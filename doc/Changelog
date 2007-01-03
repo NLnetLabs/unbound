@@ -6,6 +6,8 @@
 	- Added doc/README with compile help.
 	- main program stub and quiet makefile.
 	- minimal logging service (to stderr).
+	- added postcommit hook that serves emails.
+	- added first test 00-lint. postcommit also checks if build succeeds.
 
 15 December 2006: Wouter
 	- Created Makefile.in and configure.ac.
