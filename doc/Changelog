@@ -1,5 +1,7 @@
 3 January 2007: Wouter
 	- committed first set of files into subversion repository.
+	  svn co svn+ssh://unbound.net/svn/unbound
+	  You need a ssh login.  There is no https access yet.
 	- Added LICENSE, the BSD license.
 	- Added doc/README with compile help.
 

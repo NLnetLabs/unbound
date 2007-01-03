@@ -5,8 +5,8 @@ http://unbound.net
 This software is under BSD license, see LICENSE for details.
 
 * Needs the following libraries
-  * ldns (http://www.nlnetlabs.nl/ldns)
-  * libevent
+  * ldns	http://www.nlnetlabs.nl/ldns/			(BSD license)
+  * libevent	http://www.monkey.org/~provos/libevent/		(BSD license)
 
 * Make and install: ./configure; make
   * --with-ldns=/path/to/ldns
