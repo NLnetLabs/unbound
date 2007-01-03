@@ -1,5 +1,7 @@
 3 January 2007: Wouter
 	- committed first set of files into subversion repository.
+	- Added LICENSE, the BSD license.
+	- Added doc/README with compile help.
 
 15 December 2006: Wouter
 	- Created Makefile.in and configure.ac.
