@@ -8,6 +8,8 @@
 	- minimal logging service (to stderr).
 	- added postcommit hook that serves emails.
 	- added first test 00-lint. postcommit also checks if build succeeds.
+	- 01-doc: doxygen doc target added for html docs. And stringent test
+	  on documented files, functions and parameters.
 
 15 December 2006: Wouter
 	- Created Makefile.in and configure.ac.

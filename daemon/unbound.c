@@ -7,9 +7,20 @@
  *
  */
 
+/**
+ * \file
+ *
+ * Main program to start the DNS resolver daemon.
+ */
+
 #include "config.h"
 #include "util/log.h"
 
+/**
+ * main program. Set options given commandline arguments.
+ * @param argc: number of commandline arguments.
+ * @param argv: array of commandline arguments.
+ */
 int 
 main(int argc, char* argv[])
 {

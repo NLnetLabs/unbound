@@ -75,7 +75,7 @@ unittest:	$(COMMON_OBJ) $(UNITTEST_OBJ)
 
 clean:
 	rm -f *.o *.d *.lo *~ tags
-	rm -rf autom4te.cache .libs build
+	rm -rf autom4te.cache .libs build doc/html
 
 realclean: clean
 	rm -f config.status config.log config.h.in config.h
@@ -91,6 +91,11 @@ lint:
 
 tags:	$(srcdir)/*.c ldns/*.[ch]
 	ctags  -f $(srcdir)/tags $(srcdir)/*.[ch] ldns/*.[ch]
+
+doc:
+ifdef doxygen
+	$(doxygen) $(srcdir)/doc/unbound.doxygen
+endif
 
 # Automatic dependencies.
 $(BUILD)%.d: $(srcdir)/%.c

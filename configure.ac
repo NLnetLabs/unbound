@@ -135,6 +135,7 @@ AC_PATH_TOOL(AR, ar, [false])
 if test $AR = false; then
 	AC_MSG_ERROR([Cannot find 'ar', please extend PATH to include it])
 fi
+AC_CHECK_PROG(doxygen, doxygen, doxygen)
 # avoid libtool max commandline length test on systems that fork slowly.
 AC_CANONICAL_HOST
 if echo "$host_os" | grep "sunos4" >/dev/null; then

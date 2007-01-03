@@ -6,9 +6,19 @@
  * See LICENSE for the license.
  *
  */
+/**
+ * \file
+ * Unit test main program. Calls all the other unit tests.
+ * Exits with code 1 on a failure. 0 if all unit tests are successfull.
+ */
 
 #include "config.h"
 
+/**
+ * Main unit test program. Setup, teardown and report errors.
+ * @param argc: arg count.
+ * @param argv: array of commandline arguments.
+ */
 int main(int argc, char* argv[])
 {
 	if(argc != 1) {

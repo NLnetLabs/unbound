@@ -6,6 +6,10 @@
  * See LICENSE for the license.
  *
  */
+/**
+ * \file
+ * Implementation of log.h.
+ */
 
 #include "config.h"
 #include "util/log.h"
@@ -28,6 +32,10 @@ log_vmsg(const char *format, va_list args)
 		(int)time(NULL), ident, (int)getpid(), message);
 }
 
+/**
+ * implementation of log_info
+ * @param format: format string printf-style.
+ */
 void
 log_info(const char *format, ...)
 {
