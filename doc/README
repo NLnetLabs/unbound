@@ -15,4 +15,4 @@ This software is under BSD license, see LICENSE for details.
   * run libtoolize -c if config.sub is missing.
   * autoreconf (autoheader && autoconf), if ./configure is missing.
 
-* Mail bugs or praise to: wouter@nlnetlabs.nl
+* mailto:wouter@nlnetlabs.nl
