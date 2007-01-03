@@ -4,6 +4,8 @@
 	  You need a ssh login.  There is no https access yet.
 	- Added LICENSE, the BSD license.
 	- Added doc/README with compile help.
+	- main program stub and quiet makefile.
+	- minimal logging service (to stderr).
 
 15 December 2006: Wouter
 	- Created Makefile.in and configure.ac.

@@ -1,5 +1,17 @@
-# Standard installation pathnames
+# Copyright 2007 NLnet Labs
 # See the file LICENSE for the license
+# 
+# Standard installation pathnames
+
+QUIET=yes
+ifeq "$(QUIET)" "yes"
+  Q=@
+  INFO=@echo
+else
+  Q=
+  INFO=@:
+endif
+
 SHELL=@SHELL@
 VERSION=@PACKAGE_VERSION@
 srcdir=@srcdir@
@@ -21,6 +33,9 @@ LIBOBJS=@LIBOBJS@
 RUNTIME_PATH=@RUNTIME_PATH@
 DATE=$(shell date +%Y%m%d)
 LIBTOOL=$(libtool)
+ifeq "$(QUIET)" "yes"
+  LIBTOOL+=--quiet
+endif
 BUILD=build/
 
 LINT=splint
@@ -28,24 +43,35 @@ LINTFLAGS=+quiet -weak -warnposix -unrecog -Din_addr_t=uint32_t -Du_int=unsigned
 
 INSTALL=$(srcdir)/install-sh 
 
-COMMON_SRC=$(wildcard *.c)
+COMMON_SRC=$(wildcard services/*.c util/*.c)
 COMMON_OBJ=$(addprefix $(BUILD),$(COMMON_SRC:.c=.o) $(LIBOBJS))
-ALL_SOURCES=$(COMMON_SRC)
+UNITTEST_SRC=$(wildcard testcode/*.c)
+UNITTEST_OBJ=$(addprefix $(BUILD),$(UNITTEST_SRC:.c=.o))
+DAEMON_SRC=$(wildcard daemon/*.c)
+DAEMON_OBJ=$(addprefix $(BUILD),$(DAEMON_SRC:.c=.o))
+ALL_SRC=$(COMMON_SRC) $(UNITTEST_SRC) $(DAEMON_SRC)
+ALL_OBJ=$(addprefix $(BUILD),$(ALL_SRC:.c=.o) $(LIBOBJS))
 
 COMPILE=$(LIBTOOL) --mode=compile $(CC) $(CPPFLAGS) $(CFLAGS)
 LINK=$(LIBTOOL) --mode=link $(CC) $(CFLAGS) $(LDFLAGS)
 LINK_LIB=$(LIBTOOL) --mode=link $(CC) $(CFLAGS) $(LDFLAGS) -release $(VERSION)
 
 $(BUILD)%.o:    $(srcdir)/%.c 
-	@if test ! -d $(BUILD); then mkdir $(BUILD); fi
-	$(COMPILE) -c $< -o $@
+	$(INFO) Build $<
+	@if test ! -d $(dir $@); then $(INSTALL) -d $(patsubst %/,%,$(dir $@)); fi
+	$Q$(COMPILE) -c $< -o $@
 
 .PHONY:	clean realclean doc lint all 
 
-all:	$(COMMON_OBJ) main
+all:	$(COMMON_OBJ) unbound unittest
 
-main:	$(COMMON_OBJ)
-	$(LINK) -o $@ $<
+unbound:	$(COMMON_OBJ) $(DAEMON_OBJ)
+	$(INFO) Link $@
+	$Q$(LINK) -o $@ $^
+
+unittest:	$(COMMON_OBJ) $(UNITTEST_OBJ)
+	$(INFO) Link $@
+	$Q$(LINK) -o $@ $^
 
 clean:
 	rm -f *.o *.d *.lo *~ tags
@@ -57,7 +83,7 @@ realclean: clean
 	rm -f Makefile 
 
 lint:
-	for i in $(SOURCES); do \
+	for i in $(ALL_SRC); do \
 		$(LINT) $(LINTFLAGS) -I. -I$(srcdir) $(srcdir)/$$i ; \
 		if [ $$? -ne 0 ] ; then exit 1 ; fi ; \
 	done
@@ -67,9 +93,10 @@ tags:	$(srcdir)/*.c ldns/*.[ch]
 
 # Automatic dependencies.
 $(BUILD)%.d: $(srcdir)/%.c
-	@if test ! -d $(BUILD); then mkdir $(BUILD); fi
-	$(SHELL) -ec '$(CC) -MM $(CPPFLAGS) $< \
+	$(INFO) Depend $<
+	@if test ! -d $(dir $@); then $(INSTALL) -d $(patsubst %/,%,$(dir $@)); fi
+	$Q$(SHELL) -ec '$(CC) -MM $(CPPFLAGS) $< \
 	              | sed '\''s!\(.*\)\.o[ :]*!$(dir $@)\1.o $@ : !g'\'' > $@; \
 	              [ -s $@ ] || rm -f $@'
 
--include $(addprefix $(BUILD),$(ALL_SOURCES:.c=.d))
+-include $(addprefix $(BUILD),$(ALL_SRC:.c=.d))

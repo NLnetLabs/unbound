@@ -208,6 +208,8 @@ AC_ARG_WITH(ldns,
 
 AC_CHECK_LIB(ldns, ldns_rr_new,, [AC_MSG_ERROR([Can't find ldns library])])
 
+AC_DEFINE_UNQUOTED([MAXSYSLOGMSGLEN], [512], [Define to the maximum message length to pass to syslog.])
+
 AH_BOTTOM([
 #include <stdio.h>
 #include <string.h>
@@ -238,6 +240,21 @@ AH_BOTTOM([
 #ifdef HAVE_ARPA_INET_H
 #include <arpa/inet.h>
 #endif
+
+#ifdef HAVE_ATTR_FORMAT
+#  define ATTR_FORMAT(archetype, string_index, first_to_check) \
+    __attribute__ ((format (archetype, string_index, first_to_check)))
+#else /* !HAVE_ATTR_FORMAT */
+#  define ATTR_FORMAT(archetype, string_index, first_to_check) /* empty */
+#endif /* !HAVE_ATTR_FORMAT */
+#if defined(__cplusplus)
+#  define ATTR_UNUSED(x)
+#elif defined(HAVE_ATTR_UNUSED)
+#  define ATTR_UNUSED(x)  x __attribute__((unused))
+#else /* !HAVE_ATTR_UNUSED */
+#  define ATTR_UNUSED(x)  x
+#endif /* !HAVE_ATTR_UNUSED */
+
 ])
 
 AC_CONFIG_FILES([Makefile])
