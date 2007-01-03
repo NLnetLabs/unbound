@@ -1,0 +1,75 @@
+# Standard installation pathnames
+# See the file LICENSE for the license
+SHELL=@SHELL@
+VERSION=@PACKAGE_VERSION@
+srcdir=@srcdir@
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+bindir=@bindir@
+mandir=@mandir@
+libdir=@libdir@
+includedir=@includedir@
+doxygen=@doxygen@
+libtool=@libtool@
+
+CC=@CC@
+CPPFLAGS=@CPPFLAGS@ @DEFS@ -I.
+CFLAGS=@CFLAGS@ -I.
+LDFLAGS=@LDFLAGS@
+LIBS=@LIBS@
+LIBOBJS=@LIBOBJS@
+RUNTIME_PATH=@RUNTIME_PATH@
+DATE=$(shell date +%Y%m%d)
+LIBTOOL=$(libtool)
+BUILD=build/
+
+LINT=splint
+LINTFLAGS=+quiet -weak -warnposix -unrecog -Din_addr_t=uint32_t -Du_int=unsigned -Du_char=uint8_t -preproc
+
+INSTALL=$(srcdir)/install-sh 
+
+COMMON_SRC=$(wildcard *.c)
+COMMON_OBJ=$(addprefix $(BUILD),$(COMMON_SRC:.c=.o) $(LIBOBJS))
+ALL_SOURCES=$(COMMON_SRC)
+
+COMPILE=$(LIBTOOL) --mode=compile $(CC) $(CPPFLAGS) $(CFLAGS)
+LINK=$(LIBTOOL) --mode=link $(CC) $(CFLAGS) $(LDFLAGS)
+LINK_LIB=$(LIBTOOL) --mode=link $(CC) $(CFLAGS) $(LDFLAGS) -release $(VERSION)
+
+$(BUILD)%.o:    $(srcdir)/%.c 
+	@if test ! -d $(BUILD); then mkdir $(BUILD); fi
+	$(COMPILE) -c $< -o $@
+
+.PHONY:	clean realclean doc lint all 
+
+all:	$(COMMON_OBJ) main
+
+main:	$(COMMON_OBJ)
+	$(LINK) -o $@ $<
+
+clean:
+	rm -f *.o *.d *.lo *~ tags
+	rm -rf autom4te.cache .libs build
+
+realclean: clean
+	rm -f config.status config.log config.h.in config.h
+	rm -f configure config.sub config.guess ltmain.sh aclocal.m4 libtool
+	rm -f Makefile 
+
+lint:
+	for i in $(SOURCES); do \
+		$(LINT) $(LINTFLAGS) -I. -I$(srcdir) $(srcdir)/$$i ; \
+		if [ $$? -ne 0 ] ; then exit 1 ; fi ; \
+	done
+
+tags:	$(srcdir)/*.c ldns/*.[ch]
+	ctags  -f $(srcdir)/tags $(srcdir)/*.[ch] ldns/*.[ch]
+
+# Automatic dependencies.
+$(BUILD)%.d: $(srcdir)/%.c
+	@if test ! -d $(BUILD); then mkdir $(BUILD); fi
+	$(SHELL) -ec '$(CC) -MM $(CPPFLAGS) $< \
+	              | sed '\''s!\(.*\)\.o[ :]*!$(dir $@)\1.o $@ : !g'\'' > $@; \
+	              [ -s $@ ] || rm -f $@'
+
+-include $(addprefix $(BUILD),$(ALL_SOURCES:.c=.d))
