@@ -83,7 +83,8 @@ realclean: clean
 	rm -f Makefile 
 
 lint:
-	for i in $(ALL_SRC); do \
+	$Qfor i in $(ALL_SRC); do \
+		echo lint $$i; \
 		$(LINT) $(LINTFLAGS) -I. -I$(srcdir) $(srcdir)/$$i ; \
 		if [ $$? -ne 0 ] ; then exit 1 ; fi ; \
 	done
