@@ -52,9 +52,9 @@ DAEMON_OBJ=$(addprefix $(BUILD),$(DAEMON_SRC:.c=.o))
 ALL_SRC=$(COMMON_SRC) $(UNITTEST_SRC) $(DAEMON_SRC)
 ALL_OBJ=$(addprefix $(BUILD),$(ALL_SRC:.c=.o) $(LIBOBJS))
 
-COMPILE=$(LIBTOOL) --mode=compile $(CC) $(CPPFLAGS) $(CFLAGS)
-LINK=$(LIBTOOL) --mode=link $(CC) $(CFLAGS) $(LDFLAGS)
-LINK_LIB=$(LIBTOOL) --mode=link $(CC) $(CFLAGS) $(LDFLAGS) -release $(VERSION)
+COMPILE=$(LIBTOOL) --tag=CC --mode=compile $(CC) $(CPPFLAGS) $(CFLAGS)
+LINK=$(LIBTOOL) --tag=CC --mode=link $(CC) $(CFLAGS) $(LDFLAGS)
+LINK_LIB=$(LIBTOOL) --tag=CC --mode=link $(CC) $(CFLAGS) $(LDFLAGS) -release $(VERSION)
 
 $(BUILD)%.o:    $(srcdir)/%.c 
 	$(INFO) Build $<
