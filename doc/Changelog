@@ -1,6 +1,7 @@
 4 January 2007: Wouter
 	- Testbed script (run on multiple platforms the test set).
 	  Works on Sunos9, Sunos10, FreeBSD 6.1, Fedora core 5.
+	- added unit test tpkg.
 
 3 January 2007: Wouter
 	- committed first set of files into subversion repository.
