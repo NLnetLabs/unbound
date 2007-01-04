@@ -4,6 +4,7 @@ AC_PREREQ(2.57)
 
 AC_INIT(unbound, 0.1, wouter@nlnetlabs.nl, unbound)
 
+CFLAGS=
 AC_AIX
 
 dnl routine to help check for compiler flags.
