@@ -12,6 +12,11 @@ REPORT_FILE=testdata/testbed.report
 LOG_FILE=testdata/testbed.log
 HOST_FILE=testdata/host_file.$USER
 
+if test ! -f $HOST_FILE; then
+	echo "No such file: $HOST_FILE"
+	exit 1
+fi
+
 function echossh() # like ssh but echos.
 {
 	echo "> ssh $*"
@@ -64,7 +69,8 @@ function dotest()
 		DISABLE="--with-ldns=$LDNS $DISABLE"
 	fi
 	echossh $1 "cd $2; if test ! -f config.h -o configure -nt config.h; then ./configure $CONFIGURE_FLAGS $DISABLE; fi"
-	echossh $1 "cd $2; if which gmake; then gmake; else $MAKE_CMD; fi"
+	echossh $1 "cd $2; if test -f "'"`which gmake`"'"; then gmake; else $MAKE_CMD; fi"
+	echossh $1 "cd $2; if test -f "'"`which gmake`"'"; then gmake doc; else $MAKE_CMD doc; fi"
 	if test $RUN_TEST = yes; then
 	echossh $1 "cd $2/testdata; tpkg clean"
 	echossh $1 "cd $2; bash testcode/do-tests.sh"
@@ -102,7 +108,7 @@ for((i=0; i<${#hostname[*]}; i=$i+1)); do
 	# echo "desc=[${desc[$i]}]"
 	# echo "dir=[${dir[$i]}]"
 	# echo "vars=[${vars[$i]}]"
-	AC_CMD="libtoolize -c; autoconf && autoheader"
+	AC_CMD="libtoolize -c --force; autoconf && autoheader"
 	MAKE_CMD="make"
 	SVN=yes
 	IP6=yes
@@ -111,7 +117,7 @@ for((i=0; i<${#hostname[*]}; i=$i+1)); do
 	LDNS=
 	eval ${vars[$i]}
 	echo "*** ${hostname[$i]} ${desc[$i]} ***" | tee -a $LOG_FILE | tee -a $REPORT_FILE
-	dotest ${hostname[$i]} ${dir[$i]} | tee -a $LOG_FILE
+	dotest ${hostname[$i]} ${dir[$i]} 2>&1 | tee -a $LOG_FILE
 done
 
 echo "done"
