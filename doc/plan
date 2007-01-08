@@ -1,0 +1,240 @@
+Plan for Unbound.
+
+Split into a set of boxes.  Every box will take about 3 weeks to a month
+to complete.  The first set of of boxes (approx 5 months) will need coding
+by a limited set of people.  But after every box, a 0.x release is done, 
+which is then tested and code review is done.  
+
+Every box:
+ * implement the features
+ * documentation of those features
+ * test-framework for the new features
+ * tests for the new features
+ * speed test of this stage
+ * release of 0.x version (0.x for development only)
+ * a teleconference(jabber) held to discuss.
+ * code review internal couple of days, external a week or so,
+   while we continue the next box. 
+
+Roughly the boxes are as follows:
+0.0 initial setup - results in network code that forwards queries
+    and returns the reply (no cache), but also testbed, svn, maillist.
+    One query at a time (nonblocking IO though).
+0.1 threads - results in threaded forwarder
+0.2 LRU hashtable, results in basic caching forwarder (no DNS parse)
+0.3 First functionality - results in caching forwarder (with DNS parse,
+    query compare, RR specific updates).
+0.4 Basic resolver - module layout, iterator module, scrubber module,
+    results in resolver that can service multiple queries per thread.
+    This stage takes longer, due to complexity in the iterator module.
+    Twice as long; one box for module layout, one box for iterator module.
+0.5 Validator - validator module.
+0.6 Bigger and better - good syslog, compressed packets, port ranges,
+    config file format with config checker. 
+0.7 Local zones feature - localzones stubzones fwdzones, no leak rfc1918.
+0.8 Library use - resolver validator lib (and test apps)
+0.9 Corner cases - be able to resolve in the wild. Run fuzzers.
+    Run as many tests as we can think of.
+1.0 El product. Run shadow for a resolver in production for several
+    weeks.
+
+For boxes 0.5-1.0 the planning is to be revised, at the 0.5 stage external
+coders are welcome.  Since the project is bigger, there is room for them.
+
+This is a summary of the items.  Below more detailed work items are spelled
+out with a (tentative) directory structure for the project.
+
+
+Styleguide:
+* write working stuff. (it starts to work with no features)
+* write tests immediately for every function, every feature.
+* document as you go. (doxygen comments, manpages and readme).
+* copyright every file BSD. comments every file. clean coding in C.
+* every day discuss state of the nation for 10 minutes.
+
+*** Initial setup
+* setup svn repo. Makefile with automatic dependencies and configure script.
+	* link with ldns.
+* listen_dnsport and outside_network services, (unit) tests for them.
+	* use libevent to listen on fds.
+* setup test infrastructure (tpkg on checkin; testbed on labs test machines).
+* daemon version that forwards queries. (listen, send) Tests for it.
+	* test by having the outside_net service grab answers from a
+	  file instead of network, file of id priority answerpacket.
+	  and what query to give this answer to, highprio matches first.
+
+*** Threads
+* first simple config file reading/writing and tests on config file.
+  (config option is forwarder: yes/no. Cache size. That sort of thing.)
+  (very simple format)
+* First simple logging (to a file).
+* Threads
+	* check if pthread lib is the one to use (sys specific is faster?).
+	* make config option to have threads.
+	* alloc threadable.
+	* locks.c
+	* Tests with and without threads.
+* alloc_service. Tests for alloc service (unit tests in internal structs).
+* threading for the network services.
+* Make sure threading/libevent starts working on all test machines.
+  Use configure to turn off threading/libevent/...
+  -- use libevent packaged together if not in system.
+  -- maybe also for pthreads/...
+* threaded forwarder version.
+	* speed test of threaded version.
+
+*** LRU hashtable.
+* mini msg/reply structure for LRU hashtable test, simple replay format. 
+* hashtable+LRU structure. Tests on structure.
+	* tests on enter/remove, finding items.
+	* tests on LRU movements.
+	* Test on speed of finding items.
+* slabbed hashtable+LRU structure. 
+	* Test locking; perhaps by having sleeps in some threads to force
+	  locks to contend. helgrind.
+* daemon upgraded to be a caching forwarder. So it stores all in cache. 
+  Replies from cache. Tests on fake-caching forwarder functionality.
+	* timeout of data test
+	* finding data in cache.
+	* finding data not in cache.
+	* lru falloff of data.
+* Speed test of fake-caching forwarder.
+
+*** First functionality
+* implement dname type and unit tests on it. (all corner cases, random cases)
+* implement rrset type and tests. (all corner cases, random cases).
+* msg-reply structure. unit tests of structure.
+	* Test of those rrset pointers
+* daemon upgraded to be a caching forwarder. So it stores all in cache. 
+  Replies from cache. Tests on caching forwarder functionality.
+	* timeout of data test
+	* finding data in cache.
+	* finding data not in cache.
+	* lru falloff of data.
+* Test update of one rrset in cached packet.
+* Speed test of caching forwarder.
+
+*** Basic Resolver
+* Create module interfacce and module caller algorithm.
+* Daemon config to use modules. Test the module caller.
+* Create basic iterator and scrubber modules.
+	* Test every state of the iterator by passing test data into
+	  it.
+	* And scrubber.
+* Daemon config as cache(iterator).
+	* Test daemon
+	* Speed test.
+
+*** Validator
+* Create validator 
+* Test validator on various conditions. By having stored set of
+  domains and RRs in those domains to return to validator.
+* Validating resolver.
+	* Test resolver.
+	* Speed test.
+
+*** Bigger and Better
+* DNS packet compression of output.
+	* test packet compression (that it compresses.)
+	* config option to compress yes/no
+	* speed test with and without compression.
+* Config file syntax checker program. Tests on checker.
+* Use a huge number of random outgoing ports.
+* Logging first class feature with config options.
+
+*** Local zones feature.
+* Build in local zone features. First the total stop for1912.
+* Then 'local content' for minimal serving of localhost.localdomain,
+  and so on. 
+* Remember jakob's diagram.
+* Forward-local-zone to NSD.
+	- include in package, autoforkexec on localhost to do so.
+* forward local zone to remote server.
+* stub zones - send queries for a zone to configged nameserver.
+* test local zones
+	* for speed
+	* for correctness on corner cases
+	* for validation
+	* in case you get data on localzone in an answer (from rootserver).
+
+*** Library use
+* Create library that can do:
+	* resolver
+	* validator
+	* validating resolver.
+* Test application that links the library. (Like /usr/bin/host+validating).
+	* Test it.
+
+*** Corner cases
+* Try to setup corner cases of (mis)configured DNS service/websites.
+* Resolve msoft, google, yahoo, etc weird websites.
+* Try to resolve many many different queries, perhaps compared with bind.
+
+treeshrew/
+	validator/ *.c *.h
+		module takes qname, qtype, asks next module for answer
+		and validates that answer.
+	iterator/ *.c *.h
+		module takes qname, qtype, iterative DNS queries
+		never asks next module.
+	services/
+		- Routines that provide the callback services for modules.
+
+		alloc_service: L1, L2 alloc service
+		outside_network: pending queries helpers.
+			pending query structure
+		listen_dnsport: listen port53 service.
+			request structure
+		type_caches/
+			rrset_cache
+			msg_cache
+				rrset and msg cache check local zones.
+			infra_cache
+			trusted_key_cache
+	util/
+		- Various components from which to build the rest.
+
+		storage/
+		rbtree: redblack tree, for L1 use.
+			- copy from NSD.
+		hashtable and hashfunc: for L1 use.
+		locked_hashtable: for L2 use. -- not needed.
+		fragment_hashtable: for L2 use.
+		fragment_rbtree: for L2 use.
+		slab_allocator: perhaps to support alloc service.
+
+		(in util/ itself)
+		locks: selected lock,unlock (spinlock/mutex).
+		config: reads, stores config file
+		netio: register callbacks to select().
+			- use libevent (!)
+			- copy from NSD.
+		log: error and log handling.
+		module.h: module interface
+		misc: time() wrapper for speed.
+
+		data/
+		msg_reply: qname/qtype/CD/qclass/reply store.
+		packed_rrset: main datatype
+		dname: compare, printf, parse
+
+	testcode/
+		main programs that do unit tests, using testdata
+	testdata/
+	daemon/
+		unbound.c for validating caching recursive dns server.
+		scheduler.c for the modules.
+
+	libunbound-all/
+		app linkable. Can be configged to do whatever,
+		validator, iterator, validating iterator, forwarding stub.
+	libunbound-fwd/
+		app linkable forwarding stub. Small lib.
+
+	ask_cachor/ *.c *.h
+		module takes qname, qtype, returns answer from msgcache.
+		could ask cached for answer (and wait for network, 10 ms).
+		if not in cache, asks next module.
+	cachord/
+		main.c, simple udp proto, query or store msg in cache.
+		supports option to save cache to disk (absolute time ttls).
