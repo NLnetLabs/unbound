@@ -1,0 +1,81 @@
+Requirements for Recursive Caching Resolver 
+	(a.k.a. Treeshrew, Unbound-C)
+By W.C.A. Wijngaards, NLnet Labs, October 2006.
+
+Contents
+1. Introduction
+2. History
+3. Goals
+4. Non-Goals
+
+
+1. Introduction
+---------------
+This is the requirements document for a DNS name server and aims to
+document the goals and non-goals of the project.  The DNS (the Domain
+Name System) is a global, replicated database that uses a hierarchical
+structure for queries.
+
+Data in the DNS is stored in Resource Record sets (RR sets), and has a
+time to live (TTL).  During this time the data can be cached.  It is
+thus useful to cache data to speed up future lookups.  A server that
+looks up data in the DNS for clients and caches previous answers to
+speed up processing is called a caching, recursive nameserver.  
+
+This project aims to develop such a nameserver in modular components, so
+that also DNSSEC (secure DNS) validation and stub-resolvers (that do not
+run as a server, but a linked into an application) are easily possible.
+
+The main components are the Validator that validates the security
+fingerprints on data sets, the Iterator that sends queries to the
+hierarchical DNS servers that own the data and the Cache that stores
+data from previous queries.  The networking and query management code
+then interface with the modules to perform the necessary processing.
+
+In Section 2 the origins of the Unbound project are documented. Section
+3 lists the goals, while Section 4 lists the explicit non-goals of the
+project.
+
+
+2. History
+----------
+The unbound resolver project started by Bill Manning, David Blacka, and
+Matt Larson (from the University of California and from Verisign), that
+created a Java based prototype resolver called Unbound.  The basic
+design decisions of clean modules was executed.
+
+The Java prototype worked very well, with contributions from Geoff
+Sisson and Roy Arends from Nominet.  Around 2006 the idea came to create
+a full-fledged C implementation ready for deployed use.  NLnet Labs
+volunteered to write this implementation.
+
+
+3. Goals
+--------
+o A validating recursive DNS resolver.
+o Code diversity in the DNS resolver monoculture.
+o Drop-in replacement for BIND apart from config.
+o DNSSEC support.
+o Fully RFC compliant.
+o High performance
+	* even with validation.
+o Used as
+	* stub resolver.
+	* full caching name server.
+	* resolver library.
+o Elegant design of validator, resolver, cache modules.
+	* provide the ability to pick and choose modules.
+o Robust.
+o In C, open source: The BSD license. 
+o Highly portable, targets include modern Unix systems, such as *BSD,
+solaris, linux, and maybe also the windows platform.
+o Smallest as possible component that does the job.
+o Stub-zones can be configured (local data or AS112 zones).
+
+
+4. Non-Goals
+------------
+o An authoritative name server.
+o Too many Features.
+
+
