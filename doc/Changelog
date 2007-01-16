@@ -1,3 +1,6 @@
+16  January 2007: Wouter
+	- added readme.svn and readme.tests.
+
 4 January 2007: Wouter
 	- Testbed script (run on multiple platforms the test set).
 	  Works on Sunos9, Sunos10, FreeBSD 6.1, Fedora core 5.

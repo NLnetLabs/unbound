@@ -1,0 +1,11 @@
+README unbound tests
+
+There is a test setup for unbound.
+
+testdata/ contains the data for tests. 
+testcode/ contains scripts and c code for the tests.
+
+do-tests.sh : runs all the tests in the testdata directory.
+testbed.sh : compiles on a set of (user specific) hosts and runs do-tests.
+
+Tests are run using tpkg.

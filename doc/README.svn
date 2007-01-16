@@ -1,0 +1,13 @@
+README.svn
+
+For a svn checkout
+* Create build environment - see README.
+  * possibly copy aclocal.m4 from your autoconf/libtool setup.
+
+* Note changes in the Changelog.
+* Every checking a postcommit hook is run
+	(the postcommit hook is in the svn/unbound/hooks directory).
+	* generates commit email with your changes and comment.
+	* compiles and runs the tests (with testcode/do-tests.sh).
+	* If build errors or test errors happen
+		* Please fix your errors and commit again.
