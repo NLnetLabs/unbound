@@ -69,9 +69,12 @@ struct comm_point {
 
 	/** is this a UDP, TCP-accept or TCP socket. */
 	enum comm_point_type {
-		comm_udp, /** UDP socket */
-		comm_tcp_accept, /** TCP accept socket */
-		comm_tcp  /** TCP handler socket */
+		/** UDP socket - handle datagrams. */
+		comm_udp, 
+		/** TCP accept socket - only creates handlers if readable. */
+		comm_tcp_accept, 
+		/** TCP handler socket - handle byteperbyte readwrite. */
+		comm_tcp  
 	} type;
 
 	/** what to do when read/write is done.
