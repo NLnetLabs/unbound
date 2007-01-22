@@ -56,8 +56,10 @@ struct comm_point {
 	struct comm_point tcp_parent;
 
 	/* -------- TCP Accept -------- */
-	/** current and max number of TCP connections on this socket */
-	int cur_tcp_count, max_tcp_count;
+	/** current number of TCP connections on this socket */
+	int cur_tcp_count;
+	/** the number of TCP handlers for this tcp-accept socket */
+	int max_tcp_count;
 	/** malloced array of tcp handlers for a tcp-accept, 
 	    of size max_tcp_count. */
 	struct comm_point *tcp_handlers;
@@ -66,7 +68,11 @@ struct comm_point {
 	struct comm_point *tcp_free;
 
 	/** is this a UDP, TCP-accept or TCP socket. */
-	enum comm_point_type {comm_udp, comm_tcp_accept, comm_tcp} type;
+	enum comm_point_type {
+		comm_udp, /** UDP socket */
+		comm_tcp_accept, /** TCP accept socket */
+		comm_tcp  /** TCP handler socket */
+	} type;
 
 	/** what to do when read/write is done.
 
