@@ -42,6 +42,7 @@ CHECK_COMPILER_FLAG(O2, [CFLAGS="$CFLAGS -O2"])
 CHECK_COMPILER_FLAG(W, [CFLAGS="$CFLAGS -W"])
 CHECK_COMPILER_FLAG(Wall, [CFLAGS="$CFLAGS -Wall"])
 CHECK_COMPILER_FLAG(Wextra, [CFLAGS="$CFLAGS -Wextra"])
+CHECK_COMPILER_FLAG(Wdeclaration-after-statement, [CFLAGS="$CFLAGS -Wdeclaration-after-statement"])
 AC_C_INLINE
 
 AC_DEFUN([AC_CHECK_FORMAT_ATTRIBUTE],
@@ -89,6 +90,69 @@ fi
 
 AC_CHECK_FORMAT_ATTRIBUTE
 AC_CHECK_UNUSED_ATTRIBUTE
+
+if test "$srcdir" != "."; then
+	CPPFLAGS="$CPPFLAGS -I$srcdir";
+fi
+
+# Use libtool 
+AC_CHECK_PROGS(libtool, [glibtool libtool15 libtool], [./libtool])
+AC_PATH_TOOL(AR, ar, [false])
+if test $AR = false; then
+	AC_MSG_ERROR([Cannot find 'ar', please extend PATH to include it])
+fi
+AC_CHECK_PROG(doxygen, doxygen, doxygen)
+# avoid libtool max commandline length test on systems that fork slowly.
+AC_CANONICAL_HOST
+if echo "$host_os" | grep "sunos4" >/dev/null; then
+	lt_cv_sys_max_cmd_len=32750;
+fi
+AC_PROG_LIBTOOL
+
+# Checks for header files.
+AC_HEADER_STDC
+AC_CHECK_HEADERS([getopt.h stdarg.h stdbool.h openssl/ssl.h netinet/in.h time.h sys/param.h sys/socket.h],,, [AC_INCLUDES_DEFAULT])
+
+# check for types
+AC_CHECK_TYPE(int8_t, char)
+AC_CHECK_TYPE(int16_t, short)
+AC_CHECK_TYPE(int32_t, int)
+AC_CHECK_TYPE(int64_t, long long)
+AC_CHECK_TYPE(uint8_t, unsigned char)
+AC_CHECK_TYPE(uint16_t, unsigned short)
+AC_CHECK_TYPE(uint32_t, unsigned int)
+AC_CHECK_TYPE(uint64_t, unsigned long long)
+AC_TYPE_SIZE_T
+AC_CHECK_TYPE(ssize_t, int)
+AC_TYPE_UID_T
+AC_TYPE_PID_T
+AC_TYPE_OFF_T
+
+AC_CHECK_TYPE(socklen_t, , 
+	[AC_DEFINE([socklen_t], [int], [Define to 'int' if not defined])], [
+AC_INCLUDES_DEFAULT
+#if HAVE_SYS_SOCKET_H
+#  include <sys/socket.h>
+#endif
+])
+AC_CHECK_TYPE(in_addr_t, [], [AC_DEFINE([in_addr_t], [uint32_t], [in_addr_t])], [
+AC_INCLUDES_DEFAULT
+#if HAVE_SYS_TYPES_H
+# include <sys/types.h>
+#endif
+#if HAVE_NETINET_IN_H
+# include <netinet/in.h>
+#endif
+])
+AC_CHECK_TYPE(in_port_t, [], [AC_DEFINE([in_port_t], [uint16_t], [in_port_t])], [
+AC_INCLUDES_DEFAULT
+#if HAVE_SYS_TYPES_H
+# include <sys/types.h>
+#endif
+#if HAVE_NETINET_IN_H
+# include <netinet/in.h>
+#endif
+])
 
 # Checks for libraries.
 AC_ARG_WITH(ssl, AC_HELP_STRING([--with-ssl=pathname],
@@ -156,65 +220,6 @@ AC_ARG_WITH(ssl, AC_HELP_STRING([--with-libevent=pathname],
 	AC_SUBST(RUNTIME_PATH)
     fi
 
-if test "$srcdir" != "."; then
-	CPPFLAGS="$CPPFLAGS -I$srcdir";
-fi
-
-# Use libtool 
-AC_CHECK_PROGS(libtool, [glibtool libtool15 libtool], [./libtool])
-AC_PATH_TOOL(AR, ar, [false])
-if test $AR = false; then
-	AC_MSG_ERROR([Cannot find 'ar', please extend PATH to include it])
-fi
-AC_CHECK_PROG(doxygen, doxygen, doxygen)
-# avoid libtool max commandline length test on systems that fork slowly.
-AC_CANONICAL_HOST
-if echo "$host_os" | grep "sunos4" >/dev/null; then
-	lt_cv_sys_max_cmd_len=32750;
-fi
-AC_PROG_LIBTOOL
-
-# Checks for header files.
-AC_HEADER_STDC
-AC_CHECK_HEADERS([getopt.h stdarg.h stdbool.h openssl/ssl.h netinet/in.h time.h sys/param.h sys/socket.h],,, [AC_INCLUDES_DEFAULT])
-
-# check for types
-AC_CHECK_TYPE(int8_t, char)
-AC_CHECK_TYPE(int16_t, short)
-AC_CHECK_TYPE(int32_t, int)
-AC_CHECK_TYPE(int64_t, long long)
-AC_CHECK_TYPE(uint8_t, unsigned char)
-AC_CHECK_TYPE(uint16_t, unsigned short)
-AC_CHECK_TYPE(uint32_t, unsigned int)
-AC_CHECK_TYPE(uint64_t, unsigned long long)
-AC_TYPE_SIZE_T
-AC_CHECK_TYPE(ssize_t, int)
-AC_TYPE_UID_T
-AC_TYPE_PID_T
-AC_TYPE_OFF_T
-
-AC_CHECK_TYPE(socklen_t, , 
-	[AC_DEFINE([socklen_t], [int], [Define to 'int' if not defined])], [
-AC_INCLUDES_DEFAULT
-#if HAVE_SYS_SOCKET_H
-#  include <sys/socket.h>
-#endif
-])
-AC_CHECK_TYPE(in_addr_t, [], [AC_DEFINE([in_addr_t], [uint32_t], [in_addr_t])], [
-#if HAVE_SYS_TYPES_H
-# include <sys/types.h>
-#endif
-#if HAVE_NETINET_IN_H
-# include <netinet/in.h>
-#endif])
-AC_CHECK_TYPE(in_port_t, [], [AC_DEFINE([in_port_t], [uint16_t], [in_port_t])], [
-#if HAVE_SYS_TYPES_H
-# include <sys/types.h>
-#endif
-#if HAVE_NETINET_IN_H
-# include <netinet/in.h>
-#endif])
-
 # check to see if libraries are needed for these functions.
 AC_CHECK_LIB(socket, socket)
 AC_CHECK_LIB(nsl, inet_pton)
@@ -279,7 +284,9 @@ AH_BOTTOM([
 #else /* !HAVE_ATTR_FORMAT */
 #  define ATTR_FORMAT(archetype, string_index, first_to_check) /* empty */
 #endif /* !HAVE_ATTR_FORMAT */
-#if defined(__cplusplus)
+#if defined(DOXYGEN)
+#  define ATTR_UNUSED(x)  x
+#elif defined(__cplusplus)
 #  define ATTR_UNUSED(x)
 #elif defined(HAVE_ATTR_UNUSED)
 #  define ATTR_UNUSED(x)  x __attribute__((unused))

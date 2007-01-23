@@ -2,6 +2,10 @@
 	- added libevent to configure to link with.
 	- util/netevent setup work.
 	- configure searches for libevent.
+	- search for libs at end of configure (when other headers and types
+	  have been found).
+	- doxygen works with ATTR_UNUSED().
+	- util/netevent implementation.
 
 22  January 2007: Wouter
 	- Designed header file for network communication.

@@ -17,6 +17,8 @@
 #include "util/log.h"
 #include <errno.h>
 
+/* -------- Start of local definitions -------- */
+
 /* we use libevent */
 #include <event.h>
 
@@ -37,7 +39,42 @@ struct internal_base {
 	struct event_base* base;
 };
 
-struct comm_base* comm_base_create()
+/**
+ * handle libevent callback for udp comm point.
+ * @param fd: file descriptor.
+ * @param event: event bits from libevent: 
+ *	EV_READ, EV_WRITE, EV_SIGNAL, EV_TIMEOUT.
+ * @param arg: the comm_point structure.
+ */
+static void comm_point_udp_callback(int fd, short event, void* arg);
+
+/**
+ * handle libevent callback for tcp accept comm point
+ * @param fd: file descriptor.
+ * @param event: event bits from libevent: 
+ *	EV_READ, EV_WRITE, EV_SIGNAL, EV_TIMEOUT.
+ * @param arg: the comm_point structure.
+ */
+static void comm_point_tcp_accept_callback(int fd, short event, void* arg);
+
+/**
+ * handle libevent callback for tcp data comm point
+ * @param fd: file descriptor.
+ * @param event: event bits from libevent: 
+ *	EV_READ, EV_WRITE, EV_SIGNAL, EV_TIMEOUT.
+ * @param arg: the comm_point structure.
+ */
+static void comm_point_tcp_handle_callback(int fd, short event, void* arg);
+
+/** create a tcp handler with a parent */
+static struct comm_point* comm_point_create_tcp_handler(
+	struct comm_base *base, struct comm_point* parent, size_t bufsize,
+        comm_point_callback_t* callback, void* callback_arg);
+
+/* -------- End of local definitions -------- */
+
+struct comm_base* 
+comm_base_create()
 {
 	struct comm_base* b = (struct comm_base*)calloc(1,
 		sizeof(struct comm_base));
@@ -57,7 +94,8 @@ struct comm_base* comm_base_create()
 	return b;
 }
 
-void comm_base_delete(struct comm_base* b)
+void 
+comm_base_delete(struct comm_base* b)
 {
 	/* No way to delete event_base! leaks. */
 	b->eb->base = NULL;
@@ -65,7 +103,8 @@ void comm_base_delete(struct comm_base* b)
 	free(b);
 }
 
-void comm_base_dispatch(struct comm_base* b)
+void 
+comm_base_dispatch(struct comm_base* b)
 {
 	int retval;
 	while(1) {
@@ -77,13 +116,6 @@ void comm_base_dispatch(struct comm_base* b)
 	}
 }
 
-/**
- * libevent callback routine for commpoint udp
- * @param fd: file descriptor.
- * @param event: event bits from libevent: 
- *	EV_READ, EV_WRITE, EV_SIGNAL, EV_TIMEOUT.
- * @param arg: the comm_point structure.
- */
 static void 
 comm_point_udp_callback(int ATTR_UNUSED(fd), short ATTR_UNUSED(event), 
 	void* arg)
@@ -92,13 +124,6 @@ comm_point_udp_callback(int ATTR_UNUSED(fd), short ATTR_UNUSED(event),
 	log_info("callback udp for %x", (int)c);
 }
 
-/**
- * libevent callback routine for commpoint tcp accept listeners.
- * @param fd: file descriptor.
- * @param event: event bits from libevent: 
- *	EV_READ, EV_WRITE, EV_SIGNAL, EV_TIMEOUT.
- * @param arg: the comm_point structure.
- */
 static void 
 comm_point_tcp_accept_callback(int ATTR_UNUSED(fd), short ATTR_UNUSED(event), 
 	void* arg)
@@ -107,8 +132,16 @@ comm_point_tcp_accept_callback(int ATTR_UNUSED(fd), short ATTR_UNUSED(event),
 	log_info("callback tcpaccept for %x", (int)c);
 }
 
-struct comm_point* comm_point_create_udp(struct comm_base *base,
-	int fd, struct buffer* buffer,
+static void 
+comm_point_tcp_handle_callback(int ATTR_UNUSED(fd), short ATTR_UNUSED(event), 
+	void* arg)
+{
+	struct comm_point* c = (struct comm_point*)arg;
+	log_info("callback tcpaccept for %x", (int)c);
+}
+
+struct comm_point* 
+comm_point_create_udp(struct comm_base *base, int fd, struct buffer* buffer,
 	comm_point_callback_t* callback, void* callback_arg)
 {
 	struct comm_point* c = (struct comm_point*)calloc(1,
@@ -149,12 +182,52 @@ struct comm_point* comm_point_create_udp(struct comm_base *base,
 	return c;
 }
 
-struct comm_point* 
+static struct comm_point* 
 comm_point_create_tcp_handler(struct comm_base *base, 
 	struct comm_point* parent, size_t bufsize,
         comm_point_callback_t* callback, void* callback_arg)
 {
-	return NULL;
+	struct comm_point* c = (struct comm_point*)calloc(1,
+		sizeof(struct comm_point));
+	short evbits;
+	if(!c)
+		return NULL;
+	c->ev = (struct internal_event*)calloc(1,
+		sizeof(struct internal_event));
+	if(!c->ev) {
+		free(c);
+		return NULL;
+	}
+	c->fd = -1;
+	c->buffer = NULL /* routine to create new buffer! bufsize */;
+	c->timeout = NULL;
+	c->tcp_is_reading = 0;
+	c->tcp_byte_count = 0;
+	c->tcp_parent = parent;
+	c->cur_tcp_count = 0;
+	c->max_tcp_count = 0;
+	c->tcp_handlers = NULL;
+	c->tcp_free = NULL;
+	c->type = comm_tcp;
+	c->tcp_do_close = 0;
+	c->tcp_do_toggle_rw = 0;
+	c->callback = callback;
+	c->cb_arg = callback_arg;
+	/* add to parent free list */
+	c->tcp_free = parent->tcp_free;
+	parent->tcp_free = c;
+	/* libevent stuff */
+	evbits = EV_PERSIST | EV_READ;
+	event_set(&c->ev->ev, c->fd, evbits, comm_point_tcp_handle_callback, c);
+	if(event_base_set(base->eb->base, &c->ev->ev) != 0)
+	{
+		log_err("could not basetset tcphdl event");
+		parent->tcp_free = c->tcp_free;
+		free(c->ev);
+		free(c);
+		return NULL;
+	}
+	return c;
 }
 
 struct comm_point* 
@@ -210,12 +283,17 @@ comm_point_create_tcp(struct comm_base *base, int fd, int num, size_t bufsize,
 	for(i=0; i<num; i++) {
 		c->tcp_handlers[i] = comm_point_create_tcp_handler(base,
 			c, bufsize, callback, callback_arg);
+		if(!c->tcp_handlers[i]) {
+			comm_point_delete(c);
+			return NULL;
+		}
 	}
 	
 	return c;
 }
 
-void comm_point_close(struct comm_point* c)
+void 
+comm_point_close(struct comm_point* c)
 {
 	if(c->fd != -1)
 		close(c->fd);
@@ -225,8 +303,11 @@ void comm_point_close(struct comm_point* c)
 	}
 }
 
-void comm_point_delete(struct comm_point* c)
+void 
+comm_point_delete(struct comm_point* c)
 {
+	if(!c) 
+		return;
 	comm_point_close(c);
 	if(c->tcp_handlers) {
 		int i;
