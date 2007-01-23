@@ -67,11 +67,11 @@ all:	$(COMMON_OBJ) unbound unittest
 
 unbound:	$(COMMON_OBJ) $(DAEMON_OBJ)
 	$(INFO) Link $@
-	$Q$(LINK) -o $@ $^
+	$Q$(LINK) -o $@ $^ $(LIBS)
 
 unittest:	$(COMMON_OBJ) $(UNITTEST_OBJ)
 	$(INFO) Link $@
-	$Q$(LINK) -o $@ $^
+	$Q$(LINK) -o $@ $^ $(LIBS)
 
 clean:
 	rm -f *.o *.d *.lo *~ tags

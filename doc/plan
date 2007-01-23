@@ -35,7 +35,7 @@ Roughly the boxes are as follows:
 0.8 Library use - resolver validator lib (and test apps)
 0.9 Corner cases - be able to resolve in the wild. Run fuzzers.
     Run as many tests as we can think of.
-1.0 El product. Run shadow for a resolver in production for several
+0.10 Beta release. Run shadow for a resolver in production for several
     weeks.
 
 For boxes 0.5-1.0 the planning is to be revised, at the 0.5 stage external

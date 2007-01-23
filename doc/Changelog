@@ -1,3 +1,7 @@
+23  January 2007: Wouter
+	- added libevent to configure to link with.
+	- util/netevent setup work.
+
 22  January 2007: Wouter
 	- Designed header file for network communication.
 

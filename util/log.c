@@ -23,13 +23,13 @@ log_init()
 }
 
 void
-log_vmsg(const char *format, va_list args)
+log_vmsg(const char* type, const char *format, va_list args)
 {
 	char message[MAXSYSLOGMSGLEN];
 	const char* ident="unbound";
 	vsnprintf(message, sizeof(message), format, args);
-	fprintf(stderr, "[%d] %s[%d]: %s\n",
-		(int)time(NULL), ident, (int)getpid(), message);
+	fprintf(stderr, "[%d] %s[%d] %s: %s\n",
+		(int)time(NULL), ident, (int)getpid(), type, message);
 }
 
 /**
@@ -41,6 +41,19 @@ log_info(const char *format, ...)
 {
         va_list args;
 	va_start(args, format);
-	log_vmsg(format, args);
+	log_vmsg("info", format, args);
+	va_end(args);
+}
+
+/**
+ * implementation of log_err
+ * @param format: format string printf-style.
+ */
+void
+log_err(const char *format, ...)
+{
+        va_list args;
+	va_start(args, format);
+	log_vmsg("error", format, args);
 	va_end(args);
 }

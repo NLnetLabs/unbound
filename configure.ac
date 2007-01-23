@@ -188,6 +188,7 @@ AC_CHECK_TYPE(in_port_t, [], [AC_DEFINE([in_port_t], [uint16_t], [in_port_t])], 
 # check to see if libraries are needed for these functions.
 AC_CHECK_LIB(socket, socket)
 AC_CHECK_LIB(nsl, inet_pton)
+AC_CHECK_LIB(event, event_set)
 
 AC_FUNC_MALLOC
 
