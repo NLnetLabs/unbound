@@ -104,7 +104,7 @@ AC_ARG_WITH(ssl, AC_HELP_STRING([--with-ssl=pathname],
         fi
         for dir in $withval; do
             ssldir="$dir"
-            if test -f "$dir/include/openssl/ssl.h"; then
+            if test -f "$dir/include/event.h"; then
                 found_ssl="yes";
                 AC_DEFINE_UNQUOTED([HAVE_SSL], [], [Define if you have the SSL libraries installed.])
                 CPPFLAGS="$CPPFLAGS -I$ssldir/include";
@@ -123,6 +123,36 @@ AC_ARG_WITH(ssl, AC_HELP_STRING([--with-ssl=pathname],
                 ])
         fi
         AC_SUBST(HAVE_SSL)
+	AC_SUBST(RUNTIME_PATH)
+    fi
+
+# check for libevent
+AC_ARG_WITH(ssl, AC_HELP_STRING([--with-libevent=pathname],
+                                    [set path to libevent  (will check /usr/local /usr/lib /usr/pkg /usr/sfw /usr)]),[
+        ],[
+            withval="yes"
+        ])
+    if test x_$withval != x_no; then
+        AC_MSG_CHECKING(for libevent)
+        if test x_$withval = x_ -o x_$withval = x_yes; then
+            withval="/usr/local /usr/lib /usr/pkg /usr/sfw /usr"
+        fi
+        for dir in $withval; do
+            thedir="$dir"
+            if test -f "$dir/include/event.h"; then
+                found_libevent="yes";
+                CPPFLAGS="$CPPFLAGS -I$thedir/include";
+                break;
+            fi
+        done
+        if test x_$found_libevent != x_yes; then
+            AC_MSG_ERROR(Cannot find the libevent library in $withval)
+        else
+            AC_MSG_RESULT(found in $thedir)
+            LDFLAGS="$LDFLAGS -L$thedir/lib -levent";
+	    RUNTIME_PATH="$RUNTIME_PATH -R$thedir/lib"
+	    AC_CHECK_LIB(event, event_set)
+        fi
 	AC_SUBST(RUNTIME_PATH)
     fi
 
@@ -188,7 +218,6 @@ AC_CHECK_TYPE(in_port_t, [], [AC_DEFINE([in_port_t], [uint16_t], [in_port_t])], 
 # check to see if libraries are needed for these functions.
 AC_CHECK_LIB(socket, socket)
 AC_CHECK_LIB(nsl, inet_pton)
-AC_CHECK_LIB(event, event_set)
 
 AC_FUNC_MALLOC
 
