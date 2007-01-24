@@ -168,7 +168,7 @@ AC_ARG_WITH(ssl, AC_HELP_STRING([--with-ssl=pathname],
         fi
         for dir in $withval; do
             ssldir="$dir"
-            if test -f "$dir/include/event.h"; then
+            if test -f "$dir/include/openssl/ssl.h"; then
                 found_ssl="yes";
                 AC_DEFINE_UNQUOTED([HAVE_SSL], [], [Define if you have the SSL libraries installed.])
                 CPPFLAGS="$CPPFLAGS -I$ssldir/include";
@@ -180,7 +180,7 @@ AC_ARG_WITH(ssl, AC_HELP_STRING([--with-ssl=pathname],
         else
             AC_MSG_RESULT(found in $ssldir)
             HAVE_SSL=yes
-            LDFLAGS="$LDFLAGS -L$ssldir/lib -lcrypto";
+            LDFLAGS="$LDFLAGS -L$ssldir/lib";
 	    RUNTIME_PATH="$RUNTIME_PATH -R$ssldir/lib"
             AC_CHECK_LIB(crypto, HMAC_CTX_init,, [
                     AC_MSG_ERROR([OpenSSL found in $ssldir, but version 0.9.7 or higher is required])
@@ -213,7 +213,7 @@ AC_ARG_WITH(ssl, AC_HELP_STRING([--with-libevent=pathname],
             AC_MSG_ERROR(Cannot find the libevent library in $withval)
         else
             AC_MSG_RESULT(found in $thedir)
-            LDFLAGS="$LDFLAGS -L$thedir/lib -levent";
+            LDFLAGS="$LDFLAGS -L$thedir/lib";
 	    RUNTIME_PATH="$RUNTIME_PATH -R$thedir/lib"
 	    AC_CHECK_LIB(event, event_set)
         fi
@@ -293,6 +293,8 @@ AH_BOTTOM([
 #else /* !HAVE_ATTR_UNUSED */
 #  define ATTR_UNUSED(x)  x
 #endif /* !HAVE_ATTR_UNUSED */
+
+#include "ldns/ldns.h"
 
 ])
 

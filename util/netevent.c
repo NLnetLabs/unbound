@@ -141,7 +141,7 @@ comm_point_tcp_handle_callback(int ATTR_UNUSED(fd), short ATTR_UNUSED(event),
 }
 
 struct comm_point* 
-comm_point_create_udp(struct comm_base *base, int fd, struct buffer* buffer,
+comm_point_create_udp(struct comm_base *base, int fd, ldns_buffer* buffer,
 	comm_point_callback_t* callback, void* callback_arg)
 {
 	struct comm_point* c = (struct comm_point*)calloc(1,
@@ -199,7 +199,7 @@ comm_point_create_tcp_handler(struct comm_base *base,
 		return NULL;
 	}
 	c->fd = -1;
-	c->buffer = NULL /* routine to create new buffer! bufsize */;
+	c->buffer = ldns_buffer_new(bufsize);
 	c->timeout = NULL;
 	c->tcp_is_reading = 0;
 	c->tcp_byte_count = 0;

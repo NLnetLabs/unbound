@@ -28,12 +28,11 @@
 #define NET_EVENT_H
 
 #include "config.h"
-struct buffer;
+struct comm_point;
 
 /* internal event notification data storage structure. */
 struct internal_event;
 struct internal_base;
-struct comm_point;
 
 /** callback from communication point function type */
 typedef int comm_point_callback_t(struct comm_point*, void*, int);
@@ -66,7 +65,7 @@ struct comm_point {
 	struct timeval *timeout;
 
 	/** buffer pointer. Either to perthread, or own buffer or NULL */
-	struct buffer *buffer;
+	ldns_buffer *buffer;
 
 	/* -------- TCP Handler -------- */
 	/** Read/Write state for TCP */
@@ -163,7 +162,7 @@ void comm_base_dispatch(struct comm_base* b);
  * Sets timeout to NULL. Turns off TCP options.
  */
 struct comm_point* comm_point_create_udp(struct comm_base *base,
-	int fd, struct buffer* buffer, 
+	int fd, ldns_buffer* buffer, 
 	comm_point_callback_t* callback, void* callback_arg);
 
 /**
