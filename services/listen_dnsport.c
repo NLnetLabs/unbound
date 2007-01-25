@@ -78,7 +78,7 @@ verbose_print_addr(struct addrinfo *addr)
 		char buf[100];
 		if(inet_ntop(addr->ai_family, 
 			&((struct sockaddr_in*)addr->ai_addr)->sin_addr, buf, 
-			sizeof(buf)) == 0) {
+			(socklen_t)sizeof(buf)) == 0) {
 			strncpy(buf, "(null)", sizeof(buf));
 		}
 		verbose(VERB_ALGO, "creating %s %s socket %s %d", 
@@ -139,7 +139,8 @@ create_tcp_accept_sock(struct addrinfo *addr)
 		return -1;
 	}
 #ifdef SO_REUSEADDR
-	if(setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on)) < 0) {
+	if(setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &on, 
+		(socklen_t)sizeof(on)) < 0) {
 		log_err("setsockopt(.. SO_REUSEADDR ..) failed: %s",
 			strerror(errno));
 		return -1;
