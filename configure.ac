@@ -111,7 +111,7 @@ AC_PROG_LIBTOOL
 
 # Checks for header files.
 AC_HEADER_STDC
-AC_CHECK_HEADERS([getopt.h stdarg.h stdbool.h openssl/ssl.h netinet/in.h time.h sys/param.h sys/socket.h],,, [AC_INCLUDES_DEFAULT])
+AC_CHECK_HEADERS([getopt.h stdarg.h stdbool.h netinet/in.h time.h sys/param.h sys/socket.h],,, [AC_INCLUDES_DEFAULT])
 
 # check for types
 AC_CHECK_TYPE(int8_t, char)
@@ -189,6 +189,7 @@ AC_ARG_WITH(ssl, AC_HELP_STRING([--with-ssl=pathname],
         AC_SUBST(HAVE_SSL)
 	AC_SUBST(RUNTIME_PATH)
     fi
+AC_CHECK_HEADERS([openssl/ssl.h],,, [AC_INCLUDES_DEFAULT])
 
 # check for libevent
 AC_ARG_WITH(ssl, AC_HELP_STRING([--with-libevent=pathname],
@@ -219,6 +220,7 @@ AC_ARG_WITH(ssl, AC_HELP_STRING([--with-libevent=pathname],
         fi
 	AC_SUBST(RUNTIME_PATH)
     fi
+AC_CHECK_HEADERS([event.h],,, [AC_INCLUDES_DEFAULT])
 
 # check to see if libraries are needed for these functions.
 AC_CHECK_LIB(socket, socket)
@@ -240,7 +242,8 @@ AC_ARG_WITH(ldns,
 	, [ specialldnsdir="$withval"
 	CPPFLAGS="$CPPFLAGS -I$withval/include"
 	LDFLAGS="$LDFLAGS -L$withval -L$withval/lib -lldns"
-	LDNSDIR="$withval"
+	ldnsdir="$withval"
+	AC_SUBST(ldnsdir)
 ])
 
 AC_CHECK_LIB(ldns, ldns_rr_new,, [AC_MSG_ERROR([Can't find ldns library])])

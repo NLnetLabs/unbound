@@ -23,6 +23,7 @@ libdir=@libdir@
 includedir=@includedir@
 doxygen=@doxygen@
 libtool=@libtool@
+ldnsdir=@ldnsdir@
 
 CC=@CC@
 CPPFLAGS=@CPPFLAGS@ @DEFS@ -I.
@@ -85,7 +86,7 @@ realclean: clean
 lint:
 	$Qfor i in $(ALL_SRC); do \
 		echo lint $$i; \
-		$(LINT) $(LINTFLAGS) -I. -I$(srcdir) $(srcdir)/$$i ; \
+		$(LINT) $(LINTFLAGS) -I. -I$(srcdir) -I$(ldnsdir)/include $(srcdir)/$$i ; \
 		if [ $$? -ne 0 ] ; then exit 1 ; fi ; \
 	done
 

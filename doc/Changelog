@@ -1,3 +1,6 @@
+25  January 2007: Wouter
+	- fixed lint so it may work on BSD.
+
 24  January 2007: Wouter
 	- cleaned up configure.ac.
 
