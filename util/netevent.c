@@ -255,7 +255,7 @@ comm_point_create_tcp(struct comm_base *base, int fd, int num, size_t bufsize,
 	c->tcp_parent = NULL;
 	c->cur_tcp_count = 0;
 	c->max_tcp_count = num;
-	c->tcp_handlers = (struct comm_point**)calloc(num,
+	c->tcp_handlers = (struct comm_point**)calloc((size_t)num,
 		sizeof(struct comm_point*));
 	c->tcp_free = NULL;
 	c->type = comm_tcp_accept;
