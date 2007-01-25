@@ -192,7 +192,7 @@ AC_ARG_WITH(ssl, AC_HELP_STRING([--with-ssl=pathname],
 AC_CHECK_HEADERS([openssl/ssl.h],,, [AC_INCLUDES_DEFAULT])
 
 # check for libevent
-AC_ARG_WITH(ssl, AC_HELP_STRING([--with-libevent=pathname],
+AC_ARG_WITH(libevent, AC_HELP_STRING([--with-libevent=pathname],
                                     [set path to libevent  (will check /usr/local /usr/lib /usr/pkg /usr/sfw /usr)]),[
         ],[
             withval="yes"
@@ -221,6 +221,7 @@ AC_ARG_WITH(ssl, AC_HELP_STRING([--with-libevent=pathname],
 	AC_SUBST(RUNTIME_PATH)
     fi
 AC_CHECK_HEADERS([event.h],,, [AC_INCLUDES_DEFAULT])
+AC_CHECK_FUNCS([event_base_free]) # only in libevent 1.2 and later
 
 # check to see if libraries are needed for these functions.
 AC_CHECK_LIB(socket, socket)

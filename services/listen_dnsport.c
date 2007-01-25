@@ -1,5 +1,5 @@
 /*
- * daemon/unbound.c - main program for unbound DNS resolver daemon.
+ * services/listen_dnsport.c - listen on port 53 for incoming DNS queries.
  *
  * Copyright (c) 2007, NLnet Labs. All rights reserved.
  *
@@ -31,75 +31,13 @@
  * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
 /**
  * \file
  *
- * Main program to start the DNS resolver daemon.
+ * This file has functions to get queries from clients.
  */
 
-#include "config.h"
-#include "util/log.h"
-#include "util/netevent.h"
+#include "services/listen_dnsport.h"
 
-/** print usage.
- * @param argv: the argv passed to main().
- */
-static void usage()
-{
-	printf("usage: unbound [options]\n");
-	printf("\tstart unbound daemon DNS resolver.\n");
-	printf("\t-h\tthis help\n");
-	printf("\t-v\tverbose (multiple times increase verbosity)\n");
-	printf("Version %s\n", PACKAGE_VERSION);
-	printf("BSD licensed, see LICENSE file in source package.\n");
-	printf("Report bugs to %s.\n", PACKAGE_BUGREPORT);
-}
-
-extern int optind;
-extern char* optarg;
-
-/**
- * main program. Set options given commandline arguments.
- * @param argc: number of commandline arguments.
- * @param argv: array of commandline arguments.
- */
-int 
-main(int argc, char* argv[])
-{
-	struct comm_base *base = 0;
-	int c;
-
-	log_init();
-	/* parse the options */
-	while( (c=getopt(argc, argv, "hv")) != -1) {
-		switch(c) {
-		case 'v':
-			verbosity ++;
-			break;
-		case '?':
-		case 'h':
-		default:
-			usage();
-			return 1;
-		}
-	}
-	argc -= optind;
-	argv += optind;
-
-	if(argc != 0) {
-		usage();
-		return 1;
-	}
-
-	log_info("Start of %s.", PACKAGE_STRING);
-
-	base = comm_base_create();
-	if(!base)
-		fatal_exit("could not create commbase");
-
-	comm_base_delete(base);
-	return 0;
-}

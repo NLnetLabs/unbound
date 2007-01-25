@@ -1,5 +1,10 @@
 25  January 2007: Wouter
 	- fixed lint so it may work on BSD.
+	- put license into header of every file.
+	- created verbosity flag.
+	- fixed libevent configure flag.
+	- detects event_base_free() in new libevent 1.2 version.
+	- getopt in daemon. fatal_exit() and verbose() logging funcs.
 
 24  January 2007: Wouter
 	- cleaned up configure.ac.
