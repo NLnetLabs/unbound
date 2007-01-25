@@ -44,9 +44,7 @@
 #include "util/log.h"
 #include "util/netevent.h"
 
-/** print usage.
- * @param argv: the argv passed to main().
- */
+/** print usage. */
 static void usage()
 {
 	printf("usage: unbound [options]\n");
@@ -58,7 +56,9 @@ static void usage()
 	printf("Report bugs to %s.\n", PACKAGE_BUGREPORT);
 }
 
+/** getopt global, in case header files fail to declare it. */
 extern int optind;
+/** getopt global, in case header files fail to declare it. */
 extern char* optarg;
 
 /**
