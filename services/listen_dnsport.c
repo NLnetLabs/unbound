@@ -40,4 +40,296 @@
  */
 
 #include "services/listen_dnsport.h"
+#include "util/netevent.h"
+#include "util/log.h"
+
+#ifdef HAVE_SYS_TYPES_H
+#  include <sys/types.h>
+#endif
+#include <netdb.h>
+#include <errno.h>
+#include <fcntl.h>
+
+/** number of queued TCP connections for listen() */
+#define TCP_BACKLOG 5 
+/** number of simultaneous open TCP connections */
+#define TCP_COUNT 10 
+
+/** callback of comm_point_callback_t for events. */
+static int listen_udp_callback(struct comm_point* cp, void* arg, int error)
+{
+	return 0;
+}
+
+/** callback of comm_point_callback_t for events. */
+static int listen_tcp_callback(struct comm_point* cp, void* arg, int error)
+{
+	return 0;
+}
+
+/**
+ * Debug print of the getaddrinfo returned address.
+ * @param addr: the address returned.
+ */
+static void
+verbose_print_addr(struct addrinfo *addr)
+{
+	if(verbosity >= VERB_ALGO) {
+		char buf[100];
+		if(inet_ntop(addr->ai_family, 
+			&((struct sockaddr_in*)addr->ai_addr)->sin_addr, buf, 
+			sizeof(buf)) == 0) {
+			strncpy(buf, "(null)", sizeof(buf));
+		}
+		verbose(VERB_ALGO, "creating %s %s socket %s %d", 
+			addr->ai_family==AF_INET?"inet":
+			addr->ai_family==AF_INET6?"inet6":"otherfamily", 
+			addr->ai_socktype==SOCK_DGRAM?"udp":
+			addr->ai_socktype==SOCK_STREAM?"tcp":"otherprotocol",
+			buf, 
+			ntohs(((struct sockaddr_in*)addr->ai_addr)->sin_port));
+	}
+}
+
+/**
+ * Create and bind UDP socket
+ * @param addr: address info ready to make socket.
+ * @return: the socket. -1 on error.
+ */
+static int
+create_udp_sock(struct addrinfo *addr)
+{
+	int s, flag;
+	verbose_print_addr(addr);
+	if((s = socket(addr->ai_family, addr->ai_socktype, 0)) == -1) {
+		log_err("can't create socket: %s", strerror(errno));
+		return -1;
+	}
+	if(bind(s, (struct sockaddr*)addr->ai_addr, addr->ai_addrlen) != 0) {
+		log_err("can't bind socket: %s", strerror(errno));
+		return -1;
+	}
+	if((flag = fcntl(s, F_GETFL)) == -1) {
+		log_err("can't fcntl F_GETFL: %s", strerror(errno));
+		flag = 0;
+	}
+	flag |= O_NONBLOCK;
+	if(fcntl(s, F_SETFL, flag) == -1) {
+		log_err("can't fcntl F_SETFL: %s", strerror(errno));
+		return -1;
+	}
+	return s;
+}
+
+/**
+ * Create and bind TCP listening socket
+ * @param addr: address info ready to make socket.
+ * @return: the socket. -1 on error.
+ */
+static int
+create_tcp_accept_sock(struct addrinfo *addr)
+{
+	int s, flag;
+#ifdef SO_REUSEADDR
+	int on = 1;
+#endif /* SO_REUSEADDR */
+	verbose_print_addr(addr);
+	if((s = socket(addr->ai_family, addr->ai_socktype, 0)) == -1) {
+		log_err("can't create socket: %s", strerror(errno));
+		return -1;
+	}
+#ifdef SO_REUSEADDR
+	if(setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on)) < 0) {
+		log_err("setsockopt(.. SO_REUSEADDR ..) failed: %s",
+			strerror(errno));
+		return -1;
+	}
+#endif /* SO_REUSEADDR */
+	if(bind(s, (struct sockaddr*)addr->ai_addr, addr->ai_addrlen) != 0) {
+		log_err("can't bind socket: %s", strerror(errno));
+		return -1;
+	}
+	if((flag = fcntl(s, F_GETFL)) == -1) {
+		log_err("can't fcntl F_GETFL: %s", strerror(errno));
+		flag = 0;
+	}
+	flag |= O_NONBLOCK;
+	if(fcntl(s, F_SETFL, flag) == -1) {
+		log_err("can't fcntl F_SETFL: %s", strerror(errno));
+		return -1;
+	}
+	if(listen(s, TCP_BACKLOG) == -1) {
+		log_err("can't listen: %s", strerror(errno));
+		return -1;
+	}
+	return s;
+}
+
+/**
+ * Create socket from getaddrinfo results
+ */
+static int
+make_sock(int stype, const char* ifname, const char* port, 
+	struct addrinfo *hints)
+{
+	struct addrinfo *res = NULL;
+	int r, s;
+	hints->ai_socktype = stype;
+	if((r=getaddrinfo(ifname, port, hints, &res)) != 0 || !res) {
+		log_err("node %s:%s getaddrinfo: %s %s", 
+			ifname?ifname:"default", port, gai_strerror(r),
+			r==EAI_SYSTEM?strerror(errno):"");
+		return -1;
+	}
+	if(stype == SOCK_DGRAM)
+		s = create_udp_sock(res);
+	else	s = create_tcp_accept_sock(res);
+	freeaddrinfo(res);
+	return s;
+}
+
+/**
+ * Helper for listen_create. Creates one interface (or NULL for default).
+ * @param ifname: The interface ip address.
+ * @param front: The the listening info.
+ * @param base: Event base.
+ * @param port: Port number to use (as string).
+ * @param do_udp: if udp should be used.
+ * @param do_tcp: if udp should be used.
+ * @param hints: for getaddrinfo. family and flags have to be set by caller.
+ * @param bufsize: TCP buffer size.
+ * @return: returns false on error.
+ */
+static int
+listen_create_if(const char* ifname, struct listen_dnsport* front, 
+	struct comm_base* base, const char* port, int do_udp, int do_tcp, 
+	struct addrinfo *hints, size_t bufsize)
+{
+	struct comm_point *cp_udp = NULL, *cp_tcp = NULL;
+	struct listen_list *el_udp, *el_tcp;
+	int s;
+	if(!do_udp && !do_tcp)
+		return 0;
+	if(do_udp) {
+		if((s = make_sock(SOCK_DGRAM, ifname, port, hints)) == -1)
+			return 0;
+		cp_udp = comm_point_create_udp(base, s, front->udp_buff, 
+			listen_udp_callback, front);
+		if(!cp_udp) {
+			log_err("can't create commpoint");	
+			close(s);
+			return 0;
+		}
+	}
+	if(do_tcp) {
+		if((s = make_sock(SOCK_STREAM, ifname, port, hints)) == -1) {
+			comm_point_delete(cp_udp);
+			return 0;
+		}
+		cp_tcp = comm_point_create_tcp(base, s, TCP_COUNT, bufsize, 
+			listen_tcp_callback, front);
+		if(!cp_tcp) {
+			log_err("can't create commpoint");	
+			comm_point_delete(cp_udp);
+			return 0;
+		}
+	}
+	/* add commpoints to the listen structure */
+	el_udp = (struct listen_list*)malloc(sizeof(struct listen_list));
+	if(!el_udp) {
+		log_err("out of memory");
+		comm_point_delete(cp_udp);
+		comm_point_delete(cp_tcp);
+		return 0;
+	}
+	el_tcp = (struct listen_list*)malloc(sizeof(struct listen_list));
+	if(!el_tcp) {
+		log_err("out of memory");
+		free(el_udp);
+		comm_point_delete(cp_udp);
+		comm_point_delete(cp_tcp);
+		return 0;
+	}
+	el_udp->com = cp_udp;
+	el_udp->next = front->cps;
+	front->cps = el_udp;
+	comm_point_set_cb_arg(el_udp->com, el_udp);
+	el_tcp->com = cp_tcp;
+	el_tcp->next = front->cps;
+	front->cps = el_tcp;
+	comm_point_set_cb_arg(el_tcp->com, el_tcp);
+	return 1;
+}
+
+struct listen_dnsport* 
+listen_create(struct comm_base* base, int num_ifs, const char* ifs[], 
+	const char* port, int do_ip4, int do_ip6, int do_udp, int do_tcp,
+	size_t bufsize)
+{
+	struct addrinfo hints;
+	int i;
+	struct listen_dnsport* front = (struct listen_dnsport*)
+		malloc(sizeof(struct listen_dnsport));
+	if(!front)
+		return NULL;
+	front->cps = NULL;
+	front->udp_buff = ldns_buffer_new(bufsize);
+	if(!front->udp_buff) {
+		free(front);
+		return NULL;
+	}
+	
+	/* getaddrinfo */
+	memset(&hints, 0, sizeof(hints));
+
+	hints.ai_flags = AI_PASSIVE;
+	/* no name lookups on our listening ports */
+	if(num_ifs > 0)
+		hints.ai_flags |= AI_NUMERICHOST;
+
+	hints.ai_family = AF_UNSPEC;
+	if(!do_ip4 && !do_ip6) {
+		listen_delete(front);
+		return NULL;
+	} else if(do_ip4 && do_ip6)
+		hints.ai_family = AF_UNSPEC;
+	else if(do_ip4)
+		hints.ai_family = AF_INET;
+	else if(do_ip6) {
+		hints.ai_family = AF_INET6;
+	}
+
+	if(num_ifs == 0) {
+		if(!listen_create_if(NULL, front, base, port, 
+			do_udp, do_tcp, &hints, bufsize)) {
+			listen_delete(front);
+			return NULL;
+		}
+	} else for(i = 0; i<num_ifs; i++) {
+		if(!listen_create_if(ifs[i], front, base, port, 
+			do_udp, do_tcp, &hints, bufsize)) {
+			listen_delete(front);
+			return NULL;
+		}
+	}
+
+	return front;
+}
+
+void 
+listen_delete(struct listen_dnsport* front)
+{
+	struct listen_list *p, *pn;
+	if(!front) 
+		return;
+	p = front->cps;
+	while(p) {
+		pn = p->next;
+		comm_point_delete(p->com);
+		free(p);
+		p = pn;
+	}
+	ldns_buffer_free(front->udp_buff);
+	free(front);
+}
 

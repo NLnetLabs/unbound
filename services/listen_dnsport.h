@@ -44,6 +44,7 @@
 
 #include "config.h"
 struct comm_base;
+struct listen_list;
 
 /**
  * Listening for queries structure.
@@ -52,6 +53,23 @@ struct comm_base;
 struct listen_dnsport {
 	/** Base for select calls */
 	struct comm_base* base;
+
+	/** buffer shared by UDP connections, since there is only one
+	    datagram at any time. */
+	ldns_buffer* udp_buff;
+
+	/** list of comm points used to get incoming events */
+	struct listen_list *cps;
+};
+
+/**
+ * Single linked list to store event points.
+ */
+struct listen_list {
+	/** next in list */
+	struct listen_list *next;
+	/** event info */
+	struct comm_point *com;
 };
 
 /**
@@ -67,11 +85,13 @@ struct listen_dnsport {
  * @param do_ip6: listen to ip6 queries.
  * @param do_udp: listen to udp queries.
  * @param do_tcp: listen to tcp queries.
- * @return: the malloced listening structure, ready for use.
+ * @param bufsize: size of datagram buffer.
+ * @return: the malloced listening structure, ready for use. NULL on error.
  */
 struct listen_dnsport* listen_create(struct comm_base* base,
-	int num_ifs, const char* ifs[], int port,
-	int do_ip4, int do_ip6, int do_udp, int do_tcp);
+	int num_ifs, const char* ifs[], const char* port,
+	int do_ip4, int do_ip6, int do_udp, int do_tcp,
+	size_t bufsize);
 
 /**
  * delete the listening structure

@@ -325,12 +325,13 @@ comm_point_create_tcp(struct comm_base *base, int fd, int num, size_t bufsize,
 void 
 comm_point_close(struct comm_point* c)
 {
-	if(c->fd != -1)
-		close(c->fd);
-	c->fd = -1;
 	if(event_del(&c->ev->ev) != 0) {
 		log_err("could not event_del on close");
 	}
+	/* close fd after removing from event lists, or epoll/etc messes up */
+	if(c->fd != -1)
+		close(c->fd);
+	c->fd = -1;
 }
 
 void 
@@ -345,7 +346,15 @@ comm_point_delete(struct comm_point* c)
 			comm_point_delete(c->tcp_handlers[i]);
 		free(c->tcp_handlers);
 	}
+	if(c->type == comm_tcp)
+		ldns_buffer_free(c->buffer);
 	free(c->ev);
 	free(c);
 }
 
+void 
+comm_point_set_cb_arg(struct comm_point* c, void *arg)
+{
+	log_assert(c);
+	c->cb_arg = arg;
+}

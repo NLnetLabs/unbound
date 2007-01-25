@@ -225,4 +225,11 @@ void comm_point_close(struct comm_point* c);
  */
 void comm_point_delete(struct comm_point* c);
 
+/**
+ * Reset the callback argument for a comm point.
+ * @param c: the comm point to change.
+ * @param arg: the new callback user argument.
+ */
+void comm_point_set_cb_arg(struct comm_point* c, void *arg);
+
 #endif /* NET_EVENT_H */

@@ -43,14 +43,21 @@
 #include "config.h"
 #include "util/log.h"
 #include "util/netevent.h"
+#include "services/listen_dnsport.h"
+
+/** default port to listen for queries, passed to getaddrinfo */
+#define UNBOUND_DNS_PORT "53"
+/** buffer size for network connections */
+#define BUFSZ 65552
 
 /** print usage. */
 static void usage()
 {
 	printf("usage: unbound [options]\n");
 	printf("\tstart unbound daemon DNS resolver.\n");
-	printf("\t-h\tthis help\n");
-	printf("\t-v\tverbose (multiple times increase verbosity)\n");
+	printf("-h	this help\n");
+	printf("-p port	the port to listen on\n");
+	printf("-v	verbose (multiple times increase verbosity)\n");
 	printf("Version %s\n", PACKAGE_VERSION);
 	printf("BSD licensed, see LICENSE file in source package.\n");
 	printf("Report bugs to %s.\n", PACKAGE_BUGREPORT);
@@ -70,12 +77,21 @@ int
 main(int argc, char* argv[])
 {
 	struct comm_base *base = 0;
+	struct listen_dnsport* front = 0;
+	int do_ip4=1, do_ip6=1, do_udp=1, do_tcp=1;
+	const char* port = UNBOUND_DNS_PORT;
 	int c;
 
 	log_init();
 	/* parse the options */
-	while( (c=getopt(argc, argv, "hv")) != -1) {
+	while( (c=getopt(argc, argv, "hvp:")) != -1) {
 		switch(c) {
+		case 'p':
+			if(!atoi(optarg))
+				fatal_exit("invalid port '%s'", optarg);
+			port = optarg;
+			verbose(VERB_ALGO, "using port: %s", port);
+			break;
 		case 'v':
 			verbosity ++;
 			break;
@@ -94,12 +110,20 @@ main(int argc, char* argv[])
 		return 1;
 	}
 
-	log_info("Start of %s.", PACKAGE_STRING);
-
+	/* setup */
 	base = comm_base_create();
 	if(!base)
-		fatal_exit("could not create commbase");
+		fatal_exit("could not create event handling base");
+	front = listen_create(base, 0, NULL, port, do_ip4, do_ip6, 
+		do_udp, do_tcp, BUFSZ);
+	if(!front)
+		fatal_exit("could not create listening sockets");
 
+	log_info("Start of %s.", PACKAGE_STRING);
+
+	/* cleanup */
+	verbose(VERB_ALGO, "Exit cleanup.");
+	listen_delete(front);
 	comm_base_delete(base);
 	return 0;
 }

@@ -111,7 +111,7 @@ AC_PROG_LIBTOOL
 
 # Checks for header files.
 AC_HEADER_STDC
-AC_CHECK_HEADERS([getopt.h stdarg.h stdbool.h netinet/in.h time.h sys/param.h sys/socket.h],,, [AC_INCLUDES_DEFAULT])
+AC_CHECK_HEADERS([getopt.h stdarg.h stdbool.h netinet/in.h time.h sys/param.h sys/socket.h arpa/inet.h],,, [AC_INCLUDES_DEFAULT])
 
 # check for types
 AC_CHECK_TYPE(int8_t, char)

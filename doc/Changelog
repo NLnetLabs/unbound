@@ -5,6 +5,8 @@
 	- fixed libevent configure flag.
 	- detects event_base_free() in new libevent 1.2 version.
 	- getopt in daemon. fatal_exit() and verbose() logging funcs.
+	- created log_assert, that throws assertions to the logfile.
+	- listen_dnsport service. Binds ports.
 
 24  January 2007: Wouter
 	- cleaned up configure.ac.
