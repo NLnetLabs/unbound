@@ -120,6 +120,8 @@ main(int argc, char* argv[])
 		comm_base_delete(base);
 		fatal_exit("could not create listening sockets");
 	}
+	
+	/* drop user priviliges and chroot if needed */
 
 	log_info("Start of %s.", PACKAGE_STRING);
 
