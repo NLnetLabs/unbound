@@ -1,3 +1,6 @@
+26  January 2007: Wouter
+	- fixed memleak.
+
 25  January 2007: Wouter
 	- fixed lint so it may work on BSD.
 	- put license into header of every file.

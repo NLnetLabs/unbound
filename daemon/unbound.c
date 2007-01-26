@@ -116,8 +116,10 @@ main(int argc, char* argv[])
 		fatal_exit("could not create event handling base");
 	front = listen_create(base, 0, NULL, port, do_ip4, do_ip6, 
 		do_udp, do_tcp, BUFSZ);
-	if(!front)
+	if(!front) {
+		comm_base_delete(base);
 		fatal_exit("could not create listening sockets");
+	}
 
 	log_info("Start of %s.", PACKAGE_STRING);
 
