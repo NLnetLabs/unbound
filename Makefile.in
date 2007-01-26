@@ -48,11 +48,13 @@ INSTALL=$(srcdir)/install-sh
 
 COMMON_SRC=$(wildcard services/*.c util/*.c)
 COMMON_OBJ=$(addprefix $(BUILD),$(COMMON_SRC:.c=.o) $(LIBOBJS))
-UNITTEST_SRC=$(wildcard testcode/*.c)
+UNITTEST_SRC=testcode/unitmain.c
 UNITTEST_OBJ=$(addprefix $(BUILD),$(UNITTEST_SRC:.c=.o))
 DAEMON_SRC=$(wildcard daemon/*.c)
 DAEMON_OBJ=$(addprefix $(BUILD),$(DAEMON_SRC:.c=.o))
-ALL_SRC=$(COMMON_SRC) $(UNITTEST_SRC) $(DAEMON_SRC)
+TESTBOUND_SRC=testcode/testbound.c
+TESTBOUND_OBJ=$(addprefix $(BUILD),$(TESTBOUND_SRC:.c=.o))
+ALL_SRC=$(COMMON_SRC) $(UNITTEST_SRC) $(DAEMON_SRC) $(TESTBOUND_SRC)
 ALL_OBJ=$(addprefix $(BUILD),$(ALL_SRC:.c=.o) $(LIBOBJS))
 
 COMPILE=$(LIBTOOL) --tag=CC --mode=compile $(CC) $(CPPFLAGS) $(CFLAGS)
@@ -66,13 +68,17 @@ $(BUILD)%.o:    $(srcdir)/%.c
 
 .PHONY:	clean realclean doc lint all 
 
-all:	$(COMMON_OBJ) unbound unittest
+all:	$(COMMON_OBJ) unbound unittest testbound
 
 unbound:	$(COMMON_OBJ) $(DAEMON_OBJ)
 	$(INFO) Link $@
 	$Q$(LINK) -o $@ $^ $(LIBS)
 
 unittest:	$(COMMON_OBJ) $(UNITTEST_OBJ)
+	$(INFO) Link $@
+	$Q$(LINK) -o $@ $^ $(LIBS)
+
+testbound:	$(COMMON_OBJ) $(TESTBOUND_OBJ)
 	$(INFO) Link $@
 	$Q$(LINK) -o $@ $^ $(LIBS)
 
@@ -92,8 +98,8 @@ lint:
 		if [ $$? -ne 0 ] ; then exit 1 ; fi ; \
 	done
 
-tags:	$(srcdir)/*.c ldns/*.[ch]
-	ctags  -f $(srcdir)/tags $(srcdir)/*.[ch] ldns/*.[ch]
+tags:	$(srcdir)/*.[ch] $(srcdir)/*/*.[ch]
+	ctags  -f $(srcdir)/tags $(srcdir)/*.[ch] $(srcdir)/*/*.[ch]
 
 doc:
 ifdef doxygen

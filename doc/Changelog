@@ -1,6 +1,8 @@
 26  January 2007: Wouter
 	- fixed memleak.
 	- make lint works on BSD and Linux (openssl defines).
+	- make tags works.
+	- testbound program start.
 
 25  January 2007: Wouter
 	- fixed lint so it may work on BSD.

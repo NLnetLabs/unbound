@@ -1,11 +1,17 @@
+# generated automatically by aclocal 1.9.6 -*- Autoconf -*-
+
+# Copyright (C) 1996, 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004,
+# 2005  Free Software Foundation, Inc.
+# This file is free software; the Free Software Foundation
+# gives unlimited permission to copy and/or distribute it,
+# with or without modifications, as long as this notice is preserved.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY, to the extent permitted by law; without
+# even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+# PARTICULAR PURPOSE.
+
 # libtool.m4 - Configure libtool for the host system. -*-Autoconf-*-
-## Copyright 1996, 1997, 1998, 1999, 2000, 2001, 2003, 2004, 2005
-## Free Software Foundation, Inc.
-## Originally by Gordon Matzigkeit <gord@gnu.ai.mit.edu>, 1996
-##
-## This file is free software; the Free Software Foundation gives
-## unlimited permission to copy and/or distribute it, with or without
-## modifications, as long as this notice is preserved.
 
 # serial 48 AC_PROG_LIBTOOL
 
@@ -2688,10 +2694,6 @@ _LT_AC_SYS_COMPILER
 _LT_COMPILER_BOILERPLATE
 _LT_LINKER_BOILERPLATE
 
-## CAVEAT EMPTOR:
-## There is no encapsulation within the following macros, do not change
-## the running order or otherwise move them around unless you know exactly
-## what you are doing...
 AC_LIBTOOL_PROG_COMPILER_NO_RTTI($1)
 AC_LIBTOOL_PROG_COMPILER_PIC($1)
 AC_LIBTOOL_PROG_CC_C_O($1)
@@ -3720,10 +3722,6 @@ test "$_LT_AC_TAGVAR(ld_shlibs, $1)" = no && can_build_shared=no
 _LT_AC_TAGVAR(GCC, $1)="$GXX"
 _LT_AC_TAGVAR(LD, $1)="$LD"
 
-## CAVEAT EMPTOR:
-## There is no encapsulation within the following macros, do not change
-## the running order or otherwise move them around unless you know exactly
-## what you are doing...
 AC_LIBTOOL_POSTDEP_PREDEP($1)
 AC_LIBTOOL_PROG_COMPILER_PIC($1)
 AC_LIBTOOL_PROG_CC_C_O($1)
@@ -4050,10 +4048,6 @@ _LT_AC_TAGVAR(archive_cmds_need_lc, $1)=no
 
 _LT_AC_TAGVAR(old_archive_cmds, $1)=$old_archive_cmds
 
-## CAVEAT EMPTOR:
-## There is no encapsulation within the following macros, do not change
-## the running order or otherwise move them around unless you know exactly
-## what you are doing...
 AC_LIBTOOL_PROG_COMPILER_NO_RTTI($1)
 AC_LIBTOOL_PROG_COMPILER_PIC($1)
 AC_LIBTOOL_PROG_CC_C_O($1)
@@ -6350,12 +6344,10 @@ AC_DEFUN([LT_AC_PROG_RC],
 [AC_CHECK_TOOL(RC, windres, no)
 ])
 
-############################################################
 # NOTE: This macro has been submitted for inclusion into   #
 #  GNU Autoconf as AC_PROG_SED.  When it is available in   #
 #  a released version of Autoconf we should remove this    #
 #  macro and use it instead.                               #
-############################################################
 # LT_AC_PROG_SED
 # --------------
 # Check for a fully-functional sed program, that truncates
@@ -6412,3 +6404,4 @@ done
 SED=$lt_cv_path_SED
 AC_MSG_RESULT([$SED])
 ])
+
