@@ -1,10 +1,13 @@
-26  January 2007: Wouter
+29 January 2007: Wouter
+	- unbound.8 a short manpage.
+
+26 January 2007: Wouter
 	- fixed memleak.
 	- make lint works on BSD and Linux (openssl defines).
 	- make tags works.
 	- testbound program start.
 
-25  January 2007: Wouter
+25 January 2007: Wouter
 	- fixed lint so it may work on BSD.
 	- put license into header of every file.
 	- created verbosity flag.
