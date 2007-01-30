@@ -39,6 +39,7 @@
  */
 
 #include "config.h"
+#include "ldns-testpkts.h"
 
 /** 
  * include the main program from the unbound daemon.
@@ -55,6 +56,7 @@ testbound_usage()
 	printf("usage: testbound [options]\n");
 	printf("\ttest the unbound daemon.\n");
 	printf("-h      this help\n");
+	printf("-p file	playback text file\n");
 	printf("-o str  unbound commandline options separated by spaces.\n");
 	printf("Version %s\n", PACKAGE_VERSION);
 	printf("BSD licensed, see LICENSE file in source package.\n");
@@ -124,15 +126,20 @@ int main(int argc, char* argv[])
 	int c, res;
 	int pass_argc = 0;
 	char* pass_argv[MAXARG];
+	char* playback_file = NULL;
 	int init_optind = optind;
 	char* init_optarg = optarg;
+	struct entry* matched_answers = NULL;
 
 	printf("Start of %s testbound program.\n", PACKAGE_STRING);
 	/* determine commandline options for the daemon */
 	pass_argc = 1;
 	pass_argv[0] = "unbound";
-	while( (c=getopt(argc, argv, "ho:")) != -1) {
+	while( (c=getopt(argc, argv, "ho:p:")) != -1) {
 		switch(c) {
+		case 'p':
+			playback_file = optarg;
+			break;
 		case 'o':
 			add_opts(optarg, &pass_argc, pass_argv);
 			break;
@@ -151,6 +158,9 @@ int main(int argc, char* argv[])
 	}
 
 	/* setup test environment */
+	if(playback_file)
+		matched_answers = read_datafile(playback_file);
+	/* init fake event backend */
 
 	pass_argv[pass_argc] = NULL;
 	echo_cmdline(pass_argc, pass_argv);
