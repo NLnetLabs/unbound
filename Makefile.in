@@ -52,7 +52,7 @@ UNITTEST_SRC=testcode/unitmain.c
 UNITTEST_OBJ=$(addprefix $(BUILD),$(UNITTEST_SRC:.c=.o))
 DAEMON_SRC=$(wildcard daemon/*.c)
 DAEMON_OBJ=$(addprefix $(BUILD),$(DAEMON_SRC:.c=.o))
-TESTBOUND_SRC=testcode/testbound.c
+TESTBOUND_SRC=testcode/testbound.c testcode/ldns-testpkts.c
 TESTBOUND_OBJ=$(addprefix $(BUILD),$(TESTBOUND_SRC:.c=.o))
 ALL_SRC=$(COMMON_SRC) $(UNITTEST_SRC) $(DAEMON_SRC) $(TESTBOUND_SRC)
 ALL_OBJ=$(addprefix $(BUILD),$(ALL_SRC:.c=.o) $(LIBOBJS))
@@ -81,6 +81,11 @@ unittest:	$(COMMON_OBJ) $(UNITTEST_OBJ)
 testbound:	$(COMMON_OBJ) $(TESTBOUND_OBJ)
 	$(INFO) Link $@
 	$Q$(LINK) -o $@ $^ $(LIBS)
+
+testcode/ldns-testpkts.c:	$(ldnsdir)/examples/ldns-testpkts.c \
+			$(ldnsdir)/examples/ldns-testpkts.h
+	cp $(ldnsdir)/examples/ldns-testpkts.c testcode/ldns-testpkts.c
+	cp $(ldnsdir)/examples/ldns-testpkts.h testcode/ldns-testpkts.h
 
 clean:
 	rm -f *.o *.d *.lo *~ tags
