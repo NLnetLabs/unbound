@@ -265,7 +265,7 @@ listen_create_if(const char* ifname, struct listen_dnsport* front,
 struct listen_dnsport* 
 listen_create(struct comm_base* base, int num_ifs, const char* ifs[], 
 	const char* port, int do_ip4, int do_ip6, int do_udp, int do_tcp,
-	size_t bufsize)
+	size_t bufsize, listen_dnsport_cb_t* cb, void *cb_arg)
 {
 	struct addrinfo hints;
 	int i;
@@ -274,6 +274,8 @@ listen_create(struct comm_base* base, int num_ifs, const char* ifs[],
 	if(!front)
 		return NULL;
 	front->cps = NULL;
+	front->cb = cb;
+	front->cb_arg = cb_arg;
 	front->udp_buff = ldns_buffer_new(bufsize);
 	if(!front->udp_buff) {
 		free(front);

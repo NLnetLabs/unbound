@@ -52,7 +52,7 @@ UNITTEST_SRC=testcode/unitmain.c
 UNITTEST_OBJ=$(addprefix $(BUILD),$(UNITTEST_SRC:.c=.o))
 DAEMON_SRC=$(wildcard daemon/*.c)
 DAEMON_OBJ=$(addprefix $(BUILD),$(DAEMON_SRC:.c=.o))
-TESTBOUND_SRC=testcode/testbound.c testcode/ldns-testpkts.c
+TESTBOUND_SRC=testcode/testbound.c testcode/ldns-testpkts.c daemon/worker.c
 TESTBOUND_OBJ=$(addprefix $(BUILD),$(TESTBOUND_SRC:.c=.o))
 ALL_SRC=$(COMMON_SRC) $(UNITTEST_SRC) $(DAEMON_SRC) $(TESTBOUND_SRC)
 ALL_OBJ=$(addprefix $(BUILD),$(ALL_SRC:.c=.o) $(LIBOBJS))

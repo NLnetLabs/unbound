@@ -42,8 +42,7 @@
 
 #include "config.h"
 #include "util/log.h"
-#include "util/netevent.h"
-#include "services/listen_dnsport.h"
+#include "daemon/worker.h"
 
 /** default port to listen for queries, passed to getaddrinfo */
 #define UNBOUND_DNS_PORT "53"
@@ -76,8 +75,7 @@ extern char* optarg;
 int 
 main(int argc, char* argv[])
 {
-	struct comm_base *base = 0;
-	struct listen_dnsport* front = 0;
+	struct worker* worker = NULL;
 	int do_ip4=1, do_ip6=1, do_udp=1, do_tcp=1;
 	const char* port = UNBOUND_DNS_PORT;
 	int c;
@@ -111,23 +109,17 @@ main(int argc, char* argv[])
 	}
 
 	/* setup */
-	base = comm_base_create();
-	if(!base)
-		fatal_exit("could not create event handling base");
-	front = listen_create(base, 0, NULL, port, do_ip4, do_ip6, 
-		do_udp, do_tcp, BUFSZ);
-	if(!front) {
-		comm_base_delete(base);
-		fatal_exit("could not create listening sockets");
+	worker = worker_init(port, do_ip4, do_ip6, do_udp, do_tcp, BUFSZ);
+	if(!worker) {
+		fatal_exit("could not initialize");
 	}
 	
 	/* drop user priviliges and chroot if needed */
-
 	log_info("Start of %s.", PACKAGE_STRING);
+	worker_work(worker);
 
 	/* cleanup */
 	verbose(VERB_ALGO, "Exit cleanup.");
-	listen_delete(front);
-	comm_base_delete(base);
+	worker_delete(worker);
 	return 0;
 }

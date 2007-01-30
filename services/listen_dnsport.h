@@ -46,6 +46,9 @@
 struct comm_base;
 struct listen_list;
 
+/** The callback type for a incoming request packet */
+typedef int listen_dnsport_cb_t(ldns_buffer* packet, void* arg);
+
 /**
  * Listening for queries structure.
  * Contains list of query-listen sockets.
@@ -60,6 +63,12 @@ struct listen_dnsport {
 
 	/** list of comm points used to get incoming events */
 	struct listen_list *cps;
+	
+	/** callback function that accepts incoming message. */
+	listen_dnsport_cb_t* cb;
+
+	/** callback argument */
+	void *cb_arg;
 };
 
 /**
@@ -86,12 +95,14 @@ struct listen_list {
  * @param do_udp: listen to udp queries.
  * @param do_tcp: listen to tcp queries.
  * @param bufsize: size of datagram buffer.
+ * @param cb: callback function when a request arrives.
+ * @param cb_arg: user data argument for callback function.
  * @return: the malloced listening structure, ready for use. NULL on error.
  */
 struct listen_dnsport* listen_create(struct comm_base* base,
 	int num_ifs, const char* ifs[], const char* port,
 	int do_ip4, int do_ip6, int do_udp, int do_tcp,
-	size_t bufsize);
+	size_t bufsize, listen_dnsport_cb_t* cb, void *cb_arg);
 
 /**
  * delete the listening structure
