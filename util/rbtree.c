@@ -36,16 +36,21 @@
  *
  */
 
-#include <config.h>
+/**
+ * \file
+ * Implementation of a redblack tree.
+ */
 
-#include <assert.h>
-#include <stdlib.h>
+#include "config.h"
+#include "log.h"
+#include "util/rbtree.h"
 
-#include "rbtree.h"
-
+/** Node colour black */
 #define	BLACK	0
+/** Node colour red */
 #define	RED	1
 
+/** the NULL node, global alloc */
 rbnode_t	rbtree_null_node = {
 	RBTREE_NULL,		/* Parent.  */
 	RBTREE_NULL,		/* Left.  */
@@ -54,9 +59,13 @@ rbnode_t	rbtree_null_node = {
 	BLACK			/* Color.  */
 };
 
+/** rotate subtree left (to preserve redblack property). */
 static void rbtree_rotate_left(rbtree_t *rbtree, rbnode_t *node);
+/** rotate subtree right (to preserve redblack property). */
 static void rbtree_rotate_right(rbtree_t *rbtree, rbnode_t *node);
+/** Fixup node colours when insert happened */
 static void rbtree_insert_fixup(rbtree_t *rbtree, rbnode_t *node);
+/** Fixup node colours when delete happened */
 static void rbtree_delete_fixup(rbtree_t* rbtree, rbnode_t* child, rbnode_t* child_parent);
 
 /*
@@ -66,12 +75,12 @@ static void rbtree_delete_fixup(rbtree_t* rbtree, rbnode_t* child, rbnode_t* chi
  *
  */
 rbtree_t *
-rbtree_create (region_type *region, int (*cmpf)(const void *, const void *))
+rbtree_create (int (*cmpf)(const void *, const void *))
 {
 	rbtree_t *rbtree;
 
 	/* Allocate memory for it */
-	rbtree = (rbtree_t *) region_alloc(region, sizeof(rbtree_t));
+	rbtree = (rbtree_t *) malloc(sizeof(rbtree_t));
 	if (!rbtree) {
 		return NULL;
 	}
@@ -79,7 +88,6 @@ rbtree_create (region_type *region, int (*cmpf)(const void *, const void *))
 	/* Initialize it */
 	rbtree->root = RBTREE_NULL;
 	rbtree->count = 0;
-	rbtree->region = region;
 	rbtree->cmp = cmpf;
 
 	return rbtree;
@@ -273,34 +281,37 @@ rbtree_search (rbtree_t *rbtree, const void *key)
 	}
 }
 
-/* helpers for delete */
+/** helpers for delete: swap node colours */
 static void swap_int8(uint8_t* x, uint8_t* y) 
 { 
 	uint8_t t = *x; *x = *y; *y = t; 
 }
 
+/** helpers for delete: swap node pointers */
 static void swap_np(rbnode_t** x, rbnode_t** y) 
 {
 	rbnode_t* t = *x; *x = *y; *y = t; 
 }
 
+/** Update parent pointers of child trees of 'parent'. */
 static void change_parent_ptr(rbtree_t* rbtree, rbnode_t* parent, rbnode_t* old, rbnode_t* new)
 {
 	if(parent == RBTREE_NULL)
 	{
-		assert(rbtree->root == old);
+		log_assert(rbtree->root == old);
 		if(rbtree->root == old) rbtree->root = new;
 		return;
 	}
-	assert(parent->left == old || parent->right == old
+	log_assert(parent->left == old || parent->right == old
 		|| parent->left == new || parent->right == new);
 	if(parent->left == old) parent->left = new;
 	if(parent->right == old) parent->right = new;
 }
+/** Update parent pointer of a node 'child'. */
 static void change_child_ptr(rbnode_t* child, rbnode_t* old, rbnode_t* new)
 {
 	if(child == RBTREE_NULL) return;
-	assert(child->parent == old || child->parent == new);
+	log_assert(child->parent == old || child->parent == new);
 	if(child->parent == old) child->parent = new;
 }
 
@@ -354,7 +365,7 @@ rbtree_delete(rbtree_t *rbtree, const void *key)
 
 		/* now delete to_delete (which is at the location where the smright previously was) */
 	}
-	assert(to_delete->left == RBTREE_NULL || to_delete->right == RBTREE_NULL);
+	log_assert(to_delete->left == RBTREE_NULL || to_delete->right == RBTREE_NULL);
 
 	if(to_delete->left != RBTREE_NULL) child = to_delete->left;
 	else child = to_delete->right;
@@ -439,7 +450,7 @@ static void rbtree_delete_fixup(rbtree_t* rbtree, rbnode_t* child, rbnode_t* chi
 		child_parent->color = BLACK;
 		return;
 	}
-	assert(sibling != RBTREE_NULL);
+	log_assert(sibling != RBTREE_NULL);
 
 	/* get a new sibling, by rotating at sibling. See which child
 	   of sibling is red */
@@ -473,13 +484,13 @@ static void rbtree_delete_fixup(rbtree_t* rbtree, rbnode_t* child, rbnode_t* chi
 	child_parent->color = BLACK;
 	if(child_parent->right == child)
 	{
-		assert(sibling->left->color == RED);
+		log_assert(sibling->left->color == RED);
 		sibling->left->color = BLACK;
 		rbtree_rotate_right(rbtree, child_parent);
 	}
 	else
 	{
-		assert(sibling->right->color == RED);
+		log_assert(sibling->right->color == RED);
 		sibling->right->color = BLACK;
 		rbtree_rotate_left(rbtree, child_parent);
 	}
@@ -491,7 +502,7 @@ rbtree_find_less_equal(rbtree_t *rbtree, const void *key, rbnode_t **result)
 	int r;
 	rbnode_t *node;
 
-	assert(result);
+	log_assert(result);
 	
 	/* We start at root... */
 	node = rbtree->root;
