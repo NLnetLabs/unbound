@@ -1,3 +1,6 @@
+31 January 2007: Wouter
+	- Added makedist.sh script to make release tarball.
+
 30 January 2007: Wouter
 	- links in example/ldns-testpkts.c and .h for premade packet support.
 	- added callback argument to listen_dnsport and daemon/worker.
