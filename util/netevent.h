@@ -55,13 +55,15 @@
 
 #include "config.h"
 struct comm_point;
+struct comm_reply;
 
 /* internal event notification data storage structure. */
 struct internal_event;
 struct internal_base;
 
 /** callback from communication point function type */
-typedef int comm_point_callback_t(struct comm_point*, void*, int);
+typedef int comm_point_callback_t(struct comm_point*, void*, int, 
+	struct comm_reply*);
 
 /**
  * A communication point dispatcher. Thread specific.
@@ -142,10 +144,15 @@ struct comm_point {
 	    nonzero. If nonzero, it is an errno value.
 	    If the connection is closed (by remote end) then the
 	    callback is called with error set to -1.
+	    If a timeout happens on the connection, the error is set to -2.
+	    The reply_info can be copied if the reply needs to happen at a
+	    later time. It consists of a struct with commpoint and address.
+	    It can be passed to a msg send routine some time later.
+	    Note the reply information is temporary and must be copied.
 
 	    declare as: 
-	    int my_callback(struct comm_point* c, void* my_arg, 
-	        int timeout, int error);
+	    int my_callback(struct comm_point* c, void* my_arg, int error,
+		struct comm_reply *reply_info);
 
 	    if the routine returns 0, nothing is done.
 	    Notzero, the buffer will be sent back to client.
@@ -155,6 +162,18 @@ struct comm_point {
 	comm_point_callback_t* callback;
 	/** argument to pass to callback. */
 	void *cb_arg;
+};
+
+/**
+ * Reply information for a communication point.
+ */
+struct comm_reply {
+	/** the comm_point with fd to send reply on to. */
+	struct comm_point *c;
+	/** the address (for UDP based communication) */
+	struct sockaddr_storage addr;
+	/** length of address */
+	socklen_t addrlen;
 };
 
 /**
@@ -231,5 +250,11 @@ void comm_point_delete(struct comm_point* c);
  * @param arg: the new callback user argument.
  */
 void comm_point_set_cb_arg(struct comm_point* c, void *arg);
+
+/**
+ * Send reply. Put message into commpoint buffer.
+ * @param repinfo: The reply info copied from a commpoint callback call.
+ */
+void comm_point_send_reply(struct comm_reply *repinfo);
 
 #endif /* NET_EVENT_H */

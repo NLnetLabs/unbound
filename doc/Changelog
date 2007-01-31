@@ -1,5 +1,9 @@
 31 January 2007: Wouter
 	- Added makedist.sh script to make release tarball.
+	- Removed listen callback layer, did not add anything.
+	- Added UDP recv to netevent, worker callback for udp.
+	- netevent communication reply storage structure.
+	- minimal query header sanity checking for worker.
 
 30 January 2007: Wouter
 	- links in example/ldns-testpkts.c and .h for premade packet support.

@@ -146,12 +146,51 @@ comm_base_dispatch(struct comm_base* b)
 	}
 }
 
+/** send a UDP reply */
+static void
+comm_point_send_udp_msg(struct comm_point *c, struct sockaddr* addr,
+	socklen_t addrlen) {
+	ssize_t sent;
+	sent = sendto(c->fd, ldns_buffer_begin(c->buffer), 
+		ldns_buffer_remaining(c->buffer), 0,
+		addr, addrlen);
+	if(sent == -1) {
+		log_err("sendto failed: %s", strerror(errno));
+	} else if((size_t)sent != ldns_buffer_remaining(c->buffer)) {
+		log_err("sent %d in place of %d bytes", 
+			sent, (int)ldns_buffer_remaining(c->buffer));
+	}
+}
+
 static void 
-comm_point_udp_callback(int ATTR_UNUSED(fd), short ATTR_UNUSED(event), 
-	void* arg)
+comm_point_udp_callback(int fd, short event, void* arg)
 {
-	struct comm_point* c = (struct comm_point*)arg;
-	log_info("callback udp for %x", (int)c);
+	struct comm_reply rep;
+	ssize_t recv;
+
+	rep.c = (struct comm_point*)arg;
+
+	verbose(VERB_ALGO, "callback udp");
+	if(!(event&EV_READ))
+		return;
+	log_assert(rep.c && rep.c->buffer && rep.c->fd == fd);
+	ldns_buffer_clear(rep.c->buffer);
+	recv = recvfrom(fd, ldns_buffer_begin(rep.c->buffer), 
+		ldns_buffer_remaining(rep.c->buffer), 0, 
+		(struct sockaddr*)&rep.addr, &rep.addrlen);
+	if(recv == -1) {
+		if(errno != EAGAIN && errno != EINTR) {
+			log_err("recvfrom failed: %s", strerror(errno));
+		}
+		return;
+	}
+	ldns_buffer_skip(rep.c->buffer, recv);
+	ldns_buffer_flip(rep.c->buffer);
+	if((*rep.c->callback)(rep.c, rep.c->cb_arg, 0, &rep)) {
+		/* send back immediate reply */
+		comm_point_send_udp_msg(rep.c, (struct sockaddr*)&rep.addr, 
+			rep.addrlen);
+	}
 }
 
 static void 
@@ -358,3 +397,15 @@ comm_point_set_cb_arg(struct comm_point* c, void *arg)
 	log_assert(c);
 	c->cb_arg = arg;
 }
+
+void comm_point_send_reply(struct comm_reply *repinfo)
+{
+	log_assert(repinfo && repinfo->c);
+	if(repinfo->c->type == comm_udp) {
+		comm_point_send_udp_msg(repinfo->c, 
+			(struct sockaddr*)&repinfo->addr, repinfo->addrlen);
+	} else {
+		log_info("tcp reply");
+	}
+}
+

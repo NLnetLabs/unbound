@@ -55,18 +55,6 @@
 /** number of simultaneous open TCP connections */
 #define TCP_COUNT 10 
 
-/** callback of comm_point_callback_t for events. */
-static int listen_udp_callback(struct comm_point* cp, void* arg, int error)
-{
-	return 0;
-}
-
-/** callback of comm_point_callback_t for events. */
-static int listen_tcp_callback(struct comm_point* cp, void* arg, int error)
-{
-	return 0;
-}
-
 /**
  * Debug print of the getaddrinfo returned address.
  * @param addr: the address returned.
@@ -199,12 +187,15 @@ make_sock(int stype, const char* ifname, const char* port,
  * @param do_tcp: if udp should be used.
  * @param hints: for getaddrinfo. family and flags have to be set by caller.
  * @param bufsize: TCP buffer size.
+ * @param cb: callback function
+ * @param cb_arg: user parameter for callback function.
  * @return: returns false on error.
  */
 static int
 listen_create_if(const char* ifname, struct listen_dnsport* front, 
 	struct comm_base* base, const char* port, int do_udp, int do_tcp, 
-	struct addrinfo *hints, size_t bufsize)
+	struct addrinfo *hints, size_t bufsize, comm_point_callback_t* cb, 
+	void *cb_arg)
 {
 	struct comm_point *cp_udp = NULL, *cp_tcp = NULL;
 	struct listen_list *el_udp, *el_tcp;
@@ -215,7 +206,7 @@ listen_create_if(const char* ifname, struct listen_dnsport* front,
 		if((s = make_sock(SOCK_DGRAM, ifname, port, hints)) == -1)
 			return 0;
 		cp_udp = comm_point_create_udp(base, s, front->udp_buff, 
-			listen_udp_callback, front);
+			cb, cb_arg);
 		if(!cp_udp) {
 			log_err("can't create commpoint");	
 			close(s);
@@ -228,7 +219,7 @@ listen_create_if(const char* ifname, struct listen_dnsport* front,
 			return 0;
 		}
 		cp_tcp = comm_point_create_tcp(base, s, TCP_COUNT, bufsize, 
-			listen_tcp_callback, front);
+			cb, cb_arg);
 		if(!cp_tcp) {
 			log_err("can't create commpoint");	
 			comm_point_delete(cp_udp);
@@ -254,18 +245,16 @@ listen_create_if(const char* ifname, struct listen_dnsport* front,
 	el_udp->com = cp_udp;
 	el_udp->next = front->cps;
 	front->cps = el_udp;
-	comm_point_set_cb_arg(el_udp->com, el_udp);
 	el_tcp->com = cp_tcp;
 	el_tcp->next = front->cps;
 	front->cps = el_tcp;
-	comm_point_set_cb_arg(el_tcp->com, el_tcp);
 	return 1;
 }
 
 struct listen_dnsport* 
 listen_create(struct comm_base* base, int num_ifs, const char* ifs[], 
 	const char* port, int do_ip4, int do_ip6, int do_udp, int do_tcp,
-	size_t bufsize, listen_dnsport_cb_t* cb, void *cb_arg)
+	size_t bufsize, comm_point_callback_t* cb, void *cb_arg)
 {
 	struct addrinfo hints;
 	int i;
@@ -274,8 +263,6 @@ listen_create(struct comm_base* base, int num_ifs, const char* ifs[],
 	if(!front)
 		return NULL;
 	front->cps = NULL;
-	front->cb = cb;
-	front->cb_arg = cb_arg;
 	front->udp_buff = ldns_buffer_new(bufsize);
 	if(!front->udp_buff) {
 		free(front);
@@ -304,13 +291,13 @@ listen_create(struct comm_base* base, int num_ifs, const char* ifs[],
 
 	if(num_ifs == 0) {
 		if(!listen_create_if(NULL, front, base, port, 
-			do_udp, do_tcp, &hints, bufsize)) {
+			do_udp, do_tcp, &hints, bufsize, cb, cb_arg)) {
 			listen_delete(front);
 			return NULL;
 		}
 	} else for(i = 0; i<num_ifs; i++) {
 		if(!listen_create_if(ifs[i], front, base, port, 
-			do_udp, do_tcp, &hints, bufsize)) {
+			do_udp, do_tcp, &hints, bufsize, cb, cb_arg)) {
 			listen_delete(front);
 			return NULL;
 		}

@@ -44,7 +44,7 @@
 #define DAEMON_WORKER_H
 
 #include "config.h"
-struct comm_base;
+#include "util/netevent.h"
 struct listen_dnsport;
 
 /**
@@ -57,6 +57,12 @@ struct worker {
 
 	/** the frontside listening interface where request events come in */
 	struct listen_dnsport* front;
+
+	/** our one and only query, packet buffer and where to send. */
+	struct comm_reply query_reply;
+
+	/** number of requests currently active */
+	int num_requests;
 };
 
 /**
