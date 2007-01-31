@@ -52,7 +52,9 @@ static void worker_process_query(struct worker* worker)
 	
 }
 
-/** check request sanity. Returns error code, 0 OK, or -1 discard. */
+/** check request sanity. Returns error code, 0 OK, or -1 discard. 
+ * @param pkt: the wire packet to examine for sanity.
+*/
 static int worker_check_request(ldns_buffer* pkt)
 {
 	if(ldns_buffer_limit(pkt) < LDNS_HEADER_SIZE) {

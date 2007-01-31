@@ -4,6 +4,7 @@
 	- Added UDP recv to netevent, worker callback for udp.
 	- netevent communication reply storage structure.
 	- minimal query header sanity checking for worker.
+	- copied over rbtree implementation from NSD (BSD licensed too).
 
 30 January 2007: Wouter
 	- links in example/ldns-testpkts.c and .h for premade packet support.
