@@ -46,6 +46,10 @@
 #include "config.h"
 #include "util/netevent.h"
 struct listen_dnsport;
+struct outside_network;
+
+/** size of table used for random numbers. large to be more secure. */
+#define RND_STATE_SIZE 256
 
 /**
  * Structure holding working information for unbound.
@@ -58,11 +62,23 @@ struct worker {
 	/** the frontside listening interface where request events come in */
 	struct listen_dnsport* front;
 
+	/** the backside outside network interface to the auth servers */
+	struct outside_network* back;
+
 	/** our one and only query, packet buffer and where to send. */
 	struct comm_reply query_reply;
 
 	/** number of requests currently active */
 	int num_requests;
+
+	/** random() table for this worker. */
+	char rndstate[RND_STATE_SIZE];
+
+	/** address to forward to */
+	struct sockaddr_storage fwd_addr;
+
+	/** length of fwd_addr */
+	socklen_t fwd_addrlen;
 };
 
 /**
@@ -74,10 +90,13 @@ struct worker {
  * @param do_udp: listen to udp queries.
  * @param do_tcp: listen to tcp queries.
  * @param buffer_size: size of datagram buffer.
+ * @param numports: number of outgoing ports.
+ * @param base_port: -1 or specify base of outgoing port range.
  * @return: The worker, or NULL on error.
  */
 struct worker* worker_init(const char* port, int do_ip4, int do_ip6,
-	int do_udp, int do_tcp, size_t buffer_size);
+	int do_udp, int do_tcp, size_t buffer_size, size_t numports,
+	int base_port);
 
 /**
  * Make worker work.
@@ -88,5 +107,14 @@ void worker_work(struct worker* worker);
  * Delete worker.
  */
 void worker_delete(struct worker* worker);
+
+/**
+ * Set forwarder
+ * @param worker: the worker to modify.
+ * @param ip: the server name.
+ * @param port: port on server or NULL for default 53.
+ * @return: false on error.
+ */
+int worker_set_fwd(struct worker* worker, const char* ip, const char* port);
 
 #endif /* DAEMON_WORKER_H */

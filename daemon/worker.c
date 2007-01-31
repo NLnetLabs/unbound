@@ -44,12 +44,23 @@
 #include "daemon/worker.h"
 #include "util/netevent.h"
 #include "services/listen_dnsport.h"
+#include "services/outside_network.h"
+
+#ifdef HAVE_SYS_TYPES_H
+#  include <sys/types.h>
+#endif
+#include <netdb.h>
+#include <errno.h>
+
+/** timeout in seconds for UDP queries to auth servers. TODO: proper rtt */
+#define UDP_QUERY_TIMEOUT 5
 
 /** process incoming request */
 static void worker_process_query(struct worker* worker) 
 {
 	/* query the forwarding address */
-	
+	pending_udp_query(worker->back, worker->query_reply.c->buffer, 
+		&worker->fwd_addr, worker->fwd_addrlen, UDP_QUERY_TIMEOUT);
 }
 
 /** check request sanity. Returns error code, 0 OK, or -1 discard. 
@@ -124,7 +135,8 @@ static int worker_handle_request(struct comm_point* c, void* arg, int error,
 }
 
 struct worker* worker_init(const char* port, int do_ip4, int do_ip6,
-	int do_udp, int do_tcp, size_t buffer_size)
+	int do_udp, int do_tcp, size_t buffer_size, size_t numports,
+	int base_port)
 {
 	struct worker* worker = (struct worker*)calloc(1, 
 		sizeof(struct worker));
@@ -143,9 +155,21 @@ struct worker* worker_init(const char* port, int do_ip4, int do_ip6,
 		log_err("could not create listening sockets");
 		return NULL;
 	}
+	worker->back = outside_network_create(worker->base,
+		buffer_size, numports, NULL, 0, do_ip4, do_ip6, base_port);
+	if(!worker->back) {
+		comm_base_delete(worker->base);
+		log_err("could not create outgoing sockets");
+		return NULL;
+	}
+	/* init random(), large table size. */
+	if(!initstate(time(NULL)^getpid(), worker->rndstate, RND_STATE_SIZE)) {
+		log_err("could not init random numbers.");
+		comm_base_delete(worker->base);
+		return NULL;
+	}
 	return worker;
 }
-
 
 void worker_work(struct worker* worker)
 {
@@ -157,6 +181,26 @@ void worker_delete(struct worker* worker)
 	if(!worker) 
 		return;
 	listen_delete(worker->front);
+	outside_network_delete(worker->back);
 	comm_base_delete(worker->base);
 	free(worker);
+}
+
+int worker_set_fwd(struct worker* worker, const char* ip, const char* port)
+{
+	struct addrinfo *res = NULL;
+	int r;
+	log_assert(worker && ip);
+	if(!port) 
+		port = UNBOUND_DNS_PORT;
+	if((r=getaddrinfo(ip, port, NULL, &res)) != 0 || !res) {
+		log_err("failed %s:%s getaddrinfo: %s %s",
+			ip, port,
+			gai_strerror(r), r==EAI_SYSTEM?strerror(errno):"");
+		return 0;
+	}
+	worker->fwd_addrlen = res->ai_addrlen;
+	memcpy(&worker->fwd_addr, &res->ai_addr, res->ai_addrlen);
+	freeaddrinfo(res);
+	return 1;
 }

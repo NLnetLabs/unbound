@@ -37,6 +37,7 @@
  */
 
 /**
+ * \file
  * Red black tree. Implementation taken from NSD 3.0.5, adjusted for use
  * in unbound (memory allocation, logging and so on).
  */

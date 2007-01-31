@@ -300,6 +300,8 @@ AH_BOTTOM([
 
 #include "ldns/ldns.h"
 
+/** default port to listen for queries, passed to getaddrinfo */
+#define UNBOUND_DNS_PORT "53"
 ])
 
 AC_CONFIG_FILES([Makefile])

@@ -44,8 +44,6 @@
 #include "util/log.h"
 #include "daemon/worker.h"
 
-/** default port to listen for queries, passed to getaddrinfo */
-#define UNBOUND_DNS_PORT "53"
 /** buffer size for network connections */
 #define BUFSZ 65552
 
@@ -77,8 +75,12 @@ main(int argc, char* argv[])
 {
 	struct worker* worker = NULL;
 	int do_ip4=1, do_ip6=1, do_udp=1, do_tcp=1;
+	size_t numports=3;
+	int baseport=10000;
 	const char* port = UNBOUND_DNS_PORT;
 	int c;
+	const char* fwd = "127.0.0.1";
+	const char* fwdport = UNBOUND_DNS_PORT;
 
 	log_init();
 	/* parse the options */
@@ -88,6 +90,7 @@ main(int argc, char* argv[])
 			if(!atoi(optarg))
 				fatal_exit("invalid port '%s'", optarg);
 			port = optarg;
+			baseport = atoi(optarg)+2000;
 			verbose(VERB_ALGO, "using port: %s", port);
 			break;
 		case 'v':
@@ -109,9 +112,13 @@ main(int argc, char* argv[])
 	}
 
 	/* setup */
-	worker = worker_init(port, do_ip4, do_ip6, do_udp, do_tcp, BUFSZ);
+	worker = worker_init(port, do_ip4, do_ip6, do_udp, do_tcp, BUFSZ,
+		numports, baseport);
 	if(!worker) {
 		fatal_exit("could not initialize");
+	}
+	if(!worker_set_fwd(worker, fwd, fwdport)) {
+		fatal_exit("could set forwarder address");
 	}
 	
 	/* drop user priviliges and chroot if needed */

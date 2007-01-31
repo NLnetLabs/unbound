@@ -79,12 +79,7 @@ verbose_print_addr(struct addrinfo *addr)
 	}
 }
 
-/**
- * Create and bind UDP socket
- * @param addr: address info ready to make socket.
- * @return: the socket. -1 on error.
- */
-static int
+int
 create_udp_sock(struct addrinfo *addr)
 {
 	int s, flag;
