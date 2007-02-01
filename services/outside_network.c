@@ -303,7 +303,7 @@ new_pending(struct outside_network* outnet, ldns_buffer* packet,
 			return NULL;
 		}
 	}
-	tv.tv_sec = time(NULL) + timeout;
+	tv.tv_sec = (int)time(NULL) + timeout;
 	tv.tv_usec = 0;
 	comm_timer_set(pend->timer, &tv);
 	return pend;
