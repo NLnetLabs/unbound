@@ -1,3 +1,8 @@
+1 February 2007: Wouter
+	- outside network more UDP work.
+	- moved * closer to type.
+	- comm_timer object and events.
+
 31 January 2007: Wouter
 	- Added makedist.sh script to make release tarball.
 	- Removed listen callback layer, did not add anything.

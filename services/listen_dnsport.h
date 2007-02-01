@@ -60,7 +60,7 @@ struct listen_dnsport {
 	ldns_buffer* udp_buff;
 
 	/** list of comm points used to get incoming events */
-	struct listen_list *cps;
+	struct listen_list* cps;
 };
 
 /**
@@ -68,9 +68,9 @@ struct listen_dnsport {
  */
 struct listen_list {
 	/** next in list */
-	struct listen_list *next;
+	struct listen_list* next;
 	/** event info */
-	struct comm_point *com;
+	struct comm_point* com;
 };
 
 /**
@@ -95,7 +95,7 @@ struct listen_list {
 struct listen_dnsport* listen_create(struct comm_base* base,
 	int num_ifs, const char* ifs[], const char* port,
 	int do_ip4, int do_ip6, int do_udp, int do_tcp,
-	size_t bufsize, comm_point_callback_t* cb, void *cb_arg);
+	size_t bufsize, comm_point_callback_t* cb, void* cb_arg);
 
 /**
  * delete the listening structure
@@ -108,7 +108,7 @@ void listen_delete(struct listen_dnsport* listen);
  * @param addr: address info ready to make socket.
  * @return: the socket. -1 on error.
  */
-int create_udp_sock(struct addrinfo *addr);
+int create_udp_sock(struct addrinfo* addr);
 
 
 #endif /* LISTEN_DNSPORT_H */

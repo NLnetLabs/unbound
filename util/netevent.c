@@ -66,6 +66,16 @@ struct internal_base {
 };
 
 /**
+ * Internal timer structure, to store timer event in.
+ */
+struct internal_timer {
+	/** libevent event type, alloced here */
+	struct event ev;
+	/** is timer enabled, yes or no */
+	uint8_t enabled;
+};
+
+/**
  * handle libevent callback for udp comm point.
  * @param fd: file descriptor.
  * @param event: event bits from libevent: 
@@ -91,6 +101,15 @@ static void comm_point_tcp_accept_callback(int fd, short event, void* arg);
  * @param arg: the comm_point structure.
  */
 static void comm_point_tcp_handle_callback(int fd, short event, void* arg);
+
+/**
+ * handle libevent callback for timer comm.
+ * @param fd: file descriptor (always -1).
+ * @param event: event bits from libevent: 
+ *	EV_READ, EV_WRITE, EV_SIGNAL, EV_TIMEOUT.
+ * @param arg: the comm_point structure.
+ */
+static void comm_timer_callback(int fd, short event, void* arg);
 
 /** create a tcp handler with a parent */
 static struct comm_point* comm_point_create_tcp_handler(
@@ -147,19 +166,23 @@ comm_base_dispatch(struct comm_base* b)
 }
 
 /** send a UDP reply */
-static void
-comm_point_send_udp_msg(struct comm_point *c, struct sockaddr* addr,
-	socklen_t addrlen) {
+int
+comm_point_send_udp_msg(struct comm_point *c, ldns_buffer* packet,
+	struct sockaddr* addr, socklen_t addrlen) 
+{
 	ssize_t sent;
-	sent = sendto(c->fd, ldns_buffer_begin(c->buffer), 
-		ldns_buffer_remaining(c->buffer), 0,
+	sent = sendto(c->fd, ldns_buffer_begin(packet), 
+		ldns_buffer_remaining(packet), 0,
 		addr, addrlen);
 	if(sent == -1) {
 		log_err("sendto failed: %s", strerror(errno));
-	} else if((size_t)sent != ldns_buffer_remaining(c->buffer)) {
+		return 0;
+	} else if((size_t)sent != ldns_buffer_remaining(packet)) {
 		log_err("sent %d in place of %d bytes", 
-			sent, (int)ldns_buffer_remaining(c->buffer));
+			sent, (int)ldns_buffer_remaining(packet));
+		return 0;
 	}
+	return 1;
 }
 
 static void 
@@ -188,8 +211,8 @@ comm_point_udp_callback(int fd, short event, void* arg)
 	ldns_buffer_flip(rep.c->buffer);
 	if((*rep.c->callback)(rep.c, rep.c->cb_arg, 0, &rep)) {
 		/* send back immediate reply */
-		comm_point_send_udp_msg(rep.c, (struct sockaddr*)&rep.addr, 
-			rep.addrlen);
+		(void)comm_point_send_udp_msg(rep.c, rep.c->buffer,
+			(struct sockaddr*)&rep.addr, rep.addrlen);
 	}
 }
 
@@ -402,10 +425,77 @@ void comm_point_send_reply(struct comm_reply *repinfo)
 {
 	log_assert(repinfo && repinfo->c);
 	if(repinfo->c->type == comm_udp) {
-		comm_point_send_udp_msg(repinfo->c, 
+		comm_point_send_udp_msg(repinfo->c, repinfo->c->buffer,
 			(struct sockaddr*)&repinfo->addr, repinfo->addrlen);
 	} else {
 		log_info("tcp reply");
 	}
 }
 
+struct comm_timer* comm_timer_create(struct comm_base* base,
+        void (*cb)(void*), void* cb_arg)
+{
+	struct comm_timer *tm = (struct comm_timer*)calloc(1,
+		sizeof(struct comm_timer));
+	if(!tm)
+		return NULL;
+	tm->ev_timer = (struct internal_timer*)calloc(1,
+		sizeof(struct internal_timer));
+	if(!tm->ev_timer) {
+		log_err("malloc failed");
+		free(tm);
+		return NULL;
+	}
+	tm->callback = cb;
+	tm->cb_arg = cb_arg;
+	evtimer_set(&tm->ev_timer->ev, comm_timer_callback, tm);
+	if(event_base_set(base->eb->base, &tm->ev_timer->ev) != 0) {
+		log_err("timer_create: event_base_set failed.");
+		free(tm->ev_timer);
+		free(tm);
+		return NULL;
+	}
+	return tm;
+}
+
+void comm_timer_disable(struct comm_timer* timer)
+{
+	if(!timer)
+		return;
+	evtimer_del(&timer->ev_timer->ev);
+	timer->ev_timer->enabled = 0;
+}
+
+void comm_timer_set(struct comm_timer* timer, struct timeval* tv)
+{
+	if(timer->ev_timer->enabled)
+		comm_timer_disable(timer);
+	memcpy((struct timeval*)&timer->timeout, tv, sizeof(struct timeval));
+	evtimer_add(&timer->ev_timer->ev, (struct timeval*)&timer->timeout);
+	timer->ev_timer->enabled = 1;
+}
+
+void comm_timer_delete(struct comm_timer* timer)
+{
+	if(!timer)
+		return;
+	comm_timer_disable(timer);
+	free(timer->ev_timer);
+	free(timer);
+}
+
+static void 
+comm_timer_callback(int ATTR_UNUSED(fd), short event, void* arg)
+{
+	struct comm_timer* tm = (struct comm_timer*)arg;
+	if(!(event&EV_TIMEOUT))
+		return;
+	tm->ev_timer->enabled = 0;
+	(*tm->callback)(tm->cb_arg);
+}
+
+int 
+comm_timer_is_set(struct comm_timer* timer)
+{
+	return (int)timer->ev_timer->enabled;
+}

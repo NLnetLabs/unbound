@@ -60,6 +60,7 @@ struct comm_reply;
 /* internal event notification data storage structure. */
 struct internal_event;
 struct internal_base;
+struct internal_timer;
 
 /** callback from communication point function type */
 typedef int comm_point_callback_t(struct comm_point*, void*, int, 
@@ -90,10 +91,10 @@ struct comm_point {
 	int fd;
 
 	/** timeout (NULL if it does not). Malloced. */
-	struct timeval *timeout;
+	struct timeval* timeout;
 
 	/** buffer pointer. Either to perthread, or own buffer or NULL */
-	ldns_buffer *buffer;
+	ldns_buffer* buffer;
 
 	/* -------- TCP Handler -------- */
 	/** Read/Write state for TCP */
@@ -101,7 +102,7 @@ struct comm_point {
 	/** The current read/write count for TCP */
 	size_t tcp_byte_count;
 	/** parent communication point (for TCP sockets) */
-	struct comm_point *tcp_parent;
+	struct comm_point* tcp_parent;
 
 	/* -------- TCP Accept -------- */
 	/** current number of TCP connections on this socket */
@@ -110,10 +111,10 @@ struct comm_point {
 	int max_tcp_count;
 	/** malloced array of tcp handlers for a tcp-accept, 
 	    of size max_tcp_count. */
-	struct comm_point **tcp_handlers;
+	struct comm_point** tcp_handlers;
 	/** linked list of free tcp_handlers to use for new queries.
 	    For tcp_accept the first entry, for tcp_handlers the next one. */
-	struct comm_point *tcp_free;
+	struct comm_point* tcp_free;
 
 	/** is this a UDP, TCP-accept or TCP socket. */
 	enum comm_point_type {
@@ -169,11 +170,31 @@ struct comm_point {
  */
 struct comm_reply {
 	/** the comm_point with fd to send reply on to. */
-	struct comm_point *c;
+	struct comm_point* c;
 	/** the address (for UDP based communication) */
 	struct sockaddr_storage addr;
 	/** length of address */
 	socklen_t addrlen;
+};
+
+/**
+ * Structure only for making timeout events.
+ */
+struct comm_timer {
+	/** the internal event stuff */
+	struct internal_timer* ev_timer;
+
+	/** 
+	 * the timeout, absolute value seconds.
+	 * Do not write to this, call comm_timer_set instead.
+	 */
+	const struct timeval timeout;
+
+	/** callback function, takes user arg only */
+	void (*callback)(void*);
+
+	/** callback user argument */
+	void* cb_arg;
 };
 
 /**
@@ -206,7 +227,7 @@ void comm_base_dispatch(struct comm_base* b);
  * @return: returns the allocated communication point. NULL on error.
  * Sets timeout to NULL. Turns off TCP options.
  */
-struct comm_point* comm_point_create_udp(struct comm_base *base,
+struct comm_point* comm_point_create_udp(struct comm_base* base,
 	int fd, ldns_buffer* buffer, 
 	comm_point_callback_t* callback, void* callback_arg);
 
@@ -227,7 +248,7 @@ struct comm_point* comm_point_create_udp(struct comm_base *base,
  *	returns NULL on error.
  * Inits timeout to NULL. All handlers are on the free list.
  */
-struct comm_point* comm_point_create_tcp(struct comm_base *base,
+struct comm_point* comm_point_create_tcp(struct comm_base* base,
 	int fd, int num, size_t bufsize, 
 	comm_point_callback_t* callback, void* callback_arg);
 
@@ -249,12 +270,59 @@ void comm_point_delete(struct comm_point* c);
  * @param c: the comm point to change.
  * @param arg: the new callback user argument.
  */
-void comm_point_set_cb_arg(struct comm_point* c, void *arg);
+void comm_point_set_cb_arg(struct comm_point* c, void* arg);
 
 /**
  * Send reply. Put message into commpoint buffer.
  * @param repinfo: The reply info copied from a commpoint callback call.
  */
-void comm_point_send_reply(struct comm_reply *repinfo);
+void comm_point_send_reply(struct comm_reply* repinfo);
+
+/**
+ * Send an udp message over a commpoint.
+ * @param c: commpoint to send it from.
+ * @param packet: what to send.
+ * @param addr: where to send it to.
+ * @param addrlen: length of addr.
+ * @return: false on a failure.
+ */
+int comm_point_send_udp_msg(struct comm_point* c, ldns_buffer* packet,
+	struct sockaddr* addr, socklen_t addrlen);
+
+/**
+ * create timer. Not active upon creation.
+ * @param base: event handling base.
+ * @param cb: callback function: void myfunc(void* myarg);
+ * @param cb_arg: user callback argument.
+ * @return: the new timer or NULL on error.
+ */
+struct comm_timer* comm_timer_create(struct comm_base* base, 
+	void (*cb)(void*), void* cb_arg);
+
+/**
+ * disable timer. Stops callbacks from happening.
+ * @param timer: to disable.
+ */
+void comm_timer_disable(struct comm_timer* timer);
+
+/**
+ * reset timevalue for timer.
+ * @param timer: timer to (re)set.
+ * @param tv: when the timer should activate. if NULL timer is disabled.
+ */
+void comm_timer_set(struct comm_timer* timer, struct timeval* tv);
+
+/**
+ * delete timer.
+ * @param timer: to delete.
+ */
+void comm_timer_delete(struct comm_timer* timer);
+
+/**
+ * see if timeout has been set to a value.
+ * @param timer: the timer to examine.
+ * @return: false if disabled or not set.
+ */
+int comm_timer_is_set(struct comm_timer* timer);
 
 #endif /* NET_EVENT_H */

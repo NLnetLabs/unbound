@@ -72,8 +72,6 @@ struct outside_network {
 
 	/** pending answers. sorted by id, addr */
 	rbtree_t *pending;
-	/** Each pending answer has a timeout, sorted by timeout. */
-	rbtree_t *pending_timeout;
 };
 
 /**
@@ -90,20 +88,8 @@ struct pending {
 	socklen_t addrlen;
 	/** comm point it was sent on (and reply must come back on). */
 	struct comm_point* c;
-	/** the timeout of the query */
-	struct pending_timeout *timeout;
-};
-
-/**
- * Timeout structure for pending queries
- */
-struct pending_timeout {
-	/** entry in rbtree. key is timeout value, then pending ptr(uniq). */
-	rbnode_t node;
-	/** timeout, an absolute time value. */
-	struct timeval timeout;
-	/** pending query */
-	struct pending* pending;
+	/** timeout event */
+	struct comm_timer* timer;
 };
 
 /**
@@ -119,7 +105,7 @@ struct pending_timeout {
  *    the ports numbered from this starting number.
  * @return: the new empty structure or NULL on error.
  */
-struct outside_network* outside_network_create(struct comm_base *base,
+struct outside_network* outside_network_create(struct comm_base* base,
 	size_t bufsize, size_t num_ports, const char** ifs, int num_ifs,
 	int do_ip4, int do_ip6, int port_base);
 

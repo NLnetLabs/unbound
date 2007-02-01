@@ -106,7 +106,7 @@ void fatal_exit(const char* format, ...) ATTR_FORMAT(printf, 1, 2);
  * @param format: the printf style format to print. no newline.
  * @param args: arguments for format string.
  */
-void log_vmsg(const char* type, const char *format, va_list args);
+void log_vmsg(const char* type, const char* format, va_list args);
 
 /** always assert for now. */
 #define UNBOUND_ASSERT 1
