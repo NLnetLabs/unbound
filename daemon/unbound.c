@@ -55,6 +55,8 @@ static void usage()
 	printf("-h	this help\n");
 	printf("-p port	the port to listen on\n");
 	printf("-v	verbose (multiple times increase verbosity)\n");
+	printf("-f ip	set forwarder address\n");
+	printf("-z port	set forwarder port\n");
 	printf("Version %s\n", PACKAGE_VERSION);
 	printf("BSD licensed, see LICENSE file in source package.\n");
 	printf("Report bugs to %s.\n", PACKAGE_BUGREPORT);
@@ -84,8 +86,14 @@ main(int argc, char* argv[])
 
 	log_init();
 	/* parse the options */
-	while( (c=getopt(argc, argv, "hvp:")) != -1) {
+	while( (c=getopt(argc, argv, "f:hvp:z:")) != -1) {
 		switch(c) {
+		case 'f':
+			fwd = optarg;
+			break;
+		case 'z':
+			fwdport = optarg;
+			break;
 		case 'p':
 			if(!atoi(optarg))
 				fatal_exit("invalid port '%s'", optarg);
@@ -119,7 +127,7 @@ main(int argc, char* argv[])
 	}
 	if(!worker_set_fwd(worker, fwd, fwdport)) {
 		worker_delete(worker);
-		fatal_exit("could set forwarder address");
+		fatal_exit("could not set forwarder address");
 	}
 	
 	/* drop user priviliges and chroot if needed */

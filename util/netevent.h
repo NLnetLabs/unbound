@@ -184,12 +184,6 @@ struct comm_timer {
 	/** the internal event stuff */
 	struct internal_timer* ev_timer;
 
-	/** 
-	 * the timeout, absolute value seconds.
-	 * Do not write to this, call comm_timer_set instead.
-	 */
-	const struct timeval timeout;
-
 	/** callback function, takes user arg only */
 	void (*callback)(void*);
 

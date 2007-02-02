@@ -188,23 +188,38 @@ void worker_delete(struct worker* worker)
 
 int worker_set_fwd(struct worker* worker, const char* ip, const char* port)
 {
-	struct addrinfo *res = NULL;
-	struct addrinfo hints;
-	int r;
+	uint16_t p;
 	log_assert(worker && ip);
-	memset(&hints, 0, sizeof(hints));
-	hints.ai_family = AF_UNSPEC;
-	hints.ai_socktype = SOCK_DGRAM;
-	if(!port) 
-		port = UNBOUND_DNS_PORT;
-	if((r=getaddrinfo(ip, port, &hints, &res)) != 0 || !res) {
-		log_err("failed %s:%s getaddrinfo: %s %s",
-			ip, port,
-			gai_strerror(r), r==EAI_SYSTEM?strerror(errno):"");
+	if(port)
+		p = (uint16_t)atoi(port);
+	else 	p = (uint16_t)atoi(UNBOUND_DNS_PORT);
+	if(!p) {
+		log_err("Bad port number %s", port?port:"default_port");
 		return 0;
 	}
-	worker->fwd_addrlen = res->ai_addrlen;
-	memcpy(&worker->fwd_addr, &res->ai_addr, res->ai_addrlen);
-	freeaddrinfo(res);
+	if(str_is_ip6(ip)) {
+		struct sockaddr_in6* sa = 
+			(struct sockaddr_in6*)&worker->fwd_addr;
+		worker->fwd_addrlen = (socklen_t)sizeof(struct sockaddr_in6);
+		memset(sa, 0, worker->fwd_addrlen);
+		sa->sin6_family = AF_INET6;
+		sa->sin6_port = htons(p);
+		if(inet_pton((int)sa->sin6_family, ip, &sa->sin6_addr) <= 0) {
+			log_err("Bad ip6 address %s", ip);
+			return 0;
+		}
+	} else { /* ip4 */
+		struct sockaddr_in* sa = 
+			(struct sockaddr_in*)&worker->fwd_addr;
+		worker->fwd_addrlen = (socklen_t)sizeof(struct sockaddr_in);
+		memset(sa, 0, worker->fwd_addrlen);
+		sa->sin_family = AF_INET;
+		sa->sin_port = htons(p);
+		if(inet_pton((int)sa->sin_family, ip, &sa->sin_addr) <= 0) {
+			log_err("Bad ip4 address %s", ip);
+			return 0;
+		}
+	}
+	verbose(VERB_ALGO, "fwd queries to: %s %d", ip, p);
 	return 1;
 }

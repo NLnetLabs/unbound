@@ -107,6 +107,7 @@ static int outnet_udp_cb(struct comm_point* c, void* arg, int error,
 	}
 	comm_timer_disable(p->timer);
 	/* TODO handle it */
+	log_info("outnet handle udp reply");
 
 	return 0;
 }
@@ -226,6 +227,7 @@ static void pending_udp_timer_cb(void *arg)
 {
 	/* struct pending* p = (struct pending*)arg; */
 	/* it timed out . TODO handle it. */
+	log_info("timeout udp");
 }
 
 struct outside_network* 
@@ -429,8 +431,7 @@ static void select_port(struct outside_network* outnet, struct pending* pend)
 	else	pend->c = outnet->udp4_ports[chosen];
 	log_assert(pend->c);
 
-	log_info("chose query %x outbound %d of %d", 
-		pend->id, chosen, nummax);
+	log_info("query %x outbound %d of %d", pend->id, chosen, nummax);
 }
 
 
@@ -458,7 +459,7 @@ void pending_udp_query(struct outside_network* outnet, ldns_buffer* packet,
 
 	/* system calls to set timeout after sending UDP to make roundtrip
 	   smaller. */
-	tv.tv_sec = (int)time(NULL) + timeout;
+	tv.tv_sec = timeout;
 	tv.tv_usec = 0;
 	comm_timer_set(pend->timer, &tv);
 }
