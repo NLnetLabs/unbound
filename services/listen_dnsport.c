@@ -109,7 +109,7 @@ create_udp_sock(struct addrinfo *addr)
 		 */
 		if (setsockopt(s, IPPROTO_IPV6, IPV6_USE_MIN_MTU,
 			&on, sizeof(on)) < 0) {
-			log_msg(LOG_ERR, "setsockopt(..., IPV6_USE_MIN_MTU, "
+			log_err("setsockopt(..., IPV6_USE_MIN_MTU, "
 				"...) failed: %s", strerror(errno));
 			return -1;
 		}
