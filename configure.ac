@@ -211,12 +211,20 @@ AC_ARG_WITH(libevent, AC_HELP_STRING([--with-libevent=pathname],
             fi
         done
         if test x_$found_libevent != x_yes; then
-            AC_MSG_ERROR(Cannot find the libevent library in $withval)
+		if test -f "$dir/event.h" -a -f "$dir/.libs/libevent.a"; then
+			# libevent source directory
+            		AC_MSG_RESULT(found in $thedir)
+                	CPPFLAGS="$CPPFLAGS -I$thedir";
+            		LDFLAGS="$thedir/.libs/*.o $LDFLAGS";
+	    		AC_SEARCH_LIBS(event_set, [event])
+		else
+            		AC_MSG_ERROR(Cannot find the libevent library in $withval)
+		fi
         else
             AC_MSG_RESULT(found in $thedir)
             LDFLAGS="$LDFLAGS -L$thedir/lib";
 	    RUNTIME_PATH="$RUNTIME_PATH -R$thedir/lib"
-	    AC_CHECK_LIB(event, event_set)
+	    AC_SEARCH_LIBS(event_set, [event])
         fi
 	AC_SUBST(RUNTIME_PATH)
     fi
@@ -280,6 +288,10 @@ AH_BOTTOM([
 
 #ifdef HAVE_ARPA_INET_H
 #include <arpa/inet.h>
+#endif
+
+#ifdef HAVE_GETOPT_H
+#include <getopt.h>
 #endif
 
 #ifdef HAVE_ATTR_FORMAT
