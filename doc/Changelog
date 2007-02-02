@@ -1,3 +1,7 @@
+2 February 2007: Wouter
+	- Created udp4 and udp6 port arrays to provide service for both
+	  address families.
+
 1 February 2007: Wouter
 	- outside network more UDP work.
 	- moved * closer to type.

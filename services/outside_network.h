@@ -64,11 +64,18 @@ struct outside_network {
 
 	/** 
 	 * Array of udp comm point* that are used to listen to pending events.
-	 * Each is on a different port.
+	 * Each is on a different port. This is for ip4 ports.
 	 */
-	struct comm_point **udp_ports;
-	/** number of udp ports */
-	size_t num_udp;
+	struct comm_point **udp4_ports;
+	/** number of udp4 ports */
+	size_t num_udp4;
+
+	/**
+	 * The opened ip6 ports.
+	 */
+	struct comm_point **udp6_ports;
+	/** number of udp6 ports */
+	size_t num_udp6;
 
 	/** pending answers. sorted by id, addr */
 	rbtree_t *pending;
