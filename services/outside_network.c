@@ -245,15 +245,15 @@ outside_network_create(struct comm_base *base, size_t bufsize,
 		outside_network_delete(outnet);
 		return NULL;
 	}
-	/* open ip4 ports first, to get them apart from ip6 ports. */
+	/* Try to get ip6 and ip4 ports. Ip6 first, in case second fails. */
 	if(num_ifs == 0) {
-		if(do_ip4) {
-			outnet->num_udp4 = make_udp_range(outnet->udp4_ports, 
-				NULL, num_ports, 1, 0, port_base, outnet);
-		}
 		if(do_ip6) {
 		   	outnet->num_udp6 = make_udp_range(outnet->udp6_ports, 
 				NULL, num_ports, 0, 1, port_base, outnet);
+		}
+		if(do_ip4) {
+			outnet->num_udp4 = make_udp_range(outnet->udp4_ports, 
+				NULL, num_ports, 1, 0, port_base, outnet);
 		}
 		if(outnet->num_udp4 != num_ports || 
 			outnet->num_udp6 != num_ports) {
@@ -265,15 +265,15 @@ outside_network_create(struct comm_base *base, size_t bufsize,
 	else {
 		size_t done_4 = 0, done_6 = 0;
 		for(k=0; k<num_ifs; k++) {
-			if(!str_is_ip6(ifs[k]) && do_ip4) {
-				done_4 += make_udp_range(
-					outnet->udp4_ports+done_4, ifs[k],
-					num_ports, 1, 0, port_base, outnet);
-			}
 			if(str_is_ip6(ifs[k]) && do_ip6) {
 				done_6 += make_udp_range(
 					outnet->udp6_ports+done_6, ifs[k],
 					num_ports, 0, 1, port_base, outnet);
+			}
+			if(!str_is_ip6(ifs[k]) && do_ip4) {
+				done_4 += make_udp_range(
+					outnet->udp4_ports+done_4, ifs[k],
+					num_ports, 1, 0, port_base, outnet);
 			}
 		}
 		if(done_6 != outnet->num_udp6 || done_4 != outnet->num_udp4) {

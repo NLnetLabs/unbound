@@ -1,6 +1,7 @@
 2 February 2007: Wouter
 	- Created udp4 and udp6 port arrays to provide service for both
 	  address families.
+	- uses IPV6_USE_MIN_MTU for udp6 ,IPV6_V6ONLY to make ip6 sockets.
 
 1 February 2007: Wouter
 	- outside network more UDP work.

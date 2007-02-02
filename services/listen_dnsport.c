@@ -83,10 +83,37 @@ int
 create_udp_sock(struct addrinfo *addr)
 {
 	int s, flag;
+	int on=1;
 	verbose_print_addr(addr);
 	if((s = socket(addr->ai_family, addr->ai_socktype, 0)) == -1) {
 		log_err("can't create socket: %s", strerror(errno));
 		return -1;
+	}
+	if(addr->ai_family == AF_INET6) {
+# if defined(IPV6_V6ONLY)
+		if (setsockopt(s, IPPROTO_IPV6, IPV6_V6ONLY, 
+			&on, sizeof(on)) < 0) {
+			log_err("setsockopt(..., IPV6_V6ONLY, ...) failed: %s",
+				strerror(errno));
+			return -1;
+		}
+# endif
+# if defined(IPV6_USE_MIN_MTU)
+		/*
+		 * There is no fragmentation of IPv6 datagrams
+		 * during forwarding in the network. Therefore
+		 * we do not send UDP datagrams larger than
+		 * the minimum IPv6 MTU of 1280 octets. The
+		 * EDNS0 message length can be larger if the
+		 * network stack supports IPV6_USE_MIN_MTU.
+		 */
+		if (setsockopt(s, IPPROTO_IPV6, IPV6_USE_MIN_MTU,
+			&on, sizeof(on)) < 0) {
+			log_msg(LOG_ERR, "setsockopt(..., IPV6_USE_MIN_MTU, "
+				"...) failed: %s", strerror(errno));
+			return -1;
+		}
+# endif
 	}
 	if(bind(s, (struct sockaddr*)addr->ai_addr, addr->ai_addrlen) != 0) {
 		log_err("can't bind socket: %s", strerror(errno));
@@ -113,9 +140,9 @@ static int
 create_tcp_accept_sock(struct addrinfo *addr)
 {
 	int s, flag;
-#ifdef SO_REUSEADDR
+#if defined(SO_REUSEADDR) || defined(IPV6_V6ONLY)
 	int on = 1;
-#endif /* SO_REUSEADDR */
+#endif /* SO_REUSEADDR || IPV6_V6ONLY */
 	verbose_print_addr(addr);
 	if((s = socket(addr->ai_family, addr->ai_socktype, 0)) == -1) {
 		log_err("can't create socket: %s", strerror(errno));
@@ -129,6 +156,16 @@ create_tcp_accept_sock(struct addrinfo *addr)
 		return -1;
 	}
 #endif /* SO_REUSEADDR */
+#if defined(IPV6_V6ONLY)
+	if(addr->ai_family == AF_INET6) {
+		if(setsockopt(s, IPPROTO_IPV6, IPV6_V6ONLY, 
+			&on, sizeof(on)) < 0) {
+			log_err("setsockopt(..., IPV6_V6ONLY, ...) failed: %s",
+				strerror(errno));
+			return -1;
+		}
+	}
+#endif /* IPV6_V6ONLY */
 	if(bind(s, (struct sockaddr*)addr->ai_addr, addr->ai_addrlen) != 0) {
 		log_err("can't bind socket: %s", strerror(errno));
 		return -1;
