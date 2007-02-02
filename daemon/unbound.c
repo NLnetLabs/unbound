@@ -118,6 +118,7 @@ main(int argc, char* argv[])
 		fatal_exit("could not initialize");
 	}
 	if(!worker_set_fwd(worker, fwd, fwdport)) {
+		worker_delete(worker);
 		fatal_exit("could set forwarder address");
 	}
 	

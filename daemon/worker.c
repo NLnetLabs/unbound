@@ -189,11 +189,15 @@ void worker_delete(struct worker* worker)
 int worker_set_fwd(struct worker* worker, const char* ip, const char* port)
 {
 	struct addrinfo *res = NULL;
+	struct addrinfo hints;
 	int r;
 	log_assert(worker && ip);
+	memset(&hints, 0, sizeof(hints));
+	hints.ai_family = AF_UNSPEC;
+	hints.ai_socktype = SOCK_DGRAM;
 	if(!port) 
 		port = UNBOUND_DNS_PORT;
-	if((r=getaddrinfo(ip, port, NULL, &res)) != 0 || !res) {
+	if((r=getaddrinfo(ip, port, &hints, &res)) != 0 || !res) {
 		log_err("failed %s:%s getaddrinfo: %s %s",
 			ip, port,
 			gai_strerror(r), r==EAI_SYSTEM?strerror(errno):"");
