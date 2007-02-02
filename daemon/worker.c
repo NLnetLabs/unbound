@@ -238,7 +238,7 @@ int worker_set_fwd(struct worker* worker, const char* ip, const char* port)
 		worker->fwd_addrlen = (socklen_t)sizeof(struct sockaddr_in6);
 		memset(sa, 0, worker->fwd_addrlen);
 		sa->sin6_family = AF_INET6;
-		sa->sin6_port = htons(p);
+		sa->sin6_port = (in_port_t)htons(p);
 		if(inet_pton((int)sa->sin6_family, ip, &sa->sin6_addr) <= 0) {
 			log_err("Bad ip6 address %s", ip);
 			return 0;
@@ -249,7 +249,7 @@ int worker_set_fwd(struct worker* worker, const char* ip, const char* port)
 		worker->fwd_addrlen = (socklen_t)sizeof(struct sockaddr_in);
 		memset(sa, 0, worker->fwd_addrlen);
 		sa->sin_family = AF_INET;
-		sa->sin_port = htons(p);
+		sa->sin_port = (in_port_t)htons(p);
 		if(inet_pton((int)sa->sin_family, ip, &sa->sin_addr) <= 0) {
 			log_err("Bad ip4 address %s", ip);
 			return 0;
