@@ -142,6 +142,14 @@ static int open_udp_port_range(const char* ifname, struct addrinfo* hints,
 /**
  * Create range of UDP ports on the given interface.
  * Returns number of ports bound.
+ * @param coms: communication point array start position. Filled with entries.
+ * @param ifname: name of interface to make port on.
+ * @param num_ports: number of ports opened.
+ * @param do_ip4: if true make ip4 ports.
+ * @param do_ip6: if true make ip6 ports.
+ * @param porthint: -1 for system chosen port, or a base of port range.
+ * @param outnet: network structure with comm base, shared udp buffer.
+ * @return: the number of ports successfully opened, entries filled in coms.
  */
 static size_t 
 make_udp_range(struct comm_point** coms, const char* ifname, 
@@ -371,7 +379,11 @@ new_pending(struct outside_network* outnet, ldns_buffer* packet,
 	return pend;
 }
 
-/** return true if sockaddr is ip6 */
+/** 
+ * Checkout address family.
+ * @param addr: the sockaddr to examine.
+ * return: true if sockaddr is ip6.
+ */
 static int addr_is_ip6(struct sockaddr_storage* addr)
 {
 	short family = *(short*)addr;
@@ -380,7 +392,11 @@ static int addr_is_ip6(struct sockaddr_storage* addr)
 	else	return 0;
 }
 
-/** select outgoing comm point for a query. Fills in c. */
+/** 
+ * Select outgoing comm point for a query. Fills in c. 
+ * @param outnet: network structure that has arrays of ports to choose from.
+ * @param pend: the message to send. c is filled in, randomly chosen.
+ */
 static void select_port(struct outside_network* outnet, struct pending* pend)
 {
 	double precho;
