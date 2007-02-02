@@ -92,7 +92,7 @@ create_udp_sock(struct addrinfo *addr)
 	if(addr->ai_family == AF_INET6) {
 # if defined(IPV6_V6ONLY)
 		if (setsockopt(s, IPPROTO_IPV6, IPV6_V6ONLY, 
-			&on, sizeof(on)) < 0) {
+			&on, (socklen_t)sizeof(on)) < 0) {
 			log_err("setsockopt(..., IPV6_V6ONLY, ...) failed: %s",
 				strerror(errno));
 			return -1;
@@ -108,7 +108,7 @@ create_udp_sock(struct addrinfo *addr)
 		 * network stack supports IPV6_USE_MIN_MTU.
 		 */
 		if (setsockopt(s, IPPROTO_IPV6, IPV6_USE_MIN_MTU,
-			&on, sizeof(on)) < 0) {
+			&on, (socklen_t)sizeof(on)) < 0) {
 			log_err("setsockopt(..., IPV6_USE_MIN_MTU, "
 				"...) failed: %s", strerror(errno));
 			return -1;
@@ -159,7 +159,7 @@ create_tcp_accept_sock(struct addrinfo *addr)
 #if defined(IPV6_V6ONLY)
 	if(addr->ai_family == AF_INET6) {
 		if(setsockopt(s, IPPROTO_IPV6, IPV6_V6ONLY, 
-			&on, sizeof(on)) < 0) {
+			&on, (socklen_t)sizeof(on)) < 0) {
 			log_err("setsockopt(..., IPV6_V6ONLY, ...) failed: %s",
 				strerror(errno));
 			return -1;
