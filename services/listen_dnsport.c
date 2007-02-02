@@ -40,6 +40,7 @@
  */
 
 #include "services/listen_dnsport.h"
+#include "services/outside_network.h"
 #include "util/netevent.h"
 #include "util/log.h"
 
@@ -69,11 +70,11 @@ verbose_print_addr(struct addrinfo *addr)
 			(socklen_t)sizeof(buf)) == 0) {
 			strncpy(buf, "(null)", sizeof(buf));
 		}
-		verbose(VERB_ALGO, "creating %s %s socket %s %d", 
-			addr->ai_family==AF_INET?"inet":
-			addr->ai_family==AF_INET6?"inet6":"otherfamily", 
+		verbose(VERB_ALGO, "creating %s%s socket %s %d", 
 			addr->ai_socktype==SOCK_DGRAM?"udp":
-			addr->ai_socktype==SOCK_STREAM?"tcp":"otherprotocol",
+			addr->ai_socktype==SOCK_STREAM?"tcp":"otherproto",
+			addr->ai_family==AF_INET?"4":
+			addr->ai_family==AF_INET6?"6":"_otherfam", 
 			buf, 
 			ntohs(((struct sockaddr_in*)addr->ai_addr)->sin_port));
 	}
@@ -313,26 +314,51 @@ listen_create(struct comm_base* base, int num_ifs, const char* ifs[],
 	if(!do_ip4 && !do_ip6) {
 		listen_delete(front);
 		return NULL;
-	} else if(do_ip4 && do_ip6)
-		hints.ai_family = AF_UNSPEC;
-	else if(do_ip4)
-		hints.ai_family = AF_INET;
-	else if(do_ip6) {
-		hints.ai_family = AF_INET6;
 	}
 
+	/* create ip4 and ip6 ports so that return addresses are nice. */
 	if(num_ifs == 0) {
-		if(!listen_create_if(NULL, front, base, port, 
-			do_udp, do_tcp, &hints, bufsize, cb, cb_arg)) {
-			listen_delete(front);
-			return NULL;
+		if(do_ip6) {
+			hints.ai_family = AF_INET6;
+			if(!listen_create_if(NULL, front, base, port, 
+				do_udp, do_tcp, &hints, bufsize, cb, cb_arg)) {
+				listen_delete(front);
+				return NULL;
+			}
+		}
+		if(do_ip4) {
+			hints.ai_family = AF_INET;
+			if(!listen_create_if(NULL, front, base, port, 
+				do_udp, do_tcp, &hints, bufsize, cb, cb_arg)) {
+				listen_delete(front);
+				return NULL;
+			}
 		}
 	} else for(i = 0; i<num_ifs; i++) {
-		if(!listen_create_if(ifs[i], front, base, port, 
-			do_udp, do_tcp, &hints, bufsize, cb, cb_arg)) {
-			listen_delete(front);
-			return NULL;
+		if(str_is_ip6(ifs[i])) {
+			if(!do_ip6)
+				continue;
+			hints.ai_family = AF_INET6;
+			if(!listen_create_if(ifs[i], front, base, port, 
+				do_udp, do_tcp, &hints, bufsize, cb, cb_arg)) {
+				listen_delete(front);
+				return NULL;
+			}
+		} else {
+			if(!do_ip4)
+				continue;
+			hints.ai_family = AF_INET;
+			if(!listen_create_if(ifs[i], front, base, port, 
+				do_udp, do_tcp, &hints, bufsize, cb, cb_arg)) {
+				listen_delete(front);
+				return NULL;
+			}
 		}
+	}
+	if(!front->cps) {
+		log_err("Could not open sockets to accept queries.");
+		listen_delete(front);
+		return NULL;
 	}
 
 	return front;

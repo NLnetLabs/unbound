@@ -186,7 +186,7 @@ make_udp_range(struct comm_point** coms, const char* ifname,
 }
 
 /** returns true is string addr is an ip6 specced address. */
-static int str_is_ip6(const char* str)
+int str_is_ip6(const char* str)
 {
 	if(strchr(str, ':'))
 		return 1;
