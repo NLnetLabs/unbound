@@ -5,6 +5,7 @@
 	- listens on both ip4 and ip6 ports to provide correct return address.
 	- worker fwder address filled correctly.
 	- fixup timer code.
+	- forwards udp queries and sends answer.
 
 1 February 2007: Wouter
 	- outside network more UDP work.

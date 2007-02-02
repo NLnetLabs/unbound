@@ -45,10 +45,9 @@
 
 #include "config.h"
 #include "util/rbtree.h"
+#include "util/netevent.h"
 struct pending;
 struct pending_timeout;
-struct comm_point;
-struct comm_base;
 
 /**
  * Send queries to outside servers and wait for answers from servers.
@@ -97,6 +96,10 @@ struct pending {
 	struct comm_point* c;
 	/** timeout event */
 	struct comm_timer* timer;
+	/** callback for the timeout, error or reply to the message */
+	comm_point_callback_t* cb;
+	/** callback user argument */
+	void* cb_arg;
 };
 
 /**
@@ -129,9 +132,12 @@ void outside_network_delete(struct outside_network* outnet);
  * @param addr: address to send to.
  * @param addrlen: length of addr.
  * @param timeout: in seconds from now.
+ * @param callback: function to call on error, timeout or reply.
+ * @param callback_arg: user argument for callback function.
  */
 void pending_udp_query(struct outside_network* outnet, ldns_buffer* packet, 
-	struct sockaddr_storage* addr, socklen_t addrlen, int timeout);
+	struct sockaddr_storage* addr, socklen_t addrlen, int timeout,
+	comm_point_callback_t* callback, void* callback_arg);
 
 /**
  * Delete pending answer.

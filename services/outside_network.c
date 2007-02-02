@@ -106,9 +106,8 @@ static int outnet_udp_cb(struct comm_point* c, void* arg, int error,
 		return 0;
 	}
 	comm_timer_disable(p->timer);
-	/* TODO handle it */
 	log_info("outnet handle udp reply");
-
+	(void)(*p->cb)(p->c, p->cb_arg, 0, NULL);
 	return 0;
 }
 
@@ -225,9 +224,10 @@ static void calc_num46(const char** ifs, int num_ifs,
 /** callback for udp timeout */
 static void pending_udp_timer_cb(void *arg)
 {
-	/* struct pending* p = (struct pending*)arg; */
-	/* it timed out . TODO handle it. */
+	struct pending* p = (struct pending*)arg;
+	/* it timed out */
 	log_info("timeout udp");
+	(void)(*p->cb)(p->c, p->cb_arg, -2, NULL);
 }
 
 struct outside_network* 
@@ -344,7 +344,8 @@ void pending_delete(struct outside_network* outnet, struct pending* p)
 /** create a new pending item with given characteristics, false on failure */
 static struct pending*
 new_pending(struct outside_network* outnet, ldns_buffer* packet, 
-	struct sockaddr_storage* addr, socklen_t addrlen)
+	struct sockaddr_storage* addr, socklen_t addrlen,
+	comm_point_callback_t* callback, void* callback_arg)
 {
 	/* alloc */
 	int id_tries = 0;
@@ -364,6 +365,8 @@ new_pending(struct outside_network* outnet, ldns_buffer* packet,
 	pend->id = LDNS_ID_WIRE(ldns_buffer_begin(packet));
 	memcpy(&pend->addr, addr, addrlen);
 	pend->addrlen = addrlen;
+	pend->cb = callback;
+	pend->cb_arg = callback_arg;
 
 	/* insert in tree */
 	pend->node.key = pend;
@@ -436,14 +439,16 @@ static void select_port(struct outside_network* outnet, struct pending* pend)
 
 
 void pending_udp_query(struct outside_network* outnet, ldns_buffer* packet, 
-	struct sockaddr_storage* addr, socklen_t addrlen, int timeout)
+	struct sockaddr_storage* addr, socklen_t addrlen, int timeout,
+	comm_point_callback_t* cb, void* cb_arg)
 {
 	struct pending* pend;
 	struct timeval tv;
 
 	/* create pending struct (and possibly change ID to be unique) */
-	if(!(pend=new_pending(outnet, packet, addr, addrlen))) {
+	if(!(pend=new_pending(outnet, packet, addr, addrlen, cb, cb_arg))) {
 		/* callback user for the error */
+		(void)(*cb)(NULL, cb_arg, -1, NULL);
 		return;
 	}
 	select_port(outnet, pend);
@@ -454,6 +459,7 @@ void pending_udp_query(struct outside_network* outnet, ldns_buffer* packet,
 		/* error, call error callback function */
 		pending_delete(outnet, pend);
 		/* callback user for the error */
+		(void)(*pend->cb)(pend->c, pend->cb_arg, -1, NULL);
 		return;
 	}
 

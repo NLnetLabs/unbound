@@ -54,13 +54,47 @@
 
 /** timeout in seconds for UDP queries to auth servers. TODO: proper rtt */
 #define UDP_QUERY_TIMEOUT 5
+/** the size of ID and flags, opcode, rcode in dns packet */
+#define ID_AND_FLAGS 4
+
+/** reply to query with given error code */
+static void replyerror(int r, struct worker* worker)
+{
+	LDNS_QR_SET(ldns_buffer_begin(worker->query_reply.c->buffer));
+	LDNS_RCODE_SET(ldns_buffer_begin(worker->query_reply.c->buffer), r);
+	comm_point_send_reply(&worker->query_reply);
+	worker->num_requests --;
+}
+
+/** process incoming replies from the network */
+static int worker_handle_reply(struct comm_point* c, void* arg, int error, 
+	struct comm_reply* ATTR_UNUSED(reply_info))
+{
+	struct worker* worker = (struct worker*)arg;
+	if(error != 0) {
+		replyerror(LDNS_RCODE_SERVFAIL, worker);
+		return 0;
+	}
+	/* woohoo a reply! */
+	ldns_buffer_clear(worker->query_reply.c->buffer);
+	ldns_buffer_skip(worker->query_reply.c->buffer, ID_AND_FLAGS);
+	ldns_buffer_write(worker->query_reply.c->buffer, 
+		ldns_buffer_at(c->buffer, ID_AND_FLAGS), 
+		ldns_buffer_limit(c->buffer) - ID_AND_FLAGS);
+	LDNS_QR_SET(ldns_buffer_begin(worker->query_reply.c->buffer));
+	ldns_buffer_flip(worker->query_reply.c->buffer);
+	comm_point_send_reply(&worker->query_reply);
+	worker->num_requests --;
+	return 0;
+}
 
 /** process incoming request */
 static void worker_process_query(struct worker* worker) 
 {
 	/* query the forwarding address */
 	pending_udp_query(worker->back, worker->query_reply.c->buffer, 
-		&worker->fwd_addr, worker->fwd_addrlen, UDP_QUERY_TIMEOUT);
+		&worker->fwd_addr, worker->fwd_addrlen, UDP_QUERY_TIMEOUT,
+		worker_handle_reply, worker);
 }
 
 /** check request sanity. Returns error code, 0 OK, or -1 discard. 
@@ -117,6 +151,7 @@ static int worker_handle_request(struct comm_point* c, void* arg, int error,
 	}
 	if((ret=worker_check_request(c->buffer)) != 0) {
 		if(ret != -1) {
+			LDNS_QR_SET(ldns_buffer_begin(c->buffer));
 			LDNS_RCODE_SET(ldns_buffer_begin(c->buffer), ret);
 			return 1;
 		}
