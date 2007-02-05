@@ -37,7 +37,7 @@ fi
 dnl routine to help check for needed compiler flags.
 # if the given code compiles without the flag, execute argument 4
 # if the given code only compiles with the flag, execute argument 3
-# otherwise fail
+# otherwise fail, execute argument 5.
 AC_DEFUN([CHECK_COMPILER_FLAG_NEEDED],
 [
 AC_REQUIRE([AC_PROG_CC])
@@ -54,11 +54,12 @@ else
 if test -z "`$CC $CFLAGS $1 -Werror -Wall -c conftest.c 2>&1`"; then
 eval "cv_prog_cc_flag_needed_$cache=yes"
 else
-echo 'Test with flag fails too!'
-cat conftest.c
-echo "$CC $CFLAGS $1 -Werror -Wall -c conftest.c 2>&1"
-echo `$CC $CFLAGS $1 -Werror -Wall -c conftest.c`
-exit 1
+eval "cv_prog_cc_flag_needed_$cache=fail"
+#echo 'Test with flag fails too!'
+#cat conftest.c
+#echo "$CC $CFLAGS $1 -Werror -Wall -c conftest.c 2>&1"
+#echo `$CC $CFLAGS $1 -Werror -Wall -c conftest.c`
+#exit 1
 fi
 ]
 fi
@@ -69,9 +70,15 @@ AC_MSG_RESULT(yes)
 :
 $3
 else
+if eval "test \"`echo '$cv_prog_cc_flag_needed_'$cache`\" = no"; then
 AC_MSG_RESULT(no)
 :
 $4
+else
+AC_MSG_RESULT(failed)
+:
+$5
+fi
 fi
 ])
 
@@ -139,6 +146,17 @@ int test() {
         return a;
 }
 ], [CFLAGS="$CFLAGS -D__EXTENSIONS__"])
+# check that functions are defined
+AC_CHECK_DECLS([isascii, getopt, srandom, ctime_r, isblank, gai_strerror],, [echo "Cannot set compile environment; pass defines in CFLAGS=-D... ./configure"; exit 1], [
+#include <stdlib.h>
+#include <sys/time.h>
+#include <time.h>
+#include <netdb.h>
+#include <unistd.h>
+#include <getopt.h>
+#include <stdbool.h>
+#include <ctype.h>
+])
 
 # for Sun studio 11.
 CHECK_COMPILER_FLAG(xO4, [CFLAGS="$CFLAGS -xO4"])
