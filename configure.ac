@@ -34,15 +34,121 @@ $3
 fi
 ])
 
+dnl routine to help check for needed compiler flags.
+# if the given code compiles without the flag, execute argument 4
+# if the given code only compiles with the flag, execute argument 3
+# otherwise fail
+AC_DEFUN([CHECK_COMPILER_FLAG_NEEDED],
+[
+AC_REQUIRE([AC_PROG_CC])
+AC_MSG_CHECKING(whether we need $1 as a flag for $CC)
+cache=`echo $1 | sed 'y%.=/+-%___p_%'`
+AC_CACHE_VAL(cv_prog_cc_flag_needed_$cache,
+[
+echo '$2' > conftest.c
+echo 'void f(){}' >>conftest.c
+if test -z "`$CC $CFLAGS -Werror -Wall -c conftest.c 2>&1`"; then
+eval "cv_prog_cc_flag_needed_$cache=no"
+else
+[
+if test -z "`$CC $CFLAGS $1 -Werror -Wall -c conftest.c 2>&1`"; then
+eval "cv_prog_cc_flag_needed_$cache=yes"
+else
+echo 'Test with flag fails too!'
+cat conftest.c
+echo "$CC $CFLAGS $1 -Werror -Wall -c conftest.c 2>&1"
+echo `$CC $CFLAGS $1 -Werror -Wall -c conftest.c`
+exit 1
+fi
+]
+fi
+rm -f conftest*
+])
+if eval "test \"`echo '$cv_prog_cc_flag_needed_'$cache`\" = yes"; then
+AC_MSG_RESULT(yes)
+:
+$3
+else
+AC_MSG_RESULT(no)
+:
+$4
+fi
+])
+
 # Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST
 AC_LANG_C
 CHECK_COMPILER_FLAG(g, [CFLAGS="$CFLAGS -g"])
 CHECK_COMPILER_FLAG(O2, [CFLAGS="$CFLAGS -O2"])
+
+CHECK_COMPILER_FLAG_NEEDED(-std=c99,
+[
+#include <stdbool.h>
+#include <ctype.h>
+int test() {
+        int a = 0;
+        a = isblank(12);
+        return a;
+}
+], [CFLAGS="$CFLAGS -std=c99"])
+
+CHECK_COMPILER_FLAG_NEEDED(-D_BSD_SOURCE,
+[
+#include <ctype.h>
+
+int test() {
+        int a;
+        a = isascii(32);
+        return a;
+}
+], [CFLAGS="$CFLAGS -D_BSD_SOURCE"])
+
+CHECK_COMPILER_FLAG_NEEDED(-D_POSIX_C_SOURCE=200112,
+[
+#include <time.h>
+#include <netdb.h>
+
+int test() {
+        int a = 0;
+        char *t;
+        time_t time = 0;
+        char *buf = NULL;
+	const char* str = NULL;
+        t = ctime_r(&time, buf);
+	str = gai_strerror(0);
+        return a;
+}
+], [CFLAGS="$CFLAGS -D_POSIX_C_SOURCE=200112"])
+
+CHECK_COMPILER_FLAG_NEEDED(-D__EXTENSIONS__,
+[
+#include <stdlib.h>
+#include <ctype.h>
+#include <sys/time.h>
+#include <unistd.h>
+#include <getopt.h>
+
+int test() {
+        int a;
+        char **opts = NULL;
+        struct timeval tv;
+        tv.tv_usec = 10;
+        srandom(32);
+        a = getopt(2, opts, "a");
+        a = isascii(32);
+        return a;
+}
+], [CFLAGS="$CFLAGS -D__EXTENSIONS__"])
+
+# for Sun studio 11.
+CHECK_COMPILER_FLAG(xO4, [CFLAGS="$CFLAGS -xO4"])
+CHECK_COMPILER_FLAG(xtarget=generic, [CFLAGS="$CFLAGS -xtarget=generic"])
+# flag warnings.
 CHECK_COMPILER_FLAG(W, [CFLAGS="$CFLAGS -W"])
 CHECK_COMPILER_FLAG(Wall, [CFLAGS="$CFLAGS -Wall"])
 CHECK_COMPILER_FLAG(Wextra, [CFLAGS="$CFLAGS -Wextra"])
 CHECK_COMPILER_FLAG(Wdeclaration-after-statement, [CFLAGS="$CFLAGS -Wdeclaration-after-statement"])
+
 AC_C_INLINE
 
 AC_DEFUN([AC_CHECK_FORMAT_ATTRIBUTE],
