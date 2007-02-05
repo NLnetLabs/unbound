@@ -251,6 +251,7 @@ AC_CHECK_TYPE(ssize_t, int)
 AC_TYPE_UID_T
 AC_TYPE_PID_T
 AC_TYPE_OFF_T
+AC_CHECK_TYPE(u_char, unsigned char)
 
 AC_CHECK_TYPE(socklen_t, , 
 	[AC_DEFINE([socklen_t], [int], [Define to 'int' if not defined])], [
