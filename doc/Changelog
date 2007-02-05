@@ -1,6 +1,7 @@
 5 February 2007: Wouter
 	- Picked up stdc99 and other define tests from ldns. Improved
 	  POSIX define test to include getaddrinfo.
+	- defined constants for netevent callback error code.
 
 2 February 2007: Wouter
 	- Created udp4 and udp6 port arrays to provide service for both

@@ -66,6 +66,13 @@ struct internal_timer;
 typedef int comm_point_callback_t(struct comm_point*, void*, int, 
 	struct comm_reply*);
 
+/** to pass no_error to callback function */
+#define NETEVENT_NOERROR 0
+/** to pass closed connection to callback function */
+#define NETEVENT_CLOSED -1
+/** to pass timeout happened to callback function */
+#define NETEVENT_TIMEOUT -2 
+
 /**
  * A communication point dispatcher. Thread specific.
  */
@@ -142,10 +149,11 @@ struct comm_point {
 	    tcp_accept does not get called back, is NULL then.
 	    If a timeout happens, callback with timeout=1 is called.
 	    If an error happens, callback is called with error set 
-	    nonzero. If nonzero, it is an errno value.
+	    nonzero. If not NETEVENT_NOERROR, it is an errno value.
 	    If the connection is closed (by remote end) then the
-	    callback is called with error set to -1.
-	    If a timeout happens on the connection, the error is set to -2.
+	    callback is called with error set to NETEVENT_CLOSED=-1.
+	    If a timeout happens on the connection, the error is set to 
+	    NETEVENT_TIMEOUT=-2.
 	    The reply_info can be copied if the reply needs to happen at a
 	    later time. It consists of a struct with commpoint and address.
 	    It can be passed to a msg send routine some time later.

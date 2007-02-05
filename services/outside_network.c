@@ -107,7 +107,7 @@ static int outnet_udp_cb(struct comm_point* c, void* arg, int error,
 	}
 	comm_timer_disable(p->timer);
 	log_info("outnet handle udp reply");
-	(void)(*p->cb)(p->c, p->cb_arg, 0, NULL);
+	(void)(*p->cb)(p->c, p->cb_arg, NETEVENT_NOERROR, NULL);
 	return 0;
 }
 
@@ -227,7 +227,7 @@ static void pending_udp_timer_cb(void *arg)
 	struct pending* p = (struct pending*)arg;
 	/* it timed out */
 	log_info("timeout udp");
-	(void)(*p->cb)(p->c, p->cb_arg, -2, NULL);
+	(void)(*p->cb)(p->c, p->cb_arg, NETEVENT_TIMEOUT, NULL);
 }
 
 struct outside_network* 
@@ -448,7 +448,7 @@ void pending_udp_query(struct outside_network* outnet, ldns_buffer* packet,
 	/* create pending struct (and possibly change ID to be unique) */
 	if(!(pend=new_pending(outnet, packet, addr, addrlen, cb, cb_arg))) {
 		/* callback user for the error */
-		(void)(*cb)(NULL, cb_arg, -1, NULL);
+		(void)(*cb)(NULL, cb_arg, NETEVENT_CLOSED, NULL);
 		return;
 	}
 	select_port(outnet, pend);
@@ -459,7 +459,7 @@ void pending_udp_query(struct outside_network* outnet, ldns_buffer* packet,
 		/* error, call error callback function */
 		pending_delete(outnet, pend);
 		/* callback user for the error */
-		(void)(*pend->cb)(pend->c, pend->cb_arg, -1, NULL);
+		(void)(*pend->cb)(pend->c, pend->cb_arg, NETEVENT_CLOSED, NULL);
 		return;
 	}
 

@@ -209,7 +209,7 @@ comm_point_udp_callback(int fd, short event, void* arg)
 	}
 	ldns_buffer_skip(rep.c->buffer, recv);
 	ldns_buffer_flip(rep.c->buffer);
-	if((*rep.c->callback)(rep.c, rep.c->cb_arg, 0, &rep)) {
+	if((*rep.c->callback)(rep.c, rep.c->cb_arg, NETEVENT_NOERROR, &rep)) {
 		/* send back immediate reply */
 		(void)comm_point_send_udp_msg(rep.c, rep.c->buffer,
 			(struct sockaddr*)&rep.addr, rep.addrlen);
