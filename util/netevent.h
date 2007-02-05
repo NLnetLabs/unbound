@@ -200,6 +200,23 @@ struct comm_timer {
 };
 
 /**
+ * Structure only for signal events.
+ */
+struct comm_signal {
+	/** the communication base */
+	struct comm_base* base;
+
+	/** the internal event stuff */
+	struct internal_signal* ev_signal;
+
+	/** callback function, takes signal number and user arg */
+	void (*callback)(int, void*);
+
+	/** callback user argument */
+	void* cb_arg;
+};
+
+/**
  * Create a new comm base.
  * @return: the new comm base. NULL on error.
  */
@@ -217,6 +234,12 @@ void comm_base_delete(struct comm_base* b);
  * @param b: the communication to perform.
  */
 void comm_base_dispatch(struct comm_base* b);
+
+/**
+ * Exit from dispatch loop.
+ * @param b: the communicatio base that is in dispatch().
+ */
+void comm_base_exit(struct comm_base* b);
 
 /**
  * Create an UDP comm point. Calls malloc.
@@ -326,5 +349,29 @@ void comm_timer_delete(struct comm_timer* timer);
  * @return: false if disabled or not set.
  */
 int comm_timer_is_set(struct comm_timer* timer);
+
+/**
+ * Create a signal handler.
+ * @param base: communication base to use.
+ * @param callback: called when signal is caught.
+ * @param cb_arg: user argument to callback
+ * @return: the signal struct (bind it to a signal) or NULL on error.
+ */
+struct comm_signal* comm_signal_create(struct comm_base* base,
+	void (*callback)(int, void*), void* cb_arg);
+
+/**
+ * Bind signal struct to catch a signal.
+ * @param comsig: the communication point, with callback information.
+ * @param sig: signal number.
+ * @return: true on success. false on error.
+ */
+int comm_signal_bind(struct comm_signal* comsig, int sig);
+
+/**
+ * Delete the signal communication point.
+ * @param comsig: to delete.
+ */
+void comm_signal_delete(struct comm_signal* comsig);
 
 #endif /* NET_EVENT_H */

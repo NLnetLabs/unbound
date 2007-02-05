@@ -76,6 +76,18 @@ struct internal_timer {
 };
 
 /**
+ * Internal signal structure, to store signal event in.
+ */
+struct internal_signal {
+	/** libevent event type, alloced here */
+	struct event ev;
+	/** the commpoint it is part of */
+	struct comm_signal* comm;
+	/** next in signal list */
+	struct internal_signal* next;
+};
+
+/**
  * handle libevent callback for udp comm point.
  * @param fd: file descriptor.
  * @param event: event bits from libevent: 
@@ -107,9 +119,18 @@ static void comm_point_tcp_handle_callback(int fd, short event, void* arg);
  * @param fd: file descriptor (always -1).
  * @param event: event bits from libevent: 
  *	EV_READ, EV_WRITE, EV_SIGNAL, EV_TIMEOUT.
- * @param arg: the comm_point structure.
+ * @param arg: the comm_timer structure.
  */
 static void comm_timer_callback(int fd, short event, void* arg);
+
+/**
+ * handle libevent callback for signal comm.
+ * @param fd: file descriptor (used signal number).
+ * @param event: event bits from libevent: 
+ *	EV_READ, EV_WRITE, EV_SIGNAL, EV_TIMEOUT.
+ * @param arg: the internal commsignal structure.
+ */
+static void comm_signal_callback(int fd, short event, void* arg);
 
 /** create a tcp handler with a parent */
 static struct comm_point* comm_point_create_tcp_handler(
@@ -156,12 +177,17 @@ void
 comm_base_dispatch(struct comm_base* b)
 {
 	int retval;
-	while(1) {
-		retval = event_base_dispatch(b->eb->base);
-		if(retval != 0) {
-			log_err("event_dispatch returned error %d, "
-				"errno is %s", retval, strerror(errno));
-		}
+	retval = event_base_dispatch(b->eb->base);
+	if(retval != 0) {
+		fatal_exit("event_dispatch returned error %d, "
+			"errno is %s", retval, strerror(errno));
+	}
+}
+
+void comm_base_exit(struct comm_base* b)
+{
+	if(event_base_loopexit(b->eb->base, NULL) != 0) {
+		log_err("Could not loopexit");
 	}
 }
 
@@ -499,4 +525,71 @@ int
 comm_timer_is_set(struct comm_timer* timer)
 {
 	return (int)timer->ev_timer->enabled;
+}
+
+struct comm_signal* comm_signal_create(struct comm_base* base,
+        void (*callback)(int, void*), void* cb_arg)
+{
+	struct comm_signal* com = (struct comm_signal*)malloc(
+		sizeof(struct comm_signal));
+	if(!com) {
+		log_err("malloc failed");
+		return NULL;
+	}
+	com->base = base;
+	com->callback = callback;
+	com->cb_arg = cb_arg;
+	com->ev_signal = NULL;
+	return com;
+}
+
+static void comm_signal_callback(int sig, short event, void* arg)
+{
+	struct internal_signal* entry = (struct internal_signal*)arg;
+	if(!(event & EV_SIGNAL))
+		return;
+	(*entry->comm->callback)(sig, entry->comm->cb_arg);
+}
+
+int comm_signal_bind(struct comm_signal* comsig, int sig)
+{
+	struct internal_signal* entry = (struct internal_signal*)calloc(1, 
+		sizeof(struct internal_signal));
+	if(!entry) {
+		log_err("malloc failed");
+		return 0;
+	}
+	log_assert(comsig);
+	entry->comm = comsig;
+	/* add signal event */
+	signal_set(&entry->ev, sig, comm_signal_callback, entry);
+	if(event_base_set(comsig->base->eb->base, &entry->ev) != 0) {
+		log_err("Could not set signal base");
+		free(entry);
+		return 0;
+	}
+	if(signal_add(&entry->ev, NULL) != 0) {
+		log_err("Could not add signal handler");
+		free(entry);
+		return 0;
+	}
+	/* link into list */
+	entry->next = comsig->ev_signal;
+	comsig->ev_signal = entry;
+	return 1;
+}
+
+void comm_signal_delete(struct comm_signal* comsig)
+{
+	struct internal_signal* p, *np;
+	if(!comsig)
+		return;
+	p=comsig->ev_signal;
+	while(p) {
+		np = p->next;
+		signal_del(&p->ev);
+		free(p);
+		p = np;
+	}
+	free(comsig);
 }

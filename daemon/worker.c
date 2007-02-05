@@ -51,6 +51,7 @@
 #endif
 #include <netdb.h>
 #include <errno.h>
+#include <signal.h>
 
 /** timeout in seconds for UDP queries to auth servers. TODO: proper rtt */
 #define UDP_QUERY_TIMEOUT 5
@@ -169,6 +170,30 @@ static int worker_handle_request(struct comm_point* c, void* arg, int error,
 	return 0;
 }
 
+/** worker signal callback */
+void worker_sighandler(int sig, void* arg)
+{
+	/* note that log, print, syscalls here give race conditions. */
+	struct worker* worker = (struct worker*)arg;
+	switch(sig) {
+		case SIGHUP:
+			log_info("caught signal SIGHUP");
+			comm_base_exit(worker->base);
+			break;
+		case SIGINT:
+			log_info("caught signal SIGINT");
+			comm_base_exit(worker->base);
+			break;
+		case SIGQUIT:
+			log_info("caught signal SIGQUIT");
+			comm_base_exit(worker->base);
+			break;
+		default:
+			log_err("unknown signal: %d, ignored", sig);
+			break;
+	}
+}
+
 struct worker* worker_init(const char* port, int do_ip4, int do_ip6,
 	int do_udp, int do_tcp, size_t buffer_size, size_t numports,
 	int base_port)
@@ -180,27 +205,36 @@ struct worker* worker_init(const char* port, int do_ip4, int do_ip6,
 	worker->base = comm_base_create();
 	if(!worker->base) {
 		log_err("could not create event handling base");
+		worker_delete(worker);
+		return NULL;
+	}
+	worker->comsig = comm_signal_create(worker->base, worker_sighandler, 
+		worker);
+	if(!worker->comsig || !comm_signal_bind(worker->comsig, SIGHUP)
+		|| !comm_signal_bind(worker->comsig, SIGINT)
+		|| !comm_signal_bind(worker->comsig, SIGQUIT)) {
+		log_err("could not create signal handlers");
+		worker_delete(worker);
 		return NULL;
 	}
 	worker->front = listen_create(worker->base, 0, NULL, port, 
 		do_ip4, do_ip6, do_udp, do_tcp, buffer_size, 
 		worker_handle_request, worker);
 	if(!worker->front) {
-		comm_base_delete(worker->base);
+		worker_delete(worker);
 		log_err("could not create listening sockets");
 		return NULL;
 	}
 	worker->back = outside_network_create(worker->base,
 		buffer_size, numports, NULL, 0, do_ip4, do_ip6, base_port);
 	if(!worker->back) {
-		comm_base_delete(worker->base);
 		log_err("could not create outgoing sockets");
 		return NULL;
 	}
 	/* init random(), large table size. */
 	if(!initstate(time(NULL)^getpid(), worker->rndstate, RND_STATE_SIZE)) {
 		log_err("could not init random numbers.");
-		comm_base_delete(worker->base);
+		worker_delete(worker);
 		return NULL;
 	}
 	return worker;
@@ -217,6 +251,7 @@ void worker_delete(struct worker* worker)
 		return;
 	listen_delete(worker->front);
 	outside_network_delete(worker->back);
+	comm_signal_delete(worker->comsig);
 	comm_base_delete(worker->base);
 	free(worker);
 }

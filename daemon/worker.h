@@ -79,6 +79,9 @@ struct worker {
 
 	/** length of fwd_addr */
 	socklen_t fwd_addrlen;
+
+	/** the signal handler */
+	struct comm_signal *comsig;
 };
 
 /**
