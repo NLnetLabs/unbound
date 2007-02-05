@@ -84,7 +84,9 @@ int
 create_udp_sock(struct addrinfo *addr)
 {
 	int s, flag;
+# if defined(IPV6_V6ONLY)
 	int on=1;
+# endif
 	verbose_print_addr(addr);
 	if((s = socket(addr->ai_family, addr->ai_socktype, 0)) == -1) {
 		log_err("can't create socket: %s", strerror(errno));
