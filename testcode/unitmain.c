@@ -40,6 +40,26 @@
  */
 
 #include "config.h"
+#include "util/log.h"
+
+/** number of tests done */
+int testcount = 0;
+/** test bool x, exits on failure, increases testcount. */
+#define unit_assert(x) testcount++; log_assert(x);
+
+/** test net code */
+#include "services/outside_network.h"
+static void net_test()
+{
+	unit_assert( str_is_ip6("::") );
+	unit_assert( str_is_ip6("::1") );
+	unit_assert( str_is_ip6("2001:7b8:206:1:240:f4ff:fe37:8810") );
+	unit_assert( str_is_ip6("fe80::240:f4ff:fe37:8810") );
+	unit_assert( !str_is_ip6("0.0.0.0") );
+	unit_assert( !str_is_ip6("213.154.224.12") );
+	unit_assert( !str_is_ip6("213.154.224.255") );
+	unit_assert( !str_is_ip6("255.255.255.0") );
+}
 
 /**
  * Main unit test program. Setup, teardown and report errors.
@@ -54,5 +74,7 @@ int main(int argc, char* argv[])
 		return 1;
 	}
 	printf("Start of %s unit test.\n", PACKAGE_STRING);
+	net_test();
+	printf("%d tests succeeded\n", testcount);
 	return 0;
 }
