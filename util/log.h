@@ -115,7 +115,7 @@ void log_vmsg(const char* type, const char* format, va_list args);
  */
 #ifdef UNBOUND_ASSERT
 #  define log_assert(x) \
- 	do { if(!(x)) \
+	do { if(!(x)) \
 		fatal_exit("%s:%d: %s: assertion %s failed", \
 			__FILE__, __LINE__, __func__, #x); \
 	} while(0);

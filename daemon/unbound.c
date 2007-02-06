@@ -85,6 +85,7 @@ main(int argc, char* argv[])
 	const char* fwdport = UNBOUND_DNS_PORT;
 
 	log_init();
+	log_info("Start of %s.", PACKAGE_STRING);
 	/* parse the options */
 	while( (c=getopt(argc, argv, "f:hvp:z:")) != -1) {
 		switch(c) {
@@ -131,7 +132,7 @@ main(int argc, char* argv[])
 	}
 	
 	/* drop user priviliges and chroot if needed */
-	log_info("Start of %s.", PACKAGE_STRING);
+	verbose(VERB_OPS, "start of service (%s).", PACKAGE_STRING);
 	worker_work(worker);
 
 	/* cleanup */

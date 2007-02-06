@@ -1,9 +1,7 @@
 /*
  * rbtree.c -- generic red black tree
  *
- * Copyright (c) 2001-2006, NLnet Labs. All rights reserved.
- *
- * Copyright (c) 2007, NLnet Labs. All rights reserved.
+ * Copyright (c) 2001-2007, NLnet Labs. All rights reserved.
  * 
  * This software is open source.
  * 

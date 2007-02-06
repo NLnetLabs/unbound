@@ -44,6 +44,7 @@
 #include <errno.h>
 
 /* -------- Start of local definitions -------- */
+/* We define libevent structures here to hide the libevent stuff. */
 
 /* we use libevent */
 #include <event.h>
@@ -71,7 +72,7 @@ struct internal_base {
 struct internal_timer {
 	/** libevent event type, alloced here */
 	struct event ev;
-	/** is timer enabled, yes or no */
+	/** is timer enabled */
 	uint8_t enabled;
 };
 
@@ -81,8 +82,6 @@ struct internal_timer {
 struct internal_signal {
 	/** libevent event type, alloced here */
 	struct event ev;
-	/** the commpoint it is part of */
-	struct comm_signal* comm;
 	/** next in signal list */
 	struct internal_signal* next;
 };
@@ -125,7 +124,7 @@ static void comm_timer_callback(int fd, short event, void* arg);
 
 /**
  * handle libevent callback for signal comm.
- * @param fd: file descriptor (used signal number).
+ * @param fd: file descriptor (used for the signal number).
  * @param event: event bits from libevent: 
  *	EV_READ, EV_WRITE, EV_SIGNAL, EV_TIMEOUT.
  * @param arg: the internal commsignal structure.
@@ -218,6 +217,7 @@ comm_point_udp_callback(int fd, short event, void* arg)
 	ssize_t recv;
 
 	rep.c = (struct comm_point*)arg;
+	log_assert(rep.c->type == comm_udp);
 
 	verbose(VERB_ALGO, "callback udp");
 	if(!(event&EV_READ))
@@ -248,6 +248,8 @@ comm_point_tcp_accept_callback(int ATTR_UNUSED(fd), short ATTR_UNUSED(event),
 {
 	struct comm_point* c = (struct comm_point*)arg;
 	log_info("callback tcpaccept for %x", (int)c);
+	log_assert(c->type == comm_tcp_accept);
+	/* TODO */
 }
 
 static void 
@@ -256,6 +258,8 @@ comm_point_tcp_handle_callback(int ATTR_UNUSED(fd), short ATTR_UNUSED(event),
 {
 	struct comm_point* c = (struct comm_point*)arg;
 	log_info("callback tcpaccept for %x", (int)c);
+	log_assert(c->type == comm_tcp);
+	/* TODO */
 }
 
 struct comm_point* 
@@ -375,6 +379,11 @@ comm_point_create_tcp(struct comm_base *base, int fd, int num, size_t bufsize,
 	c->max_tcp_count = num;
 	c->tcp_handlers = (struct comm_point**)calloc((size_t)num,
 		sizeof(struct comm_point*));
+	if(!c->tcp_handlers) {
+		free(c->ev);
+		free(c);
+		return NULL;
+	}
 	c->tcp_free = NULL;
 	c->type = comm_tcp_accept;
 	c->tcp_do_close = 0;
@@ -384,16 +393,11 @@ comm_point_create_tcp(struct comm_base *base, int fd, int num, size_t bufsize,
 	evbits = EV_READ | EV_PERSIST;
 	/* libevent stuff */
 	event_set(&c->ev->ev, c->fd, evbits, comm_point_tcp_accept_callback, c);
-	if( event_base_set(base->eb->base, &c->ev->ev) != 0 ||
+	if(event_base_set(base->eb->base, &c->ev->ev) != 0 ||
 		event_add(&c->ev->ev, c->timeout) != 0 )
 	{
 		log_err("could not add tcpacc event");
-		if(!event_del(&c->ev->ev)) {
-			log_err("could not event_del tcpacc event");
-		}
-		free(c->tcp_handlers);
-		free(c->ev);
-		free(c);
+		comm_point_delete(c);
 		return NULL;
 	}
 
@@ -413,10 +417,12 @@ comm_point_create_tcp(struct comm_base *base, int fd, int num, size_t bufsize,
 void 
 comm_point_close(struct comm_point* c)
 {
+	if(!c)
+		return;
 	if(event_del(&c->ev->ev) != 0) {
 		log_err("could not event_del on close");
 	}
-	/* close fd after removing from event lists, or epoll/etc messes up */
+	/* close fd after removing from event lists, or epoll.. is messed up */
 	if(c->fd != -1)
 		close(c->fd);
 	c->fd = -1;
@@ -447,7 +453,8 @@ comm_point_set_cb_arg(struct comm_point* c, void *arg)
 	c->cb_arg = arg;
 }
 
-void comm_point_send_reply(struct comm_reply *repinfo)
+void 
+comm_point_send_reply(struct comm_reply *repinfo)
 {
 	log_assert(repinfo && repinfo->c);
 	if(repinfo->c->type == comm_udp) {
@@ -455,11 +462,12 @@ void comm_point_send_reply(struct comm_reply *repinfo)
 			(struct sockaddr*)&repinfo->addr, repinfo->addrlen);
 	} else {
 		log_info("tcp reply");
+		/* TODO */
 	}
 }
 
-struct comm_timer* comm_timer_create(struct comm_base* base,
-        void (*cb)(void*), void* cb_arg)
+struct comm_timer* 
+comm_timer_create(struct comm_base* base, void (*cb)(void*), void* cb_arg)
 {
 	struct comm_timer *tm = (struct comm_timer*)calloc(1,
 		sizeof(struct comm_timer));
@@ -474,7 +482,6 @@ struct comm_timer* comm_timer_create(struct comm_base* base,
 	}
 	tm->callback = cb;
 	tm->cb_arg = cb_arg;
-	/*evtimer_set(&tm->ev_timer->ev, comm_timer_callback, tm);*/
 	event_set(&tm->ev_timer->ev, -1, EV_PERSIST|EV_TIMEOUT, 
 		comm_timer_callback, tm);
 	if(event_base_set(base->eb->base, &tm->ev_timer->ev) != 0) {
@@ -486,7 +493,8 @@ struct comm_timer* comm_timer_create(struct comm_base* base,
 	return tm;
 }
 
-void comm_timer_disable(struct comm_timer* timer)
+void 
+comm_timer_disable(struct comm_timer* timer)
 {
 	if(!timer)
 		return;
@@ -494,7 +502,8 @@ void comm_timer_disable(struct comm_timer* timer)
 	timer->ev_timer->enabled = 0;
 }
 
-void comm_timer_set(struct comm_timer* timer, struct timeval* tv)
+void 
+comm_timer_set(struct comm_timer* timer, struct timeval* tv)
 {
 	if(timer->ev_timer->enabled)
 		comm_timer_disable(timer);
@@ -502,7 +511,8 @@ void comm_timer_set(struct comm_timer* timer, struct timeval* tv)
 	timer->ev_timer->enabled = 1;
 }
 
-void comm_timer_delete(struct comm_timer* timer)
+void 
+comm_timer_delete(struct comm_timer* timer)
 {
 	if(!timer)
 		return;
@@ -527,7 +537,8 @@ comm_timer_is_set(struct comm_timer* timer)
 	return (int)timer->ev_timer->enabled;
 }
 
-struct comm_signal* comm_signal_create(struct comm_base* base,
+struct comm_signal* 
+comm_signal_create(struct comm_base* base,
         void (*callback)(int, void*), void* cb_arg)
 {
 	struct comm_signal* com = (struct comm_signal*)malloc(
@@ -543,15 +554,17 @@ struct comm_signal* comm_signal_create(struct comm_base* base,
 	return com;
 }
 
-static void comm_signal_callback(int sig, short event, void* arg)
+static void 
+comm_signal_callback(int sig, short event, void* arg)
 {
-	struct internal_signal* entry = (struct internal_signal*)arg;
+	struct comm_signal* comsig = (struct comm_signal*)arg;
 	if(!(event & EV_SIGNAL))
 		return;
-	(*entry->comm->callback)(sig, entry->comm->cb_arg);
+	(*comsig->callback)(sig, comsig->cb_arg);
 }
 
-int comm_signal_bind(struct comm_signal* comsig, int sig)
+int 
+comm_signal_bind(struct comm_signal* comsig, int sig)
 {
 	struct internal_signal* entry = (struct internal_signal*)calloc(1, 
 		sizeof(struct internal_signal));
@@ -560,9 +573,8 @@ int comm_signal_bind(struct comm_signal* comsig, int sig)
 		return 0;
 	}
 	log_assert(comsig);
-	entry->comm = comsig;
 	/* add signal event */
-	signal_set(&entry->ev, sig, comm_signal_callback, entry);
+	signal_set(&entry->ev, sig, comm_signal_callback, comsig);
 	if(event_base_set(comsig->base->eb->base, &entry->ev) != 0) {
 		log_err("Could not set signal base");
 		free(entry);
@@ -579,7 +591,8 @@ int comm_signal_bind(struct comm_signal* comsig, int sig)
 	return 1;
 }
 
-void comm_signal_delete(struct comm_signal* comsig)
+void 
+comm_signal_delete(struct comm_signal* comsig)
 {
 	struct internal_signal* p, *np;
 	if(!comsig)

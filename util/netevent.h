@@ -48,6 +48,13 @@
  *    o frontside - aimed towards our clients, queries come in, answers back.
  *    o behind - aimed towards internet, to the authoritative DNS servers.
  *
+ * Several event types are available:
+ *    o comm_base - for thread safety of the comm points, one per thread.
+ *    o comm_point - udp and tcp networking, with callbacks.
+ *    o comm_timer - a timeout with callback.
+ *    o comm_signal - callbacks when signal is caught.
+ *    o comm_reply - holds reply info during networking callback.
+ *
  */
 
 #ifndef NET_EVENT_H
@@ -158,6 +165,7 @@ struct comm_point {
 	    later time. It consists of a struct with commpoint and address.
 	    It can be passed to a msg send routine some time later.
 	    Note the reply information is temporary and must be copied.
+	    NULL is passed for_reply info, in cases where error happened.
 
 	    declare as: 
 	    int my_callback(struct comm_point* c, void* my_arg, int error,
@@ -351,17 +359,18 @@ void comm_timer_delete(struct comm_timer* timer);
 int comm_timer_is_set(struct comm_timer* timer);
 
 /**
- * Create a signal handler.
+ * Create a signal handler. Call signal_bind() later to bind to a signal.
  * @param base: communication base to use.
  * @param callback: called when signal is caught.
  * @param cb_arg: user argument to callback
- * @return: the signal struct (bind it to a signal) or NULL on error.
+ * @return: the signal struct or NULL on error.
  */
 struct comm_signal* comm_signal_create(struct comm_base* base,
 	void (*callback)(int, void*), void* cb_arg);
 
 /**
- * Bind signal struct to catch a signal.
+ * Bind signal struct to catch a signal. A signle comm_signal can be bound
+ * to multiple signals, calling comm_signal_bind multiple times.
  * @param comsig: the communication point, with callback information.
  * @param sig: signal number.
  * @return: true on success. false on error.

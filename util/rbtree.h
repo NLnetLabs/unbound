@@ -1,9 +1,7 @@
 /*
  * rbtree.h -- generic red-black tree
  *
- * Copyright (c) 2001-2006, NLnet Labs. All rights reserved.
- *
- * Copyright (c) 2007, NLnet Labs. All rights reserved.
+ * Copyright (c) 2001-2007, NLnet Labs. All rights reserved.
  * 
  * This software is open source.
  * 
@@ -52,7 +50,7 @@
  */
 typedef struct rbnode_t rbnode_t;
 /**
- * The rbnore_t struct definition.
+ * The rbnode_t struct definition.
  */
 struct rbnode_t {
 	/** parent in rbtree, RBTREE_NULL for root */
@@ -173,7 +171,7 @@ rbnode_t *rbtree_previous(rbnode_t *rbtree);
 		((d) = (void *) (rbtree)->_node); (rbtree)->_node = rbtree_next((rbtree)->_node))
 
 /**
- * call with node=variable of struct* with rbnode_t as first element.
+ * Call with node=variable of struct* with rbnode_t as first element.
  * with type is the type of a pointer to that struct. 
  */
 #define RBTREE_FOR(node, type, rbtree) \
