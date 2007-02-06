@@ -51,15 +51,15 @@
 static void usage()
 {
 	printf("usage: unbound [options]\n");
-	printf("\tstart unbound daemon DNS resolver.\n");
+	printf("	start unbound daemon DNS resolver.\n");
 	printf("-h	this help\n");
 	printf("-p port	the port to listen on\n");
 	printf("-v	verbose (multiple times increase verbosity)\n");
 	printf("-f ip	set forwarder address\n");
 	printf("-z port	set forwarder port\n");
 	printf("Version %s\n", PACKAGE_VERSION);
-	printf("BSD licensed, see LICENSE file in source package.\n");
-	printf("Report bugs to %s.\n", PACKAGE_BUGREPORT);
+	printf("BSD licensed, see LICENSE in source package for details.\n");
+	printf("Report bugs to %s\n", PACKAGE_BUGREPORT);
 }
 
 /** getopt global, in case header files fail to declare it. */
@@ -71,6 +71,7 @@ extern char* optarg;
  * main program. Set options given commandline arguments.
  * @param argc: number of commandline arguments.
  * @param argv: array of commandline arguments.
+ * @return: exit status of the program.
  */
 int 
 main(int argc, char* argv[])

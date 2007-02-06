@@ -59,7 +59,8 @@
 #define ID_AND_FLAGS 4
 
 /** reply to query with given error code */
-static void replyerror(int r, struct worker* worker)
+static void 
+replyerror(int r, struct worker* worker)
 {
 	LDNS_QR_SET(ldns_buffer_begin(worker->query_reply.c->buffer));
 	LDNS_RCODE_SET(ldns_buffer_begin(worker->query_reply.c->buffer), r);
@@ -68,7 +69,8 @@ static void replyerror(int r, struct worker* worker)
 }
 
 /** process incoming replies from the network */
-static int worker_handle_reply(struct comm_point* c, void* arg, int error, 
+static int 
+worker_handle_reply(struct comm_point* c, void* arg, int error, 
 	struct comm_reply* ATTR_UNUSED(reply_info))
 {
 	struct worker* worker = (struct worker*)arg;
@@ -90,7 +92,8 @@ static int worker_handle_reply(struct comm_point* c, void* arg, int error,
 }
 
 /** process incoming request */
-static void worker_process_query(struct worker* worker) 
+static void 
+worker_process_query(struct worker* worker) 
 {
 	/* query the forwarding address */
 	pending_udp_query(worker->back, worker->query_reply.c->buffer, 
@@ -101,7 +104,8 @@ static void worker_process_query(struct worker* worker)
 /** check request sanity. Returns error code, 0 OK, or -1 discard. 
  * @param pkt: the wire packet to examine for sanity.
 */
-static int worker_check_request(ldns_buffer* pkt)
+static int 
+worker_check_request(ldns_buffer* pkt)
 {
 	if(ldns_buffer_limit(pkt) < LDNS_HEADER_SIZE) {
 		verbose(VERB_DETAIL, "request too short, discarded");
@@ -140,13 +144,14 @@ static int worker_check_request(ldns_buffer* pkt)
 }
 
 /** handles callbacks from listening event interface */
-static int worker_handle_request(struct comm_point* c, void* arg, int error,
+static int 
+worker_handle_request(struct comm_point* c, void* arg, int error,
 	struct comm_reply* repinfo)
 {
 	struct worker* worker = (struct worker*)arg;
 	int ret;
 	log_info("worker handle request");
-	if(error != 0) {
+	if(error != NETEVENT_NOERROR) {
 		log_err("called with err=%d", error);
 		return 0;
 	}
@@ -171,7 +176,8 @@ static int worker_handle_request(struct comm_point* c, void* arg, int error,
 }
 
 /** worker signal callback */
-void worker_sighandler(int sig, void* arg)
+void 
+worker_sighandler(int sig, void* arg)
 {
 	/* note that log, print, syscalls here give race conditions. */
 	struct worker* worker = (struct worker*)arg;
@@ -194,9 +200,9 @@ void worker_sighandler(int sig, void* arg)
 	}
 }
 
-struct worker* worker_init(const char* port, int do_ip4, int do_ip6,
-	int do_udp, int do_tcp, size_t buffer_size, size_t numports,
-	int base_port)
+struct worker* 
+worker_init(const char* port, int do_ip4, int do_ip6, int do_udp, int do_tcp, 
+	size_t buffer_size, size_t numports, int base_port)
 {
 	struct worker* worker = (struct worker*)calloc(1, 
 		sizeof(struct worker));
@@ -221,14 +227,15 @@ struct worker* worker_init(const char* port, int do_ip4, int do_ip6,
 		do_ip4, do_ip6, do_udp, do_tcp, buffer_size, 
 		worker_handle_request, worker);
 	if(!worker->front) {
-		worker_delete(worker);
 		log_err("could not create listening sockets");
+		worker_delete(worker);
 		return NULL;
 	}
 	worker->back = outside_network_create(worker->base,
 		buffer_size, numports, NULL, 0, do_ip4, do_ip6, base_port);
 	if(!worker->back) {
 		log_err("could not create outgoing sockets");
+		worker_delete(worker);
 		return NULL;
 	}
 	/* init random(), large table size. */
@@ -240,12 +247,14 @@ struct worker* worker_init(const char* port, int do_ip4, int do_ip6,
 	return worker;
 }
 
-void worker_work(struct worker* worker)
+void 
+worker_work(struct worker* worker)
 {
 	comm_base_dispatch(worker->base);
 }
 
-void worker_delete(struct worker* worker)
+void 
+worker_delete(struct worker* worker)
 {
 	if(!worker) 
 		return;
@@ -256,7 +265,8 @@ void worker_delete(struct worker* worker)
 	free(worker);
 }
 
-int worker_set_fwd(struct worker* worker, const char* ip, const char* port)
+int 
+worker_set_fwd(struct worker* worker, const char* ip, const char* port)
 {
 	uint16_t p;
 	log_assert(worker && ip);

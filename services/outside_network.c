@@ -56,7 +56,8 @@
 #define MAX_ID_RETRY 1000
 
 /** compare function of pending rbtree */
-static int pending_cmp(const void* key1, const void* key2)
+static int 
+pending_cmp(const void* key1, const void* key2)
 {
 	struct pending *p1 = (struct pending*)key1;
 	struct pending *p2 = (struct pending*)key2;
@@ -74,7 +75,8 @@ static int pending_cmp(const void* key1, const void* key2)
 }
 
 /** callback for incoming udp answers from the network. */
-static int outnet_udp_cb(struct comm_point* c, void* arg, int error,
+static int 
+outnet_udp_cb(struct comm_point* c, void* arg, int error,
 	struct comm_reply *reply_info)
 {
 	struct outside_network* outnet = (struct outside_network*)arg;
@@ -82,7 +84,7 @@ static int outnet_udp_cb(struct comm_point* c, void* arg, int error,
 	struct pending* p;
 	log_info("answer cb");
 
-	if(error != 0) {
+	if(error != NETEVENT_NOERROR) {
 		log_info("outnetudp got udp error %d", error);
 		return 0;
 	}
@@ -93,16 +95,17 @@ static int outnet_udp_cb(struct comm_point* c, void* arg, int error,
 	memcpy(&key.addr, &reply_info->addr, reply_info->addrlen);
 	key.addrlen = reply_info->addrlen;
 
-	/* find it, see if this thing is a valid query */
+	/* find it, see if this thing is a valid query response */
 	p = (struct pending*)rbtree_search(outnet->pending, &key);
 	if(!p) {
-		verbose(VERB_DETAIL, "received uncalled udp reply. dropped.");
+		verbose(VERB_DETAIL, "received unsolicited udp reply. dropped.");
 		return 0;
 	}
 
 	verbose(VERB_ALGO, "received udp reply.");
 	if(p->c != c) {
-		verbose(VERB_DETAIL, "received answer on wrong port. dropped");
+		verbose(VERB_DETAIL, "received reply id,addr on wrong port. "
+			"dropped.");
 		return 0;
 	}
 	comm_timer_disable(p->timer);
@@ -118,8 +121,8 @@ static int outnet_udp_cb(struct comm_point* c, void* arg, int error,
   * @param porthint: if not -1, it gives the port to base range on.
   * @return: file descriptor
   */
-static int open_udp_port_range(const char* ifname, struct addrinfo* hints,
-	int porthint)
+static int 
+open_udp_port_range(const char* ifname, struct addrinfo* hints, int porthint)
 {
 	struct addrinfo *res = NULL;
 	int r, s;
@@ -186,7 +189,8 @@ make_udp_range(struct comm_point** coms, const char* ifname,
 }
 
 /** returns true is string addr is an ip6 specced address. */
-int str_is_ip6(const char* str)
+int 
+str_is_ip6(const char* str)
 {
 	if(strchr(str, ':'))
 		return 1;
@@ -194,9 +198,9 @@ int str_is_ip6(const char* str)
 }
 
 /** calculate number of ip4 and ip6 interfaces, times multiplier. */
-static void calc_num46(const char** ifs, int num_ifs, 
-	int do_ip4, int do_ip6, size_t multiplier, 
-	size_t* num_ip4, size_t* num_ip6)
+static void 
+calc_num46(const char** ifs, int num_ifs, int do_ip4, int do_ip6, 
+	size_t multiplier, size_t* num_ip4, size_t* num_ip6)
 {
 	int i;
 	*num_ip4 = 0;
@@ -222,7 +226,8 @@ static void calc_num46(const char** ifs, int num_ifs,
 }
 
 /** callback for udp timeout */
-static void pending_udp_timer_cb(void *arg)
+static void 
+pending_udp_timer_cb(void *arg)
 {
 	struct pending* p = (struct pending*)arg;
 	/* it timed out */
@@ -245,6 +250,7 @@ outside_network_create(struct comm_base *base, size_t bufsize,
 	outnet->base = base;
 	calc_num46(ifs, num_ifs, do_ip4, do_ip6, num_ports, 
 		&outnet->num_udp4, &outnet->num_udp6);
+	/* adds +1 to portnums so we do not allocate zero bytes. */
 	if(	!(outnet->udp_buff = ldns_buffer_new(bufsize)) ||
 		!(outnet->udp4_ports = (struct comm_point **)calloc(
 			outnet->num_udp4+1, sizeof(struct comm_point*))) ||
@@ -297,7 +303,8 @@ outside_network_create(struct comm_base *base, size_t bufsize,
 	return outnet;
 }
 
-void outside_network_delete(struct outside_network* outnet)
+void 
+outside_network_delete(struct outside_network* outnet)
 {
 	if(!outnet)
 		return;
@@ -329,7 +336,8 @@ void outside_network_delete(struct outside_network* outnet)
 	free(outnet);
 }
 
-void pending_delete(struct outside_network* outnet, struct pending* p)
+void 
+pending_delete(struct outside_network* outnet, struct pending* p)
 {
 	if(!p)
 		return;
@@ -362,7 +370,9 @@ new_pending(struct outside_network* outnet, ldns_buffer* packet,
 		return NULL;
 	}
 	/* set */
-	pend->id = LDNS_ID_WIRE(ldns_buffer_begin(packet));
+	/* id uses lousy random() TODO use better and entropy */
+	pend->id = (random()>>8) & 0xffff;
+	LDNS_ID_SET(ldns_buffer_begin(packet), pend->id);
 	memcpy(&pend->addr, addr, addrlen);
 	pend->addrlen = addrlen;
 	pend->cb = callback;
@@ -389,7 +399,8 @@ new_pending(struct outside_network* outnet, ldns_buffer* packet,
  * @param addr: the sockaddr to examine.
  * return: true if sockaddr is ip6.
  */
-static int addr_is_ip6(struct sockaddr_storage* addr)
+static int 
+addr_is_ip6(struct sockaddr_storage* addr)
 {
 	short family = *(short*)addr;
 	if(family == AF_INET6)
@@ -402,7 +413,8 @@ static int addr_is_ip6(struct sockaddr_storage* addr)
  * @param outnet: network structure that has arrays of ports to choose from.
  * @param pend: the message to send. c is filled in, randomly chosen.
  */
-static void select_port(struct outside_network* outnet, struct pending* pend)
+static void 
+select_port(struct outside_network* outnet, struct pending* pend)
 {
 	double precho;
 	int chosen, nummax;
@@ -438,14 +450,15 @@ static void select_port(struct outside_network* outnet, struct pending* pend)
 }
 
 
-void pending_udp_query(struct outside_network* outnet, ldns_buffer* packet, 
+void 
+pending_udp_query(struct outside_network* outnet, ldns_buffer* packet, 
 	struct sockaddr_storage* addr, socklen_t addrlen, int timeout,
 	comm_point_callback_t* cb, void* cb_arg)
 {
 	struct pending* pend;
 	struct timeval tv;
 
-	/* create pending struct (and possibly change ID to be unique) */
+	/* create pending struct and change ID to be unique */
 	if(!(pend=new_pending(outnet, packet, addr, addrlen, cb, cb_arg))) {
 		/* callback user for the error */
 		(void)(*cb)(NULL, cb_arg, NETEVENT_CLOSED, NULL);
@@ -456,10 +469,9 @@ void pending_udp_query(struct outside_network* outnet, ldns_buffer* packet,
 	/* send it over the commlink */
 	if(!comm_point_send_udp_msg(pend->c, packet, (struct sockaddr*)addr, 
 		addrlen)) {
-		/* error, call error callback function */
-		pending_delete(outnet, pend);
 		/* callback user for the error */
 		(void)(*pend->cb)(pend->c, pend->cb_arg, NETEVENT_CLOSED, NULL);
+		pending_delete(outnet, pend);
 		return;
 	}
 

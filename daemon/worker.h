@@ -58,30 +58,25 @@ struct outside_network;
 struct worker {
 	/** the event base this worker works with */
 	struct comm_base* base;
-
 	/** the frontside listening interface where request events come in */
 	struct listen_dnsport* front;
-
 	/** the backside outside network interface to the auth servers */
 	struct outside_network* back;
-
-	/** our one and only query, packet buffer and where to send. */
-	struct comm_reply query_reply;
+	/** the signal handler */
+	struct comm_signal *comsig;
 
 	/** number of requests currently active */
 	int num_requests;
-
-	/** random() table for this worker. */
-	char rndstate[RND_STATE_SIZE];
+	/** our one and only query, packet buffer and where to send. */
+	struct comm_reply query_reply;
 
 	/** address to forward to */
 	struct sockaddr_storage fwd_addr;
-
 	/** length of fwd_addr */
 	socklen_t fwd_addrlen;
 
-	/** the signal handler */
-	struct comm_signal *comsig;
+	/** random() table for this worker. */
+	char rndstate[RND_STATE_SIZE];
 };
 
 /**

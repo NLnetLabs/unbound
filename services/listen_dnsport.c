@@ -53,7 +53,7 @@
 
 /** number of queued TCP connections for listen() */
 #define TCP_BACKLOG 5 
-/** number of simultaneous open TCP connections */
+/** number of simultaneous open TCP connections for queries */
 #define TCP_COUNT 10 
 
 /**
@@ -258,6 +258,7 @@ listen_create_if(const char* ifname, struct listen_dnsport* front,
 		if(!cp_tcp) {
 			log_err("can't create commpoint");	
 			comm_point_delete(cp_udp);
+			close(s);
 			return 0;
 		}
 	}
@@ -306,12 +307,10 @@ listen_create(struct comm_base* base, int num_ifs, const char* ifs[],
 	
 	/* getaddrinfo */
 	memset(&hints, 0, sizeof(hints));
-
 	hints.ai_flags = AI_PASSIVE;
 	/* no name lookups on our listening ports */
 	if(num_ifs > 0)
 		hints.ai_flags |= AI_NUMERICHOST;
-
 	hints.ai_family = AF_UNSPEC;
 	if(!do_ip4 && !do_ip6) {
 		listen_delete(front);
@@ -382,4 +381,3 @@ listen_delete(struct listen_dnsport* front)
 	ldns_buffer_free(front->udp_buff);
 	free(front);
 }
-

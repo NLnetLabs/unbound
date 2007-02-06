@@ -108,12 +108,13 @@ struct pending {
  * @param bufsize: size for network buffers.
  * @param num_ports: number of udp ports to open per interface.
  * @param ifs: interface names (or NULL for default interface).
+ *    These interfaces must be able to access all authoritative servers.
  * @param num_ifs: number of names in array ifs.
  * @param do_ip4: service IP4.
  * @param do_ip6: service IP6.
  * @param port_base: if -1 system assigns ports, otherwise try to get
  *    the ports numbered from this starting number.
- * @return: the new empty structure or NULL on error.
+ * @return: the new structure (with no pending answers) or NULL on error.
  */
 struct outside_network* outside_network_create(struct comm_base* base,
 	size_t bufsize, size_t num_ports, const char** ifs, int num_ifs,
@@ -127,12 +128,15 @@ void outside_network_delete(struct outside_network* outnet);
 
 /**
  * Send UDP query, create pending answer.
+ * Changes the ID for the query to be random and unique for that destination.
  * @param outnet: provides the event handling
  * @param packet: wireformat query to send to destination.
  * @param addr: address to send to.
  * @param addrlen: length of addr.
  * @param timeout: in seconds from now.
  * @param callback: function to call on error, timeout or reply.
+ *    The routine does not return an error, instead it calls the callback,
+ *    with an error code if an error happens.
  * @param callback_arg: user argument for callback function.
  */
 void pending_udp_query(struct outside_network* outnet, ldns_buffer* packet, 
@@ -142,7 +146,7 @@ void pending_udp_query(struct outside_network* outnet, ldns_buffer* packet,
 /**
  * Delete pending answer.
  * @param outnet: outside network the pending query is part of.
- *    Used internal, if NULL, p is not unlinked from rbtree.
+ *    Internal feature: if outnet is NULL, p is not unlinked from rbtree.
  * @param p: deleted
  */
 void pending_delete(struct outside_network* outnet, struct pending* p);
@@ -150,7 +154,7 @@ void pending_delete(struct outside_network* outnet, struct pending* p);
 /** 
  * See if string is ip4 or ip6.
  * @param str: IP specification.
- * @return: true is string addr is an ip6 specced address. 
+ * @return: true if string addr is an ip6 specced address. 
  */
 int str_is_ip6(const char* str);
 

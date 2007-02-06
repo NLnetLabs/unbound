@@ -47,9 +47,10 @@ int testcount = 0;
 /** test bool x, exits on failure, increases testcount. */
 #define unit_assert(x) testcount++; log_assert(x);
 
-/** test net code */
 #include "services/outside_network.h"
-static void net_test()
+/** test net code */
+static void 
+net_test()
 {
 	unit_assert( str_is_ip6("::") );
 	unit_assert( str_is_ip6("::1") );
@@ -66,7 +67,8 @@ static void net_test()
  * @param argc: arg count.
  * @param argv: array of commandline arguments.
  */
-int main(int argc, char* argv[])
+int 
+main(int argc, char* argv[])
 {
 	if(argc != 1) {
 		printf("usage: %s\n", argv[0]);

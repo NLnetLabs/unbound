@@ -102,13 +102,11 @@ struct listen_dnsport* listen_create(struct comm_base* base,
  */
 void listen_delete(struct listen_dnsport* listen);
 
-
 /**
  * Create and bind nonblocking UDP socket
  * @param addr: address info ready to make socket.
  * @return: the socket. -1 on error.
  */
 int create_udp_sock(struct addrinfo* addr);
-
 
 #endif /* LISTEN_DNSPORT_H */

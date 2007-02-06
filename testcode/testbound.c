@@ -86,6 +86,7 @@ add_opts(char* optarg, int* pass_argc, char* pass_argv[])
 		else	len = strlen(p);
 		/* allocate and copy option */
 		if(*pass_argc >= MAXARG-1) {
+			/* printf because log_init is not yet called. */
 			printf("too many arguments: '%s'\n", p);
 			exit(1);
 		}
@@ -121,7 +122,8 @@ echo_cmdline(int argc, char* argv[])
  * @param argc: arg count.
  * @param argv: array of commandline arguments.
  */
-int main(int argc, char* argv[])
+int 
+main(int argc, char* argv[])
 {
 	int c, res;
 	int pass_argc = 0;
