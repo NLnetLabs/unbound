@@ -74,6 +74,8 @@ worker_handle_reply(struct comm_point* c, void* arg, int error,
 	struct comm_reply* ATTR_UNUSED(reply_info))
 {
 	struct worker* worker = (struct worker*)arg;
+	LDNS_ID_SET(ldns_buffer_begin(worker->query_reply.c->buffer),
+		worker->query_id);
 	if(error != 0) {
 		replyerror(LDNS_RCODE_SERVFAIL, worker);
 		return 0;
@@ -96,6 +98,8 @@ static void
 worker_process_query(struct worker* worker) 
 {
 	/* query the forwarding address */
+	worker->query_id = LDNS_ID_WIRE(ldns_buffer_begin(
+		worker->query_reply.c->buffer));
 	pending_udp_query(worker->back, worker->query_reply.c->buffer, 
 		&worker->fwd_addr, worker->fwd_addrlen, UDP_QUERY_TIMEOUT,
 		worker_handle_reply, worker);

@@ -1,3 +1,9 @@
+7 February 2007: Wouter
+	- return answer with the same ID as query was sent with.
+	- created udp forwarder test. I've done some effort to make it perform
+	  quickly. After servers are created, no big sleep statements but
+	  it checks the logfiles to see if servers have come up. Takes 0.14s.
+
 6 February 2007: Wouter
 	- reviewed code and improved in places.
 

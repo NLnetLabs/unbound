@@ -69,6 +69,8 @@ struct worker {
 	int num_requests;
 	/** our one and only query, packet buffer and where to send. */
 	struct comm_reply query_reply;
+	/** id of query */
+	uint16_t query_id;
 
 	/** address to forward to */
 	struct sockaddr_storage fwd_addr;
