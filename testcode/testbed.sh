@@ -68,6 +68,9 @@ function dotest()
 	if test x$LDNS != x; then
 		DISABLE="--with-ldns=$LDNS $DISABLE"
 	fi
+	if test x$LIBEVENT != x; then
+		DISABLE="--with-libevent=$LIBEVENT $DISABLE"
+	fi
 	echossh $1 "cd $2; if test ! -f config.h -o configure -nt config.h; then ./configure $CONFIGURE_FLAGS $DISABLE; fi"
 	echossh $1 "cd $2; if test -f "'"`which gmake`"'"; then gmake; else $MAKE_CMD; fi"
 	echossh $1 "cd $2; if test -f "'"`which gmake`"'"; then gmake doc; else $MAKE_CMD doc; fi"
@@ -115,6 +118,7 @@ for((i=0; i<${#hostname[*]}; i=$i+1)); do
 	FIXCONFIGURE=no
 	RUN_TEST=yes
 	LDNS=
+	LIBEVENT=
 	eval ${vars[$i]}
 	echo "*** ${hostname[$i]} ${desc[$i]} ***" | tee -a $LOG_FILE | tee -a $REPORT_FILE
 	dotest ${hostname[$i]} ${dir[$i]} 2>&1 | tee -a $LOG_FILE

@@ -22,6 +22,9 @@ Only important variable for unbound is the LDNS=<dir> variable that if present
 forces --with-ldns=<dir> to be passed to ./configure. In case LDNS is not
 installed on the system itself, but present somewhere else.
 
+You can also set LIBEVENT=<dir> for the libevent directory, if it is
+installed in a nonstandard location.
+
 *** Running the testbed
 
 Run by executing the script. It will take all the hosts from the file in 
