@@ -59,31 +59,6 @@
 /** byte size of ip6 address */
 #define INET6_SIZE 16 
 
-/** send addr to logfile */
-static void
-log_addr(struct sockaddr_storage* addr, socklen_t addrlen)
-{
-	uint16_t port;
-	const char* family = "unknown";
-	char dest[100];
-	int af = (int)((struct sockaddr_in*)addr)->sin_family;
-	void* sinaddr = &((struct sockaddr_in*)addr)->sin_addr;
-	switch(af) {
-		case AF_INET: family="ip4"; break;
-		case AF_INET6: family="ip6"; 
-			sinaddr = &((struct sockaddr_in6*)addr)->sin6_addr;
-			break;
-		case AF_UNIX: family="unix"; break;
-		default: break;
-	}
-	if(inet_ntop(af, sinaddr, dest, (socklen_t)sizeof(dest)) == 0) {
-		strncpy(dest, "(inet_ntop error)", sizeof(dest));
-	}
-	port = ntohs(((struct sockaddr_in*)addr)->sin_port);
-	log_info("addr fam=%s port=%d dest=%s len=%d",
-		family, (int)port, dest, (int)addrlen);
-}
-
 /** compare function of pending rbtree */
 static int 
 pending_cmp(const void* key1, const void* key2)

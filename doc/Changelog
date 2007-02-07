@@ -6,6 +6,7 @@
 	- set addrlen value when calling recvfrom.
 	- comparison of addrs more portable.
 	- LIBEVENT option for testbed to set libevent directory.
+	- work on tcp input.
 
 6 February 2007: Wouter
 	- reviewed code and improved in places.

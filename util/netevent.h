@@ -119,8 +119,6 @@ struct comm_point {
 	struct comm_point* tcp_parent;
 
 	/* -------- TCP Accept -------- */
-	/** current number of TCP connections on this socket */
-	int cur_tcp_count;
 	/** the number of TCP handlers for this tcp-accept socket */
 	int max_tcp_count;
 	/** malloced array of tcp handlers for a tcp-accept, 
@@ -323,6 +321,20 @@ int comm_point_send_udp_msg(struct comm_point* c, ldns_buffer* packet,
 	struct sockaddr* addr, socklen_t addrlen);
 
 /**
+ * Stop listening for input on the commpoint. No callbacks will happen.
+ * @param c: commpoint to disable. The fd is not closed.
+ */
+void comm_point_stop_listening(struct comm_point* c);
+
+/**
+ * Start listening again for input on the comm point.
+ * @param c: commpoint to enable again.
+ * @param newfd: new fd, or -1 to leave fd be.
+ * @param sec: timeout in seconds, or -1 for no (change to the) timeout.
+ */
+void comm_point_start_listening(struct comm_point* c, int newfd, int sec);
+
+/**
  * create timer. Not active upon creation.
  * @param base: event handling base.
  * @param cb: callback function: void myfunc(void* myarg);
@@ -382,5 +394,12 @@ int comm_signal_bind(struct comm_signal* comsig, int sig);
  * @param comsig: to delete.
  */
 void comm_signal_delete(struct comm_signal* comsig);
+
+/**
+ * Prints the sockaddr in readable format with log_info. Debug helper.
+ * @param addr: the sockaddr to print. Can be ip4 or ip6.
+ * @param addrlen: length of addr.
+ */
+void log_addr(struct sockaddr_storage* addr, socklen_t addrlen);
 
 #endif /* NET_EVENT_H */
