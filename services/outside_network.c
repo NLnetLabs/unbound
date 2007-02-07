@@ -54,6 +54,10 @@
 
 /** number of times to retry making a random ID that is unique. */
 #define MAX_ID_RETRY 1000
+/** byte size of ip4 address */
+#define INET_SIZE 4
+/** byte size of ip6 address */
+#define INET6_SIZE 16 
 
 /** send addr to logfile */
 static void
@@ -62,7 +66,7 @@ log_addr(struct sockaddr_storage* addr, socklen_t addrlen)
 	uint16_t port;
 	const char* family = "unknown";
 	char dest[100];
-	int af = ((struct sockaddr_in*)addr)->sin_family;
+	int af = (int)((struct sockaddr_in*)addr)->sin_family;
 	void* sinaddr = &((struct sockaddr_in*)addr)->sin_addr;
 	switch(af) {
 		case AF_INET: family="ip4"; break;
@@ -90,10 +94,6 @@ pending_cmp(const void* key1, const void* key2)
 	struct sockaddr_in* p2_in = (struct sockaddr_in*)&p2->addr;
 	struct sockaddr_in6* p1_in6 = (struct sockaddr_in6*)&p1->addr;
 	struct sockaddr_in6* p2_in6 = (struct sockaddr_in6*)&p2->addr;
-/** byte size of ip4 address */
-#define INET_SIZE 4
-/** byte size of ip6 address */
-#define INET6_SIZE 16 
 	if(p1->id < p2->id)
 		return -1;
 	if(p1->id > p2->id)
