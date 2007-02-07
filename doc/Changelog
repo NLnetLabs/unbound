@@ -3,6 +3,8 @@
 	- created udp forwarder test. I've done some effort to make it perform
 	  quickly. After servers are created, no big sleep statements but
 	  it checks the logfiles to see if servers have come up. Takes 0.14s.
+	- set addrlen value when calling recvfrom.
+	- comparison of addrs more portable.
 
 6 February 2007: Wouter
 	- reviewed code and improved in places.

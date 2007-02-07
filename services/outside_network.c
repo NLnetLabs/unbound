@@ -55,12 +55,45 @@
 /** number of times to retry making a random ID that is unique. */
 #define MAX_ID_RETRY 1000
 
+/** send addr to logfile */
+static void
+log_addr(struct sockaddr_storage* addr, socklen_t addrlen)
+{
+	uint16_t port;
+	const char* family = "unknown";
+	char dest[100];
+	int af = ((struct sockaddr_in*)addr)->sin_family;
+	void* sinaddr = &((struct sockaddr_in*)addr)->sin_addr;
+	switch(af) {
+		case AF_INET: family="ip4"; break;
+		case AF_INET6: family="ip6"; 
+			sinaddr = &((struct sockaddr_in6*)addr)->sin6_addr;
+			break;
+		case AF_UNIX: family="unix"; break;
+		default: break;
+	}
+	if(inet_ntop(af, sinaddr, dest, (socklen_t)sizeof(dest)) == 0) {
+		strncpy(dest, "(inet_ntop error)", sizeof(dest));
+	}
+	port = ntohs(((struct sockaddr_in*)addr)->sin_port);
+	log_info("addr fam=%s port=%d dest=%s len=%d",
+		family, (int)port, dest, (int)addrlen);
+}
+
 /** compare function of pending rbtree */
 static int 
 pending_cmp(const void* key1, const void* key2)
 {
 	struct pending *p1 = (struct pending*)key1;
 	struct pending *p2 = (struct pending*)key2;
+	struct sockaddr_in* p1_in = (struct sockaddr_in*)&p1->addr;
+	struct sockaddr_in* p2_in = (struct sockaddr_in*)&p2->addr;
+	struct sockaddr_in6* p1_in6 = (struct sockaddr_in6*)&p1->addr;
+	struct sockaddr_in6* p2_in6 = (struct sockaddr_in6*)&p2->addr;
+/** byte size of ip4 address */
+#define INET_SIZE 4
+/** byte size of ip6 address */
+#define INET6_SIZE 16 
 	if(p1->id < p2->id)
 		return -1;
 	if(p1->id > p2->id)
@@ -71,7 +104,33 @@ pending_cmp(const void* key1, const void* key2)
 	if(p1->addrlen > p2->addrlen)
 		return 1;
 	log_assert(p1->addrlen == p2->addrlen);
-	return memcmp(&p1->addr, &p2->addr, p1->addrlen);
+	if( p1_in->sin_family < p2_in->sin_family)
+		return -1;
+	if( p1_in->sin_family > p2_in->sin_family)
+		return 1;
+	log_assert( p1_in->sin_family == p2_in->sin_family );
+	/* compare ip4 */
+	if( p1_in->sin_family == AF_INET ) {
+		/* just order it, ntohs not required */
+		if(p1_in->sin_port < p2_in->sin_port)
+			return -1;
+		if(p1_in->sin_port > p2_in->sin_port)
+			return 1;
+		log_assert(p1_in->sin_port == p2_in->sin_port);
+		return memcmp(&p1_in->sin_addr, &p2_in->sin_addr, INET_SIZE);
+	} else if (p1_in6->sin6_family == AF_INET6) {
+		/* just order it, ntohs not required */
+		if(p1_in6->sin6_port < p2_in6->sin6_port)
+			return -1;
+		if(p1_in6->sin6_port > p2_in6->sin6_port)
+			return 1;
+		log_assert(p1_in6->sin6_port == p2_in6->sin6_port);
+		return memcmp(&p1_in6->sin6_addr, &p2_in6->sin6_addr, 
+			INET6_SIZE);
+	} else {
+		/* eek unknown type, perform this comparison for sanity. */
+		return memcmp(&p1->addr, &p2->addr, p1->addrlen);
+	}
 }
 
 /** callback for incoming udp answers from the network. */
@@ -94,8 +153,11 @@ outnet_udp_cb(struct comm_point* c, void* arg, int error,
 	key.id = LDNS_ID_WIRE(ldns_buffer_begin(c->buffer));
 	memcpy(&key.addr, &reply_info->addr, reply_info->addrlen);
 	key.addrlen = reply_info->addrlen;
+	log_info("Incoming reply id=%4.4x addr=", key.id);
+	log_addr(&key.addr, key.addrlen);
 
 	/* find it, see if this thing is a valid query response */
+	log_info("lookup size is %d entries", (int)outnet->pending->count);
 	p = (struct pending*)rbtree_search(outnet->pending, &key);
 	if(!p) {
 		verbose(VERB_DETAIL, "received unsolicited udp reply. dropped.");
@@ -391,6 +453,8 @@ new_pending(struct outside_network* outnet, ldns_buffer* packet,
 			return NULL;
 		}
 	}
+	log_info("inserted new pending reply id=%4.4x addr=", pend->id);
+	log_addr(&pend->addr, pend->addrlen);
 	return pend;
 }
 

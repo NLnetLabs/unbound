@@ -65,8 +65,11 @@ verbose_print_addr(struct addrinfo *addr)
 {
 	if(verbosity >= VERB_ALGO) {
 		char buf[100];
-		if(inet_ntop(addr->ai_family, 
-			&((struct sockaddr_in*)addr->ai_addr)->sin_addr, buf, 
+		void* sinaddr = &((struct sockaddr_in*)addr->ai_addr)->sin_addr;
+		if(addr->ai_family == AF_INET6)
+			sinaddr = &((struct sockaddr_in6*)addr->ai_addr)->
+				sin6_addr;
+		if(inet_ntop(addr->ai_family, sinaddr, buf,
 			(socklen_t)sizeof(buf)) == 0) {
 			strncpy(buf, "(null)", sizeof(buf));
 		}

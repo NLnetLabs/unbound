@@ -224,6 +224,7 @@ comm_point_udp_callback(int fd, short event, void* arg)
 		return;
 	log_assert(rep.c && rep.c->buffer && rep.c->fd == fd);
 	ldns_buffer_clear(rep.c->buffer);
+	rep.addrlen = (socklen_t)sizeof(rep.addr);
 	recv = recvfrom(fd, ldns_buffer_begin(rep.c->buffer), 
 		ldns_buffer_remaining(rep.c->buffer), 0, 
 		(struct sockaddr*)&rep.addr, &rep.addrlen);
