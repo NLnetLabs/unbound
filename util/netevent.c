@@ -693,7 +693,20 @@ comm_point_send_reply(struct comm_reply *repinfo)
 	}
 }
 
-void comm_point_stop_listening(struct comm_point* c)
+void 
+comm_point_drop_reply(struct comm_reply* repinfo)
+{
+	if(!repinfo)
+		return;
+	log_assert(repinfo && repinfo->c);
+	log_assert(repinfo->c->type != comm_tcp_accept);
+	if(repinfo->c->type == comm_udp)
+		return;
+	reclaim_tcp_handler(repinfo->c);
+}
+
+void 
+comm_point_stop_listening(struct comm_point* c)
 {
 	log_info("comm point stop listening %x", (int)c);
 	if(event_del(&c->ev->ev) != 0) {
@@ -701,7 +714,8 @@ void comm_point_stop_listening(struct comm_point* c)
 	}
 }
 
-void comm_point_start_listening(struct comm_point* c, int newfd, int sec)
+void 
+comm_point_start_listening(struct comm_point* c, int newfd, int sec)
 {
 	log_info("comm point start listening %x", (int)c);
 	if(c->type == comm_tcp_accept && !c->tcp_free) {

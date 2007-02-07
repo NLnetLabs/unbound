@@ -310,6 +310,12 @@ void comm_point_set_cb_arg(struct comm_point* c, void* arg);
 void comm_point_send_reply(struct comm_reply* repinfo);
 
 /**
+ * Drop reply. Cleans up.
+ * @param repinfo: The reply info copied from a commpoint callback call.
+ */
+void comm_point_drop_reply(struct comm_reply* repinfo);
+
+/**
  * Send an udp message over a commpoint.
  * @param c: commpoint to send it from.
  * @param packet: what to send.

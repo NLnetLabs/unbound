@@ -165,11 +165,13 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 			LDNS_RCODE_SET(ldns_buffer_begin(c->buffer), ret);
 			return 1;
 		}
+		comm_point_drop_reply(repinfo);
 		return 0;
 	}
 	if(worker->num_requests > 0) {
 		verbose(VERB_DETAIL, "worker: too many requests active. "
 			"dropping incoming query.");
+		comm_point_drop_reply(repinfo);
 		return 0;
 	}
 	/* answer it */
