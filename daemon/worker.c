@@ -41,6 +41,7 @@
  */
 #include "config.h"
 #include "util/log.h"
+#include "util/net_help.h"
 #include "daemon/worker.h"
 #include "util/netevent.h"
 #include "services/listen_dnsport.h"

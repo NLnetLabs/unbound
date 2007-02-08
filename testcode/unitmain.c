@@ -41,6 +41,7 @@
 
 #include "config.h"
 #include "util/log.h"
+#include "util/net_help.h"
 
 /** number of tests done */
 int testcount = 0;
