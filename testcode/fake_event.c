@@ -1,5 +1,5 @@
 /*
- * testcode/replay.c - store and use a replay of events for the DNS resolver.
+ * testcode/fake_event.c - fake event handling that replays existing scenario.
  *
  * Copyright (c) 2007, NLnet Labs. All rights reserved.
  * 
@@ -35,19 +35,38 @@
 
 /**
  * \file
- * Store and use a replay of events for the DNS resolver.
- * Used to test known scenarios to get known outcomes.
+ * Event service that replays a scenario.
+ * This implements the same exported symbols as the files:
+ * util/netevent.c
+ * services/listen_dnsport.c
+ * services/outside_network.c
+ * But these do not actually access the network or events, instead
+ * the scenario is played.
  */
 
 #include "config.h"
+#include "testcode/fake_event.h"
+#include "util/netevent.h"
+#include "services/listen_dnsport.h"
+#include "services/outside_network.h"
 #include "testcode/replay.h"
-struct replay_scenario* 
-replay_scenario_read(FILE* in)
+
+/** Global variable: the scenario */
+static struct replay_scenario* scenario = NULL;
+
+void 
+fake_event_init(struct replay_scenario* scen)
 {
-	return NULL;
+	scenario = scen;
 }
 
 void 
-replay_scenario_delete(struct replay_scenario* scen)
+fake_event_cleanup()
 {
+	replay_scenario_delete(scenario);
+	scenario = NULL;
 }
+
+/*********** Dummy routines ***********/
+
+/*********** End of Dummy routines ***********/

@@ -42,10 +42,12 @@
  * File format for replay files.
  *
  * ; comment line.
- * And then a number of entries:
+ * SCENARIO_BEGIN 
+ * TITLE name_of_scenario
  * RANGE start_time end_time
  *    match_entries
  * END_RANGE
+ * ; more RANGE items.
  * ; go to the next moment
  * STEP time_step event_type
  * ; event_type can be:
@@ -55,10 +57,14 @@
  *	o CHECK_OUT_QUERY - followed by entry
  *	o REPLY - followed by entry
  *      o TIMEOUT
+ *      o ERROR
  * ; following entry starts on the next line, ENTRY_BEGIN.
+ * SCENARIO_END
  *
  *
  * ; Example file
+ * SCENARIO_BEGIN
+ * TITLE Example scenario
  * RANGE 0 100
  *   ENTRY_BEGIN
  *   ; precoded answers to queries.
@@ -78,6 +84,7 @@
  *   ; what the reply should look like
  *   ENTRY_END
  * ; successful termination. (if the answer was OK).
+ * SCENARIO_END
  * 
  * </pre>
  */
@@ -92,10 +99,13 @@ struct replay_answer;
 struct replay_range;
 struct entry;
 
+
 /**
  * A replay scenario.
  */
 struct replay_scenario {
+	/** name of replay scenario. malloced string. */
+	const char* title;
 
 	/** The list of replay moments. Linked list. Time increases in list. */
 	struct replay_moment* mom_first;
@@ -110,23 +120,6 @@ struct replay_scenario {
 	 * So: timestep, parts of query, destination --> answer.
 	 */
 	struct replay_range* range_list;
-
-	/** 
-	 * List of pending queries in order they were sent out. First
-	 * one has been sent out most recently. Last one in list is oldest. 
-	 */
-	struct fake_pending* pending_list;
-
-	/**
-	 * List of answers from the matching list, that need to be returned
-	 * to the program.
-	 */
-	struct replay_answer* answer_list;
-
-	/** callback for incoming queries */
-	comm_point_callback_t* callback_query;
-	/** user argument for incoming query callback */
-	void *cb_arg;
 };
 
 /**
@@ -158,6 +151,8 @@ struct replay_moment {
 		repevt_back_reply,
 		/** test fails if query to the network does not match */
 		repevt_back_query,
+		/** an error happens to outbound query */
+		repevt_error,
 	} evt_type;
 
 	/** The sent packet must match this. Incoming events, the data. */
@@ -166,6 +161,44 @@ struct replay_moment {
 	/** what pending query should timeout or is answered. or 
 	 * NULL for last sent query. */
 	ldns_rr* qname;
+};
+
+/**
+ * Range of timesteps, and canned replies to matching queries.
+ */
+struct replay_range {
+	/** time range when this is valid. Including start and end step. */
+	size_t start_step;
+	/** end step of time range. */
+	size_t end_step;
+
+	/** Matching list */
+	struct entry* match;
+
+	/** next in list of time ranges. */
+	struct replay_range* next_range;
+};
+
+/**
+ * Replay storage of runtime information.
+ */
+struct replay_runtime {
+	/** 
+	 * List of pending queries in order they were sent out. First
+	 * one has been sent out most recently. Last one in list is oldest. 
+	 */
+	struct fake_pending* pending_list;
+
+	/**
+	 * List of answers from the matching list, that need to be returned
+	 * to the program.
+	 */
+	struct replay_answer* answer_list;
+
+	/** callback for incoming queries */
+	comm_point_callback_t* callback_query;
+	/** user argument for incoming query callback */
+	void *cb_arg;
 };
 
 /**
@@ -178,7 +211,7 @@ struct fake_pending {
 	struct sockaddr_storage addr;
 	/** len of addr */
 	socklen_t addrlen;
-	/** The callback function to call */
+	/** The callback function to call when answer arrives (or timeout) */
 	comm_point_callback_t* callback;
 	/** callback user argument */
 	void* cb_arg;
@@ -197,19 +230,16 @@ struct replay_answer {
 };
 
 /**
- * Range of timesteps, and canned replies to matching queries.
+ * Read a replay scenario from the file.
+ * @param in: file to read from.
+ * @return: Scenario. NULL if no scenario read.
  */
-struct replay_range {
-	/** time range when this is valid. Including start and end step. */
-	size_t start_step;
-	/** end step of time range. */
-	size_t end_step;
+struct replay_scenario* replay_scenario_read(FILE* in);
 
-	/** Matching list */
-	struct entry* match;
-
-	/** next in list of time ranges. */
-	struct replay_range* next_range;
-};
+/**
+ * Delete scenario.
+ * @param scen: to delete.
+ */
+void replay_scenario_delete(struct replay_scenario* scen);
 
 #endif /* TESTCODE_REPLAY_H */
