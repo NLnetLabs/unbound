@@ -11,3 +11,5 @@ For a svn checkout
 	* compiles and runs the tests (with testcode/do-tests.sh).
 	* If build errors or test errors happen
 		* Please fix your errors and commit again.
+
+* Use gnu make to compile, make or 'gmake'.
