@@ -43,6 +43,7 @@
 #include "services/outside_network.h"
 #include "util/netevent.h"
 #include "util/log.h"
+#include "util/net_help.h"
 
 #ifdef HAVE_SYS_TYPES_H
 #  include <sys/types.h>

@@ -48,11 +48,11 @@ INSTALL=$(srcdir)/install-sh
 
 COMMON_SRC=$(wildcard services/*.c util/*.c)
 COMMON_OBJ=$(addprefix $(BUILD),$(COMMON_SRC:.c=.o) $(LIBOBJS))
-UNITTEST_SRC=testcode/unitmain.c
+UNITTEST_SRC=testcode/unitmain.c $(COMMON_SRC)
 UNITTEST_OBJ=$(addprefix $(BUILD),$(UNITTEST_SRC:.c=.o))
-DAEMON_SRC=$(wildcard daemon/*.c)
+DAEMON_SRC=$(wildcard daemon/*.c) $(COMMON_SRC)
 DAEMON_OBJ=$(addprefix $(BUILD),$(DAEMON_SRC:.c=.o))
-TESTBOUND_SRC=testcode/testbound.c testcode/ldns-testpkts.c daemon/worker.c testcode/replay.c testcode/fake_event.c
+TESTBOUND_SRC=testcode/testbound.c testcode/ldns-testpkts.c daemon/worker.c testcode/replay.c testcode/fake_event.c $(filter-out util/netevent.c services/listen_dnsport.c services/outside_network.c, $(COMMON_SRC))
 TESTBOUND_OBJ=$(addprefix $(BUILD),$(TESTBOUND_SRC:.c=.o))
 ALL_SRC=$(COMMON_SRC) $(UNITTEST_SRC) $(DAEMON_SRC) $(TESTBOUND_SRC)
 ALL_OBJ=$(addprefix $(BUILD),$(ALL_SRC:.c=.o) $(LIBOBJS))
@@ -70,15 +70,15 @@ $(BUILD)%.o:    $(srcdir)/%.c
 
 all:	$(COMMON_OBJ) unbound unittest testbound
 
-unbound:	$(COMMON_OBJ) $(DAEMON_OBJ)
+unbound:	$(DAEMON_OBJ)
 	$(INFO) Link $@
 	$Q$(LINK) -o $@ $^ $(LIBS)
 
-unittest:	$(COMMON_OBJ) $(UNITTEST_OBJ)
+unittest:	$(UNITTEST_OBJ)
 	$(INFO) Link $@
 	$Q$(LINK) -o $@ $^ $(LIBS)
 
-testbound:	$(COMMON_OBJ) $(TESTBOUND_OBJ)
+testbound:	$(TESTBOUND_OBJ)
 	$(INFO) Link $@
 	$Q$(LINK) -o $@ $^ $(LIBS)
 

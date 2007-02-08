@@ -44,6 +44,7 @@
 #include "services/listen_dnsport.h"
 #include "util/netevent.h"
 #include "util/log.h"
+#include "util/net_help.h"
 
 #ifdef HAVE_SYS_TYPES_H
 #  include <sys/types.h>
@@ -223,15 +224,6 @@ make_udp_range(struct comm_point** coms, const char* ifname,
 			done++;
 	}
 	return done;
-}
-
-/** returns true is string addr is an ip6 specced address. */
-int 
-str_is_ip6(const char* str)
-{
-	if(strchr(str, ':'))
-		return 1;
-	else 	return 0;
 }
 
 /** calculate number of ip4 and ip6 interfaces, times multiplier. */

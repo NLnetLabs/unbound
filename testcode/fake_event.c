@@ -69,4 +69,94 @@ fake_event_cleanup()
 
 /*********** Dummy routines ***********/
 
+struct listen_dnsport* 
+listen_create(struct comm_base* ATTR_UNUSED(base),
+	int ATTR_UNUSED(num_ifs), const char* ATTR_UNUSED(ifs[]), 
+	const char* ATTR_UNUSED(port),
+	int ATTR_UNUSED(do_ip4), int ATTR_UNUSED(do_ip6), 
+	int ATTR_UNUSED(do_udp), int ATTR_UNUSED(do_tcp),
+	size_t ATTR_UNUSED(bufsize), comm_point_callback_t* ATTR_UNUSED(cb), 
+	void* ATTR_UNUSED(cb_arg))
+{
+	return malloc(1);
+}
+
+void 
+listen_delete(struct listen_dnsport* listen)
+{
+	free(listen);
+}
+
+struct comm_base* comm_base_create()
+{
+	return malloc(1);
+}
+
+void comm_base_delete(struct comm_base* b)
+{
+	free(b);
+}
+
+void comm_base_dispatch(struct comm_base* b)
+{
+	/* TODO run the scenario ! */
+}
+
+void comm_base_exit(struct comm_base* ATTR_UNUSED(b))
+{
+	/* some sort of failure */
+	exit(1);
+}
+
+struct comm_signal* comm_signal_create(struct comm_base* ATTR_UNUSED(base),
+        void ATTR_UNUSED((*callback)(int, void*)), void* ATTR_UNUSED(cb_arg))
+{
+	return malloc(1);
+}
+
+int comm_signal_bind(struct comm_signal* ATTR_UNUSED(comsig), int 
+	ATTR_UNUSED(sig))
+{
+	return 1;
+}
+
+void comm_signal_delete(struct comm_signal* comsig)
+{
+	free(comsig);
+}
+
+void 
+comm_point_send_reply(struct comm_reply* repinfo)
+{
+	/* TODO see if this is checked */
+}
+
+void 
+comm_point_drop_reply(struct comm_reply* repinfo)
+{
+	/* TODO */
+}
+
+struct outside_network* 
+outside_network_create(struct comm_base* ATTR_UNUSED(base),
+	size_t ATTR_UNUSED(bufsize), size_t ATTR_UNUSED(num_ports), 
+	const char** ATTR_UNUSED(ifs), int ATTR_UNUSED(num_ifs),
+	int ATTR_UNUSED(do_ip4), int ATTR_UNUSED(do_ip6), 
+	int ATTR_UNUSED(port_base))
+{
+	return malloc(1);
+}
+
+void 
+outside_network_delete(struct outside_network* outnet)
+{
+	free(outnet);
+}
+
+void pending_udp_query(struct outside_network* outnet, ldns_buffer* packet,
+	struct sockaddr_storage* addr, socklen_t addrlen, int timeout,
+	comm_point_callback_t* callback, void* callback_arg)
+{
+}
+
 /*********** End of Dummy routines ***********/

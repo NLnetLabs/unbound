@@ -151,11 +151,4 @@ void pending_udp_query(struct outside_network* outnet, ldns_buffer* packet,
  */
 void pending_delete(struct outside_network* outnet, struct pending* p);
 
-/** 
- * See if string is ip4 or ip6.
- * @param str: IP specification.
- * @return: true if string addr is an ip6 specced address. 
- */
-int str_is_ip6(const char* str);
-
 #endif /* OUTSIDE_NETWORK_H */
