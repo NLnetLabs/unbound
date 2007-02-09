@@ -42,11 +42,10 @@
  * File format for replay files.
  *
  * ; comment line.
- * SCENARIO_BEGIN 
- * TITLE name_of_scenario
- * RANGE start_time end_time
+ * SCENARIO_BEGIN name_of_scenario
+ * RANGE_BEGIN start_time end_time
  *    match_entries
- * END_RANGE
+ * RANGE_END
  * ; more RANGE items.
  * ; go to the next moment
  * STEP time_step event_type
@@ -63,9 +62,8 @@
  *
  *
  * ; Example file
- * SCENARIO_BEGIN
- * TITLE Example scenario
- * RANGE 0 100
+ * SCENARIO_BEGIN Example scenario
+ * RANGE_BEGIN 0 100
  *   ENTRY_BEGIN
  *   ; precoded answers to queries.
  *   ENTRY_END
@@ -105,7 +103,7 @@ struct entry;
  */
 struct replay_scenario {
 	/** name of replay scenario. malloced string. */
-	const char* title;
+	char* title;
 
 	/** The list of replay moments. Linked list. Time increases in list. */
 	struct replay_moment* mom_first;
@@ -133,7 +131,7 @@ struct replay_moment {
 	 * The replay time step number. Starts at 0, time is incremented 
 	 * every time the fake select() is run. 
 	 */
-	size_t time_step;
+	int time_step;
 	/** Next replay moment in list of replay moments. */
 	struct replay_moment* mom_next;
 
@@ -152,7 +150,7 @@ struct replay_moment {
 		/** test fails if query to the network does not match */
 		repevt_back_query,
 		/** an error happens to outbound query */
-		repevt_error,
+		repevt_error
 	} evt_type;
 
 	/** The sent packet must match this. Incoming events, the data. */
@@ -168,9 +166,9 @@ struct replay_moment {
  */
 struct replay_range {
 	/** time range when this is valid. Including start and end step. */
-	size_t start_step;
+	int start_step;
 	/** end step of time range. */
-	size_t end_step;
+	int end_step;
 
 	/** Matching list */
 	struct entry* match;

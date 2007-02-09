@@ -360,7 +360,12 @@ AC_CHECK_FUNCS([event_base_free]) # only in libevent 1.2 and later
 AC_CHECK_LIB(socket, socket)
 AC_CHECK_LIB(nsl, inet_pton)
 
+AC_FUNC_CHOWN
+AC_FUNC_FORK
 AC_FUNC_MALLOC
+AC_TYPE_SIGNAL
+AC_FUNC_FSEEKO
+AC_SYS_LARGEFILE
 
 #AC_REPLACE_FUNCS(snprintf)
 #AC_REPLACE_FUNCS(strlcpy)
@@ -434,6 +439,10 @@ AH_BOTTOM([
 #else /* !HAVE_ATTR_UNUSED */
 #  define ATTR_UNUSED(x)  x
 #endif /* !HAVE_ATTR_UNUSED */
+#ifndef HAVE_FSEEKO
+#define fseeko fseek
+#define ftello ftell
+#endif /* HAVE_FSEEKO */
 
 #include "ldns/ldns.h"
 

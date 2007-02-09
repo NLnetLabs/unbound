@@ -39,7 +39,8 @@
  */
 
 #include "config.h"
-#include "ldns-testpkts.h"
+#include "testcode/ldns-testpkts.h"
+#include "testcode/replay.h"
 
 /** 
  * include the main program from the unbound daemon.
@@ -116,6 +117,27 @@ echo_cmdline(int argc, char* argv[])
 	}
 	printf("\n");
 }
+
+/** read playback file */
+static struct replay_scenario* 
+setup_playback(const char* filename)
+{
+	struct replay_scenario* scen = NULL;
+	if(filename) {
+		FILE *in = fopen(filename, "r");
+		if(!in) {
+			perror(filename);
+			exit(1);
+		}
+		scen = replay_scenario_read(in);
+		fclose(in);
+		if(!scen)
+			fatal_exit("Could not read: %s", filename);
+	}
+	else fatal_exit("need a playback file (-p)");
+	printf("Scenario: %s\n", scen->title);
+	return scen;
+}
 	
 /**
  * Main unit test program. Setup, teardown and report errors.
@@ -131,7 +153,7 @@ main(int argc, char* argv[])
 	char* playback_file = NULL;
 	int init_optind = optind;
 	char* init_optarg = optarg;
-	struct entry* matched_answers = NULL;
+	struct replay_scenario* scen = NULL;
 
 	printf("Start of %s testbound program.\n", PACKAGE_STRING);
 	/* determine commandline options for the daemon */
@@ -160,8 +182,7 @@ main(int argc, char* argv[])
 	}
 
 	/* setup test environment */
-	if(playback_file)
-		matched_answers = read_datafile(playback_file);
+	scen = setup_playback(playback_file);
 	/* init fake event backend */
 
 	pass_argv[pass_argc] = NULL;
@@ -174,6 +195,7 @@ main(int argc, char* argv[])
 	/* run the normal daemon */
 	res = daemon_main(pass_argc, pass_argv);
 
+	replay_scenario_delete(scen);
 	for(c=1; c<pass_argc; c++)
 		free(pass_argv[c]);
 	return res;
