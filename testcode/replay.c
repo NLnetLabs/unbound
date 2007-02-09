@@ -47,8 +47,11 @@
 /** max length of lines in file */
 #define MAX_LINE_LEN 10240
 
-/** parse keyword in string. true if found, false if not.
- * if found, the line is advanced to after the keyword. */
+/** parse keyword in string. 
+ * @param line: if found, the line is advanced to after the keyword.
+ * @param keyword: string.
+ * @return: true if found, false if not. 
+ */
 static int parse_keyword(char** line, char* keyword)
 {
 	size_t len = (size_t)strlen(keyword);
@@ -235,7 +238,7 @@ replay_scenario_read(FILE* in)
 	ldns_rdf* prev = NULL;
 	line[MAX_LINE_LEN-1]=0;
 
-	while(fgets(line, sizeof(line)-1, in)) {
+	while(fgets(line, MAX_LINE_LEN-1, in)) {
 		parse=line;
 		lineno++;
 		while(isspace(*parse))
