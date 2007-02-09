@@ -41,6 +41,7 @@
 #include "config.h"
 #include "testcode/ldns-testpkts.h"
 #include "testcode/replay.h"
+#include "testcode/fake_event.h"
 
 /** 
  * include the main program from the unbound daemon.
@@ -184,6 +185,7 @@ main(int argc, char* argv[])
 	/* setup test environment */
 	scen = setup_playback(playback_file);
 	/* init fake event backend */
+	fake_event_init(scen);
 
 	pass_argv[pass_argc] = NULL;
 	echo_cmdline(pass_argc, pass_argv);
@@ -195,7 +197,7 @@ main(int argc, char* argv[])
 	/* run the normal daemon */
 	res = daemon_main(pass_argc, pass_argv);
 
-	replay_scenario_delete(scen);
+	fake_event_cleanup();
 	for(c=1; c<pass_argc; c++)
 		free(pass_argv[c]);
 	return res;

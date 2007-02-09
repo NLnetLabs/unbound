@@ -1,5 +1,8 @@
 9 February 2007: Wouter
 	- replay file reading.
+	- fake event setup, it creates fake structures, and teardowns,
+	  added signal callbacks to reply to be able to fake those,
+	  and main structure of event replay routines.
 
 8 February 2007: Wouter
 	- added tcp test.

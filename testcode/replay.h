@@ -91,6 +91,7 @@
 #define TESTCODE_REPLAY_H
 #include "config.h"
 #include "util/netevent.h"
+#include "testcode/ldns-testpkts.h"
 struct replay_moment;
 struct fake_pending;
 struct replay_answer;
@@ -181,6 +182,15 @@ struct replay_range {
  * Replay storage of runtime information.
  */
 struct replay_runtime {
+	/**
+	 * The scenario
+	 */
+	struct replay_scenario* scenario;
+	/**
+	 * Current moment.
+	 */
+	struct replay_moment* now;
+
 	/** 
 	 * List of pending queries in order they were sent out. First
 	 * one has been sent out most recently. Last one in list is oldest. 
@@ -197,6 +207,11 @@ struct replay_runtime {
 	comm_point_callback_t* callback_query;
 	/** user argument for incoming query callback */
 	void *cb_arg;
+
+	/** signal handler callback */
+	void (*sig_cb)(int, void*);
+	/** signal handler user arg */
+	void *sig_cb_arg;
 };
 
 /**
@@ -213,6 +228,13 @@ struct fake_pending {
 	comm_point_callback_t* callback;
 	/** callback user argument */
 	void* cb_arg;
+
+	/** next in pending list */
+	struct fake_pending* next;
+	/** the buffer parsed into a ldns_pkt */
+	ldns_pkt* pkt;
+	/** by what transport was the query sent out */
+	enum transport_type transport;
 };
 
 /**
