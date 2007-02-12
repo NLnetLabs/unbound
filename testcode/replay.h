@@ -212,6 +212,9 @@ struct replay_runtime {
 	void (*sig_cb)(int, void*);
 	/** signal handler user arg */
 	void *sig_cb_arg;
+
+	/** size of buffers */
+	size_t bufsize;
 };
 
 /**
@@ -228,6 +231,8 @@ struct fake_pending {
 	comm_point_callback_t* callback;
 	/** callback user argument */
 	void* cb_arg;
+	/** original timeout in seconds from 'then' */
+	int timeout;
 
 	/** next in pending list */
 	struct fake_pending* next;

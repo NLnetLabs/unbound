@@ -51,6 +51,7 @@
 #include "services/outside_network.h"
 #include "testcode/replay.h"
 #include "testcode/ldns-testpkts.h"
+#include "util/log.h"
 
 /** Global variable: the scenario. Saved here for when event_init is done. */
 static struct replay_scenario* saved_scenario = NULL;
@@ -66,6 +67,27 @@ fake_event_cleanup()
 {
 	replay_scenario_delete(saved_scenario);
 	saved_scenario = NULL;
+}
+
+/** delete a fake pending */
+static void 
+delete_fake_pending(struct fake_pending* pend)
+{
+	if(!pend)
+		return;
+	ldns_buffer_free(pend->buffer);
+	ldns_pkt_free(pend->pkt);
+	free(pend);
+}
+
+/** delete a replay answer */
+static void
+delete_replay_answer(struct replay_answer* a)
+{
+	if(!a)
+		return;
+	ldns_buffer_free(a->buf);
+	free(a);
 }
 
 /**
@@ -87,6 +109,31 @@ pending_matches_current(struct replay_runtime* runtime)
 }
 
 /**
+ * Find the range that matches this pending message.
+ * @param runtime: runtime with current moment, and range list.
+ * @param entry: returns the pointer to entry that matches.
+ * @param pend: the pending that the entry must match.
+ * @return: true if a match is found.
+ */
+static int
+pending_find_match(struct replay_runtime* runtime, struct entry** entry, 
+	struct fake_pending* pend)
+{
+	int timenow = runtime->now->time_step;
+	struct replay_range* p = runtime->scenario->range_list;
+	while(p) {
+		if(p->start_step <= timenow && timenow <= p->end_step &&
+		  (*entry = find_match(p->match, pend->pkt, pend->transport))) {
+			log_info("matched query time %d in range [%d, %d]",
+				timenow, p->start_step, p->end_step);
+			return 1;
+		}
+		p = p->next_range;
+	}
+	return 0;
+}
+
+/**
  * See if outgoing pending query matches an entry.
  * @param runtime: runtime.
  * @param entry: if true, the entry that matches is returned.
@@ -97,6 +144,16 @@ static int
 pending_matches_range(struct replay_runtime* runtime, 
 	struct entry** entry, struct fake_pending** pend)
 {
+	struct fake_pending* p = runtime->pending_list;
+	/* slow, O(N*N), but it works as advertised with weird matching */
+	while(p) {
+		if(pending_find_match(runtime, entry, p)) {
+			*pend = p;
+			return 1;
+		}
+		p = p->next;
+	}
+	return 0;
 }
 
 /**
@@ -112,6 +169,42 @@ answer_callback_from_entry(struct replay_runtime* runtime,
 }
 
 /**
+ * Create commpoint (as return address) for a fake incoming query.
+ */
+static void
+fake_front_query(struct replay_runtime* runtime)
+{
+	struct comm_reply repinfo;
+	ldns_status status;
+	memset(&repinfo, 0, sizeof(repinfo));
+	repinfo.c = (struct comm_point*)calloc(1, sizeof(struct comm_point));
+	repinfo.addrlen = (socklen_t)sizeof(struct sockaddr_in);
+	repinfo.c->buffer = ldns_buffer_new(runtime->bufsize);
+	if(!runtime->now->match->reply_list->reply) {
+		ldns_buffer_write(repinfo.c->buffer, 
+			ldns_buffer_begin(runtime->now->match->reply_list->
+			reply_from_hex),
+			ldns_buffer_limit(runtime->now->match->reply_list->
+			reply_from_hex));
+		ldns_buffer_flip(repinfo.c->buffer);
+	} else {
+		status = ldns_pkt2buffer_wire(repinfo.c->buffer,
+			runtime->now->match->reply_list->reply);
+		if(status != LDNS_STATUS_OK) {
+			fatal_exit("could not parse incoming query pkt");
+		}
+	}
+	/* call the callback for incoming queries */
+	if((*runtime->callback_query)(repinfo.c, runtime->cb_arg, 
+		NETEVENT_NOERROR, &repinfo)) {
+		/* send immediate reply */
+		comm_point_send_reply(&repinfo);
+	}
+	/* clear it again, in case copy not done properly */
+	memset(&repinfo, 0, sizeof(repinfo));
+}
+
+/**
  * Perform actions or checks determined by the moment.
  */
 static void
@@ -119,6 +212,50 @@ do_moment(struct replay_runtime* runtime)
 {
 	if(!runtime->now)
 		return;
+	switch(runtime->now->evt_type) {
+	case repevt_nothing:	
+		break;
+	case repevt_front_query: 
+		/* call incoming query callback */
+		fake_front_query(runtime);
+		break;
+	case repevt_front_reply: 
+		fatal_exit("testbound: query answer not matched");
+		break;
+	case repevt_timeout:	
+		/* callback reply routine with timeout */
+		break;
+	case repevt_back_reply: 
+		/* callback the reply routine */
+		break;
+	case repevt_back_query: 
+		fatal_exit("testbound: back query not matched");
+		break;
+	case repevt_error:	
+		/* callback reply routine with error */
+		break;
+	default:
+		fatal_exit("testbound: unknown event type %d", 
+			runtime->now->evt_type);
+	}
+}
+
+/**
+ * Returns a string describing the event type.
+ */
+static const char*
+repevt_string(enum replay_event_type t)
+{
+	switch(t) {
+	case repevt_nothing:	return "NOTHING";
+	case repevt_front_query: return "QUERY";
+	case repevt_front_reply: return "CHECK_ANSWER";
+	case repevt_timeout:	return "TIMEOUT";
+	case repevt_back_reply: return "REPLY";
+	case repevt_back_query: return "CHECK_OUT_QUERY";
+	case repevt_error:	return "ERROR";
+	default:	return "UNKNOWN";
+	};
 }
 
 /**
@@ -130,6 +267,12 @@ advance_moment(struct replay_runtime* runtime)
 	if(!runtime->now)
 		runtime->now = runtime->scenario->mom_first;
 	else 	runtime->now = runtime->now->mom_next;
+
+	if(runtime->now)
+		log_info("testbound: advancing to STEP %d %s",
+			runtime->now->time_step, 
+			repevt_string(runtime->now->evt_type));
+	else	log_info("testbound: advancing to step: The End.");
 }
 
 /** run the scenario in event callbacks */
@@ -152,6 +295,7 @@ run_scenario(struct replay_runtime* runtime)
 			advance_moment(runtime);
 		}
 	} while(runtime->now);
+	log_info("testbound: exiting event loop (success).");
 }
 
 /*********** Dummy routines ***********/
@@ -176,6 +320,7 @@ listen_create(struct comm_base* base,
 	}
 	runtime->callback_query = cb;
 	runtime->cb_arg = cb_arg;
+	runtime->bufsize = bufsize;
 	return l;
 }
 
@@ -200,6 +345,23 @@ struct comm_base* comm_base_create()
 void comm_base_delete(struct comm_base* b)
 {
 	struct replay_runtime* runtime = (struct replay_runtime*)b;
+	struct fake_pending* p, *np;
+	struct replay_answer* a, *na;
+	if(!runtime)
+		return;
+	runtime->scenario= NULL;
+	p = runtime->pending_list;
+	while(p) {
+		np = p->next;
+		delete_fake_pending(p);
+		p = np;
+	}
+	a = runtime->answer_list;
+	while(a) {
+		na = a->next;
+		delete_replay_answer(a);
+		a = na;
+	}
 	free(runtime);
 }
 
@@ -239,12 +401,14 @@ void
 comm_point_send_reply(struct comm_reply* repinfo)
 {
 	/* TODO see if this is checked */
+	log_info("comm_point_send_reply fake");
 }
 
 void 
 comm_point_drop_reply(struct comm_reply* repinfo)
 {
 	/* TODO */
+	log_info("comm_point_drop_reply fake");
 }
 
 struct outside_network* 
@@ -278,7 +442,33 @@ void pending_udp_query(struct outside_network* outnet, ldns_buffer* packet,
 	struct sockaddr_storage* addr, socklen_t addrlen, int timeout,
 	comm_point_callback_t* callback, void* callback_arg)
 {
-	/* TODO create it */
+	struct replay_runtime* runtime = (struct replay_runtime*)outnet->base;
+	struct fake_pending* pend = (struct fake_pending*)calloc(1,
+		sizeof(struct fake_pending));
+	ldns_status status;
+	log_assert(pend);
+	pend->buffer = ldns_buffer_new(ldns_buffer_capacity(packet));
+	ldns_buffer_write(pend->buffer, ldns_buffer_begin(packet),
+		ldns_buffer_limit(packet));
+	ldns_buffer_flip(pend->buffer);
+	memcpy(&pend->addr, addr, addrlen);
+	pend->addrlen = addrlen;
+	pend->callback = callback;
+	pend->cb_arg = callback_arg;
+	pend->timeout = timeout;
+	pend->transport = transport_udp;
+	pend->pkt = NULL;
+	status = ldns_buffer2pkt_wire(&pend->pkt, packet);
+	if(status != LDNS_STATUS_OK) {
+		log_err("ldns error parsing udp output packet: %s",
+			ldns_get_errorstr_by_id(status));
+		fatal_exit("Sending unparseable DNS packets to servers!");
+	}
+	log_info("testbound: created fake pending");
+
+	/* add to list */
+	pend->next = runtime->pending_list;
+	runtime->pending_list = pend;
 }
 
 /*********** End of Dummy routines ***********/
