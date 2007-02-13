@@ -665,12 +665,11 @@ pending_udp_query(struct outside_network* outnet, ldns_buffer* packet,
 		log_info("testbound: do STEP %d %s", runtime->now->time_step,
 			repevt_string(runtime->now->evt_type));
 		advance_moment(runtime);
-	} else {
-		log_info("testbound: created fake pending");
-		/* add to list */
-		pend->next = runtime->pending_list;
-		runtime->pending_list = pend;
-	}
+	} 
+	log_info("testbound: created fake pending");
+	/* add to list */
+	pend->next = runtime->pending_list;
+	runtime->pending_list = pend;
 }
 
 /*********** End of Dummy routines ***********/
