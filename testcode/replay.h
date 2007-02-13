@@ -53,7 +53,7 @@
  *	o NOTHING - nothing
  *	o QUERY - followed by entry
  *	o CHECK_ANSWER - followed by entry
- *	o CHECK_OUT_QUERY - followed by entry
+ *	o CHECK_OUT_QUERY - followed by entry (if copy-id it is also reply).
  *	o REPLY - followed by entry
  *      o TIMEOUT
  *      o ERROR
@@ -202,6 +202,9 @@ struct replay_runtime {
 	 * to the program.
 	 */
 	struct replay_answer* answer_list;
+	
+	/** last element in answer list. */
+	struct replay_answer* answer_last;
 
 	/** callback for incoming queries */
 	comm_point_callback_t* callback_query;
@@ -243,15 +246,15 @@ struct fake_pending {
 };
 
 /**
- * An answer to a back-query, stored so it can be provided as an event.
+ * An answer that is pending to happen.
  */
 struct replay_answer {
 	/** Next in list */
 	struct replay_answer* next;
-	/** pending question this is an answer to */
-	struct fake_pending* question;
-	/** The answer. */
-	ldns_buffer* buf;
+	/** reply information */
+	struct comm_reply repinfo;
+	/** the answer preparsed as ldns pkt */
+	ldns_pkt* pkt;
 };
 
 /**

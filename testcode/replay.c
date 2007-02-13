@@ -186,7 +186,7 @@ replay_moment_read(char* remain, FILE* in, int* lineno,
 	} else if(parse_keyword(&remain, "TIMEOUT")) {
 		mom->evt_type = repevt_timeout;
 	} else if(parse_keyword(&remain, "ERROR")) {
-		mom->evt_type = repevt_back_query;
+		mom->evt_type = repevt_error;
 	} else {
 		log_err("%d: unknown event type %s", *lineno, remain);
 		free(mom);
@@ -195,9 +195,10 @@ replay_moment_read(char* remain, FILE* in, int* lineno,
 
 	if(readentry) {
 		mom->match = read_entry(in, "datafile", lineno, ttl, or, prev);
-		free(mom);
-		if(!mom->match)
+		if(!mom->match) {
+			free(mom);
 			return NULL;
+		}
 	}
 
 	return mom;
@@ -272,9 +273,20 @@ replay_scenario_read(FILE* in)
 			else	scen->mom_first = mom;
 			scen->mom_last = mom;
 		} else if(parse_keyword(&parse, "SCENARIO_END")) {
+			struct replay_moment *p = scen->mom_first;
+			int num = 0;
+			while(p) {
+				num++;
+				p = p->mom_next;
+			}
+			log_info("Scenario has %d steps", num);
+			ldns_rdf_deep_free(or);
+			ldns_rdf_deep_free(prev);
 			return scen;
 		}
 	}
+	ldns_rdf_deep_free(or);
+	ldns_rdf_deep_free(prev);
 	replay_scenario_delete(scen);
 	return NULL;
 }
