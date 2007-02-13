@@ -206,6 +206,39 @@ pending_list_delete(struct replay_runtime* runtime, struct fake_pending* pend)
 }
 
 /**
+ * Fill buffer with reply from the entry.
+ */
+static void
+fill_buffer_with_reply(ldns_buffer* buffer, struct entry* entry, ldns_pkt* q)
+{
+	ldns_status status;
+	ldns_pkt* answer_pkt = NULL;
+	log_assert(entry->reply_list);
+	ldns_buffer_clear(buffer);
+	if(entry->reply_list->reply_from_hex) {
+		status = ldns_buffer2pkt_wire(&answer_pkt, 
+			entry->reply_list->reply_from_hex);
+		if(status != LDNS_STATUS_OK) {
+			log_err("testbound: hex packet unparsable, used asis.");
+			ldns_buffer_write(buffer, 
+			ldns_buffer_begin(entry->reply_list->reply_from_hex), 
+			ldns_buffer_limit(entry->reply_list->reply_from_hex));
+		}
+	} else {
+		answer_pkt = ldns_pkt_clone(entry->reply_list->reply);
+	}
+	if(answer_pkt) {
+		if(q)
+			adjust_packet(entry, answer_pkt, q);
+		status = ldns_pkt2buffer_wire(buffer, answer_pkt);
+		if(status != LDNS_STATUS_OK)
+			fatal_exit("ldns: cannot pkt2buffer_wire parsed pkt");
+	}
+	ldns_pkt_free(answer_pkt);
+	ldns_buffer_flip(buffer);
+}
+
+/**
  * Perform range entry on pending message.
  * @param runtime: runtime, needed?.
  * @param entry: entry that codes for the reply to do.
@@ -216,36 +249,16 @@ answer_callback_from_entry(struct replay_runtime* runtime,
         struct entry* entry, struct fake_pending* pend)
 {
 	struct comm_point c;
-	ldns_status status;
-	ldns_pkt* answer_pkt = NULL;
 	memset(&c, 0, sizeof(c));
 	c.fd = -1;
 	c.buffer = ldns_buffer_new(runtime->bufsize);
 	c.type = comm_udp;
 	if(pend->transport == transport_tcp)
 		c.type = comm_tcp;
-	if(entry->reply_list->reply_from_hex) {
-		status = ldns_buffer2pkt_wire(&answer_pkt, 
-			entry->reply_list->reply_from_hex);
-		if(status != LDNS_STATUS_OK) {
-			log_err("testbound: hex packet unparsable, sent.");
-			ldns_buffer_write(c.buffer, 
-			ldns_buffer_begin(entry->reply_list->reply_from_hex), 
-			ldns_buffer_limit(entry->reply_list->reply_from_hex));
-		}
-	} else {
-		answer_pkt = ldns_pkt_clone(entry->reply_list->reply);
-	}
-	if(answer_pkt) {
-		adjust_packet(entry, answer_pkt, pend->pkt);
-		status = ldns_pkt2buffer_wire(c.buffer, answer_pkt);
-		if(status != LDNS_STATUS_OK)
-			fatal_exit("ldns: cannot pkt2buffer_wire parsed pkt");
-	}
+	fill_buffer_with_reply(c.buffer, entry, pend->pkt);
 	if((*pend->callback)(&c, pend->cb_arg, NETEVENT_NOERROR, NULL)) {
 		fatal_exit("testbound: unexpected: callback returned 1");
 	}
-	ldns_pkt_free(answer_pkt);
 	ldns_buffer_free(c.buffer);
 	pending_list_delete(runtime, pend);
 }
@@ -267,6 +280,9 @@ answer_check_it(struct replay_runtime* runtime)
 			log_info("testbound matched event %s entry %d",
 				repevt_string(runtime->now->evt_type),
 				runtime->now->match->lineno);
+			log_info("testbound: do STEP %d %s", 
+				runtime->now->time_step,
+				repevt_string(runtime->now->evt_type));
 			*prev = ans->next;
 			delete_replay_answer(ans);
 			ans = n;
@@ -284,27 +300,13 @@ static void
 fake_front_query(struct replay_runtime* runtime, struct replay_moment *todo)
 {
 	struct comm_reply repinfo;
-	ldns_status status;
 	memset(&repinfo, 0, sizeof(repinfo));
 	repinfo.c = (struct comm_point*)calloc(1, sizeof(struct comm_point));
 	repinfo.addrlen = (socklen_t)sizeof(struct sockaddr_in);
 	repinfo.c->ev = (struct internal_event*)runtime;
 	repinfo.c->buffer = ldns_buffer_new(runtime->bufsize);
 	repinfo.c->type = comm_udp;
-	if(!todo->match->reply_list->reply) {
-		ldns_buffer_write(repinfo.c->buffer, 
-			ldns_buffer_begin(todo->match->reply_list->
-			reply_from_hex),
-			ldns_buffer_limit(todo->match->reply_list->
-			reply_from_hex));
-		ldns_buffer_flip(repinfo.c->buffer);
-	} else {
-		status = ldns_pkt2buffer_wire(repinfo.c->buffer,
-			todo->match->reply_list->reply);
-		if(status != LDNS_STATUS_OK) {
-			fatal_exit("could not parse incoming query pkt");
-		}
-	}
+	fill_buffer_with_reply(repinfo.c->buffer, todo->match, NULL);
 	log_info("testbound: incoming QUERY (event from time %d)",
 		todo->time_step);
 	/* call the callback for incoming queries */
@@ -318,6 +320,33 @@ fake_front_query(struct replay_runtime* runtime, struct replay_moment *todo)
 }
 
 /**
+ * Perform callback for fake pending message.
+ */
+static void
+fake_pending_callback(struct replay_runtime* runtime, 
+	struct replay_moment* todo, int error)
+{
+	struct fake_pending* p = runtime->pending_list;
+	struct comm_point c;
+	memset(&c, 0, sizeof(c));
+	if(!p) fatal_exit("No pending queries.");
+	log_assert(todo->qname == NULL); /* or find that one */
+	c.buffer = ldns_buffer_new(runtime->bufsize);
+	c.type = comm_udp;
+	if(p->transport == transport_tcp)
+		c.type = comm_tcp;
+	if(todo->evt_type == repevt_back_reply && todo->match) {
+		fill_buffer_with_reply(c.buffer, todo->match, p->pkt);
+	}	
+	if((*p->callback)(&c, p->cb_arg, error, NULL)) {
+		fatal_exit("unexpected: pending callback returned 1");
+	}
+	/* delete the pending item. */
+	ldns_buffer_free(c.buffer);
+	pending_list_delete(runtime, p);
+}
+
+/**
  * Advance to the next moment.
  */
 static void
@@ -327,26 +356,23 @@ advance_moment(struct replay_runtime* runtime)
 		runtime->now = runtime->scenario->mom_first;
 	else 	runtime->now = runtime->now->mom_next;
 
-	if(runtime->now)
-		log_info("testbound: advancing to STEP %d %s",
-			runtime->now->time_step, 
-			repevt_string(runtime->now->evt_type));
-	else	log_info("testbound: advancing to step: The End.");
 }
 
 /**
  * Perform actions or checks determined by the moment.
  * Also advances the time by one step.
+ * @param runtime: scenario runtime information.
  */
 static void
 do_moment_and_advance(struct replay_runtime* runtime)
 {
 	struct replay_moment* mom;
-	log_info("testbound: do moment");
 	if(!runtime->now) {
 		advance_moment(runtime);
 		return;
 	}
+	log_info("testbound: do STEP %d %s", runtime->now->time_step, 
+		repevt_string(runtime->now->evt_type));
 	switch(runtime->now->evt_type) {
 	case repevt_nothing:	
 		advance_moment(runtime);
@@ -363,12 +389,14 @@ do_moment_and_advance(struct replay_runtime* runtime)
 		fatal_exit("testbound: query answer not matched");
 		break;
 	case repevt_timeout:	
+		mom = runtime->now;
 		advance_moment(runtime);
-		/* TODO callback reply routine with timeout */
+		fake_pending_callback(runtime, mom, NETEVENT_TIMEOUT);
 		break;
 	case repevt_back_reply: 
+		mom = runtime->now;
 		advance_moment(runtime);
-		/* TODO callback the reply routine */
+		fake_pending_callback(runtime, mom, NETEVENT_NOERROR);
 		break;
 	case repevt_back_query: 
 		log_err("Back queries are matched when they are sent out.");
@@ -376,8 +404,9 @@ do_moment_and_advance(struct replay_runtime* runtime)
 		fatal_exit("testbound: back query not matched");
 		break;
 	case repevt_error:	
+		mom = runtime->now;
 		advance_moment(runtime);
-		/* TODO callback reply routine with error */
+		fake_pending_callback(runtime, mom, NETEVENT_CLOSED);
 		break;
 	default:
 		fatal_exit("testbound: unknown event type %d", 
@@ -393,7 +422,7 @@ run_scenario(struct replay_runtime* runtime)
 	struct fake_pending* pending = NULL;
 	int max_rounds = 50;
 	int rounds = 0;
-	runtime->now = NULL;
+	runtime->now = runtime->scenario->mom_first;
 	log_info("testbound: entering fake runloop");
 	do {
 		/* if moment matches pending query do it. */
@@ -402,6 +431,8 @@ run_scenario(struct replay_runtime* runtime)
 		/* else do the current moment */
 		if(pending_matches_current(runtime, &entry, &pending)) {
 			advance_moment(runtime);
+			log_info("testbound: do STEP %d REPLY", 
+				runtime->now->time_step);
 			if(entry->copy_id)
 				answer_callback_from_entry(runtime, entry, 
 				pending);
@@ -419,6 +450,7 @@ run_scenario(struct replay_runtime* runtime)
 		if(rounds > max_rounds)
 			fatal_exit("testbound: too many rounds, it loops.");
 	} while(runtime->now);
+
 	log_info("testbound: exiting event loop (success).");
 	if(runtime->pending_list) {
 		fatal_exit("testbound: there are still messages pending.");
@@ -630,6 +662,8 @@ pending_udp_query(struct outside_network* outnet, ldns_buffer* packet,
 		find_match(runtime->now->match, pend->pkt, transport_udp)) {
 		log_info("testbound: matched pending to event. "
 			"advance time between events.");
+		log_info("testbound: do STEP %d %s", runtime->now->time_step,
+			repevt_string(runtime->now->evt_type));
 		advance_moment(runtime);
 	} else {
 		log_info("testbound: created fake pending");

@@ -158,7 +158,9 @@ struct replay_moment {
 	struct entry* match;
 
 	/** what pending query should timeout or is answered. or 
-	 * NULL for last sent query. */
+	 * NULL for last sent query. 
+	 * Unused at this time.
+	 */
 	ldns_rr* qname;
 };
 

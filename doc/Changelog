@@ -1,5 +1,6 @@
 13 February 2007: Wouter
 	- work on fake events, first fwd replay works.
+	- events can do timeouts and errors on queries to servers.
 
 12 February 2007: Wouter
 	- work on fake events.
