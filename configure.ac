@@ -92,6 +92,7 @@ AC_CHECK_HEADERS([getopt.h time.h],,, [AC_INCLUDES_DEFAULT])
 
 CHECK_COMPILER_FLAG_NEEDED(-std=c99 -D__EXTENSIONS__ -D_BSD_SOURCE -D_POSIX_C_SOURCE=200112 -D_XOPEN_SOURCE=600,
 [
+#include "confdefs.h"
 #include <stdlib.h>
 #include <ctype.h>
 #include <sys/time.h>
@@ -145,6 +146,7 @@ int test() {
 
 CHECK_COMPILER_FLAG_NEEDED(-D_POSIX_C_SOURCE=200112,
 [
+#include "confdefs.h"
 #ifdef HAVE_TIME_H
 #include <time.h>
 #endif
@@ -164,6 +166,7 @@ int test() {
 
 CHECK_COMPILER_FLAG_NEEDED(-D__EXTENSIONS__,
 [
+#include "confdefs.h"
 #include <stdlib.h>
 #include <ctype.h>
 #include <sys/time.h>
