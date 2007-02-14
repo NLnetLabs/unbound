@@ -88,14 +88,21 @@ AC_LANG_C
 CHECK_COMPILER_FLAG(g, [CFLAGS="$CFLAGS -g"])
 CHECK_COMPILER_FLAG(O2, [CFLAGS="$CFLAGS -O2"])
 
+AC_CHECK_HEADERS([getopt.h time.h],,, [AC_INCLUDES_DEFAULT])
+
 CHECK_COMPILER_FLAG_NEEDED(-std=c99 -D__EXTENSIONS__ -D_BSD_SOURCE -D_POSIX_C_SOURCE=200112 -D_XOPEN_SOURCE=600,
 [
 #include <stdlib.h>
 #include <ctype.h>
 #include <sys/time.h>
+#ifdef HAVE_TIME_H
 #include <time.h>
+#endif
 #include <unistd.h>
 #include <netdb.h>
+#ifdef HAVE_GETOPT_H
+#include <getopt.h>
+#endif
 
 int test() {
 	int a;
@@ -121,7 +128,6 @@ CHECK_COMPILER_FLAG_NEEDED(-std=c99,
 #include <ctype.h>
 int test() {
         int a = 0;
-        a = isblank(12);
         return a;
 }
 ], [CFLAGS="$CFLAGS -std=c99"])
@@ -139,7 +145,9 @@ int test() {
 
 CHECK_COMPILER_FLAG_NEEDED(-D_POSIX_C_SOURCE=200112,
 [
+#ifdef HAVE_TIME_H
 #include <time.h>
+#endif
 #include <netdb.h>
 
 int test() {
@@ -160,7 +168,9 @@ CHECK_COMPILER_FLAG_NEEDED(-D__EXTENSIONS__,
 #include <ctype.h>
 #include <sys/time.h>
 #include <unistd.h>
+#ifdef HAVE_GETOPT_H
 #include <getopt.h>
+#endif
 
 int test() {
         int a;
@@ -173,14 +183,17 @@ int test() {
         return a;
 }
 ], [CFLAGS="$CFLAGS -D__EXTENSIONS__"])
-# check that functions are defined
-AC_CHECK_DECLS([isascii, getopt, srandom, ctime_r, isblank, gai_strerror],, [echo "Cannot set compile environment; pass defines in CFLAGS=-D... ./configure"; exit 1], [
+AC_CHECK_DECLS([isascii, getopt, srandom, ctime_r, gai_strerror],, [echo "Cannot set compile environment; pass defines in CFLAGS=-D... ./configure"; exit 1], [
 #include <stdlib.h>
 #include <sys/time.h>
+#ifdef HAVE_TIME_H
 #include <time.h>
+#endif
 #include <netdb.h>
 #include <unistd.h>
+#ifdef HAVE_GETOPT_H
 #include <getopt.h>
+#endif
 #include <stdbool.h>
 #include <ctype.h>
 ])

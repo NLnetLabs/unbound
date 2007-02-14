@@ -1,5 +1,7 @@
 14 February 2007: Wouter
 	- Included configure.ac changes from ldns.
+	- detect (some) headers before the standards check.
+	- do not use isblank to test c99, since its not available on solaris9.
 
 13 February 2007: Wouter
 	- work on fake events, first fwd replay works.
