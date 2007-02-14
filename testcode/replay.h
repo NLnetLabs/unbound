@@ -58,6 +58,7 @@
  *      o TIMEOUT
  *      o ERROR
  * ; following entry starts on the next line, ENTRY_BEGIN.
+ * ; more STEP items
  * SCENARIO_END
  *
  *
@@ -74,7 +75,7 @@
  *   ENTRY_END
  * ; a query is sent out to the network by resolver.
  * ; precoded answer from range is returned.
- * ; algorithm will do precoded answers immediately, except if
+ * ; algorithm will do precoded answers from RANGE immediately, except if
  * ; the next step specifically checks for that OUT_QUERY.
  * ; or if none of the precoded answers match.
  * STEP 1 CHECK_ANSWER
@@ -82,6 +83,8 @@
  *   ; what the reply should look like
  *   ENTRY_END
  * ; successful termination. (if the answer was OK).
+ * ; also, all answers must have been checked with CHECK_ANSWER.
+ * ; and, no more pending out_queries (that have not been checked).
  * SCENARIO_END
  * 
  * </pre>
@@ -92,12 +95,10 @@
 #include "config.h"
 #include "util/netevent.h"
 #include "testcode/ldns-testpkts.h"
-struct replay_moment;
-struct fake_pending;
 struct replay_answer;
+struct replay_moment;
 struct replay_range;
-struct entry;
-
+struct fake_pending;
 
 /**
  * A replay scenario.
@@ -200,15 +201,14 @@ struct replay_runtime {
 	struct fake_pending* pending_list;
 
 	/**
-	 * List of answers from the matching list, that need to be returned
-	 * to the program.
+	 * List of answers to queries from clients. These need to be checked.
 	 */
 	struct replay_answer* answer_list;
 	
 	/** last element in answer list. */
 	struct replay_answer* answer_last;
 
-	/** callback for incoming queries */
+	/** callback to call for incoming queries */
 	comm_point_callback_t* callback_query;
 	/** user argument for incoming query callback */
 	void *cb_arg;

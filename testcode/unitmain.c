@@ -41,14 +41,13 @@
 
 #include "config.h"
 #include "util/log.h"
-#include "util/net_help.h"
 
 /** number of tests done */
 int testcount = 0;
 /** test bool x, exits on failure, increases testcount. */
 #define unit_assert(x) testcount++; log_assert(x);
 
-#include "services/outside_network.h"
+#include "util/net_help.h"
 /** test net code */
 static void 
 net_test()

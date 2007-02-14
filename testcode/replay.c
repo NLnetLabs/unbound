@@ -274,6 +274,9 @@ replay_scenario_read(FILE* in, const char* name)
 				in, name, &lineno, &ttl, &or, &prev);
 			if(!mom)
 				fatal_exit("%d: bad moment", lineno);
+			if(scen->mom_last && 
+				scen->mom_last->time_step >= mom->time_step)
+				fatal_exit("%d: time goes backwards", lineno);
 			if(scen->mom_last)
 				scen->mom_last->mom_next = mom;
 			else	scen->mom_first = mom;

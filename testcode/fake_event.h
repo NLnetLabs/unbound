@@ -51,6 +51,9 @@ struct replay_scenario;
 /**
  * Initialise fake event services.
  *
+ * The fake event services will automatically start when the main program
+ * calls netevent.h functions, such as comm_base_dispatch().
+ *
  * @param scen: Set the scenario to use for upcoming event handling.
  */
 void fake_event_init(struct replay_scenario* scen);

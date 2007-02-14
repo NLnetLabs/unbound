@@ -87,16 +87,11 @@ add_opts(char* optarg, int* pass_argc, char* pass_argv[])
 			len = (size_t)(np-p);
 		else	len = strlen(p);
 		/* allocate and copy option */
-		if(*pass_argc >= MAXARG-1) {
-			/* printf because log_init is not yet called. */
-			printf("too many arguments: '%s'\n", p);
-			exit(1);
-		}
+		if(*pass_argc >= MAXARG-1)
+			fatal_exit("too many arguments: '%s'", p);
 		pass_argv[*pass_argc] = (char*)malloc(len+1);
-		if(!pass_argv[*pass_argc]) {
-			printf("out of memory\n");
-			exit(1);
-		}
+		if(!pass_argv[*pass_argc])
+			fatal_exit("add_opts: out of memory");
 		memcpy(pass_argv[*pass_argc], p, len);
 		pass_argv[*pass_argc][len] = 0;
 		(*pass_argc)++;
@@ -112,7 +107,7 @@ static void
 echo_cmdline(int argc, char* argv[])
 {
 	int i;
-	printf("starting:");
+	printf("testbound is starting:");
 	for(i=0; i<argc; i++) {
 		printf(" [%s]", argv[i]);
 	}
@@ -136,12 +131,12 @@ setup_playback(const char* filename)
 			fatal_exit("Could not read: %s", filename);
 	}
 	else fatal_exit("need a playback file (-p)");
-	printf("Scenario: %s\n", scen->title);
+	log_info("Scenario: %s", scen->title);
 	return scen;
 }
 	
 /**
- * Main unit test program. Setup, teardown and report errors.
+ * Main fake event test program. Setup, teardown and report errors.
  * @param argc: arg count.
  * @param argv: array of commandline arguments.
  */
@@ -156,7 +151,7 @@ main(int argc, char* argv[])
 	char* init_optarg = optarg;
 	struct replay_scenario* scen = NULL;
 
-	printf("Start of %s testbound program.\n", PACKAGE_STRING);
+	log_info("Start of %s testbound program.", PACKAGE_STRING);
 	/* determine commandline options for the daemon */
 	pass_argc = 1;
 	pass_argv[0] = "unbound";
