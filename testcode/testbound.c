@@ -130,7 +130,7 @@ setup_playback(const char* filename)
 			perror(filename);
 			exit(1);
 		}
-		scen = replay_scenario_read(in);
+		scen = replay_scenario_read(in, filename);
 		fclose(in);
 		if(!scen)
 			fatal_exit("Could not read: %s", filename);

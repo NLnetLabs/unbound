@@ -52,7 +52,8 @@
  * @param keyword: string.
  * @return: true if found, false if not. 
  */
-static int parse_keyword(char** line, char* keyword)
+static int 
+parse_keyword(char** line, char* keyword)
 {
 	size_t len = (size_t)strlen(keyword);
 	if(strncmp(*line, keyword, len) == 0) {
@@ -88,6 +89,7 @@ replay_range_delete(struct replay_range* rng)
  * Read a range from file. 
  * @param remain: Rest of line (after RANGE keyword).
  * @param in: file to read from.
+ * @param name: name to print in errors.
  * @param lineno: incremented as lines are read.
  * @param line: line buffer.
  * @param ttl: for readentry
@@ -96,14 +98,14 @@ replay_range_delete(struct replay_range* rng)
  * @return: range object to add to list, or NULL on error.
  */
 static struct replay_range*
-replay_range_read(char* remain, FILE* in, int* lineno, char* line,
-	uint16_t* ttl, ldns_rdf** or, ldns_rdf** prev)
+replay_range_read(char* remain, FILE* in, const char* name, int* lineno, 
+	char* line, uint16_t* ttl, ldns_rdf** or, ldns_rdf** prev)
 {
 	struct replay_range* rng = (struct replay_range*)malloc(
 		sizeof(struct replay_range));
 	off_t pos;
 	char *parse;
-	struct entry* entry;
+	struct entry* entry, *last = NULL;
 	if(!rng)
 		return NULL;
 	memset(rng, 0, sizeof(*rng));
@@ -128,11 +130,14 @@ replay_range_read(char* remain, FILE* in, int* lineno, char* line,
 		/* set position before line; read entry */
 		(*lineno)--;
 		fseeko(in, pos, SEEK_SET);
-		entry = read_entry(in, "datafile", lineno, ttl, or, prev);
+		entry = read_entry(in, name, lineno, ttl, or, prev);
 		if(!entry)
 			fatal_exit("%d: bad entry", *lineno);
-		entry->next = rng->match;
-		rng->match = entry;
+		entry->next = NULL;
+		if(last)
+			last->next = entry;
+		else	rng->match = entry;
+		last = entry;
 
 		pos = ftello(in);
 	}
@@ -144,6 +149,7 @@ replay_range_read(char* remain, FILE* in, int* lineno, char* line,
  * Read a replay moment 'STEP' from file. 
  * @param remain: Rest of line (after STEP keyword).
  * @param in: file to read from.
+ * @param name: name to print in errors.
  * @param lineno: incremented as lines are read.
  * @param ttl: for readentry
  * @param or: for readentry
@@ -151,7 +157,7 @@ replay_range_read(char* remain, FILE* in, int* lineno, char* line,
  * @return: range object to add to list, or NULL on error.
  */
 static struct replay_moment*
-replay_moment_read(char* remain, FILE* in, int* lineno, 
+replay_moment_read(char* remain, FILE* in, const char* name, int* lineno, 
 	uint16_t* ttl, ldns_rdf** or, ldns_rdf** prev)
 {
 	struct replay_moment* mom = (struct replay_moment*)malloc(
@@ -162,7 +168,7 @@ replay_moment_read(char* remain, FILE* in, int* lineno,
 		return NULL;
 	memset(mom, 0, sizeof(*mom));
 	if(sscanf(remain, " %d%n", &mom->time_step, &skip) != 1) {
-		log_err("%d: cannot read value: %s", *lineno, remain);
+		log_err("%d: cannot read number: %s", *lineno, remain);
 		free(mom);
 		return NULL;
 	}
@@ -194,7 +200,7 @@ replay_moment_read(char* remain, FILE* in, int* lineno,
 	}
 
 	if(readentry) {
-		mom->match = read_entry(in, "datafile", lineno, ttl, or, prev);
+		mom->match = read_entry(in, name, lineno, ttl, or, prev);
 		if(!mom->match) {
 			free(mom);
 			return NULL;
@@ -228,7 +234,7 @@ make_scenario(char* line)
 }
 
 struct replay_scenario* 
-replay_scenario_read(FILE* in)
+replay_scenario_read(FILE* in, const char* name)
 {
 	char line[MAX_LINE_LEN];
 	char *parse;
@@ -257,15 +263,15 @@ replay_scenario_read(FILE* in)
 		if(!scen)
 			fatal_exit("%d: expected SCENARIO", lineno);
 		if(parse_keyword(&parse, "RANGE_BEGIN")) {
-			struct replay_range* newr = replay_range_read(
-				parse, in, &lineno, line, &ttl, &or, &prev);
+			struct replay_range* newr = replay_range_read(parse, 
+				in, name, &lineno, line, &ttl, &or, &prev);
 			if(!newr)
 				fatal_exit("%d: bad range", lineno);
 			newr->next_range = scen->range_list;
 			scen->range_list = newr;
 		} else if(parse_keyword(&parse, "STEP")) {
-			struct replay_moment* mom = replay_moment_read(
-				parse, in, &lineno, &ttl, &or, &prev);
+			struct replay_moment* mom = replay_moment_read(parse, 
+				in, name, &lineno, &ttl, &or, &prev);
 			if(!mom)
 				fatal_exit("%d: bad moment", lineno);
 			if(scen->mom_last)

@@ -207,7 +207,7 @@ comm_point_send_udp_msg(struct comm_point *c, ldns_buffer* packet,
 		return 0;
 	} else if((size_t)sent != ldns_buffer_remaining(packet)) {
 		log_err("sent %d in place of %d bytes", 
-			sent, (int)ldns_buffer_remaining(packet));
+			(int)sent, (int)ldns_buffer_remaining(packet));
 		return 0;
 	}
 	return 1;
@@ -383,7 +383,7 @@ comm_point_tcp_handle_read(int fd, struct comm_point* c)
 			return 0;
 		}
 		log_info("Reading tcp query of length %d", 
-			ldns_buffer_limit(c->buffer));
+			(int)ldns_buffer_limit(c->buffer));
 	}
 
 	r = read(fd, ldns_buffer_current(c->buffer), 

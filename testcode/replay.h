@@ -262,9 +262,10 @@ struct replay_answer {
 /**
  * Read a replay scenario from the file.
  * @param in: file to read from.
+ * @param name: name to print in errors.
  * @return: Scenario. NULL if no scenario read.
  */
-struct replay_scenario* replay_scenario_read(FILE* in);
+struct replay_scenario* replay_scenario_read(FILE* in, const char* name);
 
 /**
  * Delete scenario.

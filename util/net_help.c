@@ -34,7 +34,7 @@
  */
 /**
  * \file
- * Implementation of log.h.
+ * Implementation of net_help.h.
  */
 
 #include "config.h"

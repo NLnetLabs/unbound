@@ -112,7 +112,7 @@ ifdef doxygen
 endif
 
 # Automatic dependencies.
-$(BUILD)%.d: $(srcdir)/%.c
+$(BUILD)%.d: $(srcdir)/%.c testcode/ldns-testpkts.c
 	$(INFO) Depend $<
 	@if test ! -d $(dir $@); then $(INSTALL) -d $(patsubst %/,%,$(dir $@)); fi
 	$Q$(SHELL) -ec '$(CC) -MM $(CPPFLAGS) $(CFLAGS) $< \
