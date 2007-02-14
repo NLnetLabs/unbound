@@ -42,7 +42,7 @@ AC_DEFUN([CHECK_COMPILER_FLAG_NEEDED],
 [
 AC_REQUIRE([AC_PROG_CC])
 AC_MSG_CHECKING(whether we need $1 as a flag for $CC)
-cache=`echo $1 | sed 'y%.=/+-%___p_%'`
+cache=`echo $1 | sed 'y%.=/+- %___p__%'`
 AC_CACHE_VAL(cv_prog_cc_flag_needed_$cache,
 [
 echo '$2' > conftest.c
@@ -63,7 +63,7 @@ eval "cv_prog_cc_flag_needed_$cache=fail"
 fi
 ]
 fi
-rm -f conftest*
+rm -f conftest
 ])
 if eval "test \"`echo '$cv_prog_cc_flag_needed_'$cache`\" = yes"; then
 AC_MSG_RESULT(yes)
@@ -87,6 +87,33 @@ AC_C_CONST
 AC_LANG_C
 CHECK_COMPILER_FLAG(g, [CFLAGS="$CFLAGS -g"])
 CHECK_COMPILER_FLAG(O2, [CFLAGS="$CFLAGS -O2"])
+
+CHECK_COMPILER_FLAG_NEEDED(-std=c99 -D__EXTENSIONS__ -D_BSD_SOURCE -D_POSIX_C_SOURCE=200112 -D_XOPEN_SOURCE=600,
+[
+#include <stdlib.h>
+#include <ctype.h>
+#include <sys/time.h>
+#include <time.h>
+#include <unistd.h>
+#include <netdb.h>
+
+int test() {
+	int a;
+	char **opts = NULL;
+	struct timeval tv;
+	char *t;
+	time_t time = 0;
+	char *buf = NULL;
+	const char* str = NULL;
+	t = ctime_r(&time, buf);
+	tv.tv_usec = 10;
+	srandom(32);
+	a = getopt(2, opts, "a");
+	a = isascii(32);
+	str = gai_strerror(0);
+	return a;
+}
+], [CFLAGS="$CFLAGS -std=c99 -D__EXTENSIONS__ -D_BSD_SOURCE -D_POSIX_C_SOURCE=200112 -D_XOPEN_SOURCE=600"])
 
 CHECK_COMPILER_FLAG_NEEDED(-std=c99,
 [
