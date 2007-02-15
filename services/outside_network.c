@@ -149,6 +149,7 @@ outnet_udp_cb(struct comm_point* c, void* arg, int error,
 	comm_timer_disable(p->timer);
 	log_info("outnet handle udp reply");
 	(void)(*p->cb)(p->c, p->cb_arg, NETEVENT_NOERROR, NULL);
+	pending_delete(outnet, p);
 	return 0;
 }
 
@@ -262,6 +263,7 @@ pending_udp_timer_cb(void *arg)
 	/* it timed out */
 	log_info("timeout udp");
 	(void)(*p->cb)(p->c, p->cb_arg, NETEVENT_TIMEOUT, NULL);
+	pending_delete(p->outnet, p);
 }
 
 struct outside_network* 
@@ -332,6 +334,15 @@ outside_network_create(struct comm_base *base, size_t bufsize,
 	return outnet;
 }
 
+/** helper pending delete */
+static void
+pending_node_del(rbnode_t* node, void* arg)
+{
+	struct pending* pend = (struct pending*)node;
+	struct outside_network* outnet = (struct outside_network*)arg;
+	pending_delete(outnet, pend);
+}
+
 void 
 outside_network_delete(struct outside_network* outnet)
 {
@@ -339,13 +350,7 @@ outside_network_delete(struct outside_network* outnet)
 		return;
 	/* check every element, since we can be called on malloc error */
 	if(outnet->pending) {
-		struct pending *p, *np;
-		p = (struct pending*)rbtree_first(outnet->pending);
-		while(p && (rbnode_t*)p!=RBTREE_NULL) {
-			np = (struct pending*)rbtree_next((rbnode_t*)p);
-			pending_delete(NULL, p);
-			p = np;
-		}
+		traverse_postorder(outnet->pending, pending_node_del, outnet);
 		free(outnet->pending);
 	}
 	if(outnet->udp_buff)
@@ -406,6 +411,7 @@ new_pending(struct outside_network* outnet, ldns_buffer* packet,
 	pend->addrlen = addrlen;
 	pend->cb = callback;
 	pend->cb_arg = callback_arg;
+	pend->outnet = outnet;
 
 	/* insert in tree */
 	pend->node.key = pend;

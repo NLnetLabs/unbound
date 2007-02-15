@@ -2,6 +2,8 @@
 	- port to FreeBSD 4.11 Dec Alpha. Also works on Solaris 10 sparc64,
 	  Solaris 9, FreeBSD 6, Linux i386 and OSX powerpc.
 	- malloc rndstate, so that it is aligned for access.
+	- fixed rbtree cleanup with postorder traverse.
+	- fixed pending messages are deleted when handled.
 
 14 February 2007: Wouter
 	- Included configure.ac changes from ldns.

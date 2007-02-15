@@ -100,6 +100,8 @@ struct pending {
 	comm_point_callback_t* cb;
 	/** callback user argument */
 	void* cb_arg;
+	/** the outside network it is part of */
+	struct outside_network* outnet;
 };
 
 /**

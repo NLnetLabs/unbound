@@ -179,4 +179,15 @@ rbnode_t *rbtree_previous(rbnode_t *rbtree);
 		(rbnode_t*)node != RBTREE_NULL; \
 		node = (type)rbtree_next((rbnode_t*)node))
 
+/**
+ * Call function for all elements in the redblack tree, such that
+ * leaf elements are called before parent elements. So that all
+ * elements can be safely free()d.
+ * @param tree: the tree
+ * @param func: function called with element and user arg.
+ * @param arg: user argument.
+ */
+void traverse_postorder(rbtree_t* tree, void (*func)(rbnode_t*, void*),
+	void* arg);
+
 #endif /* UTIL_RBTREE_H_ */

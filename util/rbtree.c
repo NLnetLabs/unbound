@@ -589,3 +589,22 @@ rbtree_previous(rbnode_t *node)
 	}
 	return node;
 }
+
+/** recursive descent traverse. */
+static void 
+traverse_post(void (*func)(rbnode_t*, void*), void* arg, rbnode_t* node)
+{
+	if(!node || node == RBTREE_NULL)
+		return;
+	/* recurse */
+	traverse_post(func, arg, node->left);
+	traverse_post(func, arg, node->right);
+	/* call user func */
+	(*func)(node, arg);
+}
+
+void 
+traverse_postorder(rbtree_t* tree, void (*func)(rbnode_t*, void*), void* arg)
+{
+	traverse_post(func, arg, tree->root);
+}
