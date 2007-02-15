@@ -264,7 +264,6 @@ comm_point_tcp_accept_callback(int fd, short event, void* arg)
 	struct comm_point* c = (struct comm_point*)arg, *c_hdl;
 	struct comm_reply rep;
 	int new_fd;
-	log_info("callback tcpaccept for %x", (int)c);
 	log_assert(c->type == comm_tcp_accept);
 	if(!(event & EV_READ)) {
 		log_info("ignoring tcp accept event %d", (int)event);
@@ -276,8 +275,13 @@ comm_point_tcp_accept_callback(int fd, short event, void* arg)
 	new_fd = accept(fd, (struct sockaddr*)&rep.addr, &rep.addrlen);
 	if(new_fd == -1) {
 		/* EINTR is signal interrupt. others are closed connection. */
-		if(errno != EINTR && errno != EWOULDBLOCK && 
-			errno != ECONNABORTED && errno != EPROTO)
+		if(	errno != EINTR 
+			&& errno != EWOULDBLOCK 
+			&& errno != ECONNABORTED 
+#ifdef EPROTO
+			&& errno != EPROTO
+#endif /* EPROTO */
+			)
 			log_err("accept failed: %s", strerror(errno));
 		return;
 	}
@@ -708,7 +712,7 @@ comm_point_drop_reply(struct comm_reply* repinfo)
 void 
 comm_point_stop_listening(struct comm_point* c)
 {
-	log_info("comm point stop listening %x", (int)c);
+	log_info("comm point stop listening %d", c->fd);
 	if(event_del(&c->ev->ev) != 0) {
 		log_err("event_del error to stoplisten");
 	}
@@ -717,7 +721,7 @@ comm_point_stop_listening(struct comm_point* c)
 void 
 comm_point_start_listening(struct comm_point* c, int newfd, int sec)
 {
-	log_info("comm point start listening %x", (int)c);
+	log_info("comm point start listening %d", c->fd);
 	if(c->type == comm_tcp_accept && !c->tcp_free) {
 		/* no use to start listening no free slots. */
 		return;
