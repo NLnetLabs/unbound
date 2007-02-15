@@ -170,6 +170,9 @@ CHECK_COMPILER_FLAG_NEEDED(-D__EXTENSIONS__,
 #include <stdlib.h>
 #include <ctype.h>
 #include <sys/time.h>
+#ifdef HAVE_TIME_H
+#include <time.h>
+#endif
 #include <unistd.h>
 #ifdef HAVE_GETOPT_H
 #include <getopt.h>
