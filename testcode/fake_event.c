@@ -69,6 +69,19 @@ fake_event_cleanup()
 	saved_scenario = NULL;
 }
 
+/** helper function that logs a ldns_pkt packet to logfile. */
+static void
+log_pkt(const char* desc, ldns_pkt* pkt)
+{
+	char* str = ldns_pkt2str(pkt);
+	if(!str)
+		log_info("%s: (failed)", desc);
+	else {
+		log_info("%s%s", desc, str);
+		free(str);
+	}
+}
+
 /**
  * Returns a string describing the event type.
  */
@@ -592,6 +605,7 @@ comm_point_send_reply(struct comm_reply* repinfo)
 			ldns_get_errorstr_by_id(status));
 		fatal_exit("Sending unparseable DNS replies to clients!");
 	}
+	log_pkt("reply pkt: ", ans->pkt);
 }
 
 void 
@@ -658,6 +672,7 @@ pending_udp_query(struct outside_network* outnet, ldns_buffer* packet,
 			ldns_get_errorstr_by_id(status));
 		fatal_exit("Sending unparseable DNS packets to servers!");
 	}
+	log_pkt("pending udp pkt: ", pend->pkt);
 
 	/* see if it matches the current moment */
 	if(runtime->now && runtime->now->evt_type == repevt_back_query &&
