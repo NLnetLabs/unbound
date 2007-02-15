@@ -186,8 +186,8 @@ rm -r autom4te* || error_cleanup "Failed to remove autoconf cache directory."
 # info "Building lexer and parser."
 
 # copy ldns-testpkts from ldns examples
-cp $LDNSDIR/examples/ldns-testpkts.c testcode/ldns-testpkts.c || error_cleanup "copy ldns/examples/.. failed"
-cp $LDNSDIR/examples/ldns-testpkts.h testcode/ldns-testpkts.h || error_cleanup "copy ldns/examples/.. failed"
+#cp $LDNSDIR/examples/ldns-testpkts.c testcode/ldns-testpkts.c || error_cleanup "copy ldns/examples/.. failed"
+#cp $LDNSDIR/examples/ldns-testpkts.h testcode/ldns-testpkts.h || error_cleanup "copy ldns/examples/.. failed"
 
 find . -name .c-mode-rc.el -exec rm {} \;
 find . -name .cvsignore -exec rm {} \;
