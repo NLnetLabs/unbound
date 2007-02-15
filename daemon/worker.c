@@ -246,6 +246,11 @@ worker_init(const char* port, int do_ip4, int do_ip6, int do_udp, int do_tcp,
 		return NULL;
 	}
 	/* init random(), large table size. */
+	if(!(worker->rndstate = (char*)malloc(RND_STATE_SIZE))) {
+		log_err("malloc rndtable failed.");
+		worker_delete(worker);
+		return NULL;
+	}
 	if(!initstate(time(NULL)^getpid(), worker->rndstate, RND_STATE_SIZE)) {
 		log_err("could not init random numbers.");
 		worker_delete(worker);

@@ -78,7 +78,7 @@ struct worker {
 	socklen_t fwd_addrlen;
 
 	/** random() table for this worker. */
-	char rndstate[RND_STATE_SIZE];
+	char* rndstate;
 };
 
 /**

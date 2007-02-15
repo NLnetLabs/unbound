@@ -1,4 +1,4 @@
-SCENARIO_BEGIN Forwarder and a timeout happens on server query.
+SCENARIO_BEGIN Forwarder and an error happens on server query.
 STEP 1 QUERY
 ENTRY_BEGIN
 SECTION QUESTION
