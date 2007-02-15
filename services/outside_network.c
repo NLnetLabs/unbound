@@ -350,7 +350,8 @@ outside_network_delete(struct outside_network* outnet)
 		return;
 	/* check every element, since we can be called on malloc error */
 	if(outnet->pending) {
-		traverse_postorder(outnet->pending, pending_node_del, outnet);
+		/* free pending elements, but do no unlink from tree. */
+		traverse_postorder(outnet->pending, pending_node_del, NULL);
 		free(outnet->pending);
 	}
 	if(outnet->udp_buff)
