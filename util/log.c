@@ -43,7 +43,7 @@
 #include <time.h>
 #endif
 
-enum verbosity_value verbosity = 3;
+enum verbosity_value verbosity = 0;
 
 void
 log_init()
@@ -58,6 +58,7 @@ log_vmsg(const char* type, const char *format, va_list args)
 	vsnprintf(message, sizeof(message), format, args);
 	fprintf(stderr, "[%d] %s[%d] %s: %s\n",
 		(int)time(NULL), ident, (int)getpid(), type, message);
+	fflush(stderr);
 }
 
 /**

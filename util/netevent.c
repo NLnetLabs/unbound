@@ -386,7 +386,7 @@ comm_point_tcp_handle_read(int fd, struct comm_point* c)
 			verbose(VERB_DETAIL, "tcp: dropped bogus too short.");
 			return 0;
 		}
-		log_info("Reading tcp query of length %d", 
+		verbose(VERB_ALGO, "Reading tcp query of length %d", 
 			(int)ldns_buffer_limit(c->buffer));
 	}
 
@@ -712,7 +712,7 @@ comm_point_drop_reply(struct comm_reply* repinfo)
 void 
 comm_point_stop_listening(struct comm_point* c)
 {
-	log_info("comm point stop listening %d", c->fd);
+	verbose(VERB_ALGO, "comm point stop listening %d", c->fd);
 	if(event_del(&c->ev->ev) != 0) {
 		log_err("event_del error to stoplisten");
 	}
@@ -721,7 +721,7 @@ comm_point_stop_listening(struct comm_point* c)
 void 
 comm_point_start_listening(struct comm_point* c, int newfd, int sec)
 {
-	log_info("comm point start listening %d", c->fd);
+	verbose(VERB_ALGO, "comm point start listening %d", c->fd);
 	if(c->type == comm_tcp_accept && !c->tcp_free) {
 		/* no use to start listening no free slots. */
 		return;
@@ -918,6 +918,6 @@ log_addr(struct sockaddr_storage* addr, socklen_t addrlen)
 		strncpy(dest, "(inet_ntop error)", sizeof(dest));
 	}
 	port = ntohs(((struct sockaddr_in*)addr)->sin_port);
-	log_info("addr fam=%s port=%d dest=%s len=%d",
+	verbose(VERB_DETAIL, "addr fam=%s port=%d dest=%s len=%d",
 		family, (int)port, dest, (int)addrlen);
 }

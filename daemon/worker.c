@@ -155,7 +155,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 {
 	struct worker* worker = (struct worker*)arg;
 	int ret;
-	log_info("worker handle request");
+	verbose(VERB_DETAIL, "worker handle request");
 	if(error != NETEVENT_NOERROR) {
 		log_err("called with err=%d", error);
 		return 0;

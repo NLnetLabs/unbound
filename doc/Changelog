@@ -4,6 +4,8 @@
 	- malloc rndstate, so that it is aligned for access.
 	- fixed rbtree cleanup with postorder traverse.
 	- fixed pending messages are deleted when handled.
+	- You can control verbosity; default is not verbose, every -v
+	  adds more verbosity.
 
 14 February 2007: Wouter
 	- Included configure.ac changes from ldns.

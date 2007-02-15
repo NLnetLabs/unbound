@@ -133,7 +133,7 @@ main(int argc, char* argv[])
 	}
 	
 	/* drop user priviliges and chroot if needed */
-	verbose(VERB_OPS, "start of service (%s).", PACKAGE_STRING);
+	log_info("start of service (%s).", PACKAGE_STRING);
 	worker_work(worker);
 
 	/* cleanup */

@@ -117,7 +117,7 @@ outnet_udp_cb(struct comm_point* c, void* arg, int error,
 	struct outside_network* outnet = (struct outside_network*)arg;
 	struct pending key;
 	struct pending* p;
-	log_info("answer cb");
+	verbose(VERB_ALGO, "answer cb");
 
 	if(error != NETEVENT_NOERROR) {
 		log_info("outnetudp got udp error %d", error);
@@ -129,11 +129,11 @@ outnet_udp_cb(struct comm_point* c, void* arg, int error,
 	key.id = LDNS_ID_WIRE(ldns_buffer_begin(c->buffer));
 	memcpy(&key.addr, &reply_info->addr, reply_info->addrlen);
 	key.addrlen = reply_info->addrlen;
-	log_info("Incoming reply id=%4.4x addr=", key.id);
+	verbose(VERB_ALGO, "Incoming reply id=%4.4x addr=", key.id);
 	log_addr(&key.addr, key.addrlen);
 
 	/* find it, see if this thing is a valid query response */
-	log_info("lookup size is %d entries", (int)outnet->pending->count);
+	verbose(VERB_ALGO, "lookup size is %d entries", (int)outnet->pending->count);
 	p = (struct pending*)rbtree_search(outnet->pending, &key);
 	if(!p) {
 		verbose(VERB_DETAIL, "received unsolicited udp reply. dropped.");
@@ -147,7 +147,7 @@ outnet_udp_cb(struct comm_point* c, void* arg, int error,
 		return 0;
 	}
 	comm_timer_disable(p->timer);
-	log_info("outnet handle udp reply");
+	verbose(VERB_ALGO, "outnet handle udp reply");
 	(void)(*p->cb)(p->c, p->cb_arg, NETEVENT_NOERROR, NULL);
 	pending_delete(outnet, p);
 	return 0;
@@ -261,7 +261,7 @@ pending_udp_timer_cb(void *arg)
 {
 	struct pending* p = (struct pending*)arg;
 	/* it timed out */
-	log_info("timeout udp");
+	verbose(VERB_ALGO, "timeout udp");
 	(void)(*p->cb)(p->c, p->cb_arg, NETEVENT_TIMEOUT, NULL);
 	pending_delete(p->outnet, p);
 }
@@ -427,7 +427,7 @@ new_pending(struct outside_network* outnet, ldns_buffer* packet,
 			return NULL;
 		}
 	}
-	log_info("inserted new pending reply id=%4.4x addr=", pend->id);
+	verbose(VERB_ALGO, "inserted new pending reply id=%4.4x addr=", pend->id);
 	log_addr(&pend->addr, pend->addrlen);
 	return pend;
 }
@@ -484,7 +484,7 @@ select_port(struct outside_network* outnet, struct pending* pend)
 	else	pend->c = outnet->udp4_ports[chosen];
 	log_assert(pend->c);
 
-	log_info("query %x outbound %d of %d", pend->id, chosen, nummax);
+	verbose(VERB_ALGO, "query %x outbound %d of %d", pend->id, chosen, nummax);
 }
 
 
