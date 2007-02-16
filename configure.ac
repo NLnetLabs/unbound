@@ -387,6 +387,17 @@ AC_SEARCH_LIBS(event_set, [event])
 AC_CHECK_HEADERS([event.h],,, [AC_INCLUDES_DEFAULT])
 AC_CHECK_FUNCS([event_base_free]) # only in libevent 1.2 and later
 
+AC_ARG_WITH(ldns,
+        AC_HELP_STRING([--with-ldns=PATH        specify prefix of path of ldns library to use])
+	, [ specialldnsdir="$withval"
+	CPPFLAGS="$CPPFLAGS -I$withval/include"
+	LDFLAGS="$LDFLAGS -L$withval -L$withval/lib -lldns"
+	ldnsdir="$withval"
+	AC_SUBST(ldnsdir)
+])
+
+AC_CHECK_LIB(ldns, ldns_rr_new,, [AC_MSG_ERROR([Can't find ldns library])])
+
 # check to see if libraries are needed for these functions.
 AC_CHECK_LIB(socket, socket)
 AC_CHECK_LIB(nsl, inet_pton)
@@ -406,17 +417,6 @@ AC_CHECK_FUNCS([getaddrinfo])
 if test $ac_cv_func_getaddrinfo = no; then
 AC_LIBOBJ([fake-rfc2553])
 fi
-
-AC_ARG_WITH(ldns,
-        AC_HELP_STRING([--with-ldns=PATH        specify prefix of path of ldns library to use])
-	, [ specialldnsdir="$withval"
-	CPPFLAGS="$CPPFLAGS -I$withval/include"
-	LDFLAGS="$LDFLAGS -L$withval -L$withval/lib -lldns"
-	ldnsdir="$withval"
-	AC_SUBST(ldnsdir)
-])
-
-AC_CHECK_LIB(ldns, ldns_rr_new,, [AC_MSG_ERROR([Can't find ldns library])])
 
 AC_DEFINE_UNQUOTED([MAXSYSLOGMSGLEN], [512], [Define to the maximum message length to pass to syslog.])
 
@@ -497,6 +497,7 @@ void *memmove(void *dest, const void *src, size_t n);
 size_t strlcpy(char *dst, const char *src, size_t siz);
 #endif
 #ifndef HAVE_GETADDRINFO
+struct sockaddr_storage;
 #include "compat/fake-rfc2553.h"
 #endif
 
