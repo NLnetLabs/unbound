@@ -67,9 +67,11 @@ verbose_print_addr(struct addrinfo *addr)
 	if(verbosity >= VERB_ALGO) {
 		char buf[100];
 		void* sinaddr = &((struct sockaddr_in*)addr->ai_addr)->sin_addr;
+#ifdef INET6
 		if(addr->ai_family == AF_INET6)
 			sinaddr = &((struct sockaddr_in6*)addr->ai_addr)->
 				sin6_addr;
+#endif /* INET6 */
 		if(inet_ntop(addr->ai_family, sinaddr, buf,
 			(socklen_t)sizeof(buf)) == 0) {
 			strncpy(buf, "(null)", sizeof(buf));
@@ -78,8 +80,8 @@ verbose_print_addr(struct addrinfo *addr)
 			addr->ai_socktype==SOCK_DGRAM?"udp":
 			addr->ai_socktype==SOCK_STREAM?"tcp":"otherproto",
 			addr->ai_family==AF_INET?"4":
-			addr->ai_family==AF_INET6?"6":"_otherfam", 
-			buf, 
+			addr->ai_family==AF_INET6?"6":
+			"_otherfam", buf, 
 			ntohs(((struct sockaddr_in*)addr->ai_addr)->sin_port));
 	}
 }

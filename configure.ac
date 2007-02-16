@@ -267,7 +267,7 @@ AC_PROG_LIBTOOL
 
 # Checks for header files.
 AC_HEADER_STDC
-AC_CHECK_HEADERS([getopt.h stdarg.h stdbool.h netinet/in.h time.h sys/param.h sys/socket.h arpa/inet.h],,, [AC_INCLUDES_DEFAULT])
+AC_CHECK_HEADERS([stdarg.h stdbool.h netinet/in.h sys/param.h sys/socket.h arpa/inet.h],,, [AC_INCLUDES_DEFAULT])
 
 # check for types
 AC_CHECK_TYPE(int8_t, char)
@@ -302,6 +302,16 @@ AC_INCLUDES_DEFAULT
 #endif
 ])
 AC_CHECK_TYPE(in_port_t, [], [AC_DEFINE([in_port_t], [uint16_t], [in_port_t])], [
+AC_INCLUDES_DEFAULT
+#if HAVE_SYS_TYPES_H
+# include <sys/types.h>
+#endif
+#if HAVE_NETINET_IN_H
+# include <netinet/in.h>
+#endif
+])
+
+AC_CHECK_TYPE(struct sockaddr_storage, [], [AC_DEFINE([sockaddr_storage], [sockaddr_in], [sockaddr_storage])], [
 AC_INCLUDES_DEFAULT
 #if HAVE_SYS_TYPES_H
 # include <sys/types.h>
@@ -398,14 +408,14 @@ AC_TYPE_SIGNAL
 AC_FUNC_FSEEKO
 AC_SYS_LARGEFILE
 
-#AC_REPLACE_FUNCS(snprintf)
-#AC_REPLACE_FUNCS(strlcpy)
-#AC_REPLACE_FUNCS(memmove)
+AC_REPLACE_FUNCS(snprintf)
+AC_REPLACE_FUNCS(strlcpy)
+AC_REPLACE_FUNCS(memmove)
 
-#AC_CHECK_FUNCS([getaddrinfo])
-#if test $ac_cv_func_getaddrinfo = no; then
-#AC_LIBOBJ([fake-rfc2553])
-#fi
+AC_CHECK_FUNCS([getaddrinfo])
+if test $ac_cv_func_getaddrinfo = no; then
+AC_LIBOBJ([fake-rfc2553])
+fi
 
 AC_ARG_WITH(ldns,
         AC_HELP_STRING([--with-ldns=PATH        specify prefix of path of ldns library to use])
@@ -474,6 +484,16 @@ AH_BOTTOM([
 #define fseeko fseek
 #define ftello ftell
 #endif /* HAVE_FSEEKO */
+
+#ifndef IPV6_MIN_MTU
+#define IPV6_MIN_MTU 1280
+#endif /* IPV6_MIN_MTU */
+
+#ifdef AF_INET6
+#define INET6
+#else
+#define AF_INET6        28
+#endif
 
 #include "ldns/ldns.h"
 
