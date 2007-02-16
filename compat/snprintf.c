@@ -136,7 +136,9 @@ int snprintf (va_alist) va_dcl
 #define DP_C_LDOUBLE 3
 
 #define char_to_int(p) (p - '0')
+#ifndef MAX
 #define MAX(p,q) ((p >= q) ? p : q)
+#endif
 
 static void dopr (char *buffer, size_t maxlen, const char *format, va_list args)
 {

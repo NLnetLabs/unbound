@@ -173,7 +173,8 @@ open_udp_port_range(const char* ifname, struct addrinfo* hints, int porthint)
 		&res)) != 0 || !res) {
 		log_err("node %s %s getaddrinfo: %s %s",
 			ifname?ifname:"default", (porthint!=-1)?portstr:"eph", 
-			gai_strerror(r), r==EAI_SYSTEM?strerror(errno):"");
+			gai_strerror(r), 
+			r==EAI_SYSTEM?(char*)strerror(errno):"");
 		return -1;
 	}
 	s = create_udp_sock(res);

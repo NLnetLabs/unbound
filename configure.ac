@@ -480,6 +480,10 @@ AH_BOTTOM([
 #define ftello ftell
 #endif /* HAVE_FSEEKO */
 
+#ifndef RAND_MAX
+#define RAND_MAX	2147483647
+#endif
+
 #ifndef IPV6_MIN_MTU
 #define IPV6_MIN_MTU 1280
 #endif /* IPV6_MIN_MTU */
