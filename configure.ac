@@ -311,16 +311,6 @@ AC_INCLUDES_DEFAULT
 #endif
 ])
 
-AC_CHECK_TYPE(struct sockaddr_storage, [], [AC_DEFINE([sockaddr_storage], [sockaddr_in], [sockaddr_storage])], [
-AC_INCLUDES_DEFAULT
-#if HAVE_SYS_TYPES_H
-# include <sys/types.h>
-#endif
-#if HAVE_NETINET_IN_H
-# include <netinet/in.h>
-#endif
-])
-
 # Checks for libraries.
 AC_ARG_WITH(ssl, AC_HELP_STRING([--with-ssl=pathname],
                                     [enable SSL (will check /usr/local/ssl
