@@ -495,6 +495,21 @@ AH_BOTTOM([
 #define AF_INET6        28
 #endif
 
+#ifndef HAVE_SNPRINTF
+#include <stdarg.h>
+int snprintf (char *str, size_t count, const char *fmt, ...);
+int vsnprintf (char *str, size_t count, const char *fmt, va_list arg);
+#endif /* HAVE_SNPRINTF */
+#ifndef HAVE_MEMMOVE
+void *memmove(void *dest, const void *src, size_t n);
+#endif
+#ifndef HAVE_STRLCPY
+size_t strlcpy(char *dst, const char *src, size_t siz);
+#endif
+#ifndef HAVE_GETADDRINFO
+#include "compat/fake-rfc2553.h"
+#endif
+
 #include "ldns/ldns.h"
 
 /** default port to listen for queries, passed to getaddrinfo */
