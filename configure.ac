@@ -357,7 +357,7 @@ AC_ARG_WITH(libevent, AC_HELP_STRING([--with-libevent=pathname],
     if test x_$withval != x_no; then
         AC_MSG_CHECKING(for libevent)
         if test x_$withval = x_ -o x_$withval = x_yes; then
-            withval="/usr/local /usr/lib /usr/pkg /usr/sfw /usr"
+            withval="/usr/local /usr/lib /usr/pkg /usr/sfw /usr";
         fi
         for dir in $withval; do
             thedir="$dir"
@@ -373,7 +373,6 @@ AC_ARG_WITH(libevent, AC_HELP_STRING([--with-libevent=pathname],
             		AC_MSG_RESULT(found in $thedir)
                 	CPPFLAGS="$CPPFLAGS -I$thedir";
             		LDFLAGS="$thedir/.libs/*.o $LDFLAGS";
-	    		AC_SEARCH_LIBS(event_set, [event])
 		else
             		AC_MSG_ERROR(Cannot find the libevent library in $withval)
 		fi
@@ -381,10 +380,10 @@ AC_ARG_WITH(libevent, AC_HELP_STRING([--with-libevent=pathname],
             AC_MSG_RESULT(found in $thedir)
             LDFLAGS="$LDFLAGS -L$thedir/lib";
 	    RUNTIME_PATH="$RUNTIME_PATH -R$thedir/lib"
-	    AC_SEARCH_LIBS(event_set, [event])
         fi
 	AC_SUBST(RUNTIME_PATH)
     fi
+AC_SEARCH_LIBS(event_set, [event])
 AC_CHECK_HEADERS([event.h],,, [AC_INCLUDES_DEFAULT])
 AC_CHECK_FUNCS([event_base_free]) # only in libevent 1.2 and later
 
