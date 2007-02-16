@@ -50,7 +50,7 @@ INSTALL=$(srcdir)/install-sh
 
 COMMON_SRC=$(wildcard services/*.c util/*.c)
 COMMON_OBJ=$(addprefix $(BUILD),$(COMMON_SRC:.c=.o))
-COMPAT_OBJ=$(addprefix $(BUILD)compat/,$(LIBOBJS)))
+COMPAT_OBJ=$(addprefix $(BUILD)compat/,$(LIBOBJS))
 UNITTEST_SRC=testcode/unitmain.c $(COMMON_SRC)
 UNITTEST_OBJ=$(addprefix $(BUILD),$(UNITTEST_SRC:.c=.o)) $(COMPAT_OBJ)
 DAEMON_SRC=$(wildcard daemon/*.c) $(COMMON_SRC)

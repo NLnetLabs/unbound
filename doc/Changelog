@@ -1,6 +1,7 @@
 16 February 2007: Wouter
 	- Updated testbed script, works better by using make on remote end.
 	- removed check decls, we can compile without them.
+	- makefile supports LIBOBJ replacements.
 
 15 February 2007: Wouter
 	- port to FreeBSD 4.11 Dec Alpha. Also works on Solaris 10 sparc64,
