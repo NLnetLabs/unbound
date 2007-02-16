@@ -490,11 +490,14 @@ AH_BOTTOM([
 #define IPV6_MIN_MTU 1280
 #endif /* IPV6_MIN_MTU */
 
-#ifdef AF_INET6
-#define INET6
-#else
-#define AF_INET6        28
-#endif
+#ifndef CHECKED_INET6
+#  define CHECKED_INET6
+#  ifdef AF_INET6
+#    define INET6
+#  else
+#    define AF_INET6        28
+#  endif
+#endif /* CHECKED_INET6 */
 
 #ifndef HAVE_SNPRINTF
 #include <stdarg.h>

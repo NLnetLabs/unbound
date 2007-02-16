@@ -6,6 +6,7 @@
 	- added util/mini-event.c and .h, a select based alternative used with
 	  ./configure --with-libevent=no
 	  It is limited to 1024 file descriptors, and has less features.
+	- will not create ip6 sockets if ip6 not on the machine.
 
 15 February 2007: Wouter
 	- port to FreeBSD 4.11 Dec Alpha. Also works on Solaris 10 sparc64,

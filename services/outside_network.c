@@ -280,6 +280,9 @@ outside_network_create(struct comm_base *base, size_t bufsize,
 		return NULL;
 	}
 	outnet->base = base;
+#ifndef INET6
+	do_ip6 = 0;
+#endif
 	calc_num46(ifs, num_ifs, do_ip4, do_ip6, num_ports, 
 		&outnet->num_udp4, &outnet->num_udp6);
 	/* adds +1 to portnums so we do not allocate zero bytes. */
@@ -303,8 +306,8 @@ outside_network_create(struct comm_base *base, size_t bufsize,
 			outnet->num_udp4 = make_udp_range(outnet->udp4_ports, 
 				NULL, num_ports, 1, 0, port_base, outnet);
 		}
-		if(outnet->num_udp4 != num_ports || 
-			outnet->num_udp6 != num_ports) {
+		if( (do_ip4 && outnet->num_udp4 != num_ports) || 
+			(do_ip6 && outnet->num_udp6 != num_ports)) {
 			log_err("Could not open all networkside ports");
 			outside_network_delete(outnet);
 			return NULL;

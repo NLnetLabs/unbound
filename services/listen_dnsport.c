@@ -318,6 +318,9 @@ listen_create(struct comm_base* base, int num_ifs, const char* ifs[],
 	if(num_ifs > 0)
 		hints.ai_flags |= AI_NUMERICHOST;
 	hints.ai_family = AF_UNSPEC;
+#ifndef INET6
+	do_ip6 = 0;
+#endif
 	if(!do_ip4 && !do_ip6) {
 		listen_delete(front);
 		return NULL;
