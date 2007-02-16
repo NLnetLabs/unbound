@@ -189,20 +189,6 @@ int test() {
         return a;
 }
 ], [CFLAGS="$CFLAGS -D__EXTENSIONS__"])
-AC_CHECK_DECLS([isascii, getopt, srandom, ctime_r, gai_strerror],, [echo "Cannot set compile environment; pass defines in CFLAGS=-D... ./configure"; exit 1], [
-#include <stdlib.h>
-#include <sys/time.h>
-#ifdef HAVE_TIME_H
-#include <time.h>
-#endif
-#include <netdb.h>
-#include <unistd.h>
-#ifdef HAVE_GETOPT_H
-#include <getopt.h>
-#endif
-#include <stdbool.h>
-#include <ctype.h>
-])
 
 # for Sun studio 11.
 CHECK_COMPILER_FLAG(xO4, [CFLAGS="$CFLAGS -xO4"])
