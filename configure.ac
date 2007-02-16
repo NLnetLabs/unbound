@@ -354,7 +354,7 @@ AC_ARG_WITH(libevent, AC_HELP_STRING([--with-libevent=pathname],
         ],[
             withval="yes"
         ])
-    if test x_$withval != x_no; then
+if test x_$withval != x_no; then
         AC_MSG_CHECKING(for libevent)
         if test x_$withval = x_ -o x_$withval = x_yes; then
             withval="/usr/local /usr/lib /usr/pkg /usr/sfw /usr";
@@ -382,10 +382,12 @@ AC_ARG_WITH(libevent, AC_HELP_STRING([--with-libevent=pathname],
 	    RUNTIME_PATH="$RUNTIME_PATH -R$thedir/lib"
         fi
 	AC_SUBST(RUNTIME_PATH)
-    fi
-AC_SEARCH_LIBS(event_set, [event])
-AC_CHECK_HEADERS([event.h],,, [AC_INCLUDES_DEFAULT])
-AC_CHECK_FUNCS([event_base_free]) # only in libevent 1.2 and later
+	AC_SEARCH_LIBS(event_set, [event])
+	AC_CHECK_HEADERS([event.h],,, [AC_INCLUDES_DEFAULT])
+	AC_CHECK_FUNCS([event_base_free]) # only in libevent 1.2 and later
+else
+	AC_DEFINE(USE_MINI_EVENT, 1, [Define if you want to use internal select based events])
+fi
 
 # check to see if libraries are needed for these functions.
 AC_CHECK_LIB(socket, socket)

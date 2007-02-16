@@ -49,8 +49,12 @@
 
 /* We define libevent structures here to hide the libevent stuff. */
 
+#ifdef USE_MINI_EVENT
+#include "util/mini_event.h"
+#else
 /* we use libevent */
 #include <event.h>
+#endif
 
 /**
  * The internal event structure for keeping libevent info for the event.
@@ -159,7 +163,8 @@ comm_base_create()
 		free(b);
 		return NULL;
 	}
-	verbose(VERB_ALGO, "libevent uses %s method.", event_get_method());
+	verbose(VERB_ALGO, "libevent %s uses %s method.", 
+		event_get_version(), event_get_method());
 	return b;
 }
 

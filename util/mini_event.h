@@ -1,0 +1,146 @@
+/*
+ * mini-event.h - micro implementation of libevent api, using select() only.
+ *
+ * Copyright (c) 2007, NLnet Labs. All rights reserved.
+ * 
+ * This software is open source.
+ * 
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 
+ * Redistributions of source code must retain the above copyright notice,
+ * this list of conditions and the following disclaimer.
+ * 
+ * Redistributions in binary form must reproduce the above copyright notice,
+ * this list of conditions and the following disclaimer in the documentation
+ * and/or other materials provided with the distribution.
+ * 
+ * Neither the name of the NLNET LABS nor the names of its contributors may
+ * be used to endorse or promote products derived from this software without
+ * specific prior written permission.
+ * 
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+ * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ */
+
+/**
+ * \file
+ * This file implements part of the event(3) libevent api.
+ * The back end is only select. Max number of fds is limited.
+ */
+
+#ifndef MINI_EVENT_H
+#define MINI_EVENT_H
+
+#ifdef USE_MINI_EVENT
+
+#ifndef HAVE_EVENT_BASE_FREE
+#define HAVE_EVENT_BASE_FREE
+#endif 
+
+/** event timeout */
+#define EV_TIMEOUT	0x01
+/** event fd readable */
+#define EV_READ		0x02
+/** event fd writable */
+#define EV_WRITE	0x04
+/** event signal */
+#define EV_SIGNAL	0x08
+/** event must persist */
+#define EV_PERSIST	0x10
+
+/* needs our redblack tree */
+#include "rbtree.h"
+
+/** max number of file descriptors to support */
+#define MAX_FDS 1024
+/** max number of signals to support */
+#define MAX_SIG 32
+
+/** event base */
+struct event_base
+{
+	/** sorted by timeout (absolute), ptr */
+	rbtree_t* times;
+	/** array of 0 - maxfd of ptr to event for it */
+	struct event** fds;
+	/** max fd in use */
+	int maxfd;
+	/** fdset for read write */
+	fd_set reads, writes;
+	/** array of 0 - maxsig of ptr to event for it */
+	struct event** signals;
+	/** if we need to exit */
+	int need_to_exit;
+};
+
+/**
+ * Event structure. Has some of the event elements.
+ */
+struct event {
+	/** node in timeout rbtree */
+	rbnode_t node;
+	/** is event already added */
+	int added;
+
+	/** event base it belongs to */
+	struct event_base *ev_base;
+	/** fd to poll or -1 for timeouts */
+	int ev_fd;
+	/** events this event is interested in */
+	short ev_events;
+	/** timeout value */
+	struct timeval ev_timeout;
+
+	/** callback to call: fd, eventbits, userarg */
+	void (*ev_callback)(int, short, void *arg);
+	/** callback user arg */
+	void *ev_arg;
+};
+
+/* function prototypes as they appear in event.h */
+/** create event base */
+void *event_init(void);
+/** get version */
+const char *event_get_version(void);
+/** get polling method, select */
+const char *event_get_method(void);
+/** run select in a loop */
+int event_base_dispatch(struct event_base *);
+/** exit that loop */
+int event_base_loopexit(struct event_base *, struct timeval *);
+/** free event base. Free events yourself */
+void event_base_free(struct event_base *);
+/** set content of event */
+void event_set(struct event *, int, short, void (*)(int, short, void *), void *);
+/** add event to a base */
+int event_base_set(struct event_base *, struct event *);
+/** add event to make it active. You may not change it with event_set anymore */
+int event_add(struct event *, struct timeval *);
+/** remove event. You may change it again */
+int event_del(struct event *);
+
+#define evtimer_add(ev, tv)             event_add(ev, tv)
+#define evtimer_del(ev)                 event_del(ev)
+
+/* uses different implementation. Cannot mix fd/timeouts and signals. */
+/** install signal handler */
+int signal_add(struct event *, struct timeval *);
+/** set signal event contents */
+#define signal_set(ev, x, cb, arg)      \
+        event_set(ev, x, EV_SIGNAL|EV_PERSIST, cb, arg)
+/** remove signal handler */
+int signal_del(struct event *);
+
+#endif /* USE_MINI_EVENT */
+#endif /* MINI_EVENT_H */

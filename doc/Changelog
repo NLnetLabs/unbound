@@ -3,6 +3,9 @@
 	- removed check decls, we can compile without them.
 	- makefile supports LIBOBJ replacements.
 	- docs checks ignore compat code.
+	- added util/mini-event.c and .h, a select based alternative used with
+	  ./configure --with-libevent=no
+	  It is limited to 1024 file descriptors, and has less features.
 
 15 February 2007: Wouter
 	- port to FreeBSD 4.11 Dec Alpha. Also works on Solaris 10 sparc64,
