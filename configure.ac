@@ -398,6 +398,9 @@ AC_TYPE_SIGNAL
 AC_FUNC_FSEEKO
 AC_SYS_LARGEFILE
 
+AC_REPLACE_FUNCS(inet_aton)
+AC_REPLACE_FUNCS(inet_pton)
+AC_REPLACE_FUNCS(inet_ntop)
 AC_REPLACE_FUNCS(snprintf)
 AC_REPLACE_FUNCS(strlcpy)
 AC_REPLACE_FUNCS(memmove)
@@ -492,6 +495,15 @@ AH_BOTTOM([
 int snprintf (char *str, size_t count, const char *fmt, ...);
 int vsnprintf (char *str, size_t count, const char *fmt, va_list arg);
 #endif /* HAVE_SNPRINTF */
+#ifndef HAVE_INET_PTON
+int inet_pton(int af, const char* src, void* dst);
+#endif /* HAVE_INET_PTON */
+#ifndef HAVE_INET_NTOP
+const char *inet_ntop(int af, const void *src, char *dst, size_t size);
+#endif
+#ifndef HAVE_INET_ATON
+int inet_aton(const char *cp, struct in_addr *addr);
+#endif
 #ifndef HAVE_MEMMOVE
 void *memmove(void *dest, const void *src, size_t n);
 #endif
