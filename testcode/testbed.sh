@@ -31,23 +31,38 @@ function dotest()
 {
 	echo "$1 begin on "`date` | tee -a $REPORT_FILE
 
+	DISABLE=""
+	if test $IP6 = no; then
+		DISABLE="--disable-ipv6"
+	fi
+	if test x$LDNS != x; then
+		DISABLE="--with-ldns=$LDNS $DISABLE"
+	fi
+	if test x$LIBEVENT != x; then
+		DISABLE="--with-libevent=$LIBEVENT $DISABLE"
+	fi
+
+	cat >makeconf.mak.$$ << EOF 
+configure:	configure.ac
+	$AC_CMD
+	touch configure
+Makefile:	configure
+	./configure $CONFIGURE_FLAGS $DISABLE
+	touch Makefile 
+EOF
+	scp makeconf.mak.$$ $1:$2
+	# determine make to use
+	tempx=`ssh $1 "cd $2; which gmake"`
+	MAKE_CMD=`ssh $1 "cd $2; if test -f '$tempx'; then echo $tempx; else echo $MAKE_CMD; fi"`
+
 	if test $SVN = yes; then
 		echossh $1 "cd $2; svn up"
-		echossh $1 "cd $2; if test ! -f configure -o configure.ac -nt configure; then $AC_CMD; fi"
+		echossh $1 "cd $2; $MAKE_CMD -f makeconf.mak.$$ configure"
 	else
 		# svn and autoconf locally
 		echo "fake svn via svnexport, tar, autoconf, bison, flex."
 		svn export svn+ssh://open.nlnetlabs.nl/svn/nsd/trunk unbound_ttt
 		(cd unbound_ttt; $AC_CMD; rm -r autom4te* .c-mode-rc.el .cvsignore)
-		if test "need_fixup_flexbison" = "yes"; then
-			(cd unbound_ttt; \
-			echo "#include <config.h>" > zlexer.c ; \
-			flex -i -t zlexer.lex >> zlexer.c ; \
-			bison -y -d -o zparser.c zparser.y ; \
-			echo "#include \"configyyrename.h\"" > configlexer.c ; \
-			flex -i -t configlexer.lex >> configlexer.c ; \
-			bison -y -d -o configparser.c configparser.y )
-		fi
 		if test $FIXCONFIGURE = yes; then
 			echo fixing up configure length test.
 			(cd unbound_ttt; mv configure oldconf; sed -e 's?while (test "X"?lt_cv_sys_max_cmd_len=65500; echo skip || while (test "X"?' <oldconf >configure; chmod +x ./configure)
@@ -61,24 +76,16 @@ function dotest()
 		# rm unbound_ttt.tgz
 		# echossh $1 "gtar xzf unbound_ttt.tar.gz && rm unbound_ttt.tar.gz"
 	fi
-	DISABLE=""
-	if test $IP6 = no; then
-		DISABLE="--disable-ipv6"
-	fi
-	if test x$LDNS != x; then
-		DISABLE="--with-ldns=$LDNS $DISABLE"
-	fi
-	if test x$LIBEVENT != x; then
-		DISABLE="--with-libevent=$LIBEVENT $DISABLE"
-	fi
-	echossh $1 "cd $2; if test ! -f config.h -o configure -nt config.h; then ./configure $CONFIGURE_FLAGS $DISABLE; fi"
-	echossh $1 "cd $2; if test -f "'"`which gmake`"'"; then gmake; else $MAKE_CMD; fi"
-	echossh $1 "cd $2; if test -f "'"`which gmake`"'"; then gmake doc; else $MAKE_CMD doc; fi"
+	echossh $1 "cd $2; $MAKE_CMD -f makeconf.mak.$$ Makefile"
+	echossh $1 "cd $2; $MAKE_CMD"
+	echossh $1 "cd $2; $MAKE_CMD doc"
 	if test $RUN_TEST = yes; then
 	echossh $1 "cd $2/testdata; tpkg clean"
 	echossh $1 "cd $2; bash testcode/do-tests.sh"
 	echossh $1 "cd $2/testdata; tpkg -q report" | tee -a $REPORT_FILE
 	fi
+	echossh $1 "cd $2; rm -f makeconf.mak.$$"
+	rm -f makeconf.mak.$$
 	echo "$1 end on "`date` | tee -a $REPORT_FILE
 }
 
