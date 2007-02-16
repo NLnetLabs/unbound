@@ -208,7 +208,7 @@ make_sock(int stype, const char* ifname, const char* port,
 	if((r=getaddrinfo(ifname, port, hints, &res)) != 0 || !res) {
 		log_err("node %s:%s getaddrinfo: %s %s", 
 			ifname?ifname:"default", port, gai_strerror(r),
-			r==EAI_SYSTEM?strerror(errno):"");
+			r==EAI_SYSTEM?(char*)strerror(errno):"");
 		return -1;
 	}
 	if(stype == SOCK_DGRAM)
