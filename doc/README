@@ -10,6 +10,9 @@ This software is under BSD license, see LICENSE for details.
 
 * Make and install: ./configure; make
   * --with-ldns=/path/to/ldns
+  * --with-libevent=/path/to/libevent
+  	Can be set to either the system install or the build directory.
+	--with-libevent=no gives an alternative to libevent (based on select).
 
 * Create build environment 
   * run libtoolize -c if config.sub is missing.
