@@ -348,6 +348,22 @@ AC_ARG_WITH(ssl, AC_HELP_STRING([--with-ssl=pathname],
     fi
 AC_CHECK_HEADERS([openssl/ssl.h],,, [AC_INCLUDES_DEFAULT])
 
+# check for thread library.
+AC_ARG_WITH(pthreads, 
+	AC_HELP_STRING([--with-pthreads], [use pthreads library, or --without--pthreads to disable threading support.]), [
+    	],[
+    	withval="yes"
+])
+if test x_$withval != x_no; then
+	sinclude(acx_pthread.m4)
+	ACX_PTHREAD([
+		AC_DEFINE(HAVE_PTHREAD,1,[Define if you have POSIX threads libraries and header files.])
+		LIBS="$PTHREAD_LIBS $LIBS"
+		CFLAGS="$CFLAGS $PTHREAD_CFLAGS"
+		CC="$PTHREAD_CC"
+		])
+fi
+
 # check for libevent
 AC_ARG_WITH(libevent, AC_HELP_STRING([--with-libevent=pathname],
                                     [set path to libevent  (will check /usr/local /usr/lib /usr/pkg /usr/sfw /usr)]),[

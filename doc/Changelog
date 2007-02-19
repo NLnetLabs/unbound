@@ -1,3 +1,9 @@
+19 February 2007: Wouter
+	- Created 0.0 svn tag.
+	- added acx_pthread.m4 autoconf check for pthreads from 
+	  the autoconf archive. It is GPL-with-autoconf-exception Licensed.
+	  You can specify --with-pthreads, or --without-pthreads to configure.
+
 16 February 2007: Wouter
 	- Updated testbed script, works better by using make on remote end.
 	- removed check decls, we can compile without them.
