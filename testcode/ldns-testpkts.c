@@ -21,6 +21,7 @@
  */
 
 #include "config.h"
+struct sockaddr_storage;
 #include <ldns/ldns.h>
 #include <errno.h>
 #include "ldns-testpkts.h"
