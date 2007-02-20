@@ -1,3 +1,6 @@
+20 February 2007: Wouter
+	- Added locks code and pthread spinlock detection.
+
 19 February 2007: Wouter
 	- Created 0.0 svn tag.
 	- added acx_pthread.m4 autoconf check for pthreads from 

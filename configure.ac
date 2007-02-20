@@ -361,6 +361,7 @@ if test x_$withval != x_no; then
 		LIBS="$PTHREAD_LIBS $LIBS"
 		CFLAGS="$CFLAGS $PTHREAD_CFLAGS"
 		CC="$PTHREAD_CC"
+		AC_CHECK_TYPES(pthread_spinlock_t,,,[#include <pthread.h>])
 		])
 fi
 
