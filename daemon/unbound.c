@@ -43,6 +43,7 @@
 #include "config.h"
 #include "util/log.h"
 #include "daemon/worker.h"
+#include "util/config_file.h"
 
 /** buffer size for network connections */
 #define BUFSZ 65552
@@ -53,6 +54,7 @@ static void usage()
 	printf("usage: unbound [options]\n");
 	printf("	start unbound daemon DNS resolver.\n");
 	printf("-h	this help\n");
+	printf("-c file	config file to read, unbound.conf(5).\n");
 	printf("-p port	the port to listen on\n");
 	printf("-v	verbose (multiple times increase verbosity)\n");
 	printf("-f ip	set forwarder address\n");
@@ -84,12 +86,16 @@ main(int argc, char* argv[])
 	int c;
 	const char* fwd = "127.0.0.1";
 	const char* fwdport = UNBOUND_DNS_PORT;
+	const char* cfgfile = NULL;
+	struct config_file *cfg = NULL;
 
 	log_init();
-	log_info("Start of %s.", PACKAGE_STRING);
 	/* parse the options */
-	while( (c=getopt(argc, argv, "f:hvp:z:")) != -1) {
+	while( (c=getopt(argc, argv, "c:f:hvp:z:")) != -1) {
 		switch(c) {
+		case 'c':
+			cfgfile = optarg;
+			break;
 		case 'f':
 			fwd = optarg;
 			break;
@@ -120,6 +126,18 @@ main(int argc, char* argv[])
 		usage();
 		return 1;
 	}
+
+	if(!(cfg = config_create())) {
+		fprintf(stderr, "Could not init config defaults.");
+		return 1;
+	}
+	if(cfgfile) {
+		if(!config_read(cfg, cfgfile)) {
+			config_delete(cfg);
+			return 1;
+		}
+	}
+	log_info("Start of %s.", PACKAGE_STRING);
 
 	/* setup */
 	worker = worker_init(port, do_ip4, do_ip6, do_udp, do_tcp, BUFSZ,

@@ -73,6 +73,18 @@ config_create()
 	return cfg;
 }
 
+/** initialize the global cfg_parser object. */
+static void
+create_cfg_parser(struct config_file* cfg, char* filename)
+{
+	static struct config_parser_state st;
+	cfg_parser = &st;
+	cfg_parser->filename = filename;
+	cfg_parser->line = 1;
+	cfg_parser->errors = 0;
+	cfg_parser->cfg = cfg;
+}
+
 int 
 config_read(struct config_file* cfg, const char* filename)
 {
@@ -81,7 +93,16 @@ config_read(struct config_file* cfg, const char* filename)
 		log_err("Could not open %s: %s", filename, strerror(errno));
 		return 0;
 	}
+	create_cfg_parser(cfg, (char*)filename);
+	ub_c_in = in;
+	ub_c_parse();
 	fclose(in);
+
+	if(cfg_parser->errors != 0) {
+		fprintf(stderr, "read %s failed: %d errors in configuration file\n",
+			cfg_parser->filename, cfg_parser->errors);
+		return 0;
+	}
 	return 1;
 }
 
