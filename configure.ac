@@ -349,11 +349,10 @@ AC_ARG_WITH(ssl, AC_HELP_STRING([--with-ssl=pathname],
 AC_CHECK_HEADERS([openssl/ssl.h],,, [AC_INCLUDES_DEFAULT])
 
 # check for thread library.
-AC_ARG_WITH(pthreads, 
-	AC_HELP_STRING([--with-pthreads], [use pthreads library, or --without--pthreads to disable threading support.]), [
-    	],[
-    	withval="yes"
-])
+AC_ARG_WITH(pthreads, AC_HELP_STRING([--with-pthreads], 
+ [use pthreads library, or --without--pthreads to disable threading support.]), 
+ [ ],[ withval="yes" ])
+ub_have_pthreads=no
 if test x_$withval != x_no; then
 	sinclude(acx_pthread.m4)
 	ACX_PTHREAD([
@@ -361,16 +360,34 @@ if test x_$withval != x_no; then
 		LIBS="$PTHREAD_LIBS $LIBS"
 		CFLAGS="$CFLAGS $PTHREAD_CFLAGS"
 		CC="$PTHREAD_CC"
+		ub_have_pthreads=yes
 		AC_CHECK_TYPES(pthread_spinlock_t,,,[#include <pthread.h>])
 		])
 fi
 
+# check solaris thread library 
+AC_ARG_WITH(solaris-threads, AC_HELP_STRING([--with-solaris-threads], 
+	[use solaris native thread library.]), [ ],[ withval="no" ])
+if test x_$withval != x_no; then
+	if test x_$ub_have_pthreads != x_no; then
+	    AC_WARN([Have pthreads already, ignoring --with-solaris-threads])
+	else
+	AC_SEARCH_LIBS(thr_create, [thread],
+	[
+    		AC_DEFINE(HAVE_SOLARIS_THREADS, 1, [Using Solaris threads])
+
+		CHECK_COMPILER_FLAG(mt, [CFLAGS="$CFLAGS -mt"],
+			[CFLAGS="$CFLAGS -D_REENTRANT"])
+	] , [ 
+		AC_ERROR([no solaris threads found.]) 
+	])
+	fi
+fi
+
 # check for libevent
 AC_ARG_WITH(libevent, AC_HELP_STRING([--with-libevent=pathname],
-                                    [set path to libevent  (will check /usr/local /usr/lib /usr/pkg /usr/sfw /usr)]),[
-        ],[
-            withval="yes"
-        ])
+    [set path to libevent  (will check /usr/local /usr/lib /usr/pkg /usr/sfw /usr)]),
+    [ ],[ withval="yes" ])
 if test x_$withval != x_no; then
         AC_MSG_CHECKING(for libevent)
         if test x_$withval = x_ -o x_$withval = x_yes; then

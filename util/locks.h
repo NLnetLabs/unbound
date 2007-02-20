@@ -67,10 +67,12 @@
 	if( (err=(func)) != 0)		\
 		log_err("%s at %d could not " #func ": %s", \
 		__FILE__, __LINE__, strerror(err));	\
- 	} while(0) 
+ 	} while(0)
 
 #ifdef HAVE_PTHREAD
 #include <pthread.h>
+
+/******************* PTHREAD ************************/
 
 /** we use the pthread rwlock */
 typedef pthread_rwlock_t lock_rw_t;
@@ -96,7 +98,7 @@ typedef pthread_mutex_t lock_basic_t;
 /** unlock acquired lock. */
 #define lock_basic_unlock(lock) LOCKRET(pthread_mutex_unlock(lock))
 
-#ifdef HAVE_PTHREAD_SPINLOCK_T
+#ifndef HAVE_PTHREAD_SPINLOCK_T
 /** in case spinlocks are not supported, use a mutex. */
 typedef pthread_mutex_t lock_quick_t;
 /** small front for pthread init func, NULL is default attrs. */
@@ -133,9 +135,52 @@ typedef pthread_t ub_thread_t;
 /** Pass where to store tread_t in thr. Use default NULL attributes. */
 #define ub_thread_create(thr, func, arg) LOCKRET(pthread_create(thr, NULL, func, arg))
 
-#else /* HAVE_PTHREAD */
+#else /* we do not HAVE_PTHREAD */
+#ifdef HAVE_SOLARIS_THREADS
 
-/** In case there is no pthread support, define locks to do nothing */
+/******************* SOLARIS THREADS ************************/
+typedef rwlock_t lock_rw_t;
+/** create thisprocessonly lock */
+#define lock_rw_init(lock) LOCKRET(rwlock_init(lock, USYNC_THREAD, NULL))
+/** destroy it */
+#define lock_rw_destroy(lock) LOCKRET(rwlock_destroy(lock))
+/** lock read */
+#define lock_rw_rdlock(lock) LOCKRET(rw_rdlock(lock))
+/** lock write */
+#define lock_rw_wrlock(lock) LOCKRET(rw_wrlock(lock))
+/** unlock */
+#define lock_rw_unlock(lock) LOCKRET(rw_unlock(lock))
+
+/** use basic mutex */
+typedef mutex_t lock_basic_t;
+/** create */
+#define lock_basic_init(lock) LOCKRET(mutex_init(lock, USYNC_THREAD, NULL))
+/** destroy */
+#define lock_basic_destroy(lock) LOCKRET(mutex_destroy(lock))
+/** lock */
+#define lock_basic_lock(lock) LOCKRET(mutex_lock(lock))
+/** unlock */
+#define lock_basic_unlock(lock) LOCKRET(mutex_unlock(lock))
+
+/** No spinlocks in solaris threads API. Use a mutex. */
+typedef mutex_t lock_quick_t;
+/** create */
+#define lock_quick_init(lock) LOCKRET(mutex_init(lock, USYNC_THREAD, NULL))
+/** destroy */
+#define lock_quick_destroy(lock) LOCKRET(mutex_destroy(lock))
+/** lock */
+#define lock_quick_lock(lock) LOCKRET(mutex_lock(lock))
+/** unlock */
+#define lock_quick_unlock(lock) LOCKRET(mutex_unlock(lock))
+
+/** Thread creation, create a default thread. */
+typedef thread_t ub_thread_t;
+#define ub_thread_create(thr, func, arg) LOCKRET(thr_create(NULL, NULL, func, arg, NULL, thr))
+
+#else /* we do not HAVE_SOLARIS_THREADS and no PTHREADS */
+
+/******************* NO THREADS ************************/
+/** In case there is no thread support, define locks to do nothing */
 typedef int lock_rw_t;
 /** does nothing */
 #define lock_rw_init(lock) /* nop */
@@ -177,5 +222,6 @@ typedef int ub_thread_t;
 	fatal_exit("%s %d called thread create, but no thread support "  \
 		"has been compiled in.",  __FILE__, __LINE__)
 
+#endif /* HAVE_SOLARIS_THREADS */
 #endif /* HAVE_PTHREAD */
 #endif /* UTIL_LOCKS_H */

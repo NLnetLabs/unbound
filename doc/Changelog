@@ -1,5 +1,6 @@
 20 February 2007: Wouter
 	- Added locks code and pthread spinlock detection.
+	- can use no locks, or solaris native thread library.
 
 19 February 2007: Wouter
 	- Created 0.0 svn tag.
