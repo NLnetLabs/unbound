@@ -263,6 +263,8 @@ AC_CANONICAL_HOST
 if echo "$host_os" | grep "sunos4" >/dev/null; then
 	lt_cv_sys_max_cmd_len=32750;
 fi
+AC_PROG_LEX
+AC_PROG_YACC
 AC_PROG_LIBTOOL
 
 # Checks for header files.
@@ -476,6 +478,8 @@ AH_BOTTOM([
 #include <stdint.h>
 #endif
 
+#include <errno.h>
+
 #if HAVE_SYS_PARAM_H
 #include <sys/param.h>
 #endif
@@ -532,6 +536,9 @@ AH_BOTTOM([
 #    define AF_INET6        28
 #  endif
 #endif /* CHECKED_INET6 */
+
+/* maximum nesting of included files */
+#define MAXINCLUDES 10
 
 #ifndef HAVE_SNPRINTF
 #include <stdarg.h>

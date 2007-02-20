@@ -183,7 +183,10 @@ autoheader || error_cleanup "Autoheader failed."
 
 rm -r autom4te* || error_cleanup "Failed to remove autoconf cache directory."
 
-# info "Building lexer and parser."
+info "Building lexer and parser."
+echo "#include \"util/configyyrename.h\"" > util/configlexer.c || error_cleanup "Failed to create configlexer"
+flex -i -t util/configlexer.lex >> util/configlexer.c  || error_cleanup "Failed to create configlexer"
+bison -y -d -o util/configparser.c util/configparser.y || error_cleanup "Failed to create configparser"
 
 # copy ldns-testpkts from ldns examples
 #cp $LDNSDIR/examples/ldns-testpkts.c testcode/ldns-testpkts.c || error_cleanup "copy ldns/examples/.. failed"

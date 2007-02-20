@@ -50,7 +50,6 @@
 #  include <sys/types.h>
 #endif
 #include <netdb.h>
-#include <errno.h>
 #include <fcntl.h>
 
 /** number of times to retry making a random ID that is unique. */

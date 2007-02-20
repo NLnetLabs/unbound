@@ -51,7 +51,6 @@
 #  include <sys/types.h>
 #endif
 #include <netdb.h>
-#include <errno.h>
 #include <signal.h>
 
 /** timeout in seconds for UDP queries to auth servers. TODO: proper rtt */

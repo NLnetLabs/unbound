@@ -41,7 +41,6 @@
 
 #include "util/netevent.h"
 #include "util/log.h"
-#include <errno.h>
 
 /* -------- Start of local definitions -------- */
 /** The TCP reading or writing query timeout in seconds */

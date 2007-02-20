@@ -1,6 +1,9 @@
 20 February 2007: Wouter
 	- Added locks code and pthread spinlock detection.
 	- can use no locks, or solaris native thread library.
+	- added yacc and lex configure, and config file parsing code.
+	  also makedist.sh, and manpage.
+	- put include errno.h in config.h
 
 19 February 2007: Wouter
 	- Created 0.0 svn tag.

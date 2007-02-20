@@ -1,0 +1,61 @@
+.\"
+.\" unbound.conf.5 -- unbound.conf manual
+.\"
+.\" Copyright (c) 2007, NLnet Labs. All rights reserved.
+.\"
+.\" See LICENSE for the license.
+.\"
+.\"
+.Dd @date@
+.Os FreeBSD
+.Dt unbound.conf 5
+.Sh NAME
+.Nm unbound.conf
+.Nd Unbound configuration file.
+.Sh SYNOPSIS
+.Nm unbound.conf
+.Sh DESCRIPTION
+.Ic unbound.conf
+is used to configure
+.Xr unbound 8 .
+The file format has attributes and values. Some attributes have attributes inside them.
+The notation is: attribute: value.
+
+Comments start with # and last to the end of line. Empty lines are
+ignored as is whitespace at the beginning of a line.
+
+.El
+.Sh FILE FORMAT
+There must be whitespace between keywords. Attribute keywords end with a colon ':'. An attribute
+is followed by its containing attributes, or a value.
+
+.Pp
+Files can be included using the
+.Ic include:
+directive. It can appear anywhere, and takes a single filename as an argument.
+Processing continues as if the text from the included file was copied into
+the config file at that point.
+
+.Ss Server Options
+There may only be one 
+.Ic server:
+clause.
+.Bl -tag -width indent
+.It \fBverbosity:\fR <number>
+The verbosity number, level 0 means no verbosity, only errors. Level 1 
+gives operational information. Level 2 gives query level information, 
+output per query. Level 3 gives algorithm level information.  
+.It \fBnum-threads:\fR <number>
+The number of threads to create to serve clients. Use 1 for no threading.
+
+.Sh FILES
+.Bl -tag -width indent
+.It Pa unbound.conf
+unbound configuration file.
+.El
+.Sh SEE ALSO
+.Xr unbound 8
+.Sh AUTHORS
+.Ic Unbound 
+was written by NLnet Labs. Please see CREDITS file
+in the distribution for further details.

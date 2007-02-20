@@ -27,6 +27,8 @@ doxygen=@doxygen@
 libtool=@libtool@
 ldnsdir=@ldnsdir@
 
+YACC=@YACC@
+LEX=@LEX@
 CC=@CC@
 CPPFLAGS=-I. @CPPFLAGS@ @DEFS@
 CFLAGS=-I. @CFLAGS@
@@ -48,7 +50,7 @@ LINTFLAGS+="-DBN_ULONG=unsigned long" -Dkrb5_int32=int "-Dkrb5_ui_4=unsigned int
 
 INSTALL=$(srcdir)/install-sh 
 
-COMMON_SRC=$(wildcard services/*.c util/*.c)
+COMMON_SRC=$(wildcard services/*.c util/*.c) util/configparser.c util/configlexer.c
 COMMON_OBJ=$(addprefix $(BUILD),$(COMMON_SRC:.c=.o))
 COMPAT_OBJ=$(addprefix $(BUILD)compat/,$(LIBOBJS))
 UNITTEST_SRC=testcode/unitmain.c $(COMMON_SRC)
@@ -90,6 +92,18 @@ testcode/ldns-testpkts.c:	$(ldnsdir)/examples/ldns-testpkts.c \
 	cp $(ldnsdir)/examples/ldns-testpkts.c testcode/ldns-testpkts.c
 	cp $(ldnsdir)/examples/ldns-testpkts.h testcode/ldns-testpkts.h
 
+util/config_file.c:	util/configparser.h
+util/configlexer.c:  $(srcdir)/util/configlexer.lex util/configparser.h
+	$(INFO) Lex $<
+	@if test ! -d util; then $(INSTALL) -d util; fi
+	$Qecho "#include \"util/configyyrename.h\"" > $@
+	$Q$(LEX) -i -t $< >> $@
+
+util/configparser.c util/configparser.h:  $(srcdir)/util/configparser.y
+	$(INFO) Yacc $<
+	@if test ! -d util; then $(INSTALL) -d util; fi
+	$Q$(YACC) -d -o util/configparser.c $<
+
 clean:
 	rm -f *.o *.d *.lo *~ tags
 	rm -rf autom4te.cache .libs build doc/html
@@ -97,6 +111,7 @@ clean:
 realclean: clean
 	rm -f config.status config.log config.h.in config.h
 	rm -f configure config.sub config.guess ltmain.sh aclocal.m4 libtool
+	rm -f util/configlexer.c util/configparser.c util/configparser.h
 	rm -f Makefile 
 
 lint:

@@ -49,7 +49,6 @@
 #  include <sys/types.h>
 #endif
 #include <netdb.h>
-#include <errno.h>
 #include <fcntl.h>
 
 /** number of queued TCP connections for listen() */
