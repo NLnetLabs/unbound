@@ -83,15 +83,21 @@ void config_delete(struct config_file* config);
  * Used during options parsing
  */
 struct config_parser_state {
+	/** name of file being parser */
 	char* filename;
+	/** line number in the file, starts at 1 */
 	int line;
+	/** number of errors encountered */
 	int errors;
+	/** the result of parsing is stored here. */
 	struct config_file* cfg;
 };
 
+/** global config parser object used during config parsing */
 extern struct config_parser_state* cfg_parser;
-/* parsing helpers */
+/** parsing helpers: print error with file and line numbers. */
 void ub_c_error(const char* msg);
+/** parsing helpers: print error with file and line numbers. */
 void ub_c_error_msg(const char* fmt, ...) ATTR_FORMAT(printf, 1, 2);
 
 #endif /* UTIL_CONFIG_FILE_H */

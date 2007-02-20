@@ -78,24 +78,17 @@
 typedef pthread_rwlock_t lock_rw_t;
 /** small front for pthread init func, NULL is default attrs. */
 #define lock_rw_init(lock) LOCKRET(pthread_rwlock_init(lock, NULL))
-/** free up the lock. must be unlocked. */
 #define lock_rw_destroy(lock) LOCKRET(pthread_rwlock_destroy(lock))
-/** acquire a read lock */
 #define lock_rw_rdlock(lock) LOCKRET(pthread_rwlock_rdlock(lock))
-/** acquire a write lock */
 #define lock_rw_wrlock(lock) LOCKRET(pthread_rwlock_wrlock(lock))
-/** unlock previously acquired read or write lock */
 #define lock_rw_unlock(lock) LOCKRET(pthread_rwlock_unlock(lock))
 
 /** use pthread mutex for basic lock */
 typedef pthread_mutex_t lock_basic_t;
 /** small front for pthread init func, NULL is default attrs. */
 #define lock_basic_init(lock) LOCKRET(pthread_mutex_init(lock, NULL))
-/** free up the lock. must be unlocked. */
 #define lock_basic_destroy(lock) LOCKRET(pthread_mutex_destroy(lock))
-/** acquire lock. This may block indefinetely. */
 #define lock_basic_lock(lock) LOCKRET(pthread_mutex_lock(lock))
-/** unlock acquired lock. */
 #define lock_basic_unlock(lock) LOCKRET(pthread_mutex_unlock(lock))
 
 #ifndef HAVE_PTHREAD_SPINLOCK_T
@@ -103,11 +96,8 @@ typedef pthread_mutex_t lock_basic_t;
 typedef pthread_mutex_t lock_quick_t;
 /** small front for pthread init func, NULL is default attrs. */
 #define lock_quick_init(lock) LOCKRET(pthread_mutex_init(lock, NULL))
-/** free up the lock. must be unlocked. */
 #define lock_quick_destroy(lock) LOCKRET(pthread_mutex_destroy(lock))
-/** acquire lock. may block. */
 #define lock_quick_lock(lock) LOCKRET(pthread_mutex_lock(lock))
-/** unlock acquired lock. */
 #define lock_quick_unlock(lock) LOCKRET(pthread_mutex_unlock(lock))
 
 #else /* HAVE_PTHREAD_SPINLOCK_T */
@@ -121,11 +111,8 @@ typedef pthread_spinlock_t lock_quick_t;
  * spinlocks are not supported on all pthread platforms. 
  */
 #define lock_quick_init(lock) LOCKRET(pthread_spin_init(lock, PTHREAD_PROCESS_PRIVATE))
-/** free up the lock. must be unlocked. */
 #define lock_quick_destroy(lock) LOCKRET(pthread_spin_destroy(lock))
-/** acquire lock. This may block indefinetely, and will spin. */
 #define lock_quick_lock(lock) LOCKRET(pthread_spin_lock(lock))
-/** unlock acquired lock. */
 #define lock_quick_unlock(lock) LOCKRET(pthread_spin_unlock(lock))
 
 #endif /* HAVE SPINLOCK */
@@ -140,37 +127,24 @@ typedef pthread_t ub_thread_t;
 
 /******************* SOLARIS THREADS ************************/
 typedef rwlock_t lock_rw_t;
-/** create thisprocessonly lock */
 #define lock_rw_init(lock) LOCKRET(rwlock_init(lock, USYNC_THREAD, NULL))
-/** destroy it */
 #define lock_rw_destroy(lock) LOCKRET(rwlock_destroy(lock))
-/** lock read */
 #define lock_rw_rdlock(lock) LOCKRET(rw_rdlock(lock))
-/** lock write */
 #define lock_rw_wrlock(lock) LOCKRET(rw_wrlock(lock))
-/** unlock */
 #define lock_rw_unlock(lock) LOCKRET(rw_unlock(lock))
 
 /** use basic mutex */
 typedef mutex_t lock_basic_t;
-/** create */
 #define lock_basic_init(lock) LOCKRET(mutex_init(lock, USYNC_THREAD, NULL))
-/** destroy */
 #define lock_basic_destroy(lock) LOCKRET(mutex_destroy(lock))
-/** lock */
 #define lock_basic_lock(lock) LOCKRET(mutex_lock(lock))
-/** unlock */
 #define lock_basic_unlock(lock) LOCKRET(mutex_unlock(lock))
 
 /** No spinlocks in solaris threads API. Use a mutex. */
 typedef mutex_t lock_quick_t;
-/** create */
 #define lock_quick_init(lock) LOCKRET(mutex_init(lock, USYNC_THREAD, NULL))
-/** destroy */
 #define lock_quick_destroy(lock) LOCKRET(mutex_destroy(lock))
-/** lock */
 #define lock_quick_lock(lock) LOCKRET(mutex_lock(lock))
-/** unlock */
 #define lock_quick_unlock(lock) LOCKRET(mutex_unlock(lock))
 
 /** Thread creation, create a default thread. */
@@ -182,37 +156,24 @@ typedef thread_t ub_thread_t;
 /******************* NO THREADS ************************/
 /** In case there is no thread support, define locks to do nothing */
 typedef int lock_rw_t;
-/** does nothing */
 #define lock_rw_init(lock) /* nop */
-/** does nothing */
 #define lock_rw_destroy(lock) /* nop */
-/** does nothing */
 #define lock_rw_rdlock(lock) /* nop */
-/** does nothing */
 #define lock_rw_wrlock(lock) /* nop */
-/** does nothing */
 #define lock_rw_unlock(lock) /* nop */
 
 /** define locks to do nothing */
 typedef int lock_basic_t;
-/** does nothing */
 #define lock_basic_init(lock) /* nop */
-/** does nothing */
 #define lock_basic_destroy(lock) /* nop */
-/** does nothing */
 #define lock_basic_lock(lock) /* nop */
-/** does nothing */
 #define lock_basic_unlock(lock) /* nop */
 
 /** define locks to do nothing */
 typedef int lock_quick_t;
-/** does nothing */
 #define lock_quick_init(lock) /* nop */
-/** does nothing */
 #define lock_quick_destroy(lock) /* nop */
-/** does nothing */
 #define lock_quick_lock(lock) /* nop */
-/** does nothing */
 #define lock_quick_unlock(lock) /* nop */
 
 /** Thread creation, threads do not exist */

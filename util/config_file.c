@@ -45,11 +45,19 @@
 #include "util/configyyrename.h"
 #include "util/config_file.h"
 #include "util/configparser.h"
+/** global config during parsing */
 struct config_parser_state* cfg_parser = 0;
-extern FILE* ub_c_in, *ub_c_out;
+/** lex in file */
+extern FILE* ub_c_in;
+/** lex out file */
+extern FILE* ub_c_out;
+/** the yacc lex generated parse function */
 int ub_c_parse(void);
+/** the lexer function */
 int ub_c_lex(void);
+/** wrap function */
 int ub_c_wrap(void);
+/** print error with file and line number */
 void ub_c_error(const char *message);
 
 struct config_file* 
@@ -85,6 +93,7 @@ config_delete(struct config_file* cfg)
 	free(cfg);
 }
 
+/** print error with file and line number */
 void ub_c_error_va_list(const char *fmt, va_list args)
 {
 	cfg_parser->errors++;
@@ -94,6 +103,7 @@ void ub_c_error_va_list(const char *fmt, va_list args)
 	fprintf(stderr, "\n");
 }
 
+/** print error with file and line number */
 void ub_c_error_msg(const char* fmt, ...)
 {
 	va_list args;
