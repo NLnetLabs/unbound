@@ -37,6 +37,16 @@
  * \file
  * This file implements part of the event(3) libevent api.
  * The back end is only select. Max number of fds is limited.
+ * Max number of signals is limited, one handler per signal only.
+ * And one handler per fd.
+ *
+ * Although limited to select() and a max (1024) open fds, it
+ * is efficient:
+ * o dispatch call caches fd_sets to use. 
+ * o handler calling takes time ~ to the number of fds.
+ * o timeouts are stored in a redblack tree, sorted, so take log(n).
+ * Timeouts are only accurate to the second (no subsecond accuracy).
+ * To avoid cpu hogging, fractional timeouts are rounded up to a whole second.
  */
 
 #ifndef MINI_EVENT_H
@@ -76,6 +86,8 @@ struct event_base
 	struct event** fds;
 	/** max fd in use */
 	int maxfd;
+	/** capacity - size of the fds array */
+	int capfd;
 	/** fdset for read write */
 	fd_set reads, writes;
 	/** array of 0 - maxsig of ptr to event for it */
@@ -95,9 +107,9 @@ struct event {
 
 	/** event base it belongs to */
 	struct event_base *ev_base;
-	/** fd to poll or -1 for timeouts */
+	/** fd to poll or -1 for timeouts. signal number for sigs. */
 	int ev_fd;
-	/** events this event is interested in */
+	/** what events this event is interested in, see EV_.. above. */
 	short ev_events;
 	/** timeout value */
 	struct timeval ev_timeout;
@@ -123,7 +135,7 @@ int event_base_loopexit(struct event_base *, struct timeval *);
 void event_base_free(struct event_base *);
 /** set content of event */
 void event_set(struct event *, int, short, void (*)(int, short, void *), void *);
-/** add event to a base */
+/** add event to a base. You *must* call this for every event. */
 int event_base_set(struct event_base *, struct event *);
 /** add event to make it active. You may not change it with event_set anymore */
 int event_add(struct event *, struct timeval *);
@@ -133,7 +145,8 @@ int event_del(struct event *);
 #define evtimer_add(ev, tv)             event_add(ev, tv)
 #define evtimer_del(ev)                 event_del(ev)
 
-/* uses different implementation. Cannot mix fd/timeouts and signals. */
+/* uses different implementation. Cannot mix fd/timeouts and signals inside
+ * the same struct event. create several event structs for that.  */
 /** install signal handler */
 int signal_add(struct event *, struct timeval *);
 /** set signal event contents */

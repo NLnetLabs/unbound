@@ -79,7 +79,12 @@ void *event_init(void)
 		event_base_free(base);
 		return NULL;
 	}
-	base->fds = (struct event**)calloc(MAX_FDS, sizeof(struct event*));
+	base->capfd = MAX_FDS;
+#ifdef FD_SETSIZE
+	if((int)FD_SETSIZE < base->capfd)
+		base->capfd = (int)FD_SETSIZE;
+#endif
+	base->fds = (struct event**)calloc(base->capfd, sizeof(struct event*));
 	if(!base->fds) {
 		event_base_free(base);
 		return NULL;
@@ -239,7 +244,7 @@ int event_add(struct event* ev, struct timeval* tv)
 {
 	if(ev->added)
 		event_del(ev);
-	if(ev->ev_fd != -1 && ev->ev_fd >= MAX_FDS)
+	if(ev->ev_fd != -1 && ev->ev_fd >= ev->ev_base->capfd)
 		return -1;
 	if( (ev->ev_events&(EV_READ|EV_WRITE)) && ev->ev_fd != -1) {
 		ev->ev_base->fds[ev->ev_fd] = ev;
@@ -264,7 +269,7 @@ int event_add(struct event* ev, struct timeval* tv)
 /** remove event, you may change it again */
 int event_del(struct event* ev)
 {
-	if(ev->ev_fd != -1 && ev->ev_fd >= MAX_FDS)
+	if(ev->ev_fd != -1 && ev->ev_fd >= ev->ev_base->capfd)
 		return -1;
 	if(ev->ev_events&EV_TIMEOUT)
 		(void)rbtree_delete(ev->ev_base->times, &ev->node);

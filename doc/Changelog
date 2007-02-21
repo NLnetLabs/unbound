@@ -1,3 +1,7 @@
+21 February 2007: Wouter
+	- put -c option in man page.
+	- minievent fd array capped by FD_SETSIZE.
+
 20 February 2007: Wouter
 	- Added locks code and pthread spinlock detection.
 	- can use no locks, or solaris native thread library.
