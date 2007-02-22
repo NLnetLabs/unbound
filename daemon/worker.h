@@ -45,9 +45,11 @@
 
 #include "config.h"
 #include "util/netevent.h"
+#include "util/locks.h"
 struct listen_dnsport;
 struct outside_network;
 struct config_file;
+struct daemon;
 
 /** size of table used for random numbers. large to be more secure. */
 #define RND_STATE_SIZE 256
@@ -57,6 +59,10 @@ struct config_file;
  * Holds globally visible information.
  */
 struct worker {
+	/** global shared daemon structure */
+	struct daemon* daemon;
+	/** the thread number (in daemon array). */
+	int thread_num;
 	/** the event base this worker works with */
 	struct comm_base* base;
 	/** the frontside listening interface where request events come in */

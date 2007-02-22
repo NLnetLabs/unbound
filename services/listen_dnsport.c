@@ -391,3 +391,14 @@ listen_delete(struct listen_dnsport* front)
 	ldns_buffer_free(front->udp_buff);
 	free(front);
 }
+
+struct listen_port* 
+listening_ports_open(struct config_file* cfg)
+{
+	return calloc(1,1);
+}
+
+void listening_ports_free(struct listen_port* list)
+{
+	free(list);
+}

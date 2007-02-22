@@ -42,11 +42,10 @@
 
 #include "config.h"
 #include "util/log.h"
-#include "daemon/worker.h"
+#include "daemon/daemon.h"
 #include "util/config_file.h"
-
-/** buffer size for network connections */
-#define BUFSZ 65552
+#include <fcntl.h>
+#include <pwd.h>
 
 /** print usage. */
 static void usage()
@@ -61,6 +60,51 @@ static void usage()
 	printf("Report bugs to %s\n", PACKAGE_BUGREPORT);
 }
 
+/** daemonize, drop user priviliges and chroot if needed */
+static void
+do_chroot(struct config_file* cfg)
+{
+	log_assert(cfg);
+
+	/* daemonize last to be able to print error to user */
+	if(cfg->chrootdir && cfg->chrootdir[0])
+		if(chroot(cfg->chrootdir))
+			fatal_exit("unable to chroot: %s", strerror(errno));
+	if(cfg->username && cfg->username[0]) {
+		struct passwd *pwd;
+		if((pwd = getpwnam(cfg->username)) == NULL)
+			fatal_exit("user '%s' does not exist.", cfg->username);
+		if(setgid(pwd->pw_gid) != 0)
+			fatal_exit("unable to set group id: %s", strerror(errno));
+		if(setuid(pwd->pw_uid) != 0)
+			fatal_exit("unable to set user id: %s", strerror(errno));
+		endpwent();
+	}
+	if(cfg->do_daemonize) {
+		int fd;
+		/* Take off... */
+		switch (fork()) {
+			case 0:
+				break;
+			case -1:
+				fatal_exit("fork failed: %s", strerror(errno));
+			default:
+				/* exit interactive session */
+				exit(0);
+		}
+		/* detach */
+		if(setsid() == -1)
+			fatal_exit("setsid() failed: %s", strerror(errno));
+		if ((fd = open("/dev/null", O_RDWR, 0)) != -1) {
+			(void)dup2(fd, STDIN_FILENO);
+			(void)dup2(fd, STDOUT_FILENO);
+			(void)dup2(fd, STDERR_FILENO);
+			if (fd > 2)
+				(void)close(fd);
+		}
+	}
+}
+
 /**
  * Run the daemon. 
  * @param cfgfile: the config file name.
@@ -69,35 +113,41 @@ static void usage()
  */
 static void run_daemon(const char* cfgfile, int cmdline_verbose)
 {
-	struct worker* worker = NULL;
-	struct config_file *cfg = NULL;
+	struct config_file* cfg = NULL;
+	struct daemon* daemon = NULL;
+	int done_chroot = 0;
 
-	if(!(cfg = config_create())) {
-		fprintf(stderr, "Could not init config defaults.");
-		exit(1);
-	}
-	if(cfgfile) {
-		if(!config_read(cfg, cfgfile)) {
-			config_delete(cfg);
-			exit(1);
-		}
+	if(!(daemon = daemon_init()))
+		fatal_exit("alloc failure");
+	while(!daemon->need_to_exit) {
+		if(done_chroot)
+			log_info("Restart of %s.", PACKAGE_STRING);
+		else	log_info("Start of %s.", PACKAGE_STRING);
+
+		/* config stuff */
+		if(!(cfg = config_create()))
+			fatal_exit("Could not alloc config defaults");
+		if(!config_read(cfg, cfgfile))
+			fatal_exit("Could not read config file: %s", cfgfile);
 		verbosity = cmdline_verbose + cfg->verbosity;
-	}
-	log_info("Start of %s.", PACKAGE_STRING);
-
-	/* setup */
-	worker = worker_init(cfg, BUFSZ);
-	if(!worker) {
-		fatal_exit("could not initialize");
-	}
 	
-	/* drop user priviliges and chroot if needed */
-	log_info("start of service (%s).", PACKAGE_STRING);
-	worker_work(worker);
+		/* prepare */
+		if(!daemon_open_shared_ports(daemon, cfg))
+			fatal_exit("could not open ports");
+		if(!done_chroot) { 
+			do_chroot(cfg); 
+			done_chroot = 1; 
+		}
+		/* work */
+		daemon_fork(daemon);
 
-	/* cleanup */
+		/* clean up for restart */
+		verbose(VERB_ALGO, "cleanup.");
+		daemon_cleanup(daemon);
+		config_delete(cfg);
+	}
 	verbose(VERB_ALGO, "Exit cleanup.");
-	worker_delete(worker);
+	daemon_delete(daemon);
 }
 
 /** getopt global, in case header files fail to declare it. */

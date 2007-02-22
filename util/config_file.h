@@ -73,6 +73,14 @@ struct config_file {
 	char* fwd_address;
 	/** forwarder port */
 	int fwd_port;
+
+	/** chrootdir, if not "" or chroot will be done */
+	char* chrootdir;
+	/** username to change to, if not "". */
+	char* username;
+	
+	/** daemonize, i.e. fork into the background. */
+	int do_daemonize;
 };
 
 /**
@@ -84,7 +92,7 @@ struct config_file* config_create();
 /**
  * Read the config file from the specified filename.
  * @param config: where options are stored into, must be freshly created.
- * @param filename: name of configfile.
+ * @param filename: name of configfile. If NULL nothing is done.
  * @return: false on error.
  */
 int config_read(struct config_file* config, const char* filename);

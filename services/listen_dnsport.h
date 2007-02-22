@@ -46,6 +46,7 @@
 #include "util/netevent.h"
 struct listen_list;
 struct addrinfo;
+struct config_file;
 
 /**
  * Listening for queries structure.
@@ -72,6 +73,31 @@ struct listen_list {
 	/** event info */
 	struct comm_point* com;
 };
+
+/**
+ * Single linked list to store shared ports that have been 
+ * opened for use by all threads.
+ */
+struct listen_port {
+	/** next in list */
+	struct listen_port* next;
+	/** file descriptor, open and ready for use */
+	int fd;
+	/** type of file descriptor, udp or tcp */
+	int is_udp;
+};
+
+/**
+ * Create shared listening ports
+ * @param cfg: settings on what ports to open.
+ * @return: linked list of ports or NULL on error.
+ */
+struct listen_port* listening_ports_open(struct config_file* cfg);
+
+/**
+ * Close and delete the (list of) listening ports.
+ */
+void listening_ports_free(struct listen_port* list);
 
 /**
  * Getaddrinfo, create socket, bind and listen to zero or more 

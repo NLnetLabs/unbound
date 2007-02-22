@@ -281,6 +281,7 @@ worker_delete(struct worker* worker)
 	outside_network_delete(worker->back);
 	comm_signal_delete(worker->comsig);
 	comm_base_delete(worker->base);
+	free(worker->rndstate);
 	free(worker);
 }
 

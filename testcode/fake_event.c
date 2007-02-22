@@ -690,4 +690,15 @@ pending_udp_query(struct outside_network* outnet, ldns_buffer* packet,
 	runtime->pending_list = pend;
 }
 
+struct listen_port* listening_ports_open(struct config_file* ATTR_UNUSED(cfg))
+{
+	return calloc(1, 1);
+}
+
+void listening_ports_free(struct listen_port* list)
+{
+	free(list);
+}
+
+
 /*********** End of Dummy routines ***********/

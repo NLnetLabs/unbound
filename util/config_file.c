@@ -77,12 +77,20 @@ config_create()
 	cfg->do_tcp = 1;
 	cfg->outgoing_base_port = cfg->port + 1000;
 	cfg->outgoing_num_ports = 16;
-	cfg->fwd_address = strdup("");
-	if(!cfg->fwd_address) {
-		free(cfg);
+	if(!(cfg->fwd_address = strdup(""))) {
+		config_delete(cfg);
+		return NULL;
+	}
+	if(!(cfg->username = strdup(""))) {
+		config_delete(cfg);
+		return NULL;
+	}
+	if(!(cfg->chrootdir = strdup(""))) {
+		config_delete(cfg);
 		return NULL;
 	}
 	cfg->fwd_port = UNBOUND_DNS_PORT;
+	cfg->do_daemonize = 0;
 	return cfg;
 }
 
@@ -101,7 +109,10 @@ create_cfg_parser(struct config_file* cfg, char* filename)
 int 
 config_read(struct config_file* cfg, const char* filename)
 {
-	FILE *in = fopen(filename, "r");
+	FILE *in;
+	if(!filename)
+		return 1;
+	in = fopen(filename, "r");
 	if(!in) {
 		log_err("Could not open %s: %s", filename, strerror(errno));
 		return 0;
@@ -124,6 +135,8 @@ config_delete(struct config_file* cfg)
 {
 	if(!cfg) return;
 	free(cfg->fwd_address);
+	free(cfg->username);
+	free(cfg->chrootdir);
 	free(cfg);
 }
 
