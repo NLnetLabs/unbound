@@ -67,7 +67,11 @@ static int server_settings_seen = 0;
 
 %token SPACE LETTER NEWLINE COMMENT COLON ANY ZONESTR
 %token <str> STRING
-%token VAR_SERVER VAR_VERBOSITY VAR_NUM_THREADS
+%token VAR_SERVER VAR_VERBOSITY VAR_NUM_THREADS VAR_PORT
+%token VAR_OUTGOING_PORT VAR_OUTGOING_RANGE
+%token VAR_DO_IP4 VAR_DO_IP6 VAR_DO_UDP VAR_DO_TCP
+%token VAR_FORWARD_TO VAR_FORWARD_TO_PORT
+
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -83,7 +87,10 @@ serverstart: VAR_SERVER
 	}
 	;
 contents_server: contents_server content_server | ;
-content_server: server_num_threads | server_verbosity;
+content_server: server_num_threads | server_verbosity | server_port |
+	server_outgoing_port | server_outgoing_range | server_do_ip4 |
+	server_do_ip6 | server_do_udp | server_do_tcp | server_forward_to |
+	server_forward_to_port;
 server_num_threads: VAR_NUM_THREADS STRING 
 	{ 
 		OUTYY(("P(server_num_threads:%s)\n", $2)); 
@@ -102,7 +109,85 @@ server_verbosity: VAR_VERBOSITY STRING
 		free($2);
 	}
 	;
-
+server_port: VAR_PORT STRING
+	{
+		OUTYY(("P(server_port:%s)\n", $2));
+		if(atoi($2) == 0)
+			yyerror("port number expected");
+		else cfg_parser->cfg->port = atoi($2);
+		free($2);
+	}
+	;
+server_outgoing_port: VAR_OUTGOING_PORT STRING
+	{
+		OUTYY(("P(server_outgoing_port:%s)\n", $2));
+		if(atoi($2) == 0)
+			yyerror("port number expected");
+		else cfg_parser->cfg->outgoing_base_port = atoi($2);
+		free($2);
+	}
+	;
+server_outgoing_range: VAR_OUTGOING_RANGE STRING
+	{
+		OUTYY(("P(server_outgoing_range:%s)\n", $2));
+		if(atoi($2) == 0)
+			yyerror("number expected");
+		else cfg_parser->cfg->outgoing_num_ports = atoi($2);
+		free($2);
+	}
+	;
+server_do_ip4: VAR_DO_IP4 STRING
+	{
+		OUTYY(("P(server_do_ip4:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->do_ip4 = (strcmp($2, "yes")==0);
+		free($2);
+	}
+	;
+server_do_ip6: VAR_DO_IP6 STRING
+	{
+		OUTYY(("P(server_do_ip6:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->do_ip6 = (strcmp($2, "yes")==0);
+		free($2);
+	}
+	;
+server_do_udp: VAR_DO_UDP STRING
+	{
+		OUTYY(("P(server_do_udp:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->do_udp = (strcmp($2, "yes")==0);
+		free($2);
+	}
+	;
+server_do_tcp: VAR_DO_TCP STRING
+	{
+		OUTYY(("P(server_do_tcp:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->do_tcp = (strcmp($2, "yes")==0);
+		free($2);
+	}
+	;
+server_forward_to: VAR_FORWARD_TO STRING
+	{
+		OUTYY(("P(server_forward_to:%s)\n", $2));
+		free(cfg_parser->cfg->fwd_address);
+		cfg_parser->cfg->fwd_address = $2;
+	}
+	;
+server_forward_to_port: VAR_FORWARD_TO_PORT STRING
+	{
+		OUTYY(("P(server_forward_to_port:%s)\n", $2));
+		if(atoi($2) == 0)
+			yyerror("number expected");
+		else cfg_parser->cfg->fwd_port = atoi($2);
+		free($2);
+	}
+	;
 %%
 
 /* parse helper routines could be here */

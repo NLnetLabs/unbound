@@ -42,9 +42,6 @@ unbound
 .Nm unbound
 .Op Fl h
 .Op Fl c Ar cfgfile
-.Op Fl p Ar port
-.Op Fl f Ar ip
-.Op Fl z Ar port
 .Op Fl v
 
 .Sh DESCRIPTION
@@ -63,17 +60,9 @@ Set the config file to read with settings for unbound. The syntax is
 described in 
 .Xr unbound.conf 5 .
 
-.It Fl p Ar port
-Start listening on the given port. Default is port 53(DNS).
-
-.It Fl f Ar ip
-Set forwarder address. DNS queries will be forwarded to this server.
-
-.It Fl z Ar ip
-Set forwarder port. DNS queries will be forwarded to this port.
-
 .It Fl v
 Increase verbosity. If given multiple times, more information is logged.
+This is in addition to the verbosity (if any) from the config file.
 
 .El
 .Sh SEE ALSO

@@ -480,7 +480,7 @@ run_scenario(struct replay_runtime* runtime)
 
 struct listen_dnsport* 
 listen_create(struct comm_base* base, int ATTR_UNUSED(num_ifs), 
-	const char* ATTR_UNUSED(ifs[]), const char* ATTR_UNUSED(port),
+	const char* ATTR_UNUSED(ifs[]), int ATTR_UNUSED(port),
 	int ATTR_UNUSED(do_ip4), int ATTR_UNUSED(do_ip6), 
 	int ATTR_UNUSED(do_udp), int ATTR_UNUSED(do_tcp),
 	size_t bufsize, comm_point_callback_t* cb, void* cb_arg)

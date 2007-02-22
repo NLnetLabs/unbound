@@ -294,15 +294,17 @@ listen_create_if(const char* ifname, struct listen_dnsport* front,
 
 struct listen_dnsport* 
 listen_create(struct comm_base* base, int num_ifs, const char* ifs[], 
-	const char* port, int do_ip4, int do_ip6, int do_udp, int do_tcp,
+	int port, int do_ip4, int do_ip6, int do_udp, int do_tcp,
 	size_t bufsize, comm_point_callback_t* cb, void *cb_arg)
 {
 	struct addrinfo hints;
 	int i;
+	char portbuf[10];
 	struct listen_dnsport* front = (struct listen_dnsport*)
 		malloc(sizeof(struct listen_dnsport));
 	if(!front)
 		return NULL;
+	snprintf(portbuf, sizeof(portbuf), "%d", port);
 	front->cps = NULL;
 	front->udp_buff = ldns_buffer_new(bufsize);
 	if(!front->udp_buff) {
@@ -329,7 +331,7 @@ listen_create(struct comm_base* base, int num_ifs, const char* ifs[],
 	if(num_ifs == 0) {
 		if(do_ip6) {
 			hints.ai_family = AF_INET6;
-			if(!listen_create_if(NULL, front, base, port, 
+			if(!listen_create_if(NULL, front, base, portbuf, 
 				do_udp, do_tcp, &hints, bufsize, cb, cb_arg)) {
 				listen_delete(front);
 				return NULL;
@@ -337,7 +339,7 @@ listen_create(struct comm_base* base, int num_ifs, const char* ifs[],
 		}
 		if(do_ip4) {
 			hints.ai_family = AF_INET;
-			if(!listen_create_if(NULL, front, base, port, 
+			if(!listen_create_if(NULL, front, base, portbuf, 
 				do_udp, do_tcp, &hints, bufsize, cb, cb_arg)) {
 				listen_delete(front);
 				return NULL;
@@ -348,7 +350,7 @@ listen_create(struct comm_base* base, int num_ifs, const char* ifs[],
 			if(!do_ip6)
 				continue;
 			hints.ai_family = AF_INET6;
-			if(!listen_create_if(ifs[i], front, base, port, 
+			if(!listen_create_if(ifs[i], front, base, portbuf, 
 				do_udp, do_tcp, &hints, bufsize, cb, cb_arg)) {
 				listen_delete(front);
 				return NULL;
@@ -357,7 +359,7 @@ listen_create(struct comm_base* base, int num_ifs, const char* ifs[],
 			if(!do_ip4)
 				continue;
 			hints.ai_family = AF_INET;
-			if(!listen_create_if(ifs[i], front, base, port, 
+			if(!listen_create_if(ifs[i], front, base, portbuf, 
 				do_udp, do_tcp, &hints, bufsize, cb, cb_arg)) {
 				listen_delete(front);
 				return NULL;

@@ -55,13 +55,49 @@ static void usage()
 	printf("	start unbound daemon DNS resolver.\n");
 	printf("-h	this help\n");
 	printf("-c file	config file to read, unbound.conf(5).\n");
-	printf("-p port	the port to listen on\n");
 	printf("-v	verbose (multiple times increase verbosity)\n");
-	printf("-f ip	set forwarder address\n");
-	printf("-z port	set forwarder port\n");
 	printf("Version %s\n", PACKAGE_VERSION);
 	printf("BSD licensed, see LICENSE in source package for details.\n");
 	printf("Report bugs to %s\n", PACKAGE_BUGREPORT);
+}
+
+/**
+ * Run the daemon. 
+ * @param cfgfile: the config file name.
+ * @param cmdline_verbose: verbosity resulting from commandline -v.
+ *    These increase verbosity as specified in the config file.
+ */
+static void run_daemon(const char* cfgfile, int cmdline_verbose)
+{
+	struct worker* worker = NULL;
+	struct config_file *cfg = NULL;
+
+	if(!(cfg = config_create())) {
+		fprintf(stderr, "Could not init config defaults.");
+		exit(1);
+	}
+	if(cfgfile) {
+		if(!config_read(cfg, cfgfile)) {
+			config_delete(cfg);
+			exit(1);
+		}
+		verbosity = cmdline_verbose + cfg->verbosity;
+	}
+	log_info("Start of %s.", PACKAGE_STRING);
+
+	/* setup */
+	worker = worker_init(cfg, BUFSZ);
+	if(!worker) {
+		fatal_exit("could not initialize");
+	}
+	
+	/* drop user priviliges and chroot if needed */
+	log_info("start of service (%s).", PACKAGE_STRING);
+	worker_work(worker);
+
+	/* cleanup */
+	verbose(VERB_ALGO, "Exit cleanup.");
+	worker_delete(worker);
 }
 
 /** getopt global, in case header files fail to declare it. */
@@ -78,39 +114,20 @@ extern char* optarg;
 int 
 main(int argc, char* argv[])
 {
-	struct worker* worker = NULL;
-	int do_ip4=1, do_ip6=1, do_udp=1, do_tcp=1;
-	size_t numports=3;
-	int baseport=10000;
-	const char* port = UNBOUND_DNS_PORT;
 	int c;
-	const char* fwd = "127.0.0.1";
-	const char* fwdport = UNBOUND_DNS_PORT;
 	const char* cfgfile = NULL;
-	struct config_file *cfg = NULL;
+	int cmdline_verbose = 0;
 
 	log_init();
 	/* parse the options */
-	while( (c=getopt(argc, argv, "c:f:hvp:z:")) != -1) {
+	while( (c=getopt(argc, argv, "c:hv")) != -1) {
 		switch(c) {
 		case 'c':
 			cfgfile = optarg;
 			break;
-		case 'f':
-			fwd = optarg;
-			break;
-		case 'z':
-			fwdport = optarg;
-			break;
-		case 'p':
-			if(!atoi(optarg))
-				fatal_exit("invalid port '%s'", optarg);
-			port = optarg;
-			baseport = atoi(optarg)+2000;
-			verbose(VERB_ALGO, "using port: %s", port);
-			break;
 		case 'v':
-			verbosity ++;
+			cmdline_verbose ++;
+			verbosity++;
 			break;
 		case '?':
 		case 'h':
@@ -127,35 +144,6 @@ main(int argc, char* argv[])
 		return 1;
 	}
 
-	if(!(cfg = config_create())) {
-		fprintf(stderr, "Could not init config defaults.");
-		return 1;
-	}
-	if(cfgfile) {
-		if(!config_read(cfg, cfgfile)) {
-			config_delete(cfg);
-			return 1;
-		}
-	}
-	log_info("Start of %s.", PACKAGE_STRING);
-
-	/* setup */
-	worker = worker_init(port, do_ip4, do_ip6, do_udp, do_tcp, BUFSZ,
-		numports, baseport);
-	if(!worker) {
-		fatal_exit("could not initialize");
-	}
-	if(!worker_set_fwd(worker, fwd, fwdport)) {
-		worker_delete(worker);
-		fatal_exit("could not set forwarder address");
-	}
-	
-	/* drop user priviliges and chroot if needed */
-	log_info("start of service (%s).", PACKAGE_STRING);
-	worker_work(worker);
-
-	/* cleanup */
-	verbose(VERB_ALGO, "Exit cleanup.");
-	worker_delete(worker);
+	run_daemon(cfgfile, cmdline_verbose);
 	return 0;
 }

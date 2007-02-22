@@ -53,6 +53,22 @@ struct config_file {
 	/** number of threads to create */
 	int num_threads;
 
+	/** port on which queries are answered. */
+	int port;
+	/** do ip4 query support. */
+	int do_ip4;
+	/** do ip6 query support. */
+	int do_ip6;
+	/** do udp query support. */
+	int do_udp;
+	/** do tcp query support. */
+	int do_tcp;
+
+	/** outgoing port range base number */
+	int outgoing_base_port;
+	/** outgoing port range number of ports (per thread, per if) */
+	int outgoing_num_ports;
+
 	/** forwarder address. string. If not NULL fwder mode is enabled. */
 	char* fwd_address;
 	/** forwarder port */

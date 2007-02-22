@@ -93,7 +93,7 @@ struct listen_list {
  * @return: the malloced listening structure, ready for use. NULL on error.
  */
 struct listen_dnsport* listen_create(struct comm_base* base,
-	int num_ifs, const char* ifs[], const char* port,
+	int num_ifs, const char* ifs[], int port,
 	int do_ip4, int do_ip6, int do_udp, int do_tcp,
 	size_t bufsize, comm_point_callback_t* cb, void* cb_arg);
 

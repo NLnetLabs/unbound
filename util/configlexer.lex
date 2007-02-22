@@ -99,6 +99,15 @@ ANY     [^\"\n\r\\]|\\.
 server{COLON}		{ LEXOUT(("v(%s) ", yytext)); return VAR_SERVER;}
 num-threads{COLON}	{ LEXOUT(("v(%s) ", yytext)); return VAR_NUM_THREADS;}
 verbosity{COLON}	{ LEXOUT(("v(%s) ", yytext)); return VAR_VERBOSITY;}
+port{COLON}		{ LEXOUT(("v(%s) ", yytext)); return VAR_PORT;}
+outgoing-port{COLON}	{ LEXOUT(("v(%s) ", yytext)); return VAR_OUTGOING_PORT;}
+outgoing-range{COLON}	{ LEXOUT(("v(%s) ", yytext)); return VAR_OUTGOING_RANGE;}
+do-ip4{COLON}		{ LEXOUT(("v(%s) ", yytext)); return VAR_DO_IP4;}
+do-ip6{COLON}		{ LEXOUT(("v(%s) ", yytext)); return VAR_DO_IP6;}
+do-udp{COLON}		{ LEXOUT(("v(%s) ", yytext)); return VAR_DO_UDP;}
+do-tcp{COLON}		{ LEXOUT(("v(%s) ", yytext)); return VAR_DO_TCP;}
+forward-to{COLON}	{ LEXOUT(("v(%s) ", yytext)); return VAR_FORWARD_TO;}
+forward-to-port{COLON}	{ LEXOUT(("v(%s) ", yytext)); return VAR_FORWARD_TO_PORT;}
 {NEWLINE}		{ LEXOUT(("NL\n")); cfg_parser->line++;}
 
 	/* Quoted strings. Strip leading and ending quotes */

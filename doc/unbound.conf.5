@@ -47,6 +47,30 @@ gives operational information. Level 2 gives query level information,
 output per query. Level 3 gives algorithm level information.  
 .It \fBnum-threads:\fR <number>
 The number of threads to create to serve clients. Use 1 for no threading.
+.It \fBport:\fR <port number>
+The port number, default 53, on which the server responds to queries.
+.It \fBoutgoing-port:\fR <port number>
+The starting port number where the outgoing query port range is allocated.
+Default is 1053.
+.It \fBoutgoing-range:\fR <number>
+Number of ports to open. This number is opened per thread for every outgoing
+query interface. Must be at least 1. Default is 16.
+Larger numbers give more protection against spoofing attempts, but need
+extra resources from the operating system.
+.It \fBdo-ip4:\fR <yes or no>
+Enable or disable whether ip4 queries are answered. Default is yes.
+.It \fBdo-ip6:\fR <yes or no>
+Enable or disable whether ip6 queries are answered. Default is yes.
+.It \fBdo-udp:\fR <yes or no>
+Enable or disable whether UDP queries are answered. Default is yes.
+.It \fBdo-tcp:\fR <yes or no>
+Enable or disable whether TCP queries are answered. Default is yes.
+.It \fBforward-to:\fR <ip address>
+If set (not "") then forwarder mode is enabled. Default is "" (disabled).
+The ip address is used to forward all DNS queries to.
+.It \fBforward-to-port:\fR <port number>
+The port on which the remote server is running that answers forwarded queries.
+Default is 53.
 
 .Sh FILES
 .Bl -tag -width indent

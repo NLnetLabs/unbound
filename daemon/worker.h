@@ -47,6 +47,7 @@
 #include "util/netevent.h"
 struct listen_dnsport;
 struct outside_network;
+struct config_file;
 
 /** size of table used for random numbers. large to be more secure. */
 #define RND_STATE_SIZE 256
@@ -84,19 +85,11 @@ struct worker {
 /**
  * Initialize worker.
  * Allocates event base, listens to ports
- * @param port: the port number to bind to.
- * @param do_ip4: listen to ip4 queries.
- * @param do_ip6: listen to ip6 queries.
- * @param do_udp: listen to udp queries.
- * @param do_tcp: listen to tcp queries.
+ * @param cfg: configuration settings.
  * @param buffer_size: size of datagram buffer.
- * @param numports: number of outgoing ports.
- * @param base_port: -1 or specify base of outgoing port range.
  * @return: The worker, or NULL on error.
  */
-struct worker* worker_init(const char* port, int do_ip4, int do_ip6,
-	int do_udp, int do_tcp, size_t buffer_size, size_t numports,
-	int base_port);
+struct worker* worker_init(struct config_file *cfg, size_t buffer_size);
 
 /**
  * Make worker work.
@@ -115,6 +108,6 @@ void worker_delete(struct worker* worker);
  * @param port: port on server or NULL for default 53.
  * @return: false on error.
  */
-int worker_set_fwd(struct worker* worker, const char* ip, const char* port);
+int worker_set_fwd(struct worker* worker, const char* ip, int port);
 
 #endif /* DAEMON_WORKER_H */

@@ -44,6 +44,7 @@
 #include "util/net_help.h"
 #include "daemon/worker.h"
 #include "util/netevent.h"
+#include "util/config_file.h"
 #include "services/listen_dnsport.h"
 #include "services/outside_network.h"
 
@@ -207,8 +208,7 @@ worker_sighandler(int sig, void* arg)
 }
 
 struct worker* 
-worker_init(const char* port, int do_ip4, int do_ip6, int do_udp, int do_tcp, 
-	size_t buffer_size, size_t numports, int base_port)
+worker_init(struct config_file *cfg, size_t buffer_size)
 {
 	struct worker* worker = (struct worker*)calloc(1, 
 		sizeof(struct worker));
@@ -229,16 +229,17 @@ worker_init(const char* port, int do_ip4, int do_ip6, int do_udp, int do_tcp,
 		worker_delete(worker);
 		return NULL;
 	}
-	worker->front = listen_create(worker->base, 0, NULL, port, 
-		do_ip4, do_ip6, do_udp, do_tcp, buffer_size, 
-		worker_handle_request, worker);
+	worker->front = listen_create(worker->base, 0, NULL, cfg->port, 
+		cfg->do_ip4, cfg->do_ip6, cfg->do_udp, cfg->do_tcp, 
+		buffer_size, worker_handle_request, worker);
 	if(!worker->front) {
 		log_err("could not create listening sockets");
 		worker_delete(worker);
 		return NULL;
 	}
 	worker->back = outside_network_create(worker->base,
-		buffer_size, numports, NULL, 0, do_ip4, do_ip6, base_port);
+		buffer_size, (size_t)cfg->outgoing_num_ports, NULL, 0, 
+		cfg->do_ip4, cfg->do_ip6, cfg->outgoing_base_port);
 	if(!worker->back) {
 		log_err("could not create outgoing sockets");
 		worker_delete(worker);
@@ -254,6 +255,13 @@ worker_init(const char* port, int do_ip4, int do_ip6, int do_udp, int do_tcp,
 		log_err("could not init random numbers.");
 		worker_delete(worker);
 		return NULL;
+	}
+	/* set forwarder address */
+	if(cfg->fwd_address && cfg->fwd_address[0]) {
+		if(!worker_set_fwd(worker, cfg->fwd_address, cfg->fwd_port)) {
+			worker_delete(worker);
+			fatal_exit("could not set forwarder address");
+		}
 	}
 	return worker;
 }
@@ -277,17 +285,11 @@ worker_delete(struct worker* worker)
 }
 
 int 
-worker_set_fwd(struct worker* worker, const char* ip, const char* port)
+worker_set_fwd(struct worker* worker, const char* ip, int port)
 {
 	uint16_t p;
 	log_assert(worker && ip);
-	if(port)
-		p = (uint16_t)atoi(port);
-	else 	p = (uint16_t)atoi(UNBOUND_DNS_PORT);
-	if(!p) {
-		log_err("Bad port number %s", port?port:"default_port");
-		return 0;
-	}
+	p = (uint16_t) port;
 	if(str_is_ip6(ip)) {
 		struct sockaddr_in6* sa = 
 			(struct sockaddr_in6*)&worker->fwd_addr;

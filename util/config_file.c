@@ -70,6 +70,19 @@ config_create()
 	/* the defaults if no config is present */
 	cfg->verbosity = 1;
 	cfg->num_threads = 1;
+	cfg->port = UNBOUND_DNS_PORT;
+	cfg->do_ip4 = 1;
+	cfg->do_ip6 = 1;
+	cfg->do_udp = 1;
+	cfg->do_tcp = 1;
+	cfg->outgoing_base_port = cfg->port + 1000;
+	cfg->outgoing_num_ports = 16;
+	cfg->fwd_address = strdup("");
+	if(!cfg->fwd_address) {
+		free(cfg);
+		return NULL;
+	}
+	cfg->fwd_port = UNBOUND_DNS_PORT;
 	return cfg;
 }
 
