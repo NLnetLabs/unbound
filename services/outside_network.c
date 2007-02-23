@@ -164,7 +164,7 @@ open_udp_port_range(const char* ifname, struct addrinfo* hints, int porthint)
 {
 	struct addrinfo *res = NULL;
 	int r, s;
-	char portstr[20];
+	char portstr[32];
 	if(porthint != -1)
 		snprintf(portstr, sizeof(portstr), "%d", porthint);
 

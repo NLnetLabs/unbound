@@ -191,6 +191,7 @@ worker_sighandler(int sig, void* arg)
 	switch(sig) {
 		case SIGHUP:
 			log_info("caught signal SIGHUP");
+			worker->need_to_restart = 1;
 			comm_base_exit(worker->base);
 			break;
 		case SIGINT:
@@ -208,12 +209,14 @@ worker_sighandler(int sig, void* arg)
 }
 
 struct worker* 
-worker_init(struct config_file *cfg, size_t buffer_size)
+worker_init(struct config_file *cfg, struct listen_port* ports,
+	size_t buffer_size)
 {
 	struct worker* worker = (struct worker*)calloc(1, 
 		sizeof(struct worker));
 	if(!worker) 
 		return NULL;
+	worker->need_to_restart = 0;
 	worker->base = comm_base_create();
 	if(!worker->base) {
 		log_err("could not create event handling base");
@@ -229,8 +232,7 @@ worker_init(struct config_file *cfg, size_t buffer_size)
 		worker_delete(worker);
 		return NULL;
 	}
-	worker->front = listen_create(worker->base, 0, NULL, cfg->port, 
-		cfg->do_ip4, cfg->do_ip6, cfg->do_udp, cfg->do_tcp, 
+	worker->front = listen_create(worker->base, ports,
 		buffer_size, worker_handle_request, worker);
 	if(!worker->front) {
 		log_err("could not create listening sockets");

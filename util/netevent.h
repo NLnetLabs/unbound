@@ -139,6 +139,9 @@ struct comm_point {
 	} type;
 
 	/* ---------- Behaviour ----------- */
+	/** if set the connection is NOT closed on delete. */
+	int do_not_close;
+
 	/** if set, the connection is closed on error, on timeout, 
 	    and after read/write completes. No callback is done. */
 	int tcp_do_close;

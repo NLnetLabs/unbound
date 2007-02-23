@@ -52,7 +52,6 @@ void ub_c_error(const char *message);
 
 /* these need to be global, otherwise they cannot be used inside yacc */
 extern struct config_parser_state* cfg_parser;
-static int server_settings_seen = 0;
 
 #if 0
 #define OUTYY(s)  printf s /* used ONLY when debugging */
@@ -80,10 +79,10 @@ toplevelvar: serverstart contents_server ;
 /* server: declaration */
 serverstart: VAR_SERVER
 	{ OUTYY(("\nP(server:)\n")); 
-		if(server_settings_seen) {
+		if(cfg_parser->server_settings_seen) {
 			yyerror("duplicate server: element.");
 		}
-		server_settings_seen = 1;
+		cfg_parser->server_settings_seen = 1;
 	}
 	;
 contents_server: contents_server content_server | ;

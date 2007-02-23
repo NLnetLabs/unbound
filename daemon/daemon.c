@@ -83,14 +83,17 @@ daemon_fork(struct daemon* daemon)
 	daemon->num = 1;
 	daemon->workers = (struct worker**)calloc((size_t)daemon->num, 
 		sizeof(struct worker*));
-	if(!(daemon->workers[0] = worker_init(daemon->cfg, BUFSZ)))
+	if(!(daemon->workers[0] = worker_init(daemon->cfg, daemon->ports, 
+		BUFSZ)))
 		fatal_exit("could not initialize thread # %d", 0);
 	daemon->workers[0]->daemon = daemon;
 	daemon->workers[0]->thread_num = 0;
 
 	log_info("start of service (%s).", PACKAGE_STRING);
 	worker_work(daemon->workers[0]);
-	daemon->need_to_exit = 1;
+	if(daemon->workers[0]->need_to_restart)
+		daemon->need_to_exit = 0;
+	else	daemon->need_to_exit = 1;
 }
 
 void 

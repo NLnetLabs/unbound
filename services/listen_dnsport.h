@@ -89,6 +89,9 @@ struct listen_port {
 
 /**
  * Create shared listening ports
+ * Getaddrinfo, create socket, bind and listen to zero or more 
+ * interfaces for IP4 and/or IP6, for UDP and/or TCP.
+ * On the given port number. It creates the sockets.
  * @param cfg: settings on what ports to open.
  * @return: linked list of ports or NULL on error.
  */
@@ -100,18 +103,10 @@ struct listen_port* listening_ports_open(struct config_file* cfg);
 void listening_ports_free(struct listen_port* list);
 
 /**
- * Getaddrinfo, create socket, bind and listen to zero or more 
- * interfaces for IP4 and/or IP6, for UDP and/or TCP.
- * On the given port number. It creates the listening sockets.
+ * Create commpoints with for this thread for the shared ports.
  * @param base: the comm_base that provides event functionality.
- * @param num_ifs: number of interfaces to listen on. Can be 0,
  *	for default all ifs.
- * @param ifs: array of strings with interface specs, IP addresses.
- * @param port: the port number to bind to.
- * @param do_ip4: listen to ip4 queries.
- * @param do_ip6: listen to ip6 queries.
- * @param do_udp: listen to udp queries.
- * @param do_tcp: listen to tcp queries.
+ * @param ports: the list of shared ports.
  * @param bufsize: size of datagram buffer.
  * @param cb: callback function when a request arrives. It is passed
  *	  the packet and user argument. Return true to send a reply.
@@ -119,9 +114,8 @@ void listening_ports_free(struct listen_port* list);
  * @return: the malloced listening structure, ready for use. NULL on error.
  */
 struct listen_dnsport* listen_create(struct comm_base* base,
-	int num_ifs, const char* ifs[], int port,
-	int do_ip4, int do_ip6, int do_udp, int do_tcp,
-	size_t bufsize, comm_point_callback_t* cb, void* cb_arg);
+	struct listen_port* ports, size_t bufsize, 
+	comm_point_callback_t* cb, void* cb_arg);
 
 /**
  * delete the listening structure

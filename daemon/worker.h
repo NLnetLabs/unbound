@@ -50,6 +50,7 @@ struct listen_dnsport;
 struct outside_network;
 struct config_file;
 struct daemon;
+struct listen_port;
 
 /** size of table used for random numbers. large to be more secure. */
 #define RND_STATE_SIZE 256
@@ -86,16 +87,20 @@ struct worker {
 
 	/** random() table for this worker. */
 	char* rndstate;
+	/** do we need to restart (instead of exit) ? */
+	int need_to_restart;
 };
 
 /**
  * Initialize worker.
  * Allocates event base, listens to ports
  * @param cfg: configuration settings.
+ * @param ports: list of shared query ports.
  * @param buffer_size: size of datagram buffer.
  * @return: The worker, or NULL on error.
  */
-struct worker* worker_init(struct config_file *cfg, size_t buffer_size);
+struct worker* worker_init(struct config_file *cfg, struct listen_port* ports,
+	size_t buffer_size);
 
 /**
  * Make worker work.

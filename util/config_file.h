@@ -74,6 +74,11 @@ struct config_file {
 	/** forwarder port */
 	int fwd_port;
 
+	/** number of interfaces to open. If 0 default all interfaces. */
+	int num_ifs;
+	/** interface description strings (IP addresses) */
+	char **ifs;
+
 	/** chrootdir, if not "" or chroot will be done */
 	char* chrootdir;
 	/** username to change to, if not "". */
@@ -115,6 +120,8 @@ struct config_parser_state {
 	int errors;
 	/** the result of parsing is stored here. */
 	struct config_file* cfg;
+	/** has server: already been seen. */
+	int server_settings_seen;
 };
 
 /** global config parser object used during config parsing */

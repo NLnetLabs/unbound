@@ -91,6 +91,8 @@ config_create()
 	}
 	cfg->fwd_port = UNBOUND_DNS_PORT;
 	cfg->do_daemonize = 0;
+	cfg->num_ifs = 0;
+	cfg->ifs = NULL;
 	return cfg;
 }
 
@@ -104,6 +106,7 @@ create_cfg_parser(struct config_file* cfg, char* filename)
 	cfg_parser->line = 1;
 	cfg_parser->errors = 0;
 	cfg_parser->cfg = cfg;
+	cfg_parser->server_settings_seen = 0;
 }
 
 int 

@@ -43,6 +43,7 @@
 #include "services/outside_network.h"
 #include "util/netevent.h"
 #include "util/log.h"
+#include "util/config_file.h"
 #include "util/net_help.h"
 
 #ifdef HAVE_SYS_TYPES_H
@@ -218,93 +219,90 @@ make_sock(int stype, const char* ifname, const char* port,
 }
 
 /**
- * Helper for listen_create. Creates one interface (or NULL for default).
+ * Add port to open ports list.
+ * @param list: list head. changed.
+ * @param s: fd.
+ * @param is_udp: if fd is UDP.
+ * @return false on failure. list in unchanged then.
+ */
+static int
+port_insert(struct listen_port** list, int s, int is_udp)
+{
+	struct listen_port* item = (struct listen_port*)malloc(
+		sizeof(struct listen_port));
+	if(!item)
+		return 0;
+	item->next = *list;
+	item->fd = s;
+	item->is_udp = is_udp;
+	*list = item;
+	return 1;
+}
+
+/**
+ * Helper for ports_open. Creates one interface (or NULL for default).
  * @param ifname: The interface ip address.
- * @param front: The the listening info.
- * @param base: Event base.
- * @param port: Port number to use (as string).
  * @param do_udp: if udp should be used.
  * @param do_tcp: if udp should be used.
  * @param hints: for getaddrinfo. family and flags have to be set by caller.
- * @param bufsize: TCP buffer size.
- * @param cb: callback function
- * @param cb_arg: user parameter for callback function.
+ * @param port: Port number to use (as string).
+ * @param list: list of open ports, appended to, changed to point to list head.
  * @return: returns false on error.
  */
 static int
-listen_create_if(const char* ifname, struct listen_dnsport* front, 
-	struct comm_base* base, const char* port, int do_udp, int do_tcp, 
-	struct addrinfo *hints, size_t bufsize, comm_point_callback_t* cb, 
-	void *cb_arg)
+ports_create_if(const char* ifname, int do_udp, int do_tcp, 
+	struct addrinfo *hints, const char* port, struct listen_port** list)
 {
-	struct comm_point *cp_udp = NULL, *cp_tcp = NULL;
-	struct listen_list *el_udp, *el_tcp;
 	int s;
 	if(!do_udp && !do_tcp)
 		return 0;
 	if(do_udp) {
 		if((s = make_sock(SOCK_DGRAM, ifname, port, hints)) == -1)
 			return 0;
-		cp_udp = comm_point_create_udp(base, s, front->udp_buff, 
-			cb, cb_arg);
-		if(!cp_udp) {
-			log_err("can't create commpoint");	
+		if(!port_insert(list, s, 1)) {
 			close(s);
 			return 0;
 		}
 	}
 	if(do_tcp) {
 		if((s = make_sock(SOCK_STREAM, ifname, port, hints)) == -1) {
-			comm_point_delete(cp_udp);
 			return 0;
 		}
-		cp_tcp = comm_point_create_tcp(base, s, TCP_COUNT, bufsize, 
-			cb, cb_arg);
-		if(!cp_tcp) {
-			log_err("can't create commpoint");	
-			comm_point_delete(cp_udp);
+		if(!port_insert(list, s, 0)) {
 			close(s);
 			return 0;
 		}
 	}
-	/* add commpoints to the listen structure */
-	el_udp = (struct listen_list*)malloc(sizeof(struct listen_list));
-	if(!el_udp) {
-		log_err("out of memory");
-		comm_point_delete(cp_udp);
-		comm_point_delete(cp_tcp);
+	return 1;
+}
+
+/** 
+ * Add items to commpoint list in front.
+ * @param c: commpoint to add.
+ * @param front: listen struct.
+ * @return: false on failure.
+ */
+static int
+listen_cp_insert(struct comm_point* c, struct listen_dnsport* front)
+{
+	struct listen_list* item = (struct listen_list*)malloc(
+		sizeof(struct listen_list));
+	if(!item)
 		return 0;
-	}
-	el_tcp = (struct listen_list*)malloc(sizeof(struct listen_list));
-	if(!el_tcp) {
-		log_err("out of memory");
-		free(el_udp);
-		comm_point_delete(cp_udp);
-		comm_point_delete(cp_tcp);
-		return 0;
-	}
-	el_udp->com = cp_udp;
-	el_udp->next = front->cps;
-	front->cps = el_udp;
-	el_tcp->com = cp_tcp;
-	el_tcp->next = front->cps;
-	front->cps = el_tcp;
+	item->com = c;
+	item->next = front->cps;
+	front->cps = item;
 	return 1;
 }
 
 struct listen_dnsport* 
-listen_create(struct comm_base* base, int num_ifs, const char* ifs[], 
-	int port, int do_ip4, int do_ip6, int do_udp, int do_tcp,
+listen_create(struct comm_base* base, struct listen_port* ports,
 	size_t bufsize, comm_point_callback_t* cb, void *cb_arg)
 {
-	struct addrinfo hints;
-	int i;
-	char portbuf[10];
 	struct listen_dnsport* front = (struct listen_dnsport*)
 		malloc(sizeof(struct listen_dnsport));
 	if(!front)
 		return NULL;
-	snprintf(portbuf, sizeof(portbuf), "%d", port);
 	front->cps = NULL;
 	front->udp_buff = ldns_buffer_new(bufsize);
 	if(!front->udp_buff) {
@@ -312,59 +310,27 @@ listen_create(struct comm_base* base, int num_ifs, const char* ifs[],
 		return NULL;
 	}
 	
-	/* getaddrinfo */
-	memset(&hints, 0, sizeof(hints));
-	hints.ai_flags = AI_PASSIVE;
-	/* no name lookups on our listening ports */
-	if(num_ifs > 0)
-		hints.ai_flags |= AI_NUMERICHOST;
-	hints.ai_family = AF_UNSPEC;
-#ifndef INET6
-	do_ip6 = 0;
-#endif
-	if(!do_ip4 && !do_ip6) {
-		listen_delete(front);
-		return NULL;
-	}
-
-	/* create ip4 and ip6 ports so that return addresses are nice. */
-	if(num_ifs == 0) {
-		if(do_ip6) {
-			hints.ai_family = AF_INET6;
-			if(!listen_create_if(NULL, front, base, portbuf, 
-				do_udp, do_tcp, &hints, bufsize, cb, cb_arg)) {
-				listen_delete(front);
-				return NULL;
-			}
+	/* create comm points as needed */
+	while(ports) {
+		struct comm_point* cp = NULL;
+		if(ports->is_udp) 
+			cp = comm_point_create_udp(base, ports->fd, 
+				front->udp_buff, cb, cb_arg);
+		else 	cp = comm_point_create_tcp(base, ports->fd, 
+				TCP_COUNT, bufsize, cb, cb_arg);
+		if(!cp) {
+			log_err("can't create commpoint");	
+			listen_delete(front);
+			return NULL;
 		}
-		if(do_ip4) {
-			hints.ai_family = AF_INET;
-			if(!listen_create_if(NULL, front, base, portbuf, 
-				do_udp, do_tcp, &hints, bufsize, cb, cb_arg)) {
-				listen_delete(front);
-				return NULL;
-			}
+		cp->do_not_close = 1;
+		if(!listen_cp_insert(cp, front)) {
+			log_err("malloc failed");
+			comm_point_delete(cp);
+			listen_delete(front);
+			return NULL;
 		}
-	} else for(i = 0; i<num_ifs; i++) {
-		if(str_is_ip6(ifs[i])) {
-			if(!do_ip6)
-				continue;
-			hints.ai_family = AF_INET6;
-			if(!listen_create_if(ifs[i], front, base, portbuf, 
-				do_udp, do_tcp, &hints, bufsize, cb, cb_arg)) {
-				listen_delete(front);
-				return NULL;
-			}
-		} else {
-			if(!do_ip4)
-				continue;
-			hints.ai_family = AF_INET;
-			if(!listen_create_if(ifs[i], front, base, portbuf, 
-				do_udp, do_tcp, &hints, bufsize, cb, cb_arg)) {
-				listen_delete(front);
-				return NULL;
-			}
-		}
+		ports = ports->next;
 	}
 	if(!front->cps) {
 		log_err("Could not open sockets to accept queries.");
@@ -395,10 +361,77 @@ listen_delete(struct listen_dnsport* front)
 struct listen_port* 
 listening_ports_open(struct config_file* cfg)
 {
-	return calloc(1,1);
+	struct listen_port* list = NULL;
+	struct addrinfo hints;
+	int i, do_ip4, do_ip6;
+	char portbuf[32];
+	snprintf(portbuf, sizeof(portbuf), "%d", cfg->port);
+	do_ip4 = cfg->do_ip4;
+	do_ip6 = cfg->do_ip6;
+
+	/* getaddrinfo */
+	memset(&hints, 0, sizeof(hints));
+	hints.ai_flags = AI_PASSIVE;
+	/* no name lookups on our listening ports */
+	if(cfg->num_ifs > 0)
+		hints.ai_flags |= AI_NUMERICHOST;
+	hints.ai_family = AF_UNSPEC;
+#ifndef INET6
+	do_ip6 = 0;
+#endif
+	if(!do_ip4 && !do_ip6) {
+		return NULL;
+	}
+	/* create ip4 and ip6 ports so that return addresses are nice. */
+	if(cfg->num_ifs == 0) {
+		if(do_ip6) {
+			hints.ai_family = AF_INET6;
+			if(!ports_create_if(NULL, cfg->do_udp, cfg->do_tcp, 
+				&hints, portbuf, &list)) {
+				listening_ports_free(list);
+				return NULL;
+			}
+		}
+		if(do_ip4) {
+			hints.ai_family = AF_INET;
+			if(!ports_create_if(NULL, cfg->do_udp, cfg->do_tcp, 
+				&hints, portbuf, &list)) {
+				listening_ports_free(list);
+				return NULL;
+			}
+		}
+	} else for(i = 0; i<cfg->num_ifs; i++) {
+		if(str_is_ip6(cfg->ifs[i])) {
+			if(!do_ip6)
+				continue;
+			hints.ai_family = AF_INET6;
+			if(!ports_create_if(cfg->ifs[i], cfg->do_udp, 
+				cfg->do_tcp, &hints, portbuf, &list)) {
+				listening_ports_free(list);
+				return NULL;
+			}
+		} else {
+			if(!do_ip4)
+				continue;
+			hints.ai_family = AF_INET;
+			if(!ports_create_if(cfg->ifs[i], cfg->do_udp, 
+				cfg->do_tcp, &hints, portbuf, &list)) {
+				listening_ports_free(list);
+				return NULL;
+			}
+		}
+	}
+	return list;
 }
 
 void listening_ports_free(struct listen_port* list)
 {
-	free(list);
+	struct listen_port* nx;
+	while(list) {
+		nx = list->next;
+		if(list->fd != -1)
+			close(list->fd);
+		free(list);
+		list = nx;
+	}
 }

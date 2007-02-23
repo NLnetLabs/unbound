@@ -516,6 +516,7 @@ comm_point_create_udp(struct comm_base *base, int fd, ldns_buffer* buffer,
 	c->tcp_free = NULL;
 	c->type = comm_udp;
 	c->tcp_do_close = 0;
+	c->do_not_close = 0;
 	c->tcp_do_toggle_rw = 0;
 	c->callback = callback;
 	c->cb_arg = callback_arg;
@@ -569,6 +570,7 @@ comm_point_create_tcp_handler(struct comm_base *base,
 	c->tcp_free = NULL;
 	c->type = comm_tcp;
 	c->tcp_do_close = 0;
+	c->do_not_close = 0;
 	c->tcp_do_toggle_rw = 0;
 	c->callback = callback;
 	c->cb_arg = callback_arg;
@@ -623,6 +625,7 @@ comm_point_create_tcp(struct comm_base *base, int fd, int num, size_t bufsize,
 	c->tcp_free = NULL;
 	c->type = comm_tcp_accept;
 	c->tcp_do_close = 0;
+	c->do_not_close = 0;
 	c->tcp_do_toggle_rw = 0;
 	c->callback = NULL;
 	c->cb_arg = NULL;
@@ -659,7 +662,7 @@ comm_point_close(struct comm_point* c)
 		log_err("could not event_del on close");
 	}
 	/* close fd after removing from event lists, or epoll.. is messed up */
-	if(c->fd != -1)
+	if(c->fd != -1 && !c->do_not_close)
 		close(c->fd);
 	c->fd = -1;
 }

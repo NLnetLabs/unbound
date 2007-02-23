@@ -1,3 +1,9 @@
+23 February 2007: Wouter
+	- Can do reloads on sigHUP. Everything is stopped, and freed,
+	  except the listening ports. Then the config file is reread.
+	  And everything is started again (and listening ports if needed).
+	- Ports for queries are shared.
+
 22 February 2007: Wouter
 	- Have a config file. Removed commandline options, moved to config.
 	- tests use config file.
