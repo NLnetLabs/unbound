@@ -6,6 +6,7 @@
 	- config file added interface:, chroot: and username:.
 	- config file: directory, logfile, pidfile. And they work too.
 	- will daemonize by default now. Use -d to stay in the foreground.
+	- got BSD random[256 state] code, made it threadsafe. util/random.
 
 22 February 2007: Wouter
 	- Have a config file. Removed commandline options, moved to config.

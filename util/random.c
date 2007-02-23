@@ -50,9 +50,11 @@
 #include <errno.h>
 
 #ifndef ULONG_MAX
+/** in case its not defined */
 #define	ULONG_MAX  ((unsigned long)(~0L))     /* 0xFFFFFFFF for 32-bits */
 #endif
 #ifndef LONG_MAX
+/** in case its not defined */
 #define	LONG_MAX   ((long)(ULONG_MAX >> 1))   /* 0x7FFFFFFF for 32-bits*/
 #endif
 
@@ -98,41 +100,57 @@
    the polynomial (actually a trinomial) that the R.N.G. is based on, and
    separation between the two lower order coefficients of the trinomial.  */
 
-/* Linear congruential.  */
+/** Linear congruential.  */
 #define	TYPE_0		0
+/** the break */
 #define	BREAK_0		8
+/** the degree */
 #define	DEG_0		0
+/** the sep */
 #define	SEP_0		0
 
-/* x**7 + x**3 + 1.  */
+/** x**7 + x**3 + 1.  */
 #define	TYPE_1		1
+/** the break */
 #define	BREAK_1		32
+/** the degree */
 #define	DEG_1		7
+/** the sep */
 #define	SEP_1		3
 
-/* x**15 + x + 1.  */
+/** x**15 + x + 1.  */
 #define	TYPE_2		2
+/** the break */
 #define	BREAK_2		64
+/** the degree */
 #define	DEG_2		15
+/** the sep */
 #define	SEP_2		1
 
-/* x**31 + x**3 + 1.  */
+/** x**31 + x**3 + 1.  */
 #define	TYPE_3		3
+/** the break */
 #define	BREAK_3		128
+/** the degree */
 #define	DEG_3		31
+/** the sep */
 #define	SEP_3		3
 
-/* x**63 + x + 1.  */
+/** x**63 + x + 1.  */
 #define	TYPE_4		4
+/** the break */
 #define	BREAK_4		256
+/** the degree */
 #define	DEG_4		63
+/** the sep */
 #define	SEP_4		1
 
 
 /* Array versions of the above information to make code run faster.
    Relies on fact that TYPE_i == i.  */
 
-#define	MAX_TYPES	5	/* Max number of types above.  */
+/** Max number of types above.  */
+#define	MAX_TYPES	5	
 
 /*
 static int degrees[MAX_TYPES] = { DEG_0, DEG_1, DEG_2, DEG_3, DEG_4 };
@@ -207,10 +225,14 @@ static long int *end_ptr = &randtbl[sizeof(randtbl) / sizeof(randtbl[0])];
    information a given number of times to get rid of any initial dependencies
    introduced by the L.C.R.N.G.  Note that the initialization of randtbl[]
    for default usage relies on values produced by this routine.  */
+/** init state.
+ * @param s: state to init.
+ * @param x: seed.
+ */
 static void
 ub_srandom (struct ub_randstate* s, unsigned int x)
 {
-  s->state[0] = x;
+  s->state[0] = (long int)x;
   if (s->rand_type != TYPE_0)
     {
       register long int i;
@@ -219,7 +241,7 @@ ub_srandom (struct ub_randstate* s, unsigned int x)
       s->fptr = &s->state[s->rand_sep];
       s->rptr = &s->state[0];
       for (i = 0; i < 10 * s->rand_deg; ++i)
-	ub_random(s);
+	(void)ub_random(s);
     }
 }
 
@@ -332,3 +354,8 @@ ub_random (struct ub_randstate* s)
     }
 }
 
+
+void ub_randfree(struct ub_randstate* state)
+{
+	free(state->state);
+}

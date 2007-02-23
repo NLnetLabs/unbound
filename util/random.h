@@ -45,12 +45,19 @@
  * random state structure.
  */
 struct ub_randstate {
+	/** state array, malloced */
 	long int* state;
+	/** front ptr */
 	long int* fptr;
+	/** rear ptr */
 	long int* rptr;
+	/** rng type */
 	int rand_type;
+	/** rng degree */
 	int rand_deg;
+	/** rng sep */
 	int rand_sep;
+	/** rng end ptr */
 	long int* end_ptr;
 };
 
@@ -71,5 +78,11 @@ int ub_initstate(unsigned int seed, struct ub_randstate* state,
  * @return: random 31 bit value.
  */
 long int ub_random(struct ub_randstate* state);
+
+/**
+ * Delete the random state.
+ * @param state: to delete.
+ */
+void ub_randfree(struct ub_randstate* state);
 
 #endif /* UTIL_RANDOM_H */
