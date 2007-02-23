@@ -89,7 +89,7 @@ readpid (const char* file)
 	pid_t pid;
 	char pidbuf[32];
 	char* t;
-	int l;
+	ssize_t l;
 
 	if ((fd = open(file, O_RDONLY)) == -1) {
 		return -1;
@@ -134,7 +134,10 @@ writepid (const char* pidfile, pid_t pid)
 	fclose(f);
 }
 
-/** check old pid file */
+/**
+ * check old pid file.
+ * @param cfg: the config settings
+ */
 static void
 checkoldpid(struct config_file* cfg)
 {

@@ -44,6 +44,7 @@
 #endif
 
 enum verbosity_value verbosity = 0;
+/** the file logged to. */
 static FILE* logfile = 0;
 
 void
