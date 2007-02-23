@@ -84,7 +84,7 @@ config_create()
 	if(!(cfg->logfile = strdup(""))) {config_delete(cfg); return NULL;}
 	if(!(cfg->pidfile = strdup("unbound.pid"))) {config_delete(cfg); return NULL;}
 	cfg->fwd_port = UNBOUND_DNS_PORT;
-	cfg->do_daemonize = 0;
+	cfg->do_daemonize = 1;
 	cfg->num_ifs = 0;
 	cfg->ifs = NULL;
 	return cfg;

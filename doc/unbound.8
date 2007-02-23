@@ -41,8 +41,9 @@ unbound
 .Sh SYNOPSIS
 .Nm unbound
 .Op Fl h
-.Op Fl c Ar cfgfile
+.Op Fl d
 .Op Fl v
+.Op Fl c Ar cfgfile
 
 .Sh DESCRIPTION
 .Ic Unbound 
@@ -59,6 +60,10 @@ Show the version and commandline option help.
 Set the config file to read with settings for unbound. The syntax is
 described in 
 .Xr unbound.conf 5 .
+
+.It Fl d
+Debug flag, do not fork into the background, but stay attached to the
+console.
 
 .It Fl v
 Increase verbosity. If given multiple times, more information is logged.

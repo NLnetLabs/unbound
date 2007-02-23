@@ -156,6 +156,7 @@ main(int argc, char* argv[])
 	/* determine commandline options for the daemon */
 	pass_argc = 1;
 	pass_argv[0] = "unbound";
+	add_opts("-d", &pass_argc, pass_argv);
 	while( (c=getopt(argc, argv, "ho:p:")) != -1) {
 		switch(c) {
 		case 'p':

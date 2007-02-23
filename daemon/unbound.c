@@ -55,6 +55,7 @@ static void usage()
 	printf("	start unbound daemon DNS resolver.\n");
 	printf("-h	this help\n");
 	printf("-c file	config file to read, unbound.conf(5).\n");
+	printf("-d	do not fork into the background.\n");
 	printf("-v	verbose (multiple times increase verbosity)\n");
 	printf("Version %s\n", PACKAGE_VERSION);
 	printf("BSD licensed, see LICENSE in source package for details.\n");
@@ -157,7 +158,7 @@ checkoldpid(struct config_file* cfg)
 
 /** daemonize, drop user priviliges and chroot if needed */
 static void
-do_chroot(struct daemon* daemon, struct config_file* cfg)
+do_chroot(struct daemon* daemon, struct config_file* cfg, int debug_mode)
 {
 	log_assert(cfg);
 
@@ -182,7 +183,7 @@ do_chroot(struct daemon* daemon, struct config_file* cfg)
 
 	/* init logfile just before fork */
 	log_init(cfg->logfile);
-	if(cfg->do_daemonize) {
+	if(!debug_mode && cfg->do_daemonize) {
 		int fd;
 		/* Take off... */
 		switch (fork()) {
@@ -217,8 +218,9 @@ do_chroot(struct daemon* daemon, struct config_file* cfg)
  * @param cfgfile: the config file name.
  * @param cmdline_verbose: verbosity resulting from commandline -v.
  *    These increase verbosity as specified in the config file.
+ * @param debug_mode: if set, do not daemonize.
  */
-static void run_daemon(const char* cfgfile, int cmdline_verbose)
+static void run_daemon(const char* cfgfile, int cmdline_verbose, int debug_mode)
 {
 	struct config_file* cfg = NULL;
 	struct daemon* daemon = NULL;
@@ -242,7 +244,7 @@ static void run_daemon(const char* cfgfile, int cmdline_verbose)
 		if(!daemon_open_shared_ports(daemon))
 			fatal_exit("could not open ports");
 		if(!done_chroot) { 
-			do_chroot(daemon, cfg); 
+			do_chroot(daemon, cfg, debug_mode); 
 			done_chroot = 1; 
 		}
 		/* work */
@@ -276,10 +278,11 @@ main(int argc, char* argv[])
 	int c;
 	const char* cfgfile = NULL;
 	int cmdline_verbose = 0;
+	int debug_mode = 0;
 
 	log_init(NULL);
 	/* parse the options */
-	while( (c=getopt(argc, argv, "c:hv")) != -1) {
+	while( (c=getopt(argc, argv, "c:dhv")) != -1) {
 		switch(c) {
 		case 'c':
 			cfgfile = optarg;
@@ -287,6 +290,9 @@ main(int argc, char* argv[])
 		case 'v':
 			cmdline_verbose ++;
 			verbosity++;
+			break;
+		case 'd':
+			debug_mode = 1;
 			break;
 		case '?':
 		case 'h':
@@ -303,6 +309,6 @@ main(int argc, char* argv[])
 		return 1;
 	}
 
-	run_daemon(cfgfile, cmdline_verbose);
+	run_daemon(cfgfile, cmdline_verbose, debug_mode);
 	return 0;
 }

@@ -5,6 +5,7 @@
 	- Ports for queries are shared.
 	- config file added interface:, chroot: and username:.
 	- config file: directory, logfile, pidfile. And they work too.
+	- will daemonize by default now. Use -d to stay in the foreground.
 
 22 February 2007: Wouter
 	- Have a config file. Removed commandline options, moved to config.
