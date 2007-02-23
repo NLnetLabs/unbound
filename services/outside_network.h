@@ -119,7 +119,7 @@ struct pending {
  * @return: the new structure (with no pending answers) or NULL on error.
  */
 struct outside_network* outside_network_create(struct comm_base* base,
-	size_t bufsize, size_t num_ports, const char** ifs, int num_ifs,
+	size_t bufsize, size_t num_ports, char** ifs, int num_ifs,
 	int do_ip4, int do_ip6, int port_base);
 
 /**

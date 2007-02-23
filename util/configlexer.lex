@@ -108,6 +108,9 @@ do-udp{COLON}		{ LEXOUT(("v(%s) ", yytext)); return VAR_DO_UDP;}
 do-tcp{COLON}		{ LEXOUT(("v(%s) ", yytext)); return VAR_DO_TCP;}
 forward-to{COLON}	{ LEXOUT(("v(%s) ", yytext)); return VAR_FORWARD_TO;}
 forward-to-port{COLON}	{ LEXOUT(("v(%s) ", yytext)); return VAR_FORWARD_TO_PORT;}
+interface{COLON}	{ LEXOUT(("v(%s) ", yytext)); return VAR_INTERFACE;}
+chroot{COLON}		{ LEXOUT(("v(%s) ", yytext)); return VAR_CHROOT;}
+username{COLON}		{ LEXOUT(("v(%s) ", yytext)); return VAR_USERNAME;}
 {NEWLINE}		{ LEXOUT(("NL\n")); cfg_parser->line++;}
 
 	/* Quoted strings. Strip leading and ending quotes */
@@ -123,6 +126,8 @@ forward-to-port{COLON}	{ LEXOUT(("v(%s) ", yytext)); return VAR_FORWARD_TO_PORT;
         BEGIN(INITIAL);
         yytext[yyleng - 1] = '\0';
 	yylval.str = strdup(yytext);
+	if(!yylval.str)
+		yyerror("out of memory");
         return STRING;
 }
 

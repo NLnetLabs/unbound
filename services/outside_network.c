@@ -229,7 +229,7 @@ make_udp_range(struct comm_point** coms, const char* ifname,
 
 /** calculate number of ip4 and ip6 interfaces, times multiplier. */
 static void 
-calc_num46(const char** ifs, int num_ifs, int do_ip4, int do_ip6, 
+calc_num46(char** ifs, int num_ifs, int do_ip4, int do_ip6, 
 	size_t multiplier, size_t* num_ip4, size_t* num_ip6)
 {
 	int i;
@@ -268,7 +268,7 @@ pending_udp_timer_cb(void *arg)
 
 struct outside_network* 
 outside_network_create(struct comm_base *base, size_t bufsize, 
-	size_t num_ports, const char** ifs, int num_ifs, int do_ip4, 
+	size_t num_ports, char** ifs, int num_ifs, int do_ip4, 
 	int do_ip6, int port_base)
 {
 	struct outside_network* outnet = (struct outside_network*)

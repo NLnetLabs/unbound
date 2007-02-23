@@ -67,10 +67,10 @@ extern struct config_parser_state* cfg_parser;
 %token SPACE LETTER NEWLINE COMMENT COLON ANY ZONESTR
 %token <str> STRING
 %token VAR_SERVER VAR_VERBOSITY VAR_NUM_THREADS VAR_PORT
-%token VAR_OUTGOING_PORT VAR_OUTGOING_RANGE
+%token VAR_OUTGOING_PORT VAR_OUTGOING_RANGE VAR_INTERFACE
 %token VAR_DO_IP4 VAR_DO_IP6 VAR_DO_UDP VAR_DO_TCP
-%token VAR_FORWARD_TO VAR_FORWARD_TO_PORT
-
+%token VAR_FORWARD_TO VAR_FORWARD_TO_PORT VAR_CHROOT
+%token VAR_USERNAME
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -89,7 +89,8 @@ contents_server: contents_server content_server | ;
 content_server: server_num_threads | server_verbosity | server_port |
 	server_outgoing_port | server_outgoing_range | server_do_ip4 |
 	server_do_ip6 | server_do_udp | server_do_tcp | server_forward_to |
-	server_forward_to_port;
+	server_forward_to_port | server_interface | server_chroot | 
+	server_username;
 server_num_threads: VAR_NUM_THREADS STRING 
 	{ 
 		OUTYY(("P(server_num_threads:%s)\n", $2)); 
@@ -115,6 +116,19 @@ server_port: VAR_PORT STRING
 			yyerror("port number expected");
 		else cfg_parser->cfg->port = atoi($2);
 		free($2);
+	}
+	;
+server_interface: VAR_INTERFACE STRING
+	{
+		OUTYY(("P(server_interface:%s)\n", $2));
+		if(cfg_parser->cfg->num_ifs == 0)
+			cfg_parser->cfg->ifs = calloc(1, sizeof(char*));
+		else 	cfg_parser->cfg->ifs = realloc(cfg_parser->cfg->ifs,
+				(cfg_parser->cfg->num_ifs+1)*sizeof(char*));
+		if(!cfg_parser->cfg->ifs)
+			yyerror("out of memory");
+		else
+			cfg_parser->cfg->ifs[cfg_parser->cfg->num_ifs++] = $2;
 	}
 	;
 server_outgoing_port: VAR_OUTGOING_PORT STRING
@@ -185,6 +199,20 @@ server_forward_to_port: VAR_FORWARD_TO_PORT STRING
 			yyerror("number expected");
 		else cfg_parser->cfg->fwd_port = atoi($2);
 		free($2);
+	}
+	;
+server_chroot: VAR_CHROOT STRING
+	{
+		OUTYY(("P(server_chroot:%s)\n", $2));
+		free(cfg_parser->cfg->chrootdir);
+		cfg_parser->cfg->chrootdir = $2;
+	}
+	;
+server_username: VAR_USERNAME STRING
+	{
+		OUTYY(("P(server_username:%s)\n", $2));
+		free(cfg_parser->cfg->username);
+		cfg_parser->cfg->username = $2;
 	}
 	;
 %%

@@ -49,6 +49,9 @@ output per query. Level 3 gives algorithm level information.
 The number of threads to create to serve clients. Use 1 for no threading.
 .It \fBport:\fR <port number>
 The port number, default 53, on which the server responds to queries.
+.It \fBinterface:\fR <ip address>
+Interface to use to connect to the network. Can be given multiple times to
+work on several interfaces. If none are given the default (all) is used.
 .It \fBoutgoing-port:\fR <port number>
 The starting port number where the outgoing query port range is allocated.
 Default is 1053.
@@ -71,6 +74,14 @@ The ip address is used to forward all DNS queries to.
 .It \fBforward-to-port:\fR <port number>
 The port on which the remote server is running that answers forwarded queries.
 Default is 53.
+.It \fBchroot:\fR <directory>
+If given a chroot is done to the given directory. The default is none ("").
+.It \fBusername:\fR <name>
+If given, after binding the port the user privileges are dropped. Default is
+not to change user, username: "". If this user is not capable of binding the
+port, reloads (by signal HUP) will work, however, if you change the port
+number in the config file, and that port number requires privileges, then
+a reload will fail to bind to the new port number; a restart is needed.
 
 .Sh FILES
 .Bl -tag -width indent

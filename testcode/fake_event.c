@@ -617,7 +617,7 @@ comm_point_drop_reply(struct comm_reply* repinfo)
 
 struct outside_network* 
 outside_network_create(struct comm_base* base, size_t bufsize, 
-	size_t ATTR_UNUSED(num_ports), const char** ATTR_UNUSED(ifs), 
+	size_t ATTR_UNUSED(num_ports), char** ATTR_UNUSED(ifs), 
 	int ATTR_UNUSED(num_ifs), int ATTR_UNUSED(do_ip4), 
 	int ATTR_UNUSED(do_ip6), int ATTR_UNUSED(port_base))
 {

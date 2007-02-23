@@ -240,8 +240,9 @@ worker_init(struct config_file *cfg, struct listen_port* ports,
 		return NULL;
 	}
 	worker->back = outside_network_create(worker->base,
-		buffer_size, (size_t)cfg->outgoing_num_ports, NULL, 0, 
-		cfg->do_ip4, cfg->do_ip6, cfg->outgoing_base_port);
+		buffer_size, (size_t)cfg->outgoing_num_ports, cfg->ifs, 
+		cfg->num_ifs, cfg->do_ip4, cfg->do_ip6, 
+		cfg->outgoing_base_port);
 	if(!worker->back) {
 		log_err("could not create outgoing sockets");
 		worker_delete(worker);

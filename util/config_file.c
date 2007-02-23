@@ -140,6 +140,12 @@ config_delete(struct config_file* cfg)
 	free(cfg->fwd_address);
 	free(cfg->username);
 	free(cfg->chrootdir);
+	if(cfg->ifs) {
+		int i;
+		for(i=0; i<cfg->num_ifs; i++)
+			free(cfg->ifs[i]);
+		free(cfg->ifs);
+	}
 	free(cfg);
 }
 
