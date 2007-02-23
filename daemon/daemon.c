@@ -62,10 +62,9 @@ daemon_init()
 }
 
 int 
-daemon_open_shared_ports(struct daemon* daemon, struct config_file* cfg)
+daemon_open_shared_ports(struct daemon* daemon)
 {
 	log_assert(daemon);
-	daemon->cfg = cfg;
 	if(daemon->cfg->port == daemon->listening_port)
 		return 1;
 	listening_ports_free(daemon->ports);
@@ -116,5 +115,7 @@ daemon_delete(struct daemon* daemon)
 		return;
 	listening_ports_free(daemon->ports);
 	lock_basic_destroy(&daemon->lock);
+	free(daemon->cwd);
+	free(daemon->pidfile);
 	free(daemon);
 }

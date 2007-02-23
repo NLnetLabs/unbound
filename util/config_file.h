@@ -83,6 +83,12 @@ struct config_file {
 	char* chrootdir;
 	/** username to change to, if not "". */
 	char* username;
+	/** working directory */
+	char* directory;
+	/** filename to log to. */
+	char* logfile;
+	/** pidfile to write pid to. */
+	char* pidfile;
 	
 	/** daemonize, i.e. fork into the background. */
 	int do_daemonize;

@@ -44,6 +44,7 @@
 #include "util/log.h"
 #include "daemon/daemon.h"
 #include "util/config_file.h"
+#include <signal.h>
 #include <fcntl.h>
 #include <pwd.h>
 
@@ -60,9 +61,100 @@ static void usage()
 	printf("Report bugs to %s\n", PACKAGE_BUGREPORT);
 }
 
+/** to changedir, logfile */
+static void
+apply_dir(struct daemon* daemon, struct config_file* cfg, int cmdline_verbose)
+{
+	/* apply changes if they have changed */
+	daemon->cfg = cfg;
+	verbosity = cmdline_verbose + cfg->verbosity;
+	if(cfg->directory && cfg->directory[0]) {
+		if(!daemon->cwd || strcmp(daemon->cwd, cfg->directory) != 0) {
+			if(chdir(cfg->directory)) {
+				log_err("Could not chdir to %s: %s",
+					cfg->directory, strerror(errno));
+			}
+			free(daemon->cwd);
+			if(!(daemon->cwd = strdup(cfg->directory)))
+				fatal_exit("malloc failed");
+		}
+	}
+}
+
+/** Read existing pid from pidfile. */
+static pid_t
+readpid (const char* file)
+{
+	int fd;
+	pid_t pid;
+	char pidbuf[32];
+	char* t;
+	int l;
+
+	if ((fd = open(file, O_RDONLY)) == -1) {
+		return -1;
+	}
+
+	if (((l = read(fd, pidbuf, sizeof(pidbuf)))) == -1) {
+		close(fd);
+		return -1;
+	}
+
+	close(fd);
+
+	/* Empty pidfile means no pidfile... */
+	if (l == 0) {
+		errno = ENOENT;
+		return -1;
+	}
+
+	pid = strtol(pidbuf, &t, 10);
+	
+	if (*t && *t != '\n') {
+		return -1;
+	}
+	return pid;
+}
+
+/** write pid to file. */
+static void
+writepid (const char* pidfile, pid_t pid)
+{
+	FILE* f;
+
+	if ((f = fopen(pidfile, "w")) ==  NULL ) {
+		log_err("cannot open pidfile %s: %s", 
+			pidfile, strerror(errno));
+		return;
+	}
+	if(fprintf(f, "%lu\n", (unsigned long)pid) < 0) {
+		log_err("cannot write to pidfile %s: %s", 
+			pidfile, strerror(errno));
+	}
+	fclose(f);
+}
+
+/** check old pid file */
+static void
+checkoldpid(struct config_file* cfg)
+{
+	pid_t old;
+	if((old = readpid(cfg->pidfile)) == -1) {
+		if(errno != ENOENT) {
+			log_err("Could not read pidfile %s: %s",
+				cfg->pidfile, strerror(errno));
+		}
+	} else {
+		/** see if it is still alive */
+		if(kill(old, 0) == 0 || errno == EPERM)
+			log_warn("unbound is already running as pid %u.", old);
+		else	log_warn("did not exit gracefully last time (%u)", old);
+	}
+}
+
 /** daemonize, drop user priviliges and chroot if needed */
 static void
-do_chroot(struct config_file* cfg)
+do_chroot(struct daemon* daemon, struct config_file* cfg)
 {
 	log_assert(cfg);
 
@@ -80,6 +172,13 @@ do_chroot(struct config_file* cfg)
 			fatal_exit("unable to set user id: %s", strerror(errno));
 		endpwent();
 	}
+	/* check old pid file before forking */
+	if(cfg->pidfile && cfg->pidfile[0]) {
+		checkoldpid(cfg);
+	}
+
+	/* init logfile just before fork */
+	log_init(cfg->logfile);
 	if(cfg->do_daemonize) {
 		int fd;
 		/* Take off... */
@@ -87,6 +186,7 @@ do_chroot(struct config_file* cfg)
 			case 0:
 				break;
 			case -1:
+				unlink(cfg->pidfile);
 				fatal_exit("fork failed: %s", strerror(errno));
 			default:
 				/* exit interactive session */
@@ -102,6 +202,10 @@ do_chroot(struct config_file* cfg)
 			if (fd > 2)
 				(void)close(fd);
 		}
+	}
+	if(cfg->pidfile && cfg->pidfile[0]) {
+		writepid(cfg->pidfile, getpid());
+		daemon->pidfile = strdup(cfg->pidfile);
 	}
 }
 
@@ -129,13 +233,13 @@ static void run_daemon(const char* cfgfile, int cmdline_verbose)
 			fatal_exit("Could not alloc config defaults");
 		if(!config_read(cfg, cfgfile))
 			fatal_exit("Could not read config file: %s", cfgfile);
-		verbosity = cmdline_verbose + cfg->verbosity;
+		apply_dir(daemon, cfg, cmdline_verbose);
 	
 		/* prepare */
-		if(!daemon_open_shared_ports(daemon, cfg))
+		if(!daemon_open_shared_ports(daemon))
 			fatal_exit("could not open ports");
 		if(!done_chroot) { 
-			do_chroot(cfg); 
+			do_chroot(daemon, cfg); 
 			done_chroot = 1; 
 		}
 		/* work */
@@ -147,6 +251,8 @@ static void run_daemon(const char* cfgfile, int cmdline_verbose)
 		config_delete(cfg);
 	}
 	verbose(VERB_ALGO, "Exit cleanup.");
+	if(daemon->pidfile)
+		unlink(daemon->pidfile);
 	daemon_delete(daemon);
 }
 
@@ -168,7 +274,7 @@ main(int argc, char* argv[])
 	const char* cfgfile = NULL;
 	int cmdline_verbose = 0;
 
-	log_init();
+	log_init(NULL);
 	/* parse the options */
 	while( (c=getopt(argc, argv, "c:hv")) != -1) {
 		switch(c) {

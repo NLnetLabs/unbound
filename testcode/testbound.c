@@ -151,6 +151,7 @@ main(int argc, char* argv[])
 	char* init_optarg = optarg;
 	struct replay_scenario* scen = NULL;
 
+	log_init(NULL);
 	log_info("Start of %s testbound program.", PACKAGE_STRING);
 	/* determine commandline options for the daemon */
 	pass_argc = 1;

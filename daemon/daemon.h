@@ -56,6 +56,10 @@ struct daemon {
 	lock_basic_t lock;
 	/** The config settings */
 	struct config_file* cfg;
+	/** current working directory */
+	char* cwd;
+	/** pidfile that is used */
+	char* pidfile;
 	/** port number that has ports opened. */
 	int listening_port;
 	/** listening ports, opened, to be shared by threads */
@@ -76,11 +80,11 @@ struct daemon* daemon_init();
 
 /**
  * Open shared listening ports (if needed).
+ * The cfg member pointer must have been set for the daemon.
  * @param daemon: the daemon.
- * @param cfg: the cfg settings. Applied to daemon.
  * @return: false on error.
  */
-int daemon_open_shared_ports(struct daemon* daemon, struct config_file* cfg);
+int daemon_open_shared_ports(struct daemon* daemon);
 
 /**
  * Fork workers and start service.

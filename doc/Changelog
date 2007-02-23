@@ -4,6 +4,7 @@
 	  And everything is started again (and listening ports if needed).
 	- Ports for queries are shared.
 	- config file added interface:, chroot: and username:.
+	- config file: directory, logfile, pidfile. And they work too.
 
 22 February 2007: Wouter
 	- Have a config file. Removed commandline options, moved to config.

@@ -111,6 +111,9 @@ forward-to-port{COLON}	{ LEXOUT(("v(%s) ", yytext)); return VAR_FORWARD_TO_PORT;
 interface{COLON}	{ LEXOUT(("v(%s) ", yytext)); return VAR_INTERFACE;}
 chroot{COLON}		{ LEXOUT(("v(%s) ", yytext)); return VAR_CHROOT;}
 username{COLON}		{ LEXOUT(("v(%s) ", yytext)); return VAR_USERNAME;}
+directory{COLON}	{ LEXOUT(("v(%s) ", yytext)); return VAR_DIRECTORY;}
+logfile{COLON}		{ LEXOUT(("v(%s) ", yytext)); return VAR_LOGFILE;}
+pidfile{COLON}		{ LEXOUT(("v(%s) ", yytext)); return VAR_PIDFILE;}
 {NEWLINE}		{ LEXOUT(("NL\n")); cfg_parser->line++;}
 
 	/* Quoted strings. Strip leading and ending quotes */

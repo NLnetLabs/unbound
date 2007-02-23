@@ -76,8 +76,9 @@ void verbose(enum verbosity_value level,
 
 /**
  * call this to initialize logging services.
+ * @param filename: if NULL stderr is used.
  */
-void log_init();
+void log_init(const char* filename);
 
 /**
  * Log informational message.
@@ -92,6 +93,13 @@ void log_info(const char* format, ...) ATTR_FORMAT(printf, 1, 2);
  * @param format: printf-style format string. Arguments follow.
  */
 void log_err(const char* format, ...) ATTR_FORMAT(printf, 1, 2);
+
+/**
+ * Log warning message.
+ * Pass printf formatted arguments. No trailing newline is needed.
+ * @param format: printf-style format string. Arguments follow.
+ */
+void log_warn(const char* format, ...) ATTR_FORMAT(printf, 1, 2);
 
 /**
  * Log fatal error message, and exit the current process.

@@ -70,7 +70,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_OUTGOING_PORT VAR_OUTGOING_RANGE VAR_INTERFACE
 %token VAR_DO_IP4 VAR_DO_IP6 VAR_DO_UDP VAR_DO_TCP
 %token VAR_FORWARD_TO VAR_FORWARD_TO_PORT VAR_CHROOT
-%token VAR_USERNAME
+%token VAR_USERNAME VAR_DIRECTORY VAR_LOGFILE VAR_PIDFILE
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -90,7 +90,7 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_outgoing_port | server_outgoing_range | server_do_ip4 |
 	server_do_ip6 | server_do_udp | server_do_tcp | server_forward_to |
 	server_forward_to_port | server_interface | server_chroot | 
-	server_username;
+	server_username | server_directory | server_logfile | server_pidfile;
 server_num_threads: VAR_NUM_THREADS STRING 
 	{ 
 		OUTYY(("P(server_num_threads:%s)\n", $2)); 
@@ -213,6 +213,27 @@ server_username: VAR_USERNAME STRING
 		OUTYY(("P(server_username:%s)\n", $2));
 		free(cfg_parser->cfg->username);
 		cfg_parser->cfg->username = $2;
+	}
+	;
+server_directory: VAR_DIRECTORY STRING
+	{
+		OUTYY(("P(server_directory:%s)\n", $2));
+		free(cfg_parser->cfg->directory);
+		cfg_parser->cfg->directory = $2;
+	}
+	;
+server_logfile: VAR_LOGFILE STRING
+	{
+		OUTYY(("P(server_logfile:%s)\n", $2));
+		free(cfg_parser->cfg->logfile);
+		cfg_parser->cfg->logfile = $2;
+	}
+	;
+server_pidfile: VAR_PIDFILE STRING
+	{
+		OUTYY(("P(server_pidfile:%s)\n", $2));
+		free(cfg_parser->cfg->pidfile);
+		cfg_parser->cfg->pidfile = $2;
 	}
 	;
 %%

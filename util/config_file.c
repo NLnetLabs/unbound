@@ -77,18 +77,12 @@ config_create()
 	cfg->do_tcp = 1;
 	cfg->outgoing_base_port = cfg->port + 1000;
 	cfg->outgoing_num_ports = 16;
-	if(!(cfg->fwd_address = strdup(""))) {
-		config_delete(cfg);
-		return NULL;
-	}
-	if(!(cfg->username = strdup(""))) {
-		config_delete(cfg);
-		return NULL;
-	}
-	if(!(cfg->chrootdir = strdup(""))) {
-		config_delete(cfg);
-		return NULL;
-	}
+	if(!(cfg->fwd_address = strdup(""))) {config_delete(cfg); return NULL;}
+	if(!(cfg->username = strdup(""))) {config_delete(cfg); return NULL;}
+	if(!(cfg->chrootdir = strdup(""))) {config_delete(cfg); return NULL;}
+	if(!(cfg->directory = strdup("/etc/unbound"))) {config_delete(cfg); return NULL;}
+	if(!(cfg->logfile = strdup(""))) {config_delete(cfg); return NULL;}
+	if(!(cfg->pidfile = strdup("unbound.pid"))) {config_delete(cfg); return NULL;}
 	cfg->fwd_port = UNBOUND_DNS_PORT;
 	cfg->do_daemonize = 0;
 	cfg->num_ifs = 0;
@@ -140,6 +134,9 @@ config_delete(struct config_file* cfg)
 	free(cfg->fwd_address);
 	free(cfg->username);
 	free(cfg->chrootdir);
+	free(cfg->directory);
+	free(cfg->logfile);
+	free(cfg->pidfile);
 	if(cfg->ifs) {
 		int i;
 		for(i=0; i<cfg->num_ifs; i++)

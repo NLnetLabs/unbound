@@ -79,9 +79,19 @@ If given a chroot is done to the given directory. The default is none ("").
 .It \fBusername:\fR <name>
 If given, after binding the port the user privileges are dropped. Default is
 not to change user, username: "". If this user is not capable of binding the
-port, reloads (by signal HUP) will work, however, if you change the port
-number in the config file, and that port number requires privileges, then
-a reload will fail to bind to the new port number; a restart is needed.
+port, reloads (by signal HUP) will still retain the opened ports.
+If you change the port number in the config file, and that new port number 
+requires privileges, then a restart is needed.
+.It \fBdirectory:\fR <directory>
+Sets the working directory for the program.
+.It \fBlogfile:\fR <filename>
+If "" is given, logging goes to stderr, or nowhere once daemonized.
+The logfile is appended to, in the following format: 
+[seconds since 1970] unbound[pid]: type: message. 
+.It \fBpidfile:\fR <filename>
+The process id is written to the file. Default is "unbound.pid". So,
+kill -HUP `cat /etc/unbound/unbound.pid` will trigger a reload,
+kill -QUIT `cat /etc/unbound/unbound.pid` will gracefully terminate.
 
 .Sh FILES
 .Bl -tag -width indent

@@ -44,10 +44,28 @@
 #endif
 
 enum verbosity_value verbosity = 0;
+static FILE* logfile = 0;
 
 void
-log_init()
+log_init(const char* filename)
 {
+	FILE *f;
+	if(!filename || !filename[0]) {
+		if(logfile && logfile != stderr)
+			fclose(logfile);
+		logfile = stderr;
+		return;
+	}
+	/* open the file for logging */
+	f = fopen(filename, "a");
+	if(!f) {
+		log_err("Could not open logfile %s: %s", filename, 
+			strerror(errno));
+		return;
+	}
+	if(logfile && logfile != stderr)
+		fclose(logfile);
+	logfile = f;
 }
 
 void
@@ -56,9 +74,9 @@ log_vmsg(const char* type, const char *format, va_list args)
 	char message[MAXSYSLOGMSGLEN];
 	const char* ident="unbound";
 	vsnprintf(message, sizeof(message), format, args);
-	fprintf(stderr, "[%d] %s[%d] %s: %s\n",
+	fprintf(logfile, "[%d] %s[%d] %s: %s\n",
 		(int)time(NULL), ident, (int)getpid(), type, message);
-	fflush(stderr);
+	fflush(logfile);
 }
 
 /**
@@ -84,6 +102,19 @@ log_err(const char *format, ...)
         va_list args;
 	va_start(args, format);
 	log_vmsg("error", format, args);
+	va_end(args);
+}
+
+/**
+ * implementation of log_warn
+ * @param format: format string printf-style.
+ */
+void
+log_warn(const char *format, ...)
+{
+        va_list args;
+	va_start(args, format);
+	log_vmsg("warning", format, args);
 	va_end(args);
 }
 
