@@ -3,6 +3,9 @@
  * BSD licensed, taken from binutils 2.17.
  */
 
+#include "config.h"
+#include "util/random.h"
+
 /*
  * Copyright (c) 1983 Regents of the University of California.
  * All rights reserved.
@@ -39,53 +42,20 @@
  * It was reworked for the GNU C Library by Roland McGrath.
  */
 
-/*
-
-@deftypefn Supplement {long int} random (void)
-@deftypefnx Supplement void srandom (unsigned int @var{seed})
-@deftypefnx Supplement void* initstate (unsigned int @var{seed}, void *@var{arg_state}, unsigned long @var{n})
-@deftypefnx Supplement void* setstate (void *@var{arg_state})
-
-Random number functions.  @code{random} returns a random number in the
-range 0 to @code{LONG_MAX}.  @code{srandom} initializes the random
-number generator to some starting point determined by @var{seed}
-(else, the values returned by @code{random} are always the same for each
-run of the program).  @code{initstate} and @code{setstate} allow fine-grained
-control over the state of the random number generator.
-
-@end deftypefn
-
-*/
+/**
+ * \file
+ * Thread safe random functions. Similar to random(3) and initstate(3).
+ */
 
 #include <errno.h>
 
-#if 0
-
-#include <ansidecl.h>
-#include <limits.h>
-#include <stddef.h>
-#include <stdlib.h>
-
-#else
-
+#ifndef ULONG_MAX
 #define	ULONG_MAX  ((unsigned long)(~0L))     /* 0xFFFFFFFF for 32-bits */
+#endif
+#ifndef LONG_MAX
 #define	LONG_MAX   ((long)(ULONG_MAX >> 1))   /* 0x7FFFFFFF for 32-bits*/
-
-#ifdef __STDC__
-#  define PTR void *
-#  ifndef NULL
-#    define NULL (void *) 0
-#  endif
-#else
-#  define PTR char *
-#  ifndef NULL
-#    define NULL (void *) 0
-#  endif
 #endif
 
-#endif
-
-long int random (void);
 
 /* An improved random number generation package.  In addition to the standard
    rand()/srand() like interface, this package also has a special state info
@@ -164,9 +134,10 @@ long int random (void);
 
 #define	MAX_TYPES	5	/* Max number of types above.  */
 
+/*
 static int degrees[MAX_TYPES] = { DEG_0, DEG_1, DEG_2, DEG_3, DEG_4 };
 static int seps[MAX_TYPES] = { SEP_0, SEP_1, SEP_2, SEP_3, SEP_4 };
-
+*/
 
 
 /* Initially, everything is set up as if from:
@@ -178,6 +149,7 @@ static int seps[MAX_TYPES] = { SEP_0, SEP_1, SEP_2, SEP_3, SEP_4 };
    position of the rear pointer is just
 	(MAX_TYPES * (rptr - state)) + TYPE_3 == TYPE_3.  */
 
+/*
 static long int randtbl[DEG_3 + 1] =
   { TYPE_3,
       0x9a319039, 0x32d9c024, 0x9b663182, 0x5da1f342,
@@ -189,6 +161,7 @@ static long int randtbl[DEG_3 + 1] =
       0x36413f93, 0xc622c298, 0xf5a42ab8, 0x8a88d77b,
       0xf5ad9d0e, 0x8999220b, 0x27fb47b9
     };
+*/
 
 /* FPTR and RPTR are two pointers into the state info, a front and a rear
    pointer.  These two pointers are always rand_sep places aparts, as they
@@ -200,9 +173,10 @@ static long int randtbl[DEG_3 + 1] =
    in the initialization of randtbl) because the state table pointer is set
    to point to randtbl[1] (as explained below).)  */
 
+/*
 static long int *fptr = &randtbl[SEP_3 + 1];
 static long int *rptr = &randtbl[1];
-
+*/
 
 
 /* The following things are the pointer to the state information table,
@@ -215,6 +189,7 @@ static long int *rptr = &randtbl[1];
    indexing every time to find the address of the last element to see if
    the front and rear pointers have wrapped.  */
 
+/*
 static long int *state = &randtbl[1];
 
 static int rand_type = TYPE_3;
@@ -222,6 +197,7 @@ static int rand_deg = DEG_3;
 static int rand_sep = SEP_3;
 
 static long int *end_ptr = &randtbl[sizeof(randtbl) / sizeof(randtbl[0])];
+*/
 
 /* Initialize the random number generator based on the given seed.  If the
    type is the trivial no-state-information type, just remember the seed.
@@ -231,19 +207,19 @@ static long int *end_ptr = &randtbl[sizeof(randtbl) / sizeof(randtbl[0])];
    information a given number of times to get rid of any initial dependencies
    introduced by the L.C.R.N.G.  Note that the initialization of randtbl[]
    for default usage relies on values produced by this routine.  */
-void
-srandom (unsigned int x)
+static void
+ub_srandom (struct ub_randstate* s, unsigned int x)
 {
-  state[0] = x;
-  if (rand_type != TYPE_0)
+  s->state[0] = x;
+  if (s->rand_type != TYPE_0)
     {
       register long int i;
-      for (i = 1; i < rand_deg; ++i)
-	state[i] = (1103515145 * state[i - 1]) + 12345;
-      fptr = &state[rand_sep];
-      rptr = &state[0];
-      for (i = 0; i < 10 * rand_deg; ++i)
-	random();
+      for (i = 1; i < s->rand_deg; ++i)
+	s->state[i] = (1103515145 * s->state[i - 1]) + 12345;
+      s->fptr = &s->state[s->rand_sep];
+      s->rptr = &s->state[0];
+      for (i = 0; i < 10 * s->rand_deg; ++i)
+	ub_random(s);
     }
 }
 
@@ -258,112 +234,61 @@ srandom (unsigned int x)
    Note: The first thing we do is save the current state, if any, just like
    setstate so that it doesn't matter when initstate is called.
    Returns a pointer to the old state.  */
-PTR
-initstate (unsigned int seed, PTR arg_state, unsigned long n)
+int
+ub_initstate (unsigned int seed, struct ub_randstate* state, unsigned long n)
 {
-  PTR ostate = (PTR) &state[-1];
+  memset(state, 0, sizeof(state));
+  state->state = calloc(1, n);
+  if(!state->state)
+	  return 0;
 
-  if (rand_type == TYPE_0)
-    state[-1] = rand_type;
-  else
-    state[-1] = (MAX_TYPES * (rptr - state)) + rand_type;
   if (n < BREAK_1)
     {
       if (n < BREAK_0)
 	{
 	  errno = EINVAL;
-	  return NULL;
+	  return 0;
 	}
-      rand_type = TYPE_0;
-      rand_deg = DEG_0;
-      rand_sep = SEP_0;
+      state->rand_type = TYPE_0;
+      state->rand_deg = DEG_0;
+      state->rand_sep = SEP_0;
     }
   else if (n < BREAK_2)
     {
-      rand_type = TYPE_1;
-      rand_deg = DEG_1;
-      rand_sep = SEP_1;
+      state->rand_type = TYPE_1;
+      state->rand_deg = DEG_1;
+      state->rand_sep = SEP_1;
     }
   else if (n < BREAK_3)
     {
-      rand_type = TYPE_2;
-      rand_deg = DEG_2;
-      rand_sep = SEP_2;
+      state->rand_type = TYPE_2;
+      state->rand_deg = DEG_2;
+      state->rand_sep = SEP_2;
     }
   else if (n < BREAK_4)
     {
-      rand_type = TYPE_3;
-      rand_deg = DEG_3;
-      rand_sep = SEP_3;
+      state->rand_type = TYPE_3;
+      state->rand_deg = DEG_3;
+      state->rand_sep = SEP_3;
     }
   else
     {
-      rand_type = TYPE_4;
-      rand_deg = DEG_4;
-      rand_sep = SEP_4;
+      state->rand_type = TYPE_4;
+      state->rand_deg = DEG_4;
+      state->rand_sep = SEP_4;
     }
 
-  state = &((long int *) arg_state)[1];	/* First location.  */
   /* Must set END_PTR before srandom.  */
-  end_ptr = &state[rand_deg];
-  srandom(seed);
-  if (rand_type == TYPE_0)
-    state[-1] = rand_type;
+  state->end_ptr = &state->state[state->rand_deg];
+  ub_srandom(state, seed);
+  /*
+  if (state->rand_type == TYPE_0)
+    state->state[-1] = state->rand_type;
   else
-    state[-1] = (MAX_TYPES * (rptr - state)) + rand_type;
+    state->state[-1] = (MAX_TYPES * (state->rptr - state->state)) + state->rand_type;
+    */
 
-  return ostate;
-}
-
-/* Restore the state from the given state array.
-   Note: It is important that we also remember the locations of the pointers
-   in the current state information, and restore the locations of the pointers
-   from the old state information.  This is done by multiplexing the pointer
-   location into the zeroeth word of the state information. Note that due
-   to the order in which things are done, it is OK to call setstate with the
-   same state as the current state
-   Returns a pointer to the old state information.  */
-
-PTR
-setstate (PTR arg_state)
-{
-  register long int *new_state = (long int *) arg_state;
-  register int type = new_state[0] % MAX_TYPES;
-  register int rear = new_state[0] / MAX_TYPES;
-  PTR ostate = (PTR) &state[-1];
-
-  if (rand_type == TYPE_0)
-    state[-1] = rand_type;
-  else
-    state[-1] = (MAX_TYPES * (rptr - state)) + rand_type;
-
-  switch (type)
-    {
-    case TYPE_0:
-    case TYPE_1:
-    case TYPE_2:
-    case TYPE_3:
-    case TYPE_4:
-      rand_type = type;
-      rand_deg = degrees[type];
-      rand_sep = seps[type];
-      break;
-    default:
-      /* State info munged.  */
-      errno = EINVAL;
-      return NULL;
-    }
-
-  state = &new_state[1];
-  if (rand_type != TYPE_0)
-    {
-      rptr = &state[rear];
-      fptr = &state[(rear + rand_sep) % rand_deg];
-    }
-  /* Set end_ptr too.  */
-  end_ptr = &state[rand_deg];
-
-  return ostate;
+  return 1;
 }
 
 /* If we are using the trivial TYPE_0 R.N.G., just do the old linear
@@ -378,30 +303,30 @@ setstate (PTR arg_state)
    pointer if the front one has wrapped.  Returns a 31-bit random number.  */
 
 long int
-random (void)
+ub_random (struct ub_randstate* s)
 {
-  if (rand_type == TYPE_0)
+  if (s->rand_type == TYPE_0)
     {
-      state[0] = ((state[0] * 1103515245) + 12345) & LONG_MAX;
-      return state[0];
+      s->state[0] = ((s->state[0] * 1103515245) + 12345) & LONG_MAX;
+      return s->state[0];
     }
   else
     {
       long int i;
-      *fptr += *rptr;
+      *s->fptr += *s->rptr;
       /* Chucking least random bit.  */
-      i = (*fptr >> 1) & LONG_MAX;
-      ++fptr;
-      if (fptr >= end_ptr)
+      i = (*s->fptr >> 1) & LONG_MAX;
+      ++s->fptr;
+      if (s->fptr >= s->end_ptr)
 	{
-	  fptr = state;
-	  ++rptr;
+	  s->fptr = s->state;
+	  ++s->rptr;
 	}
       else
 	{
-	  ++rptr;
-	  if (rptr >= end_ptr)
-	    rptr = state;
+	  ++s->rptr;
+	  if (s->rptr >= s->end_ptr)
+	    s->rptr = s->state;
 	}
       return i;
     }
