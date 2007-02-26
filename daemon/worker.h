@@ -51,6 +51,7 @@ struct outside_network;
 struct config_file;
 struct daemon;
 struct listen_port;
+struct ub_randstate;
 
 /** size of table used for random numbers. large to be more secure. */
 #define RND_STATE_SIZE 256
@@ -86,7 +87,7 @@ struct worker {
 	socklen_t fwd_addrlen;
 
 	/** random() table for this worker. */
-	char* rndstate;
+	struct ub_randstate* rndstate;
 	/** do we need to restart (instead of exit) ? */
 	int need_to_restart;
 };

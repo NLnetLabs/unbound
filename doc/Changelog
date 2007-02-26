@@ -1,3 +1,6 @@
+26 February 2007: Wouter
+	- ub_random code used to select ID and port.
+
 23 February 2007: Wouter
 	- Can do reloads on sigHUP. Everything is stopped, and freed,
 	  except the listening ports. Then the config file is reread.

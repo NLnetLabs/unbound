@@ -45,6 +45,7 @@
 #include "util/netevent.h"
 #include "util/log.h"
 #include "util/net_help.h"
+#include "util/random.h"
 
 #ifdef HAVE_SYS_TYPES_H
 #  include <sys/types.h>
@@ -391,7 +392,8 @@ pending_delete(struct outside_network* outnet, struct pending* p)
 static struct pending*
 new_pending(struct outside_network* outnet, ldns_buffer* packet, 
 	struct sockaddr_storage* addr, socklen_t addrlen,
-	comm_point_callback_t* callback, void* callback_arg)
+	comm_point_callback_t* callback, void* callback_arg, 
+	struct ub_randstate* rnd)
 {
 	/* alloc */
 	int id_tries = 0;
@@ -409,7 +411,7 @@ new_pending(struct outside_network* outnet, ldns_buffer* packet,
 	}
 	/* set */
 	/* id uses lousy random() TODO use better and entropy */
-	pend->id = (random()>>8) & 0xffff;
+	pend->id = ((unsigned)ub_random(rnd)>>8) & 0xffff;
 	LDNS_ID_SET(ldns_buffer_begin(packet), pend->id);
 	memcpy(&pend->addr, addr, addrlen);
 	pend->addrlen = addrlen;
@@ -421,7 +423,7 @@ new_pending(struct outside_network* outnet, ldns_buffer* packet,
 	pend->node.key = pend;
 	while(!rbtree_insert(outnet->pending, &pend->node)) {
 		/* change ID to avoid collision */
-		pend->id = (random()>>8) & 0xffff;
+		pend->id = ((unsigned)ub_random(rnd)>>8) & 0xffff;
 		LDNS_ID_SET(ldns_buffer_begin(packet), pend->id);
 		id_tries++;
 		if(id_tries == MAX_ID_RETRY) {
@@ -453,9 +455,11 @@ addr_is_ip6(struct sockaddr_storage* addr)
  * Select outgoing comm point for a query. Fills in c. 
  * @param outnet: network structure that has arrays of ports to choose from.
  * @param pend: the message to send. c is filled in, randomly chosen.
+ * @param rnd: random state for generating ID and port.
  */
 static void 
-select_port(struct outside_network* outnet, struct pending* pend)
+select_port(struct outside_network* outnet, struct pending* pend,
+	struct ub_randstate* rnd)
 {
 	double precho;
 	int chosen, nummax;
@@ -473,8 +477,8 @@ select_port(struct outside_network* outnet, struct pending* pend)
 	}
 
 	/* choose a random outgoing port and interface */
-	/* uses lousy random() function. TODO: entropy source. */
-	precho = (double)random() * (double)nummax / 
+	/* TODO: entropy source. */
+	precho = (double)ub_random(rnd) * (double)nummax / 
 		((double)RAND_MAX + 1.0);
 	chosen = (int)precho;
 
@@ -494,18 +498,19 @@ select_port(struct outside_network* outnet, struct pending* pend)
 void 
 pending_udp_query(struct outside_network* outnet, ldns_buffer* packet, 
 	struct sockaddr_storage* addr, socklen_t addrlen, int timeout,
-	comm_point_callback_t* cb, void* cb_arg)
+	comm_point_callback_t* cb, void* cb_arg, struct ub_randstate* rnd)
 {
 	struct pending* pend;
 	struct timeval tv;
 
 	/* create pending struct and change ID to be unique */
-	if(!(pend=new_pending(outnet, packet, addr, addrlen, cb, cb_arg))) {
+	if(!(pend=new_pending(outnet, packet, addr, addrlen, cb, cb_arg, 
+		rnd))) {
 		/* callback user for the error */
 		(void)(*cb)(NULL, cb_arg, NETEVENT_CLOSED, NULL);
 		return;
 	}
-	select_port(outnet, pend);
+	select_port(outnet, pend, rnd);
 
 	/* send it over the commlink */
 	if(!comm_point_send_udp_msg(pend->c, packet, (struct sockaddr*)addr, 

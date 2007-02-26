@@ -48,6 +48,7 @@
 #include "util/netevent.h"
 struct pending;
 struct pending_timeout;
+struct ub_randstate;
 
 /**
  * Send queries to outside servers and wait for answers from servers.
@@ -140,10 +141,12 @@ void outside_network_delete(struct outside_network* outnet);
  *    The routine does not return an error, instead it calls the callback,
  *    with an error code if an error happens.
  * @param callback_arg: user argument for callback function.
+ * @param rnd: random state for generating ID and port.
  */
 void pending_udp_query(struct outside_network* outnet, ldns_buffer* packet, 
 	struct sockaddr_storage* addr, socklen_t addrlen, int timeout,
-	comm_point_callback_t* callback, void* callback_arg);
+	comm_point_callback_t* callback, void* callback_arg,
+	struct ub_randstate* rnd);
 
 /**
  * Delete pending answer.

@@ -42,6 +42,7 @@
 #include "config.h"
 #include "util/log.h"
 #include "util/net_help.h"
+#include "util/random.h"
 #include "daemon/worker.h"
 #include "util/netevent.h"
 #include "util/config_file.h"
@@ -103,7 +104,7 @@ worker_process_query(struct worker* worker)
 		worker->query_reply.c->buffer));
 	pending_udp_query(worker->back, worker->query_reply.c->buffer, 
 		&worker->fwd_addr, worker->fwd_addrlen, UDP_QUERY_TIMEOUT,
-		worker_handle_reply, worker);
+		worker_handle_reply, worker, worker->rndstate);
 }
 
 /** check request sanity. Returns error code, 0 OK, or -1 discard. 
@@ -214,6 +215,7 @@ worker_init(struct config_file *cfg, struct listen_port* ports,
 {
 	struct worker* worker = (struct worker*)calloc(1, 
 		sizeof(struct worker));
+	unsigned int seed;
 	if(!worker) 
 		return NULL;
 	worker->need_to_restart = 0;
@@ -249,12 +251,14 @@ worker_init(struct config_file *cfg, struct listen_port* ports,
 		return NULL;
 	}
 	/* init random(), large table size. */
-	if(!(worker->rndstate = (char*)malloc(RND_STATE_SIZE))) {
+	if(!(worker->rndstate = (struct ub_randstate*)calloc(1,
+		sizeof(struct ub_randstate)))) {
 		log_err("malloc rndtable failed.");
 		worker_delete(worker);
 		return NULL;
 	}
-	if(!initstate(time(NULL)^getpid(), worker->rndstate, RND_STATE_SIZE)) {
+	seed = (unsigned int)time(NULL) ^ (unsigned int)getpid();
+	if(!ub_initstate(seed, worker->rndstate, RND_STATE_SIZE)) {
 		log_err("could not init random numbers.");
 		worker_delete(worker);
 		return NULL;
