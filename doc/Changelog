@@ -3,6 +3,8 @@
 	- log code prints thread id.
 	- unbound can thread itself, with reload(HUP) and quit working
 	  correctly.
+	- don't open pipes for #0, doesn't need it.
+	- listens to SIGTERM, SIGQUIT, SIGINT (all quit) and SIGHUP (reload).
 
 23 February 2007: Wouter
 	- Can do reloads on sigHUP. Everything is stopped, and freed,

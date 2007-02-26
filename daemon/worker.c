@@ -262,21 +262,23 @@ worker_create(struct daemon* daemon, int id)
 {
 	struct worker* worker = (struct worker*)calloc(1, 
 		sizeof(struct worker));
-	int sv[2];
 	if(!worker) 
 		return NULL;
 	worker->daemon = daemon;
 	worker->thread_num = id;
 	worker->cmd_send_fd = -1;
 	worker->cmd_recv_fd = -1;
-	/* create socketpair to communicate with worker */
-	if(socketpair(AF_UNIX, SOCK_STREAM, 0, sv) == -1) {
-		free(worker);
-		log_err("socketpair: %s", strerror(errno));
-		return NULL;
+	if(id != 0) {
+		int sv[2];
+		/* create socketpair to communicate with worker */
+		if(socketpair(AF_UNIX, SOCK_STREAM, 0, sv) == -1) {
+			free(worker);
+			log_err("socketpair: %s", strerror(errno));
+			return NULL;
+		}
+		worker->cmd_send_fd = sv[0];
+		worker->cmd_recv_fd = sv[1];
 	}
-	worker->cmd_send_fd = sv[0];
-	worker->cmd_recv_fd = sv[1];
 	return worker;
 }
 
@@ -342,13 +344,15 @@ worker_init(struct worker* worker, struct config_file *cfg,
 		worker_delete(worker);
 		return 0;
 	}
-	/* start listening to commands */
-	if(!(worker->cmd_com=comm_point_create_local(worker->base, 
-		worker->cmd_recv_fd, buffer_size, worker_handle_control_cmd, 
-		worker))) {
-		log_err("could not create control compt.");
-		worker_delete(worker);
-		return 0;
+	if(worker->thread_num != 0) {
+		/* start listening to commands */
+		if(!(worker->cmd_com=comm_point_create_local(worker->base, 
+			worker->cmd_recv_fd, buffer_size, 
+			worker_handle_control_cmd, worker))) {
+			log_err("could not create control compt.");
+			worker_delete(worker);
+			return 0;
+		}
 	}
 
 	/* set forwarder address */
