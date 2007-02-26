@@ -137,6 +137,9 @@ static void comm_timer_callback(int fd, short event, void* arg);
  */
 static void comm_signal_callback(int fd, short event, void* arg);
 
+/** libevent callback for AF_UNIX fds. */
+static void comm_point_local_handle_callback(int fd, short event, void* arg);
+
 /** create a tcp handler with a parent */
 static struct comm_point* comm_point_create_tcp_handler(
 	struct comm_base *base, struct comm_point* parent, size_t bufsize,
@@ -327,7 +330,8 @@ tcp_callback_writer(struct comm_point* c)
 {
 	log_assert(c->type == comm_tcp);
 	ldns_buffer_clear(c->buffer);
-	c->tcp_is_reading = 1;
+	if(c->tcp_do_toggle_rw)
+		c->tcp_is_reading = 1;
 	c->tcp_byte_count = 0;
 	comm_point_stop_listening(c);
 	/* for listening socket */
@@ -339,11 +343,13 @@ static void
 tcp_callback_reader(struct comm_point* c)
 {
 	struct comm_reply rep;
-	log_assert(c->type == comm_tcp);
+	log_assert(c->type == comm_tcp || c->type == comm_local);
 	ldns_buffer_flip(c->buffer);
-	c->tcp_is_reading = 0;
+	if(c->tcp_do_toggle_rw)
+		c->tcp_is_reading = 0;
 	c->tcp_byte_count = 0;
-	comm_point_stop_listening(c);
+	if(c->type == comm_tcp)
+		comm_point_stop_listening(c);
 	rep.c = c;
 	rep.addrlen = 0;
 	if( (*c->callback)(c, c->cb_arg, NETEVENT_NOERROR, &rep) ) {
@@ -354,13 +360,14 @@ tcp_callback_reader(struct comm_point* c)
 /** Handle tcp reading callback. 
  * @param fd: file descriptor of socket.
  * @param c: comm point to read from into buffer.
+ * @param short_ok: if true, very short packets are OK (for comm_local).
  * @return: 0 on error 
  */
 static int
-comm_point_tcp_handle_read(int fd, struct comm_point* c)
+comm_point_tcp_handle_read(int fd, struct comm_point* c, int short_ok)
 {
 	ssize_t r;
-	log_assert(c->type == comm_tcp);
+	log_assert(c->type == comm_tcp || c->type == comm_local);
 	if(!c->tcp_is_reading)
 		return 0;
 
@@ -386,7 +393,8 @@ comm_point_tcp_handle_read(int fd, struct comm_point* c)
 		}
 		ldns_buffer_set_limit(c->buffer, 
 			ldns_buffer_read_u16_at(c->buffer, 0));
-		if(ldns_buffer_limit(c->buffer) < LDNS_HEADER_SIZE) {
+		if(!short_ok && 
+			ldns_buffer_limit(c->buffer) < LDNS_HEADER_SIZE) {
 			verbose(VERB_DETAIL, "tcp: dropped bogus too short.");
 			return 0;
 		}
@@ -462,7 +470,7 @@ comm_point_tcp_handle_callback(int fd, short event, void* arg)
 	log_assert(c->type == comm_tcp);
 
 	if(event&EV_READ) {
-		if(!comm_point_tcp_handle_read(fd, c)) {
+		if(!comm_point_tcp_handle_read(fd, c, 0)) {
 			reclaim_tcp_handler(c);
 			if(!c->tcp_do_close)
 				(void)(*c->callback)(c, c->cb_arg, 
@@ -488,6 +496,20 @@ comm_point_tcp_handle_callback(int fd, short event, void* arg)
 		return;
 	}
 	log_err("Ignored event %d for tcphdl.", event);
+}
+
+static void comm_point_local_handle_callback(int fd, short event, void* arg)
+{
+	struct comm_point* c = (struct comm_point*)arg;
+	log_assert(c->type == comm_local);
+
+	if(event&EV_READ) {
+		if(!comm_point_tcp_handle_read(fd, c, 1)) {
+			log_err("error in localhdl");
+		}
+		return;
+	}
+	log_err("Ignored event %d for localhdl.", event);
 }
 
 struct comm_point* 
@@ -571,7 +593,7 @@ comm_point_create_tcp_handler(struct comm_base *base,
 	c->type = comm_tcp;
 	c->tcp_do_close = 0;
 	c->do_not_close = 0;
-	c->tcp_do_toggle_rw = 0;
+	c->tcp_do_toggle_rw = 1;
 	c->callback = callback;
 	c->cb_arg = callback_arg;
 	/* add to parent free list */
@@ -650,6 +672,56 @@ comm_point_create_tcp(struct comm_base *base, int fd, int num, size_t bufsize,
 		}
 	}
 	
+	return c;
+}
+
+struct comm_point* 
+comm_point_create_local(struct comm_base *base, int fd, size_t bufsize,
+        comm_point_callback_t* callback, void* callback_arg)
+{
+	struct comm_point* c = (struct comm_point*)calloc(1,
+		sizeof(struct comm_point));
+	short evbits;
+	if(!c)
+		return NULL;
+	c->ev = (struct internal_event*)calloc(1,
+		sizeof(struct internal_event));
+	if(!c->ev) {
+		free(c);
+		return NULL;
+	}
+	c->fd = fd;
+	c->buffer = ldns_buffer_new(bufsize);
+	if(!c->buffer) {
+		free(c->ev);
+		free(c);
+		return NULL;
+	}
+	c->timeout = NULL;
+	c->tcp_is_reading = 1;
+	c->tcp_byte_count = 0;
+	c->tcp_parent = NULL;
+	c->max_tcp_count = 0;
+	c->tcp_handlers = NULL;
+	c->tcp_free = NULL;
+	c->type = comm_local;
+	c->tcp_do_close = 0;
+	c->do_not_close = 1;
+	c->tcp_do_toggle_rw = 0;
+	c->callback = callback;
+	c->cb_arg = callback_arg;
+	/* libevent stuff */
+	evbits = EV_PERSIST | EV_READ;
+	event_set(&c->ev->ev, c->fd, evbits, comm_point_local_handle_callback, 
+		c);
+	if(event_base_set(base->eb->base, &c->ev->ev) != 0 ||
+		event_add(&c->ev->ev, c->timeout) != 0 )
+	{
+		log_err("could not add tcphdl event");
+		free(c->ev);
+		free(c);
+		return NULL;
+	}
 	return c;
 }
 

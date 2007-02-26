@@ -135,7 +135,9 @@ struct comm_point {
 		/** TCP accept socket - only creates handlers if readable. */
 		comm_tcp_accept, 
 		/** TCP handler socket - handle byteperbyte readwrite. */
-		comm_tcp  
+		comm_tcp,
+		/** AF_UNIX socket - for internal commands. */
+		comm_local
 	} type;
 
 	/* ---------- Behaviour ----------- */
@@ -284,6 +286,19 @@ struct comm_point* comm_point_create_udp(struct comm_base* base,
  */
 struct comm_point* comm_point_create_tcp(struct comm_base* base,
 	int fd, int num, size_t bufsize, 
+	comm_point_callback_t* callback, void* callback_arg);
+
+/**
+ * Create commpoint to listen to a local domain file descriptor.
+ * @param base: in which base to alloc the commpoint.
+ * @param fd: file descriptor of open AF_UNIX socket set to listen nonblocking.
+ * @param bufsize: size of buffer to create for handlers.
+ * @param callback: callback function pointer for the handler.
+ * @param callback_arg: will be passed to your callback function.
+ * @return: the commpoint or NULL on error.
+ */
+struct comm_point* comm_point_create_local(struct comm_base* base,
+	int fd, size_t bufsize, 
 	comm_point_callback_t* callback, void* callback_arg);
 
 /**

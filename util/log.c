@@ -39,6 +39,7 @@
 
 #include "config.h"
 #include "util/log.h"
+#include "util/locks.h"
 #ifdef HAVE_TIME_H
 #include <time.h>
 #endif
@@ -64,6 +65,7 @@ log_init(const char* filename)
 			strerror(errno));
 		return;
 	}
+	verbose(VERB_DETAIL, "switching to logfile %s", filename);
 	if(logfile && logfile != stderr)
 		fclose(logfile);
 	logfile = f;
@@ -75,8 +77,10 @@ log_vmsg(const char* type, const char *format, va_list args)
 	char message[MAXSYSLOGMSGLEN];
 	const char* ident="unbound";
 	vsnprintf(message, sizeof(message), format, args);
-	fprintf(logfile, "[%d] %s[%d] %s: %s\n",
-		(int)time(NULL), ident, (int)getpid(), type, message);
+	fprintf(logfile, "[%d] %s[%d:%x] %s: %s\n",
+		(int)time(NULL), ident, (int)getpid(), 
+		(int)ub_thread_self(),
+		type, message);
 	fflush(logfile);
 }
 

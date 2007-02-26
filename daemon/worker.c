@@ -60,6 +60,20 @@
 /** the size of ID and flags, opcode, rcode in dns packet */
 #define ID_AND_FLAGS 4
 
+void 
+worker_send_cmd(struct worker* worker, ldns_buffer* buffer,
+	enum worker_commands cmd)
+{
+	ldns_buffer_clear(buffer);
+	/* like DNS message, length data */
+	ldns_buffer_write_u16(buffer, sizeof(uint32_t));
+	ldns_buffer_write_u32(buffer, (uint32_t)cmd);
+	ldns_buffer_flip(buffer);
+	if(!write_socket(worker->cmd_send_fd, ldns_buffer_begin(buffer),
+		ldns_buffer_limit(buffer)))
+		log_err("write socket: %s", strerror(errno));
+}
+
 /** reply to query with given error code */
 static void 
 replyerror(int r, struct worker* worker)
@@ -149,6 +163,36 @@ worker_check_request(ldns_buffer* pkt)
 	return 0;
 }
 
+/** process control messages from the main thread. */
+static int 
+worker_handle_control_cmd(struct comm_point* c, void* arg, int error, 
+	struct comm_reply* ATTR_UNUSED(reply_info))
+{
+	struct worker* worker = (struct worker*)arg;
+	enum worker_commands cmd;
+	if(error != NETEVENT_NOERROR) {
+		if(error == NETEVENT_CLOSED)
+			comm_base_exit(worker->base);
+		else	log_info("control cmd: %d", error);
+		return 0;
+	}
+	log_info("control cmd");
+	if(ldns_buffer_limit(c->buffer) != sizeof(uint32_t)) {
+		fatal_exit("bad control msg length %d", 
+			(int)ldns_buffer_limit(c->buffer));
+	}
+	cmd = ldns_buffer_read_u32(c->buffer);
+	switch(cmd) {
+	case worker_cmd_quit:
+		comm_base_exit(worker->base);
+		break;
+	default:
+		log_err("bad command %d", (int)cmd);
+		break;
+	}
+	return 0;
+}
+
 /** handles callbacks from listening event interface */
 static int 
 worker_handle_request(struct comm_point* c, void* arg, int error,
@@ -210,59 +254,97 @@ worker_sighandler(int sig, void* arg)
 }
 
 struct worker* 
-worker_init(struct config_file *cfg, struct listen_port* ports,
-	size_t buffer_size)
+worker_create(struct daemon* daemon, int id)
 {
 	struct worker* worker = (struct worker*)calloc(1, 
 		sizeof(struct worker));
-	unsigned int seed;
+	int sv[2];
 	if(!worker) 
 		return NULL;
+	worker->daemon = daemon;
+	worker->thread_num = id;
+	worker->cmd_send_fd = -1;
+	worker->cmd_recv_fd = -1;
+	/* create socketpair to communicate with worker */
+	if(socketpair(AF_UNIX, SOCK_STREAM, 0, sv) == -1) {
+		free(worker);
+		log_err("socketpair: %s", strerror(errno));
+		return NULL;
+	}
+	worker->cmd_send_fd = sv[0];
+	worker->cmd_recv_fd = sv[1];
+	return worker;
+}
+
+int
+worker_init(struct worker* worker, struct config_file *cfg, 
+	struct listen_port* ports, size_t buffer_size, int do_sigs)
+{
+	unsigned int seed;
+	int startport;
 	worker->need_to_restart = 0;
 	worker->base = comm_base_create();
 	if(!worker->base) {
 		log_err("could not create event handling base");
 		worker_delete(worker);
-		return NULL;
+		return 0;
 	}
-	worker->comsig = comm_signal_create(worker->base, worker_sighandler, 
-		worker);
-	if(!worker->comsig || !comm_signal_bind(worker->comsig, SIGHUP)
-		|| !comm_signal_bind(worker->comsig, SIGINT)
-		|| !comm_signal_bind(worker->comsig, SIGQUIT)) {
-		log_err("could not create signal handlers");
-		worker_delete(worker);
-		return NULL;
+	if(do_sigs) {
+		worker->comsig = comm_signal_create(worker->base, 
+			worker_sighandler, worker);
+		if(!worker->comsig || !comm_signal_bind(worker->comsig, SIGHUP)
+			|| !comm_signal_bind(worker->comsig, SIGINT)
+			|| !comm_signal_bind(worker->comsig, SIGQUIT)) {
+			log_err("could not create signal handlers");
+			worker_delete(worker);
+			return 0;
+		}
+		ub_thread_sig_unblock(SIGHUP);
+		ub_thread_sig_unblock(SIGINT);
+		ub_thread_sig_unblock(SIGQUIT);
+	} else { /* !do_sigs */
+		worker->comsig = 0;
 	}
 	worker->front = listen_create(worker->base, ports,
 		buffer_size, worker_handle_request, worker);
 	if(!worker->front) {
 		log_err("could not create listening sockets");
 		worker_delete(worker);
-		return NULL;
+		return 0;
 	}
+	startport  = cfg->outgoing_base_port + 
+		cfg->outgoing_num_ports * worker->thread_num;
 	worker->back = outside_network_create(worker->base,
 		buffer_size, (size_t)cfg->outgoing_num_ports, cfg->ifs, 
-		cfg->num_ifs, cfg->do_ip4, cfg->do_ip6, 
-		cfg->outgoing_base_port);
+		cfg->num_ifs, cfg->do_ip4, cfg->do_ip6, startport);
 	if(!worker->back) {
 		log_err("could not create outgoing sockets");
 		worker_delete(worker);
-		return NULL;
+		return 0;
 	}
 	/* init random(), large table size. */
 	if(!(worker->rndstate = (struct ub_randstate*)calloc(1,
 		sizeof(struct ub_randstate)))) {
 		log_err("malloc rndtable failed.");
 		worker_delete(worker);
-		return NULL;
+		return 0;
 	}
-	seed = (unsigned int)time(NULL) ^ (unsigned int)getpid();
+	seed = (unsigned int)time(NULL) ^ (unsigned int)getpid() ^
+		(unsigned int)worker->thread_num;
 	if(!ub_initstate(seed, worker->rndstate, RND_STATE_SIZE)) {
 		log_err("could not init random numbers.");
 		worker_delete(worker);
-		return NULL;
+		return 0;
 	}
+	/* start listening to commands */
+	if(!(worker->cmd_com=comm_point_create_local(worker->base, 
+		worker->cmd_recv_fd, buffer_size, worker_handle_control_cmd, 
+		worker))) {
+		log_err("could not create control compt.");
+		worker_delete(worker);
+		return 0;
+	}
+
 	/* set forwarder address */
 	if(cfg->fwd_address && cfg->fwd_address[0]) {
 		if(!worker_set_fwd(worker, cfg->fwd_address, cfg->fwd_port)) {
@@ -270,7 +352,7 @@ worker_init(struct config_file *cfg, struct listen_port* ports,
 			fatal_exit("could not set forwarder address");
 		}
 	}
-	return worker;
+	return 1;
 }
 
 void 
@@ -284,6 +366,10 @@ worker_delete(struct worker* worker)
 {
 	if(!worker) 
 		return;
+	close(worker->cmd_send_fd);
+	worker->cmd_send_fd = -1;
+	close(worker->cmd_recv_fd);
+	worker->cmd_recv_fd = -1;
 	listen_delete(worker->front);
 	outside_network_delete(worker->back);
 	comm_signal_delete(worker->comsig);

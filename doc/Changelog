@@ -1,5 +1,8 @@
 26 February 2007: Wouter
 	- ub_random code used to select ID and port.
+	- log code prints thread id.
+	- unbound can thread itself, with reload(HUP) and quit working
+	  correctly.
 
 23 February 2007: Wouter
 	- Can do reloads on sigHUP. Everything is stopped, and freed,

@@ -56,6 +56,13 @@ struct ub_randstate;
 /** size of table used for random numbers. large to be more secure. */
 #define RND_STATE_SIZE 256
 
+/** worker commands */
+enum worker_commands {
+	/** make the worker quit */
+	worker_cmd_quit
+};
+
+
 /**
  * Structure holding working information for unbound.
  * Holds globally visible information.
@@ -65,6 +72,12 @@ struct worker {
 	struct daemon* daemon;
 	/** the thread number (in daemon array). */
 	int thread_num;
+	/** thread id */
+	ub_thread_t thr_id;
+	/** fd 0 of socketpair, write commands for worker to this one */
+	int cmd_send_fd;
+	/** fd 1 of socketpair, worker listens on this one */
+	int cmd_recv_fd;
 	/** the event base this worker works with */
 	struct comm_base* base;
 	/** the frontside listening interface where request events come in */
@@ -72,7 +85,9 @@ struct worker {
 	/** the backside outside network interface to the auth servers */
 	struct outside_network* back;
 	/** the signal handler */
-	struct comm_signal *comsig;
+	struct comm_signal* comsig;
+	/** commpoint to listen to commands. */
+	struct comm_point* cmd_com;
 
 	/** number of requests currently active */
 	int num_requests;
@@ -93,15 +108,26 @@ struct worker {
 };
 
 /**
+ * Create the worker structure. Bare bones version, zeroed struct,
+ * with backpointers only. Use worker_init on it later.
+ * @param daemon: the daemon that this worker thread is part of.
+ * @param id: the thread number from 0.. numthreads-1.
+ * @return: the new worker or NULL on alloc failure.
+ */
+struct worker* worker_create(struct daemon* daemon, int id);
+
+/**
  * Initialize worker.
  * Allocates event base, listens to ports
+ * @param worker: worker to initialize, created with worker_create.
  * @param cfg: configuration settings.
  * @param ports: list of shared query ports.
  * @param buffer_size: size of datagram buffer.
- * @return: The worker, or NULL on error.
+ * @param do_sigs: if true, worker installs signal handlers.
+ * @return: false on error.
  */
-struct worker* worker_init(struct config_file *cfg, struct listen_port* ports,
-	size_t buffer_size);
+int worker_init(struct worker* worker, struct config_file *cfg, 
+	struct listen_port* ports, size_t buffer_size, int do_sigs);
 
 /**
  * Make worker work.
@@ -121,5 +147,14 @@ void worker_delete(struct worker* worker);
  * @return: false on error.
  */
 int worker_set_fwd(struct worker* worker, const char* ip, int port);
+
+/**
+ * Send a command to a worker. Uses blocking writes.
+ * @param worker: worker to send command to.
+ * @param buffer: an empty buffer to use.
+ * @param cmd: command to send.
+ */
+void worker_send_cmd(struct worker* worker, ldns_buffer* buffer,
+        enum worker_commands cmd);
 
 #endif /* DAEMON_WORKER_H */

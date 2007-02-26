@@ -41,4 +41,52 @@
 
 #include "config.h"
 #include "util/locks.h"
+#include <signal.h>
+
+void 
+ub_thread_blocksigs()
+{
+#ifdef HAVE_PTHREAD
+	int err;
+	sigset_t sigset;
+	sigfillset(&sigset);
+	log_info("blocking signals");
+	if((err=pthread_sigmask(SIG_SETMASK, &sigset, NULL)))
+		fatal_exit("pthread_sigmask: %s", strerror(err));
+#else
+#  ifdef HAVE_SOLARIS_THREADS
+	int err;
+	sigset_t sigset;
+	sigfillset(&sigset);
+	if((err=thr_sigsetmask(SIG_SETMASK, &sigset, NULL)))
+		fatal_exit("thr_sigsetmask: %s", strerror(err));
+#  else 
+	/* have nothing, do nothing */
+#  endif /* HAVE_SOLARIS_THREADS */
+#endif /* HAVE_PTHREAD */
+}
+
+void ub_thread_sig_unblock(int sig)
+{
+#ifdef HAVE_PTHREAD
+	int err;
+	sigset_t sigset;
+	sigemptyset(&sigset);
+	sigaddset(&sigset, sig);
+	log_info("unblocking signal %d", sig);
+	if((err=pthread_sigmask(SIG_UNBLOCK, &sigset, NULL)))
+		fatal_exit("pthread_sigmask: %s", strerror(err));
+#else
+#  ifdef HAVE_SOLARIS_THREADS
+	int err;
+	sigset_t sigset;
+	sigemptyset(&sigset);
+	sigaddset(&sigset, sig);
+	if((err=thr_sigsetmask(SIG_UNBLOCK, &sigset, NULL)))
+		fatal_exit("thr_sigsetmask: %s", strerror(err));
+#  else 
+	/* have nothing, do nothing */
+#  endif /* HAVE_SOLARIS_THREADS */
+#endif /* HAVE_PTHREAD */
+}
 

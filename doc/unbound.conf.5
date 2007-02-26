@@ -45,6 +45,9 @@ clause.
 The verbosity number, level 0 means no verbosity, only errors. Level 1 
 gives operational information. Level 2 gives query level information, 
 output per query. Level 3 gives algorithm level information.  
+Default is level 1. The verbosity can also be increased from the commandline,
+see
+.Xr unbound 8 .
 .It \fBnum-threads:\fR <number>
 The number of threads to create to serve clients. Use 1 for no threading.
 .It \fBport:\fR <port number>
@@ -87,7 +90,7 @@ Sets the working directory for the program.
 .It \fBlogfile:\fR <filename>
 If "" is given, logging goes to stderr, or nowhere once daemonized.
 The logfile is appended to, in the following format: 
-[seconds since 1970] unbound[pid]: type: message. 
+[seconds since 1970] unbound[pid:tid]: type: message. 
 .It \fBpidfile:\fR <filename>
 The process id is written to the file. Default is "unbound.pid". So,
 kill -HUP `cat /etc/unbound/unbound.pid` will trigger a reload,

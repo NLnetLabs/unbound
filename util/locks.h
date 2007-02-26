@@ -121,6 +121,8 @@ typedef pthread_spinlock_t lock_quick_t;
 typedef pthread_t ub_thread_t;
 /** Pass where to store tread_t in thr. Use default NULL attributes. */
 #define ub_thread_create(thr, func, arg) LOCKRET(pthread_create(thr, NULL, func, arg))
+/** get self id. */
+#define ub_thread_self() pthread_self()
 
 #else /* we do not HAVE_PTHREAD */
 #ifdef HAVE_SOLARIS_THREADS
@@ -150,6 +152,7 @@ typedef mutex_t lock_quick_t;
 /** Thread creation, create a default thread. */
 typedef thread_t ub_thread_t;
 #define ub_thread_create(thr, func, arg) LOCKRET(thr_create(NULL, NULL, func, arg, NULL, thr))
+#define ub_thread_self() thr_self()
 
 #else /* we do not HAVE_SOLARIS_THREADS and no PTHREADS */
 
@@ -182,7 +185,20 @@ typedef int ub_thread_t;
 #define ub_thread_create(thr, func, arg) \
 	fatal_exit("%s %d called thread create, but no thread support "  \
 		"has been compiled in.",  __FILE__, __LINE__)
+#define ub_thread_self() 0
 
 #endif /* HAVE_SOLARIS_THREADS */
 #endif /* HAVE_PTHREAD */
+
+/**
+ * Block all signals for this thread.
+ * fatal exit on error.
+ */
+void ub_thread_blocksigs();
+
+/**
+ * unblock one signal for this thread.
+ */
+void ub_thread_sig_unblock(int sig);
+
 #endif /* UTIL_LOCKS_H */

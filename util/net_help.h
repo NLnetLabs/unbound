@@ -49,4 +49,14 @@
  */
 int str_is_ip6(const char* str);
 
+/**
+ * Write (blocking) to a nonblocking socket.
+ * @param s: fd.
+ * @param buf: data buffer.
+ * @param size: length of data to send.
+ * @return: 0 on error. errno is set.
+ */
+int
+write_socket(int s, const void *buf, size_t size);
+
 #endif /* NET_HELP_H */
