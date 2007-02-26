@@ -79,7 +79,7 @@ log_vmsg(const char* type, const char *format, va_list args)
 	vsnprintf(message, sizeof(message), format, args);
 	fprintf(logfile, "[%d] %s[%d:%x] %s: %s\n",
 		(int)time(NULL), ident, (int)getpid(), 
-		(int)ub_thread_self(),
+		(unsigned int)ub_thread_self(),
 		type, message);
 	fflush(logfile);
 }

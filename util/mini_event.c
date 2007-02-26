@@ -84,7 +84,8 @@ void *event_init(void)
 	if((int)FD_SETSIZE < base->capfd)
 		base->capfd = (int)FD_SETSIZE;
 #endif
-	base->fds = (struct event**)calloc(base->capfd, sizeof(struct event*));
+	base->fds = (struct event**)calloc((size_t)base->capfd, 
+		sizeof(struct event*));
 	if(!base->fds) {
 		event_base_free(base);
 		return NULL;

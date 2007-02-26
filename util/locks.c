@@ -43,6 +43,7 @@
 #include "util/locks.h"
 #include <signal.h>
 
+/** block all signals, masks them away. */
 void 
 ub_thread_blocksigs()
 {
@@ -66,6 +67,7 @@ ub_thread_blocksigs()
 #endif /* HAVE_PTHREAD */
 }
 
+/** unblock one signal, so we can catch it. */
 void ub_thread_sig_unblock(int sig)
 {
 #ifdef HAVE_PTHREAD

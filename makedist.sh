@@ -175,11 +175,8 @@ cd unbound || error_cleanup "Unbound not exported correctly from SVN"
 info "Adding libtool utils (libtoolize)."
 libtoolize -c || error_cleanup "libtoolize failed"
 
-info "Building configure script (autoconf)."
-autoconf || error_cleanup "Autoconf failed."
-
-info "Building config.h.in (autoheader)."
-autoheader || error_cleanup "Autoheader failed."
+info "Building configure script (autoreconf)."
+autoreconf || error_cleanup "Autoconf failed."
 
 rm -r autom4te* || error_cleanup "Failed to remove autoconf cache directory."
 
