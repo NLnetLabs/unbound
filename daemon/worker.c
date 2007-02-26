@@ -247,6 +247,10 @@ worker_sighandler(int sig, void* arg)
 			log_info("caught signal SIGQUIT");
 			comm_base_exit(worker->base);
 			break;
+		case SIGTERM:
+			log_info("caught signal SIGTERM");
+			comm_base_exit(worker->base);
+			break;
 		default:
 			log_err("unknown signal: %d, ignored", sig);
 			break;
@@ -294,6 +298,7 @@ worker_init(struct worker* worker, struct config_file *cfg,
 			worker_sighandler, worker);
 		if(!worker->comsig || !comm_signal_bind(worker->comsig, SIGHUP)
 			|| !comm_signal_bind(worker->comsig, SIGINT)
+			|| !comm_signal_bind(worker->comsig, SIGTERM)
 			|| !comm_signal_bind(worker->comsig, SIGQUIT)) {
 			log_err("could not create signal handlers");
 			worker_delete(worker);
@@ -302,6 +307,7 @@ worker_init(struct worker* worker, struct config_file *cfg,
 		ub_thread_sig_unblock(SIGHUP);
 		ub_thread_sig_unblock(SIGINT);
 		ub_thread_sig_unblock(SIGQUIT);
+		ub_thread_sig_unblock(SIGTERM);
 	} else { /* !do_sigs */
 		worker->comsig = 0;
 	}
@@ -373,6 +379,7 @@ worker_delete(struct worker* worker)
 	listen_delete(worker->front);
 	outside_network_delete(worker->back);
 	comm_signal_delete(worker->comsig);
+	comm_point_delete(worker->cmd_com);
 	comm_base_delete(worker->base);
 	free(worker->rndstate);
 	free(worker);

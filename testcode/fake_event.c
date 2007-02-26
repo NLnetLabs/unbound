@@ -698,5 +698,18 @@ void listening_ports_free(struct listen_port* list)
 	free(list);
 }
 
+struct comm_point* comm_point_create_local(struct comm_base* ATTR_UNUSED(base),
+        int ATTR_UNUSED(fd), size_t ATTR_UNUSED(bufsize),
+        comm_point_callback_t* ATTR_UNUSED(callback), 
+	void* ATTR_UNUSED(callback_arg))
+{
+	return calloc(1, 1);
+}
+
+/* only cmd com _local gets deleted */
+void comm_point_delete(struct comm_point* c)
+{
+	free(c);
+}
 
 /*********** End of Dummy routines ***********/
