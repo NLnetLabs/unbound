@@ -9,6 +9,8 @@
 	- If query list is full, will stop selecting listening ports for read.
 	  This makes all threads service incoming requests, instead of one.
 	  No memory is leaking during reloads, service of queries, etc.
+	- test that uses ldns-testns -f to test threading. Have to answer
+	  three queries at the same time.
 
 26 February 2007: Wouter
 	- ub_random code used to select ID and port.
