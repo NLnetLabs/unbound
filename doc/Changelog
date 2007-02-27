@@ -6,6 +6,9 @@
 	- During reloads the daemon will temporarily handle signals,
 	  so that they do not result in problems.
 	- Also randomize the outgoing port range for tests.
+	- If query list is full, will stop selecting listening ports for read.
+	  This makes all threads service incoming requests, instead of one.
+	  No memory is leaking during reloads, service of queries, etc.
 
 26 February 2007: Wouter
 	- ub_random code used to select ID and port.

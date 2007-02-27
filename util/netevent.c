@@ -755,7 +755,7 @@ comm_point_delete(struct comm_point* c)
 		free(c->tcp_handlers);
 	}
 	free(c->timeout);
-	if(c->type == comm_tcp)
+	if(c->type == comm_tcp || c->type == comm_local)
 		ldns_buffer_free(c->buffer);
 	free(c->ev);
 	free(c);

@@ -81,6 +81,10 @@ replyerror(int r, struct worker* worker)
 	LDNS_QR_SET(ldns_buffer_begin(worker->query_reply.c->buffer));
 	LDNS_RCODE_SET(ldns_buffer_begin(worker->query_reply.c->buffer), r);
 	comm_point_send_reply(&worker->query_reply);
+	if(worker->num_requests == 1)  {
+		/* no longer at max, start accepting again. */
+		listen_resume(worker->front);
+	}
 	worker->num_requests --;
 }
 
@@ -90,6 +94,7 @@ worker_handle_reply(struct comm_point* c, void* arg, int error,
 	struct comm_reply* ATTR_UNUSED(reply_info))
 {
 	struct worker* worker = (struct worker*)arg;
+	log_info("reply to query with stored ID %d", worker->query_id);
 	LDNS_ID_SET(ldns_buffer_begin(worker->query_reply.c->buffer),
 		worker->query_id);
 	if(error != 0) {
@@ -105,6 +110,10 @@ worker_handle_reply(struct comm_point* c, void* arg, int error,
 	LDNS_QR_SET(ldns_buffer_begin(worker->query_reply.c->buffer));
 	ldns_buffer_flip(worker->query_reply.c->buffer);
 	comm_point_send_reply(&worker->query_reply);
+	if(worker->num_requests == 1)  {
+		/* no longer at max, start accepting again. */
+		listen_resume(worker->front);
+	}
 	worker->num_requests --;
 	return 0;
 }
@@ -116,6 +125,7 @@ worker_process_query(struct worker* worker)
 	/* query the forwarding address */
 	worker->query_id = LDNS_ID_WIRE(ldns_buffer_begin(
 		worker->query_reply.c->buffer));
+	log_info("stored in process_query ID %d", worker->query_id);
 	pending_udp_query(worker->back, worker->query_reply.c->buffer, 
 		&worker->fwd_addr, worker->fwd_addrlen, UDP_QUERY_TIMEOUT,
 		worker_handle_reply, worker, worker->rndstate);
@@ -215,6 +225,8 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 		return 0;
 	}
 	if(worker->num_requests > 0) {
+		/* we could get this due to a slow tcp incoming query, 
+		   that started before we performed listen_pushback */
 		verbose(VERB_DETAIL, "worker: too many incoming requests "
 			"active. dropping incoming query.");
 		comm_point_drop_reply(repinfo);
@@ -222,6 +234,10 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 	}
 	/* answer it */
 	worker->num_requests ++;
+	if(worker->num_requests >= 1)  {
+		/* the max request number has been reached, stop accepting */
+		listen_pushback(worker->front);
+	}
 	memcpy(&worker->query_reply, repinfo, sizeof(struct comm_reply));
 	worker_process_query(worker);
 	return 0;

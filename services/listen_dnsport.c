@@ -358,6 +358,32 @@ listen_delete(struct listen_dnsport* front)
 	free(front);
 }
 
+void listen_pushback(struct listen_dnsport* listen)
+{
+	struct listen_list *p;
+	log_assert(listen);
+	for(p = listen->cps; p; p = p->next)
+	{
+		if(p->com->type != comm_udp &&
+			p->com->type != comm_tcp_accept)
+			continue;
+		comm_point_stop_listening(p->com);
+	}
+}
+
+void listen_resume(struct listen_dnsport* listen)
+{
+	struct listen_list *p;
+	log_assert(listen);
+	for(p = listen->cps; p; p = p->next)
+	{
+		if(p->com->type != comm_udp &&
+			p->com->type != comm_tcp_accept)
+			continue;
+		comm_point_start_listening(p->com, -1, -1);
+	}
+}
+
 struct listen_port* 
 listening_ports_open(struct config_file* cfg)
 {
