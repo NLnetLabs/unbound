@@ -173,6 +173,8 @@ comm_base_create()
 void 
 comm_base_delete(struct comm_base* b)
 {
+	if(!b)
+		return;
 #ifdef HAVE_EVENT_BASE_FREE
 	/* only libevent 1.2+ has it */
 	event_base_free(b->eb->base);

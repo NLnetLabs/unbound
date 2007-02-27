@@ -184,13 +184,14 @@ typedef int lock_quick_t;
 
 /** Thread creation, threads do not exist */
 typedef pid_t ub_thread_t;
-/** ub_thread_create gives an error, it should not be called. */
+/** ub_thread_create is simulated with fork (extremely heavy threads,
+  * with no shared memory). */
 #define ub_thread_create(thr, func, arg) \
 	ub_thr_fork_create(thr, func, arg)
-	fatal_exit("%s %d called thread create, but no thread support "  \
-		"has been compiled in.",  __FILE__, __LINE__)
 #define ub_thread_self() getpid()
 #define ub_thread_join(thread) ub_thr_fork_wait(thread)
+void ub_thr_fork_wait(ub_thread_t thread);
+void ub_thr_fork_create(ub_thread_t* thr, void* (*func)(void*), void* arg);
 
 #endif /* HAVE_SOLARIS_THREADS */
 #endif /* HAVE_PTHREAD */

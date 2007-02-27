@@ -1,6 +1,8 @@
 27 February 2007: Wouter
 	- ub_thread_join portable definition.
 	- forking is used if no threading is available.
+	  Tested, it works, since pipes work across processes as well.
+	  Thread_join is replaced with waitpid. 
 
 26 February 2007: Wouter
 	- ub_random code used to select ID and port.

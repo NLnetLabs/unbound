@@ -104,10 +104,10 @@ ub_thr_fork_create(ub_thread_t* thr, void* (*func)(void*), void* arg)
 	pid_t pid = fork();
 	switch(pid) {
 	default:	/* main */
-			*thr = pid;
+			*thr = (ub_thread_t)pid;
 			return;
 	case 0: 	/* child */
-			*thr = getpid();
+			*thr = (ub_thread_t)getpid();
 			(void)(*func)(arg);
 			exit(0);
 	case -1:	/* error */
@@ -123,7 +123,7 @@ ub_thr_fork_create(ub_thread_t* thr, void* (*func)(void*), void* arg)
 void ub_thr_fork_wait(ub_thread_t thread)
 {
 	int status = 0;
-	if(waitpid(thread, &status, 0) == -1)
+	if(waitpid((pid_t)thread, &status, 0) == -1)
 		log_err("waitpid(%d): %s", (int)thread, strerror(errno));
 	if(status != 0)
 		log_warn("process %d abnormal exit with status %d",
