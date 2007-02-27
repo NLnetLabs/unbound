@@ -151,8 +151,10 @@ checkoldpid(struct config_file* cfg)
 	} else {
 		/** see if it is still alive */
 		if(kill(old, 0) == 0 || errno == EPERM)
-			log_warn("unbound is already running as pid %u.", old);
-		else	log_warn("did not exit gracefully last time (%u)", old);
+			log_warn("unbound is already running as pid %u.", 
+				(unsigned)old);
+		else	log_warn("did not exit gracefully last time (%u)", 
+				(unsigned)old);
 	}
 }
 
