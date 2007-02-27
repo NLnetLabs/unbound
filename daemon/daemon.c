@@ -88,21 +88,34 @@ daemon_create_workers(struct daemon* daemon)
 {
 	int i;
 	log_assert(daemon && daemon->cfg);
-	/* only one thread for now */
 	daemon->num = daemon->cfg->num_threads;
-#if !defined(HAVE_PTHREAD) && !defined(HAVE_SOLARIS_THREADS)
-	if(daemon->num != 1) {
-		log_err("configed %d threads, but executable was compiled "
-		"with no thread support. Continuing with 1.", daemon->num);
-		daemon->num = 1;
-	}
-#endif /* no threads */
 	daemon->workers = (struct worker**)calloc((size_t)daemon->num, 
 		sizeof(struct worker*));
 	for(i=0; i<daemon->num; i++) {
 		if(!(daemon->workers[i] = worker_create(daemon, i)))
 			fatal_exit("malloc failure");
 	}
+}
+
+/**
+ * Close all pipes except for the numbered thread.
+ * @param daemon: daemon to close pipes in.
+ * @param thr: thread number 0..num-1 of thread to skip.
+ */
+void close_other_pipes(struct daemon* daemon, int thr)
+{
+	int i;
+	for(i=0; i<daemon->num; i++)
+		if(i!=thr) {
+			if(daemon->workers[i]->cmd_send_fd != -1) {
+				close(daemon->workers[i]->cmd_send_fd);
+				daemon->workers[i]->cmd_send_fd = -1;
+			}
+			if(daemon->workers[i]->cmd_recv_fd != -1) {
+				close(daemon->workers[i]->cmd_recv_fd);
+				daemon->workers[i]->cmd_recv_fd = -1;
+			}
+		}
 }
 
 /**
@@ -116,6 +129,12 @@ thread_start(void* arg)
 	struct worker* worker = (struct worker*)arg;
 	int num = worker->thread_num;
 	ub_thread_blocksigs();
+#if !defined(HAVE_PTHREAD) && !defined(HAVE_SOLARIS_THREADS)
+	/* close pipe ends used by main */
+	close(worker->cmd_send_fd);
+	worker->cmd_send_fd = -1;
+	close_other_pipes(worker->daemon, worker->thread_num);
+#endif /* no threads */
 	if(!worker_init(worker, worker->daemon->cfg, worker->daemon->ports,
 		BUFSZ, 0))
 		fatal_exit("Could not initialize thread #%d", num);
@@ -138,6 +157,11 @@ daemon_start_others(struct daemon* daemon)
 	for(i=1; i<daemon->num; i++) {
 		ub_thread_create(&daemon->workers[i]->thr_id,
 			thread_start, daemon->workers[i]);
+#if !defined(HAVE_PTHREAD) && !defined(HAVE_SOLARIS_THREADS)
+		/* close pipe end of child */
+		close(daemon->workers[i]->cmd_recv_fd);
+		daemon->workers[i]->cmd_recv_fd = -1;
+#endif /* no threads */
 	}
 }
 
@@ -148,7 +172,7 @@ daemon_start_others(struct daemon* daemon)
 static void
 daemon_stop_others(struct daemon* daemon)
 {
-	int i, err;
+	int i;
 	log_assert(daemon);
 	log_info("stop others");
 	/* skip i=0, is this thread */
@@ -162,8 +186,7 @@ daemon_stop_others(struct daemon* daemon)
 	for(i=1; i<daemon->num; i++) {
 		/* join it to make sure its dead */
 		log_info("join %d", i);
-		if((err=pthread_join(daemon->workers[i]->thr_id, NULL)))
-			log_err("pthread_join: %s", strerror(err));
+		ub_thread_join(daemon->workers[i]->thr_id);
 		log_info("join success %d", i);
 	}
 }

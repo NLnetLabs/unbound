@@ -42,27 +42,27 @@
 #include "config.h"
 #include "util/locks.h"
 #include <signal.h>
+#include <sys/wait.h>
 
 /** block all signals, masks them away. */
 void 
 ub_thread_blocksigs()
 {
-#ifdef HAVE_PTHREAD
 	int err;
 	sigset_t sigset;
 	sigfillset(&sigset);
 	log_info("blocking signals");
+#ifdef HAVE_PTHREAD
 	if((err=pthread_sigmask(SIG_SETMASK, &sigset, NULL)))
 		fatal_exit("pthread_sigmask: %s", strerror(err));
 #else
 #  ifdef HAVE_SOLARIS_THREADS
-	int err;
-	sigset_t sigset;
-	sigfillset(&sigset);
 	if((err=thr_sigsetmask(SIG_SETMASK, &sigset, NULL)))
 		fatal_exit("thr_sigsetmask: %s", strerror(err));
 #  else 
-	/* have nothing, do nothing */
+	/* have nothing, do single process signal mask */
+	if((err=sigprocmask(SIG_SETMASK, &sigset, NULL)))
+		fatal_exit("sigprocmask: %s", strerror(errno));
 #  endif /* HAVE_SOLARIS_THREADS */
 #endif /* HAVE_PTHREAD */
 }
@@ -70,25 +70,62 @@ ub_thread_blocksigs()
 /** unblock one signal, so we can catch it. */
 void ub_thread_sig_unblock(int sig)
 {
-#ifdef HAVE_PTHREAD
 	int err;
 	sigset_t sigset;
 	sigemptyset(&sigset);
 	sigaddset(&sigset, sig);
 	log_info("unblocking signal %d", sig);
+#ifdef HAVE_PTHREAD
 	if((err=pthread_sigmask(SIG_UNBLOCK, &sigset, NULL)))
 		fatal_exit("pthread_sigmask: %s", strerror(err));
 #else
 #  ifdef HAVE_SOLARIS_THREADS
-	int err;
-	sigset_t sigset;
-	sigemptyset(&sigset);
-	sigaddset(&sigset, sig);
 	if((err=thr_sigsetmask(SIG_UNBLOCK, &sigset, NULL)))
 		fatal_exit("thr_sigsetmask: %s", strerror(err));
 #  else 
 	/* have nothing, do nothing */
+	if((err=sigprocmask(SIG_UNBLOCK, &sigset, NULL)))
+		fatal_exit("sigprocmask: %s", strerror(errno));
 #  endif /* HAVE_SOLARIS_THREADS */
 #endif /* HAVE_PTHREAD */
 }
 
+/**
+ * No threading available: fork a new process.
+ * This means no shared data structure, and no locking.
+ * Only the main thread ever returns. Exits on errors.
+ * @param thr: the location where to store the thread-id.
+ * @param func: function body of the thread. Return value of func is lost.
+ * @param arg: user argument to func.
+ */
+void 
+ub_thr_fork_create(ub_thread_t* thr, void* (*func)(void*), void* arg)
+{
+	pid_t pid = fork();
+	switch(pid) {
+	default:	/* main */
+			*thr = pid;
+			return;
+	case 0: 	/* child */
+			*thr = getpid();
+			(void)(*func)(arg);
+			exit(0);
+	case -1:	/* error */
+			fatal_exit("could not fork: %s", strerror(errno));
+	}
+}
+
+/**
+ * There is no threading. Wait for a process to terminate.
+ * Note that ub_thread_t is defined as pid_t.
+ * @param thread: the process id to wait for.
+ */
+void ub_thr_fork_wait(ub_thread_t thread)
+{
+	int status = 0;
+	if(waitpid(thread, &status, 0) == -1)
+		log_err("waitpid(%d): %s", (int)thread, strerror(errno));
+	if(status != 0)
+		log_warn("process %d abnormal exit with status %d",
+			(int)thread, status);
+}
