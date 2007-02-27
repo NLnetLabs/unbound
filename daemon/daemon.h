@@ -101,7 +101,8 @@ void daemon_fork(struct daemon* daemon);
 void daemon_cleanup(struct daemon* daemon);
 
 /**
- * Delete worker.
+ * Delete workers, close listening ports.
+ * @param daemon: the daemon.
  */
 void daemon_delete(struct daemon* daemon);
 

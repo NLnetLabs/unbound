@@ -48,10 +48,60 @@
 #include "util/log.h"
 #include "util/config_file.h"
 #include "services/listen_dnsport.h"
-
-/* @@@ TODO remove */
-#include "pthread.h"
 #include <signal.h>
+
+/** How many quit requests happened. */
+static int sig_record_quit = 0;
+/** How many reload requests happened. */
+static int sig_record_reload = 0;
+
+/** used when no other sighandling happens, so we don't die
+  * when multiple signals in quick succession are sent to us. */
+static RETSIGTYPE record_sigh(int sig)
+{
+	switch(sig)
+	{
+		case SIGTERM:
+		case SIGQUIT:
+		case SIGINT:
+			sig_record_quit++;
+			break;
+		case SIGHUP:
+			sig_record_reload++;
+			break;
+		default:
+			log_err("ignoring signal %d", sig);
+	}
+}
+
+/** 
+ * Signal handling during the time when netevent is disabled.
+ * Stores signals to replay later.
+ */
+static void
+signal_handling_record()
+{
+	if( signal(SIGTERM, record_sigh) == SIG_ERR ||
+		signal(SIGQUIT, record_sigh) == SIG_ERR ||
+		signal(SIGINT, record_sigh) == SIG_ERR ||
+		signal(SIGHUP, record_sigh) == SIG_ERR)
+		log_err("install sighandler: %s", strerror(errno));
+}
+
+/**
+ * Replay old signals.
+ * @param wrk: worker that handles signals.
+ */
+static void
+signal_handling_playback(struct worker* wrk)
+{
+	if(sig_record_quit)
+		worker_sighandler(SIGTERM, wrk);
+	if(sig_record_reload)
+		worker_sighandler(SIGHUP, wrk);
+	sig_record_quit = 0;
+	sig_record_reload = 0;
+}
 
 struct daemon* 
 daemon_init()
@@ -60,6 +110,7 @@ daemon_init()
 		sizeof(struct daemon));
 	if(!daemon)
 		return NULL;
+	signal_handling_record();
 	lock_basic_init(&daemon->lock);
 	daemon->need_to_exit = 0;
 	return daemon;	
@@ -212,7 +263,7 @@ daemon_fork(struct daemon* daemon)
 	if(!worker_init(daemon->workers[0], daemon->cfg, daemon->ports,
 		BUFSZ, 1))
 		fatal_exit("Could not initialize main thread");
-	/* see if other threads have started correctly? */
+	signal_handling_playback(daemon->workers[0]);
 
 	/* Start resolver service on main thread. */
 	log_info("start of service (%s).", PACKAGE_STRING);
@@ -231,6 +282,9 @@ daemon_cleanup(struct daemon* daemon)
 {
 	int i;
 	log_assert(daemon);
+	/* before stopping main worker, handle signals ourselves, so we
+	   don't die on multiple reload signals for example. */
+	signal_handling_record();
 	for(i=0; i<daemon->num; i++)
 		worker_delete(daemon->workers[i]);
 	free(daemon->workers);

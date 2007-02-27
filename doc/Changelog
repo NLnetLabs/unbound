@@ -3,6 +3,8 @@
 	- forking is used if no threading is available.
 	  Tested, it works, since pipes work across processes as well.
 	  Thread_join is replaced with waitpid. 
+	- During reloads the daemon will temporarily handle signals,
+	  so that they do not result in problems.
 
 26 February 2007: Wouter
 	- ub_random code used to select ID and port.

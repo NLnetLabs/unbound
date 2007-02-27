@@ -376,15 +376,18 @@ worker_delete(struct worker* worker)
 {
 	if(!worker) 
 		return;
-	close(worker->cmd_send_fd);
+	if(worker->cmd_send_fd != -1)
+		close(worker->cmd_send_fd);
 	worker->cmd_send_fd = -1;
-	close(worker->cmd_recv_fd);
+	if(worker->cmd_recv_fd != -1)
+		close(worker->cmd_recv_fd);
 	worker->cmd_recv_fd = -1;
 	listen_delete(worker->front);
 	outside_network_delete(worker->back);
 	comm_signal_delete(worker->comsig);
 	comm_point_delete(worker->cmd_com);
 	comm_base_delete(worker->base);
+	ub_randfree(worker->rndstate);
 	free(worker->rndstate);
 	free(worker);
 }

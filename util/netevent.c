@@ -507,7 +507,8 @@ static void comm_point_local_handle_callback(int fd, short event, void* arg)
 
 	if(event&EV_READ) {
 		if(!comm_point_tcp_handle_read(fd, c, 1)) {
-			log_err("error in localhdl");
+			(void)(*c->callback)(c, c->cb_arg, NETEVENT_CLOSED, 
+				NULL);
 		}
 		return;
 	}

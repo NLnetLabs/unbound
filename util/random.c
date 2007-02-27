@@ -357,5 +357,7 @@ ub_random (struct ub_randstate* s)
 
 void ub_randfree(struct ub_randstate* state)
 {
+	if(!state)
+		return;
 	free(state->state);
 }

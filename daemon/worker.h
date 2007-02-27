@@ -157,4 +157,11 @@ int worker_set_fwd(struct worker* worker, const char* ip, int port);
 void worker_send_cmd(struct worker* worker, ldns_buffer* buffer,
         enum worker_commands cmd);
 
+/**
+ * Worker signal handler function. User argument is the worker itself.
+ * @param sig: signal number.
+ * @param arg: the worker (main worker) that handles signals.
+ */
+void worker_sighandler(int sig, void* arg);
+
 #endif /* DAEMON_WORKER_H */
