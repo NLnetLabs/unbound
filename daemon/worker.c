@@ -94,7 +94,8 @@ worker_handle_reply(struct comm_point* c, void* arg, int error,
 	struct comm_reply* ATTR_UNUSED(reply_info))
 {
 	struct worker* worker = (struct worker*)arg;
-	log_info("reply to query with stored ID %d", worker->query_id);
+	verbose(VERB_DETAIL, "reply to query with stored ID %d", 
+		worker->query_id);
 	LDNS_ID_SET(ldns_buffer_begin(worker->query_reply.c->buffer),
 		worker->query_id);
 	if(error != 0) {
@@ -125,7 +126,7 @@ worker_process_query(struct worker* worker)
 	/* query the forwarding address */
 	worker->query_id = LDNS_ID_WIRE(ldns_buffer_begin(
 		worker->query_reply.c->buffer));
-	log_info("stored in process_query ID %d", worker->query_id);
+	verbose(VERB_DETAIL, "process_query ID %d", worker->query_id);
 	pending_udp_query(worker->back, worker->query_reply.c->buffer, 
 		&worker->fwd_addr, worker->fwd_addrlen, UDP_QUERY_TIMEOUT,
 		worker_handle_reply, worker, worker->rndstate);
@@ -183,10 +184,9 @@ worker_handle_control_cmd(struct comm_point* c, void* arg, int error,
 	if(error != NETEVENT_NOERROR) {
 		if(error == NETEVENT_CLOSED)
 			comm_base_exit(worker->base);
-		else	log_info("control cmd: %d", error);
+		else	log_info("control event: %d", error);
 		return 0;
 	}
-	log_info("control cmd");
 	if(ldns_buffer_limit(c->buffer) != sizeof(uint32_t)) {
 		fatal_exit("bad control msg length %d", 
 			(int)ldns_buffer_limit(c->buffer));
@@ -194,6 +194,7 @@ worker_handle_control_cmd(struct comm_point* c, void* arg, int error,
 	cmd = ldns_buffer_read_u32(c->buffer);
 	switch(cmd) {
 	case worker_cmd_quit:
+		verbose(VERB_ALGO, "got control cmd quit");
 		comm_base_exit(worker->base);
 		break;
 	default:

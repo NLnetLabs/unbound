@@ -203,7 +203,7 @@ daemon_start_others(struct daemon* daemon)
 {
 	int i;
 	log_assert(daemon);
-	log_info("start others");
+	verbose(VERB_ALGO, "start threads");
 	/* skip i=0, is this thread */
 	for(i=1; i<daemon->num; i++) {
 		ub_thread_create(&daemon->workers[i]->thr_id,
@@ -225,20 +225,19 @@ daemon_stop_others(struct daemon* daemon)
 {
 	int i;
 	log_assert(daemon);
-	log_info("stop others");
+	verbose(VERB_ALGO, "stop threads");
 	/* skip i=0, is this thread */
 	/* use i=0 buffer for sending cmds; because we are #0 */
 	for(i=1; i<daemon->num; i++) {
-		log_info("killing thread %d", i);
 		worker_send_cmd(daemon->workers[i], 
 			daemon->workers[0]->front->udp_buff, worker_cmd_quit);
 	}
 	/** wait for them to quit */
 	for(i=1; i<daemon->num; i++) {
 		/* join it to make sure its dead */
-		log_info("join %d", i);
+		verbose(VERB_ALGO, "join %d", i);
 		ub_thread_join(daemon->workers[i]->thr_id);
-		log_info("join success %d", i);
+		verbose(VERB_ALGO, "join success %d", i);
 	}
 }
 
@@ -246,7 +245,6 @@ void
 daemon_fork(struct daemon* daemon)
 {
 	log_assert(daemon);
-	log_info("daemon_fork");
 	/* first create all the worker structures, so we can pass
 	 * them to the newly created threads. 
 	 */

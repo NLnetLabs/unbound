@@ -11,6 +11,7 @@
 	  No memory is leaking during reloads, service of queries, etc.
 	- test that uses ldns-testns -f to test threading. Have to answer
 	  three queries at the same time.
+	- with verbose=0 operates quietly.
 
 26 February 2007: Wouter
 	- ub_random code used to select ID and port.

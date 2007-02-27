@@ -51,7 +51,6 @@ ub_thread_blocksigs()
 	int err;
 	sigset_t sigset;
 	sigfillset(&sigset);
-	log_info("blocking signals");
 #ifdef HAVE_PTHREAD
 	if((err=pthread_sigmask(SIG_SETMASK, &sigset, NULL)))
 		fatal_exit("pthread_sigmask: %s", strerror(err));
@@ -74,7 +73,6 @@ void ub_thread_sig_unblock(int sig)
 	sigset_t sigset;
 	sigemptyset(&sigset);
 	sigaddset(&sigset, sig);
-	log_info("unblocking signal %d", sig);
 #ifdef HAVE_PTHREAD
 	if((err=pthread_sigmask(SIG_UNBLOCK, &sigset, NULL)))
 		fatal_exit("pthread_sigmask: %s", strerror(err));
