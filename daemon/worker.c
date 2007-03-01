@@ -293,6 +293,12 @@ worker_create(struct daemon* daemon, int id)
 			log_err("socketpair: %s", strerror(errno));
 			return NULL;
 		}
+		if(!fd_set_nonblock(sv[0]) || !fd_set_nonblock(sv[1])) {
+			close(sv[0]);
+			close(sv[1]);
+			free(worker);
+			return NULL;
+		}
 		worker->cmd_send_fd = sv[0];
 		worker->cmd_recv_fd = sv[1];
 	}
@@ -313,6 +319,10 @@ worker_init(struct worker* worker, struct config_file *cfg,
 		return 0;
 	}
 	if(do_sigs) {
+		ub_thread_sig_unblock(SIGHUP);
+		ub_thread_sig_unblock(SIGINT);
+		ub_thread_sig_unblock(SIGQUIT);
+		ub_thread_sig_unblock(SIGTERM);
 		worker->comsig = comm_signal_create(worker->base, 
 			worker_sighandler, worker);
 		if(!worker->comsig || !comm_signal_bind(worker->comsig, SIGHUP)
@@ -323,10 +333,6 @@ worker_init(struct worker* worker, struct config_file *cfg,
 			worker_delete(worker);
 			return 0;
 		}
-		ub_thread_sig_unblock(SIGHUP);
-		ub_thread_sig_unblock(SIGINT);
-		ub_thread_sig_unblock(SIGQUIT);
-		ub_thread_sig_unblock(SIGTERM);
 	} else { /* !do_sigs */
 		worker->comsig = 0;
 	}
@@ -393,12 +399,6 @@ worker_delete(struct worker* worker)
 {
 	if(!worker) 
 		return;
-	if(worker->cmd_send_fd != -1)
-		close(worker->cmd_send_fd);
-	worker->cmd_send_fd = -1;
-	if(worker->cmd_recv_fd != -1)
-		close(worker->cmd_recv_fd);
-	worker->cmd_recv_fd = -1;
 	listen_delete(worker->front);
 	outside_network_delete(worker->back);
 	comm_signal_delete(worker->comsig);
@@ -406,6 +406,14 @@ worker_delete(struct worker* worker)
 	comm_base_delete(worker->base);
 	ub_randfree(worker->rndstate);
 	free(worker->rndstate);
+	/* close fds after deleting commpoints, to be sure.
+	   Also epoll does not like closing fd before event_del */
+	if(worker->cmd_send_fd != -1)
+		close(worker->cmd_send_fd);
+	worker->cmd_send_fd = -1;
+	if(worker->cmd_recv_fd != -1)
+		close(worker->cmd_recv_fd);
+	worker->cmd_recv_fd = -1;
 	free(worker);
 }
 

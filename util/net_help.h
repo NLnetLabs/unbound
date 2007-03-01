@@ -59,4 +59,11 @@ int str_is_ip6(const char* str);
 int
 write_socket(int s, const void *buf, size_t size);
 
+/**
+ * Set fd nonblocking.
+ * @param s: file descriptor.
+ * @return: 0 on error (error is printed to log).
+ */
+int fd_set_nonblock(int s); 
+
 #endif /* NET_HELP_H */

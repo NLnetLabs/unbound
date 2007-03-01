@@ -89,7 +89,7 @@ verbose_print_addr(struct addrinfo *addr)
 int
 create_udp_sock(struct addrinfo *addr)
 {
-	int s, flag;
+	int s;
 # if defined(IPV6_V6ONLY)
 	int on=1;
 # endif
@@ -128,15 +128,8 @@ create_udp_sock(struct addrinfo *addr)
 		log_err("can't bind socket: %s", strerror(errno));
 		return -1;
 	}
-	if((flag = fcntl(s, F_GETFL)) == -1) {
-		log_err("can't fcntl F_GETFL: %s", strerror(errno));
-		flag = 0;
-	}
-	flag |= O_NONBLOCK;
-	if(fcntl(s, F_SETFL, flag) == -1) {
-		log_err("can't fcntl F_SETFL: %s", strerror(errno));
+	if(!fd_set_nonblock(s))
 		return -1;
-	}
 	return s;
 }
 

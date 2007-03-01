@@ -39,6 +39,8 @@
 
 #include "config.h"
 #include "util/net_help.h"
+#include "util/log.h"
+#include <fcntl.h>
 
 /** returns true is string addr is an ip6 specced address. */
 int
@@ -68,4 +70,20 @@ write_socket(int s, const void *buf, size_t size)
                 total_count += count;
         }
         return 1;
+}
+
+int 
+fd_set_nonblock(int s) 
+{
+	int flag;
+	if((flag = fcntl(s, F_GETFL)) == -1) {
+		log_err("can't fcntl F_GETFL: %s", strerror(errno));
+		flag = 0;
+	}
+	flag |= O_NONBLOCK;
+	if(fcntl(s, F_SETFL, flag) == -1) {
+		log_err("can't fcntl F_SETFL: %s", strerror(errno));
+		return 0;
+	}
+	return 1;
 }

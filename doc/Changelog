@@ -1,3 +1,8 @@
+1 March 2007: Wouter
+	- Signals, libevent and threads work well, with libevent patch and
+	  changes to code (close after event_del).
+	- set ipc pipes nonblocking.
+
 27 February 2007: Wouter
 	- ub_thread_join portable definition.
 	- forking is used if no threading is available.
