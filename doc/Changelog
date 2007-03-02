@@ -5,6 +5,7 @@
 	- even on systems with nonthreadsafe libevent signal handling,
 	  unbound will exit if given a signal.
 	  Reloads will not work, and exit is not graceful.
+	- start of alloc framework layout.
 
 1 March 2007: Wouter
 	- Signals, libevent and threads work well, with libevent patch and
