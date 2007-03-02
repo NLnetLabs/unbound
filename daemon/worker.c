@@ -323,6 +323,7 @@ worker_init(struct worker* worker, struct config_file *cfg,
 		ub_thread_sig_unblock(SIGINT);
 		ub_thread_sig_unblock(SIGQUIT);
 		ub_thread_sig_unblock(SIGTERM);
+#ifndef LIBEVENT_SIGNAL_PROBLEM
 		worker->comsig = comm_signal_create(worker->base, 
 			worker_sighandler, worker);
 		if(!worker->comsig || !comm_signal_bind(worker->comsig, SIGHUP)
@@ -333,6 +334,7 @@ worker_init(struct worker* worker, struct config_file *cfg,
 			worker_delete(worker);
 			return 0;
 		}
+#endif /* LIBEVENT_SIGNAL_PROBLEM */
 	} else { /* !do_sigs */
 		worker->comsig = 0;
 	}

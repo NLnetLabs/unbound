@@ -59,6 +59,9 @@ static int sig_record_reload = 0;
   * when multiple signals in quick succession are sent to us. */
 static RETSIGTYPE record_sigh(int sig)
 {
+#ifdef LIBEVENT_SIGNAL_PROBLEM
+	exit(0);
+#endif 
 	switch(sig)
 	{
 		case SIGTERM:

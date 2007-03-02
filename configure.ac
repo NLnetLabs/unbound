@@ -421,6 +421,7 @@ if test x_$withval != x_no; then
 	AC_SEARCH_LIBS(event_set, [event])
 	AC_CHECK_HEADERS([event.h],,, [AC_INCLUDES_DEFAULT])
 	AC_CHECK_FUNCS([event_base_free]) # only in libevent 1.2 and later
+	AC_CHECK_FUNCS([event_base_once]) # only in libevent 1.4? and later
 else
 	AC_DEFINE(USE_MINI_EVENT, 1, [Define if you want to use internal select based events])
 fi
@@ -519,6 +520,10 @@ AH_BOTTOM([
 #define fseeko fseek
 #define ftello ftell
 #endif /* HAVE_FSEEKO */
+#if defined(HAVE_EVENT_H) && !defined(HAVE_EVENT_BASE_ONCE) && (defined(HAVE_PTHREAD) || defined(HAVE_SOLARIS_THREADS))
+   /* using version of libevent that is not threadsafe. */
+#  define LIBEVENT_SIGNAL_PROBLEM 1
+#endif
 
 #ifndef RAND_MAX
 #define RAND_MAX	2147483647

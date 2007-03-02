@@ -18,4 +18,11 @@ This software is under BSD license, see LICENSE for details.
   * run libtoolize -c if config.sub is missing.
   * autoreconf (autoheader && autoconf), if ./configure is missing.
 
+Known issues
+------------
+o If libevent is older (1.3 and before), unbound will exit instead of reload
+  on sighup. On a restart 'did not exit gracefully last time' warning is 
+  printed. Perform ./configure --with-libevent=no or update libevent, rerun 
+  configure and recompile unbound to make sighup work correctly.
+
 * mailto:wouter@nlnetlabs.nl

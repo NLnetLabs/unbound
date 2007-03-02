@@ -2,6 +2,9 @@
 	- do not compile fork funcs unless needed. Otherwise will give
 	  type errors as their typedefs have not been enabled.
 	- log shows thread numbers much more nicely (and portably).
+	- even on systems with nonthreadsafe libevent signal handling,
+	  unbound will exit if given a signal.
+	  Reloads will not work, and exit is not graceful.
 
 1 March 2007: Wouter
 	- Signals, libevent and threads work well, with libevent patch and
