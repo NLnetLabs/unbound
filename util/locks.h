@@ -125,6 +125,10 @@ typedef pthread_t ub_thread_t;
 #define ub_thread_self() pthread_self()
 /** wait for another thread to terminate */
 #define ub_thread_join(thread) LOCKRET(pthread_join(thread, NULL))
+typedef pthread_key_t ub_thread_key_t;
+#define ub_thread_key_create(key, f) LOCKRET(pthread_key_create(key, f))
+#define ub_thread_key_set(key, v) LOCKRET(pthread_setspecific(key, v))
+#define ub_thread_key_get(key) pthread_getspecific(key)
 
 #else /* we do not HAVE_PTHREAD */
 #ifdef HAVE_SOLARIS_THREADS
@@ -156,6 +160,10 @@ typedef thread_t ub_thread_t;
 #define ub_thread_create(thr, func, arg) LOCKRET(thr_create(NULL, NULL, func, arg, NULL, thr))
 #define ub_thread_self() thr_self()
 #define ub_thread_join(thread) LOCKRET(thr_join(thread, NULL, NULL))
+typedef thread_key_t ub_thread_key_t;
+#define ub_thread_key_create(key, f) LOCKRET(thr_keycreate(key, f))
+#define ub_thread_key_set(key, v) LOCKRET(thr_setspecific(key, v))
+void* ub_thread_key_get(ub_thread_key_t key);
 
 #else /* we do not HAVE_SOLARIS_THREADS and no PTHREADS */
 
@@ -192,6 +200,10 @@ typedef pid_t ub_thread_t;
 #define ub_thread_join(thread) ub_thr_fork_wait(thread)
 void ub_thr_fork_wait(ub_thread_t thread);
 void ub_thr_fork_create(ub_thread_t* thr, void* (*func)(void*), void* arg);
+typedef void* ub_thread_key_t;
+#define ub_thread_key_create(key, f) (*(key)) = NULL
+#define ub_thread_key_set(key, v) (key) = (v)
+#define ub_thread_key_get(key) (key)
 
 #endif /* HAVE_SOLARIS_THREADS */
 #endif /* HAVE_PTHREAD */

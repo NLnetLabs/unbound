@@ -47,11 +47,20 @@
 enum verbosity_value verbosity = 0;
 /** the file logged to. */
 static FILE* logfile = 0;
+/** if key has been created */
+static int key_created = 0;
+/** pthread key for thread ids in logfile */
+static ub_thread_key_t logkey;
 
 void
 log_init(const char* filename)
 {
 	FILE *f;
+	if(!key_created) {
+		key_created = 1;
+		ub_thread_key_create(&logkey, NULL);
+	}
+
 	if(!filename || !filename[0]) {
 		if(logfile && logfile != stderr)
 			fclose(logfile);
@@ -71,16 +80,21 @@ log_init(const char* filename)
 	logfile = f;
 }
 
+void log_thread_set(int* num)
+{
+	ub_thread_key_set(logkey, num);
+}
+
 void
 log_vmsg(const char* type, const char *format, va_list args)
 {
 	char message[MAXSYSLOGMSGLEN];
 	const char* ident="unbound";
+	unsigned int* tid = (unsigned int*)ub_thread_key_get(logkey);
 	vsnprintf(message, sizeof(message), format, args);
 	fprintf(logfile, "[%d] %s[%d:%x] %s: %s\n",
 		(int)time(NULL), ident, (int)getpid(), 
-		(unsigned int)ub_thread_self(),
-		type, message);
+		tid?*tid:0, type, message);
 	fflush(logfile);
 }
 

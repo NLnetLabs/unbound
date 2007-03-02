@@ -81,6 +81,14 @@ void verbose(enum verbosity_value level,
 void log_init(const char* filename);
 
 /**
+ * Init a thread (will print this number for the thread log entries).
+ * Must be called from the thread itself. If not called 0 is printed.
+ * @param num: number to print for this thread. Owned by caller, must
+ *	continue to exist.
+ */
+void log_thread_set(int* num);
+
+/**
  * Log informational message.
  * Pass printf formatted arguments. No trailing newline is needed.
  * @param format: printf-style format string. Arguments follow.

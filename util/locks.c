@@ -88,6 +88,7 @@ void ub_thread_sig_unblock(int sig)
 #endif /* HAVE_PTHREAD */
 }
 
+#if !defined(HAVE_PTHREAD) && !defined(HAVE_SOLARIS_THREADS)
 /**
  * No threading available: fork a new process.
  * This means no shared data structure, and no locking.
@@ -127,3 +128,13 @@ void ub_thr_fork_wait(ub_thread_t thread)
 		log_warn("process %d abnormal exit with status %d",
 			(int)thread, status);
 }
+#endif /* !defined(HAVE_PTHREAD) && !defined(HAVE_SOLARIS_THREADS) */
+
+#ifdef HAVE_SOLARIS_THREADS
+void* ub_thread_key_get(ub_thread_key_t key)
+{
+	void* ret=NULL;
+	LOCKRET(thr_getspecific(key, &ret));
+	return ret;
+}
+#endif

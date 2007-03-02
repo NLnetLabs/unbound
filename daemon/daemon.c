@@ -179,6 +179,7 @@ thread_start(void* arg)
 {
 	struct worker* worker = (struct worker*)arg;
 	int num = worker->thread_num;
+	log_thread_set(&worker->thread_num);
 	ub_thread_blocksigs();
 #if !defined(HAVE_PTHREAD) && !defined(HAVE_SOLARIS_THREADS)
 	/* close pipe ends used by main */
@@ -283,6 +284,7 @@ daemon_cleanup(struct daemon* daemon)
 	/* before stopping main worker, handle signals ourselves, so we
 	   don't die on multiple reload signals for example. */
 	signal_handling_record();
+	log_thread_set(NULL);
 	for(i=0; i<daemon->num; i++)
 		worker_delete(daemon->workers[i]);
 	free(daemon->workers);
