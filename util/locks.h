@@ -134,6 +134,9 @@ typedef pthread_key_t ub_thread_key_t;
 #ifdef HAVE_SOLARIS_THREADS
 
 /******************* SOLARIS THREADS ************************/
+#include <synch.h>
+#include <thread.h>
+
 typedef rwlock_t lock_rw_t;
 #define lock_rw_init(lock) LOCKRET(rwlock_init(lock, USYNC_THREAD, NULL))
 #define lock_rw_destroy(lock) LOCKRET(rwlock_destroy(lock))
