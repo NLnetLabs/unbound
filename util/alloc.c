@@ -42,3 +42,141 @@
 #include "config.h"
 #include "util/alloc.h"
 
+/** prealloc some entries in the cache. To minimize contention. 
+ * @param alloc: the structure to fill up.
+ */
+static void
+prealloc(struct alloc_cache* alloc)
+{
+	alloc_special_t* p;
+	int i;
+	for(i=0; i<ALLOC_SPECIAL_MAX; i++) {
+		if(!(p = (alloc_special_t*)malloc(sizeof(alloc_special_t))))
+			fatal_exit("prealloc: out of memory");
+		alloc_special_next(p) = alloc->quar;
+		alloc->quar = p;
+		alloc->num_quar++;
+	}
+}
+
+void 
+alloc_init(struct alloc_cache* alloc, struct alloc_cache* super)
+{
+	memset(alloc, 0, sizeof(*alloc));
+	alloc->super = super;
+	lock_quick_init(&alloc->lock);
+}
+
+void 
+alloc_delete(struct alloc_cache* alloc)
+{
+	alloc_special_t* p, *np;
+	if(!alloc)
+		return;
+	lock_quick_destroy(&alloc->lock);
+	if(alloc->super && alloc->quar) {
+		/* push entire list into super */
+		p = alloc->quar;
+		while(alloc_special_next(p)) /* find last */
+			p = alloc_special_next(p);
+		lock_quick_lock(&alloc->super->lock);
+		alloc_special_next(p) = alloc->super->quar;
+		alloc->super->quar = alloc->quar;
+		alloc->super->num_quar += alloc->num_quar;
+		lock_quick_unlock(&alloc->super->lock);
+	} else {
+		/* free */
+		p = alloc->quar;
+		while(p) {
+			np = alloc_special_next(p);
+			free(p);
+			p = np;
+		}
+	}
+	alloc->quar = 0;
+	alloc->num_quar = 0;
+}
+
+alloc_special_t* 
+alloc_special_obtain(struct alloc_cache* alloc)
+{
+	alloc_special_t* p;
+	log_assert(alloc);
+	/* see if in local cache */
+	if(alloc->quar) {
+		p = alloc->quar;
+		alloc->quar = alloc_special_next(p);
+		alloc->num_quar--;
+		alloc->special_allocated++;
+		return p;
+	}
+	/* see if in global cache */
+	if(alloc->super) {
+		lock_quick_lock(&alloc->super->lock);
+		if((p = alloc->super->quar)) {
+			alloc->super->quar = alloc_special_next(p);
+			alloc->super->num_quar--;
+		}
+		lock_quick_unlock(&alloc->super->lock);
+		if(p) {
+			alloc->special_allocated++;
+			return p;
+		}
+	}
+	/* allocate new */
+	prealloc(alloc);
+	if(!(p = (alloc_special_t*)malloc(sizeof(alloc_special_t))))
+		fatal_exit("alloc_special_obtain: out of memory");
+	alloc->special_allocated++;
+	return p;
+}
+
+/** push mem and some more items to the super */
+static void 
+pushintosuper(struct alloc_cache* alloc, alloc_special_t* mem)
+{
+	int i;
+	alloc_special_t *p = alloc->quar;
+	log_assert(p);
+	log_assert(alloc && alloc->super && 
+		alloc->num_quar >= ALLOC_SPECIAL_MAX);
+	/* push ALLOC_SPECIAL_MAX/2 after mem */
+	alloc_special_next(mem) = alloc->quar;
+	for(i=1; i<ALLOC_SPECIAL_MAX/2; i++) {
+		p = alloc_special_next(p);
+	}
+	alloc->quar = alloc_special_next(p);
+	alloc->num_quar -= ALLOC_SPECIAL_MAX/2;
+
+	lock_quick_lock(&alloc->super->lock);
+	alloc_special_next(p) = alloc->super->quar;
+	alloc->super->quar = mem;
+	alloc->super->num_quar += ALLOC_SPECIAL_MAX/2 + 1;
+	lock_quick_unlock(&alloc->super->lock);
+}
+
+void 
+alloc_special_release(struct alloc_cache* alloc, alloc_special_t* mem)
+{
+	log_assert(alloc);
+	if(!mem)
+		return;
+	if(alloc->super && alloc->num_quar >= ALLOC_SPECIAL_MAX) {
+		/* push it to the super structure */
+		alloc->special_allocated --;
+		pushintosuper(alloc, mem);
+		return;
+	}
+
+	alloc_special_next(mem) = alloc->quar;
+	alloc->quar = mem;
+	alloc->num_quar++;
+	alloc->special_allocated--;
+}
+
+void 
+alloc_stats(struct alloc_cache* alloc)
+{
+	log_info("%salloc: %d allocated, %d in cache.", alloc->super?"":"sup",
+		(int)alloc->special_allocated, (int)alloc->num_quar);
+}
