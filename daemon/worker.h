@@ -68,10 +68,10 @@ enum worker_commands {
  * Holds globally visible information.
  */
 struct worker {
+	/** the thread number (in daemon array). First in struct for debug. */
+	int thread_num;
 	/** global shared daemon structure */
 	struct daemon* daemon;
-	/** the thread number (in daemon array). */
-	int thread_num;
 	/** thread id */
 	ub_thread_t thr_id;
 	/** fd 0 of socketpair, write commands for worker to this one */

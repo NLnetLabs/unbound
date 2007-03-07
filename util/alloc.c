@@ -43,6 +43,7 @@
 #include "util/alloc.h"
 
 /** prealloc some entries in the cache. To minimize contention. 
+ * Result is 1 lock per alloc_max newly created entries.
  * @param alloc: the structure to fill up.
  */
 static void
@@ -108,10 +109,13 @@ alloc_special_obtain(struct alloc_cache* alloc)
 		alloc->quar = alloc_special_next(p);
 		alloc->num_quar--;
 		alloc->special_allocated++;
+		alloc_special_clean(p);
 		return p;
 	}
 	/* see if in global cache */
 	if(alloc->super) {
+		/* could maybe grab alloc_max/2 entries in one go,
+		 * but really, isn't that just as fast as this code? */
 		lock_quick_lock(&alloc->super->lock);
 		if((p = alloc->super->quar)) {
 			alloc->super->quar = alloc_special_next(p);
@@ -120,6 +124,7 @@ alloc_special_obtain(struct alloc_cache* alloc)
 		lock_quick_unlock(&alloc->super->lock);
 		if(p) {
 			alloc->special_allocated++;
+			alloc_special_clean(p);
 			return p;
 		}
 	}
@@ -128,6 +133,7 @@ alloc_special_obtain(struct alloc_cache* alloc)
 	if(!(p = (alloc_special_t*)malloc(sizeof(alloc_special_t))))
 		fatal_exit("alloc_special_obtain: out of memory");
 	alloc->special_allocated++;
+	alloc_special_clean(p);
 	return p;
 }
 
@@ -148,11 +154,13 @@ pushintosuper(struct alloc_cache* alloc, alloc_special_t* mem)
 	alloc->quar = alloc_special_next(p);
 	alloc->num_quar -= ALLOC_SPECIAL_MAX/2;
 
+	/* dump mem+list into the super quar list */
 	lock_quick_lock(&alloc->super->lock);
 	alloc_special_next(p) = alloc->super->quar;
 	alloc->super->quar = mem;
 	alloc->super->num_quar += ALLOC_SPECIAL_MAX/2 + 1;
 	lock_quick_unlock(&alloc->super->lock);
+	/* so 1 lock per mem+alloc/2 deletes */
 }
 
 void 
@@ -161,6 +169,7 @@ alloc_special_release(struct alloc_cache* alloc, alloc_special_t* mem)
 	log_assert(alloc);
 	if(!mem)
 		return;
+	alloc_special_clean(mem);
 	if(alloc->super && alloc->num_quar >= ALLOC_SPECIAL_MAX) {
 		/* push it to the super structure */
 		alloc->special_allocated --;

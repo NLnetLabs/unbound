@@ -1,3 +1,5 @@
 TODO items.
 o use real entropy to make random (ID, port) numbers more random.
 o in production mode, do not free memory on exit. In debug mode, test leaks.
+o profile memory allocation, and if performance issues, use special memory
+  allocator. For example, with caches per thread.

@@ -1,3 +1,8 @@
+7 March 2007: Wouter
+	- created a wrapper around thread calls that performs some basic
+	  checking for data race and deadlock, and basic performance 
+	  contention measurement.
+
 6 March 2007: Wouter
 	- Testbed works with threading (different machines, different options).
 	- alloc work, does the special type.

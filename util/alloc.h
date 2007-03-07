@@ -43,13 +43,6 @@
  *	o The packed rrset type needs to be kept on special freelists,
  *	  so that they are reused for other packet rrset allocations.
  *
- * Design choices:
- *	o The global malloc/free is used to handle fragmentation, etc.
- *	  If freelists become very large, it is returned to the system.
- *	o Only 1k and smaller is cached, bigger uses malloc.
- *	  Because DNS fragments are mostly this size.
- *	o On startup preallocated memory can be given, so threads can
- *	  avoid contention in the startup phase.
  */
 
 #ifndef UTIL_ALLOC_H
@@ -89,13 +82,14 @@ struct alloc_cache {
  * Init alloc (zeroes the struct).
  * @param alloc: this parameter is allocated by the caller.
  * @param super: super to use (init that before with super_init).
+ *    Pass this argument NULL to init the toplevel alloc structure.
  */
 void alloc_init(struct alloc_cache* alloc, struct alloc_cache* super);
 
 /**
  * Free the alloc. Pushes all the cached items into the super structure.
- * Or deletes them if super is NULL.
- * Does not free the alloc struct itself.
+ * Or deletes them if alloc->super is NULL.
+ * Does not free the alloc struct itself (it was also allocated by caller).
  * @param alloc: is almost zeroed on exit (except some stats).
  */
 void alloc_delete(struct alloc_cache* alloc);
@@ -104,11 +98,13 @@ void alloc_delete(struct alloc_cache* alloc);
  * Get a new special_t element.
  * @param alloc: where to alloc it.
  * @return: memory block. Will not return NULL (instead fatal_exit).
+ *    The block is zeroed.
  */
 alloc_special_t* alloc_special_obtain(struct alloc_cache* alloc);
 
 /**
  * Return special_t back to pool.
+ * The block is cleaned up (zeroed) which also invalidates the ID inside.
  * @param alloc: where to alloc it.
  * @param mem: block to free.
  */

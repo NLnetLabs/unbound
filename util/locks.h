@@ -69,6 +69,15 @@
 		__FILE__, __LINE__, strerror(err));	\
  	} while(0)
 
+#define USE_THREAD_DEBUG
+#ifdef USE_THREAD_DEBUG
+/******************* THREAD DEBUG ************************/
+/* (some) checking; to detect races and deadlocks. */
+#include "testcode/checklocks.h"
+
+#else /* USE_THREAD_DEBUG */
+#define lock_protect(lock, area, size) /* nop */
+
 #ifdef HAVE_PTHREAD
 #include <pthread.h>
 
@@ -210,6 +219,7 @@ typedef void* ub_thread_key_t;
 
 #endif /* HAVE_SOLARIS_THREADS */
 #endif /* HAVE_PTHREAD */
+#endif /* USE_THREAD_DEBUG */
 
 /**
  * Block all signals for this thread.
