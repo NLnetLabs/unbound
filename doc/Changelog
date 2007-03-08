@@ -1,3 +1,6 @@
+8 March 2007: Wouter
+	- Reviewed checklock code.
+
 7 March 2007: Wouter
 	- created a wrapper around thread calls that performs some basic
 	  checking for data race and deadlock, and basic performance 

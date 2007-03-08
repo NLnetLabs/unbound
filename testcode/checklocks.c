@@ -42,11 +42,12 @@
  * \file
  * Locks that are checked.
  *
- * Ugly hack: uses the fact that workers are passed to thread_create to make
- * the thread numbers here the same as those used for logging which is nice.
+ * Ugly hack: uses the fact that workers start with an int thread_num, and
+ * are passed to thread_create to make the thread numbers here the same as 
+ * those used for logging which is nice.
  *
  * Todo: - check global ordering of instances of locks.
- *       - refcount statistics.
+ *	 - refcount statistics.
  *	 - debug status print, of thread lock stacks, and current waiting.
  */
 #ifdef USE_THREAD_DEBUG
@@ -55,7 +56,7 @@
 static int key_created = 0;
 /** we hide the thread debug info with this key. */
 static ub_thread_key_t thr_debug_key;
-/** the list of threads, so all threads can be examined. NULL at start. */
+/** the list of threads, so all threads can be examined. NULL if unused. */
 static struct thr_check* thread_infos[THRDEBUG_MAX_THREADS];
 
 /** print pretty lock error and exit */
@@ -63,17 +64,20 @@ static void lock_error(struct checked_lock* lock,
 	const char* func, const char* file, int line, const char* err)
 {
 	log_err("lock error (description follows)");
-	log_err("Created at %s %s %d", lock->create_func, lock->create_file, lock->create_line);
-	log_err("Previously %s %s %d", lock->holder_func, lock->holder_file, lock->holder_line);
-	log_err("At %s %s %d", func, file, line);
+	log_err("Created at %s %s:%d", lock->create_func, 
+		lock->create_file, lock->create_line);
+	log_err("Previously %s %s:%d", lock->holder_func, 
+		lock->holder_file, lock->holder_line);
+	log_err("At %s %s:%d", func, file, line);
 	log_err("Error for %s lock: %s",
 		(lock->type==check_lock_mutex)?"mutex": (
 		(lock->type==check_lock_spinlock)?"spinlock": "rwlock"), err);
 	fatal_exit("bailing out");
 }
 
-/** obtain lock on debug lock structure. This could be a deadlock.
- * (could it?) Anyway, check with timeouts. 
+/** 
+ * Obtain lock on debug lock structure. This could be a deadlock by the caller.
+ * The debug code itself does not deadlock. Anyway, check with timeouts. 
  * @param lock: on what to acquire lock.
  * @param func: user level caller identification.
  * @param file: user level caller identification.
@@ -101,6 +105,7 @@ acquire_locklock(struct checked_lock* lock,
 		log_err("in acquiring locklock: %s", strerror(err));
 		lock_error(lock, func, file, line, "acquire locklock");
 	}
+	/* since we hold the lock, we can edit the contention_count */
 	lock->contention_count += contend;
 }
 
@@ -108,13 +113,13 @@ acquire_locklock(struct checked_lock* lock,
 void 
 lock_protect(struct checked_lock* lock, void* area, size_t size)
 {
-	struct protected_area* e = (struct protected_area*)calloc(1,
+	struct protected_area* e = (struct protected_area*)malloc(
 		sizeof(struct protected_area));
 	if(!e)
 		fatal_exit("lock_protect: out of memory");
 	e->region = area;
 	e->size = size;
-	e->hold = calloc(1, size);
+	e->hold = malloc(size);
 	if(!e->hold)
 		fatal_exit("lock_protect: out of memory");
 	memcpy(e->hold, e->region, e->size);
@@ -189,7 +194,7 @@ checklock_init(enum check_lock_type type, struct checked_lock** lock,
 }
 
 /** delete prot items */
-static void prot_delete(struct checked_lock* lock)
+static void prot_clear(struct checked_lock* lock)
 {
 	struct protected_area* p=lock->prot, *np;
 	while(p) {
@@ -222,11 +227,11 @@ checklock_destroy(enum check_lock_type type, struct checked_lock** lock,
 	e = *lock;
 	if(!e)
 		return;
-	*lock = NULL; /* use after free will fail */
 	checktype(type, e, func, file, line);
 
 	/* check if delete is OK */
 	acquire_locklock(e, func, file, line);
+	*lock = NULL; /* use after free will fail */
 	if(e->hold_count != 0)
 		lock_error(e, func, file, line, "delete while locked.");
 	if(e->wait_count != 0)
@@ -243,8 +248,9 @@ checklock_destroy(enum check_lock_type type, struct checked_lock** lock,
 
 	/* delete it */
 	LOCKRET(pthread_mutex_destroy(&e->lock));
-	prot_delete(e);
-	/* since nobody holds the lock - see check above, no need to unlink */
+	prot_clear(e);
+	/* since nobody holds the lock - see check above, no need to unlink 
+	 * from the thread-held locks list. */
 	switch(e->type) {
 		case check_lock_mutex:
 			LOCKRET(pthread_mutex_destroy(&e->mutex));
@@ -258,7 +264,7 @@ checklock_destroy(enum check_lock_type type, struct checked_lock** lock,
 		default:
 			log_assert(0);
 	}
-	memset(e, 0, sizeof(*lock));
+	memset(e, 0, sizeof(struct checked_lock));
 	free(e);
 }
 
@@ -329,7 +335,7 @@ checklock_lockit(enum check_lock_type type, struct checked_lock* lock,
 		if((err=timedfunc(arg, &to))) {
 			if(err == ETIMEDOUT)
 				lock_error(lock, func, file, line, 
-					"timeout, deadlock?");
+					"timeout possible deadlock");
 			log_err("timedlock: %s", strerror(err));
 		}
 		contend ++;
@@ -458,7 +464,7 @@ checklock_unlock(enum check_lock_type type, struct checked_lock* lock,
 
 	/* delete from thread holder list */
 	/* no need to lock other lockstructs, because they are all on the
-	 * held-locks list, and this threads holds their locks.
+	 * held-locks list, and this thread holds their locks.
 	 * we only touch the thr->num members, so it is safe.  */
 	if(thr->holding_first == lock)
 		thr->holding_first = lock->next_held_lock[thr->num];

@@ -50,6 +50,7 @@
  *        memcmp'ed to ascertain no race conditions.
  *      o checks that locks are unlocked properly (before deletion).
  *        keeps which func, file, line that locked it.
+ *	o checks deadlocks with timeout so it can print errors for them.
  *
  * Limitations:
  *	o Detects unprotected memory access when the lock is locked or freed,
@@ -59,13 +60,13 @@
  *	o Does not check order of locking.
  *	o Uses a lot of memory.
  *	o The checks use locks themselves, changing scheduling,
- *	  thus affecting the races that you see.
+ *	  thus changing what races you see.
  *	o for rwlocks does not detect exclusive writelock, or double locking.
  */
 
 #ifdef USE_THREAD_DEBUG
 #ifndef HAVE_PTHREAD
-/* really pretty arbitrary, since it will work with solaris threads too */
+/* we need the *timed*lock() routines to use for deadlock detection. */
 #error "Need pthreads for checked locks"
 #endif
 /******************* THREAD DEBUG ************************/
@@ -75,7 +76,7 @@
 #define CHECK_LOCK_TIMEOUT 5 /* seconds */
 /** How long to wait before join attempt is a failure. */
 #define CHECK_JOIN_TIMEOUT 120 /* seconds */
-/** How many trheads to allocate for */
+/** How many threads to allocate for */
 #define THRDEBUG_MAX_THREADS 32 /* threads */
 
 /**
@@ -95,7 +96,7 @@ struct protected_area {
 };
 
 /**
- * per thread information for locking debug wrappers. 
+ * Per thread information for locking debug wrappers. 
  */
 struct thr_check {
 	/** thread id */
@@ -107,9 +108,9 @@ struct thr_check {
 	/** number of thread in list structure */
 	int num;
 	/** 
-	 * list of locks that this thread is holding, double
-	 * linked list, which first element the most recent lock acquired.
-	 * So a represents the stack of locks acquired. (of all types).
+	 * List of locks that this thread is holding, double
+	 * linked list. The first element is the most recent lock acquired.
+	 * So it represents the stack of locks acquired. (of all types).
 	 */
 	struct checked_lock *holding_first, *holding_last;
 	/** if the thread is currently waiting for a lock, which one */
@@ -169,9 +170,13 @@ struct checked_lock {
 /**
  * Additional call for the user to specify what areas are protected
  * @param lock: the lock that protects the area. It can be inside the area.
+ *	The lock must be inited.
  * @param area: ptr to mem.
  * @param size: length of area.
  * You can call it multiple times with the same lock to give several areas.
+ * Call it when you are done initialising the area, since it will be copied
+ * at this time and protected right away against unauthorised changes until 
+ * the next lock() call is done.
  */
 void lock_protect(struct checked_lock* lock, void* area, size_t size);
 
@@ -259,6 +264,8 @@ void checklock_thrjoin(pthread_t thread);
 /** structures to enable compiler type checking on the locks. 
  * Also the pointer makes it so that the lock can be part of the protected
  * region without any possible problem (since the ptr will stay the same.)
+ * i.e. there can be contention and readlocks stored in checked_lock, while
+ * the protected area stays the same, even though it contains (ptr to) lock.
  */
 struct checked_lock_rw { struct checked_lock* c_rw; };
 /** structures to enable compiler type checking on the locks. */
