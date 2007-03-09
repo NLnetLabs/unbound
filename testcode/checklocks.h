@@ -171,7 +171,8 @@ struct checked_lock {
 /**
  * Additional call for the user to specify what areas are protected
  * @param lock: the lock that protects the area. It can be inside the area.
- *	The lock must be inited.
+ *	The lock must be inited. Call with user lock. (any type).
+ *	It demangles the lock itself (struct checked_lock**).
  * @param area: ptr to mem.
  * @param size: length of area.
  * You can call it multiple times with the same lock to give several areas.
@@ -179,7 +180,17 @@ struct checked_lock {
  * at this time and protected right away against unauthorised changes until 
  * the next lock() call is done.
  */
-void lock_protect(struct checked_lock* lock, void* area, size_t size);
+void lock_protect(void* lock, void* area, size_t size);
+
+/**
+ * Initialise checklock. Sets up internal debug structures.
+ */
+void checklock_start();
+
+/**
+ * Cleanup internal debug state.
+ */
+void checklock_stop();
 
 /**
  * Init locks.

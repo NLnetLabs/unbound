@@ -77,6 +77,8 @@
 
 #else /* USE_THREAD_DEBUG */
 #define lock_protect(lock, area, size) /* nop */
+#define checklock_start() /* nop */
+#define checklock_stop() /* nop */
 
 #ifdef HAVE_PTHREAD
 #include <pthread.h>

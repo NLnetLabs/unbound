@@ -46,6 +46,7 @@
 #include "config.h"
 #include "util/netevent.h"
 #include "util/locks.h"
+#include "util/alloc.h"
 struct listen_dnsport;
 struct outside_network;
 struct config_file;
@@ -105,6 +106,8 @@ struct worker {
 	struct ub_randstate* rndstate;
 	/** do we need to restart (instead of exit) ? */
 	int need_to_restart;
+	/** allocation cache for this thread */
+	struct alloc_cache alloc;
 };
 
 /**

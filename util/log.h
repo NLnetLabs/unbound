@@ -110,6 +110,15 @@ void log_err(const char* format, ...) ATTR_FORMAT(printf, 1, 2);
 void log_warn(const char* format, ...) ATTR_FORMAT(printf, 1, 2);
 
 /**
+ * Log a hex-string to the log. Can be any length.
+ * performs mallocs to do so, slow. But debug useful.
+ * @param msg: string desc to accompany the hexdump.
+ * @param data: data to dump in hex format.
+ * @param length: length of data.
+ */
+void log_hex(const char* msg, void* data, size_t length);
+
+/**
  * Log fatal error message, and exit the current process.
  * Pass printf formatted arguments. No trailing newline is needed.
  * @param format: printf-style format string. Arguments follow.

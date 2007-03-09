@@ -2,6 +2,9 @@
 	- added rwlock writelock checking.
 	  So it will keep track of the writelock, and readlocks are enforced
 	  to not change protected memory areas.
+	- log_hex function to dump hex strings to the logfile.
+	- checklocks zeroes its destroyed lock after checking memory areas.
+	- unit test for alloc.
 
 8 March 2007: Wouter
 	- Reviewed checklock code.

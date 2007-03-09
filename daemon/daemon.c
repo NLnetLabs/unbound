@@ -114,8 +114,9 @@ daemon_init()
 	if(!daemon)
 		return NULL;
 	signal_handling_record();
-	lock_basic_init(&daemon->lock);
+	checklock_start();
 	daemon->need_to_exit = 0;
+	alloc_init(&daemon->superalloc, NULL);
 	return daemon;	
 }
 
@@ -302,8 +303,9 @@ daemon_delete(struct daemon* daemon)
 	if(!daemon)
 		return;
 	listening_ports_free(daemon->ports);
-	lock_basic_destroy(&daemon->lock);
+	alloc_clear(&daemon->superalloc);
 	free(daemon->cwd);
 	free(daemon->pidfile);
 	free(daemon);
+	checklock_stop();
 }

@@ -44,6 +44,7 @@
 #include "util/net_help.h"
 #include "util/random.h"
 #include "daemon/worker.h"
+#include "daemon/daemon.h"
 #include "util/netevent.h"
 #include "util/config_file.h"
 #include "services/listen_dnsport.h"
@@ -387,6 +388,7 @@ worker_init(struct worker* worker, struct config_file *cfg,
 			fatal_exit("could not set forwarder address");
 		}
 	}
+	alloc_init(&worker->alloc, &worker->daemon->superalloc);
 	return 1;
 }
 
@@ -416,6 +418,7 @@ worker_delete(struct worker* worker)
 	if(worker->cmd_recv_fd != -1)
 		close(worker->cmd_recv_fd);
 	worker->cmd_recv_fd = -1;
+	alloc_clear(&worker->alloc);
 	free(worker);
 }
 

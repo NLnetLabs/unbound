@@ -65,16 +65,20 @@ alloc_init(struct alloc_cache* alloc, struct alloc_cache* super)
 {
 	memset(alloc, 0, sizeof(*alloc));
 	alloc->super = super;
-	lock_quick_init(&alloc->lock);
+	if(!alloc->super) {
+		lock_quick_init(&alloc->lock);
+		lock_protect(&alloc->lock, alloc, sizeof(*alloc));
+	}
 }
 
 void 
-alloc_delete(struct alloc_cache* alloc)
+alloc_clear(struct alloc_cache* alloc)
 {
 	alloc_special_t* p, *np;
 	if(!alloc)
 		return;
-	lock_quick_destroy(&alloc->lock);
+	if(!alloc->super)
+		lock_quick_destroy(&alloc->lock);
 	if(alloc->super && alloc->quar) {
 		/* push entire list into super */
 		p = alloc->quar;
@@ -108,7 +112,6 @@ alloc_special_obtain(struct alloc_cache* alloc)
 		p = alloc->quar;
 		alloc->quar = alloc_special_next(p);
 		alloc->num_quar--;
-		alloc->special_allocated++;
 		alloc_special_clean(p);
 		return p;
 	}
@@ -123,7 +126,6 @@ alloc_special_obtain(struct alloc_cache* alloc)
 		}
 		lock_quick_unlock(&alloc->super->lock);
 		if(p) {
-			alloc->special_allocated++;
 			alloc_special_clean(p);
 			return p;
 		}
@@ -132,7 +134,6 @@ alloc_special_obtain(struct alloc_cache* alloc)
 	prealloc(alloc);
 	if(!(p = (alloc_special_t*)malloc(sizeof(alloc_special_t))))
 		fatal_exit("alloc_special_obtain: out of memory");
-	alloc->special_allocated++;
 	alloc_special_clean(p);
 	return p;
 }
@@ -172,7 +173,6 @@ alloc_special_release(struct alloc_cache* alloc, alloc_special_t* mem)
 	alloc_special_clean(mem);
 	if(alloc->super && alloc->num_quar >= ALLOC_SPECIAL_MAX) {
 		/* push it to the super structure */
-		alloc->special_allocated --;
 		pushintosuper(alloc, mem);
 		return;
 	}
@@ -180,12 +180,11 @@ alloc_special_release(struct alloc_cache* alloc, alloc_special_t* mem)
 	alloc_special_next(mem) = alloc->quar;
 	alloc->quar = mem;
 	alloc->num_quar++;
-	alloc->special_allocated--;
 }
 
 void 
 alloc_stats(struct alloc_cache* alloc)
 {
-	log_info("%salloc: %d allocated, %d in cache.", alloc->super?"":"sup",
-		(int)alloc->special_allocated, (int)alloc->num_quar);
+	log_info("%salloc: %d in cache.", alloc->super?"":"sup",
+		(int)alloc->num_quar);
 }

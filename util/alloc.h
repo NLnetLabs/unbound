@@ -73,9 +73,6 @@ struct alloc_cache {
 	alloc_special_t* quar;
 	/** number of items in quarantine. */
 	size_t num_quar;
-
-	/** number of special type allocated */
-	size_t special_allocated;
 };
 
 /**
@@ -92,7 +89,7 @@ void alloc_init(struct alloc_cache* alloc, struct alloc_cache* super);
  * Does not free the alloc struct itself (it was also allocated by caller).
  * @param alloc: is almost zeroed on exit (except some stats).
  */
-void alloc_delete(struct alloc_cache* alloc);
+void alloc_clear(struct alloc_cache* alloc);
 
 /**
  * Get a new special_t element.

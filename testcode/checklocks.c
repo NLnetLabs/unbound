@@ -71,7 +71,8 @@ static void lock_error(struct checked_lock* lock,
 	log_err("At %s %s:%d", func, file, line);
 	log_err("Error for %s lock: %s",
 		(lock->type==check_lock_mutex)?"mutex": (
-		(lock->type==check_lock_spinlock)?"spinlock": "rwlock"), err);
+		(lock->type==check_lock_spinlock)?"spinlock": (
+		(lock->type==check_lock_rwlock)?"rwlock": "badtype")), err);
 	fatal_exit("bailing out");
 }
 
@@ -111,8 +112,9 @@ acquire_locklock(struct checked_lock* lock,
 
 /** add protected region */
 void 
-lock_protect(struct checked_lock* lock, void* area, size_t size)
+lock_protect(void *p, void* area, size_t size)
 {
+	struct checked_lock* lock = *(struct checked_lock**)p;
 	struct protected_area* e = (struct protected_area*)malloc(
 		sizeof(struct protected_area));
 	if(!e)
@@ -144,6 +146,8 @@ prot_check(struct checked_lock* lock,
 	struct protected_area* p = lock->prot;
 	while(p) {
 		if(memcmp(p->hold, p->region, p->size) != 0) {
+			log_hex("memory prev", p->hold, p->size);
+			log_hex("memory here", p->region, p->size);
 			lock_error(lock, func, file, line, 
 				"protected area modified");
 		}
@@ -211,6 +215,9 @@ static void
 checktype(enum check_lock_type type, struct checked_lock* lock,
         const char* func, const char* file, int line)
 {
+	if(!lock) 
+		fatal_exit("use of null/deleted lock at %s %s:%d", 
+			func, file, line);
 	if(type != lock->type) {
 		lock_error(lock, func, file, line, "wrong lock type");
 	}
@@ -232,12 +239,12 @@ checklock_destroy(enum check_lock_type type, struct checked_lock** lock,
 
 	/* check if delete is OK */
 	acquire_locklock(e, func, file, line);
-	*lock = NULL; /* use after free will fail */
 	if(e->hold_count != 0)
 		lock_error(e, func, file, line, "delete while locked.");
 	if(e->wait_count != 0)
 		lock_error(e, func, file, line, "delete while waited on.");
 	prot_check(e, func, file, line);
+	*lock = NULL; /* use after free will fail */
 	LOCKRET(pthread_mutex_unlock(&e->lock));
 
 	/* contention */
@@ -521,6 +528,7 @@ static void* checklock_main(void* arg)
 	thr->id = pthread_self();
 	/* Hack to get same numbers as in log file */
 	thr->num = *(int*)(thr->arg);
+	log_assert(thr->num < THRDEBUG_MAX_THREADS);
 	log_assert(thread_infos[thr->num] == NULL);
 	thread_infos[thr->num] = thr;
 	LOCKRET(pthread_setspecific(thr_debug_key, thr));
@@ -528,6 +536,36 @@ static void* checklock_main(void* arg)
 	thread_infos[thr->num] = NULL;
 	free(thr);
 	return ret;
+}
+
+/** init the main thread */
+void checklock_start()
+{
+	if(!key_created) {
+		struct thr_check* thisthr = (struct thr_check*)calloc(1, 
+			sizeof(struct thr_check));
+		if(!thisthr)
+			fatal_exit("thrcreate: out of memory");
+		key_created = 1;
+		LOCKRET(pthread_key_create(&thr_debug_key, NULL));
+		LOCKRET(pthread_setspecific(thr_debug_key, thisthr));
+		thread_infos[0] = thisthr;
+	}
+}
+
+/** stop checklocks */
+void checklock_stop()
+{
+	if(key_created) {
+		int i;
+		free(thread_infos[0]);
+		thread_infos[0] = NULL;
+		for(i = 0; i < THRDEBUG_MAX_THREADS; i++)
+			log_assert(thread_infos[i] == NULL);
+			/* should have been cleaned up. */
+		LOCKRET(pthread_key_delete(thr_debug_key));
+		key_created = 0;
+	}
 }
 
 /** allocate debug info and create thread */
@@ -539,14 +577,7 @@ checklock_thrcreate(pthread_t* id, void* (*func)(void*), void* arg)
 	if(!thr)
 		fatal_exit("thrcreate: out of memory");
 	if(!key_created) {
-		struct thr_check* thisthr = (struct thr_check*)calloc(1, 
-			sizeof(struct thr_check));
-		if(!thisthr)
-			fatal_exit("thrcreate: out of memory");
-		key_created = 1;
-		LOCKRET(pthread_key_create(&thr_debug_key, NULL));
-		LOCKRET(pthread_setspecific(thr_debug_key, thisthr));
-		thread_infos[0] = thisthr;
+		checklock_start();
 	}
 	thr->func = func;
 	thr->arg = arg;

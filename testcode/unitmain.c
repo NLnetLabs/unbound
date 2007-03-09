@@ -47,6 +47,46 @@ int testcount = 0;
 /** test bool x, exits on failure, increases testcount. */
 #define unit_assert(x) testcount++; log_assert(x);
 
+#include "util/alloc.h"
+/** test alloc code */
+static void
+alloc_test() {
+	alloc_special_t *t1, *t2;
+	struct alloc_cache major, minor1, minor2;
+	int i;
+
+	checklock_start();
+	alloc_init(&major, NULL);
+	alloc_init(&minor1, &major);
+	alloc_init(&minor2, &major);
+
+	t1 = alloc_special_obtain(&minor1);
+	alloc_clear(&minor1);
+
+	alloc_special_release(&minor2, t1);
+	t2 = alloc_special_obtain(&minor2);
+	unit_assert( t1 == t2 ); /* reused */
+	alloc_special_release(&minor2, t1);
+
+	for(i=0; i<100; i++) {
+		t1 = alloc_special_obtain(&minor1);
+		alloc_special_release(&minor2, t1);
+	}
+	if(0) {
+		alloc_stats(&minor1);
+		alloc_stats(&minor2);
+		alloc_stats(&major);
+	}
+	/* reuse happened */
+	unit_assert(minor1.num_quar + minor2.num_quar + major.num_quar == 11);
+
+	alloc_clear(&minor1);
+	alloc_clear(&minor2);
+	unit_assert(major.num_quar == 11);
+	alloc_clear(&major);
+	checklock_stop();
+}
+
 #include "util/net_help.h"
 /** test net code */
 static void 
@@ -78,6 +118,7 @@ main(int argc, char* argv[])
 	}
 	printf("Start of %s unit test.\n", PACKAGE_STRING);
 	net_test();
+	alloc_test();
 	printf("%d tests succeeded\n", testcount);
 	return 0;
 }

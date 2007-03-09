@@ -43,6 +43,7 @@
 #define DAEMON_H
 
 #include "util/locks.h"
+#include "util/alloc.h"
 struct config_file;
 struct worker;
 struct listen_port;
@@ -52,8 +53,6 @@ struct listen_port;
  * Holds globally visible information.
  */
 struct daemon {
-	/** mutex for exclusive access to this structure. */
-	lock_basic_t lock;
 	/** The config settings */
 	struct config_file* cfg;
 	/** current working directory */
@@ -70,6 +69,8 @@ struct daemon {
 	struct worker** workers;
 	/** do we need to exit unbound (or is it only a reload?) */
 	int need_to_exit;
+	/** master allocation cache */
+	struct alloc_cache superalloc;
 };
 
 /**
