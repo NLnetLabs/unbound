@@ -69,7 +69,11 @@
 		__FILE__, __LINE__, strerror(err));	\
  	} while(0)
 
-#define USE_THREAD_DEBUG
+/** DEBUG: use thread debug whenever possible */
+#if defined(HAVE_PTHREAD) && defined(HAVE_PTHREAD_SPINLOCK_T)
+#  define USE_THREAD_DEBUG
+#endif
+
 #ifdef USE_THREAD_DEBUG
 /******************* THREAD DEBUG ************************/
 /* (some) checking; to detect races and deadlocks. */
