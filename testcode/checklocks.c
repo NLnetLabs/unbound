@@ -184,13 +184,13 @@ checklock_init(enum check_lock_type type, struct checked_lock** lock,
 	LOCKRET(pthread_mutex_init(&e->lock, NULL));
 	switch(e->type) {
 		case check_lock_mutex:
-			LOCKRET(pthread_mutex_init(&e->mutex, NULL));
+			LOCKRET(pthread_mutex_init(&e->u.mutex, NULL));
 			break;
 		case check_lock_spinlock:
-			LOCKRET(pthread_spin_init(&e->spinlock, PTHREAD_PROCESS_PRIVATE));
+			LOCKRET(pthread_spin_init(&e->u.spinlock, PTHREAD_PROCESS_PRIVATE));
 			break;
 		case check_lock_rwlock:
-			LOCKRET(pthread_rwlock_init(&e->rwlock, NULL));
+			LOCKRET(pthread_rwlock_init(&e->u.rwlock, NULL));
 			break;
 		default:
 			log_assert(0);
@@ -261,13 +261,13 @@ checklock_destroy(enum check_lock_type type, struct checked_lock** lock,
 	 * from the thread-held locks list. */
 	switch(e->type) {
 		case check_lock_mutex:
-			LOCKRET(pthread_mutex_destroy(&e->mutex));
+			LOCKRET(pthread_mutex_destroy(&e->u.mutex));
 			break;
 		case check_lock_spinlock:
-			LOCKRET(pthread_spin_destroy(&e->spinlock));
+			LOCKRET(pthread_spin_destroy(&e->u.spinlock));
 			break;
 		case check_lock_rwlock:
-			LOCKRET(pthread_rwlock_destroy(&e->rwlock));
+			LOCKRET(pthread_rwlock_destroy(&e->u.rwlock));
 			break;
 		default:
 			log_assert(0);
@@ -386,7 +386,7 @@ checklock_rdlock(enum check_lock_type type, struct checked_lock* lock,
 
 	log_assert(type == check_lock_rwlock);
 	checklock_lockit(type, lock, func, file, line,
-		try_rd, timed_rd, &lock->rwlock, 0, 0);
+		try_rd, timed_rd, &lock->u.rwlock, 0, 0);
 }
 
 /** helper for wrlock: try */
@@ -403,7 +403,7 @@ checklock_wrlock(enum check_lock_type type, struct checked_lock* lock,
 {
 	log_assert(type == check_lock_rwlock);
 	checklock_lockit(type, lock, func, file, line,
-		try_wr, timed_wr, &lock->rwlock, 0, 1);
+		try_wr, timed_wr, &lock->u.rwlock, 0, 1);
 }
 
 /** helper for lock mutex: try */
@@ -439,13 +439,13 @@ checklock_lock(enum check_lock_type type, struct checked_lock* lock,
 	switch(type) {
 		case check_lock_mutex:
 			checklock_lockit(type, lock, func, file, line,
-				try_mutex, timed_mutex, &lock->mutex, 1, 0);
+				try_mutex, timed_mutex, &lock->u.mutex, 1, 0);
 			break;
 		case check_lock_spinlock:
 			/* void* cast needed because 'volatile' on some OS */
 			checklock_lockit(type, lock, func, file, line,
 				try_spinlock, timed_spinlock, 
-				(void*)&lock->spinlock, 1, 0);
+				(void*)&lock->u.spinlock, 1, 0);
 			break;
 		default:
 			log_assert(0);
@@ -507,13 +507,13 @@ checklock_unlock(enum check_lock_type type, struct checked_lock* lock,
 	/* unlock it */
 	switch(type) {
 		case check_lock_mutex:
-			LOCKRET(pthread_mutex_unlock(&lock->mutex));
+			LOCKRET(pthread_mutex_unlock(&lock->u.mutex));
 			break;
 		case check_lock_spinlock:
-			LOCKRET(pthread_spin_unlock(&lock->spinlock));
+			LOCKRET(pthread_spin_unlock(&lock->u.spinlock));
 			break;
 		case check_lock_rwlock:
-			LOCKRET(pthread_rwlock_unlock(&lock->rwlock));
+			LOCKRET(pthread_rwlock_unlock(&lock->u.rwlock));
 			break;
 		default:
 			log_assert(0);

@@ -165,7 +165,7 @@ struct checked_lock {
 		pthread_spinlock_t spinlock;
 		/** rwlock */
 		pthread_rwlock_t rwlock;
-	};
+	} u;
 };
 
 /**

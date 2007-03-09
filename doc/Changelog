@@ -5,6 +5,7 @@
 	- log_hex function to dump hex strings to the logfile.
 	- checklocks zeroes its destroyed lock after checking memory areas.
 	- unit test for alloc.
+	- identifier for union in checklocks to please older compilers.
 
 8 March 2007: Wouter
 	- Reviewed checklock code.

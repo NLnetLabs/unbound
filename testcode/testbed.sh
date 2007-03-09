@@ -46,7 +46,7 @@ function dotest()
 configure:	configure.ac
 	$AC_CMD
 	touch configure
-Makefile:	configure
+Makefile:	configure Makefile.in
 	./configure $CONFIGURE_FLAGS $DISABLE
 	touch Makefile 
 EOF
