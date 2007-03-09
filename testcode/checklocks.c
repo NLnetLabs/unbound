@@ -194,7 +194,8 @@ checklock_init(enum check_lock_type type, struct checked_lock** lock,
 }
 
 /** delete prot items */
-static void prot_clear(struct checked_lock* lock)
+static void 
+prot_clear(struct checked_lock* lock)
 {
 	struct protected_area* p=lock->prot, *np;
 	while(p) {
@@ -305,12 +306,13 @@ finish_acquire_lock(struct thr_check* thr, struct checked_lock* lock,
  *	Uses absolute timeout value.
  * @param arg: what to pass to tryfunc and timedlock.
  * @param exclusive: if lock must be exlusive (only one allowed).
+ * @param getwr: if attempts to get writelock (or readlock) for rwlocks.
  */
 static void 
 checklock_lockit(enum check_lock_type type, struct checked_lock* lock,
         const char* func, const char* file, int line,
 	int (*tryfunc)(void*), int (*timedfunc)(void*, struct timespec*),
-	void* arg, int exclusive)
+	void* arg, int exclusive, int getwr)
 {
 	int err;
 	int contend = 0;
@@ -324,6 +326,8 @@ checklock_lockit(enum check_lock_type type, struct checked_lock* lock,
 	thr->waiting = lock;
 	if(exclusive && lock->hold_count > 0 && lock->holder == thr) 
 		lock_error(lock, func, file, line, "thread already owns lock");
+	if(type==check_lock_rwlock && getwr && lock->writeholder == thr)
+		lock_error(lock, func, file, line, "thread already has wrlock");
 	LOCKRET(pthread_mutex_unlock(&lock->lock));
 
 	/* first try; if busy increase contention counter */
@@ -346,11 +350,16 @@ checklock_lockit(enum check_lock_type type, struct checked_lock* lock,
 	lock->contention_count += contend;
 	if(exclusive && lock->hold_count > 0)
 		lock_error(lock, func, file, line, "got nonexclusive lock");
+	if(type==check_lock_rwlock && getwr && lock->writeholder)
+		lock_error(lock, func, file, line, "got nonexclusive wrlock");
+	if(type==check_lock_rwlock && getwr)
+		lock->writeholder = thr;
 	/* check the memory areas for unauthorized changes,
 	 * between last unlock time and current lock time.
 	 * we check while holding the lock (threadsafe).
 	 */
-	prot_check(lock, func, file, line);
+	if(getwr || exclusive)
+		prot_check(lock, func, file, line);
 	finish_acquire_lock(thr, lock, func, file, line);
 	LOCKRET(pthread_mutex_unlock(&lock->lock));
 }
@@ -370,7 +379,7 @@ checklock_rdlock(enum check_lock_type type, struct checked_lock* lock,
 
 	log_assert(type == check_lock_rwlock);
 	checklock_lockit(type, lock, func, file, line,
-		try_rd, timed_rd, &lock->rwlock, 0);
+		try_rd, timed_rd, &lock->rwlock, 0, 0);
 }
 
 /** helper for wrlock: try */
@@ -387,7 +396,7 @@ checklock_wrlock(enum check_lock_type type, struct checked_lock* lock,
 {
 	log_assert(type == check_lock_rwlock);
 	checklock_lockit(type, lock, func, file, line,
-		try_wr, timed_wr, &lock->rwlock, 0);
+		try_wr, timed_wr, &lock->rwlock, 0, 1);
 }
 
 /** helper for lock mutex: try */
@@ -423,13 +432,13 @@ checklock_lock(enum check_lock_type type, struct checked_lock* lock,
 	switch(type) {
 		case check_lock_mutex:
 			checklock_lockit(type, lock, func, file, line,
-				try_mutex, timed_mutex, &lock->mutex, 1);
+				try_mutex, timed_mutex, &lock->mutex, 1, 0);
 			break;
 		case check_lock_spinlock:
 			/* void* cast needed because 'volatile' on some OS */
 			checklock_lockit(type, lock, func, file, line,
 				try_spinlock, timed_spinlock, 
-				(void*)&lock->spinlock, 1);
+				(void*)&lock->spinlock, 1, 0);
 			break;
 		default:
 			log_assert(0);
@@ -479,8 +488,13 @@ checklock_unlock(enum check_lock_type type, struct checked_lock* lock,
 	lock->next_held_lock[thr->num] = NULL;
 	lock->prev_held_lock[thr->num] = NULL;
 
-	/* store memory areas that are protected, for later checks */
-	prot_store(lock);
+	if(type==check_lock_rwlock && lock->writeholder == thr) {
+		lock->writeholder = NULL;
+		prot_store(lock);
+	} else if(type != check_lock_rwlock) {
+		/* store memory areas that are protected, for later checks */
+		prot_store(lock);
+	}
 	LOCKRET(pthread_mutex_unlock(&lock->lock));
 
 	/* unlock it */

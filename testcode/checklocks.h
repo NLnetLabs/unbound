@@ -61,7 +61,6 @@
  *	o Uses a lot of memory.
  *	o The checks use locks themselves, changing scheduling,
  *	  thus changing what races you see.
- *	o for rwlocks does not detect exclusive writelock, or double locking.
  */
 
 #ifdef USE_THREAD_DEBUG
@@ -141,6 +140,8 @@ struct checked_lock {
 	int holder_line;
 	/** who owns the lock now */
 	struct thr_check* holder;
+	/** for rwlocks, the writelock holder */
+	struct thr_check* writeholder;
 
 	/** next lock a thread is holding (less recent) */
 	struct checked_lock* next_held_lock[THRDEBUG_MAX_THREADS];
