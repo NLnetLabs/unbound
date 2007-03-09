@@ -77,8 +77,9 @@ alloc_clear(struct alloc_cache* alloc)
 	alloc_special_t* p, *np;
 	if(!alloc)
 		return;
-	if(!alloc->super)
+	if(!alloc->super) {
 		lock_quick_destroy(&alloc->lock);
+	}
 	if(alloc->super && alloc->quar) {
 		/* push entire list into super */
 		p = alloc->quar;
