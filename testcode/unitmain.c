@@ -102,6 +102,36 @@ net_test()
 	unit_assert( !str_is_ip6("255.255.255.0") );
 }
 
+/** put dname into buffer */
+static ldns_buffer*
+dname_to_buf(ldns_buffer* b, const char* str)
+{
+	ldns_rdf* rdf;
+	ldns_status status;
+	ldns_buffer_clear(b);
+	rdf = ldns_dname_new_frm_str(str);	
+	status = ldns_dname2buffer_wire(b, rdf);
+	if(status != LDNS_STATUS_OK)
+		fatal_exit("%s ldns: %s", __func__, 
+			ldns_get_errorstr_by_id(status));
+	ldns_rdf_free(rdf);
+	ldns_buffer_flip(b);
+	return b;
+}
+
+#include "util/data/msgreply.h"
+/** test query parse code */
+static void
+msgreply_test()
+{
+	ldns_buffer* buff = ldns_buffer_new(65800);
+	unit_assert( query_dname_len(buff) == 0);
+	unit_assert( query_dname_len(dname_to_buf(buff, ".")) == 1 );
+	unit_assert( query_dname_len(dname_to_buf(buff, "bla.foo.")) == 9 );
+	unit_assert( query_dname_len(dname_to_buf(buff, "x.y.z.example.com.")) == 19 );
+	ldns_buffer_free(buff);
+}
+
 /**
  * Main unit test program. Setup, teardown and report errors.
  * @param argc: arg count.
@@ -119,6 +149,7 @@ main(int argc, char* argv[])
 	printf("Start of %s unit test.\n", PACKAGE_STRING);
 	net_test();
 	alloc_test();
+	msgreply_test();
 	printf("%d tests succeeded\n", testcount);
 	return 0;
 }

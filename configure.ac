@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 AC_PREREQ(2.57)
 
-AC_INIT(unbound, 0.1, wouter@nlnetlabs.nl, unbound)
+AC_INIT(unbound, 0.2, wouter@nlnetlabs.nl, unbound)
 
 CFLAGS=
 AC_AIX

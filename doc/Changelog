@@ -1,3 +1,7 @@
+12 March 2007: Wouter
+	- configure.ac moved to 0.2.
+	- query_info and replymsg util/data structure.
+
 9 March 2007: Wouter
 	- added rwlock writelock checking.
 	  So it will keep track of the writelock, and readlocks are enforced

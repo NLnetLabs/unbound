@@ -50,7 +50,7 @@ LINTFLAGS+="-DBN_ULONG=unsigned long" -Dkrb5_int32=int "-Dkrb5_ui_4=unsigned int
 
 INSTALL=$(srcdir)/install-sh 
 
-COMMON_SRC=$(wildcard services/*.c util/*.c) util/configparser.c util/configlexer.c testcode/checklocks.c
+COMMON_SRC=$(wildcard services/*.c util/*.c util/data/*.c) util/configparser.c util/configlexer.c testcode/checklocks.c
 COMMON_OBJ=$(addprefix $(BUILD),$(COMMON_SRC:.c=.o))
 COMPAT_OBJ=$(addprefix $(BUILD)compat/,$(LIBOBJS))
 UNITTEST_SRC=testcode/unitmain.c $(COMMON_SRC)
