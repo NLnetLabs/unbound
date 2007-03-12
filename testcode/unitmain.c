@@ -125,6 +125,7 @@ static void
 msgreply_test()
 {
 	ldns_buffer* buff = ldns_buffer_new(65800);
+	ldns_buffer_flip(buff);
 	unit_assert( query_dname_len(buff) == 0);
 	unit_assert( query_dname_len(dname_to_buf(buff, ".")) == 1 );
 	unit_assert( query_dname_len(dname_to_buf(buff, "bla.foo.")) == 9 );
