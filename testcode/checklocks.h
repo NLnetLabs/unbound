@@ -183,6 +183,14 @@ struct checked_lock {
 void lock_protect(void* lock, void* area, size_t size);
 
 /**
+ * Remove protected area from lock.
+ * No need to call this when deleting the lock.
+ * @param lock: the lock, any type, (struct checked_lock**).
+ * @param area: pointer to memory.
+ */
+void lock_unprotect(void* lock, void* area);
+
+/**
  * Initialise checklock. Sets up internal debug structures.
  */
 void checklock_start();

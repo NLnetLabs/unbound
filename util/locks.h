@@ -81,6 +81,7 @@
 
 #else /* USE_THREAD_DEBUG */
 #define lock_protect(lock, area, size) /* nop */
+#define lock_unprotect(lock, area) /* nop */
 #define checklock_start() /* nop */
 #define checklock_stop() /* nop */
 

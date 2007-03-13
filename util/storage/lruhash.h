@@ -1,0 +1,275 @@
+/*
+ * util/storage/lrulash.h - hashtable, hash function, LRU keeping.
+ *
+ * Copyright (c) 2007, NLnet Labs. All rights reserved.
+ *
+ * This software is open source.
+ * 
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 
+ * Redistributions of source code must retain the above copyright notice,
+ * this list of conditions and the following disclaimer.
+ * 
+ * Redistributions in binary form must reproduce the above copyright notice,
+ * this list of conditions and the following disclaimer in the documentation
+ * and/or other materials provided with the distribution.
+ * 
+ * Neither the name of the NLNET LABS nor the names of its contributors may
+ * be used to endorse or promote products derived from this software without
+ * specific prior written permission.
+ * 
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+ * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ */
+
+/**
+ * \file
+ *
+ * This file contains a hashtable with LRU keeping of entries.
+ *
+ * The hash table keeps a maximum memory size. Old entries are removed
+ * to make space for new entries.
+ *
+ * The locking strategy is as follows:
+ * 	o since (almost) every read also implies a LRU update, the
+ *	  hashtable lock is a spinlock, not rwlock.
+ *	o the idea is to move every thread through the hash lock quickly,
+ *	  so that the next thread can access the lookup table.
+ *	o User performs hash function.
+ *
+ * For read:
+ *	o lock hashtable.
+ *		o lookup hash bin.
+ *		o lock hash bin.
+ *			o find entry (if failed, unlock hash, unl bin, exit).
+ *			o swizzle pointers for LRU update.
+ *		o unlock hashtable.
+ *		o lock entry (rwlock).
+ *		o unlock hash bin.
+ *		o work on entry.
+ *	o unlock entry.
+ *
+ * To update an entry, gain writelock and change the entry.
+ * (the entry must keep the same hashvalue, so a data update.)
+ * (you cannot upgrade a readlock to a writelock, because the item may
+ *  be deleted, it would cause race conditions. So instead, unlock and
+ *  relookup it in the hashtable.)
+ *
+ * To delete an entry:
+ *	o unlock the entry if you hold the lock already.
+ *	o lock hashtable.
+ *		o lookup hash bin.
+ *		o lock hash bin.
+ *			o find entry (if failed, unlock hash, unl bin, exit).
+ *			o remove entry from hashtable bin overflow chain.
+ *		o unlock hashtable.
+ *		o lock entry (writelock).
+ *		o unlock hash bin.
+ *	o unlock entry (nobody else should be waiting for this lock,
+ *	  since you removed it from hashtable, and you got writelock while
+ *	  holding the hashbinlock so you are the only one.)
+ * 	  Note you are only allowed to obtain a lock while holding hashbinlock.
+ *	o delete entry.
+ *
+ * The above sequence is:
+ *	o race free, works with read, write and delete.
+ *	o but has a queue, imagine someone needing a writelock on an item.
+ *	  but there are still readlocks. The writelocker waits, but holds
+ *	  the hashbinlock. The next thread that comes in and needs the same
+ * 	  hashbin will wait for the lock while holding the hashtable lock.
+ *	  thus halting the entire system on hashtable.
+ *	  This is because of the delete protection. 
+ *	  Readlocks will be easier on the rwlock on entries.
+ *	  While the writer is holding writelock, similar problems happen with
+ *	  a reader or writer needing the same item.
+ *	  the scenario requires more than three threads.
+ * 	o so the queue length is 3 threads in a bad situation. The fourth is
+ *	  unable to use the hashtable.
+ */
+
+#ifndef UTIL_STORAGE_LRUHASH_H
+#define UTIL_STORAGE_LRUHASH_H
+#include "util/locks.h"
+struct lruhash_bin;
+struct lruhash_entry;
+
+/** default start size for hash arrays */
+#define HASH_DEFAULT_STARTARRAY		1024 /* entries in array */
+/** default max memory for hash arrays */
+#define HASH_DEFAULT_MAXMEM		4*1024*1024 /* bytes */
+
+/** the type of a hash value */
+typedef uint32_t hashvalue_t;
+
+/** 
+ * Type of function that calculates the size of an entry.
+ * Result must include the size of struct lruhash_entry. 
+ * Keys that are identical must also calculate to the same size.
+ * size = func(key, data).
+ */
+typedef size_t (*lruhash_sizefunc_t)(void*, void*);
+
+/** type of function that compares two keys. return 0 if equal. */
+typedef int (*lruhash_compfunc_t)(void*, void*);
+
+/** old keys is deleted. This function is called: func(key, userarg) */
+typedef void (*lruhash_delkeyfunc_t)(void*, void*);
+
+/** old data is deleted. This function is called: func(data, userarg). */
+typedef void (*lruhash_deldatafunc_t)(void*, void*);
+
+/**
+ * Hash table that keeps LRU list of entries.
+ */
+struct lruhash {
+	/** lock for exclusive access, to the lookup array */
+	lock_quick_t lock;
+	/** the size function for entries in this table */
+	lruhash_sizefunc_t sizefunc;
+	/** the compare function for entries in this table. */
+	lruhash_compfunc_t compfunc;
+	/** how to delete keys. */
+	lruhash_delkeyfunc_t delkeyfunc;
+	/** how to delete data. */
+	lruhash_deldatafunc_t deldatafunc;
+	/** user argument for user functions */
+	void* cb_arg;
+
+	/** the size of the lookup array */
+	size_t size;
+	/** size bitmask - since size is a power of 2 */
+	int size_mask;
+	/** lookup array of bins */
+	struct lruhash_bin* array;
+
+	/** the lru list, start and end, noncyclical double linked list. */
+	struct lruhash_entry* lru_start;
+	/** lru list end item (least recently used) */
+	struct lruhash_entry* lru_end;
+
+	/** the number of entries in the hash table. */
+	size_t num;
+	/** the amount of space used, roughly the number of bytes in use. */
+	size_t space_used;
+	/** the amount of space the hash table is maximally allowed to use. */
+	size_t space_max;
+};
+
+/**
+ * A single bin with a linked list of entries in it.
+ */
+struct lruhash_bin {
+	/** 
+	 * Lock for exclusive access to the linked list
+	 * This lock makes deletion of items safe in this overflow list.
+	 */
+	lock_quick_t lock;
+	/** linked list of overflow entries */
+	struct lruhash_entry* overflow_list;
+};
+
+/**
+ * An entry into the hash table.
+ * To change overflow_next you need to hold the bin lock.
+ * To change the lru items you need to hold the hashtable lock.
+ * This structure is designed as part of key struct. And key pointer helps
+ * to get the surrounding structure. Data should be allocated on its own.
+ */
+struct lruhash_entry {
+	/** 
+	 * rwlock for access to the contents of the entry
+	 * Note that it does _not_ cover the lru_ and overflow_ ptrs.
+	 * Even with a writelock, you cannot change hash and key.
+	 * You need to delete it to change hash or key.
+	 */
+	lock_rw_t lock;
+	/** next entry in overflow chain */
+	struct lruhash_entry* overflow_next;
+	/** next entry in lru chain */
+	struct lruhash_entry* lru_next;
+	/** prev entry in lru chain */
+	struct lruhash_entry* lru_prev;
+	/** hash value of the key */
+	hashvalue_t hash;
+	/** key */
+	void* key;
+	/** data */
+	void* data;
+};
+
+/**
+ * Create new hash table.
+ * @param start_size: size of hashtable array at start, must be power of 2.
+ * @param maxmem: maximum amount of memory this table is allowed to use.
+ * @param sizefunc: calculates memory usage of entries.
+ * @param compfunc: compares entries, 0 on equality.
+ * @param delkeyfunc: deletes key.
+ *   Calling both delkey and deldata will also free the struct lruhash_entry.
+ *   Make it part of the key structure and delete it in delkeyfunc.
+ * @param deldatafunc: deletes data. 
+ * @param arg: user argument that is passed to user function calls.
+ * @return: new hash table or NULL on malloc failure.
+ */
+struct lruhash* lruhash_create(size_t start_size, size_t maxmem,
+	lruhash_sizefunc_t sizefunc, lruhash_compfunc_t compfunc,
+	lruhash_delkeyfunc_t delkeyfunc, lruhash_deldatafunc_t deldatafunc, 
+	void* arg);
+
+/**
+ * Delete hash table. Entries are all deleted.
+ * @param table: to delete.
+ */
+void lruhash_delete(struct lruhash* table);
+
+/**
+ * Insert a new element into the hashtable. 
+ * If key is already present data pointer in that entry is updated.
+ * The space calculation function is called with the key, data.
+ * If necessary the least recently used entries are deleted to make space.
+ * If necessary the hash array is grown up.
+ *
+ * @param table: hash table.
+ * @param hash: hash value. User calculates the hash.
+ * @param entry: identifies the entry.
+ * 	If key already present, this entry->key is deleted immediately.
+ *	But entry->data is set to NULL before deletion, and put into
+ * 	the existing entry. The data is then freed.
+ * @param data: the data.
+ */
+void lruhash_insert(struct lruhash* table, hashvalue_t hash, 
+	struct lruhash_entry* entry, void* data);
+
+/**
+ * Lookup an entry in the hashtable.
+ * At the end of the function you hold a (read/write)lock on the entry.
+ * The LRU is updated for the entry (if found).
+ * @param table: hash table.
+ * @param key: what to look for, compared against entries in overflow chain.
+ *    the hash value must be set, and must work with compare function.
+ * @param wr: set to true if you desire a writelock on the entry.
+ *    with a writelock you can update the data part.
+ * @return: pointer to the entry or NULL. The entry is locked.
+ *    The user must unlock the entry when done.
+ */
+struct lruhash_entry* lruhash_lookup(struct lruhash* table, void* key, int wr);
+
+/**
+ * Remove entry from hashtable. Does nothing if not found in hashtable.
+ * Delfunc is called for the entry.
+ * @param table: hash table.
+ * @param key: what to look for. 
+ */
+void lruhash_remove(struct lruhash* table, void* key);
+
+#endif /* UTIL_STORAGE_LRUHASH_H */

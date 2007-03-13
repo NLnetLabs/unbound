@@ -132,6 +132,31 @@ lock_protect(void *p, void* area, size_t size)
 	LOCKRET(pthread_mutex_unlock(&lock->lock));
 }
 
+/** remove protected region */
+void
+lock_unprotect(void* mangled, void* area)
+{
+	struct checked_lock* lock = *(struct checked_lock**)mangled;
+	struct protected_area* p, **prevp;
+	if(!lock) 
+		return;
+	acquire_locklock(lock, __func__, __FILE__, __LINE__);
+	p = lock->prot;
+	prevp = &lock->prot;
+	while(p) {
+		if(p->region == area) {
+			*prevp = p->next;
+			free(p->hold);
+			free(p);
+			LOCKRET(pthread_mutex_unlock(&lock->lock));
+			return;
+		}
+		prevp = &p->next;
+		p = p->next;
+	}
+	LOCKRET(pthread_mutex_unlock(&lock->lock));
+}
+
 /** 
  * Check protected memory region. Memory compare. Exit on error. 
  * @param lock: which lock to check.

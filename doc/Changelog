@@ -1,3 +1,7 @@
+13 March 2007: Wouter
+	- lock_unprotect in checklocks.
+	- util/storage/lruhash.h for LRU hash table structure.
+
 12 March 2007: Wouter
 	- configure.ac moved to 0.2.
 	- query_info and replymsg util/data structure.
