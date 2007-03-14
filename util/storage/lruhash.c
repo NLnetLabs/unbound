@@ -138,10 +138,10 @@ bin_init(struct lruhash_bin* array, size_t size)
 	}
 }
 
-struct lruhash* lruhash_create(size_t start_size, size_t maxmem,
-        lruhash_sizefunc_t sizefunc, lruhash_compfunc_t compfunc,
-	lruhash_delkeyfunc_t delkeyfunc, lruhash_deldatafunc_t deldatafunc,
-	void* arg)
+struct lruhash* 
+lruhash_create(size_t start_size, size_t maxmem, lruhash_sizefunc_t sizefunc, 
+	lruhash_compfunc_t compfunc, lruhash_delkeyfunc_t delkeyfunc, 
+	lruhash_deldatafunc_t deldatafunc, void* arg)
 {
 	struct lruhash* table = (struct lruhash*)calloc(1, 
 		sizeof(struct lruhash));
@@ -173,7 +173,8 @@ struct lruhash* lruhash_create(size_t start_size, size_t maxmem,
 	return table;
 }
 
-static void bin_delete(struct lruhash* table, struct lruhash_bin* bin)
+static void 
+bin_delete(struct lruhash* table, struct lruhash_bin* bin)
 {
 	struct lruhash_entry* p, *np;
 	if(!bin)
@@ -217,7 +218,8 @@ bin_split(struct lruhash* table, struct lruhash_bin* newa,
 	}
 }
 
-void lruhash_delete(struct lruhash* table)
+void 
+lruhash_delete(struct lruhash* table)
 {
 	size_t i;
 	if(!table)
@@ -361,7 +363,8 @@ lru_touch(struct lruhash* table, struct lruhash_entry* entry)
 	lru_front(table, entry);
 }
 
-void lruhash_insert(struct lruhash* table, hashvalue_t hash,
+void 
+lruhash_insert(struct lruhash* table, hashvalue_t hash,
         struct lruhash_entry* entry, void* data)
 {
 	struct lruhash_bin* bin;
@@ -408,10 +411,10 @@ void lruhash_insert(struct lruhash* table, hashvalue_t hash,
 	}
 }
 
-struct lruhash_entry* lruhash_lookup(struct lruhash* table, hashvalue_t hash,
-	void* key, int wr)
+struct lruhash_entry* 
+lruhash_lookup(struct lruhash* table, hashvalue_t hash, void* key, int wr)
 {
-	struct lruhash_entry* entry = NULL;
+	struct lruhash_entry* entry;
 	struct lruhash_bin* bin;
 
 	lock_quick_lock(&table->lock);
@@ -430,6 +433,28 @@ struct lruhash_entry* lruhash_lookup(struct lruhash* table, hashvalue_t hash,
 	return entry;
 }
 
-void lruhash_remove(struct lruhash* table, void* key)
+void 
+lruhash_remove(struct lruhash* table, hashvalue_t hash, void* key)
 {
+	struct lruhash_entry* entry;
+	struct lruhash_bin* bin;
+
+	lock_quick_lock(&table->lock);
+	bin = &table->array[hash & table->size_mask];
+	lock_quick_lock(&bin->lock);
+	if((entry=bin_find_entry(table, bin, hash, key))) {
+		bin_overflow_remove(bin, entry);
+		lru_remove(table, entry);
+	} else {
+		lock_quick_unlock(&table->lock);
+		lock_quick_unlock(&bin->lock);
+		return;
+	}
+	lock_quick_unlock(&table->lock);
+	lock_rw_wrlock(&entry->lock);
+	lock_quick_unlock(&bin->lock);
+	/* finish removal */
+	lock_rw_unlock(&entry->lock);
+	(*table->delkeyfunc)(entry->key, table->cb_arg);
+	(*table->deldatafunc)(entry->data, table->cb_arg);
 }

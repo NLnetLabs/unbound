@@ -270,8 +270,9 @@ struct lruhash_entry* lruhash_lookup(struct lruhash* table, hashvalue_t hash,
  * Remove entry from hashtable. Does nothing if not found in hashtable.
  * Delfunc is called for the entry.
  * @param table: hash table.
+ * @param hash: hash of key.
  * @param key: what to look for. 
  */
-void lruhash_remove(struct lruhash* table, void* key);
+void lruhash_remove(struct lruhash* table, hashvalue_t hash, void* key);
 
 #endif /* UTIL_STORAGE_LRUHASH_H */
