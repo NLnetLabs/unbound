@@ -195,7 +195,7 @@ bin_split(struct lruhash* table, struct lruhash_bin* newa,
 {
 	size_t i;
 	struct lruhash_entry *p, *np;
-	int newbin;
+	struct lruhash_bin* newbin;
 	/* move entries to new table. Notice that since hash x is mapped to
 	 * bin x & mask, and new mask uses one more bit, so all entries in
 	 * one bin will go into the old bin or bin | newbit */
@@ -209,9 +209,9 @@ bin_split(struct lruhash* table, struct lruhash_bin* newa,
 		while(p) {
 			np = p->overflow_next;
 			/* link into correct new bin */
-			newbin = p->hash & newmask;
-			p->overflow_next = newa[newbin].overflow_list;
-			newa[newbin].overflow_list = p;
+			newbin = &newa[p->hash & newmask];
+			p->overflow_next = newbin->overflow_list;
+			newbin->overflow_list = p;
 			p=np;
 		}
 	}
