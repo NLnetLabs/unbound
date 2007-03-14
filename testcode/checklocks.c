@@ -66,8 +66,9 @@ static void lock_error(struct checked_lock* lock,
 	log_err("lock error (description follows)");
 	log_err("Created at %s %s:%d", lock->create_func, 
 		lock->create_file, lock->create_line);
-	log_err("Previously %s %s:%d", lock->holder_func, 
-		lock->holder_file, lock->holder_line);
+	if(lock->holder_func && lock->holder_file)
+		log_err("Previously %s %s:%d", lock->holder_func, 
+			lock->holder_file, lock->holder_line);
 	log_err("At %s %s:%d", func, file, line);
 	log_err("Error for %s lock: %s",
 		(lock->type==check_lock_mutex)?"mutex": (

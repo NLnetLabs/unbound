@@ -266,6 +266,10 @@ void lruhash_insert(struct lruhash* table, hashvalue_t hash,
 struct lruhash_entry* lruhash_lookup(struct lruhash* table, hashvalue_t hash, 
 	void* key, int wr);
 
+
+/************************* Internal functions ************************/
+/*** these are only exposed for unit tests. ***/
+
 /**
  * Remove entry from hashtable. Does nothing if not found in hashtable.
  * Delfunc is called for the entry.
@@ -274,5 +278,86 @@ struct lruhash_entry* lruhash_lookup(struct lruhash* table, hashvalue_t hash,
  * @param key: what to look for. 
  */
 void lruhash_remove(struct lruhash* table, hashvalue_t hash, void* key);
+
+/** init the hash bins for the table. */
+void bin_init(struct lruhash_bin* array, size_t size);
+
+/** delete the hash bin and entries inside it */
+void bin_delete(struct lruhash* table, struct lruhash_bin* bin);
+
+/** 
+ * Find entry in hash bin. You must have locked the bin.
+ * @param table: hash table with function pointers.
+ * @param bin: hash bin to look into.
+ * @param hash: hash value to look for.
+ * @param key: key to look for.
+ * @return: the entry or NULL if not found.
+ */
+struct lruhash_entry* bin_find_entry(struct lruhash* table, 
+	struct lruhash_bin* bin, hashvalue_t hash, void* key);
+
+/**
+ * Remove entry from bin overflow chain.
+ * You must have locked the bin.
+ * @param bin: hash bin to look into.
+ * @param entry: entry ptr that needs removal.
+ */
+void bin_overflow_remove(struct lruhash_bin* bin, 
+	struct lruhash_entry* entry);
+
+/**
+ * Split hash bin into two new ones. Based on increased size_mask.
+ * Caller must hold hash table lock.
+ * At the end the routine acquires all hashbin locks (in the old array).
+ * This makes it wait for other threads to finish with the bins.
+ * So the bins are ready to be deleted after this function.
+ * @param table: hash table with function pointers.
+ * @param newa: new increased array.
+ * @param newmask: new lookup mask.
+ */
+void bin_split(struct lruhash* table, struct lruhash_bin* newa, 
+	int newmask);
+
+/** 
+ * Try to make space available by deleting old entries.
+ * Assumes that the lock on the hashtable is being held by caller.
+ * Caller must not hold bin locks.
+ * @param table: hash table.
+ * @param list: list of entries that are to be deleted later.
+ *	Entries have been removed from the hash table and writelock is held.
+ */
+void reclaim_space(struct lruhash* table, struct lruhash_entry** list);
+
+/**
+ * Grow the table lookup array. Becomes twice as large.
+ * Caller must hold the hash table lock. Must not hold any bin locks.
+ * Tries to grow, on malloc failure, nothing happened.
+ * @param table: hash table.
+ */
+void table_grow(struct lruhash* table);
+
+/**
+ * Touch entry, so it becomes the most recently used in the LRU list.
+ * Caller must hold hash table lock. The entry must be inserted already.
+ * @param table: hash table.
+ * @param entry: entry to make first in LRU.
+ */
+void lru_touch(struct lruhash* table, struct lruhash_entry* entry);
+
+/**
+ * Put entry at front of lru. entry must be unlinked from lru.
+ * Caller must hold hash table lock.
+ * @param table: hash table with lru head and tail.
+ * @param entry: entry to make most recently used.
+ */
+void lru_front(struct lruhash* table, struct lruhash_entry* entry);
+
+/**
+ * Remove entry from lru list.
+ * Caller must hold hash table lock.
+ * @param table: hash table with lru head and tail.
+ * @param entry: entry to remove from lru.
+ */
+void lru_remove(struct lruhash* table, struct lruhash_entry* entry);
 
 #endif /* UTIL_STORAGE_LRUHASH_H */

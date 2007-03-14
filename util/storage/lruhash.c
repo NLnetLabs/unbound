@@ -43,91 +43,7 @@
 #include "config.h"
 #include "util/storage/lruhash.h"
 
-/* ------ local helper functions ------------- */
-
-/** init the hash bins for the table. */
-static void bin_init(struct lruhash_bin* array, size_t size);
-
-/** delete the hash bin and entries inside it */
-static void bin_delete(struct lruhash* table, struct lruhash_bin* bin);
-
-/** find entry in hash bin. You must have locked the bin.
- * @param table: hash table with function pointers.
- * @param bin: hash bin to look into.
- * @param hash: hash value to look for.
- * @param key: key to look for.
- * @return: the entry or NULL if not found.
- */
-static struct lruhash_entry* bin_find_entry(struct lruhash* table, 
-	struct lruhash_bin* bin, hashvalue_t hash, void* key);
-
-/**
- * Remove entry from bin overflow chain.
- * You must have locked the bin.
- * @param bin: hash bin to look into.
- * @param entry: entry ptr that needs removal.
- */
-static void bin_overflow_remove(struct lruhash_bin* bin, 
-	struct lruhash_entry* entry);
-
-/**
- * Split hash bin into two new ones. Based on increased size_mask.
- * Caller must hold hash table lock.
- * At the end the routine acquires all hashbin locks (in the old array).
- * This makes it wait for other threads to finish with the bins.
- * So the bins are ready to be deleted after this function.
- * @param table: hash table with function pointers.
- * @param newa: new increased array.
- * @param newmask: new lookup mask.
- */
-static void bin_split(struct lruhash* table, struct lruhash_bin* newa, 
-	int newmask);
-
-/** 
- * Try to make space available by deleting old entries.
- * Assumes that the lock on the hashtable is being held by caller.
- * Caller must not hold bin locks.
- * @param table: hash table.
- * @param list: list of entries that are to be deleted later.
- *	Entries have been removed from the hash table and writelock is held.
- */
-static void reclaim_space(struct lruhash* table, struct lruhash_entry** list);
-
-/**
- * Grow the table lookup array. Becomes twice as large.
- * Caller must hold the hash table lock. Must not hold any bin locks.
- * Tries to grow, on malloc failure, nothing happened.
- * @param table: hash table.
- */
-static void table_grow(struct lruhash* table);
-
-/**
- * Touch entry, so it becomes the most recently used in the LRU list.
- * Caller must hold hash table lock. The entry must be inserted already.
- * @param table: hash table.
- * @param entry: entry to make first in LRU.
- */
-static void lru_touch(struct lruhash* table, struct lruhash_entry* entry);
-
-/**
- * Put entry at front of lru. entry must be unlinked from lru.
- * Caller must hold hash table lock.
- * @param table: hash table with lru head and tail.
- * @param entry: entry to make most recently used.
- */
-static void lru_front(struct lruhash* table, struct lruhash_entry* entry);
-
-/**
- * Remove entry from lru list.
- * Caller must hold hash table lock.
- * @param table: hash table with lru head and tail.
- * @param entry: entry to remove from lru.
- */
-static void lru_remove(struct lruhash* table, struct lruhash_entry* entry);
-
-/* ------ end local helper functions --------- */
-
-static void
+void
 bin_init(struct lruhash_bin* array, size_t size)
 {
 	size_t i;
@@ -173,7 +89,7 @@ lruhash_create(size_t start_size, size_t maxmem, lruhash_sizefunc_t sizefunc,
 	return table;
 }
 
-static void 
+void 
 bin_delete(struct lruhash* table, struct lruhash_bin* bin)
 {
 	struct lruhash_entry* p, *np;
@@ -190,7 +106,7 @@ bin_delete(struct lruhash* table, struct lruhash_bin* bin)
 	}
 }
 
-static void 
+void 
 bin_split(struct lruhash* table, struct lruhash_bin* newa, 
 	int newmask)
 {
@@ -232,7 +148,7 @@ lruhash_delete(struct lruhash* table)
 	free(table);
 }
 
-static void 
+void 
 bin_overflow_remove(struct lruhash_bin* bin, struct lruhash_entry* entry)
 {
 	struct lruhash_entry* p = bin->overflow_list;
@@ -247,7 +163,7 @@ bin_overflow_remove(struct lruhash_bin* bin, struct lruhash_entry* entry)
 	}
 }
 
-static void 
+void 
 reclaim_space(struct lruhash* table, struct lruhash_entry** list)
 {
 	struct lruhash_entry* d;
@@ -280,7 +196,7 @@ reclaim_space(struct lruhash* table, struct lruhash_entry** list)
 	}
 }
 
-static struct lruhash_entry* 
+struct lruhash_entry* 
 bin_find_entry(struct lruhash* table, 
 	struct lruhash_bin* bin, hashvalue_t hash, void* key)
 {
@@ -293,7 +209,7 @@ bin_find_entry(struct lruhash* table,
 	return NULL;
 }
 
-static void 
+void 
 table_grow(struct lruhash* table)
 {
 	struct lruhash_bin* newa;
@@ -329,7 +245,7 @@ table_grow(struct lruhash* table)
 	return;
 }
 
-static void 
+void 
 lru_front(struct lruhash* table, struct lruhash_entry* entry)
 {
 	entry->lru_prev = NULL;
@@ -340,7 +256,7 @@ lru_front(struct lruhash* table, struct lruhash_entry* entry)
 	table->lru_start = entry;
 }
 
-static void 
+void 
 lru_remove(struct lruhash* table, struct lruhash_entry* entry)
 {
 	if(entry->lru_prev)
@@ -351,7 +267,7 @@ lru_remove(struct lruhash* table, struct lruhash_entry* entry)
 	else	table->lru_end = entry->lru_prev;
 }
 
-static void 
+void 
 lru_touch(struct lruhash* table, struct lruhash_entry* entry)
 {
 	log_assert(table && entry);

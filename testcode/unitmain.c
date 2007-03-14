@@ -41,11 +41,10 @@
 
 #include "config.h"
 #include "util/log.h"
+#include "testcode/unitmain.h"
 
 /** number of tests done */
 int testcount = 0;
-/** test bool x, exits on failure, increases testcount. */
-#define unit_assert(x) testcount++; log_assert(x);
 
 #include "util/alloc.h"
 /** test alloc code */
@@ -55,7 +54,6 @@ alloc_test() {
 	struct alloc_cache major, minor1, minor2;
 	int i;
 
-	checklock_start();
 	alloc_init(&major, NULL);
 	alloc_init(&minor1, &major);
 	alloc_init(&minor2, &major);
@@ -84,7 +82,6 @@ alloc_test() {
 	alloc_clear(&minor2);
 	unit_assert(major.num_quar == 11);
 	alloc_clear(&major);
-	checklock_stop();
 }
 
 #include "util/net_help.h"
@@ -148,9 +145,12 @@ main(int argc, char* argv[])
 		return 1;
 	}
 	printf("Start of %s unit test.\n", PACKAGE_STRING);
+	checklock_start();
 	net_test();
 	alloc_test();
 	msgreply_test();
+	lruhash_test();
+	checklock_stop();
 	printf("%d tests succeeded\n", testcount);
 	return 0;
 }
