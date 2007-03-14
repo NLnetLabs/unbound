@@ -194,13 +194,13 @@ struct lruhash_entry {
 	 * You need to delete it to change hash or key.
 	 */
 	lock_rw_t lock;
-	/** next entry in overflow chain */
+	/** next entry in overflow chain. Covered by hashlock and binlock. */
 	struct lruhash_entry* overflow_next;
-	/** next entry in lru chain */
+	/** next entry in lru chain. covered by hashlock. */
 	struct lruhash_entry* lru_next;
-	/** prev entry in lru chain */
+	/** prev entry in lru chain. covered by hashlock. */
 	struct lruhash_entry* lru_prev;
-	/** hash value of the key */
+	/** hash value of the key. It may not change, until entry deleted. */
 	hashvalue_t hash;
 	/** key */
 	void* key;
@@ -255,6 +255,7 @@ void lruhash_insert(struct lruhash* table, hashvalue_t hash,
  * At the end of the function you hold a (read/write)lock on the entry.
  * The LRU is updated for the entry (if found).
  * @param table: hash table.
+ * @param hash: hash of key.
  * @param key: what to look for, compared against entries in overflow chain.
  *    the hash value must be set, and must work with compare function.
  * @param wr: set to true if you desire a writelock on the entry.
@@ -262,7 +263,8 @@ void lruhash_insert(struct lruhash* table, hashvalue_t hash,
  * @return: pointer to the entry or NULL. The entry is locked.
  *    The user must unlock the entry when done.
  */
-struct lruhash_entry* lruhash_lookup(struct lruhash* table, void* key, int wr);
+struct lruhash_entry* lruhash_lookup(struct lruhash* table, hashvalue_t hash, 
+	void* key, int wr);
 
 /**
  * Remove entry from hashtable. Does nothing if not found in hashtable.
