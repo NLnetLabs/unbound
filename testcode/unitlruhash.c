@@ -68,7 +68,7 @@ static void test_deldata(void*, void*);
 /* --- end test representation --- */
 
 /** hash func, very bad to improve collisions. */
-static hashvalue_t myhash(int id) {return id & 0x0f;}
+static hashvalue_t myhash(int id) {return (hashvalue_t)id & 0x0f;}
 /** allocate new key, fill in hash. */
 static struct testkey* newkey(int id) {
 	struct testkey* k = (struct testkey*)calloc(1, sizeof(struct testkey));
