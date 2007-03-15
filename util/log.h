@@ -89,6 +89,12 @@ void log_init(const char* filename);
 void log_thread_set(int* num);
 
 /**
+ * Set identity to print, default is 'unbound'. 
+ * @param id: string to print. Name of executable.
+ */
+void log_ident_set(const char* id);
+
+/**
  * Log informational message.
  * Pass printf formatted arguments. No trailing newline is needed.
  * @param format: printf-style format string. Arguments follow.

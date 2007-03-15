@@ -77,6 +77,8 @@
 #define CHECK_JOIN_TIMEOUT 120 /* seconds */
 /** How many threads to allocate for */
 #define THRDEBUG_MAX_THREADS 32 /* threads */
+/** do we check locking order */
+extern int check_locking_order;
 
 /**
  * Protection memory area.
@@ -106,6 +108,10 @@ struct thr_check {
 	void* arg;
 	/** number of thread in list structure */
 	int num;
+	/** instance number - how many locks have been created by thread */
+	int locks_created;
+	/** file to write locking order information to */
+	FILE* order_info;
 	/** 
 	 * List of locks that this thread is holding, double
 	 * linked list. The first element is the most recent lock acquired.
@@ -128,6 +134,8 @@ struct checked_lock {
 	const char* create_func, *create_file;
 	/** where was this lock created */
 	int create_line;
+	/** unique instance identifier */
+	int create_thread, create_instance;
 	/** contention count */
 	size_t contention_count;
 	/** hold count (how many threads are holding this lock) */

@@ -51,6 +51,8 @@ static FILE* logfile = 0;
 static int key_created = 0;
 /** pthread key for thread ids in logfile */
 static ub_thread_key_t logkey;
+/** the identity of this executable/process */
+static const char* ident="unbound";
 
 void
 log_init(const char* filename)
@@ -85,11 +87,15 @@ void log_thread_set(int* num)
 	ub_thread_key_set(logkey, num);
 }
 
+void log_ident_set(const char* id)
+{
+	ident = id;
+}
+
 void
 log_vmsg(const char* type, const char *format, va_list args)
 {
 	char message[MAXSYSLOGMSGLEN];
-	const char* ident="unbound";
 	unsigned int* tid = (unsigned int*)ub_thread_key_get(logkey);
 	vsnprintf(message, sizeof(message), format, args);
 	fprintf(logfile, "[%d] %s[%d:%x] %s: %s\n",

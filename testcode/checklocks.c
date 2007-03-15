@@ -58,6 +58,10 @@ static int key_created = 0;
 static ub_thread_key_t thr_debug_key;
 /** the list of threads, so all threads can be examined. NULL if unused. */
 static struct thr_check* thread_infos[THRDEBUG_MAX_THREADS];
+/** do we check locking order */
+int check_locking_order = 1;
+/** the pid of this runset, reasonably unique. */
+static pid_t check_lock_pid;
 
 /** print pretty lock error and exit */
 static void lock_error(struct checked_lock* lock, 
@@ -192,6 +196,45 @@ prot_store(struct checked_lock* lock)
 	}
 }
 
+/** write lock trace info to file, while you hold those locks. */
+static void
+ordercheck_locklock(struct thr_check* thr, struct checked_lock* lock)
+{
+	int info[4];
+	if(!check_locking_order) return;
+	if(!thr->holding_first) return; /* no older lock, no info */
+	/* write: <lock id held> <lock id new> <file> <line> */
+	info[0] = thr->holding_first->create_thread;
+	info[1] = thr->holding_first->create_instance;
+	info[2] = lock->create_thread;
+	info[3] = lock->create_instance;
+	if(fwrite(info, 4*sizeof(int), 1, thr->order_info) != 1 ||
+		fwrite(lock->holder_file, strlen(lock->holder_file)+1, 1, 
+		thr->order_info) != 1 ||
+		fwrite(&lock->holder_line, sizeof(int), 1, 
+		thr->order_info) != 1)
+		log_err("fwrite: %s", strerror(errno));
+}
+
+/** write ordercheck lock creation details to file. */
+static void 
+ordercheck_lockcreate(struct thr_check* thr, struct checked_lock* lock)
+{
+	/* write: <ffff = create> <lock id> <file> <line> */
+	int cmd = -1;
+	if(!check_locking_order) return;
+
+	if( fwrite(&cmd, sizeof(int), 1, thr->order_info) != 1 ||
+		fwrite(&lock->create_thread, sizeof(int), 1, 
+			thr->order_info) != 1 ||
+		fwrite(&lock->create_instance, sizeof(int), 1, 
+			thr->order_info) != 1 ||
+		fwrite(lock->create_file, strlen(lock->create_file)+1, 1, 
+			thr->order_info) != 1 ||
+		fwrite(&lock->create_line, sizeof(int), 1, 
+		thr->order_info) != 1)
+		log_err("fwrite: %s", strerror(errno));
+}
 
 /** alloc struct, init lock empty */
 void 
@@ -200,13 +243,21 @@ checklock_init(enum check_lock_type type, struct checked_lock** lock,
 {
 	struct checked_lock* e = (struct checked_lock*)calloc(1, 
 		sizeof(struct checked_lock));
+	struct thr_check *thr = (struct thr_check*)pthread_getspecific(
+		thr_debug_key);
 	if(!e)
 		fatal_exit("%s %s %d: out of memory", func, file, line);
+	if(!thr)
+		fatal_exit("%s %s %d: lock_init no thread info", func, file,
+			line);
 	*lock = e;
 	e->type = type;
 	e->create_func = func;
 	e->create_file = file;
 	e->create_line = line;
+	e->create_thread = thr->num;
+	e->create_instance = thr->locks_created++;
+	ordercheck_lockcreate(thr, e);
 	LOCKRET(pthread_mutex_init(&e->lock, NULL));
 	switch(e->type) {
 		case check_lock_mutex:
@@ -314,6 +365,7 @@ finish_acquire_lock(struct thr_check* thr, struct checked_lock* lock,
 	lock->holder_func = func;
 	lock->holder_file = file;
 	lock->holder_line = line;
+	ordercheck_locklock(thr, lock);
 	
 	/* insert in thread lock list, as first */
 	lock->prev_held_lock[thr->num] = NULL;
@@ -546,6 +598,26 @@ checklock_unlock(enum check_lock_type type, struct checked_lock* lock,
 	}
 }
 
+/** open order info debug file, thr->num must be valid. */
+static void 
+open_lockorder(struct thr_check* thr)
+{
+	char buf[24];
+	time_t t;
+	snprintf(buf, sizeof(buf), "ublocktrace.%d", thr->num);
+	thr->order_info = fopen(buf, "w");
+	if(!thr->order_info)
+		fatal_exit("could not open %s: %s", buf, strerror(errno));
+	thr->locks_created = 0;
+	t = time(NULL);
+	/* write: <time_stamp> <runpid> <thread_num> */
+	if(fwrite(&t, sizeof(t), 1, thr->order_info) != 1 ||
+		fwrite(&thr->num, sizeof(thr->num), 1, thr->order_info) != 1 || 
+		fwrite(&check_lock_pid, sizeof(check_lock_pid), 1, 
+		thr->order_info) != 1)
+		log_err("fwrite: %s", strerror(errno));
+}
+
 /** checklock thread main, Inits thread structure. */
 static void* checklock_main(void* arg)
 {
@@ -558,8 +630,12 @@ static void* checklock_main(void* arg)
 	log_assert(thread_infos[thr->num] == NULL);
 	thread_infos[thr->num] = thr;
 	LOCKRET(pthread_setspecific(thr_debug_key, thr));
+	if(check_locking_order)
+		open_lockorder(thr);
 	ret = thr->func(thr->arg);
 	thread_infos[thr->num] = NULL;
+	if(check_locking_order)
+		fclose(thr->order_info);
 	free(thr);
 	return ret;
 }
@@ -573,9 +649,12 @@ void checklock_start()
 		if(!thisthr)
 			fatal_exit("thrcreate: out of memory");
 		key_created = 1;
+		check_lock_pid = getpid();
 		LOCKRET(pthread_key_create(&thr_debug_key, NULL));
 		LOCKRET(pthread_setspecific(thr_debug_key, thisthr));
 		thread_infos[0] = thisthr;
+		if(check_locking_order)
+			open_lockorder(thisthr);
 	}
 }
 
@@ -584,6 +663,8 @@ void checklock_stop()
 {
 	if(key_created) {
 		int i;
+		if(check_locking_order)
+			fclose(thread_infos[0]->order_info);
 		free(thread_infos[0]);
 		thread_infos[0] = NULL;
 		for(i = 0; i < THRDEBUG_MAX_THREADS; i++)

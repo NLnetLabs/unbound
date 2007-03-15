@@ -59,7 +59,9 @@ DAEMON_SRC=$(wildcard daemon/*.c) $(COMMON_SRC)
 DAEMON_OBJ=$(addprefix $(BUILD),$(DAEMON_SRC:.c=.o)) $(COMPAT_OBJ)
 TESTBOUND_SRC=testcode/testbound.c testcode/ldns-testpkts.c daemon/worker.c daemon/daemon.c testcode/replay.c testcode/fake_event.c $(filter-out util/netevent.c services/listen_dnsport.c services/outside_network.c, $(COMMON_SRC))
 TESTBOUND_OBJ=$(addprefix $(BUILD),$(TESTBOUND_SRC:.c=.o)) $(COMPAT_OBJ)
-ALL_SRC=$(COMMON_SRC) $(UNITTEST_SRC) $(DAEMON_SRC) $(TESTBOUND_SRC)
+LOCKVERIFY_SRC=testcode/lock_verify.c $(COMMON_SRC)
+LOCKVERIFY_OBJ=$(addprefix $(BUILD),$(LOCKVERIFY_SRC:.c=.o)) $(COMPAT_OBJ)
+ALL_SRC=$(COMMON_SRC) $(UNITTEST_SRC) $(DAEMON_SRC) $(TESTBOUND_SRC) $(LOCKVERIFY_SRC)
 ALL_OBJ=$(addprefix $(BUILD),$(ALL_SRC:.c=.o) $(addprefix compat/,$(LIBOBJS))) $(COMPAT_OBJ)
 
 COMPILE=$(LIBTOOL) --tag=CC --mode=compile $(CC) $(CPPFLAGS) $(CFLAGS)
@@ -73,7 +75,7 @@ $(BUILD)%.o:    $(srcdir)/%.c
 
 .PHONY:	clean realclean doc lint all 
 
-all:	$(COMMON_OBJ) unbound unittest testbound
+all:	$(COMMON_OBJ) unbound unittest testbound lock-verify
 
 unbound:	$(DAEMON_OBJ)
 	$(INFO) Link $@
@@ -84,6 +86,10 @@ unittest:	$(UNITTEST_OBJ)
 	$Q$(LINK) -o $@ $^ $(LIBS)
 
 testbound:	$(TESTBOUND_OBJ)
+	$(INFO) Link $@
+	$Q$(LINK) -o $@ $^ $(LIBS)
+
+lock-verify:	$(LOCKVERIFY_OBJ)
 	$(INFO) Link $@
 	$Q$(LINK) -o $@ $^ $(LIBS)
 
