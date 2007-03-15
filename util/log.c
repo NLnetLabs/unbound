@@ -171,7 +171,7 @@ log_hex(const char* msg, void* data, size_t length)
 {
 	size_t i;
 	uint8_t* data8 = (uint8_t*)data;
-	const char const* hexchar = "0123456789ABCDEF";
+	const char* hexchar = "0123456789ABCDEF";
 	char* buf = malloc(length*2 + 1); /* alloc hex chars + \0 */
 	for(i=0; i<length; i++) {
 		buf[i*2] = hexchar[ data8[i] >> 4 ];
