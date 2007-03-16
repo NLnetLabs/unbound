@@ -1,3 +1,6 @@
+16 March 2007: Wouter
+	- lock-verifier, checks consistent order of locking.
+
 14 March 2007: Wouter
 	- hash table insert (and subroutines) and lookup implemented.
 	- hash table remove.

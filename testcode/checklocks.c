@@ -46,7 +46,7 @@
  * are passed to thread_create to make the thread numbers here the same as 
  * those used for logging which is nice.
  *
- * Todo: - check global ordering of instances of locks.
+ * Todo: 
  *	 - refcount statistics.
  *	 - debug status print, of thread lock stacks, and current waiting.
  */
