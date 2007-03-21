@@ -395,7 +395,7 @@ lruhash_status(struct lruhash* table, const char* id, int extended)
 		(unsigned)table->size, table->size_mask);
 	if(extended) {
 		size_t i;
-		int min=table->size*2, max=-2;
+		int min=(int)table->size*2, max=-2;
 		for(i=0; i<table->size; i++) {
 			int here = 0;
 			struct lruhash_entry *en;

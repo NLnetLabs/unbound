@@ -337,10 +337,11 @@ static void check_order(rbtree_t* all_locks)
 	struct order_lock* lock;
 	int i=0;
 	RBTREE_FOR(lock, struct order_lock*, all_locks) {
-		if(1) printf("[%d/%d] Checking lock %d %d %s %d\n",
-			i++, (int)all_locks->count,
+		if(i % 100 == 0) printf("[%d/%d] Checking lock %d %d %s %d\n",
+			i, (int)all_locks->count,
 			lock->id.thr, lock->id.instance, 
 			lock->create_file, lock->create_line);
+		i++;
 		check_order_lock(lock);
 	}
 }
