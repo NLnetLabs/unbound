@@ -116,13 +116,16 @@ bin_split(struct lruhash* table, struct lruhash_bin* newa,
 	/* move entries to new table. Notice that since hash x is mapped to
 	 * bin x & mask, and new mask uses one more bit, so all entries in
 	 * one bin will go into the old bin or bin | newbit */
-	/* newbit = newmask - table->size_mask; */
+	int newbit = newmask - table->size_mask;
 	/* so, really, this task could also be threaded, per bin. */
 	/* LRU list is not changed */
 	for(i=0; i<table->size; i++)
 	{
 		lock_quick_lock(&table->array[i].lock);
 		p = table->array[i].overflow_list;
+		/* lock both destination bins */
+		lock_quick_lock(&newa[i].lock);
+		lock_quick_lock(&newa[newbit|i].lock);
 		while(p) {
 			np = p->overflow_next;
 			/* link into correct new bin */
@@ -131,6 +134,8 @@ bin_split(struct lruhash* table, struct lruhash_bin* newa,
 			newbin->overflow_list = p;
 			p=np;
 		}
+		lock_quick_unlock(&newa[i].lock);
+		lock_quick_unlock(&newa[newbit|i].lock);
 	}
 }
 
@@ -366,6 +371,8 @@ lruhash_remove(struct lruhash* table, hashvalue_t hash, void* key)
 		lock_quick_unlock(&bin->lock);
 		return;
 	}
+	table->num--;
+	table->space_used -= (*table->sizefunc)(entry->key, entry->data);
 	lock_quick_unlock(&table->lock);
 	lock_rw_wrlock(&entry->lock);
 	lock_quick_unlock(&bin->lock);
@@ -373,4 +380,39 @@ lruhash_remove(struct lruhash* table, hashvalue_t hash, void* key)
 	lock_rw_unlock(&entry->lock);
 	(*table->delkeyfunc)(entry->key, table->cb_arg);
 	(*table->deldatafunc)(entry->data, table->cb_arg);
+}
+
+
+void 
+lruhash_status(struct lruhash* table, const char* id, int extended)
+{
+	lock_quick_lock(&table->lock);
+	log_info("%s: %u entries, memory %u / %u",
+		id, (unsigned)table->num, (unsigned)table->space_used,
+		(unsigned)table->space_max);
+	log_info("  itemsize %u, array %u, mask %d",
+		(unsigned)(table->num? table->space_used/table->num : 0),
+		(unsigned)table->size, table->size_mask);
+	if(extended) {
+		size_t i;
+		int min=table->size*2, max=-2;
+		for(i=0; i<table->size; i++) {
+			int here = 0;
+			struct lruhash_entry *en;
+			lock_quick_lock(&table->array[i].lock);
+			en = table->array[i].overflow_list;
+			while(en) {
+				here ++;
+				en = en->overflow_next;
+			}
+			lock_quick_unlock(&table->array[i].lock);
+			if(extended >= 2)
+				log_info("bin[%d] %d", (int)i, here);
+			if(here > max) max = here;
+			if(here < min) min = here;
+		}
+		log_info("  bin min %d, avg %.2lf, max %d", min, 
+			(double)table->num/(double)table->size, max);
+	}
+	lock_quick_unlock(&table->lock);
 }

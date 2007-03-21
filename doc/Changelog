@@ -1,3 +1,8 @@
+21 March 2007: Wouter
+	- unit test of hash table, fixup locking problem in table_grow().
+	- fixup accounting of sizes for removing items from hashtable.
+	- unit test for hash table, single threaded test of integrity.
+
 16 March 2007: Wouter
 	- lock-verifier, checks consistent order of locking.
 

@@ -218,14 +218,220 @@ static void test_lru(struct lruhash* table)
 	delkey(k2);
 }
 
+/** test hashtable using short sequence */
+static void
+test_short_table(struct lruhash* table) 
+{
+	struct testkey* k = newkey(12);
+	struct testkey* k2 = newkey(14);
+	struct testdata* d = newdata(128);
+	struct testdata* d2 = newdata(129);
+	
+	k->entry.data = d;
+	k2->entry.data = d2;
+
+	lruhash_insert(table, myhash(12), &k->entry, d);
+	lruhash_insert(table, myhash(14), &k2->entry, d2);
+	
+	unit_assert( lruhash_lookup(table, myhash(12), k, 0) == &k->entry);
+	lock_rw_unlock( &k->entry.lock );
+	unit_assert( lruhash_lookup(table, myhash(14), k2, 0) == &k2->entry);
+	lock_rw_unlock( &k2->entry.lock );
+	lruhash_remove(table, myhash(12), k);
+	lruhash_remove(table, myhash(14), k2);
+}
+
+/** number of hash test max */
+#define HASHTESTMAX 100
+
+/** test adding a random element */
+static void
+testadd(struct lruhash* table, struct testdata* ref[])
+{
+	int numtoadd = random() % HASHTESTMAX;
+	struct testdata* data = newdata(numtoadd);
+	struct testkey* key = newkey(numtoadd);
+	key->entry.data = data;
+	lruhash_insert(table, myhash(numtoadd), &key->entry, data);
+	ref[numtoadd] = data;
+}
+
+/** test adding a random element */
+static void
+testremove(struct lruhash* table, struct testdata* ref[])
+{
+	int num = random() % HASHTESTMAX;
+	struct testkey* key = newkey(num);
+	lruhash_remove(table, myhash(num), key);
+	ref[num] = NULL;
+	delkey(key);
+}
+
+/** test adding a random element */
+static void
+testlookup(struct lruhash* table, struct testdata* ref[])
+{
+	int num = random() % HASHTESTMAX;
+	struct testkey* key = newkey(num);
+	struct lruhash_entry* en = lruhash_lookup(table, myhash(num), key, 0);
+	struct testdata* data = en? (struct testdata*)en->data : NULL;
+	if(en) {
+		unit_assert(en->key);
+		unit_assert(en->data);
+	}
+	if(0) log_info("lookup %d got %d, expect %d", num, en? data->data :-1,
+		ref[num]? ref[num]->data : -1);
+	unit_assert( data == ref[num] );
+	if(en) lock_rw_unlock(&en->lock);
+	delkey(key);
+}
+
+/** check integrity of hash table */
+static void
+check_table(struct lruhash* table)
+{
+	struct lruhash_entry* p;
+	size_t c = 0;
+	lock_quick_lock(&table->lock);
+	unit_assert( table->num <= table->size);
+	unit_assert( table->size_mask == (int)table->size-1 );
+	unit_assert( (table->lru_start && table->lru_end) ||
+		(!table->lru_start && !table->lru_end) );
+	unit_assert( table->space_used <= table->space_max );
+	/* check lru list integrity */
+	if(table->lru_start)
+		unit_assert(table->lru_start->lru_prev == NULL);
+	if(table->lru_end)
+		unit_assert(table->lru_end->lru_next == NULL);
+	p = table->lru_start;
+	while(p) {
+		if(p->lru_prev) {
+			unit_assert(p->lru_prev->lru_next == p);
+		}
+		if(p->lru_next) {
+			unit_assert(p->lru_next->lru_prev == p);
+		}
+		c++;
+		p = p->lru_next;
+	}
+	unit_assert(c == table->num);
+
+	/* this assertion is specific to the unit test */
+	unit_assert( table->space_used == 
+		table->num * test_sizefunc(NULL, NULL) );
+	lock_quick_unlock(&table->lock);
+}
+
+/** test adding a random element (unlimited range) */
+static void
+testadd_unlim(struct lruhash* table, struct testdata* ref[])
+{
+	int numtoadd = random() % (HASHTESTMAX * 10);
+	struct testdata* data = newdata(numtoadd);
+	struct testkey* key = newkey(numtoadd);
+	key->entry.data = data;
+	lruhash_insert(table, myhash(numtoadd), &key->entry, data);
+	ref[numtoadd] = data;
+}
+
+/** test adding a random element (unlimited range) */
+static void
+testremove_unlim(struct lruhash* table, struct testdata* ref[])
+{
+	int num = random() % (HASHTESTMAX*10);
+	struct testkey* key = newkey(num);
+	lruhash_remove(table, myhash(num), key);
+	ref[num] = NULL;
+	delkey(key);
+}
+
+/** test adding a random element (unlimited range) */
+static void
+testlookup_unlim(struct lruhash* table, struct testdata* ref[])
+{
+	int num = random() % (HASHTESTMAX*10);
+	struct testkey* key = newkey(num);
+	struct lruhash_entry* en = lruhash_lookup(table, myhash(num), key, 0);
+	struct testdata* data = en? (struct testdata*)en->data : NULL;
+	if(en) {
+		unit_assert(en->key);
+		unit_assert(en->data);
+	}
+	if(0) log_info("lookup unlim %d got %d, expect %d", num, en ? 
+		data->data :-1, ref[num] ? ref[num]->data : -1);
+	if(data) {
+		/* its okay for !data, it fell off the lru */
+		unit_assert( data == ref[num] );
+	}
+	if(en) lock_rw_unlock(&en->lock);
+	delkey(key);
+}
+
+/** test with long sequence of adds, removes and updates, and lookups */
+static void
+test_long_table(struct lruhash* table) 
+{
+	/* assuming it all fits in the hastable, this check will work */
+	struct testdata* ref[HASHTESTMAX * 100];
+	size_t i;
+	memset(ref, 0, sizeof(ref));
+	/* test assumption */
+	unit_assert( test_sizefunc(NULL, NULL)*HASHTESTMAX < table->space_max);
+	if(0) lruhash_status(table, "unit test", 1);
+	srandom(48);
+	for(i=0; i<1000; i++) {
+		/* what to do? */
+		switch(random() % 4) {
+			case 0:
+			case 3:
+				testadd(table, ref);
+				break;
+			case 1:
+				testremove(table, ref);
+				break;
+			case 2:
+				testlookup(table, ref);
+				break;
+			default:
+				unit_assert(0);
+		}
+		if(0) lruhash_status(table, "unit test", 1);
+		check_table(table);
+		unit_assert( table->num <= HASHTESTMAX );
+	}
+
+	/* test more, but 'ref' assumption does not hold anymore */
+	for(i=0; i<1000; i++) {
+		/* what to do? */
+		switch(random() % 4) {
+			case 0:
+			case 3:
+				testadd_unlim(table, ref);
+				break;
+			case 1:
+				testremove_unlim(table, ref);
+				break;
+			case 2:
+				testlookup_unlim(table, ref);
+				break;
+			default:
+				unit_assert(0);
+		}
+		if(0) lruhash_status(table, "unlim", 1);
+		check_table(table);
+	}
+}
+
 void lruhash_test()
 {
 	/* start very very small array, so it can do lots of table_grow() */
 	/* also small in size so that reclaim has to be done quickly. */
-	struct lruhash* table = lruhash_create(2, 1024, 
+	struct lruhash* table = lruhash_create(2, 4096, 
 		test_sizefunc, test_compfunc, test_delkey, test_deldata, NULL);
 	test_bin_find_entry(table);
 	test_lru(table);
+	test_short_table(table);
+	test_long_table(table);
 	/* hashtable tests go here */
 	lruhash_delete(table);
 }

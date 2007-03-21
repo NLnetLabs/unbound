@@ -360,4 +360,12 @@ void lru_front(struct lruhash* table, struct lruhash_entry* entry);
  */
 void lru_remove(struct lruhash* table, struct lruhash_entry* entry);
 
+/**
+ * Output debug info to the log as to state of the hash table.
+ * @param table: hash table.
+ * @param id: string printed with table to identify the hash table.
+ * @param extended: set to true to print statistics on overflow bin lengths.
+ */
+void lruhash_status(struct lruhash* table, const char* id, int extended);
+
 #endif /* UTIL_STORAGE_LRUHASH_H */
