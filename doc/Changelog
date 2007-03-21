@@ -2,6 +2,7 @@
 	- unit test of hash table, fixup locking problem in table_grow().
 	- fixup accounting of sizes for removing items from hashtable.
 	- unit test for hash table, single threaded test of integrity.
+	- lock-verify reports errors nicely. More quiet in operation.
 
 16 March 2007: Wouter
 	- lock-verifier, checks consistent order of locking.

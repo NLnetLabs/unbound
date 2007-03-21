@@ -93,6 +93,8 @@ struct lock_ref {
 
 /** count of errors detected */
 static int errors_detected = 0;
+/** verbose? */
+static int verb = 0;
 
 /** print program usage help */
 static void
@@ -194,7 +196,7 @@ static void read_create(rbtree_t* all, FILE* in)
 	o->node.key = &o->id;
 	if(!rbtree_insert(all, &o->node))
 		fatal_exit("lock created twice");
-	if(1) printf("read create %s %d\n", o->create_file, o->create_line);
+	if(verb) printf("read create %s %d\n", o->create_file, o->create_line);
 }
 
 /** read lock entry */
@@ -212,7 +214,7 @@ static void read_lock(rbtree_t* all, FILE* in, int val)
 	   !readup_str(&ref->file, in) ||
 	   fread(&ref->line, sizeof(int), 1, in) != 1)
 		fatal_exit("fread: %s", strerror(errno));
-	if(1) printf("read lock %s %d\n", ref->file, ref->line);
+	if(verb) printf("read lock %s %d\n", ref->file, ref->line);
 	/* find the two locks involved */
 	prev = (struct order_lock*)rbtree_search(all, &prev_id);
 	now = (struct order_lock*)rbtree_search(all, &now_id);
@@ -255,7 +257,7 @@ static void found_cycle(struct lock_ref* visit, int level)
 	int i = 0;
 	errors_detected++;
 	printf("Found inconsistent locking order of length %d\n", level);
-	printf("for lock %d %d created %s %d", 
+	printf("for lock %d %d created %s %d\n", 
 		visit->lock->id.thr, visit->lock->id.instance,
 		visit->lock->create_file, visit->lock->create_line);
 	printf("sequence is:\n");
@@ -264,8 +266,7 @@ static void found_cycle(struct lock_ref* visit, int level)
 		struct order_lock* next = 
 			p->lock->dfs_next?p->lock->dfs_next->lock:visit->lock;
 		printf("[%d] is locked at line %s %d before lock %d %d\n",
-			i, visit->file, visit->line, 
-			next->id.thr, next->id.instance);
+			i, p->file, p->line, next->id.thr, next->id.instance);
 		printf("[%d] lock %d %d is created at %s %d\n",
 			i, next->id.thr, next->id.instance,
 			next->create_file, next->create_line); 
@@ -337,13 +338,17 @@ static void check_order(rbtree_t* all_locks)
 	struct order_lock* lock;
 	int i=0;
 	RBTREE_FOR(lock, struct order_lock*, all_locks) {
-		if(i % 100 == 0) printf("[%d/%d] Checking lock %d %d %s %d\n",
+		if(verb)
+		    printf("[%d/%d] Checking lock %d %d %s %d\n",
 			i, (int)all_locks->count,
 			lock->id.thr, lock->id.instance, 
 			lock->create_file, lock->create_line);
+		else if (i % 100 == 0) 
+		    fprintf(stderr, ".");
 		i++;
 		check_order_lock(lock);
 	}
+	fprintf(stderr, "\n");
 }
 
 /** main program to verify all traces passed */
