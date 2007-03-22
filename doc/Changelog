@@ -1,3 +1,10 @@
+22 March 2007: Wouter
+	- AIX configure check.
+	- lock-verify can handle references to locks that are created
+	  in files it has not yet read in.
+	- threaded hash table test. 
+	- unit test runs lock-verify afterwards and checks result.
+
 21 March 2007: Wouter
 	- unit test of hash table, fixup locking problem in table_grow().
 	- fixup accounting of sizes for removing items from hashtable.

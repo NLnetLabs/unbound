@@ -324,30 +324,32 @@ check_table(struct lruhash* table)
 
 /** test adding a random element (unlimited range) */
 static void
-testadd_unlim(struct lruhash* table, struct testdata* ref[])
+testadd_unlim(struct lruhash* table, struct testdata** ref)
 {
 	int numtoadd = random() % (HASHTESTMAX * 10);
 	struct testdata* data = newdata(numtoadd);
 	struct testkey* key = newkey(numtoadd);
 	key->entry.data = data;
 	lruhash_insert(table, myhash(numtoadd), &key->entry, data);
-	ref[numtoadd] = data;
+	if(ref)
+		ref[numtoadd] = data;
 }
 
 /** test adding a random element (unlimited range) */
 static void
-testremove_unlim(struct lruhash* table, struct testdata* ref[])
+testremove_unlim(struct lruhash* table, struct testdata** ref)
 {
 	int num = random() % (HASHTESTMAX*10);
 	struct testkey* key = newkey(num);
 	lruhash_remove(table, myhash(num), key);
-	ref[num] = NULL;
+	if(ref)
+		ref[num] = NULL;
 	delkey(key);
 }
 
 /** test adding a random element (unlimited range) */
 static void
-testlookup_unlim(struct lruhash* table, struct testdata* ref[])
+testlookup_unlim(struct lruhash* table, struct testdata** ref)
 {
 	int num = random() % (HASHTESTMAX*10);
 	struct testkey* key = newkey(num);
@@ -357,9 +359,9 @@ testlookup_unlim(struct lruhash* table, struct testdata* ref[])
 		unit_assert(en->key);
 		unit_assert(en->data);
 	}
-	if(0) log_info("lookup unlim %d got %d, expect %d", num, en ? 
+	if(0 && ref) log_info("lookup unlim %d got %d, expect %d", num, en ? 
 		data->data :-1, ref[num] ? ref[num]->data : -1);
-	if(data) {
+	if(data && ref) {
 		/* its okay for !data, it fell off the lru */
 		unit_assert( data == ref[num] );
 	}
@@ -422,6 +424,66 @@ test_long_table(struct lruhash* table)
 	}
 }
 
+/** structure to threaded test the lru hash table */
+struct test_thr {
+	/** thread num, first entry. */
+	int num;
+	/** id */
+	ub_thread_t id;
+	/** hash table */
+	struct lruhash* table;
+};
+
+/** main routine for threaded hash table test */
+static void*
+test_thr_main(void* arg) 
+{
+	struct test_thr* t = (struct test_thr*)arg;
+	int i;
+	log_thread_set(&t->num);
+	for(i=0; i<1000; i++) {
+		switch(random() % 4) {
+			case 0:
+			case 3:
+				testadd_unlim(t->table, NULL);
+				break;
+			case 1:
+				testremove_unlim(t->table, NULL);
+				break;
+			case 2:
+				testlookup_unlim(t->table, NULL);
+				break;
+			default:
+				unit_assert(0);
+		}
+		if(0) lruhash_status(t->table, "hashtest", 1);
+		if(i % 100 == 0) /* because of locking, not all the time */
+			check_table(t->table);
+	}
+	check_table(t->table);
+	return NULL;
+}
+
+/** test hash table access by multiple threads. */
+static void
+test_threaded_table(struct lruhash* table)
+{
+	int numth = 10;
+	struct test_thr t[100];
+	int i;
+
+	for(i=1; i<numth; i++) {
+		t[i].num = i;
+		t[i].table = table;
+		ub_thread_create(&t[i].id, test_thr_main, &t[i]);
+	}
+
+	for(i=1; i<numth; i++) {
+		ub_thread_join(t[i].id);
+	}
+	if(0) lruhash_status(table, "hashtest", 1);
+}
+
 void lruhash_test()
 {
 	/* start very very small array, so it can do lots of table_grow() */
@@ -432,7 +494,10 @@ void lruhash_test()
 	test_lru(table);
 	test_short_table(table);
 	test_long_table(table);
-	/* hashtable tests go here */
+	lruhash_delete(table);
+	table = lruhash_create(2, 4096, 
+		test_sizefunc, test_compfunc, test_delkey, test_deldata, NULL);
+	test_threaded_table(table);
 	lruhash_delete(table);
 }
 

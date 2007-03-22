@@ -155,7 +155,7 @@ read_header(FILE* in)
 		if( abs((int)(the_time - t)) > 3600)
 			fatal_exit("input files from different times: %u %u",
 				(unsigned)the_time, (unsigned)t);
-		printf(" trace of thread %d\n", thrno);
+		printf(" trace of thread %u:%d\n", (unsigned)p, thrno);
 	}
 	return 1;
 }
@@ -194,9 +194,34 @@ static void read_create(rbtree_t* all, FILE* in)
 		fatal_exit("fread: %s", strerror(errno));
 	o->smaller = rbtree_create(order_lock_cmp);
 	o->node.key = &o->id;
+	if(!rbtree_insert(all, &o->node)) {
+		/* already inserted */
+		struct order_lock* a = (struct order_lock*)rbtree_search(all, 
+			&o->id);
+		log_assert(a);
+		a->create_file = o->create_file;
+		a->create_line = o->create_line;
+		free(o->smaller);
+		free(o);
+		o = a;
+	}
+	if(verb) printf("read create %u %u %s %d\n", 
+		(unsigned)o->id.thr, (unsigned)o->id.instance,
+		o->create_file, o->create_line);
+}
+
+/** insert lock entry (empty) into list */
+static struct order_lock* 
+insert_lock(rbtree_t* all, struct order_id* id)
+{
+	struct order_lock* o = calloc(1, sizeof(struct order_lock));
+	if(!o) fatal_exit("malloc failure");
+	o->smaller = rbtree_create(order_lock_cmp);
+	o->id = *id;
+	o->node.key = &o->id;
 	if(!rbtree_insert(all, &o->node))
-		fatal_exit("lock created twice");
-	if(verb) printf("read create %s %d\n", o->create_file, o->create_line);
+		fatal_exit("insert fail should not happen");
+	return o;
 }
 
 /** read lock entry */
@@ -214,12 +239,16 @@ static void read_lock(rbtree_t* all, FILE* in, int val)
 	   !readup_str(&ref->file, in) ||
 	   fread(&ref->line, sizeof(int), 1, in) != 1)
 		fatal_exit("fread: %s", strerror(errno));
-	if(verb) printf("read lock %s %d\n", ref->file, ref->line);
+	if(verb) printf("read lock %u %u %u %u %s %d\n", 
+		(unsigned)prev_id.thr, (unsigned)prev_id.instance,
+		(unsigned)now_id.thr, (unsigned)now_id.instance,
+		ref->file, ref->line);
 	/* find the two locks involved */
 	prev = (struct order_lock*)rbtree_search(all, &prev_id);
 	now = (struct order_lock*)rbtree_search(all, &now_id);
-	if(!prev || !now)
-		fatal_exit("Could not find locks involved.");
+	/* if not there - insert 'em */
+	if(!prev) prev = insert_lock(all, &prev_id);
+	if(!now) now = insert_lock(all, &now_id);
 	ref->lock = prev;
 	ref->node.key = &prev->id;
 	if(!rbtree_insert(now->smaller, &ref->node)) {
@@ -326,6 +355,10 @@ static void check_order_lock(struct order_lock* lock)
 	start.file = lock->create_file;
 	start.line = lock->create_line;
 
+	if(!lock->create_file)
+		log_err("lock %u %u does not have create info",
+			(unsigned)lock->id.thr, (unsigned)lock->id.instance);
+
 	/* depth first search to find cycle with this lock at head */
 	lock->dfs_next = NULL;
 	search_cycle(&start, 0, &start);
@@ -343,7 +376,7 @@ static void check_order(rbtree_t* all_locks)
 			i, (int)all_locks->count,
 			lock->id.thr, lock->id.instance, 
 			lock->create_file, lock->create_line);
-		else if (i % 100 == 0) 
+		else if (i % (all_locks->count/75) == 0) 
 		    fprintf(stderr, ".");
 		i++;
 		check_order_lock(lock);
