@@ -47,7 +47,6 @@
  * those used for logging which is nice.
  *
  * Todo: 
- *	 - refcount statistics.
  *	 - debug status print, of thread lock stacks, and current waiting.
  */
 #ifdef USE_THREAD_DEBUG
@@ -305,7 +304,7 @@ void
 checklock_destroy(enum check_lock_type type, struct checked_lock** lock,
         const char* func, const char* file, int line)
 {
-	const size_t contention_interest = 10;
+	const size_t contention_interest = 1; /* promille contented locks */
 	struct checked_lock* e;
 	if(!lock) 
 		return;
@@ -324,11 +323,13 @@ checklock_destroy(enum check_lock_type type, struct checked_lock** lock,
 	*lock = NULL; /* use after free will fail */
 	LOCKRET(pthread_mutex_unlock(&e->lock));
 
-	/* contention */
-	if(e->contention_count > contention_interest) {
-		log_info("lock created %s %s %d has contention %u",
+	/* contention, look at fraction in trouble. */
+	if(e->history_count > 1 &&
+	   1000*e->contention_count/e->history_count > contention_interest) {
+		log_info("lock created %s %s %d has contention %u of %u",
 			e->create_func, e->create_file, e->create_line,
-			(unsigned int)e->contention_count);
+			(unsigned int)e->contention_count, 
+			(unsigned int)e->history_count);
 	}
 
 	/* delete it */
@@ -433,6 +434,7 @@ checklock_lockit(enum check_lock_type type, struct checked_lock* lock,
 
 	acquire_locklock(lock, func, file, line);
 	lock->contention_count += contend;
+	lock->history_count++;
 	if(exclusive && lock->hold_count > 0)
 		lock_error(lock, func, file, line, "got nonexclusive lock");
 	if(type==check_lock_rwlock && getwr && lock->writeholder)

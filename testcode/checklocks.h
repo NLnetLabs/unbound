@@ -138,6 +138,8 @@ struct checked_lock {
 	int create_thread, create_instance;
 	/** contention count */
 	size_t contention_count;
+	/** number of times locked, ever */
+	size_t history_count;
 	/** hold count (how many threads are holding this lock) */
 	int hold_count;
 	/** how many threads are waiting for this lock */
