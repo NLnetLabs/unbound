@@ -47,6 +47,7 @@
 #include "util/netevent.h"
 #include "util/locks.h"
 #include "util/alloc.h"
+#include "util/data/msgreply.h"
 struct listen_dnsport;
 struct outside_network;
 struct config_file;
@@ -96,6 +97,12 @@ struct worker {
 	struct comm_reply query_reply;
 	/** id of query */
 	uint16_t query_id;
+	/** flags uint16 from query */
+	uint16_t query_flags;
+	/** the query_info structure from the query */
+	struct query_info qinfo;
+	/** hash value of the query qinfo */
+	hashvalue_t query_hash;
 
 	/** address to forward to */
 	struct sockaddr_storage fwd_addr;

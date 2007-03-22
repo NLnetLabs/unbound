@@ -93,6 +93,7 @@ void
 bin_delete(struct lruhash* table, struct lruhash_bin* bin)
 {
 	struct lruhash_entry* p, *np;
+	void *d;
 	if(!bin)
 		return;
 	lock_quick_destroy(&bin->lock);
@@ -100,8 +101,9 @@ bin_delete(struct lruhash* table, struct lruhash_bin* bin)
 	bin->overflow_list = NULL;
 	while(p) {
 		np = p->overflow_next;
+		d = p->data;
 		(*table->delkeyfunc)(p->key, table->cb_arg);
-		(*table->deldatafunc)(p->data, table->cb_arg);
+		(*table->deldatafunc)(d, table->cb_arg);
 		p = np;
 	}
 }
@@ -307,13 +309,15 @@ lruhash_insert(struct lruhash* table, hashvalue_t hash,
 		table->num++;
 		table->space_used += need_size;
 	} else {
-		/* if so: update data */
+		/* if so: update data - needs a writelock */
 		table->space_used += need_size -
 			(*table->sizefunc)(found->key, found->data);
 		(*table->delkeyfunc)(entry->key, table->cb_arg);
+		lru_touch(table, found);
+		lock_rw_wrlock(&found->lock);
 		(*table->deldatafunc)(found->data, table->cb_arg);
 		found->data = data;
-		lru_touch(table, found);
+		lock_rw_unlock(&found->lock);
 	}
 	lock_quick_unlock(&bin->lock);
 	if(table->space_used > table->space_max)

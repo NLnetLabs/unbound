@@ -47,6 +47,7 @@
 struct config_file;
 struct worker;
 struct listen_port;
+struct lruhash;
 
 /**
  * Structure holding worker list.
@@ -71,6 +72,8 @@ struct daemon {
 	int need_to_exit;
 	/** master allocation cache */
 	struct alloc_cache superalloc;
+	/** the message cache, content is struct msgreply_entry* */
+	struct lruhash* msg_cache;
 };
 
 /**

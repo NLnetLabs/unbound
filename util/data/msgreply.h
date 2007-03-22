@@ -41,6 +41,7 @@
 
 #ifndef UTIL_DATA_MSGREPLY_H
 #define UTIL_DATA_MSGREPLY_H
+#include "util/storage/lruhash.h"
 
 /**
  * Structure to store query information that makes answers to queries
@@ -64,15 +65,21 @@ struct query_info {
  * To use it, copy over the flags from reply and modify using flags from
  * the query (RD,CD if not AA). prepend ID. 
  */
-struct msgreply {
-	/** id of this entry. */
-	struct query_info q;
-	/** if q.qname is allocated by malloc or not */
-	int qname_malloced;
+struct reply_info {
 	/** the reply packet, skips ID, starts with flags/opcode/rcode word */
 	uint8_t* reply;
 	/** the reply size */
 	size_t replysize;
+};
+
+/**
+ * Structure to keep hash table entry for message replies.
+ */
+struct msgreply_entry {
+	/** the hash table key */
+	struct query_info key;
+	/** the hash table entry, data is struct reply_info* */
+	struct lruhash_entry entry;
 };
 
 /** 
@@ -103,7 +110,40 @@ void query_info_clear(struct query_info* m);
   * allowed, returns 0 on failure. */
 size_t query_dname_len(ldns_buffer* query);
 
-/** clear out msgreply structure */
-void msgreply_clear(struct msgreply* m);
+/** clear out reply info structure */
+void reply_info_clear(struct reply_info* m);
+
+/** calculate size of struct query_info + reply_info */
+size_t msgreply_sizefunc(void* k, void* d);
+
+/** delete query_info key structure */
+void query_info_delete(void *q, void* arg);
+
+/** delete reply_info data structure */
+void reply_info_delete(void* d, void* arg);
+
+/** calculate hash value of query_info */
+hashvalue_t query_info_hash(struct query_info *q);
+
+/** 
+ * Generate answer from reply_info.
+ * @param rep: reply to fill in.
+ * @param qflags: flags word from the query.
+ * @param buf: buffer to put reply into. Note that the query ID must 
+ *	be put in the buffer by caller.
+ *	The buffer must be large enough.
+ */
+void reply_info_answer(struct reply_info* rep, uint16_t qflags, 
+	ldns_buffer* buf);
+
+/**
+ * Setup query info entry
+ * @param q: query info to copy. Emptied as if clear is called.
+ * @param r: reply to init data.
+ * @param h: hash value.
+ * @return: newly allocated message reply cache item.
+ */
+struct msgreply_entry* query_info_entrysetup(struct query_info* q,
+	struct reply_info* r, hashvalue_t h);
 
 #endif /* UTIL_DATA_MSGREPLY_H */

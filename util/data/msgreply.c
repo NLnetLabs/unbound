@@ -41,6 +41,7 @@
 
 #include "config.h"
 #include "util/data/msgreply.h"
+#include "util/storage/lookup3.h"
 #include "util/log.h"
 
 /** determine length of a dname in buffer, no compression pointers allowed. */
@@ -78,8 +79,15 @@ int query_info_parse(struct query_info* m, ldns_buffer* query)
 	log_assert(ldns_buffer_position(query) == 0);
 	m->has_cd = (int)LDNS_CD_WIRE(q);
 	ldns_buffer_skip(query, LDNS_HEADER_SIZE);
-	m->qname = ldns_buffer_current(query);
-	m->qnamesize = query_dname_len(query);
+	q = ldns_buffer_current(query);
+	if((m->qnamesize = query_dname_len(query)) == 0)
+		return 0; /* parse error */
+	if(!(m->qname = (uint8_t*)malloc(m->qnamesize))) {
+		log_err("query_info_parse: out of memory");
+		return 0; /* out of memory */
+	}
+	memmove(m->qname, q, m->qnamesize);
+
 	if(ldns_buffer_remaining(query) < 4)
 		return 0; /* need qtype, qclass */
 	m->qtype = ldns_buffer_read_u16(query);
@@ -111,12 +119,75 @@ int query_info_compare(void* m1, void* m2)
 
 void query_info_clear(struct query_info* m)
 {
+	free(m->qname);
 	m->qname = NULL;
 }
 
-void msgreply_clear(struct msgreply* m)
+void reply_info_clear(struct reply_info* m)
 {
-	if(m->qname_malloced)
-		free(m->q.qname);
 	free(m->reply);
+	m->reply = NULL;
+}
+
+size_t msgreply_sizefunc(void* k, void* d)
+{
+	struct query_info* q = (struct query_info*)k;
+	struct reply_info* r = (struct reply_info*)d;
+	return sizeof(struct msgreply_entry) + sizeof(struct reply_info)
+		+ r->replysize + q->qnamesize;
+}
+
+void query_info_delete(void *k, void* ATTR_UNUSED(arg))
+{
+	struct query_info* q = (struct query_info*)k;
+	query_info_clear(q);
+	free(q);
+}
+
+void reply_info_delete(void* d, void* ATTR_UNUSED(arg))
+{
+	struct reply_info* r = (struct reply_info*)d;
+	reply_info_clear(r);
+	free(r);
+}
+
+hashvalue_t query_info_hash(struct query_info *q)
+{
+	hashvalue_t h = 0xab;
+	h = hashlittle(&q->qtype, sizeof(q->qtype), h);
+	h = hashlittle(&q->qclass, sizeof(q->qclass), h);
+	h = hashlittle(&q->has_cd, sizeof(q->has_cd), h);
+	h = hashlittle(q->qname, q->qnamesize, h);
+	return h;
+}
+
+void reply_info_answer(struct reply_info* rep, uint16_t qflags, 
+	ldns_buffer* buffer)
+{
+	uint16_t flags;
+	ldns_buffer_clear(buffer);
+	ldns_buffer_skip(buffer, 2); /* ID */
+	flags = ldns_read_uint16(rep->reply+2);
+	flags |= (qflags & 0x0100); /* copy RD bit */
+	log_info("flags %x", flags);
+	ldns_buffer_write_u16(buffer, flags);
+	ldns_buffer_write(buffer, rep->reply+2, rep->replysize-2);
+	ldns_buffer_flip(buffer);
+}
+
+struct msgreply_entry* query_info_entrysetup(struct query_info* q,
+	struct reply_info* r, hashvalue_t h)
+{
+	struct msgreply_entry* e = (struct msgreply_entry*)malloc( 
+		sizeof(struct msgreply_entry));
+	if(!e) return NULL;
+	memcpy(&e->key, q, sizeof(*q));
+	e->entry.hash = h;
+	e->entry.key = e;
+	e->entry.data = r;
+	lock_rw_init(&e->entry.lock);
+	lock_protect(&e->entry.lock, e, sizeof(*e));
+	lock_protect(&e->entry.lock, e->key.qname, e->key.qnamesize);
+	q->qname = NULL;
+	return e;
 }

@@ -47,6 +47,7 @@
 #include "daemon/worker.h"
 #include "util/log.h"
 #include "util/config_file.h"
+#include "util/data/msgreply.h"
 #include "services/listen_dnsport.h"
 #include <signal.h>
 
@@ -116,6 +117,13 @@ daemon_init()
 	signal_handling_record();
 	checklock_start();
 	daemon->need_to_exit = 0;
+	daemon->msg_cache = lruhash_create(HASH_DEFAULT_STARTARRAY,
+		HASH_DEFAULT_MAXMEM, msgreply_sizefunc, query_info_compare,
+		query_info_delete, reply_info_delete, NULL);
+	if(!daemon->msg_cache) {
+		free(daemon);
+		return NULL;
+	}
 	alloc_init(&daemon->superalloc, NULL);
 	return daemon;	
 }
@@ -303,6 +311,7 @@ daemon_delete(struct daemon* daemon)
 	if(!daemon)
 		return;
 	listening_ports_free(daemon->ports);
+	lruhash_delete(daemon->msg_cache);
 	alloc_clear(&daemon->superalloc);
 	free(daemon->cwd);
 	free(daemon->pidfile);

@@ -132,7 +132,7 @@ read_header(FILE* in)
 	if(fread(&t, sizeof(t), 1, in) != 1 ||	
 		fread(&thrno, sizeof(thrno), 1, in) != 1 ||
 		fread(&p, sizeof(p), 1, in) != 1) {
-		fatal_exit("fread: %s", strerror(errno));
+		fatal_exit("fread failed");
 	}
 	/* check these values are sorta OK */
 	if(!have_values) {
@@ -191,7 +191,7 @@ static void read_create(rbtree_t* all, FILE* in)
 	   fread(&o->id.instance, sizeof(int), 1, in) != 1 ||	
 	   !readup_str(&o->create_file, in) ||
 	   fread(&o->create_line, sizeof(int), 1, in) != 1)
-		fatal_exit("fread: %s", strerror(errno));
+		fatal_exit("fread failed");
 	o->smaller = rbtree_create(order_lock_cmp);
 	o->node.key = &o->id;
 	if(!rbtree_insert(all, &o->node)) {
@@ -238,7 +238,7 @@ static void read_lock(rbtree_t* all, FILE* in, int val)
 	   fread(&now_id.instance, sizeof(int), 1, in) != 1 ||	
 	   !readup_str(&ref->file, in) ||
 	   fread(&ref->line, sizeof(int), 1, in) != 1)
-		fatal_exit("fread: %s", strerror(errno));
+		fatal_exit("fread failed");
 	if(verb) printf("read lock %u %u %u %u %s %d\n", 
 		(unsigned)prev_id.thr, (unsigned)prev_id.instance,
 		(unsigned)now_id.thr, (unsigned)now_id.instance,

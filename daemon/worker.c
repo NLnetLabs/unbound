@@ -57,9 +57,7 @@
 #include <signal.h>
 
 /** timeout in seconds for UDP queries to auth servers. TODO: proper rtt */
-#define UDP_QUERY_TIMEOUT 5
-/** the size of ID and flags, opcode, rcode in dns packet */
-#define ID_AND_FLAGS 4
+#define UDP_QUERY_TIMEOUT 4
 
 void 
 worker_send_cmd(struct worker* worker, ldns_buffer* buffer,
@@ -79,14 +77,32 @@ worker_send_cmd(struct worker* worker, ldns_buffer* buffer,
 static void 
 replyerror(int r, struct worker* worker)
 {
-	LDNS_QR_SET(ldns_buffer_begin(worker->query_reply.c->buffer));
-	LDNS_RCODE_SET(ldns_buffer_begin(worker->query_reply.c->buffer), r);
+	ldns_buffer* buf = worker->query_reply.c->buffer;
+	uint16_t flags;
+	verbose(VERB_DETAIL, "reply with error");
+	
+	ldns_buffer_clear(buf);
+	ldns_buffer_write_u16(buf, worker->query_id);
+	flags = (uint16_t)(0x8000 | r); /* QR and retcode*/
+	flags |= (worker->query_flags & 0x0100); /* copy RD bit */
+	ldns_buffer_write_u16(buf, flags);
+	flags = 1;
+	ldns_buffer_write_u16(buf, flags);
+	flags = 0;
+	ldns_buffer_write(buf, &flags, sizeof(uint16_t));
+	ldns_buffer_write(buf, &flags, sizeof(uint16_t));
+	ldns_buffer_write(buf, &flags, sizeof(uint16_t));
+	ldns_buffer_write(buf, worker->qinfo.qname, worker->qinfo.qnamesize);
+	ldns_buffer_write_u16(buf, worker->qinfo.qtype);
+	ldns_buffer_write_u16(buf, worker->qinfo.qclass);
+	ldns_buffer_flip(buf);
 	comm_point_send_reply(&worker->query_reply);
 	if(worker->num_requests == 1)  {
 		/* no longer at max, start accepting again. */
 		listen_resume(worker->front);
 	}
 	worker->num_requests --;
+	query_info_clear(&worker->qinfo);
 }
 
 /** process incoming replies from the network */
@@ -95,6 +111,8 @@ worker_handle_reply(struct comm_point* c, void* arg, int error,
 	struct comm_reply* ATTR_UNUSED(reply_info))
 {
 	struct worker* worker = (struct worker*)arg;
+	struct reply_info* rep;
+	struct msgreply_entry* e;
 	verbose(VERB_DETAIL, "reply to query with stored ID %d", 
 		worker->query_id);
 	LDNS_ID_SET(ldns_buffer_begin(worker->query_reply.c->buffer),
@@ -104,19 +122,40 @@ worker_handle_reply(struct comm_point* c, void* arg, int error,
 		return 0;
 	}
 	/* woohoo a reply! */
-	ldns_buffer_clear(worker->query_reply.c->buffer);
-	ldns_buffer_skip(worker->query_reply.c->buffer, ID_AND_FLAGS);
-	ldns_buffer_write(worker->query_reply.c->buffer, 
-		ldns_buffer_at(c->buffer, ID_AND_FLAGS), 
-		ldns_buffer_limit(c->buffer) - ID_AND_FLAGS);
-	LDNS_QR_SET(ldns_buffer_begin(worker->query_reply.c->buffer));
-	ldns_buffer_flip(worker->query_reply.c->buffer);
+	rep = (struct reply_info*)malloc(sizeof(struct reply_info));
+	if(!rep) {
+		log_err("out of memory");
+		replyerror(LDNS_RCODE_SERVFAIL, worker);
+		return 0;
+	}
+	rep->replysize = ldns_buffer_limit(c->buffer) - 2; /* minus ID */
+	log_info("got reply of size %d", rep->replysize);
+	rep->reply = (uint8_t*)malloc(rep->replysize);
+	if(!rep->reply) {
+		free(rep);
+		log_err("out of memory");
+		replyerror(LDNS_RCODE_SERVFAIL, worker);
+		return 0;
+	}
+	memmove(rep->reply, ldns_buffer_at(c->buffer, 2), rep->replysize);
+	ldns_buffer_write_u16_at(worker->query_reply.c->buffer, 0, 
+		worker->query_id);
+	reply_info_answer(rep, worker->query_flags, worker->query_reply.c->
+		buffer);
 	comm_point_send_reply(&worker->query_reply);
 	if(worker->num_requests == 1)  {
 		/* no longer at max, start accepting again. */
 		listen_resume(worker->front);
 	}
 	worker->num_requests --;
+	/* store or update reply in the cache */
+	if(!(e = query_info_entrysetup(&worker->qinfo, rep, 
+		worker->query_hash))) {
+		log_err("out of memory");
+		return 0;
+	}
+	lruhash_insert(worker->daemon->msg_cache, worker->query_hash, 
+		&e->entry, rep);
 	return 0;
 }
 
@@ -127,6 +166,8 @@ worker_process_query(struct worker* worker)
 	/* query the forwarding address */
 	worker->query_id = LDNS_ID_WIRE(ldns_buffer_begin(
 		worker->query_reply.c->buffer));
+	worker->query_flags = ldns_buffer_read_u16_at(worker->
+		query_reply.c->buffer, 2);
 	verbose(VERB_DETAIL, "process_query ID %d", worker->query_id);
 	pending_udp_query(worker->back, worker->query_reply.c->buffer, 
 		&worker->fwd_addr, worker->fwd_addrlen, UDP_QUERY_TIMEOUT,
@@ -212,6 +253,8 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 {
 	struct worker* worker = (struct worker*)arg;
 	int ret;
+	hashvalue_t h;
+	struct lruhash_entry* e;
 	verbose(VERB_DETAIL, "worker handle request");
 	if(error != NETEVENT_NOERROR) {
 		log_err("called with err=%d", error);
@@ -234,7 +277,27 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 		comm_point_drop_reply(repinfo);
 		return 0;
 	}
+	/* see if query is in the cache */
+	if(!query_info_parse(&worker->qinfo, c->buffer)) {
+		LDNS_QR_SET(ldns_buffer_begin(c->buffer));
+		LDNS_RCODE_SET(ldns_buffer_begin(c->buffer), 
+			LDNS_RCODE_FORMERR);
+		return 1;
+	}
+	h = query_info_hash(&worker->qinfo);
+	if((e=lruhash_lookup(worker->daemon->msg_cache, h, &worker->qinfo, 
+		0))) {
+		/* answer from cache */
+		query_info_clear(&worker->qinfo);
+		/* id is still in the buffer, no need to touch it */
+		reply_info_answer((struct reply_info*)e->data, 
+			ldns_buffer_read_u16_at(c->buffer, 2), c->buffer);
+		return 1;
+	}
+	ldns_buffer_rewind(c->buffer);
+
 	/* answer it */
+	worker->query_hash = h;
 	worker->num_requests ++;
 	if(worker->num_requests >= 1)  {
 		/* the max request number has been reached, stop accepting */
