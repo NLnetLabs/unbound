@@ -1,5 +1,5 @@
 /*
- * util/storage/lrulash.c - hashtable, hash function, LRU keeping.
+ * util/storage/lruhash.c - hashtable, hash function, LRU keeping.
  *
  * Copyright (c) 2007, NLnet Labs. All rights reserved.
  *
@@ -329,9 +329,10 @@ lruhash_insert(struct lruhash* table, hashvalue_t hash,
 	/* finish reclaim if any (outside of critical region) */
 	while(reclaimlist) {
 		struct lruhash_entry* n = reclaimlist->overflow_next;
+		void* d = reclaimlist->data;
 		lock_rw_unlock(&reclaimlist->lock);
 		(*table->delkeyfunc)(reclaimlist->key, table->cb_arg);
-		(*table->deldatafunc)(reclaimlist->data, table->cb_arg);
+		(*table->deldatafunc)(d, table->cb_arg);
 		reclaimlist = n;
 	}
 }
@@ -363,6 +364,7 @@ lruhash_remove(struct lruhash* table, hashvalue_t hash, void* key)
 {
 	struct lruhash_entry* entry;
 	struct lruhash_bin* bin;
+	void *d;
 
 	lock_quick_lock(&table->lock);
 	bin = &table->array[hash & table->size_mask];
@@ -382,8 +384,9 @@ lruhash_remove(struct lruhash* table, hashvalue_t hash, void* key)
 	lock_quick_unlock(&bin->lock);
 	/* finish removal */
 	lock_rw_unlock(&entry->lock);
+	d = entry->data;
 	(*table->delkeyfunc)(entry->key, table->cb_arg);
-	(*table->deldatafunc)(entry->data, table->cb_arg);
+	(*table->deldatafunc)(d, table->cb_arg);
 }
 
 

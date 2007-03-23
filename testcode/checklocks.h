@@ -71,10 +71,6 @@
 /******************* THREAD DEBUG ************************/
 #include <pthread.h>
 
-/** How long to wait before lock attempt is a failure. */
-#define CHECK_LOCK_TIMEOUT 5 /* seconds */
-/** How long to wait before join attempt is a failure. */
-#define CHECK_JOIN_TIMEOUT 120 /* seconds */
 /** How many threads to allocate for */
 #define THRDEBUG_MAX_THREADS 32 /* threads */
 /** do we check locking order */

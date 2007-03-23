@@ -49,5 +49,7 @@ extern int testcount;
 
 /** unit test lruhashtable implementation */
 void lruhash_test();
+/** unit test slabhashtable implementation */
+void slabhash_test();
 
 #endif /* TESTCODE_UNITMAIN_H */

@@ -51,6 +51,11 @@
  */
 #ifdef USE_THREAD_DEBUG
 
+/** How long to wait before lock attempt is a failure. */
+#define CHECK_LOCK_TIMEOUT 15 /* seconds */
+/** How long to wait before join attempt is a failure. */
+#define CHECK_JOIN_TIMEOUT 120 /* seconds */
+
 /** if key has been created */
 static int key_created = 0;
 /** we hide the thread debug info with this key. */
@@ -326,10 +331,11 @@ checklock_destroy(enum check_lock_type type, struct checked_lock** lock,
 	/* contention, look at fraction in trouble. */
 	if(e->history_count > 1 &&
 	   1000*e->contention_count/e->history_count > contention_interest) {
-		log_info("lock created %s %s %d has contention %u of %u",
+		log_info("lock created %s %s %d has contention %u of %u (%d%%)",
 			e->create_func, e->create_file, e->create_line,
 			(unsigned int)e->contention_count, 
-			(unsigned int)e->history_count);
+			(unsigned int)e->history_count,
+			100*e->contention_count/e->history_count);
 	}
 
 	/* delete it */

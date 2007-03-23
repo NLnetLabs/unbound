@@ -1,5 +1,5 @@
 /*
- * util/storage/lrulash.h - hashtable, hash function, LRU keeping.
+ * util/storage/lruhash.h - hashtable, hash function, LRU keeping.
  *
  * Copyright (c) 2007, NLnet Labs. All rights reserved.
  *

@@ -111,7 +111,7 @@ dname_to_buf(ldns_buffer* b, const char* str)
 	if(status != LDNS_STATUS_OK)
 		fatal_exit("%s ldns: %s", __func__, 
 			ldns_get_errorstr_by_id(status));
-	ldns_rdf_free(rdf);
+	ldns_rdf_deep_free(rdf);
 	ldns_buffer_flip(b);
 	return b;
 }
@@ -150,6 +150,7 @@ main(int argc, char* argv[])
 	alloc_test();
 	msgreply_test();
 	lruhash_test();
+	slabhash_test();
 	checklock_stop();
 	printf("%d tests succeeded\n", testcount);
 	return 0;
