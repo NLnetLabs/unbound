@@ -1,3 +1,6 @@
+23 March 2007: Wouter
+	- review of yesterday's commits.
+
 22 March 2007: Wouter
 	- AIX configure check.
 	- lock-verify can handle references to locks that are created

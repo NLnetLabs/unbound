@@ -292,6 +292,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 		/* id is still in the buffer, no need to touch it */
 		reply_info_answer((struct reply_info*)e->data, 
 			ldns_buffer_read_u16_at(c->buffer, 2), c->buffer);
+		lock_rw_unlock(&e->lock);
 		return 1;
 	}
 	ldns_buffer_rewind(c->buffer);

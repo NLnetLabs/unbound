@@ -88,8 +88,11 @@ int query_info_parse(struct query_info* m, ldns_buffer* query)
 	}
 	memmove(m->qname, q, m->qnamesize);
 
-	if(ldns_buffer_remaining(query) < 4)
+	if(ldns_buffer_remaining(query) < 4) {
+		free(m->qname);
+		m->qname = NULL;
 		return 0; /* need qtype, qclass */
+	}
 	m->qtype = ldns_buffer_read_u16(query);
 	m->qclass = ldns_buffer_read_u16(query);
 	return 1;
@@ -186,7 +189,9 @@ struct msgreply_entry* query_info_entrysetup(struct query_info* q,
 	e->entry.key = e;
 	e->entry.data = r;
 	lock_rw_init(&e->entry.lock);
-	lock_protect(&e->entry.lock, e, sizeof(*e));
+	lock_protect(&e->entry.lock, &e->key, sizeof(e->key));
+	lock_protect(&e->entry.lock, &e->entry.hash, sizeof(e->entry.hash) +
+		sizeof(e->entry.key) + sizeof(e->entry.data));
 	lock_protect(&e->entry.lock, e->key.qname, e->key.qnamesize);
 	q->qname = NULL;
 	return e;
