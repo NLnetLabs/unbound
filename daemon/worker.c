@@ -288,6 +288,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 	if((e=lruhash_lookup(worker->daemon->msg_cache, h, &worker->qinfo, 
 		0))) {
 		/* answer from cache */
+		log_info("answer from the cache");
 		query_info_clear(&worker->qinfo);
 		/* id is still in the buffer, no need to touch it */
 		reply_info_answer((struct reply_info*)e->data, 

@@ -116,8 +116,8 @@ void reply_info_clear(struct reply_info* m);
 /** calculate size of struct query_info + reply_info */
 size_t msgreply_sizefunc(void* k, void* d);
 
-/** delete query_info key structure */
-void query_info_delete(void *q, void* arg);
+/** delete msgreply_entry key structure */
+void query_entry_delete(void *q, void* arg);
 
 /** delete reply_info data structure */
 void reply_info_delete(void* d, void* arg);

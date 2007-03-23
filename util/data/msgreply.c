@@ -140,10 +140,11 @@ size_t msgreply_sizefunc(void* k, void* d)
 		+ r->replysize + q->qnamesize;
 }
 
-void query_info_delete(void *k, void* ATTR_UNUSED(arg))
+void query_entry_delete(void *k, void* ATTR_UNUSED(arg))
 {
-	struct query_info* q = (struct query_info*)k;
-	query_info_clear(q);
+	struct msgreply_entry* q = (struct msgreply_entry*)k;
+	lock_rw_destroy(&q->entry.lock);
+	query_info_clear(&q->key);
 	free(q);
 }
 
@@ -170,7 +171,7 @@ void reply_info_answer(struct reply_info* rep, uint16_t qflags,
 	uint16_t flags;
 	ldns_buffer_clear(buffer);
 	ldns_buffer_skip(buffer, 2); /* ID */
-	flags = ldns_read_uint16(rep->reply+2);
+	flags = ldns_read_uint16(rep->reply);
 	flags |= (qflags & 0x0100); /* copy RD bit */
 	log_info("flags %x", flags);
 	ldns_buffer_write_u16(buffer, flags);

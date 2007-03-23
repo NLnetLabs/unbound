@@ -119,7 +119,7 @@ daemon_init()
 	daemon->need_to_exit = 0;
 	daemon->msg_cache = lruhash_create(HASH_DEFAULT_STARTARRAY,
 		HASH_DEFAULT_MAXMEM, msgreply_sizefunc, query_info_compare,
-		query_info_delete, reply_info_delete, NULL);
+		query_entry_delete, reply_info_delete, NULL);
 	if(!daemon->msg_cache) {
 		free(daemon);
 		return NULL;
