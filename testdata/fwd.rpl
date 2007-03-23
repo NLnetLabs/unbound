@@ -5,6 +5,7 @@ RANGE_BEGIN 0 100
 	ENTRY_BEGIN
 	MATCH opcode qtype qname
 	ADJUST copy_id
+	REPLY QR RD RA NOERROR
 	SECTION QUESTION
 www.example.com. IN A
 	SECTION ANSWER

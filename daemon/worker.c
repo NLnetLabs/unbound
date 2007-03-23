@@ -115,12 +115,17 @@ worker_handle_reply(struct comm_point* c, void* arg, int error,
 	struct msgreply_entry* e;
 	verbose(VERB_DETAIL, "reply to query with stored ID %d", 
 		worker->query_id);
-	LDNS_ID_SET(ldns_buffer_begin(worker->query_reply.c->buffer),
-		worker->query_id);
 	if(error != 0) {
 		replyerror(LDNS_RCODE_SERVFAIL, worker);
 		return 0;
 	}
+	/* sanity check. */
+	if(!LDNS_QR_WIRE(ldns_buffer_begin(c->buffer)))
+		return 0; /* not a reply. */
+	if(LDNS_OPCODE_WIRE(ldns_buffer_begin(c->buffer)) != LDNS_PACKET_QUERY)
+		return 0; /* not a reply to a query. */
+	if(LDNS_QDCOUNT(ldns_buffer_begin(c->buffer)) > 1)
+		return 0; /* too much in the query section */
 	/* woohoo a reply! */
 	rep = (struct reply_info*)malloc(sizeof(struct reply_info));
 	if(!rep) {

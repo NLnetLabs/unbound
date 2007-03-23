@@ -2,6 +2,7 @@
 	- review of yesterday's commits.
 	- covered up memory leak of the entry locks.
 	- answers from the cache correctly. Copies flags correctly.
+	- sanity check for incoming query replies.
 
 22 March 2007: Wouter
 	- AIX configure check.

@@ -173,7 +173,7 @@ void reply_info_answer(struct reply_info* rep, uint16_t qflags,
 	ldns_buffer_skip(buffer, 2); /* ID */
 	flags = ldns_read_uint16(rep->reply);
 	flags |= (qflags & 0x0100); /* copy RD bit */
-	log_info("flags %x", flags);
+	log_assert(flags & 0x8000); /* QR bit must be on in our replies */
 	ldns_buffer_write_u16(buffer, flags);
 	ldns_buffer_write(buffer, rep->reply+2, rep->replysize-2);
 	ldns_buffer_flip(buffer);
