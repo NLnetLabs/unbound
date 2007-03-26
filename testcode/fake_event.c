@@ -280,7 +280,7 @@ static void
 answer_check_it(struct replay_runtime* runtime)
 {
 	struct replay_answer* ans = runtime->answer_list, 
-		**prev = &runtime->answer_list;
+		*prev = NULL;
 	log_assert(runtime && runtime->now && 
 		runtime->now->evt_type == repevt_front_reply);
 	while(ans) {
@@ -294,12 +294,16 @@ answer_check_it(struct replay_runtime* runtime)
 			log_info("testbound: do STEP %d %s", 
 				runtime->now->time_step,
 				repevt_string(runtime->now->evt_type));
-			*prev = ans->next;
+			if(prev)
+				prev->next = ans->next;
+			else 	runtime->answer_list = ans->next;
+			if(!ans->next)
+				runtime->answer_last = prev;
 			delete_replay_answer(ans);
 			ans = n;
 			return;
 		} else {
-			prev = &ans->next;
+			prev = ans;
 			ans = ans->next;
 		}
 	}

@@ -1,5 +1,7 @@
 26 March 2007: Wouter
 	- config settings for slab hash message cache.
+	- test for cached answer.
+	- Fixup deleting fake answer from testbound list.
 
 23 March 2007: Wouter
 	- review of yesterday's commits.
