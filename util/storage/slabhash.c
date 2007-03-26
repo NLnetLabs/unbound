@@ -131,3 +131,14 @@ void slabhash_status(struct slabhash* sl, const char* id, int extended)
 		lruhash_status(sl->array[i], num, extended);
 	}
 }
+
+size_t slabhash_get_size(struct slabhash* sl)
+{
+	size_t i, total = 0;
+	for(i=0; i<sl->size; i++) {
+		lock_quick_lock(&sl->array[i]->lock);
+		total += sl->array[i]->space_max;
+		lock_quick_unlock(&sl->array[i]->lock);
+	}
+	return total;
+}

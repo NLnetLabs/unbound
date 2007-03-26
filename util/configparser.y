@@ -46,6 +46,7 @@
 
 #include "util/configyyrename.h"
 #include "util/config_file.h"
+#include "util/net_help.h"
 
 int ub_c_lex(void);
 void ub_c_error(const char *message);
@@ -71,6 +72,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_DO_IP4 VAR_DO_IP6 VAR_DO_UDP VAR_DO_TCP
 %token VAR_FORWARD_TO VAR_FORWARD_TO_PORT VAR_CHROOT
 %token VAR_USERNAME VAR_DIRECTORY VAR_LOGFILE VAR_PIDFILE
+%token VAR_MSG_CACHE_SIZE VAR_MSG_CACHE_SLABS
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -90,7 +92,8 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_outgoing_port | server_outgoing_range | server_do_ip4 |
 	server_do_ip6 | server_do_udp | server_do_tcp | server_forward_to |
 	server_forward_to_port | server_interface | server_chroot | 
-	server_username | server_directory | server_logfile | server_pidfile;
+	server_username | server_directory | server_logfile | server_pidfile |
+	server_msg_cache_size | server_msg_cache_slabs;
 server_num_threads: VAR_NUM_THREADS STRING 
 	{ 
 		OUTYY(("P(server_num_threads:%s)\n", $2)); 
@@ -234,6 +237,28 @@ server_pidfile: VAR_PIDFILE STRING
 		OUTYY(("P(server_pidfile:%s)\n", $2));
 		free(cfg_parser->cfg->pidfile);
 		cfg_parser->cfg->pidfile = $2;
+	}
+	;
+server_msg_cache_size: VAR_MSG_CACHE_SIZE STRING
+	{
+		OUTYY(("P(server_msg_cache_size:%s)\n", $2));
+		if(atoi($2) == 0)
+			yyerror("number expected");
+		else cfg_parser->cfg->msg_cache_size = atoi($2);
+		free($2);
+	}
+	;
+server_msg_cache_slabs: VAR_MSG_CACHE_SLABS STRING
+	{
+		OUTYY(("P(server_msg_cache_slabs:%s)\n", $2));
+		if(atoi($2) == 0)
+			yyerror("number expected");
+		else {
+			cfg_parser->cfg->msg_cache_slabs = atoi($2);
+			if(!is_pow2(cfg_parser->cfg->msg_cache_slabs))
+				yyerror("must be a power of 2");
+		}
+		free($2);
 	}
 	;
 %%

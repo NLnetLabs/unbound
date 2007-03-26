@@ -44,6 +44,8 @@
 #include "util/log.h"
 #include "daemon/daemon.h"
 #include "util/config_file.h"
+#include "util/storage/slabhash.h"
+#include "util/data/msgreply.h"
 #include <signal.h>
 #include <fcntl.h>
 #include <pwd.h>
@@ -78,6 +80,17 @@ apply_dir(struct daemon* daemon, struct config_file* cfg, int cmdline_verbose)
 			free(daemon->cwd);
 			if(!(daemon->cwd = strdup(cfg->directory)))
 				fatal_exit("malloc failed");
+		}
+	}
+	if(cfg->msg_cache_size != slabhash_get_size(daemon->msg_cache) ||
+		cfg->msg_cache_slabs != daemon->msg_cache->size) {
+		slabhash_delete(daemon->msg_cache);
+		daemon->msg_cache = slabhash_create(cfg->msg_cache_slabs, 
+			HASH_DEFAULT_STARTARRAY, cfg->msg_cache_size, 
+			msgreply_sizefunc, query_info_compare,
+			query_entry_delete, reply_info_delete, NULL);
+		if(!daemon->msg_cache) {
+			fatal_exit("malloc failure updating config settings");
 		}
 	}
 }

@@ -69,6 +69,11 @@ struct config_file {
 	/** outgoing port range number of ports (per thread, per if) */
 	int outgoing_num_ports;
 
+	/** size of the message cache */
+	size_t msg_cache_size;
+	/** slabs in the message cache. */
+	size_t msg_cache_slabs;
+
 	/** forwarder address. string. If not NULL fwder mode is enabled. */
 	char* fwd_address;
 	/** forwarder port */

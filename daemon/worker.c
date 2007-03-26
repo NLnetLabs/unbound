@@ -47,6 +47,7 @@
 #include "daemon/daemon.h"
 #include "util/netevent.h"
 #include "util/config_file.h"
+#include "util/storage/slabhash.h"
 #include "services/listen_dnsport.h"
 #include "services/outside_network.h"
 
@@ -159,7 +160,7 @@ worker_handle_reply(struct comm_point* c, void* arg, int error,
 		log_err("out of memory");
 		return 0;
 	}
-	lruhash_insert(worker->daemon->msg_cache, worker->query_hash, 
+	slabhash_insert(worker->daemon->msg_cache, worker->query_hash, 
 		&e->entry, rep);
 	return 0;
 }
@@ -290,7 +291,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 		return 1;
 	}
 	h = query_info_hash(&worker->qinfo);
-	if((e=lruhash_lookup(worker->daemon->msg_cache, h, &worker->qinfo, 
+	if((e=slabhash_lookup(worker->daemon->msg_cache, h, &worker->qinfo, 
 		0))) {
 		/* answer from cache */
 		log_info("answer from the cache");

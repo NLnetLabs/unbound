@@ -1,3 +1,6 @@
+26 March 2007: Wouter
+	- config settings for slab hash message cache.
+
 23 March 2007: Wouter
 	- review of yesterday's commits.
 	- covered up memory leak of the entry locks.

@@ -63,6 +63,12 @@ Number of ports to open. This number is opened per thread for every outgoing
 query interface. Must be at least 1. Default is 16.
 Larger numbers give more protection against spoofing attempts, but need
 extra resources from the operating system.
+.It \fBmsg-cache-size:\fR <number>
+Number of bytes size of the message cache. Default is 4 megabytes.
+.It \fBmsg-cache-slabs:\fR <number>
+Number of slabs in the message cache. Slabs reduce lock contention by threads.
+Must be set to a power of 2. Setting (close) to the number of cpus is a 
+reasonable guess.
 .It \fBdo-ip4:\fR <yes or no>
 Enable or disable whether ip4 queries are answered. Default is yes.
 .It \fBdo-ip6:\fR <yes or no>

@@ -66,4 +66,11 @@ write_socket(int s, const void *buf, size_t size);
  */
 int fd_set_nonblock(int s); 
 
+/**
+ * See if number is a power of 2.
+ * @param num: the value.
+ * @return: true if the number is a power of 2.
+ */
+int is_pow2(size_t num);
+
 #endif /* NET_HELP_H */

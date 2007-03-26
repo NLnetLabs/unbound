@@ -77,6 +77,8 @@ config_create()
 	cfg->do_tcp = 1;
 	cfg->outgoing_base_port = cfg->port + 1000;
 	cfg->outgoing_num_ports = 16;
+	cfg->msg_cache_size = 4 * 1024 * 1024;
+	cfg->msg_cache_slabs = 4;
 	if(!(cfg->fwd_address = strdup(""))) {config_delete(cfg); return NULL;}
 	if(!(cfg->username = strdup(""))) {config_delete(cfg); return NULL;}
 	if(!(cfg->chrootdir = strdup(""))) {config_delete(cfg); return NULL;}

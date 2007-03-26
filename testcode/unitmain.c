@@ -97,6 +97,26 @@ net_test()
 	unit_assert( !str_is_ip6("213.154.224.12") );
 	unit_assert( !str_is_ip6("213.154.224.255") );
 	unit_assert( !str_is_ip6("255.255.255.0") );
+	unit_assert( is_pow2(0) );
+	unit_assert( is_pow2(1) );
+	unit_assert( is_pow2(2) );
+	unit_assert( is_pow2(4) );
+	unit_assert( is_pow2(8) );
+	unit_assert( is_pow2(16) );
+	unit_assert( is_pow2(1024) );
+	unit_assert( is_pow2(1024*1024) );
+	unit_assert( is_pow2(1024*1024*1024) );
+	unit_assert( !is_pow2(3) );
+	unit_assert( !is_pow2(5) );
+	unit_assert( !is_pow2(6) );
+	unit_assert( !is_pow2(7) );
+	unit_assert( !is_pow2(9) );
+	unit_assert( !is_pow2(10) );
+	unit_assert( !is_pow2(11) );
+	unit_assert( !is_pow2(17) );
+	unit_assert( !is_pow2(23) );
+	unit_assert( !is_pow2(257) );
+	unit_assert( !is_pow2(259) );
 }
 
 /** put dname into buffer */

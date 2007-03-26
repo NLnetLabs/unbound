@@ -134,4 +134,10 @@ void slabhash_remove(struct slabhash* table, hashvalue_t hash, void* key);
  */
 void slabhash_status(struct slabhash* table, const char* id, int extended);
 
+/**
+ * Retrieve slab hash total size.
+ * @param table: hash table.
+ */
+size_t slabhash_get_size(struct slabhash* table);
+
 #endif /* UTIL_STORAGE_SLABHASH_H */
