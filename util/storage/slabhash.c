@@ -37,6 +37,7 @@
  * \file
  *
  * Implementation of hash table that consists of smaller hash tables.
+ * This results in a partitioned lruhash table.
  * It cannot grow, but that gives it the ability to have multiple
  * locks. Also this means there are multiple LRU lists.
  */

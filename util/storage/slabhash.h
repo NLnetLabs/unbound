@@ -47,6 +47,7 @@
 
 /**
  * Hash table formed from several smaller ones. 
+ * This results in a partitioned lruhash table.
  * None of the data inside the slabhash may be altered.
  * Therefore, no locks are needed to access the structure.
  */

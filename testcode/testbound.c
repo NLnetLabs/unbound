@@ -125,7 +125,8 @@ setup_config(FILE* in, char* configfile, int* lineno,
 	char line[MAX_LINE_LEN];
 	char* parse;
 	FILE* cfg;
-	sprintf(configfile, "/tmp/testbound_cfg_%u.tmp", (unsigned)getpid());
+	snprintf(configfile, MAX_LINE_LEN, "/tmp/testbound_cfg_%u.tmp", 
+		(unsigned)getpid());
 	add_opts("-c", pass_argc, pass_argv);
 	add_opts(configfile, pass_argc, pass_argv);
 	cfg = fopen(configfile, "w");
@@ -194,7 +195,7 @@ main(int argc, char* argv[])
 	int init_optind = optind;
 	char* init_optarg = optarg;
 	struct replay_scenario* scen = NULL;
-	char cfgfile[128];
+	char cfgfile[MAX_LINE_LEN];
 
 	log_init(NULL);
 	log_info("Start of %s testbound program.", PACKAGE_STRING);
