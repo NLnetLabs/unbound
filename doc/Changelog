@@ -1,3 +1,6 @@
+27 March 2007: Wouter
+	- added test for cache and not cached answers, in testbound replays.
+
 26 March 2007: Wouter
 	- config settings for slab hash message cache.
 	- test for cached answer.
