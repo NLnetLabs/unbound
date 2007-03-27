@@ -64,6 +64,23 @@ enum worker_commands {
 	worker_cmd_quit
 };
 
+/** information per query that is in processing */
+struct work_query {
+	/** next query in freelist */
+	struct work_query* next;
+	/** the worker for this query */
+	struct worker* worker;
+	/** the query reply destination, packet buffer and where to send. */
+	struct comm_reply query_reply;
+	/** the query_info structure from the query */
+	struct query_info qinfo;
+	/** hash value of the query qinfo */
+	hashvalue_t query_hash;
+	/** id of query */
+	uint16_t query_id;
+	/** flags uint16 from query */
+	uint16_t query_flags;
+};
 
 /**
  * Structure holding working information for unbound.
@@ -93,16 +110,10 @@ struct worker {
 
 	/** number of requests currently active */
 	int num_requests;
-	/** our one and only query, packet buffer and where to send. */
-	struct comm_reply query_reply;
-	/** id of query */
-	uint16_t query_id;
-	/** flags uint16 from query */
-	uint16_t query_flags;
-	/** the query_info structure from the query */
-	struct query_info qinfo;
-	/** hash value of the query qinfo */
-	hashvalue_t query_hash;
+	/** number of requests that can be handled by this worker */
+	int request_size;
+	/** the free working queries */
+	struct work_query* free_queries;
 
 	/** address to forward to */
 	struct sockaddr_storage fwd_addr;

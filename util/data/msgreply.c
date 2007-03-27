@@ -79,22 +79,25 @@ int query_info_parse(struct query_info* m, ldns_buffer* query)
 	log_assert(ldns_buffer_position(query) == 0);
 	m->has_cd = (int)LDNS_CD_WIRE(q);
 	ldns_buffer_skip(query, LDNS_HEADER_SIZE);
-	q = ldns_buffer_current(query);
+	m->qname = ldns_buffer_current(query);
 	if((m->qnamesize = query_dname_len(query)) == 0)
 		return 0; /* parse error */
+	if(ldns_buffer_remaining(query) < 4)
+		return 0; /* need qtype, qclass */
+	m->qtype = ldns_buffer_read_u16(query);
+	m->qclass = ldns_buffer_read_u16(query);
+	return 1;
+}
+
+int 
+query_info_allocqname(struct query_info* m)
+{
+	uint8_t* q = m->qname;
 	if(!(m->qname = (uint8_t*)malloc(m->qnamesize))) {
-		log_err("query_info_parse: out of memory");
+		log_err("query_info_allocqname: out of memory");
 		return 0; /* out of memory */
 	}
 	memmove(m->qname, q, m->qnamesize);
-
-	if(ldns_buffer_remaining(query) < 4) {
-		free(m->qname);
-		m->qname = NULL;
-		return 0; /* need qtype, qclass */
-	}
-	m->qtype = ldns_buffer_read_u16(query);
-	m->qclass = ldns_buffer_read_u16(query);
 	return 1;
 }
 

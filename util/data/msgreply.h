@@ -86,13 +86,20 @@ struct msgreply_entry {
  * Parse wire query into a queryinfo structure, return 0 on parse error. 
  * initialises the (prealloced) queryinfo structure as well. sets reply to 0.
  * This query structure contains a pointer back info the buffer!
- * This pointer avoids memory allocation.
+ * This pointer avoids memory allocation. 
  * @param m: the prealloced queryinfo structure to put query into.
  *    must be unused, or _clear()ed.
  * @param query: the wireformat packet query. starts with ID.
  * @return: 0 on format error.
  */
 int query_info_parse(struct query_info* m, ldns_buffer* query);
+
+/**
+ * Allocate and copy the qname (obtained from query_info_parse()).
+ * @param m: the queryinfo structure.
+ * @return: 0 on alloc failure.
+ */
+int query_info_allocqname(struct query_info* m);
 
 /**
  * Compare two queryinfo structures, on query, 

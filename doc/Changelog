@@ -5,6 +5,7 @@
 	- created test that checks if items drop out of the cache.
 	- added word 'partitioned hash table' to documentation on slab hash.
 	  A slab hash is a partitioned hash table.
+	- worker can handle multiple queries at a time.
 
 26 March 2007: Wouter
 	- config settings for slab hash message cache.
