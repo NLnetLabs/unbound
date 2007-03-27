@@ -1,4 +1,6 @@
 ; This is a comment.
+; config options go here.
+CONFIG_END
 
 SCENARIO_BEGIN Sample of a valid query
 RANGE_BEGIN 0 100

@@ -51,6 +51,9 @@
 #include "daemon/unbound.c"
 #undef main
 
+/** maximum line length for lines in the replay file. */
+#define MAX_LINE_LEN 1024
+
 /** give commandline usage for testbound. */
 static void
 testbound_usage()
@@ -107,25 +110,66 @@ static void
 echo_cmdline(int argc, char* argv[])
 {
 	int i;
-	printf("testbound is starting:");
+	fprintf(stderr, "testbound is starting:");
 	for(i=0; i<argc; i++) {
-		printf(" [%s]", argv[i]);
+		fprintf(stderr, " [%s]", argv[i]);
 	}
-	printf("\n");
+	fprintf(stderr, "\n");
+}
+
+/** process config elements */
+static void
+setup_config(FILE* in, char* configfile, int* lineno,
+	int* pass_argc, char* pass_argv[])
+{
+	char line[MAX_LINE_LEN];
+	char* parse;
+	FILE* cfg;
+	sprintf(configfile, "/tmp/testbound_cfg_%u.tmp", (unsigned)getpid());
+	add_opts("-c", pass_argc, pass_argv);
+	add_opts(configfile, pass_argc, pass_argv);
+	cfg = fopen(configfile, "w");
+	if(!cfg) fatal_exit("could not open %s: %s", 
+			configfile, strerror(errno));
+	line[MAX_LINE_LEN-1] = 0;
+	while(fgets(line, MAX_LINE_LEN-1, in)) {
+		parse = line;
+		(*lineno)++;
+		while(isspace(*parse))
+			parse++;
+		if(!*parse || parse[0] == ';')
+			continue;
+		if(strncmp(parse, "COMMANDLINE", 11) == 0) {
+			parse[strlen(parse)-1] = 0; /* strip off \n */
+			add_opts(parse+11, pass_argc, pass_argv);
+			continue;
+		}
+		if(strncmp(parse, "CONFIG_END", 10) == 0) {
+			fclose(cfg);
+			return;
+		}
+		fputs(line, cfg);
+	}
+	fatal_exit("No CONFIG_END in input file");
+
 }
 
 /** read playback file */
 static struct replay_scenario* 
-setup_playback(const char* filename)
+setup_playback(const char* filename, char* configfile,
+	int* pass_argc, char* pass_argv[])
 {
 	struct replay_scenario* scen = NULL;
+	int lineno = 0;
+
 	if(filename) {
 		FILE *in = fopen(filename, "r");
 		if(!in) {
 			perror(filename);
 			exit(1);
 		}
-		scen = replay_scenario_read(in, filename);
+		setup_config(in, configfile, &lineno, pass_argc, pass_argv);
+		scen = replay_scenario_read(in, filename, &lineno);
 		fclose(in);
 		if(!scen)
 			fatal_exit("Could not read: %s", filename);
@@ -150,6 +194,7 @@ main(int argc, char* argv[])
 	int init_optind = optind;
 	char* init_optarg = optarg;
 	struct replay_scenario* scen = NULL;
+	char cfgfile[128];
 
 	log_init(NULL);
 	log_info("Start of %s testbound program.", PACKAGE_STRING);
@@ -180,7 +225,7 @@ main(int argc, char* argv[])
 	}
 
 	/* setup test environment */
-	scen = setup_playback(playback_file);
+	scen = setup_playback(playback_file, cfgfile, &pass_argc, pass_argv);
 	/* init fake event backend */
 	fake_event_init(scen);
 
@@ -194,6 +239,7 @@ main(int argc, char* argv[])
 	/* run the normal daemon */
 	res = daemon_main(pass_argc, pass_argv);
 
+	unlink(cfgfile);
 	fake_event_cleanup();
 	for(c=1; c<pass_argc; c++)
 		free(pass_argv[c]);

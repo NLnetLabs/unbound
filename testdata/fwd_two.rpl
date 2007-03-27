@@ -1,3 +1,5 @@
+; config options go here.
+CONFIG_END
 SCENARIO_BEGIN Sample of a valid query
 
 ; query responses from authority servers.

@@ -234,11 +234,10 @@ make_scenario(char* line)
 }
 
 struct replay_scenario* 
-replay_scenario_read(FILE* in, const char* name)
+replay_scenario_read(FILE* in, const char* name, int* lineno)
 {
 	char line[MAX_LINE_LEN];
 	char *parse;
-	int lineno = 0;
 	struct replay_scenario* scen = NULL;
 	uint16_t ttl = 3600;
 	ldns_rdf* or = NULL;
@@ -247,7 +246,7 @@ replay_scenario_read(FILE* in, const char* name)
 
 	while(fgets(line, MAX_LINE_LEN-1, in)) {
 		parse=line;
-		lineno++;
+		(*lineno)++;
 		while(isspace(*parse))
 			parse++;
 		if(!*parse) 
@@ -257,26 +256,26 @@ replay_scenario_read(FILE* in, const char* name)
 		if(parse_keyword(&parse, "SCENARIO_BEGIN")) {
 			scen = make_scenario(parse);
 			if(!scen)
-				fatal_exit("%d: could not make scen", lineno);
+				fatal_exit("%d: could not make scen", *lineno);
 			continue;
 		} 
 		if(!scen)
-			fatal_exit("%d: expected SCENARIO", lineno);
+			fatal_exit("%d: expected SCENARIO", *lineno);
 		if(parse_keyword(&parse, "RANGE_BEGIN")) {
 			struct replay_range* newr = replay_range_read(parse, 
-				in, name, &lineno, line, &ttl, &or, &prev);
+				in, name, lineno, line, &ttl, &or, &prev);
 			if(!newr)
-				fatal_exit("%d: bad range", lineno);
+				fatal_exit("%d: bad range", *lineno);
 			newr->next_range = scen->range_list;
 			scen->range_list = newr;
 		} else if(parse_keyword(&parse, "STEP")) {
 			struct replay_moment* mom = replay_moment_read(parse, 
-				in, name, &lineno, &ttl, &or, &prev);
+				in, name, lineno, &ttl, &or, &prev);
 			if(!mom)
-				fatal_exit("%d: bad moment", lineno);
+				fatal_exit("%d: bad moment", *lineno);
 			if(scen->mom_last && 
 				scen->mom_last->time_step >= mom->time_step)
-				fatal_exit("%d: time goes backwards", lineno);
+				fatal_exit("%d: time goes backwards", *lineno);
 			if(scen->mom_last)
 				scen->mom_last->mom_next = mom;
 			else	scen->mom_first = mom;

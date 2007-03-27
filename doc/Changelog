@@ -1,5 +1,8 @@
 27 March 2007: Wouter
 	- added test for cache and not cached answers, in testbound replays.
+	- testbound can give config file and commandline options from the
+	  replay file to unbound.
+	- created test that checks if items drop out of the cache.
 
 26 March 2007: Wouter
 	- config settings for slab hash message cache.
