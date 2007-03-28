@@ -1,3 +1,8 @@
+28 March 2007: Wouter
+	- new config option: num-queries-per-thread.
+	- added tpkg test for answering three queries at the same time
+	  using one thread (from the query service list).
+
 27 March 2007: Wouter
 	- added test for cache and not cached answers, in testbound replays.
 	- testbound can give config file and commandline options from the

@@ -84,8 +84,8 @@ req_release(struct work_query* w)
 		/* no longer at max, start accepting again. */
 		listen_resume(w->worker->front);
 	}
+	log_assert(w->worker->num_requests >= 1);
 	w->worker->num_requests --;
-	log_assert(w->worker->num_requests >= 0);
 	w->next = w->worker->free_queries;
 	w->worker->free_queries = w;
 }
@@ -398,7 +398,7 @@ worker_create(struct daemon* daemon, int id)
 static int
 reqs_init(struct worker* worker)
 {
-	int i;
+	size_t i;
 	for(i=0; i<worker->request_size; i++) {
 		struct work_query* q = (struct work_query*)calloc(1,
 			sizeof(struct work_query));
@@ -406,8 +406,26 @@ reqs_init(struct worker* worker)
 		q->worker = worker;
 		q->next = worker->free_queries;
 		worker->free_queries = q;
+		q->all_next = worker->all_queries;
+		worker->all_queries = q;
 	}
 	return 1;
+}
+
+/** delete request list */
+static void
+reqs_delete(struct worker* worker)
+{
+	struct work_query* q = worker->all_queries;
+	struct work_query* n;
+	while(q) {
+		n = q->all_next;
+		log_assert(q->worker == worker);
+		/* comm_reply closed in outside_network_delete */
+		query_info_clear(&q->qinfo);
+		free(q);
+		q = n;
+	}
 }
 
 int
@@ -484,7 +502,7 @@ worker_init(struct worker* worker, struct config_file *cfg,
 			return 0;
 		}
 	}
-	worker->request_size = 1;
+	worker->request_size = cfg->num_queries_per_thread;
 	if(!reqs_init(worker)) {
 		worker_delete(worker);
 		return 0;
@@ -512,6 +530,7 @@ worker_delete(struct worker* worker)
 {
 	if(!worker) 
 		return;
+	reqs_delete(worker);
 	listen_delete(worker->front);
 	outside_network_delete(worker->back);
 	comm_signal_delete(worker->comsig);

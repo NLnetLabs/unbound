@@ -1,4 +1,6 @@
 ; config options go here.
+server:
+	num-queries-per-thread: 1
 CONFIG_END
 SCENARIO_BEGIN Sample of a valid query
 

@@ -79,6 +79,7 @@ config_create()
 	cfg->outgoing_num_ports = 16;
 	cfg->msg_cache_size = 4 * 1024 * 1024;
 	cfg->msg_cache_slabs = 4;
+	cfg->num_queries_per_thread = 1024;
 	if(!(cfg->fwd_address = strdup(""))) {config_delete(cfg); return NULL;}
 	if(!(cfg->username = strdup(""))) {config_delete(cfg); return NULL;}
 	if(!(cfg->chrootdir = strdup(""))) {config_delete(cfg); return NULL;}

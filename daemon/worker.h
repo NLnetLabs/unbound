@@ -80,6 +80,8 @@ struct work_query {
 	uint16_t query_id;
 	/** flags uint16 from query */
 	uint16_t query_flags;
+	/** next query in all-list */
+	struct work_query* all_next;
 };
 
 /**
@@ -109,11 +111,13 @@ struct worker {
 	struct comm_point* cmd_com;
 
 	/** number of requests currently active */
-	int num_requests;
+	size_t num_requests;
 	/** number of requests that can be handled by this worker */
-	int request_size;
+	size_t request_size;
 	/** the free working queries */
 	struct work_query* free_queries;
+	/** list of all working queries */
+	struct work_query* all_queries;
 
 	/** address to forward to */
 	struct sockaddr_storage fwd_addr;

@@ -73,6 +73,8 @@ struct config_file {
 	size_t msg_cache_size;
 	/** slabs in the message cache. */
 	size_t msg_cache_slabs;
+	/** number of queries every thread can service */
+	size_t num_queries_per_thread;
 
 	/** forwarder address. string. If not NULL fwder mode is enabled. */
 	char* fwd_address;
