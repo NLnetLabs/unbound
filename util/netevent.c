@@ -781,6 +781,69 @@ comm_point_send_reply(struct comm_reply *repinfo)
 }
 
 void 
+comm_point_send_reply_iov(struct comm_reply* repinfo, struct iovec* iov,
+        size_t iovlen)
+{
+	log_assert(repinfo && repinfo->c);
+	if(repinfo->c->type == comm_udp) {
+		struct msghdr hdr;
+		hdr.msg_name = &repinfo->addr;
+		hdr.msg_namelen = repinfo->addrlen;
+		hdr.msg_iov = iov + 1;
+		hdr.msg_iovlen = iovlen - 1;
+		hdr.msg_control = NULL;
+		hdr.msg_controllen = 0;
+		hdr.msg_flags = 0;
+		/* note that number of characters sent is not checked. */
+		if(sendmsg(repinfo->c->fd, &hdr, 0) == -1)
+			log_err("sendmsg: %s", strerror(errno));
+	} else {
+		/* try if it can be sent in writev right now */
+		size_t i;
+		uint16_t len = 0;
+		ssize_t done;
+		for(i=1; i<iovlen; i++)
+			len += iov[i].iov_len;
+		len = htons(len);
+		iov[0].iov_base = &len;
+		iov[0].iov_len = sizeof(uint16_t);
+		if((done=writev(repinfo->c->fd, iov, (int)iovlen)) == -1) {
+#ifdef S_SPLINT_S
+			/* don't complain about returning stack references */
+			iov[0].iov_base = NULL;
+#endif
+			if(errno != EINTR && errno != EAGAIN) {
+				log_err("writev: %s", strerror(errno));
+				comm_point_drop_reply(repinfo);
+				return;
+			}
+			done = 0;
+		}
+#ifdef S_SPLINT_S
+		/* don't complain about returning stack references */
+		iov[0].iov_base = NULL;
+#endif
+		if((size_t)done == ntohs(len) + sizeof(uint16_t)) {
+			/* done in one call */
+			comm_point_drop_reply(repinfo);
+		} else {
+			/* sending remaining bytes */
+			ldns_buffer_clear(repinfo->c->buffer);
+			repinfo->c->tcp_byte_count = (size_t)done;
+			for(i=1; i<iovlen; i++)
+				ldns_buffer_write(repinfo->c->buffer,
+					iov[i].iov_base, iov[i].iov_len);
+			ldns_buffer_flip(repinfo->c->buffer);
+			if((size_t)done >= sizeof(uint16_t))
+				ldns_buffer_set_position(repinfo->c->buffer,
+					(size_t)done - sizeof(uint16_t));
+			comm_point_start_listening(repinfo->c, -1, 
+				TCP_QUERY_TIMEOUT);
+		}
+	}
+}
+
+void 
 comm_point_drop_reply(struct comm_reply* repinfo)
 {
 	if(!repinfo)

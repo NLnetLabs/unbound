@@ -610,6 +610,19 @@ comm_point_send_reply(struct comm_reply* repinfo)
 }
 
 void 
+comm_point_send_reply_iov(struct comm_reply* repinfo, struct iovec* iov,
+        size_t iovlen)
+{
+	size_t i;
+	ldns_buffer_clear(repinfo->c->buffer);
+	for(i=1; i<iovlen; i++)
+		ldns_buffer_write(repinfo->c->buffer, iov[i].iov_base,
+			iov[i].iov_len);
+	ldns_buffer_flip(repinfo->c->buffer);
+	comm_point_send_reply(repinfo);
+}
+
+void 
 comm_point_drop_reply(struct comm_reply* repinfo)
 {
 	log_info("comm_point_drop_reply fake");

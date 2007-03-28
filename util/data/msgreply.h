@@ -42,6 +42,7 @@
 #ifndef UTIL_DATA_MSGREPLY_H
 #define UTIL_DATA_MSGREPLY_H
 #include "util/storage/lruhash.h"
+struct comm_reply;
 
 /**
  * Structure to store query information that makes answers to queries
@@ -142,6 +143,16 @@ hashvalue_t query_info_hash(struct query_info *q);
  */
 void reply_info_answer(struct reply_info* rep, uint16_t qflags, 
 	ldns_buffer* buf);
+
+/**
+ * Generate and send out answer from reply_info.
+ * @param rep: reply to fill in.
+ * @param qid: query id.
+ * @param qflags: flags word from the query.
+ * @param comrep: communication reply point.
+ */
+void reply_info_answer_iov(struct reply_info* rep, uint16_t qid,
+	uint16_t qflags, struct comm_reply* comrep);
 
 /**
  * Setup query info entry
