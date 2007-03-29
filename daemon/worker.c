@@ -289,11 +289,11 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 	if((e=slabhash_lookup(worker->daemon->msg_cache, h, &qinfo, 0))) {
 		/* answer from cache */
 		log_info("answer from the cache");
-		/* id is still in the buffer, no need to touch it */
-		reply_info_answer((struct reply_info*)e->data, 
-			ldns_buffer_read_u16_at(c->buffer, 2), c->buffer);
+		reply_info_answer_iov((struct reply_info*)e->data, 
+			ldns_buffer_read_u16_at(c->buffer, 0),
+			ldns_buffer_read_u16_at(c->buffer, 2), repinfo);
 		lock_rw_unlock(&e->lock);
-		return 1;
+		return 0;
 	}
 	ldns_buffer_rewind(c->buffer);
 	/* perform memory allocation(s) */
