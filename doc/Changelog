@@ -1,6 +1,8 @@
 29 March 2007: Wouter
 	- writev or sendmsg used when answering from cache.
 	  This avoids a copy of the data.
+	- do not do useless byteswap on query id. Store reply flags in uint16
+	  for easier access (and no repeated byteswapping).
 
 28 March 2007: Wouter
 	- new config option: num-queries-per-thread.

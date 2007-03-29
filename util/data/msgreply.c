@@ -175,11 +175,10 @@ void reply_info_answer(struct reply_info* rep, uint16_t qflags,
 	uint16_t flags;
 	ldns_buffer_clear(buffer);
 	ldns_buffer_skip(buffer, 2); /* ID */
-	flags = ldns_read_uint16(rep->reply);
-	flags |= (qflags & 0x0100); /* copy RD bit */
+	flags = rep->flags | (qflags & 0x0100); /* copy RD bit */
 	log_assert(flags & 0x8000); /* QR bit must be on in our replies */
 	ldns_buffer_write_u16(buffer, flags);
-	ldns_buffer_write(buffer, rep->reply+2, rep->replysize-2);
+	ldns_buffer_write(buffer, rep->reply, rep->replysize);
 	ldns_buffer_flip(buffer);
 }
 
@@ -191,17 +190,15 @@ reply_info_answer_iov(struct reply_info* rep, uint16_t qid,
 	/* [0]=tcp, [1]=id, [2]=flags, [3]=message */
 	struct iovec iov[4];
 
-	qid = htons(qid);
 	iov[1].iov_base = &qid;
 	iov[1].iov_len = sizeof(uint16_t);
-	flags = ldns_read_uint16(rep->reply);
-	flags |= (qflags & 0x0100); /* copy RD bit */
+	flags = rep->flags | (qflags & 0x0100); /* copy RD bit */
 	log_assert(flags & 0x8000); /* QR bit must be on in our replies */
 	flags = htons(flags);
 	iov[2].iov_base = &flags;
 	iov[2].iov_len = sizeof(uint16_t);
-	iov[3].iov_base = rep->reply+2;
-	iov[3].iov_len = rep->replysize-2;
+	iov[3].iov_base = rep->reply;
+	iov[3].iov_len = rep->replysize;
 	comm_point_send_reply_iov(comrep, iov, 4);
 }
 

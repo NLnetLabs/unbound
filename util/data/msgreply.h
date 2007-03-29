@@ -67,10 +67,13 @@ struct query_info {
  * the query (RD,CD if not AA). prepend ID. 
  */
 struct reply_info {
-	/** the reply packet, skips ID, starts with flags/opcode/rcode word */
+	/** the reply packet, skips ID and flags, 
+	 * starts with opcode/rcode word */
 	uint8_t* reply;
 	/** the reply size */
 	size_t replysize;
+	/** the flags for the answer, host order. */
+	uint16_t flags;
 };
 
 /**
@@ -147,7 +150,7 @@ void reply_info_answer(struct reply_info* rep, uint16_t qflags,
 /**
  * Generate and send out answer from reply_info.
  * @param rep: reply to fill in.
- * @param qid: query id.
+ * @param qid: query id, in network byte order.
  * @param qflags: flags word from the query.
  * @param comrep: communication reply point.
  */

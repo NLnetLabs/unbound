@@ -76,7 +76,7 @@ struct work_query {
 	struct query_info qinfo;
 	/** hash value of the query qinfo */
 	hashvalue_t query_hash;
-	/** id of query */
+	/** id of query, in network byteorder. */
 	uint16_t query_id;
 	/** flags uint16 from query */
 	uint16_t query_flags;

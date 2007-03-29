@@ -57,6 +57,8 @@
 #include <netdb.h>
 #include <signal.h>
 
+/** size of ID+FLAGS in a DNS message */
+#define DNS_ID_AND_FLAGS 4
 /** timeout in seconds for UDP queries to auth servers. TODO: proper rtt */
 #define UDP_QUERY_TIMEOUT 4
 
@@ -99,7 +101,7 @@ replyerror(int r, struct work_query* w)
 	verbose(VERB_DETAIL, "reply with error");
 	
 	ldns_buffer_clear(buf);
-	ldns_buffer_write_u16(buf, w->query_id);
+	ldns_buffer_write(buf, &w->query_id, sizeof(uint16_t));
 	flags = (uint16_t)(0x8000 | r); /* QR and retcode*/
 	flags |= (w->query_flags & 0x0100); /* copy RD bit */
 	ldns_buffer_write_u16(buf, flags);
@@ -126,7 +128,8 @@ worker_handle_reply(struct comm_point* c, void* arg, int error,
 	struct work_query* w = (struct work_query*)arg;
 	struct reply_info* rep;
 	struct msgreply_entry* e;
-	verbose(VERB_DETAIL, "reply to query with stored ID %d", w->query_id);
+	verbose(VERB_DETAIL, "reply to query with stored ID %d", 
+		ntohs(w->query_id)); /* byteswapped so same as dig prints */
 	if(error != 0) {
 		replyerror(LDNS_RCODE_SERVFAIL, w);
 		return 0;
@@ -145,7 +148,8 @@ worker_handle_reply(struct comm_point* c, void* arg, int error,
 		replyerror(LDNS_RCODE_SERVFAIL, w);
 		return 0;
 	}
-	rep->replysize = ldns_buffer_limit(c->buffer) - 2; /* minus ID */
+	rep->flags = ldns_buffer_read_u16_at(c->buffer, 2);
+	rep->replysize = ldns_buffer_limit(c->buffer) - DNS_ID_AND_FLAGS;
 	log_info("got reply of size %d", rep->replysize);
 	rep->reply = (uint8_t*)malloc(rep->replysize);
 	if(!rep->reply) {
@@ -154,10 +158,10 @@ worker_handle_reply(struct comm_point* c, void* arg, int error,
 		replyerror(LDNS_RCODE_SERVFAIL, w);
 		return 0;
 	}
-	memmove(rep->reply, ldns_buffer_at(c->buffer, 2), rep->replysize);
-	ldns_buffer_write_u16_at(w->query_reply.c->buffer, 0, w->query_id);
-	reply_info_answer(rep, w->query_flags, w->query_reply.c->buffer);
-	comm_point_send_reply(&w->query_reply);
+	memmove(rep->reply, ldns_buffer_at(c->buffer, DNS_ID_AND_FLAGS), 
+		rep->replysize);
+	reply_info_answer_iov(rep, w->query_id, w->query_flags, 
+		&w->query_reply);
 	req_release(w);
 	/* store or update reply in the cache */
 	if(!(e = query_info_entrysetup(&w->qinfo, rep, w->query_hash))) {
@@ -174,7 +178,7 @@ static void
 worker_process_query(struct worker* worker, struct work_query* w) 
 {
 	/* query the forwarding address */
-	verbose(VERB_DETAIL, "process_query ID %d", w->query_id);
+	verbose(VERB_DETAIL, "process_query ID %d", ntohs(w->query_id));
 	pending_udp_query(worker->back, w->query_reply.c->buffer, 
 		&worker->fwd_addr, worker->fwd_addrlen, UDP_QUERY_TIMEOUT,
 		worker_handle_reply, w, worker->rndstate);
@@ -325,7 +329,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 	w->query_hash = h;
 	memcpy(&w->query_reply, repinfo, sizeof(struct comm_reply));
 	memcpy(&w->qinfo, &qinfo, sizeof(struct query_info));
-	w->query_id = LDNS_ID_WIRE(ldns_buffer_begin(c->buffer));
+	memcpy(&w->query_id, ldns_buffer_begin(c->buffer), sizeof(uint16_t));
 	w->query_flags = ldns_buffer_read_u16_at(c->buffer, 2);
 
 	/* answer it */
