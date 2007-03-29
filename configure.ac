@@ -269,7 +269,7 @@ AC_PROG_LIBTOOL
 
 # Checks for header files.
 AC_HEADER_STDC
-AC_CHECK_HEADERS([stdarg.h stdbool.h netinet/in.h sys/param.h sys/socket.h arpa/inet.h],,, [AC_INCLUDES_DEFAULT])
+AC_CHECK_HEADERS([stdarg.h stdbool.h netinet/in.h sys/param.h sys/socket.h sys/uio.h arpa/inet.h],,, [AC_INCLUDES_DEFAULT])
 
 # check for types
 AC_CHECK_TYPE(int8_t, char)
@@ -487,6 +487,10 @@ AH_BOTTOM([
 
 #ifdef HAVE_SYS_SOCKET_H
 #include <sys/socket.h>
+#endif
+
+#ifdef HAVE_SYS_UIO_H
+#include <sys/uio.h>
 #endif
 
 #ifdef HAVE_NETINET_IN_H

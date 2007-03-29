@@ -4,6 +4,7 @@
 	- do not do useless byteswap on query id. Store reply flags in uint16
 	  for easier access (and no repeated byteswapping).
 	- reviewed code.
+	- configure detects and config.h includes sys/uio.h for writev decl.
 
 28 March 2007: Wouter
 	- new config option: num-queries-per-thread.
