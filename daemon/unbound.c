@@ -68,7 +68,7 @@ static void usage()
 static void
 apply_dir(struct daemon* daemon, struct config_file* cfg, int cmdline_verbose)
 {
-	/* apply changes if they have changed */
+	/* apply if they have changed */
 	daemon->cfg = cfg;
 	verbosity = cmdline_verbose + cfg->verbosity;
 	if(cfg->directory && cfg->directory[0]) {
@@ -79,7 +79,7 @@ apply_dir(struct daemon* daemon, struct config_file* cfg, int cmdline_verbose)
 			}
 			free(daemon->cwd);
 			if(!(daemon->cwd = strdup(cfg->directory)))
-				fatal_exit("malloc failed");
+				log_err("cwd: malloc failed");
 		}
 	}
 	if(cfg->msg_cache_size != slabhash_get_size(daemon->msg_cache) ||
@@ -106,10 +106,16 @@ readpid (const char* file)
 	ssize_t l;
 
 	if ((fd = open(file, O_RDONLY)) == -1) {
+		if(errno != ENOENT)
+			log_err("Could not read pidfile %s: %s",
+				file, strerror(errno));
 		return -1;
 	}
 
 	if (((l = read(fd, pidbuf, sizeof(pidbuf)))) == -1) {
+		if(errno != ENOENT)
+			log_err("Could not read pidfile %s: %s",
+				file, strerror(errno));
 		close(fd);
 		return -1;
 	}
@@ -118,7 +124,6 @@ readpid (const char* file)
 
 	/* Empty pidfile means no pidfile... */
 	if (l == 0) {
-		errno = ENOENT;
 		return -1;
 	}
 
@@ -156,18 +161,41 @@ static void
 checkoldpid(struct config_file* cfg)
 {
 	pid_t old;
-	if((old = readpid(cfg->pidfile)) == -1) {
-		if(errno != ENOENT) {
-			log_err("Could not read pidfile %s: %s",
-				cfg->pidfile, strerror(errno));
-		}
-	} else {
-		/** see if it is still alive */
+	if((old = readpid(cfg->pidfile)) != -1) {
+		/* see if it is still alive */
 		if(kill(old, 0) == 0 || errno == EPERM)
 			log_warn("unbound is already running as pid %u.", 
 				(unsigned)old);
 		else	log_warn("did not exit gracefully last time (%u)", 
 				(unsigned)old);
+	}
+}
+
+/** detach from command line */
+static void
+detach(struct config_file* cfg)
+{
+	int fd;
+	/* Take off... */
+	switch (fork()) {
+		case 0:
+			break;
+		case -1:
+			unlink(cfg->pidfile);
+			fatal_exit("fork failed: %s", strerror(errno));
+		default:
+			/* exit interactive session */
+			exit(0);
+	}
+	/* detach */
+	if(setsid() == -1)
+		fatal_exit("setsid() failed: %s", strerror(errno));
+	if ((fd = open("/dev/null", O_RDWR, 0)) != -1) {
+		(void)dup2(fd, STDIN_FILENO);
+		(void)dup2(fd, STDOUT_FILENO);
+		(void)dup2(fd, STDERR_FILENO);
+		if (fd > 2)
+			(void)close(fd);
 	}
 }
 
@@ -199,32 +227,12 @@ do_chroot(struct daemon* daemon, struct config_file* cfg, int debug_mode)
 	/* init logfile just before fork */
 	log_init(cfg->logfile);
 	if(!debug_mode && cfg->do_daemonize) {
-		int fd;
-		/* Take off... */
-		switch (fork()) {
-			case 0:
-				break;
-			case -1:
-				unlink(cfg->pidfile);
-				fatal_exit("fork failed: %s", strerror(errno));
-			default:
-				/* exit interactive session */
-				exit(0);
-		}
-		/* detach */
-		if(setsid() == -1)
-			fatal_exit("setsid() failed: %s", strerror(errno));
-		if ((fd = open("/dev/null", O_RDWR, 0)) != -1) {
-			(void)dup2(fd, STDIN_FILENO);
-			(void)dup2(fd, STDOUT_FILENO);
-			(void)dup2(fd, STDERR_FILENO);
-			if (fd > 2)
-				(void)close(fd);
-		}
+		detach(cfg);
 	}
 	if(cfg->pidfile && cfg->pidfile[0]) {
 		writepid(cfg->pidfile, getpid());
-		daemon->pidfile = strdup(cfg->pidfile);
+		if(!(daemon->pidfile = strdup(cfg->pidfile)))
+			log_err("pidf: malloc failed");
 	}
 }
 
@@ -235,7 +243,8 @@ do_chroot(struct daemon* daemon, struct config_file* cfg, int debug_mode)
  *    These increase verbosity as specified in the config file.
  * @param debug_mode: if set, do not daemonize.
  */
-static void run_daemon(const char* cfgfile, int cmdline_verbose, int debug_mode)
+static void 
+run_daemon(const char* cfgfile, int cmdline_verbose, int debug_mode)
 {
 	struct config_file* cfg = NULL;
 	struct daemon* daemon = NULL;

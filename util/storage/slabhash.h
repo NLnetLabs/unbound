@@ -45,6 +45,9 @@
 #define UTIL_STORAGE_SLABHASH_H
 #include "util/storage/lruhash.h"
 
+/** default number of slabs */
+#define HASH_DEFAULT_SLABS 4
+
 /**
  * Hash table formed from several smaller ones. 
  * This results in a partitioned lruhash table.

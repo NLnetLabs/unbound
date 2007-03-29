@@ -118,8 +118,9 @@ daemon_init()
 	signal_handling_record();
 	checklock_start();
 	daemon->need_to_exit = 0;
-	daemon->msg_cache = slabhash_create(4, HASH_DEFAULT_STARTARRAY,
-		HASH_DEFAULT_MAXMEM, msgreply_sizefunc, query_info_compare,
+	daemon->msg_cache = slabhash_create(HASH_DEFAULT_SLABS, 
+		HASH_DEFAULT_STARTARRAY, HASH_DEFAULT_MAXMEM, 
+		msgreply_sizefunc, query_info_compare,
 		query_entry_delete, reply_info_delete, NULL);
 	if(!daemon->msg_cache) {
 		free(daemon);
@@ -157,7 +158,7 @@ daemon_create_workers(struct daemon* daemon)
 		sizeof(struct worker*));
 	for(i=0; i<daemon->num; i++) {
 		if(!(daemon->workers[i] = worker_create(daemon, i)))
-			fatal_exit("malloc failure");
+			fatal_exit("could not create worker");
 	}
 }
 
@@ -191,7 +192,6 @@ static void*
 thread_start(void* arg)
 {
 	struct worker* worker = (struct worker*)arg;
-	int num = worker->thread_num;
 	log_thread_set(&worker->thread_num);
 	ub_thread_blocksigs();
 #if !defined(HAVE_PTHREAD) && !defined(HAVE_SOLARIS_THREADS)
@@ -199,10 +199,10 @@ thread_start(void* arg)
 	close(worker->cmd_send_fd);
 	worker->cmd_send_fd = -1;
 	close_other_pipes(worker->daemon, worker->thread_num);
-#endif /* no threads */
+#endif
 	if(!worker_init(worker, worker->daemon->cfg, worker->daemon->ports,
 		BUFSZ, 0))
-		fatal_exit("Could not initialize thread #%d", num);
+		fatal_exit("Could not initialize thread");
 
 	worker_work(worker);
 	return NULL;
