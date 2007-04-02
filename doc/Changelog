@@ -1,3 +1,8 @@
+2 April 2007: Wouter
+	- check sizes of udp received messages, not too short.
+	- review changes. Some memmoves can be memcpys: 4byte aligned.
+	  set id correctly on cached answers. 
+
 29 March 2007: Wouter
 	- writev or sendmsg used when answering from cache.
 	  This avoids a copy of the data.

@@ -98,7 +98,7 @@ query_info_allocqname(struct query_info* m)
 		log_err("query_info_allocqname: out of memory");
 		return 0; /* out of memory */
 	}
-	memmove(m->qname, q, m->qnamesize);
+	memcpy(m->qname, q, m->qnamesize);
 	return 1;
 }
 

@@ -123,6 +123,10 @@ outnet_udp_cb(struct comm_point* c, void* arg, int error,
 		log_info("outnetudp got udp error %d", error);
 		return 0;
 	}
+	if(ldns_buffer_limit(c->buffer) < LDNS_HEADER_SIZE) {
+		log_info("outnetudp udp too short");
+		return 0;
+	}
 	log_assert(reply_info);
 
 	/* setup lookup key */

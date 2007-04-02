@@ -158,13 +158,15 @@ worker_handle_reply(struct comm_point* c, void* arg, int error,
 		replyerror(LDNS_RCODE_SERVFAIL, w);
 		return 0;
 	}
-	memmove(rep->reply, ldns_buffer_at(c->buffer, DNS_ID_AND_FLAGS), 
+	memcpy(rep->reply, ldns_buffer_at(c->buffer, DNS_ID_AND_FLAGS), 
 		rep->replysize);
 	reply_info_answer_iov(rep, w->query_id, w->query_flags, 
 		&w->query_reply);
 	req_release(w);
 	/* store or update reply in the cache */
 	if(!(e = query_info_entrysetup(&w->qinfo, rep, w->query_hash))) {
+		free(rep->reply);
+		free(rep);
 		log_err("out of memory");
 		return 0;
 	}
@@ -291,10 +293,11 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 	}
 	h = query_info_hash(&qinfo);
 	if((e=slabhash_lookup(worker->daemon->msg_cache, h, &qinfo, 0))) {
-		/* answer from cache */
+		/* answer from cache - we have acquired a readlock on it */
+		uint16_t id;
 		log_info("answer from the cache");
-		reply_info_answer_iov((struct reply_info*)e->data, 
-			ldns_buffer_read_u16_at(c->buffer, 0),
+		memcpy(&id, ldns_buffer_begin(c->buffer), sizeof(uint16_t));
+		reply_info_answer_iov((struct reply_info*)e->data, id,
 			ldns_buffer_read_u16_at(c->buffer, 2), repinfo);
 		lock_rw_unlock(&e->lock);
 		return 0;
@@ -307,7 +310,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 	}
 
 	/* grab a work request structure for this new request */
-	if(!worker->free_queries) {
+	if(!(w = worker->free_queries)) {
 		/* we could get this due to a slow tcp incoming query, 
 		   that started before we performed listen_pushback */
 		verbose(VERB_DETAIL, "worker: too many incoming requests "
@@ -315,7 +318,6 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 		comm_point_drop_reply(repinfo);
 		return 0;
 	}
-	w = worker->free_queries;
 	worker->free_queries = w->next;
 	worker->num_requests ++;
 	log_assert(worker->num_requests <= worker->request_size);
@@ -351,14 +353,17 @@ worker_sighandler(int sig, void* arg)
 			break;
 		case SIGINT:
 			log_info("caught signal SIGINT");
+			worker->need_to_restart = 0;
 			comm_base_exit(worker->base);
 			break;
 		case SIGQUIT:
 			log_info("caught signal SIGQUIT");
+			worker->need_to_restart = 0;
 			comm_base_exit(worker->base);
 			break;
 		case SIGTERM:
 			log_info("caught signal SIGTERM");
+			worker->need_to_restart = 0;
 			comm_base_exit(worker->base);
 			break;
 		default:
