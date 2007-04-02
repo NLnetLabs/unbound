@@ -6,6 +6,7 @@ SCENARIO_BEGIN Query receives answer from the cache
 
 STEP 1 QUERY
 ENTRY_BEGIN
+	REPLY RD
 	SECTION QUESTION
 	www.example.com. IN A
 ENTRY_END
@@ -20,7 +21,8 @@ STEP 3 REPLY
 ENTRY_BEGIN
 	MATCH opcode qtype qname
 	ADJUST copy_id
-	REPLY QR RD RA NOERROR
+	; authoritative answer
+	REPLY QR AA RD RA NOERROR
 	SECTION QUESTION
 	www.example.com. IN A
 	SECTION ANSWER
@@ -32,27 +34,40 @@ ENTRY_BEGIN
 ENTRY_END
 STEP 4 CHECK_ANSWER
 ENTRY_BEGIN
-	MATCH opcode qname qtype
+	MATCH all 
+	; first reply, have AA set.
+	REPLY QR AA RD RA
 	SECTION QUESTION
 	www.example.com. IN A
 	SECTION ANSWER
 	www.example.com. IN A 10.20.30.40
+	SECTION AUTHORITY
+	www.example.com. IN NS ns.example.com.
+	SECTION ADDITIONAL
+	ns.example.com. IN A 10.20.30.50
 ENTRY_END
 
-; another query, same, so it must be answered frm the cache
+; another query, same, so it must be answered from the cache
 STEP 5 QUERY
 ENTRY_BEGIN
+	REPLY RD
 	SECTION QUESTION
 	www.example.com. IN A
 ENTRY_END
 ; immediate answer without an OUT_QUERY happening (checked on exit)
+; also, the answer does not have AA set
 STEP 6 CHECK_ANSWER
 ENTRY_BEGIN
-	MATCH opcode qname qtype
+	MATCH all
+	REPLY QR RD RA
 	SECTION QUESTION
 	www.example.com. IN A
 	SECTION ANSWER
 	www.example.com. IN A 10.20.30.40
+	SECTION AUTHORITY
+	www.example.com. IN NS ns.example.com.
+	SECTION ADDITIONAL
+	ns.example.com. IN A 10.20.30.50
 ENTRY_END
 
 SCENARIO_END

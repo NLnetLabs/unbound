@@ -88,9 +88,9 @@ struct msgreply_entry {
 
 /** 
  * Parse wire query into a queryinfo structure, return 0 on parse error. 
- * initialises the (prealloced) queryinfo structure as well. sets reply to 0.
+ * initialises the (prealloced) queryinfo structure as well.
  * This query structure contains a pointer back info the buffer!
- * This pointer avoids memory allocation. 
+ * This pointer avoids memory allocation. allocqname does memory allocation.
  * @param m: the prealloced queryinfo structure to put query into.
  *    must be unused, or _clear()ed.
  * @param query: the wireformat packet query. starts with ID.
@@ -106,8 +106,8 @@ int query_info_parse(struct query_info* m, ldns_buffer* query);
 int query_info_allocqname(struct query_info* m);
 
 /**
- * Compare two queryinfo structures, on query, 
- * The qname is _not_ sorted in canonical ordering.
+ * Compare two queryinfo structures, on query and type, class. 
+ * It is _not_ sorted in canonical ordering.
  * @param m1: struct query_info* , void* here to ease use as function pointer.
  * @param m2: struct query_info* , void* here to ease use as function pointer.
  * @return: 0 = same, -1 m1 is smaller, +1 m1 is larger.
@@ -118,8 +118,11 @@ int query_info_compare(void* m1, void* m2);
 void query_info_clear(struct query_info* m);
 
 /** helper routine, determine length of dname in buffer, no compression ptrs
-  * allowed, returns 0 on failure. */
+  * allowed, returns 0 on parse failure. */
 size_t query_dname_len(ldns_buffer* query);
+
+/** lowercase query dname */
+void query_dname_tolower(uint8_t* dname, size_t len);
 
 /** clear out reply info structure */
 void reply_info_clear(struct reply_info* m);
@@ -133,7 +136,7 @@ void query_entry_delete(void *q, void* arg);
 /** delete reply_info data structure */
 void reply_info_delete(void* d, void* arg);
 
-/** calculate hash value of query_info */
+/** calculate hash value of query_info, lowercases the qname. */
 hashvalue_t query_info_hash(struct query_info *q);
 
 /** 
@@ -153,9 +156,11 @@ void reply_info_answer(struct reply_info* rep, uint16_t qflags,
  * @param qid: query id, in network byte order.
  * @param qflags: flags word from the query.
  * @param comrep: communication reply point.
+ * @param cached: set true if a cached reply (so no AA bit).
+ *	set false for the first reply.
  */
 void reply_info_answer_iov(struct reply_info* rep, uint16_t qid,
-	uint16_t qflags, struct comm_reply* comrep);
+	uint16_t qflags, struct comm_reply* comrep, int cached);
 
 /**
  * Setup query info entry

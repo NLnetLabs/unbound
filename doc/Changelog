@@ -2,6 +2,10 @@
 	- check sizes of udp received messages, not too short.
 	- review changes. Some memmoves can be memcpys: 4byte aligned.
 	  set id correctly on cached answers. 
+	- review changes msgreply.c, memleak on error condition. AA flag
+	  clear on cached reply. Lowercase queries on hashing.
+	  unit test on lowercasing. Test AA bit not set on cached reply.
+	  Note that no TTLs are managed.
 
 29 March 2007: Wouter
 	- writev or sendmsg used when answering from cache.

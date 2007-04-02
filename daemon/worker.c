@@ -161,7 +161,7 @@ worker_handle_reply(struct comm_point* c, void* arg, int error,
 	memcpy(rep->reply, ldns_buffer_at(c->buffer, DNS_ID_AND_FLAGS), 
 		rep->replysize);
 	reply_info_answer_iov(rep, w->query_id, w->query_flags, 
-		&w->query_reply);
+		&w->query_reply, 0);
 	req_release(w);
 	/* store or update reply in the cache */
 	if(!(e = query_info_entrysetup(&w->qinfo, rep, w->query_hash))) {
@@ -298,7 +298,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 		log_info("answer from the cache");
 		memcpy(&id, ldns_buffer_begin(c->buffer), sizeof(uint16_t));
 		reply_info_answer_iov((struct reply_info*)e->data, id,
-			ldns_buffer_read_u16_at(c->buffer, 2), repinfo);
+			ldns_buffer_read_u16_at(c->buffer, 2), repinfo, 1);
 		lock_rw_unlock(&e->lock);
 		return 0;
 	}
@@ -316,6 +316,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 		verbose(VERB_DETAIL, "worker: too many incoming requests "
 			"active. dropping incoming query.");
 		comm_point_drop_reply(repinfo);
+		query_info_clear(&qinfo);
 		return 0;
 	}
 	worker->free_queries = w->next;

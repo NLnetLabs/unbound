@@ -68,7 +68,8 @@ query_dname_len(ldns_buffer* query)
 	}
 }
 
-int query_info_parse(struct query_info* m, ldns_buffer* query)
+int 
+query_info_parse(struct query_info* m, ldns_buffer* query)
 {
 	uint8_t* q = ldns_buffer_begin(query);
 	/* minimum size: header + \0 + qtype + qclass */
@@ -107,7 +108,9 @@ query_info_allocqname(struct query_info* m)
 	if( (x) < (y) ) return -1; \
 	else if( (x) > (y) ) return +1; \
 	log_assert( (x) == (y) );
-int query_info_compare(void* m1, void* m2)
+
+int 
+query_info_compare(void* m1, void* m2)
 {
 	struct query_info* msg1 = (struct query_info*)m1;
 	struct query_info* msg2 = (struct query_info*)m2;
@@ -115,8 +118,7 @@ int query_info_compare(void* m1, void* m2)
 	/* from most different to least different for speed */
 	COMPARE_IT(msg1->qtype, msg2->qtype);
 	COMPARE_IT(msg1->qnamesize, msg2->qnamesize);
-	mc = memcmp(msg1->qname, msg2->qname, msg1->qnamesize);
-	if(mc != 0)
+	if((mc = memcmp(msg1->qname, msg2->qname, msg1->qnamesize)) != 0)
 		return mc;
 	COMPARE_IT(msg1->has_cd, msg2->has_cd);
 	COMPARE_IT(msg1->qclass, msg2->qclass);
@@ -124,19 +126,22 @@ int query_info_compare(void* m1, void* m2)
 #undef COMPARE_IT
 }
 
-void query_info_clear(struct query_info* m)
+void 
+query_info_clear(struct query_info* m)
 {
 	free(m->qname);
 	m->qname = NULL;
 }
 
-void reply_info_clear(struct reply_info* m)
+void 
+reply_info_clear(struct reply_info* m)
 {
 	free(m->reply);
 	m->reply = NULL;
 }
 
-size_t msgreply_sizefunc(void* k, void* d)
+size_t 
+msgreply_sizefunc(void* k, void* d)
 {
 	struct query_info* q = (struct query_info*)k;
 	struct reply_info* r = (struct reply_info*)d;
@@ -144,7 +149,8 @@ size_t msgreply_sizefunc(void* k, void* d)
 		+ r->replysize + q->qnamesize;
 }
 
-void query_entry_delete(void *k, void* ATTR_UNUSED(arg))
+void 
+query_entry_delete(void *k, void* ATTR_UNUSED(arg))
 {
 	struct msgreply_entry* q = (struct msgreply_entry*)k;
 	lock_rw_destroy(&q->entry.lock);
@@ -152,24 +158,45 @@ void query_entry_delete(void *k, void* ATTR_UNUSED(arg))
 	free(q);
 }
 
-void reply_info_delete(void* d, void* ATTR_UNUSED(arg))
+void 
+reply_info_delete(void* d, void* ATTR_UNUSED(arg))
 {
 	struct reply_info* r = (struct reply_info*)d;
 	reply_info_clear(r);
 	free(r);
 }
 
-hashvalue_t query_info_hash(struct query_info *q)
+void 
+query_dname_tolower(uint8_t* dname, size_t len)
+{
+	/* the dname is stored uncompressed */
+	uint8_t labellen;
+	log_assert(len > 0);
+	labellen = *dname;
+	while(labellen) {
+		dname++;
+		while(labellen--) {
+			*dname = (uint8_t)tolower((int)*dname);
+			dname++;
+		}
+		labellen = *dname;
+	}
+}
+
+hashvalue_t 
+query_info_hash(struct query_info *q)
 {
 	hashvalue_t h = 0xab;
 	h = hashlittle(&q->qtype, sizeof(q->qtype), h);
 	h = hashlittle(&q->qclass, sizeof(q->qclass), h);
 	h = hashlittle(&q->has_cd, sizeof(q->has_cd), h);
+	query_dname_tolower(q->qname, q->qnamesize);
 	h = hashlittle(q->qname, q->qnamesize, h);
 	return h;
 }
 
-void reply_info_answer(struct reply_info* rep, uint16_t qflags, 
+void 
+reply_info_answer(struct reply_info* rep, uint16_t qflags, 
 	ldns_buffer* buffer)
 {
 	uint16_t flags;
@@ -184,26 +211,32 @@ void reply_info_answer(struct reply_info* rep, uint16_t qflags,
 
 void 
 reply_info_answer_iov(struct reply_info* rep, uint16_t qid,
-        uint16_t qflags, struct comm_reply* comrep)
+        uint16_t qflags, struct comm_reply* comrep, int cached)
 {
-	uint16_t flags;
-	/* [0]=tcp, [1]=id, [2]=flags, [3]=message */
+	/* [0]=reserved for tcplen, [1]=id, [2]=flags, [3]=message */
 	struct iovec iov[4];
 
 	iov[1].iov_base = &qid;
 	iov[1].iov_len = sizeof(uint16_t);
-	flags = rep->flags | (qflags & 0x0100); /* copy RD bit */
-	log_assert(flags & 0x8000); /* QR bit must be on in our replies */
-	flags = htons(flags);
-	iov[2].iov_base = &flags;
+	if(!cached) {
+		/* original flags, copy RD bit from query. */
+		qflags = rep->flags | (qflags & 0x0100); 
+	} else {
+		/* remove AA bit, copy RD and CD bits from query. */
+		qflags = (rep->flags & ~0x0400) | (qflags & 0x0110); 
+	}
+	log_assert(qflags & 0x8000); /* QR bit must be on in our replies */
+	qflags = htons(qflags);
+	iov[2].iov_base = &qflags;
 	iov[2].iov_len = sizeof(uint16_t);
 	iov[3].iov_base = rep->reply;
 	iov[3].iov_len = rep->replysize;
 	comm_point_send_reply_iov(comrep, iov, 4);
 }
 
-struct msgreply_entry* query_info_entrysetup(struct query_info* q,
-	struct reply_info* r, hashvalue_t h)
+struct msgreply_entry* 
+query_info_entrysetup(struct query_info* q, struct reply_info* r, 
+	hashvalue_t h)
 {
 	struct msgreply_entry* e = (struct msgreply_entry*)malloc( 
 		sizeof(struct msgreply_entry));

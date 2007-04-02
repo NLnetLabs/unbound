@@ -147,6 +147,25 @@ msgreply_test()
 	unit_assert( query_dname_len(dname_to_buf(buff, ".")) == 1 );
 	unit_assert( query_dname_len(dname_to_buf(buff, "bla.foo.")) == 9 );
 	unit_assert( query_dname_len(dname_to_buf(buff, "x.y.z.example.com.")) == 19 );
+
+	ldns_buffer_write_at(buff, 0, "\012abCDeaBCde\003cOm\000", 16);
+	query_dname_tolower(ldns_buffer_begin(buff), 16);
+	unit_assert( memcmp(ldns_buffer_begin(buff), 
+		"\012abcdeabcde\003com\000", 16) == 0);
+
+	ldns_buffer_write_at(buff, 0, "\001+\012abC{e-ZYXe\003NET\000", 18);
+	query_dname_tolower(ldns_buffer_begin(buff), 18);
+	unit_assert( memcmp(ldns_buffer_begin(buff), 
+		"\001+\012abc{e-zyxe\003net\000", 18) == 0);
+
+	ldns_buffer_write_at(buff, 0, "\000", 1);
+	query_dname_tolower(ldns_buffer_begin(buff), 1);
+	unit_assert( memcmp(ldns_buffer_begin(buff), "\000", 1) == 0);
+
+	ldns_buffer_write_at(buff, 0, "\002NL\000", 4);
+	query_dname_tolower(ldns_buffer_begin(buff), 4);
+	unit_assert( memcmp(ldns_buffer_begin(buff), "\002nl\000", 4) == 0);
+
 	ldns_buffer_free(buff);
 }
 
