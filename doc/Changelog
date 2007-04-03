@@ -1,3 +1,9 @@
+3 April 2007: Wouter
+	- detect sign of msghdr.msg_iovlen so that the cast to that type
+	  in netevent (which is there to please lint) can be correct.
+	  The type on several OSes ranges from int, int32, uint32, size_t.
+	  Detects unsigned or signed using math trick.
+
 2 April 2007: Wouter
 	- check sizes of udp received messages, not too short.
 	- review changes. Some memmoves can be memcpys: 4byte aligned.

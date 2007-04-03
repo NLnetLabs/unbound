@@ -790,7 +790,7 @@ comm_point_send_reply_iov(struct comm_reply* repinfo, struct iovec* iov,
 		hdr.msg_name = &repinfo->addr;
 		hdr.msg_namelen = repinfo->addrlen;
 		hdr.msg_iov = iov + 1;
-		hdr.msg_iovlen = (typeof(hdr.msg_iovlen))(iovlen - 1);
+		hdr.msg_iovlen = (TYPE_MSGIOVLEN)(iovlen - 1);
 		hdr.msg_control = NULL;
 		hdr.msg_controllen = 0;
 		hdr.msg_flags = 0;

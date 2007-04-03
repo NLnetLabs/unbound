@@ -123,7 +123,7 @@ for((i=0; i<${#hostname[*]}; i=$i+1)); do
 	SVN=yes
 	IP6=yes
 	FIXCONFIGURE=no
-	RUN_TEST=yes
+	RUN_TEST=no
 	LDNS=
 	LIBEVENT=
 	eval ${vars[$i]}
