@@ -381,6 +381,8 @@ test_long_table(struct lruhash* table)
 	size_t i;
 	memset(ref, 0, sizeof(ref));
 	/* test assumption */
+	if(0) log_info(" size %d x %d < %d", (int)test_sizefunc(NULL, NULL), 
+		(int)HASHTESTMAX, (int)table->space_max);
 	unit_assert( test_sizefunc(NULL, NULL)*HASHTESTMAX < table->space_max);
 	if(0) lruhash_status(table, "unit test", 1);
 	srandom(48);
@@ -493,14 +495,14 @@ void lruhash_test()
 	/* also small in size so that reclaim has to be done quickly. */
 	struct lruhash* table ;
 	printf("lruhash test\n");
-	table = lruhash_create(2, 4096, 
+	table = lruhash_create(2, 16384, 
 		test_sizefunc, test_compfunc, test_delkey, test_deldata, NULL);
 	test_bin_find_entry(table);
 	test_lru(table);
 	test_short_table(table);
 	test_long_table(table);
 	lruhash_delete(table);
-	table = lruhash_create(2, 4096, 
+	table = lruhash_create(2, 16384, 
 		test_sizefunc, test_compfunc, test_delkey, test_deldata, NULL);
 	test_threaded_table(table);
 	lruhash_delete(table);
