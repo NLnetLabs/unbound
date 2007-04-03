@@ -787,13 +787,11 @@ comm_point_send_reply_iov(struct comm_reply* repinfo, struct iovec* iov,
 	log_assert(repinfo && repinfo->c);
 	if(repinfo->c->type == comm_udp) {
 		struct msghdr hdr;
+		memset(&hdr, 0, sizeof(hdr));
 		hdr.msg_name = &repinfo->addr;
 		hdr.msg_namelen = repinfo->addrlen;
 		hdr.msg_iov = iov + 1;
 		hdr.msg_iovlen = (TYPE_MSGIOVLEN)(iovlen - 1);
-		hdr.msg_control = NULL;
-		hdr.msg_controllen = 0;
-		hdr.msg_flags = 0;
 		/* note that number of characters sent is not checked. */
 		if(sendmsg(repinfo->c->fd, &hdr, 0) == -1)
 			log_err("sendmsg: %s", strerror(errno));
@@ -805,7 +803,7 @@ comm_point_send_reply_iov(struct comm_reply* repinfo, struct iovec* iov,
 		for(i=1; i<iovlen; i++)
 			len += iov[i].iov_len;
 		len = htons(len);
-		iov[0].iov_base = &len;
+		iov[0].iov_base = (void*)&len;
 		iov[0].iov_len = sizeof(uint16_t);
 		if((done=writev(repinfo->c->fd, iov, (int)iovlen)) == -1) {
 #ifdef S_SPLINT_S

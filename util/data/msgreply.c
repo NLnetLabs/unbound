@@ -217,7 +217,7 @@ reply_info_answer_iov(struct reply_info* rep, uint16_t qid,
 	/* [0]=reserved for tcplen, [1]=id, [2]=flags, [3]=message */
 	struct iovec iov[4];
 
-	iov[1].iov_base = &qid;
+	iov[1].iov_base = (void*)&qid;
 	iov[1].iov_len = sizeof(uint16_t);
 	if(!cached) {
 		/* original flags, copy RD bit from query. */
@@ -228,9 +228,9 @@ reply_info_answer_iov(struct reply_info* rep, uint16_t qid,
 	}
 	log_assert(qflags & BIT_QR); /* QR bit must be on in our replies */
 	qflags = htons(qflags);
-	iov[2].iov_base = &qflags;
+	iov[2].iov_base = (void*)&qflags;
 	iov[2].iov_len = sizeof(uint16_t);
-	iov[3].iov_base = rep->reply;
+	iov[3].iov_base = (void*)rep->reply;
 	iov[3].iov_len = rep->replysize;
 	comm_point_send_reply_iov(comrep, iov, 4);
 }

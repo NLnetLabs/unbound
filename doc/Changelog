@@ -6,6 +6,7 @@
 	- constants for DNS flags. 
 	- compilation without locks fixup.
 	- removed include of unportable header from lookup3.c.
+	- more portable use of struct msghdr.
 
 2 April 2007: Wouter
 	- check sizes of udp received messages, not too short.
