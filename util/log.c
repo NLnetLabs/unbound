@@ -184,6 +184,6 @@ log_hex(const char* msg, void* data, size_t length)
 		buf[i*2 + 1] = hexchar[ data8[i] & 0xF ];
 	}
 	buf[length*2] = 0;
-	log_info("%s[%d] %s", msg, length, buf);
+	log_info("%s[%u] %s", msg, (unsigned)length, buf);
 	free(buf);
 }

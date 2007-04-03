@@ -150,7 +150,7 @@ worker_handle_reply(struct comm_point* c, void* arg, int error,
 	}
 	rep->flags = ldns_buffer_read_u16_at(c->buffer, 2);
 	rep->replysize = ldns_buffer_limit(c->buffer) - DNS_ID_AND_FLAGS;
-	log_info("got reply of size %d", rep->replysize);
+	log_info("got reply of size %u", (unsigned)rep->replysize);
 	rep->reply = (uint8_t*)malloc(rep->replysize);
 	if(!rep->reply) {
 		free(rep);
