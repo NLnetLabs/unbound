@@ -2,6 +2,7 @@
   March 2007(Wouter) adapted from lookup3.c original, add config.h include.
      added #ifdef VALGRIND to remove 298,384,660 'unused variable k8' warnings.
      added include of lookup3.h to check definitions match declarations.
+     removed include of stdint - config.h takes care of platform independence.
   url http://burtleburtle.net/bob/hash/index.html.
 */
 /*
@@ -45,7 +46,7 @@ on 1 byte), but shoehorning those bytes into integers efficiently is messy.
 #include "util/storage/lookup3.h"
 #include <stdio.h>      /* defines printf for tests */
 #include <time.h>       /* defines time_t for timings in the test */
-#include <stdint.h>     /* defines uint32_t etc */
+/*#include <stdint.h>     defines uint32_t etc  (from config.h) */
 #include <sys/param.h>  /* attempt to define endianness */
 #ifdef linux
 # include <endian.h>    /* attempt to define endianness */

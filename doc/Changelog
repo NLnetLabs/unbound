@@ -5,6 +5,7 @@
 	  Detects unsigned or signed using math trick.
 	- constants for DNS flags. 
 	- compilation without locks fixup.
+	- removed include of unportable header from lookup3.c.
 
 2 April 2007: Wouter
 	- check sizes of udp received messages, not too short.
