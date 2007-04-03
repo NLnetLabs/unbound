@@ -338,7 +338,8 @@ static void search_cycle(struct lock_ref* visit, int level,
 	if(!visit->lock->visited)
 		from = visit;
 	if(verb > 1) fprintf(stderr, "[%d] visit lock %u %u %s %d\n", level,
-			visit->lock->id.thr, visit->lock->id.instance,
+			(unsigned)visit->lock->id.thr, 
+			(unsigned)visit->lock->id.instance,
 			visit->lock->create_file, visit->lock->create_line);
 	RBTREE_FOR(ref, struct lock_ref*, visit->lock->smaller) {
 		ref->lock->dfs_next = visit;
