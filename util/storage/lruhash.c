@@ -351,9 +351,8 @@ lruhash_lookup(struct lruhash* table, hashvalue_t hash, void* key, int wr)
 	lock_quick_unlock(&table->lock);
 
 	if(entry) {
-		if(wr)
-			lock_rw_wrlock(&entry->lock);
-		else	lock_rw_rdlock(&entry->lock);
+		if(wr)	{ lock_rw_wrlock(&entry->lock); }
+		else	{ lock_rw_rdlock(&entry->lock); }
 	}
 	lock_quick_unlock(&bin->lock);
 	return entry;

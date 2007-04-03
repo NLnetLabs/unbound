@@ -4,6 +4,7 @@
 	  The type on several OSes ranges from int, int32, uint32, size_t.
 	  Detects unsigned or signed using math trick.
 	- constants for DNS flags. 
+	- compilation without locks fixup.
 
 2 April 2007: Wouter
 	- check sizes of udp received messages, not too short.
