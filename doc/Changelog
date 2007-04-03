@@ -8,6 +8,8 @@
 	- removed include of unportable header from lookup3.c.
 	- more portable use of struct msghdr.
 	- casts for printf warning portability.
+	- tweaks to tests to port them to the testbed.
+	- 0.2 tag created.
 
 2 April 2007: Wouter
 	- check sizes of udp received messages, not too short.
