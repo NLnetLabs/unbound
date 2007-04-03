@@ -245,7 +245,7 @@ test_short_table(struct lruhash* table)
 }
 
 /** number of hash test max */
-#define HASHTESTMAX 32
+#define HASHTESTMAX 25
 
 /** test adding a random element */
 static void
