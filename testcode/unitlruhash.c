@@ -285,7 +285,7 @@ testlookup(struct lruhash* table, struct testdata* ref[])
 	if(0) log_info("lookup %d got %d, expect %d", num, en? data->data :-1,
 		ref[num]? ref[num]->data : -1);
 	unit_assert( data == ref[num] );
-	if(en) lock_rw_unlock(&en->lock);
+	if(en) { lock_rw_unlock(&en->lock); }
 	delkey(key);
 }
 
@@ -368,7 +368,7 @@ testlookup_unlim(struct lruhash* table, struct testdata** ref)
 		/* its okay for !data, it fell off the lru */
 		unit_assert( data == ref[num] );
 	}
-	if(en) lock_rw_unlock(&en->lock);
+	if(en) { lock_rw_unlock(&en->lock); }
 	delkey(key);
 }
 
