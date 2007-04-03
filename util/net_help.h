@@ -42,6 +42,16 @@
 #ifndef NET_HELP_H
 #define NET_HELP_H
 
+/** DNS constants for uint16_t style flag manipulation. host byteorder. */
+/** AA flag */
+#define BIT_AA 0x0400
+/** RD flag */
+#define BIT_RD 0x0100
+/** CD flag */
+#define BIT_CD 0x0010
+/** QR flag */
+#define BIT_QR 0x8000
+
 /**
  * See if string is ip4 or ip6.
  * @param str: IP specification.

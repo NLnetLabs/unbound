@@ -102,8 +102,8 @@ replyerror(int r, struct work_query* w)
 	
 	ldns_buffer_clear(buf);
 	ldns_buffer_write(buf, &w->query_id, sizeof(uint16_t));
-	flags = (uint16_t)(0x8000 | r); /* QR and retcode*/
-	flags |= (w->query_flags & 0x0100); /* copy RD bit */
+	flags = (uint16_t)(BIT_QR | r); /* QR and retcode*/
+	flags |= (w->query_flags & (BIT_RD|BIT_CD)); /* copy RD and CD bit */
 	ldns_buffer_write_u16(buf, flags);
 	flags = 1;
 	ldns_buffer_write_u16(buf, flags);

@@ -44,6 +44,7 @@
 #include "util/storage/lookup3.h"
 #include "util/log.h"
 #include "util/netevent.h"
+#include "util/net_help.h"
 
 /** determine length of a dname in buffer, no compression pointers allowed. */
 size_t
@@ -202,8 +203,8 @@ reply_info_answer(struct reply_info* rep, uint16_t qflags,
 	uint16_t flags;
 	ldns_buffer_clear(buffer);
 	ldns_buffer_skip(buffer, 2); /* ID */
-	flags = rep->flags | (qflags & 0x0100); /* copy RD bit */
-	log_assert(flags & 0x8000); /* QR bit must be on in our replies */
+	flags = rep->flags | (qflags & BIT_RD); /* copy RD bit */
+	log_assert(flags & BIT_QR); /* QR bit must be on in our replies */
 	ldns_buffer_write_u16(buffer, flags);
 	ldns_buffer_write(buffer, rep->reply, rep->replysize);
 	ldns_buffer_flip(buffer);
@@ -220,12 +221,12 @@ reply_info_answer_iov(struct reply_info* rep, uint16_t qid,
 	iov[1].iov_len = sizeof(uint16_t);
 	if(!cached) {
 		/* original flags, copy RD bit from query. */
-		qflags = rep->flags | (qflags & 0x0100); 
+		qflags = rep->flags | (qflags & BIT_RD); 
 	} else {
 		/* remove AA bit, copy RD and CD bits from query. */
-		qflags = (rep->flags & ~0x0400) | (qflags & 0x0110); 
+		qflags = (rep->flags & ~BIT_AA) | (qflags & (BIT_RD|BIT_CD)); 
 	}
-	log_assert(qflags & 0x8000); /* QR bit must be on in our replies */
+	log_assert(qflags & BIT_QR); /* QR bit must be on in our replies */
 	qflags = htons(qflags);
 	iov[2].iov_base = &qflags;
 	iov[2].iov_len = sizeof(uint16_t);
