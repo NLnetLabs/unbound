@@ -1,0 +1,137 @@
+/*
+ * util/data/packed_rrset.h - data storage for a set of resource records.
+ *
+ * Copyright (c) 2007, NLnet Labs. All rights reserved.
+ *
+ * This software is open source.
+ * 
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 
+ * Redistributions of source code must retain the above copyright notice,
+ * this list of conditions and the following disclaimer.
+ * 
+ * Redistributions in binary form must reproduce the above copyright notice,
+ * this list of conditions and the following disclaimer in the documentation
+ * and/or other materials provided with the distribution.
+ * 
+ * Neither the name of the NLNET LABS nor the names of its contributors may
+ * be used to endorse or promote products derived from this software without
+ * specific prior written permission.
+ * 
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+ * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ */
+
+/**
+ * \file
+ *
+ * This file contains the data storage for RRsets.
+ */
+
+#ifndef UTIL_DATA_PACKED_RRSET_H
+#define UTIL_DATA_PACKED_RRSET_H
+#include "util/storage/lruhash.h"
+
+/** type used to uniquely identify rrsets. Cannot be reused without
+ * clearing the cache. */
+typedef uint64_t rrset_id_t;
+
+/**
+ * This structure contains an RRset. A set of resource records that
+ * share the same domain name, type and class.
+ *
+ * Due to memory management and threading, the key structure cannot be
+ * deleted, although the data can be. The id can be set to 0 to store and the
+ * structure can be recycled with a new id.
+ */
+struct packed_rrset_key {
+	/** 
+	 * entry into hashtable. Note the lock is never destroyed,
+	 *  even when this key is retired to the cache. 
+	 * the data pointer (if not null) points to a struct packed_rrset.
+	 */
+	struct lruhash_entry entry;
+	/** 
+	 * the ID of this rrset. unique, based on threadid + sequenceno. 
+	 * ids are not reused, except after flushing the cache.
+	 * zero is an unused entry, and never a valid id.
+	 * Check this value after getting entry.lock.
+	 * The other values in this struct may only be altered after changing
+	 * the id (which needs a writelock on entry.lock).
+	 */
+	rrset_id_t id;
+
+	/**
+	 * The domain name. If not null (for id=0) it is allocated, and
+	 * contains the wireformat domain name.
+	 * This dname is canonicalized.
+	 * After the dname uint16_t type and uint16_t class is stored 
+	 * in wireformat.
+	 */
+	uint8_t* dname;
+	/** 
+	 * Length of the domain name, including last 0 root octet. 
+	 * The value+sizeof(uint16_t)*2 is actually allocated. 
+	 */
+	size_t dname_len;
+};
+
+/**
+ * RRset data.
+ *
+ * The data is packed, stored contiguously in memory.
+ * memory layout:
+ *	o base struct
+ *	o rr_data uint8_t* array
+ *	o rr_len size_t array
+ *	o rr_ttl uint32_t array
+ *	o rr_data rdata wireformats
+ *	o rrsig_data rdata wireformat
+ *
+ * Rdata is stored in wireformat. The dname is stored in wireformat.
+ * TTLs are stored as absolute values (and could be expired).
+ *
+ * You need the packed_rrset_key to know dname, type, class of the
+ * resource records in this RRset. (if signed the rrsig gives the type too).
+ *
+ * On the wire an RR is:
+ *	name, type, class, ttl, rdlength, rdata.
+ * So we need to send the following per RR:
+ *	key.dname, ttl, rr_data[i].
+ *	since key.dname ends with type and class.
+ *	and rr_data starts with the rdlength.
+ *	the ttl value to send changes due to time.
+ */
+struct packed_rrset {
+	/** TTL (in seconds like time()) of the rrset */
+	uint32_t ttl;
+	/** number of rrs. */
+	size_t num;
+	/** 
+	 * Array of pointers to every rr's rdata. 
+	 * The rr_data[i] rdata is stored in uncompressed wireformat. 
+	 * The first uint16_t of rr_data[i] is network format rdlength.
+	 */
+	uint8_t** rr_data;
+	/** length of every rr's rdata, rr_len[i] is size of rr_data[i]. */
+	size_t* rr_len;
+	/** TTL of every rr (equal or bigger than the rrset ttl). */
+	uint32_t* rr_ttl;
+	/** if this rrset is signed with an RRSIG, it is stored here. */
+	uint8_t* rrsig_data;
+	/** length of rrsig rdata (only examine if rrsig_data is not null) */
+	size_t rrsig_len;
+};
+
+#endif /* UTIL_DATA_PACKED_RRSET_H */

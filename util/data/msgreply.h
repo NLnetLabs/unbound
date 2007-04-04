@@ -42,7 +42,9 @@
 #ifndef UTIL_DATA_MSGREPLY_H
 #define UTIL_DATA_MSGREPLY_H
 #include "util/storage/lruhash.h"
+#include "util/data/packed_rrset.h"
 struct comm_reply;
+struct alloc_cache;
 
 /**
  * Structure to store query information that makes answers to queries
@@ -62,9 +64,24 @@ struct query_info {
 };
 
 /**
+ * Information to reference an rrset
+ */
+struct rrset_ref {
+	/** the key with lock, and ptr to packed data. */
+	struct packed_rrset_key* key;
+	/** id needed */
+	rrset_id_t id;
+};
+
+/**
  * Structure to store DNS query and the reply packet.
  * To use it, copy over the flags from reply and modify using flags from
  * the query (RD,CD if not AA). prepend ID. 
+ *
+ * Memory layout is:
+ *	o struct
+ *	o rrset_ref array
+ *	o packed_rrset_key* array.
  */
 struct reply_info {
 	/** the reply packet, skips ID and flags, 
@@ -74,6 +91,34 @@ struct reply_info {
 	size_t replysize;
 	/** the flags for the answer, host order. */
 	uint16_t flags;
+
+	/** 
+	 * network order counts: qdcount ancount nscount arcount. 
+	 * so this is wireformat for the counts as they appear in the message.
+	 * If qdcount is not 0, then it is 1, and the data that appears
+	 * in the reply is the same as the query_info.
+	 */
+	uint16_t counts[4];
+
+	/** Total number of rrsets in reply: ancount+nscount+arcount. */
+	size_t num_rrsets;
+
+	/** 
+	 * List of pointers (only) to the rrsets in the order in which 
+	 * They appear in the reply message.  
+	 * number of elements is ancount+nscount+arcount.
+	 * this is a pointer to that array. 
+	 */
+	struct packed_rrset_key** rrsets;
+
+	/** 
+	 * Packed array of ids (see counts) and pointers to packed_rrset_key.
+	 * The number equals ancount+nscount+arcount. 
+	 * These are sorted in ascending pointer, the locking order. So
+	 * this list can be locked (and id, ttl checked), to see if 
+	 * all the data is available and recent enough.
+	 */
+	struct rrset_ref ref[1];
 };
 
 /**
@@ -97,6 +142,28 @@ struct msgreply_entry {
  * @return: 0 on format error.
  */
 int query_info_parse(struct query_info* m, ldns_buffer* query);
+
+/**
+ * Parse query reply.
+ * Fills in preallocated query_info structure (with ptr into buffer).
+ * Allocates reply_info and packed_rrsets. These are not yet added to any
+ * caches or anything, this is only parsing. Returns formerror on qdcount > 1.
+ * @param pkt: the packet buffer. Must be positioned after the query section.
+ * @param alloc: creates packed rrset key structures.
+ * @param rep: allocated reply_info is returned (only on no error).
+ * @param qinf: query_info is returned (only on no error).
+ * @return: zero is OK, or error code in case of error.
+ */
+int reply_info_parse(ldns_buffer* pkt, struct alloc_cache* alloc,
+	struct query_info* qinf, struct reply_info* rep);
+
+/** 
+ * Delete reply_info and packed_rrsets (while they are not yet added to the
+ * hashtables.). Returns rrsets to the alloc cache.
+ * @param rep: reply_info to delete.
+ * @param alloc: where to return rrset structures to.
+ */
+void reply_info_parsedelete(struct reply_info* rep, struct alloc_cache* alloc);
 
 /**
  * Allocate and copy the qname (obtained from query_info_parse()).
