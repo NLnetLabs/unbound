@@ -45,29 +45,7 @@
 #include "util/log.h"
 #include "util/netevent.h"
 #include "util/net_help.h"
-
-/** determine length of a dname in buffer, no compression pointers allowed. */
-size_t
-query_dname_len(ldns_buffer* query)
-{
-	size_t len = 0;
-	size_t labellen;
-	while(1) {
-		if(ldns_buffer_remaining(query) < 1)
-			return 0; /* parse error, need label len */
-		labellen = ldns_buffer_read_u8(query);
-		if(labellen & 0xC0)
-			return 0; /* no compression allowed in queries */
-		len += labellen + 1;
-		if(len > LDNS_MAX_DOMAINLEN)
-			return 0; /* too long */
-		if(labellen == 0)
-			return len;
-		if(ldns_buffer_remaining(query) < labellen)
-			return 0; /* parse error, need content */
-		ldns_buffer_skip(query, (ssize_t)labellen);
-	}
-}
+#include "util/data/dname.h"
 
 int 
 query_info_parse(struct query_info* m, ldns_buffer* query)
@@ -165,23 +143,6 @@ reply_info_delete(void* d, void* ATTR_UNUSED(arg))
 	struct reply_info* r = (struct reply_info*)d;
 	reply_info_clear(r);
 	free(r);
-}
-
-void 
-query_dname_tolower(uint8_t* dname, size_t len)
-{
-	/* the dname is stored uncompressed */
-	uint8_t labellen;
-	log_assert(len > 0);
-	labellen = *dname;
-	while(labellen) {
-		dname++;
-		while(labellen--) {
-			*dname = (uint8_t)tolower((int)*dname);
-			dname++;
-		}
-		labellen = *dname;
-	}
 }
 
 hashvalue_t 

@@ -117,13 +117,6 @@ int query_info_compare(void* m1, void* m2);
 /** clear out query info structure. */
 void query_info_clear(struct query_info* m);
 
-/** helper routine, determine length of dname in buffer, no compression ptrs
-  * allowed, returns 0 on parse failure. */
-size_t query_dname_len(ldns_buffer* query);
-
-/** lowercase query dname */
-void query_dname_tolower(uint8_t* dname, size_t len);
-
 /** clear out reply info structure */
 void reply_info_clear(struct reply_info* m);
 

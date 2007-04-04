@@ -137,6 +137,7 @@ dname_to_buf(ldns_buffer* b, const char* str)
 }
 
 #include "util/data/msgreply.h"
+#include "util/data/dname.h"
 /** test query parse code */
 static void
 msgreply_test()

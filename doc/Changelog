@@ -1,3 +1,7 @@
+4 April 2007: Wouter
+	- moved to version 0.3.
+	- added util/data/dname.c
+
 3 April 2007: Wouter
 	- detect sign of msghdr.msg_iovlen so that the cast to that type
 	  in netevent (which is there to please lint) can be correct.
