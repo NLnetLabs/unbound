@@ -51,7 +51,11 @@ struct alloc_cache;
  * different.
  */
 struct query_info {
-	/** salient data on the query: qname, in wireformat. */
+	/** 
+	 * Salient data on the query: qname, in wireformat. 
+	 * can be allocated or a pointer to outside buffer.
+	 * User has to keep track on the status of this.
+	 */
 	uint8_t* qname;
 	/** length of qname (including last 0 octet) */
 	size_t qnamesize;
@@ -89,8 +93,16 @@ struct reply_info {
 	uint8_t* reply;
 	/** the reply size */
 	size_t replysize;
-	/** the flags for the answer, host order. */
+
+	/** the flags for the answer, host byte order. */
 	uint16_t flags;
+
+	/** 
+	 * TTL of the entire reply (for negative caching).
+	 * only for use when there are 0 RRsets in this message.
+	 * if there are RRsets, check those instead.
+	 */
+	uint32_t ttl;
 
 	/** 
 	 * network order counts: qdcount ancount nscount arcount. 
@@ -100,14 +112,17 @@ struct reply_info {
 	 */
 	uint16_t counts[4];
 
-	/** Total number of rrsets in reply: ancount+nscount+arcount. */
+	/** Total number of rrsets in reply: ancount+nscount+arcount. 
+	 * Use the accessor function to get this value.
+	 */
 	size_t num_rrsets;
 
 	/** 
 	 * List of pointers (only) to the rrsets in the order in which 
-	 * They appear in the reply message.  
-	 * number of elements is ancount+nscount+arcount.
-	 * this is a pointer to that array. 
+	 * they appear in the reply message.  
+	 * Number of elements is ancount+nscount+arcount.
+	 * This is a pointer to that array. 
+	 * Use the accessor function for access.
 	 */
 	struct packed_rrset_key** rrsets;
 
@@ -117,6 +132,15 @@ struct reply_info {
 	 * These are sorted in ascending pointer, the locking order. So
 	 * this list can be locked (and id, ttl checked), to see if 
 	 * all the data is available and recent enough.
+	 *
+	 * This is defined as an array of size 1, so that the compiler 
+	 * associates the identifier with this position in the structure.
+	 * Array bound overflow on this array then gives access to the further
+	 * elements of the array, which are allocated after the main structure.
+	 *
+	 * It could be more pure to define as array of size 0, ref[0].
+	 * But ref[1] may be less confusing for compilers.
+	 * Use the accessor function for access.
 	 */
 	struct rrset_ref ref[1];
 };

@@ -3,3 +3,5 @@ o use real entropy to make random (ID, port) numbers more random.
 o in production mode, do not free memory on exit. In debug mode, test leaks.
 o profile memory allocation, and if performance issues, use special memory
   allocator. For example, with caches per thread.
+o #define BIT_... different on bigendian and smallendian systems so that
+  the htons on flags is not needed to send a message from the cache.

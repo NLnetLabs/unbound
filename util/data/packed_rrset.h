@@ -48,6 +48,26 @@
 typedef uint64_t rrset_id_t;
 
 /**
+ * The identifying information for an RRset.
+ */
+struct packed_rrset_key {
+	/**
+	 * The domain name. If not null (for id=0) it is allocated, and
+	 * contains the wireformat domain name.
+	 * This dname is not canonicalized.
+	 * After the dname uint16_t type and uint16_t class is stored 
+	 * in wireformat.
+	 * Use accessor functions to get type and class values.
+	 */
+	uint8_t* dname;
+	/** 
+	 * Length of the domain name, including last 0 root octet. 
+	 * The value+sizeof(uint16_t)*2 is actually allocated. 
+	 */
+	size_t dname_len;
+};
+
+/**
  * This structure contains an RRset. A set of resource records that
  * share the same domain name, type and class.
  *
@@ -55,7 +75,7 @@ typedef uint64_t rrset_id_t;
  * deleted, although the data can be. The id can be set to 0 to store and the
  * structure can be recycled with a new id.
  */
-struct packed_rrset_key {
+struct ub_packed_rrset_key {
 	/** 
 	 * entry into hashtable. Note the lock is never destroyed,
 	 *  even when this key is retired to the cache. 
@@ -71,20 +91,8 @@ struct packed_rrset_key {
 	 * the id (which needs a writelock on entry.lock).
 	 */
 	rrset_id_t id;
-
-	/**
-	 * The domain name. If not null (for id=0) it is allocated, and
-	 * contains the wireformat domain name.
-	 * This dname is canonicalized.
-	 * After the dname uint16_t type and uint16_t class is stored 
-	 * in wireformat.
-	 */
-	uint8_t* dname;
-	/** 
-	 * Length of the domain name, including last 0 root octet. 
-	 * The value+sizeof(uint16_t)*2 is actually allocated. 
-	 */
-	size_t dname_len;
+	/** key data: dname, type and class */
+	struct packed_rrset_key rk;
 };
 
 /**
@@ -113,11 +121,12 @@ struct packed_rrset_key {
  *	and rr_data starts with the rdlength.
  *	the ttl value to send changes due to time.
  */
-struct packed_rrset {
-	/** TTL (in seconds like time()) of the rrset */
+struct packed_rrset_data {
+	/** TTL (in seconds like time()) of the rrset.
+	 * Same for all RRs see rfc2181(5.2).  */
 	uint32_t ttl;
 	/** number of rrs. */
-	size_t num;
+	size_t count;
 	/** 
 	 * Array of pointers to every rr's rdata. 
 	 * The rr_data[i] rdata is stored in uncompressed wireformat. 
@@ -126,12 +135,22 @@ struct packed_rrset {
 	uint8_t** rr_data;
 	/** length of every rr's rdata, rr_len[i] is size of rr_data[i]. */
 	size_t* rr_len;
-	/** TTL of every rr (equal or bigger than the rrset ttl). */
-	uint32_t* rr_ttl;
 	/** if this rrset is signed with an RRSIG, it is stored here. */
 	uint8_t* rrsig_data;
 	/** length of rrsig rdata (only examine if rrsig_data is not null) */
 	size_t rrsig_len;
+};
+
+/**
+ * An RRset can be represented using both key and data together.
+ * Split into key and data structures to simplify implementation of
+ * caching schemes.
+ */
+struct packed_rrset {
+	/** domain name, type and class */
+	struct packed_rrset_key* k;
+	/** ttl, count and rdatas (and rrsig) */
+	struct packed_rrset_data* d;
 };
 
 #endif /* UTIL_DATA_PACKED_RRSET_H */

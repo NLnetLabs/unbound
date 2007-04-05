@@ -1,3 +1,6 @@
+5 April 2007: Wouter
+	- discussed packed rrset with Jelte.
+
 4 April 2007: Wouter
 	- moved to version 0.3.
 	- added util/data/dname.c
