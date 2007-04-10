@@ -48,7 +48,10 @@
 #include "util/data/dname.h"
 
 int reply_info_parse(ldns_buffer* pkt, struct alloc_cache* alloc,
-        struct query_info* qinf, struct reply_info** rep);
+        struct query_info* qinf, struct reply_info** rep)
+{
+	return LDNS_RCODE_SERVFAIL;
+}
 
 void 
 reply_info_parsedelete(struct reply_info* rep, struct alloc_cache* alloc)

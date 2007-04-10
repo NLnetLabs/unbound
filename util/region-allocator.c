@@ -35,64 +35,91 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
+/**
+ * \file
+ * Region allocator. Allocates small portions of of larger chunks.
+ */
+
 #include "config.h"
-
-#include <assert.h>
-#include <stdlib.h>
-#include <string.h>
-
-#include "region-allocator.h"
+#include "util/log.h"
+#include "util/region-allocator.h"
 
 #ifdef ALIGNMENT
 #  undef ALIGNMENT
 #endif
+/** increase size until it fits alignment of s bytes */
 #define ALIGN_UP(x, s)     (((x) + s - 1) & (~(s - 1)))
+/** what size to align on */
 #define ALIGNMENT          (sizeof(void *))
-#define CHECK_DOUBLE_FREE 0 /* set to 1 to perform expensive check for double recycle() */
+/** set to 1 to perform expensive check for double recycle() */
+#define CHECK_DOUBLE_FREE 0 
 
+/** typedef for cleanup structure */
 typedef struct cleanup cleanup_type;
+/** store chunks and user cleanup actions */
 struct cleanup
 {
+	/** action to call (such as free) */
 	void (*action)(void *);
+	/** pointer to pass to action. */
 	void *data;
 };
 
+/** linked list of recycle elements of a certain size. */
 struct recycle_elem {
+	/** next in recycle list. First bytes of block is used for this ptr */
 	struct recycle_elem* next;
 };
 
+/** hidden type of the region. */
 struct region
 {
+	/** total bytes allocated */
 	size_t        total_allocated;
+	/** number of small objects allocated */
 	size_t        small_objects;
+	/** number of large objects allocated */
 	size_t        large_objects;
+	/** number of chunks allocated */
 	size_t        chunk_count;
-	size_t        unused_space; /* Unused space due to alignment, etc. */
+	/** Unused space due to alignment, etc. */
+	size_t        unused_space; 
 	
+	/** number of bytes allocated in the current chunk. */
 	size_t        allocated;
+	/** initial chunk */
 	char         *initial_data;
+	/** current chunk */
 	char         *data;
 
+	/** how to allocate memory (for chunks) */
 	void         *(*allocator)(size_t);
+	/** how to deallocate memory (for chunks) */
 	void          (*deallocator)(void *);
     
+	/** current max size of growing cleanup array */
 	size_t        maximum_cleanup_count;
+	/** number used inside the cleanup array */
 	size_t        cleanup_count;
+	/** cleanup array, chunks and user actions */
 	cleanup_type *cleanups;
 
+	/** size of chunks */
 	size_t        chunk_size;
+	/** large object size */
 	size_t        large_object_size;
 
-	/* if not NULL recycling is enabled.
+	/** if not NULL recycling is enabled.
 	 * It is an array of linked lists of parts held for recycle.
 	 * The parts are all pointers to within the allocated chunks.
 	 * Array [i] points to elements of size i. */
 	struct recycle_elem** recycle_bin;
-	/* amount of memory in recycle storage */
+	/** amount of memory in recycle storage */
 	size_t		recycle_size;
 };
 
 
+/** common code to initialize a region */
 static region_type *
 alloc_region_base(void *(*allocator)(size_t size),
 		  void (*deallocator)(void *),
@@ -116,7 +143,7 @@ alloc_region_base(void *(*allocator)(size_t size),
 	result->allocator = allocator;
 	result->deallocator = deallocator;
 
-	assert(initial_cleanup_count > 0);
+	log_assert(initial_cleanup_count > 0);
 	result->maximum_cleanup_count = initial_cleanup_count;
 	result->cleanup_count = 0;
 	result->cleanups = (cleanup_type *) allocator(
@@ -132,8 +159,7 @@ alloc_region_base(void *(*allocator)(size_t size),
 }
 
 region_type *
-region_create(void *(*allocator)(size_t size),
-	      void (*deallocator)(void *))
+region_create(void *(*allocator)(size_t), void (*deallocator)(void *))
 {
 	region_type* result = alloc_region_base(allocator, deallocator, 
 		DEFAULT_INITIAL_CLEANUP_SIZE);
@@ -162,7 +188,7 @@ region_type *region_create_custom(void *(*allocator)(size_t),
 		initial_cleanup_size);
 	if(!result)
 		return NULL;
-	assert(large_object_size <= chunk_size);
+	log_assert(large_object_size <= chunk_size);
 	result->chunk_size = chunk_size;
 	result->large_object_size = large_object_size;
 	if(result->chunk_size > 0) {
@@ -209,7 +235,7 @@ region_destroy(region_type *region)
 size_t
 region_add_cleanup(region_type *region, void (*action)(void *), void *data)
 {
-	assert(action);
+	log_assert(action);
     
 	if (region->cleanup_count >= region->maximum_cleanup_count) {
 		cleanup_type *cleanups = (cleanup_type *) region->allocator(
@@ -281,7 +307,13 @@ region_alloc(region_type *region, size_t size)
 		++region->chunk_count;
 		region->unused_space += region->chunk_size - region->allocated;
 		
-		region_add_cleanup(region, region->deallocator, chunk);
+		if(!region_add_cleanup(region, region->deallocator, chunk)) {
+			region->deallocator(chunk);
+			region->chunk_count--;
+			region->unused_space -= 
+				region->chunk_size - region->allocated;
+			return NULL;
+		}
 		region->allocated = 0;
 		region->data = (char *) chunk;
 	}
@@ -318,13 +350,13 @@ void
 region_free_all(region_type *region)
 {
 	size_t i;
-	assert(region);
-	assert(region->cleanups);
+	log_assert(region);
+	log_assert(region->cleanups);
     
 	i = region->cleanup_count;
 	while (i > 0) {
 		--i;
-		assert(region->cleanups[i].action);
+		log_assert(region->cleanups[i].action);
 		region->cleanups[i].action(region->cleanups[i].data);
 	}
 
@@ -369,13 +401,13 @@ region_recycle(region_type *region, void *block, size_t size)
 	if(aligned_size < region->large_object_size) {
 		struct recycle_elem* elem = (struct recycle_elem*)block;
 		/* we rely on the fact that ALIGNMENT is void* so the next will fit */
-		assert(aligned_size >= sizeof(struct recycle_elem));
+		log_assert(aligned_size >= sizeof(struct recycle_elem));
 
 		if(CHECK_DOUBLE_FREE) {
 			/* make sure the same ptr is not freed twice. */
 			struct recycle_elem *p = region->recycle_bin[aligned_size];
 			while(p) {
-				assert(p != elem); 
+				log_assert(p != elem); 
 				p = p->next;
 			}
 		}
@@ -446,7 +478,7 @@ region_log_stats(region_type *region)
 {
 	char buf[10240], *str=buf;
 	int len=0;
-	sprintf(str, "%lu objects (%lu small/%lu large), %lu bytes allocated (%lu wasted) in %lu chunks, %lu cleanups, %lu in recyclebin%n",
+	snprintf(str, 10240, "%lu objects (%lu small/%lu large), %lu bytes allocated (%lu wasted) in %lu chunks, %lu cleanups, %lu in recyclebin%n",
 		(unsigned long) (region->small_objects + region->large_objects),
 		(unsigned long) region->small_objects,
 		(unsigned long) region->large_objects,
@@ -468,8 +500,8 @@ region_log_stats(region_type *region)
 				el = el->next;
 			}
 			if(i%ALIGNMENT == 0 && i!=0) {
-				sprintf(str, " %lu%n", (unsigned long)count, 
-					&len);
+				snprintf(str, 10240, " %lu%n", 
+					(unsigned long)count, &len);
 				str+=len;
 			}
 		}

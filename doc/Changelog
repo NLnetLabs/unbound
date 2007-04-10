@@ -5,6 +5,7 @@
 	- import of region-allocator code from nsd.
 	- set alloc special type to ub_packed_rrset_key.
 	  Uses lruhash entry overflow chain next pointer in alloc cache.
+	- doxygen documentation for region-allocator.
 
 5 April 2007: Wouter
 	- discussed packed rrset with Jelte.
