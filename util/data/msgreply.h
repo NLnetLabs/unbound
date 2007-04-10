@@ -97,6 +97,14 @@ struct reply_info {
 	/** the flags for the answer, host byte order. */
 	uint16_t flags;
 
+	/**
+	 * Number of RRs in the query section.
+	 * If qdcount is not 0, then it is 1, and the data that appears
+	 * in the reply is the same as the query_info.
+	 * Host byte order.
+	 */
+	uint16_t qdcount;
+
 	/** 
 	 * TTL of the entire reply (for negative caching).
 	 * only for use when there are 0 RRsets in this message.
@@ -104,23 +112,24 @@ struct reply_info {
 	 */
 	uint32_t ttl;
 
-	/** 
-	 * network order counts: qdcount ancount nscount arcount. 
-	 * so this is wireformat for the counts as they appear in the message.
-	 * If qdcount is not 0, then it is 1, and the data that appears
-	 * in the reply is the same as the query_info.
+	/**
+	 * Number of RRsets in each section.
+	 * The answer section. Add up the RRs in every RRset to calculate
+	 * the number of RRs, and the count for the dns packet. 
+	 * The number of RRs in RRsets can change due to RRset updates.
 	 */
-	uint16_t counts[4];
+	size_t an_numrrsets;
 
-	/** Total number of rrsets in reply: ancount+nscount+arcount. 
-	 * Use the accessor function to get this value.
-	 */
-	size_t num_rrsets;
+	/** Count of authority section RRsets */
+	size_t ns_numrrsets;
+
+	/** Count of additional section RRsets */
+	size_t ar_numrrsets;
 
 	/** 
 	 * List of pointers (only) to the rrsets in the order in which 
 	 * they appear in the reply message.  
-	 * Number of elements is ancount+nscount+arcount.
+	 * Number of elements is ancount+nscount+arcount RRsets.
 	 * This is a pointer to that array. 
 	 * Use the accessor function for access.
 	 */
@@ -128,7 +137,7 @@ struct reply_info {
 
 	/** 
 	 * Packed array of ids (see counts) and pointers to packed_rrset_key.
-	 * The number equals ancount+nscount+arcount. 
+	 * The number equals ancount+nscount+arcount RRsets. 
 	 * These are sorted in ascending pointer, the locking order. So
 	 * this list can be locked (and id, ttl checked), to see if 
 	 * all the data is available and recent enough.

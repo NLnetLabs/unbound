@@ -1,3 +1,8 @@
+10 April 2007: Wouter
+	- Improved alignment of reply_info packet, nice for 32 and 64 bit.
+	- Put RRset counts in reply_info, because the number of RRs can change
+	  due to RRset updates.
+
 5 April 2007: Wouter
 	- discussed packed rrset with Jelte.
 
