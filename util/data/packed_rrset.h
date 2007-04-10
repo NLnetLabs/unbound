@@ -42,6 +42,7 @@
 #ifndef UTIL_DATA_PACKED_RRSET_H
 #define UTIL_DATA_PACKED_RRSET_H
 #include "util/storage/lruhash.h"
+struct alloc_cache;
 
 /** type used to uniquely identify rrsets. Cannot be reused without
  * clearing the cache. */
@@ -101,8 +102,8 @@ struct ub_packed_rrset_key {
  * The data is packed, stored contiguously in memory.
  * memory layout:
  *	o base struct
- *	o rr_data uint8_t* array
  *	o rr_len size_t array
+ *	o rr_data uint8_t* array
  *	o rr_ttl uint32_t array
  *	o rr_data rdata wireformats
  *	o rrsig_data rdata wireformat
@@ -127,14 +128,14 @@ struct packed_rrset_data {
 	uint32_t ttl;
 	/** number of rrs. */
 	size_t count;
+	/** length of every rr's rdata, rr_len[i] is size of rr_data[i]. */
+	size_t* rr_len;
 	/** 
 	 * Array of pointers to every rr's rdata. 
 	 * The rr_data[i] rdata is stored in uncompressed wireformat. 
 	 * The first uint16_t of rr_data[i] is network format rdlength.
 	 */
 	uint8_t** rr_data;
-	/** length of every rr's rdata, rr_len[i] is size of rr_data[i]. */
-	size_t* rr_len;
 	/** if this rrset is signed with an RRSIG, it is stored here. */
 	uint8_t* rrsig_data;
 	/** length of rrsig rdata (only examine if rrsig_data is not null) */
@@ -152,5 +153,14 @@ struct packed_rrset {
 	/** ttl, count and rdatas (and rrsig) */
 	struct packed_rrset_data* d;
 };
+
+/**
+ * Delete packed rrset key and data, not entered in hashtables yet.
+ * Used during parsing.
+ * @param pkey: rrset key structure with locks, key and data pointers.
+ * @param alloc: where to return the unfree-able key structure.
+ */
+void ub_packed_rrset_parsedelete(struct ub_packed_rrset_key* pkey,
+	struct alloc_cache* alloc);
 
 #endif /* UTIL_DATA_PACKED_RRSET_H */

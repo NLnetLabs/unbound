@@ -42,5 +42,21 @@
 #include "config.h"
 #include "util/data/packed_rrset.h"
 #include "util/log.h"
+#include "util/alloc.h"
 
+void
+ub_packed_rrset_parsedelete(struct ub_packed_rrset_key* pkey,
+        struct alloc_cache* alloc)
+{
+	if(!pkey)
+		return;
+	if(pkey->entry.data)
+		free(pkey->entry.data);
+	pkey->entry.data = NULL;
+	if(pkey->rk.dname)
+		free(pkey->rk.dname);
+	pkey->rk.dname = NULL;
+	pkey->id = 0;
+	alloc_special_release(alloc, pkey);
+}
 

@@ -2,6 +2,9 @@
 	- Improved alignment of reply_info packet, nice for 32 and 64 bit.
 	- Put RRset counts in reply_info, because the number of RRs can change
 	  due to RRset updates.
+	- import of region-allocator code from nsd.
+	- set alloc special type to ub_packed_rrset_key.
+	  Uses lruhash entry overflow chain next pointer in alloc cache.
 
 5 April 2007: Wouter
 	- discussed packed rrset with Jelte.

@@ -41,6 +41,7 @@
 
 #include "config.h"
 #include "util/alloc.h"
+#include "util/data/packed_rrset.h"
 
 /** prealloc some entries in the cache. To minimize contention. 
  * Result is 1 lock per alloc_max newly created entries.
@@ -54,7 +55,7 @@ prealloc(struct alloc_cache* alloc)
 	for(i=0; i<ALLOC_SPECIAL_MAX; i++) {
 		if(!(p = (alloc_special_t*)malloc(sizeof(alloc_special_t))))
 			fatal_exit("prealloc: out of memory");
-		alloc_special_next(p) = alloc->quar;
+		alloc_set_special_next(p, alloc->quar);
 		alloc->quar = p;
 		alloc->num_quar++;
 	}
@@ -86,7 +87,7 @@ alloc_clear(struct alloc_cache* alloc)
 		while(alloc_special_next(p)) /* find last */
 			p = alloc_special_next(p);
 		lock_quick_lock(&alloc->super->lock);
-		alloc_special_next(p) = alloc->super->quar;
+		alloc_set_special_next(p, alloc->super->quar);
 		alloc->super->quar = alloc->quar;
 		alloc->super->num_quar += alloc->num_quar;
 		lock_quick_unlock(&alloc->super->lock);
@@ -149,7 +150,7 @@ pushintosuper(struct alloc_cache* alloc, alloc_special_t* mem)
 	log_assert(alloc && alloc->super && 
 		alloc->num_quar >= ALLOC_SPECIAL_MAX);
 	/* push ALLOC_SPECIAL_MAX/2 after mem */
-	alloc_special_next(mem) = alloc->quar;
+	alloc_set_special_next(mem, alloc->quar);
 	for(i=1; i<ALLOC_SPECIAL_MAX/2; i++) {
 		p = alloc_special_next(p);
 	}
@@ -158,7 +159,7 @@ pushintosuper(struct alloc_cache* alloc, alloc_special_t* mem)
 
 	/* dump mem+list into the super quar list */
 	lock_quick_lock(&alloc->super->lock);
-	alloc_special_next(p) = alloc->super->quar;
+	alloc_set_special_next(p, alloc->super->quar);
 	alloc->super->quar = mem;
 	alloc->super->num_quar += ALLOC_SPECIAL_MAX/2 + 1;
 	lock_quick_unlock(&alloc->super->lock);
@@ -178,7 +179,7 @@ alloc_special_release(struct alloc_cache* alloc, alloc_special_t* mem)
 		return;
 	}
 
-	alloc_special_next(mem) = alloc->quar;
+	alloc_set_special_next(mem, alloc->quar);
 	alloc->quar = mem;
 	alloc->num_quar++;
 }

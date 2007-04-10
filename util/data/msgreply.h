@@ -72,7 +72,7 @@ struct query_info {
  */
 struct rrset_ref {
 	/** the key with lock, and ptr to packed data. */
-	struct packed_rrset_key* key;
+	struct ub_packed_rrset_key* key;
 	/** id needed */
 	rrset_id_t id;
 };
@@ -126,6 +126,9 @@ struct reply_info {
 	/** Count of additional section RRsets */
 	size_t ar_numrrsets;
 
+	/** number of RRsets: an_numrrsets + ns_numrrsets + ar_numrrsets */
+	size_t rrset_count;
+
 	/** 
 	 * List of pointers (only) to the rrsets in the order in which 
 	 * they appear in the reply message.  
@@ -133,7 +136,7 @@ struct reply_info {
 	 * This is a pointer to that array. 
 	 * Use the accessor function for access.
 	 */
-	struct packed_rrset_key** rrsets;
+	struct ub_packed_rrset_key** rrsets;
 
 	/** 
 	 * Packed array of ids (see counts) and pointers to packed_rrset_key.
@@ -185,10 +188,12 @@ int query_info_parse(struct query_info* m, ldns_buffer* query);
  * @param alloc: creates packed rrset key structures.
  * @param rep: allocated reply_info is returned (only on no error).
  * @param qinf: query_info is returned (only on no error).
- * @return: zero is OK, or error code in case of error.
+ * @return: zero is OK, or DNS error code in case of error
+ *	o FORMERR for parse errors.
+ *	o SERVFAIL for memory allocation errors.
  */
 int reply_info_parse(ldns_buffer* pkt, struct alloc_cache* alloc,
-	struct query_info* qinf, struct reply_info* rep);
+	struct query_info* qinf, struct reply_info** rep);
 
 /** 
  * Delete reply_info and packed_rrsets (while they are not yet added to the

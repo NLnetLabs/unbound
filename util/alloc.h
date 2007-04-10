@@ -49,13 +49,17 @@
 #define UTIL_ALLOC_H
 
 #include "util/locks.h"
+struct ub_packed_rrset_key;
 
 /** The special type, packed rrset. Not allowed to be used for other memory */
-typedef uint64_t alloc_special_t;
+typedef struct ub_packed_rrset_key alloc_special_t;
 /** clean the special type. Pass pointer. */
-#define alloc_special_clean(x) memset(x, 0, sizeof(alloc_special_t))
+#define alloc_special_clean(x) (x)->id = 0;
 /** access next pointer. (in available spot). Pass pointer. */
-#define alloc_special_next(x) (*((alloc_special_t**)(x)))
+#define alloc_special_next(x) ((alloc_special_t*)((x)->entry.overflow_next))
+/** set next pointer. (in available spot). Pass pointers. */
+#define alloc_set_special_next(x, y) \
+	((x)->entry.overflow_next) = (struct lruhash_entry*)(y);
 
 /** how many blocks to cache locally. */
 #define ALLOC_SPECIAL_MAX 10
