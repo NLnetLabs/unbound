@@ -6,6 +6,7 @@
 	- set alloc special type to ub_packed_rrset_key.
 	  Uses lruhash entry overflow chain next pointer in alloc cache.
 	- doxygen documentation for region-allocator.
+	- setup for parse scratch data.
 
 5 April 2007: Wouter
 	- discussed packed rrset with Jelte.

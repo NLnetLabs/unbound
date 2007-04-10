@@ -47,9 +47,97 @@
 #include "util/net_help.h"
 #include "util/data/dname.h"
 
+struct rrset_parse;
+struct rr_parse;
+
+/** number of buckets in parse rrset hash table. */
+#define PARSE_TABLE_SIZE 1024
+
+/**
+ * Data stored in scratch pad memory during parsing.
+ * Stores the data that will enter into the msgreply and packet result.
+ */
+struct msg_parse {
+	/** flags from message, host format. */
+	uint16_t flags;
+	/** count of RRs, host format */
+	uint16_t qdcount;
+	/** count of RRs, host format */
+	uint16_t ancount;
+	/** count of RRs, host format */
+	uint16_t nscount;
+	/** count of RRs, host format */
+	uint16_t arcount;
+	/** count of RRsets per section. */
+	size_t an_rrsets;
+	/** count of RRsets per section. */
+	size_t ns_rrsets; 
+	/** count of RRsets per section. */
+	size_t ar_rrsets;
+	/** total number of rrsets found. */
+	size_t rrset_count;
+
+	/** query dname (pointer to start location in packet, NULL if none */
+	uint8_t* qname;
+	/** length of query dname in octets, 0 if none */
+	size_t qname_len;
+	/** query type, network order. 0 if qdcount=0 */
+	uint16_t qtype;
+	/** query class, network order. 0 if qdcount=0 */
+	uint16_t qclass;
+
+	/**
+	 * Hash table array used during parsing to lookup rrset types.
+	 * Based on name, type, class.  Same hash value as in rrset cache.
+	 */
+	struct rrset_parse* hashtable[PARSE_TABLE_SIZE];
+	
+	/** linked list of rrsets that have been found (in order). */
+	struct rrset_parse* rrset_first;
+	/** last element of rrset list. */
+	struct rrset_parse* rrset_last;
+};
+
+/**
+ * Data stored for an rrset during parsing.
+ */
+struct rrset_parse {
+	/** next in hash bucket */
+	struct rrset_parse* rrset_bucket_next;
+	/** next in list of all rrsets */
+	struct rrset_parse* rrset_all_next;
+	/** hash value of rrset */
+	hashvalue_t hash;
+	/** start of (possibly compressed) dname in packet */
+	uint8_t* dname;
+	/** type, network order. */
+	uint16_t type;
+	/** class, network order. name so that it is not a c++ keyword. */
+	uint16_t rrset_class;
+	/** linked list of RRs in this rrset. */
+	struct rr_parse* rr_first;
+	/** last in list of RRs in this rrset. */
+	struct rr_parse* rr_last;
+};
+
+/**
+ * Data stored for an RR during parsing.
+ */
+struct rr_parse {
+	/** 
+	 * Pointer to the RR. Points to start of TTL value in the packet.
+	 * Rdata length and rdata follow it.
+	 * its dname, type and class are the same and stored for the rrset.
+	 */
+	uint8_t* ttl_data;
+	/** next in list of RRs. */
+	struct rr_parse* next;
+};
+
 int reply_info_parse(ldns_buffer* pkt, struct alloc_cache* alloc,
         struct query_info* qinf, struct reply_info** rep)
 {
+	/* use scratch pad region-allocator during parsing. */
 	return LDNS_RCODE_SERVFAIL;
 }
 
