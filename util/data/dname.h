@@ -56,4 +56,15 @@ size_t query_dname_len(ldns_buffer* query);
 /** lowercase query dname */
 void query_dname_tolower(uint8_t* dname, size_t len);
 
+/**
+ * Determine correct, compressed, dname present in packet.
+ * Checks for parse errors.
+ * @param pkt: packet to read from (from current start position).
+ * @return: 0 on parse error.
+ *	At exit the position is right after the (compressed) dname.
+ *	Compression pointers are followed and checked for loops.
+ *	The uncompressed wireformat length is returned.
+ */
+size_t pkt_dname_len(ldns_buffer* pkt);
+
 #endif /* UTIL_DATA_DNAME_H */

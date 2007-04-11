@@ -46,6 +46,7 @@
 #include "util/netevent.h"
 #include "util/net_help.h"
 #include "util/data/dname.h"
+#include "util/region-allocator.h"
 
 struct rrset_parse;
 struct rr_parse;
@@ -58,6 +59,8 @@ struct rr_parse;
  * Stores the data that will enter into the msgreply and packet result.
  */
 struct msg_parse {
+	/** id from message, network format. */
+	uint16_t id;
 	/** flags from message, host format. */
 	uint16_t flags;
 	/** count of RRs, host format */
@@ -108,8 +111,14 @@ struct rrset_parse {
 	struct rrset_parse* rrset_all_next;
 	/** hash value of rrset */
 	hashvalue_t hash;
+	/** which section was it found in: one of
+	 * LDNS_SECTION_ANSWER, LDNS_SECTION_AUTHORITY, LDNS_SECTION_ADDITIONAL
+	 */
+	ldns_pkt_section section;
 	/** start of (possibly compressed) dname in packet */
 	uint8_t* dname;
+	/** length of the dname uncompressed wireformat */
+	size_t dname_len;
 	/** type, network order. */
 	uint16_t type;
 	/** class, network order. name so that it is not a c++ keyword. */
@@ -134,10 +143,183 @@ struct rr_parse {
 	struct rr_parse* next;
 };
 
+/** Find rrset. If equal to previous it is fast. hash if not so.
+ * @param msg: the message with hash table.
+ * @param dname: pointer to start of dname (compressed) in packet.
+ * @param dnamelen: uncompressed wirefmt length of dname.
+ * @param type: type of current rr.
+ * @param dclass: class of current rr.
+ * @param hash: hash value is returned if the rrset could not be found.
+ * @param prev_dname: dname of last seen RR.
+ * @param prev_dnamelen: dname len of last seen RR.
+ * @param prev_type: type of last seen RR.
+ * @param prev_dclass: class of last seen RR.
+ * @param rrset_prev: last seen RRset.
+ * @return the rrset if found, or null if no matching rrset exists.
+ */
+static struct rrset_parse*
+find_rrset(struct msg_parse* msg, uint8_t* dname, size_t dnamelen, 
+	uint16_t type, uint16_t dclass, hashvalue_t* hash, 
+	uint8_t** prev_dname, size_t* prev_dnamelen, uint16_t* prev_type,
+	uint16_t* prev_dclass, struct rrset_parse** rrset_prev)
+{
+	if(rrset_prev) {
+		/* check if equal to previous item */
+
+	}
+	/* find by hashing and lookup in hashtable */
+	return NULL;
+}
+
+/**
+ * Parse query section. 
+ * @param pkt: packet, position at call must be at start of query section.
+ *	at end position is after query section.
+ * @param msg: store results here.
+ * @return: 0 if OK, or rcode on error.
+ */
+static int
+parse_query_section(ldns_buffer* pkt, struct msg_parse* msg)
+{
+	if(msg->qdcount == 0)
+		return 0;
+	if(msg->qdcount > 1)
+		return LDNS_RCODE_FORMERR;
+	log_assert(msg->qdcount == 1);
+	if(ldns_buffer_remaining(pkt) <= 0)
+		return LDNS_RCODE_FORMERR;
+	msg->qname = ldns_buffer_current(pkt);
+	if((msg->qname_len = query_dname_len(pkt)) == 0)
+		return LDNS_RCODE_FORMERR;
+	if(ldns_buffer_remaining(pkt) < sizeof(uint16_t)*2)
+		return LDNS_RCODE_FORMERR;
+	msg->qtype = ldns_buffer_read_u16(pkt);
+	msg->qclass = ldns_buffer_read_u16(pkt);
+	return 0;
+}
+
+/**
+ * Parse packet RR section, for answer, authority and additional sections. 
+ * @param pkt: packet, position at call must be at start of section.
+ *	at end position is after section.
+ * @param msg: store results here.
+ * @param region: how to alloc results.
+ * @param section: section enum.
+ * @param num_rrs: how many rrs are in the section.
+ * @param num_rrsets: returns number of rrsets in the section.
+ * @return: 0 if OK, or rcode on error.
+ */
+static int
+parse_section(ldns_buffer* pkt, struct msg_parse* msg, region_type* region,
+	ldns_pkt_section section, uint16_t num_rrs, size_t* num_rrsets)
+{
+	uint16_t i;
+	uint8_t* dname, *prev_dname = NULL;
+	size_t dnamelen, prev_dnamelen = 0;
+	uint16_t type, prev_type = 0;
+	uint16_t dclass, prev_dclass = 0;
+	hashvalue_t hash;
+	struct rrset_parse* rrset, *rrset_prev = NULL;
+
+	if(num_rrs == 0)
+		return 0;
+	if(ldns_buffer_remaining(pkt) <= 0)
+		return LDNS_RCODE_FORMERR;
+	for(i=0; i<num_rrs; i++) {
+		/* parse this RR. */
+		dname = ldns_buffer_current(pkt);
+		if((dnamelen = pkt_dname_len(pkt)) == 0)
+			return LDNS_RCODE_FORMERR;
+		if(ldns_buffer_remaining(pkt) < 10) /* type, class, ttl, len */
+			return LDNS_RCODE_FORMERR;
+		ldns_buffer_read(pkt, &type, sizeof(type));
+		ldns_buffer_read(pkt, &dclass, sizeof(dclass));
+
+		/* see if it is part of an existing RR set */
+		if((rrset = find_rrset(msg, dname, dnamelen, type, dclass,
+			&hash, &prev_dname, &prev_dnamelen, &prev_type,
+			&prev_dclass, &rrset_prev)) != 0) {
+			/* check if it fits the existing rrset */
+			/* add to rrset. */
+		} else {
+			/* it is a new RR set. hash already calculated. */
+		}
+	}
+	return 0;
+}
+
+/**
+ * Parse the packet.
+ * @param pkt: packet, position at call must be at start of packet.
+ *	at end position is after packet.
+ * @param msg: where to store results.
+ * @param region: how to alloc results.
+ * @return: 0 if OK, or rcode on error.
+ */
+static int
+parse_packet(ldns_buffer* pkt, struct msg_parse* msg,
+        region_type* region)
+{
+	int ret;
+	if(ldns_buffer_remaining(pkt) < LDNS_HEADER_SIZE)
+		return LDNS_RCODE_FORMERR;
+	/* read the header */
+	ldns_buffer_read(pkt, &msg->id, sizeof(uint16_t));
+	msg->flags = ldns_buffer_read_u16(pkt);
+	msg->qdcount = ldns_buffer_read_u16(pkt);
+	msg->ancount = ldns_buffer_read_u16(pkt);
+	msg->nscount = ldns_buffer_read_u16(pkt);
+	msg->arcount = ldns_buffer_read_u16(pkt);
+	if(msg->qdcount > 1)
+		return LDNS_RCODE_FORMERR;
+	if((ret = parse_query_section(pkt, msg)) != 0)
+		return ret;
+	if((ret = parse_section(pkt, msg, region, LDNS_SECTION_ANSWER,
+		msg->ancount, &msg->an_rrsets)) != 0)
+		return ret;
+	if((ret = parse_section(pkt, msg, region, LDNS_SECTION_AUTHORITY,
+		msg->nscount, &msg->ns_rrsets)) != 0)
+		return ret;
+	if((ret = parse_section(pkt, msg, region, LDNS_SECTION_ADDITIONAL, 
+		msg->arcount, &msg->ar_rrsets)) != 0)
+		return ret;
+	if(ldns_buffer_remaining(pkt) > 0) {
+		/* spurious data at end of packet. ignore */
+		verbose(VERB_DETAIL, "spurious data at end of packet, ign.");
+	}
+	return 0;
+}
+
+
 int reply_info_parse(ldns_buffer* pkt, struct alloc_cache* alloc,
         struct query_info* qinf, struct reply_info** rep)
 {
 	/* use scratch pad region-allocator during parsing. */
+	region_type* region = region_create(malloc, free);
+	struct msg_parse* msg;
+	int ret;
+	
+	*rep = NULL;
+	msg = region_alloc(region, sizeof(*msg));
+	if(!msg)
+		goto malloc_error;
+	memset(msg, 0, sizeof(*msg));
+	
+	log_assert(ldns_buffer_position(pkt) == 0);
+	if((ret = parse_packet(pkt, msg, region)) != 0) {
+		region_free_all(region);
+		region_destroy(region);
+		return ret;
+	}
+	/* parse OK, allocate return structures */
+
+	/* exit and cleanup */
+	region_free_all(region);
+	region_destroy(region);
+	return 0;
+malloc_error:
+	region_free_all(region);
+	region_destroy(region);
 	return LDNS_RCODE_SERVFAIL;
 }
 
