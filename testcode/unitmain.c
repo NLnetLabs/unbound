@@ -167,6 +167,31 @@ msgreply_test()
 	query_dname_tolower(ldns_buffer_begin(buff), 4);
 	unit_assert( memcmp(ldns_buffer_begin(buff), "\002nl\000", 4) == 0);
 
+	/* test query_dname_compare */
+	unit_assert(query_dname_compare((uint8_t*)"", (uint8_t*)"") == 0);
+	unit_assert(query_dname_compare((uint8_t*)"\001a", 
+					(uint8_t*)"\001a") == 0);
+	unit_assert(query_dname_compare((uint8_t*)"\003abc\001a", 
+					(uint8_t*)"\003abc\001a") == 0);
+	unit_assert(query_dname_compare((uint8_t*)"\003aBc\001a", 
+					(uint8_t*)"\003AbC\001A") == 0);
+	unit_assert(query_dname_compare((uint8_t*)"\003abc", 
+					(uint8_t*)"\003abc\001a") == -1);
+	unit_assert(query_dname_compare((uint8_t*)"\003abc\001a", 
+					(uint8_t*)"\003abc") == +1);
+	unit_assert(query_dname_compare((uint8_t*)"\003abc\001a", 
+					(uint8_t*)"") == +1);
+	unit_assert(query_dname_compare((uint8_t*)"", 
+					(uint8_t*)"\003abc\001a") == -1);
+	unit_assert(query_dname_compare((uint8_t*)"\003abc\001a", 
+					(uint8_t*)"\003xxx\001a") == -1);
+	unit_assert(query_dname_compare((uint8_t*)"\003axx\001a", 
+					(uint8_t*)"\003abc\001a") == 1);
+	unit_assert(query_dname_compare((uint8_t*)"\003abc\001a", 
+					(uint8_t*)"\003abc\001Z") == -1);
+	unit_assert(query_dname_compare((uint8_t*)"\003abc\001Z", 
+					(uint8_t*)"\003abc\001a") == 1);
+
 	ldns_buffer_free(buff);
 }
 

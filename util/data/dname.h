@@ -57,6 +57,17 @@ size_t query_dname_len(ldns_buffer* query);
 void query_dname_tolower(uint8_t* dname, size_t len);
 
 /**
+ * Compare query dnames (uncompressed storage). The Dnames passed do not
+ * have to be lowercased, comparison routine does this.
+ * Dnames have to be valid format.
+ * @param d1: dname to compare
+ * @param d2: dname to compare
+ * @return: -1, 0, or +1 depending on comparison results.
+ * 	Sort order is first difference found. not the canonical ordering.
+ */
+int query_dname_compare(uint8_t* d1, uint8_t* d2);
+
+/**
  * Determine correct, compressed, dname present in packet.
  * Checks for parse errors.
  * @param pkt: packet to read from (from current start position).

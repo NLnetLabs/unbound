@@ -385,9 +385,9 @@ query_info_compare(void* m1, void* m2)
 	int mc;
 	/* from most different to least different for speed */
 	COMPARE_IT(msg1->qtype, msg2->qtype);
-	COMPARE_IT(msg1->qnamesize, msg2->qnamesize);
-	if((mc = memcmp(msg1->qname, msg2->qname, msg1->qnamesize)) != 0)
+	if((mc = query_dname_compare(msg1->qname, msg2->qname)) != 0)
 		return mc;
+	log_assert(msg1->qnamesize == msg2->qnamesize);
 	COMPARE_IT(msg1->has_cd, msg2->has_cd);
 	COMPARE_IT(msg1->qclass, msg2->qclass);
 	return 0;
@@ -437,12 +437,30 @@ reply_info_delete(void* d, void* ATTR_UNUSED(arg))
 hashvalue_t 
 query_info_hash(struct query_info *q)
 {
+	uint8_t labuf[LDNS_MAX_LABELLEN+1];
+	uint8_t lablen;
+	uint8_t* d;
+	int i;
+
 	hashvalue_t h = 0xab;
 	h = hashlittle(&q->qtype, sizeof(q->qtype), h);
 	h = hashlittle(&q->qclass, sizeof(q->qclass), h);
 	h = hashlittle(&q->has_cd, sizeof(q->has_cd), h);
-	query_dname_tolower(q->qname, q->qnamesize);
-	h = hashlittle(q->qname, q->qnamesize, h);
+
+	/* preserve case of query, make hash label by label */
+	d = q->qname;
+	lablen = *d;
+	while(lablen) {
+		log_assert(lablen <= LDNS_MAX_LABELLEN);
+		labuf[0] = lablen;
+		d++;
+		i=0;
+		while(lablen--)
+			labuf[++i] = (uint8_t)tolower((int)*d++);
+		h = hashlittle(labuf, labuf[0] + 1, h);
+		lablen = *d;
+	}
+
 	return h;
 }
 

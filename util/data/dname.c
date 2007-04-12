@@ -66,6 +66,39 @@ query_dname_len(ldns_buffer* query)
 	}
 }
 
+int 
+query_dname_compare(uint8_t* d1, uint8_t* d2)
+{
+	uint8_t lab1, lab2;
+	log_assert(d1 && d2);
+	lab1 = *d1++;
+	lab2 = *d2++;
+	while( lab1 != 0 || lab2 != 0 ) {
+		/* compare label length */
+		/* if one dname ends, it has labellength 0 */
+		if(lab1 != lab2) {
+			if(lab1 < lab2)
+				return -1;
+			return 1;
+		}
+		log_assert(lab1 == lab2 && lab1 != 0);
+		/* compare lowercased labels. */
+		while(lab1--) {
+			if(tolower((int)*d1) != tolower((int)*d2)) {
+				if(tolower((int)*d1) < tolower((int)*d2))
+					return -1;
+				return 1;
+			}
+			d1++;
+			d2++;
+		}
+		/* next pair of labels. */
+		lab1 = *d1++;
+		lab2 = *d2++;
+	}
+	return 0;
+}
+
 void 
 query_dname_tolower(uint8_t* dname, size_t len)
 {
