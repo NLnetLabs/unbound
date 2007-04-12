@@ -185,3 +185,44 @@ pkt_dname_len(ldns_buffer* pkt)
 
 	return len;
 }
+
+int 
+dname_pkt_compare(ldns_buffer* pkt, uint8_t* d1, uint8_t* d2)
+{
+	uint8_t len1, len2;
+	log_assert(pkt && d1 && d2);
+	len1 = *d1++;
+	len2 = *d2++;
+	while( len1 != 0 || len2 != 0 ) {
+		/* resolve ptrs */
+		if( (len1 & 0xc0) == 0xc0) {
+			d1 = ldns_buffer_at(pkt, (len1&0x3f)<<8 | *d1);
+			len1 = *d1++;
+			continue;
+		}
+		if( (len2 & 0xc0) == 0xc0) {
+			d2 = ldns_buffer_at(pkt, (len2&0x3f)<<8 | *d2);
+			len2 = *d2++;
+			continue;
+		}
+		/* check label length */
+		log_assert(len1 <= LDNS_MAX_LABELLEN);
+		log_assert(len2 <= LDNS_MAX_LABELLEN);
+		if(len1 != len2) {
+			if(len1 < len2) return -1;
+			return 1;
+		}
+		log_assert(len1 == len2 && len1 != 0);
+		/* compare labels */
+		while(len1--) {
+			if(tolower((int)*d1++) != tolower((int)*d2++)) {
+				if(tolower((int)d1[-1]) < tolower((int)d2[-1]))
+					return -1;
+				return 1;
+			}
+		}
+		len1 = *d1++;
+		len2 = *d2++;
+	}
+	return 0;
+}

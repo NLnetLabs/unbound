@@ -78,4 +78,15 @@ int query_dname_compare(uint8_t* d1, uint8_t* d2);
  */
 size_t pkt_dname_len(ldns_buffer* pkt);
 
+/**
+ * Compare dnames in packet (compressed). Dnames must be valid.
+ * routine performs lowercasing, so the packet casing is preserved.
+ * @param pkt: packet, used to resolve compression pointers.
+ * @param d1: dname to compare
+ * @param d2: dname to compare
+ * @return: -1, 0, or +1 depending on comparison results.
+ * 	Sort order is first difference found. not the canonical ordering.
+ */
+int dname_pkt_compare(ldns_buffer* pkt, uint8_t* d1, uint8_t* d2);
+
 #endif /* UTIL_DATA_DNAME_H */

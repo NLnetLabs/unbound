@@ -143,14 +143,51 @@ struct rr_parse {
 	struct rr_parse* next;
 };
 
+/** smart comparison of (compressed, valid) dnames from packet. */
+static int
+smart_compare(ldns_buffer* pkt, uint8_t* dnow, 
+	uint8_t *dprfirst, uint8_t* dprlast)
+{
+	uint8_t* p;
+	if( (*dnow & 0xc0) == 0xc0) {
+		/* prev dname is also a ptr, both ptrs are the same. */
+		if( (*dprfirst & 0xc0) == 0xc0 &&
+			dprfirst[0] == dnow[0] && dprfirst[1] == dnow[1])
+			return 0;
+		if( (*dprlast & 0xc0) == 0xc0 &&
+			dprlast[0] == dnow[0] && dprlast[1] == dnow[1])
+			return 0;
+		/* ptr points to a previous dname */
+		p = ldns_buffer_at(pkt, (dnow[0]&0x3f)<<8 | dnow[1]);
+		if( p == dprfirst || p == dprlast )
+			return 0;
+	/* checks for prev dnames pointing forwards in the packet
+	} else {
+		if( (*dprfirst & 0xc0) == 0xc0 ) {
+			if(ldns_buffer_at(pkt, (dprfirst[0]&0x3f)<<8 | 
+				dprfirst[1]) == dnow)
+			return 0;
+		}
+		if( (*dprlast & 0xc0) == 0xc0 ) {
+			if(ldns_buffer_at(pkt, (dprlast[0]&0x3f)<<8 | 
+				dprlast[1]) == dnow)
+			return 0;
+		}
+	*/
+	}
+	return dname_pkt_compare(pkt, dnow, dprlast);
+}
+
 /** Find rrset. If equal to previous it is fast. hash if not so.
  * @param msg: the message with hash table.
+ * @param pkt: the packet in wireformat (needed for compression ptrs).
  * @param dname: pointer to start of dname (compressed) in packet.
  * @param dnamelen: uncompressed wirefmt length of dname.
  * @param type: type of current rr.
  * @param dclass: class of current rr.
  * @param hash: hash value is returned if the rrset could not be found.
- * @param prev_dname: dname of last seen RR.
+ * @param prev_dname_first: dname of last seen RR. First seen dname.
+ * @param prev_dname_last: dname of last seen RR. Last seen dname.
  * @param prev_dnamelen: dname len of last seen RR.
  * @param prev_type: type of last seen RR.
  * @param prev_dclass: class of last seen RR.
@@ -158,13 +195,22 @@ struct rr_parse {
  * @return the rrset if found, or null if no matching rrset exists.
  */
 static struct rrset_parse*
-find_rrset(struct msg_parse* msg, uint8_t* dname, size_t dnamelen, 
-	uint16_t type, uint16_t dclass, hashvalue_t* hash, 
-	uint8_t** prev_dname, size_t* prev_dnamelen, uint16_t* prev_type,
+find_rrset(struct msg_parse* msg, ldns_buffer* pkt, uint8_t* dname, 
+	size_t dnamelen, uint16_t type, uint16_t dclass, hashvalue_t* hash, 
+	uint8_t** prev_dname_first, uint8_t** prev_dname_last,
+	size_t* prev_dnamelen, uint16_t* prev_type,
 	uint16_t* prev_dclass, struct rrset_parse** rrset_prev)
 {
 	if(rrset_prev) {
 		/* check if equal to previous item */
+		if(type == *prev_type && dclass == *prev_dclass &&
+			dnamelen == *prev_dnamelen &&
+			smart_compare(pkt, dname, *prev_dname_first, 
+				*prev_dname_last) == 0) {
+			/* same as previous */
+			*prev_dname_last = dname;
+			return *rrset_prev;
+		}
 
 	}
 	/* find by hashing and lookup in hashtable */
@@ -214,7 +260,7 @@ parse_section(ldns_buffer* pkt, struct msg_parse* msg, region_type* region,
 	ldns_pkt_section section, uint16_t num_rrs, size_t* num_rrsets)
 {
 	uint16_t i;
-	uint8_t* dname, *prev_dname = NULL;
+	uint8_t* dname, *prev_dname_f = NULL, *prev_dname_l = NULL;
 	size_t dnamelen, prev_dnamelen = 0;
 	uint16_t type, prev_type = 0;
 	uint16_t dclass, prev_dclass = 0;
@@ -236,9 +282,9 @@ parse_section(ldns_buffer* pkt, struct msg_parse* msg, region_type* region,
 		ldns_buffer_read(pkt, &dclass, sizeof(dclass));
 
 		/* see if it is part of an existing RR set */
-		if((rrset = find_rrset(msg, dname, dnamelen, type, dclass,
-			&hash, &prev_dname, &prev_dnamelen, &prev_type,
-			&prev_dclass, &rrset_prev)) != 0) {
+		if((rrset = find_rrset(msg, pkt, dname, dnamelen, type, dclass,
+			&hash, &prev_dname_f, &prev_dname_l, &prev_dnamelen, 
+			&prev_type, &prev_dclass, &rrset_prev)) != 0) {
 			/* check if it fits the existing rrset */
 			/* add to rrset. */
 		} else {
