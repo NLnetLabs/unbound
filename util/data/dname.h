@@ -44,6 +44,7 @@
 
 #ifndef UTIL_DATA_DNAME_H
 #define UTIL_DATA_DNAME_H
+#include "util/storage/lruhash.h"
 
 /** 
  * Determine length of dname in buffer, no compression ptrs allowed, 
@@ -88,5 +89,27 @@ size_t pkt_dname_len(ldns_buffer* pkt);
  * 	Sort order is first difference found. not the canonical ordering.
  */
 int dname_pkt_compare(ldns_buffer* pkt, uint8_t* d1, uint8_t* d2);
+
+/**
+ * Hash dname, label by label, lowercasing, into hashvalue.
+ * Dname in query format (not compressed).
+ * @param dname: dname to hash.
+ * @param h: initial hash value.
+ * @return: result hash value.
+ */
+hashvalue_t dname_query_hash(uint8_t* dname, hashvalue_t h);
+
+/**
+ * Hash dname, label by label, lowercasing, into hashvalue.
+ * Dname in pkt format (compressed).
+ * @param pkt: packet, for resolving compression pointers.
+ * @param dname: dname to hash, pointer to the pkt buffer.
+ * 	Must be valid format. No loops, etc.
+ * @param h: initial hash value.
+ * @return: result hash value.
+ * 	Result is the same as dname_query_hash, even if compression is used.
+ */
+hashvalue_t dname_pkt_hash(ldns_buffer* pkt, uint8_t* dname, hashvalue_t h);
+
 
 #endif /* UTIL_DATA_DNAME_H */

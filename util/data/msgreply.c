@@ -51,7 +51,7 @@
 struct rrset_parse;
 struct rr_parse;
 
-/** number of buckets in parse rrset hash table. */
+/** number of buckets in parse rrset hash table. Must be power of 2. */
 #define PARSE_TABLE_SIZE 1024
 
 /**
@@ -123,6 +123,8 @@ struct rrset_parse {
 	uint16_t type;
 	/** class, network order. name so that it is not a c++ keyword. */
 	uint16_t rrset_class;
+	/** the flags for the rrset, like for packedrrset */
+	uint32_t flags;
 	/** linked list of RRs in this rrset. */
 	struct rr_parse* rr_first;
 	/** last in list of RRs in this rrset. */
@@ -148,18 +150,17 @@ static int
 smart_compare(ldns_buffer* pkt, uint8_t* dnow, 
 	uint8_t *dprfirst, uint8_t* dprlast)
 {
-	uint8_t* p;
 	if( (*dnow & 0xc0) == 0xc0) {
-		/* prev dname is also a ptr, both ptrs are the same. */
-		if( (*dprfirst & 0xc0) == 0xc0 &&
-			dprfirst[0] == dnow[0] && dprfirst[1] == dnow[1])
+		/* ptr points to a previous dname */
+		uint8_t* p = ldns_buffer_at(pkt, (dnow[0]&0x3f)<<8 | dnow[1]);
+		if( p == dprfirst || p == dprlast )
 			return 0;
+		/* prev dname is also a ptr, both ptrs are the same. */
+		/* if( (*dprfirst & 0xc0) == 0xc0 &&
+			dprfirst[0] == dnow[0] && dprfirst[1] == dnow[1])
+			return 0; */
 		if( (*dprlast & 0xc0) == 0xc0 &&
 			dprlast[0] == dnow[0] && dprlast[1] == dnow[1])
-			return 0;
-		/* ptr points to a previous dname */
-		p = ldns_buffer_at(pkt, (dnow[0]&0x3f)<<8 | dnow[1]);
-		if( p == dprfirst || p == dprlast )
 			return 0;
 	/* checks for prev dnames pointing forwards in the packet
 	} else {
@@ -178,6 +179,102 @@ smart_compare(ldns_buffer* pkt, uint8_t* dnow,
 	return dname_pkt_compare(pkt, dnow, dprlast);
 }
 
+/** See if next rrset is nsec at zone apex. */
+static int
+nsec_at_apex(ldns_buffer* pkt)
+{
+	/* we are at ttl position in packet. */
+	size_t pos = ldns_buffer_position(pkt);
+	uint16_t rdatalen;
+	if(ldns_buffer_remaining(pkt) < 7) /* ttl+len+root */
+		return 0; /* eek! */
+	ldns_buffer_skip(pkt, 4); /* ttl */;
+	rdatalen = ldns_buffer_read_u16(pkt);
+	if(ldns_buffer_remaining(pkt) < rdatalen) {
+		ldns_buffer_set_position(pkt, pos);
+		return 0; /* parse error happens later */
+	}
+	/* must validate the nsec next domain name format */
+	if(pkt_dname_len(pkt) == 0) {
+		ldns_buffer_set_position(pkt, pos);
+		return 0; /* parse error */
+	}
+
+	/* see if SOA bit is set. */
+	if(ldns_buffer_position(pkt) < pos+rdatalen) {
+		/* nsec type bitmap contains items */
+		uint8_t win, blen, bits;
+		/* need: windownum, bitmap len, firstbyte */
+		if(ldns_buffer_position(pkt)+3 <= pos+rdatalen) {
+			ldns_buffer_set_position(pkt, pos);
+			return 0; /* malformed nsec */
+		}
+		win = ldns_buffer_read_u8(pkt);
+		blen = ldns_buffer_read_u8(pkt);
+		bits = ldns_buffer_read_u8(pkt);
+		/* 0window always first window. bitlen >=1 or parse
+		   error really. bit 0x2 is SOA. */
+		if(win == 0 && blen >= 1 && (bits & 0x02)) {
+			ldns_buffer_set_position(pkt, pos);
+			return 1;
+		}
+	}
+
+	ldns_buffer_set_position(pkt, pos);
+	return 0;
+}
+
+/** Calculate hash value for rrset in packet. */
+static hashvalue_t
+pkt_hash_rrset(struct msg_parse* msg, ldns_buffer* pkt, uint8_t* dname, 
+	uint16_t type, uint16_t dclass, uint32_t* rrset_flags)
+{
+	hashvalue_t h = 0xab;
+	if(msg->flags & BIT_CD)
+		*rrset_flags = PACKED_RRSET_CD;
+	else	*rrset_flags = 0;
+	if(type == htons(LDNS_RR_TYPE_NSEC) && nsec_at_apex(pkt))
+		*rrset_flags |= PACKED_RRSET_NSEC_AT_APEX;
+	
+	h = hashlittle(&type, sizeof(type), h);
+	h = hashlittle(&dclass, sizeof(dclass), h);
+	h = hashlittle(rrset_flags, sizeof(uint32_t), h);
+	h = dname_pkt_hash(pkt, dname, h);
+	return h;
+}
+
+/** compare rrset_parse with data. */
+static int
+rrset_parse_equals(struct rrset_parse* p, ldns_buffer* pkt, hashvalue_t h, 
+	uint32_t rrset_flags, uint8_t* dname, size_t dnamelen, 
+	uint16_t type, uint16_t dclass)
+{
+	if(p->hash == h && p->dname_len == dnamelen && p->type == type &&
+		p->rrset_class == dclass && p->flags == rrset_flags &&
+		dname_pkt_compare(pkt, dname, p->dname) == 0)
+		return 1;
+	return 0;
+}
+
+
+/**
+ * Lookup in msg hashtable to find a rrset
+ */
+static struct rrset_parse*
+hashtable_lookup(struct msg_parse* msg, ldns_buffer* pkt, hashvalue_t h, 
+	uint32_t rrset_flags, uint8_t* dname, size_t dnamelen, 
+	uint16_t type, uint16_t dclass)
+{
+	struct rrset_parse* p = msg->hashtable[h & (PARSE_TABLE_SIZE-1)];
+	while(p) {
+		if(rrset_parse_equals(p, pkt, h, rrset_flags, dname, dnamelen,
+			type, dclass))
+			return p;
+		p = p->rrset_bucket_next;
+	}
+	return NULL;
+}
+
 /** Find rrset. If equal to previous it is fast. hash if not so.
  * @param msg: the message with hash table.
  * @param pkt: the packet in wireformat (needed for compression ptrs).
@@ -186,6 +283,7 @@ smart_compare(ldns_buffer* pkt, uint8_t* dnow,
  * @param type: type of current rr.
  * @param dclass: class of current rr.
  * @param hash: hash value is returned if the rrset could not be found.
+ * @param rrset_flags: is returned if the rrset could not be found.
  * @param prev_dname_first: dname of last seen RR. First seen dname.
  * @param prev_dname_last: dname of last seen RR. Last seen dname.
  * @param prev_dnamelen: dname len of last seen RR.
@@ -197,6 +295,7 @@ smart_compare(ldns_buffer* pkt, uint8_t* dnow,
 static struct rrset_parse*
 find_rrset(struct msg_parse* msg, ldns_buffer* pkt, uint8_t* dname, 
 	size_t dnamelen, uint16_t type, uint16_t dclass, hashvalue_t* hash, 
+	uint32_t* rrset_flags,
 	uint8_t** prev_dname_first, uint8_t** prev_dname_last,
 	size_t* prev_dnamelen, uint16_t* prev_type,
 	uint16_t* prev_dclass, struct rrset_parse** rrset_prev)
@@ -214,7 +313,17 @@ find_rrset(struct msg_parse* msg, ldns_buffer* pkt, uint8_t* dname,
 
 	}
 	/* find by hashing and lookup in hashtable */
-	return NULL;
+	*hash = pkt_hash_rrset(msg, pkt, dname, type, dclass, rrset_flags);
+	*rrset_prev = hashtable_lookup(msg, pkt, *hash, *rrset_flags, 
+		dname, dnamelen, type, dclass);
+	if(*rrset_prev)
+		*prev_dname_first = (*rrset_prev)->dname;
+	else 	*prev_dname_first = dname;
+	*prev_dname_last = dname;
+	*prev_dnamelen = dnamelen;
+	*prev_type = type;
+	*prev_dclass = dclass;
+	return *rrset_prev;
 }
 
 /**
@@ -245,6 +354,69 @@ parse_query_section(ldns_buffer* pkt, struct msg_parse* msg)
 }
 
 /**
+ * Allocate new rrset in region, fill with data.
+ */
+static struct rrset_parse* 
+new_rrset(struct msg_parse* msg, uint8_t* dname, size_t dnamelen, 
+	uint16_t type, uint16_t dclass, hashvalue_t hash, 
+	uint32_t rrset_flags, ldns_pkt_section section, region_type* region)
+{
+	struct rrset_parse* p = region_alloc(region, sizeof(*p));
+	if(!p) return NULL;
+	p->rrset_bucket_next = msg->hashtable[hash & (PARSE_TABLE_SIZE-1)];
+	msg->hashtable[hash & (PARSE_TABLE_SIZE-1)] = p;
+	p->rrset_all_next = 0;
+	if(msg->rrset_last)
+		msg->rrset_last->rrset_all_next = p;
+	else 	msg->rrset_first = p;
+	msg->rrset_last = p;
+	p->hash = hash;
+	p->section = section;
+	p->dname = dname;
+	p->dname_len = dnamelen;
+	p->type = type;
+	p->rrset_class = dclass;
+	p->flags = rrset_flags;
+	p->rr_first = 0;
+	p->rr_last = 0;
+	return p;
+}
+
+/** Add rr (from packet here) to rrset, skips rr */
+static int
+add_rr_to_rrset(struct rrset_parse* rrset, ldns_buffer* pkt, 
+	region_type* region, ldns_pkt_section section)
+{
+	uint16_t rdatalen;
+	/* check section of rrset. */
+	if(rrset->section != section) {
+		/* silently drop it */
+		verbose(VERB_DETAIL, "Packet contains rrset data in "
+			"multiple sections, dropped last part.");
+	} else {
+		/* create rr */
+		struct rr_parse* rr = region_alloc(region, sizeof(*rr));
+		if(!rr) return LDNS_RCODE_SERVFAIL;
+		rr->ttl_data = ldns_buffer_current(pkt);
+		rr->next = 0;
+		if(rrset->rr_last)
+			rrset->rr_last->next = rr;
+		else	rrset->rr_first = rr;
+		rrset->rr_last = rr;
+	}
+
+	/* forwards */
+	if(ldns_buffer_remaining(pkt) < 6) /* ttl + rdatalen */
+		return LDNS_RCODE_FORMERR;
+	ldns_buffer_skip(pkt, 4); /* ttl */
+	rdatalen = ldns_buffer_read_u16(pkt);
+	if(ldns_buffer_remaining(pkt) < rdatalen)
+		return LDNS_RCODE_FORMERR;
+	ldns_buffer_skip(pkt, (ssize_t)rdatalen);
+	return 0;
+}
+
+/**
  * Parse packet RR section, for answer, authority and additional sections. 
  * @param pkt: packet, position at call must be at start of section.
  *	at end position is after section.
@@ -264,8 +436,10 @@ parse_section(ldns_buffer* pkt, struct msg_parse* msg, region_type* region,
 	size_t dnamelen, prev_dnamelen = 0;
 	uint16_t type, prev_type = 0;
 	uint16_t dclass, prev_dclass = 0;
-	hashvalue_t hash;
+	uint32_t rrset_flags = 0;
+	hashvalue_t hash = 0;
 	struct rrset_parse* rrset, *rrset_prev = NULL;
+	int r;
 
 	if(num_rrs == 0)
 		return 0;
@@ -283,13 +457,21 @@ parse_section(ldns_buffer* pkt, struct msg_parse* msg, region_type* region,
 
 		/* see if it is part of an existing RR set */
 		if((rrset = find_rrset(msg, pkt, dname, dnamelen, type, dclass,
-			&hash, &prev_dname_f, &prev_dname_l, &prev_dnamelen, 
-			&prev_type, &prev_dclass, &rrset_prev)) != 0) {
+			&hash, &rrset_flags, &prev_dname_f, &prev_dname_l, 
+			&prev_dnamelen, &prev_type, &prev_dclass, 
+			&rrset_prev)) != 0) {
 			/* check if it fits the existing rrset */
 			/* add to rrset. */
 		} else {
-			/* it is a new RR set. hash already calculated. */
+			/* it is a new RR set. hash&flags already calculated.*/
+			(*num_rrsets)++;
+			rrset = new_rrset(msg, dname, dnamelen, type, dclass,
+				hash, rrset_flags, section, region);
+			if(!rrset) return LDNS_RCODE_SERVFAIL;
+			rrset_prev = rrset;
 		}
+		if((r=add_rr_to_rrset(rrset, pkt, region, section)))
+			return r;
 	}
 	return 0;
 }
@@ -331,7 +513,7 @@ parse_packet(ldns_buffer* pkt, struct msg_parse* msg,
 		return ret;
 	if(ldns_buffer_remaining(pkt) > 0) {
 		/* spurious data at end of packet. ignore */
-		verbose(VERB_DETAIL, "spurious data at end of packet, ign.");
+		verbose(VERB_DETAIL, "spurious data at end of packet ignored");
 	}
 	return 0;
 }
@@ -357,6 +539,7 @@ int reply_info_parse(ldns_buffer* pkt, struct alloc_cache* alloc,
 		region_destroy(region);
 		return ret;
 	}
+
 	/* parse OK, allocate return structures */
 
 	/* exit and cleanup */
@@ -483,30 +666,11 @@ reply_info_delete(void* d, void* ATTR_UNUSED(arg))
 hashvalue_t 
 query_info_hash(struct query_info *q)
 {
-	uint8_t labuf[LDNS_MAX_LABELLEN+1];
-	uint8_t lablen;
-	uint8_t* d;
-	int i;
-
 	hashvalue_t h = 0xab;
 	h = hashlittle(&q->qtype, sizeof(q->qtype), h);
 	h = hashlittle(&q->qclass, sizeof(q->qclass), h);
 	h = hashlittle(&q->has_cd, sizeof(q->has_cd), h);
-
-	/* preserve case of query, make hash label by label */
-	d = q->qname;
-	lablen = *d;
-	while(lablen) {
-		log_assert(lablen <= LDNS_MAX_LABELLEN);
-		labuf[0] = lablen;
-		d++;
-		i=0;
-		while(lablen--)
-			labuf[++i] = (uint8_t)tolower((int)*d++);
-		h = hashlittle(labuf, labuf[0] + 1, h);
-		lablen = *d;
-	}
-
+	h = dname_query_hash(q->qname, h);
 	return h;
 }
 

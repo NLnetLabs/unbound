@@ -1,3 +1,6 @@
+13 April 2007: Wouter
+	- parse routines. Code that parses rrsets, rrs.
+
 12 April 2007: Wouter
 	- dname compare routine that preserves case, with unit tests.
 	

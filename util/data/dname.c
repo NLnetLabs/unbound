@@ -42,6 +42,7 @@
 #include "config.h"
 #include "util/data/dname.h"
 #include "util/log.h"
+#include "util/storage/lookup3.h"
 
 /** determine length of a dname in buffer, no compression pointers allowed. */
 size_t
@@ -225,4 +226,55 @@ dname_pkt_compare(ldns_buffer* pkt, uint8_t* d1, uint8_t* d2)
 		len2 = *d2++;
 	}
 	return 0;
+}
+
+hashvalue_t 
+dname_query_hash(uint8_t* dname, hashvalue_t h)
+{
+	uint8_t labuf[LDNS_MAX_LABELLEN+1];
+	uint8_t lablen;
+	int i;
+
+	/* preserve case of query, make hash label by label */
+	lablen = *dname;
+	while(lablen) {
+		log_assert(lablen <= LDNS_MAX_LABELLEN);
+		labuf[0] = lablen;
+		dname++;
+		i=0;
+		while(lablen--)
+			labuf[++i] = (uint8_t)tolower((int)*dname++);
+		h = hashlittle(labuf, labuf[0] + 1, h);
+		lablen = *dname;
+	}
+
+	return h;
+}
+
+hashvalue_t 
+dname_pkt_hash(ldns_buffer* pkt, uint8_t* dname, hashvalue_t h)
+{
+	uint8_t labuf[LDNS_MAX_LABELLEN+1];
+	uint8_t lablen;
+	int i;
+
+	/* preserve case of query, make hash label by label */
+	lablen = *dname++;
+	while(lablen) {
+		if((lablen & 0xc0) == 0xc0) {
+			/* follow pointer */
+			dname = ldns_buffer_at(pkt, (lablen&0x3f)<<8 | *dname);
+			lablen = *dname++;
+			continue;
+		}
+		log_assert(lablen <= LDNS_MAX_LABELLEN);
+		labuf[0] = lablen;
+		i=0;
+		while(lablen--)
+			labuf[++i] = (uint8_t)tolower((int)*dname++);
+		h = hashlittle(labuf, labuf[0] + 1, h);
+		lablen = *dname++;
+	}
+
+	return h;
 }
