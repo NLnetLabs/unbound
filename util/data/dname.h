@@ -111,5 +111,12 @@ hashvalue_t dname_query_hash(uint8_t* dname, hashvalue_t h);
  */
 hashvalue_t dname_pkt_hash(ldns_buffer* pkt, uint8_t* dname, hashvalue_t h);
 
+/**
+ * Copy over a valid dname and decompress it.
+ * @param pkt: packet to resolve compression pointers.
+ * @param to: buffer of size from pkt_len function to hold result.
+ * @param dname: pointer into packet where dname starts.
+ */
+void dname_pkt_copy(ldns_buffer* pkt, uint8_t* to, uint8_t* dname);
 
 #endif /* UTIL_DATA_DNAME_H */

@@ -77,6 +77,12 @@ struct alloc_cache {
 	alloc_special_t* quar;
 	/** number of items in quarantine. */
 	size_t num_quar;
+	/** thread number for id creation */
+	int thread_num;
+	/** next id number to pass out */
+	uint64_t next_id;
+	/** last id number possible */
+	uint64_t last_id;
 };
 
 /**
@@ -84,8 +90,10 @@ struct alloc_cache {
  * @param alloc: this parameter is allocated by the caller.
  * @param super: super to use (init that before with super_init).
  *    Pass this argument NULL to init the toplevel alloc structure.
+ * @param thread_num: thread number for id creation of special type.
  */
-void alloc_init(struct alloc_cache* alloc, struct alloc_cache* super);
+void alloc_init(struct alloc_cache* alloc, struct alloc_cache* super,
+	int thread_num);
 
 /**
  * Free the alloc. Pushes all the cached items into the super structure.

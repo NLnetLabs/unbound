@@ -43,6 +43,7 @@
 #include "util/data/msgreply.h"
 #include "util/storage/lookup3.h"
 #include "util/log.h"
+#include "util/alloc.h"
 #include "util/netevent.h"
 #include "util/net_help.h"
 #include "util/data/dname.h"
@@ -125,6 +126,8 @@ struct rrset_parse {
 	uint16_t rrset_class;
 	/** the flags for the rrset, like for packedrrset */
 	uint32_t flags;
+	/** number of RRs in the rr list */
+	size_t rr_count;
 	/** linked list of RRs in this rrset. */
 	struct rr_parse* rr_first;
 	/** last in list of RRs in this rrset. */
@@ -141,6 +144,8 @@ struct rr_parse {
 	 * its dname, type and class are the same and stored for the rrset.
 	 */
 	uint8_t* ttl_data;
+	/** the length of the rdata if allocated (with no dname compression)*/
+	size_t size;
 	/** next in list of RRs. */
 	struct rr_parse* next;
 };
@@ -377,6 +382,7 @@ new_rrset(struct msg_parse* msg, uint8_t* dname, size_t dnamelen,
 	p->type = type;
 	p->rrset_class = dclass;
 	p->flags = rrset_flags;
+	p->rr_count = 0;
 	p->rr_first = 0;
 	p->rr_last = 0;
 	return p;
@@ -403,6 +409,7 @@ add_rr_to_rrset(struct rrset_parse* rrset, ldns_buffer* pkt,
 			rrset->rr_last->next = rr;
 		else	rrset->rr_first = rr;
 		rrset->rr_last = rr;
+		rrset->rr_count++;
 	}
 
 	/* forwards */
@@ -518,6 +525,235 @@ parse_packet(ldns_buffer* pkt, struct msg_parse* msg,
 	return 0;
 }
 
+/** copy and allocate an uncompressed dname. */
+static uint8_t*
+copy_uncompr(uint8_t* dname, size_t len) 
+{
+	uint8_t* p = (uint8_t*)malloc(len);
+	if(!p) return 0;
+	memmove(p, dname, len);
+	return p;
+}
+
+/** allocate qinfo, return 0 on error. */
+static int
+parse_create_qinfo(struct msg_parse* msg, struct query_info* qinf)
+{
+	if(msg->qname) {
+		if(!(qinf->qname = copy_uncompr(msg->qname, msg->qname_len)))
+			return 0;
+	} else	qinf->qname = 0;
+	qinf->qnamesize = msg->qname_len;
+	qinf->qtype = msg->qtype;
+	qinf->qclass = msg->qclass;
+	return 1;
+}
+
+/** allocate replyinfo, return 0 on error. */
+static int
+parse_create_repinfo(struct msg_parse* msg, struct reply_info** rep)
+{
+	/* rrset_count-1 because the first ref is part of the struct. */
+	*rep = malloc(sizeof(struct reply_info) + 
+		sizeof(struct rrset_ref) * (msg->rrset_count-1)  +
+		sizeof(struct ub_packed_rrset_key*) * msg->rrset_count);
+	if(!*rep) return 0;
+	(*rep)->reply = 0; /* unused */
+	(*rep)->replysize = 0; /* unused */
+	(*rep)->flags = msg->flags;
+	(*rep)->qdcount = msg->qdcount;
+	(*rep)->ttl = 0;
+	(*rep)->an_numrrsets = msg->an_rrsets;
+	(*rep)->ns_numrrsets = msg->ns_rrsets;
+	(*rep)->ar_numrrsets = msg->ar_rrsets;
+	(*rep)->rrset_count = msg->rrset_count;
+	/* array starts after the refs */
+	(*rep)->rrsets = (struct ub_packed_rrset_key**)&
+		((*rep)->ref[msg->rrset_count]);
+	/* zero the arrays to assist cleanup in case of malloc failure */
+	memset( (*rep)->rrsets, 0, 
+		sizeof(struct ub_packed_rrset_key*) * msg->rrset_count);
+	memset( &(*rep)->ref[0], 0, 
+		sizeof(struct rrset_ref) * msg->rrset_count);
+	return 1;
+}
+
+/** allocate (special) rrset keys, return 0 on error. */
+static int
+parse_alloc_rrset_keys(struct msg_parse* msg, struct reply_info* rep,
+	struct alloc_cache* alloc)
+{
+	size_t i;
+	for(i=0; i<msg->rrset_count; i++) {
+		rep->rrsets[i] = alloc_special_obtain(alloc);
+		if(!rep->rrsets[i])
+			return 0;
+		rep->rrsets[i]->entry.data = NULL;
+	}
+	return 1;
+}
+
+/** calculate the size of one rr */
+static int
+calc_size(ldns_buffer* pkt, uint16_t type, struct rr_parse* rr)
+{
+	const ldns_rr_descriptor* desc;
+	uint16_t pkt_len; /* length of rr inside the packet */
+	rr->size = sizeof(uint16_t); /* the rdatalen */
+	ldns_buffer_set_position(pkt, (size_t)(rr->ttl_data - 
+		ldns_buffer_begin(pkt) + 4)); /* skip ttl */
+	pkt_len = ldns_buffer_read_u16(pkt);
+	if(ldns_buffer_remaining(pkt) < pkt_len)
+		return 0;
+	desc = ldns_rr_descript(type);
+	if(desc->_dname_count > 0) {
+		int count = (int)desc->_dname_count;
+		int rdf = 0;
+		size_t len;
+		/* skip first part. */
+		while(count) {
+			switch(desc->_wireformat[rdf]) {
+			case LDNS_RDF_TYPE_DNAME:
+				/* decompress every domain name */
+				if((len = pkt_dname_len(pkt)) == 0)
+					return 0;
+				rr->size += len;
+				count--;
+				break;
+			case LDNS_RDF_TYPE_STR:
+				len = ldns_buffer_current(pkt)[0] + 1;
+				rr->size += len;
+				ldns_buffer_skip(pkt, (ssize_t)len);
+				break;
+			case LDNS_RDF_TYPE_CLASS:
+			case LDNS_RDF_TYPE_ALG:
+			case LDNS_RDF_TYPE_INT8:
+				ldns_buffer_skip(pkt, 1);
+				rr->size += 1;
+				break;
+			case LDNS_RDF_TYPE_INT16:
+			case LDNS_RDF_TYPE_TYPE:
+			case LDNS_RDF_TYPE_CERT_ALG:
+				ldns_buffer_skip(pkt, 2);
+				rr->size += 2;
+				break;
+			case LDNS_RDF_TYPE_INT32:
+			case LDNS_RDF_TYPE_TIME:
+			case LDNS_RDF_TYPE_A:
+			case LDNS_RDF_TYPE_PERIOD:
+				ldns_buffer_skip(pkt, 4);
+				rr->size += 4;
+				break;
+			case LDNS_RDF_TYPE_TSIGTIME:
+				ldns_buffer_skip(pkt, 6);
+				rr->size += 6;
+				break;
+			case LDNS_RDF_TYPE_AAAA:
+				ldns_buffer_skip(pkt, 16);
+				rr->size += 16;
+			default:
+				log_assert(false); /* add type above */
+				/* only types that appear before a domain  *
+				 * name are needed. rest is simply copied. */
+			}
+			rdf++;
+		}
+	}
+	/* remaining rdata */
+	rr->size += pkt_len;
+	return 1;
+}
+
+/** calculate size of rrs in rrset, 0 on parse failure */
+static int
+parse_rr_size(ldns_buffer* pkt, struct rrset_parse* pset, size_t* allocsize)
+{
+	struct rr_parse* p = pset->rr_first;
+	*allocsize = 0;
+	while(p) {
+		if(!calc_size(pkt, ntohs(pset->type), p))
+			return 0;
+		*allocsize += p->size;
+		p = p->next;
+	}
+	return 1;
+}
+
+/** create rrset return 0 or rcode */
+static int
+parse_create_rrset(ldns_buffer* pkt, struct rrset_parse* pset,
+	struct packed_rrset_data** data)
+{
+	/* calculate sizes of rr rdata */
+	size_t allocsize;
+	if(!parse_rr_size(pkt, pset, &allocsize))
+		return LDNS_RCODE_FORMERR;
+	/* allocate */
+	*data = malloc(sizeof(struct packed_rrset_data) + pset->rr_count* 
+		(sizeof(size_t)+sizeof(uint8_t*)+sizeof(uint32_t)) + allocsize);
+	if(!*data)
+		return LDNS_RCODE_SERVFAIL;
+	return 0;
+}
+
+/** 
+ * Copy and decompress rrs
+ * @param pkt: the packet for compression pointer resolution.
+ * @param msg: the parsed message
+ * @param rep: reply info to put rrs into.
+ * @return 0 or rcode.
+ */
+static int
+parse_copy_decompress(ldns_buffer* pkt, struct msg_parse* msg,
+	struct reply_info* rep)
+{
+	int ret;
+	size_t i;
+	struct rrset_parse *pset = msg->rrset_first;
+	struct packed_rrset_data* data;
+	log_assert(rep);
+
+	for(i=0; i<rep->rrset_count; i++) {
+		rep->rrsets[i]->rk.flags = pset->flags;
+		rep->rrsets[i]->rk.dname_len = pset->dname_len;
+		rep->rrsets[i]->rk.dname = malloc(pset->dname_len + 4);
+		if(!rep->rrsets[i]->rk.dname)
+			return LDNS_RCODE_SERVFAIL;
+		/** copy & decompress dname */
+		dname_pkt_copy(pkt, rep->rrsets[i]->rk.dname, pset->dname);
+		/** copy over type and class */
+		memmove(&rep->rrsets[i]->rk.dname[pset->dname_len], 
+			&pset->type, sizeof(uint16_t));
+		memmove(&rep->rrsets[i]->rk.dname[pset->dname_len+2], 
+			&pset->rrset_class, sizeof(uint16_t));
+		/** read data part. */
+		if((ret=parse_create_rrset(pkt, pset, &data)) != 0)
+			return ret;
+		rep->rrsets[i]->entry.data = (void*)data;
+
+		pset = pset->rrset_all_next;
+	}
+	return 0;
+}
+
+/** allocate and decompress message and rrsets, returns 0 or rcode. */
+static int 
+parse_create_msg(ldns_buffer* pkt, struct msg_parse* msg,
+	struct alloc_cache* alloc, struct query_info* qinf, 
+	struct reply_info** rep)
+{
+	int ret;
+	log_assert(pkt && msg);
+	if(!parse_create_qinfo(msg, qinf))
+		return LDNS_RCODE_SERVFAIL;
+	if(!parse_create_repinfo(msg, rep))
+		return LDNS_RCODE_SERVFAIL;
+	if(!parse_alloc_rrset_keys(msg, *rep, alloc))
+		return LDNS_RCODE_SERVFAIL;
+	if((ret=parse_copy_decompress(pkt, msg, *rep)) != 0)
+		return ret;
+	return 0;
+}
 
 int reply_info_parse(ldns_buffer* pkt, struct alloc_cache* alloc,
         struct query_info* qinf, struct reply_info** rep)
@@ -541,6 +777,15 @@ int reply_info_parse(ldns_buffer* pkt, struct alloc_cache* alloc,
 	}
 
 	/* parse OK, allocate return structures */
+	/* this also performs dname decompression */
+	*rep = NULL;
+	if((ret = parse_create_msg(pkt, msg, alloc, qinf, rep)) != 0) {
+		query_info_clear(qinf);
+		reply_info_parsedelete(*rep, alloc);
+		region_free_all(region);
+		region_destroy(region);
+		return ret;
+	}
 
 	/* exit and cleanup */
 	region_free_all(region);

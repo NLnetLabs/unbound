@@ -54,9 +54,9 @@ alloc_test() {
 	struct alloc_cache major, minor1, minor2;
 	int i;
 
-	alloc_init(&major, NULL);
-	alloc_init(&minor1, &major);
-	alloc_init(&minor2, &major);
+	alloc_init(&major, NULL, 0);
+	alloc_init(&minor1, &major, 0);
+	alloc_init(&minor2, &major, 1);
 
 	t1 = alloc_special_obtain(&minor1);
 	alloc_clear(&minor1);

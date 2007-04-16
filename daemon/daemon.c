@@ -126,7 +126,7 @@ daemon_init()
 		free(daemon);
 		return NULL;
 	}
-	alloc_init(&daemon->superalloc, NULL);
+	alloc_init(&daemon->superalloc, NULL, 0);
 	return daemon;	
 }
 

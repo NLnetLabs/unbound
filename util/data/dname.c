@@ -278,3 +278,25 @@ dname_pkt_hash(ldns_buffer* pkt, uint8_t* dname, hashvalue_t h)
 
 	return h;
 }
+
+void dname_pkt_copy(ldns_buffer* pkt, uint8_t* to, uint8_t* dname)
+{
+	/* copy over the dname and decompress it at the same time */
+	uint8_t lablen;
+	lablen = *dname++;
+	while(lablen) {
+		if((lablen & 0xc0) == 0xc0) {
+			/* follow pointer */
+			dname = ldns_buffer_at(pkt, (lablen&0x3f)<<8 | *dname);
+			lablen = *dname++;
+			continue;
+		}
+		log_assert(lablen <= LDNS_MAX_LABELLEN);
+		*to++ = lablen;
+		memmove(to, dname, lablen);
+		dname += lablen;
+		to += lablen;
+	}
+	/* copy last \0 */
+	*to = 0;
+}

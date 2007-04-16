@@ -1,3 +1,8 @@
+16 April 2007: Wouter
+	- following a small change in LDNS, parsing code calculates the
+	  memory size to allocate for rrs.
+	- code to handle ID creation.
+
 13 April 2007: Wouter
 	- parse routines. Code that parses rrsets, rrs.
 

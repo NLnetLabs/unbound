@@ -5,3 +5,9 @@ o profile memory allocation, and if performance issues, use special memory
   allocator. For example, with caches per thread.
 o #define BIT_... different on bigendian and smallendian systems so that
   the htons on flags is not needed to send a message from the cache.
+o possible optimization with delayed malloc of msgreply after parse
+  (reuse parse structures and ptrs to packet in meantime).
+o possible optimization, so that precious id number resource is not depleted
+  by parsing of messages. Delay malloc, as above, or try to reverse release
+  special id numbers, and if you release the next_id number for the thread
+  it reuses that id number.

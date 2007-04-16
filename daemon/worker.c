@@ -525,7 +525,8 @@ worker_init(struct worker* worker, struct config_file *cfg,
 			fatal_exit("could not set forwarder address");
 		}
 	}
-	alloc_init(&worker->alloc, &worker->daemon->superalloc);
+	alloc_init(&worker->alloc, &worker->daemon->superalloc, 
+		worker->thread_num);
 	return 1;
 }
 
