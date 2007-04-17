@@ -51,5 +51,7 @@ extern int testcount;
 void lruhash_test();
 /** unit test slabhashtable implementation */
 void slabhash_test();
+/** unit test for msgreply and msgparse */
+void msgparse_test();
 
 #endif /* TESTCODE_UNITMAIN_H */

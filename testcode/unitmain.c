@@ -216,6 +216,7 @@ main(int argc, char* argv[])
 	msgreply_test();
 	lruhash_test();
 	slabhash_test();
+	msgparse_test();
 	checklock_stop();
 	printf("%d tests succeeded\n", testcount);
 	return 0;

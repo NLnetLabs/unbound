@@ -93,8 +93,8 @@ parse_create_repinfo(struct msg_parse* msg, struct reply_info** rep)
 	(*rep)->ar_numrrsets = msg->ar_rrsets;
 	(*rep)->rrset_count = msg->rrset_count;
 	/* array starts after the refs */
-	(*rep)->rrsets = (struct ub_packed_rrset_key**)&
-		((*rep)->ref[msg->rrset_count]);
+	(*rep)->rrsets = (struct ub_packed_rrset_key**)
+		&((*rep)->ref[msg->rrset_count]);
 	/* zero the arrays to assist cleanup in case of malloc failure */
 	memset( (*rep)->rrsets, 0, 
 		sizeof(struct ub_packed_rrset_key*) * msg->rrset_count);
@@ -308,10 +308,10 @@ parse_rr_copy(ldns_buffer* pkt, struct rrset_parse* pset,
 	data->ttl = MAX_TTL;
 	data->count = pset->rr_count;
 	/* layout: struct - rr_len - rr_data - rdata - rrsig */
-	data->rr_len = (size_t*)((uint8_t*)&data + 
+	data->rr_len = (size_t*)((uint8_t*)data + 
 		sizeof(struct packed_rrset_data));
-	data->rr_data = (uint8_t**)(&data->rr_len[data->count]);
-	nextrdata = (uint8_t*)(&data->rr_data[data->count]);
+	data->rr_data = (uint8_t**)&(data->rr_len[data->count]);
+	nextrdata = (uint8_t*)&(data->rr_data[data->count]);
 	data->rrsig_data = 0;
 	data->rrsig_len = 0;
 	for(i=0; i<data->count; i++) {

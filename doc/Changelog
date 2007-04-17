@@ -3,6 +3,10 @@
 	- store calculated hash value too.
 	- routine to create message out of stored information.
 	- util/data/msgparse.c for message parsing code.
+	- unit test, and first fixes because of test.
+		* forgot rrset_count addition.
+		* did & of ptr on stack for memory position calculation.
+		* dname_pkt_copy forgot to read next label length.
 
 16 April 2007: Wouter
 	- following a small change in LDNS, parsing code calculates the

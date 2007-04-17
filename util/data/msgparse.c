@@ -32,6 +32,10 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
+/**
+ * \file
+ * Routines for message parsing a packet buffer to a descriptive structure.
+ */
 #include "config.h"
 #include "util/data/msgparse.h"
 #include "util/net_help.h"
@@ -403,5 +407,6 @@ parse_packet(ldns_buffer* pkt, struct msg_parse* msg, region_type* region)
 		/* spurious data at end of packet. ignore */
 		verbose(VERB_DETAIL, "spurious data at end of packet ignored");
 	}
+	msg->rrset_count = msg->an_rrsets + msg->ns_rrsets + msg->ar_rrsets;
 	return 0;
 }

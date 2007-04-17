@@ -296,6 +296,7 @@ void dname_pkt_copy(ldns_buffer* pkt, uint8_t* to, uint8_t* dname)
 		memmove(to, dname, lablen);
 		dname += lablen;
 		to += lablen;
+		lablen = *dname++;
 	}
 	/* copy last \0 */
 	*to = 0;

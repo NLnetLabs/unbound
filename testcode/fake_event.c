@@ -47,6 +47,7 @@
 #include "config.h"
 #include "testcode/fake_event.h"
 #include "util/netevent.h"
+#include "util/net_help.h"
 #include "services/listen_dnsport.h"
 #include "services/outside_network.h"
 #include "testcode/replay.h"
@@ -613,12 +614,7 @@ void
 comm_point_send_reply_iov(struct comm_reply* repinfo, struct iovec* iov,
         size_t iovlen)
 {
-	size_t i;
-	ldns_buffer_clear(repinfo->c->buffer);
-	for(i=1; i<iovlen; i++)
-		ldns_buffer_write(repinfo->c->buffer, iov[i].iov_base,
-			iov[i].iov_len);
-	ldns_buffer_flip(repinfo->c->buffer);
+	write_iov_buffer(repinfo->c->buffer, iov, iovlen);
 	comm_point_send_reply(repinfo);
 }
 

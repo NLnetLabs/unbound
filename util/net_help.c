@@ -94,3 +94,16 @@ is_pow2(size_t num)
 	if(num == 0) return 1;
 	return (num & (num-1)) == 0;
 }
+
+void 
+write_iov_buffer(ldns_buffer* buffer, struct iovec* iov, size_t iovlen)
+{
+	size_t i;
+	ldns_buffer_clear(buffer);
+	for(i=1; i<iovlen; i++) {
+		log_assert(ldns_buffer_position(buffer)+iov[i].iov_len
+			<= ldns_buffer_capacity(buffer));
+		ldns_buffer_write(buffer, iov[i].iov_base, iov[i].iov_len);
+	}
+	ldns_buffer_flip(buffer);
+}
