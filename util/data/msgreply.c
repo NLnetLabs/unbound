@@ -54,6 +54,8 @@ struct rr_parse;
 
 /** number of buckets in parse rrset hash table. Must be power of 2. */
 #define PARSE_TABLE_SIZE 1024
+/** Maximum TTL that is allowed. */
+#define MAX_TTL	3600*24*365*10 /* ten years */
 
 /**
  * Data stored in scratch pad memory during parsing.
@@ -593,6 +595,46 @@ parse_alloc_rrset_keys(struct msg_parse* msg, struct reply_info* rep,
 	return 1;
 }
 
+/**
+ * Obtain size in the packet of an rr type, that is before dname type.
+ * Do TYPE_DNAME, and type STR, yourself.
+ * @param rdf: the rdf type from the descriptor.
+ * @return: size in octets. 0 on failure.
+ */
+static size_t
+get_rdf_size(ldns_rdf_type rdf)
+{
+	switch(rdf) {
+		case LDNS_RDF_TYPE_CLASS:
+		case LDNS_RDF_TYPE_ALG:
+		case LDNS_RDF_TYPE_INT8:
+			return 1;
+			break;
+		case LDNS_RDF_TYPE_INT16:
+		case LDNS_RDF_TYPE_TYPE:
+		case LDNS_RDF_TYPE_CERT_ALG:
+			return 2;
+			break;
+		case LDNS_RDF_TYPE_INT32:
+		case LDNS_RDF_TYPE_TIME:
+		case LDNS_RDF_TYPE_A:
+		case LDNS_RDF_TYPE_PERIOD:
+			return 4;
+			break;
+		case LDNS_RDF_TYPE_TSIGTIME:
+			return 6;
+			break;
+		case LDNS_RDF_TYPE_AAAA:
+			return 16;
+			break;
+		default:
+			log_assert(false); /* add type above */
+			/* only types that appear before a domain  *
+			 * name are needed. rest is simply copied. */
+	}
+	return 0;
+}
+
 /** calculate the size of one rr */
 static int
 calc_size(ldns_buffer* pkt, uint16_t type, struct rr_parse* rr)
@@ -610,51 +652,36 @@ calc_size(ldns_buffer* pkt, uint16_t type, struct rr_parse* rr)
 		int count = (int)desc->_dname_count;
 		int rdf = 0;
 		size_t len;
+		size_t oldpos;
 		/* skip first part. */
 		while(count) {
 			switch(desc->_wireformat[rdf]) {
 			case LDNS_RDF_TYPE_DNAME:
 				/* decompress every domain name */
+				oldpos = ldns_buffer_position(pkt);
 				if((len = pkt_dname_len(pkt)) == 0)
-					return 0;
+					return 0; /* malformed dname */
+				if(ldns_buffer_position(pkt)-oldpos > pkt_len)
+					return 0; /* dname exceeds rdata */
+				pkt_len -= ldns_buffer_position(pkt)-oldpos;
 				rr->size += len;
 				count--;
+				len = 0;
 				break;
 			case LDNS_RDF_TYPE_STR:
+				if(pkt_len < 1)
+					return 0; /* len byte exceeds rdata */
 				len = ldns_buffer_current(pkt)[0] + 1;
-				rr->size += len;
-				ldns_buffer_skip(pkt, (ssize_t)len);
 				break;
-			case LDNS_RDF_TYPE_CLASS:
-			case LDNS_RDF_TYPE_ALG:
-			case LDNS_RDF_TYPE_INT8:
-				ldns_buffer_skip(pkt, 1);
-				rr->size += 1;
-				break;
-			case LDNS_RDF_TYPE_INT16:
-			case LDNS_RDF_TYPE_TYPE:
-			case LDNS_RDF_TYPE_CERT_ALG:
-				ldns_buffer_skip(pkt, 2);
-				rr->size += 2;
-				break;
-			case LDNS_RDF_TYPE_INT32:
-			case LDNS_RDF_TYPE_TIME:
-			case LDNS_RDF_TYPE_A:
-			case LDNS_RDF_TYPE_PERIOD:
-				ldns_buffer_skip(pkt, 4);
-				rr->size += 4;
-				break;
-			case LDNS_RDF_TYPE_TSIGTIME:
-				ldns_buffer_skip(pkt, 6);
-				rr->size += 6;
-				break;
-			case LDNS_RDF_TYPE_AAAA:
-				ldns_buffer_skip(pkt, 16);
-				rr->size += 16;
 			default:
-				log_assert(false); /* add type above */
-				/* only types that appear before a domain  *
-				 * name are needed. rest is simply copied. */
+				len = get_rdf_size(desc->_wireformat[rdf]);
+			}
+			if(len) {
+				if(pkt_len < len)
+					return 0; /* exceeds rdata */
+				pkt_len -= len;
+				ldns_buffer_skip(pkt, (ssize_t)len);
+				rr->size += len;
 			}
 			rdf++;
 		}
@@ -670,12 +697,109 @@ parse_rr_size(ldns_buffer* pkt, struct rrset_parse* pset, size_t* allocsize)
 {
 	struct rr_parse* p = pset->rr_first;
 	*allocsize = 0;
+	/* size of rrs */
 	while(p) {
 		if(!calc_size(pkt, ntohs(pset->type), p))
 			return 0;
 		*allocsize += p->size;
 		p = p->next;
 	}
+	/* TODO calc size of rrsig */
+	return 1;
+}
+
+/** do the rdata copy */
+static int
+rdata_copy(ldns_buffer* pkt, struct rrset_parse* pset,
+	struct packed_rrset_data* data, uint8_t* to, struct rr_parse* rr)
+{
+	uint16_t pkt_len;
+	uint32_t ttl;
+	const ldns_rr_descriptor* desc;
+	ldns_buffer_set_position(pkt, (size_t)
+		(rr->ttl_data - ldns_buffer_begin(pkt)));
+	if(ldns_buffer_remaining(pkt) < 6)
+		return 0;
+	ttl = ldns_buffer_read_u32(pkt);
+	if(ttl < data->ttl)
+		data->ttl = ttl;
+	/* insert decompressed size into memory rdata len */
+	pkt_len = htons(rr->size);
+	memmove(to, &pkt_len, sizeof(uint16_t));
+	to += 2;
+	/* read packet rdata len */
+	pkt_len = ldns_buffer_read_u16(pkt);
+	if(ldns_buffer_remaining(pkt) < pkt_len)
+		return 0;
+	log_assert((size_t)pkt_len+2 <= rr->size);
+	desc = ldns_rr_descript(ntohs(pset->type));
+	if(desc->_dname_count > 0) {
+		int count = (int)desc->_dname_count;
+		int rdf = 0;
+		size_t len;
+		size_t oldpos;
+		/* decompress dnames. */
+		while(count) {
+			switch(desc->_wireformat[rdf]) {
+			case LDNS_RDF_TYPE_DNAME:
+				oldpos = ldns_buffer_position(pkt);
+				dname_pkt_copy(pkt, to, 
+					ldns_buffer_current(pkt));
+				to += pkt_dname_len(pkt);
+				pkt_len -= ldns_buffer_position(pkt)-oldpos;
+				count--;
+				len = 0;
+				break;
+			case LDNS_RDF_TYPE_STR:
+				len = ldns_buffer_current(pkt)[0] + 1;
+				break;
+			default:
+				len = get_rdf_size(desc->_wireformat[rdf]);
+				break;
+			}
+			if(len) {
+				memmove(to, ldns_buffer_current(pkt), len);
+				to += len;
+				ldns_buffer_skip(pkt, (ssize_t)len);
+				log_assert(len <= pkt_len);
+				pkt_len -= len;
+			}
+			rdf++;
+		}
+	}
+	/* copy remaining rdata */
+	if(pkt_len >  0)
+		memmove(to, ldns_buffer_current(pkt), pkt_len);
+	
+	return 1;
+}
+
+/** copy over the data into packed rrset */
+static int
+parse_rr_copy(ldns_buffer* pkt, struct rrset_parse* pset, 
+	struct packed_rrset_data* data)
+{
+	size_t i;
+	struct rr_parse* rr = pset->rr_first;
+	uint8_t* nextrdata;
+	data->ttl = MAX_TTL;
+	data->count = pset->rr_count;
+	/* layout: struct - rr_len - rr_data - rdata - rrsig */
+	data->rr_len = (size_t*)((uint8_t*)&data + 
+		sizeof(struct packed_rrset_data));
+	data->rr_data = (uint8_t**)(&data->rr_len[data->count]);
+	nextrdata = (uint8_t*)(&data->rr_data[data->count]);
+	data->rrsig_data = 0;
+	data->rrsig_len = 0;
+	for(i=0; i<data->count; i++) {
+		data->rr_len[i] = rr->size;
+		data->rr_data[i] = nextrdata;
+		nextrdata += rr->size;
+		if(!rdata_copy(pkt, pset, data, data->rr_data[i], rr))
+			return 0;
+		rr = rr->next;
+	}
+	/* if rrsig, its rdata is at nextrdata */
 	return 1;
 }
 
@@ -692,6 +816,9 @@ parse_create_rrset(ldns_buffer* pkt, struct rrset_parse* pset,
 	*data = malloc(sizeof(struct packed_rrset_data) + pset->rr_count* 
 		(sizeof(size_t)+sizeof(uint8_t*)+sizeof(uint32_t)) + allocsize);
 	if(!*data)
+		return LDNS_RCODE_SERVFAIL;
+	/* copy & decompress */
+	if(!parse_rr_copy(pkt, pset, *data))
 		return LDNS_RCODE_SERVFAIL;
 	return 0;
 }

@@ -115,7 +115,6 @@ struct ub_packed_rrset_key {
  *	o base struct
  *	o rr_len size_t array
  *	o rr_data uint8_t* array
- *	o rr_ttl uint32_t array
  *	o rr_data rdata wireformats
  *	o rrsig_data rdata wireformat
  *
