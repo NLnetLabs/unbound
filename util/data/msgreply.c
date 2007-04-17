@@ -171,13 +171,13 @@ calc_size(ldns_buffer* pkt, uint16_t type, struct rr_parse* rr)
 	if(ldns_buffer_remaining(pkt) < pkt_len)
 		return 0;
 	desc = ldns_rr_descript(type);
-	if(desc->_dname_count > 0) {
+	if(pkt_len > 0 && desc->_dname_count > 0) {
 		int count = (int)desc->_dname_count;
 		int rdf = 0;
 		size_t len;
 		size_t oldpos;
 		/* skip first part. */
-		while(count) {
+		while(pkt_len > 0 && count) {
 			switch(desc->_wireformat[rdf]) {
 			case LDNS_RDF_TYPE_DNAME:
 				/* decompress every domain name */
@@ -256,13 +256,13 @@ rdata_copy(ldns_buffer* pkt, struct rrset_parse* pset,
 		return 0;
 	log_assert((size_t)pkt_len+2 <= rr->size);
 	desc = ldns_rr_descript(ntohs(pset->type));
-	if(desc->_dname_count > 0) {
+	if(pkt_len > 0 && desc->_dname_count > 0) {
 		int count = (int)desc->_dname_count;
 		int rdf = 0;
 		size_t len;
 		size_t oldpos;
 		/* decompress dnames. */
-		while(count) {
+		while(pkt_len > 0 && count) {
 			switch(desc->_wireformat[rdf]) {
 			case LDNS_RDF_TYPE_DNAME:
 				oldpos = ldns_buffer_position(pkt);
@@ -414,6 +414,7 @@ int reply_info_parse(ldns_buffer* pkt, struct alloc_cache* alloc,
 	struct msg_parse* msg;
 	int ret;
 	
+	qinf->qname = NULL;
 	*rep = NULL;
 	msg = region_alloc(region, sizeof(*msg));
 	if(!msg)
@@ -433,6 +434,7 @@ int reply_info_parse(ldns_buffer* pkt, struct alloc_cache* alloc,
 	if((ret = parse_create_msg(pkt, msg, alloc, qinf, rep)) != 0) {
 		query_info_clear(qinf);
 		reply_info_parsedelete(*rep, alloc);
+		*rep = NULL;
 		region_free_all(region);
 		region_destroy(region);
 		return ret;

@@ -187,6 +187,22 @@ test_buffers(ldns_buffer* pkt, ldns_buffer* out)
 	return 0;
 }
 
+/** check if unbound formerr equals ldns formerr. */
+static void
+checkformerr(ldns_buffer* pkt)
+{
+	ldns_pkt* p;
+	ldns_status status = ldns_buffer2pkt_wire(&p, pkt);
+	if(0) printf("formerr, ldns parse is: %s\n",
+			ldns_get_errorstr_by_id(status));
+	if(status == LDNS_STATUS_OK) {
+		printf("Formerr, but ldns gives packet:\n");
+		ldns_pkt_print(stdout, p);
+		exit(1);
+	}
+	unit_assert(status != LDNS_STATUS_OK);
+}
+
 /** test a packet */
 static void
 testpkt(ldns_buffer* pkt, struct alloc_cache* alloc, ldns_buffer* out, 
@@ -208,16 +224,18 @@ testpkt(ldns_buffer* pkt, struct alloc_cache* alloc, ldns_buffer* out,
 	memmove(&flags, ldns_buffer_at(pkt, 2), sizeof(flags));
 	ret = reply_info_parse(pkt, alloc, &qi, &rep);
 	if(ret != 0) {
-		printf("exit code %d: %s", ret, 
+		if(0) printf("parse code %d: %s\n", ret, 
 			ldns_lookup_by_id(ldns_rcodes, ret)->name);
-		unit_assert(ret == 0);
-	}
-	sz = reply_info_iov_regen(&qi, rep, id, flags, iov, maxiov,
-		timenow, region);
-	unit_assert(sz != 0); /* udp packets should fit in 1024 iov */
-	write_iov_buffer(out, iov, sz);
-
-	test_buffers(pkt, out);
+		if(ret == LDNS_RCODE_FORMERR)
+			checkformerr(pkt);
+		unit_assert(ret != LDNS_RCODE_SERVFAIL);
+	} else {
+		sz = reply_info_iov_regen(&qi, rep, id, flags, iov, maxiov,
+			timenow, region);
+		unit_assert(sz != 0); /* udp packets should fit in 1024 iov */
+		write_iov_buffer(out, iov, sz);
+		test_buffers(pkt, out);
+	} 
 
 	query_info_clear(&qi);
 	reply_info_parsedelete(rep, alloc);
@@ -263,6 +281,30 @@ simpletest(ldns_buffer* pkt, struct alloc_cache* alloc, ldns_buffer* out)
 	" 64 b9 00 04 c0 3a 80 1e  ");
 }
 
+/** simple test of parsing. */
+static void
+testfromfile(ldns_buffer* pkt, struct alloc_cache* alloc, ldns_buffer* out,
+	const char* fname)
+{
+	FILE* in = fopen(fname, "r");
+	char buf[102400];
+	int no=0;
+	if(!in) {
+		perror("fname");
+		return;
+	}
+	while(fgets(buf, sizeof(buf), in)) {
+		if(buf[0] == ';') /* comment */
+			continue;
+		if(strlen(buf) < 10) /* skip pcat line numbers. */
+			continue;
+		if(0) printf("test no %d\n", no);
+		testpkt(pkt, alloc, out, buf);
+		no++;
+	}
+	fclose(in);
+}
+
 void msgparse_test()
 {
 	ldns_buffer* pkt = ldns_buffer_new(65553);
@@ -272,7 +314,9 @@ void msgparse_test()
 	alloc_init(&super_a, NULL, 0);
 	alloc_init(&alloc, &super_a, 2);
 
+	printf("testmsgparse\n");
 	simpletest(pkt, &alloc, out);
+	testfromfile(pkt, &alloc, out, "testdata/test_packets.1");
 
 	/* cleanup */
 	alloc_clear(&alloc);
