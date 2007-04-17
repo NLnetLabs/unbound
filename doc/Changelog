@@ -1,6 +1,7 @@
 17 April 2007: Wouter
 	- copy and decompress dnames.
 	- store calculated hash value too.
+	- routine to create message out of stored information.
 
 16 April 2007: Wouter
 	- following a small change in LDNS, parsing code calculates the

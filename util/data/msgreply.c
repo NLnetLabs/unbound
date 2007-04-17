@@ -1061,6 +1061,104 @@ reply_info_answer(struct reply_info* rep, uint16_t qflags,
 	ldns_buffer_flip(buffer);
 }
 
+/** store rrset in iov vector */
+static int
+packed_rrset_iov(struct ub_packed_rrset_key* key, struct iovec* iov, 
+	size_t max, uint16_t* num_rrs, uint32_t timenow, region_type* region,
+	size_t* used)
+{
+	size_t i;
+	uint32_t* ttl = (uint32_t*)region_alloc(region, sizeof(uint32_t));
+	struct packed_rrset_data* data = (struct packed_rrset_data*)
+		key->entry.data;
+	*num_rrs += data->count;
+	if(!ttl) return 0;
+	*ttl = data->ttl - timenow;
+	for(i=0; i<data->count; i++) {
+		if(max - *used < 3) return 0;
+		/* no compression of dnames yet */
+		iov[*used].iov_base = (void*)key->rk.dname;
+		iov[*used].iov_len = key->rk.dname_len + 4;
+		iov[*used+1].iov_base = (void*)ttl;
+		iov[*used+1].iov_len = sizeof(uint32_t);
+		iov[*used+2].iov_base = (void*)data->rr_data[i];
+		iov[*used+2].iov_len = data->rr_len[i];
+		*used += 3;
+	}
+
+	return 1;
+}
+
+/** store msg section in iov vector */
+static int
+insert_section(struct reply_info* rep, size_t num_rrsets, uint16_t* num_rrs,
+	struct iovec* iov, size_t max, size_t rrsets_before,
+	uint32_t timenow, region_type* region, size_t* used)
+{
+	size_t i;
+	*num_rrs = 0;
+	for(i=0; i<num_rrsets; i++) {
+		if(!packed_rrset_iov(rep->rrsets[rrsets_before+i], iov,
+			max, num_rrs, timenow, region, used))
+			return 0;
+	}
+	*num_rrs = htons(*num_rrs);
+	return 1;
+}
+
+size_t reply_info_iov_regen(struct query_info* qinfo, struct reply_info* rep, 
+	uint16_t id, uint16_t flags, struct iovec* iov, size_t max, 
+	uint32_t timenow, region_type* region)
+{
+	size_t used;
+	uint16_t* hdr = (uint16_t*)region_alloc(region, sizeof(uint16_t)*4);
+	if(!hdr) return 0;
+	if(max<3) return 0;
+	flags = htons(flags);
+	iov[0].iov_base = (void*)&id;
+	iov[0].iov_len = sizeof(uint16_t);
+	iov[1].iov_base = (void*)&flags;
+	iov[1].iov_len = sizeof(uint16_t);
+	iov[2].iov_base = (void*)&hdr[0];
+	iov[2].iov_len = sizeof(uint16_t)*4;
+	hdr[0] = htons(rep->qdcount);
+	used=3;
+
+	/* insert query section */
+	if(rep->qdcount) {
+		uint16_t* qt = (uint16_t*)region_alloc(region,sizeof(uint16_t));
+		uint16_t* qc = (uint16_t*)region_alloc(region,sizeof(uint16_t));
+		if(!qt || !qc) return 0;
+		if(max-used < 3) return 0;
+		iov[used].iov_base = (void*)qinfo->qname;
+		iov[used].iov_len = qinfo->qnamesize;
+		*qt = htons(qinfo->qtype);
+		*qc = htons(qinfo->qclass);
+		iov[used+1].iov_base = (void*)qt;
+		iov[used+1].iov_len = sizeof(uint16_t);
+		iov[used+2].iov_base = (void*)qc;
+		iov[used+2].iov_len = sizeof(uint16_t);
+		used += 3;
+	}
+
+	/* insert answer section */
+	if(!insert_section(rep, rep->an_numrrsets, &hdr[1], iov, max, 
+		0, timenow, region, &used))
+		return 0;
+
+	/* insert auth section */
+	if(!insert_section(rep, rep->ns_numrrsets, &hdr[2], iov, max, 
+		rep->an_numrrsets, timenow, region, &used))
+		return 0;
+
+	/* insert add section */
+	if(!insert_section(rep, rep->ar_numrrsets, &hdr[3], iov, max, 
+		rep->an_numrrsets + rep->ns_numrrsets, timenow, region, &used))
+		return 0;
+
+	return used;
+}
+
 void 
 reply_info_answer_iov(struct reply_info* rep, uint16_t qid,
         uint16_t qflags, struct comm_reply* comrep, int cached)

@@ -45,6 +45,8 @@
 #include "util/data/packed_rrset.h"
 struct comm_reply;
 struct alloc_cache;
+struct iovec;
+struct region;
 
 /**
  * Structure to store query information that makes answers to queries
@@ -247,6 +249,22 @@ hashvalue_t query_info_hash(struct query_info *q);
  */
 void reply_info_answer(struct reply_info* rep, uint16_t qflags, 
 	ldns_buffer* buf);
+
+/**
+ * Regenerate the wireformat from the parsed msg.
+ * @param qinfo: query info to store.
+ * @param rep: reply to store.
+ * @param id: id value to store, network order.
+ * @param flags: flags value to store, host order.
+ * @param iov: iov to store it into (start position to store).
+ * @param max: max that can be stored.
+ * @param timenow: time now, to adjust ttl values.
+ * @param region: to store temporary data in.
+ * @return: number of items stored, 0 on error.
+ */
+size_t reply_info_iov_regen(struct query_info* qinfo, struct reply_info* rep, 
+	uint16_t id, uint16_t flags, struct iovec* iov, size_t max, 
+	uint32_t timenow, struct region* region);
 
 /**
  * Generate and send out answer from reply_info.
