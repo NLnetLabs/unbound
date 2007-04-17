@@ -857,6 +857,7 @@ parse_copy_decompress(ldns_buffer* pkt, struct msg_parse* msg,
 		if((ret=parse_create_rrset(pkt, pset, &data)) != 0)
 			return ret;
 		rep->rrsets[i]->entry.data = (void*)data;
+		rep->rrsets[i]->entry.hash = pset->hash;
 
 		pset = pset->rrset_all_next;
 	}
