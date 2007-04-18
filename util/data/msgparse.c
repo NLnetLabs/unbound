@@ -47,33 +47,17 @@
 /** smart comparison of (compressed, valid) dnames from packet. */
 static int
 smart_compare(ldns_buffer* pkt, uint8_t* dnow, 
-	uint8_t *dprfirst, uint8_t* dprlast)
+	uint8_t* dprfirst, uint8_t* dprlast)
 {
-	if( (*dnow & 0xc0) == 0xc0) {
+	if(LABEL_IS_PTR(*dnow)) {
 		/* ptr points to a previous dname */
-		uint8_t* p = ldns_buffer_at(pkt, (dnow[0]&0x3f)<<8 | dnow[1]);
+		uint8_t* p = ldns_buffer_at(pkt, PTR_OFFSET(dnow[0], dnow[1]));
 		if( p == dprfirst || p == dprlast )
 			return 0;
 		/* prev dname is also a ptr, both ptrs are the same. */
-		/* if( (*dprfirst & 0xc0) == 0xc0 &&
-			dprfirst[0] == dnow[0] && dprfirst[1] == dnow[1])
-			return 0; */
-		if( (*dprlast & 0xc0) == 0xc0 &&
+		if(LABEL_IS_PTR(*dprlast) &&
 			dprlast[0] == dnow[0] && dprlast[1] == dnow[1])
 			return 0;
-	/* checks for prev dnames pointing forwards in the packet
-	} else {
-		if( (*dprfirst & 0xc0) == 0xc0 ) {
-			if(ldns_buffer_at(pkt, (dprfirst[0]&0x3f)<<8 | 
-				dprfirst[1]) == dnow)
-			return 0;
-		}
-		if( (*dprlast & 0xc0) == 0xc0 ) {
-			if(ldns_buffer_at(pkt, (dprlast[0]&0x3f)<<8 | 
-				dprlast[1]) == dnow)
-			return 0;
-		}
-	*/
 	}
 	return dname_pkt_compare(pkt, dnow, dprlast);
 }
@@ -104,7 +88,7 @@ nsec_at_apex(ldns_buffer* pkt)
 		/* nsec type bitmap contains items */
 		uint8_t win, blen, bits;
 		/* need: windownum, bitmap len, firstbyte */
-		if(ldns_buffer_position(pkt)+3 <= pos+rdatalen) {
+		if(ldns_buffer_position(pkt)+3 > pos+rdatalen) {
 			ldns_buffer_set_position(pkt, pos);
 			return 0; /* malformed nsec */
 		}
@@ -277,10 +261,102 @@ new_rrset(struct msg_parse* msg, uint8_t* dname, size_t dnamelen,
 	p->rrset_class = dclass;
 	p->flags = rrset_flags;
 	p->rr_count = 0;
+	p->size = 0;
 	p->rr_first = 0;
 	p->rr_last = 0;
 	return p;
 }
+
+size_t
+get_rdf_size(ldns_rdf_type rdf)
+{
+	switch(rdf) {
+		case LDNS_RDF_TYPE_CLASS:
+		case LDNS_RDF_TYPE_ALG:
+		case LDNS_RDF_TYPE_INT8:
+			return 1;
+			break;
+		case LDNS_RDF_TYPE_INT16:
+		case LDNS_RDF_TYPE_TYPE:
+		case LDNS_RDF_TYPE_CERT_ALG:
+			return 2;
+			break;
+		case LDNS_RDF_TYPE_INT32:
+		case LDNS_RDF_TYPE_TIME:
+		case LDNS_RDF_TYPE_A:
+		case LDNS_RDF_TYPE_PERIOD:
+			return 4;
+			break;
+		case LDNS_RDF_TYPE_TSIGTIME:
+			return 6;
+			break;
+		case LDNS_RDF_TYPE_AAAA:
+			return 16;
+			break;
+		default:
+			log_assert(false); /* add type above */
+			/* only types that appear before a domain  *
+			 * name are needed. rest is simply copied. */
+	}
+	return 0;
+}
+
+/** calculate the size of one rr */
+static int
+calc_size(ldns_buffer* pkt, uint16_t type, struct rr_parse* rr)
+{
+	const ldns_rr_descriptor* desc;
+	uint16_t pkt_len; /* length of rr inside the packet */
+	rr->size = sizeof(uint16_t); /* the rdatalen */
+	ldns_buffer_skip(pkt, 4); /* skip ttl */
+	pkt_len = ldns_buffer_read_u16(pkt);
+	if(ldns_buffer_remaining(pkt) < pkt_len)
+		return 0;
+	desc = ldns_rr_descript(type);
+	if(pkt_len > 0 && desc->_dname_count > 0) {
+		int count = (int)desc->_dname_count;
+		int rdf = 0;
+		size_t len;
+		size_t oldpos;
+		/* skip first part. */
+		while(pkt_len > 0 && count) {
+			switch(desc->_wireformat[rdf]) {
+			case LDNS_RDF_TYPE_DNAME:
+				/* decompress every domain name */
+				oldpos = ldns_buffer_position(pkt);
+				if((len = pkt_dname_len(pkt)) == 0)
+					return 0; /* malformed dname */
+				if(ldns_buffer_position(pkt)-oldpos > pkt_len)
+					return 0; /* dname exceeds rdata */
+				pkt_len -= ldns_buffer_position(pkt)-oldpos;
+				rr->size += len;
+				count--;
+				len = 0;
+				break;
+			case LDNS_RDF_TYPE_STR:
+				if(pkt_len < 1)
+					return 0; /* len byte exceeds rdata */
+				len = ldns_buffer_current(pkt)[0] + 1;
+				break;
+			default:
+				len = get_rdf_size(desc->_wireformat[rdf]);
+			}
+			if(len) {
+				if(pkt_len < len)
+					return 0; /* exceeds rdata */
+				pkt_len -= len;
+				ldns_buffer_skip(pkt, (ssize_t)len);
+				rr->size += len;
+			}
+			rdf++;
+		}
+	}
+	/* remaining rdata */
+	rr->size += pkt_len;
+	ldns_buffer_skip(pkt, (ssize_t)pkt_len);
+	return 1;
+}
+
 
 /** Add rr (from packet here) to rrset, skips rr */
 static int
@@ -288,32 +364,40 @@ add_rr_to_rrset(struct rrset_parse* rrset, ldns_buffer* pkt,
 	region_type* region, ldns_pkt_section section)
 {
 	uint16_t rdatalen;
+	struct rr_parse* rr;
 	/* check section of rrset. */
 	if(rrset->section != section) {
-		/* silently drop it */
+		/* silently drop it - it is a security problem, since
+		 * trust in rr data depends on the section it is in. 
+		 * the less trustworthy part is discarded. */
 		verbose(VERB_DETAIL, "Packet contains rrset data in "
 			"multiple sections, dropped last part.");
-	} else {
-		/* create rr */
-		struct rr_parse* rr = region_alloc(region, sizeof(*rr));
-		if(!rr) return LDNS_RCODE_SERVFAIL;
-		rr->ttl_data = ldns_buffer_current(pkt);
-		rr->next = 0;
-		if(rrset->rr_last)
-			rrset->rr_last->next = rr;
-		else	rrset->rr_first = rr;
-		rrset->rr_last = rr;
-		rrset->rr_count++;
-	}
+		/* forwards */
+		if(ldns_buffer_remaining(pkt) < 6) /* ttl + rdatalen */
+			return LDNS_RCODE_FORMERR;
+		ldns_buffer_skip(pkt, 4); /* ttl */
+		rdatalen = ldns_buffer_read_u16(pkt);
+		if(ldns_buffer_remaining(pkt) < rdatalen)
+			return LDNS_RCODE_FORMERR;
+		ldns_buffer_skip(pkt, (ssize_t)rdatalen);
+		return 0;
+	} 
+	/* create rr */
+	if(!(rr = (struct rr_parse*)region_alloc(region, sizeof(*rr))))
+		return LDNS_RCODE_SERVFAIL;
+	rr->ttl_data = ldns_buffer_current(pkt);
+	rr->next = 0;
+	if(rrset->rr_last)
+		rrset->rr_last->next = rr;
+	else	rrset->rr_first = rr;
+	rrset->rr_last = rr;
+	rrset->rr_count++;
 
-	/* forwards */
-	if(ldns_buffer_remaining(pkt) < 6) /* ttl + rdatalen */
+	/* calc decompressed size */
+	if(!calc_size(pkt, ntohs(rrset->type), rr))
 		return LDNS_RCODE_FORMERR;
-	ldns_buffer_skip(pkt, 4); /* ttl */
-	rdatalen = ldns_buffer_read_u16(pkt);
-	if(ldns_buffer_remaining(pkt) < rdatalen)
-		return LDNS_RCODE_FORMERR;
-	ldns_buffer_skip(pkt, (ssize_t)rdatalen);
+	rrset->size += rr->size;
+
 	return 0;
 }
 
@@ -357,21 +441,20 @@ parse_section(ldns_buffer* pkt, struct msg_parse* msg, region_type* region,
 		ldns_buffer_read(pkt, &dclass, sizeof(dclass));
 
 		/* see if it is part of an existing RR set */
-		if((rrset = find_rrset(msg, pkt, dname, dnamelen, type, dclass,
+		if(!(rrset = find_rrset(msg, pkt, dname, dnamelen, type, dclass,
 			&hash, &rrset_flags, &prev_dname_f, &prev_dname_l, 
 			&prev_dnamelen, &prev_type, &prev_dclass, 
-			&rrset_prev)) != 0) {
-			/* check if it fits the existing rrset */
-			/* add to rrset. */
-		} else {
+			&rrset_prev))) {
 			/* it is a new RR set. hash&flags already calculated.*/
 			(*num_rrsets)++;
 			rrset = new_rrset(msg, dname, dnamelen, type, dclass,
 				hash, rrset_flags, section, region);
-			if(!rrset) return LDNS_RCODE_SERVFAIL;
+			if(!rrset) 
+				return LDNS_RCODE_SERVFAIL;
 			rrset_prev = rrset;
 		}
-		if((r=add_rr_to_rrset(rrset, pkt, region, section)))
+		/* add to rrset. */
+		if((r=add_rr_to_rrset(rrset, pkt, region, section)) != 0)
 			return r;
 	}
 	return 0;

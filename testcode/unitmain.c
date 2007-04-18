@@ -211,13 +211,11 @@ main(int argc, char* argv[])
 	}
 	printf("Start of %s unit test.\n", PACKAGE_STRING);
 	checklock_start();
-	/*
 	net_test();
 	alloc_test();
 	msgreply_test();
 	lruhash_test();
 	slabhash_test();
-	*/
 	msgparse_test();
 	checklock_stop();
 	printf("%d tests succeeded\n", testcount);

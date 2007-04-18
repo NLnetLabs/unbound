@@ -11,3 +11,4 @@ o possible optimization, so that precious id number resource is not depleted
   by parsing of messages. Delay malloc, as above, or try to reverse release
   special id numbers, and if you release the next_id number for the thread
   it reuses that id number.
+o calculate rdata size during parse step, instead of delay until copy.

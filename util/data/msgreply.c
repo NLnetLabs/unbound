@@ -55,7 +55,8 @@ static uint8_t*
 copy_uncompr(uint8_t* dname, size_t len) 
 {
 	uint8_t* p = (uint8_t*)malloc(len);
-	if(!p) return 0;
+	if(!p) 
+		return 0;
 	memmove(p, dname, len);
 	return p;
 }
@@ -79,7 +80,7 @@ static int
 parse_create_repinfo(struct msg_parse* msg, struct reply_info** rep)
 {
 	/* rrset_count-1 because the first ref is part of the struct. */
-	*rep = malloc(sizeof(struct reply_info) + 
+	*rep = (struct reply_info*)malloc(sizeof(struct reply_info) + 
 		sizeof(struct rrset_ref) * (msg->rrset_count-1)  +
 		sizeof(struct ub_packed_rrset_key*) * msg->rrset_count);
 	if(!*rep) return 0;
@@ -118,119 +119,6 @@ parse_alloc_rrset_keys(struct msg_parse* msg, struct reply_info* rep,
 	return 1;
 }
 
-/**
- * Obtain size in the packet of an rr type, that is before dname type.
- * Do TYPE_DNAME, and type STR, yourself.
- * @param rdf: the rdf type from the descriptor.
- * @return: size in octets. 0 on failure.
- */
-static size_t
-get_rdf_size(ldns_rdf_type rdf)
-{
-	switch(rdf) {
-		case LDNS_RDF_TYPE_CLASS:
-		case LDNS_RDF_TYPE_ALG:
-		case LDNS_RDF_TYPE_INT8:
-			return 1;
-			break;
-		case LDNS_RDF_TYPE_INT16:
-		case LDNS_RDF_TYPE_TYPE:
-		case LDNS_RDF_TYPE_CERT_ALG:
-			return 2;
-			break;
-		case LDNS_RDF_TYPE_INT32:
-		case LDNS_RDF_TYPE_TIME:
-		case LDNS_RDF_TYPE_A:
-		case LDNS_RDF_TYPE_PERIOD:
-			return 4;
-			break;
-		case LDNS_RDF_TYPE_TSIGTIME:
-			return 6;
-			break;
-		case LDNS_RDF_TYPE_AAAA:
-			return 16;
-			break;
-		default:
-			log_assert(false); /* add type above */
-			/* only types that appear before a domain  *
-			 * name are needed. rest is simply copied. */
-	}
-	return 0;
-}
-
-/** calculate the size of one rr */
-static int
-calc_size(ldns_buffer* pkt, uint16_t type, struct rr_parse* rr)
-{
-	const ldns_rr_descriptor* desc;
-	uint16_t pkt_len; /* length of rr inside the packet */
-	rr->size = sizeof(uint16_t); /* the rdatalen */
-	ldns_buffer_set_position(pkt, (size_t)(rr->ttl_data - 
-		ldns_buffer_begin(pkt) + 4)); /* skip ttl */
-	pkt_len = ldns_buffer_read_u16(pkt);
-	if(ldns_buffer_remaining(pkt) < pkt_len)
-		return 0;
-	desc = ldns_rr_descript(type);
-	if(pkt_len > 0 && desc->_dname_count > 0) {
-		int count = (int)desc->_dname_count;
-		int rdf = 0;
-		size_t len;
-		size_t oldpos;
-		/* skip first part. */
-		while(pkt_len > 0 && count) {
-			switch(desc->_wireformat[rdf]) {
-			case LDNS_RDF_TYPE_DNAME:
-				/* decompress every domain name */
-				oldpos = ldns_buffer_position(pkt);
-				if((len = pkt_dname_len(pkt)) == 0)
-					return 0; /* malformed dname */
-				if(ldns_buffer_position(pkt)-oldpos > pkt_len)
-					return 0; /* dname exceeds rdata */
-				pkt_len -= ldns_buffer_position(pkt)-oldpos;
-				rr->size += len;
-				count--;
-				len = 0;
-				break;
-			case LDNS_RDF_TYPE_STR:
-				if(pkt_len < 1)
-					return 0; /* len byte exceeds rdata */
-				len = ldns_buffer_current(pkt)[0] + 1;
-				break;
-			default:
-				len = get_rdf_size(desc->_wireformat[rdf]);
-			}
-			if(len) {
-				if(pkt_len < len)
-					return 0; /* exceeds rdata */
-				pkt_len -= len;
-				ldns_buffer_skip(pkt, (ssize_t)len);
-				rr->size += len;
-			}
-			rdf++;
-		}
-	}
-	/* remaining rdata */
-	rr->size += pkt_len;
-	return 1;
-}
-
-/** calculate size of rrs in rrset, 0 on parse failure */
-static int
-parse_rr_size(ldns_buffer* pkt, struct rrset_parse* pset, size_t* allocsize)
-{
-	struct rr_parse* p = pset->rr_first;
-	*allocsize = 0;
-	/* size of rrs */
-	while(p) {
-		if(!calc_size(pkt, ntohs(pset->type), p))
-			return 0;
-		*allocsize += p->size;
-		p = p->next;
-	}
-	/* TODO calc size of rrsig */
-	return 1;
-}
-
 /** do the rdata copy */
 static int
 rdata_copy(ldns_buffer* pkt, struct rrset_parse* pset,
@@ -241,12 +129,11 @@ rdata_copy(ldns_buffer* pkt, struct rrset_parse* pset,
 	const ldns_rr_descriptor* desc;
 	ldns_buffer_set_position(pkt, (size_t)
 		(rr->ttl_data - ldns_buffer_begin(pkt)));
-	if(ldns_buffer_remaining(pkt) < 6)
-		return 0;
+	log_assert(ldns_buffer_remaining(pkt) >= 6 /* ttl + rdatalen */);
 	ttl = ldns_buffer_read_u32(pkt);
 	if(ttl < data->ttl)
 		data->ttl = ttl;
-	/* insert decompressed size into memory rdata len */
+	/* insert decompressed size into rdata len stored in memory */
 	pkt_len = htons(rr->size);
 	memmove(to, &pkt_len, sizeof(uint16_t));
 	to += 2;
@@ -331,13 +218,10 @@ static int
 parse_create_rrset(ldns_buffer* pkt, struct rrset_parse* pset,
 	struct packed_rrset_data** data)
 {
-	/* calculate sizes of rr rdata */
-	size_t allocsize;
-	if(!parse_rr_size(pkt, pset, &allocsize))
-		return LDNS_RCODE_FORMERR;
 	/* allocate */
 	*data = malloc(sizeof(struct packed_rrset_data) + pset->rr_count* 
-		(sizeof(size_t)+sizeof(uint8_t*)+sizeof(uint32_t)) + allocsize);
+		(sizeof(size_t)+sizeof(uint8_t*)+sizeof(uint32_t)) + 
+		pset->size);
 	if(!*data)
 		return LDNS_RCODE_SERVFAIL;
 	/* copy & decompress */
@@ -366,7 +250,8 @@ parse_copy_decompress(ldns_buffer* pkt, struct msg_parse* msg,
 	for(i=0; i<rep->rrset_count; i++) {
 		rep->rrsets[i]->rk.flags = pset->flags;
 		rep->rrsets[i]->rk.dname_len = pset->dname_len;
-		rep->rrsets[i]->rk.dname = malloc(pset->dname_len + 4);
+		rep->rrsets[i]->rk.dname = (uint8_t*)malloc(
+			pset->dname_len + 4 /* size of type and class */ );
 		if(!rep->rrsets[i]->rk.dname)
 			return LDNS_RCODE_SERVFAIL;
 		/** copy & decompress dname */
@@ -416,9 +301,11 @@ int reply_info_parse(ldns_buffer* pkt, struct alloc_cache* alloc,
 	
 	qinf->qname = NULL;
 	*rep = NULL;
-	msg = region_alloc(region, sizeof(*msg));
-	if(!msg)
-		goto malloc_error;
+	if(!(msg = region_alloc(region, sizeof(*msg)))) {
+		region_free_all(region);
+		region_destroy(region);
+		return LDNS_RCODE_SERVFAIL;
+	}
 	memset(msg, 0, sizeof(*msg));
 	
 	log_assert(ldns_buffer_position(pkt) == 0);
@@ -430,7 +317,6 @@ int reply_info_parse(ldns_buffer* pkt, struct alloc_cache* alloc,
 
 	/* parse OK, allocate return structures */
 	/* this also performs dname decompression */
-	*rep = NULL;
 	if((ret = parse_create_msg(pkt, msg, alloc, qinf, rep)) != 0) {
 		query_info_clear(qinf);
 		reply_info_parsedelete(*rep, alloc);
@@ -444,10 +330,6 @@ int reply_info_parse(ldns_buffer* pkt, struct alloc_cache* alloc,
 	region_free_all(region);
 	region_destroy(region);
 	return 0;
-malloc_error:
-	region_free_all(region);
-	region_destroy(region);
-	return LDNS_RCODE_SERVFAIL;
 }
 
 void 

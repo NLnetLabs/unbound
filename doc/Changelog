@@ -1,3 +1,7 @@
+18 April 2007: Wouter
+	- review of msgparse code.
+	- smaller test cases.
+
 17 April 2007: Wouter
 	- copy and decompress dnames.
 	- store calculated hash value too.

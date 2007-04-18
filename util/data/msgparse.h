@@ -117,12 +117,14 @@ struct rrset_parse {
 	size_t dname_len;
 	/** type, network order. */
 	uint16_t type;
-	/** class, network order. name so that it is not a c++ keyword. */
+	/** class, network order. var name so that it is not a c++ keyword. */
 	uint16_t rrset_class;
 	/** the flags for the rrset, like for packedrrset */
 	uint32_t flags;
 	/** number of RRs in the rr list */
 	size_t rr_count;
+	/** sum of RR rdata sizes */
+	size_t size;
 	/** linked list of RRs in this rrset. */
 	struct rr_parse* rr_first;
 	/** last in list of RRs in this rrset. */
@@ -144,6 +146,20 @@ struct rr_parse {
 	/** next in list of RRs. */
 	struct rr_parse* next;
 };
+
+/** Check if label length is first octet of a compression pointer, pass u8. */
+#define LABEL_IS_PTR(x) ( ((x)&0xc0) == 0xc0 )
+/** Calculate destination offset of a compression pointer. pass first and
+ * second octets of the compression pointer. */
+#define PTR_OFFSET(x, y) ( ((x)&0x3f)<<8 | (y) )
+
+/**
+ * Obtain size in the packet of an rr type, that is before dname type.
+ * Do TYPE_DNAME, and type STR, yourself. Gives size for most regular types.
+ * @param rdf: the rdf type from the descriptor.
+ * @return: size in octets. 0 on failure.
+ */
+size_t get_rdf_size(ldns_rdf_type rdf);
 
 /**
  * Parse the packet.

@@ -41,6 +41,7 @@
 
 #include "config.h"
 #include "util/data/dname.h"
+#include "util/data/msgparse.h"
 #include "util/log.h"
 #include "util/storage/lookup3.h"
 
@@ -54,7 +55,7 @@ query_dname_len(ldns_buffer* query)
 		if(ldns_buffer_remaining(query) < 1)
 			return 0; /* parse error, need label len */
 		labellen = ldns_buffer_read_u8(query);
-		if(labellen & 0xC0)
+		if(labellen&0xc0)
 			return 0; /* no compression allowed in queries */
 		len += labellen + 1;
 		if(len > LDNS_MAX_DOMAINLEN)
@@ -152,12 +153,12 @@ pkt_dname_len(ldns_buffer* pkt)
 		if(ldns_buffer_remaining(pkt) < 1)
 			return 0;
 		labellen = ldns_buffer_read_u8(pkt);
-		if( (labellen & 0xc0) == 0xc0 ) {
+		if(LABEL_IS_PTR(labellen)) {
 			/* compression ptr */
-			uint16_t ptr = (labellen & 0x3f) << 8;
+			uint16_t ptr;
 			if(ldns_buffer_remaining(pkt) < 1)
 				return 0;
-			ptr |= ldns_buffer_read_u8(pkt);
+			ptr = PTR_OFFSET(labellen, ldns_buffer_read_u8(pkt));
 			if(loopcheck(loop, ptr))
 				return 0; /* loop! */
 			if(ldns_buffer_limit(pkt) <= ptr)
@@ -196,13 +197,13 @@ dname_pkt_compare(ldns_buffer* pkt, uint8_t* d1, uint8_t* d2)
 	len2 = *d2++;
 	while( len1 != 0 || len2 != 0 ) {
 		/* resolve ptrs */
-		if( (len1 & 0xc0) == 0xc0) {
-			d1 = ldns_buffer_at(pkt, (len1&0x3f)<<8 | *d1);
+		if(LABEL_IS_PTR(len1)) {
+			d1 = ldns_buffer_at(pkt, PTR_OFFSET(len1, *d1));
 			len1 = *d1++;
 			continue;
 		}
-		if( (len2 & 0xc0) == 0xc0) {
-			d2 = ldns_buffer_at(pkt, (len2&0x3f)<<8 | *d2);
+		if(LABEL_IS_PTR(len2)) {
+			d2 = ldns_buffer_at(pkt, PTR_OFFSET(len2, *d2));
 			len2 = *d2++;
 			continue;
 		}
@@ -261,9 +262,9 @@ dname_pkt_hash(ldns_buffer* pkt, uint8_t* dname, hashvalue_t h)
 	/* preserve case of query, make hash label by label */
 	lablen = *dname++;
 	while(lablen) {
-		if((lablen & 0xc0) == 0xc0) {
+		if(LABEL_IS_PTR(lablen)) {
 			/* follow pointer */
-			dname = ldns_buffer_at(pkt, (lablen&0x3f)<<8 | *dname);
+			dname = ldns_buffer_at(pkt, PTR_OFFSET(lablen, *dname));
 			lablen = *dname++;
 			continue;
 		}
@@ -285,9 +286,9 @@ void dname_pkt_copy(ldns_buffer* pkt, uint8_t* to, uint8_t* dname)
 	uint8_t lablen;
 	lablen = *dname++;
 	while(lablen) {
-		if((lablen & 0xc0) == 0xc0) {
+		if(LABEL_IS_PTR(lablen)) {
 			/* follow pointer */
-			dname = ldns_buffer_at(pkt, (lablen&0x3f)<<8 | *dname);
+			dname = ldns_buffer_at(pkt, PTR_OFFSET(lablen, *dname));
 			lablen = *dname++;
 			continue;
 		}

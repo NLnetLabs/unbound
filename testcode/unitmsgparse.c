@@ -293,7 +293,7 @@ testfromfile(ldns_buffer* pkt, struct alloc_cache* alloc, ldns_buffer* out,
 		perror("fname");
 		return;
 	}
-	while(fgets(buf, sizeof(buf), in)) {
+	while(fgets(buf, (int)sizeof(buf), in)) {
 		if(buf[0] == ';') /* comment */
 			continue;
 		if(strlen(buf) < 10) /* skip pcat line numbers. */
@@ -320,6 +320,8 @@ void msgparse_test()
 	printf("testmsgparse\n");
 	simpletest(pkt, &alloc, out);
 	testfromfile(pkt, &alloc, out, "testdata/test_packets.1");
+	testfromfile(pkt, &alloc, out, "testdata/test_packets.2");
+	testfromfile(pkt, &alloc, out, "testdata/test_packets.3");
 
 	/* cleanup */
 	alloc_clear(&alloc);
