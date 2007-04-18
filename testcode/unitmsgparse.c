@@ -298,7 +298,10 @@ testfromfile(ldns_buffer* pkt, struct alloc_cache* alloc, ldns_buffer* out,
 			continue;
 		if(strlen(buf) < 10) /* skip pcat line numbers. */
 			continue;
-		if(0) printf("test no %d\n", no);
+		if(0) {
+			printf("test no %d: %s", no, buf);
+			fflush(stdout);
+		}
 		testpkt(pkt, alloc, out, buf);
 		no++;
 	}

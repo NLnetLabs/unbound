@@ -117,6 +117,8 @@ alloc_clear(struct alloc_cache* alloc)
 		p = alloc->quar;
 		while(p) {
 			np = alloc_special_next(p);
+			/* deinit special type */
+			lock_rw_destroy(&p->entry.lock);
 			free(p);
 			p = np;
 		}
