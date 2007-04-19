@@ -95,7 +95,7 @@ void log_ident_set(const char* id)
 void
 log_vmsg(const char* type, const char *format, va_list args)
 {
-	char message[MAXSYSLOGMSGLEN];
+	char message[MAXSYSLOGMSGLEN * 10];
 	unsigned int* tid = (unsigned int*)ub_thread_key_get(logkey);
 	vsnprintf(message, sizeof(message), format, args);
 	fprintf(logfile, "[%d] %s[%d:%x] %s: %s\n",

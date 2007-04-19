@@ -178,8 +178,8 @@ test_buffers(ldns_buffer* pkt, ldns_buffer* out)
 	if(ldns_buffer_limit(pkt) == ldns_buffer_limit(out) &&
 		memcmp(ldns_buffer_begin(pkt), ldns_buffer_begin(out),
 			ldns_buffer_limit(pkt)) == 0) {
-		if(1) printf("binary the same (length=%d)\n",
-				ldns_buffer_limit(pkt));
+		if(1) printf("binary the same (length=%u)\n",
+				(unsigned)ldns_buffer_limit(pkt));
 		return 1;
 	}
 	/* check if it 'means the same' */
@@ -261,7 +261,8 @@ testpkt(ldns_buffer* pkt, struct alloc_cache* alloc, ldns_buffer* out,
 			timenow, region);
 		unit_assert(sz != 0); /* udp packets should fit in 1024 iov */
 		write_iov_buffer(out, iov, sz);
-		printf("iov len outlen %d %d\n", sz, ldns_buffer_limit(out));
+		printf("iov len outlen %u %u\n", (unsigned)sz, 
+			(unsigned)ldns_buffer_limit(out));
 		test_buffers(pkt, out);
 	} 
 
