@@ -1,3 +1,12 @@
+19 April 2007: Wouter
+	- fix unit test to actually to tests.
+	- fix write iov helper, and fakevent code.
+	- extra builtin testcase (small packet).
+	- ttl converted to network format in packets.
+	- flags converted correctly
+	- rdatalen off by 2 error fixup.
+	- uses less iov space for header.
+
 18 April 2007: Wouter
 	- review of msgparse code.
 	- smaller test cases.

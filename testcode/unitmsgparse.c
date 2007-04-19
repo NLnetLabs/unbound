@@ -85,7 +85,9 @@ static void hex_to_buf(ldns_buffer* pkt, const char* hex)
 		skip_whites(&p);
 	}
 	ldns_buffer_flip(pkt);
-	if(0) printf("packet size %u\n", (unsigned)ldns_buffer_limit(pkt));
+	if(0) {
+		printf("packet size %u\n", (unsigned)ldns_buffer_limit(pkt));
+	}
 }
 
 /** match two rr lists */
@@ -102,6 +104,13 @@ match_list(ldns_rr_list* q, ldns_rr_list *p)
 			verbose(3, "rr %d different", i);
 			return 0;
 		}
+		/* and check the ttl */
+		if(ldns_rr_ttl(ldns_rr_list_rr(q, i)) !=
+			ldns_rr_ttl(ldns_rr_list_rr(p, i))) {
+			verbose(3, "rr %d ttl different", i);
+			return 0;
+		}
+
 	}
 	return 1;
 }
@@ -168,11 +177,28 @@ test_buffers(ldns_buffer* pkt, ldns_buffer* out)
 	/* check binary same */
 	if(ldns_buffer_limit(pkt) == ldns_buffer_limit(out) &&
 		memcmp(ldns_buffer_begin(pkt), ldns_buffer_begin(out),
-			ldns_buffer_limit(pkt)) == 0)
+			ldns_buffer_limit(pkt)) == 0) {
+		if(1) printf("binary the same (length=%d)\n",
+				ldns_buffer_limit(pkt));
 		return 1;
+	}
 	/* check if it 'means the same' */
 	s1 = ldns_buffer2pkt_wire(&p1, pkt);
-	s2 = ldns_buffer2pkt_wire(&p2, pkt);
+	s2 = ldns_buffer2pkt_wire(&p2, out);
+	if(1) {
+		log_hex("orig in hex", ldns_buffer_begin(pkt),
+			ldns_buffer_limit(pkt));
+		log_hex("unbound out in hex", ldns_buffer_begin(out),
+			ldns_buffer_limit(out));
+		printf("\npacket from unbound (%d):\n", 
+			(int)ldns_buffer_limit(out));
+		ldns_pkt_print(stdout, p2);
+
+		printf("\npacket original (%d):\n", 
+			(int)ldns_buffer_limit(pkt));
+		ldns_pkt_print(stdout, p1);
+		printf("\n");
+	}
 	if(s1 != s2) {
 		/* oops! */
 		printf("input ldns parse: %s, output ldns parse: %s.\n",
@@ -193,7 +219,7 @@ checkformerr(ldns_buffer* pkt)
 {
 	ldns_pkt* p;
 	ldns_status status = ldns_buffer2pkt_wire(&p, pkt);
-	if(0) printf("formerr, ldns parse is: %s\n",
+	if(1) printf("formerr, ldns parse is: %s\n",
 			ldns_get_errorstr_by_id(status));
 	if(status == LDNS_STATUS_OK) {
 		printf("Formerr, but ldns gives packet:\n");
@@ -222,9 +248,10 @@ testpkt(ldns_buffer* pkt, struct alloc_cache* alloc, ldns_buffer* out,
 	hex_to_buf(pkt, hex);
 	memmove(&id, ldns_buffer_begin(pkt), sizeof(id));
 	memmove(&flags, ldns_buffer_at(pkt, 2), sizeof(flags));
+	flags = ntohs(flags);
 	ret = reply_info_parse(pkt, alloc, &qi, &rep);
 	if(ret != 0) {
-		if(0) printf("parse code %d: %s\n", ret, 
+		if(1) printf("parse code %d: %s\n", ret, 
 			ldns_lookup_by_id(ldns_rcodes, ret)->name);
 		if(ret == LDNS_RCODE_FORMERR)
 			checkformerr(pkt);
@@ -234,6 +261,7 @@ testpkt(ldns_buffer* pkt, struct alloc_cache* alloc, ldns_buffer* out,
 			timenow, region);
 		unit_assert(sz != 0); /* udp packets should fit in 1024 iov */
 		write_iov_buffer(out, iov, sz);
+		printf("iov len outlen %d %d\n", sz, ldns_buffer_limit(out));
 		test_buffers(pkt, out);
 	} 
 
@@ -249,6 +277,18 @@ simpletest(ldns_buffer* pkt, struct alloc_cache* alloc, ldns_buffer* out)
 	/* a root query  drill -q - */
 	testpkt(pkt, alloc, out, 
 		" c5 40 01 00 00 01 00 00 00 00 00 00 00 00 02 00 01 ");
+
+	/* very small packet */
+	testpkt(pkt, alloc, out, 
+"; 0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19\n"
+";-- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --\n"
+"74 0c 85 83 00 01 00 00 00 01 00 00 03 62 6c 61 09 6e 6c 6e    ;          1-  20\n"
+"65 74 6c 61 62 73 02 6e 6c 00 00 0f 00 01 09 6e 6c 6e 65 74    ;         21-  40\n"
+"6c 61 62 73 02 6e 6c 00 00 06 00 01 00 00 46 50 00 40 04 6f    ;         41-  60\n"
+"70 65 6e 09 6e 6c 6e 65 74 6c 61 62 73 02 6e 6c 00 0a 68 6f    ;         61-  80\n"
+"73 74 6d 61 73 74 65 72 09 6e 6c 6e 65 74 6c 61 62 73 02 6e    ;         81- 100\n"
+"6c 00 77 a1 02 58 00 00 70 80 00 00 1c 20 00 09 3a 80 00 00    ;        101- 120\n"
+"46 50\n");
 	
 	/* a root reply  drill -w - */
 	testpkt(pkt, alloc, out, 
@@ -281,7 +321,7 @@ simpletest(ldns_buffer* pkt, struct alloc_cache* alloc, ldns_buffer* out)
 	" 64 b9 00 04 c0 3a 80 1e  ");
 }
 
-/** simple test of parsing. */
+/** simple test of parsing, pcat file. */
 static void
 testfromfile(ldns_buffer* pkt, struct alloc_cache* alloc, ldns_buffer* out,
 	const char* fname)
@@ -308,6 +348,31 @@ testfromfile(ldns_buffer* pkt, struct alloc_cache* alloc, ldns_buffer* out,
 	fclose(in);
 }
 
+/** simple test of parsing, drill file. */
+static void
+testfromdrillfile(ldns_buffer* pkt, struct alloc_cache* alloc, 
+	ldns_buffer* out, const char* fname)
+{
+	FILE* in = fopen(fname, "r");
+	char buf[102400];
+	char *np = buf;
+	if(!in) {
+		perror("fname");
+		return;
+	}
+	while(fgets(np, (int)sizeof(buf) - (np-buf), in)) {
+		if(np[0] == ';') /* comment */
+			continue;
+		np = &np[strlen(np)];
+	}
+	if(0) {
+		printf("test %s", buf);
+		fflush(stdout);
+	}
+	testpkt(pkt, alloc, out, buf);
+	fclose(in);
+}
+
 void msgparse_test()
 {
 	ldns_buffer* pkt = ldns_buffer_new(65553);
@@ -319,9 +384,10 @@ void msgparse_test()
 
 	printf("testmsgparse\n");
 	simpletest(pkt, &alloc, out);
-	testfromfile(pkt, &alloc, out, "testdata/test_packets.1");
-	testfromfile(pkt, &alloc, out, "testdata/test_packets.2");
-	testfromfile(pkt, &alloc, out, "testdata/test_packets.3");
+	if(0) testfromdrillfile(pkt, &alloc, out, "blabla");
+	if(0) testfromfile(pkt, &alloc, out, "testdata/test_packets.1");
+	if(0) testfromfile(pkt, &alloc, out, "testdata/test_packets.2");
+	if(0) testfromfile(pkt, &alloc, out, "testdata/test_packets.3");
 
 	/* cleanup */
 	alloc_clear(&alloc);

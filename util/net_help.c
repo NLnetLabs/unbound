@@ -99,10 +99,12 @@ void
 write_iov_buffer(ldns_buffer* buffer, struct iovec* iov, size_t iovlen)
 {
 	size_t i;
+	size_t s = 0;
 	ldns_buffer_clear(buffer);
-	for(i=1; i<iovlen; i++) {
+	for(i=0; i<iovlen; i++) {
 		log_assert(ldns_buffer_position(buffer)+iov[i].iov_len
 			<= ldns_buffer_capacity(buffer));
+		s += iov[i].iov_len;
 		ldns_buffer_write(buffer, iov[i].iov_base, iov[i].iov_len);
 	}
 	ldns_buffer_flip(buffer);

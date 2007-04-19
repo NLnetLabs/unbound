@@ -134,7 +134,8 @@ rdata_copy(ldns_buffer* pkt, struct rrset_parse* pset,
 	if(ttl < data->ttl)
 		data->ttl = ttl;
 	/* insert decompressed size into rdata len stored in memory */
-	pkt_len = htons(rr->size);
+	/* -2 because rdatalen bytes are not included. */
+	pkt_len = htons(rr->size - 2);
 	memmove(to, &pkt_len, sizeof(uint16_t));
 	to += 2;
 	/* read packet rdata len */
@@ -480,7 +481,7 @@ packed_rrset_iov(struct ub_packed_rrset_key* key, struct iovec* iov,
 		key->entry.data;
 	*num_rrs += data->count;
 	if(!ttl) return 0;
-	*ttl = data->ttl - timenow;
+	*ttl = htonl(data->ttl - timenow);
 	for(i=0; i<data->count; i++) {
 		if(max - *used < 3) return 0;
 		/* no compression of dnames yet */
@@ -518,18 +519,15 @@ size_t reply_info_iov_regen(struct query_info* qinfo, struct reply_info* rep,
 	uint32_t timenow, region_type* region)
 {
 	size_t used;
-	uint16_t* hdr = (uint16_t*)region_alloc(region, sizeof(uint16_t)*4);
+	uint16_t* hdr = (uint16_t*)region_alloc(region, sizeof(uint16_t)*6);
 	if(!hdr) return 0;
-	if(max<3) return 0;
-	flags = htons(flags);
-	iov[0].iov_base = (void*)&id;
-	iov[0].iov_len = sizeof(uint16_t);
-	iov[1].iov_base = (void*)&flags;
-	iov[1].iov_len = sizeof(uint16_t);
-	iov[2].iov_base = (void*)&hdr[0];
-	iov[2].iov_len = sizeof(uint16_t)*4;
-	hdr[0] = htons(rep->qdcount);
-	used=3;
+	if(max<1) return 0;
+	hdr[0] = id;
+	hdr[1] = htons(flags);
+	iov[0].iov_base = (void*)&hdr[0];
+	iov[0].iov_len = sizeof(uint16_t)*6;
+	hdr[2] = htons(rep->qdcount);
+	used=1;
 
 	/* insert query section */
 	if(rep->qdcount) {
@@ -549,17 +547,17 @@ size_t reply_info_iov_regen(struct query_info* qinfo, struct reply_info* rep,
 	}
 
 	/* insert answer section */
-	if(!insert_section(rep, rep->an_numrrsets, &hdr[1], iov, max, 
+	if(!insert_section(rep, rep->an_numrrsets, &hdr[3], iov, max, 
 		0, timenow, region, &used))
 		return 0;
 
 	/* insert auth section */
-	if(!insert_section(rep, rep->ns_numrrsets, &hdr[2], iov, max, 
+	if(!insert_section(rep, rep->ns_numrrsets, &hdr[4], iov, max, 
 		rep->an_numrrsets, timenow, region, &used))
 		return 0;
 
 	/* insert add section */
-	if(!insert_section(rep, rep->ar_numrrsets, &hdr[3], iov, max, 
+	if(!insert_section(rep, rep->ar_numrrsets, &hdr[5], iov, max, 
 		rep->an_numrrsets + rep->ns_numrrsets, timenow, region, &used))
 		return 0;
 

@@ -614,7 +614,8 @@ void
 comm_point_send_reply_iov(struct comm_reply* repinfo, struct iovec* iov,
         size_t iovlen)
 {
-	write_iov_buffer(repinfo->c->buffer, iov, iovlen);
+	/* skip tcp len at [0]. */
+	write_iov_buffer(repinfo->c->buffer, iov+1, iovlen-1);
 	comm_point_send_reply(repinfo);
 }
 
