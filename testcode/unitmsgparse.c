@@ -48,6 +48,9 @@
 #include "util/region-allocator.h"
 #include "util/net_help.h"
 
+/** verbose message parse unit test */
+static int vbmp = 0;
+
 /** skip whitespace */
 static void
 skip_whites(const char** p)
@@ -85,7 +88,7 @@ static void hex_to_buf(ldns_buffer* pkt, const char* hex)
 		skip_whites(&p);
 	}
 	ldns_buffer_flip(pkt);
-	if(0) {
+	if(vbmp) {
 		printf("packet size %u\n", (unsigned)ldns_buffer_limit(pkt));
 	}
 }
@@ -178,14 +181,14 @@ test_buffers(ldns_buffer* pkt, ldns_buffer* out)
 	if(ldns_buffer_limit(pkt) == ldns_buffer_limit(out) &&
 		memcmp(ldns_buffer_begin(pkt), ldns_buffer_begin(out),
 			ldns_buffer_limit(pkt)) == 0) {
-		if(1) printf("binary the same (length=%u)\n",
+		if(vbmp) printf("binary the same (length=%u)\n",
 				(unsigned)ldns_buffer_limit(pkt));
 		return 1;
 	}
 	/* check if it 'means the same' */
 	s1 = ldns_buffer2pkt_wire(&p1, pkt);
 	s2 = ldns_buffer2pkt_wire(&p2, out);
-	if(1) {
+	if(vbmp) {
 		log_hex("orig in hex", ldns_buffer_begin(pkt),
 			ldns_buffer_limit(pkt));
 		log_hex("unbound out in hex", ldns_buffer_begin(out),
@@ -219,7 +222,7 @@ checkformerr(ldns_buffer* pkt)
 {
 	ldns_pkt* p;
 	ldns_status status = ldns_buffer2pkt_wire(&p, pkt);
-	if(1) printf("formerr, ldns parse is: %s\n",
+	if(vbmp) printf("formerr, ldns parse is: %s\n",
 			ldns_get_errorstr_by_id(status));
 	if(status == LDNS_STATUS_OK) {
 		printf("Formerr, but ldns gives packet:\n");
@@ -251,7 +254,7 @@ testpkt(ldns_buffer* pkt, struct alloc_cache* alloc, ldns_buffer* out,
 	flags = ntohs(flags);
 	ret = reply_info_parse(pkt, alloc, &qi, &rep);
 	if(ret != 0) {
-		if(1) printf("parse code %d: %s\n", ret, 
+		if(vbmp) printf("parse code %d: %s\n", ret, 
 			ldns_lookup_by_id(ldns_rcodes, ret)->name);
 		if(ret == LDNS_RCODE_FORMERR)
 			checkformerr(pkt);
@@ -261,7 +264,7 @@ testpkt(ldns_buffer* pkt, struct alloc_cache* alloc, ldns_buffer* out,
 			timenow, region);
 		unit_assert(sz != 0); /* udp packets should fit in 1024 iov */
 		write_iov_buffer(out, iov, sz);
-		printf("iov len outlen %u %u\n", (unsigned)sz, 
+		if(vbmp) printf("iov len outlen %u %u\n", (unsigned)sz, 
 			(unsigned)ldns_buffer_limit(out));
 		test_buffers(pkt, out);
 	} 
@@ -339,7 +342,7 @@ testfromfile(ldns_buffer* pkt, struct alloc_cache* alloc, ldns_buffer* out,
 			continue;
 		if(strlen(buf) < 10) /* skip pcat line numbers. */
 			continue;
-		if(0) {
+		if(vbmp) {
 			printf("test no %d: %s", no, buf);
 			fflush(stdout);
 		}
@@ -366,7 +369,7 @@ testfromdrillfile(ldns_buffer* pkt, struct alloc_cache* alloc,
 			continue;
 		np = &np[strlen(np)];
 	}
-	if(0) {
+	if(vbmp) {
 		printf("test %s", buf);
 		fflush(stdout);
 	}
@@ -385,10 +388,10 @@ void msgparse_test()
 
 	printf("testmsgparse\n");
 	simpletest(pkt, &alloc, out);
+	testfromfile(pkt, &alloc, out, "testdata/test_packets.1");
+	testfromfile(pkt, &alloc, out, "testdata/test_packets.2");
+	testfromfile(pkt, &alloc, out, "testdata/test_packets.3");
 	if(0) testfromdrillfile(pkt, &alloc, out, "blabla");
-	if(0) testfromfile(pkt, &alloc, out, "testdata/test_packets.1");
-	if(0) testfromfile(pkt, &alloc, out, "testdata/test_packets.2");
-	if(0) testfromfile(pkt, &alloc, out, "testdata/test_packets.3");
 
 	/* cleanup */
 	alloc_clear(&alloc);

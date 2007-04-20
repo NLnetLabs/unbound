@@ -486,10 +486,9 @@ parse_packet(ldns_buffer* pkt, struct msg_parse* msg, region_type* region)
 	if((ret = parse_section(pkt, msg, region, LDNS_SECTION_ADDITIONAL, 
 		msg->arcount, &msg->ar_rrsets)) != 0)
 		return ret;
-	if(ldns_buffer_remaining(pkt) > 0) {
-		/* spurious data at end of packet. ignore */
-		verbose(VERB_DETAIL, "spurious data at end of packet ignored");
-	}
+	/* if(ldns_buffer_remaining(pkt) > 0) { */
+		/* there is spurious data at end of packet. ignore */
+	/* } */
 	msg->rrset_count = msg->an_rrsets + msg->ns_rrsets + msg->ar_rrsets;
 	return 0;
 }
