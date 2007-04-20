@@ -36,6 +36,28 @@
  * \file
  * Contains message parsing data structures.
  * These point back into the packet buffer.
+ *
+ * During parsing RRSIGS are put together with the rrsets they (claim to) sign.
+ * This process works as follows:
+ *	o if RRSIG follows the data rrset, it is added to the rrset rrsig list.
+ *	o if no matching data rrset is found, the RRSIG becomes a new rrset.
+ *	o If the data rrset later follows the RRSIG
+ *		o See if the RRSIG rrset contains multiple types, and needs to
+ *		  have the rrsig(s) for that data type split off.
+ *		o Put the data rr as data type in the rrset and rrsig in list.
+ *	o RRSIGs are allowed to move to a different section. The section of
+ *	  the data item is used for the final rrset.
+ *	o multiple signatures over an RRset are possible.
+ *
+ * For queries of qtype=RRSIG, some special handling is needed, to avoid
+ * splitting the RRSIG in the answer section.
+ *	o duplicate, not split, RRSIGs from the answer section, if qtype=RRSIG.
+ *	o check for doubles in the rrsig list when adding an RRSIG to data,
+ *	  so that a data rrset is signed by RRSIGs with different rdata.
+ *	  when qtype=RRSIG.
+ * This will move the RRSIG from the answer section to sign the data further
+ * in the packet (if possible). If then after that, more RRSIGs are found
+ * that sign the data as well, doubles are removed.
  */
 
 #ifndef UTIL_DATA_MSGPARSE_H
@@ -129,6 +151,12 @@ struct rrset_parse {
 	struct rr_parse* rr_first;
 	/** last in list of RRs in this rrset. */
 	struct rr_parse* rr_last;
+	/** number of RRSIGs over this rrset. */
+	size_t rrsig_count;
+	/** linked list of RRsig RRs over this rrset. */
+	struct rr_parse* rrsig_first;
+	/** last in list of RRSIG RRs over this rrset. */
+	struct rr_parse* rrsig_last;
 };
 
 /**

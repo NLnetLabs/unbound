@@ -44,7 +44,7 @@
 #include <time.h>
 #endif
 
-enum verbosity_value verbosity = 0;
+enum verbosity_value verbosity = 4;
 /** the file logged to. */
 static FILE* logfile = 0;
 /** if key has been created */

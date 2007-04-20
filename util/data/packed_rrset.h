@@ -116,10 +116,12 @@ struct ub_packed_rrset_key {
  *	o rr_len size_t array
  *	o rr_data uint8_t* array
  *	o rr_data rdata wireformats
- *	o rrsig_data rdata wireformat
+ *	o rrsig_data rdata wireformat(s)
  *
  * Rdata is stored in wireformat. The dname is stored in wireformat.
  * TTLs are stored as absolute values (and could be expired).
+ *
+ * RRSIGs are stored in the arrays after the regular rrs.
  *
  * You need the packed_rrset_key to know dname, type, class of the
  * resource records in this RRset. (if signed the rrsig gives the type too).
@@ -138,18 +140,18 @@ struct packed_rrset_data {
 	uint32_t ttl;
 	/** number of rrs. */
 	size_t count;
+	/** number of rrsigs, if 0 no rrsigs */
+	size_t rrsig_count;
 	/** length of every rr's rdata, rr_len[i] is size of rr_data[i]. */
 	size_t* rr_len;
 	/** 
 	 * Array of pointers to every rr's rdata. 
 	 * The rr_data[i] rdata is stored in uncompressed wireformat. 
 	 * The first uint16_t of rr_data[i] is network format rdlength.
+	 *
+	 * rr_data[count] to rr_data[count+rrsig_count] contain the rrsig data.
 	 */
 	uint8_t** rr_data;
-	/** if this rrset is signed with an RRSIG, it is stored here. */
-	uint8_t* rrsig_data;
-	/** length of rrsig rdata (only examine if rrsig_data is not null) */
-	size_t rrsig_len;
 };
 
 /**

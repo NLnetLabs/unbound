@@ -200,8 +200,7 @@ parse_rr_copy(ldns_buffer* pkt, struct rrset_parse* pset,
 		sizeof(struct packed_rrset_data));
 	data->rr_data = (uint8_t**)&(data->rr_len[data->count]);
 	nextrdata = (uint8_t*)&(data->rr_data[data->count]);
-	data->rrsig_data = 0;
-	data->rrsig_len = 0;
+	data->rrsig_count = 0;
 	for(i=0; i<data->count; i++) {
 		data->rr_len[i] = rr->size;
 		data->rr_data[i] = nextrdata;

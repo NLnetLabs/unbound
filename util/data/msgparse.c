@@ -264,6 +264,9 @@ new_rrset(struct msg_parse* msg, uint8_t* dname, size_t dnamelen,
 	p->size = 0;
 	p->rr_first = 0;
 	p->rr_last = 0;
+	p->rrsig_count = 0;
+	p->rrsig_first = 0;
+	p->rrsig_last = 0;
 	return p;
 }
 

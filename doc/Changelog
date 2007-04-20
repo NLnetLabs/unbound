@@ -1,6 +1,7 @@
 20 April 2007: Wouter
 	- code comes through all of the unit tests now.
 	- disabled warning about spurious extra data.
+	- documented the RRSIG parse plan in msgparse.h.
 
 19 April 2007: Wouter
 	- fix unit test to actually to tests.
