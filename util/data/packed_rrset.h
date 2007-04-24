@@ -114,6 +114,7 @@ struct ub_packed_rrset_key {
  * memory layout:
  *	o base struct
  *	o rr_len size_t array
+ *	o rr_ttl uint32_t array
  *	o rr_data uint8_t* array
  *	o rr_data rdata wireformats
  *	o rrsig_data rdata wireformat(s)
@@ -144,6 +145,8 @@ struct packed_rrset_data {
 	size_t rrsig_count;
 	/** length of every rr's rdata, rr_len[i] is size of rr_data[i]. */
 	size_t* rr_len;
+	/** ttl of every rr. rr_ttl[i] ttl of rr i. */
+	uint32_t *rr_ttl;
 	/** 
 	 * Array of pointers to every rr's rdata. 
 	 * The rr_data[i] rdata is stored in uncompressed wireformat. 

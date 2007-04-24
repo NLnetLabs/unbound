@@ -181,6 +181,26 @@ struct rr_parse {
  * second octets of the compression pointer. */
 #define PTR_OFFSET(x, y) ( ((x)&0x3f)<<8 | (y) )
 
+/** error codes, extended with EDNS, so > 15. */
+#define EDNS_RCODE_BADVERS	16	/** bad EDNS version */
+
+/**
+ * EDNS data storage
+ * EDNS rdata is ignored.
+ */
+struct edns_data {
+	/** if EDNS OPT record was present */
+	int edns_present;
+	/** Extended RCODE */
+	uint8_t ext_rcode;
+	/** The EDNS version number */
+	uint8_t edns_version;
+	/** the EDNS bits field from ttl (host order): Z */
+	uint16_t bits;
+	/** UDP reassembly size. */
+	uint16_t udp_size;
+};
+
 /**
  * Obtain size in the packet of an rr type, that is before dname type.
  * Do TYPE_DNAME, and type STR, yourself. Gives size for most regular types.
@@ -199,5 +219,23 @@ size_t get_rdf_size(ldns_rdf_type rdf);
  */
 int parse_packet(ldns_buffer* pkt, struct msg_parse* msg, 
 	struct region* region);
+
+/**
+ * After parsing the packet, extract EDNS data from packet.
+ * If not present this is noted in the data structure.
+ * If a parse error happens, an error code is returned.
+ *
+ * Quirks:
+ *	o ignores OPT rdata.
+ *	o ignores OPT owner name.
+ *	o ignores extra OPT records, except the last one in the packet.
+ *
+ * @param msg: parsed message structure. Modified on exit, if EDNS was present
+ * 	it is removed from the additional section.
+ * @param edns: the edns data is stored here. Does not have to be initialised.
+ * @return: 0 on success. or an RCODE on an error.
+ *	RCODE formerr if OPT in wrong section, and so on.
+ */
+int parse_extract_edns(struct msg_parse* msg, struct edns_data* edns);
 
 #endif /* UTIL_DATA_MSGPARSE_H */

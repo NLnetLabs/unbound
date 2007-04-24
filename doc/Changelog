@@ -1,7 +1,16 @@
+24 April 2007: Wouter
+	- ttl per RR, for RRSIG rrsets and others.
+	- dname_print debug function.
+	- if type is not known, size calc will skip DNAME decompression.
+	- RRSIG parsing and storing and putting in messages.
+	- dnssec enabled unit tests (from nlnetlabs.nl and se queries).
+	- EDNS extraction routine.
+
 20 April 2007: Wouter
 	- code comes through all of the unit tests now.
 	- disabled warning about spurious extra data.
 	- documented the RRSIG parse plan in msgparse.h.
+	- rrsig reading and outputting.
 
 19 April 2007: Wouter
 	- fix unit test to actually to tests.

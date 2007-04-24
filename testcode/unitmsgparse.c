@@ -98,8 +98,12 @@ static int
 match_list(ldns_rr_list* q, ldns_rr_list *p)
 {
 	size_t i;
-	if(ldns_rr_list_rr_count(q) != ldns_rr_list_rr_count(p))
+	if(ldns_rr_list_rr_count(q) != ldns_rr_list_rr_count(p)) {
+		verbose(3, "rrlistcount different %d %d", 
+			(int)ldns_rr_list_rr_count(q), 
+			(int)ldns_rr_list_rr_count(p));
 		return 0;
+	}
 	for(i=0; i<ldns_rr_list_rr_count(q); i++)
 	{
 		if(ldns_rr_compare(ldns_rr_list_rr(q, i),
@@ -165,9 +169,9 @@ match_all(ldns_pkt* q, ldns_pkt* p)
 	if(!match_list(ldns_pkt_answer(q), ldns_pkt_answer(p)))
 	{ verbose(3, "allmatch: an section different"); return 0;}
 	if(!match_list(ldns_pkt_authority(q), ldns_pkt_authority(p)))
-	{ verbose(3, "allmatch: ar section different"); return 0;}
-	if(!match_list(ldns_pkt_additional(q), ldns_pkt_additional(p)))
 	{ verbose(3, "allmatch: ns section different"); return 0;}
+	if(!match_list(ldns_pkt_additional(q), ldns_pkt_additional(p)))
+	{ verbose(3, "allmatch: ar section different"); return 0;}
 	return 1;
 }
 
@@ -184,6 +188,30 @@ test_buffers(ldns_buffer* pkt, ldns_buffer* out)
 		if(vbmp) printf("binary the same (length=%u)\n",
 				(unsigned)ldns_buffer_limit(pkt));
 		return 1;
+	}
+
+	if(vbmp) {
+		size_t sz = 16;
+		size_t count;
+		size_t lim = ldns_buffer_limit(out);
+		if(ldns_buffer_limit(pkt) < lim)
+			lim = ldns_buffer_limit(pkt);
+		for(count=0; count<lim; count+=sz) {
+			size_t rem = sz;
+			if(lim-count < sz) rem = lim-count;
+			if(memcmp(ldns_buffer_at(pkt, count), 
+				ldns_buffer_at(out, count), rem) == 0) {
+				log_info("same %d %d", count, rem);
+				log_hex("same: ", ldns_buffer_at(pkt, count),
+					rem);
+			} else {
+				log_info("diff %d %d", count, rem);
+				log_hex("difp: ", ldns_buffer_at(pkt, count),
+					rem);
+				log_hex("difo: ", ldns_buffer_at(out, count),
+					rem);
+			}
+		}
 	}
 	/* check if it 'means the same' */
 	s1 = ldns_buffer2pkt_wire(&p1, pkt);
@@ -357,6 +385,7 @@ static void
 testfromdrillfile(ldns_buffer* pkt, struct alloc_cache* alloc, 
 	ldns_buffer* out, const char* fname)
 {
+	/*  ;-- is used to indicate a new message */
 	FILE* in = fopen(fname, "r");
 	char buf[102400];
 	char *np = buf;
@@ -365,13 +394,18 @@ testfromdrillfile(ldns_buffer* pkt, struct alloc_cache* alloc,
 		return;
 	}
 	while(fgets(np, (int)sizeof(buf) - (np-buf), in)) {
+		if(strncmp(np, ";--", 3) == 0) {
+			/* new entry */
+			/* test previous */
+			if(np != buf)
+				testpkt(pkt, alloc, out, buf);
+			/* set for new entry */
+			np = buf;
+			continue;
+		}
 		if(np[0] == ';') /* comment */
 			continue;
 		np = &np[strlen(np)];
-	}
-	if(vbmp) {
-		printf("test %s", buf);
-		fflush(stdout);
 	}
 	testpkt(pkt, alloc, out, buf);
 	fclose(in);
@@ -388,10 +422,12 @@ void msgparse_test()
 
 	printf("testmsgparse\n");
 	simpletest(pkt, &alloc, out);
+	/* plain hex dumps, like pcat */
 	testfromfile(pkt, &alloc, out, "testdata/test_packets.1");
 	testfromfile(pkt, &alloc, out, "testdata/test_packets.2");
 	testfromfile(pkt, &alloc, out, "testdata/test_packets.3");
-	if(0) testfromdrillfile(pkt, &alloc, out, "blabla");
+	/* like from drill -w - */
+	testfromdrillfile(pkt, &alloc, out, "testdata/test_packets.4");
 
 	/* cleanup */
 	alloc_clear(&alloc);

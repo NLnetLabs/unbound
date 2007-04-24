@@ -121,18 +121,20 @@ parse_alloc_rrset_keys(struct msg_parse* msg, struct reply_info* rep,
 
 /** do the rdata copy */
 static int
-rdata_copy(ldns_buffer* pkt, struct rrset_parse* pset,
-	struct packed_rrset_data* data, uint8_t* to, struct rr_parse* rr)
+rdata_copy(ldns_buffer* pkt, struct packed_rrset_data* data, uint8_t* to, 
+	struct rr_parse* rr, uint32_t* rr_ttl, uint16_t type)
 {
 	uint16_t pkt_len;
-	uint32_t ttl;
 	const ldns_rr_descriptor* desc;
 	ldns_buffer_set_position(pkt, (size_t)
 		(rr->ttl_data - ldns_buffer_begin(pkt)));
 	log_assert(ldns_buffer_remaining(pkt) >= 6 /* ttl + rdatalen */);
-	ttl = ldns_buffer_read_u32(pkt);
-	if(ttl < data->ttl)
-		data->ttl = ttl;
+	*rr_ttl = ldns_buffer_read_u32(pkt);
+	/* RFC 2181 Section 8. if msb of ttl is set treat as if zero. */
+	if(*rr_ttl & 0x80000000U)
+		*rr_ttl = 0;
+	if(*rr_ttl < data->ttl)
+		data->ttl = *rr_ttl;
 	/* insert decompressed size into rdata len stored in memory */
 	/* -2 because rdatalen bytes are not included. */
 	pkt_len = htons(rr->size - 2);
@@ -143,8 +145,8 @@ rdata_copy(ldns_buffer* pkt, struct rrset_parse* pset,
 	if(ldns_buffer_remaining(pkt) < pkt_len)
 		return 0;
 	log_assert((size_t)pkt_len+2 <= rr->size);
-	desc = ldns_rr_descript(ntohs(pset->type));
-	if(pkt_len > 0 && desc->_dname_count > 0) {
+	desc = ldns_rr_descript(type);
+	if(pkt_len > 0 && desc && desc->_dname_count > 0) {
 		int count = (int)desc->_dname_count;
 		int rdf = 0;
 		size_t len;
@@ -193,23 +195,36 @@ parse_rr_copy(ldns_buffer* pkt, struct rrset_parse* pset,
 	size_t i;
 	struct rr_parse* rr = pset->rr_first;
 	uint8_t* nextrdata;
+	size_t total = pset->rr_count + pset->rrsig_count;
 	data->ttl = MAX_TTL;
 	data->count = pset->rr_count;
+	data->rrsig_count = pset->rrsig_count;
 	/* layout: struct - rr_len - rr_data - rdata - rrsig */
 	data->rr_len = (size_t*)((uint8_t*)data + 
 		sizeof(struct packed_rrset_data));
-	data->rr_data = (uint8_t**)&(data->rr_len[data->count]);
-	nextrdata = (uint8_t*)&(data->rr_data[data->count]);
-	data->rrsig_count = 0;
+	data->rr_ttl = (uint32_t*)&(data->rr_len[total]);
+	data->rr_data = (uint8_t**)&(data->rr_ttl[total]);
+	nextrdata = (uint8_t*)&(data->rr_data[total]);
 	for(i=0; i<data->count; i++) {
 		data->rr_len[i] = rr->size;
 		data->rr_data[i] = nextrdata;
 		nextrdata += rr->size;
-		if(!rdata_copy(pkt, pset, data, data->rr_data[i], rr))
+		if(!rdata_copy(pkt, data, data->rr_data[i], rr, 
+			&data->rr_ttl[i], ntohs(pset->type)))
 			return 0;
 		rr = rr->next;
 	}
 	/* if rrsig, its rdata is at nextrdata */
+	rr = pset->rrsig_first;
+	for(i=data->count; i<total; i++) {
+		data->rr_len[i] = rr->size;
+		data->rr_data[i] = nextrdata;
+		nextrdata += rr->size;
+		if(!rdata_copy(pkt, data, data->rr_data[i], rr, 
+			&data->rr_ttl[i], LDNS_RR_TYPE_RRSIG))
+			return 0;
+		rr = rr->next;
+	}
 	return 1;
 }
 
@@ -219,7 +234,8 @@ parse_create_rrset(ldns_buffer* pkt, struct rrset_parse* pset,
 	struct packed_rrset_data** data)
 {
 	/* allocate */
-	*data = malloc(sizeof(struct packed_rrset_data) + pset->rr_count* 
+	*data = malloc(sizeof(struct packed_rrset_data) + 
+		(pset->rr_count + pset->rrsig_count) * 
 		(sizeof(size_t)+sizeof(uint8_t*)+sizeof(uint32_t)) + 
 		pset->size);
 	if(!*data)
@@ -468,29 +484,74 @@ reply_info_answer(struct reply_info* rep, uint16_t qflags,
 	ldns_buffer_flip(buffer);
 }
 
+/** bake a new type-class-ttl value, or 0 on malloc error */
+static uint32_t*
+bake_tcttl(int do_sig, region_type* region, 
+	struct packed_rrset_key* rk, uint32_t ttl, uint32_t timenow)
+{
+	/* type, class, ttl,
+	   type-class-ttl used for rrsigs.
+	   ttl used for data itself. */
+	uint32_t* t;
+	if(do_sig) {
+		t =  (uint32_t*)region_alloc(region, 2*sizeof(uint32_t));
+		if(!t) return 0;
+		((uint16_t*)t)[0] = htons(LDNS_RR_TYPE_RRSIG);
+		memcpy( &(((uint16_t*)t)[1]), &(rk->dname[rk->dname_len+2]),
+			sizeof(uint16_t));
+		t[1] = htonl(ttl - timenow);
+	} else {
+		t =  (uint32_t*)region_alloc(region, sizeof(uint32_t));
+		if(!t) return 0;
+		t[0] = htonl(ttl - timenow);
+	}
+	return t;
+}
+
 /** store rrset in iov vector */
 static int
 packed_rrset_iov(struct ub_packed_rrset_key* key, struct iovec* iov, 
 	size_t max, uint16_t* num_rrs, uint32_t timenow, region_type* region,
-	size_t* used)
+	size_t* used, int do_data, int do_sig)
 {
 	size_t i;
-	uint32_t* ttl = (uint32_t*)region_alloc(region, sizeof(uint32_t));
+	uint32_t* tcttl;
 	struct packed_rrset_data* data = (struct packed_rrset_data*)
 		key->entry.data;
-	*num_rrs += data->count;
-	if(!ttl) return 0;
-	*ttl = htonl(data->ttl - timenow);
-	for(i=0; i<data->count; i++) {
-		if(max - *used < 3) return 0;
-		/* no compression of dnames yet */
-		iov[*used].iov_base = (void*)key->rk.dname;
-		iov[*used].iov_len = key->rk.dname_len + 4;
-		iov[*used+1].iov_base = (void*)ttl;
-		iov[*used+1].iov_len = sizeof(uint32_t);
-		iov[*used+2].iov_base = (void*)data->rr_data[i];
-		iov[*used+2].iov_len = data->rr_len[i];
-		*used += 3;
+	if(do_data) {
+		*num_rrs += data->count;
+		for(i=0; i<data->count; i++) {
+			if(max - *used < 3) return 0;
+			if(!(tcttl = bake_tcttl(0, region, &key->rk, 
+				data->rr_ttl[i], timenow)))
+				return 0;
+			/* no compression of dnames yet */
+			iov[*used].iov_base = (void*)key->rk.dname;
+			iov[*used].iov_len = key->rk.dname_len + 4;
+			iov[*used+1].iov_base = (void*)tcttl;
+			iov[*used+1].iov_len = sizeof(uint32_t);
+			iov[*used+2].iov_base = (void*)data->rr_data[i];
+			iov[*used+2].iov_len = data->rr_len[i];
+			*used += 3;
+		}
+	}
+	/* insert rrsigs */
+	if(do_sig) {
+		*num_rrs += data->rrsig_count;
+		for(i=0; i<data->rrsig_count; i++) {
+			if(max - *used < 3) return 0;
+			if(!(tcttl = bake_tcttl(1, region, &key->rk, 
+				data->rr_ttl[data->count+i], timenow)))
+				return 0;
+			/* no compression of dnames yet */
+			iov[*used].iov_base = (void*)key->rk.dname;
+			iov[*used].iov_len = key->rk.dname_len;
+			iov[*used+1].iov_base = (void*)tcttl;
+			iov[*used+1].iov_len = sizeof(uint32_t)*2;
+			iov[*used+2].iov_base = (void*)data->rr_data[data->count+i];
+			iov[*used+2].iov_len = data->rr_len[data->count+i];
+			*used += 3;
+		}
 	}
 
 	return 1;
@@ -500,13 +561,23 @@ packed_rrset_iov(struct ub_packed_rrset_key* key, struct iovec* iov,
 static int
 insert_section(struct reply_info* rep, size_t num_rrsets, uint16_t* num_rrs,
 	struct iovec* iov, size_t max, size_t rrsets_before,
-	uint32_t timenow, region_type* region, size_t* used)
+	uint32_t timenow, region_type* region, size_t* used, int addit)
 {
 	size_t i;
 	*num_rrs = 0;
-	for(i=0; i<num_rrsets; i++) {
-		if(!packed_rrset_iov(rep->rrsets[rrsets_before+i], iov,
-			max, num_rrs, timenow, region, used))
+	if(!addit) {
+	  	for(i=0; i<num_rrsets; i++)
+			if(!packed_rrset_iov(rep->rrsets[rrsets_before+i], iov,
+				max, num_rrs, timenow, region, used, 1, 1))
+			return 0;
+	} else {
+	  	for(i=0; i<num_rrsets; i++)
+			if(!packed_rrset_iov(rep->rrsets[rrsets_before+i], iov,
+				max, num_rrs, timenow, region, used, 1, 0))
+			return 0;
+	  	for(i=0; i<num_rrsets; i++)
+			if(!packed_rrset_iov(rep->rrsets[rrsets_before+i], iov,
+				max, num_rrs, timenow, region, used, 0, 1))
 			return 0;
 	}
 	*num_rrs = htons(*num_rrs);
@@ -547,17 +618,18 @@ size_t reply_info_iov_regen(struct query_info* qinfo, struct reply_info* rep,
 
 	/* insert answer section */
 	if(!insert_section(rep, rep->an_numrrsets, &hdr[3], iov, max, 
-		0, timenow, region, &used))
+		0, timenow, region, &used, 0))
 		return 0;
 
 	/* insert auth section */
 	if(!insert_section(rep, rep->ns_numrrsets, &hdr[4], iov, max, 
-		rep->an_numrrsets, timenow, region, &used))
+		rep->an_numrrsets, timenow, region, &used, 0))
 		return 0;
 
 	/* insert add section */
 	if(!insert_section(rep, rep->ar_numrrsets, &hdr[5], iov, max, 
-		rep->an_numrrsets + rep->ns_numrrsets, timenow, region, &used))
+		rep->an_numrrsets + rep->ns_numrrsets, timenow, region, 
+		&used, 1))
 		return 0;
 
 	return used;
