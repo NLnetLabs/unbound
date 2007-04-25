@@ -712,7 +712,6 @@ bakedname(int dosig, struct compress_tree_node** tree, size_t* offset,
 	/* see if this name can be compressed */
 	struct compress_tree_node* p;
 	int labs = dname_count_labels(rk->dname);
-	size_t atset = *offset;
 	p = compress_tree_lookup(*tree, rk->dname, labs);
 	if(p) {
 		/* compress it */
@@ -722,7 +721,7 @@ bakedname(int dosig, struct compress_tree_node** tree, size_t* offset,
 		uint8_t* from = rk->dname;
 		uint16_t ptr;
 		uint8_t* dat = (uint8_t*)region_alloc(region,
-			sizeof(uint16_t)*2*dosig + rk->dname_len);
+			(dosig?0:sizeof(uint16_t)*2) + rk->dname_len);
 		/* note: oversized memory allocation. */
 		if(!dat) return 0;
 		iov->iov_base = dat;
@@ -747,20 +746,18 @@ bakedname(int dosig, struct compress_tree_node** tree, size_t* offset,
 			dat += 4;
 			len += 4;
 		}
-		log_assert(len <= sizeof(uint16_t)*2*dosig + rk->dname_len);
+		log_assert(len <= (dosig?0:sizeof(uint16_t)*2) + rk->dname_len);
 		iov->iov_len = len;
-		*offset += len;
 	} else {
 		/* uncompressed */
 		iov->iov_base = rk->dname;
 		if(dosig)
 			iov->iov_len = rk->dname_len;
 		else	iov->iov_len = rk->dname_len + 4;
-		*offset += iov->iov_len;
 	}
 
 	/* store this name for future compression */
-	if(!compress_tree_store(tree, rk->dname, labs, atset, region, p))
+	if(!compress_tree_store(tree, rk->dname, labs, *offset, region, p))
 		return 0;
 	return 1;
 }
@@ -785,12 +782,15 @@ packed_rrset_iov(struct ub_packed_rrset_key* key, struct iovec* iov,
 				i>0?&data->rr_ttl[i-1]:0, tcttl)))
 				return 0;
 			/* no compression of dnames yet */
-			if(0)
+			if(1) {
 			if(!bakedname(0, tree, offset, region, &iov[*used], 
 				&key->rk))
 				return 0;
-			iov[*used].iov_base = (void*)key->rk.dname;
-			iov[*used].iov_len = key->rk.dname_len + 4;
+			} else {
+				/* no compression */
+				iov[*used].iov_base = (void*)key->rk.dname;
+				iov[*used].iov_len = key->rk.dname_len + 4;
+			}
 			iov[*used+1].iov_base = (void*)tcttl;
 			iov[*used+1].iov_len = sizeof(uint32_t);
 			iov[*used+2].iov_base = (void*)data->rr_data[i];
@@ -816,6 +816,8 @@ packed_rrset_iov(struct ub_packed_rrset_key* key, struct iovec* iov,
 			iov[*used+1].iov_len = sizeof(uint32_t)*2;
 			iov[*used+2].iov_base = (void*)data->rr_data[data->count+i];
 			iov[*used+2].iov_len = data->rr_len[data->count+i];
+			*offset += iov[*used].iov_len + sizeof(uint32_t)*2 +
+				data->rr_len[data->count+i];
 			*used += 3;
 		}
 	}
