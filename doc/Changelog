@@ -1,5 +1,7 @@
 25 April 2007: Wouter
 	- prettier code; parse_rrset->type kept in host byte order.
+	- datatype used for hashvalue of converted rrsig structure.
+	- unit test compares edns section data too.
 
 24 April 2007: Wouter
 	- ttl per RR, for RRSIG rrsets and others.

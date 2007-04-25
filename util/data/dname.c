@@ -333,3 +333,103 @@ void dname_print(FILE* out, ldns_buffer* pkt, uint8_t* dname)
 		lablen = *dname++;
 	}
 }
+
+int 
+dname_count_labels(uint8_t* dname)
+{
+	uint8_t lablen;
+	int labs = 1;
+
+	lablen = *dname++;
+	while(lablen) {
+		labs++;
+		dname += lablen;
+		lablen = *dname++;
+	}
+	return labs;
+}
+
+/**
+ * Compare labels in memory, lowercase while comparing.
+ * @param p1: label 1
+ * @param p2: label 2
+ * @param len: number of bytes to compare.
+ * @return: 0, -1, +1 comparison result.
+ */
+static int
+memlowercmp(uint8_t* p1, uint8_t* p2, uint8_t len)
+{
+	while(len--) {
+		if(tolower((int)*p1++) != tolower((int)*p2++)) {
+			if(tolower((int)p1[-1]) < tolower((int)p2[-1]))
+				return -1;
+			return 1;
+		}
+	}
+	return 0;
+}
+
+
+int 
+dname_lab_cmp(uint8_t* d1, int labs1, uint8_t* d2, int labs2, int* mlabs)
+{
+	uint8_t len1, len2;
+	int atlabel = labs1;
+	int lastmlabs;
+	int lastdiff = 0;
+	int c;
+	/* first skip so that we compare same label. */
+	if(labs1 > labs2) {
+		while(atlabel > labs2) {
+			len1 = *d1++;
+			d1 += len1;
+			atlabel--;
+		}
+		log_assert(atlabel == labs2);
+	} else if(labs1 < labs2) {
+		atlabel = labs2;
+		while(atlabel > labs1) {
+			len2 = *d2++;
+			d2 += len2;
+			atlabel--;
+		}
+		log_assert(atlabel == labs1);
+	}
+	lastmlabs = atlabel+1;
+	/* now at same label in d1 and d2, atlabel */
+	/* www.example.com.                  */
+	/* 4   3       2  1   atlabel number */
+	/* repeat until at root label (which is always the same) */
+	while(atlabel > 1) {
+		len1 = *d1++;
+		len2 = *d2++;
+		if(len1 != len2) {
+			log_assert(len1 != 0 && len2 != 0);
+			if(len1<len2)
+				lastdiff = -1;
+			else	lastdiff = 1;
+			lastmlabs = atlabel;
+		} else if((c=memlowercmp(d1, d2, len1)) != 0) { 
+			if(c<0)
+				lastdiff = -1;
+			else	lastdiff = 1;
+			lastmlabs = atlabel;
+		}
+
+		d1 += len1;
+		d2 += len2;
+		atlabel--;
+	}
+	/* last difference atlabel number, so number of labels matching,
+	 * at the right side, is one less. */
+	*mlabs = lastmlabs-1;
+	if(lastdiff == 0) {
+		/* all labels compared were equal, check if one has more
+		 * labels, so that example.com. > com. */
+		if(labs1 > labs2)
+			return 1;
+		else if(labs1 < labs2)
+			return -1;
+	}
+	return lastdiff;
+}

@@ -354,7 +354,7 @@ change_rrsig_rrset(struct rrset_parse* sigset, struct msg_parse* msg,
 	int hasother, ldns_pkt_section section, region_type* region)
 {
 	struct rrset_parse* dataset = sigset;
-	hashvalue_t hash = pkt_hash_rrset(pkt, sigset->dname, sigset->type, 
+	hashvalue_t hash = pkt_hash_rrset(pkt, sigset->dname, datatype, 
 		sigset->rrset_class, rrset_flags);
 	log_assert( sigset->type == LDNS_RR_TYPE_RRSIG );
 	log_assert( datatype != LDNS_RR_TYPE_RRSIG );

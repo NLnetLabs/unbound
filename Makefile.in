@@ -53,7 +53,7 @@ INSTALL=$(srcdir)/install-sh
 COMMON_SRC=$(wildcard services/*.c util/*.c util/data/*.c util/storage/*.c) util/configparser.c util/configlexer.c testcode/checklocks.c
 COMMON_OBJ=$(addprefix $(BUILD),$(COMMON_SRC:.c=.o))
 COMPAT_OBJ=$(addprefix $(BUILD)compat/,$(LIBOBJS))
-UNITTEST_SRC=$(wildcard testcode/unit*.c) $(COMMON_SRC)
+UNITTEST_SRC=$(wildcard testcode/unit*.c) testcode/readhex.c $(COMMON_SRC)
 UNITTEST_OBJ=$(addprefix $(BUILD),$(UNITTEST_SRC:.c=.o)) $(COMPAT_OBJ)
 DAEMON_SRC=$(wildcard daemon/*.c) $(COMMON_SRC)
 DAEMON_OBJ=$(addprefix $(BUILD),$(DAEMON_SRC:.c=.o)) $(COMPAT_OBJ)
@@ -61,6 +61,8 @@ TESTBOUND_SRC=testcode/testbound.c testcode/ldns-testpkts.c daemon/worker.c daem
 TESTBOUND_OBJ=$(addprefix $(BUILD),$(TESTBOUND_SRC:.c=.o)) $(COMPAT_OBJ)
 LOCKVERIFY_SRC=testcode/lock_verify.c $(COMMON_SRC)
 LOCKVERIFY_OBJ=$(addprefix $(BUILD),$(LOCKVERIFY_SRC:.c=.o)) $(COMPAT_OBJ)
+PKTVIEW_SRC=testcode/pktview.c testcode/readhex.c $(COMMON_SRC)
+PKTVIEW_OBJ=$(addprefix $(BUILD),$(PKTVIEW_SRC:.c=.o)) $(COMPAT_OBJ)
 ALL_SRC=$(COMMON_SRC) $(UNITTEST_SRC) $(DAEMON_SRC) $(TESTBOUND_SRC) $(LOCKVERIFY_SRC)
 ALL_OBJ=$(addprefix $(BUILD),$(ALL_SRC:.c=.o) $(addprefix compat/,$(LIBOBJS))) $(COMPAT_OBJ)
 
@@ -75,7 +77,7 @@ $(BUILD)%.o:    $(srcdir)/%.c
 
 .PHONY:	clean realclean doc lint all 
 
-all:	$(COMMON_OBJ) unbound unittest testbound lock-verify
+all:	$(COMMON_OBJ) unbound unittest testbound lock-verify pktview
 
 unbound:	$(DAEMON_OBJ)
 	$(INFO) Link $@
@@ -90,6 +92,10 @@ testbound:	$(TESTBOUND_OBJ)
 	$Q$(LINK) -o $@ $^ $(LIBS)
 
 lock-verify:	$(LOCKVERIFY_OBJ)
+	$(INFO) Link $@
+	$Q$(LINK) -o $@ $^ $(LIBS)
+
+pktview:	$(PKTVIEW_OBJ)
 	$(INFO) Link $@
 	$Q$(LINK) -o $@ $^ $(LIBS)
 

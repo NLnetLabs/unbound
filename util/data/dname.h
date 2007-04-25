@@ -126,4 +126,23 @@ void dname_pkt_copy(ldns_buffer* pkt, uint8_t* to, uint8_t* dname);
  */
 void dname_print(FILE* out, ldns_buffer* pkt, uint8_t* dname);
 
+/**
+ * Count the number of labels in an uncompressed dname in memory.
+ * @param dname: pointer to uncompressed dname.
+ * @return: count of labels, including root label, "com." has 2 labels.
+ */
+int dname_count_labels(uint8_t* dname);
+
+/**
+ * Compare dnames, sorted not canonical, but by label.
+ * Such that zone contents follows zone apex.
+ * @param d1: first dname. pointer to uncompressed wireformat.
+ * @param labs1: number of labels in first dname.
+ * @param d2: second dname. pointer to uncompressed wireformat.
+ * @param labs2: number of labels in second dname.
+ * @param mlabs: number of labels that matched exactly.
+ * @return: 0 for equal, -1 smaller, or +1 d1 larger than d2.
+ */
+int dname_lab_cmp(uint8_t* d1, int labs1, uint8_t* d2, int labs2, int* mlabs);
+
 #endif /* UTIL_DATA_DNAME_H */

@@ -47,51 +47,10 @@
 #include "util/alloc.h"
 #include "util/region-allocator.h"
 #include "util/net_help.h"
+#include "testcode/readhex.h"
 
 /** verbose message parse unit test */
 static int vbmp = 0;
-
-/** skip whitespace */
-static void
-skip_whites(const char** p)
-{
-	while(1) {
-		while(isspace(**p))
-			(*p)++;
-		if(**p == ';') {
-			/* comment, skip until newline */
-			while(**p && **p != '\n')
-				(*p)++;
-			if(**p == '\n')
-				(*p)++;
-		} else return;
-	}
-}
-
-/** takes a hex string and puts into buffer */
-static void hex_to_buf(ldns_buffer* pkt, const char* hex)
-{
-	const char* p = hex;
-	int val;
-	ldns_buffer_clear(pkt);
-	while(*p) {
-		skip_whites(&p);
-		if(ldns_buffer_position(pkt) == ldns_buffer_limit(pkt))
-			fatal_exit("hex_to_buf: buffer too small");
-		if(!isalnum(*p))
-			break;
-		val = ldns_hexdigit_to_int(*p++) << 4;
-		skip_whites(&p);
-		log_assert(*p && isalnum(*p));
-		val |= ldns_hexdigit_to_int(*p++);
-		ldns_buffer_write_u8(pkt, (uint8_t)val);
-		skip_whites(&p);
-	}
-	ldns_buffer_flip(pkt);
-	if(vbmp) {
-		printf("packet size %u\n", (unsigned)ldns_buffer_limit(pkt));
-	}
-}
 
 /** match two rr lists */
 static int
@@ -119,6 +78,25 @@ match_list(ldns_rr_list* q, ldns_rr_list *p)
 		}
 
 	}
+	return 1;
+}
+
+/** match edns sections */
+static int
+match_edns(ldns_pkt* q, ldns_pkt* p)
+{
+	if(ldns_pkt_edns_udp_size(q) != ldns_pkt_edns_udp_size(p))
+		return 0;
+	if(ldns_pkt_edns_extended_rcode(q) != ldns_pkt_edns_extended_rcode(p))
+		return 0;
+	if(ldns_pkt_edns_version(q) != ldns_pkt_edns_version(p))
+		return 0;
+	if(ldns_pkt_edns_do(q) != ldns_pkt_edns_do(p))
+		return 0;
+	if(ldns_pkt_edns_z(q) != ldns_pkt_edns_z(p))
+		return 0;
+	if(ldns_rdf_compare(ldns_pkt_edns_data(q), ldns_pkt_edns_data(p)) != 0)
+		return 0;
 	return 1;
 }
 
@@ -172,6 +150,8 @@ match_all(ldns_pkt* q, ldns_pkt* p)
 	{ verbose(3, "allmatch: ns section different"); return 0;}
 	if(!match_list(ldns_pkt_additional(q), ldns_pkt_additional(p)))
 	{ verbose(3, "allmatch: ar section different"); return 0;}
+	if(!match_edns(q, p))
+	{ verbose(3, "edns different."); return 0;}
 	return 1;
 }
 
@@ -388,7 +368,7 @@ testfromdrillfile(ldns_buffer* pkt, struct alloc_cache* alloc,
 	/*  ;-- is used to indicate a new message */
 	FILE* in = fopen(fname, "r");
 	char buf[102400];
-	char *np = buf;
+	char* np = buf;
 	if(!in) {
 		perror("fname");
 		return;

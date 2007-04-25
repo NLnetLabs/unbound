@@ -486,15 +486,209 @@ reply_info_answer(struct reply_info* rep, uint16_t qflags,
 	ldns_buffer_flip(buffer);
 }
 
+/**
+ * Data structure to help domain name compression in outgoing messages.
+ * A tree of dnames and their offsets in the packet is kept.
+ * It is kept sorted, not canonical, but by label at least, so that after
+ * a lookup of a name you know its closest match, and the parent from that
+ * closest match. These are possible compression targets.
+ *
+ * It is a binary tree, not a rbtree or balanced tree, as the effort
+ * of keeping it balanced probably outweighs usefulness (given typical
+ * DNS packet size).
+ */
+struct compress_tree_node {
+	/** left node in tree, all smaller to this */
+	struct compress_tree_node* left;
+	/** right node in tree, all larger than this */
+	struct compress_tree_node* right;
+
+	/** the parent node - not for tree, but zone parent. One less label */
+	struct compress_tree_node* parent;
+	/** the domain name for this node. Pointer to uncompressed memory. */
+	uint8_t* dname;
+	/** number of labels in domain name, kept to help compare func. */
+	int labs;
+	/** offset in packet that points to this dname */
+	size_t offset;
+};
+
+/**
+ * Find domain name in tree, returns exact and closest match.
+ * @param tree: root of tree.
+ * @param dname: pointer to uncompressed dname.
+ * @param labs: number of labels in domain name.
+ * @param match: closest or exact match.
+ *	guaranteed to be smaller or equal to the sought dname.
+ *	can be null if the tree is empty.
+ * @param matchlabels: number of labels that match with closest match.
+ *	can be zero is there is no match.
+ * @return: 0 if no exact match.
+ */
+static int
+compress_tree_search(struct compress_tree_node* tree, uint8_t* dname,
+	int labs, struct compress_tree_node** match, int* matchlabels)
+{
+	int c, n, closen=0;
+	struct compress_tree_node* p = tree;
+	struct compress_tree_node* close = 0;
+	while(p) {
+		if((c = dname_lab_cmp(dname, labs, p->dname, p->labs, &n)) 
+			== 0) {
+			*matchlabels = n;
+			*match = p;
+			return 1;
+		}
+		if(c<0) p = p->left;
+		else	{
+			closen = n;
+			close = p; /* p->dname is smaller than dname */
+			p = p->right;
+		}
+	}
+	*matchlabels = closen;
+	*match = close;
+	return 0;
+}
+
+/**
+ * Lookup a domain name in compression tree.
+ * @param tree: root of tree (not the node with '.').
+ * @param dname: pointer to uncompressed dname.
+ * @param labs: number of labels in domain name.
+ * @return: 0 if not found or compress treenode with best compression.
+ */
+static struct compress_tree_node*
+compress_tree_lookup(struct compress_tree_node* tree, uint8_t* dname,
+	int labs)
+{
+	struct compress_tree_node* p;
+	int m;
+	if(labs <= 1)
+		return 0; /* do not compress root node */
+	if(compress_tree_search(tree, dname, labs, &p, &m)) {
+		/* exact match */
+		return p;
+	}
+	/* return some ancestor of p that compresses well. */
+	if(m>1) {
+		/* www.example.com. (labs=4) matched foo.example.com.(labs=4)
+		 * then matchcount = 3. need to go up. */
+		while(p && p->labs > m)
+			p = p->parent;
+		return p;
+	}
+	return 0;
+}
+
+/**
+ * Insert node into domain name compression tree.
+ * @param tree: root of tree (may be modified)
+ * @param dname: pointer to uncompressed dname (stored in tree).
+ * @param labs: number of labels in dname.
+ * @param offset: offset into packet for dname.
+ * @param region: how to allocate memory for new node.
+ * @return new node or 0 on malloc failure.
+ */
+static struct compress_tree_node*
+compress_tree_insert(struct compress_tree_node** tree, uint8_t* dname,
+	int labs, size_t offset, region_type* region)
+{
+	int c, m;
+	struct compress_tree_node* p, **prev;
+	struct compress_tree_node* n = (struct compress_tree_node*)
+		region_alloc(region, sizeof(struct compress_tree_node));
+	if(!n) return 0;
+	n->left = 0;
+	n->right = 0;
+	n->parent = 0;
+	n->dname = dname;
+	n->labs = labs;
+	n->offset = offset;
+
+	/* find spot to insert it into */
+	prev = tree;
+	p = *tree;
+	while(p) {
+		c = dname_lab_cmp(dname, labs, p->dname, p->labs, &m);
+		log_assert(c != 0); /* may not already be in tree */
+		if(c==0) return p;
+		if(c<0)	{
+			prev = &p->left;
+			p = p->left;
+		} else {
+			prev = &p->right;
+			p = p->right;
+		}
+	}
+	*prev = n;
+	return n;
+}
+
+/**
+ * Store domain name and ancestors into compression tree.
+ * @param tree: root of tree (may be modified)
+ * @param dname: pointer to uncompressed dname (stored in tree).
+ * @param labs: number of labels in dname.
+ * @param offset: offset into packet for dname.
+ * @param region: how to allocate memory for new node.
+ * @param closest: match from previous lookup, used to compress dname.
+ *	may be NULL if no previous match.
+ *	if the tree has an ancestor of dname already, this must be it.
+ * @return: 0 on memory error.
+ */
+static int
+compress_tree_store(struct compress_tree_node** tree, uint8_t* dname,
+	int labs, size_t offset, region_type* region,
+	struct compress_tree_node* closest)
+{
+	uint8_t lablen;
+	struct compress_tree_node** lastparentptr = 0;
+	struct compress_tree_node* newnode;
+	int uplabs = labs-1; /* does not store root in tree */
+	if(closest) uplabs = labs - closest->labs;
+	log_assert(uplabs >= 0);
+	while(uplabs--) {
+		if(offset > 0x3fff) { /* largest valid compr. offset */
+			if(lastparentptr) 
+				*lastparentptr = closest;
+			return 1; /* compression pointer no longer useful */
+		}
+		/* store dname, labs, offset */
+		if(!(newnode = compress_tree_insert(tree, dname, labs, offset, 
+			region))) {
+			if(lastparentptr) 
+				*lastparentptr = closest;
+			return 0;
+		}
+		if(lastparentptr)
+			*lastparentptr = newnode;
+		lastparentptr = &newnode->parent;
+
+		/* next label */
+		lablen = *dname++;
+		dname += lablen;
+		offset += lablen+1;
+		labs--;
+	}
+	if(lastparentptr)
+		*lastparentptr = closest;
+	return 1;
+}
+
+
 /** bake a new type-class-ttl value, or 0 on malloc error */
 static uint32_t*
 bake_tcttl(int do_sig, region_type* region, 
-	struct packed_rrset_key* rk, uint32_t ttl, uint32_t timenow)
+	struct packed_rrset_key* rk, uint32_t ttl, uint32_t timenow,
+	uint32_t* prevttl, uint32_t* prevtcttl)
 {
 	/* type, class, ttl,
 	   type-class-ttl used for rrsigs.
 	   ttl used for data itself. */
 	uint32_t* t;
+	if(prevttl && *prevttl == ttl)
+		return prevtcttl;
 	if(do_sig) {
 		t =  (uint32_t*)region_alloc(region, 2*sizeof(uint32_t));
 		if(!t) return 0;
@@ -510,14 +704,76 @@ bake_tcttl(int do_sig, region_type* region,
 	return t;
 }
 
+/** bake dname iov */
+static int
+bakedname(int dosig, struct compress_tree_node** tree, size_t* offset, 
+	region_type* region, struct iovec* iov, struct packed_rrset_key* rk)
+{
+	/* see if this name can be compressed */
+	struct compress_tree_node* p;
+	int labs = dname_count_labels(rk->dname);
+	size_t atset = *offset;
+	p = compress_tree_lookup(*tree, rk->dname, labs);
+	if(p) {
+		/* compress it */
+		int labcopy = labs - p->labs;
+		size_t len = 0;
+		uint8_t lablen;
+		uint8_t* from = rk->dname;
+		uint16_t ptr;
+		uint8_t* dat = (uint8_t*)region_alloc(region,
+			sizeof(uint16_t)*2*dosig + rk->dname_len);
+		/* note: oversized memory allocation. */
+		if(!dat) return 0;
+		iov->iov_base = dat;
+		/* copy the first couple of labels */
+		while(labcopy--) {
+			lablen = *from++;
+			*dat++ = lablen;
+			memmove(dat, from, lablen);
+			len += lablen+1;
+			dat += lablen;
+			from += lablen;
+		}
+		/* insert compression ptr */
+		ptr = 0xc000 | p->offset;
+		ptr = htons(ptr);
+		memmove(dat, &ptr, sizeof(ptr));
+		len += sizeof(ptr);
+		dat += sizeof(ptr);
+		if(!dosig) {
+			/* add type and class */
+			memmove(dat, &rk->dname[rk->dname_len], 4);
+			dat += 4;
+			len += 4;
+		}
+		log_assert(len <= sizeof(uint16_t)*2*dosig + rk->dname_len);
+		iov->iov_len = len;
+		*offset += len;
+	} else {
+		/* uncompressed */
+		iov->iov_base = rk->dname;
+		if(dosig)
+			iov->iov_len = rk->dname_len;
+		else	iov->iov_len = rk->dname_len + 4;
+		*offset += iov->iov_len;
+	}
+
+	/* store this name for future compression */
+	if(!compress_tree_store(tree, rk->dname, labs, atset, region, p))
+		return 0;
+	return 1;
+}
+
 /** store rrset in iov vector */
 static int
 packed_rrset_iov(struct ub_packed_rrset_key* key, struct iovec* iov, 
 	size_t max, uint16_t* num_rrs, uint32_t timenow, region_type* region,
-	size_t* used, int do_data, int do_sig)
+	size_t* used, int do_data, int do_sig, 
+	struct compress_tree_node** tree, size_t* offset)
 {
 	size_t i;
-	uint32_t* tcttl;
+	uint32_t* tcttl = 0;
 	struct packed_rrset_data* data = (struct packed_rrset_data*)
 		key->entry.data;
 	if(do_data) {
@@ -525,15 +781,22 @@ packed_rrset_iov(struct ub_packed_rrset_key* key, struct iovec* iov,
 		for(i=0; i<data->count; i++) {
 			if(max - *used < 3) return 0;
 			if(!(tcttl = bake_tcttl(0, region, &key->rk, 
-				data->rr_ttl[i], timenow)))
+				data->rr_ttl[i], timenow, 
+				i>0?&data->rr_ttl[i-1]:0, tcttl)))
 				return 0;
 			/* no compression of dnames yet */
+			if(0)
+			if(!bakedname(0, tree, offset, region, &iov[*used], 
+				&key->rk))
+				return 0;
 			iov[*used].iov_base = (void*)key->rk.dname;
 			iov[*used].iov_len = key->rk.dname_len + 4;
 			iov[*used+1].iov_base = (void*)tcttl;
 			iov[*used+1].iov_len = sizeof(uint32_t);
 			iov[*used+2].iov_base = (void*)data->rr_data[i];
 			iov[*used+2].iov_len = data->rr_len[i];
+			*offset += iov[*used].iov_len + sizeof(uint32_t) +
+				data->rr_len[i];
 			*used += 3;
 		}
 	}
@@ -543,7 +806,8 @@ packed_rrset_iov(struct ub_packed_rrset_key* key, struct iovec* iov,
 		for(i=0; i<data->rrsig_count; i++) {
 			if(max - *used < 3) return 0;
 			if(!(tcttl = bake_tcttl(1, region, &key->rk, 
-				data->rr_ttl[data->count+i], timenow)))
+				data->rr_ttl[data->count+i], timenow,
+				i>0?&data->rr_ttl[i-1]:0, tcttl)))
 				return 0;
 			/* no compression of dnames yet */
 			iov[*used].iov_base = (void*)key->rk.dname;
@@ -563,23 +827,27 @@ packed_rrset_iov(struct ub_packed_rrset_key* key, struct iovec* iov,
 static int
 insert_section(struct reply_info* rep, size_t num_rrsets, uint16_t* num_rrs,
 	struct iovec* iov, size_t max, size_t rrsets_before,
-	uint32_t timenow, region_type* region, size_t* used, int addit)
+	uint32_t timenow, region_type* region, size_t* used, int addit,
+	struct compress_tree_node** tree, size_t* offset)
 {
 	size_t i;
 	*num_rrs = 0;
 	if(!addit) {
 	  	for(i=0; i<num_rrsets; i++)
 			if(!packed_rrset_iov(rep->rrsets[rrsets_before+i], iov,
-				max, num_rrs, timenow, region, used, 1, 1))
+				max, num_rrs, timenow, region, used, 1, 1,
+				tree, offset))
 			return 0;
 	} else {
 	  	for(i=0; i<num_rrsets; i++)
 			if(!packed_rrset_iov(rep->rrsets[rrsets_before+i], iov,
-				max, num_rrs, timenow, region, used, 1, 0))
+				max, num_rrs, timenow, region, used, 1, 0,
+				tree, offset))
 			return 0;
 	  	for(i=0; i<num_rrsets; i++)
 			if(!packed_rrset_iov(rep->rrsets[rrsets_before+i], iov,
-				max, num_rrs, timenow, region, used, 0, 1))
+				max, num_rrs, timenow, region, used, 0, 1,
+				tree, offset))
 			return 0;
 	}
 	*num_rrs = htons(*num_rrs);
@@ -592,6 +860,8 @@ size_t reply_info_iov_regen(struct query_info* qinfo, struct reply_info* rep,
 {
 	size_t used;
 	uint16_t* hdr = (uint16_t*)region_alloc(region, sizeof(uint16_t)*6);
+	size_t offset = 0;
+	struct compress_tree_node* tree = 0;
 	if(!hdr) return 0;
 	if(max<1) return 0;
 	hdr[0] = id;
@@ -599,6 +869,7 @@ size_t reply_info_iov_regen(struct query_info* qinfo, struct reply_info* rep,
 	iov[0].iov_base = (void*)&hdr[0];
 	iov[0].iov_len = sizeof(uint16_t)*6;
 	hdr[2] = htons(rep->qdcount);
+	offset = sizeof(uint16_t)*6;
 	used=1;
 
 	/* insert query section */
@@ -609,29 +880,33 @@ size_t reply_info_iov_regen(struct query_info* qinfo, struct reply_info* rep,
 		if(max-used < 3) return 0;
 		iov[used].iov_base = (void*)qinfo->qname;
 		iov[used].iov_len = qinfo->qnamesize;
+		if(!compress_tree_store(&tree, qinfo->qname, 
+			dname_count_labels(qinfo->qname), offset, region, NULL))
+			return 0;
 		*qt = htons(qinfo->qtype);
 		*qc = htons(qinfo->qclass);
 		iov[used+1].iov_base = (void*)qt;
 		iov[used+1].iov_len = sizeof(uint16_t);
 		iov[used+2].iov_base = (void*)qc;
 		iov[used+2].iov_len = sizeof(uint16_t);
+		offset += qinfo->qnamesize + sizeof(uint16_t)*2;
 		used += 3;
 	}
 
 	/* insert answer section */
 	if(!insert_section(rep, rep->an_numrrsets, &hdr[3], iov, max, 
-		0, timenow, region, &used, 0))
+		0, timenow, region, &used, 0, &tree, &offset))
 		return 0;
 
 	/* insert auth section */
 	if(!insert_section(rep, rep->ns_numrrsets, &hdr[4], iov, max, 
-		rep->an_numrrsets, timenow, region, &used, 0))
+		rep->an_numrrsets, timenow, region, &used, 0, &tree, &offset))
 		return 0;
 
 	/* insert add section */
 	if(!insert_section(rep, rep->ar_numrrsets, &hdr[5], iov, max, 
 		rep->an_numrrsets + rep->ns_numrrsets, timenow, region, 
-		&used, 1))
+		&used, 1, &tree, &offset))
 		return 0;
 
 	return used;
