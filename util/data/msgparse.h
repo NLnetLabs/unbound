@@ -102,9 +102,9 @@ struct msg_parse {
 	uint8_t* qname;
 	/** length of query dname in octets, 0 if none */
 	size_t qname_len;
-	/** query type, network order. 0 if qdcount=0 */
+	/** query type, host order. 0 if qdcount=0 */
 	uint16_t qtype;
-	/** query class, network order. 0 if qdcount=0 */
+	/** query class, host order. 0 if qdcount=0 */
 	uint16_t qclass;
 
 	/**
@@ -137,7 +137,7 @@ struct rrset_parse {
 	uint8_t* dname;
 	/** length of the dname uncompressed wireformat */
 	size_t dname_len;
-	/** type, network order. */
+	/** type, host order. */
 	uint16_t type;
 	/** class, network order. var name so that it is not a c++ keyword. */
 	uint16_t rrset_class;

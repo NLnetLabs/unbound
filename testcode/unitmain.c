@@ -218,6 +218,6 @@ main(int argc, char* argv[])
 	slabhash_test();
 	msgparse_test();
 	checklock_stop();
-	printf("%d tests succeeded\n", testcount);
+	printf("%d checks ok.\n", testcount);
 	return 0;
 }

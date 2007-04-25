@@ -149,7 +149,7 @@ pkt_rrset_flags(struct msg_parse* msg, ldns_buffer* pkt, uint16_t type)
 	if(msg->flags & BIT_CD)
 		f = PACKED_RRSET_CD;
 	else	f = 0;
-	if(type == htons(LDNS_RR_TYPE_NSEC) && nsec_at_apex(pkt)) {
+	if(type == LDNS_RR_TYPE_NSEC && nsec_at_apex(pkt)) {
 		f |= PACKED_RRSET_NSEC_AT_APEX;
 	}
 	return f;
@@ -224,7 +224,7 @@ static int
 pkt_rrsig_covered_equals(ldns_buffer* pkt, uint8_t* here, uint16_t type)
 {
 	uint16_t t;
-	if(pkt_rrsig_covered(pkt, here, &t) && t == ntohs(type))
+	if(pkt_rrsig_covered(pkt, here, &t) && t == type)
 		return 1;
 	return 0;
 }
@@ -295,7 +295,7 @@ rrset_has_sigover(ldns_buffer* pkt, struct rrset_parse* rrset, uint16_t type,
 {
 	int res = 0;
 	struct rr_parse* rr = rrset->rr_first;
-	log_assert( htons(rrset->type) == LDNS_RR_TYPE_RRSIG );
+	log_assert( rrset->type == LDNS_RR_TYPE_RRSIG );
 	while(rr) {
 		if(pkt_rrsig_covered_equals(pkt, rr->ttl_data, type))
 			res = 1;
@@ -356,8 +356,8 @@ change_rrsig_rrset(struct rrset_parse* sigset, struct msg_parse* msg,
 	struct rrset_parse* dataset = sigset;
 	hashvalue_t hash = pkt_hash_rrset(pkt, sigset->dname, sigset->type, 
 		sigset->rrset_class, rrset_flags);
-	log_assert( ntohs(sigset->type) == LDNS_RR_TYPE_RRSIG );
-	log_assert( ntohs(datatype) != LDNS_RR_TYPE_RRSIG );
+	log_assert( sigset->type == LDNS_RR_TYPE_RRSIG );
+	log_assert( datatype != LDNS_RR_TYPE_RRSIG );
 	if(hasother) {
 		/* need to make new rrset to hold data type */
 		dataset = new_rrset(msg, sigset->dname, sigset->dname_len, 
@@ -372,8 +372,8 @@ change_rrsig_rrset(struct rrset_parse* sigset, struct msg_parse* msg,
 			default: log_assert(0);
 		}
 		if(!moveover_rrsigs(pkt, region, sigset, dataset, 
-			ntohs(msg->qtype) == LDNS_RR_TYPE_RRSIG ||
-			ntohs(msg->qtype) == LDNS_RR_TYPE_ANY ))
+			msg->qtype == LDNS_RR_TYPE_RRSIG ||
+			msg->qtype == LDNS_RR_TYPE_ANY ))
 			return NULL;
 		return dataset;
 	}
@@ -437,8 +437,7 @@ find_rrset(struct msg_parse* msg, ldns_buffer* pkt, uint8_t* dname,
 			return 1;
 		}
 		/* check if rrsig over previous item */
-		if(ntohs(type) == LDNS_RR_TYPE_RRSIG && 
-			dclass == *prev_dclass &&
+		if(type == LDNS_RR_TYPE_RRSIG && dclass == *prev_dclass &&
 			pkt_rrsig_covered_equals(pkt, ldns_buffer_current(pkt),
 				*prev_type) &&
 			smart_compare(pkt, dname, *prev_dname_first,
@@ -452,14 +451,13 @@ find_rrset(struct msg_parse* msg, ldns_buffer* pkt, uint8_t* dname,
 	*rrset_flags = pkt_rrset_flags(msg, pkt, type);
 	
 	/* if rrsig - try to lookup matching data set first */
-	if(ntohs(type) == LDNS_RR_TYPE_RRSIG && pkt_rrsig_covered(pkt, 
+	if(type == LDNS_RR_TYPE_RRSIG && pkt_rrsig_covered(pkt, 
 		ldns_buffer_current(pkt), &covtype)) {
-		covtype = htons(covtype);
 		*hash = pkt_hash_rrset(pkt, dname, covtype, dclass, 
 			*rrset_flags);
 		*rrset_prev = hashtable_lookup(msg, pkt, *hash, *rrset_flags, 
 			dname, dnamelen, covtype, dclass);
-		if(!*rrset_prev && ntohs(covtype) == LDNS_RR_TYPE_NSEC) {
+		if(!*rrset_prev && covtype == LDNS_RR_TYPE_NSEC) {
 			/* if NSEC try with NSEC apex bit twiddled */
 			*rrset_flags ^= PACKED_RRSET_NSEC_AT_APEX;
 			*hash = pkt_hash_rrset(pkt, dname, covtype, dclass, 
@@ -476,13 +474,13 @@ find_rrset(struct msg_parse* msg, ldns_buffer* pkt, uint8_t* dname,
 			return 1;
 		}
 	}
-	if(ntohs(type) != LDNS_RR_TYPE_RRSIG) {
+	if(type != LDNS_RR_TYPE_RRSIG) {
 		int hasother = 0;
 		/* find matching rrsig */
-		*hash = pkt_hash_rrset(pkt, dname, htons(LDNS_RR_TYPE_RRSIG), 
+		*hash = pkt_hash_rrset(pkt, dname, LDNS_RR_TYPE_RRSIG, 
 			dclass, *rrset_flags);
 		*rrset_prev = hashtable_lookup(msg, pkt, *hash, *rrset_flags, 
-			dname, dnamelen, htons(LDNS_RR_TYPE_RRSIG), dclass);
+			dname, dnamelen, LDNS_RR_TYPE_RRSIG, dclass);
 		if(*rrset_prev && rrset_has_sigover(pkt, *rrset_prev, type,
 			&hasother)) {
 			/* yes! */
@@ -694,8 +692,8 @@ add_rr_to_rrset(struct rrset_parse* rrset, ldns_buffer* pkt,
 {
 	struct rr_parse* rr;
 	/* check section of rrset. */
-	if(rrset->section != section && ntohs(type) != LDNS_RR_TYPE_RRSIG &&
-		ntohs(rrset->type) != LDNS_RR_TYPE_RRSIG) {
+	if(rrset->section != section && type != LDNS_RR_TYPE_RRSIG &&
+		rrset->type != LDNS_RR_TYPE_RRSIG) {
 		/* silently drop it - it is a security problem, since
 		 * trust in rr data depends on the section it is in. 
 		 * the less trustworthy part is discarded. */
@@ -707,8 +705,8 @@ add_rr_to_rrset(struct rrset_parse* rrset, ldns_buffer* pkt,
 		return 0;
 	} 
 
-	if( (ntohs(msg->qtype) == LDNS_RR_TYPE_RRSIG ||
-	     ntohs(msg->qtype) == LDNS_RR_TYPE_ANY) 
+	if( (msg->qtype == LDNS_RR_TYPE_RRSIG ||
+	     msg->qtype == LDNS_RR_TYPE_ANY) 
 	    && sig_is_double(pkt, rrset, ldns_buffer_current(pkt))) {
 		if(!skip_ttl_rdata(pkt))
 			return LDNS_RCODE_FORMERR;
@@ -720,7 +718,7 @@ add_rr_to_rrset(struct rrset_parse* rrset, ldns_buffer* pkt,
 		return LDNS_RCODE_SERVFAIL;
 	rr->ttl_data = ldns_buffer_current(pkt);
 	rr->next = 0;
-	if(ntohs(type) == LDNS_RR_TYPE_RRSIG) {
+	if(type == LDNS_RR_TYPE_RRSIG) {
 		if(rrset->rrsig_last) 
 			rrset->rrsig_last->next = rr;
 		else	rrset->rrsig_first = rr;
@@ -735,7 +733,7 @@ add_rr_to_rrset(struct rrset_parse* rrset, ldns_buffer* pkt,
 	}
 
 	/* calc decompressed size */
-	if(!calc_size(pkt, ntohs(type), rr))
+	if(!calc_size(pkt, type, rr))
 		return LDNS_RCODE_FORMERR;
 	rrset->size += rr->size;
 
@@ -778,14 +776,14 @@ parse_section(ldns_buffer* pkt, struct msg_parse* msg, region_type* region,
 			return LDNS_RCODE_FORMERR;
 		if(ldns_buffer_remaining(pkt) < 10) /* type, class, ttl, len */
 			return LDNS_RCODE_FORMERR;
-		ldns_buffer_read(pkt, &type, sizeof(type));
+		type = ldns_buffer_read_u16(pkt);
 		ldns_buffer_read(pkt, &dclass, sizeof(dclass));
 
 		if(0) { /* debug show what is being parsed. */
 			printf("parse of %s(%d)",
-				ldns_rr_descript(ntohs(type))?
-				ldns_rr_descript(ntohs(type))->_name: "??",
-				(int)ntohs(type));
+				ldns_rr_descript(type)?
+				ldns_rr_descript(type)->_name: "??",
+				(int)type);
 			printf(" %s(%d) ",
 				ldns_lookup_by_id(ldns_rr_classes, 
 				(int)ntohs(dclass))?ldns_lookup_by_id(
@@ -860,7 +858,7 @@ parse_extract_edns(struct msg_parse* msg, struct edns_data* edns)
 	/* since the class encodes the UDP size, we cannot use hash table to
 	 * find the EDNS OPT record. Scan the packet. */
 	while(rrset) {
-		if(ntohs(rrset->type) == LDNS_RR_TYPE_OPT) {
+		if(rrset->type == LDNS_RR_TYPE_OPT) {
 			/* only one OPT RR allowed. */
 			if(found) return LDNS_RCODE_FORMERR;
 			/* found it! */

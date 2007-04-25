@@ -1,3 +1,6 @@
+25 April 2007: Wouter
+	- prettier code; parse_rrset->type kept in host byte order.
+
 24 April 2007: Wouter
 	- ttl per RR, for RRSIG rrsets and others.
 	- dname_print debug function.

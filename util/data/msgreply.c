@@ -210,7 +210,7 @@ parse_rr_copy(ldns_buffer* pkt, struct rrset_parse* pset,
 		data->rr_data[i] = nextrdata;
 		nextrdata += rr->size;
 		if(!rdata_copy(pkt, data, data->rr_data[i], rr, 
-			&data->rr_ttl[i], ntohs(pset->type)))
+			&data->rr_ttl[i], pset->type))
 			return 0;
 		rr = rr->next;
 	}
@@ -259,6 +259,7 @@ parse_copy_decompress(ldns_buffer* pkt, struct msg_parse* msg,
 {
 	int ret;
 	size_t i;
+	uint16_t t;
 	struct rrset_parse *pset = msg->rrset_first;
 	struct packed_rrset_data* data;
 	log_assert(rep);
@@ -273,8 +274,9 @@ parse_copy_decompress(ldns_buffer* pkt, struct msg_parse* msg,
 		/** copy & decompress dname */
 		dname_pkt_copy(pkt, rep->rrsets[i]->rk.dname, pset->dname);
 		/** copy over type and class */
+		t = htons(pset->type);
 		memmove(&rep->rrsets[i]->rk.dname[pset->dname_len], 
-			&pset->type, sizeof(uint16_t));
+			&t, sizeof(uint16_t));
 		memmove(&rep->rrsets[i]->rk.dname[pset->dname_len+2], 
 			&pset->rrset_class, sizeof(uint16_t));
 		/** read data part. */
