@@ -126,12 +126,13 @@ realclean: clean
 	rm -f util/configlexer.c util/configparser.c util/configparser.h
 	rm -f Makefile 
 
-lint:
-	$Qfor i in $(filter-out util/configparser.c,$(filter-out util/configlexer.c,$(sort $(ALL_SRC)))); do \
-		echo lint $$i; \
-		$(LINT) $(LINTFLAGS) -I. -I$(srcdir) -I$(ldnsdir)/include $(srcdir)/$$i ; \
-		if [ $$? -ne 0 ] ; then exit 1 ; fi ; \
-	done
+$(BUILD)%.lint:    $(srcdir)/%.c 
+	$(INFO) Lint $<
+	@if test ! -d $(dir $@); then $(INSTALL) -d $(patsubst %/,%,$(dir $@)); fi
+	$Q$(LINT) $(LINTFLAGS) -I. -I$(srcdir) -I$(ldnsdir)/include $<
+	$Qtouch $@
+
+lint:	$(addprefix $(BUILD),$(filter-out util/configparser.lint,$(filter-out util/configlexer.lint,$(sort $(ALL_SRC:.c=.lint)))))
 
 tags:	$(srcdir)/*.[ch] $(srcdir)/*/*.[ch]
 	ctags  -f $(srcdir)/tags $(srcdir)/*.[ch] $(srcdir)/*/*.[ch]

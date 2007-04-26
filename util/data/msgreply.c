@@ -649,7 +649,7 @@ compress_tree_store(struct compress_tree_node** tree, uint8_t* dname,
 	if(closest) uplabs = labs - closest->labs;
 	log_assert(uplabs >= 0);
 	while(uplabs--) {
-		if(offset > 0x3fff) { /* largest valid compr. offset */
+		if(offset > PTR_MAX_OFFSET) {
 			if(lastparentptr) 
 				*lastparentptr = closest;
 			return 1; /* compression pointer no longer useful */
@@ -713,7 +713,7 @@ bakedname(int dosig, struct compress_tree_node** tree, size_t* offset,
 	struct compress_tree_node* p;
 	int labs = dname_count_labels(rk->dname);
 	p = compress_tree_lookup(*tree, rk->dname, labs);
-	if(p) {
+	if(p && p->offset <= PTR_MAX_OFFSET) {
 		/* compress it */
 		int labcopy = labs - p->labs;
 		size_t len = 0;
@@ -735,7 +735,7 @@ bakedname(int dosig, struct compress_tree_node** tree, size_t* offset,
 			from += lablen;
 		}
 		/* insert compression ptr */
-		ptr = 0xc000 | p->offset;
+		ptr = (uint16_t)(0xc000 | p->offset);
 		ptr = htons(ptr);
 		memmove(dat, &ptr, sizeof(ptr));
 		len += sizeof(ptr);

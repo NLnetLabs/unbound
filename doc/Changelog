@@ -1,5 +1,8 @@
 26 April 2007: Wouter
 	- floating point exception fix in lock-verify.
+	- lint uses make dependency
+	- fixup lint in dname owner domain name compression code.
+	- define for offset range that can be compressed to.
 
 25 April 2007: Wouter
 	- prettier code; parse_rrset->type kept in host byte order.
