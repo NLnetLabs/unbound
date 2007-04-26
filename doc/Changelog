@@ -1,3 +1,6 @@
+26 April 2007: Wouter
+	- floating point exception fix in lock-verify.
+
 25 April 2007: Wouter
 	- prettier code; parse_rrset->type kept in host byte order.
 	- datatype used for hashvalue of converted rrsig structure.

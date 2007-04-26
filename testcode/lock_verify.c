@@ -380,7 +380,8 @@ static void check_order(rbtree_t* all_locks)
 			i, (int)all_locks->count,
 			lock->id.thr, lock->id.instance, 
 			lock->create_file, lock->create_line);
-		else if (i % (all_locks->count/75) == 0) 
+		else if (i % ((all_locks->count/75)<1?1:all_locks->count/75) 
+			== 0) 
 		    fprintf(stderr, ".");
 		i++;
 		check_order_lock(lock);
