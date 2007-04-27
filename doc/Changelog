@@ -1,5 +1,7 @@
 27 April 2007: Wouter
 	- removed iov usage, it is not good for dns message encoding.
+	- owner name compression more optimal.
+	- rrsig owner name compression.
 
 26 April 2007: Wouter
 	- floating point exception fix in lock-verify.

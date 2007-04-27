@@ -433,3 +433,17 @@ dname_lab_cmp(uint8_t* d1, int labs1, uint8_t* d2, int labs2, int* mlabs)
 	}
 	return lastdiff;
 }
+
+void dname_buffer_write(ldns_buffer* pkt, uint8_t* dname)
+{
+	uint8_t lablen;
+
+	lablen = *dname++;
+	ldns_buffer_write_u8(pkt, lablen);
+	while(lablen) {
+		ldns_buffer_write(pkt, dname, lablen);
+		dname += lablen;
+		lablen = *dname++;
+		ldns_buffer_write_u8(pkt, lablen);
+	}
+}

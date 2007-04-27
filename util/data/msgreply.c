@@ -676,42 +676,81 @@ compress_tree_store(struct compress_tree_node** tree, uint8_t* dname,
 	return 1;
 }
 
-/** bake dname compression */
-static int
-bakedname(struct compress_tree_node** tree, region_type* region, 
-	ldns_buffer* pkt, struct packed_rrset_key* rk)
+/** compress a domain name */
+static void
+write_compressed_dname(ldns_buffer* pkt, uint8_t* dname, int labs,
+	struct compress_tree_node* p)
 {
-	/* see if this name can be compressed */
-	size_t pos = ldns_buffer_position(pkt);
-	struct compress_tree_node* p;
-	int labs = dname_count_labels(rk->dname);
-	p = compress_tree_lookup(*tree, rk->dname, labs);
-	if(p && p->offset <= PTR_MAX_OFFSET) {
-		/* compress it */
-		int labcopy = labs - p->labs;
-		uint8_t lablen;
-		uint8_t* from = rk->dname;
-		uint16_t ptr;
+	/* compress it */
+	int labcopy = labs - p->labs;
+	uint8_t lablen;
+	uint16_t ptr;
 
-		/* copy the first couple of labels */
-		while(labcopy--) {
-			lablen = *from++;
-			ldns_buffer_write_u8(pkt, lablen);
-			ldns_buffer_write(pkt, from, lablen);
-			from += lablen;
-		}
-		/* insert compression ptr */
-		ptr = (uint16_t)(0xc000 | p->offset);
-		ldns_buffer_write_u16(pkt, ptr);
-	} else {
-		/* uncompressed */
-		ldns_buffer_write(pkt, rk->dname, rk->dname_len);
+	/* copy the first couple of labels */
+	while(labcopy--) {
+		lablen = *dname++;
+		ldns_buffer_write_u8(pkt, lablen);
+		ldns_buffer_write(pkt, dname, lablen);
+		dname += lablen;
 	}
+	/* insert compression ptr */
+	ptr = (uint16_t)(0xc000 | p->offset);
+	ldns_buffer_write_u16(pkt, ptr);
+}
 
-	/* store this name for future compression */
-	if(!compress_tree_store(tree, rk->dname, labs, pos, region, p))
-		return 0;
+/** compress owner name of RR */
+static int
+compress_owner(struct ub_packed_rrset_key* key, ldns_buffer* pkt, 
+	region_type* region, struct compress_tree_node** tree, 
+	size_t owner_pos, uint16_t* owner_ptr, int owner_labs)
+{
+	struct compress_tree_node* p;
+	if(!*owner_ptr) {
+		/* compress first time dname */
+		if((p = compress_tree_lookup(*tree, key->rk.dname, 
+			owner_labs))) {
+			if(p->labs == owner_labs) 
+				/* avoid ptr chains, since some software is
+				 * not capable of decoding ptr after a ptr. */
+				*owner_ptr = htons((uint16_t)(0xc000 | 
+					p->offset));
+			write_compressed_dname(pkt, key->rk.dname, 
+				owner_labs, p);
+			ldns_buffer_write(pkt, &key->rk.dname[
+				key->rk.dname_len], 4);
+		} else {
+			/* no compress */
+			ldns_buffer_write(pkt, key->rk.dname, 
+				key->rk.dname_len+4);
+			if(owner_pos <= PTR_MAX_OFFSET)
+				*owner_ptr = htons((uint16_t)(0xc000 | 
+					owner_pos));
+		}
+		if(!compress_tree_store(tree, key->rk.dname, 
+			owner_labs, owner_pos, region, p))
+			return 0;
+	} else {
+		/* always compress 2nd-further RRs in RRset */
+		ldns_buffer_write(pkt, owner_ptr, 2);
+		ldns_buffer_write(pkt, &key->rk.dname[key->rk.dname_len], 4);
+	}
 	return 1;
+}
+
+/** compress any domain name to the packet */
+static int
+compress_any_dname(uint8_t* dname, ldns_buffer* pkt, 
+	region_type* region, struct compress_tree_node** tree)
+{
+	struct compress_tree_node* p;
+	int labs = dname_count_labels(dname);
+	size_t pos = ldns_buffer_position(pkt);
+	if((p = compress_tree_lookup(*tree, dname, labs))) {
+		write_compressed_dname(pkt, dname, labs, p);
+	} else {
+		dname_buffer_write(pkt, dname);
+	}
+	return compress_tree_store(tree, dname, labs, pos, region, p);
 }
 
 /** store rrset in iov vector */
@@ -720,17 +759,22 @@ packed_rrset_iov(struct ub_packed_rrset_key* key, ldns_buffer* pkt,
 	uint16_t* num_rrs, uint32_t timenow, region_type* region,
 	int do_data, int do_sig, struct compress_tree_node** tree)
 {
-	size_t i;
+	size_t i, owner_pos;
+	int owner_labs;
+	uint16_t owner_ptr = 0;
 	struct packed_rrset_data* data = (struct packed_rrset_data*)
 		key->entry.data;
+
+	owner_labs = dname_count_labels(key->rk.dname);
+	owner_pos = ldns_buffer_position(pkt);
+
 	if(do_data) {
 		*num_rrs += data->count;
 		for(i=0; i<data->count; i++) {
 			if(1) { /* compression */
-				if(!bakedname(tree, region, pkt, &key->rk))
+				if(!compress_owner(key, pkt, region, tree, 
+					owner_pos, &owner_ptr, owner_labs))
 					return 0;
-				ldns_buffer_write(pkt, 
-					&key->rk.dname[key->rk.dname_len], 4);
 			} else {
 				/* no compression */
 				ldns_buffer_write(pkt, key->rk.dname, 
@@ -746,14 +790,22 @@ packed_rrset_iov(struct ub_packed_rrset_key* key, ldns_buffer* pkt,
 		size_t total = data->count+data->rrsig_count;
 		*num_rrs += data->rrsig_count;
 		for(i=data->count; i<total; i++) {
-
-			/* no compression of dnames yet */
-			ldns_buffer_write(pkt, key->rk.dname, 
-				key->rk.dname_len);
+			if(1) { /* compression */
+				if(owner_ptr)
+					ldns_buffer_write(pkt, &owner_ptr, 2);
+				else 	compress_any_dname(key->rk.dname, 
+						pkt, region, tree);
+			} else {
+				/* no compression */
+				ldns_buffer_write(pkt, key->rk.dname, 
+					key->rk.dname_len);
+			}
 			ldns_buffer_write_u16(pkt, LDNS_RR_TYPE_RRSIG);
 			ldns_buffer_write(pkt, &(key->rk.dname[
 				key->rk.dname_len+2]), sizeof(uint16_t));
 			ldns_buffer_write_u32(pkt, data->rr_ttl[i]-timenow);
+			/* rrsig rdata cannot be compressed, perform 100+ byte
+			 * memcopy. */
 			ldns_buffer_write(pkt, data->rr_data[i],
 				data->rr_len[i]);
 		}

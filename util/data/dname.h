@@ -119,6 +119,13 @@ hashvalue_t dname_pkt_hash(ldns_buffer* pkt, uint8_t* dname, hashvalue_t h);
  */
 void dname_pkt_copy(ldns_buffer* pkt, uint8_t* to, uint8_t* dname);
 
+/**
+ * Copy over a valid dname to a packet.
+ * @param pkt: packet to copy to.
+ * @param dname: dname to copy.
+ */
+void dname_buffer_write(ldns_buffer* pkt, uint8_t* dname);
+
 /** debug helper. Print wireformat dname to output. 
  * @param out: like stdout or a file.
  * @param pkt: if not NULL, the packet for resolving compression ptrs.
