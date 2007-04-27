@@ -13,3 +13,4 @@ o possible optimization, so that precious id number resource is not depleted
   it reuses that id number.
 o use rbtree to compress domain names in messages, sorted AXFRs of 16Kb
   and so on. This may be faster for that case.
+o speed up pkt domain name decompression loop detection using counter perhaps.
