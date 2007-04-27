@@ -247,7 +247,6 @@ testpkt(ldns_buffer* pkt, struct alloc_cache* alloc, ldns_buffer* out,
 {
 	struct query_info qi;
 	struct reply_info* rep = 0;
-	size_t sz;
 	int ret;
 	uint16_t id;
 	uint16_t flags;
@@ -266,9 +265,9 @@ testpkt(ldns_buffer* pkt, struct alloc_cache* alloc, ldns_buffer* out,
 			checkformerr(pkt);
 		unit_assert(ret != LDNS_RCODE_SERVFAIL);
 	} else {
-		sz = reply_info_encode(&qi, rep, id, flags, out, timenow,
+		ret = reply_info_encode(&qi, rep, id, flags, out, timenow,
 			region);
-		unit_assert(sz != 0); /* udp packets should fit in 1024 iov */
+		unit_assert(ret != 0); /* udp packets should fit */
 		if(vbmp) printf("inlen %u outlen %u\n", 
 			(unsigned)ldns_buffer_limit(pkt),
 			(unsigned)ldns_buffer_limit(out));
