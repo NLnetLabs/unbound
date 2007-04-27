@@ -612,7 +612,7 @@ compress_tree_insert(struct compress_tree_node** tree, uint8_t* dname,
 	while(p) {
 		c = dname_lab_cmp(dname, labs, p->dname, p->labs, &m);
 		log_assert(c != 0); /* may not already be in tree */
-		if(c==0) return p;
+		if(c==0) return p; /* insert only once */
 		if(c<0)	{
 			prev = &p->left;
 			p = p->left;
