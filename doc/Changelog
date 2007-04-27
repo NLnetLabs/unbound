@@ -1,3 +1,6 @@
+27 April 2007: Wouter
+	- removed iov usage, it is not good for dns message encoding.
+
 26 April 2007: Wouter
 	- floating point exception fix in lock-verify.
 	- lint uses make dependency

@@ -251,20 +251,20 @@ void reply_info_answer(struct reply_info* rep, uint16_t qflags,
 	ldns_buffer* buf);
 
 /**
- * Regenerate the wireformat from the parsed msg.
+ * Regenerate the wireformat from the stored msg reply.
  * @param qinfo: query info to store.
  * @param rep: reply to store.
  * @param id: id value to store, network order.
  * @param flags: flags value to store, host order.
- * @param iov: iov to store it into (start position to store).
- * @param max: max that can be stored.
+ * @param buffer: buffer to store the packet into.
  * @param timenow: time now, to adjust ttl values.
  * @param region: to store temporary data in.
- * @return: number of items stored, 0 on error.
+ * @return: nonzero is success, or 
+ *	0 on error: malloc failure or buffer too small.
  */
-size_t reply_info_iov_regen(struct query_info* qinfo, struct reply_info* rep, 
-	uint16_t id, uint16_t flags, struct iovec* iov, size_t max, 
-	uint32_t timenow, struct region* region);
+int reply_info_encode(struct query_info* qinfo, struct reply_info* rep, 
+	uint16_t id, uint16_t flags, ldns_buffer* buffer, uint32_t timenow, 
+	struct region* region);
 
 /**
  * Generate and send out answer from reply_info.

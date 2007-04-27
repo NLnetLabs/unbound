@@ -676,149 +676,86 @@ compress_tree_store(struct compress_tree_node** tree, uint8_t* dname,
 	return 1;
 }
 
-
-/** bake a new type-class-ttl value, or 0 on malloc error */
-static uint32_t*
-bake_tcttl(int do_sig, region_type* region, 
-	struct packed_rrset_key* rk, uint32_t ttl, uint32_t timenow,
-	uint32_t* prevttl, uint32_t* prevtcttl)
-{
-	/* type, class, ttl,
-	   type-class-ttl used for rrsigs.
-	   ttl used for data itself. */
-	uint32_t* t;
-	if(prevttl && *prevttl == ttl)
-		return prevtcttl;
-	if(do_sig) {
-		t =  (uint32_t*)region_alloc(region, 2*sizeof(uint32_t));
-		if(!t) return 0;
-		((uint16_t*)t)[0] = htons(LDNS_RR_TYPE_RRSIG);
-		memcpy( &(((uint16_t*)t)[1]), &(rk->dname[rk->dname_len+2]),
-			sizeof(uint16_t));
-		t[1] = htonl(ttl - timenow);
-	} else {
-		t =  (uint32_t*)region_alloc(region, sizeof(uint32_t));
-		if(!t) return 0;
-		t[0] = htonl(ttl - timenow);
-	}
-	return t;
-}
-
-/** bake dname iov */
+/** bake dname compression */
 static int
-bakedname(int dosig, struct compress_tree_node** tree, size_t* offset, 
-	region_type* region, struct iovec* iov, struct packed_rrset_key* rk)
+bakedname(struct compress_tree_node** tree, region_type* region, 
+	ldns_buffer* pkt, struct packed_rrset_key* rk)
 {
 	/* see if this name can be compressed */
+	size_t pos = ldns_buffer_position(pkt);
 	struct compress_tree_node* p;
 	int labs = dname_count_labels(rk->dname);
 	p = compress_tree_lookup(*tree, rk->dname, labs);
 	if(p && p->offset <= PTR_MAX_OFFSET) {
 		/* compress it */
 		int labcopy = labs - p->labs;
-		size_t len = 0;
 		uint8_t lablen;
 		uint8_t* from = rk->dname;
 		uint16_t ptr;
-		uint8_t* dat = (uint8_t*)region_alloc(region,
-			(dosig?0:sizeof(uint16_t)*2) + rk->dname_len);
-		/* note: oversized memory allocation. */
-		if(!dat) return 0;
-		iov->iov_base = dat;
+
 		/* copy the first couple of labels */
 		while(labcopy--) {
 			lablen = *from++;
-			*dat++ = lablen;
-			memmove(dat, from, lablen);
-			len += lablen+1;
-			dat += lablen;
+			ldns_buffer_write_u8(pkt, lablen);
+			ldns_buffer_write(pkt, from, lablen);
 			from += lablen;
 		}
 		/* insert compression ptr */
 		ptr = (uint16_t)(0xc000 | p->offset);
-		ptr = htons(ptr);
-		memmove(dat, &ptr, sizeof(ptr));
-		len += sizeof(ptr);
-		dat += sizeof(ptr);
-		if(!dosig) {
-			/* add type and class */
-			memmove(dat, &rk->dname[rk->dname_len], 4);
-			dat += 4;
-			len += 4;
-		}
-		log_assert(len <= (dosig?0:sizeof(uint16_t)*2) + rk->dname_len);
-		iov->iov_len = len;
+		ldns_buffer_write_u16(pkt, ptr);
 	} else {
 		/* uncompressed */
-		iov->iov_base = rk->dname;
-		if(dosig)
-			iov->iov_len = rk->dname_len;
-		else	iov->iov_len = rk->dname_len + 4;
+		ldns_buffer_write(pkt, rk->dname, rk->dname_len);
 	}
 
 	/* store this name for future compression */
-	if(!compress_tree_store(tree, rk->dname, labs, *offset, region, p))
+	if(!compress_tree_store(tree, rk->dname, labs, pos, region, p))
 		return 0;
 	return 1;
 }
 
 /** store rrset in iov vector */
 static int
-packed_rrset_iov(struct ub_packed_rrset_key* key, struct iovec* iov, 
-	size_t max, uint16_t* num_rrs, uint32_t timenow, region_type* region,
-	size_t* used, int do_data, int do_sig, 
-	struct compress_tree_node** tree, size_t* offset)
+packed_rrset_iov(struct ub_packed_rrset_key* key, ldns_buffer* pkt, 
+	uint16_t* num_rrs, uint32_t timenow, region_type* region,
+	int do_data, int do_sig, struct compress_tree_node** tree)
 {
 	size_t i;
-	uint32_t* tcttl = 0;
 	struct packed_rrset_data* data = (struct packed_rrset_data*)
 		key->entry.data;
 	if(do_data) {
 		*num_rrs += data->count;
 		for(i=0; i<data->count; i++) {
-			if(max - *used < 3) return 0;
-			if(!(tcttl = bake_tcttl(0, region, &key->rk, 
-				data->rr_ttl[i], timenow, 
-				i>0?&data->rr_ttl[i-1]:0, tcttl)))
-				return 0;
-			/* no compression of dnames yet */
-			if(1) {
-			if(!bakedname(0, tree, offset, region, &iov[*used], 
-				&key->rk))
-				return 0;
+			if(1) { /* compression */
+				if(!bakedname(tree, region, pkt, &key->rk))
+					return 0;
+				ldns_buffer_write(pkt, 
+					&key->rk.dname[key->rk.dname_len], 4);
 			} else {
 				/* no compression */
-				iov[*used].iov_base = (void*)key->rk.dname;
-				iov[*used].iov_len = key->rk.dname_len + 4;
+				ldns_buffer_write(pkt, key->rk.dname, 
+					key->rk.dname_len + 4);
 			}
-			iov[*used+1].iov_base = (void*)tcttl;
-			iov[*used+1].iov_len = sizeof(uint32_t);
-			iov[*used+2].iov_base = (void*)data->rr_data[i];
-			iov[*used+2].iov_len = data->rr_len[i];
-			*offset += iov[*used].iov_len + sizeof(uint32_t) +
-				data->rr_len[i];
-			*used += 3;
+			ldns_buffer_write_u32(pkt, data->rr_ttl[i]-timenow);
+			ldns_buffer_write(pkt, data->rr_data[i], 
+				data->rr_len[i]);
 		}
 	}
 	/* insert rrsigs */
 	if(do_sig) {
+		size_t total = data->count+data->rrsig_count;
 		*num_rrs += data->rrsig_count;
-		for(i=0; i<data->rrsig_count; i++) {
-			if(max - *used < 3) return 0;
-			if(!(tcttl = bake_tcttl(1, region, &key->rk, 
-				data->rr_ttl[data->count+i], timenow,
-				i>0?&data->rr_ttl[i-1]:0, tcttl)))
-				return 0;
+		for(i=data->count; i<total; i++) {
+
 			/* no compression of dnames yet */
-			iov[*used].iov_base = (void*)key->rk.dname;
-			iov[*used].iov_len = key->rk.dname_len;
-			iov[*used+1].iov_base = (void*)tcttl;
-			iov[*used+1].iov_len = sizeof(uint32_t)*2;
-			iov[*used+2].iov_base = (void*)data->rr_data[data->count+i];
-			iov[*used+2].iov_len = data->rr_len[data->count+i];
-			*offset += iov[*used].iov_len + sizeof(uint32_t)*2 +
-				data->rr_len[data->count+i];
-			*used += 3;
+			ldns_buffer_write(pkt, key->rk.dname, 
+				key->rk.dname_len);
+			ldns_buffer_write_u16(pkt, LDNS_RR_TYPE_RRSIG);
+			ldns_buffer_write(pkt, &(key->rk.dname[
+				key->rk.dname_len+2]), sizeof(uint16_t));
+			ldns_buffer_write_u32(pkt, data->rr_ttl[i]-timenow);
+			ldns_buffer_write(pkt, data->rr_data[i],
+				data->rr_len[i]);
 		}
 	}
 
@@ -828,90 +765,81 @@ packed_rrset_iov(struct ub_packed_rrset_key* key, struct iovec* iov,
 /** store msg section in iov vector */
 static int
 insert_section(struct reply_info* rep, size_t num_rrsets, uint16_t* num_rrs,
-	struct iovec* iov, size_t max, size_t rrsets_before,
-	uint32_t timenow, region_type* region, size_t* used, int addit,
-	struct compress_tree_node** tree, size_t* offset)
+	ldns_buffer* pkt, size_t rrsets_before, uint32_t timenow, 
+	region_type* region, int addit, struct compress_tree_node** tree)
 {
 	size_t i;
 	*num_rrs = 0;
 	if(!addit) {
 	  	for(i=0; i<num_rrsets; i++)
-			if(!packed_rrset_iov(rep->rrsets[rrsets_before+i], iov,
-				max, num_rrs, timenow, region, used, 1, 1,
-				tree, offset))
+			if(!packed_rrset_iov(rep->rrsets[rrsets_before+i], pkt,
+				num_rrs, timenow, region, 1, 1, tree))
 			return 0;
 	} else {
 	  	for(i=0; i<num_rrsets; i++)
-			if(!packed_rrset_iov(rep->rrsets[rrsets_before+i], iov,
-				max, num_rrs, timenow, region, used, 1, 0,
-				tree, offset))
+			if(!packed_rrset_iov(rep->rrsets[rrsets_before+i], pkt,
+				num_rrs, timenow, region, 1, 0, tree))
 			return 0;
 	  	for(i=0; i<num_rrsets; i++)
-			if(!packed_rrset_iov(rep->rrsets[rrsets_before+i], iov,
-				max, num_rrs, timenow, region, used, 0, 1,
-				tree, offset))
+			if(!packed_rrset_iov(rep->rrsets[rrsets_before+i], pkt,
+				num_rrs, timenow, region, 0, 1, tree))
 			return 0;
 	}
-	*num_rrs = htons(*num_rrs);
 	return 1;
 }
 
-size_t reply_info_iov_regen(struct query_info* qinfo, struct reply_info* rep, 
-	uint16_t id, uint16_t flags, struct iovec* iov, size_t max, 
-	uint32_t timenow, region_type* region)
+int reply_info_encode(struct query_info* qinfo, struct reply_info* rep, 
+	uint16_t id, uint16_t flags, ldns_buffer* buffer, uint32_t timenow, 
+	region_type* region)
 {
-	size_t used;
-	uint16_t* hdr = (uint16_t*)region_alloc(region, sizeof(uint16_t)*6);
-	size_t offset = 0;
+	uint16_t ancount=0, nscount=0, arcount=0;
 	struct compress_tree_node* tree = 0;
-	if(!hdr) return 0;
-	if(max<1) return 0;
-	hdr[0] = id;
-	hdr[1] = htons(flags);
-	iov[0].iov_base = (void*)&hdr[0];
-	iov[0].iov_len = sizeof(uint16_t)*6;
-	hdr[2] = htons(rep->qdcount);
-	offset = sizeof(uint16_t)*6;
-	used=1;
+
+	ldns_buffer_clear(buffer);
+	if(ldns_buffer_capacity(buffer) < LDNS_HEADER_SIZE)
+		return 0;
+
+	ldns_buffer_write(buffer, &id, sizeof(uint16_t));
+	ldns_buffer_write_u16(buffer, flags);
+	ldns_buffer_write_u16(buffer, rep->qdcount);
+	/* skip an, ns, ar counts */
+	ldns_buffer_set_position(buffer, LDNS_HEADER_SIZE);
 
 	/* insert query section */
 	if(rep->qdcount) {
-		uint16_t* qt = (uint16_t*)region_alloc(region,sizeof(uint16_t));
-		uint16_t* qc = (uint16_t*)region_alloc(region,sizeof(uint16_t));
-		if(!qt || !qc) return 0;
-		if(max-used < 3) return 0;
-		iov[used].iov_base = (void*)qinfo->qname;
-		iov[used].iov_len = qinfo->qnamesize;
+		if(ldns_buffer_remaining(buffer) < 
+			qinfo->qnamesize+sizeof(uint16_t)*2)
+			return 0; /* buffer too small */
 		if(!compress_tree_store(&tree, qinfo->qname, 
-			dname_count_labels(qinfo->qname), offset, region, NULL))
+			dname_count_labels(qinfo->qname), 
+			ldns_buffer_position(buffer), region, NULL))
 			return 0;
-		*qt = htons(qinfo->qtype);
-		*qc = htons(qinfo->qclass);
-		iov[used+1].iov_base = (void*)qt;
-		iov[used+1].iov_len = sizeof(uint16_t);
-		iov[used+2].iov_base = (void*)qc;
-		iov[used+2].iov_len = sizeof(uint16_t);
-		offset += qinfo->qnamesize + sizeof(uint16_t)*2;
-		used += 3;
+		ldns_buffer_write(buffer, qinfo->qname, qinfo->qnamesize);
+		ldns_buffer_write_u16(buffer, qinfo->qtype);
+		ldns_buffer_write_u16(buffer, qinfo->qclass);
 	}
 
 	/* insert answer section */
-	if(!insert_section(rep, rep->an_numrrsets, &hdr[3], iov, max, 
-		0, timenow, region, &used, 0, &tree, &offset))
+	if(!insert_section(rep, rep->an_numrrsets, &ancount, buffer, 
+		0, timenow, region, 0, &tree))
 		return 0;
+	ldns_buffer_write_u16_at(buffer, 6, ancount);
 
 	/* insert auth section */
-	if(!insert_section(rep, rep->ns_numrrsets, &hdr[4], iov, max, 
-		rep->an_numrrsets, timenow, region, &used, 0, &tree, &offset))
+	if(!insert_section(rep, rep->ns_numrrsets, &nscount, buffer, 
+		rep->an_numrrsets, timenow, region, 0, &tree))
 		return 0;
+	ldns_buffer_write_u16_at(buffer, 8, nscount);
 
 	/* insert add section */
-	if(!insert_section(rep, rep->ar_numrrsets, &hdr[5], iov, max, 
+	if(!insert_section(rep, rep->ar_numrrsets, &arcount, buffer, 
 		rep->an_numrrsets + rep->ns_numrrsets, timenow, region, 
-		&used, 1, &tree, &offset))
+		1, &tree))
 		return 0;
+	ldns_buffer_write_u16_at(buffer, 10, arcount);
+	ldns_buffer_flip(buffer);
 
-	return used;
+	return 1;
 }
 
 void 

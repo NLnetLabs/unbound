@@ -253,8 +253,6 @@ testpkt(ldns_buffer* pkt, struct alloc_cache* alloc, ldns_buffer* out,
 	uint16_t flags;
 	uint32_t timenow = 0;
 	region_type *region = region_create(malloc, free);
-	struct iovec iov[1024];
-	size_t maxiov = 1024;
 
 	hex_to_buf(pkt, hex);
 	memmove(&id, ldns_buffer_begin(pkt), sizeof(id));
@@ -268,11 +266,11 @@ testpkt(ldns_buffer* pkt, struct alloc_cache* alloc, ldns_buffer* out,
 			checkformerr(pkt);
 		unit_assert(ret != LDNS_RCODE_SERVFAIL);
 	} else {
-		sz = reply_info_iov_regen(&qi, rep, id, flags, iov, maxiov,
-			timenow, region);
+		sz = reply_info_encode(&qi, rep, id, flags, out, timenow,
+			region);
 		unit_assert(sz != 0); /* udp packets should fit in 1024 iov */
-		write_iov_buffer(out, iov, sz);
-		if(vbmp) printf("iov len outlen %u %u\n", (unsigned)sz, 
+		if(vbmp) printf("inlen %u outlen %u\n", 
+			(unsigned)ldns_buffer_limit(pkt),
 			(unsigned)ldns_buffer_limit(out));
 		test_buffers(pkt, out);
 	} 
