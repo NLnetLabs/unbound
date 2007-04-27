@@ -349,6 +349,24 @@ dname_count_labels(uint8_t* dname)
 	return labs;
 }
 
+int 
+dname_count_size_labels(uint8_t* dname, size_t* size)
+{	
+	uint8_t lablen;
+	int labs = 1;
+	*size = 1;
+
+	lablen = *dname++;
+	while(lablen) {
+		labs++;
+		*size += lablen+1;
+		dname += lablen;
+		lablen = *dname++;
+	}
+	return labs;
+
+}
+
 /**
  * Compare labels in memory, lowercase while comparing.
  * @param p1: label 1
@@ -434,7 +452,8 @@ dname_lab_cmp(uint8_t* d1, int labs1, uint8_t* d2, int labs2, int* mlabs)
 	return lastdiff;
 }
 
-void dname_buffer_write(ldns_buffer* pkt, uint8_t* dname)
+void 
+dname_buffer_write(ldns_buffer* pkt, uint8_t* dname)
 {
 	uint8_t lablen;
 

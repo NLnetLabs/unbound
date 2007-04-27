@@ -739,11 +739,10 @@ compress_owner(struct ub_packed_rrset_key* key, ldns_buffer* pkt,
 
 /** compress any domain name to the packet */
 static int
-compress_any_dname(uint8_t* dname, ldns_buffer* pkt, 
+compress_any_dname(uint8_t* dname, ldns_buffer* pkt, int labs, 
 	region_type* region, struct compress_tree_node** tree)
 {
 	struct compress_tree_node* p;
-	int labs = dname_count_labels(dname);
 	size_t pos = ldns_buffer_position(pkt);
 	if((p = compress_tree_lookup(*tree, dname, labs))) {
 		write_compressed_dname(pkt, dname, labs, p);
@@ -751,6 +750,67 @@ compress_any_dname(uint8_t* dname, ldns_buffer* pkt,
 		dname_buffer_write(pkt, dname);
 	}
 	return compress_tree_store(tree, dname, labs, pos, region, p);
+}
+
+/** return true if type needs domain name compression in rdata */
+static const ldns_rr_descriptor*
+type_rdata_compressable(struct ub_packed_rrset_key* key)
+{
+	uint16_t t;
+	memmove(&t, &key->rk.dname[key->rk.dname_len], sizeof(t));
+	t = ntohs(t);
+	if(ldns_rr_descript(t) && 
+		ldns_rr_descript(t)->_compress == LDNS_RR_COMPRESS)
+		return ldns_rr_descript(t);
+	return 0;
+}
+
+/** compress domain names in rdata */
+static int
+compress_rdata(ldns_buffer* pkt, uint8_t* rdata, size_t todolen, 
+	region_type* region, struct compress_tree_node** tree, 
+	const ldns_rr_descriptor* desc)
+{
+	int labs, rdf = 0;
+	size_t dname_len, len, pos = ldns_buffer_position(pkt);
+	uint8_t count = desc->_dname_count;
+
+	ldns_buffer_skip(pkt, 2); /* rdata len fill in later */
+	rdata += 2;
+	todolen -= 2;
+	while(todolen > 0 && count) {
+		switch(desc->_wireformat[rdf]) {
+		case LDNS_RDF_TYPE_DNAME:
+			labs = dname_count_size_labels(rdata, &dname_len);
+			if(!compress_any_dname(rdata, pkt, labs, region, tree))
+				return 0;
+			rdata += dname_len;
+			todolen -= dname_len;
+			count--;
+			len = 0;
+			break;
+		case LDNS_RDF_TYPE_STR:
+			len = *rdata + 1;
+			break;
+		default:
+			len = get_rdf_size(desc->_wireformat[rdf]);
+		}
+		if(len) {
+			/* copy over */
+			ldns_buffer_write(pkt, rdata, len);
+			todolen -= len;
+			rdata += len;
+		}
+		rdf++;
+	}
+	/* copy remainder */
+	if(todolen > 0) {
+		ldns_buffer_write(pkt, rdata, todolen);
+	}
+
+	/* set rdata len */
+	ldns_buffer_write_u16_at(pkt, pos, ldns_buffer_position(pkt)-pos-2);
+	return 1;
 }
 
 /** store rrset in iov vector */
@@ -769,6 +829,7 @@ packed_rrset_iov(struct ub_packed_rrset_key* key, ldns_buffer* pkt,
 	owner_pos = ldns_buffer_position(pkt);
 
 	if(do_data) {
+		const ldns_rr_descriptor* c = type_rdata_compressable(key);
 		*num_rrs += data->count;
 		for(i=0; i<data->count; i++) {
 			if(1) { /* compression */
@@ -781,7 +842,11 @@ packed_rrset_iov(struct ub_packed_rrset_key* key, ldns_buffer* pkt,
 					key->rk.dname_len + 4);
 			}
 			ldns_buffer_write_u32(pkt, data->rr_ttl[i]-timenow);
-			ldns_buffer_write(pkt, data->rr_data[i], 
+			if(c) {
+				if(!compress_rdata(pkt, data->rr_data[i],
+					data->rr_len[i], region, tree, c))
+					return 0;
+			} else ldns_buffer_write(pkt, data->rr_data[i], 
 				data->rr_len[i]);
 		}
 	}
@@ -793,8 +858,11 @@ packed_rrset_iov(struct ub_packed_rrset_key* key, ldns_buffer* pkt,
 			if(1) { /* compression */
 				if(owner_ptr)
 					ldns_buffer_write(pkt, &owner_ptr, 2);
-				else 	compress_any_dname(key->rk.dname, 
-						pkt, region, tree);
+				else 	{
+					if(!compress_any_dname(key->rk.dname, 
+						pkt, owner_labs, region, tree))
+						return 0;
+				}
 			} else {
 				/* no compression */
 				ldns_buffer_write(pkt, key->rk.dname, 
