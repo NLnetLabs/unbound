@@ -50,24 +50,15 @@
 #include "util/region-allocator.h"
 #include "util/data/msgparse.h"
 
-/** copy and allocate an uncompressed dname. */
-static uint8_t*
-copy_uncompr(uint8_t* dname, size_t len) 
-{
-	uint8_t* p = (uint8_t*)malloc(len);
-	if(!p) 
-		return 0;
-	memmove(p, dname, len);
-	return p;
-}
-
 /** allocate qinfo, return 0 on error. */
 static int
-parse_create_qinfo(struct msg_parse* msg, struct query_info* qinf)
+parse_create_qinfo(ldns_buffer* pkt, struct msg_parse* msg, 
+	struct query_info* qinf)
 {
 	if(msg->qname) {
-		if(!(qinf->qname = copy_uncompr(msg->qname, msg->qname_len)))
-			return 0;
+		qinf->qname = (uint8_t*)malloc(msg->qname_len);
+		if(!qinf->qname) return 0;
+		dname_pkt_copy(pkt, qinf->qname, msg->qname);
 	} else	qinf->qname = 0;
 	qinf->qnamesize = msg->qname_len;
 	qinf->qtype = msg->qtype;
@@ -298,7 +289,7 @@ parse_create_msg(ldns_buffer* pkt, struct msg_parse* msg,
 {
 	int ret;
 	log_assert(pkt && msg);
-	if(!parse_create_qinfo(msg, qinf))
+	if(!parse_create_qinfo(pkt, msg, qinf))
 		return LDNS_RCODE_SERVFAIL;
 	if(!parse_create_repinfo(msg, rep))
 		return LDNS_RCODE_SERVFAIL;

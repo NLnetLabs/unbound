@@ -255,7 +255,9 @@ testpkt(ldns_buffer* pkt, struct alloc_cache* alloc, ldns_buffer* out,
 
 	hex_to_buf(pkt, hex);
 	memmove(&id, ldns_buffer_begin(pkt), sizeof(id));
-	memmove(&flags, ldns_buffer_at(pkt, 2), sizeof(flags));
+	if(ldns_buffer_limit(pkt) < 2)
+		flags = 0;
+	else	memmove(&flags, ldns_buffer_at(pkt, 2), sizeof(flags));
 	flags = ntohs(flags);
 	ret = reply_info_parse(pkt, alloc, &qi, &rep);
 	if(ret != 0) {
@@ -366,6 +368,7 @@ testfromdrillfile(ldns_buffer* pkt, struct alloc_cache* alloc,
 	FILE* in = fopen(fname, "r");
 	char buf[102400];
 	char* np = buf;
+	buf[0]=0;
 	if(!in) {
 		perror("fname");
 		return;
@@ -378,6 +381,7 @@ testfromdrillfile(ldns_buffer* pkt, struct alloc_cache* alloc,
 				testpkt(pkt, alloc, out, buf);
 			/* set for new entry */
 			np = buf;
+			buf[0]=0;
 			continue;
 		}
 		if(np[0] == ';') /* comment */
@@ -405,6 +409,7 @@ void msgparse_test()
 	testfromfile(pkt, &alloc, out, "testdata/test_packets.3");
 	/* like from drill -w - */
 	testfromdrillfile(pkt, &alloc, out, "testdata/test_packets.4");
+	testfromdrillfile(pkt, &alloc, out, "testdata/test_packets.5");
 
 	/* cleanup */
 	alloc_clear(&alloc);

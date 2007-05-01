@@ -528,7 +528,7 @@ parse_query_section(ldns_buffer* pkt, struct msg_parse* msg)
 	if(ldns_buffer_remaining(pkt) <= 0)
 		return LDNS_RCODE_FORMERR;
 	msg->qname = ldns_buffer_current(pkt);
-	if((msg->qname_len = query_dname_len(pkt)) == 0)
+	if((msg->qname_len = pkt_dname_len(pkt)) == 0)
 		return LDNS_RCODE_FORMERR;
 	if(ldns_buffer_remaining(pkt) < sizeof(uint16_t)*2)
 		return LDNS_RCODE_FORMERR;
