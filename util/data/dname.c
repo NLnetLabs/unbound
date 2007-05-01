@@ -452,17 +452,22 @@ dname_lab_cmp(uint8_t* d1, int labs1, uint8_t* d2, int labs2, int* mlabs)
 	return lastdiff;
 }
 
-void 
+int 
 dname_buffer_write(ldns_buffer* pkt, uint8_t* dname)
 {
 	uint8_t lablen;
 
+	if(ldns_buffer_remaining(pkt) < 1)
+		return 0;
 	lablen = *dname++;
 	ldns_buffer_write_u8(pkt, lablen);
 	while(lablen) {
+		if(ldns_buffer_remaining(pkt) < (size_t)lablen+1)
+			return 0;
 		ldns_buffer_write(pkt, dname, lablen);
 		dname += lablen;
 		lablen = *dname++;
 		ldns_buffer_write_u8(pkt, lablen);
 	}
+	return 1;
 }

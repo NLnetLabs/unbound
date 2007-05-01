@@ -705,12 +705,17 @@ compress_owner(struct ub_packed_rrset_key* key, ldns_buffer* pkt,
 				 * not capable of decoding ptr after a ptr. */
 				*owner_ptr = htons((uint16_t)(0xc000 | 
 					p->offset));
+			/* check if ptr + tc+4 ttl + rdatalen is available */
+			if(ldns_buffer_remaining(pkt) < 2+4+4+2)
+				return 0;
 			write_compressed_dname(pkt, key->rk.dname, 
 				owner_labs, p);
 			ldns_buffer_write(pkt, &key->rk.dname[
 				key->rk.dname_len], 4);
 		} else {
 			/* no compress */
+			if(ldns_buffer_remaining(pkt) < key->rk.dname_len+4+4+2)
+				return 0;
 			ldns_buffer_write(pkt, key->rk.dname, 
 				key->rk.dname_len+4);
 			if(owner_pos <= PTR_MAX_OFFSET)
@@ -722,6 +727,8 @@ compress_owner(struct ub_packed_rrset_key* key, ldns_buffer* pkt,
 			return 0;
 	} else {
 		/* always compress 2nd-further RRs in RRset */
+		if(ldns_buffer_remaining(pkt) < 2+4+4+2)
+			return 0;
 		ldns_buffer_write(pkt, owner_ptr, 2);
 		ldns_buffer_write(pkt, &key->rk.dname[key->rk.dname_len], 4);
 	}
@@ -736,6 +743,8 @@ compress_any_dname(uint8_t* dname, ldns_buffer* pkt, int labs,
 	struct compress_tree_node* p;
 	size_t pos = ldns_buffer_position(pkt);
 	if((p = compress_tree_lookup(*tree, dname, labs))) {
+		if(ldns_buffer_remaining(pkt) < 2)
+			return 0;
 		write_compressed_dname(pkt, dname, labs, p);
 	} else {
 		dname_buffer_write(pkt, dname);
@@ -767,6 +776,7 @@ compress_rdata(ldns_buffer* pkt, uint8_t* rdata, size_t todolen,
 	uint8_t count = desc->_dname_count;
 
 	ldns_buffer_skip(pkt, 2); /* rdata len fill in later */
+	/* space for rdatalen checked for already */
 	rdata += 2;
 	todolen -= 2;
 	while(todolen > 0 && count) {
@@ -788,6 +798,8 @@ compress_rdata(ldns_buffer* pkt, uint8_t* rdata, size_t todolen,
 		}
 		if(len) {
 			/* copy over */
+			if(ldns_buffer_remaining(pkt) < len)
+				return 0;
 			ldns_buffer_write(pkt, rdata, len);
 			todolen -= len;
 			rdata += len;
@@ -796,6 +808,8 @@ compress_rdata(ldns_buffer* pkt, uint8_t* rdata, size_t todolen,
 	}
 	/* copy remainder */
 	if(todolen > 0) {
+		if(ldns_buffer_remaining(pkt) < todolen)
+			return 0;
 		ldns_buffer_write(pkt, rdata, todolen);
 	}
 
@@ -829,6 +843,8 @@ packed_rrset_iov(struct ub_packed_rrset_key* key, ldns_buffer* pkt,
 					return 0;
 			} else {
 				/* no compression */
+				if(ldns_buffer_remaining(pkt) < 
+					key->rk.dname_len + 4+4+2) return 0;
 				ldns_buffer_write(pkt, key->rk.dname, 
 					key->rk.dname_len + 4);
 			}
@@ -837,8 +853,12 @@ packed_rrset_iov(struct ub_packed_rrset_key* key, ldns_buffer* pkt,
 				if(!compress_rdata(pkt, data->rr_data[i],
 					data->rr_len[i], region, tree, c))
 					return 0;
-			} else ldns_buffer_write(pkt, data->rr_data[i], 
-				data->rr_len[i]);
+			} else {
+				if(ldns_buffer_remaining(pkt) < data->rr_len[i])
+					return 0;
+				ldns_buffer_write(pkt, data->rr_data[i], 
+					data->rr_len[i]);
+			}
 		}
 	}
 	/* insert rrsigs */
@@ -847,15 +867,21 @@ packed_rrset_iov(struct ub_packed_rrset_key* key, ldns_buffer* pkt,
 		*num_rrs += data->rrsig_count;
 		for(i=data->count; i<total; i++) {
 			if(1) { /* compression */
-				if(owner_ptr)
+				if(owner_ptr) {
+					if(ldns_buffer_remaining(pkt) <
+						2+4+4+data->rr_len[i]) 
+						return 0;
 					ldns_buffer_write(pkt, &owner_ptr, 2);
-				else 	{
+				} else {
 					if(!compress_any_dname(key->rk.dname, 
 						pkt, owner_labs, region, tree))
 						return 0;
 				}
 			} else {
 				/* no compression */
+				if(ldns_buffer_remaining(pkt) < 
+					key->rk.dname_len+4+4+data->rr_len[i])
+					return 0;
 				ldns_buffer_write(pkt, key->rk.dname, 
 					key->rk.dname_len);
 			}
@@ -885,8 +911,10 @@ insert_section(struct reply_info* rep, size_t num_rrsets, uint16_t* num_rrs,
 	  	for(i=0; i<num_rrsets; i++)
 			if(!packed_rrset_iov(rep->rrsets[rrsets_before+i], pkt,
 				num_rrs, timenow, region, 1, 1, tree))
+			/* Bad, but if due to size must set TC bit */
 			return 0;
 	} else {
+		/* might be OKAY to discard rrsets at end */
 	  	for(i=0; i<num_rrsets; i++)
 			if(!packed_rrset_iov(rep->rrsets[rrsets_before+i], pkt,
 				num_rrs, timenow, region, 1, 0, tree))
@@ -907,7 +935,7 @@ int reply_info_encode(struct query_info* qinfo, struct reply_info* rep,
 	struct compress_tree_node* tree = 0;
 
 	ldns_buffer_clear(buffer);
-	if(ldns_buffer_capacity(buffer) < LDNS_HEADER_SIZE)
+	if(ldns_buffer_remaining(buffer) < LDNS_HEADER_SIZE)
 		return 0;
 
 	ldns_buffer_write(buffer, &id, sizeof(uint16_t));

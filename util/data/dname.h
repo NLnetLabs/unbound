@@ -123,8 +123,9 @@ void dname_pkt_copy(ldns_buffer* pkt, uint8_t* to, uint8_t* dname);
  * Copy over a valid dname to a packet.
  * @param pkt: packet to copy to.
  * @param dname: dname to copy.
+ * @return: 0 if not enough space in buffer.
  */
-void dname_buffer_write(ldns_buffer* pkt, uint8_t* dname);
+int dname_buffer_write(ldns_buffer* pkt, uint8_t* dname);
 
 /** debug helper. Print wireformat dname to output. 
  * @param out: like stdout or a file.

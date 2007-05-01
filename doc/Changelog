@@ -3,6 +3,9 @@
 	  But only for answers from other servers, not for plain queries.
 	- compression and decompression test cases.
 	- some stats added.
+	- example.conf interface: line is changed from 127.0.0.1 which leads
+	  to problems if used (restricting communication to the localhost),
+	  to a documentation and test address.
 
 27 April 2007: Wouter
 	- removed iov usage, it is not good for dns message encoding.
