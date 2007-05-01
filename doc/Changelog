@@ -2,6 +2,7 @@
 	- decompress query section, extremely lenient acceptance.
 	  But only for answers from other servers, not for plain queries.
 	- compression and decompression test cases.
+	- some stats added.
 
 27 April 2007: Wouter
 	- removed iov usage, it is not good for dns message encoding.

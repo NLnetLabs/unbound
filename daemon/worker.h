@@ -48,6 +48,7 @@
 #include "util/locks.h"
 #include "util/alloc.h"
 #include "util/data/msgreply.h"
+#include "daemon/stats.h"
 struct listen_dnsport;
 struct outside_network;
 struct config_file;
@@ -130,6 +131,8 @@ struct worker {
 	int need_to_restart;
 	/** allocation cache for this thread */
 	struct alloc_cache alloc;
+	/** per thread statistics */
+	struct server_stats stats;
 };
 
 /**

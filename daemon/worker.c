@@ -284,6 +284,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 		comm_point_drop_reply(repinfo);
 		return 0;
 	}
+	worker->stats.num_queries++;
 	/* see if query is in the cache */
 	if(!query_info_parse(&qinfo, c->buffer)) {
 		LDNS_QR_SET(ldns_buffer_begin(c->buffer));
@@ -303,6 +304,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 		return 0;
 	}
 	ldns_buffer_rewind(c->buffer);
+	server_stats_querymiss(&worker->stats, worker);
 	/* perform memory allocation(s) */
 	if(!query_info_allocqname(&qinfo)) {
 		comm_point_drop_reply(repinfo);
@@ -315,6 +317,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 		   that started before we performed listen_pushback */
 		verbose(VERB_DETAIL, "worker: too many incoming requests "
 			"active. dropping incoming query.");
+		worker->stats.num_query_list_exceeded++;
 		comm_point_drop_reply(repinfo);
 		query_info_clear(&qinfo);
 		return 0;
@@ -525,6 +528,7 @@ worker_init(struct worker* worker, struct config_file *cfg,
 			fatal_exit("could not set forwarder address");
 		}
 	}
+	server_stats_init(&worker->stats);
 	alloc_init(&worker->alloc, &worker->daemon->superalloc, 
 		worker->thread_num);
 	return 1;
@@ -541,6 +545,7 @@ worker_delete(struct worker* worker)
 {
 	if(!worker) 
 		return;
+	server_stats_log(&worker->stats, worker->thread_num);
 	reqs_delete(worker);
 	listen_delete(worker->front);
 	outside_network_delete(worker->back);
