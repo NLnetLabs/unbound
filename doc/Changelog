@@ -1,6 +1,8 @@
 2 May 2007: Wouter
 	- dname unit tests in own file and spread out neatly in functions.
 	- more dname unit tests.
+	- message encoding creates truncated TC flagged messages if they do 
+	  not fit, and will leave out (whole)rrsets from additional if needed.
 
 1 May 2007: Wouter
 	- decompress query section, extremely lenient acceptance.

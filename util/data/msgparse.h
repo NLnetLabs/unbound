@@ -180,6 +180,8 @@ struct rr_parse {
 /** Calculate destination offset of a compression pointer. pass first and
  * second octets of the compression pointer. */
 #define PTR_OFFSET(x, y) ( ((x)&0x3f)<<8 | (y) )
+/** create a compression pointer to the given offset. */
+#define PTR_CREATE(offset) ((uint16_t)(0xc000 | (offset)))
 
 /** error codes, extended with EDNS, so > 15. */
 #define EDNS_RCODE_BADVERS	16	/** bad EDNS version */

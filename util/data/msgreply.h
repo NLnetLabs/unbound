@@ -252,6 +252,9 @@ void reply_info_answer(struct reply_info* rep, uint16_t qflags,
 
 /**
  * Regenerate the wireformat from the stored msg reply.
+ * If the buffer is too small then the message is truncated at a whole
+ * rrset and the TC bit set, or whole rrsets are left out of the additional
+ * and the TC bit is not set.
  * @param qinfo: query info to store.
  * @param rep: reply to store.
  * @param id: id value to store, network order.
@@ -260,7 +263,7 @@ void reply_info_answer(struct reply_info* rep, uint16_t qflags,
  * @param timenow: time now, to adjust ttl values.
  * @param region: to store temporary data in.
  * @return: nonzero is success, or 
- *	0 on error: malloc failure or buffer too small.
+ *	0 on error: malloc failure (no log_err has been done).
  */
 int reply_info_encode(struct query_info* qinfo, struct reply_info* rep, 
 	uint16_t id, uint16_t flags, ldns_buffer* buffer, uint32_t timenow, 

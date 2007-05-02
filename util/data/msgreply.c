@@ -50,6 +50,14 @@
 #include "util/region-allocator.h"
 #include "util/data/msgparse.h"
 
+/** return code that means the function ran out of memory. negative so it does
+ * not conflict with DNS rcodes. */
+#define RETVAL_OUTMEM	-2
+/** return code that means the data did not fit (completely) in the packet */
+#define RETVAL_TRUNC	-4
+/** return code that means all is peachy keen. Equal to DNS rcode NOERROR */
+#define RETVAL_OK	0
+
 /** allocate qinfo, return 0 on error. */
 static int
 parse_create_qinfo(ldns_buffer* pkt, struct msg_parse* msg, 
@@ -668,7 +676,7 @@ compress_tree_store(struct compress_tree_node** tree, uint8_t* dname,
 }
 
 /** compress a domain name */
-static void
+static int
 write_compressed_dname(ldns_buffer* pkt, uint8_t* dname, int labs,
 	struct compress_tree_node* p)
 {
@@ -680,16 +688,21 @@ write_compressed_dname(ldns_buffer* pkt, uint8_t* dname, int labs,
 	/* copy the first couple of labels */
 	while(labcopy--) {
 		lablen = *dname++;
+		if(ldns_buffer_remaining(pkt) < (size_t)lablen+1)
+			return 0;
 		ldns_buffer_write_u8(pkt, lablen);
 		ldns_buffer_write(pkt, dname, lablen);
 		dname += lablen;
 	}
 	/* insert compression ptr */
-	ptr = (uint16_t)(0xc000 | p->offset);
+	if(ldns_buffer_remaining(pkt) < 2)
+		return 0;
+	ptr = PTR_CREATE(p->offset);
 	ldns_buffer_write_u16(pkt, ptr);
+	return 1;
 }
 
-/** compress owner name of RR */
+/** compress owner name of RR, return RETVAL_OUTMEM RETVAL_TRUNC */
 static int
 compress_owner(struct ub_packed_rrset_key* key, ldns_buffer* pkt, 
 	region_type* region, struct compress_tree_node** tree, 
@@ -703,39 +716,38 @@ compress_owner(struct ub_packed_rrset_key* key, ldns_buffer* pkt,
 			if(p->labs == owner_labs) 
 				/* avoid ptr chains, since some software is
 				 * not capable of decoding ptr after a ptr. */
-				*owner_ptr = htons((uint16_t)(0xc000 | 
-					p->offset));
-			/* check if ptr + tc+4 ttl + rdatalen is available */
-			if(ldns_buffer_remaining(pkt) < 2+4+4+2)
-				return 0;
-			write_compressed_dname(pkt, key->rk.dname, 
-				owner_labs, p);
+				*owner_ptr = htons(PTR_CREATE(p->offset));
+			if(!write_compressed_dname(pkt, key->rk.dname, 
+				owner_labs, p))
+				return RETVAL_TRUNC;
+			/* check if typeclass+4 ttl + rdatalen is available */
+			if(ldns_buffer_remaining(pkt) < 4+4+2)
+				return RETVAL_TRUNC;
 			ldns_buffer_write(pkt, &key->rk.dname[
 				key->rk.dname_len], 4);
 		} else {
 			/* no compress */
 			if(ldns_buffer_remaining(pkt) < key->rk.dname_len+4+4+2)
-				return 0;
+				return RETVAL_TRUNC;
 			ldns_buffer_write(pkt, key->rk.dname, 
 				key->rk.dname_len+4);
 			if(owner_pos <= PTR_MAX_OFFSET)
-				*owner_ptr = htons((uint16_t)(0xc000 | 
-					owner_pos));
+				*owner_ptr = htons(PTR_CREATE(owner_pos));
 		}
 		if(!compress_tree_store(tree, key->rk.dname, 
 			owner_labs, owner_pos, region, p))
-			return 0;
+			return RETVAL_OUTMEM;
 	} else {
 		/* always compress 2nd-further RRs in RRset */
 		if(ldns_buffer_remaining(pkt) < 2+4+4+2)
-			return 0;
+			return RETVAL_TRUNC;
 		ldns_buffer_write(pkt, owner_ptr, 2);
 		ldns_buffer_write(pkt, &key->rk.dname[key->rk.dname_len], 4);
 	}
-	return 1;
+	return RETVAL_OK;
 }
 
-/** compress any domain name to the packet */
+/** compress any domain name to the packet, return RETVAL_* */
 static int
 compress_any_dname(uint8_t* dname, ldns_buffer* pkt, int labs, 
 	region_type* region, struct compress_tree_node** tree)
@@ -743,13 +755,15 @@ compress_any_dname(uint8_t* dname, ldns_buffer* pkt, int labs,
 	struct compress_tree_node* p;
 	size_t pos = ldns_buffer_position(pkt);
 	if((p = compress_tree_lookup(*tree, dname, labs))) {
-		if(ldns_buffer_remaining(pkt) < 2)
-			return 0;
-		write_compressed_dname(pkt, dname, labs, p);
+		if(!write_compressed_dname(pkt, dname, labs, p))
+			return RETVAL_TRUNC;
 	} else {
-		dname_buffer_write(pkt, dname);
+		if(!dname_buffer_write(pkt, dname))
+			return RETVAL_TRUNC;
 	}
-	return compress_tree_store(tree, dname, labs, pos, region, p);
+	if(!compress_tree_store(tree, dname, labs, pos, region, p))
+		return RETVAL_OUTMEM;
+	return RETVAL_OK;
 }
 
 /** return true if type needs domain name compression in rdata */
@@ -765,13 +779,13 @@ type_rdata_compressable(struct ub_packed_rrset_key* key)
 	return 0;
 }
 
-/** compress domain names in rdata */
+/** compress domain names in rdata, return RETVAL_* */
 static int
 compress_rdata(ldns_buffer* pkt, uint8_t* rdata, size_t todolen, 
 	region_type* region, struct compress_tree_node** tree, 
 	const ldns_rr_descriptor* desc)
 {
-	int labs, rdf = 0;
+	int labs, r, rdf = 0;
 	size_t dname_len, len, pos = ldns_buffer_position(pkt);
 	uint8_t count = desc->_dname_count;
 
@@ -783,8 +797,9 @@ compress_rdata(ldns_buffer* pkt, uint8_t* rdata, size_t todolen,
 		switch(desc->_wireformat[rdf]) {
 		case LDNS_RDF_TYPE_DNAME:
 			labs = dname_count_size_labels(rdata, &dname_len);
-			if(!compress_any_dname(rdata, pkt, labs, region, tree))
-				return 0;
+			if((r=compress_any_dname(rdata, pkt, labs, region, 
+				tree)) != RETVAL_OK)
+				return r;
 			rdata += dname_len;
 			todolen -= dname_len;
 			count--;
@@ -799,7 +814,7 @@ compress_rdata(ldns_buffer* pkt, uint8_t* rdata, size_t todolen,
 		if(len) {
 			/* copy over */
 			if(ldns_buffer_remaining(pkt) < len)
-				return 0;
+				return RETVAL_TRUNC;
 			ldns_buffer_write(pkt, rdata, len);
 			todolen -= len;
 			rdata += len;
@@ -809,23 +824,23 @@ compress_rdata(ldns_buffer* pkt, uint8_t* rdata, size_t todolen,
 	/* copy remainder */
 	if(todolen > 0) {
 		if(ldns_buffer_remaining(pkt) < todolen)
-			return 0;
+			return RETVAL_TRUNC;
 		ldns_buffer_write(pkt, rdata, todolen);
 	}
 
 	/* set rdata len */
 	ldns_buffer_write_u16_at(pkt, pos, ldns_buffer_position(pkt)-pos-2);
-	return 1;
+	return RETVAL_OK;
 }
 
-/** store rrset in iov vector */
+/** store rrset in buffer in wireformat, return RETVAL_* */
 static int
-packed_rrset_iov(struct ub_packed_rrset_key* key, ldns_buffer* pkt, 
+packed_rrset_encode(struct ub_packed_rrset_key* key, ldns_buffer* pkt, 
 	uint16_t* num_rrs, uint32_t timenow, region_type* region,
 	int do_data, int do_sig, struct compress_tree_node** tree)
 {
 	size_t i, owner_pos;
-	int owner_labs;
+	int r, owner_labs;
 	uint16_t owner_ptr = 0;
 	struct packed_rrset_data* data = (struct packed_rrset_data*)
 		key->entry.data;
@@ -835,27 +850,29 @@ packed_rrset_iov(struct ub_packed_rrset_key* key, ldns_buffer* pkt,
 
 	if(do_data) {
 		const ldns_rr_descriptor* c = type_rdata_compressable(key);
-		*num_rrs += data->count;
 		for(i=0; i<data->count; i++) {
 			if(1) { /* compression */
-				if(!compress_owner(key, pkt, region, tree, 
+				if((r=compress_owner(key, pkt, region, tree, 
 					owner_pos, &owner_ptr, owner_labs))
-					return 0;
+					!= RETVAL_OK)
+					return r;
 			} else {
 				/* no compression */
 				if(ldns_buffer_remaining(pkt) < 
-					key->rk.dname_len + 4+4+2) return 0;
+					key->rk.dname_len + 4+4+2) 
+					return RETVAL_TRUNC;
 				ldns_buffer_write(pkt, key->rk.dname, 
 					key->rk.dname_len + 4);
 			}
 			ldns_buffer_write_u32(pkt, data->rr_ttl[i]-timenow);
 			if(c) {
-				if(!compress_rdata(pkt, data->rr_data[i],
+				if((r=compress_rdata(pkt, data->rr_data[i],
 					data->rr_len[i], region, tree, c))
-					return 0;
+					!= RETVAL_OK)
+					return r;
 			} else {
 				if(ldns_buffer_remaining(pkt) < data->rr_len[i])
-					return 0;
+					return RETVAL_TRUNC;
 				ldns_buffer_write(pkt, data->rr_data[i], 
 					data->rr_len[i]);
 			}
@@ -864,24 +881,27 @@ packed_rrset_iov(struct ub_packed_rrset_key* key, ldns_buffer* pkt,
 	/* insert rrsigs */
 	if(do_sig) {
 		size_t total = data->count+data->rrsig_count;
-		*num_rrs += data->rrsig_count;
 		for(i=data->count; i<total; i++) {
 			if(1) { /* compression */
 				if(owner_ptr) {
 					if(ldns_buffer_remaining(pkt) <
 						2+4+4+data->rr_len[i]) 
-						return 0;
+						return RETVAL_TRUNC;
 					ldns_buffer_write(pkt, &owner_ptr, 2);
 				} else {
-					if(!compress_any_dname(key->rk.dname, 
+					if((r=compress_any_dname(key->rk.dname, 
 						pkt, owner_labs, region, tree))
-						return 0;
+						!= RETVAL_OK)
+						return r;
+					if(ldns_buffer_remaining(pkt) < 
+						4+4+data->rr_len[i])
+						return RETVAL_TRUNC;
 				}
 			} else {
 				/* no compression */
 				if(ldns_buffer_remaining(pkt) < 
 					key->rk.dname_len+4+4+data->rr_len[i])
-					return 0;
+					return RETVAL_TRUNC;
 				ldns_buffer_write(pkt, key->rk.dname, 
 					key->rk.dname_len);
 			}
@@ -895,36 +915,57 @@ packed_rrset_iov(struct ub_packed_rrset_key* key, ldns_buffer* pkt,
 				data->rr_len[i]);
 		}
 	}
+	/* change rrnum only after we are sure it fits */
+	if(do_data)
+		*num_rrs += data->count;
+	if(do_sig)
+		*num_rrs += data->rrsig_count;
 
-	return 1;
+	return RETVAL_OK;
 }
 
-/** store msg section in iov vector */
+/** store msg section in wireformat buffer, return RETVAL_* */
 static int
 insert_section(struct reply_info* rep, size_t num_rrsets, uint16_t* num_rrs,
 	ldns_buffer* pkt, size_t rrsets_before, uint32_t timenow, 
 	region_type* region, int addit, struct compress_tree_node** tree)
 {
-	size_t i;
+	int r;
+	size_t i, setstart;
 	*num_rrs = 0;
 	if(!addit) {
-	  	for(i=0; i<num_rrsets; i++)
-			if(!packed_rrset_iov(rep->rrsets[rrsets_before+i], pkt,
-				num_rrs, timenow, region, 1, 1, tree))
-			/* Bad, but if due to size must set TC bit */
-			return 0;
+	  	for(i=0; i<num_rrsets; i++) {
+			setstart = ldns_buffer_position(pkt);
+			if((r=packed_rrset_encode(rep->rrsets[rrsets_before+i], 
+				pkt, num_rrs, timenow, region, 1, 1, tree))
+				!= RETVAL_OK) {
+				/* Bad, but if due to size must set TC bit */
+				/* trim off the rrset neatly. */
+				ldns_buffer_set_position(pkt, setstart);
+				return r;
+			}
+		}
 	} else {
-		/* might be OKAY to discard rrsets at end */
-	  	for(i=0; i<num_rrsets; i++)
-			if(!packed_rrset_iov(rep->rrsets[rrsets_before+i], pkt,
-				num_rrs, timenow, region, 1, 0, tree))
-			return 0;
-	  	for(i=0; i<num_rrsets; i++)
-			if(!packed_rrset_iov(rep->rrsets[rrsets_before+i], pkt,
-				num_rrs, timenow, region, 0, 1, tree))
-			return 0;
+	  	for(i=0; i<num_rrsets; i++) {
+			setstart = ldns_buffer_position(pkt);
+			if((r=packed_rrset_encode(rep->rrsets[rrsets_before+i], 
+				pkt, num_rrs, timenow, region, 1, 0, tree))
+				!= RETVAL_OK) {
+				ldns_buffer_set_position(pkt, setstart);
+				return r;
+			}
+		}
+	  	for(i=0; i<num_rrsets; i++) {
+			setstart = ldns_buffer_position(pkt);
+			if((r=packed_rrset_encode(rep->rrsets[rrsets_before+i], 
+				pkt, num_rrs, timenow, region, 0, 1, tree))
+				!= RETVAL_OK) {
+				ldns_buffer_set_position(pkt, setstart);
+				return r;
+			}
+		}
 	}
-	return 1;
+	return RETVAL_OK;
 }
 
 int reply_info_encode(struct query_info* qinfo, struct reply_info* rep, 
@@ -933,6 +974,7 @@ int reply_info_encode(struct query_info* qinfo, struct reply_info* rep,
 {
 	uint16_t ancount=0, nscount=0, arcount=0;
 	struct compress_tree_node* tree = 0;
+	int r;
 
 	ldns_buffer_clear(buffer);
 	if(ldns_buffer_remaining(buffer) < LDNS_HEADER_SIZE)
@@ -941,8 +983,8 @@ int reply_info_encode(struct query_info* qinfo, struct reply_info* rep,
 	ldns_buffer_write(buffer, &id, sizeof(uint16_t));
 	ldns_buffer_write_u16(buffer, flags);
 	ldns_buffer_write_u16(buffer, rep->qdcount);
-	/* skip an, ns, ar counts */
-	ldns_buffer_set_position(buffer, LDNS_HEADER_SIZE);
+	/* set an, ns, ar counts to zero in case of small packets */
+	ldns_buffer_write(buffer, "\000\000\000\000\000\000", 6);
 
 	/* insert query section */
 	if(rep->qdcount) {
@@ -959,25 +1001,47 @@ int reply_info_encode(struct query_info* qinfo, struct reply_info* rep,
 	}
 
 	/* insert answer section */
-	if(!insert_section(rep, rep->an_numrrsets, &ancount, buffer, 
-		0, timenow, region, 0, &tree))
+	if((r=insert_section(rep, rep->an_numrrsets, &ancount, buffer, 
+		0, timenow, region, 0, &tree)) != RETVAL_OK) {
+		if(r == RETVAL_TRUNC) {
+			/* create truncated message */
+			ldns_buffer_write_u16_at(buffer, 6, ancount);
+			LDNS_TC_SET(ldns_buffer_begin(buffer));
+			ldns_buffer_flip(buffer);
+			return 1;
+		}
 		return 0;
+	}
 	ldns_buffer_write_u16_at(buffer, 6, ancount);
 
 	/* insert auth section */
-	if(!insert_section(rep, rep->ns_numrrsets, &nscount, buffer, 
-		rep->an_numrrsets, timenow, region, 0, &tree))
+	if((r=insert_section(rep, rep->ns_numrrsets, &nscount, buffer, 
+		rep->an_numrrsets, timenow, region, 0, &tree)) != RETVAL_OK) {
+		if(r == RETVAL_TRUNC) {
+			/* create truncated message */
+			ldns_buffer_write_u16_at(buffer, 8, nscount);
+			LDNS_TC_SET(ldns_buffer_begin(buffer));
+			ldns_buffer_flip(buffer);
+			return 1;
+		}
 		return 0;
+	}
 	ldns_buffer_write_u16_at(buffer, 8, nscount);
 
 	/* insert add section */
-	if(!insert_section(rep, rep->ar_numrrsets, &arcount, buffer, 
+	if((r=insert_section(rep, rep->ar_numrrsets, &arcount, buffer, 
 		rep->an_numrrsets + rep->ns_numrrsets, timenow, region, 
-		1, &tree))
+		1, &tree)) != RETVAL_OK) {
+		if(r == RETVAL_TRUNC) {
+			/* no need to set TC bit, this is the additional */
+			ldns_buffer_write_u16_at(buffer, 10, arcount);
+			ldns_buffer_flip(buffer);
+			return 1;
+		}
 		return 0;
+	}
 	ldns_buffer_write_u16_at(buffer, 10, arcount);
 	ldns_buffer_flip(buffer);
-
 	return 1;
 }
 
