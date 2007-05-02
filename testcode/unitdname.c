@@ -156,10 +156,109 @@ dname_test_count_size_labels()
 
 
 /** test pkt_dname_len */
-/** test dname_pkt_compare */
-/** test dname_query_hash and dname_pkt_hash */
-/** test dname_pkt_copy */
-/** test dname_buffer_write */
+static void
+dname_test_pkt_dname_len(ldns_buffer* buff)
+{
+	ldns_buffer_clear(buff);
+	ldns_buffer_write(buff, "\000", 1);
+	ldns_buffer_flip(buff);
+	unit_assert( pkt_dname_len(buff) == 1 );
+	unit_assert( ldns_buffer_position(buff) == 1);
+
+	ldns_buffer_clear(buff);
+	ldns_buffer_write(buff, "\003org\000", 5);
+	ldns_buffer_flip(buff);
+	unit_assert( pkt_dname_len(buff) == 5 );
+	unit_assert( ldns_buffer_position(buff) == 5);
+
+	ldns_buffer_clear(buff);
+	ldns_buffer_write(buff, "\002os\007example\003org\000", 16);
+	ldns_buffer_flip(buff);
+	unit_assert( pkt_dname_len(buff) == 16 );
+	unit_assert( ldns_buffer_position(buff) == 16);
+
+	/* invalid compression pointer: to self */
+	ldns_buffer_clear(buff);
+	ldns_buffer_write(buff, "\300\000os\007example\003org\000", 17);
+	ldns_buffer_flip(buff);
+	unit_assert( pkt_dname_len(buff) == 0 );
+
+	/* valid compression pointer */
+	ldns_buffer_clear(buff);
+	ldns_buffer_write(buff, "\003com\000\040\300\000", 8);
+	ldns_buffer_flip(buff);
+	ldns_buffer_set_position(buff, 6);
+	unit_assert( pkt_dname_len(buff) == 5 );
+	unit_assert( ldns_buffer_position(buff) == 8);
+
+	/* unknown label type */
+	ldns_buffer_clear(buff);
+	ldns_buffer_write(buff, "\002os\107example\003org\000", 16);
+	ldns_buffer_flip(buff);
+	unit_assert( pkt_dname_len(buff) == 0 );
+
+	/* label too long */
+	ldns_buffer_clear(buff);
+	ldns_buffer_write(buff, "\002os\047example\003org\000", 16);
+	ldns_buffer_flip(buff);
+	unit_assert( pkt_dname_len(buff) == 0 );
+
+	/* label exceeds packet */
+	ldns_buffer_clear(buff);
+	ldns_buffer_write(buff, "\002os\007example\007org\004", 16);
+	ldns_buffer_flip(buff);
+	unit_assert( pkt_dname_len(buff) == 0 );
+
+	/* name very long */
+	ldns_buffer_clear(buff);
+	ldns_buffer_write(buff, 
+		"\020a1cdef5555544444"
+		"\020a2cdef5555544444"
+		"\020a3cdef5555544444"
+		"\020a4cdef5555544444"
+		"\020a5cdef5555544444"
+		"\020a6cdef5555544444"
+		"\020a7cdef5555544444"
+		"\020a8cdef5555544444"
+		"\020a9cdef5555544444"
+		"\020aAcdef5555544444"
+		"\020aBcdef5555544444"
+		"\020aCcdef5555544444"
+		"\020aDcdef5555544444"
+		"\020aEcdef5555544444"	/* 238 up to here */
+		"\007aabbccd"		/* 246 up to here */
+		"\007example\000"	/* 255 to here */
+		, 255);
+	ldns_buffer_flip(buff);
+	unit_assert( pkt_dname_len(buff) == 255 );
+	unit_assert( ldns_buffer_position(buff) == 255);
+
+	/* name too long */
+	ldns_buffer_clear(buff);
+	ldns_buffer_write(buff, 
+		"\020a1cdef5555544444"
+		"\020a2cdef5555544444"
+		"\020a3cdef5555544444"
+		"\020a4cdef5555544444"
+		"\020a5cdef5555544444"
+		"\020a6cdef5555544444"
+		"\020a7cdef5555544444"
+		"\020a8cdef5555544444"
+		"\020a9cdef5555544444"
+		"\020aAcdef5555544444"
+		"\020aBcdef5555544444"
+		"\020aCcdef5555544444"
+		"\020aXcdef5555544444"
+		"\020aXcdef5555544444"
+		"\020aXcdef5555544444"
+		"\020aDcdef5555544444"
+		"\020aEcdef5555544444"	/* 238 up to here */
+		"\007aabbccd"		/* 246 up to here */
+		"\007example\000"	/* 255 to here */
+		, 255);
+	ldns_buffer_flip(buff);
+	unit_assert( pkt_dname_len(buff) == 0 );
+}
 
 /** test dname_lab_cmp */
 static void
@@ -248,6 +347,11 @@ dname_test_dname_lab_cmp()
 		(uint8_t*)"\003aag\003bla\007example\003net", 5, 
 		&ml) == -1);
 	unit_assert(ml == 3);
+	unit_assert(dname_lab_cmp(
+		(uint8_t*)"\02sn\003opt\003aag\007example\003net", 6, 
+		(uint8_t*)"\02sn\003opt\003bla\007example\003net", 6, 
+		&ml) == -1);
+	unit_assert(ml == 3);
 
 	/* but lowercase/uppercase does not make a difference. */
 	unit_assert(dname_lab_cmp(
@@ -267,5 +371,6 @@ void dname_test()
 	dname_test_count_labels();
 	dname_test_count_size_labels();
 	dname_test_dname_lab_cmp();
+	dname_test_pkt_dname_len(buff);
 	ldns_buffer_free(buff);
 }
