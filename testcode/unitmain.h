@@ -53,5 +53,7 @@ void lruhash_test();
 void slabhash_test();
 /** unit test for msgreply and msgparse */
 void msgparse_test();
+/** unit test dname handling functions */
+void dname_test();
 
 #endif /* TESTCODE_UNITMAIN_H */

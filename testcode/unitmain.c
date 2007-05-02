@@ -119,89 +119,6 @@ net_test()
 	unit_assert( !is_pow2(259) );
 }
 
-/** put dname into buffer */
-static ldns_buffer*
-dname_to_buf(ldns_buffer* b, const char* str)
-{
-	ldns_rdf* rdf;
-	ldns_status status;
-	ldns_buffer_clear(b);
-	rdf = ldns_dname_new_frm_str(str);	
-	status = ldns_dname2buffer_wire(b, rdf);
-	if(status != LDNS_STATUS_OK)
-		fatal_exit("%s ldns: %s", __func__, 
-			ldns_get_errorstr_by_id(status));
-	ldns_rdf_deep_free(rdf);
-	ldns_buffer_flip(b);
-	return b;
-}
-
-#include "util/data/msgreply.h"
-#include "util/data/dname.h"
-/** test query parse code */
-static void
-msgreply_test()
-{
-	ldns_buffer* buff = ldns_buffer_new(65800);
-	ldns_buffer_flip(buff);
-	unit_assert( query_dname_len(buff) == 0);
-	unit_assert( query_dname_len(dname_to_buf(buff, ".")) == 1 );
-	unit_assert( query_dname_len(dname_to_buf(buff, "bla.foo.")) == 9 );
-	unit_assert( query_dname_len(dname_to_buf(buff, "x.y.z.example.com.")) == 19 );
-
-	ldns_buffer_write_at(buff, 0, "\012abCDeaBCde\003cOm\000", 16);
-	query_dname_tolower(ldns_buffer_begin(buff), 16);
-	unit_assert( memcmp(ldns_buffer_begin(buff), 
-		"\012abcdeabcde\003com\000", 16) == 0);
-
-	ldns_buffer_write_at(buff, 0, "\001+\012abC{e-ZYXe\003NET\000", 18);
-	query_dname_tolower(ldns_buffer_begin(buff), 18);
-	unit_assert( memcmp(ldns_buffer_begin(buff), 
-		"\001+\012abc{e-zyxe\003net\000", 18) == 0);
-
-	ldns_buffer_write_at(buff, 0, "\000", 1);
-	query_dname_tolower(ldns_buffer_begin(buff), 1);
-	unit_assert( memcmp(ldns_buffer_begin(buff), "\000", 1) == 0);
-
-	ldns_buffer_write_at(buff, 0, "\002NL\000", 4);
-	query_dname_tolower(ldns_buffer_begin(buff), 4);
-	unit_assert( memcmp(ldns_buffer_begin(buff), "\002nl\000", 4) == 0);
-
-	/* test query_dname_compare */
-	unit_assert(query_dname_compare((uint8_t*)"", (uint8_t*)"") == 0);
-	unit_assert(query_dname_compare((uint8_t*)"\001a", 
-					(uint8_t*)"\001a") == 0);
-	unit_assert(query_dname_compare((uint8_t*)"\003abc\001a", 
-					(uint8_t*)"\003abc\001a") == 0);
-	unit_assert(query_dname_compare((uint8_t*)"\003aBc\001a", 
-					(uint8_t*)"\003AbC\001A") == 0);
-	unit_assert(query_dname_compare((uint8_t*)"\003abc", 
-					(uint8_t*)"\003abc\001a") == -1);
-	unit_assert(query_dname_compare((uint8_t*)"\003abc\001a", 
-					(uint8_t*)"\003abc") == +1);
-	unit_assert(query_dname_compare((uint8_t*)"\003abc\001a", 
-					(uint8_t*)"") == +1);
-	unit_assert(query_dname_compare((uint8_t*)"", 
-					(uint8_t*)"\003abc\001a") == -1);
-	unit_assert(query_dname_compare((uint8_t*)"\003abc\001a", 
-					(uint8_t*)"\003xxx\001a") == -1);
-	unit_assert(query_dname_compare((uint8_t*)"\003axx\001a", 
-					(uint8_t*)"\003abc\001a") == 1);
-	unit_assert(query_dname_compare((uint8_t*)"\003abc\001a", 
-					(uint8_t*)"\003abc\001Z") == -1);
-	unit_assert(query_dname_compare((uint8_t*)"\003abc\001Z", 
-					(uint8_t*)"\003abc\001a") == 1);
-
-	unit_assert(dname_count_labels((uint8_t*)"") == 1);
-	unit_assert(dname_count_labels((uint8_t*)"\003com") == 2);
-	unit_assert(dname_count_labels((uint8_t*)"\003org") == 2);
-	unit_assert(dname_count_labels((uint8_t*)"\007example\003com") == 3);
-	unit_assert(dname_count_labels((uint8_t*)"\003bla\007example\003com") 
-		== 4);
-
-	ldns_buffer_free(buff);
-}
-
 /**
  * Main unit test program. Setup, teardown and report errors.
  * @param argc: arg count.
@@ -219,8 +136,8 @@ main(int argc, char* argv[])
 	printf("Start of %s unit test.\n", PACKAGE_STRING);
 	checklock_start();
 	net_test();
+	dname_test();
 	alloc_test();
-	msgreply_test();
 	lruhash_test();
 	slabhash_test();
 	msgparse_test();

@@ -35,8 +35,7 @@
  */
 /**
  * \file
- * Unit test main program. Calls all the other unit tests.
- * Exits with code 1 on a failure. 0 if all unit tests are successfull.
+ * Calls msg parse unit tests. Exits with code 1 on a failure. 
  */
 
 #include "config.h"
