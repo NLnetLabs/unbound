@@ -1,3 +1,8 @@
+3 May 2007: Wouter
+	- fill refs. Use new parse and encode to answer queries.
+	- stores rrsets in cache.
+	- uses new msgreply format in cache.
+
 2 May 2007: Wouter
 	- dname unit tests in own file and spread out neatly in functions.
 	- more dname unit tests.

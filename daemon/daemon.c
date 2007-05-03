@@ -126,6 +126,15 @@ daemon_init()
 		free(daemon);
 		return NULL;
 	}
+	daemon->rrset_cache = slabhash_create(HASH_DEFAULT_SLABS, 
+		HASH_DEFAULT_STARTARRAY, HASH_DEFAULT_MAXMEM, 
+		ub_rrset_sizefunc, ub_rrset_compare,
+		ub_rrset_key_delete, rrset_data_delete, &daemon->superalloc);
+	if(!daemon->rrset_cache) {
+		slabhash_delete(daemon->msg_cache);
+		free(daemon);
+		return NULL;
+	}
 	alloc_init(&daemon->superalloc, NULL, 0);
 	return daemon;	
 }
@@ -313,6 +322,7 @@ daemon_delete(struct daemon* daemon)
 		return;
 	listening_ports_free(daemon->ports);
 	slabhash_delete(daemon->msg_cache);
+	slabhash_delete(daemon->rrset_cache);
 	alloc_clear(&daemon->superalloc);
 	free(daemon->cwd);
 	free(daemon->pidfile);

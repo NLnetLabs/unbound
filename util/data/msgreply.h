@@ -90,12 +90,6 @@ struct rrset_ref {
  *	o packed_rrset_key* array.
  */
 struct reply_info {
-	/** the reply packet, skips ID and flags, 
-	 * starts with opcode/rcode word */
-	uint8_t* reply;
-	/** the reply size */
-	size_t replysize;
-
 	/** the flags for the answer, host byte order. */
 	uint16_t flags;
 
@@ -197,6 +191,19 @@ int query_info_parse(struct query_info* m, ldns_buffer* query);
 int reply_info_parse(ldns_buffer* pkt, struct alloc_cache* alloc,
 	struct query_info* qinf, struct reply_info** rep);
 
+/**
+ * Fills in the ref array based on the rest of the structure, the rrsets.
+ * @param rep: reply info. rrsets must be filled in.
+ */
+void reply_info_fillref(struct reply_info* rep);
+
+/**
+ * Set TTLs inside the replyinfo to absolute values.
+ * @param rep: reply info. rrsets must be filled in.
+ * @param timenow: the current time.
+ */
+void reply_info_set_ttls(struct reply_info* rep, uint32_t timenow);
+
 /** 
  * Delete reply_info and packed_rrsets (while they are not yet added to the
  * hashtables.). Returns rrsets to the alloc cache.
@@ -224,9 +231,6 @@ int query_info_compare(void* m1, void* m2);
 /** clear out query info structure. */
 void query_info_clear(struct query_info* m);
 
-/** clear out reply info structure */
-void reply_info_clear(struct reply_info* m);
-
 /** calculate size of struct query_info + reply_info */
 size_t msgreply_sizefunc(void* k, void* d);
 
@@ -241,14 +245,19 @@ hashvalue_t query_info_hash(struct query_info *q);
 
 /** 
  * Generate answer from reply_info.
+ * @param qinf: query information that provides query section in packet.
  * @param rep: reply to fill in.
+ * @param id: id word from the query.
  * @param qflags: flags word from the query.
- * @param buf: buffer to put reply into. Note that the query ID must 
- *	be put in the buffer by caller.
- *	The buffer must be large enough.
+ * @param dest: buffer to put message into; will truncate if it does not fit.
+ * @param timenow: time to subtract.
+ * @param cached: set true if a cached reply (so no AA bit).
+ *	set false for the first reply.
+ * @return: 0 on error (server failure).
  */
-void reply_info_answer(struct reply_info* rep, uint16_t qflags, 
-	ldns_buffer* buf);
+int reply_info_answer_encode(struct query_info* qinf, struct reply_info* rep, 
+	uint16_t id, uint16_t qflags, ldns_buffer* dest, uint32_t timenow,
+	int cached);
 
 /**
  * Regenerate the wireformat from the stored msg reply.
@@ -268,18 +277,6 @@ void reply_info_answer(struct reply_info* rep, uint16_t qflags,
 int reply_info_encode(struct query_info* qinfo, struct reply_info* rep, 
 	uint16_t id, uint16_t flags, ldns_buffer* buffer, uint32_t timenow, 
 	struct region* region);
-
-/**
- * Generate and send out answer from reply_info.
- * @param rep: reply to fill in.
- * @param qid: query id, in network byte order.
- * @param qflags: flags word from the query.
- * @param comrep: communication reply point.
- * @param cached: set true if a cached reply (so no AA bit).
- *	set false for the first reply.
- */
-void reply_info_answer_iov(struct reply_info* rep, uint16_t qid,
-	uint16_t qflags, struct comm_reply* comrep, int cached);
 
 /**
  * Setup query info entry

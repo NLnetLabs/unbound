@@ -92,18 +92,19 @@ req_release(struct work_query* w)
 	w->worker->free_queries = w;
 }
 
-/** reply to query with given error code */
-static void 
-replyerror(int r, struct work_query* w)
+/** create error and fill into buffer */
+static void
+replyerror_fillbuf(int r, struct comm_reply* repinfo, uint16_t id,
+	uint16_t qflags, struct query_info* qinfo)
 {
-	ldns_buffer* buf = w->query_reply.c->buffer;
+	ldns_buffer* buf = repinfo->c->buffer;
 	uint16_t flags;
 	verbose(VERB_DETAIL, "reply with error");
 	
 	ldns_buffer_clear(buf);
-	ldns_buffer_write(buf, &w->query_id, sizeof(uint16_t));
+	ldns_buffer_write(buf, &id, sizeof(uint16_t));
 	flags = (uint16_t)(BIT_QR | r); /* QR and retcode*/
-	flags |= (w->query_flags & (BIT_RD|BIT_CD)); /* copy RD and CD bit */
+	flags |= (qflags & (BIT_RD|BIT_CD)); /* copy RD and CD bit */
 	ldns_buffer_write_u16(buf, flags);
 	flags = 1;
 	ldns_buffer_write_u16(buf, flags);
@@ -111,13 +112,34 @@ replyerror(int r, struct work_query* w)
 	ldns_buffer_write(buf, &flags, sizeof(uint16_t));
 	ldns_buffer_write(buf, &flags, sizeof(uint16_t));
 	ldns_buffer_write(buf, &flags, sizeof(uint16_t));
-	ldns_buffer_write(buf, w->qinfo.qname, w->qinfo.qnamesize);
-	ldns_buffer_write_u16(buf, w->qinfo.qtype);
-	ldns_buffer_write_u16(buf, w->qinfo.qclass);
+	ldns_buffer_write(buf, qinfo->qname, qinfo->qnamesize);
+	ldns_buffer_write_u16(buf, qinfo->qtype);
+	ldns_buffer_write_u16(buf, qinfo->qclass);
 	ldns_buffer_flip(buf);
+}
+
+/** reply to query with given error code */
+static void 
+replyerror(int r, struct work_query* w)
+{
+	replyerror_fillbuf(r, &w->query_reply, w->query_id, w->query_flags,
+		&w->qinfo);
 	comm_point_send_reply(&w->query_reply);
 	req_release(w);
 	query_info_clear(&w->qinfo);
+}
+
+/** store rrsets in the rrset cache. */
+static void
+worker_store_rrsets(struct worker* worker, struct reply_info* rep)
+{
+	size_t i;
+	for(i=0; i<rep->rrset_count; i++) {
+		/* TODO: check if update really needed */
+		slabhash_insert(worker->daemon->rrset_cache, 
+			rep->rrsets[i]->entry.hash, &rep->rrsets[i]->entry,
+			rep->rrsets[i]->entry.data);
+	}
 }
 
 /** process incoming replies from the network */
@@ -126,8 +148,11 @@ worker_handle_reply(struct comm_point* c, void* arg, int error,
 	struct comm_reply* ATTR_UNUSED(reply_info))
 {
 	struct work_query* w = (struct work_query*)arg;
+	struct query_info qinf;
 	struct reply_info* rep;
 	struct msgreply_entry* e;
+	int r;
+
 	verbose(VERB_DETAIL, "reply to query with stored ID %d", 
 		ntohs(w->query_id)); /* byteswapped so same as dig prints */
 	if(error != 0) {
@@ -142,32 +167,36 @@ worker_handle_reply(struct comm_point* c, void* arg, int error,
 	if(LDNS_QDCOUNT(ldns_buffer_begin(c->buffer)) > 1)
 		return 0; /* too much in the query section */
 	/* woohoo a reply! */
-	rep = (struct reply_info*)malloc(sizeof(struct reply_info));
-	if(!rep) {
-		log_err("out of memory");
+	if((r=reply_info_parse(c->buffer, &w->worker->alloc, &qinf, &rep))!=0) {
+		if(r == LDNS_RCODE_SERVFAIL)
+			log_err("reply_info_parse: out of memory");
+		/* formerr on my parse gives servfail to my client */
 		replyerror(LDNS_RCODE_SERVFAIL, w);
 		return 0;
 	}
-	rep->flags = ldns_buffer_read_u16_at(c->buffer, 2);
-	rep->replysize = ldns_buffer_limit(c->buffer) - DNS_ID_AND_FLAGS;
-	log_info("got reply of size %u", (unsigned)rep->replysize);
-	rep->reply = (uint8_t*)malloc(rep->replysize);
-	if(!rep->reply) {
-		free(rep);
-		log_err("out of memory");
+	if(!reply_info_answer_encode(&qinf, rep, w->query_id, w->query_flags,
+		w->query_reply.c->buffer, 0, 0)) {
 		replyerror(LDNS_RCODE_SERVFAIL, w);
+		query_info_clear(&qinf);
+		reply_info_parsedelete(rep, &w->worker->alloc);
 		return 0;
 	}
-	memcpy(rep->reply, ldns_buffer_at(c->buffer, DNS_ID_AND_FLAGS), 
-		rep->replysize);
-	reply_info_answer_iov(rep, w->query_id, w->query_flags, 
-		&w->query_reply, 0);
+	comm_point_send_reply(&w->query_reply);
 	req_release(w);
-	/* store or update reply in the cache */
-	if(!(e = query_info_entrysetup(&w->qinfo, rep, w->query_hash))) {
-		free(rep->reply);
-		free(rep);
-		log_err("out of memory");
+	query_info_clear(&w->qinfo);
+	if(rep->ttl == 0) {
+		log_info("TTL 0: dropped");
+		query_info_clear(&qinf);
+		reply_info_parsedelete(rep, &w->worker->alloc);
+		return 0;
+	}
+	reply_info_set_ttls(rep, time(0));
+	worker_store_rrsets(w->worker, rep);
+	reply_info_fillref(rep);
+	/* store msg in the cache */
+	if(!(e = query_info_entrysetup(&qinf, rep, w->query_hash))) {
+		query_info_clear(&qinf);
+		reply_info_parsedelete(rep, &w->worker->alloc);
 		return 0;
 	}
 	slabhash_insert(w->worker->daemon->msg_cache, w->query_hash, 
@@ -258,6 +287,46 @@ worker_handle_control_cmd(struct comm_point* c, void* arg, int error,
 	return 0;
 }
 
+/** answer query from the cache */
+static int
+answer_from_cache(struct lruhash_entry* e, uint16_t id,
+	uint16_t flags, struct comm_reply* repinfo)
+{
+	struct msgreply_entry* mrentry = (struct msgreply_entry*)e->key;
+	struct reply_info* rep = (struct reply_info*)e->data;
+	uint32_t timenow = time(0);
+	size_t i;
+	/* see if it is possible */
+	if(rep->ttl <= timenow) {
+		/* the rrsets may have been updated in the meantime */
+		/* but this ignores it */
+		return 0;
+	}
+	/* check rrsets */
+	for(i=0; i<rep->rrset_count; i++) {
+		lock_rw_rdlock(&rep->ref[i].key->entry.lock);
+		if(rep->ref[i].id != rep->ref[i].key->id ||
+			rep->ttl <= timenow) {
+			/* failure! rollback our readlocks */
+			size_t j;
+			for(j=0; j<=i; j++)
+				lock_rw_unlock(&rep->ref[j].key->entry.lock);
+			return 0;
+		}
+	}
+	/* locked and ids and ttls are OK. */
+	if(!reply_info_answer_encode(&mrentry->key, rep, id, flags, 
+		repinfo->c->buffer, timenow, 1)) {
+		replyerror_fillbuf(LDNS_RCODE_SERVFAIL, repinfo, id,
+			flags, &mrentry->key);
+	}
+	/* unlock */
+	for(i=0; i<rep->rrset_count; i++)
+		lock_rw_unlock(&rep->ref[i].key->entry.lock);
+	/* go and return this buffer to the client */
+	return 1;
+}
+
 /** handles callbacks from listening event interface */
 static int 
 worker_handle_request(struct comm_point* c, void* arg, int error,
@@ -295,13 +364,15 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 	h = query_info_hash(&qinfo);
 	if((e=slabhash_lookup(worker->daemon->msg_cache, h, &qinfo, 0))) {
 		/* answer from cache - we have acquired a readlock on it */
-		uint16_t id;
 		log_info("answer from the cache");
-		memcpy(&id, ldns_buffer_begin(c->buffer), sizeof(uint16_t));
-		reply_info_answer_iov((struct reply_info*)e->data, id,
-			ldns_buffer_read_u16_at(c->buffer, 2), repinfo, 1);
+		if(answer_from_cache(e, 
+			*(uint16_t*)ldns_buffer_begin(c->buffer), 
+			ldns_buffer_read_u16_at(c->buffer, 2), repinfo)) {
+			lock_rw_unlock(&e->lock);
+			return 1;
+		}
+		log_info("answer from the cache -- data has timed out");
 		lock_rw_unlock(&e->lock);
-		return 0;
 	}
 	ldns_buffer_rewind(c->buffer);
 	server_stats_querymiss(&worker->stats, worker);

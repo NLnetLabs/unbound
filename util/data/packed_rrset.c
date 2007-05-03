@@ -60,3 +60,62 @@ ub_packed_rrset_parsedelete(struct ub_packed_rrset_key* pkey,
 	alloc_special_release(alloc, pkey);
 }
 
+size_t 
+ub_rrset_sizefunc(void* key, void* data)
+{
+	struct ub_packed_rrset_key* k = (struct ub_packed_rrset_key*)key;
+	struct packed_rrset_data* d = (struct packed_rrset_data*)data;
+	size_t s = sizeof(struct ub_packed_rrset_key) + k->rk.dname_len;
+	if(d->rrsig_count > 0) {
+		s += ((uint8_t*)d->rr_data[d->count+d->rrsig_count-1] - 
+			(uint8_t*)d) + d->rr_len[d->count+d->rrsig_count-1];
+	} else {
+		log_assert(d->count > 0);
+		s += ((uint8_t*)d->rr_data[d->count-1] - (uint8_t*)d) + 
+			d->rr_len[d->count-1];
+	}
+	return s;
+}
+
+int 
+ub_rrset_compare(void* k1, void* k2)
+{
+	struct ub_packed_rrset_key* key1 = (struct ub_packed_rrset_key*)k1;
+	struct ub_packed_rrset_key* key2 = (struct ub_packed_rrset_key*)k2;
+	int c;
+	if(key1 == key2 || key1->id == key2->id)
+		return 0;
+	if(key1->rk.dname_len != key2->rk.dname_len) {
+		if(key1->rk.dname_len < key2->rk.dname_len)
+			return -1;
+		return 1;
+	}
+	if((c=memcmp(key1->rk.dname, key2->rk.dname, key1->rk.dname_len)) != 0)
+		return c;
+	if(key1->rk.flags != key2->rk.flags) {
+		if(key1->rk.flags < key2->rk.flags)
+			return -1;
+		return 1;
+	}
+	return 0;
+}
+
+void 
+ub_rrset_key_delete(void* key, void* userdata)
+{
+	struct ub_packed_rrset_key* k = (struct ub_packed_rrset_key*)key;
+	struct alloc_cache* a = (struct alloc_cache*)userdata;
+	k->id = 0;
+	free(k->rk.dname);
+	k->rk.dname = NULL;
+	lock_quick_lock(&a->lock);
+	alloc_special_release(a, k);
+	lock_quick_unlock(&a->lock);
+}
+
+void 
+rrset_data_delete(void* data, void* ATTR_UNUSED(userdata))
+{
+	struct packed_rrset_data* d = (struct packed_rrset_data*)data;
+	free(d);
+}

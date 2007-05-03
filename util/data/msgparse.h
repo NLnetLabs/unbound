@@ -71,6 +71,8 @@ struct region;
 #define PARSE_TABLE_SIZE 1024
 /** Maximum TTL that is allowed. */
 #define MAX_TTL	3600*24*365*10 /* ten years */
+/** Negative cache time (for entries without any RRs.) */
+#define NORR_TTL 5 /* seconds */
 
 /**
  * Data stored in scratch pad memory during parsing.

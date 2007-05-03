@@ -71,6 +71,9 @@ parse_create_qinfo(ldns_buffer* pkt, struct msg_parse* msg,
 	qinf->qnamesize = msg->qname_len;
 	qinf->qtype = msg->qtype;
 	qinf->qclass = msg->qclass;
+	qinf->has_cd = 0;
+	if(msg->flags & BIT_CD)
+		qinf->has_cd = 1;
 	return 1;
 }
 
@@ -83,8 +86,6 @@ parse_create_repinfo(struct msg_parse* msg, struct reply_info** rep)
 		sizeof(struct rrset_ref) * (msg->rrset_count-1)  +
 		sizeof(struct ub_packed_rrset_key*) * msg->rrset_count);
 	if(!*rep) return 0;
-	(*rep)->reply = 0; /* unused */
-	(*rep)->replysize = 0; /* unused */
 	(*rep)->flags = msg->flags;
 	(*rep)->qdcount = msg->qdcount;
 	(*rep)->ttl = 0;
@@ -262,6 +263,9 @@ parse_copy_decompress(ldns_buffer* pkt, struct msg_parse* msg,
 	struct rrset_parse *pset = msg->rrset_first;
 	struct packed_rrset_data* data;
 	log_assert(rep);
+	rep->ttl = MAX_TTL;
+	if(rep->rrset_count == 0)
+		rep->ttl = NORR_TTL;
 
 	for(i=0; i<rep->rrset_count; i++) {
 		rep->rrsets[i]->rk.flags = pset->flags;
@@ -282,7 +286,10 @@ parse_copy_decompress(ldns_buffer* pkt, struct msg_parse* msg,
 		if((ret=parse_create_rrset(pkt, pset, &data)) != 0)
 			return ret;
 		rep->rrsets[i]->entry.data = (void*)data;
+		rep->rrsets[i]->entry.key = (void*)rep->rrsets[i];
 		rep->rrsets[i]->entry.hash = pset->hash;
+		if(data->ttl < rep->ttl)
+			rep->ttl = data->ttl;
 
 		pset = pset->rrset_all_next;
 	}
@@ -349,6 +356,41 @@ int reply_info_parse(ldns_buffer* pkt, struct alloc_cache* alloc,
 	return 0;
 }
 
+/** helper compare function to sort in lock order */
+static int
+reply_info_fillref_cmp(const void* a, const void* b)
+{
+	if(a < b) return -1;
+	if(a > b) return 1;
+	return 0;
+}
+
+void 
+reply_info_fillref(struct reply_info* rep)
+{
+	size_t i;
+	for(i=0; i<rep->rrset_count; i++) {
+		rep->ref[i].key = rep->rrsets[i];
+		rep->ref[i].id = rep->rrsets[i]->id;
+	}
+	qsort(&rep->ref[0], rep->rrset_count, sizeof(struct rrset_ref),
+		reply_info_fillref_cmp);
+}
+
+void 
+reply_info_set_ttls(struct reply_info* rep, uint32_t timenow)
+{
+	size_t i, j;
+	rep->ttl += timenow;
+	for(i=0; i<rep->rrset_count; i++) {
+		struct packed_rrset_data* data = (struct packed_rrset_data*)
+			rep->rrsets[i]->entry.data;
+		data->ttl += timenow;
+		for(j=0; j<data->count + data->rrsig_count; j++)
+			data->rr_ttl[j] += timenow;
+	}
+}
+
 void 
 reply_info_parsedelete(struct reply_info* rep, struct alloc_cache* alloc)
 {
@@ -373,7 +415,7 @@ query_info_parse(struct query_info* m, ldns_buffer* query)
 	log_assert(LDNS_OPCODE_WIRE(q) == LDNS_PACKET_QUERY);
 	log_assert(LDNS_QDCOUNT(q) == 1);
 	log_assert(ldns_buffer_position(query) == 0);
-	m->has_cd = (int)LDNS_CD_WIRE(q);
+	m->has_cd = LDNS_CD_WIRE(q)?1:0;
 	ldns_buffer_skip(query, LDNS_HEADER_SIZE);
 	m->qname = ldns_buffer_current(query);
 	if((m->qnamesize = query_dname_len(query)) == 0)
@@ -427,20 +469,17 @@ query_info_clear(struct query_info* m)
 	m->qname = NULL;
 }
 
-void 
-reply_info_clear(struct reply_info* m)
-{
-	free(m->reply);
-	m->reply = NULL;
-}
-
 size_t 
 msgreply_sizefunc(void* k, void* d)
 {
 	struct query_info* q = (struct query_info*)k;
 	struct reply_info* r = (struct reply_info*)d;
-	return sizeof(struct msgreply_entry) + sizeof(struct reply_info)
-		+ r->replysize + q->qnamesize;
+	size_t s = sizeof(struct msgreply_entry) + sizeof(struct reply_info)
+		+ q->qnamesize;
+	if(r->rrset_count > 0)
+		s += r->rrset_count * (sizeof(struct ub_packed_rrset_key*) +
+			sizeof(struct rrset_ref));
+	return s;
 }
 
 void 
@@ -456,7 +495,6 @@ void
 reply_info_delete(void* d, void* ATTR_UNUSED(arg))
 {
 	struct reply_info* r = (struct reply_info*)d;
-	reply_info_clear(r);
 	free(r);
 }
 
@@ -469,20 +507,6 @@ query_info_hash(struct query_info *q)
 	h = hashlittle(&q->has_cd, sizeof(q->has_cd), h);
 	h = dname_query_hash(q->qname, h);
 	return h;
-}
-
-void 
-reply_info_answer(struct reply_info* rep, uint16_t qflags, 
-	ldns_buffer* buffer)
-{
-	uint16_t flags;
-	ldns_buffer_clear(buffer);
-	ldns_buffer_skip(buffer, 2); /* ID */
-	flags = rep->flags | (qflags & BIT_RD); /* copy RD bit */
-	log_assert(flags & BIT_QR); /* QR bit must be on in our replies */
-	ldns_buffer_write_u16(buffer, flags);
-	ldns_buffer_write(buffer, rep->reply, rep->replysize);
-	ldns_buffer_flip(buffer);
 }
 
 /**
@@ -851,19 +875,10 @@ packed_rrset_encode(struct ub_packed_rrset_key* key, ldns_buffer* pkt,
 	if(do_data) {
 		const ldns_rr_descriptor* c = type_rdata_compressable(key);
 		for(i=0; i<data->count; i++) {
-			if(1) { /* compression */
-				if((r=compress_owner(key, pkt, region, tree, 
-					owner_pos, &owner_ptr, owner_labs))
-					!= RETVAL_OK)
-					return r;
-			} else {
-				/* no compression */
-				if(ldns_buffer_remaining(pkt) < 
-					key->rk.dname_len + 4+4+2) 
-					return RETVAL_TRUNC;
-				ldns_buffer_write(pkt, key->rk.dname, 
-					key->rk.dname_len + 4);
-			}
+			if((r=compress_owner(key, pkt, region, tree, 
+				owner_pos, &owner_ptr, owner_labs))
+				!= RETVAL_OK)
+				return r;
 			ldns_buffer_write_u32(pkt, data->rr_ttl[i]-timenow);
 			if(c) {
 				if((r=compress_rdata(pkt, data->rr_data[i],
@@ -882,28 +897,19 @@ packed_rrset_encode(struct ub_packed_rrset_key* key, ldns_buffer* pkt,
 	if(do_sig) {
 		size_t total = data->count+data->rrsig_count;
 		for(i=data->count; i<total; i++) {
-			if(1) { /* compression */
-				if(owner_ptr) {
-					if(ldns_buffer_remaining(pkt) <
-						2+4+4+data->rr_len[i]) 
-						return RETVAL_TRUNC;
-					ldns_buffer_write(pkt, &owner_ptr, 2);
-				} else {
-					if((r=compress_any_dname(key->rk.dname, 
-						pkt, owner_labs, region, tree))
-						!= RETVAL_OK)
-						return r;
-					if(ldns_buffer_remaining(pkt) < 
-						4+4+data->rr_len[i])
-						return RETVAL_TRUNC;
-				}
-			} else {
-				/* no compression */
-				if(ldns_buffer_remaining(pkt) < 
-					key->rk.dname_len+4+4+data->rr_len[i])
+			if(owner_ptr) {
+				if(ldns_buffer_remaining(pkt) <
+					2+4+4+data->rr_len[i]) 
 					return RETVAL_TRUNC;
-				ldns_buffer_write(pkt, key->rk.dname, 
-					key->rk.dname_len);
+				ldns_buffer_write(pkt, &owner_ptr, 2);
+			} else {
+				if((r=compress_any_dname(key->rk.dname, 
+					pkt, owner_labs, region, tree))
+					!= RETVAL_OK)
+					return r;
+				if(ldns_buffer_remaining(pkt) < 
+					4+4+data->rr_len[i])
+					return RETVAL_TRUNC;
 			}
 			ldns_buffer_write_u16(pkt, LDNS_RR_TYPE_RRSIG);
 			ldns_buffer_write(pkt, &(key->rk.dname[
@@ -1045,29 +1051,29 @@ int reply_info_encode(struct query_info* qinfo, struct reply_info* rep,
 	return 1;
 }
 
-void 
-reply_info_answer_iov(struct reply_info* rep, uint16_t qid,
-        uint16_t qflags, struct comm_reply* comrep, int cached)
+int 
+reply_info_answer_encode(struct query_info* qinf, struct reply_info* rep, 
+	uint16_t id, uint16_t qflags, ldns_buffer* pkt, uint32_t timenow,
+	int cached)
 {
-	/* [0]=reserved for tcplen, [1]=id, [2]=flags, [3]=message */
-	struct iovec iov[4];
+	uint16_t flags;
+	region_type* region = region_create(malloc, free);
 
-	iov[1].iov_base = (void*)&qid;
-	iov[1].iov_len = sizeof(uint16_t);
 	if(!cached) {
 		/* original flags, copy RD bit from query. */
-		qflags = rep->flags | (qflags & BIT_RD); 
+		flags = rep->flags | (qflags & BIT_RD); 
 	} else {
 		/* remove AA bit, copy RD and CD bits from query. */
-		qflags = (rep->flags & ~BIT_AA) | (qflags & (BIT_RD|BIT_CD)); 
+		flags = (rep->flags & ~BIT_AA) | (qflags & (BIT_RD|BIT_CD)); 
 	}
-	log_assert(qflags & BIT_QR); /* QR bit must be on in our replies */
-	qflags = htons(qflags);
-	iov[2].iov_base = (void*)&qflags;
-	iov[2].iov_len = sizeof(uint16_t);
-	iov[3].iov_base = (void*)rep->reply;
-	iov[3].iov_len = rep->replysize;
-	comm_point_send_reply_iov(comrep, iov, 4);
+	log_assert(flags & BIT_QR); /* QR bit must be on in our replies */
+
+	if(!reply_info_encode(qinf, rep, id, flags, pkt, timenow, region)) {
+		log_err("reply encode: out of memory");
+		return 0;
+	}
+	region_destroy(region);
+	return 1;
 }
 
 struct msgreply_entry* 

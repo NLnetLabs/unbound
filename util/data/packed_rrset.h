@@ -178,4 +178,34 @@ struct packed_rrset {
 void ub_packed_rrset_parsedelete(struct ub_packed_rrset_key* pkey,
 	struct alloc_cache* alloc);
 
+/**
+ * Calculate memory size of rrset entry. For hash table usage.
+ * @param key: struct ub_packed_rrset_key*.
+ * @param data: struct packed_rrset_data*.
+ * @return size in bytes.
+ */
+size_t ub_rrset_sizefunc(void* key, void* data);
+
+/**
+ * compares two rrset keys.
+ * @param k1: struct ub_packed_rrset_key*.
+ * @param k2: struct ub_packed_rrset_key*.
+ * @return 0 if equal.
+ */
+int ub_rrset_compare(void* k1, void* k2);
+
+/**
+ * Old key to be deleted. RRset keys are recycled via alloc.
+ * @param key: struct ub_packed_rrset_key*.
+ * @param userdata: alloc structure to use for recycling.
+ */
+void ub_rrset_key_delete(void* key, void* userdata);
+
+/**
+ * Old data to be deleted.
+ * @param data: what to delete.
+ * @param userdata: user data ptr.
+ */
+void rrset_data_delete(void* data, void* userdata);
+
 #endif /* UTIL_DATA_PACKED_RRSET_H */

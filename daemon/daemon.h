@@ -74,6 +74,8 @@ struct daemon {
 	struct alloc_cache superalloc;
 	/** the message cache, content is struct msgreply_entry* */
 	struct slabhash* msg_cache;
+	/** the rrset cache, content is struct struct ub_packed_rrset_key* */
+	struct slabhash* rrset_cache;
 };
 
 /**
