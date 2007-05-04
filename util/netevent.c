@@ -436,7 +436,13 @@ comm_point_tcp_handle_write(int fd, struct comm_point* c)
 
 	if(c->tcp_byte_count < sizeof(uint16_t)) {
 		uint16_t len = htons(ldns_buffer_limit(c->buffer));
-		r = write(fd, &len, sizeof(uint16_t)-c->tcp_byte_count);
+		/*
+		struct iovec iov[2];
+		iov[0].iov_base = (uint8_t*)&len + c->tcp_byte_count;
+		iov[0].iov_len = sizeof(uint16_t) - c->tcp_byte_count;
+		*/
+		r = write(fd, (uint8_t*)&len + c->tcp_byte_count, 
+			sizeof(uint16_t) - c->tcp_byte_count);
 		if(r == -1) {
 			if(errno == EINTR || errno == EAGAIN)
 				return 1;
