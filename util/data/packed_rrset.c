@@ -117,3 +117,20 @@ rrset_data_delete(void* data, void* ATTR_UNUSED(userdata))
 	struct packed_rrset_data* d = (struct packed_rrset_data*)data;
 	free(d);
 }
+
+int 
+rrsetdata_equal(struct packed_rrset_data* d1, struct packed_rrset_data* d2)
+{
+	size_t i;
+	size_t total;
+	if(d1->count != d2->count || d1->rrsig_count != d2->rrsig_count) 
+		return 0;
+	total = d1->count + d1->rrsig_count;
+	for(i=0; i<total; i++) {
+		if(d1->rr_len[i] != d2->rr_len[i])
+			return 0;
+		if(memcmp(d1->rr_data[i], d2->rr_data[i], d1->rr_len[i]) != 0)
+			return 0;
+	}
+	return 1;
+}

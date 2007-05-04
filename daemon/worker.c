@@ -129,16 +129,66 @@ replyerror(int r, struct work_query* w)
 	query_info_clear(&w->qinfo);
 }
 
+/** see if rrset needs to be updated in the cache */
+static int
+need_to_update_rrset(struct packed_rrset_data* newd, 
+	struct packed_rrset_data* cached)
+{
+	if( newd->trust > cached->trust )
+		return 1;
+	if( newd->ttl > cached->ttl &&
+		rrsetdata_equal(newd, cached))
+		return 1;
+	return 0;
+}
+
 /** store rrsets in the rrset cache. */
 static void
 worker_store_rrsets(struct worker* worker, struct reply_info* rep)
 {
+	struct lruhash_entry* e;
 	size_t i;
+	/* see if rrset already exists in cache, if not insert it. */
+	/* if it does exist: */
+	/*	o if current RRset is more trustworthy - insert it */
+	/*	o see if TTL is better than TTL in cache. */
+	/*	  if so, see if rrset+rdata is (exactly!) the same */
+	/*	  if so, update TTL in cache. */
 	for(i=0; i<rep->rrset_count; i++) {
-		/* TODO: check if update really needed */
+		rep->ref[i].key = rep->rrsets[i];
+		rep->ref[i].id = rep->rrsets[i]->id;
+		/* looks up item with a readlock - no editing! */
+		if((e=slabhash_lookup(worker->daemon->rrset_cache,
+			rep->rrsets[i]->entry.hash, rep->rrsets[i]->entry.key,
+			0)) != 0) {
+			struct packed_rrset_data* data = 
+				(struct packed_rrset_data*)e->data;
+			struct packed_rrset_data* rd = 
+				(struct packed_rrset_data*)
+				rep->rrsets[i]->entry.data;
+			rep->ref[i].key = (struct ub_packed_rrset_key*)e->key;
+			rep->ref[i].id = rep->rrsets[i]->id;
+			/* found in cache, do checks above */
+			if(!need_to_update_rrset(rd, data)) {
+				lock_rw_unlock(&e->lock);
+				ub_packed_rrset_parsedelete(rep->rrsets[i],
+					&worker->alloc);
+				rep->rrsets[i] = rep->ref[i].key;
+				continue; /* use cached item instead */
+			}
+			if(rd->trust < data->trust)
+				rd->trust = data->trust;
+			lock_rw_unlock(&e->lock);
+			/* small gap here, where entry is not locked.
+			 * possibly entry is updated with something else.
+			 * this is just too bad, its cache anyway. */
+			/* use insert to update entry to manage lruhash
+			 * cache size values nicely. */
+		}
 		slabhash_insert(worker->daemon->rrset_cache, 
 			rep->rrsets[i]->entry.hash, &rep->rrsets[i]->entry,
 			rep->rrsets[i]->entry.data, &worker->alloc);
+		/* TODO store correct key and id */
 	}
 }
 
@@ -192,7 +242,7 @@ worker_handle_reply(struct comm_point* c, void* arg, int error,
 	}
 	reply_info_set_ttls(rep, time(0));
 	worker_store_rrsets(w->worker, rep);
-	reply_info_fillref(rep);
+	reply_info_sortref(rep);
 	/* store msg in the cache */
 	if(!(e = query_info_entrysetup(&qinf, rep, w->query_hash))) {
 		query_info_clear(&qinf);

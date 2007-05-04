@@ -108,6 +108,51 @@ struct ub_packed_rrset_key {
 };
 
 /**
+ * RRset trustworthiness. Bigger value is more trust. RFC 2181.
+ * The rrset_trust_add_noAA, rrset_trust_auth_noAA, rrset_trust_add_AA,
+ * are mentioned as the same trustworthiness in 2181, but split up here
+ * for ease of processing.
+ *
+ * rrset_trust_nonauth_ans_AA, rrset_trust_ans_noAA
+ * are also mentioned as the same trustworthiness in 2181, but split up here
+ * for ease of processing.
+ *
+ * Added trust_none for a sane initial value, smaller than anything else.
+ * Added validated and ultimate trust for keys and rrsig validated content.
+ */
+enum rrset_trust {
+	/** initial value for trust */
+	rrset_trust_none = 0,
+	/** Additional information from non-authoritative answers */
+	rrset_trust_add_noAA,
+	/** Data from the authority section of a non-authoritative answer */
+	rrset_trust_auth_noAA,
+	/** Additional information from an authoritative answer */
+	rrset_trust_add_AA,
+	/** non-authoritative data from the answer section of authoritative
+	 * answers */
+	rrset_trust_nonauth_ans_AA,
+	/** Data from the answer section of a non-authoritative answer */
+	rrset_trust_ans_noAA,
+	/** Glue from a primary zone, or glue from a zone transfer */
+	rrset_trust_glue,
+	/** Data from the authority section of an authoritative answer */
+	rrset_trust_auth_AA,
+	/** The authoritative data included in the answer section of an
+	 *  authoritative reply */
+	rrset_trust_ans_AA,
+	/** Data from a zone transfer, other than glue */
+	rrset_trust_sec_noglue,
+	/** Data from a primary zone file, other than glue data */
+	rrset_trust_prim_noglue,
+	/** DNSSEC(rfc4034) validated with trusted keys */
+	rrset_trust_validated,
+	/** ultimately trusted, no more trust is possible; 
+	 * trusted keys from the unbound configuration setup. */
+	rrset_trust_ultimate
+};
+
+/**
  * RRset data.
  *
  * The data is packed, stored contiguously in memory.
@@ -143,6 +188,8 @@ struct packed_rrset_data {
 	size_t count;
 	/** number of rrsigs, if 0 no rrsigs */
 	size_t rrsig_count;
+	/** the trustworthiness of the rrset data */
+	enum rrset_trust trust; 
 	/** length of every rr's rdata, rr_len[i] is size of rr_data[i]. */
 	size_t* rr_len;
 	/** ttl of every rr. rr_ttl[i] ttl of rr i. */
@@ -193,6 +240,15 @@ size_t ub_rrset_sizefunc(void* key, void* data);
  * @return 0 if equal.
  */
 int ub_rrset_compare(void* k1, void* k2);
+
+/**
+ * compare two rrset data structures.
+ * Compared rdata and rrsigdata, not the trust or ttl value.
+ * @param d1: data to compare.
+ * @param d2: data to compare.
+ * @return 1 if equal.
+ */
+int rrsetdata_equal(struct packed_rrset_data* d1, struct packed_rrset_data* d2);
 
 /**
  * Old key to be deleted. RRset keys are recycled via alloc.

@@ -192,10 +192,10 @@ int reply_info_parse(ldns_buffer* pkt, struct alloc_cache* alloc,
 	struct query_info* qinf, struct reply_info** rep);
 
 /**
- * Fills in the ref array based on the rest of the structure, the rrsets.
+ * Sorts the ref array.
  * @param rep: reply info. rrsets must be filled in.
  */
-void reply_info_fillref(struct reply_info* rep);
+void reply_info_sortref(struct reply_info* rep);
 
 /**
  * Set TTLs inside the replyinfo to absolute values.

@@ -199,6 +199,7 @@ parse_rr_copy(ldns_buffer* pkt, struct rrset_parse* pset,
 	data->ttl = MAX_TTL;
 	data->count = pset->rr_count;
 	data->rrsig_count = pset->rrsig_count;
+	data->trust = rrset_trust_none;
 	/* layout: struct - rr_len - rr_data - rdata - rrsig */
 	data->rr_len = (size_t*)((uint8_t*)data + 
 		sizeof(struct packed_rrset_data));
@@ -246,6 +247,31 @@ parse_create_rrset(ldns_buffer* pkt, struct rrset_parse* pset,
 	return 0;
 }
 
+/** get trust value for rrset */
+static enum rrset_trust
+get_rrset_trust(struct reply_info* rep, size_t i)
+{
+	uint16_t AA = rep->flags & BIT_AA;
+	/* TODO: need scrubber that knows what zone the server serves, so that
+	 * it can check if AA bit is warranted.
+	 * it can check if rrset_trust_nonauth_ans_AA should be used */
+	if(i < rep->an_numrrsets) {
+		/* answer section */
+		if(AA)	return rrset_trust_ans_AA;
+		else	return rrset_trust_ans_noAA;
+		
+	} else if(i < rep->an_numrrsets+rep->ns_numrrsets) {
+		/* authority section */
+		if(AA)	return rrset_trust_auth_AA;
+		else	return rrset_trust_auth_noAA;
+	} else {
+		/* addit section */
+		if(AA)	return rrset_trust_add_AA;
+		else	return rrset_trust_add_noAA;
+	}
+	return rrset_trust_none;
+}
+
 /** 
  * Copy and decompress rrs
  * @param pkt: the packet for compression pointer resolution.
@@ -288,6 +314,7 @@ parse_copy_decompress(ldns_buffer* pkt, struct msg_parse* msg,
 		rep->rrsets[i]->entry.data = (void*)data;
 		rep->rrsets[i]->entry.key = (void*)rep->rrsets[i];
 		rep->rrsets[i]->entry.hash = pset->hash;
+		data->trust = get_rrset_trust(rep, i);
 		if(data->ttl < rep->ttl)
 			rep->ttl = data->ttl;
 
@@ -358,7 +385,7 @@ int reply_info_parse(ldns_buffer* pkt, struct alloc_cache* alloc,
 
 /** helper compare function to sort in lock order */
 static int
-reply_info_fillref_cmp(const void* a, const void* b)
+reply_info_sortref_cmp(const void* a, const void* b)
 {
 	if(a < b) return -1;
 	if(a > b) return 1;
@@ -366,15 +393,10 @@ reply_info_fillref_cmp(const void* a, const void* b)
 }
 
 void 
-reply_info_fillref(struct reply_info* rep)
+reply_info_sortref(struct reply_info* rep)
 {
-	size_t i;
-	for(i=0; i<rep->rrset_count; i++) {
-		rep->ref[i].key = rep->rrsets[i];
-		rep->ref[i].id = rep->rrsets[i]->id;
-	}
 	qsort(&rep->ref[0], rep->rrset_count, sizeof(struct rrset_ref),
-		reply_info_fillref_cmp);
+		reply_info_sortref_cmp);
 }
 
 void 

@@ -3,6 +3,8 @@
 	- config settings for rrset cache size and slabs.
 	- hashtable insert takes argument so that a thread can use its own
 	  alloc cache to store released keys.
+	- alloc cache special_release() locks if necessary.
+	- rrset trustworthiness type added.
 
 3 May 2007: Wouter
 	- fill refs. Use new parse and encode to answer queries.
