@@ -184,12 +184,14 @@ int query_info_parse(struct query_info* m, ldns_buffer* query);
  * @param alloc: creates packed rrset key structures.
  * @param rep: allocated reply_info is returned (only on no error).
  * @param qinf: query_info is returned (only on no error).
+ * @param region: where to store temporary data (for parsing).
  * @return: zero is OK, or DNS error code in case of error
  *	o FORMERR for parse errors.
  *	o SERVFAIL for memory allocation errors.
  */
 int reply_info_parse(ldns_buffer* pkt, struct alloc_cache* alloc,
-	struct query_info* qinf, struct reply_info** rep);
+	struct query_info* qinf, struct reply_info** rep, 
+	struct region* region);
 
 /**
  * Sorts the ref array.
@@ -253,11 +255,12 @@ hashvalue_t query_info_hash(struct query_info *q);
  * @param timenow: time to subtract.
  * @param cached: set true if a cached reply (so no AA bit).
  *	set false for the first reply.
+ * @param region: where to allocate temp variables (for compression).
  * @return: 0 on error (server failure).
  */
 int reply_info_answer_encode(struct query_info* qinf, struct reply_info* rep, 
 	uint16_t id, uint16_t qflags, ldns_buffer* dest, uint32_t timenow,
-	int cached);
+	int cached, struct region* region);
 
 /**
  * Regenerate the wireformat from the stored msg reply.

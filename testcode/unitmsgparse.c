@@ -258,7 +258,7 @@ testpkt(ldns_buffer* pkt, struct alloc_cache* alloc, ldns_buffer* out,
 		flags = 0;
 	else	memmove(&flags, ldns_buffer_at(pkt, 2), sizeof(flags));
 	flags = ntohs(flags);
-	ret = reply_info_parse(pkt, alloc, &qi, &rep);
+	ret = reply_info_parse(pkt, alloc, &qi, &rep, region);
 	if(ret != 0) {
 		if(vbmp) printf("parse code %d: %s\n", ret, 
 			ldns_lookup_by_id(ldns_rcodes, ret)->name);

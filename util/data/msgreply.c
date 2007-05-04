@@ -343,26 +343,21 @@ parse_create_msg(ldns_buffer* pkt, struct msg_parse* msg,
 }
 
 int reply_info_parse(ldns_buffer* pkt, struct alloc_cache* alloc,
-        struct query_info* qinf, struct reply_info** rep)
+        struct query_info* qinf, struct reply_info** rep, struct region* region)
 {
 	/* use scratch pad region-allocator during parsing. */
-	region_type* region = region_create(malloc, free);
 	struct msg_parse* msg;
 	int ret;
 	
 	qinf->qname = NULL;
 	*rep = NULL;
 	if(!(msg = region_alloc(region, sizeof(*msg)))) {
-		region_free_all(region);
-		region_destroy(region);
 		return LDNS_RCODE_SERVFAIL;
 	}
 	memset(msg, 0, sizeof(*msg));
 	
 	log_assert(ldns_buffer_position(pkt) == 0);
 	if((ret = parse_packet(pkt, msg, region)) != 0) {
-		region_free_all(region);
-		region_destroy(region);
 		return ret;
 	}
 
@@ -372,14 +367,8 @@ int reply_info_parse(ldns_buffer* pkt, struct alloc_cache* alloc,
 		query_info_clear(qinf);
 		reply_info_parsedelete(*rep, alloc);
 		*rep = NULL;
-		region_free_all(region);
-		region_destroy(region);
 		return ret;
 	}
-
-	/* exit and cleanup */
-	region_free_all(region);
-	region_destroy(region);
 	return 0;
 }
 
@@ -1075,10 +1064,9 @@ int reply_info_encode(struct query_info* qinfo, struct reply_info* rep,
 int 
 reply_info_answer_encode(struct query_info* qinf, struct reply_info* rep, 
 	uint16_t id, uint16_t qflags, ldns_buffer* pkt, uint32_t timenow,
-	int cached)
+	int cached, struct region* region)
 {
 	uint16_t flags;
-	region_type* region = region_create(malloc, free);
 
 	if(!cached) {
 		/* original flags, copy RD bit from query. */
@@ -1093,7 +1081,6 @@ reply_info_answer_encode(struct query_info* qinf, struct reply_info* rep,
 		log_err("reply encode: out of memory");
 		return 0;
 	}
-	region_destroy(region);
 	return 1;
 }
 

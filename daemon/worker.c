@@ -47,6 +47,7 @@
 #include "daemon/daemon.h"
 #include "util/netevent.h"
 #include "util/config_file.h"
+#include "util/region-allocator.h"
 #include "util/storage/slabhash.h"
 #include "services/listen_dnsport.h"
 #include "services/outside_network.h"
@@ -188,7 +189,7 @@ worker_store_rrsets(struct worker* worker, struct reply_info* rep)
 		slabhash_insert(worker->daemon->rrset_cache, 
 			rep->rrsets[i]->entry.hash, &rep->rrsets[i]->entry,
 			rep->rrsets[i]->entry.data, &worker->alloc);
-		/* TODO store correct key and id */
+		if(e) rep->rrsets[i] = rep->ref[i].key;
 	}
 }
 
@@ -217,21 +218,25 @@ worker_handle_reply(struct comm_point* c, void* arg, int error,
 	if(LDNS_QDCOUNT(ldns_buffer_begin(c->buffer)) > 1)
 		return 0; /* too much in the query section */
 	/* woohoo a reply! */
-	if((r=reply_info_parse(c->buffer, &w->worker->alloc, &qinf, &rep))!=0) {
+	if((r=reply_info_parse(c->buffer, &w->worker->alloc, &qinf, &rep,
+		w->worker->scratchpad))!=0) {
 		if(r == LDNS_RCODE_SERVFAIL)
 			log_err("reply_info_parse: out of memory");
 		/* formerr on my parse gives servfail to my client */
 		replyerror(LDNS_RCODE_SERVFAIL, w);
+		region_free_all(w->worker->scratchpad);
 		return 0;
 	}
 	if(!reply_info_answer_encode(&qinf, rep, w->query_id, w->query_flags,
-		w->query_reply.c->buffer, 0, 0)) {
+		w->query_reply.c->buffer, 0, 0, w->worker->scratchpad)) {
 		replyerror(LDNS_RCODE_SERVFAIL, w);
 		query_info_clear(&qinf);
 		reply_info_parsedelete(rep, &w->worker->alloc);
+		region_free_all(w->worker->scratchpad);
 		return 0;
 	}
 	comm_point_send_reply(&w->query_reply);
+	region_free_all(w->worker->scratchpad);
 	req_release(w);
 	query_info_clear(&w->qinfo);
 	if(rep->ttl == 0) {
@@ -339,7 +344,7 @@ worker_handle_control_cmd(struct comm_point* c, void* arg, int error,
 
 /** answer query from the cache */
 static int
-answer_from_cache(struct lruhash_entry* e, uint16_t id,
+answer_from_cache(struct worker* worker, struct lruhash_entry* e, uint16_t id,
 	uint16_t flags, struct comm_reply* repinfo)
 {
 	struct msgreply_entry* mrentry = (struct msgreply_entry*)e->key;
@@ -366,13 +371,14 @@ answer_from_cache(struct lruhash_entry* e, uint16_t id,
 	}
 	/* locked and ids and ttls are OK. */
 	if(!reply_info_answer_encode(&mrentry->key, rep, id, flags, 
-		repinfo->c->buffer, timenow, 1)) {
+		repinfo->c->buffer, timenow, 1, worker->scratchpad)) {
 		replyerror_fillbuf(LDNS_RCODE_SERVFAIL, repinfo, id,
 			flags, &mrentry->key);
 	}
 	/* unlock */
 	for(i=0; i<rep->rrset_count; i++)
 		lock_rw_unlock(&rep->ref[i].key->entry.lock);
+	region_free_all(worker->scratchpad);
 	/* go and return this buffer to the client */
 	return 1;
 }
@@ -415,7 +421,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 	if((e=slabhash_lookup(worker->daemon->msg_cache, h, &qinfo, 0))) {
 		/* answer from cache - we have acquired a readlock on it */
 		log_info("answer from the cache");
-		if(answer_from_cache(e, 
+		if(answer_from_cache(worker, e, 
 			*(uint16_t*)ldns_buffer_begin(c->buffer), 
 			ldns_buffer_read_u16_at(c->buffer, 2), repinfo)) {
 			lock_rw_unlock(&e->lock);
@@ -652,6 +658,8 @@ worker_init(struct worker* worker, struct config_file *cfg,
 	server_stats_init(&worker->stats);
 	alloc_init(&worker->alloc, &worker->daemon->superalloc, 
 		worker->thread_num);
+	worker->scratchpad = region_create_custom(malloc, free, 
+		65536, 8192, 32, 1);
 	return 1;
 }
 
@@ -684,6 +692,7 @@ worker_delete(struct worker* worker)
 		close(worker->cmd_recv_fd);
 	worker->cmd_recv_fd = -1;
 	alloc_clear(&worker->alloc);
+	region_destroy(worker->scratchpad);
 	free(worker);
 }
 
