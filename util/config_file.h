@@ -75,6 +75,10 @@ struct config_file {
 	size_t msg_cache_slabs;
 	/** number of queries every thread can service */
 	size_t num_queries_per_thread;
+	/** size of the rrset cache */
+	size_t rrset_cache_size;
+	/** slabs in the rrset cache */
+	size_t rrset_cache_slabs;
 
 	/** forwarder address. string. If not NULL fwder mode is enabled. */
 	char* fwd_address;

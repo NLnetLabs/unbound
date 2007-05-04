@@ -73,6 +73,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_FORWARD_TO VAR_FORWARD_TO_PORT VAR_CHROOT
 %token VAR_USERNAME VAR_DIRECTORY VAR_LOGFILE VAR_PIDFILE
 %token VAR_MSG_CACHE_SIZE VAR_MSG_CACHE_SLABS VAR_NUM_QUERIES_PER_THREAD
+%token VAR_RRSET_CACHE_SIZE VAR_RRSET_CACHE_SLABS
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -87,14 +88,17 @@ serverstart: VAR_SERVER
 		cfg_parser->server_settings_seen = 1;
 	}
 	;
-contents_server: contents_server content_server | ;
+contents_server: contents_server content_server 
+	| ;
 content_server: server_num_threads | server_verbosity | server_port |
 	server_outgoing_port | server_outgoing_range | server_do_ip4 |
 	server_do_ip6 | server_do_udp | server_do_tcp | server_forward_to |
 	server_forward_to_port | server_interface | server_chroot | 
 	server_username | server_directory | server_logfile | server_pidfile |
 	server_msg_cache_size | server_msg_cache_slabs |
-	server_num_queries_per_thread;
+	server_num_queries_per_thread | server_rrset_cache_size | 
+	server_rrset_cache_slabs 
+	;
 server_num_threads: VAR_NUM_THREADS STRING 
 	{ 
 		OUTYY(("P(server_num_threads:%s)\n", $2)); 
@@ -268,6 +272,28 @@ server_num_queries_per_thread: VAR_NUM_QUERIES_PER_THREAD STRING
 		if(atoi($2) == 0)
 			yyerror("number expected");
 		else cfg_parser->cfg->num_queries_per_thread = atoi($2);
+		free($2);
+	}
+	;
+server_rrset_cache_size: VAR_RRSET_CACHE_SIZE STRING
+	{
+		OUTYY(("P(server_rrset_cache_size:%s)\n", $2));
+		if(atoi($2) == 0)
+			yyerror("number expected");
+		else cfg_parser->cfg->rrset_cache_size = atoi($2);
+		free($2);
+	}
+	;
+server_rrset_cache_slabs: VAR_RRSET_CACHE_SLABS STRING
+	{
+		OUTYY(("P(server_rrset_cache_slabs:%s)\n", $2));
+		if(atoi($2) == 0)
+			yyerror("number expected");
+		else {
+			cfg_parser->cfg->rrset_cache_slabs = atoi($2);
+			if(!is_pow2(cfg_parser->cfg->rrset_cache_slabs))
+				yyerror("must be a power of 2");
+		}
 		free($2);
 	}
 	;

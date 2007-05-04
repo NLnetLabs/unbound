@@ -116,6 +116,8 @@ logfile{COLON}		{ LEXOUT(("v(%s) ", yytext)); return VAR_LOGFILE;}
 pidfile{COLON}		{ LEXOUT(("v(%s) ", yytext)); return VAR_PIDFILE;}
 msg-cache-size{COLON}	{ LEXOUT(("v(%s) ", yytext)); return VAR_MSG_CACHE_SIZE;}
 msg-cache-slabs{COLON}	{ LEXOUT(("v(%s) ", yytext)); return VAR_MSG_CACHE_SLABS;}
+rrset-cache-size{COLON}	{ LEXOUT(("v(%s) ", yytext)); return VAR_RRSET_CACHE_SIZE;}
+rrset-cache-slabs{COLON}	{ LEXOUT(("v(%s) ", yytext)); return VAR_RRSET_CACHE_SLABS;}
 num-queries-per-thread{COLON}	{ LEXOUT(("v(%s) ", yytext)); return VAR_NUM_QUERIES_PER_THREAD;}
 {NEWLINE}		{ LEXOUT(("NL\n")); cfg_parser->line++;}
 

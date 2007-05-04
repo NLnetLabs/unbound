@@ -80,17 +80,22 @@ config_create()
 	cfg->msg_cache_size = 4 * 1024 * 1024;
 	cfg->msg_cache_slabs = 4;
 	cfg->num_queries_per_thread = 1024;
-	if(!(cfg->fwd_address = strdup(""))) {config_delete(cfg); return NULL;}
-	if(!(cfg->username = strdup(""))) {config_delete(cfg); return NULL;}
-	if(!(cfg->chrootdir = strdup(""))) {config_delete(cfg); return NULL;}
-	if(!(cfg->directory = strdup("/etc/unbound"))) {config_delete(cfg); return NULL;}
-	if(!(cfg->logfile = strdup(""))) {config_delete(cfg); return NULL;}
-	if(!(cfg->pidfile = strdup("unbound.pid"))) {config_delete(cfg); return NULL;}
+	cfg->rrset_cache_size = 4 * 1024 * 1024;
+	cfg->rrset_cache_slabs = 4;
+	if(!(cfg->fwd_address = strdup(""))) goto error_exit;
+	if(!(cfg->username = strdup(""))) goto error_exit;
+	if(!(cfg->chrootdir = strdup(""))) goto error_exit;
+	if(!(cfg->directory = strdup("/etc/unbound"))) goto error_exit;
+	if(!(cfg->logfile = strdup(""))) goto error_exit;
+	if(!(cfg->pidfile = strdup("unbound.pid"))) goto error_exit;
 	cfg->fwd_port = UNBOUND_DNS_PORT;
 	cfg->do_daemonize = 1;
 	cfg->num_ifs = 0;
 	cfg->ifs = NULL;
 	return cfg;
+error_exit:
+	config_delete(cfg); 
+	return NULL;
 }
 
 /** initialize the global cfg_parser object. */

@@ -71,6 +71,11 @@ Must be set to a power of 2. Setting (close) to the number of cpus is a
 reasonable guess.
 .It \fBnum-queries-per-thread:\fR <number>
 The number of queries that every thread will service simultaneously.
+.It \fBrrset-cache-size:\fR <number>
+Number of bytes size of the RRset cache. Default is 4 megabytes.
+.It \fBrrset-cache-slabs:\fR <number>
+Number of slabs in the RRset cache. Slabs reduce lock contention by threads.
+Must be set to a power of 2. 
 .It \fBdo-ip4:\fR <yes or no>
 Enable or disable whether ip4 queries are answered. Default is yes.
 .It \fBdo-ip6:\fR <yes or no>
