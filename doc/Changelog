@@ -6,6 +6,8 @@
 	- alloc cache special_release() locks if necessary.
 	- rrset trustworthiness type added.
 	- thread keeps a scratchpad region for handling messages.
+	- writev used in netevent to write tcp length and data after another.
+	  This saves a roundtrip on tcp replies.
 
 3 May 2007: Wouter
 	- fill refs. Use new parse and encode to answer queries.

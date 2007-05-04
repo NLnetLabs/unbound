@@ -436,30 +436,34 @@ comm_point_tcp_handle_write(int fd, struct comm_point* c)
 
 	if(c->tcp_byte_count < sizeof(uint16_t)) {
 		uint16_t len = htons(ldns_buffer_limit(c->buffer));
-		/*
 		struct iovec iov[2];
 		iov[0].iov_base = (uint8_t*)&len + c->tcp_byte_count;
 		iov[0].iov_len = sizeof(uint16_t) - c->tcp_byte_count;
-		*/
-		r = write(fd, (uint8_t*)&len + c->tcp_byte_count, 
-			sizeof(uint16_t) - c->tcp_byte_count);
+		iov[1].iov_base = ldns_buffer_begin(c->buffer);
+		iov[1].iov_len = ldns_buffer_limit(c->buffer);
+		r = writev(fd, iov, 2);
 		if(r == -1) {
 			if(errno == EINTR || errno == EAGAIN)
 				return 1;
-			log_err("tcp write(s): %s", strerror(errno));
+			log_err("tcp writev: %s", strerror(errno));
 			return 0;
 		}
 		c->tcp_byte_count += r;
-		if(c->tcp_byte_count != sizeof(uint16_t))
+		if(c->tcp_byte_count < sizeof(uint16_t))
 			return 1;
-		ldns_buffer_set_position(c->buffer, 0);
+		ldns_buffer_set_position(c->buffer, c->tcp_byte_count - 
+			sizeof(uint16_t));
+		if(ldns_buffer_remaining(c->buffer) == 0) {
+			tcp_callback_writer(c);
+		}
+		return 1;
 	}
 	r = write(fd, ldns_buffer_current(c->buffer), 
 		ldns_buffer_remaining(c->buffer));
 	if(r == -1) {
 		if(errno == EINTR || errno == EAGAIN)
 			return 1;
-		log_err("tcp write(w): %s", strerror(errno));
+		log_err("tcp write: %s", strerror(errno));
 		return 0;
 	}
 	ldns_buffer_skip(c->buffer, r);
