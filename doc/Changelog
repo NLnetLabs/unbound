@@ -11,6 +11,7 @@
 	- test for one rrset updated in the cache.
 	- test for one rrset which is not updated, as it is not deemed
 	  trustworthy enough.
+	- test for TTL refreshed in rrset.
 
 3 May 2007: Wouter
 	- fill refs. Use new parse and encode to answer queries.

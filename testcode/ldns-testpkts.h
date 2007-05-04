@@ -44,7 +44,8 @@
 	; 'qname' makes the query match the qname from the reply
 	; 'serial=1023' makes the query match if ixfr serial is 1023. 
 	; 'all' has to match header byte for byte and all rrs in packet.
-	MATCH [opcode] [qtype] [qname] [serial=<value>] [all]
+	; 'ttl' used with all, rrs in packet must also have matching TTLs.
+	MATCH [opcode] [qtype] [qname] [serial=<value>] [all] [ttl]
 	MATCH [UDP|TCP]
 	MATCH ...
 	; Then the REPLY header is specified.
@@ -157,6 +158,8 @@ struct entry {
 	bool match_serial; 
 	/** match all of the packet */
 	bool match_all;
+	/** match ttls in the packet */
+	bool match_ttl;
 	/** match query serial with this value. */
 	uint32_t ixfr_soa_serial; 
 	/** match on UDP/TCP */
