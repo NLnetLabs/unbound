@@ -476,9 +476,8 @@ msgreply_sizefunc(void* k, void* d)
 	struct reply_info* r = (struct reply_info*)d;
 	size_t s = sizeof(struct msgreply_entry) + sizeof(struct reply_info)
 		+ q->qnamesize;
-	if(r->rrset_count > 0)
-		s += r->rrset_count * (sizeof(struct ub_packed_rrset_key*) +
-			sizeof(struct rrset_ref));
+	s += (r->rrset_count-1) * sizeof(struct rrset_ref);
+	s += r->rrset_count * sizeof(struct ub_packed_rrset_key*);
 	return s;
 }
 
