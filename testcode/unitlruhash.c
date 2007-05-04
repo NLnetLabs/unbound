@@ -233,8 +233,8 @@ test_short_table(struct lruhash* table)
 	k->entry.data = d;
 	k2->entry.data = d2;
 
-	lruhash_insert(table, myhash(12), &k->entry, d);
-	lruhash_insert(table, myhash(14), &k2->entry, d2);
+	lruhash_insert(table, myhash(12), &k->entry, d, NULL);
+	lruhash_insert(table, myhash(14), &k2->entry, d2, NULL);
 	
 	unit_assert( lruhash_lookup(table, myhash(12), k, 0) == &k->entry);
 	lock_rw_unlock( &k->entry.lock );
@@ -255,7 +255,7 @@ testadd(struct lruhash* table, struct testdata* ref[])
 	struct testdata* data = newdata(numtoadd);
 	struct testkey* key = newkey(numtoadd);
 	key->entry.data = data;
-	lruhash_insert(table, myhash(numtoadd), &key->entry, data);
+	lruhash_insert(table, myhash(numtoadd), &key->entry, data, NULL);
 	ref[numtoadd] = data;
 }
 
@@ -333,7 +333,7 @@ testadd_unlim(struct lruhash* table, struct testdata** ref)
 	struct testdata* data = newdata(numtoadd);
 	struct testkey* key = newkey(numtoadd);
 	key->entry.data = data;
-	lruhash_insert(table, myhash(numtoadd), &key->entry, data);
+	lruhash_insert(table, myhash(numtoadd), &key->entry, data, NULL);
 	if(ref)
 		ref[numtoadd] = data;
 }

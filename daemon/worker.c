@@ -138,7 +138,7 @@ worker_store_rrsets(struct worker* worker, struct reply_info* rep)
 		/* TODO: check if update really needed */
 		slabhash_insert(worker->daemon->rrset_cache, 
 			rep->rrsets[i]->entry.hash, &rep->rrsets[i]->entry,
-			rep->rrsets[i]->entry.data);
+			rep->rrsets[i]->entry.data, &worker->alloc);
 	}
 }
 
@@ -200,7 +200,7 @@ worker_handle_reply(struct comm_point* c, void* arg, int error,
 		return 0;
 	}
 	slabhash_insert(w->worker->daemon->msg_cache, w->query_hash, 
-		&e->entry, rep);
+		&e->entry, rep, &w->worker->alloc);
 	return 0;
 }
 

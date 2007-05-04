@@ -288,12 +288,13 @@ lru_touch(struct lruhash* table, struct lruhash_entry* entry)
 
 void 
 lruhash_insert(struct lruhash* table, hashvalue_t hash,
-        struct lruhash_entry* entry, void* data)
+        struct lruhash_entry* entry, void* data, void* cb_arg)
 {
 	struct lruhash_bin* bin;
 	struct lruhash_entry* found, *reclaimlist=NULL;
 	size_t need_size;
 	need_size = table->sizefunc(entry->key, data);
+	if(cb_arg == NULL) cb_arg = table->cb_arg;
 
 	/* find bin */
 	lock_quick_lock(&table->lock);
@@ -312,10 +313,10 @@ lruhash_insert(struct lruhash* table, hashvalue_t hash,
 		/* if so: update data - needs a writelock */
 		table->space_used += need_size -
 			(*table->sizefunc)(found->key, found->data);
-		(*table->delkeyfunc)(entry->key, table->cb_arg);
+		(*table->delkeyfunc)(entry->key, cb_arg);
 		lru_touch(table, found);
 		lock_rw_wrlock(&found->lock);
-		(*table->deldatafunc)(found->data, table->cb_arg);
+		(*table->deldatafunc)(found->data, cb_arg);
 		found->data = data;
 		lock_rw_unlock(&found->lock);
 	}
@@ -331,8 +332,8 @@ lruhash_insert(struct lruhash* table, hashvalue_t hash,
 		struct lruhash_entry* n = reclaimlist->overflow_next;
 		void* d = reclaimlist->data;
 		lock_rw_unlock(&reclaimlist->lock);
-		(*table->delkeyfunc)(reclaimlist->key, table->cb_arg);
-		(*table->deldatafunc)(d, table->cb_arg);
+		(*table->delkeyfunc)(reclaimlist->key, cb_arg);
+		(*table->deldatafunc)(d, cb_arg);
 		reclaimlist = n;
 	}
 }

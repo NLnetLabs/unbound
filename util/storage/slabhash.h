@@ -101,9 +101,10 @@ void slabhash_delete(struct slabhash* table);
  *	But entry->data is set to NULL before deletion, and put into
  * 	the existing entry. The data is then freed.
  * @param data: the data.
+ * @param cb_override: if not NULL overrides the cb_arg for deletfunc.
  */
 void slabhash_insert(struct slabhash* table, hashvalue_t hash, 
-	struct lruhash_entry* entry, void* data);
+	struct lruhash_entry* entry, void* data, void* cb_override);
 
 /**
  * Lookup an entry in the hashtable. Uses lruhash_lookup.

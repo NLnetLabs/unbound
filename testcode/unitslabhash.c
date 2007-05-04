@@ -110,8 +110,8 @@ test_short_table(struct slabhash* table)
 	k->entry.data = d;
 	k2->entry.data = d2;
 
-	slabhash_insert(table, myhash(12), &k->entry, d);
-	slabhash_insert(table, myhash(14), &k2->entry, d2);
+	slabhash_insert(table, myhash(12), &k->entry, d, NULL);
+	slabhash_insert(table, myhash(14), &k2->entry, d2, NULL);
 	
 	unit_assert( slabhash_lookup(table, myhash(12), k, 0) == &k->entry);
 	lock_rw_unlock( &k->entry.lock );
@@ -132,7 +132,7 @@ testadd(struct slabhash* table, struct slabtestdata* ref[])
 	struct slabtestdata* data = newdata(numtoadd);
 	struct slabtestkey* key = newkey(numtoadd);
 	key->entry.data = data;
-	slabhash_insert(table, myhash(numtoadd), &key->entry, data);
+	slabhash_insert(table, myhash(numtoadd), &key->entry, data, NULL);
 	ref[numtoadd] = data;
 }
 
@@ -219,7 +219,7 @@ testadd_unlim(struct slabhash* table, struct slabtestdata** ref)
 	struct slabtestdata* data = newdata(numtoadd);
 	struct slabtestkey* key = newkey(numtoadd);
 	key->entry.data = data;
-	slabhash_insert(table, myhash(numtoadd), &key->entry, data);
+	slabhash_insert(table, myhash(numtoadd), &key->entry, data, NULL);
 	if(ref)
 		ref[numtoadd] = data;
 }

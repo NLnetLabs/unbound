@@ -105,9 +105,9 @@ slab_idx(struct slabhash* sl, hashvalue_t hash)
 }
 
 void slabhash_insert(struct slabhash* sl, hashvalue_t hash, 
-	struct lruhash_entry* entry, void* data)
+	struct lruhash_entry* entry, void* data, void* arg)
 {
-	lruhash_insert(sl->array[slab_idx(sl, hash)], hash, entry, data);
+	lruhash_insert(sl->array[slab_idx(sl, hash)], hash, entry, data, arg);
 }
 
 struct lruhash_entry* slabhash_lookup(struct slabhash* sl, 

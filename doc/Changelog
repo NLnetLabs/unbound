@@ -1,6 +1,8 @@
 4 May 2007: Wouter
 	- msgreply sizefunc is more accurate.
 	- config settings for rrset cache size and slabs.
+	- hashtable insert takes argument so that a thread can use its own
+	  alloc cache to store released keys.
 
 3 May 2007: Wouter
 	- fill refs. Use new parse and encode to answer queries.

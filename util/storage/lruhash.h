@@ -246,9 +246,10 @@ void lruhash_delete(struct lruhash* table);
  *	But entry->data is set to NULL before deletion, and put into
  * 	the existing entry. The data is then freed.
  * @param data: the data.
+ * @param cb_override: if not null overrides the cb_arg for the deletefunc.
  */
 void lruhash_insert(struct lruhash* table, hashvalue_t hash, 
-	struct lruhash_entry* entry, void* data);
+	struct lruhash_entry* entry, void* data, void* cb_override);
 
 /**
  * Lookup an entry in the hashtable.

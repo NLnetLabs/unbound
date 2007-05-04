@@ -208,6 +208,9 @@ alloc_special_release(struct alloc_cache* alloc, alloc_special_t* mem)
 	log_assert(alloc);
 	if(!mem)
 		return;
+	if(!alloc->super) /* superalloc needs locking */
+		lock_quick_lock(&alloc->lock);
+
 	alloc_special_clean(mem);
 	if(alloc->super && alloc->num_quar >= ALLOC_SPECIAL_MAX) {
 		/* push it to the super structure */
@@ -218,6 +221,8 @@ alloc_special_release(struct alloc_cache* alloc, alloc_special_t* mem)
 	alloc_set_special_next(mem, alloc->quar);
 	alloc->quar = mem;
 	alloc->num_quar++;
+	if(!alloc->super)
+		lock_quick_unlock(&alloc->lock);
 }
 
 void 
