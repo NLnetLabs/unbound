@@ -135,8 +135,16 @@ static int
 need_to_update_rrset(struct packed_rrset_data* newd, 
 	struct packed_rrset_data* cached)
 {
+	/*	o if current RRset is more trustworthy - insert it */
 	if( newd->trust > cached->trust )
 		return 1;
+	/*	o same trust, but different in data - insert it */
+	if( newd->trust == cached->trust &&
+		!rrsetdata_equal(newd, cached))
+		return 1;
+	/*	o see if TTL is better than TTL in cache. */
+	/*	  if so, see if rrset+rdata is the same */
+	/*	  if so, update TTL in cache, even if trust is worse. */
 	if( newd->ttl > cached->ttl &&
 		rrsetdata_equal(newd, cached))
 		return 1;
@@ -150,11 +158,7 @@ worker_store_rrsets(struct worker* worker, struct reply_info* rep)
 	struct lruhash_entry* e;
 	size_t i;
 	/* see if rrset already exists in cache, if not insert it. */
-	/* if it does exist: */
-	/*	o if current RRset is more trustworthy - insert it */
-	/*	o see if TTL is better than TTL in cache. */
-	/*	  if so, see if rrset+rdata is (exactly!) the same */
-	/*	  if so, update TTL in cache. */
+	/* if it does exist: check to insert it */
 	for(i=0; i<rep->rrset_count; i++) {
 		rep->ref[i].key = rep->rrsets[i];
 		rep->ref[i].id = rep->rrsets[i]->id;
@@ -359,6 +363,8 @@ answer_from_cache(struct worker* worker, struct lruhash_entry* e, uint16_t id,
 	}
 	/* check rrsets */
 	for(i=0; i<rep->rrset_count; i++) {
+		if(i>0 && rep->ref[i].key == rep->ref[i-1].key)
+			continue; /* only lock items once */
 		lock_rw_rdlock(&rep->ref[i].key->entry.lock);
 		if(rep->ref[i].id != rep->ref[i].key->id ||
 			rep->ttl <= timenow) {
@@ -376,8 +382,11 @@ answer_from_cache(struct worker* worker, struct lruhash_entry* e, uint16_t id,
 			flags, &mrentry->key);
 	}
 	/* unlock */
-	for(i=0; i<rep->rrset_count; i++)
+	for(i=0; i<rep->rrset_count; i++) {
+		if(i>0 && rep->ref[i].key == rep->ref[i-1].key)
+			continue; /* only unlock items once */
 		lock_rw_unlock(&rep->ref[i].key->entry.lock);
+	}
 	region_free_all(worker->scratchpad);
 	/* go and return this buffer to the client */
 	return 1;
