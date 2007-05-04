@@ -2,7 +2,7 @@
 ; config options go here.
 CONFIG_END
 
-SCENARIO_BEGIN RRset is updated from other message that passes by.
+SCENARIO_BEGIN Untrusted rrset not used for update
 
 STEP 1 QUERY
 ENTRY_BEGIN
@@ -62,6 +62,7 @@ ENTRY_BEGIN
 ENTRY_END
 STEP 8 REPLY
 ; This answer has updated information on ns2.example.com.
+; But it is nerfed into the additional. Must be ignored per rfc2181.
 ENTRY_BEGIN
 	MATCH opcode qtype qname
 	ADJUST copy_id
@@ -72,11 +73,11 @@ ENTRY_BEGIN
 	SECTION ANSWER
 	bla.example.com. IN A 10.20.30.140
 	SECTION AUTHORITY
-	example.com. IN NS ns.example.com.
-	example.com. IN NS ns2.example.com.
 	SECTION ADDITIONAL
-	ns.example.com. IN A 10.20.30.50
-	ns2.example.com. IN A 10.20.30.53
+	example.com. IN NS ns.eeeek.com.
+	example.com. IN NS ns2.eeeek.com.
+	ns.eeeek.com. IN A 55.44.33.22
+	ns2.eeeek.com. IN A 55.44.33.24
 ENTRY_END
 STEP 9 CHECK_ANSWER
 ENTRY_BEGIN
@@ -88,11 +89,11 @@ ENTRY_BEGIN
 	SECTION ANSWER
 	bla.example.com. IN A 10.20.30.140
 	SECTION AUTHORITY
-	example.com. IN NS ns.example.com.
-	example.com. IN NS ns2.example.com.
 	SECTION ADDITIONAL
-	ns.example.com. IN A 10.20.30.50
-	ns2.example.com. IN A 10.20.30.53
+	example.com. IN NS ns.eeeek.com.
+	example.com. IN NS ns2.eeeek.com.
+	ns.eeeek.com. IN A 55.44.33.22
+	ns2.eeeek.com. IN A 55.44.33.24
 ENTRY_END
 
 
@@ -105,7 +106,7 @@ ENTRY_BEGIN
 ENTRY_END
 ; immediate answer without an OUT_QUERY happening (checked on exit)
 ; also, the answer does not have AA set
-; NS rrset has been updated.
+; NS rrset has not been updated from the additional seen before.
 STEP 11 CHECK_ANSWER
 ENTRY_BEGIN
 	MATCH all
@@ -116,7 +117,6 @@ ENTRY_BEGIN
 	www.example.com. IN A 10.20.30.40
 	SECTION AUTHORITY
 	example.com. IN NS ns.example.com.
-	example.com. IN NS ns2.example.com.
 	SECTION ADDITIONAL
 	ns.example.com. IN A 10.20.30.50
 ENTRY_END

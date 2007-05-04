@@ -9,6 +9,8 @@
 	- writev used in netevent to write tcp length and data after another.
 	  This saves a roundtrip on tcp replies.
 	- test for one rrset updated in the cache.
+	- test for one rrset which is not updated, as it is not deemed
+	  trustworthy enough.
 
 3 May 2007: Wouter
 	- fill refs. Use new parse and encode to answer queries.
