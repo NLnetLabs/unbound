@@ -299,6 +299,13 @@ struct msgreply_entry* query_info_entrysetup(struct query_info* q,
 	struct reply_info* r, hashvalue_t h);
 
 /**
+ * Estimate size of EDNS record in packet. EDNS record will be no larger.
+ * @param edns: edns data or NULL.
+ * @return octets to reserve for EDNS.
+ */
+uint16_t calc_edns_field_size(struct edns_data* edns);
+
+/**
  * Attach EDNS record to buffer. Buffer has complete packet. There must
  * be enough room left for the EDNS record.
  * @param pkt: packet added to.

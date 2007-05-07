@@ -267,6 +267,7 @@ testpkt(ldns_buffer* pkt, struct alloc_cache* alloc, ldns_buffer* out,
 			checkformerr(pkt);
 		unit_assert(ret != LDNS_RCODE_SERVFAIL);
 	} else {
+		const size_t lim = 512;
 		ret = reply_info_encode(&qi, rep, id, flags, out, timenow,
 			region, 65535);
 		unit_assert(ret != 0); /* udp packets should fit */
@@ -275,6 +276,24 @@ testpkt(ldns_buffer* pkt, struct alloc_cache* alloc, ldns_buffer* out,
 			(unsigned)ldns_buffer_limit(pkt),
 			(unsigned)ldns_buffer_limit(out));
 		test_buffers(pkt, out);
+
+		if(ldns_buffer_limit(out) > lim) {
+			ret = reply_info_encode(&qi, rep, id, flags, out, 
+				timenow, region, 
+				lim - calc_edns_field_size(&edns));
+			unit_assert(ret != 0); /* should fit, but with TC */
+			attach_edns_record(out, &edns);
+			if( LDNS_QDCOUNT(ldns_buffer_begin(out)) !=
+				LDNS_QDCOUNT(ldns_buffer_begin(pkt)) ||
+				LDNS_ANCOUNT(ldns_buffer_begin(out)) !=
+				LDNS_ANCOUNT(ldns_buffer_begin(pkt)) ||
+				LDNS_NSCOUNT(ldns_buffer_begin(out)) !=
+				LDNS_NSCOUNT(ldns_buffer_begin(pkt)))
+				unit_assert(
+				LDNS_TC_WIRE(ldns_buffer_begin(out)));
+				/* must set TC bit if shortened */
+			unit_assert(ldns_buffer_limit(out) <= lim);
+		}
 	} 
 
 	query_info_clear(&qi);

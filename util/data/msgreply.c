@@ -1066,8 +1066,7 @@ int reply_info_encode(struct query_info* qinfo, struct reply_info* rep,
 	return 1;
 }
 
-/** estimate size of EDNS field in packet */
-static uint16_t
+uint16_t
 calc_edns_field_size(struct edns_data* edns)
 {
 	if(!edns || !edns->edns_present) 
