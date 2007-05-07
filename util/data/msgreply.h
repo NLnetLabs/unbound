@@ -298,4 +298,13 @@ int reply_info_encode(struct query_info* qinfo, struct reply_info* rep,
 struct msgreply_entry* query_info_entrysetup(struct query_info* q,
 	struct reply_info* r, hashvalue_t h);
 
+/**
+ * Attach EDNS record to buffer. Buffer has complete packet. There must
+ * be enough room left for the EDNS record.
+ * @param pkt: packet added to.
+ * @param edns: if NULL or present=0, nothing is added to the packet.
+ */
+void attach_edns_record(ldns_buffer* pkt, struct edns_data* edns);
+
+
 #endif /* UTIL_DATA_MSGREPLY_H */

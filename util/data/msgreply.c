@@ -1076,9 +1076,8 @@ calc_edns_field_size(struct edns_data* edns)
 	return 1 + 2 + 2 + 4 + 2;
 }
 
-/** append EDNS field as last record in packet */
-static void
-attach_edns_field(ldns_buffer* pkt, struct edns_data* edns)
+void
+attach_edns_record(ldns_buffer* pkt, struct edns_data* edns)
 {
 	size_t len;
 	if(!edns || !edns->edns_present)
@@ -1124,7 +1123,7 @@ reply_info_answer_encode(struct query_info* qinf, struct reply_info* rep,
 		log_err("reply encode: out of memory");
 		return 0;
 	}
-	attach_edns_field(pkt, edns);
+	attach_edns_record(pkt, edns);
 	return 1;
 }
 

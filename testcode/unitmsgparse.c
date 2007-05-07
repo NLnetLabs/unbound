@@ -270,6 +270,7 @@ testpkt(ldns_buffer* pkt, struct alloc_cache* alloc, ldns_buffer* out,
 		ret = reply_info_encode(&qi, rep, id, flags, out, timenow,
 			region, 65535);
 		unit_assert(ret != 0); /* udp packets should fit */
+		attach_edns_record(out, &edns);
 		if(vbmp) printf("inlen %u outlen %u\n", 
 			(unsigned)ldns_buffer_limit(pkt),
 			(unsigned)ldns_buffer_limit(out));
