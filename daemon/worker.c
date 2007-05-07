@@ -459,7 +459,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 		return 1;
 	}
 	if(edns.edns_present && edns.edns_version != 0) {
-		edns.ext_rcode = EDNS_RCODE_BADVERS>>4;
+		edns.ext_rcode = (uint8_t)(EDNS_RCODE_BADVERS>>4);
 		edns.edns_version = EDNS_ADVERTISED_VERSION;
 		edns.udp_size = EDNS_ADVERTISED_SIZE;
 		edns.bits &= EDNS_DO;
