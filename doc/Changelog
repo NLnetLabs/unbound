@@ -1,6 +1,9 @@
 7 May 2007: Wouter
 	- EDNS read from query, used to make reply smaller.
 	- advertised edns value constants.
+	- EDNS BADVERS response, if asked for too high edns version.
+	- EDNS extended error reponses once the EDNS record from the query
+	  has successfully been parsed.
 
 4 May 2007: Wouter
 	- msgreply sizefunc is more accurate.

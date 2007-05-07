@@ -129,8 +129,13 @@ replyerror_fillbuf(int r, struct comm_reply* repinfo, uint16_t id,
 static void 
 replyerror(int r, struct work_query* w)
 {
+	w->edns.edns_version = EDNS_ADVERTISED_VERSION;
+	w->edns.udp_size = EDNS_ADVERTISED_SIZE;
+	w->edns.ext_rcode = 0;
+	w->edns.bits &= EDNS_DO;
 	replyerror_fillbuf(r, &w->query_reply, w->query_id, w->query_flags,
 		&w->qinfo);
+	attach_edns_record(w->query_reply.c->buffer, &w->edns);
 	comm_point_send_reply(&w->query_reply);
 	req_release(w);
 	query_info_clear(&w->qinfo);
@@ -454,10 +459,14 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 		return 1;
 	}
 	if(edns.edns_present && edns.edns_version != 0) {
-		/* TODO BADVERS errcode */
-		LDNS_QR_SET(ldns_buffer_begin(c->buffer));
-		LDNS_RCODE_SET(ldns_buffer_begin(c->buffer), 
-			LDNS_RCODE_NOTIMPL);
+		edns.ext_rcode = EDNS_RCODE_BADVERS>>4;
+		edns.edns_version = EDNS_ADVERTISED_VERSION;
+		edns.udp_size = EDNS_ADVERTISED_SIZE;
+		edns.bits &= EDNS_DO;
+		replyerror_fillbuf(EDNS_RCODE_BADVERS&0xf, repinfo, 
+			*(uint16_t*)ldns_buffer_begin(c->buffer),
+			ldns_buffer_read_u16_at(c->buffer, 2), &qinfo);
+		attach_edns_record(c->buffer, &edns);
 		return 1;
 	}
 	if(c->type != comm_udp)
