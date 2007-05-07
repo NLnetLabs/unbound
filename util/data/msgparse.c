@@ -694,11 +694,17 @@ add_rr_to_rrset(struct rrset_parse* rrset, ldns_buffer* pkt,
 	/* check section of rrset. */
 	if(rrset->section != section && type != LDNS_RR_TYPE_RRSIG &&
 		rrset->type != LDNS_RR_TYPE_RRSIG) {
-		/* silently drop it - it is a security problem, since
+		/* silently drop it - we drop the last part, since
 		 * trust in rr data depends on the section it is in. 
-		 * the less trustworthy part is discarded. */
+		 * the less trustworthy part is discarded. 
+		 * also the last part is more likely to be incomplete.
+		 * RFC 2181: must put RRset only once in response. */
+		/*
 		verbose(VERB_DETAIL, "Packet contains rrset data in "
 			"multiple sections, dropped last part.");
+		log_hex("packet was: ", ldns_buffer_begin(pkt), 
+			ldns_buffer_limit(pkt));
+		*/
 		/* forwards */
 		if(!skip_ttl_rdata(pkt))
 			return LDNS_RCODE_FORMERR;

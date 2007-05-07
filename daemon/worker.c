@@ -234,6 +234,11 @@ worker_handle_reply(struct comm_point* c, void* arg, int error,
 		return 0; /* not a reply to a query. */
 	if(LDNS_QDCOUNT(ldns_buffer_begin(c->buffer)) > 1)
 		return 0; /* too much in the query section */
+	/* see if it is truncated */
+	if(LDNS_TC_WIRE(ldns_buffer_begin(c->buffer)) && c->type == comm_udp) {
+		log_info("TC: truncated. retry in TCP mode.");
+		return 0;
+	}
 	/* woohoo a reply! */
 	if((r=reply_info_parse(c->buffer, &w->worker->alloc, &qinf, &rep,
 		w->worker->scratchpad, &svr_edns))!=0) {
