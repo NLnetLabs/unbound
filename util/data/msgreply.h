@@ -47,6 +47,7 @@ struct comm_reply;
 struct alloc_cache;
 struct iovec;
 struct region;
+struct edns_data;
 
 /**
  * Structure to store query information that makes answers to queries
@@ -185,13 +186,14 @@ int query_info_parse(struct query_info* m, ldns_buffer* query);
  * @param rep: allocated reply_info is returned (only on no error).
  * @param qinf: query_info is returned (only on no error).
  * @param region: where to store temporary data (for parsing).
+ * @param edns: where to store edns information, does not need to be inited.
  * @return: zero is OK, or DNS error code in case of error
  *	o FORMERR for parse errors.
  *	o SERVFAIL for memory allocation errors.
  */
 int reply_info_parse(ldns_buffer* pkt, struct alloc_cache* alloc,
 	struct query_info* qinf, struct reply_info** rep, 
-	struct region* region);
+	struct region* region, struct edns_data* edns);
 
 /**
  * Sorts the ref array.
@@ -256,11 +258,15 @@ hashvalue_t query_info_hash(struct query_info *q);
  * @param cached: set true if a cached reply (so no AA bit).
  *	set false for the first reply.
  * @param region: where to allocate temp variables (for compression).
+ * @param udpsize: size of the answer, 512, from EDNS, or 64k for TCP.
+ * @param edns: EDNS data included in the answer, NULL for none.
+ *	or if edns_present = 0, it is not included.
  * @return: 0 on error (server failure).
  */
 int reply_info_answer_encode(struct query_info* qinf, struct reply_info* rep, 
 	uint16_t id, uint16_t qflags, ldns_buffer* dest, uint32_t timenow,
-	int cached, struct region* region);
+	int cached, struct region* region, uint16_t udpsize, 
+	struct edns_data* edns);
 
 /**
  * Regenerate the wireformat from the stored msg reply.
@@ -274,12 +280,13 @@ int reply_info_answer_encode(struct query_info* qinf, struct reply_info* rep,
  * @param buffer: buffer to store the packet into.
  * @param timenow: time now, to adjust ttl values.
  * @param region: to store temporary data in.
+ * @param udpsize: size of the answer, 512, from EDNS, or 64k for TCP.
  * @return: nonzero is success, or 
  *	0 on error: malloc failure (no log_err has been done).
  */
 int reply_info_encode(struct query_info* qinfo, struct reply_info* rep, 
 	uint16_t id, uint16_t flags, ldns_buffer* buffer, uint32_t timenow, 
-	struct region* region);
+	struct region* region, uint16_t udpsize);
 
 /**
  * Setup query info entry

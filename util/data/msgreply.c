@@ -343,7 +343,8 @@ parse_create_msg(ldns_buffer* pkt, struct msg_parse* msg,
 }
 
 int reply_info_parse(ldns_buffer* pkt, struct alloc_cache* alloc,
-        struct query_info* qinf, struct reply_info** rep, struct region* region)
+        struct query_info* qinf, struct reply_info** rep, struct region* region,
+	struct edns_data* edns)
 {
 	/* use scratch pad region-allocator during parsing. */
 	struct msg_parse* msg;
@@ -360,6 +361,8 @@ int reply_info_parse(ldns_buffer* pkt, struct alloc_cache* alloc,
 	if((ret = parse_packet(pkt, msg, region)) != 0) {
 		return ret;
 	}
+	if((ret = parse_extract_edns(msg, edns)) != 0)
+		return ret;
 
 	/* parse OK, allocate return structures */
 	/* this also performs dname decompression */
@@ -986,13 +989,15 @@ insert_section(struct reply_info* rep, size_t num_rrsets, uint16_t* num_rrs,
 
 int reply_info_encode(struct query_info* qinfo, struct reply_info* rep, 
 	uint16_t id, uint16_t flags, ldns_buffer* buffer, uint32_t timenow, 
-	region_type* region)
+	region_type* region, uint16_t udpsize)
 {
 	uint16_t ancount=0, nscount=0, arcount=0;
 	struct compress_tree_node* tree = 0;
 	int r;
 
 	ldns_buffer_clear(buffer);
+	if(udpsize < ldns_buffer_limit(buffer))
+		ldns_buffer_set_limit(buffer, udpsize);
 	if(ldns_buffer_remaining(buffer) < LDNS_HEADER_SIZE)
 		return 0;
 
@@ -1061,10 +1066,45 @@ int reply_info_encode(struct query_info* qinfo, struct reply_info* rep,
 	return 1;
 }
 
+/** estimate size of EDNS field in packet */
+static uint16_t
+calc_edns_field_size(struct edns_data* edns)
+{
+	if(!edns || !edns->edns_present) 
+		return 0;
+	/* domain root '.' + type + class + ttl + rdatalen(=0) */
+	return 1 + 2 + 2 + 4 + 2;
+}
+
+/** append EDNS field as last record in packet */
+static void
+attach_edns_field(ldns_buffer* pkt, struct edns_data* edns)
+{
+	size_t len;
+	if(!edns || !edns->edns_present)
+		return;
+	/* inc additional count */
+	ldns_buffer_write_u16_at(pkt, 10,
+		ldns_buffer_read_u16_at(pkt, 10) + 1);
+	len = ldns_buffer_limit(pkt);
+	ldns_buffer_clear(pkt);
+	ldns_buffer_set_position(pkt, len);
+	/* write EDNS record */
+	ldns_buffer_write_u8(pkt, 0); /* '.' label */
+	ldns_buffer_write_u16(pkt, LDNS_RR_TYPE_OPT); /* type */
+	ldns_buffer_write_u16(pkt, edns->udp_size); /* class */
+	ldns_buffer_write_u8(pkt, edns->ext_rcode); /* ttl */
+	ldns_buffer_write_u8(pkt, edns->edns_version);
+	ldns_buffer_write_u16(pkt, edns->bits);
+	ldns_buffer_write_u16(pkt, 0); /* rdatalen */
+	ldns_buffer_flip(pkt);
+}
+
 int 
 reply_info_answer_encode(struct query_info* qinf, struct reply_info* rep, 
 	uint16_t id, uint16_t qflags, ldns_buffer* pkt, uint32_t timenow,
-	int cached, struct region* region)
+	int cached, struct region* region, uint16_t udpsize, 
+	struct edns_data* edns)
 {
 	uint16_t flags;
 
@@ -1076,11 +1116,15 @@ reply_info_answer_encode(struct query_info* qinf, struct reply_info* rep,
 		flags = (rep->flags & ~BIT_AA) | (qflags & (BIT_RD|BIT_CD)); 
 	}
 	log_assert(flags & BIT_QR); /* QR bit must be on in our replies */
-
-	if(!reply_info_encode(qinf, rep, id, flags, pkt, timenow, region)) {
+	if(udpsize < LDNS_HEADER_SIZE + calc_edns_field_size(edns))
+		return 0; /* packet too small to contain edns... */
+	udpsize -= calc_edns_field_size(edns);
+	if(!reply_info_encode(qinf, rep, id, flags, pkt, timenow, region,
+		udpsize)) {
 		log_err("reply encode: out of memory");
 		return 0;
 	}
+	attach_edns_field(pkt, edns);
 	return 1;
 }
 

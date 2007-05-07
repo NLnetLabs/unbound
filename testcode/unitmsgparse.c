@@ -251,6 +251,7 @@ testpkt(ldns_buffer* pkt, struct alloc_cache* alloc, ldns_buffer* out,
 	uint16_t flags;
 	uint32_t timenow = 0;
 	region_type *region = region_create(malloc, free);
+	struct edns_data edns;
 
 	hex_to_buf(pkt, hex);
 	memmove(&id, ldns_buffer_begin(pkt), sizeof(id));
@@ -258,7 +259,7 @@ testpkt(ldns_buffer* pkt, struct alloc_cache* alloc, ldns_buffer* out,
 		flags = 0;
 	else	memmove(&flags, ldns_buffer_at(pkt, 2), sizeof(flags));
 	flags = ntohs(flags);
-	ret = reply_info_parse(pkt, alloc, &qi, &rep, region);
+	ret = reply_info_parse(pkt, alloc, &qi, &rep, region, &edns);
 	if(ret != 0) {
 		if(vbmp) printf("parse code %d: %s\n", ret, 
 			ldns_lookup_by_id(ldns_rcodes, ret)->name);
@@ -267,7 +268,7 @@ testpkt(ldns_buffer* pkt, struct alloc_cache* alloc, ldns_buffer* out,
 		unit_assert(ret != LDNS_RCODE_SERVFAIL);
 	} else {
 		ret = reply_info_encode(&qi, rep, id, flags, out, timenow,
-			region);
+			region, 65535);
 		unit_assert(ret != 0); /* udp packets should fit */
 		if(vbmp) printf("inlen %u outlen %u\n", 
 			(unsigned)ldns_buffer_limit(pkt),

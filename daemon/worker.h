@@ -48,6 +48,7 @@
 #include "util/locks.h"
 #include "util/alloc.h"
 #include "util/data/msgreply.h"
+#include "util/data/msgparse.h"
 #include "daemon/stats.h"
 struct listen_dnsport;
 struct outside_network;
@@ -84,6 +85,8 @@ struct work_query {
 	uint16_t query_id;
 	/** flags uint16 from query */
 	uint16_t query_flags;
+	/** edns data from the query */
+	struct edns_data edns;
 };
 
 /**

@@ -189,6 +189,8 @@ struct rr_parse {
 #define EDNS_RCODE_BADVERS	16	/** bad EDNS version */
 /** largest valid compression offset */
 #define PTR_MAX_OFFSET 	0x3fff
+/** bits for EDNS bitfield */
+#define EDNS_DO	0x8000 /* Dnssec Ok */
 
 /**
  * EDNS data storage
@@ -243,5 +245,16 @@ int parse_packet(ldns_buffer* pkt, struct msg_parse* msg,
  *	RCODE formerr if OPT in wrong section, and so on.
  */
 int parse_extract_edns(struct msg_parse* msg, struct edns_data* edns);
+
+/**
+ * If EDNS data follows a query section, extract it and initialize edns struct.
+ * @param pkt: the packet. position at start must be right after the query
+ *	section. At end, right after EDNS data or no movement if failed.
+ * @param edns: the edns data allocated by the caller. Does not have to be
+ *	initialised.
+ * @return: 0 on success, or an RCODE on error.
+ *	RCODE formerr if OPT is badly formatted and so on.
+ */
+int parse_edns_from_pkt(ldns_buffer* pkt, struct edns_data* edns);
 
 #endif /* UTIL_DATA_MSGPARSE_H */

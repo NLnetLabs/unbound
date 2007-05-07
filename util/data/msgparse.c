@@ -904,3 +904,34 @@ parse_extract_edns(struct msg_parse* msg, struct edns_data* edns)
 	/* ignore rdata and rrsigs */
 	return 0;
 }
+
+int 
+parse_edns_from_pkt(ldns_buffer* pkt, struct edns_data* edns)
+{
+	log_assert(LDNS_QDCOUNT(ldns_buffer_begin(pkt)) == 1);
+	log_assert(LDNS_ANCOUNT(ldns_buffer_begin(pkt)) == 0);
+	log_assert(LDNS_NSCOUNT(ldns_buffer_begin(pkt)) == 0);
+	/* check edns section is present */
+	if(LDNS_ARCOUNT(ldns_buffer_begin(pkt)) > 1) {
+		return LDNS_RCODE_FORMERR;
+	}
+	if(LDNS_ARCOUNT(ldns_buffer_begin(pkt)) == 0) {
+		memset(edns, 0, sizeof(*edns));
+		edns->udp_size = 512;
+		return 0;
+	}
+	/* domain name must be the root of length 1. */
+	if(pkt_dname_len(pkt) != 1)
+		return LDNS_RCODE_FORMERR;
+	if(ldns_buffer_remaining(pkt) < 10) /* type, class, ttl, rdatalen */
+		return LDNS_RCODE_FORMERR;
+	if(ldns_buffer_read_u16(pkt) != LDNS_RR_TYPE_OPT)
+		return LDNS_RCODE_FORMERR;
+	edns->edns_present = 1;
+	edns->udp_size = ldns_buffer_read_u16(pkt); /* class is udp size */
+	edns->ext_rcode = ldns_buffer_read_u8(pkt); /* ttl used for bits */
+	edns->edns_version = ldns_buffer_read_u8(pkt);
+	edns->bits = ldns_buffer_read_u16(pkt);
+	/* ignore rdata and rrsigs */
+	return 0;
+}
