@@ -49,6 +49,8 @@
 struct pending;
 struct pending_timeout;
 struct ub_randstate;
+struct pending_tcp;
+struct waiting_tcp;
 
 /**
  * Send queries to outside servers and wait for answers from servers.
@@ -77,8 +79,24 @@ struct outside_network {
 	/** number of udp6 ports */
 	size_t num_udp6;
 
-	/** pending answers. sorted by id, addr */
+	/** pending udp answers. sorted by id, addr */
 	rbtree_t *pending;
+
+	/**
+	 * Array of tcp pending used for outgoing TCP connections.
+	 * Each can be used to establish a TCP connection with a server.
+	 * The file descriptors are -1 if its free, need to be opened for 
+	 * the tcp connection. Can be used for ip4 and ip6.
+	 */
+	struct pending_tcp **tcp_conns;
+	/** number of tcp communication points. */
+	size_t num_tcp;
+	/** list of tcp comm points that are free for use */
+	struct pending_tcp* tcp_free;
+	/** list of tcp queries waiting for a buffer */
+	struct waiting_tcp* tcp_wait_first;
+	/** last of waiting query list */
+	struct waiting_tcp* tcp_wait_last;
 };
 
 /**
@@ -106,6 +124,53 @@ struct pending {
 };
 
 /**
+ * Pending TCP query to server.
+ */
+struct pending_tcp {
+	/** next in list of free tcp comm points, or NULL. */
+	struct pending_tcp* next_free;
+	/** the ID for the query; checked in reply */
+	uint16_t id;
+	/** tcp comm point it was sent on (and reply must come back on). */
+	struct comm_point* c;
+	/** the query being serviced, NULL if the pending_tcp is unused. */
+	struct waiting_tcp* query;
+};
+
+/**
+ * Query waiting for TCP buffer.
+ */
+struct waiting_tcp {
+	/** 
+	 * next in waiting list.
+	 * if pkt==0, this points to the pending_tcp structure.
+	 */
+	struct waiting_tcp* next_waiting;
+	/** timeout event; timer keeps running whether the query is
+	 * waiting for a buffer or the tcp reply is pending */
+	struct comm_timer* timer;
+	/** the outside network it is part of */
+	struct outside_network* outnet;
+	/** remote address. */
+	struct sockaddr_storage addr;
+	/** length of addr field in use. */
+	socklen_t addrlen;
+	/** 
+	 * The query itself, the query packet to send.
+	 * allocated after the waiting_tcp structure.
+	 * set to NULL when the query is serviced and it part of pending_tcp.
+	 * if this is NULL, the next_waiting points to the pending_tcp.
+	 */
+	uint8_t* pkt;
+	/** length of query packet. */
+	size_t pkt_len;
+	/** callback for the timeout, error or reply to the message */
+	comm_point_callback_t* cb;
+	/** callback user argument */
+	void* cb_arg;
+};
+
+/**
  * Create outside_network structure with N udp ports.
  * @param base: the communication base to use for event handling.
  * @param bufsize: size for network buffers.
@@ -117,11 +182,12 @@ struct pending {
  * @param do_ip6: service IP6.
  * @param port_base: if -1 system assigns ports, otherwise try to get
  *    the ports numbered from this starting number.
+ * @param num_tcp: number of outgoing tcp buffers to preallocate.
  * @return: the new structure (with no pending answers) or NULL on error.
  */
 struct outside_network* outside_network_create(struct comm_base* base,
 	size_t bufsize, size_t num_ports, char** ifs, int num_ifs,
-	int do_ip4, int do_ip6, int port_base);
+	int do_ip4, int do_ip6, int port_base, size_t num_tcp);
 
 /**
  * Delete outside_network structure.
@@ -144,6 +210,27 @@ void outside_network_delete(struct outside_network* outnet);
  * @param rnd: random state for generating ID and port.
  */
 void pending_udp_query(struct outside_network* outnet, ldns_buffer* packet, 
+	struct sockaddr_storage* addr, socklen_t addrlen, int timeout,
+	comm_point_callback_t* callback, void* callback_arg,
+	struct ub_randstate* rnd);
+
+/**
+ * Send TCP query. May wait for TCP buffer. Selects ID to be random, and 
+ * checks id.
+ * @param outnet: provides the event handling.
+ * @param packet: wireformat query to send to destination. copied from.
+ * @param addr: address to send to.
+ * @param addrlen: length of addr.
+ * @param timeout: in seconds from now.
+ *    Timer starts running now. Timer may expire if all buffers are used,
+ *    without any query been sent to the server yet.
+ * @param callback: function to call on error, timeout or reply.
+ *    The routine does not return an error, instead it calls the callback,
+ *    with an error code if an error happens.
+ * @param callback_arg: user argument for callback function.
+ * @param rnd: random state for generating ID.
+ */
+void pending_tcp_query(struct outside_network* outnet, ldns_buffer* packet, 
 	struct sockaddr_storage* addr, socklen_t addrlen, int timeout,
 	comm_point_callback_t* callback, void* callback_arg,
 	struct ub_randstate* rnd);

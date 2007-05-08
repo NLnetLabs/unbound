@@ -318,11 +318,13 @@ reclaim_tcp_handler(struct comm_point* c)
 {
 	log_assert(c->type == comm_tcp);
 	comm_point_close(c);
-	c->tcp_free = c->tcp_parent->tcp_free;
-	c->tcp_parent->tcp_free = c;
-	if(!c->tcp_free) {
-		/* re-enable listening on accept socket */
-		comm_point_start_listening(c->tcp_parent, -1, -1);
+	if(c->tcp_parent) {
+		c->tcp_free = c->tcp_parent->tcp_free;
+		c->tcp_parent->tcp_free = c;
+		if(!c->tcp_free) {
+			/* re-enable listening on accept socket */
+			comm_point_start_listening(c->tcp_parent, -1, -1);
+		}
 	}
 }
 
@@ -336,8 +338,10 @@ tcp_callback_writer(struct comm_point* c)
 		c->tcp_is_reading = 1;
 	c->tcp_byte_count = 0;
 	comm_point_stop_listening(c);
-	/* for listening socket */
-	reclaim_tcp_handler(c);
+	if(c->tcp_parent) /* for listening socket */
+		reclaim_tcp_handler(c);
+	else	/* its outgoing socket, start listening for reading */
+		comm_point_start_listening(c, -1, -1);
 }
 
 /** do the callback when reading is done */
@@ -421,7 +425,8 @@ comm_point_tcp_handle_read(int fd, struct comm_point* c, int short_ok)
 	return 1;
 }
 
-/** Handle tcp writing callback. 
+/** 
+ * Handle tcp writing callback. 
  * @param fd: file descriptor of socket.
  * @param c: comm point to write buffer out of.
  * @return: 0 on error
@@ -433,6 +438,21 @@ comm_point_tcp_handle_write(int fd, struct comm_point* c)
 	log_assert(c->type == comm_tcp);
 	if(c->tcp_is_reading)
 		return 0;
+	if(c->tcp_byte_count == 0 && c->tcp_check_nb_connect) {
+		/* check for pending error from nonblocking connect */
+		/* from Stevens, unix network programming, vol1, 3rd ed, p450*/
+		int error = 0;
+		socklen_t len = (socklen_t)sizeof(error);
+		if(getsockopt(fd, SOL_SOCKET, SO_ERROR, &error, &len) < 0){
+			error = errno; /* on solaris errno is error */
+		}
+		if(error == EINPROGRESS || error == EWOULDBLOCK)
+			return 1; /* try again later */
+		if(error != 0) {
+			log_err("tcp connect: %s", strerror(error));
+			return 0;
+		}
+	}
 
 	if(c->tcp_byte_count < sizeof(uint16_t)) {
 		uint16_t len = htons(ldns_buffer_limit(c->buffer));
@@ -553,6 +573,7 @@ comm_point_create_udp(struct comm_base *base, int fd, ldns_buffer* buffer,
 	c->tcp_do_close = 0;
 	c->do_not_close = 0;
 	c->tcp_do_toggle_rw = 0;
+	c->tcp_check_nb_connect = 0;
 	c->callback = callback;
 	c->cb_arg = callback_arg;
 	evbits = EV_READ | EV_PERSIST;
@@ -607,6 +628,7 @@ comm_point_create_tcp_handler(struct comm_base *base,
 	c->tcp_do_close = 0;
 	c->do_not_close = 0;
 	c->tcp_do_toggle_rw = 1;
+	c->tcp_check_nb_connect = 0;
 	c->callback = callback;
 	c->cb_arg = callback_arg;
 	/* add to parent free list */
@@ -662,6 +684,7 @@ comm_point_create_tcp(struct comm_base *base, int fd, int num, size_t bufsize,
 	c->tcp_do_close = 0;
 	c->do_not_close = 0;
 	c->tcp_do_toggle_rw = 0;
+	c->tcp_check_nb_connect = 0;
 	c->callback = NULL;
 	c->cb_arg = NULL;
 	evbits = EV_READ | EV_PERSIST;
@@ -685,6 +708,44 @@ comm_point_create_tcp(struct comm_base *base, int fd, int num, size_t bufsize,
 		}
 	}
 	
+	return c;
+}
+
+struct comm_point* 
+comm_point_create_tcp_out(size_t bufsize,
+        comm_point_callback_t* callback, void* callback_arg)
+{
+	struct comm_point* c = (struct comm_point*)calloc(1,
+		sizeof(struct comm_point));
+	if(!c)
+		return NULL;
+	c->ev = (struct internal_event*)calloc(1,
+		sizeof(struct internal_event));
+	if(!c->ev) {
+		free(c);
+		return NULL;
+	}
+	c->fd = -1;
+	c->buffer = ldns_buffer_new(bufsize);
+	if(!c->buffer) {
+		free(c->ev);
+		free(c);
+		return NULL;
+	}
+	c->timeout = NULL;
+	c->tcp_is_reading = 0;
+	c->tcp_byte_count = 0;
+	c->tcp_parent = NULL;
+	c->max_tcp_count = 0;
+	c->tcp_handlers = NULL;
+	c->tcp_free = NULL;
+	c->type = comm_tcp;
+	c->tcp_do_close = 0;
+	c->do_not_close = 0;
+	c->tcp_do_toggle_rw = 1;
+	c->tcp_check_nb_connect = 1;
+	c->callback = callback;
+	c->cb_arg = callback_arg;
 	return c;
 }
 
@@ -721,6 +782,7 @@ comm_point_create_local(struct comm_base *base, int fd, size_t bufsize,
 	c->tcp_do_close = 0;
 	c->do_not_close = 1;
 	c->tcp_do_toggle_rw = 0;
+	c->tcp_check_nb_connect = 0;
 	c->callback = callback;
 	c->cb_arg = callback_arg;
 	/* libevent stuff */
@@ -743,9 +805,10 @@ comm_point_close(struct comm_point* c)
 {
 	if(!c)
 		return;
-	if(event_del(&c->ev->ev) != 0) {
-		log_err("could not event_del on close");
-	}
+	if(c->fd != -1)
+		if(event_del(&c->ev->ev) != 0) {
+			log_err("could not event_del on close");
+		}
 	/* close fd after removing from event lists, or epoll.. is messed up */
 	if(c->fd != -1 && !c->do_not_close)
 		close(c->fd);

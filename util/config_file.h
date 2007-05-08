@@ -68,6 +68,8 @@ struct config_file {
 	int outgoing_base_port;
 	/** outgoing port range number of ports (per thread, per if) */
 	int outgoing_num_ports;
+	/** number of outgoing tcp buffers per (per thread) */
+	size_t outgoing_num_tcp;
 
 	/** size of the message cache */
 	size_t msg_cache_size;

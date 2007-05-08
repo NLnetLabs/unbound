@@ -109,6 +109,98 @@ pending_cmp(const void* key1, const void* key2)
 	}
 }
 
+/** use next free buffer to service a tcp query */
+static void
+outnet_tcp_take_into_use(struct waiting_tcp* w, uint8_t* pkt)
+{
+	struct pending_tcp* pend = w->outnet->tcp_free;
+	int s;
+	log_assert(pend);
+	log_assert(pkt);
+	/* open socket */
+#ifndef INET6
+	if(addr_is_ip6(addr))
+		s = socket(PF_INET6, SOCK_STREAM, IPPROTO_TCP);
+	else
+#endif
+		s = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
+	if(s == -1) {
+		log_err("outgoing tcp: socket: %s", strerror(errno));
+		log_addr(&w->addr, w->addrlen);
+		(void)(*w->cb)(NULL, w->cb_arg, NETEVENT_CLOSED, NULL);
+		free(w);
+		return;
+	}
+	fd_set_nonblock(s);
+	if(connect(s, (struct sockaddr*)&w->addr, w->addrlen) == -1) {
+		if(errno != EINPROGRESS) {
+			log_err("outgoing tcp: connect: %s", strerror(errno));
+			log_addr(&w->addr, w->addrlen);
+			close(s);
+			(void)(*w->cb)(NULL, w->cb_arg, NETEVENT_CLOSED, NULL);
+			free(w);
+			return;
+		}
+	}
+	w->pkt = NULL;
+	w->next_waiting = (void*)pend;
+	memmove(&pend->id, pkt, sizeof(uint16_t));
+	w->outnet->tcp_free = pend->next_free;
+	pend->next_free = NULL;
+	pend->query = w;
+	ldns_buffer_clear(pend->c->buffer);
+	ldns_buffer_write(pend->c->buffer, pkt, w->pkt_len);
+	ldns_buffer_flip(pend->c->buffer);
+	pend->c->tcp_is_reading = 0;
+	pend->c->tcp_byte_count = 0;
+	comm_point_start_listening(pend->c, s, -1);
+	return;
+}
+
+/** see if buffers can be used to service TCP queries. */
+static void
+use_free_buffer(struct outside_network* outnet)
+{
+	struct waiting_tcp* w;
+	while(outnet->tcp_free && outnet->tcp_wait_first) {
+		w = outnet->tcp_wait_first;
+		outnet->tcp_wait_first = w->next_waiting;
+		if(outnet->tcp_wait_last == w)
+			outnet->tcp_wait_last = NULL;
+		outnet_tcp_take_into_use(w, w->pkt);
+	}
+}
+
+/** callback for pending tcp connections */
+static int 
+outnet_tcp_cb(struct comm_point* c, void* arg, int error,
+	struct comm_reply *reply_info)
+{
+	struct pending_tcp* pend = (struct pending_tcp*)arg;
+	struct outside_network* outnet = pend->query->outnet;
+	verbose(VERB_ALGO, "outnettcp cb");
+	if(error != NETEVENT_NOERROR) {
+		log_info("outnettcp got tcp error %d", error);
+		/* pass error below and exit */
+	} else {
+		/* check ID */
+		if(ldns_buffer_limit(c->buffer) < sizeof(uint16_t) ||
+			LDNS_ID_WIRE(ldns_buffer_begin(c->buffer))!=pend->id) {
+			log_info("outnettcp: bad ID in reply");
+			log_addr(&pend->query->addr, pend->query->addrlen);
+			error = NETEVENT_CLOSED;
+		}
+	}
+	(void)(*pend->query->cb)(c, pend->query->cb_arg, error, reply_info);
+	comm_point_close(c);
+	pend->next_free = outnet->tcp_free;
+	outnet->tcp_free = pend;
+	free(pend->query);
+	pend->query = NULL;
+	use_free_buffer(outnet);
+	return 0;
+}
+
 /** callback for incoming udp answers from the network. */
 static int 
 outnet_udp_cb(struct comm_point* c, void* arg, int error,
@@ -271,10 +363,34 @@ pending_udp_timer_cb(void *arg)
 	pending_delete(p->outnet, p);
 }
 
+/** create pending_tcp buffers */
+static int
+create_pending_tcp(struct outside_network* outnet, size_t bufsize)
+{
+	size_t i;
+	if(outnet->num_tcp == 0)
+		return 1; /* no tcp needed, nothing to do */
+	if(!(outnet->tcp_conns = (struct pending_tcp **)calloc(
+			outnet->num_tcp, sizeof(struct pending_tcp*))))
+		return 0;
+	for(i=0; i<outnet->num_tcp; i++) {
+		if(!(outnet->tcp_conns[i] = (struct pending_tcp*)calloc(1, 
+			sizeof(struct pending_tcp))))
+			return 0;
+		outnet->tcp_conns[i]->next_free = outnet->tcp_free;
+		outnet->tcp_free = outnet->tcp_conns[i];
+		outnet->tcp_conns[i]->c = comm_point_create_tcp_out(
+			bufsize, outnet_tcp_cb, outnet->tcp_conns[i]);
+		if(!outnet->tcp_conns[i]->c)
+			return 0;
+	}
+	return 1;
+}
+
 struct outside_network* 
 outside_network_create(struct comm_base *base, size_t bufsize, 
 	size_t num_ports, char** ifs, int num_ifs, int do_ip4, 
-	int do_ip6, int port_base)
+	int do_ip6, int port_base, size_t num_tcp)
 {
 	struct outside_network* outnet = (struct outside_network*)
 		calloc(1, sizeof(struct outside_network));
@@ -284,6 +400,7 @@ outside_network_create(struct comm_base *base, size_t bufsize,
 		return NULL;
 	}
 	outnet->base = base;
+	outnet->num_tcp = num_tcp;
 #ifndef INET6
 	do_ip6 = 0;
 #endif
@@ -295,7 +412,8 @@ outside_network_create(struct comm_base *base, size_t bufsize,
 			outnet->num_udp4+1, sizeof(struct comm_point*))) ||
 		!(outnet->udp6_ports = (struct comm_point **)calloc(
 			outnet->num_udp6+1, sizeof(struct comm_point*))) ||
-		!(outnet->pending = rbtree_create(pending_cmp)) ) {
+		!(outnet->pending = rbtree_create(pending_cmp)) ||
+		!create_pending_tcp(outnet, bufsize)) {
 		log_err("malloc failed");
 		outside_network_delete(outnet);
 		return NULL;
@@ -375,6 +493,15 @@ outside_network_delete(struct outside_network* outnet)
 		for(i=0; i<outnet->num_udp6; i++)
 			comm_point_delete(outnet->udp6_ports[i]);
 		free(outnet->udp6_ports);
+	}
+	if(outnet->tcp_conns) {
+		size_t i;
+		for(i=0; i<outnet->num_tcp; i++)
+			if(outnet->tcp_conns[i]) {
+				comm_point_delete(outnet->tcp_conns[i]->c);
+				free(outnet->tcp_conns[i]);
+			}
+		free(outnet->tcp_conns);
 	}
 	free(outnet);
 }
@@ -530,4 +657,87 @@ pending_udp_query(struct outside_network* outnet, ldns_buffer* packet,
 	tv.tv_sec = timeout;
 	tv.tv_usec = 0;
 	comm_timer_set(pend->timer, &tv);
+}
+
+/** callback for outgoing TCP timer event */
+static void
+outnet_tcptimer(void* arg)
+{
+	struct waiting_tcp* w = (struct waiting_tcp*)arg;
+	struct outside_network* outnet = w->outnet;
+	if(w->pkt) {
+		/* it is on the waiting list */
+		struct waiting_tcp* p=outnet->tcp_wait_first, *prev=NULL;
+		while(p) {
+			if(p == w) {
+				if(prev) prev->next_waiting = w->next_waiting;
+				else	outnet->tcp_wait_first=w->next_waiting;
+				outnet->tcp_wait_last = prev;
+				break;
+			}
+			prev = p;
+			p=p->next_waiting;
+		}
+	} else {
+		/* it was in use */
+		struct pending_tcp* pend=(struct pending_tcp*)w->next_waiting;
+		comm_point_close(pend->c);
+		pend->query = NULL;
+		pend->next_free = outnet->tcp_free;
+		outnet->tcp_free = pend;
+	}
+	(void)(*w->cb)(NULL, w->cb_arg, NETEVENT_TIMEOUT, NULL);
+	free(w);
+	use_free_buffer(outnet);
+}
+
+void 
+pending_tcp_query(struct outside_network* outnet, ldns_buffer* packet, 
+	struct sockaddr_storage* addr, socklen_t addrlen, int timeout,
+	comm_point_callback_t* callback, void* callback_arg,
+	struct ub_randstate* rnd)
+{
+	struct pending_tcp* pend = outnet->tcp_free;
+	struct waiting_tcp* w;
+	struct timeval tv;
+	uint16_t id;
+	/* if no buffer is free allocate space to store query */
+	w = (struct waiting_tcp*)malloc(sizeof(struct waiting_tcp) 
+		+ (pend?0:ldns_buffer_limit(packet)));
+	if(!w) {
+		/* callback user for the error */
+		(void)(*callback)(NULL, callback_arg, NETEVENT_CLOSED, NULL);
+		return;
+	}
+	if(!(w->timer = comm_timer_create(outnet->base, outnet_tcptimer, w))) {
+		free(w);
+		(void)(*callback)(NULL, callback_arg, NETEVENT_CLOSED, NULL);
+		return;
+	}
+	w->pkt = NULL;
+	w->pkt_len = ldns_buffer_limit(packet);
+	/* id uses lousy random() TODO use better and entropy */
+	id = ((unsigned)ub_random(rnd)>>8) & 0xffff;
+	LDNS_ID_SET(ldns_buffer_begin(packet), id);
+	memcpy(&w->addr, addr, addrlen);
+	w->addrlen = addrlen;
+	w->outnet = outnet;
+	w->cb = callback;
+	w->cb_arg = callback_arg;
+	tv.tv_sec = timeout;
+	tv.tv_usec = 0;
+	comm_timer_set(w->timer, &tv);
+	if(pend) {
+		/* we have a buffer available right now */
+		outnet_tcp_take_into_use(w, ldns_buffer_begin(packet));
+	} else {
+		/* queue up */
+		w->pkt = (uint8_t*)w + sizeof(struct waiting_tcp);
+		memmove(w->pkt, ldns_buffer_begin(packet), w->pkt_len);
+		w->next_waiting = NULL;
+		if(outnet->tcp_wait_last)
+			outnet->tcp_wait_last->next_waiting = w;
+		else	outnet->tcp_wait_first = w;
+		outnet->tcp_wait_last = w;
+	}
 }

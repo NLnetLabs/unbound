@@ -63,6 +63,9 @@ Number of ports to open. This number is opened per thread for every outgoing
 query interface. Must be at least 1. Default is 16.
 Larger numbers give more protection against spoofing attempts, but need
 extra resources from the operating system.
+.It \fBoutgoing-num-tcp:\fR <number>
+Number of outgoing TCP buffers to allocate per thread. Default is 10. If set
+to 0, or if do_tcp is "no", no TCP queries to authoritative servers are done.
 .It \fBmsg-cache-size:\fR <number>
 Number of bytes size of the message cache. Default is 4 megabytes.
 .It \fBmsg-cache-slabs:\fR <number>

@@ -73,7 +73,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_FORWARD_TO VAR_FORWARD_TO_PORT VAR_CHROOT
 %token VAR_USERNAME VAR_DIRECTORY VAR_LOGFILE VAR_PIDFILE
 %token VAR_MSG_CACHE_SIZE VAR_MSG_CACHE_SLABS VAR_NUM_QUERIES_PER_THREAD
-%token VAR_RRSET_CACHE_SIZE VAR_RRSET_CACHE_SLABS
+%token VAR_RRSET_CACHE_SIZE VAR_RRSET_CACHE_SLABS VAR_OUTGOING_NUM_TCP
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -97,7 +97,7 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_username | server_directory | server_logfile | server_pidfile |
 	server_msg_cache_size | server_msg_cache_slabs |
 	server_num_queries_per_thread | server_rrset_cache_size | 
-	server_rrset_cache_slabs 
+	server_rrset_cache_slabs | server_outgoing_num_tcp
 	;
 server_num_threads: VAR_NUM_THREADS STRING 
 	{ 
@@ -154,6 +154,15 @@ server_outgoing_range: VAR_OUTGOING_RANGE STRING
 		if(atoi($2) == 0)
 			yyerror("number expected");
 		else cfg_parser->cfg->outgoing_num_ports = atoi($2);
+		free($2);
+	}
+	;
+server_outgoing_num_tcp: VAR_OUTGOING_NUM_TCP STRING
+	{
+		OUTYY(("P(server_outgoing_num_tcp:%s)\n", $2));
+		if(atoi($2) == 0 && strcmp($2, "0") != 0)
+			yyerror("number expected");
+		else cfg_parser->cfg->outgoing_num_tcp = atoi($2);
 		free($2);
 	}
 	;

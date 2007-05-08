@@ -155,6 +155,9 @@ struct comm_point {
 	    So that when that is done the callback is called. */
 	int tcp_do_toggle_rw;
 
+	/** if set, checks for pending error from nonblocking connect() call.*/
+	int tcp_check_nb_connect;
+
 	/** callback when done.
 	    tcp_accept does not get called back, is NULL then.
 	    If a timeout happens, callback with timeout=1 is called.
@@ -286,6 +289,16 @@ struct comm_point* comm_point_create_udp(struct comm_base* base,
  */
 struct comm_point* comm_point_create_tcp(struct comm_base* base,
 	int fd, int num, size_t bufsize, 
+	comm_point_callback_t* callback, void* callback_arg);
+
+/**
+ * Create an outgoing TCP commpoint. No file descriptor is opened, left at -1.
+ * @param bufsize: size of buffer to create for handlers.
+ * @param callback: callback function pointer for the handler.
+ * @param callback_arg: will be passed to your callback function.
+ * @return: the commpoint or NULL on error.
+ */
+struct comm_point* comm_point_create_tcp_out(size_t bufsize, 
 	comm_point_callback_t* callback, void* callback_arg);
 
 /**

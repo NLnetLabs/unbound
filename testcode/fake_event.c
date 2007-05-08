@@ -633,7 +633,8 @@ struct outside_network*
 outside_network_create(struct comm_base* base, size_t bufsize, 
 	size_t ATTR_UNUSED(num_ports), char** ATTR_UNUSED(ifs), 
 	int ATTR_UNUSED(num_ifs), int ATTR_UNUSED(do_ip4), 
-	int ATTR_UNUSED(do_ip6), int ATTR_UNUSED(port_base))
+	int ATTR_UNUSED(do_ip6), int ATTR_UNUSED(port_base),
+	size_t ATTR_UNUSED(num_tcp))
 {
 	struct outside_network* outnet =  calloc(1, 
 		sizeof(struct outside_network));

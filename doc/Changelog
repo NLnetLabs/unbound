@@ -1,3 +1,10 @@
+8 May 2007: Wouter
+	- outgoing network keeps list of available tcp buffers for outgoing 
+	  tcp queries.
+	- outgoing-num-tcp config option.
+	- outgoing network keeps waiting list of queries waiting for buffer.
+	- netevent supports outgoing tcp commpoints, nonblocking connects.
+
 7 May 2007: Wouter
 	- EDNS read from query, used to make reply smaller.
 	- advertised edns value constants.

@@ -102,6 +102,7 @@ verbosity{COLON}	{ LEXOUT(("v(%s) ", yytext)); return VAR_VERBOSITY;}
 port{COLON}		{ LEXOUT(("v(%s) ", yytext)); return VAR_PORT;}
 outgoing-port{COLON}	{ LEXOUT(("v(%s) ", yytext)); return VAR_OUTGOING_PORT;}
 outgoing-range{COLON}	{ LEXOUT(("v(%s) ", yytext)); return VAR_OUTGOING_RANGE;}
+outgoing-num-tcp{COLON}	{ LEXOUT(("v(%s) ", yytext)); return VAR_OUTGOING_NUM_TCP;}
 do-ip4{COLON}		{ LEXOUT(("v(%s) ", yytext)); return VAR_DO_IP4;}
 do-ip6{COLON}		{ LEXOUT(("v(%s) ", yytext)); return VAR_DO_IP6;}
 do-udp{COLON}		{ LEXOUT(("v(%s) ", yytext)); return VAR_DO_UDP;}
