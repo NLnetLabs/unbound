@@ -2,6 +2,7 @@
 	- outside network cleans up waiting tcp queries on exit.
 	- fallback to TCP.
 	- testbound replay with retry in TCP mode.
+	- tpkg test for retry in TCP mode, against ldns-testns server.
 
 8 May 2007: Wouter
 	- outgoing network keeps list of available tcp buffers for outgoing 
