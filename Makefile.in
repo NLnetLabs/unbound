@@ -99,10 +99,10 @@ pktview:	$(PKTVIEW_OBJ)
 	$(INFO) Link $@
 	$Q$(LINK) -o $@ $^ $(LIBS)
 
-testcode/ldns-testpkts.c:	$(ldnsdir)/examples/ldns-testpkts.c \
-			$(ldnsdir)/examples/ldns-testpkts.h
-	cp $(ldnsdir)/examples/ldns-testpkts.c testcode/ldns-testpkts.c
-	cp $(ldnsdir)/examples/ldns-testpkts.h testcode/ldns-testpkts.h
+#testcode/ldns-testpkts.c:	$(ldnsdir)/examples/ldns-testpkts.c \
+#			$(ldnsdir)/examples/ldns-testpkts.h
+#	cp $(ldnsdir)/examples/ldns-testpkts.c testcode/ldns-testpkts.c
+#	cp $(ldnsdir)/examples/ldns-testpkts.h testcode/ldns-testpkts.h
 
 util/config_file.c:	util/configparser.h
 util/configlexer.c:  $(srcdir)/util/configlexer.lex util/configparser.h
