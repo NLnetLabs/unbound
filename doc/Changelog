@@ -5,6 +5,8 @@
 	- tpkg test for retry in TCP mode, against ldns-testns server.
 	- daemon checks max number of open files and complains if not enough.
 	- test where data expires in the cache.
+	- compiletests: fixed empty body ifstatements in alloc.c, in case
+	  locks are disabled.
 
 8 May 2007: Wouter
 	- outgoing network keeps list of available tcp buffers for outgoing 
