@@ -45,10 +45,12 @@
 #include "daemon/daemon.h"
 #include "util/config_file.h"
 #include "util/storage/slabhash.h"
+#include "services/listen_dnsport.h"
 #include "util/data/msgreply.h"
 #include <signal.h>
 #include <fcntl.h>
 #include <pwd.h>
+#include <sys/resource.h>
 
 /** print usage. */
 static void usage()
@@ -62,6 +64,40 @@ static void usage()
 	printf("Version %s\n", PACKAGE_VERSION);
 	printf("BSD licensed, see LICENSE in source package for details.\n");
 	printf("Report bugs to %s\n", PACKAGE_BUGREPORT);
+}
+
+/** check file descriptor count */
+static void
+checkrlimits(struct config_file* cfg)
+{
+	size_t list = ((cfg->do_ip4?1:0) + (cfg->do_ip6?1:0)) * 
+		((cfg->do_udp?1:0) + (cfg->do_tcp?1 + TCP_ACCEPT_COUNT:0));
+	size_t ifs = (cfg->num_ifs==0?1:cfg->num_ifs);
+	size_t listen_num = list*ifs;
+	size_t outnum = cfg->outgoing_num_ports*ifs + cfg->outgoing_num_tcp;
+	size_t misc = 4; /* logfile, pidfile, stdout... */
+	size_t perthread = listen_num + outnum + 2/*cmdpipe*/ + 2/*libevent*/
+		+ misc; 
+#if !defined(HAVE_PTHREAD) && !defined(HAVE_SOLARIS_THREADS)
+	size_t numthread = 1; /* it forks */
+#else
+	size_t numthread = cfg->num_threads;
+#endif
+	size_t total = numthread * perthread + misc;
+	struct rlimit rlim;
+	if(getrlimit(RLIMIT_NOFILE, &rlim) < 0) {
+		log_warn("getrlimit: %s", strerror(errno));
+		return;
+	}
+	if((size_t)rlim.rlim_cur < total) {
+		log_err("Not enough sockets available. Increase "
+			"ulimit(open files).");
+		log_err("or decrease number of threads, outgoing num ports, "
+			"outgoing num tcp or number of interfaces");
+		log_err("estimate %u fds high mark, %u available", 
+			(unsigned)total, (unsigned)rlim.rlim_cur);
+		fatal_exit("Not enough file descriptors available");
+	}
 }
 
 /** to changedir, logfile */
@@ -105,6 +141,7 @@ apply_dir(struct daemon* daemon, struct config_file* cfg, int cmdline_verbose)
 			fatal_exit("malloc failure updating config settings");
 		}
 	}
+	checkrlimits(cfg);
 }
 
 /** Read existing pid from pidfile. */

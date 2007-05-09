@@ -48,6 +48,9 @@ struct listen_list;
 struct addrinfo;
 struct config_file;
 
+/** number of simultaneous open TCP connections for queries */
+#define TCP_ACCEPT_COUNT 10 
+
 /**
  * Listening for queries structure.
  * Contains list of query-listen sockets.

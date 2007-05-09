@@ -3,6 +3,7 @@
 	- fallback to TCP.
 	- testbound replay with retry in TCP mode.
 	- tpkg test for retry in TCP mode, against ldns-testns server.
+	- daemon checks max number of open files and complains if not enough.
 
 8 May 2007: Wouter
 	- outgoing network keeps list of available tcp buffers for outgoing 

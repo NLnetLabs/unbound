@@ -54,8 +54,6 @@
 
 /** number of queued TCP connections for listen() */
 #define TCP_BACKLOG 5 
-/** number of simultaneous open TCP connections for queries */
-#define TCP_COUNT 10 
 
 /**
  * Debug print of the getaddrinfo returned address.
@@ -310,7 +308,7 @@ listen_create(struct comm_base* base, struct listen_port* ports,
 			cp = comm_point_create_udp(base, ports->fd, 
 				front->udp_buff, cb, cb_arg);
 		else 	cp = comm_point_create_tcp(base, ports->fd, 
-				TCP_COUNT, bufsize, cb, cb_arg);
+				TCP_ACCEPT_COUNT, bufsize, cb, cb_arg);
 		if(!cp) {
 			log_err("can't create commpoint");	
 			listen_delete(front);
