@@ -1,6 +1,7 @@
 9 May 2007: Wouter
 	- outside network cleans up waiting tcp queries on exit.
 	- fallback to TCP.
+	- testbound replay with retry in TCP mode.
 
 8 May 2007: Wouter
 	- outgoing network keeps list of available tcp buffers for outgoing 

@@ -1,0 +1,69 @@
+; This is a comment.
+; config options go here.
+CONFIG_END
+
+SCENARIO_BEGIN Query forwarded, receives truncated reply.
+
+STEP 1 QUERY
+ENTRY_BEGIN
+	REPLY RD
+	SECTION QUESTION
+	www.example.com. IN A
+ENTRY_END
+; the query is sent to the forwarder - UDP
+STEP 2 CHECK_OUT_QUERY
+ENTRY_BEGIN
+	MATCH qname qtype opcode UDP
+	SECTION QUESTION
+	www.example.com. IN A
+ENTRY_END
+; reply TC bit
+STEP 3 REPLY
+ENTRY_BEGIN
+	MATCH opcode qtype qname UDP
+	ADJUST copy_id
+	; authoritative answer
+	REPLY QR AA RD RA TC NOERROR
+	SECTION QUESTION
+	www.example.com. IN A
+	SECTION ANSWER
+	www.example.com. IN A 10.20.30.40
+ENTRY_END
+; retry in TCP mode.
+STEP 4 CHECK_OUT_QUERY
+ENTRY_BEGIN
+	MATCH qname qtype opcode TCP
+	SECTION QUESTION
+	www.example.com. IN A
+ENTRY_END
+STEP 5 REPLY
+ENTRY_BEGIN
+	MATCH opcode qtype qname TCP
+	ADJUST copy_id
+	; authoritative answer
+	REPLY QR AA RD RA NOERROR
+	SECTION QUESTION
+	www.example.com. IN A
+	SECTION ANSWER
+	www.example.com. IN A 10.20.30.40
+	SECTION AUTHORITY
+	www.example.com. IN NS ns.example.com.
+	SECTION ADDITIONAL
+	ns.example.com. IN A 10.20.30.50
+ENTRY_END
+STEP 6 CHECK_ANSWER
+ENTRY_BEGIN
+	MATCH all 
+	; first reply, have AA set.
+	REPLY QR AA RD RA
+	SECTION QUESTION
+	www.example.com. IN A
+	SECTION ANSWER
+	www.example.com. IN A 10.20.30.40
+	SECTION AUTHORITY
+	www.example.com. IN NS ns.example.com.
+	SECTION ADDITIONAL
+	ns.example.com. IN A 10.20.30.50
+ENTRY_END
+
+SCENARIO_END
