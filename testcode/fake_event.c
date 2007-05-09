@@ -703,6 +703,53 @@ pending_udp_query(struct outside_network* outnet, ldns_buffer* packet,
 	runtime->pending_list = pend;
 }
 
+void 
+pending_tcp_query(struct outside_network* outnet, ldns_buffer* packet,
+	struct sockaddr_storage* addr, socklen_t addrlen, int timeout,
+	comm_point_callback_t* callback, void* callback_arg,
+	struct ub_randstate* ATTR_UNUSED(rnd))
+{
+	struct replay_runtime* runtime = (struct replay_runtime*)outnet->base;
+	struct fake_pending* pend = (struct fake_pending*)calloc(1,
+		sizeof(struct fake_pending));
+	ldns_status status;
+	log_assert(pend);
+	pend->buffer = ldns_buffer_new(ldns_buffer_capacity(packet));
+	log_assert(pend->buffer);
+	ldns_buffer_write(pend->buffer, ldns_buffer_begin(packet),
+		ldns_buffer_limit(packet));
+	ldns_buffer_flip(pend->buffer);
+	memcpy(&pend->addr, addr, addrlen);
+	pend->addrlen = addrlen;
+	pend->callback = callback;
+	pend->cb_arg = callback_arg;
+	pend->timeout = timeout;
+	pend->transport = transport_tcp;
+	pend->pkt = NULL;
+	status = ldns_buffer2pkt_wire(&pend->pkt, packet);
+	if(status != LDNS_STATUS_OK) {
+		log_err("ldns error parsing tcp output packet: %s",
+			ldns_get_errorstr_by_id(status));
+		fatal_exit("Sending unparseable DNS packets to servers!");
+	}
+	log_pkt("pending tcp pkt: ", pend->pkt);
+
+	/* see if it matches the current moment */
+	if(runtime->now && runtime->now->evt_type == repevt_back_query &&
+		find_match(runtime->now->match, pend->pkt, pend->transport)) {
+		log_info("testbound: matched pending to event. "
+			"advance time between events.");
+		log_info("testbound: do STEP %d %s", runtime->now->time_step,
+			repevt_string(runtime->now->evt_type));
+		advance_moment(runtime);
+		/* still create the pending, because we need it to callback */
+	} 
+	log_info("testbound: created fake pending");
+	/* add to list */
+	pend->next = runtime->pending_list;
+	runtime->pending_list = pend;
+}
+
 struct listen_port* listening_ports_open(struct config_file* ATTR_UNUSED(cfg))
 {
 	return calloc(1, 1);

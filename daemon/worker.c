@@ -63,6 +63,8 @@
 #define DNS_ID_AND_FLAGS 4
 /** timeout in seconds for UDP queries to auth servers. TODO: proper rtt */
 #define UDP_QUERY_TIMEOUT 4
+/** timeout in seconds for TCP queries to auth servers. TODO: proper rtt */
+#define TCP_QUERY_TIMEOUT 30 
 /** Advertised version of EDNS capabilities */
 #define EDNS_ADVERTISED_VERSION 	0
 /** Advertised size of EDNS capabilities */
@@ -237,6 +239,11 @@ worker_handle_reply(struct comm_point* c, void* arg, int error,
 	/* see if it is truncated */
 	if(LDNS_TC_WIRE(ldns_buffer_begin(c->buffer)) && c->type == comm_udp) {
 		log_info("TC: truncated. retry in TCP mode.");
+		qinfo_query_encode(w->worker->back->udp_buff, &w->qinfo);
+		pending_tcp_query(w->worker->back, w->worker->back->udp_buff, 
+			&w->worker->fwd_addr, w->worker->fwd_addrlen, 
+			TCP_QUERY_TIMEOUT, worker_handle_reply, w, 
+			w->worker->rndstate);
 		return 0;
 	}
 	/* woohoo a reply! */

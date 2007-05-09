@@ -712,11 +712,12 @@ comm_point_create_tcp(struct comm_base *base, int fd, int num, size_t bufsize,
 }
 
 struct comm_point* 
-comm_point_create_tcp_out(size_t bufsize,
+comm_point_create_tcp_out(struct comm_base *base, size_t bufsize,
         comm_point_callback_t* callback, void* callback_arg)
 {
 	struct comm_point* c = (struct comm_point*)calloc(1,
 		sizeof(struct comm_point));
+	short evbits;
 	if(!c)
 		return NULL;
 	c->ev = (struct internal_event*)calloc(1,
@@ -746,6 +747,17 @@ comm_point_create_tcp_out(size_t bufsize,
 	c->tcp_check_nb_connect = 1;
 	c->callback = callback;
 	c->cb_arg = callback_arg;
+	evbits = EV_PERSIST | EV_WRITE;
+	event_set(&c->ev->ev, c->fd, evbits, comm_point_tcp_handle_callback, c);
+	if(event_base_set(base->eb->base, &c->ev->ev) != 0)
+	{
+		log_err("could not basetset tcpout event");
+		ldns_buffer_free(c->buffer);
+		free(c->ev);
+		free(c);
+		return NULL;
+	}
+
 	return c;
 }
 

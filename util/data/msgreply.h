@@ -289,6 +289,13 @@ int reply_info_encode(struct query_info* qinfo, struct reply_info* rep,
 	struct region* region, uint16_t udpsize);
 
 /**
+ * Encode query packet. Assumes the buffer is large enough.
+ * @param pkt: where to store the packet.
+ * @param qinfo: query info.
+ */
+void qinfo_query_encode(ldns_buffer* pkt, struct query_info* qinfo);
+
+/**
  * Setup query info entry
  * @param q: query info to copy. Emptied as if clear is called.
  * @param r: reply to init data.

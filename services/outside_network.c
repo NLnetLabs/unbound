@@ -109,6 +109,18 @@ pending_cmp(const void* key1, const void* key2)
 	}
 }
 
+/** delete waiting_tcp entry. Does not unlink from waiting list. 
+ * @param w: to delete.
+ */
+static void
+waiting_tcp_delete(struct waiting_tcp* w)
+{
+	if(!w) return;
+	if(w->timer)
+		comm_timer_delete(w->timer);
+	free(w);
+}
+
 /** use next free buffer to service a tcp query */
 static void
 outnet_tcp_take_into_use(struct waiting_tcp* w, uint8_t* pkt)
@@ -128,7 +140,7 @@ outnet_tcp_take_into_use(struct waiting_tcp* w, uint8_t* pkt)
 		log_err("outgoing tcp: socket: %s", strerror(errno));
 		log_addr(&w->addr, w->addrlen);
 		(void)(*w->cb)(NULL, w->cb_arg, NETEVENT_CLOSED, NULL);
-		free(w);
+		waiting_tcp_delete(w);
 		return;
 	}
 	fd_set_nonblock(s);
@@ -138,13 +150,13 @@ outnet_tcp_take_into_use(struct waiting_tcp* w, uint8_t* pkt)
 			log_addr(&w->addr, w->addrlen);
 			close(s);
 			(void)(*w->cb)(NULL, w->cb_arg, NETEVENT_CLOSED, NULL);
-			free(w);
+			waiting_tcp_delete(w);
 			return;
 		}
 	}
 	w->pkt = NULL;
 	w->next_waiting = (void*)pend;
-	memmove(&pend->id, pkt, sizeof(uint16_t));
+	pend->id = LDNS_ID_WIRE(pkt);
 	w->outnet->tcp_free = pend->next_free;
 	pend->next_free = NULL;
 	pend->query = w;
@@ -186,7 +198,7 @@ outnet_tcp_cb(struct comm_point* c, void* arg, int error,
 		/* check ID */
 		if(ldns_buffer_limit(c->buffer) < sizeof(uint16_t) ||
 			LDNS_ID_WIRE(ldns_buffer_begin(c->buffer))!=pend->id) {
-			log_info("outnettcp: bad ID in reply");
+			log_info("outnettcp: bad ID in reply, from:");
 			log_addr(&pend->query->addr, pend->query->addrlen);
 			error = NETEVENT_CLOSED;
 		}
@@ -195,7 +207,7 @@ outnet_tcp_cb(struct comm_point* c, void* arg, int error,
 	comm_point_close(c);
 	pend->next_free = outnet->tcp_free;
 	outnet->tcp_free = pend;
-	free(pend->query);
+	waiting_tcp_delete(pend->query);
 	pend->query = NULL;
 	use_free_buffer(outnet);
 	return 0;
@@ -380,7 +392,8 @@ create_pending_tcp(struct outside_network* outnet, size_t bufsize)
 		outnet->tcp_conns[i]->next_free = outnet->tcp_free;
 		outnet->tcp_free = outnet->tcp_conns[i];
 		outnet->tcp_conns[i]->c = comm_point_create_tcp_out(
-			bufsize, outnet_tcp_cb, outnet->tcp_conns[i]);
+			outnet->base, bufsize, outnet_tcp_cb, 
+			outnet->tcp_conns[i]);
 		if(!outnet->tcp_conns[i]->c)
 			return 0;
 	}
@@ -499,10 +512,20 @@ outside_network_delete(struct outside_network* outnet)
 		for(i=0; i<outnet->num_tcp; i++)
 			if(outnet->tcp_conns[i]) {
 				comm_point_delete(outnet->tcp_conns[i]->c);
+				waiting_tcp_delete(outnet->tcp_conns[i]->query);
 				free(outnet->tcp_conns[i]);
 			}
 		free(outnet->tcp_conns);
 	}
+	if(outnet->tcp_wait_first) {
+		struct waiting_tcp* p = outnet->tcp_wait_first, *np;
+		while(p) {
+			np = p->next_waiting;
+			waiting_tcp_delete(p);
+			p = np;
+		}
+	}
+
 	free(outnet);
 }
 
@@ -687,7 +710,7 @@ outnet_tcptimer(void* arg)
 		outnet->tcp_free = pend;
 	}
 	(void)(*w->cb)(NULL, w->cb_arg, NETEVENT_TIMEOUT, NULL);
-	free(w);
+	waiting_tcp_delete(w);
 	use_free_buffer(outnet);
 }
 

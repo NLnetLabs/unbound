@@ -293,13 +293,14 @@ struct comm_point* comm_point_create_tcp(struct comm_base* base,
 
 /**
  * Create an outgoing TCP commpoint. No file descriptor is opened, left at -1.
+ * @param base: in which base to alloc the commpoint.
  * @param bufsize: size of buffer to create for handlers.
  * @param callback: callback function pointer for the handler.
  * @param callback_arg: will be passed to your callback function.
  * @return: the commpoint or NULL on error.
  */
-struct comm_point* comm_point_create_tcp_out(size_t bufsize, 
-	comm_point_callback_t* callback, void* callback_arg);
+struct comm_point* comm_point_create_tcp_out(struct comm_base* base,
+	size_t bufsize, comm_point_callback_t* callback, void* callback_arg);
 
 /**
  * Create commpoint to listen to a local domain file descriptor.

@@ -1145,3 +1145,21 @@ query_info_entrysetup(struct query_info* q, struct reply_info* r,
 	q->qname = NULL;
 	return e;
 }
+
+void 
+qinfo_query_encode(ldns_buffer* pkt, struct query_info* qinfo)
+{
+	uint16_t flags = 0; /* QUERY, NOERROR */
+	if(qinfo->has_cd)
+		flags |= BIT_CD;
+	ldns_buffer_clear(pkt);
+	log_assert(ldns_buffer_remaining(pkt) >= 12+255+4/*max query*/);
+	ldns_buffer_skip(pkt, 2); /* id done later */
+	ldns_buffer_write_u16(pkt, flags);
+	ldns_buffer_write_u16(pkt, 1); /* query count */
+	ldns_buffer_write(pkt, "\000\000\000\000\000\000", 6); /* counts */
+	ldns_buffer_write(pkt, qinfo->qname, qinfo->qnamesize);
+	ldns_buffer_write_u16(pkt, qinfo->qtype);
+	ldns_buffer_write_u16(pkt, qinfo->qclass);
+	ldns_buffer_flip(pkt);
+}
