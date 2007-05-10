@@ -51,10 +51,6 @@ struct worker;
 
 /** Maximum number of modules in operation */
 #define MAX_MODULE 2
-/** module id for the iterator */
-#define MODULE_ID_ITERATOR 0
-/** module id for the validator */
-#define MODULE_ID_VALIDATOR 1
 
 /**
  * Module environment.
@@ -73,6 +69,8 @@ struct module_env {
 	/** send DNS query to server */
 	/** create a subquery */
 
+	/** allocation service */
+	struct alloc* alloc;
 	/** internal data for daemon - worker thread. */
 	struct worker* worker;
 	/** module specific data. indexed by module id. */
@@ -143,7 +141,7 @@ struct module_qstate {
 	/** module states */
 	enum module_ext_state ext_state[MAX_MODULE];
 	/** module specific data for query. indexed by module id. */
-	void* modinfo[MAX_MODULE];
+	void* minfo[MAX_MODULE];
 	/** environment for this query */
 	struct module_env* module_env;
 };
@@ -154,20 +152,20 @@ struct module_qstate {
 struct module_func_block {
 	/** text string name of module */
 	char* name;
-	/** id number of module */
-	int id;
 
 	/** 
 	 * init the module
 	 * @param env: module environment.
+	 * @param id: module id number.
 	 * return: 0 on error
 	 */
-	int (*init)(struct module_env* env);
+	int (*init)(struct module_env* env, int id);
 	/**
 	 * de-init, delete, the module.
 	 * @param env: module environment.
+	 * @param id: module id number.
 	 */
-	void (*deinit)(struct module_env* env);
+	void (*deinit)(struct module_env* env, int id);
 
 	/**
 	 * accept a new query, or work further on existing query.
@@ -176,11 +174,12 @@ struct module_func_block {
 	 *	(re-)activate.
 	 * @param qstate: the query state. 
 	 */
-	void (*operate)(struct module_qstate* qstate, enum module_ev event);
+	void (*operate)(struct module_qstate* qstate, enum module_ev event, 
+		int id);
 	/**
 	 * clear module specific data
 	 */
-	void (*clear)(struct module_qstate* qstate);
+	void (*clear)(struct module_qstate* qstate, int id);
 };
 
 #endif /* UTIL_MODULE_H */
