@@ -66,8 +66,8 @@ struct module_env {
 	struct slabhash* rrset_cache;
 
 	/* --- services --- */
-	/** send DNS query to server */
-	/** create a subquery */
+	/** send DNS query to server. operate() should return with wait_reply */
+	/** create a subquery. operate should then return with wait_subq */
 
 	/** allocation service */
 	struct alloc* alloc;
@@ -173,6 +173,12 @@ struct module_func_block {
 	 * @param ev: event that causes the module state machine to 
 	 *	(re-)activate.
 	 * @param qstate: the query state. 
+	 * @return: if at exit the ext_state is:
+	 *	o wait_module: next module is started. (with pass event).
+	 *	o error or finished: previous module is resumed.
+	 *	o otherwise it waits until that event happens (assumes
+	 *	  the service routine to make subrequest or send message
+	 *	  have been called.
 	 */
 	void (*operate)(struct module_qstate* qstate, enum module_ev event, 
 		int id);
