@@ -18,3 +18,6 @@ o use rbtree to compress domain names in messages, sorted AXFRs of 16Kb
 o speed up pkt domain name decompression loop detection using counter perhaps.
 o detect OS/400 pthreads implementation that allows upgrading to writelock
   on pthreads rwlocks and use it to examine-rd before storing-wr rrset cache.
+o understand synthesized DNAMEs, so those TTL=0 packets are cached properly.
+o understand NSEC/NSEC3, aggressive negative caching, so that updates to
+  NSEC/NSEC3 will result in proper negative responses.
