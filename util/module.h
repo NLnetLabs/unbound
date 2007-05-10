@@ -144,6 +144,13 @@ struct module_qstate {
 	void* minfo[MAX_MODULE];
 	/** environment for this query */
 	struct module_env* module_env;
+
+	/** parent query, only nonNULL for subqueries */
+	struct module_qstate* parent;
+	/** pointer to first subquery below this one; makes list with next */
+	struct module_qstate* subquery_first;
+	/** pointer to next sibling subquery (not above or below this one) */
+	struct module_qstate* subquery_next;
 };
 
 /** 
