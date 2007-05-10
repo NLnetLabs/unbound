@@ -722,6 +722,14 @@ write_compressed_dname(ldns_buffer* pkt, uint8_t* dname, int labs,
 	uint8_t lablen;
 	uint16_t ptr;
 
+	if(labs == 1) {
+		/* write root label */
+		if(ldns_buffer_remaining(pkt) < 1)
+			return 0;
+		ldns_buffer_write_u8(pkt, 0);
+		return 1;
+	}
+
 	/* copy the first couple of labels */
 	while(labcopy--) {
 		lablen = *dname++;
@@ -776,9 +784,15 @@ compress_owner(struct ub_packed_rrset_key* key, ldns_buffer* pkt,
 			return RETVAL_OUTMEM;
 	} else {
 		/* always compress 2nd-further RRs in RRset */
-		if(ldns_buffer_remaining(pkt) < 2+4+4+2)
-			return RETVAL_TRUNC;
-		ldns_buffer_write(pkt, owner_ptr, 2);
+		if(owner_labs == 1) {
+			if(ldns_buffer_remaining(pkt) < 1+4+4+2) 
+				return RETVAL_TRUNC;
+			ldns_buffer_write_u8(pkt, 0);
+		} else {
+			if(ldns_buffer_remaining(pkt) < 2+4+4+2) 
+				return RETVAL_TRUNC;
+			ldns_buffer_write(pkt, owner_ptr, 2);
+		}
 		ldns_buffer_write(pkt, &key->rk.dname[key->rk.dname_len], 4);
 	}
 	return RETVAL_OK;
@@ -910,7 +924,7 @@ packed_rrset_encode(struct ub_packed_rrset_key* key, ldns_buffer* pkt,
 	if(do_sig) {
 		size_t total = data->count+data->rrsig_count;
 		for(i=data->count; i<total; i++) {
-			if(owner_ptr) {
+			if(owner_ptr && owner_labs != 1) {
 				if(ldns_buffer_remaining(pkt) <
 					2+4+4+data->rr_len[i]) 
 					return RETVAL_TRUNC;

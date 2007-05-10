@@ -1,5 +1,7 @@
 10 May 2007: Wouter
 	- created release-0.3 svn tag.
+	- util/module.h
+	- fixed compression - no longer compresses root name.
 
 9 May 2007: Wouter
 	- outside network cleans up waiting tcp queries on exit.
