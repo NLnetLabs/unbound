@@ -137,6 +137,8 @@ struct module_qstate {
 	struct msg_parse* msg_parse;
 	/** region for temporary usage. May be cleared when module blocks. */
 	struct region* scratch;
+	/** region for this query. Cleared when query process finishes. */
+	struct region* region;
 
 	/** module states */
 	enum module_ext_state ext_state[MAX_MODULE];
