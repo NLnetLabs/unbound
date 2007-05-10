@@ -1,3 +1,6 @@
+10 May 2007: Wouter
+	- created release-0.3 svn tag.
+
 9 May 2007: Wouter
 	- outside network cleans up waiting tcp queries on exit.
 	- fallback to TCP.
