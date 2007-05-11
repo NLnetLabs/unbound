@@ -52,6 +52,15 @@
 /** QR flag */
 #define BIT_QR 0x8000
 
+/** timeout in seconds for UDP queries to auth servers. TODO: proper rtt */
+#define UDP_QUERY_TIMEOUT 4
+/** timeout in seconds for TCP queries to auth servers. TODO: proper rtt */
+#define TCP_QUERY_TIMEOUT 30
+/** Advertised version of EDNS capabilities */
+#define EDNS_ADVERTISED_VERSION         0
+/** Advertised size of EDNS capabilities */
+#define EDNS_ADVERTISED_SIZE    4096
+
 /**
  * See if string is ip4 or ip6.
  * @param str: IP specification.

@@ -42,12 +42,16 @@
 #ifndef UTIL_MODULE_H
 #define UTIL_MODULE_H
 #include "util/storage/lruhash.h"
+#include "util/data/msgreply.h"
+#include "util/data/msgparse.h"
+struct alloc_cache;
 struct config_file;
 struct slabhash;
 struct query_info;
 struct edns_data;
 struct region;
 struct worker;
+struct module_qstate;
 
 /** Maximum number of modules in operation */
 #define MAX_MODULE 2
@@ -66,11 +70,27 @@ struct module_env {
 	struct slabhash* rrset_cache;
 
 	/* --- services --- */
-	/** send DNS query to server. operate() should return with wait_reply */
+	/** 
+	 * Send DNS query to server. operate() should return with wait_reply.
+	 * Later on a callback will cause operate() to be called with event
+	 * timeout or reply.
+	 * @param pkt: packet to send.
+	 * @param addr: where to.
+	 * @param addrlen: length of addr.
+	 * @param timeout: seconds to wait until timeout.
+	 * @param q: wich query state to reactivate upon return.
+	 * @param use_tcp: set to true to send over TCP. 0 for UDP.
+	 * return: false on failure (memory or socket related). no query was
+	 *	sent.
+	 */
+	int (*send_query)(ldns_buffer* pkt, struct sockaddr_storage* addr,
+		socklen_t addrlen, int timeout, struct module_qstate* q,
+		int use_tcp);
+
 	/** create a subquery. operate should then return with wait_subq */
 
 	/** allocation service */
-	struct alloc* alloc;
+	struct alloc_cache* alloc;
 	/** internal data for daemon - worker thread. */
 	struct worker* worker;
 	/** module specific data. indexed by module id. */
@@ -122,30 +142,34 @@ enum module_ev {
  */
 struct module_qstate {
 	/** which query is being answered: name, type, class */
-	struct query_info* qinfo;
+	struct query_info qinfo;
 	/** hash value of the query qinfo */
 	hashvalue_t query_hash;
 	/** flags uint16 from query */
 	uint16_t query_flags;
 	/** edns data from the query */
-	struct edns_data* edns;
+	struct edns_data edns;
 
-	/** buffer, contains server replies, store resulting reply here. 
+	/** buffer, store resulting reply here. 
 	 * May be cleared when module blocks. */
 	ldns_buffer* buf;
-	/** parsed message from server */
-	struct msg_parse* msg_parse;
+	/** comm_reply contains server replies */
+	struct comm_reply* reply;
 	/** region for temporary usage. May be cleared when module blocks. */
 	struct region* scratch;
 	/** region for this query. Cleared when query process finishes. */
 	struct region* region;
 
+	/** which module is executing */
+	int curmod;
 	/** module states */
 	enum module_ext_state ext_state[MAX_MODULE];
 	/** module specific data for query. indexed by module id. */
 	void* minfo[MAX_MODULE];
 	/** environment for this query */
-	struct module_env* module_env;
+	struct module_env* env;
+	/** worker related state for this query */
+	struct work_query* work_info;
 
 	/** parent query, only nonNULL for subqueries */
 	struct module_qstate* parent;
@@ -163,14 +187,15 @@ struct module_func_block {
 	char* name;
 
 	/** 
-	 * init the module
+	 * init the module. Called once for the global state.
+	 * This is the place to apply settings from the config file.
 	 * @param env: module environment.
 	 * @param id: module id number.
 	 * return: 0 on error
 	 */
 	int (*init)(struct module_env* env, int id);
 	/**
-	 * de-init, delete, the module.
+	 * de-init, delete, the module. Called once for the global state.
 	 * @param env: module environment.
 	 * @param id: module id number.
 	 */
@@ -196,5 +221,19 @@ struct module_func_block {
 	 */
 	void (*clear)(struct module_qstate* qstate, int id);
 };
+
+/** 
+ * Debug utility: module external qstate to string 
+ * @param s: the state value.
+ * @return descriptive string.
+ */
+const char* strextstate(enum module_ext_state s);
+
+/** 
+ * Debug utility: module event to string 
+ * @param e: the module event value.
+ * @return descriptive string.
+ */
+const char* strmodulevent(enum module_ev e);
 
 #endif /* UTIL_MODULE_H */

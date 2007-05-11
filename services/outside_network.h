@@ -204,12 +204,11 @@ void outside_network_delete(struct outside_network* outnet);
  * @param addrlen: length of addr.
  * @param timeout: in seconds from now.
  * @param callback: function to call on error, timeout or reply.
- *    The routine does not return an error, instead it calls the callback,
- *    with an error code if an error happens.
  * @param callback_arg: user argument for callback function.
  * @param rnd: random state for generating ID and port.
+ * @return: false on error for malloc or socket.
  */
-void pending_udp_query(struct outside_network* outnet, ldns_buffer* packet, 
+int pending_udp_query(struct outside_network* outnet, ldns_buffer* packet, 
 	struct sockaddr_storage* addr, socklen_t addrlen, int timeout,
 	comm_point_callback_t* callback, void* callback_arg,
 	struct ub_randstate* rnd);
@@ -225,12 +224,11 @@ void pending_udp_query(struct outside_network* outnet, ldns_buffer* packet,
  *    Timer starts running now. Timer may expire if all buffers are used,
  *    without any query been sent to the server yet.
  * @param callback: function to call on error, timeout or reply.
- *    The routine does not return an error, instead it calls the callback,
- *    with an error code if an error happens.
  * @param callback_arg: user argument for callback function.
  * @param rnd: random state for generating ID.
+ * @return: false on error for malloc or socket.
  */
-void pending_tcp_query(struct outside_network* outnet, ldns_buffer* packet, 
+int pending_tcp_query(struct outside_network* outnet, ldns_buffer* packet, 
 	struct sockaddr_storage* addr, socklen_t addrlen, int timeout,
 	comm_point_callback_t* callback, void* callback_arg,
 	struct ub_randstate* rnd);

@@ -48,6 +48,7 @@ struct config_file;
 struct worker;
 struct listen_port;
 struct slabhash;
+struct module_env;
 
 /**
  * Structure holding worker list.
@@ -76,6 +77,12 @@ struct daemon {
 	struct slabhash* msg_cache;
 	/** the rrset cache, content is struct ub_packed_rrset_key* */
 	struct slabhash* rrset_cache;
+	/** the module environment master value, copied and changed by threads*/
+	struct module_env* env;
+	/** number of modules active, ids from 0 to num-1. */
+	int num_modules;
+	/** the module callbacks, array of num_modules length */
+	struct module_func_block** modfunc;
 };
 
 /**

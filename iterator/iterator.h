@@ -1,5 +1,5 @@
 /*
- * util/module.c - module interface
+ * iterator/iterator.h - iterative resolver DNS query response module
  *
  * Copyright (c) 2007, NLnet Labs. All rights reserved.
  *
@@ -32,39 +32,37 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
+
 /**
  * \file
- * Implementation of module.h.
+ *
+ * This file contains a module that performs recusive iterative DNS query
+ * processing.
  */
 
-#include "config.h"
-#include "util/module.h"
+#ifndef ITERATOR_ITERATOR_H
+#define ITERATOR_ITERATOR_H
+struct module_func_block;
 
-const char* 
-strextstate(enum module_ext_state s)
-{
-	switch(s) {
-	case module_state_initial: return "module_state_initial";
-	case module_wait_reply: return "module_wait_reply";
-	case module_wait_module: return "module_wait_module";
-	case module_wait_subquery: return "module_wait_subquery";
-	case module_error: return "module_error";
-	case module_finished: return "module_finished";
-	}
-	return "bad_extstate_value";
-}
+/**
+ * Global state for the iterator. 
+ */
+struct iter_env {
+	/** address to forward to */
+	struct sockaddr_storage fwd_addr;
+	/** length of fwd_addr */
+	socklen_t fwd_addrlen;
+};
 
-const char* 
-strmodulevent(enum module_ev e)
-{
-	switch(e) {
-	case module_event_new: return "module_event_new";
-	case module_event_pass: return "module_event_pass";
-	case module_event_reply: return "module_event_reply";
-	case module_event_timeout: return "module_event_timeout";
-	case module_event_mod_done: return "module_event_mod_done";
-	case module_event_subq_done: return "module_event_subq_done";
-	case module_event_error: return "module_event_error";
-	}
-	return "bad_event_value";
-}
+/**
+ * Per query state for the iterator module.
+ */
+struct iter_qstate {
+};
+
+/**
+ * Get the iterator function block.
+ */
+struct module_func_block* iter_get_funcblock();
+
+#endif /* ITERATOR_ITERATOR_H */

@@ -122,7 +122,7 @@ waiting_tcp_delete(struct waiting_tcp* w)
 }
 
 /** use next free buffer to service a tcp query */
-static void
+static int
 outnet_tcp_take_into_use(struct waiting_tcp* w, uint8_t* pkt)
 {
 	struct pending_tcp* pend = w->outnet->tcp_free;
@@ -139,9 +139,7 @@ outnet_tcp_take_into_use(struct waiting_tcp* w, uint8_t* pkt)
 	if(s == -1) {
 		log_err("outgoing tcp: socket: %s", strerror(errno));
 		log_addr(&w->addr, w->addrlen);
-		(void)(*w->cb)(NULL, w->cb_arg, NETEVENT_CLOSED, NULL);
-		waiting_tcp_delete(w);
-		return;
+		return 0;
 	}
 	fd_set_nonblock(s);
 	if(connect(s, (struct sockaddr*)&w->addr, w->addrlen) == -1) {
@@ -149,9 +147,7 @@ outnet_tcp_take_into_use(struct waiting_tcp* w, uint8_t* pkt)
 			log_err("outgoing tcp: connect: %s", strerror(errno));
 			log_addr(&w->addr, w->addrlen);
 			close(s);
-			(void)(*w->cb)(NULL, w->cb_arg, NETEVENT_CLOSED, NULL);
-			waiting_tcp_delete(w);
-			return;
+			return 0;
 		}
 	}
 	w->pkt = NULL;
@@ -166,7 +162,7 @@ outnet_tcp_take_into_use(struct waiting_tcp* w, uint8_t* pkt)
 	pend->c->tcp_is_reading = 0;
 	pend->c->tcp_byte_count = 0;
 	comm_point_start_listening(pend->c, s, -1);
-	return;
+	return 1;
 }
 
 /** see if buffers can be used to service TCP queries. */
@@ -179,7 +175,10 @@ use_free_buffer(struct outside_network* outnet)
 		outnet->tcp_wait_first = w->next_waiting;
 		if(outnet->tcp_wait_last == w)
 			outnet->tcp_wait_last = NULL;
-		outnet_tcp_take_into_use(w, w->pkt);
+		if(!outnet_tcp_take_into_use(w, w->pkt)) {
+			(void)(*w->cb)(NULL, w->cb_arg, NETEVENT_CLOSED, NULL);
+			waiting_tcp_delete(w);
+		}
 	}
 }
 
@@ -649,7 +648,7 @@ select_port(struct outside_network* outnet, struct pending* pend,
 }
 
 
-void 
+int 
 pending_udp_query(struct outside_network* outnet, ldns_buffer* packet, 
 	struct sockaddr_storage* addr, socklen_t addrlen, int timeout,
 	comm_point_callback_t* cb, void* cb_arg, struct ub_randstate* rnd)
@@ -660,19 +659,15 @@ pending_udp_query(struct outside_network* outnet, ldns_buffer* packet,
 	/* create pending struct and change ID to be unique */
 	if(!(pend=new_pending(outnet, packet, addr, addrlen, cb, cb_arg, 
 		rnd))) {
-		/* callback user for the error */
-		(void)(*cb)(NULL, cb_arg, NETEVENT_CLOSED, NULL);
-		return;
+		return 0;
 	}
 	select_port(outnet, pend, rnd);
 
 	/* send it over the commlink */
 	if(!comm_point_send_udp_msg(pend->c, packet, (struct sockaddr*)addr, 
 		addrlen)) {
-		/* callback user for the error */
-		(void)(*pend->cb)(pend->c, pend->cb_arg, NETEVENT_CLOSED, NULL);
 		pending_delete(outnet, pend);
-		return;
+		return 0;
 	}
 
 	/* system calls to set timeout after sending UDP to make roundtrip
@@ -680,6 +675,7 @@ pending_udp_query(struct outside_network* outnet, ldns_buffer* packet,
 	tv.tv_sec = timeout;
 	tv.tv_usec = 0;
 	comm_timer_set(pend->timer, &tv);
+	return 1;
 }
 
 /** callback for outgoing TCP timer event */
@@ -714,7 +710,7 @@ outnet_tcptimer(void* arg)
 	use_free_buffer(outnet);
 }
 
-void 
+int 
 pending_tcp_query(struct outside_network* outnet, ldns_buffer* packet, 
 	struct sockaddr_storage* addr, socklen_t addrlen, int timeout,
 	comm_point_callback_t* callback, void* callback_arg,
@@ -728,14 +724,11 @@ pending_tcp_query(struct outside_network* outnet, ldns_buffer* packet,
 	w = (struct waiting_tcp*)malloc(sizeof(struct waiting_tcp) 
 		+ (pend?0:ldns_buffer_limit(packet)));
 	if(!w) {
-		/* callback user for the error */
-		(void)(*callback)(NULL, callback_arg, NETEVENT_CLOSED, NULL);
-		return;
+		return 0;
 	}
 	if(!(w->timer = comm_timer_create(outnet->base, outnet_tcptimer, w))) {
 		free(w);
-		(void)(*callback)(NULL, callback_arg, NETEVENT_CLOSED, NULL);
-		return;
+		return 0;
 	}
 	w->pkt = NULL;
 	w->pkt_len = ldns_buffer_limit(packet);
@@ -752,7 +745,10 @@ pending_tcp_query(struct outside_network* outnet, ldns_buffer* packet,
 	comm_timer_set(w->timer, &tv);
 	if(pend) {
 		/* we have a buffer available right now */
-		outnet_tcp_take_into_use(w, ldns_buffer_begin(packet));
+		if(!outnet_tcp_take_into_use(w, ldns_buffer_begin(packet))) {
+			waiting_tcp_delete(w);
+			return 0;
+		}
 	} else {
 		/* queue up */
 		w->pkt = (uint8_t*)w + sizeof(struct waiting_tcp);
@@ -763,4 +759,5 @@ pending_tcp_query(struct outside_network* outnet, ldns_buffer* packet,
 		else	outnet->tcp_wait_first = w;
 		outnet->tcp_wait_last = w;
 	}
+	return 1;
 }

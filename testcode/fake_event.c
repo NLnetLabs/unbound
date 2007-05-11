@@ -656,7 +656,7 @@ outside_network_delete(struct outside_network* outnet)
 	free(outnet);
 }
 
-void 
+int 
 pending_udp_query(struct outside_network* outnet, ldns_buffer* packet,
 	struct sockaddr_storage* addr, socklen_t addrlen, int timeout,
 	comm_point_callback_t* callback, void* callback_arg,
@@ -701,9 +701,10 @@ pending_udp_query(struct outside_network* outnet, ldns_buffer* packet,
 	/* add to list */
 	pend->next = runtime->pending_list;
 	runtime->pending_list = pend;
+	return 1;
 }
 
-void 
+int 
 pending_tcp_query(struct outside_network* outnet, ldns_buffer* packet,
 	struct sockaddr_storage* addr, socklen_t addrlen, int timeout,
 	comm_point_callback_t* callback, void* callback_arg,
@@ -748,6 +749,7 @@ pending_tcp_query(struct outside_network* outnet, ldns_buffer* packet,
 	/* add to list */
 	pend->next = runtime->pending_list;
 	runtime->pending_list = pend;
+	return 1;
 }
 
 struct listen_port* listening_ports_open(struct config_file* ATTR_UNUSED(cfg))

@@ -50,6 +50,7 @@
 #include "util/data/msgreply.h"
 #include "util/data/msgparse.h"
 #include "daemon/stats.h"
+#include "util/module.h"
 struct listen_dnsport;
 struct outside_network;
 struct config_file;
@@ -71,22 +72,14 @@ enum worker_commands {
 struct work_query {
 	/** next query in freelist */
 	struct work_query* next;
-	/** the worker for this query */
-	struct worker* worker;
+	/** query state */
+	struct module_qstate state;
 	/** the query reply destination, packet buffer and where to send. */
 	struct comm_reply query_reply;
-	/** the query_info structure from the query */
-	struct query_info qinfo;
-	/** hash value of the query qinfo */
-	hashvalue_t query_hash;
-	/** next query in all-list */
-	struct work_query* all_next;
 	/** id of query, in network byteorder. */
 	uint16_t query_id;
-	/** flags uint16 from query */
-	uint16_t query_flags;
-	/** edns data from the query */
-	struct edns_data edns;
+	/** next query in all-list */
+	struct work_query* all_next;
 };
 
 /**
@@ -124,11 +117,6 @@ struct worker {
 	/** list of all working queries */
 	struct work_query* all_queries;
 
-	/** address to forward to */
-	struct sockaddr_storage fwd_addr;
-	/** length of fwd_addr */
-	socklen_t fwd_addrlen;
-
 	/** random() table for this worker. */
 	struct ub_randstate* rndstate;
 	/** do we need to restart (instead of exit) ? */
@@ -139,6 +127,9 @@ struct worker {
 	struct server_stats stats;
 	/** thread scratch region */
 	struct region* scratchpad;
+
+	/** module environment passed to modules, changed for this thread */
+	struct module_env env;
 };
 
 /**
@@ -174,15 +165,6 @@ void worker_work(struct worker* worker);
 void worker_delete(struct worker* worker);
 
 /**
- * Set forwarder
- * @param worker: the worker to modify.
- * @param ip: the server name.
- * @param port: port on server or NULL for default 53.
- * @return: false on error.
- */
-int worker_set_fwd(struct worker* worker, const char* ip, int port);
-
-/**
  * Send a command to a worker. Uses blocking writes.
  * @param worker: worker to send command to.
  * @param buffer: an empty buffer to use.
@@ -197,5 +179,19 @@ void worker_send_cmd(struct worker* worker, ldns_buffer* buffer,
  * @param arg: the worker (main worker) that handles signals.
  */
 void worker_sighandler(int sig, void* arg);
+
+/**
+ * Worker service routine to send udp messages for modules.
+ * @param pkt: packet to send.
+ * @param addr: where to.
+ * @param addrlen: length of addr.
+ * @param timeout: seconds to wait until timeout.
+ * @param q: wich query state to reactivate upon return.
+ * @param use_tcp: true to use TCP, false for UDP.
+ * return: false on failure (memory or socket related). no query was
+ *      sent.
+ */
+int worker_send_query(ldns_buffer* pkt, struct sockaddr_storage* addr,
+	socklen_t addrlen, int timeout, struct module_qstate* q, int use_tcp);
 
 #endif /* DAEMON_WORKER_H */

@@ -59,18 +59,6 @@
 #include <netdb.h>
 #include <signal.h>
 
-/** size of ID+FLAGS in a DNS message */
-#define DNS_ID_AND_FLAGS 4
-/** timeout in seconds for UDP queries to auth servers. TODO: proper rtt */
-#define UDP_QUERY_TIMEOUT 4
-/** timeout in seconds for TCP queries to auth servers. TODO: proper rtt */
-#define TCP_QUERY_TIMEOUT 30 
-/** Advertised version of EDNS capabilities */
-#define EDNS_ADVERTISED_VERSION 	0
-/** Advertised size of EDNS capabilities */
-#define EDNS_ADVERTISED_SIZE 	4096
-
-
 void 
 worker_send_cmd(struct worker* worker, ldns_buffer* buffer,
 	enum worker_commands cmd)
@@ -91,14 +79,15 @@ worker_send_cmd(struct worker* worker, ldns_buffer* buffer,
 static void
 req_release(struct work_query* w)
 {
-	if(w->worker->num_requests == w->worker->request_size)  {
+	struct worker* worker = w->state.env->worker;
+	if(worker->num_requests == worker->request_size)  {
 		/* no longer at max, start accepting again. */
-		listen_resume(w->worker->front);
+		listen_resume(worker->front);
 	}
-	log_assert(w->worker->num_requests >= 1);
-	w->worker->num_requests --;
-	w->next = w->worker->free_queries;
-	w->worker->free_queries = w;
+	log_assert(worker->num_requests >= 1);
+	worker->num_requests --;
+	w->next = worker->free_queries;
+	worker->free_queries = w;
 }
 
 /** create error and fill into buffer */
@@ -131,178 +120,78 @@ replyerror_fillbuf(int r, struct comm_reply* repinfo, uint16_t id,
 static void 
 replyerror(int r, struct work_query* w)
 {
-	w->edns.edns_version = EDNS_ADVERTISED_VERSION;
-	w->edns.udp_size = EDNS_ADVERTISED_SIZE;
-	w->edns.ext_rcode = 0;
-	w->edns.bits &= EDNS_DO;
-	replyerror_fillbuf(r, &w->query_reply, w->query_id, w->query_flags,
-		&w->qinfo);
-	attach_edns_record(w->query_reply.c->buffer, &w->edns);
+	w->state.edns.edns_version = EDNS_ADVERTISED_VERSION;
+	w->state.edns.udp_size = EDNS_ADVERTISED_SIZE;
+	w->state.edns.ext_rcode = 0;
+	w->state.edns.bits &= EDNS_DO;
+	replyerror_fillbuf(r, &w->query_reply, w->query_id, 
+		w->state.query_flags, &w->state.qinfo);
+	attach_edns_record(w->query_reply.c->buffer, &w->state.edns);
 	comm_point_send_reply(&w->query_reply);
 	req_release(w);
-	query_info_clear(&w->qinfo);
+	query_info_clear(&w->state.qinfo);
 }
 
-/** see if rrset needs to be updated in the cache */
-static int
-need_to_update_rrset(struct packed_rrset_data* newd, 
-	struct packed_rrset_data* cached)
+/** process incoming request */
+static void 
+worker_process_query(struct worker* worker, struct work_query* w, 
+	enum module_ev event) 
 {
-	/*	o if current RRset is more trustworthy - insert it */
-	if( newd->trust > cached->trust )
-		return 1;
-	/*	o same trust, but different in data - insert it */
-	if( newd->trust == cached->trust &&
-		!rrsetdata_equal(newd, cached))
-		return 1;
-	/*	o see if TTL is better than TTL in cache. */
-	/*	  if so, see if rrset+rdata is the same */
-	/*	  if so, update TTL in cache, even if trust is worse. */
-	if( newd->ttl > cached->ttl &&
-		rrsetdata_equal(newd, cached))
-		return 1;
-	return 0;
-}
-
-/** store rrsets in the rrset cache. */
-static void
-worker_store_rrsets(struct worker* worker, struct reply_info* rep)
-{
-	struct lruhash_entry* e;
-	size_t i;
-	/* see if rrset already exists in cache, if not insert it. */
-	/* if it does exist: check to insert it */
-	for(i=0; i<rep->rrset_count; i++) {
-		rep->ref[i].key = rep->rrsets[i];
-		rep->ref[i].id = rep->rrsets[i]->id;
-		/* looks up item with a readlock - no editing! */
-		if((e=slabhash_lookup(worker->daemon->rrset_cache,
-			rep->rrsets[i]->entry.hash, rep->rrsets[i]->entry.key,
-			0)) != 0) {
-			struct packed_rrset_data* data = 
-				(struct packed_rrset_data*)e->data;
-			struct packed_rrset_data* rd = 
-				(struct packed_rrset_data*)
-				rep->rrsets[i]->entry.data;
-			rep->ref[i].key = (struct ub_packed_rrset_key*)e->key;
-			rep->ref[i].id = rep->rrsets[i]->id;
-			/* found in cache, do checks above */
-			if(!need_to_update_rrset(rd, data)) {
-				lock_rw_unlock(&e->lock);
-				ub_packed_rrset_parsedelete(rep->rrsets[i],
-					&worker->alloc);
-				rep->rrsets[i] = rep->ref[i].key;
-				continue; /* use cached item instead */
-			}
-			if(rd->trust < data->trust)
-				rd->trust = data->trust;
-			lock_rw_unlock(&e->lock);
-			/* small gap here, where entry is not locked.
-			 * possibly entry is updated with something else.
-			 * this is just too bad, its cache anyway. */
-			/* use insert to update entry to manage lruhash
-			 * cache size values nicely. */
-		}
-		slabhash_insert(worker->daemon->rrset_cache, 
-			rep->rrsets[i]->entry.hash, &rep->rrsets[i]->entry,
-			rep->rrsets[i]->entry.data, &worker->alloc);
-		if(e) rep->rrsets[i] = rep->ref[i].key;
+	int i;
+	if(event == module_event_new) {
+		w->state.curmod = 0;
+		for(i=0; i<worker->daemon->num_modules; i++)
+			w->state.ext_state[i] = module_state_initial;
 	}
+	/* allow current module to run */
+	(*worker->daemon->modfunc[w->state.curmod]->operate)(&w->state, event,
+		w->state.curmod);
+	/* TODO examine results, start further modules, etc.
+	 * assume it went to sleep
+	 */
+	region_free_all(worker->scratchpad);
+	if(w->state.ext_state[w->state.curmod] == module_error) {
+		region_free_all(w->state.region);
+		replyerror(LDNS_RCODE_SERVFAIL, w);
+		return;
+	}
+	if(w->state.ext_state[w->state.curmod] == module_finished) {
+		memcpy(ldns_buffer_begin(w->query_reply.c->buffer),
+			&w->query_id, sizeof(w->query_id));
+		comm_point_send_reply(&w->query_reply);
+		region_free_all(w->state.region);
+		req_release(w);
+		query_info_clear(&w->state.qinfo);
+		return;
+	}
+	/* suspend, waits for wakeup callback */
 }
 
 /** process incoming replies from the network */
 static int 
 worker_handle_reply(struct comm_point* c, void* arg, int error, 
-	struct comm_reply* ATTR_UNUSED(reply_info))
+	struct comm_reply* reply_info)
 {
 	struct work_query* w = (struct work_query*)arg;
-	struct query_info qinf;
-	struct reply_info* rep;
-	struct msgreply_entry* e;
-	struct edns_data svr_edns; /* unused server edns advertisement */
-	uint16_t us;
-	int r;
+	struct worker* worker = w->state.env->worker;
 
-	verbose(VERB_DETAIL, "reply to query with stored ID %d", 
-		ntohs(w->query_id)); /* byteswapped so same as dig prints */
+	w->state.reply = reply_info;
 	if(error != 0) {
-		replyerror(LDNS_RCODE_SERVFAIL, w);
+		worker_process_query(worker, w, module_event_timeout);
 		return 0;
 	}
 	/* sanity check. */
-	if(!LDNS_QR_WIRE(ldns_buffer_begin(c->buffer)))
-		return 0; /* not a reply. */
-	if(LDNS_OPCODE_WIRE(ldns_buffer_begin(c->buffer)) != LDNS_PACKET_QUERY)
-		return 0; /* not a reply to a query. */
-	if(LDNS_QDCOUNT(ldns_buffer_begin(c->buffer)) > 1)
-		return 0; /* too much in the query section */
-	/* see if it is truncated */
-	if(LDNS_TC_WIRE(ldns_buffer_begin(c->buffer)) && c->type == comm_udp) {
-		log_info("TC: truncated. retry in TCP mode.");
-		qinfo_query_encode(w->worker->back->udp_buff, &w->qinfo);
-		pending_tcp_query(w->worker->back, w->worker->back->udp_buff, 
-			&w->worker->fwd_addr, w->worker->fwd_addrlen, 
-			TCP_QUERY_TIMEOUT, worker_handle_reply, w, 
-			w->worker->rndstate);
+	if(!LDNS_QR_WIRE(ldns_buffer_begin(c->buffer))
+		|| LDNS_OPCODE_WIRE(ldns_buffer_begin(c->buffer)) != 
+			LDNS_PACKET_QUERY
+		|| LDNS_QDCOUNT(ldns_buffer_begin(c->buffer)) > 1) {
+		/* error becomes timeout for the module as if this reply
+		 * never arrived. */
+		worker_process_query(worker, w, module_event_timeout);
 		return 0;
 	}
-	/* woohoo a reply! */
-	if((r=reply_info_parse(c->buffer, &w->worker->alloc, &qinf, &rep,
-		w->worker->scratchpad, &svr_edns))!=0) {
-		if(r == LDNS_RCODE_SERVFAIL)
-			log_err("reply_info_parse: out of memory");
-		/* formerr on my parse gives servfail to my client */
-		replyerror(LDNS_RCODE_SERVFAIL, w);
-		region_free_all(w->worker->scratchpad);
-		return 0;
-	}
-	us = w->edns.udp_size;
-	w->edns.edns_version = EDNS_ADVERTISED_VERSION;
-	w->edns.udp_size = EDNS_ADVERTISED_SIZE;
-	w->edns.ext_rcode = 0;
-	w->edns.bits &= EDNS_DO;
-	if(!reply_info_answer_encode(&qinf, rep, w->query_id, w->query_flags,
-		w->query_reply.c->buffer, 0, 0, w->worker->scratchpad, us, 
-		&w->edns)) {
-		replyerror(LDNS_RCODE_SERVFAIL, w);
-		query_info_clear(&qinf);
-		reply_info_parsedelete(rep, &w->worker->alloc);
-		region_free_all(w->worker->scratchpad);
-		return 0;
-	}
-	comm_point_send_reply(&w->query_reply);
-	region_free_all(w->worker->scratchpad);
-	req_release(w);
-	query_info_clear(&w->qinfo);
-	if(rep->ttl == 0) {
-		log_info("TTL 0: dropped");
-		query_info_clear(&qinf);
-		reply_info_parsedelete(rep, &w->worker->alloc);
-		return 0;
-	}
-	reply_info_set_ttls(rep, time(0));
-	worker_store_rrsets(w->worker, rep);
-	reply_info_sortref(rep);
-	/* store msg in the cache */
-	if(!(e = query_info_entrysetup(&qinf, rep, w->query_hash))) {
-		query_info_clear(&qinf);
-		reply_info_parsedelete(rep, &w->worker->alloc);
-		return 0;
-	}
-	slabhash_insert(w->worker->daemon->msg_cache, w->query_hash, 
-		&e->entry, rep, &w->worker->alloc);
+	worker_process_query(worker, w, module_event_reply);
 	return 0;
-}
-
-/** process incoming request */
-static void 
-worker_process_query(struct worker* worker, struct work_query* w) 
-{
-	/* query the forwarding address */
-	verbose(VERB_DETAIL, "process_query ID %d", ntohs(w->query_id));
-	pending_udp_query(worker->back, w->query_reply.c->buffer, 
-		&worker->fwd_addr, worker->fwd_addrlen, UDP_QUERY_TIMEOUT,
-		worker_handle_reply, w, worker->rndstate);
 }
 
 /** check request sanity. Returns error code, 0 OK, or -1 discard. 
@@ -515,7 +404,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 		query_info_clear(&qinfo);
 		return 0;
 	}
-	w->edns = edns;
+	w->state.edns = edns;
 	worker->free_queries = w->next;
 	worker->num_requests ++;
 	log_assert(worker->num_requests <= worker->request_size);
@@ -526,14 +415,15 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 
 	/* init request */
 	w->next = NULL;
-	w->query_hash = h;
+	w->state.query_hash = h;
 	memcpy(&w->query_reply, repinfo, sizeof(struct comm_reply));
-	memcpy(&w->qinfo, &qinfo, sizeof(struct query_info));
+	memcpy(&w->state.qinfo, &qinfo, sizeof(struct query_info));
 	memcpy(&w->query_id, ldns_buffer_begin(c->buffer), sizeof(uint16_t));
-	w->query_flags = ldns_buffer_read_u16_at(c->buffer, 2);
+	w->state.query_flags = ldns_buffer_read_u16_at(c->buffer, 2);
 
 	/* answer it */
-	worker_process_query(worker, w);
+	w->state.buf = c->buffer;
+	worker_process_query(worker, w, module_event_new);
 	return 0;
 }
 
@@ -610,7 +500,16 @@ reqs_init(struct worker* worker)
 		struct work_query* q = (struct work_query*)calloc(1,
 			sizeof(struct work_query));
 		if(!q) return 0;
-		q->worker = worker;
+		q->state.buf = worker->front->udp_buff;
+		q->state.scratch = worker->scratchpad;
+		q->state.region = region_create_custom(malloc, free, 1024, 
+			64, 16, 0);
+		if(!q->state.region) {
+			free(q);
+			return 0;
+		}
+		q->state.env = &worker->env;
+		q->state.work_info = q;
 		q->next = worker->free_queries;
 		worker->free_queries = q;
 		q->all_next = worker->all_queries;
@@ -627,9 +526,10 @@ reqs_delete(struct worker* worker)
 	struct work_query* n;
 	while(q) {
 		n = q->all_next;
-		log_assert(q->worker == worker);
+		log_assert(q->state.env->worker == worker);
 		/* comm_reply closed in outside_network_delete */
-		query_info_clear(&q->qinfo);
+		query_info_clear(&q->state.qinfo);
+		region_destroy(q->state.region);
 		free(q);
 		q = n;
 	}
@@ -710,24 +610,25 @@ worker_init(struct worker* worker, struct config_file *cfg,
 			return 0;
 		}
 	}
+	worker->scratchpad = region_create_custom(malloc, free, 
+		65536, 8192, 32, 1);
+	if(!worker->scratchpad) {
+		log_err("malloc failure");
+		worker_delete(worker);
+		return 0;
+	}
 	worker->request_size = cfg->num_queries_per_thread;
 	if(!reqs_init(worker)) {
 		worker_delete(worker);
 		return 0;
 	}
 
-	/* set forwarder address */
-	if(cfg->fwd_address && cfg->fwd_address[0]) {
-		if(!worker_set_fwd(worker, cfg->fwd_address, cfg->fwd_port)) {
-			worker_delete(worker);
-			fatal_exit("could not set forwarder address");
-		}
-	}
 	server_stats_init(&worker->stats);
 	alloc_init(&worker->alloc, &worker->daemon->superalloc, 
 		worker->thread_num);
-	worker->scratchpad = region_create_custom(malloc, free, 
-		65536, 8192, 32, 1);
+	worker->env = *worker->daemon->env;
+	worker->env.worker = worker;
+	worker->env.alloc = &worker->alloc;
 	return 1;
 }
 
@@ -765,34 +666,15 @@ worker_delete(struct worker* worker)
 }
 
 int 
-worker_set_fwd(struct worker* worker, const char* ip, int port)
+worker_send_query(ldns_buffer* pkt, struct sockaddr_storage* addr,
+        socklen_t addrlen, int timeout, struct module_qstate* q, int use_tcp)
 {
-	uint16_t p;
-	log_assert(worker && ip);
-	p = (uint16_t) port;
-	if(str_is_ip6(ip)) {
-		struct sockaddr_in6* sa = 
-			(struct sockaddr_in6*)&worker->fwd_addr;
-		worker->fwd_addrlen = (socklen_t)sizeof(struct sockaddr_in6);
-		memset(sa, 0, worker->fwd_addrlen);
-		sa->sin6_family = AF_INET6;
-		sa->sin6_port = (in_port_t)htons(p);
-		if(inet_pton((int)sa->sin6_family, ip, &sa->sin6_addr) <= 0) {
-			log_err("Bad ip6 address %s", ip);
-			return 0;
-		}
-	} else { /* ip4 */
-		struct sockaddr_in* sa = 
-			(struct sockaddr_in*)&worker->fwd_addr;
-		worker->fwd_addrlen = (socklen_t)sizeof(struct sockaddr_in);
-		memset(sa, 0, worker->fwd_addrlen);
-		sa->sin_family = AF_INET;
-		sa->sin_port = (in_port_t)htons(p);
-		if(inet_pton((int)sa->sin_family, ip, &sa->sin_addr) <= 0) {
-			log_err("Bad ip4 address %s", ip);
-			return 0;
-		}
+	struct worker* worker = q->env->worker;
+	if(use_tcp) {
+		return pending_tcp_query(worker->back, pkt, addr, addrlen, 
+			timeout, worker_handle_reply, q->work_info, 
+			worker->rndstate);
 	}
-	verbose(VERB_ALGO, "fwd queries to: %s %d", ip, p);
-	return 1;
+	return pending_udp_query(worker->back, pkt, addr, addrlen, timeout,
+		worker_handle_reply, q->work_info, worker->rndstate);
 }

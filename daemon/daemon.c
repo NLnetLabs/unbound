@@ -50,6 +50,8 @@
 #include "util/data/msgreply.h"
 #include "util/storage/slabhash.h"
 #include "services/listen_dnsport.h"
+#include "util/module.h"
+#include "iterator/iterator.h"
 #include <signal.h>
 
 /** How many quit requests happened. */
@@ -136,6 +138,11 @@ daemon_init()
 		return NULL;
 	}
 	alloc_init(&daemon->superalloc, NULL, 0);
+	if(!(daemon->env = (struct module_env*)calloc(1, 
+		sizeof(*daemon->env)))) {
+		daemon_delete(daemon);
+		return NULL;
+	}
 	return daemon;	
 }
 
@@ -150,6 +157,37 @@ daemon_open_shared_ports(struct daemon* daemon)
 		return 0;
 	daemon->listening_port = daemon->cfg->port;
 	return 1;
+}
+
+/**
+ * Setup modules. Assigns ids and calls module_init.
+ * @param daemon: the daemon
+ */
+static void daemon_setup_modules(struct daemon* daemon)
+{
+	int i;
+	/* fixed setup of the modules */
+	daemon->num_modules = 1;
+	daemon->modfunc = (struct module_func_block**)calloc((size_t)
+		daemon->num_modules, sizeof(struct module_func_block*));
+	if(!daemon->modfunc) {
+		fatal_exit("malloc failure allocating function callbacks");
+	}
+	daemon->modfunc[0] = iter_get_funcblock();
+	daemon->env->cfg = daemon->cfg;
+	daemon->env->msg_cache = daemon->msg_cache;
+	daemon->env->rrset_cache = daemon->rrset_cache;
+	daemon->env->alloc = &daemon->superalloc;
+	daemon->env->worker = NULL;
+	daemon->env->send_query = &worker_send_query;
+	for(i=0; i<daemon->num_modules; i++) {
+		log_info("init module %d: %s", i, daemon->modfunc[i]->name);
+		if(!(*daemon->modfunc[i]->init)(daemon->env, i)) {
+			fatal_exit("module init for module %s failed",
+				daemon->modfunc[i]->name);
+		}
+	}
+
 }
 
 /**
@@ -264,10 +302,30 @@ daemon_stop_others(struct daemon* daemon)
 	}
 }
 
+/**
+ * Desetup the modules, deinit, delete.
+ * @param daemon: the daemon.
+ */
+static void
+daemon_desetup_modules(struct daemon* daemon)
+{
+	int i;
+	for(i=0; i<daemon->num_modules; i++) {
+		(*daemon->modfunc[i]->deinit)(daemon->env, i);
+	}
+	daemon->num_modules = 0;
+	free(daemon->modfunc);
+	daemon->modfunc = 0;
+}
+
 void 
 daemon_fork(struct daemon* daemon)
 {
 	log_assert(daemon);
+
+	/* setup modules */
+	daemon_setup_modules(daemon);
+
 	/* first create all the worker structures, so we can pass
 	 * them to the newly created threads. 
 	 */
@@ -292,6 +350,9 @@ daemon_fork(struct daemon* daemon)
 
 	/* we exited! a signal happened! Stop other threads */
 	daemon_stop_others(daemon);
+
+	/* de-setup modules */
+	daemon_desetup_modules(daemon);
 
 	if(daemon->workers[0]->need_to_restart)
 		daemon->need_to_exit = 0;
@@ -326,6 +387,7 @@ daemon_delete(struct daemon* daemon)
 	alloc_clear(&daemon->superalloc);
 	free(daemon->cwd);
 	free(daemon->pidfile);
+	free(daemon->env);
 	free(daemon);
 	checklock_stop();
 }

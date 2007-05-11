@@ -1,3 +1,6 @@
+11 May 2007: Wouter
+	- iterator/iterator.c module.
+
 10 May 2007: Wouter
 	- created release-0.3 svn tag.
 	- util/module.h
