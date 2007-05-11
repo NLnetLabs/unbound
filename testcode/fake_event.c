@@ -262,6 +262,7 @@ answer_callback_from_entry(struct replay_runtime* runtime,
         struct entry* entry, struct fake_pending* pend)
 {
 	struct comm_point c;
+	struct comm_reply repinfo;
 	memset(&c, 0, sizeof(c));
 	c.fd = -1;
 	c.buffer = ldns_buffer_new(runtime->bufsize);
@@ -269,7 +270,10 @@ answer_callback_from_entry(struct replay_runtime* runtime,
 	if(pend->transport == transport_tcp)
 		c.type = comm_tcp;
 	fill_buffer_with_reply(c.buffer, entry, pend->pkt);
-	if((*pend->callback)(&c, pend->cb_arg, NETEVENT_NOERROR, NULL)) {
+	repinfo.c = &c;
+	repinfo.addrlen = pend->addrlen;
+	memcpy(&repinfo.addr, &pend->addr, pend->addrlen);
+	if((*pend->callback)(&c, pend->cb_arg, NETEVENT_NOERROR, &repinfo)) {
 		fatal_exit("testbound: unexpected: callback returned 1");
 	}
 	ldns_buffer_free(c.buffer);
@@ -347,6 +351,7 @@ fake_pending_callback(struct replay_runtime* runtime,
 	struct replay_moment* todo, int error)
 {
 	struct fake_pending* p = runtime->pending_list;
+	struct comm_reply repinfo;
 	struct comm_point c;
 	memset(&c, 0, sizeof(c));
 	if(!p) fatal_exit("No pending queries.");
@@ -357,8 +362,11 @@ fake_pending_callback(struct replay_runtime* runtime,
 		c.type = comm_tcp;
 	if(todo->evt_type == repevt_back_reply && todo->match) {
 		fill_buffer_with_reply(c.buffer, todo->match, p->pkt);
-	}	
-	if((*p->callback)(&c, p->cb_arg, error, NULL)) {
+	}
+	repinfo.c = &c;
+	repinfo.addrlen = p->addrlen;
+	memcpy(&repinfo.addr, &p->addr, p->addrlen);
+	if((*p->callback)(&c, p->cb_arg, error, &repinfo)) {
 		fatal_exit("unexpected: pending callback returned 1");
 	}
 	/* delete the pending item. */

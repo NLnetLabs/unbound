@@ -234,12 +234,14 @@ iter_operate(struct module_qstate* qstate, enum module_ev event, int id)
 	}
 	if(event == module_event_timeout) {
 		/* try TCP if UDP fails */
+		/* TODO: disabled now, make better retry with EDNS.
 		if(qstate->reply->c->type == comm_udp) {
 			qinfo_query_encode(qstate->buf, &qstate->qinfo);
 			(*env->send_query)(qstate->buf, &ie->fwd_addr, 
 				ie->fwd_addrlen, TCP_QUERY_TIMEOUT, qstate, 1);
 			return;
 		}
+		*/
 		qstate->ext_state[id] = module_error;
 		return;
 	}

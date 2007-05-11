@@ -178,6 +178,7 @@ worker_handle_reply(struct comm_point* c, void* arg, int error,
 	w->state.reply = reply_info;
 	if(error != 0) {
 		worker_process_query(worker, w, module_event_timeout);
+		w->state.reply = NULL;
 		return 0;
 	}
 	/* sanity check. */
@@ -188,9 +189,11 @@ worker_handle_reply(struct comm_point* c, void* arg, int error,
 		/* error becomes timeout for the module as if this reply
 		 * never arrived. */
 		worker_process_query(worker, w, module_event_timeout);
+		w->state.reply = NULL;
 		return 0;
 	}
 	worker_process_query(worker, w, module_event_reply);
+	w->state.reply = NULL;
 	return 0;
 }
 

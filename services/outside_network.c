@@ -255,7 +255,7 @@ outnet_udp_cb(struct comm_point* c, void* arg, int error,
 	}
 	comm_timer_disable(p->timer);
 	verbose(VERB_ALGO, "outnet handle udp reply");
-	(void)(*p->cb)(p->c, p->cb_arg, NETEVENT_NOERROR, NULL);
+	(void)(*p->cb)(p->c, p->cb_arg, NETEVENT_NOERROR, reply_info);
 	pending_delete(outnet, p);
 	return 0;
 }
