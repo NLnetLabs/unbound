@@ -66,13 +66,13 @@ match_list(ldns_rr_list* q, ldns_rr_list *p)
 	{
 		if(ldns_rr_compare(ldns_rr_list_rr(q, i),
 			ldns_rr_list_rr(p, i)) != 0) {
-			verbose(3, "rr %d different", i);
+			verbose(3, "rr %u different", (unsigned)i);
 			return 0;
 		}
 		/* and check the ttl */
 		if(ldns_rr_ttl(ldns_rr_list_rr(q, i)) !=
 			ldns_rr_ttl(ldns_rr_list_rr(p, i))) {
-			verbose(3, "rr %d ttl different", i);
+			verbose(3, "rr %u ttl different", (unsigned)i);
 			return 0;
 		}
 
@@ -180,11 +180,11 @@ test_buffers(ldns_buffer* pkt, ldns_buffer* out)
 			if(lim-count < sz) rem = lim-count;
 			if(memcmp(ldns_buffer_at(pkt, count), 
 				ldns_buffer_at(out, count), rem) == 0) {
-				log_info("same %d %d", count, rem);
+				log_info("same %d %d", (int)count, (int)rem);
 				log_hex("same: ", ldns_buffer_at(pkt, count),
 					rem);
 			} else {
-				log_info("diff %d %d", count, rem);
+				log_info("diff %d %d", (int)count, (int)rem);
 				log_hex("difp: ", ldns_buffer_at(pkt, count),
 					rem);
 				log_hex("difo: ", ldns_buffer_at(out, count),
