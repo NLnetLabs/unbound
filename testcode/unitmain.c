@@ -119,6 +119,30 @@ net_test()
 	unit_assert( !is_pow2(259) );
 }
 
+#include "util/rtt.h"
+/** test RTT code */
+static void
+rtt_test()
+{
+	int i;
+	struct rtt_info r;
+	rtt_init(&r);
+	/* initial value sensible */
+	unit_assert( rtt_timeout(&r) == 3000 );
+	rtt_lost(&r);
+	unit_assert( rtt_timeout(&r) == 6000 );
+	rtt_lost(&r);
+	unit_assert( rtt_timeout(&r) == 12000 );
+	rtt_update(&r, 4000);
+	unit_assert( rtt_timeout(&r) >= 5000 );
+	rtt_lost(&r);
+	for(i=0; i<100; i++) {
+		rtt_lost(&r); 
+		unit_assert( rtt_timeout(&r) > RTT_MIN_TIMEOUT-1);
+		unit_assert( rtt_timeout(&r) < RTT_MAX_TIMEOUT+1);
+	}
+}
+
 /**
  * Main unit test program. Setup, teardown and report errors.
  * @param argc: arg count.
@@ -137,6 +161,7 @@ main(int argc, char* argv[])
 	checklock_start();
 	net_test();
 	dname_test();
+	rtt_test();
 	alloc_test();
 	lruhash_test();
 	slabhash_test();

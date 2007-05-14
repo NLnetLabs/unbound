@@ -756,7 +756,8 @@ thread_debug_info(struct thr_check* thr)
 		(thr->arg?*(int*)thr->arg:0));
 	log_info("thread num is %d", thr->num);
 	log_info("locks created %d", thr->locks_created);
-	log_info("FILE for lockinfo: %x. flushing.", (int)thr->order_info);
+	log_info("open file for lockinfo: %s", 
+		thr->order_info?"yes, flushing":"no");
 	fflush(thr->order_info);
 	w = thr->waiting;
 	f = thr->holding_first;
