@@ -2,6 +2,7 @@
 	- Port to OS/X and Dec Alpha. Printf format and alignment fixes.
 	- extensive lock debug report on join timeout.
 	- proper RTT calculation, in utility code.
+	- setup of services/cache/infra, host cache.
 
 11 May 2007: Wouter
 	- iterator/iterator.c module.
