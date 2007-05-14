@@ -54,7 +54,7 @@
 /** How long to wait before lock attempt is a failure. */
 #define CHECK_LOCK_TIMEOUT 30 /* seconds */
 /** How long to wait before join attempt is a failure. */
-#define CHECK_JOIN_TIMEOUT 240 /* seconds */
+#define CHECK_JOIN_TIMEOUT 120 /* seconds */
 
 /** if key has been created */
 static int key_created = 0;
@@ -699,9 +699,98 @@ checklock_thrcreate(pthread_t* id, void* (*func)(void*), void* arg)
 	LOCKRET(pthread_create(id, NULL, checklock_main, thr));
 }
 
+/** count number of thread infos */
+static int
+count_thread_infos()
+{
+	int cnt = 0;
+	int i;
+	for(i=0; i<THRDEBUG_MAX_THREADS; i++)
+		if(thread_infos[i])
+			cnt++;
+	return cnt;
+}
+
+/** print lots of info on a lock */
+static void
+lock_debug_info(struct checked_lock* lock)
+{
+	if(!lock) return;
+	log_info("+++ Lock %x, %d %d create %s %s %d", (int)lock, 
+		lock->create_thread, lock->create_instance, 
+		lock->create_func, lock->create_file, lock->create_line);
+	log_info("lock type: %s",
+		(lock->type==check_lock_mutex)?"mutex": (
+		(lock->type==check_lock_spinlock)?"spinlock": (
+		(lock->type==check_lock_rwlock)?"rwlock": "badtype")));
+	log_info("lock contention %u, history:%u, hold:%d, wait:%d", 
+		(unsigned)lock->contention_count, (unsigned)lock->history_count,
+		lock->hold_count, lock->wait_count);
+	log_info("last touch %s %s %d", lock->holder_func, lock->holder_file,
+		lock->holder_line);
+	log_info("holder thread %d, writeholder thread %d",
+		lock->holder?lock->holder->num:-1,
+		lock->writeholder?lock->writeholder->num:-1);
+}
+
+/** print debug locks held by a thread */
+static void
+held_debug_info(struct thr_check* thr, struct checked_lock* lock)
+{
+	if(!lock) return;
+	lock_debug_info(lock);
+	held_debug_info(thr, lock->next_held_lock[thr->num]);
+}
+
+/** print debug info for a thread */
+static void
+thread_debug_info(struct thr_check* thr)
+{
+	struct checked_lock* w = NULL;
+	struct checked_lock* f = NULL;
+	struct checked_lock* l = NULL;
+	if(!thr) return;
+	log_info("pthread id is %x", (int)thr->id);
+	log_info("thread func is %x", (int)thr->func);
+	log_info("thread arg is %x (%d)", (int)thr->arg, 
+		(thr->arg?*(int*)thr->arg:0));
+	log_info("thread num is %d", thr->num);
+	log_info("locks created %d", thr->locks_created);
+	log_info("FILE for lockinfo: %x. flushing.", (int)thr->order_info);
+	fflush(thr->order_info);
+	w = thr->waiting;
+	f = thr->holding_first;
+	l = thr->holding_last;
+	log_info("thread waiting for a lock: %s %x", w?"yes":"no", (int)w);
+	lock_debug_info(w);
+	log_info("thread holding first: %s, last: %s", f?"yes":"no", 
+		l?"yes":"no");
+	held_debug_info(thr, f);
+}
+
+/** print all possible debug info on the state of the system */
+static void
+total_debug_info()
+{
+	int i;
+	log_info("checklocks: supervising %d threads.",
+		count_thread_infos());
+	if(!key_created) {
+		log_info("No thread debug key created yet");
+	}
+	for(i=0; i<THRDEBUG_MAX_THREADS; i++) {
+		if(thread_infos[i]) {
+			log_info("*** Thread %d information: ***", i);
+			thread_debug_info(thread_infos[i]);
+		}
+	}
+}
+
 /** signal handler for join timeout, Exits. */
 static RETSIGTYPE joinalarm(int ATTR_UNUSED(sig))
 {
+	log_err("join thread timeout. hangup or deadlock. Info follows.");
+	total_debug_info();
 	fatal_exit("join thread timeout. hangup or deadlock.");
 }
 

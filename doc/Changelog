@@ -1,5 +1,6 @@
 14 May 2007: Wouter
 	- Port to OS/X and Dec Alpha. Printf format and alignment fixes.
+	- extensive lock debug report on join timeout.
 
 11 May 2007: Wouter
 	- iterator/iterator.c module.
