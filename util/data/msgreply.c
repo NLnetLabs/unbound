@@ -200,12 +200,12 @@ parse_rr_copy(ldns_buffer* pkt, struct rrset_parse* pset,
 	data->count = pset->rr_count;
 	data->rrsig_count = pset->rrsig_count;
 	data->trust = rrset_trust_none;
-	/* layout: struct - rr_len - rr_data - rdata - rrsig */
+	/* layout: struct - rr_len - rr_data - rr_ttl - rdata - rrsig */
 	data->rr_len = (size_t*)((uint8_t*)data + 
 		sizeof(struct packed_rrset_data));
-	data->rr_ttl = (uint32_t*)&(data->rr_len[total]);
-	data->rr_data = (uint8_t**)&(data->rr_ttl[total]);
-	nextrdata = (uint8_t*)&(data->rr_data[total]);
+	data->rr_data = (uint8_t**)&(data->rr_len[total]);
+	data->rr_ttl = (uint32_t*)&(data->rr_data[total]);
+	nextrdata = (uint8_t*)&(data->rr_ttl[total]);
 	for(i=0; i<data->count; i++) {
 		data->rr_len[i] = rr->size;
 		data->rr_data[i] = nextrdata;
