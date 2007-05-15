@@ -109,3 +109,15 @@ write_iov_buffer(ldns_buffer* buffer, struct iovec* iov, size_t iovlen)
 	}
 	ldns_buffer_flip(buffer);
 }
+
+void* 
+memdup(void* data, size_t len)
+{
+	void* d;
+	if(!data) return NULL;
+	if(len == 0) return NULL;
+	d = malloc(len);
+	if(!d) return NULL;
+	memcpy(d, data, len);
+	return d;
+}

@@ -70,8 +70,6 @@ struct infra_host_data {
 	struct lruhash* lameness;
 	/** edns version that the host supports, -1 means no EDNS */
 	int edns_version;
-	/** edns message size that the host advertizes, 512 by default. */
-	uint16_t edns_size;
 };
 
 /**
@@ -101,6 +99,12 @@ struct infra_lame_data {
 #define HOST_LAME_TTL 900
 /** default size of the host cache, number of entries */
 #define HOST_DEFAULT_SIZE 1000
+/** infra host cache default hash lookup size */
+#define INFRA_HOST_STARTSIZE 32
+/** infra lame cache default hash lookup size */
+#define INFRA_LAME_STARTSIZE 2
+/** infra lame cache max memory per host, for this many entries */
+#define INFRA_LAME_MAXMEM 1000
 
 /**
  * Create infra cache.
@@ -122,15 +126,16 @@ void infra_delete(struct slabhash* infra);
  * @param addrlen: length of addr.
  * @param wr: set to true to get a writelock on the entry.
  * @param timenow: what time it is now.
+ * @param key: the key for the host, returned so caller can unlock when done.
  * @return: host data or NULL if not found or expired.
  */
-struct infra_data* infra_lookup_host(struct slabhash* infra, 
+struct infra_host_data* infra_lookup_host(struct slabhash* infra, 
 	struct sockaddr_storage* addr, socklen_t addrlen, int wr, 
-	time_t timenow);
+	time_t timenow, struct infra_host_key** key);
 
 /**
  * Find host information to send a packet. Creates new entry if not found.
- * Lameness is empty. EDNS is 0, size is 512, and rtt is returned for 
+ * Lameness is empty. EDNS is 0 (try with first), and rtt is returned for 
  * the first message to it.
  * @param infra: infrastructure cache.
  * @param addr: host address.
@@ -152,7 +157,7 @@ int infra_host(struct slabhash* infra, struct sockaddr_storage* addr,
  * @param timenow: what time it is now.
  * @return: 0 if not lame or unknown or timed out, true if lame.
  */
-int infra_lookup_lame(struct infra_data* host,
+int infra_lookup_lame(struct infra_host_data* host,
 	uint8_t* name, size_t namelen, time_t timenow);
 
 /**
@@ -174,7 +179,8 @@ int infra_set_lame(struct slabhash* infra,
  * @param infra: infrastructure cache.
  * @param addr: host address.
  * @param addrlen: length of addr.
- * @param roundtrip: estimate of roundtrip time or -1 for timeout.
+ * @param roundtrip: estimate of roundtrip time in milliseconds or -1 for 
+ * 	timeout.
  * @param timenow: what time it is now.
  * @return: 0 on error.
  */
@@ -188,12 +194,11 @@ int infra_rtt_update(struct slabhash* infra,
  * @param addr: host address.
  * @param addrlen: length of addr.
  * @param edns_version: the version that it publishes.
- * @param udp_size: what udp size it can handle.
  * @param timenow: what time it is now.
  * @return: 0 on error.
  */
 int infra_edns_update(struct slabhash* infra,
         struct sockaddr_storage* addr, socklen_t addrlen,
-	int edns_version, uint16_t udp_size, time_t timenow);
+	int edns_version, time_t timenow);
 
 #endif /* SERVICES_CACHE_INFRA_H */

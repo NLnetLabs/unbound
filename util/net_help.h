@@ -100,4 +100,12 @@ int is_pow2(size_t num);
  */
 void write_iov_buffer(ldns_buffer* buffer, struct iovec* iov, size_t iovlen);
 
+/**
+ * Allocate memory and copy over contents.
+ * @param data: what to copy over.
+ * @param len: length of data.
+ * @return: NULL on malloc failure, or newly malloced data.
+ */
+void* memdup(void* data, size_t len);
+
 #endif /* NET_HELP_H */
