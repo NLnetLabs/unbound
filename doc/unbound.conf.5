@@ -79,6 +79,18 @@ Number of bytes size of the RRset cache. Default is 4 megabytes.
 .It \fBrrset-cache-slabs:\fR <number>
 Number of slabs in the RRset cache. Slabs reduce lock contention by threads.
 Must be set to a power of 2. 
+.It \fBinfra-host-ttl:\fR <seconds>
+Time to live for entries in the host cache. The host cache contains 
+roundtrip timing and EDNS support information. Default is 900.
+.It \fBinfra-lame-ttl:\fR <seconds>
+The time to live when a delegation is discovered to be lame. Default is 900.
+.It \fBinfra-cache-slabs:\fR <number>
+Number of slabs in the infrastructure cache. Slabs reduce lock contention 
+by threads. Must be set to a power of 2. 
+.It \fBinfra-cache-numhosts:\fR <number>
+Number of hosts for which information is cached. Default is 1000.
+.It \fBinfra-cache-numlame:\fR <number>
+Number of zones per host for which lameness is cached. Default is 1000.
 .It \fBdo-ip4:\fR <yes or no>
 Enable or disable whether ip4 queries are answered. Default is yes.
 .It \fBdo-ip6:\fR <yes or no>

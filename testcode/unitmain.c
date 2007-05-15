@@ -152,7 +152,7 @@ infra_test()
 	int one = 1;
 	uint8_t* zone = (uint8_t*)"\007example\003com\000";
 	size_t zonelen = 13;
-	struct slabhash* slab;
+	struct infra_cache* slab;
 	struct config_file* cfg = config_create();
 	time_t now = 0;
 	int vs, to;
@@ -161,35 +161,35 @@ infra_test()
 
 	slab = infra_create(cfg);
 	unit_assert( infra_host(slab, (struct sockaddr_storage*)&one, 
-		sizeof(int), now, &vs, &to) );
+		(socklen_t)sizeof(int), now, &vs, &to) );
 	unit_assert( vs == 0 && to == 3000 );
 
 	unit_assert( infra_rtt_update(slab, (struct sockaddr_storage*)&one,
-		sizeof(int), -1, now) );
+		(socklen_t)sizeof(int), -1, now) );
 	unit_assert( infra_host(slab, (struct sockaddr_storage*)&one, 
-		sizeof(int), now, &vs, &to) );
+		(socklen_t)sizeof(int), now, &vs, &to) );
 	unit_assert( vs == 0 && to == 6000 );
 
 	unit_assert( infra_edns_update(slab, (struct sockaddr_storage*)&one,
-		sizeof(int), -1, now) );
+		(socklen_t)sizeof(int), -1, now) );
 	unit_assert( infra_host(slab, (struct sockaddr_storage*)&one, 
-		sizeof(int), now, &vs, &to) );
+		(socklen_t)sizeof(int), now, &vs, &to) );
 	unit_assert( vs == -1 && to == 6000 );
 
-	now += HOST_TTL + 10;
+	now += cfg->host_ttl + 10;
 	unit_assert( infra_host(slab, (struct sockaddr_storage*)&one, 
-		sizeof(int), now, &vs, &to) );
+		(socklen_t)sizeof(int), now, &vs, &to) );
 	unit_assert( vs == 0 && to == 3000 );
 	
 	unit_assert( infra_set_lame(slab, (struct sockaddr_storage*)&one, 
-		sizeof(int), zone, zonelen, now) );
+		(socklen_t)sizeof(int), zone, zonelen, now) );
 	unit_assert( (d=infra_lookup_host(slab, (struct sockaddr_storage*)&one,
-		sizeof(int), 0, now, &k)) );
-	unit_assert( d->ttl == now+HOST_TTL );
+		(socklen_t)sizeof(int), 0, now, &k)) );
+	unit_assert( d->ttl == now+cfg->host_ttl );
 	unit_assert( d->edns_version == 0 );
 	unit_assert( infra_lookup_lame(d, zone, zonelen, now) );
 	unit_assert( !infra_lookup_lame(d, zone, zonelen, 
-		now+HOST_LAME_TTL+10) );
+		now+cfg->lame_ttl+10) );
 	unit_assert( !infra_lookup_lame(d, (uint8_t*)"\000", 1, now) );
 	lock_rw_unlock(&k->entry.lock);
 

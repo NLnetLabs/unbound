@@ -93,31 +93,37 @@ struct infra_lame_data {
 	time_t ttl;
 };
 
-/** default TTL value for host information, in seconds */
-#define HOST_TTL 900
-/** default TTL for Lameness information, in seconds */
-#define HOST_LAME_TTL 900
-/** default size of the host cache, number of entries */
-#define HOST_DEFAULT_SIZE 1000
+/**
+ * Infra cache 
+ */
+struct infra_cache {
+	/** The hash table with hosts */
+	struct slabhash* hosts;
+	/** TTL value for host information, in seconds */
+	int host_ttl;
+	/** TTL for Lameness information, in seconds */
+	int lame_ttl;
+	/** infra lame cache max memory per host, for this many entries */
+	size_t max_lame;
+};
+
 /** infra host cache default hash lookup size */
 #define INFRA_HOST_STARTSIZE 32
 /** infra lame cache default hash lookup size */
 #define INFRA_LAME_STARTSIZE 2
-/** infra lame cache max memory per host, for this many entries */
-#define INFRA_LAME_MAXMEM 1000
 
 /**
  * Create infra cache.
  * @param cfg: config parameters.
  * @return: new infra cache, or NULL.
  */
-struct slabhash* infra_create(struct config_file* cfg);
+struct infra_cache* infra_create(struct config_file* cfg);
 
 /**
  * Delete infra cache.
  * @param infra: infrastructure cache to delete.
  */
-void infra_delete(struct slabhash* infra);
+void infra_delete(struct infra_cache* infra);
 
 /**
  * Lookup host data
@@ -129,7 +135,7 @@ void infra_delete(struct slabhash* infra);
  * @param key: the key for the host, returned so caller can unlock when done.
  * @return: host data or NULL if not found or expired.
  */
-struct infra_host_data* infra_lookup_host(struct slabhash* infra, 
+struct infra_host_data* infra_lookup_host(struct infra_cache* infra, 
 	struct sockaddr_storage* addr, socklen_t addrlen, int wr, 
 	time_t timenow, struct infra_host_key** key);
 
@@ -145,7 +151,7 @@ struct infra_host_data* infra_lookup_host(struct slabhash* infra,
  * @param to: timeout to use, is returned.
  * @return: 0 on error.
  */
-int infra_host(struct slabhash* infra, struct sockaddr_storage* addr, 
+int infra_host(struct infra_cache* infra, struct sockaddr_storage* addr, 
 	socklen_t addrlen, time_t timenow, int* edns_vs, int* to);
 
 /**
@@ -170,7 +176,7 @@ int infra_lookup_lame(struct infra_host_data* host,
  * @param timenow: what time it is now.
  * @return: 0 on error.
  */
-int infra_set_lame(struct slabhash* infra,
+int infra_set_lame(struct infra_cache* infra,
         struct sockaddr_storage* addr, socklen_t addrlen,
 	uint8_t* name, size_t namelen, time_t timenow);
 
@@ -184,7 +190,7 @@ int infra_set_lame(struct slabhash* infra,
  * @param timenow: what time it is now.
  * @return: 0 on error.
  */
-int infra_rtt_update(struct slabhash* infra,
+int infra_rtt_update(struct infra_cache* infra,
         struct sockaddr_storage* addr, socklen_t addrlen,
 	int roundtrip, time_t timenow);
 
@@ -197,7 +203,7 @@ int infra_rtt_update(struct slabhash* infra,
  * @param timenow: what time it is now.
  * @return: 0 on error.
  */
-int infra_edns_update(struct slabhash* infra,
+int infra_edns_update(struct infra_cache* infra,
         struct sockaddr_storage* addr, socklen_t addrlen,
 	int edns_version, time_t timenow);
 

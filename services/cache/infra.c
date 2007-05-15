@@ -44,6 +44,7 @@
 #include "util/storage/lookup3.h"
 #include "util/log.h"
 #include "util/net_help.h"
+#include "util/config_file.h"
 
 /** calculate size for the hashtable, does not count size of lameness,
  * so the hashtable is a fixed number of items */
@@ -87,26 +88,36 @@ infra_host_deldatafunc(void* d, void* ATTR_UNUSED(arg))
 	free(data);
 }
 
-struct slabhash* 
+struct infra_cache* 
 infra_create(struct config_file* cfg)
 {
+	struct infra_cache* infra = (struct infra_cache*)calloc(1, 
+		sizeof(struct infra_cache));
 	/* TODO: use config settings */
 	/* the size of the lameness tables are not counted */
-	size_t maxmem = HOST_DEFAULT_SIZE * (sizeof(struct infra_host_key) + 
-		sizeof(struct infra_host_data));
-	struct slabhash* infra = slabhash_create(HASH_DEFAULT_SLABS,
+	size_t maxmem = cfg->infra_cache_numhosts * 
+		(sizeof(struct infra_host_key)+sizeof(struct infra_host_data));
+	infra->hosts = slabhash_create(cfg->infra_cache_slabs,
 		INFRA_HOST_STARTSIZE, maxmem, &infra_host_sizefunc,
 		&infra_host_compfunc, &infra_host_delkeyfunc,
 		&infra_host_deldatafunc, NULL);
+	if(!infra->hosts) {
+		free(infra);
+		return NULL;
+	}
+	infra->host_ttl = cfg->host_ttl;
+	infra->lame_ttl = cfg->lame_ttl;
+	infra->max_lame = cfg->infra_cache_numlame;
 	return infra;
 }
 
 void 
-infra_delete(struct slabhash* infra)
+infra_delete(struct infra_cache* infra)
 {
 	if(!infra)
 		return;
-	slabhash_delete(infra);
+	slabhash_delete(infra->hosts);
+	free(infra);
 }
 
 /** calculate the hash value for a host key */
@@ -121,7 +132,7 @@ hash_addr(struct sockaddr_storage* addr, socklen_t addrlen)
 
 /** lookup version that does not check host ttl (you check it) */
 static struct lruhash_entry* 
-infra_lookup_host_nottl(struct slabhash* infra,
+infra_lookup_host_nottl(struct infra_cache* infra,
         struct sockaddr_storage* addr, socklen_t addrlen, int wr)
 {
 	struct infra_host_key k;
@@ -130,11 +141,11 @@ infra_lookup_host_nottl(struct slabhash* infra,
 	k.entry.hash = hash_addr(addr, addrlen);
 	k.entry.key = (void*)&k;
 	k.entry.data = NULL;
-	return slabhash_lookup(infra, k.entry.hash, &k, wr);
+	return slabhash_lookup(infra->hosts, k.entry.hash, &k, wr);
 }
 
 struct infra_host_data* 
-infra_lookup_host(struct slabhash* infra,
+infra_lookup_host(struct infra_cache* infra,
         struct sockaddr_storage* addr, socklen_t addrlen, int wr,
         time_t timenow, struct infra_host_key** key)
 {
@@ -162,7 +173,8 @@ infra_lookup_host(struct slabhash* infra,
  * @return: the new entry or NULL on malloc failure.
  */
 static struct lruhash_entry*
-new_host_entry(struct sockaddr_storage* addr, socklen_t addrlen, time_t tm)
+new_host_entry(struct infra_cache* infra, struct sockaddr_storage* addr, 
+	socklen_t addrlen, time_t tm)
 {
 	struct infra_host_data* data;
 	struct infra_host_key* key = (struct infra_host_key*)malloc(
@@ -181,7 +193,7 @@ new_host_entry(struct sockaddr_storage* addr, socklen_t addrlen, time_t tm)
 	key->entry.data = (void*)data;
 	key->addrlen = addrlen;
 	memcpy(&key->addr, addr, addrlen);
-	data->ttl = tm + HOST_TTL;
+	data->ttl = tm + infra->host_ttl;
 	data->lameness = NULL;
 	data->edns_version = 0;
 	rtt_init(&data->rtt);
@@ -189,7 +201,7 @@ new_host_entry(struct sockaddr_storage* addr, socklen_t addrlen, time_t tm)
 }
 
 int 
-infra_host(struct slabhash* infra, struct sockaddr_storage* addr,
+infra_host(struct infra_cache* infra, struct sockaddr_storage* addr,
         socklen_t addrlen, time_t timenow, int* edns_vs, int* to)
 {
 	struct lruhash_entry* e = infra_lookup_host_nottl(infra, addr, 
@@ -203,7 +215,7 @@ infra_host(struct slabhash* infra, struct sockaddr_storage* addr,
 			/* if its still there we have a writelock, init */
 			/* re-initialise */
 			data = (struct infra_host_data*)e->data;
-			data->ttl = timenow + HOST_TTL;
+			data->ttl = timenow + infra->host_ttl;
 			rtt_init(&data->rtt);
 			/* do not touch lameness, it may be valid still */
 			data->edns_version = 0;
@@ -211,12 +223,12 @@ infra_host(struct slabhash* infra, struct sockaddr_storage* addr,
 	}
 	if(!e) {
 		/* insert new entry */
-		if(!(e = new_host_entry(addr, addrlen, timenow)))
+		if(!(e = new_host_entry(infra, addr, addrlen, timenow)))
 			return 0;
 		data = (struct infra_host_data*)e->data;
 		*to = rtt_timeout(&data->rtt);
 		*edns_vs = data->edns_version;
-		slabhash_insert(infra, e->hash, e, data, NULL);
+		slabhash_insert(infra->hosts, e->hash, e, data, NULL);
 		return 1;
 	}
 	/* use existing entry */
@@ -304,7 +316,7 @@ infra_lame_deldatafunc(void* d, void* ATTR_UNUSED(arg))
 }
 
 int 
-infra_set_lame(struct slabhash* infra,
+infra_set_lame(struct infra_cache* infra,
         struct sockaddr_storage* addr, socklen_t addrlen,
         uint8_t* name, size_t namelen, time_t timenow)
 {
@@ -336,12 +348,12 @@ infra_set_lame(struct slabhash* infra,
 	k->entry.hash = hash_lameness(name, namelen);
 	k->entry.key = (void*)k;
 	k->entry.data = (void*)d;
-	d->ttl = timenow + HOST_LAME_TTL;
+	d->ttl = timenow + infra->lame_ttl;
 	k->namelen = namelen;
 	e = infra_lookup_host_nottl(infra, addr, addrlen, 1);
 	if(!e) {
 		/* insert it */
-		if(!(e = new_host_entry(addr, addrlen, timenow))) {
+		if(!(e = new_host_entry(infra, addr, addrlen, timenow))) {
 			free(k->zonename);
 			free(k);
 			free(d);
@@ -355,14 +367,14 @@ infra_set_lame(struct slabhash* infra,
 	if(!data->lameness) {
 		/* create hash table if not there already */
 		data->lameness = lruhash_create(INFRA_LAME_STARTSIZE,
-			INFRA_LAME_MAXMEM*(sizeof(struct infra_lame_key)+
+			infra->max_lame*(sizeof(struct infra_lame_key)+
 			sizeof(struct infra_lame_data)), infra_lame_sizefunc, 
 			infra_lame_compfunc, infra_lame_delkeyfunc,
 			infra_lame_deldatafunc, NULL);
 		if(!data->lameness) {
 			log_err("set_lame: malloc failure");
-			if(needtoinsert) slabhash_insert(infra, e->hash, e, 
-				e->data, NULL);
+			if(needtoinsert) slabhash_insert(infra->hosts, 
+				e->hash, e, e->data, NULL);
 			else 	lock_rw_unlock(&e->lock);
 			free(k->zonename);
 			free(k);
@@ -374,13 +386,13 @@ infra_set_lame(struct slabhash* infra,
 	lruhash_insert(data->lameness, k->entry.hash, &k->entry, d, NULL);
 	
 	if(needtoinsert)
-		slabhash_insert(infra, e->hash, e, e->data, NULL);
+		slabhash_insert(infra->hosts, e->hash, e, e->data, NULL);
 	else 	lock_rw_unlock(&e->lock);
 	return 1;
 }
 
 int 
-infra_rtt_update(struct slabhash* infra,
+infra_rtt_update(struct infra_cache* infra,
         struct sockaddr_storage* addr, socklen_t addrlen,
         int roundtrip, time_t timenow)
 {
@@ -389,25 +401,25 @@ infra_rtt_update(struct slabhash* infra,
 	struct infra_host_data* data;
 	int needtoinsert = 0;
 	if(!e) {
-		if(!(e = new_host_entry(addr, addrlen, timenow)))
+		if(!(e = new_host_entry(infra, addr, addrlen, timenow)))
 			return 0;
 		needtoinsert = 1;
 	}
 	/* have an entry, update the rtt, and the ttl */
 	data = (struct infra_host_data*)e->data;
-	data->ttl = timenow + HOST_TTL;
+	data->ttl = timenow + infra->host_ttl;
 	if(roundtrip == -1)
 		rtt_lost(&data->rtt);
 	else	rtt_update(&data->rtt, roundtrip);
 
 	if(needtoinsert)
-		slabhash_insert(infra, e->hash, e, e->data, NULL);
+		slabhash_insert(infra->hosts, e->hash, e, e->data, NULL);
 	else 	lock_rw_unlock(&e->lock);
 	return 1;
 }
 
 int 
-infra_edns_update(struct slabhash* infra,
+infra_edns_update(struct infra_cache* infra,
         struct sockaddr_storage* addr, socklen_t addrlen,
         int edns_version, time_t timenow)
 {
@@ -416,17 +428,17 @@ infra_edns_update(struct slabhash* infra,
 	struct infra_host_data* data;
 	int needtoinsert = 0;
 	if(!e) {
-		if(!(e = new_host_entry(addr, addrlen, timenow)))
+		if(!(e = new_host_entry(infra, addr, addrlen, timenow)))
 			return 0;
 		needtoinsert = 1;
 	}
 	/* have an entry, update the rtt, and the ttl */
 	data = (struct infra_host_data*)e->data;
-	data->ttl = timenow + HOST_TTL;
+	data->ttl = timenow + infra->host_ttl;
 	data->edns_version = edns_version;
 
 	if(needtoinsert)
-		slabhash_insert(infra, e->hash, e, e->data, NULL);
+		slabhash_insert(infra->hosts, e->hash, e, e->data, NULL);
 	else 	lock_rw_unlock(&e->lock);
 	return 1;
 }

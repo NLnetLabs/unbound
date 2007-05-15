@@ -83,6 +83,11 @@ config_create()
 	cfg->num_queries_per_thread = 1024;
 	cfg->rrset_cache_size = 4 * 1024 * 1024;
 	cfg->rrset_cache_slabs = 4;
+	cfg->host_ttl = 900;
+	cfg->lame_ttl = 900;
+	cfg->infra_cache_slabs = 4;
+	cfg->infra_cache_numhosts = 1000;
+	cfg->infra_cache_numlame = 1000;
 	if(!(cfg->fwd_address = strdup(""))) goto error_exit;
 	if(!(cfg->username = strdup(""))) goto error_exit;
 	if(!(cfg->chrootdir = strdup(""))) goto error_exit;
