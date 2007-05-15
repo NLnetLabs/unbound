@@ -108,4 +108,12 @@ void write_iov_buffer(ldns_buffer* buffer, struct iovec* iov, size_t iovlen);
  */
 void* memdup(void* data, size_t len);
 
+/**
+ * Prints the sockaddr in readable format with log_info. Debug helper.
+ * @param addr: the sockaddr to print. Can be ip4 or ip6.
+ * @param addrlen: length of addr.
+ */
+void log_addr(struct sockaddr_storage* addr, socklen_t addrlen);
+
+
 #endif /* NET_HELP_H */

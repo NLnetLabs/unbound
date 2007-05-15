@@ -445,11 +445,4 @@ int comm_signal_bind(struct comm_signal* comsig, int sig);
  */
 void comm_signal_delete(struct comm_signal* comsig);
 
-/**
- * Prints the sockaddr in readable format with log_info. Debug helper.
- * @param addr: the sockaddr to print. Can be ip4 or ip6.
- * @param addrlen: length of addr.
- */
-void log_addr(struct sockaddr_storage* addr, socklen_t addrlen);
-
 #endif /* NET_EVENT_H */
