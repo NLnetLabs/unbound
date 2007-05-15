@@ -1,5 +1,6 @@
 15 May 2007: Wouter
 	- host cache code.
+	- unit test for host cache.
 
 14 May 2007: Wouter
 	- Port to OS/X and Dec Alpha. Printf format and alignment fixes.
