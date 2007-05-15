@@ -167,6 +167,7 @@ infra_lookup_host(struct infra_cache* infra,
 
 /** 
  * Create and init a new entry for a host 
+ * @param infra: infra structure with config parameters.
  * @param addr: host address.
  * @param addrlen: length of addr.
  * @param tm: time now.
