@@ -1,3 +1,10 @@
+16 May 2007: Wouter
+	- lruhash_touch() would cause locking order problems. Fixup in 
+	  lock-verify in case locking cycle is found.
+	- services/cache/rrset.c for rrset cache code.
+	- special rrset_cache LRU updating function that uses the rrset id.
+	- no dependencies calculation when make clean is called.
+
 15 May 2007: Wouter
 	- host cache code.
 	- unit test for host cache.

@@ -102,7 +102,7 @@ bin_delete(struct lruhash* table, struct lruhash_bin* bin)
 	while(p) {
 		np = p->overflow_next;
 		d = p->data;
-		(*table->delkeyfunc)(p->key, table->cb_arg);
+		(*table->delkeyfunc)(p->key, table->cb_arg, 0);
 		(*table->deldatafunc)(d, table->cb_arg);
 		p = np;
 	}
@@ -313,7 +313,7 @@ lruhash_insert(struct lruhash* table, hashvalue_t hash,
 		/* if so: update data - needs a writelock */
 		table->space_used += need_size -
 			(*table->sizefunc)(found->key, found->data);
-		(*table->delkeyfunc)(entry->key, cb_arg);
+		(*table->delkeyfunc)(entry->key, cb_arg, 0);
 		lru_touch(table, found);
 		lock_rw_wrlock(&found->lock);
 		(*table->deldatafunc)(found->data, cb_arg);
@@ -331,8 +331,7 @@ lruhash_insert(struct lruhash* table, hashvalue_t hash,
 	while(reclaimlist) {
 		struct lruhash_entry* n = reclaimlist->overflow_next;
 		void* d = reclaimlist->data;
-		lock_rw_unlock(&reclaimlist->lock);
-		(*table->delkeyfunc)(reclaimlist->key, cb_arg);
+		(*table->delkeyfunc)(reclaimlist->key, cb_arg, 1);
 		(*table->deldatafunc)(d, cb_arg);
 		reclaimlist = n;
 	}
@@ -383,9 +382,8 @@ lruhash_remove(struct lruhash* table, hashvalue_t hash, void* key)
 	lock_rw_wrlock(&entry->lock);
 	lock_quick_unlock(&bin->lock);
 	/* finish removal */
-	lock_rw_unlock(&entry->lock);
 	d = entry->data;
-	(*table->delkeyfunc)(entry->key, table->cb_arg);
+	(*table->delkeyfunc)(entry->key, table->cb_arg, 1);
 	(*table->deldatafunc)(d, table->cb_arg);
 }
 

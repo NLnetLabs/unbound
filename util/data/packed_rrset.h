@@ -256,8 +256,11 @@ int rrsetdata_equal(struct packed_rrset_data* d1, struct packed_rrset_data* d2);
  * Old key to be deleted. RRset keys are recycled via alloc.
  * @param key: struct ub_packed_rrset_key*.
  * @param userdata: alloc structure to use for recycling.
+ * @param is_locked: if the key is locked, the id is set to 0 while it is
+ *	still locked. So that other threads, after acquiring a lock always
+ *	get the correct value, in this case the 0 deleted-special value.
  */
-void ub_rrset_key_delete(void* key, void* userdata);
+void ub_rrset_key_delete(void* key, void* userdata, int is_locked);
 
 /**
  * Old data to be deleted.

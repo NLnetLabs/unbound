@@ -157,4 +157,8 @@ $(BUILD)%.d: $(srcdir)/%.c
 	              | sed '\''s!\(.*\)\.o[ :]*!$(dir $@)\1.o $@ : !g'\'' > $@; \
 	              [ -s $@ ] || rm -f $@'
 
+ifneq ($(MAKECMDGOALS),clean)
+ifneq ($(MAKECMDGOALS),realclean)
 -include $(addprefix $(BUILD),$(ALL_SRC:.c=.d))
+endif
+endif

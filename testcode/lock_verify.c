@@ -139,6 +139,9 @@ read_header(FILE* in)
 		the_time = t;
 		the_pid = p;
 		memset(threads, 0, 256*sizeof(int));
+		if(thrno >= 256) {
+			fatal_exit("Thread number too big. %d", thrno);
+		}
 		threads[thrno] = 1;
 		have_values = 1;
 		printf(" trace %d from pid %u on %s", thrno, 
@@ -332,7 +335,7 @@ static void search_cycle(struct lock_ref* visit, int level,
 	/* check for cycle */
 	if(detect_cycle(visit, from) && level != 0) {
 		found_cycle(visit, level);
-		return;
+		fatal_exit("found lock order cycle");
 	}
 	/* recurse */
 	if(!visit->lock->visited)

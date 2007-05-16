@@ -143,3 +143,8 @@ size_t slabhash_get_size(struct slabhash* sl)
 	}
 	return total;
 }
+
+struct lruhash* slabhash_gettable(struct slabhash* sl, hashvalue_t hash)
+{
+	return sl->array[slab_idx(sl, hash)];
+}

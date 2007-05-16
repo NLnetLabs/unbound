@@ -1,0 +1,131 @@
+/*
+ * services/cache/rrset.h - Resource record set cache.
+ *
+ * Copyright (c) 2007, NLnet Labs. All rights reserved.
+ *
+ * This software is open source.
+ * 
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 
+ * Redistributions of source code must retain the above copyright notice,
+ * this list of conditions and the following disclaimer.
+ * 
+ * Redistributions in binary form must reproduce the above copyright notice,
+ * this list of conditions and the following disclaimer in the documentation
+ * and/or other materials provided with the distribution.
+ * 
+ * Neither the name of the NLNET LABS nor the names of its contributors may
+ * be used to endorse or promote products derived from this software without
+ * specific prior written permission.
+ * 
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+ * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ */
+
+/**
+ * \file
+ *
+ * This file contains the rrset cache.
+ */
+
+#ifndef SERVICES_CACHE_RRSET_H
+#define SERVICES_CACHE_RRSET_H
+#include "util/storage/lruhash.h"
+#include "util/storage/slabhash.h"
+#include "util/data/packed_rrset.h"
+struct config_file;
+struct alloc_cache;
+struct rrset_ref;
+
+/**
+ * The rrset cache
+ * Thin wrapper around hashtable, like a typedef.
+ */
+struct rrset_cache {
+	/** uses partitioned hash table */
+	struct slabhash table;
+};
+
+/**
+ * Create rrset cache
+ * @param cfg: config settings or NULL for defaults.
+ * @param alloc: initial default rrset key allocation.
+ * @return: NULL on error.
+ */
+struct rrset_cache* rrset_cache_create(struct config_file* cfg, 
+	struct alloc_cache* alloc);
+
+/**
+ * Delete rrset cache
+ * @param r: rrset cache to delete.
+ */
+void rrset_cache_delete(struct rrset_cache* r);
+
+/**
+ * Adjust settings of the cache to settings from the config file.
+ * May purge the cache. May recreate the cache.
+ * There may be no threading or use by other threads.
+ * @param r: rrset cache to adjust (like realloc).
+ * @param cfg: config settings or NULL for defaults.
+ * @param alloc: initial default rrset key allocation.
+ * @return 0 on error, or new rrset cache pointer on success.
+ */
+struct rrset_cache* rrset_cache_adjust(struct rrset_cache* r, 
+	struct config_file* cfg, struct alloc_cache* alloc);
+
+/**
+ * Touch rrset, with given pointer and id.
+ * Caller may not hold a lock on ANY rrset, this could give deadlock.
+ *
+ * This routine is faster than a hashtable lookup:
+ *	o no bin_lock is acquired.
+ *	o no walk through the bin-overflow-list. 
+ *	o no comparison of the entry key to find it.
+ *
+ * @param r: rrset cache.
+ * @param key: rrset key. Marked recently used (if it was not deleted
+ *	before the lock is acquired, in that case nothing happens).
+ * @param hash: hash value of the item. Please read it from the key when
+ *	you have it locked. Used to find slab from slabhash.
+ * @param id: used to check that the item is unchanged and not deleted.
+ */
+void rrset_cache_touch(struct rrset_cache* r, struct ub_packed_rrset_key* key,
+	hashvalue_t hash, rrset_id_t id);
+
+/**
+ * Update an rrset in the rrset cache. Stores the information for later use.
+ * Will lookup if the rrset is in the cache and perform an update if necessary.
+ * If the item was present, and superior, references are returned to that.
+ * The passed item is then deallocated with rrset_parsedelete.
+ *
+ * A superior rrset is:
+ *	o rrset with better trust value.
+ *	o same trust value, different rdata, newly passed rrset is inserted.
+ * If rdata is the same, TTL in the cache is updated.
+ *
+ * @param r: the rrset cache.
+ * @param ref: reference (ptr and id) to the rrset. Pass reference setup for
+ *	the new rrset. The reference may be changed if the cached rrset is
+ *	superior.
+ *	Before calling the rrset is presumed newly allocated and changeable.
+ *	Afer calling you do not hold a lock, and the rrset is inserted in
+ *	the hashtable so you need a lock to change it.
+ * @param alloc: how to allocate (and deallocate) the special rrset key.
+ * @param timenow: current time (to see if ttl in cache is expired).
+ * @return: true if the passed reference is updated, false if it is unchanged.
+ */
+int rrset_cache_update(struct rrset_cache* r, struct rrset_ref* ref, 
+	struct alloc_cache* alloc, uint32_t timenow);
+
+#endif /* SERVICES_CACHE_RRSET_H */

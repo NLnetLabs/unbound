@@ -46,7 +46,9 @@
 #include "util/config_file.h"
 #include "util/storage/slabhash.h"
 #include "services/listen_dnsport.h"
+#include "services/cache/rrset.h"
 #include "util/data/msgreply.h"
+#include "util/module.h"
 #include <signal.h>
 #include <fcntl.h>
 #include <pwd.h>
@@ -129,18 +131,11 @@ apply_dir(struct daemon* daemon, struct config_file* cfg, int cmdline_verbose)
 			fatal_exit("malloc failure updating config settings");
 		}
 	}
-	if(cfg->rrset_cache_size != slabhash_get_size(daemon->rrset_cache) ||
-		cfg->rrset_cache_slabs != daemon->rrset_cache->size) {
-		slabhash_delete(daemon->rrset_cache);
-		daemon->rrset_cache = slabhash_create(cfg->rrset_cache_slabs, 
-			HASH_DEFAULT_STARTARRAY, cfg->rrset_cache_size, 
-			ub_rrset_sizefunc, ub_rrset_compare,
-			ub_rrset_key_delete, rrset_data_delete, 
-			&daemon->superalloc);
-		if(!daemon->rrset_cache) {
+	if((daemon->rrset_cache = rrset_cache_adjust(daemon->rrset_cache,
+			cfg, &daemon->superalloc)) == 0)
 			fatal_exit("malloc failure updating config settings");
-		}
-	}
+	daemon->env->rrset_cache = daemon->rrset_cache;
+	daemon->env->msg_cache = daemon->msg_cache;
 	checkrlimits(cfg);
 }
 

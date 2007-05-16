@@ -47,6 +47,7 @@
 #include "util/config_file.h"
 #include "util/net_help.h"
 #include "util/storage/slabhash.h"
+#include "services/cache/rrset.h"
 
 /** 
  * Set forwarder address 
@@ -122,70 +123,18 @@ iter_deinit(struct module_env* env, int id)
 		free(iter_env);
 }
 
-/** see if rrset needs to be updated in the cache */
-static int
-need_to_update_rrset(struct packed_rrset_data* newd,
-        struct packed_rrset_data* cached)
-{
-        /*      o if current RRset is more trustworthy - insert it */
-        if( newd->trust > cached->trust )
-                return 1;
-        /*      o same trust, but different in data - insert it */
-        if( newd->trust == cached->trust &&
-                !rrsetdata_equal(newd, cached))
-                return 1;
-        /*      o see if TTL is better than TTL in cache. */
-        /*        if so, see if rrset+rdata is the same */
-        /*        if so, update TTL in cache, even if trust is worse. */
-        if( newd->ttl > cached->ttl &&
-                rrsetdata_equal(newd, cached))
-                return 1;
-        return 0;
-}
-
 /** store rrsets in the rrset cache. */
 static void
-worker_store_rrsets(struct module_env* env, struct reply_info* rep)
+store_rrsets(struct module_env* env, struct reply_info* rep, uint32_t now)
 {
-        struct lruhash_entry* e;
         size_t i;
         /* see if rrset already exists in cache, if not insert it. */
-        /* if it does exist: check to insert it */
         for(i=0; i<rep->rrset_count; i++) {
                 rep->ref[i].key = rep->rrsets[i];
                 rep->ref[i].id = rep->rrsets[i]->id;
-                /* looks up item with a readlock - no editing! */
-                if((e=slabhash_lookup(env->rrset_cache,
-                        rep->rrsets[i]->entry.hash, rep->rrsets[i]->entry.key,
-                        0)) != 0) {
-                        struct packed_rrset_data* data =
-                                (struct packed_rrset_data*)e->data;
-                        struct packed_rrset_data* rd =
-                                (struct packed_rrset_data*)
-                                rep->rrsets[i]->entry.data;
-                        rep->ref[i].key = (struct ub_packed_rrset_key*)e->key;
-                        rep->ref[i].id = rep->rrsets[i]->id;
-                        /* found in cache, do checks above */
-                        if(!need_to_update_rrset(rd, data)) {
-                                lock_rw_unlock(&e->lock);
-                                ub_packed_rrset_parsedelete(rep->rrsets[i],
-                                        env->alloc);
-                                rep->rrsets[i] = rep->ref[i].key;
-                                continue; /* use cached item instead */
-                        }
-                        if(rd->trust < data->trust)
-                                rd->trust = data->trust;
-                        lock_rw_unlock(&e->lock);
-                        /* small gap here, where entry is not locked.
-                         * possibly entry is updated with something else.
-                         * this is just too bad, its cache anyway. */
-                        /* use insert to update entry to manage lruhash
-                         * cache size values nicely. */
-                }
-                slabhash_insert(env->rrset_cache,
-                        rep->rrsets[i]->entry.hash, &rep->rrsets[i]->entry,
-                        rep->rrsets[i]->entry.data, env->alloc);
-                if(e) rep->rrsets[i] = rep->ref[i].key;
+		if(rrset_cache_update(env->rrset_cache, &rep->ref[i], 
+			env->alloc, now)) /* it was in the cache */
+			rep->rrsets[i] = rep->ref[i].key;
         }
 }
 
@@ -196,8 +145,9 @@ store_msg(struct module_qstate* qstate, struct query_info* qinfo,
 	struct reply_info* rep)
 {
 	struct msgreply_entry* e;
-	reply_info_set_ttls(rep, time(0));
-	worker_store_rrsets(qstate->env, rep);
+	uint32_t now = time(NULL);
+	reply_info_set_ttls(rep, now);
+	store_rrsets(qstate->env, rep, now);
 	if(rep->ttl == 0) {
 		log_info("TTL 0: dropped msg from cache");
 		return;

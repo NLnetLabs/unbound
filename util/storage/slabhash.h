@@ -145,4 +145,12 @@ void slabhash_status(struct slabhash* table, const char* id, int extended);
  */
 size_t slabhash_get_size(struct slabhash* table);
 
+/**
+ * Get lruhash table for a given hash value
+ * @param table: slabbed hash table.
+ * @param hash: hash value.
+ * @return the lru hash table.
+ */
+struct lruhash* slabhash_gettable(struct slabhash* table, hashvalue_t hash);
+
 #endif /* UTIL_STORAGE_SLABHASH_H */

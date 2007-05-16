@@ -62,7 +62,7 @@ static size_t test_sizefunc(void*, void*);
 /** comparefunc for lruhash */
 static int test_compfunc(void*, void*);
 /** delkey for lruhash */
-static void test_delkey(void*, void*);
+static void test_delkey(void*, void*, int);
 /** deldata for lruhash */
 static void test_deldata(void*, void*);
 /* --- end test representation --- */
@@ -524,8 +524,9 @@ static int test_compfunc(void* key1, void* key2)
 	return -1;
 }
 
-static void test_delkey(void* key, void* ATTR_UNUSED(arg))
+static void test_delkey(void* key, void* ATTR_UNUSED(arg), int l)
 {
+	if(l) lock_rw_unlock(&((struct testkey*)key)->entry.lock);
 	delkey((struct testkey*)key);
 }
 

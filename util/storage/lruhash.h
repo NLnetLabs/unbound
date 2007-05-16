@@ -123,8 +123,13 @@ typedef size_t (*lruhash_sizefunc_t)(void*, void*);
 /** type of function that compares two keys. return 0 if equal. */
 typedef int (*lruhash_compfunc_t)(void*, void*);
 
-/** old keys is deleted. This function is called: func(key, userarg) */
-typedef void (*lruhash_delkeyfunc_t)(void*, void*);
+/** old keys are deleted. 
+ * If is_locked is set, then the routine must unlock the item before deletion.
+ * If is_locked is not set, then this item is not locked. This allows the 
+ * routine to perform operations within the critical region of the lock 
+ * of the key. The critical region has been locked before the delete happened.
+ * This function is called: func(key, userarg, is_locked) */
+typedef void (*lruhash_delkeyfunc_t)(void*, void*, int);
 
 /** old data is deleted. This function is called: func(data, userarg). */
 typedef void (*lruhash_deldatafunc_t)(void*, void*);
@@ -267,6 +272,13 @@ void lruhash_insert(struct lruhash* table, hashvalue_t hash,
 struct lruhash_entry* lruhash_lookup(struct lruhash* table, hashvalue_t hash, 
 	void* key, int wr);
 
+/**
+ * Touch entry, so it becomes the most recently used in the LRU list.
+ * Caller must hold hash table lock. The entry must be inserted already.
+ * @param table: hash table.
+ * @param entry: entry to make first in LRU.
+ */
+void lru_touch(struct lruhash* table, struct lruhash_entry* entry);
 
 /************************* Internal functions ************************/
 /*** these are only exposed for unit tests. ***/
@@ -336,14 +348,6 @@ void reclaim_space(struct lruhash* table, struct lruhash_entry** list);
  * @param table: hash table.
  */
 void table_grow(struct lruhash* table);
-
-/**
- * Touch entry, so it becomes the most recently used in the LRU list.
- * Caller must hold hash table lock. The entry must be inserted already.
- * @param table: hash table.
- * @param entry: entry to make first in LRU.
- */
-void lru_touch(struct lruhash* table, struct lruhash_entry* entry);
 
 /**
  * Put entry at front of lru. entry must be unlinked from lru.

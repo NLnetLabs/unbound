@@ -50,6 +50,7 @@
 #include "util/data/msgreply.h"
 #include "util/storage/slabhash.h"
 #include "services/listen_dnsport.h"
+#include "services/cache/rrset.h"
 #include "util/module.h"
 #include "iterator/iterator.h"
 #include <signal.h>
@@ -128,16 +129,13 @@ daemon_init()
 		free(daemon);
 		return NULL;
 	}
-	daemon->rrset_cache = slabhash_create(HASH_DEFAULT_SLABS, 
-		HASH_DEFAULT_STARTARRAY, HASH_DEFAULT_MAXMEM, 
-		ub_rrset_sizefunc, ub_rrset_compare,
-		ub_rrset_key_delete, rrset_data_delete, &daemon->superalloc);
+	alloc_init(&daemon->superalloc, NULL, 0);
+	daemon->rrset_cache = rrset_cache_create(NULL, &daemon->superalloc);
 	if(!daemon->rrset_cache) {
 		slabhash_delete(daemon->msg_cache);
 		free(daemon);
 		return NULL;
 	}
-	alloc_init(&daemon->superalloc, NULL, 0);
 	if(!(daemon->env = (struct module_env*)calloc(1, 
 		sizeof(*daemon->env)))) {
 		daemon_delete(daemon);
@@ -383,7 +381,7 @@ daemon_delete(struct daemon* daemon)
 		return;
 	listening_ports_free(daemon->ports);
 	slabhash_delete(daemon->msg_cache);
-	slabhash_delete(daemon->rrset_cache);
+	rrset_cache_delete(daemon->rrset_cache);
 	alloc_clear(&daemon->superalloc);
 	free(daemon->cwd);
 	free(daemon->pidfile);

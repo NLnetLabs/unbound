@@ -239,7 +239,7 @@ void query_info_clear(struct query_info* m);
 size_t msgreply_sizefunc(void* k, void* d);
 
 /** delete msgreply_entry key structure */
-void query_entry_delete(void *q, void* arg);
+void query_entry_delete(void *q, void* arg, int is_locked);
 
 /** delete reply_info data structure */
 void reply_info_delete(void* d, void* arg);

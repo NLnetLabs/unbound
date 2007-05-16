@@ -51,6 +51,7 @@
 #include "util/storage/slabhash.h"
 #include "services/listen_dnsport.h"
 #include "services/outside_network.h"
+#include "services/cache/rrset.h"
 #include "util/data/msgparse.h"
 
 #ifdef HAVE_SYS_TYPES_H
@@ -279,16 +280,22 @@ answer_from_cache(struct worker* worker, struct lruhash_entry* e, uint16_t id,
 	uint32_t timenow = time(0);
 	uint16_t udpsize = edns->udp_size;
 	size_t i;
+	hashvalue_t* h;
 	/* see if it is possible */
 	if(rep->ttl <= timenow) {
-		/* the rrsets may have been updated in the meantime */
-		/* but this ignores it */
+		/* the rrsets may have been updated in the meantime.
+		 * we will refetch the message format from the
+		 * authoritative server 
+		 */
 		return 0;
 	}
 	edns->edns_version = EDNS_ADVERTISED_VERSION;
 	edns->udp_size = EDNS_ADVERTISED_SIZE;
 	edns->ext_rcode = 0;
 	edns->bits &= EDNS_DO;
+	if(!(h = (hashvalue_t*)region_alloc(worker->scratchpad, 
+		sizeof(hashvalue_t)*rep->rrset_count)))
+		return 0;
 	/* check rrsets */
 	for(i=0; i<rep->rrset_count; i++) {
 		if(i>0 && rep->ref[i].key == rep->ref[i-1].key)
@@ -314,7 +321,15 @@ answer_from_cache(struct worker* worker, struct lruhash_entry* e, uint16_t id,
 	for(i=0; i<rep->rrset_count; i++) {
 		if(i>0 && rep->ref[i].key == rep->ref[i-1].key)
 			continue; /* only unlock items once */
+		h[i] = rep->ref[i].key->entry.hash;
 		lock_rw_unlock(&rep->ref[i].key->entry.lock);
+	}
+	/* LRU touch, with no rrset locks held */
+	for(i=0; i<rep->rrset_count; i++) {
+		if(i>0 && rep->ref[i].key == rep->ref[i-1].key)
+			continue; /* only touch items once */
+		rrset_cache_touch(worker->env.rrset_cache, rep->ref[i].key,
+			h[i], rep->ref[i].id);
 	}
 	region_free_all(worker->scratchpad);
 	/* go and return this buffer to the client */
@@ -375,7 +390,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 	}
 	if(c->type != comm_udp)
 		edns.udp_size = 65535; /* max size for TCP replies */
-	if((e=slabhash_lookup(worker->daemon->msg_cache, h, &qinfo, 0))) {
+	if((e=slabhash_lookup(worker->env.msg_cache, h, &qinfo, 0))) {
 		/* answer from cache - we have acquired a readlock on it */
 		log_info("answer from the cache");
 		if(answer_from_cache(worker, e, 

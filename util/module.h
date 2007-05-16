@@ -45,6 +45,7 @@
 #include "util/data/msgreply.h"
 #include "util/data/msgparse.h"
 struct alloc_cache;
+struct rrset_cache;
 struct config_file;
 struct slabhash;
 struct query_info;
@@ -67,7 +68,7 @@ struct module_env {
 	/** shared message cache */
 	struct slabhash* msg_cache;
 	/** shared rrset cache */
-	struct slabhash* rrset_cache;
+	struct rrset_cache* rrset_cache;
 
 	/* --- services --- */
 	/** 
