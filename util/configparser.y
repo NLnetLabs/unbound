@@ -74,6 +74,8 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_USERNAME VAR_DIRECTORY VAR_LOGFILE VAR_PIDFILE
 %token VAR_MSG_CACHE_SIZE VAR_MSG_CACHE_SLABS VAR_NUM_QUERIES_PER_THREAD
 %token VAR_RRSET_CACHE_SIZE VAR_RRSET_CACHE_SLABS VAR_OUTGOING_NUM_TCP
+%token VAR_INFRA_HOST_TTL VAR_INFRA_LAME_TTL VAR_INFRA_CACHE_SLABS
+%token VAR_INFRA_CACHE_NUMHOSTS VAR_INFRA_CACHE_NUMLAME
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -97,7 +99,10 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_username | server_directory | server_logfile | server_pidfile |
 	server_msg_cache_size | server_msg_cache_slabs |
 	server_num_queries_per_thread | server_rrset_cache_size | 
-	server_rrset_cache_slabs | server_outgoing_num_tcp
+	server_rrset_cache_slabs | server_outgoing_num_tcp | 
+	server_infra_host_ttl | server_infra_lame_ttl | 
+	server_infra_cache_slabs | server_infra_cache_numhosts |
+	server_infra_cache_numlame
 	;
 server_num_threads: VAR_NUM_THREADS STRING 
 	{ 
@@ -301,6 +306,55 @@ server_rrset_cache_slabs: VAR_RRSET_CACHE_SLABS STRING
 		else {
 			cfg_parser->cfg->rrset_cache_slabs = atoi($2);
 			if(!is_pow2(cfg_parser->cfg->rrset_cache_slabs))
+				yyerror("must be a power of 2");
+		}
+		free($2);
+	}
+	;
+server_infra_host_ttl: VAR_INFRA_HOST_TTL STRING
+	{
+		OUTYY(("P(server_infra_host_ttl:%s)\n", $2));
+		if(atoi($2) == 0 && strcmp($2, "0") != 0)
+			yyerror("number expected");
+		else cfg_parser->cfg->host_ttl = atoi($2);
+		free($2);
+	}
+	;
+server_infra_lame_ttl: VAR_INFRA_LAME_TTL STRING
+	{
+		OUTYY(("P(server_infra_lame_ttl:%s)\n", $2));
+		if(atoi($2) == 0 && strcmp($2, "0") != 0)
+			yyerror("number expected");
+		else cfg_parser->cfg->lame_ttl = atoi($2);
+		free($2);
+	}
+	;
+server_infra_cache_numhosts: VAR_INFRA_CACHE_NUMHOSTS STRING
+	{
+		OUTYY(("P(server_infra_cache_numhosts:%s)\n", $2));
+		if(atoi($2) == 0)
+			yyerror("number expected");
+		else cfg_parser->cfg->infra_cache_numhosts = atoi($2);
+		free($2);
+	}
+	;
+server_infra_cache_numlame: VAR_INFRA_CACHE_NUMLAME STRING
+	{
+		OUTYY(("P(server_infra_cache_numlame:%s)\n", $2));
+		if(atoi($2) == 0)
+			yyerror("number expected");
+		else cfg_parser->cfg->infra_cache_numlame = atoi($2);
+		free($2);
+	}
+	;
+server_infra_cache_slabs: VAR_INFRA_CACHE_SLABS STRING
+	{
+		OUTYY(("P(server_infra_cache_slabs:%s)\n", $2));
+		if(atoi($2) == 0)
+			yyerror("number expected");
+		else {
+			cfg_parser->cfg->infra_cache_slabs = atoi($2);
+			if(!is_pow2(cfg_parser->cfg->infra_cache_slabs))
 				yyerror("must be a power of 2");
 		}
 		free($2);

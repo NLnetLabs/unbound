@@ -69,6 +69,8 @@ struct module_env {
 	struct slabhash* msg_cache;
 	/** shared rrset cache */
 	struct rrset_cache* rrset_cache;
+	/** shared infrastructure cache (edns, lameness) */
+	struct infra_cache* infra_cache;
 
 	/* --- services --- */
 	/** 

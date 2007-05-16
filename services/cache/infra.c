@@ -121,6 +121,25 @@ infra_delete(struct infra_cache* infra)
 	free(infra);
 }
 
+struct infra_cache* 
+infra_adjust(struct infra_cache* infra, struct config_file* cfg)
+{
+	size_t maxmem;
+	if(!infra)
+		return infra_create(cfg);
+	infra->host_ttl = cfg->host_ttl;
+	infra->lame_ttl = cfg->lame_ttl;
+	infra->max_lame = cfg->infra_cache_numlame;
+	maxmem = cfg->infra_cache_numhosts * 
+		(sizeof(struct infra_host_key)+sizeof(struct infra_host_data));
+	if(maxmem != slabhash_get_size(infra->hosts) ||
+		cfg->infra_cache_slabs != infra->hosts->size) {
+		infra_delete(infra);
+		infra = infra_create(cfg);
+	}
+	return infra;
+}
+
 /** calculate the hash value for a host key */
 static hashvalue_t
 hash_addr(struct sockaddr_storage* addr, socklen_t addrlen)

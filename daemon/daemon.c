@@ -51,6 +51,7 @@
 #include "util/storage/slabhash.h"
 #include "services/listen_dnsport.h"
 #include "services/cache/rrset.h"
+#include "services/cache/infra.h"
 #include "util/module.h"
 #include "iterator/iterator.h"
 #include <signal.h>
@@ -121,26 +122,12 @@ daemon_init()
 	signal_handling_record();
 	checklock_start();
 	daemon->need_to_exit = 0;
-	daemon->msg_cache = slabhash_create(HASH_DEFAULT_SLABS, 
-		HASH_DEFAULT_STARTARRAY, HASH_DEFAULT_MAXMEM, 
-		msgreply_sizefunc, query_info_compare,
-		query_entry_delete, reply_info_delete, NULL);
-	if(!daemon->msg_cache) {
+	if(!(daemon->env = (struct module_env*)calloc(1, 
+		sizeof(*daemon->env)))) {
 		free(daemon);
 		return NULL;
 	}
 	alloc_init(&daemon->superalloc, NULL, 0);
-	daemon->rrset_cache = rrset_cache_create(NULL, &daemon->superalloc);
-	if(!daemon->rrset_cache) {
-		slabhash_delete(daemon->msg_cache);
-		free(daemon);
-		return NULL;
-	}
-	if(!(daemon->env = (struct module_env*)calloc(1, 
-		sizeof(*daemon->env)))) {
-		daemon_delete(daemon);
-		return NULL;
-	}
 	return daemon;	
 }
 
@@ -173,8 +160,6 @@ static void daemon_setup_modules(struct daemon* daemon)
 	}
 	daemon->modfunc[0] = iter_get_funcblock();
 	daemon->env->cfg = daemon->cfg;
-	daemon->env->msg_cache = daemon->msg_cache;
-	daemon->env->rrset_cache = daemon->rrset_cache;
 	daemon->env->alloc = &daemon->superalloc;
 	daemon->env->worker = NULL;
 	daemon->env->send_query = &worker_send_query;
@@ -380,8 +365,11 @@ daemon_delete(struct daemon* daemon)
 	if(!daemon)
 		return;
 	listening_ports_free(daemon->ports);
-	slabhash_delete(daemon->msg_cache);
-	rrset_cache_delete(daemon->rrset_cache);
+	if(daemon->env) {
+		slabhash_delete(daemon->env->msg_cache);
+		rrset_cache_delete(daemon->env->rrset_cache);
+		infra_delete(daemon->env->infra_cache);
+	}
 	alloc_clear(&daemon->superalloc);
 	free(daemon->cwd);
 	free(daemon->pidfile);

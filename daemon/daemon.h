@@ -74,10 +74,6 @@ struct daemon {
 	int need_to_exit;
 	/** master allocation cache */
 	struct alloc_cache superalloc;
-	/** the message cache, content is struct msgreply_entry* */
-	struct slabhash* msg_cache;
-	/** the rrset cache, content is struct ub_packed_rrset_key* */
-	struct rrset_cache* rrset_cache;
 	/** the module environment master value, copied and changed by threads*/
 	struct module_env* env;
 	/** number of modules active, ids from 0 to num-1. */

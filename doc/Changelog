@@ -4,6 +4,8 @@
 	- services/cache/rrset.c for rrset cache code.
 	- special rrset_cache LRU updating function that uses the rrset id.
 	- no dependencies calculation when make clean is called.
+	- config settings for infra cache.
+	- daemon code slightly cleaner, only creates caches once.
 
 15 May 2007: Wouter
 	- host cache code.

@@ -114,7 +114,7 @@ struct infra_cache {
 
 /**
  * Create infra cache.
- * @param cfg: config parameters.
+ * @param cfg: config parameters or NULL for defaults.
  * @return: new infra cache, or NULL.
  */
 struct infra_cache* infra_create(struct config_file* cfg);
@@ -124,6 +124,17 @@ struct infra_cache* infra_create(struct config_file* cfg);
  * @param infra: infrastructure cache to delete.
  */
 void infra_delete(struct infra_cache* infra);
+
+/**
+ * Adjust infra cache to use updated configuration settings.
+ * This may clean the cache. Operates a bit like realloc.
+ * There may be no threading or use by other threads.
+ * @param infra: existing cache. If NULL a new infra cache is returned.
+ * @param cfg: config options.
+ * @return the new infra cache pointer or NULL on error.
+ */
+struct infra_cache* infra_adjust(struct infra_cache* infra, 
+	struct config_file* cfg);
 
 /**
  * Lookup host data

@@ -27,6 +27,8 @@ void ub_c_error(const char *message);
 #define LEXOUT(s)
 #endif
 
+#define YDOUT LEXOUT(("v(%s )", yytext))
+
 struct inc_state {
 	char* filename;
 	int line;
@@ -96,30 +98,35 @@ ANY     [^\"\n\r\\]|\\.
 %%
 {SPACE}* 		{ LEXOUT(("SP ")); /* ignore */ }
 {SPACE}*{COMMENT}.* 	{ LEXOUT(("comment(%s) ", yytext)); /* ignore */ }
-server{COLON}		{ LEXOUT(("v(%s) ", yytext)); return VAR_SERVER;}
-num-threads{COLON}	{ LEXOUT(("v(%s) ", yytext)); return VAR_NUM_THREADS;}
-verbosity{COLON}	{ LEXOUT(("v(%s) ", yytext)); return VAR_VERBOSITY;}
-port{COLON}		{ LEXOUT(("v(%s) ", yytext)); return VAR_PORT;}
-outgoing-port{COLON}	{ LEXOUT(("v(%s) ", yytext)); return VAR_OUTGOING_PORT;}
-outgoing-range{COLON}	{ LEXOUT(("v(%s) ", yytext)); return VAR_OUTGOING_RANGE;}
-outgoing-num-tcp{COLON}	{ LEXOUT(("v(%s) ", yytext)); return VAR_OUTGOING_NUM_TCP;}
-do-ip4{COLON}		{ LEXOUT(("v(%s) ", yytext)); return VAR_DO_IP4;}
-do-ip6{COLON}		{ LEXOUT(("v(%s) ", yytext)); return VAR_DO_IP6;}
-do-udp{COLON}		{ LEXOUT(("v(%s) ", yytext)); return VAR_DO_UDP;}
-do-tcp{COLON}		{ LEXOUT(("v(%s) ", yytext)); return VAR_DO_TCP;}
-forward-to{COLON}	{ LEXOUT(("v(%s) ", yytext)); return VAR_FORWARD_TO;}
-forward-to-port{COLON}	{ LEXOUT(("v(%s) ", yytext)); return VAR_FORWARD_TO_PORT;}
-interface{COLON}	{ LEXOUT(("v(%s) ", yytext)); return VAR_INTERFACE;}
-chroot{COLON}		{ LEXOUT(("v(%s) ", yytext)); return VAR_CHROOT;}
-username{COLON}		{ LEXOUT(("v(%s) ", yytext)); return VAR_USERNAME;}
-directory{COLON}	{ LEXOUT(("v(%s) ", yytext)); return VAR_DIRECTORY;}
-logfile{COLON}		{ LEXOUT(("v(%s) ", yytext)); return VAR_LOGFILE;}
-pidfile{COLON}		{ LEXOUT(("v(%s) ", yytext)); return VAR_PIDFILE;}
-msg-cache-size{COLON}	{ LEXOUT(("v(%s) ", yytext)); return VAR_MSG_CACHE_SIZE;}
-msg-cache-slabs{COLON}	{ LEXOUT(("v(%s) ", yytext)); return VAR_MSG_CACHE_SLABS;}
-rrset-cache-size{COLON}	{ LEXOUT(("v(%s) ", yytext)); return VAR_RRSET_CACHE_SIZE;}
-rrset-cache-slabs{COLON}	{ LEXOUT(("v(%s) ", yytext)); return VAR_RRSET_CACHE_SLABS;}
-num-queries-per-thread{COLON}	{ LEXOUT(("v(%s) ", yytext)); return VAR_NUM_QUERIES_PER_THREAD;}
+server{COLON}		{ YDOUT; return VAR_SERVER;}
+num-threads{COLON}	{ YDOUT; return VAR_NUM_THREADS;}
+verbosity{COLON}	{ YDOUT; return VAR_VERBOSITY;}
+port{COLON}		{ YDOUT; return VAR_PORT;}
+outgoing-port{COLON}	{ YDOUT; return VAR_OUTGOING_PORT;}
+outgoing-range{COLON}	{ YDOUT; return VAR_OUTGOING_RANGE;}
+outgoing-num-tcp{COLON}	{ YDOUT; return VAR_OUTGOING_NUM_TCP;}
+do-ip4{COLON}		{ YDOUT; return VAR_DO_IP4;}
+do-ip6{COLON}		{ YDOUT; return VAR_DO_IP6;}
+do-udp{COLON}		{ YDOUT; return VAR_DO_UDP;}
+do-tcp{COLON}		{ YDOUT; return VAR_DO_TCP;}
+forward-to{COLON}	{ YDOUT; return VAR_FORWARD_TO;}
+forward-to-port{COLON}	{ YDOUT; return VAR_FORWARD_TO_PORT;}
+interface{COLON}	{ YDOUT; return VAR_INTERFACE;}
+chroot{COLON}		{ YDOUT; return VAR_CHROOT;}
+username{COLON}		{ YDOUT; return VAR_USERNAME;}
+directory{COLON}	{ YDOUT; return VAR_DIRECTORY;}
+logfile{COLON}		{ YDOUT; return VAR_LOGFILE;}
+pidfile{COLON}		{ YDOUT; return VAR_PIDFILE;}
+msg-cache-size{COLON}	{ YDOUT; return VAR_MSG_CACHE_SIZE;}
+msg-cache-slabs{COLON}	{ YDOUT; return VAR_MSG_CACHE_SLABS;}
+rrset-cache-size{COLON}	{ YDOUT; return VAR_RRSET_CACHE_SIZE;}
+rrset-cache-slabs{COLON}	{ YDOUT; return VAR_RRSET_CACHE_SLABS;}
+infra-host-ttl{COLON}	{ YDOUT; return VAR_INFRA_HOST_TTL;}
+infra-lame-ttl{COLON}	{ YDOUT; return VAR_INFRA_LAME_TTL;}
+infra-cache-slabs{COLON}	{ YDOUT; return VAR_INFRA_CACHE_SLABS;}
+infra-cache-numhosts{COLON}	{ YDOUT; return VAR_INFRA_CACHE_NUMHOSTS;}
+infra-cache-numlame{COLON}	{ YDOUT; return VAR_INFRA_CACHE_NUMLAME;}
+num-queries-per-thread{COLON}	{ YDOUT; return VAR_NUM_QUERIES_PER_THREAD;}
 {NEWLINE}		{ LEXOUT(("NL\n")); cfg_parser->line++;}
 
 	/* Quoted strings. Strip leading and ending quotes */

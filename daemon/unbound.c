@@ -47,6 +47,7 @@
 #include "util/storage/slabhash.h"
 #include "services/listen_dnsport.h"
 #include "services/cache/rrset.h"
+#include "services/cache/infra.h"
 #include "util/data/msgreply.h"
 #include "util/module.h"
 #include <signal.h>
@@ -120,22 +121,24 @@ apply_dir(struct daemon* daemon, struct config_file* cfg, int cmdline_verbose)
 				log_err("cwd: malloc failed");
 		}
 	}
-	if(cfg->msg_cache_size != slabhash_get_size(daemon->msg_cache) ||
-		cfg->msg_cache_slabs != daemon->msg_cache->size) {
-		slabhash_delete(daemon->msg_cache);
-		daemon->msg_cache = slabhash_create(cfg->msg_cache_slabs, 
+	if(!daemon->env->msg_cache ||
+	   cfg->msg_cache_size != slabhash_get_size(daemon->env->msg_cache) ||
+	   cfg->msg_cache_slabs != daemon->env->msg_cache->size) {
+		slabhash_delete(daemon->env->msg_cache);
+		daemon->env->msg_cache = slabhash_create(cfg->msg_cache_slabs, 
 			HASH_DEFAULT_STARTARRAY, cfg->msg_cache_size, 
 			msgreply_sizefunc, query_info_compare,
 			query_entry_delete, reply_info_delete, NULL);
-		if(!daemon->msg_cache) {
+		if(!daemon->env->msg_cache) {
 			fatal_exit("malloc failure updating config settings");
 		}
 	}
-	if((daemon->rrset_cache = rrset_cache_adjust(daemon->rrset_cache,
-			cfg, &daemon->superalloc)) == 0)
-			fatal_exit("malloc failure updating config settings");
-	daemon->env->rrset_cache = daemon->rrset_cache;
-	daemon->env->msg_cache = daemon->msg_cache;
+	if((daemon->env->rrset_cache = rrset_cache_adjust(
+		daemon->env->rrset_cache, cfg, &daemon->superalloc)) == 0)
+		fatal_exit("malloc failure updating config settings");
+	if((daemon->env->infra_cache = infra_adjust(daemon->env->infra_cache, 
+		cfg))==0)
+		fatal_exit("malloc failure updating config settings");
 	checkrlimits(cfg);
 }
 
