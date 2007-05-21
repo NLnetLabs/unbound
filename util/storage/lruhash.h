@@ -96,6 +96,12 @@
  *	  the scenario requires more than three threads.
  * 	o so the queue length is 3 threads in a bad situation. The fourth is
  *	  unable to use the hashtable.
+ *
+ * If you need to acquire locks on multiple items from the hashtable.
+ *	o you MUST release all locks on items from the hashtable before
+ *	  doing the next lookup/insert/delete/whatever.
+ *	o To acquire multiple items you should use a special routine that
+ *	  obtains the locks on those multiple items in one go.
  */
 
 #ifndef UTIL_STORAGE_LRUHASH_H

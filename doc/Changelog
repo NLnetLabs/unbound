@@ -1,3 +1,8 @@
+21 May 2007: Wouter
+	- small comment on hash table locking.
+	- outside network serviced queries, contain edns and tcp fallback,
+	  and udp retries and rtt timing.
+
 16 May 2007: Wouter
 	- lruhash_touch() would cause locking order problems. Fixup in 
 	  lock-verify in case locking cycle is found.

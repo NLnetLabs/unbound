@@ -317,6 +317,8 @@ answer_from_cache(struct worker* worker, struct lruhash_entry* e, uint16_t id,
 		replyerror_fillbuf(LDNS_RCODE_SERVFAIL, repinfo, id,
 			flags, &mrentry->key);
 	}
+	/* cannot send the reply right now, because blocking network syscall
+	 * is bad while holding locks. */
 	/* unlock */
 	for(i=0; i<rep->rrset_count; i++) {
 		if(i>0 && rep->ref[i].key == rep->ref[i-1].key)
@@ -324,6 +326,7 @@ answer_from_cache(struct worker* worker, struct lruhash_entry* e, uint16_t id,
 		h[i] = rep->ref[i].key->entry.hash;
 		lock_rw_unlock(&rep->ref[i].key->entry.lock);
 	}
+	/* still holding msgreply lock to touch LRU, so cannot send reply yet*/
 	/* LRU touch, with no rrset locks held */
 	for(i=0; i<rep->rrset_count; i++) {
 		if(i>0 && rep->ref[i].key == rep->ref[i-1].key)
@@ -586,6 +589,20 @@ worker_init(struct worker* worker, struct config_file *cfg,
 	} else { /* !do_sigs */
 		worker->comsig = 0;
 	}
+	/* init random(), large table size. */
+	if(!(worker->rndstate = (struct ub_randstate*)calloc(1,
+		sizeof(struct ub_randstate)))) {
+		log_err("malloc rndtable failed.");
+		worker_delete(worker);
+		return 0;
+	}
+	seed = (unsigned int)time(NULL) ^ (unsigned int)getpid() ^
+		(unsigned int)worker->thread_num;
+	if(!ub_initstate(seed, worker->rndstate, RND_STATE_SIZE)) {
+		log_err("could not init random numbers.");
+		worker_delete(worker);
+		return 0;
+	}
 	worker->front = listen_create(worker->base, ports,
 		buffer_size, worker_handle_request, worker);
 	if(!worker->front) {
@@ -598,23 +615,10 @@ worker_init(struct worker* worker, struct config_file *cfg,
 	worker->back = outside_network_create(worker->base,
 		buffer_size, (size_t)cfg->outgoing_num_ports, cfg->ifs, 
 		cfg->num_ifs, cfg->do_ip4, cfg->do_ip6, startport, 
-		cfg->do_tcp?cfg->outgoing_num_tcp:0);
+		cfg->do_tcp?cfg->outgoing_num_tcp:0, 
+		worker->daemon->env->infra_cache, worker->rndstate);
 	if(!worker->back) {
 		log_err("could not create outgoing sockets");
-		worker_delete(worker);
-		return 0;
-	}
-	/* init random(), large table size. */
-	if(!(worker->rndstate = (struct ub_randstate*)calloc(1,
-		sizeof(struct ub_randstate)))) {
-		log_err("malloc rndtable failed.");
-		worker_delete(worker);
-		return 0;
-	}
-	seed = (unsigned int)time(NULL) ^ (unsigned int)getpid() ^
-		(unsigned int)worker->thread_num;
-	if(!ub_initstate(seed, worker->rndstate, RND_STATE_SIZE)) {
-		log_err("could not init random numbers.");
 		worker_delete(worker);
 		return 0;
 	}
@@ -691,8 +695,8 @@ worker_send_query(ldns_buffer* pkt, struct sockaddr_storage* addr,
 	if(use_tcp) {
 		return pending_tcp_query(worker->back, pkt, addr, addrlen, 
 			timeout, worker_handle_reply, q->work_info, 
-			worker->rndstate);
+			worker->rndstate) != 0;
 	}
 	return pending_udp_query(worker->back, pkt, addr, addrlen, timeout,
-		worker_handle_reply, q->work_info, worker->rndstate);
+		worker_handle_reply, q->work_info, worker->rndstate) != 0;
 }

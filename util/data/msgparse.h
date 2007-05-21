@@ -189,8 +189,6 @@ struct rr_parse {
 #define EDNS_RCODE_BADVERS	16	/** bad EDNS version */
 /** largest valid compression offset */
 #define PTR_MAX_OFFSET 	0x3fff
-/** bits for EDNS bitfield */
-#define EDNS_DO	0x8000 /* Dnssec Ok */
 
 /**
  * EDNS data storage

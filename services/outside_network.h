@@ -51,6 +51,7 @@ struct pending_timeout;
 struct ub_randstate;
 struct pending_tcp;
 struct waiting_tcp;
+struct infra_cache;
 
 /**
  * Send queries to outside servers and wait for answers from servers.
@@ -68,19 +69,25 @@ struct outside_network {
 	 * Array of udp comm point* that are used to listen to pending events.
 	 * Each is on a different port. This is for ip4 ports.
 	 */
-	struct comm_point **udp4_ports;
+	struct comm_point** udp4_ports;
 	/** number of udp4 ports */
 	size_t num_udp4;
 
 	/**
 	 * The opened ip6 ports.
 	 */
-	struct comm_point **udp6_ports;
+	struct comm_point** udp6_ports;
 	/** number of udp6 ports */
 	size_t num_udp6;
 
 	/** pending udp answers. sorted by id, addr */
-	rbtree_t *pending;
+	rbtree_t* pending;
+	/** serviced queries, sorted by qbuf, addr, dnssec */
+	rbtree_t* serviced;
+	/** host cache, pointer but not owned by outnet. */
+	struct infra_cache* infra;
+	/** where to get random numbers */
+	struct ub_randstate* rnd;
 
 	/**
 	 * Array of tcp pending used for outgoing TCP connections.
@@ -171,6 +178,64 @@ struct waiting_tcp {
 };
 
 /**
+ * Callback to party interested in serviced query results.
+ */
+struct service_callback {
+	/** next in callback list */
+	struct service_callback* next;
+	/** callback function */
+	comm_point_callback_t* cb;
+	/** user argument for callback function */
+	void* cb_arg;
+};
+
+/**
+ * Query service record.
+ * Contains query and destination. UDP, TCP, EDNS are all tried.
+ * complete with retries and timeouts. A number of interested parties can
+ * receive a callback.
+ */
+struct serviced_query {
+	/** The rbtree node, key is this record */
+	rbnode_t node;
+	/** The query that needs to be answered. Starts with flags u16,
+	 * then qdcount, ..., including qname, qtype, qclass. Does not include
+	 * EDNS record. */
+	uint8_t* qbuf;
+	/** length of qbuf. */
+	size_t qbuflen;
+	/** If an EDNS section is included, the DO bit will be turned on. */
+	int dnssec;
+	/** where to send it */
+	struct sockaddr_storage addr;
+	/** length of addr field in use. */
+	socklen_t addrlen;
+	/** current status */
+	enum serviced_query_status {
+		/** initial status */
+		serviced_initial,
+		/** UDP with EDNS sent */
+		serviced_query_UDP_EDNS,
+		/** UDP without EDNS sent */
+		serviced_query_UDP,
+		/** TCP with EDNS sent */
+		serviced_query_TCP_EDNS,
+		/** TCP without EDNS sent */
+		serviced_query_TCP
+	} status;
+	/** number of UDP retries */
+	int retry;
+	/** time last UDP was sent */
+	time_t last_sent_time;
+	/** outside network this is part of */
+	struct outside_network* outnet;
+	/** list of interested parties that need callback on results. */
+	struct service_callback* cblist;
+	/** the UDP or TCP query that is pending, see status which */
+	void* pending;
+};
+
+/**
  * Create outside_network structure with N udp ports.
  * @param base: the communication base to use for event handling.
  * @param bufsize: size for network buffers.
@@ -183,11 +248,14 @@ struct waiting_tcp {
  * @param port_base: if -1 system assigns ports, otherwise try to get
  *    the ports numbered from this starting number.
  * @param num_tcp: number of outgoing tcp buffers to preallocate.
+ * @param infra: pointer to infra cached used for serviced queries.
+ * @param rnd: stored to create random numbers for serviced queries.
  * @return: the new structure (with no pending answers) or NULL on error.
  */
 struct outside_network* outside_network_create(struct comm_base* base,
 	size_t bufsize, size_t num_ports, char** ifs, int num_ifs,
-	int do_ip4, int do_ip6, int port_base, size_t num_tcp);
+	int do_ip4, int do_ip6, int port_base, size_t num_tcp, 
+	struct infra_cache* infra, struct ub_randstate* rnd);
 
 /**
  * Delete outside_network structure.
@@ -206,12 +274,12 @@ void outside_network_delete(struct outside_network* outnet);
  * @param callback: function to call on error, timeout or reply.
  * @param callback_arg: user argument for callback function.
  * @param rnd: random state for generating ID and port.
- * @return: false on error for malloc or socket.
+ * @return: NULL on error for malloc or socket. Else the pending query object.
  */
-int pending_udp_query(struct outside_network* outnet, ldns_buffer* packet, 
-	struct sockaddr_storage* addr, socklen_t addrlen, int timeout,
-	comm_point_callback_t* callback, void* callback_arg,
-	struct ub_randstate* rnd);
+struct pending* pending_udp_query(struct outside_network* outnet, 
+	ldns_buffer* packet, struct sockaddr_storage* addr, 
+	socklen_t addrlen, int timeout, comm_point_callback_t* callback, 
+	void* callback_arg, struct ub_randstate* rnd);
 
 /**
  * Send TCP query. May wait for TCP buffer. Selects ID to be random, and 
@@ -226,12 +294,12 @@ int pending_udp_query(struct outside_network* outnet, ldns_buffer* packet,
  * @param callback: function to call on error, timeout or reply.
  * @param callback_arg: user argument for callback function.
  * @param rnd: random state for generating ID.
- * @return: false on error for malloc or socket.
+ * @return: false on error for malloc or socket. Else the pending TCP object.
  */
-int pending_tcp_query(struct outside_network* outnet, ldns_buffer* packet, 
-	struct sockaddr_storage* addr, socklen_t addrlen, int timeout,
-	comm_point_callback_t* callback, void* callback_arg,
-	struct ub_randstate* rnd);
+struct waiting_tcp* pending_tcp_query(struct outside_network* outnet, 
+	ldns_buffer* packet, struct sockaddr_storage* addr, 
+	socklen_t addrlen, int timeout, comm_point_callback_t* callback, 
+	void* callback_arg, struct ub_randstate* rnd);
 
 /**
  * Delete pending answer.
@@ -240,5 +308,38 @@ int pending_tcp_query(struct outside_network* outnet, ldns_buffer* packet,
  * @param p: deleted
  */
 void pending_delete(struct outside_network* outnet, struct pending* p);
+
+/**
+ * Perform a serviced query to the authoritative servers.
+ * Duplicate efforts are detected, and EDNS, TCP and UDP retry is performed.
+ * @param outnet: outside network, with rbtree of serviced queries.
+ * @param qname: what qname to query.
+ * @param qnamelen: length of qname in octets including 0 root label.
+ * @param qtype: rrset type to query (host format)
+ * @param qclass: query class. (host format)
+ * @param flags: flags u16 (host format), includes opcode, CD bit.
+ * @param dnssec: if set, DO bit is set in EDNS queries.
+ * @param callback: callback function.
+ * @param callback_arg: user argument to callback function.
+ * @param addr: to which server to send the query.
+ * @param addrlen: length of addr.
+ * @param buff: scratch buffer to create query contents in. Empty on exit.
+ * @return 0 on error, or pointer to serviced query that is used to answer
+ *	this serviced query may be shared with other callbacks as well.
+ */
+struct serviced_query* outnet_serviced_query(struct outside_network* outnet,
+	uint8_t* qname, size_t qnamelen, uint16_t qtype, uint16_t qclass,
+	uint16_t flags, int dnssec, struct sockaddr_storage* addr, 
+	socklen_t addrlen, comm_point_callback_t* callback, 
+	void* callback_arg, ldns_buffer* buff);
+
+/**
+ * Remove service query callback.
+ * If that leads to zero callbacks, the query is completely cancelled.
+ * @param sq: serviced query to adjust.
+ * @param cb_arg: callback argument of callback that needs removal.
+ *	same as the callback_arg to outnet_serviced_query().
+ */
+void outnet_serviced_query_stop(struct serviced_query* sq, void* cb_arg);
 
 #endif /* OUTSIDE_NETWORK_H */

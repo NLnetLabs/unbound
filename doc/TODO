@@ -21,3 +21,4 @@ o detect OS/400 pthreads implementation that allows upgrading to writelock
 o understand synthesized DNAMEs, so those TTL=0 packets are cached properly.
 o understand NSEC/NSEC3, aggressive negative caching, so that updates to
   NSEC/NSEC3 will result in proper negative responses.
+o fallback without EDNS if result is NOTIMPL, now only on FORMERR like in java.

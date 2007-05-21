@@ -60,6 +60,8 @@
 #define EDNS_ADVERTISED_VERSION         0
 /** Advertised size of EDNS capabilities */
 #define EDNS_ADVERTISED_SIZE    4096
+/** bits for EDNS bitfield */
+#define EDNS_DO 0x8000 /* Dnssec Ok */
 
 /**
  * See if string is ip4 or ip6.

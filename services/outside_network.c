@@ -42,6 +42,9 @@
 
 #include "services/outside_network.h"
 #include "services/listen_dnsport.h"
+#include "services/cache/infra.h"
+#include "util/data/msgparse.h"
+#include "util/data/msgreply.h"
 #include "util/netevent.h"
 #include "util/log.h"
 #include "util/net_help.h"
@@ -59,27 +62,30 @@
 #define INET_SIZE 4
 /** byte size of ip6 address */
 #define INET6_SIZE 16 
+/** number of retries on outgoing UDP queries */
+#define OUTBOUND_UDP_RETRY 4
 
-/** compare function of pending rbtree */
-static int 
-pending_cmp(const void* key1, const void* key2)
+/** callback for serviced query UDP answers. */
+static int serviced_udp_callback(struct comm_point* c, void* arg, int error,
+        struct comm_reply* rep);
+/** initiate TCP transaction for serviced query */
+static void serviced_tcp_initiate(struct outside_network* outnet, 
+	struct serviced_query* sq, ldns_buffer* buff);
+
+/** compare sockaddr */
+static int
+sockaddr_cmp(struct sockaddr_storage* addr1, socklen_t len1, 
+	struct sockaddr_storage* addr2, socklen_t len2)
 {
-	struct pending *p1 = (struct pending*)key1;
-	struct pending *p2 = (struct pending*)key2;
-	struct sockaddr_in* p1_in = (struct sockaddr_in*)&p1->addr;
-	struct sockaddr_in* p2_in = (struct sockaddr_in*)&p2->addr;
-	struct sockaddr_in6* p1_in6 = (struct sockaddr_in6*)&p1->addr;
-	struct sockaddr_in6* p2_in6 = (struct sockaddr_in6*)&p2->addr;
-	if(p1->id < p2->id)
+	struct sockaddr_in* p1_in = (struct sockaddr_in*)addr1;
+	struct sockaddr_in* p2_in = (struct sockaddr_in*)addr2;
+	struct sockaddr_in6* p1_in6 = (struct sockaddr_in6*)addr1;
+	struct sockaddr_in6* p2_in6 = (struct sockaddr_in6*)addr2;
+	if(len1 < len2)
 		return -1;
-	if(p1->id > p2->id)
+	if(len1 > len2)
 		return 1;
-	log_assert(p1->id == p2->id);
-	if(p1->addrlen < p2->addrlen)
-		return -1;
-	if(p1->addrlen > p2->addrlen)
-		return 1;
-	log_assert(p1->addrlen == p2->addrlen);
+	log_assert(len1 == len2);
 	if( p1_in->sin_family < p2_in->sin_family)
 		return -1;
 	if( p1_in->sin_family > p2_in->sin_family)
@@ -105,8 +111,44 @@ pending_cmp(const void* key1, const void* key2)
 			INET6_SIZE);
 	} else {
 		/* eek unknown type, perform this comparison for sanity. */
-		return memcmp(&p1->addr, &p2->addr, p1->addrlen);
+		return memcmp(addr1, addr2, len1);
 	}
+}
+
+/** compare function of pending rbtree */
+static int 
+pending_cmp(const void* key1, const void* key2)
+{
+	struct pending *p1 = (struct pending*)key1;
+	struct pending *p2 = (struct pending*)key2;
+	if(p1->id < p2->id)
+		return -1;
+	if(p1->id > p2->id)
+		return 1;
+	log_assert(p1->id == p2->id);
+	return sockaddr_cmp(&p1->addr, p1->addrlen, &p2->addr, p2->addrlen);
+}
+
+/** compare function of serviced query rbtree */
+static int 
+serviced_cmp(const void* key1, const void* key2)
+{
+	struct serviced_query* q1 = (struct serviced_query*)key1;
+	struct serviced_query* q2 = (struct serviced_query*)key2;
+	int r;
+	if(q1->qbuflen < q2->qbuflen)
+		return -1;
+	if(q1->qbuflen > q2->qbuflen)
+		return 1;
+	log_assert(q1->qbuflen == q2->qbuflen);
+	if((r = memcmp(q1->qbuf, q2->qbuf, q1->qbuflen)) != 0)
+		return r;
+	if(q1->dnssec != q2->dnssec) {
+		if(q1->dnssec < q2->dnssec)
+			return -1;
+		return 1;
+	}
+	return sockaddr_cmp(&q1->addr, q1->addrlen, &q2->addr, q2->addrlen);
 }
 
 /** delete waiting_tcp entry. Does not unlink from waiting list. 
@@ -182,6 +224,19 @@ use_free_buffer(struct outside_network* outnet)
 	}
 }
 
+/** decomission a tcp buffer, closes commpoint and frees waiting_tcp entry */
+static void
+decomission_pending_tcp(struct outside_network* outnet, 
+	struct pending_tcp* pend)
+{
+	comm_point_close(pend->c);
+	pend->next_free = outnet->tcp_free;
+	outnet->tcp_free = pend;
+	waiting_tcp_delete(pend->query);
+	pend->query = NULL;
+	use_free_buffer(outnet);
+}
+
 /** callback for pending tcp connections */
 static int 
 outnet_tcp_cb(struct comm_point* c, void* arg, int error,
@@ -203,12 +258,7 @@ outnet_tcp_cb(struct comm_point* c, void* arg, int error,
 		}
 	}
 	(void)(*pend->query->cb)(c, pend->query->cb_arg, error, reply_info);
-	comm_point_close(c);
-	pend->next_free = outnet->tcp_free;
-	outnet->tcp_free = pend;
-	waiting_tcp_delete(pend->query);
-	pend->query = NULL;
-	use_free_buffer(outnet);
+	decomission_pending_tcp(outnet, pend);
 	return 0;
 }
 
@@ -255,8 +305,10 @@ outnet_udp_cb(struct comm_point* c, void* arg, int error,
 	}
 	comm_timer_disable(p->timer);
 	verbose(VERB_ALGO, "outnet handle udp reply");
+	/* delete from tree first in case callback creates a retry */
+	(void)rbtree_delete(outnet->pending, p->node.key);
 	(void)(*p->cb)(p->c, p->cb_arg, NETEVENT_NOERROR, reply_info);
-	pending_delete(outnet, p);
+	pending_delete(NULL, p);
 	return 0;
 }
 
@@ -402,7 +454,8 @@ create_pending_tcp(struct outside_network* outnet, size_t bufsize)
 struct outside_network* 
 outside_network_create(struct comm_base *base, size_t bufsize, 
 	size_t num_ports, char** ifs, int num_ifs, int do_ip4, 
-	int do_ip6, int port_base, size_t num_tcp)
+	int do_ip6, int port_base, size_t num_tcp, struct infra_cache* infra,
+	struct ub_randstate* rnd)
 {
 	struct outside_network* outnet = (struct outside_network*)
 		calloc(1, sizeof(struct outside_network));
@@ -413,6 +466,8 @@ outside_network_create(struct comm_base *base, size_t bufsize,
 	}
 	outnet->base = base;
 	outnet->num_tcp = num_tcp;
+	outnet->infra = infra;
+	outnet->rnd = rnd;
 #ifndef INET6
 	do_ip6 = 0;
 #endif
@@ -425,6 +480,7 @@ outside_network_create(struct comm_base *base, size_t bufsize,
 		!(outnet->udp6_ports = (struct comm_point **)calloc(
 			outnet->num_udp6+1, sizeof(struct comm_point*))) ||
 		!(outnet->pending = rbtree_create(pending_cmp)) ||
+		!(outnet->serviced = rbtree_create(serviced_cmp)) ||
 		!create_pending_tcp(outnet, bufsize)) {
 		log_err("malloc failed");
 		outside_network_delete(outnet);
@@ -481,6 +537,21 @@ pending_node_del(rbnode_t* node, void* arg)
 	pending_delete(outnet, pend);
 }
 
+/** helper serviced delete */
+static void
+serviced_node_del(rbnode_t* node, void* ATTR_UNUSED(arg))
+{
+	struct serviced_query* sq = (struct serviced_query*)node;
+	struct service_callback* p = sq->cblist, *np;
+	free(sq->qbuf);
+	while(p) {
+		np = p->next;
+		free(p);
+		p = np;
+	}
+	free(sq);
+}
+
 void 
 outside_network_delete(struct outside_network* outnet)
 {
@@ -491,6 +562,10 @@ outside_network_delete(struct outside_network* outnet)
 		/* free pending elements, but do no unlink from tree. */
 		traverse_postorder(outnet->pending, pending_node_del, NULL);
 		free(outnet->pending);
+	}
+	if(outnet->serviced) {
+		traverse_postorder(outnet->serviced, serviced_node_del, NULL);
+		free(outnet->serviced);
 	}
 	if(outnet->udp_buff)
 		ldns_buffer_free(outnet->udp_buff);
@@ -648,7 +723,7 @@ select_port(struct outside_network* outnet, struct pending* pend,
 }
 
 
-int 
+struct pending* 
 pending_udp_query(struct outside_network* outnet, ldns_buffer* packet, 
 	struct sockaddr_storage* addr, socklen_t addrlen, int timeout,
 	comm_point_callback_t* cb, void* cb_arg, struct ub_randstate* rnd)
@@ -659,7 +734,7 @@ pending_udp_query(struct outside_network* outnet, ldns_buffer* packet,
 	/* create pending struct and change ID to be unique */
 	if(!(pend=new_pending(outnet, packet, addr, addrlen, cb, cb_arg, 
 		rnd))) {
-		return 0;
+		return NULL;
 	}
 	select_port(outnet, pend, rnd);
 
@@ -667,7 +742,7 @@ pending_udp_query(struct outside_network* outnet, ldns_buffer* packet,
 	if(!comm_point_send_udp_msg(pend->c, packet, (struct sockaddr*)addr, 
 		addrlen)) {
 		pending_delete(outnet, pend);
-		return 0;
+		return NULL;
 	}
 
 	/* system calls to set timeout after sending UDP to make roundtrip
@@ -675,7 +750,7 @@ pending_udp_query(struct outside_network* outnet, ldns_buffer* packet,
 	tv.tv_sec = timeout;
 	tv.tv_usec = 0;
 	comm_timer_set(pend->timer, &tv);
-	return 1;
+	return pend;
 }
 
 /** callback for outgoing TCP timer event */
@@ -710,7 +785,7 @@ outnet_tcptimer(void* arg)
 	use_free_buffer(outnet);
 }
 
-int 
+struct waiting_tcp* 
 pending_tcp_query(struct outside_network* outnet, ldns_buffer* packet, 
 	struct sockaddr_storage* addr, socklen_t addrlen, int timeout,
 	comm_point_callback_t* callback, void* callback_arg,
@@ -724,11 +799,11 @@ pending_tcp_query(struct outside_network* outnet, ldns_buffer* packet,
 	w = (struct waiting_tcp*)malloc(sizeof(struct waiting_tcp) 
 		+ (pend?0:ldns_buffer_limit(packet)));
 	if(!w) {
-		return 0;
+		return NULL;
 	}
 	if(!(w->timer = comm_timer_create(outnet->base, outnet_tcptimer, w))) {
 		free(w);
-		return 0;
+		return NULL;
 	}
 	w->pkt = NULL;
 	w->pkt_len = ldns_buffer_limit(packet);
@@ -747,7 +822,7 @@ pending_tcp_query(struct outside_network* outnet, ldns_buffer* packet,
 		/* we have a buffer available right now */
 		if(!outnet_tcp_take_into_use(w, ldns_buffer_begin(packet))) {
 			waiting_tcp_delete(w);
-			return 0;
+			return NULL;
 		}
 	} else {
 		/* queue up */
@@ -759,5 +834,348 @@ pending_tcp_query(struct outside_network* outnet, ldns_buffer* packet,
 		else	outnet->tcp_wait_first = w;
 		outnet->tcp_wait_last = w;
 	}
+	return w;
+}
+
+/** create query for serviced queries. */
+static void
+serviced_gen_query(ldns_buffer* buff, uint8_t* qname, size_t qnamelen, 
+	uint16_t qtype, uint16_t qclass, uint16_t flags)
+{
+	ldns_buffer_clear(buff);
+	/* skip id */
+	ldns_buffer_write_u16(buff, flags);
+	ldns_buffer_write_u16(buff, 1); /* qdcount */
+	ldns_buffer_write_u16(buff, 0); /* ancount */
+	ldns_buffer_write_u16(buff, 0); /* nscount */
+	ldns_buffer_write_u16(buff, 0); /* arcount */
+	ldns_buffer_write(buff, qname, qnamelen);
+	ldns_buffer_write_u16(buff, qtype);
+	ldns_buffer_write_u16(buff, qclass);
+	ldns_buffer_flip(buff);
+}
+
+/** lookup serviced query in serviced query rbtree */
+static struct serviced_query*
+lookup_serviced(struct outside_network* outnet, ldns_buffer* buff, int dnssec,
+	struct sockaddr_storage* addr, socklen_t addrlen)
+{
+	struct serviced_query key;
+	key.node.key = &key;
+	key.qbuf = ldns_buffer_begin(buff);
+	key.qbuflen = ldns_buffer_limit(buff);
+	key.dnssec = dnssec;
+	memcpy(&key.addr, addr, addrlen);
+	key.addrlen = addrlen;
+	key.outnet = outnet;
+	return (struct serviced_query*)rbtree_search(outnet->serviced, &key);
+}
+
+/** Create new serviced entry */
+static struct serviced_query*
+serviced_create(struct outside_network* outnet, ldns_buffer* buff, int dnssec,
+        struct sockaddr_storage* addr, socklen_t addrlen)
+{
+	struct serviced_query* sq = (struct serviced_query*)malloc(sizeof(*sq));
+	rbnode_t* ins;
+	if(!sq) 
+		return NULL;
+	sq->node.key = sq;
+	sq->qbuf = memdup(ldns_buffer_begin(buff), ldns_buffer_limit(buff));
+	if(!sq->qbuf) {
+		free(sq);
+		return NULL;
+	}
+	sq->qbuflen = ldns_buffer_limit(buff);
+	sq->dnssec = dnssec;
+	memcpy(&sq->addr, addr, addrlen);
+	sq->addrlen = addrlen;
+	sq->outnet = outnet;
+	sq->cblist = NULL;
+	sq->pending = NULL;
+	sq->status = serviced_initial;
+	sq->retry = 0;
+	ins = rbtree_insert(outnet->serviced, &sq->node);
+	log_assert(ins != NULL); /* must not be already present */
+	return sq;
+}
+
+/** remove waiting tcp from the outnet waiting list */
+static void
+waiting_list_remove(struct outside_network* outnet, struct waiting_tcp* w)
+{
+	struct waiting_tcp* p = outnet->tcp_wait_first, *prev = NULL;
+	while(p) {
+		if(p == w) {
+			/* remove w */
+			if(prev)
+				prev->next_waiting = w->next_waiting;
+			else	outnet->tcp_wait_first = w->next_waiting;
+			if(outnet->tcp_wait_last == w)
+				outnet->tcp_wait_last = prev;
+			return;
+		}
+		prev = p;
+		p = p->next_waiting;
+	}
+}
+
+/** cleanup serviced query entry */
+static void
+serviced_delete(struct serviced_query* sq)
+{
+	if(sq->pending) {
+		/* clear up the pending query */
+		if(sq->status == serviced_query_UDP_EDNS ||
+			sq->status == serviced_query_UDP) {
+			struct pending* p = (struct pending*)sq->pending;
+			pending_delete(sq->outnet, p);
+		} else {
+			struct waiting_tcp* p = (struct waiting_tcp*)
+				sq->pending;
+			if(p->pkt == NULL) {
+				decomission_pending_tcp(sq->outnet, 
+					(struct pending_tcp*)p->next_waiting);
+			} else {
+				waiting_list_remove(sq->outnet, p);
+			}
+		}
+	}
+	/* does not delete from tree, caller has to do that */
+	serviced_node_del(&sq->node, NULL);
+}
+
+/** put serviced query into a buffer */
+static void
+serviced_encode(struct serviced_query* sq, ldns_buffer* buff, int with_edns)
+{
+	/* generate query */
+	ldns_buffer_clear(buff);
+	ldns_buffer_write_u16(buff, 0); /* id placeholder */
+	ldns_buffer_write(buff, sq->qbuf, sq->qbuflen);
+	if(with_edns) {
+		/* add edns section */
+		struct edns_data edns;
+		edns.edns_present = 1;
+		edns.ext_rcode = 0;
+		edns.edns_version = EDNS_ADVERTISED_VERSION;
+		edns.udp_size = EDNS_ADVERTISED_SIZE;
+		edns.bits = 0;
+		if(sq->dnssec)
+			edns.bits = EDNS_DO;
+		attach_edns_record(buff, &edns);
+	}
+	ldns_buffer_flip(buff);
+}
+
+/**
+ * Perform serviced query UDP sending operation.
+ * Sends UDP with EDNS, unless infra host marked non EDNS.
+ * @param sq: query to send.
+ * @param buff: buffer scratch space.
+ * @return 0 on error.
+ */
+static int
+serviced_udp_send(struct serviced_query* sq, ldns_buffer* buff)
+{
+	int rtt, vs;
+	time_t now = time(0);
+
+	if(!infra_host(sq->outnet->infra, &sq->addr, sq->addrlen, now, &vs,
+		&rtt))
+		return 0;
+	if(sq->status == serviced_initial) {
+		if(vs != -1)
+			sq->status = serviced_query_UDP_EDNS;
+		else 	sq->status = serviced_query_UDP;
+	}
+	serviced_encode(sq, buff, sq->status == serviced_query_UDP_EDNS);
+	sq->last_sent_time = now;
+	/* round rtt to whole seconds for now. TODO better timing */
+	rtt = rtt/1000 + 1;
+	sq->pending = pending_udp_query(sq->outnet, buff, &sq->addr, 
+		sq->addrlen, rtt, serviced_udp_callback, sq, sq->outnet->rnd);
+	if(!sq->pending)
+		return 0;
 	return 1;
+}
+
+/** call the callbacks for a serviced query */
+static void
+serviced_callbacks(struct serviced_query* sq, int error, struct comm_point* c)
+{
+	struct service_callback* p = sq->cblist;
+	while(p) {
+		(void)(*p->cb)(c, p->cb_arg, error, NULL);
+		p = p->next;
+	}
+}
+
+/** TCP reply or error callback for serviced queries */
+static int 
+serviced_tcp_callback(struct comm_point* c, void* arg, int error,
+        struct comm_reply* ATTR_UNUSED(rep))
+{
+	struct serviced_query* sq = (struct serviced_query*)arg;
+	sq->pending = NULL; /* removed after this callback */
+	if(error==NETEVENT_NOERROR && LDNS_RCODE_WIRE(ldns_buffer_begin(
+		c->buffer)) == LDNS_RCODE_FORMERR && 
+		sq->status == serviced_query_TCP_EDNS) {
+		if(!infra_edns_update(sq->outnet->infra, &sq->addr, 
+			sq->addrlen, -1, time(0)))
+			log_err("Out of memory caching no edns for host");
+		sq->status = serviced_query_TCP;
+		serviced_tcp_initiate(sq->outnet, sq, c->buffer);
+		return 0;
+	}
+
+	(void)rbtree_delete(sq->outnet->serviced, sq);
+	serviced_callbacks(sq, error, c);
+	serviced_delete(sq);
+	return 0;
+}
+
+static void
+serviced_tcp_initiate(struct outside_network* outnet, 
+	struct serviced_query* sq, ldns_buffer* buff)
+{
+	serviced_encode(sq, buff, sq->status == serviced_query_TCP_EDNS);
+	sq->pending = pending_tcp_query(outnet, buff, &sq->addr,
+		sq->addrlen, TCP_QUERY_TIMEOUT, serviced_tcp_callback, 
+		sq, outnet->rnd);
+	if(!sq->pending) {
+		/* delete from tree so that a retry by above layer does not
+		 * clash with this entry */
+		log_err("serviced_tcp_initiate: failed to send tcp query");
+		(void)rbtree_delete(outnet->serviced, sq);
+		serviced_callbacks(sq, NETEVENT_CLOSED, NULL);
+		serviced_delete(sq);
+	}
+}
+
+static int 
+serviced_udp_callback(struct comm_point* c, void* arg, int error,
+        struct comm_reply* ATTR_UNUSED(rep))
+{
+	struct serviced_query* sq = (struct serviced_query*)arg;
+	struct outside_network* outnet = sq->outnet;
+	time_t now = time(NULL);
+	int roundtime;
+	sq->pending = NULL; /* removed after callback */
+	if(error == NETEVENT_TIMEOUT) {
+		sq->retry++;
+		if(!infra_rtt_update(outnet->infra, &sq->addr, sq->addrlen,
+			-1, now))
+			log_err("out of memory in UDP exponential backoff");
+		if(sq->retry < OUTBOUND_UDP_RETRY) {
+			if(!serviced_udp_send(sq, c->buffer)) {
+				(void)rbtree_delete(outnet->serviced, sq);
+				serviced_callbacks(sq, NETEVENT_CLOSED, c);
+				serviced_delete(sq);
+			}
+			return 0;
+		}
+		error = NETEVENT_TIMEOUT;
+		/* UDP does not work, fallback to TCP below */
+	}
+	if(error == NETEVENT_NOERROR && sq->status == serviced_query_UDP_EDNS 
+		&& LDNS_RCODE_WIRE(ldns_buffer_begin(c->buffer)) 
+			== LDNS_RCODE_FORMERR) {
+		/* note no EDNS, fallback without EDNS */
+		if(!infra_edns_update(outnet->infra, &sq->addr, sq->addrlen,
+			-1, now)) {
+			log_err("Out of memory caching no edns for host");
+		}
+		sq->status = serviced_query_UDP;
+		sq->retry = 0;
+		if(!serviced_udp_send(sq, c->buffer)) {
+			(void)rbtree_delete(outnet->serviced, sq);
+			serviced_callbacks(sq, NETEVENT_CLOSED, c);
+			serviced_delete(sq);
+		}
+		return 0;
+	}
+	if(error != NETEVENT_NOERROR || 
+		LDNS_TC_WIRE(ldns_buffer_begin(c->buffer))) {
+		/* fallback to TCP */
+		/* this discards partial UDP contents */
+		if(sq->status == serviced_query_UDP_EDNS)
+			sq->status = serviced_query_TCP_EDNS;
+		else	sq->status = serviced_query_TCP;
+		serviced_tcp_initiate(outnet, sq, c->buffer);
+		return 0;
+	}
+	/* yay! an answer */
+	roundtime = (int)now - (int)sq->last_sent_time;
+	if(roundtime >= 0)
+		if(!infra_rtt_update(outnet->infra, &sq->addr, sq->addrlen, 
+			roundtime*1000, now))
+			log_err("out of memory noting rtt.");
+	(void)rbtree_delete(outnet->serviced, sq);
+	serviced_callbacks(sq, error, c);
+	serviced_delete(sq);
+	return 0;
+}
+
+struct serviced_query* 
+outnet_serviced_query(struct outside_network* outnet,
+	uint8_t* qname, size_t qnamelen, uint16_t qtype, uint16_t qclass,
+	uint16_t flags, int dnssec, struct sockaddr_storage* addr,
+	socklen_t addrlen, comm_point_callback_t* callback,
+	void* callback_arg, ldns_buffer* buff)
+{
+	struct serviced_query* sq;
+	struct service_callback* cb;
+	serviced_gen_query(buff, qname, qnamelen, qtype, qclass, flags);
+	sq = lookup_serviced(outnet, buff, dnssec, addr, addrlen);
+	if(!(cb = (struct service_callback*)malloc(sizeof(*cb))))
+		return NULL;
+	if(!sq) {
+		/* make new serviced query entry */
+		sq = serviced_create(outnet, buff, dnssec, addr, addrlen);
+		if(!sq) {
+			free(cb);
+			return NULL;
+		}
+		/* perform first network action */
+		if(!serviced_udp_send(sq, buff)) {
+			free(sq);
+			free(cb);
+			return NULL;
+		}
+	}
+	/* add callback to list of callbacks */
+	cb->cb = callback;
+	cb->cb_arg = callback_arg;
+	cb->next = sq->cblist;
+	sq->cblist = cb;
+
+	return sq;
+}
+
+/** remove callback from list */
+static void
+callback_list_remove(struct serviced_query* sq, void* cb_arg)
+{
+	struct service_callback** pp = &sq->cblist;
+	while(*pp) {
+		if((*pp)->cb_arg == cb_arg) {
+			struct service_callback* del = *pp;
+			*pp = del->next;
+			free(del);
+			return;
+		}
+		pp = &(*pp)->next;
+	}
+}
+
+void outnet_serviced_query_stop(struct serviced_query* sq, void* cb_arg)
+{
+	if(!sq) 
+		return;
+	callback_list_remove(sq, cb_arg);
+	if(!sq->cblist) {
+		(void)rbtree_delete(sq->outnet->serviced, sq);
+		serviced_delete(sq);
+	}
 }
