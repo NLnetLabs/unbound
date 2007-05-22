@@ -357,7 +357,7 @@ int reply_info_parse(ldns_buffer* pkt, struct alloc_cache* alloc,
 	}
 	memset(msg, 0, sizeof(*msg));
 	
-	log_assert(ldns_buffer_position(pkt) == 0);
+	ldns_buffer_set_position(pkt, 0);
 	if((ret = parse_packet(pkt, msg, region)) != 0) {
 		return ret;
 	}
