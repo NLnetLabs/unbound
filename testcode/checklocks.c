@@ -67,6 +67,9 @@ int check_locking_order = 1;
 /** the pid of this runset, reasonably unique. */
 static pid_t check_lock_pid;
 
+/** print all possible debug info on the state of the system */
+static void total_debug_info();
+
 /** print pretty lock error and exit */
 static void lock_error(struct checked_lock* lock, 
 	const char* func, const char* file, int line, const char* err)
@@ -82,6 +85,8 @@ static void lock_error(struct checked_lock* lock,
 		(lock->type==check_lock_mutex)?"mutex": (
 		(lock->type==check_lock_spinlock)?"spinlock": (
 		(lock->type==check_lock_rwlock)?"rwlock": "badtype")), err);
+	log_err("complete status display:");
+	total_debug_info();
 	fatal_exit("bailing out");
 }
 
@@ -769,7 +774,6 @@ thread_debug_info(struct thr_check* thr)
 	held_debug_info(thr, f);
 }
 
-/** print all possible debug info on the state of the system */
 static void
 total_debug_info()
 {
