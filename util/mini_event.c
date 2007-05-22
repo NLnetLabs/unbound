@@ -115,46 +115,56 @@ const char *event_get_method(void)
 }
 
 /** call timeouts handlers, and return how long to wait for next one or -1 */
-static void handle_timeouts(struct event_base* base, time_t now, time_t *wait)
+static void handle_timeouts(struct event_base* base, struct timeval* now, 
+	struct timeval* wait)
 {
-	struct event* p, *np;
-	*wait = (time_t)-1;
+	struct event* p;
+#ifndef S_SPLINT_S
+	wait->tv_sec = (time_t)-1;
+#endif
 
-	p = (struct event*)rbtree_first(base->times);
-	while((rbnode_t*)p!=RBTREE_NULL) {
-		/* store next to make deletion possible */
-		np = (struct event*)rbtree_next((rbnode_t*)p);
-		if(!p || p->ev_timeout.tv_sec > now ||
-		(p->ev_timeout.tv_sec==now && p->ev_timeout.tv_usec>0)) {
+	while((rbnode_t*)(p = (struct event*)rbtree_first(base->times))
+		!=RBTREE_NULL) {
+#ifndef S_SPLINT_S
+		if(p->ev_timeout.tv_sec > now->tv_sec ||
+			(p->ev_timeout.tv_sec==now->tv_sec && 
+		 	p->ev_timeout.tv_usec > now->tv_usec)) {
 			/* there is a next larger timeout. wait for it */
-			*wait = p->ev_timeout.tv_sec - now;
-			if(p->ev_timeout.tv_usec > 0)
-				*wait+=1; /* wait a bit longer */
+			wait->tv_sec = p->ev_timeout.tv_sec - now->tv_sec;
+			if(now->tv_usec > p->ev_timeout.tv_usec) {
+				wait->tv_sec--;
+				wait->tv_usec = 1000000 - (now->tv_usec -
+					p->ev_timeout.tv_usec);
+			} else {
+				wait->tv_usec = p->ev_timeout.tv_usec 
+					- now->tv_usec;
+			}
 			return;
 		}
+#endif
 		/* event times out, remove it */
 		(void)rbtree_delete(base->times, p);
 		p->ev_events &= ~EV_TIMEOUT;
 		(*p->ev_callback)(p->ev_fd, EV_TIMEOUT, p->ev_arg);
-		/* next is a valid pointer and next larger element */
-		p = np;
 	}
 }
 
 /** call select and callbacks for that */
-static int handle_select(struct event_base* base, time_t wait)
+static int handle_select(struct event_base* base, struct timeval* wait)
 {
-	struct timeval tv;
 	fd_set r, w;
 	int ret, i;
 
-	tv.tv_sec = wait;
-	tv.tv_usec = 0;
+#ifndef S_SPLINT_S
+	if(wait->tv_sec==(time_t)-1)
+		wait = NULL;
+#endif
+	if(wait) log_info("waiting for %d %d", wait->tv_sec, wait->tv_usec);
+	else log_info("wait forever");
 	memmove(&r, &base->reads, sizeof(fd_set));
 	memmove(&w, &base->writes, sizeof(fd_set));
 
-	if((ret = select(base->maxfd+1, &r, &w, NULL, 
-		(wait==(time_t)-1)?NULL:&tv)) == -1) {
+	if((ret = select(base->maxfd+1, &r, &w, NULL, wait)) == -1) {
 		return -1;
 	}
 	
@@ -185,13 +195,15 @@ static int handle_select(struct event_base* base, time_t wait)
 /** run select in a loop */
 int event_base_dispatch(struct event_base* base)
 {
+	struct timeval now, wait;
 	while(!base->need_to_exit)
 	{
-		time_t now = time(NULL), wait;
+		if(gettimeofday(&now, NULL) < 0)
+			return -1;
 		/* see if timeouts need handling */
-		handle_timeouts(base, now, &wait);
+		handle_timeouts(base, &now, &wait);
 		/* do select */
-		if(handle_select(base, wait) < 0) {
+		if(handle_select(base, &wait) < 0) {
 			if(base->need_to_exit)
 				return 0;
 			return -1;
@@ -258,8 +270,15 @@ int event_add(struct event* ev, struct timeval* tv)
 	}
 	if(tv && ev->ev_events&EV_TIMEOUT) {
 #ifndef S_SPLINT_S
-		ev->ev_timeout.tv_sec = tv->tv_sec + time(NULL);
-		ev->ev_timeout.tv_usec = tv->tv_usec;
+		struct timeval now;
+		if(gettimeofday(&now, NULL) < 0)
+			return -1;
+		ev->ev_timeout.tv_sec = tv->tv_sec + now.tv_sec;
+		ev->ev_timeout.tv_usec = tv->tv_usec + now.tv_usec;
+		while(ev->ev_timeout.tv_usec > 1000000) {
+			ev->ev_timeout.tv_usec -= 1000000;
+			ev->ev_timeout.tv_sec++;
+		}
 #endif
 		(void)rbtree_insert(ev->ev_base->times, &ev->node);
 	}

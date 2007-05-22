@@ -406,7 +406,7 @@ static int test_compfunc(void* key1, void* key2)
 
 static void test_delkey(void* key, void* ATTR_UNUSED(arg), int l)
 {
-	if(l) lock_rw_unlock(&((struct slabtestkey*)key)->entry.lock);
+	if(l) { lock_rw_unlock(&((struct slabtestkey*)key)->entry.lock); }
 	delkey((struct slabtestkey*)key);
 }
 

@@ -75,7 +75,7 @@ infra_host_delkeyfunc(void* k, void* ATTR_UNUSED(arg), int il)
 	struct infra_host_key* key = (struct infra_host_key*)k;
 	if(!key)
 		return;
-	if(il) lock_rw_unlock(&key->entry.lock);
+	if(il) { lock_rw_unlock(&key->entry.lock); }
 	lock_rw_destroy(&key->entry.lock);
 	free(key);
 }
@@ -322,7 +322,7 @@ infra_lame_delkeyfunc(void* k, void* ATTR_UNUSED(arg), int il)
 	struct infra_lame_key* key = (struct infra_lame_key*)k;
 	if(!key) 
 		return;
-	if(il) lock_rw_unlock(&key->entry.lock);
+	if(il) { lock_rw_unlock(&key->entry.lock); }
 	lock_rw_destroy(&key->entry.lock);
 	free(key->zonename);
 	free(key);
@@ -397,7 +397,7 @@ infra_set_lame(struct infra_cache* infra,
 			log_err("set_lame: malloc failure");
 			if(needtoinsert) slabhash_insert(infra->hosts, 
 				e->hash, e, e->data, NULL);
-			else 	lock_rw_unlock(&e->lock);
+			else 	{ lock_rw_unlock(&e->lock); }
 			free(k->zonename);
 			free(k);
 			free(d);
@@ -409,7 +409,7 @@ infra_set_lame(struct infra_cache* infra,
 	
 	if(needtoinsert)
 		slabhash_insert(infra->hosts, e->hash, e, e->data, NULL);
-	else 	lock_rw_unlock(&e->lock);
+	else 	{ lock_rw_unlock(&e->lock); }
 	return 1;
 }
 
@@ -436,7 +436,7 @@ infra_rtt_update(struct infra_cache* infra,
 
 	if(needtoinsert)
 		slabhash_insert(infra->hosts, e->hash, e, e->data, NULL);
-	else 	lock_rw_unlock(&e->lock);
+	else 	{ lock_rw_unlock(&e->lock); }
 	return 1;
 }
 
@@ -461,6 +461,6 @@ infra_edns_update(struct infra_cache* infra,
 
 	if(needtoinsert)
 		slabhash_insert(infra->hosts, e->hash, e, e->data, NULL);
-	else 	lock_rw_unlock(&e->lock);
+	else 	{ lock_rw_unlock(&e->lock); }
 	return 1;
 }

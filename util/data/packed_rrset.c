@@ -106,8 +106,9 @@ ub_rrset_key_delete(void* key, void* userdata, int is_locked)
 	struct ub_packed_rrset_key* k = (struct ub_packed_rrset_key*)key;
 	struct alloc_cache* a = (struct alloc_cache*)userdata;
 	k->id = 0;
-	if(is_locked)
+	if(is_locked) {
 		lock_rw_unlock(&k->entry.lock);
+	}
 	free(k->rk.dname);
 	k->rk.dname = NULL;
 	alloc_special_release(a, k);

@@ -4,6 +4,9 @@
 	- testbound support for new serviced queries.
 	- test for retry to TCP cannot use testbound any longer.
 	- testns test for EDNS fallback, test for TCP fallback already exists.
+	- fixes for no-locking compile.
+	- mini_event timer precision and fix for change in timeouts during
+	  timeout callback. Fix for fwd_three tests, performed nonexit query.
 
 21 May 2007: Wouter
 	- small comment on hash table locking.

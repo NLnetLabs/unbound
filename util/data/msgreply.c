@@ -499,8 +499,9 @@ void
 query_entry_delete(void *k, void* ATTR_UNUSED(arg), int is_locked)
 {
 	struct msgreply_entry* q = (struct msgreply_entry*)k;
-	if(is_locked)
+	if(is_locked) {
 		lock_rw_unlock(&q->entry.lock);
+	}
 	lock_rw_destroy(&q->entry.lock);
 	query_info_clear(&q->key);
 	free(q);
