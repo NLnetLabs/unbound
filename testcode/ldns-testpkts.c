@@ -108,6 +108,8 @@ static void matchline(const char* line, struct entry* e)
 			e->match_all = true;
 		} else if(str_keyword(&parse, "ttl")) {
 			e->match_ttl = true;
+		} else if(str_keyword(&parse, "DO")) {
+			e->match_do = true;
 		} else if(str_keyword(&parse, "UDP")) {
 			e->match_transport = transport_udp;
 		} else if(str_keyword(&parse, "TCP")) {
@@ -220,6 +222,7 @@ static struct entry* new_entry()
 	e->match_qname = false;
 	e->match_all = false;
 	e->match_ttl = false;
+	e->match_do = false;
 	e->match_serial = false;
 	e->ixfr_soa_serial = 0;
 	e->match_transport = transport_any;
@@ -662,6 +665,10 @@ find_match(struct entry* entries, ldns_pkt* query_pkt,
 		if(p->match_serial && get_serial(query_pkt) != p->ixfr_soa_serial) {
 				verbose(3, "bad serial\n");
 				continue;
+		}
+		if(p->match_do && !ldns_pkt_edns_do(query_pkt)) {
+			verbose(3, "no DO bit set\n");
+			continue;
 		}
 		if(p->match_transport != transport_any && p->match_transport != transport) {
 			verbose(3, "bad transport\n");

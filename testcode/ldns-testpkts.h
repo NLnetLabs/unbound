@@ -45,8 +45,9 @@
 	; 'serial=1023' makes the query match if ixfr serial is 1023. 
 	; 'all' has to match header byte for byte and all rrs in packet.
 	; 'ttl' used with all, rrs in packet must also have matching TTLs.
+	; 'DO' will match only queries with DO bit set.
 	MATCH [opcode] [qtype] [qname] [serial=<value>] [all] [ttl]
-	MATCH [UDP|TCP]
+	MATCH [UDP|TCP] DO
 	MATCH ...
 	; Then the REPLY header is specified.
 	REPLY opcode, rcode or flags.
@@ -160,6 +161,8 @@ struct entry {
 	bool match_all;
 	/** match ttls in the packet */
 	bool match_ttl;
+	/** match DO bit */
+	bool match_do;
 	/** match query serial with this value. */
 	uint32_t ixfr_soa_serial; 
 	/** match on UDP/TCP */

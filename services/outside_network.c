@@ -287,7 +287,6 @@ outnet_udp_cb(struct comm_point* c, void* arg, int error,
 	memcpy(&key.addr, &reply_info->addr, reply_info->addrlen);
 	key.addrlen = reply_info->addrlen;
 	verbose(VERB_ALGO, "Incoming reply id=%4.4x addr=", key.id);
-	log_addr(&key.addr, key.addrlen);
 
 	/* find it, see if this thing is a valid query response */
 	verbose(VERB_ALGO, "lookup size is %d entries", (int)outnet->pending->count);
@@ -660,8 +659,7 @@ new_pending(struct outside_network* outnet, ldns_buffer* packet,
 			return NULL;
 		}
 	}
-	verbose(VERB_ALGO, "inserted new pending reply id=%4.4x addr=", pend->id);
-	log_addr(&pend->addr, pend->addrlen);
+	verbose(VERB_ALGO, "inserted new pending reply id=%4.4x", pend->id);
 	return pend;
 }
 
