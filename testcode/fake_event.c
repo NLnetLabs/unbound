@@ -48,6 +48,8 @@
 #include "testcode/fake_event.h"
 #include "util/netevent.h"
 #include "util/net_help.h"
+#include "util/data/msgparse.h"
+#include "util/data/msgreply.h"
 #include "services/listen_dnsport.h"
 #include "services/outside_network.h"
 #include "testcode/replay.h"
@@ -688,6 +690,7 @@ pending_udp_query(struct outside_network* outnet, ldns_buffer* packet,
 	pend->timeout = timeout;
 	pend->transport = transport_udp;
 	pend->pkt = NULL;
+	pend->runtime = runtime;
 	status = ldns_buffer2pkt_wire(&pend->pkt, packet);
 	if(status != LDNS_STATUS_OK) {
 		log_err("ldns error parsing udp output packet: %s",
@@ -736,6 +739,7 @@ pending_tcp_query(struct outside_network* outnet, ldns_buffer* packet,
 	pend->timeout = timeout;
 	pend->transport = transport_tcp;
 	pend->pkt = NULL;
+	pend->runtime = runtime;
 	status = ldns_buffer2pkt_wire(&pend->pkt, packet);
 	if(status != LDNS_STATUS_OK) {
 		log_err("ldns error parsing tcp output packet: %s",
@@ -759,6 +763,100 @@ pending_tcp_query(struct outside_network* outnet, ldns_buffer* packet,
 	pend->next = runtime->pending_list;
 	runtime->pending_list = pend;
 	return (struct waiting_tcp*)pend;
+}
+
+struct serviced_query* outnet_serviced_query(struct outside_network* outnet,
+        uint8_t* qname, size_t qnamelen, uint16_t qtype, uint16_t qclass,
+	uint16_t flags, int dnssec, struct sockaddr_storage* addr,
+	socklen_t addrlen, comm_point_callback_t* callback,
+	void* callback_arg, ldns_buffer* ATTR_UNUSED(buff))
+{
+	struct replay_runtime* runtime = (struct replay_runtime*)outnet->base;
+	struct fake_pending* pend = (struct fake_pending*)calloc(1,
+		sizeof(struct fake_pending));
+	ldns_status status;
+	log_assert(pend);
+
+	/* create packet with EDNS */
+	pend->buffer = ldns_buffer_new(512);
+	log_assert(pend->buffer);
+	ldns_buffer_write_u16(pend->buffer, 0); /* id */
+	ldns_buffer_write_u16(pend->buffer, flags);
+	ldns_buffer_write_u16(pend->buffer, 1); /* qdcount */
+	ldns_buffer_write_u16(pend->buffer, 0); /* ancount */
+	ldns_buffer_write_u16(pend->buffer, 0); /* nscount */
+	ldns_buffer_write_u16(pend->buffer, 0); /* arcount */
+	ldns_buffer_write(pend->buffer, qname, qnamelen);
+	ldns_buffer_write_u16(pend->buffer, qtype);
+	ldns_buffer_write_u16(pend->buffer, qclass);
+	ldns_buffer_flip(pend->buffer);
+	if(1) {
+		/* add edns */
+		struct edns_data edns;
+		edns.edns_present = 1;
+		edns.ext_rcode = 0;
+		edns.edns_version = EDNS_ADVERTISED_VERSION;
+		edns.udp_size = EDNS_ADVERTISED_SIZE;
+		edns.bits = 0;
+		if(dnssec)
+			edns.bits = EDNS_DO;
+		attach_edns_record(pend->buffer, &edns);
+	}
+	memcpy(&pend->addr, addr, addrlen);
+	pend->addrlen = addrlen;
+	pend->callback = callback;
+	pend->cb_arg = callback_arg;
+	pend->timeout = UDP_QUERY_TIMEOUT;
+	pend->transport = transport_udp; /* pretend UDP */
+	pend->pkt = NULL;
+	pend->runtime = runtime;
+	status = ldns_buffer2pkt_wire(&pend->pkt, pend->buffer);
+	if(status != LDNS_STATUS_OK) {
+		log_err("ldns error parsing serviced output packet: %s",
+			ldns_get_errorstr_by_id(status));
+		fatal_exit("internal error");
+	}
+	log_pkt("pending serviced query: ", pend->pkt);
+
+	/* see if it matches the current moment */
+	if(runtime->now && runtime->now->evt_type == repevt_back_query &&
+		find_match(runtime->now->match, pend->pkt, pend->transport)) {
+		log_info("testbound: matched pending to event. "
+			"advance time between events.");
+		log_info("testbound: do STEP %d %s", runtime->now->time_step,
+			repevt_string(runtime->now->evt_type));
+		advance_moment(runtime);
+		/* still create the pending, because we need it to callback */
+	} 
+	log_info("testbound: created fake pending");
+	/* add to list */
+	pend->next = runtime->pending_list;
+	runtime->pending_list = pend;
+	return (struct serviced_query*)pend;
+}
+
+void outnet_serviced_query_stop(struct serviced_query* sq, void* cb_arg)
+{
+	struct fake_pending* pend = (struct fake_pending*)sq;
+	struct replay_runtime* runtime = pend->runtime;
+	/* delete from the list */
+	struct fake_pending* p = runtime->pending_list, *prev=NULL;
+	while(p) {
+		if(p == pend) {
+			log_assert(p->cb_arg == cb_arg);
+			if(prev)
+				prev->next = p->next;
+			else 	runtime->pending_list = p->next;
+			log_pkt("deleted pending serviced query.", p->pkt);
+			ldns_buffer_free(p->buffer);
+			ldns_pkt_free(p->pkt);
+			free(p);
+			return;
+		}
+		prev = p;
+		p = p->next;
+	}
+	log_pkt("double delet of pending serviced query", p->pkt);
 }
 
 struct listen_port* listening_ports_open(struct config_file* ATTR_UNUSED(cfg))

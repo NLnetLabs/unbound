@@ -1,3 +1,9 @@
+22 May 2007: Wouter
+	- outbound query list for modules and support to callback with the
+	  outbound entry to the module.
+	- testbound support for new serviced queries.
+	- test for retry to TCP cannot use testbound any longer.
+
 21 May 2007: Wouter
 	- small comment on hash table locking.
 	- outside network serviced queries, contain edns and tcp fallback,

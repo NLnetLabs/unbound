@@ -47,10 +47,12 @@
 #include "daemon/daemon.h"
 #include "util/netevent.h"
 #include "util/config_file.h"
+#include "util/module.h"
 #include "util/region-allocator.h"
 #include "util/storage/slabhash.h"
 #include "services/listen_dnsport.h"
 #include "services/outside_network.h"
+#include "services/outbound_list.h"
 #include "services/cache/rrset.h"
 #include "util/data/msgparse.h"
 
@@ -136,7 +138,7 @@ replyerror(int r, struct work_query* w)
 /** process incoming request */
 static void 
 worker_process_query(struct worker* worker, struct work_query* w, 
-	enum module_ev event) 
+	enum module_ev event, struct outbound_entry* entry) 
 {
 	int i;
 	if(event == module_event_new) {
@@ -146,7 +148,7 @@ worker_process_query(struct worker* worker, struct work_query* w,
 	}
 	/* allow current module to run */
 	(*worker->daemon->modfunc[w->state.curmod]->operate)(&w->state, event,
-		w->state.curmod);
+		w->state.curmod, entry);
 	/* TODO examine results, start further modules, etc.
 	 * assume it went to sleep
 	 */
@@ -178,7 +180,7 @@ worker_handle_reply(struct comm_point* c, void* arg, int error,
 
 	w->state.reply = reply_info;
 	if(error != 0) {
-		worker_process_query(worker, w, module_event_timeout);
+		worker_process_query(worker, w, module_event_timeout, NULL);
 		w->state.reply = NULL;
 		return 0;
 	}
@@ -189,11 +191,42 @@ worker_handle_reply(struct comm_point* c, void* arg, int error,
 		|| LDNS_QDCOUNT(ldns_buffer_begin(c->buffer)) > 1) {
 		/* error becomes timeout for the module as if this reply
 		 * never arrived. */
-		worker_process_query(worker, w, module_event_timeout);
+		worker_process_query(worker, w, module_event_timeout, NULL);
 		w->state.reply = NULL;
 		return 0;
 	}
-	worker_process_query(worker, w, module_event_reply);
+	worker_process_query(worker, w, module_event_reply, NULL);
+	w->state.reply = NULL;
+	return 0;
+}
+
+/** process incoming serviced query replies from the network */
+static int 
+worker_handle_service_reply(struct comm_point* c, void* arg, int error, 
+	struct comm_reply* reply_info)
+{
+	struct outbound_entry* e = (struct outbound_entry*)arg;
+	struct work_query* w = e->qstate->work_info;
+	struct worker* worker = w->state.env->worker;
+
+	w->state.reply = reply_info;
+	if(error != 0) {
+		worker_process_query(worker, w, module_event_timeout, e);
+		w->state.reply = NULL;
+		return 0;
+	}
+	/* sanity check. */
+	if(!LDNS_QR_WIRE(ldns_buffer_begin(c->buffer))
+		|| LDNS_OPCODE_WIRE(ldns_buffer_begin(c->buffer)) != 
+			LDNS_PACKET_QUERY
+		|| LDNS_QDCOUNT(ldns_buffer_begin(c->buffer)) > 1) {
+		/* error becomes timeout for the module as if this reply
+		 * never arrived. */
+		worker_process_query(worker, w, module_event_timeout, e);
+		w->state.reply = NULL;
+		return 0;
+	}
+	worker_process_query(worker, w, module_event_reply, e);
 	w->state.reply = NULL;
 	return 0;
 }
@@ -444,7 +477,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 
 	/* answer it */
 	w->state.buf = c->buffer;
-	worker_process_query(worker, w, module_event_new);
+	worker_process_query(worker, w, module_event_new, NULL);
 	return 0;
 }
 
@@ -688,7 +721,7 @@ worker_delete(struct worker* worker)
 }
 
 int 
-worker_send_query(ldns_buffer* pkt, struct sockaddr_storage* addr,
+worker_send_packet(ldns_buffer* pkt, struct sockaddr_storage* addr,
         socklen_t addrlen, int timeout, struct module_qstate* q, int use_tcp)
 {
 	struct worker* worker = q->env->worker;
@@ -699,4 +732,25 @@ worker_send_query(ldns_buffer* pkt, struct sockaddr_storage* addr,
 	}
 	return pending_udp_query(worker->back, pkt, addr, addrlen, timeout,
 		worker_handle_reply, q->work_info, worker->rndstate) != 0;
+}
+
+struct outbound_entry*
+worker_send_query(uint8_t* qname, size_t qnamelen, uint16_t qtype,
+	uint16_t qclass, uint16_t flags, int dnssec,
+	struct sockaddr_storage* addr, socklen_t addrlen,
+	struct module_qstate* q)
+{
+	struct worker* worker = q->env->worker;
+	struct outbound_entry* e = (struct outbound_entry*)malloc(sizeof(*e));
+	if(!e) 
+		return NULL;
+	e->qstate = q;
+	e->qsent = outnet_serviced_query(worker->back, qname,
+		qnamelen, qtype, qclass, flags, dnssec, addr, addrlen, 
+		worker_handle_service_reply, e, worker->back->udp_buff);
+	if(!e->qsent) {
+		free(e);
+		return NULL;
+	}
+	return e;
 }

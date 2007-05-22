@@ -1,5 +1,5 @@
 /*
- * iterator/iterator.h - iterative resolver DNS query response module
+ * services/outbound_list.c - keep list of outbound serviced queries.
  *
  * Copyright (c) 2007, NLnet Labs. All rights reserved.
  *
@@ -36,36 +36,51 @@
 /**
  * \file
  *
- * This file contains a module that performs recusive iterative DNS query
- * processing.
+ * This file contains functions to help a module keep track of the
+ * queries it has outstanding to authoritative servers.
  */
-
-#ifndef ITERATOR_ITERATOR_H
-#define ITERATOR_ITERATOR_H
+#include "config.h"
 #include "services/outbound_list.h"
-struct module_func_block;
+#include "services/outside_network.h"
 
-/**
- * Global state for the iterator. 
- */
-struct iter_env {
-	/** address to forward to */
-	struct sockaddr_storage fwd_addr;
-	/** length of fwd_addr */
-	socklen_t fwd_addrlen;
-};
+void 
+outbound_list_init(struct outbound_list* list)
+{
+	list->first = NULL;
+}
 
-/**
- * Per query state for the iterator module.
- */
-struct iter_qstate {
-	/** list of pending queries to authoritative servers. */
-	struct outbound_list outlist;
-};
+void 
+outbound_list_clear(struct outbound_list* list)
+{
+	struct outbound_entry *p, *np;
+	p = list->first;
+	while(p) {
+		np = p->next;
+		outnet_serviced_query_stop(p->qsent, p);
+		free(p);
+		p = np;
+	}
+	outbound_list_init(list);
+}
 
-/**
- * Get the iterator function block.
- */
-struct module_func_block* iter_get_funcblock();
+void 
+outbound_list_insert(struct outbound_list* list, struct outbound_entry* e)
+{
+	e->next = list->first;
+	e->prev = NULL;
+	list->first = e;
+}
 
-#endif /* ITERATOR_ITERATOR_H */
+void 
+outbound_list_remove(struct outbound_list* list, struct outbound_entry* e)
+{
+	if(!e)
+		return;
+	outnet_serviced_query_stop(e->qsent, e);
+	if(e->next)
+		e->next->prev = e->prev;
+	if(e->prev)
+		e->prev->next = e->next;
+	else	list->first = e->next;
+	free(e);
+}

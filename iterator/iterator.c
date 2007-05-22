@@ -47,6 +47,7 @@
 #include "util/config_file.h"
 #include "util/net_help.h"
 #include "util/storage/slabhash.h"
+#include "util/region-allocator.h"
 #include "services/cache/rrset.h"
 
 /** 
@@ -162,74 +163,87 @@ store_msg(struct module_qstate* qstate, struct query_info* qinfo,
 		&e->entry, rep, &qstate->env->alloc);
 }
 
-/** iterator operate on a query */
-static void 
-iter_operate(struct module_qstate* qstate, enum module_ev event, int id)
+/** new query for iterator */
+static int
+iter_new(struct module_qstate* qstate, int id)
 {
+	struct iter_qstate* iq = (struct iter_qstate*)region_alloc(
+		qstate->region, sizeof(struct iter_qstate));
 	struct module_env* env = qstate->env;
 	struct iter_env* ie = (struct iter_env*)env->modinfo[id];
+	struct outbound_entry* e;
+	uint16_t flags = 0; /* opcode=query, no flags */
+	int dnssec = 1; /* always get dnssec info */
+	qstate->minfo[id] = iq;
+	if(!iq) 
+		return 0;
+	outbound_list_init(&iq->outlist);
+	if(qstate->qinfo.has_cd)
+		flags |= BIT_CD;
+	e = (*env->send_query)(qstate->qinfo.qname, qstate->qinfo.qnamesize,
+		qstate->qinfo.qtype, qstate->qinfo.qclass, flags, dnssec, 
+		&ie->fwd_addr, ie->fwd_addrlen, qstate);
+	if(!e) 
+		return 0;
+	outbound_list_insert(&iq->outlist, e);
+	qstate->ext_state[id] = module_wait_reply;
+	return 1;
+}
+
+/** iterator handle reply from authoritative server */
+static int
+iter_handlereply(struct module_qstate* qstate, int id,
+        struct outbound_entry* ATTR_UNUSED(outbound))
+{
+	struct module_env* env = qstate->env;
+	uint16_t us = qstate->edns.udp_size;
+	struct query_info reply_qinfo;
+	struct reply_info* reply_msg;
+	struct edns_data reply_edns;
+	int r;
+	if((r=reply_info_parse(qstate->reply->c->buffer, env->alloc, 
+		&reply_qinfo, &reply_msg, qstate->scratch, 
+		&reply_edns))!=0)
+		return 0;
+
+	qstate->edns.edns_version = EDNS_ADVERTISED_VERSION;
+	qstate->edns.udp_size = EDNS_ADVERTISED_SIZE;
+	qstate->edns.ext_rcode = 0;
+	qstate->edns.bits &= EDNS_DO;
+	if(!reply_info_answer_encode(&reply_qinfo, reply_msg, 0, 
+		qstate->query_flags, qstate->buf, 0, 0, 
+		qstate->scratch, us, &qstate->edns))
+		return 0;
+	store_msg(qstate, &reply_qinfo, reply_msg);
+	qstate->ext_state[id] = module_finished;
+	return 1;
+}
+
+/** iterator operate on a query */
+static void 
+iter_operate(struct module_qstate* qstate, enum module_ev event, int id,
+	struct outbound_entry* outbound)
+{
 	verbose(VERB_ALGO, "iterator[module %d] operate: extstate:%s event:%s", 
 		id, strextstate(qstate->ext_state[id]), strmodulevent(event));
-	if(event == module_event_error) {
+	if(event == module_event_new) {
+		if(!iter_new(qstate, id))
+			qstate->ext_state[id] = module_error;
+		return;
+	}
+	/* it must be a query reply */
+	if(!outbound) {
+		verbose(VERB_ALGO, "query reply was not serviced");
 		qstate->ext_state[id] = module_error;
 		return;
 	}
-	if(event == module_event_new) {
-		/* send UDP query to forwarder address */
-		(*env->send_query)(qstate->buf, &ie->fwd_addr, 
-			ie->fwd_addrlen, UDP_QUERY_TIMEOUT, qstate, 0);
-		qstate->ext_state[id] = module_wait_reply;
-		qstate->minfo[id] = NULL;
-		return;
-	}
-	if(event == module_event_timeout) {
-		/* try TCP if UDP fails */
-		/* TODO: disabled now, make better retry with EDNS.
-		if(qstate->reply->c->type == comm_udp) {
-			qinfo_query_encode(qstate->buf, &qstate->qinfo);
-			(*env->send_query)(qstate->buf, &ie->fwd_addr, 
-				ie->fwd_addrlen, TCP_QUERY_TIMEOUT, qstate, 1);
-			return;
-		}
-		*/
+	if(event == module_event_timeout || event == module_event_error) {
 		qstate->ext_state[id] = module_error;
 		return;
 	}
 	if(event == module_event_reply) {
-		uint16_t us = qstate->edns.udp_size;
-		struct query_info reply_qinfo;
-		struct reply_info* reply_msg;
-		struct edns_data reply_edns;
-		int r;
-		/* see if it is truncated */
-		if(LDNS_TC_WIRE(ldns_buffer_begin(qstate->reply->c->buffer)) 
-			&& qstate->reply->c->type == comm_udp) {
-			log_info("TC: truncated. retry in TCP mode.");
-			qinfo_query_encode(qstate->buf, &qstate->qinfo);
-			(*env->send_query)(qstate->buf, &ie->fwd_addr, 
-				ie->fwd_addrlen, TCP_QUERY_TIMEOUT, qstate, 1);
-			/* stay in wait_reply state */
-			return;
-		}
-		if((r=reply_info_parse(qstate->reply->c->buffer, env->alloc, 
-			&reply_qinfo, &reply_msg, qstate->scratch, 
-			&reply_edns))!=0) {
+		if(!iter_handlereply(qstate, id, outbound))
 			qstate->ext_state[id] = module_error;
-			return;
-		}
-
-		qstate->edns.edns_version = EDNS_ADVERTISED_VERSION;
-		qstate->edns.udp_size = EDNS_ADVERTISED_SIZE;
-		qstate->edns.ext_rcode = 0;
-		qstate->edns.bits &= EDNS_DO;
-		if(!reply_info_answer_encode(&reply_qinfo, reply_msg, 0, 
-			qstate->query_flags, qstate->buf, 0, 0, 
-			qstate->scratch, us, &qstate->edns)) {
-			qstate->ext_state[id] = module_error;
-			return;
-		}
-		store_msg(qstate, &reply_qinfo, reply_msg);
-		qstate->ext_state[id] = module_finished;
 		return;
 	}
 	log_err("bad event for iterator");
@@ -240,9 +254,11 @@ iter_operate(struct module_qstate* qstate, enum module_ev event, int id)
 static void 
 iter_clear(struct module_qstate* qstate, int id)
 {
+	struct iter_qstate* iq;
 	if(!qstate)
 		return;
-	/* allocated in region, so nothing to do */
+	iq = (struct iter_qstate*)qstate->minfo[id];
+	outbound_list_clear(&iq->outlist);
 	qstate->minfo[id] = NULL;
 }
 

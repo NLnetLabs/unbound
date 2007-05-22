@@ -245,6 +245,8 @@ struct fake_pending {
 	ldns_pkt* pkt;
 	/** by what transport was the query sent out */
 	enum transport_type transport;
+	/** the runtime structure this is part of */
+	struct replay_runtime* runtime;
 };
 
 /**

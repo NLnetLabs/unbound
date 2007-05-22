@@ -74,21 +74,47 @@ struct module_env {
 
 	/* --- services --- */
 	/** 
+	 * Direct access to the network, this packet gets sent to destination.
 	 * Send DNS query to server. operate() should return with wait_reply.
 	 * Later on a callback will cause operate() to be called with event
-	 * timeout or reply.
+	 * timeout or reply. Replied packet is then in the query buffer.
 	 * @param pkt: packet to send.
 	 * @param addr: where to.
 	 * @param addrlen: length of addr.
 	 * @param timeout: seconds to wait until timeout.
 	 * @param q: wich query state to reactivate upon return.
 	 * @param use_tcp: set to true to send over TCP. 0 for UDP.
-	 * return: false on failure (memory or socket related). no query was
+	 * @return: false on failure (memory or socket related). no query was
 	 *	sent.
 	 */
-	int (*send_query)(ldns_buffer* pkt, struct sockaddr_storage* addr,
+	int (*send_packet)(ldns_buffer* pkt, struct sockaddr_storage* addr,
 		socklen_t addrlen, int timeout, struct module_qstate* q,
 		int use_tcp);
+
+	/** 
+	 * Send serviced DNS query to server. UDP/TCP and EDNS is handled.
+	 * operate() should return with wait_reply. Later on a callback 
+	 * will cause operate() to be called with event timeout or reply.
+	 * The time until a timeout is calculated from roundtrip timing,
+	 * several UDP retries are attempted.
+	 * @param qname: query name. (host order)
+	 * @param qnamelen: length in bytes of qname, including trailing 0.
+	 * @param qtype: query type. (host order)
+	 * @param qclass: query class. (host order)
+	 * @param flags: host order flags word, with opcode and CD bit.
+	 * @param dnssec: if set, EDNS record will have DO bit set.
+	 * @param addr: where to.
+	 * @param addrlen: length of addr.
+	 * @param q: wich query state to reactivate upon return.
+	 * @return: false on failure (memory or socket related). no query was
+	 *	sent. Or returns an outbound entry with qsent and qstate set.
+	 *	This outbound_entry will be used on later module invocations
+	 *	that involve this query (timeout, error or reply).
+	 */
+	struct outbound_entry* (*send_query)(uint8_t* qname, size_t qnamelen, 
+		uint16_t qtype, uint16_t qclass, uint16_t flags, int dnssec, 
+		struct sockaddr_storage* addr, socklen_t addrlen, 
+		struct module_qstate* q);
 
 	/** create a subquery. operate should then return with wait_subq */
 
@@ -210,6 +236,9 @@ struct module_func_block {
 	 * @param ev: event that causes the module state machine to 
 	 *	(re-)activate.
 	 * @param qstate: the query state. 
+	 * @param id: module id number that operate() is called on. 
+	 * @param outbound: if not NULL this event is due to the reply/timeout
+	 *	or error on this outbound query.
 	 * @return: if at exit the ext_state is:
 	 *	o wait_module: next module is started. (with pass event).
 	 *	o error or finished: previous module is resumed.
@@ -218,7 +247,7 @@ struct module_func_block {
 	 *	  have been called.
 	 */
 	void (*operate)(struct module_qstate* qstate, enum module_ev event, 
-		int id);
+		int id, struct outbound_entry* outbound);
 	/**
 	 * clear module specific data
 	 */

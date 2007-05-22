@@ -953,6 +953,7 @@ serviced_encode(struct serviced_query* sq, ldns_buffer* buff, int with_edns)
 	ldns_buffer_clear(buff);
 	ldns_buffer_write_u16(buff, 0); /* id placeholder */
 	ldns_buffer_write(buff, sq->qbuf, sq->qbuflen);
+	ldns_buffer_flip(buff);
 	if(with_edns) {
 		/* add edns section */
 		struct edns_data edns;
@@ -965,7 +966,6 @@ serviced_encode(struct serviced_query* sq, ldns_buffer* buff, int with_edns)
 			edns.bits = EDNS_DO;
 		attach_edns_record(buff, &edns);
 	}
-	ldns_buffer_flip(buff);
 }
 
 /**
@@ -1002,11 +1002,12 @@ serviced_udp_send(struct serviced_query* sq, ldns_buffer* buff)
 
 /** call the callbacks for a serviced query */
 static void
-serviced_callbacks(struct serviced_query* sq, int error, struct comm_point* c)
+serviced_callbacks(struct serviced_query* sq, int error, struct comm_point* c,
+	struct comm_reply* rep)
 {
 	struct service_callback* p = sq->cblist;
 	while(p) {
-		(void)(*p->cb)(c, p->cb_arg, error, NULL);
+		(void)(*p->cb)(c, p->cb_arg, error, rep);
 		p = p->next;
 	}
 }
@@ -1014,7 +1015,7 @@ serviced_callbacks(struct serviced_query* sq, int error, struct comm_point* c)
 /** TCP reply or error callback for serviced queries */
 static int 
 serviced_tcp_callback(struct comm_point* c, void* arg, int error,
-        struct comm_reply* ATTR_UNUSED(rep))
+        struct comm_reply* rep)
 {
 	struct serviced_query* sq = (struct serviced_query*)arg;
 	sq->pending = NULL; /* removed after this callback */
@@ -1030,7 +1031,7 @@ serviced_tcp_callback(struct comm_point* c, void* arg, int error,
 	}
 
 	(void)rbtree_delete(sq->outnet->serviced, sq);
-	serviced_callbacks(sq, error, c);
+	serviced_callbacks(sq, error, c, rep);
 	serviced_delete(sq);
 	return 0;
 }
@@ -1048,14 +1049,14 @@ serviced_tcp_initiate(struct outside_network* outnet,
 		 * clash with this entry */
 		log_err("serviced_tcp_initiate: failed to send tcp query");
 		(void)rbtree_delete(outnet->serviced, sq);
-		serviced_callbacks(sq, NETEVENT_CLOSED, NULL);
+		serviced_callbacks(sq, NETEVENT_CLOSED, NULL, NULL);
 		serviced_delete(sq);
 	}
 }
 
 static int 
 serviced_udp_callback(struct comm_point* c, void* arg, int error,
-        struct comm_reply* ATTR_UNUSED(rep))
+        struct comm_reply* rep)
 {
 	struct serviced_query* sq = (struct serviced_query*)arg;
 	struct outside_network* outnet = sq->outnet;
@@ -1070,7 +1071,7 @@ serviced_udp_callback(struct comm_point* c, void* arg, int error,
 		if(sq->retry < OUTBOUND_UDP_RETRY) {
 			if(!serviced_udp_send(sq, c->buffer)) {
 				(void)rbtree_delete(outnet->serviced, sq);
-				serviced_callbacks(sq, NETEVENT_CLOSED, c);
+				serviced_callbacks(sq, NETEVENT_CLOSED, c, rep);
 				serviced_delete(sq);
 			}
 			return 0;
@@ -1090,7 +1091,7 @@ serviced_udp_callback(struct comm_point* c, void* arg, int error,
 		sq->retry = 0;
 		if(!serviced_udp_send(sq, c->buffer)) {
 			(void)rbtree_delete(outnet->serviced, sq);
-			serviced_callbacks(sq, NETEVENT_CLOSED, c);
+			serviced_callbacks(sq, NETEVENT_CLOSED, c, rep);
 			serviced_delete(sq);
 		}
 		return 0;
@@ -1112,7 +1113,7 @@ serviced_udp_callback(struct comm_point* c, void* arg, int error,
 			roundtime*1000, now))
 			log_err("out of memory noting rtt.");
 	(void)rbtree_delete(outnet->serviced, sq);
-	serviced_callbacks(sq, error, c);
+	serviced_callbacks(sq, error, c, rep);
 	serviced_delete(sq);
 	return 0;
 }
@@ -1175,7 +1176,7 @@ void outnet_serviced_query_stop(struct serviced_query* sq, void* cb_arg)
 		return;
 	callback_list_remove(sq, cb_arg);
 	if(!sq->cblist) {
-		(void)rbtree_delete(sq->outnet->serviced, sq);
-		serviced_delete(sq);
+		if(rbtree_delete(sq->outnet->serviced, sq))
+			serviced_delete(sq); /* safe against double delete */
 	}
 }
