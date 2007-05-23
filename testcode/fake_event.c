@@ -687,7 +687,7 @@ pending_udp_query(struct outside_network* outnet, ldns_buffer* packet,
 	pend->addrlen = addrlen;
 	pend->callback = callback;
 	pend->cb_arg = callback_arg;
-	pend->timeout = timeout;
+	pend->timeout = timeout/1000;
 	pend->transport = transport_udp;
 	pend->pkt = NULL;
 	pend->runtime = runtime;

@@ -159,8 +159,6 @@ static int handle_select(struct event_base* base, struct timeval* wait)
 	if(wait->tv_sec==(time_t)-1)
 		wait = NULL;
 #endif
-	if(wait) log_info("waiting for %d %d", wait->tv_sec, wait->tv_usec);
-	else log_info("wait forever");
 	memmove(&r, &base->reads, sizeof(fd_set));
 	memmove(&w, &base->writes, sizeof(fd_set));
 

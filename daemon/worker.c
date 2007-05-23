@@ -730,8 +730,9 @@ worker_send_packet(ldns_buffer* pkt, struct sockaddr_storage* addr,
 			timeout, worker_handle_reply, q->work_info, 
 			worker->rndstate) != 0;
 	}
-	return pending_udp_query(worker->back, pkt, addr, addrlen, timeout,
-		worker_handle_reply, q->work_info, worker->rndstate) != 0;
+	return pending_udp_query(worker->back, pkt, addr, addrlen, 
+		timeout*1000, worker_handle_reply, q->work_info, 
+		worker->rndstate) != 0;
 }
 
 struct outbound_entry*

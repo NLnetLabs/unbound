@@ -745,8 +745,8 @@ pending_udp_query(struct outside_network* outnet, ldns_buffer* packet,
 
 	/* system calls to set timeout after sending UDP to make roundtrip
 	   smaller. */
-	tv.tv_sec = timeout;
-	tv.tv_usec = 0;
+	tv.tv_sec = timeout/1000;
+	tv.tv_usec = (timeout%1000)*1000;
 	comm_timer_set(pend->timer, &tv);
 	return pend;
 }
@@ -988,9 +988,11 @@ serviced_udp_send(struct serviced_query* sq, ldns_buffer* buff)
 		else 	sq->status = serviced_query_UDP;
 	}
 	serviced_encode(sq, buff, sq->status == serviced_query_UDP_EDNS);
-	sq->last_sent_time = now;
-	/* round rtt to whole seconds for now. TODO better timing */
-	rtt = rtt/1000 + 1;
+	if(gettimeofday(&sq->last_sent_time, NULL) < 0) {
+		log_err("gettimeofday: %s", strerror(errno));
+		return 0;
+	}
+	verbose(VERB_DETAIL, "serviced query UDP timeout=%d msec", rtt);
 	sq->pending = pending_udp_query(sq->outnet, buff, &sq->addr, 
 		sq->addrlen, rtt, serviced_udp_callback, sq, sq->outnet->rnd);
 	if(!sq->pending)
@@ -1058,13 +1060,17 @@ serviced_udp_callback(struct comm_point* c, void* arg, int error,
 {
 	struct serviced_query* sq = (struct serviced_query*)arg;
 	struct outside_network* outnet = sq->outnet;
-	time_t now = time(NULL);
-	int roundtime;
+	struct timeval now;
+	if(gettimeofday(&now, NULL) < 0) {
+		log_err("gettimeofday: %s", strerror(errno));
+		/* this option does not need current time */
+		error = NETEVENT_CLOSED; 
+	}
 	sq->pending = NULL; /* removed after callback */
 	if(error == NETEVENT_TIMEOUT) {
 		sq->retry++;
 		if(!infra_rtt_update(outnet->infra, &sq->addr, sq->addrlen,
-			-1, now))
+			-1, now.tv_sec))
 			log_err("out of memory in UDP exponential backoff");
 		if(sq->retry < OUTBOUND_UDP_RETRY) {
 			if(!serviced_udp_send(sq, c->buffer)) {
@@ -1082,7 +1088,7 @@ serviced_udp_callback(struct comm_point* c, void* arg, int error,
 			== LDNS_RCODE_FORMERR) {
 		/* note no EDNS, fallback without EDNS */
 		if(!infra_edns_update(outnet->infra, &sq->addr, sq->addrlen,
-			-1, now)) {
+			-1, now.tv_sec)) {
 			log_err("Out of memory caching no edns for host");
 		}
 		sq->status = serviced_query_UDP;
@@ -1105,11 +1111,17 @@ serviced_udp_callback(struct comm_point* c, void* arg, int error,
 		return 0;
 	}
 	/* yay! an answer */
-	roundtime = (int)now - (int)sq->last_sent_time;
-	if(roundtime >= 0)
+	if(now.tv_sec > sq->last_sent_time.tv_sec ||
+		(now.tv_sec == sq->last_sent_time.tv_sec &&
+		now.tv_usec > sq->last_sent_time.tv_usec)) {
+		/* convert from microseconds to milliseconds */
+		int roundtime = (now.tv_sec - sq->last_sent_time.tv_sec)*1000
+		  + ((int)now.tv_usec - (int)sq->last_sent_time.tv_usec)/1000;
+		log_info("measured roundtrip at %d msec", roundtime);
 		if(!infra_rtt_update(outnet->infra, &sq->addr, sq->addrlen, 
-			roundtime*1000, now))
+			roundtime, now.tv_sec))
 			log_err("out of memory noting rtt.");
+	}
 	(void)rbtree_delete(outnet->serviced, sq);
 	serviced_callbacks(sq, error, c, rep);
 	serviced_delete(sq);

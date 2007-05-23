@@ -226,7 +226,7 @@ struct serviced_query {
 	/** number of UDP retries */
 	int retry;
 	/** time last UDP was sent */
-	time_t last_sent_time;
+	struct timeval last_sent_time;
 	/** outside network this is part of */
 	struct outside_network* outnet;
 	/** list of interested parties that need callback on results. */
@@ -270,7 +270,7 @@ void outside_network_delete(struct outside_network* outnet);
  * @param packet: wireformat query to send to destination.
  * @param addr: address to send to.
  * @param addrlen: length of addr.
- * @param timeout: in seconds from now.
+ * @param timeout: in milliseconds from now.
  * @param callback: function to call on error, timeout or reply.
  * @param callback_arg: user argument for callback function.
  * @param rnd: random state for generating ID and port.
