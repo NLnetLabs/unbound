@@ -109,4 +109,43 @@ struct delegpt_addr {
  */
 struct delegpt* delegpt_create(struct region* region);
 
+/**
+ * Set name of delegation point.
+ * @param dp: delegation point.
+ * @param region: where to allocate the name copy.
+ * @param name: name to use.
+ * @return false on error.
+ */
+int delegpt_set_name(struct delegpt* dp, struct region* region, uint8_t* name);
+
+/**
+ * Add a name to the delegation point.
+ * @param dp: delegation point.
+ * @param region: where to allocate the info.
+ * @param name: domain name in wire format.
+ * @return false on error.
+ */
+int delegpt_add_ns(struct delegpt* dp, struct region* region, uint8_t* name);
+
+/**
+ * Add address to the delegation point.
+ * @param dp: delegation point.
+ * @param region: where to allocate the info.
+ * @param name: name for which target was found (must be in nslist).
+ *	This name is marked resolved.
+ * @param namelen: length of name.
+ * @param addr: the address.
+ * @param addrlen: the length of addr.
+ * @return false on error.
+ */
+int delegpt_add_target(struct delegpt* dp, struct region* region, 
+	uint8_t* name, size_t namelen, struct sockaddr_storage* addr, 
+	socklen_t addrlen);
+
+/**
+ * Print the delegation point to the log. For debugging.
+ * @param dp: delegation point.
+ */
+void delegpt_log(struct delegpt* dp);
+
 #endif /* ITERATOR_ITER_DELEGPT_H */

@@ -127,13 +127,6 @@ void dname_pkt_copy(ldns_buffer* pkt, uint8_t* to, uint8_t* dname);
  */
 int dname_buffer_write(ldns_buffer* pkt, uint8_t* dname);
 
-/** debug helper. Print wireformat dname to output. 
- * @param out: like stdout or a file.
- * @param pkt: if not NULL, the packet for resolving compression ptrs.
- * @param dname: pointer to (start of) dname.
- */
-void dname_print(FILE* out, ldns_buffer* pkt, uint8_t* dname);
-
 /**
  * Count the number of labels in an uncompressed dname in memory.
  * @param dname: pointer to uncompressed dname.
@@ -160,5 +153,23 @@ int dname_count_size_labels(uint8_t* dname, size_t* size);
  * @return: 0 for equal, -1 smaller, or +1 d1 larger than d2.
  */
 int dname_lab_cmp(uint8_t* d1, int labs1, uint8_t* d2, int labs2, int* mlabs);
+
+/** 
+ * Debug helper. Print wireformat dname to output. 
+ * @param out: like stdout or a file.
+ * @param pkt: if not NULL, the packet for resolving compression ptrs.
+ * @param dname: pointer to (start of) dname.
+ */
+void dname_print(FILE* out, ldns_buffer* pkt, uint8_t* dname);
+
+/** 
+ * Debug helper. Print dname to given string buffer (string buffer must
+ * be at least 255 chars + 1 for the 0, in printable form.
+ * This may lose information (? for nonprintable characters, or & if
+ * the name is too long, # for a bad label length).
+ * @param dname: uncompressed wireformat.
+ * @param str: buffer of 255+1 length.
+ */
+void dname_str(uint8_t* dname, char* str);
 
 #endif /* UTIL_DATA_DNAME_H */

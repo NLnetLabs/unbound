@@ -42,6 +42,7 @@
 #include "config.h"
 #include "iterator/iter_utils.h"
 #include "iterator/iterator.h"
+#include "iterator/iter_hints.h"
 #include "util/net_help.h"
 #include "util/log.h"
 #include "util/config_file.h"
@@ -64,6 +65,14 @@ iter_apply_cfg(struct iter_env* iter_env, struct config_file* cfg)
 	for(i=0; i<iter_env->max_dependency_depth+1; i++)
 		verbose(VERB_DETAIL, "target fetch policy for level %d is %d",
 			i, iter_env->target_fetch_policy[i]);
+	
+	if(!iter_env->hints)
+		iter_env->hints = hints_create();
+	if(!iter_env->hints || !hints_apply_cfg(iter_env->hints, cfg)) {
+		log_err("Could not set root or stub hints");
+		return 0;
+	}
+	
 
 	/* forwarder address */
 	if(cfg->fwd_address && cfg->fwd_address[0]) {

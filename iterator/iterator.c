@@ -49,6 +49,7 @@
 #include "util/region-allocator.h"
 #include "services/cache/rrset.h"
 #include "iterator/iter_utils.h"
+#include "iterator/iter_hints.h"
 
 /** iterator init */
 static int 
@@ -76,6 +77,8 @@ iter_deinit(struct module_env* env, int id)
 	if(!env || !env->modinfo)
 		return;
 	iter_env = (struct iter_env*)env->modinfo[id];
+	free(iter_env->target_fetch_policy);
+	hints_delete(iter_env->hints);
 	if(iter_env)
 		free(iter_env);
 }
@@ -135,6 +138,7 @@ iter_new(struct module_qstate* qstate, int id)
 		return 0;
 	memset(iq, 0, sizeof(*iq));
 	outbound_list_init(&iq->outlist);
+	iq->num_target_queries = -1; /* default our targetQueries counter. */
 	if(qstate->qinfo.has_cd)
 		flags |= BIT_CD;
 	e = (*env->send_query)(qstate->qinfo.qname, qstate->qinfo.qnamesize,
@@ -231,4 +235,30 @@ struct module_func_block*
 iter_get_funcblock()
 {
 	return &iter_block;
+}
+
+const char* 
+iter_state_to_string(enum iter_state state)
+{
+	switch (state)
+	{
+	case INIT_REQUEST_STATE :
+		return "INIT REQUEST STATE";
+	case INIT_REQUEST_2_STATE :
+		return "INIT REQUEST STATE (stage 2)";
+	case INIT_REQUEST_3_STATE:
+		return "INIT REQUEST STATE (stage 3)";
+	case QUERYTARGETS_STATE :
+		return "QUERY TARGETS STATE";
+	case PRIME_RESP_STATE :
+		return "PRIME RESPONSE STATE";
+	case QUERY_RESP_STATE :
+		return "QUERY RESPONSE STATE";
+	case TARGET_RESP_STATE :
+		return "TARGET RESPONSE STATE";
+	case FINISHED_STATE :
+		return "FINISHED RESPONSE STATE";
+	default :
+		return "UNKNOWN ITER STATE";
+	}
 }

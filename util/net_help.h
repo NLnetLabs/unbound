@@ -112,10 +112,12 @@ void* memdup(void* data, size_t len);
 
 /**
  * Prints the sockaddr in readable format with log_info. Debug helper.
+ * @param str: descriptive string printed with it.
  * @param addr: the sockaddr to print. Can be ip4 or ip6.
  * @param addrlen: length of addr.
  */
-void log_addr(struct sockaddr_storage* addr, socklen_t addrlen);
+void log_addr(const char* str, struct sockaddr_storage* addr, 
+	socklen_t addrlen);
 
 /**
  * Convert ip address string and port to sockaddr.

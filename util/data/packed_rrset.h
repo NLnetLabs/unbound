@@ -219,6 +219,16 @@ struct packed_rrset {
 };
 
 /**
+ * list of packed rrsets
+ */
+struct packed_rrset_list {
+	/** next in list */
+	struct packed_rrset_list* next;
+	/** rrset key and data */
+	struct packed_rrset rrset;
+};
+
+/**
  * Delete packed rrset key and data, not entered in hashtables yet.
  * Used during parsing.
  * @param pkey: rrset key structure with locks, key and data pointers.

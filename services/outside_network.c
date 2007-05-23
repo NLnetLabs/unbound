@@ -180,14 +180,14 @@ outnet_tcp_take_into_use(struct waiting_tcp* w, uint8_t* pkt)
 		s = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
 	if(s == -1) {
 		log_err("outgoing tcp: socket: %s", strerror(errno));
-		log_addr(&w->addr, w->addrlen);
+		log_addr("failed address", &w->addr, w->addrlen);
 		return 0;
 	}
 	fd_set_nonblock(s);
 	if(connect(s, (struct sockaddr*)&w->addr, w->addrlen) == -1) {
 		if(errno != EINPROGRESS) {
 			log_err("outgoing tcp: connect: %s", strerror(errno));
-			log_addr(&w->addr, w->addrlen);
+			log_addr("failed address", &w->addr, w->addrlen);
 			close(s);
 			return 0;
 		}
@@ -252,8 +252,8 @@ outnet_tcp_cb(struct comm_point* c, void* arg, int error,
 		/* check ID */
 		if(ldns_buffer_limit(c->buffer) < sizeof(uint16_t) ||
 			LDNS_ID_WIRE(ldns_buffer_begin(c->buffer))!=pend->id) {
-			log_info("outnettcp: bad ID in reply, from:");
-			log_addr(&pend->query->addr, pend->query->addrlen);
+			log_addr("outnettcp: bad ID in reply, from:",
+				&pend->query->addr, pend->query->addrlen);
 			error = NETEVENT_CLOSED;
 		}
 	}

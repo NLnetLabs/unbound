@@ -45,6 +45,8 @@
 #include "services/outbound_list.h"
 struct module_func_block;
 struct delegpt;
+struct packed_rrset_list;
+struct iter_hints;
 
 /**
  * Global state for the iterator. 
@@ -61,7 +63,7 @@ struct iter_env {
 	 * that both root hints and stub zone "hints" are stored in this 
 	 * data structure.
 	 */
-	/* struct hints* hints TODO */
+	struct iter_hints* hints;
 
 	/** A flag to indicate whether or not we have an IPv6 route */
 	int supports_ipv6;
@@ -156,7 +158,7 @@ struct iter_qstate {
 	 * This is a list of RRsets that must be prepended to the 
 	 * ANSWER section of a response before being sent upstream.
 	 */
-	/* TODO list of struct rrsets or something */
+	struct packed_rrset_list* prepend_list;
 
 	/** 
 	 * This is the current delegation point for an in-progress query. This
@@ -192,5 +194,12 @@ struct iter_qstate {
  * Get the iterator function block.
  */
 struct module_func_block* iter_get_funcblock();
+
+/**
+ * Get iterator state as a string
+ * @param state: to convert
+ * @return constant string that is printable.
+ */
+const char* iter_state_to_string(enum iter_state state);
 
 #endif /* ITERATOR_ITERATOR_H */

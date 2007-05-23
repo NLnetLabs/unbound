@@ -471,3 +471,41 @@ dname_buffer_write(ldns_buffer* pkt, uint8_t* dname)
 	}
 	return 1;
 }
+
+void dname_str(uint8_t* dname, char* str)
+{
+	size_t len = 0;
+	uint8_t lablen = 0;
+	char* s = str;
+	if(!dname || !*dname) {
+		*s++ = '.';
+		*s = 0;
+		return;
+	}
+	lablen = *dname++;
+	while(lablen) {
+		if(lablen > LDNS_MAX_LABELLEN) {
+			*s++ = '#';
+			*s = 0;
+			return;
+		}
+		len += lablen+1;
+		if(len >= LDNS_MAX_DOMAINLEN-1) {
+			*s++ = '&';
+			*s = 0;
+			return;
+		}
+		while(lablen--) {
+			if(isalnum((int)*dname) 
+				|| *dname == '-' || *dname == '_')
+				*s++ = *(char*)dname++;
+			else	{
+				*s++ = '?';
+				dname++;
+			}
+		}
+		*s++ = '.';
+		lablen = *dname++;
+	}
+	*s = 0;
+}
