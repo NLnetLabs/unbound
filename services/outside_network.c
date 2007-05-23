@@ -1070,7 +1070,7 @@ serviced_udp_callback(struct comm_point* c, void* arg, int error,
 	if(error == NETEVENT_TIMEOUT) {
 		sq->retry++;
 		if(!infra_rtt_update(outnet->infra, &sq->addr, sq->addrlen,
-			-1, now.tv_sec))
+			-1, (time_t)now.tv_sec))
 			log_err("out of memory in UDP exponential backoff");
 		if(sq->retry < OUTBOUND_UDP_RETRY) {
 			if(!serviced_udp_send(sq, c->buffer)) {
@@ -1088,7 +1088,7 @@ serviced_udp_callback(struct comm_point* c, void* arg, int error,
 			== LDNS_RCODE_FORMERR) {
 		/* note no EDNS, fallback without EDNS */
 		if(!infra_edns_update(outnet->infra, &sq->addr, sq->addrlen,
-			-1, now.tv_sec)) {
+			-1, (time_t)now.tv_sec)) {
 			log_err("Out of memory caching no edns for host");
 		}
 		sq->status = serviced_query_UDP;
@@ -1119,7 +1119,7 @@ serviced_udp_callback(struct comm_point* c, void* arg, int error,
 		  + ((int)now.tv_usec - (int)sq->last_sent_time.tv_usec)/1000;
 		log_info("measured roundtrip at %d msec", roundtime);
 		if(!infra_rtt_update(outnet->infra, &sq->addr, sq->addrlen, 
-			roundtime, now.tv_sec))
+			roundtime, (time_t)now.tv_sec))
 			log_err("out of memory noting rtt.");
 	}
 	(void)rbtree_delete(outnet->serviced, sq);
