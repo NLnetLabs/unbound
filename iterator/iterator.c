@@ -44,51 +44,11 @@
 #include "iterator/iterator.h"
 #include "util/module.h"
 #include "util/netevent.h"
-#include "util/config_file.h"
 #include "util/net_help.h"
 #include "util/storage/slabhash.h"
 #include "util/region-allocator.h"
 #include "services/cache/rrset.h"
-
-/** 
- * Set forwarder address 
- * @param ie: iterator global state.
- * @param ip: the server name.
- * @param port: port on server or NULL for default 53.
- * @return: false on error.
- */
-static int
-iter_set_fwd(struct iter_env* ie, const char* ip, int port)
-{
-        uint16_t p;
-        log_assert(ie && ip);
-        p = (uint16_t) port;
-        if(str_is_ip6(ip)) {
-                struct sockaddr_in6* sa =
-                        (struct sockaddr_in6*)&ie->fwd_addr;
-                ie->fwd_addrlen = (socklen_t)sizeof(struct sockaddr_in6);
-                memset(sa, 0, ie->fwd_addrlen);
-                sa->sin6_family = AF_INET6;
-                sa->sin6_port = (in_port_t)htons(p);
-                if(inet_pton((int)sa->sin6_family, ip, &sa->sin6_addr) <= 0) {
-                        log_err("Bad ip6 address %s", ip);
-                        return 0;
-                }
-        } else { /* ip4 */
-                struct sockaddr_in* sa =
-                        (struct sockaddr_in*)&ie->fwd_addr;
-                ie->fwd_addrlen = (socklen_t)sizeof(struct sockaddr_in);
-                memset(sa, 0, ie->fwd_addrlen);
-                sa->sin_family = AF_INET;
-                sa->sin_port = (in_port_t)htons(p);
-                if(inet_pton((int)sa->sin_family, ip, &sa->sin_addr) <= 0) {
-                        log_err("Bad ip4 address %s", ip);
-                        return 0;
-                }
-        }
-        verbose(VERB_ALGO, "iterator: fwd queries to: %s %d", ip, p);
-        return 1;
-}
+#include "iterator/iter_utils.h"
 
 /** iterator init */
 static int 
@@ -101,13 +61,9 @@ iter_init(struct module_env* env, int id)
 		return 0;
 	}
 	env->modinfo[id] = (void*)iter_env;
-	/* set forwarder address */
-	if(env->cfg->fwd_address && env->cfg->fwd_address[0]) {
-		if(!iter_set_fwd(iter_env, env->cfg->fwd_address, 
-			env->cfg->fwd_port)) {
-			log_err("iterator: could not set forwarder address");
-			return 0;
-		}
+	if(!iter_apply_cfg(iter_env, env->cfg)) {
+		log_err("iterator: could not apply configuration settings.");
+		return 0;
 	}
 	return 1;
 }
@@ -177,6 +133,7 @@ iter_new(struct module_qstate* qstate, int id)
 	qstate->minfo[id] = iq;
 	if(!iq) 
 		return 0;
+	memset(iq, 0, sizeof(*iq));
 	outbound_list_init(&iq->outlist);
 	if(qstate->qinfo.has_cd)
 		flags |= BIT_CD;

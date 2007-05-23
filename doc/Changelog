@@ -1,6 +1,8 @@
 23 May 2007: Wouter
 	- outside network does precise timers for roundtrip estimates for rtt
 	  and for setting timeout for UDP. Pending_udp takes milliseconds.
+	- cleaner iterator sockaddr conversion of forwarder address.
+	- iterator/iter_utils and iter_delegpt setup.
 
 22 May 2007: Wouter
 	- outbound query list for modules and support to callback with the

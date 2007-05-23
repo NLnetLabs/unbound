@@ -44,6 +44,7 @@
 #define ITERATOR_ITERATOR_H
 #include "services/outbound_list.h"
 struct module_func_block;
+struct delegpt;
 
 /**
  * Global state for the iterator. 
@@ -51,14 +52,138 @@ struct module_func_block;
 struct iter_env {
 	/** address to forward to */
 	struct sockaddr_storage fwd_addr;
-	/** length of fwd_addr */
+	/** length of fwd_addr, if not 0, forward mode is used */
 	socklen_t fwd_addrlen;
+
+	/** 
+	 * The hints -- these aren't stored in the cache because they don't 
+	 * expire. The hints are always used to "prime" the cache. Note 
+	 * that both root hints and stub zone "hints" are stored in this 
+	 * data structure.
+	 */
+	/* struct hints* hints TODO */
+
+	/** A flag to indicate whether or not we have an IPv6 route */
+	int supports_ipv6;
+
+	/** Mapping of forwarding zones to targets. */
+	/* struct fwds fwd_map TODO */
+
+	/** A set of inetaddrs that should never be queried. */
+	/* struct bla donotquery_addrs TODO */
+
+	/** The maximum dependency depth that this resolver will pursue. */
+	int max_dependency_depth;
+
+	/**
+	 * The target fetch policy for each dependency level. This is 
+	 * described as a simple number (per dependency level): 
+	 *	negative numbers (usually just -1) mean fetch-all, 
+	 *	0 means only fetch on demand, and 
+	 *	positive numbers mean to fetch at most that many targets.
+	 * array of max_dependency_depth+1 size.
+	 */
+	int* target_fetch_policy;
+};
+
+/**
+ * State of the iterator for a query.
+ */
+enum iter_state {
+	/**
+	 * Externally generated queries start at this state. Query restarts are
+	 * reset to this state.
+	 */
+	INIT_REQUEST_STATE = 0,
+
+	/**
+	 * Root priming events reactivate here, most other events pass 
+	 * through this naturally as the 2nd part of the INIT_REQUEST_STATE.
+	 */
+	INIT_REQUEST_2_STATE,
+
+	/**
+	 * Stub priming events reactivate here, most other events pass 
+	 * through this naturally as the 3rd part of the INIT_REQUEST_STATE.
+	 */
+	INIT_REQUEST_3_STATE,
+
+	/**
+	 * Each time a delegation point changes for a given query or a 
+	 * query times out and/or wakes up, this state is (re)visited. 
+	 * This state is reponsible for iterating through a list of 
+	 * nameserver targets.
+	 */
+	QUERYTARGETS_STATE,
+
+	/**
+	 * Responses to queries start at this state. This state handles 
+	 * the decision tree associated with handling responses.
+	 */
+	QUERY_RESP_STATE,
+
+	/** Responses to priming queries finish at this state. */
+	PRIME_RESP_STATE,
+
+	/** Responses to target queries start at this state. */
+	TARGET_RESP_STATE,
+
+	/** Responses that are to be returned upstream end at this state. */
+	FINISHED_STATE
 };
 
 /**
  * Per query state for the iterator module.
  */
 struct iter_qstate {
+	/** state of the iterator module 
+	 * This is the state that event is in or should sent to -- all 
+	 * requests should start with the INIT_REQUEST_STATE. All 
+	 * responses should start with QUERY_RESP_STATE. Subsequent 
+	 * processing of the event will change this state.
+	 */
+	enum iter_state state;
+
+	/** final state for the iterator module 
+	 * This is the state that responses should be routed to once the 
+	 * response is final. For externally initiated queries, this 
+	 * will be FINISHED_STATE, locally initiated queries will have 
+	 * different final states.
+	 */
+	enum iter_state final_state;
+
+	/** 
+	 * This is a list of RRsets that must be prepended to the 
+	 * ANSWER section of a response before being sent upstream.
+	 */
+	/* TODO list of struct rrsets or something */
+
+	/** 
+	 * This is the current delegation point for an in-progress query. This
+	 * object retains state as to which delegation targets need to be
+	 * (sub)queried for vs which ones have already been visited.
+	 */
+	struct delegpt* dp;
+
+	/** number of outstanding target sub queries */
+	int num_target_queries;
+
+	/** outstanding direct queries */
+	int num_current_queries;
+
+	/** the number of times this query has been restarted. */
+	int query_restart_count;
+
+	/** the number of times this query as followed a referral. */
+	int referral_count;
+
+	/**
+	 * This is flag that, if true, means that this event is 
+	 * representing a stub priming query. It is meaningless unless 
+	 * the finalState is the PRIMING_RESP_STATE.
+	 */
+	int priming_stub;
+
 	/** list of pending queries to authoritative servers. */
 	struct outbound_list outlist;
 };

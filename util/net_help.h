@@ -117,5 +117,15 @@ void* memdup(void* data, size_t len);
  */
 void log_addr(struct sockaddr_storage* addr, socklen_t addrlen);
 
+/**
+ * Convert ip address string and port to sockaddr.
+ * @param ip: ip4 or ip6 address string.
+ * @param port: port number, host format.
+ * @param addr: where to store sockaddr.
+ * @param addrlen: length of stored sockaddr is returned.
+ * @return 0 on error.
+ */
+int ipstrtoaddr(const char* ip, int port, struct sockaddr_storage* addr,
+	socklen_t* addrlen);
 
 #endif /* NET_HELP_H */
