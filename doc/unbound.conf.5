@@ -123,6 +123,21 @@ The logfile is appended to, in the following format:
 The process id is written to the file. Default is "unbound.pid". So,
 kill -HUP `cat /etc/unbound/unbound.pid` will trigger a reload,
 kill -QUIT `cat /etc/unbound/unbound.pid` will gracefully terminate.
+.El
+
+.Ss Stub Zone Options
+There may be multiple
+.Ic stub-zone:
+clauses. Each with a name: and zero or more hostnames or IP addresses.
+For the stub zone this list of nameservers is used. Class IN is assumed.
+.Bl -tag -width indent
+.It \fBname:\fR <domain name>
+Name of the stub zone.
+.It \fBstub-host:\fR <domain name>
+Name of stub zone nameserver. Will need to be resolved before it can be used.
+.It \fBstub-addr:\fR <IP address>
+IP address of stub zone nameserver. Can be IP 4 or IP 6.
+.El
 
 .Sh FILES
 .Bl -tag -width indent
