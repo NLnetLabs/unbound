@@ -196,8 +196,8 @@ worker_process_query(struct worker* worker, struct work_query* w,
 	}
 	/* request done */
 	if(s == module_error) {
-		qstate_free(worker, qstate);
 		replyerror(LDNS_RCODE_SERVFAIL, w);
+		qstate_free(worker, qstate);
 		return;
 	}
 	if(s == module_finished) {

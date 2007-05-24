@@ -3,6 +3,7 @@
 	- iterator forwarder feature separated out.
 	- iterator hints stub code, config file stub code, so that first
 	  testing can proceed locally.
+	- replay tests now have config option to enable forwarding mode.
 
 23 May 2007: Wouter
 	- outside network does precise timers for roundtrip estimates for rtt

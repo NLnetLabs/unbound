@@ -117,10 +117,11 @@ struct delegpt* hints_lookup_root(struct iter_hints* hints, uint16_t qclass);
  * for this qname/qclass, determine if this combination indicates that a
  * stub hint exists and must be primed.
  *
- * @param qname The qname that generated the delegation point.
- * @param qclass The qclass that generated the delegation point.
- * @param dp The cache generated delegation point.
- * @return A priming delegation point if there is a stub hint that must
+ * @param hints: hint storage.
+ * @param qname: The qname that generated the delegation point.
+ * @param qclass: The qclass that generated the delegation point.
+ * @param dp: The cache generated delegation point.
+ * @return: A priming delegation point if there is a stub hint that must
  *         be primed, otherwise null.
  */
 struct delegpt* hints_lookup_stub(struct iter_hints* hints, 

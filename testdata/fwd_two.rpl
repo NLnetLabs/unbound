@@ -1,6 +1,7 @@
 ; config options go here.
 server:
 	num-queries-per-thread: 1
+	forward-to: "127.0.0.1"
 CONFIG_END
 SCENARIO_BEGIN Sample of a valid query
 

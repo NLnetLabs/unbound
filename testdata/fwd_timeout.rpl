@@ -1,4 +1,5 @@
 ; config options go here.
+server: forward-to: "127.0.0.1"
 CONFIG_END
 SCENARIO_BEGIN Forwarder and a timeout happens on server query.
 STEP 1 QUERY

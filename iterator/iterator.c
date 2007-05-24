@@ -201,7 +201,7 @@ perform_forward(struct module_qstate* qstate, enum module_ev event, int id,
 			qstate->ext_state[id] = module_error;
 		return;
 	}
-	log_err("bad event for iterator");
+	log_err("bad event for iterator[forwarding]");
 	qstate->ext_state[id] = module_error;
 }
 
@@ -222,6 +222,8 @@ iter_operate(struct module_qstate* qstate, enum module_ev event, int id,
 		perform_forward(qstate, event, id, outbound);
 		return;
 	}
+	log_err("bad event for iterator");
+	qstate->ext_state[id] = module_error;
 }
 
 /** iterator cleanup query state */
