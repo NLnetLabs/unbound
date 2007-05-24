@@ -127,6 +127,10 @@ infra-cache-slabs{COLON}	{ YDOUT; return VAR_INFRA_CACHE_SLABS;}
 infra-cache-numhosts{COLON}	{ YDOUT; return VAR_INFRA_CACHE_NUMHOSTS;}
 infra-cache-numlame{COLON}	{ YDOUT; return VAR_INFRA_CACHE_NUMLAME;}
 num-queries-per-thread{COLON}	{ YDOUT; return VAR_NUM_QUERIES_PER_THREAD;}
+stub-zone{COLON}	{ YDOUT; return VAR_STUB_ZONE;}
+name{COLON}		{ YDOUT; return VAR_NAME;}
+stub-addr{COLON}	{ YDOUT; return VAR_STUB_ADDR;}
+stub-host{COLON}	{ YDOUT; return VAR_STUB_HOST;}
 {NEWLINE}		{ LEXOUT(("NL\n")); cfg_parser->line++;}
 
 	/* Quoted strings. Strip leading and ending quotes */

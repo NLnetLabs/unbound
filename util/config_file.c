@@ -98,6 +98,7 @@ config_create()
 	cfg->do_daemonize = 1;
 	cfg->num_ifs = 0;
 	cfg->ifs = NULL;
+	cfg->stubs = NULL;
 	return cfg;
 error_exit:
 	config_delete(cfg); 
@@ -141,6 +142,19 @@ config_read(struct config_file* cfg, const char* filename)
 	return 1;
 }
 
+/** delete config strlist */
+static void
+config_delstrlist(struct config_strlist* p)
+{
+	struct config_strlist *np;
+	while(p) {
+		np = p->next;
+		free(p->str);
+		free(p);
+		p = np;
+	}
+}
+
 void 
 config_delete(struct config_file* cfg)
 {
@@ -156,6 +170,16 @@ config_delete(struct config_file* cfg)
 		for(i=0; i<cfg->num_ifs; i++)
 			free(cfg->ifs[i]);
 		free(cfg->ifs);
+	}
+	if(cfg->stubs) {
+		struct config_stub* p = cfg->stubs, *np;
+		while(p) {
+			np = p->next;
+			free(p->name);
+			config_delstrlist(p->hosts);
+			config_delstrlist(p->addrs);
+			p = np;
+		}
 	}
 	free(cfg);
 }

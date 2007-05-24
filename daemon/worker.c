@@ -76,6 +76,30 @@ worker_send_cmd(struct worker* worker, ldns_buffer* buffer,
 		log_err("write socket: %s", strerror(errno));
 }
 
+/** delete subrequest */
+static void
+qstate_free(struct worker* worker, struct module_qstate* qstate)
+{
+	int i;
+	if(!qstate)
+		return;
+	/* remove subqueries */
+	while(qstate->subquery_first) {
+		qstate_free(worker, qstate->subquery_first);
+	}
+	log_assert(qstate->subquery_first == NULL);
+	/* call de-init while all is OK */
+	for(i=0; i<worker->daemon->num_modules; i++)
+		(*worker->daemon->modfunc[i]->clear)(qstate, i);
+	/* cleanup this query */
+	region_free_all(qstate->region);
+	query_info_clear(&qstate->qinfo);
+	if(qstate->parent) {
+		module_subreq_remove(qstate);
+		free(qstate);
+	}
+}
+
 /** release workrequest back to the freelist,
  * note that the w->qinfo still needs to be cleared after this. 
  */
@@ -138,33 +162,50 @@ replyerror(int r, struct work_query* w)
 /** process incoming request */
 static void 
 worker_process_query(struct worker* worker, struct work_query* w, 
-	enum module_ev event, struct outbound_entry* entry) 
+	struct module_qstate* qstate, enum module_ev event, 
+	struct outbound_entry* entry) 
 {
 	int i;
+	enum module_ext_state s;
 	if(event == module_event_new) {
-		w->state.curmod = 0;
+		qstate->curmod = 0;
 		for(i=0; i<worker->daemon->num_modules; i++)
-			w->state.ext_state[i] = module_state_initial;
+			qstate->ext_state[i] = module_state_initial;
 	}
 	/* allow current module to run */
-	(*worker->daemon->modfunc[w->state.curmod]->operate)(&w->state, event,
-		w->state.curmod, entry);
+	(*worker->daemon->modfunc[qstate->curmod]->operate)(qstate, event,
+		qstate->curmod, entry);
+	s = qstate->ext_state[qstate->curmod];
 	/* TODO examine results, start further modules, etc.
 	 * assume it went to sleep
 	 */
 	region_free_all(worker->scratchpad);
-	if(w->state.ext_state[w->state.curmod] == module_error) {
-		region_free_all(w->state.region);
+	/* subrequest done */
+	/* TODO properly delete subquery */
+	if(s == module_error && qstate->parent) {
+		qstate_free(worker, qstate);
+		worker_process_query(worker, w, qstate->parent, 
+			module_event_error, NULL);
+		return;
+	}
+	if(s == module_finished && qstate->parent) {
+		qstate_free(worker, qstate);
+		worker_process_query(worker, w, qstate->parent, 
+			module_event_subq_done, NULL);
+		return;
+	}
+	/* request done */
+	if(s == module_error) {
+		qstate_free(worker, qstate);
 		replyerror(LDNS_RCODE_SERVFAIL, w);
 		return;
 	}
-	if(w->state.ext_state[w->state.curmod] == module_finished) {
+	if(s == module_finished) {
 		memcpy(ldns_buffer_begin(w->query_reply.c->buffer),
 			&w->query_id, sizeof(w->query_id));
 		comm_point_send_reply(&w->query_reply);
-		region_free_all(w->state.region);
+		qstate_free(worker, qstate);
 		req_release(w);
-		query_info_clear(&w->state.qinfo);
 		return;
 	}
 	/* suspend, waits for wakeup callback */
@@ -180,7 +221,8 @@ worker_handle_reply(struct comm_point* c, void* arg, int error,
 
 	w->state.reply = reply_info;
 	if(error != 0) {
-		worker_process_query(worker, w, module_event_timeout, NULL);
+		worker_process_query(worker, w, &w->state, 
+			module_event_timeout, NULL);
 		w->state.reply = NULL;
 		return 0;
 	}
@@ -191,11 +233,12 @@ worker_handle_reply(struct comm_point* c, void* arg, int error,
 		|| LDNS_QDCOUNT(ldns_buffer_begin(c->buffer)) > 1) {
 		/* error becomes timeout for the module as if this reply
 		 * never arrived. */
-		worker_process_query(worker, w, module_event_timeout, NULL);
+		worker_process_query(worker, w, &w->state, 
+			module_event_timeout, NULL);
 		w->state.reply = NULL;
 		return 0;
 	}
-	worker_process_query(worker, w, module_event_reply, NULL);
+	worker_process_query(worker, w, &w->state, module_event_reply, NULL);
 	w->state.reply = NULL;
 	return 0;
 }
@@ -211,7 +254,8 @@ worker_handle_service_reply(struct comm_point* c, void* arg, int error,
 
 	w->state.reply = reply_info;
 	if(error != 0) {
-		worker_process_query(worker, w, module_event_timeout, e);
+		worker_process_query(worker, w, e->qstate, 
+			module_event_timeout, e);
 		w->state.reply = NULL;
 		return 0;
 	}
@@ -222,11 +266,12 @@ worker_handle_service_reply(struct comm_point* c, void* arg, int error,
 		|| LDNS_QDCOUNT(ldns_buffer_begin(c->buffer)) > 1) {
 		/* error becomes timeout for the module as if this reply
 		 * never arrived. */
-		worker_process_query(worker, w, module_event_timeout, e);
+		worker_process_query(worker, w, e->qstate, 
+			module_event_timeout, e);
 		w->state.reply = NULL;
 		return 0;
 	}
-	worker_process_query(worker, w, module_event_reply, e);
+	worker_process_query(worker, w, e->qstate, module_event_reply, e);
 	w->state.reply = NULL;
 	return 0;
 }
@@ -477,7 +522,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 
 	/* answer it */
 	w->state.buf = c->buffer;
-	worker_process_query(worker, w, module_event_new, NULL);
+	worker_process_query(worker, w, &w->state, module_event_new, NULL);
 	return 0;
 }
 
@@ -582,7 +627,7 @@ reqs_delete(struct worker* worker)
 		n = q->all_next;
 		log_assert(q->state.env->worker == worker);
 		/* comm_reply closed in outside_network_delete */
-		query_info_clear(&q->state.qinfo);
+		qstate_free(worker, &q->state);
 		region_destroy(q->state.region);
 		free(q);
 		q = n;

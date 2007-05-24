@@ -180,18 +180,12 @@ iter_handlereply(struct module_qstate* qstate, int id,
 	return 1;
 }
 
-/** iterator operate on a query */
+/** perform forwarder functionality */
 static void 
-iter_operate(struct module_qstate* qstate, enum module_ev event, int id,
+perform_forward(struct module_qstate* qstate, enum module_ev event, int id,
 	struct outbound_entry* outbound)
 {
-	verbose(VERB_ALGO, "iterator[module %d] operate: extstate:%s event:%s", 
-		id, strextstate(qstate->ext_state[id]), strmodulevent(event));
-	if(event == module_event_new) {
-		if(!iter_new(qstate, id))
-			qstate->ext_state[id] = module_error;
-		return;
-	}
+	verbose(VERB_ALGO, "iterator: forwarding");
 	/* it must be a query reply */
 	if(!outbound) {
 		verbose(VERB_ALGO, "query reply was not serviced");
@@ -209,6 +203,25 @@ iter_operate(struct module_qstate* qstate, enum module_ev event, int id,
 	}
 	log_err("bad event for iterator");
 	qstate->ext_state[id] = module_error;
+}
+
+/** iterator operate on a query */
+static void 
+iter_operate(struct module_qstate* qstate, enum module_ev event, int id,
+	struct outbound_entry* outbound)
+{
+	struct iter_env* ie = (struct iter_env*)qstate->env->modinfo[id];
+	verbose(VERB_ALGO, "iterator[module %d] operate: extstate:%s event:%s", 
+		id, strextstate(qstate->ext_state[id]), strmodulevent(event));
+	if(event == module_event_new) {
+		if(!iter_new(qstate, id))
+			qstate->ext_state[id] = module_error;
+		return;
+	}
+	if(ie->fwd_addrlen != 0) {
+		perform_forward(qstate, event, id, outbound);
+		return;
+	}
 }
 
 /** iterator cleanup query state */

@@ -509,3 +509,18 @@ void dname_str(uint8_t* dname, char* str)
 	}
 	*s = 0;
 }
+
+int 
+dname_strict_subdomain(uint8_t* d1, int labs1, uint8_t* d2, int labs2)
+{
+	int m;
+	/* check subdomain: d1: www.example.com. and d2: example.com. */
+	if(labs2 >= labs1) 
+		return 0;
+	if(dname_lab_cmp(d1, labs1, d2, labs2, &m) > 0) {
+		/* subdomain if all labels match */
+		return (m == labs2);
+	}
+	return 0;
+}
+

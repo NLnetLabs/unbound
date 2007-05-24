@@ -268,4 +268,11 @@ const char* strextstate(enum module_ext_state s);
  */
 const char* strmodulevent(enum module_ev e);
 
+/**
+ * Remove subqrequest from list.
+ * @param sub: subrequest. Parent pointer used to access list.
+ * 	It is snipped off. 
+ */
+void module_subreq_remove(struct module_qstate* sub);
+
 #endif /* UTIL_MODULE_H */

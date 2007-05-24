@@ -98,15 +98,20 @@ delegpt_add_target(struct delegpt* dp, struct region* region,
 	uint8_t* name, size_t namelen, struct sockaddr_storage* addr, 
 	socklen_t addrlen)
 {
-	struct delegpt_addr* a;
 	struct delegpt_ns* ns = delegpt_find_ns(dp, name, namelen);
 	if(!ns) {
 		/* ignore it */
 		return 1;
 	}
 	ns->resolved = 1;
-	
-	a = (struct delegpt_addr*)region_alloc(region,
+	return delegpt_add_addr(dp, region, addr, addrlen);
+}
+
+int 
+delegpt_add_addr(struct delegpt* dp, struct region* region, 
+	struct sockaddr_storage* addr, socklen_t addrlen)
+{
+	struct delegpt_addr* a = (struct delegpt_addr*)region_alloc(region,
 		sizeof(struct delegpt_addr));
 	if(!a)
 		return 0;
@@ -118,7 +123,6 @@ delegpt_add_target(struct delegpt* dp, struct region* region,
 	memcpy(&a->addr, addr, addrlen);
 	a->addrlen = addrlen;
 	return 1;
-
 }
 
 void delegpt_log(struct delegpt* dp)
@@ -127,6 +131,10 @@ void delegpt_log(struct delegpt* dp)
 	struct delegpt_ns* ns;
 	struct delegpt_addr* a;
 	dname_str(dp->name, buf);
+	if(dp->nslist == NULL && dp->target_list == NULL) {
+		log_info("DelegationPoint<%s>: empty", buf);
+		return;
+	}
 	log_info("DelegationPoint<%s>:", buf);
 	for(ns = dp->nslist; ns; ns = ns->next) {
 		dname_str(ns->name, buf);

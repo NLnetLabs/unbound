@@ -75,7 +75,8 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_MSG_CACHE_SIZE VAR_MSG_CACHE_SLABS VAR_NUM_QUERIES_PER_THREAD
 %token VAR_RRSET_CACHE_SIZE VAR_RRSET_CACHE_SLABS VAR_OUTGOING_NUM_TCP
 %token VAR_INFRA_HOST_TTL VAR_INFRA_LAME_TTL VAR_INFRA_CACHE_SLABS
-%token VAR_INFRA_CACHE_NUMHOSTS VAR_INFRA_CACHE_NUMLAME
+%token VAR_INFRA_CACHE_NUMHOSTS VAR_INFRA_CACHE_NUMLAME VAR_NAME
+%token VAR_STUB_ZONE VAR_STUB_HOST VAR_STUB_ADDR
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -102,7 +103,23 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_rrset_cache_slabs | server_outgoing_num_tcp | 
 	server_infra_host_ttl | server_infra_lame_ttl | 
 	server_infra_cache_slabs | server_infra_cache_numhosts |
-	server_infra_cache_numlame
+	server_infra_cache_numlame | stubstart contents_stub
+	;
+stubstart: VAR_STUB_ZONE
+	{
+		struct config_stub* s;
+		OUTYY(("\nP(stub_zone:)\n")); 
+		s = (struct config_stub*)calloc(1, sizeof(struct config_stub));
+		if(s) {
+			s->next = cfg_parser->cfg->stubs;
+			cfg_parser->cfg->stubs = s;
+		} else 
+			yyerror("out of memory");
+	}
+	;
+contents_stub: contents_stub content_stub 
+	| ;
+content_stub: stub_name | stub_host | stub_addr 
 	;
 server_num_threads: VAR_NUM_THREADS STRING 
 	{ 
@@ -358,6 +375,38 @@ server_infra_cache_slabs: VAR_INFRA_CACHE_SLABS STRING
 				yyerror("must be a power of 2");
 		}
 		free($2);
+	}
+	;
+stub_name: VAR_NAME STRING
+	{
+		OUTYY(("P(name:%s)\n", $2));
+		cfg_parser->cfg->stubs->name = $2;
+	}
+	;
+stub_host: VAR_STUB_HOST STRING
+	{
+		struct config_strlist *s = (struct config_strlist*)calloc(1, 
+			sizeof(struct config_strlist));
+		OUTYY(("P(stub-host:%s)\n", $2));
+		if(s) {
+			s->str = $2;
+			s->next = cfg_parser->cfg->stubs->hosts;
+			cfg_parser->cfg->stubs->hosts = s;
+		} else
+			yyerror("out of memory");
+	}
+	;
+stub_addr: VAR_STUB_ADDR STRING
+	{
+		struct config_strlist *s = (struct config_strlist*)calloc(1, 
+			sizeof(struct config_strlist));
+		OUTYY(("P(stub-addr:%s)\n", $2));
+		if(s) {
+			s->str = $2;
+			s->next = cfg_parser->cfg->stubs->addrs;
+			cfg_parser->cfg->stubs->addrs = s;
+		} else
+			yyerror("out of memory");
 	}
 	;
 %%

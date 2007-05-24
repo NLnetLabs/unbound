@@ -128,7 +128,7 @@ int delegpt_set_name(struct delegpt* dp, struct region* region, uint8_t* name);
 int delegpt_add_ns(struct delegpt* dp, struct region* region, uint8_t* name);
 
 /**
- * Add address to the delegation point.
+ * Add target address to the delegation point.
  * @param dp: delegation point.
  * @param region: where to allocate the info.
  * @param name: name for which target was found (must be in nslist).
@@ -141,6 +141,17 @@ int delegpt_add_ns(struct delegpt* dp, struct region* region, uint8_t* name);
 int delegpt_add_target(struct delegpt* dp, struct region* region, 
 	uint8_t* name, size_t namelen, struct sockaddr_storage* addr, 
 	socklen_t addrlen);
+
+/**
+ * Add address to the delegation point. No servername is associated or checked.
+ * @param dp: delegation point.
+ * @param region: where to allocate the info.
+ * @param addr: the address.
+ * @param addrlen: the length of addr.
+ * @return false on error.
+ */
+int delegpt_add_addr(struct delegpt* dp, struct region* region, 
+	struct sockaddr_storage* addr, socklen_t addrlen);
 
 /**
  * Print the delegation point to the log. For debugging.

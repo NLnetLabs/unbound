@@ -138,7 +138,8 @@ enum iter_state {
  * Per query state for the iterator module.
  */
 struct iter_qstate {
-	/** state of the iterator module 
+	/** 
+	 * State of the iterator module.
 	 * This is the state that event is in or should sent to -- all 
 	 * requests should start with the INIT_REQUEST_STATE. All 
 	 * responses should start with QUERY_RESP_STATE. Subsequent 
@@ -146,7 +147,8 @@ struct iter_qstate {
 	 */
 	enum iter_state state;
 
-	/** final state for the iterator module 
+	/** 
+	 * Final state for the iterator module.
 	 * This is the state that responses should be routed to once the 
 	 * response is final. For externally initiated queries, this 
 	 * will be FINISHED_STATE, locally initiated queries will have 
@@ -159,6 +161,8 @@ struct iter_qstate {
 	 * ANSWER section of a response before being sent upstream.
 	 */
 	struct packed_rrset_list* prepend_list;
+	/** Last element of the prepend list */
+	struct packed_rrset_list* prepend_last;
 
 	/** 
 	 * This is the current delegation point for an in-progress query. This
@@ -166,6 +170,11 @@ struct iter_qstate {
 	 * (sub)queried for vs which ones have already been visited.
 	 */
 	struct delegpt* dp;
+
+	/**
+	 * Current address target.
+	 */
+	struct delegpt_addr* current_target;
 
 	/** number of outstanding target sub queries */
 	int num_target_queries;
@@ -192,6 +201,7 @@ struct iter_qstate {
 
 /**
  * Get the iterator function block.
+ * @return: function block with function pointers to iterator methods.
  */
 struct module_func_block* iter_get_funcblock();
 

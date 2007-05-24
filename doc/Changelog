@@ -1,3 +1,9 @@
+24 May 2007: Wouter
+	- small changes to prepare for subqueries.
+	- iterator forwarder feature separated out.
+	- iterator hints stub code, config file stub code, so that first
+	  testing can proceed locally.
+
 23 May 2007: Wouter
 	- outside network does precise timers for roundtrip estimates for rtt
 	  and for setting timeout for UDP. Pending_udp takes milliseconds.

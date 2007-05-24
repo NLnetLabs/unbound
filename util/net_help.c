@@ -142,7 +142,7 @@ log_addr(const char* str, struct sockaddr_storage* addr, socklen_t addrlen)
                 strncpy(dest, "(inet_ntop error)", sizeof(dest));
         }
         port = ntohs(((struct sockaddr_in*)addr)->sin_port);
-        verbose(VERB_DETAIL, "%s %s %s:%d (len %d)",
+        verbose(VERB_DETAIL, "%s %s %s %d (len %d)",
                 str, family, dest, (int)port, (int)addrlen);
 }
 

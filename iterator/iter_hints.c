@@ -44,6 +44,7 @@
 #include "iterator/iter_delegpt.h"
 #include "util/region-allocator.h"
 #include "util/log.h"
+#include "util/config_file.h"
 #include "util/net_help.h"
 #include "util/data/dname.h"
 
@@ -147,8 +148,7 @@ compile_time_root_prime(struct region* r)
 
 /** insert new hint info into hint structure */
 static int
-hints_insert(struct iter_hints* hints, uint16_t c, uint8_t* name, 
-	size_t namelen, int namelabs, struct delegpt* dp)
+hints_insert(struct iter_hints* hints, uint16_t c, struct delegpt* dp)
 {
 	struct iter_hints_stub* node = region_alloc(hints->region,
 		sizeof(struct iter_hints_stub));
@@ -156,11 +156,11 @@ hints_insert(struct iter_hints* hints, uint16_t c, uint8_t* name,
 		return 0;
 	node->node.key = node;
 	node->hint_class = c;
-	node->name = region_alloc_init(hints->region, name, namelen);
+	node->name = region_alloc_init(hints->region, dp->name, dp->namelen);
 	if(!node->name)
 		return 0;
-	node->namelen = namelen;
-	node->namelabs = namelabs;
+	node->namelen = dp->namelen;
+	node->namelabs = dp->namelabs;
 	node->dp = dp;
 	if(!rbtree_insert(hints->tree, &node->node)) {
 		log_err("second hints ignored.");
@@ -197,24 +197,123 @@ init_parents(struct iter_hints* hints)
 	}
 }
 
-int 
-hints_apply_cfg(struct iter_hints* hints, struct config_file* ATTR_UNUSED(cfg))
+/** set stub name */
+static int 
+read_stubs_name(struct iter_hints* hints, struct config_stub* s, 
+	struct delegpt* dp)
 {
-	struct delegpt* dp;
+	ldns_rdf* rdf;
+	if(!s->name) {
+		log_err("stub zone without a name");
+		return 0;
+	}
+	rdf = ldns_dname_new_frm_str(s->name);
+	if(!rdf) {
+		log_err("cannot parse stub zone name %s", s->name);
+		return 0;
+	}
+	if(!delegpt_set_name(dp, hints->region, ldns_rdf_data(rdf))) {
+		ldns_rdf_deep_free(rdf);
+		log_err("out of memory");
+		return 0;
+	}
+	ldns_rdf_deep_free(rdf);
+	return 1;
+}
+
+/** set stub host names */
+static int 
+read_stubs_host(struct iter_hints* hints, struct config_stub* s, 
+	struct delegpt* dp)
+{
+	struct config_strlist* p;
+	ldns_rdf* rdf;
+	for(p = s->hosts; p; p = p->next) {
+		log_assert(p->str);
+		rdf = ldns_dname_new_frm_str(p->str);
+		if(!rdf) {
+			log_err("cannot parse stub %s nameserver name: '%s'", 
+				s->name, p->str);
+			return 0;
+		}
+		if(!delegpt_add_ns(dp, hints->region, ldns_rdf_data(rdf))) {
+			ldns_rdf_deep_free(rdf);
+			log_err("out of memory");
+			return 0;
+		}
+		ldns_rdf_deep_free(rdf);
+	}
+	return 1;
+}
+
+/** set stub server addresses */
+static int 
+read_stubs_addr(struct iter_hints* hints, struct config_stub* s, 
+	struct delegpt* dp)
+{
+	struct config_strlist* p;
+	struct sockaddr_storage addr;
+	socklen_t addrlen;
+	for(p = s->addrs; p; p = p->next) {
+		log_assert(p->str);
+		if(!ipstrtoaddr(p->str, UNBOUND_DNS_PORT, &addr, &addrlen)) {
+			log_err("cannot parse stub %s ip address: '%s'", 
+				s->name, p->str);
+			return 0;
+		}
+		if(!delegpt_add_addr(dp, hints->region, &addr, addrlen)) {
+			log_err("out of memory");
+			return 0;
+		}
+	}
+	return 1;
+}
+
+/** read stubs config */
+static int 
+read_stubs(struct iter_hints* hints, struct config_file* cfg)
+{
+	struct config_stub* s;
+	for(s = cfg->stubs; s; s = s->next) {
+		struct delegpt* dp = delegpt_create(hints->region);
+		if(!dp) {
+			log_err("out of memory");
+			return 0;
+		}
+		if(!read_stubs_name(hints, s, dp) ||
+			!read_stubs_host(hints, s, dp) ||
+			!read_stubs_addr(hints, s, dp))
+			return 0;
+		if(!hints_insert(hints, LDNS_RR_CLASS_IN, dp))
+			return 0;
+		delegpt_log(dp);
+	}
+	return 1;
+}
+
+int 
+hints_apply_cfg(struct iter_hints* hints, struct config_file* cfg)
+{
 	free(hints->tree);
 	hints->tree = rbtree_create(stub_cmp);
 	if(!hints->tree)
 		return 0;
-	/* TODO: read hints from file named in cfg */
+	/* TODO: read root hints from file named in cfg */
+
+	/* read stub hints */
+	if(!read_stubs(hints, cfg))
+		return 0;
 
 	/* use fallback compiletime root hints */
-	dp = compile_time_root_prime(hints->region);
-	if(!dp) 
-		return 0;
-	if(!hints_insert(hints, LDNS_RR_CLASS_IN, dp->name, dp->namelen, 
-		dp->namelabs, dp))
-		return 0;
-	delegpt_log(dp);
+	if(!hints_lookup_root(hints, LDNS_RR_CLASS_IN)) {
+		struct delegpt* dp = compile_time_root_prime(hints->region);
+		verbose(VERB_ALGO, "no config, using builtin root hints.");
+		if(!dp) 
+			return 0;
+		if(!hints_insert(hints, LDNS_RR_CLASS_IN, dp))
+			return 0;
+		delegpt_log(dp);
+	}
 
 	init_parents(hints);
 	return 1;
@@ -234,4 +333,45 @@ hints_lookup_root(struct iter_hints* hints, uint16_t qclass)
 	if(!stub)
 		return NULL;
 	return stub->dp;
+}
+
+struct delegpt* 
+hints_lookup_stub(struct iter_hints* hints, uint8_t* qname, 
+	uint16_t qclass, struct delegpt* cache_dp)
+{
+	/* first lookup the stub */
+	rbnode_t* res = NULL;
+	struct iter_hints_stub *result;
+	struct iter_hints_stub key;
+	key.node.key = &key;
+	key.hint_class = qclass;
+	key.name = qname;
+	key.namelabs = dname_count_size_labels(qname, &key.namelen);
+	if(rbtree_find_less_equal(hints->tree, &key, &res)) {
+		/* exact */
+		result = (struct iter_hints_stub*)res;
+	} else {
+		/* smaller element (or no element) */
+		int m;
+		result = (struct iter_hints_stub*)res;
+		if(!result || result->hint_class != qclass)
+			return NULL;
+		/* count number of labels matched */
+		(void)dname_lab_cmp(result->name, result->namelabs, key.name,
+			key.namelabs, &m);
+		while(result) { /* go up until qname is subdomain of stub */
+			if(result->namelabs <= m)
+				break;
+			result = result->parent;
+		}
+		if(!result)
+			return NULL;
+	}
+	/* 
+	 * If our cached delegation point is above the hint, we need to prime.
+	 */
+	if(dname_strict_subdomain(result->dp->name, result->dp->namelabs,
+		cache_dp->name, cache_dp->namelabs))
+		return result->dp; /* need to prime this stub */
+	return NULL;
 }

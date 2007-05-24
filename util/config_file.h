@@ -41,6 +41,8 @@
 
 #ifndef UTIL_CONFIG_FILE_H
 #define UTIL_CONFIG_FILE_H
+struct config_stub;
+struct config_strlist;
 
 /**
  * The configuration options.
@@ -102,6 +104,9 @@ struct config_file {
 	/** interface description strings (IP addresses) */
 	char **ifs;
 
+	/** the stub definitions, linked list */
+	struct config_stub* stubs;
+
 	/** chrootdir, if not "" or chroot will be done */
 	char* chrootdir;
 	/** username to change to, if not "". */
@@ -115,6 +120,30 @@ struct config_file {
 	
 	/** daemonize, i.e. fork into the background. */
 	int do_daemonize;
+};
+
+/**
+ * Stub config options
+ */
+struct config_stub {
+	/** next in list */
+	struct config_stub* next;
+	/** domain name (in text) of the stub apex domain */
+	char* name;
+	/** list of stub nameserver hosts (domain name) */
+	struct config_strlist* hosts;
+	/** list of stub nameserver addresses (IP address) */
+	struct config_strlist* addrs;
+};
+
+/**
+ * List of strings for config options
+ */
+struct config_strlist {
+	/** next item in list */
+	struct config_strlist* next;
+	/** config option string */
+	char* str;
 };
 
 /**

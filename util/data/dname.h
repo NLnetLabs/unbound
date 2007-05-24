@@ -154,6 +154,17 @@ int dname_count_size_labels(uint8_t* dname, size_t* size);
  */
 int dname_lab_cmp(uint8_t* d1, int labs1, uint8_t* d2, int labs2, int* mlabs);
 
+/**
+ * See if domain name d1 is a strict subdomain of d2.
+ * That is a subdomain, but not equal. 
+ * @param d1: domain name, uncompressed wireformat
+ * @param labs1: number of labels in d1, including root label.
+ * @param d2: domain name, uncompressed wireformat
+ * @param labs2: number of labels in d2, including root label.
+ * @return true if d1 is a subdomain of d2, but not equal to d2.
+ */
+int dname_strict_subdomain(uint8_t* d1, int labs1, uint8_t* d2, int labs2);
+
 /** 
  * Debug helper. Print wireformat dname to output. 
  * @param out: like stdout or a file.

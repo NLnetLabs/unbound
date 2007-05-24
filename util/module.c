@@ -68,3 +68,22 @@ strmodulevent(enum module_ev e)
 	}
 	return "bad_event_value";
 }
+
+void 
+module_subreq_remove(struct module_qstate* sub)
+{
+	struct module_qstate* p, *prev = NULL;
+	if(!sub || !sub->parent) 
+		return;
+	p = sub->parent->subquery_first;
+	while(p) {
+		if(p == sub) {
+			/* snip it off */
+			if(prev) prev->subquery_next = p->subquery_next;
+			else sub->parent->subquery_first = p->subquery_next;
+			return;
+		}
+		prev = p;
+		p = p->subquery_next;
+	}
+}
