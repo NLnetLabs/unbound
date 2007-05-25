@@ -5,6 +5,8 @@
 	- packed rrset key has type and class as easily accessable struct
 	  members. They are still kept in network format for fast msg encode.
 	- dns cache find_delegation routine.
+	- iterator main functions setup.
+	- dns cache lookup setup.
 
 24 May 2007: Wouter
 	- small changes to prepare for subqueries.

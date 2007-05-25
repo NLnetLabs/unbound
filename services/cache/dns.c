@@ -46,6 +46,7 @@
 #include "util/data/packed_rrset.h"
 #include "util/module.h"
 #include "util/net_help.h"
+#include "util/region-allocator.h"
 
 /** store rrsets in the rrset cache. */
 static void
@@ -228,4 +229,120 @@ dns_cache_find_delegation(struct module_env* env, uint8_t* qname,
 	log_info("dns_cache_find_delegation returns delegpt");
 	delegpt_log(dp);
 	return dp;
+}
+
+/** allocate rrset in region - no more locks needed */
+static struct ub_packed_rrset_key*
+copy_rrset(struct ub_packed_rrset_key* key, struct region* region)
+{
+	/* lock, lrutouch rrset in cache */
+	return NULL;
+}
+
+/** allocate dns_msg from query_info and reply_info */
+static struct dns_msg*
+tomsg(struct msgreply_entry* e, struct reply_info* r, struct region* region)
+{
+	struct dns_msg* msg = (struct dns_msg*)region_alloc(region,
+		sizeof(struct dns_msg));
+	size_t i;
+	if(!msg) 
+		return NULL;
+	memcpy(&msg->qinfo, &e->key, sizeof(struct query_info));
+	msg->qinfo.qname = region_alloc_init(region, e->key.qname, 
+		e->key.qnamesize);
+	if(!msg->qinfo.qname)
+		return NULL;
+	/* allocate replyinfo struct and rrset key array separately */
+	msg->rep = (struct reply_info*)region_alloc(region, 
+		sizeof(struct reply_info) - sizeof(struct rrset_ref));
+	if(!msg->rep)
+		return NULL;
+	memcpy(msg->rep, r, 
+		sizeof(struct reply_info) - sizeof(struct rrset_ref));
+	msg->rep->rrsets = (struct ub_packed_rrset_key**)region_alloc(region,
+		msg->rep->rrset_count * sizeof(struct ub_packed_rrset_key*));
+	if(!msg->rep->rrsets)
+		return NULL;
+	/* try to lock all of the rrsets we need */
+	for(i=0; i<msg->rep->rrset_count; i++) {
+		msg->rep->rrsets[i] = copy_rrset(r->rrsets[i], region);
+		if(!msg->rep->rrsets[i])
+			return NULL;
+	}
+	return msg;
+}
+
+/** allocate dns_msg from CNAME record */
+static struct dns_msg*
+cnamemsg(uint8_t* qname, size_t qnamelen, struct ub_packed_rrset_key* rrset,
+	struct packed_rrset_data* d, struct region* region)
+{
+	struct dns_msg* msg = (struct dns_msg*)region_alloc(region,
+		sizeof(struct dns_msg));
+	if(!msg) 
+		return NULL;
+	msg->qinfo.qnamesize = rrset->rk.dname_len;
+	msg->qinfo.qname = region_alloc_init(region, rrset->rk.dname,
+		rrset->rk.dname_len);
+	if(!msg->qinfo.qname)
+		return NULL;
+	msg->qinfo.has_cd = (rrset->rk.flags&PACKED_RRSET_CD)?1:0;
+	msg->qinfo.qtype = LDNS_RR_TYPE_CNAME;
+	msg->qinfo.qclass = ntohs(rrset->rk.rrset_class);
+	/* TODO create reply info with the CNAME */
+	return NULL;
+}
+
+struct dns_msg* 
+dns_cache_lookup(struct module_env* env,
+	uint8_t* qname, size_t qnamelen, uint16_t qtype, uint16_t qclass,
+	int has_cd, struct region* region)
+{
+	struct lruhash_entry* e;
+	struct query_info k;
+	hashvalue_t h;
+	uint32_t now = (uint32_t)time(NULL);
+	struct ub_packed_rrset_key* rrset;
+
+	/* lookup first, this has both NXdomains and ANSWER responses */
+	k.qname = qname;
+	k.qnamesize = qnamelen;
+	k.qtype = qtype;
+	k.qclass = qclass;
+	k.has_cd = has_cd;
+	h = query_info_hash(&k);
+	e = slabhash_lookup(env->msg_cache, h, &k, 0);
+	if(e) {
+		/* check ttl */
+		struct msgreply_entry* key = (struct msgreply_entry*)e->key;
+		struct reply_info* data = (struct reply_info*)e->data;
+		if(now <= data->ttl) {
+			struct dns_msg* msg = tomsg(key, data, region);
+			lock_rw_unlock(&e->lock);
+			return msg;
+		}
+		lock_rw_unlock(&e->lock);
+	}
+
+	/* see if we have a CNAME for this domain */
+	rrset = rrset_cache_lookup(env->rrset_cache, qname, qnamelen, 
+		LDNS_RR_TYPE_CNAME, qclass, 
+		(uint32_t)(has_cd?PACKED_RRSET_CD:0), now, 0);
+	if(rrset) {
+		struct packed_rrset_data* d = (struct packed_rrset_data*)
+			rrset->entry.data;
+		if(now <= d->ttl) {
+			/* construct CNAME response */
+			struct dns_msg* msg = cnamemsg(qname, qnamelen, rrset,
+				d, region);
+			lock_rw_unlock(&rrset->entry.lock);
+			return msg;
+		}
+		lock_rw_unlock(&rrset->entry.lock);
+	}
+
+	/* construct DS, DNSKEY messages from rrset cache. TODO */
+
+	return NULL;
 }

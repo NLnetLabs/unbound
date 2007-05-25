@@ -88,6 +88,31 @@ iter_new(struct module_qstate* qstate, int id)
 {
 	struct iter_qstate* iq = (struct iter_qstate*)region_alloc(
 		qstate->region, sizeof(struct iter_qstate));
+	qstate->minfo[id] = iq;
+	if(!iq) 
+		return 0;
+	memset(iq, 0, sizeof(*iq));
+	iq->state = INIT_REQUEST_STATE;
+	iq->final_state = FINISHED_STATE;
+	iq->prepend_list = NULL;
+	iq->prepend_last = NULL;
+	iq->dp = NULL;
+	iq->current_target = NULL;
+	iq->num_target_queries = -1; /* default our targetQueries counter. */
+	iq->num_current_queries = 0;
+	iq->query_restart_count = 0;
+	iq->referral_count = 0;
+	iq->priming_stub = 0;
+	outbound_list_init(&iq->outlist);
+	return 1;
+}
+
+/** new query for iterator in forward mode */
+static int
+fwd_new(struct module_qstate* qstate, int id)
+{
+	struct iter_qstate* iq = (struct iter_qstate*)region_alloc(
+		qstate->region, sizeof(struct iter_qstate));
 	struct module_env* env = qstate->env;
 	struct iter_env* ie = (struct iter_env*)env->modinfo[id];
 	struct outbound_entry* e;
@@ -98,7 +123,6 @@ iter_new(struct module_qstate* qstate, int id)
 		return 0;
 	memset(iq, 0, sizeof(*iq));
 	outbound_list_init(&iq->outlist);
-	iq->num_target_queries = -1; /* default our targetQueries counter. */
 	if(qstate->qinfo.has_cd)
 		flags |= BIT_CD;
 	e = (*env->send_query)(qstate->qinfo.qname, qstate->qinfo.qnamesize,
@@ -147,6 +171,11 @@ perform_forward(struct module_qstate* qstate, enum module_ev event, int id,
 	struct outbound_entry* outbound)
 {
 	verbose(VERB_ALGO, "iterator: forwarding");
+	if(event == module_event_new) {
+		if(!fwd_new(qstate, id))
+			qstate->ext_state[id] = module_error;
+		return;
+	}
 	/* it must be a query reply */
 	if(!outbound) {
 		verbose(VERB_ALGO, "query reply was not serviced");
@@ -166,23 +195,355 @@ perform_forward(struct module_qstate* qstate, enum module_ev event, int id,
 	qstate->ext_state[id] = module_error;
 }
 
+/**
+ * Transition to the next state. This can be used to advance a currently
+ * processing event. It cannot be used to reactivate a forEvent.
+ *
+ * @param qstate: query state
+ * @param iq: iterator query state
+ * @param nextstate The state to transition to.
+ * @return true. This is so this can be called as the return value for the
+ *         actual process*State() methods. (Transitioning to the next state
+ *         implies further processing).
+ */
+static int
+next_state(struct module_qstate* qstate, struct iter_qstate* iq, 
+	enum iter_state nextstate)
+{
+	/* If transitioning to a "response" state, make sure that there is a
+	 * response */
+	if(iter_state_is_responsestate(nextstate)) {
+		if(qstate->reply == NULL) {
+			log_err("transitioning to response state sans "
+				"response.");
+		}
+	}
+	iq->state = nextstate;
+	return 1;
+}
+
+/**
+ * Transition an event to its final state. Final states always either return
+ * a result up the module chain, or reactivate a dependent event. Which
+ * final state to transtion to is set in the module state for the event when
+ * it was created, and depends on the original purpose of the event.
+ *
+ * The response is stored in the qstate->buf buffer.
+ *
+ * @param qstate: query state
+ * @param iq: iterator query state
+ * @return false. This is so this method can be used as the return value for
+ *         the processState methods. (Transitioning to the final state
+ */
+static int
+final_state(struct module_qstate* qstate, struct iter_qstate* iq)
+{
+	return next_state(qstate, iq, iq->final_state);
+}
+
+/**
+ * Return an error to the client
+ */
+static int
+error_response(struct module_qstate* qstate, struct iter_qstate* iq, int rcode)
+{
+	log_info("err response %s", ldns_lookup_by_id(ldns_rcodes, rcode)?
+		ldns_lookup_by_id(ldns_rcodes, rcode)->name:"??");
+	qinfo_query_encode(qstate->buf, &qstate->qinfo);
+	LDNS_RCODE_SET(ldns_buffer_begin(qstate->buf), rcode);
+	LDNS_QR_SET(ldns_buffer_begin(qstate->buf));
+	return final_state(qstate, iq);
+}
+
+/** 
+ * Process the initial part of the request handling. This state roughly
+ * corresponds to resolver algorithms steps 1 (find answer in cache) and 2
+ * (find the best servers to ask).
+ *
+ * Note that all requests start here, and query restarts revisit this state.
+ *
+ * This state either generates: 1) a response, from cache or error, 2) a
+ * priming event, or 3) forwards the request to the next state (init2,
+ * generally).
+ *
+ * @param qstate: query state.
+ * @param iq: iterator query state.
+ * @param ie: iterator shared global environment.
+ * @return true if the event needs more request processing immediately,
+ *         false if not.
+ */
+static int
+processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
+	struct iter_env* ie)
+{
+	int d;
+	uint8_t* delname;
+	size_t delnamelen;
+	log_nametypeclass("resolving", qstate->qinfo.qname, 
+		qstate->qinfo.qtype, qstate->qinfo.qclass);
+	/* check effort */
+
+	/* We enforce a maximum number of query restarts. This is primarily a
+	 * cheap way to prevent CNAME loops. */
+	if(iq->query_restart_count > MAX_RESTART_COUNT) {
+		verbose(VERB_DETAIL, "request has exceeded the maximum number"
+			" of query restarts with %d", iq->query_restart_count);
+		return error_response(qstate, iq, LDNS_RCODE_SERVFAIL);
+	}
+
+	/* We enforce a maximum recursion/dependency depth -- in general, 
+	 * this is unnecessary for dependency loops (although it will 
+	 * catch those), but it provides a sensible limit to the amount 
+	 * of work required to answer a given query. */
+	d = module_subreq_depth(qstate);
+	verbose(VERB_ALGO, "request has dependency depth of %d", d);
+	if(d > ie->max_dependency_depth) {
+		verbose(VERB_DETAIL, "request has exceeded the maximum "
+			"dependency depth with depth of %d", d);
+		return error_response(qstate, iq, LDNS_RCODE_SERVFAIL);
+	}
+
+	/* Resolver Algorithm Step 1 -- Look for the answer in local data. */
+
+	/* This either results in a query restart (CNAME cache response), a
+	 * terminating response (ANSWER), or a cache miss (null). */
+	
+	/* TODO: cache lookup */
+	/* lookup qname, qtype qclass */
+
+	/* TODO: handle positive cache response */
+		/* calc response type (from cache msg) */
+		/* if cname */
+			/* handle cname, overwrite qname, restart */
+		/* it is an answer, response, to final state */
+	
+	/* TODO attempt to forward the request */
+
+	/* TODO attempt to find a covering DNAME in the cache */
+
+	/* Resolver Algorithm Step 2 -- find the "best" servers. */
+
+	/* first, adjust for DS queries. To avoid the grandparent problem, 
+	 * we just look for the closest set of server to the parent of qname.
+	 */
+	delname = qstate->qinfo.qname;
+	delnamelen = qstate->qinfo.qnamesize;
+	if(qstate->qinfo.qtype == LDNS_RR_TYPE_DS && delname[0] != 0) {
+		/* do not adjust root label */
+		size_t lablen = delname[0] + 1;
+		delname += lablen;
+		delnamelen -= lablen;
+	}
+	
+	/* Lookup the delegation in the cache. If null, then the cache needs 
+	 * to be primed for the qclass. */
+	iq->dp = dns_cache_find_delegation(qstate->env, delname, delnamelen,
+		qstate->qinfo.qclass, qstate->region);
+
+	/* If the cache has returned nothing, then we have a root priming
+	 * situation. */
+	if(iq->dp == NULL) {
+		/* Note that the result of this will set a new
+		 * DelegationPoint based on the result of priming. */
+
+		 /* TODO
+		if(!prime_root(qstate, iq, ie, qstate->qinfo.qclass))
+			return error_response(qstate, iq, LDNS_RCODE_SERVFAIL);
+			*/
+
+		/* priming creates an sends a subordinate query, with 
+		 * this query as the parent. So further processing for 
+		 * this event will stop until reactivated by the results 
+		 * of priming. */
+		return false;
+	}
+
+	/* Reset the RD flag. If this is a query restart, then the RD 
+	 * will have been turned off. */
+	 /*
+	 TODO store original flags and original qinfo 
+	qstate->query_flags |= (qstate->orig_query_flags & BIT_RD);
+	*/
+
+	/* Otherwise, set the current delegation point and move on to the 
+	 * next state. */
+	return next_state(qstate, iq, INIT_REQUEST_2_STATE);
+}
+
+#if 0
+/** TODO */
+static int
+processInitRequest2(struct module_qstate* qstate, struct iter_qstate* iq,
+	struct iter_env* ie)
+{
+	return 0;
+}
+
+/** TODO */
+static int
+processInitRequest3(struct module_qstate* qstate, struct iter_qstate* iq,
+	struct iter_env* ie)
+{
+	return 0;
+}
+
+/** TODO */
+static int
+processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
+	struct iter_env* ie)
+{
+	return 0;
+}
+
+/** TODO */
+static int
+processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
+	struct iter_env* ie)
+{
+	return 0;
+}
+
+/** TODO */
+static int
+processPrimeResponse(struct module_qstate* qstate, struct iter_qstate* iq,
+	struct iter_env* ie)
+{
+	return 0;
+}
+
+/** TODO */
+static int
+processTargetResponse(struct module_qstate* qstate, struct iter_qstate* iq,
+	struct iter_env* ie)
+{
+	return 0;
+}
+
+/** TODO */
+static int
+processFinished(struct module_qstate* qstate, struct iter_qstate* iq,
+	struct iter_env* ie)
+{
+	return 0;
+}
+#endif
+
+/**
+ * Handle iterator state.
+ * Handle events. This is the real processing loop for events, responsible
+ * for moving events through the various states. If a processing method
+ * returns true, then it will be advanced to the next state. If false, then
+ * processing will stop.
+ *
+ * @param qstate: query state.
+ * @param ie: iterator shared global environment.
+ * @param iq: iterator query state.
+ */
+static void
+iter_handle(struct module_qstate* qstate, struct iter_qstate* iq,
+	struct iter_env* ie)
+{
+	int cont = 1;
+	while(cont) {
+		verbose(VERB_ALGO, "iter_handle processing q with state %s",
+			iter_state_to_string(iq->state));
+		switch(iq->state) {
+			case INIT_REQUEST_STATE:
+				cont = processInitRequest(qstate, iq, ie);
+				break;
+#if 0
+			case INIT_REQUEST_2_STATE:
+				cont = processInitRequest2(qstate, iq, ie);
+				break;
+			case INIT_REQUEST_3_STATE:
+				cont = processInitRequest3(qstate, iq, ie);
+				break;
+			case QUERYTARGETS_STATE:
+				cont = processQueryTargets(qstate, iq, ie);
+				break;
+			case QUERY_RESP_STATE:
+				cont = processQueryResponse(qstate, iq, ie);
+				break;
+			case PRIME_RESP_STATE:
+				cont = processPrimeResponse(qstate, iq, ie);
+				break;
+			case TARGET_RESP_STATE:
+				cont = processTargetResponse(qstate, iq, ie);
+				break;
+			case FINISHED_STATE:
+				cont = processFinished(qstate, iq, ie);
+				break;
+#endif
+			default:
+				log_warn("iterator: invalid state: %d",
+					iq->state);
+				cont = 0;
+				break;
+		}
+	}
+}
+
+/** 
+ * This is the primary entry point for processing request events. Note that
+ * this method should only be used by external modules.
+ * @param qstate: query state.
+ * @param ie: iterator shared global environment.
+ * @param iq: iterator query state.
+ */
+static void
+process_request(struct module_qstate* qstate, struct iter_qstate* iq,
+	struct iter_env* ie)
+{
+	/* external requests start in the INIT state, and finish using the
+	 * FINISHED state. */
+	iq->state = INIT_REQUEST_STATE;
+	iq->final_state = FINISHED_STATE;
+	verbose(VERB_ALGO, "process_request: new external request event");
+	iter_handle(qstate, iq, ie);
+}
+
+/** process authoritative server reply */
+static void
+process_response(struct module_qstate* qstate, struct iter_qstate* iq, 
+	struct iter_env* ie, struct outbound_entry* outbound)
+{
+	verbose(VERB_ALGO, "process_response: new external response event");
+	/* TODO outbound: use it for scrubbing and so on */
+	iq->state = QUERY_RESP_STATE;
+	iter_handle(qstate, iq, ie);
+}
+
 /** iterator operate on a query */
 static void 
 iter_operate(struct module_qstate* qstate, enum module_ev event, int id,
 	struct outbound_entry* outbound)
 {
 	struct iter_env* ie = (struct iter_env*)qstate->env->modinfo[id];
+	struct iter_qstate* iq;
 	verbose(VERB_ALGO, "iterator[module %d] operate: extstate:%s event:%s", 
 		id, strextstate(qstate->ext_state[id]), strmodulevent(event));
-	if(event == module_event_new) {
-		if(!iter_new(qstate, id))
-			qstate->ext_state[id] = module_error;
-		return;
-	}
 	if(ie->fwd_addrlen != 0) {
 		perform_forward(qstate, event, id, outbound);
 		return;
 	}
+	/* perform iterator state machine */
+	if(event == module_event_new) {
+		log_info("iter state machine");
+		if(!iter_new(qstate, id)) {
+			qstate->ext_state[id] = module_error;
+			return;
+		}
+		iq = (struct iter_qstate*)qstate->minfo[id];
+		process_request(qstate, iq, ie);
+		return;
+	}
+	iq = (struct iter_qstate*)qstate->minfo[id];
+	if(event == module_event_reply) {
+		process_response(qstate, iq, ie, outbound);
+		return;
+	}
+	/* TODO: uhh */
+
 	log_err("bad event for iterator");
 	qstate->ext_state[id] = module_error;
 }
@@ -237,4 +598,19 @@ iter_state_to_string(enum iter_state state)
 	default :
 		return "UNKNOWN ITER STATE";
 	}
+}
+
+int 
+iter_state_is_responsestate(enum iter_state s)
+{
+	switch(s) {
+		case INIT_REQUEST_STATE :
+		case INIT_REQUEST_2_STATE :
+		case INIT_REQUEST_3_STATE :
+		case QUERYTARGETS_STATE :
+			return 0;
+		default:
+			break;
+	}
+	return 1;
 }

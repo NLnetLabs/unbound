@@ -40,6 +40,7 @@
 #include "config.h"
 #include "util/net_help.h"
 #include "util/log.h"
+#include "util/data/dname.h"
 #include <fcntl.h>
 
 /** returns true is string addr is an ip6 specced address. */
@@ -175,4 +176,16 @@ ipstrtoaddr(const char* ip, int port, struct sockaddr_storage* addr,
 		}
 	}
 	return 1;
+}
+
+void
+log_nametypeclass(const char* str, uint8_t* name, uint16_t type, 
+	uint16_t dclass)
+{
+	char buf[LDNS_MAX_DOMAINLEN+1];
+	dname_str(name, buf);
+	log_info("%s <%s %s %s>", str, buf, 
+		ldns_rr_descript(type)?ldns_rr_descript(type)->_name: "??",
+		ldns_lookup_by_id(ldns_rr_classes, (int)dclass)?
+		ldns_lookup_by_id(ldns_rr_classes, (int)dclass)->name:"??");
 }

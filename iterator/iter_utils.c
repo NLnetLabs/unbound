@@ -82,7 +82,7 @@ iter_apply_cfg(struct iter_env* iter_env, struct config_file* cfg)
 			return 0;
 		}
 		verbose(VERB_ALGO, "iterator: fwd queries to: %s %d",
-		cfg->fwd_address, cfg->fwd_port);
+			cfg->fwd_address, cfg->fwd_port);
 	}
 	return 1;
 }

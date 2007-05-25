@@ -87,3 +87,14 @@ module_subreq_remove(struct module_qstate* sub)
 		p = p->subquery_next;
 	}
 }
+
+int 
+module_subreq_depth(struct module_qstate* sub)
+{
+	int d = 0;
+	while(sub->parent) {
+		d++;
+		sub = sub->parent;
+	}
+	return d;
+}

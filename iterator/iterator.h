@@ -48,6 +48,9 @@ struct delegpt;
 struct packed_rrset_list;
 struct iter_hints;
 
+/** max number of query restarts. Determines max number of CNAME chain. */
+#define MAX_RESTART_COUNT       8
+
 /**
  * Global state for the iterator. 
  */
@@ -211,5 +214,12 @@ struct module_func_block* iter_get_funcblock();
  * @return constant string that is printable.
  */
 const char* iter_state_to_string(enum iter_state state);
+
+/**
+ * See if iterator state is a response state
+ * @param s: to inspect
+ * @return true if response state.
+ */
+int iter_state_is_responsestate(enum iter_state s);
 
 #endif /* ITERATOR_ITERATOR_H */

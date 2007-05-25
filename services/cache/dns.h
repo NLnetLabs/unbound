@@ -42,11 +42,22 @@
 #ifndef SERVICES_CACHE_DNS_H
 #define SERVICES_CACHE_DNS_H
 #include "util/storage/lruhash.h"
+#include "util/data/msgreply.h"
 struct module_env;
 struct query_info;
 struct reply_info;
 struct region;
 struct delegpt;
+
+/**
+ * Region allocated message reply
+ */
+struct dns_msg {
+	/** query info */
+	struct query_info qinfo;
+	/** reply info - ptr to packed repinfo structure */
+	struct reply_info *rep;
+};
 
 /**
  * Store message in the cache. Stores in message cache and rrset cache.
@@ -76,7 +87,22 @@ struct delegpt* dns_cache_find_delegation(struct module_env* env,
 	uint8_t* qname, size_t qnamelen, uint16_t qclass, 
 	struct region* region);
 
-/** Find cached message */
+/** 
+ * Find cached message 
+ * @param env: module environment with the DNS cache.
+ * @param qname: query name.
+ * @param qnamelen: length of qname.
+ * @param qtype: query type.
+ * @param qclass: query class.
+ * @param has_cd: if true, CD flag is turned on for lookup.
+ * @param region: where to allocate result.
+ * @return new response message (alloced in region, rrsets do not have IDs).
+ * 	or NULL on error or if not found in cache.
+ */
+struct dns_msg* dns_cache_lookup(struct module_env* env,
+	uint8_t* qname, size_t qnamelen, uint16_t qtype, uint16_t qclass,
+	int has_cd, struct region* region);
+
 /** Find covering DNAME */
 
 #endif /* SERVICES_CACHE_DNS_H */

@@ -134,4 +134,14 @@ void log_addr(const char* str, struct sockaddr_storage* addr,
 int ipstrtoaddr(const char* ip, int port, struct sockaddr_storage* addr,
 	socklen_t* addrlen);
 
+/**
+ * Print string with neat domain name, type and class.
+ * @param str: string of message.
+ * @param name: domain name uncompressed wireformat.
+ * @param type: host format RR type.
+ * @param dclass: host format RR class.
+ */
+void log_nametypeclass(const char* str, uint8_t* name, uint16_t type, 
+	uint16_t dclass);
+
 #endif /* NET_HELP_H */

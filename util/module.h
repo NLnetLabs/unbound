@@ -275,4 +275,11 @@ const char* strmodulevent(enum module_ev e);
  */
 void module_subreq_remove(struct module_qstate* sub);
 
+/**
+ * Calculate depth of subrequest
+ * @param sub: the subrequest. parent point is used.
+ * @return: depth > 0 for subrequests.
+ */
+int module_subreq_depth(struct module_qstate* sub);
+
 #endif /* UTIL_MODULE_H */
