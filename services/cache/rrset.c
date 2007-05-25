@@ -174,3 +174,35 @@ rrset_cache_update(struct rrset_cache* r, struct rrset_ref* ref,
 		return 1;
 	return 0;
 }
+
+struct ub_packed_rrset_key* 
+rrset_cache_lookup(struct rrset_cache* r, uint8_t* qname, size_t qnamelen, 
+	uint16_t qtype, uint16_t qclass, uint32_t flags, uint32_t timenow,
+	int wr)
+{
+	struct lruhash_entry* e;
+	struct ub_packed_rrset_key key;
+	
+	key.entry.key = &key;
+	key.entry.data = NULL;
+	key.rk.dname = qname;
+	key.rk.dname_len = qnamelen;
+	key.rk.type = htons(qtype);
+	key.rk.rrset_class = htons(qclass);
+	key.rk.flags = flags;
+
+	key.entry.hash = rrset_key_hash(&key.rk);
+
+	if((e = slabhash_lookup(&r->table, key.entry.hash, &key, wr))) {
+		/* check TTL */
+		struct packed_rrset_data* data = 
+			(struct packed_rrset_data*)e->data;
+		if(timenow > data->ttl) {
+			lock_rw_unlock(e->lock);
+			return NULL;
+		}
+		/* we're done */
+		return (struct ub_packed_rrset_key*)e->key;
+	}
+	return NULL;
+}

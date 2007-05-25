@@ -160,9 +160,11 @@ static hashvalue_t
 pkt_hash_rrset(ldns_buffer* pkt, uint8_t* dname, uint16_t type, 
 	uint16_t dclass, uint32_t rrset_flags)
 {
+	/* note this MUST be identical to rrset_key_hash in packed_rrset.c */
+	/* this routine handles compressed names */
 	hashvalue_t h = 0xab;
-	h = hashlittle(&type, sizeof(type), h);
-	h = hashlittle(&dclass, sizeof(dclass), h);
+	h = hashlittle(&type, sizeof(type), h);		/* host order */
+	h = hashlittle(&dclass, sizeof(dclass), h);	/* netw order */
 	h = hashlittle(&rrset_flags, sizeof(uint32_t), h);
 	h = dname_pkt_hash(pkt, dname, h);
 	return h;

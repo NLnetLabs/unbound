@@ -128,4 +128,22 @@ void rrset_cache_touch(struct rrset_cache* r, struct ub_packed_rrset_key* key,
 int rrset_cache_update(struct rrset_cache* r, struct rrset_ref* ref, 
 	struct alloc_cache* alloc, uint32_t timenow);
 
+/**
+ * Lookup rrset. You obtain read/write lock. You must unlock before lookup
+ * anything of else.
+ * @param r: the rrset cache.
+ * @param qname: name of rrset to lookup.
+ * @param qnamelen: length of name of rrset to lookup.
+ * @param qtype: type of rrset to lookup (host order).
+ * @param qclass: class of rrset to lookup (host order).
+ * @param flags: rrset flags, or 0.
+ * @param timenow: used to compare with TTL.
+ * @param wr: set true to get writelock.
+ * @return packed rrset key pointer. Remember to unlock the key.entry.lock.
+ * 	or NULL if could not be found or it was timed out.
+ */
+struct ub_packed_rrset_key* rrset_cache_lookup(struct rrset_cache* r,
+	uint8_t* qname, size_t qnamelen, uint16_t qtype, uint16_t qclass,
+	uint32_t flags, uint32_t timenow, int wr);
+
 #endif /* SERVICES_CACHE_RRSET_H */

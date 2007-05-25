@@ -4,19 +4,27 @@ http://unbound.net
 
 This software is under BSD license, see LICENSE for details.
 
+* Download the latest version of this software from 
+  	http://unbound.net 
+  or get a beta version from the svn repository at 
+  	http://unbound.net/svn/
+
 * Needs the following libraries
   * ldns	http://www.nlnetlabs.nl/ldns/			(BSD license)
   * libevent	http://www.monkey.org/~provos/libevent/		(BSD license)
+
+* Create build environment 
+  * run libtoolize -c if config.sub is missing.
+  * autoreconf (autoheader && autoconf), if ./configure is missing.
 
 * Make and install: ./configure; make
   * --with-ldns=/path/to/ldns
   * --with-libevent=/path/to/libevent
   	Can be set to either the system install or the build directory.
-	--with-libevent=no gives an alternative to libevent (based on select).
-
-* Create build environment 
-  * run libtoolize -c if config.sub is missing.
-  * autoreconf (autoheader && autoconf), if ./configure is missing.
+	--with-libevent=no gives a builtin alternative implementation.
+  * --without-pthreads 
+	This disables pthreads, and uses Solaris thr library or no threading. 
+	Without this option the pthreads library is detected automatically.
 
 Known issues
 ------------
@@ -24,5 +32,12 @@ o If libevent is older (1.3 and before), unbound will exit instead of reload
   on sighup. On a restart 'did not exit gracefully last time' warning is 
   printed. Perform ./configure --with-libevent=no or update libevent, rerun 
   configure and recompile unbound to make sighup work correctly.
+
+Acknowledgements
+----------------
+o Thanks to David Blacka and Matt Larson (Verisign) for the unbound-java
+  prototype. Design and code from that prototype has been used to create
+  this program. Such as the iterator state machine and the cache design.
+o See Credits file for contributors.
 
 * mailto:wouter@nlnetlabs.nl

@@ -42,14 +42,13 @@
 
 #include "config.h"
 #include "iterator/iterator.h"
+#include "iterator/iter_utils.h"
+#include "iterator/iter_hints.h"
+#include "services/cache/dns.h"
 #include "util/module.h"
 #include "util/netevent.h"
 #include "util/net_help.h"
-#include "util/storage/slabhash.h"
 #include "util/region-allocator.h"
-#include "services/cache/rrset.h"
-#include "iterator/iter_utils.h"
-#include "iterator/iter_hints.h"
 
 /** iterator init */
 static int 
@@ -81,45 +80,6 @@ iter_deinit(struct module_env* env, int id)
 	hints_delete(iter_env->hints);
 	if(iter_env)
 		free(iter_env);
-}
-
-/** store rrsets in the rrset cache. */
-static void
-store_rrsets(struct module_env* env, struct reply_info* rep, uint32_t now)
-{
-        size_t i;
-        /* see if rrset already exists in cache, if not insert it. */
-        for(i=0; i<rep->rrset_count; i++) {
-                rep->ref[i].key = rep->rrsets[i];
-                rep->ref[i].id = rep->rrsets[i]->id;
-		if(rrset_cache_update(env->rrset_cache, &rep->ref[i], 
-			env->alloc, now)) /* it was in the cache */
-			rep->rrsets[i] = rep->ref[i].key;
-        }
-}
-
-
-/** store message in the cache */
-static void
-store_msg(struct module_qstate* qstate, struct query_info* qinfo,
-	struct reply_info* rep)
-{
-	struct msgreply_entry* e;
-	uint32_t now = time(NULL);
-	reply_info_set_ttls(rep, now);
-	store_rrsets(qstate->env, rep, now);
-	if(rep->ttl == 0) {
-		log_info("TTL 0: dropped msg from cache");
-		return;
-	}
-	reply_info_sortref(rep);
-	/* store msg in the cache */
-	if(!(e = query_info_entrysetup(qinfo, rep, qstate->query_hash))) {
-		log_err("store_msg: malloc failed");
-		return;
-	}
-	slabhash_insert(qstate->env->msg_cache, qstate->query_hash,
-		&e->entry, rep, &qstate->env->alloc);
 }
 
 /** new query for iterator */
@@ -175,7 +135,8 @@ iter_handlereply(struct module_qstate* qstate, int id,
 		qstate->query_flags, qstate->buf, 0, 0, 
 		qstate->scratch, us, &qstate->edns))
 		return 0;
-	store_msg(qstate, &reply_qinfo, reply_msg);
+	dns_cache_store_msg(qstate->env, &reply_qinfo, qstate->query_hash, 
+		reply_msg);
 	qstate->ext_state[id] = module_finished;
 	return 1;
 }

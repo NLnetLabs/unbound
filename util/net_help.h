@@ -62,6 +62,10 @@
 #define EDNS_ADVERTISED_SIZE    4096
 /** bits for EDNS bitfield */
 #define EDNS_DO 0x8000 /* Dnssec Ok */
+/** byte size of ip4 address */
+#define INET_SIZE 4
+/** byte size of ip6 address */
+#define INET6_SIZE 16
 
 /**
  * See if string is ip4 or ip6.

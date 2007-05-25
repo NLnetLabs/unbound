@@ -61,14 +61,10 @@ struct packed_rrset_key {
 	 * The domain name. If not null (for id=0) it is allocated, and
 	 * contains the wireformat domain name.
 	 * This dname is not canonicalized.
-	 * After the dname uint16_t type and uint16_t class is stored 
-	 * in wireformat.
-	 * Use accessor functions to get type and class values.
 	 */
 	uint8_t* dname;
 	/** 
 	 * Length of the domain name, including last 0 root octet. 
-	 * The value+sizeof(uint16_t)*2 is actually allocated. 
 	 */
 	size_t dname_len;
 	/**
@@ -77,6 +73,10 @@ struct packed_rrset_key {
 	 * 	o PACKED_RRSET_CD
 	 */
 	uint32_t flags;
+	/** the rrset type in network format */
+	uint16_t type;
+	/** the rrset class in network format */
+	uint16_t rrset_class;
 };
 
 /**
@@ -278,5 +278,12 @@ void ub_rrset_key_delete(void* key, void* userdata, int is_locked);
  * @param userdata: user data ptr.
  */
 void rrset_data_delete(void* data, void* userdata);
+
+/**
+ * Calculate hash value for a packed rrset key.
+ * @param key: the rrset key with name, type, class, flags.
+ * @return hash value.
+ */
+hashvalue_t rrset_key_hash(struct packed_rrset_key* key);
 
 #endif /* UTIL_DATA_PACKED_RRSET_H */

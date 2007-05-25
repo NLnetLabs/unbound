@@ -285,7 +285,6 @@ parse_copy_decompress(ldns_buffer* pkt, struct msg_parse* msg,
 {
 	int ret;
 	size_t i;
-	uint16_t t;
 	struct rrset_parse *pset = msg->rrset_first;
 	struct packed_rrset_data* data;
 	log_assert(rep);
@@ -296,18 +295,14 @@ parse_copy_decompress(ldns_buffer* pkt, struct msg_parse* msg,
 	for(i=0; i<rep->rrset_count; i++) {
 		rep->rrsets[i]->rk.flags = pset->flags;
 		rep->rrsets[i]->rk.dname_len = pset->dname_len;
-		rep->rrsets[i]->rk.dname = (uint8_t*)malloc(
-			pset->dname_len + 4 /* size of type and class */ );
+		rep->rrsets[i]->rk.dname = (uint8_t*)malloc(pset->dname_len);
 		if(!rep->rrsets[i]->rk.dname)
 			return LDNS_RCODE_SERVFAIL;
 		/** copy & decompress dname */
 		dname_pkt_copy(pkt, rep->rrsets[i]->rk.dname, pset->dname);
 		/** copy over type and class */
-		t = htons(pset->type);
-		memmove(&rep->rrsets[i]->rk.dname[pset->dname_len], 
-			&t, sizeof(uint16_t));
-		memmove(&rep->rrsets[i]->rk.dname[pset->dname_len+2], 
-			&pset->rrset_class, sizeof(uint16_t));
+		rep->rrsets[i]->rk.type = htons(pset->type);
+		rep->rrsets[i]->rk.rrset_class = pset->rrset_class;
 		/** read data part. */
 		if((ret=parse_create_rrset(pkt, pset, &data)) != 0)
 			return ret;
@@ -771,14 +766,12 @@ compress_owner(struct ub_packed_rrset_key* key, ldns_buffer* pkt,
 			/* check if typeclass+4 ttl + rdatalen is available */
 			if(ldns_buffer_remaining(pkt) < 4+4+2)
 				return RETVAL_TRUNC;
-			ldns_buffer_write(pkt, &key->rk.dname[
-				key->rk.dname_len], 4);
 		} else {
 			/* no compress */
 			if(ldns_buffer_remaining(pkt) < key->rk.dname_len+4+4+2)
 				return RETVAL_TRUNC;
 			ldns_buffer_write(pkt, key->rk.dname, 
-				key->rk.dname_len+4);
+				key->rk.dname_len);
 			if(owner_pos <= PTR_MAX_OFFSET)
 				*owner_ptr = htons(PTR_CREATE(owner_pos));
 		}
@@ -796,7 +789,6 @@ compress_owner(struct ub_packed_rrset_key* key, ldns_buffer* pkt,
 				return RETVAL_TRUNC;
 			ldns_buffer_write(pkt, owner_ptr, 2);
 		}
-		ldns_buffer_write(pkt, &key->rk.dname[key->rk.dname_len], 4);
 	}
 	return RETVAL_OK;
 }
@@ -824,9 +816,7 @@ compress_any_dname(uint8_t* dname, ldns_buffer* pkt, int labs,
 static const ldns_rr_descriptor*
 type_rdata_compressable(struct ub_packed_rrset_key* key)
 {
-	uint16_t t;
-	memmove(&t, &key->rk.dname[key->rk.dname_len], sizeof(t));
-	t = ntohs(t);
+	uint16_t t = ntohs(key->rk.type);
 	if(ldns_rr_descript(t) && 
 		ldns_rr_descript(t)->_compress == LDNS_RR_COMPRESS)
 		return ldns_rr_descript(t);
@@ -909,6 +899,8 @@ packed_rrset_encode(struct ub_packed_rrset_key* key, ldns_buffer* pkt,
 				owner_pos, &owner_ptr, owner_labs))
 				!= RETVAL_OK)
 				return r;
+			ldns_buffer_write(pkt, &key->rk.type, 2);
+			ldns_buffer_write(pkt, &key->rk.rrset_class, 2);
 			ldns_buffer_write_u32(pkt, data->rr_ttl[i]-timenow);
 			if(c) {
 				if((r=compress_rdata(pkt, data->rr_data[i],
@@ -942,8 +934,7 @@ packed_rrset_encode(struct ub_packed_rrset_key* key, ldns_buffer* pkt,
 					return RETVAL_TRUNC;
 			}
 			ldns_buffer_write_u16(pkt, LDNS_RR_TYPE_RRSIG);
-			ldns_buffer_write(pkt, &(key->rk.dname[
-				key->rk.dname_len+2]), sizeof(uint16_t));
+			ldns_buffer_write(pkt, &key->rk.rrset_class, 2);
 			ldns_buffer_write_u32(pkt, data->rr_ttl[i]-timenow);
 			/* rrsig rdata cannot be compressed, perform 100+ byte
 			 * memcopy. */

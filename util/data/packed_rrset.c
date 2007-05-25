@@ -41,6 +41,8 @@
 
 #include "config.h"
 #include "util/data/packed_rrset.h"
+#include "util/data/dname.h"
+#include "util/storage/lookup3.h"
 #include "util/log.h"
 #include "util/alloc.h"
 
@@ -85,6 +87,11 @@ ub_rrset_compare(void* k1, void* k2)
 	int c;
 	if(key1 == key2 || key1->id == key2->id)
 		return 0;
+	if(key1->rk.type != key2->rk.type) {
+		if(key1->rk.type < key2->rk.type)
+			return -1;
+		return 1;
+	}
 	if(key1->rk.dname_len != key2->rk.dname_len) {
 		if(key1->rk.dname_len < key2->rk.dname_len)
 			return -1;
@@ -92,6 +99,11 @@ ub_rrset_compare(void* k1, void* k2)
 	}
 	if((c=memcmp(key1->rk.dname, key2->rk.dname, key1->rk.dname_len)) != 0)
 		return c;
+	if(key1->rk.rrset_class != key2->rk.rrset_class) {
+		if(key1->rk.rrset_class < key2->rk.rrset_class)
+			return -1;
+		return 1;
+	}
 	if(key1->rk.flags != key2->rk.flags) {
 		if(key1->rk.flags < key2->rk.flags)
 			return -1;
@@ -136,4 +148,19 @@ rrsetdata_equal(struct packed_rrset_data* d1, struct packed_rrset_data* d2)
 			return 0;
 	}
 	return 1;
+}
+
+hashvalue_t 
+rrset_key_hash(struct packed_rrset_key* key)
+{
+	/* type is hashed in host order */
+	uint16_t t = ntohs(key->type);
+	/* Note this MUST be identical to pkt_hash_rrset in msgparse.c */
+	/* this routine does not have a compressed name */
+	hashvalue_t h = 0xab;
+        h = hashlittle(&t, sizeof(t), h);
+        h = hashlittle(&key->rrset_class, sizeof(uint16_t), h);
+        h = hashlittle(&key->flags, sizeof(uint32_t), h);
+	h = dname_query_hash(key->dname, h);
+	return h;
 }

@@ -58,10 +58,6 @@
 
 /** number of times to retry making a random ID that is unique. */
 #define MAX_ID_RETRY 1000
-/** byte size of ip4 address */
-#define INET_SIZE 4
-/** byte size of ip6 address */
-#define INET6_SIZE 16 
 /** number of retries on outgoing UDP queries */
 #define OUTBOUND_UDP_RETRY 4
 

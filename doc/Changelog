@@ -1,3 +1,11 @@
+25 May 2007: Wouter
+	- Acknowledge use of unbound-java code in iterator. Nicer readme.
+	- services/cache/dns.c DNS Cache. Hybrid cache uses msgcache and
+	  rrset cache from module environment.
+	- packed rrset key has type and class as easily accessable struct
+	  members. They are still kept in network format for fast msg encode.
+	- dns cache find_delegation routine.
+
 24 May 2007: Wouter
 	- small changes to prepare for subqueries.
 	- iterator forwarder feature separated out.
