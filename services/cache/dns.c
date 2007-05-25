@@ -174,19 +174,19 @@ find_add_addrs(struct module_env* env, uint16_t qclass, struct region* region,
 			ns->namelen, LDNS_RR_TYPE_A, qclass, 0, now, 0);
 		if(akey) {
 			if(!add_a(akey, dp, region)) {
-				lock_rw_unlock(akey->entry.lock);
+				lock_rw_unlock(&akey->entry.lock);
 				return 0;
 			}
-			lock_rw_unlock(akey->entry.lock);
+			lock_rw_unlock(&akey->entry.lock);
 		}
 		akey = rrset_cache_lookup(env->rrset_cache, ns->name, 
 			ns->namelen, LDNS_RR_TYPE_AAAA, qclass, 0, now, 0);
 		if(akey) {
 			if(!add_aaaa(akey, dp, region)) {
-				lock_rw_unlock(akey->entry.lock);
+				lock_rw_unlock(&akey->entry.lock);
 				return 0;
 			}
-			lock_rw_unlock(akey->entry.lock);
+			lock_rw_unlock(&akey->entry.lock);
 		}
 	}
 	return 1;
@@ -210,7 +210,7 @@ dns_cache_find_delegation(struct module_env* env, uint8_t* qname,
 	/* got the NS key, create delegation point */
 	dp = delegpt_create(region);
 	if(!dp || !delegpt_set_name(dp, region, nskey->rk.dname)) {
-		lock_rw_unlock(nskey->entry.lock);
+		lock_rw_unlock(&nskey->entry.lock);
 		log_err("find_delegation: out of memory");
 		return NULL;
 	}
@@ -222,7 +222,7 @@ dns_cache_find_delegation(struct module_env* env, uint8_t* qname,
 			log_err("find_delegation: addns out of memory");
 	}
 	/* find and add A entries */
-	lock_rw_unlock(nskey->entry.lock); /* first unlock before next lookup*/
+	lock_rw_unlock(&nskey->entry.lock); /* first unlock before next lookup*/
 	if(!find_add_addrs(env, qclass, region, dp, now))
 		log_err("find_delegation: addrs out of memory");
 	log_info("dns_cache_find_delegation returns delegpt");

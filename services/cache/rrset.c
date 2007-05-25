@@ -198,7 +198,7 @@ rrset_cache_lookup(struct rrset_cache* r, uint8_t* qname, size_t qnamelen,
 		struct packed_rrset_data* data = 
 			(struct packed_rrset_data*)e->data;
 		if(timenow > data->ttl) {
-			lock_rw_unlock(e->lock);
+			lock_rw_unlock(&e->lock);
 			return NULL;
 		}
 		/* we're done */
