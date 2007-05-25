@@ -38,6 +38,8 @@ Acknowledgements
 o Thanks to David Blacka and Matt Larson (Verisign) for the unbound-java
   prototype. Design and code from that prototype has been used to create
   this program. Such as the iterator state machine and the cache design.
+o Other code origins are from the NSD (NLnet Labs) and LDNS (NLnet Labs)
+  projects. Such as buffer, region-allocator and red-black tree code.
 o See Credits file for contributors.
 
 * mailto:wouter@nlnetlabs.nl
