@@ -61,7 +61,7 @@ struct query_info {
 	 */
 	uint8_t* qname;
 	/** length of qname (including last 0 octet) */
-	size_t qnamesize;
+	size_t qname_len;
 	/** qtype, host byte order */
 	uint16_t qtype;
 	/** qclass, host byte order */

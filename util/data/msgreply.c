@@ -68,7 +68,7 @@ parse_create_qinfo(ldns_buffer* pkt, struct msg_parse* msg,
 		if(!qinf->qname) return 0;
 		dname_pkt_copy(pkt, qinf->qname, msg->qname);
 	} else	qinf->qname = 0;
-	qinf->qnamesize = msg->qname_len;
+	qinf->qname_len = msg->qname_len;
 	qinf->qtype = msg->qtype;
 	qinf->qclass = msg->qclass;
 	qinf->has_cd = 0;
@@ -430,7 +430,7 @@ query_info_parse(struct query_info* m, ldns_buffer* query)
 	m->has_cd = LDNS_CD_WIRE(q)?1:0;
 	ldns_buffer_skip(query, LDNS_HEADER_SIZE);
 	m->qname = ldns_buffer_current(query);
-	if((m->qnamesize = query_dname_len(query)) == 0)
+	if((m->qname_len = query_dname_len(query)) == 0)
 		return 0; /* parse error */
 	if(ldns_buffer_remaining(query) < 4)
 		return 0; /* need qtype, qclass */
@@ -443,11 +443,11 @@ int
 query_info_allocqname(struct query_info* m)
 {
 	uint8_t* q = m->qname;
-	if(!(m->qname = (uint8_t*)malloc(m->qnamesize))) {
+	if(!(m->qname = (uint8_t*)malloc(m->qname_len))) {
 		log_err("query_info_allocqname: out of memory");
 		return 0; /* out of memory */
 	}
-	memcpy(m->qname, q, m->qnamesize);
+	memcpy(m->qname, q, m->qname_len);
 	return 1;
 }
 
@@ -467,7 +467,7 @@ query_info_compare(void* m1, void* m2)
 	COMPARE_IT(msg1->qtype, msg2->qtype);
 	if((mc = query_dname_compare(msg1->qname, msg2->qname)) != 0)
 		return mc;
-	log_assert(msg1->qnamesize == msg2->qnamesize);
+	log_assert(msg1->qname_len == msg2->qname_len);
 	COMPARE_IT(msg1->has_cd, msg2->has_cd);
 	COMPARE_IT(msg1->qclass, msg2->qclass);
 	return 0;
@@ -487,7 +487,7 @@ msgreply_sizefunc(void* k, void* d)
 	struct query_info* q = (struct query_info*)k;
 	struct reply_info* r = (struct reply_info*)d;
 	size_t s = sizeof(struct msgreply_entry) + sizeof(struct reply_info)
-		+ q->qnamesize;
+		+ q->qname_len;
 	s += (r->rrset_count-1) * sizeof(struct rrset_ref);
 	s += r->rrset_count * sizeof(struct ub_packed_rrset_key*);
 	return s;
@@ -1021,13 +1021,13 @@ int reply_info_encode(struct query_info* qinfo, struct reply_info* rep,
 	/* insert query section */
 	if(rep->qdcount) {
 		if(ldns_buffer_remaining(buffer) < 
-			qinfo->qnamesize+sizeof(uint16_t)*2)
+			qinfo->qname_len+sizeof(uint16_t)*2)
 			return 0; /* buffer too small */
 		if(!compress_tree_store(&tree, qinfo->qname, 
 			dname_count_labels(qinfo->qname), 
 			ldns_buffer_position(buffer), region, NULL))
 			return 0;
-		ldns_buffer_write(buffer, qinfo->qname, qinfo->qnamesize);
+		ldns_buffer_write(buffer, qinfo->qname, qinfo->qname_len);
 		ldns_buffer_write_u16(buffer, qinfo->qtype);
 		ldns_buffer_write_u16(buffer, qinfo->qclass);
 	}
@@ -1152,7 +1152,7 @@ query_info_entrysetup(struct query_info* q, struct reply_info* r,
 	lock_protect(&e->entry.lock, &e->key, sizeof(e->key));
 	lock_protect(&e->entry.lock, &e->entry.hash, sizeof(e->entry.hash) +
 		sizeof(e->entry.key) + sizeof(e->entry.data));
-	lock_protect(&e->entry.lock, e->key.qname, e->key.qnamesize);
+	lock_protect(&e->entry.lock, e->key.qname, e->key.qname_len);
 	q->qname = NULL;
 	return e;
 }
@@ -1169,7 +1169,7 @@ qinfo_query_encode(ldns_buffer* pkt, struct query_info* qinfo)
 	ldns_buffer_write_u16(pkt, flags);
 	ldns_buffer_write_u16(pkt, 1); /* query count */
 	ldns_buffer_write(pkt, "\000\000\000\000\000\000", 6); /* counts */
-	ldns_buffer_write(pkt, qinfo->qname, qinfo->qnamesize);
+	ldns_buffer_write(pkt, qinfo->qname, qinfo->qname_len);
 	ldns_buffer_write_u16(pkt, qinfo->qtype);
 	ldns_buffer_write_u16(pkt, qinfo->qclass);
 	ldns_buffer_flip(pkt);

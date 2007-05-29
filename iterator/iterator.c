@@ -125,7 +125,7 @@ fwd_new(struct module_qstate* qstate, int id)
 	outbound_list_init(&iq->outlist);
 	if(qstate->qinfo.has_cd)
 		flags |= BIT_CD;
-	e = (*env->send_query)(qstate->qinfo.qname, qstate->qinfo.qnamesize,
+	e = (*env->send_query)(qstate->qinfo.qname, qstate->qinfo.qname_len,
 		qstate->qinfo.qtype, qstate->qinfo.qclass, flags, dnssec, 
 		&ie->fwd_addr, ie->fwd_addrlen, qstate);
 	if(!e) 
@@ -327,7 +327,7 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 	 * we just look for the closest set of server to the parent of qname.
 	 */
 	delname = qstate->qinfo.qname;
-	delnamelen = qstate->qinfo.qnamesize;
+	delnamelen = qstate->qinfo.qname_len;
 	if(qstate->qinfo.qtype == LDNS_RR_TYPE_DS && delname[0] != 0) {
 		/* do not adjust root label */
 		size_t lablen = delname[0] + 1;

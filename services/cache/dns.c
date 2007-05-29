@@ -286,7 +286,7 @@ tomsg(struct module_env* env, struct msgreply_entry* e, struct reply_info* r,
 		return NULL;
 	memcpy(&msg->qinfo, &e->key, sizeof(struct query_info));
 	msg->qinfo.qname = region_alloc_init(region, e->key.qname, 
-		e->key.qnamesize);
+		e->key.qname_len);
 	if(!msg->qinfo.qname)
 		return NULL;
 	/* allocate replyinfo struct and rrset key array separately */
@@ -326,7 +326,7 @@ dns_cache_lookup(struct module_env* env,
 
 	/* lookup first, this has both NXdomains and ANSWER responses */
 	k.qname = qname;
-	k.qnamesize = qnamelen;
+	k.qname_len = qnamelen;
 	k.qtype = qtype;
 	k.qclass = qclass;
 	k.has_cd = has_cd;

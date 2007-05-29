@@ -3,6 +3,7 @@
 	- lookup message from msg cache (and copy to region).
 	- fixed cast error in dns msg lookup.
 	- message with duplicate rrset does not increase its TTLs twice.
+	- 'qnamesize' changed to 'qname_len' for similar naming scheme.
 
 25 May 2007: Wouter
 	- Acknowledge use of unbound-java code in iterator. Nicer readme.

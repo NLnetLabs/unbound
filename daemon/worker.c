@@ -137,7 +137,7 @@ replyerror_fillbuf(int r, struct comm_reply* repinfo, uint16_t id,
 	ldns_buffer_write(buf, &flags, sizeof(uint16_t));
 	ldns_buffer_write(buf, &flags, sizeof(uint16_t));
 	ldns_buffer_write(buf, &flags, sizeof(uint16_t));
-	ldns_buffer_write(buf, qinfo->qname, qinfo->qnamesize);
+	ldns_buffer_write(buf, qinfo->qname, qinfo->qname_len);
 	ldns_buffer_write_u16(buf, qinfo->qtype);
 	ldns_buffer_write_u16(buf, qinfo->qclass);
 	ldns_buffer_flip(buf);
