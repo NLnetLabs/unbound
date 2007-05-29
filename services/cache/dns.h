@@ -96,12 +96,14 @@ struct delegpt* dns_cache_find_delegation(struct module_env* env,
  * @param qclass: query class.
  * @param has_cd: if true, CD flag is turned on for lookup.
  * @param region: where to allocate result.
+ * @param scratch: where to allocate temporary data.
  * @return new response message (alloced in region, rrsets do not have IDs).
  * 	or NULL on error or if not found in cache.
+ *	TTLs are made relative to the current time.
  */
 struct dns_msg* dns_cache_lookup(struct module_env* env,
 	uint8_t* qname, size_t qnamelen, uint16_t qtype, uint16_t qclass,
-	int has_cd, struct region* region);
+	int has_cd, struct region* region, struct region* scratch);
 
 /** Find covering DNAME */
 

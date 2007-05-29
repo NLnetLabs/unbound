@@ -47,6 +47,7 @@
 struct config_file;
 struct alloc_cache;
 struct rrset_ref;
+struct region;
 
 /**
  * The rrset cache
@@ -145,5 +146,42 @@ int rrset_cache_update(struct rrset_cache* r, struct rrset_ref* ref,
 struct ub_packed_rrset_key* rrset_cache_lookup(struct rrset_cache* r,
 	uint8_t* qname, size_t qnamelen, uint16_t qtype, uint16_t qclass,
 	uint32_t flags, uint32_t timenow, int wr);
+
+/**
+ * Obtain readlock on a (sorted) list of rrset references.
+ * Checks TTLs and IDs of the rrsets and rollbacks locking if not Ok.
+ * @param ref: array of rrset references (key pointer and ID value).
+ *	duplicate references are allowed and handled.
+ * @param count: size of array.
+ * @param timenow: used to compare with TTL.
+ * @return true on success, false on a failure, which can be that some
+ * 	RRsets have timed out, or that they do not exist any more, the
+ *	RRsets have been purged from the cache.
+ *	If true, you hold readlocks on all the ref items. 
+ */
+int rrset_array_lock(struct rrset_ref* ref, size_t count, uint32_t timenow);
+
+/**
+ * Unlock array (sorted) of rrset references.
+ * @param ref: array of rrset references (key pointer and ID value).
+ *	duplicate references are allowed and handled.
+ * @param count: size of array.
+ */
+void rrset_array_unlock(struct rrset_ref* ref, size_t count);
+
+/**
+ * Unlock array (sorted) of rrset references and at the same time
+ * touch LRU on the rrsets. It needs the scratch region for temporary
+ * storage as it uses the initial locks to obtain hash values.
+ * @param r: the rrset cache. In this cache LRU is updated.
+ * @param scratch: region for temporary storage of hash values.
+ *	if memory allocation fails, the lru touch fails silently,
+ *	but locks are released. memory errors are logged.
+ * @param ref: array of rrset references (key pointer and ID value).
+ *	duplicate references are allowed and handled.
+ * @param count: size of array.
+ */
+void rrset_array_unlock_touch(struct rrset_cache* r, struct region* scratch,
+	struct rrset_ref* ref, size_t count);
 
 #endif /* SERVICES_CACHE_RRSET_H */

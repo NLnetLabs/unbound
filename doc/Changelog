@@ -1,3 +1,7 @@
+29 May 2007: Wouter
+	- routines to lock and unlock array of rrsets moved to cache/rrset.
+	- lookup message from msg cache (and copy to region).
+
 25 May 2007: Wouter
 	- Acknowledge use of unbound-java code in iterator. Nicer readme.
 	- services/cache/dns.c DNS Cache. Hybrid cache uses msgcache and

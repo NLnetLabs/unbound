@@ -238,6 +238,13 @@ void ub_packed_rrset_parsedelete(struct ub_packed_rrset_key* pkey,
 	struct alloc_cache* alloc);
 
 /**
+ * Memory size of rrset data. RRset data must be filled in correctly.
+ * @param data: data to examine.
+ * @return size in bytes.
+ */
+size_t packed_rrset_sizeof(struct packed_rrset_data* data);
+
+/**
  * Calculate memory size of rrset entry. For hash table usage.
  * @param key: struct ub_packed_rrset_key*.
  * @param data: struct packed_rrset_data*.
@@ -285,5 +292,12 @@ void rrset_data_delete(void* data, void* userdata);
  * @return hash value.
  */
 hashvalue_t rrset_key_hash(struct packed_rrset_key* key);
+
+/**
+ * Fixup pointers in fixed data packed_rrset_data blob.
+ * After a memcpy of the data for example. Will set internal pointers right.
+ * @param data: rrset data structure. Otherwise correctly filled in.
+ */
+void packed_rrset_ptr_fixup(struct packed_rrset_data* data);
 
 #endif /* UTIL_DATA_PACKED_RRSET_H */

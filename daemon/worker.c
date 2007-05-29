@@ -357,8 +357,6 @@ answer_from_cache(struct worker* worker, struct lruhash_entry* e, uint16_t id,
 	struct reply_info* rep = (struct reply_info*)e->data;
 	uint32_t timenow = time(0);
 	uint16_t udpsize = edns->udp_size;
-	size_t i;
-	hashvalue_t* h;
 	/* see if it is possible */
 	if(rep->ttl <= timenow) {
 		/* the rrsets may have been updated in the meantime.
@@ -371,23 +369,8 @@ answer_from_cache(struct worker* worker, struct lruhash_entry* e, uint16_t id,
 	edns->udp_size = EDNS_ADVERTISED_SIZE;
 	edns->ext_rcode = 0;
 	edns->bits &= EDNS_DO;
-	if(!(h = (hashvalue_t*)region_alloc(worker->scratchpad, 
-		sizeof(hashvalue_t)*rep->rrset_count)))
+	if(!rrset_array_lock(rep->ref, rep->rrset_count, timenow))
 		return 0;
-	/* check rrsets */
-	for(i=0; i<rep->rrset_count; i++) {
-		if(i>0 && rep->ref[i].key == rep->ref[i-1].key)
-			continue; /* only lock items once */
-		lock_rw_rdlock(&rep->ref[i].key->entry.lock);
-		if(rep->ref[i].id != rep->ref[i].key->id ||
-			rep->ttl <= timenow) {
-			/* failure! rollback our readlocks */
-			size_t j;
-			for(j=0; j<=i; j++)
-				lock_rw_unlock(&rep->ref[j].key->entry.lock);
-			return 0;
-		}
-	}
 	/* locked and ids and ttls are OK. */
 	if(!reply_info_answer_encode(&mrentry->key, rep, id, flags, 
 		repinfo->c->buffer, timenow, 1, worker->scratchpad,
@@ -397,21 +380,8 @@ answer_from_cache(struct worker* worker, struct lruhash_entry* e, uint16_t id,
 	}
 	/* cannot send the reply right now, because blocking network syscall
 	 * is bad while holding locks. */
-	/* unlock */
-	for(i=0; i<rep->rrset_count; i++) {
-		if(i>0 && rep->ref[i].key == rep->ref[i-1].key)
-			continue; /* only unlock items once */
-		h[i] = rep->ref[i].key->entry.hash;
-		lock_rw_unlock(&rep->ref[i].key->entry.lock);
-	}
-	/* still holding msgreply lock to touch LRU, so cannot send reply yet*/
-	/* LRU touch, with no rrset locks held */
-	for(i=0; i<rep->rrset_count; i++) {
-		if(i>0 && rep->ref[i].key == rep->ref[i-1].key)
-			continue; /* only touch items once */
-		rrset_cache_touch(worker->env.rrset_cache, rep->ref[i].key,
-			h[i], rep->ref[i].id);
-	}
+	rrset_array_unlock_touch(worker->env.rrset_cache, worker->scratchpad,
+		rep->ref, rep->rrset_count);
 	region_free_all(worker->scratchpad);
 	/* go and return this buffer to the client */
 	return 1;

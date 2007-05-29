@@ -68,12 +68,20 @@ ub_rrset_sizefunc(void* key, void* data)
 	struct ub_packed_rrset_key* k = (struct ub_packed_rrset_key*)key;
 	struct packed_rrset_data* d = (struct packed_rrset_data*)data;
 	size_t s = sizeof(struct ub_packed_rrset_key) + k->rk.dname_len;
+	s += packed_rrset_sizeof(d);
+	return s;
+}
+
+size_t 
+packed_rrset_sizeof(struct packed_rrset_data* d)
+{
+	size_t s;
 	if(d->rrsig_count > 0) {
-		s += ((uint8_t*)d->rr_data[d->count+d->rrsig_count-1] - 
+		s = ((uint8_t*)d->rr_data[d->count+d->rrsig_count-1] - 
 			(uint8_t*)d) + d->rr_len[d->count+d->rrsig_count-1];
 	} else {
 		log_assert(d->count > 0);
-		s += ((uint8_t*)d->rr_data[d->count-1] - (uint8_t*)d) + 
+		s = ((uint8_t*)d->rr_data[d->count-1] - (uint8_t*)d) + 
 			d->rr_len[d->count-1];
 	}
 	return s;
@@ -163,4 +171,22 @@ rrset_key_hash(struct packed_rrset_key* key)
         h = hashlittle(&key->flags, sizeof(uint32_t), h);
 	h = dname_query_hash(key->dname, h);
 	return h;
+}
+
+void 
+packed_rrset_ptr_fixup(struct packed_rrset_data* data)
+{
+	size_t i;
+	size_t total = data->count + data->rrsig_count;
+	uint8_t* nextrdata;
+	/* fixup pointers in packed rrset data */
+	data->rr_len = (size_t*)((uint8_t*)data +
+		sizeof(struct packed_rrset_data));
+	data->rr_data = (uint8_t**)&(data->rr_len[total]);
+	data->rr_ttl = (uint32_t*)&(data->rr_data[total]);
+	nextrdata = (uint8_t*)&(data->rr_ttl[total]);
+	for(i=0; i<total; i++) {
+		data->rr_data[i] = nextrdata;
+		nextrdata += data->rr_len[i];
+	}
 }

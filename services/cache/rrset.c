@@ -44,6 +44,7 @@
 #include "util/config_file.h"
 #include "util/data/packed_rrset.h"
 #include "util/data/msgreply.h"
+#include "util/region-allocator.h"
 
 struct rrset_cache* rrset_cache_create(struct config_file* cfg, 
 	struct alloc_cache* alloc)
@@ -205,4 +206,61 @@ rrset_cache_lookup(struct rrset_cache* r, uint8_t* qname, size_t qnamelen,
 		return (struct ub_packed_rrset_key*)e->key;
 	}
 	return NULL;
+}
+
+int 
+rrset_array_lock(struct rrset_ref* ref, size_t count, uint32_t timenow)
+{
+	size_t i;
+	for(i=0; i<count; i++) {
+		if(i>0 && ref[i].key == ref[i-1].key)
+			continue; /* only lock items once */
+		lock_rw_rdlock(&ref[i].key->entry.lock);
+		if(ref[i].id != ref[i].key->id || timenow >
+			((struct reply_info*)(ref[i].key->entry.data))->ttl) {
+			/* failure! rollback our readlocks */
+			rrset_array_unlock(ref, i+1);
+			return 0;
+		}
+	}
+	return 1;
+}
+
+void 
+rrset_array_unlock(struct rrset_ref* ref, size_t count)
+{
+	size_t i;
+	for(i=0; i<count; i++) {
+		if(i>0 && ref[i].key == ref[i-1].key)
+			continue; /* only unlock items once */
+		lock_rw_unlock(&ref[i].key->entry.lock);
+	}
+}
+
+void 
+rrset_array_unlock_touch(struct rrset_cache* r, struct region* scratch,         
+	struct rrset_ref* ref, size_t count)
+{
+	hashvalue_t* h;
+	size_t i;
+	if(!(h = (hashvalue_t*)region_alloc(scratch, 
+		sizeof(hashvalue_t)*count)))
+		log_warn("rrset LRU: memory allocation failed");
+	else 	/* store hash values */
+		for(i=0; i<count; i++)
+			h[i] = ref[i].key->entry.hash;
+	/* unlock */
+	for(i=0; i<count; i++) {
+		if(i>0 && ref[i].key == ref[i-1].key)
+			continue; /* only unlock items once */
+		lock_rw_unlock(&ref[i].key->entry.lock);
+	}
+	if(h) {
+		/* LRU touch, with no rrset locks held */
+		for(i=0; i<count; i++) {
+			if(i>0 && ref[i].key == ref[i-1].key)
+				continue; /* only touch items once */
+			rrset_cache_touch(r, ref[i].key, h[i], ref[i].id);
+		}
+	}
 }
