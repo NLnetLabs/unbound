@@ -103,6 +103,7 @@ iter_new(struct module_qstate* qstate, int id)
 	iq->query_restart_count = 0;
 	iq->referral_count = 0;
 	iq->priming_stub = 0;
+	iq->orig_qflags = qstate->query_flags;
 	outbound_list_init(&iq->outlist);
 	return 1;
 }
@@ -255,6 +256,96 @@ error_response(struct module_qstate* qstate, struct iter_qstate* iq, int rcode)
 	return final_state(qstate, iq);
 }
 
+/** prepend the prepend list in the answer section of dns_msg */
+static int
+iter_prepend(struct iter_qstate* iq, struct dns_msg* msg, 
+	struct region* region)
+{
+	struct packed_rrset_list* p;
+	struct ub_packed_rrset_key** sets;
+	size_t num = 0;
+	for(p = iq->prepend_list; p; p = p->next)
+		num++;
+	if(num == 0)
+		return 1;
+	sets = region_alloc(region, (num+msg->rep->rrset_count) *
+		sizeof(struct ub_packed_rrset_key*));
+	if(!sets) 
+		return 0;
+	memcpy(sets+num, msg->rep->rrsets, msg->rep->rrset_count *
+		sizeof(struct ub_packed_rrset_key*));
+	num = 0;
+	for(p = iq->prepend_list; p; p = p->next) {
+		sets[num] = (struct ub_packed_rrset_key*)region_alloc(region,
+			sizeof(struct ub_packed_rrset_key));
+		if(!sets[num])
+			return 0;
+		sets[num]->rk = *p->rrset.k;
+		sets[num]->entry.data = p->rrset.d;
+		num++;
+	}
+	msg->rep->rrsets = sets;
+	return 1;
+}
+
+/**
+ * Encode response message for iterator responses. Into response buffer.
+ * On error an error message is encoded.
+ * @param qstate: query state. With qinfo information.
+ * @param iq: iterator query state. With qinfo original and prepend list.
+ * @param msg: answer message.
+ */
+static void 
+iter_encode_respmsg(struct module_qstate* qstate, struct iter_qstate* iq, 
+	struct dns_msg* msg)
+{
+	struct query_info qinf = qstate->qinfo;
+	uint32_t now = time(NULL);
+	struct edns_data edns;
+	if(iq->orig_qname) {
+		qinf.qname = iq->orig_qname;
+		qinf.qname_len = iq->orig_qnamelen;
+	}
+	if(iq->prepend_list) {
+		if(!iter_prepend(iq, msg, qstate->region)) {
+			error_response(qstate, iq, LDNS_RCODE_SERVFAIL);
+			return;
+		}
+	}
+
+	edns.edns_present = qstate->edns.edns_present;
+	edns.edns_version = EDNS_ADVERTISED_VERSION;
+	edns.udp_size = EDNS_ADVERTISED_SIZE;
+	edns.ext_rcode = 0;
+	edns.bits = qstate->edns.bits & EDNS_DO;
+	if(!reply_info_answer_encode(&qinf, msg->rep, 0, iq->orig_qflags, 
+		qstate->buf, now, 1, qstate->scratch, qstate->edns.udp_size, 
+		&edns)) {
+		/* encode servfail */
+		error_response(qstate, iq, LDNS_RCODE_SERVFAIL);
+		return;
+	}
+}
+
+/**
+ * Given a CNAME response (defined as a response containing a CNAME or DNAME
+ * that does not answer the request), process the response, modifying the
+ * state as necessary. This follows the CNAME/DNAME chain and returns the
+ * final query name.
+ *
+ * sets the new query name, after following the CNAME/DNAME chain.
+ * @param qstate: query state.
+ * @param iq: iterator query state.
+ * @param ie: iterator shared global environment.
+ */
+static void
+handle_cname_response(struct module_qstate* qstate, struct iter_qstate* iq,
+        struct iter_env* ie)
+{
+
+}
+
+
 /** 
  * Process the initial part of the request handling. This state roughly
  * corresponds to resolver algorithms steps 1 (find answer in cache) and 2
@@ -279,6 +370,8 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 	int d;
 	uint8_t* delname;
 	size_t delnamelen;
+	struct dns_msg* msg;
+
 	log_nametypeclass("resolving", qstate->qinfo.qname, 
 		qstate->qinfo.qtype, qstate->qinfo.qclass);
 	/* check effort */
@@ -308,14 +401,30 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 	/* This either results in a query restart (CNAME cache response), a
 	 * terminating response (ANSWER), or a cache miss (null). */
 	
-	/* TODO: cache lookup */
-	/* lookup qname, qtype qclass */
+	msg = dns_cache_lookup(qstate->env, qstate->qinfo.qname, 
+		qstate->qinfo.qname_len, qstate->qinfo.qtype, 
+		qstate->qinfo.qclass, qstate->qinfo.has_cd, 
+		qstate->region, qstate->scratch);
+	if(msg) {
+		/* handle positive cache response */
+		/*
+		enum response_type type = type_cache_response(msg);
 
-	/* TODO: handle positive cache response */
-		/* calc response type (from cache msg) */
-		/* if cname */
-			/* handle cname, overwrite qname, restart */
+		if(type == RESPONSE_TYPE_CNAME) */ {
+			verbose(VERB_ALGO, "returning CNAME response from "
+				"cache");
+			/* handleCnameresponse  &iq->orig_qname, &iq->orig_qname_len */
+			/* his *is* a query restart, even if it is a cheap 
+			 * one. */
+			iq->query_restart_count++;
+			return next_state(qstate, iq, INIT_REQUEST_STATE);
+		}
+
 		/* it is an answer, response, to final state */
+		verbose(VERB_ALGO, "returning answer from cache.");
+		iter_encode_respmsg(qstate, iq, msg);
+		return final_state(qstate, iq);
+	}
 	
 	/* TODO attempt to forward the request */
 

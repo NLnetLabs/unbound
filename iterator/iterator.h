@@ -167,6 +167,13 @@ struct iter_qstate {
 	/** Last element of the prepend list */
 	struct packed_rrset_list* prepend_last;
 
+	/** original query name - if not NULL, malloced and before CNAME */
+	uint8_t* orig_qname;
+	/** original query name length */
+	size_t orig_qnamelen;
+	/** original query flags (i.e. RD flag) */
+	uint16_t orig_qflags;
+
 	/** 
 	 * This is the current delegation point for an in-progress query. This
 	 * object retains state as to which delegation targets need to be

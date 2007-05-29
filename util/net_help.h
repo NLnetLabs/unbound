@@ -47,6 +47,8 @@
 #define BIT_AA 0x0400
 /** RD flag */
 #define BIT_RD 0x0100
+/** RA flag */
+#define BIT_RA 0x0080
 /** CD flag */
 #define BIT_CD 0x0010
 /** QR flag */
