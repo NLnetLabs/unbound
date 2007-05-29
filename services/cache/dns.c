@@ -68,12 +68,18 @@ dns_cache_store_msg(struct module_env* env, struct query_info* qinfo,
 	hashvalue_t hash, struct reply_info* rep)
 {
 	struct msgreply_entry* e;
-	uint32_t now = time(NULL);
+	uint32_t now = time(NULL), ttl = rep->ttl;
+	size_t i;
 
 	/* store RRsets */
+        for(i=0; i<rep->rrset_count; i++) {
+                rep->ref[i].key = rep->rrsets[i];
+                rep->ref[i].id = rep->rrsets[i]->id;
+	}
+	reply_info_sortref(rep);
 	reply_info_set_ttls(rep, now);
 	store_rrsets(env, rep, now);
-	if(rep->ttl == 0) {
+	if(ttl == 0) {
 		/* we do not store the message, but we did store the RRs,
 		 * which could be useful for delegation information */
 		verbose(VERB_ALGO, "TTL 0: dropped msg from cache");
@@ -259,7 +265,7 @@ copy_rrset(struct ub_packed_rrset_key* key, struct region* region,
 		return NULL;
 	ck->entry.data = d;
 	packed_rrset_ptr_fixup(d);
-	/* make TTLs relative */
+	/* make TTLs relative - once per rrset */
 	for(i=0; i<d->count + d->rrsig_count; i++)
 		d->rr_ttl[i] -= now;
 	d->ttl -= now;

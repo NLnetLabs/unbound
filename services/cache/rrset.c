@@ -217,7 +217,8 @@ rrset_array_lock(struct rrset_ref* ref, size_t count, uint32_t timenow)
 			continue; /* only lock items once */
 		lock_rw_rdlock(&ref[i].key->entry.lock);
 		if(ref[i].id != ref[i].key->id || timenow >
-			((struct reply_info*)(ref[i].key->entry.data))->ttl) {
+			((struct packed_rrset_data*)(ref[i].key->entry.data))
+			->ttl) {
 			/* failure! rollback our readlocks */
 			rrset_array_unlock(ref, i+1);
 			return 0;

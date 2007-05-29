@@ -203,7 +203,8 @@ void reply_info_sortref(struct reply_info* rep);
 
 /**
  * Set TTLs inside the replyinfo to absolute values.
- * @param rep: reply info. rrsets must be filled in.
+ * @param rep: reply info. rrsets must be filled in. 
+ *	Also refs must be filled in.
  * @param timenow: the current time.
  */
 void reply_info_set_ttls(struct reply_info* rep, uint32_t timenow);

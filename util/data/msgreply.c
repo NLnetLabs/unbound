@@ -393,10 +393,13 @@ reply_info_set_ttls(struct reply_info* rep, uint32_t timenow)
 	rep->ttl += timenow;
 	for(i=0; i<rep->rrset_count; i++) {
 		struct packed_rrset_data* data = (struct packed_rrset_data*)
-			rep->rrsets[i]->entry.data;
+			rep->ref[i].key->entry.data;
+		if(i>0 && rep->ref[i].key == rep->ref[i-1].key)
+			continue;
 		data->ttl += timenow;
-		for(j=0; j<data->count + data->rrsig_count; j++)
+		for(j=0; j<data->count + data->rrsig_count; j++) {
 			data->rr_ttl[j] += timenow;
+		}
 	}
 }
 
