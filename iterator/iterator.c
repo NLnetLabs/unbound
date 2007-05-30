@@ -124,8 +124,6 @@ fwd_new(struct module_qstate* qstate, int id)
 		return 0;
 	memset(iq, 0, sizeof(*iq));
 	outbound_list_init(&iq->outlist);
-	if(qstate->qinfo.has_cd)
-		flags |= BIT_CD;
 	e = (*env->send_query)(qstate->qinfo.qname, qstate->qinfo.qname_len,
 		qstate->qinfo.qtype, qstate->qinfo.qclass, flags, dnssec, 
 		&ie->fwd_addr, ie->fwd_addrlen, qstate);
@@ -403,8 +401,7 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 	
 	msg = dns_cache_lookup(qstate->env, qstate->qinfo.qname, 
 		qstate->qinfo.qname_len, qstate->qinfo.qtype, 
-		qstate->qinfo.qclass, qstate->qinfo.has_cd, 
-		qstate->region, qstate->scratch);
+		qstate->qinfo.qclass, qstate->region, qstate->scratch);
 	if(msg) {
 		/* handle positive cache response */
 		/*

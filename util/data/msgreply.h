@@ -66,8 +66,6 @@ struct query_info {
 	uint16_t qtype;
 	/** qclass, host byte order */
 	uint16_t qclass;
-	/** does query have CD bit set */
-	int has_cd;
 };
 
 /**

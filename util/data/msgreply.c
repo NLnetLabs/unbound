@@ -71,9 +71,6 @@ parse_create_qinfo(ldns_buffer* pkt, struct msg_parse* msg,
 	qinf->qname_len = msg->qname_len;
 	qinf->qtype = msg->qtype;
 	qinf->qclass = msg->qclass;
-	qinf->has_cd = 0;
-	if(msg->flags & BIT_CD)
-		qinf->has_cd = 1;
 	return 1;
 }
 
@@ -427,7 +424,6 @@ query_info_parse(struct query_info* m, ldns_buffer* query)
 	log_assert(LDNS_OPCODE_WIRE(q) == LDNS_PACKET_QUERY);
 	log_assert(LDNS_QDCOUNT(q) == 1);
 	log_assert(ldns_buffer_position(query) == 0);
-	m->has_cd = LDNS_CD_WIRE(q)?1:0;
 	ldns_buffer_skip(query, LDNS_HEADER_SIZE);
 	m->qname = ldns_buffer_current(query);
 	if((m->qname_len = query_dname_len(query)) == 0)
@@ -468,7 +464,6 @@ query_info_compare(void* m1, void* m2)
 	if((mc = query_dname_compare(msg1->qname, msg2->qname)) != 0)
 		return mc;
 	log_assert(msg1->qname_len == msg2->qname_len);
-	COMPARE_IT(msg1->has_cd, msg2->has_cd);
 	COMPARE_IT(msg1->qclass, msg2->qclass);
 	return 0;
 #undef COMPARE_IT
@@ -518,7 +513,6 @@ query_info_hash(struct query_info *q)
 	hashvalue_t h = 0xab;
 	h = hashlittle(&q->qtype, sizeof(q->qtype), h);
 	h = hashlittle(&q->qclass, sizeof(q->qclass), h);
-	h = hashlittle(&q->has_cd, sizeof(q->has_cd), h);
 	h = dname_query_hash(q->qname, h);
 	return h;
 }
@@ -1161,8 +1155,6 @@ void
 qinfo_query_encode(ldns_buffer* pkt, struct query_info* qinfo)
 {
 	uint16_t flags = 0; /* QUERY, NOERROR */
-	if(qinfo->has_cd)
-		flags |= BIT_CD;
 	ldns_buffer_clear(pkt);
 	log_assert(ldns_buffer_remaining(pkt) >= 12+255+4/*max query*/);
 	ldns_buffer_skip(pkt, 2); /* id done later */

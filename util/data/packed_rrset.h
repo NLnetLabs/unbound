@@ -48,10 +48,8 @@ struct alloc_cache;
  * clearing the cache. */
 typedef uint64_t rrset_id_t;
 
-/** this rrset is NSEC/NSEC3 and is at zone apex (at child size of zonecut) */
+/** this rrset is NSEC and is at zone apex (at child side of zonecut) */
 #define PACKED_RRSET_NSEC_AT_APEX 0x1
-/** this rrset was obtained and is used for checking-disabled replies. */
-#define PACKED_RRSET_CD 0x2
 
 /**
  * The identifying information for an RRset.
@@ -70,7 +68,6 @@ struct packed_rrset_key {
 	/**
 	 * Flags. 32bit to be easy for hashing:
 	 * 	o PACKED_RRSET_NSEC_AT_APEX
-	 * 	o PACKED_RRSET_CD
 	 */
 	uint32_t flags;
 	/** the rrset type in network format */

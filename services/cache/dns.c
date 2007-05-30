@@ -317,7 +317,7 @@ tomsg(struct module_env* env, struct msgreply_entry* e, struct reply_info* r,
 struct dns_msg* 
 dns_cache_lookup(struct module_env* env,
 	uint8_t* qname, size_t qnamelen, uint16_t qtype, uint16_t qclass,
-	int has_cd, struct region* region, struct region* scratch)
+	struct region* region, struct region* scratch)
 {
 	struct lruhash_entry* e;
 	struct query_info k;
@@ -329,7 +329,6 @@ dns_cache_lookup(struct module_env* env,
 	k.qname_len = qnamelen;
 	k.qtype = qtype;
 	k.qclass = qclass;
-	k.has_cd = has_cd;
 	h = query_info_hash(&k);
 	e = slabhash_lookup(env->msg_cache, h, &k, 0);
 	if(e) {
