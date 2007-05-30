@@ -169,6 +169,33 @@ set_extstates_initial(struct worker* worker, struct module_qstate* qstate)
 		qstate->ext_state[i] = module_state_initial;
 }
 
+/** find runnable recursive */
+static struct module_qstate*
+find_run_in(struct module_qstate* p)
+{
+	struct module_qstate* q;
+	for(p = p->subquery_first; p; p = p->subquery_next) {
+		if(p->ext_state[p->curmod] == module_state_initial)
+			return p;
+		if((q=find_run_in(p)))
+			return q;
+	}
+	return NULL;
+}
+
+/** find other runnable subqueries */
+static struct module_qstate*
+find_runnable(struct module_qstate* subq)
+{
+	struct module_qstate* p = subq;
+	if(p->subquery_next && p->subquery_next->ext_state[
+		p->subquery_next->curmod] == module_state_initial)
+		return p->subquery_next;
+	while(p->parent)
+		p = p->parent;
+	return find_run_in(p);
+}
+
 /** process incoming request */
 static void 
 worker_process_query(struct worker* worker, struct work_query* w, 
@@ -218,6 +245,15 @@ worker_process_query(struct worker* worker, struct work_query* w,
 			entry = NULL;
 			event = module_event_subq_done;
 			continue;
+		}
+		if(s != module_error && s != module_finished) {
+			/* see if we can continue with other subrequests */
+			struct module_qstate* nxt = find_runnable(qstate);
+			if(nxt) {
+				qstate = nxt;
+				entry = NULL;
+				event = module_event_pass;
+			}
 		}
 		break;
 	}

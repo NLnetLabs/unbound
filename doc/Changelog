@@ -9,6 +9,7 @@
 	- processInitRequest and processInitRequest2.
 	- cache synthesizes referral messages, with DS and NSEC.
 	- processInitRequest3.
+	- if a request creates multiple subrequests these are all activated.
 
 29 May 2007: Wouter
 	- routines to lock and unlock array of rrsets moved to cache/rrset.
