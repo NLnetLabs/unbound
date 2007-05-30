@@ -96,9 +96,8 @@ qstate_free(struct worker* worker, struct module_qstate* qstate)
 	query_info_clear(&qstate->qinfo);
 	if(qstate->parent) {
 		module_subreq_remove(qstate);
-		free(qstate);
-	} else {
 		region_destroy(qstate->region);
+		free(qstate);
 	}
 }
 

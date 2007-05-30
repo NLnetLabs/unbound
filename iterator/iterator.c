@@ -44,6 +44,7 @@
 #include "iterator/iterator.h"
 #include "iterator/iter_utils.h"
 #include "iterator/iter_hints.h"
+#include "iterator/iter_delegpt.h"
 #include "iterator/iter_resptype.h"
 #include "services/cache/dns.h"
 #include "util/module.h"
@@ -214,7 +215,7 @@ next_state(struct module_qstate* qstate, struct iter_qstate* iq,
 	/* If transitioning to a "response" state, make sure that there is a
 	 * response */
 	if(iter_state_is_responsestate(nextstate)) {
-		if(qstate->reply == NULL) {
+		if(qstate->reply == NULL || iq->response == NULL) {
 			log_err("transitioning to response state sans "
 				"response.");
 		}
@@ -486,6 +487,7 @@ generate_sub_request(uint8_t* qname, size_t qnamelen, uint16_t qtype,
 	 * uninterested in validating things not on the direct resolution 
 	 * path.  */
 	subq->query_flags |= BIT_CD;
+	subiq->orig_qflags = subq->query_flags;
 	
 	return subq;
 }
@@ -504,7 +506,7 @@ prime_root(struct module_qstate* qstate, struct iter_env* ie, int id,
 	struct delegpt* dp;
 	struct module_qstate* subq;
 	struct iter_qstate* subiq;
-	verbose(VERB_ALGO, "priming <./%s>", 
+	verbose(VERB_ALGO, "priming . NS %s", 
 		ldns_lookup_by_id(ldns_rr_classes, (int)qclass)?
 		ldns_lookup_by_id(ldns_rr_classes, (int)qclass)->name:"??");
 	dp = hints_lookup_root(ie->hints, qclass);
@@ -526,6 +528,61 @@ prime_root(struct module_qstate* qstate, struct iter_env* ie, int id,
 	subiq->dp = dp;
 	/* suppress any target queries. */
 	subiq->num_target_queries = 0; 
+	
+	/* this module stops, our submodule starts, and does the query. */
+	qstate->ext_state[id] = module_wait_subquery;
+	return 1;
+}
+
+/**
+ * Generate and process a stub priming request. This method tests for the
+ * need to prime a stub zone, so it is safe to call for every request.
+ *
+ * @param qstate: the qtstate that triggered the need to prime.
+ * @param iq: iterator query state.
+ * @param ie: iterator global state.
+ * @param id: module id.
+ * @param qname: request name.
+ * @param qclass: the class to prime.
+ * @return true if a priming subrequest was made, false if not. The will only
+ *         issue a priming request if it detects an unprimed stub.
+ */
+static int
+prime_stub(struct module_qstate* qstate, struct iter_qstate* iq, 
+	struct iter_env* ie, int id, uint8_t* qname, uint16_t qclass)
+{
+	/* Lookup the stub hint. This will return null if the stub doesn't 
+	 * need to be re-primed. */
+	struct delegpt* stub_dp = hints_lookup_stub(ie->hints, qname, qclass, 
+		iq->dp);
+	struct module_qstate* subq;
+	struct iter_qstate* subiq;
+	/* The stub (if there is one) does not need priming. */
+	if(!stub_dp)
+		return 0;
+
+	/* Otherwise, we need to (re)prime the stub. */
+	log_nametypeclass("priming stub", stub_dp->name, LDNS_RR_TYPE_NS, 
+		qclass);
+
+	/* Stub priming events start at the QUERYTARGETS state to avoid the
+	 * redundant INIT state processing. */
+	subq = generate_sub_request(stub_dp->name, stub_dp->namelen, 
+		LDNS_RR_TYPE_NS, qclass, qstate, id, 
+		QUERYTARGETS_STATE, PRIME_RESP_STATE);
+	if(!subq) {
+		log_err("out of memory priming stub");
+		qstate->ext_state[id] = module_error;
+		return 1; /* return 1 to make module stop, with error */
+	}
+	subiq = (struct iter_qstate*)subq->minfo[id];
+
+	/* Set the initial delegation point to the hint. */
+	subiq->dp = stub_dp;
+	/* suppress any target queries -- although there wouldn't be anyway, 
+	 * since stub hints never have missing targets.*/
+	subiq->num_target_queries = 0; 
+	subiq->priming_stub = 1;
 	
 	/* this module stops, our submodule starts, and does the query. */
 	qstate->ext_state[id] = module_wait_subquery;
@@ -689,25 +746,50 @@ return nextState(event, req, state, IterEventState.INIT_REQUEST_STATE);
 
 	/* Reset the RD flag. If this is a query restart, then the RD 
 	 * will have been turned off. */
-	 /*
-	 TODO store original flags and original qinfo 
-	qstate->query_flags |= (qstate->orig_query_flags & BIT_RD);
-	*/
+	if(iq->orig_qflags & BIT_RD)
+		qstate->query_flags |= BIT_RD;
+	else	qstate->query_flags &= ~BIT_RD;
 
 	/* Otherwise, set the current delegation point and move on to the 
 	 * next state. */
 	return next_state(qstate, iq, INIT_REQUEST_2_STATE);
 }
 
-#if 0
-/** TODO */
+/** 
+ * Process the second part of the initial request handling. This state
+ * basically exists so that queries that generate root priming events have
+ * the same init processing as ones that do not. Request events that reach
+ * this state must have a valid currentDelegationPoint set.
+ *
+ * This part is primarly handling stub zone priming. Events that reach this
+ * state must have a current delegation point.
+ *
+ * @param qstate: query state.
+ * @param iq: iterator query state.
+ * @param ie: iterator shared global environment.
+ * @param id: module id.
+ * @return true if the event needs more request processing immediately,
+ *         false if not.
+ */
 static int
 processInitRequest2(struct module_qstate* qstate, struct iter_qstate* iq,
 	struct iter_env* ie, int id)
 {
-	return 0;
+	log_nametypeclass("resolving (init part 2): ", qstate->qinfo.qname,
+		qstate->qinfo.qtype, qstate->qinfo.qclass);
+
+	/* Check to see if we need to prime a stub zone. */
+	if(prime_stub(qstate, iq, ie, id, qstate->qinfo.qname, 
+		qstate->qinfo.qclass)) {
+		/* A priming sub request was made */
+		return false;
+	}
+
+	/* most events just get forwarded to the next state. */
+	return next_state(qstate, iq, INIT_REQUEST_3_STATE);
 }
 
+#if 0
 /** TODO */
 static int
 processInitRequest3(struct module_qstate* qstate, struct iter_qstate* iq,
@@ -781,10 +863,10 @@ iter_handle(struct module_qstate* qstate, struct iter_qstate* iq,
 			case INIT_REQUEST_STATE:
 				cont = processInitRequest(qstate, iq, ie, id);
 				break;
-#if 0
 			case INIT_REQUEST_2_STATE:
 				cont = processInitRequest2(qstate, iq, ie, id);
 				break;
+#if 0
 			case INIT_REQUEST_3_STATE:
 				cont = processInitRequest3(qstate, iq, ie, id);
 				break;
