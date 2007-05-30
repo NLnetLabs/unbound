@@ -97,6 +97,8 @@ qstate_free(struct worker* worker, struct module_qstate* qstate)
 	if(qstate->parent) {
 		module_subreq_remove(qstate);
 		free(qstate);
+	} else {
+		region_destroy(qstate->region);
 	}
 }
 
@@ -159,40 +161,66 @@ replyerror(int r, struct work_query* w)
 	query_info_clear(&w->state.qinfo);
 }
 
+/** init qstate module states */
+static void
+set_extstates_initial(struct worker* worker, struct module_qstate* qstate)
+{
+	int i;
+	for(i=0; i<worker->daemon->num_modules; i++)
+		qstate->ext_state[i] = module_state_initial;
+}
+
 /** process incoming request */
 static void 
 worker_process_query(struct worker* worker, struct work_query* w, 
 	struct module_qstate* qstate, enum module_ev event, 
 	struct outbound_entry* entry) 
 {
-	int i;
 	enum module_ext_state s;
 	if(event == module_event_new) {
 		qstate->curmod = 0;
-		for(i=0; i<worker->daemon->num_modules; i++)
-			qstate->ext_state[i] = module_state_initial;
+		set_extstates_initial(worker, qstate);
 	}
 	/* allow current module to run */
-	(*worker->daemon->modfunc[qstate->curmod]->operate)(qstate, event,
-		qstate->curmod, entry);
-	s = qstate->ext_state[qstate->curmod];
-	/* TODO examine results, start further modules, etc.
-	 * assume it went to sleep
-	 */
-	region_free_all(worker->scratchpad);
-	/* subrequest done */
-	/* TODO properly delete subquery */
-	if(s == module_error && qstate->parent) {
-		qstate_free(worker, qstate);
-		worker_process_query(worker, w, qstate->parent, 
-			module_event_error, NULL);
-		return;
-	}
-	if(s == module_finished && qstate->parent) {
-		qstate_free(worker, qstate);
-		worker_process_query(worker, w, qstate->parent, 
-			module_event_subq_done, NULL);
-		return;
+	/* loops for subqueries or parent queries. */
+	while(1) {
+		(*worker->daemon->modfunc[qstate->curmod]->operate)(qstate, 
+			event, qstate->curmod, entry);
+		region_free_all(worker->scratchpad);
+		s = qstate->ext_state[qstate->curmod];
+		/* examine results, start further modules, etc. */
+		if(s == module_wait_subquery) {
+			if(!qstate->subquery_first) {
+				log_err("module exit wait subq, but no subq");
+				s = module_error;
+			} else {
+				/* start submodule */
+				qstate = qstate->subquery_first;
+				set_extstates_initial(worker, qstate);
+				event = module_event_pass;
+				entry = NULL;
+				continue;
+			}
+		}
+
+		/* subrequest done */
+		if(s == module_error && qstate->parent) {
+			struct module_qstate* up = qstate->parent;
+			qstate_free(worker, qstate);
+			qstate = up;
+			entry = NULL;
+			event = module_event_error;
+			continue;
+		}
+		if(s == module_finished && qstate->parent) {
+			struct module_qstate* up = qstate->parent;
+			qstate_free(worker, qstate);
+			qstate = up;
+			entry = NULL;
+			event = module_event_subq_done;
+			continue;
+		}
+		break;
 	}
 	/* request done */
 	if(s == module_error) {

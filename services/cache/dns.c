@@ -44,6 +44,7 @@
 #include "services/cache/rrset.h"
 #include "util/data/msgreply.h"
 #include "util/data/packed_rrset.h"
+#include "util/data/dname.h"
 #include "util/module.h"
 #include "util/net_help.h"
 #include "util/region-allocator.h"
@@ -224,6 +225,9 @@ dns_cache_find_delegation(struct module_env* env, uint8_t* qname,
 	/* add NS entries */
 	for(i=0; i<nsdata->count; i++) {
 		if(nsdata->rr_len[i] < 2+1) continue; /* len + root label */
+		if(dname_valid(nsdata->rr_data[i]+2, nsdata->rr_len[i]-2) != 
+			(size_t)ldns_read_uint16(nsdata->rr_data[i])-2)
+			continue; /* bad format */
 		/* add rdata of NS (= wirefmt dname), skip rdatalen bytes */
 		if(!delegpt_add_ns(dp, region, nsdata->rr_data[i]+2))
 			log_err("find_delegation: addns out of memory");

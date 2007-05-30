@@ -53,6 +53,8 @@
 #define BIT_CD 0x0010
 /** QR flag */
 #define BIT_QR 0x8000
+/** get RCODE bits from uint16 flags */
+#define FLAGS_GET_RCODE(f) ((f) & 0xf)
 
 /** timeout in seconds for UDP queries to auth servers. TODO: proper rtt */
 #define UDP_QUERY_TIMEOUT 4

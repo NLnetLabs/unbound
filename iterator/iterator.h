@@ -45,8 +45,8 @@
 #include "services/outbound_list.h"
 struct module_func_block;
 struct delegpt;
-struct packed_rrset_list;
 struct iter_hints;
+struct iter_prep_list;
 
 /** max number of query restarts. Determines max number of CNAME chain. */
 #define MAX_RESTART_COUNT       8
@@ -159,13 +159,18 @@ struct iter_qstate {
 	 */
 	enum iter_state final_state;
 
+	/**
+	 * The response
+	 */
+	struct dns_msg* response;
+
 	/** 
 	 * This is a list of RRsets that must be prepended to the 
 	 * ANSWER section of a response before being sent upstream.
 	 */
-	struct packed_rrset_list* prepend_list;
+	struct iter_prep_list* prepend_list;
 	/** Last element of the prepend list */
-	struct packed_rrset_list* prepend_last;
+	struct iter_prep_list* prepend_last;
 
 	/** original query name - if not NULL, malloced and before CNAME */
 	uint8_t* orig_qname;
@@ -207,6 +212,16 @@ struct iter_qstate {
 
 	/** list of pending queries to authoritative servers. */
 	struct outbound_list outlist;
+};
+
+/**
+ * List of prepend items
+ */
+struct iter_prep_list {
+	/** next in list */
+	struct iter_prep_list* next;
+	/** rrset */
+	struct ub_packed_rrset_key* rrset;
 };
 
 /**

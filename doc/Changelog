@@ -2,6 +2,10 @@
 	- removed FLAG_CD from message and rrset caches. This was useful for
 	  an agnostic forwarder, but not for a sophisticated (trust value per
 	  rrset enabled) cache.
+	- iterator reponse typing.
+	- iterator cname handle.
+	- iterator prime start.
+	- subquery work.
 
 29 May 2007: Wouter
 	- routines to lock and unlock array of rrsets moved to cache/rrset.

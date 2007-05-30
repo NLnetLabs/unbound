@@ -190,3 +190,26 @@ packed_rrset_ptr_fixup(struct packed_rrset_data* data)
 		nextrdata += data->rr_len[i];
 	}
 }
+
+void 
+get_cname_target(struct ub_packed_rrset_key* rrset, uint8_t** dname, 
+	size_t* dname_len)
+{
+	struct packed_rrset_data* d;
+	size_t len;
+	if(ntohs(rrset->rk.type) != LDNS_RR_TYPE_CNAME)
+		return;
+	d = (struct packed_rrset_data*)rrset->entry.data;
+	if(d->count < 1)
+		return;
+	if(d->rr_len[0] < 3) /* at least rdatalen + 0byte root label */
+		return;
+	len = ldns_read_uint16(d->rr_data[0]);
+	if(len != d->rr_len[0] - sizeof(uint16_t))
+		return;
+	len -= sizeof(uint16_t);
+	if(dname_valid(d->rr_data[0]+sizeof(uint16_t), len) != len)
+		return;
+	*dname = d->rr_data[0]+sizeof(uint16_t);
+	*dname_len = len;
+}

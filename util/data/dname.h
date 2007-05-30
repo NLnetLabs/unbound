@@ -54,6 +54,14 @@
  */
 size_t query_dname_len(ldns_buffer* query);
 
+/**
+ * Determine if dname in memory is correct. no compression ptrs allowed.
+ * @param dname: where dname starts in memory.
+ * @param len: dname is not allowed to exceed this length (i.e. of allocation).
+ * @return length of dname if dname is ok, 0 on a parse error.
+ */
+size_t dname_valid(uint8_t* dname, size_t len);
+
 /** lowercase query dname */
 void query_dname_tolower(uint8_t* dname, size_t len);
 
@@ -164,6 +172,14 @@ int dname_lab_cmp(uint8_t* d1, int labs1, uint8_t* d2, int labs2, int* mlabs);
  * @return true if d1 is a subdomain of d2, but not equal to d2.
  */
 int dname_strict_subdomain(uint8_t* d1, int labs1, uint8_t* d2, int labs2);
+
+/**
+ * Like dname_strict_subdomain but counts labels 
+ * @param d1: domain name, uncompressed wireformat
+ * @param d2: domain name, uncompressed wireformat
+ * @return true if d1 is a subdomain of d2, but not equal to d2.
+ */
+int dname_strict_subdomain_c(uint8_t* d1, uint8_t* d2);
 
 /** 
  * Debug helper. Print wireformat dname to output. 

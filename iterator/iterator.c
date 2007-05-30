@@ -44,11 +44,13 @@
 #include "iterator/iterator.h"
 #include "iterator/iter_utils.h"
 #include "iterator/iter_hints.h"
+#include "iterator/iter_resptype.h"
 #include "services/cache/dns.h"
 #include "util/module.h"
 #include "util/netevent.h"
 #include "util/net_help.h"
 #include "util/region-allocator.h"
+#include "util/data/dname.h"
 
 /** iterator init */
 static int 
@@ -254,6 +256,7 @@ error_response(struct module_qstate* qstate, struct iter_qstate* iq, int rcode)
 	return final_state(qstate, iq);
 }
 
+#if 0
 /** prepend the prepend list in the answer section of dns_msg */
 static int
 iter_prepend(struct iter_qstate* iq, struct dns_msg* msg, 
@@ -324,6 +327,32 @@ iter_encode_respmsg(struct module_qstate* qstate, struct iter_qstate* iq,
 		return;
 	}
 }
+#endif
+
+/**
+ * Add rrset to prepend list
+ * @param qstate: query state.
+ * @param iq: iterator query state.
+ * @param rrset: rrset to add.
+ * @return false on failure (malloc).
+ */
+static int
+iter_add_prepend(struct module_qstate* qstate, struct iter_qstate* iq,
+	struct ub_packed_rrset_key* rrset)
+{
+	struct iter_prep_list* p = (struct iter_prep_list*)region_alloc(
+		qstate->region, sizeof(struct iter_prep_list));
+	if(!p)
+		return 0;
+	p->rrset = rrset;
+	p->next = NULL;
+	/* add at end */
+	if(iq->prepend_last)
+		iq->prepend_last->next = p;
+	else	iq->prepend_list = p;
+	iq->prepend_last = p;
+	return 1;
+}
 
 /**
  * Given a CNAME response (defined as a response containing a CNAME or DNAME
@@ -334,15 +363,174 @@ iter_encode_respmsg(struct module_qstate* qstate, struct iter_qstate* iq,
  * sets the new query name, after following the CNAME/DNAME chain.
  * @param qstate: query state.
  * @param iq: iterator query state.
- * @param ie: iterator shared global environment.
+ * @param msg: the response.
+ * @param mname: returned target new query name.
+ * @param mname_len: length of mname.
+ * @return false on (malloc) error.
  */
-static void
+static int
 handle_cname_response(struct module_qstate* qstate, struct iter_qstate* iq,
-        struct iter_env* ie)
+        struct dns_msg* msg, uint8_t** mname, size_t* mname_len)
 {
+	size_t i;
+	/* Start with the (current) qname. */
+	*mname = qstate->qinfo.qname;
+	*mname_len = qstate->qinfo.qname_len;
 
+	/* Iterate over the ANSWER rrsets in order, looking for CNAMEs and 
+	 * DNAMES. */
+	for(i=0; i<msg->rep->an_numrrsets; i++) {
+		struct ub_packed_rrset_key* r = msg->rep->rrsets[i];
+		/* If there is a (relevant) DNAME, add it to the list.
+		 * We always expect there to be CNAME that was generated 
+		 * by this DNAME following, so we don't process the DNAME 
+		 * directly.  */
+		if(ntohs(r->rk.type) == LDNS_RR_TYPE_DNAME &&
+			dname_strict_subdomain_c(*mname, r->rk.dname)) {
+			if(!iter_add_prepend(qstate, iq, r))
+				return 0;
+			continue;
+		}
+
+		if(ntohs(r->rk.type) == LDNS_RR_TYPE_CNAME &&
+			query_dname_compare(*mname, r->rk.dname) == 0) {
+			/* Add this relevant CNAME rrset to the prepend list.*/
+			if(!iter_add_prepend(qstate, iq, r))
+				return 0;
+			get_cname_target(r, mname, mname_len);
+		}
+
+		/* Other rrsets in the section are ignored. */
+	}
+	return 1;
 }
 
+/**
+ * Generate a subrequest.
+ * Generate a local request event. Local events are tied to this module, and
+ * have a correponding (first tier) event that is waiting for this event to
+ * resolve to continue.
+ *
+ * @param qname The query name for this request.
+ * @param qnamelen length of qname
+ * @param qtype The query type for this request.
+ * @param qclass The query class for this request.
+ * @param qstate The event that is generating this event.
+ * @param id: module id.
+ * @param initial_state The initial response state (normally this
+ *          is QUERY_RESP_STATE, unless it is known that the request won't
+ *          need iterative processing
+ * @param final_state The final state for the response to this
+ *          request.
+ * @return generated subquerystate, or NULL on error (malloc).
+ */
+static struct module_qstate* 
+generate_sub_request(uint8_t* qname, size_t qnamelen, uint16_t qtype, 
+	uint16_t qclass, struct module_qstate* qstate, int id,
+	enum iter_state initial_state, enum iter_state final_state)
+{
+	struct module_qstate* subq = (struct module_qstate*)malloc(
+		sizeof(struct module_qstate));
+	struct iter_qstate* subiq;
+	if(!subq)
+		return NULL;
+	memset(subq, 0, sizeof(*subq));
+	subq->qinfo.qname = memdup(qname, qnamelen);
+	if(!subq->qinfo.qname) {
+		free(subq);
+		return NULL;
+	}
+	subq->qinfo.qname_len = qnamelen;
+	subq->qinfo.qtype = qtype;
+	subq->qinfo.qclass = qclass;
+	subq->query_hash = query_info_hash(&subq->qinfo);
+	subq->query_flags = 0; /* OPCODE QUERY, no flags */
+	subq->edns.udp_size = 65535;
+	subq->buf = qstate->buf;
+	subq->scratch = qstate->scratch;
+	subq->region = region_create(malloc, free);
+	if(!subq->region) {
+		free(subq->qinfo.qname);
+		free(subq);
+		return NULL;
+	}
+	subq->curmod = id;
+	subq->ext_state[id] = module_state_initial;
+	subq->minfo[id] = region_alloc(subq->region, 
+		sizeof(struct iter_qstate));
+	if(!subq->minfo[id]) {
+		region_destroy(subq->region);
+		free(subq->qinfo.qname);
+		free(subq);
+		return NULL;
+	}
+	subq->env = qstate->env;
+	subq->work_info = qstate->work_info;
+	subq->parent = qstate;
+	subq->subquery_next = qstate->subquery_first;
+	qstate->subquery_first = subq;
+
+	subiq = (struct iter_qstate*)subq->minfo[id];
+	memset(subiq, 0, sizeof(*subiq));
+	subiq->num_target_queries = -1; /* default our targetQueries counter. */
+	outbound_list_init(&subiq->outlist);
+	subiq->state = initial_state;
+	subiq->final_state = final_state;
+
+	/* RD should be set only when sending the query back through the INIT
+	 * state. */
+	if(initial_state == INIT_REQUEST_STATE)
+		subq->query_flags |= BIT_RD;
+	/* We set the CD flag so we can send this through the "head" of 
+	 * the resolution chain, which might have a validator. We are 
+	 * uninterested in validating things not on the direct resolution 
+	 * path.  */
+	subq->query_flags |= BIT_CD;
+	
+	return subq;
+}
+
+/**
+ * Generate and send a root priming request.
+ * @param qstate: the qtstate that triggered the need to prime.
+ * @param ie: iterator global state.
+ * @param id: module id.
+ * @param qclass: the class to prime.
+ */
+static int
+prime_root(struct module_qstate* qstate, struct iter_env* ie, int id, 
+	uint16_t qclass)
+{
+	struct delegpt* dp;
+	struct module_qstate* subq;
+	struct iter_qstate* subiq;
+	verbose(VERB_ALGO, "priming <./%s>", 
+		ldns_lookup_by_id(ldns_rr_classes, (int)qclass)?
+		ldns_lookup_by_id(ldns_rr_classes, (int)qclass)->name:"??");
+	dp = hints_lookup_root(ie->hints, qclass);
+	if(!dp) {
+		verbose(VERB_ALGO, "Cannot prime due to lack of hints");
+		return 0;
+	}
+	/* Priming requests start at the QUERYTARGETS state, skipping 
+	 * the normal INIT state logic (which would cause an infloop). */
+	subq = generate_sub_request((uint8_t*)"\000", 1, LDNS_RR_TYPE_NS, 
+		qclass, qstate, id, QUERYTARGETS_STATE, PRIME_RESP_STATE);
+	if(!subq) {
+		log_err("out of memory priming root");
+		return 0;
+	}
+	subiq = (struct iter_qstate*)subq->minfo[id];
+
+	/* Set the initial delegation point to the hint. */
+	subiq->dp = dp;
+	/* suppress any target queries. */
+	subiq->num_target_queries = 0; 
+	
+	/* this module stops, our submodule starts, and does the query. */
+	qstate->ext_state[id] = module_wait_subquery;
+	return 1;
+}
 
 /** 
  * Process the initial part of the request handling. This state roughly
@@ -358,12 +546,13 @@ handle_cname_response(struct module_qstate* qstate, struct iter_qstate* iq,
  * @param qstate: query state.
  * @param iq: iterator query state.
  * @param ie: iterator shared global environment.
+ * @param id: module id.
  * @return true if the event needs more request processing immediately,
  *         false if not.
  */
 static int
 processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
-	struct iter_env* ie)
+	struct iter_env* ie, int id)
 {
 	int d;
 	uint8_t* delname;
@@ -404,14 +593,25 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 		qstate->qinfo.qclass, qstate->region, qstate->scratch);
 	if(msg) {
 		/* handle positive cache response */
-		/*
-		enum response_type type = type_cache_response(msg);
+		enum response_type type = response_type_from_cache(msg, 
+			&qstate->qinfo);
 
-		if(type == RESPONSE_TYPE_CNAME) */ {
+		if(type == RESPONSE_TYPE_CNAME) {
+			uint8_t* sname = 0;
+			size_t slen = 0;
 			verbose(VERB_ALGO, "returning CNAME response from "
 				"cache");
-			/* handleCnameresponse  &iq->orig_qname, &iq->orig_qname_len */
-			/* his *is* a query restart, even if it is a cheap 
+			if(!iq->orig_qname) {
+				iq->orig_qname = qstate->qinfo.qname;
+				iq->orig_qnamelen = qstate->qinfo.qname_len;
+			}
+			if(!handle_cname_response(qstate, iq, msg, 
+				&sname, &slen))
+				return error_response(qstate, iq,
+					LDNS_RCODE_SERVFAIL);
+			qstate->qinfo.qname = sname;
+			qstate->qinfo.qname_len = slen;
+			/* This *is* a query restart, even if it is a cheap 
 			 * one. */
 			iq->query_restart_count++;
 			return next_state(qstate, iq, INIT_REQUEST_STATE);
@@ -419,13 +619,39 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 
 		/* it is an answer, response, to final state */
 		verbose(VERB_ALGO, "returning answer from cache.");
-		iter_encode_respmsg(qstate, iq, msg);
+		iq->response = msg;
 		return final_state(qstate, iq);
 	}
 	
 	/* TODO attempt to forward the request */
+	/* if (forwardRequest(event, state, req))
+	   {
+		// the request has been forwarded.
+		// forwarded requests need to be immediately sent to the 
+		// next state, QUERYTARGETS.
+		return nextState(event, req, state, 
+			IterEventState.QUERYTARGETS_STATE);
+		}
+	*/
 
 	/* TODO attempt to find a covering DNAME in the cache */
+	/* resp = mDNSCache.findDNAME(req.getQName(), req.getQType(), req
+	        .getQClass());
+	    if (resp != null)
+	{
+log.trace("returning synthesized CNAME response from cache: " + resp);
+Name cname = handleCNAMEResponse(state, req, resp);
+// At this point, we just initiate the query restart.
+// This might not be a query restart situation (e.g., qtype == CNAME),
+// but
+// the answer returned from findDNAME() is likely to be one that we
+// don't want to return.
+// Thus we allow the cache and other resolution mojo kick in regardless.
+req.setQName(cname);
+state.queryRestartCount++;
+return nextState(event, req, state, IterEventState.INIT_REQUEST_STATE);
+}
+	*/
 
 	/* Resolver Algorithm Step 2 -- find the "best" servers. */
 
@@ -435,7 +661,7 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 	delname = qstate->qinfo.qname;
 	delnamelen = qstate->qinfo.qname_len;
 	if(qstate->qinfo.qtype == LDNS_RR_TYPE_DS && delname[0] != 0) {
-		/* do not adjust root label */
+		/* do not adjust root label, remove first label from delname */
 		size_t lablen = delname[0] + 1;
 		delname += lablen;
 		delnamelen -= lablen;
@@ -451,11 +677,8 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 	if(iq->dp == NULL) {
 		/* Note that the result of this will set a new
 		 * DelegationPoint based on the result of priming. */
-
-		 /* TODO
-		if(!prime_root(qstate, iq, ie, qstate->qinfo.qclass))
-			return error_response(qstate, iq, LDNS_RCODE_SERVFAIL);
-			*/
+		if(!prime_root(qstate, ie, id, qstate->qinfo.qclass))
+			return error_response(qstate, iq, LDNS_RCODE_REFUSED);
 
 		/* priming creates an sends a subordinate query, with 
 		 * this query as the parent. So further processing for 
@@ -480,7 +703,7 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 /** TODO */
 static int
 processInitRequest2(struct module_qstate* qstate, struct iter_qstate* iq,
-	struct iter_env* ie)
+	struct iter_env* ie, int id)
 {
 	return 0;
 }
@@ -488,7 +711,7 @@ processInitRequest2(struct module_qstate* qstate, struct iter_qstate* iq,
 /** TODO */
 static int
 processInitRequest3(struct module_qstate* qstate, struct iter_qstate* iq,
-	struct iter_env* ie)
+	struct iter_env* ie, int id)
 {
 	return 0;
 }
@@ -496,7 +719,7 @@ processInitRequest3(struct module_qstate* qstate, struct iter_qstate* iq,
 /** TODO */
 static int
 processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
-	struct iter_env* ie)
+	struct iter_env* ie, int id)
 {
 	return 0;
 }
@@ -504,7 +727,7 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 /** TODO */
 static int
 processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
-	struct iter_env* ie)
+	struct iter_env* ie, int id)
 {
 	return 0;
 }
@@ -512,7 +735,7 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 /** TODO */
 static int
 processPrimeResponse(struct module_qstate* qstate, struct iter_qstate* iq,
-	struct iter_env* ie)
+	struct iter_env* ie, int id)
 {
 	return 0;
 }
@@ -520,7 +743,7 @@ processPrimeResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 /** TODO */
 static int
 processTargetResponse(struct module_qstate* qstate, struct iter_qstate* iq,
-	struct iter_env* ie)
+	struct iter_env* ie, int id)
 {
 	return 0;
 }
@@ -528,7 +751,7 @@ processTargetResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 /** TODO */
 static int
 processFinished(struct module_qstate* qstate, struct iter_qstate* iq,
-	struct iter_env* ie)
+	struct iter_env* ie, int id)
 {
 	return 0;
 }
@@ -544,10 +767,11 @@ processFinished(struct module_qstate* qstate, struct iter_qstate* iq,
  * @param qstate: query state.
  * @param ie: iterator shared global environment.
  * @param iq: iterator query state.
+ * @param id: module id.
  */
 static void
 iter_handle(struct module_qstate* qstate, struct iter_qstate* iq,
-	struct iter_env* ie)
+	struct iter_env* ie, int id)
 {
 	int cont = 1;
 	while(cont) {
@@ -555,29 +779,29 @@ iter_handle(struct module_qstate* qstate, struct iter_qstate* iq,
 			iter_state_to_string(iq->state));
 		switch(iq->state) {
 			case INIT_REQUEST_STATE:
-				cont = processInitRequest(qstate, iq, ie);
+				cont = processInitRequest(qstate, iq, ie, id);
 				break;
 #if 0
 			case INIT_REQUEST_2_STATE:
-				cont = processInitRequest2(qstate, iq, ie);
+				cont = processInitRequest2(qstate, iq, ie, id);
 				break;
 			case INIT_REQUEST_3_STATE:
-				cont = processInitRequest3(qstate, iq, ie);
+				cont = processInitRequest3(qstate, iq, ie, id);
 				break;
 			case QUERYTARGETS_STATE:
-				cont = processQueryTargets(qstate, iq, ie);
+				cont = processQueryTargets(qstate, iq, ie, id);
 				break;
 			case QUERY_RESP_STATE:
-				cont = processQueryResponse(qstate, iq, ie);
+				cont = processQueryResponse(qstate, iq, ie, id);
 				break;
 			case PRIME_RESP_STATE:
-				cont = processPrimeResponse(qstate, iq, ie);
+				cont = processPrimeResponse(qstate, iq, ie, id);
 				break;
 			case TARGET_RESP_STATE:
-				cont = processTargetResponse(qstate, iq, ie);
+				cont = processTargetResponse(qstate, iq, ie, id);
 				break;
 			case FINISHED_STATE:
-				cont = processFinished(qstate, iq, ie);
+				cont = processFinished(qstate, iq, ie, id);
 				break;
 #endif
 			default:
@@ -595,28 +819,29 @@ iter_handle(struct module_qstate* qstate, struct iter_qstate* iq,
  * @param qstate: query state.
  * @param ie: iterator shared global environment.
  * @param iq: iterator query state.
+ * @param id: module id.
  */
 static void
 process_request(struct module_qstate* qstate, struct iter_qstate* iq,
-	struct iter_env* ie)
+	struct iter_env* ie, int id)
 {
 	/* external requests start in the INIT state, and finish using the
 	 * FINISHED state. */
 	iq->state = INIT_REQUEST_STATE;
 	iq->final_state = FINISHED_STATE;
 	verbose(VERB_ALGO, "process_request: new external request event");
-	iter_handle(qstate, iq, ie);
+	iter_handle(qstate, iq, ie, id);
 }
 
 /** process authoritative server reply */
 static void
 process_response(struct module_qstate* qstate, struct iter_qstate* iq, 
-	struct iter_env* ie, struct outbound_entry* outbound)
+	struct iter_env* ie, int id, struct outbound_entry* outbound)
 {
 	verbose(VERB_ALGO, "process_response: new external response event");
 	/* TODO outbound: use it for scrubbing and so on */
 	iq->state = QUERY_RESP_STATE;
-	iter_handle(qstate, iq, ie);
+	iter_handle(qstate, iq, ie, id);
 }
 
 /** iterator operate on a query */
@@ -625,7 +850,7 @@ iter_operate(struct module_qstate* qstate, enum module_ev event, int id,
 	struct outbound_entry* outbound)
 {
 	struct iter_env* ie = (struct iter_env*)qstate->env->modinfo[id];
-	struct iter_qstate* iq;
+	struct iter_qstate* iq = (struct iter_qstate*)qstate->minfo[id];
 	verbose(VERB_ALGO, "iterator[module %d] operate: extstate:%s event:%s", 
 		id, strextstate(qstate->ext_state[id]), strmodulevent(event));
 	if(ie->fwd_addrlen != 0) {
@@ -633,19 +858,22 @@ iter_operate(struct module_qstate* qstate, enum module_ev event, int id,
 		return;
 	}
 	/* perform iterator state machine */
-	if(event == module_event_new) {
+	if(event == module_event_new && iq == NULL) {
 		log_info("iter state machine");
 		if(!iter_new(qstate, id)) {
 			qstate->ext_state[id] = module_error;
 			return;
 		}
 		iq = (struct iter_qstate*)qstate->minfo[id];
-		process_request(qstate, iq, ie);
+		process_request(qstate, iq, ie, id);
 		return;
 	}
-	iq = (struct iter_qstate*)qstate->minfo[id];
+	if(event == module_event_pass) {
+		iter_handle(qstate, iq, ie, id);
+		return;
+	}
 	if(event == module_event_reply) {
-		process_response(qstate, iq, ie, outbound);
+		process_response(qstate, iq, ie, id, outbound);
 		return;
 	}
 	/* TODO: uhh */
@@ -662,6 +890,11 @@ iter_clear(struct module_qstate* qstate, int id)
 	if(!qstate)
 		return;
 	iq = (struct iter_qstate*)qstate->minfo[id];
+	if(iq->orig_qname) {
+		/* so the correct qname gets free'd */
+		qstate->qinfo.qname = iq->orig_qname;
+		qstate->qinfo.qname_len = iq->orig_qnamelen;
+	}
 	outbound_list_clear(&iq->outlist);
 	qstate->minfo[id] = NULL;
 }

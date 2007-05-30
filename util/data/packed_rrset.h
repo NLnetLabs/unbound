@@ -297,4 +297,17 @@ hashvalue_t rrset_key_hash(struct packed_rrset_key* key);
  */
 void packed_rrset_ptr_fixup(struct packed_rrset_data* data);
 
+/**
+ * Utility procedure to extract CNAME target name from its rdata.
+ * Failsafes; it will change passed dname to a valid dname or do nothing.
+ * @param rrset: the rrset structure. Must be a CNAME. 
+ *	Only first RR is used (multiple RRs are technically illegal anyway).
+ * @param dname: this pointer is updated to point into the cname rdata.
+ *	If a failsafe fails, nothing happens to the pointer (such as the
+ *	rdata was not a valid dname, not a CNAME, ...).
+ * @param dname_len: length of dname is returned.
+ */
+void get_cname_target(struct ub_packed_rrset_key* rrset, uint8_t** dname, 
+	size_t* dname_len);
+
 #endif /* UTIL_DATA_PACKED_RRSET_H */
