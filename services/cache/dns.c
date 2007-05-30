@@ -96,151 +96,6 @@ dns_cache_store_msg(struct module_env* env, struct query_info* qinfo,
 	slabhash_insert(env->msg_cache, hash, &e->entry, rep, env->alloc);
 }
 
-/** find closest NS and returns the rrset (locked) */
-static struct ub_packed_rrset_key*
-find_deleg_ns(struct module_env* env, uint8_t* qname, size_t qnamelen, 
-	uint16_t qclass, uint32_t now)
-{
-	struct ub_packed_rrset_key *rrset;
-	uint8_t lablen;
-
-	/* snip off front part of qname until NS is found */
-	while(qnamelen > 0) {
-		if((rrset = rrset_cache_lookup(env->rrset_cache, qname, 
-			qnamelen, LDNS_RR_TYPE_NS, qclass, 0, now, 0)))
-			return rrset;
-
-		/* snip off front label */
-		lablen = *qname;
-		qname += lablen + 1;
-		qnamelen -= lablen + 1;
-	}
-	return NULL;
-}
-
-/** add A records to delegation */
-static int
-add_a(struct ub_packed_rrset_key* ak, struct delegpt* dp, 
-	struct region* region)
-{
-	struct packed_rrset_data* d=(struct packed_rrset_data*)ak->entry.data;
-	size_t i;
-	struct sockaddr_in sa;
-	socklen_t len = (socklen_t)sizeof(sa);
-	memset(&sa, 0, len);
-	sa.sin_family = AF_INET;
-	sa.sin_port = (in_port_t)htons(UNBOUND_DNS_PORT);
-	for(i=0; i<d->count; i++) {
-		if(d->rr_len[i] != 2 + INET_SIZE)
-			continue;
-		memmove(&sa.sin_addr, d->rr_data[i]+2, INET_SIZE);
-		log_addr("adding A to deleg",  (struct sockaddr_storage*)&sa,
-			len);
-		if(!delegpt_add_target(dp, region, ak->rk.dname, 
-			ak->rk.dname_len, (struct sockaddr_storage*)&sa,
-			len))
-			return 0;
-	}
-	return 1;
-}
-
-/** add AAAA records to delegation */
-static int
-add_aaaa(struct ub_packed_rrset_key* ak, struct delegpt* dp, 
-	struct region* region)
-{
-	struct packed_rrset_data* d=(struct packed_rrset_data*)ak->entry.data;
-	size_t i;
-	struct sockaddr_in6 sa;
-	socklen_t len = (socklen_t)sizeof(sa);
-	memset(&sa, 0, len);
-	sa.sin6_family = AF_INET6;
-	sa.sin6_port = (in_port_t)htons(UNBOUND_DNS_PORT);
-	for(i=0; i<d->count; i++) {
-		if(d->rr_len[i] != 2 + INET6_SIZE) /* rdatalen + len of IP6 */
-			continue;
-		memmove(&sa.sin6_addr, d->rr_data[i]+2, INET6_SIZE);
-		log_addr("adding AAAA to deleg",  (struct sockaddr_storage*)&sa,
-			len);
-		if(!delegpt_add_target(dp, region, ak->rk.dname, 
-			ak->rk.dname_len, (struct sockaddr_storage*)&sa,
-			len))
-			return 0;
-	}
-	return 1;
-}
-
-/** find and add A and AAAA records for nameservers in delegpt */
-static int
-find_add_addrs(struct module_env* env, uint16_t qclass, struct region* region,
-	struct delegpt* dp, uint32_t now)
-{
-	struct delegpt_ns* ns;
-	struct ub_packed_rrset_key* akey;
-	for(ns = dp->nslist; ns; ns = ns->next) {
-		akey = rrset_cache_lookup(env->rrset_cache, ns->name, 
-			ns->namelen, LDNS_RR_TYPE_A, qclass, 0, now, 0);
-		if(akey) {
-			if(!add_a(akey, dp, region)) {
-				lock_rw_unlock(&akey->entry.lock);
-				return 0;
-			}
-			lock_rw_unlock(&akey->entry.lock);
-		}
-		akey = rrset_cache_lookup(env->rrset_cache, ns->name, 
-			ns->namelen, LDNS_RR_TYPE_AAAA, qclass, 0, now, 0);
-		if(akey) {
-			if(!add_aaaa(akey, dp, region)) {
-				lock_rw_unlock(&akey->entry.lock);
-				return 0;
-			}
-			lock_rw_unlock(&akey->entry.lock);
-		}
-	}
-	return 1;
-}
-
-struct delegpt* 
-dns_cache_find_delegation(struct module_env* env, uint8_t* qname, 
-	size_t qnamelen, uint16_t qclass, struct region* region)
-{
-	/* try to find closest NS rrset */
-	struct ub_packed_rrset_key* nskey;
-	struct packed_rrset_data* nsdata;
-	struct delegpt* dp;
-	size_t i;
-	uint32_t now = (uint32_t)time(NULL);
-
-	nskey = find_deleg_ns(env, qname, qnamelen, qclass, now);
-	if(!nskey) /* hope the caller has hints to prime or something */
-		return NULL;
-	nsdata = (struct packed_rrset_data*)nskey->entry.data;
-	/* got the NS key, create delegation point */
-	dp = delegpt_create(region);
-	if(!dp || !delegpt_set_name(dp, region, nskey->rk.dname)) {
-		lock_rw_unlock(&nskey->entry.lock);
-		log_err("find_delegation: out of memory");
-		return NULL;
-	}
-	/* add NS entries */
-	for(i=0; i<nsdata->count; i++) {
-		if(nsdata->rr_len[i] < 2+1) continue; /* len + root label */
-		if(dname_valid(nsdata->rr_data[i]+2, nsdata->rr_len[i]-2) != 
-			(size_t)ldns_read_uint16(nsdata->rr_data[i])-2)
-			continue; /* bad format */
-		/* add rdata of NS (= wirefmt dname), skip rdatalen bytes */
-		if(!delegpt_add_ns(dp, region, nsdata->rr_data[i]+2))
-			log_err("find_delegation: addns out of memory");
-	}
-	/* find and add A entries */
-	lock_rw_unlock(&nskey->entry.lock); /* first unlock before next lookup*/
-	if(!find_add_addrs(env, qclass, region, dp, now))
-		log_err("find_delegation: addrs out of memory");
-	log_info("dns_cache_find_delegation returns delegpt");
-	delegpt_log(dp);
-	return dp;
-}
-
 /** allocate rrset in region - no more locks needed */
 static struct ub_packed_rrset_key*
 copy_rrset(struct ub_packed_rrset_key* key, struct region* region, 
@@ -274,6 +129,260 @@ copy_rrset(struct ub_packed_rrset_key* key, struct region* region,
 		d->rr_ttl[i] -= now;
 	d->ttl -= now;
 	return ck;
+}
+
+/** find closest NS and returns the rrset (locked) */
+static struct ub_packed_rrset_key*
+find_deleg_ns(struct module_env* env, uint8_t* qname, size_t qnamelen, 
+	uint16_t qclass, uint32_t now)
+{
+	struct ub_packed_rrset_key *rrset;
+	uint8_t lablen;
+
+	/* snip off front part of qname until NS is found */
+	while(qnamelen > 0) {
+		if((rrset = rrset_cache_lookup(env->rrset_cache, qname, 
+			qnamelen, LDNS_RR_TYPE_NS, qclass, 0, now, 0)))
+			return rrset;
+
+		/* snip off front label */
+		lablen = *qname;
+		qname += lablen + 1;
+		qnamelen -= lablen + 1;
+	}
+	return NULL;
+}
+
+/** add addr to additional section */
+static void
+addr_to_additional(struct ub_packed_rrset_key* rrset, struct region* region,
+	struct dns_msg* msg, uint32_t now)
+{
+	if((msg->rep->rrsets[msg->rep->rrset_count] = 
+		copy_rrset(rrset, region, now))) {
+		msg->rep->ar_numrrsets++;
+		msg->rep->rrset_count++;
+	}
+}
+
+/** add A records to delegation */
+static int
+add_a(struct ub_packed_rrset_key* ak, struct delegpt* dp, 
+	struct region* region, struct dns_msg** msg, uint32_t now)
+{
+	struct packed_rrset_data* d=(struct packed_rrset_data*)ak->entry.data;
+	size_t i;
+	struct sockaddr_in sa;
+	socklen_t len = (socklen_t)sizeof(sa);
+	memset(&sa, 0, len);
+	sa.sin_family = AF_INET;
+	sa.sin_port = (in_port_t)htons(UNBOUND_DNS_PORT);
+	for(i=0; i<d->count; i++) {
+		if(d->rr_len[i] != 2 + INET_SIZE)
+			continue;
+		memmove(&sa.sin_addr, d->rr_data[i]+2, INET_SIZE);
+		log_addr("adding A to deleg",  (struct sockaddr_storage*)&sa,
+			len);
+		if(!delegpt_add_target(dp, region, ak->rk.dname, 
+			ak->rk.dname_len, (struct sockaddr_storage*)&sa,
+			len))
+			return 0;
+	}
+	if(msg)
+		addr_to_additional(ak, region, *msg, now);
+	return 1;
+}
+
+/** add AAAA records to delegation */
+static int
+add_aaaa(struct ub_packed_rrset_key* ak, struct delegpt* dp, 
+	struct region* region, struct dns_msg** msg, uint32_t now)
+{
+	struct packed_rrset_data* d=(struct packed_rrset_data*)ak->entry.data;
+	size_t i;
+	struct sockaddr_in6 sa;
+	socklen_t len = (socklen_t)sizeof(sa);
+	memset(&sa, 0, len);
+	sa.sin6_family = AF_INET6;
+	sa.sin6_port = (in_port_t)htons(UNBOUND_DNS_PORT);
+	for(i=0; i<d->count; i++) {
+		if(d->rr_len[i] != 2 + INET6_SIZE) /* rdatalen + len of IP6 */
+			continue;
+		memmove(&sa.sin6_addr, d->rr_data[i]+2, INET6_SIZE);
+		log_addr("adding AAAA to deleg",  (struct sockaddr_storage*)&sa,
+			len);
+		if(!delegpt_add_target(dp, region, ak->rk.dname, 
+			ak->rk.dname_len, (struct sockaddr_storage*)&sa,
+			len))
+			return 0;
+	}
+	if(msg)
+		addr_to_additional(ak, region, *msg, now);
+	return 1;
+}
+
+/** find and add A and AAAA records for nameservers in delegpt */
+static int
+find_add_addrs(struct module_env* env, uint16_t qclass, struct region* region,
+	struct delegpt* dp, uint32_t now, struct dns_msg** msg)
+{
+	struct delegpt_ns* ns;
+	struct ub_packed_rrset_key* akey;
+	for(ns = dp->nslist; ns; ns = ns->next) {
+		akey = rrset_cache_lookup(env->rrset_cache, ns->name, 
+			ns->namelen, LDNS_RR_TYPE_A, qclass, 0, now, 0);
+		if(akey) {
+			if(!add_a(akey, dp, region, msg, now)) {
+				lock_rw_unlock(&akey->entry.lock);
+				return 0;
+			}
+			lock_rw_unlock(&akey->entry.lock);
+		}
+		akey = rrset_cache_lookup(env->rrset_cache, ns->name, 
+			ns->namelen, LDNS_RR_TYPE_AAAA, qclass, 0, now, 0);
+		if(akey) {
+			if(!add_aaaa(akey, dp, region, msg, now)) {
+				lock_rw_unlock(&akey->entry.lock);
+				return 0;
+			}
+			lock_rw_unlock(&akey->entry.lock);
+		}
+	}
+	return 1;
+}
+
+/** Add NS records to delegation */
+static void
+add_ns(struct packed_rrset_data* nsdata, struct delegpt* dp, 
+	struct region* region)
+{
+	size_t i;
+	for(i=0; i<nsdata->count; i++) {
+		if(nsdata->rr_len[i] < 2+1) continue; /* len + root label */
+		if(dname_valid(nsdata->rr_data[i]+2, nsdata->rr_len[i]-2) != 
+			(size_t)ldns_read_uint16(nsdata->rr_data[i])-2)
+			continue; /* bad format */
+		/* add rdata of NS (= wirefmt dname), skip rdatalen bytes */
+		if(!delegpt_add_ns(dp, region, nsdata->rr_data[i]+2))
+			log_err("find_delegation: addns out of memory");
+	}
+}
+
+/** find and add DS or NSEC to delegation msg */
+static void
+find_add_ds(struct module_env* env, struct region* region, 
+	struct dns_msg* msg, struct delegpt* dp, uint32_t now)
+{
+	/* Lookup the DS or NSEC at the delegation point. */
+	struct ub_packed_rrset_key* rrset = rrset_cache_lookup(
+		env->rrset_cache, dp->name, dp->namelen, LDNS_RR_TYPE_DS, 
+		msg->qinfo.qclass, 0, now, 0);
+	if(!rrset) {
+		/* NOTE: this won't work for alternate NSEC schemes 
+		 *	(opt-in, NSEC3) */
+		rrset = rrset_cache_lookup(env->rrset_cache, dp->name, 
+			dp->namelen, LDNS_RR_TYPE_NSEC, msg->qinfo.qclass, 
+			0, now, 0);
+		/* Note: the PACKED_RRSET_NSEC_AT_APEX flag is not used.
+		 * since this is a referral, we need the NSEC at the parent
+		 * side of the zone cut, not the NSEC at apex side. */
+	}
+	if(rrset) {
+		/* add it to auth section. This is the second rrset. */
+		if((msg->rep->rrsets[msg->rep->rrset_count] = 
+			copy_rrset(rrset, region, now))) {
+			msg->rep->ns_numrrsets++;
+			msg->rep->rrset_count++;
+		}
+		lock_rw_unlock(&rrset->entry.lock);
+	}
+}
+
+/** create referral message with NS and query */
+static struct dns_msg*
+create_msg(uint8_t* qname, size_t qnamelen, uint16_t qtype, uint16_t qclass, 
+	struct region* region, struct ub_packed_rrset_key* nskey, 
+	struct packed_rrset_data* nsdata, uint32_t now)
+{
+	struct dns_msg* msg = (struct dns_msg*)region_alloc(region,
+		sizeof(struct dns_msg));
+	if(!msg)
+		return NULL;
+	msg->qinfo.qname = region_alloc_init(region, qname, qnamelen);
+	if(!msg->qinfo.qname)
+		return NULL;
+	msg->qinfo.qname_len = qnamelen;
+	msg->qinfo.qtype = qtype;
+	msg->qinfo.qclass = qclass;
+	/* non-packed reply_info, because it needs to grow the array */
+	msg->rep = (struct reply_info*)region_alloc(region, 
+		sizeof(struct reply_info)-sizeof(struct rrset_ref));
+	if(!msg->rep)
+		return NULL;
+	memset(msg->rep, 0, 
+		sizeof(struct reply_info)-sizeof(struct rrset_ref));
+	msg->rep->flags = BIT_QR; /* with QR, no AA */
+	msg->rep->qdcount = 1;
+	/* allocate the array to as much as we could need:
+	 *	NS rrset + DS/NSEC rrset +
+	 *	A rrset for every NS RR
+	 *	AAAA rrset for every NS RR
+	 */
+	msg->rep->rrsets = (struct ub_packed_rrset_key**)region_alloc(region,
+		(2 + nsdata->count*2)*sizeof(struct ub_packed_rrset_key*));
+	if(!msg->rep->rrsets)
+		return NULL;
+	msg->rep->rrsets[0] = copy_rrset(nskey, region, now);
+	if(!msg->rep->rrsets[0])
+		return NULL;
+	msg->rep->ns_numrrsets++;
+	msg->rep->rrset_count++;
+	return msg;
+}
+
+struct delegpt* 
+dns_cache_find_delegation(struct module_env* env, uint8_t* qname, 
+	size_t qnamelen, uint16_t qtype, uint16_t qclass, 
+	struct region* region, struct dns_msg** msg)
+{
+	/* try to find closest NS rrset */
+	struct ub_packed_rrset_key* nskey;
+	struct packed_rrset_data* nsdata;
+	struct delegpt* dp;
+	uint32_t now = (uint32_t)time(NULL);
+
+	nskey = find_deleg_ns(env, qname, qnamelen, qclass, now);
+	if(!nskey) /* hope the caller has hints to prime or something */
+		return NULL;
+	nsdata = (struct packed_rrset_data*)nskey->entry.data;
+	/* got the NS key, create delegation point */
+	dp = delegpt_create(region);
+	if(!dp || !delegpt_set_name(dp, region, nskey->rk.dname)) {
+		lock_rw_unlock(&nskey->entry.lock);
+		log_err("find_delegation: out of memory");
+		return NULL;
+	}
+	/* create referral message */
+	if(msg) {
+		*msg = create_msg(qname, qnamelen, qtype, qclass, region, 
+			nskey, nsdata, now);
+		if(!*msg) {
+			lock_rw_unlock(&nskey->entry.lock);
+			log_err("find_delegation: out of memory");
+			return NULL;
+		}
+	}
+	add_ns(nsdata, dp, region);
+	lock_rw_unlock(&nskey->entry.lock); /* first unlock before next lookup*/
+	/* find and add DS/NSEC (if any) */
+	if(msg)
+		find_add_ds(env, region, *msg, dp, now);
+	/* find and add A entries */
+	if(!find_add_addrs(env, qclass, region, dp, now, msg))
+		log_err("find_delegation: addrs out of memory");
+	log_info("dns_cache_find_delegation returns delegpt");
+	delegpt_log(dp);
+	return dp;
 }
 
 /** allocate dns_msg from query_info and reply_info */

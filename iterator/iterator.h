@@ -191,6 +191,9 @@ struct iter_qstate {
 	 */
 	struct delegpt_addr* current_target;
 
+	/** Current delegation message - returned for non-RD queries */
+	struct dns_msg* deleg_msg;
+
 	/** number of outstanding target sub queries */
 	int num_target_queries;
 

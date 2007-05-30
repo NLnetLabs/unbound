@@ -727,7 +727,8 @@ return nextState(event, req, state, IterEventState.INIT_REQUEST_STATE);
 	/* Lookup the delegation in the cache. If null, then the cache needs 
 	 * to be primed for the qclass. */
 	iq->dp = dns_cache_find_delegation(qstate->env, delname, delnamelen,
-		qstate->qinfo.qclass, qstate->region);
+		qstate->qinfo.qtype, qstate->qinfo.qclass, qstate->region, 
+		&iq->deleg_msg);
 
 	/* If the cache has returned nothing, then we have a root priming
 	 * situation. */
@@ -789,15 +790,38 @@ processInitRequest2(struct module_qstate* qstate, struct iter_qstate* iq,
 	return next_state(qstate, iq, INIT_REQUEST_3_STATE);
 }
 
-#if 0
-/** TODO */
+/** 
+ * Process the third part of the initial request handling. This state exists
+ * as a separate state so that queries that generate stub priming events
+ * will get the tail end of the init process but not repeat the stub priming
+ * check.
+ *
+ * @param qstate: query state.
+ * @param iq: iterator query state.
+ * @return true if the event needs more request processing immediately,
+ *         false if not.
+ */
 static int
-processInitRequest3(struct module_qstate* qstate, struct iter_qstate* iq,
-	struct iter_env* ie, int id)
+processInitRequest3(struct module_qstate* qstate, struct iter_qstate* iq)
 {
-	return 0;
+	log_nametypeclass("resolving (init part 3): ", qstate->qinfo.qname,
+		qstate->qinfo.qtype, qstate->qinfo.qclass);
+	/* If the RD flag wasn't set, then we just finish with the 
+	 * cached referral as the response. */
+	if(!(qstate->query_flags & BIT_RD)) {
+		iq->response = iq->deleg_msg;
+		return final_state(qstate, iq);
+	}
+
+	/* After this point, unset the RD flag -- this query is going to 
+	 * be sent to an auth. server. */
+	qstate->query_flags &= ~BIT_RD;
+
+	/* Jump to the next state. */
+	return next_state(qstate, iq, QUERYTARGETS_STATE);
 }
 
+#if 0
 /** TODO */
 static int
 processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
@@ -866,10 +890,10 @@ iter_handle(struct module_qstate* qstate, struct iter_qstate* iq,
 			case INIT_REQUEST_2_STATE:
 				cont = processInitRequest2(qstate, iq, ie, id);
 				break;
-#if 0
 			case INIT_REQUEST_3_STATE:
-				cont = processInitRequest3(qstate, iq, ie, id);
+				cont = processInitRequest3(qstate, iq);
 				break;
+#if 0
 			case QUERYTARGETS_STATE:
 				cont = processQueryTargets(qstate, iq, ie, id);
 				break;

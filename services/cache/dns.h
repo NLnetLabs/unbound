@@ -79,13 +79,16 @@ void dns_cache_store_msg(struct module_env* env, struct query_info* qinfo,
  * @param env: module environment with the DNS cache.
  * @param qname: query name.
  * @param qnamelen: length of qname.
+ * @param qtype: query type.
  * @param qclass: query class.
  * @param region: where to allocate result delegation.
+ * @param msg: if not NULL, delegation message is returned here, synthesized
+ *	from the cache.
  * @return new delegation or NULL on error or if not found in cache.
  */
 struct delegpt* dns_cache_find_delegation(struct module_env* env, 
-	uint8_t* qname, size_t qnamelen, uint16_t qclass, 
-	struct region* region);
+	uint8_t* qname, size_t qnamelen, uint16_t qtype, uint16_t qclass, 
+	struct region* region, struct dns_msg** msg);
 
 /** 
  * Find cached message 
