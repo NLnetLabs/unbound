@@ -46,6 +46,7 @@
 #include "iterator/iter_hints.h"
 #include "iterator/iter_delegpt.h"
 #include "iterator/iter_resptype.h"
+#include "iterator/iter_scrub.h"
 #include "services/cache/dns.h"
 #include "util/module.h"
 #include "util/netevent.h"
@@ -743,7 +744,7 @@ return nextState(event, req, state, IterEventState.INIT_REQUEST_STATE);
 		 * this query as the parent. So further processing for 
 		 * this event will stop until reactivated by the results 
 		 * of priming. */
-		return false;
+		return 0;
 	}
 
 	/* Reset the RD flag. If this is a query restart, then the RD 
@@ -784,7 +785,7 @@ processInitRequest2(struct module_qstate* qstate, struct iter_qstate* iq,
 	if(prime_stub(qstate, iq, ie, id, qstate->qinfo.qname, 
 		qstate->qinfo.qclass)) {
 		/* A priming sub request was made */
-		return false;
+		return 0;
 	}
 
 	/* most events just get forwarded to the next state. */
@@ -1042,7 +1043,7 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 		else 	verbose(VERB_ALGO, "no current targets -- waiting "
 				"for %d outstanding queries to respond.",
 				iq->num_current_queries);
-		return false;
+		return 0;
 	}
 
 	/* We have a valid target. */
@@ -1060,6 +1061,7 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 	}
 	outbound_list_insert(&iq->outlist, outq);
 	iq->num_current_queries++;
+	qstate->ext_state[id] = module_wait_reply;
 
 	return 0;
 }
@@ -1177,11 +1179,58 @@ process_request(struct module_qstate* qstate, struct iter_qstate* iq,
 /** process authoritative server reply */
 static void
 process_response(struct module_qstate* qstate, struct iter_qstate* iq, 
-	struct iter_env* ie, int id, struct outbound_entry* outbound)
+	struct iter_env* ie, int id, struct outbound_entry* outbound,
+	enum module_ev event)
 {
+	struct msg_parse* prs;
+	struct edns_data edns;
+	ldns_buffer* pkt;
+
 	verbose(VERB_ALGO, "process_response: new external response event");
-	/* TODO outbound: use it for scrubbing and so on */
+	iq->response = NULL;
 	iq->state = QUERY_RESP_STATE;
+	if(event == module_event_timeout || event == module_event_error) {
+		goto handle_it;
+	}
+	if(event != module_event_reply || !qstate->reply) {
+		log_err("Bad event combined with response");
+		outbound_list_remove(&iq->outlist, outbound);
+		qstate->ext_state[id] = module_error;
+		return;
+	}
+
+	/* parse message */
+	prs = (struct msg_parse*)region_alloc(qstate->scratch, 
+		sizeof(struct msg_parse));
+	if(!prs) {
+		log_err("out of memory on incoming message");
+		/* like packet got dropped */
+		goto handle_it;
+	}
+	memset(prs, 0, sizeof(*prs));
+	memset(&edns, 0, sizeof(edns));
+	pkt = qstate->reply->c->buffer;
+	ldns_buffer_set_position(pkt, 0);
+	if(!parse_packet(pkt, prs, qstate->scratch))
+		goto handle_it;
+	/* edns is not examined, but removed from message to help cache */
+	if(!parse_extract_edns(prs, &edns))
+		goto handle_it;
+
+	/* normalize and sanitize: easy to delete items from linked lists */
+	if(!scrub_message(pkt, prs, &qstate->qinfo, 
+		iq->dp->name, iq->dp->namelen, qstate->scratch))
+		goto handle_it;
+
+	/* allocate response dns_msg in region */
+	/* TODO:
+	iq->response = dns_parse_to_msg(prs, qstate->region);
+	*/
+	if(!iq->response)
+		goto handle_it;
+
+handle_it:
+	outbound_list_remove(&iq->outlist, outbound);
 	iter_handle(qstate, iq, ie, id);
 }
 
@@ -1213,8 +1262,8 @@ iter_operate(struct module_qstate* qstate, enum module_ev event, int id,
 		iter_handle(qstate, iq, ie, id);
 		return;
 	}
-	if(event == module_event_reply) {
-		process_response(qstate, iq, ie, id, outbound);
+	if(outbound) {
+		process_response(qstate, iq, ie, id, outbound, event);
 		return;
 	}
 	/* TODO: uhh */
