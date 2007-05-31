@@ -660,20 +660,6 @@ new_pending(struct outside_network* outnet, ldns_buffer* packet,
 }
 
 /** 
- * Checkout address family.
- * @param addr: the sockaddr to examine.
- * return: true if sockaddr is ip6.
- */
-static int 
-addr_is_ip6(struct sockaddr_storage* addr)
-{
-	short family = *(short*)addr;
-	if(family == AF_INET6)
-		return 1;
-	else	return 0;
-}
-
-/** 
  * Select outgoing comm point for a query. Fills in c. 
  * @param outnet: network structure that has arrays of ports to choose from.
  * @param pend: the message to send. c is filled in, randomly chosen.

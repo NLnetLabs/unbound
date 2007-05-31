@@ -464,3 +464,30 @@ infra_edns_update(struct infra_cache* infra,
 	else 	{ lock_rw_unlock(&e->lock); }
 	return 1;
 }
+
+int 
+infra_get_lame_rtt(struct infra_cache* infra,
+        struct sockaddr_storage* addr, socklen_t addrlen,
+        uint8_t* name, size_t namelen, int* lame, int* rtt, time_t timenow)
+{
+	struct infra_host_data* host;
+	struct lruhash_entry* e = infra_lookup_host_nottl(infra, addr, 
+		addrlen, 0);
+	if(!e) 
+		return 0;
+	host = (struct infra_host_data*)e->data;
+	*rtt = rtt_timeout(&host->rtt);
+	/* check lameness first, if so, ttl on host does not matter anymore */
+	if(infra_lookup_lame(host, name, namelen, timenow)) {
+		lock_rw_unlock(&e->lock);
+		*lame = 1;
+		return 1;
+	}
+	*lame = 0;
+	if(timenow > host->ttl) {
+		lock_rw_unlock(&e->lock);
+		return 0;
+	}
+	lock_rw_unlock(&e->lock);
+	return 1;
+}

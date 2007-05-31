@@ -1,3 +1,10 @@
+31 May 2007: Wouter
+	- querytargets state.
+	- dname_subdomain_c() routine.
+	- server selection, based on RTT. ip6 is filtered out if not available,
+	  and lameness is checked too.
+	- delegation point copy routine.
+
 30 May 2007: Wouter
 	- removed FLAG_CD from message and rrset caches. This was useful for
 	  an agnostic forwarder, but not for a sophisticated (trust value per

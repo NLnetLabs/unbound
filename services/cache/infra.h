@@ -218,4 +218,20 @@ int infra_edns_update(struct infra_cache* infra,
         struct sockaddr_storage* addr, socklen_t addrlen,
 	int edns_version, time_t timenow);
 
+/**
+ * Get Lameness information and average RTT if host is in the cache.
+ * @param infra: infrastructure cache.
+ * @param addr: host address.
+ * @param addrlen: length of addr.
+ * @param name: zone name.
+ * @param namelen: zone name length.
+ * @param lame: if function returns true, this returns lameness of the zone.
+ * @param rtt: if function returns true, this returns avg rtt of the server.
+ * @param timenow: what time it is now.
+ * @return if found in cache, or false if not (or TTL bad).
+ */
+int infra_get_lame_rtt(struct infra_cache* infra,
+        struct sockaddr_storage* addr, socklen_t addrlen, 
+	uint8_t* name, size_t namelen, int* lame, int* rtt, time_t timenow);
+
 #endif /* SERVICES_CACHE_INFRA_H */

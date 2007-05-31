@@ -181,6 +181,14 @@ int dname_strict_subdomain(uint8_t* d1, int labs1, uint8_t* d2, int labs2);
  */
 int dname_strict_subdomain_c(uint8_t* d1, uint8_t* d2);
 
+/**
+ * Counts labels. Tests is d1 is a subdomain of d2.
+ * @param d1: domain name, uncompressed wireformat
+ * @param d2: domain name, uncompressed wireformat
+ * @return true if d1 is a subdomain of d2.
+ */
+int dname_subdomain_c(uint8_t* d1, uint8_t* d2);
+
 /** 
  * Debug helper. Print wireformat dname to output. 
  * @param out: like stdout or a file.

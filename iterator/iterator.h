@@ -50,6 +50,10 @@ struct iter_prep_list;
 
 /** max number of query restarts. Determines max number of CNAME chain. */
 #define MAX_RESTART_COUNT       8
+/** max number of referrals. Makes sure resolver does not run away */
+#define MAX_REFERRAL_COUNT	30
+/** how nice is a server without further information, in msec */
+#define UNKNOWN_SERVER_NICENESS 3000
 
 /**
  * Global state for the iterator. 
@@ -185,11 +189,6 @@ struct iter_qstate {
 	 * (sub)queried for vs which ones have already been visited.
 	 */
 	struct delegpt* dp;
-
-	/**
-	 * Current address target.
-	 */
-	struct delegpt_addr* current_target;
 
 	/** Current delegation message - returned for non-RD queries */
 	struct dns_msg* deleg_msg;

@@ -55,6 +55,27 @@ delegpt_create(struct region* region)
 	return dp;
 }
 
+struct delegpt* delegpt_copy(struct delegpt* dp, struct region* region)
+{
+	struct delegpt* copy = delegpt_create(region);
+	struct delegpt_ns* ns;
+	struct delegpt_addr* a;
+	if(!copy) 
+		return NULL;
+	if(!delegpt_set_name(copy, region, dp->name))
+		return NULL;
+	for(ns = dp->nslist; ns; ns = ns->next) {
+		if(!delegpt_add_ns(copy, region, ns->name))
+			return NULL;
+		copy->nslist->resolved = ns->resolved;
+	}
+	for(a = dp->target_list; a; a = a->next_target) {
+		if(!delegpt_add_addr(copy, region, &a->addr, a->addrlen))
+			return NULL;
+	}
+	return copy;
+}
+
 int 
 delegpt_set_name(struct delegpt* dp, struct region* region, uint8_t* name)
 {
@@ -143,4 +164,27 @@ void delegpt_log(struct delegpt* dp)
 	for(a = dp->target_list; a; a = a->next_target) {
 		log_addr("  ", &a->addr, a->addrlen);
 	}
+}
+
+void 
+delegpt_add_unused_targets(struct delegpt* dp)
+{
+	struct delegpt_addr* usa = dp->usable_list;
+	dp->usable_list = NULL;
+	while(usa) {
+		usa->next_result = dp->result_list;
+		dp->result_list = usa;
+		usa = usa->next_usable;
+	}
+}
+
+size_t 
+delegpt_count_missing_targets(struct delegpt* dp)
+{
+	struct delegpt_ns* ns;
+	size_t n = 0;
+	for(ns = dp->nslist; ns; ns = ns->next)
+		if(!ns->resolved)
+			n++;
+	return n;
 }

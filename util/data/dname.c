@@ -553,3 +553,21 @@ dname_strict_subdomain_c(uint8_t* d1, uint8_t* d2)
 	return dname_strict_subdomain(d1, dname_count_labels(d1), d2,
 		dname_count_labels(d2));
 }
+
+int 
+dname_subdomain_c(uint8_t* d1, uint8_t* d2)
+{
+	int m;
+	/* check subdomain: d1: www.example.com. and d2: example.com. */
+	/*  	or 	    d1: example.com. and d2: example.com. */
+	int labs1 = dname_count_labels(d1);
+	int labs2 = dname_count_labels(d2);
+	if(labs2 > labs1) 
+		return 0;
+	if(dname_lab_cmp(d1, labs1, d2, labs2, &m) < 0) {
+		/* must have been example.com , www.example.com - wrong */
+		/* or otherwise different dnames */
+		return 0;
+	}
+	return (m == labs2);
+}

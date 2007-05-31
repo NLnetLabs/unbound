@@ -100,13 +100,14 @@ iter_new(struct module_qstate* qstate, int id)
 	iq->prepend_list = NULL;
 	iq->prepend_last = NULL;
 	iq->dp = NULL;
-	iq->current_target = NULL;
 	iq->num_target_queries = -1; /* default our targetQueries counter. */
 	iq->num_current_queries = 0;
 	iq->query_restart_count = 0;
 	iq->referral_count = 0;
 	iq->priming_stub = 0;
 	iq->orig_qflags = qstate->query_flags;
+	/* remove all weird bits from the query flags */
+	qstate->query_flags &= (BIT_RD | BIT_CD);
 	outbound_list_init(&iq->outlist);
 	return 1;
 }
@@ -798,8 +799,7 @@ processInitRequest2(struct module_qstate* qstate, struct iter_qstate* iq,
  *
  * @param qstate: query state.
  * @param iq: iterator query state.
- * @return true if the event needs more request processing immediately,
- *         false if not.
+ * @return true, advancing the event to the QUERYTARGETS_STATE.
  */
 static int
 processInitRequest3(struct module_qstate* qstate, struct iter_qstate* iq)
@@ -821,15 +821,250 @@ processInitRequest3(struct module_qstate* qstate, struct iter_qstate* iq)
 	return next_state(qstate, iq, QUERYTARGETS_STATE);
 }
 
-#if 0
-/** TODO */
+/**
+ * Given a basic query, generate a "target" query. These are subordinate
+ * queries for missing delegation point target addresses.
+ *
+ * @param qstate: query state.
+ * @param iq: iterator query state.
+ * @param id: module id.
+ * @param name: target qname.
+ * @param namelen: target qname length.
+ * @param qtype: target qtype (either A or AAAA).
+ * @param qclass: target qclass.
+ * @return true on success, false on failure.
+ */
+static int
+generate_target_query(struct module_qstate* qstate, struct iter_qstate* iq,
+        int id, uint8_t* name, size_t namelen, uint16_t qtype, uint16_t qclass)
+{
+	struct module_qstate* subq = generate_sub_request(name, namelen, qtype,
+		qclass, qstate, id, INIT_REQUEST_STATE, TARGET_RESP_STATE);
+	struct iter_qstate* subiq;
+	if(!subq)
+		return 0;
+	subiq = (struct iter_qstate*)subq->minfo[id];
+	subiq->dp = delegpt_copy(iq->dp, subq->region);
+	if(!subiq->dp) {
+		subq->ext_state[id] = module_error;
+		return 0;
+	}
+	return 1;
+}
+
+/**
+ * Given an event at a certain state, generate zero or more target queries
+ * for it's current delegation point.
+ *
+ * @param qstate: query state.
+ * @param iq: iterator query state.
+ * @param ie: iterator shared global environment.
+ * @param id: module id.
+ * @param maxtargets: The maximum number of targets to query for.
+ *	if it is negative, there is no maximum number of targets.
+ * @param num: returns the number of queries generated and processed, 
+ *	which may be zero if there were no missing targets.
+ * @return false on error.
+ */
+static int
+query_for_targets(struct module_qstate* qstate, struct iter_qstate* iq,
+        struct iter_env* ie, int id, int maxtargets, int* num)
+{
+	int query_count = 0;
+	int target_count = 0;
+	struct delegpt_ns* ns = iq->dp->nslist;
+
+	/* Generate target requests. Basically, any missing targets 
+	 * are queried for here, regardless if it is necessary to do 
+	 * so to continue processing. */
+
+	/* loop over missing targets */
+	for(ns = iq->dp->nslist; ns; ns = ns->next) {
+		if(ns->resolved)
+			continue;
+
+		/* Sanity check: if the target name is at or *below* the 
+		 * delegation point itself, then this will be (potentially) 
+		 * unresolvable. This is the one case where glue *must* 
+		 * have been present.
+		 * FIXME: at this point, this *may* be resolvable, so 
+		 * perhaps we should issue the query anyway and let it fail.*/
+		if(dname_subdomain_c(ns->name, iq->dp->name)) {
+			log_nametypeclass("skipping target name because "
+				"it should have been glue", ns->name,
+				LDNS_RR_TYPE_NS, qstate->qinfo.qclass);
+			continue;
+		}
+
+		if(ie->supports_ipv6) {
+			/* Send the AAAA request. */
+			if(!generate_target_query(qstate, iq, id, 
+				ns->name, ns->namelen,
+				LDNS_RR_TYPE_AAAA, qstate->qinfo.qclass))
+				return 0;
+			query_count++;
+		}
+		/* Send the A request. */
+		if(!generate_target_query(qstate, iq, id, 
+			ns->name, ns->namelen, 
+			LDNS_RR_TYPE_A, qstate->qinfo.qclass))
+			return 0;
+		query_count++;
+
+		/* mark this target as in progress. */
+		ns->resolved = 1;
+
+		/* if maxtargets is negative, there is no maximum, 
+		 * otherwise only query for ntarget names. */
+		if(maxtargets > 0 && ++target_count > maxtargets)
+			break;
+	}
+	*num = query_count;
+
+	return 1;
+}
+
+/** 
+ * This is the request event state where the request will be sent to one of
+ * its current query targets. This state also handles issuing target lookup
+ * queries for missing target IP addresses. Queries typically iterate on
+ * this state, both when they are just trying different targets for a given
+ * delegation point, and when they change delegation points. This state
+ * roughly corresponds to RFC 1034 algorithm steps 3 and 4.
+ *
+ * @param qstate: query state.
+ * @param iq: iterator query state.
+ * @param ie: iterator shared global environment.
+ * @param id: module id.
+ * @return true if the event requires more request processing immediately,
+ *         false if not. This state only returns true when it is generating
+ *         a SERVFAIL response because the query has hit a dead end.
+ */
 static int
 processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 	struct iter_env* ie, int id)
 {
+	int tf_policy, d;
+	struct delegpt_addr* target;
+	struct outbound_entry* outq;
+
+	/* NOTE: a request will encounter this state for each target it 
+	 * needs to send a query to. That is, at least one per referral, 
+	 * more if some targets timeout or return throwaway answers. */
+
+	log_nametypeclass("processQueryTargets:", qstate->qinfo.qname,
+		qstate->qinfo.qtype, qstate->qinfo.qclass);
+	verbose(VERB_ALGO, "processQueryTargets: targetqueries %d, "
+		"currentqueries %d", iq->num_target_queries, 
+		iq->num_current_queries);
+
+	/* Make sure that we haven't run away */
+	/* FIXME: is this check even necessary? */
+	if(iq->referral_count > MAX_REFERRAL_COUNT) {
+		verbose(VERB_ALGO, "request has exceeded the maximum "
+			"number of referrrals with %d", iq->referral_count);
+		return error_response(qstate, iq, LDNS_RCODE_SERVFAIL);
+	}
+
+	tf_policy = 0;
+	d = module_subreq_depth(qstate);
+	if(d <= ie->max_dependency_depth) {
+		tf_policy = ie->target_fetch_policy[d];
+	}
+
+	/* if there is a policy to fetch missing targets 
+	 * opportunistically, do it. we rely on the fact that once a 
+	 * query (or queries) for a missing name have been issued, 
+	 * they will not be show up again. */
+	if(tf_policy != 0) {
+		if(!query_for_targets(qstate, iq, ie, id, tf_policy, 
+			&iq->num_target_queries)) {
+			return error_response(qstate, iq, LDNS_RCODE_SERVFAIL);
+		}
+	} else {
+		iq->num_target_queries = 0;
+	}
+
+	/* Add the current set of unused targets to our queue. */
+	delegpt_add_unused_targets(iq->dp);
+
+	/* Select the next usable target, filtering out unsuitable targets. */
+	target = iter_server_selection(ie, qstate->env, iq->dp, 
+		iq->dp->name, iq->dp->namelen);
+
+	/* If no usable target was selected... */
+	if(!target) {
+		/* Here we distinguish between three states: generate a new 
+		 * target query, just wait, or quit (with a SERVFAIL).
+		 * We have the following information: number of active 
+		 * target queries, number of active current queries, 
+		 * the presence of missing targets at this delegation 
+		 * point, and the given query target policy. */
+		
+		/* Check for the wait condition. If this is true, then 
+		 * an action must be taken. */
+		if(iq->num_target_queries==0 && iq->num_current_queries==0) {
+			/* If there is nothing to wait for, then we need 
+			 * to distinguish between generating (a) new target 
+			 * query, or failing. */
+			if(delegpt_count_missing_targets(iq->dp) > 0) {
+				verbose(VERB_ALGO, "querying for next "
+					"missing target");
+				if(!query_for_targets(qstate, iq, ie, id, 
+						1, &iq->num_target_queries)) {
+					return error_response(qstate, iq, 
+						LDNS_RCODE_SERVFAIL);
+				}
+			}
+			/* Since a target query might have been made, we 
+			 * need to check again. */
+			if(iq->num_target_queries == 0) {
+				verbose(VERB_ALGO, "out of query targets -- "
+					"returning SERVFAIL");
+				/* fail -- no more targets, no more hope 
+				 * of targets, no hope of a response. */
+				return error_response(qstate, iq, 
+					LDNS_RCODE_SERVFAIL);
+			}
+		}
+
+		/* otherwise, we have no current targets, so submerge 
+		 * until one of the target or direct queries return. */
+		if(iq->num_target_queries>0 && iq->num_current_queries>0)
+			verbose(VERB_ALGO, "no current targets -- waiting "
+				"for %d targets to resolve or %d outstanding"
+				" queries to respond", iq->num_target_queries, 
+				iq->num_current_queries);
+		else if(iq->num_target_queries>0)
+			verbose(VERB_ALGO, "no current targets -- waiting "
+				"for %d targets to resolve.",
+				iq->num_target_queries);
+		else 	verbose(VERB_ALGO, "no current targets -- waiting "
+				"for %d outstanding queries to respond.",
+				iq->num_current_queries);
+		return false;
+	}
+
+	/* We have a valid target. */
+	log_nametypeclass("sending query:", qstate->qinfo.qname, 
+		qstate->qinfo.qtype, qstate->qinfo.qclass);
+	log_addr("sending to target:", &target->addr, target->addrlen);
+	outq = (*qstate->env->send_query)(
+		qstate->qinfo.qname, qstate->qinfo.qname_len, 
+		qstate->qinfo.qtype, qstate->qinfo.qclass, 
+		qstate->query_flags, 1, &target->addr, target->addrlen, 
+		qstate);
+	if(!outq) {
+		log_err("out of memory sending query to auth server");
+		return error_response(qstate, iq, LDNS_RCODE_SERVFAIL);
+	}
+	outbound_list_insert(&iq->outlist, outq);
+	iq->num_current_queries++;
+
 	return 0;
 }
 
+#if 0
 /** TODO */
 static int
 processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
@@ -893,10 +1128,10 @@ iter_handle(struct module_qstate* qstate, struct iter_qstate* iq,
 			case INIT_REQUEST_3_STATE:
 				cont = processInitRequest3(qstate, iq);
 				break;
-#if 0
 			case QUERYTARGETS_STATE:
 				cont = processQueryTargets(qstate, iq, ie, id);
 				break;
+#if 0
 			case QUERY_RESP_STATE:
 				cont = processQueryResponse(qstate, iq, ie, id);
 				break;

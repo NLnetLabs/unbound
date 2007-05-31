@@ -43,10 +43,14 @@
 #include "iterator/iter_utils.h"
 #include "iterator/iterator.h"
 #include "iterator/iter_hints.h"
+#include "iterator/iter_delegpt.h"
+#include "services/cache/infra.h"
 #include "util/net_help.h"
+#include "util/module.h"
 #include "util/log.h"
 #include "util/config_file.h"
-
+#include "util/region-allocator.h"
+	
 int 
 iter_apply_cfg(struct iter_env* iter_env, struct config_file* cfg)
 {
@@ -87,3 +91,63 @@ iter_apply_cfg(struct iter_env* iter_env, struct config_file* cfg)
 	return 1;
 }
 
+/** filter out unsuitable targets, return rtt or -1 */
+static int
+iter_filter_unsuitable(struct iter_env* iter_env, struct module_env* env,
+        struct delegpt_addr* a, uint8_t* name, size_t namelen, time_t now)
+{
+	int rtt;
+	int lame;
+	/* TODO: check ie->donotqueryaddrs for a */
+	if(!iter_env->supports_ipv6 && addr_is_ip6(&a->addr)) {
+		return -1;
+	}
+	/* check lameness - need zone , class info */
+	if(infra_get_lame_rtt(env->infra_cache, &a->addr, a->addrlen, 
+		name, namelen, &lame, &rtt, now)) {
+		if(lame)
+			return -1;
+		else 	return rtt;
+	}
+	/* no server information present */
+	return UNKNOWN_SERVER_NICENESS;
+}
+
+struct delegpt_addr* iter_server_selection(struct iter_env* iter_env, 
+	struct module_env* env, struct delegpt* dp, 
+	uint8_t* name, size_t namelen)
+{
+	int got_one = 0, got_rtt = 0;
+	struct delegpt_addr* got = NULL, *got_prev = NULL, *a, *prev = NULL;
+	time_t now = time(NULL);
+
+	for(a = dp->result_list; a; a = a->next_result) {
+		/* filter out unsuitable targets */
+		int thisrtt = iter_filter_unsuitable(iter_env, env, a, name, 
+			namelen, now);
+		if(thisrtt == -1) {
+			prev = a;
+			continue;
+		}
+		if(!got_one) {
+			got_rtt = thisrtt;
+			got = a;
+			got_prev = prev;
+			got_one = 1;
+		} else {
+			if(thisrtt < got_rtt) {
+				got_rtt = thisrtt;
+				got = a;
+				got_prev = prev;
+			}
+		}
+		prev = a;
+	}
+	if(got) {
+		/* remove it from list */
+		if(got_prev)
+			got_prev->next_result = got->next_result;
+		else	dp->result_list = got->next_result;
+	}
+	return got;
+}

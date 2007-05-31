@@ -148,4 +148,11 @@ int ipstrtoaddr(const char* ip, int port, struct sockaddr_storage* addr,
 void log_nametypeclass(const char* str, uint8_t* name, uint16_t type, 
 	uint16_t dclass);
 
+/**
+ * Checkout address family.
+ * @param addr: the sockaddr to examine.
+ * return: true if sockaddr is ip6.
+ */
+int addr_is_ip6(struct sockaddr_storage* addr);
+
 #endif /* NET_HELP_H */

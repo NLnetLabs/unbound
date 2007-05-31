@@ -44,6 +44,9 @@
 #define ITERATOR_ITER_UTILS_H
 struct iter_env;
 struct config_file;
+struct module_env;
+struct delegpt_addr;
+struct delegpt;
 
 /**
  * Process config options and set iterator module state.
@@ -53,5 +56,22 @@ struct config_file;
  * @return 0 on error.
  */
 int iter_apply_cfg(struct iter_env* iter_env, struct config_file* cfg);
+
+/**
+ * Select a valid, nice target to send query to.
+ * Sorting and removing unsuitable targets is combined.
+ *
+ * @param iter_env: iterator module global state, with ip6 enabled and 
+ *	do-not-query-addresses.
+ * @param env: environment with infra cache (lameness, rtt info).
+ * @param dp: delegation point with result list.
+ * @param name: zone name (for lameness check).
+ * @param namelen: length of name.
+ * @return best target or NULL if no target.
+ *	if not null, that target is removed from the result list in the dp.
+ */
+struct delegpt_addr* iter_server_selection(struct iter_env* iter_env, 
+	struct module_env* env, struct delegpt* dp, uint8_t* name, 
+	size_t namelen);
 
 #endif /* ITERATOR_ITER_UTILS_H */

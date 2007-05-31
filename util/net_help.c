@@ -189,3 +189,12 @@ log_nametypeclass(const char* str, uint8_t* name, uint16_t type,
 		ldns_lookup_by_id(ldns_rr_classes, (int)dclass)?
 		ldns_lookup_by_id(ldns_rr_classes, (int)dclass)->name:"??");
 }
+
+int
+addr_is_ip6(struct sockaddr_storage* addr)
+{
+	short family = *(short*)addr;
+	if(family == AF_INET6)
+		return 1;
+	else    return 0;
+}

@@ -62,7 +62,8 @@ struct delegpt {
 	struct delegpt_ns* nslist;
 	/** the target addresses for delegation */
 	struct delegpt_addr* target_list;
-	/** the list of usable targets; subset of target_list */
+	/** the list of usable targets; subset of target_list 
+	 * the items in this list are not part of the result list.  */
 	struct delegpt_addr* usable_list;
 	/** the list of returned targets; subset of target_list */
 	struct delegpt_addr* result_list;
@@ -108,6 +109,14 @@ struct delegpt_addr {
  * @return new delegation point or NULL on error.
  */
 struct delegpt* delegpt_create(struct region* region);
+
+/**
+ * Create a copy of a delegation point.
+ * @param dp: delegation point to copy.
+ * @param region: where to allocate it.
+ * @return new delegation point or NULL on error.
+ */
+struct delegpt* delegpt_copy(struct delegpt* dp, struct region* region);
 
 /**
  * Set name of delegation point.
@@ -158,5 +167,18 @@ int delegpt_add_addr(struct delegpt* dp, struct region* region,
  * @param dp: delegation point.
  */
 void delegpt_log(struct delegpt* dp);
+
+/**
+ * Add all usable targets to the result list.
+ * @param dp: delegation point.
+ */
+void delegpt_add_unused_targets(struct delegpt* dp);
+
+/**
+ * Count number of missing targets. These are ns names with no resolved flag.
+ * @param dp: delegation point.
+ * @return number of missing targets (or 0).
+ */
+size_t delegpt_count_missing_targets(struct delegpt* dp);
 
 #endif /* ITERATOR_ITER_DELEGPT_H */
