@@ -152,8 +152,7 @@ pkt_rrset_flags(ldns_buffer* pkt, uint16_t type)
 	return f;
 }
 
-/** Calculate hash value for rrset in packet. */
-static hashvalue_t
+hashvalue_t
 pkt_hash_rrset(ldns_buffer* pkt, uint8_t* dname, uint16_t type, 
 	uint16_t dclass, uint32_t rrset_flags)
 {
@@ -181,12 +180,9 @@ rrset_parse_equals(struct rrset_parse* p, ldns_buffer* pkt, hashvalue_t h,
 }
 
 
-/**
- * Lookup in msg hashtable to find a rrset
- */
-static struct rrset_parse*
-hashtable_lookup(struct msg_parse* msg, ldns_buffer* pkt, hashvalue_t h, 
-	uint32_t rrset_flags, uint8_t* dname, size_t dnamelen, 
+struct rrset_parse*
+msgparse_hashtable_lookup(struct msg_parse* msg, ldns_buffer* pkt, 
+	hashvalue_t h, uint32_t rrset_flags, uint8_t* dname, size_t dnamelen, 
 	uint16_t type, uint16_t dclass)
 {
 	struct rrset_parse* p = msg->hashtable[h & (PARSE_TABLE_SIZE-1)];
@@ -228,9 +224,8 @@ pkt_rrsig_covered_equals(ldns_buffer* pkt, uint8_t* here, uint16_t type)
 	return 0;
 }
 
-/** remove rrset from hash list */
-static void
-bucket_remove(struct msg_parse* msg, struct rrset_parse* rrset)
+void
+msgparse_bucket_remove(struct msg_parse* msg, struct rrset_parse* rrset)
 {
 	struct rrset_parse** p;
 	p = &msg->hashtable[ rrset->hash & (PARSE_TABLE_SIZE-1) ];
@@ -377,7 +372,7 @@ change_rrsig_rrset(struct rrset_parse* sigset, struct msg_parse* msg,
 		return dataset;
 	}
 	/* changeover the type of the rrset to data set */
-	bucket_remove(msg, dataset);
+	msgparse_bucket_remove(msg, dataset);
 	/* insert into new hash bucket */
 	dataset->rrset_bucket_next = msg->hashtable[hash&(PARSE_TABLE_SIZE-1)];
 	msg->hashtable[hash&(PARSE_TABLE_SIZE-1)] = dataset;
@@ -454,15 +449,16 @@ find_rrset(struct msg_parse* msg, ldns_buffer* pkt, uint8_t* dname,
 		ldns_buffer_current(pkt), &covtype)) {
 		*hash = pkt_hash_rrset(pkt, dname, covtype, dclass, 
 			*rrset_flags);
-		*rrset_prev = hashtable_lookup(msg, pkt, *hash, *rrset_flags, 
-			dname, dnamelen, covtype, dclass);
+		*rrset_prev = msgparse_hashtable_lookup(msg, pkt, *hash, 
+			*rrset_flags, dname, dnamelen, covtype, dclass);
 		if(!*rrset_prev && covtype == LDNS_RR_TYPE_NSEC) {
 			/* if NSEC try with NSEC apex bit twiddled */
 			*rrset_flags ^= PACKED_RRSET_NSEC_AT_APEX;
 			*hash = pkt_hash_rrset(pkt, dname, covtype, dclass, 
 				*rrset_flags);
-			*rrset_prev = hashtable_lookup(msg, pkt, *hash, 
-				*rrset_flags, dname, dnamelen, covtype, dclass);
+			*rrset_prev = msgparse_hashtable_lookup(msg, pkt, 
+				*hash, *rrset_flags, dname, dnamelen, covtype, 
+				dclass);
 		}
 		if(*rrset_prev) {
 			*prev_dname_first = (*rrset_prev)->dname;
@@ -478,8 +474,9 @@ find_rrset(struct msg_parse* msg, ldns_buffer* pkt, uint8_t* dname,
 		/* find matching rrsig */
 		*hash = pkt_hash_rrset(pkt, dname, LDNS_RR_TYPE_RRSIG, 
 			dclass, *rrset_flags);
-		*rrset_prev = hashtable_lookup(msg, pkt, *hash, *rrset_flags, 
-			dname, dnamelen, LDNS_RR_TYPE_RRSIG, dclass);
+		*rrset_prev = msgparse_hashtable_lookup(msg, pkt, *hash, 
+			*rrset_flags, dname, dnamelen, LDNS_RR_TYPE_RRSIG, 
+			dclass);
 		if(*rrset_prev && rrset_has_sigover(pkt, *rrset_prev, type,
 			&hasother)) {
 			/* yes! */
@@ -497,7 +494,7 @@ find_rrset(struct msg_parse* msg, ldns_buffer* pkt, uint8_t* dname,
 	}
 
 	*hash = pkt_hash_rrset(pkt, dname, type, dclass, *rrset_flags);
-	*rrset_prev = hashtable_lookup(msg, pkt, *hash, *rrset_flags, 
+	*rrset_prev = msgparse_hashtable_lookup(msg, pkt, *hash, *rrset_flags, 
 		dname, dnamelen, type, dclass);
 	if(*rrset_prev)
 		*prev_dname_first = (*rrset_prev)->dname;

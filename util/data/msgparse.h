@@ -255,4 +255,39 @@ int parse_extract_edns(struct msg_parse* msg, struct edns_data* edns);
  */
 int parse_edns_from_pkt(ldns_buffer* pkt, struct edns_data* edns);
 
+/**
+ * Calculate hash value for rrset in packet.
+ * @param pkt: the packet.
+ * @param dname: pointer to uncompressed dname, or compressed dname in packet.
+ * @param type: rrset type in host order.
+ * @param dclass: rrset class in network order.
+ * @param rrset_flags: rrset flags (same as packed_rrset flags).
+ * @return hash value
+ */
+hashvalue_t pkt_hash_rrset(ldns_buffer* pkt, uint8_t* dname, uint16_t type,
+        uint16_t dclass, uint32_t rrset_flags);
+
+/**
+ * Lookup in msg hashtable to find a rrset.
+ * @param msg: with the hashtable.
+ * @param pkt: packet for compressed names.
+ * @param h: hash value
+ * @param rrset_flags: flags of rrset sought for.
+ * @param dname: name of rrset sought for.
+ * @param dnamelen: len of dname.
+ * @param type: rrset type, host order.
+ * @param dclass: rrset class, network order.
+ * @return NULL or the rrset_parse if found.
+ */
+struct rrset_parse* msgparse_hashtable_lookup(struct msg_parse* msg, 
+	ldns_buffer* pkt, hashvalue_t h, uint32_t rrset_flags, 
+	uint8_t* dname, size_t dnamelen, uint16_t type, uint16_t dclass);
+
+/**
+ * Remove rrset from hash table.
+ * @param msg: with hashtable.
+ * @param rrset: with hash value and id info.
+ */
+void msgparse_bucket_remove(struct msg_parse* msg, struct rrset_parse* rrset);
+
 #endif /* UTIL_DATA_MSGPARSE_H */

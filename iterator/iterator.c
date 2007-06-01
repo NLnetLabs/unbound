@@ -1218,8 +1218,8 @@ process_response(struct module_qstate* qstate, struct iter_qstate* iq,
 		goto handle_it;
 
 	/* normalize and sanitize: easy to delete items from linked lists */
-	if(!scrub_message(pkt, prs, &qstate->qinfo, 
-		iq->dp->name, iq->dp->namelen, qstate->scratch))
+	if(!scrub_message(pkt, prs, &qstate->qinfo, iq->dp->name, 
+		qstate->scratch))
 		goto handle_it;
 
 	/* allocate response dns_msg in region */
