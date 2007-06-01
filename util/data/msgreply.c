@@ -555,6 +555,7 @@ query_info_entrysetup(struct query_info* q, struct reply_info* r,
 	return e;
 }
 
+/** copy over reply info structure, size it correcly for rrsets */
 static struct reply_info*
 copy_repinfo(struct reply_info* from)
 {
