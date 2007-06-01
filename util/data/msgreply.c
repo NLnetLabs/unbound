@@ -226,7 +226,7 @@ parse_rr_copy(ldns_buffer* pkt, struct rrset_parse* pset,
 	return 1;
 }
 
-/** create rrset return 0 or rcode */
+/** create rrset return 0 on failure */
 static int
 parse_create_rrset(ldns_buffer* pkt, struct rrset_parse* pset,
 	struct packed_rrset_data** data)
@@ -237,11 +237,11 @@ parse_create_rrset(ldns_buffer* pkt, struct rrset_parse* pset,
 		(sizeof(size_t)+sizeof(uint8_t*)+sizeof(uint32_t)) + 
 		pset->size);
 	if(!*data)
-		return LDNS_RCODE_SERVFAIL;
+		return 0;
 	/* copy & decompress */
 	if(!parse_rr_copy(pkt, pset, *data))
-		return LDNS_RCODE_SERVFAIL;
-	return 0;
+		return 0;
+	return 1;
 }
 
 /** get trust value for rrset */
@@ -274,13 +274,12 @@ get_rrset_trust(struct reply_info* rep, size_t i)
  * @param pkt: the packet for compression pointer resolution.
  * @param msg: the parsed message
  * @param rep: reply info to put rrs into.
- * @return 0 or rcode.
+ * @return 0 on failure.
  */
 static int
 parse_copy_decompress(ldns_buffer* pkt, struct msg_parse* msg,
 	struct reply_info* rep)
 {
-	int ret;
 	size_t i;
 	struct rrset_parse *pset = msg->rrset_first;
 	struct packed_rrset_data* data;
@@ -294,15 +293,15 @@ parse_copy_decompress(ldns_buffer* pkt, struct msg_parse* msg,
 		rep->rrsets[i]->rk.dname_len = pset->dname_len;
 		rep->rrsets[i]->rk.dname = (uint8_t*)malloc(pset->dname_len);
 		if(!rep->rrsets[i]->rk.dname)
-			return LDNS_RCODE_SERVFAIL;
+			return 0;
 		/** copy & decompress dname */
 		dname_pkt_copy(pkt, rep->rrsets[i]->rk.dname, pset->dname);
 		/** copy over type and class */
 		rep->rrsets[i]->rk.type = htons(pset->type);
 		rep->rrsets[i]->rk.rrset_class = pset->rrset_class;
 		/** read data part. */
-		if((ret=parse_create_rrset(pkt, pset, &data)) != 0)
-			return ret;
+		if(!parse_create_rrset(pkt, pset, &data))
+			return 0;
 		rep->rrsets[i]->entry.data = (void*)data;
 		rep->rrsets[i]->entry.key = (void*)rep->rrsets[i];
 		rep->rrsets[i]->entry.hash = pset->hash;
@@ -312,26 +311,25 @@ parse_copy_decompress(ldns_buffer* pkt, struct msg_parse* msg,
 
 		pset = pset->rrset_all_next;
 	}
-	return 0;
+	return 1;
 }
 
-/** allocate and decompress message and rrsets, returns 0 or rcode. */
+/** allocate and decompress message and rrsets, returns 0 if failed. */
 static int 
 parse_create_msg(ldns_buffer* pkt, struct msg_parse* msg,
 	struct alloc_cache* alloc, struct query_info* qinf, 
 	struct reply_info** rep)
 {
-	int ret;
 	log_assert(pkt && msg);
 	if(!parse_create_qinfo(pkt, msg, qinf))
-		return LDNS_RCODE_SERVFAIL;
+		return 0;
 	if(!parse_create_repinfo(msg, rep))
-		return LDNS_RCODE_SERVFAIL;
+		return 0;
 	if(!parse_alloc_rrset_keys(msg, *rep, alloc))
-		return LDNS_RCODE_SERVFAIL;
-	if((ret=parse_copy_decompress(pkt, msg, *rep)) != 0)
-		return ret;
-	return 0;
+		return 0;
+	if(!parse_copy_decompress(pkt, msg, *rep))
+		return 0;
+	return 1;
 }
 
 int reply_info_parse(ldns_buffer* pkt, struct alloc_cache* alloc,
@@ -358,11 +356,11 @@ int reply_info_parse(ldns_buffer* pkt, struct alloc_cache* alloc,
 
 	/* parse OK, allocate return structures */
 	/* this also performs dname decompression */
-	if((ret = parse_create_msg(pkt, msg, alloc, qinf, rep)) != 0) {
+	if(!parse_create_msg(pkt, msg, alloc, qinf, rep)) {
 		query_info_clear(qinf);
 		reply_info_parsedelete(*rep, alloc);
 		*rep = NULL;
-		return ret;
+		return LDNS_RCODE_SERVFAIL;
 	}
 	return 0;
 }

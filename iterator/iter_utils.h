@@ -47,6 +47,8 @@ struct config_file;
 struct module_env;
 struct delegpt_addr;
 struct delegpt;
+struct region;
+struct msg_parse;
 
 /**
  * Process config options and set iterator module state.
@@ -73,5 +75,13 @@ int iter_apply_cfg(struct iter_env* iter_env, struct config_file* cfg);
 struct delegpt_addr* iter_server_selection(struct iter_env* iter_env, 
 	struct module_env* env, struct delegpt* dp, uint8_t* name, 
 	size_t namelen);
+
+/**
+ * Allocate dns_msg from parsed msg, in region.
+ * @param msg: parsed message (cleaned and ready for region allocation).
+ * @param region: region to use for allocation.
+ * @return newly allocated dns_msg, or NULL on memory error.
+ */
+struct dns_msg* dns_alloc_msg(struct msg_parse* msg, struct region* region);
 
 #endif /* ITERATOR_ITER_UTILS_H */

@@ -45,11 +45,13 @@
 #include "iterator/iter_hints.h"
 #include "iterator/iter_delegpt.h"
 #include "services/cache/infra.h"
+#include "services/cache/dns.h"
 #include "util/net_help.h"
 #include "util/module.h"
 #include "util/log.h"
 #include "util/config_file.h"
 #include "util/region-allocator.h"
+#include "util/data/msgparse.h"
 	
 int 
 iter_apply_cfg(struct iter_env* iter_env, struct config_file* cfg)
@@ -150,4 +152,15 @@ struct delegpt_addr* iter_server_selection(struct iter_env* iter_env,
 		else	dp->result_list = got->next_result;
 	}
 	return got;
+}
+
+struct dns_msg* 
+dns_alloc_msg(struct msg_parse* msg, struct region* region)
+{
+	struct dns_msg* m = (struct dns_msg*)region_alloc(region,
+		sizeof(struct dns_msg));
+	if(!m)
+		return NULL;
+	memset(m, 0, sizeof(*m));
+	return m;
 }
