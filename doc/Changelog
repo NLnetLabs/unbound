@@ -2,6 +2,7 @@
 	- normalize incoming messages. Like unbound-java, with CNAME chain
 	  checked, DNAME checked, CNAME's synthesized, glue checked.
 	- sanitize incoming messages.
+	- split msgreply encode functions into own file msgencode.c.
 
 31 May 2007: Wouter
 	- querytargets state.

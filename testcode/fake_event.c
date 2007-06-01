@@ -50,6 +50,7 @@
 #include "util/net_help.h"
 #include "util/data/msgparse.h"
 #include "util/data/msgreply.h"
+#include "util/data/msgencode.h"
 #include "services/listen_dnsport.h"
 #include "services/outside_network.h"
 #include "testcode/replay.h"

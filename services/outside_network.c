@@ -45,6 +45,7 @@
 #include "services/cache/infra.h"
 #include "util/data/msgparse.h"
 #include "util/data/msgreply.h"
+#include "util/data/msgencode.h"
 #include "util/netevent.h"
 #include "util/log.h"
 #include "util/net_help.h"

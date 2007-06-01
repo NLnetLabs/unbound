@@ -53,6 +53,7 @@
 #include "util/net_help.h"
 #include "util/region-allocator.h"
 #include "util/data/dname.h"
+#include "util/data/msgencode.h"
 
 /** iterator init */
 static int 

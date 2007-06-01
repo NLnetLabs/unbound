@@ -43,6 +43,7 @@
 #include "testcode/unitmain.h"
 #include "util/data/msgparse.h"
 #include "util/data/msgreply.h"
+#include "util/data/msgencode.h"
 #include "util/alloc.h"
 #include "util/region-allocator.h"
 #include "util/net_help.h"

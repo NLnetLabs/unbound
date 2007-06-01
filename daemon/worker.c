@@ -55,6 +55,7 @@
 #include "services/outbound_list.h"
 #include "services/cache/rrset.h"
 #include "util/data/msgparse.h"
+#include "util/data/msgencode.h"
 
 #ifdef HAVE_SYS_TYPES_H
 #  include <sys/types.h>

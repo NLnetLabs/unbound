@@ -246,54 +246,6 @@ void reply_info_delete(void* d, void* arg);
 /** calculate hash value of query_info, lowercases the qname. */
 hashvalue_t query_info_hash(struct query_info *q);
 
-/** 
- * Generate answer from reply_info.
- * @param qinf: query information that provides query section in packet.
- * @param rep: reply to fill in.
- * @param id: id word from the query.
- * @param qflags: flags word from the query.
- * @param dest: buffer to put message into; will truncate if it does not fit.
- * @param timenow: time to subtract.
- * @param cached: set true if a cached reply (so no AA bit).
- *	set false for the first reply.
- * @param region: where to allocate temp variables (for compression).
- * @param udpsize: size of the answer, 512, from EDNS, or 64k for TCP.
- * @param edns: EDNS data included in the answer, NULL for none.
- *	or if edns_present = 0, it is not included.
- * @return: 0 on error (server failure).
- */
-int reply_info_answer_encode(struct query_info* qinf, struct reply_info* rep, 
-	uint16_t id, uint16_t qflags, ldns_buffer* dest, uint32_t timenow,
-	int cached, struct region* region, uint16_t udpsize, 
-	struct edns_data* edns);
-
-/**
- * Regenerate the wireformat from the stored msg reply.
- * If the buffer is too small then the message is truncated at a whole
- * rrset and the TC bit set, or whole rrsets are left out of the additional
- * and the TC bit is not set.
- * @param qinfo: query info to store.
- * @param rep: reply to store.
- * @param id: id value to store, network order.
- * @param flags: flags value to store, host order.
- * @param buffer: buffer to store the packet into.
- * @param timenow: time now, to adjust ttl values.
- * @param region: to store temporary data in.
- * @param udpsize: size of the answer, 512, from EDNS, or 64k for TCP.
- * @return: nonzero is success, or 
- *	0 on error: malloc failure (no log_err has been done).
- */
-int reply_info_encode(struct query_info* qinfo, struct reply_info* rep, 
-	uint16_t id, uint16_t flags, ldns_buffer* buffer, uint32_t timenow, 
-	struct region* region, uint16_t udpsize);
-
-/**
- * Encode query packet. Assumes the buffer is large enough.
- * @param pkt: where to store the packet.
- * @param qinfo: query info.
- */
-void qinfo_query_encode(ldns_buffer* pkt, struct query_info* qinfo);
-
 /**
  * Setup query info entry
  * @param q: query info to copy. Emptied as if clear is called.
@@ -303,21 +255,5 @@ void qinfo_query_encode(ldns_buffer* pkt, struct query_info* qinfo);
  */
 struct msgreply_entry* query_info_entrysetup(struct query_info* q,
 	struct reply_info* r, hashvalue_t h);
-
-/**
- * Estimate size of EDNS record in packet. EDNS record will be no larger.
- * @param edns: edns data or NULL.
- * @return octets to reserve for EDNS.
- */
-uint16_t calc_edns_field_size(struct edns_data* edns);
-
-/**
- * Attach EDNS record to buffer. Buffer has complete packet. There must
- * be enough room left for the EDNS record.
- * @param pkt: packet added to.
- * @param edns: if NULL or present=0, nothing is added to the packet.
- */
-void attach_edns_record(ldns_buffer* pkt, struct edns_data* edns);
-
 
 #endif /* UTIL_DATA_MSGREPLY_H */
