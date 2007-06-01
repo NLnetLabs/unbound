@@ -155,12 +155,16 @@ struct delegpt_addr* iter_server_selection(struct iter_env* iter_env,
 }
 
 struct dns_msg* 
-dns_alloc_msg(struct msg_parse* msg, struct region* region)
+dns_alloc_msg(ldns_buffer* pkt, struct msg_parse* msg, struct region* region)
 {
 	struct dns_msg* m = (struct dns_msg*)region_alloc(region,
 		sizeof(struct dns_msg));
 	if(!m)
 		return NULL;
 	memset(m, 0, sizeof(*m));
+	if(!parse_create_msg(pkt, msg, NULL, &m->qinfo, &m->rep, region)) {
+		log_err("malloc failure: allocating incoming dns_msg");
+		return NULL;
+	}
 	return m;
 }

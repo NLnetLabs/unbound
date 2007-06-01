@@ -48,6 +48,7 @@ struct alloc_cache;
 struct iovec;
 struct region;
 struct edns_data;
+struct msg_parse;
 
 /**
  * Structure to store query information that makes answers to queries
@@ -192,6 +193,25 @@ int query_info_parse(struct query_info* m, ldns_buffer* query);
 int reply_info_parse(ldns_buffer* pkt, struct alloc_cache* alloc,
 	struct query_info* qinf, struct reply_info** rep, 
 	struct region* region, struct edns_data* edns);
+
+/**
+ * Allocate and decompress parsed message and rrsets.
+ * @param pkt: for name decompression.
+ * @param msg: parsed message in scratch region.
+ * @param alloc: alloc cache for special rrset key structures.
+ *	Not used if region!=NULL, it can be NULL in that case.
+ * @param qinf: where to store query info.
+ *	qinf itself is allocated by the caller.
+ * @param rep: reply info is allocated and returned.
+ * @param region: if this parameter is NULL then malloc and the alloc is used.
+ *	otherwise, everything is allocated in this region.
+ *	In a region, no special rrset key structures are needed (not shared),
+ *	and no rrset_ref array in the reply is built up.
+ * @return 0 if allocation failed.
+ */
+int parse_create_msg(ldns_buffer* pkt, struct msg_parse* msg,
+        struct alloc_cache* alloc, struct query_info* qinf,
+	struct reply_info** rep, struct region* region);
 
 /**
  * Sorts the ref array.

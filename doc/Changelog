@@ -3,6 +3,7 @@
 	  checked, DNAME checked, CNAME's synthesized, glue checked.
 	- sanitize incoming messages.
 	- split msgreply encode functions into own file msgencode.c.
+	- msg_parse to queryinfo/replyinfo conversion more versatile.
 
 31 May 2007: Wouter
 	- querytargets state.

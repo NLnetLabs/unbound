@@ -1224,7 +1224,7 @@ process_response(struct module_qstate* qstate, struct iter_qstate* iq,
 		goto handle_it;
 
 	/* allocate response dns_msg in region */
-	iq->response = dns_alloc_msg(prs, qstate->region);
+	iq->response = dns_alloc_msg(pkt, prs, qstate->region);
 	if(!iq->response)
 		goto handle_it;
 

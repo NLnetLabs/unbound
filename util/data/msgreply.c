@@ -53,10 +53,13 @@
 /** allocate qinfo, return 0 on error. */
 static int
 parse_create_qinfo(ldns_buffer* pkt, struct msg_parse* msg, 
-	struct query_info* qinf)
+	struct query_info* qinf, struct region* region)
 {
 	if(msg->qname) {
-		qinf->qname = (uint8_t*)malloc(msg->qname_len);
+		if(region)
+			qinf->qname = (uint8_t*)region_alloc(region, 
+				msg->qname_len);
+		else	qinf->qname = (uint8_t*)malloc(msg->qname_len);
 		if(!qinf->qname) return 0;
 		dname_pkt_copy(pkt, qinf->qname, msg->qname);
 	} else	qinf->qname = 0;
@@ -68,12 +71,16 @@ parse_create_qinfo(ldns_buffer* pkt, struct msg_parse* msg,
 
 /** allocate replyinfo, return 0 on error. */
 static int
-parse_create_repinfo(struct msg_parse* msg, struct reply_info** rep)
+parse_create_repinfo(struct msg_parse* msg, struct reply_info** rep,
+	struct region* region)
 {
 	/* rrset_count-1 because the first ref is part of the struct. */
-	*rep = (struct reply_info*)malloc(sizeof(struct reply_info) + 
-		sizeof(struct rrset_ref) * (msg->rrset_count-1)  +
-		sizeof(struct ub_packed_rrset_key*) * msg->rrset_count);
+	size_t s = sizeof(struct reply_info) - sizeof(struct rrset_ref) +
+		sizeof(struct ub_packed_rrset_key*) * msg->rrset_count;
+	if(region)
+		*rep = (struct reply_info*)region_alloc(region, s);
+	else	*rep = (struct reply_info*)malloc(s + 
+			sizeof(struct rrset_ref) * (msg->rrset_count));
 	if(!*rep) return 0;
 	(*rep)->flags = msg->flags;
 	(*rep)->qdcount = msg->qdcount;
@@ -83,24 +90,38 @@ parse_create_repinfo(struct msg_parse* msg, struct reply_info** rep)
 	(*rep)->ar_numrrsets = msg->ar_rrsets;
 	(*rep)->rrset_count = msg->rrset_count;
 	/* array starts after the refs */
-	(*rep)->rrsets = (struct ub_packed_rrset_key**)
-		&((*rep)->ref[msg->rrset_count]);
+	if(region)
+		(*rep)->rrsets = (struct ub_packed_rrset_key**)
+			&((*rep)->ref[0]);
+	else	(*rep)->rrsets = (struct ub_packed_rrset_key**)
+			&((*rep)->ref[msg->rrset_count]);
 	/* zero the arrays to assist cleanup in case of malloc failure */
 	memset( (*rep)->rrsets, 0, 
 		sizeof(struct ub_packed_rrset_key*) * msg->rrset_count);
-	memset( &(*rep)->ref[0], 0, 
-		sizeof(struct rrset_ref) * msg->rrset_count);
+	if(!region)
+		memset( &(*rep)->ref[0], 0, 
+			sizeof(struct rrset_ref) * msg->rrset_count);
 	return 1;
 }
 
 /** allocate (special) rrset keys, return 0 on error. */
 static int
 parse_alloc_rrset_keys(struct msg_parse* msg, struct reply_info* rep,
-	struct alloc_cache* alloc)
+	struct alloc_cache* alloc, struct region* region)
 {
 	size_t i;
 	for(i=0; i<msg->rrset_count; i++) {
-		rep->rrsets[i] = alloc_special_obtain(alloc);
+		if(region) {
+			rep->rrsets[i] = (struct ub_packed_rrset_key*)
+				region_alloc(region, 
+				sizeof(struct ub_packed_rrset_key));
+			if(rep->rrsets[i]) {
+				memset(rep->rrsets[i], 0, 
+					sizeof(struct ub_packed_rrset_key));
+				rep->rrsets[i]->entry.key = rep->rrsets[i];
+			}
+		}
+		else	rep->rrsets[i] = alloc_special_obtain(alloc);
 		if(!rep->rrsets[i])
 			return 0;
 		rep->rrsets[i]->entry.data = NULL;
@@ -221,13 +242,16 @@ parse_rr_copy(ldns_buffer* pkt, struct rrset_parse* pset,
 /** create rrset return 0 on failure */
 static int
 parse_create_rrset(ldns_buffer* pkt, struct rrset_parse* pset,
-	struct packed_rrset_data** data)
+	struct packed_rrset_data** data, struct region* region)
 {
 	/* allocate */
-	*data = malloc(sizeof(struct packed_rrset_data) + 
+	size_t s = sizeof(struct packed_rrset_data) + 
 		(pset->rr_count + pset->rrsig_count) * 
 		(sizeof(size_t)+sizeof(uint8_t*)+sizeof(uint32_t)) + 
-		pset->size);
+		pset->size;
+	if(region)
+		*data = region_alloc(region, s);
+	else	*data = malloc(s);
 	if(!*data)
 		return 0;
 	/* copy & decompress */
@@ -270,7 +294,7 @@ get_rrset_trust(struct reply_info* rep, size_t i)
  */
 static int
 parse_copy_decompress(ldns_buffer* pkt, struct msg_parse* msg,
-	struct reply_info* rep)
+	struct reply_info* rep, struct region* region)
 {
 	size_t i;
 	struct rrset_parse *pset = msg->rrset_first;
@@ -283,7 +307,11 @@ parse_copy_decompress(ldns_buffer* pkt, struct msg_parse* msg,
 	for(i=0; i<rep->rrset_count; i++) {
 		rep->rrsets[i]->rk.flags = pset->flags;
 		rep->rrsets[i]->rk.dname_len = pset->dname_len;
-		rep->rrsets[i]->rk.dname = (uint8_t*)malloc(pset->dname_len);
+		if(region)
+			rep->rrsets[i]->rk.dname = (uint8_t*)region_alloc(
+				region, pset->dname_len);
+		else	rep->rrsets[i]->rk.dname = 
+				(uint8_t*)malloc(pset->dname_len);
 		if(!rep->rrsets[i]->rk.dname)
 			return 0;
 		/** copy & decompress dname */
@@ -292,7 +320,7 @@ parse_copy_decompress(ldns_buffer* pkt, struct msg_parse* msg,
 		rep->rrsets[i]->rk.type = htons(pset->type);
 		rep->rrsets[i]->rk.rrset_class = pset->rrset_class;
 		/** read data part. */
-		if(!parse_create_rrset(pkt, pset, &data))
+		if(!parse_create_rrset(pkt, pset, &data, region))
 			return 0;
 		rep->rrsets[i]->entry.data = (void*)data;
 		rep->rrsets[i]->entry.key = (void*)rep->rrsets[i];
@@ -306,20 +334,19 @@ parse_copy_decompress(ldns_buffer* pkt, struct msg_parse* msg,
 	return 1;
 }
 
-/** allocate and decompress message and rrsets, returns 0 if failed. */
-static int 
+int 
 parse_create_msg(ldns_buffer* pkt, struct msg_parse* msg,
 	struct alloc_cache* alloc, struct query_info* qinf, 
-	struct reply_info** rep)
+	struct reply_info** rep, struct region* region)
 {
 	log_assert(pkt && msg);
-	if(!parse_create_qinfo(pkt, msg, qinf))
+	if(!parse_create_qinfo(pkt, msg, qinf, region))
 		return 0;
-	if(!parse_create_repinfo(msg, rep))
+	if(!parse_create_repinfo(msg, rep, region))
 		return 0;
-	if(!parse_alloc_rrset_keys(msg, *rep, alloc))
+	if(!parse_alloc_rrset_keys(msg, *rep, alloc, region))
 		return 0;
-	if(!parse_copy_decompress(pkt, msg, *rep))
+	if(!parse_copy_decompress(pkt, msg, *rep, region))
 		return 0;
 	return 1;
 }
@@ -348,7 +375,7 @@ int reply_info_parse(ldns_buffer* pkt, struct alloc_cache* alloc,
 
 	/* parse OK, allocate return structures */
 	/* this also performs dname decompression */
-	if(!parse_create_msg(pkt, msg, alloc, qinf, rep)) {
+	if(!parse_create_msg(pkt, msg, alloc, qinf, rep, NULL)) {
 		query_info_clear(qinf);
 		reply_info_parsedelete(*rep, alloc);
 		*rep = NULL;

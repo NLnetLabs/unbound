@@ -235,7 +235,10 @@ synth_cname_rrset(uint8_t** sname, size_t* snamelen, uint8_t* alias,
 		return NULL;
 	cn->rr_last = cn->rr_first;
 	/* CNAME from sname to alias */
-	cn->dname = (uint8_t*)region_alloc_init(region, *sname, *snamelen);
+	cn->dname = (uint8_t*)region_alloc(region, *snamelen);
+	if(!cn->dname)
+		return NULL;
+	dname_pkt_copy(pkt, cn->dname, *sname);
 	cn->dname_len = *snamelen;
 	cn->type = LDNS_RR_TYPE_CNAME;
 	cn->section = rrset->section;
