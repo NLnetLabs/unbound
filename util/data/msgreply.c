@@ -554,3 +554,41 @@ query_info_entrysetup(struct query_info* q, struct reply_info* r,
 	q->qname = NULL;
 	return e;
 }
+
+static struct reply_info*
+copy_repinfo(struct reply_info* from)
+{
+	struct reply_info* cp;
+	/* rrset_count-1 because the first ref is part of the struct. */
+	size_t s = sizeof(struct reply_info) - sizeof(struct rrset_ref) +
+		sizeof(struct ub_packed_rrset_key*) * from->rrset_count;
+	cp = (struct reply_info*)malloc(s + 
+			sizeof(struct rrset_ref) * (from->rrset_count));
+	if(!cp) return NULL;
+	cp->flags = from->flags;
+	cp->qdcount = from->qdcount;
+	cp->ttl = from->ttl;
+	cp->an_numrrsets = from->an_numrrsets;
+	cp->ns_numrrsets = from->ns_numrrsets;
+	cp->ar_numrrsets = from->ar_numrrsets;
+	cp->rrset_count = from->rrset_count;
+	/* array starts after the refs */
+	cp->rrsets = (struct ub_packed_rrset_key**)
+		&(cp->ref[from->rrset_count]);
+	/* zero the arrays to assist cleanup in case of malloc failure */
+	memset( cp->rrsets, 0, 
+		sizeof(struct ub_packed_rrset_key*) * from->rrset_count);
+	memset( &cp->ref[0], 0, 
+		sizeof(struct rrset_ref) * from->rrset_count);
+	return cp;
+}
+
+struct reply_info* 
+reply_info_copy(struct reply_info* rep, struct alloc_cache* alloc)
+{
+	struct reply_info* cp;
+	if(!(cp = copy_repinfo(rep)))
+		return NULL;
+	/* TODO copy rrsets */
+	return cp;
+}

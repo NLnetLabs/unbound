@@ -1067,15 +1067,132 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 	return 0;
 }
 
-#if 0
-/** TODO */
+/** 
+ * Process the query response. All queries end up at this state first. This
+ * process generally consists of analyzing the response and routing the
+ * event to the next state (either bouncing it back to a request state, or
+ * terminating the processing for this event).
+ * 
+ * @param qstate: query state.
+ * @param iq: iterator query state.
+ * @param id: module id.
+ * @return true if the event requires more immediate processing, false if
+ *         not. This is generally only true when forwarding the request to
+ *         the final state (i.e., on answer).
+ */
 static int
 processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
-	struct iter_env* ie, int id)
+	int id)
 {
-	return 0;
+	enum response_type type;
+	iq->num_current_queries--;
+	qstate->ext_state[id] = module_error; /* debug, must be overridden */
+	if(iq->response == NULL) {
+		verbose(VERB_ALGO, "query response was timeout");
+		return next_state(qstate, iq, QUERYTARGETS_STATE);
+	}
+	type = response_type_from_server(iq->response, &qstate->qinfo, iq->dp);
+	if(type == RESPONSE_TYPE_ANSWER) {
+		/* ANSWER type responses terminate the query algorithm, 
+		 * so they sent on their */
+		verbose(VERB_ALGO, "query response was ANSWER");
+		
+		/* FIXME: there is a question about whether this gets 
+		 * stored under the original query or most recent query. 
+		 * The original query would reduce cache work, but you 
+		 * need to apply the prependList before caching, and 
+		 * also cache under the latest query. */
+		if(!iter_dns_store(qstate->env, iq->response, 0))
+			return error_response(qstate, iq, LDNS_RCODE_SERVFAIL);
+		/* close down outstanding requests to be discarded */
+		outbound_list_clear(&iq->outlist);
+		return final_state(qstate, iq);
+	} else if(type == RESPONSE_TYPE_REFERRAL) {
+		/* REFERRAL type responses get a reset of the 
+		 * delegation point, and back to the QUERYTARGETS_STATE. */
+		verbose(VERB_ALGO, "query response was REFERRAL");
+
+		/* Store the referral under the current query */
+		if(!iter_dns_store(qstate->env, iq->response, 1))
+			return error_response(qstate, iq, LDNS_RCODE_SERVFAIL);
+
+		/* Reset the event state, setting the current delegation 
+		 * point to the referral. */
+		iq->deleg_msg = iq->response;
+		iq->dp = delegpt_from_message(iq->response, qstate->region);
+		if(!iq->dp)
+			return error_response(qstate, iq, LDNS_RCODE_SERVFAIL);
+		iq->num_current_queries = 0;
+		iq->num_target_queries = -1;
+		/* Count this as a referral. */
+		iq->referral_count++;
+
+		/* stop current outstanding queries. 
+		 * FIXME: should the outstanding queries be waited for and
+		 * handled?
+		 */
+		outbound_list_clear(&iq->outlist);
+		verbose(VERB_ALGO, "cleared outbound list for next round");
+		return next_state(qstate, iq, QUERYTARGETS_STATE);
+	} else if(type == RESPONSE_TYPE_CNAME) {
+		uint8_t* sname = NULL;
+		size_t snamelen = 0;
+		/* CNAME type responses get a query restart (i.e., get a 
+		 * reset of the query state and go back to INIT_REQUEST_STATE).
+		 */
+		verbose(VERB_ALGO, "query response was CNAME");
+		/* Process the CNAME response. */
+		if(!iq->orig_qname) {
+			iq->orig_qname = qstate->qinfo.qname;
+			iq->orig_qnamelen = qstate->qinfo.qname_len;
+		}
+		if(!handle_cname_response(qstate, iq, iq->response, 
+			&sname, &snamelen))
+			return error_response(qstate, iq, LDNS_RCODE_SERVFAIL);
+		/* cache the CNAME response under the current query */
+		if(!iter_dns_store(qstate->env, iq->response, 0))
+			return error_response(qstate, iq, LDNS_RCODE_SERVFAIL);
+		/* set the current request's qname to the new value. */
+		qstate->qinfo.qname = sname;
+		qstate->qinfo.qname_len = snamelen;
+		/* Clear the query state, since this is a query restart. */
+		iq->deleg_msg = NULL;
+		iq->dp = NULL;
+		iq->num_current_queries = 0;
+		iq->num_target_queries = -1;
+		/* Note the query restart. */
+		iq->query_restart_count++;
+
+		/* stop current outstanding queries. 
+		 * FIXME: should the outstanding queries be waited for and
+		 * handled?
+		 */
+		outbound_list_clear(&iq->outlist);
+		verbose(VERB_ALGO, "cleared outbound list for query restart");
+		/* go to INIT_REQUEST_STATE for new qname. */
+		return next_state(qstate, iq, INIT_REQUEST_STATE);
+	} else if(type == RESPONSE_TYPE_LAME) {
+		/* Cache the LAMEness. */
+		/* TODO mark addr, dp->name, as lame */
+		verbose(VERB_ALGO, "query response was LAME");
+	} else if(type == RESPONSE_TYPE_THROWAWAY) {
+		/* LAME and THROWAWAY responses are handled the same way. 
+		 * In this case, the event is just sent directly back to 
+		 * the QUERYTARGETS_STATE without resetting anything, 
+		 * because, clearly, the next target must be tried. */
+		verbose(VERB_ALGO, "query response was THROWAWAY");
+	} else {
+		log_warn("A query response came back with an unknown type: %d",
+			(int)type);
+	}
+
+	/* LAME, THROWAWAY and "unknown" all end up here.
+	 * Recycle to the QUERYTARGETS state to hopefully try a 
+	 * different target. */
+	return next_state(qstate, iq, QUERYTARGETS_STATE);
 }
 
+#if 0
 /** TODO */
 static int
 processPrimeResponse(struct module_qstate* qstate, struct iter_qstate* iq,
@@ -1134,10 +1251,10 @@ iter_handle(struct module_qstate* qstate, struct iter_qstate* iq,
 			case QUERYTARGETS_STATE:
 				cont = processQueryTargets(qstate, iq, ie, id);
 				break;
-#if 0
 			case QUERY_RESP_STATE:
-				cont = processQueryResponse(qstate, iq, ie, id);
+				cont = processQueryResponse(qstate, iq, id);
 				break;
+#if 0
 			case PRIME_RESP_STATE:
 				cont = processPrimeResponse(qstate, iq, ie, id);
 				break;

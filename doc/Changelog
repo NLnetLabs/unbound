@@ -4,6 +4,7 @@
 	- sanitize incoming messages.
 	- split msgreply encode functions into own file msgencode.c.
 	- msg_parse to queryinfo/replyinfo conversion more versatile.
+	- process_response, classify response, delegpt_from_message. 
 
 31 May 2007: Wouter
 	- querytargets state.

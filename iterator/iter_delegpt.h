@@ -45,6 +45,8 @@
 struct region;
 struct delegpt_ns;
 struct delegpt_addr;
+struct dns_msg;
+struct ub_packed_rrset_key;
 
 /**
  * Delegation Point.
@@ -137,6 +139,16 @@ int delegpt_set_name(struct delegpt* dp, struct region* region, uint8_t* name);
 int delegpt_add_ns(struct delegpt* dp, struct region* region, uint8_t* name);
 
 /**
+ * Add NS rrset; calls add_ns repeatedly.
+ * @param dp: delegation point.
+ * @param region: where to allocate the info.
+ * @param ns_rrset: NS rrset.
+ * return 0 on alloc error.
+ */
+int delegpt_rrset_add_ns(struct delegpt* dp, struct region* region,
+	struct ub_packed_rrset_key* ns_rrset);
+
+/**
  * Add target address to the delegation point.
  * @param dp: delegation point.
  * @param region: where to allocate the info.
@@ -150,6 +162,26 @@ int delegpt_add_ns(struct delegpt* dp, struct region* region, uint8_t* name);
 int delegpt_add_target(struct delegpt* dp, struct region* region, 
 	uint8_t* name, size_t namelen, struct sockaddr_storage* addr, 
 	socklen_t addrlen);
+
+/**
+ * Add A RRset to delegpt.
+ * @param dp: delegation point.
+ * @param region: where to allocate the info.
+ * @param rrset: RRset A to add.
+ * @return 0 on alloc error.
+ */
+int delegpt_add_rrset_A(struct delegpt* dp, struct region* region, 
+	struct ub_packed_rrset_key* rrset);
+
+/**
+ * Add AAAA RRset to delegpt.
+ * @param dp: delegation point.
+ * @param region: where to allocate the info.
+ * @param rrset: RRset AAAA to add.
+ * @return 0 on alloc error.
+ */
+int delegpt_add_rrset_AAAA(struct delegpt* dp, struct region* region, 
+	struct ub_packed_rrset_key* rrset);
 
 /**
  * Add address to the delegation point. No servername is associated or checked.
@@ -180,5 +212,26 @@ void delegpt_add_unused_targets(struct delegpt* dp);
  * @return number of missing targets (or 0).
  */
 size_t delegpt_count_missing_targets(struct delegpt* dp);
+
+/**
+ * Create new delegation point from a dns message
+ *
+ * Note that this method does not actually test to see if the message is an
+ * actual referral. It really is just checking to see if it can construct a
+ * delegation point, so the message could be of some other type (some ANSWER
+ * messages, some CNAME messages, generally.) Note that the resulting
+ * DelegationPoint will contain targets for all "relevant" glue (i.e.,
+ * address records whose ownernames match the target of one of the NS
+ * records), so if policy dictates that some glue should be discarded beyond
+ * that, discard it before calling this method. Note that this method will
+ * find "glue" in either the ADDITIONAL section or the ANSWER section.
+ *
+ * @param msg: the dns message, referral.
+ * @param region: where to allocate delegation point.
+ * @return new delegation point or NULL on alloc error, or if the
+ *         message was not appropriate.
+ */
+struct delegpt* delegpt_from_message(struct dns_msg* msg, 
+	struct region* region);
 
 #endif /* ITERATOR_ITER_DELEGPT_H */

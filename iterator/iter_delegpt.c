@@ -41,8 +41,11 @@
  */
 #include "config.h"
 #include "iterator/iter_delegpt.h"
+#include "services/cache/dns.h"
 #include "util/region-allocator.h"
 #include "util/data/dname.h"
+#include "util/data/packed_rrset.h"
+#include "util/data/msgreply.h"
 #include "util/net_help.h"
 
 struct delegpt* 
@@ -187,4 +190,133 @@ delegpt_count_missing_targets(struct delegpt* dp)
 		if(!ns->resolved)
 			n++;
 	return n;
+}
+
+/** find NS rrset in given list */
+static struct ub_packed_rrset_key*
+find_NS(struct reply_info* rep, size_t from, size_t to)
+{
+	size_t i;
+	for(i=from; i<to; i++) {
+		if(ntohs(rep->rrsets[i]->rk.type) == LDNS_RR_TYPE_NS)
+			return rep->rrsets[i];
+	}
+	return NULL;
+}
+
+struct delegpt* 
+delegpt_from_message(struct dns_msg* msg, struct region* region)
+{
+	struct ub_packed_rrset_key* ns_rrset = NULL;
+	struct delegpt* dp;
+	size_t i;
+	/* look for NS records in the authority section... */
+	ns_rrset = find_NS(msg->rep, msg->rep->an_numrrsets, 
+		msg->rep->an_numrrsets+msg->rep->ns_numrrsets);
+
+	/* In some cases (even legitimate, perfectly legal cases), the 
+	 * NS set for the "referral" might be in the answer section. */
+	if(!ns_rrset)
+		ns_rrset = find_NS(msg->rep, 0, msg->rep->an_numrrsets);
+	
+	/* If there was no NS rrset in the authority section, then this 
+	 * wasn't a referral message. (It might not actually be a 
+	 * referral message anyway) */
+	if(!ns_rrset)
+		return NULL;
+	
+	/* If we found any, then Yay! we have a delegation point. */
+	dp = delegpt_create(region);
+	if(!dp)
+		return NULL;
+	if(!delegpt_set_name(dp, region, ns_rrset->rk.dname))
+		return NULL;
+	if(!delegpt_rrset_add_ns(dp, region, ns_rrset))
+		return NULL;
+
+	/* add glue, A and AAAA in answer and additional section */
+	for(i=0; i<msg->rep->rrset_count; i++) {
+		struct ub_packed_rrset_key* s = msg->rep->rrsets[i];
+		/* skip auth section. FIXME really needed?*/
+		if(msg->rep->an_numrrsets <= i && 
+			i < (msg->rep->an_numrrsets+msg->rep->ns_numrrsets))
+			continue;
+
+		if(ntohs(s->rk.type) == LDNS_RR_TYPE_A) {
+			if(!delegpt_add_rrset_A(dp, region, s))
+				return NULL;
+		} else if(ntohs(s->rk.type) == LDNS_RR_TYPE_AAAA) {
+			if(!delegpt_add_rrset_AAAA(dp, region, s))
+				return NULL;
+		}
+	}
+	return dp;
+}
+
+int 
+delegpt_rrset_add_ns(struct delegpt* dp, struct region* region,
+        struct ub_packed_rrset_key* ns_rrset)
+{
+	struct packed_rrset_data* nsdata = (struct packed_rrset_data*)
+		ns_rrset->entry.data;
+	size_t i;
+	for(i=0; i<nsdata->count; i++) {
+		if(nsdata->rr_len[i] < 2+1) continue; /* len + root label */
+		if(dname_valid(nsdata->rr_data[i]+2, nsdata->rr_len[i]-2) !=
+			(size_t)ldns_read_uint16(nsdata->rr_data[i])-2)
+			continue; /* bad format */
+		/* add rdata of NS (= wirefmt dname), skip rdatalen bytes */
+		if(!delegpt_add_ns(dp, region, nsdata->rr_data[i]+2))
+			return 0;
+	}
+	return 1;
+}
+
+int 
+delegpt_add_rrset_A(struct delegpt* dp, struct region* region,
+	struct ub_packed_rrset_key* ak)
+{
+        struct packed_rrset_data* d=(struct packed_rrset_data*)ak->entry.data;
+        size_t i;
+        struct sockaddr_in sa;
+        socklen_t len = (socklen_t)sizeof(sa);
+        memset(&sa, 0, len);
+        sa.sin_family = AF_INET;
+        sa.sin_port = (in_port_t)htons(UNBOUND_DNS_PORT);
+        for(i=0; i<d->count; i++) {
+                if(d->rr_len[i] != 2 + INET_SIZE)
+                        continue;
+                memmove(&sa.sin_addr, d->rr_data[i]+2, INET_SIZE);
+                log_addr("adding A to deleg",  (struct sockaddr_storage*)&sa,
+                        len);
+                if(!delegpt_add_target(dp, region, ak->rk.dname,
+                        ak->rk.dname_len, (struct sockaddr_storage*)&sa,
+                        len))
+                        return 0;
+        }
+        return 1;
+}
+
+int 
+delegpt_add_rrset_AAAA(struct delegpt* dp, struct region* region,
+	struct ub_packed_rrset_key* ak)
+{
+        struct packed_rrset_data* d=(struct packed_rrset_data*)ak->entry.data;
+        size_t i;
+        struct sockaddr_in6 sa;
+        socklen_t len = (socklen_t)sizeof(sa);
+        memset(&sa, 0, len);
+        sa.sin6_family = AF_INET6;
+        sa.sin6_port = (in_port_t)htons(UNBOUND_DNS_PORT);
+        for(i=0; i<d->count; i++) {
+                if(d->rr_len[i] != 2 + INET6_SIZE) /* rdatalen + len of IP6 */
+                        continue;
+                memmove(&sa.sin6_addr, d->rr_data[i]+2, INET6_SIZE);
+                log_addr("adding AAAA to deleg",  (struct sockaddr_storage*)&sa,                        len);
+                if(!delegpt_add_target(dp, region, ak->rk.dname,
+                        ak->rk.dname_len, (struct sockaddr_storage*)&sa,
+                        len))
+                        return 0;
+        }
+        return 1;
 }

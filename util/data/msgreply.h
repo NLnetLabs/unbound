@@ -276,4 +276,13 @@ hashvalue_t query_info_hash(struct query_info *q);
 struct msgreply_entry* query_info_entrysetup(struct query_info* q,
 	struct reply_info* r, hashvalue_t h);
 
+/**
+ * Copy reply_info and all rrsets in it and allocate.
+ * @param rep: what to copy, probably inside region, no ref[] array in it.
+ * @param alloc: how to allocate rrset keys.
+ * @return new reply info or NULL on memory error.
+ */
+struct reply_info* reply_info_copy(struct reply_info* rep, 
+	struct alloc_cache* alloc);
+
 #endif /* UTIL_DATA_MSGREPLY_H */

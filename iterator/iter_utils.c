@@ -46,6 +46,7 @@
 #include "iterator/iter_delegpt.h"
 #include "services/cache/infra.h"
 #include "services/cache/dns.h"
+#include "services/cache/rrset.h"
 #include "util/net_help.h"
 #include "util/module.h"
 #include "util/log.h"
@@ -167,4 +168,43 @@ dns_alloc_msg(ldns_buffer* pkt, struct msg_parse* msg, struct region* region)
 		return NULL;
 	}
 	return m;
+}
+
+int 
+iter_dns_store(struct module_env* env, struct dns_msg* msg, int is_referral)
+{
+	struct reply_info* rep = NULL;
+	/* alloc, malloc properly (not in region, like msg is) */
+	rep = reply_info_copy(msg->rep, env->alloc);
+	if(!rep)
+		return 0;
+
+	if(is_referral) {
+		/* store rrsets */
+		struct rrset_ref ref;
+		uint32_t now = time(NULL);
+		size_t i;
+		reply_info_set_ttls(rep, now);
+		for(i=0; i<rep->rrset_count; i++) {
+			ref.key = rep->rrsets[i];
+			ref.id = rep->rrsets[i]->id;
+			/*ignore ret: it was in the cache, ref updated */
+			(void)rrset_cache_update(env->rrset_cache, &ref, 
+				env->alloc, now);
+		}
+		return 1;
+	} else {
+		/* store msg, and rrsets */
+		struct query_info qinf;
+		hashvalue_t h;
+
+		qinf = msg->qinfo;
+		qinf.qname = memdup(msg->qinfo.qname, msg->qinfo.qname_len);
+		if(!qinf.qname)
+			return 0;
+		h = query_info_hash(&qinf);
+		dns_cache_store_msg(env, &qinf, h, rep);
+		free(qinf.qname);
+	}
+	return 1;
 }

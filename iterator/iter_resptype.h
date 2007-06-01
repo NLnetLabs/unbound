@@ -44,6 +44,7 @@
 #define ITERATOR_ITER_RESPTYPE_H
 struct dns_msg;
 struct query_info;
+struct delegpt;
 
 /**
  * The response type is used to interpret the response.
@@ -96,5 +97,23 @@ enum response_type {
  */
 enum response_type response_type_from_cache(struct dns_msg* msg, 
 	struct query_info* request);
+
+/**
+ * Classifies a response message (from the wire) based on the current
+ * request.
+ *
+ * NOTE: currently this routine uses the AA bit in the response to help
+ * distinguish between some non-standard referrals and answers. It also
+ * relies somewhat on the originating zone to be accurate (for lameness
+ * detection, mostly).
+ *
+ * @param msg: the message from the cache.
+ * @param request: the request that generated the response.
+ * @param dp: The delegation point that was being queried
+ *          when the response was returned.
+ * @return the response type (CNAME or ANSWER).
+ */
+enum response_type response_type_from_server(struct dns_msg* msg, 
+	struct query_info* request, struct delegpt* dp);
 
 #endif /* ITERATOR_ITER_RESPTYPE_H */

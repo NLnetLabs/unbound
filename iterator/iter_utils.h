@@ -86,4 +86,15 @@ struct delegpt_addr* iter_server_selection(struct iter_env* iter_env,
 struct dns_msg* dns_alloc_msg(ldns_buffer* pkt, struct msg_parse* msg, 
 	struct region* region);
 
+/**
+ * Allocate a dns_msg with malloc/alloc structure and store in dns cache.
+ * @param env: environment, with alloc structure and dns cache.
+ * @param msg: dns_msg from dns_alloc_msg for example.
+ * @param is_referral: If true, then the given message to be stored is a
+ *	referral. The cache implementation may use this as a hint.
+ * @return 0 on alloc error (out of memory).
+ */
+int iter_dns_store(struct module_env* env, struct dns_msg* msg, 
+	int is_referral);
+
 #endif /* ITERATOR_ITER_UTILS_H */
