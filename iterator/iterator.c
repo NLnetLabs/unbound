@@ -1265,7 +1265,6 @@ iter_operate(struct module_qstate* qstate, enum module_ev event, int id,
 		process_response(qstate, iq, ie, id, outbound, event);
 		return;
 	}
-	/* TODO: uhh */
 
 	log_err("bad event for iterator");
 	qstate->ext_state[id] = module_error;

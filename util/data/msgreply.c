@@ -290,6 +290,7 @@ get_rrset_trust(struct reply_info* rep, size_t i)
  * @param pkt: the packet for compression pointer resolution.
  * @param msg: the parsed message
  * @param rep: reply info to put rrs into.
+ * @param region: if not NULL, used for allocation.
  * @return 0 on failure.
  */
 static int
