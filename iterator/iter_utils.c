@@ -53,7 +53,8 @@
 #include "util/config_file.h"
 #include "util/region-allocator.h"
 #include "util/data/msgparse.h"
-	
+#include "util/random.h"
+
 int 
 iter_apply_cfg(struct iter_env* iter_env, struct config_file* cfg)
 {
@@ -97,7 +98,7 @@ iter_apply_cfg(struct iter_env* iter_env, struct config_file* cfg)
 /** filter out unsuitable targets, return rtt or -1 */
 static int
 iter_filter_unsuitable(struct iter_env* iter_env, struct module_env* env,
-        struct delegpt_addr* a, uint8_t* name, size_t namelen, time_t now)
+	uint8_t* name, size_t namelen, time_t now, struct delegpt_addr* a)
 {
 	int rtt;
 	int lame;
@@ -116,43 +117,90 @@ iter_filter_unsuitable(struct iter_env* iter_env, struct module_env* env,
 	return UNKNOWN_SERVER_NICENESS;
 }
 
-struct delegpt_addr* iter_server_selection(struct iter_env* iter_env, 
+/** filter the addres list, putting best targets at front,
+ * returns number of best targets (or 0, no suitable targets) */
+static int
+iter_filter_order(struct iter_env* iter_env, struct module_env* env,
+	uint8_t* name, size_t namelen, time_t now, struct delegpt* dp)
+{
+	int got_num = 0, got_rtt = 0, thisrtt, swap_to_front;
+	struct delegpt_addr* a, *n, *prev=NULL;
+
+	a = dp->result_list;
+	while(a) {
+		/* filter out unsuitable targets */
+		thisrtt = iter_filter_unsuitable(iter_env, env, name, namelen, 
+			now, a);
+		if(thisrtt == -1) {
+			prev = a;
+			a = a->next_result;
+			continue;
+		}
+		/* classify the server address and determine what to do */
+		swap_to_front = 0;
+		if(got_num == 0) {
+			got_rtt = thisrtt;
+			got_num = 1;
+			swap_to_front = 1;
+		} else if(thisrtt == got_rtt) {
+			got_num++;
+			swap_to_front = 1;
+		} else if(thisrtt < got_rtt) {
+			got_rtt = thisrtt;
+			got_num = 1; /* start back at count of 1 */
+			swap_to_front = 1;
+		}
+		/* swap to front if necessary, or move to next result */
+		if(swap_to_front && prev) {
+			n = a->next_result;
+			prev->next_result = n;
+			a->next_result = dp->result_list;
+			dp->result_list = a;
+			a = n;
+		} else {
+			prev = a;
+			a = a->next_result;
+		}
+	}
+	return got_num;
+}
+
+struct delegpt_addr* 
+iter_server_selection(struct iter_env* iter_env, 
 	struct module_env* env, struct delegpt* dp, 
 	uint8_t* name, size_t namelen)
 {
-	int got_one = 0, got_rtt = 0;
-	struct delegpt_addr* got = NULL, *got_prev = NULL, *a, *prev = NULL;
 	time_t now = time(NULL);
+	int sel;
+	struct delegpt_addr* a, *prev;
+	int num = iter_filter_order(iter_env, env, name, namelen, now, dp);
 
-	for(a = dp->result_list; a; a = a->next_result) {
-		/* filter out unsuitable targets */
-		int thisrtt = iter_filter_unsuitable(iter_env, env, a, name, 
-			namelen, now);
-		if(thisrtt == -1) {
-			prev = a;
-			continue;
-		}
-		if(!got_one) {
-			got_rtt = thisrtt;
-			got = a;
-			got_prev = prev;
-			got_one = 1;
-		} else {
-			if(thisrtt < got_rtt) {
-				got_rtt = thisrtt;
-				got = a;
-				got_prev = prev;
-			}
-		}
+	if(num == 0)
+		return NULL;
+	if(num == 1) {
+		a = dp->result_list;
+		dp->result_list = a->next_result;
+		return a;
+	}
+	/* randomly select a target from the list */
+	log_assert(num > 1);
+	/* we do not need secure random numbers here, but
+	 * we do need it to be threadsafe, so we use this */
+	sel = ub_random(env->rnd) % num; 
+	a = dp->result_list;
+	prev = NULL;
+	while(sel > 0 && a) {
 		prev = a;
+		a = a->next_result;
+		sel--;
 	}
-	if(got) {
-		/* remove it from list */
-		if(got_prev)
-			got_prev->next_result = got->next_result;
-		else	dp->result_list = got->next_result;
-	}
-	return got;
+	if(!a)  /* robustness */
+		return NULL;
+	/* remove it from list */
+	if(prev)
+		prev->next_result = a->next_result;
+	else	dp->result_list = a->next_result;
+	return a;
 }
 
 struct dns_msg* 

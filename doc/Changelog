@@ -1,3 +1,6 @@
+4 June 2007: Wouter
+	- random selection of equally preferred nameserver targets.
+
 1 June 2007: Wouter
 	- normalize incoming messages. Like unbound-java, with CNAME chain
 	  checked, DNAME checked, CNAME's synthesized, glue checked.

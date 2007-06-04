@@ -763,6 +763,7 @@ worker_init(struct worker* worker, struct config_file *cfg,
 	worker->env = *worker->daemon->env;
 	worker->env.worker = worker;
 	worker->env.alloc = &worker->alloc;
+	worker->env.rnd = worker->rndstate;
 	return 1;
 }
 

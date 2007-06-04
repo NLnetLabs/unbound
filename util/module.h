@@ -53,6 +53,7 @@ struct edns_data;
 struct region;
 struct worker;
 struct module_qstate;
+struct ub_randstate;
 
 /** Maximum number of modules in operation */
 #define MAX_MODULE 2
@@ -116,12 +117,12 @@ struct module_env {
 		struct sockaddr_storage* addr, socklen_t addrlen, 
 		struct module_qstate* q);
 
-	/** create a subquery. operate should then return with wait_subq */
-
-	/** allocation service */
-	struct alloc_cache* alloc;
 	/** internal data for daemon - worker thread. */
 	struct worker* worker;
+	/** allocation service */
+	struct alloc_cache* alloc;
+	/** random table to generate random numbers */
+	struct ub_randstate* rnd;
 	/** module specific data. indexed by module id. */
 	void* modinfo[MAX_MODULE];
 };
