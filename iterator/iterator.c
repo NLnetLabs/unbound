@@ -48,6 +48,7 @@
 #include "iterator/iter_resptype.h"
 #include "iterator/iter_scrub.h"
 #include "services/cache/dns.h"
+#include "services/cache/infra.h"
 #include "util/module.h"
 #include "util/netevent.h"
 #include "util/net_help.h"
@@ -1091,6 +1092,7 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		verbose(VERB_ALGO, "query response was timeout");
 		return next_state(qstate, iq, QUERYTARGETS_STATE);
 	}
+	log_assert(qstate->reply); /* need addr for lameness cache */
 	type = response_type_from_server(iq->response, &qstate->qinfo, iq->dp);
 	if(type == RESPONSE_TYPE_ANSWER) {
 		/* ANSWER type responses terminate the query algorithm, 
@@ -1173,8 +1175,11 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		return next_state(qstate, iq, INIT_REQUEST_STATE);
 	} else if(type == RESPONSE_TYPE_LAME) {
 		/* Cache the LAMEness. */
-		/* TODO mark addr, dp->name, as lame */
 		verbose(VERB_ALGO, "query response was LAME");
+		if(!infra_set_lame(qstate->env->infra_cache, 
+			&qstate->reply->addr, qstate->reply->addrlen, 
+			iq->dp->name, iq->dp->namelen, time(NULL)))
+			log_err("mark host lame: out of memory");
 	} else if(type == RESPONSE_TYPE_THROWAWAY) {
 		/* LAME and THROWAWAY responses are handled the same way. 
 		 * In this case, the event is just sent directly back to 

@@ -214,6 +214,7 @@ worker_process_query(struct worker* worker, struct work_query* w,
 		(*worker->daemon->modfunc[qstate->curmod]->operate)(qstate, 
 			event, qstate->curmod, entry);
 		region_free_all(worker->scratchpad);
+		qstate->reply = NULL;
 		s = qstate->ext_state[qstate->curmod];
 		/* examine results, start further modules, etc. */
 		if(s == module_wait_subquery) {
@@ -287,7 +288,6 @@ worker_handle_reply(struct comm_point* c, void* arg, int error,
 	if(error != 0) {
 		worker_process_query(worker, w, &w->state, 
 			module_event_timeout, NULL);
-		w->state.reply = NULL;
 		return 0;
 	}
 	/* sanity check. */
@@ -299,11 +299,9 @@ worker_handle_reply(struct comm_point* c, void* arg, int error,
 		 * never arrived. */
 		worker_process_query(worker, w, &w->state, 
 			module_event_timeout, NULL);
-		w->state.reply = NULL;
 		return 0;
 	}
 	worker_process_query(worker, w, &w->state, module_event_reply, NULL);
-	w->state.reply = NULL;
 	return 0;
 }
 
@@ -316,11 +314,10 @@ worker_handle_service_reply(struct comm_point* c, void* arg, int error,
 	struct work_query* w = e->qstate->work_info;
 	struct worker* worker = w->state.env->worker;
 
-	w->state.reply = reply_info;
+	e->qstate->reply = reply_info;
 	if(error != 0) {
 		worker_process_query(worker, w, e->qstate, 
 			module_event_timeout, e);
-		w->state.reply = NULL;
 		return 0;
 	}
 	/* sanity check. */
@@ -332,11 +329,9 @@ worker_handle_service_reply(struct comm_point* c, void* arg, int error,
 		 * never arrived. */
 		worker_process_query(worker, w, e->qstate, 
 			module_event_timeout, e);
-		w->state.reply = NULL;
 		return 0;
 	}
 	worker_process_query(worker, w, e->qstate, module_event_reply, e);
-	w->state.reply = NULL;
 	return 0;
 }
 
