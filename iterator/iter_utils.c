@@ -218,6 +218,22 @@ dns_alloc_msg(ldns_buffer* pkt, struct msg_parse* msg, struct region* region)
 	return m;
 }
 
+struct dns_msg* 
+dns_copy_msg(struct dns_msg* from, struct region* region)
+{
+	struct dns_msg* m = (struct dns_msg*)region_alloc(region,
+		sizeof(struct dns_msg));
+	if(!m)
+		return NULL;
+	m->qinfo = from->qinfo;
+	if(!(m->qinfo.qname = region_alloc_init(region, from->qinfo.qname,
+		from->qinfo.qname_len)))
+		return NULL;
+	if(!(m->rep = reply_info_copy(from->rep, NULL, region)))
+		return NULL;
+	return m;
+}
+
 int 
 iter_dns_store(struct module_env* env, struct dns_msg* msg, int is_referral)
 {

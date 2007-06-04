@@ -4,6 +4,7 @@
 	- cache lameness in response handling.
 	- do not touch qstate after worker_process_query because it may have
 	  been deleted by that routine.
+	- Prime response state.
 
 1 June 2007: Wouter
 	- normalize incoming messages. Like unbound-java, with CNAME chain

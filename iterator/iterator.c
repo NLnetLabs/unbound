@@ -1197,15 +1197,67 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 	return next_state(qstate, iq, QUERYTARGETS_STATE);
 }
 
-#if 0
-/** TODO */
+/** 
+ * This handles the response to a priming query. This is used to handle both
+ * root and stub priming responses. This is basically the equivalent of the
+ * QUERY_RESP_STATE, but will not handle CNAME responses and will treat
+ * REFERRALs as ANSWERS. It will also update and reactivate the originating
+ * event.
+ *
+ * @param qstate: query state.
+ * @param iq: iterator query state.
+ * @param id: module id.
+ * @return true if the event needs more immediate processing, false if not.
+ *         This state always returns false.
+ */
 static int
 processPrimeResponse(struct module_qstate* qstate, struct iter_qstate* iq,
-	struct iter_env* ie, int id)
+	int id)
 {
+	struct module_qstate* forq = qstate->parent;
+	struct iter_qstate* foriq;
+	struct delegpt* dp = NULL;
+	enum response_type type = response_type_from_server(iq->response, 
+		&qstate->qinfo, iq->dp);
+	log_assert(qstate->parent); /* this is a subrequest of another */
+	if(type == RESPONSE_TYPE_ANSWER) {
+		/* Convert our response to a delegation point */
+		dp = delegpt_from_message(iq->response, forq->region);
+	}
+	if(!dp) {
+		/* if there is no convertable delegation point, then 
+		 * the ANSWER type was (presumably) a negative answer. */
+		verbose(VERB_ALGO, "prime response was not a positive "
+			"ANSWER; failing");
+		/* note that this will call the forevent with event error. */
+		qstate->ext_state[id] = module_error;
+		return 0;
+	}
+
+	log_nametypeclass("priming successful for", qstate->qinfo.qname,
+		qstate->qinfo.qtype, qstate->qinfo.qclass);
+	/* This event is finished. */
+	qstate->ext_state[id] = module_finished;
+	foriq = (struct iter_qstate*)forq->minfo[id];
+	foriq->dp = dp;
+	foriq->response = dns_copy_msg(iq->response, forq->region);
+	if(!foriq->response) {
+		log_err("copy prime response: out of memory");
+		/* note that this will call the forevent with event error. */
+		qstate->ext_state[id] = module_error;
+		return 0;
+	}
+
+	/* root priming responses go to init stage 2, priming stub 
+	 * responses to to stage 3. */
+	if(iq->priming_stub)
+		foriq->state = INIT_REQUEST_3_STATE;
+	else	foriq->state = INIT_REQUEST_2_STATE;
+	/* because we are finished, the parent will be reactivated */
 	return 0;
 }
 
+#if 0
 /** TODO */
 static int
 processTargetResponse(struct module_qstate* qstate, struct iter_qstate* iq,
@@ -1259,10 +1311,10 @@ iter_handle(struct module_qstate* qstate, struct iter_qstate* iq,
 			case QUERY_RESP_STATE:
 				cont = processQueryResponse(qstate, iq, id);
 				break;
-#if 0
 			case PRIME_RESP_STATE:
-				cont = processPrimeResponse(qstate, iq, ie, id);
+				cont = processPrimeResponse(qstate, iq, id);
 				break;
+#if 0
 			case TARGET_RESP_STATE:
 				cont = processTargetResponse(qstate, iq, ie, id);
 				break;
@@ -1385,6 +1437,11 @@ iter_operate(struct module_qstate* qstate, enum module_ev event, int id,
 	}
 	if(outbound) {
 		process_response(qstate, iq, ie, id, outbound, event);
+		return;
+	}
+	if(event == module_event_error) {
+		verbose(VERB_ALGO, "got called with event error, giving up");
+		qstate->ext_state[id] = module_error;
 		return;
 	}
 

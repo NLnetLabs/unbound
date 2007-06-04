@@ -87,6 +87,14 @@ struct dns_msg* dns_alloc_msg(ldns_buffer* pkt, struct msg_parse* msg,
 	struct region* region);
 
 /**
+ * Copy a dns_msg to this region.
+ * @param from: dns message, also in region.
+ * @param region: region to use for allocation.
+ * @return newly allocated dns_msg, or NULL on memory error.
+ */
+struct dns_msg* dns_copy_msg(struct dns_msg* from, struct region* region);
+
+/**
  * Allocate a dns_msg with malloc/alloc structure and store in dns cache.
  * @param env: environment, with alloc structure and dns cache.
  * @param msg: dns_msg from dns_alloc_msg for example.
