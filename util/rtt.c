@@ -47,7 +47,7 @@
 static int
 calc_rto(const struct rtt_info* rtt)
 {
-	/* From Stevens, Unix Network Programming, p.598 */
+	/* From Stevens, Unix Network Programming, Vol1, 3rd ed., p.598 */
 	int rto = rtt->srtt + 4*rtt->rttvar;
 	if(rto < RTT_MIN_TIMEOUT)
 		rto = RTT_MIN_TIMEOUT;
