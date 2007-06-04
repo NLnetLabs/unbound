@@ -138,6 +138,7 @@ serviced_cmp(const void* key1, const void* key2)
 	if(q1->qbuflen > q2->qbuflen)
 		return 1;
 	log_assert(q1->qbuflen == q2->qbuflen);
+	/* FIXME: will not detect alternate casing of qname */
 	if((r = memcmp(q1->qbuf, q2->qbuf, q1->qbuflen)) != 0)
 		return r;
 	if(q1->dnssec != q2->dnssec) {

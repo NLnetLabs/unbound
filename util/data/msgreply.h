@@ -290,4 +290,14 @@ struct msgreply_entry* query_info_entrysetup(struct query_info* q,
 struct reply_info* reply_info_copy(struct reply_info* rep, 
 	struct alloc_cache* alloc, struct region* region);
 
+/**
+ * Find answer rrset in reply, the one matching qinfo. Follows CNAMEs, so the
+ * result may have a different owner name.
+ * @param qinfo: what to look for.
+ * @param rep: looks in answer section of this message.
+ * @return: pointer to rrset, or NULL if not found.
+ */
+struct ub_packed_rrset_key* reply_find_answer_rrset(struct query_info* qinfo,
+	struct reply_info* rep);
+
 #endif /* UTIL_DATA_MSGREPLY_H */

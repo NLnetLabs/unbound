@@ -1257,15 +1257,76 @@ processPrimeResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 	return 0;
 }
 
-#if 0
-/** TODO */
+/** 
+ * Do final processing on responses to target queries. Events reach this
+ * state after the iterative resolution algorithm terminates. This state is
+ * responsible for reactiving the original event, and housekeeping related
+ * to received target responses (caching, updating the current delegation
+ * point, etc).
+ *
+ * @param qstate: query state.
+ * @param iq: iterator query state.
+ * @param id: module id.
+ * @return true if the event requires more (response) processing
+ *         immediately, false if not. This particular state always returns
+ *         false.
+ */
 static int
 processTargetResponse(struct module_qstate* qstate, struct iter_qstate* iq,
-	struct iter_env* ie, int id)
+	int id)
 {
+	struct ub_packed_rrset_key* rrset;
+	struct delegpt_ns* dpns;
+	struct module_qstate* forq = qstate->parent;
+	struct iter_qstate* foriq;
+	log_assert(qstate->parent); /* fetch targets for a parent */
+	foriq = (struct iter_qstate*)forq->minfo[id];
+	qstate->ext_state[id] = module_finished;
+
+	/* check to see if parent event is still interested.  */
+	if(iq->orig_qname)
+		dpns = delegpt_find_ns(foriq->dp, iq->orig_qname, 
+			iq->orig_qnamelen);
+	else	dpns = delegpt_find_ns(foriq->dp, qstate->qinfo.qname,
+			qstate->qinfo.qname_len);
+	if(!dpns) {
+		/* FIXME: maybe store this nameserver address in the cache
+		 * anyways? */
+		/* If not, just stop processing this event */
+		return 0;
+	}
+
+	/* Tell the originating event that this target query has finished
+	 * (regardless if it succeeded or not). */
+	foriq->num_target_queries--;
+
+	/* This response is relevant to the current query, so we 
+	 * add (attempt to add, anyway) this target(s) and reactivate 
+	 * the original event. 
+	 * NOTE: we could only look for the AnswerRRset if the 
+	 * response type was ANSWER. */
+	rrset = reply_find_answer_rrset(&qstate->qinfo, iq->response->rep);
+	if(rrset) {
+		/* if CNAMEs have been followed - add new NS to delegpt. */
+		if(!delegpt_find_ns(foriq->dp, rrset->rk.dname, 
+			rrset->rk.dname_len)) {
+			if(!delegpt_add_ns(foriq->dp, forq->region, 
+				rrset->rk.dname))
+				log_err("out of memory adding cnamed-ns");
+		}
+		if(!delegpt_add_rrset(foriq->dp, forq->region, rrset))
+			log_err("out of memory adding targets");
+	} else	dpns->resolved = 1; /* fail the target */
+
+	log_assert(dpns->resolved); /* one way or another it is now done */
+
+	/* Reactivate the forEvent, now that it has either a new target or a
+	 * failed target. */
+	foriq->state = QUERYTARGETS_STATE;
 	return 0;
 }
 
+#if 0
 /** TODO */
 static int
 processFinished(struct module_qstate* qstate, struct iter_qstate* iq,
@@ -1314,10 +1375,10 @@ iter_handle(struct module_qstate* qstate, struct iter_qstate* iq,
 			case PRIME_RESP_STATE:
 				cont = processPrimeResponse(qstate, iq, id);
 				break;
-#if 0
 			case TARGET_RESP_STATE:
-				cont = processTargetResponse(qstate, iq, ie, id);
+				cont = processTargetResponse(qstate, iq, id);
 				break;
+#if 0
 			case FINISHED_STATE:
 				cont = processFinished(qstate, iq, ie, id);
 				break;

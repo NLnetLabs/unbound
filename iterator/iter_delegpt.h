@@ -184,6 +184,16 @@ int delegpt_add_rrset_AAAA(struct delegpt* dp, struct region* region,
 	struct ub_packed_rrset_key* rrset);
 
 /**
+ * Add any RRset to delegpt.
+ * @param dp: delegation point.
+ * @param region: where to allocate the info.
+ * @param rrset: RRset to add, NS, A, AAAA.
+ * @return 0 on alloc error.
+ */
+int delegpt_add_rrset(struct delegpt* dp, struct region* region, 
+	struct ub_packed_rrset_key* rrset);
+
+/**
  * Add address to the delegation point. No servername is associated or checked.
  * @param dp: delegation point.
  * @param region: where to allocate the info.
@@ -193,6 +203,16 @@ int delegpt_add_rrset_AAAA(struct delegpt* dp, struct region* region,
  */
 int delegpt_add_addr(struct delegpt* dp, struct region* region, 
 	struct sockaddr_storage* addr, socklen_t addrlen);
+
+/** 
+ * Find NS record in name list of delegation point.
+ * @param dp: delegation point.
+ * @param name: name of nameserver to look for, uncompressed wireformat.
+ * @param namelen: length of name.
+ * @return the ns structure or NULL if not found.
+ */
+struct delegpt_ns* delegpt_find_ns(struct delegpt* dp, uint8_t* name, 
+	size_t namelen);
 
 /**
  * Print the delegation point to the log. For debugging.

@@ -105,7 +105,7 @@ ub_rrset_compare(void* k1, void* k2)
 			return -1;
 		return 1;
 	}
-	if((c=memcmp(key1->rk.dname, key2->rk.dname, key1->rk.dname_len)) != 0)
+	if((c=query_dname_compare(key1->rk.dname, key2->rk.dname)) != 0)
 		return c;
 	if(key1->rk.rrset_class != key2->rk.rrset_class) {
 		if(key1->rk.rrset_class < key2->rk.rrset_class)

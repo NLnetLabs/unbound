@@ -102,14 +102,13 @@ delegpt_add_ns(struct delegpt* dp, struct region* region, uint8_t* name)
 	return 1;
 }
 
-/** find name in deleg list */
-static struct delegpt_ns*
+struct delegpt_ns*
 delegpt_find_ns(struct delegpt* dp, uint8_t* name, size_t namelen)
 {
 	struct delegpt_ns* p = dp->nslist;
 	while(p) {
 		if(namelen == p->namelen && 
-			memcmp(name, p->name, namelen) == 0) {
+			query_dname_compare(name, p->name) == 0) {
 			return p;
 		}
 		p = p->next;
@@ -320,3 +319,20 @@ delegpt_add_rrset_AAAA(struct delegpt* dp, struct region* region,
         }
         return 1;
 }
+
+int 
+delegpt_add_rrset(struct delegpt* dp, struct region* region,
+        struct ub_packed_rrset_key* rrset)
+{
+	if(!rrset)
+		return 1;
+	if(ntohs(rrset->rk.type) == LDNS_RR_TYPE_NS)
+		return delegpt_rrset_add_ns(dp, region, rrset);
+	else if(ntohs(rrset->rk.type) == LDNS_RR_TYPE_A)
+		return delegpt_add_rrset_A(dp, region, rrset);
+	else if(ntohs(rrset->rk.type) == LDNS_RR_TYPE_AAAA)
+		return delegpt_add_rrset_AAAA(dp, region, rrset);
+	log_warn("Unknown rrset type added to delegpt");
+	return 1;
+}
+

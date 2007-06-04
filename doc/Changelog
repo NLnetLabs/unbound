@@ -5,6 +5,8 @@
 	- do not touch qstate after worker_process_query because it may have
 	  been deleted by that routine.
 	- Prime response state.
+	- Process target response state.
+	- some memcmp changed to dname_compare for case preservation.
 
 1 June 2007: Wouter
 	- normalize incoming messages. Like unbound-java, with CNAME chain

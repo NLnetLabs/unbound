@@ -42,6 +42,7 @@
 #include "services/cache/infra.h"
 #include "util/storage/slabhash.h"
 #include "util/storage/lookup3.h"
+#include "util/data/dname.h"
 #include "util/log.h"
 #include "util/net_help.h"
 #include "util/config_file.h"
@@ -312,7 +313,7 @@ infra_lame_compfunc(void* key1, void* key2)
 			return -1;
 		return 1;
 	}
-	return memcmp(k1->zonename, k2->zonename, k1->namelen);
+	return query_dname_compare(k1->zonename, k2->zonename);
 }
 
 /** free key, lock and zonename */
