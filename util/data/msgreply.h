@@ -280,9 +280,14 @@ struct msgreply_entry* query_info_entrysetup(struct query_info* q,
  * Copy reply_info and all rrsets in it and allocate.
  * @param rep: what to copy, probably inside region, no ref[] array in it.
  * @param alloc: how to allocate rrset keys.
+ *	Not used if region!=NULL, it can be NULL in that case.
+ * @param region: if this parameter is NULL then malloc and the alloc is used.
+ *	otherwise, everything is allocated in this region.
+ *	In a region, no special rrset key structures are needed (not shared),
+ *	and no rrset_ref array in the reply is built up.
  * @return new reply info or NULL on memory error.
  */
 struct reply_info* reply_info_copy(struct reply_info* rep, 
-	struct alloc_cache* alloc);
+	struct alloc_cache* alloc, struct region* region);
 
 #endif /* UTIL_DATA_MSGREPLY_H */

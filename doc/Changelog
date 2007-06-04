@@ -1,5 +1,6 @@
 4 June 2007: Wouter
 	- random selection of equally preferred nameserver targets.
+	- reply info copy routine. Reuses existing code.
 
 1 June 2007: Wouter
 	- normalize incoming messages. Like unbound-java, with CNAME chain

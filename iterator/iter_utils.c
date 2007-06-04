@@ -223,7 +223,7 @@ iter_dns_store(struct module_env* env, struct dns_msg* msg, int is_referral)
 {
 	struct reply_info* rep = NULL;
 	/* alloc, malloc properly (not in region, like msg is) */
-	rep = reply_info_copy(msg->rep, env->alloc);
+	rep = reply_info_copy(msg->rep, env->alloc, NULL);
 	if(!rep)
 		return 0;
 

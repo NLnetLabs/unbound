@@ -69,48 +69,59 @@ parse_create_qinfo(ldns_buffer* pkt, struct msg_parse* msg,
 	return 1;
 }
 
+/** constructor for replyinfo */
+static struct reply_info*
+construct_reply_info_base(struct region* region, uint16_t flags, size_t qd,
+	uint32_t ttl, size_t an, size_t ns, size_t ar, size_t total)
+{
+	struct reply_info* rep;
+	/* rrset_count-1 because the first ref is part of the struct. */
+	size_t s = sizeof(struct reply_info) - sizeof(struct rrset_ref) +
+		sizeof(struct ub_packed_rrset_key*) * total;
+	if(region)
+		rep = (struct reply_info*)region_alloc(region, s);
+	else	rep = (struct reply_info*)malloc(s + 
+			sizeof(struct rrset_ref) * (total));
+	if(!rep) 
+		return NULL;
+	rep->flags = flags;
+	rep->qdcount = qd;
+	rep->ttl = ttl;
+	rep->an_numrrsets = an;
+	rep->ns_numrrsets = ns;
+	rep->ar_numrrsets = ar;
+	rep->rrset_count = total;
+	/* array starts after the refs */
+	if(region)
+		rep->rrsets = (struct ub_packed_rrset_key**)&(rep->ref[0]);
+	else	rep->rrsets = (struct ub_packed_rrset_key**)&(rep->ref[total]);
+	/* zero the arrays to assist cleanup in case of malloc failure */
+	memset( rep->rrsets, 0, sizeof(struct ub_packed_rrset_key*) * total);
+	if(!region)
+		memset( &rep->ref[0], 0, sizeof(struct rrset_ref) * total);
+	return rep;
+}
+
 /** allocate replyinfo, return 0 on error. */
 static int
 parse_create_repinfo(struct msg_parse* msg, struct reply_info** rep,
 	struct region* region)
 {
-	/* rrset_count-1 because the first ref is part of the struct. */
-	size_t s = sizeof(struct reply_info) - sizeof(struct rrset_ref) +
-		sizeof(struct ub_packed_rrset_key*) * msg->rrset_count;
-	if(region)
-		*rep = (struct reply_info*)region_alloc(region, s);
-	else	*rep = (struct reply_info*)malloc(s + 
-			sizeof(struct rrset_ref) * (msg->rrset_count));
-	if(!*rep) return 0;
-	(*rep)->flags = msg->flags;
-	(*rep)->qdcount = msg->qdcount;
-	(*rep)->ttl = 0;
-	(*rep)->an_numrrsets = msg->an_rrsets;
-	(*rep)->ns_numrrsets = msg->ns_rrsets;
-	(*rep)->ar_numrrsets = msg->ar_rrsets;
-	(*rep)->rrset_count = msg->rrset_count;
-	/* array starts after the refs */
-	if(region)
-		(*rep)->rrsets = (struct ub_packed_rrset_key**)
-			&((*rep)->ref[0]);
-	else	(*rep)->rrsets = (struct ub_packed_rrset_key**)
-			&((*rep)->ref[msg->rrset_count]);
-	/* zero the arrays to assist cleanup in case of malloc failure */
-	memset( (*rep)->rrsets, 0, 
-		sizeof(struct ub_packed_rrset_key*) * msg->rrset_count);
-	if(!region)
-		memset( &(*rep)->ref[0], 0, 
-			sizeof(struct rrset_ref) * msg->rrset_count);
+	*rep = construct_reply_info_base(region, msg->flags, msg->qdcount, 0,
+		msg->an_rrsets, msg->ns_rrsets, msg->ar_rrsets, 
+		msg->rrset_count);
+	if(!*rep)
+		return 0;
 	return 1;
 }
 
 /** allocate (special) rrset keys, return 0 on error. */
 static int
-parse_alloc_rrset_keys(struct msg_parse* msg, struct reply_info* rep,
-	struct alloc_cache* alloc, struct region* region)
+repinfo_alloc_rrset_keys(struct reply_info* rep, struct alloc_cache* alloc, 
+	struct region* region)
 {
 	size_t i;
-	for(i=0; i<msg->rrset_count; i++) {
+	for(i=0; i<rep->rrset_count; i++) {
 		if(region) {
 			rep->rrsets[i] = (struct ub_packed_rrset_key*)
 				region_alloc(region, 
@@ -345,7 +356,7 @@ parse_create_msg(ldns_buffer* pkt, struct msg_parse* msg,
 		return 0;
 	if(!parse_create_repinfo(msg, rep, region))
 		return 0;
-	if(!parse_alloc_rrset_keys(msg, *rep, alloc, region))
+	if(!repinfo_alloc_rrset_keys(*rep, alloc, region))
 		return 0;
 	if(!parse_copy_decompress(pkt, msg, *rep, region))
 		return 0;
@@ -555,41 +566,62 @@ query_info_entrysetup(struct query_info* q, struct reply_info* r,
 	return e;
 }
 
-/** copy over reply info structure, size it correcly for rrsets */
-static struct reply_info*
-copy_repinfo(struct reply_info* from)
+/** copy rrsets from replyinfo to dest replyinfo */
+static int
+repinfo_copy_rrsets(struct reply_info* dest, struct reply_info* from, 
+	struct region* region)
 {
-	struct reply_info* cp;
-	/* rrset_count-1 because the first ref is part of the struct. */
-	size_t s = sizeof(struct reply_info) - sizeof(struct rrset_ref) +
-		sizeof(struct ub_packed_rrset_key*) * from->rrset_count;
-	cp = (struct reply_info*)malloc(s + 
-			sizeof(struct rrset_ref) * (from->rrset_count));
-	if(!cp) return NULL;
-	cp->flags = from->flags;
-	cp->qdcount = from->qdcount;
-	cp->ttl = from->ttl;
-	cp->an_numrrsets = from->an_numrrsets;
-	cp->ns_numrrsets = from->ns_numrrsets;
-	cp->ar_numrrsets = from->ar_numrrsets;
-	cp->rrset_count = from->rrset_count;
-	/* array starts after the refs */
-	cp->rrsets = (struct ub_packed_rrset_key**)
-		&(cp->ref[from->rrset_count]);
-	/* zero the arrays to assist cleanup in case of malloc failure */
-	memset( cp->rrsets, 0, 
-		sizeof(struct ub_packed_rrset_key*) * from->rrset_count);
-	memset( &cp->ref[0], 0, 
-		sizeof(struct rrset_ref) * from->rrset_count);
-	return cp;
+	size_t i, s;
+	struct packed_rrset_data* fd, *dd;
+	struct ub_packed_rrset_key* fk, *dk;
+	for(i=0; i<dest->rrset_count; i++) {
+		fk = from->rrsets[i];
+		dk = dest->rrsets[i];
+		fd = (struct packed_rrset_data*)fk->entry.data;
+		dk->id = fk->id;
+		dk->entry.hash = fk->entry.hash;
+		dk->rk = fk->rk;
+		if(region)
+			dk->rk.dname = (uint8_t*)region_alloc_init(region,
+				fk->rk.dname, fk->rk.dname_len);
+		else	
+			dk->rk.dname = (uint8_t*)memdup(fk->rk.dname, 
+				fk->rk.dname_len);
+		if(!dk->rk.dname)
+			return 0;
+		s = packed_rrset_sizeof(fd);
+		if(region)
+			dd = (struct packed_rrset_data*)region_alloc_init(
+				region, fd, s);
+		else	dd = (struct packed_rrset_data*)memdup(fd, s);
+		if(!dd) 
+			return 0;
+		packed_rrset_ptr_fixup(dd);
+		dk->entry.data = (void*)dd;
+	}
+	return 1;
 }
 
 struct reply_info* 
-reply_info_copy(struct reply_info* rep, struct alloc_cache* alloc)
+reply_info_copy(struct reply_info* rep, struct alloc_cache* alloc, 
+	struct region* region)
 {
 	struct reply_info* cp;
-	if(!(cp = copy_repinfo(rep)))
+	cp = construct_reply_info_base(region, rep->flags, rep->qdcount, 
+		rep->ttl, rep->an_numrrsets, rep->ns_numrrsets, 
+		rep->ar_numrrsets, rep->rrset_count);
+	if(!cp)
 		return NULL;
-	/* TODO copy rrsets */
+	/* allocate ub_key structures special or not */
+	if(!repinfo_alloc_rrset_keys(cp, alloc, region)) {
+		if(!region)
+			reply_info_parsedelete(cp, alloc);
+		return NULL;
+	}
+	if(!repinfo_copy_rrsets(cp, rep, region)) {
+		if(!region)
+			reply_info_parsedelete(cp, alloc);
+		return NULL;
+	}
 	return cp;
 }
