@@ -301,7 +301,6 @@ worker_process_query(struct worker* worker, struct work_query* w,
 	if(s == module_error) {
 		if(w) {
 			replyerror(LDNS_RCODE_SERVFAIL, w);
-			req_release(w);
 		}
 		qstate_free(worker, qstate);
 		return;
