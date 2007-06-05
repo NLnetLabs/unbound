@@ -3,6 +3,10 @@
 	- subrequests without parent store in cache and stop.
 	- worker slumber list for ongoing promiscuous queries.
 	- subrequest error handling.
+	- priming failure returns SERVFAIL.
+	- priming gives LAME result, returns SERVFAIL.
+	- debug routine to print dns_msg as handled by iterator.
+	- memleak in config file stubs fixup.
 
 4 June 2007: Wouter
 	- random selection of equally preferred nameserver targets.

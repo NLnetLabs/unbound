@@ -116,7 +116,7 @@ response_type_from_server(struct dns_msg* msg, struct query_info* request,
 	
 	/* Other response codes mean (so far) to throw the response away as
 	 * meaningless and move on to the next nameserver. */
-	if(FLAGS_GET_RCODE(msg->rep->flags) == LDNS_RCODE_NOERROR)
+	if(FLAGS_GET_RCODE(msg->rep->flags) != LDNS_RCODE_NOERROR)
 		return RESPONSE_TYPE_THROWAWAY;
 
 	/* Note: TC bit has already been handled */

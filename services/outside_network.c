@@ -989,10 +989,11 @@ static void
 serviced_callbacks(struct serviced_query* sq, int error, struct comm_point* c,
 	struct comm_reply* rep)
 {
-	struct service_callback* p = sq->cblist;
+	struct service_callback* p = sq->cblist, *n;
 	while(p) {
+		n = p->next;
 		(void)(*p->cb)(c, p->cb_arg, error, rep);
-		p = p->next;
+		p = n;
 	}
 }
 

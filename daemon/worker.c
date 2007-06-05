@@ -125,18 +125,20 @@ qstate_free(struct worker* worker, struct module_qstate* qstate)
 {
 	if(!qstate)
 		return;
-	while(qstate->subquery_first) {
-		/* put subqueries on slumber list */
-		struct module_qstate* s = qstate->subquery_first;
-		module_subreq_remove(&qstate->subquery_first, s);
-		s->parent = NULL;
-		s->work_info = NULL;
-		s->subquery_next = worker->slumber_list;
-		s->subquery_prev = NULL;
-		worker->slumber_list = s;
+	if(qstate->subquery_first) {
+		while(qstate->subquery_first) {
+			/* put subqueries on slumber list */
+			struct module_qstate* s = qstate->subquery_first;
+			module_subreq_remove(&qstate->subquery_first, s);
+			s->parent = NULL;
+			s->work_info = NULL;
+			s->subquery_next = worker->slumber_list;
+			s->subquery_prev = NULL;
+			worker->slumber_list = s;
+		}
+		verbose(VERB_ALGO, "worker: slumber list has %d entries",
+			module_subreq_num(worker->slumber_list));
 	}
-	verbose(VERB_ALGO, "worker: slumber list has %d entries",
-		module_subreq_num(worker->slumber_list));
 	qstate_cleanup(worker, qstate);
 }
 

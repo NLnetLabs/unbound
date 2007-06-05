@@ -49,6 +49,7 @@
 #include "util/data/dname.h"
 #include "util/region-allocator.h"
 #include "util/data/msgparse.h"
+#include "util/data/msgencode.h"
 
 /** allocate qinfo, return 0 on error. */
 static int
@@ -449,7 +450,6 @@ query_info_parse(struct query_info* m, ldns_buffer* query)
 	/* minimum size: header + \0 + qtype + qclass */
 	if(ldns_buffer_limit(query) < LDNS_HEADER_SIZE + 5)
 		return 0;
-	log_assert(!LDNS_QR_WIRE(q));
 	log_assert(LDNS_OPCODE_WIRE(q) == LDNS_PACKET_QUERY);
 	log_assert(LDNS_QDCOUNT(q) == 1);
 	log_assert(ldns_buffer_position(query) == 0);
@@ -650,4 +650,37 @@ reply_find_answer_rrset(struct query_info* qinfo, struct reply_info* rep)
 		}
 	}
 	return NULL;
+}
+
+void 
+log_dns_msg(const char* str, struct query_info* qinfo, struct reply_info* rep)
+{
+	/* not particularly fast but flexible, make wireformat and print */
+	ldns_buffer* buf = ldns_buffer_new(65535);
+	struct region* region = region_create(malloc, free);
+	if(!reply_info_encode(qinfo, rep, 0, rep->flags, buf, 0, 
+		region, 65535)) {
+		log_info("%s: log_dns_msg: out of memory", str);
+	} else {
+		ldns_status s;
+		ldns_pkt* pkt = NULL;
+		s = ldns_buffer2pkt_wire(&pkt, buf);
+		if(s != LDNS_STATUS_OK) {
+			log_info("%s: log_dns_msg: ldns parse gave: %s",
+				str, ldns_get_errorstr_by_id(s));
+		} else {
+			ldns_buffer_clear(buf);
+			s = ldns_pkt2buffer_str(buf, pkt);
+			if(s != LDNS_STATUS_OK) {
+				log_info("%s: log_dns_msg: ldns tostr gave: %s",
+					str, ldns_get_errorstr_by_id(s));
+			} else {
+				log_info("%s %s", 
+					str, (char*)ldns_buffer_begin(buf));
+			}
+		}
+		ldns_pkt_free(pkt);
+	}
+	ldns_buffer_free(buf);
+	region_destroy(region);
 }

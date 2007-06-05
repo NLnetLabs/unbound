@@ -300,4 +300,13 @@ struct reply_info* reply_info_copy(struct reply_info* rep,
 struct ub_packed_rrset_key* reply_find_answer_rrset(struct query_info* qinfo,
 	struct reply_info* rep);
 
+/**
+ * Debug send the query info and reply info to the log in readable form.
+ * @param str: descriptive string printed with packet content.
+ * @param qinfo: query section.
+ * @param rep: rest of message.
+ */
+void log_dns_msg(const char* str, struct query_info* qinfo, 
+	struct reply_info* rep);
+
 #endif /* UTIL_DATA_MSGREPLY_H */

@@ -178,6 +178,7 @@ config_delete(struct config_file* cfg)
 			free(p->name);
 			config_delstrlist(p->hosts);
 			config_delstrlist(p->addrs);
+			free(p);
 			p = np;
 		}
 	}

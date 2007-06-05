@@ -1504,10 +1504,12 @@ process_response(struct module_qstate* qstate, struct iter_qstate* iq,
 	memset(&edns, 0, sizeof(edns));
 	pkt = qstate->reply->c->buffer;
 	ldns_buffer_set_position(pkt, 0);
-	if(!parse_packet(pkt, prs, qstate->scratch))
+	if(parse_packet(pkt, prs, qstate->scratch) != LDNS_RCODE_NOERROR) {
+		verbose(VERB_ALGO, "parse error on reply packet");
 		goto handle_it;
+	}
 	/* edns is not examined, but removed from message to help cache */
-	if(!parse_extract_edns(prs, &edns))
+	if(parse_extract_edns(prs, &edns) != LDNS_RCODE_NOERROR)
 		goto handle_it;
 
 	/* normalize and sanitize: easy to delete items from linked lists */
@@ -1519,6 +1521,8 @@ process_response(struct module_qstate* qstate, struct iter_qstate* iq,
 	iq->response = dns_alloc_msg(pkt, prs, qstate->region);
 	if(!iq->response)
 		goto handle_it;
+	log_dns_msg("incoming scrubbed packet", &iq->response->qinfo, 
+		iq->response->rep);
 
 handle_it:
 	outbound_list_remove(&iq->outlist, outbound);
@@ -1544,7 +1548,7 @@ process_subq_error(struct module_qstate* qstate, struct iter_qstate* iq,
 	}
 	if(errinf.qtype == LDNS_RR_TYPE_NS) {
 		/* a priming query has failed. */
-		iter_handle(qstate, iq, ie, id);
+		(void)error_response(qstate, id, LDNS_RCODE_SERVFAIL);
 		return;
 	}
 	if(errinf.qtype != LDNS_RR_TYPE_A && 
@@ -1576,6 +1580,8 @@ iter_operate(struct module_qstate* qstate, enum module_ev event, int id,
 	struct iter_qstate* iq = (struct iter_qstate*)qstate->minfo[id];
 	verbose(VERB_ALGO, "iterator[module %d] operate: extstate:%s event:%s", 
 		id, strextstate(qstate->ext_state[id]), strmodulevent(event));
+	if(iq) log_nametypeclass("for qstate", qstate->qinfo.qname, 
+		qstate->qinfo.qtype, qstate->qinfo.qclass);
 	if(ie->fwd_addrlen != 0) {
 		perform_forward(qstate, event, id, outbound);
 		return;
@@ -1627,12 +1633,14 @@ iter_clear(struct module_qstate* qstate, int id)
 	if(!qstate)
 		return;
 	iq = (struct iter_qstate*)qstate->minfo[id];
-	if(iq->orig_qname) {
+	if(iq && iq->orig_qname) {
 		/* so the correct qname gets free'd */
 		qstate->qinfo.qname = iq->orig_qname;
 		qstate->qinfo.qname_len = iq->orig_qnamelen;
 	}
-	outbound_list_clear(&iq->outlist);
+	if(iq) {
+		outbound_list_clear(&iq->outlist);
+	}
 	qstate->minfo[id] = NULL;
 }
 
