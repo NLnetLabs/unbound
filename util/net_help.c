@@ -183,11 +183,23 @@ log_nametypeclass(const char* str, uint8_t* name, uint16_t type,
 	uint16_t dclass)
 {
 	char buf[LDNS_MAX_DOMAINLEN+1];
+	char t[12], c[12];
+	const char *ts, *cs; 
 	dname_str(name, buf);
-	log_info("%s <%s %s %s>", str, buf, 
-		ldns_rr_descript(type)?ldns_rr_descript(type)->_name: "??",
-		ldns_lookup_by_id(ldns_rr_classes, (int)dclass)?
-		ldns_lookup_by_id(ldns_rr_classes, (int)dclass)->name:"??");
+	if(ldns_rr_descript(type) && ldns_rr_descript(type)->_name)
+		ts = ldns_rr_descript(type)->_name;
+	else {
+		snprintf(t, 12, "TYPE%d", (int)type);
+		ts = t;
+	}
+	if(ldns_lookup_by_id(ldns_rr_classes, (int)dclass) &&
+		ldns_lookup_by_id(ldns_rr_classes, (int)dclass)->name)
+		cs = ldns_lookup_by_id(ldns_rr_classes, (int)dclass)->name;
+	else {
+		snprintf(c, 12, "CLASS%d", (int)dclass);
+		cs = c;
+	}
+	log_info("%s <%s %s %s>", str, buf, ts, cs);
 }
 
 int

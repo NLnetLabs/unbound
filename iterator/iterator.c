@@ -870,6 +870,8 @@ generate_target_query(struct module_qstate* qstate, struct iter_qstate* iq,
 		free(subq);
 		return 0;
 	}
+	log_nametypeclass("new target", name, qtype, qclass);
+	delegpt_log(subiq->dp);
 	return 1;
 }
 
@@ -1141,6 +1143,7 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		iq->dp = delegpt_from_message(iq->response, qstate->region);
 		if(!iq->dp)
 			return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
+		delegpt_log(iq->dp);
 		iq->num_current_queries = 0;
 		iq->num_target_queries = -1;
 		/* Count this as a referral. */
@@ -1258,6 +1261,7 @@ processPrimeResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 
 	log_nametypeclass("priming successful for", qstate->qinfo.qname,
 		qstate->qinfo.qtype, qstate->qinfo.qclass);
+	delegpt_log(dp);
 	foriq = (struct iter_qstate*)forq->minfo[id];
 	foriq->dp = dp;
 	foriq->response = dns_copy_msg(iq->response, forq->region);

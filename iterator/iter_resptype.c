@@ -190,7 +190,7 @@ response_type_from_server(struct dns_msg* msg, struct query_info* request,
 			/* If we are getting an NS set for the zone we 
 			 * thought we were contacting, then it is an answer.*/
 			/* FIXME: is this correct? */
-			if(query_dname_compare(s->rk.dname, origzone)) {
+			if(query_dname_compare(s->rk.dname, origzone) == 0) {
 				return RESPONSE_TYPE_ANSWER;
 			}
 			/* If we are getting a referral upwards (or to 

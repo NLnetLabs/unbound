@@ -52,6 +52,7 @@ alloc_setup_special(alloc_special_t* t)
 {
 	memset(t, 0, sizeof(*t));
 	lock_rw_init(&t->entry.lock);
+	t->entry.key = t;
 }
 
 /** prealloc some entries in the cache. To minimize contention. 

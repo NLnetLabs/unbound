@@ -361,6 +361,42 @@ dname_test_dname_lab_cmp()
 	unit_assert(ml == 4);
 }
 
+/** test dname_subdomain_c */
+static void
+dname_test_subdomain()
+{
+	unit_assert(dname_subdomain_c(
+		(uint8_t*)"",
+		(uint8_t*)""));
+	unit_assert(dname_subdomain_c(
+		(uint8_t*)"\003com",
+		(uint8_t*)""));
+	unit_assert(!dname_subdomain_c(
+		(uint8_t*)"",
+		(uint8_t*)"\003com"));
+	unit_assert(dname_subdomain_c(
+		(uint8_t*)"\007example\003com",
+		(uint8_t*)"\003com"));
+	unit_assert(!dname_subdomain_c(
+		(uint8_t*)"\003com",
+		(uint8_t*)"\007example\003com"));
+	unit_assert(dname_subdomain_c(
+		(uint8_t*)"\007example\003com",
+		(uint8_t*)""));
+	unit_assert(!dname_subdomain_c(
+		(uint8_t*)"\003net",
+		(uint8_t*)"\003com"));
+	unit_assert(!dname_subdomain_c(
+		(uint8_t*)"\003net",
+		(uint8_t*)"\003org"));
+	unit_assert(!dname_subdomain_c(
+		(uint8_t*)"\007example\003net",
+		(uint8_t*)"\003org"));
+	unit_assert(!dname_subdomain_c(
+		(uint8_t*)"\003net",
+		(uint8_t*)"\007example\003org"));
+}
+
 /** test dname_strict_subdomain */
 static void
 dname_test_strict_subdomain()
@@ -409,5 +445,6 @@ void dname_test()
 	dname_test_dname_lab_cmp();
 	dname_test_pkt_dname_len(buff);
 	dname_test_strict_subdomain();
+	dname_test_subdomain();
 	ldns_buffer_free(buff);
 }

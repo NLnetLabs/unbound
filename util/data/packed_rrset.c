@@ -93,7 +93,7 @@ ub_rrset_compare(void* k1, void* k2)
 	struct ub_packed_rrset_key* key1 = (struct ub_packed_rrset_key*)k1;
 	struct ub_packed_rrset_key* key2 = (struct ub_packed_rrset_key*)k2;
 	int c;
-	if(key1 == key2 || key1->id == key2->id)
+	if(key1 == key2)
 		return 0;
 	if(key1->rk.type != key2->rk.type) {
 		if(key1->rk.type < key2->rk.type)

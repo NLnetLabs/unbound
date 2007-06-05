@@ -247,15 +247,21 @@ iter_dns_store(struct module_env* env, struct dns_msg* msg, int is_referral)
 		/* store rrsets */
 		struct rrset_ref ref;
 		uint32_t now = time(NULL);
-		size_t i;
-		reply_info_set_ttls(rep, now);
+		size_t i, j;
 		for(i=0; i<rep->rrset_count; i++) {
+			/* fixup rrset ttl */
+			struct packed_rrset_data* data = (struct 
+				packed_rrset_data*)rep->rrsets[i]->entry.data;
+			data->ttl += now;
+			for(j=0; j<data->count + data->rrsig_count; j++)
+				data->rr_ttl[j] += now;
 			ref.key = rep->rrsets[i];
 			ref.id = rep->rrsets[i]->id;
 			/*ignore ret: it was in the cache, ref updated */
 			(void)rrset_cache_update(env->rrset_cache, &ref, 
 				env->alloc, now);
 		}
+		free(rep);
 		return 1;
 	} else {
 		/* store msg, and rrsets */

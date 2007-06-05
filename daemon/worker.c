@@ -215,9 +215,12 @@ static struct module_qstate*
 find_run_in(struct module_qstate* p)
 {
 	struct module_qstate* q;
+	log_nametypeclass("find run in", p->qinfo.qname, p->qinfo.qtype, p->qinfo.qclass);
 	for(p = p->subquery_first; p; p = p->subquery_next) {
+		log_nametypeclass("find run passed", p->qinfo.qname, p->qinfo.qtype, p->qinfo.qclass);
 		if(p->ext_state[p->curmod] == module_state_initial)
 			return p;
+		log_nametypeclass("find run morepass", p->qinfo.qname, p->qinfo.qtype, p->qinfo.qclass);
 		if((q=find_run_in(p)))
 			return q;
 	}
@@ -229,6 +232,7 @@ static struct module_qstate*
 find_runnable(struct module_qstate* subq)
 {
 	struct module_qstate* p = subq;
+	log_info("find runnable");
 	if(p->subquery_next && p->subquery_next->ext_state[
 		p->subquery_next->curmod] == module_state_initial)
 		return p->subquery_next;
@@ -256,6 +260,8 @@ worker_process_query(struct worker* worker, struct work_query* w,
 		region_free_all(worker->scratchpad);
 		qstate->reply = NULL;
 		s = qstate->ext_state[qstate->curmod];
+		log_info("worker_process_query: module exit state is %s",
+			strextstate(s));
 		/* examine results, start further modules, etc. */
 		if(s == module_wait_subquery) {
 			if(!qstate->subquery_first) {
@@ -295,6 +301,7 @@ worker_process_query(struct worker* worker, struct work_query* w,
 				qstate = nxt;
 				entry = NULL;
 				event = module_event_pass;
+				continue;
 			}
 		}
 		break;

@@ -277,20 +277,21 @@ synth_cname_rrset(uint8_t** sname, size_t* snamelen, uint8_t* alias,
 static int
 pkt_strict_sub(ldns_buffer* pkt, uint8_t* sname, uint8_t* dr)
 {
-	uint8_t buf[LDNS_MAX_DOMAINLEN+1];
-	/* decompress DNAME name */
-	dname_pkt_copy(pkt, buf, dr);
-	return dname_strict_subdomain_c(sname, buf);
+	uint8_t buf1[LDNS_MAX_DOMAINLEN+1];
+	uint8_t buf2[LDNS_MAX_DOMAINLEN+1];
+	/* decompress names */
+	dname_pkt_copy(pkt, buf1, sname);
+	dname_pkt_copy(pkt, buf2, dr);
+	return dname_strict_subdomain_c(buf1, buf2);
 }
 
 /** check subdomain with decompression */
 static int
-pkt_sub(ldns_buffer* pkt, uint8_t* sname, uint8_t* dr)
+pkt_sub(ldns_buffer* pkt, uint8_t* comprname, uint8_t* zone)
 {
 	uint8_t buf[LDNS_MAX_DOMAINLEN+1];
-	/* decompress DNAME name */
-	dname_pkt_copy(pkt, buf, dr);
-	return dname_subdomain_c(sname, buf);
+	dname_pkt_copy(pkt, buf, comprname);
+	return dname_subdomain_c(buf, zone);
 }
 
 /**
@@ -452,6 +453,7 @@ scrub_sanitize(ldns_buffer* pkt, struct msg_parse* msg, uint8_t* zonename)
 	struct rrset_parse* rrset, *prev;
 	prev = NULL;
 	rrset = msg->rrset_first;
+	log_nametypeclass("sanitize for", zonename, 0, 0);
 
 	/* At this point, we brutally remove ALL rrsets that aren't 
 	 * children of the originating zone. The idea here is that, 

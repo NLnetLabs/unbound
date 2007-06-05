@@ -7,6 +7,10 @@
 	- priming gives LAME result, returns SERVFAIL.
 	- debug routine to print dns_msg as handled by iterator.
 	- memleak in config file stubs fixup.
+	- more small bugs, in scrubber, query compare no ID for lookup,
+	  in dname validation for NS targets.
+	- sets entry.key for new special allocs.
+	- lognametypeclass can display unknown types and classes.
 
 4 June 2007: Wouter
 	- random selection of equally preferred nameserver targets.
