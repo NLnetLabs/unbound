@@ -79,16 +79,11 @@ worker_send_cmd(struct worker* worker, ldns_buffer* buffer,
 
 /** delete subrequest */
 static void
-qstate_free(struct worker* worker, struct module_qstate* qstate)
+qstate_cleanup(struct worker* worker, struct module_qstate* qstate)
 {
 	int i;
 	if(!qstate)
 		return;
-	/* remove subqueries */
-	while(qstate->subquery_first) {
-		qstate_free(worker, qstate->subquery_first);
-	}
-	log_assert(qstate->subquery_first == NULL);
 	/* call de-init while all is OK */
 	for(i=0; i<worker->daemon->num_modules; i++)
 		(*worker->daemon->modfunc[i]->clear)(qstate, i);
@@ -96,10 +91,53 @@ qstate_free(struct worker* worker, struct module_qstate* qstate)
 	region_free_all(qstate->region);
 	query_info_clear(&qstate->qinfo);
 	if(qstate->parent) {
-		module_subreq_remove(qstate);
+		/* subquery of parent */
+		module_subreq_remove(&qstate->parent->subquery_first, qstate);
 		region_destroy(qstate->region);
 		free(qstate);
+	} else if (!qstate->work_info) {
+		/* slumbering query */
+		module_subreq_remove(&worker->slumber_list, qstate);
+		region_destroy(qstate->region);
+		free(qstate);
+		verbose(VERB_ALGO, "cleanup: slumber list has %d entries",
+			module_subreq_num(worker->slumber_list));
 	}
+}
+
+/** delete subrequest recursively */
+static void
+qstate_free_recurs_list(struct worker* worker, struct module_qstate* list)
+{
+	struct module_qstate* n;
+	/* remove subqueries */
+	while(list) {
+		n = list->subquery_next;
+		qstate_free_recurs_list(worker, list->subquery_first);
+		qstate_cleanup(worker, list);
+		list = n;
+	}
+}
+
+/** delete subrequest */
+static void
+qstate_free(struct worker* worker, struct module_qstate* qstate)
+{
+	if(!qstate)
+		return;
+	while(qstate->subquery_first) {
+		/* put subqueries on slumber list */
+		struct module_qstate* s = qstate->subquery_first;
+		module_subreq_remove(&qstate->subquery_first, s);
+		s->parent = NULL;
+		s->work_info = NULL;
+		s->subquery_next = worker->slumber_list;
+		s->subquery_prev = NULL;
+		worker->slumber_list = s;
+	}
+	verbose(VERB_ALGO, "worker: slumber list has %d entries",
+		module_subreq_num(worker->slumber_list));
+	qstate_cleanup(worker, qstate);
 }
 
 /** release workrequest back to the freelist,
@@ -237,7 +275,7 @@ worker_process_query(struct worker* worker, struct work_query* w,
 			qstate_free(worker, qstate);
 			qstate = up;
 			entry = NULL;
-			event = module_event_error;
+			event = module_event_subq_error;
 			continue;
 		}
 		if(s == module_finished && qstate->parent) {
@@ -261,16 +299,21 @@ worker_process_query(struct worker* worker, struct work_query* w,
 	}
 	/* request done */
 	if(s == module_error) {
-		replyerror(LDNS_RCODE_SERVFAIL, w);
+		if(w) {
+			replyerror(LDNS_RCODE_SERVFAIL, w);
+			req_release(w);
+		}
 		qstate_free(worker, qstate);
 		return;
 	}
 	if(s == module_finished) {
-		memcpy(ldns_buffer_begin(w->query_reply.c->buffer),
-			&w->query_id, sizeof(w->query_id));
-		comm_point_send_reply(&w->query_reply);
+		if(w) {
+			memcpy(ldns_buffer_begin(w->query_reply.c->buffer),
+				&w->query_id, sizeof(w->query_id));
+			comm_point_send_reply(&w->query_reply);
+			req_release(w);
+		}
 		qstate_free(worker, qstate);
-		req_release(w);
 		return;
 	}
 	/* suspend, waits for wakeup callback */
@@ -312,7 +355,7 @@ worker_handle_service_reply(struct comm_point* c, void* arg, int error,
 {
 	struct outbound_entry* e = (struct outbound_entry*)arg;
 	struct work_query* w = e->qstate->work_info;
-	struct worker* worker = w->state.env->worker;
+	struct worker* worker = e->qstate->env->worker;
 
 	e->qstate->reply = reply_info;
 	if(error != 0) {
@@ -656,7 +699,8 @@ reqs_delete(struct worker* worker)
 		n = q->all_next;
 		log_assert(q->state.env->worker == worker);
 		/* comm_reply closed in outside_network_delete */
-		qstate_free(worker, &q->state);
+		qstate_free_recurs_list(worker, q->state.subquery_first);
+		qstate_cleanup(worker, &q->state);
 		region_destroy(q->state.region);
 		free(q);
 		q = n;
@@ -751,6 +795,7 @@ worker_init(struct worker* worker, struct config_file *cfg,
 		worker_delete(worker);
 		return 0;
 	}
+	worker->slumber_list = NULL;
 
 	server_stats_init(&worker->stats);
 	alloc_init(&worker->alloc, &worker->daemon->superalloc, 
@@ -775,6 +820,7 @@ worker_delete(struct worker* worker)
 		return;
 	server_stats_log(&worker->stats, worker->thread_num);
 	reqs_delete(worker);
+	qstate_free_recurs_list(worker, worker->slumber_list);
 	listen_delete(worker->front);
 	outside_network_delete(worker->back);
 	comm_signal_delete(worker->comsig);

@@ -253,11 +253,30 @@ final_state(struct module_qstate* qstate, struct iter_qstate* iq)
 static int
 error_response(struct module_qstate* qstate, int id, int rcode)
 {
+	struct iter_qstate* iq = (struct iter_qstate*)qstate->minfo[id];
 	log_info("err response %s", ldns_lookup_by_id(ldns_rcodes, rcode)?
 		ldns_lookup_by_id(ldns_rcodes, rcode)->name:"??");
+	if(iq && iq->orig_qname) {
+		/* encode original query */
+		qstate->qinfo.qname = iq->orig_qname;
+		qstate->qinfo.qname_len = iq->orig_qnamelen;
+		qstate->query_flags = iq->orig_qflags;
+	}
 	qinfo_query_encode(qstate->buf, &qstate->qinfo);
 	LDNS_RCODE_SET(ldns_buffer_begin(qstate->buf), rcode);
+	LDNS_RA_SET(ldns_buffer_begin(qstate->buf));
 	LDNS_QR_SET(ldns_buffer_begin(qstate->buf));
+	if((qstate->query_flags & BIT_RD))
+		LDNS_RD_SET(ldns_buffer_begin(qstate->buf));
+	if((qstate->query_flags & BIT_CD))
+		LDNS_CD_SET(ldns_buffer_begin(qstate->buf));
+
+	if(qstate->parent) {
+		/* return subquery error module event to parent */
+		qstate->ext_state[id] = module_error;
+		return 0;
+	}
+	/* return to client */
 	qstate->ext_state[id] = module_finished;
 	return 0;
 }
@@ -468,6 +487,7 @@ generate_sub_request(uint8_t* qname, size_t qnamelen, uint16_t qtype,
 	subq->work_info = qstate->work_info;
 	subq->parent = qstate;
 	subq->subquery_next = qstate->subquery_first;
+	subq->subquery_prev = NULL;
 	qstate->subquery_first = subq;
 
 	subiq = (struct iter_qstate*)subq->minfo[id];
@@ -571,7 +591,7 @@ prime_stub(struct module_qstate* qstate, struct iter_qstate* iq,
 		QUERYTARGETS_STATE, PRIME_RESP_STATE);
 	if(!subq) {
 		log_err("out of memory priming stub");
-		qstate->ext_state[id] = module_error;
+		(void)error_response(qstate, id, LDNS_RCODE_SERVFAIL);
 		return 1; /* return 1 to make module stop, with error */
 	}
 	subiq = (struct iter_qstate*)subq->minfo[id];
@@ -844,7 +864,10 @@ generate_target_query(struct module_qstate* qstate, struct iter_qstate* iq,
 	subiq = (struct iter_qstate*)subq->minfo[id];
 	subiq->dp = delegpt_copy(iq->dp, subq->region);
 	if(!subiq->dp) {
-		subq->ext_state[id] = module_error;
+		module_subreq_remove(&qstate->subquery_first, subq);
+		region_destroy(subq->region);
+		free(subq->qinfo.qname);
+		free(subq);
 		return 0;
 	}
 	return 1;
@@ -1082,7 +1105,6 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 {
 	enum response_type type;
 	iq->num_current_queries--;
-	qstate->ext_state[id] = module_error; /* debug, must be overridden */
 	if(iq->response == NULL) {
 		verbose(VERB_ALGO, "query response was timeout");
 		return next_state(qstate, iq, QUERYTARGETS_STATE);
@@ -1214,7 +1236,14 @@ processPrimeResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 	struct delegpt* dp = NULL;
 	enum response_type type = response_type_from_server(iq->response, 
 		&qstate->qinfo, iq->dp);
-	log_assert(qstate->parent); /* this is a subrequest of another */
+
+	/* This event is finished. */
+	qstate->ext_state[id] = module_finished;
+
+	if(!qstate->parent) {
+		/* no more parent - it is not interested anymore */
+		return 0;
+	}
 	if(type == RESPONSE_TYPE_ANSWER) {
 		/* Convert our response to a delegation point */
 		dp = delegpt_from_message(iq->response, forq->region);
@@ -1224,23 +1253,17 @@ processPrimeResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		 * the ANSWER type was (presumably) a negative answer. */
 		verbose(VERB_ALGO, "prime response was not a positive "
 			"ANSWER; failing");
-		/* note that this will call the forevent with event error. */
-		qstate->ext_state[id] = module_error;
-		return 0;
+		return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
 	}
 
 	log_nametypeclass("priming successful for", qstate->qinfo.qname,
 		qstate->qinfo.qtype, qstate->qinfo.qclass);
-	/* This event is finished. */
-	qstate->ext_state[id] = module_finished;
 	foriq = (struct iter_qstate*)forq->minfo[id];
 	foriq->dp = dp;
 	foriq->response = dns_copy_msg(iq->response, forq->region);
 	if(!foriq->response) {
 		log_err("copy prime response: out of memory");
-		/* note that this will call the forevent with event error. */
-		qstate->ext_state[id] = module_error;
-		return 0;
+		return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
 	}
 
 	/* root priming responses go to init stage 2, priming stub 
@@ -1274,9 +1297,14 @@ processTargetResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 	struct delegpt_ns* dpns;
 	struct module_qstate* forq = qstate->parent;
 	struct iter_qstate* foriq;
-	log_assert(qstate->parent); /* fetch targets for a parent */
-	foriq = (struct iter_qstate*)forq->minfo[id];
+
 	qstate->ext_state[id] = module_finished;
+	if(!qstate->parent) {
+		/* no parent, it is not interested anymore */
+		return 0;
+	}
+
+	foriq = (struct iter_qstate*)forq->minfo[id];
 
 	/* check to see if parent event is still interested.  */
 	if(iq->orig_qname)
@@ -1460,7 +1488,7 @@ process_response(struct module_qstate* qstate, struct iter_qstate* iq,
 	if(event != module_event_reply || !qstate->reply) {
 		log_err("Bad event combined with response");
 		outbound_list_remove(&iq->outlist, outbound);
-		qstate->ext_state[id] = module_error;
+		(void)error_response(qstate, id, LDNS_RCODE_SERVFAIL);
 		return;
 	}
 
@@ -1496,6 +1524,48 @@ handle_it:
 	outbound_list_remove(&iq->outlist, outbound);
 	iter_handle(qstate, iq, ie, id);
 }
+/** 
+ * Handles subquery errors. Checks if query is still relevant, and adjusts
+ * the state.
+ * @param qstate: query state.
+ * @param ie: iterator shared global environment.
+ * @param iq: iterator query state.
+ * @param id: module id.
+ */
+static void
+process_subq_error(struct module_qstate* qstate, struct iter_qstate* iq,
+	struct iter_env* ie, int id)
+{
+	struct query_info errinf;
+	struct delegpt_ns* dpns = NULL;
+	if(!query_info_parse(&errinf, qstate->buf)) {
+		log_err("Could not parse error from sub module");
+		return;
+	}
+	if(errinf.qtype == LDNS_RR_TYPE_NS) {
+		/* a priming query has failed. */
+		iter_handle(qstate, iq, ie, id);
+		return;
+	}
+	if(errinf.qtype != LDNS_RR_TYPE_A && 
+		errinf.qtype != LDNS_RR_TYPE_AAAA) {
+		log_err("Bad error from sub module");
+		return;
+	}
+	/* see if we are still interested in this subquery result */
+	
+	if(!iq->dp)
+		dpns = delegpt_find_ns(iq->dp, errinf.qname, 
+			errinf.qname_len);
+	if(!dpns) {
+		/* not interested */
+		return;
+	}
+	dpns->resolved = 1; /* mark as failed */
+	iq->num_target_queries--; /* and the query is finished */
+	iq->state = QUERYTARGETS_STATE; /* evaluate targets again */
+	iter_handle(qstate, iq, ie, id);
+}
 
 /** iterator operate on a query */
 static void 
@@ -1514,7 +1584,7 @@ iter_operate(struct module_qstate* qstate, enum module_ev event, int id,
 	if(event == module_event_new && iq == NULL) {
 		log_info("iter state machine");
 		if(!iter_new(qstate, id)) {
-			qstate->ext_state[id] = module_error;
+			(void)error_response(qstate, id, LDNS_RCODE_SERVFAIL);
 			return;
 		}
 		iq = (struct iter_qstate*)qstate->minfo[id];
@@ -1529,14 +1599,24 @@ iter_operate(struct module_qstate* qstate, enum module_ev event, int id,
 		process_response(qstate, iq, ie, id, outbound, event);
 		return;
 	}
+	if(event == module_event_subq_done) {
+		/* subquery has set our state correctly */
+		iter_handle(qstate, iq, ie, id);
+		return;
+	}
+	if(event == module_event_subq_error) {
+		/* need to delist subquery and continue processing */
+		process_subq_error(qstate, iq, ie, id);
+		return;
+	}
 	if(event == module_event_error) {
 		verbose(VERB_ALGO, "got called with event error, giving up");
-		qstate->ext_state[id] = module_error;
+		(void)error_response(qstate, id, LDNS_RCODE_SERVFAIL);
 		return;
 	}
 
 	log_err("bad event for iterator");
-	qstate->ext_state[id] = module_error;
+	(void)error_response(qstate, id, LDNS_RCODE_SERVFAIL);
 }
 
 /** iterator cleanup query state */

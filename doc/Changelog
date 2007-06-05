@@ -1,5 +1,8 @@
 5 June 2007: Wouter
 	- iterator state finished.
+	- subrequests without parent store in cache and stop.
+	- worker slumber list for ongoing promiscuous queries.
+	- subrequest error handling.
 
 4 June 2007: Wouter
 	- random selection of equally preferred nameserver targets.

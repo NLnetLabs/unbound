@@ -163,6 +163,8 @@ enum module_ev {
 	module_event_mod_done,
 	/** subquery finished */
 	module_event_subq_done,
+	/** subquery finished with error */
+	module_event_subq_error,
 	/** error */
 	module_event_error
 };
@@ -198,15 +200,19 @@ struct module_qstate {
 	void* minfo[MAX_MODULE];
 	/** environment for this query */
 	struct module_env* env;
-	/** worker related state for this query */
+	/** worker related state for this query. NULL for queries that do
+	 * not need to have answers sent to a client. */
 	struct work_query* work_info;
 
 	/** parent query, only nonNULL for subqueries */
 	struct module_qstate* parent;
 	/** pointer to first subquery below this one; makes list with next */
 	struct module_qstate* subquery_first;
+
 	/** pointer to next sibling subquery (not above or below this one) */
 	struct module_qstate* subquery_next;
+	/** pointer to prev sibling subquery (not above or below this one) */
+	struct module_qstate* subquery_prev;
 };
 
 /** 
@@ -271,10 +277,13 @@ const char* strmodulevent(enum module_ev e);
 
 /**
  * Remove subqrequest from list.
+ * @param head: List head. pointer to start of subquery_next/prev sibling list.
+ *	mostly reference to the parent subquery_first.
  * @param sub: subrequest. Parent pointer used to access list.
  * 	It is snipped off. 
  */
-void module_subreq_remove(struct module_qstate* sub);
+void module_subreq_remove(struct module_qstate** head, 
+	struct module_qstate* sub);
 
 /**
  * Calculate depth of subrequest
@@ -282,5 +291,12 @@ void module_subreq_remove(struct module_qstate* sub);
  * @return: depth > 0 for subrequests.
  */
 int module_subreq_depth(struct module_qstate* sub);
+
+/**
+ * Calculate number of queries in the query list.
+ * @param q: the start of the list, pass subquery_first.
+ * @return: number, 0 if q was NULL.
+ */
+int module_subreq_num(struct module_qstate* q);
 
 #endif /* UTIL_MODULE_H */

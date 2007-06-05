@@ -64,28 +64,26 @@ strmodulevent(enum module_ev e)
 	case module_event_timeout: return "module_event_timeout";
 	case module_event_mod_done: return "module_event_mod_done";
 	case module_event_subq_done: return "module_event_subq_done";
+	case module_event_subq_error: return "module_event_subq_error";
 	case module_event_error: return "module_event_error";
 	}
 	return "bad_event_value";
 }
 
 void 
-module_subreq_remove(struct module_qstate* sub)
+module_subreq_remove(struct module_qstate** head, struct module_qstate* sub)
 {
-	struct module_qstate* p, *prev = NULL;
-	if(!sub || !sub->parent) 
+	if(!sub || !head) 
 		return;
-	p = sub->parent->subquery_first;
-	while(p) {
-		if(p == sub) {
-			/* snip it off */
-			if(prev) prev->subquery_next = p->subquery_next;
-			else sub->parent->subquery_first = p->subquery_next;
-			return;
-		}
-		prev = p;
-		p = p->subquery_next;
-	}
+	/* snip off double linked list */
+	if(sub->subquery_prev)
+		sub->subquery_prev->subquery_next = sub->subquery_next;
+	else	*head = sub->subquery_next;
+	if(sub->subquery_next)
+		sub->subquery_next->subquery_prev = sub->subquery_prev;
+	/* cleanup values for robustness */
+	sub->subquery_next = NULL;
+	sub->subquery_prev = NULL;
 }
 
 int 
@@ -97,4 +95,15 @@ module_subreq_depth(struct module_qstate* sub)
 		sub = sub->parent;
 	}
 	return d;
+}
+
+int 
+module_subreq_num(struct module_qstate* q)
+{
+	int n = 0;
+	while(q) {
+		n++;
+		q = q->subquery_next;
+	}
+	return n;
 }

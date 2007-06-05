@@ -116,6 +116,8 @@ struct worker {
 	struct work_query* free_queries;
 	/** list of all working queries */
 	struct work_query* all_queries;
+	/** list of slumbering states, with promiscuous queries */
+	struct module_qstate* slumber_list;
 
 	/** random() table for this worker. */
 	struct ub_randstate* rndstate;
