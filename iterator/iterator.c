@@ -251,23 +251,23 @@ final_state(struct module_qstate* qstate, struct iter_qstate* iq)
  * Return an error to the client
  */
 static int
-error_response(struct module_qstate* qstate, struct iter_qstate* iq, int rcode)
+error_response(struct module_qstate* qstate, int id, int rcode)
 {
 	log_info("err response %s", ldns_lookup_by_id(ldns_rcodes, rcode)?
 		ldns_lookup_by_id(ldns_rcodes, rcode)->name:"??");
 	qinfo_query_encode(qstate->buf, &qstate->qinfo);
 	LDNS_RCODE_SET(ldns_buffer_begin(qstate->buf), rcode);
 	LDNS_QR_SET(ldns_buffer_begin(qstate->buf));
-	return final_state(qstate, iq);
+	qstate->ext_state[id] = module_finished;
+	return 0;
 }
 
-#if 0
 /** prepend the prepend list in the answer section of dns_msg */
 static int
 iter_prepend(struct iter_qstate* iq, struct dns_msg* msg, 
 	struct region* region)
 {
-	struct packed_rrset_list* p;
+	struct iter_prep_list* p;
 	struct ub_packed_rrset_key** sets;
 	size_t num = 0;
 	for(p = iq->prepend_list; p; p = p->next)
@@ -282,13 +282,7 @@ iter_prepend(struct iter_qstate* iq, struct dns_msg* msg,
 		sizeof(struct ub_packed_rrset_key*));
 	num = 0;
 	for(p = iq->prepend_list; p; p = p->next) {
-		sets[num] = (struct ub_packed_rrset_key*)region_alloc(region,
-			sizeof(struct ub_packed_rrset_key));
-		if(!sets[num])
-			return 0;
-		sets[num]->rk = *p->rrset.k;
-		sets[num]->entry.data = p->rrset.d;
-		num++;
+		sets[num++] = p->rrset;
 	}
 	msg->rep->rrsets = sets;
 	return 1;
@@ -300,10 +294,11 @@ iter_prepend(struct iter_qstate* iq, struct dns_msg* msg,
  * @param qstate: query state. With qinfo information.
  * @param iq: iterator query state. With qinfo original and prepend list.
  * @param msg: answer message.
+ * @param id: module id (used in error condition).
  */
 static void 
 iter_encode_respmsg(struct module_qstate* qstate, struct iter_qstate* iq, 
-	struct dns_msg* msg)
+	struct dns_msg* msg, int id)
 {
 	struct query_info qinf = qstate->qinfo;
 	uint32_t now = time(NULL);
@@ -314,7 +309,8 @@ iter_encode_respmsg(struct module_qstate* qstate, struct iter_qstate* iq,
 	}
 	if(iq->prepend_list) {
 		if(!iter_prepend(iq, msg, qstate->region)) {
-			error_response(qstate, iq, LDNS_RCODE_SERVFAIL);
+			log_err("prepend rrsets: out of memory");
+			error_response(qstate, id, LDNS_RCODE_SERVFAIL);
 			return;
 		}
 	}
@@ -328,11 +324,10 @@ iter_encode_respmsg(struct module_qstate* qstate, struct iter_qstate* iq,
 		qstate->buf, now, 1, qstate->scratch, qstate->edns.udp_size, 
 		&edns)) {
 		/* encode servfail */
-		error_response(qstate, iq, LDNS_RCODE_SERVFAIL);
+		error_response(qstate, id, LDNS_RCODE_SERVFAIL);
 		return;
 	}
 }
-#endif
 
 /**
  * Add rrset to prepend list
@@ -629,7 +624,7 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 	if(iq->query_restart_count > MAX_RESTART_COUNT) {
 		verbose(VERB_DETAIL, "request has exceeded the maximum number"
 			" of query restarts with %d", iq->query_restart_count);
-		return error_response(qstate, iq, LDNS_RCODE_SERVFAIL);
+		return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
 	}
 
 	/* We enforce a maximum recursion/dependency depth -- in general, 
@@ -641,7 +636,7 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 	if(d > ie->max_dependency_depth) {
 		verbose(VERB_DETAIL, "request has exceeded the maximum "
 			"dependency depth with depth of %d", d);
-		return error_response(qstate, iq, LDNS_RCODE_SERVFAIL);
+		return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
 	}
 
 	/* Resolver Algorithm Step 1 -- Look for the answer in local data. */
@@ -668,7 +663,7 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 			}
 			if(!handle_cname_response(qstate, iq, msg, 
 				&sname, &slen))
-				return error_response(qstate, iq,
+				return error_response(qstate, id, 
 					LDNS_RCODE_SERVFAIL);
 			qstate->qinfo.qname = sname;
 			qstate->qinfo.qname_len = slen;
@@ -740,7 +735,7 @@ return nextState(event, req, state, IterEventState.INIT_REQUEST_STATE);
 		/* Note that the result of this will set a new
 		 * DelegationPoint based on the result of priming. */
 		if(!prime_root(qstate, ie, id, qstate->qinfo.qclass))
-			return error_response(qstate, iq, LDNS_RCODE_REFUSED);
+			return error_response(qstate, id, LDNS_RCODE_REFUSED);
 
 		/* priming creates an sends a subordinate query, with 
 		 * this query as the parent. So further processing for 
@@ -966,7 +961,7 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 	if(iq->referral_count > MAX_REFERRAL_COUNT) {
 		verbose(VERB_ALGO, "request has exceeded the maximum "
 			"number of referrrals with %d", iq->referral_count);
-		return error_response(qstate, iq, LDNS_RCODE_SERVFAIL);
+		return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
 	}
 
 	tf_policy = 0;
@@ -982,7 +977,7 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 	if(tf_policy != 0) {
 		if(!query_for_targets(qstate, iq, ie, id, tf_policy, 
 			&iq->num_target_queries)) {
-			return error_response(qstate, iq, LDNS_RCODE_SERVFAIL);
+			return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
 		}
 	} else {
 		iq->num_target_queries = 0;
@@ -1015,7 +1010,7 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 					"missing target");
 				if(!query_for_targets(qstate, iq, ie, id, 
 						1, &iq->num_target_queries)) {
-					return error_response(qstate, iq, 
+					return error_response(qstate, id,
 						LDNS_RCODE_SERVFAIL);
 				}
 			}
@@ -1026,7 +1021,7 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 					"returning SERVFAIL");
 				/* fail -- no more targets, no more hope 
 				 * of targets, no hope of a response. */
-				return error_response(qstate, iq, 
+				return error_response(qstate, id,
 					LDNS_RCODE_SERVFAIL);
 			}
 		}
@@ -1059,7 +1054,7 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 		qstate);
 	if(!outq) {
 		log_err("out of memory sending query to auth server");
-		return error_response(qstate, iq, LDNS_RCODE_SERVFAIL);
+		return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
 	}
 	outbound_list_insert(&iq->outlist, outq);
 	iq->num_current_queries++;
@@ -1105,7 +1100,7 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		 * need to apply the prependList before caching, and 
 		 * also cache under the latest query. */
 		if(!iter_dns_store(qstate->env, iq->response, 0))
-			return error_response(qstate, iq, LDNS_RCODE_SERVFAIL);
+			return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
 		/* close down outstanding requests to be discarded */
 		outbound_list_clear(&iq->outlist);
 		return final_state(qstate, iq);
@@ -1116,14 +1111,14 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 
 		/* Store the referral under the current query */
 		if(!iter_dns_store(qstate->env, iq->response, 1))
-			return error_response(qstate, iq, LDNS_RCODE_SERVFAIL);
+			return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
 
 		/* Reset the event state, setting the current delegation 
 		 * point to the referral. */
 		iq->deleg_msg = iq->response;
 		iq->dp = delegpt_from_message(iq->response, qstate->region);
 		if(!iq->dp)
-			return error_response(qstate, iq, LDNS_RCODE_SERVFAIL);
+			return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
 		iq->num_current_queries = 0;
 		iq->num_target_queries = -1;
 		/* Count this as a referral. */
@@ -1150,10 +1145,10 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		}
 		if(!handle_cname_response(qstate, iq, iq->response, 
 			&sname, &snamelen))
-			return error_response(qstate, iq, LDNS_RCODE_SERVFAIL);
+			return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
 		/* cache the CNAME response under the current query */
 		if(!iter_dns_store(qstate->env, iq->response, 0))
-			return error_response(qstate, iq, LDNS_RCODE_SERVFAIL);
+			return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
 		/* set the current request's qname to the new value. */
 		qstate->qinfo.qname = sname;
 		qstate->qinfo.qname_len = snamelen;
@@ -1326,15 +1321,51 @@ processTargetResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 	return 0;
 }
 
-#if 0
-/** TODO */
+/** 
+ * This handles the final state for first-tier responses (i.e., responses to
+ * externally generated queries).
+ *
+ * @param qstate: query state.
+ * @param iq: iterator query state.
+ * @param id: module id.
+ * @return true if the event needs more processing, false if not. Since this
+ *         is the final state for an event, it always returns false.
+ */
 static int
 processFinished(struct module_qstate* qstate, struct iter_qstate* iq,
-	struct iter_env* ie, int id)
+	int id)
 {
+	log_nametypeclass("finishing processing for", qstate->qinfo.qname,
+		qstate->qinfo.qtype, qstate->qinfo.qclass);
+
+	if(!iq->response) {
+		verbose(VERB_ALGO, "No response is set, servfail");
+		return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
+	}
+
+	/* Make sure that the RA flag is set (since the presence of 
+	 * this module means that recursion is available) */
+	iq->response->rep->flags |= BIT_RA;
+
+	/* Clear the AA flag */
+	/* FIXME: does this action go here or in some other module? */
+	iq->response->rep->flags &= ~BIT_AA;
+
+	/* make sure QR flag is on */
+	iq->response->rep->flags |= BIT_QR;
+
+	/* we have finished processing this query */
+	qstate->ext_state[id] = module_finished;
+
+	/* TODO:  we are using a private TTL, trim the response. */
+	/* if (mPrivateTTL > 0){IterUtils.setPrivateTTL(resp, mPrivateTTL); } */
+
+	/* Makes sure the final response contains the original question. */
+	/* and prepends items we have to prepend. Stores reponse in buffer */
+	iter_encode_respmsg(qstate, iq, iq->response, id);
+
 	return 0;
 }
-#endif
 
 /**
  * Handle iterator state.
@@ -1378,11 +1409,9 @@ iter_handle(struct module_qstate* qstate, struct iter_qstate* iq,
 			case TARGET_RESP_STATE:
 				cont = processTargetResponse(qstate, iq, id);
 				break;
-#if 0
 			case FINISHED_STATE:
-				cont = processFinished(qstate, iq, ie, id);
+				cont = processFinished(qstate, iq, id);
 				break;
-#endif
 			default:
 				log_warn("iterator: invalid state: %d",
 					iq->state);

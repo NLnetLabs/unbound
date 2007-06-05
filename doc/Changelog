@@ -1,3 +1,6 @@
+5 June 2007: Wouter
+	- iterator state finished.
+
 4 June 2007: Wouter
 	- random selection of equally preferred nameserver targets.
 	- reply info copy routine. Reuses existing code.
