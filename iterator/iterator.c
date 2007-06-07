@@ -1083,8 +1083,9 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 		qstate->query_flags, 1, &target->addr, target->addrlen, 
 		qstate);
 	if(!outq) {
-		log_err("out of memory sending query to auth server");
-		return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
+		log_err("error sending query to auth server; skip this address");
+		log_addr("error for address:", &target->addr, target->addrlen);
+		return next_state(qstate, iq, QUERYTARGETS_STATE);
 	}
 	outbound_list_insert(&iq->outlist, outq);
 	iq->num_current_queries++;

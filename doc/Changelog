@@ -13,6 +13,9 @@
 	  VERB_ALGO, verbosity: 3 gives extensive output.
 	- fixup RA bit in cached replies.
 	- fixup CNAME responses from the cache no longer partial response.
+	- error in network send handled without leakage.
+	- enable ip6 from config, and try ip6 addresses if available,
+	  if ip6 is not connected, skips to next server.
 
 5 June 2007: Wouter
 	- iterator state finished.

@@ -1138,6 +1138,8 @@ outnet_serviced_query(struct outside_network* outnet,
 		}
 		/* perform first network action */
 		if(!serviced_udp_send(sq, buff)) {
+			(void)rbtree_delete(outnet->serviced, sq);
+			free(sq->qbuf);
 			free(sq);
 			free(cb);
 			return NULL;

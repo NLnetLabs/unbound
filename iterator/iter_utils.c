@@ -80,7 +80,7 @@ iter_apply_cfg(struct iter_env* iter_env, struct config_file* cfg)
 		log_err("Could not set root or stub hints");
 		return 0;
 	}
-	
+	iter_env->supports_ipv6 = cfg->do_ip6;
 
 	/* forwarder address */
 	if(cfg->fwd_address && cfg->fwd_address[0]) {
@@ -196,7 +196,7 @@ iter_server_selection(struct iter_env* iter_env,
 	}
 	if(!a)  /* robustness */
 		return NULL;
-	/* remove it from list */
+	/* remove it from the delegation point result list */
 	if(prev)
 		prev->next_result = a->next_result;
 	else	dp->result_list = a->next_result;
