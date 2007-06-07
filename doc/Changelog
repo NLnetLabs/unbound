@@ -11,6 +11,8 @@
 	- subreq insertion code fixup for slumber list.
 	- VERB_DETAIL, verbosity: 2 level gives short but readable output.
 	  VERB_ALGO, verbosity: 3 gives extensive output.
+	- fixup RA bit in cached replies.
+	- fixup CNAME responses from the cache no longer partial response.
 
 5 June 2007: Wouter
 	- iterator state finished.

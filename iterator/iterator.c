@@ -1178,7 +1178,9 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 			&sname, &snamelen))
 			return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
 		/* cache the CNAME response under the current query */
-		if(!iter_dns_store(qstate->env, iq->response, 0))
+		/* NOTE : set referral=1, so that rrsets get stored but not 
+		 * the partial query answer (CNAME only). */
+		if(!iter_dns_store(qstate->env, iq->response, 1))
 			return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
 		/* set the current request's qname to the new value. */
 		qstate->qinfo.qname = sname;
