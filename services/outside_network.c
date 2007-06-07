@@ -285,12 +285,15 @@ outnet_udp_cb(struct comm_point* c, void* arg, int error,
 	memcpy(&key.addr, &reply_info->addr, reply_info->addrlen);
 	key.addrlen = reply_info->addrlen;
 	verbose(VERB_ALGO, "Incoming reply id=%4.4x addr=", key.id);
+	if(verbosity >= VERB_ALGO) {
+		log_addr("Incoming reply addr=", &reply_info->addr, reply_info->addrlen);
+	}
 
 	/* find it, see if this thing is a valid query response */
 	verbose(VERB_ALGO, "lookup size is %d entries", (int)outnet->pending->count);
 	p = (struct pending*)rbtree_search(outnet->pending, &key);
 	if(!p) {
-		verbose(VERB_DETAIL, "received unsolicited udp reply. dropped.");
+		verbose(VERB_DETAIL, "received unwanted or unsolicited udp reply dropped.");
 		return 0;
 	}
 

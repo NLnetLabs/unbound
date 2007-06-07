@@ -210,17 +210,33 @@ set_extstates_initial(struct worker* worker, struct module_qstate* qstate)
 		qstate->ext_state[i] = module_state_initial;
 }
 
+/** recursive debug logging of (sub)query structure */
+static void
+run_debug(struct module_qstate* p, int d)
+{
+	char buf[80+1+1]; /* max nn=80; marker is 1, zero at end is 1 */
+	int i, nn = d*2;
+	if(nn > 80)
+		nn = 80;
+	for(i=0; i<nn; i++) {
+		buf[i] = ' ';
+	}
+	buf[i++] = 'o';
+	buf[i] = 0;
+	log_nametypeclass(buf, p->qinfo.qname, p->qinfo.qtype, p->qinfo.qclass);
+	for(p = p->subquery_first; p; p = p->subquery_next) {
+		run_debug(p, d+1);
+	}
+}
+
 /** find runnable recursive */
 static struct module_qstate*
 find_run_in(struct module_qstate* p)
 {
 	struct module_qstate* q;
-	log_nametypeclass("find run in", p->qinfo.qname, p->qinfo.qtype, p->qinfo.qclass);
 	for(p = p->subquery_first; p; p = p->subquery_next) {
-		log_nametypeclass("find run passed", p->qinfo.qname, p->qinfo.qtype, p->qinfo.qclass);
 		if(p->ext_state[p->curmod] == module_state_initial)
 			return p;
-		log_nametypeclass("find run morepass", p->qinfo.qname, p->qinfo.qtype, p->qinfo.qclass);
 		if((q=find_run_in(p)))
 			return q;
 	}
@@ -238,6 +254,8 @@ find_runnable(struct module_qstate* subq)
 		return p->subquery_next;
 	while(p->parent)
 		p = p->parent;
+	if(verbosity >= VERB_ALGO)
+		run_debug(p, 0);
 	return find_run_in(p);
 }
 

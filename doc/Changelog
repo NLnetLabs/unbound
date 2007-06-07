@@ -1,7 +1,9 @@
 7 June 2007: Wouter
 	- fixup error in double linked list insertion for subqueries and
 	  for outbound list of serviced queries for iterator module.
-	- nicer printout of outgoing port selection.
+	- nicer printout of outgoing port selection. 
+	- fixup cname target readout.
+	- nicer debug output.
 
 5 June 2007: Wouter
 	- iterator state finished.

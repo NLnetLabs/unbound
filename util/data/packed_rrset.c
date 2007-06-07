@@ -207,7 +207,6 @@ get_cname_target(struct ub_packed_rrset_key* rrset, uint8_t** dname,
 	len = ldns_read_uint16(d->rr_data[0]);
 	if(len != d->rr_len[0] - sizeof(uint16_t))
 		return;
-	len -= sizeof(uint16_t);
 	if(dname_valid(d->rr_data[0]+sizeof(uint16_t), len) != len)
 		return;
 	*dname = d->rr_data[0]+sizeof(uint16_t);
