@@ -1157,7 +1157,7 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 
 		/* stop current outstanding queries. 
 		 * FIXME: should the outstanding queries be waited for and
-		 * handled?
+		 * handled? Say by a subquery that inherits the outbound_entry.
 		 */
 		outbound_list_clear(&iq->outlist);
 		verbose(VERB_ALGO, "cleared outbound list for next round");
@@ -1196,7 +1196,7 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 
 		/* stop current outstanding queries. 
 		 * FIXME: should the outstanding queries be waited for and
-		 * handled?
+		 * handled? Say by a subquery that inherits the outbound_entry.
 		 */
 		outbound_list_clear(&iq->outlist);
 		verbose(VERB_ALGO, "cleared outbound list for query restart");
