@@ -4,6 +4,13 @@
 	- nicer printout of outgoing port selection. 
 	- fixup cname target readout.
 	- nicer debug output.
+	- fixup rrset counts when prepending CNAMEs to the answer.
+	- fixup rrset TTL for prepended CNAMEs.
+	- process better check for looping modules, and which submodule to
+	  run next.
+	- subreq insertion code fixup for slumber list.
+	- VERB_DETAIL, verbosity: 2 level gives short but readable output.
+	  VERB_ALGO, verbosity: 3 gives extensive output.
 
 5 June 2007: Wouter
 	- iterator state finished.

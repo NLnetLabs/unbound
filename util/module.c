@@ -86,6 +86,16 @@ module_subreq_remove(struct module_qstate** head, struct module_qstate* sub)
 	sub->subquery_prev = NULL;
 }
 
+void 
+module_subreq_insert(struct module_qstate** head, struct module_qstate* sub)
+{
+	if(*head)
+		(*head)->subquery_prev = sub;
+	sub->subquery_next = *head;
+	sub->subquery_prev = NULL;
+	*head = sub;
+}
+
 int 
 module_subreq_depth(struct module_qstate* sub)
 {

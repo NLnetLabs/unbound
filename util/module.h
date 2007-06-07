@@ -279,10 +279,18 @@ const char* strmodulevent(enum module_ev e);
  * Remove subqrequest from list.
  * @param head: List head. pointer to start of subquery_next/prev sibling list.
  *	mostly reference to the parent subquery_first.
- * @param sub: subrequest. Parent pointer used to access list.
- * 	It is snipped off. 
+ * @param sub: subrequest. It is snipped off. 
  */
 void module_subreq_remove(struct module_qstate** head, 
+	struct module_qstate* sub);
+
+/**
+ * Insert subqrequest in list. You must set the parent ptr of sub correctly.
+ * @param head: List head. pointer to start of subquery_next/prev sibling list.
+ *	mostly reference to the parent subquery_first.
+ * @param sub: subrequest. It is added to the list. 
+ */
+void module_subreq_insert(struct module_qstate** head, 
 	struct module_qstate* sub);
 
 /**

@@ -212,3 +212,13 @@ get_cname_target(struct ub_packed_rrset_key* rrset, uint8_t** dname,
 	*dname = d->rr_data[0]+sizeof(uint16_t);
 	*dname_len = len;
 }
+
+void 
+packed_rrset_ttl_add(struct packed_rrset_data* data, uint32_t add)
+{
+	size_t i;
+	size_t total = data->count + data->rrsig_count;
+	data->ttl += add;
+	for(i=0; i<total; i++)
+		data->rr_ttl[i] += add;
+}

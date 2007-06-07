@@ -179,12 +179,14 @@ ipstrtoaddr(const char* ip, int port, struct sockaddr_storage* addr,
 }
 
 void
-log_nametypeclass(const char* str, uint8_t* name, uint16_t type, 
-	uint16_t dclass)
+log_nametypeclass(enum verbosity_value v, const char* str, uint8_t* name, 
+	uint16_t type, uint16_t dclass)
 {
 	char buf[LDNS_MAX_DOMAINLEN+1];
 	char t[12], c[12];
 	const char *ts, *cs; 
+	if(verbosity < v)
+		return;
 	dname_str(name, buf);
 	if(ldns_rr_descript(type) && ldns_rr_descript(type)->_name)
 		ts = ldns_rr_descript(type)->_name;
@@ -200,6 +202,37 @@ log_nametypeclass(const char* str, uint8_t* name, uint16_t type,
 		cs = c;
 	}
 	log_info("%s <%s %s %s>", str, buf, ts, cs);
+}
+
+void log_name_addr(enum verbosity_value v, const char* str, uint8_t* zone, 
+	struct sockaddr_storage* addr, socklen_t addrlen)
+{
+        uint16_t port;
+        const char* family = "unknown_family ";
+	char namebuf[LDNS_MAX_DOMAINLEN+1];
+        char dest[100];
+        int af = (int)((struct sockaddr_in*)addr)->sin_family;
+        void* sinaddr = &((struct sockaddr_in*)addr)->sin_addr;
+	if(verbosity < v)
+		return;
+        switch(af) {
+                case AF_INET: family=""; break;
+                case AF_INET6: family="";
+                        sinaddr = &((struct sockaddr_in6*)addr)->sin6_addr;
+                        break;
+                case AF_UNIX: family="unix_family "; break;
+                default: break;
+        }
+        if(inet_ntop(af, sinaddr, dest, (socklen_t)sizeof(dest)) == 0) {
+                strncpy(dest, "(inet_ntop error)", sizeof(dest));
+        }
+        port = ntohs(((struct sockaddr_in*)addr)->sin_port);
+	dname_str(zone, namebuf);
+	if(af != AF_INET && af != AF_INET6)
+		verbose(VERB_DETAIL, "%s <%s> %s%s#%d (addrlen %d)",
+			str, namebuf, family, dest, (int)port, (int)addrlen);
+        else	verbose(VERB_DETAIL, "%s <%s> %s%s#%d",
+			str, namebuf, family, dest, (int)port);
 }
 
 int

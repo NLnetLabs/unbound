@@ -132,9 +132,7 @@ qstate_free(struct worker* worker, struct module_qstate* qstate)
 			module_subreq_remove(&qstate->subquery_first, s);
 			s->parent = NULL;
 			s->work_info = NULL;
-			s->subquery_next = worker->slumber_list;
-			s->subquery_prev = NULL;
-			worker->slumber_list = s;
+			module_subreq_insert(&worker->slumber_list, s);
 		}
 		verbose(VERB_ALGO, "worker: slumber list has %d entries",
 			module_subreq_num(worker->slumber_list));
@@ -223,7 +221,8 @@ run_debug(struct module_qstate* p, int d)
 	}
 	buf[i++] = 'o';
 	buf[i] = 0;
-	log_nametypeclass(buf, p->qinfo.qname, p->qinfo.qtype, p->qinfo.qclass);
+	log_nametypeclass(VERB_ALGO, buf, p->qinfo.qname, p->qinfo.qtype, 
+		p->qinfo.qclass);
 	for(p = p->subquery_first; p; p = p->subquery_next) {
 		run_debug(p, d+1);
 	}
@@ -248,7 +247,7 @@ static struct module_qstate*
 find_runnable(struct module_qstate* subq)
 {
 	struct module_qstate* p = subq;
-	log_info("find runnable");
+	verbose(VERB_ALGO, "find runnable");
 	if(p->subquery_next && p->subquery_next->ext_state[
 		p->subquery_next->curmod] == module_state_initial)
 		return p->subquery_next;
@@ -266,6 +265,7 @@ worker_process_query(struct worker* worker, struct work_query* w,
 	struct outbound_entry* entry) 
 {
 	enum module_ext_state s;
+	verbose(VERB_DETAIL, "worker process handle event");
 	if(event == module_event_new) {
 		qstate->curmod = 0;
 		set_extstates_initial(worker, qstate);
@@ -278,19 +278,27 @@ worker_process_query(struct worker* worker, struct work_query* w,
 		region_free_all(worker->scratchpad);
 		qstate->reply = NULL;
 		s = qstate->ext_state[qstate->curmod];
-		log_info("worker_process_query: module exit state is %s",
-			strextstate(s));
+		verbose(VERB_ALGO, "worker_process_query: module "
+			"exit state is %s", strextstate(s));
+		if(s == module_state_initial) {
+			log_err("module exit in initial state, "
+				"it loops; aborted");
+			s = module_error;
+		}
 		/* examine results, start further modules, etc. */
-		if(s == module_wait_subquery) {
-			if(!qstate->subquery_first) {
+		if(s != module_error && s != module_finished) {
+			/* see if we can continue with other subrequests */
+			struct module_qstate* nxt = find_runnable(qstate);
+			if(s == module_wait_subquery && !nxt) {
 				log_err("module exit wait subq, but no subq");
 				s = module_error;
-			} else {
+			}
+			if(nxt) {
 				/* start submodule */
-				qstate = qstate->subquery_first;
+				qstate = nxt;
 				set_extstates_initial(worker, qstate);
-				event = module_event_pass;
 				entry = NULL;
+				event = module_event_pass;
 				continue;
 			}
 		}
@@ -312,16 +320,6 @@ worker_process_query(struct worker* worker, struct work_query* w,
 			event = module_event_subq_done;
 			continue;
 		}
-		if(s != module_error && s != module_finished) {
-			/* see if we can continue with other subrequests */
-			struct module_qstate* nxt = find_runnable(qstate);
-			if(nxt) {
-				qstate = nxt;
-				entry = NULL;
-				event = module_event_pass;
-				continue;
-			}
-		}
 		break;
 	}
 	/* request done */
@@ -330,6 +328,7 @@ worker_process_query(struct worker* worker, struct work_query* w,
 			replyerror(LDNS_RCODE_SERVFAIL, w);
 		}
 		qstate_free(worker, qstate);
+		verbose(VERB_DETAIL, "worker process suspend");
 		return;
 	}
 	if(s == module_finished) {
@@ -340,9 +339,11 @@ worker_process_query(struct worker* worker, struct work_query* w,
 			req_release(w);
 		}
 		qstate_free(worker, qstate);
+		verbose(VERB_DETAIL, "worker process suspend");
 		return;
 	}
 	/* suspend, waits for wakeup callback */
+	verbose(VERB_DETAIL, "worker process suspend");
 }
 
 /** process incoming replies from the network */
@@ -571,7 +572,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 		edns.udp_size = 65535; /* max size for TCP replies */
 	if((e=slabhash_lookup(worker->env.msg_cache, h, &qinfo, 0))) {
 		/* answer from cache - we have acquired a readlock on it */
-		log_info("answer from the cache");
+		verbose(VERB_DETAIL, "answer from the cache");
 		if(answer_from_cache(worker, e, 
 			*(uint16_t*)ldns_buffer_begin(c->buffer), 
 			ldns_buffer_read_u16_at(c->buffer, 2), repinfo, 
@@ -579,7 +580,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 			lock_rw_unlock(&e->lock);
 			return 1;
 		}
-		log_info("answer from the cache -- data has timed out");
+		verbose(VERB_DETAIL, "answer from the cache -- data has timed out");
 		lock_rw_unlock(&e->lock);
 	}
 	ldns_buffer_rewind(c->buffer);
@@ -706,6 +707,7 @@ reqs_init(struct worker* worker)
 			return 0;
 		}
 		q->state.env = &worker->env;
+		q->state.parent = NULL;
 		q->state.work_info = q;
 		q->next = worker->free_queries;
 		worker->free_queries = q;

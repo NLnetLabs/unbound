@@ -41,6 +41,7 @@
 
 #ifndef NET_HELP_H
 #define NET_HELP_H
+#include "util/log.h"
 
 /** DNS constants for uint16_t style flag manipulation. host byteorder. */
 /** AA flag */
@@ -128,6 +129,17 @@ void log_addr(const char* str, struct sockaddr_storage* addr,
 	socklen_t addrlen);
 
 /**
+ * Prints zone name and sockaddr in readable format with log_info. Debug.
+ * @param v: at what verbosity level to print this.
+ * @param str: descriptive string printed with it.
+ * @param zone: DNS domain name, uncompressed wireformat.
+ * @param addr: the sockaddr to print. Can be ip4 or ip6.
+ * @param addrlen: length of addr.
+ */
+void log_name_addr(enum verbosity_value v, const char* str, uint8_t* zone, 
+	struct sockaddr_storage* addr, socklen_t addrlen);
+
+/**
  * Convert ip address string and port to sockaddr.
  * @param ip: ip4 or ip6 address string.
  * @param port: port number, host format.
@@ -140,13 +152,14 @@ int ipstrtoaddr(const char* ip, int port, struct sockaddr_storage* addr,
 
 /**
  * Print string with neat domain name, type and class.
+ * @param v: at what verbosity level to print this.
  * @param str: string of message.
  * @param name: domain name uncompressed wireformat.
  * @param type: host format RR type.
  * @param dclass: host format RR class.
  */
-void log_nametypeclass(const char* str, uint8_t* name, uint16_t type, 
-	uint16_t dclass);
+void log_nametypeclass(enum verbosity_value v, const char* str, 
+	uint8_t* name, uint16_t type, uint16_t dclass);
 
 /**
  * Checkout address family.

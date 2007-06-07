@@ -244,7 +244,7 @@ outnet_tcp_cb(struct comm_point* c, void* arg, int error,
 	struct outside_network* outnet = pend->query->outnet;
 	verbose(VERB_ALGO, "outnettcp cb");
 	if(error != NETEVENT_NOERROR) {
-		log_info("outnettcp got tcp error %d", error);
+		verbose(VERB_DETAIL, "outnettcp got tcp error %d", error);
 		/* pass error below and exit */
 	} else {
 		/* check ID */
@@ -271,11 +271,11 @@ outnet_udp_cb(struct comm_point* c, void* arg, int error,
 	verbose(VERB_ALGO, "answer cb");
 
 	if(error != NETEVENT_NOERROR) {
-		log_info("outnetudp got udp error %d", error);
+		verbose(VERB_DETAIL, "outnetudp got udp error %d", error);
 		return 0;
 	}
 	if(ldns_buffer_limit(c->buffer) < LDNS_HEADER_SIZE) {
-		log_info("outnetudp udp too short");
+		verbose(VERB_DETAIL, "outnetudp udp too short");
 		return 0;
 	}
 	log_assert(reply_info);
@@ -284,9 +284,9 @@ outnet_udp_cb(struct comm_point* c, void* arg, int error,
 	key.id = LDNS_ID_WIRE(ldns_buffer_begin(c->buffer));
 	memcpy(&key.addr, &reply_info->addr, reply_info->addrlen);
 	key.addrlen = reply_info->addrlen;
-	verbose(VERB_ALGO, "Incoming reply id=%4.4x addr=", key.id);
+	verbose(VERB_ALGO, "Incoming reply id = %4.4x", key.id);
 	if(verbosity >= VERB_ALGO) {
-		log_addr("Incoming reply addr=", &reply_info->addr, reply_info->addrlen);
+		log_addr("Incoming reply addr =", &reply_info->addr, reply_info->addrlen);
 	}
 
 	/* find it, see if this thing is a valid query response */
@@ -979,7 +979,7 @@ serviced_udp_send(struct serviced_query* sq, ldns_buffer* buff)
 		log_err("gettimeofday: %s", strerror(errno));
 		return 0;
 	}
-	verbose(VERB_DETAIL, "serviced query UDP timeout=%d msec", rtt);
+	verbose(VERB_ALGO, "serviced query UDP timeout=%d msec", rtt);
 	sq->pending = pending_udp_query(sq->outnet, buff, &sq->addr, 
 		sq->addrlen, rtt, serviced_udp_callback, sq, sq->outnet->rnd);
 	if(!sq->pending)
@@ -1105,7 +1105,7 @@ serviced_udp_callback(struct comm_point* c, void* arg, int error,
 		/* convert from microseconds to milliseconds */
 		int roundtime = (now.tv_sec - sq->last_sent_time.tv_sec)*1000
 		  + ((int)now.tv_usec - (int)sq->last_sent_time.tv_usec)/1000;
-		log_info("measured roundtrip at %d msec", roundtime);
+		verbose(VERB_ALGO, "measured roundtrip at %d msec", roundtime);
 		if(!infra_rtt_update(outnet->infra, &sq->addr, sq->addrlen, 
 			roundtime, (time_t)now.tv_sec))
 			log_err("out of memory noting rtt.");

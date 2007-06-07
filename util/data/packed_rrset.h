@@ -298,6 +298,13 @@ hashvalue_t rrset_key_hash(struct packed_rrset_key* key);
 void packed_rrset_ptr_fixup(struct packed_rrset_data* data);
 
 /**
+ * Fixup TTLs in fixed data packed_rrset_data blob.
+ * @param data: rrset data structure. Otherwise correctly filled in.
+ * @param add: how many seconds to add, pass time(0) for example.
+ */
+void packed_rrset_ttl_add(struct packed_rrset_data* data, uint32_t add);
+
+/**
  * Utility procedure to extract CNAME target name from its rdata.
  * Failsafes; it will change passed dname to a valid dname or do nothing.
  * @param rrset: the rrset structure. Must be a CNAME. 

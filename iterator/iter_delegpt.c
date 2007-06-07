@@ -148,23 +148,65 @@ delegpt_add_addr(struct delegpt* dp, struct region* region,
 	return 1;
 }
 
+/** count NS and number missing */
+static void
+delegpt_count_ns(struct delegpt* dp, size_t* numns, size_t* missing)
+{
+	struct delegpt_ns* ns;
+	*numns = 0;
+	*missing = 0;
+	for(ns = dp->nslist; ns; ns = ns->next) {
+		(*numns)++;
+		if(!ns->resolved)
+			(*missing)++;
+	}
+}
+
+/** count addresses, and number in result and available lists */
+static void
+delegpt_count_addr(struct delegpt* dp, size_t* numaddr, size_t* numres, 
+	size_t* numavail)
+{
+	struct delegpt_addr* a;
+	*numaddr = 0;
+	*numres = 0;
+	*numavail = 0;
+	for(a = dp->target_list; a; a = a->next_target) {
+		(*numaddr)++;
+	}
+	for(a = dp->result_list; a; a = a->next_result) {
+		(*numres)++;
+	}
+	for(a = dp->usable_list; a; a = a->next_usable) {
+		(*numavail)++;
+	}
+}
+
 void delegpt_log(struct delegpt* dp)
 {
 	char buf[LDNS_MAX_DOMAINLEN+1];
 	struct delegpt_ns* ns;
 	struct delegpt_addr* a;
+	size_t missing=0, numns=0, numaddr=0, numres=0, numavail=0;
 	dname_str(dp->name, buf);
 	if(dp->nslist == NULL && dp->target_list == NULL) {
 		log_info("DelegationPoint<%s>: empty", buf);
 		return;
 	}
-	log_info("DelegationPoint<%s>:", buf);
-	for(ns = dp->nslist; ns; ns = ns->next) {
-		dname_str(ns->name, buf);
-		log_info("  %s%s", buf, (ns->resolved?"*":""));
-	}
-	for(a = dp->target_list; a; a = a->next_target) {
-		log_addr("  ", &a->addr, a->addrlen);
+	delegpt_count_ns(dp, &numns, &missing);
+	delegpt_count_addr(dp, &numaddr, &numres, &numavail);
+	log_info("DelegationPoint<%s>: %u names (%u missing), "
+		"%u addrs (%u result, %u avail)", 
+		buf, (unsigned)numns, (unsigned)missing, 
+		(unsigned)numaddr, (unsigned)numres, (unsigned)numavail);
+	if(verbosity >= VERB_ALGO) {
+		for(ns = dp->nslist; ns; ns = ns->next) {
+			dname_str(ns->name, buf);
+			log_info("  %s%s", buf, (ns->resolved?"*":""));
+		}
+		for(a = dp->target_list; a; a = a->next_target) {
+			log_addr("  ", &a->addr, a->addrlen);
+		}
 	}
 }
 
@@ -286,8 +328,6 @@ delegpt_add_rrset_A(struct delegpt* dp, struct region* region,
                 if(d->rr_len[i] != 2 + INET_SIZE)
                         continue;
                 memmove(&sa.sin_addr, d->rr_data[i]+2, INET_SIZE);
-                log_addr("adding A to deleg",  (struct sockaddr_storage*)&sa,
-                        len);
                 if(!delegpt_add_target(dp, region, ak->rk.dname,
                         ak->rk.dname_len, (struct sockaddr_storage*)&sa,
                         len))
@@ -311,7 +351,6 @@ delegpt_add_rrset_AAAA(struct delegpt* dp, struct region* region,
                 if(d->rr_len[i] != 2 + INET6_SIZE) /* rdatalen + len of IP6 */
                         continue;
                 memmove(&sa.sin6_addr, d->rr_data[i]+2, INET6_SIZE);
-                log_addr("adding AAAA to deleg",  (struct sockaddr_storage*)&sa,                        len);
                 if(!delegpt_add_target(dp, region, ak->rk.dname,
                         ak->rk.dname_len, (struct sockaddr_storage*)&sa,
                         len))

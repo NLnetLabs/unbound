@@ -56,11 +56,11 @@ static void
 remove_rrset(const char* str, ldns_buffer* pkt, struct msg_parse* msg, 
 	struct rrset_parse* prev, struct rrset_parse** rrset)
 {
-	if(verbosity >= VERB_ALGO 
+	if(verbosity >= VERB_DETAIL 
 		&& (*rrset)->dname_len <= LDNS_MAX_DOMAINLEN) {
 		uint8_t buf[LDNS_MAX_DOMAINLEN+1];
 		dname_pkt_copy(pkt, buf, (*rrset)->dname);
-		log_nametypeclass(str, buf, 
+		log_nametypeclass(VERB_DETAIL, str, buf, 
 			(*rrset)->type, ntohs((*rrset)->rrset_class));
 	}
 	if(prev)
@@ -453,7 +453,6 @@ scrub_sanitize(ldns_buffer* pkt, struct msg_parse* msg, uint8_t* zonename)
 	struct rrset_parse* rrset, *prev;
 	prev = NULL;
 	rrset = msg->rrset_first;
-	log_nametypeclass("sanitize for", zonename, 0, 0);
 
 	/* At this point, we brutally remove ALL rrsets that aren't 
 	 * children of the originating zone. The idea here is that, 
@@ -486,12 +485,9 @@ int
 scrub_message(ldns_buffer* pkt, struct msg_parse* msg, 
 	struct query_info* qinfo, uint8_t* zonename, struct region* region)
 {
-	/* things to check:
-	 * if qdcount > 0 : qinfo.
-	 * from normalize() from NSclient.
-	 * from sanitize() from iterator.
-	 */
 	/* basic sanity checks */
+	log_nametypeclass(VERB_ALGO, "scrub for", zonename, LDNS_RR_TYPE_NS, 
+		qinfo->qclass);
 	if(msg->qdcount > 1)
 		return 0;
 	if( !(msg->flags&BIT_QR) )

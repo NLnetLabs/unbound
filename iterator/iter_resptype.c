@@ -159,9 +159,7 @@ response_type_from_server(struct dns_msg* msg, struct query_info* request,
 			 * it is relevant. */
 			if(ntohs(s->rk.type) == LDNS_RR_TYPE_CNAME &&
 				query_dname_compare(mname, s->rk.dname) == 0) {
-				log_nametypeclass("following CNAME from", mname, LDNS_RR_TYPE_CNAME, request->qclass);
 				get_cname_target(s, &mname, &mname_len);
-				log_nametypeclass("following CNAME to", mname, request->qtype, request->qclass);
 			}
 		}
 		/* if we encountered a CNAME (or a bunch of CNAMEs), and 
