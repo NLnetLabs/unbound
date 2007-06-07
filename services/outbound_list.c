@@ -66,6 +66,8 @@ outbound_list_clear(struct outbound_list* list)
 void 
 outbound_list_insert(struct outbound_list* list, struct outbound_entry* e)
 {
+	if(list->first)
+		list->first->prev = e;
 	e->next = list->first;
 	e->prev = NULL;
 	list->first = e;

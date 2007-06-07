@@ -486,6 +486,8 @@ generate_sub_request(uint8_t* qname, size_t qnamelen, uint16_t qtype,
 	subq->env = qstate->env;
 	subq->work_info = qstate->work_info;
 	subq->parent = qstate;
+	if(qstate->subquery_first)
+		qstate->subquery_first->subquery_prev = subq;
 	subq->subquery_next = qstate->subquery_first;
 	subq->subquery_prev = NULL;
 	qstate->subquery_first = subq;

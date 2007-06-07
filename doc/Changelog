@@ -1,3 +1,8 @@
+7 June 2007: Wouter
+	- fixup error in double linked list insertion for subqueries and
+	  for outbound list of serviced queries for iterator module.
+	- nicer printout of outgoing port selection.
+
 5 June 2007: Wouter
 	- iterator state finished.
 	- subrequests without parent store in cache and stop.

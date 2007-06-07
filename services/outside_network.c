@@ -701,7 +701,7 @@ select_port(struct outside_network* outnet, struct pending* pend,
 	else	pend->c = outnet->udp4_ports[chosen];
 	log_assert(pend->c);
 
-	verbose(VERB_ALGO, "query %x outbound %d of %d", pend->id, chosen, nummax);
+	verbose(VERB_ALGO, "query %x outbound on port %d of %d", pend->id, chosen, nummax);
 }
 
 
