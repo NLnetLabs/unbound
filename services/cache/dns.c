@@ -389,22 +389,8 @@ dns_cache_lookup(struct module_env* env,
 		lock_rw_unlock(&e->lock);
 	}
 
-	/* see if we have CNAME for this domain */
-	k.qtype = LDNS_RR_TYPE_CNAME;
-	h = query_info_hash(&k);
-	e = slabhash_lookup(env->msg_cache, h, &k, 0);
-	if(e) {
-		struct msgreply_entry* key = (struct msgreply_entry*)e->key;
-		struct reply_info* data = (struct reply_info*)e->data;
-		struct dns_msg* msg = tomsg(env, key, data, region, now, 
-			scratch);
-		if(msg) {
-			lock_rw_unlock(&e->lock);
-			return msg;
-		}
-		/* could be msg==NULL; due to TTL or not all rrsets available */
-		lock_rw_unlock(&e->lock);
-	}
+	/* see if we have CNAME for this domain TODO */
+	/* or a DNAME exists. Check in RRset cache and synth a message. */
 
 	/* construct DS, DNSKEY messages from rrset cache. TODO */
 
