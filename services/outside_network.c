@@ -1017,7 +1017,9 @@ serviced_tcp_callback(struct comm_point* c, void* arg, int error,
 		serviced_tcp_initiate(sq->outnet, sq, c->buffer);
 		return 0;
 	}
-
+	/* insert address into reply info */
+	memcpy(&rep->addr, &sq->addr, sq->addrlen);
+	rep->addrlen = sq->addrlen;
 	(void)rbtree_delete(sq->outnet->serviced, sq);
 	serviced_callbacks(sq, error, c, rep);
 	serviced_delete(sq);

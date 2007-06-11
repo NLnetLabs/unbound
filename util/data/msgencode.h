@@ -61,12 +61,13 @@ struct edns_data;
  * @param udpsize: size of the answer, 512, from EDNS, or 64k for TCP.
  * @param edns: EDNS data included in the answer, NULL for none.
  *	or if edns_present = 0, it is not included.
+ * @param dnssec: if 0 DNSSEC records are omitted from the answer.
  * @return: 0 on error (server failure).
  */
 int reply_info_answer_encode(struct query_info* qinf, struct reply_info* rep, 
 	uint16_t id, uint16_t qflags, ldns_buffer* dest, uint32_t timenow,
 	int cached, struct region* region, uint16_t udpsize, 
-	struct edns_data* edns);
+	struct edns_data* edns, int dnssec);
 
 /**
  * Regenerate the wireformat from the stored msg reply.
@@ -81,12 +82,13 @@ int reply_info_answer_encode(struct query_info* qinf, struct reply_info* rep,
  * @param timenow: time now, to adjust ttl values.
  * @param region: to store temporary data in.
  * @param udpsize: size of the answer, 512, from EDNS, or 64k for TCP.
+ * @param dnssec: if 0 DNSSEC records are omitted from the answer.
  * @return: nonzero is success, or 
  *	0 on error: malloc failure (no log_err has been done).
  */
 int reply_info_encode(struct query_info* qinfo, struct reply_info* rep, 
 	uint16_t id, uint16_t flags, ldns_buffer* buffer, uint32_t timenow, 
-	struct region* region, uint16_t udpsize);
+	struct region* region, uint16_t udpsize, int dnssec);
 
 /**
  * Encode query packet. Assumes the buffer is large enough.

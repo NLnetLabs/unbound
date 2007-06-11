@@ -503,7 +503,7 @@ answer_from_cache(struct worker* worker, struct lruhash_entry* e, uint16_t id,
 	/* locked and ids and ttls are OK. */
 	if(!reply_info_answer_encode(&mrentry->key, rep, id, flags, 
 		repinfo->c->buffer, timenow, 1, worker->scratchpad,
-		udpsize, edns)) {
+		udpsize, edns, (int)(edns->bits & EDNS_DO) )) {
 		replyerror_fillbuf(LDNS_RCODE_SERVFAIL, repinfo, id,
 			flags, &mrentry->key);
 	}
@@ -529,12 +529,12 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 	struct work_query* w;
 	struct edns_data edns;
 
-	verbose(VERB_DETAIL, "worker handle request");
 	if(error != NETEVENT_NOERROR) {
-		log_err("called with err=%d", error);
+		log_err("handle request called with err=%d", error);
 		return 0;
 	}
 	if((ret=worker_check_request(c->buffer)) != 0) {
+		verbose(VERB_ALGO, "worker check request: bad query.");
 		if(ret != -1) {
 			LDNS_QR_SET(ldns_buffer_begin(c->buffer));
 			LDNS_RCODE_SET(ldns_buffer_begin(c->buffer), ret);
@@ -546,6 +546,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 	worker->stats.num_queries++;
 	/* see if query is in the cache */
 	if(!query_info_parse(&qinfo, c->buffer)) {
+		verbose(VERB_ALGO, "worker parse request: formerror.");
 		LDNS_QR_SET(ldns_buffer_begin(c->buffer));
 		LDNS_RCODE_SET(ldns_buffer_begin(c->buffer), 
 			LDNS_RCODE_FORMERR);
@@ -553,6 +554,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 	}
 	h = query_info_hash(&qinfo);
 	if((ret=parse_edns_from_pkt(c->buffer, &edns)) != 0) {
+		verbose(VERB_ALGO, "worker parse edns: formerror.");
 		LDNS_QR_SET(ldns_buffer_begin(c->buffer));
 		LDNS_RCODE_SET(ldns_buffer_begin(c->buffer), ret);
 		return 1;
@@ -562,6 +564,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 		edns.edns_version = EDNS_ADVERTISED_VERSION;
 		edns.udp_size = EDNS_ADVERTISED_SIZE;
 		edns.bits &= EDNS_DO;
+		verbose(VERB_ALGO, "query with bad edns version.");
 		replyerror_fillbuf(EDNS_RCODE_BADVERS&0xf, repinfo, 
 			*(uint16_t*)ldns_buffer_begin(c->buffer),
 			ldns_buffer_read_u16_at(c->buffer, 2), &qinfo);
@@ -572,7 +575,6 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 		edns.udp_size = 65535; /* max size for TCP replies */
 	if((e=slabhash_lookup(worker->env.msg_cache, h, &qinfo, 0))) {
 		/* answer from cache - we have acquired a readlock on it */
-		verbose(VERB_DETAIL, "answer from the cache");
 		if(answer_from_cache(worker, e, 
 			*(uint16_t*)ldns_buffer_begin(c->buffer), 
 			ldns_buffer_read_u16_at(c->buffer, 2), repinfo, 

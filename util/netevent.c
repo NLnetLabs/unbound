@@ -231,7 +231,6 @@ comm_point_udp_callback(int fd, short event, void* arg)
 	rep.c = (struct comm_point*)arg;
 	log_assert(rep.c->type == comm_udp);
 
-	verbose(VERB_ALGO, "callback udp");
 	if(!(event&EV_READ))
 		return;
 	log_assert(rep.c && rep.c->buffer && rep.c->fd == fd);

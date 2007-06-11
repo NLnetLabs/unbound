@@ -720,7 +720,7 @@ add_rr_to_rrset(struct rrset_parse* rrset, ldns_buffer* pkt,
 		return LDNS_RCODE_SERVFAIL;
 	rr->ttl_data = ldns_buffer_current(pkt);
 	rr->next = 0;
-	if(type == LDNS_RR_TYPE_RRSIG) {
+	if(type == LDNS_RR_TYPE_RRSIG && rrset->type != LDNS_RR_TYPE_RRSIG) {
 		if(rrset->rrsig_last) 
 			rrset->rrsig_last->next = rr;
 		else	rrset->rrsig_first = rr;

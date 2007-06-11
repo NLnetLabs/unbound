@@ -163,7 +163,8 @@ iter_handlereply(struct module_qstate* qstate, int id,
 	qstate->edns.bits &= EDNS_DO;
 	if(!reply_info_answer_encode(&reply_qinfo, reply_msg, 0, 
 		qstate->query_flags, qstate->buf, 0, 0, 
-		qstate->scratch, us, &qstate->edns))
+		qstate->scratch, us, &qstate->edns, 
+		(int)(qstate->edns.bits&EDNS_DO)))
 		return 0;
 	dns_cache_store_msg(qstate->env, &reply_qinfo, qstate->query_hash, 
 		reply_msg);
@@ -344,7 +345,7 @@ iter_encode_respmsg(struct module_qstate* qstate, struct iter_qstate* iq,
 	edns.bits = qstate->edns.bits & EDNS_DO;
 	if(!reply_info_answer_encode(&qinf, msg->rep, 0, iq->orig_qflags, 
 		qstate->buf, 0, 1, qstate->scratch, qstate->edns.udp_size, 
-		&edns)) {
+		&edns, (int)(qstate->edns.bits & EDNS_DO))) {
 		/* encode servfail */
 		error_response(qstate, id, LDNS_RCODE_SERVFAIL);
 		return;

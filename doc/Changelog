@@ -1,3 +1,13 @@
+11 June 2007: Wouter
+	- replies on TCP queries have the address field set in replyinfo,
+	  for serviced queries, because the initiator does not know that
+	  a TCP fallback has occured.
+	- omit DNSSEC types from nonDO replies, except if qtype is ANY or
+	  if qtype directly queries for the type (and then only show that
+	  'unknown type' in the answer section).
+	- fixed message parsing where rrsigs on their own would be put
+	  in the signature list over the rrsig type.
+
 7 June 2007: Wouter
 	- fixup error in double linked list insertion for subqueries and
 	  for outbound list of serviced queries for iterator module.

@@ -659,7 +659,7 @@ log_dns_msg(const char* str, struct query_info* qinfo, struct reply_info* rep)
 	ldns_buffer* buf = ldns_buffer_new(65535);
 	struct region* region = region_create(malloc, free);
 	if(!reply_info_encode(qinfo, rep, 0, rep->flags, buf, 0, 
-		region, 65535)) {
+		region, 65535, 1)) {
 		log_info("%s: log_dns_msg: out of memory", str);
 	} else {
 		ldns_status s;

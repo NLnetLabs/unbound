@@ -270,7 +270,7 @@ testpkt(ldns_buffer* pkt, struct alloc_cache* alloc, ldns_buffer* out,
 	} else {
 		const size_t lim = 512;
 		ret = reply_info_encode(&qi, rep, id, flags, out, timenow,
-			region, 65535);
+			region, 65535, (int)(edns.bits & EDNS_DO) );
 		unit_assert(ret != 0); /* udp packets should fit */
 		attach_edns_record(out, &edns);
 		if(vbmp) printf("inlen %u outlen %u\n", 
@@ -281,7 +281,8 @@ testpkt(ldns_buffer* pkt, struct alloc_cache* alloc, ldns_buffer* out,
 		if(ldns_buffer_limit(out) > lim) {
 			ret = reply_info_encode(&qi, rep, id, flags, out, 
 				timenow, region, 
-				lim - calc_edns_field_size(&edns));
+				lim - calc_edns_field_size(&edns),
+				(int)(edns.bits & EDNS_DO));
 			unit_assert(ret != 0); /* should fit, but with TC */
 			attach_edns_record(out, &edns);
 			if( LDNS_QDCOUNT(ldns_buffer_begin(out)) !=
