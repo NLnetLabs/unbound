@@ -103,7 +103,7 @@ iter_new(struct module_qstate* qstate, int id)
 	iq->prepend_list = NULL;
 	iq->prepend_last = NULL;
 	iq->dp = NULL;
-	iq->num_target_queries = -1; /* default our targetQueries counter. */
+	iq->num_target_queries = 0;
 	iq->num_current_queries = 0;
 	iq->query_restart_count = 0;
 	iq->referral_count = 0;
@@ -206,7 +206,6 @@ perform_forward(struct module_qstate* qstate, enum module_ev event, int id,
  * Transition to the next state. This can be used to advance a currently
  * processing event. It cannot be used to reactivate a forEvent.
  *
- * @param qstate: query state
  * @param iq: iterator query state
  * @param nextstate The state to transition to.
  * @return true. This is so this can be called as the return value for the
@@ -214,13 +213,12 @@ perform_forward(struct module_qstate* qstate, enum module_ev event, int id,
  *         implies further processing).
  */
 static int
-next_state(struct module_qstate* qstate, struct iter_qstate* iq, 
-	enum iter_state nextstate)
+next_state(struct iter_qstate* iq, enum iter_state nextstate)
 {
 	/* If transitioning to a "response" state, make sure that there is a
 	 * response */
 	if(iter_state_is_responsestate(nextstate)) {
-		if(qstate->reply == NULL || iq->response == NULL) {
+		if(iq->response == NULL) {
 			log_err("transitioning to response state sans "
 				"response.");
 		}
@@ -237,15 +235,14 @@ next_state(struct module_qstate* qstate, struct iter_qstate* iq,
  *
  * The response is stored in the qstate->buf buffer.
  *
- * @param qstate: query state
  * @param iq: iterator query state
  * @return false. This is so this method can be used as the return value for
  *         the processState methods. (Transitioning to the final state
  */
 static int
-final_state(struct module_qstate* qstate, struct iter_qstate* iq)
+final_state(struct iter_qstate* iq)
 {
-	return next_state(qstate, iq, iq->final_state);
+	return next_state(iq, iq->final_state);
 }
 
 /**
@@ -494,7 +491,8 @@ generate_sub_request(uint8_t* qname, size_t qnamelen, uint16_t qtype,
 
 	subiq = (struct iter_qstate*)subq->minfo[id];
 	memset(subiq, 0, sizeof(*subiq));
-	subiq->num_target_queries = -1; /* default our targetQueries counter. */
+	subiq->num_target_queries = 0;
+	subiq->num_current_queries = 0;
 	outbound_list_init(&subiq->outlist);
 	subiq->state = initial_state;
 	subiq->final_state = final_state;
@@ -693,13 +691,13 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 			/* This *is* a query restart, even if it is a cheap 
 			 * one. */
 			iq->query_restart_count++;
-			return next_state(qstate, iq, INIT_REQUEST_STATE);
+			return next_state(iq, INIT_REQUEST_STATE);
 		}
 
 		/* it is an answer, response, to final state */
 		verbose(VERB_ALGO, "returning answer from cache.");
 		iq->response = msg;
-		return final_state(qstate, iq);
+		return final_state(iq);
 	}
 	
 	/* TODO attempt to forward the request */
@@ -775,7 +773,7 @@ return nextState(event, req, state, IterEventState.INIT_REQUEST_STATE);
 
 	/* Otherwise, set the current delegation point and move on to the 
 	 * next state. */
-	return next_state(qstate, iq, INIT_REQUEST_2_STATE);
+	return next_state(iq, INIT_REQUEST_2_STATE);
 }
 
 /** 
@@ -809,7 +807,7 @@ processInitRequest2(struct module_qstate* qstate, struct iter_qstate* iq,
 	}
 
 	/* most events just get forwarded to the next state. */
-	return next_state(qstate, iq, INIT_REQUEST_3_STATE);
+	return next_state(iq, INIT_REQUEST_3_STATE);
 }
 
 /** 
@@ -831,7 +829,7 @@ processInitRequest3(struct module_qstate* qstate, struct iter_qstate* iq)
 	 * cached referral as the response. */
 	if(!(qstate->query_flags & BIT_RD)) {
 		iq->response = iq->deleg_msg;
-		return final_state(qstate, iq);
+		return final_state(iq);
 	}
 
 	/* After this point, unset the RD flag -- this query is going to 
@@ -839,7 +837,7 @@ processInitRequest3(struct module_qstate* qstate, struct iter_qstate* iq)
 	qstate->query_flags &= ~BIT_RD;
 
 	/* Jump to the next state. */
-	return next_state(qstate, iq, QUERYTARGETS_STATE);
+	return next_state(iq, QUERYTARGETS_STATE);
 }
 
 /**
@@ -985,6 +983,7 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 	verbose(VERB_ALGO, "processQueryTargets: targetqueries %d, "
 		"currentqueries %d", iq->num_target_queries, 
 		iq->num_current_queries);
+	qstate->ext_state[id] = module_wait_reply;
 
 	/* Make sure that we haven't run away */
 	/* FIXME: is this check even necessary? */
@@ -1005,12 +1004,11 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 	 * query (or queries) for a missing name have been issued, 
 	 * they will not be show up again. */
 	if(tf_policy != 0) {
-		if(!query_for_targets(qstate, iq, ie, id, tf_policy, 
-			&iq->num_target_queries)) {
+		int extra = 0;
+		if(!query_for_targets(qstate, iq, ie, id, tf_policy, &extra)) {
 			return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
 		}
-	} else {
-		iq->num_target_queries = 0;
+		iq->num_target_queries += extra;
 	}
 
 	/* Add the current set of unused targets to our queue. */
@@ -1036,13 +1034,15 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 			 * to distinguish between generating (a) new target 
 			 * query, or failing. */
 			if(delegpt_count_missing_targets(iq->dp) > 0) {
+				int qs = 0;
 				verbose(VERB_ALGO, "querying for next "
 					"missing target");
 				if(!query_for_targets(qstate, iq, ie, id, 
-						1, &iq->num_target_queries)) {
+					1, &qs)) {
 					return error_response(qstate, id,
 						LDNS_RCODE_SERVFAIL);
 				}
+				iq->num_target_queries += qs;
 			}
 			/* Since a target query might have been made, we 
 			 * need to check again. */
@@ -1086,7 +1086,7 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 	if(!outq) {
 		log_err("error sending query to auth server; skip this address");
 		log_addr("error for address:", &target->addr, target->addrlen);
-		return next_state(qstate, iq, QUERYTARGETS_STATE);
+		return next_state(iq, QUERYTARGETS_STATE);
 	}
 	outbound_list_insert(&iq->outlist, outq);
 	iq->num_current_queries++;
@@ -1116,9 +1116,8 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 	iq->num_current_queries--;
 	if(iq->response == NULL) {
 		verbose(VERB_ALGO, "query response was timeout");
-		return next_state(qstate, iq, QUERYTARGETS_STATE);
+		return next_state(iq, QUERYTARGETS_STATE);
 	}
-	log_assert(qstate->reply); /* need addr for lameness cache */
 	type = response_type_from_server(iq->response, &qstate->qinfo, iq->dp);
 	if(type == RESPONSE_TYPE_ANSWER) {
 		/* ANSWER type responses terminate the query algorithm, 
@@ -1134,7 +1133,7 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 			return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
 		/* close down outstanding requests to be discarded */
 		outbound_list_clear(&iq->outlist);
-		return final_state(qstate, iq);
+		return final_state(iq);
 	} else if(type == RESPONSE_TYPE_REFERRAL) {
 		/* REFERRAL type responses get a reset of the 
 		 * delegation point, and back to the QUERYTARGETS_STATE. */
@@ -1152,7 +1151,7 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 			return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
 		delegpt_log(iq->dp);
 		iq->num_current_queries = 0;
-		iq->num_target_queries = -1;
+		iq->num_target_queries = 0;
 		/* Count this as a referral. */
 		iq->referral_count++;
 
@@ -1162,7 +1161,7 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		 */
 		outbound_list_clear(&iq->outlist);
 		verbose(VERB_ALGO, "cleared outbound list for next round");
-		return next_state(qstate, iq, QUERYTARGETS_STATE);
+		return next_state(iq, QUERYTARGETS_STATE);
 	} else if(type == RESPONSE_TYPE_CNAME) {
 		uint8_t* sname = NULL;
 		size_t snamelen = 0;
@@ -1191,7 +1190,7 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		iq->deleg_msg = NULL;
 		iq->dp = NULL;
 		iq->num_current_queries = 0;
-		iq->num_target_queries = -1;
+		iq->num_target_queries = 0;
 		/* Note the query restart. */
 		iq->query_restart_count++;
 
@@ -1202,14 +1201,18 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		outbound_list_clear(&iq->outlist);
 		verbose(VERB_ALGO, "cleared outbound list for query restart");
 		/* go to INIT_REQUEST_STATE for new qname. */
-		return next_state(qstate, iq, INIT_REQUEST_STATE);
+		return next_state(iq, INIT_REQUEST_STATE);
 	} else if(type == RESPONSE_TYPE_LAME) {
 		/* Cache the LAMEness. */
 		verbose(VERB_DETAIL, "query response was LAME");
-		if(!infra_set_lame(qstate->env->infra_cache, 
-			&qstate->reply->addr, qstate->reply->addrlen, 
-			iq->dp->name, iq->dp->namelen, time(NULL)))
-			log_err("mark host lame: out of memory");
+		if(qstate->reply) {
+			/* need addr for lameness cache, but we may have
+			 * gotten this from cache, so test to be sure */
+			if(!infra_set_lame(qstate->env->infra_cache, 
+				&qstate->reply->addr, qstate->reply->addrlen, 
+				iq->dp->name, iq->dp->namelen, time(NULL)))
+				log_err("mark host lame: out of memory");
+		} else log_err("lame response from cache");
 	} else if(type == RESPONSE_TYPE_THROWAWAY) {
 		/* LAME and THROWAWAY responses are handled the same way. 
 		 * In this case, the event is just sent directly back to 
@@ -1224,7 +1227,7 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 	/* LAME, THROWAWAY and "unknown" all end up here.
 	 * Recycle to the QUERYTARGETS state to hopefully try a 
 	 * different target. */
-	return next_state(qstate, iq, QUERYTARGETS_STATE);
+	return next_state(iq, QUERYTARGETS_STATE);
 }
 
 /** 

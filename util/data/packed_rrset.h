@@ -309,6 +309,7 @@ void packed_rrset_ttl_add(struct packed_rrset_data* data, uint32_t add);
  * Failsafes; it will change passed dname to a valid dname or do nothing.
  * @param rrset: the rrset structure. Must be a CNAME. 
  *	Only first RR is used (multiple RRs are technically illegal anyway).
+ * 	Also works on type DNAME. Returns target name.
  * @param dname: this pointer is updated to point into the cname rdata.
  *	If a failsafe fails, nothing happens to the pointer (such as the
  *	rdata was not a valid dname, not a CNAME, ...).

@@ -1,3 +1,8 @@
+12 June 2007: Wouter
+	- num target queries was set to 0 at a bad time. Default it to 0 and
+	  increase as target queries are done.
+	- synthesize CNAME and DNAME responses from the cache.
+
 11 June 2007: Wouter
 	- replies on TCP queries have the address field set in replyinfo,
 	  for serviced queries, because the initiator does not know that
