@@ -20,7 +20,7 @@
 # libc) for the transcoding. See http://www.gnu.org/software/libiconv for the list of 
 # possible encodings.
 
-DOXYFILE_ENCODING      = UTF-8
+# DOXYFILE_ENCODING      = UTF-8
 
 # The PROJECT_NAME tag is a single word (or a sequence of words surrounded 
 # by quotes) that should identify the project.
@@ -205,7 +205,7 @@ BUILTIN_STL_SUPPORT    = NO
 # If you use Microsoft's C++/CLI language, you should set this option to YES to
 # enable parsing support.
 
-CPP_CLI_SUPPORT        = NO
+# CPP_CLI_SUPPORT        = NO
 
 # If member grouping is used in the documentation and the DISTRIBUTE_GROUP_DOC 
 # tag is set to YES, then doxygen will reuse the documentation of the first 
@@ -469,7 +469,7 @@ INPUT                  = .
 # input encoding. Doxygen uses libiconv (or the iconv built into libc) for the transcoding. 
 # See http://www.gnu.org/software/libiconv for the list of possible encodings.
 
-INPUT_ENCODING         = UTF-8
+# INPUT_ENCODING         = UTF-8
 
 # If the value of the INPUT tag contains directories, you can use the 
 # FILE_PATTERNS tag to specify one or more wildcard pattern (like *.cpp 
@@ -516,7 +516,7 @@ EXCLUDE_PATTERNS       =
 # The symbol name can be a fully qualified name, a word, or if the wildcard * is used, 
 # a substring. Examples: ANamespace, AClass, AClass::ANamespace, ANamespace::*Test
 
-EXCLUDE_SYMBOLS        = 
+# EXCLUDE_SYMBOLS        = 
 
 # The EXAMPLE_PATH tag can be used to specify one or more files or 
 # directories that contain example code fragments that are included (see 
@@ -1113,7 +1113,7 @@ CLASS_DIAGRAMS         = YES
 # specify the directory where the mscgen tool resides. If left empty the tool is assumed to 
 # be found in the default search path.
 
-MSCGEN_PATH            = 
+# MSCGEN_PATH            = 
 
 # If set to YES, the inheritance and collaboration graphs will hide 
 # inheritance and usage relations if the target is undocumented 
@@ -1223,7 +1223,7 @@ DOTFILE_DIRS           =
 # visualized by representing a node as a red box. Note that doxygen will always 
 # show the root nodes and its direct children regardless of this setting.
 
-DOT_GRAPH_MAX_NODES    = 50
+# DOT_GRAPH_MAX_NODES    = 50
 
 # Set the DOT_TRANSPARENT tag to YES to generate images with a transparent 
 # background. This is disabled by default, which results in a white background. 
