@@ -2,6 +2,8 @@
 	- num target queries was set to 0 at a bad time. Default it to 0 and
 	  increase as target queries are done.
 	- synthesize CNAME and DNAME responses from the cache.
+	- Updated doxygen config for doxygen 1.5.
+	- aclocal newer version.
 
 11 June 2007: Wouter
 	- replies on TCP queries have the address field set in replyinfo,
