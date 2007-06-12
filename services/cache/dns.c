@@ -49,7 +49,11 @@
 #include "util/net_help.h"
 #include "util/region-allocator.h"
 
-/** store rrsets in the rrset cache. */
+/** store rrsets in the rrset cache. 
+ * @param env: module environment with caches.
+ * @param rep: contains list of rrsets to store.
+ * @param now: current time(NULL).
+ */
 static void
 store_rrsets(struct module_env* env, struct reply_info* rep, uint32_t now)
 {

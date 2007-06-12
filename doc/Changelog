@@ -4,6 +4,7 @@
 	- synthesize CNAME and DNAME responses from the cache.
 	- Updated doxygen config for doxygen 1.5.
 	- aclocal newer version.
+	- doxygen 1.5 fixes for comments (for the strict check on docs).
 
 11 June 2007: Wouter
 	- replies on TCP queries have the address field set in replyinfo,

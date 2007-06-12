@@ -163,14 +163,14 @@ char *region_strdup(region_type *region, const char *string);
 void region_recycle(region_type *region, void *block, size_t size);
 
 /**
- * Print some REGION statistics to OUT.
+ * Print some REGION statistics to OUT
  */
 void region_dump_stats(region_type *region, FILE *out);
 
 /** get size of recyclebin */
 size_t region_get_recycle_size(region_type* region);
 
-/** Debug print REGION statistics to LOG. */
+/** Debug print REGION statistics to LOG */
 void region_log_stats(region_type *region);
 
 #endif /* _REGION_ALLOCATOR_H_ */

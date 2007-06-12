@@ -210,7 +210,7 @@ replay_moment_read(char* remain, FILE* in, const char* name, int* lineno,
 	return mom;
 }
 
-/** makes scenario with title on rest of line. */
+/** makes scenario with title on rest of line */
 static struct replay_scenario*
 make_scenario(char* line)
 {

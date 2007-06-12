@@ -62,7 +62,7 @@
 /** number of retries on outgoing UDP queries */
 #define OUTBOUND_UDP_RETRY 4
 
-/** callback for serviced query UDP answers. */
+/** callback for serviced query UDP answers */
 static int serviced_udp_callback(struct comm_point* c, void* arg, int error,
         struct comm_reply* rep);
 /** initiate TCP transaction for serviced query */
@@ -205,7 +205,7 @@ outnet_tcp_take_into_use(struct waiting_tcp* w, uint8_t* pkt)
 	return 1;
 }
 
-/** see if buffers can be used to service TCP queries. */
+/** see if buffers can be used to service TCP queries */
 static void
 use_free_buffer(struct outside_network* outnet)
 {
@@ -260,7 +260,7 @@ outnet_tcp_cb(struct comm_point* c, void* arg, int error,
 	return 0;
 }
 
-/** callback for incoming udp answers from the network. */
+/** callback for incoming udp answers from the network */
 static int 
 outnet_udp_cb(struct comm_point* c, void* arg, int error,
 	struct comm_reply *reply_info)
@@ -387,7 +387,7 @@ make_udp_range(struct comm_point** coms, const char* ifname,
 	return done;
 }
 
-/** calculate number of ip4 and ip6 interfaces, times multiplier. */
+/** calculate number of ip4 and ip6 interfaces, times multiplier */
 static void 
 calc_num46(char** ifs, int num_ifs, int do_ip4, int do_ip6, 
 	size_t multiplier, size_t* num_ip4, size_t* num_ip6)
@@ -822,7 +822,7 @@ pending_tcp_query(struct outside_network* outnet, ldns_buffer* packet,
 	return w;
 }
 
-/** create query for serviced queries. */
+/** create query for serviced queries */
 static void
 serviced_gen_query(ldns_buffer* buff, uint8_t* qname, size_t qnamelen, 
 	uint16_t qtype, uint16_t qclass, uint16_t flags)

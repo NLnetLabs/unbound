@@ -447,7 +447,12 @@ worker_check_request(ldns_buffer* pkt)
 	return 0;
 }
 
-/** process control messages from the main thread. */
+/** process control messages from the main thread. 
+ * @param c: comm point to read from.
+ * @param arg: worker.
+ * @param error: error status of comm point.
+ * @param reply_info: not used.
+ */
 static int 
 worker_handle_control_cmd(struct comm_point* c, void* arg, int error, 
 	struct comm_reply* ATTR_UNUSED(reply_info))

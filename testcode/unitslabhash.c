@@ -67,14 +67,14 @@ static void test_delkey(void*, void*, int);
 static void test_deldata(void*, void*);
 /* --- end test representation --- */
 
-/** hash func, very bad to improve collisions, both high and low bits. */
+/** hash func, very bad to improve collisions, both high and low bits */
 static hashvalue_t myhash(int id) {
 	hashvalue_t h = (hashvalue_t)id & 0x0f;
 	h |= (h << 28);
 	return h;
 }
 
-/** allocate new key, fill in hash. */
+/** allocate new key, fill in hash */
 static struct slabtestkey* newkey(int id) {
 	struct slabtestkey* k = (struct slabtestkey*)calloc(1, sizeof(struct slabtestkey));
 	if(!k) fatal_exit("out of memory");
@@ -351,7 +351,7 @@ test_thr_main(void* arg)
 	return NULL;
 }
 
-/** test hash table access by multiple threads. */
+/** test hash table access by multiple threads */
 static void
 test_threaded_table(struct slabhash* table)
 {

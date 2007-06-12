@@ -194,7 +194,7 @@ prot_check(struct checked_lock* lock,
 	}
 }
 
-/** Copy protected memory region. */
+/** Copy protected memory region */
 static void 
 prot_store(struct checked_lock* lock)
 {
@@ -205,7 +205,7 @@ prot_store(struct checked_lock* lock)
 	}
 }
 
-/** write lock trace info to file, while you hold those locks. */
+/** write lock trace info to file, while you hold those locks */
 static void
 ordercheck_locklock(struct thr_check* thr, struct checked_lock* lock)
 {
@@ -225,7 +225,7 @@ ordercheck_locklock(struct thr_check* thr, struct checked_lock* lock)
 		log_err("fwrite: %s", strerror(errno));
 }
 
-/** write ordercheck lock creation details to file. */
+/** write ordercheck lock creation details to file */
 static void 
 ordercheck_lockcreate(struct thr_check* thr, struct checked_lock* lock)
 {
@@ -365,7 +365,7 @@ checklock_destroy(enum check_lock_type type, struct checked_lock** lock,
 	free(e);
 }
 
-/** finish acquiring lock, shared between _(rd|wr||)lock() routines. */
+/** finish acquiring lock, shared between _(rd|wr||)lock() routines */
 static void 
 finish_acquire_lock(struct thr_check* thr, struct checked_lock* lock,
         const char* func, const char* file, int line)
@@ -611,7 +611,7 @@ checklock_unlock(enum check_lock_type type, struct checked_lock* lock,
 	}
 }
 
-/** open order info debug file, thr->num must be valid. */
+/** open order info debug file, thr->num must be valid */
 static void 
 open_lockorder(struct thr_check* thr)
 {
@@ -631,7 +631,7 @@ open_lockorder(struct thr_check* thr)
 		log_err("fwrite: %s", strerror(errno));
 }
 
-/** checklock thread main, Inits thread structure. */
+/** checklock thread main, Inits thread structure */
 static void* checklock_main(void* arg)
 {
 	struct thr_check* thr = (struct thr_check*)arg; 
@@ -791,7 +791,7 @@ total_debug_info()
 	}
 }
 
-/** signal handler for join timeout, Exits. */
+/** signal handler for join timeout, Exits */
 static RETSIGTYPE joinalarm(int ATTR_UNUSED(sig))
 {
 	log_err("join thread timeout. hangup or deadlock. Info follows.");
@@ -799,7 +799,7 @@ static RETSIGTYPE joinalarm(int ATTR_UNUSED(sig))
 	fatal_exit("join thread timeout. hangup or deadlock.");
 }
 
-/** wait for thread with a timeout. */
+/** wait for thread with a timeout */
 void 
 checklock_thrjoin(pthread_t thread)
 {

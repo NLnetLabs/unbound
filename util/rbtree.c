@@ -57,9 +57,9 @@ rbnode_t	rbtree_null_node = {
 	BLACK			/* Color.  */
 };
 
-/** rotate subtree left (to preserve redblack property). */
+/** rotate subtree left (to preserve redblack property) */
 static void rbtree_rotate_left(rbtree_t *rbtree, rbnode_t *node);
-/** rotate subtree right (to preserve redblack property). */
+/** rotate subtree right (to preserve redblack property) */
 static void rbtree_rotate_right(rbtree_t *rbtree, rbnode_t *node);
 /** Fixup node colours when insert happened */
 static void rbtree_insert_fixup(rbtree_t *rbtree, rbnode_t *node);
@@ -291,7 +291,7 @@ static void swap_np(rbnode_t** x, rbnode_t** y)
 	rbnode_t* t = *x; *x = *y; *y = t; 
 }
 
-/** Update parent pointers of child trees of 'parent'. */
+/** Update parent pointers of child trees of 'parent' */
 static void change_parent_ptr(rbtree_t* rbtree, rbnode_t* parent, rbnode_t* old, rbnode_t* new)
 {
 	if(parent == RBTREE_NULL)
@@ -305,7 +305,7 @@ static void change_parent_ptr(rbtree_t* rbtree, rbnode_t* parent, rbnode_t* old,
 	if(parent->left == old) parent->left = new;
 	if(parent->right == old) parent->right = new;
 }
-/** Update parent pointer of a node 'child'. */
+/** Update parent pointer of a node 'child' */
 static void change_child_ptr(rbnode_t* child, rbnode_t* old, rbnode_t* new)
 {
 	if(child == RBTREE_NULL) return;
@@ -590,7 +590,7 @@ rbtree_previous(rbnode_t *node)
 	return node;
 }
 
-/** recursive descent traverse. */
+/** recursive descent traverse */
 static void 
 traverse_post(void (*func)(rbnode_t*, void*), void* arg, rbnode_t* node)
 {

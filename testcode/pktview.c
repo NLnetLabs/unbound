@@ -67,7 +67,7 @@ void read_input(ldns_buffer* pkt, FILE* in)
 	hex_to_buf(pkt, buf);
 }
 
-/** analyze domain name in packet, possibly compressed. */
+/** analyze domain name in packet, possibly compressed */
 void analyze_dname(ldns_buffer* pkt)
 {
 	size_t oldpos = ldns_buffer_position(pkt);
@@ -117,7 +117,7 @@ void analyze_rdata(ldns_buffer*pkt, const ldns_rr_descriptor* desc,
 	ldns_buffer_skip(pkt, (ssize_t)rdlen);
 }
 
-/** analyze rr in packet. */
+/** analyze rr in packet */
 void analyze_rr(ldns_buffer* pkt, int q)
 {
 	uint16_t type, dclass, len;

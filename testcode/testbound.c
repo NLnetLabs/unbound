@@ -105,7 +105,7 @@ add_opts(char* optarg, int* pass_argc, char* pass_argv[])
 	}
 }
 
-/** pretty print commandline for unbound in this test. */
+/** pretty print commandline for unbound in this test */
 static void
 echo_cmdline(int argc, char* argv[])
 {

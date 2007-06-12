@@ -43,7 +43,7 @@
 #include "util/data/dname.h"
 #include <fcntl.h>
 
-/** returns true is string addr is an ip6 specced address. */
+/** returns true is string addr is an ip6 specced address */
 int
 str_is_ip6(const char* str)
 {

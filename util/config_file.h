@@ -184,9 +184,9 @@ struct config_parser_state {
 
 /** global config parser object used during config parsing */
 extern struct config_parser_state* cfg_parser;
-/** parsing helpers: print error with file and line numbers. */
+/** parsing helpers: print error with file and line numbers */
 void ub_c_error(const char* msg);
-/** parsing helpers: print error with file and line numbers. */
+/** parsing helpers: print error with file and line numbers */
 void ub_c_error_msg(const char* fmt, ...) ATTR_FORMAT(printf, 1, 2);
 
 #endif /* UTIL_CONFIG_FILE_H */

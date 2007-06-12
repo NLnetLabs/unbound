@@ -67,9 +67,9 @@ static void test_delkey(void*, void*, int);
 static void test_deldata(void*, void*);
 /* --- end test representation --- */
 
-/** hash func, very bad to improve collisions. */
+/** hash func, very bad to improve collisions */
 static hashvalue_t myhash(int id) {return (hashvalue_t)id & 0x0f;}
-/** allocate new key, fill in hash. */
+/** allocate new key, fill in hash */
 static struct testkey* newkey(int id) {
 	struct testkey* k = (struct testkey*)calloc(1, sizeof(struct testkey));
 	if(!k) fatal_exit("out of memory");
@@ -469,7 +469,7 @@ test_thr_main(void* arg)
 	return NULL;
 }
 
-/** test hash table access by multiple threads. */
+/** test hash table access by multiple threads */
 static void
 test_threaded_table(struct lruhash* table)
 {

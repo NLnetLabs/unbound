@@ -298,7 +298,7 @@ void lru_touch(struct lruhash* table, struct lruhash_entry* entry);
  */
 void lruhash_remove(struct lruhash* table, hashvalue_t hash, void* key);
 
-/** init the hash bins for the table. */
+/** init the hash bins for the table */
 void bin_init(struct lruhash_bin* array, size_t size);
 
 /** delete the hash bin and entries inside it */

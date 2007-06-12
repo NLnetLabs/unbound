@@ -51,7 +51,7 @@
 #include "util/data/msgparse.h"
 #include "util/data/msgencode.h"
 
-/** allocate qinfo, return 0 on error. */
+/** allocate qinfo, return 0 on error */
 static int
 parse_create_qinfo(ldns_buffer* pkt, struct msg_parse* msg, 
 	struct query_info* qinf, struct region* region)
@@ -103,7 +103,7 @@ construct_reply_info_base(struct region* region, uint16_t flags, size_t qd,
 	return rep;
 }
 
-/** allocate replyinfo, return 0 on error. */
+/** allocate replyinfo, return 0 on error */
 static int
 parse_create_repinfo(struct msg_parse* msg, struct reply_info** rep,
 	struct region* region)
@@ -116,7 +116,7 @@ parse_create_repinfo(struct msg_parse* msg, struct reply_info** rep,
 	return 1;
 }
 
-/** allocate (special) rrset keys, return 0 on error. */
+/** allocate (special) rrset keys, return 0 on error */
 static int
 repinfo_alloc_rrset_keys(struct reply_info* rep, struct alloc_cache* alloc, 
 	struct region* region)

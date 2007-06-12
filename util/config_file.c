@@ -105,7 +105,7 @@ error_exit:
 	return NULL;
 }
 
-/** initialize the global cfg_parser object. */
+/** initialize the global cfg_parser object */
 static void
 create_cfg_parser(struct config_file* cfg, char* filename)
 {

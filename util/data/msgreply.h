@@ -251,7 +251,7 @@ int query_info_allocqname(struct query_info* m);
  */
 int query_info_compare(void* m1, void* m2);
 
-/** clear out query info structure. */
+/** clear out query info structure */
 void query_info_clear(struct query_info* m);
 
 /** calculate size of struct query_info + reply_info */
@@ -263,7 +263,7 @@ void query_entry_delete(void *q, void* arg, int is_locked);
 /** delete reply_info data structure */
 void reply_info_delete(void* d, void* arg);
 
-/** calculate hash value of query_info, lowercases the qname. */
+/** calculate hash value of query_info, lowercases the qname */
 hashvalue_t query_info_hash(struct query_info *q);
 
 /**

@@ -66,7 +66,7 @@ ub_thread_blocksigs()
 #endif /* HAVE_PTHREAD */
 }
 
-/** unblock one signal, so we can catch it. */
+/** unblock one signal, so we can catch it */
 void ub_thread_sig_unblock(int sig)
 {
 	int err;

@@ -142,7 +142,10 @@ apply_dir(struct daemon* daemon, struct config_file* cfg, int cmdline_verbose)
 	checkrlimits(cfg);
 }
 
-/** Read existing pid from pidfile. */
+/** Read existing pid from pidfile. 
+ * @param file: file name of pid file.
+ * @return: the pid from the file or -1 if none.
+ */
 static pid_t
 readpid (const char* file)
 {
@@ -182,7 +185,10 @@ readpid (const char* file)
 	return pid;
 }
 
-/** write pid to file. */
+/** write pid to file. 
+ * @param pidfile: file name of pid file.
+ * @param pid: pid to write to file.
+ */
 static void
 writepid (const char* pidfile, pid_t pid)
 {

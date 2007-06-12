@@ -44,7 +44,7 @@
 #include "util/storage/lookup3.h"
 #include "util/region-allocator.h"
 
-/** smart comparison of (compressed, valid) dnames from packet. */
+/** smart comparison of (compressed, valid) dnames from packet */
 static int
 smart_compare(ldns_buffer* pkt, uint8_t* dnow, 
 	uint8_t* dprfirst, uint8_t* dprlast)
@@ -96,7 +96,7 @@ new_rrset(struct msg_parse* msg, uint8_t* dname, size_t dnamelen,
 	return p;
 }
 
-/** See if next rrset is nsec at zone apex. */
+/** See if next rrset is nsec at zone apex */
 static int
 nsec_at_apex(ldns_buffer* pkt)
 {
@@ -166,7 +166,7 @@ pkt_hash_rrset(ldns_buffer* pkt, uint8_t* dname, uint16_t type,
 	return h;
 }
 
-/** compare rrset_parse with data. */
+/** compare rrset_parse with data */
 static int
 rrset_parse_equals(struct rrset_parse* p, ldns_buffer* pkt, hashvalue_t h, 
 	uint32_t rrset_flags, uint8_t* dname, size_t dnamelen, 

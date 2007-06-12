@@ -309,7 +309,7 @@ static void found_cycle(struct lock_ref* visit, int level)
 	}
 }
 
-/** Detect cycle by comparing visited now with all (unvisited) bigger nodes. */
+/** Detect cycle by comparing visited now with all (unvisited) bigger nodes */
 static int detect_cycle(struct lock_ref* visit, struct lock_ref* from)
 {
 	struct lock_ref* p = from;

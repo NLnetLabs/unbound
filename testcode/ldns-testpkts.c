@@ -31,7 +31,7 @@ struct sockaddr_storage;
 /** string to show in warnings and errors */
 static const char* prog_name = "ldns-testpkts";
 
-/** logging routine, provided by caller. */
+/** logging routine, provided by caller */
 void verbose(int lvl, const char* msg, ...);
 
 /** print error and exit */

@@ -137,7 +137,7 @@ static void comm_timer_callback(int fd, short event, void* arg);
  */
 static void comm_signal_callback(int fd, short event, void* arg);
 
-/** libevent callback for AF_UNIX fds. */
+/** libevent callback for AF_UNIX fds */
 static void comm_point_local_handle_callback(int fd, short event, void* arg);
 
 /** create a tcp handler with a parent */
@@ -254,7 +254,7 @@ comm_point_udp_callback(int fd, short event, void* arg)
 	}
 }
 
-/** Use a new tcp handler for new query fd, set to read query. */
+/** Use a new tcp handler for new query fd, set to read query */
 static void
 setup_tcp_handler(struct comm_point* c, int fd) 
 {
@@ -310,7 +310,7 @@ comm_point_tcp_accept_callback(int fd, short event, void* arg)
 	setup_tcp_handler(c_hdl, new_fd);
 }
 
-/** Make tcp handler free for next assignment. */
+/** Make tcp handler free for next assignment */
 static void
 reclaim_tcp_handler(struct comm_point* c)
 {

@@ -62,7 +62,10 @@ static int sig_record_quit = 0;
 static int sig_record_reload = 0;
 
 /** used when no other sighandling happens, so we don't die
-  * when multiple signals in quick succession are sent to us. */
+  * when multiple signals in quick succession are sent to us. 
+  * @param sig: signal number.
+  * @return signal handler return type (void or int).
+  */
 static RETSIGTYPE record_sigh(int sig)
 {
 #ifdef LIBEVENT_SIGNAL_PROBLEM

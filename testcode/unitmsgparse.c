@@ -224,7 +224,7 @@ test_buffers(ldns_buffer* pkt, ldns_buffer* out)
 	return 0;
 }
 
-/** check if unbound formerr equals ldns formerr. */
+/** check if unbound formerr equals ldns formerr */
 static void
 checkformerr(ldns_buffer* pkt)
 {
@@ -303,7 +303,7 @@ testpkt(ldns_buffer* pkt, struct alloc_cache* alloc, ldns_buffer* out,
 	region_destroy(region);
 }
 
-/** simple test of parsing. */
+/** simple test of parsing */
 static void
 simpletest(ldns_buffer* pkt, struct alloc_cache* alloc, ldns_buffer* out)
 {
@@ -354,7 +354,7 @@ simpletest(ldns_buffer* pkt, struct alloc_cache* alloc, ldns_buffer* out)
 	" 64 b9 00 04 c0 3a 80 1e  ");
 }
 
-/** simple test of parsing, pcat file. */
+/** simple test of parsing, pcat file */
 static void
 testfromfile(ldns_buffer* pkt, struct alloc_cache* alloc, ldns_buffer* out,
 	const char* fname)
@@ -381,7 +381,7 @@ testfromfile(ldns_buffer* pkt, struct alloc_cache* alloc, ldns_buffer* out,
 	fclose(in);
 }
 
-/** simple test of parsing, drill file. */
+/** simple test of parsing, drill file */
 static void
 testfromdrillfile(ldns_buffer* pkt, struct alloc_cache* alloc, 
 	ldns_buffer* out, const char* fname)

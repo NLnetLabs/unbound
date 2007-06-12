@@ -73,7 +73,7 @@ fake_event_cleanup()
 	saved_scenario = NULL;
 }
 
-/** helper function that logs a ldns_pkt packet to logfile. */
+/** helper function that logs a ldns_pkt packet to logfile */
 static void
 log_pkt(const char* desc, ldns_pkt* pkt)
 {
