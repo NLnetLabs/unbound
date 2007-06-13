@@ -294,6 +294,10 @@ outnet_udp_cb(struct comm_point* c, void* arg, int error,
 	p = (struct pending*)rbtree_search(outnet->pending, &key);
 	if(!p) {
 		verbose(VERB_DETAIL, "received unwanted or unsolicited udp reply dropped.");
+		if(verbosity >= VERB_ALGO)
+			log_hex("dropped message", 
+				ldns_buffer_begin(c->buffer), 
+				ldns_buffer_limit(c->buffer));
 		return 0;
 	}
 
@@ -1069,6 +1073,8 @@ serviced_udp_callback(struct comm_point* c, void* arg, int error,
 			-1, (time_t)now.tv_sec))
 			log_err("out of memory in UDP exponential backoff");
 		if(sq->retry < OUTBOUND_UDP_RETRY) {
+			log_name_addr(VERB_ALGO, "retry query", sq->qbuf+10,
+				&sq->addr, sq->addrlen);
 			if(!serviced_udp_send(sq, c->buffer)) {
 				(void)rbtree_delete(outnet->serviced, sq);
 				serviced_callbacks(sq, NETEVENT_CLOSED, c, rep);
