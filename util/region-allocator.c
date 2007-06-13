@@ -50,7 +50,7 @@
 /** increase size until it fits alignment of s bytes */
 #define ALIGN_UP(x, s)     (((x) + s - 1) & (~(s - 1)))
 /** what size to align on */
-#define ALIGNMENT          (sizeof(void *))
+#define ALIGNMENT          (sizeof(uint64_t))
 /** set to 1 to perform expensive check for double recycle() */
 #define CHECK_DOUBLE_FREE 0 
 
