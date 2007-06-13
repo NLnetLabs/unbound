@@ -1006,6 +1006,7 @@ serviced_tcp_callback(struct comm_point* c, void* arg, int error,
         struct comm_reply* rep)
 {
 	struct serviced_query* sq = (struct serviced_query*)arg;
+	struct comm_reply r2;
 	sq->pending = NULL; /* removed after this callback */
 	if(error==NETEVENT_NOERROR && LDNS_RCODE_WIRE(ldns_buffer_begin(
 		c->buffer)) == LDNS_RCODE_FORMERR && 
@@ -1018,6 +1019,11 @@ serviced_tcp_callback(struct comm_point* c, void* arg, int error,
 		return 0;
 	}
 	/* insert address into reply info */
+	if(!rep) {
+		/* create one if there isn't (on errors) */
+		rep = &r2;
+		r2.c = c;
+	}
 	memcpy(&rep->addr, &sq->addr, sq->addrlen);
 	rep->addrlen = sq->addrlen;
 	(void)rbtree_delete(sq->outnet->serviced, sq);

@@ -3,6 +3,8 @@
 	  ldns and libevent are linked statically. Default is off.
 	- make install and make uninstall. Works with static-exe and without.
 	  installation of unbound binary and manual pages.
+	- alignement problem fix on solaris 64.
+	- fixup address in case of TCP error.
 
 12 June 2007: Wouter
 	- num target queries was set to 0 at a bad time. Default it to 0 and
