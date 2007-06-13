@@ -449,6 +449,16 @@ else
 	AC_DEFINE(USE_MINI_EVENT, 1, [Define if you want to use internal select based events])
 fi
 
+# set static linking if requested
+AC_SUBST(staticexe)
+staticexe=""
+AC_ARG_ENABLE(staticexe, AC_HELP_STRING([--enable-static-exe],
+	[ enable to compile executables statically against event, ldns libs, for debug purposes ]), 
+	, )
+if test x_$enable_static_exe = x_yes; then
+	staticexe="-static"
+fi
+
 # check to see if libraries are needed for these functions.
 AC_CHECK_LIB(socket, socket)
 AC_CHECK_LIB(nsl, inet_pton)

@@ -1,3 +1,9 @@
+13 June 2007: Wouter
+	- debug option: configure --enable-static-exe for compile where
+	  ldns and libevent are linked statically. Default is off.
+	- make install and make uninstall. Works with static-exe and without.
+	  installation of unbound binary and manual pages.
+
 12 June 2007: Wouter
 	- num target queries was set to 0 at a bad time. Default it to 0 and
 	  increase as target queries are done.

@@ -17,7 +17,7 @@ This software is under BSD license, see LICENSE for details.
   * run libtoolize -c if config.sub is missing.
   * autoreconf (autoheader && autoconf), if ./configure is missing.
 
-* Make and install: ./configure; make
+* Make and install: ./configure; make; make install
   * --with-ldns=/path/to/ldns
   * --with-libevent=/path/to/libevent
   	Can be set to either the system install or the build directory.
@@ -25,6 +25,9 @@ This software is under BSD license, see LICENSE for details.
   * --without-pthreads 
 	This disables pthreads, and uses Solaris thr library or no threading. 
 	Without this option the pthreads library is detected automatically.
+  * --enable-static-exe
+	This enables a debug option to statically link, against ldns and 
+	libevent libraries.
 
 Known issues
 ------------
