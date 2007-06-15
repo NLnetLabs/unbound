@@ -215,4 +215,10 @@ struct outbound_entry* worker_send_query(uint8_t* qname, size_t qnamelen,
 	struct sockaddr_storage* addr, socklen_t addrlen,
 	struct module_qstate* q);
 
+/**
+ * Remove subqueries, by moving them to the slumber list.
+ * @param qstate: this state has subqueries removed.
+ */
+void worker_slumber_subqueries(struct module_qstate* qstate);
+
 #endif /* DAEMON_WORKER_H */

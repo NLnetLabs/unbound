@@ -167,6 +167,7 @@ static void daemon_setup_modules(struct daemon* daemon)
 	daemon->env->worker = NULL;
 	daemon->env->send_packet = &worker_send_packet;
 	daemon->env->send_query = &worker_send_query;
+	daemon->env->remove_subqueries = &worker_slumber_subqueries;
 	for(i=0; i<daemon->num_modules; i++) {
 		log_info("init module %d: %s", i, daemon->modfunc[i]->name);
 		if(!(*daemon->modfunc[i]->init)(daemon->env, i)) {

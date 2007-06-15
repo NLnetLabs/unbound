@@ -1133,6 +1133,7 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 			return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
 		/* close down outstanding requests to be discarded */
 		outbound_list_clear(&iq->outlist);
+		(*qstate->env->remove_subqueries)(qstate);
 		return final_state(iq);
 	} else if(type == RESPONSE_TYPE_REFERRAL) {
 		/* REFERRAL type responses get a reset of the 
@@ -1160,6 +1161,7 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		 * handled? Say by a subquery that inherits the outbound_entry.
 		 */
 		outbound_list_clear(&iq->outlist);
+		(*qstate->env->remove_subqueries)(qstate);
 		verbose(VERB_ALGO, "cleared outbound list for next round");
 		return next_state(iq, QUERYTARGETS_STATE);
 	} else if(type == RESPONSE_TYPE_CNAME) {
@@ -1199,6 +1201,7 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		 * handled? Say by a subquery that inherits the outbound_entry.
 		 */
 		outbound_list_clear(&iq->outlist);
+		(*qstate->env->remove_subqueries)(qstate);
 		verbose(VERB_ALGO, "cleared outbound list for query restart");
 		/* go to INIT_REQUEST_STATE for new qname. */
 		return next_state(iq, INIT_REQUEST_STATE);

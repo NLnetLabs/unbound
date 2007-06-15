@@ -3,6 +3,9 @@
 	  multiple times, this will succeed. Only one callback will happen;
 	  multiple outbound-list entries result (but the double cleanup of it
 	  will not matter).
+	- when iterator moves on due to CNAME or referral, it will remove
+	  the subqueries (for other targets). These are put on the slumber
+	  list.
 
 14 June 2007: Wouter
 	- num query targets was > 0 , not >= 0 compared, so that fetch

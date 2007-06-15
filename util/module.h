@@ -117,6 +117,16 @@ struct module_env {
 		struct sockaddr_storage* addr, socklen_t addrlen, 
 		struct module_qstate* q);
 
+	/**
+	 * Cleanup subqueries from this query state. Either delete or
+	 * move them somewhere else. This query state no longer needs the
+	 * results from those subqueries.
+	 * @param qstate: query state.
+	 * 	subqueries are (re)moved so that no subq_done events from
+	 * 	them will reach this qstate.
+	 */
+	void (*remove_subqueries)(struct module_qstate* qstate);
+
 	/** internal data for daemon - worker thread. */
 	struct worker* worker;
 	/** allocation service */
