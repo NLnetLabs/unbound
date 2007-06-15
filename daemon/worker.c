@@ -271,17 +271,15 @@ worker_process_query(struct worker* worker, struct work_query* w,
 			"exit state is %s", strextstate(s));
 		if(s == module_state_initial) {
 			log_err("module exit in initial state, "
-				"it loops; aborted");
+				"it loops; parent query is aborted");
+			while(qstate->parent)
+				qstate = qstate->parent;
 			s = module_error;
 		}
 		/* examine results, start further modules, etc. */
 		if(s != module_error && s != module_finished) {
 			/* see if we can continue with other subrequests */
 			struct module_qstate* nxt = find_runnable(qstate);
-			if(s == module_wait_subquery && !nxt) {
-				log_err("module exit wait subq, but no subq");
-				s = module_error;
-			}
 			if(nxt) {
 				/* start submodule */
 				qstate = nxt;

@@ -6,6 +6,9 @@
 	- when iterator moves on due to CNAME or referral, it will remove
 	  the subqueries (for other targets). These are put on the slumber
 	  list.
+	- state module wait subq is OK with no new subqs, an old one may have
+	  stopped, with an error, and it is still waiting for other ones.
+	- if a query loops, halt entire query (easy way to clean up properly).
 
 14 June 2007: Wouter
 	- num query targets was > 0 , not >= 0 compared, so that fetch
