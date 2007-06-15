@@ -1,3 +1,13 @@
+15 June 2007: Wouter
+	- if a query asks to be notified of the same serviced query result
+	  multiple times, this will succeed. Only one callback will happen;
+	  multiple outbound-list entries result (but the double cleanup of it
+	  will not matter).
+
+14 June 2007: Wouter
+	- num query targets was > 0 , not >= 0 compared, so that fetch
+	  policy of 0 did nothing.
+
 13 June 2007: Wouter
 	- debug option: configure --enable-static-exe for compile where
 	  ldns and libevent are linked statically. Default is off.

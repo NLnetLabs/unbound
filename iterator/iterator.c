@@ -940,7 +940,7 @@ query_for_targets(struct module_qstate* qstate, struct iter_qstate* iq,
 
 		/* if maxtargets is negative, there is no maximum, 
 		 * otherwise only query for ntarget names. */
-		if(maxtargets > 0 && ++target_count > maxtargets)
+		if(maxtargets >= 0 && ++target_count > maxtargets)
 			break;
 	}
 	*num = query_count;
