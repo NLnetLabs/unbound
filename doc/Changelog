@@ -1,6 +1,7 @@
 18 June 2007: Wouter
 	- same, move subqueries to slumber list when first has resolved.
 	- fixup last fix for duplicate callbacks.
+	- another offbyone in targetcounter. Also in Java prototype by the way.
 
 15 June 2007: Wouter
 	- if a query asks to be notified of the same serviced query result

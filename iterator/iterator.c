@@ -897,6 +897,7 @@ query_for_targets(struct module_qstate* qstate, struct iter_qstate* iq,
 	int query_count = 0;
 	int target_count = 0;
 	struct delegpt_ns* ns = iq->dp->nslist;
+	log_assert(maxtargets != 0); /* that would not be useful */
 
 	/* Generate target requests. Basically, any missing targets 
 	 * are queried for here, regardless if it is necessary to do 
@@ -940,7 +941,7 @@ query_for_targets(struct module_qstate* qstate, struct iter_qstate* iq,
 
 		/* if maxtargets is negative, there is no maximum, 
 		 * otherwise only query for ntarget names. */
-		if(maxtargets >= 0 && ++target_count > maxtargets)
+		if(maxtargets >= 0 && ++target_count >= maxtargets)
 			break;
 	}
 	*num = query_count;
