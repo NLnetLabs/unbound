@@ -55,20 +55,71 @@
 #include "util/data/msgparse.h"
 #include "util/random.h"
 
+/** count number of integers in fetch policy string */
+static int
+fetch_count(const char* s)
+{
+	/* format ::= (sp num)+ sp 	*/
+	/* num ::= [-](0-9)+ 		*/
+	/* sp ::= (space|tab)* 		*/
+	int num = 0;
+	while(*s) {
+		while(*s && isspace(*s))
+			s++;
+		if(!*s)	/* end of string */
+			break;
+		if(*s == '-')
+			s++;
+		if(!*s) /* only - not allowed */
+			return 0;
+		if(!isdigit(*s)) /* bad character */
+			return 0;
+		while(*s && isdigit(*s))
+			s++;
+		num++;
+	}
+	return num;
+}
+
+/** fillup fetch policy array */
+static void
+fetch_fill(struct iter_env* ie, const char* str)
+{
+	char* s = (char*)str, *e;
+	int i;
+	for(i=0; i<ie->max_dependency_depth+1; i++) {
+		ie->target_fetch_policy[i] = strtol(s, &e, 10);
+		log_assert(s != e); /* parsed syntax already */
+		s = e;
+	}
+}
+
+/** Read config string that represents the target fetch policy */
+static int
+read_fetch_policy(struct iter_env* ie, const char* str)
+{
+	int count = fetch_count(str);
+	if(count < 1) {
+		log_err("Cannot parse target fetch policy: \"%s\"", str);
+		return 0;
+	}
+	ie->max_dependency_depth = count - 1;
+	ie->target_fetch_policy = (int*)calloc(
+		(size_t)ie->max_dependency_depth+1, sizeof(int));
+	if(!ie->target_fetch_policy) {
+		log_err("alloc fetch policy: out of memory");
+		return 0;
+	}
+	fetch_fill(ie, str);
+	return 1;
+}
+
 int 
 iter_apply_cfg(struct iter_env* iter_env, struct config_file* cfg)
 {
 	int i;
 	/* target fetch policy */
-	iter_env->max_dependency_depth = 4;
-	iter_env->target_fetch_policy = (int*)calloc(
-		(size_t)iter_env->max_dependency_depth+1, sizeof(int));
-	if(iter_env->max_dependency_depth >= 1)
-		iter_env->target_fetch_policy[1] = 3;
-	if(iter_env->max_dependency_depth >= 2)
-		iter_env->target_fetch_policy[2] = 1;
-	/* TODO read setting from config */
-	if(!iter_env->target_fetch_policy)
+	if(!read_fetch_policy(iter_env, cfg->target_fetch_policy))
 		return 0;
 	for(i=0; i<iter_env->max_dependency_depth+1; i++)
 		verbose(VERB_DETAIL, "target fetch policy for level %d is %d",

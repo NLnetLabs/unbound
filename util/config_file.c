@@ -94,6 +94,7 @@ config_create()
 	if(!(cfg->directory = strdup("/etc/unbound"))) goto error_exit;
 	if(!(cfg->logfile = strdup(""))) goto error_exit;
 	if(!(cfg->pidfile = strdup("unbound.pid"))) goto error_exit;
+	if(!(cfg->target_fetch_policy = strdup("3 2 1 0 0"))) goto error_exit;
 	cfg->fwd_port = UNBOUND_DNS_PORT;
 	cfg->do_daemonize = 1;
 	cfg->num_ifs = 0;
@@ -165,6 +166,7 @@ config_delete(struct config_file* cfg)
 	free(cfg->directory);
 	free(cfg->logfile);
 	free(cfg->pidfile);
+	free(cfg->target_fetch_policy);
 	if(cfg->ifs) {
 		int i;
 		for(i=0; i<cfg->num_ifs; i++)

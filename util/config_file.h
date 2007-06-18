@@ -99,6 +99,9 @@ struct config_file {
 	/** forwarder port */
 	int fwd_port;
 
+	/** the target fetch policy for the iterator */
+	char* target_fetch_policy;
+
 	/** number of interfaces to open. If 0 default all interfaces. */
 	int num_ifs;
 	/** interface description strings (IP addresses) */
