@@ -770,12 +770,14 @@ struct serviced_query* outnet_serviced_query(struct outside_network* outnet,
         uint8_t* qname, size_t qnamelen, uint16_t qtype, uint16_t qclass,
 	uint16_t flags, int dnssec, struct sockaddr_storage* addr,
 	socklen_t addrlen, comm_point_callback_t* callback,
-	void* callback_arg, ldns_buffer* ATTR_UNUSED(buff))
+	void* callback_arg, ldns_buffer* ATTR_UNUSED(buff),
+	int (*arg_compare)(void*,void*))
 {
 	struct replay_runtime* runtime = (struct replay_runtime*)outnet->base;
 	struct fake_pending* pend = (struct fake_pending*)calloc(1,
 		sizeof(struct fake_pending));
 	ldns_status status;
+	(void)arg_compare;
 	log_assert(pend);
 
 	/* create packet with EDNS */

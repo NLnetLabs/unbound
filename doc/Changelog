@@ -1,3 +1,7 @@
+18 June 2007: Wouter
+	- same, move subqueries to slumber list when first has resolved.
+	- fixup last fix for duplicate callbacks.
+
 15 June 2007: Wouter
 	- if a query asks to be notified of the same serviced query result
 	  multiple times, this will succeed. Only one callback will happen;

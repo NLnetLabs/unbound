@@ -1132,11 +1132,12 @@ serviced_udp_callback(struct comm_point* c, void* arg, int error,
 
 /** find callback in list */
 static struct service_callback*
-callback_list_find(struct serviced_query* sq, void* cb_arg)
+callback_list_find(struct serviced_query* sq, void* cb_arg, 
+	int (*arg_compare)(void*,void*))
 {
 	struct service_callback* p;
 	for(p = sq->cblist; p; p = p->next) {
-		if(p->cb_arg == cb_arg)
+		if(arg_compare(p->cb_arg, cb_arg))
 			return p;
 	}
 	return NULL;
@@ -1147,7 +1148,8 @@ outnet_serviced_query(struct outside_network* outnet,
 	uint8_t* qname, size_t qnamelen, uint16_t qtype, uint16_t qclass,
 	uint16_t flags, int dnssec, struct sockaddr_storage* addr,
 	socklen_t addrlen, comm_point_callback_t* callback,
-	void* callback_arg, ldns_buffer* buff)
+	void* callback_arg, ldns_buffer* buff, 
+	int (*arg_compare)(void*,void*))
 {
 	struct serviced_query* sq;
 	struct service_callback* cb;
@@ -1155,7 +1157,7 @@ outnet_serviced_query(struct outside_network* outnet,
 	sq = lookup_serviced(outnet, buff, dnssec, addr, addrlen);
 	if(sq) {
 		/* see if it is a duplicate notification request for cb_arg */
-		if((cb = callback_list_find(sq, callback_arg))) {
+		if((cb = callback_list_find(sq, callback_arg, arg_compare))) {
 			return sq;
 		}
 	}

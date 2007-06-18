@@ -878,6 +878,17 @@ worker_send_packet(ldns_buffer* pkt, struct sockaddr_storage* addr,
 		worker->rndstate) != 0;
 }
 
+/** compare outbound entry qstates */
+static int
+outbound_entry_compare(void* a, void* b)
+{
+	struct outbound_entry* e1 = (struct outbound_entry*)a;
+	struct outbound_entry* e2 = (struct outbound_entry*)b;
+	if(e1->qstate == e2->qstate)
+		return 1;
+	return 0;
+}
+
 struct outbound_entry*
 worker_send_query(uint8_t* qname, size_t qnamelen, uint16_t qtype,
 	uint16_t qclass, uint16_t flags, int dnssec,
@@ -891,7 +902,8 @@ worker_send_query(uint8_t* qname, size_t qnamelen, uint16_t qtype,
 	e->qstate = q;
 	e->qsent = outnet_serviced_query(worker->back, qname,
 		qnamelen, qtype, qclass, flags, dnssec, addr, addrlen, 
-		worker_handle_service_reply, e, worker->back->udp_buff);
+		worker_handle_service_reply, e, worker->back->udp_buff,
+		&outbound_entry_compare);
 	if(!e->qsent) {
 		free(e);
 		return NULL;

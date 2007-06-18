@@ -1072,6 +1072,10 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 				iq->num_current_queries);
 		return 0;
 	}
+	/* move other targets to slumber list */
+	if(iq->num_target_queries>0) {
+		(*qstate->env->remove_subqueries)(qstate);
+	}
 
 	/* We have a valid target. */
 	log_nametypeclass(VERB_DETAIL, "sending query:", qstate->qinfo.qname, 

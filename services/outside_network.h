@@ -324,6 +324,8 @@ void pending_delete(struct outside_network* outnet, struct pending* p);
  * @param addr: to which server to send the query.
  * @param addrlen: length of addr.
  * @param buff: scratch buffer to create query contents in. Empty on exit.
+ * @param arg_compare: function to compare callback args, return true if 
+ * 	identical. It is given the callback_arg and args that are listed.
  * @return 0 on error, or pointer to serviced query that is used to answer
  *	this serviced query may be shared with other callbacks as well.
  */
@@ -331,7 +333,8 @@ struct serviced_query* outnet_serviced_query(struct outside_network* outnet,
 	uint8_t* qname, size_t qnamelen, uint16_t qtype, uint16_t qclass,
 	uint16_t flags, int dnssec, struct sockaddr_storage* addr, 
 	socklen_t addrlen, comm_point_callback_t* callback, 
-	void* callback_arg, ldns_buffer* buff);
+	void* callback_arg, ldns_buffer* buff, 
+	int (*arg_compare)(void*,void*));
 
 /**
  * Remove service query callback.
