@@ -92,8 +92,8 @@ struct outside_network {
 	/**
 	 * Array of tcp pending used for outgoing TCP connections.
 	 * Each can be used to establish a TCP connection with a server.
-	 * The file descriptors are -1 if its free, need to be opened for 
-	 * the tcp connection. Can be used for ip4 and ip6.
+	 * The file descriptors are -1 if they are free, and need to be 
+	 * opened for the tcp connection. Can be used for ip4 and ip6.
 	 */
 	struct pending_tcp **tcp_conns;
 	/** number of tcp communication points. */

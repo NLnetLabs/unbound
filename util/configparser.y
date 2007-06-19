@@ -76,7 +76,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_RRSET_CACHE_SIZE VAR_RRSET_CACHE_SLABS VAR_OUTGOING_NUM_TCP
 %token VAR_INFRA_HOST_TTL VAR_INFRA_LAME_TTL VAR_INFRA_CACHE_SLABS
 %token VAR_INFRA_CACHE_NUMHOSTS VAR_INFRA_CACHE_NUMLAME VAR_NAME
-%token VAR_STUB_ZONE VAR_STUB_HOST VAR_STUB_ADDR
+%token VAR_STUB_ZONE VAR_STUB_HOST VAR_STUB_ADDR VAR_TARGET_FETCH_POLICY
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -103,7 +103,8 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_rrset_cache_slabs | server_outgoing_num_tcp | 
 	server_infra_host_ttl | server_infra_lame_ttl | 
 	server_infra_cache_slabs | server_infra_cache_numhosts |
-	server_infra_cache_numlame | stubstart contents_stub
+	server_infra_cache_numlame | stubstart contents_stub | 
+	server_target_fetch_policy
 	;
 stubstart: VAR_STUB_ZONE
 	{
@@ -375,6 +376,13 @@ server_infra_cache_slabs: VAR_INFRA_CACHE_SLABS STRING
 				yyerror("must be a power of 2");
 		}
 		free($2);
+	}
+	;
+server_target_fetch_policy: VAR_TARGET_FETCH_POLICY STRING
+	{
+		OUTYY(("P(server_target_fetch_policy:%s)\n", $2));
+		free(cfg_parser->cfg->target_fetch_policy);
+		cfg_parser->cfg->target_fetch_policy = $2;
 	}
 	;
 stub_name: VAR_NAME STRING

@@ -65,7 +65,7 @@ void server_stats_log(struct server_stats* stats, int threadnum)
 	log_info("server stats for thread %d: requestlist max %u avg %g "
 		"exceeded %u", threadnum, (unsigned)stats->max_query_list_size,
 		stats->num_queries_missed_cache?
-		(double)stats->sum_query_list_size/
-		stats->num_queries_missed_cache:0.0,
+			(double)stats->sum_query_list_size/
+			stats->num_queries_missed_cache : 0.0,
 		(unsigned)stats->num_query_list_exceeded);
 }

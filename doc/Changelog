@@ -1,3 +1,10 @@
+19 June 2007: Wouter
+	- nicer layout in stats.c, review 0.3 change.
+	- spelling improvement, review 0.3 change.
+	- uncapped timeout for server selection, so that very fast or slow
+	  servers will stand out from the rest.
+	- target-fetch-policy: "3 2 1 0 0" config setting.
+
 18 June 2007: Wouter
 	- same, move subqueries to slumber list when first has resolved.
 	- fixup last fix for duplicate callbacks.

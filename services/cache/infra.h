@@ -227,6 +227,7 @@ int infra_edns_update(struct infra_cache* infra,
  * @param namelen: zone name length.
  * @param lame: if function returns true, this returns lameness of the zone.
  * @param rtt: if function returns true, this returns avg rtt of the server.
+ * 	The rtt value is unclamped and reflects recent timeouts.
  * @param timenow: what time it is now.
  * @return if found in cache, or false if not (or TTL bad).
  */

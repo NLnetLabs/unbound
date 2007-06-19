@@ -71,6 +71,17 @@ rtt_timeout(const struct rtt_info* rtt)
 	return rtt->rto;
 }
 
+int 
+rtt_unclamped(const struct rtt_info* rtt)
+{
+	if(calc_rto(rtt) != rtt->rto) {
+		/* timeout fallback has happened */
+		return rtt->rto;
+	}
+	/* return unclamped value */
+	return rtt->srtt + 4*rtt->rttvar;
+}
+
 void 
 rtt_update(struct rtt_info* rtt, int ms)
 {

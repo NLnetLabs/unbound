@@ -73,6 +73,14 @@ void rtt_init(struct rtt_info* rtt);
  */
 int rtt_timeout(const struct rtt_info* rtt);
 
+/** 
+ * Get unclamped timeout to use for server selection.
+ * Recent timeouts are reflected in the returned value.
+ * @param rtt: round trip statistics structure.
+ * @return: value to use in milliseconds. 
+ */
+int rtt_unclamped(const struct rtt_info* rtt);
+
 /**
  * Update the statistics with a new roundtrip estimate observation.
  * @param rtt: round trip statistics structure.

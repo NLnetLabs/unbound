@@ -477,7 +477,7 @@ infra_get_lame_rtt(struct infra_cache* infra,
 	if(!e) 
 		return 0;
 	host = (struct infra_host_data*)e->data;
-	*rtt = rtt_timeout(&host->rtt);
+	*rtt = rtt_unclamped(&host->rtt);
 	/* check lameness first, if so, ttl on host does not matter anymore */
 	if(infra_lookup_lame(host, name, namelen, timenow)) {
 		lock_rw_unlock(&e->lock);

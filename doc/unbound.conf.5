@@ -123,6 +123,17 @@ The logfile is appended to, in the following format:
 The process id is written to the file. Default is "unbound.pid". So,
 kill -HUP `cat /etc/unbound/unbound.pid` will trigger a reload,
 kill -QUIT `cat /etc/unbound/unbound.pid` will gracefully terminate.
+.It \fBtarget-fetch-policy:\fR <"list of numbers">
+Set the target fetch policy used by unbound to determine if it should fetch
+nameserver target addresses opportunistically. The policy is described per
+dependency depth. The number of values determines the maximum dependency depth
+that unbound will pursue in answering a query. 
+A value of -1 means to fetch all targets opportunistically for that dependency
+depth. A value of 0 means to fetch on demand only. A positive value fetches
+that many targets opportunistically. Enclose the list between quotes ("").
+The default is "3 2 1 0 0". Setting all zeroes, "0 0 0 0 0" gives behaviour
+closer to that of BIND 9, while setting "-1 -1 -1 -1 -1" gives behaviour 
+rumoured to be closer to that of BIND 8.
 .El
 
 .Ss Stub Zone Options
