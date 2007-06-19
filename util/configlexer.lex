@@ -128,6 +128,8 @@ infra-cache-numhosts{COLON}	{ YDOUT; return VAR_INFRA_CACHE_NUMHOSTS;}
 infra-cache-numlame{COLON}	{ YDOUT; return VAR_INFRA_CACHE_NUMLAME;}
 num-queries-per-thread{COLON}	{ YDOUT; return VAR_NUM_QUERIES_PER_THREAD;}
 target-fetch-policy{COLON}	{ YDOUT; return VAR_TARGET_FETCH_POLICY;}
+harden-short-bufsize{COLON}	{ YDOUT; return VAR_HARDEN_SHORT_BUFSIZE;}
+harden-large-queries{COLON}	{ YDOUT; return VAR_HARDEN_LARGE_QUERIES;}
 stub-zone{COLON}	{ YDOUT; return VAR_STUB_ZONE;}
 name{COLON}		{ YDOUT; return VAR_NAME;}
 stub-addr{COLON}	{ YDOUT; return VAR_STUB_ADDR;}

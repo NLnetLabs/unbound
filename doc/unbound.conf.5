@@ -134,6 +134,14 @@ that many targets opportunistically. Enclose the list between quotes ("").
 The default is "3 2 1 0 0". Setting all zeroes, "0 0 0 0 0" gives behaviour
 closer to that of BIND 9, while setting "-1 -1 -1 -1 -1" gives behaviour 
 rumoured to be closer to that of BIND 8.
+.It \fBharden-short-bufsize:\fR <yes or no>
+Very small EDNS buffer sizes from queries are ignored. Default is off, since
+it is legal protocol wise to send these, and unbound tries to give very 
+small answers to these queries, where possible.
+.It \fBharden-large-queries:\fR <yes or no>
+Very large queries are ignored. Default is off, since it is legal protocol
+wise to send these, and could be necessary for operation if TSIG or EDNS
+payload is very large.
 .El
 
 .Ss Stub Zone Options

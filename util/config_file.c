@@ -100,6 +100,8 @@ config_create()
 	cfg->num_ifs = 0;
 	cfg->ifs = NULL;
 	cfg->stubs = NULL;
+	cfg->harden_short_bufsize = 0;
+	cfg->harden_large_queries = 0;
 	return cfg;
 error_exit:
 	config_delete(cfg); 

@@ -77,6 +77,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_INFRA_HOST_TTL VAR_INFRA_LAME_TTL VAR_INFRA_CACHE_SLABS
 %token VAR_INFRA_CACHE_NUMHOSTS VAR_INFRA_CACHE_NUMLAME VAR_NAME
 %token VAR_STUB_ZONE VAR_STUB_HOST VAR_STUB_ADDR VAR_TARGET_FETCH_POLICY
+%token VAR_HARDEN_SHORT_BUFSIZE VAR_HARDEN_LARGE_QUERIES
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -104,7 +105,8 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_infra_host_ttl | server_infra_lame_ttl | 
 	server_infra_cache_slabs | server_infra_cache_numhosts |
 	server_infra_cache_numlame | stubstart contents_stub | 
-	server_target_fetch_policy
+	server_target_fetch_policy | server_harden_short_bufsize |
+	server_harden_large_queries
 	;
 stubstart: VAR_STUB_ZONE
 	{
@@ -383,6 +385,26 @@ server_target_fetch_policy: VAR_TARGET_FETCH_POLICY STRING
 		OUTYY(("P(server_target_fetch_policy:%s)\n", $2));
 		free(cfg_parser->cfg->target_fetch_policy);
 		cfg_parser->cfg->target_fetch_policy = $2;
+	}
+	;
+server_harden_short_bufsize: VAR_HARDEN_SHORT_BUFSIZE STRING
+	{
+		OUTYY(("P(server_harden_short_bufsize:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->harden_short_bufsize = 
+			(strcmp($2, "yes")==0);
+		free($2);
+	}
+	;
+server_harden_large_queries: VAR_HARDEN_LARGE_QUERIES STRING
+	{
+		OUTYY(("P(server_harden_large_queries:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->harden_large_queries = 
+			(strcmp($2, "yes")==0);
+		free($2);
 	}
 	;
 stub_name: VAR_NAME STRING

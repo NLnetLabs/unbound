@@ -63,6 +63,9 @@
 #include <netdb.h>
 #include <signal.h>
 
+/** Size of an UDP datagram */
+#define NORMAL_UDP_SIZE	512 /* bytes */
+
 void 
 worker_send_cmd(struct worker* worker, ldns_buffer* buffer,
 	enum worker_commands cmd)
@@ -394,12 +397,18 @@ worker_handle_service_reply(struct comm_point* c, void* arg, int error,
 
 /** check request sanity. Returns error code, 0 OK, or -1 discard. 
  * @param pkt: the wire packet to examine for sanity.
+ * @param worker: parameters for checking.
 */
 static int 
-worker_check_request(ldns_buffer* pkt)
+worker_check_request(ldns_buffer* pkt, struct worker* worker)
 {
 	if(ldns_buffer_limit(pkt) < LDNS_HEADER_SIZE) {
 		verbose(VERB_DETAIL, "request too short, discarded");
+		return -1;
+	}
+	if(ldns_buffer_limit(pkt) > NORMAL_UDP_SIZE && 
+		worker->daemon->cfg->harden_large_queries) {
+		verbose(VERB_DETAIL, "request too large, discarded");
 		return -1;
 	}
 	if(LDNS_QR_WIRE(ldns_buffer_begin(pkt))) {
@@ -525,7 +534,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 		log_err("handle request called with err=%d", error);
 		return 0;
 	}
-	if((ret=worker_check_request(c->buffer)) != 0) {
+	if((ret=worker_check_request(c->buffer, worker)) != 0) {
 		verbose(VERB_ALGO, "worker check request: bad query.");
 		if(ret != -1) {
 			LDNS_QR_SET(ldns_buffer_begin(c->buffer));
@@ -570,6 +579,12 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 			ldns_buffer_read_u16_at(c->buffer, 2), &qinfo);
 		attach_edns_record(c->buffer, &edns);
 		return 1;
+	}
+	if(edns.edns_present && edns.udp_size < NORMAL_UDP_SIZE &&
+		worker->daemon->cfg->harden_short_bufsize) {
+		verbose(VERB_DETAIL, "worker request: EDNS bufsize %d ignored",
+			(int)edns.udp_size);
+		edns.udp_size = NORMAL_UDP_SIZE;
 	}
 	if(edns.edns_present && edns.udp_size < LDNS_HEADER_SIZE) {
 		verbose(VERB_ALGO, "worker request: edns is too small.");

@@ -110,6 +110,11 @@ struct config_file {
 	/** the stub definitions, linked list */
 	struct config_stub* stubs;
 
+	/** harden against very small edns buffer sizes */
+	int harden_short_bufsize;
+	/** harden against very large query sizes */
+	int harden_large_queries;
+
 	/** chrootdir, if not "" or chroot will be done */
 	char* chrootdir;
 	/** username to change to, if not "". */
