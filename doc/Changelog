@@ -6,6 +6,9 @@
 	- target-fetch-policy: "3 2 1 0 0" config setting.
 	- fixup queries answered without RD bit (for root prime results).
 	- refuse AXFR and IXFR requests.
+	- fixup RD flag in error reply from iterator. fixup RA flag from
+	  worker error reply.
+	- fixup encoding of very short edns buffer sizes, now sets TC bit.
 
 18 June 2007: Wouter
 	- same, move subqueries to slumber list when first has resolved.

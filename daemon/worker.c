@@ -157,7 +157,7 @@ replyerror_fillbuf(int r, struct comm_reply* repinfo, uint16_t id,
 	
 	ldns_buffer_clear(buf);
 	ldns_buffer_write(buf, &id, sizeof(uint16_t));
-	flags = (uint16_t)(BIT_QR | r); /* QR and retcode*/
+	flags = (uint16_t)(BIT_QR | BIT_RA | r); /* QR and retcode*/
 	flags |= (qflags & (BIT_RD|BIT_CD)); /* copy RD and CD bit */
 	ldns_buffer_write_u16(buf, flags);
 	flags = 1;
@@ -569,6 +569,16 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 			*(uint16_t*)ldns_buffer_begin(c->buffer),
 			ldns_buffer_read_u16_at(c->buffer, 2), &qinfo);
 		attach_edns_record(c->buffer, &edns);
+		return 1;
+	}
+	if(edns.edns_present && edns.udp_size < LDNS_HEADER_SIZE) {
+		verbose(VERB_ALGO, "worker request: edns is too small.");
+		LDNS_QR_SET(ldns_buffer_begin(c->buffer));
+		LDNS_TC_SET(ldns_buffer_begin(c->buffer));
+		LDNS_RCODE_SET(ldns_buffer_begin(c->buffer), 
+			LDNS_RCODE_SERVFAIL);
+		ldns_buffer_set_position(c->buffer, LDNS_HEADER_SIZE);
+		ldns_buffer_flip(c->buffer);
 		return 1;
 	}
 	if(c->type != comm_udp)

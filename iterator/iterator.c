@@ -255,10 +255,12 @@ error_response(struct module_qstate* qstate, int id, int rcode)
 	verbose(VERB_DETAIL, "return error response %s", 
 		ldns_lookup_by_id(ldns_rcodes, rcode)?
 		ldns_lookup_by_id(ldns_rcodes, rcode)->name:"??");
-	if(iq && iq->orig_qname) {
-		/* encode original query */
-		qstate->qinfo.qname = iq->orig_qname;
-		qstate->qinfo.qname_len = iq->orig_qnamelen;
+	if(iq) {
+		if(iq->orig_qname) {
+			/* encode original query */
+			qstate->qinfo.qname = iq->orig_qname;
+			qstate->qinfo.qname_len = iq->orig_qnamelen;
+		}
 		qstate->query_flags = iq->orig_qflags;
 	}
 	qinfo_query_encode(qstate->buf, &qstate->qinfo);

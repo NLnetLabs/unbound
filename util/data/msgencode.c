@@ -568,7 +568,26 @@ insert_section(struct reply_info* rep, size_t num_rrsets, uint16_t* num_rrs,
 	return RETVAL_OK;
 }
 
-int reply_info_encode(struct query_info* qinfo, struct reply_info* rep, 
+/** store query section in wireformat buffer, return RETVAL */
+static int
+insert_query(struct query_info* qinfo, struct compress_tree_node* tree, 
+	ldns_buffer* buffer, struct region* region)
+{
+	if(ldns_buffer_remaining(buffer) < 
+		qinfo->qname_len+sizeof(uint16_t)*2)
+		return RETVAL_TRUNC; /* buffer too small */
+	if(!compress_tree_store(&tree, qinfo->qname, 
+		dname_count_labels(qinfo->qname), 
+		ldns_buffer_position(buffer), region, NULL))
+		return RETVAL_OUTMEM;
+	ldns_buffer_write(buffer, qinfo->qname, qinfo->qname_len);
+	ldns_buffer_write_u16(buffer, qinfo->qtype);
+	ldns_buffer_write_u16(buffer, qinfo->qclass);
+	return RETVAL_OK;
+}
+
+int 
+reply_info_encode(struct query_info* qinfo, struct reply_info* rep, 
 	uint16_t id, uint16_t flags, ldns_buffer* buffer, uint32_t timenow, 
 	region_type* region, uint16_t udpsize, int dnssec)
 {
@@ -590,16 +609,17 @@ int reply_info_encode(struct query_info* qinfo, struct reply_info* rep,
 
 	/* insert query section */
 	if(rep->qdcount) {
-		if(ldns_buffer_remaining(buffer) < 
-			qinfo->qname_len+sizeof(uint16_t)*2)
-			return 0; /* buffer too small */
-		if(!compress_tree_store(&tree, qinfo->qname, 
-			dname_count_labels(qinfo->qname), 
-			ldns_buffer_position(buffer), region, NULL))
+		if((r=insert_query(qinfo, tree, buffer, region)) != 
+			RETVAL_OK) {
+			if(r == RETVAL_TRUNC) {
+				/* create truncated message */
+				ldns_buffer_write_u16_at(buffer, 4, 0);
+				LDNS_TC_SET(ldns_buffer_begin(buffer));
+				ldns_buffer_flip(buffer);
+				return 1;
+			}
 			return 0;
-		ldns_buffer_write(buffer, qinfo->qname, qinfo->qname_len);
-		ldns_buffer_write_u16(buffer, qinfo->qtype);
-		ldns_buffer_write_u16(buffer, qinfo->qclass);
+		}
 	}
 
 	/* insert answer section */
@@ -689,6 +709,7 @@ reply_info_answer_encode(struct query_info* qinf, struct reply_info* rep,
 	struct edns_data* edns, int dnssec)
 {
 	uint16_t flags;
+	int attach_edns = 1;
 
 	if(!cached) {
 		/* original flags, copy RD bit from query. */
@@ -698,15 +719,23 @@ reply_info_answer_encode(struct query_info* qinf, struct reply_info* rep,
 		flags = (rep->flags & ~BIT_AA) | (qflags & (BIT_RD|BIT_CD)); 
 	}
 	log_assert(flags & BIT_QR); /* QR bit must be on in our replies */
-	if(udpsize < LDNS_HEADER_SIZE + calc_edns_field_size(edns))
-		return 0; /* packet too small to contain edns... */
-	udpsize -= calc_edns_field_size(edns);
+	if(udpsize < LDNS_HEADER_SIZE)
+		return 0;
+	if(udpsize < LDNS_HEADER_SIZE + calc_edns_field_size(edns)) {
+		/* packet too small to contain edns, omit it. */
+		attach_edns = 0;
+	} else {
+		/* reserve space for edns record */
+		udpsize -= calc_edns_field_size(edns);
+	}
+
 	if(!reply_info_encode(qinf, rep, id, flags, pkt, timenow, region,
 		udpsize, dnssec)) {
 		log_err("reply encode: out of memory");
 		return 0;
 	}
-	attach_edns_record(pkt, edns);
+	if(attach_edns)
+		attach_edns_record(pkt, edns);
 	return 1;
 }
 
