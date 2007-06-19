@@ -829,6 +829,9 @@ processInitRequest3(struct module_qstate* qstate, struct iter_qstate* iq)
 	 * cached referral as the response. */
 	if(!(qstate->query_flags & BIT_RD)) {
 		iq->response = iq->deleg_msg;
+		if(verbosity >= VERB_ALGO)
+			log_dns_msg("no RD requested, using delegation msg", 
+				&iq->response->qinfo, iq->response->rep);
 		return final_state(iq);
 	}
 
@@ -1285,8 +1288,8 @@ processPrimeResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 	delegpt_log(dp);
 	foriq = (struct iter_qstate*)forq->minfo[id];
 	foriq->dp = dp;
-	foriq->response = dns_copy_msg(iq->response, forq->region);
-	if(!foriq->response) {
+	foriq->deleg_msg = dns_copy_msg(iq->response, forq->region);
+	if(!foriq->deleg_msg) {
 		log_err("copy prime response: out of memory");
 		return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
 	}

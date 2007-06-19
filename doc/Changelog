@@ -4,6 +4,8 @@
 	- uncapped timeout for server selection, so that very fast or slow
 	  servers will stand out from the rest.
 	- target-fetch-policy: "3 2 1 0 0" config setting.
+	- fixup queries answered without RD bit (for root prime results).
+	- refuse AXFR and IXFR requests.
 
 18 June 2007: Wouter
 	- same, move subqueries to slumber list when first has resolved.

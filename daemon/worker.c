@@ -544,6 +544,14 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 			LDNS_RCODE_FORMERR);
 		return 1;
 	}
+	if(qinfo.qtype == LDNS_RR_TYPE_AXFR || 
+		qinfo.qtype == LDNS_RR_TYPE_IXFR) {
+		verbose(VERB_ALGO, "worker request: refused zone transfer.");
+		LDNS_QR_SET(ldns_buffer_begin(c->buffer));
+		LDNS_RCODE_SET(ldns_buffer_begin(c->buffer), 
+			LDNS_RCODE_REFUSED);
+		return 1;
+	}
 	h = query_info_hash(&qinfo);
 	if((ret=parse_edns_from_pkt(c->buffer, &edns)) != 0) {
 		verbose(VERB_ALGO, "worker parse edns: formerror.");
