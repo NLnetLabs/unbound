@@ -833,6 +833,8 @@ worker_init(struct worker* worker, struct config_file *cfg,
 		worker_delete(worker);
 		return 0;
 	}
+	outside_network_set_secondary_buffer(worker->back, 
+		worker->front->udp_buff);
 	if(worker->thread_num != 0) {
 		/* start listening to commands */
 		if(!(worker->cmd_com=comm_point_create_local(worker->base, 

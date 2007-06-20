@@ -472,6 +472,7 @@ outside_network_create(struct comm_base *base, size_t bufsize,
 	outnet->num_tcp = num_tcp;
 	outnet->infra = infra;
 	outnet->rnd = rnd;
+	outnet->udp_second = 0;
 #ifndef INET6
 	do_ip6 = 0;
 #endif
@@ -530,6 +531,13 @@ outside_network_create(struct comm_base *base, size_t bufsize,
 		outnet->num_udp4 = done_4;
 	}
 	return outnet;
+}
+
+void 
+outside_network_set_secondary_buffer(struct outside_network* outnet,
+        ldns_buffer* buf)
+{
+	outnet->udp_second = buf;
 }
 
 /** helper pending delete */
@@ -998,6 +1006,7 @@ serviced_callbacks(struct serviced_query* sq, int error, struct comm_point* c,
 	struct comm_reply* rep)
 {
 	struct service_callback* p = sq->cblist, *n;
+	int dobackup = (sq->cblist && sq->cblist->next); /* >1 cb*/
 	rbnode_t* rem;
 	/* remove from tree, and schedule for deletion, so that callbacks
 	 * can safely deregister themselves and even create new serviced
@@ -1005,8 +1014,28 @@ serviced_callbacks(struct serviced_query* sq, int error, struct comm_point* c,
 	rem = rbtree_delete(sq->outnet->serviced, sq);
 	log_assert(rem); /* should have been present */
 	sq->to_be_deleted = 1; 
+	if(dobackup) {
+		/* make a backup of the query, since the querystate processing
+		 * may send outgoing queries that overwrite the buffer.
+		 * use secondary buffer to store the query.
+		 * This is a data copy, but faster than packet to server */
+		log_assert(ldns_buffer_capacity(sq->outnet->udp_second) >=
+			ldns_buffer_limit(c->buffer));
+		ldns_buffer_clear(sq->outnet->udp_second);
+		ldns_buffer_write(sq->outnet->udp_second, 
+			ldns_buffer_begin(c->buffer),
+			ldns_buffer_limit(c->buffer));
+		ldns_buffer_flip(sq->outnet->udp_second);
+	}
 	while(p) {
 		n = p->next;
+		if(dobackup) {
+			ldns_buffer_clear(c->buffer);
+			ldns_buffer_write(c->buffer, 
+			ldns_buffer_begin(sq->outnet->udp_second),
+			ldns_buffer_limit(sq->outnet->udp_second));
+			ldns_buffer_flip(c->buffer);
+		}
 		(void)(*p->cb)(c, p->cb_arg, error, rep);
 		p = n;
 	}

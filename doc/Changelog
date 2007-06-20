@@ -7,6 +7,7 @@
 	- typo in check caused subquery errors to be ignored, fixed.
 	- make lint happy about rlim_t.
 	- freeup of modules after freeup of module-states.
+	- duplicate replies work, this uses secondary udp buffer in outnet.
 
 19 June 2007: Wouter
 	- nicer layout in stats.c, review 0.3 change.
