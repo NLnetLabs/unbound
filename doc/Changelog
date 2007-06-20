@@ -6,6 +6,7 @@
 	- set num target queries to 0 when you move them to slumber list.
 	- typo in check caused subquery errors to be ignored, fixed.
 	- make lint happy about rlim_t.
+	- freeup of modules after freeup of module-states.
 
 19 June 2007: Wouter
 	- nicer layout in stats.c, review 0.3 change.

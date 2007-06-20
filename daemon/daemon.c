@@ -125,6 +125,7 @@ daemon_init()
 	signal_handling_record();
 	checklock_start();
 	daemon->need_to_exit = 0;
+	daemon->num_modules = 0;
 	if(!(daemon->env = (struct module_env*)calloc(1, 
 		sizeof(*daemon->env)))) {
 		free(daemon);
@@ -148,12 +149,30 @@ daemon_open_shared_ports(struct daemon* daemon)
 }
 
 /**
+ * Desetup the modules, deinit, delete.
+ * @param daemon: the daemon.
+ */
+static void
+daemon_desetup_modules(struct daemon* daemon)
+{
+	int i;
+	for(i=0; i<daemon->num_modules; i++) {
+		(*daemon->modfunc[i]->deinit)(daemon->env, i);
+	}
+	daemon->num_modules = 0;
+	free(daemon->modfunc);
+	daemon->modfunc = 0;
+}
+
+/**
  * Setup modules. Assigns ids and calls module_init.
  * @param daemon: the daemon
  */
 static void daemon_setup_modules(struct daemon* daemon)
 {
 	int i;
+	if(daemon->num_modules != 0)
+		daemon_desetup_modules(daemon);
 	/* fixed setup of the modules */
 	daemon->num_modules = 1;
 	daemon->modfunc = (struct module_func_block**)calloc((size_t)
@@ -290,22 +309,6 @@ daemon_stop_others(struct daemon* daemon)
 	}
 }
 
-/**
- * Desetup the modules, deinit, delete.
- * @param daemon: the daemon.
- */
-static void
-daemon_desetup_modules(struct daemon* daemon)
-{
-	int i;
-	for(i=0; i<daemon->num_modules; i++) {
-		(*daemon->modfunc[i]->deinit)(daemon->env, i);
-	}
-	daemon->num_modules = 0;
-	free(daemon->modfunc);
-	daemon->modfunc = 0;
-}
-
 void 
 daemon_fork(struct daemon* daemon)
 {
@@ -339,9 +342,6 @@ daemon_fork(struct daemon* daemon)
 	/* we exited! a signal happened! Stop other threads */
 	daemon_stop_others(daemon);
 
-	/* de-setup modules */
-	daemon_desetup_modules(daemon);
-
 	if(daemon->workers[0]->need_to_restart)
 		daemon->need_to_exit = 0;
 	else	daemon->need_to_exit = 1;
@@ -369,6 +369,7 @@ daemon_delete(struct daemon* daemon)
 {
 	if(!daemon)
 		return;
+	daemon_desetup_modules(daemon);
 	listening_ports_free(daemon->ports);
 	if(daemon->env) {
 		slabhash_delete(daemon->env->msg_cache);
