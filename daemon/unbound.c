@@ -55,6 +55,9 @@
 #include <pwd.h>
 #include <sys/resource.h>
 
+/** if we want to enable coredumps after daemonize */
+static int enable_coredumps = 0;
+
 /** print usage. */
 static void usage()
 {
@@ -63,6 +66,7 @@ static void usage()
 	printf("-h	this help\n");
 	printf("-c file	config file to read, unbound.conf(5).\n");
 	printf("-d	do not fork into the background.\n");
+	printf("-C	try to enable coredumps after fork into background.\n");
 	printf("-v	verbose (multiple times increase verbosity)\n");
 	printf("Version %s\n", PACKAGE_VERSION);
 	printf("BSD licensed, see LICENSE in source package for details.\n");
@@ -92,6 +96,8 @@ checkrlimits(struct config_file* cfg)
 		log_warn("getrlimit: %s", strerror(errno));
 		return;
 	}
+	if(rlim.rlim_cur == RLIM_INFINITY)
+		return;
 	if((size_t)rlim.rlim_cur < total) {
 		log_err("Not enough sockets available. Increase "
 			"ulimit(open files).");
@@ -101,6 +107,49 @@ checkrlimits(struct config_file* cfg)
 			(unsigned)total, (unsigned)rlim.rlim_cur);
 		fatal_exit("Not enough file descriptors available");
 	}
+}
+
+/** printout rlimit prettily */
+static void
+print_rlim_pretty(const char* str, struct rlimit* rlim)
+{
+	if(rlim->rlim_cur == RLIM_INFINITY && rlim->rlim_max == RLIM_INFINITY)
+		log_info("%s unlimited, max unlimited", str);
+	else if(rlim->rlim_max == RLIM_INFINITY)
+		log_info("%s %d, max unlimited", str, (int)rlim->rlim_cur);
+	else if(rlim->rlim_cur == RLIM_INFINITY)
+		log_info("%s unlimited, max %d", str, (int)rlim->rlim_max);
+	else	log_info("%s %d, max %d", str, (int)rlim->rlim_cur, 
+			(int)rlim->rlim_max);
+}
+
+/** try to enable coredumps */
+static void
+do_coredump_enable()
+{
+	struct rlimit rlim;
+	if(getrlimit(RLIMIT_CORE, &rlim) < 0) {
+		log_warn("getrlimit(core): %s", strerror(errno));
+		return;
+	}
+	print_rlim_pretty("rlimit(core) is", &rlim);
+	if(rlim.rlim_cur == RLIM_INFINITY && rlim.rlim_max == RLIM_INFINITY) {
+		return;
+	}
+	if(rlim.rlim_cur > 10000) {
+		return;
+	}
+	rlim.rlim_cur = RLIM_INFINITY;
+	rlim.rlim_max = RLIM_INFINITY;
+	if(setrlimit(RLIMIT_CORE, &rlim) < 0) {
+		log_warn("setrlimit(core): %s", strerror(errno));
+		return;
+	}
+	if(getrlimit(RLIMIT_CORE, &rlim) < 0) {
+		log_warn("getrlimit(core, upd): %s", strerror(errno));
+		return;
+	}
+	print_rlim_pretty("updated rlimit(core) is", &rlim);
 }
 
 /** to changedir, logfile */
@@ -281,6 +330,8 @@ do_chroot(struct daemon* daemon, struct config_file* cfg, int debug_mode)
 	log_init(cfg->logfile);
 	if(!debug_mode && cfg->do_daemonize) {
 		detach(cfg);
+		if(enable_coredumps)
+			do_coredump_enable();
 	}
 	if(cfg->pidfile && cfg->pidfile[0]) {
 		writepid(cfg->pidfile, getpid());
@@ -359,8 +410,11 @@ main(int argc, char* argv[])
 
 	log_init(NULL);
 	/* parse the options */
-	while( (c=getopt(argc, argv, "c:dhv")) != -1) {
+	while( (c=getopt(argc, argv, "Cc:dhv")) != -1) {
 		switch(c) {
+		case 'C':
+			enable_coredumps = 1;
+			break;
 		case 'c':
 			cfgfile = optarg;
 			break;

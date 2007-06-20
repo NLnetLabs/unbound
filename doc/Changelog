@@ -1,3 +1,7 @@
+20 June 2007: Wouter
+	- new -C option to enable coredumps after forking away.
+	- doc update.
+
 19 June 2007: Wouter
 	- nicer layout in stats.c, review 0.3 change.
 	- spelling improvement, review 0.3 change.
