@@ -171,6 +171,9 @@ struct rr_parse {
 	 * its dname, type and class are the same and stored for the rrset.
 	 */
 	uint8_t* ttl_data;
+	/** true if ttl_data is not part of the packet, but elsewhere in mem.
+	 * Set for generated CNAMEs for DNAMEs. */
+	int outside_packet;
 	/** the length of the rdata if allocated (with no dname compression)*/
 	size_t size;
 	/** next in list of RRs. */

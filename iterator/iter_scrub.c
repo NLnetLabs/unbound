@@ -248,6 +248,7 @@ synth_cname_rrset(uint8_t** sname, size_t* snamelen, uint8_t* alias,
 	cn->hash=pkt_hash_rrset(pkt, cn->dname, cn->type, cn->rrset_class, 0);
 	/* allocate TTL + rdatalen + uncompressed dname */
 	memset(cn->rr_first, 0, sizeof(struct rr_parse));
+	cn->rr_first->outside_packet = 1;
 	cn->rr_first->ttl_data = (uint8_t*)region_alloc(region, 
 		sizeof(uint32_t)+sizeof(uint16_t)+aliaslen);
 	if(!cn->rr_first->ttl_data)
@@ -361,7 +362,7 @@ scrub_normalize(ldns_buffer* pkt, struct msg_parse* msg,
 			}
 			/* synth a CNAME rrset */
 			prev = synth_cname_rrset(&sname, &snamelen, alias, 
-				aliaslen, region, msg, rrset, prev, nx, pkt);
+				aliaslen, region, msg, rrset, rrset, nx, pkt);
 			if(!prev) {
 				log_err("out of memory synthesizing CNAME");
 				return 0;

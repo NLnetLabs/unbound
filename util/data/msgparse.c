@@ -314,6 +314,7 @@ moveover_rrsigs(ldns_buffer* pkt, region_type* region,
 				/* new */
 				insert = (struct rr_parse*)region_alloc(region,
 					sizeof(struct rr_parse));
+				insert->outside_packet = 0;
 				insert->ttl_data = sig->ttl_data;
 				insert->size = sig->size;
 			} else {
@@ -718,6 +719,7 @@ add_rr_to_rrset(struct rrset_parse* rrset, ldns_buffer* pkt,
 	/* create rr */
 	if(!(rr = (struct rr_parse*)region_alloc(region, sizeof(*rr))))
 		return LDNS_RCODE_SERVFAIL;
+	rr->outside_packet = 0;
 	rr->ttl_data = ldns_buffer_current(pkt);
 	rr->next = 0;
 	if(type == LDNS_RR_TYPE_RRSIG && rrset->type != LDNS_RR_TYPE_RRSIG) {

@@ -148,15 +148,22 @@ rdata_copy(ldns_buffer* pkt, struct packed_rrset_data* data, uint8_t* to,
 {
 	uint16_t pkt_len;
 	const ldns_rr_descriptor* desc;
-	ldns_buffer_set_position(pkt, (size_t)
-		(rr->ttl_data - ldns_buffer_begin(pkt)));
-	log_assert(ldns_buffer_remaining(pkt) >= 6 /* ttl + rdatalen */);
-	*rr_ttl = ldns_buffer_read_u32(pkt);
+
+	*rr_ttl = ldns_read_uint32(rr->ttl_data);
 	/* RFC 2181 Section 8. if msb of ttl is set treat as if zero. */
 	if(*rr_ttl & 0x80000000U)
 		*rr_ttl = 0;
 	if(*rr_ttl < data->ttl)
 		data->ttl = *rr_ttl;
+
+	if(rr->outside_packet) {
+		/* uncompressed already, only needs copy */
+		memmove(to, rr->ttl_data+sizeof(uint32_t), rr->size);
+		return 1;
+	}
+
+	ldns_buffer_set_position(pkt, (size_t)
+		(rr->ttl_data - ldns_buffer_begin(pkt) + sizeof(uint32_t)));
 	/* insert decompressed size into rdata len stored in memory */
 	/* -2 because rdatalen bytes are not included. */
 	pkt_len = htons(rr->size - 2);
