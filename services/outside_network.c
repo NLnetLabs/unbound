@@ -1010,6 +1010,7 @@ serviced_callbacks(struct serviced_query* sq, int error, struct comm_point* c,
 		(void)(*p->cb)(c, p->cb_arg, error, rep);
 		p = n;
 	}
+	log_assert(sq->cblist == NULL);
 	serviced_delete(sq);
 }
 

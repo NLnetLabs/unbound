@@ -3,6 +3,9 @@
 	- doc update.
 	- fixup CNAME generation by scrubber, and memory allocation of it.
 	- fixup deletion of serviced queries when all callbacks delete too.
+	- set num target queries to 0 when you move them to slumber list.
+	- typo in check caused subquery errors to be ignored, fixed.
+	- make lint happy about rlim_t.
 
 19 June 2007: Wouter
 	- nicer layout in stats.c, review 0.3 change.

@@ -389,6 +389,7 @@ worker_handle_service_reply(struct comm_point* c, void* arg, int error,
 		|| LDNS_QDCOUNT(ldns_buffer_begin(c->buffer)) > 1) {
 		/* error becomes timeout for the module as if this reply
 		 * never arrived. */
+		verbose(VERB_ALGO, "worker: bad reply handled as timeout");
 		worker_process_query(worker, w, e->qstate, 
 			module_event_timeout, e);
 		return 0;

@@ -96,7 +96,7 @@ checkrlimits(struct config_file* cfg)
 		log_warn("getrlimit: %s", strerror(errno));
 		return;
 	}
-	if(rlim.rlim_cur == RLIM_INFINITY)
+	if(rlim.rlim_cur == (rlim_t)RLIM_INFINITY)
 		return;
 	if((size_t)rlim.rlim_cur < total) {
 		log_err("Not enough sockets available. Increase "
@@ -113,11 +113,12 @@ checkrlimits(struct config_file* cfg)
 static void
 print_rlim_pretty(const char* str, struct rlimit* rlim)
 {
-	if(rlim->rlim_cur == RLIM_INFINITY && rlim->rlim_max == RLIM_INFINITY)
+	if(rlim->rlim_cur == (rlim_t)RLIM_INFINITY && 
+		rlim->rlim_max == (rlim_t)RLIM_INFINITY)
 		log_info("%s unlimited, max unlimited", str);
-	else if(rlim->rlim_max == RLIM_INFINITY)
+	else if(rlim->rlim_max == (rlim_t)RLIM_INFINITY)
 		log_info("%s %d, max unlimited", str, (int)rlim->rlim_cur);
-	else if(rlim->rlim_cur == RLIM_INFINITY)
+	else if(rlim->rlim_cur == (rlim_t)RLIM_INFINITY)
 		log_info("%s unlimited, max %d", str, (int)rlim->rlim_max);
 	else	log_info("%s %d, max %d", str, (int)rlim->rlim_cur, 
 			(int)rlim->rlim_max);
@@ -133,14 +134,15 @@ do_coredump_enable()
 		return;
 	}
 	print_rlim_pretty("rlimit(core) is", &rlim);
-	if(rlim.rlim_cur == RLIM_INFINITY && rlim.rlim_max == RLIM_INFINITY) {
+	if(rlim.rlim_cur == (rlim_t)RLIM_INFINITY && 
+		rlim.rlim_max == (rlim_t)RLIM_INFINITY) {
 		return;
 	}
-	if(rlim.rlim_cur > 10000) {
+	if(rlim.rlim_cur > (rlim_t)10000) {
 		return;
 	}
-	rlim.rlim_cur = RLIM_INFINITY;
-	rlim.rlim_max = RLIM_INFINITY;
+	rlim.rlim_cur = (rlim_t)RLIM_INFINITY;
+	rlim.rlim_max = (rlim_t)RLIM_INFINITY;
 	if(setrlimit(RLIMIT_CORE, &rlim) < 0) {
 		log_warn("setrlimit(core): %s", strerror(errno));
 		return;

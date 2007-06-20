@@ -1081,6 +1081,7 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 	/* move other targets to slumber list */
 	if(iq->num_target_queries>0) {
 		(*qstate->env->remove_subqueries)(qstate);
+		iq->num_target_queries = 0;
 	}
 
 	/* We have a valid target. */
@@ -1143,7 +1144,9 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 			return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
 		/* close down outstanding requests to be discarded */
 		outbound_list_clear(&iq->outlist);
+		iq->num_current_queries = 0;
 		(*qstate->env->remove_subqueries)(qstate);
+		iq->num_target_queries = 0;
 		return final_state(iq);
 	} else if(type == RESPONSE_TYPE_REFERRAL) {
 		/* REFERRAL type responses get a reset of the 
@@ -1161,8 +1164,6 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		if(!iq->dp)
 			return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
 		delegpt_log(iq->dp);
-		iq->num_current_queries = 0;
-		iq->num_target_queries = 0;
 		/* Count this as a referral. */
 		iq->referral_count++;
 
@@ -1171,7 +1172,9 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		 * handled? Say by a subquery that inherits the outbound_entry.
 		 */
 		outbound_list_clear(&iq->outlist);
+		iq->num_current_queries = 0;
 		(*qstate->env->remove_subqueries)(qstate);
+		iq->num_target_queries = 0;
 		verbose(VERB_ALGO, "cleared outbound list for next round");
 		return next_state(iq, QUERYTARGETS_STATE);
 	} else if(type == RESPONSE_TYPE_CNAME) {
@@ -1201,8 +1204,6 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		/* Clear the query state, since this is a query restart. */
 		iq->deleg_msg = NULL;
 		iq->dp = NULL;
-		iq->num_current_queries = 0;
-		iq->num_target_queries = 0;
 		/* Note the query restart. */
 		iq->query_restart_count++;
 
@@ -1211,7 +1212,9 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		 * handled? Say by a subquery that inherits the outbound_entry.
 		 */
 		outbound_list_clear(&iq->outlist);
+		iq->num_current_queries = 0;
 		(*qstate->env->remove_subqueries)(qstate);
+		iq->num_target_queries = 0;
 		verbose(VERB_ALGO, "cleared outbound list for query restart");
 		/* go to INIT_REQUEST_STATE for new qname. */
 		return next_state(iq, INIT_REQUEST_STATE);
@@ -1346,6 +1349,7 @@ processTargetResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		/* FIXME: maybe store this nameserver address in the cache
 		 * anyways? */
 		/* If not, just stop processing this event */
+		verbose(VERB_ALGO, "subq: parent not interested anymore");
 		return 0;
 	}
 
@@ -1590,12 +1594,15 @@ process_subq_error(struct module_qstate* qstate, struct iter_qstate* iq,
 		return;
 	}
 	/* see if we are still interested in this subquery result */
-	
-	if(!iq->dp)
+	if(iq->dp)
 		dpns = delegpt_find_ns(iq->dp, errinf.qname, 
 			errinf.qname_len);
 	if(!dpns) {
 		/* not interested */
+		verbose(VERB_ALGO, "got subq error, but not interested");
+		log_nametypeclass(VERB_ALGO, "errname", 
+			errinf.qname, errinf.qtype, errinf.qclass);
+		delegpt_log(iq->dp);
 		return;
 	}
 	dpns->resolved = 1; /* mark as failed */
@@ -1672,6 +1679,7 @@ iter_clear(struct module_qstate* qstate, int id)
 	}
 	if(iq) {
 		outbound_list_clear(&iq->outlist);
+		iq->num_current_queries = 0;
 	}
 	qstate->minfo[id] = NULL;
 }
