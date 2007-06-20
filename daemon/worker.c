@@ -147,6 +147,8 @@ req_release(struct work_query* w)
 	worker->num_requests --;
 	w->next = worker->free_queries;
 	worker->free_queries = w;
+	verbose(VERB_ALGO, "released query to pool, %d in use", 
+		(int)worker->num_requests);
 }
 
 /** create error and fill into buffer */
@@ -624,6 +626,8 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 		   that started before we performed listen_pushback */
 		verbose(VERB_DETAIL, "worker: too many incoming requests "
 			"active. dropping incoming query.");
+		verbose(VERB_ALGO, "currently servicing %d of %d queries", 
+			(int)worker->num_requests, (int)worker->request_size);
 		worker->stats.num_query_list_exceeded++;
 		comm_point_drop_reply(repinfo);
 		query_info_clear(&qinfo);
