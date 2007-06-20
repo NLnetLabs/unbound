@@ -2,6 +2,7 @@
 	- new -C option to enable coredumps after forking away.
 	- doc update.
 	- fixup CNAME generation by scrubber, and memory allocation of it.
+	- fixup deletion of serviced queries when all callbacks delete too.
 
 19 June 2007: Wouter
 	- nicer layout in stats.c, review 0.3 change.

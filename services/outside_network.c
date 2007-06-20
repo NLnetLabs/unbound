@@ -884,6 +884,7 @@ serviced_create(struct outside_network* outnet, ldns_buffer* buff, int dnssec,
 	sq->pending = NULL;
 	sq->status = serviced_initial;
 	sq->retry = 0;
+	sq->to_be_deleted = 0;
 	ins = rbtree_insert(outnet->serviced, &sq->node);
 	log_assert(ins != NULL); /* must not be already present */
 	return sq;
@@ -997,11 +998,19 @@ serviced_callbacks(struct serviced_query* sq, int error, struct comm_point* c,
 	struct comm_reply* rep)
 {
 	struct service_callback* p = sq->cblist, *n;
+	rbnode_t* rem;
+	/* remove from tree, and schedule for deletion, so that callbacks
+	 * can safely deregister themselves and even create new serviced
+	 * queries that are identical to this one. */
+	rem = rbtree_delete(sq->outnet->serviced, sq);
+	log_assert(rem); /* should have been present */
+	sq->to_be_deleted = 1; 
 	while(p) {
 		n = p->next;
 		(void)(*p->cb)(c, p->cb_arg, error, rep);
 		p = n;
 	}
+	serviced_delete(sq);
 }
 
 /** TCP reply or error callback for serviced queries */
@@ -1030,9 +1039,7 @@ serviced_tcp_callback(struct comm_point* c, void* arg, int error,
 	}
 	memcpy(&rep->addr, &sq->addr, sq->addrlen);
 	rep->addrlen = sq->addrlen;
-	(void)rbtree_delete(sq->outnet->serviced, sq);
 	serviced_callbacks(sq, error, c, rep);
-	serviced_delete(sq);
 	return 0;
 }
 
@@ -1048,9 +1055,7 @@ serviced_tcp_initiate(struct outside_network* outnet,
 		/* delete from tree so that a retry by above layer does not
 		 * clash with this entry */
 		log_err("serviced_tcp_initiate: failed to send tcp query");
-		(void)rbtree_delete(outnet->serviced, sq);
 		serviced_callbacks(sq, NETEVENT_CLOSED, NULL, NULL);
-		serviced_delete(sq);
 	}
 }
 
@@ -1076,9 +1081,7 @@ serviced_udp_callback(struct comm_point* c, void* arg, int error,
 			log_name_addr(VERB_ALGO, "retry query", sq->qbuf+10,
 				&sq->addr, sq->addrlen);
 			if(!serviced_udp_send(sq, c->buffer)) {
-				(void)rbtree_delete(outnet->serviced, sq);
 				serviced_callbacks(sq, NETEVENT_CLOSED, c, rep);
-				serviced_delete(sq);
 			}
 			return 0;
 		}
@@ -1096,9 +1099,7 @@ serviced_udp_callback(struct comm_point* c, void* arg, int error,
 		sq->status = serviced_query_UDP;
 		sq->retry = 0;
 		if(!serviced_udp_send(sq, c->buffer)) {
-			(void)rbtree_delete(outnet->serviced, sq);
 			serviced_callbacks(sq, NETEVENT_CLOSED, c, rep);
-			serviced_delete(sq);
 		}
 		return 0;
 	}
@@ -1124,9 +1125,7 @@ serviced_udp_callback(struct comm_point* c, void* arg, int error,
 			roundtime, (time_t)now.tv_sec))
 			log_err("out of memory noting rtt.");
 	}
-	(void)rbtree_delete(outnet->serviced, sq);
 	serviced_callbacks(sq, error, c, rep);
-	serviced_delete(sq);
 	return 0;
 }
 
@@ -1209,8 +1208,11 @@ void outnet_serviced_query_stop(struct serviced_query* sq, void* cb_arg)
 	if(!sq) 
 		return;
 	callback_list_remove(sq, cb_arg);
-	if(!sq->cblist) {
-		if(rbtree_delete(sq->outnet->serviced, sq))
-			serviced_delete(sq); /* safe against double delete */
+	/* if callbacks() routine scheduled deletion, let it do that */
+	if(!sq->cblist && !sq->to_be_deleted) {
+		rbnode_t* rem;
+		rem = rbtree_delete(sq->outnet->serviced, sq);
+		log_assert(rem); /* should be present */
+		serviced_delete(sq); 
 	}
 }
