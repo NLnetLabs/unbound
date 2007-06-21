@@ -224,13 +224,13 @@ run_debug(struct module_qstate* p, int d)
 
 /** find runnable recursive */
 static struct module_qstate*
-find_run_in(struct module_qstate* p)
+find_run_in(struct module_qstate* pfirst)
 {
-	struct module_qstate* q;
-	for(p = p->subquery_first; p; p = p->subquery_next) {
+	struct module_qstate* q, *p;
+	for(p = pfirst; p; p = p->subquery_next) {
 		if(p->ext_state[p->curmod] == module_state_initial)
 			return p;
-		if((q=find_run_in(p)))
+		if((q=find_run_in(p->subquery_first)))
 			return q;
 	}
 	return NULL;
@@ -249,7 +249,10 @@ find_runnable(struct module_qstate* subq)
 		p = p->parent;
 	if(verbosity >= VERB_ALGO)
 		run_debug(p, 0);
-	return find_run_in(p);
+	p = find_run_in(p->subquery_first);
+	if(p) return p;
+	p = find_run_in(subq->env->worker->slumber_list);
+	return p;
 }
 
 /** process incoming request */
