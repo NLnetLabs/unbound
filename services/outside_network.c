@@ -1053,6 +1053,8 @@ serviced_tcp_callback(struct comm_point* c, void* arg, int error,
 	struct serviced_query* sq = (struct serviced_query*)arg;
 	struct comm_reply r2;
 	sq->pending = NULL; /* removed after this callback */
+	if(error != NETEVENT_NOERROR && verbosity >= VERB_DETAIL)
+		log_addr("tcp error for address", &sq->addr, sq->addrlen);
 	if(error==NETEVENT_NOERROR && LDNS_RCODE_WIRE(ldns_buffer_begin(
 		c->buffer)) == LDNS_RCODE_FORMERR && 
 		sq->status == serviced_query_TCP_EDNS) {
