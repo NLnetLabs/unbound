@@ -98,6 +98,13 @@ struct rbtree_t {
 rbtree_t *rbtree_create(int (*cmpf)(const void *, const void *));
 
 /** 
+ * Init a new tree (malloced by caller) with given key compare function. 
+ * @param rbtree: uninitialised memory for new tree, returned empty.
+ * @param cmpf: compare function (like strcmp) takes pointers to two keys.
+ */
+void rbtree_init(rbtree_t *rbtree, int (*cmpf)(const void *, const void *));
+
+/** 
  * Insert data into the tree. 
  * @param rbtree: tree to insert to.
  * @param data: element to insert. 

@@ -84,11 +84,18 @@ rbtree_create (int (*cmpf)(const void *, const void *))
 	}
 
 	/* Initialize it */
+	rbtree_init(rbtree, cmpf);
+
+	return rbtree;
+}
+
+void 
+rbtree_init(rbtree_t *rbtree, int (*cmpf)(const void *, const void *))
+{
+	/* Initialize it */
 	rbtree->root = RBTREE_NULL;
 	rbtree->count = 0;
 	rbtree->cmp = cmpf;
-
-	return rbtree;
 }
 
 /*

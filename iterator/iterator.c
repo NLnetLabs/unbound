@@ -111,7 +111,7 @@ iter_new(struct module_qstate* qstate, int id)
 	iq->priming_stub = 0;
 	iq->orig_qflags = qstate->query_flags;
 	/* remove all weird bits from the query flags */
-	qstate->query_flags &= (BIT_RD | BIT_CD);
+	qstate->query_flags &= BIT_RD;
 	outbound_list_init(&iq->outlist);
 	return 1;
 }
