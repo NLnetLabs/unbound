@@ -487,7 +487,7 @@ generate_sub_request(uint8_t* qname, size_t qnamelen, uint16_t qtype,
 		return NULL;
 	}
 	subq->env = qstate->env;
-	subq->work_info = qstate->work_info;
+	subq->work_info = NULL;
 	subq->parent = qstate;
 	module_subreq_insert(&qstate->subquery_first, subq);
 
