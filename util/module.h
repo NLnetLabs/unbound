@@ -304,13 +304,6 @@ void module_subreq_insert(struct module_qstate** head,
 	struct module_qstate* sub);
 
 /**
- * Calculate depth of subrequest
- * @param sub: the subrequest. parent point is used.
- * @return: depth > 0 for subrequests.
- */
-int module_subreq_depth(struct module_qstate* sub);
-
-/**
  * Calculate number of queries in the query list.
  * @param q: the start of the list, pass subquery_first.
  * @return: number, 0 if q was NULL.

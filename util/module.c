@@ -97,17 +97,6 @@ module_subreq_insert(struct module_qstate** head, struct module_qstate* sub)
 }
 
 int 
-module_subreq_depth(struct module_qstate* sub)
-{
-	int d = 0;
-	while(sub->parent) {
-		d++;
-		sub = sub->parent;
-	}
-	return d;
-}
-
-int 
 module_subreq_num(struct module_qstate* q)
 {
 	int n = 0;

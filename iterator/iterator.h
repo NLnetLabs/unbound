@@ -163,6 +163,13 @@ struct iter_qstate {
 	 */
 	enum iter_state final_state;
 
+	/** 
+	 * The depth of this query, this means the depth of recursion.
+	 * This address is needed for another query, which is an address
+	 * needed for another query, etc. Original client query has depth 0.
+	 */
+	int depth;
+
 	/**
 	 * The response
 	 */

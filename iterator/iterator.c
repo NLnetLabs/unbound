@@ -103,6 +103,7 @@ iter_new(struct module_qstate* qstate, int id)
 	iq->prepend_list = NULL;
 	iq->prepend_last = NULL;
 	iq->dp = NULL;
+	iq->depth = 0;
 	iq->num_target_queries = 0;
 	iq->num_current_queries = 0;
 	iq->query_restart_count = 0;
@@ -439,6 +440,7 @@ handle_cname_response(struct module_qstate* qstate, struct iter_qstate* iq,
  * @param qclass The query class for this request.
  * @param qstate The event that is generating this event.
  * @param id: module id.
+ * @param iq: The iterator state that is generating this event.
  * @param initial_state The initial response state (normally this
  *          is QUERY_RESP_STATE, unless it is known that the request won't
  *          need iterative processing
@@ -449,7 +451,8 @@ handle_cname_response(struct module_qstate* qstate, struct iter_qstate* iq,
 static struct module_qstate* 
 generate_sub_request(uint8_t* qname, size_t qnamelen, uint16_t qtype, 
 	uint16_t qclass, struct module_qstate* qstate, int id,
-	enum iter_state initial_state, enum iter_state final_state)
+	struct iter_qstate* iq, enum iter_state initial_state, 
+	enum iter_state final_state)
 {
 	struct module_qstate* subq = (struct module_qstate*)malloc(
 		sizeof(struct module_qstate));
@@ -495,6 +498,7 @@ generate_sub_request(uint8_t* qname, size_t qnamelen, uint16_t qtype,
 	memset(subiq, 0, sizeof(*subiq));
 	subiq->num_target_queries = 0;
 	subiq->num_current_queries = 0;
+	subiq->depth = iq->depth+1;
 	outbound_list_init(&subiq->outlist);
 	subiq->state = initial_state;
 	subiq->final_state = final_state;
@@ -516,13 +520,14 @@ generate_sub_request(uint8_t* qname, size_t qnamelen, uint16_t qtype,
 /**
  * Generate and send a root priming request.
  * @param qstate: the qtstate that triggered the need to prime.
+ * @param iq: iterator query state.
  * @param ie: iterator global state.
  * @param id: module id.
  * @param qclass: the class to prime.
  */
 static int
-prime_root(struct module_qstate* qstate, struct iter_env* ie, int id, 
-	uint16_t qclass)
+prime_root(struct module_qstate* qstate, struct iter_qstate* iq, 
+	struct iter_env* ie, int id, uint16_t qclass)
 {
 	struct delegpt* dp;
 	struct module_qstate* subq;
@@ -538,7 +543,7 @@ prime_root(struct module_qstate* qstate, struct iter_env* ie, int id,
 	/* Priming requests start at the QUERYTARGETS state, skipping 
 	 * the normal INIT state logic (which would cause an infloop). */
 	subq = generate_sub_request((uint8_t*)"\000", 1, LDNS_RR_TYPE_NS, 
-		qclass, qstate, id, QUERYTARGETS_STATE, PRIME_RESP_STATE);
+		qclass, qstate, id, iq, QUERYTARGETS_STATE, PRIME_RESP_STATE);
 	if(!subq) {
 		log_err("out of memory priming root");
 		return 0;
@@ -589,7 +594,7 @@ prime_stub(struct module_qstate* qstate, struct iter_qstate* iq,
 	/* Stub priming events start at the QUERYTARGETS state to avoid the
 	 * redundant INIT state processing. */
 	subq = generate_sub_request(stub_dp->name, stub_dp->namelen, 
-		LDNS_RR_TYPE_NS, qclass, qstate, id, 
+		LDNS_RR_TYPE_NS, qclass, qstate, id, iq,
 		QUERYTARGETS_STATE, PRIME_RESP_STATE);
 	if(!subq) {
 		log_err("out of memory priming stub");
@@ -632,7 +637,6 @@ static int
 processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 	struct iter_env* ie, int id)
 {
-	int d;
 	uint8_t* delname;
 	size_t delnamelen;
 	struct dns_msg* msg;
@@ -653,11 +657,10 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 	 * this is unnecessary for dependency loops (although it will 
 	 * catch those), but it provides a sensible limit to the amount 
 	 * of work required to answer a given query. */
-	d = module_subreq_depth(qstate);
-	verbose(VERB_ALGO, "request has dependency depth of %d", d);
-	if(d > ie->max_dependency_depth) {
+	verbose(VERB_ALGO, "request has dependency depth of %d", iq->depth);
+	if(iq->depth > ie->max_dependency_depth) {
 		verbose(VERB_DETAIL, "request has exceeded the maximum "
-			"dependency depth with depth of %d", d);
+			"dependency depth with depth of %d", iq->depth);
 		return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
 	}
 
@@ -757,7 +760,7 @@ return nextState(event, req, state, IterEventState.INIT_REQUEST_STATE);
 	if(iq->dp == NULL) {
 		/* Note that the result of this will set a new
 		 * DelegationPoint based on the result of priming. */
-		if(!prime_root(qstate, ie, id, qstate->qinfo.qclass))
+		if(!prime_root(qstate, iq, ie, id, qstate->qinfo.qclass))
 			return error_response(qstate, id, LDNS_RCODE_REFUSED);
 
 		/* priming creates an sends a subordinate query, with 
@@ -863,7 +866,7 @@ generate_target_query(struct module_qstate* qstate, struct iter_qstate* iq,
         int id, uint8_t* name, size_t namelen, uint16_t qtype, uint16_t qclass)
 {
 	struct module_qstate* subq = generate_sub_request(name, namelen, qtype,
-		qclass, qstate, id, INIT_REQUEST_STATE, TARGET_RESP_STATE);
+		qclass, qstate, id, iq, INIT_REQUEST_STATE, TARGET_RESP_STATE);
 	struct iter_qstate* subiq;
 	if(!subq)
 		return 0;
@@ -976,7 +979,7 @@ static int
 processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 	struct iter_env* ie, int id)
 {
-	int tf_policy, d;
+	int tf_policy;
 	struct delegpt_addr* target;
 	struct outbound_entry* outq;
 
@@ -1000,9 +1003,8 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 	}
 
 	tf_policy = 0;
-	d = module_subreq_depth(qstate);
-	if(d <= ie->max_dependency_depth) {
-		tf_policy = ie->target_fetch_policy[d];
+	if(iq->depth <= ie->max_dependency_depth) {
+		tf_policy = ie->target_fetch_policy[iq->depth];
 	}
 
 	/* if there is a policy to fetch missing targets 
@@ -1011,6 +1013,7 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 	 * they will not be show up again. */
 	if(tf_policy != 0) {
 		int extra = 0;
+		verbose(VERB_ALGO, "query for extra %d targets", tf_policy);
 		if(!query_for_targets(qstate, iq, ie, id, tf_policy, &extra)) {
 			return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
 		}
