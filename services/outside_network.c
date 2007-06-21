@@ -1020,22 +1020,12 @@ serviced_callbacks(struct serviced_query* sq, int error, struct comm_point* c,
 		 * may send outgoing queries that overwrite the buffer.
 		 * use secondary buffer to store the query.
 		 * This is a data copy, but faster than packet to server */
-		log_assert(ldns_buffer_capacity(sq->outnet->udp_second) >=
-			ldns_buffer_limit(c->buffer));
-		ldns_buffer_clear(sq->outnet->udp_second);
-		ldns_buffer_write(sq->outnet->udp_second, 
-			ldns_buffer_begin(c->buffer),
-			ldns_buffer_limit(c->buffer));
-		ldns_buffer_flip(sq->outnet->udp_second);
+		ldns_buffer_copy(sq->outnet->udp_second, c->buffer);
 	}
 	while(p) {
 		n = p->next;
 		if(dobackup && c) {
-			ldns_buffer_clear(c->buffer);
-			ldns_buffer_write(c->buffer, 
-			ldns_buffer_begin(sq->outnet->udp_second),
-			ldns_buffer_limit(sq->outnet->udp_second));
-			ldns_buffer_flip(c->buffer);
+			ldns_buffer_copy(c->buffer, sq->outnet->udp_second);
 		}
 		(void)(*p->cb)(c, p->cb_arg, error, rep);
 		p = n;
