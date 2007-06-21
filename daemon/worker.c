@@ -257,9 +257,8 @@ find_runnable(struct module_qstate* subq)
 
 /** process incoming request */
 static void 
-worker_process_query(struct worker* worker, struct work_query* w, 
-	struct module_qstate* qstate, enum module_ev event, 
-	struct outbound_entry* entry) 
+worker_process_query(struct worker* worker, struct module_qstate* qstate, 
+	enum module_ev event, struct outbound_entry* entry) 
 {
 	enum module_ext_state s;
 	verbose(VERB_DETAIL, "worker process handle event");
@@ -319,19 +318,21 @@ worker_process_query(struct worker* worker, struct work_query* w,
 	}
 	/* request done */
 	if(s == module_error) {
-		if(w) {
-			replyerror(LDNS_RCODE_SERVFAIL, w);
+		if(qstate->work_info) {
+			replyerror(LDNS_RCODE_SERVFAIL, qstate->work_info);
 		}
 		qstate_free(worker, qstate);
 		verbose(VERB_DETAIL, "worker process suspend");
 		return;
 	}
 	if(s == module_finished) {
-		if(w) {
-			memcpy(ldns_buffer_begin(w->query_reply.c->buffer),
-				&w->query_id, sizeof(w->query_id));
-			comm_point_send_reply(&w->query_reply);
-			req_release(w);
+		if(qstate->work_info) {
+			memcpy(ldns_buffer_begin(qstate->work_info->
+				query_reply.c->buffer), &qstate->
+				work_info->query_id, sizeof(qstate->
+				work_info->query_id));
+			comm_point_send_reply(&qstate->work_info->query_reply);
+			req_release(qstate->work_info);
 		}
 		qstate_free(worker, qstate);
 		verbose(VERB_DETAIL, "worker process suspend");
@@ -351,7 +352,7 @@ worker_handle_reply(struct comm_point* c, void* arg, int error,
 
 	w->state.reply = reply_info;
 	if(error != 0) {
-		worker_process_query(worker, w, &w->state, 
+		worker_process_query(worker, &w->state, 
 			module_event_timeout, NULL);
 		return 0;
 	}
@@ -362,11 +363,11 @@ worker_handle_reply(struct comm_point* c, void* arg, int error,
 		|| LDNS_QDCOUNT(ldns_buffer_begin(c->buffer)) > 1) {
 		/* error becomes timeout for the module as if this reply
 		 * never arrived. */
-		worker_process_query(worker, w, &w->state, 
+		worker_process_query(worker, &w->state, 
 			module_event_timeout, NULL);
 		return 0;
 	}
-	worker_process_query(worker, w, &w->state, module_event_reply, NULL);
+	worker_process_query(worker, &w->state, module_event_reply, NULL);
 	return 0;
 }
 
@@ -376,13 +377,12 @@ worker_handle_service_reply(struct comm_point* c, void* arg, int error,
 	struct comm_reply* reply_info)
 {
 	struct outbound_entry* e = (struct outbound_entry*)arg;
-	struct work_query* w = e->qstate->work_info;
 	struct worker* worker = e->qstate->env->worker;
 
 	verbose(VERB_ALGO, "worker scvd callback for qstate %p", e->qstate);
 	e->qstate->reply = reply_info;
 	if(error != 0) {
-		worker_process_query(worker, w, e->qstate, 
+		worker_process_query(worker, e->qstate, 
 			module_event_timeout, e);
 		return 0;
 	}
@@ -394,11 +394,11 @@ worker_handle_service_reply(struct comm_point* c, void* arg, int error,
 		/* error becomes timeout for the module as if this reply
 		 * never arrived. */
 		verbose(VERB_ALGO, "worker: bad reply handled as timeout");
-		worker_process_query(worker, w, e->qstate, 
+		worker_process_query(worker, e->qstate, 
 			module_event_timeout, e);
 		return 0;
 	}
-	worker_process_query(worker, w, e->qstate, module_event_reply, e);
+	worker_process_query(worker, e->qstate, module_event_reply, e);
 	return 0;
 }
 
@@ -657,7 +657,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 
 	/* answer it */
 	w->state.buf = c->buffer;
-	worker_process_query(worker, w, &w->state, module_event_new, NULL);
+	worker_process_query(worker, &w->state, module_event_new, NULL);
 	return 0;
 }
 

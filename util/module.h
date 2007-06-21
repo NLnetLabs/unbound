@@ -210,7 +210,7 @@ struct module_qstate {
 	void* minfo[MAX_MODULE];
 	/** environment for this query */
 	struct module_env* env;
-	/** worker related state for this query. NULL for queries that do
+	/** worker related state for this query. NULL for (sub)queries that do
 	 * not need to have answers sent to a client. */
 	struct work_query* work_info;
 
