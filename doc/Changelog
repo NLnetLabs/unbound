@@ -2,6 +2,7 @@
 	- Fixup secondary buffer in case of error callback.
 	- cleanup slumber list of runnable states.
 	- module_subreq_depth fails to work in slumber list.
+	- fixup query release for cached results to sub targets.
 
 20 June 2007: Wouter
 	- new -C option to enable coredumps after forking away.
