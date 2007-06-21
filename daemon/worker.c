@@ -376,6 +376,7 @@ worker_handle_service_reply(struct comm_point* c, void* arg, int error,
 	struct work_query* w = e->qstate->work_info;
 	struct worker* worker = e->qstate->env->worker;
 
+	verbose(VERB_ALGO, "worker scvd callback for qstate %p", e->qstate);
 	e->qstate->reply = reply_info;
 	if(error != 0) {
 		worker_process_query(worker, w, e->qstate, 

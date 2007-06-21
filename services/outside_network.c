@@ -1014,7 +1014,8 @@ serviced_callbacks(struct serviced_query* sq, int error, struct comm_point* c,
 	rem = rbtree_delete(sq->outnet->serviced, sq);
 	log_assert(rem); /* should have been present */
 	sq->to_be_deleted = 1; 
-	if(dobackup) {
+	verbose(VERB_ALGO, "svcd callbacks start");
+	if(dobackup && c) {
 		/* make a backup of the query, since the querystate processing
 		 * may send outgoing queries that overwrite the buffer.
 		 * use secondary buffer to store the query.
@@ -1029,7 +1030,7 @@ serviced_callbacks(struct serviced_query* sq, int error, struct comm_point* c,
 	}
 	while(p) {
 		n = p->next;
-		if(dobackup) {
+		if(dobackup && c) {
 			ldns_buffer_clear(c->buffer);
 			ldns_buffer_write(c->buffer, 
 			ldns_buffer_begin(sq->outnet->udp_second),
@@ -1039,6 +1040,7 @@ serviced_callbacks(struct serviced_query* sq, int error, struct comm_point* c,
 		(void)(*p->cb)(c, p->cb_arg, error, rep);
 		p = n;
 	}
+	verbose(VERB_ALGO, "svcd callbacks end");
 	log_assert(sq->cblist == NULL);
 	serviced_delete(sq);
 }
