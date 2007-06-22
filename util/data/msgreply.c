@@ -691,3 +691,10 @@ log_dns_msg(const char* str, struct query_info* qinfo, struct reply_info* rep)
 	ldns_buffer_free(buf);
 	region_destroy(region);
 }
+
+void 
+log_query_info(enum verbosity_value v, const char* str, 
+	struct query_info* qinf)
+{
+	log_nametypeclass(v, str, qinf->qname, qinf->qtype, qinf->qclass);
+}

@@ -55,42 +55,49 @@ struct mesh_reply;
 struct worker;
 struct query_info;
 struct reply_info;
+struct outbound_entry;
 
 /** 
  * Mesh of query states
  */
-struct query_mesh {
+struct mesh_area {
 	/** what worker this is a part of */
 	struct worker* worker;
-	/** set of runnable queries (mesh_state_ref*) */
+	/** set of runnable queries (mesh_state.run_node) */
 	rbtree_t run;
-	/** rbtree of all current queries */
+	/** rbtree of all current queries (mesh_state.node)*/
 	rbtree_t all;
-	/** count of the number of mesh_reply entries */
-	size_t reply_count;
-	/** count of the number of mesh_states that have no mesh_replies
-	 * i.e. are for internal use. */
-	size_t internal_count;
+
+	/** count of the total number of mesh_reply entries */
+	size_t num_reply_addrs;
+	/** count of the number of mesh_states that have mesh_replies 
+	 * Because a state can send results to multiple reply addresses,
+	 * this number must be equal or lower than num_reply_addrs. */
+	size_t num_reply_states;
+	/** number of mesh_states that have no mesh_replies, and also
+	 * an empty set of super-states, thus are 'toplevel' or detached
+	 * internal opportunistic queries */
+	size_t num_detached_states;
 };
 
 /**
  * A mesh query state
- * Unique per qname, qtype, qclass.
+ * Unique per qname, qtype, qclass (from the qstate).
  * And RD flag; in case a client turns it off.
  * And priming queries are different from ordinary queries (because of hints).
+ *
+ * The entire structure is allocated in a region, this region is the qstate
+ * region. All parts (rbtree nodes etc) are also allocated in the region.
  */
 struct mesh_state {
-	/** node in query_mesh all tree, key is this struct */
+	/** node in mesh_area all tree, key is this struct */
 	rbnode_t node;
-	/** node in query_mesh runnable tree, key is this struct */
+	/** node in mesh_area runnable tree, key is this struct */
 	rbnode_t run_node;
-	/** unique identity for this mesh state: what is it for */
-	/* Note that qstate qinfo is changed by iterator */
-
-	/** if this is a priming query (with hints) */
+	/** if this is a (stub or root) priming query (with hints) */
 	int is_priming;
-	
-	/** the query state */
+	/** the query state. Note that the qinfo and query_flags 
+	 * may not change. */
 	struct module_qstate* state;
 	/** the list of replies to clients for the results */
 	struct mesh_reply* reply_list;
@@ -123,38 +130,59 @@ struct mesh_reply {
 	struct comm_reply query_reply;
 	/** edns data from query */
 	struct edns_data edns;
+	/** the time when request was entered */
+	struct timeval start_time;
 	/** id of query, in network byteorder. */
 	uint16_t qid;
 	/** flags of query, for reply flags */
 	uint16_t qflags;
 };
 
+/* ------------------- Functions for worker -------------------- */
+
 /**
  * Allocate mesh, to empty.
  * @param worker: what worker it is part of.
  * @return mesh: the new mesh or NULL on error.
  */
-struct query_mesh* mesh_create(struct worker* worker);
+struct mesh_area* mesh_create(struct worker* worker);
 
 /**
  * Delete mesh, and all query states and replies in it.
  * @param mesh: the mesh to delete.
  */
-void mesh_delete(struct query_mesh* mesh);
+void mesh_delete(struct mesh_area* mesh);
 
 /**
  * New query incoming from clients. Create new query state if needed, and
  * add mesh_reply to it. Returns error to client on malloc failures.
+ * Will run the mesh area queries to process if a new query state is created.
+ *
  * @param mesh: the mesh.
  * @param qinfo: query from client.
  * @param qflags: flags from client query.
  * @param edns: edns data from client query.
  * @param rep: where to reply to.
- * @param id: query id to reply with.
+ * @param qid: query id to reply with.
  */
-void mesh_new_client(struct query_mesh* mesh, struct query_info* qinfo,
+void mesh_new_client(struct mesh_area* mesh, struct query_info* qinfo,
 	uint16_t qflags, struct edns_data* edns, struct comm_reply* rep, 
-	uint16_t id);
+	uint16_t qid);
+
+/**
+ * Handle new event from the wire. A serviced query has returned.
+ * The query state will be made runnable, and the mesh_area will process
+ * query states until processing is complete.
+ *
+ * @param mesh: the query mesh.
+ * @param e: outbound entry, with query state to run and reply pointer.
+ * @param is_ok: if true, reply is OK, otherwise a timeout happened.
+ * @param reply: the comm point reply info.
+ */
+void mesh_report_reply(struct mesh_area* mesh, struct outbound_entry* e,
+	int is_ok, struct comm_reply* reply);
+
+/* ------------------- Functions for module environment --------------- */
 
 /**
  * Detach-subqueries.
@@ -179,7 +207,7 @@ void mesh_detach_subs(struct module_qstate* qstate);
  * 	the results from the new subquery.
  * @param qinfo: what to query for (copied).
  * @param qflags: what flags to use (RD flag or not).
- * @param prime: if it is a priming query.
+ * @param prime: if it is a (stub) priming query.
  * @param newq: If the new subquery needs initialisation, it is returned,
  * 	otherwise NULL is returned.
  * @return: false on error, true if success (and init may be needed).
@@ -220,5 +248,16 @@ void mesh_query_done(struct module_qstate* qstate, int rcode,
  */
 void mesh_walk_supers(struct module_qstate* qstate, int id, int rcode,
 	void (*cb)(struct module_qstate*, int, struct module_qstate*, int));
+
+/* ------------------- Functions for mesh -------------------- */
+
+/**
+ * Create and initialize a new mesh state and its query state
+ */
+
+/**
+ * Cleanup a mesh state and its query state. Does not do rbtree or 
+ * reference cleanup.
+ */
 
 #endif /* SERVICES_MESH_H */

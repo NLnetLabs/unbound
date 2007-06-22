@@ -1,3 +1,10 @@
+22 June 2007: Wouter
+	- removed unused _node iterator value from rbtree_t. Takes up space.
+	- iterator can handle querytargets state without a delegation point
+	  set, so that a priming(stub) subquery error can be handled.
+	- iterator stores if it is priming or not.
+	- log_query_info() neater logging.
+
 21 June 2007: Wouter
 	- Fixup secondary buffer in case of error callback.
 	- cleanup slumber list of runnable states.

@@ -80,9 +80,6 @@ struct rbtree_t {
 	/** The number of the nodes in the tree */
 	size_t       count;
 
-	/** Current node for walks... */
-	rbnode_t    *_node;
-
 	/** 
 	 * Key compare function. <0,0,>0 like strcmp. 
 	 * Return 0 on two NULL ptrs. 
@@ -168,14 +165,6 @@ rbnode_t *rbtree_next(rbnode_t *rbtree);
  * @return: previous smaller element or NULL if no previous in tree.
  */
 rbnode_t *rbtree_previous(rbnode_t *rbtree);
-
-/**
- * Macro to walk through the tree, sets k to key, d to data, for every element.
- */
-#define	RBTREE_WALK(rbtree, k, d) \
-	for((rbtree)->_node = rbtree_first(rbtree);\
-		(rbtree)->_node != RBTREE_NULL && ((k) = (rbtree)->_node->key) && \
-		((d) = (void *) (rbtree)->_node); (rbtree)->_node = rbtree_next((rbtree)->_node))
 
 /**
  * Call with node=variable of struct* with rbnode_t as first element.

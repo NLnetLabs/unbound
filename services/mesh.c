@@ -44,4 +44,62 @@
  */
 #include "config.h"
 #include "services/mesh.h"
+#include "util/log.h"
+#include "util/net_help.h"
+#include "util/module.h"
+#include "util/region-allocator.h"
 
+/** compare two mesh_states */
+static int
+mesh_state_compare(const void* ap, const void* bp)
+{
+	struct mesh_state* a = (struct mesh_state*)ap;
+	struct mesh_state* b = (struct mesh_state*)bp;
+
+	if(a->is_priming && !b->is_priming)
+		return -1;
+	if(!a->is_priming && b->is_priming)
+		return 1;
+
+	if((a->state->query_flags&BIT_RD) && !(b->state->query_flags&BIT_RD))
+		return -1;
+	if(!(a->state->query_flags&BIT_RD) && (b->state->query_flags&BIT_RD))
+		return 1;
+
+	return query_info_compare(&a->state->qinfo, &b->state->qinfo);
+}
+
+/** compare two mesh references */
+static int
+mesh_state_ref_compare(const void* ap, const void* bp)
+{
+	struct mesh_state_ref* a = (struct mesh_state_ref*)ap;
+	struct mesh_state_ref* b = (struct mesh_state_ref*)bp;
+	return mesh_state_compare(a->s, b->s);
+}
+
+struct mesh_area* 
+mesh_create(struct worker* worker)
+{
+	struct mesh_area* mesh = calloc(1, sizeof(struct mesh_area));
+	if(!mesh) {
+		log_err("mesh area alloc: out of memory");
+		return NULL;
+	}
+	mesh->worker = worker;
+	rbtree_init(&mesh->run, &mesh_state_compare);
+	rbtree_init(&mesh->all, &mesh_state_compare);
+	mesh->num_reply_addrs = 0;
+	mesh->num_reply_states = 0;
+	mesh->num_detached_states = 0;
+	return mesh;
+}
+
+void 
+mesh_delete(struct mesh_area* mesh)
+{
+	if(!mesh)
+		return;
+	/* free all query states */
+	free(mesh);
+}

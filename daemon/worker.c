@@ -215,8 +215,7 @@ run_debug(struct module_qstate* p, int d)
 	}
 	buf[i++] = 'o';
 	buf[i] = 0;
-	log_nametypeclass(VERB_ALGO, buf, p->qinfo.qname, p->qinfo.qtype, 
-		p->qinfo.qclass);
+	log_query_info(VERB_ALGO, buf, &p->qinfo);
 	for(p = p->subquery_first; p; p = p->subquery_next) {
 		run_debug(p, d+1);
 	}

@@ -309,4 +309,13 @@ struct ub_packed_rrset_key* reply_find_answer_rrset(struct query_info* qinfo,
 void log_dns_msg(const char* str, struct query_info* qinfo, 
 	struct reply_info* rep);
 
+/**
+ * Print string with neat domain name, type, class from query info.
+ * @param v: at what verbosity level to print this.
+ * @param str: string of message.
+ * @param qinf: query info structure with name, type and class.
+ */
+void log_query_info(enum verbosity_value v, const char* str, 
+	struct query_info* qinf);
+
 #endif /* UTIL_DATA_MSGREPLY_H */
