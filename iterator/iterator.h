@@ -43,6 +43,7 @@
 #ifndef ITERATOR_ITERATOR_H
 #define ITERATOR_ITERATOR_H
 #include "services/outbound_list.h"
+#include "util/data/msgreply.h"
 struct module_func_block;
 struct delegpt;
 struct iter_hints;
@@ -183,12 +184,12 @@ struct iter_qstate {
 	/** Last element of the prepend list */
 	struct iter_prep_list* prepend_last;
 
-	/** original query name - if not NULL, malloced and before CNAME */
-	uint8_t* orig_qname;
-	/** original query name length */
-	size_t orig_qnamelen;
-	/** original query flags (i.e. RD flag) */
-	uint16_t orig_qflags;
+	/** query name used for chasing the results. Initially the same as
+	 * the state qinfo, but after CNAMEs this will be different. 
+	 * The query info used to elicit the results needed. */
+	struct query_info qchase;
+	/** query flags to use when chasing the answer (i.e. RD flag) */
+	uint16_t chase_flags;
 
 	/** 
 	 * This is the current delegation point for an in-progress query. This
