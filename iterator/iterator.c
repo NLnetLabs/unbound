@@ -155,7 +155,7 @@ iter_handlereply(struct module_qstate* qstate, int id,
 	struct edns_data reply_edns;
 	int r;
 	if((r=reply_info_parse(qstate->reply->c->buffer, env->alloc, 
-		&reply_qinfo, &reply_msg, qstate->scratch, 
+		&reply_qinfo, &reply_msg, qstate->env->scratch, 
 		&reply_edns))!=0)
 		return 0;
 
@@ -165,7 +165,7 @@ iter_handlereply(struct module_qstate* qstate, int id,
 	qstate->edns.bits &= EDNS_DO;
 	if(!reply_info_answer_encode(&reply_qinfo, reply_msg, 0, 
 		qstate->query_flags, qstate->buf, 0, 0, 
-		qstate->scratch, us, &qstate->edns, 
+		qstate->env->scratch, us, &qstate->edns, 
 		(int)(qstate->edns.bits&EDNS_DO)))
 		return 0;
 	dns_cache_store_msg(qstate->env, &reply_qinfo, qstate->query_hash, 
@@ -345,7 +345,7 @@ iter_encode_respmsg(struct module_qstate* qstate, struct iter_qstate* iq,
 	edns.ext_rcode = 0;
 	edns.bits = qstate->edns.bits & EDNS_DO;
 	if(!reply_info_answer_encode(&qinf, msg->rep, 0, iq->orig_qflags, 
-		qstate->buf, 0, 1, qstate->scratch, qstate->edns.udp_size, 
+		qstate->buf, 0, 1, qstate->env->scratch, qstate->edns.udp_size, 
 		&edns, (int)(qstate->edns.bits & EDNS_DO))) {
 		/* encode servfail */
 		error_response(qstate, id, LDNS_RCODE_SERVFAIL);
@@ -473,7 +473,7 @@ generate_sub_request(uint8_t* qname, size_t qnamelen, uint16_t qtype,
 	subq->query_flags = 0; /* OPCODE QUERY, no flags */
 	subq->edns.udp_size = 65535;
 	subq->buf = qstate->buf;
-	subq->scratch = qstate->scratch;
+	subq->env->scratch = qstate->env->scratch;
 	subq->region = region_create(malloc, free);
 	if(!subq->region) {
 		free(subq->qinfo.qname);
@@ -673,7 +673,7 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 	
 	msg = dns_cache_lookup(qstate->env, qstate->qinfo.qname, 
 		qstate->qinfo.qname_len, qstate->qinfo.qtype, 
-		qstate->qinfo.qclass, qstate->region, qstate->scratch);
+		qstate->qinfo.qclass, qstate->region, qstate->env->scratch);
 	if(msg) {
 		/* handle positive cache response */
 		enum response_type type = response_type_from_cache(msg, 
@@ -1536,7 +1536,7 @@ process_response(struct module_qstate* qstate, struct iter_qstate* iq,
 	}
 
 	/* parse message */
-	prs = (struct msg_parse*)region_alloc(qstate->scratch, 
+	prs = (struct msg_parse*)region_alloc(qstate->env->scratch, 
 		sizeof(struct msg_parse));
 	if(!prs) {
 		log_err("out of memory on incoming message");
@@ -1547,7 +1547,7 @@ process_response(struct module_qstate* qstate, struct iter_qstate* iq,
 	memset(&edns, 0, sizeof(edns));
 	pkt = qstate->reply->c->buffer;
 	ldns_buffer_set_position(pkt, 0);
-	if(parse_packet(pkt, prs, qstate->scratch) != LDNS_RCODE_NOERROR) {
+	if(parse_packet(pkt, prs, qstate->env->scratch) != LDNS_RCODE_NOERROR) {
 		verbose(VERB_ALGO, "parse error on reply packet");
 		goto handle_it;
 	}
@@ -1557,7 +1557,7 @@ process_response(struct module_qstate* qstate, struct iter_qstate* iq,
 
 	/* normalize and sanitize: easy to delete items from linked lists */
 	if(!scrub_message(pkt, prs, &qstate->qinfo, iq->dp->name, 
-		qstate->scratch))
+		qstate->env->scratch))
 		goto handle_it;
 
 	/* allocate response dns_msg in region */

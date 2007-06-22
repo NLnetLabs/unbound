@@ -61,12 +61,12 @@ mesh_state_compare(const void* ap, const void* bp)
 	if(!a->is_priming && b->is_priming)
 		return 1;
 
-	if((a->state->query_flags&BIT_RD) && !(b->state->query_flags&BIT_RD))
+	if((a->s.query_flags&BIT_RD) && !(b->s.query_flags&BIT_RD))
 		return -1;
-	if(!(a->state->query_flags&BIT_RD) && (b->state->query_flags&BIT_RD))
+	if(!(a->s.query_flags&BIT_RD) && (b->s.query_flags&BIT_RD))
 		return 1;
 
-	return query_info_compare(&a->state->qinfo, &b->state->qinfo);
+	return query_info_compare(&a->s.qinfo, &b->s.qinfo);
 }
 
 /** compare two mesh references */
@@ -79,14 +79,15 @@ mesh_state_ref_compare(const void* ap, const void* bp)
 }
 
 struct mesh_area* 
-mesh_create(struct worker* worker)
+mesh_create(int num_modules, struct module_func_block** modfunc)
 {
 	struct mesh_area* mesh = calloc(1, sizeof(struct mesh_area));
 	if(!mesh) {
 		log_err("mesh area alloc: out of memory");
 		return NULL;
 	}
-	mesh->worker = worker;
+	mesh->num_modules = num_modules;
+	mesh->modfunc = modfunc;
 	rbtree_init(&mesh->run, &mesh_state_compare);
 	rbtree_init(&mesh->all, &mesh_state_compare);
 	mesh->num_reply_addrs = 0;
@@ -98,8 +99,77 @@ mesh_create(struct worker* worker)
 void 
 mesh_delete(struct mesh_area* mesh)
 {
+	struct mesh_state* mstate;
 	if(!mesh)
 		return;
 	/* free all query states */
+	RBTREE_FOR(mstate, struct mesh_state*, &mesh->all) {
+		mesh_state_cleanup(mstate);
+	}
 	free(mesh);
+}
+
+struct mesh_state* 
+mesh_state_create(struct module_env* env, struct query_info* qinfo, 
+	uint16_t qflags, int prime)
+{
+	region_type* region = region_create(malloc, free);
+	struct mesh_state* mstate;
+	int i;
+	if(!region)
+		return NULL;
+	mstate = (struct mesh_state*)region_alloc(region, 
+		sizeof(struct mesh_state));
+	if(!mstate) {
+		region_destroy(region);
+		return NULL;
+	}
+	mstate->node = *RBTREE_NULL;
+	mstate->run_node = *RBTREE_NULL;
+	mstate->node.key = mstate;
+	mstate->run_node.key = mstate;
+	mstate->is_priming = prime;
+	mstate->reply_list = NULL;
+	rbtree_init(&mstate->super_set, &mesh_state_ref_compare);
+	rbtree_init(&mstate->sub_set, &mesh_state_ref_compare);
+	/* init module qstate */
+	mstate->s.qinfo.qtype = qinfo->qtype;
+	mstate->s.qinfo.qclass = qinfo->qclass;
+	mstate->s.qinfo.qname_len = qinfo->qname_len;
+	mstate->s.qinfo.qname = region_alloc_init(region, qinfo->qname,
+		qinfo->qname_len);
+	if(!mstate->s.qinfo.qname) {
+		region_destroy(region);
+		return NULL;
+	}
+	/* remove all weird bits from qflags */
+	mstate->s.query_flags = (qflags & BIT_RD);
+	mstate->s.reply = NULL;
+	mstate->s.region = region;
+	mstate->s.curmod = 0;
+	mstate->s.env = env;
+	mstate->s.mesh_info = mstate;
+	/* init modules */
+	for(i=0; i<env->mesh->num_modules; i++) {
+		mstate->s.minfo[i] = NULL;
+		mstate->s.ext_state[i] = module_state_initial;
+	}
+	return mstate;
+}
+
+void 
+mesh_state_cleanup(struct mesh_state* mstate)
+{
+	struct mesh_area* mesh;
+	int i;
+	if(!mstate)
+		return;
+	/* de-init modules */
+	mesh = mstate->s.env->mesh;
+	for(i=0; i<mesh->num_modules; i++) {
+		(*mesh->modfunc[i]->clear)(&mstate->s, i);
+		mstate->s.minfo[i] = NULL;
+		mstate->s.ext_state[i] = module_finished;
+	}
+	region_destroy(mstate->s.region);
 }

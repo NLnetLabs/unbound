@@ -54,6 +54,8 @@ struct region;
 struct worker;
 struct module_qstate;
 struct ub_randstate;
+struct mesh_area;
+struct mesh_state;
 
 /** Maximum number of modules in operation */
 #define MAX_MODULE 2
@@ -127,8 +129,12 @@ struct module_env {
 	 */
 	void (*remove_subqueries)(struct module_qstate* qstate);
 
+	/** region for temporary usage. May be cleared after operate() call. */
+	struct region* scratch;
 	/** internal data for daemon - worker thread. */
 	struct worker* worker;
+	/** mesh area with query state dependencies */
+	struct mesh_area* mesh;
 	/** allocation service */
 	struct alloc_cache* alloc;
 	/** random table to generate random numbers */
@@ -185,20 +191,11 @@ enum module_ev {
 struct module_qstate {
 	/** which query is being answered: name, type, class */
 	struct query_info qinfo;
-	/** hash value of the query qinfo */
-	hashvalue_t query_hash;
 	/** flags uint16 from query */
 	uint16_t query_flags;
-	/** edns data from the query */
-	struct edns_data edns;
 
-	/** buffer, store resulting reply here. 
-	 * May be cleared when module blocks. */
-	ldns_buffer* buf;
 	/** comm_reply contains server replies */
 	struct comm_reply* reply;
-	/** region for temporary usage. May be cleared when module blocks. */
-	struct region* scratch;
 	/** region for this query. Cleared when query process finishes. */
 	struct region* region;
 
@@ -210,15 +207,22 @@ struct module_qstate {
 	void* minfo[MAX_MODULE];
 	/** environment for this query */
 	struct module_env* env;
-	/** worker related state for this query. NULL for (sub)queries that do
-	 * not need to have answers sent to a client. */
-	struct work_query* work_info;
+	/** mesh related information for this query */
+	struct mesh_state* mesh_info;
 
+	/** -----  TO DELETE */
+	struct work_query* work_info; 
+	/** hash value of the query qinfo */
+	hashvalue_t query_hash;
+	/** edns data from the query */
+	struct edns_data edns;
+	/** buffer, store resulting reply here. 
+	 * May be cleared when module blocks. */
+	ldns_buffer* buf;
 	/** parent query, only nonNULL for subqueries */
 	struct module_qstate* parent;
 	/** pointer to first subquery below this one; makes list with next */
 	struct module_qstate* subquery_first;
-
 	/** pointer to next sibling subquery (not above or below this one) */
 	struct module_qstate* subquery_next;
 	/** pointer to prev sibling subquery (not above or below this one) */

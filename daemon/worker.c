@@ -54,6 +54,7 @@
 #include "services/outside_network.h"
 #include "services/outbound_list.h"
 #include "services/cache/rrset.h"
+#include "services/mesh.h"
 #include "util/data/msgparse.h"
 #include "util/data/msgencode.h"
 
@@ -734,7 +735,6 @@ reqs_init(struct worker* worker)
 			sizeof(struct work_query));
 		if(!q) return 0;
 		q->state.buf = worker->front->udp_buff;
-		q->state.scratch = worker->scratchpad;
 		q->state.region = region_create_custom(malloc, free, 1024, 
 			64, 16, 0);
 		if(!q->state.region) {
@@ -869,6 +869,13 @@ worker_init(struct worker* worker, struct config_file *cfg,
 	worker->env.worker = worker;
 	worker->env.alloc = &worker->alloc;
 	worker->env.rnd = worker->rndstate;
+	worker->env.scratch = worker->scratchpad;
+	worker->env.mesh = mesh_create(worker->daemon->num_modules,
+		worker->daemon->modfunc);
+	if(!worker->env.mesh) {
+		worker_delete(worker);
+		return 0;
+	}
 	return 1;
 }
 
@@ -884,6 +891,7 @@ worker_delete(struct worker* worker)
 	if(!worker) 
 		return;
 	server_stats_log(&worker->stats, worker->thread_num);
+	mesh_delete(worker->env.mesh);
 	reqs_delete(worker);
 	qstate_free_recurs_list(worker, worker->slumber_list);
 	listen_delete(worker->front);

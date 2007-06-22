@@ -49,10 +49,9 @@
 #include "util/rbtree.h"
 #include "util/netevent.h"
 #include "util/data/msgparse.h"
-struct module_qstate;
+#include "util/module.h"
 struct mesh_state;
 struct mesh_reply;
-struct worker;
 struct query_info;
 struct reply_info;
 struct outbound_entry;
@@ -61,8 +60,11 @@ struct outbound_entry;
  * Mesh of query states
  */
 struct mesh_area {
-	/** what worker this is a part of */
-	struct worker* worker;
+	/** the number of modules */
+	int num_modules;
+	/** the module callbacks, array of num_modules length (ref only) */
+	struct module_func_block** modfunc;
+
 	/** set of runnable queries (mesh_state.run_node) */
 	rbtree_t run;
 	/** rbtree of all current queries (mesh_state.node)*/
@@ -90,7 +92,7 @@ struct mesh_area {
  * region. All parts (rbtree nodes etc) are also allocated in the region.
  */
 struct mesh_state {
-	/** node in mesh_area all tree, key is this struct */
+	/** node in mesh_area all tree, key is this struct. Must be first. */
 	rbnode_t node;
 	/** node in mesh_area runnable tree, key is this struct */
 	rbnode_t run_node;
@@ -98,7 +100,7 @@ struct mesh_state {
 	int is_priming;
 	/** the query state. Note that the qinfo and query_flags 
 	 * may not change. */
-	struct module_qstate* state;
+	struct module_qstate s;
 	/** the list of replies to clients for the results */
 	struct mesh_reply* reply_list;
 	/** set of superstates (that want this state's result) 
@@ -142,10 +144,13 @@ struct mesh_reply {
 
 /**
  * Allocate mesh, to empty.
- * @param worker: what worker it is part of.
+ * @param num_modules: number of modules that are present.
+ * @param modfunc: array passed (alloced and deleted by caller), that has
+ * 	num_modules function callbacks for the modules.
  * @return mesh: the new mesh or NULL on error.
  */
-struct mesh_area* mesh_create(struct worker* worker);
+struct mesh_area* mesh_create(int num_modules, 
+	struct module_func_block** modfunc);
 
 /**
  * Delete mesh, and all query states and replies in it.
@@ -253,11 +258,22 @@ void mesh_walk_supers(struct module_qstate* qstate, int id, int rcode,
 
 /**
  * Create and initialize a new mesh state and its query state
+ * Does not put the mesh state into rbtrees and so on.
+ * @param env: module environment to set.
+ * @param qinfo: query info that the mesh is for.
+ * @param qflags: flags for query (RD flag).
+ * @param prime: if true, it is a priming query, set is_priming on mesh state.
+ * @return: new mesh state or NULL on allocation error.
  */
+struct mesh_state* mesh_state_create(struct module_env* env, 
+	struct query_info* qinfo, uint16_t qflags, int prime);
 
 /**
  * Cleanup a mesh state and its query state. Does not do rbtree or 
  * reference cleanup.
+ * @param mstate: mesh state to cleanup. Its pointer may no longer be used
+ * 	afterwards. Cleanup rbtrees before calling this function.
  */
+void mesh_state_cleanup(struct mesh_state* mstate);
 
 #endif /* SERVICES_MESH_H */
