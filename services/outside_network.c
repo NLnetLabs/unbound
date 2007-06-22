@@ -734,6 +734,10 @@ pending_udp_query(struct outside_network* outnet, ldns_buffer* packet,
 		return NULL;
 	}
 	select_port(outnet, pend, rnd);
+	if(!pend->c) {
+		pending_delete(outnet, pend);
+		return NULL;
+	}
 
 	/* send it over the commlink */
 	if(!comm_point_send_udp_msg(pend->c, packet, (struct sockaddr*)addr, 

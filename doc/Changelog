@@ -7,6 +7,7 @@
 	- changed iterator so that it does not alter module_qstate.qinfo
 	  but keeps a chase query info. Also query_flags are not altered,
 	  the iterator uses chase_flags.
+	- fixup crash in case no ports for the family exist.
 
 21 June 2007: Wouter
 	- Fixup secondary buffer in case of error callback.
