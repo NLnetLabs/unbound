@@ -64,6 +64,8 @@ struct mesh_area {
 	int num_modules;
 	/** the module callbacks, array of num_modules length (ref only) */
 	struct module_func_block** modfunc;
+	/** environment for new states */
+	struct module_env* env;
 
 	/** set of runnable queries (mesh_state.run_node) */
 	rbtree_t run;
@@ -80,6 +82,11 @@ struct mesh_area {
 	 * an empty set of super-states, thus are 'toplevel' or detached
 	 * internal opportunistic queries */
 	size_t num_detached_states;
+
+	/** number of replies sent */
+	size_t replies_sent;
+	/** sum of waiting times for the replies */
+	struct timeval replies_sum_wait;
 };
 
 /**
@@ -103,6 +110,8 @@ struct mesh_state {
 	struct module_qstate s;
 	/** the list of replies to clients for the results */
 	struct mesh_reply* reply_list;
+	/** debug flags */
+	int debug_flags;
 	/** set of superstates (that want this state's result) 
 	 * contains struct mesh_state_ref* */
 	rbtree_t super_set;
@@ -117,7 +126,7 @@ struct mesh_state {
  */
 struct mesh_state_ref {
 	/** node in rbtree for set, key is this structure */
-	rbtree_t node;
+	rbnode_t node;
 	/** the mesh state */
 	struct mesh_state* s;
 };
@@ -147,10 +156,11 @@ struct mesh_reply {
  * @param num_modules: number of modules that are present.
  * @param modfunc: array passed (alloced and deleted by caller), that has
  * 	num_modules function callbacks for the modules.
+ * @param env: environment for new queries.
  * @return mesh: the new mesh or NULL on error.
  */
 struct mesh_area* mesh_create(int num_modules, 
-	struct module_func_block** modfunc);
+	struct module_func_block** modfunc, struct module_env* env);
 
 /**
  * Delete mesh, and all query states and replies in it.
@@ -192,7 +202,8 @@ void mesh_report_reply(struct mesh_area* mesh, struct outbound_entry* e,
 /**
  * Detach-subqueries.
  * Remove all sub-query references from this query state.
- * Keeps sub-query-super-references correct.
+ * Keeps super-references of those sub-queries correct.
+ * Updates stat items in mesh_area structure.
  * @param qstate: used to find mesh state.
  */
 void mesh_detach_subs(struct module_qstate* qstate);
@@ -201,6 +212,7 @@ void mesh_detach_subs(struct module_qstate* qstate);
  * Attach subquery.
  * Creates it if it does not exist already.
  * Keeps sub and super references correct.
+ * Updates stat items in mesh_area structure.
  * Pass if it is priming query or not.
  * return:
  * 	o if error (malloc) happened.
@@ -275,5 +287,59 @@ struct mesh_state* mesh_state_create(struct module_env* env,
  * 	afterwards. Cleanup rbtrees before calling this function.
  */
 void mesh_state_cleanup(struct mesh_state* mstate);
+
+/**
+ * Delete mesh state, cleanup and also rbtrees and so on.
+ * Will detach from all super/subnodes.
+ * @param mstate: to remove.
+ */
+void mesh_state_delete(struct mesh_state* mstate);
+
+/**
+ * Find a mesh state in the mesh area. Pass relevant flags.
+ *
+ * @param mesh: the mesh area to look in.
+ * @param qinfo: what query
+ * @param qflags: if RD bit is set or not.
+ * @param prime: if it is a priming query.
+ * @return: mesh state or NULL if not found.
+ */
+struct mesh_state* mesh_area_find(struct mesh_area* mesh, 
+	struct query_info* qinfo, uint16_t qflags, int prime);
+
+/**
+ * Setup attachment super/sub relation between super and sub mesh state.
+ * The relation must not be present when calling the function.
+ * Does not update stat items in mesh_area.
+ * @param super: super state.
+ * @param sub: sub state.
+ * @return: 0 on alloc error.
+ */
+int mesh_state_attachment(struct mesh_state* super, struct mesh_state* sub);
+
+/**
+ * Create new reply structure and attach it to a mesh state.
+ * Does not update stat items in mesh area.
+ * @param s: the mesh state.
+ * @param edns: edns data for reply (bufsize).
+ * @param rep: comm point reply info.
+ * @param qid: ID of reply.
+ * @param qflags: original query flags.
+ * @return: 0 on alloc error.
+ */
+int mesh_state_add_reply(struct mesh_state* s, struct edns_data* edns, 
+	struct comm_reply* rep, uint16_t qid, uint16_t qflags);
+
+/**
+ * Run the mesh. Run all runnable mesh states. Which can create new
+ * runnable mesh states. Until completion. Automatically called by
+ * mesh_report_reply and mesh_new_client as needed.
+ * @param mesh: mesh area.
+ * @param mstate: first mesh state to run.
+ * @param ev: event the mstate. Others get event_pass.
+ * @param e: if a reply, its outbound entry.
+ */
+void mesh_run(struct mesh_area* mesh, struct mesh_state* mstate, 
+	enum module_ev ev, struct outbound_entry* e);
 
 #endif /* SERVICES_MESH_H */

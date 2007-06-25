@@ -112,5 +112,18 @@ uint16_t calc_edns_field_size(struct edns_data* edns);
  */
 void attach_edns_record(ldns_buffer* pkt, struct edns_data* edns);
 
+/** 
+ * Encode an error. With QR and RA set.
+ *
+ * @param pkt: where to store the packet.
+ * @param r: RCODE value to encode.
+ * @param qinfo: if not NULL, the query is included.
+ * @param qid: query ID to set in packet. network order.
+ * @param qflags: original query flags (to copy RD and CD bits). host order.
+ * @param edns: if not NULL, this is the query edns info,
+ * 	and an edns reply is attached. Only attached if EDNS record fits reply.
+ */
+void error_encode(ldns_buffer* pkt, int r, struct query_info* qinfo,
+	uint16_t qid, uint16_t qflags, struct edns_data* edns);
 
 #endif /* UTIL_DATA_MSGENCODE_H */

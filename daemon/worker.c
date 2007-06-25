@@ -152,43 +152,12 @@ req_release(struct work_query* w)
 		(int)worker->num_requests);
 }
 
-/** create error and fill into buffer */
-static void
-replyerror_fillbuf(int r, struct comm_reply* repinfo, uint16_t id,
-	uint16_t qflags, struct query_info* qinfo)
-{
-	ldns_buffer* buf = repinfo->c->buffer;
-	uint16_t flags;
-	verbose(VERB_DETAIL, "reply with error");
-	
-	ldns_buffer_clear(buf);
-	ldns_buffer_write(buf, &id, sizeof(uint16_t));
-	flags = (uint16_t)(BIT_QR | BIT_RA | r); /* QR and retcode*/
-	flags |= (qflags & (BIT_RD|BIT_CD)); /* copy RD and CD bit */
-	ldns_buffer_write_u16(buf, flags);
-	flags = 1;
-	ldns_buffer_write_u16(buf, flags);
-	flags = 0;
-	ldns_buffer_write(buf, &flags, sizeof(uint16_t));
-	ldns_buffer_write(buf, &flags, sizeof(uint16_t));
-	ldns_buffer_write(buf, &flags, sizeof(uint16_t));
-	ldns_buffer_write(buf, qinfo->qname, qinfo->qname_len);
-	ldns_buffer_write_u16(buf, qinfo->qtype);
-	ldns_buffer_write_u16(buf, qinfo->qclass);
-	ldns_buffer_flip(buf);
-}
-
 /** reply to query with given error code */
 static void 
 replyerror(int r, struct work_query* w)
 {
-	w->state.edns.edns_version = EDNS_ADVERTISED_VERSION;
-	w->state.edns.udp_size = EDNS_ADVERTISED_SIZE;
-	w->state.edns.ext_rcode = 0;
-	w->state.edns.bits &= EDNS_DO;
-	replyerror_fillbuf(r, &w->query_reply, w->query_id, 
-		w->state.query_flags, &w->state.qinfo);
-	attach_edns_record(w->query_reply.c->buffer, &w->state.edns);
+	error_encode(w->query_reply.c->buffer, r, &w->state.qinfo, 
+		w->query_id, w->state.query_flags, &w->state.edns);
 	comm_point_send_reply(&w->query_reply);
 	req_release(w);
 	query_info_clear(&w->state.qinfo);
@@ -512,8 +481,8 @@ answer_from_cache(struct worker* worker, struct lruhash_entry* e, uint16_t id,
 	if(!reply_info_answer_encode(&mrentry->key, rep, id, flags, 
 		repinfo->c->buffer, timenow, 1, worker->scratchpad,
 		udpsize, edns, (int)(edns->bits & EDNS_DO) )) {
-		replyerror_fillbuf(LDNS_RCODE_SERVFAIL, repinfo, id,
-			flags, &mrentry->key);
+		error_encode(repinfo->c->buffer, LDNS_RCODE_SERVFAIL, 
+			&mrentry->key, id, flags, edns);
 	}
 	/* cannot send the reply right now, because blocking network syscall
 	 * is bad while holding locks. */
@@ -581,9 +550,9 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 		edns.udp_size = EDNS_ADVERTISED_SIZE;
 		edns.bits &= EDNS_DO;
 		verbose(VERB_ALGO, "query with bad edns version.");
-		replyerror_fillbuf(EDNS_RCODE_BADVERS&0xf, repinfo, 
+		error_encode(c->buffer, EDNS_RCODE_BADVERS&0xf, &qinfo,
 			*(uint16_t*)ldns_buffer_begin(c->buffer),
-			ldns_buffer_read_u16_at(c->buffer, 2), &qinfo);
+			ldns_buffer_read_u16_at(c->buffer, 2), NULL);
 		attach_edns_record(c->buffer, &edns);
 		return 1;
 	}
@@ -871,7 +840,11 @@ worker_init(struct worker* worker, struct config_file *cfg,
 	worker->env.rnd = worker->rndstate;
 	worker->env.scratch = worker->scratchpad;
 	worker->env.mesh = mesh_create(worker->daemon->num_modules,
-		worker->daemon->modfunc);
+		worker->daemon->modfunc, &worker->env);
+	worker->env.detach_subs = &mesh_detach_subs;
+	worker->env.attach_sub = &mesh_attach_sub;
+	worker->env.query_done = &mesh_query_done;
+	worker->env.walk_supers = &mesh_walk_supers;
 	if(!worker->env.mesh) {
 		worker_delete(worker);
 		return 0;

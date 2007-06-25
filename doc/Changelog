@@ -1,3 +1,7 @@
+25 June 2007: Wouter
+	- more mesh work.
+	- error encode routine for ease.
+
 22 June 2007: Wouter
 	- removed unused _node iterator value from rbtree_t. Takes up space.
 	- iterator can handle querytargets state without a delegation point

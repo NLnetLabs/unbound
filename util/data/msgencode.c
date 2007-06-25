@@ -754,3 +754,40 @@ qinfo_query_encode(ldns_buffer* pkt, struct query_info* qinfo)
 	ldns_buffer_write_u16(pkt, qinfo->qclass);
 	ldns_buffer_flip(pkt);
 }
+
+void 
+error_encode(ldns_buffer* buf, int r, struct query_info* qinfo,
+	uint16_t qid, uint16_t qflags, struct edns_data* edns)
+{
+	uint16_t flags;
+
+	ldns_buffer_clear(buf);
+	ldns_buffer_write(buf, &qid, sizeof(uint16_t));
+	flags = (uint16_t)(BIT_QR | BIT_RA | r); /* QR and retcode*/
+	flags |= (qflags & (BIT_RD|BIT_CD)); /* copy RD and CD bit */
+	ldns_buffer_write_u16(buf, flags);
+	if(qinfo) flags = 1;
+	else	flags = 0;
+	ldns_buffer_write_u16(buf, flags);
+	flags = 0;
+	ldns_buffer_write(buf, &flags, sizeof(uint16_t));
+	ldns_buffer_write(buf, &flags, sizeof(uint16_t));
+	ldns_buffer_write(buf, &flags, sizeof(uint16_t));
+	if(qinfo) {
+		ldns_buffer_write(buf, qinfo->qname, qinfo->qname_len);
+		ldns_buffer_write_u16(buf, qinfo->qtype);
+		ldns_buffer_write_u16(buf, qinfo->qclass);
+	}
+	ldns_buffer_flip(buf);
+	if(edns) {
+		struct edns_data es = *edns;
+		es.edns_version = EDNS_ADVERTISED_VERSION;
+		es.udp_size = EDNS_ADVERTISED_SIZE;
+		es.ext_rcode = 0;
+		es.bits &= EDNS_DO;
+		if(ldns_buffer_limit(buf) + calc_edns_field_size(&es) >
+			edns->udp_size)
+			return;
+		attach_edns_record(buf, &es);
+	}
+}

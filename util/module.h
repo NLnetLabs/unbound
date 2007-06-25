@@ -120,14 +120,75 @@ struct module_env {
 		struct module_qstate* q);
 
 	/**
-	 * Cleanup subqueries from this query state. Either delete or
-	 * move them somewhere else. This query state no longer needs the
-	 * results from those subqueries.
-	 * @param qstate: query state.
-	 * 	subqueries are (re)moved so that no subq_done events from
-	 * 	them will reach this qstate.
+	 * Detach-subqueries.
+	 * Remove all sub-query references from this query state.
+	 * Keeps super-references of those sub-queries correct.
+	 * Updates stat items in mesh_area structure.
+	 * @param qstate: used to find mesh state.
 	 */
-	void (*remove_subqueries)(struct module_qstate* qstate);
+	void (*detach_subs)(struct module_qstate* qstate);
+
+	/**
+	 * Attach subquery.
+	 * Creates it if it does not exist already.
+	 * Keeps sub and super references correct.
+	 * Updates stat items in mesh_area structure.
+	 * Pass if it is priming query or not.
+	 * return:
+	 * o if error (malloc) happened.
+	 * o need to initialise the new state (module init; it is a new state).
+	 *   so that the next run of the query with this module is successful.
+	 * o no init needed, attachment successful.
+	 * 
+	 * @param qstate: the state to find mesh state, and that wants to 
+	 * 	receive the results from the new subquery.
+	 * @param qinfo: what to query for (copied).
+	 * @param qflags: what flags to use (RD flag or not).
+	 * @param prime: if it is a (stub) priming query.
+	 * @param newq: If the new subquery needs initialisation, it is 
+	 * 	returned, otherwise NULL is returned.
+	 * @return: false on error, true if success (and init may be needed).
+	 */ 
+	int (*attach_sub)(struct module_qstate* qstate, 
+		struct query_info* qinfo, uint16_t qflags, int prime, 
+		struct module_qstate** newq);
+
+	/**
+	 * Query state is done, send messages to reply entries.
+	 * Encode messages using reply entry values and the querystate 
+	 * (with original qinfo), using given reply_info.
+	 * Pass errcode != 0 if an error reply is needed.
+	 * If no reply entries, nothing is done.
+	 * Must be called before a module can module_finished or return 
+	 * module_error.
+	 * The module must handle the super query states itself as well.
+	 * 
+	 * @param qstate: used for original query info. And to find mesh info.
+	 * @param rcode: if not 0 (NOERROR) an error is sent back (and 
+	 * 	rep ignored).
+	 * @param rep: reply to encode and send back to clients.
+	 */
+	void (*query_done)(struct module_qstate* qstate, int rcode,
+	        struct reply_info* rep);
+
+	/**
+	 * Get a callback for the super query states that are interested in the 
+	 * results from this query state. These can then be changed for error 
+	 * or results.
+	 * Must be called befor a module can module_finished or return 
+	 * module_error.  After finishing or module error, the super 
+	 * query states become runnable with event module_event_pass.
+	 * 
+	 * @param qstate: the state that has results, used to find mesh state.
+	 * @param id: module id.
+	 * @param rcode: rcode to pass to callback, for easier error passing to 
+	 *       parents.
+	 * @param cb: callback function. Called as
+	 * 	cb(qstate, id, super_qstate, rcode) for every super qstate.
+	 */
+	void (*walk_supers)(struct module_qstate* qstate, int id, 
+		int rcode, void (*cb)(struct module_qstate*, int, 
+		struct module_qstate*, int));
 
 	/** region for temporary usage. May be cleared after operate() call. */
 	struct region* scratch;
@@ -141,6 +202,17 @@ struct module_env {
 	struct ub_randstate* rnd;
 	/** module specific data. indexed by module id. */
 	void* modinfo[MAX_MODULE];
+
+	/** @@@ TO BE DELETED */
+	/**
+	 * Cleanup subqueries from this query state. Either delete or
+	 * move them somewhere else. This query state no longer needs the
+	 * results from those subqueries.
+	 * @param qstate: query state.
+	 * 	subqueries are (re)moved so that no subq_done events from
+	 * 	them will reach this qstate.
+	 */
+	void (*remove_subqueries)(struct module_qstate* qstate);
 };
 
 /**
