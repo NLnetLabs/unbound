@@ -154,6 +154,15 @@ struct module_env {
 		struct module_qstate** newq);
 
 	/**
+	 * Kill newly attached sub. If attach_sub returns newq for 
+	 * initialisation, but that fails, then this routine will cleanup and
+	 * delete the fresly created sub.
+	 * @param newq: the new subquery that is no longer needed.
+	 * 	It is removed.
+	 */
+	void (*kill_sub)(struct module_qstate* newq);
+
+	/**
 	 * Query state is done, send messages to reply entries.
 	 * Encode messages using reply entry values and the querystate 
 	 * (with original qinfo), using given reply_info.
@@ -202,17 +211,6 @@ struct module_env {
 	struct ub_randstate* rnd;
 	/** module specific data. indexed by module id. */
 	void* modinfo[MAX_MODULE];
-
-	/** @@@ TO BE DELETED */
-	/**
-	 * Cleanup subqueries from this query state. Either delete or
-	 * move them somewhere else. This query state no longer needs the
-	 * results from those subqueries.
-	 * @param qstate: query state.
-	 * 	subqueries are (re)moved so that no subq_done events from
-	 * 	them will reach this qstate.
-	 */
-	void (*remove_subqueries)(struct module_qstate* qstate);
 };
 
 /**
@@ -247,12 +245,6 @@ enum module_ev {
 	module_event_reply,
 	/** timeout */
 	module_event_timeout,
-	/** other module finished */
-	module_event_mod_done,
-	/** subquery finished */
-	module_event_subq_done,
-	/** subquery finished with error */
-	module_event_subq_error,
 	/** error */
 	module_event_error
 };
@@ -281,24 +273,6 @@ struct module_qstate {
 	struct module_env* env;
 	/** mesh related information for this query */
 	struct mesh_state* mesh_info;
-
-	/** -----  TO DELETE */
-	struct work_query* work_info; 
-	/** hash value of the query qinfo */
-	hashvalue_t query_hash;
-	/** edns data from the query */
-	struct edns_data edns;
-	/** buffer, store resulting reply here. 
-	 * May be cleared when module blocks. */
-	ldns_buffer* buf;
-	/** parent query, only nonNULL for subqueries */
-	struct module_qstate* parent;
-	/** pointer to first subquery below this one; makes list with next */
-	struct module_qstate* subquery_first;
-	/** pointer to next sibling subquery (not above or below this one) */
-	struct module_qstate* subquery_next;
-	/** pointer to prev sibling subquery (not above or below this one) */
-	struct module_qstate* subquery_prev;
 };
 
 /** 
@@ -360,30 +334,5 @@ const char* strextstate(enum module_ext_state s);
  * @return descriptive string.
  */
 const char* strmodulevent(enum module_ev e);
-
-/**
- * Remove subqrequest from list.
- * @param head: List head. pointer to start of subquery_next/prev sibling list.
- *	mostly reference to the parent subquery_first.
- * @param sub: subrequest. It is snipped off. 
- */
-void module_subreq_remove(struct module_qstate** head, 
-	struct module_qstate* sub);
-
-/**
- * Insert subqrequest in list. You must set the parent ptr of sub correctly.
- * @param head: List head. pointer to start of subquery_next/prev sibling list.
- *	mostly reference to the parent subquery_first.
- * @param sub: subrequest. It is added to the list. 
- */
-void module_subreq_insert(struct module_qstate** head, 
-	struct module_qstate* sub);
-
-/**
- * Calculate number of queries in the query list.
- * @param q: the start of the list, pass subquery_first.
- * @return: number, 0 if q was NULL.
- */
-int module_subreq_num(struct module_qstate* q);
 
 #endif /* UTIL_MODULE_H */

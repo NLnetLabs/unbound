@@ -135,10 +135,8 @@ enum iter_state {
 	/** Responses to priming queries finish at this state. */
 	PRIME_RESP_STATE,
 
-	/** Responses to target queries start at this state. */
-	TARGET_RESP_STATE,
-
-	/** Responses that are to be returned upstream end at this state. */
+	/** Responses that are to be returned upstream end at this state. 
+	 * As well as responses to target queries. */
 	FINISHED_STATE
 };
 

@@ -42,6 +42,7 @@
 #include "config.h"
 #include "daemon/stats.h"
 #include "daemon/worker.h"
+#include "services/mesh.h"
 
 void server_stats_init(struct server_stats* stats)
 {
@@ -51,9 +52,9 @@ void server_stats_init(struct server_stats* stats)
 void server_stats_querymiss(struct server_stats* stats, struct worker* worker)
 {
 	stats->num_queries_missed_cache++;
-	stats->sum_query_list_size += worker->num_requests;
-	if(worker->num_requests > stats->max_query_list_size)
-		stats->max_query_list_size = worker->num_requests;
+	stats->sum_query_list_size += worker->env.mesh->all.count;
+	if(worker->env.mesh->all.count > stats->max_query_list_size)
+		stats->max_query_list_size = worker->env.mesh->all.count;
 }
 
 void server_stats_log(struct server_stats* stats, int threadnum)

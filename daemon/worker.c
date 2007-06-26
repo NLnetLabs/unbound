@@ -81,248 +81,19 @@ worker_send_cmd(struct worker* worker, ldns_buffer* buffer,
 		log_err("write socket: %s", strerror(errno));
 }
 
-/** delete subrequest */
-static void
-qstate_cleanup(struct worker* worker, struct module_qstate* qstate)
-{
-	int i;
-	if(!qstate)
-		return;
-	/* call de-init while all is OK */
-	for(i=0; i<worker->daemon->num_modules; i++)
-		(*worker->daemon->modfunc[i]->clear)(qstate, i);
-	/* cleanup this query */
-	region_free_all(qstate->region);
-	query_info_clear(&qstate->qinfo);
-	if(qstate->parent) {
-		/* subquery of parent */
-		module_subreq_remove(&qstate->parent->subquery_first, qstate);
-		region_destroy(qstate->region);
-		free(qstate);
-	} else if (!qstate->work_info) {
-		/* slumbering query */
-		module_subreq_remove(&worker->slumber_list, qstate);
-		region_destroy(qstate->region);
-		free(qstate);
-		verbose(VERB_ALGO, "cleanup: slumber list has %d entries",
-			module_subreq_num(worker->slumber_list));
-	}
-}
-
-/** delete subrequest recursively */
-static void
-qstate_free_recurs_list(struct worker* worker, struct module_qstate* list)
-{
-	struct module_qstate* n;
-	/* remove subqueries */
-	while(list) {
-		n = list->subquery_next;
-		qstate_free_recurs_list(worker, list->subquery_first);
-		qstate_cleanup(worker, list);
-		list = n;
-	}
-}
-
-/** delete subrequest */
-static void
-qstate_free(struct worker* worker, struct module_qstate* qstate)
-{
-	if(!qstate)
-		return;
-	worker_slumber_subqueries(qstate);
-	qstate_cleanup(worker, qstate);
-}
-
-/** release workrequest back to the freelist,
- * note that the w->qinfo still needs to be cleared after this. 
- */
-static void
-req_release(struct work_query* w)
-{
-	struct worker* worker = w->state.env->worker;
-	if(worker->num_requests == worker->request_size)  {
-		/* no longer at max, start accepting again. */
-		listen_resume(worker->front);
-	}
-	log_assert(worker->num_requests >= 1);
-	worker->num_requests --;
-	w->next = worker->free_queries;
-	worker->free_queries = w;
-	verbose(VERB_ALGO, "released query to pool, %d in use", 
-		(int)worker->num_requests);
-}
-
-/** reply to query with given error code */
-static void 
-replyerror(int r, struct work_query* w)
-{
-	error_encode(w->query_reply.c->buffer, r, &w->state.qinfo, 
-		w->query_id, w->state.query_flags, &w->state.edns);
-	comm_point_send_reply(&w->query_reply);
-	req_release(w);
-	query_info_clear(&w->state.qinfo);
-}
-
-/** init qstate module states */
-static void
-set_extstates_initial(struct worker* worker, struct module_qstate* qstate)
-{
-	int i;
-	for(i=0; i<worker->daemon->num_modules; i++)
-		qstate->ext_state[i] = module_state_initial;
-}
-
-/** recursive debug logging of (sub)query structure */
-static void
-run_debug(struct module_qstate* p, int d)
-{
-	char buf[80+1+1]; /* max nn=80; marker is 1, zero at end is 1 */
-	int i, nn = d*2;
-	if(nn > 80)
-		nn = 80;
-	for(i=0; i<nn; i++) {
-		buf[i] = ' ';
-	}
-	buf[i++] = 'o';
-	buf[i] = 0;
-	log_query_info(VERB_ALGO, buf, &p->qinfo);
-	for(p = p->subquery_first; p; p = p->subquery_next) {
-		run_debug(p, d+1);
-	}
-}
-
-/** find runnable recursive */
-static struct module_qstate*
-find_run_in(struct module_qstate* pfirst)
-{
-	struct module_qstate* q, *p;
-	for(p = pfirst; p; p = p->subquery_next) {
-		if(p->ext_state[p->curmod] == module_state_initial)
-			return p;
-		if((q=find_run_in(p->subquery_first)))
-			return q;
-	}
-	return NULL;
-}
-
-/** find other runnable subqueries */
-static struct module_qstate*
-find_runnable(struct module_qstate* subq)
-{
-	struct module_qstate* p = subq;
-	verbose(VERB_ALGO, "find runnable");
-	if(p->subquery_next && p->subquery_next->ext_state[
-		p->subquery_next->curmod] == module_state_initial)
-		return p->subquery_next;
-	while(p->parent)
-		p = p->parent;
-	if(verbosity >= VERB_ALGO)
-		run_debug(p, 0);
-	p = find_run_in(p->subquery_first);
-	if(p) return p;
-	p = find_run_in(subq->env->worker->slumber_list);
-	return p;
-}
-
-/** process incoming request */
-static void 
-worker_process_query(struct worker* worker, struct module_qstate* qstate, 
-	enum module_ev event, struct outbound_entry* entry) 
-{
-	enum module_ext_state s;
-	verbose(VERB_DETAIL, "worker process handle event");
-	if(event == module_event_new) {
-		qstate->curmod = 0;
-		set_extstates_initial(worker, qstate);
-	}
-	/* allow current module to run */
-	/* loops for subqueries or parent queries. */
-	while(1) {
-		(*worker->daemon->modfunc[qstate->curmod]->operate)(qstate, 
-			event, qstate->curmod, entry);
-		region_free_all(worker->scratchpad);
-		qstate->reply = NULL;
-		s = qstate->ext_state[qstate->curmod];
-		verbose(VERB_ALGO, "worker_process_query: module "
-			"exit state is %s", strextstate(s));
-		if(s == module_state_initial) {
-			log_err("module exit in initial state, "
-				"it loops; parent query is aborted");
-			while(qstate->parent)
-				qstate = qstate->parent;
-			s = module_error;
-		}
-		/* examine results, start further modules, etc. */
-		if(s != module_error && s != module_finished) {
-			/* see if we can continue with other subrequests */
-			struct module_qstate* nxt = find_runnable(qstate);
-			if(nxt) {
-				/* start submodule */
-				qstate = nxt;
-				set_extstates_initial(worker, qstate);
-				entry = NULL;
-				event = module_event_pass;
-				continue;
-			}
-		}
-
-		/* subrequest done */
-		if(s == module_error && qstate->parent) {
-			struct module_qstate* up = qstate->parent;
-			qstate_free(worker, qstate);
-			qstate = up;
-			entry = NULL;
-			event = module_event_subq_error;
-			continue;
-		}
-		if(s == module_finished && qstate->parent) {
-			struct module_qstate* up = qstate->parent;
-			qstate_free(worker, qstate);
-			qstate = up;
-			entry = NULL;
-			event = module_event_subq_done;
-			continue;
-		}
-		break;
-	}
-	/* request done */
-	if(s == module_error) {
-		if(qstate->work_info) {
-			replyerror(LDNS_RCODE_SERVFAIL, qstate->work_info);
-		}
-		qstate_free(worker, qstate);
-		verbose(VERB_DETAIL, "worker process suspend");
-		return;
-	}
-	if(s == module_finished) {
-		if(qstate->work_info) {
-			memcpy(ldns_buffer_begin(qstate->work_info->
-				query_reply.c->buffer), &qstate->
-				work_info->query_id, sizeof(qstate->
-				work_info->query_id));
-			comm_point_send_reply(&qstate->work_info->query_reply);
-			req_release(qstate->work_info);
-		}
-		qstate_free(worker, qstate);
-		verbose(VERB_DETAIL, "worker process suspend");
-		return;
-	}
-	/* suspend, waits for wakeup callback */
-	verbose(VERB_DETAIL, "worker process suspend");
-}
-
 /** process incoming replies from the network */
 static int 
 worker_handle_reply(struct comm_point* c, void* arg, int error, 
 	struct comm_reply* reply_info)
 {
-	struct work_query* w = (struct work_query*)arg;
-	struct worker* worker = w->state.env->worker;
+	struct module_qstate* q = (struct module_qstate*)arg;
+	struct worker* worker = q->env->worker;
+	struct outbound_entry e;
+	e.qstate = q;
+	e.qsent = NULL;
 
-	w->state.reply = reply_info;
 	if(error != 0) {
-		worker_process_query(worker, &w->state, 
-			module_event_timeout, NULL);
+		mesh_report_reply(worker->env.mesh, &e, 0, reply_info);
 		return 0;
 	}
 	/* sanity check. */
@@ -332,11 +103,10 @@ worker_handle_reply(struct comm_point* c, void* arg, int error,
 		|| LDNS_QDCOUNT(ldns_buffer_begin(c->buffer)) > 1) {
 		/* error becomes timeout for the module as if this reply
 		 * never arrived. */
-		worker_process_query(worker, &w->state, 
-			module_event_timeout, NULL);
+		mesh_report_reply(worker->env.mesh, &e, 0, reply_info);
 		return 0;
 	}
-	worker_process_query(worker, &w->state, module_event_reply, NULL);
+	mesh_report_reply(worker->env.mesh, &e, 1, reply_info);
 	return 0;
 }
 
@@ -349,10 +119,8 @@ worker_handle_service_reply(struct comm_point* c, void* arg, int error,
 	struct worker* worker = e->qstate->env->worker;
 
 	verbose(VERB_ALGO, "worker scvd callback for qstate %p", e->qstate);
-	e->qstate->reply = reply_info;
 	if(error != 0) {
-		worker_process_query(worker, e->qstate, 
-			module_event_timeout, e);
+		mesh_report_reply(worker->env.mesh, e, 0, reply_info);
 		return 0;
 	}
 	/* sanity check. */
@@ -363,11 +131,10 @@ worker_handle_service_reply(struct comm_point* c, void* arg, int error,
 		/* error becomes timeout for the module as if this reply
 		 * never arrived. */
 		verbose(VERB_ALGO, "worker: bad reply handled as timeout");
-		worker_process_query(worker, e->qstate, 
-			module_event_timeout, e);
+		mesh_report_reply(worker->env.mesh, e, 0, reply_info);
 		return 0;
 	}
-	worker_process_query(worker, e->qstate, module_event_reply, e);
+	mesh_report_reply(worker->env.mesh, e, 1, reply_info);
 	return 0;
 }
 
@@ -503,7 +270,6 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 	hashvalue_t h;
 	struct lruhash_entry* e;
 	struct query_info qinfo;
-	struct work_query* w;
 	struct edns_data edns;
 
 	if(error != NETEVENT_NOERROR) {
@@ -588,45 +354,29 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 	}
 	ldns_buffer_rewind(c->buffer);
 	server_stats_querymiss(&worker->stats, worker);
-	/* perform memory allocation(s) */
-	if(!query_info_allocqname(&qinfo)) {
-		comm_point_drop_reply(repinfo);
-		return 0;
-	}
 
 	/* grab a work request structure for this new request */
-	if(!(w = worker->free_queries)) {
+	if(worker->env.mesh->all.count > worker->request_size) {
 		/* we could get this due to a slow tcp incoming query, 
 		   that started before we performed listen_pushback */
 		verbose(VERB_DETAIL, "worker: too many incoming requests "
 			"active. dropping incoming query.");
 		verbose(VERB_ALGO, "currently servicing %d of %d queries", 
-			(int)worker->num_requests, (int)worker->request_size);
+			(int)worker->env.mesh->all.count, 
+			(int)worker->request_size);
 		worker->stats.num_query_list_exceeded++;
 		comm_point_drop_reply(repinfo);
 		query_info_clear(&qinfo);
 		return 0;
 	}
-	w->state.edns = edns;
-	worker->free_queries = w->next;
-	worker->num_requests ++;
-	log_assert(worker->num_requests <= worker->request_size);
-	if(worker->num_requests == worker->request_size)  {
+	mesh_new_client(worker->env.mesh, &qinfo, 
+		ldns_buffer_read_u16_at(c->buffer, 2),
+		&edns, repinfo, *(uint16_t*)ldns_buffer_begin(c->buffer));
+
+	if(worker->env.mesh->all.count == worker->request_size)  {
 		/* the max request number has been reached, stop accepting */
 		listen_pushback(worker->front);
 	}
-
-	/* init request */
-	w->next = NULL;
-	w->state.query_hash = h;
-	memcpy(&w->query_reply, repinfo, sizeof(struct comm_reply));
-	memcpy(&w->state.qinfo, &qinfo, sizeof(struct query_info));
-	memcpy(&w->query_id, ldns_buffer_begin(c->buffer), sizeof(uint16_t));
-	w->state.query_flags = ldns_buffer_read_u16_at(c->buffer, 2);
-
-	/* answer it */
-	w->state.buf = c->buffer;
-	worker_process_query(worker, &w->state, module_event_new, NULL);
 	return 0;
 }
 
@@ -692,51 +442,6 @@ worker_create(struct daemon* daemon, int id)
 		worker->cmd_recv_fd = sv[1];
 	}
 	return worker;
-}
-
-/** create request handling structures */
-static int
-reqs_init(struct worker* worker)
-{
-	size_t i;
-	for(i=0; i<worker->request_size; i++) {
-		struct work_query* q = (struct work_query*)calloc(1,
-			sizeof(struct work_query));
-		if(!q) return 0;
-		q->state.buf = worker->front->udp_buff;
-		q->state.region = region_create_custom(malloc, free, 1024, 
-			64, 16, 0);
-		if(!q->state.region) {
-			free(q);
-			return 0;
-		}
-		q->state.env = &worker->env;
-		q->state.parent = NULL;
-		q->state.work_info = q;
-		q->next = worker->free_queries;
-		worker->free_queries = q;
-		q->all_next = worker->all_queries;
-		worker->all_queries = q;
-	}
-	return 1;
-}
-
-/** delete request list */
-static void
-reqs_delete(struct worker* worker)
-{
-	struct work_query* q = worker->all_queries;
-	struct work_query* n;
-	while(q) {
-		n = q->all_next;
-		log_assert(q->state.env->worker == worker);
-		/* comm_reply closed in outside_network_delete */
-		qstate_free_recurs_list(worker, q->state.subquery_first);
-		qstate_cleanup(worker, &q->state);
-		region_destroy(q->state.region);
-		free(q);
-		q = n;
-	}
 }
 
 int
@@ -825,11 +530,6 @@ worker_init(struct worker* worker, struct config_file *cfg,
 		return 0;
 	}
 	worker->request_size = cfg->num_queries_per_thread;
-	if(!reqs_init(worker)) {
-		worker_delete(worker);
-		return 0;
-	}
-	worker->slumber_list = NULL;
 
 	server_stats_init(&worker->stats);
 	alloc_init(&worker->alloc, &worker->daemon->superalloc, 
@@ -843,6 +543,7 @@ worker_init(struct worker* worker, struct config_file *cfg,
 		worker->daemon->modfunc, &worker->env);
 	worker->env.detach_subs = &mesh_detach_subs;
 	worker->env.attach_sub = &mesh_attach_sub;
+	worker->env.kill_sub = &mesh_state_delete;
 	worker->env.query_done = &mesh_query_done;
 	worker->env.walk_supers = &mesh_walk_supers;
 	if(!worker->env.mesh) {
@@ -865,8 +566,6 @@ worker_delete(struct worker* worker)
 		return;
 	server_stats_log(&worker->stats, worker->thread_num);
 	mesh_delete(worker->env.mesh);
-	reqs_delete(worker);
-	qstate_free_recurs_list(worker, worker->slumber_list);
 	listen_delete(worker->front);
 	outside_network_delete(worker->back);
 	comm_signal_delete(worker->comsig);
@@ -894,11 +593,11 @@ worker_send_packet(ldns_buffer* pkt, struct sockaddr_storage* addr,
 	struct worker* worker = q->env->worker;
 	if(use_tcp) {
 		return pending_tcp_query(worker->back, pkt, addr, addrlen, 
-			timeout, worker_handle_reply, q->work_info, 
+			timeout, worker_handle_reply, q, 
 			worker->rndstate) != 0;
 	}
 	return pending_udp_query(worker->back, pkt, addr, addrlen, 
-		timeout*1000, worker_handle_reply, q->work_info, 
+		timeout*1000, worker_handle_reply, q, 
 		worker->rndstate) != 0;
 }
 
@@ -933,22 +632,4 @@ worker_send_query(uint8_t* qname, size_t qnamelen, uint16_t qtype,
 		return NULL;
 	}
 	return e;
-}
-
-void 
-worker_slumber_subqueries(struct module_qstate* qstate)
-{
-	struct worker* worker = qstate->env->worker;
-	if(qstate->subquery_first) {
-		while(qstate->subquery_first) {
-			/* put subqueries on slumber list */
-			struct module_qstate* s = qstate->subquery_first;
-			module_subreq_remove(&qstate->subquery_first, s);
-			s->parent = NULL;
-			s->work_info = NULL;
-			module_subreq_insert(&worker->slumber_list, s);
-		}
-		verbose(VERB_ALGO, "worker: slumber list has %d entries",
-			module_subreq_num(worker->slumber_list));
-	}
 }

@@ -68,20 +68,6 @@ enum worker_commands {
 	worker_cmd_quit
 };
 
-/** information per query that is in processing */
-struct work_query {
-	/** next query in freelist */
-	struct work_query* next;
-	/** query state */
-	struct module_qstate state;
-	/** the query reply destination, packet buffer and where to send. */
-	struct comm_reply query_reply;
-	/** id of query, in network byteorder. */
-	uint16_t query_id;
-	/** next query in all-list */
-	struct work_query* all_next;
-};
-
 /**
  * Structure holding working information for unbound.
  * Holds globally visible information.
@@ -108,16 +94,8 @@ struct worker {
 	/** commpoint to listen to commands. */
 	struct comm_point* cmd_com;
 
-	/** number of requests currently active */
-	size_t num_requests;
 	/** number of requests that can be handled by this worker */
 	size_t request_size;
-	/** the free working queries */
-	struct work_query* free_queries;
-	/** list of all working queries */
-	struct work_query* all_queries;
-	/** list of slumbering states, with promiscuous queries */
-	struct module_qstate* slumber_list;
 
 	/** random() table for this worker. */
 	struct ub_randstate* rndstate;
@@ -214,11 +192,5 @@ struct outbound_entry* worker_send_query(uint8_t* qname, size_t qnamelen,
 	uint16_t qtype, uint16_t qclass, uint16_t flags, int dnssec, 
 	struct sockaddr_storage* addr, socklen_t addrlen,
 	struct module_qstate* q);
-
-/**
- * Remove subqueries, by moving them to the slumber list.
- * @param qstate: this state has subqueries removed.
- */
-void worker_slumber_subqueries(struct module_qstate* qstate);
 
 #endif /* DAEMON_WORKER_H */

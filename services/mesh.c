@@ -149,7 +149,7 @@ void mesh_new_client(struct mesh_area* mesh, struct query_info* qinfo,
 				qinfo, qid, qflags, edns);
 			comm_point_send_reply(rep);
 			if(added)
-				mesh_state_delete(s);
+				mesh_state_delete(&s->s);
 			return;
 	}
 	/* update statistics */
@@ -240,12 +240,14 @@ mesh_state_cleanup(struct mesh_state* mstate)
 }
 
 void 
-mesh_state_delete(struct mesh_state* mstate)
+mesh_state_delete(struct module_qstate* qstate)
 {
 	struct mesh_area* mesh;
 	struct mesh_state_ref* super, ref;
-	if(!mstate)
+	struct mesh_state* mstate;
+	if(!qstate)
 		return;
+	mstate = qstate->mesh_info;
 	mesh = mstate->s.env->mesh;
 	mesh_detach_subs(&mstate->s);
 	if(!mstate->reply_list && mstate->super_set.count == 0) {
@@ -350,7 +352,7 @@ timeval_subtract(struct timeval* d, struct timeval* end, struct timeval* start)
 #ifndef S_SPLINT_S
 	d->tv_sec = end->tv_sec - start->tv_sec;
 	while(end->tv_usec < start->tv_usec) {
-		d->tv_usec += 1000000;
+		end->tv_usec += 1000000;
 		d->tv_sec--;
 	}
 	d->tv_usec = end->tv_usec - start->tv_usec;
@@ -368,6 +370,25 @@ timeval_add(struct timeval* d, struct timeval* add)
 		d->tv_usec -= 1000000;
 		d->tv_sec++;
 	}
+#endif
+}
+
+/** divide sum of timers to get average */
+static void
+timeval_divide(struct timeval* avg, struct timeval* sum, size_t d)
+{
+#ifndef S_SPLINT_S
+	size_t leftover;
+	if(d == 0) {
+		avg->tv_sec = 0;
+		avg->tv_usec = 0;
+		return;
+	}
+	avg->tv_sec = sum->tv_sec / d;
+	avg->tv_usec = sum->tv_usec / d;
+	/* handle fraction from seconds divide */
+	leftover = sum->tv_sec - avg->tv_sec*d;
+	avg->tv_usec += (leftover*1000000)/d;
 #endif
 }
 
@@ -412,7 +433,7 @@ mesh_send_reply(struct mesh_state* m, int rcode, struct reply_info* rep,
 	} else {
 		struct timeval duration;
 		timeval_subtract(&duration, &end_time, &r->start_time);
-		verbose(VERB_ALGO, "query took %d s %d usec",
+		verbose(VERB_ALGO, "query took %d.%6.6d sec",
 			(int)duration.tv_sec, (int)duration.tv_usec);
 		m->s.env->mesh->replies_sent++;
 		timeval_add(&m->s.env->mesh->replies_sum_wait, &duration);
@@ -503,7 +524,7 @@ void mesh_run(struct mesh_area* mesh, struct mesh_state* mstate,
 		if(s == module_error || s == module_finished) {
 			/* must have called _done and _supers */
 			log_assert(mstate->debug_flags == 3);
-			mesh_state_delete(mstate);
+			mesh_state_delete(&mstate->s);
 		}
 
 		/* run more modules */
@@ -515,5 +536,17 @@ void mesh_run(struct mesh_area* mesh, struct mesh_state* mstate,
 			(void)rbtree_delete(&mesh->run, mstate);
 		} else mstate = NULL;
 	}
-	verbose(VERB_ALGO, "mesh_run: end");
+	verbose(VERB_ALGO, "mesh_run: end, %u states (%u with reply, "
+		"%u detached), %u total replies", (unsigned)mesh->all.count, 
+		(unsigned)mesh->num_reply_states,
+		(unsigned)mesh->num_detached_states,
+		(unsigned)mesh->num_reply_addrs);
+	if(1) {
+		struct timeval avg;
+		timeval_divide(&avg, &mesh->replies_sum_wait, 
+			mesh->replies_sent);
+		verbose(VERB_ALGO, "send %u replies, with average wait "
+			"of %d.%6.6d", (unsigned)mesh->replies_sent,
+			(int)avg.tv_sec, (int)avg.tv_usec);
+	}
 }

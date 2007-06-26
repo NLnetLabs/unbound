@@ -62,47 +62,7 @@ strmodulevent(enum module_ev e)
 	case module_event_pass: return "module_event_pass";
 	case module_event_reply: return "module_event_reply";
 	case module_event_timeout: return "module_event_timeout";
-	case module_event_mod_done: return "module_event_mod_done";
-	case module_event_subq_done: return "module_event_subq_done";
-	case module_event_subq_error: return "module_event_subq_error";
 	case module_event_error: return "module_event_error";
 	}
 	return "bad_event_value";
-}
-
-void 
-module_subreq_remove(struct module_qstate** head, struct module_qstate* sub)
-{
-	if(!sub || !head) 
-		return;
-	/* snip off double linked list */
-	if(sub->subquery_prev)
-		sub->subquery_prev->subquery_next = sub->subquery_next;
-	else	*head = sub->subquery_next;
-	if(sub->subquery_next)
-		sub->subquery_next->subquery_prev = sub->subquery_prev;
-	/* cleanup values for robustness */
-	sub->subquery_next = NULL;
-	sub->subquery_prev = NULL;
-}
-
-void 
-module_subreq_insert(struct module_qstate** head, struct module_qstate* sub)
-{
-	if(*head)
-		(*head)->subquery_prev = sub;
-	sub->subquery_next = *head;
-	sub->subquery_prev = NULL;
-	*head = sub;
-}
-
-int 
-module_subreq_num(struct module_qstate* q)
-{
-	int n = 0;
-	while(q) {
-		n++;
-		q = q->subquery_next;
-	}
-	return n;
 }

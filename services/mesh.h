@@ -266,6 +266,13 @@ void mesh_query_done(struct module_qstate* qstate, int rcode,
 void mesh_walk_supers(struct module_qstate* qstate, int id, int rcode,
 	void (*cb)(struct module_qstate*, int, struct module_qstate*, int));
 
+/**
+ * Delete mesh state, cleanup and also rbtrees and so on.
+ * Will detach from all super/subnodes.
+ * @param qstate: to remove.
+ */
+void mesh_state_delete(struct module_qstate* qstate);
+
 /* ------------------- Functions for mesh -------------------- */
 
 /**
@@ -287,13 +294,6 @@ struct mesh_state* mesh_state_create(struct module_env* env,
  * 	afterwards. Cleanup rbtrees before calling this function.
  */
 void mesh_state_cleanup(struct mesh_state* mstate);
-
-/**
- * Delete mesh state, cleanup and also rbtrees and so on.
- * Will detach from all super/subnodes.
- * @param mstate: to remove.
- */
-void mesh_state_delete(struct mesh_state* mstate);
 
 /**
  * Find a mesh state in the mesh area. Pass relevant flags.
