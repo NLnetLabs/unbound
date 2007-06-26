@@ -161,7 +161,7 @@ iter_handlereply(struct module_qstate* qstate, int id)
 	h = query_info_hash(&qstate->qinfo);
 	(*qstate->env->query_done)(qstate, LDNS_RCODE_NOERROR, reply_msg);
 	/* there should be no dependencies in this forwarding mode */
-	(*qstate->env->walk_supers)(qstate, id, LDNS_RCODE_SERVFAIL, NULL);
+	(*qstate->env->walk_supers)(qstate, id, NULL);
 	dns_cache_store_msg(qstate->env, &reply_qinfo, h, reply_msg);
 	qstate->ext_state[id] = module_finished;
 	return 1;
@@ -177,8 +177,7 @@ perform_forward(struct module_qstate* qstate, enum module_ev event, int id,
 		if(!fwd_new(qstate, id)) {
 			(*qstate->env->query_done)(qstate, 
 				LDNS_RCODE_SERVFAIL, NULL);
-			(*qstate->env->walk_supers)(qstate, id, 
-				LDNS_RCODE_SERVFAIL, NULL);
+			(*qstate->env->walk_supers)(qstate, id, NULL);
 			qstate->ext_state[id] = module_error;
 			return;
 		}
@@ -188,15 +187,13 @@ perform_forward(struct module_qstate* qstate, enum module_ev event, int id,
 	if(!outbound) {
 		verbose(VERB_ALGO, "query reply was not serviced");
 		(*qstate->env->query_done)(qstate, LDNS_RCODE_SERVFAIL, NULL);
-		(*qstate->env->walk_supers)(qstate, id, 
-			LDNS_RCODE_SERVFAIL, NULL);
+		(*qstate->env->walk_supers)(qstate, id, NULL);
 		qstate->ext_state[id] = module_error;
 		return;
 	}
 	if(event == module_event_timeout || event == module_event_error) {
 		(*qstate->env->query_done)(qstate, LDNS_RCODE_SERVFAIL, NULL);
-		(*qstate->env->walk_supers)(qstate, id, 
-			LDNS_RCODE_SERVFAIL, NULL);
+		(*qstate->env->walk_supers)(qstate, id, NULL);
 		qstate->ext_state[id] = module_error;
 		return;
 	}
@@ -204,15 +201,14 @@ perform_forward(struct module_qstate* qstate, enum module_ev event, int id,
 		if(!iter_handlereply(qstate, id)) {
 			(*qstate->env->query_done)(qstate, 
 				LDNS_RCODE_SERVFAIL, NULL);
-			(*qstate->env->walk_supers)(qstate, id, 
-				LDNS_RCODE_SERVFAIL, NULL);
+			(*qstate->env->walk_supers)(qstate, id, NULL);
 			qstate->ext_state[id] = module_error;
 		}
 		return;
 	}
 	log_err("bad event for iterator[forwarding]");
 	(*qstate->env->query_done)(qstate, LDNS_RCODE_SERVFAIL, NULL);
-	(*qstate->env->walk_supers)(qstate, id, LDNS_RCODE_SERVFAIL, NULL);
+	(*qstate->env->walk_supers)(qstate, id, NULL);
 	qstate->ext_state[id] = module_error;
 }
 
@@ -264,14 +260,11 @@ final_state(struct iter_qstate* iq)
  * @param qstate: query state that failed.
  * @param id: module id.
  * @param super: super state.
- * @param rcode: the error code.
  */
 static void
-error_supers(struct module_qstate* qstate, int id, 
-	struct module_qstate* super, int rcode)
+error_supers(struct module_qstate* qstate, int id, struct module_qstate* super)
 {
 	struct iter_qstate* super_iq = (struct iter_qstate*)super->minfo[id];
-	log_assert(rcode != LDNS_RCODE_NOERROR);
 
 	if(qstate->qinfo.qtype == LDNS_RR_TYPE_A ||
 		qstate->qinfo.qtype == LDNS_RR_TYPE_AAAA) {
@@ -317,7 +310,7 @@ error_response(struct module_qstate* qstate, int id, int rcode)
 	/* tell clients that we failed */
 	(*qstate->env->query_done)(qstate, rcode, NULL);
 	/* tell our parents that we failed */
-	(*qstate->env->walk_supers)(qstate, id, rcode, &error_supers);
+	(*qstate->env->walk_supers)(qstate, id, &error_supers);
 	qstate->ext_state[id] = module_finished;
 	return 0;
 }
@@ -1248,11 +1241,9 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
  * @param qstate: priming query state that finished.
  * @param id: module id.
  * @param forq: the qstate for which priming has been done.
- * @param rcode: error code.
  */
 static void
-prime_supers(struct module_qstate* qstate, int id, 
-	struct module_qstate* forq, int rcode)
+prime_supers(struct module_qstate* qstate, int id, struct module_qstate* forq)
 {
 	struct iter_qstate* iq = (struct iter_qstate*)qstate->minfo[id];
 	struct iter_qstate* foriq = (struct iter_qstate*)forq->minfo[id];
@@ -1260,7 +1251,6 @@ prime_supers(struct module_qstate* qstate, int id,
 	enum response_type type = response_type_from_server(iq->response, 
 		&iq->qchase, iq->dp);
 
-	log_assert(rcode == LDNS_RCODE_NOERROR);
 	log_assert(iq->priming || iq->priming_stub);
 	if(type == RESPONSE_TYPE_ANSWER) {
 		/* Convert our response to a delegation point */
@@ -1317,8 +1307,7 @@ processPrimeResponse(struct module_qstate* qstate, int id)
 	 * bugger off (and retry) */
 	(*qstate->env->query_done)(qstate, LDNS_RCODE_SERVFAIL, NULL);
 	/* tell interested supers that priming is done */
-	(*qstate->env->walk_supers)(qstate, id, LDNS_RCODE_NOERROR, 
-		&prime_supers);
+	(*qstate->env->walk_supers)(qstate, id, &prime_supers);
 	return 0;
 }
 
@@ -1334,11 +1323,10 @@ processPrimeResponse(struct module_qstate* qstate, int id)
  * @param qstate: query state.
  * @param id: module id.
  * @param forq: super query state.
- * @param rcode: if not NOERROR, an error occurred.
  */
 static void
 processTargetResponse(struct module_qstate* qstate, int id,
-	struct module_qstate* forq, int rcode)
+	struct module_qstate* forq)
 {
 	struct iter_qstate* iq = (struct iter_qstate*)qstate->minfo[id];
 	struct iter_qstate* foriq = (struct iter_qstate*)forq->minfo[id];
@@ -1346,8 +1334,6 @@ processTargetResponse(struct module_qstate* qstate, int id,
 	struct delegpt_ns* dpns;
 
 	foriq->state = QUERYTARGETS_STATE;
-	/* use error_response for errs*/
-	log_assert(rcode == LDNS_RCODE_NOERROR); 
 
 	/* check to see if parent event is still interested (in orig name).  */
 	dpns = delegpt_find_ns(foriq->dp, qstate->qinfo.qname,
@@ -1441,8 +1427,7 @@ processFinished(struct module_qstate* qstate, struct iter_qstate* iq,
 	}
 	(*qstate->env->query_done)(qstate, LDNS_RCODE_NOERROR, 
 		iq->response->rep);
-	(*qstate->env->walk_supers)(qstate, id, LDNS_RCODE_NOERROR, 
-		&processTargetResponse);
+	(*qstate->env->walk_supers)(qstate, id, &processTargetResponse);
 
 	return 0;
 }

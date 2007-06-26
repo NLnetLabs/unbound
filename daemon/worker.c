@@ -564,6 +564,7 @@ worker_delete(struct worker* worker)
 {
 	if(!worker) 
 		return;
+	mesh_stats(worker->env.mesh, "mesh has");
 	server_stats_log(&worker->stats, worker->thread_num);
 	mesh_delete(worker->env.mesh);
 	listen_delete(worker->front);

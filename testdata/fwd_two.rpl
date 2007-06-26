@@ -69,6 +69,15 @@ www.example.com. IN A
 SECTION ANSWER
 www.example.com. IN A 10.20.30.40
 ENTRY_END
+
+STEP 11 CHECK_ANSWER
+ENTRY_BEGIN
+MATCH opcode qname qtype
+SECTION QUESTION
+www.example.net. IN A
+SECTION ANSWER
+www.example.net. IN A 10.20.30.40
+ENTRY_END
 SCENARIO_END
 
 ; testbound checks before exit: 

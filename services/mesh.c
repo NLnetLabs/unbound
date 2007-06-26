@@ -160,6 +160,7 @@ void mesh_new_client(struct mesh_area* mesh, struct query_info* qinfo,
 	if(was_noreply) {
 		mesh->num_reply_states ++;
 	}
+	mesh->num_reply_addrs++;
 	if(added)
 		mesh_run(mesh, s, module_event_new, NULL);
 }
@@ -427,6 +428,7 @@ mesh_send_reply(struct mesh_state* m, int rcode, struct reply_info* rep,
 		comm_point_send_reply(&r->query_reply);
 	}
 	/* account */
+	m->s.env->mesh->num_reply_addrs--;
 	if(gettimeofday(&end_time, NULL) < 0) {
 		log_err("gettimeofday: %s", strerror(errno));
 		return;
@@ -452,8 +454,8 @@ void mesh_query_done(struct module_qstate* qstate, int rcode,
 	}
 }
 
-void mesh_walk_supers(struct module_qstate* qstate, int id, int rcode,
-        void (*cb)(struct module_qstate*, int, struct module_qstate*, int))
+void mesh_walk_supers(struct module_qstate* qstate, int id, 
+        void (*cb)(struct module_qstate*, int, struct module_qstate*))
 {
 	struct mesh_state* m = qstate->mesh_info;
 	struct mesh_area* mesh = m->s.env->mesh;
@@ -465,7 +467,7 @@ void mesh_walk_supers(struct module_qstate* qstate, int id, int rcode,
 		/* make super runnable */
 		(void)rbtree_insert(&mesh->run, &ref->s->run_node);
 		/* callback */
-		(*cb)(qstate, id, &ref->s->s, rcode);
+		(*cb)(qstate, id, &ref->s->s);
 	}
 }
 
@@ -536,17 +538,23 @@ void mesh_run(struct mesh_area* mesh, struct mesh_state* mstate,
 			(void)rbtree_delete(&mesh->run, mstate);
 		} else mstate = NULL;
 	}
-	verbose(VERB_ALGO, "mesh_run: end, %u states (%u with reply, "
-		"%u detached), %u total replies", (unsigned)mesh->all.count, 
+	mesh_stats(mesh, "mesh_run: end");
+}
+
+void 
+mesh_stats(struct mesh_area* mesh, const char* str)
+{
+	verbose(VERB_ALGO, "%s %u states (%u with reply, %u detached), "
+		"%u waiting replies", str, (unsigned)mesh->all.count, 
 		(unsigned)mesh->num_reply_states,
 		(unsigned)mesh->num_detached_states,
 		(unsigned)mesh->num_reply_addrs);
-	if(1) {
+	if(mesh->replies_sent > 0) {
 		struct timeval avg;
 		timeval_divide(&avg, &mesh->replies_sum_wait, 
 			mesh->replies_sent);
-		verbose(VERB_ALGO, "send %u replies, with average wait "
-			"of %d.%6.6d", (unsigned)mesh->replies_sent,
+		verbose(VERB_ALGO, "sent %u replies, with average wait "
+			"of %d.%6.6d sec", (unsigned)mesh->replies_sent,
 			(int)avg.tv_sec, (int)avg.tv_usec);
 	}
 }

@@ -2,6 +2,8 @@
 	- mesh is called by worker, and iterator uses it.
 	  This removes the hierarchical code.
 	  QueryTargets state and Finished state are merged for iterator.
+	- forwarder mode no longer sets AA bit on first reply.
+	- rcode in walk_supers is not needed.
 
 25 June 2007: Wouter
 	- more mesh work.

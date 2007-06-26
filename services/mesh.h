@@ -258,13 +258,11 @@ void mesh_query_done(struct module_qstate* qstate, int rcode,
  *
  * @param qstate: the state that has results, used to find mesh state.
  * @param id: module id.
- * @param rcode: rcode to pass to callback, for easier error passing to 
- * 	parents.
  * @param cb: callback function. Called as
- * 	cb(qstate, id, super_qstate, rcode) for every super query state.
+ * 	cb(qstate, id, super_qstate) for every super query state.
  */
-void mesh_walk_supers(struct module_qstate* qstate, int id, int rcode,
-	void (*cb)(struct module_qstate*, int, struct module_qstate*, int));
+void mesh_walk_supers(struct module_qstate* qstate, int id, 
+	void (*cb)(struct module_qstate*, int, struct module_qstate*));
 
 /**
  * Delete mesh state, cleanup and also rbtrees and so on.
@@ -341,5 +339,12 @@ int mesh_state_add_reply(struct mesh_state* s, struct edns_data* edns,
  */
 void mesh_run(struct mesh_area* mesh, struct mesh_state* mstate, 
 	enum module_ev ev, struct outbound_entry* e);
+
+/**
+ * Print some stats about the mesh to the log.
+ * @param mesh: the mesh to print it for.
+ * @param str: descriptive string to go with it.
+ */
+void mesh_stats(struct mesh_area* mesh, const char* str);
 
 #endif /* SERVICES_MESH_H */

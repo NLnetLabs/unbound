@@ -190,14 +190,11 @@ struct module_env {
 	 * 
 	 * @param qstate: the state that has results, used to find mesh state.
 	 * @param id: module id.
-	 * @param rcode: rcode to pass to callback, for easier error passing to 
-	 *       parents.
 	 * @param cb: callback function. Called as
-	 * 	cb(qstate, id, super_qstate, rcode) for every super qstate.
+	 * 	cb(qstate, id, super_qstate) for every super qstate.
 	 */
 	void (*walk_supers)(struct module_qstate* qstate, int id, 
-		int rcode, void (*cb)(struct module_qstate*, int, 
-		struct module_qstate*, int));
+		void (*cb)(struct module_qstate*, int, struct module_qstate*));
 
 	/** region for temporary usage. May be cleared after operate() call. */
 	struct region* scratch;
