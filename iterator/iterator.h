@@ -53,8 +53,15 @@ struct iter_prep_list;
 #define MAX_RESTART_COUNT       8
 /** max number of referrals. Makes sure resolver does not run away */
 #define MAX_REFERRAL_COUNT	30
-/** how nice is a server without further information, in msec */
+/** how nice is a server without further information, in msec 
+ * Equals rtt initial timeout value.
+ */
 #define UNKNOWN_SERVER_NICENESS 3000
+/** maximum timeout before a host is deemed unsuitable, in msec. 
+ * After host_ttl this will be timed out and the host will be tried again. 
+ * Equals RTT_MAX_TIMEOUT
+ */
+#define USEFUL_SERVER_TOP_TIMEOUT	120000
 
 /**
  * Global state for the iterator. 

@@ -161,8 +161,10 @@ iter_filter_unsuitable(struct iter_env* iter_env, struct module_env* env,
 	if(infra_get_lame_rtt(env->infra_cache, &a->addr, a->addrlen, 
 		name, namelen, &lame, &rtt, now)) {
 		if(lame)
-			return -1;
-		else 	return rtt;
+			return -1; /* server is lame */
+		else if(rtt >= USEFUL_SERVER_TOP_TIMEOUT)
+			return -1; /* server is unresponsive */
+		else	return rtt;
 	}
 	/* no server information present */
 	return UNKNOWN_SERVER_NICENESS;

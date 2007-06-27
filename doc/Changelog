@@ -2,6 +2,11 @@
 	- delete of mesh does a postorder traverse of the tree.
 	- found and fixed a memory leak. For TTL=0 messages, that would
 	  not be cached, instead the msg-replyinfo structure was leaked.
+	- changed server selection so it will filter out hosts that are
+	  unresponsive. This is defined as a host with the maximum rto value.
+	  This means that unbound tried the host for retries up to 120 secs.
+	  The rto value will time out after host-ttl seconds from the cache.
+	  This keeps such unresolvable queries from taking up resources.
 
 26 June 2007: Wouter
 	- mesh is called by worker, and iterator uses it.
