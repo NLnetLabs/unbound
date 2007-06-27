@@ -7,6 +7,7 @@
 	  This means that unbound tried the host for retries up to 120 secs.
 	  The rto value will time out after host-ttl seconds from the cache.
 	  This keeps such unresolvable queries from taking up resources.
+	- utility for keeping histogram.
 
 26 June 2007: Wouter
 	- mesh is called by worker, and iterator uses it.

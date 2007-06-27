@@ -50,6 +50,7 @@
 #include "util/module.h"
 #include "util/region-allocator.h"
 #include "util/data/msgencode.h"
+#include "util/timehist.h"
 
 /** compare two mesh_states */
 static int
@@ -89,6 +90,12 @@ mesh_create(int num_modules, struct module_func_block** modfunc,
 		log_err("mesh area alloc: out of memory");
 		return NULL;
 	}
+	mesh->histogram = timehist_setup();
+	if(!mesh->histogram) {
+		free(mesh);
+		log_err("mesh area alloc: out of memory");
+		return NULL;
+	}
 	mesh->num_modules = num_modules;
 	mesh->modfunc = modfunc;
 	mesh->env = env;
@@ -115,6 +122,7 @@ mesh_delete(struct mesh_area* mesh)
 		return;
 	/* free all query states */
 	traverse_postorder(&mesh->all, &mesh_delete_helper, NULL);
+	timehist_delete(mesh->histogram);
 	free(mesh);
 }
 
@@ -444,6 +452,7 @@ mesh_send_reply(struct mesh_state* m, int rcode, struct reply_info* rep,
 			(int)duration.tv_sec, (int)duration.tv_usec);
 		m->s.env->mesh->replies_sent++;
 		timeval_add(&m->s.env->mesh->replies_sum_wait, &duration);
+		timehist_insert(m->s.env->mesh->histogram, &duration);
 	}
 }
 
@@ -543,13 +552,14 @@ void mesh_run(struct mesh_area* mesh, struct mesh_state* mstate,
 			(void)rbtree_delete(&mesh->run, mstate);
 		} else mstate = NULL;
 	}
-	mesh_stats(mesh, "mesh_run: end");
+	if(verbosity >= VERB_ALGO)
+		mesh_stats(mesh, "mesh_run: end");
 }
 
 void 
 mesh_stats(struct mesh_area* mesh, const char* str)
 {
-	verbose(VERB_ALGO, "%s %u states (%u with reply, %u detached), "
+	log_info("%s %u states (%u with reply, %u detached), "
 		"%u waiting replies", str, (unsigned)mesh->all.count, 
 		(unsigned)mesh->num_reply_states,
 		(unsigned)mesh->num_detached_states,
@@ -558,8 +568,10 @@ mesh_stats(struct mesh_area* mesh, const char* str)
 		struct timeval avg;
 		timeval_divide(&avg, &mesh->replies_sum_wait, 
 			mesh->replies_sent);
-		verbose(VERB_ALGO, "sent %u replies, with average wait "
+		log_info("sent %u replies, with average wait "
 			"of %d.%6.6d sec", (unsigned)mesh->replies_sent,
 			(int)avg.tv_sec, (int)avg.tv_usec);
+		log_info("histogram of reply wait times");
+		timehist_log(mesh->histogram);
 	}
 }

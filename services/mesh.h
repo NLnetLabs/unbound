@@ -55,6 +55,7 @@ struct mesh_reply;
 struct query_info;
 struct reply_info;
 struct outbound_entry;
+struct timehist;
 
 /** 
  * Mesh of query states
@@ -87,6 +88,8 @@ struct mesh_area {
 	size_t replies_sent;
 	/** sum of waiting times for the replies */
 	struct timeval replies_sum_wait;
+	/** histogram of time values */
+	struct timehist* histogram;
 };
 
 /**
