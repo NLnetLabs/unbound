@@ -317,8 +317,10 @@ iter_dns_store(struct module_env* env, struct dns_msg* msg, int is_referral)
 
 		qinf = msg->qinfo;
 		qinf.qname = memdup(msg->qinfo.qname, msg->qinfo.qname_len);
-		if(!qinf.qname)
+		if(!qinf.qname) {
+			reply_info_parsedelete(msg->rep, env->alloc);
 			return 0;
+		}
 		/* fixup flags to be sensible for a reply based on the cache */
 		/* this module means that RA is available. It is an answer QR. 
 		 * Not AA from cache. Not CD in cache (depends on client bit). */
@@ -326,6 +328,8 @@ iter_dns_store(struct module_env* env, struct dns_msg* msg, int is_referral)
 		rep->flags &= ~(BIT_AA | BIT_CD);
 		h = query_info_hash(&qinf);
 		dns_cache_store_msg(env, &qinf, h, rep);
+		/* qname is used inside query_info_entrysetup, and set to 
+		 * NULL. If it has not been used, free it. free(0) is safe. */
 		free(qinf.qname);
 	}
 	return 1;

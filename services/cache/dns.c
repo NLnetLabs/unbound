@@ -78,8 +78,8 @@ dns_cache_store_msg(struct module_env* env, struct query_info* qinfo,
 
 	/* store RRsets */
         for(i=0; i<rep->rrset_count; i++) {
-                rep->ref[i].key = rep->rrsets[i];
-                rep->ref[i].id = rep->rrsets[i]->id;
+		rep->ref[i].key = rep->rrsets[i];
+		rep->ref[i].id = rep->rrsets[i]->id;
 	}
 	reply_info_sortref(rep);
 	reply_info_set_ttls(rep, now);
@@ -88,6 +88,7 @@ dns_cache_store_msg(struct module_env* env, struct query_info* qinfo,
 		/* we do not store the message, but we did store the RRs,
 		 * which could be useful for delegation information */
 		verbose(VERB_ALGO, "TTL 0: dropped msg from cache");
+		free(rep);
 		return;
 	}
 
