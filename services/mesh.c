@@ -100,16 +100,21 @@ mesh_create(int num_modules, struct module_func_block** modfunc,
 	return mesh;
 }
 
+/** help mesh delete delete mesh states */
+static void
+mesh_delete_helper(rbnode_t* n, void* ATTR_UNUSED(arg))
+{
+	struct mesh_state* mstate = (struct mesh_state*)n->key;
+	mesh_state_cleanup(mstate);
+}
+
 void 
 mesh_delete(struct mesh_area* mesh)
 {
-	struct mesh_state* mstate;
 	if(!mesh)
 		return;
 	/* free all query states */
-	RBTREE_FOR(mstate, struct mesh_state*, &mesh->all) {
-		mesh_state_cleanup(mstate);
-	}
+	traverse_postorder(&mesh->all, &mesh_delete_helper, NULL);
 	free(mesh);
 }
 

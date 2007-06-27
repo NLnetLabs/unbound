@@ -1211,7 +1211,6 @@ outnet_serviced_query(struct outside_network* outnet,
 	cb->cb_arg = callback_arg;
 	cb->next = sq->cblist;
 	sq->cblist = cb;
-
 	return sq;
 }
 

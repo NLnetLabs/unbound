@@ -1,3 +1,6 @@
+27 June 2007: Wouter
+	- delete of mesh does a postorder traverse of the tree.
+
 26 June 2007: Wouter
 	- mesh is called by worker, and iterator uses it.
 	  This removes the hierarchical code.
