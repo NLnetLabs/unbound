@@ -140,7 +140,7 @@ void log_name_addr(enum verbosity_value v, const char* str, uint8_t* zone,
 	struct sockaddr_storage* addr, socklen_t addrlen);
 
 /**
- * Convert address string, with @port appendix, to sockaddr.
+ * Convert address string, with "@port" appendix, to sockaddr.
  * Uses DNS port by default.
  * @param str: the string
  * @param addr: where to store sockaddr.
