@@ -94,11 +94,6 @@ struct config_file {
 	/** max number of lame zones per host in the infra cache */
 	size_t infra_cache_numlame;
 
-	/** forwarder address. string. If not NULL fwder mode is enabled. */
-	char* fwd_address;
-	/** forwarder port */
-	int fwd_port;
-
 	/** the target fetch policy for the iterator */
 	char* target_fetch_policy;
 
@@ -109,7 +104,7 @@ struct config_file {
 
 	/** the stub definitions, linked list */
 	struct config_stub* stubs;
-	/** the forward definitions, linked list */
+	/** the forward zone definitions, linked list */
 	struct config_stub* forwards;
 
 	/** harden against very small edns buffer sizes */

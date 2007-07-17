@@ -119,101 +119,6 @@ iter_new(struct module_qstate* qstate, int id)
 	return 1;
 }
 
-/** new query for iterator in forward mode */
-static int
-fwd_new(struct module_qstate* qstate, int id)
-{
-	struct iter_qstate* iq = (struct iter_qstate*)region_alloc(
-		qstate->region, sizeof(struct iter_qstate));
-	struct module_env* env = qstate->env;
-	struct iter_env* ie = (struct iter_env*)env->modinfo[id];
-	struct outbound_entry* e;
-	uint16_t flags = 0; /* opcode=query, no flags */
-	int dnssec = 1; /* always get dnssec info */
-	qstate->minfo[id] = iq;
-	if(!iq) 
-		return 0;
-	memset(iq, 0, sizeof(*iq));
-	outbound_list_init(&iq->outlist);
-	e = (*env->send_query)(qstate->qinfo.qname, qstate->qinfo.qname_len,
-		qstate->qinfo.qtype, qstate->qinfo.qclass, flags, dnssec, 
-		&ie->fwd_addr, ie->fwd_addrlen, qstate);
-	if(!e) 
-		return 0;
-	outbound_list_insert(&iq->outlist, e);
-	qstate->ext_state[id] = module_wait_reply;
-	return 1;
-}
-
-/** iterator handle reply from authoritative server */
-static int
-iter_handlereply(struct module_qstate* qstate, int id)
-{
-	struct module_env* env = qstate->env;
-	struct query_info reply_qinfo;
-	struct reply_info* reply_msg;
-	struct edns_data reply_edns;
-	hashvalue_t h;
-	int r;
-	if((r=reply_info_parse(qstate->reply->c->buffer, env->alloc, 
-		&reply_qinfo, &reply_msg, qstate->env->scratch, 
-		&reply_edns))!=0)
-		return 0;
-
-	h = query_info_hash(&qstate->qinfo);
-	(*qstate->env->query_done)(qstate, LDNS_RCODE_NOERROR, reply_msg);
-	/* there should be no dependencies in this forwarding mode */
-	(*qstate->env->walk_supers)(qstate, id, NULL);
-	dns_cache_store_msg(qstate->env, &reply_qinfo, h, reply_msg);
-	qstate->ext_state[id] = module_finished;
-	return 1;
-}
-
-/** perform forwarder functionality */
-static void 
-perform_forward(struct module_qstate* qstate, enum module_ev event, int id,
-	struct outbound_entry* outbound)
-{
-	verbose(VERB_ALGO, "iterator: forwarding");
-	if(event == module_event_new) {
-		if(!fwd_new(qstate, id)) {
-			(*qstate->env->query_done)(qstate, 
-				LDNS_RCODE_SERVFAIL, NULL);
-			(*qstate->env->walk_supers)(qstate, id, NULL);
-			qstate->ext_state[id] = module_error;
-			return;
-		}
-		return;
-	}
-	/* it must be a query reply */
-	if(!outbound) {
-		verbose(VERB_ALGO, "query reply was not serviced");
-		(*qstate->env->query_done)(qstate, LDNS_RCODE_SERVFAIL, NULL);
-		(*qstate->env->walk_supers)(qstate, id, NULL);
-		qstate->ext_state[id] = module_error;
-		return;
-	}
-	if(event == module_event_timeout || event == module_event_error) {
-		(*qstate->env->query_done)(qstate, LDNS_RCODE_SERVFAIL, NULL);
-		(*qstate->env->walk_supers)(qstate, id, NULL);
-		qstate->ext_state[id] = module_error;
-		return;
-	}
-	if(event == module_event_reply) {
-		if(!iter_handlereply(qstate, id)) {
-			(*qstate->env->query_done)(qstate, 
-				LDNS_RCODE_SERVFAIL, NULL);
-			(*qstate->env->walk_supers)(qstate, id, NULL);
-			qstate->ext_state[id] = module_error;
-		}
-		return;
-	}
-	log_err("bad event for iterator[forwarding]");
-	(*qstate->env->query_done)(qstate, LDNS_RCODE_SERVFAIL, NULL);
-	(*qstate->env->walk_supers)(qstate, id, NULL);
-	qstate->ext_state[id] = module_error;
-}
-
 /**
  * Transition to the next state. This can be used to advance a currently
  * processing event. It cannot be used to reactivate a forEvent.
@@ -1599,10 +1504,6 @@ iter_operate(struct module_qstate* qstate, enum module_ev event, int id,
 		log_query_info(VERB_DETAIL, "iterator operate: chased to", 
 			&iq->qchase);
 
-	if(ie->fwd_addrlen != 0) {
-		perform_forward(qstate, event, id, outbound);
-		return;
-	}
 	/* perform iterator state machine */
 	if(event == module_event_new && iq == NULL) {
 		if(!iter_new(qstate, id)) {

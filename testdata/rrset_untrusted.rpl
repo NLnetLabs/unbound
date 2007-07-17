@@ -1,6 +1,6 @@
 ; This is a comment.
 ; config options go here.
-server:	forward-to: "127.0.0.1"
+forward-zone: name: "." forward-addr: 127.0.0.1
 CONFIG_END
 
 SCENARIO_BEGIN Untrusted rrset not used for update
@@ -91,8 +91,6 @@ ENTRY_BEGIN
 	SECTION ADDITIONAL
 	example.com. IN NS ns.eeeek.com.
 	example.com. IN NS ns2.eeeek.com.
-	ns.eeeek.com. IN A 55.44.33.22
-	ns2.eeeek.com. IN A 55.44.33.24
 ENTRY_END
 
 

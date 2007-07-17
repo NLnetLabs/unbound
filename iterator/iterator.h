@@ -68,11 +68,6 @@ struct iter_prep_list;
  * Global state for the iterator. 
  */
 struct iter_env {
-	/** address to forward to */
-	struct sockaddr_storage fwd_addr;
-	/** length of fwd_addr, if not 0, forward mode is used */
-	socklen_t fwd_addrlen;
-
 	/** 
 	 * The hints -- these aren't stored in the cache because they don't 
 	 * expire. The hints are always used to "prime" the cache. Note 

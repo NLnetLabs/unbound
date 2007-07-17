@@ -101,7 +101,7 @@ ah(struct delegpt* dp, struct region* r, const char* sv, const char* ip)
 		return 0;
 	}
 	if(!delegpt_add_ns(dp, r, ldns_rdf_data(rdf)) ||
-	   !ipstrtoaddr(ip, UNBOUND_DNS_PORT, &addr, &addrlen) ||
+	   !extstrtoaddr(ip, &addr, &addrlen) ||
 	   !delegpt_add_target(dp, r, ldns_rdf_data(rdf), ldns_rdf_size(rdf),
 		&addr, addrlen)) {
 		ldns_rdf_deep_free(rdf);
@@ -256,7 +256,7 @@ read_stubs_addr(struct iter_hints* hints, struct config_stub* s,
 	socklen_t addrlen;
 	for(p = s->addrs; p; p = p->next) {
 		log_assert(p->str);
-		if(!ipstrtoaddr(p->str, UNBOUND_DNS_PORT, &addr, &addrlen)) {
+		if(!extstrtoaddr(p->str, &addr, &addrlen)) {
 			log_err("cannot parse stub %s ip address: '%s'", 
 				s->name, p->str);
 			return 0;

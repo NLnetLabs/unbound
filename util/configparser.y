@@ -69,9 +69,8 @@ extern struct config_parser_state* cfg_parser;
 %token <str> STRING
 %token VAR_SERVER VAR_VERBOSITY VAR_NUM_THREADS VAR_PORT
 %token VAR_OUTGOING_PORT VAR_OUTGOING_RANGE VAR_INTERFACE
-%token VAR_DO_IP4 VAR_DO_IP6 VAR_DO_UDP VAR_DO_TCP
-%token VAR_FORWARD_TO VAR_FORWARD_TO_PORT VAR_CHROOT
-%token VAR_USERNAME VAR_DIRECTORY VAR_LOGFILE VAR_PIDFILE
+%token VAR_DO_IP4 VAR_DO_IP6 VAR_DO_UDP VAR_DO_TCP 
+%token VAR_CHROOT VAR_USERNAME VAR_DIRECTORY VAR_LOGFILE VAR_PIDFILE
 %token VAR_MSG_CACHE_SIZE VAR_MSG_CACHE_SLABS VAR_NUM_QUERIES_PER_THREAD
 %token VAR_RRSET_CACHE_SIZE VAR_RRSET_CACHE_SLABS VAR_OUTGOING_NUM_TCP
 %token VAR_INFRA_HOST_TTL VAR_INFRA_LAME_TTL VAR_INFRA_CACHE_SLABS
@@ -82,7 +81,9 @@ extern struct config_parser_state* cfg_parser;
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
-toplevelvar: serverstart contents_server ;
+toplevelvar: serverstart contents_server | stubstart contents_stub |
+	forwardstart contents_forward
+	;
 
 /* server: declaration */
 serverstart: VAR_SERVER
@@ -97,17 +98,16 @@ contents_server: contents_server content_server
 	| ;
 content_server: server_num_threads | server_verbosity | server_port |
 	server_outgoing_port | server_outgoing_range | server_do_ip4 |
-	server_do_ip6 | server_do_udp | server_do_tcp | server_forward_to |
-	server_forward_to_port | server_interface | server_chroot | 
-	server_username | server_directory | server_logfile | server_pidfile |
+	server_do_ip6 | server_do_udp | server_do_tcp | 
+	server_interface | server_chroot | server_username | 
+	server_directory | server_logfile | server_pidfile |
 	server_msg_cache_size | server_msg_cache_slabs |
 	server_num_queries_per_thread | server_rrset_cache_size | 
 	server_rrset_cache_slabs | server_outgoing_num_tcp | 
 	server_infra_host_ttl | server_infra_lame_ttl | 
 	server_infra_cache_slabs | server_infra_cache_numhosts |
-	server_infra_cache_numlame | stubstart contents_stub | 
-	server_target_fetch_policy | server_harden_short_bufsize |
-	server_harden_large_queries | forwardstart contents_forward
+	server_infra_cache_numlame | server_target_fetch_policy | 
+	server_harden_short_bufsize | server_harden_large_queries 
 	;
 stubstart: VAR_STUB_ZONE
 	{
@@ -241,22 +241,6 @@ server_do_tcp: VAR_DO_TCP STRING
 		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
 			yyerror("expected yes or no.");
 		else cfg_parser->cfg->do_tcp = (strcmp($2, "yes")==0);
-		free($2);
-	}
-	;
-server_forward_to: VAR_FORWARD_TO STRING
-	{
-		OUTYY(("P(server_forward_to:%s)\n", $2));
-		free(cfg_parser->cfg->fwd_address);
-		cfg_parser->cfg->fwd_address = $2;
-	}
-	;
-server_forward_to_port: VAR_FORWARD_TO_PORT STRING
-	{
-		OUTYY(("P(server_forward_to_port:%s)\n", $2));
-		if(atoi($2) == 0)
-			yyerror("number expected");
-		else cfg_parser->cfg->fwd_port = atoi($2);
 		free($2);
 	}
 	;

@@ -199,7 +199,7 @@ read_fwds_addr(struct iter_forwards* fwd, struct config_stub* s,
 	socklen_t addrlen;
 	for(p = s->addrs; p; p = p->next) {
 		log_assert(p->str);
-		if(!ipstrtoaddr(p->str, UNBOUND_DNS_PORT, &addr, &addrlen)) {
+		if(!extstrtoaddr(p->str, &addr, &addrlen)) {
 			log_err("cannot parse forward %s ip address: '%s'", 
 				s->name, p->str);
 			return 0;

@@ -2,6 +2,13 @@
 	- forward zone options in config file.
 	- forward per zone in iterator. takes precendence over stubs.
 	- fixup commithooks.
+	- removed forward-to and forward-to-port features, subsumed by
+	  new forward zones.
+	- fix parser to handle absent server: clause.
+	- change untrusted rrset test to account for scrubber that is now
+	  applied during the test (which removes the poison, by the way).
+	- feature, addresses can be specified with @portnumber, like nsd.conf.
+	- test config files changed over to new forwarder syntax.
 
 27 June 2007: Wouter
 	- delete of mesh does a postorder traverse of the tree.

@@ -109,8 +109,6 @@ do-ip4{COLON}		{ YDOUT; return VAR_DO_IP4;}
 do-ip6{COLON}		{ YDOUT; return VAR_DO_IP6;}
 do-udp{COLON}		{ YDOUT; return VAR_DO_UDP;}
 do-tcp{COLON}		{ YDOUT; return VAR_DO_TCP;}
-forward-to{COLON}	{ YDOUT; return VAR_FORWARD_TO;}
-forward-to-port{COLON}	{ YDOUT; return VAR_FORWARD_TO_PORT;}
 interface{COLON}	{ YDOUT; return VAR_INTERFACE;}
 chroot{COLON}		{ YDOUT; return VAR_CHROOT;}
 username{COLON}		{ YDOUT; return VAR_USERNAME;}

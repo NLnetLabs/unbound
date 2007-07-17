@@ -88,14 +88,12 @@ config_create()
 	cfg->infra_cache_slabs = 4;
 	cfg->infra_cache_numhosts = 1000;
 	cfg->infra_cache_numlame = 1000;
-	if(!(cfg->fwd_address = strdup(""))) goto error_exit;
 	if(!(cfg->username = strdup(""))) goto error_exit;
 	if(!(cfg->chrootdir = strdup(""))) goto error_exit;
 	if(!(cfg->directory = strdup("/etc/unbound"))) goto error_exit;
 	if(!(cfg->logfile = strdup(""))) goto error_exit;
 	if(!(cfg->pidfile = strdup("unbound.pid"))) goto error_exit;
 	if(!(cfg->target_fetch_policy = strdup("3 2 1 0 0"))) goto error_exit;
-	cfg->fwd_port = UNBOUND_DNS_PORT;
 	cfg->do_daemonize = 1;
 	cfg->num_ifs = 0;
 	cfg->ifs = NULL;
@@ -178,7 +176,6 @@ void
 config_delete(struct config_file* cfg)
 {
 	if(!cfg) return;
-	free(cfg->fwd_address);
 	free(cfg->username);
 	free(cfg->chrootdir);
 	free(cfg->directory);

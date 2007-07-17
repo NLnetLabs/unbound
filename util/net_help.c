@@ -43,6 +43,9 @@
 #include "util/data/dname.h"
 #include <fcntl.h>
 
+/** max length of an IP address (the address portion) that we allow */
+#define MAX_ADDR_STRLEN 128 /* characters */
+
 /** returns true is string addr is an ip6 specced address */
 int
 str_is_ip6(const char* str)
@@ -146,6 +149,31 @@ log_addr(const char* str, struct sockaddr_storage* addr, socklen_t addrlen)
         verbose(VERB_DETAIL, "%s %s %s %d (len %d)",
                 str, family, dest, (int)port, (int)addrlen);
 }
+
+int 
+extstrtoaddr(const char* str, struct sockaddr_storage* addr,
+	socklen_t* addrlen)
+{
+	char* s;
+	int port = UNBOUND_DNS_PORT;
+	if((s=strchr(str, '@'))) {
+		char buf[MAX_ADDR_STRLEN];
+		if(s-str >= MAX_ADDR_STRLEN) {
+			log_err("address too long: '%s'", str);
+			return 0;
+		}
+		strncpy(buf, str, MAX_ADDR_STRLEN);
+		buf[s-str] = 0;
+		port = atoi(s+1);
+		if(port == 0 && strcmp(s+1,"0")!=0) {
+			log_err("bad port spec in address: '%s", str);
+			return 0;
+		}
+		return ipstrtoaddr(buf, port, addr, addrlen);
+	}
+	return ipstrtoaddr(str, port, addr, addrlen);
+}
+
 
 int 
 ipstrtoaddr(const char* ip, int port, struct sockaddr_storage* addr,

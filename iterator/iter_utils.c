@@ -139,17 +139,6 @@ iter_apply_cfg(struct iter_env* iter_env, struct config_file* cfg)
 		return 0;
 	}
 	iter_env->supports_ipv6 = cfg->do_ip6;
-
-	/* forwarder address */
-	if(cfg->fwd_address && cfg->fwd_address[0]) {
-		if(!ipstrtoaddr(cfg->fwd_address, cfg->fwd_port,
-			&iter_env->fwd_addr, &iter_env->fwd_addrlen)) {
-			log_err("iterator: could not set forwarder address");
-			return 0;
-		}
-		verbose(VERB_ALGO, "iterator: fwd queries to: %s %d",
-			cfg->fwd_address, cfg->fwd_port);
-	}
 	return 1;
 }
 

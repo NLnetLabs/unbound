@@ -99,12 +99,6 @@ Enable or disable whether ip6 queries are answered. Default is yes.
 Enable or disable whether UDP queries are answered. Default is yes.
 .It \fBdo-tcp:\fR <yes or no>
 Enable or disable whether TCP queries are answered. Default is yes.
-.It \fBforward-to:\fR <ip address>
-If set (not "") then forwarder mode is enabled. Default is "" (disabled).
-The ip address is used to forward all DNS queries to.
-.It \fBforward-to-port:\fR <port number>
-The port on which the remote server is running that answers forwarded queries.
-Default is 53.
 .It \fBchroot:\fR <directory>
 If given a chroot is done to the given directory. The default is none ("").
 .It \fBusername:\fR <name>
@@ -156,6 +150,7 @@ Name of the stub zone.
 Name of stub zone nameserver. Is itself resolved before it is used.
 .It \fBstub-addr:\fR <IP address>
 IP address of stub zone nameserver. Can be IP 4 or IP 6.
+To use a nondefault port for DNS communication append '@' with the port number.
 .El
 
 .Ss Forward Zone Options
@@ -173,6 +168,7 @@ Name of the forward zone.
 Name of server to forward to. Is itself resolved before it is used.
 .It \fBforward-addr:\fR <IP address>
 IP address of server to forward to. Can be IP 4 or IP 6.
+To use a nondefault port for DNS communication append '@' with the port number.
 .El
 
 .Sh FILES
