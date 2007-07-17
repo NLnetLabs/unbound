@@ -153,9 +153,26 @@ For the stub zone this list of nameservers is used. Class IN is assumed.
 .It \fBname:\fR <domain name>
 Name of the stub zone.
 .It \fBstub-host:\fR <domain name>
-Name of stub zone nameserver. Will need to be resolved before it can be used.
+Name of stub zone nameserver. Is itself resolved before it is used.
 .It \fBstub-addr:\fR <IP address>
 IP address of stub zone nameserver. Can be IP 4 or IP 6.
+.El
+
+.Ss Forward Zone Options
+There may be multiple
+.Ic forward-zone:
+clauses. Each with a name: and zero or more hostnames or IP addresses.
+For the forward zone this list of nameservers is used to forward the queries
+to. The servers have to handle further recursion for the query. Class IN is 
+assumed. A forward-zone entry with name "." and a forward-addr target will 
+forward all queries to that other server (unless it can answer from the cache).
+.Bl -tag -width indent
+.It \fBname:\fR <domain name>
+Name of the forward zone.
+.It \fBforward-host:\fR <domain name>
+Name of server to forward to. Is itself resolved before it is used.
+.It \fBforward-addr:\fR <IP address>
+IP address of server to forward to. Can be IP 4 or IP 6.
 .El
 
 .Sh FILES

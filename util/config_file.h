@@ -109,6 +109,8 @@ struct config_file {
 
 	/** the stub definitions, linked list */
 	struct config_stub* stubs;
+	/** the forward definitions, linked list */
+	struct config_stub* forwards;
 
 	/** harden against very small edns buffer sizes */
 	int harden_short_bufsize;

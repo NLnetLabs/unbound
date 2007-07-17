@@ -43,6 +43,7 @@
 #include "iterator/iter_utils.h"
 #include "iterator/iterator.h"
 #include "iterator/iter_hints.h"
+#include "iterator/iter_fwd.h"
 #include "iterator/iter_delegpt.h"
 #include "services/cache/infra.h"
 #include "services/cache/dns.h"
@@ -129,6 +130,12 @@ iter_apply_cfg(struct iter_env* iter_env, struct config_file* cfg)
 		iter_env->hints = hints_create();
 	if(!iter_env->hints || !hints_apply_cfg(iter_env->hints, cfg)) {
 		log_err("Could not set root or stub hints");
+		return 0;
+	}
+	if(!iter_env->fwds)
+		iter_env->fwds = forwards_create();
+	if(!iter_env->fwds || !forwards_apply_cfg(iter_env->fwds, cfg)) {
+		log_err("Could not set forward zones");
 		return 0;
 	}
 	iter_env->supports_ipv6 = cfg->do_ip6;

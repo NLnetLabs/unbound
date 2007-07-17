@@ -44,6 +44,7 @@
 #include "iterator/iterator.h"
 #include "iterator/iter_utils.h"
 #include "iterator/iter_hints.h"
+#include "iterator/iter_fwd.h"
 #include "iterator/iter_delegpt.h"
 #include "iterator/iter_resptype.h"
 #include "iterator/iter_scrub.h"
@@ -84,6 +85,7 @@ iter_deinit(struct module_env* env, int id)
 	iter_env = (struct iter_env*)env->modinfo[id];
 	free(iter_env->target_fetch_policy);
 	hints_delete(iter_env->hints);
+	forwards_delete(iter_env->fwds);
 	if(iter_env)
 		free(iter_env);
 }
@@ -603,6 +605,31 @@ prime_stub(struct module_qstate* qstate, struct iter_qstate* iq,
 	return 1;
 }
 
+/**
+ * See if the query needs forwarding.
+ * 
+ * @param qstate: query state.
+ * @param iq: iterator query state.
+ * @param ie: iterator shared global environment.
+ * @return true if the request is forwarded, false if not.
+ * 	If returns true but, iq->dp is NULL then a malloc failure occurred.
+ */
+static int
+forward_request(struct module_qstate* qstate, struct iter_qstate* iq,
+	struct iter_env* ie)
+{
+	struct delegpt* dp = forwards_lookup(ie->fwds, iq->qchase.qname,
+		iq->qchase.qclass);
+	if(!dp) 
+		return 0;
+	/* send recursion desired to forward addr */
+	iq->chase_flags |= BIT_RD; 
+	iq->dp = delegpt_copy(dp, qstate->region);
+	/* iq->dp checked by caller */
+	verbose(VERB_ALGO, "forwarding request");
+	return 1;
+}
+
 /** 
  * Process the initial part of the request handling. This state roughly
  * corresponds to resolver algorithms steps 1 (find answer in cache) and 2
@@ -688,35 +715,18 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 		return final_state(iq);
 	}
 	
-	/* TODO attempt to forward the request */
-	/* if (forwardRequest(event, state, req))
-	   {
-		// the request has been forwarded.
-		// forwarded requests need to be immediately sent to the 
-		// next state, QUERYTARGETS.
-		return nextState(event, req, state, 
-			IterEventState.QUERYTARGETS_STATE);
-		}
-	*/
-
-	/* TODO attempt to find a covering DNAME in the cache */
-	/* resp = mDNSCache.findDNAME(req.getQName(), req.getQType(), req
-	        .getQClass());
-	    if (resp != null)
+	/* attempt to forward the request */
+	if(forward_request(qstate, iq, ie))
 	{
-log.trace("returning synthesized CNAME response from cache: " + resp);
-Name cname = handleCNAMEResponse(state, req, resp);
-// At this point, we just initiate the query restart.
-// This might not be a query restart situation (e.g., qtype == CNAME),
-// but
-// the answer returned from findDNAME() is likely to be one that we
-// don't want to return.
-// Thus we allow the cache and other resolution mojo kick in regardless.
-req.setQName(cname);
-state.queryRestartCount++;
-return nextState(event, req, state, IterEventState.INIT_REQUEST_STATE);
-}
-	*/
+		if(!iq->dp) {
+			log_err("alloc failure for forward dp");
+			return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
+		}
+		/* the request has been forwarded.
+		 * forwarded requests need to be immediately sent to the 
+		 * next state, QUERYTARGETS. */
+		return next_state(iq, QUERYTARGETS_STATE);
+	}
 
 	/* Resolver Algorithm Step 2 -- find the "best" servers. */
 
@@ -1002,7 +1012,8 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 	 * they will not be show up again. */
 	if(tf_policy != 0) {
 		int extra = 0;
-		verbose(VERB_ALGO, "query for extra %d targets", tf_policy);
+		verbose(VERB_ALGO, "attempt to get extra %d targets", 
+			tf_policy);
 		if(!query_for_targets(qstate, iq, ie, id, tf_policy, &extra)) {
 			return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
 		}
@@ -1120,6 +1131,13 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		return next_state(iq, QUERYTARGETS_STATE);
 	}
 	type = response_type_from_server(iq->response, &iq->qchase, iq->dp);
+	if(type == RESPONSE_TYPE_REFERRAL && (iq->chase_flags&BIT_RD)) {
+		/* When forwarding (RD bit is set), we handle referrals 
+		 * differently. No queries should be sent elsewhere */
+		type = RESPONSE_TYPE_ANSWER;
+	}
+
+	/* handle each of the type cases */
 	if(type == RESPONSE_TYPE_ANSWER) {
 		/* ANSWER type responses terminate the query algorithm, 
 		 * so they sent on their */

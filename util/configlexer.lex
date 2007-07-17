@@ -134,6 +134,9 @@ stub-zone{COLON}	{ YDOUT; return VAR_STUB_ZONE;}
 name{COLON}		{ YDOUT; return VAR_NAME;}
 stub-addr{COLON}	{ YDOUT; return VAR_STUB_ADDR;}
 stub-host{COLON}	{ YDOUT; return VAR_STUB_HOST;}
+forward-zone{COLON}	{ YDOUT; return VAR_FORWARD_ZONE;}
+forward-addr{COLON}	{ YDOUT; return VAR_FORWARD_ADDR;}
+forward-host{COLON}	{ YDOUT; return VAR_FORWARD_HOST;}
 {NEWLINE}		{ LEXOUT(("NL\n")); cfg_parser->line++;}
 
 	/* Quoted strings. Strip leading and ending quotes */

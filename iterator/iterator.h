@@ -47,6 +47,7 @@
 struct module_func_block;
 struct delegpt;
 struct iter_hints;
+struct iter_forwards;
 struct iter_prep_list;
 
 /** max number of query restarts. Determines max number of CNAME chain. */
@@ -84,7 +85,7 @@ struct iter_env {
 	int supports_ipv6;
 
 	/** Mapping of forwarding zones to targets. */
-	/* struct fwds fwd_map TODO */
+	struct iter_forwards* fwds;
 
 	/** A set of inetaddrs that should never be queried. */
 	/* struct bla donotquery_addrs TODO */

@@ -1,3 +1,7 @@
+17 July 2007: Wouter
+	- forward zone options in config file.
+	- forward per zone in iterator. takes precendence over stubs.
+
 27 June 2007: Wouter
 	- delete of mesh does a postorder traverse of the tree.
 	- found and fixed a memory leak. For TTL=0 messages, that would

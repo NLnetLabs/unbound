@@ -100,6 +100,7 @@ config_create()
 	cfg->num_ifs = 0;
 	cfg->ifs = NULL;
 	cfg->stubs = NULL;
+	cfg->forwards = NULL;
 	cfg->harden_short_bufsize = 0;
 	cfg->harden_large_queries = 0;
 	return cfg;
@@ -158,6 +159,21 @@ config_delstrlist(struct config_strlist* p)
 	}
 }
 
+/** delete config stublist */
+static void
+config_delstubs(struct config_stub* p)
+{
+	struct config_stub* np;
+	while(p) {
+		np = p->next;
+		free(p->name);
+		config_delstrlist(p->hosts);
+		config_delstrlist(p->addrs);
+		free(p);
+		p = np;
+	}
+}
+
 void 
 config_delete(struct config_file* cfg)
 {
@@ -175,17 +191,8 @@ config_delete(struct config_file* cfg)
 			free(cfg->ifs[i]);
 		free(cfg->ifs);
 	}
-	if(cfg->stubs) {
-		struct config_stub* p = cfg->stubs, *np;
-		while(p) {
-			np = p->next;
-			free(p->name);
-			config_delstrlist(p->hosts);
-			config_delstrlist(p->addrs);
-			free(p);
-			p = np;
-		}
-	}
+	config_delstubs(cfg->stubs);
+	config_delstubs(cfg->forwards);
 	free(cfg);
 }
 
