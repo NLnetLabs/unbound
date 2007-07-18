@@ -4,7 +4,7 @@
 server:
 	msg-cache-size: 1 # one whole byte!
 	msg-cache-slabs: 1
-forward-zone: name: "." forward-addr: 127.0.0.1
+forward-zone: name: "." forward-addr: 216.0.0.1
 CONFIG_END
 
 SCENARIO_BEGIN Old answer is dropped from the cache

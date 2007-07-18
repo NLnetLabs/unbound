@@ -1,6 +1,6 @@
 ; This is a comment.
 ; config options go here.
-forward-zone: name: "." forward-addr: 127.0.0.1
+forward-zone: name: "." forward-addr: 216.0.0.1
 CONFIG_END
 
 SCENARIO_BEGIN Untrusted rrset not used for update

@@ -7,7 +7,7 @@ server:
 	msg-cache-size: 1024
 forward-zone: 
 	name: "." 
-	forward-addr: 127.0.0.1
+	forward-addr: 216.0.0.1
 CONFIG_END
 
 SCENARIO_BEGIN Query receives answer not from the cache
