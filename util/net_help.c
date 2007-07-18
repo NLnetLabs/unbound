@@ -264,6 +264,48 @@ void log_name_addr(enum verbosity_value v, const char* str, uint8_t* zone,
 }
 
 int
+sockaddr_cmp(struct sockaddr_storage* addr1, socklen_t len1, 
+	struct sockaddr_storage* addr2, socklen_t len2)
+{
+	struct sockaddr_in* p1_in = (struct sockaddr_in*)addr1;
+	struct sockaddr_in* p2_in = (struct sockaddr_in*)addr2;
+	struct sockaddr_in6* p1_in6 = (struct sockaddr_in6*)addr1;
+	struct sockaddr_in6* p2_in6 = (struct sockaddr_in6*)addr2;
+	if(len1 < len2)
+		return -1;
+	if(len1 > len2)
+		return 1;
+	log_assert(len1 == len2);
+	if( p1_in->sin_family < p2_in->sin_family)
+		return -1;
+	if( p1_in->sin_family > p2_in->sin_family)
+		return 1;
+	log_assert( p1_in->sin_family == p2_in->sin_family );
+	/* compare ip4 */
+	if( p1_in->sin_family == AF_INET ) {
+		/* just order it, ntohs not required */
+		if(p1_in->sin_port < p2_in->sin_port)
+			return -1;
+		if(p1_in->sin_port > p2_in->sin_port)
+			return 1;
+		log_assert(p1_in->sin_port == p2_in->sin_port);
+		return memcmp(&p1_in->sin_addr, &p2_in->sin_addr, INET_SIZE);
+	} else if (p1_in6->sin6_family == AF_INET6) {
+		/* just order it, ntohs not required */
+		if(p1_in6->sin6_port < p2_in6->sin6_port)
+			return -1;
+		if(p1_in6->sin6_port > p2_in6->sin6_port)
+			return 1;
+		log_assert(p1_in6->sin6_port == p2_in6->sin6_port);
+		return memcmp(&p1_in6->sin6_addr, &p2_in6->sin6_addr, 
+			INET6_SIZE);
+	} else {
+		/* eek unknown type, perform this comparison for sanity. */
+		return memcmp(addr1, addr2, len1);
+	}
+}
+
+int
 addr_is_ip6(struct sockaddr_storage* addr)
 {
 	short family = *(short*)addr;

@@ -78,6 +78,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_STUB_ZONE VAR_STUB_HOST VAR_STUB_ADDR VAR_TARGET_FETCH_POLICY
 %token VAR_HARDEN_SHORT_BUFSIZE VAR_HARDEN_LARGE_QUERIES
 %token VAR_FORWARD_ZONE VAR_FORWARD_HOST VAR_FORWARD_ADDR
+%token VAR_DO_NOT_QUERY_ADDRESS
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -107,7 +108,8 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_infra_host_ttl | server_infra_lame_ttl | 
 	server_infra_cache_slabs | server_infra_cache_numhosts |
 	server_infra_cache_numlame | server_target_fetch_policy | 
-	server_harden_short_bufsize | server_harden_large_queries 
+	server_harden_short_bufsize | server_harden_large_queries |
+	server_do_not_query_address
 	;
 stubstart: VAR_STUB_ZONE
 	{
@@ -408,6 +410,13 @@ server_harden_large_queries: VAR_HARDEN_LARGE_QUERIES STRING
 		free($2);
 	}
 	;
+server_do_not_query_address: VAR_DO_NOT_QUERY_ADDRESS STRING
+	{
+		OUTYY(("P(server_do_not_query_address:%s)\n", $2));
+		if(!cfg_strlist_insert(&cfg_parser->cfg->donotqueryaddrs, $2))
+			yyerror("out of memory");
+	}
+	;
 stub_name: VAR_NAME STRING
 	{
 		OUTYY(("P(name:%s)\n", $2));
@@ -417,27 +426,15 @@ stub_name: VAR_NAME STRING
 	;
 stub_host: VAR_STUB_HOST STRING
 	{
-		struct config_strlist *s = (struct config_strlist*)calloc(1, 
-			sizeof(struct config_strlist));
 		OUTYY(("P(stub-host:%s)\n", $2));
-		if(s) {
-			s->str = $2;
-			s->next = cfg_parser->cfg->stubs->hosts;
-			cfg_parser->cfg->stubs->hosts = s;
-		} else
+		if(!cfg_strlist_insert(&cfg_parser->cfg->stubs->hosts, $2))
 			yyerror("out of memory");
 	}
 	;
 stub_addr: VAR_STUB_ADDR STRING
 	{
-		struct config_strlist *s = (struct config_strlist*)calloc(1, 
-			sizeof(struct config_strlist));
 		OUTYY(("P(stub-addr:%s)\n", $2));
-		if(s) {
-			s->str = $2;
-			s->next = cfg_parser->cfg->stubs->addrs;
-			cfg_parser->cfg->stubs->addrs = s;
-		} else
+		if(!cfg_strlist_insert(&cfg_parser->cfg->stubs->addrs, $2))
 			yyerror("out of memory");
 	}
 	;
@@ -450,27 +447,15 @@ forward_name: VAR_NAME STRING
 	;
 forward_host: VAR_FORWARD_HOST STRING
 	{
-		struct config_strlist *s = (struct config_strlist*)calloc(1, 
-			sizeof(struct config_strlist));
 		OUTYY(("P(forward-host:%s)\n", $2));
-		if(s) {
-			s->str = $2;
-			s->next = cfg_parser->cfg->forwards->hosts;
-			cfg_parser->cfg->forwards->hosts = s;
-		} else
+		if(!cfg_strlist_insert(&cfg_parser->cfg->forwards->hosts, $2))
 			yyerror("out of memory");
 	}
 	;
 forward_addr: VAR_FORWARD_ADDR STRING
 	{
-		struct config_strlist *s = (struct config_strlist*)calloc(1, 
-			sizeof(struct config_strlist));
 		OUTYY(("P(forward-addr:%s)\n", $2));
-		if(s) {
-			s->str = $2;
-			s->next = cfg_parser->cfg->forwards->addrs;
-			cfg_parser->cfg->forwards->addrs = s;
-		} else
+		if(!cfg_strlist_insert(&cfg_parser->cfg->forwards->addrs, $2))
 			yyerror("out of memory");
 	}
 	;

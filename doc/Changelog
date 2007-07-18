@@ -1,3 +1,6 @@
+18 July 2007: Wouter
+	- do not query addresses, 127.0.0.1, and ::1 by default.
+
 17 July 2007: Wouter
 	- forward zone options in config file.
 	- forward per zone in iterator. takes precendence over stubs.

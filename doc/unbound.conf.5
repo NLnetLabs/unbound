@@ -136,6 +136,10 @@ small answers to these queries, where possible.
 Very large queries are ignored. Default is off, since it is legal protocol
 wise to send these, and could be necessary for operation if TSIG or EDNS
 payload is very large.
+.It \fBdo-not-query-address:\fR <IP address>
+Do not query the given IP address. Can be IP4 or IP6. By default the
+DNS port is blocked for that address. Appending "@portnumber" will block 
+other port numbers. 
 .El
 
 .Ss Stub Zone Options

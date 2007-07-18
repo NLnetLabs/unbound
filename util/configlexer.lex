@@ -135,6 +135,7 @@ stub-host{COLON}	{ YDOUT; return VAR_STUB_HOST;}
 forward-zone{COLON}	{ YDOUT; return VAR_FORWARD_ZONE;}
 forward-addr{COLON}	{ YDOUT; return VAR_FORWARD_ADDR;}
 forward-host{COLON}	{ YDOUT; return VAR_FORWARD_HOST;}
+do-not-query-address{COLON}	{ YDOUT; return VAR_DO_NOT_QUERY_ADDRESS;}
 {NEWLINE}		{ LEXOUT(("NL\n")); cfg_parser->line++;}
 
 	/* Quoted strings. Strip leading and ending quotes */

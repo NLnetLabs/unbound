@@ -48,6 +48,7 @@ struct module_func_block;
 struct delegpt;
 struct iter_hints;
 struct iter_forwards;
+struct iter_donotq;
 struct iter_prep_list;
 
 /** max number of query restarts. Determines max number of CNAME chain. */
@@ -83,7 +84,7 @@ struct iter_env {
 	struct iter_forwards* fwds;
 
 	/** A set of inetaddrs that should never be queried. */
-	/* struct bla donotquery_addrs TODO */
+	struct iter_donotq* donotq;
 
 	/** The maximum dependency depth that this resolver will pursue. */
 	int max_dependency_depth;

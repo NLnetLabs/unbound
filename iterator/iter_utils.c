@@ -44,6 +44,7 @@
 #include "iterator/iterator.h"
 #include "iterator/iter_hints.h"
 #include "iterator/iter_fwd.h"
+#include "iterator/iter_donotq.h"
 #include "iterator/iter_delegpt.h"
 #include "services/cache/infra.h"
 #include "services/cache/dns.h"
@@ -138,6 +139,12 @@ iter_apply_cfg(struct iter_env* iter_env, struct config_file* cfg)
 		log_err("Could not set forward zones");
 		return 0;
 	}
+	if(!iter_env->donotq)
+		iter_env->donotq = donotq_create();
+	if(!iter_env->donotq || !donotq_apply_cfg(iter_env->donotq, cfg)) {
+		log_err("Could not set donotqueryaddresses");
+		return 0;
+	}
 	iter_env->supports_ipv6 = cfg->do_ip6;
 	return 1;
 }
@@ -149,9 +156,11 @@ iter_filter_unsuitable(struct iter_env* iter_env, struct module_env* env,
 {
 	int rtt;
 	int lame;
-	/* TODO: check ie->donotqueryaddrs for a */
+	if(donotq_lookup(iter_env->donotq, &a->addr, a->addrlen)) {
+		return -1; /* server is on the donotquery list */
+	}
 	if(!iter_env->supports_ipv6 && addr_is_ip6(&a->addr)) {
-		return -1;
+		return -1; /* there is no ip6 available */
 	}
 	/* check lameness - need zone , class info */
 	if(infra_get_lame_rtt(env->infra_cache, &a->addr, a->addrlen, 

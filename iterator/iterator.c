@@ -45,6 +45,7 @@
 #include "iterator/iter_utils.h"
 #include "iterator/iter_hints.h"
 #include "iterator/iter_fwd.h"
+#include "iterator/iter_donotq.h"
 #include "iterator/iter_delegpt.h"
 #include "iterator/iter_resptype.h"
 #include "iterator/iter_scrub.h"
@@ -86,6 +87,7 @@ iter_deinit(struct module_env* env, int id)
 	free(iter_env->target_fetch_policy);
 	hints_delete(iter_env->hints);
 	forwards_delete(iter_env->fwds);
+	donotq_delete(iter_env->donotq);
 	if(iter_env)
 		free(iter_env);
 }

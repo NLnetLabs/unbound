@@ -61,12 +61,7 @@ infra_host_compfunc(void* key1, void* key2)
 {
 	struct infra_host_key* k1 = (struct infra_host_key*)key1;
 	struct infra_host_key* k2 = (struct infra_host_key*)key2;
-	if(k1->addrlen != k2->addrlen) {
-		if(k1->addrlen < k2->addrlen)
-			return -1;
-		return 1;
-	}
-	return memcmp(&k1->addr, &k2->addr, k1->addrlen);
+	return sockaddr_cmp(&k1->addr, k1->addrlen, &k2->addr, k2->addrlen);
 }
 
 /** delete key, and destroy the lock */

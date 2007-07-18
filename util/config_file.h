@@ -106,6 +106,8 @@ struct config_file {
 	struct config_stub* stubs;
 	/** the forward zone definitions, linked list */
 	struct config_stub* forwards;
+	/** list of donotquery addresses, linked list */
+	struct config_strlist* donotqueryaddrs;
 
 	/** harden against very small edns buffer sizes */
 	int harden_short_bufsize;
@@ -170,6 +172,14 @@ int config_read(struct config_file* config, const char* filename);
  * @param config: to delete.
  */
 void config_delete(struct config_file* config);
+
+/**
+ * Insert string into strlist.
+ * @param head: pointer to strlist head variable.
+ * @param item: new item. malloced by caller. If NULL the insertion fails.
+ * @return: true on success.
+ */
+int cfg_strlist_insert(struct config_strlist** head, char* item);
 
 /**
  * Used during options parsing

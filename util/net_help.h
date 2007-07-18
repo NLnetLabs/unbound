@@ -173,6 +173,17 @@ void log_nametypeclass(enum verbosity_value v, const char* str,
 	uint8_t* name, uint16_t type, uint16_t dclass);
 
 /**
+ * Compare two sockaddrs. Imposes an ordering on the addresses.
+ * @param addr1: address 1.
+ * @param len1: lengths of addr1.
+ * @param addr2: address 2.
+ * @param len2: lengths of addr2.
+ * @return: 0 if addr1 == addr2. -1 if addr1 is smaller, +1 if larger.
+ */
+int sockaddr_cmp(struct sockaddr_storage* addr1, socklen_t len1, 
+	struct sockaddr_storage* addr2, socklen_t len2);
+
+/**
  * Checkout address family.
  * @param addr: the sockaddr to examine.
  * return: true if sockaddr is ip6.

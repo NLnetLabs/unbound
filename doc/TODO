@@ -24,3 +24,4 @@ o understand NSEC/NSEC3, aggressive negative caching, so that updates to
 o fallback without EDNS if result is NOTIMPL, now only on FORMERR like in java.
 o scrubber has slow pkt_subdomain and pkt_strict_subdomain functions.
 o get serverselection algorithm out of local optimum.
+o donotqueryaddresses allow specification of subnets, use trie to store.

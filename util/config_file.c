@@ -94,6 +94,11 @@ config_create()
 	if(!(cfg->logfile = strdup(""))) goto error_exit;
 	if(!(cfg->pidfile = strdup("unbound.pid"))) goto error_exit;
 	if(!(cfg->target_fetch_policy = strdup("3 2 1 0 0"))) goto error_exit;
+	cfg->donotqueryaddrs = NULL;
+	if(!cfg_strlist_insert(&cfg->donotqueryaddrs, strdup("127.0.0.1")))
+		goto error_exit;
+	if(!cfg_strlist_insert(&cfg->donotqueryaddrs, strdup("::1")))
+		goto error_exit;
 	cfg->do_daemonize = 1;
 	cfg->num_ifs = 0;
 	cfg->ifs = NULL;
@@ -190,6 +195,7 @@ config_delete(struct config_file* cfg)
 	}
 	config_delstubs(cfg->stubs);
 	config_delstubs(cfg->forwards);
+	config_delstrlist(cfg->donotqueryaddrs);
 	free(cfg);
 }
 
@@ -224,3 +230,17 @@ int ub_c_wrap()
 	return 1;
 }
 
+int 
+cfg_strlist_insert(struct config_strlist** head, char* item)
+{
+	struct config_strlist *s;
+	if(!item || !head)
+		return 0;
+	s = (struct config_strlist*)calloc(1, sizeof(struct config_strlist));
+	if(!s)
+		return 0;
+	s->str = item;
+	s->next = *head;
+	*head = s;
+	return 1;
+}
