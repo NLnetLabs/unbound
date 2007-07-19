@@ -1053,13 +1053,8 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		/* ANSWER type responses terminate the query algorithm, 
 		 * so they sent on their */
 		verbose(VERB_DETAIL, "query response was ANSWER");
-		
-		/* FIXME: there is a question about whether this gets 
-		 * stored under the original query or most recent query. 
-		 * The original query would reduce cache work, but you 
-		 * need to apply the prependList before caching, and 
-		 * also cache under the latest query. */
-		if(!iter_dns_store(qstate->env, iq->response, 0))
+		if(!iter_dns_store(qstate->env, &iq->response->qinfo,
+			iq->response->rep, 0))
 			return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
 		/* close down outstanding requests to be discarded */
 		outbound_list_clear(&iq->outlist);
@@ -1073,7 +1068,8 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		verbose(VERB_DETAIL, "query response was REFERRAL");
 
 		/* Store the referral under the current query */
-		if(!iter_dns_store(qstate->env, iq->response, 1))
+		if(!iter_dns_store(qstate->env, &iq->response->qinfo,
+			iq->response->rep, 1))
 			return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
 
 		/* Reset the event state, setting the current delegation 
@@ -1111,7 +1107,8 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		/* cache the CNAME response under the current query */
 		/* NOTE : set referral=1, so that rrsets get stored but not 
 		 * the partial query answer (CNAME only). */
-		if(!iter_dns_store(qstate->env, iq->response, 1))
+		if(!iter_dns_store(qstate->env, &iq->response->qinfo,
+			iq->response->rep, 1))
 			return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
 		/* set the current request's qname to the new value. */
 		iq->qchase.qname = sname;
@@ -1347,6 +1344,10 @@ processFinished(struct module_qstate* qstate, struct iter_qstate* iq,
 			log_err("prepend rrsets: out of memory");
 			return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
 		}
+		/* store message with the finished prepended items */
+		if(!iter_dns_store(qstate->env, &qstate->qinfo, 
+			iq->response->rep, 0))
+			return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
 	}
 	if(query_dname_compare(qstate->qinfo.qname, 
 		iq->response->qinfo.qname) == 0) {

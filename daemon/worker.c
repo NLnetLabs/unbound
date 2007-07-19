@@ -222,6 +222,12 @@ worker_handle_control_cmd(struct comm_point* c, void* arg, int error,
 	return 0;
 }
 
+/** check cname chain in cache reply */
+static int
+check_cache_chain(struct reply_info* rep) {
+	return 1;
+}
+
 /** answer query from the cache */
 static int
 answer_from_cache(struct worker* worker, struct lruhash_entry* e, uint16_t id,
@@ -246,6 +252,17 @@ answer_from_cache(struct worker* worker, struct lruhash_entry* e, uint16_t id,
 	if(!rrset_array_lock(rep->ref, rep->rrset_count, timenow))
 		return 0;
 	/* locked and ids and ttls are OK. */
+	/* check CNAME chain (if any) */
+	if(rep->an_numrrsets > 0 && (rep->rrsets[0]->rk.type == 
+		htons(LDNS_RR_TYPE_CNAME) || rep->rrsets[0]->rk.type == 
+		htons(LDNS_RR_TYPE_DNAME))) {
+		if(!check_cache_chain(rep)) {
+			rrset_array_unlock_touch(worker->env.rrset_cache, 
+				worker->scratchpad, rep->ref, rep->rrset_count);
+			region_free_all(worker->scratchpad);
+			return 0;
+		}
+	}
 	if(!reply_info_answer_encode(&mrentry->key, rep, id, flags, 
 		repinfo->c->buffer, timenow, 1, worker->scratchpad,
 		udpsize, edns, (int)(edns->bits & EDNS_DO) )) {

@@ -3,6 +3,7 @@
 	- fixup of deadlock warnings, yield cpu in checklock code so that
 	  freebsd scheduler selects correct process to run.
 	- added identity and version config options and replies.
+	- store cname messages complete answers.
 
 18 July 2007: Wouter
 	- do not query addresses, 127.0.0.1, and ::1 by default.

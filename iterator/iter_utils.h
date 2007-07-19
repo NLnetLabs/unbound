@@ -50,6 +50,8 @@ struct delegpt;
 struct region;
 struct msg_parse;
 struct ub_randstate;
+struct query_info;
+struct reply_info;
 
 /**
  * Process config options and set iterator module state.
@@ -98,13 +100,14 @@ struct dns_msg* dns_copy_msg(struct dns_msg* from, struct region* region);
 /**
  * Allocate a dns_msg with malloc/alloc structure and store in dns cache.
  * @param env: environment, with alloc structure and dns cache.
- * @param msg: dns_msg from dns_alloc_msg for example.
+ * @param qinf: query info, the query for which answer is stored.
+ * @param rep: reply in dns_msg from dns_alloc_msg for example.
  * @param is_referral: If true, then the given message to be stored is a
  *	referral. The cache implementation may use this as a hint.
  * @return 0 on alloc error (out of memory).
  */
-int iter_dns_store(struct module_env* env, struct dns_msg* msg, 
-	int is_referral);
+int iter_dns_store(struct module_env* env, struct query_info* qinf,
+	struct reply_info* rep, int is_referral);
 
 /**
  * Select randomly with n/m probability.

@@ -293,11 +293,12 @@ dns_copy_msg(struct dns_msg* from, struct region* region)
 }
 
 int 
-iter_dns_store(struct module_env* env, struct dns_msg* msg, int is_referral)
+iter_dns_store(struct module_env* env, struct query_info* msgqinf,
+	struct reply_info* msgrep, int is_referral)
 {
 	struct reply_info* rep = NULL;
 	/* alloc, malloc properly (not in region, like msg is) */
-	rep = reply_info_copy(msg->rep, env->alloc, NULL);
+	rep = reply_info_copy(msgrep, env->alloc, NULL);
 	if(!rep)
 		return 0;
 
@@ -322,10 +323,10 @@ iter_dns_store(struct module_env* env, struct dns_msg* msg, int is_referral)
 		struct query_info qinf;
 		hashvalue_t h;
 
-		qinf = msg->qinfo;
-		qinf.qname = memdup(msg->qinfo.qname, msg->qinfo.qname_len);
+		qinf = *msgqinf;
+		qinf.qname = memdup(msgqinf->qname, msgqinf->qname_len);
 		if(!qinf.qname) {
-			reply_info_parsedelete(msg->rep, env->alloc);
+			reply_info_parsedelete(rep, env->alloc);
 			return 0;
 		}
 		/* fixup flags to be sensible for a reply based on the cache */
