@@ -117,6 +117,16 @@ The logfile is appended to, in the following format:
 The process id is written to the file. Default is "unbound.pid". So,
 kill -HUP `cat /etc/unbound/unbound.pid` will trigger a reload,
 kill -QUIT `cat /etc/unbound/unbound.pid` will gracefully terminate.
+.It \fBhide-identity:\fR <yes or no>
+If enabled id.server and hostname.bind queries are refused.
+.It \fBidentity:\fR <string>
+Set the identity to report. If set to "", the default, then the hostname
+of the server is returned.
+.It \fBhide-version:\fR <yes or no>
+If enabled version.server and version.bind queries are refused.
+.It \fBversion:\fR <string>
+Set the version to report. If set to "", the default, then the package
+version is returned.
 .It \fBtarget-fetch-policy:\fR <"list of numbers">
 Set the target fetch policy used by unbound to determine if it should fetch
 nameserver target addresses opportunistically. The policy is described per

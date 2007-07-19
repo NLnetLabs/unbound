@@ -57,6 +57,7 @@
 #include "services/mesh.h"
 #include "util/data/msgparse.h"
 #include "util/data/msgencode.h"
+#include "util/data/dname.h"
 
 #ifdef HAVE_SYS_TYPES_H
 #  include <sys/types.h>
@@ -260,6 +261,94 @@ answer_from_cache(struct worker* worker, struct lruhash_entry* e, uint16_t id,
 	return 1;
 }
 
+/**
+ * Fill CH class answer into buffer. Keeps query.
+ * @param pkt: buffer
+ * @param str: string to put into text record (<255).
+ * @param edns: edns reply information.
+ */
+static void
+chaos_replystr(ldns_buffer* pkt, const char* str, struct edns_data* edns)
+{
+	int len = strlen(str);
+	int rd = LDNS_RD_WIRE(ldns_buffer_begin(pkt));
+	int cd = LDNS_CD_WIRE(ldns_buffer_begin(pkt));
+	if(len>255) len=255; /* cap size of TXT record */
+	ldns_buffer_clear(pkt);
+	ldns_buffer_skip(pkt, sizeof(uint16_t)); /* skip id */
+	ldns_buffer_write_u16(pkt, BIT_QR|BIT_RA); /* noerror, no flags */
+	if(rd) LDNS_RD_SET(ldns_buffer_begin(pkt));
+	if(cd) LDNS_CD_SET(ldns_buffer_begin(pkt));
+	ldns_buffer_write_u16(pkt, 1); /* qdcount */
+	ldns_buffer_write_u16(pkt, 1); /* ancount */
+	ldns_buffer_write_u16(pkt, 0); /* nscount */
+	ldns_buffer_write_u16(pkt, 0); /* arcount */
+	(void)query_dname_len(pkt); /* skip qname */
+	ldns_buffer_skip(pkt, sizeof(uint16_t)); /* skip qtype */
+	ldns_buffer_skip(pkt, sizeof(uint16_t)); /* skip qclass */
+	ldns_buffer_write_u16(pkt, 0xc00c); /* compr ptr to query */
+	ldns_buffer_write_u16(pkt, LDNS_RR_TYPE_TXT);
+	ldns_buffer_write_u16(pkt, LDNS_RR_CLASS_CH);
+	ldns_buffer_write_u32(pkt, 0); /* TTL */
+	ldns_buffer_write_u16(pkt, sizeof(uint8_t) + len);
+	ldns_buffer_write_u8(pkt, len);
+	ldns_buffer_write(pkt, str, len);
+	ldns_buffer_flip(pkt);
+	edns->edns_version = EDNS_ADVERTISED_VERSION;
+	edns->udp_size = EDNS_ADVERTISED_SIZE;
+	edns->bits &= EDNS_DO;
+	attach_edns_record(pkt, edns);
+}
+
+/**
+ * Answer CH class queries.
+ * @param w: worker
+ * @param qinfo: query info. Pointer into packet buffer.
+ * @param edns: edns info from query.
+ * @param pkt: packet buffer.
+ * @return: true if a reply is to be sent.
+ */
+static int
+answer_chaos(struct worker* w, struct query_info* qinfo, 
+	struct edns_data* edns, ldns_buffer* pkt)
+{
+	struct config_file* cfg = w->env.cfg;
+	if(qinfo->qtype != LDNS_RR_TYPE_ANY && qinfo->qtype != LDNS_RR_TYPE_TXT)
+		return 0;
+	if(query_dname_compare(qinfo->qname, 
+		(uint8_t*)"\002id\006server") == 0 ||
+		query_dname_compare(qinfo->qname, 
+		(uint8_t*)"\010hostname\004bind") == 0)
+	{
+		if(cfg->hide_identity) 
+			return 0;
+		if(cfg->identity==NULL || cfg->identity[0]==0) {
+			char buf[MAXHOSTNAMELEN];
+			if (gethostname(buf, MAXHOSTNAMELEN) == 0)
+				chaos_replystr(pkt, buf, edns);
+			else 	{
+				log_err("gethostname: %s", strerror(errno));
+				chaos_replystr(pkt, "no hostname", edns);
+			}
+		}
+		else 	chaos_replystr(pkt, cfg->identity, edns);
+		return 1;
+	}
+	if(query_dname_compare(qinfo->qname, 
+		(uint8_t*)"\007version\006server") == 0 ||
+		query_dname_compare(qinfo->qname, 
+		(uint8_t*)"\007version\004bind") == 0)
+	{
+		if(cfg->hide_version) 
+			return 0;
+		if(cfg->version==NULL || cfg->version[0]==0)
+			chaos_replystr(pkt, PACKAGE_STRING, edns);
+		else 	chaos_replystr(pkt, cfg->version, edns);
+		return 1;
+	}
+	return 0;
+}
+
 /** handles callbacks from listening event interface */
 static int 
 worker_handle_request(struct comm_point* c, void* arg, int error,
@@ -303,7 +392,6 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 			LDNS_RCODE_REFUSED);
 		return 1;
 	}
-	h = query_info_hash(&qinfo);
 	if((ret=parse_edns_from_pkt(c->buffer, &edns)) != 0) {
 		verbose(VERB_ALGO, "worker parse edns: formerror.");
 		LDNS_QR_SET(ldns_buffer_begin(c->buffer));
@@ -340,6 +428,12 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 	}
 	if(c->type != comm_udp)
 		edns.udp_size = 65535; /* max size for TCP replies */
+	if(qinfo.qclass == LDNS_RR_CLASS_CH && answer_chaos(worker, &qinfo,
+		&edns, c->buffer)) {
+		verbose(VERB_ALGO, "class CH reply");
+		return 1;
+	}
+	h = query_info_hash(&qinfo);
 	if((e=slabhash_lookup(worker->env.msg_cache, h, &qinfo, 0))) {
 		/* answer from cache - we have acquired a readlock on it */
 		if(answer_from_cache(worker, e, 

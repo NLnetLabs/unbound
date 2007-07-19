@@ -106,6 +106,10 @@ config_create()
 	cfg->forwards = NULL;
 	cfg->harden_short_bufsize = 0;
 	cfg->harden_large_queries = 0;
+	cfg->hide_identity = 0;
+	cfg->hide_version = 0;
+	cfg->identity = NULL;
+	cfg->version = NULL;
 	return cfg;
 error_exit:
 	config_delete(cfg); 
@@ -196,6 +200,8 @@ config_delete(struct config_file* cfg)
 	config_delstubs(cfg->stubs);
 	config_delstubs(cfg->forwards);
 	config_delstrlist(cfg->donotqueryaddrs);
+	free(cfg->identity);
+	free(cfg->version);
 	free(cfg);
 }
 

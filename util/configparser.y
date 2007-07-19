@@ -78,7 +78,8 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_STUB_ZONE VAR_STUB_HOST VAR_STUB_ADDR VAR_TARGET_FETCH_POLICY
 %token VAR_HARDEN_SHORT_BUFSIZE VAR_HARDEN_LARGE_QUERIES
 %token VAR_FORWARD_ZONE VAR_FORWARD_HOST VAR_FORWARD_ADDR
-%token VAR_DO_NOT_QUERY_ADDRESS
+%token VAR_DO_NOT_QUERY_ADDRESS VAR_HIDE_IDENTITY VAR_HIDE_VERSION
+%token VAR_IDENTITY VAR_VERSION
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -109,7 +110,8 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_infra_cache_slabs | server_infra_cache_numhosts |
 	server_infra_cache_numlame | server_target_fetch_policy | 
 	server_harden_short_bufsize | server_harden_large_queries |
-	server_do_not_query_address
+	server_do_not_query_address | server_hide_identity |
+	server_hide_version | server_identity | server_version
 	;
 stubstart: VAR_STUB_ZONE
 	{
@@ -279,6 +281,38 @@ server_pidfile: VAR_PIDFILE STRING
 		OUTYY(("P(server_pidfile:%s)\n", $2));
 		free(cfg_parser->cfg->pidfile);
 		cfg_parser->cfg->pidfile = $2;
+	}
+	;
+server_hide_identity: VAR_HIDE_IDENTITY STRING
+	{
+		OUTYY(("P(server_hide_identity:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->hide_identity = (strcmp($2, "yes")==0);
+		free($2);
+	}
+	;
+server_hide_version: VAR_HIDE_VERSION STRING
+	{
+		OUTYY(("P(server_hide_version:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->hide_version = (strcmp($2, "yes")==0);
+		free($2);
+	}
+	;
+server_identity: VAR_IDENTITY STRING
+	{
+		OUTYY(("P(server_identity:%s)\n", $2));
+		free(cfg_parser->cfg->identity);
+		cfg_parser->cfg->identity = $2;
+	}
+	;
+server_version: VAR_VERSION STRING
+	{
+		OUTYY(("P(server_version:%s)\n", $2));
+		free(cfg_parser->cfg->version);
+		cfg_parser->cfg->version = $2;
 	}
 	;
 server_msg_cache_size: VAR_MSG_CACHE_SIZE STRING

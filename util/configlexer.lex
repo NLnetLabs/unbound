@@ -136,6 +136,10 @@ forward-zone{COLON}	{ YDOUT; return VAR_FORWARD_ZONE;}
 forward-addr{COLON}	{ YDOUT; return VAR_FORWARD_ADDR;}
 forward-host{COLON}	{ YDOUT; return VAR_FORWARD_HOST;}
 do-not-query-address{COLON}	{ YDOUT; return VAR_DO_NOT_QUERY_ADDRESS;}
+hide-identity{COLON}	{ YDOUT; return VAR_HIDE_IDENTITY;}
+hide-version{COLON}     { YDOUT; return VAR_HIDE_VERSION;}
+identity{COLON}		{ YDOUT; return VAR_IDENTITY;}
+version{COLON}     	{ YDOUT; return VAR_VERSION;}
 {NEWLINE}		{ LEXOUT(("NL\n")); cfg_parser->line++;}
 
 	/* Quoted strings. Strip leading and ending quotes */

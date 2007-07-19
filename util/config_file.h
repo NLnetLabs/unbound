@@ -124,6 +124,15 @@ struct config_file {
 	char* logfile;
 	/** pidfile to write pid to. */
 	char* pidfile;
+
+	/** do not report identity (id.server, hostname.bind) */
+	int hide_identity;
+	/** do not report version (version.server, version.bind) */
+	int hide_version;
+	/** identity, hostname is returned if "". */
+	char* identity;
+	/** version, package version returned if "". */
+	char* version;
 	
 	/** daemonize, i.e. fork into the background. */
 	int do_daemonize;
