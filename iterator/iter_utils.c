@@ -341,3 +341,15 @@ iter_dns_store(struct module_env* env, struct dns_msg* msg, int is_referral)
 	}
 	return 1;
 }
+
+int 
+iter_ns_probability(struct ub_randstate* rnd, int n, int m)
+{
+	int sel;
+	if(n == m) /* 100% chance */
+		return 1;
+	/* we do not need secure random numbers here, but
+	 * we do need it to be threadsafe, so we use this */
+	sel = ub_random(rnd) % m; 
+	return (sel < n);
+}

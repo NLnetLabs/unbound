@@ -49,6 +49,7 @@ struct delegpt_addr;
 struct delegpt;
 struct region;
 struct msg_parse;
+struct ub_randstate;
 
 /**
  * Process config options and set iterator module state.
@@ -104,5 +105,15 @@ struct dns_msg* dns_copy_msg(struct dns_msg* from, struct region* region);
  */
 int iter_dns_store(struct module_env* env, struct dns_msg* msg, 
 	int is_referral);
+
+/**
+ * Select randomly with n/m probability.
+ * For shuffle NS records for address fetching.
+ * @param rnd: random table
+ * @param n: probability.
+ * @param m: divisor for probability.
+ * @return true with n/m probability.
+ */
+int iter_ns_probability(struct ub_randstate* rnd, int n, int m);
 
 #endif /* ITERATOR_ITER_UTILS_H */

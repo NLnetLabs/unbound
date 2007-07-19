@@ -803,29 +803,34 @@ query_for_targets(struct module_qstate* qstate, struct iter_qstate* iq,
         struct iter_env* ie, int id, int maxtargets, int* num)
 {
 	int query_count = 0;
-	int target_count = 0;
 	struct delegpt_ns* ns = iq->dp->nslist;
+	int missing = (int)delegpt_count_missing_targets(iq->dp);
+	int toget = 0;
 	log_assert(maxtargets != 0); /* that would not be useful */
 
 	/* Generate target requests. Basically, any missing targets 
 	 * are queried for here, regardless if it is necessary to do 
 	 * so to continue processing. */
+	if(maxtargets < 0 || maxtargets > missing)
+		toget = missing;
+	else	toget = maxtargets;
+	if(toget == 0) {
+		*num = 0;
+		return 1;
+	}
+	/* select 'toget' items from the total of 'missing' items */
+	log_assert(toget <= missing);
 
 	/* loop over missing targets */
 	for(ns = iq->dp->nslist; ns; ns = ns->next) {
 		if(ns->resolved)
 			continue;
 
-		/* Sanity check: if the target name is at or *below* the 
-		 * delegation point itself, then this will be (potentially) 
-		 * unresolvable. This is the one case where glue *must* 
-		 * have been present.
-		 * FIXME: at this point, this *may* be resolvable, so 
-		 * perhaps we should issue the query anyway and let it fail.*/
-		if(dname_subdomain_c(ns->name, iq->dp->name)) {
-			log_nametypeclass(VERB_DETAIL, "skipping target name "
-				"because it should have been glue", ns->name,
-				LDNS_RR_TYPE_NS, iq->qchase.qclass);
+		/* randomly select this item with probability toget/missing */
+		if(!iter_ns_probability(qstate->env->rnd, toget, missing)) {
+			/* do not select this one, next; select toget number
+			 * of items from a list one less in size */
+			missing --;
 			continue;
 		}
 
@@ -846,10 +851,9 @@ query_for_targets(struct module_qstate* qstate, struct iter_qstate* iq,
 
 		/* mark this target as in progress. */
 		ns->resolved = 1;
-
-		/* if maxtargets is negative, there is no maximum, 
-		 * otherwise only query for ntarget names. */
-		if(maxtargets >= 0 && ++target_count >= maxtargets)
+		missing--;
+		toget--;
+		if(toget == 0)
 			break;
 	}
 	*num = query_count;
@@ -1286,6 +1290,7 @@ processTargetResponse(struct module_qstate* qstate, int id,
 	rrset = reply_find_answer_rrset(&iq->qchase, iq->response->rep);
 	if(rrset) {
 		/* if CNAMEs have been followed - add new NS to delegpt. */
+		/* BTW. RFC 1918 says NS should not have got CNAMEs. Robust. */
 		if(!delegpt_find_ns(foriq->dp, rrset->rk.dname, 
 			rrset->rk.dname_len)) {
 			if(!delegpt_add_ns(foriq->dp, forq->region, 
@@ -1295,8 +1300,6 @@ processTargetResponse(struct module_qstate* qstate, int id,
 		if(!delegpt_add_rrset(foriq->dp, forq->region, rrset))
 			log_err("out of memory adding targets");
 	} else	dpns->resolved = 1; /* fail the target */
-
-	log_assert(dpns->resolved); /* one way or another it is now done */
 }
 
 /** 
