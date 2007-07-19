@@ -270,13 +270,13 @@ answer_from_cache(struct worker* worker, struct lruhash_entry* e, uint16_t id,
 static void
 chaos_replystr(ldns_buffer* pkt, const char* str, struct edns_data* edns)
 {
-	int len = strlen(str);
-	int rd = LDNS_RD_WIRE(ldns_buffer_begin(pkt));
-	int cd = LDNS_CD_WIRE(ldns_buffer_begin(pkt));
+	size_t len = strlen(str);
+	unsigned int rd = LDNS_RD_WIRE(ldns_buffer_begin(pkt));
+	unsigned int cd = LDNS_CD_WIRE(ldns_buffer_begin(pkt));
 	if(len>255) len=255; /* cap size of TXT record */
 	ldns_buffer_clear(pkt);
-	ldns_buffer_skip(pkt, sizeof(uint16_t)); /* skip id */
-	ldns_buffer_write_u16(pkt, BIT_QR|BIT_RA); /* noerror, no flags */
+	ldns_buffer_skip(pkt, (ssize_t)sizeof(uint16_t)); /* skip id */
+	ldns_buffer_write_u16(pkt, (uint16_t)(BIT_QR|BIT_RA));
 	if(rd) LDNS_RD_SET(ldns_buffer_begin(pkt));
 	if(cd) LDNS_CD_SET(ldns_buffer_begin(pkt));
 	ldns_buffer_write_u16(pkt, 1); /* qdcount */
@@ -284,8 +284,8 @@ chaos_replystr(ldns_buffer* pkt, const char* str, struct edns_data* edns)
 	ldns_buffer_write_u16(pkt, 0); /* nscount */
 	ldns_buffer_write_u16(pkt, 0); /* arcount */
 	(void)query_dname_len(pkt); /* skip qname */
-	ldns_buffer_skip(pkt, sizeof(uint16_t)); /* skip qtype */
-	ldns_buffer_skip(pkt, sizeof(uint16_t)); /* skip qclass */
+	ldns_buffer_skip(pkt, (ssize_t)sizeof(uint16_t)); /* skip qtype */
+	ldns_buffer_skip(pkt, (ssize_t)sizeof(uint16_t)); /* skip qclass */
 	ldns_buffer_write_u16(pkt, 0xc00c); /* compr ptr to query */
 	ldns_buffer_write_u16(pkt, LDNS_RR_TYPE_TXT);
 	ldns_buffer_write_u16(pkt, LDNS_RR_CLASS_CH);
