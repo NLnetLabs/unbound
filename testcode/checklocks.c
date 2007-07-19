@@ -516,6 +516,7 @@ static int timed_spinlock(void* arg, struct timespec* to)
 #ifndef S_SPLINT_S
 		if(time(NULL) >= to->tv_sec)
 			return ETIMEDOUT;
+		usleep(1000); /* in 1/1000000s of a second */
 #endif
 	}
 	return err;
