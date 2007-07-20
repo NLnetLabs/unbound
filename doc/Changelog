@@ -1,3 +1,6 @@
+20 July 2007: Wouter
+	- Check CNAME chain before returning cache entry with CNAMEs.
+
 19 July 2007: Wouter
 	- shuffle NS selection when getting nameserver target addresses.
 	- fixup of deadlock warnings, yield cpu in checklock code so that
