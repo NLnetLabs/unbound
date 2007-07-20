@@ -1480,7 +1480,7 @@ process_response(struct module_qstate* qstate, struct iter_qstate* iq,
 
 	/* normalize and sanitize: easy to delete items from linked lists */
 	if(!scrub_message(pkt, prs, &iq->qchase, iq->dp->name, 
-		qstate->env->scratch))
+		qstate->env->scratch, qstate->env))
 		goto handle_it;
 
 	/* allocate response dns_msg in region */

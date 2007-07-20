@@ -113,6 +113,8 @@ struct config_file {
 	int harden_short_bufsize;
 	/** harden against very large query sizes */
 	int harden_large_queries;
+	/** harden against spoofed glue (out of zone data) */
+	int harden_glue;
 
 	/** chrootdir, if not "" or chroot will be done */
 	char* chrootdir;

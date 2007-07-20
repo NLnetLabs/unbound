@@ -106,6 +106,7 @@ config_create()
 	cfg->forwards = NULL;
 	cfg->harden_short_bufsize = 0;
 	cfg->harden_large_queries = 0;
+	cfg->harden_glue = 1;
 	cfg->hide_identity = 0;
 	cfg->hide_version = 0;
 	cfg->identity = NULL;

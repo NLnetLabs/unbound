@@ -41,12 +41,16 @@
  */
 #include "config.h"
 #include "iterator/iter_scrub.h"
+#include "services/cache/rrset.h"
 #include "util/log.h"
 #include "util/net_help.h"
 #include "util/region-allocator.h"
+#include "util/config_file.h"
+#include "util/module.h"
 #include "util/data/msgparse.h"
 #include "util/data/dname.h"
 #include "util/data/msgreply.h"
+#include "util/alloc.h"
 
 /** RRset flag used during scrubbing. The RRset is OK. */
 #define RRSET_SCRUB_OK	0x80
@@ -438,6 +442,42 @@ scrub_normalize(ldns_buffer* pkt, struct msg_parse* msg,
 }
 
 /**
+ * Store potential poison in the cache (only if hardening disabled).
+ * The rrset is stored in the cache but removed from the message.
+ * So that it will be used for infrastructure purposes, but not be 
+ * returned to the client.
+ * @param pkt: packet
+ * @param msg: message parsed
+ * @param env: environment with cache
+ * @param rrset: to store.
+ */
+static void
+store_rrset(ldns_buffer* pkt, struct msg_parse* msg, struct module_env* env,
+	struct rrset_parse* rrset)
+{
+	struct ub_packed_rrset_key* k;
+	struct packed_rrset_data* d;
+	struct rrset_ref ref;
+	uint32_t now = time(NULL);
+
+	k = alloc_special_obtain(env->alloc);
+	if(!k)
+		return;
+	k->entry.data = NULL;
+	if(!parse_copy_decompress_rrset(pkt, msg, rrset, NULL, k)) {
+		alloc_special_release(env->alloc, k);
+		return;
+	}
+	d = (struct packed_rrset_data*)k->entry.data;
+	packed_rrset_ttl_add(d, now);
+	ref.key = k;
+	ref.id = k->id;
+	/*ignore ret: it was in the cache, ref updated */
+	(void)rrset_cache_update(env->rrset_cache, &ref,
+		env->alloc, now);
+}
+
+/**
  * Given a response event, remove suspect RRsets from the response.
  * "Suspect" rrsets are potentially poison. Note that this routine expects
  * the response to be in a "normalized" state -- that is, all "irrelevant"
@@ -446,10 +486,12 @@ scrub_normalize(ldns_buffer* pkt, struct msg_parse* msg,
  * @param pkt: packet.
  * @param msg: msg to normalize.
  * @param zonename: name of server zone.
+ * @param env: module environment with config and cache.
  * @return 0 on error.
  */
 static int
-scrub_sanitize(ldns_buffer* pkt, struct msg_parse* msg, uint8_t* zonename)
+scrub_sanitize(ldns_buffer* pkt, struct msg_parse* msg, uint8_t* zonename,
+	struct module_env* env)
 {
 	struct rrset_parse* rrset, *prev;
 	prev = NULL;
@@ -472,8 +514,16 @@ scrub_sanitize(ldns_buffer* pkt, struct msg_parse* msg, uint8_t* zonename)
 		 * same check can be used */
 
 		if(!pkt_sub(pkt, rrset->dname, zonename)) {
-			remove_rrset("sanitize: removing potential poison "
-				"RRset:", pkt, msg, prev, &rrset);
+			if(!env->cfg->harden_glue) {
+				/* store in cache! Since it is relevant
+				 * (from normalize) it will be picked up 
+				 * from the cache to be used later */
+				store_rrset(pkt, msg, env, rrset);
+				remove_rrset("sanitize: storing potential "
+				"poison RRset:", pkt, msg, prev, &rrset);
+			} else
+				remove_rrset("sanitize: removing potential "
+				"poison RRset:", pkt, msg, prev, &rrset);
 			continue;
 		}
 		prev = rrset;
@@ -484,7 +534,8 @@ scrub_sanitize(ldns_buffer* pkt, struct msg_parse* msg, uint8_t* zonename)
 
 int 
 scrub_message(ldns_buffer* pkt, struct msg_parse* msg, 
-	struct query_info* qinfo, uint8_t* zonename, struct region* region)
+	struct query_info* qinfo, uint8_t* zonename, struct region* region,
+	struct module_env* env)
 {
 	/* basic sanity checks */
 	log_nametypeclass(VERB_ALGO, "scrub for", zonename, LDNS_RR_TYPE_NS, 
@@ -507,7 +558,7 @@ scrub_message(ldns_buffer* pkt, struct msg_parse* msg,
 	if(!scrub_normalize(pkt, msg, qinfo, region))
 		return 0;
 	/* delete all out-of-zone information */
-	if(!scrub_sanitize(pkt, msg, zonename))
+	if(!scrub_sanitize(pkt, msg, zonename, env))
 		return 0;
 	return 1;
 }

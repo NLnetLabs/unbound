@@ -281,19 +281,13 @@ parse_create_rrset(ldns_buffer* pkt, struct rrset_parse* pset,
 
 /** get trust value for rrset */
 static enum rrset_trust
-get_rrset_trust(struct reply_info* rep, size_t i)
+get_rrset_trust(struct msg_parse* msg, struct rrset_parse* rrset)
 {
-	uint16_t AA = rep->flags & BIT_AA;
-	/* TODO: need scrubber that knows what zone the server serves, so that
-	 * it can check if AA bit is warranted.
-	 * it can check if rrset_trust_nonauth_ans_AA should be used */
-	if(i < rep->an_numrrsets) {
-		/* answer section */
+	uint16_t AA = msg->flags & BIT_AA;
+	if(rrset->section == LDNS_SECTION_ANSWER) {
 		if(AA)	return rrset_trust_ans_AA;
 		else	return rrset_trust_ans_noAA;
-		
-	} else if(i < rep->an_numrrsets+rep->ns_numrrsets) {
-		/* authority section */
+	} else if(rrset->section == LDNS_SECTION_AUTHORITY) {
 		if(AA)	return rrset_trust_auth_AA;
 		else	return rrset_trust_auth_noAA;
 	} else {
@@ -302,6 +296,36 @@ get_rrset_trust(struct reply_info* rep, size_t i)
 		else	return rrset_trust_add_noAA;
 	}
 	return rrset_trust_none;
+}
+
+int
+parse_copy_decompress_rrset(ldns_buffer* pkt, struct msg_parse* msg,
+	struct rrset_parse *pset, struct region* region, 
+	struct ub_packed_rrset_key* pk)
+{
+	struct packed_rrset_data* data;
+	pk->rk.flags = pset->flags;
+	pk->rk.dname_len = pset->dname_len;
+	if(region)
+		pk->rk.dname = (uint8_t*)region_alloc(
+			region, pset->dname_len);
+	else	pk->rk.dname = 
+			(uint8_t*)malloc(pset->dname_len);
+	if(!pk->rk.dname)
+		return 0;
+	/** copy & decompress dname */
+	dname_pkt_copy(pkt, pk->rk.dname, pset->dname);
+	/** copy over type and class */
+	pk->rk.type = htons(pset->type);
+	pk->rk.rrset_class = pset->rrset_class;
+	/** read data part. */
+	if(!parse_create_rrset(pkt, pset, &data, region))
+		return 0;
+	pk->entry.data = (void*)data;
+	pk->entry.key = (void*)pk;
+	pk->entry.hash = pset->hash;
+	data->trust = get_rrset_trust(msg, pset);
+	return 1;
 }
 
 /** 
@@ -325,27 +349,10 @@ parse_copy_decompress(ldns_buffer* pkt, struct msg_parse* msg,
 		rep->ttl = NORR_TTL;
 
 	for(i=0; i<rep->rrset_count; i++) {
-		rep->rrsets[i]->rk.flags = pset->flags;
-		rep->rrsets[i]->rk.dname_len = pset->dname_len;
-		if(region)
-			rep->rrsets[i]->rk.dname = (uint8_t*)region_alloc(
-				region, pset->dname_len);
-		else	rep->rrsets[i]->rk.dname = 
-				(uint8_t*)malloc(pset->dname_len);
-		if(!rep->rrsets[i]->rk.dname)
+		if(!parse_copy_decompress_rrset(pkt, msg, pset, region,
+			rep->rrsets[i]))
 			return 0;
-		/** copy & decompress dname */
-		dname_pkt_copy(pkt, rep->rrsets[i]->rk.dname, pset->dname);
-		/** copy over type and class */
-		rep->rrsets[i]->rk.type = htons(pset->type);
-		rep->rrsets[i]->rk.rrset_class = pset->rrset_class;
-		/** read data part. */
-		if(!parse_create_rrset(pkt, pset, &data, region))
-			return 0;
-		rep->rrsets[i]->entry.data = (void*)data;
-		rep->rrsets[i]->entry.key = (void*)rep->rrsets[i];
-		rep->rrsets[i]->entry.hash = pset->hash;
-		data->trust = get_rrset_trust(rep, i);
+		data = (struct packed_rrset_data*)rep->rrsets[i]->entry.data;
 		if(data->ttl < rep->ttl)
 			rep->ttl = data->ttl;
 

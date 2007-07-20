@@ -79,7 +79,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_HARDEN_SHORT_BUFSIZE VAR_HARDEN_LARGE_QUERIES
 %token VAR_FORWARD_ZONE VAR_FORWARD_HOST VAR_FORWARD_ADDR
 %token VAR_DO_NOT_QUERY_ADDRESS VAR_HIDE_IDENTITY VAR_HIDE_VERSION
-%token VAR_IDENTITY VAR_VERSION
+%token VAR_IDENTITY VAR_VERSION VAR_HARDEN_GLUE
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -111,7 +111,8 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_infra_cache_numlame | server_target_fetch_policy | 
 	server_harden_short_bufsize | server_harden_large_queries |
 	server_do_not_query_address | server_hide_identity |
-	server_hide_version | server_identity | server_version
+	server_hide_version | server_identity | server_version |
+	server_harden_glue
 	;
 stubstart: VAR_STUB_ZONE
 	{
@@ -440,6 +441,16 @@ server_harden_large_queries: VAR_HARDEN_LARGE_QUERIES STRING
 		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
 			yyerror("expected yes or no.");
 		else cfg_parser->cfg->harden_large_queries = 
+			(strcmp($2, "yes")==0);
+		free($2);
+	}
+	;
+server_harden_glue: VAR_HARDEN_GLUE STRING
+	{
+		OUTYY(("P(server_harden_glue:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->harden_glue = 
 			(strcmp($2, "yes")==0);
 		free($2);
 	}

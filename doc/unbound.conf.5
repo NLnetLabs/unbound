@@ -146,6 +146,8 @@ small answers to these queries, where possible.
 Very large queries are ignored. Default is off, since it is legal protocol
 wise to send these, and could be necessary for operation if TSIG or EDNS
 payload is very large.
+.It \fBharden-glue:\fR <yes or no>
+Will trust glue only if it is within the servers authority. Default is on.
 .It \fBdo-not-query-address:\fR <IP address>
 Do not query the given IP address. Can be IP4 or IP6. By default the
 DNS port is blocked for that address. Appending "@portnumber" will block 

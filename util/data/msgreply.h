@@ -49,6 +49,7 @@ struct iovec;
 struct region;
 struct edns_data;
 struct msg_parse;
+struct rrset_parse;
 
 /**
  * Structure to store query information that makes answers to queries
@@ -289,6 +290,21 @@ struct msgreply_entry* query_info_entrysetup(struct query_info* q,
  */
 struct reply_info* reply_info_copy(struct reply_info* rep, 
 	struct alloc_cache* alloc, struct region* region);
+
+/**
+ * Copy a parsed rrset into given key, decompressing and allocating rdata.
+ * @param pkt: packet for decompression
+ * @param msg: the parser message (for flags for trust).
+ * @param pset: the parsed rrset to copy.
+ * @param region: if NULL - malloc, else data is allocated in this region.
+ * @param pk: a freshly obtained rrsetkey structure. No dname is set yet,
+ *	will be set on return.
+ *	Note that TTL will still be relative on return.
+ * @return false on alloc failure.
+ */
+int parse_copy_decompress_rrset(ldns_buffer* pkt, struct msg_parse* msg,
+	struct rrset_parse *pset, struct region* region, 
+	struct ub_packed_rrset_key* pk);
 
 /**
  * Find answer rrset in reply, the one matching qinfo. Follows CNAMEs, so the
