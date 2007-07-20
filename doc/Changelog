@@ -1,5 +1,10 @@
 20 July 2007: Wouter
 	- Check CNAME chain before returning cache entry with CNAMEs.
+	- Option harden-glue, default is on. It will discard out of zone
+	  data. If disabled, performance is faster, but spoofing attempts
+	  become a possibility. Note that still normalize scrubbing is done,
+	  and that the potentially spoofed data is used for infrastructure
+	  and not returned to the client.
 
 19 July 2007: Wouter
 	- shuffle NS selection when getting nameserver target addresses.
