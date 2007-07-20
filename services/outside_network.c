@@ -1200,3 +1200,51 @@ void outnet_serviced_query_stop(struct serviced_query* sq, void* cb_arg)
 		serviced_delete(sq); 
 	}
 }
+
+/** get memory used by waiting tcp entry (in use or not) */
+static size_t
+waiting_tcp_get_mem(struct waiting_tcp* w)
+{
+	size_t s;
+	if(!w) return 0;
+	s = sizeof(*w) + w->pkt_len;
+	if(w->timer)
+		s += comm_timer_get_mem(w->timer);
+	return s;
+}
+
+size_t outnet_get_mem(struct outside_network* outnet)
+{
+	size_t i;
+	struct waiting_tcp* w;
+	struct serviced_query* sq;
+	struct service_callback* sb;
+	size_t s = sizeof(*outnet) + sizeof(*outnet->base) + 
+		sizeof(*outnet->udp_buff) + 
+		ldns_buffer_capacity(outnet->udp_buff);
+	/* second buffer is not ours */
+	s += sizeof(struct comm_point*)*outnet->num_udp4;
+	for(i=0; i<outnet->num_udp4; i++)
+		s += comm_point_get_mem(outnet->udp4_ports[i]);
+	s += sizeof(struct comm_point*)*outnet->num_udp6;
+	for(i=0; i<outnet->num_udp6; i++)
+		s += comm_point_get_mem(outnet->udp6_ports[i]);
+	s += sizeof(struct pending_tcp*)*outnet->num_tcp;
+	for(i=0; i<outnet->num_tcp; i++) {
+		s += sizeof(struct pending_tcp);
+		s += comm_point_get_mem(outnet->tcp_conns[i]->c);
+		if(outnet->tcp_conns[i]->query)
+			s += waiting_tcp_get_mem(outnet->tcp_conns[i]->query);
+	}
+	for(w=outnet->tcp_wait_first; w; w = w->next_waiting)
+		s += waiting_tcp_get_mem(w);
+	s += sizeof(*outnet->pending);
+	s += sizeof(struct pending) * outnet->pending->count;
+	s += sizeof(*outnet->serviced);
+	RBTREE_FOR(sq, struct serviced_query*, outnet->serviced) {
+		s += sizeof(*sq) + sq->qbuflen;
+		for(sb = sq->cblist; sb; sb = sb->next)
+			s += sizeof(*sb);
+	}
+	return s;
+}

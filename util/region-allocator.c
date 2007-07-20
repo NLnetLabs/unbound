@@ -508,3 +508,14 @@ region_log_stats(region_type *region)
 	}
 	log_info("memory: %s", buf);
 }
+
+size_t 
+region_get_mem(region_type* region)
+{
+	size_t s = sizeof(*region);
+	s += region->total_allocated + region->chunk_size - region->allocated;
+	s += region->maximum_cleanup_count * sizeof(cleanup_type);
+	if(region->recycle_bin)
+		s += sizeof(struct recycle_elem*)*region->large_object_size;
+	return s;
+}

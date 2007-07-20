@@ -363,4 +363,12 @@ struct serviced_query* outnet_serviced_query(struct outside_network* outnet,
  */
 void outnet_serviced_query_stop(struct serviced_query* sq, void* cb_arg);
 
+/**
+ * Get memory size in use by outside network.
+ * Counts buffers and outstanding query (serviced queries) malloced data.
+ * @param outnet: outside network structure.
+ * @return size in bytes.
+ */
+size_t outnet_get_mem(struct outside_network* outnet);
+
 #endif /* OUTSIDE_NETWORK_H */

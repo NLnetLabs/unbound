@@ -120,6 +120,13 @@ alloc_special_t* alloc_special_obtain(struct alloc_cache* alloc);
 void alloc_special_release(struct alloc_cache* alloc, alloc_special_t* mem);
 
 /**
+ * Get memory size of alloc cache, alloc structure including special types.
+ * @param alloc: on what alloc.
+ * @return size in bytes.
+ */
+size_t alloc_get_mem(struct alloc_cache* alloc);
+
+/**
  * Print debug information (statistics).
  * @param alloc: on what alloc.
  */

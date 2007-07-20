@@ -234,3 +234,16 @@ alloc_stats(struct alloc_cache* alloc)
 	log_info("%salloc: %d in cache.", alloc->super?"":"sup",
 		(int)alloc->num_quar);
 }
+
+size_t alloc_get_mem(struct alloc_cache* alloc)
+{
+	size_t s = sizeof(*alloc);
+	if(!alloc->super) { 
+		lock_quick_lock(&alloc->lock); /* superalloc needs locking */
+	}
+	s += sizeof(alloc_special_t) * alloc->num_quar;
+	if(!alloc->super) {
+		lock_quick_unlock(&alloc->lock);
+	}
+	return s;
+}

@@ -141,8 +141,16 @@ void listen_resume(struct listen_dnsport* listen);
 
 /**
  * delete the listening structure
+ * @param listen: listening structure.
  */
 void listen_delete(struct listen_dnsport* listen);
+
+/**
+ * get memory size used by the listening structs
+ * @param listen: listening structure.
+ * @return: size in bytes.
+ */
+size_t listen_get_mem(struct listen_dnsport* listen);
 
 /**
  * Create and bind nonblocking UDP socket

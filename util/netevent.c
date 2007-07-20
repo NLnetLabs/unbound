@@ -984,6 +984,24 @@ comm_point_start_listening(struct comm_point* c, int newfd, int sec)
 	}
 }
 
+size_t comm_point_get_mem(struct comm_point* c)
+{
+	size_t s;
+	if(!c) 
+		return 0;
+	s = sizeof(*c) + sizeof(*c->ev);
+	if(c->timeout) 
+		s += sizeof(*c->timeout);
+	if(c->type == comm_tcp || c->type == comm_local)
+		s += sizeof(*c->buffer) + ldns_buffer_capacity(c->buffer);
+	if(c->type == comm_tcp_accept) {
+		int i;
+		for(i=0; i<c->max_tcp_count; i++)
+			s += comm_point_get_mem(c->tcp_handlers[i]);
+	}
+	return s;
+}
+
 struct comm_timer* 
 comm_timer_create(struct comm_base* base, void (*cb)(void*), void* cb_arg)
 {
@@ -1053,6 +1071,12 @@ int
 comm_timer_is_set(struct comm_timer* timer)
 {
 	return (int)timer->ev_timer->enabled;
+}
+
+size_t 
+comm_timer_get_mem(struct comm_timer* timer)
+{
+	return sizeof(*timer) + sizeof(struct internal_timer);
 }
 
 struct comm_signal* 

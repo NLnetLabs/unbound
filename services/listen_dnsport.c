@@ -452,3 +452,16 @@ void listening_ports_free(struct listen_port* list)
 		list = nx;
 	}
 }
+
+size_t listen_get_mem(struct listen_dnsport* listen)
+{
+	size_t s = sizeof(*listen) + sizeof(*listen->base) + 
+		sizeof(*listen->udp_buff) + 
+		ldns_buffer_capacity(listen->udp_buff);
+	struct listen_list* p;
+	for(p = listen->cps; p; p = p->next) {
+		s += sizeof(*p);
+		s += comm_point_get_mem(p->com);
+	}
+	return s;
+}

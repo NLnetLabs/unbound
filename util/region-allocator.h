@@ -173,4 +173,7 @@ size_t region_get_recycle_size(region_type* region);
 /** Debug print REGION statistics to LOG */
 void region_log_stats(region_type *region);
 
+/** get total memory size in use by region */
+size_t region_get_mem(region_type* region);
+
 #endif /* _REGION_ALLOCATOR_H_ */

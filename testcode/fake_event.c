@@ -901,4 +901,19 @@ void comm_point_delete(struct comm_point* c)
 	free(c);
 }
 
+size_t listen_get_mem(struct listen_dnsport* ATTR_UNUSED(listen))
+{
+	return 0;
+}
+
+size_t outnet_get_mem(struct outside_network* ATTR_UNUSED(outnet))
+{
+	return 0;
+}
+
+size_t comm_point_get_mem(struct comm_point* ATTR_UNUSED(c))
+{
+	return 0;
+}
+
 /*********** End of Dummy routines ***********/

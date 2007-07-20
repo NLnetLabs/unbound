@@ -385,6 +385,15 @@ void comm_point_stop_listening(struct comm_point* c);
 void comm_point_start_listening(struct comm_point* c, int newfd, int sec);
 
 /**
+ * Get size of memory used by comm point.
+ * For TCP handlers this includes subhandlers.
+ * For UDP handlers, this does not include the (shared) UDP buffer.
+ * @param c: commpoint.
+ * @return size in bytes.
+ */
+size_t comm_point_get_mem(struct comm_point* c);
+
+/**
  * create timer. Not active upon creation.
  * @param base: event handling base.
  * @param cb: callback function: void myfunc(void* myarg);
@@ -419,6 +428,13 @@ void comm_timer_delete(struct comm_timer* timer);
  * @return: false if disabled or not set.
  */
 int comm_timer_is_set(struct comm_timer* timer);
+
+/**
+ * Get size of memory used by comm timer.
+ * @param timer: the timer to examine.
+ * @return size in bytes.
+ */
+size_t comm_timer_get_mem(struct comm_timer* timer);
 
 /**
  * Create a signal handler. Call signal_bind() later to bind to a signal.

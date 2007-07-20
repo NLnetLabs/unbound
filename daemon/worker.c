@@ -54,6 +54,7 @@
 #include "services/outside_network.h"
 #include "services/outbound_list.h"
 #include "services/cache/rrset.h"
+#include "services/cache/infra.h"
 #include "services/mesh.h"
 #include "util/data/msgparse.h"
 #include "util/data/msgencode.h"
@@ -67,6 +68,34 @@
 
 /** Size of an UDP datagram */
 #define NORMAL_UDP_SIZE	512 /* bytes */
+
+/** Report on memory usage by this thread and global */
+static void
+worker_mem_report(struct worker* worker)
+{
+	size_t total, front, back, mesh, msg, rrset, infra, ac, superac;
+	size_t me;
+	if(verbosity < VERB_ALGO) 
+		return;
+	front = listen_get_mem(worker->front);
+	back = outnet_get_mem(worker->back);
+	msg = slabhash_get_mem(worker->env.msg_cache);
+	rrset = slabhash_get_mem(&worker->env.rrset_cache->table);
+	infra = slabhash_get_mem(worker->env.infra_cache->hosts);
+	mesh = mesh_get_mem(worker->env.mesh);
+	ac = alloc_get_mem(&worker->alloc);
+	superac = alloc_get_mem(&worker->daemon->superalloc);
+	me = sizeof(*worker) + sizeof(*worker->base) + sizeof(*worker->comsig)
+		+ comm_point_get_mem(worker->cmd_com) + 
+		sizeof(worker->rndstate) + region_get_mem(worker->scratchpad);
+	total = front+back+mesh+msg+rrset+infra+ac+superac+me;
+	log_info("Memory conditions: %u front=%u back=%u mesh=%u msg=%u "
+		"rrset=%u infra=%u alloccache=%u globalalloccache=%u me=%u",
+		(unsigned)total, (unsigned)front, (unsigned)back, 
+		(unsigned)mesh, (unsigned)msg, (unsigned)rrset, 
+		(unsigned)infra, (unsigned)ac, (unsigned)superac, 
+		(unsigned)me);
+}
 
 void 
 worker_send_cmd(struct worker* worker, ldns_buffer* buffer,
@@ -95,6 +124,7 @@ worker_handle_reply(struct comm_point* c, void* arg, int error,
 
 	if(error != 0) {
 		mesh_report_reply(worker->env.mesh, &e, 0, reply_info);
+		worker_mem_report(worker);
 		return 0;
 	}
 	/* sanity check. */
@@ -105,9 +135,11 @@ worker_handle_reply(struct comm_point* c, void* arg, int error,
 		/* error becomes timeout for the module as if this reply
 		 * never arrived. */
 		mesh_report_reply(worker->env.mesh, &e, 0, reply_info);
+		worker_mem_report(worker);
 		return 0;
 	}
 	mesh_report_reply(worker->env.mesh, &e, 1, reply_info);
+	worker_mem_report(worker);
 	return 0;
 }
 
@@ -122,6 +154,7 @@ worker_handle_service_reply(struct comm_point* c, void* arg, int error,
 	verbose(VERB_ALGO, "worker scvd callback for qstate %p", e->qstate);
 	if(error != 0) {
 		mesh_report_reply(worker->env.mesh, e, 0, reply_info);
+		worker_mem_report(worker);
 		return 0;
 	}
 	/* sanity check. */
@@ -133,9 +166,11 @@ worker_handle_service_reply(struct comm_point* c, void* arg, int error,
 		 * never arrived. */
 		verbose(VERB_ALGO, "worker: bad reply handled as timeout");
 		mesh_report_reply(worker->env.mesh, e, 0, reply_info);
+		worker_mem_report(worker);
 		return 0;
 	}
 	mesh_report_reply(worker->env.mesh, e, 1, reply_info);
+	worker_mem_report(worker);
 	return 0;
 }
 
@@ -507,6 +542,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 		/* the max request number has been reached, stop accepting */
 		listen_pushback(worker->front);
 	}
+	worker_mem_report(worker);
 	return 0;
 }
 
@@ -680,6 +716,7 @@ worker_init(struct worker* worker, struct config_file *cfg,
 		worker_delete(worker);
 		return 0;
 	}
+	worker_mem_report(worker);
 	return 1;
 }
 
@@ -696,6 +733,7 @@ worker_delete(struct worker* worker)
 		return;
 	mesh_stats(worker->env.mesh, "mesh has");
 	server_stats_log(&worker->stats, worker->thread_num);
+	worker_mem_report(worker);
 	mesh_delete(worker->env.mesh);
 	listen_delete(worker->front);
 	outside_network_delete(worker->back);

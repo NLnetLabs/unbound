@@ -350,4 +350,11 @@ void mesh_run(struct mesh_area* mesh, struct mesh_state* mstate,
  */
 void mesh_stats(struct mesh_area* mesh, const char* str);
 
+/**
+ * Calculate memory size in use by mesh and all queries inside it.
+ * @param mesh: the mesh to examine.
+ * @return size in bytes.
+ */
+size_t mesh_get_mem(struct mesh_area* mesh);
+
 #endif /* SERVICES_MESH_H */

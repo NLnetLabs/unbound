@@ -144,6 +144,18 @@ size_t slabhash_get_size(struct slabhash* sl)
 	return total;
 }
 
+size_t slabhash_get_mem(struct slabhash* sl)
+{	
+	size_t i, total = sizeof(*sl);
+	for(i=0; i<sl->size; i++) {
+		lock_quick_lock(&sl->array[i]->lock);
+		total += sizeof(struct lruhash) + sl->array[i]->space_used +
+			sizeof(struct lruhash_bin)*sl->array[i]->size;
+		lock_quick_unlock(&sl->array[i]->lock);
+	}
+	return total;
+}
+
 struct lruhash* slabhash_gettable(struct slabhash* sl, hashvalue_t hash)
 {
 	return sl->array[slab_idx(sl, hash)];

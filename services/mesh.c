@@ -575,3 +575,16 @@ mesh_stats(struct mesh_area* mesh, const char* str)
 		timehist_log(mesh->histogram);
 	}
 }
+
+size_t 
+mesh_get_mem(struct mesh_area* mesh)
+{
+	struct mesh_state* m;
+	size_t s = sizeof(*mesh) + sizeof(struct timehist) +
+		sizeof(struct th_buck)*mesh->histogram->num;
+	RBTREE_FOR(m, struct mesh_state*, &mesh->all) {
+		/* all, including m itself allocated in qstate region */
+		s += region_get_mem(m->s.region);
+	}
+	return s;
+}

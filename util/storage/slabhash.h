@@ -142,8 +142,16 @@ void slabhash_status(struct slabhash* table, const char* id, int extended);
 /**
  * Retrieve slab hash total size.
  * @param table: hash table.
+ * @return size configured as max.
  */
 size_t slabhash_get_size(struct slabhash* table);
+
+/**
+ * Retrieve slab hash current memory use.
+ * @param table: hash table.
+ * @return memory in use.
+ */
+size_t slabhash_get_mem(struct slabhash* table);
 
 /**
  * Get lruhash table for a given hash value
