@@ -183,7 +183,7 @@ void mesh_report_reply(struct mesh_area* mesh, struct outbound_entry* e,
 {
 	e->qstate->reply = reply;
 	mesh_run(mesh, e->qstate->mesh_info,
-		is_ok?module_event_reply:module_event_timeout, e);
+		is_ok?module_event_reply:module_event_noreply, e);
 }
 
 struct mesh_state* 

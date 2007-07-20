@@ -1449,7 +1449,7 @@ process_response(struct module_qstate* qstate, struct iter_qstate* iq,
 	verbose(VERB_ALGO, "process_response: new external response event");
 	iq->response = NULL;
 	iq->state = QUERY_RESP_STATE;
-	if(event == module_event_timeout || event == module_event_error) {
+	if(event == module_event_noreply || event == module_event_error) {
 		goto handle_it;
 	}
 	if(event != module_event_reply || !qstate->reply) {

@@ -240,8 +240,8 @@ enum module_ev {
 	module_event_pass,
 	/** reply inbound from server */
 	module_event_reply,
-	/** timeout */
-	module_event_timeout,
+	/** no reply, timeout or other error */
+	module_event_noreply,
 	/** error */
 	module_event_error
 };

@@ -7,6 +7,9 @@
 	  and not returned to the client.
 	- if glue times out, refetch by asking parent of delegation again.
 	  Much like asking for DS at the parent side.
+	- TODO items from forgery-resilience draft.
+	  and on memory handling improvements.
+	- renamed module_event_timeout to module_event_noreply.
 
 19 July 2007: Wouter
 	- shuffle NS selection when getting nameserver target addresses.
