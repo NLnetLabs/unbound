@@ -107,6 +107,17 @@ struct dns_msg* dns_cache_lookup(struct module_env* env,
 	uint8_t* qname, size_t qnamelen, uint16_t qtype, uint16_t qclass,
 	struct region* region, struct region* scratch);
 
+/** 
+ * find and add A and AAAA records for missing nameservers in delegpt 
+ * @param env: module environment with rrset cache
+ * @param qclass: which class to look in.
+ * @param region: where to store new dp info.
+ * @param dp: delegation point to fill missing entries.
+ * @return false on alloc failure.
+ */
+int cache_fill_missing(struct module_env* env, uint16_t qclass, 
+	struct region* region, struct delegpt* dp);
+
 /** Find covering DNAME */
 
 #endif /* SERVICES_CACHE_DNS_H */

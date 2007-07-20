@@ -1078,6 +1078,9 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		iq->dp = delegpt_from_message(iq->response, qstate->region);
 		if(!iq->dp)
 			return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
+		if(!cache_fill_missing(qstate->env, iq->qchase.qclass, 
+			qstate->region, iq->dp))
+			return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
 		delegpt_log(iq->dp);
 		/* Count this as a referral. */
 		iq->referral_count++;

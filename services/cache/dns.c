@@ -204,6 +204,43 @@ find_add_addrs(struct module_env* env, uint16_t qclass, struct region* region,
 	return 1;
 }
 
+/** find and add A and AAAA records for missing nameservers in delegpt */
+int
+cache_fill_missing(struct module_env* env, uint16_t qclass, 
+	struct region* region, struct delegpt* dp)
+{
+	struct delegpt_ns* ns;
+	struct ub_packed_rrset_key* akey;
+	uint32_t now = time(NULL);
+	for(ns = dp->nslist; ns; ns = ns->next) {
+		if(ns->resolved)
+			continue;
+		akey = rrset_cache_lookup(env->rrset_cache, ns->name, 
+			ns->namelen, LDNS_RR_TYPE_A, qclass, 0, now, 0);
+		if(akey) {
+			if(!delegpt_add_rrset_A(dp, region, akey)) {
+				lock_rw_unlock(&akey->entry.lock);
+				return 0;
+			}
+			log_nametypeclass(VERB_ALGO, "found in cache",
+				ns->name, LDNS_RR_TYPE_A, qclass);
+			lock_rw_unlock(&akey->entry.lock);
+		}
+		akey = rrset_cache_lookup(env->rrset_cache, ns->name, 
+			ns->namelen, LDNS_RR_TYPE_AAAA, qclass, 0, now, 0);
+		if(akey) {
+			if(!delegpt_add_rrset_AAAA(dp, region, akey)) {
+				lock_rw_unlock(&akey->entry.lock);
+				return 0;
+			}
+			log_nametypeclass(VERB_ALGO, "found in cache",
+				ns->name, LDNS_RR_TYPE_AAAA, qclass);
+			lock_rw_unlock(&akey->entry.lock);
+		}
+	}
+	return 1;
+}
+
 /** find and add DS or NSEC to delegation msg */
 static void
 find_add_ds(struct module_env* env, struct region* region, 
