@@ -99,17 +99,6 @@ delegpt_add_ns(struct delegpt* dp, struct region* region, uint8_t* name)
 	(void)dname_count_size_labels(name, &ns->namelen);
 	ns->name = region_alloc_init(region, name, ns->namelen);
 	ns->resolved = 0;
-
-	/* Sanity check: if the target name is at or *below* the 
-	 * delegation point itself, then this will be (potentially) 
-	 * unresolvable. This is the one case where glue *must* 
-	 * have been present.
-	 * FIXME: at this point, this *may* be resolvable, so 
-	 * perhaps we should issue the query anyway and let it fail.*/
-	if(dname_subdomain_c(ns->name, dp->name)) {
-		ns->resolved = 1;
-	}
-
 	return 1;
 }
 

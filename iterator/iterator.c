@@ -114,6 +114,7 @@ iter_new(struct module_qstate* qstate, int id)
 	iq->referral_count = 0;
 	iq->priming = 0;
 	iq->priming_stub = 0;
+	iq->refetch_glue = 0;
 	iq->chase_flags = qstate->query_flags;
 	/* Start with the (current) qname. */
 	iq->qchase = qstate->qinfo;
@@ -405,6 +406,7 @@ generate_sub_request(uint8_t* qname, size_t qnamelen, uint16_t qtype,
 		subiq->final_state = final_state;
 		subiq->qchase = subq->qinfo;
 		subiq->chase_flags = subq->query_flags;
+		subiq->refetch_glue = 0;
 	}
 	return 1;
 }
@@ -639,10 +641,12 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 
 	/* first, adjust for DS queries. To avoid the grandparent problem, 
 	 * we just look for the closest set of server to the parent of qname.
+	 * When re-fetching glue we also need to ask the parent.
 	 */
 	delname = iq->qchase.qname;
 	delnamelen = iq->qchase.qname_len;
-	if(iq->qchase.qtype == LDNS_RR_TYPE_DS && delname[0] != 0) {
+	if((iq->qchase.qtype == LDNS_RR_TYPE_DS || iq->refetch_glue)
+		&& delname[0] != 0) {
 		/* do not adjust root label, remove first label from delname */
 		size_t lablen = delname[0] + 1;
 		delname += lablen;
@@ -663,7 +667,7 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 		if(!prime_root(qstate, iq, ie, id, iq->qchase.qclass))
 			return error_response(qstate, id, LDNS_RCODE_REFUSED);
 
-		/* priming creates an sends a subordinate query, with 
+		/* priming creates and sends a subordinate query, with 
 		 * this query as the parent. So further processing for 
 		 * this event will stop until reactivated by the results 
 		 * of priming. */
@@ -772,13 +776,10 @@ generate_target_query(struct module_qstate* qstate, struct iter_qstate* iq,
 	if(subq) {
 		struct iter_qstate* subiq = 
 			(struct iter_qstate*)subq->minfo[id];
-		subiq->dp = delegpt_copy(iq->dp, subq->region);
-		if(!subiq->dp) {
-			log_err("init targetq: out of memory");
-			(*qstate->env->kill_sub)(subq);
-			return 0;
+		if(dname_subdomain_c(name, iq->dp->name)) {
+			verbose(VERB_ALGO, "refetch of target glue");
+			subiq->refetch_glue = 1;
 		}
-		delegpt_log(subiq->dp);
 	}
 	log_nametypeclass(VERB_DETAIL, "new target", name, qtype, qclass);
 	return 1;

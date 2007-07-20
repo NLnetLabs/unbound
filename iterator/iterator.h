@@ -228,6 +228,14 @@ struct iter_qstate {
 	 */
 	int priming_stub;
 
+	/**
+	 * This is a flag that, if true, means that this query is
+	 * for (re)fetching glue from a zone. Since the address should
+	 * have been glue, query again to the servers that should have
+	 * been returning it as glue.
+	 */
+	int refetch_glue;
+
 	/** list of pending queries to authoritative servers. */
 	struct outbound_list outlist;
 };
