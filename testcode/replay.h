@@ -158,6 +158,11 @@ struct replay_moment {
 	/** The sent packet must match this. Incoming events, the data. */
 	struct entry* match;
 
+	/** address that must be matched, or packet remote host address. */
+	struct sockaddr_storage addr;
+	/** length of addr, if 0, then any address will do */
+	socklen_t addrlen;
+
 	/** what pending query should timeout or is answered. or 
 	 * NULL for last sent query. 
 	 * Unused at this time.
@@ -173,6 +178,10 @@ struct replay_range {
 	int start_step;
 	/** end step of time range. */
 	int end_step;
+	/** address of where this range is served. */
+	struct sockaddr_storage addr;
+	/** length of addr, if 0, then any address will do */
+	socklen_t addrlen;
 
 	/** Matching list */
 	struct entry* match;

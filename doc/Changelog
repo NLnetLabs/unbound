@@ -1,5 +1,6 @@
 24 July 2007: Wouter
 	- Example section in config manual.
+	- Addr stored for range and moment in replay.
 
 20 July 2007: Wouter
 	- Check CNAME chain before returning cache entry with CNAMEs.
