@@ -25,6 +25,31 @@ Comments start with # and last to the end of line. Empty lines are
 ignored as is whitespace at the beginning of a line.
 
 .El
+.Sh EXAMPLE
+An example config file is shown below. Copy this to /etc/unbound/unbound.conf
+and start the server with:
+.nf
+	$ unbound -c /etc/unbound/unbound.conf 
+.fi
+Most settings are the defaults. Stop the server with:
+.nf
+	$ kill `cat /etc/unbound/unbound.pid`
+.fi
+Below is a minimal config file. The source distribution contains an extensive
+example.conf file with all the options.
+
+.nf
+# unbound.conf(5) config file for unbound(8).
+server:
+	directory: "/etc/unbound"
+	username: unbound 	# make sure it can write to pidfile, logfile.
+	chroot: "/etc/unbound"
+	logfile: "/etc/unbound/unbound.log"
+	pidfile: "/etc/unbound/unbound.pid"
+	# verbosity: 1		# uncomment and increase to get more logging.
+.fi
+
+.El
 .Sh FILE FORMAT
 There must be whitespace between keywords. Attribute keywords end with a colon ':'. An attribute
 is followed by its containing attributes, or a value.

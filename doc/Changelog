@@ -1,3 +1,6 @@
+24 July 2007: Wouter
+	- Example section in config manual.
+
 20 July 2007: Wouter
 	- Check CNAME chain before returning cache entry with CNAMEs.
 	- Option harden-glue, default is on. It will discard out of zone
