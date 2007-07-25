@@ -143,6 +143,10 @@ pending_matches_current(struct replay_runtime* runtime,
 		return 0;
 	/* see if any of the pending queries matches */
 	for(p = runtime->pending_list; p; p = p->next) {
+		if(runtime->now->addrlen != 0 &&
+			sockaddr_cmp(&p->addr, p->addrlen, &runtime->now->addr,
+			runtime->now->addrlen) != 0)
+			continue;
 		if((e=find_match(runtime->now->match, p->pkt, p->transport))) {
 			*entry = e;
 			*pend = p;
@@ -167,10 +171,14 @@ pending_find_match(struct replay_runtime* runtime, struct entry** entry,
 	struct replay_range* p = runtime->scenario->range_list;
 	while(p) {
 		if(p->start_step <= timenow && timenow <= p->end_step &&
+		  (p->addrlen == 0 || sockaddr_cmp(&p->addr, p->addrlen,
+		  	&pend->addr, pend->addrlen) == 0) &&
 		  (*entry = find_match(p->match, pend->pkt, pend->transport))) {
 			log_info("matched query time %d in range [%d, %d] "
 				"with entry line %d", timenow, 
 				p->start_step, p->end_step, (*entry)->lineno);
+			if(p->addrlen != 0)
+				log_addr("matched ip", &p->addr, p->addrlen);
 			return 1;
 		}
 		p = p->next_range;
@@ -192,6 +200,7 @@ pending_matches_range(struct replay_runtime* runtime,
 	struct fake_pending* p = runtime->pending_list;
 	/* slow, O(N*N), but it works as advertised with weird matching */
 	while(p) {
+		log_info("check of pending");
 		if(pending_find_match(runtime, entry, p)) {
 			*pend = p;
 			return 1;
@@ -266,6 +275,9 @@ answer_callback_from_entry(struct replay_runtime* runtime,
 {
 	struct comm_point c;
 	struct comm_reply repinfo;
+	void* cb_arg = pend->cb_arg;
+	comm_point_callback_t* cb = pend->callback;
+
 	memset(&c, 0, sizeof(c));
 	c.fd = -1;
 	c.buffer = ldns_buffer_new(runtime->bufsize);
@@ -276,11 +288,12 @@ answer_callback_from_entry(struct replay_runtime* runtime,
 	repinfo.c = &c;
 	repinfo.addrlen = pend->addrlen;
 	memcpy(&repinfo.addr, &pend->addr, pend->addrlen);
-	if((*pend->callback)(&c, pend->cb_arg, NETEVENT_NOERROR, &repinfo)) {
+	if(!pend->serviced)
+		pending_list_delete(runtime, pend);
+	if((*cb)(&c, cb_arg, NETEVENT_NOERROR, &repinfo)) {
 		fatal_exit("testbound: unexpected: callback returned 1");
 	}
 	ldns_buffer_free(c.buffer);
-	pending_list_delete(runtime, pend);
 }
 
 /** Check the now moment answer check event */
@@ -295,7 +308,10 @@ answer_check_it(struct replay_runtime* runtime)
 		enum transport_type tr = transport_tcp;
 		if(ans->repinfo.c->type == comm_udp)
 			tr = transport_udp;
-		if(find_match(runtime->now->match, ans->pkt, tr)) {
+		if((runtime->now->addrlen == 0 || sockaddr_cmp(
+			&runtime->now->addr, runtime->now->addrlen,
+			&ans->repinfo.addr, ans->repinfo.addrlen) == 0) &&
+			find_match(runtime->now->match, ans->pkt, tr)) {
 			struct replay_answer *n = ans->next;
 			log_info("testbound matched event entry from line %d",
 				runtime->now->match->lineno);
@@ -330,6 +346,10 @@ fake_front_query(struct replay_runtime* runtime, struct replay_moment *todo)
 	memset(&repinfo, 0, sizeof(repinfo));
 	repinfo.c = (struct comm_point*)calloc(1, sizeof(struct comm_point));
 	repinfo.addrlen = (socklen_t)sizeof(struct sockaddr_in);
+	if(todo->addrlen != 0) {
+		repinfo.addrlen = todo->addrlen;
+		memcpy(&repinfo.addr, &todo->addr, todo->addrlen);
+	}
 	repinfo.c->fd = -1;
 	repinfo.c->ev = (struct internal_event*)runtime;
 	repinfo.c->buffer = ldns_buffer_new(runtime->bufsize);
@@ -484,6 +504,10 @@ run_scenario(struct replay_runtime* runtime)
 	} while(runtime->now);
 
 	if(runtime->pending_list) {
+		struct fake_pending* p;
+		log_err("testbound: there are still messages pending.");
+		for(p = runtime->pending_list; p; p=p->next)
+			log_pkt("pending msg", p->pkt);
 		fatal_exit("testbound: there are still messages pending.");
 	}
 	if(runtime->answer_list) {
@@ -698,6 +722,7 @@ pending_udp_query(struct outside_network* outnet, ldns_buffer* packet,
 	pend->timeout = timeout/1000;
 	pend->transport = transport_udp;
 	pend->pkt = NULL;
+	pend->serviced = 0;
 	pend->runtime = runtime;
 	status = ldns_buffer2pkt_wire(&pend->pkt, packet);
 	if(status != LDNS_STATUS_OK) {
@@ -709,6 +734,9 @@ pending_udp_query(struct outside_network* outnet, ldns_buffer* packet,
 
 	/* see if it matches the current moment */
 	if(runtime->now && runtime->now->evt_type == repevt_back_query &&
+		(runtime->now->addrlen == 0 || sockaddr_cmp(
+			&runtime->now->addr, runtime->now->addrlen,
+			&pend->addr, pend->addrlen) == 0) &&
 		find_match(runtime->now->match, pend->pkt, pend->transport)) {
 		log_info("testbound: matched pending to event. "
 			"advance time between events.");
@@ -748,6 +776,7 @@ pending_tcp_query(struct outside_network* outnet, ldns_buffer* packet,
 	pend->transport = transport_tcp;
 	pend->pkt = NULL;
 	pend->runtime = runtime;
+	pend->serviced = 0;
 	status = ldns_buffer2pkt_wire(&pend->pkt, packet);
 	if(status != LDNS_STATUS_OK) {
 		log_err("ldns error parsing tcp output packet: %s",
@@ -758,6 +787,9 @@ pending_tcp_query(struct outside_network* outnet, ldns_buffer* packet,
 
 	/* see if it matches the current moment */
 	if(runtime->now && runtime->now->evt_type == repevt_back_query &&
+		(runtime->now->addrlen == 0 || sockaddr_cmp(
+			&runtime->now->addr, runtime->now->addrlen,
+			&pend->addr, pend->addrlen) == 0) &&
 		find_match(runtime->now->match, pend->pkt, pend->transport)) {
 		log_info("testbound: matched pending to event. "
 			"advance time between events.");
@@ -820,6 +852,7 @@ struct serviced_query* outnet_serviced_query(struct outside_network* outnet,
 	pend->transport = transport_udp; /* pretend UDP */
 	pend->pkt = NULL;
 	pend->runtime = runtime;
+	pend->serviced = 1;
 	status = ldns_buffer2pkt_wire(&pend->pkt, pend->buffer);
 	if(status != LDNS_STATUS_OK) {
 		log_err("ldns error parsing serviced output packet: %s",
@@ -830,6 +863,9 @@ struct serviced_query* outnet_serviced_query(struct outside_network* outnet,
 
 	/* see if it matches the current moment */
 	if(runtime->now && runtime->now->evt_type == repevt_back_query &&
+		(runtime->now->addrlen == 0 || sockaddr_cmp(
+			&runtime->now->addr, runtime->now->addrlen,
+			&pend->addr, pend->addrlen) == 0) &&
 		find_match(runtime->now->match, pend->pkt, pend->transport)) {
 		log_info("testbound: matched pending to event. "
 			"advance time between events.");
@@ -854,10 +890,10 @@ void outnet_serviced_query_stop(struct serviced_query* sq, void* cb_arg)
 	while(p) {
 		if(p == pend) {
 			log_assert(p->cb_arg == cb_arg);
+			log_info("serviced pending delete");
 			if(prev)
 				prev->next = p->next;
 			else 	runtime->pending_list = p->next;
-			log_pkt("deleted pending serviced query.", p->pkt);
 			ldns_buffer_free(p->buffer);
 			ldns_pkt_free(p->pkt);
 			free(p);
@@ -866,7 +902,7 @@ void outnet_serviced_query_stop(struct serviced_query* sq, void* cb_arg)
 		prev = p;
 		p = p->next;
 	}
-	log_pkt("double delet of pending serviced query", p->pkt);
+	log_info("double delete of pending serviced query");
 }
 
 struct listen_port* listening_ports_open(struct config_file* ATTR_UNUSED(cfg))

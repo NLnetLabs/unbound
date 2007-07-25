@@ -157,6 +157,8 @@ static void replyline(const char* line, ldns_pkt *reply)
 			ldns_pkt_set_rcode(reply, LDNS_RCODE_NXDOMAIN);
 		} else if(str_keyword(&parse, "NOTIMPL")) {
 			ldns_pkt_set_rcode(reply, LDNS_RCODE_NOTIMPL);
+		} else if(str_keyword(&parse, "REFUSED")) {
+			ldns_pkt_set_rcode(reply, LDNS_RCODE_REFUSED);
 		} else if(str_keyword(&parse, "YXDOMAIN")) {
 			ldns_pkt_set_rcode(reply, LDNS_RCODE_YXDOMAIN);
 		} else if(str_keyword(&parse, "YXRRSET")) {

@@ -41,6 +41,7 @@
 
 #include "config.h"
 #include "util/log.h"
+#include "util/net_help.h"
 #include "testcode/replay.h"
 #include "testcode/ldns-testpkts.h"
 
@@ -85,6 +86,18 @@ replay_range_delete(struct replay_range* rng)
 	free(rng);
 }
 
+/** strip whitespace from end of string */
+static void
+strip_end_white(char* p)
+{
+	size_t i;
+	for(i = strlen(p); i > 0; i--) {
+		if(isspace(p[i-1]))
+			p[i-1] = 0;
+		else return;
+	}
+}
+
 /** 
  * Read a range from file. 
  * @param remain: Rest of line (after RANGE keyword).
@@ -124,6 +137,19 @@ replay_range_read(char* remain, FILE* in, const char* name, int* lineno,
 			parse++;
 		if(!*parse || *parse == ';')
 			continue;
+		if(parse_keyword(&parse, "ADDRESS")) {
+			while(isspace(*parse))
+				parse++;
+			strip_end_white(parse);
+			if(!extstrtoaddr(parse, &rng->addr, &rng->addrlen)) {
+				log_err("Line %d: could not read ADDRESS: %s", 
+					*lineno, parse);
+				free(rng);
+				return NULL;
+			}
+			pos = ftello(in);
+			continue;
+		}
 		if(parse_keyword(&parse, "RANGE_END")) {
 			return rng;
 		}
@@ -197,6 +223,16 @@ replay_moment_read(char* remain, FILE* in, const char* name, int* lineno,
 		log_err("%d: unknown event type %s", *lineno, remain);
 		free(mom);
 		return NULL;
+	}
+	while(isspace(*remain))
+		remain++;
+	if(parse_keyword(&remain, "ADDRESS")) {
+		if(!extstrtoaddr(remain, &mom->addr, &mom->addrlen)) {
+			log_err("line %d: could not parse ADDRESS: %s", 
+				*lineno, remain);
+			free(mom);
+			return NULL;
+		}
 	}
 
 	if(readentry) {

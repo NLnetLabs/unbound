@@ -44,11 +44,13 @@
  * ; comment line.
  * SCENARIO_BEGIN name_of_scenario
  * RANGE_BEGIN start_time end_time
+ *    ; give ip of the virtual server, it matches any ip if not present.
+ *    ADDRESS ip_address 
  *    match_entries
  * RANGE_END
  * ; more RANGE items.
  * ; go to the next moment
- * STEP time_step event_type
+ * STEP time_step event_type [ADDRESS ip_address]
  * ; event_type can be:
  *	o NOTHING - nothing
  *	o QUERY - followed by entry
@@ -254,6 +256,8 @@ struct fake_pending {
 	ldns_pkt* pkt;
 	/** by what transport was the query sent out */
 	enum transport_type transport;
+	/** if this is a serviced query */
+	int serviced;
 	/** the runtime structure this is part of */
 	struct replay_runtime* runtime;
 };

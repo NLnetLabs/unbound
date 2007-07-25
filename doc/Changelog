@@ -1,3 +1,8 @@
+25 July 2007: Wouter
+	- testbound read ADDRESS and check it.
+	- test for version.bind and friends.
+	- test for iterator chaining through several referrals.
+
 24 July 2007: Wouter
 	- Example section in config manual.
 	- Addr stored for range and moment in replay.
