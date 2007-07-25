@@ -643,8 +643,13 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 	 * we just look for the closest set of server to the parent of qname.
 	 * When re-fetching glue we also need to ask the parent.
 	 */
-	delname = iq->qchase.qname;
-	delnamelen = iq->qchase.qname_len;
+	if(iq->refetch_glue) {
+		delname = iq->dp->name;
+		delnamelen = iq->dp->namelen;
+	} else {
+		delname = iq->qchase.qname;
+		delnamelen = iq->qchase.qname_len;
+	}
 	if((iq->qchase.qtype == LDNS_RR_TYPE_DS || iq->refetch_glue)
 		&& delname[0] != 0) {
 		/* do not adjust root label, remove first label from delname */
@@ -779,6 +784,7 @@ generate_target_query(struct module_qstate* qstate, struct iter_qstate* iq,
 		if(dname_subdomain_c(name, iq->dp->name)) {
 			verbose(VERB_ALGO, "refetch of target glue");
 			subiq->refetch_glue = 1;
+			subiq->dp = delegpt_copy(iq->dp, subq->region);
 		}
 	}
 	log_nametypeclass(VERB_DETAIL, "new target", name, qtype, qclass);
@@ -832,6 +838,13 @@ query_for_targets(struct module_qstate* qstate, struct iter_qstate* iq,
 			/* do not select this one, next; select toget number
 			 * of items from a list one less in size */
 			missing --;
+			continue;
+		}
+		if(iq->refetch_glue && dname_subdomain_c(ns->name, 
+			iq->dp->name)) {
+			log_nametypeclass(VERB_DETAIL, "skip double glue "
+				"refetch", ns->name, LDNS_RR_TYPE_A, 
+				iq->qchase.qclass);
 			continue;
 		}
 

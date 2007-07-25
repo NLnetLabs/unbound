@@ -2,6 +2,8 @@
 	- testbound read ADDRESS and check it.
 	- test for version.bind and friends.
 	- test for iterator chaining through several referrals.
+	- test and fixup for refetch for glue. Refetch fails if glue
+	  is still not provided.
 
 24 July 2007: Wouter
 	- Example section in config manual.

@@ -233,6 +233,8 @@ struct iter_qstate {
 	 * for (re)fetching glue from a zone. Since the address should
 	 * have been glue, query again to the servers that should have
 	 * been returning it as glue.
+	 * The delegation point must be set to the one that should *not*
+	 * be used when creating the state. A higher one will be attempted.
 	 */
 	int refetch_glue;
 
