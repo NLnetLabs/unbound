@@ -2,6 +2,7 @@
 	- cycle detection, for query state dependencies. Will attempt to
 	  circumvent the cycle, but if no other targets available fails.
 	- unit test for AXFR, IXFR response.
+	- test for cycle detection.
 
 25 July 2007: Wouter
 	- testbound read ADDRESS and check it.

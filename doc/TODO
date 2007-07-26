@@ -25,8 +25,10 @@ o fallback without EDNS if result is NOTIMPL, now only on FORMERR like in java.
 o scrubber has slow pkt_subdomain and pkt_strict_subdomain functions.
 o get serverselection algorithm out of local optimum.
 o donotqueryaddresses allow specification of subnets, use trie to store.
+  extend default list to contain illegal ip4 and ip6 addresses.
 o memory profile; and if needed put serviced queries under qstate->region
   and special purpose region code, reuse blocks, shrink if too big.
 o check query, option to enforce presence of qdsection in noerror answers.
 o configuration option where port 53 is used for send and receive, no other
   ports are used.
+o prime sequence in multiple queries, if glue missing from prime sequence.
