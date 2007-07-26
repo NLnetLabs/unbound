@@ -118,7 +118,7 @@ util/configlexer.c:  $(srcdir)/util/configlexer.lex util/configparser.h
 	$(INFO) Lex $<
 	@if test ! -d util; then $(INSTALL) -d util; fi
 	$Qecho "#include \"util/configyyrename.h\"" > $@
-	$Q$(LEX) -i -t $< >> $@
+	$Q$(LEX) -t $< >> $@
 
 util/configparser.c util/configparser.h:  $(srcdir)/util/configparser.y
 	$(INFO) Yacc $<

@@ -336,6 +336,26 @@ cv_msgiovlen_type="int" ],
 AC_MSG_RESULT($cv_msgiovlen_type)
 AC_DEFINE_UNQUOTED([TYPE_MSGIOVLEN], $cv_msgiovlen_type, [Define to 'int' or type of struct msghdr.msg_iovlen.])
 
+# Check for yyunput
+AC_DEFUN([CHECK_YYUNPUT],
+[AC_MSG_CHECKING(whether lex can not generate yyunput)
+AC_CACHE_VAL(ac_cv_c_yy_unput,
+[ac_cv_c_yy_unput=no
+if $LEX --nounput -h 2>&1 | grep "do not generate" 2>&1 >/dev/null; then
+   ac_cv_c_yy_unput="yes"
+else
+   ac_cv_c_yy_unput="no"
+fi
+])
+
+AC_MSG_RESULT($ac_cv_c_yy_unput)
+if test $ac_cv_c_yy_unput = yes; then
+	LEX="$LEX --nounput"
+fi
+])dnl
+
+CHECK_YYUNPUT
+
 # Checks for libraries.
 AC_ARG_WITH(ssl, AC_HELP_STRING([--with-ssl=pathname],
                                     [enable SSL (will check /usr/local/ssl
