@@ -52,6 +52,7 @@ struct msg_parse;
 struct ub_randstate;
 struct query_info;
 struct reply_info;
+struct module_qstate;
 
 /**
  * Process config options and set iterator module state.
@@ -118,5 +119,13 @@ int iter_dns_store(struct module_env* env, struct query_info* qinf,
  * @return true with n/m probability.
  */
 int iter_ns_probability(struct ub_randstate* rnd, int n, int m);
+
+/**
+ * Mark targets that result in a dependency cycle as done, so they
+ * will not get selected as targets.
+ * @param qstate: query state.
+ * @param dp: delegpt to mark ns in.
+ */
+void iter_mark_cycle_targets(struct module_qstate* qstate, struct delegpt* dp);
 
 #endif /* ITERATOR_ITER_UTILS_H */

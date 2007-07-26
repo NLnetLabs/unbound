@@ -196,6 +196,20 @@ struct module_env {
 	void (*walk_supers)(struct module_qstate* qstate, int id, 
 		void (*cb)(struct module_qstate*, int, struct module_qstate*));
 
+	/**
+	 * Detect if adding a dependency for qstate on name,type,class will
+	 * create a dependency cycle.
+	 * @param qstate: given mesh querystate.
+	 * @param qinfo: query info for dependency. Assumed RDflag and not
+	 * 	priming.
+	 * @return true if the name,type,class exists and the given 
+	 * 	qstate mesh exists as a dependency of that name. Thus 
+	 * 	if qstate becomes dependent on name,type,class then a 
+	 * 	cycle is created.
+	 */
+	int (*detect_cycle)(struct module_qstate* qstate, 
+		struct query_info* qinfo);
+
 	/** region for temporary usage. May be cleared after operate() call. */
 	struct region* scratch;
 	/** internal data for daemon - worker thread. */

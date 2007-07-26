@@ -811,8 +811,11 @@ query_for_targets(struct module_qstate* qstate, struct iter_qstate* iq,
 {
 	int query_count = 0;
 	struct delegpt_ns* ns = iq->dp->nslist;
-	int missing = (int)delegpt_count_missing_targets(iq->dp);
+	int missing;
 	int toget = 0;
+
+	iter_mark_cycle_targets(qstate, iq->dp);
+	missing = (int)delegpt_count_missing_targets(iq->dp);
 	log_assert(maxtargets != 0); /* that would not be useful */
 
 	/* Generate target requests. Basically, any missing targets 
@@ -838,13 +841,6 @@ query_for_targets(struct module_qstate* qstate, struct iter_qstate* iq,
 			/* do not select this one, next; select toget number
 			 * of items from a list one less in size */
 			missing --;
-			continue;
-		}
-		if(iq->refetch_glue && dname_subdomain_c(ns->name, 
-			iq->dp->name)) {
-			log_nametypeclass(VERB_DETAIL, "skip double glue "
-				"refetch", ns->name, LDNS_RR_TYPE_A, 
-				iq->qchase.qclass);
 			continue;
 		}
 

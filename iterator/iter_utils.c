@@ -354,3 +354,32 @@ iter_ns_probability(struct ub_randstate* rnd, int n, int m)
 	sel = ub_random(rnd) % m; 
 	return (sel < n);
 }
+
+/** detect dependency cycle for query and target */
+static int
+causes_cycle(struct module_qstate* qstate, uint8_t* name, size_t namelen,
+	uint16_t t, uint16_t c)
+{
+	struct query_info qinf;
+	qinf.qname = name;
+	qinf.qname_len = namelen;
+	qinf.qtype = t;
+	qinf.qclass = c;
+	return (*qstate->env->detect_cycle)(qstate, &qinf);
+}
+
+void 
+iter_mark_cycle_targets(struct module_qstate* qstate, struct delegpt* dp)
+{
+	struct delegpt_ns* ns;
+	for(ns = dp->nslist; ns; ns = ns->next) {
+		if(ns->resolved)
+			continue;
+		/* see if this ns as target causes dependency cycle */
+		if(causes_cycle(qstate, ns->name, ns->namelen, 
+			LDNS_RR_TYPE_AAAA, qstate->qinfo.qclass) ||
+		   causes_cycle(qstate, ns->name, ns->namelen, 
+			LDNS_RR_TYPE_A, qstate->qinfo.qclass))
+			ns->resolved = 1;
+	}
+}

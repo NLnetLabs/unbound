@@ -357,4 +357,15 @@ void mesh_stats(struct mesh_area* mesh, const char* str);
  */
 size_t mesh_get_mem(struct mesh_area* mesh);
 
+/**
+ * Find cycle; see if the given mesh is in the targets sub, or sub-sub, ...
+ * trees.
+ * @param qstate: given mesh querystate.
+ * @param qinfo: query info for dependency.
+ * @return true if the name,type,class exists and the given qstate mesh exists
+ * 	as a dependency of that name. Thus if qstate becomes dependent on
+ * 	name,type,class then a cycle is created.
+ */
+int mesh_detect_cycle(struct module_qstate* qstate, struct query_info* qinfo);
+
 #endif /* SERVICES_MESH_H */

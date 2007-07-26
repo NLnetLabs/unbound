@@ -712,6 +712,7 @@ worker_init(struct worker* worker, struct config_file *cfg,
 	worker->env.kill_sub = &mesh_state_delete;
 	worker->env.query_done = &mesh_query_done;
 	worker->env.walk_supers = &mesh_walk_supers;
+	worker->env.detect_cycle = &mesh_detect_cycle;
 	if(!worker->env.mesh) {
 		worker_delete(worker);
 		return 0;
