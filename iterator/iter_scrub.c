@@ -188,7 +188,7 @@ parse_get_cname_target(struct rrset_parse* rrset, uint8_t** sname,
 {
 	if(rrset->rr_count != 1) {
 		verbose(VERB_ALGO, "Found CNAME rrset with "
-			"size > 1: %d", rrset->rr_count);
+			"size > 1: %u", (unsigned)rrset->rr_count);
 		return 0;
 	}
 	if(rrset->rr_first->size < sizeof(uint16_t)+1)
@@ -340,7 +340,8 @@ scrub_normalize(ldns_buffer* pkt, struct msg_parse* msg,
 			size_t aliaslen = 0;
 			if(rrset->rr_count != 1) {
 				verbose(VERB_ALGO, "Found DNAME rrset with "
-					"size > 1: %d", rrset->rr_count);
+					"size > 1: %u", 
+					(unsigned)rrset->rr_count);
 				return 0;
 			}
 			if(!synth_cname(sname, snamelen, rrset, alias, 
