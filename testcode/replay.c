@@ -112,7 +112,7 @@ strip_end_white(char* p)
  */
 static struct replay_range*
 replay_range_read(char* remain, FILE* in, const char* name, int* lineno, 
-	char* line, uint16_t* ttl, ldns_rdf** or, ldns_rdf** prev)
+	char* line, uint32_t* ttl, ldns_rdf** or, ldns_rdf** prev)
 {
 	struct replay_range* rng = (struct replay_range*)malloc(
 		sizeof(struct replay_range));
@@ -184,7 +184,7 @@ replay_range_read(char* remain, FILE* in, const char* name, int* lineno,
  */
 static struct replay_moment*
 replay_moment_read(char* remain, FILE* in, const char* name, int* lineno, 
-	uint16_t* ttl, ldns_rdf** or, ldns_rdf** prev)
+	uint32_t* ttl, ldns_rdf** or, ldns_rdf** prev)
 {
 	struct replay_moment* mom = (struct replay_moment*)malloc(
 		sizeof(struct replay_moment));
@@ -275,7 +275,7 @@ replay_scenario_read(FILE* in, const char* name, int* lineno)
 	char line[MAX_LINE_LEN];
 	char *parse;
 	struct replay_scenario* scen = NULL;
-	uint16_t ttl = 3600;
+	uint32_t ttl = 3600;
 	ldns_rdf* or = NULL;
 	ldns_rdf* prev = NULL;
 	line[MAX_LINE_LEN-1]=0;

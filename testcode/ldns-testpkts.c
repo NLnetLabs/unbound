@@ -399,7 +399,7 @@ get_origin(const char* name, int lineno, ldns_rdf** origin, char* parse)
 
 /* Reads one entry from file. Returns entry or NULL on error. */
 struct entry*
-read_entry(FILE* in, const char* name, int *lineno, uint16_t* default_ttl, 
+read_entry(FILE* in, const char* name, int *lineno, uint32_t* default_ttl, 
 	ldns_rdf** origin, ldns_rdf** prev_rr)
 {
 	struct entry* current = NULL;
@@ -433,7 +433,7 @@ read_entry(FILE* in, const char* name, int *lineno, uint16_t* default_ttl,
 			get_origin(name, *lineno, origin, (char*)parse);
 			continue;
 		} else if(str_keyword(&parse, "$TTL")) {
-			*default_ttl = (uint16_t)atoi(parse);
+			*default_ttl = (uint32_t)atoi(parse);
 			continue;
 		}
 
@@ -507,7 +507,7 @@ read_datafile(const char* name)
 	struct entry* current = NULL;
 	FILE *in;
 	int lineno = 0;
-	uint16_t default_ttl = 0;
+	uint32_t default_ttl = 0;
 	ldns_rdf* origin = NULL;
 	ldns_rdf* prev_rr = NULL;
 	int entry_num = 0;

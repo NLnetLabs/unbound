@@ -210,7 +210,7 @@ void delete_entry(struct entry* list);
  * @return: The entry read (malloced) or NULL if no entry could be read.
  */
 struct entry* read_entry(FILE* in, const char* name, int *lineno, 
-	uint16_t* default_ttl, ldns_rdf** origin, ldns_rdf** prev_rr);
+	uint32_t* default_ttl, ldns_rdf** origin, ldns_rdf** prev_rr);
 
 /**
  * finds entry in list, or returns NULL.
