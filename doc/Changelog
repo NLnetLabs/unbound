@@ -1,6 +1,7 @@
 27 July 2007: Wouter
 	- removed useless -C debug option. It did not work.
 	- text edit of documentation.
+	- added doc/CREDITS file, referred to by the manpages.
 
 26 July 2007: Wouter
 	- cycle detection, for query state dependencies. Will attempt to
