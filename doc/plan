@@ -29,14 +29,23 @@ Roughly the boxes are as follows:
     This stage takes longer, due to complexity in the iterator module.
     Twice as long; one box for module layout, one box for iterator module.
 0.5 Validator - validator module.
-0.6 Bigger and better - good syslog, compressed packets, port ranges,
-    config file format with config checker. 
+0.6 Bigger and better - Operational useful features (config, log, memory)
 0.7 Local zones feature - localzones stubzones fwdzones, no leak rfc1918.
+    views support; for selective recursive service.
 0.8 Library use - resolver validator lib (and test apps)
 0.9 Corner cases - be able to resolve in the wild. Run fuzzers.
     Run as many tests as we can think of.
+    Go through logs and check for long, unresolved cases
+    Use profiler.
 0.10 Beta release. Run shadow for a resolver in production for several
     weeks.
+0.11 Features features
+    aggressive negative caching for NSEC, NSEC3.
+    multiple queries per question, server exploration, server selection.
+    option to use real entropy for randomness (mix it in once in a while).
+    check query, option to enforce qdsection checking (forgery-resilience).
+    NSID support.
+    Be able to prime roots using several queries (only NS on first).
 
 For boxes 0.5-1.0 the planning is to be revised, at the 0.5 stage external
 coders are welcome.  Since the project is bigger, there is room for them.
@@ -115,7 +124,7 @@ Styleguide:
 * Speed test of caching forwarder.
 
 *** Basic Resolver
-* Create module interfacce and module caller algorithm.
+* Create module interface and module caller algorithm.
 * Daemon config to use modules. Test the module caller.
 * Create basic iterator and scrubber modules.
 	* Test every state of the iterator by passing test data into
@@ -134,19 +143,17 @@ Styleguide:
 	* Speed test.
 
 *** Bigger and Better
-* DNS packet compression of output.
-	* test packet compression (that it compresses.)
-	* config option to compress yes/no
-	* speed test with and without compression.
 * Config file syntax checker program. Tests on checker.
-* Use a huge number of random outgoing ports.
 * Logging first class feature with config options.
+* donotqueryaddresses with trie for blocking entire netblocks.
+* Memory overhaul, special allocators for hashtable caches, and mesh qstates.
 
 *** Local zones feature.
 * Build in local zone features. First the total stop for1912.
 * Then 'local content' for minimal serving of localhost.localdomain,
   and so on. 
 * Remember jakob's diagram.
+	* views support, selective recursive service
 * Forward-local-zone to NSD.
 	- include in package, autoforkexec on localhost to do so.
 * forward local zone to remote server.
@@ -169,6 +176,26 @@ Styleguide:
 * Try to setup corner cases of (mis)configured DNS service/websites.
 * Resolve msoft, google, yahoo, etc weird websites.
 * Try to resolve many many different queries, perhaps compared with bind.
+* create module testers, specific for the modules
+	* read a file with cache contents and settings, provide fake
+	  environment for module-handle-state-X functions, then check
+	  resulting module state structure to correct answer.
+
+*** Beta release. 
+* Run shadow for a resolver in production for several weeks.
+* Check logs for errors, long queries.
+* Run in valgrind, speed profiling (as production shadow).
+
+*** Features features
+* aggressive negative caching for NSEC, NSEC3.
+* multiple queries per question, server exploration, server selection.
+* option to use real entropy for randomness (mix it in once in a while).
+* check query, enforce qdsection, checking for forgery-resilience.
+* NSID support.
+* support TSIG on queries, for validating resolver deployment.
+* Be able to prime roots using several queries (like, get only NS first).
+* Nicer statistics
+
 
 treeshrew/
 	validator/ *.c *.h
