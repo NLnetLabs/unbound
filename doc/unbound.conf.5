@@ -128,10 +128,12 @@ Enable or disable whether TCP queries are answered. Default is yes.
 If given a chroot is done to the given directory. The default is none ("").
 .It \fBusername:\fR <name>
 If given, after binding the port the user privileges are dropped. Default is
-not to change user, username: "". If this user is not capable of binding the
+not to change user, username: "". 
+
+If this user is not capable of binding the
 port, reloads (by signal HUP) will still retain the opened ports.
 If you change the port number in the config file, and that new port number 
-requires privileges, then a restart is needed.
+requires privileges, then a reload will fail; a restart is needed.
 .It \fBdirectory:\fR <directory>
 Sets the working directory for the program.
 .It \fBlogfile:\fR <filename>
@@ -155,11 +157,15 @@ version is returned.
 .It \fBtarget-fetch-policy:\fR <"list of numbers">
 Set the target fetch policy used by unbound to determine if it should fetch
 nameserver target addresses opportunistically. The policy is described per
-dependency depth. The number of values determines the maximum dependency depth
-that unbound will pursue in answering a query. 
+dependency depth. 
+
+The number of values determines the maximum dependency depth
+that unbound will pursue in answering a query.  
 A value of -1 means to fetch all targets opportunistically for that dependency
 depth. A value of 0 means to fetch on demand only. A positive value fetches
-that many targets opportunistically. Enclose the list between quotes ("").
+that many targets opportunistically. 
+
+Enclose the list between quotes ("") and put spaces between numbers.
 The default is "3 2 1 0 0". Setting all zeroes, "0 0 0 0 0" gives behaviour
 closer to that of BIND 9, while setting "-1 -1 -1 -1 -1" gives behaviour 
 rumoured to be closer to that of BIND 8.
@@ -175,8 +181,8 @@ payload is very large.
 Will trust glue only if it is within the servers authority. Default is on.
 .It \fBdo-not-query-address:\fR <IP address>
 Do not query the given IP address. Can be IP4 or IP6. By default the
-DNS port is blocked for that address. Appending "@portnumber" will block 
-other port numbers. 
+DNS port is blocked for that address. Appending the character '@' and then
+the portnumber will block other port numbers. 
 .El
 
 .Ss Stub Zone Options
@@ -214,8 +220,14 @@ To use a nondefault port for DNS communication append '@' with the port number.
 
 .Sh FILES
 .Bl -tag -width indent
+.It Pa /etc/unbound
+default unbound working directory
 .It Pa unbound.conf
 unbound configuration file.
+.It Pa unbound.pid
+default unbound pidfile with process ID of the running daemon.
+.It Pa unbound.log
+unbound log file.
 .El
 .Sh SEE ALSO
 .Xr unbound 8
