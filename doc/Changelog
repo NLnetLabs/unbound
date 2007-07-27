@@ -1,3 +1,6 @@
+27 July 2007: Wouter
+	- removed useless -C debug option. I did not work.
+
 26 July 2007: Wouter
 	- cycle detection, for query state dependencies. Will attempt to
 	  circumvent the cycle, but if no other targets available fails.

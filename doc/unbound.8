@@ -16,7 +16,6 @@ unbound
 .Op Fl h
 .Op Fl d
 .Op Fl v
-.Op Fl C
 .Op Fl c Ar cfgfile
 
 .Sh DESCRIPTION
@@ -42,11 +41,6 @@ console.
 .It Fl v
 Increase verbosity. If given multiple times, more information is logged.
 This is in addition to the verbosity (if any) from the config file.
-
-.It Fl C
-Try to enable coredumps after forking into the background. If you do not
-have permission to alter the ulimits, then this will fail. Performs
-the equivalent of 'ulimit -c unlimited'. For debug purposes.
 
 .El
 .Sh SEE ALSO

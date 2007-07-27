@@ -5,16 +5,6 @@ o profile memory allocation, and if performance issues, use special memory
   allocator. For example, with caches per thread.
 o #define BIT_... different on bigendian and smallendian systems so that
   the htons on flags is not needed to send a message from the cache.
-o possible optimization with delayed malloc of msgreply after parse
-  (reuse parse structures and ptrs to packet in meantime).
-o possible optimization, so that precious id number resource is not depleted
-  by parsing of messages. Delay malloc, as above, or try to reverse release
-  special id numbers, and if you release the next_id number for the thread
-  it reuses that id number.
-o use rbtree to compress domain names in messages, sorted AXFRs of 16Kb
-  and so on. For current packets, even worstcase, list, is ok. Only if we
-  start to send out compressed AXFRs then it becomes a problem.
-  We can cap AXFR packets on 256 or 1024 domain names, for example.
 o speed up pkt domain name decompression loop detection using counter perhaps.
 o detect OS/400 pthreads implementation that allows upgrading to writelock
   on pthreads rwlocks and use it to examine-rd before storing-wr rrset cache.
@@ -24,6 +14,8 @@ o understand NSEC/NSEC3, aggressive negative caching, so that updates to
 o fallback without EDNS if result is NOTIMPL, now only on FORMERR like in java.
 o scrubber has slow pkt_subdomain and pkt_strict_subdomain functions.
 o get serverselection algorithm out of local optimum.
+  make subtargets to get rtt info for a couple of targets, like fetch-policy.
+  or send out multiple queries to multiple servers.
 o donotqueryaddresses allow specification of subnets, use trie to store.
   extend default list to contain illegal ip4 and ip6 addresses.
 o memory profile; and if needed put serviced queries under qstate->region
