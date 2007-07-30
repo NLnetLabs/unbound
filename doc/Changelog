@@ -1,6 +1,11 @@
 30 July 2007: Wouter
 	- changed random state init, so that sequential process IDs are not
 	  cancelled out by sequential thread-ids in the random number seed.
+	- the fwd_three test, which sends three queries to unbound, and 
+	  unbound is kept waiting by ldns-testns for 3 seconds, failed
+	  because the retry timeout for default by unbound is 3 seconds too,
+	  it would hit that timeout and fail the test. Changed so that unbound
+	  is kept waiting for 2 seconds instead.
 
 27 July 2007: Wouter
 	- removed useless -C debug option. It did not work.
