@@ -651,7 +651,8 @@ worker_init(struct worker* worker, struct config_file *cfg,
 		return 0;
 	}
 	seed = (unsigned int)time(NULL) ^ (unsigned int)getpid() ^
-		(unsigned int)worker->thread_num;
+		(((unsigned int)worker->thread_num)<<17);
+		/* shift thread_num so it does not match out pid bits */
 	if(!ub_initstate(seed, worker->rndstate, RND_STATE_SIZE)) {
 		log_err("could not init random numbers.");
 		worker_delete(worker);

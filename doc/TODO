@@ -24,3 +24,5 @@ o check query, option to enforce presence of qdsection in noerror answers.
 o configuration option where port 53 is used for send and receive, no other
   ports are used.
 o prime sequence in multiple queries, if glue missing from prime sequence.
+o (option) to not send replies to clients after a timeout of (say 5 secs) has
+  passed, but keep task active for later retries by client.

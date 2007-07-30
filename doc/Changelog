@@ -1,3 +1,7 @@
+30 July 2007: Wouter
+	- changed random state init, so that sequential process IDs are not
+	  cancelled out by sequential thread-ids in the random number seed.
+
 27 July 2007: Wouter
 	- removed useless -C debug option. It did not work.
 	- text edit of documentation.
