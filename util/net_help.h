@@ -57,9 +57,9 @@
 /** get RCODE bits from uint16 flags */
 #define FLAGS_GET_RCODE(f) ((f) & 0xf)
 
-/** timeout in seconds for UDP queries to auth servers. TODO: proper rtt */
+/** timeout in seconds for UDP queries to auth servers. */
 #define UDP_QUERY_TIMEOUT 4
-/** timeout in seconds for TCP queries to auth servers. TODO: proper rtt */
+/** timeout in seconds for TCP queries to auth servers. */
 #define TCP_QUERY_TIMEOUT 30
 /** Advertised version of EDNS capabilities */
 #define EDNS_ADVERTISED_VERSION         0

@@ -147,6 +147,7 @@ Styleguide:
 * Logging first class feature with config options.
 * donotqueryaddresses with trie for blocking entire netblocks.
 * Memory overhaul, special allocators for hashtable caches, and mesh qstates.
+* read root hints from file.
 
 *** Local zones feature.
 * Build in local zone features. First the total stop for1912.
@@ -195,6 +196,7 @@ Styleguide:
 * support TSIG on queries, for validating resolver deployment.
 * Be able to prime roots using several queries (like, get only NS first).
 * Nicer statistics
+* private TTL, dTLS features.
 
 
 treeshrew/

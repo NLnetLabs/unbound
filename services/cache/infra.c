@@ -90,7 +90,6 @@ infra_create(struct config_file* cfg)
 {
 	struct infra_cache* infra = (struct infra_cache*)calloc(1, 
 		sizeof(struct infra_cache));
-	/* TODO: use config settings */
 	/* the size of the lameness tables are not counted */
 	size_t maxmem = cfg->infra_cache_numhosts * 
 		(sizeof(struct infra_host_key)+sizeof(struct infra_host_data));

@@ -1,3 +1,6 @@
+31 July 2007: Wouter
+	- updated plan
+
 30 July 2007: Wouter
 	- changed random state init, so that sequential process IDs are not
 	  cancelled out by sequential thread-ids in the random number seed.
