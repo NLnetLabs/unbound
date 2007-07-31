@@ -26,3 +26,5 @@ o configuration option where port 53 is used for send and receive, no other
 o prime sequence in multiple queries, if glue missing from prime sequence.
 o (option) to not send replies to clients after a timeout of (say 5 secs) has
   passed, but keep task active for later retries by client.
+o private TTL feature
+o pretend-dnssec-unaware, and pretend-edns-unaware modes for debug/workshops.
