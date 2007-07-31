@@ -1,5 +1,6 @@
 31 July 2007: Wouter
 	- updated plan
+	- release 0.4 tag.
 
 30 July 2007: Wouter
 	- changed random state init, so that sequential process IDs are not
