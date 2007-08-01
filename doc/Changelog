@@ -2,6 +2,7 @@
 	- set version to 0.5
 	- module work for module to module interconnections.
 	- config of modules.
+	- detect cycle takes flags.
 
 31 July 2007: Wouter
 	- updated plan

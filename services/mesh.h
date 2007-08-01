@@ -362,10 +362,13 @@ size_t mesh_get_mem(struct mesh_area* mesh);
  * trees.
  * @param qstate: given mesh querystate.
  * @param qinfo: query info for dependency.
+ * @param flags: query flags of dependency.
+ * @param prime: if dependency is a priming query or not.
  * @return true if the name,type,class exists and the given qstate mesh exists
  * 	as a dependency of that name. Thus if qstate becomes dependent on
  * 	name,type,class then a cycle is created.
  */
-int mesh_detect_cycle(struct module_qstate* qstate, struct query_info* qinfo);
+int mesh_detect_cycle(struct module_qstate* qstate, struct query_info* qinfo,
+	uint16_t flags, int prime);
 
 #endif /* SERVICES_MESH_H */

@@ -202,15 +202,16 @@ struct module_env {
 	 * Detect if adding a dependency for qstate on name,type,class will
 	 * create a dependency cycle.
 	 * @param qstate: given mesh querystate.
-	 * @param qinfo: query info for dependency. Assumed RDflag and not
-	 * 	priming.
+	 * @param qinfo: query info for dependency. 
+	 * @param flags: query flags of dependency, RD/CD flags.
+	 * @param prime: if dependency is a priming query or not.
 	 * @return true if the name,type,class exists and the given 
 	 * 	qstate mesh exists as a dependency of that name. Thus 
 	 * 	if qstate becomes dependent on name,type,class then a 
 	 * 	cycle is created.
 	 */
 	int (*detect_cycle)(struct module_qstate* qstate, 
-		struct query_info* qinfo);
+		struct query_info* qinfo, uint16_t flags, int prime);
 
 	/** region for temporary usage. May be cleared after operate() call. */
 	struct region* scratch;

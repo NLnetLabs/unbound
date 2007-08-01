@@ -607,11 +607,12 @@ find_in_subsub(struct mesh_state* m, struct mesh_state* tofind)
 }
 
 int 
-mesh_detect_cycle(struct module_qstate* qstate, struct query_info* qinfo)
+mesh_detect_cycle(struct module_qstate* qstate, struct query_info* qinfo,
+	uint16_t flags, int prime)
 {
 	struct mesh_area* mesh = qstate->env->mesh;
 	struct mesh_state* cyc_m = qstate->mesh_info;
-	struct mesh_state* dep_m = mesh_area_find(mesh, qinfo, BIT_RD, 0);
+	struct mesh_state* dep_m = mesh_area_find(mesh, qinfo, flags, prime);
 	if(!dep_m)
 		return 0;
 	if(dep_m == cyc_m || find_in_subsub(dep_m, cyc_m))
