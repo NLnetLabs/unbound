@@ -1398,7 +1398,7 @@ iter_inform_super(struct module_qstate* qstate, int id,
 {
 	if(qstate->return_rcode != LDNS_RCODE_NOERROR)
 		error_supers(qstate, id, super);
-	if(qstate->is_priming)
+	else if(qstate->is_priming)
 		prime_supers(qstate, id, super);
 	else	processTargetResponse(qstate, id, super);
 }
