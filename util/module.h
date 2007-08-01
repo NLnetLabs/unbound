@@ -271,9 +271,15 @@ struct module_qstate {
 	struct query_info qinfo;
 	/** flags uint16 from query */
 	uint16_t query_flags;
+	/** if this is a (stub or root) priming query (with hints) */
+	int is_priming;
 
 	/** comm_reply contains server replies */
 	struct comm_reply* reply;
+	/** the reply info, with message for client, calling module */
+	struct reply_info* return_rep;
+	/** the rcode, in case of error, instead of a reply info message */
+	int return_rcode;
 	/** region for this query. Cleared when query process finishes. */
 	struct region* region;
 

@@ -365,7 +365,8 @@ causes_cycle(struct module_qstate* qstate, uint8_t* name, size_t namelen,
 	qinf.qname_len = namelen;
 	qinf.qtype = t;
 	qinf.qclass = c;
-	return (*qstate->env->detect_cycle)(qstate, &qinf, BIT_RD, 0);
+	return (*qstate->env->detect_cycle)(qstate, &qinf, BIT_RD, 
+		qstate->is_priming);
 }
 
 void 

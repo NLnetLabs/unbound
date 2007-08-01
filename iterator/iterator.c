@@ -111,8 +111,7 @@ iter_new(struct module_qstate* qstate, int id)
 	iq->num_current_queries = 0;
 	iq->query_restart_count = 0;
 	iq->referral_count = 0;
-	iq->priming = 0;
-	iq->priming_stub = 0;
+	iq->wait_priming_stub = 0;
 	iq->refetch_glue = 0;
 	iq->chase_flags = qstate->query_flags;
 	/* Start with the (current) qname. */
@@ -375,9 +374,7 @@ generate_sub_request(uint8_t* qname, size_t qnamelen, uint16_t qtype,
 	 * the resolution chain, which might have a validator. We are 
 	 * uninterested in validating things not on the direct resolution 
 	 * path.  */
-	/* Turned off! CD does not make a difference in query results.
-	qstate->query_flags |= BIT_CD;
-	*/
+	qflags |= BIT_CD;
 
 	/* attach subquery, lookup existing or make a new one */
 	if(!(*qstate->env->attach_sub)(qstate, &qinf, qflags, prime, &subq)) {
@@ -447,7 +444,6 @@ prime_root(struct module_qstate* qstate, struct iter_qstate* iq,
 		subiq->dp = dp;
 		/* there should not be any target queries. */
 		subiq->num_target_queries = 0; 
-		subiq->priming = 1;
 	}
 	
 	/* this module stops, our submodule starts, and does the query. */
@@ -504,8 +500,7 @@ prime_stub(struct module_qstate* qstate, struct iter_qstate* iq,
 		 * wouldn't be anyway, since stub hints never have 
 		 * missing targets. */
 		subiq->num_target_queries = 0; 
-		subiq->priming = 1;
-		subiq->priming_stub = 1;
+		subiq->wait_priming_stub = 1;
 	}
 	
 	/* this module stops, our submodule starts, and does the query. */
@@ -1190,7 +1185,7 @@ prime_supers(struct module_qstate* qstate, int id, struct module_qstate* forq)
 	enum response_type type = response_type_from_server(iq->response, 
 		&iq->qchase, iq->dp);
 
-	log_assert(iq->priming || iq->priming_stub);
+	log_assert(qstate->is_priming || foriq->wait_priming_stub);
 	if(type == RESPONSE_TYPE_ANSWER) {
 		/* Convert our response to a delegation point */
 		dp = delegpt_from_message(iq->response, forq->region);
@@ -1218,9 +1213,10 @@ prime_supers(struct module_qstate* qstate, int id, struct module_qstate* forq)
 
 	/* root priming responses go to init stage 2, priming stub 
 	 * responses to to stage 3. */
-	if(iq->priming_stub)
+	if(foriq->wait_priming_stub) {
 		foriq->state = INIT_REQUEST_3_STATE;
-	else	foriq->state = INIT_REQUEST_2_STATE;
+		foriq->wait_priming_stub = 0;
+	} else	foriq->state = INIT_REQUEST_2_STATE;
 	/* because we are finished, the parent will be reactivated */
 }
 
@@ -1257,7 +1253,7 @@ processPrimeResponse(struct module_qstate* qstate, int id)
  * to received target responses (caching, updating the current delegation
  * point, etc).
  * Callback from walk_supers for every super state that is interested in 
- * the results from thiis query.
+ * the results from this query.
  *
  * @param qstate: query state.
  * @param id: module id.

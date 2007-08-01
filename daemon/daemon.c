@@ -172,7 +172,7 @@ count_modules(const char* s)
 
 /**
  * Get funcblock for module name
- * @param str: string with module name. Advanced to next value.
+ * @param str: string with module name. Advanced to next value on success.
  * @return funcblock or NULL on error.
  */
 static struct module_func_block*

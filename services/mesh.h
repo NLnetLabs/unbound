@@ -106,8 +106,6 @@ struct mesh_state {
 	rbnode_t node;
 	/** node in mesh_area runnable tree, key is this struct */
 	rbnode_t run_node;
-	/** if this is a (stub or root) priming query (with hints) */
-	int is_priming;
 	/** the query state. Note that the qinfo and query_flags 
 	 * may not change. */
 	struct module_qstate s;

@@ -216,17 +216,10 @@ struct iter_qstate {
 	int referral_count;
 
 	/**
-	 * This flag, if true, means that this event is a priming query.
-	 * In that case priming stub may be set as well.
-	 */
-	int priming;
-
-	/**
 	 * This is flag that, if true, means that this event is 
-	 * representing a stub priming query. It is meaningless unless 
-	 * the finalState is the PRIMING_RESP_STATE.
+	 * waiting for a stub priming query. 
 	 */
-	int priming_stub;
+	int wait_priming_stub;
 
 	/**
 	 * This is a flag that, if true, means that this query is

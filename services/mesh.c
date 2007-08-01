@@ -59,9 +59,9 @@ mesh_state_compare(const void* ap, const void* bp)
 	struct mesh_state* a = (struct mesh_state*)ap;
 	struct mesh_state* b = (struct mesh_state*)bp;
 
-	if(a->is_priming && !b->is_priming)
+	if(a->s.is_priming && !b->s.is_priming)
 		return -1;
-	if(!a->is_priming && b->is_priming)
+	if(!a->s.is_priming && b->s.is_priming)
 		return 1;
 
 	if((a->s.query_flags&BIT_RD) && !(b->s.query_flags&BIT_RD))
@@ -212,7 +212,6 @@ mesh_state_create(struct module_env* env, struct query_info* qinfo,
 	mstate->node.key = mstate;
 	mstate->run_node.key = mstate;
 	mstate->debug_flags = 0;
-	mstate->is_priming = prime;
 	mstate->reply_list = NULL;
 	rbtree_init(&mstate->super_set, &mesh_state_ref_compare);
 	rbtree_init(&mstate->sub_set, &mesh_state_ref_compare);
@@ -228,9 +227,12 @@ mesh_state_create(struct module_env* env, struct query_info* qinfo,
 	}
 	/* remove all weird bits from qflags */
 	mstate->s.query_flags = (qflags & (BIT_RD|BIT_CD));
+	mstate->s.is_priming = prime;
 	mstate->s.reply = NULL;
 	mstate->s.region = region;
 	mstate->s.curmod = 0;
+	mstate->s.return_rep = 0;
+	mstate->s.return_rcode = LDNS_RCODE_NOERROR;
 	mstate->s.env = env;
 	mstate->s.mesh_info = mstate;
 	/* init modules */
@@ -497,7 +499,7 @@ struct mesh_state* mesh_area_find(struct mesh_area* mesh,
 	struct mesh_state* result;
 
 	key.node.key = &key;
-	key.is_priming = prime;
+	key.s.is_priming = prime;
 	key.s.qinfo = *qinfo;
 	key.s.query_flags = qflags;
 	
