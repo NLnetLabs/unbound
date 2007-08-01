@@ -58,7 +58,7 @@ struct mesh_area;
 struct mesh_state;
 
 /** Maximum number of modules in operation */
-#define MAX_MODULE 2
+#define MAX_MODULE 5
 
 /**
  * Module environment.
@@ -105,7 +105,9 @@ struct module_env {
 	 * @param qtype: query type. (host order)
 	 * @param qclass: query class. (host order)
 	 * @param flags: host order flags word, with opcode and CD bit.
-	 * @param dnssec: if set, EDNS record will have DO bit set.
+	 * @param dnssec: if set, EDNS record will have bits set.
+	 *	If EDNS_DO bit is set, DO bit is set in EDNS records.
+	 *	If BIT_CD is set, CD bit is set in queries with EDNS records.
 	 * @param addr: where to.
 	 * @param addrlen: length of addr.
 	 * @param q: wich query state to reactivate upon return.
@@ -143,7 +145,7 @@ struct module_env {
 	 * @param qstate: the state to find mesh state, and that wants to 
 	 * 	receive the results from the new subquery.
 	 * @param qinfo: what to query for (copied).
-	 * @param qflags: what flags to use (RD flag or not).
+	 * @param qflags: what flags to use (RD, CD flag or not).
 	 * @param prime: if it is a (stub) priming query.
 	 * @param newq: If the new subquery needs initialisation, it is 
 	 * 	returned, otherwise NULL is returned.
@@ -314,6 +316,10 @@ struct module_func_block {
 	 * @param ev: event that causes the module state machine to 
 	 *	(re-)activate.
 	 * @param qstate: the query state. 
+	 *	Note that this method is not allowed to change the
+	 *	query state 'identity', that is query info, qflags,
+	 *	and priming status.
+	 *	Attach a subquery to get results to a different query.
 	 * @param id: module id number that operate() is called on. 
 	 * @param outbound: if not NULL this event is due to the reply/timeout
 	 *	or error on this outbound query.

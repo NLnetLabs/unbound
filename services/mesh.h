@@ -95,7 +95,7 @@ struct mesh_area {
 /**
  * A mesh query state
  * Unique per qname, qtype, qclass (from the qstate).
- * And RD flag; in case a client turns it off.
+ * And RD / CD flag; in case a client turns it off.
  * And priming queries are different from ordinary queries (because of hints).
  *
  * The entire structure is allocated in a region, this region is the qstate
@@ -226,7 +226,7 @@ void mesh_detach_subs(struct module_qstate* qstate);
  * @param qstate: the state to find mesh state, and that wants to receive
  * 	the results from the new subquery.
  * @param qinfo: what to query for (copied).
- * @param qflags: what flags to use (RD flag or not).
+ * @param qflags: what flags to use (RD / CD flag or not).
  * @param prime: if it is a (stub) priming query.
  * @param newq: If the new subquery needs initialisation, it is returned,
  * 	otherwise NULL is returned.
@@ -281,7 +281,7 @@ void mesh_state_delete(struct module_qstate* qstate);
  * Does not put the mesh state into rbtrees and so on.
  * @param env: module environment to set.
  * @param qinfo: query info that the mesh is for.
- * @param qflags: flags for query (RD flag).
+ * @param qflags: flags for query (RD / CD flag).
  * @param prime: if true, it is a priming query, set is_priming on mesh state.
  * @return: new mesh state or NULL on allocation error.
  */
@@ -301,7 +301,7 @@ void mesh_state_cleanup(struct mesh_state* mstate);
  *
  * @param mesh: the mesh area to look in.
  * @param qinfo: what query
- * @param qflags: if RD bit is set or not.
+ * @param qflags: if RD / CD bit is set or not.
  * @param prime: if it is a priming query.
  * @return: mesh state or NULL if not found.
  */

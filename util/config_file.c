@@ -111,6 +111,7 @@ config_create()
 	cfg->hide_version = 0;
 	cfg->identity = NULL;
 	cfg->version = NULL;
+	if(!(cfg->module_conf = strdup("iterator"))) goto error_exit;
 	return cfg;
 error_exit:
 	config_delete(cfg); 
@@ -203,6 +204,7 @@ config_delete(struct config_file* cfg)
 	config_delstrlist(cfg->donotqueryaddrs);
 	free(cfg->identity);
 	free(cfg->version);
+	free(cfg->module_conf);
 	free(cfg);
 }
 

@@ -210,7 +210,7 @@ struct serviced_query {
 	uint8_t* qbuf;
 	/** length of qbuf. */
 	size_t qbuflen;
-	/** If an EDNS section is included, the DO bit will be turned on. */
+	/** If an EDNS section is included, the DO/CD bit will be turned on. */
 	int dnssec;
 	/** where to send it */
 	struct sockaddr_storage addr;
@@ -337,6 +337,8 @@ void pending_delete(struct outside_network* outnet, struct pending* p);
  * @param qclass: query class. (host format)
  * @param flags: flags u16 (host format), includes opcode, CD bit.
  * @param dnssec: if set, DO bit is set in EDNS queries.
+ *	If the value includes BIT_CD, CD bit is set when in EDNS queries.
+ *	If the value includes BIT_DO, DO bit is set when in EDNS queries.
  * @param callback: callback function.
  * @param callback_arg: user argument to callback function.
  * @param addr: to which server to send the query.

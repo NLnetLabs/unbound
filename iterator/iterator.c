@@ -81,15 +81,14 @@ static void
 iter_deinit(struct module_env* env, int id)
 {
 	struct iter_env* iter_env;
-	if(!env || !env->modinfo)
+	if(!env || !env->modinfo || !env->modinfo[id])
 		return;
 	iter_env = (struct iter_env*)env->modinfo[id];
 	free(iter_env->target_fetch_policy);
 	hints_delete(iter_env->hints);
 	forwards_delete(iter_env->fwds);
 	donotq_delete(iter_env->donotq);
-	if(iter_env)
-		free(iter_env);
+	free(iter_env);
 }
 
 /** new query for iterator */
@@ -1015,7 +1014,8 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 	outq = (*qstate->env->send_query)(
 		iq->qchase.qname, iq->qchase.qname_len, 
 		iq->qchase.qtype, iq->qchase.qclass, 
-		iq->chase_flags, 1, &target->addr, target->addrlen, qstate);
+		iq->chase_flags, EDNS_DO|BIT_CD, 
+		&target->addr, target->addrlen, qstate);
 	if(!outq) {
 		log_err("error sending query to auth server; skip this address");
 		log_addr("error for address:", &target->addr, target->addrlen);

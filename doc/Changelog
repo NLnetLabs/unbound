@@ -1,3 +1,8 @@
+1 August 2007: Wouter
+	- set version to 0.5
+	- module work for module to module interconnections.
+	- config of modules.
+
 31 July 2007: Wouter
 	- updated plan
 	- release 0.4 tag.

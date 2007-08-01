@@ -135,6 +135,9 @@ struct config_file {
 	char* identity;
 	/** version, package version returned if "". */
 	char* version;
+
+	/** the module configuration string */
+	char* module_conf;
 	
 	/** daemonize, i.e. fork into the background. */
 	int do_daemonize;

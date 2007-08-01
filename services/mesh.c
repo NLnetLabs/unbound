@@ -69,6 +69,11 @@ mesh_state_compare(const void* ap, const void* bp)
 	if(!(a->s.query_flags&BIT_RD) && (b->s.query_flags&BIT_RD))
 		return 1;
 
+	if((a->s.query_flags&BIT_CD) && !(b->s.query_flags&BIT_CD))
+		return -1;
+	if(!(a->s.query_flags&BIT_CD) && (b->s.query_flags&BIT_CD))
+		return 1;
+
 	return query_info_compare(&a->s.qinfo, &b->s.qinfo);
 }
 
@@ -222,7 +227,7 @@ mesh_state_create(struct module_env* env, struct query_info* qinfo,
 		return NULL;
 	}
 	/* remove all weird bits from qflags */
-	mstate->s.query_flags = (qflags & BIT_RD);
+	mstate->s.query_flags = (qflags & (BIT_RD|BIT_CD));
 	mstate->s.reply = NULL;
 	mstate->s.region = region;
 	mstate->s.curmod = 0;

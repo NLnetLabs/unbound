@@ -183,6 +183,11 @@ Will trust glue only if it is within the servers authority. Default is on.
 Do not query the given IP address. Can be IP4 or IP6. By default the
 DNS port is blocked for that address. Appending the character '@' and then
 the portnumber will block other port numbers. 
+.It \fBmodule-config:\fR <"module names">
+Module configuration, a list of module names separated by spaces, surround
+the string with quotes (""). The modules can be validator, iterator.
+Setting this to "iterator" will result in a non-validating server.
+Setting this to "validator iterator" will turn on validation.
 .El
 
 .Ss Stub Zone Options

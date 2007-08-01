@@ -141,6 +141,7 @@ hide-identity{COLON}	{ YDOUT; return VAR_HIDE_IDENTITY;}
 hide-version{COLON}     { YDOUT; return VAR_HIDE_VERSION;}
 identity{COLON}		{ YDOUT; return VAR_IDENTITY;}
 version{COLON}     	{ YDOUT; return VAR_VERSION;}
+module-conf{COLON}     	{ YDOUT; return VAR_MODULE_CONF;}
 {NEWLINE}		{ LEXOUT(("NL\n")); cfg_parser->line++;}
 
 	/* Quoted strings. Strip leading and ending quotes */

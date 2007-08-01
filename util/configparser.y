@@ -79,7 +79,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_HARDEN_SHORT_BUFSIZE VAR_HARDEN_LARGE_QUERIES
 %token VAR_FORWARD_ZONE VAR_FORWARD_HOST VAR_FORWARD_ADDR
 %token VAR_DO_NOT_QUERY_ADDRESS VAR_HIDE_IDENTITY VAR_HIDE_VERSION
-%token VAR_IDENTITY VAR_VERSION VAR_HARDEN_GLUE
+%token VAR_IDENTITY VAR_VERSION VAR_HARDEN_GLUE VAR_MODULE_CONF
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -112,7 +112,7 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_harden_short_bufsize | server_harden_large_queries |
 	server_do_not_query_address | server_hide_identity |
 	server_hide_version | server_identity | server_version |
-	server_harden_glue
+	server_harden_glue | server_module_conf
 	;
 stubstart: VAR_STUB_ZONE
 	{
@@ -460,6 +460,13 @@ server_do_not_query_address: VAR_DO_NOT_QUERY_ADDRESS STRING
 		OUTYY(("P(server_do_not_query_address:%s)\n", $2));
 		if(!cfg_strlist_insert(&cfg_parser->cfg->donotqueryaddrs, $2))
 			yyerror("out of memory");
+	}
+	;
+server_module_conf: VAR_MODULE_CONF STRING
+	{
+		OUTYY(("P(server_module_conf:%s)\n", $2));
+		free(cfg_parser->cfg->module_conf);
+		cfg_parser->cfg->module_conf = $2;
 	}
 	;
 stub_name: VAR_NAME STRING

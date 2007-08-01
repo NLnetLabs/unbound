@@ -921,8 +921,10 @@ serviced_encode(struct serviced_query* sq, ldns_buffer* buff, int with_edns)
 		edns.edns_version = EDNS_ADVERTISED_VERSION;
 		edns.udp_size = EDNS_ADVERTISED_SIZE;
 		edns.bits = 0;
-		if(sq->dnssec)
+		if(sq->dnssec & EDNS_DO)
 			edns.bits = EDNS_DO;
+		if(sq->dnssec & BIT_CD)
+			LDNS_CD_SET(ldns_buffer_begin(buff));
 		attach_edns_record(buff, &edns);
 	}
 }
