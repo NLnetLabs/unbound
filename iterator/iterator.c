@@ -215,10 +215,12 @@ error_response(struct module_qstate* qstate, int id, int rcode)
 	verbose(VERB_DETAIL, "return error response %s", 
 		ldns_lookup_by_id(ldns_rcodes, rcode)?
 		ldns_lookup_by_id(ldns_rcodes, rcode)->name:"??");
+	qstate->return_rcode = rcode;
+	qstate->return_msg = NULL;
 	/* tell clients that we failed */
 	(*qstate->env->query_done)(qstate, rcode, NULL);
 	/* tell our parents that we failed */
-	(*qstate->env->walk_supers)(qstate, id, &error_supers);
+	(*qstate->env->walk_supers)(qstate, id, NULL);
 	qstate->ext_state[id] = module_finished;
 	return 0;
 }
@@ -1179,17 +1181,13 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 static void
 prime_supers(struct module_qstate* qstate, int id, struct module_qstate* forq)
 {
-	struct iter_qstate* iq = (struct iter_qstate*)qstate->minfo[id];
 	struct iter_qstate* foriq = (struct iter_qstate*)forq->minfo[id];
 	struct delegpt* dp = NULL;
-	enum response_type type = response_type_from_server(iq->response, 
-		&iq->qchase, iq->dp);
 
 	log_assert(qstate->is_priming || foriq->wait_priming_stub);
-	if(type == RESPONSE_TYPE_ANSWER) {
-		/* Convert our response to a delegation point */
-		dp = delegpt_from_message(iq->response, forq->region);
-	}
+	log_assert(qstate->return_rcode == LDNS_RCODE_NOERROR);
+	/* Convert our response to a delegation point */
+	dp = delegpt_from_message(qstate->return_msg, forq->region);
 	if(!dp) {
 		/* if there is no convertable delegation point, then 
 		 * the ANSWER type was (presumably) a negative answer. */
@@ -1200,10 +1198,10 @@ prime_supers(struct module_qstate* qstate, int id, struct module_qstate* forq)
 		return;
 	}
 
-	log_query_info(VERB_DETAIL, "priming successful for", &iq->qchase);
+	log_query_info(VERB_DETAIL, "priming successful for", &qstate->qinfo);
 	delegpt_log(dp);
 	foriq->dp = dp;
-	foriq->deleg_msg = dns_copy_msg(iq->response, forq->region);
+	foriq->deleg_msg = dns_copy_msg(qstate->return_msg, forq->region);
 	if(!foriq->deleg_msg) {
 		log_err("copy prime response: out of memory");
 		foriq->dp = NULL;
@@ -1235,6 +1233,17 @@ prime_supers(struct module_qstate* qstate, int id, struct module_qstate* forq)
 static int
 processPrimeResponse(struct module_qstate* qstate, int id)
 {
+	struct iter_qstate* iq = (struct iter_qstate*)qstate->minfo[id];
+	enum response_type type = response_type_from_server(iq->response, 
+		&iq->qchase, iq->dp);
+	if(type == RESPONSE_TYPE_ANSWER) {
+		qstate->return_rcode = LDNS_RCODE_NOERROR;
+		qstate->return_msg = iq->response;
+	} else {
+		qstate->return_rcode = LDNS_RCODE_SERVFAIL;
+		qstate->return_msg = NULL;
+	}
+
 	/* This event is finished. */
 	qstate->ext_state[id] = module_finished;
 
@@ -1242,7 +1251,7 @@ processPrimeResponse(struct module_qstate* qstate, int id)
 	 * bugger off (and retry) */
 	(*qstate->env->query_done)(qstate, LDNS_RCODE_SERVFAIL, NULL);
 	/* tell interested supers that priming is done */
-	(*qstate->env->walk_supers)(qstate, id, &prime_supers);
+	(*qstate->env->walk_supers)(qstate, id, NULL);
 	return 0;
 }
 
@@ -1267,6 +1276,7 @@ processTargetResponse(struct module_qstate* qstate, int id,
 	struct iter_qstate* foriq = (struct iter_qstate*)forq->minfo[id];
 	struct ub_packed_rrset_key* rrset;
 	struct delegpt_ns* dpns;
+	log_assert(qstate->return_rcode == LDNS_RCODE_NOERROR);
 
 	foriq->state = QUERYTARGETS_STATE;
 
@@ -1293,7 +1303,7 @@ processTargetResponse(struct module_qstate* qstate, int id,
 	 * the original event. 
 	 * NOTE: we could only look for the AnswerRRset if the 
 	 * response type was ANSWER. */
-	rrset = reply_find_answer_rrset(&iq->qchase, iq->response->rep);
+	rrset = reply_find_answer_rrset(&iq->qchase, qstate->return_msg->rep);
 	if(rrset) {
 		/* if CNAMEs have been followed - add new NS to delegpt. */
 		/* BTW. RFC 1918 says NS should not have got CNAMEs. Robust. */
@@ -1363,11 +1373,34 @@ processFinished(struct module_qstate* qstate, struct iter_qstate* iq,
 		/* use server supplied upper/lower case */
 		qstate->qinfo.qname = iq->response->qinfo.qname;
 	}
+	qstate->return_rcode = LDNS_RCODE_NOERROR;
+	qstate->return_msg = iq->response;
 	(*qstate->env->query_done)(qstate, LDNS_RCODE_NOERROR, 
 		iq->response->rep);
-	(*qstate->env->walk_supers)(qstate, id, &processTargetResponse);
+	(*qstate->env->walk_supers)(qstate, id, NULL);
 
 	return 0;
+}
+
+/**
+ * Return priming query results to interestes super querystates.
+ * 
+ * Sets the delegation point and delegation message (not nonRD queries).
+ * This is a callback from walk_supers.
+ *
+ * @param qstate: query state that finished.
+ * @param id: module id.
+ * @param super: the qstate to inform.
+ */
+static void
+iter_inform_super(struct module_qstate* qstate, int id, 
+	struct module_qstate* super)
+{
+	if(qstate->return_rcode != LDNS_RCODE_NOERROR)
+		error_supers(qstate, id, super);
+	if(qstate->is_priming)
+		prime_supers(qstate, id, super);
+	else	processTargetResponse(qstate, id, super);
 }
 
 /**
@@ -1567,7 +1600,8 @@ iter_clear(struct module_qstate* qstate, int id)
  */
 static struct module_func_block iter_block = {
 	"iterator",
-	&iter_init, &iter_deinit, &iter_operate, &iter_clear
+	&iter_init, &iter_deinit, &iter_operate, &iter_inform_super, 
+	&iter_clear
 };
 
 struct module_func_block* 

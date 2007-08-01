@@ -276,9 +276,9 @@ struct module_qstate {
 
 	/** comm_reply contains server replies */
 	struct comm_reply* reply;
-	/** the reply info, with message for client, calling module */
-	struct reply_info* return_rep;
-	/** the rcode, in case of error, instead of a reply info message */
+	/** the reply message, with message for client and calling module */
+	struct dns_msg* return_msg;
+	/** the rcode, in case of error, instead of a reply message */
 	int return_rcode;
 	/** region for this query. Cleared when query process finishes. */
 	struct region* region;
@@ -339,6 +339,19 @@ struct module_func_block {
 	 */
 	void (*operate)(struct module_qstate* qstate, enum module_ev event, 
 		int id, struct outbound_entry* outbound);
+
+	/**
+	 * inform super querystate about the results from this subquerystate.
+	 * Is called when the querystate is finished.
+	 * @param qstate: the query state that is finished.
+	 *	Examine return_rcode and return_reply in the qstate.
+	 * @param id: module id for this module.
+	 *	This coincides with the current module for the super qstate.
+	 * @param super: the super querystate that needs to be informed.
+	 */
+	void (*inform_super)(struct module_qstate* qstate, int id,
+		struct module_qstate* super);
+
 	/**
 	 * clear module specific data
 	 */

@@ -89,6 +89,20 @@ val_operate(struct module_qstate* qstate, enum module_ev event, int id,
 	(void)outbound;
 }
 
+/** 
+ * inform validator super.
+ * 
+ * @param qstate: query state that finished.
+ * @param id: module id.
+ * @param super: the qstate to inform.
+ */
+static void
+val_inform_super(struct module_qstate* qstate, int id,
+	struct module_qstate* super)
+{
+}
+
+
 /** validator cleanup query state */
 static void
 val_clear(struct module_qstate* qstate, int id)
@@ -104,7 +118,7 @@ val_clear(struct module_qstate* qstate, int id)
  */
 static struct module_func_block val_block = {
 	"validator",
-	&val_init, &val_deinit, &val_operate, &val_clear
+	&val_init, &val_deinit, &val_operate, &val_inform_super, &val_clear
 };
 
 struct module_func_block* 

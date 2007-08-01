@@ -231,7 +231,7 @@ mesh_state_create(struct module_env* env, struct query_info* qinfo,
 	mstate->s.reply = NULL;
 	mstate->s.region = region;
 	mstate->s.curmod = 0;
-	mstate->s.return_rep = 0;
+	mstate->s.return_msg = 0;
 	mstate->s.return_rcode = LDNS_RCODE_NOERROR;
 	mstate->s.env = env;
 	mstate->s.mesh_info = mstate;
@@ -483,12 +483,14 @@ void mesh_walk_supers(struct module_qstate* qstate, int id,
 	struct mesh_state_ref* ref;
 	log_assert(!(m->debug_flags&2)); /* not twice! */
 	m->debug_flags |= 2;
+	(void)cb;
 	RBTREE_FOR(ref, struct mesh_state_ref*, &qstate->mesh_info->super_set)
 	{
 		/* make super runnable */
 		(void)rbtree_insert(&mesh->run, &ref->s->run_node);
-		/* callback */
-		(*cb)(qstate, id, &ref->s->s);
+		/* callback the function to inform super of result */
+		(*mesh->modfunc[ref->s->s.curmod]->inform_super)(qstate, 
+			id, &ref->s->s);
 	}
 }
 
