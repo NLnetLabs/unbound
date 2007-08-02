@@ -45,6 +45,7 @@
 #include "config.h"
 #include "services/mesh.h"
 #include "services/outbound_list.h"
+#include "services/cache/dns.h"
 #include "util/log.h"
 #include "util/net_help.h"
 #include "util/module.h"
@@ -211,7 +212,6 @@ mesh_state_create(struct module_env* env, struct query_info* qinfo,
 	mstate->run_node = *RBTREE_NULL;
 	mstate->node.key = mstate;
 	mstate->run_node.key = mstate;
-	mstate->debug_flags = 0;
 	mstate->reply_list = NULL;
 	rbtree_init(&mstate->super_set, &mesh_state_ref_compare);
 	rbtree_init(&mstate->sub_set, &mesh_state_ref_compare);
@@ -468,22 +468,16 @@ void mesh_query_done(struct module_qstate* qstate, int rcode,
 {
 	struct mesh_state* m = qstate->mesh_info;
 	struct mesh_reply* r;
-	log_assert(!(m->debug_flags&1)); /* not twice! */
-	m->debug_flags |= 1;
 	for(r = m->reply_list; r; r = r->next) {
 		mesh_send_reply(m, rcode, rep, r);
 	}
 }
 
-void mesh_walk_supers(struct module_qstate* qstate, int id, 
-        void (*cb)(struct module_qstate*, int, struct module_qstate*))
+void mesh_walk_supers(struct module_qstate* qstate, int id)
 {
 	struct mesh_state* m = qstate->mesh_info;
 	struct mesh_area* mesh = m->s.env->mesh;
 	struct mesh_state_ref* ref;
-	log_assert(!(m->debug_flags&2)); /* not twice! */
-	m->debug_flags |= 2;
-	(void)cb;
 	RBTREE_FOR(ref, struct mesh_state_ref*, &qstate->mesh_info->super_set)
 	{
 		/* make super runnable */
@@ -542,19 +536,24 @@ void mesh_run(struct mesh_area* mesh, struct mesh_state* mstate,
 
 		/* examine results */
 		mstate->s.reply = NULL;
+		e = NULL;
 		region_free_all(mstate->s.env->scratch);
 		s = mstate->s.ext_state[mstate->s.curmod];
 		verbose(VERB_ALGO, "mesh_run: %s module exit state is %s", 
 			mesh->modfunc[mstate->s.curmod]->name, strextstate(s));
 		if(s == module_error || s == module_finished) {
-			/* must have called _done and _supers */
-			log_assert(mstate->debug_flags == 3);
-			mesh_state_delete(&mstate->s);
+			if(mstate->s.curmod == 0) {
+				mesh_query_done(&mstate->s, 
+					mstate->s.return_rcode,
+					mstate->s.return_msg->rep);
+				mesh_walk_supers(&mstate->s, mstate->s.curmod);
+				mesh_state_delete(&mstate->s);
+			}
+			/* pass along the locus of control */
 		}
 
 		/* run more modules */
 		ev = module_event_pass;
-		e = NULL;
 		if(mesh->run.count > 0) {
 			/* pop random element off the runnable tree */
 			mstate = (struct mesh_state*)mesh->run.root->key;

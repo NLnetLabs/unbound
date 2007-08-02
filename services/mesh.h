@@ -111,8 +111,6 @@ struct mesh_state {
 	struct module_qstate s;
 	/** the list of replies to clients for the results */
 	struct mesh_reply* reply_list;
-	/** debug flags */
-	int debug_flags;
 	/** set of superstates (that want this state's result) 
 	 * contains struct mesh_state_ref* */
 	rbtree_t super_set;
@@ -250,20 +248,16 @@ void mesh_query_done(struct module_qstate* qstate, int rcode,
 	struct reply_info* rep);
 
 /**
- * Get a callback for the super query states that are interested in the 
+ * Call inform_super for the super query states that are interested in the 
  * results from this query state. These can then be changed for error 
  * or results.
- * Must be called befor a module can module_finished or return module_error.
- * After finishing or module error, the super query states become runnable
- * with event module_event_pass.
+ * Called when a module is module_finished or returns module_error.
+ * The super query states become runnable with event module_event_pass.
  *
  * @param qstate: the state that has results, used to find mesh state.
  * @param id: module id.
- * @param cb: callback function. Called as
- * 	cb(qstate, id, super_qstate) for every super query state.
  */
-void mesh_walk_supers(struct module_qstate* qstate, int id, 
-	void (*cb)(struct module_qstate*, int, struct module_qstate*));
+void mesh_walk_supers(struct module_qstate* qstate, int id);
 
 /**
  * Delete mesh state, cleanup and also rbtrees and so on.

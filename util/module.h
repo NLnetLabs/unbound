@@ -165,40 +165,6 @@ struct module_env {
 	void (*kill_sub)(struct module_qstate* newq);
 
 	/**
-	 * Query state is done, send messages to reply entries.
-	 * Encode messages using reply entry values and the querystate 
-	 * (with original qinfo), using given reply_info.
-	 * Pass errcode != 0 if an error reply is needed.
-	 * If no reply entries, nothing is done.
-	 * Must be called before a module can module_finished or return 
-	 * module_error.
-	 * The module must handle the super query states itself as well.
-	 * 
-	 * @param qstate: used for original query info. And to find mesh info.
-	 * @param rcode: if not 0 (NOERROR) an error is sent back (and 
-	 * 	rep ignored).
-	 * @param rep: reply to encode and send back to clients.
-	 */
-	void (*query_done)(struct module_qstate* qstate, int rcode,
-	        struct reply_info* rep);
-
-	/**
-	 * Get a callback for the super query states that are interested in the 
-	 * results from this query state. These can then be changed for error 
-	 * or results.
-	 * Must be called befor a module can module_finished or return 
-	 * module_error.  After finishing or module error, the super 
-	 * query states become runnable with event module_event_pass.
-	 * 
-	 * @param qstate: the state that has results, used to find mesh state.
-	 * @param id: module id.
-	 * @param cb: callback function. Called as
-	 * 	cb(qstate, id, super_qstate) for every super qstate.
-	 */
-	void (*walk_supers)(struct module_qstate* qstate, int id, 
-		void (*cb)(struct module_qstate*, int, struct module_qstate*));
-
-	/**
 	 * Detect if adding a dependency for qstate on name,type,class will
 	 * create a dependency cycle.
 	 * @param qstate: given mesh querystate.

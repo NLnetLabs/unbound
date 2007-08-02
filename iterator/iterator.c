@@ -217,10 +217,6 @@ error_response(struct module_qstate* qstate, int id, int rcode)
 		ldns_lookup_by_id(ldns_rcodes, rcode)->name:"??");
 	qstate->return_rcode = rcode;
 	qstate->return_msg = NULL;
-	/* tell clients that we failed */
-	(*qstate->env->query_done)(qstate, rcode, NULL);
-	/* tell our parents that we failed */
-	(*qstate->env->walk_supers)(qstate, id, NULL);
 	qstate->ext_state[id] = module_finished;
 	return 0;
 }
@@ -1246,12 +1242,6 @@ processPrimeResponse(struct module_qstate* qstate, int id)
 
 	/* This event is finished. */
 	qstate->ext_state[id] = module_finished;
-
-	/* there should be no outside clients subscribed tell them to
-	 * bugger off (and retry) */
-	(*qstate->env->query_done)(qstate, LDNS_RCODE_SERVFAIL, NULL);
-	/* tell interested supers that priming is done */
-	(*qstate->env->walk_supers)(qstate, id, NULL);
 	return 0;
 }
 
@@ -1375,10 +1365,6 @@ processFinished(struct module_qstate* qstate, struct iter_qstate* iq,
 	}
 	qstate->return_rcode = LDNS_RCODE_NOERROR;
 	qstate->return_msg = iq->response;
-	(*qstate->env->query_done)(qstate, LDNS_RCODE_NOERROR, 
-		iq->response->rep);
-	(*qstate->env->walk_supers)(qstate, id, NULL);
-
 	return 0;
 }
 
