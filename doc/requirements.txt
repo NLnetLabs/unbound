@@ -79,3 +79,10 @@ o An authoritative name server.
 o Too many Features.
 
 
+5. Choices
+----------
+o rfc2181 decourages duplicates RRs in RRsets. unbound does not create
+  duplicates, but when presented with duplicates on the wire from the
+  authoritative servers, does not perform duplicate removal.
+  It does do some rrsig duplicate removal, in the msgparser, for dnssec qtype
+  rrsig and any, because of special rrsig processing in the msgparser.
