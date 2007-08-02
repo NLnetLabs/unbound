@@ -6,6 +6,7 @@
 	  so that the classification is lame.
 	- validator module exists, and does nothing but pass through,
 	  with calling of next module and return.
+	- validator work.
 
 1 August 2007: Wouter
 	- set version to 0.5

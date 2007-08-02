@@ -43,6 +43,7 @@
 #ifndef VALIDATOR_VALIDATOR_H
 #define VALIDATOR_VALIDATOR_H
 struct module_func_block;
+#include "util/data/msgreply.h"
 
 /**
  * Global state for the validator. 
@@ -50,6 +51,10 @@ struct module_func_block;
 struct val_env {
 	/** global state placeholder */
 	int option;
+
+	/** trusted key storage */
+
+	/** key cache */
 };
 
 /**
@@ -57,7 +62,19 @@ struct val_env {
  */
 enum val_state {
 	/** initial state for validation */
-	VAL_STATE_INIT = 0
+	VAL_INIT_STATE = 0,
+	/** handle response to trust anchor priming query */
+	VAL_PRIME_RESP_STATE,
+	/** find the proper keys for validation, follow trust chain */
+	VAL_FINDKEY_STATE,
+	/** handle response to DS query to make trust chain */
+	VAL_FINDKEY_DS_RESP_STATE,
+	/** handle response to DNSKEY query to make trust chain */
+	VAL_FINDKEY_DNSKEY_RESP_STATE,
+	/** validate the answer, using found key entry */
+	VAL_VALIDATE_STATE,
+	/** finish up */
+	VAL_FINISHED_STATE
 };
 
 /**
@@ -68,6 +85,24 @@ struct val_qstate {
 	 * State of the validator module.
 	 */
 	enum val_state state;
+
+	/**
+	 * The original message we have been given to validate.
+	 */
+	struct dns_msg* orig_msg;
+
+	/**
+	 * The query name we have chased to; qname after following CNAMEs
+	 */
+	struct query_info qchase;
+
+	/**
+	 * The chased reply, extract from original message. Can be:
+	 * 	o CNAME
+	 * 	o DNAME + CNAME
+	 * 	o answer plus authority, additional (nsecs).
+	 */
+	struct reply_info* chase_reply;
 };
 
 /**
