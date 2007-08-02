@@ -139,6 +139,9 @@ struct config_file {
 	/** the module configuration string */
 	char* module_conf;
 	
+	/** file with trusted DS and DNSKEYs in zonefile format */
+	char* trust_anchor_file;
+
 	/** daemonize, i.e. fork into the background. */
 	int do_daemonize;
 };

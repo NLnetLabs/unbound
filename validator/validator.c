@@ -41,11 +41,29 @@
  */
 #include "config.h"
 #include "validator/validator.h"
+#include "validator/val_anchor.h"
 #include "services/cache/dns.h"
 #include "util/module.h"
 #include "util/log.h"
 #include "util/net_help.h"
 #include "util/region-allocator.h"
+
+/** apply config settings to validator */
+static int
+val_apply_cfg(struct val_env* val_env, struct config_file* cfg)
+{
+	if(!val_env->anchors)
+		val_env->anchors = anchors_create();
+	if(!val_env->anchors) {
+		log_err("out of memory");
+		return 0;
+	}
+	if(!anchors_apply_cfg(val_env->anchors, cfg)) {
+		log_err("validator: error in trustanchors config");
+		return 0;
+	}
+	return 1;
+}
 
 /** validator init */
 static int
@@ -58,10 +76,10 @@ val_init(struct module_env* env, int id)
 		return 0;
 	}
 	env->modinfo[id] = (void*)val_env;
-	/*if(!val_apply_cfg(val_env, env->cfg)) {
+	if(!val_apply_cfg(val_env, env->cfg)) {
 		log_err("validator: could not apply configuration settings.");
 		return 0;
-	}*/
+	}
 	return 1;
 }
 
@@ -73,6 +91,7 @@ val_deinit(struct module_env* env, int id)
 	if(!env || !env->modinfo || !env->modinfo[id])
 		return;
 	val_env = (struct val_env*)env->modinfo[id];
+	anchors_delete(val_env->anchors);
 	free(val_env);
 }
 

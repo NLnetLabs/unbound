@@ -44,15 +44,14 @@
 #define VALIDATOR_VALIDATOR_H
 struct module_func_block;
 #include "util/data/msgreply.h"
+struct val_anchors;
 
 /**
  * Global state for the validator. 
  */
 struct val_env {
-	/** global state placeholder */
-	int option;
-
 	/** trusted key storage */
+	struct val_anchors* anchors;
 
 	/** key cache */
 };

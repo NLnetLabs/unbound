@@ -142,6 +142,7 @@ hide-version{COLON}     { YDOUT; return VAR_HIDE_VERSION;}
 identity{COLON}		{ YDOUT; return VAR_IDENTITY;}
 version{COLON}     	{ YDOUT; return VAR_VERSION;}
 module-conf{COLON}     	{ YDOUT; return VAR_MODULE_CONF;}
+trust-anchor-file{COLON}	{ YDOUT; return VAR_TRUST_ANCHOR_FILE;}
 {NEWLINE}		{ LEXOUT(("NL\n")); cfg_parser->line++;}
 
 	/* Quoted strings. Strip leading and ending quotes */

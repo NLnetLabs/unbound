@@ -80,6 +80,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_FORWARD_ZONE VAR_FORWARD_HOST VAR_FORWARD_ADDR
 %token VAR_DO_NOT_QUERY_ADDRESS VAR_HIDE_IDENTITY VAR_HIDE_VERSION
 %token VAR_IDENTITY VAR_VERSION VAR_HARDEN_GLUE VAR_MODULE_CONF
+%token VAR_TRUST_ANCHOR_FILE
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -112,7 +113,7 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_harden_short_bufsize | server_harden_large_queries |
 	server_do_not_query_address | server_hide_identity |
 	server_hide_version | server_identity | server_version |
-	server_harden_glue | server_module_conf
+	server_harden_glue | server_module_conf | server_trust_anchor_file
 	;
 stubstart: VAR_STUB_ZONE
 	{
@@ -282,6 +283,13 @@ server_pidfile: VAR_PIDFILE STRING
 		OUTYY(("P(server_pidfile:%s)\n", $2));
 		free(cfg_parser->cfg->pidfile);
 		cfg_parser->cfg->pidfile = $2;
+	}
+	;
+server_trust_anchor_file: VAR_TRUST_ANCHOR_FILE STRING
+	{
+		OUTYY(("P(server_trust_anchor_file:%s)\n", $2));
+		free(cfg_parser->cfg->trust_anchor_file);
+		cfg_parser->cfg->trust_anchor_file = $2;
 	}
 	;
 server_hide_identity: VAR_HIDE_IDENTITY STRING
