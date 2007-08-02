@@ -463,13 +463,13 @@ mesh_send_reply(struct mesh_state* m, int rcode, struct reply_info* rep,
 	}
 }
 
-void mesh_query_done(struct module_qstate* qstate, int rcode,
-        struct reply_info* rep)
+void mesh_query_done(struct mesh_state* mstate)
 {
-	struct mesh_state* m = qstate->mesh_info;
 	struct mesh_reply* r;
-	for(r = m->reply_list; r; r = r->next) {
-		mesh_send_reply(m, rcode, rep, r);
+	struct reply_info* rep = (mstate->s.return_msg?
+		mstate->s.return_msg->rep:NULL);
+	for(r = mstate->reply_list; r; r = r->next) {
+		mesh_send_reply(mstate, mstate->s.return_rcode, rep, r);
 	}
 }
 
@@ -524,6 +524,58 @@ int mesh_state_add_reply(struct mesh_state* s, struct edns_data* edns,
 
 }
 
+/**
+ * Continue processing the mesh state at another module.
+ * Handles module to modules tranfer of control.
+ * Handles module finished.
+ * @param mesh: the mesh area.
+ * @param mstate: currently active mesh state.
+ * 	Deleted if finished, calls _done and _supers to 
+ * 	send replies to clients and inform other mesh states.
+ * 	This in turn may create additional runnable mesh states.
+ * @param s: state at which the current module exited.
+ * @param ev: the event sent to the module.
+ * 	returned is the event to send to the next module.
+ * @return true if continue processing at the new module.
+ * 	false if not continued processing is needed.
+ */
+static int
+mesh_continue(struct mesh_area* mesh, struct mesh_state* mstate,
+	enum module_ext_state s, enum module_ev* ev)
+{
+	if(s == module_wait_module) {
+		/* start next module */
+		mstate->s.curmod++;
+		if(mesh->num_modules == mstate->s.curmod) {
+			log_err("Cannot pass to next module; at last module");
+			log_query_info(VERB_DETAIL, "pass error for qstate",
+				&mstate->s.qinfo);
+			log_assert(0); /* catch this for now */
+			mstate->s.curmod--;
+			return mesh_continue(mesh, mstate, module_error, ev);
+		}
+		*ev = module_event_pass;
+		return 1;
+	}
+	if(s == module_error && mstate->s.return_rcode == LDNS_RCODE_NOERROR) {
+		/* error is bad, handle pass back up below */
+		mstate->s.return_rcode = LDNS_RCODE_SERVFAIL;
+	}
+	if(s == module_error || s == module_finished) {
+		if(mstate->s.curmod == 0) {
+			mesh_query_done(mstate);
+			mesh_walk_supers(&mstate->s, mstate->s.curmod);
+			mesh_state_delete(&mstate->s);
+			return 0;
+		}
+		/* pass along the locus of control */
+		mstate->s.curmod --;
+		*ev = module_event_pass;
+		return 1;
+	}
+	return 0;
+}
+
 void mesh_run(struct mesh_area* mesh, struct mesh_state* mstate,
 	enum module_ev ev, struct outbound_entry* e)
 {
@@ -536,21 +588,13 @@ void mesh_run(struct mesh_area* mesh, struct mesh_state* mstate,
 
 		/* examine results */
 		mstate->s.reply = NULL;
-		e = NULL;
 		region_free_all(mstate->s.env->scratch);
 		s = mstate->s.ext_state[mstate->s.curmod];
 		verbose(VERB_ALGO, "mesh_run: %s module exit state is %s", 
 			mesh->modfunc[mstate->s.curmod]->name, strextstate(s));
-		if(s == module_error || s == module_finished) {
-			if(mstate->s.curmod == 0) {
-				mesh_query_done(&mstate->s, 
-					mstate->s.return_rcode,
-					mstate->s.return_msg->rep);
-				mesh_walk_supers(&mstate->s, mstate->s.curmod);
-				mesh_state_delete(&mstate->s);
-			}
-			/* pass along the locus of control */
-		}
+		e = NULL;
+		if(mesh_continue(mesh, mstate, s, &ev))
+			continue;
 
 		/* run more modules */
 		ev = module_event_pass;

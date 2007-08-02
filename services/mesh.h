@@ -240,12 +240,13 @@ int mesh_attach_sub(struct module_qstate* qstate, struct query_info* qinfo,
  * Must be called before a module can module_finished or return module_error.
  * The module must handle the super query states itself as well.
  *
- * @param qstate: used for original query info. And to find mesh info.
- * @param rcode: if not 0 (NOERROR) an error is sent back (and rep ignored).
- * @param rep: reply to encode and send back to clients.
+ * @param mstate: mesh state that is done. return_rcode and return_msg
+ * 	are used for replies.
+ * 	return_rcode: if not 0 (NOERROR) an error is sent back (and 
+ * 		return_msg is ignored).
+ * 	return_msg: reply to encode and send back to clients.
  */
-void mesh_query_done(struct module_qstate* qstate, int rcode, 
-	struct reply_info* rep);
+void mesh_query_done(struct mesh_state* mstate);
 
 /**
  * Call inform_super for the super query states that are interested in the 

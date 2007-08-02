@@ -1539,7 +1539,8 @@ iter_operate(struct module_qstate* qstate, enum module_ev event, int id,
 			&iq->qchase);
 
 	/* perform iterator state machine */
-	if(event == module_event_new && iq == NULL) {
+	if((event == module_event_new || event == module_event_pass) && 
+		iq == NULL) {
 		if(!iter_new(qstate, id)) {
 			(void)error_response(qstate, id, LDNS_RCODE_SERVFAIL);
 			return;
