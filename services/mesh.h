@@ -255,10 +255,10 @@ void mesh_query_done(struct mesh_state* mstate);
  * Called when a module is module_finished or returns module_error.
  * The super query states become runnable with event module_event_pass.
  *
- * @param qstate: the state that has results, used to find mesh state.
- * @param id: module id.
+ * @param mesh: mesh area to add newly runnable modules to.
+ * @param mstate: the state that has results, used to find mesh state.
  */
-void mesh_walk_supers(struct module_qstate* qstate, int id);
+void mesh_walk_supers(struct mesh_area* mesh, struct mesh_state* mstate);
 
 /**
  * Delete mesh state, cleanup and also rbtrees and so on.

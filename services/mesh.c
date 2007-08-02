@@ -473,17 +473,15 @@ void mesh_query_done(struct mesh_state* mstate)
 	}
 }
 
-void mesh_walk_supers(struct module_qstate* qstate, int id)
+void mesh_walk_supers(struct mesh_area* mesh, struct mesh_state* mstate)
 {
-	struct mesh_state* m = qstate->mesh_info;
-	struct mesh_area* mesh = m->s.env->mesh;
 	struct mesh_state_ref* ref;
-	RBTREE_FOR(ref, struct mesh_state_ref*, &qstate->mesh_info->super_set)
+	RBTREE_FOR(ref, struct mesh_state_ref*, &mstate->super_set)
 	{
 		/* make super runnable */
 		(void)rbtree_insert(&mesh->run, &ref->s->run_node);
 		/* callback the function to inform super of result */
-		(*mesh->modfunc[ref->s->s.curmod]->inform_super)(qstate, 
+		(*mesh->modfunc[ref->s->s.curmod]->inform_super)(&mstate->s, 
 			ref->s->s.curmod, &ref->s->s);
 	}
 }
@@ -564,7 +562,7 @@ mesh_continue(struct mesh_area* mesh, struct mesh_state* mstate,
 	if(s == module_error || s == module_finished) {
 		if(mstate->s.curmod == 0) {
 			mesh_query_done(mstate);
-			mesh_walk_supers(&mstate->s, mstate->s.curmod);
+			mesh_walk_supers(mesh, mstate);
 			mesh_state_delete(&mstate->s);
 			return 0;
 		}
