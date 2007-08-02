@@ -1,6 +1,7 @@
 2 August 2007: Wouter
 	- configure change for latest libevent trunk version (needs -lrt).
 	- query_done and walk_supers are moved out of module interface.
+	- fixup delegation point duplicates.
 
 1 August 2007: Wouter
 	- set version to 0.5

@@ -90,13 +90,20 @@ delegpt_set_name(struct delegpt* dp, struct region* region, uint8_t* name)
 int 
 delegpt_add_ns(struct delegpt* dp, struct region* region, uint8_t* name)
 {
-	struct delegpt_ns* ns = (struct delegpt_ns*)region_alloc(region,
+	struct delegpt_ns* ns;
+	size_t len;
+	(void)dname_count_size_labels(name, &len);
+	/* slow check for duplicates to avoid counting failures when
+	 * adding the same server as a dependency twice */
+	if(delegpt_find_ns(dp, name, len))
+		return 1;
+	ns = (struct delegpt_ns*)region_alloc(region,
 		sizeof(struct delegpt_ns));
 	if(!ns)
 		return 0;
 	ns->next = dp->nslist;
+	ns->namelen = len;
 	dp->nslist = ns;
-	(void)dname_count_size_labels(name, &ns->namelen);
 	ns->name = region_alloc_init(region, name, ns->namelen);
 	ns->resolved = 0;
 	return 1;

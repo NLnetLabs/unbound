@@ -28,3 +28,4 @@ o (option) to not send replies to clients after a timeout of (say 5 secs) has
   passed, but keep task active for later retries by client.
 o private TTL feature
 o pretend-dnssec-unaware, and pretend-edns-unaware modes for debug/workshops.
+o delegpt use rbtree for ns-list, to avoid slowdown for very large NS sets.
