@@ -62,6 +62,7 @@ strmodulevent(enum module_ev e)
 	case module_event_pass: return "module_event_pass";
 	case module_event_reply: return "module_event_reply";
 	case module_event_noreply: return "module_event_noreply";
+	case module_event_moddone: return "module_event_moddone";
 	case module_event_error: return "module_event_error";
 	}
 	return "bad_event_value";

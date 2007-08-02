@@ -83,10 +83,24 @@ val_operate(struct module_qstate* qstate, enum module_ev event, int id,
 	verbose(VERB_DETAIL, "validator[module %d] operate: extstate:%s "
 		"event:%s", id, strextstate(qstate->ext_state[id]), 
 		strmodulevent(event));
-	if(vq) log_query_info(VERB_DETAIL, "iterator operate: query",
+	if(vq) log_query_info(VERB_DETAIL, "validator operate: query",
 		&qstate->qinfo);
 	(void)ve;
 	(void)outbound;
+	if(event == module_event_new || event == module_event_pass) {
+		/* pass request to next module, to get it */
+		verbose(VERB_ALGO, "validator: pass to next module");
+		qstate->ext_state[id] = module_wait_module;
+		return;
+	}
+	if(event == module_event_moddone) {
+		/* we're done */
+		verbose(VERB_ALGO, "validator: nextmodule returned");
+		qstate->ext_state[id] = module_finished;
+		return;
+	}
+	qstate->ext_state[id] = module_error;
+	return;
 }
 
 /** 
@@ -100,6 +114,9 @@ static void
 val_inform_super(struct module_qstate* qstate, int id,
 	struct module_qstate* super)
 {
+	log_query_info(VERB_ALGO, "validator: inform_super, sub=",
+		&qstate->qinfo);
+	log_query_info(VERB_ALGO, "super=", &super->qinfo);
 }
 
 

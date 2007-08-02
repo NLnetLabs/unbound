@@ -225,6 +225,8 @@ enum module_ev {
 	module_event_reply,
 	/** no reply, timeout or other error */
 	module_event_noreply,
+	/** next module is done, and its reply is awaiting you */
+	module_event_moddone,
 	/** error */
 	module_event_error
 };

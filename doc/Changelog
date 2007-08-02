@@ -4,6 +4,8 @@
 	- fixup delegation point duplicates.
 	- fixup iterator scrubber; lame NS set is let through the scrubber
 	  so that the classification is lame.
+	- validator module exists, and does nothing but pass through,
+	  with calling of next module and return.
 
 1 August 2007: Wouter
 	- set version to 0.5

@@ -484,7 +484,7 @@ void mesh_walk_supers(struct module_qstate* qstate, int id)
 		(void)rbtree_insert(&mesh->run, &ref->s->run_node);
 		/* callback the function to inform super of result */
 		(*mesh->modfunc[ref->s->s.curmod]->inform_super)(qstate, 
-			id, &ref->s->s);
+			ref->s->s.curmod, &ref->s->s);
 	}
 }
 
@@ -570,7 +570,7 @@ mesh_continue(struct mesh_area* mesh, struct mesh_state* mstate,
 		}
 		/* pass along the locus of control */
 		mstate->s.curmod --;
-		*ev = module_event_pass;
+		*ev = module_event_moddone;
 		return 1;
 	}
 	return 0;
