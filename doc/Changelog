@@ -1,3 +1,6 @@
+2 August 2007: Wouter
+	- configure change for latest libevent trunk version (needs -lrt).
+
 1 August 2007: Wouter
 	- set version to 0.5
 	- module work for module to module interconnections.

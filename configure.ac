@@ -482,6 +482,7 @@ fi
 # check to see if libraries are needed for these functions.
 AC_CHECK_LIB(socket, socket)
 AC_CHECK_LIB(nsl, inet_pton)
+AC_CHECK_LIB(rt, clock_gettime)
 
 AC_FUNC_CHOWN
 AC_FUNC_FORK
