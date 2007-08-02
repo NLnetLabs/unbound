@@ -2,6 +2,8 @@
 	- configure change for latest libevent trunk version (needs -lrt).
 	- query_done and walk_supers are moved out of module interface.
 	- fixup delegation point duplicates.
+	- fixup iterator scrubber; lame NS set is let through the scrubber
+	  so that the classification is lame.
 
 1 August 2007: Wouter
 	- set version to 0.5

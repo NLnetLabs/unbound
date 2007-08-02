@@ -515,17 +515,26 @@ scrub_sanitize(ldns_buffer* pkt, struct msg_parse* msg, uint8_t* zonename,
 		 * same check can be used */
 
 		if(!pkt_sub(pkt, rrset->dname, zonename)) {
-			if(!env->cfg->harden_glue) {
+			if(msg->an_rrsets == 0 && 
+				rrset->type == LDNS_RR_TYPE_NS && 
+				FLAGS_GET_RCODE(msg->flags) == 
+				LDNS_RCODE_NOERROR) {
+				/* noerror, nodata and this NS rrset is above
+				 * the zone. This is LAME! 
+				 * Leave in the NS for lame classification. */
+			} else if(!env->cfg->harden_glue) {
 				/* store in cache! Since it is relevant
 				 * (from normalize) it will be picked up 
 				 * from the cache to be used later */
 				store_rrset(pkt, msg, env, rrset);
 				remove_rrset("sanitize: storing potential "
 				"poison RRset:", pkt, msg, prev, &rrset);
-			} else
+				continue;
+			} else {
 				remove_rrset("sanitize: removing potential "
 				"poison RRset:", pkt, msg, prev, &rrset);
-			continue;
+				continue;
+			}
 		}
 		prev = rrset;
 		rrset = rrset->rrset_all_next;
