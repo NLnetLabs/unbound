@@ -3,6 +3,7 @@
 	- scrubber check section of lame NS set.
 	- trust anchors can be in config file or read from zone file,
 	  DS and DNSKEY entries.
+	- unit test trust anchor storage.
 
 2 August 2007: Wouter
 	- configure change for latest libevent trunk version (needs -lrt).

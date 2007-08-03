@@ -136,4 +136,14 @@ int anchors_apply_cfg(struct val_anchors* anchors, struct config_file* cfg);
 struct trust_anchor* anchors_lookup(struct val_anchors* anchors,
 	uint8_t* qname, size_t qname_len, uint16_t qclass);
 
+/**
+ * Store one string as trust anchor RR.
+ * @param anchors: anchor storage.
+ * @param buffer: parsing buffer, to generate the RR wireformat in.
+ * @param str: string.
+ * @return false on error.
+ */
+int anchor_store_str(struct val_anchors* anchors, ldns_buffer* buffer,
+	const char* str);
+
 #endif /* VALIDATOR_VAL_ANCHOR_H */

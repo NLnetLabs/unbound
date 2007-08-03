@@ -153,16 +153,21 @@ static struct trust_anchor*
 anchor_new_ta(struct val_anchors* anchors, uint8_t* name, int namelabs,
 	size_t namelen, uint16_t dclass)
 {
+	rbnode_t* r;
 	struct trust_anchor* ta = (struct trust_anchor*)region_alloc(
 		anchors->region, sizeof(struct trust_anchor));
 	if(!ta)
 		return NULL;
 	memset(ta, 0, sizeof(*ta));
 	ta->node.key = ta;
-	ta->name = name;
+	ta->name = region_alloc_init(anchors->region, name, namelen);
+	if(!ta->name)
+		return NULL;
 	ta->namelabs = namelabs;
 	ta->namelen = namelen;
 	ta->dclass = dclass;
+	r = rbtree_insert(anchors->tree, &ta->node);
+	log_assert(r != NULL);
 	return ta;
 }
 
@@ -281,14 +286,7 @@ anchor_store_new_rr(struct val_anchors* anchors, ldns_buffer* buffer,
 	return 1;
 }
 
-/**
- * Store one string as trust anchor RR.
- * @param anchors: anchor storage.
- * @param buffer: parsing buffer.
- * @param str: string.
- * @return false on error.
- */
-static int
+int
 anchor_store_str(struct val_anchors* anchors, ldns_buffer* buffer,
 	const char* str)
 {
@@ -407,11 +405,11 @@ anchors_lookup(struct val_anchors* anchors,
 	key.dclass = qclass;
 	if(rbtree_find_less_equal(anchors->tree, &key, &res)) {
 		/* exact */
-		result = (struct trust_anchor*)res->key;
+		result = (struct trust_anchor*)res;
 	} else {
 		/* smaller element (or no element) */
 		int m;
-		result = (struct trust_anchor*)res->key;
+		result = (struct trust_anchor*)res;
 		if(!result || result->dclass != qclass)
 			return NULL;
 		/* count number of labels matched */
@@ -422,8 +420,6 @@ anchors_lookup(struct val_anchors* anchors,
 				break;
 			result = result->parent;
 		}
-		if(!result)
-			return NULL;
 	}
 	return result;
 }

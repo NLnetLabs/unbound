@@ -55,5 +55,7 @@ void slabhash_test();
 void msgparse_test();
 /** unit test dname handling functions */
 void dname_test();
+/** unit test trust anchor storage functions */
+void anchors_test();
 
 #endif /* TESTCODE_UNITMAIN_H */

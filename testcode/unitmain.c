@@ -215,6 +215,7 @@ main(int argc, char* argv[])
 	checklock_start();
 	net_test();
 	dname_test();
+	anchors_test();
 	rtt_test();
 	alloc_test();
 	lruhash_test();
