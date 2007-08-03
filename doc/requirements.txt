@@ -86,3 +86,38 @@ o rfc2181 decourages duplicates RRs in RRsets. unbound does not create
   authoritative servers, does not perform duplicate removal.
   It does do some rrsig duplicate removal, in the msgparser, for dnssec qtype
   rrsig and any, because of special rrsig processing in the msgparser.
+o The harden-glue feature, when yes all out of zone glue is deleted, when
+  no out of zone glue is used for further resolving, is more complicated 
+  than that, see below.
+  Main points:
+  	* rfc2182 trust handling is used. 
+	* data is let through only in very specific cases
+	* spoofability remains possible.
+  Not all glue is let through (despite the name of the option). Only glue 
+  which is present in a delegation, of type A and AAAA, where the name is
+  present in the NS record in the authority section is let through.
+  The glue that is let through is stored in the cache (marked as 'from the
+  additional section'). And will then be used for sending queries to. It
+  will not be present in the reply to the client (if RD is off).
+  A direct query for that name will attempt to get a msg into the message
+  cache. Since A and AAAA queries are not synthesized by the unbound cache,
+  this query will be (eventually) sent to the authoritative server and its
+  answer will be put in the cache, marked as 'from the answer section' and
+  thus remove the 'from the additional section' data, and this record is 
+  returned to the client.
+  The message has a TTL smaller or equal to the TTL of the answer RR.
+  If the cache memory is low; the answer RR may be dropped, and a glue
+  RR may be inserted, within the message TTL time, and thus return the
+  spoofed glue to a client. When the message expires, it is refetched and
+  the cached RR is updated with the correct content.
+  The server can be spoofed by getting it to visit a especially prepared 
+  domain. This domain then inserts an address for another authoritative 
+  server into the cache, when visiting that other domain, this address may
+  then be used to send queries to. And fake answers may be returned.
+  If the other domain is signed by DNSSEC, the fakes will be detected.
+
+  In summary, the harden glue feature presents a security risk if
+  disabled. Disabling the feature leads to possible better performance
+  as more glue is present for the recursive service to use. The feature
+  is implemented so as to minimise the security risk, while trying to 
+  keep this performance gain.
