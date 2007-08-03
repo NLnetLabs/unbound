@@ -5,6 +5,7 @@
 	  DS and DNSKEY entries.
 	- unit test trust anchor storage.
 	- trust anchors converted to packed rrsets.
+	- key entry definition.
 
 2 August 2007: Wouter
 	- configure change for latest libevent trunk version (needs -lrt).
