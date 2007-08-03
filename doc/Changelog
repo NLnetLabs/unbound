@@ -1,3 +1,9 @@
+3 August 2007: Wouter
+	- replanning.
+	- scrubber check section of lame NS set.
+	- trust anchors can be in config file or read from zone file,
+	  DS and DNSKEY entries.
+
 2 August 2007: Wouter
 	- configure change for latest libevent trunk version (needs -lrt).
 	- query_done and walk_supers are moved out of module interface.

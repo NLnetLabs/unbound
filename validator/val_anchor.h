@@ -67,9 +67,9 @@ struct val_anchors {
 struct ta_key {
 	/** next in list */
 	struct ta_key* next;
-	/** rdata, in wireformat of the key RR. */
+	/** rdata, in wireformat of the key RR. starts with rdlength. */
 	uint8_t* data;
-	/** length of the rdata */
+	/** length of the rdata (including rdlength). */
 	size_t len;
 	/** DNS type (host format) of the key, DS or DNSKEY */
 	uint16_t type;
@@ -84,6 +84,8 @@ struct trust_anchor {
 	rbnode_t node;
 	/** name of this trust anchor */
 	uint8_t* name;
+	/** length of name */
+	size_t namelen;
 	/** number of labels in name of rrset */
 	int namelabs;
 	/** the ancestor in the trustanchor tree */

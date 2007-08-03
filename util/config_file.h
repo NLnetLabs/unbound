@@ -139,8 +139,10 @@ struct config_file {
 	/** the module configuration string */
 	char* module_conf;
 	
-	/** file with trusted DS and DNSKEYs in zonefile format */
-	char* trust_anchor_file;
+	/** files with trusted DS and DNSKEYs in zonefile format, list */
+	struct config_strlist* trust_anchor_file_list;
+	/** list of trustanchor keys, linked list */
+	struct config_strlist* trust_anchor_list;
 
 	/** daemonize, i.e. fork into the background. */
 	int do_daemonize;

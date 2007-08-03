@@ -192,6 +192,13 @@ Setting this to "validator iterator" will turn on validation.
 File with trusted keys for validation. Both DS and DNSKEY entries can appear
 in the file. The format of the file is the standard DNS Zone file format.
 Default is "", or no trust anchor file.
+.It \fBtrust-anchor:\fR <"Resource Record">
+A DS or DNSKEY RR for a key to use for validation. Multiple entries can be
+given to specify multiple trusted keys, in addition to the trust-anchor-files.
+The resource record is entered in the same format as 'dig' or 'drill' prints
+them, the same format as in the zone file. Has to be on a single line, with
+"" around it. A TTL can be specified for ease of cut and paste, but is ignored. 
+A class can be specified, but class IN is default.
 .El
 
 .Ss Stub Zone Options

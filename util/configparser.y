@@ -80,7 +80,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_FORWARD_ZONE VAR_FORWARD_HOST VAR_FORWARD_ADDR
 %token VAR_DO_NOT_QUERY_ADDRESS VAR_HIDE_IDENTITY VAR_HIDE_VERSION
 %token VAR_IDENTITY VAR_VERSION VAR_HARDEN_GLUE VAR_MODULE_CONF
-%token VAR_TRUST_ANCHOR_FILE
+%token VAR_TRUST_ANCHOR_FILE VAR_TRUST_ANCHOR
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -113,7 +113,8 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_harden_short_bufsize | server_harden_large_queries |
 	server_do_not_query_address | server_hide_identity |
 	server_hide_version | server_identity | server_version |
-	server_harden_glue | server_module_conf | server_trust_anchor_file
+	server_harden_glue | server_module_conf | server_trust_anchor_file |
+	server_trust_anchor
 	;
 stubstart: VAR_STUB_ZONE
 	{
@@ -288,8 +289,16 @@ server_pidfile: VAR_PIDFILE STRING
 server_trust_anchor_file: VAR_TRUST_ANCHOR_FILE STRING
 	{
 		OUTYY(("P(server_trust_anchor_file:%s)\n", $2));
-		free(cfg_parser->cfg->trust_anchor_file);
-		cfg_parser->cfg->trust_anchor_file = $2;
+		if(!cfg_strlist_insert(&cfg_parser->cfg->
+			trust_anchor_file_list, $2))
+			yyerror("out of memory");
+	}
+	;
+server_trust_anchor: VAR_TRUST_ANCHOR STRING
+	{
+		OUTYY(("P(server_trust_anchor:%s)\n", $2));
+		if(!cfg_strlist_insert(&cfg_parser->cfg->trust_anchor_list, $2))
+			yyerror("out of memory");
 	}
 	;
 server_hide_identity: VAR_HIDE_IDENTITY STRING
