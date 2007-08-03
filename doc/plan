@@ -30,16 +30,19 @@ Roughly the boxes are as follows:
     Twice as long; one box for module layout, one box for iterator module.
 0.5 Validator - validator module.
 0.6 Bigger and better - Operational useful features (config, log, memory)
-0.7 Local zones feature - localzones stubzones fwdzones, no leak rfc1918.
+0.7 Put to a limited audience.
+    gamma/alpha core functionality test release, to a small audience.
+    partial functionality. For more extensive use and testing.
+0.8 Local zones feature - localzones stubzones fwdzones, no leak rfc1918.
     views support; for selective recursive service.
-0.8 Library use - resolver validator lib (and test apps)
-0.9 Corner cases - be able to resolve in the wild. Run fuzzers.
+0.9 Library use - resolver validator lib (and test apps)
+0.10 Corner cases - be able to resolve in the wild. Run fuzzers.
     Run as many tests as we can think of.
     Go through logs and check for long, unresolved cases
     Use profiler.
-0.10 Beta release. Run shadow for a resolver in production for several
+0.11 Beta release. Run shadow for a resolver in production for several
     weeks.
-0.11 Features features
+0.12 Features features
     aggressive negative caching for NSEC, NSEC3.
     multiple queries per question, server exploration, server selection.
     option to use real entropy for randomness (mix it in once in a while).
@@ -141,6 +144,11 @@ Styleguide:
 * Validating resolver.
 	* Test resolver.
 	* Speed test.
+
+*** Put to a limited audience
+* The alpha/gamma core functionality, svn access to limited audience.
+* Support features and requests as they arise.
+* Provide real-world experiences.
 
 *** Bigger and Better
 * Config file syntax checker program. Tests on checker.
