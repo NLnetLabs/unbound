@@ -517,6 +517,7 @@ scrub_sanitize(ldns_buffer* pkt, struct msg_parse* msg, uint8_t* zonename,
 		if(!pkt_sub(pkt, rrset->dname, zonename)) {
 			if(msg->an_rrsets == 0 && 
 				rrset->type == LDNS_RR_TYPE_NS && 
+				rrset->section == LDNS_SECTION_AUTHORITY &&
 				FLAGS_GET_RCODE(msg->flags) == 
 				LDNS_RCODE_NOERROR) {
 				/* noerror, nodata and this NS rrset is above
