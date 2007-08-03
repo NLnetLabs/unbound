@@ -154,7 +154,6 @@ fatal_exit(const char *format, ...)
 	va_start(args, format);
 	log_vmsg("fatal error", format, args);
 	va_end(args);
-	memset(NULL, 0, 10);
 	exit(1);
 }
 
