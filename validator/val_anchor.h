@@ -45,6 +45,7 @@
 struct region;
 struct trust_anchor;
 struct config_file;
+struct ub_packed_rrset_key;
 
 /**
  * Trust anchor store.
@@ -99,6 +100,10 @@ struct trust_anchor {
 	size_t numDS;
 	/** number of DNSKEYs in the keylist */
 	size_t numDNSKEY;
+	/** the DS RRset */
+	struct ub_packed_rrset_key* ds_rrset;
+	/** The DNSKEY RRset */
+	struct ub_packed_rrset_key* dnskey_rrset;
 	/** class of the trust anchor */
 	uint16_t dclass;
 };

@@ -363,6 +363,107 @@ anchor_read_file(struct val_anchors* anchors, ldns_buffer* buffer,
 	return ok;
 }
 
+/** 
+ * Assemble an rrset structure for the type 
+ * @param region: allocated in this region.
+ * @param ta: trust anchor.
+ * @param num: number of items to fetch from list.
+ * @param type: fetch only items of this type.
+ * @return rrset or NULL on error.
+ */
+static struct ub_packed_rrset_key*
+assemble_it(struct region* region, struct trust_anchor* ta, size_t num, 
+	uint16_t type)
+{
+	struct ub_packed_rrset_key* pkey = (struct ub_packed_rrset_key*)
+		region_alloc(region, sizeof(*pkey));
+	struct packed_rrset_data* pd;
+	struct ta_key* tk;
+	size_t i;
+	if(!pkey)
+		return NULL;
+	memset(pkey, 0, sizeof(*pkey));
+	pkey->rk.dname = region_alloc_init(region, ta->name, ta->namelen);
+	if(!pkey->rk.dname)
+		return NULL;
+	
+	pkey->rk.dname_len = ta->namelen;
+	pkey->rk.type = htons(type);
+	pkey->rk.rrset_class = htons(ta->dclass);
+	/* The rrset is build in an uncompressed way. This means it
+	 * cannot be copied in the normal way. */
+	pd = (struct packed_rrset_data*)region_alloc(region, sizeof(*pd));
+	if(!pd)
+		return NULL;
+	memset(pd, 0, sizeof(*pd));
+	pd->count = num;
+	pd->trust = rrset_trust_ultimate;
+	pd->rr_len = (size_t*)region_alloc(region, num*sizeof(size_t));
+	if(!pd->rr_len)
+		return NULL;
+	pd->rr_ttl = (uint32_t*)region_alloc(region, num*sizeof(uint32_t));
+	if(!pd->rr_ttl)
+		return NULL;
+	pd->rr_data = (uint8_t**)region_alloc(region, num*sizeof(uint8_t*));
+	if(!pd->rr_data)
+		return NULL;
+	/* fill in rrs */
+	i=0;
+	for(tk = ta->keylist; tk; tk = tk->next) {
+		if(tk->type != type)
+			continue;
+		pd->rr_len[i] = tk->len;
+		/* reuse data ptr to allocation in region */
+		pd->rr_data[i] = tk->data;
+		pd->rr_ttl[i] = 0;
+		i++;
+	}
+	pkey->entry.data = (void*)pd;
+	return pkey;
+}
+
+/**
+ * Assemble structures for the trust DS and DNSKEY rrsets.
+ * @param anchors: trust anchor storage.
+ * @param ta: trust anchor
+ * @return: false on error.
+ */
+static int
+anchors_assemble(struct val_anchors* anchors, struct trust_anchor* ta)
+{
+	if(ta->numDS > 0) {
+		ta->ds_rrset = assemble_it(anchors->region, ta,
+			ta->numDS, LDNS_RR_TYPE_DS);
+		if(!ta->ds_rrset)
+			return 0;
+	}
+	if(ta->numDNSKEY > 0) {
+		ta->dnskey_rrset = assemble_it(anchors->region, ta,
+			ta->numDNSKEY, LDNS_RR_TYPE_DNSKEY);
+		if(!ta->dnskey_rrset)
+			return 0;
+	}
+	return 1;
+}
+
+/**
+ * Assemble the rrsets in the anchors, ready for use by validator.
+ * @param anchors: trust anchor storage.
+ * @return: false on error.
+ */
+static int
+anchors_assemble_rrsets(struct val_anchors* anchors)
+{
+	struct trust_anchor* ta;
+	RBTREE_FOR(ta, struct trust_anchor*, anchors->tree) {
+		if(!anchors_assemble(anchors, ta)) {
+			log_err("out of memory");
+			return 0;
+		}
+	}
+	return 1;
+}
+
 int 
 anchors_apply_cfg(struct val_anchors* anchors, struct config_file* cfg)
 {
@@ -387,6 +488,7 @@ anchors_apply_cfg(struct val_anchors* anchors, struct config_file* cfg)
 		}
 	}
 	init_parents(anchors);
+	anchors_assemble_rrsets(anchors);
 	ldns_buffer_free(parsebuf);
 	return 1;
 }

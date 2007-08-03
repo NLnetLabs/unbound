@@ -4,6 +4,7 @@
 	- trust anchors can be in config file or read from zone file,
 	  DS and DNSKEY entries.
 	- unit test trust anchor storage.
+	- trust anchors converted to packed rrsets.
 
 2 August 2007: Wouter
 	- configure change for latest libevent trunk version (needs -lrt).
