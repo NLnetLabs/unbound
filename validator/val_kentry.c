@@ -177,3 +177,10 @@ key_entry_copy(struct key_entry_key* kkey)
 	}
 	return newk;
 }
+
+int 
+key_entry_isnull(struct key_entry_key* kkey)
+{
+	struct key_entry_data* d = (struct key_entry_data*)kkey->entry.data;
+	return (!d->isbad && d->rrset_data == NULL);
+}

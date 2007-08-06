@@ -44,8 +44,10 @@
 #define VALIDATOR_VALIDATOR_H
 struct module_func_block;
 #include "util/data/msgreply.h"
+#include "validator/val_utils.h"
 struct val_anchors;
 struct key_cache;
+struct key_entry_key;
 
 /**
  * Global state for the validator. 
@@ -105,6 +107,31 @@ struct val_qstate {
 	 * 	o answer plus authority, additional (nsecs).
 	 */
 	struct reply_info* chase_reply;
+
+	/** This is the "final" state for the event. */
+	enum val_state final_state;
+
+	/** the trust anchor rrset */
+	struct trust_anchor* trust_anchor;
+
+	/** the DS rrset */
+	struct ub_packed_rrset_key* ds_rrset;
+
+	/** domain name for empty nonterminal detection */
+	uint8_t* empty_DS_name;
+	/** length of empty_DS_name */
+	size_t empty_DS_len;
+
+	/** the current key entry */
+	struct key_entry_key* key_entry;
+
+	/** subtype */
+	enum val_classification subtype;
+
+	/** signer name */
+	uint8_t* signer_name;
+	/** length of signer_name */
+	size_t signer_len;
 };
 
 /**

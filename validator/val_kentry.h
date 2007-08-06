@@ -116,4 +116,11 @@ struct key_entry_key* key_entry_copy_toregion(struct key_entry_key* kkey,
  */
 struct key_entry_key* key_entry_copy(struct key_entry_key* kkey);
 
+/**
+ * See if this is a null entry. Does not do locking.
+ * @param kkey: must have data pointer set correctly
+ * @return true if it is a NULL rrset entry.
+ */
+int key_entry_isnull(struct key_entry_key* kkey);
+
 #endif /* VALIDATOR_VAL_KENTRY_H */

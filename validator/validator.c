@@ -43,7 +43,10 @@
 #include "validator/validator.h"
 #include "validator/val_anchor.h"
 #include "validator/val_kcache.h"
+#include "validator/val_kentry.h"
+#include "validator/val_utils.h"
 #include "services/cache/dns.h"
+#include "util/data/dname.h"
 #include "util/module.h"
 #include "util/log.h"
 #include "util/net_help.h"
@@ -140,19 +143,141 @@ val_new(struct module_qstate* qstate, int id)
 }
 
 /** 
- * Process init state for validator.
+ * Check to see if a given response needs to go through the validation
+ * process. Typical reasons for this routine to return false are: CD bit was
+ * on in the original request, the response was already validated, or the
+ * response is a kind of message that is unvalidatable (i.e., SERVFAIL,
+ * REFUSED, etc.)
+ *
+ * @param qstate: query state.
+ * @param vq: validator query state.
+ * @return true if the response could use validation (although this does not
+ *         mean we can actually validate this response).
+ */
+static int
+needs_validation(struct module_qstate* qstate, struct val_qstate* vq)
+{
+	int rcode;
+
+	/* If the CD bit is on in the original request, then we don't bother to
+	 * validate anything.*/
+	if(qstate->query_flags | BIT_CD) {
+		verbose(VERB_ALGO, "not validating response due to CD bit");
+		return 0;
+	}
+
+	/* TODO: check if already validated */
+	/*
+	 *     if (response.getStatus() > SecurityStatus.BOGUS)
+	 *         {
+	 *               log.debug("response has already been validated");
+	 *                     return false;
+	 *                         }
+	 */
+
+	rcode = (int)FLAGS_GET_RCODE(vq->orig_msg->rep->flags);
+	if(rcode != LDNS_RCODE_NOERROR && rcode != LDNS_RCODE_NXDOMAIN) {
+		verbose(VERB_ALGO, "cannot validate non-answer, rcode %s",
+			ldns_lookup_by_id(ldns_rcodes, rcode)?
+			ldns_lookup_by_id(ldns_rcodes, rcode)->name:"??");
+		return 0;
+	}
+	return 1;
+}
+
+/**
+ * Prime trust anchor for use.
  *
  * @param qstate: query state.
  * @param vq: validator query state.
  * @param ve: validator shared global environment.
  * @param id: module id.
- * @return true to continue processing
+ * @param toprime: what to prime.
+ * @return true if the event should be processed further on return, false if
+ *         not.
+ */
+static void
+prime_trust_anchor(struct module_qstate* qstate, struct val_qstate* vq,
+        struct val_env* ve, int id, struct trust_anchor* toprime)
+{
+
+}
+
+/** 
+ * Process init state for validator.
+ * Process the INIT state. First tier responses start in the INIT state.
+ * This is where they are vetted for validation suitability, and the initial
+ * key search is done.
+ * 
+ * Currently, events the come through this routine will be either promoted
+ * to FINISHED/CNAME_RESP (no validation needed), FINDKEY (next step to
+ * validation), or will be (temporarily) retired and a new priming request
+ * event will be generated.
+ *
+ * @param qstate: query state.
+ * @param vq: validator query state.
+ * @param ve: validator shared global environment.
+ * @param id: module id.
+ * @return true if the event should be processed further on return, false if
+ *         not.
  */
 static int
 processInit(struct module_qstate* qstate, struct val_qstate* vq, 
 	struct val_env* ve, int id)
 {
-	return 0;
+	uint8_t* lookup_name;
+	size_t lookup_len;
+	if(!needs_validation(qstate, vq)) {
+		vq->state = vq->final_state;
+		return 1;
+	}
+	vq->trust_anchor = anchors_lookup(ve->anchors, vq->qchase.qname,
+		vq->qchase.qname_len, vq->qchase.qclass);
+	if(vq->trust_anchor == NULL) {
+		/*response isn't under a trust anchor, so we cannot validate.*/
+		vq->state = vq->final_state;
+		return 1;
+	}
+
+	/* Determine the signer/lookup name */
+	val_find_signer(&vq->qchase, vq->chase_reply, 
+		&vq->signer_name, &vq->signer_len);
+	if(vq->signer_name == NULL) {
+		lookup_name = vq->qchase.qname;
+		lookup_len = vq->qchase.qname_len;
+	} else {
+		lookup_name = vq->signer_name;
+		lookup_len = vq->signer_len;
+	}
+
+	vq->key_entry = key_cache_obtain(ve->kcache, lookup_name, lookup_len,
+		vq->qchase.qclass, qstate->region);
+	
+	/* if not key, or if keyentry is *above* the trustanchor, i.e.
+	 * the keyentry is based on another (higher) trustanchor */
+	if(vq->key_entry == NULL || dname_strict_subdomain_c(
+		vq->trust_anchor->name, vq->key_entry->name)) {
+		/* fire off a trust anchor priming query. */
+		prime_trust_anchor(qstate, vq, ve, id, vq->trust_anchor);
+		/* and otherwise, don't continue processing this event.
+		 * (it will be reactivated when the priming query returns). */
+		vq->state = VAL_FINDKEY_STATE;
+		return 0;
+	} else if(key_entry_isnull(vq->key_entry)) {
+		/* response is under a null key, so we cannot validate
+		 * However, we do set the status to INSECURE, since it is 
+		 * essentially proven insecure. */
+		/* TODO
+		vq->security_state = SEC_INSECURE;
+		*/
+		vq->state = vq->final_state;
+		return 1;
+	}
+
+	/* otherwise, we have our "closest" cached key -- continue 
+	 * processing in the next state. */
+	vq->state = VAL_FINDKEY_STATE;
+	return 1;
 }
 
 /** 
@@ -197,6 +322,9 @@ val_operate(struct module_qstate* qstate, enum module_ev event, int id,
 		strmodulevent(event));
 	log_query_info(VERB_DETAIL, "validator operate: query",
 		&qstate->qinfo);
+	if(vq && qstate->qinfo.qname != vq->qchase.qname) 
+		log_query_info(VERB_DETAIL, "validator operate: chased to",
+		&vq->qchase);
 	(void)outbound;
 	if(event == module_event_new || event == module_event_pass) {
 		/* pass request to next module, to get it */
