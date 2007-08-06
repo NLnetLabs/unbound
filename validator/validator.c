@@ -142,6 +142,21 @@ val_new(struct module_qstate* qstate, int id)
 	return vq;
 }
 
+/**
+ * Exit validation with an error status
+ * 
+ * @param qstate: query state
+ * @param id: validator id.
+ * @return false, for use by caller to return to stop processing.
+ */
+static int
+val_error(struct module_qstate* qstate, int id)
+{
+	qstate->ext_state[id] = module_error;
+	qstate->return_rcode = LDNS_RCODE_SERVFAIL;
+	return 0;
+}
+
 /** 
  * Check to see if a given response needs to go through the validation
  * process. Typical reasons for this routine to return false are: CD bit was
@@ -187,20 +202,37 @@ needs_validation(struct module_qstate* qstate, struct val_qstate* vq)
 
 /**
  * Prime trust anchor for use.
+ * Generate and dispatch a priming query for the given trust anchor.
+ * The trust anchor can be DNSKEY or DS and does not have to be signed.
  *
  * @param qstate: query state.
  * @param vq: validator query state.
- * @param ve: validator shared global environment.
  * @param id: module id.
  * @param toprime: what to prime.
- * @return true if the event should be processed further on return, false if
- *         not.
+ * @return false on a processing error.
  */
-static void
+static int
 prime_trust_anchor(struct module_qstate* qstate, struct val_qstate* vq,
-        struct val_env* ve, int id, struct trust_anchor* toprime)
+	int id, struct trust_anchor* toprime)
 {
-
+	struct module_qstate* newq;
+	struct query_info ask;
+	ask.qname = toprime->name;
+	ask.qname_len = toprime->namelen;
+	ask.qtype = LDNS_RR_TYPE_DNSKEY;
+	ask.qclass = toprime->dclass;
+	log_query_info(VERB_ALGO, "priming trust anchor", &ask);
+	if(!(*qstate->env->attach_sub)(qstate, &ask, 
+		(uint16_t)(BIT_RD|BIT_CD), 0, &newq)){
+		log_err("Could not prime trust anchor: out of memory");
+		return 0;
+	}
+	/* ignore newq; validator does not need state created for that
+	 * query, and its a 'normal' for iterator as well */
+	vq->wait_prime_ta = 1; /* to elicit PRIME_RESP_STATE processing 
+		from the validator inform_super() routine */
+	qstate->ext_state[id] = module_wait_subquery;
+	return 1;
 }
 
 /** 
@@ -258,7 +290,8 @@ processInit(struct module_qstate* qstate, struct val_qstate* vq,
 	if(vq->key_entry == NULL || dname_strict_subdomain_c(
 		vq->trust_anchor->name, vq->key_entry->name)) {
 		/* fire off a trust anchor priming query. */
-		prime_trust_anchor(qstate, vq, ve, id, vq->trust_anchor);
+		if(!prime_trust_anchor(qstate, vq, id, vq->trust_anchor))
+			return val_error(qstate, id);
 		/* and otherwise, don't continue processing this event.
 		 * (it will be reactivated when the priming query returns). */
 		vq->state = VAL_FINDKEY_STATE;
@@ -366,6 +399,62 @@ val_operate(struct module_qstate* qstate, enum module_ev event, int id,
 	return;
 }
 
+/**
+ * Evaluate the response to a priming request.
+ *
+ * @param rcode: rcode return value.
+ * @param msg: message return value (allocated in a the wrong region).
+ * @param ta: trust anchor.
+ * @param qstate: qstate that needs key.
+ * @param id: module id.
+ * @return new key entry or NULL on allocation failure.
+ *	The key entry will either contain a validated DNSKEY rrset, or
+ *	represent a Null key (query failed, but validation did not), or a
+ *	Bad key (validation failed).
+ */
+static struct key_entry_key*
+primeResponseToKE(int rcode, struct dns_msg* msg, struct trust_anchor* ta,
+	struct module_qstate* qstate, int id)
+{
+	struct ub_packed_rrset_key* dnskey_rrset = NULL;
+	if(rcode == LDNS_RCODE_NOERROR) {
+		dnskey_rrset = 0/*find answer */;
+	}
+	if(!dnskey_rrset) {
+		log_query_info(VERB_ALGO, "failed to prime trust anchor -- "
+			"could not fetch DNSKEY rrset", &msg->qinfo);
+		/* create NULL key with NULL_KEY_TTL, store in cache. */
+		return NULL;
+	}
+	return NULL;
+}
+
+/**
+ * Process prime response
+ * Sets the key entry in the state.
+ *
+ * @param qstate: query state that is validating and primed a trust anchor.
+ * @param vq: validator query state
+ * @param id: module id.
+ * @param rcode: rcode result value.
+ * @param msg: result message (if rcode is OK).
+ */
+static void
+process_prime_response(struct module_qstate* qstate, struct val_qstate* vq,
+	int id, int rcode, struct dns_msg* msg)
+{
+	/* Fetch and validate the keyEntry that corresponds to the 
+	 * current trust anchor. */
+	vq->key_entry = primeResponseToKE(rcode, msg, vq->trust_anchor,
+		qstate, id);
+
+	/* If the result of the prime is a null key, skip the FINDKEY state.*/
+	if(!vq->key_entry || key_entry_isnull(vq->key_entry)) {
+		vq->state = VAL_VALIDATE_STATE;
+	}
+	/* the qstate will be reactivated after inform_super is done */
+}
+
 /** 
  * inform validator super.
  * 
@@ -377,9 +466,20 @@ static void
 val_inform_super(struct module_qstate* qstate, int id,
 	struct module_qstate* super)
 {
+	struct val_qstate* vq = (struct val_qstate*)super->minfo[id];
 	log_query_info(VERB_ALGO, "validator: inform_super, sub=",
 		&qstate->qinfo);
 	log_query_info(VERB_ALGO, "super=", &super->qinfo);
+	if(!vq) {
+		verbose(VERB_ALGO, "super: has no validator state");
+		return;
+	}
+	if(vq->wait_prime_ta) {
+		vq->wait_prime_ta = 0;
+		process_prime_response(super, vq, id, qstate->return_rcode,
+			qstate->return_msg);
+		return;
+	}
 }
 
 

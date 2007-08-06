@@ -132,6 +132,9 @@ struct val_qstate {
 	uint8_t* signer_name;
 	/** length of signer_name */
 	size_t signer_len;
+
+	/** true if this state is waiting to prime a trust anchor */
+	int wait_prime_ta;
 };
 
 /**
