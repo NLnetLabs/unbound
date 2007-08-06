@@ -45,15 +45,18 @@
 struct module_func_block;
 #include "util/data/msgreply.h"
 struct val_anchors;
+struct key_cache;
 
 /**
  * Global state for the validator. 
  */
 struct val_env {
-	/** trusted key storage */
+	/** trusted key storage; these are the configured keys */
 	struct val_anchors* anchors;
 
-	/** key cache */
+	/** key cache; these are validated keys. trusted keys only
+	 * end up here after being primed. */
+	struct key_cache* kcache;
 };
 
 /**

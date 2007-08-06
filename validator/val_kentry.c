@@ -43,9 +43,11 @@
 #include "util/data/packed_rrset.h"
 #include "util/data/dname.h"
 #include "util/storage/lookup3.h"
+#include "util/region-allocator.h"
+#include "util/net_help.h"
 
 size_t 
-key_entry_sizefunc_t(void* key, void* data)
+key_entry_sizefunc(void* key, void* data)
 {
 	struct key_entry_key* kk = (struct key_entry_key*)key;
 	struct key_entry_data* kd = (struct key_entry_data*)data;
@@ -57,7 +59,7 @@ key_entry_sizefunc_t(void* key, void* data)
 }
 
 int 
-key_entry_compfunc_t(void* k1, void* k2)
+key_entry_compfunc(void* k1, void* k2)
 {
 	struct key_entry_key* n1 = (struct key_entry_key*)k1;
 	struct key_entry_key* n2 = (struct key_entry_key*)k2;
@@ -70,7 +72,7 @@ key_entry_compfunc_t(void* k1, void* k2)
 }
 
 void 
-key_entry_delkeyfunc_t(void* key, void* ATTR_UNUSED(userarg), int islocked)
+key_entry_delkeyfunc(void* key, void* ATTR_UNUSED(userarg), int islocked)
 {
 	struct key_entry_key* kk = (struct key_entry_key*)key;
 	if(!key)
@@ -83,7 +85,7 @@ key_entry_delkeyfunc_t(void* key, void* ATTR_UNUSED(userarg), int islocked)
 }
 
 void 
-key_entry_deldatafunc_t(void* data, void* ATTR_UNUSED(userarg))
+key_entry_deldatafunc(void* data, void* ATTR_UNUSED(userarg))
 {
 	struct key_entry_data* kd = (struct key_entry_data*)data;
 	free(kd->rrset_data);
@@ -97,4 +99,81 @@ key_entry_hash(struct key_entry_key* kk)
 	kk->entry.hash = hashlittle(&kk->key_class, sizeof(kk->key_class), 
 		kk->entry.hash);
 	kk->entry.hash = dname_query_hash(kk->name, kk->entry.hash);
+}
+
+struct key_entry_key* 
+key_entry_copy_toregion(struct key_entry_key* kkey, struct region* region)
+{
+	struct key_entry_key* newk;
+	newk = region_alloc_init(region, kkey, sizeof(*kkey));
+	if(!newk)
+		return NULL;
+	newk->name = region_alloc_init(region, kkey->name, kkey->namelen);
+	if(!newk->name)
+		return NULL;
+	newk->entry.key = newk;
+	if(newk->entry.data) {
+		/* copy data element */
+		struct key_entry_data *d = (struct key_entry_data*)
+			kkey->entry.data;
+		struct key_entry_data *newd;
+		newd = region_alloc_init(region, d, sizeof(*d));
+		if(!newd)
+			return NULL;
+		/* copy rrset */
+		if(d->rrset_data) {
+			newd->rrset_data = region_alloc_init(region,
+				d->rrset_data, 
+				packed_rrset_sizeof(d->rrset_data));
+			if(!newd->rrset_data)
+				return NULL;
+			packed_rrset_ptr_fixup(newd->rrset_data);
+		}
+		newk->entry.data = newd;
+	}
+	return newk;
+}
+
+struct key_entry_key* 
+key_entry_copy(struct key_entry_key* kkey)
+{
+	struct key_entry_key* newk;
+	if(!kkey)
+		return NULL;
+	newk = memdup(kkey, sizeof(*kkey));
+	if(!newk)
+		return NULL;
+	newk->name = memdup(kkey->name, kkey->namelen);
+	if(!newk->name) {
+		free(newk);
+		return NULL;
+	}
+	lock_rw_init(&newk->entry.lock);
+	newk->entry.key = newk;
+	if(newk->entry.data) {
+		/* copy data element */
+		struct key_entry_data *d = (struct key_entry_data*)
+			kkey->entry.data;
+		struct key_entry_data *newd;
+		newd = memdup(d, sizeof(*d));
+		if(!newd) {
+			free(newk->name);
+			free(newk);
+			return NULL;
+		}
+		/* copy rrset */
+		if(d->rrset_data) {
+			newd->rrset_data = memdup(d->rrset_data, 
+				packed_rrset_sizeof(d->rrset_data));
+			if(!newd->rrset_data) {
+				free(newd);
+				free(newk->name);
+				free(newk);
+				return NULL;
+			}
+			packed_rrset_ptr_fixup(newd->rrset_data);
+		}
+		newk->entry.data = newd;
+	}
+	return newk;
 }

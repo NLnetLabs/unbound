@@ -42,6 +42,7 @@
 #ifndef VALIDATOR_VAL_KENTRY_H
 #define VALIDATOR_VAL_KENTRY_H
 struct packed_rrset_data;
+struct region;
 #include "util/storage/lruhash.h"
 
 /**
@@ -83,20 +84,36 @@ struct key_entry_data {
 };
 
 /** function for lruhash operation */
-size_t key_entry_sizefunc_t(void* key, void* data);
+size_t key_entry_sizefunc(void* key, void* data);
 
 /** function for lruhash operation */
-int key_entry_compfunc_t(void* k1, void* k2);
+int key_entry_compfunc(void* k1, void* k2);
 
 /** function for lruhash operation */
-void key_entry_delkeyfunc_t(void* key, void* userarg, int islocked);
+void key_entry_delkeyfunc(void* key, void* userarg, int islocked);
 
 /** function for lruhash operation */
-void key_entry_deldatafunc_t(void* data, void* userarg);
+void key_entry_deldatafunc(void* data, void* userarg);
 
 /** calculate hash for key entry 
  * @param kk: key entry. The lruhash entry.hash value is filled in.
  */
 void key_entry_hash(struct key_entry_key* kk);
+
+/**
+ * Copy a key entry, to be region-allocated.
+ * @param kkey: the key entry key (and data pointer) to copy.
+ * @param region: where to allocate it
+ * @return newly region-allocated entry or NULL on a failure to allocate.
+ */
+struct key_entry_key* key_entry_copy_toregion(struct key_entry_key* kkey, 
+	struct region* region);
+
+/**
+ * Copy a key entry, malloced.
+ * @param kkey: the key entry key (and data pointer) to copy.
+ * @return newly allocated entry or NULL on a failure to allocate memory.
+ */
+struct key_entry_key* key_entry_copy(struct key_entry_key* kkey);
 
 #endif /* VALIDATOR_VAL_KENTRY_H */

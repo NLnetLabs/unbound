@@ -42,6 +42,7 @@
 #include "config.h"
 #include "validator/validator.h"
 #include "validator/val_anchor.h"
+#include "validator/val_kcache.h"
 #include "services/cache/dns.h"
 #include "util/module.h"
 #include "util/log.h"
@@ -55,6 +56,12 @@ val_apply_cfg(struct val_env* val_env, struct config_file* cfg)
 	if(!val_env->anchors)
 		val_env->anchors = anchors_create();
 	if(!val_env->anchors) {
+		log_err("out of memory");
+		return 0;
+	}
+	if(!val_env->kcache)
+		val_env->kcache = key_cache_create(cfg);
+	if(!val_env->kcache) {
 		log_err("out of memory");
 		return 0;
 	}
@@ -92,6 +99,7 @@ val_deinit(struct module_env* env, int id)
 		return;
 	val_env = (struct val_env*)env->modinfo[id];
 	anchors_delete(val_env->anchors);
+	key_cache_delete(val_env->kcache);
 	free(val_env);
 }
 
