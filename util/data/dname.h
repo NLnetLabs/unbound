@@ -207,4 +207,19 @@ void dname_print(FILE* out, ldns_buffer* pkt, uint8_t* dname);
  */
 void dname_str(uint8_t* dname, char* str);
 
+/**
+ * Returns true if the uncompressed wireformat dname is the root "."
+ * @param dname: the dname to check
+ * @return true if ".", false if not.
+ */
+int dname_is_root(uint8_t* dname);
+
+/**
+ * Snip off first label from a dname, returning the parent zone.
+ * @param dname: from what to strip off. uncompressed wireformat.
+ * @param len: length, adjusted to become less.
+ * @return stripped off, or "." if input was ".".
+ */
+void dname_remove_label(uint8_t** dname, size_t* len);
+
 #endif /* UTIL_DATA_DNAME_H */

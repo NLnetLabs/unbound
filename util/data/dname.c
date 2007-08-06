@@ -571,3 +571,27 @@ dname_subdomain_c(uint8_t* d1, uint8_t* d2)
 	}
 	return (m == labs2);
 }
+
+int 
+dname_is_root(uint8_t* dname)
+{
+	uint8_t len;
+	log_assert(dname);
+	len = dname[0];
+	log_assert(!LABEL_IS_PTR(len));
+	return (len == 0);
+}
+
+void 
+dname_remove_label(uint8_t** dname, size_t* len)
+{
+	size_t lablen;
+	log_assert(dname && *dname && len);
+	lablen = (*dname)[0];
+	log_assert(!LABEL_IS_PTR(lablen));
+	log_assert(*len > lablen);
+	if(lablen == 0)
+		return; /* do not modify root label */
+	*len -= lablen+1;
+	*dname += lablen+1;
+}

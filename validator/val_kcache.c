@@ -43,6 +43,7 @@
 #include "validator/val_kentry.h"
 #include "util/log.h"
 #include "util/config_file.h"
+#include "util/data/dname.h"
 
 struct key_cache* 
 key_cache_create(struct config_file* cfg)
@@ -140,10 +141,9 @@ key_cache_obtain(struct key_cache* kcache, uint8_t* name, size_t namelen,
 			lock_rw_unlock(&k->entry.lock);
 		}
 		/* snip off first label to continue */
-		if(name[0] == 0 || namelen <= 1)
+		if(dname_is_root(name))
 			break;
-		namelen -= (size_t)name[0] + 1;
-		name += (size_t)name[0] + 1;
+		dname_remove_label(&name, &namelen);
 	}
 	return NULL;
 }

@@ -433,6 +433,36 @@ dname_test_strict_subdomain()
 		(uint8_t*)"\007example\003org", 3));
 }
 
+/** test dname_is_root */
+static void
+dname_test_isroot()
+{
+	unit_assert(dname_is_root((uint8_t*)"\000"));
+	unit_assert(!dname_is_root((uint8_t*)"\001a\000"));
+	unit_assert(!dname_is_root((uint8_t*)"\005abvcd\003com\000"));
+	/* malformed dname in this test, but should work */
+	unit_assert(!dname_is_root((uint8_t*)"\077a\000"));
+	unit_assert(dname_is_root((uint8_t*)"\000"));
+}
+
+/** test dname_remove_label */
+static void
+dname_test_removelabel()
+{
+	uint8_t* orig = (uint8_t*)"\007example\003com\000";
+	uint8_t* n = orig;
+	size_t l = 13;
+	dname_remove_label(&n, &l);
+	unit_assert( n == orig+8 );
+	unit_assert( l == 5 );
+	dname_remove_label(&n, &l);
+	unit_assert( n == orig+12 );
+	unit_assert( l == 1 );
+	dname_remove_label(&n, &l);
+	unit_assert( n == orig+12 );
+	unit_assert( l == 1 );
+}
+
 void dname_test()
 {
 	ldns_buffer* buff = ldns_buffer_new(65800);
@@ -446,5 +476,7 @@ void dname_test()
 	dname_test_pkt_dname_len(buff);
 	dname_test_strict_subdomain();
 	dname_test_subdomain();
+	dname_test_isroot();
+	dname_test_removelabel();
 	ldns_buffer_free(buff);
 }

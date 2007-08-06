@@ -1,5 +1,6 @@
 6 August 2007: Wouter
 	- key cache for validator.
+	- moved isroot and dellabel to own dname routines, with unit test.
 
 3 August 2007: Wouter
 	- replanning.

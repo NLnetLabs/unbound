@@ -643,11 +643,9 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 		delnamelen = iq->qchase.qname_len;
 	}
 	if((iq->qchase.qtype == LDNS_RR_TYPE_DS || iq->refetch_glue)
-		&& delname[0] != 0) {
+		&& !dname_is_root(delname)) {
 		/* do not adjust root label, remove first label from delname */
-		size_t lablen = delname[0] + 1;
-		delname += lablen;
-		delnamelen -= lablen;
+		dname_remove_label(&delname, &delnamelen);
 	}
 	
 	/* Lookup the delegation in the cache. If null, then the cache needs 
