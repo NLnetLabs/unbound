@@ -712,7 +712,8 @@ worker_init(struct worker* worker, struct config_file *cfg,
 	worker->env.attach_sub = &mesh_attach_sub;
 	worker->env.kill_sub = &mesh_state_delete;
 	worker->env.detect_cycle = &mesh_detect_cycle;
-	if(!worker->env.mesh) {
+	worker->env.scratch_buffer = ldns_buffer_new(65536);
+	if(!worker->env.mesh || !worker->env.scratch_buffer) {
 		worker_delete(worker);
 		return 0;
 	}
@@ -735,6 +736,7 @@ worker_delete(struct worker* worker)
 	server_stats_log(&worker->stats, worker->thread_num);
 	worker_mem_report(worker);
 	mesh_delete(worker->env.mesh);
+	ldns_buffer_free(worker->env.scratch_buffer);
 	listen_delete(worker->front);
 	outside_network_delete(worker->back);
 	comm_signal_delete(worker->comsig);

@@ -181,6 +181,8 @@ struct module_env {
 
 	/** region for temporary usage. May be cleared after operate() call. */
 	struct region* scratch;
+	/** buffer for temporary usage. May be cleared after operate() call. */
+	ldns_buffer* scratch_buffer;
 	/** internal data for daemon - worker thread. */
 	struct worker* worker;
 	/** mesh area with query state dependencies */

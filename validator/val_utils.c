@@ -208,7 +208,7 @@ verify_dnskeys_with_ds_rr(struct module_env* env, struct val_env* ve,
 	struct ub_packed_rrset_key* dnskey_rrset, 
         struct ub_packed_rrset_key* ds_rrset, size_t ds_idx)
 {
-	enum sec_status sec;
+	enum sec_status sec = sec_status_bogus;
 	size_t i, num;
 	num = rrset_get_count(dnskey_rrset);
 	for(i=0; i<num; i++) {
