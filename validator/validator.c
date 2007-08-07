@@ -181,14 +181,12 @@ needs_validation(struct module_qstate* qstate, struct val_qstate* vq)
 		return 0;
 	}
 
-	/* TODO: check if already validated */
-	/*
-	 *     if (response.getStatus() > SecurityStatus.BOGUS)
-	 *         {
-	 *               log.debug("response has already been validated");
-	 *                     return false;
-	 *                         }
-	 */
+	/* validate unchecked, and re-validate bogus messages */
+	if (vq->orig_msg->rep->security > sec_status_bogus)
+	{
+		verbose(VERB_ALGO, "response has already been validated");
+		return 0;
+	}
 
 	rcode = (int)FLAGS_GET_RCODE(vq->orig_msg->rep->flags);
 	if(rcode != LDNS_RCODE_NOERROR && rcode != LDNS_RCODE_NXDOMAIN) {

@@ -128,16 +128,21 @@ alloc_clear(struct alloc_cache* alloc)
 	alloc->num_quar = 0;
 }
 
-/** get a new id */
-static void
-alloc_get_id(struct alloc_cache* alloc, alloc_special_t* t)
+uint64_t
+alloc_get_id(struct alloc_cache* alloc)
 {
-	t->id = alloc->next_id++;
-	if(alloc->next_id == alloc->last_id) {
+	uint64_t id = alloc->next_id++;
+	if(id == alloc->last_id) {
 		/* TODO: clear the rrset cache */
 		log_warn("Out of ids. Clearing cache.");
+		/* start back at first number */   	/* like in alloc_init*/
+		alloc->next_id = (uint64_t)alloc->thread_num; 	
+		alloc->next_id <<= THRNUM_SHIFT; 	/* in steps for comp. */
+		alloc->next_id += 1;			/* portability. */
+		/* and generate new and safe id */
+		id = alloc->next_id++;
 	}
-	alloc_set_special_next(t, 0);
+	return id;
 }
 
 alloc_special_t* 
@@ -150,7 +155,7 @@ alloc_special_obtain(struct alloc_cache* alloc)
 		p = alloc->quar;
 		alloc->quar = alloc_special_next(p);
 		alloc->num_quar--;
-		alloc_get_id(alloc, p);
+		p->id = alloc_get_id(alloc);
 		return p;
 	}
 	/* see if in global cache */
@@ -164,7 +169,7 @@ alloc_special_obtain(struct alloc_cache* alloc)
 		}
 		lock_quick_unlock(&alloc->super->lock);
 		if(p) {
-			alloc_get_id(alloc, p);
+			p->id = alloc_get_id(alloc);
 			return p;
 		}
 	}
@@ -173,7 +178,7 @@ alloc_special_obtain(struct alloc_cache* alloc)
 	if(!(p = (alloc_special_t*)malloc(sizeof(alloc_special_t))))
 		fatal_exit("alloc_special_obtain: out of memory");
 	alloc_setup_special(p);
-	alloc_get_id(alloc, p);
+	p->id = alloc_get_id(alloc);
 	return p;
 }
 

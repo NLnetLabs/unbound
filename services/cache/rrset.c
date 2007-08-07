@@ -45,6 +45,7 @@
 #include "util/data/packed_rrset.h"
 #include "util/data/msgreply.h"
 #include "util/region-allocator.h"
+#include "util/alloc.h"
 
 struct rrset_cache* rrset_cache_create(struct config_file* cfg, 
 	struct alloc_cache* alloc)
@@ -110,7 +111,7 @@ rrset_cache_touch(struct rrset_cache* r, struct ub_packed_rrset_key* key,
 
 /** see if rrset needs to be updated in the cache */
 static int
-need_to_update_rrset(void* nd, void* cd, uint32_t timenow)
+need_to_update_rrset(void* nd, void* cd, uint32_t timenow, int equal)
 {
 	struct packed_rrset_data* newd = (struct packed_rrset_data*)nd;
 	struct packed_rrset_data* cached = (struct packed_rrset_data*)cd;
@@ -121,20 +122,36 @@ need_to_update_rrset(void* nd, void* cd, uint32_t timenow)
 	if( cached->ttl < timenow )
 		return 1;
         /*      o same trust, but different in data - insert it */
-        if( newd->trust == cached->trust &&
-                !rrsetdata_equal(newd, cached))
+        if( newd->trust == cached->trust && !equal )
                 return 1;
         /*      o see if TTL is better than TTL in cache. */
         /*        if so, see if rrset+rdata is the same */
         /*        if so, update TTL in cache, even if trust is worse. */
-        if( newd->ttl > cached->ttl &&
-                rrsetdata_equal(newd, cached)) {
+        if( newd->ttl > cached->ttl && equal ) {
 		/* since all else is the same, use the best trust value */
-		if(newd->trust < cached->trust)
+		if(newd->trust < cached->trust) {
 			newd->trust = cached->trust;
+			newd->security = cached->security;
+		}
                 return 1;
 	}
         return 0;
+}
+
+/** Update RRSet special key ID */
+static void
+rrset_update_id(struct rrset_ref* ref, struct alloc_cache* alloc)
+{
+	/* this may clear the cache and invalidate lock below */
+	uint64_t newid = alloc_get_id(alloc);
+	/* obtain writelock */
+	lock_rw_wrlock(&ref->key->entry.lock);
+	/* check if it was deleted in the meantime, if so, skip update */
+	if(ref->key->id == ref->id) {
+		ref->key->id = newid;
+		ref->id = newid;
+	}
+	lock_rw_unlock(&ref->key->entry.lock);
 }
 
 int 
@@ -144,6 +161,8 @@ rrset_cache_update(struct rrset_cache* r, struct rrset_ref* ref,
 	struct lruhash_entry* e;
 	struct ub_packed_rrset_key* k = ref->key;
 	hashvalue_t h = k->entry.hash;
+	uint16_t rrset_type = ntohs(k->rk.type);
+	int equal = 0;
 	/* looks up item with a readlock - no editing! */
 	if((e=slabhash_lookup(&r->table, h, k, 0)) != 0) {
 		/* return id and key as they will be used in the cache
@@ -155,7 +174,10 @@ rrset_cache_update(struct rrset_cache* r, struct rrset_ref* ref,
 		 */
 		ref->key = (struct ub_packed_rrset_key*)e->key;
 		ref->id = ref->key->id;
-		if(!need_to_update_rrset(k->entry.data, e->data, timenow)) {
+		equal = rrsetdata_equal((struct packed_rrset_data*)k->entry.
+			data, (struct packed_rrset_data*)e->data);
+		if(!need_to_update_rrset(k->entry.data, e->data, timenow,
+			equal)) {
 			/* cache is superior, return that value */
 			lock_rw_unlock(&e->lock);
 			ub_packed_rrset_parsedelete(k, alloc);
@@ -171,8 +193,17 @@ rrset_cache_update(struct rrset_cache* r, struct rrset_ref* ref,
 		 * cache size values nicely. */
 	}
 	slabhash_insert(&r->table, h, &k->entry, k->entry.data, alloc);
-	if(e)
+	if(e) {
+		/* For NSEC, NSEC3, DNAME, when rdata is updated, update 
+		 * the ID number so that proofs in message cache are 
+		 * invalidated */
+		if((rrset_type == LDNS_RR_TYPE_NSEC 
+			|| rrset_type == LDNS_RR_TYPE_NSEC3
+			|| rrset_type == LDNS_RR_TYPE_DNAME) && !equal) {
+			rrset_update_id(ref, alloc);
+		}
 		return 1;
+	}
 	return 0;
 }
 

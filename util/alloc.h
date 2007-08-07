@@ -120,6 +120,14 @@ alloc_special_t* alloc_special_obtain(struct alloc_cache* alloc);
 void alloc_special_release(struct alloc_cache* alloc, alloc_special_t* mem);
 
 /**
+ * Set ID number of special type to a fresh new ID number.
+ * In case of ID number overflow, the rrset cache has to be cleared.
+ * @param alloc: the alloc cache
+ * @return: fresh id is returned.
+ */
+uint64_t alloc_get_id(struct alloc_cache* alloc);
+
+/**
  * Get memory size of alloc cache, alloc structure including special types.
  * @param alloc: on what alloc.
  * @return size in bytes.
