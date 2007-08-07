@@ -40,6 +40,7 @@
  */
 #include "config.h"
 #include "validator/val_utils.h"
+#include "validator/val_kentry.h"
 #include "util/data/msgreply.h"
 #include "util/data/packed_rrset.h"
 #include "util/data/dname.h"
@@ -171,4 +172,136 @@ val_find_signer(struct query_info* qinf, struct reply_info* rep,
 		*signer_name = NULL;
 		*signer_len = 0;
 	}
+}
+
+/** return number of rrs in an rrset */
+static size_t
+rrset_get_count(struct ub_packed_rrset_key* rrset)
+{
+	struct packed_rrset_data* d = (struct packed_rrset_data*)
+		rrset->entry.data;
+	if(!d) return 0;
+	return d->count;
+}
+
+/** return TTL of rrset */
+static uint32_t
+rrset_get_ttl(struct ub_packed_rrset_key* rrset)
+{
+	struct packed_rrset_data* d = (struct packed_rrset_data*)
+		rrset->entry.data;
+	if(!d) return 0;
+	return d->ttl;
+}
+
+enum sec_status 
+val_verify_rrset(struct module_env* env, struct val_env* ve,
+        struct ub_packed_rrset_key* rrset, struct ub_packed_rrset_key* keys)
+{
+
+	return sec_status_bogus;
+}
+
+/** verify that a DS RR hashes to a key and that key signs the set */
+static enum sec_status
+verify_dnskeys_with_ds_rr(struct module_env* env, struct val_env* ve, 
+	struct ub_packed_rrset_key* dnskey_rrset, 
+        struct ub_packed_rrset_key* ds_rrset, size_t ds_idx)
+{
+	enum sec_status sec;
+	size_t i, num;
+	num = rrset_get_count(dnskey_rrset);
+	for(i=0; i<num; i++) {
+		/* Skip DNSKEYs that don't match the basic criteria. */
+		/* if (ds.getFootprint() != dnskey.getFootprint()
+		 *             || ds.getAlgorithm() != dnskey.getAlgorithm())
+		 *                     {
+		 *                               continue;
+		 *                                       }
+		 */
+
+		/* Convert the candidate DNSKEY into a hash using the 
+		 * same DS hash algorithm. */
+		/* byte[] key_hash = calculateDSHash(dnskey, ds.getDigestID());
+		 *         byte[] ds_hash = ds.getDigest() */
+
+		/* if length or contents of the hash mismatch; continue */
+
+		/* Otherwise, we have a match! Make sure that the DNSKEY 
+		 * verifies *with this key*  */
+		/*
+		sec = verify_rrset_key(env, ve, dnskey_rrset, dnskey_rrset, i);
+		*/
+		if(sec == sec_status_secure) {
+			return sec;
+		}
+		/* If it didn't validate with the DNSKEY, try the next one! */
+	}
+	return sec_status_bogus;
+}
+
+struct key_entry_key* 
+val_verify_new_DNSKEYs(struct region* region, struct module_env* env, 
+	struct val_env* ve, struct ub_packed_rrset_key* dnskey_rrset, 
+	struct ub_packed_rrset_key* ds_rrset)
+{
+	/* as long as this is false, we can consider this DS rrset to be
+	 * equivalent to no DS rrset. */
+	int has_useful_ds = 0;
+	size_t i, num;
+	enum sec_status sec;
+
+	if(dnskey_rrset->rk.dname_len != ds_rrset->rk.dname_len ||
+		query_dname_compare(dnskey_rrset->rk.dname, ds_rrset->rk.dname)
+		!= 0) {
+		verbose(VERB_ALGO, "DNSKEY RRset did not match DS RRset "
+			"by name");
+		return key_entry_create_bad(region, ds_rrset->rk.dname,
+			ds_rrset->rk.dname_len, 
+			ntohs(ds_rrset->rk.rrset_class));
+	}
+
+	num = rrset_get_count(ds_rrset);
+	for(i=0; i<num; i++) {
+
+		/* Check to see if we can understand this DS. */
+		/* if (!supportsDigestID(ds.getDigestID())
+		 *           || !mVerifier.supportsAlgorithm(ds.getAlgorithm()))
+		 *                 {
+		 *                         continue;
+		 *                               }
+		 */
+
+		/* Once we see a single DS with a known digestID and 
+		 * algorithm, we cannot return INSECURE (with a 
+		 * "null" KeyEntry). */
+		has_useful_ds = true;
+
+		sec = verify_dnskeys_with_ds_rr(env, ve, dnskey_rrset, 
+			ds_rrset, i);
+		if(sec == sec_status_secure) {
+			verbose(VERB_ALGO, "DS matched DNSKEY.");
+			/* TODO -- cannot, wrong region for prime */
+			/* update dnskey RRset status as secure */
+			return key_entry_create_rrset(region, 
+				ds_rrset->rk.dname, ds_rrset->rk.dname_len,
+				ntohs(ds_rrset->rk.rrset_class), dnskey_rrset);
+		}
+	}
+
+	/* None of the DS's worked out. */
+
+	/* If no DSs were understandable, then this is OK. */
+	if(!has_useful_ds) {
+		verbose(VERB_ALGO, "No usable DS records were found -- "
+			"treating as insecure.");
+		return key_entry_create_null(region, ds_rrset->rk.dname,
+			ds_rrset->rk.dname_len, 
+			ntohs(ds_rrset->rk.rrset_class),
+			rrset_get_ttl(ds_rrset));
+	}
+	/* If any were understandable, then it is bad. */
+	verbose(VERB_ALGO, "Failed to match any usable DS to a DNSKEY.");
+	return key_entry_create_bad(region, ds_rrset->rk.dname,
+		ds_rrset->rk.dname_len, ntohs(ds_rrset->rk.rrset_class));
 }

@@ -43,6 +43,11 @@
 #define VALIDATOR_VAL_UTILS_H
 struct query_info;
 struct reply_info;
+struct val_env;
+struct module_env;
+struct ub_packed_rrset_key;
+struct region;
+enum sec_status;
 
 /**
  * Response classifications for the validator. The different types of proofs.
@@ -86,5 +91,40 @@ enum val_classification val_classify_response(struct query_info* qinf,
  */
 void val_find_signer(struct query_info* qinf, struct reply_info* rep,
 	uint8_t** signer_name, size_t* signer_len);
+
+/**
+ * Verify RRset with keys
+ * @param env: module environment (scratch buffer)
+ * @param ve: validator environment (verification settings)
+ * @param rrset: what to verify
+ * @param keys: dnskey rrset to verify with.
+ * @return security status of verification.
+ */
+enum sec_status val_verify_rrset(struct module_env* env, struct val_env* ve,
+	struct ub_packed_rrset_key* rrset, struct ub_packed_rrset_key* keys);
+
+/**
+ * Verify new DNSKEYs with DS rrset. The DS contains hash values that should
+ * match the DNSKEY keys.
+ * match the DS to a DNSKEY and verify the DNSKEY rrset with that key.
+ *
+ * @param region: where to allocate key entry result.
+ * @param env: module environment (scratch buffer)
+ * @param ve: validator environment (verification settings)
+ * @param dnskey_rrset: DNSKEY rrset to verify
+ * @param ds_rrset: DS rrset to verify with.
+ * @return a KeyEntry. This will either contain the now trusted
+ *         dnskey_rrset, a "null" key entry indicating that this DS
+ *         rrset/DNSKEY pair indicate an secure end to the island of trust
+ *         (i.e., unknown algorithms), or a "bad" KeyEntry if the dnskey
+ *         rrset fails to verify. Note that the "null" response should
+ *         generally only occur in a private algorithm scenario: normally
+ *         this sort of thing is checked before fetching the matching DNSKEY
+ *         rrset.
+ */
+struct key_entry_key* val_verify_new_DNSKEYs(struct region* region, 
+	struct module_env* env, struct val_env* ve, 
+	struct ub_packed_rrset_key* dnskey_rrset, 
+	struct ub_packed_rrset_key* ds_rrset);
 
 #endif /* VALIDATOR_VAL_UTILS_H */

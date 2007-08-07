@@ -184,3 +184,93 @@ key_entry_isnull(struct key_entry_key* kkey)
 	struct key_entry_data* d = (struct key_entry_data*)kkey->entry.data;
 	return (!d->isbad && d->rrset_data == NULL);
 }
+
+int 
+key_entry_isgood(struct key_entry_key* kkey)
+{
+	struct key_entry_data* d = (struct key_entry_data*)kkey->entry.data;
+	return (!d->isbad && d->rrset_data != NULL);
+}
+
+int 
+key_entry_isbad(struct key_entry_key* kkey)
+{
+	struct key_entry_data* d = (struct key_entry_data*)kkey->entry.data;
+	return (int)(d->isbad);
+}
+
+/** setup key entry in region */
+static int
+key_entry_setup(struct region* region,
+	uint8_t* name, size_t namelen, uint16_t dclass, 
+	struct key_entry_key** k, struct key_entry_data** d)
+{
+	*k = region_alloc(region, sizeof(**k));
+	if(!*k)
+		return 0;
+	memset(*k, 0, sizeof(**k));
+	(*k)->entry.key = *k;
+	(*k)->name = region_alloc_init(region, name, namelen);
+	if(!(*k)->name)
+		return 0;
+	(*k)->namelen = namelen;
+	(*k)->key_class = dclass;
+	*d = region_alloc(region, sizeof(**d));
+	if(!*d)
+		return 0;
+	(*k)->entry.data = d;
+	return 1;
+}
+
+struct key_entry_key* 
+key_entry_create_null(struct region* region,
+	uint8_t* name, size_t namelen, uint16_t dclass, uint32_t ttl)
+{
+	struct key_entry_key* k;
+	struct key_entry_data* d;
+	if(!key_entry_setup(region, name, namelen, dclass, &k, &d))
+		return NULL;
+	d->ttl = ttl;
+	d->isbad = 0;
+	d->rrset_type = LDNS_RR_TYPE_DNSKEY;
+	d->rrset_data = NULL;
+	return k;
+}
+
+struct key_entry_key* 
+key_entry_create_rrset(struct region* region,
+	uint8_t* name, size_t namelen, uint16_t dclass,
+	struct ub_packed_rrset_key* rrset)
+{
+	struct key_entry_key* k;
+	struct key_entry_data* d;
+	struct packed_rrset_data* rd = (struct packed_rrset_data*)
+		rrset->entry.data;
+	if(!key_entry_setup(region, name, namelen, dclass, &k, &d))
+		return NULL;
+	d->ttl = rd->ttl;
+	log_info("New key entry TTL is %d", (int)d->ttl);
+	d->isbad = 0;
+	d->rrset_type = ntohs(rrset->rk.type);
+	d->rrset_data = (struct packed_rrset_data*)region_alloc_init(region,
+		rd, packed_rrset_sizeof(rd));
+	if(!d->rrset_data)
+		return NULL;
+	packed_rrset_ptr_fixup(d->rrset_data);
+	return k;
+}
+
+struct key_entry_key* 
+key_entry_create_bad(struct region* region,
+	uint8_t* name, size_t namelen, uint16_t dclass)
+{
+	struct key_entry_key* k;
+	struct key_entry_data* d;
+	if(!key_entry_setup(region, name, namelen, dclass, &k, &d))
+		return NULL;
+	d->ttl = 0;
+	d->isbad = 1;
+	d->rrset_type = LDNS_RR_TYPE_DNSKEY;
+	d->rrset_data = NULL;
+	return k;
+}

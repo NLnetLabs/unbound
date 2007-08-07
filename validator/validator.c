@@ -298,9 +298,7 @@ processInit(struct module_qstate* qstate, struct val_qstate* vq,
 		/* response is under a null key, so we cannot validate
 		 * However, we do set the status to INSECURE, since it is 
 		 * essentially proven insecure. */
-		/* TODO
-		vq->security_state = SEC_INSECURE;
-		*/
+		vq->chase_reply->security = sec_status_insecure;
 		vq->state = vq->final_state;
 		return 1;
 	}
@@ -414,17 +412,75 @@ static struct key_entry_key*
 primeResponseToKE(int rcode, struct dns_msg* msg, struct trust_anchor* ta,
 	struct module_qstate* qstate, int id)
 {
+	struct val_env* ve = (struct val_env*)qstate->env->modinfo[id];
 	struct ub_packed_rrset_key* dnskey_rrset = NULL;
+	struct key_entry_key* kkey = NULL;
+	enum sec_status sec = sec_status_unchecked;
+
 	if(rcode == LDNS_RCODE_NOERROR) {
-		dnskey_rrset = 0/*find answer */;
+		dnskey_rrset = reply_find_rrset_section_an(msg->rep,
+			ta->name, ta->namelen, LDNS_RR_TYPE_DNSKEY,
+			ta->dclass);
 	}
 	if(!dnskey_rrset) {
 		log_query_info(VERB_ALGO, "failed to prime trust anchor -- "
 			"could not fetch DNSKEY rrset", &msg->qinfo);
-		/* create NULL key with NULL_KEY_TTL, store in cache. */
-		return NULL;
+		kkey = key_entry_create_null(qstate->region, ta->name,
+			ta->namelen, ta->dclass, time(0)+NULL_KEY_TTL);
+		if(!kkey) {
+			log_err("out of memory: allocate null prime key");
+			return NULL;
+		}
+		key_cache_insert(ve->kcache, kkey);
+		return kkey;
 	}
-	return NULL;
+	/* attempt to verify with trust anchor DS and DNSKEY */
+	if(ta->ds_rrset) {
+		kkey = val_verify_new_DNSKEYs(qstate->region, qstate->env, ve, 
+			dnskey_rrset, ta->ds_rrset);
+		if(!kkey) {
+			log_err("out of memory: verifying prime DS");
+			return NULL;
+		}
+		if(key_entry_isgood(kkey))
+			sec = sec_status_secure;
+		else
+			sec = sec_status_bogus;
+	}
+	if(sec != sec_status_secure && ta->dnskey_rrset) {
+		sec = val_verify_rrset(qstate->env, ve, dnskey_rrset,
+			ta->dnskey_rrset);
+		if(sec == sec_status_secure) {
+			kkey = key_entry_create_rrset(qstate->region, 
+				ta->name, ta->namelen, ta->dclass, 
+				dnskey_rrset);
+			if(!kkey) {
+				log_err("out of memory: allocate primed key");
+				return NULL;
+			}
+		}
+	}
+
+	if(sec != sec_status_secure) {
+		log_query_info(VERB_ALGO, "failed to prime trust anchor -- "
+			"could not fetch DNSKEY rrset", &msg->qinfo);
+		/* NOTE: in this case, we should probably reject the trust 
+		 * anchor for longer, perhaps forever. */
+		kkey = key_entry_create_null(qstate->region, ta->name,
+			ta->namelen, ta->dclass, time(0)+NULL_KEY_TTL);
+		if(!kkey) {
+			log_err("out of memory: allocate null prime key");
+			return NULL;
+		}
+		key_cache_insert(ve->kcache, kkey);
+		return kkey;
+	}
+
+	log_query_info(VERB_ALGO, "Successfully primed trust anchor", 
+		&msg->qinfo);
+	/* store the freshly primed entry in the cache */
+	key_cache_insert(ve->kcache, kkey);
+	return kkey;
 }
 
 /**

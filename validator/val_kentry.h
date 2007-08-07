@@ -43,6 +43,7 @@
 #define VALIDATOR_VAL_KENTRY_H
 struct packed_rrset_data;
 struct region;
+struct ub_packed_rrset_key;
 #include "util/storage/lruhash.h"
 
 /**
@@ -122,5 +123,55 @@ struct key_entry_key* key_entry_copy(struct key_entry_key* kkey);
  * @return true if it is a NULL rrset entry.
  */
 int key_entry_isnull(struct key_entry_key* kkey);
+
+/**
+ * See if this entry is good. Does not do locking.
+ * @param kkey: must have data pointer set correctly
+ * @return true if it is good.
+ */
+int key_entry_isgood(struct key_entry_key* kkey);
+
+/**
+ * See if this entry is bad. Does not do locking.
+ * @param kkey: must have data pointer set correctly
+ * @return true if it is bad.
+ */
+int key_entry_isbad(struct key_entry_key* kkey);
+
+/**
+ * Create a null entry, in the given region.
+ * @param region: where to allocate
+ * @param name: the key name
+ * @param namelen: length of name
+ * @param dclass: class of key entry.
+ * @param ttl: what ttl should the key have.
+ * @return new key entry or NULL on alloc failure
+ */
+struct key_entry_key* key_entry_create_null(struct region* region,
+	uint8_t* name, size_t namelen, uint16_t dclass, uint32_t ttl);
+
+/**
+ * Create a key entry from an rrset, in the given region.
+ * @param region: where to allocate.
+ * @param name: the key name
+ * @param namelen: length of name
+ * @param dclass: class of key entry.
+ * @param rrset: data for key entry. This is copied to the region.
+ * @return new key entry or NULL on alloc failure
+ */
+struct key_entry_key* key_entry_create_rrset(struct region* region,
+        uint8_t* name, size_t namelen, uint16_t dclass, 
+	struct ub_packed_rrset_key* rrset);
+
+/**
+ * Create a bad entry, in the given region.
+ * @param region: where to allocate
+ * @param name: the key name
+ * @param namelen: length of name
+ * @param dclass: class of key entry.
+ * @return new key entry or NULL on alloc failure
+ */
+struct key_entry_key* key_entry_create_bad(struct region* region,
+	uint8_t* name, size_t namelen, uint16_t dclass);
 
 #endif /* VALIDATOR_VAL_KENTRY_H */

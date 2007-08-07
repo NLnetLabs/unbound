@@ -322,6 +322,18 @@ struct ub_packed_rrset_key* reply_find_answer_rrset(struct query_info* qinfo,
 	struct reply_info* rep);
 
 /**
+ * Find rrset in reply, inside the answer section. Does not follow CNAMEs.
+ * @param rep: looks in answer section of this message.
+ * @param name: what to look for.
+ * @param namelen: length of name.
+ * @param type: looks for (host order).
+ * @param dclass: looks for (host order).
+ * @return: pointer to rrset, or NULL if not found.
+ */
+struct ub_packed_rrset_key* reply_find_rrset_section_an(struct reply_info* rep,
+	uint8_t* name, size_t namelen, uint16_t type, uint16_t dclass);
+
+/**
  * Debug send the query info and reply info to the log in readable form.
  * @param str: descriptive string printed with packet content.
  * @param qinfo: query section.

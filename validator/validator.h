@@ -50,6 +50,12 @@ struct key_cache;
 struct key_entry_key;
 
 /**
+ * This is the TTL to use when a trust anchor fails to prime. A trust anchor
+ * will be primed no more often than this interval.
+ */
+#define NULL_KEY_TTL	900 /* seconds */
+
+/**
  * Global state for the validator. 
  */
 struct val_env {

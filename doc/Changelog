@@ -3,6 +3,7 @@
 	- security status is copied when rdata is equal for rrsets.
 	- rrset id is updated to invalidate all the message cache entries
 	  that refer to NSEC, NSEC3, DNAME rrsets that have changed.
+	- val_util work
 
 6 August 2007: Wouter
 	- key cache for validator.
