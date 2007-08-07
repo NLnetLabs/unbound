@@ -73,7 +73,8 @@ parse_create_qinfo(ldns_buffer* pkt, struct msg_parse* msg,
 /** constructor for replyinfo */
 static struct reply_info*
 construct_reply_info_base(struct region* region, uint16_t flags, size_t qd,
-	uint32_t ttl, size_t an, size_t ns, size_t ar, size_t total)
+	uint32_t ttl, size_t an, size_t ns, size_t ar, size_t total,
+	enum sec_status sec)
 {
 	struct reply_info* rep;
 	/* rrset_count-1 because the first ref is part of the struct. */
@@ -92,6 +93,7 @@ construct_reply_info_base(struct region* region, uint16_t flags, size_t qd,
 	rep->ns_numrrsets = ns;
 	rep->ar_numrrsets = ar;
 	rep->rrset_count = total;
+	rep->security = sec;
 	/* array starts after the refs */
 	if(region)
 		rep->rrsets = (struct ub_packed_rrset_key**)&(rep->ref[0]);
@@ -110,7 +112,7 @@ parse_create_repinfo(struct msg_parse* msg, struct reply_info** rep,
 {
 	*rep = construct_reply_info_base(region, msg->flags, msg->qdcount, 0,
 		msg->an_rrsets, msg->ns_rrsets, msg->ar_rrsets, 
-		msg->rrset_count);
+		msg->rrset_count, sec_status_unchecked);
 	if(!*rep)
 		return 0;
 	return 1;
@@ -229,6 +231,7 @@ parse_rr_copy(ldns_buffer* pkt, struct rrset_parse* pset,
 	data->count = pset->rr_count;
 	data->rrsig_count = pset->rrsig_count;
 	data->trust = rrset_trust_none;
+	data->security = sec_status_unchecked;
 	/* layout: struct - rr_len - rr_data - rr_ttl - rdata - rrsig */
 	data->rr_len = (size_t*)((uint8_t*)data + 
 		sizeof(struct packed_rrset_data));
@@ -345,6 +348,7 @@ parse_copy_decompress(ldns_buffer* pkt, struct msg_parse* msg,
 	struct packed_rrset_data* data;
 	log_assert(rep);
 	rep->ttl = MAX_TTL;
+	rep->security = sec_status_unchecked;
 	if(rep->rrset_count == 0)
 		rep->ttl = NORR_TTL;
 
@@ -623,7 +627,7 @@ reply_info_copy(struct reply_info* rep, struct alloc_cache* alloc,
 	struct reply_info* cp;
 	cp = construct_reply_info_base(region, rep->flags, rep->qdcount, 
 		rep->ttl, rep->an_numrrsets, rep->ns_numrrsets, 
-		rep->ar_numrrsets, rep->rrset_count);
+		rep->ar_numrrsets, rep->rrset_count, rep->security);
 	if(!cp)
 		return NULL;
 	/* allocate ub_key structures special or not */

@@ -1,3 +1,6 @@
+7 August 2007: Wouter
+	- security status type.
+
 6 August 2007: Wouter
 	- key cache for validator.
 	- moved isroot and dellabel to own dname routines, with unit test.

@@ -223,3 +223,37 @@ packed_rrset_ttl_add(struct packed_rrset_data* data, uint32_t add)
 	for(i=0; i<total; i++)
 		data->rr_ttl[i] += add;
 }
+
+const char* 
+rrset_trust_to_string(enum rrset_trust s)
+{
+	switch(s) {
+	case rrset_trust_none: 		return "rrset_trust_none";
+	case rrset_trust_add_noAA: 	return "rrset_trust_add_noAA";
+	case rrset_trust_auth_noAA: 	return "rrset_trust_auth_noAA";
+	case rrset_trust_add_AA: 	return "rrset_trust_add_AA";
+	case rrset_trust_nonauth_ans_AA:return "rrset_trust_nonauth_ans_AA";
+	case rrset_trust_ans_noAA: 	return "rrset_trust_ans_noAA";
+	case rrset_trust_glue: 		return "rrset_trust_glue";
+	case rrset_trust_auth_AA: 	return "rrset_trust_auth_AA";
+	case rrset_trust_ans_AA: 	return "rrset_trust_ans_AA";
+	case rrset_trust_sec_noglue: 	return "rrset_trust_sec_noglue";
+	case rrset_trust_prim_noglue: 	return "rrset_trust_prim_noglue";
+	case rrset_trust_validated: 	return "rrset_trust_validated";
+	case rrset_trust_ultimate: 	return "rrset_trust_ultimate";
+	}
+	return "unknown_rrset_trust_value";
+}
+
+const char* 
+sec_status_to_string(enum sec_status s)
+{
+	switch(s) {
+	case sec_status_unchecked: 	return "sec_status_unchecked";
+	case sec_status_bogus: 		return "sec_status_bogus";
+	case sec_status_indeterminate: 	return "sec_status_indeterminate";
+	case sec_status_insecure: 	return "sec_status_insecure";
+	case sec_status_secure: 	return "sec_status_secure";
+	}
+	return "unknown_sec_status_value";
+}

@@ -110,6 +110,11 @@ struct reply_info {
 	uint32_t ttl;
 
 	/**
+	 * The security status from DNSSEC validation of this message.
+	 */
+	enum sec_status security;
+
+	/**
 	 * Number of RRsets in each section.
 	 * The answer section. Add up the RRs in every RRset to calculate
 	 * the number of RRs, and the count for the dns packet. 

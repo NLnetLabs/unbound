@@ -150,6 +150,28 @@ enum rrset_trust {
 };
 
 /**
+ * Security status from validation for data.
+ */
+enum sec_status {
+	/** UNCHECKED means that object has yet to be validated. */
+	sec_status_unchecked = 0,
+	/** BOGUS means that the object (RRset or message) failed to validate
+	 *  (according to local policy), but should have validated. */
+	sec_status_bogus,
+	/** INDETERMINATE means that the object is insecure, but not 
+	 * authoritatively so. Generally this means that the RRset is not 
+	 * below a configured trust anchor. */
+	sec_status_indeterminate,
+	/** INSECURE means that the object is authoritatively known to be 
+	 * insecure. Generally this means that this RRset is below a trust 
+	 * anchor, but also below a verified, insecure delegation. */
+	sec_status_insecure,
+	/** SECURE means that the object (RRset or message) validated 
+	 * according to local policy. */
+	sec_status_secure
+};
+
+/**
  * RRset data.
  *
  * The data is packed, stored contiguously in memory.
@@ -189,6 +211,8 @@ struct packed_rrset_data {
 	size_t rrsig_count;
 	/** the trustworthiness of the rrset data */
 	enum rrset_trust trust; 
+	/** security status of the rrset data */
+	enum sec_status security;
 	/** length of every rr's rdata, rr_len[i] is size of rr_data[i]. */
 	size_t* rr_len;
 	/** ttl of every rr. rr_ttl[i] ttl of rr i. */
@@ -317,5 +341,19 @@ void packed_rrset_ttl_add(struct packed_rrset_data* data, uint32_t add);
  */
 void get_cname_target(struct ub_packed_rrset_key* rrset, uint8_t** dname, 
 	size_t* dname_len);
+
+/**
+ * Get a printable string for a rrset trust value 
+ * @param s: rrset trust value
+ * @return printable string.
+ */
+const char* rrset_trust_to_string(enum rrset_trust s);
+
+/**
+ * Get a printable string for a security status value 
+ * @param s: security status
+ * @return printable string.
+ */
+const char* sec_status_to_string(enum sec_status s);
 
 #endif /* UTIL_DATA_PACKED_RRSET_H */
