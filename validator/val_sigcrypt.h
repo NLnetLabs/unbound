@@ -45,16 +45,47 @@
 #define VALIDATOR_VAL_SIGCRYPT_H
 struct val_env;
 struct module_env;
+struct ub_packed_rrset_key;
 
-/** create DS digest for a dnskey */
+/** 
+ * Check if dnskey matches a DS digest 
+ * Does not check dnskey-keyid footprint, just the digest.
+ * @param env: module environment. Uses scratch space.
+ * @param dnskey_rrset: DNSKEY rrset.
+ * @param dnskey_idx: index of RR in rrset.
+ * @param ds_rrset: DS rrset
+ * @param ds_idx: index of RR in DS rrset.
+ * @return true if it matches, false on error, not supported or no match.
+ */
+int ds_digest_match_dnskey(struct module_env* env,
+	struct ub_packed_rrset_key* dnskey_rrset, size_t dnskey_idx,
+	struct ub_packed_rrset_key* ds_rrset, size_t ds_idx);
 
-/** check dnskey matches a DS digest */
+/** 
+ * Get dnskey keytag, footprint value
+ * @param dnskey_rrset: DNSKEY rrset.
+ * @param dnskey_idx: index of RR in rrset.
+ * @return the keytag or 0 for badly formatted DNSKEYs.
+ */
+uint16_t dnskey_calc_keytag(struct ub_packed_rrset_key* dnskey_rrset, 
+	size_t dnskey_idx);
 
-/** get dnskey id, footprint value */
+/** 
+ * See if DNSKEY algorithm is supported 
+ * @param dnskey_rrset: DNSKEY rrset.
+ * @param dnskey_idx: index of RR in rrset.
+ * @return true if supported.
+ */
+int dnskey_algo_is_supported(struct ub_packed_rrset_key* dnskey_rrset, 
+	size_t dnskey_idx);
 
-/** see if DNSKEY algorithm is supported */
-
-/** see if DS algorithm is supported */
+/** 
+ * See if DS algorithm is supported 
+ * @param ds_rrset: DS rrset
+ * @param ds_idx: index of RR in DS rrset.
+ * @return true if supported.
+ */
+int ds_algo_is_supported(struct ub_packed_rrset_key* ds_rrset, size_t ds_idx);
 
 /** verify rrset against dnskey rrset. */
 
