@@ -41,6 +41,7 @@
 #include "config.h"
 #include "validator/val_utils.h"
 #include "validator/val_kentry.h"
+#include "validator/val_sigcrypt.h"
 #include "util/data/msgreply.h"
 #include "util/data/packed_rrset.h"
 #include "util/data/dname.h"
@@ -213,19 +214,19 @@ verify_dnskeys_with_ds_rr(struct module_env* env, struct val_env* ve,
 	num = rrset_get_count(dnskey_rrset);
 	for(i=0; i<num; i++) {
 		/* Skip DNSKEYs that don't match the basic criteria. */
-		/* if (ds.getFootprint() != dnskey.getFootprint()
-		 *             || ds.getAlgorithm() != dnskey.getAlgorithm())
-		 *                     {
-		 *                               continue;
-		 *                                       }
-		 */
+		if(ds_get_key_algo(ds_rrset, ds_idx) 
+		   != dnskey_get_algo(dnskey_rrset, i)
+		   || dnskey_calc_keytag(dnskey_rrset, i)
+		   != ds_get_keytag(ds_rrset, ds_idx)) {
+			continue;
+		}
 
 		/* Convert the candidate DNSKEY into a hash using the 
 		 * same DS hash algorithm. */
-		/* byte[] key_hash = calculateDSHash(dnskey, ds.getDigestID());
-		 *         byte[] ds_hash = ds.getDigest() */
-
-		/* if length or contents of the hash mismatch; continue */
+		if(!ds_digest_match_dnskey(env, dnskey_rrset, i, ds_rrset, 
+			ds_idx)) {
+			continue;
+		}
 
 		/* Otherwise, we have a match! Make sure that the DNSKEY 
 		 * verifies *with this key*  */
@@ -263,14 +264,11 @@ val_verify_new_DNSKEYs(struct region* region, struct module_env* env,
 
 	num = rrset_get_count(ds_rrset);
 	for(i=0; i<num; i++) {
-
 		/* Check to see if we can understand this DS. */
-		/* if (!supportsDigestID(ds.getDigestID())
-		 *           || !mVerifier.supportsAlgorithm(ds.getAlgorithm()))
-		 *                 {
-		 *                         continue;
-		 *                               }
-		 */
+		if(!ds_digest_algo_is_supported(ds_rrset, i) ||
+			!ds_key_algo_is_supported(ds_rrset, i)) {
+			continue;
+		}
 
 		/* Once we see a single DS with a known digestID and 
 		 * algorithm, we cannot return INSECURE (with a 

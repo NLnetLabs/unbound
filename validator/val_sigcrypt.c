@@ -62,13 +62,7 @@ rrset_get_rdata(struct ub_packed_rrset_key* k, size_t idx, uint8_t** rdata,
 	*len = d->rr_len[idx];
 }
 
-/**
- * Get DNSKEY RR signature algorithm
- * @param k: DNSKEY rrset.
- * @param idx: which DNSKEY RR.
- * @return algorithm or 0 if DNSKEY too short.
- */
-static int
+int
 dnskey_get_algo(struct ub_packed_rrset_key* k, size_t idx)
 {
 	uint8_t* rdata;
@@ -77,6 +71,17 @@ dnskey_get_algo(struct ub_packed_rrset_key* k, size_t idx)
 	if(len < 2+4)
 		return 0;
 	return (int)rdata[2+3];
+}
+
+int
+ds_get_key_algo(struct ub_packed_rrset_key* k, size_t idx)
+{
+	uint8_t* rdata;
+	size_t len;
+	rrset_get_rdata(k, idx, &rdata, &len);
+	if(len < 2+3)
+		return 0;
+	return (int)rdata[2+2];
 }
 
 /**
@@ -94,6 +99,19 @@ ds_get_digest_algo(struct ub_packed_rrset_key* k, size_t idx)
 	if(len < 2+4)
 		return 0;
 	return (int)rdata[2+3];
+}
+
+uint16_t 
+ds_get_keytag(struct ub_packed_rrset_key* ds_rrset, size_t ds_idx)
+{
+	uint16_t t;
+	uint8_t* rdata;
+	size_t len;
+	rrset_get_rdata(ds_rrset, ds_idx, &rdata, &len);
+	if(len < 2+2)
+		return 0;
+	memmove(&t, rdata+2, 2);
+	return t;
 }
 
 /**
@@ -222,9 +240,33 @@ int ds_digest_match_dnskey(struct module_env* env,
 }
 
 int 
-ds_algo_is_supported(struct ub_packed_rrset_key* ds_rrset, size_t ds_idx)
+ds_digest_algo_is_supported(struct ub_packed_rrset_key* ds_rrset, 
+	size_t ds_idx)
 {
 	return (ds_digest_size_algo(ds_rrset, ds_idx) != 0);
+}
+
+/** return true if DNSKEY algorithm id is supported */
+static int
+dnskey_algo_id_is_supported(int id)
+{
+	switch(id) {
+	case LDNS_DSA:
+	case LDNS_DSA_NSEC3:
+	case LDNS_RSASHA1:
+	case LDNS_RSASHA1_NSEC3:
+	case LDNS_RSAMD5:
+		return 1;
+	default:
+		return 0;
+	}
+}
+
+int 
+ds_key_algo_is_supported(struct ub_packed_rrset_key* ds_rrset, 
+	size_t ds_idx)
+{
+	return dnskey_algo_id_is_supported(ds_get_key_algo(ds_rrset, ds_idx));
 }
 
 uint16_t 
@@ -240,14 +282,7 @@ dnskey_calc_keytag(struct ub_packed_rrset_key* dnskey_rrset, size_t dnskey_idx)
 int dnskey_algo_is_supported(struct ub_packed_rrset_key* dnskey_rrset,
         size_t dnskey_idx)
 {
-	switch(dnskey_get_algo(dnskey_rrset, dnskey_idx)) {
-		case LDNS_DSA:
-		case LDNS_DSA_NSEC3:
-		case LDNS_RSASHA1:
-		case LDNS_RSASHA1_NSEC3:
-		case LDNS_RSAMD5:
-			return 1;
-		default:
-			return 0;
-	}
+	return dnskey_algo_id_is_supported(dnskey_get_algo(dnskey_rrset, 
+		dnskey_idx));
 }
+

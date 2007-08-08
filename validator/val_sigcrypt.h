@@ -70,6 +70,14 @@ int ds_digest_match_dnskey(struct module_env* env,
 uint16_t dnskey_calc_keytag(struct ub_packed_rrset_key* dnskey_rrset, 
 	size_t dnskey_idx);
 
+/**
+ * Get DS keytag, footprint value that matches the DNSKEY keytag it signs.
+ * @param ds_rrset: DS rrset
+ * @param ds_idx: index of RR in DS rrset.
+ * @return the keytag or 0 for badly formatted DSs.
+ */ 
+uint16_t ds_get_keytag(struct ub_packed_rrset_key* ds_rrset, size_t ds_idx);
+
 /** 
  * See if DNSKEY algorithm is supported 
  * @param dnskey_rrset: DNSKEY rrset.
@@ -80,12 +88,38 @@ int dnskey_algo_is_supported(struct ub_packed_rrset_key* dnskey_rrset,
 	size_t dnskey_idx);
 
 /** 
- * See if DS algorithm is supported 
+ * See if DS digest algorithm is supported 
  * @param ds_rrset: DS rrset
  * @param ds_idx: index of RR in DS rrset.
  * @return true if supported.
  */
-int ds_algo_is_supported(struct ub_packed_rrset_key* ds_rrset, size_t ds_idx);
+int ds_digest_algo_is_supported(struct ub_packed_rrset_key* ds_rrset, 
+	size_t ds_idx);
+
+/** 
+ * See if DS key algorithm is supported 
+ * @param ds_rrset: DS rrset
+ * @param ds_idx: index of RR in DS rrset.
+ * @return true if supported.
+ */
+int ds_key_algo_is_supported(struct ub_packed_rrset_key* ds_rrset, 
+	size_t ds_idx);
+
+/**
+ * Get DS RR key algorithm. This value should match with the DNSKEY algo.
+ * @param k: DS rrset.
+ * @param idx: which DS.
+ * @return algorithm or 0 if DS too short.
+ */
+int ds_get_key_algo(struct ub_packed_rrset_key* k, size_t idx);
+
+/**
+ * Get DNSKEY RR signature algorithm
+ * @param k: DNSKEY rrset.
+ * @param idx: which DNSKEY RR.
+ * @return algorithm or 0 if DNSKEY too short.
+ */
+int dnskey_get_algo(struct ub_packed_rrset_key* k, size_t idx);
 
 /** verify rrset against dnskey rrset. */
 
