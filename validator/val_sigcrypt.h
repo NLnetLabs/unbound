@@ -46,6 +46,7 @@
 struct val_env;
 struct module_env;
 struct ub_packed_rrset_key;
+enum sec_status;
 
 /** 
  * Check if dnskey matches a DS digest 
@@ -121,12 +122,61 @@ int ds_get_key_algo(struct ub_packed_rrset_key* k, size_t idx);
  */
 int dnskey_get_algo(struct ub_packed_rrset_key* k, size_t idx);
 
-/** verify rrset against dnskey rrset. */
+/** 
+ * Verify rrset against dnskey rrset. 
+ * @param env: module environment, scratch space is used.
+ * @param ve: validator environment, date settings.
+ * @param rrset: to be validated.
+ * @param dnskey: DNSKEY rrset, keyset to try.
+ * @return SECURE if one key in the set verifies one rrsig.
+ *	UNCHECKED on allocation errors, unsupported algorithms, malformed data,
+ *	and BOGUS on verification failures (no keys match any signatures).
+ */
+enum sec_status dnskeyset_verify_rrset(struct module_env* env, 
+	struct val_env* ve, struct ub_packed_rrset_key* rrset, 
+	struct ub_packed_rrset_key* dnskey);
 
-/** verify rrset against one specific dnskey (from rrset) */
+/** 
+ * verify rrset against one specific dnskey (from rrset) 
+ * @param env: module environment, scratch space is used.
+ * @param ve: validator environment, date settings.
+ * @param rrset: to be validated.
+ * @param dnskey: DNSKEY rrset, keyset.
+ * @param dnskey_idx: which key from the rrset to try.
+ * @return secure if *this* key signs any of the signatures on rrset.
+ *	unchecked on error or and bogus on bad signature.
+ */
+enum sec_status dnskey_verify_rrset(struct module_env* env, 
+	struct val_env* ve, struct ub_packed_rrset_key* rrset, 
+	struct ub_packed_rrset_key* dnskey, size_t dnskey_idx);
 
-/** verify rrset, with dnskey rrset, for a specific rrsig in rrset */
+/** 
+ * verify rrset, with dnskey rrset, for a specific rrsig in rrset
+ * @param env: module environment, scratch space is used.
+ * @param ve: validator environment, date settings.
+ * @param rrset: to be validated.
+ * @param dnskey: DNSKEY rrset, keyset to try.
+ * @param sig_idx: which signature to try to validate.
+ * @return secure if any key signs *this* signature. bogus if no key signs it,
+ *	or unchecked on error.
+ */
+enum sec_status dnskeyset_verify_rrset_sig(struct module_env* env, 
+	struct val_env* ve, struct ub_packed_rrset_key* rrset, 
+	struct ub_packed_rrset_key* dnskey, size_t sig_idx);
 
-/** verify rrset, with specific dnskey(from set), for a specific rrsig */
+/** 
+ * verify rrset, with specific dnskey(from set), for a specific rrsig 
+ * @param env: module environment, scratch space is used.
+ * @param ve: validator environment, date settings.
+ * @param rrset: to be validated.
+ * @param dnskey: DNSKEY rrset, keyset.
+ * @param dnskey_idx: which key from the rrset to try.
+ * @param sig_idx: which signature to try to validate.
+ * @return secure if this key signs this signature. unchecked on error or 
+ *	bogus if it did not validate.
+ */
+enum sec_status dnskey_verify_rrset_sig(struct module_env* env, 
+	struct val_env* ve, struct ub_packed_rrset_key* rrset, 
+	struct ub_packed_rrset_key* dnskey, size_t dnskey_idx, size_t sig_idx);
 
 #endif /* VALIDATOR_VAL_SIGCRYPT_H */

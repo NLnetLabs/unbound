@@ -51,6 +51,60 @@
 #error "Need SSL library to do digital signature cryptography"
 #endif
 
+/** return number of rrs in an rrset */
+static size_t
+rrset_get_count(struct ub_packed_rrset_key* rrset)
+{
+	struct packed_rrset_data* d = (struct packed_rrset_data*)
+	rrset->entry.data;
+	if(!d) return 0;
+	return d->count;
+}
+
+/**
+ * Get RR signature count
+ */
+static size_t
+rrset_get_sigcount(struct ub_packed_rrset_key* k)
+{
+	struct packed_rrset_data* d = (struct packed_rrset_data*)k->entry.data;
+	return d->rrsig_count;
+}
+
+/**
+ * Get signature keytag value
+ * @param k: rrset (with signatures)
+ * @param sig_idx: signature index.
+ * @return keytag or 0 if malformed rrsig.
+ */
+static uint16_t 
+rrset_get_sig_keytag(struct ub_packed_rrset_key* k, size_t sig_idx)
+{
+	uint16_t t;
+	struct packed_rrset_data* d = (struct packed_rrset_data*)k->entry.data;
+	log_assert(sig_idx < d->rrsig_count);
+	if(d->rr_len[d->count + sig_idx] < 2+18)
+		return 0;
+	memmove(&t, d->rr_data[d->count + sig_idx]+2+16, 2);
+	return t;
+}
+
+/**
+ * Get signature signing algorithm value
+ * @param k: rrset (with signatures)
+ * @param sig_idx: signature index.
+ * @return algo or 0 if malformed rrsig.
+ */
+static int 
+rrset_get_sig_algo(struct ub_packed_rrset_key* k, size_t sig_idx)
+{
+	struct packed_rrset_data* d = (struct packed_rrset_data*)k->entry.data;
+	log_assert(sig_idx < d->rrsig_count);
+	if(d->rr_len[d->count + sig_idx] < 2+3)
+		return 0;
+	return (int)d->rr_data[d->count + sig_idx][2+2];
+}
+
 /** get rdata pointer and size */
 static void
 rrset_get_rdata(struct ub_packed_rrset_key* k, size_t idx, uint8_t** rdata,
@@ -286,3 +340,97 @@ int dnskey_algo_is_supported(struct ub_packed_rrset_key* dnskey_rrset,
 		dnskey_idx));
 }
 
+enum sec_status 
+dnskeyset_verify_rrset(struct module_env* env, struct val_env* ve,
+        struct ub_packed_rrset_key* rrset, struct ub_packed_rrset_key* dnskey)
+{
+	enum sec_status sec;
+	size_t i, num;
+	num = rrset_get_sigcount(rrset);
+	if(num == 0) {
+		verbose(VERB_ALGO, "rrset failed to verify due to a lack of "
+			"signatures");
+		return sec_status_bogus;
+	}
+	for(i=0; i<num; i++) {
+		sec = dnskeyset_verify_rrset_sig(env, ve, rrset, dnskey, i);
+		if(sec == sec_status_secure)
+			return sec;
+	}
+	verbose(VERB_ALGO, "rrset failed to verify: all signatures are bogus");
+	return sec_status_bogus;
+}
+
+enum sec_status 
+dnskey_verify_rrset(struct module_env* env, struct val_env* ve,
+        struct ub_packed_rrset_key* rrset, struct ub_packed_rrset_key* dnskey,
+	        size_t dnskey_idx)
+{
+	enum sec_status sec;
+	size_t i, num;
+	num = rrset_get_sigcount(rrset);
+	if(num == 0) {
+		verbose(VERB_ALGO, "rrset failed to verify due to a lack of "
+			"signatures");
+		return sec_status_bogus;
+	}
+	for(i=0; i<num; i++) {
+		sec = dnskey_verify_rrset_sig(env, ve, rrset, dnskey, 
+			dnskey_idx, i);
+		if(sec == sec_status_secure)
+			return sec;
+	}
+	verbose(VERB_ALGO, "rrset failed to verify: all signatures are bogus");
+	return sec_status_bogus;
+}
+
+enum sec_status 
+dnskeyset_verify_rrset_sig(struct module_env* env, struct val_env* ve,
+        struct ub_packed_rrset_key* rrset, struct ub_packed_rrset_key* dnskey,
+	        size_t sig_idx)
+{
+	/* find matching keys and check them */
+	enum sec_status sec = sec_status_bogus;
+	uint16_t tag = rrset_get_sig_keytag(rrset, sig_idx);
+	int algo = rrset_get_sig_algo(rrset, sig_idx);
+	size_t i, num = rrset_get_count(dnskey);
+	size_t numchecked = 0;
+	
+	for(i=0; i<num; i++) {
+		/* see if key matches keytag and algo */
+		if(algo != dnskey_get_algo(dnskey, i) ||
+			tag != dnskey_calc_keytag(dnskey, i))
+			continue;
+
+		numchecked ++;
+		/* see if key verifies */
+		sec = dnskey_verify_rrset_sig(env, ve, rrset, dnskey, 
+			i, sig_idx);
+		if(sec == sec_status_secure)
+			return sec;
+	}
+	if(numchecked == 0) {
+		verbose(VERB_ALGO, "could not find appropriate key");
+		return sec_status_bogus;
+	}
+	return sec_status_bogus;
+}
+
+enum sec_status 
+dnskey_verify_rrset_sig(struct module_env* env, struct val_env* ve,
+        struct ub_packed_rrset_key* rrset, struct ub_packed_rrset_key* dnskey,
+	        size_t dnskey_idx, size_t sig_idx)
+{
+	/* verify as many fields in rrsig as possible */
+	/* verify key dname == sig signer name */
+	/* verify covered type */
+	/* verify keytag and sig algo (possibly again) */
+	/* verify labels is in a valid range */
+	/* original ttl, always ok */
+	/* verify inception, expiration dates */
+
+	/* create rrset canonical format in buffer, ready for signature */
+
+	/* verify */
+	return sec_status_unchecked;
+}

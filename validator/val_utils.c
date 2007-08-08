@@ -199,8 +199,15 @@ enum sec_status
 val_verify_rrset(struct module_env* env, struct val_env* ve,
         struct ub_packed_rrset_key* rrset, struct ub_packed_rrset_key* keys)
 {
+	enum sec_status sec;
+	log_nametypeclass(VERB_ALGO, "verify rrset", rrset->rk.dname,
+		ntohs(rrset->rk.type), ntohs(rrset->rk.rrset_class));
+	sec = dnskeyset_verify_rrset(env, ve, rrset, keys);
+	verbose(VERB_ALGO, "verify result: %s", sec_status_to_string(sec));
 
-	return sec_status_bogus;
+	/* TODO: update rrset security status */
+
+	return sec;
 }
 
 /** verify that a DS RR hashes to a key and that key signs the set */
@@ -230,9 +237,8 @@ verify_dnskeys_with_ds_rr(struct module_env* env, struct val_env* ve,
 
 		/* Otherwise, we have a match! Make sure that the DNSKEY 
 		 * verifies *with this key*  */
-		/*
-		sec = verify_rrset_key(env, ve, dnskey_rrset, dnskey_rrset, i);
-		*/
+		sec = dnskey_verify_rrset(env, ve, dnskey_rrset, 
+			dnskey_rrset, i);
 		if(sec == sec_status_secure) {
 			return sec;
 		}

@@ -1,6 +1,8 @@
 8 August 2007: Wouter
 	- ldns _raw routines created (in ldns trunk).
 	- sigcrypt DS digest routines
+	- val_utils uses sigcrypt to perform signature cryptography.
+	- sigcrypt keyset processing
 
 7 August 2007: Wouter
 	- security status type.
