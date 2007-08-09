@@ -14,7 +14,7 @@ This software is under BSD license, see LICENSE for details.
   * libevent	http://www.monkey.org/~provos/libevent/		(BSD license)
 
 * Create build environment 
-  * run libtoolize -c if config.sub is missing.
+  * run libtoolize -c if config.sub is missing, or run glibtoolize.
   * autoreconf (autoheader && autoconf), if ./configure is missing.
 
 * Make and install: ./configure; make; make install
