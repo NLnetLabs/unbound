@@ -258,3 +258,26 @@ cfg_strlist_insert(struct config_strlist** head, char* item)
 	*head = s;
 	return 1;
 }
+
+uint32_t 
+cfg_convert_timeval(const char* str)
+{
+	uint32_t t;
+	struct tm tm;
+	memset(&tm, 0, sizeof(tm));
+	if(sscanf(str, "%4d%2d%2d%2d%2d%2d", &tm.tm_year, &tm.tm_mon, 
+		&tm.tm_mday, &tm.tm_hour, &tm.tm_min, &tm.tm_sec) != 6)
+		return 0;
+	tm.tm_year -= 1900;
+	tm.tm_mon--;
+	/* Check values */
+	if (tm.tm_year < 70)	return 0;
+	if (tm.tm_mon < 0 || tm.tm_mon > 11)	return 0;
+	if (tm.tm_mday < 1 || tm.tm_mday > 31) 	return 0;
+	if (tm.tm_hour < 0 || tm.tm_hour > 23)	return 0;
+	if (tm.tm_min < 0 || tm.tm_min > 59)	return 0;
+	if (tm.tm_sec < 0 || tm.tm_sec > 59)	return 0;
+	/* call ldns conversion function */
+	t = mktime_from_utc(&tm);
+	return t;
+}

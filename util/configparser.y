@@ -80,7 +80,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_FORWARD_ZONE VAR_FORWARD_HOST VAR_FORWARD_ADDR
 %token VAR_DO_NOT_QUERY_ADDRESS VAR_HIDE_IDENTITY VAR_HIDE_VERSION
 %token VAR_IDENTITY VAR_VERSION VAR_HARDEN_GLUE VAR_MODULE_CONF
-%token VAR_TRUST_ANCHOR_FILE VAR_TRUST_ANCHOR
+%token VAR_TRUST_ANCHOR_FILE VAR_TRUST_ANCHOR VAR_VAL_OVERRIDE_DATE
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -114,7 +114,7 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_do_not_query_address | server_hide_identity |
 	server_hide_version | server_identity | server_version |
 	server_harden_glue | server_module_conf | server_trust_anchor_file |
-	server_trust_anchor
+	server_trust_anchor | server_val_override_date
 	;
 stubstart: VAR_STUB_ZONE
 	{
@@ -484,6 +484,24 @@ server_module_conf: VAR_MODULE_CONF STRING
 		OUTYY(("P(server_module_conf:%s)\n", $2));
 		free(cfg_parser->cfg->module_conf);
 		cfg_parser->cfg->module_conf = $2;
+	}
+	;
+server_val_override_date: VAR_VAL_OVERRIDE_DATE STRING
+	{
+		OUTYY(("P(server_val_override_date:%s)\n", $2));
+		if(strlen($2) == 0 || strcmp($2, "0") == 0) {
+			cfg_parser->cfg->val_date_override = 0;
+		} else if(strlen($2) == 14) {
+			cfg_parser->cfg->val_date_override = 
+				cfg_convert_timeval($2);
+			if(!cfg_parser->cfg->val_date_override)
+				yyerror("bad date/time specification");
+		} else {
+			if(atoi($2) == 0)
+				yyerror("number expected");
+			cfg_parser->cfg->outgoing_num_ports = atoi($2);
+		}
+		free($2);
 	}
 	;
 stub_name: VAR_NAME STRING

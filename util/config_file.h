@@ -204,6 +204,13 @@ void config_delete(struct config_file* config);
 int cfg_strlist_insert(struct config_strlist** head, char* item);
 
 /**
+ * Convert 14digit to time value
+ * @param str: string of 14 digits
+ * @return time value or 0 for error.
+ */
+uint32_t cfg_convert_timeval(const char* str);
+
+/**
  * Used during options parsing
  */
 struct config_parser_state {

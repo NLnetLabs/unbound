@@ -659,9 +659,10 @@ check_dates(struct val_env* ve, uint8_t* expi_p, uint8_t* incep_p)
 	incep = ntohl(incep);
 
 	/* get current date */
-	if(ve->date_override)
+	if(ve->date_override) {
 		now = ve->date_override;
-	else	now = (int32_t)time(0);
+		verbose(VERB_ALGO, "date override option %d", (int)now); 
+	} else	now = (int32_t)time(0);
 
 	/* check them */
 	if(incep - expi > 0) {

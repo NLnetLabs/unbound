@@ -144,6 +144,7 @@ version{COLON}     	{ YDOUT; return VAR_VERSION;}
 module-conf{COLON}     	{ YDOUT; return VAR_MODULE_CONF;}
 trust-anchor-file{COLON}	{ YDOUT; return VAR_TRUST_ANCHOR_FILE;}
 trust-anchor{COLON}	{ YDOUT; return VAR_TRUST_ANCHOR;}
+val-override-date{COLON}	{ YDOUT; return VAR_VAL_OVERRIDE_DATE;}
 {NEWLINE}		{ LEXOUT(("NL\n")); cfg_parser->line++;}
 
 	/* Quoted strings. Strip leading and ending quotes */
