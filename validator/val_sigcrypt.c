@@ -42,9 +42,11 @@
  */
 #include "config.h"
 #include "validator/val_sigcrypt.h"
+#include "validator/validator.h"
 #include "util/data/msgreply.h"
 #include "util/data/dname.h"
 #include "util/module.h"
+#include "util/net_help.h"
 #include "util/region-allocator.h"
 
 #ifndef HAVE_SSL
@@ -114,6 +116,20 @@ rrset_get_rdata(struct ub_packed_rrset_key* k, size_t idx, uint8_t** rdata,
 	log_assert(d && idx < (d->count + d->rrsig_count));
 	*rdata = d->rr_data[idx];
 	*len = d->rr_len[idx];
+}
+
+uint16_t
+dnskey_get_flags(struct ub_packed_rrset_key* k, size_t idx)
+{
+	uint8_t* rdata;
+	size_t len;
+	uint16_t f;
+	rrset_get_rdata(k, idx, &rdata, &len);
+	if(len < 2+2)
+		return 0;
+	memmove(&f, rdata+2, 2);
+	f = ntohs(f);
+	return f;
 }
 
 int
@@ -244,7 +260,7 @@ ds_create_dnskey_digest(struct module_env* env,
 	ldns_buffer_clear(b);
 	ldns_buffer_write(b, dnskey_rrset->rk.dname, 
 		dnskey_rrset->rk.dname_len);
-	query_dname_tolower(ldns_buffer_begin(b), dnskey_rrset->rk.dname_len);
+	query_dname_tolower(ldns_buffer_begin(b));
 	ldns_buffer_write(b, dnskey_rdata+2, dnskey_len-2); /* skip rdatalen*/
 	ldns_buffer_flip(b);
 	
@@ -416,20 +432,337 @@ dnskeyset_verify_rrset_sig(struct module_env* env, struct val_env* ve,
 	return sec_status_bogus;
 }
 
+/**
+ * Sort RRs for rrset in canonical order.
+ * Does not actually canonicalize the RR rdatas.
+ * Does not touch rrsigs.
+ * @param rrset: to sort.
+ */
+static void
+canonical_sort(struct ub_packed_rrset_key* rrset)
+{
+	/* check if already sorted */
+	/* remove duplicates */
+}
+
+/**
+ * Inser canonical owner name into buffer.
+ * @param buf: buffer to insert into at current position.
+ * @param k: rrset with its owner name.
+ * @param sig: signature with signer name and label count.
+ * 	must be length checked, at least 18 bytes long.
+ * @param can_owner: position in buffer returned for future use.
+ * @param can_owner_len: length of canonical owner name.
+ */
+static void
+insert_can_owner(ldns_buffer* buf, struct ub_packed_rrset_key* k,
+	uint8_t* sig, uint8_t** can_owner, size_t* can_owner_len)
+{
+	int rrsig_labels = (int)sig[3];
+	int fqdn_labels = dname_signame_label_count(k->rk.dname);
+	*can_owner = ldns_buffer_current(buf);
+	if(rrsig_labels == fqdn_labels) {
+		/* no change */
+		ldns_buffer_write(buf, k->rk.dname, k->rk.dname_len);
+		query_dname_tolower(*can_owner);
+		*can_owner_len = k->rk.dname_len;
+		return;
+	}
+	log_assert(rrsig_labels < fqdn_labels);
+	/* *. | fqdn(rightmost rrsig_labels) */
+	if(rrsig_labels < fqdn_labels) {
+		int i;
+		uint8_t* nm = k->rk.dname;
+		size_t len = k->rk.dname_len;
+		/* so skip fqdn_labels-rrsig_labels */
+		for(i=0; i<fqdn_labels-rrsig_labels; i++) {
+			dname_remove_label(&nm, &len);	
+		}
+		*can_owner_len = len+2;
+		ldns_buffer_write(buf, (uint8_t*)"\001*", 2);
+		ldns_buffer_write(buf, nm, len);
+		query_dname_tolower(*can_owner);
+	}
+}
+
+/** 
+ * Lowercase a text rdata field in a buffer.
+ * @param p: pointer to start of text field (length byte).
+ */
+static void
+lowercase_text_field(uint8_t* p)
+{
+	int i, len = (int)*p;
+	p++;
+	for(i=0; i<len; i++) {
+		*p = (uint8_t)tolower((int)*p);
+		p++;
+	}
+}
+
+/**
+ * Canonicalize Rdata in buffer.
+ * @param buf: buffer at position just after the rdata.
+ * @param rrset: rrset with type.
+ * @param len: length of the rdata (including rdatalen uint16).
+ */
+static void
+canonicalize_rdata(ldns_buffer* buf, struct ub_packed_rrset_key* rrset,
+	size_t len)
+{
+	uint8_t* datstart = ldns_buffer_current(buf)-len+2;
+	switch(ntohs(rrset->rk.type)) {
+		case LDNS_RR_TYPE_NXT: 
+		case LDNS_RR_TYPE_NSEC: /* type starts with the name */
+		case LDNS_RR_TYPE_NS:
+		case LDNS_RR_TYPE_MD:
+		case LDNS_RR_TYPE_MF:
+		case LDNS_RR_TYPE_CNAME:
+		case LDNS_RR_TYPE_MB:
+		case LDNS_RR_TYPE_MG:
+		case LDNS_RR_TYPE_MR:
+		case LDNS_RR_TYPE_PTR:
+		case LDNS_RR_TYPE_DNAME:
+			/* type only has a single argument, the name */
+			query_dname_tolower(datstart);
+			return;
+		case LDNS_RR_TYPE_MINFO:
+		case LDNS_RR_TYPE_RP:
+		case LDNS_RR_TYPE_SOA:
+			/* two names after another */
+			query_dname_tolower(datstart);
+			query_dname_tolower(datstart + 
+				dname_valid(datstart, len-2));
+			return;
+		case LDNS_RR_TYPE_HINFO:
+			/* lowercase text records */
+			len -= 2;
+			if(len < (size_t)datstart[0]+1)
+				return;
+			lowercase_text_field(datstart);
+			len -= (size_t)datstart[0]+1; /* and skip the 1st */
+			datstart += (size_t)datstart[0]+1;
+			if(len < (size_t)datstart[0]+1)
+				return;
+			lowercase_text_field(datstart);
+			return;
+		case LDNS_RR_TYPE_RT:
+		case LDNS_RR_TYPE_AFSDB:
+		case LDNS_RR_TYPE_KX:
+		case LDNS_RR_TYPE_MX:
+			/* skip fixed part */
+			if(len < 2+2+1) /* rdlen, skiplen, 1byteroot */
+				return;
+			datstart += 2;
+			query_dname_tolower(datstart);
+			return;
+		case LDNS_RR_TYPE_SIG:
+		case LDNS_RR_TYPE_RRSIG:
+			/* skip fixed part */
+			if(len < 2+18+1)
+				return;
+			datstart += 18;
+			query_dname_tolower(datstart);
+			return;
+		case LDNS_RR_TYPE_PX:
+			/* skip, then two names after another */
+			if(len < 2+2+1) 
+				return;
+			datstart += 2;
+			query_dname_tolower(datstart);
+			query_dname_tolower(datstart + 
+				dname_valid(datstart, len-2-2));
+			return;
+		case LDNS_RR_TYPE_NAPTR:
+			if(len < 2+4)
+				return;
+			len -= 2+4;
+			datstart += 4;
+			if(len < (size_t)datstart[0]+1) /* skip text field */
+				return;
+			len -= (size_t)datstart[0]+1;
+			datstart += (size_t)datstart[0]+1;
+			if(len < (size_t)datstart[0]+1) /* skip text field */
+				return;
+			len -= (size_t)datstart[0]+1;
+			datstart += (size_t)datstart[0]+1;
+			if(len < (size_t)datstart[0]+1) /* skip text field */
+				return;
+			len -= (size_t)datstart[0]+1;
+			datstart += (size_t)datstart[0]+1;
+			if(len < 1)	/* check name is at least 1 byte*/
+				return;
+			query_dname_tolower(datstart);
+			return;
+		case LDNS_RR_TYPE_SRV:
+			/* skip fixed part */
+			if(len < 2+6+1)
+				return;
+			datstart += 6;
+			query_dname_tolower(datstart);
+			return;
+		/* A6 not supported */
+		default:	
+			/* nothing to do for unknown types */
+			return;
+	}
+}
+
+/**
+ * Create canonical form of rrset in the scratch buffer.
+ * @param buf: the buffer to use.
+ * @param k: the rrset to insert.
+ * @param sig: RRSIG rdata to include.
+ * @param siglen: RRSIG rdata len excluding signature field, but inclusive
+ * 	signer name length.
+ * @return false on alloc error.
+ */
+static int
+rrset_canonical(ldns_buffer* buf, struct ub_packed_rrset_key* k, 
+	uint8_t* sig, size_t siglen)
+{
+	struct packed_rrset_data* d = (struct packed_rrset_data*)k->entry.data;
+	size_t i;
+	uint8_t* can_owner = NULL;
+	size_t can_owner_len = 0;
+	/* sort RRs in place */
+	canonical_sort(k);
+
+	ldns_buffer_clear(buf);
+	ldns_buffer_write(buf, sig, siglen);
+	query_dname_tolower(sig+18); /* canonicalize signer name */
+	for(i=0; i<d->count; i++) {
+		/* determine canonical owner name */
+		if(can_owner)
+			ldns_buffer_write(buf, can_owner, can_owner_len);
+		else	insert_can_owner(buf, k, sig, &can_owner, 
+				&can_owner_len);
+		ldns_buffer_write(buf, &k->rk.type, 2);
+		ldns_buffer_write(buf, &k->rk.rrset_class, 2);
+		ldns_buffer_write(buf, sig+4, 4);
+		ldns_buffer_write(buf, d->rr_data[i], d->rr_len[i]);
+		canonicalize_rdata(buf, k, d->rr_len[i]);
+	}
+	ldns_buffer_flip(buf);
+	return 1;
+}
+
+/** check rrsig dates */
+static int
+check_dates(struct val_env* ve, uint8_t* expi_p, uint8_t* incep_p)
+{
+	/* read out the dates */
+	int32_t expi, incep, now;
+	memmove(&expi, expi_p, sizeof(expi));
+	memmove(&incep, incep_p, sizeof(incep));
+	expi = ntohl(expi);
+	incep = ntohl(incep);
+
+	/* get current date */
+	if(ve->date_override)
+		now = ve->date_override;
+	else	now = (int32_t)time(0);
+
+	/* check them */
+	if(incep - expi > 0) {
+		verbose(VERB_ALGO, "verify: inception after expiration, "
+			"signature bad");
+		return 0;
+	}
+	if(incep - now > 0) {
+		verbose(VERB_ALGO, "verify: signature bad, current time is"
+			" before inception date");
+		return 0;
+	}
+	if(now - expi > 0) {
+		verbose(VERB_ALGO, "verify: signature expired");
+		return 0;
+	}
+	return 1;
+
+}
+
 enum sec_status 
 dnskey_verify_rrset_sig(struct module_env* env, struct val_env* ve,
         struct ub_packed_rrset_key* rrset, struct ub_packed_rrset_key* dnskey,
 	        size_t dnskey_idx, size_t sig_idx)
 {
+	uint8_t* sig; /* rdata */
+	size_t siglen;
+	size_t rrnum = rrset_get_count(rrset);
+	uint8_t* signer;
+	size_t signer_len;
+	uint8_t* sigblock; /* signature rdata field */
+	size_t sigblock_len;
+	uint16_t ktag;
+	rrset_get_rdata(rrset, rrnum + sig_idx, &sig, &siglen);
+	/* min length of rdatalen, fixed rrsig, root signer, 1 byte sig */
+	if(siglen < 2+20) {
+		verbose(VERB_ALGO, "verify: signature too short");
+		return sec_status_bogus;
+	}
+
+	if(!(dnskey_get_flags(dnskey, dnskey_idx) & DNSKEY_BIT_ZSK)) {
+		verbose(VERB_ALGO, "verify: dnskey without ZSK flag");
+		return sec_status_bogus; /* signer name invalid */
+	}
+
 	/* verify as many fields in rrsig as possible */
+	signer = sig+2+18;
+	signer_len = dname_valid(signer, siglen-2-18);
+	if(!signer_len) {
+		verbose(VERB_ALGO, "verify: malformed signer name");
+		return sec_status_bogus; /* signer name invalid */
+	}
+	sigblock = signer+signer_len;
+	if(siglen < 2+18+signer_len+1) {
+		verbose(VERB_ALGO, "verify: too short, no signature data");
+		return sec_status_bogus; /* sig rdf is < 1 byte */
+	}
+	sigblock_len = siglen - 2 - 18 - signer_len;
+
 	/* verify key dname == sig signer name */
+	if(query_dname_compare(signer, dnskey->rk.dname) != 0) {
+		verbose(VERB_ALGO, "verify: wrong key for rrsig");
+		return sec_status_bogus;
+	}
+
 	/* verify covered type */
+	/* memcmp works because type is in network format for rrset */
+	if(memcmp(sig+2, &rrset->rk.type, 2) != 0) {
+		verbose(VERB_ALGO, "verify: wrong type covered");
+		return sec_status_bogus;
+	}
 	/* verify keytag and sig algo (possibly again) */
+	if((int)sig[2] != dnskey_get_algo(dnskey, dnskey_idx)) {
+		verbose(VERB_ALGO, "verify: wrong algorithm");
+		return sec_status_bogus;
+	}
+	ktag = dnskey_calc_keytag(dnskey, dnskey_idx);
+	if(memcmp(sig+16, &ktag, 2) != 0) {
+		verbose(VERB_ALGO, "verify: wrong keytag");
+		return sec_status_bogus;
+	}
+
 	/* verify labels is in a valid range */
+	if((int)sig[3] > dname_signame_label_count(rrset->rk.dname)) {
+		verbose(VERB_ALGO, "verify: labelcount out of range");
+		return sec_status_bogus;
+	}
+
 	/* original ttl, always ok */
+
 	/* verify inception, expiration dates */
+	if(!check_dates(ve, sig+8, sig+12)) {
+		return sec_status_bogus;
+	}
 
 	/* create rrset canonical format in buffer, ready for signature */
+	if(!rrset_canonical(env->scratch_buffer, rrset, sig+2, 
+		18 + signer_len)) {
+		log_err("verify: failed due to alloc error");
+		return sec_status_unchecked;
+	}
 
 	/* verify */
 	return sec_status_unchecked;

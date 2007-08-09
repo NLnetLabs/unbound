@@ -72,6 +72,11 @@
 /** byte size of ip6 address */
 #define INET6_SIZE 16
 
+/** DNSKEY zone sign key flag */
+#define DNSKEY_BIT_ZSK 0x10
+/** DNSKEY secure entry point, KSK flag */
+#define DNSKEY_BIT_SEP 0x01
+
 /**
  * See if string is ip4 or ip6.
  * @param str: IP specification.

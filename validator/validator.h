@@ -65,6 +65,10 @@ struct val_env {
 	/** key cache; these are validated keys. trusted keys only
 	 * end up here after being primed. */
 	struct key_cache* kcache;
+
+	/** for debug testing a fixed validation date can be entered.
+	 * if 0, current time is used for rrsig validation */
+	int32_t date_override;
 };
 
 /**

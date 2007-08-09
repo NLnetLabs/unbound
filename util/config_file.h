@@ -144,6 +144,9 @@ struct config_file {
 	/** list of trustanchor keys, linked list */
 	struct config_strlist* trust_anchor_list;
 
+	/** if not 0, this value is the validation date for RRSIGs */
+	int32_t val_date_override;
+
 	/** daemonize, i.e. fork into the background. */
 	int do_daemonize;
 };

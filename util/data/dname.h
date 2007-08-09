@@ -63,7 +63,7 @@ size_t query_dname_len(ldns_buffer* query);
 size_t dname_valid(uint8_t* dname, size_t len);
 
 /** lowercase query dname */
-void query_dname_tolower(uint8_t* dname, size_t len);
+void query_dname_tolower(uint8_t* dname);
 
 /**
  * Compare query dnames (uncompressed storage). The Dnames passed do not
@@ -221,5 +221,12 @@ int dname_is_root(uint8_t* dname);
  * @return stripped off, or "." if input was ".".
  */
 void dname_remove_label(uint8_t** dname, size_t* len);
+
+/**
+ * Count labels for the RRSIG signature label field.
+ * Like a normal labelcount, but "*" wildcard and "." root are not counted.
+ * @param dname: valid uncompressed wireformat.
+ */
+int dname_signame_label_count(uint8_t* dname);
 
 #endif /* UTIL_DATA_DNAME_H */

@@ -122,6 +122,14 @@ int ds_get_key_algo(struct ub_packed_rrset_key* k, size_t idx);
  */
 int dnskey_get_algo(struct ub_packed_rrset_key* k, size_t idx);
 
+/**
+ * Get DNSKEY RR flags 
+ * @param k: DNSKEY rrset.
+ * @param idx: which DNSKEY RR.
+ * @return flags or 0 if DNSKEY too short.
+ */
+uint16_t dnskey_get_flags(struct ub_packed_rrset_key* k, size_t idx);
+
 /** 
  * Verify rrset against dnskey rrset. 
  * @param env: module environment, scratch space is used.

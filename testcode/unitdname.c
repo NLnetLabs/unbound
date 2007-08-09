@@ -76,21 +76,21 @@ static void
 dname_test_qdtl(ldns_buffer* buff)
 {
 	ldns_buffer_write_at(buff, 0, "\012abCDeaBCde\003cOm\000", 16);
-	query_dname_tolower(ldns_buffer_begin(buff), 16);
+	query_dname_tolower(ldns_buffer_begin(buff));
 	unit_assert( memcmp(ldns_buffer_begin(buff), 
 		"\012abcdeabcde\003com\000", 16) == 0);
 
 	ldns_buffer_write_at(buff, 0, "\001+\012abC{e-ZYXe\003NET\000", 18);
-	query_dname_tolower(ldns_buffer_begin(buff), 18);
+	query_dname_tolower(ldns_buffer_begin(buff));
 	unit_assert( memcmp(ldns_buffer_begin(buff), 
 		"\001+\012abc{e-zyxe\003net\000", 18) == 0);
 
 	ldns_buffer_write_at(buff, 0, "\000", 1);
-	query_dname_tolower(ldns_buffer_begin(buff), 1);
+	query_dname_tolower(ldns_buffer_begin(buff));
 	unit_assert( memcmp(ldns_buffer_begin(buff), "\000", 1) == 0);
 
 	ldns_buffer_write_at(buff, 0, "\002NL\000", 4);
-	query_dname_tolower(ldns_buffer_begin(buff), 4);
+	query_dname_tolower(ldns_buffer_begin(buff));
 	unit_assert( memcmp(ldns_buffer_begin(buff), "\002nl\000", 4) == 0);
 }
 
@@ -463,6 +463,25 @@ dname_test_removelabel()
 	unit_assert( l == 1 );
 }
 
+/** test dname_signame_label_count */
+static void
+dname_test_sigcount()
+{
+	unit_assert(dname_signame_label_count((uint8_t*)"\000") == 0);
+	unit_assert(dname_signame_label_count((uint8_t*)"\001*\000") == 0);
+	unit_assert(dname_signame_label_count((uint8_t*)"\003xom\000") == 1);
+	unit_assert(dname_signame_label_count(
+		(uint8_t*)"\001*\003xom\000") == 1);
+	unit_assert(dname_signame_label_count(
+		(uint8_t*)"\007example\003xom\000") == 2);
+	unit_assert(dname_signame_label_count(
+		(uint8_t*)"\001*\007example\003xom\000") == 2);
+	unit_assert(dname_signame_label_count(
+		(uint8_t*)"\003www\007example\003xom\000") == 3);
+	unit_assert(dname_signame_label_count(
+		(uint8_t*)"\001*\003www\007example\003xom\000") == 3);
+}
+
 void dname_test()
 {
 	ldns_buffer* buff = ldns_buffer_new(65800);
@@ -478,5 +497,6 @@ void dname_test()
 	dname_test_subdomain();
 	dname_test_isroot();
 	dname_test_removelabel();
+	dname_test_sigcount();
 	ldns_buffer_free(buff);
 }

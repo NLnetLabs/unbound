@@ -113,6 +113,7 @@ config_create()
 	cfg->version = NULL;
 	cfg->trust_anchor_file_list = NULL;
 	cfg->trust_anchor_list = NULL;
+	cfg->val_date_override = 0;
 	if(!(cfg->module_conf = strdup("iterator"))) goto error_exit;
 	return cfg;
 error_exit:

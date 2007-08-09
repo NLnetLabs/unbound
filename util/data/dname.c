@@ -125,11 +125,10 @@ query_dname_compare(uint8_t* d1, uint8_t* d2)
 }
 
 void 
-query_dname_tolower(uint8_t* dname, size_t len)
+query_dname_tolower(uint8_t* dname)
 {
 	/* the dname is stored uncompressed */
 	uint8_t labellen;
-	log_assert(len > 0);
 	labellen = *dname;
 	while(labellen) {
 		dname++;
@@ -594,4 +593,23 @@ dname_remove_label(uint8_t** dname, size_t* len)
 		return; /* do not modify root label */
 	*len -= lablen+1;
 	*dname += lablen+1;
+}
+
+int 
+dname_signame_label_count(uint8_t* dname)
+{
+	uint8_t lablen;
+	int count = 0;
+	if(!*dname)
+		return 0;
+	if(dname[0] == 1 && dname[1] == '*')
+		dname += 2;
+	lablen = dname[0];
+	while(lablen) {
+		count++;
+		dname += lablen;
+		dname += 1;
+		lablen = dname[0];
+	}
+	return count;
 }

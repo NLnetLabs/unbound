@@ -51,6 +51,7 @@
 #include "util/log.h"
 #include "util/net_help.h"
 #include "util/region-allocator.h"
+#include "util/config_file.h"
 
 /** apply config settings to validator */
 static int
@@ -72,6 +73,7 @@ val_apply_cfg(struct val_env* val_env, struct config_file* cfg)
 		log_err("validator: error in trustanchors config");
 		return 0;
 	}
+	val_env->date_override = cfg->val_date_override;
 	return 1;
 }
 
