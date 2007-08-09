@@ -55,6 +55,9 @@
 #include <pwd.h>
 #include <sys/resource.h>
 
+/** global debug value to keep track of heap memory allocation */
+void* unbound_start_brk = 0;
+
 /** print usage. */
 static void usage()
 {
@@ -358,6 +361,9 @@ main(int argc, char* argv[])
 	const char* cfgfile = NULL;
 	int cmdline_verbose = 0;
 	int debug_mode = 0;
+
+	/* take debug snapshot of heap */
+	unbound_start_brk = sbrk(0);
 
 	log_init(NULL);
 	/* parse the options */

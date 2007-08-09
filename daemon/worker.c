@@ -69,6 +69,16 @@
 /** Size of an UDP datagram */
 #define NORMAL_UDP_SIZE	512 /* bytes */
 
+/** give debug heap size indication */
+static void
+debug_total_mem()
+{
+	extern void* unbound_start_brk;
+	void* cur = sbrk(0);
+	int total = cur-unbound_start_brk;
+	log_info("Total heap memory estimate: %u", (unsigned)total);
+}
+
 /** Report on memory usage by this thread and global */
 static void
 worker_mem_report(struct worker* worker)
@@ -95,6 +105,7 @@ worker_mem_report(struct worker* worker)
 		(unsigned)mesh, (unsigned)msg, (unsigned)rrset, 
 		(unsigned)infra, (unsigned)ac, (unsigned)superac, 
 		(unsigned)me);
+	debug_total_mem();
 }
 
 void 
@@ -151,7 +162,7 @@ worker_handle_service_reply(struct comm_point* c, void* arg, int error,
 	struct outbound_entry* e = (struct outbound_entry*)arg;
 	struct worker* worker = e->qstate->env->worker;
 
-	verbose(VERB_ALGO, "worker scvd callback for qstate %p", e->qstate);
+	verbose(VERB_ALGO, "worker svcd callback for qstate %p", e->qstate);
 	if(error != 0) {
 		mesh_report_reply(worker->env.mesh, e, 0, reply_info);
 		worker_mem_report(worker);

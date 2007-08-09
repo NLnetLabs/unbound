@@ -1,6 +1,8 @@
 9 August 2007: Wouter
 	- canonicalization, signature checks
 	- dname signature label count and unit test.
+	- added debug heap size print to memory printout.
+	- typo fixup in worker.c
 
 8 August 2007: Wouter
 	- ldns _raw routines created (in ldns trunk).
