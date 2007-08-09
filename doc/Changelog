@@ -3,6 +3,7 @@
 	- dname signature label count and unit test.
 	- added debug heap size print to memory printout.
 	- typo fixup in worker.c
+	- -R needed on solaris.
 
 8 August 2007: Wouter
 	- ldns _raw routines created (in ldns trunk).

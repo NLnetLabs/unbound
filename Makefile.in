@@ -76,7 +76,7 @@ ALL_OBJ=$(addprefix $(BUILD),$(ALL_SRC:.c=.o) \
 	$(addprefix compat/,$(LIBOBJS))) $(COMPAT_OBJ)
 
 COMPILE=$(LIBTOOL) --tag=CC --mode=compile $(CC) $(CPPFLAGS) $(CFLAGS)
-LINK=$(LIBTOOL) --tag=CC --mode=link $(CC) $(staticexe) $(CFLAGS) $(LDFLAGS)
+LINK=$(LIBTOOL) --tag=CC --mode=link $(CC) $(staticexe) $(RUNTIME_PATH) $(CFLAGS) $(LDFLAGS)
 LINK_LIB=$(LIBTOOL) --tag=CC --mode=link $(CC) $(CFLAGS) $(LDFLAGS) -release $(VERSION)
 
 $(BUILD)%.o:    $(srcdir)/%.c 
