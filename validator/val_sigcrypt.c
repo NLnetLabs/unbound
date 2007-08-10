@@ -44,7 +44,9 @@
 #include "validator/val_sigcrypt.h"
 #include "validator/validator.h"
 #include "util/data/msgreply.h"
+#include "util/data/msgparse.h"
 #include "util/data/dname.h"
+#include "util/rbtree.h"
 #include "util/module.h"
 #include "util/net_help.h"
 #include "util/region-allocator.h"
@@ -433,16 +435,239 @@ dnskeyset_verify_rrset_sig(struct module_env* env, struct val_env* ve,
 }
 
 /**
+ * RR entries in a canonical sorted tree of RRs
+ */
+struct canon_rr {
+	/** rbtree node, key is this structure */
+	rbnode_t node;
+	/** rrset the RR is in */
+	struct ub_packed_rrset_key* rrset;
+	/** which RR in the rrset */
+	size_t rr_idx;
+};
+
+/**
+ * Compare two RR for canonical order, in a field-style sweep.
+ * @param d: rrset data
+ * @param desc: ldns wireformat descriptor.
+ * @param i: first RR to compare
+ * @param j: first RR to compare
+ * @return comparison code.
+ */
+static int
+canonical_compare_byfield(struct packed_rrset_data* d, 
+	const ldns_rr_descriptor* desc, size_t i, size_t j)
+{
+	/* sweep across rdata, keep track of some state:
+	 * 	which rr field, and bytes left in field.
+	 * 	current position in rdata, length left.
+	 * 	are we in a dname, length left in a label.
+	 */
+	const ldns_rdf_type* wfi = desc->_wireformat;
+	const ldns_rdf_type* wfj = desc->_wireformat;
+	uint8_t* di = d->rr_data[i]+2;
+	uint8_t* dj = d->rr_data[j]+2;
+	size_t ilen = d->rr_len[i]-2;
+	size_t jlen = d->rr_len[j]-2;
+	int dname_i = 0;
+	int dname_j = 0;
+	int lablen_i = 0;
+	int lablen_j = 0;
+	uint8_t bi, bj;
+	/* TODO keep track of number of dnames left */
+
+	/* setup initial state */
+	/* if it is a domain name, set it true, lablen is then 0 to indicate
+	 * that the current byte is the label length itself.
+	 * If it is a string, get the length of the wireformat
+	 */
+	if(*wfi == LDNS_RDF_TYPE_DNAME)
+		dname_i = 1;
+	else if(*wfi == LDNS_RDF_TYPE_STR && ilen > 0)
+		lablen_i = (int)(*di)+1;
+	else	lablen_i = (int)get_rdf_size(*wfi);
+	if(*wfj == LDNS_RDF_TYPE_DNAME)
+		dname_j = 1;
+	else if(*wfj == LDNS_RDF_TYPE_STR && jlen > 0)
+		lablen_j = (int)(*dj)+1;
+	else	lablen_j = (int)get_rdf_size(*wfj);
+
+	while(ilen > 0 && jlen > 0) {
+		/* compare these two bytes */
+		/* note that labellengths are <=63 and A is 65 */
+		if(dname_i && lablen_i)
+			bi = (uint8_t)tolower((int)*di++);
+		else	bi = *di++;
+		ilen--;
+		if(dname_j && lablen_j)
+			bj = (uint8_t)tolower((int)*dj++);
+		else	bj = *dj++;
+		jlen--;
+		if(bi != bj) {
+			if(bi < bj)
+				return -1;
+			return 1;
+		}
+		/* bytes are equal */
+
+		if(lablen_i == 0) { /* advance field i */
+			if(dname_i) {
+				lablen_i = (int)bi;
+				if(!lablen_i)
+					dname_i = 0;
+			}
+			if(lablen_i == 0) {
+				wfi++;
+				if(wfi-desc->_wireformat > (int)desc->_maximum)
+					return 0; /* its formerr */
+				if(*wfi == LDNS_RDF_TYPE_DNAME)
+					dname_i = 1;
+				else if(*wfi == LDNS_RDF_TYPE_STR)
+					lablen_i = (int)bi+1;
+				else	lablen_i = (int)get_rdf_size(*wfi);
+			}
+		} else	
+			lablen_i--;
+		if(lablen_j == 0) { /* advance field j */
+			if(dname_j) {
+				lablen_j = (int)bj;
+				if(!lablen_j)
+					dname_j = 0;
+			}
+			if(lablen_j == 0) {
+				wfi++;
+				if(wfi-desc->_wireformat > (int)desc->_maximum)
+					return 0; /* its formerr */
+				if(*wfi == LDNS_RDF_TYPE_DNAME)
+					dname_j = 1;
+				else if(*wfj == LDNS_RDF_TYPE_STR)
+					lablen_j = (int)bj+1;
+				else	lablen_j = (int)get_rdf_size(*wfj);
+			}
+		} else
+			lablen_j--;
+
+	}
+	/* shortest first */
+	if(ilen == 0 && jlen == 0)
+		return 0;
+	if(ilen == 0)
+		return -1;
+	return 1;
+}
+
+/**
+ * Compare two RRs in the same RRset and determine their relative
+ * canonical order.
+ * @param rrset: the rrset in which to perform compares.
+ * @param i: first RR to compare
+ * @param j: first RR to compare
+ * @return 0 if RR i== RR j, -1 if <, +1 if >.
+ */
+static int
+canonical_compare(struct ub_packed_rrset_key* rrset, size_t i, size_t j)
+{
+	struct packed_rrset_data* d = (struct packed_rrset_data*)
+		rrset->entry.data;
+	const ldns_rr_descriptor* desc;
+	uint16_t type = ntohs(rrset->rk.type);
+	size_t minlen;
+	int c;
+
+	if(i==j)
+		return 0;
+
+	switch(type) {
+		/* only a name */
+		case LDNS_RR_TYPE_NS:
+		case LDNS_RR_TYPE_MD:
+		case LDNS_RR_TYPE_MF:
+		case LDNS_RR_TYPE_CNAME:
+		case LDNS_RR_TYPE_MB:
+		case LDNS_RR_TYPE_MG:
+		case LDNS_RR_TYPE_MR:
+		case LDNS_RR_TYPE_PTR:
+		case LDNS_RR_TYPE_DNAME:
+			return query_dname_compare(d->rr_data[i]+2, 
+				d->rr_data[j]+2);
+
+		/* type starts with the name */
+		case LDNS_RR_TYPE_NXT: 
+		case LDNS_RR_TYPE_NSEC: 
+		/* use rdata field formats */
+		case LDNS_RR_TYPE_MINFO:
+		case LDNS_RR_TYPE_RP:
+		case LDNS_RR_TYPE_SOA:
+		case LDNS_RR_TYPE_RT:
+		case LDNS_RR_TYPE_AFSDB:
+		case LDNS_RR_TYPE_KX:
+		case LDNS_RR_TYPE_MX:
+		case LDNS_RR_TYPE_SIG:
+		case LDNS_RR_TYPE_RRSIG:
+		case LDNS_RR_TYPE_PX:
+		case LDNS_RR_TYPE_NAPTR:
+		case LDNS_RR_TYPE_SRV:
+			desc = ldns_rr_descript(type);
+			log_assert(desc);
+			/* this holds for the types that need canonicalizing */
+			log_assert(desc->_minimum == desc->_maximum);
+			return canonical_compare_byfield(d, desc, i, j);
+
+		/* special (TXT is lowercased) */
+		case LDNS_RR_TYPE_HINFO:
+
+	default:
+		/* byte for byte compare, equal means shortest first*/
+		minlen = d->rr_len[i]-2;
+		if(minlen > d->rr_len[j]-2)
+			minlen = d->rr_len[j]-2;
+		c = memcmp(d->rr_data[i]+2, d->rr_data[j]+2, minlen);
+		if(c!=0)
+			return c;
+		if(d->rr_len[i] < d->rr_len[j])
+			return -1;
+		if(d->rr_len[i] > d->rr_len[j])
+			return 1;
+		break;
+	}
+	return 0;
+}
+
+/**
+ * canonical compare for two tree entries
+ */
+static int
+canonical_tree_compare(const void* k1, const void* k2)
+{
+	struct canon_rr* r1 = (struct canon_rr*)k1;
+	struct canon_rr* r2 = (struct canon_rr*)k2;
+	log_assert(r1->rrset == r2->rrset);
+	return canonical_compare(r1->rrset, r1->rr_idx, r2->rr_idx);
+}
+
+/**
  * Sort RRs for rrset in canonical order.
  * Does not actually canonicalize the RR rdatas.
  * Does not touch rrsigs.
  * @param rrset: to sort.
+ * @param d: rrset data.
+ * @param sortree: tree to sort into.
+ * @param rrs: rr storage.
  */
 static void
-canonical_sort(struct ub_packed_rrset_key* rrset)
+canonical_sort(struct ub_packed_rrset_key* rrset, struct packed_rrset_data* d,
+	rbtree_t* sortree, struct canon_rr* rrs)
 {
-	/* check if already sorted */
-	/* remove duplicates */
+	size_t i;
+	/* insert into rbtree to sort and detect duplicates */
+	for(i=0; i<d->count; i++) {
+		rrs[i].node.key = &rrs[i];
+		rrs[i].rrset = rrset;
+		rrs[i].rr_idx = i;
+		if(!rbtree_insert(sortree, &rrs[i].node)) {
+			/* this was a duplicate */
+		}
+	}
 }
 
 /**
@@ -610,6 +835,7 @@ canonicalize_rdata(ldns_buffer* buf, struct ub_packed_rrset_key* rrset,
 
 /**
  * Create canonical form of rrset in the scratch buffer.
+ * @param region: temporary region.
  * @param buf: the buffer to use.
  * @param k: the rrset to insert.
  * @param sig: RRSIG rdata to include.
@@ -618,20 +844,25 @@ canonicalize_rdata(ldns_buffer* buf, struct ub_packed_rrset_key* rrset,
  * @return false on alloc error.
  */
 static int
-rrset_canonical(ldns_buffer* buf, struct ub_packed_rrset_key* k, 
-	uint8_t* sig, size_t siglen)
+rrset_canonical(struct region* region, ldns_buffer* buf, 
+	struct ub_packed_rrset_key* k, uint8_t* sig, size_t siglen)
 {
 	struct packed_rrset_data* d = (struct packed_rrset_data*)k->entry.data;
-	size_t i;
 	uint8_t* can_owner = NULL;
 	size_t can_owner_len = 0;
-	/* sort RRs in place */
-	canonical_sort(k);
+	rbtree_t sortree;
+	struct canon_rr* walk;
+	struct canon_rr* rrs;
+	rrs = region_alloc(region, sizeof(struct canon_rr)*d->count);
+	if(!rrs)
+		return 0;
+	rbtree_init(&sortree, &canonical_tree_compare);
+	canonical_sort(k, d, &sortree, rrs);
 
 	ldns_buffer_clear(buf);
 	ldns_buffer_write(buf, sig, siglen);
 	query_dname_tolower(sig+18); /* canonicalize signer name */
-	for(i=0; i<d->count; i++) {
+	RBTREE_FOR(walk, struct canon_rr*, &sortree) {
 		/* determine canonical owner name */
 		if(can_owner)
 			ldns_buffer_write(buf, can_owner, can_owner_len);
@@ -640,8 +871,9 @@ rrset_canonical(ldns_buffer* buf, struct ub_packed_rrset_key* k,
 		ldns_buffer_write(buf, &k->rk.type, 2);
 		ldns_buffer_write(buf, &k->rk.rrset_class, 2);
 		ldns_buffer_write(buf, sig+4, 4);
-		ldns_buffer_write(buf, d->rr_data[i], d->rr_len[i]);
-		canonicalize_rdata(buf, k, d->rr_len[i]);
+		ldns_buffer_write(buf, d->rr_data[walk->rr_idx], 
+			d->rr_len[walk->rr_idx]);
+		canonicalize_rdata(buf, k, d->rr_len[walk->rr_idx]);
 	}
 	ldns_buffer_flip(buf);
 	return 1;
@@ -759,7 +991,7 @@ dnskey_verify_rrset_sig(struct module_env* env, struct val_env* ve,
 	}
 
 	/* create rrset canonical format in buffer, ready for signature */
-	if(!rrset_canonical(env->scratch_buffer, rrset, sig+2, 
+	if(!rrset_canonical(env->scratch, env->scratch_buffer, rrset, sig+2, 
 		18 + signer_len)) {
 		log_err("verify: failed due to alloc error");
 		return sec_status_unchecked;

@@ -1,6 +1,7 @@
 10 August 2007: Wouter
 	- malloc and free overrides that track total allocation and frees.
 	  for memory debugging.
+	- work on canonical sort.
 
 9 August 2007: Wouter
 	- canonicalization, signature checks

@@ -340,7 +340,7 @@ checklock_destroy(enum check_lock_type type, struct checked_lock** lock,
 			e->create_func, e->create_file, e->create_line,
 			(unsigned int)e->contention_count, 
 			(unsigned int)e->history_count,
-			100*e->contention_count/e->history_count);
+			(int)(100*e->contention_count/e->history_count));
 	}
 
 	/* delete it */
