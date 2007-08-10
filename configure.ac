@@ -631,6 +631,31 @@ struct sockaddr_storage;
 
 #include "ldns/ldns.h"
 
+/* use statistics for allocs and frees, for debug use */
+#define UNBOUND_ALLOC_STATS
+#ifdef UNBOUND_ALLOC_STATS
+#  ifdef malloc
+#    undef malloc
+#  endif
+#  ifdef realloc
+#    undef realloc
+#  endif
+#  ifdef calloc
+#    undef calloc
+#  endif
+#  ifdef free
+#    undef free
+#  endif
+#  define malloc unbound_stat_malloc
+#  define calloc unbound_stat_calloc
+#  define free unbound_stat_free
+#  define realloc unbound_stat_realloc
+void *unbound_stat_malloc(size_t size);
+void *unbound_stat_calloc(size_t nmemb, size_t size);
+void unbound_stat_free(void *ptr);
+void *unbound_stat_realloc(void *ptr, size_t size);
+#endif /* UNBOUND_ALLOC_STATS */
+
 /** default port for DNS traffic. */
 #define UNBOUND_DNS_PORT 53
 ])

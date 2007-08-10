@@ -74,9 +74,12 @@ static void
 debug_total_mem()
 {
 	extern void* unbound_start_brk;
+	extern size_t unbound_mem_alloc, unbound_mem_freed;
 	void* cur = sbrk(0);
 	int total = cur-unbound_start_brk;
-	log_info("Total heap memory estimate: %u", (unsigned)total);
+	log_info("Total heap memory estimate: %u  total-alloc: %u  "
+		"total-free: %u", (unsigned)total, 
+		(unsigned)unbound_mem_alloc, (unsigned)unbound_mem_freed);
 }
 
 /** Report on memory usage by this thread and global */

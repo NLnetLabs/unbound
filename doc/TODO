@@ -29,3 +29,5 @@ o (option) to not send replies to clients after a timeout of (say 5 secs) has
 o private TTL feature
 o pretend-dnssec-unaware, and pretend-edns-unaware modes for debug/workshops.
 o delegpt use rbtree for ns-list, to avoid slowdown for very large NS sets.
+o be able to have different listen and query-to addresses to bind to,
+  so you can listen to localhost and query-to to the internet.

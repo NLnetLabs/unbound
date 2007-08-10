@@ -252,3 +252,96 @@ size_t alloc_get_mem(struct alloc_cache* alloc)
 	}
 	return s;
 }
+
+/** global debug value to keep track of total memory mallocs */
+size_t unbound_mem_alloc = 0;
+/** global debug value to keep track of total memory frees */
+size_t unbound_mem_freed = 0;
+#ifdef UNBOUND_ALLOC_STATS
+/** special value to know if the memory is being tracked */
+uint64_t mem_special = (uint64_t)0xfeed43327766abcdLL;
+#ifdef malloc
+#undef malloc
+#endif
+/** malloc with stats */
+void *unbound_stat_malloc(size_t size)
+{
+	void* res;
+	if(size == 0) size = 1;
+	res = malloc(size+16);
+	if(!res) return NULL;
+	unbound_mem_alloc += size;
+	memcpy(res, &size, sizeof(size));
+	memcpy(res+8, &mem_special, sizeof(mem_special));
+	return res+16;
+}
+#ifdef calloc
+#undef calloc
+#endif
+/** calloc with stats */
+void *unbound_stat_calloc(size_t nmemb, size_t size)
+{
+	size_t s = (nmemb*size==0)?(size_t)1:nmemb*size;
+	void* res = calloc(1, s+16);
+	if(!res) return NULL;
+	unbound_mem_alloc += s;
+	memcpy(res, &s, sizeof(s));
+	memcpy(res+8, &mem_special, sizeof(mem_special));
+	return res+16;
+}
+#ifdef free
+#undef free
+#endif
+/** free with stats */
+void unbound_stat_free(void *ptr)
+{
+	size_t s;
+	if(!ptr) return;
+	if(memcmp(ptr-8, &mem_special, sizeof(mem_special)) != 0) {
+		free(ptr);
+		return;
+	}
+	ptr-=16;
+	memcpy(&s, ptr, sizeof(s));
+	memset(ptr+8, 0, 8);
+	unbound_mem_freed += s;
+	free(ptr);
+}
+#ifdef realloc
+#undef realloc
+#endif
+/** realloc with stats */
+void *unbound_stat_realloc(void *ptr, size_t size)
+{
+	size_t cursz;
+	void* res;
+	if(!ptr) return unbound_stat_malloc(size);
+	if(memcmp(ptr-8, &mem_special, sizeof(mem_special)) != 0) {
+		return realloc(ptr, size);
+	}
+	if(size==0) {
+		unbound_stat_free(ptr);
+		return NULL;
+	}
+	ptr -= 16;
+	memcpy(&cursz, ptr, sizeof(cursz));
+	if(cursz == size) {
+		/* nothing changes */
+		return ptr;
+	}
+	res = malloc(size+16);
+	if(!res) return NULL;
+	unbound_mem_alloc += size;
+	unbound_mem_freed += cursz;
+	if(cursz > size) {
+		memcpy(res+16, ptr+16, size);
+	} else if(size > cursz) {
+		memcpy(res+16, ptr+16, cursz);
+	}
+	memset(ptr+8, 0, 8);
+	free(ptr);
+	memcpy(res, &size, sizeof(size));
+	memcpy(res+8, &mem_special, sizeof(mem_special));
+	return res+16;
+}
+#endif /* UNBOUND_ALLOC_STATS */
