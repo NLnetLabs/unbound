@@ -116,9 +116,14 @@ pktview:	$(PKTVIEW_OBJ)
 util/config_file.c:	util/configparser.h
 util/configlexer.c:  $(srcdir)/util/configlexer.lex util/configparser.h
 	$(INFO) Lex $<
+ifeq "$(strip $(LEX))" ":"
+	$Qecho "Need to rebuild lexer, but no lex program"
+	exit 1
+else
 	@if test ! -d util; then $(INSTALL) -d util; fi
 	$Qecho "#include \"util/configyyrename.h\"" > $@
 	$Q$(LEX) -t $< >> $@
+endif
 
 util/configparser.c util/configparser.h:  $(srcdir)/util/configparser.y
 	$(INFO) Yacc $<

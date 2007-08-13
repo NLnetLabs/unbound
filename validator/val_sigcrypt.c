@@ -463,97 +463,126 @@ canonical_compare_byfield(struct packed_rrset_data* d,
 	 * 	current position in rdata, length left.
 	 * 	are we in a dname, length left in a label.
 	 */
-	const ldns_rdf_type* wfi = desc->_wireformat;
-	const ldns_rdf_type* wfj = desc->_wireformat;
-	uint8_t* di = d->rr_data[i]+2;
+	int wfi = -1;	/* current wireformat rdata field (rdf) */
+	int wfj = -1;
+	uint8_t* di = d->rr_data[i]+2; /* ptr to current rdata byte */
 	uint8_t* dj = d->rr_data[j]+2;
-	size_t ilen = d->rr_len[i]-2;
+	size_t ilen = d->rr_len[i]-2; /* length left in rdata */
 	size_t jlen = d->rr_len[j]-2;
-	int dname_i = 0;
+	int dname_i = 0;  /* true if these bytes are part of a name */
 	int dname_j = 0;
-	int lablen_i = 0;
-	int lablen_j = 0;
-	uint8_t bi, bj;
-	/* TODO keep track of number of dnames left */
+	size_t lablen_i = 0; /* 0 for label length byte,for first byte of rdf*/
+	size_t lablen_j = 0; /* otherwise remaining length of rdf or label */
+	int dname_num_i = (int)desc->_dname_count; /* decreased at root label */
+	int dname_num_j = (int)desc->_dname_count;
 
-	/* setup initial state */
-	/* if it is a domain name, set it true, lablen is then 0 to indicate
-	 * that the current byte is the label length itself.
-	 * If it is a string, get the length of the wireformat
-	 */
-	if(*wfi == LDNS_RDF_TYPE_DNAME)
-		dname_i = 1;
-	else if(*wfi == LDNS_RDF_TYPE_STR && ilen > 0)
-		lablen_i = (int)(*di)+1;
-	else	lablen_i = (int)get_rdf_size(*wfi);
-	if(*wfj == LDNS_RDF_TYPE_DNAME)
-		dname_j = 1;
-	else if(*wfj == LDNS_RDF_TYPE_STR && jlen > 0)
-		lablen_j = (int)(*dj)+1;
-	else	lablen_j = (int)get_rdf_size(*wfj);
-
-	while(ilen > 0 && jlen > 0) {
+	/* loop while there are rdata bytes available for both rrs,
+	 * and still some lowercasing needs to be done; either the dnames
+	 * have not been reached yet, or they are currently being processed */
+	while(ilen > 0 && jlen > 0 && (dname_num_i > 0 || dname_num_j > 0)) {
 		/* compare these two bytes */
-		/* note that labellengths are <=63 and A is 65 */
-		if(dname_i && lablen_i)
-			bi = (uint8_t)tolower((int)*di++);
-		else	bi = *di++;
-		ilen--;
-		if(dname_j && lablen_j)
-			bj = (uint8_t)tolower((int)*dj++);
-		else	bj = *dj++;
-		jlen--;
-		if(bi != bj) {
-			if(bi < bj)
-				return -1;
-			return 1;
+		/* lowercase if in a dname and not a label length byte */
+		if( ((dname_i && lablen_i)?(uint8_t)tolower((int)*di++):*di++)
+		 != ((dname_j && lablen_j)?(uint8_t)tolower((int)*dj++):*dj++)
+		 ) {
+		  if(((dname_i && lablen_i)?(uint8_t)tolower((int)*di++):*di++)
+		  < ((dname_j && lablen_j)?(uint8_t)tolower((int)*dj++):*dj++))
+		 	return -1;
+		    return 1;
 		}
+		ilen--;
+		jlen--;
 		/* bytes are equal */
 
-		if(lablen_i == 0) { /* advance field i */
+		/* advance field i */
+		/* lablen 0 means that this byte is the first byte of the
+		 * next rdata field; inspect this rdata field and setup
+		 * to process the rest of this rdata field.
+		 * The reason to first read the byte, then setup the rdf,
+		 * is that we are then sure the byte is available and short
+		 * rdata is handled gracefully (even if it is a formerr). */
+		if(lablen_i == 0) { 
 			if(dname_i) {
-				lablen_i = (int)bi;
-				if(!lablen_i)
+				/* scan this dname label */
+				/* capture length to lowercase */
+				lablen_i = (size_t)di[-1];
+				if(lablen_i == 0) {
+					/* end root label */
 					dname_i = 0;
-			}
-			if(lablen_i == 0) {
+					dname_num_i--;
+					/* if dname num is 0, then the
+					 * remainder is binary only */
+					if(dname_num_i == 0)
+						lablen_i = ilen;
+				}
+			} else {
+				/* scan this rdata field */
 				wfi++;
-				if(wfi-desc->_wireformat > (int)desc->_maximum)
-					return 0; /* its formerr */
-				if(*wfi == LDNS_RDF_TYPE_DNAME)
-					dname_i = 1;
-				else if(*wfi == LDNS_RDF_TYPE_STR)
-					lablen_i = (int)bi+1;
-				else	lablen_i = (int)get_rdf_size(*wfi);
+				if(desc->_wireformat[wfi] 
+					== LDNS_RDF_TYPE_DNAME) {
+					dname_i = 1; 
+					lablen_i = (size_t)di[-1];
+					if(lablen_i == 0) {
+						dname_i = 0;
+						dname_num_i--;
+						if(dname_num_i == 0)
+							lablen_i = ilen;
+					}
+				} else if(desc->_wireformat[wfi] 
+					== LDNS_RDF_TYPE_STR)
+					lablen_i = (size_t)di[-1];
+				else	lablen_i = get_rdf_size(
+					desc->_wireformat[wfi]) - 1;
 			}
-		} else	
-			lablen_i--;
-		if(lablen_j == 0) { /* advance field j */
-			if(dname_j) {
-				lablen_j = (int)bj;
-				if(!lablen_j)
-					dname_j = 0;
-			}
-			if(lablen_j == 0) {
-				wfi++;
-				if(wfi-desc->_wireformat > (int)desc->_maximum)
-					return 0; /* its formerr */
-				if(*wfi == LDNS_RDF_TYPE_DNAME)
-					dname_j = 1;
-				else if(*wfj == LDNS_RDF_TYPE_STR)
-					lablen_j = (int)bj+1;
-				else	lablen_j = (int)get_rdf_size(*wfj);
-			}
-		} else
-			lablen_j--;
+		} else	lablen_i--;
 
+		/* advance field j; same as for i */
+		if(lablen_j == 0) { 
+			if(dname_j) {
+				lablen_j = (size_t)dj[-1];
+				if(lablen_j == 0) {
+					dname_j = 0;
+					dname_num_j--;
+					if(dname_num_j == 0)
+						lablen_j = jlen;
+				}
+			} else {
+				wfj++;
+				if(desc->_wireformat[wfj] 
+					== LDNS_RDF_TYPE_DNAME) {
+					dname_j = 1; 
+					lablen_j = (size_t)dj[-1];
+					if(lablen_j == 0) {
+						dname_j = 0;
+						dname_num_j--;
+						if(dname_num_j == 0)
+							lablen_j = jlen;
+					}
+				} else if(desc->_wireformat[wfj] 
+					== LDNS_RDF_TYPE_STR)
+					lablen_j = (size_t)dj[-1];
+				else	lablen_j = get_rdf_size(
+					desc->_wireformat[wfj]) - 1;
+			}
+		} else	lablen_j--;
 	}
+	/* end of the loop; because we advanced byte by byte; now we have
+	 * that the rdata has ended, or that there is a binary remainder */
 	/* shortest first */
 	if(ilen == 0 && jlen == 0)
 		return 0;
 	if(ilen == 0)
 		return -1;
-	return 1;
+	if(jlen == 0)
+		return 1;
+	/* binary remainder, capture comparison in wfi variable */
+	if((wfi = memcmp(di, dj, (ilen<jlen)?ilen:jlen)) != 0)
+		return wfi;
+	if(ilen < jlen)
+		return -1;
+	if(jlen < ilen)
+		return 1;
+	return 0;
 }
 
 /**
@@ -578,7 +607,8 @@ canonical_compare(struct ub_packed_rrset_key* rrset, size_t i, size_t j)
 		return 0;
 
 	switch(type) {
-		/* only a name */
+		/* These RR types have only a name as RDATA. 
+		 * This name has to be canonicalized.*/
 		case LDNS_RR_TYPE_NS:
 		case LDNS_RR_TYPE_MD:
 		case LDNS_RR_TYPE_MF:
@@ -591,7 +621,11 @@ canonical_compare(struct ub_packed_rrset_key* rrset, size_t i, size_t j)
 			return query_dname_compare(d->rr_data[i]+2, 
 				d->rr_data[j]+2);
 
-		/* type starts with the name */
+		/* These RR types have STR and fixed size rdata fields
+		 * before one or more name fields that need canonicalizing,
+		 * and after that a byte-for byte remainder can be compared.
+		 */
+		/* type starts with the name; remainder is binary compared */
 		case LDNS_RR_TYPE_NXT: 
 		case LDNS_RR_TYPE_NSEC: 
 		/* use rdata field formats */
@@ -613,10 +647,13 @@ canonical_compare(struct ub_packed_rrset_key* rrset, size_t i, size_t j)
 			log_assert(desc->_minimum == desc->_maximum);
 			return canonical_compare_byfield(d, desc, i, j);
 
-		/* special (TXT is lowercased) */
+		/* This RR type is special, as the contents of text fields
+		 * is lowercased. */
 		case LDNS_RR_TYPE_HINFO:
 
 	default:
+		/* For unknown RR types, or types not listed above,
+		 * no canonicalization is needed, do binary compare */
 		/* byte for byte compare, equal means shortest first*/
 		minlen = d->rr_len[i]-2;
 		if(minlen > d->rr_len[j]-2)
@@ -624,10 +661,12 @@ canonical_compare(struct ub_packed_rrset_key* rrset, size_t i, size_t j)
 		c = memcmp(d->rr_data[i]+2, d->rr_data[j]+2, minlen);
 		if(c!=0)
 			return c;
+		/* rdata equal, shortest is first */
 		if(d->rr_len[i] < d->rr_len[j])
 			return -1;
 		if(d->rr_len[i] > d->rr_len[j])
 			return 1;
+		/* rdata equal, length equal */
 		break;
 	}
 	return 0;

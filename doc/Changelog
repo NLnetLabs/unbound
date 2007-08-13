@@ -1,3 +1,8 @@
+13 August 2007: Wouter
+	- fixup makefile, if lexer is missing give nice error and do not
+	  mess up the dependencies.
+	- canonical compare routine updated.
+
 10 August 2007: Wouter
 	- malloc and free overrides that track total allocation and frees.
 	  for memory debugging.

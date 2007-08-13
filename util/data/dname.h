@@ -68,6 +68,16 @@ void query_dname_tolower(uint8_t* dname);
 /**
  * Compare query dnames (uncompressed storage). The Dnames passed do not
  * have to be lowercased, comparison routine does this.
+ *
+ * This routine is special, in that the comparison that it does corresponds
+ * with the canonical comparison needed when comparing dnames inside rdata
+ * for RR types that need canonicalization. That means that the first byte
+ * that is smaller (possibly after lowercasing) makes an RR smaller, or the
+ * shortest name makes an RR smaller.
+ *
+ * This routine does not compute the canonical order needed for NSEC 
+ * processing.
+ *
  * Dnames have to be valid format.
  * @param d1: dname to compare
  * @param d2: dname to compare
