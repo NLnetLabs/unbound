@@ -3,6 +3,7 @@
 	  mess up the dependencies.
 	- canonical compare routine updated.
 	- canonical hinfo compare.
+	- printout list of the queries that the mesh is working on.
 
 10 August 2007: Wouter
 	- malloc and free overrides that track total allocation and frees.

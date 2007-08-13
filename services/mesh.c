@@ -602,8 +602,28 @@ void mesh_run(struct mesh_area* mesh, struct mesh_state* mstate,
 			(void)rbtree_delete(&mesh->run, mstate);
 		} else mstate = NULL;
 	}
-	if(verbosity >= VERB_ALGO)
+	if(verbosity >= VERB_ALGO) {
 		mesh_stats(mesh, "mesh_run: end");
+		mesh_log_list(mesh);
+	}
+}
+
+void 
+mesh_log_list(struct mesh_area* mesh)
+{
+	char buf[30];
+	struct mesh_state* m;
+	int num = 0;
+	RBTREE_FOR(m, struct mesh_state*, &mesh->all) {
+		snprintf(buf, sizeof(buf), "%d%s%s%s%s%s mod%d %s", 
+			num++, (m->s.is_priming)?"p":"",  /* prime */
+			(m->s.query_flags&BIT_RD)?"RD":"",
+			(m->s.query_flags&BIT_CD)?"CD":"",
+			(m->super_set.count==0)?"d":"", /* detached */
+			(m->sub_set.count!=0)?"c":"",  /* children */
+			m->s.curmod, (m->reply_list)?"hr":"nr"); /*hasreply*/
+		log_query_info(VERB_ALGO, buf, &m->s.qinfo);
+	}
 }
 
 void 

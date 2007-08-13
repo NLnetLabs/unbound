@@ -344,6 +344,12 @@ void mesh_run(struct mesh_area* mesh, struct mesh_state* mstate,
 void mesh_stats(struct mesh_area* mesh, const char* str);
 
 /**
+ * Print all the states in the mesh to the log.
+ * @param mesh: the mesh to print all states of.
+ */
+void mesh_log_list(struct mesh_area* mesh);
+
+/**
  * Calculate memory size in use by mesh and all queries inside it.
  * @param mesh: the mesh to examine.
  * @return size in bytes.
