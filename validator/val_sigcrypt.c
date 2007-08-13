@@ -447,6 +447,55 @@ struct canon_rr {
 };
 
 /**
+ * Compare HINFO rrsets. For them, the string length bytes are not lowercased,
+ * but the string contents are lowercased.
+ *
+ * This routine works for any 'all STR' RR type. It works similar to the
+ * compare_byfield routine, but stripped down, and modified to lowercase
+ * STR fields.
+ *
+ * @param d: rrset data
+ * @param i: first RR to compare
+ * @param j: first RR to compare
+ * @return comparison code.
+ */
+static int
+canonical_compare_hinfo(struct packed_rrset_data* d, size_t i, size_t j)
+{
+	uint8_t* di = d->rr_data[i]+2; /* ptr to current rdata byte */
+	uint8_t* dj = d->rr_data[j]+2;
+	size_t ilen = d->rr_len[i]-2; /* length left in rdata */
+	size_t jlen = d->rr_len[j]-2;
+	size_t strlen_i = 0;
+	size_t strlen_j = 0;
+	while(ilen > 0 && jlen > 0) {
+		/* compare this pair of bytes */
+		if( ((strlen_i)?(uint8_t)tolower((int)*di++):*di++)
+		 != ((strlen_j)?(uint8_t)tolower((int)*dj++):*dj++)
+		 ) {
+		  if(((strlen_i)?(uint8_t)tolower((int)*di++):*di++)
+		  < ((strlen_j)?(uint8_t)tolower((int)*dj++):*dj++))
+		 	return -1;
+		    return 1;
+		}
+		ilen --;
+		jlen --;
+		/* read length byte of the string in rdata if strlen=0 */
+		if(strlen_i == 0) {
+			strlen_i = (size_t)di[-1];
+		} else 	strlen_i--;
+		if(strlen_j == 0) {
+			strlen_j = (size_t)dj[-1];
+		} else 	strlen_j--;
+	}
+	if(ilen == 0 && jlen == 0)
+		return 0;
+	if(ilen == 0)
+		return -1;
+	return 1;
+}
+
+/**
  * Compare two RR for canonical order, in a field-style sweep.
  * @param d: rrset data
  * @param desc: ldns wireformat descriptor.
@@ -650,6 +699,7 @@ canonical_compare(struct ub_packed_rrset_key* rrset, size_t i, size_t j)
 		/* This RR type is special, as the contents of text fields
 		 * is lowercased. */
 		case LDNS_RR_TYPE_HINFO:
+			return canonical_compare_hinfo(d, i, j);
 
 	default:
 		/* For unknown RR types, or types not listed above,
