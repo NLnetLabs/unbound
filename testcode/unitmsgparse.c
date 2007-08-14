@@ -51,6 +51,8 @@
 
 /** verbose message parse unit test */
 static int vbmp = 0;
+/** if matching within a section should disregard the order of RRs. */
+static int matches_nolocation = 0;
 
 /** match two rr lists */
 static int
@@ -65,18 +67,25 @@ match_list(ldns_rr_list* q, ldns_rr_list *p)
 	}
 	for(i=0; i<ldns_rr_list_rr_count(q); i++)
 	{
-		if(ldns_rr_compare(ldns_rr_list_rr(q, i),
-			ldns_rr_list_rr(p, i)) != 0) {
-			verbose(3, "rr %u different", (unsigned)i);
-			return 0;
+		if(matches_nolocation) {
+			if(!ldns_rr_list_contains_rr(p, ldns_rr_list_rr(q, i)))
+			{
+				verbose(3, "rr %u not found", (unsigned)i);
+				return 0;
+			}
+		} else {
+			if(ldns_rr_compare(ldns_rr_list_rr(q, i),
+				ldns_rr_list_rr(p, i)) != 0) {
+				verbose(3, "rr %u different", (unsigned)i);
+				return 0;
+			}
+			/* and check the ttl */
+			if(ldns_rr_ttl(ldns_rr_list_rr(q, i)) !=
+				ldns_rr_ttl(ldns_rr_list_rr(p, i))) {
+				verbose(3, "rr %u ttl different", (unsigned)i);
+				return 0;
+			}
 		}
-		/* and check the ttl */
-		if(ldns_rr_ttl(ldns_rr_list_rr(q, i)) !=
-			ldns_rr_ttl(ldns_rr_list_rr(p, i))) {
-			verbose(3, "rr %u ttl different", (unsigned)i);
-			return 0;
-		}
-
 	}
 	return 1;
 }
@@ -432,6 +441,10 @@ void msgparse_test()
 	/* like from drill -w - */
 	testfromdrillfile(pkt, &alloc, out, "testdata/test_packets.4");
 	testfromdrillfile(pkt, &alloc, out, "testdata/test_packets.5");
+
+	matches_nolocation = 1; /* RR order not important for the next test */
+	testfromdrillfile(pkt, &alloc, out, "testdata/test_packets.6");
+	matches_nolocation = 0; 
 
 	/* cleanup */
 	alloc_clear(&alloc);

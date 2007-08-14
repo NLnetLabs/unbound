@@ -259,6 +259,9 @@ outnet_udp_cb(struct comm_point* c, void* arg, int error,
 	}
 
 	verbose(VERB_ALGO, "received udp reply.");
+	if(verbosity >= VERB_ALGO)
+		log_hex("udp message", ldns_buffer_begin(c->buffer), 
+				ldns_buffer_limit(c->buffer));
 	if(p->c != c) {
 		verbose(VERB_DETAIL, "received reply id,addr on wrong port. "
 			"dropped.");

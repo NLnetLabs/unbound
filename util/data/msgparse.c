@@ -389,6 +389,8 @@ change_rrsig_rrset(struct rrset_parse* sigset, struct msg_parse* msg,
 		dataset->rrsig_last->next = dataset->rr_first;
 	else	dataset->rrsig_first = dataset->rr_first;
 	dataset->rrsig_last = dataset->rr_last;
+	dataset->rr_first = 0;
+	dataset->rr_last = 0;
 	return dataset;
 }
 
@@ -715,7 +717,7 @@ add_rr_to_rrset(struct rrset_parse* rrset, ldns_buffer* pkt,
 			return LDNS_RCODE_FORMERR;
 		return 0;
 	}
-
+	
 	/* create rr */
 	if(!(rr = (struct rr_parse*)region_alloc(region, sizeof(*rr))))
 		return LDNS_RCODE_SERVFAIL;
@@ -810,6 +812,14 @@ parse_section(ldns_buffer* pkt, struct msg_parse* msg, region_type* region,
 				hash, rrset_flags, section, region);
 			if(!rrset) 
 				return LDNS_RCODE_SERVFAIL;
+		}
+		else if(0)	{ 
+			printf("is part of existing: ");
+			dname_print(stdout, pkt, rrset->dname);
+			printf(" type %s(%d)\n",
+				ldns_rr_descript(rrset->type)?
+				ldns_rr_descript(rrset->type)->_name: "??",
+				(int)rrset->type);
 		}
 		/* add to rrset. */
 		if((r=add_rr_to_rrset(rrset, pkt, msg, region, section, 

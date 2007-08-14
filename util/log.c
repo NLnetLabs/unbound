@@ -179,11 +179,19 @@ log_hex(const char* msg, void* data, size_t length)
 	uint8_t* data8 = (uint8_t*)data;
 	const char* hexchar = "0123456789ABCDEF";
 	char* buf = malloc(length*2 + 1); /* alloc hex chars + \0 */
+	size_t blocksize = 1024;
 	for(i=0; i<length; i++) {
 		buf[i*2] = hexchar[ data8[i] >> 4 ];
 		buf[i*2 + 1] = hexchar[ data8[i] & 0xF ];
 	}
 	buf[length*2] = 0;
-	log_info("%s[%u] %s", msg, (unsigned)length, buf);
+	if(length < blocksize/2)
+		log_info("%s[%u] %s", msg, (unsigned)length, buf);
+	else {
+		for(i=0; i<length*2; i+=blocksize) {
+			log_info("%s[%u:%u] %.*s", msg, (unsigned)length, 
+				(unsigned)i, blocksize, buf+i);
+		}
+	}
 	free(buf);
 }

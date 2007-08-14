@@ -7,6 +7,9 @@
 	- extensive debugging for memory allocations.
 	- --enable-lock-checks can be used to enable lock checking.
 	- protect undefs in config.h from autoheaders ministrations.
+	- print all received udp packets. log hex will print on multiple
+	  lines if needed.
+	- fixed error in parser with backwards rrsig references.
 
 13 August 2007: Wouter
 	- fixup makefile, if lexer is missing give nice error and do not
