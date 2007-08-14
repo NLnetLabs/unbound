@@ -70,7 +70,7 @@
  	} while(0)
 
 /** DEBUG: use thread debug whenever possible */
-#if defined(HAVE_PTHREAD) && defined(HAVE_PTHREAD_SPINLOCK_T)
+#if defined(HAVE_PTHREAD) && defined(HAVE_PTHREAD_SPINLOCK_T) && defined(ENABLE_LOCK_CHECKS)
 #  define USE_THREAD_DEBUG
 #endif
 

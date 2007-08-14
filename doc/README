@@ -28,6 +28,9 @@ This software is under BSD license, see LICENSE for details.
   * --enable-static-exe
 	This enables a debug option to statically link, against ldns and 
 	libevent libraries.
+  * --enable-lock-checks
+  	This enables a debug option to check lock and unlock calls. It needs
+	a recent pthreads library to work.
 
 Known issues
 ------------

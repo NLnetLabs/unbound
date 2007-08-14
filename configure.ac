@@ -481,6 +481,14 @@ if test x_$enable_static_exe = x_yes; then
 	staticexe="-static"
 fi
 
+# set lock checking if requested
+AC_ARG_ENABLE(lock_checks, AC_HELP_STRING([--enable-lock-checks],
+	[ enable to check lock and unlock calls, for debug purposes ]), 
+	, )
+if test x_$enable_lock_checks = x_yes; then
+	AC_DEFINE(ENABLE_LOCK_CHECKS, 1, [Define if you want to use debug lock checking (slow).])
+fi
+
 # check to see if libraries are needed for these functions.
 AC_CHECK_LIB(socket, socket)
 AC_CHECK_LIB(nsl, inet_pton)

@@ -5,6 +5,7 @@
 	- accounting of memory improved
 	- outbound entries are allocated in the query region they are for.
 	- extensive debugging for memory allocations.
+	- --enable-lock-checks can be used to enable lock checking.
 
 13 August 2007: Wouter
 	- fixup makefile, if lexer is missing give nice error and do not
