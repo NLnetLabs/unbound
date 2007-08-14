@@ -205,7 +205,9 @@ prot_store(struct checked_lock* lock)
 	}
 }
 
-size_t lock_get_mem(void* pp)
+/** get memory held by lock */
+size_t 
+lock_get_mem(void* pp)
 {
 	size_t s;
 	struct checked_lock* lock = *(struct checked_lock**)pp;

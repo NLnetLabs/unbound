@@ -353,6 +353,7 @@ void *unbound_stat_realloc(void *ptr, size_t size)
 	return res+16;
 }
 
+/** log to file where alloc was done */
 void *unbound_stat_malloc_log(size_t size, const char* file, int line,
         const char* func)
 {
@@ -360,6 +361,7 @@ void *unbound_stat_malloc_log(size_t size, const char* file, int line,
 	return unbound_stat_malloc(size);
 }
 
+/** log to file where alloc was done */
 void *unbound_stat_calloc_log(size_t nmemb, size_t size, const char* file,
         int line, const char* func)
 {
@@ -368,6 +370,7 @@ void *unbound_stat_calloc_log(size_t nmemb, size_t size, const char* file,
 	return unbound_stat_calloc(nmemb, size);
 }
 
+/** log to file where free was done */
 void unbound_stat_free_log(void *ptr, const char* file, int line,
         const char* func)
 {
@@ -381,6 +384,7 @@ void unbound_stat_free_log(void *ptr, const char* file, int line,
 	unbound_stat_free(ptr);
 }
 
+/** log to file where alloc was done */
 void *unbound_stat_realloc_log(void *ptr, size_t size, const char* file,
         int line, const char* func)
 {
@@ -389,12 +393,14 @@ void *unbound_stat_realloc_log(void *ptr, size_t size, const char* file,
 	return unbound_stat_realloc(ptr, size);
 }
 
+/** special routine for region-allocator, print to log */
 void *unbound_stat_malloc_region(size_t size)
 {
 	log_info("region malloc(%u)", (unsigned)size);
 	return unbound_stat_malloc(size);
 }
 
+/** special routine for region-allocator, print to log */
 void unbound_stat_free_region(void *ptr)
 {
 	if(ptr && memcmp(ptr-8, &mem_special, sizeof(mem_special)) == 0) {
