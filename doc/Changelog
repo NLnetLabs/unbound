@@ -10,6 +10,8 @@
 	- print all received udp packets. log hex will print on multiple
 	  lines if needed.
 	- fixed error in parser with backwards rrsig references.
+	- mark cycle targets for iterator did not have CD flag so failed
+	  its task.
 
 13 August 2007: Wouter
 	- fixup makefile, if lexer is missing give nice error and do not
