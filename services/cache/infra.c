@@ -53,7 +53,7 @@ static size_t
 infra_host_sizefunc(void* k, void* ATTR_UNUSED(d))
 {
 	struct infra_host_key* key = (struct infra_host_key*)k;
-	return sizeof(struct infra_host_key) + sizeof(struct infra_host_data) 
+	return sizeof(*key) + sizeof(struct infra_host_data) 
 		+ lock_get_mem(&key->entry.lock);
 }
 
@@ -296,7 +296,7 @@ static size_t
 infra_lame_sizefunc(void* k, void* ATTR_UNUSED(d))
 {
 	struct infra_lame_key* key = (struct infra_lame_key*)k;
-	return sizeof(struct infra_lame_key)+sizeof(struct infra_lame_data)
+	return sizeof(*key) + sizeof(struct infra_lame_data)
 		+ lock_get_mem(&key->entry.lock);
 }
 
