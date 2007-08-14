@@ -147,11 +147,9 @@ size_t slabhash_get_size(struct slabhash* sl)
 size_t slabhash_get_mem(struct slabhash* sl)
 {	
 	size_t i, total = sizeof(*sl);
+	total += sizeof(struct lruhash*)*sl->size;
 	for(i=0; i<sl->size; i++) {
-		lock_quick_lock(&sl->array[i]->lock);
-		total += sizeof(struct lruhash) + sl->array[i]->space_used +
-			sizeof(struct lruhash_bin)*sl->array[i]->size;
-		lock_quick_unlock(&sl->array[i]->lock);
+		total += lruhash_get_mem(sl->array[i]);
 	}
 	return total;
 }

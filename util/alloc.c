@@ -242,11 +242,15 @@ alloc_stats(struct alloc_cache* alloc)
 
 size_t alloc_get_mem(struct alloc_cache* alloc)
 {
+	alloc_special_t* p;
 	size_t s = sizeof(*alloc);
 	if(!alloc->super) { 
 		lock_quick_lock(&alloc->lock); /* superalloc needs locking */
 	}
 	s += sizeof(alloc_special_t) * alloc->num_quar;
+	for(p = alloc->quar; p; p = alloc_special_next(p)) {
+		s += lock_get_mem(&p->entry.lock);
+	}
 	if(!alloc->super) {
 		lock_quick_unlock(&alloc->lock);
 	}
@@ -271,6 +275,7 @@ void *unbound_stat_malloc(size_t size)
 	res = malloc(size+16);
 	if(!res) return NULL;
 	unbound_mem_alloc += size;
+	log_info("stat %p=malloc(%u)", res+16, (unsigned)size);
 	memcpy(res, &size, sizeof(size));
 	memcpy(res+8, &mem_special, sizeof(mem_special));
 	return res+16;
@@ -284,6 +289,7 @@ void *unbound_stat_calloc(size_t nmemb, size_t size)
 	size_t s = (nmemb*size==0)?(size_t)1:nmemb*size;
 	void* res = calloc(1, s+16);
 	if(!res) return NULL;
+	log_info("stat %p=calloc(%u, %u)", res+16, (unsigned)nmemb, (unsigned)size);
 	unbound_mem_alloc += s;
 	memcpy(res, &s, sizeof(s));
 	memcpy(res+8, &mem_special, sizeof(mem_special));
@@ -303,6 +309,7 @@ void unbound_stat_free(void *ptr)
 	}
 	ptr-=16;
 	memcpy(&s, ptr, sizeof(s));
+	log_info("stat free(%p) size %u", ptr+16, (unsigned)s);
 	memset(ptr+8, 0, 8);
 	unbound_mem_freed += s;
 	free(ptr);
@@ -333,6 +340,7 @@ void *unbound_stat_realloc(void *ptr, size_t size)
 	if(!res) return NULL;
 	unbound_mem_alloc += size;
 	unbound_mem_freed += cursz;
+	log_info("stat realloc(%p, %u) from %u", ptr+16, (unsigned)size, (unsigned)cursz);
 	if(cursz > size) {
 		memcpy(res+16, ptr+16, size);
 	} else if(size > cursz) {
@@ -344,4 +352,58 @@ void *unbound_stat_realloc(void *ptr, size_t size)
 	memcpy(res+8, &mem_special, sizeof(mem_special));
 	return res+16;
 }
+
+void *unbound_stat_malloc_log(size_t size, const char* file, int line,
+        const char* func)
+{
+	log_info("%s:%d %s malloc(%u)", file, line, func, (unsigned)size);
+	return unbound_stat_malloc(size);
+}
+
+void *unbound_stat_calloc_log(size_t nmemb, size_t size, const char* file,
+        int line, const char* func)
+{
+	log_info("%s:%d %s calloc(%u, %u)", file, line, func, 
+		(unsigned) nmemb, (unsigned)size);
+	return unbound_stat_calloc(nmemb, size);
+}
+
+void unbound_stat_free_log(void *ptr, const char* file, int line,
+        const char* func)
+{
+	if(ptr && memcmp(ptr-8, &mem_special, sizeof(mem_special)) == 0) {
+		size_t s;
+		memcpy(&s, ptr-16, sizeof(s));
+		log_info("%s:%d %s free(%p) size %u", 
+			file, line, func, ptr, (unsigned)s);
+	} else
+		log_info("%s:%d %s unmatched free(%p)", file, line, func, ptr);
+	unbound_stat_free(ptr);
+}
+
+void *unbound_stat_realloc_log(void *ptr, size_t size, const char* file,
+        int line, const char* func)
+{
+	log_info("%s:%d %s realloc(%p, %u)", file, line, func, 
+		ptr, (unsigned)size);
+	return unbound_stat_realloc(ptr, size);
+}
+
+void *unbound_stat_malloc_region(size_t size)
+{
+	log_info("region malloc(%u)", (unsigned)size);
+	return unbound_stat_malloc(size);
+}
+
+void unbound_stat_free_region(void *ptr)
+{
+	if(ptr && memcmp(ptr-8, &mem_special, sizeof(mem_special)) == 0) {
+		size_t s;
+		memcpy(&s, ptr-16, sizeof(s));
+		log_info("region free(%p) size %u", ptr, (unsigned)s);
+	} else
+		log_info("region unmatched free(%p)", ptr);
+	unbound_stat_free(ptr);
+}
+
 #endif /* UNBOUND_ALLOC_STATS */

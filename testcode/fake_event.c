@@ -952,4 +952,9 @@ size_t comm_point_get_mem(struct comm_point* ATTR_UNUSED(c))
 	return 0;
 }
 
+size_t serviced_get_mem(struct serviced_query* ATTR_UNUSED(c))
+{
+	return 0;
+}
+
 /*********** End of Dummy routines ***********/

@@ -82,6 +82,7 @@
 #else /* USE_THREAD_DEBUG */
 #define lock_protect(lock, area, size) /* nop */
 #define lock_unprotect(lock, area) /* nop */
+#define lock_get_mem(lock) (0) /* nothing */
 #define checklock_start() /* nop */
 #define checklock_stop() /* nop */
 

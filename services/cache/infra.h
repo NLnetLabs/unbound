@@ -235,4 +235,11 @@ int infra_get_lame_rtt(struct infra_cache* infra,
         struct sockaddr_storage* addr, socklen_t addrlen, 
 	uint8_t* name, size_t namelen, int* lame, int* rtt, time_t timenow);
 
+/**
+ * Get memory used by the infra cache.
+ * @param infra: infrastructure cache.
+ * @return memory in use in bytes.
+ */
+size_t infra_get_mem(struct infra_cache* infra);
+
 #endif /* SERVICES_CACHE_INFRA_H */

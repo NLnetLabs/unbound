@@ -69,9 +69,33 @@
 /** Size of an UDP datagram */
 #define NORMAL_UDP_SIZE	512 /* bytes */
 
+/** measure memory leakage */
+static void
+debug_memleak(size_t accounted, size_t heap, 
+	size_t total_alloc, size_t total_free)
+{
+	static int init = 0;
+	static size_t base_heap, base_accounted, base_alloc, base_free;
+	size_t base_af, cur_af, grow_af, grow_acc;
+	if(!init) {
+		init = 1;
+		base_heap = heap;
+		base_accounted = accounted;
+		base_alloc = total_alloc;
+		base_free = total_free;
+	}
+	base_af = base_alloc - base_free;
+	cur_af = total_alloc - total_free;
+	grow_af = cur_af - base_af;
+	grow_acc = accounted - base_accounted;
+	log_info("Leakage: %u leaked. growth: %u use, %u acc, %u heap",
+		(unsigned)(grow_af - grow_acc), (unsigned)grow_af, 
+		(unsigned)grow_acc, (unsigned)(heap - base_heap));
+}
+
 /** give debug heap size indication */
 static void
-debug_total_mem()
+debug_total_mem(size_t calctotal)
 {
 	extern void* unbound_start_brk;
 	extern size_t unbound_mem_alloc, unbound_mem_freed;
@@ -80,11 +104,13 @@ debug_total_mem()
 	log_info("Total heap memory estimate: %u  total-alloc: %u  "
 		"total-free: %u", (unsigned)total, 
 		(unsigned)unbound_mem_alloc, (unsigned)unbound_mem_freed);
+	debug_memleak(calctotal, (size_t)total, 
+		unbound_mem_alloc, unbound_mem_freed);
 }
 
 /** Report on memory usage by this thread and global */
-static void
-worker_mem_report(struct worker* worker)
+void
+worker_mem_report(struct worker* worker, struct serviced_query* cur_serv)
 {
 	size_t total, front, back, mesh, msg, rrset, infra, ac, superac;
 	size_t me;
@@ -94,13 +120,17 @@ worker_mem_report(struct worker* worker)
 	back = outnet_get_mem(worker->back);
 	msg = slabhash_get_mem(worker->env.msg_cache);
 	rrset = slabhash_get_mem(&worker->env.rrset_cache->table);
-	infra = slabhash_get_mem(worker->env.infra_cache->hosts);
+	infra = infra_get_mem(worker->env.infra_cache);
 	mesh = mesh_get_mem(worker->env.mesh);
 	ac = alloc_get_mem(&worker->alloc);
 	superac = alloc_get_mem(&worker->daemon->superalloc);
 	me = sizeof(*worker) + sizeof(*worker->base) + sizeof(*worker->comsig)
 		+ comm_point_get_mem(worker->cmd_com) + 
-		sizeof(worker->rndstate) + region_get_mem(worker->scratchpad);
+		sizeof(worker->rndstate) + region_get_mem(worker->scratchpad)+
+		sizeof(*worker->env.scratch_buffer) + 
+		ldns_buffer_capacity(worker->env.scratch_buffer);
+	if(cur_serv)
+		me += serviced_get_mem(cur_serv);
 	total = front+back+mesh+msg+rrset+infra+ac+superac+me;
 	log_info("Memory conditions: %u front=%u back=%u mesh=%u msg=%u "
 		"rrset=%u infra=%u alloccache=%u globalalloccache=%u me=%u",
@@ -108,7 +138,7 @@ worker_mem_report(struct worker* worker)
 		(unsigned)mesh, (unsigned)msg, (unsigned)rrset, 
 		(unsigned)infra, (unsigned)ac, (unsigned)superac, 
 		(unsigned)me);
-	debug_total_mem();
+	debug_total_mem(total);
 }
 
 void 
@@ -138,7 +168,7 @@ worker_handle_reply(struct comm_point* c, void* arg, int error,
 
 	if(error != 0) {
 		mesh_report_reply(worker->env.mesh, &e, 0, reply_info);
-		worker_mem_report(worker);
+		worker_mem_report(worker, NULL);
 		return 0;
 	}
 	/* sanity check. */
@@ -149,11 +179,11 @@ worker_handle_reply(struct comm_point* c, void* arg, int error,
 		/* error becomes timeout for the module as if this reply
 		 * never arrived. */
 		mesh_report_reply(worker->env.mesh, &e, 0, reply_info);
-		worker_mem_report(worker);
+		worker_mem_report(worker, NULL);
 		return 0;
 	}
 	mesh_report_reply(worker->env.mesh, &e, 1, reply_info);
-	worker_mem_report(worker);
+	worker_mem_report(worker, NULL);
 	return 0;
 }
 
@@ -164,11 +194,12 @@ worker_handle_service_reply(struct comm_point* c, void* arg, int error,
 {
 	struct outbound_entry* e = (struct outbound_entry*)arg;
 	struct worker* worker = e->qstate->env->worker;
+	struct serviced_query *sq = e->qsent;
 
 	verbose(VERB_ALGO, "worker svcd callback for qstate %p", e->qstate);
 	if(error != 0) {
 		mesh_report_reply(worker->env.mesh, e, 0, reply_info);
-		worker_mem_report(worker);
+		worker_mem_report(worker, sq);
 		return 0;
 	}
 	/* sanity check. */
@@ -180,11 +211,11 @@ worker_handle_service_reply(struct comm_point* c, void* arg, int error,
 		 * never arrived. */
 		verbose(VERB_ALGO, "worker: bad reply handled as timeout");
 		mesh_report_reply(worker->env.mesh, e, 0, reply_info);
-		worker_mem_report(worker);
+		worker_mem_report(worker, sq);
 		return 0;
 	}
 	mesh_report_reply(worker->env.mesh, e, 1, reply_info);
-	worker_mem_report(worker);
+	worker_mem_report(worker, sq);
 	return 0;
 }
 
@@ -556,7 +587,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 		/* the max request number has been reached, stop accepting */
 		listen_pushback(worker->front);
 	}
-	worker_mem_report(worker);
+	worker_mem_report(worker, NULL);
 	return 0;
 }
 
@@ -731,7 +762,7 @@ worker_init(struct worker* worker, struct config_file *cfg,
 		worker_delete(worker);
 		return 0;
 	}
-	worker_mem_report(worker);
+	worker_mem_report(worker, NULL);
 	return 1;
 }
 
@@ -748,7 +779,7 @@ worker_delete(struct worker* worker)
 		return;
 	mesh_stats(worker->env.mesh, "mesh has");
 	server_stats_log(&worker->stats, worker->thread_num);
-	worker_mem_report(worker);
+	worker_mem_report(worker, NULL);
 	mesh_delete(worker->env.mesh);
 	ldns_buffer_free(worker->env.scratch_buffer);
 	listen_delete(worker->front);
@@ -804,7 +835,8 @@ worker_send_query(uint8_t* qname, size_t qnamelen, uint16_t qtype,
 	struct module_qstate* q)
 {
 	struct worker* worker = q->env->worker;
-	struct outbound_entry* e = (struct outbound_entry*)malloc(sizeof(*e));
+	struct outbound_entry* e = (struct outbound_entry*)region_alloc(
+		q->region, sizeof(*e));
 	if(!e) 
 		return NULL;
 	e->qstate = q;

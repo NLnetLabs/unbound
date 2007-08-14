@@ -421,3 +421,19 @@ lruhash_status(struct lruhash* table, const char* id, int extended)
 	}
 	lock_quick_unlock(&table->lock);
 }
+
+size_t
+lruhash_get_mem(struct lruhash* table)
+{
+	size_t s;
+	size_t i;
+	lock_quick_lock(&table->lock);
+	s = sizeof(struct lruhash) + table->space_used;
+	for(i=0; i<table->size; i++) {
+		s +=  sizeof(struct lruhash_bin) + 
+			lock_get_mem(&table->array[i].lock);
+	}
+	lock_quick_unlock(&table->lock);
+	s += lock_get_mem(&table->lock);
+	return s;
+}

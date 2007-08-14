@@ -379,4 +379,11 @@ void lru_remove(struct lruhash* table, struct lruhash_entry* entry);
  */
 void lruhash_status(struct lruhash* table, const char* id, int extended);
 
+/**
+ * Get memory in use now by the lruhash table.
+ * @param table: hash table. Will be locked before use. And unlocked after.
+ * @return size in bytes.
+ */
+size_t lruhash_get_mem(struct lruhash* table);
+
 #endif /* UTIL_STORAGE_LRUHASH_H */

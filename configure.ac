@@ -646,14 +646,30 @@ struct sockaddr_storage;
 #  ifdef free
 #    undef free
 #  endif
+
+#if 0
+#  define malloc(s) unbound_stat_malloc_log(s, __FILE__, __LINE__, __func__)
+#  define calloc(n,s) unbound_stat_calloc_log(n, s, __FILE__, __LINE__, __func__)
+#  define free(p) unbound_stat_free_log(p, __FILE__, __LINE__, __func__)
+#  define realloc(p,s) unbound_stat_realloc_log(p, s, __FILE__, __LINE__, __func__)
+#else
 #  define malloc unbound_stat_malloc
 #  define calloc unbound_stat_calloc
 #  define free unbound_stat_free
 #  define realloc unbound_stat_realloc
+#endif
 void *unbound_stat_malloc(size_t size);
 void *unbound_stat_calloc(size_t nmemb, size_t size);
 void unbound_stat_free(void *ptr);
 void *unbound_stat_realloc(void *ptr, size_t size);
+void *unbound_stat_malloc_log(size_t size, const char* file, int line,
+	const char* func);
+void *unbound_stat_calloc_log(size_t nmemb, size_t size, const char* file,
+	int line, const char* func);
+void unbound_stat_free_log(void *ptr, const char* file, int line,
+	const char* func);
+void *unbound_stat_realloc_log(void *ptr, size_t size, const char* file,
+	int line, const char* func);
 #endif /* UNBOUND_ALLOC_STATS */
 
 /** default port for DNS traffic. */

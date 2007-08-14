@@ -526,10 +526,10 @@ query_info_clear(struct query_info* m)
 size_t 
 msgreply_sizefunc(void* k, void* d)
 {
-	struct query_info* q = (struct query_info*)k;
+	struct msgreply_entry* q = (struct msgreply_entry*)k;
 	struct reply_info* r = (struct reply_info*)d;
 	size_t s = sizeof(struct msgreply_entry) + sizeof(struct reply_info)
-		+ q->qname_len;
+		+ q->key.qname_len + lock_get_mem(&q->entry.lock);
 	s += (r->rrset_count-1) * sizeof(struct rrset_ref);
 	s += r->rrset_count * sizeof(struct ub_packed_rrset_key*);
 	return s;

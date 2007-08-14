@@ -68,7 +68,7 @@ ub_rrset_sizefunc(void* key, void* data)
 	struct ub_packed_rrset_key* k = (struct ub_packed_rrset_key*)key;
 	struct packed_rrset_data* d = (struct packed_rrset_data*)data;
 	size_t s = sizeof(struct ub_packed_rrset_key) + k->rk.dname_len;
-	s += packed_rrset_sizeof(d);
+	s += packed_rrset_sizeof(d) + lock_get_mem(&k->entry.lock);
 	return s;
 }
 

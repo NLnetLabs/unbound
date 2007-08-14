@@ -50,9 +50,11 @@
 /** calculate size for the hashtable, does not count size of lameness,
  * so the hashtable is a fixed number of items */
 static size_t 
-infra_host_sizefunc(void* ATTR_UNUSED(k), void* ATTR_UNUSED(d))
+infra_host_sizefunc(void* k, void* ATTR_UNUSED(d))
 {
-	return sizeof(struct infra_host_key) + sizeof(struct infra_host_data);
+	struct infra_host_key* key = (struct infra_host_key*)k;
+	return sizeof(struct infra_host_key) + sizeof(struct infra_host_data) 
+		+ lock_get_mem(&key->entry.lock);
 }
 
 /** compare two addresses, returns -1, 0, or +1 */
@@ -291,9 +293,11 @@ infra_lookup_lame(struct infra_host_data* host,
 /** calculate size, which is fixed, zonename does not count so that
  * a fixed number of items is stored */
 static size_t 
-infra_lame_sizefunc(void* ATTR_UNUSED(k), void* ATTR_UNUSED(d))
+infra_lame_sizefunc(void* k, void* ATTR_UNUSED(d))
 {
-	return sizeof(struct infra_lame_key)+sizeof(struct infra_lame_data);
+	struct infra_lame_key* key = (struct infra_lame_key*)k;
+	return sizeof(struct infra_lame_key)+sizeof(struct infra_lame_data)
+		+ lock_get_mem(&key->entry.lock);
 }
 
 /** compare zone names, returns -1, 0, +1 */
@@ -485,4 +489,41 @@ infra_get_lame_rtt(struct infra_cache* infra,
 	}
 	lock_rw_unlock(&e->lock);
 	return 1;
+}
+
+/** helper memory count for a host lame cache */
+static size_t
+count_host_lame(struct lruhash_entry* e)
+{
+	struct infra_host_data* host_data = (struct infra_host_data*)e->data;
+	if(!host_data->lameness)
+		return 0;
+	return lruhash_get_mem(host_data->lameness);
+}
+
+size_t 
+infra_get_mem(struct infra_cache* infra)
+{
+	size_t i, bin;
+	size_t s = sizeof(*infra) +
+		slabhash_get_mem(infra->hosts);
+	struct lruhash_entry* e;
+	for(i=0; i<infra->hosts->size; i++) {
+		lock_quick_lock(&infra->hosts->array[i]->lock);
+		for(bin=0; bin<infra->hosts->array[i]->size; bin++) {
+			lock_quick_lock(&infra->hosts->array[i]->
+				array[bin].lock);
+			/* count data size in bin items. */
+			for(e = infra->hosts->array[i]->array[bin].
+				overflow_list; e; e = e->overflow_next) {
+				lock_rw_rdlock(&e->lock);
+				s += count_host_lame(e);
+				lock_rw_unlock(&e->lock);
+			}
+			lock_quick_unlock(&infra->hosts->array[i]->
+				array[bin].lock);
+		}
+		lock_quick_unlock(&infra->hosts->array[i]->lock);
+	}
+	return s;
 }

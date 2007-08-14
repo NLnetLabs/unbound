@@ -205,6 +205,21 @@ prot_store(struct checked_lock* lock)
 	}
 }
 
+size_t lock_get_mem(void* pp)
+{
+	size_t s;
+	struct checked_lock* lock = *(struct checked_lock**)pp;
+	struct protected_area* p;
+	s = sizeof(struct checked_lock);
+	acquire_locklock(lock, __func__, __FILE__, __LINE__);
+	for(p = lock->prot; p; p = p->next) {
+		s += sizeof(struct protected_area);
+		s += p->size;
+	}
+	LOCKRET(pthread_mutex_unlock(&lock->lock));
+	return s;
+}
+
 /** write lock trace info to file, while you hold those locks */
 static void
 ordercheck_locklock(struct thr_check* thr, struct checked_lock* lock)

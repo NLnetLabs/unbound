@@ -897,6 +897,7 @@ serviced_delete(struct serviced_query* sq)
 					(struct pending_tcp*)p->next_waiting);
 			} else {
 				waiting_list_remove(sq->outnet, p);
+				waiting_tcp_delete(p);
 			}
 		}
 	}
@@ -1241,12 +1242,35 @@ size_t outnet_get_mem(struct outside_network* outnet)
 	for(w=outnet->tcp_wait_first; w; w = w->next_waiting)
 		s += waiting_tcp_get_mem(w);
 	s += sizeof(*outnet->pending);
-	s += sizeof(struct pending) * outnet->pending->count;
+	s += (sizeof(struct pending) + comm_timer_get_mem(NULL)) * 
+		outnet->pending->count;
 	s += sizeof(*outnet->serviced);
 	RBTREE_FOR(sq, struct serviced_query*, outnet->serviced) {
 		s += sizeof(*sq) + sq->qbuflen;
 		for(sb = sq->cblist; sb; sb = sb->next)
 			s += sizeof(*sb);
+	}
+	return s;
+}
+
+size_t 
+serviced_get_mem(struct serviced_query* sq)
+{
+	struct service_callback* sb;
+	size_t s;
+	s = sizeof(*sq) + sq->qbuflen;
+	for(sb = sq->cblist; sb; sb = sb->next)
+		s += sizeof(*sb);
+	/* always sq->pending existed, but is null to delete after callback */
+	if(sq->status == serviced_query_UDP_EDNS ||
+		sq->status == serviced_query_UDP) {
+		s += sizeof(struct pending);
+		s += comm_timer_get_mem(NULL);
+	} else {
+		/* does not have size of the pkt pointer */
+		s += sizeof(struct waiting_tcp);
+		/* always has a timer expect on malloc failures */
+		s += comm_timer_get_mem(NULL);
 	}
 	return s;
 }

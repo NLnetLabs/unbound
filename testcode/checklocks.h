@@ -197,6 +197,13 @@ void lock_protect(void* lock, void* area, size_t size);
 void lock_unprotect(void* lock, void* area);
 
 /**
+ * Get memory associated with a checked lock
+ * @param lock: the checked lock, any type. (struct checked_lock**).
+ * @return: in bytes, including protected areas.
+ */
+size_t lock_get_mem(void* lock);
+
+/**
  * Initialise checklock. Sets up internal debug structures.
  */
 void checklock_start();

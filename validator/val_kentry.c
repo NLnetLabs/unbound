@@ -52,7 +52,7 @@ key_entry_sizefunc(void* key, void* data)
 	struct key_entry_key* kk = (struct key_entry_key*)key;
 	struct key_entry_data* kd = (struct key_entry_data*)data;
 	size_t s = sizeof(*kk) + kk->namelen;
-	s += sizeof(*kd);
+	s += sizeof(*kd) + lock_get_mem(&kk->entry.lock);
 	if(kd->rrset_data)
 		s += packed_rrset_sizeof(kd->rrset_data);
 	return s;

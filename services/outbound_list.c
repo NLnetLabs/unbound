@@ -57,7 +57,7 @@ outbound_list_clear(struct outbound_list* list)
 	while(p) {
 		np = p->next;
 		outnet_serviced_query_stop(p->qsent, p);
-		free(p);
+		/* in region, no free needed */
 		p = np;
 	}
 	outbound_list_init(list);
@@ -84,5 +84,5 @@ outbound_list_remove(struct outbound_list* list, struct outbound_entry* e)
 	if(e->prev)
 		e->prev->next = e->next;
 	else	list->first = e->next;
-	free(e);
+	/* in region, no free needed */
 }

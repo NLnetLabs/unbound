@@ -161,7 +161,14 @@ alloc_region_base(void *(*allocator)(size_t size),
 region_type *
 region_create(void *(*allocator)(size_t), void (*deallocator)(void *))
 {
-	region_type* result = alloc_region_base(allocator, deallocator, 
+	region_type* result;
+#ifdef UNBOUND_ALLOC_STATS
+	void *unbound_stat_malloc_region(size_t size);
+	void unbound_stat_free_region(void *ptr);
+	allocator = &unbound_stat_malloc_region;
+	deallocator = &unbound_stat_free_region;
+#endif
+	result = alloc_region_base(allocator, deallocator, 
 		DEFAULT_INITIAL_CLEANUP_SIZE);
 	if(!result)
 		return NULL;
@@ -184,7 +191,14 @@ region_type *region_create_custom(void *(*allocator)(size_t),
 				  size_t initial_cleanup_size,
 				  int recycle)
 {
-	region_type* result = alloc_region_base(allocator, deallocator, 
+	region_type* result;
+#ifdef UNBOUND_ALLOC_STATS
+	void *unbound_stat_malloc_region(size_t size);
+	void unbound_stat_free_region(void *ptr);
+	allocator = &unbound_stat_malloc_region;
+	deallocator = &unbound_stat_free_region;
+#endif
+	result = alloc_region_base(allocator, deallocator, 
 		initial_cleanup_size);
 	if(!result)
 		return NULL;
@@ -517,5 +531,6 @@ region_get_mem(region_type* region)
 	s += region->maximum_cleanup_count * sizeof(cleanup_type);
 	if(region->recycle_bin)
 		s += sizeof(struct recycle_elem*)*region->large_object_size;
+	log_assert(s >= region->chunk_size * region->chunk_count);
 	return s;
 }

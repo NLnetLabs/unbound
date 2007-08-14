@@ -373,4 +373,13 @@ void outnet_serviced_query_stop(struct serviced_query* sq, void* cb_arg);
  */
 size_t outnet_get_mem(struct outside_network* outnet);
 
+/**
+ * Get memory size in use by serviced query while it is servicing callbacks.
+ * This takes into account the pre-deleted status of it; it will be deleted
+ * when the callbacks are done.
+ * @param sq: serviced query. 
+ * @return size in bytes.
+ */
+size_t serviced_get_mem(struct serviced_query* sq);
+
 #endif /* OUTSIDE_NETWORK_H */

@@ -1,3 +1,11 @@
+14 August 2007: Wouter
+	- default outgoing ports changed to avoid port 2049 by default.
+	  This port is widely blocked by firewalls.
+	- count infra lameness cache in memory size.
+	- accounting of memory improved
+	- outbound entries are allocated in the query region they are for.
+	- extensive debugging for memory allocations.
+
 13 August 2007: Wouter
 	- fixup makefile, if lexer is missing give nice error and do not
 	  mess up the dependencies.
