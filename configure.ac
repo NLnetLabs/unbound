@@ -643,16 +643,16 @@ struct sockaddr_storage;
 #define UNBOUND_ALLOC_STATS
 #ifdef UNBOUND_ALLOC_STATS
 #  ifdef malloc
-#    undef malloc
+#    undef malloc	/* keepoff autoheader */
 #  endif
 #  ifdef realloc
-#    undef realloc
+#    undef realloc	/* keepoff autoheader */
 #  endif
 #  ifdef calloc
-#    undef calloc
+#    undef calloc	/* keepoff autoheader */
 #  endif
 #  ifdef free
-#    undef free
+#    undef free	/* keepoff autoheader */
 #  endif
 
 #if 0
