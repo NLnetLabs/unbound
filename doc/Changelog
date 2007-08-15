@@ -1,5 +1,6 @@
 15 August 2007: Wouter
 	- crypto calls to verify signatures.
+	- unit test for rrsig verification.
 
 14 August 2007: Wouter
 	- default outgoing ports changed to avoid port 2049 by default.

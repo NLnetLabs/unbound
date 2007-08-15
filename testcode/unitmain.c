@@ -213,6 +213,7 @@ main(int argc, char* argv[])
 	}
 	printf("Start of %s unit test.\n", PACKAGE_STRING);
 	checklock_start();
+	verify_test();
 	net_test();
 	dname_test();
 	anchors_test();

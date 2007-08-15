@@ -73,9 +73,9 @@
 #define INET6_SIZE 16
 
 /** DNSKEY zone sign key flag */
-#define DNSKEY_BIT_ZSK 0x10
+#define DNSKEY_BIT_ZSK 0x0100
 /** DNSKEY secure entry point, KSK flag */
-#define DNSKEY_BIT_SEP 0x01
+#define DNSKEY_BIT_SEP 0x0001
 
 /**
  * See if string is ip4 or ip6.

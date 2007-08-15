@@ -1,0 +1,81 @@
+; Signature test file
+
+; first entry is a DNSKEY answer, with the DNSKEY rrset used for verification. 
+; later entries are verified with it.
+
+
+; DNSKEY used for testing, from august 2007.
+ENTRY_BEGIN
+SECTION QUESTION
+nlnetlabs.nl. IN DNSKEY
+SECTION ANSWER
+nlnetlabs.nl.           3600    IN      DNSKEY  257 3 5 AQPzzTWMz8qSWIQlfRnPckx2BiVmkVN6LPupO3mbz7FhLSnm26n6iG9N Lby97Ji453aWZY3M5/xJBSOS2vWtco2t8C0+xeO1bc/d6ZTy32DHchpW 6rDH1vp86Ll+ha0tmwyy9QP7y2bVw5zSbFCrefk8qCUBgfHm9bHzMG1U BYtEIQ==
+nlnetlabs.nl.           3600    IN      DNSKEY  256 3 5 AQOpbYrUNahQAV5/wTCJ9/wbSM/eV+N+jYZAMmIKn6QF3Z57B6upgcjV HEOyFkA3YcIt5Fz+WqodCrABn4qShd6qJYR8iP3S6fjN6PVpljMjrhsp /6yVc30C6c7P2b/mgWZi5iYC56lkegDs0VGfAW5HmosKjQVoYMjOtNo3 F+MGQw==
+nlnetlabs.nl.           3600    IN      DNSKEY  257 3 5 AQO6TtiOq7uZa8wHrQNUGT3ZXudaGjnbduUnyLw9WwiDEd8Vy1Ao4FVK 7xqEAFo4F5gOkdGr6Y7Xz0F+Z5e1AaQlvhBhjujvIhPZ5EIuNGkGUbRT YLhVX5OJUHMYdrXpGPdyG+V1TBTmxJ/+OmUdkWiT2J6w5XUpSYRB+p0k YwGf7uxPO/cDNp67fILtx1+dduS30B7QygOK+f7PeAZDcdBo2qsy5rnB sPsLhbEpdpWFs2WPTVo0IGYAER3nG6WZptiq8OYAb1K22K8i+j8+hDwv NRDMjWeVMebBZXbNQGkwsGgJsIsaoGfVOT3WdeJxDu9GqODM//mwZxTv O7StbOht
+ENTRY_END
+
+; first entry; the www site
+ENTRY_BEGIN
+SECTION QUESTION
+www.nlnetlabs.nl.              IN      A
+SECTION ANSWER
+www.nlnetlabs.nl.       600     IN      A       213.154.224.1
+www.nlnetlabs.nl.       600     IN      RRSIG   A 5 3 600 20070912005003 20070815005003 18182 nlnetlabs.nl. hAF6ZARy1QIdBuPF5FbRqktIrSZO1z6WcTXvxJ8FhpPnk17ytkD+gus/ 7Ae7pA/Lpr2KyQveSHyjfyYlnFZ82lasF3hPGrmeE/+stl3dEnuBz3Vo f8+s9lwQ6eXf7UM4e0md5KFPMdre0F9hrom/+P4/AU2yteLmuXVP6drC tFM=
+SECTION AUTHORITY
+nlnetlabs.nl.           86400   IN      NS      open.nlnetlabs.nl.
+nlnetlabs.nl.           86400   IN      NS      omval.tednet.nl.
+nlnetlabs.nl.           86400   IN      NS      ns7.domain-registry.nl.
+nlnetlabs.nl.           86400   IN      RRSIG   NS 5 2 86400 20070912005004 20070815005004 18182 nlnetlabs.nl. XHtgh1xXm5rLRLW5eGsjMzoQdCP/GsL6Yqg6/Th5WHgwwbWQicdr7VFH Jhx4hssPtQZxc2Z34kERHTQndJ1mhefmI4qatDzZpGEmAuBTvWXC1JvR MprptlhncaqeV4jaK4P6OSd23lFIeoLl31glmcwl7a77IihaE6O57YRj WGo=
+SECTION ADDITIONAL
+ns7.domain-registry.nl. 17717   IN      A       62.4.86.230
+open.nlnetlabs.nl.      600     IN      A       213.154.224.1
+open.nlnetlabs.nl.      600     IN      AAAA    2001:7b8:206:1::1
+open.nlnetlabs.nl.      600     IN      AAAA    2001:7b8:206:1::53
+omval.tednet.nl.        28800   IN      A       213.154.224.17
+omval.tednet.nl.        28800   IN      AAAA    2001:7b8:206:1:200:39ff:fe59:b187
+open.nlnetlabs.nl.      600     IN      RRSIG   A 5 3 600 20070912005004 20070815005004 18182 nlnetlabs.nl. mit7SKO8i2b7rQ9E0chqJ25Lv4SYOfR6pdBGdtDrer6PLpASo72yaAlI wA232BS8Y1z8Mfrpo03li9c6FWB3tpUd8oRZyntcWRwvEwm6Q3mvpKN3 Ppsolcg+2fLDqSDyFqSw2jIPjrr2vlZfomRANwCce1N9UdD6aBgGpFQ+ DPE=
+open.nlnetlabs.nl.      600     IN      RRSIG   AAAA 5 3 600 20070912005004 20070815005004 18182 nlnetlabs.nl. gGE8aCQHfLEDjJ5myimVH4ho+LzXBEa8K/BVAVJbwlfvh83XEFujjeEx rifIwxqWAG0gylCywcJdZdFhB0UHn+X9AVne9TaP9QMvvzoCLGu6h/UI Uy15K/wD4ezPjvaxG/7o6fs6m+QUUU8ZYK2HRYxf90XCkL/BlkBWcLLy Fjc=
+ENTRY_END
+
+
+; big zone apex
+ENTRY_BEGIN
+SECTION QUESTION
+nlnetlabs.nl.                  IN      ANY
+SECTION ANSWER
+nlnetlabs.nl.           18000   IN      NSEC    _sip._udp.nlnetlabs.nl. A NS SOA MX TXT AAAA NAPTR RRSIG NSEC DNSKEY
+nlnetlabs.nl.           18000   IN      RRSIG   NSEC 5 2 18000 20070912005004 20070815005004 18182 nlnetlabs.nl. fiCZX4X46rActlXXx8UrNwilCU6F+GiN6iVNmsAROoOcFVsV6EMbfQpR Z47XI2WHf0lmEjFcAQJbbIUlPPoMwSFeRHU9caSBkLPY7Da3rwTRDpQy nf28WwA90ZG8CxMyr0p2yIy4rd3qo7WItFvhaeFrZtovQDOx9gg92pAf SfM=
+nlnetlabs.nl.           86400   IN      A       213.154.224.1
+nlnetlabs.nl.           86400   IN      RRSIG   A 5 2 86400 20070912005004 20070815005004 18182 nlnetlabs.nl. ZpLGyN5EUfMVOIgoLvy7axjk6fgdejFaElKiScNOx452GXwyvKRonU2K DBS+1cyxQg6nsEiq0PhIk+iOW5UdlBqyqVrNOzwItuWiQLqTFFVHjN16 DqiZGLvy7EiaTecbuq4oAQDkCYe/fy1d7if6q6POurYDjN2auRfOlo9Q JLw=
+nlnetlabs.nl.           86400   IN      NS      ns7.domain-registry.nl.
+nlnetlabs.nl.           86400   IN      NS      open.nlnetlabs.nl.
+nlnetlabs.nl.           86400   IN      NS      omval.tednet.nl.
+nlnetlabs.nl.           86400   IN      RRSIG   NS 5 2 86400 20070912005004 20070815005004 18182 nlnetlabs.nl. XHtgh1xXm5rLRLW5eGsjMzoQdCP/GsL6Yqg6/Th5WHgwwbWQicdr7VFH Jhx4hssPtQZxc2Z34kERHTQndJ1mhefmI4qatDzZpGEmAuBTvWXC1JvR MprptlhncaqeV4jaK4P6OSd23lFIeoLl31glmcwl7a77IihaE6O57YRj WGo=
+nlnetlabs.nl.           86400   IN      RRSIG   SOA 5 2 86400 20070912005004 20070815005004 18182 nlnetlabs.nl. LkiJYh+EV9vtH2a5Qzai1foMe60J+J5aioEvYwMrwAgi8OFPW/eiOhhC kDWXeCRXmmFaaImyzZQ2R1dA9Kz0Caar54fOEHQ63waYeODN+LAsewLx KLQBInTxFlH/eByFAOZmlO9+jutCLGBi2Tv/LL5T2XAfDMmcpzxgXDry ExQ=
+nlnetlabs.nl.           86400   IN      MX      50 open.nlnetlabs.nl.
+nlnetlabs.nl.           86400   IN      MX      100 omval.tednet.nl.
+nlnetlabs.nl.           86400   IN      RRSIG   MX 5 2 86400 20070912005004 20070815005004 18182 nlnetlabs.nl. CdrpaduVD2QNfY2ifjKTN+t6tUDJgfUZZRzmf3LcwwtBlwfC4tRT44WD 2537dqDVnf5h6+Ejp3qJef44lwPzYaUI+/IHsGkmg6v063fHygHQf1Qz v+oBL3d4vRm7IZz0U8JzHMKwYt/D88Dw5ojr9w6NyYr7eiKXbFRD5R7x YT0=
+nlnetlabs.nl.           86400   IN      TXT     "Stichting NLnet Labs zone"
+nlnetlabs.nl.           86400   IN      RRSIG   TXT 5 2 86400 20070912005004 20070815005004 18182 nlnetlabs.nl. Ray47yu7XIgwdCRvC5Ik/0S10m8reHMuV4d0OGh/q7J5bLN8PsONLzuX ncFihPZW9ziLKCFfJu5zKCjYh/RDNwpztAAeGNmfV7e1+ZWvolFU9DIY oHYbINYKKTqhNaU/UMXDTjmnHujo+7llgfQH6muc5R5ftvBnMcPHHQBg ydw=
+nlnetlabs.nl.           86400   IN      AAAA    2001:7b8:206:1::1
+nlnetlabs.nl.           86400   IN      RRSIG   AAAA 5 2 86400 20070912005004 20070815005004 18182 nlnetlabs.nl. Pw+xxoPe7UkfOML40UkSOmWFyRS4mSPcx6P37E6xLaJ4V9uYl5MldzRh NCBGtOYH7tPZUEIEqVCQU/G2jvP6643fLs7OwGMTFFZ/jSqo7ATdUzbk AMd1ewVAtMdpDRKqOPorsMFOsU6C7YB+pkvHTizfSMLsz23RI9kJqvXQ AgQ=
+nlnetlabs.nl.           600     IN      NAPTR   20 0 "s" "SIP+D2U" "" _sip._udp.nlnetlabs.nl.
+nlnetlabs.nl.           600     IN      RRSIG   NAPTR 5 2 600 20070912005004 20070815005004 18182 nlnetlabs.nl. jhGLCeaBRFOiRMWtNgAW6tcU4x/2NQG3cnbedaCUE+vxMGFwLKQ7Y8HH sio7PAIbwl3WDzXcBnSoVXtpFQyHvyVA9PdWujq16HN2tRn3+FFRZmvz +eywRXlSQCdj4GmamjVb1MGA3deV19t/YGBetshcwQBxeT4/7p/yN0/T Zro=
+nlnetlabs.nl.           3600    IN      DNSKEY  257 3 5 AQPzzTWMz8qSWIQlfRnPckx2BiVmkVN6LPupO3mbz7FhLSnm26n6iG9N Lby97Ji453aWZY3M5/xJBSOS2vWtco2t8C0+xeO1bc/d6ZTy32DHchpW 6rDH1vp86Ll+ha0tmwyy9QP7y2bVw5zSbFCrefk8qCUBgfHm9bHzMG1U BYtEIQ==
+nlnetlabs.nl.           3600    IN      DNSKEY  256 3 5 AQOpbYrUNahQAV5/wTCJ9/wbSM/eV+N+jYZAMmIKn6QF3Z57B6upgcjV HEOyFkA3YcIt5Fz+WqodCrABn4qShd6qJYR8iP3S6fjN6PVpljMjrhsp /6yVc30C6c7P2b/mgWZi5iYC56lkegDs0VGfAW5HmosKjQVoYMjOtNo3 F+MGQw==
+nlnetlabs.nl.           3600    IN      DNSKEY  257 3 5 AQO6TtiOq7uZa8wHrQNUGT3ZXudaGjnbduUnyLw9WwiDEd8Vy1Ao4FVK 7xqEAFo4F5gOkdGr6Y7Xz0F+Z5e1AaQlvhBhjujvIhPZ5EIuNGkGUbRT YLhVX5OJUHMYdrXpGPdyG+V1TBTmxJ/+OmUdkWiT2J6w5XUpSYRB+p0k YwGf7uxPO/cDNp67fILtx1+dduS30B7QygOK+f7PeAZDcdBo2qsy5rnB sPsLhbEpdpWFs2WPTVo0IGYAER3nG6WZptiq8OYAb1K22K8i+j8+hDwv NRDMjWeVMebBZXbNQGkwsGgJsIsaoGfVOT3WdeJxDu9GqODM//mwZxTv O7StbOht
+nlnetlabs.nl.           3600    IN      RRSIG   DNSKEY 5 2 3600 20070912005004 20070815005004 18182 nlnetlabs.nl. ZBI75wWBme2zbhXevr6AMojVcLg5rSYb8osh6dxKKu92Gy2qJoOzYvjy YIn2NADmh5lMgPH836byoYlLnQ/SwAIkDgn+h7i8fTWA8mWynjl/sbK/ ojIMEKpvvLvp+o7vw09hjQfq8XAupj4oPE8Cbx7nQ9sSDPw1gED6x+si n6U=
+nlnetlabs.nl.           3600    IN      RRSIG   DNSKEY 5 2 3600 20070912005004 20070815005004 36867 nlnetlabs.nl. JYLaHp/ORxrDE2wu/gsq8t5SDmwXudnTxXPg4+IHxvg0MiVBSPYeDtEr oZgHSE5sL+AgJ0PLpL8U/CKaMuv2xTbYJ1+tABZUpE1yxmjdF3p4VJuQ P+r2qkAbnr9b0w4Bt/gzlP5hmZcUA+E9g6uZdp2pjni0OD3mgB5EhilD GaVnVUi2P0d3MCPDkGsVgNl76JY4098bL1LXmn6oqV2MbAaim7z4nb67 /S0qLIxz8Dw605dFRMDd8tfjK/FD9PGxXc424GPRWeycd5fuuifu6aig hCcG3qtNHYCtMqHaMfw6C/LiyQFvQ7zrKzq6rqGbt5PWID76j/cd1OqV QKtuYA==
+nlnetlabs.nl.           3600    IN      RRSIG   DNSKEY 5 2 3600 20070912005004 20070815005004 43791 nlnetlabs.nl. cNIuHTM6VpXpvpCjTaDLOVrzGQoNVXwJ2vcLbeNcuELeNMubpJ2hiLTG VorQbKM04t1HiJApf0BzkR5ke+9Mtoktm0/MvS1gW0lU2rqV5+7BhwTB Q6Q3QSYcgF/LUJp4neKjAKYNM4pwz4Tkg5AaurulCKfk5UZDE4JxCeCu zpI=
+nlnetlabs.nl.           86400   IN      SOA     open.nlnetlabs.nl. hostmaster.nlnetlabs.nl. 2007081500 28800 7200 604800 18000
+SECTION ADDITIONAL
+open.nlnetlabs.nl.      600     IN      A       213.154.224.1
+open.nlnetlabs.nl.      600     IN      AAAA    2001:7b8:206:1::1
+open.nlnetlabs.nl.      600     IN      AAAA    2001:7b8:206:1::53
+johnny.nlnetlabs.nl.    600     IN      A       213.154.224.44
+open.nlnetlabs.nl.      600     IN      RRSIG   A 5 3 600 20070912005004 20070815005004 18182 nlnetlabs.nl. mit7SKO8i2b7rQ9E0chqJ25Lv4SYOfR6pdBGdtDrer6PLpASo72yaAlI wA232BS8Y1z8Mfrpo03li9c6FWB3tpUd8oRZyntcWRwvEwm6Q3mvpKN3 Ppsolcg+2fLDqSDyFqSw2jIPjrr2vlZfomRANwCce1N9UdD6aBgGpFQ+ DPE=
+open.nlnetlabs.nl.      600     IN      RRSIG   AAAA 5 3 600 20070912005004 20070815005004 18182 nlnetlabs.nl. gGE8aCQHfLEDjJ5myimVH4ho+LzXBEa8K/BVAVJbwlfvh83XEFujjeEx rifIwxqWAG0gylCywcJdZdFhB0UHn+X9AVne9TaP9QMvvzoCLGu6h/UI Uy15K/wD4ezPjvaxG/7o6fs6m+QUUU8ZYK2HRYxf90XCkL/BlkBWcLLy Fjc=
+_sip._udp.nlnetlabs.nl. 600     IN      RRSIG   SRV 5 4 600 20070912005004 20070815005004 18182 nlnetlabs.nl. EY2l3CzYpfRBAKw76ztFvEiSWHVLjmcqpTHJ7vc5FgF1+ryV7Y0Z2Hdj LZYse2e6DZvll5aGmtpG9TWtOf3aBx53YIpDS6j3j438lrAgThJZ+heU 1Jfp7i0nHcfj3V86uo8q/2S4/y8fKNgmhgJeJLm5Il7/WARANVpnYeFS 9Ko=
+johnny.nlnetlabs.nl.    600     IN      RRSIG   A 5 3 600 20070912005004 20070815005004 18182 nlnetlabs.nl. DY30CLeeKAif9SSFRvC8hHpYrLa2FEtspL4ay0pHfujyLkebvOko6BBL pjfr7VWL+0MGAIOGtCOq37ouWKMmCEbONyPCwj2eC6P/Dlr+llqTwgW8 5430Yhww2K8GTFnMtBZhqIlITtfIRgK4d8CQOJtIqwJ2qrc9iavun1JK IWc=
+_sip._udp.nlnetlabs.nl. 600     IN      SRV     0 0 5060 johnny.nlnetlabs.nl.
+ENTRY_END

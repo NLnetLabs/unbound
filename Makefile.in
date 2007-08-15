@@ -57,7 +57,8 @@ COMMON_SRC=$(wildcard services/*.c services/cache/*.c util/*.c \
 	util/configparser.c util/configlexer.c testcode/checklocks.c
 COMMON_OBJ=$(addprefix $(BUILD),$(COMMON_SRC:.c=.o))
 COMPAT_OBJ=$(addprefix $(BUILD)compat/,$(LIBOBJS))
-UNITTEST_SRC=$(wildcard testcode/unit*.c) testcode/readhex.c $(COMMON_SRC)
+UNITTEST_SRC=$(wildcard testcode/unit*.c) testcode/readhex.c \
+	testcode/ldns-testpkts.c $(COMMON_SRC)
 UNITTEST_OBJ=$(addprefix $(BUILD),$(UNITTEST_SRC:.c=.o)) $(COMPAT_OBJ)
 DAEMON_SRC=$(wildcard daemon/*.c) $(COMMON_SRC)
 DAEMON_OBJ=$(addprefix $(BUILD),$(DAEMON_SRC:.c=.o)) $(COMPAT_OBJ)

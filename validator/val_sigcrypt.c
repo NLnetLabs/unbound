@@ -90,7 +90,7 @@ rrset_get_sig_keytag(struct ub_packed_rrset_key* k, size_t sig_idx)
 	if(d->rr_len[d->count + sig_idx] < 2+18)
 		return 0;
 	memmove(&t, d->rr_data[d->count + sig_idx]+2+16, 2);
-	return t;
+	return ntohs(t);
 }
 
 /**
@@ -671,6 +671,9 @@ canonical_compare(struct ub_packed_rrset_key* rrset, size_t i, size_t j)
 
 	if(i==j)
 		return 0;
+	c = memcmp(d->rr_data[i], d->rr_data[j], 2);
+	if(c != 0)
+		return c;
 
 	switch(type) {
 		/* These RR types have only a name as RDATA. 
@@ -967,7 +970,8 @@ rrset_canonical(struct region* region, ldns_buffer* buf,
 
 	ldns_buffer_clear(buf);
 	ldns_buffer_write(buf, sig, siglen);
-	query_dname_tolower(sig+18); /* canonicalize signer name */
+	/* canonicalize signer name */
+	query_dname_tolower(ldns_buffer_begin(buf)+18); 
 	RBTREE_FOR(walk, struct canon_rr*, &sortree) {
 		/* determine canonical owner name */
 		if(can_owner)
@@ -1291,18 +1295,18 @@ dnskey_verify_rrset_sig(struct module_env* env, struct val_env* ve,
 		return sec_status_bogus;
 	}
 	/* verify keytag and sig algo (possibly again) */
-	if((int)sig[2] != dnskey_get_algo(dnskey, dnskey_idx)) {
+	if((int)sig[2+2] != dnskey_get_algo(dnskey, dnskey_idx)) {
 		verbose(VERB_ALGO, "verify: wrong algorithm");
 		return sec_status_bogus;
 	}
-	ktag = dnskey_calc_keytag(dnskey, dnskey_idx);
-	if(memcmp(sig+16, &ktag, 2) != 0) {
+	ktag = htons(dnskey_calc_keytag(dnskey, dnskey_idx));
+	if(memcmp(sig+2+16, &ktag, 2) != 0) {
 		verbose(VERB_ALGO, "verify: wrong keytag");
 		return sec_status_bogus;
 	}
 
 	/* verify labels is in a valid range */
-	if((int)sig[3] > dname_signame_label_count(rrset->rk.dname)) {
+	if((int)sig[2+3] > dname_signame_label_count(rrset->rk.dname)) {
 		verbose(VERB_ALGO, "verify: labelcount out of range");
 		return sec_status_bogus;
 	}
@@ -1310,7 +1314,7 @@ dnskey_verify_rrset_sig(struct module_env* env, struct val_env* ve,
 	/* original ttl, always ok */
 
 	/* verify inception, expiration dates */
-	if(!check_dates(ve, sig+8, sig+12)) {
+	if(!check_dates(ve, sig+2+8, sig+2+12)) {
 		return sec_status_bogus;
 	}
 
@@ -1329,6 +1333,6 @@ dnskey_verify_rrset_sig(struct module_env* env, struct val_env* ve,
 	}
 
 	/* verify */
-	return verify_canonrrset(env->scratch_buffer, (int)sig[2],
+	return verify_canonrrset(env->scratch_buffer, (int)sig[2+2],
 		sigblock, sigblock_len, key, keylen);
 }

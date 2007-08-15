@@ -57,5 +57,7 @@ void msgparse_test();
 void dname_test();
 /** unit test trust anchor storage functions */
 void anchors_test();
+/** unit test for verification functions */
+void verify_test();
 
 #endif /* TESTCODE_UNITMAIN_H */
