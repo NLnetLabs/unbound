@@ -1221,7 +1221,8 @@ verify_canonrrset(ldns_buffer* buf, int algo, unsigned char* sigblock,
 	/* do the signature cryptography work */
 	EVP_MD_CTX_init(&ctx);
 	EVP_VerifyInit(&ctx, digest_type);
-	EVP_VerifyUpdate(&ctx, ldns_buffer_begin(buf), ldns_buffer_limit(buf));
+	EVP_VerifyUpdate(&ctx, (unsigned char*)ldns_buffer_begin(buf), 
+		(unsigned int)ldns_buffer_limit(buf));
 	res = EVP_VerifyFinal(&ctx, sigblock, sigblock_len, evp_key);
 	EVP_MD_CTX_cleanup(&ctx);
 	EVP_PKEY_free(evp_key);
