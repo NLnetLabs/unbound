@@ -145,6 +145,23 @@ dnskey_get_algo(struct ub_packed_rrset_key* k, size_t idx)
 	return (int)rdata[2+3];
 }
 
+/** get public key rdata field from a dnskey RR and do some checks */
+static void
+dnskey_get_pubkey(struct ub_packed_rrset_key* k, size_t idx,
+	unsigned char** pk, size_t* pklen)
+{
+	uint8_t* rdata;
+	size_t len;
+	rrset_get_rdata(k, idx, &rdata, &len);
+	if(len < 2+5) {
+		*pk = NULL;
+		*pklen = 0;
+		return;
+	}
+	*pk = (unsigned char*)rdata+2+4;
+	*pklen = len-2-4;
+}
+
 int
 ds_get_key_algo(struct ub_packed_rrset_key* k, size_t idx)
 {
@@ -1004,19 +1021,236 @@ check_dates(struct val_env* ve, uint8_t* expi_p, uint8_t* incep_p)
 
 }
 
+/**
+ * Output a libcrypto openssl error to the logfile.
+ * @param str: string to add to it.
+ * @param e: the error to output, error number from ERR_get_error().
+ */
+static void
+log_crypto_error(const char* str, unsigned long e)
+{
+	char buf[128];
+	/* or use ERR_error_string if ERR_error_string_n is not avail TODO */
+	ERR_error_string_n(e, buf, sizeof(buf));
+	/* buf now contains */
+	/* error:[error code]:[library name]:[function name]:[reason string] */
+	log_err("%s crypto %s", str, buf);
+}
+
+/**
+ * Convert DSA RRsig sigblock to a DSA_SIG structure.
+ * @param sig: sigblock field of RRSIG
+ * @param siglen: length of sig.
+ * @return DSA_SIG or NULL
+ */
+static DSA_SIG*
+dsa_rrsig_to_dsa_sig(unsigned char* sig, unsigned int siglen)
+{
+	uint8_t t;
+	BIGNUM *R, *S;
+	DSA_SIG *dsasig;
+
+	/* extract the R and S field from the sig buffer */
+	if(siglen < 1 + SHA_DIGEST_LENGTH*2) {
+		verbose(VERB_ALGO, "verify: short DSA RRSIG");
+		return NULL;
+	}
+	t = sig[0];
+	R = BN_new();
+	if(!R) {
+		log_err("verify: alloc failure");
+		return NULL;
+	}
+	S = BN_new();
+	if(!S) {
+		BN_free(R);
+		log_err("verify: alloc failure");
+		return NULL;
+	}
+	if(!BN_bin2bn(sig + 1, SHA_DIGEST_LENGTH, R)) {
+		log_err("verify: bignum failure");
+		BN_free(R);
+		BN_free(S);
+		return NULL;
+	}
+	if(!BN_bin2bn(sig + 21, SHA_DIGEST_LENGTH, S)) {
+		log_err("verify: bignum failure");
+		BN_free(R);
+		BN_free(S);
+		return NULL;
+	}
+
+	dsasig = DSA_SIG_new();
+	if(!dsasig) {
+		log_err("verify: alloc failure");
+		BN_free(R);
+		BN_free(S);
+		return NULL;
+	}
+	dsasig->r = R;
+	dsasig->s = S;
+	return dsasig;
+}
+
+/**
+ * Convert DSA signature to a DER signature.
+ * @param sig: signature, used to read, then replaced with malloced 
+ *	DER signature on success.
+ * @param siglen: read to get input len, then updated to new length.
+ * @return false on (alloc) error.
+ */
+static int
+dsa_convert_to_der(unsigned char** sig, unsigned int* siglen)
+{
+	DSA_SIG* dsasig;
+	int res;
+
+	dsasig = dsa_rrsig_to_dsa_sig(*sig, *siglen);
+	if(!dsasig) {
+		return 0;
+	}
+	*sig = NULL; /* needs libcrypto >= 0.9.7 */
+	res = i2d_DSA_SIG(dsasig, sig);
+	if(res < 0) {
+		log_crypto_error("verify: bad dsa sig ",
+			ERR_get_error());
+		DSA_SIG_free(dsasig);
+		return 0;
+	}
+	DSA_SIG_free(dsasig);
+	*siglen = (unsigned int)res;
+	return 1;
+}
+
+/**
+ * Setup key and digest for verification. Adjust sig if necessary.
+ *
+ * @param algo: key algorithm
+ * @param evp_key: EVP PKEY public key to update.
+ * @param digest_type: digest type to use
+ * @param key: key to setup for.
+ * @param keylen: length of key.
+ * @param sig: sig to update if necessary.
+ * @param siglen: length of sig.
+ * @return false on failure.
+ */
+static int
+setup_key_digest(int algo, EVP_PKEY* evp_key, const EVP_MD** digest_type, 
+	unsigned char* key, size_t keylen, 
+	unsigned char** sig, unsigned int* siglen)
+{
+	switch(algo) {
+		case LDNS_DSA:
+		case LDNS_DSA_NSEC3:
+			EVP_PKEY_assign_DSA(evp_key, 
+				ldns_key_buf2dsa_raw(key, keylen));
+			*digest_type = EVP_dss1();
+			if(!dsa_convert_to_der(sig, siglen))
+				return 0;
+
+			break;
+		case LDNS_RSASHA1:
+		case LDNS_RSASHA1_NSEC3:
+			EVP_PKEY_assign_RSA(evp_key, 
+				ldns_key_buf2rsa_raw(key, keylen));
+			*digest_type = EVP_sha1();
+
+			break;
+		case LDNS_RSAMD5:
+			EVP_PKEY_assign_RSA(evp_key, 
+				ldns_key_buf2rsa_raw(key, keylen));
+			*digest_type = EVP_md5();
+
+			break;
+		default:
+			verbose(VERB_ALGO, "verify: unknown algorithm %d", 
+				algo);
+			return 0;
+	}
+	return 1;
+}
+
+/**
+ * Desetup what setup_key_digest setup.
+ * @param algo: key algorithm
+ * @param sig: signature.
+ */
+static void
+desetup_key_digest(int algo, unsigned char* sig)
+{
+	switch(algo) {
+		case LDNS_DSA:
+		case LDNS_DSA_NSEC3:
+			/* free converted signature */
+			free(sig);
+			break;
+	}
+}
+
+/**
+ * Check a canonical sig+rrset and signature against a dnskey
+ * @param buf: buffer with data to verify, the first rrsig part and the
+ *	canonicalized rrset.
+ * @param algo: DNSKEY algorithm.
+ * @param sigblock: signature rdata field from RRSIG
+ * @param sigblock_len: length of sigblock data.
+ * @param key: public key data from DNSKEY RR.
+ * @param keylen: length of keydata.
+ * @return secure if verification succeeded, bogus on crypto failure,
+ *	unchecked on format errors and alloc failures.
+ */
+static enum sec_status
+verify_canonrrset(ldns_buffer* buf, int algo, unsigned char* sigblock, 
+	unsigned int sigblock_len, unsigned char* key, unsigned int keylen)
+{
+	const EVP_MD *digest_type;
+	EVP_MD_CTX ctx;
+	int res;
+	EVP_PKEY *evp_key = EVP_PKEY_new();
+	if(!evp_key) {
+		log_err("verify: malloc failure in crypto");
+		return sec_status_unchecked;
+	}
+
+	if(!setup_key_digest(algo, evp_key, &digest_type, key, keylen,
+		&sigblock, &sigblock_len)) {
+		EVP_PKEY_free(evp_key);
+		return sec_status_bogus;
+	}
+
+	/* do the signature cryptography work */
+	EVP_MD_CTX_init(&ctx);
+	EVP_VerifyInit(&ctx, digest_type);
+	EVP_VerifyUpdate(&ctx, ldns_buffer_begin(buf), ldns_buffer_limit(buf));
+	res = EVP_VerifyFinal(&ctx, sigblock, sigblock_len, evp_key);
+	EVP_MD_CTX_cleanup(&ctx);
+	EVP_PKEY_free(evp_key);
+	desetup_key_digest(algo, sigblock);
+
+	if(res == 1) {
+		return sec_status_secure;
+	} else if(res == 0) {
+		return sec_status_bogus;
+	}
+	log_crypto_error("verify:", ERR_get_error());
+	return sec_status_unchecked;
+}
+
 enum sec_status 
 dnskey_verify_rrset_sig(struct module_env* env, struct val_env* ve,
         struct ub_packed_rrset_key* rrset, struct ub_packed_rrset_key* dnskey,
 	        size_t dnskey_idx, size_t sig_idx)
 {
-	uint8_t* sig; /* rdata */
+	uint8_t* sig;		/* RRSIG rdata */
 	size_t siglen;
 	size_t rrnum = rrset_get_count(rrset);
-	uint8_t* signer;
+	uint8_t* signer;	/* rrsig signer name */
 	size_t signer_len;
-	uint8_t* sigblock; /* signature rdata field */
-	size_t sigblock_len;
-	uint16_t ktag;
+	unsigned char* sigblock; /* signature rdata field */
+	unsigned int sigblock_len;
+	uint16_t ktag;		/* DNSKEY key tag */
+	unsigned char* key;	/* public key rdata field */
+	unsigned int keylen;
 	rrset_get_rdata(rrset, rrnum + sig_idx, &sig, &siglen);
 	/* min length of rdatalen, fixed rrsig, root signer, 1 byte sig */
 	if(siglen < 2+20) {
@@ -1036,12 +1270,12 @@ dnskey_verify_rrset_sig(struct module_env* env, struct val_env* ve,
 		verbose(VERB_ALGO, "verify: malformed signer name");
 		return sec_status_bogus; /* signer name invalid */
 	}
-	sigblock = signer+signer_len;
+	sigblock = (unsigned char*)signer+signer_len;
 	if(siglen < 2+18+signer_len+1) {
 		verbose(VERB_ALGO, "verify: too short, no signature data");
 		return sec_status_bogus; /* sig rdf is < 1 byte */
 	}
-	sigblock_len = siglen - 2 - 18 - signer_len;
+	sigblock_len = (unsigned int)(siglen - 2 - 18 - signer_len);
 
 	/* verify key dname == sig signer name */
 	if(query_dname_compare(signer, dnskey->rk.dname) != 0) {
@@ -1086,6 +1320,14 @@ dnskey_verify_rrset_sig(struct module_env* env, struct val_env* ve,
 		return sec_status_unchecked;
 	}
 
+	/* check that dnskey is available */
+	dnskey_get_pubkey(dnskey, dnskey_idx, &key, &keylen);
+	if(!key) {
+		verbose(VERB_ALGO, "verify: short DNSKEY RR");
+		return sec_status_unchecked;
+	}
+
 	/* verify */
-	return sec_status_unchecked;
+	return verify_canonrrset(env->scratch_buffer, (int)sig[2],
+		sigblock, sigblock_len, key, keylen);
 }

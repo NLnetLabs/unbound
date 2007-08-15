@@ -125,6 +125,7 @@ daemon_init()
 		return NULL;
 	signal_handling_record();
 	checklock_start();
+	ERR_load_crypto_strings();
 	daemon->need_to_exit = 0;
 	daemon->num_modules = 0;
 	if(!(daemon->env = (struct module_env*)calloc(1, 
@@ -463,5 +464,6 @@ daemon_delete(struct daemon* daemon)
 	free(daemon->pidfile);
 	free(daemon->env);
 	free(daemon);
+	ERR_free_strings();
 	checklock_stop();
 }

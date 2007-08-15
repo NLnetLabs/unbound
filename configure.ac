@@ -392,6 +392,7 @@ AC_ARG_WITH(ssl, AC_HELP_STRING([--with-ssl=pathname],
 	AC_SUBST(RUNTIME_PATH)
     fi
 AC_CHECK_HEADERS([openssl/ssl.h],,, [AC_INCLUDES_DEFAULT])
+AC_CHECK_HEADERS([openssl/err.h],,, [AC_INCLUDES_DEFAULT])
 
 # check for thread library.
 AC_ARG_WITH(pthreads, AC_HELP_STRING([--with-pthreads], 
@@ -566,6 +567,10 @@ AH_BOTTOM([
 
 #ifdef HAVE_GETOPT_H
 #include <getopt.h>
+#endif
+
+#ifdef HAVE_OPENSSL_ERR_H
+#include <openssl/err.h>
 #endif
 
 #ifdef HAVE_ATTR_FORMAT
