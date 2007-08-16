@@ -5,7 +5,12 @@
 	- This makes a key-prime succeed in validator, with DS or DNSKEY as
 	  trust-anchor.
 	- fixup canonical compare byfield routine, fix bug and also neater.
-	
+	- fixed iterator response type classification for queries of type
+	  ANY and NS.
+	  dig ANY gives sometimes NS rrset in AN and NS section, and parser
+	  removes the NS section duplicate. dig NS gives sometimes the NS
+	  in the answer section, as referral.
+
 15 August 2007: Wouter
 	- crypto calls to verify signatures.
 	- unit test for rrsig verification.

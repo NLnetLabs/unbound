@@ -138,6 +138,18 @@ response_type_from_server(struct dns_msg* msg, struct query_info* request,
 		for(i=0; i<msg->rep->an_numrrsets; i++) {
 			struct ub_packed_rrset_key* s = msg->rep->rrsets[i];
 			
+			/* if the answer section has NS rrset, and qtype ANY 
+		 	 * and the delegation is lower, and no CNAMEs followed,
+		 	 * this is a referral where the NS went to AN section */
+			if((request->qtype == LDNS_RR_TYPE_ANY ||
+				request->qtype == LDNS_RR_TYPE_NS) &&
+				ntohs(s->rk.type) == LDNS_RR_TYPE_NS &&
+				ntohs(s->rk.rrset_class) == request->qclass &&
+				dname_strict_subdomain_c(s->rk.dname, 
+				origzone)) {
+				return RESPONSE_TYPE_REFERRAL;
+			}
+
 			/* If we have encountered an answer (before or 
 			 * after a CNAME), then we are done! Note that 
 			 * if qtype == CNAME then this will be noted as an
