@@ -200,7 +200,7 @@ ds_get_keytag(struct ub_packed_rrset_key* ds_rrset, size_t ds_idx)
 	if(len < 2+2)
 		return 0;
 	memmove(&t, rdata+2, 2);
-	return t;
+	return ntohs(t);
 }
 
 /**
@@ -430,6 +430,7 @@ dnskeyset_verify_rrset_sig(struct module_env* env, struct val_env* ve,
 	int algo = rrset_get_sig_algo(rrset, sig_idx);
 	size_t i, num = rrset_get_count(dnskey);
 	size_t numchecked = 0;
+	verbose(VERB_ALGO, "verify sig %d %d", (int)tag, algo);
 	
 	for(i=0; i<num; i++) {
 		/* see if key matches keytag and algo */

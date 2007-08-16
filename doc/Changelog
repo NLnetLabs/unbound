@@ -1,3 +1,10 @@
+16 August 2007: Wouter
+	- DS sig unit test.
+	- latest release libevent 1.3c and 1.3d have threading fixed.
+	- key entry fixup data pointer and ttl absolute.
+	- This makes a key-prime succeed in validator, with DS or DNSKEY as
+	  trust-anchor.
+	
 15 August 2007: Wouter
 	- crypto calls to verify signatures.
 	- unit test for rrsig verification.

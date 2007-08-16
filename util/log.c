@@ -190,7 +190,7 @@ log_hex(const char* msg, void* data, size_t length)
 	else {
 		for(i=0; i<length*2; i+=blocksize) {
 			log_info("%s[%u:%u] %.*s", msg, (unsigned)length, 
-				(unsigned)i, blocksize, buf+i);
+				(unsigned)i/2, blocksize, buf+i);
 		}
 	}
 	free(buf);

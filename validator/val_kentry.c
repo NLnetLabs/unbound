@@ -218,7 +218,7 @@ key_entry_setup(struct region* region,
 	*d = region_alloc(region, sizeof(**d));
 	if(!*d)
 		return 0;
-	(*k)->entry.data = d;
+	(*k)->entry.data = *d;
 	return 1;
 }
 
@@ -248,8 +248,8 @@ key_entry_create_rrset(struct region* region,
 		rrset->entry.data;
 	if(!key_entry_setup(region, name, namelen, dclass, &k, &d))
 		return NULL;
-	d->ttl = rd->ttl;
-	log_info("New key entry TTL is %d", (int)d->ttl);
+	log_info("New key entry TTL is now+%d", (int)rd->ttl);
+	d->ttl = rd->ttl + time(NULL);
 	d->isbad = 0;
 	d->rrset_type = ntohs(rrset->rk.type);
 	d->rrset_data = (struct packed_rrset_data*)region_alloc_init(region,

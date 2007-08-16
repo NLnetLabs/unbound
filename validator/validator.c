@@ -178,7 +178,7 @@ needs_validation(struct module_qstate* qstate, struct val_qstate* vq)
 
 	/* If the CD bit is on in the original request, then we don't bother to
 	 * validate anything.*/
-	if(qstate->query_flags | BIT_CD) {
+	if(qstate->query_flags & BIT_CD) {
 		verbose(VERB_ALGO, "not validating response due to CD bit");
 		return 0;
 	}
@@ -357,7 +357,8 @@ val_operate(struct module_qstate* qstate, enum module_ev event, int id,
 		log_query_info(VERB_DETAIL, "validator operate: chased to",
 		&vq->qchase);
 	(void)outbound;
-	if(event == module_event_new || event == module_event_pass) {
+	if(event == module_event_new || 
+		(event == module_event_pass && vq == NULL)) {
 		/* pass request to next module, to get it */
 		verbose(VERB_ALGO, "validator: pass to next module");
 		qstate->ext_state[id] = module_wait_module;
@@ -389,6 +390,12 @@ val_operate(struct module_qstate* qstate, enum module_ev event, int id,
 				return;
 			}
 		}
+		val_handle(qstate, vq, ve, id);
+		return;
+	}
+	if(event == module_event_pass) {
+		qstate->ext_state[id] = module_error; /* override this */
+		/* continue processing, since val_env exists */
 		val_handle(qstate, vq, ve, id);
 		return;
 	}
@@ -448,6 +455,7 @@ primeResponseToKE(int rcode, struct dns_msg* msg, struct trust_anchor* ta,
 			sec = sec_status_secure;
 		else
 			sec = sec_status_bogus;
+		log_info("priming DS result %s", sec_status_to_string(sec));
 	}
 	if(sec != sec_status_secure && ta->dnskey_rrset) {
 		sec = val_verify_rrset(qstate->env, ve, dnskey_rrset,

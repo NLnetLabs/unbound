@@ -182,6 +182,59 @@ verifytest_entry(struct entry* e, struct alloc_cache* alloc, struct region*
 	query_info_clear(&qinfo);
 }
 
+/** find RRset in reply by type */
+static struct ub_packed_rrset_key*
+find_rrset_type(struct reply_info* rep, uint16_t type)
+{
+	size_t i;
+	for(i=0; i<rep->rrset_count; i++) {
+		if(ntohs(rep->rrsets[i]->rk.type) == type)
+			return rep->rrsets[i];
+	}
+	return NULL;
+}
+
+/** DS sig test an entry - get DNSKEY and DS in entry and verify */
+static void
+dstest_entry(struct entry* e, struct alloc_cache* alloc, struct region*
+        region, ldns_buffer* pkt, struct module_env* env)
+{
+	struct query_info qinfo;
+	struct reply_info* rep = NULL;
+	struct ub_packed_rrset_key* ds, *dnskey;
+	int ret;
+
+	region_free_all(region);
+	if(vsig) {
+		printf("verifying DS-DNSKEY match:\n");
+		ldns_pkt_print(stdout, e->reply_list->reply);
+		printf("\n");
+	}
+	entry_to_repinfo(e, alloc, region, pkt, &qinfo, &rep);
+	ds = find_rrset_type(rep, LDNS_RR_TYPE_DS);
+	dnskey = find_rrset_type(rep, LDNS_RR_TYPE_DNSKEY);
+	/* check test is OK */
+	unit_assert(ds && dnskey);
+
+	ret = ds_digest_match_dnskey(env, dnskey, 0, ds, 0);
+	if(strncmp((char*)qinfo.qname, "\003yes", 4) == 0) {
+		if(vsig) {
+			printf("result(yes)= %s\n", ret?"yes":"no");
+		}
+		unit_assert(ret);
+	} else if (strncmp((char*)qinfo.qname, "\002no", 3) == 0) {
+		if(vsig) {
+			printf("result(no)= %s\n", ret?"yes":"no");
+		}
+		unit_assert(!ret);
+	} else {
+		fatal_exit("Bad qname in DS unit test, yes or no");
+	}
+
+	reply_info_parsedelete(rep, alloc);
+	query_info_clear(&qinfo);
+}
+
 /** verify from a file */
 static void
 verifytest_file(const char* fname, const char* at_date)
@@ -224,9 +277,45 @@ verifytest_file(const char* fname, const char* at_date)
 	ldns_buffer_free(buf);
 }
 
+/** verify DS matches DNSKEY from a file */
+static void
+dstest_file(const char* fname)
+{
+	/* 
+	 * The file contains a list of ldns-testpkts entries.
+	 * The first entry must be a query for DNSKEY.
+	 * The answer rrset is the keyset that will be used for verification
+	 */
+	struct region* region = region_create(malloc, free);
+	struct alloc_cache alloc;
+	ldns_buffer* buf = ldns_buffer_new(65535);
+	struct entry* e;
+	struct entry* list = read_datafile(fname);
+	struct module_env env;
+
+	if(!list)
+		fatal_exit("could not read %s: %s", fname, strerror(errno));
+	alloc_init(&alloc, NULL, 1);
+	memset(&env, 0, sizeof(env));
+	env.scratch = region;
+	env.scratch_buffer = buf;
+	unit_assert(region && buf);
+
+	/* ready to go! */
+	for(e = list; e; e = e->next) {
+		dstest_entry(e, &alloc, region, buf, &env);
+	}
+
+	delete_entry(list);
+	region_destroy(region);
+	alloc_clear(&alloc);
+	ldns_buffer_free(buf);
+}
+
 void 
 verify_test()
 {
 	printf("verify test\n");
 	verifytest_file("testdata/test_signatures.1", "20070818005004");
+	dstest_file("testdata/test_ds_sig.1");
 }

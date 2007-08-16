@@ -227,6 +227,9 @@ verify_dnskeys_with_ds_rr(struct module_env* env, struct val_env* ve,
 		   != ds_get_keytag(ds_rrset, ds_idx)) {
 			continue;
 		}
+		verbose(VERB_ALGO, "attempt DS match algo %d keytag %d",
+			ds_get_key_algo(ds_rrset, ds_idx),
+			ds_get_keytag(ds_rrset, ds_idx));
 
 		/* Convert the candidate DNSKEY into a hash using the 
 		 * same DS hash algorithm. */
