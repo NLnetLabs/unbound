@@ -488,11 +488,11 @@ canonical_compare_hinfo(struct packed_rrset_data* d, size_t i, size_t j)
 	size_t strlen_j = 0;
 	while(ilen > 0 && jlen > 0) {
 		/* compare this pair of bytes */
-		if( ((strlen_i)?(uint8_t)tolower((int)*di++):*di++)
-		 != ((strlen_j)?(uint8_t)tolower((int)*dj++):*dj++)
+		if( ((strlen_i)?(uint8_t)tolower((int)*di):*di)
+		 != ((strlen_j)?(uint8_t)tolower((int)*dj):*dj)
 		 ) {
-		  if(((strlen_i)?(uint8_t)tolower((int)*di++):*di++)
-		  < ((strlen_j)?(uint8_t)tolower((int)*dj++):*dj++))
+		  if(((strlen_i)?(uint8_t)tolower((int)*di):*di)
+		  < ((strlen_j)?(uint8_t)tolower((int)*dj):*dj))
 		 	return -1;
 		    return 1;
 		}
@@ -500,11 +500,13 @@ canonical_compare_hinfo(struct packed_rrset_data* d, size_t i, size_t j)
 		jlen --;
 		/* read length byte of the string in rdata if strlen=0 */
 		if(strlen_i == 0) {
-			strlen_i = (size_t)di[-1];
+			strlen_i = (size_t)*di;
 		} else 	strlen_i--;
 		if(strlen_j == 0) {
-			strlen_j = (size_t)dj[-1];
+			strlen_j = (size_t)*dj;
 		} else 	strlen_j--;
+		di++;
+		dj++;
 	}
 	if(ilen == 0 && jlen == 0)
 		return 0;
@@ -549,11 +551,11 @@ canonical_compare_byfield(struct packed_rrset_data* d,
 	while(ilen > 0 && jlen > 0 && (dname_num_i > 0 || dname_num_j > 0)) {
 		/* compare these two bytes */
 		/* lowercase if in a dname and not a label length byte */
-		if( ((dname_i && lablen_i)?(uint8_t)tolower((int)*di++):*di++)
-		 != ((dname_j && lablen_j)?(uint8_t)tolower((int)*dj++):*dj++)
+		if( ((dname_i && lablen_i)?(uint8_t)tolower((int)*di):*di)
+		 != ((dname_j && lablen_j)?(uint8_t)tolower((int)*dj):*dj)
 		 ) {
-		  if(((dname_i && lablen_i)?(uint8_t)tolower((int)*di++):*di++)
-		  < ((dname_j && lablen_j)?(uint8_t)tolower((int)*dj++):*dj++))
+		  if(((dname_i && lablen_i)?(uint8_t)tolower((int)*di):*di)
+		  < ((dname_j && lablen_j)?(uint8_t)tolower((int)*dj):*dj))
 		 	return -1;
 		    return 1;
 		}
@@ -572,7 +574,7 @@ canonical_compare_byfield(struct packed_rrset_data* d,
 			if(dname_i) {
 				/* scan this dname label */
 				/* capture length to lowercase */
-				lablen_i = (size_t)di[-1];
+				lablen_i = (size_t)*di;
 				if(lablen_i == 0) {
 					/* end root label */
 					dname_i = 0;
@@ -588,7 +590,7 @@ canonical_compare_byfield(struct packed_rrset_data* d,
 				if(desc->_wireformat[wfi] 
 					== LDNS_RDF_TYPE_DNAME) {
 					dname_i = 1; 
-					lablen_i = (size_t)di[-1];
+					lablen_i = (size_t)*di;
 					if(lablen_i == 0) {
 						dname_i = 0;
 						dname_num_i--;
@@ -597,7 +599,7 @@ canonical_compare_byfield(struct packed_rrset_data* d,
 					}
 				} else if(desc->_wireformat[wfi] 
 					== LDNS_RDF_TYPE_STR)
-					lablen_i = (size_t)di[-1];
+					lablen_i = (size_t)*di;
 				else	lablen_i = get_rdf_size(
 					desc->_wireformat[wfi]) - 1;
 			}
@@ -606,7 +608,7 @@ canonical_compare_byfield(struct packed_rrset_data* d,
 		/* advance field j; same as for i */
 		if(lablen_j == 0) { 
 			if(dname_j) {
-				lablen_j = (size_t)dj[-1];
+				lablen_j = (size_t)*dj;
 				if(lablen_j == 0) {
 					dname_j = 0;
 					dname_num_j--;
@@ -618,7 +620,7 @@ canonical_compare_byfield(struct packed_rrset_data* d,
 				if(desc->_wireformat[wfj] 
 					== LDNS_RDF_TYPE_DNAME) {
 					dname_j = 1; 
-					lablen_j = (size_t)dj[-1];
+					lablen_j = (size_t)*dj;
 					if(lablen_j == 0) {
 						dname_j = 0;
 						dname_num_j--;
@@ -627,11 +629,13 @@ canonical_compare_byfield(struct packed_rrset_data* d,
 					}
 				} else if(desc->_wireformat[wfj] 
 					== LDNS_RDF_TYPE_STR)
-					lablen_j = (size_t)dj[-1];
+					lablen_j = (size_t)*dj;
 				else	lablen_j = get_rdf_size(
 					desc->_wireformat[wfj]) - 1;
 			}
 		} else	lablen_j--;
+		di++;
+		dj++;
 	}
 	/* end of the loop; because we advanced byte by byte; now we have
 	 * that the rdata has ended, or that there is a binary remainder */

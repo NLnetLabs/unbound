@@ -4,6 +4,7 @@
 	- key entry fixup data pointer and ttl absolute.
 	- This makes a key-prime succeed in validator, with DS or DNSKEY as
 	  trust-anchor.
+	- fixup canonical compare byfield routine, fix bug and also neater.
 	
 15 August 2007: Wouter
 	- crypto calls to verify signatures.
