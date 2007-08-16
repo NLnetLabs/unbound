@@ -201,6 +201,39 @@ needs_validation(struct module_qstate* qstate, struct val_qstate* vq)
 }
 
 /**
+ * Generate a request for DNS data.
+ *
+ * @param qstate: query state that is the parent.
+ * @param id: module id.
+ * @param name: what name to query for.
+ * @param namelen: length of name.
+ * @param qtype: query type.
+ * @param qclass: query class.
+ * @return false on alloc failure.
+ */
+static int
+generate_request(struct module_qstate* qstate, int id, uint8_t* name, 
+	size_t namelen, uint16_t qtype, uint16_t qclass)
+{
+	struct module_qstate* newq;
+	struct query_info ask;
+	ask.qname = name;
+	ask.qname_len = namelen;
+	ask.qtype = qtype;
+	ask.qclass = qclass;
+	log_query_info(VERB_ALGO, "generate request", &ask);
+	if(!(*qstate->env->attach_sub)(qstate, &ask, 
+		(uint16_t)(BIT_RD|BIT_CD), 0, &newq)){
+		log_err("Could not generate request: out of memory");
+		return 0;
+	}
+	/* ignore newq; validator does not need state created for that
+	 * query, and its a 'normal' for iterator as well */
+	qstate->ext_state[id] = module_wait_subquery;
+	return 1;
+}
+
+/**
  * Prime trust anchor for use.
  * Generate and dispatch a priming query for the given trust anchor.
  * The trust anchor can be DNSKEY or DS and does not have to be signed.
@@ -215,15 +248,9 @@ static int
 prime_trust_anchor(struct module_qstate* qstate, struct val_qstate* vq,
 	int id, struct trust_anchor* toprime)
 {
-	struct module_qstate* newq;
-	struct query_info ask;
-	ask.qname = toprime->name;
-	ask.qname_len = toprime->namelen;
-	ask.qtype = LDNS_RR_TYPE_DNSKEY;
-	ask.qclass = toprime->dclass;
-	log_query_info(VERB_ALGO, "priming trust anchor", &ask);
-	if(!(*qstate->env->attach_sub)(qstate, &ask, 
-		(uint16_t)(BIT_RD|BIT_CD), 0, &newq)){
+	int ret = generate_request(qstate, id, toprime->name, toprime->namelen,
+		LDNS_RR_TYPE_DNSKEY, toprime->dclass);
+	if(!ret) {
 		log_err("Could not prime trust anchor: out of memory");
 		return 0;
 	}
@@ -231,7 +258,6 @@ prime_trust_anchor(struct module_qstate* qstate, struct val_qstate* vq,
 	 * query, and its a 'normal' for iterator as well */
 	vq->wait_prime_ta = 1; /* to elicit PRIME_RESP_STATE processing 
 		from the validator inform_super() routine */
-	qstate->ext_state[id] = module_wait_subquery;
 	return 1;
 }
 
@@ -311,6 +337,94 @@ processInit(struct module_qstate* qstate, struct val_qstate* vq,
 	return 1;
 }
 
+/**
+ * Process the FINDKEY state. Generally this just calculates the next name
+ * to query and either issues a DS or a DNSKEY query. It will check to see
+ * if the correct key has already been reached, in which case it will
+ * advance the event to the next state.
+ *
+ * @param qstate: query state.
+ * @param vq: validator query state.
+ * @param id: module id.
+ * @return true if the event should be processed further on return, false if
+ *         not.
+ */
+static int
+processFindKey(struct module_qstate* qstate, struct val_qstate* vq, int id)
+{
+	uint8_t* target_key_name, *current_key_name;
+	size_t target_key_len, current_key_len;
+	int strip_lab;
+
+	verbose(VERB_ALGO, "validator: FindKey");
+	/* We know that state.key_entry is not a null or bad key -- if it were,
+	 * then previous processing should have directed this event to 
+	 * a different state. */
+	log_assert(vq->key_entry && !key_entry_isbad(vq->key_entry) && 
+		!key_entry_isnull(vq->key_entry));
+
+	target_key_name = vq->signer_name;
+	target_key_len = vq->signer_len;
+	if(!target_key_name) {
+		target_key_name = vq->qchase.qname;
+		target_key_len = vq->qchase.qname_len;
+	}
+
+	current_key_name = vq->key_entry->name;
+	current_key_len = vq->key_entry->namelen;
+
+	/* If our current key entry matches our target, then we are done. */
+	if(query_dname_compare(target_key_name, current_key_name) == 0) {
+		vq->state = VAL_VALIDATE_STATE;
+		return 1;
+	}
+
+	if(vq->empty_DS_name) {
+		current_key_name = vq->empty_DS_name;
+		current_key_len = vq->empty_DS_len;
+	}
+
+	log_nametypeclass(VERB_ALGO, "current keyname", current_key_name,
+		LDNS_RR_TYPE_DNSKEY, LDNS_RR_CLASS_IN);
+	log_nametypeclass(VERB_ALGO, "target keyname", target_key_name,
+		LDNS_RR_TYPE_DNSKEY, LDNS_RR_CLASS_IN);
+	/* assert we are walking down the DNS tree */
+	log_assert(dname_subdomain_c(target_key_name, current_key_name));
+	/* so this value is >= 0 */
+	strip_lab = dname_count_labels(target_key_name) - 
+		dname_count_labels(current_key_name) - 1;
+	log_assert(strip_lab >= 0);
+	verbose(VERB_ALGO, "striplab %d", strip_lab);
+	dname_remove_labels(&target_key_name, &target_key_len, strip_lab);
+	log_nametypeclass(VERB_ALGO, "next keyname", target_key_name,
+		LDNS_RR_TYPE_DNSKEY, LDNS_RR_CLASS_IN);
+
+	/* The next step is either to query for the next DS, or to query 
+	 * for the next DNSKEY. */
+
+	if(!vq->ds_rrset || query_dname_compare(vq->ds_rrset->rk.dname,
+		target_key_name) != 0) {
+		if(!generate_request(qstate, id, target_key_name, 
+			target_key_len, LDNS_RR_TYPE_DS, vq->qchase.qclass)) {
+			log_err("mem error generating DS request");
+			qstate->ext_state[id] = module_error;
+			return 0;
+		}
+		return 0;
+	}
+
+	/* Otherwise, it is time to query for the DNSKEY */
+	if(!generate_request(qstate, id, vq->ds_rrset->rk.dname, 
+		vq->ds_rrset->rk.dname_len, LDNS_RR_TYPE_DNSKEY, 
+		vq->qchase.qclass)) {
+		log_err("mem error generating DNSKEY request");
+		qstate->ext_state[id] = module_error;
+		return 0;
+	}
+
+	return 0;
+}
+
 /** 
  * Handle validator state.
  * If a method returns true, the next state is started. If false, then
@@ -332,6 +446,14 @@ val_handle(struct module_qstate* qstate, struct val_qstate* vq,
 			case VAL_INIT_STATE:
 				cont = processInit(qstate, vq, ve, id);
 				break;
+			case VAL_FINDKEY_STATE: 
+				cont = processFindKey(qstate, vq, id);
+				break;
+			case VAL_PRIME_RESP_STATE: 
+			case VAL_FINDKEY_DS_RESP_STATE: 
+			case VAL_FINDKEY_DNSKEY_RESP_STATE: 
+			case VAL_VALIDATE_STATE: 
+			case VAL_FINISHED_STATE: 
 			default:
 				log_warn("validator: invalid state %d",
 					vq->state);
@@ -494,6 +616,71 @@ primeResponseToKE(int rcode, struct dns_msg* msg, struct trust_anchor* ta,
 }
 
 /**
+ * Process DS response. Called from inform_supers.
+ *
+ * @param qstate: query state that is validating and asked for a DS.
+ * @param vq: validator query state
+ * @param id: module id.
+ * @param rcode: rcode result value.
+ * @param msg: result message (if rcode is OK).
+ * @param qinfo: from the sub query state, query info.
+ */
+static void
+process_ds_response(struct module_qstate* qstate, struct val_qstate* vq,
+	int id, int rcode, struct dns_msg* msg, struct query_info* qinfo)
+{
+	struct key_entry_key* dske = NULL;
+	/* TODO 
+	if(!ds_response_to_ke(qstate, vq, id, rcode, msg, &dske)) {
+			@@@ */ if(0) {
+			log_err("malloc failure in DStoKE");
+			vq->key_entry = NULL; /* make it error */
+			vq->state = VAL_VALIDATE_STATE;
+			return;
+	}
+	if(dske == NULL) {
+		vq->empty_DS_name = qinfo->qname;
+		vq->empty_DS_len = qinfo->qname_len;
+		/* ds response indicated that we aren't on a delegation point.
+		 * Keep the forState.state on FINDKEY. */
+	} else if(key_entry_isgood(dske)) {
+		/* TODO
+		vq->ds_rrset = key_entry_getrrset(dske);
+		*/
+		if(!vq->ds_rrset) {
+			log_err("malloc failure in process DS");
+			vq->key_entry = NULL; /* make it error */
+			vq->state = VAL_VALIDATE_STATE;
+			return;
+		}
+		/* Keep the forState.state on FINDKEY. */
+	} else {
+		/* NOTE: the reason for the DS to be not good (that is, 
+		 * either bad or null) should have been logged by 
+		 * dsResponseToKE. */
+		vq->key_entry = dske;
+		/* The FINDKEY phase has ended, so move on. */
+		vq->state = VAL_VALIDATE_STATE;
+	}
+}
+
+/**
+ * Process DNSKEY response. Called from inform_supers.
+ * Sets the key entry in the state.
+ *
+ * @param qstate: query state that is validating and asked for a DNSKEY.
+ * @param vq: validator query state
+ * @param id: module id.
+ * @param rcode: rcode result value.
+ * @param msg: result message (if rcode is OK).
+ */
+static void
+process_dnskey_response(struct module_qstate* qstate, struct val_qstate* vq,
+	int id, int rcode, struct dns_msg* msg)
+{
+}
+	
+/**
  * Process prime response
  * Sets the key entry in the state.
  *
@@ -544,8 +731,17 @@ val_inform_super(struct module_qstate* qstate, int id,
 			qstate->return_msg);
 		return;
 	}
+	if(qstate->qinfo.qtype == LDNS_RR_TYPE_DS) {
+		process_ds_response(super, vq, id, qstate->return_rcode,
+			qstate->return_msg, &qstate->qinfo);
+		return;
+	} else if(qstate->qinfo.qtype == LDNS_RR_TYPE_DNSKEY) {
+		process_dnskey_response(super, vq, id, qstate->return_rcode,
+			qstate->return_msg);
+		return;
+	}
+	log_err("internal error in validator: no inform_supers possible");
 }
-
 
 /** validator cleanup query state */
 static void

@@ -134,6 +134,22 @@ dnskey_get_flags(struct ub_packed_rrset_key* k, size_t idx)
 	return f;
 }
 
+/**
+ * Get DNSKEY protocol value from rdata
+ * @param k: DNSKEY rrset.
+ * @param idx: which key.
+ */
+static int
+dnskey_get_protocol(struct ub_packed_rrset_key* k, size_t idx)
+{
+	uint8_t* rdata;
+	size_t len;
+	rrset_get_rdata(k, idx, &rdata, &len);
+	if(len < 2+4)
+		return 0;
+	return (int)rdata[2+2];
+}
+
 int
 dnskey_get_algo(struct ub_packed_rrset_key* k, size_t idx)
 {
@@ -1271,7 +1287,13 @@ dnskey_verify_rrset_sig(struct module_env* env, struct val_env* ve,
 
 	if(!(dnskey_get_flags(dnskey, dnskey_idx) & DNSKEY_BIT_ZSK)) {
 		verbose(VERB_ALGO, "verify: dnskey without ZSK flag");
-		return sec_status_bogus; /* signer name invalid */
+		return sec_status_bogus; 
+	}
+
+	if(dnskey_get_protocol(dnskey, dnskey_idx) != LDNS_DNSSEC_KEYPROTO) { 
+		/* RFC 4034 says DNSKEY PROTOCOL MUST be 3 */
+		verbose(VERB_ALGO, "verify: dnskey has wrong key protocol");
+		return sec_status_bogus;
 	}
 
 	/* verify as many fields in rrsig as possible */

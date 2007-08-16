@@ -233,6 +233,16 @@ int dname_is_root(uint8_t* dname);
 void dname_remove_label(uint8_t** dname, size_t* len);
 
 /**
+ * Snip off first N labels from a dname, returning the parent zone.
+ * @param dname: from what to strip off. uncompressed wireformat.
+ * @param len: length, adjusted to become less.
+ * @param n: number of labels to strip off (from the left).
+ * 	if 0, nothing happens.
+ * @return stripped off, or "." if input was ".".
+ */
+void dname_remove_labels(uint8_t** dname, size_t* len, int n);
+
+/**
  * Count labels for the RRSIG signature label field.
  * Like a normal labelcount, but "*" wildcard and "." root are not counted.
  * @param dname: valid uncompressed wireformat.

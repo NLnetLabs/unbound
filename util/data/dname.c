@@ -595,6 +595,14 @@ dname_remove_label(uint8_t** dname, size_t* len)
 	*dname += lablen+1;
 }
 
+void 
+dname_remove_labels(uint8_t** dname, size_t* len, int n)
+{
+	int i;
+	for(i=0; i<n; i++)
+		dname_remove_label(dname, len);
+}
+
 int 
 dname_signame_label_count(uint8_t* dname)
 {

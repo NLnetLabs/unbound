@@ -10,6 +10,7 @@
 	  dig ANY gives sometimes NS rrset in AN and NS section, and parser
 	  removes the NS section duplicate. dig NS gives sometimes the NS
 	  in the answer section, as referral.
+	- validator FINDKEY state.
 
 15 August 2007: Wouter
 	- crypto calls to verify signatures.
