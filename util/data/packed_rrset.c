@@ -257,3 +257,11 @@ sec_status_to_string(enum sec_status s)
 	}
 	return "unknown_sec_status_value";
 }
+
+uint32_t 
+ub_packed_rrset_ttl(struct ub_packed_rrset_key* key)
+{
+	struct packed_rrset_data* d = (struct packed_rrset_data*)key->
+		entry.data;
+	return d->ttl;
+}

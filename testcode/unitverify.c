@@ -42,6 +42,7 @@
 #include "util/log.h"
 #include "testcode/unitmain.h"
 #include "validator/val_sigcrypt.h"
+#include "validator/val_nsec.h"
 #include "validator/validator.h"
 #include "testcode/ldns-testpkts.h"
 #include "util/data/msgreply.h"
@@ -312,10 +313,53 @@ dstest_file(const char* fname)
 	ldns_buffer_free(buf);
 }
 
+/** Test NSEC type bitmap routine */
+static void
+nsectest()
+{
+	/* bitmap starts at type bitmap rdata field */
+	/* from rfc 4034 example */
+	char* bitmap = "\000\006\100\001\000\000\000\003"
+		"\004\033\000\000\000\000\000\000"
+		"\000\000\000\000\000\000\000\000"
+		"\000\000\000\000\000\000\000\000"
+		"\000\000\000\000\040";
+	size_t len = 37;
+
+	unit_assert(!unitest_nsec_has_type_rdata(bitmap, len, 0));
+	unit_assert(unitest_nsec_has_type_rdata(bitmap, len, LDNS_RR_TYPE_A));
+	unit_assert(!unitest_nsec_has_type_rdata(bitmap, len, 2));
+	unit_assert(!unitest_nsec_has_type_rdata(bitmap, len, 3));
+	unit_assert(!unitest_nsec_has_type_rdata(bitmap, len, 4));
+	unit_assert(!unitest_nsec_has_type_rdata(bitmap, len, 5));
+	unit_assert(!unitest_nsec_has_type_rdata(bitmap, len, 6));
+	unit_assert(!unitest_nsec_has_type_rdata(bitmap, len, 7));
+	unit_assert(!unitest_nsec_has_type_rdata(bitmap, len, 8));
+	unit_assert(!unitest_nsec_has_type_rdata(bitmap, len, 9));
+	unit_assert(!unitest_nsec_has_type_rdata(bitmap, len, 10));
+	unit_assert(!unitest_nsec_has_type_rdata(bitmap, len, 11));
+	unit_assert(!unitest_nsec_has_type_rdata(bitmap, len, 12));
+	unit_assert(!unitest_nsec_has_type_rdata(bitmap, len, 13));
+	unit_assert(!unitest_nsec_has_type_rdata(bitmap, len, 14));
+	unit_assert(unitest_nsec_has_type_rdata(bitmap, len, LDNS_RR_TYPE_MX));
+	unit_assert(unitest_nsec_has_type_rdata(bitmap, len, LDNS_RR_TYPE_RRSIG));
+	unit_assert(unitest_nsec_has_type_rdata(bitmap, len, LDNS_RR_TYPE_NSEC));
+	unit_assert(unitest_nsec_has_type_rdata(bitmap, len, 1234));
+	unit_assert(!unitest_nsec_has_type_rdata(bitmap, len, 1233));
+	unit_assert(!unitest_nsec_has_type_rdata(bitmap, len, 1235));
+	unit_assert(!unitest_nsec_has_type_rdata(bitmap, len, 1236));
+	unit_assert(!unitest_nsec_has_type_rdata(bitmap, len, 1237));
+	unit_assert(!unitest_nsec_has_type_rdata(bitmap, len, 1238));
+	unit_assert(!unitest_nsec_has_type_rdata(bitmap, len, 1239));
+	unit_assert(!unitest_nsec_has_type_rdata(bitmap, len, 1240));
+	unit_assert(!unitest_nsec_has_type_rdata(bitmap, len, 2230));
+}
+
 void 
 verify_test()
 {
 	printf("verify test\n");
 	verifytest_file("testdata/test_signatures.1", "20070818005004");
 	dstest_file("testdata/test_ds_sig.1");
+	nsectest();
 }

@@ -46,6 +46,7 @@ struct reply_info;
 struct val_env;
 struct module_env;
 struct ub_packed_rrset_key;
+struct key_entry_key;
 struct region;
 enum sec_status;
 
@@ -104,6 +105,18 @@ enum sec_status val_verify_rrset(struct module_env* env, struct val_env* ve,
 	struct ub_packed_rrset_key* rrset, struct ub_packed_rrset_key* keys);
 
 /**
+ * Verify RRset with keys from a keyset.
+ * @param env: module environment (scratch buffer)
+ * @param ve: validator environment (verification settings)
+ * @param rrset: what to verify
+ * @param kkey: key_entry to verify with.
+ * @return security status of verification.
+ */
+enum sec_status val_verify_rrset_entry(struct module_env* env, 
+	struct val_env* ve, struct ub_packed_rrset_key* rrset, 
+	struct key_entry_key* kkey);
+
+/**
  * Verify new DNSKEYs with DS rrset. The DS contains hash values that should
  * match the DNSKEY keys.
  * match the DS to a DNSKEY and verify the DNSKEY rrset with that key.
@@ -126,5 +139,15 @@ struct key_entry_key* val_verify_new_DNSKEYs(struct region* region,
 	struct module_env* env, struct val_env* ve, 
 	struct ub_packed_rrset_key* dnskey_rrset, 
 	struct ub_packed_rrset_key* ds_rrset);
+
+/**
+ * Determine if DS rrset is usable for validator or not.
+ * Returns true if the algorithms for key and DShash are supported,
+ * for at least one RR.
+ *
+ * @param ds_rrset: the newly received DS rrset.
+ * @return true or false if not usable.
+ */
+int val_dsset_isusable(struct ub_packed_rrset_key* ds_rrset);
 
 #endif /* VALIDATOR_VAL_UTILS_H */

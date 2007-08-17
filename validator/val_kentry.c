@@ -230,7 +230,7 @@ key_entry_create_null(struct region* region,
 	struct key_entry_data* d;
 	if(!key_entry_setup(region, name, namelen, dclass, &k, &d))
 		return NULL;
-	d->ttl = ttl;
+	d->ttl = time(0) + ttl;
 	d->isbad = 0;
 	d->rrset_type = LDNS_RR_TYPE_DNSKEY;
 	d->rrset_data = NULL;
@@ -273,4 +273,32 @@ key_entry_create_bad(struct region* region,
 	d->rrset_type = LDNS_RR_TYPE_DNSKEY;
 	d->rrset_data = NULL;
 	return k;
+}
+
+struct ub_packed_rrset_key* 
+key_entry_get_rrset(struct key_entry_key* kkey, struct region* region)
+{
+	struct key_entry_data* d = (struct key_entry_data*)kkey->entry.data;
+	struct ub_packed_rrset_key* rrk;
+	struct packed_rrset_data* rrd;
+	if(!d || !d->rrset_data)
+		return NULL;
+	rrk = region_alloc(region, sizeof(*rrk));
+	if(!rrk)
+		return NULL;
+	memset(rrk, 0, sizeof(*rrk));
+	rrk->rk.dname = region_alloc_init(region, kkey->name, kkey->namelen);
+	if(!rrk->rk.dname)
+		return NULL;
+	rrk->rk.dname_len = kkey->namelen;
+	rrk->rk.type = htons(d->rrset_type);
+	rrk->rk.rrset_class = htons(kkey->key_class);
+	rrk->entry.key = rrk;
+	rrd = region_alloc_init(region, d->rrset_data, 
+		packed_rrset_sizeof(d->rrset_data));
+	if(!rrd)
+		return NULL;
+	rrk->entry.data = rrd;
+	packed_rrset_ptr_fixup(rrd);
+	return rrk;
 }

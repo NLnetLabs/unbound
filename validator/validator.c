@@ -45,6 +45,7 @@
 #include "validator/val_kcache.h"
 #include "validator/val_kentry.h"
 #include "validator/val_utils.h"
+#include "validator/val_nsec.h"
 #include "services/cache/dns.h"
 #include "util/data/dname.h"
 #include "util/module.h"
@@ -557,7 +558,7 @@ primeResponseToKE(int rcode, struct dns_msg* msg, struct trust_anchor* ta,
 		log_query_info(VERB_ALGO, "failed to prime trust anchor -- "
 			"could not fetch DNSKEY rrset", &msg->qinfo);
 		kkey = key_entry_create_null(qstate->region, ta->name,
-			ta->namelen, ta->dclass, time(0)+NULL_KEY_TTL);
+			ta->namelen, ta->dclass, NULL_KEY_TTL);
 		if(!kkey) {
 			log_err("out of memory: allocate null prime key");
 			return NULL;
@@ -599,7 +600,7 @@ primeResponseToKE(int rcode, struct dns_msg* msg, struct trust_anchor* ta,
 		/* NOTE: in this case, we should probably reject the trust 
 		 * anchor for longer, perhaps forever. */
 		kkey = key_entry_create_null(qstate->region, ta->name,
-			ta->namelen, ta->dclass, time(0)+NULL_KEY_TTL);
+			ta->namelen, ta->dclass, NULL_KEY_TTL);
 		if(!kkey) {
 			log_err("out of memory: allocate null prime key");
 			return NULL;
@@ -616,7 +617,131 @@ primeResponseToKE(int rcode, struct dns_msg* msg, struct trust_anchor* ta,
 }
 
 /**
+ * In inform supers, with the resulting message and rcode and the current
+ * keyset in the super state, validate the DS response, returning a KeyEntry.
+ *
+ * @param qstate: query state that is validating and asked for a DS.
+ * @param vq: validator query state
+ * @param id: module id.
+ * @param rcode: rcode result value.
+ * @param msg: result message (if rcode is OK).
+ * @param qinfo: from the sub query state, query info.
+ * @param ke: the key entry to return. It returns
+ *	bad if the DS response fails to validate, null if the
+ *	DS response indicated an end to secure space, good if the DS
+ *	validated. It returns null if the DS response indicated that the
+ *	request wasn't a delegation point.
+ * @return 0 on servfail error (malloc failure).
+ */
+static int
+ds_response_to_ke(struct module_qstate* qstate, struct val_qstate* vq,
+        int id, int rcode, struct dns_msg* msg, struct query_info* qinfo,
+	struct key_entry_key** ke)
+{
+	struct val_env* ve = (struct val_env*)qstate->env->modinfo[id];
+	enum val_classification subtype;
+	if(rcode != LDNS_RCODE_NOERROR) {
+		/* errors here pretty much break validation */
+		verbose(VERB_ALGO, "DS response was error, thus bogus");
+		goto return_bogus;
+	}
+
+	subtype = val_classify_response(qinfo, msg->rep);
+	if(subtype == VAL_CLASS_POSITIVE) {
+		struct ub_packed_rrset_key* ds;
+		enum sec_status sec;
+		ds = reply_find_answer_rrset(qinfo, msg->rep);
+		/* If there was no DS rrset, then we have mis-classified 
+		 * this message. */
+		if(!ds) {
+			log_warn("internal error: POSITIVE DS response was "
+				"missing DS.");
+			goto return_bogus;
+		}
+		/* Verify only returns BOGUS or SECURE. If the rrset is 
+		 * bogus, then we are done. */
+		sec = val_verify_rrset_entry(qstate->env, ve, ds, 
+			vq->key_entry);
+		if(sec != sec_status_secure) {
+			verbose(VERB_ALGO, "DS rrset in DS response did "
+				"not verify");
+			goto return_bogus;
+		}
+
+		/* If the DS rrset validates, we still have to make sure 
+		 * that they are usable. */
+		if(!val_dsset_isusable(ds)) {
+			/* If they aren't usable, then we treat it like 
+			 * there was no DS. */
+			*ke = key_entry_create_null(qstate->region, 
+				qinfo->qname, qinfo->qname_len, qinfo->qclass, 
+				ub_packed_rrset_ttl(ds));
+			return (*ke) != NULL;
+		}
+
+		/* Otherwise, we return the positive response. */
+		log_query_info(VERB_ALGO, "DS rrset was good.", qinfo);
+		*ke = key_entry_create_rrset(qstate->region,
+			qinfo->qname, qinfo->qname_len, qinfo->qclass, ds);
+		return (*ke) != NULL;
+	} else if(subtype == VAL_CLASS_NODATA) {
+		/* NODATA means that the qname exists, but that there was 
+		 * no DS.  This is a pretty normal case. */
+		uint32_t proof_ttl = 0;
+
+		/* Try to prove absence of the DS with NSEC */
+		enum sec_status sec = val_nsec_prove_nodata_ds(qstate->env, ve, 
+			qinfo, msg->rep, vq->key_entry, &proof_ttl);
+		switch(sec) {
+			case sec_status_secure:
+				verbose(VERB_ALGO, "NSEC RRset for the "
+					"referral proved no DS.");
+				*ke = key_entry_create_null(qstate->region, 
+					qinfo->qname, qinfo->qname_len, 
+					qinfo->qclass, proof_ttl);
+				return (*ke) != NULL;
+			case sec_status_insecure:
+				verbose(VERB_ALGO, "NSEC RRset for the "
+				  "referral proved not a delegation point");
+				*ke = NULL;
+				return 1;
+			case sec_status_bogus:
+				verbose(VERB_ALGO, "NSEC RRset for the "
+					"referral did not prove no DS.");
+				goto return_bogus;
+			case sec_status_unchecked:
+			default:
+				/* NSEC proof did not work, try next */
+				break;
+		}
+
+		/* Or it could be using NSEC3. TODO */
+
+		/* Apparently, no available NSEC/NSEC3 proved NODATA, so 
+		 * this is BOGUS. */
+		verbose(VERB_ALGO, "DS ran out of options, so return bogus");
+		goto return_bogus;
+	} else if(subtype == VAL_CLASS_NAMEERROR) {
+		verbose(VERB_ALGO, "DS response was NAMEERROR, thus bogus.");
+		goto return_bogus;
+	} else {
+		verbose(VERB_ALGO, "Encountered an unhandled type of "
+			"DS response, thus bogus.");
+return_bogus:
+		*ke = key_entry_create_bad(qstate->region, qinfo->qname,
+			qinfo->qname_len, qinfo->qclass);
+		return (*ke) != NULL;
+	}
+	/* unreachable */
+	log_assert(0);
+}
+
+/**
  * Process DS response. Called from inform_supers.
+ * Because it is in inform_supers, the mesh itself is busy doing callbacks
+ * for a state that is to be deleted soon; don't touch the mesh; instead
+ * set a state in the super, as the super will be reactivated soon.
+ * Perform processing to determine what state to set in the super.
  *
  * @param qstate: query state that is validating and asked for a DS.
  * @param vq: validator query state
@@ -630,9 +755,7 @@ process_ds_response(struct module_qstate* qstate, struct val_qstate* vq,
 	int id, int rcode, struct dns_msg* msg, struct query_info* qinfo)
 {
 	struct key_entry_key* dske = NULL;
-	/* TODO 
-	if(!ds_response_to_ke(qstate, vq, id, rcode, msg, &dske)) {
-			@@@ */ if(0) {
+	if(!ds_response_to_ke(qstate, vq, id, rcode, msg, qinfo, &dske)) {
 			log_err("malloc failure in DStoKE");
 			vq->key_entry = NULL; /* make it error */
 			vq->state = VAL_VALIDATE_STATE;
@@ -644,9 +767,7 @@ process_ds_response(struct module_qstate* qstate, struct val_qstate* vq,
 		/* ds response indicated that we aren't on a delegation point.
 		 * Keep the forState.state on FINDKEY. */
 	} else if(key_entry_isgood(dske)) {
-		/* TODO
-		vq->ds_rrset = key_entry_getrrset(dske);
-		*/
+		vq->ds_rrset = key_entry_get_rrset(dske, qstate->region);
 		if(!vq->ds_rrset) {
 			log_err("malloc failure in process DS");
 			vq->key_entry = NULL; /* make it error */
@@ -667,6 +788,10 @@ process_ds_response(struct module_qstate* qstate, struct val_qstate* vq,
 /**
  * Process DNSKEY response. Called from inform_supers.
  * Sets the key entry in the state.
+ * Because it is in inform_supers, the mesh itself is busy doing callbacks
+ * for a state that is to be deleted soon; don't touch the mesh; instead
+ * set a state in the super, as the super will be reactivated soon.
+ * Perform processing to determine what state to set in the super.
  *
  * @param qstate: query state that is validating and asked for a DNSKEY.
  * @param vq: validator query state

@@ -78,7 +78,7 @@ struct key_entry_data {
 	uint32_t ttl;
 	/** the key rrdata. can be NULL to signal keyless name. */
 	struct packed_rrset_data* rrset_data;
-	/** DNS RR type of the rrset data */
+	/** DNS RR type of the rrset data (host order) */
 	uint16_t rrset_type;
 	/** if the key is bad: Bogus or malformed */
 	uint8_t isbad;
@@ -143,8 +143,8 @@ int key_entry_isbad(struct key_entry_key* kkey);
  * @param region: where to allocate
  * @param name: the key name
  * @param namelen: length of name
- * @param dclass: class of key entry.
- * @param ttl: what ttl should the key have.
+ * @param dclass: class of key entry. (host order);
+ * @param ttl: what ttl should the key have. relative.
  * @return new key entry or NULL on alloc failure
  */
 struct key_entry_key* key_entry_create_null(struct region* region,
@@ -155,7 +155,7 @@ struct key_entry_key* key_entry_create_null(struct region* region,
  * @param region: where to allocate.
  * @param name: the key name
  * @param namelen: length of name
- * @param dclass: class of key entry.
+ * @param dclass: class of key entry. (host order);
  * @param rrset: data for key entry. This is copied to the region.
  * @return new key entry or NULL on alloc failure
  */
@@ -168,10 +168,19 @@ struct key_entry_key* key_entry_create_rrset(struct region* region,
  * @param region: where to allocate
  * @param name: the key name
  * @param namelen: length of name
- * @param dclass: class of key entry.
+ * @param dclass: class of key entry. (host order);
  * @return new key entry or NULL on alloc failure
  */
 struct key_entry_key* key_entry_create_bad(struct region* region,
 	uint8_t* name, size_t namelen, uint16_t dclass);
+
+/**
+ * Obtain rrset from a key entry, allocated in region.
+ * @param kkey: key entry to convert to a rrset.
+ * @param region: where to allocate rrset
+ * @return rrset copy; if no rrset or alloc error returns NULL.
+ */
+struct ub_packed_rrset_key* key_entry_get_rrset(struct key_entry_key* kkey,
+	struct region* region);
 
 #endif /* VALIDATOR_VAL_KENTRY_H */

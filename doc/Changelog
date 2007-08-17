@@ -1,3 +1,8 @@
+17 August 2007: Wouter
+	- work on DS2KE routine.
+	- val_nsec.c for validator NSEC proofs.
+	- unit test for NSEC bitmap reading.
+
 16 August 2007: Wouter
 	- DS sig unit test.
 	- latest release libevent 1.3c and 1.3d have threading fixed.

@@ -210,6 +210,25 @@ val_verify_rrset(struct module_env* env, struct val_env* ve,
 	return sec;
 }
 
+enum sec_status 
+val_verify_rrset_entry(struct module_env* env, struct val_env* ve,
+        struct ub_packed_rrset_key* rrset, struct key_entry_key* kkey)
+{
+	/* temporary dnskey rrset-key */
+	struct ub_packed_rrset_key dnskey;
+	struct key_entry_data* kd = (struct key_entry_data*)kkey->entry.data;
+	enum sec_status sec;
+	dnskey.rk.type = htons(kd->rrset_type);
+	dnskey.rk.rrset_class = htons(kkey->key_class);
+	dnskey.rk.flags = 0;
+	dnskey.rk.dname = kkey->name;
+	dnskey.rk.dname_len = kkey->namelen;
+	dnskey.entry.key = &dnskey;
+	dnskey.entry.data = kd->rrset_data;
+	sec = val_verify_rrset(env, ve, rrset, &dnskey);
+	return sec;
+}
+
 /** verify that a DS RR hashes to a key and that key signs the set */
 static enum sec_status
 verify_dnskeys_with_ds_rr(struct module_env* env, struct val_env* ve, 
@@ -311,4 +330,16 @@ val_verify_new_DNSKEYs(struct region* region, struct module_env* env,
 	verbose(VERB_ALGO, "Failed to match any usable DS to a DNSKEY.");
 	return key_entry_create_bad(region, ds_rrset->rk.dname,
 		ds_rrset->rk.dname_len, ntohs(ds_rrset->rk.rrset_class));
+}
+
+int 
+val_dsset_isusable(struct ub_packed_rrset_key* ds_rrset)
+{
+	size_t i;
+	for(i=0; i<rrset_get_count(ds_rrset); i++) {
+		if(ds_digest_algo_is_supported(ds_rrset, i) &&
+			ds_key_algo_is_supported(ds_rrset, i))
+			return 1;
+	}
+	return 0;
 }

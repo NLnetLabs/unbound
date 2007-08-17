@@ -266,6 +266,13 @@ void ub_packed_rrset_parsedelete(struct ub_packed_rrset_key* pkey,
 size_t packed_rrset_sizeof(struct packed_rrset_data* data);
 
 /**
+ * Get TTL of rrset. RRset data must be filled in correctly.
+ * @param key: rrset key, with data to examine.
+ * @return ttl value.
+ */
+uint32_t ub_packed_rrset_ttl(struct ub_packed_rrset_key* key);
+
+/**
  * Calculate memory size of rrset entry. For hash table usage.
  * @param key: struct ub_packed_rrset_key*.
  * @param data: struct packed_rrset_data*.
