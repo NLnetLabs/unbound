@@ -67,14 +67,28 @@ struct key_entry_key;
  *	SECURE: proved absence of DS.
  *	INSECURE: proved that this was not a delegation point.
  *	BOGUS: crypto bad, or no absence of DS proven. 
- *	UNCHECKED: there was no way to prove anything (no nsecs, unknown algo).
+ *	UNCHECKED: there was no way to prove anything (no NSECs, unknown algo).
  */
-enum sec_status val_nsec_prove_nodata_ds(struct module_env* env,
+enum sec_status val_nsec_prove_nodata_dsreply(struct module_env* env,
 	struct val_env* ve, struct query_info* qinfo, 
 	struct reply_info* rep, struct key_entry_key* kkey,
 	uint32_t* proof_ttl);
 
 /** Unit test call to test function for nsec typemap check */
 int unitest_nsec_has_type_rdata(char* bitmap, size_t len, uint16_t type);
+
+/**
+ * Determine if a NSEC proves the NOERROR/NODATA conditions. This will also
+ * handle the empty non-terminal (ENT) case and partially handle the
+ * wildcard case. If the ownername of 'nsec' is a wildcard, the validator
+ * must still be provided proof that qname did not directly exist and that
+ * the wildcard is, in fact, *.closest_encloser.
+ *
+ * @param nsec: the nsec record to check against.
+ * @param qinfo: the query info.
+ * @return true if NSEC proves this.
+ */
+int nsec_proves_nodata(struct ub_packed_rrset_key* nsec, 
+	struct query_info* qinfo);
 
 #endif /* VALIDATOR_VAL_NSEC_H */

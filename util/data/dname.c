@@ -621,3 +621,107 @@ dname_signame_label_count(uint8_t* dname)
 	}
 	return count;
 }
+
+int 
+dname_is_wild(uint8_t* dname)
+{
+	return (dname[0] == 1 && dname[1] == '*');
+}
+
+/**
+ * Compare labels in memory, lowercase while comparing.
+ * Returns canonical order for labels. If all is equal, the
+ * shortest is first.
+ *
+ * @param p1: label 1
+ * @param len1: length of label 1.
+ * @param p2: label 2
+ * @param len2: length of label 2.
+ * @return: 0, -1, +1 comparison result.
+ */
+static int
+memcanoncmp(uint8_t* p1, uint8_t len1, uint8_t* p2, uint8_t len2)
+{
+	uint8_t min = (len1<len2)?len1:len2;
+	int c = memlowercmp(p1, p2, min);
+	if(c != 0)
+		return c;
+	/* equal, see who is shortest */
+	if(len1 < len2)
+		return -1;
+	if(len1 > len2)
+		return 1;
+	return 0;
+}
+
+
+int 
+dname_canon_lab_cmp(uint8_t* d1, int labs1, uint8_t* d2, int labs2, int* mlabs)
+{
+	/* like dname_lab_cmp, but with different label comparison,
+	 * empty character sorts before \000.
+	 * So   ylyly is before z. */
+	uint8_t len1, len2;
+	int atlabel = labs1;
+	int lastmlabs;
+	int lastdiff = 0;
+	int c;
+	/* first skip so that we compare same label. */
+	if(labs1 > labs2) {
+		while(atlabel > labs2) {
+			len1 = *d1++;
+			d1 += len1;
+			atlabel--;
+		}
+		log_assert(atlabel == labs2);
+	} else if(labs1 < labs2) {
+		atlabel = labs2;
+		while(atlabel > labs1) {
+			len2 = *d2++;
+			d2 += len2;
+			atlabel--;
+		}
+		log_assert(atlabel == labs1);
+	}
+	lastmlabs = atlabel+1;
+	/* now at same label in d1 and d2, atlabel */
+	/* www.example.com.                  */
+	/* 4   3       2  1   atlabel number */
+	/* repeat until at root label (which is always the same) */
+	while(atlabel > 1) {
+		len1 = *d1++;
+		len2 = *d2++;
+
+		if((c=memcanoncmp(d1, len1, d2, len2)) != 0) {
+			if(c<0)
+				lastdiff = -1;
+			else	lastdiff = 1;
+			lastmlabs = atlabel;
+		}
+
+		d1 += len1;
+		d2 += len2;
+		atlabel--;
+	}
+	/* last difference atlabel number, so number of labels matching,
+	 * at the right side, is one less. */
+	*mlabs = lastmlabs-1;
+	if(lastdiff == 0) {
+		/* all labels compared were equal, check if one has more
+		 * labels, so that example.com. > com. */
+		if(labs1 > labs2)
+			return 1;
+		else if(labs1 < labs2)
+			return -1;
+	}
+	return lastdiff;
+}
+
+int
+dname_canonical_compare(uint8_t* d1, uint8_t* d2)
+{
+	int labs1, labs2, m;
+	labs1 = dname_count_labels(d1);
+	labs2 = dname_count_labels(d2);
+	return dname_canon_lab_cmp(d1, labs1, d2, labs2, &m);
+}

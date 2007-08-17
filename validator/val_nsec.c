@@ -71,7 +71,7 @@ nsec_has_type_rdata(uint8_t* bitmap, size_t len, uint16_t type)
 			size_t mybyte = type_low>>3;
 			if(winlen <= mybyte)
 				return 0; /* window too short */
-			return bitmap[mybyte] & masks[type_low&0x7];
+			return (int)(bitmap[mybyte] & masks[type_low&0x7]);
 		} else {
 			/* not the window we are looking for */
 			bitmap += winlen;
@@ -107,7 +107,36 @@ nsec_has_type(struct ub_packed_rrset_key* nsec, uint16_t type)
 	len = dname_valid(d->rr_data[0]+2, d->rr_len[0]-2);
 	if(!len)
 		return 0;
-	nsec_has_type_rdata(d->rr_data[0]+2+len, d->rr_len[0]-2-len, type);
+	return nsec_has_type_rdata(d->rr_data[0]+2+len, 
+		d->rr_len[0]-2-len, type);
+}
+
+/**
+ * Get next owner name from nsec record
+ * @param nsec: the nsec RRset.
+ *	If there are multiple RRs, then this will only return one of them.
+ * @param nm: the next name is returned.
+ * @param ln: length of nm is returned.
+ * @return false on a bad NSEC RR (too short, malformed dname).
+ */
+static int 
+nsec_get_next(struct ub_packed_rrset_key* nsec, uint8_t** nm, size_t* ln)
+{
+	struct packed_rrset_data* d = (struct packed_rrset_data*)nsec->
+		entry.data;
+	if(!d || d->count == 0 || d->rr_len[0] < 2+1) {
+		*nm = 0;
+		*ln = 0;
+		return 0;
+	}
+	*nm = d->rr_data[0]+2;
+	*ln = dname_valid(*nm, d->rr_len[0]-2);
+	if(!*ln) {
+		*nm = 0;
+		*ln = 0;
+		return 0;
+	}
+	return 1;
 }
 
 /**
@@ -119,7 +148,7 @@ nsec_has_type(struct ub_packed_rrset_key* nsec, uint16_t type)
  *	insecure if it proves it is not a delegation point.
  *	or bogus if something was wrong.
  */
-enum sec_status 
+static enum sec_status 
 val_nsec_proves_no_ds(struct ub_packed_rrset_key* nsec, 
 	struct query_info* qinfo)
 {
@@ -128,17 +157,34 @@ val_nsec_proves_no_ds(struct ub_packed_rrset_key* nsec,
 	/* this proof may also work if qname is a subdomain */
 	log_assert(query_dname_compare(nsec->rk.dname, qinfo->qname) == 0);
 
-	return sec_status_bogus;
+	if(nsec_has_type(nsec, LDNS_RR_TYPE_SOA) || 
+		nsec_has_type(nsec, LDNS_RR_TYPE_DS)) {
+		/* SOA present means that this is the NSEC from the child, 
+		 * not the parent (so it is the wrong one).
+		 * DS present means that there should have been a positive 
+		 * response to the DS query, so there is something wrong. */
+		return sec_status_bogus;
+	}
+
+	if(!nsec_has_type(nsec, LDNS_RR_TYPE_NS)) {
+		/* If there is no NS at this point at all, then this 
+		 * doesn't prove anything one way or the other. */
+		return sec_status_insecure;
+	}
+	/* Otherwise, this proves no DS. */
+	return sec_status_secure;
 }
 
 enum sec_status 
-val_nsec_prove_nodata_ds(struct module_env* env, struct val_env* ve, 
+val_nsec_prove_nodata_dsreply(struct module_env* env, struct val_env* ve, 
 	struct query_info* qinfo, struct reply_info* rep, 
 	struct key_entry_key* kkey, uint32_t* proof_ttl)
 {
 	struct ub_packed_rrset_key* nsec = reply_find_rrset_section_ns(
 		rep, qinfo->qname, qinfo->qname_len, LDNS_RR_TYPE_NSEC, 
 		qinfo->qclass);
+	enum sec_status sec;
+	size_t i;
 
 	/* If we have a NSEC at the same name, it must prove one 
 	 * of two things
@@ -146,8 +192,7 @@ val_nsec_prove_nodata_ds(struct module_env* env, struct val_env* ve,
 	 * 1) this is a delegation point and there is no DS
 	 * 2) this is not a delegation point */
 	if(nsec) {
-		enum sec_status sec = val_verify_rrset_entry(env, ve, nsec, 
-			kkey);
+		sec = val_verify_rrset_entry(env, ve, nsec, kkey);
 		if(sec != sec_status_secure) {
 			verbose(VERB_ALGO, "NSEC RRset for the "
 				"referral did not verify.");
@@ -171,8 +216,91 @@ val_nsec_prove_nodata_ds(struct module_env* env, struct val_env* ve,
 	/* Otherwise, there is no NSEC at qname. This could be an ENT. 
 	 * (ENT=empty non terminal). If not, this is broken. */
 	
-	/* verify NSEC rrsets in auth section, call */
-	/* ValUtils.nsecProvesNodata, if so: NULL entry */
+	/* verify NSEC rrsets in auth section */
+	for(i=rep->an_numrrsets; i < rep->an_numrrsets+rep->ns_numrrsets; 
+		i++) {
+		if(rep->rrsets[i]->rk.type != htons(LDNS_RR_TYPE_NSEC))
+			continue;
+		sec = val_verify_rrset_entry(env, ve, rep->rrsets[i], kkey);
+		if(sec != sec_status_secure) {
+			verbose(VERB_ALGO, "NSEC for empty non-terminal "
+				"did not verify.");
+			return sec_status_bogus;
+		}
+		if(nsec_proves_nodata(rep->rrsets[i], qinfo)) {
+			verbose(VERB_ALGO, "NSEC for empty non-terminal "
+				"proved no DS.");
+			return sec_status_secure;
+		}
+	}
 
-	return sec_status_bogus;
+	/* NSEC proof did not conlusively point to DS or no DS */
+	return sec_status_unchecked;
+}
+
+int nsec_proves_nodata(struct ub_packed_rrset_key* nsec, 
+	struct query_info* qinfo)
+{
+	if(query_dname_compare(nsec->rk.dname, qinfo->qname) != 0) {
+		uint8_t* nm;
+		size_t ln;
+		/* wildcard checking. */
+
+		/* If this is a wildcard NSEC, make sure that a) it was 
+		 * possible to have generated qname from the wildcard and 
+		 * b) the type map does not contain qtype. Note that this 
+		 * does NOT prove that this wildcard was the applicable 
+		 * wildcard. */
+		if(dname_is_wild(nsec->rk.dname)) {
+			/* the purported closest encloser. */
+			uint8_t* ce = nsec->rk.dname;
+			size_t ce_len = nsec->rk.dname_len;
+			dname_remove_label(&ce, &ce_len);
+
+			/* The qname must be a strict subdomain of the 
+			 * closest encloser, and the qtype must be absent 
+			 * from the type map. */
+			if(!dname_strict_subdomain_c(qinfo->qname, ce) ||
+				nsec_has_type(nsec, qinfo->qtype)) {
+				return 0;
+			}
+			return 1;
+		}
+
+		/* empty-non-terminal checking. */
+
+		/* If the nsec is proving that qname is an ENT, the nsec owner 
+		 * will be less than qname, and the next name will be a child 
+		 * domain of the qname. */
+		if(!nsec_get_next(nsec, &nm, &ln))
+			return 0; /* bad nsec */
+		if(dname_strict_subdomain_c(nm, qinfo->qname) &&
+			dname_canonical_compare(nsec->rk.dname, 
+				qinfo->qname) < 0) {
+			return 1; /* proves ENT */
+		}
+		/* Otherwise, this NSEC does not prove ENT, so it does not 
+		 * prove NODATA. */
+		return 0;
+	}
+
+	/* If the qtype exists, then we should have gotten it. */
+	if(nsec_has_type(nsec, qinfo->qtype)) {
+		return 0;
+	}
+
+	/* if the name is a CNAME node, then we should have gotten the CNAME*/
+	if(nsec_has_type(nsec, LDNS_RR_TYPE_CNAME)) {
+		return 0;
+	}
+
+	/* If an NS set exists at this name, and NOT a SOA (so this is a 
+	 * zone cut, not a zone apex), then we should have gotten a 
+	 * referral (or we just got the wrong NSEC). */
+	if(nsec_has_type(nsec, LDNS_RR_TYPE_NS) && 
+		!nsec_has_type(nsec, LDNS_RR_TYPE_SOA)) {
+		return 0;
+	}
+
+	return 1;
 }

@@ -690,8 +690,9 @@ ds_response_to_ke(struct module_qstate* qstate, struct val_qstate* vq,
 		uint32_t proof_ttl = 0;
 
 		/* Try to prove absence of the DS with NSEC */
-		enum sec_status sec = val_nsec_prove_nodata_ds(qstate->env, ve, 
-			qinfo, msg->rep, vq->key_entry, &proof_ttl);
+		enum sec_status sec = val_nsec_prove_nodata_dsreply(
+			qstate->env, ve, qinfo, msg->rep, vq->key_entry, 
+			&proof_ttl);
 		switch(sec) {
 			case sec_status_secure:
 				verbose(VERB_ALGO, "NSEC RRset for the "

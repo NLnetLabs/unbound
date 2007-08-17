@@ -167,7 +167,7 @@ int dname_count_size_labels(uint8_t* dname, size_t* size);
  * @param labs1: number of labels in first dname.
  * @param d2: second dname. pointer to uncompressed wireformat.
  * @param labs2: number of labels in second dname.
- * @param mlabs: number of labels that matched exactly.
+ * @param mlabs: number of labels that matched exactly (the shared topdomain).
  * @return: 0 for equal, -1 smaller, or +1 d1 larger than d2.
  */
 int dname_lab_cmp(uint8_t* d1, int labs1, uint8_t* d2, int labs2, int* mlabs);
@@ -248,5 +248,36 @@ void dname_remove_labels(uint8_t** dname, size_t* len, int n);
  * @param dname: valid uncompressed wireformat.
  */
 int dname_signame_label_count(uint8_t* dname);
+
+/**
+ * Return true if the label is a wildcard, *.example.com.
+ * @param dname: valid uncompressed wireformat.
+ * @return true if wildcard, or false.
+ */
+int dname_is_wild(uint8_t* dname);
+
+/**
+ * Compare dnames, Canonical in rfc4034 sense, but by label.
+ * Such that zone contents follows zone apex.
+ *
+ * @param d1: first dname. pointer to uncompressed wireformat.
+ * @param labs1: number of labels in first dname.
+ * @param d2: second dname. pointer to uncompressed wireformat.
+ * @param labs2: number of labels in second dname.
+ * @param mlabs: number of labels that matched exactly (the shared topdomain).
+ * @return: 0 for equal, -1 smaller, or +1 d1 larger than d2.
+ */
+int dname_canon_lab_cmp(uint8_t* d1, int labs1, uint8_t* d2, int labs2, 
+	int* mlabs);
+
+/**
+ * Canonical dname compare. Takes care of counting labels.
+ * Per rfc 4034 canonical order.
+ *
+ * @param d1: first dname. pointer to uncompressed wireformat.
+ * @param d2: second dname. pointer to uncompressed wireformat.
+ * @return: 0 for equal, -1 smaller, or +1 d1 larger than d2.
+ */
+int dname_canonical_compare(uint8_t* d1, uint8_t* d2);
 
 #endif /* UTIL_DATA_DNAME_H */

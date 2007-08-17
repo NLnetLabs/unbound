@@ -482,6 +482,235 @@ dname_test_sigcount()
 		(uint8_t*)"\001*\003www\007example\003xom\000") == 3);
 }
 
+/** test dname_is_wild routine */
+static void
+dname_test_iswild()
+{
+	unit_assert( !dname_is_wild((uint8_t*)"\000") );
+	unit_assert( dname_is_wild((uint8_t*)"\001*\000") );
+	unit_assert( !dname_is_wild((uint8_t*)"\003net\000") );
+	unit_assert( dname_is_wild((uint8_t*)"\001*\003net\000") );
+}
+
+/** test dname_canonical_compare */
+static void
+dname_test_canoncmp()
+{
+	/* equality */
+	unit_assert( dname_canonical_compare(
+		(uint8_t*)"\000",
+		(uint8_t*)"\000"
+		) == 0);
+	unit_assert( dname_canonical_compare(
+		(uint8_t*)"\003net\000",
+		(uint8_t*)"\003net\000"
+		) == 0);
+	unit_assert( dname_canonical_compare(
+		(uint8_t*)"\007example\003net\000",
+		(uint8_t*)"\007example\003net\000"
+		) == 0);
+	unit_assert( dname_canonical_compare(
+		(uint8_t*)"\004test\007example\003net\000",
+		(uint8_t*)"\004test\007example\003net\000"
+		) == 0);
+
+	/* subdomains */
+	unit_assert( dname_canonical_compare(
+		(uint8_t*)"\003com",
+		(uint8_t*)"\000"
+		) == 1);
+	unit_assert( dname_canonical_compare(
+		(uint8_t*)"\000",
+		(uint8_t*)"\003com"
+		) == -1);
+	unit_assert( dname_canonical_compare(
+		(uint8_t*)"\007example\003com",
+		(uint8_t*)"\003com"
+		) == 1);
+	unit_assert( dname_canonical_compare(
+		(uint8_t*)"\003com",
+		(uint8_t*)"\007example\003com"
+		) == -1);
+	unit_assert( dname_canonical_compare(
+		(uint8_t*)"\007example\003com",
+		(uint8_t*)"\000"
+		) == 1);
+	unit_assert( dname_canonical_compare(
+		(uint8_t*)"\000",
+		(uint8_t*)"\007example\003com"
+		) == -1);
+
+	/* compare rightmost label */
+	unit_assert( dname_canonical_compare(
+		(uint8_t*)"\003com",
+		(uint8_t*)"\003net"
+		) == -1);
+	unit_assert( dname_canonical_compare(
+		(uint8_t*)"\003net",
+		(uint8_t*)"\003com"
+		) == 1);
+	unit_assert( dname_canonical_compare(
+		(uint8_t*)"\003net",
+		(uint8_t*)"\003org"
+		) == -1);
+	unit_assert( dname_canonical_compare(
+		(uint8_t*)"\007example\003net",
+		(uint8_t*)"\003org"
+		) == -1);
+	unit_assert( dname_canonical_compare(
+		(uint8_t*)"\003org",
+		(uint8_t*)"\007example\003net"
+		) == 1);
+
+	/* label length makes a difference; but only if rest is equal */
+	unit_assert( dname_canonical_compare(
+		(uint8_t*)"\004neta",
+		(uint8_t*)"\003net"
+		) == 1);
+	unit_assert( dname_canonical_compare(
+		(uint8_t*)"\002ne",
+		(uint8_t*)"\004neta"
+		) == -1);
+
+	/* label content */
+	unit_assert( dname_canonical_compare(
+		(uint8_t*)"\003aag\007example\003net",
+		(uint8_t*)"\003bla\007example\003net"
+		) == -1);
+	unit_assert( dname_canonical_compare(
+		(uint8_t*)"\003bla\007example\003net",
+		(uint8_t*)"\003aag\007example\003net"
+		) == 1);
+	unit_assert( dname_canonical_compare(
+		(uint8_t*)"\003bla\003aag\007example\003net",
+		(uint8_t*)"\003aag\003bla\007example\003net"
+		) == -1);
+	unit_assert( dname_canonical_compare(
+		(uint8_t*)"\02sn\003opt\003aag\007example\003net",
+		(uint8_t*)"\02sn\003opt\003bla\007example\003net"
+		) == -1);
+
+	/* lowercase during compare */
+	unit_assert( dname_canonical_compare(
+		(uint8_t*)"\003bLa\007examPLe\003net",
+		(uint8_t*)"\003bla\007eXAmple\003nET"
+		) == 0);
+
+	/* example from 4034 */
+	/* example a.example yljkjljk.a.example Z.a.example zABC.a.EXAMPLE
+	 z.example \001.z.example *.z.example \200.z.example */
+	unit_assert( dname_canonical_compare(
+		(uint8_t*)"",
+		(uint8_t*)"\007example"
+		) == -1);
+	unit_assert( dname_canonical_compare(
+		(uint8_t*)"\007example",
+		(uint8_t*)"\001a\007example"
+		) == -1);
+	unit_assert( dname_canonical_compare(
+		(uint8_t*)"\001a\007example",
+		(uint8_t*)"\010yljkjljk\001a\007example"
+		) == -1);
+	unit_assert( dname_canonical_compare(
+		(uint8_t*)"\010yljkjljk\001a\007example",
+		(uint8_t*)"\001Z\001a\007example"
+		) == -1);
+	unit_assert( dname_canonical_compare(
+		(uint8_t*)"\001Z\001a\007example",
+		(uint8_t*)"\004zABC\001a\007EXAMPLE"
+		) == -1);
+	unit_assert( dname_canonical_compare(
+		(uint8_t*)"\004zABC\001a\007EXAMPLE",
+		(uint8_t*)"\001z\007example"
+		) == -1);
+	unit_assert( dname_canonical_compare(
+		(uint8_t*)"\001z\007example",
+		(uint8_t*)"\001\001\001z\007example"
+		) == -1);
+	unit_assert( dname_canonical_compare(
+		(uint8_t*)"\001\001\001z\007example",
+		(uint8_t*)"\001*\001z\007example"
+		) == -1);
+	unit_assert( dname_canonical_compare(
+		(uint8_t*)"\001*\001z\007example",
+		(uint8_t*)"\001\200\001z\007example"
+		) == -1);
+	/* same example in reverse */
+	unit_assert( dname_canonical_compare(
+		(uint8_t*)"\007example",
+		(uint8_t*)""
+		) == 1);
+	unit_assert( dname_canonical_compare(
+		(uint8_t*)"\001a\007example",
+		(uint8_t*)"\007example"
+		) == 1);
+	unit_assert( dname_canonical_compare(
+		(uint8_t*)"\010yljkjljk\001a\007example",
+		(uint8_t*)"\001a\007example"
+		) == 1);
+	unit_assert( dname_canonical_compare(
+		(uint8_t*)"\001Z\001a\007example",
+		(uint8_t*)"\010yljkjljk\001a\007example"
+		) == 1);
+	unit_assert( dname_canonical_compare(
+		(uint8_t*)"\004zABC\001a\007EXAMPLE",
+		(uint8_t*)"\001Z\001a\007example"
+		) == 1);
+	unit_assert( dname_canonical_compare(
+		(uint8_t*)"\001z\007example",
+		(uint8_t*)"\004zABC\001a\007EXAMPLE"
+		) == 1);
+	unit_assert( dname_canonical_compare(
+		(uint8_t*)"\001\001\001z\007example",
+		(uint8_t*)"\001z\007example"
+		) == 1);
+	unit_assert( dname_canonical_compare(
+		(uint8_t*)"\001*\001z\007example",
+		(uint8_t*)"\001\001\001z\007example"
+		) == 1);
+	unit_assert( dname_canonical_compare(
+		(uint8_t*)"\001\200\001z\007example",
+		(uint8_t*)"\001*\001z\007example"
+		) == 1);
+	/* same example for equality */
+	unit_assert( dname_canonical_compare(
+		(uint8_t*)"\007example",
+		(uint8_t*)"\007example"
+		) == 0);
+	unit_assert( dname_canonical_compare(
+		(uint8_t*)"\001a\007example",
+		(uint8_t*)"\001a\007example"
+		) == 0);
+	unit_assert( dname_canonical_compare(
+		(uint8_t*)"\010yljkjljk\001a\007example",
+		(uint8_t*)"\010yljkjljk\001a\007example"
+		) == 0);
+	unit_assert( dname_canonical_compare(
+		(uint8_t*)"\001Z\001a\007example",
+		(uint8_t*)"\001Z\001a\007example"
+		) == 0);
+	unit_assert( dname_canonical_compare(
+		(uint8_t*)"\004zABC\001a\007EXAMPLE",
+		(uint8_t*)"\004zABC\001a\007EXAMPLE"
+		) == 0);
+	unit_assert( dname_canonical_compare(
+		(uint8_t*)"\001z\007example",
+		(uint8_t*)"\001z\007example"
+		) == 0);
+	unit_assert( dname_canonical_compare(
+		(uint8_t*)"\001\001\001z\007example",
+		(uint8_t*)"\001\001\001z\007example"
+		) == 0);
+	unit_assert( dname_canonical_compare(
+		(uint8_t*)"\001*\001z\007example",
+		(uint8_t*)"\001*\001z\007example"
+		) == 0);
+	unit_assert( dname_canonical_compare(
+		(uint8_t*)"\001\200\001z\007example",
+		(uint8_t*)"\001\200\001z\007example"
+		) == 0);
+}
+
 void dname_test()
 {
 	ldns_buffer* buff = ldns_buffer_new(65800);
@@ -498,5 +727,7 @@ void dname_test()
 	dname_test_isroot();
 	dname_test_removelabel();
 	dname_test_sigcount();
+	dname_test_iswild();
+	dname_test_canoncmp();
 	ldns_buffer_free(buff);
 }
