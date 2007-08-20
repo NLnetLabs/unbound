@@ -77,14 +77,8 @@ struct val_env {
 enum val_state {
 	/** initial state for validation */
 	VAL_INIT_STATE = 0,
-	/** handle response to trust anchor priming query */
-	VAL_PRIME_RESP_STATE,
 	/** find the proper keys for validation, follow trust chain */
 	VAL_FINDKEY_STATE,
-	/** handle response to DS query to make trust chain */
-	VAL_FINDKEY_DS_RESP_STATE,
-	/** handle response to DNSKEY query to make trust chain */
-	VAL_FINDKEY_DNSKEY_RESP_STATE,
 	/** validate the answer, using found key entry */
 	VAL_VALIDATE_STATE,
 	/** finish up */

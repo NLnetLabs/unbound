@@ -1,3 +1,6 @@
+18 August 2007: Wouter
+	- process DNSKEY response in FINDKEY state.
+
 17 August 2007: Wouter
 	- work on DS2KE routine.
 	- val_nsec.c for validator NSEC proofs.

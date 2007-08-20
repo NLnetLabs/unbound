@@ -450,9 +450,6 @@ val_handle(struct module_qstate* qstate, struct val_qstate* vq,
 			case VAL_FINDKEY_STATE: 
 				cont = processFindKey(qstate, vq, id);
 				break;
-			case VAL_PRIME_RESP_STATE: 
-			case VAL_FINDKEY_DS_RESP_STATE: 
-			case VAL_FINDKEY_DNSKEY_RESP_STATE: 
 			case VAL_VALIDATE_STATE: 
 			case VAL_FINISHED_STATE: 
 			default:
@@ -799,11 +796,59 @@ process_ds_response(struct module_qstate* qstate, struct val_qstate* vq,
  * @param id: module id.
  * @param rcode: rcode result value.
  * @param msg: result message (if rcode is OK).
+ * @param qinfo: from the sub query state, query info.
  */
 static void
 process_dnskey_response(struct module_qstate* qstate, struct val_qstate* vq,
-	int id, int rcode, struct dns_msg* msg)
+	int id, int rcode, struct dns_msg* msg, struct query_info* qinfo)
 {
+	struct val_env* ve = (struct val_env*)qstate->env->modinfo[id];
+	struct ub_packed_rrset_key* dnskey = NULL;
+
+	if(rcode == LDNS_RCODE_NOERROR)
+		dnskey = reply_find_answer_rrset(qinfo, msg->rep);
+
+	if(dnskey == NULL) {
+		/* bad response */
+		verbose(VERB_ALGO, "Missing DNSKEY RRset in response to "
+			"DNSKEY query.");
+		vq->key_entry = key_entry_create_bad(qstate->region, 
+			qinfo->qname, qinfo->qname_len, qinfo->qclass);
+		if(!vq->key_entry) {
+			log_err("alloc failure in missing dnskey response");
+			/* key_entry is NULL for failure in Validate */
+		}
+		vq->state = VAL_VALIDATE_STATE;
+		return;
+	}
+	if(!vq->ds_rrset) {
+		log_err("internal error: no DS rrset for new DNSKEY response");
+		vq->key_entry = NULL;
+		vq->state = VAL_VALIDATE_STATE;
+		return;
+	}
+	vq->key_entry = val_verify_new_DNSKEYs(qstate->region, qstate->env,
+		ve, dnskey, vq->ds_rrset);
+
+	if(!vq->key_entry) {
+		log_err("out of memory in verify new DNSKEYs");
+		vq->state = VAL_VALIDATE_STATE;
+		return;
+	}
+	/* If the key entry isBad or isNull, then we can move on to the next
+	 * state. */
+	if(!key_entry_isgood(vq->key_entry)) {
+		if(key_entry_isbad(vq->key_entry))
+			verbose(VERB_ALGO, "Did not match a DS to a DNSKEY, "
+				"thus bogus.");
+		vq->state = VAL_VALIDATE_STATE;
+		return;
+	}
+
+	/* The DNSKEY validated, so cache it as a trusted key rrset. */
+	key_cache_insert(ve->kcache, vq->key_entry);
+
+	/* If good, we stay in the FINDKEY state. */
 }
 	
 /**
@@ -863,7 +908,7 @@ val_inform_super(struct module_qstate* qstate, int id,
 		return;
 	} else if(qstate->qinfo.qtype == LDNS_RR_TYPE_DNSKEY) {
 		process_dnskey_response(super, vq, id, qstate->return_rcode,
-			qstate->return_msg);
+			qstate->return_msg, &qstate->qinfo);
 		return;
 	}
 	log_err("internal error in validator: no inform_supers possible");
@@ -898,12 +943,7 @@ val_state_to_string(enum val_state state)
 {
 	switch(state) {
 		case VAL_INIT_STATE: return "VAL_INIT_STATE";
-		case VAL_PRIME_RESP_STATE: return "VAL_PRIME_RESP_STATE";
 		case VAL_FINDKEY_STATE: return "VAL_FINDKEY_STATE";
-		case VAL_FINDKEY_DS_RESP_STATE: 
-				return "VAL_FINDKEY_DS_RESP_STATE";
-		case VAL_FINDKEY_DNSKEY_RESP_STATE: 
-				return "VAL_FINDKEY_DNSKEY_RESP_STATE";
 		case VAL_VALIDATE_STATE: return "VAL_VALIDATE_STATE";
 		case VAL_FINISHED_STATE: return "VAL_FINISHED_STATE";
 	}
