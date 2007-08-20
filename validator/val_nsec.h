@@ -112,4 +112,15 @@ int val_nsec_proves_name_error(struct ub_packed_rrset_key* nsec,
 int val_nsec_proves_positive_wildcard(struct ub_packed_rrset_key* nsec, 
 	struct query_info* qinf, uint8_t* wc);
 
+/**
+ * Determine closest encloser of a query name and the NSEC that covers it
+ * (and thus disproved it). 
+ * A name error must have been proven already, otherwise this will be invalid.
+ * @param qname: the name queried for.
+ * @param nsec: the nsec RRset.
+ * @return closest encloser dname or NULL on error (bad nsec RRset).
+ */
+uint8_t* nsec_closest_encloser(uint8_t* qname, 
+	struct ub_packed_rrset_key* nsec);
+
 #endif /* VALIDATOR_VAL_NSEC_H */

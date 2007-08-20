@@ -385,16 +385,110 @@ validate_positive_response(struct module_env* env, struct val_env* ve,
 		return;
 	}
 
-	verbose(VERB_ALGO, "Successfully validated postive response");
+	verbose(VERB_ALGO, "Successfully validated positive response");
 	chase_reply->security = sec_status_secure;
 }
 
-/** validate NODATA */
+/** 
+ * Validate a NOERROR/NODATA signed response -- a response that has a
+ * NOERROR Rcode but no ANSWER section RRsets. This consists of verifying
+ * the authority section rrsets and making certain that the authority
+ * section NSEC/NSEC3s proves that the qname does exist and the qtype doesn't.
+ *
+ * Note that by the time this method is called, the process of finding the
+ * trusted DNSKEY rrset that signs this response must already have been
+ * completed.
+ *
+ * @param env: module env for verify.
+ * @param ve: validator env for verify.
+ * @param qchase: query that was made.
+ * @param chase_reply: answer to that query to validate.
+ * @param key_entry: the key entry, which is trusted, and which matches
+ * 	the signer of the answer. The key entry isgood().
+ */
 static void
 validate_nodata_response(struct module_env* env, struct val_env* ve, 
 	struct query_info* qchase, struct reply_info* chase_reply, 
 	struct key_entry_key* key_entry)
 {
+	/* Since we are here, there must be nothing in the ANSWER section to
+	 * validate. */
+	/* (Note: CNAME/DNAME responses will not directly get here --
+	 * instead they are broken down into individual CNAME/DNAME/final answer
+	 * responses. - TODO this will change though) */
+	
+	/* validate the AUTHORITY section */
+	int has_valid_nsec = 0; /* If true, then the NODATA has been proven.*/
+	uint8_t* ce = NULL; /* for wildcard nodata responses. This is the 
+				proven closest encloser. */
+	uint8_t* wc = NULL; /* for wildcard nodata responses. wildcard nsec */
+	int nsec3s_seen = 0; /* nsec3s seen */
+	struct ub_packed_rrset_key* s; 
+	enum sec_status sec;
+	size_t i;
+
+	for(i=chase_reply->an_numrrsets; i<chase_reply->an_numrrsets+
+		chase_reply->ns_numrrsets; i++) {
+		s = chase_reply->rrsets[i];
+		sec = val_verify_rrset_entry(env, ve, s, key_entry);
+		if(sec != sec_status_secure) {
+			log_nametypeclass(VERB_ALGO, "NODATA response has "
+				"failed AUTHORITY rrset: ", s->rk.dname,
+				ntohs(s->rk.type), ntohs(s->rk.rrset_class));
+			chase_reply->security = sec_status_bogus;
+			return;
+		}
+
+		/* If we encounter an NSEC record, try to use it to prove 
+		 * NODATA.
+		 * This needs to handle the ENT NODATA case. */
+		if(ntohs(s->rk.type) == LDNS_RR_TYPE_NSEC) {
+			if(nsec_proves_nodata(s, qchase)) {
+				has_valid_nsec = 1;
+				if(dname_is_wild(s->rk.dname))
+					wc = s->rk.dname;
+			} 
+			if(val_nsec_proves_name_error(s, qchase->qname)) {
+				ce = nsec_closest_encloser(qchase->qname, s);
+			}
+		}
+
+		if(ntohs(s->rk.type) == LDNS_RR_TYPE_NSEC3) {
+			nsec3s_seen = 1;
+		}
+	}
+
+	/* check to see if we have a wildcard NODATA proof. */
+
+	/* The wildcard NODATA is 1 NSEC proving that qname does not exists 
+	 * (and also proving what the closest encloser is), and 1 NSEC 
+	 * showing the matching wildcard, which must be *.closest_encloser. */
+	if(wc && !ce)
+		has_valid_nsec = 0;
+	else if(wc && ce) {
+		log_assert(dname_is_wild(wc));
+		/* first label wc is \001*, so remove and compare to ce */
+		if(query_dname_compare(wc+2, ce) != 0) {
+			has_valid_nsec = 0;
+		}
+	}
+	
+	if(!has_valid_nsec && nsec3s_seen) {
+		/* TODO handle NSEC3 proof here */
+		/* and set has_valid_nsec=1; if so */
+	}
+
+	if(!has_valid_nsec) {
+		verbose(VERB_ALGO, "NODATA response failed to prove NODATA "
+			"status with NSEC/NSEC3");
+		if(verbosity >= VERB_ALGO)
+			log_dns_msg("Failed NODATA", qchase, chase_reply);
+		chase_reply->security = sec_status_bogus;
+		return;
+	}
+
+	verbose(VERB_ALGO, "successfully validated NODATA response.");
+	chase_reply->security = sec_status_secure;
 }
 
 /** validate NAME ERROR (nxdomain) response */
@@ -468,6 +562,7 @@ processInit(struct module_qstate* qstate, struct val_qstate* vq,
 	if(vq->key_entry == NULL || dname_strict_subdomain_c(
 		vq->trust_anchor->name, vq->key_entry->name)) {
 		/* fire off a trust anchor priming query. */
+		verbose(VERB_ALGO, "prime trust anchor");
 		if(!prime_trust_anchor(qstate, vq, id, vq->trust_anchor))
 			return val_error(qstate, id);
 		/* and otherwise, don't continue processing this event.
@@ -1148,9 +1243,9 @@ val_inform_super(struct module_qstate* qstate, int id,
 	struct module_qstate* super)
 {
 	struct val_qstate* vq = (struct val_qstate*)super->minfo[id];
-	log_query_info(VERB_ALGO, "validator: inform_super, sub=",
+	log_query_info(VERB_ALGO, "validator: inform_super, sub is",
 		&qstate->qinfo);
-	log_query_info(VERB_ALGO, "super=", &super->qinfo);
+	log_query_info(VERB_ALGO, "super is", &super->qinfo);
 	if(!vq) {
 		verbose(VERB_ALGO, "super: has no validator state");
 		return;
