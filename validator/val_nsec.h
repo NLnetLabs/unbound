@@ -123,4 +123,15 @@ int val_nsec_proves_positive_wildcard(struct ub_packed_rrset_key* nsec,
 uint8_t* nsec_closest_encloser(uint8_t* qname, 
 	struct ub_packed_rrset_key* nsec);
 
+/**
+ * Determine if the given NSEC proves that a wildcard match does not exist.
+ *
+ * @param nsec: the nsec RRset.
+ * @param qname: the name queried for.
+ * @param qnamelen: length of qname.
+ * @return true if proven.
+ */
+int val_nsec_proves_no_wc(struct ub_packed_rrset_key* nsec, uint8_t* qname, 
+	size_t qnamelen);
+
 #endif /* VALIDATOR_VAL_NSEC_H */

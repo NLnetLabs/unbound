@@ -451,9 +451,7 @@ validate_nodata_response(struct module_env* env, struct val_env* ve,
 			if(val_nsec_proves_name_error(s, qchase->qname)) {
 				ce = nsec_closest_encloser(qchase->qname, s);
 			}
-		}
-
-		if(ntohs(s->rk.type) == LDNS_RR_TYPE_NSEC3) {
+		} else if(ntohs(s->rk.type) == LDNS_RR_TYPE_NSEC3) {
 			nsec3s_seen = 1;
 		}
 	}
@@ -491,12 +489,81 @@ validate_nodata_response(struct module_env* env, struct val_env* ve,
 	chase_reply->security = sec_status_secure;
 }
 
-/** validate NAME ERROR (nxdomain) response */
+/** 
+ * Validate a NAMEERROR signed response -- a response that has a NXDOMAIN
+ * Rcode. This consists of verifying the authority section rrsets and making
+ * certain that the authority section NSEC proves that the qname doesn't
+ * exist and the covering wildcard also doesn't exist..
+ * 
+ * Note that by the time this method is called, the process of finding the
+ * trusted DNSKEY rrset that signs this response must already have been
+ * completed.
+ *
+ * @param env: module env for verify.
+ * @param ve: validator env for verify.
+ * @param qchase: query that was made.
+ * @param chase_reply: answer to that query to validate.
+ * @param key_entry: the key entry, which is trusted, and which matches
+ * 	the signer of the answer. The key entry isgood().
+ */
 static void
 validate_nameerror_response(struct module_env* env, struct val_env* ve, 
 	struct query_info* qchase, struct reply_info* chase_reply, 
 	struct key_entry_key* key_entry)
 {
+	/* FIXME: should we check to see if there is anything in the answer
+	 * section? if so, what should the result be? */
+
+	int has_valid_nsec = 0;
+	int has_valid_wnsec = 0;
+	int nsec3s_seen = 0;
+	struct ub_packed_rrset_key* s; 
+	enum sec_status sec;
+	size_t i;
+
+	for(i=chase_reply->an_numrrsets; i<chase_reply->an_numrrsets+
+		chase_reply->ns_numrrsets; i++) {
+		s = chase_reply->rrsets[i];
+		sec = val_verify_rrset_entry(env, ve, s, key_entry);
+		if(sec != sec_status_secure) {
+			log_nametypeclass(VERB_ALGO, "NameError response has "
+				"failed AUTHORITY rrset: ", s->rk.dname,
+				ntohs(s->rk.type), ntohs(s->rk.rrset_class));
+			chase_reply->security = sec_status_bogus;
+			return;
+		}
+		if(ntohs(s->rk.type) == LDNS_RR_TYPE_NSEC) {
+			if(val_nsec_proves_name_error(s, qchase->qname))
+				has_valid_nsec = 1;
+			if(val_nsec_proves_no_wc(s, qchase->qname, 
+				qchase->qname_len))
+				has_valid_wnsec = 1;
+		} else if(ntohs(s->rk.type) == LDNS_RR_TYPE_NSEC3)
+			nsec3s_seen = 1;
+	}
+
+	if(!has_valid_nsec || !has_valid_wnsec) {
+		/* TODO: use NSEC3 proof */
+	}
+
+	/* If the message fails to prove either condition, it is bogus. */
+	if(!has_valid_nsec) {
+		verbose(VERB_ALGO, "NameError response has failed to prove: "
+		          "qname does not exist");
+		chase_reply->security = sec_status_bogus;
+		return;
+	}
+
+	if(!has_valid_wnsec) {
+		verbose(VERB_ALGO, "NameError response has failed to prove: "
+		          "covering wildcard does not exist");
+		chase_reply->security = sec_status_bogus;
+		return;
+	}
+
+	/* Otherwise, we consider the message secure. */
+	verbose(VERB_ALGO, "successfully validated NAME ERROR response.");
+	chase_reply->security = sec_status_secure;
 }
 
 /** validate positive ANY response */

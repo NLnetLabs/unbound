@@ -330,19 +330,21 @@ val_nsec_proves_name_error(struct ub_packed_rrset_key* nsec, uint8_t* qname)
 		return 0;
 	}
 
-	/* see if this nsec is the only nsec */
 	if(query_dname_compare(owner, next) == 0) {
-		/* only zone.name NSEC zone.name, disproves everything else */
-		return 1;
-	}
-	/* see if this nsec is the last nsec */
-	if(dname_canonical_compare(owner, next) > 0) {
-		/* this is the last nsec, ....(bigger) NSEC zonename(smaller) */
-		/* the names after the last (owner) name do not exist */
-		if(dname_canonical_compare(owner, qname) < 0)
+		/* this nsec is the only nsec */
+		/* zone.name NSEC zone.name, disproves everything else */
+		/* but only for subdomains of that zone */
+		if(dname_strict_subdomain_c(qname, next))
 			return 1;
-		/* there are no names before the zone name in the zone */
-		/* if(dname_canonical_compare(qname, next) < 0) return 1; */
+	}
+	else if(dname_canonical_compare(owner, next) > 0) {
+		/* this is the last nsec, ....(bigger) NSEC zonename(smaller) */
+		/* the names after the last (owner) name do not exist 
+		 * there are no names before the zone name in the zone 
+		 * but the qname must be a subdomain of the zone name(next). */
+		if(dname_canonical_compare(owner, qname) < 0 &&
+			dname_strict_subdomain_c(qname, next))
+			return 1;
 	} else {
 		/* regular NSEC, (smaller) NSEC (larger) */
 		if(dname_canonical_compare(owner, qname) < 0 &&
@@ -386,4 +388,39 @@ int val_nsec_proves_positive_wildcard(struct ub_packed_rrset_key* nsec,
 		return 0;
 	}
 	return 1;
+}
+
+int 
+val_nsec_proves_no_wc(struct ub_packed_rrset_key* nsec, uint8_t* qname, 
+	size_t qnamelen)
+{
+	/* Determine if a NSEC record proves the non-existence of a 
+	 * wildcard that could have produced qname. */
+	int labs;
+	int i;
+	uint8_t* ce = nsec_closest_encloser(qname, nsec);
+	uint8_t* strip;
+	size_t striplen;
+	uint8_t buf[LDNS_MAX_DOMAINLEN+3];
+	if(!ce)
+		return 0;
+	/* we can subtract the closest encloser count - since that is the
+	 * largest shared topdomain with owner and next NSEC name,
+	 * because the NSEC is no proof for names shorter than the owner 
+	 * and next names. */
+	labs = dname_count_labels(qname) - dname_count_labels(ce);
+
+	for(i=labs; i>0; i--) {
+		/* i is number of labels to strip off qname, prepend * wild */
+		strip = qname;
+		striplen = qnamelen;
+		dname_remove_labels(&strip, &striplen, i);
+		buf[0] = 1;
+		buf[1] = (uint8_t)'*';
+		memmove(buf+2, strip, striplen);
+		if(val_nsec_proves_name_error(nsec, buf)) {
+			return 1;
+		}
+	}
+	return 0;
 }
