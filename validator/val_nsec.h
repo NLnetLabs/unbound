@@ -91,4 +91,25 @@ int unitest_nsec_has_type_rdata(char* bitmap, size_t len, uint16_t type);
 int nsec_proves_nodata(struct ub_packed_rrset_key* nsec, 
 	struct query_info* qinfo);
 
+/**
+ * Determine if the given NSEC proves a NameError (NXDOMAIN) for a given
+ * qname.
+ *
+ * @param nsec: the nsec to check
+ * @param qname: what was queried.
+ * @return true if proven.
+ */
+int val_nsec_proves_name_error(struct ub_packed_rrset_key* nsec, 
+	uint8_t* qname);
+
+/**
+ * Determine if the given NSEC proves a positive wildcard response.
+ * @param nsec: the nsec to check
+ * @param qinf: what was queried.
+ * @param wc: wildcard (without *. label)
+ * @return true if proven.
+ */
+int val_nsec_proves_positive_wildcard(struct ub_packed_rrset_key* nsec, 
+	struct query_info* qinf, uint8_t* wc);
+
 #endif /* VALIDATOR_VAL_NSEC_H */

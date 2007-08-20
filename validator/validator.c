@@ -262,6 +262,157 @@ prime_trust_anchor(struct module_qstate* qstate, struct val_qstate* vq,
 	return 1;
 }
 
+/**
+ * Given a "positive" response -- a response that contains an answer to the
+ * question, and no CNAME chain, validate this response. This generally
+ * consists of verifying the answer RRset and the authority RRsets.
+ * 
+ * Note that by the time this method is called, the process of finding the
+ * trusted DNSKEY rrset that signs this response must already have been
+ * completed.
+ * 
+ * @param env: module env for verify.
+ * @param ve: validator env for verify.
+ * @param qchase: query that was made.
+ * @param chase_reply: answer to that query to validate.
+ * @param key_entry: the key entry, which is trusted, and which matches
+ * 	the signer of the answer. The key entry isgood().
+ */
+static void
+validate_positive_response(struct module_env* env, struct val_env* ve, 
+	struct query_info* qchase, struct reply_info* chase_reply, 
+	struct key_entry_key* key_entry)
+{
+	uint8_t* wc = NULL;
+	int wc_NSEC_ok = 0;
+	int dname_seen = 0;
+	int nsec3s_seen = 0;
+	size_t i;
+	struct ub_packed_rrset_key* s;
+	enum sec_status sec;
+
+	/* validate the ANSWER section - this will be the answer itself */
+	for(i=0; i<chase_reply->an_numrrsets; i++) {
+		s = chase_reply->rrsets[i];
+		/* Skip the CNAME following a (validated) DNAME.
+		 * Because of the normalization routines in the iterator, 
+		 * there will always be an unsigned CNAME following a DNAME 
+		 * (unless qtype=DNAME). */
+		if(dname_seen && ntohs(s->rk.type) == LDNS_RR_TYPE_CNAME) {
+			dname_seen = 0;
+			continue;
+		}
+
+		/* Verify the answer rrset */
+		sec = val_verify_rrset_entry(env, ve, s, key_entry);
+		/* If the (answer) rrset failed to validate, then this 
+		 * message is BAD. */
+		if(sec != sec_status_secure) {
+			log_nametypeclass(VERB_ALGO, "Positive response has "
+				"failed ANSWER rrset: ", s->rk.dname,
+				ntohs(s->rk.type), ntohs(s->rk.rrset_class));
+			chase_reply->security = sec_status_bogus;
+			return;
+		}
+		/* Check to see if the rrset is the result of a wildcard 
+		 * expansion. If so, an additional check will need to be 
+		 * made in the authority section. */
+		if(!val_rrset_wildcard(s, &wc)) {
+			log_nametypeclass(VERB_ALGO, "Positive response has "
+				"inconsistent wildcard sigs: ", s->rk.dname,
+				ntohs(s->rk.type), ntohs(s->rk.rrset_class));
+			chase_reply->security = sec_status_bogus;
+			return;
+		}
+		
+		/* Notice a DNAME that should be followed by an unsigned 
+		 * CNAME. */
+		if(qchase->qtype != LDNS_RR_TYPE_DNAME && 
+			ntohs(s->rk.type) == LDNS_RR_TYPE_DNAME) {
+			dname_seen = 1;
+		}
+	}
+
+	/* validate the AUTHORITY section as well - this will generally be 
+	 * the NS rrset (which could be missing, no problem) */
+	for(i=chase_reply->an_numrrsets; i<chase_reply->an_numrrsets+
+		chase_reply->ns_numrrsets; i++) {
+		s = chase_reply->rrsets[i];
+		sec = val_verify_rrset_entry(env, ve, s, key_entry);
+		/* If anything in the authority section fails to be secure, 
+		 * we have a bad message. */
+		if(sec != sec_status_secure) {
+			log_nametypeclass(VERB_ALGO, "Positive response has "
+				"failed AUTHORITY rrset: ", s->rk.dname,
+				ntohs(s->rk.type), ntohs(s->rk.rrset_class));
+			chase_reply->security = sec_status_bogus;
+			return;
+		}
+
+		/* If this is a positive wildcard response, and we have a 
+		 * (just verified) NSEC record, try to use it to 1) prove 
+		 * that qname doesn't exist and 2) that the correct wildcard 
+		 * was used. */
+		if(wc != NULL && ntohs(s->rk.type) == LDNS_RR_TYPE_NSEC) {
+			if(val_nsec_proves_positive_wildcard(s, qchase, wc)) {
+				wc_NSEC_ok = 1;
+			}
+			/* if not, continue looking for proof */
+		}
+
+		/* Otherwise, if this is a positive wildcard response and 
+		 * we have NSEC3 records */
+		if(wc != NULL && ntohs(s->rk.type) == LDNS_RR_TYPE_NSEC3) {
+			nsec3s_seen = 1;
+		}
+	}
+
+	/* If this was a positive wildcard response that we haven't already
+	 * proven, and we have NSEC3 records, try to prove it using the NSEC3
+	 * records. */
+	if(wc != NULL && !wc_NSEC_ok && nsec3s_seen) {
+		/* TODO NSEC3 positive wildcard proof */
+		/* possibly: wc_NSEC_ok = 1; */
+	}
+
+	/* If after all this, we still haven't proven the positive wildcard
+	 * response, fail. */
+	if(wc != NULL && !wc_NSEC_ok) {
+		verbose(VERB_ALGO, "positive response was wildcard "
+			"expansion and did not prove original data "
+			"did not exist");
+		chase_reply->security = sec_status_bogus;
+		return;
+	}
+
+	verbose(VERB_ALGO, "Successfully validated postive response");
+	chase_reply->security = sec_status_secure;
+}
+
+/** validate NODATA */
+static void
+validate_nodata_response(struct module_env* env, struct val_env* ve, 
+	struct query_info* qchase, struct reply_info* chase_reply, 
+	struct key_entry_key* key_entry)
+{
+}
+
+/** validate NAME ERROR (nxdomain) response */
+static void
+validate_nameerror_response(struct module_env* env, struct val_env* ve, 
+	struct query_info* qchase, struct reply_info* chase_reply, 
+	struct key_entry_key* key_entry)
+{
+}
+
+/** validate positive ANY response */
+static void
+validate_any_response(struct module_env* env, struct val_env* ve, 
+	struct query_info* qchase, struct reply_info* chase_reply, 
+	struct key_entry_key* key_entry)
+{
+}
+
 /** 
  * Process init state for validator.
  * Process the INIT state. First tier responses start in the INIT state.
@@ -426,6 +577,112 @@ processFindKey(struct module_qstate* qstate, struct val_qstate* vq, int id)
 	return 0;
 }
 
+/**
+ * Process the VALIDATE stage, the init and findkey stages are finished,
+ * and the right keys are available to validate the response.
+ * Or, there are no keys available, in order to invalidate the response.
+ *
+ * After validation, the status is recorded in the message and rrsets,
+ * and finished state is started.
+ *
+ * @param qstate: query state.
+ * @param vq: validator query state.
+ * @param ve: validator shared global environment.
+ * @param id: module id.
+ * @return true if the event should be processed further on return, false if
+ *         not.
+ */
+static int
+processValidate(struct module_qstate* qstate, struct val_qstate* vq, 
+	struct val_env* ve, int id)
+{
+	enum val_classification subtype;
+
+	if(!vq->key_entry) {
+		verbose(VERB_ALGO, "validate: no key entry, failed");
+		qstate->ext_state[id] = module_error;
+		return 0;
+	}
+
+	/* This is the default next state. */
+	vq->state = VAL_FINISHED_STATE;
+
+	/* signerName being null is the indicator that this response was 
+	 * unsigned */
+	if(vq->signer_name == NULL) {
+		log_query_info(VERB_ALGO, "processValidate: state has no "
+			"signer name", &vq->qchase);
+		/* Unsigned responses must be underneath a "null" key entry.*/
+		if(key_entry_isnull(vq->key_entry)) {
+			verbose(VERB_ALGO, "Unsigned response was proven to "
+				"be validly INSECURE");
+			vq->chase_reply->security = sec_status_insecure;
+			return 1;
+		}
+		verbose(VERB_ALGO, "Could not establish validation of "
+		          "INSECURE status of unsigned response.");
+		vq->chase_reply->security = sec_status_bogus;
+		return 1;
+	}
+
+	if(key_entry_isbad(vq->key_entry)) {
+		log_nametypeclass(VERB_ALGO, "Could not establish a chain "
+			"of trust to keys for", vq->key_entry->name,
+			LDNS_RR_TYPE_DNSKEY, vq->key_entry->key_class);
+		vq->chase_reply->security = sec_status_bogus;
+		return 1;
+	}
+
+	if(key_entry_isnull(vq->key_entry)) {
+		verbose(VERB_ALGO, "Verified that response is INSECURE");
+		vq->chase_reply->security = sec_status_insecure;
+		return 1;
+	}
+
+	subtype = val_classify_response(&vq->qchase, vq->chase_reply);
+	switch(subtype) {
+		case VAL_CLASS_POSITIVE:
+			verbose(VERB_ALGO, "Validating a positive response");
+			validate_positive_response(qstate->env, ve, 
+				&vq->qchase, vq->chase_reply, vq->key_entry);
+			break;
+			
+		case VAL_CLASS_NODATA:
+			verbose(VERB_ALGO, "Validating a nodata response");
+			validate_nodata_response(qstate->env, ve,
+				&vq->qchase, vq->chase_reply, vq->key_entry);
+			break;
+
+		case VAL_CLASS_NAMEERROR:
+			verbose(VERB_ALGO, "Validating a nxdomain response");
+			validate_nameerror_response(qstate->env, ve,
+				&vq->qchase, vq->chase_reply, vq->key_entry);
+			break;
+
+		case VAL_CLASS_CNAME:
+			verbose(VERB_ALGO, "Validating a cname response");
+			/*
+			 * TODO special CNAME state or routines 
+			validate_cname_response(vq->qchase, vq->chase_reply,
+				vq->key_entry);
+			*/
+			break;
+
+		case VAL_CLASS_ANY:
+			verbose(VERB_ALGO, "Validating a positive ANY "
+				"response");
+			validate_any_response(qstate->env, ve,
+				&vq->qchase, vq->chase_reply, vq->key_entry);
+			break;
+
+		default:
+			log_err("validate: unhandled response subtype: %d",
+				subtype);
+	}
+
+	return 1;
+}
+
 /** 
  * Handle validator state.
  * If a method returns true, the next state is started. If false, then
@@ -451,6 +708,8 @@ val_handle(struct module_qstate* qstate, struct val_qstate* vq,
 				cont = processFindKey(qstate, vq, id);
 				break;
 			case VAL_VALIDATE_STATE: 
+				cont = processValidate(qstate, vq, ve, id);
+				break;
 			case VAL_FINISHED_STATE: 
 			default:
 				log_warn("validator: invalid state %d",

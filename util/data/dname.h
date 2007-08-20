@@ -280,4 +280,12 @@ int dname_canon_lab_cmp(uint8_t* d1, int labs1, uint8_t* d2, int labs2,
  */
 int dname_canonical_compare(uint8_t* d1, uint8_t* d2);
 
+/**
+ * Get the shared topdomain between two names. Root "." or longer.
+ * @param d1: first dname. pointer to uncompressed wireformat.
+ * @param d2: second dname. pointer to uncompressed wireformat.
+ * @return pointer to shared topdomain. Ptr to a part of d1.
+ */
+uint8_t* dname_get_shared_topdomain(uint8_t* d1, uint8_t* d2);
+
 #endif /* UTIL_DATA_DNAME_H */

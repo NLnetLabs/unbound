@@ -711,6 +711,27 @@ dname_test_canoncmp()
 		) == 0);
 }
 
+/** Test dname_get_shared_topdomain */
+static void
+dname_test_topdomain()
+{
+	unit_assert( query_dname_compare(
+		dname_get_shared_topdomain(
+			(uint8_t*)"",
+			(uint8_t*)""), 
+		(uint8_t*)"") == 0);
+	unit_assert( query_dname_compare(
+		dname_get_shared_topdomain(
+			(uint8_t*)"\003www\007example\003com",
+			(uint8_t*)"\003www\007example\003com"), 
+		(uint8_t*)"\003www\007example\003com") == 0);
+	unit_assert( query_dname_compare(
+		dname_get_shared_topdomain(
+			(uint8_t*)"\003www\007example\003com",
+			(uint8_t*)"\003bla\007example\003com"), 
+		(uint8_t*)"\007example\003com") == 0);
+}
+
 void dname_test()
 {
 	ldns_buffer* buff = ldns_buffer_new(65800);
@@ -729,5 +750,6 @@ void dname_test()
 	dname_test_sigcount();
 	dname_test_iswild();
 	dname_test_canoncmp();
+	dname_test_topdomain();
 	ldns_buffer_free(buff);
 }

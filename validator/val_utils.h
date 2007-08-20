@@ -150,4 +150,23 @@ struct key_entry_key* val_verify_new_DNSKEYs(struct region* region,
  */
 int val_dsset_isusable(struct ub_packed_rrset_key* ds_rrset);
 
+/**
+ * Determine by looking at a signed RRset whether or not the RRset name was
+ * the result of a wildcard expansion. If so, return the name of the
+ * generating wildcard.
+ * 
+ * @param rrset The rrset to chedck.
+ * @param wc: the wildcard name, if the rrset was synthesized from a wildcard.
+ *         null if not. The wildcard name, without "*." in front, is returned.
+ *         This is a pointer into the rrset owner name.
+ * @return false if the signatures are inconsistent in indicating the 
+ * 	wildcard status; possible spoofing of wildcard response for other
+ * 	responses is being tried. We lost the status which rrsig was verified
+ * 	after the verification routine finished, so we simply check if
+ * 	the signatures are consistent; inserting a fake signature is a denial
+ * 	of service; but in that you could also have removed the real 
+ * 	signature anyway.
+ */
+int val_rrset_wildcard(struct ub_packed_rrset_key* rrset, uint8_t** wc);
+
 #endif /* VALIDATOR_VAL_UTILS_H */

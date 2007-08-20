@@ -304,3 +304,90 @@ int nsec_proves_nodata(struct ub_packed_rrset_key* nsec,
 
 	return 1;
 }
+
+int 
+val_nsec_proves_name_error(struct ub_packed_rrset_key* nsec, uint8_t* qname)
+{
+	uint8_t* owner = nsec->rk.dname;
+	uint8_t* next;
+	size_t nlen;
+	if(!nsec_get_next(nsec, &next, &nlen))
+		return 0;
+
+	/* If NSEC owner == qname, then this NSEC proves that qname exists. */
+	if(query_dname_compare(qname, owner) == 0) {
+		return 0;
+	}
+
+	/* If NSEC is a parent of qname, we need to check the type map
+	 * If the parent name has a DNAME or is a delegation point, then 
+	 * this NSEC is being misused. */
+	if(dname_subdomain_c(qname, owner) && 
+		(nsec_has_type(nsec, LDNS_RR_TYPE_DNAME) ||
+		(nsec_has_type(nsec, LDNS_RR_TYPE_NS) 
+			&& !nsec_has_type(nsec, LDNS_RR_TYPE_SOA))
+		)) {
+		return 0;
+	}
+
+	/* see if this nsec is the only nsec */
+	if(query_dname_compare(owner, next) == 0) {
+		/* only zone.name NSEC zone.name, disproves everything else */
+		return 1;
+	}
+	/* see if this nsec is the last nsec */
+	if(dname_canonical_compare(owner, next) > 0) {
+		/* this is the last nsec, ....(bigger) NSEC zonename(smaller) */
+		/* the names after the last (owner) name do not exist */
+		if(dname_canonical_compare(owner, qname) < 0)
+			return 1;
+		/* there are no names before the zone name in the zone */
+		/* if(dname_canonical_compare(qname, next) < 0) return 1; */
+	} else {
+		/* regular NSEC, (smaller) NSEC (larger) */
+		if(dname_canonical_compare(owner, qname) < 0 &&
+		   dname_canonical_compare(qname, next) < 0) {
+			return 1;
+		}
+	}
+	return 0;
+}
+
+/**
+ * Determine closest encloser of a query name and the NSEC that covers it
+ * (and thus disproved it). 
+ */
+static uint8_t* nsec_closest_encloser(uint8_t* qname, 
+	struct ub_packed_rrset_key* nsec)
+{
+	uint8_t* next;
+	size_t nlen;
+	uint8_t* common1, *common2;
+	if(!nsec_get_next(nsec, &next, &nlen))
+		return NULL;
+	/* longest common with owner or next name */
+	common1 = dname_get_shared_topdomain(nsec->rk.dname, qname);
+	common2 = dname_get_shared_topdomain(next, qname);
+	if(dname_count_labels(common1) > dname_count_labels(common2))
+		return common1;
+	return common2;
+}
+
+int val_nsec_proves_positive_wildcard(struct ub_packed_rrset_key* nsec, 
+	struct query_info* qinf, uint8_t* wc)
+{
+	uint8_t* ce;
+	/*  1) prove that qname doesn't exist and 
+	 *  2) that the correct wildcard was used
+	 *  nsec has been verified already. */
+	if(!val_nsec_proves_name_error(nsec, qinf->qname))
+		return 0;
+	/* check wildcard name */
+	ce = nsec_closest_encloser(qinf->qname, nsec);
+	if(!ce)
+		return 0;
+	if(query_dname_compare(wc, ce) != 0) {
+		return 0;
+	}
+	return 1;
+}

@@ -725,3 +725,14 @@ dname_canonical_compare(uint8_t* d1, uint8_t* d2)
 	labs2 = dname_count_labels(d2);
 	return dname_canon_lab_cmp(d1, labs1, d2, labs2, &m);
 }
+
+uint8_t* dname_get_shared_topdomain(uint8_t* d1, uint8_t* d2)
+{
+	int labs1, labs2, m;
+	size_t len = LDNS_MAX_DOMAINLEN;
+	labs1 = dname_count_labels(d1);
+	labs2 = dname_count_labels(d2);
+	(void)dname_lab_cmp(d1, labs1, d2, labs2, &m);
+	dname_remove_labels(&d1, &len, labs1-m);
+	return d1;
+}
