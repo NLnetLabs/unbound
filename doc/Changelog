@@ -5,6 +5,7 @@
 	  validated, return the query to client, or send servfail to client.
 	  Sets AD bit on validated replies.
 	- do not examine security status on an error reply in mesh_done.
+	- construct DS, DNSKEY messages from rrset cache.
 
 20 August 2007: Wouter
 	- validate and positive validation, positive wildcard NSEC validation.

@@ -418,9 +418,9 @@ tomsg(struct module_env* env, struct msgreply_entry* e, struct reply_info* r,
 	return msg;
 }
 
-/** synthesize CNAME response from cached CNAME item */
+/** synthesize RRset-only response from cached RRset item */
 static struct dns_msg*
-cname_msg(struct ub_packed_rrset_key* rrset, struct region* region, 
+rrset_msg(struct ub_packed_rrset_key* rrset, struct region* region, 
 	uint32_t now, struct query_info* q)
 {
 	struct dns_msg* msg;
@@ -428,12 +428,13 @@ cname_msg(struct ub_packed_rrset_key* rrset, struct region* region,
 		rrset->entry.data;
 	if(now > d->ttl)
 		return NULL;
-	msg = gen_dns_msg(region, q, 1); /* only the CNAME RRset */
+	msg = gen_dns_msg(region, q, 1); /* only the CNAME (or other) RRset */
 	if(!msg)
 		return NULL;
 	msg->rep->flags = BIT_QR; /* reply, no AA, no error */
 	msg->rep->qdcount = 1;
 	msg->rep->ttl = d->ttl - now;
+	msg->rep->security = sec_status_unchecked;
 	msg->rep->an_numrrsets = 1;
 	msg->rep->ns_numrrsets = 0;
 	msg->rep->ar_numrrsets = 0;
@@ -463,6 +464,7 @@ synth_dname_msg(struct ub_packed_rrset_key* rrset, struct region* region,
 	msg->rep->flags = BIT_QR; /* reply, no AA, no error */
 	msg->rep->qdcount = 1;
 	msg->rep->ttl = d->ttl - now;
+	msg->rep->security = sec_status_unchecked;
 	msg->rep->an_numrrsets = 1;
 	msg->rep->ns_numrrsets = 0;
 	msg->rep->ar_numrrsets = 0;
@@ -574,7 +576,7 @@ dns_cache_lookup(struct module_env* env,
 	/* see if we have CNAME for this domain */
 	if( (rrset=rrset_cache_lookup(env->rrset_cache, qname, qnamelen, 
 		LDNS_RR_TYPE_CNAME, qclass, 0, now, 0))) {
-		struct dns_msg* msg = cname_msg(rrset, region, now, &k);
+		struct dns_msg* msg = rrset_msg(rrset, region, now, &k);
 		if(msg) {
 			lock_rw_unlock(&rrset->entry.lock);
 			return msg;
@@ -582,8 +584,17 @@ dns_cache_lookup(struct module_env* env,
 		lock_rw_unlock(&rrset->entry.lock);
 	}
 
-	/* construct DS, DNSKEY messages from rrset cache. TODO */
-
+	/* construct DS, DNSKEY messages from rrset cache. */
+	if((qtype == LDNS_RR_TYPE_DS || qtype == LDNS_RR_TYPE_DNSKEY) &&
+		(rrset=rrset_cache_lookup(env->rrset_cache, qname, qnamelen, 
+		qtype, qclass, 0, now, 0))) {
+		struct dns_msg* msg = rrset_msg(rrset, region, now, &k);
+		if(msg) {
+			lock_rw_unlock(&rrset->entry.lock);
+			return msg;
+		}
+		lock_rw_unlock(&rrset->entry.lock);
+	}
 	return NULL;
 }
 
