@@ -200,12 +200,27 @@ val_verify_rrset(struct module_env* env, struct val_env* ve,
         struct ub_packed_rrset_key* rrset, struct ub_packed_rrset_key* keys)
 {
 	enum sec_status sec;
+	struct packed_rrset_data* d = (struct packed_rrset_data*)rrset->
+		entry.data;
+	if(d->security == sec_status_secure) {
+		/* re-verify all other statuses, because keyset may change*/
+		log_nametypeclass(VERB_ALGO, "verify rrset cached", 
+			rrset->rk.dname, ntohs(rrset->rk.type), 
+			ntohs(rrset->rk.rrset_class));
+		return d->security;
+	}
 	log_nametypeclass(VERB_ALGO, "verify rrset", rrset->rk.dname,
 		ntohs(rrset->rk.type), ntohs(rrset->rk.rrset_class));
 	sec = dnskeyset_verify_rrset(env, ve, rrset, keys);
 	verbose(VERB_ALGO, "verify result: %s", sec_status_to_string(sec));
 
-	/* TODO: update rrset security status */
+	/* update rrset security status 
+	 * only improves security status */
+	if(sec > d->security) {
+		d->security = sec;
+		if(sec == sec_status_secure)
+			d->trust = rrset_trust_validated;
+	}
 
 	return sec;
 }
@@ -307,8 +322,6 @@ val_verify_new_DNSKEYs(struct region* region, struct module_env* env,
 			ds_rrset, i);
 		if(sec == sec_status_secure) {
 			verbose(VERB_ALGO, "DS matched DNSKEY.");
-			/* TODO -- cannot, wrong region for prime */
-			/* update dnskey RRset status as secure */
 			return key_entry_create_rrset(region, 
 				ds_rrset->rk.dname, ds_rrset->rk.dname_len,
 				ntohs(ds_rrset->rk.rrset_class), dnskey_rrset);

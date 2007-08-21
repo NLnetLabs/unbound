@@ -60,6 +60,24 @@ struct dns_msg {
 };
 
 /**
+ * Allocate a dns_msg with malloc/alloc structure and store in dns cache.
+ *
+ * @param env: environment, with alloc structure and dns cache.
+ * @param qinf: query info, the query for which answer is stored.
+ * 	this is allocated in a region, and will be copied to malloc area
+ * 	before insertion.
+ * @param rep: reply in dns_msg from dns_alloc_msg for example.
+ * 	this is allocated in a region, and will be copied to malloc area
+ * 	before insertion.
+ * @param is_referral: If true, then the given message to be stored is a
+ *      referral. The cache implementation may use this as a hint.
+ *      It will store only the RRsets, not the message.
+ * @return 0 on alloc error (out of memory).
+ */
+int dns_cache_store(struct module_env* env, struct query_info* qinf,
+        struct reply_info* rep, int is_referral); 
+
+/**
  * Store message in the cache. Stores in message cache and rrset cache.
  * Both qinfo and rep should be malloced and are put in the cache.
  * They should not be used after this call, as they are then in shared cache.

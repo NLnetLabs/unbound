@@ -151,6 +151,7 @@ enum rrset_trust {
 
 /**
  * Security status from validation for data.
+ * The order is significant; more secure, more proven later.
  */
 enum sec_status {
 	/** UNCHECKED means that object has yet to be validated. */

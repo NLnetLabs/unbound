@@ -89,6 +89,7 @@ val_init(struct module_env* env, int id)
 		return 0;
 	}
 	env->modinfo[id] = (void*)val_env;
+	env->need_to_validate = 1;
 	if(!val_apply_cfg(val_env, env->cfg)) {
 		log_err("validator: could not apply configuration settings.");
 		return 0;
@@ -300,6 +301,12 @@ validate_positive_response(struct module_env* env, struct val_env* ve,
 		 * (unless qtype=DNAME). */
 		if(dname_seen && ntohs(s->rk.type) == LDNS_RR_TYPE_CNAME) {
 			dname_seen = 0;
+			/* CNAME was synthesized by our own iterator */
+			/* since the DNAME verified, mark the CNAME as secure */
+			((struct packed_rrset_data*)s->entry.data)->security =
+				sec_status_secure;
+			((struct packed_rrset_data*)s->entry.data)->trust =
+				rrset_trust_validated;
 			continue;
 		}
 
@@ -665,14 +672,18 @@ processInit(struct module_qstate* qstate, struct val_qstate* vq,
 	uint8_t* lookup_name;
 	size_t lookup_len;
 	if(!needs_validation(qstate, vq)) {
-		vq->state = vq->final_state;
-		return 1;
+		qstate->return_rcode = LDNS_RCODE_NOERROR;
+		qstate->return_msg = vq->orig_msg;
+		qstate->ext_state[id] = module_finished;
+		return 0;
 	}
 	vq->trust_anchor = anchors_lookup(ve->anchors, vq->qchase.qname,
 		vq->qchase.qname_len, vq->qchase.qclass);
 	if(vq->trust_anchor == NULL) {
 		/*response isn't under a trust anchor, so we cannot validate.*/
-		vq->state = vq->final_state;
+		vq->chase_reply->security = sec_status_indeterminate;
+		/* go to finished state to cache this result */
+		vq->state = VAL_FINISHED_STATE;
 		return 1;
 	}
 
@@ -707,7 +718,8 @@ processInit(struct module_qstate* qstate, struct val_qstate* vq,
 		 * However, we do set the status to INSECURE, since it is 
 		 * essentially proven insecure. */
 		vq->chase_reply->security = sec_status_insecure;
-		vq->state = vq->final_state;
+		/* go to finished state to cache this result */
+		vq->state = VAL_FINISHED_STATE;
 		return 1;
 	}
 
@@ -911,6 +923,31 @@ processValidate(struct module_qstate* qstate, struct val_qstate* vq,
 	return 1;
 }
 
+/**
+ * The Finished state. The validation status (good or bad) has been determined.
+ *
+ * @param qstate: query state.
+ * @param vq: validator query state.
+ * @param id: module id.
+ * @return true if the event should be processed further on return, false if
+ *         not.
+ */
+static int
+processFinished(struct module_qstate* qstate, struct val_qstate* vq, int id)
+{
+	/* TODO CNAME query restarts */
+
+	/* store results in cache */
+	if(!dns_cache_store(qstate->env, &vq->qchase, vq->chase_reply, 0)) {
+		log_err("out of memory caching validator results");
+	}
+	qstate->return_rcode = LDNS_RCODE_NOERROR;
+	qstate->return_msg = vq->orig_msg;
+	qstate->return_msg->rep = vq->chase_reply;
+	qstate->ext_state[id] = module_finished;
+	return 0;
+}
+
 /** 
  * Handle validator state.
  * If a method returns true, the next state is started. If false, then
@@ -939,6 +976,8 @@ val_handle(struct module_qstate* qstate, struct val_qstate* vq,
 				cont = processValidate(qstate, vq, ve, id);
 				break;
 			case VAL_FINISHED_STATE: 
+				cont = processFinished(qstate, vq, id);
+				break;
 			default:
 				log_warn("validator: invalid state %d",
 					vq->state);

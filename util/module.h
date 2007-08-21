@@ -191,6 +191,9 @@ struct module_env {
 	struct alloc_cache* alloc;
 	/** random table to generate random numbers */
 	struct ub_randstate* rnd;
+	/** is validation required for messages, controls client-facing
+	 * validation status (AD bits) and servfails */
+	int need_to_validate;
 	/** module specific data. indexed by module id. */
 	void* modinfo[MAX_MODULE];
 };

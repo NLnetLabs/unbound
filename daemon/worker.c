@@ -327,6 +327,18 @@ check_cache_chain(struct reply_info* rep) {
 	return 1;
 }
 
+/** check security status in cache reply */
+static int
+all_rrsets_secure(struct reply_info* rep) {
+	size_t i;
+	for(i=0; i<rep->rrset_count; i++) {
+		if( ((struct packed_rrset_data*)rep->rrsets[i]->entry.data)
+			->security != sec_status_secure )
+			return 0;
+	}
+	return 1;
+}
+
 /** answer query from the cache */
 static int
 answer_from_cache(struct worker* worker, struct lruhash_entry* e, uint16_t id,
@@ -336,6 +348,8 @@ answer_from_cache(struct worker* worker, struct lruhash_entry* e, uint16_t id,
 	struct reply_info* rep = (struct reply_info*)e->data;
 	uint32_t timenow = time(0);
 	uint16_t udpsize = edns->udp_size;
+	int secure;
+	int must_validate = !(flags&BIT_CD) && worker->env.need_to_validate;
 	/* see if it is possible */
 	if(rep->ttl <= timenow) {
 		/* the rrsets may have been updated in the meantime.
@@ -356,15 +370,44 @@ answer_from_cache(struct worker* worker, struct lruhash_entry* e, uint16_t id,
 		htons(LDNS_RR_TYPE_CNAME) || rep->rrsets[0]->rk.type == 
 		htons(LDNS_RR_TYPE_DNAME))) {
 		if(!check_cache_chain(rep)) {
+			/* cname chain invalid, redo iterator steps */
+			verbose(VERB_ALGO, "Cache reply: cname chain broken");
+		bail_out:
 			rrset_array_unlock_touch(worker->env.rrset_cache, 
 				worker->scratchpad, rep->ref, rep->rrset_count);
 			region_free_all(worker->scratchpad);
 			return 0;
 		}
 	}
+	/* check security status of the cached answer */
+	if( rep->security == sec_status_bogus && must_validate) {
+		/* BAD cached */
+		error_encode(repinfo->c->buffer, LDNS_RCODE_SERVFAIL, 
+			&mrentry->key, id, flags, edns);
+		rrset_array_unlock_touch(worker->env.rrset_cache, 
+			worker->scratchpad, rep->ref, rep->rrset_count);
+		region_free_all(worker->scratchpad);
+		return 1;
+	} else if( rep->security == sec_status_unchecked && must_validate) {
+		verbose(VERB_ALGO, "Cache reply: unchecked entry needs "
+			"validation");
+		goto bail_out; /* need to validate cache entry first */
+	} else if(rep->security == sec_status_secure) {
+		if(all_rrsets_secure(rep))
+			secure = 1;
+		else	{
+			if(must_validate) {
+				verbose(VERB_ALGO, "Cache reply: secure entry"
+					" changed status");
+				goto bail_out; /* rrset changed, re-verify */
+			}
+			secure = 0;
+		}
+	} else	secure = 0;
+
 	if(!reply_info_answer_encode(&mrentry->key, rep, id, flags, 
 		repinfo->c->buffer, timenow, 1, worker->scratchpad,
-		udpsize, edns, (int)(edns->bits & EDNS_DO) )) {
+		udpsize, edns, (int)(edns->bits & EDNS_DO), secure)) {
 		error_encode(repinfo->c->buffer, LDNS_RCODE_SERVFAIL, 
 			&mrentry->key, id, flags, edns);
 	}

@@ -43,15 +43,25 @@
 #define NET_HELP_H
 #include "util/log.h"
 
-/** DNS constants for uint16_t style flag manipulation. host byteorder. */
-/** AA flag */
-#define BIT_AA 0x0400
-/** RD flag */
-#define BIT_RD 0x0100
-/** RA flag */
-#define BIT_RA 0x0080
+/** DNS constants for uint16_t style flag manipulation. host byteorder. 
+ *                                1  1  1  1  1  1
+ *  0  1  2  3  4  5  6  7  8  9  0  1  2  3  4  5
+ * +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+ * |QR|   Opcode  |AA|TC|RD|RA| Z|AD|CD|   RCODE   |
+ * +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+ */ 
 /** CD flag */
 #define BIT_CD 0x0010
+/** AD flag */
+#define BIT_AD 0x0020
+/** RA flag */
+#define BIT_RA 0x0080
+/** RD flag */
+#define BIT_RD 0x0100
+/** TC flag */
+#define BIT_TC 0x0200
+/** AA flag */
+#define BIT_AA 0x0400
 /** QR flag */
 #define BIT_QR 0x8000
 /** get RCODE bits from uint16 flags */

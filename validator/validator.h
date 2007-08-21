@@ -112,9 +112,6 @@ struct val_qstate {
 	 */
 	struct reply_info* chase_reply;
 
-	/** This is the "final" state for the event. */
-	enum val_state final_state;
-
 	/** the trust anchor rrset */
 	struct trust_anchor* trust_anchor;
 

@@ -62,12 +62,13 @@ struct edns_data;
  * @param edns: EDNS data included in the answer, NULL for none.
  *	or if edns_present = 0, it is not included.
  * @param dnssec: if 0 DNSSEC records are omitted from the answer.
+ * @param secure: if 1, the AD bit is set in the reply.
  * @return: 0 on error (server failure).
  */
 int reply_info_answer_encode(struct query_info* qinf, struct reply_info* rep, 
 	uint16_t id, uint16_t qflags, ldns_buffer* dest, uint32_t timenow,
 	int cached, struct region* region, uint16_t udpsize, 
-	struct edns_data* edns, int dnssec);
+	struct edns_data* edns, int dnssec, int secure);
 
 /**
  * Regenerate the wireformat from the stored msg reply.

@@ -706,7 +706,7 @@ int
 reply_info_answer_encode(struct query_info* qinf, struct reply_info* rep, 
 	uint16_t id, uint16_t qflags, ldns_buffer* pkt, uint32_t timenow,
 	int cached, struct region* region, uint16_t udpsize, 
-	struct edns_data* edns, int dnssec)
+	struct edns_data* edns, int dnssec, int secure)
 {
 	uint16_t flags;
 	int attach_edns = 1;
@@ -718,6 +718,8 @@ reply_info_answer_encode(struct query_info* qinf, struct reply_info* rep,
 		/* remove AA bit, copy RD and CD bits from query. */
 		flags = (rep->flags & ~BIT_AA) | (qflags & (BIT_RD|BIT_CD)); 
 	}
+	if(secure)
+		flags |= BIT_AD;
 	log_assert(flags & BIT_QR); /* QR bit must be on in our replies */
 	if(udpsize < LDNS_HEADER_SIZE)
 		return 0;

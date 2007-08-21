@@ -399,6 +399,7 @@ tomsg(struct module_env* env, struct msgreply_entry* e, struct reply_info* r,
 	msg->rep->flags = r->flags;
 	msg->rep->qdcount = r->qdcount;
 	msg->rep->ttl = r->ttl;
+	msg->rep->security = r->security;
 	msg->rep->an_numrrsets = r->an_numrrsets;
 	msg->rep->ns_numrrsets = r->ns_numrrsets;
 	msg->rep->ar_numrrsets = r->ar_numrrsets;
@@ -584,4 +585,55 @@ dns_cache_lookup(struct module_env* env,
 	/* construct DS, DNSKEY messages from rrset cache. TODO */
 
 	return NULL;
+}
+
+int 
+dns_cache_store(struct module_env* env, struct query_info* msgqinf,
+        struct reply_info* msgrep, int is_referral)
+{
+	struct reply_info* rep = NULL;
+	/* alloc, malloc properly (not in region, like msg is) */
+	rep = reply_info_copy(msgrep, env->alloc, NULL);
+	if(!rep)
+		return 0;
+
+	if(is_referral) {
+		/* store rrsets */
+		struct rrset_ref ref;
+		uint32_t now = time(NULL);
+		size_t i;
+		for(i=0; i<rep->rrset_count; i++) {
+			packed_rrset_ttl_add((struct packed_rrset_data*)
+				rep->rrsets[i]->entry.data, now);
+			ref.key = rep->rrsets[i];
+			ref.id = rep->rrsets[i]->id;
+			/*ignore ret: it was in the cache, ref updated */
+			(void)rrset_cache_update(env->rrset_cache, &ref, 
+				env->alloc, now);
+		}
+		free(rep);
+		return 1;
+	} else {
+		/* store msg, and rrsets */
+		struct query_info qinf;
+		hashvalue_t h;
+
+		qinf = *msgqinf;
+		qinf.qname = memdup(msgqinf->qname, msgqinf->qname_len);
+		if(!qinf.qname) {
+			reply_info_parsedelete(rep, env->alloc);
+			return 0;
+		}
+		/* fixup flags to be sensible for a reply based on the cache */
+		/* this module means that RA is available. It is an answer QR. 
+		 * Not AA from cache. Not CD in cache (depends on client bit). */
+		rep->flags |= (BIT_RA | BIT_QR);
+		rep->flags &= ~(BIT_AA | BIT_CD);
+		h = query_info_hash(&qinf);
+		dns_cache_store_msg(env, &qinf, h, rep);
+		/* qname is used inside query_info_entrysetup, and set to 
+		 * NULL. If it has not been used, free it. free(0) is safe. */
+		free(qinf.qname);
+	}
+	return 1;
 }

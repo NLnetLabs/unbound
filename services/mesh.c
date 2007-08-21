@@ -425,6 +425,15 @@ mesh_send_reply(struct mesh_state* m, int rcode, struct reply_info* rep,
 	struct mesh_reply* r)
 {
 	struct timeval end_time;
+	int secure;
+	/* examine security status */
+	if(m->s.env->need_to_validate && !(r->qflags&BIT_CD) &&
+		rep->security <= sec_status_bogus) {
+		rcode = LDNS_RCODE_SERVFAIL;
+	}
+	if(rep->security == sec_status_secure)
+		secure = 1;
+	else	secure = 0;
 	/* send the reply */
 	if(rcode) {
 		error_encode(r->query_reply.c->buffer, rcode, &m->s.qinfo,
@@ -439,7 +448,7 @@ mesh_send_reply(struct mesh_state* m, int rcode, struct reply_info* rep,
 		if(!reply_info_answer_encode(&m->s.qinfo, rep, r->qid, 
 			r->qflags, r->query_reply.c->buffer, 0, 1, 
 			m->s.env->scratch, udp_size, &r->edns, 
-			(int)(r->edns.bits & EDNS_DO))) 
+			(int)(r->edns.bits & EDNS_DO), secure)) 
 		{
 			error_encode(r->query_reply.c->buffer, 
 				LDNS_RCODE_SERVFAIL, &m->s.qinfo, r->qid, 
