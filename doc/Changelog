@@ -1,7 +1,12 @@
-18 August 2007: Wouter
-	- process DNSKEY response in FINDKEY state.
+21 August 2007: Wouter
+	- ANY response validation.
+
+20 August 2007: Wouter
 	- validate and positive validation, positive wildcard NSEC validation.
 	- nodata validation, nxdomain validation.
+
+18 August 2007: Wouter
+	- process DNSKEY response in FINDKEY state.
 
 17 August 2007: Wouter
 	- work on DS2KE routine.

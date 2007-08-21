@@ -566,12 +566,78 @@ validate_nameerror_response(struct module_env* env, struct val_env* ve,
 	chase_reply->security = sec_status_secure;
 }
 
-/** validate positive ANY response */
+/** 
+ * Given an "ANY" response -- a response that contains an answer to a
+ * qtype==ANY question, with answers. This consists of simply verifying all
+ * present answer/auth RRsets, with no checking that all types are present.
+ * 
+ * NOTE: it may be possible to get parent-side delegation point records
+ * here, which won't all be signed. Right now, this routine relies on the
+ * upstream iterative resolver to not return these responses -- instead
+ * treating them as referrals.
+ * 
+ * NOTE: RFC 4035 is silent on this issue, so this may change upon
+ * clarification.
+ * 
+ * Note that by the time this method is called, the process of finding the
+ * trusted DNSKEY rrset that signs this response must already have been
+ * completed.
+ * 
+ * @param env: module env for verify.
+ * @param ve: validator env for verify.
+ * @param qchase: query that was made.
+ * @param chase_reply: answer to that query to validate.
+ * @param key_entry: the key entry, which is trusted, and which matches
+ * 	the signer of the answer. The key entry isgood().
+ */
 static void
 validate_any_response(struct module_env* env, struct val_env* ve, 
 	struct query_info* qchase, struct reply_info* chase_reply, 
 	struct key_entry_key* key_entry)
 {
+	struct ub_packed_rrset_key* s; 
+	enum sec_status sec;
+	size_t i;
+	if(qchase->qtype != LDNS_RR_TYPE_ANY) {
+		log_err("internal error: ANY validation called for non-ANY");
+		chase_reply->security = sec_status_bogus;
+		return;
+	}
+
+	/* validate the ANSWER section. */
+	for(i=0; i<chase_reply->an_numrrsets; i++) {
+		s = chase_reply->rrsets[i];
+		sec = val_verify_rrset_entry(env, ve, s, key_entry);
+		/* If the (answer) rrset failed to validate, then this 
+		 * message is BAD. */
+		if(sec != sec_status_secure) {
+			log_nametypeclass(VERB_ALGO, "ANY response has "
+				"failed ANSWER rrset: ", s->rk.dname,
+				ntohs(s->rk.type), ntohs(s->rk.rrset_class));
+			chase_reply->security = sec_status_bogus;
+			return;
+		}
+	}
+
+	/* validate the AUTHORITY section as well - this will be the NS rrset
+	 * (which could be missing, no problem) */
+	for(i=chase_reply->an_numrrsets; i<chase_reply->an_numrrsets+
+		chase_reply->ns_numrrsets; i++) {
+		s = chase_reply->rrsets[i];
+		sec = val_verify_rrset_entry(env, ve, s, key_entry);
+		/* If anything in the authority section fails to be 
+		 * secure, we have a bad message. */
+		if(sec != sec_status_secure) {
+			log_nametypeclass(VERB_ALGO, "ANY response has "
+				"failed AUTHORITY rrset: ", s->rk.dname,
+				ntohs(s->rk.type), ntohs(s->rk.rrset_class));
+			chase_reply->security = sec_status_bogus;
+			return;
+		}
+	}
+
+	verbose(VERB_ALGO, "Successfully validated positive ANY response");
+	chase_reply->security = sec_status_secure;
 }
 
 /** 
