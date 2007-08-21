@@ -4,6 +4,7 @@
 	- check cache security status and either send the query to be
 	  validated, return the query to client, or send servfail to client.
 	  Sets AD bit on validated replies.
+	- do not examine security status on an error reply in mesh_done.
 
 20 August 2007: Wouter
 	- validate and positive validation, positive wildcard NSEC validation.
