@@ -199,6 +199,11 @@ The resource record is entered in the same format as 'dig' or 'drill' prints
 them, the same format as in the zone file. Has to be on a single line, with
 "" around it. A TTL can be specified for ease of cut and paste, but is ignored. 
 A class can be specified, but class IN is default.
+.It \fBval-override-date:\fR <rrsig-style date spec>
+Default is "" or "0", which disables this debugging feature. If enabled by
+giving a RRSIG style date, that date is used for verifying RRSIG inception
+and expiration dates, instead of the current date. Do not set this unless 
+you are debugging signature inception and expiration.
 .El
 
 .Ss Stub Zone Options
