@@ -81,6 +81,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_DO_NOT_QUERY_ADDRESS VAR_HIDE_IDENTITY VAR_HIDE_VERSION
 %token VAR_IDENTITY VAR_VERSION VAR_HARDEN_GLUE VAR_MODULE_CONF
 %token VAR_TRUST_ANCHOR_FILE VAR_TRUST_ANCHOR VAR_VAL_OVERRIDE_DATE
+%token VAR_BOGUS_TTL
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -114,7 +115,7 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_do_not_query_address | server_hide_identity |
 	server_hide_version | server_identity | server_version |
 	server_harden_glue | server_module_conf | server_trust_anchor_file |
-	server_trust_anchor | server_val_override_date
+	server_trust_anchor | server_val_override_date | server_bogus_ttl
 	;
 stubstart: VAR_STUB_ZONE
 	{
@@ -504,6 +505,16 @@ server_val_override_date: VAR_VAL_OVERRIDE_DATE STRING
 		free($2);
 	}
 	;
+server_bogus_ttl: VAR_BOGUS_TTL STRING
+	{
+		OUTYY(("P(server_bogus_ttl:%s)\n", $2));
+		if(atoi($2) == 0 && strcmp($2, "0") != 0)
+			yyerror("number expected");
+		else cfg_parser->cfg->bogus_ttl = atoi($2);
+		free($2);
+	}
+	;
+
 stub_name: VAR_NAME STRING
 	{
 		OUTYY(("P(name:%s)\n", $2));

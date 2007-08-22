@@ -69,6 +69,11 @@ struct val_env {
 	/** for debug testing a fixed validation date can be entered.
 	 * if 0, current time is used for rrsig validation */
 	int32_t date_override;
+
+	/** TTL for bogus data; used instead of untrusted TTL from data.
+	 * Bogus data will not be verified more often than this interval. 
+	 * seconds. */
+	uint32_t bogus_ttl;
 };
 
 /**

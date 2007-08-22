@@ -204,6 +204,11 @@ Default is "" or "0", which disables this debugging feature. If enabled by
 giving a RRSIG style date, that date is used for verifying RRSIG inception
 and expiration dates, instead of the current date. Do not set this unless 
 you are debugging signature inception and expiration.
+.It \fBval-bogus-ttl:\fR <number>
+The time to live for bogus data. This is data that has failed validation;
+due to invalid signatures or other checks. The TTL from that data cannot be
+trusted, and this value is used instead. The value is in seconds, default 900.
+The time interval prevents repeated revalidation of bogus data.
 .El
 
 .Ss Stub Zone Options

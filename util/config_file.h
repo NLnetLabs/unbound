@@ -146,6 +146,8 @@ struct config_file {
 
 	/** if not 0, this value is the validation date for RRSIGs */
 	int32_t val_date_override;
+	/** this value sets the number of seconds before revalidating bogus */
+	int bogus_ttl; 
 
 	/** daemonize, i.e. fork into the background. */
 	int do_daemonize;

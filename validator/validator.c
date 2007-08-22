@@ -58,6 +58,7 @@
 static int
 val_apply_cfg(struct val_env* val_env, struct config_file* cfg)
 {
+	val_env->bogus_ttl = (uint32_t)cfg->bogus_ttl;
 	if(!val_env->anchors)
 		val_env->anchors = anchors_create();
 	if(!val_env->anchors) {
@@ -928,14 +929,22 @@ processValidate(struct module_qstate* qstate, struct val_qstate* vq,
  *
  * @param qstate: query state.
  * @param vq: validator query state.
+ * @param ve: validator shared global environment.
  * @param id: module id.
  * @return true if the event should be processed further on return, false if
  *         not.
  */
 static int
-processFinished(struct module_qstate* qstate, struct val_qstate* vq, int id)
+processFinished(struct module_qstate* qstate, struct val_qstate* vq, 
+	struct val_env* ve, int id)
 {
 	/* TODO CNAME query restarts */
+
+	/* if the result is bogus - set message ttl to bogus ttl to avoid
+	 * endless bogus revalidation */
+	if(vq->chase_reply->security == sec_status_bogus) {
+		vq->chase_reply->ttl = time(0) + ve->bogus_ttl;
+	}
 
 	/* store results in cache */
 	if(!dns_cache_store(qstate->env, &vq->qchase, vq->chase_reply, 0)) {
@@ -976,7 +985,7 @@ val_handle(struct module_qstate* qstate, struct val_qstate* vq,
 				cont = processValidate(qstate, vq, ve, id);
 				break;
 			case VAL_FINISHED_STATE: 
-				cont = processFinished(qstate, vq, id);
+				cont = processFinished(qstate, vq, ve, id);
 				break;
 			default:
 				log_warn("validator: invalid state %d",

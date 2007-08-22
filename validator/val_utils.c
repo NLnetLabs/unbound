@@ -40,6 +40,7 @@
  */
 #include "config.h"
 #include "validator/val_utils.h"
+#include "validator/validator.h"
 #include "validator/val_kentry.h"
 #include "validator/val_sigcrypt.h"
 #include "util/data/msgreply.h"
@@ -215,11 +216,18 @@ val_verify_rrset(struct module_env* env, struct val_env* ve,
 	verbose(VERB_ALGO, "verify result: %s", sec_status_to_string(sec));
 
 	/* update rrset security status 
-	 * only improves security status */
+	 * only improves security status 
+	 * and bogus is set only once, even if we rechecked the status */
 	if(sec > d->security) {
 		d->security = sec;
 		if(sec == sec_status_secure)
 			d->trust = rrset_trust_validated;
+		else if(sec == sec_status_bogus) {
+			/* update ttl for rrset to fixed value. */
+			d->ttl = time(0) + ve->bogus_ttl;
+			/* leave RR specific TTL: not used for determine
+			 * if RRset timed out and clients see proper value. */
+		}
 	}
 
 	return sec;

@@ -116,8 +116,14 @@ need_to_update_rrset(void* nd, void* cd, uint32_t timenow, int equal)
 	struct packed_rrset_data* newd = (struct packed_rrset_data*)nd;
 	struct packed_rrset_data* cached = (struct packed_rrset_data*)cd;
         /*      o if current RRset is more trustworthy - insert it */
-        if( newd->trust > cached->trust )
+        if( newd->trust > cached->trust ) {
+		/* if the cached rrset is bogus, and this one equal,
+		 * do not update the TTL - let it expire. */
+		if(equal && cached->ttl >= timenow && 
+			cached->security == sec_status_bogus)
+			return 0;
                 return 1;
+	}
 	/*	o item in cache has expired */
 	if( cached->ttl < timenow )
 		return 1;
@@ -128,6 +134,10 @@ need_to_update_rrset(void* nd, void* cd, uint32_t timenow, int equal)
         /*        if so, see if rrset+rdata is the same */
         /*        if so, update TTL in cache, even if trust is worse. */
         if( newd->ttl > cached->ttl && equal ) {
+		/* if the cached rrset is bogus, and this one equal,
+		 * do not update the TTL - let it expire. */
+		if(cached->security == sec_status_bogus)
+			return 0;
 		/* since all else is the same, use the best trust value */
 		if(newd->trust < cached->trust) {
 			newd->trust = cached->trust;
