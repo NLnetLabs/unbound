@@ -1,5 +1,6 @@
 22 August 2007: Wouter
 	- bogus TTL.
+	- review - use val_error().
 
 21 August 2007: Wouter
 	- ANY response validation.

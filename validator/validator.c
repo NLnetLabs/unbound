@@ -800,8 +800,7 @@ processFindKey(struct module_qstate* qstate, struct val_qstate* vq, int id)
 		if(!generate_request(qstate, id, target_key_name, 
 			target_key_len, LDNS_RR_TYPE_DS, vq->qchase.qclass)) {
 			log_err("mem error generating DS request");
-			qstate->ext_state[id] = module_error;
-			return 0;
+			return val_error(qstate, id);
 		}
 		return 0;
 	}
@@ -811,8 +810,7 @@ processFindKey(struct module_qstate* qstate, struct val_qstate* vq, int id)
 		vq->ds_rrset->rk.dname_len, LDNS_RR_TYPE_DNSKEY, 
 		vq->qchase.qclass)) {
 		log_err("mem error generating DNSKEY request");
-		qstate->ext_state[id] = module_error;
-		return 0;
+		return val_error(qstate, id);
 	}
 
 	return 0;
@@ -841,8 +839,7 @@ processValidate(struct module_qstate* qstate, struct val_qstate* vq,
 
 	if(!vq->key_entry) {
 		verbose(VERB_ALGO, "validate: no key entry, failed");
-		qstate->ext_state[id] = module_error;
-		return 0;
+		return val_error(qstate, id);
 	}
 
 	/* This is the default next state. */
