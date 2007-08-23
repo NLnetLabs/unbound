@@ -143,7 +143,17 @@ val_new(struct module_qstate* qstate, int id)
 		vq->orig_msg = qstate->return_msg;
 	}
 	vq->qchase = qstate->qinfo;
-	vq->chase_reply = vq->orig_msg->rep;
+	/* chase reply will be an edited (sub)set of the orig msg rrset ptrs */
+	vq->chase_reply = region_alloc_init(qstate->region, vq->orig_msg->rep,
+		sizeof(struct reply_info) - sizeof(struct rrset_ref));
+	if(!vq->chase_reply)
+		return NULL;
+	vq->chase_reply->rrsets = region_alloc_init(qstate->region,
+		vq->orig_msg->rep->rrsets, sizeof(struct ub_packed_rrset_key*)
+			* vq->orig_msg->rep->rrset_count);
+	if(!vq->chase_reply->rrsets)
+		return NULL;
+	vq->cname_skip = 0;
 	return vq;
 }
 
@@ -170,12 +180,14 @@ val_error(struct module_qstate* qstate, int id)
  * REFUSED, etc.)
  *
  * @param qstate: query state.
- * @param vq: validator query state.
+ * @param ret_rc: rcode for this message (if noerror - examine ret_msg).
+ * @param ret_msg: return msg, can be NULL; look at rcode instead.
  * @return true if the response could use validation (although this does not
  *         mean we can actually validate this response).
  */
 static int
-needs_validation(struct module_qstate* qstate, struct val_qstate* vq)
+needs_validation(struct module_qstate* qstate, int ret_rc, 
+	struct dns_msg* ret_msg)
 {
 	int rcode;
 
@@ -186,18 +198,21 @@ needs_validation(struct module_qstate* qstate, struct val_qstate* vq)
 		return 0;
 	}
 
-	/* validate unchecked, and re-validate bogus messages */
-	if (vq->orig_msg->rep->security > sec_status_bogus)
-	{
-		verbose(VERB_ALGO, "response has already been validated");
-		return 0;
-	}
+	if(ret_rc != LDNS_RCODE_NOERROR || !ret_msg)
+		rcode = ret_rc;
+	else 	rcode = (int)FLAGS_GET_RCODE(ret_msg->rep->flags);
 
-	rcode = (int)FLAGS_GET_RCODE(vq->orig_msg->rep->flags);
 	if(rcode != LDNS_RCODE_NOERROR && rcode != LDNS_RCODE_NXDOMAIN) {
 		verbose(VERB_ALGO, "cannot validate non-answer, rcode %s",
 			ldns_lookup_by_id(ldns_rcodes, rcode)?
 			ldns_lookup_by_id(ldns_rcodes, rcode)->name:"??");
+		return 0;
+	}
+
+	/* validate unchecked, and re-validate bogus messages */
+	if (ret_msg && ret_msg->rep->security > sec_status_bogus)
+	{
+		verbose(VERB_ALGO, "response has already been validated");
 		return 0;
 	}
 	return 1;
@@ -422,8 +437,9 @@ validate_nodata_response(struct module_env* env, struct val_env* ve,
 	/* Since we are here, there must be nothing in the ANSWER section to
 	 * validate. */
 	/* (Note: CNAME/DNAME responses will not directly get here --
-	 * instead they are broken down into individual CNAME/DNAME/final answer
-	 * responses. - TODO this will change though) */
+	 * instead, they are chased down into indiviual CNAME validations,
+	 * and at the end of the cname chain a POSITIVE, or CNAME_NOANSWER 
+	 * validation.) */
 	
 	/* validate the AUTHORITY section */
 	int has_valid_nsec = 0; /* If true, then the NODATA has been proven.*/
@@ -648,6 +664,265 @@ validate_any_response(struct module_env* env, struct val_env* ve,
 	chase_reply->security = sec_status_secure;
 }
 
+/**
+ * Validate CNAME response, or DNAME+CNAME.
+ * This is just like a positive proof, except that this is about a 
+ * DNAME+CNAME. Possible wildcard proof.
+ * Also refuses wildcarded DNAMEs.
+ * 
+ * Note that by the time this method is called, the process of finding the
+ * trusted DNSKEY rrset that signs this response must already have been
+ * completed.
+ * 
+ * @param env: module env for verify.
+ * @param ve: validator env for verify.
+ * @param qchase: query that was made.
+ * @param chase_reply: answer to that query to validate.
+ * @param key_entry: the key entry, which is trusted, and which matches
+ * 	the signer of the answer. The key entry isgood().
+ */
+static void
+validate_cname_response(struct module_env* env, struct val_env* ve, 
+	struct query_info* qchase, struct reply_info* chase_reply, 
+	struct key_entry_key* key_entry)
+{
+	uint8_t* wc = NULL;
+	int wc_NSEC_ok = 0;
+	int dname_seen = 0;
+	int nsec3s_seen = 0;
+	size_t i;
+	struct ub_packed_rrset_key* s;
+	enum sec_status sec;
+
+	/* validate the ANSWER section - this will be the CNAME (+DNAME) */
+	for(i=0; i<chase_reply->an_numrrsets; i++) {
+		s = chase_reply->rrsets[i];
+		/* Skip the CNAME following a (validated) DNAME.
+		 * Because of the normalization routines in the iterator, 
+		 * there will always be an unsigned CNAME following a DNAME 
+		 * (unless qtype=DNAME). */
+		if(dname_seen && ntohs(s->rk.type) == LDNS_RR_TYPE_CNAME) {
+			dname_seen = 0;
+			/* CNAME was synthesized by our own iterator */
+			/* since the DNAME verified, mark the CNAME as secure */
+			((struct packed_rrset_data*)s->entry.data)->security =
+				sec_status_secure;
+			((struct packed_rrset_data*)s->entry.data)->trust =
+				rrset_trust_validated;
+			continue;
+		}
+
+		/* Verify the answer rrset */
+		sec = val_verify_rrset_entry(env, ve, s, key_entry);
+		/* If the (answer) rrset failed to validate, then this 
+		 * message is BAD. */
+		if(sec != sec_status_secure) {
+			log_nametypeclass(VERB_ALGO, "Cname response has "
+				"failed ANSWER rrset: ", s->rk.dname,
+				ntohs(s->rk.type), ntohs(s->rk.rrset_class));
+			chase_reply->security = sec_status_bogus;
+			return;
+		}
+		/* Check to see if the rrset is the result of a wildcard 
+		 * expansion. If so, an additional check will need to be 
+		 * made in the authority section. */
+		if(!val_rrset_wildcard(s, &wc)) {
+			log_nametypeclass(VERB_ALGO, "Cname response has "
+				"inconsistent wildcard sigs: ", s->rk.dname,
+				ntohs(s->rk.type), ntohs(s->rk.rrset_class));
+			chase_reply->security = sec_status_bogus;
+			return;
+		}
+		
+		/* Notice a DNAME that should be followed by an unsigned 
+		 * CNAME. */
+		if(qchase->qtype != LDNS_RR_TYPE_DNAME && 
+			ntohs(s->rk.type) == LDNS_RR_TYPE_DNAME) {
+			dname_seen = 1;
+			/* we will not follow a wildcarded DNAME because 
+			 * its synthesized expansion is underdefined */
+			if(dname_is_wild(s->rk.dname)) {
+				log_nametypeclass(VERB_ALGO, "cannot follow "
+				"wildcard DNAME: ", s->rk.dname, 
+				ntohs(s->rk.type), ntohs(s->rk.rrset_class));
+				chase_reply->security = sec_status_bogus;
+				return;
+			}
+		}
+	}
+
+	/* validate the AUTHORITY section as well - this will generally be 
+	 * the NS rrset (which could be missing, no problem) */
+	for(i=chase_reply->an_numrrsets; i<chase_reply->an_numrrsets+
+		chase_reply->ns_numrrsets; i++) {
+		s = chase_reply->rrsets[i];
+		sec = val_verify_rrset_entry(env, ve, s, key_entry);
+		/* If anything in the authority section fails to be secure, 
+		 * we have a bad message. */
+		if(sec != sec_status_secure) {
+			log_nametypeclass(VERB_ALGO, "Cname response has "
+				"failed AUTHORITY rrset: ", s->rk.dname,
+				ntohs(s->rk.type), ntohs(s->rk.rrset_class));
+			chase_reply->security = sec_status_bogus;
+			return;
+		}
+
+		/* If this is a positive wildcard response, and we have a 
+		 * (just verified) NSEC record, try to use it to 1) prove 
+		 * that qname doesn't exist and 2) that the correct wildcard 
+		 * was used. */
+		if(wc != NULL && ntohs(s->rk.type) == LDNS_RR_TYPE_NSEC) {
+			if(val_nsec_proves_positive_wildcard(s, qchase, wc)) {
+				wc_NSEC_ok = 1;
+			}
+			/* if not, continue looking for proof */
+		}
+
+		/* Otherwise, if this is a positive wildcard response and 
+		 * we have NSEC3 records */
+		if(wc != NULL && ntohs(s->rk.type) == LDNS_RR_TYPE_NSEC3) {
+			nsec3s_seen = 1;
+		}
+	}
+
+	/* If this was a positive wildcard response that we haven't already
+	 * proven, and we have NSEC3 records, try to prove it using the NSEC3
+	 * records. */
+	if(wc != NULL && !wc_NSEC_ok && nsec3s_seen) {
+		/* TODO NSEC3 positive wildcard proof */
+		/* possibly: wc_NSEC_ok = 1; */
+	}
+
+	/* If after all this, we still haven't proven the positive wildcard
+	 * response, fail. */
+	if(wc != NULL && !wc_NSEC_ok) {
+		verbose(VERB_ALGO, "CNAME response was wildcard "
+			"expansion and did not prove original data "
+			"did not exist");
+		chase_reply->security = sec_status_bogus;
+		return;
+	}
+
+	verbose(VERB_ALGO, "Successfully validated CNAME response");
+	chase_reply->security = sec_status_secure;
+}
+
+/**
+ * Validate CNAME NOANSWER response, no more data after a CNAME chain.
+ * This can be a NODATA or a NAME ERROR case, but not both at the same time.
+ * We don't know because the rcode has been set to NOERROR by the CNAME.
+ * 
+ * Note that by the time this method is called, the process of finding the
+ * trusted DNSKEY rrset that signs this response must already have been
+ * completed.
+ * 
+ * @param env: module env for verify.
+ * @param ve: validator env for verify.
+ * @param qchase: query that was made.
+ * @param chase_reply: answer to that query to validate.
+ * @param key_entry: the key entry, which is trusted, and which matches
+ * 	the signer of the answer. The key entry isgood().
+ */
+static void
+validate_cname_noanswer_response(struct module_env* env, struct val_env* ve, 
+	struct query_info* qchase, struct reply_info* chase_reply, 
+	struct key_entry_key* key_entry)
+{
+	/* Since we are here, there must be nothing in the ANSWER section to
+	 * validate. */
+	
+	/* validate the AUTHORITY section */
+	int nodata_valid_nsec = 0; /* If true, then NODATA has been proven.*/
+	uint8_t* ce = NULL; /* for wildcard nodata responses. This is the 
+				proven closest encloser. */
+	uint8_t* wc = NULL; /* for wildcard nodata responses. wildcard nsec */
+	int nxdomain_valid_nsec = 0; /* if true, namerror has been proven */
+	int nxdomain_valid_wnsec = 0;
+	int nsec3s_seen = 0; /* nsec3s seen */
+	struct ub_packed_rrset_key* s; 
+	enum sec_status sec;
+	size_t i;
+
+	for(i=chase_reply->an_numrrsets; i<chase_reply->an_numrrsets+
+		chase_reply->ns_numrrsets; i++) {
+		s = chase_reply->rrsets[i];
+		sec = val_verify_rrset_entry(env, ve, s, key_entry);
+		if(sec != sec_status_secure) {
+			log_nametypeclass(VERB_ALGO, "CNAMEnoanswer response has "
+				"failed AUTHORITY rrset: ", s->rk.dname,
+				ntohs(s->rk.type), ntohs(s->rk.rrset_class));
+			chase_reply->security = sec_status_bogus;
+			return;
+		}
+
+		/* If we encounter an NSEC record, try to use it to prove 
+		 * NODATA.
+		 * This needs to handle the ENT NODATA case. */
+		if(ntohs(s->rk.type) == LDNS_RR_TYPE_NSEC) {
+			if(nsec_proves_nodata(s, qchase)) {
+				nodata_valid_nsec = 1;
+				if(dname_is_wild(s->rk.dname))
+					wc = s->rk.dname;
+			} 
+			if(val_nsec_proves_name_error(s, qchase->qname)) {
+				ce = nsec_closest_encloser(qchase->qname, s);
+				nxdomain_valid_nsec = 1;
+			}
+			if(val_nsec_proves_no_wc(s, qchase->qname, 
+				qchase->qname_len))
+				nxdomain_valid_wnsec = 1;
+		} else if(ntohs(s->rk.type) == LDNS_RR_TYPE_NSEC3) {
+			nsec3s_seen = 1;
+		}
+	}
+
+	/* check to see if we have a wildcard NODATA proof. */
+
+	/* The wildcard NODATA is 1 NSEC proving that qname does not exists 
+	 * (and also proving what the closest encloser is), and 1 NSEC 
+	 * showing the matching wildcard, which must be *.closest_encloser. */
+	if(wc && !ce)
+		nodata_valid_nsec = 0;
+	else if(wc && ce) {
+		log_assert(dname_is_wild(wc));
+		/* first label wc is \001*, so remove and compare to ce */
+		if(query_dname_compare(wc+2, ce) != 0) {
+			nodata_valid_nsec = 0;
+		}
+	}
+	if(nxdomain_valid_nsec && !nxdomain_valid_wnsec) {
+		/* name error is missing wildcard denial proof */
+		nxdomain_valid_nsec = 0;
+	}
+	
+	if(nodata_valid_nsec && nxdomain_valid_nsec) {
+		verbose(VERB_ALGO, "CNAMEnoanswer proves that name exists "
+			"and not exists, bogus");
+		chase_reply->security = sec_status_bogus;
+		return;
+	}
+	if(!nodata_valid_nsec && !nxdomain_valid_nsec && nsec3s_seen) {
+		/* TODO handle NSEC3 proof here */
+		/* and set nodata_valid_nsec=1; if so */
+	}
+
+	if(!nodata_valid_nsec && !nxdomain_valid_nsec) {
+		verbose(VERB_ALGO, "CNAMEnoanswer response failed to prove "
+			"status with NSEC/NSEC3");
+		if(verbosity >= VERB_ALGO)
+			log_dns_msg("Failed CNAMEnoanswer", qchase, chase_reply);
+		chase_reply->security = sec_status_bogus;
+		return;
+	}
+
+	if(nodata_valid_nsec)
+		verbose(VERB_ALGO, "successfully validated CNAME to a "
+			"NODATA response.");
+	else	verbose(VERB_ALGO, "successfully validated CNAME to a "
+			"NAMEERROR response.");
+	chase_reply->security = sec_status_secure;
+}
+
 /** 
  * Process init state for validator.
  * Process the INIT state. First tier responses start in the INIT state.
@@ -672,12 +947,9 @@ processInit(struct module_qstate* qstate, struct val_qstate* vq,
 {
 	uint8_t* lookup_name;
 	size_t lookup_len;
-	if(!needs_validation(qstate, vq)) {
-		qstate->return_rcode = LDNS_RCODE_NOERROR;
-		qstate->return_msg = vq->orig_msg;
-		qstate->ext_state[id] = module_finished;
-		return 0;
-	}
+	enum val_classification subtype = val_classify_response(&vq->qchase, 
+		vq->orig_msg->rep, vq->cname_skip);
+
 	vq->trust_anchor = anchors_lookup(ve->anchors, vq->qchase.qname,
 		vq->qchase.qname_len, vq->qchase.qclass);
 	if(vq->trust_anchor == NULL) {
@@ -689,14 +961,22 @@ processInit(struct module_qstate* qstate, struct val_qstate* vq,
 	}
 
 	/* Determine the signer/lookup name */
-	val_find_signer(&vq->qchase, vq->chase_reply, 
-		&vq->signer_name, &vq->signer_len);
+	val_find_signer(subtype, &vq->qchase, vq->orig_msg->rep, 
+		vq->cname_skip, &vq->signer_name, &vq->signer_len);
 	if(vq->signer_name == NULL) {
 		lookup_name = vq->qchase.qname;
 		lookup_len = vq->qchase.qname_len;
 	} else {
 		lookup_name = vq->signer_name;
 		lookup_len = vq->signer_len;
+	}
+
+	if(vq->cname_skip > 0 || subtype == VAL_CLASS_CNAME) {
+		/* extract this part of orig_msg into chase_reply for
+		 * the eventual VALIDATE stage */
+		val_fill_reply(vq->chase_reply, vq->orig_msg->rep, 
+			vq->cname_skip, lookup_name, lookup_len);
+		log_dns_msg("chased extract", &vq->qchase, vq->chase_reply);
 	}
 
 	vq->key_entry = key_cache_obtain(ve->kcache, lookup_name, lookup_len,
@@ -877,7 +1157,8 @@ processValidate(struct module_qstate* qstate, struct val_qstate* vq,
 		return 1;
 	}
 
-	subtype = val_classify_response(&vq->qchase, vq->chase_reply);
+	subtype = val_classify_response(&vq->qchase, vq->orig_msg->rep, 
+		vq->cname_skip);
 	switch(subtype) {
 		case VAL_CLASS_POSITIVE:
 			verbose(VERB_ALGO, "Validating a positive response");
@@ -899,10 +1180,28 @@ processValidate(struct module_qstate* qstate, struct val_qstate* vq,
 
 		case VAL_CLASS_CNAME:
 			verbose(VERB_ALGO, "Validating a cname response");
+			validate_cname_response(qstate->env, ve,
+				&vq->qchase, vq->chase_reply, vq->key_entry);
 			/*
 			 * TODO special CNAME state or routines 
+			 * validate CNAME + wildcard NSEC or DNAME.
+			 * reject wildcarded DNAMEs.
 			validate_cname_response(vq->qchase, vq->chase_reply,
 				vq->key_entry);
+			*/
+			break;
+
+		case VAL_CLASS_CNAMENOANSWER:
+			verbose(VERB_ALGO, "Validating a cname noanswer "
+				"response");
+			validate_cname_noanswer_response(qstate->env, ve,
+				&vq->qchase, vq->chase_reply, vq->key_entry);
+			/*
+			 * TODO special CNAME state or routines 
+			 * see if nodata or noerror can be proven.
+			 * but not both.
+			validate_cnamenoanswer_response(vq->qchase, 
+				vq->chase_reply, vq->key_entry);
 			*/
 			break;
 
@@ -935,21 +1234,56 @@ static int
 processFinished(struct module_qstate* qstate, struct val_qstate* vq, 
 	struct val_env* ve, int id)
 {
-	/* TODO CNAME query restarts */
+	enum val_classification subtype = val_classify_response(&vq->qchase, 
+		vq->orig_msg->rep, vq->cname_skip);
+
+	/* store overall validation result in orig_msg */
+	if(vq->cname_skip == 0)
+		vq->orig_msg->rep->security = vq->chase_reply->security;
+	else {
+		/* use the lowest security status as end result. */
+		if(vq->chase_reply->security < vq->orig_msg->rep->security)
+			vq->orig_msg->rep->security = 
+				vq->chase_reply->security;
+	}
+
+	if(vq->chase_reply->security != sec_status_bogus &&
+		subtype == VAL_CLASS_CNAME) {
+		/* chase the CNAME; process next part of the message */
+		if(!val_chase_cname(&vq->qchase, vq->orig_msg->rep, 
+			&vq->cname_skip)) {
+			verbose(VERB_ALGO, "validator: failed to chase CNAME");
+			vq->orig_msg->rep->security = sec_status_bogus;
+		} else {
+			/* restart process for new qchase at cname_skip */
+			log_query_info(VERB_DETAIL, "validator: chased to",
+				&vq->qchase);
+			vq->chase_reply->security = sec_status_unchecked;
+			vq->state = VAL_INIT_STATE;
+			return 1;
+		}
+	}
+
+	if(vq->orig_msg->rep->security == sec_status_secure) {
+		/* Do not store the validated status of the dropped RRsets.
+		 * (only secure is reused). These rrsets are apparantly
+		 * added on maliciously, or are unsigned additional data */
+		val_dump_nonsecure(vq->orig_msg->rep);
+	}
 
 	/* if the result is bogus - set message ttl to bogus ttl to avoid
 	 * endless bogus revalidation */
-	if(vq->chase_reply->security == sec_status_bogus) {
-		vq->chase_reply->ttl = time(0) + ve->bogus_ttl;
+	if(vq->orig_msg->rep->security == sec_status_bogus) {
+		vq->orig_msg->rep->ttl = time(0) + ve->bogus_ttl;
 	}
 
 	/* store results in cache */
-	if(!dns_cache_store(qstate->env, &vq->qchase, vq->chase_reply, 0)) {
+	if(!dns_cache_store(qstate->env, &vq->orig_msg->qinfo, 
+		vq->orig_msg->rep, 0)) {
 		log_err("out of memory caching validator results");
 	}
 	qstate->return_rcode = LDNS_RCODE_NOERROR;
 	qstate->return_msg = vq->orig_msg;
-	qstate->return_msg->rep = vq->chase_reply;
 	qstate->ext_state[id] = module_finished;
 	return 0;
 }
@@ -1019,16 +1353,9 @@ val_operate(struct module_qstate* qstate, enum module_ev event, int id,
 	if(event == module_event_moddone) {
 		/* check if validation is needed */
 		verbose(VERB_ALGO, "validator: nextmodule returned");
-		if(qstate->return_rcode != LDNS_RCODE_NOERROR && 
-			qstate->return_rcode != LDNS_RCODE_NXDOMAIN &&
-			qstate->return_rcode != LDNS_RCODE_YXDOMAIN) {
-			verbose(VERB_ALGO, "rcode for error not validated");
-			qstate->ext_state[id] = module_finished;
-			return;
-		}
-		if(qstate->query_flags & BIT_CD) {
+		if(!needs_validation(qstate, qstate->return_rcode, 
+			qstate->return_msg)) {
 			/* no need to validate this */
-			verbose(VERB_ALGO, "CD bit set: query not validated");
 			qstate->ext_state[id] = module_finished;
 			return;
 		}
@@ -1175,7 +1502,7 @@ ds_response_to_ke(struct module_qstate* qstate, struct val_qstate* vq,
 		goto return_bogus;
 	}
 
-	subtype = val_classify_response(qinfo, msg->rep);
+	subtype = val_classify_response(qinfo, msg->rep, 0);
 	if(subtype == VAL_CLASS_POSITIVE) {
 		struct ub_packed_rrset_key* ds;
 		enum sec_status sec;

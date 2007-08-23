@@ -113,9 +113,20 @@ struct val_qstate {
 	 * The chased reply, extract from original message. Can be:
 	 * 	o CNAME
 	 * 	o DNAME + CNAME
-	 * 	o answer plus authority, additional (nsecs).
+	 * 	o answer 
+	 * 	plus authority, additional (nsecs) that have same signature.
 	 */
 	struct reply_info* chase_reply;
+
+	/**
+	 * The cname skip value; the number of rrsets that have been skipped
+	 * due to chasing cnames. This is the offset into the 
+	 * orig_msg->rep->rrsets array, into the answer section.
+	 * starts at 0 - for the full original message.
+	 * if it is >0 - qchase followed the cname, chase_reply setup to be
+	 * that message and relevant authority rrsets.
+	 */
+	size_t cname_skip;
 
 	/** the trust anchor rrset */
 	struct trust_anchor* trust_anchor;

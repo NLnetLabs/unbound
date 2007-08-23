@@ -1,3 +1,12 @@
+23 August 2007: Wouter
+	- CNAME handling - move needs_validation to before val_new().
+	  val_new() setups the chase-reply to be an edited copy of the msg.
+	  new classification, and find signer can find for it. 
+	  removal of unsigned crap from additional, and query restart for
+	  cname.
+	- refuse to follow wildcarded DNAMEs when validating.
+	  But you can query for qtype ANY, or qtype DNAME and validate that.
+
 22 August 2007: Wouter
 	- bogus TTL.
 	- review - use val_error().

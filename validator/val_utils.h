@@ -66,32 +66,42 @@ enum val_classification {
 	VAL_CLASS_NODATA,
 	/** A NXDOMAIN response. */
 	VAL_CLASS_NAMEERROR,
+	/** A CNAME/DNAME chain, and the offset is at the end of it,
+	 * but there is no answer here, it can be NAMERROR or NODATA. */
+	VAL_CLASS_CNAMENOANSWER,
 	/** A response to a qtype=ANY query. */
 	VAL_CLASS_ANY
 };
 
 /**
  * Given a response, classify ANSWER responses into a subtype.
- * @param qinf: query info
- * @param rep: response
- * @return A subtype ranging from UNKNOWN to NAMEERROR.
+ * @param qinf: query info. The chased query name.
+ * @param rep: response. The original response.
+ * @param skip: offset into the original response answer section.
+ * @return A subtype, all values possible except UNTYPED .
+ * 	Once CNAME type is returned you can increase skip.
+ * 	Then, another CNAME type, CNAME_NOANSWER or POSITIVE are possible.
  */
 enum val_classification val_classify_response(struct query_info* qinf,
-	struct reply_info* rep);
+	struct reply_info* rep, size_t skip);
 
 /**
  * Given a response, determine the name of the "signer". This is primarily
  * to determine if the response is, in fact, signed at all, and, if so, what
  * is the name of the most pertinent keyset.
  *
- * @param qinf: query
- * @param rep: response to that
+ * @param subtype: the type from classify.
+ * @param qinf: query, the chased query name.
+ * @param rep: response to that, original response.
+ * @param cname_skip: how many answer rrsets have been skipped due to CNAME
+ * 	chains being chased around.
  * @param signer_name:  signer name, if the response is signed 
  * 	(even partially), or null if the response isn't signed.
  * @param signer_len: length of signer_name of 0 if signer_name is NULL.
  */
-void val_find_signer(struct query_info* qinf, struct reply_info* rep,
-	uint8_t** signer_name, size_t* signer_len);
+void val_find_signer(enum val_classification subtype, 
+	struct query_info* qinf, struct reply_info* rep,
+	size_t cname_skip, uint8_t** signer_name, size_t* signer_len);
 
 /**
  * Verify RRset with keys
@@ -168,5 +178,40 @@ int val_dsset_isusable(struct ub_packed_rrset_key* ds_rrset);
  * 	signature anyway.
  */
 int val_rrset_wildcard(struct ub_packed_rrset_key* rrset, uint8_t** wc);
+
+/**
+ * Chase the cname to the next query name.
+ * @param qchase: the current query name, updated to next target.
+ * @param rep: original message reply to look at CNAMEs.
+ * @param cname_skip: the skip into the answer section. Updated to skip
+ * 	DNAME and CNAME to the next part of the answer.
+ * @return false on error (bad rdata).
+ */
+int val_chase_cname(struct query_info* qchase, struct reply_info* rep,
+	size_t* cname_skip);
+
+/**
+ * Fill up the chased reply with the content from the original reply;
+ * as pointers to those rrsets. Select the part after the cname_skip into
+ * the answer section, NS and AR sections that are signed with same signer.
+ *
+ * @param chase: chased reply, filled up.
+ * @param orig: original reply.
+ * @param cname_skip: which part of the answer section to skip.
+ * 	The skipped part contains CNAME(and DNAME)s that have been chased.
+ * @param name: the signer name to look for.
+ * @param len: length of name.
+ */
+void val_fill_reply(struct reply_info* chase, struct reply_info* orig, 
+	size_t cname_skip, uint8_t* name, size_t len);
+
+/**
+ * Remove all unsigned or non-secure status rrsets from NS and AR sections.
+ * So that unsigned data does not get let through to clients, when we have
+ * found the data to be secure.
+ *
+ * @param rep: reply to dump all nonsecure stuff out of.
+ */
+void val_dump_nonsecure(struct reply_info* rep);
 
 #endif /* VALIDATOR_VAL_UTILS_H */

@@ -49,7 +49,8 @@
 #include "util/net_help.h"
 
 enum val_classification 
-val_classify_response(struct query_info* qinf, struct reply_info* rep)
+val_classify_response(struct query_info* qinf, struct reply_info* rep, 
+	size_t skip)
 {
 	int rcode = (int)FLAGS_GET_RCODE(rep->flags);
 	size_t i;
@@ -60,6 +61,10 @@ val_classify_response(struct query_info* qinf, struct reply_info* rep)
 		return VAL_CLASS_NAMEERROR;
 
 	log_assert(rcode == LDNS_RCODE_NOERROR);
+	/* next check if the skip into the answer section shows no answer */
+	if(skip>0 && rep->an_numrrsets <= skip)
+		return VAL_CLASS_CNAMENOANSWER;
+
 	/* Next is NODATA */
 	if(rep->an_numrrsets == 0)
 		return VAL_CLASS_NODATA;
@@ -74,7 +79,7 @@ val_classify_response(struct query_info* qinf, struct reply_info* rep)
 	
 	/* Note that DNAMEs will be ignored here, unless qtype=DNAME. Unless
 	 * qtype=CNAME, this will yield a CNAME response. */
-	for(i=0; i<rep->an_numrrsets; i++) {
+	for(i=skip; i<rep->an_numrrsets; i++) {
 		if(ntohs(rep->rrsets[i]->rk.type) == qinf->qtype)
 			return VAL_CLASS_POSITIVE;
 		if(ntohs(rep->rrsets[i]->rk.type) == LDNS_RR_TYPE_CNAME)
@@ -135,17 +140,57 @@ val_find_rrset_signer(struct ub_packed_rrset_key* rrset, uint8_t** sname,
 		sname, slen);
 }
 
-void 
-val_find_signer(struct query_info* qinf, struct reply_info* rep,
-	uint8_t** signer_name, size_t* signer_len)
+/**
+ * Find best signer name in this set of rrsigs.
+ * @param rrset: which rrsigs to look through.
+ * @param qinf: the query name that needs validation.
+ * @param signer_name: the best signer_name. Updated if a better one is found.
+ * @param signer_len: length of signer name.
+ * @param matchcount: count of current best name (starts at 0 for no match).
+ * 	Updated if match is improved.
+ */
+static void
+val_find_best_signer(struct ub_packed_rrset_key* rrset, 
+	struct query_info* qinf, uint8_t** signer_name, size_t* signer_len, 
+	int* matchcount)
 {
-	enum val_classification subtype = val_classify_response(qinf, rep);
+	struct packed_rrset_data* d = (struct packed_rrset_data*)
+		rrset->entry.data;
+	uint8_t* sign;
+	size_t i;
+	int m;
+	for(i=d->count; i<d->count+d->rrsig_count; i++) {
+		sign = d->rr_data[i]+2+18;
+		/* look at signatures that are valid (long enough),
+		 * and have a signer name that is a superdomain of qname,
+		 * and then check the number of labels in the shared topdomain
+		 * improve the match if possible */
+		if(d->rr_len[i] > 2+19 && /* rdata, sig + root label*/
+			dname_subdomain_c(qinf->qname, sign)) {
+			(void)dname_lab_cmp(qinf->qname, 
+				dname_count_labels(qinf->qname), 
+				sign, dname_count_labels(sign), &m);
+			if(m > *matchcount) {
+				*matchcount = m;
+				*signer_name = sign;
+				(void)dname_count_size_labels(*signer_name,
+					signer_len);
+			}
+		}
+	}
+}
+
+void 
+val_find_signer(enum val_classification subtype, struct query_info* qinf, 
+	struct reply_info* rep, size_t cname_skip, uint8_t** signer_name, 
+	size_t* signer_len)
+{
 	size_t i;
 	
 	if(subtype == VAL_CLASS_POSITIVE || subtype == VAL_CLASS_CNAME 
 		|| subtype == VAL_CLASS_ANY) {
 		/* check for the answer rrset */
-		for(i=0; i<rep->an_numrrsets; i++) {
+		for(i=cname_skip; i<rep->an_numrrsets; i++) {
 			if(query_dname_compare(qinf->qname, 
 				rep->rrsets[i]->rk.dname) == 0) {
 				val_find_rrset_signer(rep->rrsets[i], 
@@ -166,6 +211,21 @@ val_find_signer(struct query_info* qinf, struct reply_info* rep,
 				val_find_rrset_signer(rep->rrsets[i], 
 					signer_name, signer_len);
 				return;
+			}
+		}
+	} else if(subtype == VAL_CLASS_CNAMENOANSWER) {
+		/* find closest superdomain signer name in authority section
+		 * NSEC and NSEC3s */
+		int matchcount = 0;
+		*signer_name = NULL;
+		*signer_len = 0;
+		for(i=rep->an_numrrsets; i<rep->an_numrrsets+rep->
+			ns_numrrsets; i++) { 
+			if(ntohs(rep->rrsets[i]->rk.type) == LDNS_RR_TYPE_NSEC
+				|| ntohs(rep->rrsets[i]->rk.type) == 
+				LDNS_RR_TYPE_NSEC3) {
+				val_find_best_signer(rep->rrsets[i], qinf,
+					signer_name, signer_len, &matchcount);
 			}
 		}
 	} else {
@@ -407,4 +467,121 @@ val_rrset_wildcard(struct ub_packed_rrset_key* rrset, uint8_t** wc)
 	}
 	*wc = NULL;
 	return 1;
+}
+
+int
+val_chase_cname(struct query_info* qchase, struct reply_info* rep,
+	size_t* cname_skip) {
+	size_t i;
+	/* skip any DNAMEs, go to the CNAME for next part */
+	for(i = *cname_skip; i < rep->an_numrrsets; i++) {
+		if(ntohs(rep->rrsets[i]->rk.type) == LDNS_RR_TYPE_CNAME &&
+			query_dname_compare(qchase->qname, rep->rrsets[i]->
+				rk.dname) == 0) {
+			qchase->qname = NULL;
+			get_cname_target(rep->rrsets[i], &qchase->qname,
+				&qchase->qname_len);
+			if(!qchase->qname)
+				return 0; /* bad CNAME rdata */
+			(*cname_skip) = i;
+			return 1;
+		}
+	}
+	return 0; /* CNAME classified but no matching CNAME ?! */
+}
+
+/** see if rrset has signer name as one of the rrsig signers */
+static int
+rrset_has_signer(struct ub_packed_rrset_key* rrset, uint8_t* name, size_t len)
+{
+	struct packed_rrset_data* d = (struct packed_rrset_data*)rrset->
+		entry.data;
+	size_t i;
+	for(i = d->count; i< d->count+d->rrsig_count; i++) {
+		if(d->rr_len[i] > 2+18+len) {
+			/* at least rdatalen + signature + signame (+1 sig)*/
+			if(query_dname_compare(name, d->rr_data[i]+2+18) == 0)
+			{
+				return 1;
+			}
+		}
+	}
+	return 0;
+}
+
+void 
+val_fill_reply(struct reply_info* chase, struct reply_info* orig, 
+	size_t cname_skip, uint8_t* name, size_t len)
+{
+	/* unsigned RRsets are never copied, but should not happen in 
+	 * secure answers anyway. Except for the synthesized CNAME after 
+	 * a DNAME. */
+	size_t i;
+	int seen_dname = 0;
+	chase->rrset_count = 0;
+	chase->an_numrrsets = 0;
+	chase->ns_numrrsets = 0;
+	chase->ar_numrrsets = 0;
+	/* ANSWER section */
+	for(i=cname_skip; i<orig->an_numrrsets; i++) {
+		if(seen_dname && ntohs(orig->rrsets[i]->rk.type) == 
+			LDNS_RR_TYPE_CNAME) {
+			chase->rrsets[chase->an_numrrsets++] = orig->rrsets[i];
+			seen_dname = 0;
+		} else if(rrset_has_signer(orig->rrsets[i], name, len)) {
+			chase->rrsets[chase->an_numrrsets++] = orig->rrsets[i];
+			if(ntohs(orig->rrsets[i]->rk.type) == 
+				LDNS_RR_TYPE_DNAME) {
+					seen_dname = 1;
+			}
+		}
+	}	
+	/* AUTHORITY section */
+	for(i=orig->an_numrrsets; i<orig->an_numrrsets+orig->ns_numrrsets; 
+		i++) {
+		if(rrset_has_signer(orig->rrsets[i], name, len)) {
+			chase->rrsets[chase->an_numrrsets+
+				chase->ns_numrrsets++] = orig->rrsets[i];
+		}
+	}
+	/* ADDITIONAL section */
+	for(i=orig->an_numrrsets+orig->ns_numrrsets; i<orig->rrset_count; 
+		i++) {
+		if(rrset_has_signer(orig->rrsets[i], name, len)) {
+			chase->rrsets[chase->an_numrrsets+orig->ns_numrrsets+
+				chase->ar_numrrsets++] = orig->rrsets[i];
+		}
+	}
+	chase->rrset_count = chase->an_numrrsets + chase->ns_numrrsets + 
+		chase->ar_numrrsets;
+}
+
+void
+val_dump_nonsecure(struct reply_info* rep) 
+{
+	size_t i;
+	/* authority */
+	for(i=rep->an_numrrsets; i<rep->an_numrrsets+rep->ns_numrrsets; i++) {
+		if(((struct packed_rrset_data*)rep->rrsets[i]->entry.data)
+			->security != sec_status_secure) {
+			/* remove this unsigned/bogus/unneeded rrset */
+			memmove(rep->rrsets+i, rep->rrsets+i+1, 
+				sizeof(struct ub_packed_rrset_key*)*
+				(rep->rrset_count - i - 1));
+			rep->ns_numrrsets--;
+			rep->rrset_count--;
+		}
+	}
+	/* additional */
+	for(i=rep->an_numrrsets+rep->ns_numrrsets; i<rep->rrset_count; i++) {
+		if(((struct packed_rrset_data*)rep->rrsets[i]->entry.data)
+			->security != sec_status_secure) {
+			/* remove this unsigned/bogus/unneeded rrset */
+			memmove(rep->rrsets+i, rep->rrsets+i+1, 
+				sizeof(struct ub_packed_rrset_key*)*
+				(rep->rrset_count - i - 1));
+			rep->ar_numrrsets--;
+			rep->rrset_count--;
+		}
+	}
 }
