@@ -5,6 +5,10 @@
 	  routine. This makes the proof routines prettier.
 	- fixup cname handling in validator, cname-to-positive and cname-to-
 	  nodata work.
+	- Do not synthesize DNSKEY and DS responses from the rrset cache if
+	  the rrset is from the additional section. Signatures may have
+	  fallen off the packet, and cause validation failure.
+	- more verbose signature date errors (with the date attached).
 
 23 August 2007: Wouter
 	- CNAME handling - move needs_validation to before val_new().

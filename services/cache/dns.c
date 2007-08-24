@@ -588,10 +588,22 @@ dns_cache_lookup(struct module_env* env,
 	if((qtype == LDNS_RR_TYPE_DS || qtype == LDNS_RR_TYPE_DNSKEY) &&
 		(rrset=rrset_cache_lookup(env->rrset_cache, qname, qnamelen, 
 		qtype, qclass, 0, now, 0))) {
-		struct dns_msg* msg = rrset_msg(rrset, region, now, &k);
-		if(msg) {
-			lock_rw_unlock(&rrset->entry.lock);
-			return msg;
+		/* if the rrset is from the additional section, and the
+		 * signatures have fallen off, then do not synthesize a msg
+		 * instead, allow a full query for signed results to happen.
+		 * Forego all rrset data from additional section, because
+		 * some signatures may not be present and cause validation
+		 * failure.
+		 */
+		struct packed_rrset_data *d = (struct packed_rrset_data*)
+			rrset->entry.data;
+		if(d->trust != rrset_trust_add_noAA && 
+			d->trust != rrset_trust_add_AA) {
+			struct dns_msg* msg = rrset_msg(rrset, region, now, &k);
+			if(msg) {
+				lock_rw_unlock(&rrset->entry.lock);
+				return msg;
+			}
 		}
 		lock_rw_unlock(&rrset->entry.lock);
 	}

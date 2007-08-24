@@ -1011,6 +1011,32 @@ rrset_canonical(struct region* region, ldns_buffer* buf,
 	return 1;
 }
 
+/** pretty print rrsig error with dates */
+static void
+sigdate_error(const char* str, int32_t expi, int32_t incep, int32_t now)
+{
+	struct tm tm;
+	char expi_buf[16];
+	char incep_buf[16];
+	char now_buf[16];
+	time_t te, ti, tn;
+
+	if(verbosity < VERB_ALGO)
+		return;
+	te = (time_t)expi;
+	ti = (time_t)incep;
+	tn = (time_t)now;
+	memset(&tm, 0, sizeof(tm));
+	if(gmtime_r(&te, &tm) && strftime(expi_buf, 15, "%Y%m%d%H%M%S", &tm)
+	 &&gmtime_r(&ti, &tm) && strftime(incep_buf, 15, "%Y%m%d%H%M%S", &tm)
+	 &&gmtime_r(&tn, &tm) && strftime(now_buf, 15, "%Y%m%d%H%M%S", &tm)) {
+		log_info("%s expi=%s incep=%s now=%s", str, expi_buf, 
+			incep_buf, now_buf);
+	} else
+		log_info("%s expi=%u incep=%u now=%u", str, (unsigned)expi, 
+			(unsigned)incep, (unsigned)now);
+}
+
 /** check rrsig dates */
 static int
 check_dates(struct val_env* ve, uint8_t* expi_p, uint8_t* incep_p)
@@ -1030,17 +1056,17 @@ check_dates(struct val_env* ve, uint8_t* expi_p, uint8_t* incep_p)
 
 	/* check them */
 	if(incep - expi > 0) {
-		verbose(VERB_ALGO, "verify: inception after expiration, "
-			"signature bad");
+		sigdate_error("verify: inception after expiration, "
+			"signature bad", expi, incep, now);
 		return 0;
 	}
 	if(incep - now > 0) {
-		verbose(VERB_ALGO, "verify: signature bad, current time is"
-			" before inception date");
+		sigdate_error("verify: signature bad, current time is"
+			" before inception date", expi, incep, now);
 		return 0;
 	}
 	if(now - expi > 0) {
-		verbose(VERB_ALGO, "verify: signature expired");
+		sigdate_error("verify: signature expired", expi, incep, now);
 		return 0;
 	}
 	return 1;
