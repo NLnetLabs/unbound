@@ -1,6 +1,8 @@
 24 August 2007: Wouter
 	- message is bogus if unsecure authority rrsets are present.
 	- val-clean-additional option, so you can turn it off.
+	- move rrset verification out of the specific proof types into one
+	  routine. This makes the proof routines prettier.
 
 23 August 2007: Wouter
 	- CNAME handling - move needs_validation to before val_new().

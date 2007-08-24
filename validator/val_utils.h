@@ -167,8 +167,8 @@ int val_dsset_isusable(struct ub_packed_rrset_key* ds_rrset);
  * 
  * @param rrset The rrset to chedck.
  * @param wc: the wildcard name, if the rrset was synthesized from a wildcard.
- *         null if not. The wildcard name, without "*." in front, is returned.
- *         This is a pointer into the rrset owner name.
+ *         unchanged if not.  The wildcard name, without "*." in front, is 
+ *         returned. This is a pointer into the rrset owner name.
  * @return false if the signatures are inconsistent in indicating the 
  * 	wildcard status; possible spoofing of wildcard response for other
  * 	responses is being tried. We lost the status which rrsig was verified

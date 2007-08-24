@@ -443,14 +443,12 @@ val_rrset_wildcard(struct ub_packed_rrset_key* rrset, uint8_t** wc)
 	int labdiff;
 	size_t i;
 	if(d->rrsig_count == 0) {
-		*wc = NULL;
-		return 0;
+		return 1;
 	}
 	labcount = rrsig_get_labcount(d, d->count + 0);
 	/* check rest of signatures identical */
 	for(i=1; i<d->rrsig_count; i++) {
 		if(labcount != rrsig_get_labcount(d, d->count + i)) {
-			*wc = NULL;
 			return 0;
 		}
 	}
@@ -465,7 +463,6 @@ val_rrset_wildcard(struct ub_packed_rrset_key* rrset, uint8_t** wc)
 		dname_remove_labels(wc, &wl, labdiff);
 		return 1;
 	}
-	*wc = NULL;
 	return 1;
 }
 
