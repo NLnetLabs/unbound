@@ -87,7 +87,7 @@ config_create()
 	cfg->lame_ttl = 900;
 	cfg->bogus_ttl = 900;
 	cfg->infra_cache_slabs = 4;
-	cfg->infra_cache_numhosts = 1000;
+	cfg->infra_cache_numhosts = 10000;
 	cfg->infra_cache_numlame = 1000;
 	cfg->val_clean_additional = 1;
 	if(!(cfg->username = strdup(""))) goto error_exit;

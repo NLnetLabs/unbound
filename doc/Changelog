@@ -9,6 +9,9 @@
 	  the rrset is from the additional section. Signatures may have
 	  fallen off the packet, and cause validation failure.
 	- more verbose signature date errors (with the date attached).
+	- increased default infrastructure cache size. It is important for
+	  performance, and 1000 entries are only 212k (or a 400 k total cache
+	  size). To 10000 entries (for 2M entries, 4M cache size).
 
 23 August 2007: Wouter
 	- CNAME handling - move needs_validation to before val_new().
