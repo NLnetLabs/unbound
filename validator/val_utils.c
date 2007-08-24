@@ -480,7 +480,7 @@ val_chase_cname(struct query_info* qchase, struct reply_info* rep,
 				&qchase->qname_len);
 			if(!qchase->qname)
 				return 0; /* bad CNAME rdata */
-			(*cname_skip) = i;
+			(*cname_skip) = i+1;
 			return 1;
 		}
 	}
