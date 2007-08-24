@@ -1,3 +1,7 @@
+24 August 2007: Wouter
+	- message is bogus if unsecure authority rrsets are present.
+	- val-clean-additional option, so you can turn it off.
+
 23 August 2007: Wouter
 	- CNAME handling - move needs_validation to before val_new().
 	  val_new() setups the chase-reply to be an edited copy of the msg.

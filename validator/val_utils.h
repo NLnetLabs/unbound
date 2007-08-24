@@ -210,8 +210,9 @@ void val_fill_reply(struct reply_info* chase, struct reply_info* orig,
  * So that unsigned data does not get let through to clients, when we have
  * found the data to be secure.
  *
+ * @param ve: validator environment with cleaning options.
  * @param rep: reply to dump all nonsecure stuff out of.
  */
-void val_dump_nonsecure(struct reply_info* rep);
+void val_check_nonsecure(struct val_env* ve, struct reply_info* rep);
 
 #endif /* VALIDATOR_VAL_UTILS_H */

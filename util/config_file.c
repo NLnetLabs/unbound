@@ -89,6 +89,7 @@ config_create()
 	cfg->infra_cache_slabs = 4;
 	cfg->infra_cache_numhosts = 1000;
 	cfg->infra_cache_numlame = 1000;
+	cfg->val_clean_additional = 1;
 	if(!(cfg->username = strdup(""))) goto error_exit;
 	if(!(cfg->chrootdir = strdup(""))) goto error_exit;
 	if(!(cfg->directory = strdup("/etc/unbound"))) goto error_exit;

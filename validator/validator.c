@@ -59,6 +59,7 @@ static int
 val_apply_cfg(struct val_env* val_env, struct config_file* cfg)
 {
 	val_env->bogus_ttl = (uint32_t)cfg->bogus_ttl;
+	val_env->clean_additional = cfg->val_clean_additional;
 	if(!val_env->anchors)
 		val_env->anchors = anchors_create();
 	if(!val_env->anchors) {
@@ -1267,8 +1268,9 @@ processFinished(struct module_qstate* qstate, struct val_qstate* vq,
 	if(vq->orig_msg->rep->security == sec_status_secure) {
 		/* Do not store the validated status of the dropped RRsets.
 		 * (only secure is reused). These rrsets are apparantly
-		 * added on maliciously, or are unsigned additional data */
-		val_dump_nonsecure(vq->orig_msg->rep);
+		 * added on maliciously, or are unsigned additional data 
+		 * This may cause the message to become bogus. */
+		val_check_nonsecure(ve, vq->orig_msg->rep);
 	}
 
 	/* if the result is bogus - set message ttl to bogus ttl to avoid

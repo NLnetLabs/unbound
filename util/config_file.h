@@ -148,6 +148,8 @@ struct config_file {
 	int32_t val_date_override;
 	/** this value sets the number of seconds before revalidating bogus */
 	int bogus_ttl; 
+	/** should validator clean additional section for secure msgs */
+	int val_clean_additional;
 
 	/** daemonize, i.e. fork into the background. */
 	int do_daemonize;

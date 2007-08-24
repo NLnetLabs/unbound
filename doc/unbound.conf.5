@@ -209,6 +209,12 @@ The time to live for bogus data. This is data that has failed validation;
 due to invalid signatures or other checks. The TTL from that data cannot be
 trusted, and this value is used instead. The value is in seconds, default 900.
 The time interval prevents repeated revalidation of bogus data.
+.It \fBval-clean-additional:\fR <yes or no>
+Instruct the validator to remove data from the additional section of secure
+messages that are not signed properly. Messages that are insecure, bogus,
+indeterminate or unchecked are not affected. Default is yes. Use this setting
+to protect the users that rely on this validator for authentication from 
+protentially bad data in the additional section.
 .El
 
 .Ss Stub Zone Options

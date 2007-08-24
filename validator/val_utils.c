@@ -557,26 +557,41 @@ val_fill_reply(struct reply_info* chase, struct reply_info* orig,
 }
 
 void
-val_dump_nonsecure(struct reply_info* rep) 
+val_check_nonsecure(struct val_env* ve, struct reply_info* rep) 
 {
 	size_t i;
 	/* authority */
 	for(i=rep->an_numrrsets; i<rep->an_numrrsets+rep->ns_numrrsets; i++) {
 		if(((struct packed_rrset_data*)rep->rrsets[i]->entry.data)
 			->security != sec_status_secure) {
-			/* remove this unsigned/bogus/unneeded rrset */
-			memmove(rep->rrsets+i, rep->rrsets+i+1, 
-				sizeof(struct ub_packed_rrset_key*)*
-				(rep->rrset_count - i - 1));
-			rep->ns_numrrsets--;
-			rep->rrset_count--;
+			/* because we want to return the authentic original
+			 * message when presented with CD-flagged queries,
+			 * we need to preserve AUTHORITY section data.
+			 * However, this rrset is not signed or signed
+			 * with the wrong keys. Validation has tried to
+			 * verify this rrset with the keysets of import.
+			 * But this rrset did not verify.
+			 * Therefore the message is bogus.
+			 */
+			rep->security = sec_status_bogus;
+			return;
 		}
 	}
 	/* additional */
+	if(!ve->clean_additional)
+		return;
 	for(i=rep->an_numrrsets+rep->ns_numrrsets; i<rep->rrset_count; i++) {
 		if(((struct packed_rrset_data*)rep->rrsets[i]->entry.data)
 			->security != sec_status_secure) {
-			/* remove this unsigned/bogus/unneeded rrset */
+			/* This does not cause message invalidation. It was
+			 * simply unsigned data in the additional. The
+			 * RRSIG must have been truncated off the message.
+			 *
+			 * However, we do not want to return possible bogus
+			 * data to clients that rely on this service for
+			 * their authentication.
+			 */
+			/* remove this unneeded additional rrset */
 			memmove(rep->rrsets+i, rep->rrsets+i+1, 
 				sizeof(struct ub_packed_rrset_key*)*
 				(rep->rrset_count - i - 1));

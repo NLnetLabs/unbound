@@ -74,6 +74,11 @@ struct val_env {
 	 * Bogus data will not be verified more often than this interval. 
 	 * seconds. */
 	uint32_t bogus_ttl;
+
+	/** If set, the validator should clean the additional section of
+	 * secure messages.
+	 */
+	int clean_additional;
 };
 
 /**
