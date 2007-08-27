@@ -3,6 +3,9 @@
 	- answer norecursive from cache if possible.
 	- honor clean_additional setting when returning secure non-recursive
 	  referrals.
+	- do not store referral in msg cache for nonRD queries.
+	- store verification status in the rrset cache to speed up future
+	  verification.
 
 24 August 2007: Wouter
 	- message is bogus if unsecure authority rrsets are present.

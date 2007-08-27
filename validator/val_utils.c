@@ -43,10 +43,12 @@
 #include "validator/validator.h"
 #include "validator/val_kentry.h"
 #include "validator/val_sigcrypt.h"
+#include "services/cache/rrset.h"
 #include "util/data/msgreply.h"
 #include "util/data/packed_rrset.h"
 #include "util/data/dname.h"
 #include "util/net_help.h"
+#include "util/module.h"
 
 enum val_classification 
 val_classify_response(struct query_info* qinf, struct reply_info* rep, 
@@ -270,6 +272,14 @@ val_verify_rrset(struct module_env* env, struct val_env* ve,
 			ntohs(rrset->rk.rrset_class));
 		return d->security;
 	}
+	/* check in the cache if verification has already been done */
+	rrset_check_sec_status(env->rrset_cache, rrset);
+	if(d->security == sec_status_secure) {
+		log_nametypeclass(VERB_ALGO, "verify rrset from cache", 
+			rrset->rk.dname, ntohs(rrset->rk.type), 
+			ntohs(rrset->rk.rrset_class));
+		return d->security;
+	}
 	log_nametypeclass(VERB_ALGO, "verify rrset", rrset->rk.dname,
 		ntohs(rrset->rk.type), ntohs(rrset->rk.rrset_class));
 	sec = dnskeyset_verify_rrset(env, ve, rrset, keys);
@@ -284,10 +294,12 @@ val_verify_rrset(struct module_env* env, struct val_env* ve,
 			d->trust = rrset_trust_validated;
 		else if(sec == sec_status_bogus) {
 			/* update ttl for rrset to fixed value. */
-			d->ttl = time(0) + ve->bogus_ttl;
+			d->ttl = ve->bogus_ttl;
 			/* leave RR specific TTL: not used for determine
 			 * if RRset timed out and clients see proper value. */
 		}
+		/* if status updated - store in cache for reuse */
+		rrset_update_sec_status(env->rrset_cache, rrset);
 	}
 
 	return sec;

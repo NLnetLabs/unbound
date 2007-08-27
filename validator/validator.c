@@ -1163,10 +1163,11 @@ processFinished(struct module_qstate* qstate, struct val_qstate* vq,
 	}
 
 	if(vq->orig_msg->rep->security == sec_status_secure) {
-		/* Do not store the validated status of the dropped RRsets.
-		 * (only secure is reused). These rrsets are apparantly
-		 * added on maliciously, or are unsigned additional data 
-		 * This may cause the message to become bogus. */
+		/* If the message is secure, check that all rrsets are
+		 * secure (i.e. some inserted RRset for CNAME chain with
+		 * a different signer name). And drop additional rrsets
+		 * that are not secure (if clean-additional option is set) */
+		/* this may cause the msg to be marked bogus */
 		val_check_nonsecure(ve, vq->orig_msg->rep);
 	}
 
@@ -1177,9 +1178,11 @@ processFinished(struct module_qstate* qstate, struct val_qstate* vq,
 	}
 
 	/* store results in cache */
-	if(!dns_cache_store(qstate->env, &vq->orig_msg->qinfo, 
-		vq->orig_msg->rep, 0)) {
-		log_err("out of memory caching validator results");
+	if(qstate->query_flags&BIT_RD) {
+		if(!dns_cache_store(qstate->env, &vq->orig_msg->qinfo, 
+			vq->orig_msg->rep, 0)) {
+			log_err("out of memory caching validator results");
+		}
 	}
 	qstate->return_rcode = LDNS_RCODE_NOERROR;
 	qstate->return_msg = vq->orig_msg;

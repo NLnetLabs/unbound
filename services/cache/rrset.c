@@ -115,6 +115,10 @@ need_to_update_rrset(void* nd, void* cd, uint32_t timenow, int equal)
 {
 	struct packed_rrset_data* newd = (struct packed_rrset_data*)nd;
 	struct packed_rrset_data* cached = (struct packed_rrset_data*)cd;
+	/* 	o store if rrset has been validated */
+	if( newd->security > cached->security) {
+		return 1;
+	}
         /*      o if current RRset is more trustworthy - insert it */
         if( newd->trust > cached->trust ) {
 		/* if the cached rrset is bogus, and this one equal,
@@ -305,4 +309,59 @@ rrset_array_unlock_touch(struct rrset_cache* r, struct region* scratch,
 			rrset_cache_touch(r, ref[i].key, h[i], ref[i].id);
 		}
 	}
+}
+
+void 
+rrset_update_sec_status(struct rrset_cache* r, 
+	struct ub_packed_rrset_key* rrset)
+{
+	uint32_t now = (uint32_t)time(0);
+	struct packed_rrset_data* updata = 
+		(struct packed_rrset_data*)rrset->entry.data;
+	struct lruhash_entry* e;
+	struct packed_rrset_data* cachedata;
+
+	e = slabhash_lookup(&r->table, rrset->entry.hash, rrset, 1);
+	if(!e)
+		return; /* not in the cache anymore */
+	cachedata = (struct packed_rrset_data*)e->data;
+	if(!rrsetdata_equal(updata, cachedata)) {
+		lock_rw_unlock(&e->lock);
+		return; /* rrset has changed in the meantime */
+	}
+	/* update the cached rrset */
+	cachedata->trust = updata->trust;
+	cachedata->security = updata->security;
+	cachedata->ttl = updata->ttl + now;
+	lock_rw_unlock(&e->lock);
+}
+
+void 
+rrset_check_sec_status(struct rrset_cache* r, 
+	struct ub_packed_rrset_key* rrset)
+{
+	uint32_t now = (uint32_t)time(0);
+	struct packed_rrset_data* updata = 
+		(struct packed_rrset_data*)rrset->entry.data;
+	struct lruhash_entry* e;
+	struct packed_rrset_data* cachedata;
+
+	/* hash it again to make sure it has a hash */
+	rrset->entry.hash = rrset_key_hash(&rrset->rk);
+
+	e = slabhash_lookup(&r->table, rrset->entry.hash, rrset, 0);
+	if(!e)
+		return; /* not in the cache anymore */
+	cachedata = (struct packed_rrset_data*)e->data;
+	if(now > cachedata->ttl || !rrsetdata_equal(updata, cachedata)) {
+		lock_rw_unlock(&e->lock);
+		return; /* expired, or rrset has changed in the meantime */
+	}
+	if(cachedata->security > updata->security) {
+		updata->security = cachedata->security;
+		if(cachedata->security == sec_status_bogus)
+			updata->ttl = cachedata->ttl - now;
+		updata->trust = cachedata->trust;
+	}
+	lock_rw_unlock(&e->lock);
 }

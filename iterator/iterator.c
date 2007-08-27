@@ -1355,10 +1355,15 @@ processFinished(struct module_qstate* qstate, struct iter_qstate* iq,
 			log_err("prepend rrsets: out of memory");
 			return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
 		}
-		/* store message with the finished prepended items */
-		if(!iter_dns_store(qstate->env, &qstate->qinfo, 
-			iq->response->rep, 0))
-			return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
+		/* store message with the finished prepended items,
+		 * but only if we did recursion. The nonrecursion referral
+		 * from cache does not need to be stored in the msg cache. */
+		if(qstate->query_flags&BIT_RD) {
+			if(!iter_dns_store(qstate->env, &qstate->qinfo, 
+				iq->response->rep, 0))
+				return error_response(qstate, id, 
+					LDNS_RCODE_SERVFAIL);
+		}
 	}
 	if(query_dname_compare(qstate->qinfo.qname, 
 		iq->response->qinfo.qname) == 0) {

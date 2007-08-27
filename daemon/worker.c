@@ -314,13 +314,15 @@ check_delegation_secure(struct reply_info *rep)
 	size_t num = rep->an_numrrsets + rep->ns_numrrsets;
 	/* check if answer and authority are OK */
 	for(i=0; i<num; i++) {
-		s = ((struct packed_rrset_data*)rep->rrsets[i])->security;
+		s = ((struct packed_rrset_data*)rep->rrsets[i]->entry.data)
+			->security;
 		if(s < sec)
 			sec = s;
 	}
 	/* in additional, only unchecked triggers revalidation */
 	for(i=num; i<rep->rrset_count; i++) {
-		s = ((struct packed_rrset_data*)rep->rrsets[i])->security;
+		s = ((struct packed_rrset_data*)rep->rrsets[i]->entry.data)
+			->security;
 		if(s == sec_status_unchecked)
 			return s;
 	}
@@ -336,7 +338,8 @@ deleg_remove_nonsecure_additional(struct reply_info* rep)
 	enum sec_status s;
 
 	for(i = rep->an_numrrsets+rep->ns_numrrsets; i<rep->rrset_count; i++) {
-		s = ((struct packed_rrset_data*)rep->rrsets[i])->security;
+		s = ((struct packed_rrset_data*)rep->rrsets[i]->entry.data)
+			->security;
 		if(s != sec_status_secure) {
 			memmove(rep->rrsets+i, rep->rrsets+i+1, 
 				sizeof(struct ub_packed_rrset_key*)* 

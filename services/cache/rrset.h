@@ -184,4 +184,26 @@ void rrset_array_unlock(struct rrset_ref* ref, size_t count);
 void rrset_array_unlock_touch(struct rrset_cache* r, struct region* scratch,
 	struct rrset_ref* ref, size_t count);
 
+/**
+ * Update security status of an rrset. Looks up the rrset.
+ * If found, checks if rdata is equal.
+ * If so, it will update the security, trust and rrset-ttl values.
+ * @param r: the rrset cache. 
+ * @param rrset: which rrset to attempt to update. This rrset is left 
+ * 	untouched. The rrset in the cache is updated in-place.
+ */
+void rrset_update_sec_status(struct rrset_cache* r, 
+	struct ub_packed_rrset_key* rrset);
+
+/**
+ * Looks up security status of an rrset. Looks up the rrset.
+ * If found, checks if rdata is equal, and entry did not expire.
+ * If so, it will update the security, trust and rrset-ttl values.
+ * @param r: the rrset cache. 
+ * @param rrset: This rrset may change security status due to the cache.
+ * 	But its status will only improve, towards secure.
+ */
+void rrset_check_sec_status(struct rrset_cache* r, 
+	struct ub_packed_rrset_key* rrset);
+
 #endif /* SERVICES_CACHE_RRSET_H */
