@@ -188,6 +188,7 @@ void rrset_array_unlock_touch(struct rrset_cache* r, struct region* scratch,
  * Update security status of an rrset. Looks up the rrset.
  * If found, checks if rdata is equal.
  * If so, it will update the security, trust and rrset-ttl values.
+ * The values are only updated if security is increased (towards secure).
  * @param r: the rrset cache. 
  * @param rrset: which rrset to attempt to update. This rrset is left 
  * 	untouched. The rrset in the cache is updated in-place.

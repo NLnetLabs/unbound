@@ -321,6 +321,9 @@ rrset_update_sec_status(struct rrset_cache* r,
 	struct lruhash_entry* e;
 	struct packed_rrset_data* cachedata;
 
+	/* hash it again to make sure it has a hash */
+	rrset->entry.hash = rrset_key_hash(&rrset->rk);
+
 	e = slabhash_lookup(&r->table, rrset->entry.hash, rrset, 1);
 	if(!e)
 		return; /* not in the cache anymore */
@@ -330,9 +333,11 @@ rrset_update_sec_status(struct rrset_cache* r,
 		return; /* rrset has changed in the meantime */
 	}
 	/* update the cached rrset */
-	cachedata->trust = updata->trust;
-	cachedata->security = updata->security;
-	cachedata->ttl = updata->ttl + now;
+	if(updata->security > cachedata->security) {
+		cachedata->trust = updata->trust;
+		cachedata->security = updata->security;
+		cachedata->ttl = updata->ttl + now;
+	}
 	lock_rw_unlock(&e->lock);
 }
 

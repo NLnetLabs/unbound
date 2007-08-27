@@ -48,6 +48,8 @@ struct module_env;
 struct ub_packed_rrset_key;
 struct key_entry_key;
 struct region;
+struct val_anchors;
+struct rrset_cache;
 enum sec_status;
 
 /**
@@ -214,5 +216,26 @@ void val_fill_reply(struct reply_info* chase, struct reply_info* orig,
  * @param rep: reply to dump all nonsecure stuff out of.
  */
 void val_check_nonsecure(struct val_env* ve, struct reply_info* rep);
+
+/**
+ * Mark all unchecked rrset entries not below a trust anchor as indeterminate.
+ * Only security==unchecked rrsets are updated.
+ * @param rep: the reply with rrsets.
+ * @param anchors: the trust anchors.
+ * @param r: rrset cache to store updated security status into.
+ */
+void val_mark_indeterminate(struct reply_info* rep, 
+	struct val_anchors* anchors, struct rrset_cache* r);
+
+/**
+ * Mark all unchecked rrset entries below a NULL key entry as insecure.
+ * Only security==unchecked rrsets are updated.
+ * @param rep: the reply with rrsets.
+ * @param kkey: key entry, key_entry_isnull() for it. A key entry that marks
+ * 	the end of secure space into insecure space.
+ * @param r: rrset cache to store updated security status into.
+ */
+void val_mark_insecure(struct reply_info* rep, struct key_entry_key* kkey,
+	struct rrset_cache* r);
 
 #endif /* VALIDATOR_VAL_UTILS_H */

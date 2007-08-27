@@ -43,6 +43,7 @@
 #include "validator/validator.h"
 #include "validator/val_kentry.h"
 #include "validator/val_sigcrypt.h"
+#include "validator/val_anchor.h"
 #include "services/cache/rrset.h"
 #include "util/data/msgreply.h"
 #include "util/data/packed_rrset.h"
@@ -606,6 +607,44 @@ val_check_nonsecure(struct val_env* ve, struct reply_info* rep)
 				(rep->rrset_count - i - 1));
 			rep->ar_numrrsets--;
 			rep->rrset_count--;
+		}
+	}
+}
+
+void 
+val_mark_indeterminate(struct reply_info* rep, struct val_anchors* anchors, 
+	struct rrset_cache* r)
+{
+	size_t i;
+	struct packed_rrset_data* d;
+	for(i=0; i<rep->rrset_count; i++) {
+		d = (struct packed_rrset_data*)rep->rrsets[i]->entry.data;
+		if(d->security == sec_status_unchecked &&
+		   !anchors_lookup(anchors, rep->rrsets[i]->rk.dname,
+			rep->rrsets[i]->rk.dname_len, 
+			ntohs(rep->rrsets[i]->rk.rrset_class))) 
+		{ 	
+			/* mark as indeterminate */
+			d->security = sec_status_indeterminate;
+			rrset_update_sec_status(r, rep->rrsets[i]);
+		}
+	}
+}
+
+void 
+val_mark_insecure(struct reply_info* rep, struct key_entry_key* kkey,
+	struct rrset_cache* r)
+{
+	size_t i;
+	struct packed_rrset_data* d;
+	log_assert(key_entry_isnull(kkey));
+	for(i=0; i<rep->rrset_count; i++) {
+		d = (struct packed_rrset_data*)rep->rrsets[i]->entry.data;
+		if(d->security == sec_status_unchecked &&
+		   dname_subdomain_c(rep->rrsets[i]->rk.dname, kkey->name)) {
+			/* mark as insecure */
+			d->security = sec_status_insecure;
+			rrset_update_sec_status(r, rep->rrsets[i]);
 		}
 	}
 }

@@ -857,6 +857,8 @@ processInit(struct module_qstate* qstate, struct val_qstate* vq,
 	enum val_classification subtype = val_classify_response(&vq->qchase, 
 		vq->orig_msg->rep, vq->cname_skip);
 
+	val_mark_indeterminate(vq->chase_reply, ve->anchors, 
+		qstate->env->rrset_cache);
 	vq->trust_anchor = anchors_lookup(ve->anchors, vq->qchase.qname,
 		vq->qchase.qname_len, vq->qchase.qclass);
 	if(vq->trust_anchor == NULL) {
@@ -906,6 +908,8 @@ processInit(struct module_qstate* qstate, struct val_qstate* vq,
 		 * However, we do set the status to INSECURE, since it is 
 		 * essentially proven insecure. */
 		vq->chase_reply->security = sec_status_insecure;
+		val_mark_insecure(vq->chase_reply, vq->key_entry, 
+			qstate->env->rrset_cache);
 		/* go to finished state to cache this result */
 		vq->state = VAL_FINISHED_STATE;
 		return 1;
@@ -1042,6 +1046,8 @@ processValidate(struct module_qstate* qstate, struct val_qstate* vq,
 			verbose(VERB_ALGO, "Unsigned response was proven to "
 				"be validly INSECURE");
 			vq->chase_reply->security = sec_status_insecure;
+			val_mark_insecure(vq->chase_reply, vq->key_entry, 
+				qstate->env->rrset_cache);
 			return 1;
 		}
 		verbose(VERB_ALGO, "Could not establish validation of "
@@ -1061,6 +1067,8 @@ processValidate(struct module_qstate* qstate, struct val_qstate* vq,
 	if(key_entry_isnull(vq->key_entry)) {
 		verbose(VERB_ALGO, "Verified that response is INSECURE");
 		vq->chase_reply->security = sec_status_insecure;
+		val_mark_insecure(vq->chase_reply, vq->key_entry, 
+			qstate->env->rrset_cache);
 		return 1;
 	}
 

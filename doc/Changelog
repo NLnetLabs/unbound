@@ -6,6 +6,8 @@
 	- do not store referral in msg cache for nonRD queries.
 	- store verification status in the rrset cache to speed up future
 	  verification.
+	- mark rrsets indeterminate and insecure if they are found to be so.
+	  and store this in the cache.
 
 24 August 2007: Wouter
 	- message is bogus if unsecure authority rrsets are present.
