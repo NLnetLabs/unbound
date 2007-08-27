@@ -11,6 +11,7 @@ SCENARIO_BEGIN Old answer is dropped from the cache
 
 STEP 1 QUERY
 ENTRY_BEGIN
+	REPLY RD
 	SECTION QUESTION
 	www.example.com. IN A
 ENTRY_END
@@ -47,6 +48,7 @@ ENTRY_END
 ; another query to force the cache to drop the example.com entry.
 STEP 11 QUERY
 ENTRY_BEGIN
+	REPLY RD
 	SECTION QUESTION
 	www.example.net. IN A
 ENTRY_END
@@ -84,6 +86,7 @@ ENTRY_END
 ; query, same as first, but it fell out of the cache.
 STEP 21 QUERY
 ENTRY_BEGIN
+	REPLY RD
 	SECTION QUESTION
 	www.example.com. IN A
 ENTRY_END

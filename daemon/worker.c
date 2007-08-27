@@ -311,12 +311,40 @@ check_delegation_secure(struct reply_info *rep)
 	size_t i;
 	enum sec_status sec = sec_status_secure;
 	enum sec_status s;
-	for(i=0; i<rep->rrset_count; i++) {
+	size_t num = rep->an_numrrsets + rep->ns_numrrsets;
+	/* check if answer and authority are OK */
+	for(i=0; i<num; i++) {
 		s = ((struct packed_rrset_data*)rep->rrsets[i])->security;
 		if(s < sec)
 			sec = s;
 	}
+	/* in additional, only unchecked triggers revalidation */
+	for(i=num; i<rep->rrset_count; i++) {
+		s = ((struct packed_rrset_data*)rep->rrsets[i])->security;
+		if(s == sec_status_unchecked)
+			return s;
+	}
 	return sec;
+}
+
+/** remove nonsecure from a delegation referral additional section */
+static void
+deleg_remove_nonsecure_additional(struct reply_info* rep)
+{
+	/* we can simply edit it, since we are working in the scratch region */
+	size_t i;
+	enum sec_status s;
+
+	for(i = rep->an_numrrsets+rep->ns_numrrsets; i<rep->rrset_count; i++) {
+		s = ((struct packed_rrset_data*)rep->rrsets[i])->security;
+		if(s != sec_status_secure) {
+			memmove(rep->rrsets+i, rep->rrsets+i+1, 
+				sizeof(struct ub_packed_rrset_key*)* 
+				(rep->rrset_count - i - 1));
+			rep->ar_numrrsets--; 
+			rep->rrset_count--;
+		}
+	}
 }
 
 /** answer nonrecursive query from the cache */
@@ -367,6 +395,9 @@ answer_norec_from_cache(struct worker* worker, struct query_info* qinfo,
 			return 1;
 		case sec_status_secure:
 			/* all rrsets are secure */
+			/* remove non-secure rrsets from the add. section*/
+			if(worker->env.cfg->val_clean_additional)
+				deleg_remove_nonsecure_additional(msg->rep);
 			secure = 1;
 			break;
 		case sec_status_indeterminate:
@@ -384,7 +415,7 @@ answer_norec_from_cache(struct worker* worker, struct query_info* qinfo,
 	edns->bits &= EDNS_DO;
 	msg->rep->flags |= BIT_QR|BIT_RA;
 	if(!reply_info_answer_encode(&msg->qinfo, msg->rep, id, flags, 
-		repinfo->c->buffer, timenow, 1, worker->scratchpad,
+		repinfo->c->buffer, 0, 1, worker->scratchpad,
 		udpsize, edns, (int)(edns->bits & EDNS_DO), secure)) {
 		error_encode(repinfo->c->buffer, LDNS_RCODE_SERVFAIL, 
 			&msg->qinfo, id, flags, edns);

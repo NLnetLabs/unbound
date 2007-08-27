@@ -1,6 +1,8 @@
 27 August 2007: Wouter
 	- do not garble the edns if a cache answer fails.
 	- answer norecursive from cache if possible.
+	- honor clean_additional setting when returning secure non-recursive
+	  referrals.
 
 24 August 2007: Wouter
 	- message is bogus if unsecure authority rrsets are present.
