@@ -55,6 +55,7 @@
 #include "services/outbound_list.h"
 #include "services/cache/rrset.h"
 #include "services/cache/infra.h"
+#include "services/cache/dns.h"
 #include "services/mesh.h"
 #include "util/data/msgparse.h"
 #include "util/data/msgencode.h"
@@ -302,6 +303,96 @@ worker_handle_control_cmd(struct comm_point* c, void* arg, int error,
 	return 0;
 }
 
+/** check if a delegation is secure */
+static enum sec_status
+check_delegation_secure(struct reply_info *rep) 
+{
+	/* return smallest security status */
+	size_t i;
+	enum sec_status sec = sec_status_secure;
+	enum sec_status s;
+	for(i=0; i<rep->rrset_count; i++) {
+		s = ((struct packed_rrset_data*)rep->rrsets[i])->security;
+		if(s < sec)
+			sec = s;
+	}
+	return sec;
+}
+
+/** answer nonrecursive query from the cache */
+static int
+answer_norec_from_cache(struct worker* worker, struct query_info* qinfo,
+	uint16_t id, uint16_t flags, struct comm_reply* repinfo, 
+	struct edns_data* edns)
+{
+	/* for a nonrecursive query return either:
+	 * 	o an error (servfail; we try to avoid this)
+	 * 	o a delegation (closest we have; this routine tries that)
+	 * 	o the answer (checked by answer_from_cache) 
+	 *
+	 * So, grab a delegation from the rrset cache. 
+	 * Then check if it needs validation, if so, this routine fails,
+	 * so that iterator can prime and validator can verify rrsets.
+	 */
+	uint16_t udpsize = edns->udp_size;
+	int secure = 0;
+	uint32_t timenow = (uint32_t)time(0);
+	int must_validate = !(flags&BIT_CD) && worker->env.need_to_validate;
+	struct dns_msg *msg = NULL;
+	struct delegpt *dp;
+
+	dp = dns_cache_find_delegation(&worker->env, qinfo->qname, 
+		qinfo->qname_len, qinfo->qtype, qinfo->qclass,
+		worker->scratchpad, &msg, timenow);
+	if(!dp) { /* no delegation, need to reprime */
+		region_free_all(worker->scratchpad);
+		return 0;
+	}
+	if(must_validate) {
+		switch(check_delegation_secure(msg->rep)) {
+		case sec_status_unchecked:
+			/* some rrsets have not been verified yet, go and 
+			 * let validator do that */
+			region_free_all(worker->scratchpad);
+			return 0;
+		case sec_status_bogus:
+			/* some rrsets are bogus, reply servfail */
+			edns->edns_version = EDNS_ADVERTISED_VERSION;
+			edns->udp_size = EDNS_ADVERTISED_SIZE;
+			edns->ext_rcode = 0;
+			edns->bits &= EDNS_DO;
+			error_encode(repinfo->c->buffer, LDNS_RCODE_SERVFAIL, 
+				&msg->qinfo, id, flags, edns);
+			region_free_all(worker->scratchpad);
+			return 1;
+		case sec_status_secure:
+			/* all rrsets are secure */
+			secure = 1;
+			break;
+		case sec_status_indeterminate:
+		case sec_status_insecure:
+		default:
+			/* not secure */
+			secure = 0;
+			break;
+		}
+	}
+	/* return this delegation from the cache */
+	edns->edns_version = EDNS_ADVERTISED_VERSION;
+	edns->udp_size = EDNS_ADVERTISED_SIZE;
+	edns->ext_rcode = 0;
+	edns->bits &= EDNS_DO;
+	msg->rep->flags |= BIT_QR|BIT_RA;
+	if(!reply_info_answer_encode(&msg->qinfo, msg->rep, id, flags, 
+		repinfo->c->buffer, timenow, 1, worker->scratchpad,
+		udpsize, edns, (int)(edns->bits & EDNS_DO), secure)) {
+		error_encode(repinfo->c->buffer, LDNS_RCODE_SERVFAIL, 
+			&msg->qinfo, id, flags, edns);
+	}
+	region_free_all(worker->scratchpad);
+	return 1;
+}
+
 /** check cname chain in cache reply */
 static int
 check_cache_chain(struct reply_info* rep) {
@@ -358,10 +449,6 @@ answer_from_cache(struct worker* worker, struct lruhash_entry* e, uint16_t id,
 		 */
 		return 0;
 	}
-	edns->edns_version = EDNS_ADVERTISED_VERSION;
-	edns->udp_size = EDNS_ADVERTISED_SIZE;
-	edns->ext_rcode = 0;
-	edns->bits &= EDNS_DO;
 	if(!rrset_array_lock(rep->ref, rep->rrset_count, timenow))
 		return 0;
 	/* locked and ids and ttls are OK. */
@@ -382,6 +469,10 @@ answer_from_cache(struct worker* worker, struct lruhash_entry* e, uint16_t id,
 	/* check security status of the cached answer */
 	if( rep->security == sec_status_bogus && must_validate) {
 		/* BAD cached */
+		edns->edns_version = EDNS_ADVERTISED_VERSION;
+		edns->udp_size = EDNS_ADVERTISED_SIZE;
+		edns->ext_rcode = 0;
+		edns->bits &= EDNS_DO;
 		error_encode(repinfo->c->buffer, LDNS_RCODE_SERVFAIL, 
 			&mrentry->key, id, flags, edns);
 		rrset_array_unlock_touch(worker->env.rrset_cache, 
@@ -405,6 +496,10 @@ answer_from_cache(struct worker* worker, struct lruhash_entry* e, uint16_t id,
 		}
 	} else	secure = 0;
 
+	edns->edns_version = EDNS_ADVERTISED_VERSION;
+	edns->udp_size = EDNS_ADVERTISED_SIZE;
+	edns->ext_rcode = 0;
+	edns->bits &= EDNS_DO;
 	if(!reply_info_answer_encode(&mrentry->key, rep, id, flags, 
 		repinfo->c->buffer, timenow, 1, worker->scratchpad,
 		udpsize, edns, (int)(edns->bits & EDNS_DO), secure)) {
@@ -589,7 +684,6 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 		edns.udp_size = 65535; /* max size for TCP replies */
 	if(qinfo.qclass == LDNS_RR_CLASS_CH && answer_chaos(worker, &qinfo,
 		&edns, c->buffer)) {
-		verbose(VERB_ALGO, "class CH reply");
 		return 1;
 	}
 	h = query_info_hash(&qinfo);
@@ -604,6 +698,16 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 		}
 		verbose(VERB_DETAIL, "answer from the cache -- data has timed out");
 		lock_rw_unlock(&e->lock);
+	}
+	if(!LDNS_RD_WIRE(ldns_buffer_begin(c->buffer))) {
+		if(answer_norec_from_cache(worker, &qinfo,
+			*(uint16_t*)ldns_buffer_begin(c->buffer), 
+			ldns_buffer_read_u16_at(c->buffer, 2), repinfo, 
+			&edns)) {
+			return 1;
+		}
+		verbose(VERB_DETAIL, "answer norec from cache -- "
+			"need to validate or not primed");
 	}
 	ldns_buffer_rewind(c->buffer);
 	server_stats_querymiss(&worker->stats, worker);

@@ -1,3 +1,7 @@
+27 August 2007: Wouter
+	- do not garble the edns if a cache answer fails.
+	- answer norecursive from cache if possible.
+
 24 August 2007: Wouter
 	- message is bogus if unsecure authority rrsets are present.
 	- val-clean-additional option, so you can turn it off.

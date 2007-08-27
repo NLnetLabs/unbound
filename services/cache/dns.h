@@ -102,11 +102,12 @@ void dns_cache_store_msg(struct module_env* env, struct query_info* qinfo,
  * @param region: where to allocate result delegation.
  * @param msg: if not NULL, delegation message is returned here, synthesized
  *	from the cache.
+ * @param timenow: the time now, for checking if TTL on cache entries is OK.
  * @return new delegation or NULL on error or if not found in cache.
  */
 struct delegpt* dns_cache_find_delegation(struct module_env* env, 
 	uint8_t* qname, size_t qnamelen, uint16_t qtype, uint16_t qclass, 
-	struct region* region, struct dns_msg** msg);
+	struct region* region, struct dns_msg** msg, uint32_t timenow);
 
 /** 
  * Find cached message 

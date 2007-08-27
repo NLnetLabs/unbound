@@ -652,7 +652,7 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 	 * to be primed for the qclass. */
 	iq->dp = dns_cache_find_delegation(qstate->env, delname, delnamelen,
 		iq->qchase.qtype, iq->qchase.qclass, qstate->region, 
-		&iq->deleg_msg);
+		&iq->deleg_msg, (uint32_t)time(NULL));
 
 	/* If the cache has returned nothing, then we have a root priming
 	 * situation. */
@@ -667,6 +667,10 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 		 * this event will stop until reactivated by the results 
 		 * of priming. */
 		return 0;
+	}
+	if(verbosity >= VERB_ALGO) {
+		log_info("dns_cache_find_delegation returns delegpt");
+		delegpt_log(iq->dp);
 	}
 
 	/* Reset the RD flag. If this is a query restart, then the RD 

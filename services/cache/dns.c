@@ -316,13 +316,12 @@ create_msg(uint8_t* qname, size_t qnamelen, uint16_t qtype, uint16_t qclass,
 struct delegpt* 
 dns_cache_find_delegation(struct module_env* env, uint8_t* qname, 
 	size_t qnamelen, uint16_t qtype, uint16_t qclass, 
-	struct region* region, struct dns_msg** msg)
+	struct region* region, struct dns_msg** msg, uint32_t now)
 {
 	/* try to find closest NS rrset */
 	struct ub_packed_rrset_key* nskey;
 	struct packed_rrset_data* nsdata;
 	struct delegpt* dp;
-	uint32_t now = (uint32_t)time(NULL);
 
 	nskey = find_closest_of_type(env, qname, qnamelen, qclass, now,
 		LDNS_RR_TYPE_NS);
@@ -355,8 +354,6 @@ dns_cache_find_delegation(struct module_env* env, uint8_t* qname,
 	/* find and add A entries */
 	if(!find_add_addrs(env, qclass, region, dp, now, msg))
 		log_err("find_delegation: addrs out of memory");
-	log_info("dns_cache_find_delegation returns delegpt");
-	delegpt_log(dp);
 	return dp;
 }
 

@@ -712,8 +712,8 @@ reply_info_answer_encode(struct query_info* qinf, struct reply_info* rep,
 	int attach_edns = 1;
 
 	if(!cached) {
-		/* original flags, copy RD bit from query. */
-		flags = rep->flags | (qflags & BIT_RD); 
+		/* original flags, copy RD and CD bits from query. */
+		flags = rep->flags | (qflags & (BIT_RD|BIT_CD)); 
 	} else {
 		/* remove AA bit, copy RD and CD bits from query. */
 		flags = (rep->flags & ~BIT_AA) | (qflags & (BIT_RD|BIT_CD)); 
