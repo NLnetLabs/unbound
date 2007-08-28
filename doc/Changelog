@@ -15,6 +15,9 @@
 	- if the rrset is too big (64k exactly + large owner name) the
 	  canonicalization routine will fail if it does not fit in buffer.
 	- faster verification for large sigsets.
+	- verb_detail mode reports validation failures, but not the entire
+	  algorithm for validation. Key prime failures are reported as 
+	  verb_ops level.
 
 27 August 2007: Wouter
 	- do not garble the edns if a cache answer fails.

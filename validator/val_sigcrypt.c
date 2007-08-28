@@ -400,7 +400,7 @@ dnskeyset_verify_rrset(struct module_env* env, struct val_env* ve,
 	rbtree_t* sortree = NULL;
 	num = rrset_get_sigcount(rrset);
 	if(num == 0) {
-		verbose(VERB_ALGO, "rrset failed to verify due to a lack of "
+		verbose(VERB_DETAIL, "rrset failed to verify due to a lack of "
 			"signatures");
 		return sec_status_bogus;
 	}
@@ -428,7 +428,7 @@ dnskey_verify_rrset(struct module_env* env, struct val_env* ve,
 
 	num = rrset_get_sigcount(rrset);
 	if(num == 0) {
-		verbose(VERB_ALGO, "rrset failed to verify due to a lack of "
+		verbose(VERB_DETAIL, "rrset failed to verify due to a lack of "
 			"signatures");
 		return sec_status_bogus;
 	}
@@ -477,7 +477,7 @@ dnskeyset_verify_rrset_sig(struct module_env* env, struct val_env* ve,
 			return sec;
 	}
 	if(numchecked == 0) {
-		verbose(VERB_ALGO, "could not find appropriate key");
+		verbose(VERB_DETAIL, "verify: could not find appropriate key");
 		return sec_status_bogus;
 	}
 	return sec_status_bogus;
@@ -1054,7 +1054,7 @@ sigdate_error(const char* str, int32_t expi, int32_t incep, int32_t now)
 	char now_buf[16];
 	time_t te, ti, tn;
 
-	if(verbosity < VERB_ALGO)
+	if(verbosity < VERB_DETAIL)
 		return;
 	te = (time_t)expi;
 	ti = (time_t)incep;
@@ -1179,7 +1179,7 @@ dsa_rrsig_to_dsa_sig(unsigned char* sig, unsigned int siglen)
 
 	/* extract the R and S field from the sig buffer */
 	if(siglen < 1 + SHA_DIGEST_LENGTH*2) {
-		verbose(VERB_ALGO, "verify: short DSA RRSIG");
+		verbose(VERB_DETAIL, "verify: short DSA RRSIG");
 		return NULL;
 	}
 	t = sig[0];
@@ -1290,7 +1290,7 @@ setup_key_digest(int algo, EVP_PKEY* evp_key, const EVP_MD** digest_type,
 
 			break;
 		default:
-			verbose(VERB_ALGO, "verify: unknown algorithm %d", 
+			verbose(VERB_DETAIL, "verify: unknown algorithm %d", 
 				algo);
 			return 0;
 	}
@@ -1385,18 +1385,18 @@ dnskey_verify_rrset_sig(struct region* region, ldns_buffer* buf,
 	rrset_get_rdata(rrset, rrnum + sig_idx, &sig, &siglen);
 	/* min length of rdatalen, fixed rrsig, root signer, 1 byte sig */
 	if(siglen < 2+20) {
-		verbose(VERB_ALGO, "verify: signature too short");
+		verbose(VERB_DETAIL, "verify: signature too short");
 		return sec_status_bogus;
 	}
 
 	if(!(dnskey_get_flags(dnskey, dnskey_idx) & DNSKEY_BIT_ZSK)) {
-		verbose(VERB_ALGO, "verify: dnskey without ZSK flag");
+		verbose(VERB_DETAIL, "verify: dnskey without ZSK flag");
 		return sec_status_bogus; 
 	}
 
 	if(dnskey_get_protocol(dnskey, dnskey_idx) != LDNS_DNSSEC_KEYPROTO) { 
 		/* RFC 4034 says DNSKEY PROTOCOL MUST be 3 */
-		verbose(VERB_ALGO, "verify: dnskey has wrong key protocol");
+		verbose(VERB_DETAIL, "verify: dnskey has wrong key protocol");
 		return sec_status_bogus;
 	}
 
@@ -1404,46 +1404,46 @@ dnskey_verify_rrset_sig(struct region* region, ldns_buffer* buf,
 	signer = sig+2+18;
 	signer_len = dname_valid(signer, siglen-2-18);
 	if(!signer_len) {
-		verbose(VERB_ALGO, "verify: malformed signer name");
+		verbose(VERB_DETAIL, "verify: malformed signer name");
 		return sec_status_bogus; /* signer name invalid */
 	}
 	if(!dname_subdomain_c(rrset->rk.dname, signer)) {
-		verbose(VERB_ALGO, "verify: signer name is off-tree");
+		verbose(VERB_DETAIL, "verify: signer name is off-tree");
 		return sec_status_bogus; /* signer name offtree */
 	}
 	sigblock = (unsigned char*)signer+signer_len;
 	if(siglen < 2+18+signer_len+1) {
-		verbose(VERB_ALGO, "verify: too short, no signature data");
+		verbose(VERB_DETAIL, "verify: too short, no signature data");
 		return sec_status_bogus; /* sig rdf is < 1 byte */
 	}
 	sigblock_len = (unsigned int)(siglen - 2 - 18 - signer_len);
 
 	/* verify key dname == sig signer name */
 	if(query_dname_compare(signer, dnskey->rk.dname) != 0) {
-		verbose(VERB_ALGO, "verify: wrong key for rrsig");
+		verbose(VERB_DETAIL, "verify: wrong key for rrsig");
 		return sec_status_bogus;
 	}
 
 	/* verify covered type */
 	/* memcmp works because type is in network format for rrset */
 	if(memcmp(sig+2, &rrset->rk.type, 2) != 0) {
-		verbose(VERB_ALGO, "verify: wrong type covered");
+		verbose(VERB_DETAIL, "verify: wrong type covered");
 		return sec_status_bogus;
 	}
 	/* verify keytag and sig algo (possibly again) */
 	if((int)sig[2+2] != dnskey_get_algo(dnskey, dnskey_idx)) {
-		verbose(VERB_ALGO, "verify: wrong algorithm");
+		verbose(VERB_DETAIL, "verify: wrong algorithm");
 		return sec_status_bogus;
 	}
 	ktag = htons(dnskey_calc_keytag(dnskey, dnskey_idx));
 	if(memcmp(sig+2+16, &ktag, 2) != 0) {
-		verbose(VERB_ALGO, "verify: wrong keytag");
+		verbose(VERB_DETAIL, "verify: wrong keytag");
 		return sec_status_bogus;
 	}
 
 	/* verify labels is in a valid range */
 	if((int)sig[2+3] > dname_signame_label_count(rrset->rk.dname)) {
-		verbose(VERB_ALGO, "verify: labelcount out of range");
+		verbose(VERB_DETAIL, "verify: labelcount out of range");
 		return sec_status_bogus;
 	}
 
@@ -1468,7 +1468,7 @@ dnskey_verify_rrset_sig(struct region* region, ldns_buffer* buf,
 	/* check that dnskey is available */
 	dnskey_get_pubkey(dnskey, dnskey_idx, &key, &keylen);
 	if(!key) {
-		verbose(VERB_ALGO, "verify: short DNSKEY RR");
+		verbose(VERB_DETAIL, "verify: short DNSKEY RR");
 		return sec_status_unchecked;
 	}
 
