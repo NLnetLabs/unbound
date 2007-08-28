@@ -65,12 +65,6 @@ struct outside_network {
 	    datagram at any time. */
 	ldns_buffer* udp_buff;
 
-	/** buffer for storage. (buffer for incoming connections, since
-	 * either an event to outside or incoming happens, but not both 
-	 * This buffer is used during callbacks, so that the datagram
-	 * that just arrived does not collide with new datagrams sent out. */
-	ldns_buffer* udp_second;
-
 	/** 
 	 * Array of udp comm point* that are used to listen to pending events.
 	 * Each is on a different port. This is for ip4 ports.
@@ -270,16 +264,6 @@ struct outside_network* outside_network_create(struct comm_base* base,
  * @param outnet: object to delete.
  */
 void outside_network_delete(struct outside_network* outnet);
-
-/**
- * Set secondary UDP buffer. Make sure it is not used during outside network
- * callbacks. Such as the incoming network UDP buffer. Caller responsible
- * for deletion.
- * @param outnet: outside network.
- * @param buf: buffer to use as secondary buffer.
- */
-void outside_network_set_secondary_buffer(struct outside_network* outnet,
-	ldns_buffer* buf);
 
 /**
  * Send UDP query, create pending answer.

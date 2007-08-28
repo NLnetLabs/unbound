@@ -1,3 +1,7 @@
+28 August 2007: Wouter
+	- removed double use for udp buffers, that could fail,
+	  instead performs a malloc to do the backup.
+
 27 August 2007: Wouter
 	- do not garble the edns if a cache answer fails.
 	- answer norecursive from cache if possible.
