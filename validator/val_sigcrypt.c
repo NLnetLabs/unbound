@@ -423,6 +423,8 @@ dnskey_verify_rrset(struct module_env* env, struct val_env* ve,
 	size_t i, num;
 	rbtree_t* sortree = NULL;
 	int buf_canon = 0;
+	uint16_t tag = dnskey_calc_keytag(dnskey, dnskey_idx);
+	int algo = dnskey_get_algo(dnskey, dnskey_idx);
 
 	num = rrset_get_sigcount(rrset);
 	if(num == 0) {
@@ -431,6 +433,10 @@ dnskey_verify_rrset(struct module_env* env, struct val_env* ve,
 		return sec_status_bogus;
 	}
 	for(i=0; i<num; i++) {
+		/* see if sig matches keytag and algo */
+		if(algo != rrset_get_sig_algo(rrset, i) ||
+			tag != rrset_get_sig_keytag(rrset, i))
+			continue;
 		buf_canon = 0;
 		sec = dnskey_verify_rrset_sig(env->scratch, 
 			env->scratch_buffer, ve, rrset, dnskey, dnskey_idx, i,
