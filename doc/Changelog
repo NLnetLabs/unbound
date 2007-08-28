@@ -5,6 +5,7 @@
 	  and stores the rrsets in the cache. Further referral (nonRD queries)
 	  replies are made from the rrset cache directly. Unless unchecked
 	  rrsets are encountered, there are then validated.
+	- enforce that signing is done by a parent domain (or same domain).
 
 27 August 2007: Wouter
 	- do not garble the edns if a cache answer fails.

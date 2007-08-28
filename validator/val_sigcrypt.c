@@ -1329,6 +1329,10 @@ dnskey_verify_rrset_sig(struct module_env* env, struct val_env* ve,
 		verbose(VERB_ALGO, "verify: malformed signer name");
 		return sec_status_bogus; /* signer name invalid */
 	}
+	if(!dname_subdomain_c(rrset->rk.dname, signer)) {
+		verbose(VERB_ALGO, "verify: signer name is off-tree");
+		return sec_status_bogus; /* signer name offtree */
+	}
 	sigblock = (unsigned char*)signer+signer_len;
 	if(siglen < 2+18+signer_len+1) {
 		verbose(VERB_ALGO, "verify: too short, no signature data");
