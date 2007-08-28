@@ -397,6 +397,7 @@ dnskeyset_verify_rrset(struct module_env* env, struct val_env* ve,
 {
 	enum sec_status sec;
 	size_t i, num;
+	rbtree_t* sortree = NULL;
 	num = rrset_get_sigcount(rrset);
 	if(num == 0) {
 		verbose(VERB_ALGO, "rrset failed to verify due to a lack of "
@@ -404,7 +405,8 @@ dnskeyset_verify_rrset(struct module_env* env, struct val_env* ve,
 		return sec_status_bogus;
 	}
 	for(i=0; i<num; i++) {
-		sec = dnskeyset_verify_rrset_sig(env, ve, rrset, dnskey, i);
+		sec = dnskeyset_verify_rrset_sig(env, ve, rrset, dnskey, i,
+			&sortree);
 		if(sec == sec_status_secure)
 			return sec;
 	}
@@ -415,10 +417,13 @@ dnskeyset_verify_rrset(struct module_env* env, struct val_env* ve,
 enum sec_status 
 dnskey_verify_rrset(struct module_env* env, struct val_env* ve,
         struct ub_packed_rrset_key* rrset, struct ub_packed_rrset_key* dnskey,
-	        size_t dnskey_idx)
+	size_t dnskey_idx)
 {
 	enum sec_status sec;
 	size_t i, num;
+	rbtree_t* sortree = NULL;
+	int buf_canon = 0;
+
 	num = rrset_get_sigcount(rrset);
 	if(num == 0) {
 		verbose(VERB_ALGO, "rrset failed to verify due to a lack of "
@@ -426,8 +431,10 @@ dnskey_verify_rrset(struct module_env* env, struct val_env* ve,
 		return sec_status_bogus;
 	}
 	for(i=0; i<num; i++) {
-		sec = dnskey_verify_rrset_sig(env, ve, rrset, dnskey, 
-			dnskey_idx, i);
+		buf_canon = 0;
+		sec = dnskey_verify_rrset_sig(env->scratch, 
+			env->scratch_buffer, ve, rrset, dnskey, dnskey_idx, i,
+			&sortree, &buf_canon);
 		if(sec == sec_status_secure)
 			return sec;
 	}
@@ -438,7 +445,7 @@ dnskey_verify_rrset(struct module_env* env, struct val_env* ve,
 enum sec_status 
 dnskeyset_verify_rrset_sig(struct module_env* env, struct val_env* ve,
         struct ub_packed_rrset_key* rrset, struct ub_packed_rrset_key* dnskey,
-	        size_t sig_idx)
+	size_t sig_idx, struct rbtree_t** sortree)
 {
 	/* find matching keys and check them */
 	enum sec_status sec = sec_status_bogus;
@@ -446,6 +453,7 @@ dnskeyset_verify_rrset_sig(struct module_env* env, struct val_env* ve,
 	int algo = rrset_get_sig_algo(rrset, sig_idx);
 	size_t i, num = rrset_get_count(dnskey);
 	size_t numchecked = 0;
+	int buf_canon = 0;
 	verbose(VERB_ALGO, "verify sig %d %d", (int)tag, algo);
 	
 	for(i=0; i<num; i++) {
@@ -456,8 +464,9 @@ dnskeyset_verify_rrset_sig(struct module_env* env, struct val_env* ve,
 
 		numchecked ++;
 		/* see if key verifies */
-		sec = dnskey_verify_rrset_sig(env, ve, rrset, dnskey, 
-			i, sig_idx);
+		sec = dnskey_verify_rrset_sig(env->scratch, 
+			env->scratch_buffer, ve, rrset, dnskey, i, sig_idx,
+			sortree, &buf_canon);
 		if(sec == sec_status_secure)
 			return sec;
 	}
@@ -972,29 +981,47 @@ canonicalize_rdata(ldns_buffer* buf, struct ub_packed_rrset_key* rrset,
  * @param sig: RRSIG rdata to include.
  * @param siglen: RRSIG rdata len excluding signature field, but inclusive
  * 	signer name length.
+ * @param sortree: if NULL is passed a new sorted rrset tree is built.
+ * 	Otherwise it is reused.
  * @return false on alloc error.
  */
 static int
 rrset_canonical(struct region* region, ldns_buffer* buf, 
-	struct ub_packed_rrset_key* k, uint8_t* sig, size_t siglen)
+	struct ub_packed_rrset_key* k, uint8_t* sig, size_t siglen,
+	struct rbtree_t** sortree)
 {
 	struct packed_rrset_data* d = (struct packed_rrset_data*)k->entry.data;
 	uint8_t* can_owner = NULL;
 	size_t can_owner_len = 0;
-	rbtree_t sortree;
 	struct canon_rr* walk;
 	struct canon_rr* rrs;
-	rrs = region_alloc(region, sizeof(struct canon_rr)*d->count);
-	if(!rrs)
-		return 0;
-	rbtree_init(&sortree, &canonical_tree_compare);
-	canonical_sort(k, d, &sortree, rrs);
+
+	if(!*sortree) {
+		*sortree = (struct rbtree_t*)region_alloc(region, 
+			sizeof(rbtree_t));
+		if(!*sortree)
+			return 0;
+		rrs = region_alloc(region, sizeof(struct canon_rr)*d->count);
+		if(!rrs) {
+			*sortree = NULL;
+			return 0;
+		}
+		rbtree_init(*sortree, &canonical_tree_compare);
+		canonical_sort(k, d, *sortree, rrs);
+	}
 
 	ldns_buffer_clear(buf);
 	ldns_buffer_write(buf, sig, siglen);
 	/* canonicalize signer name */
 	query_dname_tolower(ldns_buffer_begin(buf)+18); 
-	RBTREE_FOR(walk, struct canon_rr*, &sortree) {
+	RBTREE_FOR(walk, struct canon_rr*, (*sortree)) {
+		/* see if there is enough space left in the buffer */
+		if(ldns_buffer_remaining(buf) < can_owner_len + 2 + 2 + 4
+			+ d->rr_len[walk->rr_idx]) {
+			log_err("verify: failed to canonicalize, "
+				"rrset too big");
+			return 0;
+		}
 		/* determine canonical owner name */
 		if(can_owner)
 			ldns_buffer_write(buf, can_owner, can_owner_len);
@@ -1092,7 +1119,6 @@ adjust_ttl(struct val_env* ve, struct ub_packed_rrset_key* rrset,
 	/* get current date */
 	if(ve->date_override) {
 		now = ve->date_override;
-		verbose(VERB_ALGO, "date override option %d used", (int)now); 
 	} else	now = (int32_t)time(0);
 	expittl = expi - now;
 
@@ -1333,9 +1359,11 @@ verify_canonrrset(ldns_buffer* buf, int algo, unsigned char* sigblock,
 }
 
 enum sec_status 
-dnskey_verify_rrset_sig(struct module_env* env, struct val_env* ve,
+dnskey_verify_rrset_sig(struct region* region, ldns_buffer* buf, 
+	struct val_env* ve,
         struct ub_packed_rrset_key* rrset, struct ub_packed_rrset_key* dnskey,
-	        size_t dnskey_idx, size_t sig_idx)
+        size_t dnskey_idx, size_t sig_idx,
+	struct rbtree_t** sortree, int* buf_canon)
 {
 	enum sec_status sec;
 	uint8_t* sig;		/* RRSIG rdata */
@@ -1420,11 +1448,15 @@ dnskey_verify_rrset_sig(struct module_env* env, struct val_env* ve,
 		return sec_status_bogus;
 	}
 
-	/* create rrset canonical format in buffer, ready for signature */
-	if(!rrset_canonical(env->scratch, env->scratch_buffer, rrset, sig+2, 
-		18 + signer_len)) {
-		log_err("verify: failed due to alloc error");
-		return sec_status_unchecked;
+	if(!*buf_canon) {
+		/* create rrset canonical format in buffer, ready for 
+		 * signature */
+		if(!rrset_canonical(region, buf, rrset, sig+2, 
+			18 + signer_len, sortree)) {
+			log_err("verify: failed due to alloc error");
+			return sec_status_unchecked;
+		}
+		*buf_canon = 1;
 	}
 
 	/* check that dnskey is available */
@@ -1435,7 +1467,7 @@ dnskey_verify_rrset_sig(struct module_env* env, struct val_env* ve,
 	}
 
 	/* verify */
-	sec = verify_canonrrset(env->scratch_buffer, (int)sig[2+2],
+	sec = verify_canonrrset(buf, (int)sig[2+2],
 		sigblock, sigblock_len, key, keylen);
 
 	/* check if TTL is too high - reduce if so */

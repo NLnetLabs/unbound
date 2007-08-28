@@ -9,6 +9,11 @@
 	- adjust TTL downwards if rrset TTL bigger than signature allows.
 	- permissive mode feature, sets AD bit for secure, but bogus does
 	  not give servfail (bogus is changed into indeterminate).
+	- optimization of rrset verification. rr canonical sorting is reused,
+	  for the same rrset. canonical rrset image in buffer is reused for
+	  the same signature.
+	- if the rrset is too big (64k exactly + large owner name) the
+	  canonicalization routine will fail if it does not fit in buffer.
 
 27 August 2007: Wouter
 	- do not garble the edns if a cache answer fails.

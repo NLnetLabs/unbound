@@ -47,6 +47,8 @@ struct val_env;
 struct module_env;
 struct ub_packed_rrset_key;
 enum sec_status;
+struct rbtree_t;
+struct region;
 
 /** 
  * Check if dnskey matches a DS digest 
@@ -165,26 +167,38 @@ enum sec_status dnskey_verify_rrset(struct module_env* env,
  * @param rrset: to be validated.
  * @param dnskey: DNSKEY rrset, keyset to try.
  * @param sig_idx: which signature to try to validate.
+ * @param sortree: reused sorted order. Stored in region. Pass NULL at start,
+ * 	and for a new rrset.
  * @return secure if any key signs *this* signature. bogus if no key signs it,
  *	or unchecked on error.
  */
 enum sec_status dnskeyset_verify_rrset_sig(struct module_env* env, 
 	struct val_env* ve, struct ub_packed_rrset_key* rrset, 
-	struct ub_packed_rrset_key* dnskey, size_t sig_idx);
+	struct ub_packed_rrset_key* dnskey, size_t sig_idx, 
+	struct rbtree_t** sortree);
 
 /** 
  * verify rrset, with specific dnskey(from set), for a specific rrsig 
+ * @param region: scratch region used for temporary allocation.
+ * @param buf: scratch buffer used for canonicalized rrset data.
  * @param env: module environment, scratch space is used.
  * @param ve: validator environment, date settings.
  * @param rrset: to be validated.
  * @param dnskey: DNSKEY rrset, keyset.
  * @param dnskey_idx: which key from the rrset to try.
  * @param sig_idx: which signature to try to validate.
+ * @param sortree: pass NULL at start, the sorted rrset order is returned.
+ * 	pass it again for the same rrset.
+ * @param buf_canon: if true, the buffer is already canonical.
+ * 	pass false at start. pass old value only for same rrset and same
+ * 	signature (but perhaps different key) for reuse.
  * @return secure if this key signs this signature. unchecked on error or 
  *	bogus if it did not validate.
  */
-enum sec_status dnskey_verify_rrset_sig(struct module_env* env, 
-	struct val_env* ve, struct ub_packed_rrset_key* rrset, 
-	struct ub_packed_rrset_key* dnskey, size_t dnskey_idx, size_t sig_idx);
+enum sec_status dnskey_verify_rrset_sig(struct region* region, 
+	ldns_buffer* buf, struct val_env* ve, 
+	struct ub_packed_rrset_key* rrset, struct ub_packed_rrset_key* dnskey, 
+	size_t dnskey_idx, size_t sig_idx,
+	struct rbtree_t** sortree, int* buf_canon);
 
 #endif /* VALIDATOR_VAL_SIGCRYPT_H */
