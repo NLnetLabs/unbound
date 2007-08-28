@@ -7,6 +7,8 @@
 	  rrsets are encountered, there are then validated.
 	- enforce that signing is done by a parent domain (or same domain).
 	- adjust TTL downwards if rrset TTL bigger than signature allows.
+	- permissive mode feature, sets AD bit for secure, but bogus does
+	  not give servfail (bogus is changed into indeterminate).
 
 27 August 2007: Wouter
 	- do not garble the edns if a cache answer fails.

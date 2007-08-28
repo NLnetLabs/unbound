@@ -81,7 +81,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_DO_NOT_QUERY_ADDRESS VAR_HIDE_IDENTITY VAR_HIDE_VERSION
 %token VAR_IDENTITY VAR_VERSION VAR_HARDEN_GLUE VAR_MODULE_CONF
 %token VAR_TRUST_ANCHOR_FILE VAR_TRUST_ANCHOR VAR_VAL_OVERRIDE_DATE
-%token VAR_BOGUS_TTL VAR_VAL_CLEAN_ADDITIONAL
+%token VAR_BOGUS_TTL VAR_VAL_CLEAN_ADDITIONAL VAR_VAL_PERMISSIVE_MODE
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -116,7 +116,7 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_hide_version | server_identity | server_version |
 	server_harden_glue | server_module_conf | server_trust_anchor_file |
 	server_trust_anchor | server_val_override_date | server_bogus_ttl |
-	server_val_clean_additional
+	server_val_clean_additional | server_val_permissive_mode
 	;
 stubstart: VAR_STUB_ZONE
 	{
@@ -525,7 +525,16 @@ server_val_clean_additional: VAR_VAL_CLEAN_ADDITIONAL STRING
 		free($2);
 	}
 	;
-
+server_val_permissive_mode: VAR_VAL_PERMISSIVE_MODE STRING
+	{
+		OUTYY(("P(server_val_permissive_mode:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->val_permissive_mode = 
+			(strcmp($2, "yes")==0);
+		free($2);
+	}
+	;
 stub_name: VAR_NAME STRING
 	{
 		OUTYY(("P(name:%s)\n", $2));

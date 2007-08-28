@@ -89,7 +89,6 @@ config_create()
 	cfg->infra_cache_slabs = 4;
 	cfg->infra_cache_numhosts = 10000;
 	cfg->infra_cache_numlame = 1000;
-	cfg->val_clean_additional = 1;
 	if(!(cfg->username = strdup(""))) goto error_exit;
 	if(!(cfg->chrootdir = strdup(""))) goto error_exit;
 	if(!(cfg->directory = strdup("/etc/unbound"))) goto error_exit;
@@ -116,6 +115,8 @@ config_create()
 	cfg->trust_anchor_file_list = NULL;
 	cfg->trust_anchor_list = NULL;
 	cfg->val_date_override = 0;
+	cfg->val_clean_additional = 1;
+	cfg->val_permissive_mode = 0;
 	if(!(cfg->module_conf = strdup("iterator"))) goto error_exit;
 	return cfg;
 error_exit:

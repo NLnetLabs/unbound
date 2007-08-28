@@ -150,6 +150,8 @@ struct config_file {
 	int bogus_ttl; 
 	/** should validator clean additional section for secure msgs */
 	int val_clean_additional;
+	/** should validator allow bogus messages to go through */
+	int val_permissive_mode;
 
 	/** daemonize, i.e. fork into the background. */
 	int do_daemonize;

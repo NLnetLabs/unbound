@@ -79,6 +79,14 @@ struct val_env {
 	 * secure messages.
 	 */
 	int clean_additional;
+
+	/**
+	 * If set, the validator will not make messages bogus, instead
+	 * indeterminate is issued, so that no clients receive SERVFAIL.
+	 * This allows an operator to run validation 'shadow' without
+	 * hurting responses to clients.
+	 */
+	int permissive_mode;
 };
 
 /**

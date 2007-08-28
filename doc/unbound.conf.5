@@ -215,6 +215,13 @@ messages that are not signed properly. Messages that are insecure, bogus,
 indeterminate or unchecked are not affected. Default is yes. Use this setting
 to protect the users that rely on this validator for authentication from 
 protentially bad data in the additional section.
+.It \fBval-permissive-mode:\fR <yes or no>
+Instruct the validator to mark bogus messages as indeterminate. The security
+checks are performed, but if the result is bogus (failed security), the
+reply is not withheld from the client with SERVFAIL as usual. The client 
+receives the bogus data. For messages that are found to be secure the AD bit 
+is set in replies. Also logging is performed as for full validation.
+The default value is "no". 
 .El
 
 .Ss Stub Zone Options

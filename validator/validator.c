@@ -60,6 +60,7 @@ val_apply_cfg(struct val_env* val_env, struct config_file* cfg)
 {
 	val_env->bogus_ttl = (uint32_t)cfg->bogus_ttl;
 	val_env->clean_additional = cfg->val_clean_additional;
+	val_env->permissive_mode = cfg->val_permissive_mode;
 	if(!val_env->anchors)
 		val_env->anchors = anchors_create();
 	if(!val_env->anchors) {
@@ -85,13 +86,14 @@ static int
 val_init(struct module_env* env, int id)
 {
 	struct val_env* val_env = (struct val_env*)calloc(1,
-	sizeof(struct val_env));
+		sizeof(struct val_env));
 	if(!val_env) {
 		log_err("malloc failure");
 		return 0;
 	}
 	env->modinfo[id] = (void*)val_env;
 	env->need_to_validate = 1;
+	val_env->permissive_mode = 0;
 	if(!val_apply_cfg(val_env, env->cfg)) {
 		log_err("validator: could not apply configuration settings.");
 		return 0;
@@ -1253,6 +1255,9 @@ processFinished(struct module_qstate* qstate, struct val_qstate* vq,
 	 * endless bogus revalidation */
 	if(vq->orig_msg->rep->security == sec_status_bogus) {
 		vq->orig_msg->rep->ttl = time(0) + ve->bogus_ttl;
+		/* If we are in permissive mode, bogus gets indeterminate */
+		if(ve->permissive_mode)
+			vq->orig_msg->rep->security = sec_status_indeterminate;
 	}
 
 	/* store results in cache */
