@@ -1,6 +1,10 @@
 28 August 2007: Wouter
 	- removed double use for udp buffers, that could fail,
 	  instead performs a malloc to do the backup.
+	- validator validates referral messages, by validating all the rrsets
+	  and stores the rrsets in the cache. Further referral (nonRD queries)
+	  replies are made from the rrset cache directly. Unless unchecked
+	  rrsets are encountered, there are then validated.
 
 27 August 2007: Wouter
 	- do not garble the edns if a cache answer fails.

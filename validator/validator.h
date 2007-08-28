@@ -130,8 +130,11 @@ struct val_qstate {
 	 * starts at 0 - for the full original message.
 	 * if it is >0 - qchase followed the cname, chase_reply setup to be
 	 * that message and relevant authority rrsets.
+	 *
+	 * The skip is also used for referral messages, where it will
+	 * range from 0, over the answer, authority and additional sections.
 	 */
-	size_t cname_skip;
+	size_t rrset_skip;
 
 	/** the trust anchor rrset */
 	struct trust_anchor* trust_anchor;

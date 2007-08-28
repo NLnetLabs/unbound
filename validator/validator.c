@@ -154,7 +154,7 @@ val_new(struct module_qstate* qstate, int id)
 			* vq->orig_msg->rep->rrset_count);
 	if(!vq->chase_reply->rrsets)
 		return NULL;
-	vq->cname_skip = 0;
+	vq->rrset_skip = 0;
 	return vq;
 }
 
@@ -602,6 +602,33 @@ validate_nameerror_response(struct query_info* qchase,
 }
 
 /** 
+ * Given a referral response, validate rrsets and take least trusted rrset
+ * as the current validation status.
+ * 
+ * Note that by the time this method is called, the process of finding the
+ * trusted DNSKEY rrset that signs this response must already have been
+ * completed.
+ * 
+ * @param chase_reply: answer to validate.
+ */
+static void
+validate_referral_response(struct reply_info* chase_reply)
+{
+	size_t i;
+	enum sec_status s;
+	/* message security equals lowest rrset security */
+	chase_reply->security = sec_status_secure;
+	for(i=0; i<chase_reply->rrset_count; i++) {
+		s = ((struct packed_rrset_data*)chase_reply->rrsets[i]
+			->entry.data)->security;
+		if(s < chase_reply->security)
+			chase_reply->security = s;
+	}
+	verbose(VERB_ALGO, "validated part of referral response as %s",
+		sec_status_to_string(chase_reply->security));
+}
+
+/** 
  * Given an "ANY" response -- a response that contains an answer to a
  * qtype==ANY question, with answers. This does no checking that all 
  * types are present.
@@ -854,8 +881,31 @@ processInit(struct module_qstate* qstate, struct val_qstate* vq,
 {
 	uint8_t* lookup_name;
 	size_t lookup_len;
-	enum val_classification subtype = val_classify_response(&vq->qchase, 
-		vq->orig_msg->rep, vq->cname_skip);
+	enum val_classification subtype = val_classify_response(
+		qstate->query_flags, &vq->qchase, vq->orig_msg->rep, 
+		vq->rrset_skip);
+	if(subtype == VAL_CLASS_REFERRAL && 
+		vq->rrset_skip < vq->orig_msg->rep->rrset_count) {
+		/* referral uses the rrset name as qchase, to find keys for
+		 * that rrset */
+		vq->qchase.qname = vq->orig_msg->rep->
+			rrsets[vq->rrset_skip]->rk.dname;
+		vq->qchase.qname_len = vq->orig_msg->rep->
+			rrsets[vq->rrset_skip]->rk.dname_len;
+		vq->qchase.qtype = ntohs(vq->orig_msg->rep->
+			rrsets[vq->rrset_skip]->rk.type);
+		vq->qchase.qclass = ntohs(vq->orig_msg->rep->
+			rrsets[vq->rrset_skip]->rk.rrset_class);
+		/* for type DS look at the parent side for keys/trustanchor */
+		/* also for NSEC not at apex */
+		if(vq->qchase.qtype == LDNS_RR_TYPE_DS ||
+			(vq->qchase.qtype == LDNS_RR_TYPE_NSEC && 
+			 !(vq->orig_msg->rep->rrsets[vq->rrset_skip]->
+			 rk.flags&PACKED_RRSET_NSEC_AT_APEX))) {
+			dname_remove_label(&vq->qchase.qname, 
+				&vq->qchase.qname_len);
+		}
+	}
 
 	val_mark_indeterminate(vq->chase_reply, ve->anchors, 
 		qstate->env->rrset_cache);
@@ -871,7 +921,7 @@ processInit(struct module_qstate* qstate, struct val_qstate* vq,
 
 	/* Determine the signer/lookup name */
 	val_find_signer(subtype, &vq->qchase, vq->orig_msg->rep, 
-		vq->cname_skip, &vq->signer_name, &vq->signer_len);
+		vq->rrset_skip, &vq->signer_name, &vq->signer_len);
 	if(vq->signer_name == NULL) {
 		lookup_name = vq->qchase.qname;
 		lookup_len = vq->qchase.qname_len;
@@ -880,11 +930,12 @@ processInit(struct module_qstate* qstate, struct val_qstate* vq,
 		lookup_len = vq->signer_len;
 	}
 
-	if(vq->cname_skip > 0 || subtype == VAL_CLASS_CNAME) {
+	if(vq->rrset_skip > 0 || subtype == VAL_CLASS_CNAME ||
+		subtype == VAL_CLASS_REFERRAL) {
 		/* extract this part of orig_msg into chase_reply for
 		 * the eventual VALIDATE stage */
 		val_fill_reply(vq->chase_reply, vq->orig_msg->rep, 
-			vq->cname_skip, lookup_name, lookup_len);
+			vq->rrset_skip, lookup_name, lookup_len);
 		log_dns_msg("chased extract", &vq->qchase, vq->chase_reply);
 	}
 
@@ -1080,8 +1131,8 @@ processValidate(struct module_qstate* qstate, struct val_qstate* vq,
 		return 1;
 	}
 
-	subtype = val_classify_response(&vq->qchase, vq->orig_msg->rep, 
-		vq->cname_skip);
+	subtype = val_classify_response(qstate->query_flags, &vq->qchase, 
+		vq->orig_msg->rep, vq->rrset_skip);
 	switch(subtype) {
 		case VAL_CLASS_POSITIVE:
 			verbose(VERB_ALGO, "Validating a positive response");
@@ -1112,6 +1163,11 @@ processValidate(struct module_qstate* qstate, struct val_qstate* vq,
 				vq->chase_reply);
 			break;
 
+		case VAL_CLASS_REFERRAL:
+			verbose(VERB_ALGO, "Validating a referral response");
+			validate_referral_response(vq->chase_reply);
+			break;
+
 		case VAL_CLASS_ANY:
 			verbose(VERB_ALGO, "Validating a positive ANY "
 				"response");
@@ -1140,11 +1196,12 @@ static int
 processFinished(struct module_qstate* qstate, struct val_qstate* vq, 
 	struct val_env* ve, int id)
 {
-	enum val_classification subtype = val_classify_response(&vq->qchase, 
-		vq->orig_msg->rep, vq->cname_skip);
+	enum val_classification subtype = val_classify_response(
+		qstate->query_flags, &vq->qchase, vq->orig_msg->rep, 
+		vq->rrset_skip);
 
 	/* store overall validation result in orig_msg */
-	if(vq->cname_skip == 0)
+	if(vq->rrset_skip == 0)
 		vq->orig_msg->rep->security = vq->chase_reply->security;
 	else {
 		/* use the lowest security status as end result. */
@@ -1153,15 +1210,28 @@ processFinished(struct module_qstate* qstate, struct val_qstate* vq,
 				vq->chase_reply->security;
 	}
 
+	if(subtype == VAL_CLASS_REFERRAL) {
+		/* for a referral, move to next unchecked rrset and check it*/
+		vq->rrset_skip = val_next_unchecked(vq->orig_msg->rep, 
+			vq->rrset_skip);
+		if(vq->rrset_skip < vq->orig_msg->rep->rrset_count) {
+			/* and restart for this rrset */
+			verbose(VERB_ALGO, "validator: go to next rrset");
+			vq->chase_reply->security = sec_status_unchecked;
+			vq->state = VAL_INIT_STATE;
+			return 1;
+		}
+		/* referral chase is done */
+	}
 	if(vq->chase_reply->security != sec_status_bogus &&
 		subtype == VAL_CLASS_CNAME) {
 		/* chase the CNAME; process next part of the message */
 		if(!val_chase_cname(&vq->qchase, vq->orig_msg->rep, 
-			&vq->cname_skip)) {
+			&vq->rrset_skip)) {
 			verbose(VERB_ALGO, "validator: failed to chase CNAME");
 			vq->orig_msg->rep->security = sec_status_bogus;
 		} else {
-			/* restart process for new qchase at cname_skip */
+			/* restart process for new qchase at rrset_skip */
 			log_query_info(VERB_DETAIL, "validator: chased to",
 				&vq->qchase);
 			vq->chase_reply->security = sec_status_unchecked;
@@ -1189,6 +1259,12 @@ processFinished(struct module_qstate* qstate, struct val_qstate* vq,
 	if(qstate->query_flags&BIT_RD) {
 		if(!dns_cache_store(qstate->env, &vq->orig_msg->qinfo, 
 			vq->orig_msg->rep, 0)) {
+			log_err("out of memory caching validator results");
+		}
+	} else {
+		/* for a referral, store the verified RRsets */
+		if(!dns_cache_store(qstate->env, &vq->orig_msg->qinfo, 
+			vq->orig_msg->rep, 1)) {
 			log_err("out of memory caching validator results");
 		}
 	}
@@ -1412,7 +1488,7 @@ ds_response_to_ke(struct module_qstate* qstate, struct val_qstate* vq,
 		goto return_bogus;
 	}
 
-	subtype = val_classify_response(qinfo, msg->rep, 0);
+	subtype = val_classify_response(BIT_RD, qinfo, msg->rep, 0);
 	if(subtype == VAL_CLASS_POSITIVE) {
 		struct ub_packed_rrset_key* ds;
 		enum sec_status sec;

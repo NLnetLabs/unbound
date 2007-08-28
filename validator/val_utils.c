@@ -52,8 +52,8 @@
 #include "util/module.h"
 
 enum val_classification 
-val_classify_response(struct query_info* qinf, struct reply_info* rep, 
-	size_t skip)
+val_classify_response(uint16_t query_flags, struct query_info* qinf, 
+	struct reply_info* rep, size_t skip)
 {
 	int rcode = (int)FLAGS_GET_RCODE(rep->flags);
 	size_t i;
@@ -63,6 +63,10 @@ val_classify_response(struct query_info* qinf, struct reply_info* rep,
 	if(rcode == LDNS_RCODE_NXDOMAIN && rep->an_numrrsets == 0)
 		return VAL_CLASS_NAMEERROR;
 
+	/* check for referral: nonRD query */
+	if(!(query_flags&BIT_RD))
+		return VAL_CLASS_REFERRAL;
+	
 	log_assert(rcode == LDNS_RCODE_NOERROR);
 	/* next check if the skip into the answer section shows no answer */
 	if(skip>0 && rep->an_numrrsets <= skip)
@@ -185,7 +189,7 @@ val_find_best_signer(struct ub_packed_rrset_key* rrset,
 
 void 
 val_find_signer(enum val_classification subtype, struct query_info* qinf, 
-	struct reply_info* rep, size_t cname_skip, uint8_t** signer_name, 
+	struct reply_info* rep, size_t skip, uint8_t** signer_name, 
 	size_t* signer_len)
 {
 	size_t i;
@@ -193,7 +197,7 @@ val_find_signer(enum val_classification subtype, struct query_info* qinf,
 	if(subtype == VAL_CLASS_POSITIVE || subtype == VAL_CLASS_CNAME 
 		|| subtype == VAL_CLASS_ANY) {
 		/* check for the answer rrset */
-		for(i=cname_skip; i<rep->an_numrrsets; i++) {
+		for(i=skip; i<rep->an_numrrsets; i++) {
 			if(query_dname_compare(qinf->qname, 
 				rep->rrsets[i]->rk.dname) == 0) {
 				val_find_rrset_signer(rep->rrsets[i], 
@@ -231,6 +235,15 @@ val_find_signer(enum val_classification subtype, struct query_info* qinf,
 					signer_name, signer_len, &matchcount);
 			}
 		}
+	} else if(subtype == VAL_CLASS_REFERRAL) {
+		/* find keys for the item at skip */
+		if(skip < rep->rrset_count) {
+			val_find_rrset_signer(rep->rrsets[skip], 
+				signer_name, signer_len);
+			return;
+		}
+		*signer_name = NULL;
+		*signer_len = 0;
 	} else {
 		verbose(VERB_ALGO, "find_signer: could not find signer name"
 			" for unknown type response");
@@ -521,7 +534,7 @@ rrset_has_signer(struct ub_packed_rrset_key* rrset, uint8_t* name, size_t len)
 
 void 
 val_fill_reply(struct reply_info* chase, struct reply_info* orig, 
-	size_t cname_skip, uint8_t* name, size_t len)
+	size_t skip, uint8_t* name, size_t len)
 {
 	/* unsigned RRsets are never copied, but should not happen in 
 	 * secure answers anyway. Except for the synthesized CNAME after 
@@ -533,7 +546,7 @@ val_fill_reply(struct reply_info* chase, struct reply_info* orig,
 	chase->ns_numrrsets = 0;
 	chase->ar_numrrsets = 0;
 	/* ANSWER section */
-	for(i=cname_skip; i<orig->an_numrrsets; i++) {
+	for(i=skip; i<orig->an_numrrsets; i++) {
 		if(seen_dname && ntohs(orig->rrsets[i]->rk.type) == 
 			LDNS_RR_TYPE_CNAME) {
 			chase->rrsets[chase->an_numrrsets++] = orig->rrsets[i];
@@ -547,7 +560,8 @@ val_fill_reply(struct reply_info* chase, struct reply_info* orig,
 		}
 	}	
 	/* AUTHORITY section */
-	for(i=orig->an_numrrsets; i<orig->an_numrrsets+orig->ns_numrrsets; 
+	for(i = (skip > orig->an_numrrsets)?skip:orig->an_numrrsets;
+		i<orig->an_numrrsets+orig->ns_numrrsets; 
 		i++) {
 		if(rrset_has_signer(orig->rrsets[i], name, len)) {
 			chase->rrsets[chase->an_numrrsets+
@@ -555,8 +569,9 @@ val_fill_reply(struct reply_info* chase, struct reply_info* orig,
 		}
 	}
 	/* ADDITIONAL section */
-	for(i=orig->an_numrrsets+orig->ns_numrrsets; i<orig->rrset_count; 
-		i++) {
+	for(i= (skip>orig->an_numrrsets+orig->ns_numrrsets)?
+		skip:orig->an_numrrsets+orig->ns_numrrsets; 
+		i<orig->rrset_count; i++) {
 		if(rrset_has_signer(orig->rrsets[i], name, len)) {
 			chase->rrsets[chase->an_numrrsets+orig->ns_numrrsets+
 				chase->ar_numrrsets++] = orig->rrsets[i];
@@ -647,4 +662,18 @@ val_mark_insecure(struct reply_info* rep, struct key_entry_key* kkey,
 			rrset_update_sec_status(r, rep->rrsets[i]);
 		}
 	}
+}
+
+size_t 
+val_next_unchecked(struct reply_info* rep, size_t skip)
+{
+	size_t i;
+	struct packed_rrset_data* d;
+	for(i=skip+1; i<rep->rrset_count; i++) {
+		d = (struct packed_rrset_data*)rep->rrsets[i]->entry.data;
+		if(d->security == sec_status_unchecked) {
+			return i;
+		}
+	}
+	return rep->rrset_count;
 }

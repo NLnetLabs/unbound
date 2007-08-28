@@ -71,12 +71,15 @@ enum val_classification {
 	/** A CNAME/DNAME chain, and the offset is at the end of it,
 	 * but there is no answer here, it can be NAMERROR or NODATA. */
 	VAL_CLASS_CNAMENOANSWER,
+	/** A referral, from cache with a nonRD query. */
+	VAL_CLASS_REFERRAL,
 	/** A response to a qtype=ANY query. */
 	VAL_CLASS_ANY
 };
 
 /**
  * Given a response, classify ANSWER responses into a subtype.
+ * @param query_flags: query flags for the original query.
  * @param qinf: query info. The chased query name.
  * @param rep: response. The original response.
  * @param skip: offset into the original response answer section.
@@ -84,8 +87,8 @@ enum val_classification {
  * 	Once CNAME type is returned you can increase skip.
  * 	Then, another CNAME type, CNAME_NOANSWER or POSITIVE are possible.
  */
-enum val_classification val_classify_response(struct query_info* qinf,
-	struct reply_info* rep, size_t skip);
+enum val_classification val_classify_response(uint16_t query_flags,
+	struct query_info* qinf, struct reply_info* rep, size_t skip);
 
 /**
  * Given a response, determine the name of the "signer". This is primarily
@@ -237,5 +240,14 @@ void val_mark_indeterminate(struct reply_info* rep,
  */
 void val_mark_insecure(struct reply_info* rep, struct key_entry_key* kkey,
 	struct rrset_cache* r);
+
+/**
+ * Find next unchecked rrset position, return it for skip.
+ * @param rep: the original reply to look into.
+ * @param skip: the skip now.
+ * @return new skip, which may be at the rep->rrset_count position to signal
+ * 	there are no unchecked items.
+ */
+size_t val_next_unchecked(struct reply_info* rep, size_t skip);
 
 #endif /* VALIDATOR_VAL_UTILS_H */
