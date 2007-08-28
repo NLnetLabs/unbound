@@ -181,7 +181,6 @@ enum sec_status dnskeyset_verify_rrset_sig(struct module_env* env,
  * verify rrset, with specific dnskey(from set), for a specific rrsig 
  * @param region: scratch region used for temporary allocation.
  * @param buf: scratch buffer used for canonicalized rrset data.
- * @param env: module environment, scratch space is used.
  * @param ve: validator environment, date settings.
  * @param rrset: to be validated.
  * @param dnskey: DNSKEY rrset, keyset.
