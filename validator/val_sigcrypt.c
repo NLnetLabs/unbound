@@ -1073,6 +1073,49 @@ check_dates(struct val_env* ve, uint8_t* expi_p, uint8_t* incep_p)
 
 }
 
+/** adjust rrset TTL for verified rrset, compare to original TTL and expi */
+static void
+adjust_ttl(struct val_env* ve, struct ub_packed_rrset_key* rrset, 
+	uint8_t* orig_p, uint8_t* expi_p, uint8_t* incep_p)
+{
+	struct packed_rrset_data* d = 
+		(struct packed_rrset_data*)rrset->entry.data;
+	/* read out the dates */
+	int32_t origttl, expittl, expi, incep, now;
+	memmove(&origttl, orig_p, sizeof(origttl));
+	memmove(&expi, expi_p, sizeof(expi));
+	memmove(&incep, incep_p, sizeof(incep));
+	expi = ntohl(expi);
+	incep = ntohl(incep);
+	origttl = ntohl(origttl);
+
+	/* get current date */
+	if(ve->date_override) {
+		now = ve->date_override;
+		verbose(VERB_ALGO, "date override option %d used", (int)now); 
+	} else	now = (int32_t)time(0);
+	expittl = expi - now;
+
+	/* so now:
+	 * d->ttl: rrset ttl read from message or cache. May be reduced
+	 * origttl: original TTL from signature, authoritative TTL max.
+	 * expittl: TTL until the signature expires.
+	 *
+	 * Use the smallest of these.
+	 */
+	if(d->ttl > (uint32_t)origttl) {
+		verbose(VERB_DETAIL, "rrset TTL larger than original TTL,"
+			" adjusting TTL downwards");
+		d->ttl = origttl;
+	}
+	if(expittl > 0 && d->ttl > (uint32_t)expittl) {
+		verbose(VERB_ALGO, "rrset TTL larger than sig expiration ttl,"
+			" adjusting TTL downwards");
+		d->ttl = expittl;
+	}
+}
+
+
 /**
  * Output a libcrypto openssl error to the logfile.
  * @param str: string to add to it.
@@ -1294,6 +1337,7 @@ dnskey_verify_rrset_sig(struct module_env* env, struct val_env* ve,
         struct ub_packed_rrset_key* rrset, struct ub_packed_rrset_key* dnskey,
 	        size_t dnskey_idx, size_t sig_idx)
 {
+	enum sec_status sec;
 	uint8_t* sig;		/* RRSIG rdata */
 	size_t siglen;
 	size_t rrnum = rrset_get_count(rrset);
@@ -1391,6 +1435,13 @@ dnskey_verify_rrset_sig(struct module_env* env, struct val_env* ve,
 	}
 
 	/* verify */
-	return verify_canonrrset(env->scratch_buffer, (int)sig[2+2],
+	sec = verify_canonrrset(env->scratch_buffer, (int)sig[2+2],
 		sigblock, sigblock_len, key, keylen);
+
+	/* check if TTL is too high - reduce if so */
+	if(sec == sec_status_secure) {
+		adjust_ttl(ve, rrset, sig+2+4, sig+2+8, sig+2+12);
+	}
+
+	return sec;
 }

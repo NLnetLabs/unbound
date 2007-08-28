@@ -6,6 +6,7 @@
 	  replies are made from the rrset cache directly. Unless unchecked
 	  rrsets are encountered, there are then validated.
 	- enforce that signing is done by a parent domain (or same domain).
+	- adjust TTL downwards if rrset TTL bigger than signature allows.
 
 27 August 2007: Wouter
 	- do not garble the edns if a cache answer fails.
