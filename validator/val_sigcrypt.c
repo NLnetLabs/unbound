@@ -312,7 +312,10 @@ ds_create_dnskey_digest(struct module_env* env,
 				ldns_buffer_limit(b), (unsigned char*)digest);
 			return 1;
 #endif
-		default: break;
+		default: 
+			verbose(VERB_DETAIL, "unknown DS digest algorithm %d", 
+				(int) ds_get_digest_algo(ds_rrset, ds_idx));
+			break;
 	}
 	return 0;
 }
@@ -326,21 +329,33 @@ int ds_digest_match_dnskey(struct module_env* env,
 	uint8_t* digest; /* generated digest */
 	size_t digestlen = ds_digest_size_algo(ds_rrset, ds_idx);
 	
-	if(digestlen == 0)
+	if(digestlen == 0) {
+		verbose(VERB_DETAIL, "DS fail: not supported, or DS RR "
+			"format error");
 		return 0; /* not supported, or DS RR format error */
+	}
 	/* check digest length in DS with length from hash function */
 	ds_get_sigdata(ds_rrset, ds_idx, &ds, &dslen);
-	if(!ds || dslen != digestlen)
+	if(!ds || dslen != digestlen) {
+		verbose(VERB_DETAIL, "DS fail: DS RR algo and digest do not "
+			"match each other");
 		return 0; /* DS algorithm and digest do not match */
+	}
 
 	digest = region_alloc(env->scratch, digestlen);
-	if(!digest)
+	if(!digest) {
+		verbose(VERB_DETAIL, "DS fail: out of memory");
 		return 0; /* mem error */
+	}
 	if(!ds_create_dnskey_digest(env, dnskey_rrset, dnskey_idx, ds_rrset, 
-		ds_idx, digest))
+		ds_idx, digest)) {
+		verbose(VERB_DETAIL, "DS fail: could not calc key digest");
 		return 0; /* digest algo failed */
-	if(memcmp(digest, ds, dslen) != 0)
+	}
+	if(memcmp(digest, ds, dslen) != 0) {
+		verbose(VERB_DETAIL, "DS fail: digest is different");
 		return 0; /* digest different */
+	}
 	return 1;
 }
 
@@ -1165,91 +1180,6 @@ log_crypto_error(const char* str, unsigned long e)
 }
 
 /**
- * Convert DSA RRsig sigblock to a DSA_SIG structure.
- * @param sig: sigblock field of RRSIG
- * @param siglen: length of sig.
- * @return DSA_SIG or NULL
- */
-static DSA_SIG*
-dsa_rrsig_to_dsa_sig(unsigned char* sig, unsigned int siglen)
-{
-	uint8_t t;
-	BIGNUM *R, *S;
-	DSA_SIG *dsasig;
-
-	/* extract the R and S field from the sig buffer */
-	if(siglen < 1 + SHA_DIGEST_LENGTH*2) {
-		verbose(VERB_DETAIL, "verify: short DSA RRSIG");
-		return NULL;
-	}
-	t = sig[0];
-	R = BN_new();
-	if(!R) {
-		log_err("verify: alloc failure");
-		return NULL;
-	}
-	S = BN_new();
-	if(!S) {
-		BN_free(R);
-		log_err("verify: alloc failure");
-		return NULL;
-	}
-	if(!BN_bin2bn(sig + 1, SHA_DIGEST_LENGTH, R)) {
-		log_err("verify: bignum failure");
-		BN_free(R);
-		BN_free(S);
-		return NULL;
-	}
-	if(!BN_bin2bn(sig + 21, SHA_DIGEST_LENGTH, S)) {
-		log_err("verify: bignum failure");
-		BN_free(R);
-		BN_free(S);
-		return NULL;
-	}
-
-	dsasig = DSA_SIG_new();
-	if(!dsasig) {
-		log_err("verify: alloc failure");
-		BN_free(R);
-		BN_free(S);
-		return NULL;
-	}
-	dsasig->r = R;
-	dsasig->s = S;
-	return dsasig;
-}
-
-/**
- * Convert DSA signature to a DER signature.
- * @param sig: signature, used to read, then replaced with malloced 
- *	DER signature on success.
- * @param siglen: read to get input len, then updated to new length.
- * @return false on (alloc) error.
- */
-static int
-dsa_convert_to_der(unsigned char** sig, unsigned int* siglen)
-{
-	DSA_SIG* dsasig;
-	int res;
-
-	dsasig = dsa_rrsig_to_dsa_sig(*sig, *siglen);
-	if(!dsasig) {
-		return 0;
-	}
-	*sig = NULL; /* needs libcrypto >= 0.9.7 */
-	res = i2d_DSA_SIG(dsasig, sig);
-	if(res < 0) {
-		log_crypto_error("verify: bad dsa sig ",
-			ERR_get_error());
-		DSA_SIG_free(dsasig);
-		return 0;
-	}
-	DSA_SIG_free(dsasig);
-	*siglen = (unsigned int)res;
-	return 1;
-}
-
-/**
  * Setup key and digest for verification. Adjust sig if necessary.
  *
  * @param algo: key algorithm
@@ -1257,14 +1187,11 @@ dsa_convert_to_der(unsigned char** sig, unsigned int* siglen)
  * @param digest_type: digest type to use
  * @param key: key to setup for.
  * @param keylen: length of key.
- * @param sig: sig to update if necessary.
- * @param siglen: length of sig.
  * @return false on failure.
  */
 static int
 setup_key_digest(int algo, EVP_PKEY* evp_key, const EVP_MD** digest_type, 
-	unsigned char* key, size_t keylen, 
-	unsigned char** sig, unsigned int* siglen)
+	unsigned char* key, size_t keylen)
 {
 	switch(algo) {
 		case LDNS_DSA:
@@ -1272,8 +1199,6 @@ setup_key_digest(int algo, EVP_PKEY* evp_key, const EVP_MD** digest_type,
 			EVP_PKEY_assign_DSA(evp_key, 
 				ldns_key_buf2dsa_raw(key, keylen));
 			*digest_type = EVP_dss1();
-			if(!dsa_convert_to_der(sig, siglen))
-				return 0;
 
 			break;
 		case LDNS_RSASHA1:
@@ -1295,23 +1220,6 @@ setup_key_digest(int algo, EVP_PKEY* evp_key, const EVP_MD** digest_type,
 			return 0;
 	}
 	return 1;
-}
-
-/**
- * Desetup what setup_key_digest setup.
- * @param algo: key algorithm
- * @param sig: signature.
- */
-static void
-desetup_key_digest(int algo, unsigned char* sig)
-{
-	switch(algo) {
-		case LDNS_DSA:
-		case LDNS_DSA_NSEC3:
-			/* free converted signature */
-			free(sig);
-			break;
-	}
 }
 
 /**
@@ -1339,8 +1247,8 @@ verify_canonrrset(ldns_buffer* buf, int algo, unsigned char* sigblock,
 		return sec_status_unchecked;
 	}
 
-	if(!setup_key_digest(algo, evp_key, &digest_type, key, keylen,
-		&sigblock, &sigblock_len)) {
+	if(!setup_key_digest(algo, evp_key, &digest_type, key, keylen)) {
+		verbose(VERB_DETAIL, "verify: failed to setup key");
 		EVP_PKEY_free(evp_key);
 		return sec_status_bogus;
 	}
@@ -1353,7 +1261,6 @@ verify_canonrrset(ldns_buffer* buf, int algo, unsigned char* sigblock,
 	res = EVP_VerifyFinal(&ctx, sigblock, sigblock_len, evp_key);
 	EVP_MD_CTX_cleanup(&ctx);
 	EVP_PKEY_free(evp_key);
-	desetup_key_digest(algo, sigblock);
 
 	if(res == 1) {
 		return sec_status_secure;

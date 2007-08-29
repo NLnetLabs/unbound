@@ -365,8 +365,10 @@ verify_dnskeys_with_ds_rr(struct module_env* env, struct val_env* ve,
 		 * same DS hash algorithm. */
 		if(!ds_digest_match_dnskey(env, dnskey_rrset, i, ds_rrset, 
 			ds_idx)) {
+			verbose(VERB_ALGO, "DS match attempt failed");
 			continue;
 		}
+		verbose(VERB_ALGO, "DS match digest ok, trying signature");
 
 		/* Otherwise, we have a match! Make sure that the DNSKEY 
 		 * verifies *with this key*  */

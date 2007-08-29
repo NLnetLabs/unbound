@@ -3,6 +3,9 @@
 	- added RSA and DSA test keys, public and private pairs, 512 bits.
 	- default configuration is with validation enabled.
 	  Only a trust-anchor needs to be configured for DNSSEC to work.
+	- do not convert to DER for DSA signature verification.
+	- validator replay test file, for a DS to DNSKEY DSA key prime and
+	  positive response.
 
 28 August 2007: Wouter
 	- removed double use for udp buffers, that could fail,
