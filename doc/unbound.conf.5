@@ -187,7 +187,8 @@ the portnumber will block other port numbers.
 Module configuration, a list of module names separated by spaces, surround
 the string with quotes (""). The modules can be validator, iterator.
 Setting this to "iterator" will result in a non-validating server.
-Setting this to "validator iterator" will turn on validation.
+Setting this to "validator iterator" will turn on DNSSEC validation.
+You must also set trust-anchors for validation to be useful.
 .It \fBtrust-anchor-file:\fR <filename>
 File with trusted keys for validation. Both DS and DNSKEY entries can appear
 in the file. The format of the file is the standard DNS Zone file format.

@@ -117,7 +117,7 @@ config_create()
 	cfg->val_date_override = 0;
 	cfg->val_clean_additional = 1;
 	cfg->val_permissive_mode = 0;
-	if(!(cfg->module_conf = strdup("iterator"))) goto error_exit;
+	if(!(cfg->module_conf = strdup("validator iterator"))) goto error_exit;
 	return cfg;
 error_exit:
 	config_delete(cfg); 
