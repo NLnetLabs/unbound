@@ -1,3 +1,7 @@
+29 August 2007: Wouter
+	- test tool to sign rrsets for testing validator with.
+	- added RSA and DSA test keys, public and private pairs, 512 bits.
+
 28 August 2007: Wouter
 	- removed double use for udp buffers, that could fail,
 	  instead performs a malloc to do the backup.

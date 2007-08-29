@@ -71,8 +71,10 @@ LOCKVERIFY_SRC=testcode/lock_verify.c $(COMMON_SRC)
 LOCKVERIFY_OBJ=$(addprefix $(BUILD),$(LOCKVERIFY_SRC:.c=.o)) $(COMPAT_OBJ)
 PKTVIEW_SRC=testcode/pktview.c testcode/readhex.c $(COMMON_SRC)
 PKTVIEW_OBJ=$(addprefix $(BUILD),$(PKTVIEW_SRC:.c=.o)) $(COMPAT_OBJ)
+SIGNIT_SRC=testcode/signit.c $(COMMON_SRC)
+SIGNIT_OBJ=$(addprefix $(BUILD),$(SIGNIT_SRC:.c=.o)) $(COMPAT_OBJ)
 ALL_SRC=$(COMMON_SRC) $(UNITTEST_SRC) $(DAEMON_SRC) \
-	$(TESTBOUND_SRC) $(LOCKVERIFY_SRC)
+	$(TESTBOUND_SRC) $(LOCKVERIFY_SRC) $(PKTVIEW_SRC) $(SIGNIT_SRC)
 ALL_OBJ=$(addprefix $(BUILD),$(ALL_SRC:.c=.o) \
 	$(addprefix compat/,$(LIBOBJS))) $(COMPAT_OBJ)
 
@@ -87,7 +89,7 @@ $(BUILD)%.o:    $(srcdir)/%.c
 
 .PHONY:	clean realclean doc lint all install uninstall
 
-all:	$(COMMON_OBJ) unbound unittest testbound lock-verify pktview
+all:	$(COMMON_OBJ) unbound unittest testbound lock-verify pktview signit
 
 unbound:	$(DAEMON_OBJ)
 	$(INFO) Link $@
@@ -106,6 +108,10 @@ lock-verify:	$(LOCKVERIFY_OBJ)
 	$Q$(LINK) -o $@ $^ $(LIBS)
 
 pktview:	$(PKTVIEW_OBJ)
+	$(INFO) Link $@
+	$Q$(LINK) -o $@ $^ $(LIBS)
+
+signit:	$(SIGNIT_OBJ)
 	$(INFO) Link $@
 	$Q$(LINK) -o $@ $^ $(LIBS)
 
