@@ -134,9 +134,9 @@ void analyze_rr(ldns_buffer* pkt, int q)
 		printf("\n");
 	} else {
 		ttl = ldns_buffer_read_u32(pkt);
-		printf(" ttl %d (0x%x)", ttl, ttl);
+		printf(" ttl %d (0x%x)", (int)ttl, (unsigned)ttl);
 		len = ldns_buffer_read_u16(pkt);
-		printf(" rdata len %d:\n", len);
+		printf(" rdata len %d:\n", (int)len);
 		if(ldns_rr_descript(type))
 			analyze_rdata(pkt, ldns_rr_descript(type), len);
 		else ldns_buffer_skip(pkt, (ssize_t)len);
@@ -152,25 +152,28 @@ void analyze(ldns_buffer* pkt)
 	if(ldns_buffer_limit(pkt) < 12) return;
 
 	i = ldns_buffer_read_u16(pkt);
-	printf("id (hostorder): %d (0x%x)\n", i, i);
+	printf("id (hostorder): %d (0x%x)\n", (int)i, (unsigned)i);
 	f = ldns_buffer_read_u16(pkt);
-	printf("flags: 0x%x\n", f);
+	printf("flags: 0x%x\n", (unsigned)f);
 	qd = ldns_buffer_read_u16(pkt);
-	printf("qdcount: %d\n", qd);
+	printf("qdcount: %d\n", (int)qd);
 	an = ldns_buffer_read_u16(pkt);
-	printf("ancount: %d\n", an);
+	printf("ancount: %d\n", (int)an);
 	ns = ldns_buffer_read_u16(pkt);
-	printf("nscount: %d\n", ns);
+	printf("nscount: %d\n", (int)ns);
 	ar = ldns_buffer_read_u16(pkt);
-	printf("arcount: %d\n", ar);
+	printf("arcount: %d\n", (int)ar);
 	
 	printf(";-- query section\n");
 	while(ldns_buffer_remaining(pkt) > 0) {
-		if(rrnum == qd) printf(";-- answer section\n");
-		if(rrnum == qd+an) printf(";-- authority section\n");
-		if(rrnum == qd+an+ns) printf(";-- additional section\n");
+		if(rrnum == (int)qd) 
+			printf(";-- answer section\n");
+		if(rrnum == (int)qd+(int)an) 
+			printf(";-- authority section\n");
+		if(rrnum == (int)qd+(int)an+(int)ns) 
+			printf(";-- additional section\n");
 		printf("rr %d ", rrnum);
-		analyze_rr(pkt, rrnum < qd);
+		analyze_rr(pkt, rrnum < (int)qd);
 		rrnum++;
 	}
 }

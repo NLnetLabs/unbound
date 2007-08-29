@@ -76,7 +76,7 @@ parse_cmdline(char *argv[], struct keysets* s)
 {
 	s->expi = cfg_convert_timeval(argv[1]);
 	s->incep = cfg_convert_timeval(argv[2]);
-	s->keytag = atoi(argv[3]);
+	s->keytag = (uint16_t)atoi(argv[3]);
 	s->owner = argv[4];
 	s->flags = DNSKEY_BIT_ZSK; /* to enforce signing */
 }
