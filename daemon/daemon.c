@@ -460,6 +460,12 @@ daemon_delete(struct daemon* daemon)
 	free(daemon->pidfile);
 	free(daemon->env);
 	free(daemon);
+	/* libcrypto cleanup */
+	/* CONF_modules_unload(1); */
+	EVP_cleanup();
+	/* ENGINE_cleanup(); */
+	CRYPTO_cleanup_all_ex_data(); /* safe, no more threads right now */
+	ERR_remove_state(0);
 	ERR_free_strings();
 	checklock_stop();
 }

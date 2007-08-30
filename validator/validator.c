@@ -1777,7 +1777,8 @@ val_clear(struct module_qstate* qstate, int id)
 /**
  * Debug helper routine that assists worker in determining memory in 
  * use.
- * @param me: mod_env value
+ * @param env: module environment 
+ * @param id: module id.
  * @return memory in use in bytes.
  */
 static size_t 

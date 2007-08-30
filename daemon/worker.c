@@ -114,7 +114,6 @@ void
 worker_mem_report(struct worker* worker, struct serviced_query* cur_serv)
 {
 	/* debug func in validator module */
-	size_t val_kcache_get_mem(void*);
 	size_t total, front, back, mesh, msg, rrset, infra, ac, superac;
 	size_t me, iter, val;
 	int i;

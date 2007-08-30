@@ -7,6 +7,7 @@
 	- memory accounting fixup for outside network tcp callbacks.
 	- memory accounting for iterator fixed storage.
 	- key cache size and slabs config options.
+	- lib crypto cleanups at exit. 
 
 29 August 2007: Wouter
 	- test tool to sign rrsets for testing validator with.
