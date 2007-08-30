@@ -113,8 +113,11 @@ debug_total_mem(size_t calctotal)
 void
 worker_mem_report(struct worker* worker, struct serviced_query* cur_serv)
 {
+	/* debug func in validator module */
+	size_t val_kcache_get_mem(void*);
 	size_t total, front, back, mesh, msg, rrset, infra, ac, superac;
-	size_t me;
+	size_t me, iter, val;
+	int i;
 	if(verbosity < VERB_ALGO) 
 		return;
 	front = listen_get_mem(worker->front);
@@ -125,20 +128,32 @@ worker_mem_report(struct worker* worker, struct serviced_query* cur_serv)
 	mesh = mesh_get_mem(worker->env.mesh);
 	ac = alloc_get_mem(&worker->alloc);
 	superac = alloc_get_mem(&worker->daemon->superalloc);
+	iter = 0;
+	val = 0;
+	for(i=0; i<worker->env.mesh->num_modules; i++) {
+		if(strcmp(worker->env.mesh->modfunc[i]->name, "validator")==0)
+			val += (*worker->env.mesh->modfunc[i]->get_mem)
+				(&worker->env, i);
+		else	iter += (*worker->env.mesh->modfunc[i]->get_mem)
+				(&worker->env, i);
+	}
 	me = sizeof(*worker) + sizeof(*worker->base) + sizeof(*worker->comsig)
 		+ comm_point_get_mem(worker->cmd_com) + 
 		sizeof(worker->rndstate) + region_get_mem(worker->scratchpad)+
 		sizeof(*worker->env.scratch_buffer) + 
 		ldns_buffer_capacity(worker->env.scratch_buffer);
-	if(cur_serv)
+	if(cur_serv) {
+		log_info("cur_serv = %d", (int)serviced_get_mem(cur_serv));
 		me += serviced_get_mem(cur_serv);
-	total = front+back+mesh+msg+rrset+infra+ac+superac+me;
+	}
+	total = front+back+mesh+msg+rrset+infra+iter+val+ac+superac+me;
 	log_info("Memory conditions: %u front=%u back=%u mesh=%u msg=%u "
-		"rrset=%u infra=%u alloccache=%u globalalloccache=%u me=%u",
+		"rrset=%u infra=%u iter=%u val=%u "
+		"alloccache=%u globalalloccache=%u me=%u",
 		(unsigned)total, (unsigned)front, (unsigned)back, 
 		(unsigned)mesh, (unsigned)msg, (unsigned)rrset, 
-		(unsigned)infra, (unsigned)ac, (unsigned)superac, 
-		(unsigned)me);
+		(unsigned)infra, (unsigned)iter, (unsigned)val, (unsigned)ac, 
+		(unsigned)superac, (unsigned)me);
 	debug_total_mem(total);
 }
 
@@ -1027,7 +1042,6 @@ worker_send_query(uint8_t* qname, size_t qnamelen, uint16_t qtype,
 		worker_handle_service_reply, e, worker->back->udp_buff,
 		&outbound_entry_compare);
 	if(!e->qsent) {
-		free(e);
 		return NULL;
 	}
 	return e;

@@ -82,7 +82,8 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_IDENTITY VAR_VERSION VAR_HARDEN_GLUE VAR_MODULE_CONF
 %token VAR_TRUST_ANCHOR_FILE VAR_TRUST_ANCHOR VAR_VAL_OVERRIDE_DATE
 %token VAR_BOGUS_TTL VAR_VAL_CLEAN_ADDITIONAL VAR_VAL_PERMISSIVE_MODE
-%token VAR_INCOMING_NUM_TCP VAR_MSG_BUFFER_SIZE
+%token VAR_INCOMING_NUM_TCP VAR_MSG_BUFFER_SIZE VAR_KEY_CACHE_SIZE
+%token VAR_KEY_CACHE_SLABS
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -118,7 +119,8 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_harden_glue | server_module_conf | server_trust_anchor_file |
 	server_trust_anchor | server_val_override_date | server_bogus_ttl |
 	server_val_clean_additional | server_val_permissive_mode |
-	server_incoming_num_tcp | server_msg_buffer_size
+	server_incoming_num_tcp | server_msg_buffer_size | 
+	server_key_cache_size | server_key_cache_slabs
 	;
 stubstart: VAR_STUB_ZONE
 	{
@@ -554,6 +556,28 @@ server_val_permissive_mode: VAR_VAL_PERMISSIVE_MODE STRING
 			yyerror("expected yes or no.");
 		else cfg_parser->cfg->val_permissive_mode = 
 			(strcmp($2, "yes")==0);
+		free($2);
+	}
+	;
+server_key_cache_size: VAR_KEY_CACHE_SIZE STRING
+	{
+		OUTYY(("P(server_key_cache_size:%s)\n", $2));
+		if(atoi($2) == 0)
+			yyerror("number expected");
+		else cfg_parser->cfg->key_cache_size = atoi($2);
+		free($2);
+	}
+	;
+server_key_cache_slabs: VAR_KEY_CACHE_SLABS STRING
+	{
+		OUTYY(("P(server_key_cache_slabs:%s)\n", $2));
+		if(atoi($2) == 0)
+			yyerror("number expected");
+		else {
+			cfg_parser->cfg->key_cache_slabs = atoi($2);
+			if(!is_pow2(cfg_parser->cfg->key_cache_slabs))
+				yyerror("must be a power of 2");
+		}
 		free($2);
 	}
 	;

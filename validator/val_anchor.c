@@ -525,3 +525,9 @@ anchors_lookup(struct val_anchors* anchors,
 	}
 	return result;
 }
+
+size_t 
+anchors_get_mem(struct val_anchors* anchors)
+{
+	return sizeof(*anchors) + region_get_mem(anchors->region);
+}

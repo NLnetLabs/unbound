@@ -232,6 +232,12 @@ reply is not withheld from the client with SERVFAIL as usual. The client
 receives the bogus data. For messages that are found to be secure the AD bit 
 is set in replies. Also logging is performed as for full validation.
 The default value is "no". 
+.It \fBkey-cache-size:\fR <number>
+Number of bytes size of the key cache. Default is 4 megabytes.
+.It \fBkey-cache-slabs:\fR <number>
+Number of slabs in the key cache. Slabs reduce lock contention by threads.
+Must be set to a power of 2. Setting (close) to the number of cpus is a 
+reasonable guess.
 .El
 
 .Ss Stub Zone Options
@@ -289,6 +295,8 @@ server:
 	rrset-cache-slabs: 1
 	infra-cache-numhosts: 200
 	infra-cache-numlame: 10
+	key-cache-size: 102400  # 100 Kb.
+	key-cache-slabs: 1
 	num-queries-per-thread: 30
 	target-fetch-policy: "2 1 0 0 0 0"
 	harden-large-queries: "yes"

@@ -55,10 +55,9 @@ key_cache_create(struct config_file* cfg)
 		log_err("malloc failure");
 		return NULL;
 	}
-	(void)cfg; /* TODO use config for keycache params */
-	numtables = HASH_DEFAULT_SLABS;
+	numtables = cfg->key_cache_slabs;
 	start_size = HASH_DEFAULT_STARTARRAY;
-	maxmem = HASH_DEFAULT_MAXMEM;
+	maxmem = cfg->key_cache_size;
 	kcache->slab = slabhash_create(numtables, start_size, maxmem,
 		&key_entry_sizefunc, &key_entry_compfunc,
 		&key_entry_delkeyfunc, &key_entry_deldatafunc, NULL);
@@ -147,3 +146,10 @@ key_cache_obtain(struct key_cache* kcache, uint8_t* name, size_t namelen,
 	}
 	return NULL;
 }
+
+size_t 
+key_cache_get_mem(struct key_cache* kcache)
+{
+	return sizeof(*kcache) + slabhash_get_mem(kcache->slab);
+}
+

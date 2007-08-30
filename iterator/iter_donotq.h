@@ -103,4 +103,12 @@ int donotq_apply_cfg(struct iter_donotq* donotq, struct config_file* cfg);
 int donotq_lookup(struct iter_donotq* donotq, struct sockaddr_storage* addr,
 	socklen_t addrlen);
 
+/**
+ * Get memory used by donotqueryaddresses structure.
+ * @param donotq: structure for address storage.
+ * @return bytes in use.
+ */
+size_t donotq_get_mem(struct iter_donotq* donotq);
+
+
 #endif /* ITERATOR_ITER_DONOTQ_H */

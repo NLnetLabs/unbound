@@ -119,6 +119,8 @@ config_create()
 	cfg->val_date_override = 0;
 	cfg->val_clean_additional = 1;
 	cfg->val_permissive_mode = 0;
+	cfg->key_cache_size = 4 * 1024 * 1024;
+	cfg->key_cache_slabs = 4;
 	if(!(cfg->module_conf = strdup("validator iterator"))) goto error_exit;
 	return cfg;
 error_exit:

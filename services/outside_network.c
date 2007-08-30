@@ -120,7 +120,7 @@ waiting_tcp_delete(struct waiting_tcp* w)
 
 /** use next free buffer to service a tcp query */
 static int
-outnet_tcp_take_into_use(struct waiting_tcp* w, uint8_t* pkt)
+outnet_tcp_take_into_use(struct waiting_tcp* w, uint8_t* pkt, size_t pkt_len)
 {
 	struct pending_tcp* pend = w->outnet->tcp_free;
 	int s;
@@ -154,7 +154,7 @@ outnet_tcp_take_into_use(struct waiting_tcp* w, uint8_t* pkt)
 	pend->next_free = NULL;
 	pend->query = w;
 	ldns_buffer_clear(pend->c->buffer);
-	ldns_buffer_write(pend->c->buffer, pkt, w->pkt_len);
+	ldns_buffer_write(pend->c->buffer, pkt, pkt_len);
 	ldns_buffer_flip(pend->c->buffer);
 	pend->c->tcp_is_reading = 0;
 	pend->c->tcp_byte_count = 0;
@@ -172,7 +172,7 @@ use_free_buffer(struct outside_network* outnet)
 		outnet->tcp_wait_first = w->next_waiting;
 		if(outnet->tcp_wait_last == w)
 			outnet->tcp_wait_last = NULL;
-		if(!outnet_tcp_take_into_use(w, w->pkt)) {
+		if(!outnet_tcp_take_into_use(w, w->pkt, w->pkt_len)) {
 			(void)(*w->cb)(NULL, w->cb_arg, NETEVENT_CLOSED, NULL);
 			waiting_tcp_delete(w);
 		}
@@ -759,7 +759,7 @@ pending_tcp_query(struct outside_network* outnet, ldns_buffer* packet,
 		return NULL;
 	}
 	w->pkt = NULL;
-	w->pkt_len = ldns_buffer_limit(packet);
+	w->pkt_len = 0;
 	/* id uses lousy random() TODO use better and entropy */
 	id = ((unsigned)ub_random(rnd)>>8) & 0xffff;
 	LDNS_ID_SET(ldns_buffer_begin(packet), id);
@@ -773,13 +773,15 @@ pending_tcp_query(struct outside_network* outnet, ldns_buffer* packet,
 	comm_timer_set(w->timer, &tv);
 	if(pend) {
 		/* we have a buffer available right now */
-		if(!outnet_tcp_take_into_use(w, ldns_buffer_begin(packet))) {
+		if(!outnet_tcp_take_into_use(w, ldns_buffer_begin(packet),
+			ldns_buffer_limit(packet))) {
 			waiting_tcp_delete(w);
 			return NULL;
 		}
 	} else {
 		/* queue up */
 		w->pkt = (uint8_t*)w + sizeof(struct waiting_tcp);
+		w->pkt_len = ldns_buffer_limit(packet);
 		memmove(w->pkt, ldns_buffer_begin(packet), w->pkt_len);
 		w->next_waiting = NULL;
 		if(outnet->tcp_wait_last)
@@ -1268,16 +1270,19 @@ serviced_get_mem(struct serviced_query* sq)
 	s = sizeof(*sq) + sq->qbuflen;
 	for(sb = sq->cblist; sb; sb = sb->next)
 		s += sizeof(*sb);
-	/* always sq->pending existed, but is null to delete after callback */
 	if(sq->status == serviced_query_UDP_EDNS ||
 		sq->status == serviced_query_UDP) {
 		s += sizeof(struct pending);
 		s += comm_timer_get_mem(NULL);
 	} else {
 		/* does not have size of the pkt pointer */
+		/* always has a timer except on malloc failures */
+
+		/* these sizes are part of the main outside network mem */
+		/*
 		s += sizeof(struct waiting_tcp);
-		/* always has a timer expect on malloc failures */
 		s += comm_timer_get_mem(NULL);
+		*/
 	}
 	return s;
 }

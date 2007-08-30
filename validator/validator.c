@@ -1775,11 +1775,28 @@ val_clear(struct module_qstate* qstate, int id)
 }
 
 /**
+ * Debug helper routine that assists worker in determining memory in 
+ * use.
+ * @param me: mod_env value
+ * @return memory in use in bytes.
+ */
+static size_t 
+val_get_mem(struct module_env* env, int id)
+{
+	struct val_env* ve = (struct val_env*)env->modinfo[id];
+	if(!ve)
+		return 0;
+	return sizeof(*ve) + key_cache_get_mem(ve->kcache) + 
+		anchors_get_mem(ve->anchors);
+}
+
+/**
  * The validator function block 
  */
 static struct module_func_block val_block = {
 	"validator",
-	&val_init, &val_deinit, &val_operate, &val_inform_super, &val_clear
+	&val_init, &val_deinit, &val_operate, &val_inform_super, &val_clear,
+	&val_get_mem
 };
 
 struct module_func_block* 
@@ -1799,3 +1816,4 @@ val_state_to_string(enum val_state state)
 	}
 	return "UNKNOWN VALIDATOR STATE";
 }
+

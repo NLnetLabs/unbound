@@ -94,4 +94,11 @@ struct key_entry_key* key_cache_obtain(struct key_cache* kcache,
 	uint8_t* name, size_t namelen, uint16_t key_class, 
 	struct region* region);
 
+/**
+ * Get memory in use by the key cache.
+ * @param kcache: the key cache.
+ * @return memory in use in bytes.
+ */
+size_t key_cache_get_mem(struct key_cache* kcache);
+
 #endif /* VALIDATOR_VAL_KCACHE_H */

@@ -157,6 +157,11 @@ struct config_file {
 	/** should validator allow bogus messages to go through */
 	int val_permissive_mode;
 
+	/** size of the key cache */
+	size_t key_cache_size;
+	/** slabs in the key cache. */
+	size_t key_cache_slabs;
+
 	/** daemonize, i.e. fork into the background. */
 	int do_daemonize;
 };

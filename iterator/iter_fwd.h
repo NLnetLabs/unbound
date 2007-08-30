@@ -118,4 +118,11 @@ int forwards_apply_cfg(struct iter_forwards* fwd, struct config_file* cfg);
 struct delegpt* forwards_lookup(struct iter_forwards* fwd, 
 	uint8_t* qname, uint16_t qclass);
 
+/**
+ * Get memory in use by forward storage
+ * @param fwd: forward storage.
+ * @return bytes in use
+ */
+size_t forwards_get_mem(struct iter_forwards* fwd);
+
 #endif /* ITERATOR_ITER_FWD_H */

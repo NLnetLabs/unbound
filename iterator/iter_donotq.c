@@ -147,3 +147,10 @@ donotq_lookup(struct iter_donotq* donotq, struct sockaddr_storage* addr,
 		return 1;
 	return 0;
 }
+
+size_t 
+donotq_get_mem(struct iter_donotq* donotq)
+{
+	if(!donotq) return 0;
+	return sizeof(*donotq) + region_get_mem(donotq->region);
+}

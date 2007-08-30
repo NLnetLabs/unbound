@@ -127,4 +127,11 @@ struct delegpt* hints_lookup_root(struct iter_hints* hints, uint16_t qclass);
 struct delegpt* hints_lookup_stub(struct iter_hints* hints, 
 	uint8_t* qname, uint16_t qclass, struct delegpt* dp);
 
+/**
+ * Get memory in use by hints
+ * @param hints: hint storage.
+ * @return bytes in use
+ */
+size_t hints_get_mem(struct iter_hints* hints);
+
 #endif /* ITERATOR_ITER_HINTS_H */

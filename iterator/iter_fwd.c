@@ -283,3 +283,11 @@ forwards_lookup(struct iter_forwards* fwd, uint8_t* qname, uint16_t qclass)
 		return result->dp;
 	return NULL;
 }
+
+size_t 
+forwards_get_mem(struct iter_forwards* fwd)
+{
+	if(!fwd)
+		return 0;
+	return sizeof(*fwd) + region_get_mem(fwd->region);
+}

@@ -396,5 +396,6 @@ main(int argc, char* argv[])
 	}
 
 	run_daemon(cfgfile, cmdline_verbose, debug_mode);
+	log_init(NULL); /* close logfile */
 	return 0;
 }

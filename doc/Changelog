@@ -1,6 +1,12 @@
 30 August 2007: Wouter
 	- fixup override date config option.
 	- config options to control memory usage.
+	- caught bad free of un-alloced data in worker_send error case.
+	- memory accounting for key cache (trust anchors and temporary cache).
+	- memory accounting fixup for outside network tcp pending waits.
+	- memory accounting fixup for outside network tcp callbacks.
+	- memory accounting for iterator fixed storage.
+	- key cache size and slabs config options.
 
 29 August 2007: Wouter
 	- test tool to sign rrsets for testing validator with.

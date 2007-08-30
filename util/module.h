@@ -283,6 +283,7 @@ struct module_func_block {
 	 * return: 0 on error
 	 */
 	int (*init)(struct module_env* env, int id);
+
 	/**
 	 * de-init, delete, the module. Called once for the global state.
 	 * @param env: module environment.
@@ -329,6 +330,14 @@ struct module_func_block {
 	 * clear module specific data
 	 */
 	void (*clear)(struct module_qstate* qstate, int id);
+
+	/**
+	 * How much memory is the module specific data using. 
+	 * @param env: module environment.
+	 * @param id: the module id.
+	 * @return the number of bytes that are alloced.
+	 */
+	size_t (*get_mem)(struct module_env* env, int id);
 };
 
 /** 

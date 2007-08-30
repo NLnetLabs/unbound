@@ -1591,13 +1591,24 @@ iter_clear(struct module_qstate* qstate, int id)
 	qstate->minfo[id] = NULL;
 }
 
+/** iterator alloc size routine */
+static size_t iter_get_mem(struct module_env* env, int id)
+{
+	struct iter_env* ie = (struct iter_env*)env->modinfo[id];
+	if(!ie)
+		return 0;
+	return sizeof(*ie) + sizeof(int)*((size_t)ie->max_dependency_depth+1)
+		+ hints_get_mem(ie->hints) + forwards_get_mem(ie->fwds)
+		+ donotq_get_mem(ie->donotq);
+}
+
 /**
  * The iterator function block 
  */
 static struct module_func_block iter_block = {
 	"iterator",
 	&iter_init, &iter_deinit, &iter_operate, &iter_inform_super, 
-	&iter_clear
+	&iter_clear, &iter_get_mem
 };
 
 struct module_func_block* 

@@ -151,4 +151,11 @@ struct trust_anchor* anchors_lookup(struct val_anchors* anchors,
 int anchor_store_str(struct val_anchors* anchors, ldns_buffer* buffer,
 	const char* str);
 
+/**
+ * Get memory in use by the trust anchor storage
+ * @param anchors: anchor storage.
+ * @return memory in use in bytes.
+ */
+size_t anchors_get_mem(struct val_anchors* anchors);
+
 #endif /* VALIDATOR_VAL_ANCHOR_H */

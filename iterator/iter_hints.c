@@ -375,3 +375,10 @@ hints_lookup_stub(struct iter_hints* hints, uint8_t* qname,
 		return result->dp; /* need to prime this stub */
 	return NULL;
 }
+
+size_t 
+hints_get_mem(struct iter_hints* hints)
+{
+	if(!hints) return 0;
+	return sizeof(*hints) + region_get_mem(hints->region);
+}
