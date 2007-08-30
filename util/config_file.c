@@ -116,6 +116,7 @@ config_create()
 	cfg->version = NULL;
 	cfg->trust_anchor_file_list = NULL;
 	cfg->trust_anchor_list = NULL;
+	cfg->trusted_keys_file_list = NULL;
 	cfg->val_date_override = 0;
 	cfg->val_clean_additional = 1;
 	cfg->val_permissive_mode = 0;

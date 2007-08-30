@@ -147,6 +147,8 @@ struct config_file {
 	struct config_strlist* trust_anchor_file_list;
 	/** list of trustanchor keys, linked list */
 	struct config_strlist* trust_anchor_list;
+	/** files with trusted DNSKEYs in named.conf format, list */
+	struct config_strlist* trusted_keys_file_list;
 
 	/** if not 0, this value is the validation date for RRSIGs */
 	int32_t val_date_override;

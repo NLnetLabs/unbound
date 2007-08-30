@@ -209,6 +209,11 @@ The resource record is entered in the same format as 'dig' or 'drill' prints
 them, the same format as in the zone file. Has to be on a single line, with
 "" around it. A TTL can be specified for ease of cut and paste, but is ignored. 
 A class can be specified, but class IN is default.
+.It \fBtrusted-keys-file:\fR <filename>
+File with trusted keys for validation. Specify more than one file
+with several entries, one file per entry. Like \fBtrust-anchor-file\fR
+but has a different file format. Format is BIND-9 style format, 
+the trusted-keys { name flag proto algo "key"; }; clauses are read.
 .It \fBval-override-date:\fR <rrsig-style date spec>
 Default is "" or "0", which disables this debugging feature. If enabled by
 giving a RRSIG style date, that date is used for verifying RRSIG inception

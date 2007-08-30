@@ -83,7 +83,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_TRUST_ANCHOR_FILE VAR_TRUST_ANCHOR VAR_VAL_OVERRIDE_DATE
 %token VAR_BOGUS_TTL VAR_VAL_CLEAN_ADDITIONAL VAR_VAL_PERMISSIVE_MODE
 %token VAR_INCOMING_NUM_TCP VAR_MSG_BUFFER_SIZE VAR_KEY_CACHE_SIZE
-%token VAR_KEY_CACHE_SLABS
+%token VAR_KEY_CACHE_SLABS VAR_TRUSTED_KEYS_FILE
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -120,7 +120,8 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_trust_anchor | server_val_override_date | server_bogus_ttl |
 	server_val_clean_additional | server_val_permissive_mode |
 	server_incoming_num_tcp | server_msg_buffer_size | 
-	server_key_cache_size | server_key_cache_slabs
+	server_key_cache_size | server_key_cache_slabs | 
+	server_trusted_keys_file
 	;
 stubstart: VAR_STUB_ZONE
 	{
@@ -306,6 +307,14 @@ server_trust_anchor_file: VAR_TRUST_ANCHOR_FILE STRING
 		OUTYY(("P(server_trust_anchor_file:%s)\n", $2));
 		if(!cfg_strlist_insert(&cfg_parser->cfg->
 			trust_anchor_file_list, $2))
+			yyerror("out of memory");
+	}
+	;
+server_trusted_keys_file: VAR_TRUSTED_KEYS_FILE STRING
+	{
+		OUTYY(("P(server_trusted_keys_file:%s)\n", $2));
+		if(!cfg_strlist_insert(&cfg_parser->cfg->
+			trusted_keys_file_list, $2))
 			yyerror("out of memory");
 	}
 	;

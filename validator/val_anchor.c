@@ -363,6 +363,163 @@ anchor_read_file(struct val_anchors* anchors, ldns_buffer* buffer,
 	return ok;
 }
 
+/** skip file to end of line */
+static void
+skip_to_eol(FILE* in)
+{
+	int c;
+	while((c = getc(in)) != EOF ) {
+		if(c == '\n')
+			return;
+	}
+}
+
+/** true for special characters in bind configs */
+static int
+is_bind_special(int c)
+{
+	switch(c) {
+		case '{':
+		case '}':
+		case '"':
+		case ';':
+			return 1;
+	}
+	return 0;
+}
+
+/** Read a keyword skipping bind comments; spaces, specials, restkeywords. */
+static int
+readkeyword_bindfile(FILE* in, ldns_buffer* buf, int* line)
+{
+	int c;
+	int numdone = 0;
+	while((c = getc(in)) != EOF ) {
+		if(c == '#') {	/*   # blabla   */
+			skip_to_eol(in);
+			(*line)++;
+			continue;
+		} else if(c=='/' && numdone>0 && 	/* /_/ blabla */
+			ldns_buffer_read_u8_at(buf, 
+			ldns_buffer_position(buf)-1) == '/') {
+			ldns_buffer_skip(buf, -1);
+			numdone--;
+			skip_to_eol(in);
+			(*line)++;
+			continue;
+		} else if(c=='*' && numdone>0 && 	/* /_* blabla *_/ */
+			ldns_buffer_read_u8_at(buf, 
+			ldns_buffer_position(buf)-1) == '/') {
+			ldns_buffer_skip(buf, -1);
+			/* skip to end of comment */
+			while(c != EOF && (c=getc(in)) != EOF ) {
+				if(c == '*') {
+					if((c=getc(in)) == '/')
+						break;
+				}
+				if(c == '\n')
+					(*line)++;
+			}
+			continue;
+		}
+		/* not a comment, complete the keyword */
+		if(numdone > 0) {
+			/* check same type */
+			if(isspace(c)) {
+				ungetc(c, in);
+				return numdone;
+			}
+			if(is_bind_special(c)) {
+				ungetc(c, in);
+				return numdone;
+			}
+		}
+		if(c == '\n')
+			(*line)++;
+		if(ldns_buffer_remaining(buf) < 1) {
+			fatal_exit("trusted-keys, %d, string too long", *line);
+		}
+		ldns_buffer_write_u8(buf, c);
+		numdone++;
+		if(isspace(c))
+			return numdone;
+		if(is_bind_special(c))
+			return numdone;
+	}
+	return numdone;
+}
+
+/** skip through file to { */
+static int 
+skip_to_brace_open(FILE* in, int* line) 
+{
+	int c;
+	while((c = getc(in)) != EOF ) {
+		if(c == '\n')
+			(*line)++;
+		if(isspace(c))
+			continue;
+		if(c != '{') {
+			log_err("trusted-keys, line %d, expected {", *line);
+			return 0;
+		}
+		return 1;
+	}
+	log_err("trusted-keys, line %d, expected {", *line);
+	return 0;
+}
+
+static int
+process_bind_contents(struct val_anchors* anchors, ldns_buffer* buffer,
+	int* line)
+{
+	char* str = 0;
+	if(!anchor_store_str(anchors, buffer, str)) {
+	}
+}
+
+/**
+ * Read a BIND9 like file with trust anchors in named.conf format.
+ * @param anchors: anchor storage.
+ * @param buffer: parsing buffer.
+ * @param fname: string.
+ * @return false on error.
+ */
+static int
+anchor_read_bind_file(struct val_anchors* anchors, ldns_buffer* buffer,
+	const char* fname)
+{
+	int line_nr = 1;
+	FILE* in = fopen(fname, "r");
+	int rdlen = 0;
+	if(!in) {
+		log_err("error opening file %s: %s", fname, strerror(errno));
+		return 0;
+	}
+	fclose(in);
+	/* scan for  trusted-keys  keyword, ignore everything else */
+	ldns_buffer_clear(buffer);
+	while((rdlen=readkeyword_bindfile(in, buffer, &line_nr)) != 0) {
+		if(rdlen != 12 || strncmp((char*)ldns_buffer_begin(buffer),
+			"trusted-keys", 12) != 0) {
+			ldns_buffer_clear(buffer);
+			/* ignore everything but trusted-keys */
+			continue;
+		}
+		if(!skip_to_brace_open(in, &line_nr)) {
+			log_err("error in trusted key: \"%s\"", fname);
+			return 0;
+		}
+		/* process contents */
+		if(!process_bind_contents(anchors, buffer, &line_nr)) {
+			log_err("error in trusted key: \"%s\"", fname);
+			return 0;
+		}
+		ldns_buffer_clear(buffer);
+	}
+	return 1;
+}
+
 /** 
  * Assemble an rrset structure for the type 
  * @param region: allocated in this region.
@@ -474,6 +631,15 @@ anchors_apply_cfg(struct val_anchors* anchors, struct config_file* cfg)
 			continue;
 		if(!anchor_read_file(anchors, parsebuf, f->str)) {
 			log_err("error reading trust-anchor-file: %s", f->str);
+			ldns_buffer_free(parsebuf);
+			return 0;
+		}
+	}
+	for(f = cfg->trusted_keys_file_list; f; f = f->next) {
+		if(!f->str || f->str[0] == 0) /* empty "" */
+			continue;
+		if(!anchor_read_bind_file(anchors, parsebuf, f->str)) {
+			log_err("error reading trusted-keys-file: %s", f->str);
 			ldns_buffer_free(parsebuf);
 			return 0;
 		}
