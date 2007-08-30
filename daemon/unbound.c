@@ -77,7 +77,8 @@ static void
 checkrlimits(struct config_file* cfg)
 {
 	int list = ((cfg->do_ip4?1:0) + (cfg->do_ip6?1:0)) * 
-		((cfg->do_udp?1:0) + (cfg->do_tcp?1 + TCP_ACCEPT_COUNT:0));
+		((cfg->do_udp?1:0) + (cfg->do_tcp?1 + 
+			(int)cfg->incoming_num_tcp:0));
 	size_t ifs = (size_t)(cfg->num_ifs==0?1:cfg->num_ifs);
 	size_t listen_num = list*ifs;
 	size_t outnum = cfg->outgoing_num_ports*ifs + cfg->outgoing_num_tcp;

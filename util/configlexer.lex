@@ -105,6 +105,7 @@ port{COLON}		{ YDOUT; return VAR_PORT;}
 outgoing-port{COLON}	{ YDOUT; return VAR_OUTGOING_PORT;}
 outgoing-range{COLON}	{ YDOUT; return VAR_OUTGOING_RANGE;}
 outgoing-num-tcp{COLON}	{ YDOUT; return VAR_OUTGOING_NUM_TCP;}
+incoming-num-tcp{COLON}	{ YDOUT; return VAR_INCOMING_NUM_TCP;}
 do-ip4{COLON}		{ YDOUT; return VAR_DO_IP4;}
 do-ip6{COLON}		{ YDOUT; return VAR_DO_IP6;}
 do-udp{COLON}		{ YDOUT; return VAR_DO_UDP;}
@@ -115,6 +116,7 @@ username{COLON}		{ YDOUT; return VAR_USERNAME;}
 directory{COLON}	{ YDOUT; return VAR_DIRECTORY;}
 logfile{COLON}		{ YDOUT; return VAR_LOGFILE;}
 pidfile{COLON}		{ YDOUT; return VAR_PIDFILE;}
+msg-buffer-size{COLON}	{ YDOUT; return VAR_MSG_BUFFER_SIZE;}
 msg-cache-size{COLON}	{ YDOUT; return VAR_MSG_CACHE_SIZE;}
 msg-cache-slabs{COLON}	{ YDOUT; return VAR_MSG_CACHE_SLABS;}
 rrset-cache-size{COLON}	{ YDOUT; return VAR_RRSET_CACHE_SIZE;}

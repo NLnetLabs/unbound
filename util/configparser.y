@@ -82,6 +82,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_IDENTITY VAR_VERSION VAR_HARDEN_GLUE VAR_MODULE_CONF
 %token VAR_TRUST_ANCHOR_FILE VAR_TRUST_ANCHOR VAR_VAL_OVERRIDE_DATE
 %token VAR_BOGUS_TTL VAR_VAL_CLEAN_ADDITIONAL VAR_VAL_PERMISSIVE_MODE
+%token VAR_INCOMING_NUM_TCP VAR_MSG_BUFFER_SIZE
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -116,7 +117,8 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_hide_version | server_identity | server_version |
 	server_harden_glue | server_module_conf | server_trust_anchor_file |
 	server_trust_anchor | server_val_override_date | server_bogus_ttl |
-	server_val_clean_additional | server_val_permissive_mode
+	server_val_clean_additional | server_val_permissive_mode |
+	server_incoming_num_tcp | server_msg_buffer_size
 	;
 stubstart: VAR_STUB_ZONE
 	{
@@ -214,6 +216,15 @@ server_outgoing_num_tcp: VAR_OUTGOING_NUM_TCP STRING
 		if(atoi($2) == 0 && strcmp($2, "0") != 0)
 			yyerror("number expected");
 		else cfg_parser->cfg->outgoing_num_tcp = atoi($2);
+		free($2);
+	}
+	;
+server_incoming_num_tcp: VAR_INCOMING_NUM_TCP STRING
+	{
+		OUTYY(("P(server_incoming_num_tcp:%s)\n", $2));
+		if(atoi($2) == 0 && strcmp($2, "0") != 0)
+			yyerror("number expected");
+		else cfg_parser->cfg->incoming_num_tcp = atoi($2);
 		free($2);
 	}
 	;
@@ -333,6 +344,17 @@ server_version: VAR_VERSION STRING
 		OUTYY(("P(server_version:%s)\n", $2));
 		free(cfg_parser->cfg->version);
 		cfg_parser->cfg->version = $2;
+	}
+	;
+server_msg_buffer_size: VAR_MSG_BUFFER_SIZE STRING
+	{
+		OUTYY(("P(server_msg_buffer_size:%s)\n", $2));
+		if(atoi($2) == 0)
+			yyerror("number expected");
+		else if (atoi($2) < 4096)
+			yyerror("message buffer size too small (use 4096)");
+		else cfg_parser->cfg->msg_buffer_size = atoi($2);
+		free($2);
 	}
 	;
 server_msg_cache_size: VAR_MSG_CACHE_SIZE STRING
@@ -501,7 +523,7 @@ server_val_override_date: VAR_VAL_OVERRIDE_DATE STRING
 		} else {
 			if(atoi($2) == 0)
 				yyerror("number expected");
-			cfg_parser->cfg->outgoing_num_ports = atoi($2);
+			cfg_parser->cfg->val_date_override = atoi($2);
 		}
 		free($2);
 	}

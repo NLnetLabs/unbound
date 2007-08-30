@@ -127,12 +127,11 @@ struct worker* worker_create(struct daemon* daemon, int id);
  * @param worker: worker to initialize, created with worker_create.
  * @param cfg: configuration settings.
  * @param ports: list of shared query ports.
- * @param buffer_size: size of datagram buffer.
  * @param do_sigs: if true, worker installs signal handlers.
  * @return: false on error.
  */
 int worker_init(struct worker* worker, struct config_file *cfg, 
-	struct listen_port* ports, size_t buffer_size, int do_sigs);
+	struct listen_port* ports, int do_sigs);
 
 /**
  * Make worker work.

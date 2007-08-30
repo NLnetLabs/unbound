@@ -72,7 +72,11 @@ struct config_file {
 	int outgoing_num_ports;
 	/** number of outgoing tcp buffers per (per thread) */
 	size_t outgoing_num_tcp;
+	/** number of incoming tcp buffers per (per thread) */
+	size_t incoming_num_tcp;
 
+	/** number of bytes buffer size for DNS messages */
+	size_t msg_buffer_size;
 	/** size of the message cache */
 	size_t msg_cache_size;
 	/** slabs in the message cache. */

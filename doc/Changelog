@@ -1,3 +1,7 @@
+30 August 2007: Wouter
+	- fixup override date config option.
+	- config options to control memory usage.
+
 29 August 2007: Wouter
 	- test tool to sign rrsets for testing validator with.
 	- added RSA and DSA test keys, public and private pairs, 512 bits.

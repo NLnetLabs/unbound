@@ -838,7 +838,7 @@ worker_create(struct daemon* daemon, int id)
 
 int
 worker_init(struct worker* worker, struct config_file *cfg, 
-	struct listen_port* ports, size_t buffer_size, int do_sigs)
+	struct listen_port* ports, int do_sigs)
 {
 	unsigned int seed;
 	int startport;
@@ -885,7 +885,8 @@ worker_init(struct worker* worker, struct config_file *cfg,
 		return 0;
 	}
 	worker->front = listen_create(worker->base, ports,
-		buffer_size, worker_handle_request, worker);
+		cfg->msg_buffer_size, (int)cfg->incoming_num_tcp, 
+		worker_handle_request, worker);
 	if(!worker->front) {
 		log_err("could not create listening sockets");
 		worker_delete(worker);
@@ -894,8 +895,8 @@ worker_init(struct worker* worker, struct config_file *cfg,
 	startport  = cfg->outgoing_base_port + 
 		cfg->outgoing_num_ports * worker->thread_num;
 	worker->back = outside_network_create(worker->base,
-		buffer_size, (size_t)cfg->outgoing_num_ports, cfg->ifs, 
-		cfg->num_ifs, cfg->do_ip4, cfg->do_ip6, startport, 
+		cfg->msg_buffer_size, (size_t)cfg->outgoing_num_ports, 
+		cfg->ifs, cfg->num_ifs, cfg->do_ip4, cfg->do_ip6, startport, 
 		cfg->do_tcp?cfg->outgoing_num_tcp:0, 
 		worker->daemon->env->infra_cache, worker->rndstate);
 	if(!worker->back) {
@@ -906,15 +907,17 @@ worker_init(struct worker* worker, struct config_file *cfg,
 	if(worker->thread_num != 0) {
 		/* start listening to commands */
 		if(!(worker->cmd_com=comm_point_create_local(worker->base, 
-			worker->cmd_recv_fd, buffer_size, 
+			worker->cmd_recv_fd, cfg->msg_buffer_size, 
 			worker_handle_control_cmd, worker))) {
 			log_err("could not create control compt.");
 			worker_delete(worker);
 			return 0;
 		}
 	}
+	/* we use the msg_buffer_size as a good estimate for what the 
+	 * user wants for memory usage sizes */
 	worker->scratchpad = region_create_custom(malloc, free, 
-		65536, 8192, 32, 1);
+		cfg->msg_buffer_size, cfg->msg_buffer_size/4, 32, 1);
 	if(!worker->scratchpad) {
 		log_err("malloc failure");
 		worker_delete(worker);
@@ -936,7 +939,7 @@ worker_init(struct worker* worker, struct config_file *cfg,
 	worker->env.attach_sub = &mesh_attach_sub;
 	worker->env.kill_sub = &mesh_state_delete;
 	worker->env.detect_cycle = &mesh_detect_cycle;
-	worker->env.scratch_buffer = ldns_buffer_new(65536);
+	worker->env.scratch_buffer = ldns_buffer_new(cfg->msg_buffer_size);
 	if(!worker->env.mesh || !worker->env.scratch_buffer) {
 		worker_delete(worker);
 		return 0;

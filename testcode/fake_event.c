@@ -520,7 +520,8 @@ run_scenario(struct replay_runtime* runtime)
 
 struct listen_dnsport* 
 listen_create(struct comm_base* base, struct listen_port* ATTR_UNUSED(ports),
-	size_t bufsize, comm_point_callback_t* cb, void* cb_arg)
+	size_t bufsize, int ATTR_UNUSED(tcp_accept_count),
+	comm_point_callback_t* cb, void* cb_arg)
 {
 	struct replay_runtime* runtime = (struct replay_runtime*)base;
 	struct listen_dnsport* l= calloc(1, sizeof(struct listen_dnsport));

@@ -91,6 +91,15 @@ extra resources from the operating system.
 .It \fBoutgoing-num-tcp:\fR <number>
 Number of outgoing TCP buffers to allocate per thread. Default is 10. If set
 to 0, or if do_tcp is "no", no TCP queries to authoritative servers are done.
+.It \fBincoming-num-tcp:\fR <number>
+Number of incoming TCP buffers to allocate per thread. Default is 10. If set
+to 0, or if do_tcp is "no", no TCP queries from clients are accepted.
+.It \fBmsg-buffer-size:\fR <number>
+Number of bytes size of the message buffers. Default is 65552 bytes, enough
+for 64 Kb packets, the maximum DNS message size. No message larger than this
+can be sent or received. Can be reduced to use less memory, but some requests
+for DNS data, such as for huge resource records, will result in a SERVFAIL 
+reply to the client.
 .It \fBmsg-cache-size:\fR <number>
 Number of bytes size of the message cache. Default is 4 megabytes.
 .It \fBmsg-cache-slabs:\fR <number>
@@ -256,6 +265,37 @@ Name of server to forward to. Is itself resolved before it is used.
 .It \fBforward-addr:\fR <IP address>
 IP address of server to forward to. Can be IP 4 or IP 6.
 To use a nondefault port for DNS communication append '@' with the port number.
+.El
+
+.Sh MEMORY CONTROL EXAMPLE
+In the example config settings below memory usage is reduced. Some service
+levels are lower, notable very large data and a high TCP load are no longer
+supported. Very large data and high TCP loads are exceptional for the DNS.
+DNSSEC validation is enabled, just add trust anchors.
+If you do not have to worry about programs using more than 1 meg of memory,
+the below example is not for you. Use the defaults to receive full service.
+.nf
+
+# example settings that reduce memory usage
+server:
+	num-threads: 1
+	outgoing-num-tcp: 1	# this limits TCP service, uses less buffers.
+	incoming-num-tcp: 1
+	outgoing-range: 1	# uses less memory, but less port randomness.
+	msg-buffer-size: 8192   # note this limits service, 'no huge stuff'.
+	msg-cache-size: 102400  # 100 Kb.
+	msg-cache-slabs: 1
+	rrset-cache-size: 102400  # 100 Kb.
+	rrset-cache-slabs: 1
+	infra-cache-numhosts: 200
+	infra-cache-numlame: 10
+	num-queries-per-thread: 30
+	target-fetch-policy: "2 1 0 0 0 0"
+	harden-large-queries: "yes"
+	harden-short-bufsize: "yes"
+	do-ip6: no	# save a bit of memory if not used.
+.fi
+
 .El
 
 .Sh FILES

@@ -39,9 +39,6 @@
  * The daemon consists of global settings and a number of workers.
  */
 
-/** buffer size for network connections */
-#define BUFSZ 65552
-
 #include "config.h"
 #include "daemon/daemon.h"
 #include "daemon/worker.h"
@@ -338,8 +335,7 @@ thread_start(void* arg)
 	worker->cmd_send_fd = -1;
 	close_other_pipes(worker->daemon, worker->thread_num);
 #endif
-	if(!worker_init(worker, worker->daemon->cfg, worker->daemon->ports,
-		BUFSZ, 0))
+	if(!worker_init(worker, worker->daemon->cfg, worker->daemon->ports, 0))
 		fatal_exit("Could not initialize thread");
 
 	worker_work(worker);
@@ -414,8 +410,7 @@ daemon_fork(struct daemon* daemon)
 	/* Special handling for the main thread. This is the thread
 	 * that handles signals.
 	 */
-	if(!worker_init(daemon->workers[0], daemon->cfg, daemon->ports,
-		BUFSZ, 1))
+	if(!worker_init(daemon->workers[0], daemon->cfg, daemon->ports, 1))
 		fatal_exit("Could not initialize main thread");
 	signal_handling_playback(daemon->workers[0]);
 

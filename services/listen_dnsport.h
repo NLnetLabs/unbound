@@ -48,9 +48,6 @@ struct listen_list;
 struct addrinfo;
 struct config_file;
 
-/** number of simultaneous open TCP connections for queries */
-#define TCP_ACCEPT_COUNT 10 
-
 /**
  * Listening for queries structure.
  * Contains list of query-listen sockets.
@@ -111,13 +108,15 @@ void listening_ports_free(struct listen_port* list);
  *	for default all ifs.
  * @param ports: the list of shared ports.
  * @param bufsize: size of datagram buffer.
+ * @param tcp_accept_count: max number of simultaneous TCP connections 
+ * 	from clients.
  * @param cb: callback function when a request arrives. It is passed
  *	  the packet and user argument. Return true to send a reply.
  * @param cb_arg: user data argument for callback function.
  * @return: the malloced listening structure, ready for use. NULL on error.
  */
 struct listen_dnsport* listen_create(struct comm_base* base,
-	struct listen_port* ports, size_t bufsize, 
+	struct listen_port* ports, size_t bufsize, int tcp_accept_count,
 	comm_point_callback_t* cb, void* cb_arg);
 
 /**

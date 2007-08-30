@@ -78,6 +78,8 @@ config_create()
 	cfg->outgoing_base_port = cfg->port + 2000;
 	cfg->outgoing_num_ports = 16;
 	cfg->outgoing_num_tcp = 10;
+	cfg->incoming_num_tcp = 10;
+	cfg->msg_buffer_size = 65552; /* 64 k + a small margin */
 	cfg->msg_cache_size = 4 * 1024 * 1024;
 	cfg->msg_cache_slabs = 4;
 	cfg->num_queries_per_thread = 1024;

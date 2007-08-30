@@ -288,7 +288,8 @@ listen_cp_insert(struct comm_point* c, struct listen_dnsport* front)
 
 struct listen_dnsport* 
 listen_create(struct comm_base* base, struct listen_port* ports,
-	size_t bufsize, comm_point_callback_t* cb, void *cb_arg)
+	size_t bufsize, int tcp_accept_count,
+	comm_point_callback_t* cb, void *cb_arg)
 {
 	struct listen_dnsport* front = (struct listen_dnsport*)
 		malloc(sizeof(struct listen_dnsport));
@@ -308,7 +309,7 @@ listen_create(struct comm_base* base, struct listen_port* ports,
 			cp = comm_point_create_udp(base, ports->fd, 
 				front->udp_buff, cb, cb_arg);
 		else 	cp = comm_point_create_tcp(base, ports->fd, 
-				TCP_ACCEPT_COUNT, bufsize, cb, cb_arg);
+				tcp_accept_count, bufsize, cb, cb_arg);
 		if(!cp) {
 			log_err("can't create commpoint");	
 			listen_delete(front);
@@ -381,10 +382,14 @@ listening_ports_open(struct config_file* cfg)
 	struct listen_port* list = NULL;
 	struct addrinfo hints;
 	int i, do_ip4, do_ip6;
+	int do_tcp;
 	char portbuf[32];
 	snprintf(portbuf, sizeof(portbuf), "%d", cfg->port);
 	do_ip4 = cfg->do_ip4;
 	do_ip6 = cfg->do_ip6;
+	do_tcp = cfg->do_tcp;
+	if(cfg->incoming_num_tcp == 0)
+		do_tcp = 0;
 
 	/* getaddrinfo */
 	memset(&hints, 0, sizeof(hints));
@@ -403,7 +408,7 @@ listening_ports_open(struct config_file* cfg)
 	if(cfg->num_ifs == 0) {
 		if(do_ip6) {
 			hints.ai_family = AF_INET6;
-			if(!ports_create_if(NULL, cfg->do_udp, cfg->do_tcp, 
+			if(!ports_create_if(NULL, cfg->do_udp, do_tcp, 
 				&hints, portbuf, &list)) {
 				listening_ports_free(list);
 				return NULL;
@@ -411,7 +416,7 @@ listening_ports_open(struct config_file* cfg)
 		}
 		if(do_ip4) {
 			hints.ai_family = AF_INET;
-			if(!ports_create_if(NULL, cfg->do_udp, cfg->do_tcp, 
+			if(!ports_create_if(NULL, cfg->do_udp, do_tcp, 
 				&hints, portbuf, &list)) {
 				listening_ports_free(list);
 				return NULL;
@@ -423,7 +428,7 @@ listening_ports_open(struct config_file* cfg)
 				continue;
 			hints.ai_family = AF_INET6;
 			if(!ports_create_if(cfg->ifs[i], cfg->do_udp, 
-				cfg->do_tcp, &hints, portbuf, &list)) {
+				do_tcp, &hints, portbuf, &list)) {
 				listening_ports_free(list);
 				return NULL;
 			}
@@ -432,7 +437,7 @@ listening_ports_open(struct config_file* cfg)
 				continue;
 			hints.ai_family = AF_INET;
 			if(!ports_create_if(cfg->ifs[i], cfg->do_udp, 
-				cfg->do_tcp, &hints, portbuf, &list)) {
+				do_tcp, &hints, portbuf, &list)) {
 				listening_ports_free(list);
 				return NULL;
 			}
