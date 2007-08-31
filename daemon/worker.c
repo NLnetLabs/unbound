@@ -142,7 +142,6 @@ worker_mem_report(struct worker* worker, struct serviced_query* cur_serv)
 		sizeof(*worker->env.scratch_buffer) + 
 		ldns_buffer_capacity(worker->env.scratch_buffer);
 	if(cur_serv) {
-		log_info("cur_serv = %d", (int)serviced_get_mem(cur_serv));
 		me += serviced_get_mem(cur_serv);
 	}
 	total = front+back+mesh+msg+rrset+infra+iter+val+ac+superac+me;

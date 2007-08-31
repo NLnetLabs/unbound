@@ -915,6 +915,15 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 		verbose(VERB_DETAIL, "Failed to get a delegation, giving up");
 		return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
 	}
+	delegpt_log(iq->dp);
+
+	if(iq->num_current_queries>0) {
+		/* already busy answering a query, this restart is because
+		 * more delegpt addrs became available, wait for existing
+		 * query. */
+		verbose(VERB_ALGO, "woke up, but wait for outstanding query");
+		return 0;
+	}
 
 	tf_policy = 0;
 	if(iq->depth <= ie->max_dependency_depth) {
@@ -995,11 +1004,6 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 				"for %d outstanding queries to respond.",
 				iq->num_current_queries);
 		return 0;
-	}
-	/* move other targets to slumber list */
-	if(iq->num_target_queries>0) {
-		(*qstate->env->detach_subs)(qstate);
-		iq->num_target_queries = 0;
 	}
 
 	/* We have a valid target. */
@@ -1271,6 +1275,8 @@ processTargetResponse(struct module_qstate* qstate, int id,
 	log_assert(qstate->return_rcode == LDNS_RCODE_NOERROR);
 
 	foriq->state = QUERYTARGETS_STATE;
+	log_query_info(VERB_ALGO, "processTargetResponse", &qstate->qinfo);
+	log_query_info(VERB_ALGO, "processTargetResponse super", &forq->qinfo);
 
 	/* check to see if parent event is still interested (in orig name).  */
 	dpns = delegpt_find_ns(foriq->dp, qstate->qinfo.qname,
@@ -1307,7 +1313,12 @@ processTargetResponse(struct module_qstate* qstate, int id,
 		}
 		if(!delegpt_add_rrset(foriq->dp, forq->region, rrset))
 			log_err("out of memory adding targets");
-	} else	dpns->resolved = 1; /* fail the target */
+		verbose(VERB_ALGO, "added target response");
+		delegpt_log(foriq->dp);
+	} else {
+		verbose(VERB_ALGO, "iterator TargetResponse failed");
+		dpns->resolved = 1; /* fail the target */
+	}
 }
 
 /** 
