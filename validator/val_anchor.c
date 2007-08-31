@@ -463,7 +463,7 @@ readkeyword_bindfile(FILE* in, ldns_buffer* buf, int* line, int comments)
 		if(ldns_buffer_remaining(buf) < 2) {
 			fatal_exit("trusted-keys, %d, string too long", *line);
 		}
-		ldns_buffer_write_u8(buf, c);
+		ldns_buffer_write_u8(buf, (uint8_t)c);
 		numdone++;
 		if(isspace(c)) {
 			/* collate whitespace into ' ' */
@@ -490,11 +490,11 @@ skip_to_special(FILE* in, ldns_buffer* buf, int* line, int spec)
 	int rdlen;
 	ldns_buffer_clear(buf);
 	while((rdlen=readkeyword_bindfile(in, buf, line, 1))) {
-		if(rdlen == 1 && isspace(*ldns_buffer_begin(buf))) {
+		if(rdlen == 1 && isspace((int)*ldns_buffer_begin(buf))) {
 			ldns_buffer_clear(buf);
 			continue;
 		}
-		if(rdlen != 1 || *ldns_buffer_begin(buf) != spec) {
+		if(rdlen != 1 || *ldns_buffer_begin(buf) != (uint8_t)spec) {
 			ldns_buffer_write_u8(buf, 0);
 			log_err("trusted-keys, line %d, expected %c got %s", 
 				*line, spec, ldns_buffer_begin(buf));
@@ -531,7 +531,7 @@ process_bind_contents(struct val_anchors* anchors, ldns_buffer* buf,
 	ldns_buffer_clear(buf);
 	while((rdlen=readkeyword_bindfile(in, buf, line, comments))) {
 		if(rdlen == 1 && ldns_buffer_position(buf) == 1
-			&& isspace(*ldns_buffer_begin(buf))) {
+			&& isspace((int)*ldns_buffer_begin(buf))) {
 			/* starting whitespace is removed */
 			ldns_buffer_clear(buf);
 			continue;
@@ -588,7 +588,8 @@ process_bind_contents(struct val_anchors* anchors, ldns_buffer* buf,
 				return 0;
 			}
 			return 1;
-		} else if(rdlen == 1 && isspace(ldns_buffer_current(buf)[-1])) {
+		} else if(rdlen == 1 && 
+			isspace((int)ldns_buffer_current(buf)[-1])) {
 			/* leave whitespace here */
 		} else {
 			/* not space or whatnot, so actual content */
