@@ -1,3 +1,6 @@
+31 August 2007: Wouter
+	- can read bind trusted-keys { ... }; files, in a compatibility mode. 
+
 30 August 2007: Wouter
 	- fixup override date config option.
 	- config options to control memory usage.

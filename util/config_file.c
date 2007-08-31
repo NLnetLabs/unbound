@@ -217,6 +217,7 @@ config_delete(struct config_file* cfg)
 	free(cfg->version);
 	free(cfg->module_conf);
 	config_delstrlist(cfg->trust_anchor_file_list);
+	config_delstrlist(cfg->trusted_keys_file_list);
 	config_delstrlist(cfg->trust_anchor_list);
 	free(cfg);
 }

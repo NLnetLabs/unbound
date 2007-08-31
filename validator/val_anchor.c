@@ -388,18 +388,38 @@ is_bind_special(int c)
 	return 0;
 }
 
-/** Read a keyword skipping bind comments; spaces, specials, restkeywords. */
+/** 
+ * Read a keyword skipping bind comments; spaces, specials, restkeywords. 
+ * The file is split into the following tokens:
+ *	* special characters, on their own, rdlen=1, { } " ;
+ *	* whitespace becomes a single ' ' or tab. Newlines become spaces.
+ *	* other words ('keywords')
+ *	* comments are skipped if desired
+ *		/ / C++ style comment to end of line
+ *		# to end of line
+ *		/ * C style comment * /
+ * @param in: file to read from.
+ * @param buf: buffer, what is read is stored after current buffer position.
+ *	Space is left in the buffer to write a terminating 0.
+ * @param line: line number is increased per line, for error reports.
+ * @param comments: if 0, comments are not possible and become text.
+ *	if 1, comments are skipped entirely.
+ *	In BIND files, this is when reading quoted strings, for example
+ *	" base 64 text with / / in there "
+ * @return the number of character written to the buffer. 
+ *	0 on end of file.
+ */
 static int
-readkeyword_bindfile(FILE* in, ldns_buffer* buf, int* line)
+readkeyword_bindfile(FILE* in, ldns_buffer* buf, int* line, int comments)
 {
 	int c;
 	int numdone = 0;
 	while((c = getc(in)) != EOF ) {
-		if(c == '#') {	/*   # blabla   */
+		if(comments && c == '#') {	/*   # blabla   */
 			skip_to_eol(in);
 			(*line)++;
 			continue;
-		} else if(c=='/' && numdone>0 && 	/* /_/ blabla */
+		} else if(comments && c=='/' && numdone>0 && /* /_/ bla*/
 			ldns_buffer_read_u8_at(buf, 
 			ldns_buffer_position(buf)-1) == '/') {
 			ldns_buffer_skip(buf, -1);
@@ -407,10 +427,11 @@ readkeyword_bindfile(FILE* in, ldns_buffer* buf, int* line)
 			skip_to_eol(in);
 			(*line)++;
 			continue;
-		} else if(c=='*' && numdone>0 && 	/* /_* blabla *_/ */
+		} else if(comments && c=='*' && numdone>0 && /* /_* bla *_/ */
 			ldns_buffer_read_u8_at(buf, 
 			ldns_buffer_position(buf)-1) == '/') {
 			ldns_buffer_skip(buf, -1);
+			numdone--;
 			/* skip to end of comment */
 			while(c != EOF && (c=getc(in)) != EOF ) {
 				if(c == '*') {
@@ -434,48 +455,157 @@ readkeyword_bindfile(FILE* in, ldns_buffer* buf, int* line)
 				return numdone;
 			}
 		}
-		if(c == '\n')
+		if(c == '\n') {
+			c = ' ';
 			(*line)++;
-		if(ldns_buffer_remaining(buf) < 1) {
+		}
+		/* space for 1 char + 0 string terminator */
+		if(ldns_buffer_remaining(buf) < 2) {
 			fatal_exit("trusted-keys, %d, string too long", *line);
 		}
 		ldns_buffer_write_u8(buf, c);
 		numdone++;
-		if(isspace(c))
+		if(isspace(c)) {
+			/* collate whitespace into ' ' */
+			while((c = getc(in)) != EOF ) {
+				if(c == '\n')
+					(*line)++;
+				if(!isspace(c)) {
+					ungetc(c, in);
+					break;
+				}
+			}
 			return numdone;
+		}
 		if(is_bind_special(c))
 			return numdone;
 	}
 	return numdone;
 }
 
-/** skip through file to { */
+/** skip through file to { or ; */
 static int 
-skip_to_brace_open(FILE* in, int* line) 
+skip_to_special(FILE* in, ldns_buffer* buf, int* line, int spec) 
 {
-	int c;
-	while((c = getc(in)) != EOF ) {
-		if(c == '\n')
-			(*line)++;
-		if(isspace(c))
+	int rdlen;
+	ldns_buffer_clear(buf);
+	while((rdlen=readkeyword_bindfile(in, buf, line, 1))) {
+		if(rdlen == 1 && isspace(*ldns_buffer_begin(buf))) {
+			ldns_buffer_clear(buf);
 			continue;
-		if(c != '{') {
-			log_err("trusted-keys, line %d, expected {", *line);
+		}
+		if(rdlen != 1 || *ldns_buffer_begin(buf) != spec) {
+			ldns_buffer_write_u8(buf, 0);
+			log_err("trusted-keys, line %d, expected %c got %s", 
+				*line, spec, ldns_buffer_begin(buf));
 			return 0;
 		}
 		return 1;
 	}
-	log_err("trusted-keys, line %d, expected {", *line);
+	log_err("trusted-keys, line %d, expected %c got EOF", *line, spec);
 	return 0;
 }
 
+/** 
+ * read contents of trusted-keys{ ... ; clauses and insert keys into storage.
+ * @param anchors: where to store keys
+ * @param buf: buffer to use
+ * @param line: line number in file
+ * @param in: file to read from.
+ * @return 0 on error.
+ */
 static int
-process_bind_contents(struct val_anchors* anchors, ldns_buffer* buffer,
-	int* line)
+process_bind_contents(struct val_anchors* anchors, ldns_buffer* buf, 
+	int* line, FILE* in)
 {
+	/* loop over contents, collate strings before ; */
+	/* contents is (numbered): 0   1    2  3 4   5  6 7 8    */
+	/*                           name. 257 3 5 base64 base64 */
+	/* quoted value:           0 "111"  0  0 0   0  0 0 0    */
+	/* comments value:         1 "000"  1  1  1 "0  0 0 0"  1 */
+	int contnum = 0;
+	int quoted = 0;
+	int comments = 1;
+	int rdlen;
 	char* str = 0;
-	if(!anchor_store_str(anchors, buffer, str)) {
+	ldns_buffer_clear(buf);
+	while((rdlen=readkeyword_bindfile(in, buf, line, comments))) {
+		if(rdlen == 1 && ldns_buffer_position(buf) == 1
+			&& isspace(*ldns_buffer_begin(buf))) {
+			/* starting whitespace is removed */
+			ldns_buffer_clear(buf);
+			continue;
+		} else if(rdlen == 1 && ldns_buffer_current(buf)[-1] == '"') {
+			/* remove " from the string */
+			if(contnum == 0) {
+				quoted = 1;
+				comments = 0;
+			}
+			ldns_buffer_skip(buf, -1);
+			if(contnum > 0 && quoted) {
+				if(ldns_buffer_remaining(buf) < 8+1) {
+					log_err("line %d, too long, %s",
+						*line, ldns_buffer_begin(buf));
+					return 0;
+				}
+				ldns_buffer_write(buf, " DNSKEY ", 8);
+				quoted = 0;
+				comments = 1;
+			} else if(contnum > 0)
+				comments = !comments;
+			continue;
+		} else if(rdlen == 1 && ldns_buffer_current(buf)[-1] == ';') {
+
+			if(contnum < 5) {
+				ldns_buffer_write_u8(buf, 0);
+				log_err("line %d, bad key, %s",
+					*line, ldns_buffer_begin(buf));
+				return 0;
+			}
+			ldns_buffer_skip(buf, -1);
+			ldns_buffer_write_u8(buf, 0);
+			str = strdup((char*)ldns_buffer_begin(buf));
+			if(!str) {
+				log_err("line %d, allocation failure", *line);
+				return 0;
+			}
+			if(!anchor_store_str(anchors, buf, str)) {
+				log_err("line %d, bad key, %s", *line, str);
+				free(str);
+				return 0;
+			}
+			free(str);
+			ldns_buffer_clear(buf);
+			contnum = 0;
+			quoted = 0;
+			comments = 1;
+			continue;
+		} else if(rdlen == 1 && ldns_buffer_current(buf)[-1] == '}') {
+			if(contnum > 0) {
+				ldns_buffer_write_u8(buf, 0);
+				log_err("line %d, bad key before }, %s",
+					*line, ldns_buffer_begin(buf));
+				return 0;
+			}
+			return 1;
+		} else if(rdlen == 1 && isspace(ldns_buffer_current(buf)[-1])) {
+			/* leave whitespace here */
+		} else {
+			/* not space or whatnot, so actual content */
+			contnum ++;
+			if(contnum == 1 && !quoted) {
+				if(ldns_buffer_remaining(buf) < 8+1) {
+					log_err("line %d, too long, %s",
+						*line, ldns_buffer_begin(buf));
+					return 0;
+				}	
+				ldns_buffer_write(buf, " DNSKEY ", 8);
+			}
+		}
 	}
+
+	log_err("line %d, EOF before }", *line);
+	return 0;
 }
 
 /**
@@ -496,27 +626,35 @@ anchor_read_bind_file(struct val_anchors* anchors, ldns_buffer* buffer,
 		log_err("error opening file %s: %s", fname, strerror(errno));
 		return 0;
 	}
-	fclose(in);
+	verbose(VERB_DETAIL, "reading in bind-compat-mode: '%s'", fname);
 	/* scan for  trusted-keys  keyword, ignore everything else */
 	ldns_buffer_clear(buffer);
-	while((rdlen=readkeyword_bindfile(in, buffer, &line_nr)) != 0) {
+	while((rdlen=readkeyword_bindfile(in, buffer, &line_nr, 1)) != 0) {
 		if(rdlen != 12 || strncmp((char*)ldns_buffer_begin(buffer),
 			"trusted-keys", 12) != 0) {
 			ldns_buffer_clear(buffer);
 			/* ignore everything but trusted-keys */
 			continue;
 		}
-		if(!skip_to_brace_open(in, &line_nr)) {
+		if(!skip_to_special(in, buffer, &line_nr, '{')) {
 			log_err("error in trusted key: \"%s\"", fname);
+			fclose(in);
 			return 0;
 		}
 		/* process contents */
-		if(!process_bind_contents(anchors, buffer, &line_nr)) {
+		if(!process_bind_contents(anchors, buffer, &line_nr, in)) {
 			log_err("error in trusted key: \"%s\"", fname);
+			fclose(in);
+			return 0;
+		}
+		if(!skip_to_special(in, buffer, &line_nr, ';')) {
+			log_err("error in trusted key: \"%s\"", fname);
+			fclose(in);
 			return 0;
 		}
 		ldns_buffer_clear(buffer);
 	}
+	fclose(in);
 	return 1;
 }
 
