@@ -89,8 +89,8 @@ debug_memleak(size_t accounted, size_t heap,
 	cur_af = total_alloc - total_free;
 	grow_af = cur_af - base_af;
 	grow_acc = accounted - base_accounted;
-	log_info("Leakage: %u leaked. growth: %u use, %u acc, %u heap",
-		(unsigned)(grow_af - grow_acc), (unsigned)grow_af, 
+	log_info("Leakage: %d leaked. growth: %u use, %u acc, %u heap",
+		(int)(grow_af - grow_acc), (unsigned)grow_af, 
 		(unsigned)grow_acc, (unsigned)(heap - base_heap));
 }
 

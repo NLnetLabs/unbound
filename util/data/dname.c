@@ -519,7 +519,8 @@ void dname_str(uint8_t* dname, char* str)
 		}
 		while(lablen--) {
 			if(isalnum((int)*dname) 
-				|| *dname == '-' || *dname == '_')
+				|| *dname == '-' || *dname == '_' 
+				|| *dname == '*')
 				*s++ = *(char*)dname++;
 			else	{
 				*s++ = '?';
