@@ -3,7 +3,7 @@
 	- iterator should not detach target queries that it still could need.
 	  the protection against multiple outstanding queries is moved to a
 	  current_query num check.
-	- validator nodata, positive tests.
+	- validator nodata, positive, referral tests.
 	- dname print can print '*' wildcard.
 
 30 August 2007: Wouter
