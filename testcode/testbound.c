@@ -244,5 +244,7 @@ main(int argc, char* argv[])
 	fake_event_cleanup();
 	for(c=1; c<pass_argc; c++)
 		free(pass_argv[c]);
+	if(res == 0)
+		log_info("Testbound Exit Success");
 	return res;
 }

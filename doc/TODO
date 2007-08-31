@@ -31,3 +31,16 @@ o pretend-dnssec-unaware, and pretend-edns-unaware modes for debug/workshops.
 o delegpt use rbtree for ns-list, to avoid slowdown for very large NS sets.
 o be able to have different listen and query-to addresses to bind to,
   so you can listen to localhost and query-to to the internet.
+o reprime and refresh oft used data before timeout.
+o retain prime results in a overlaid roothints file.
+o store primed key data in a overlaid keyhints file (sort of like drafttimers).
+o windows version, auto update feature, a query to check for the version.
+o autoreport of problems
+o logrotation, syslog
+o command the server with TSIG inband.
+o watch for spoof nearmisses.
+o improve compression of DNS packets by first puttig uncompressible rrs, then
+  compress to their rdata.
+o if one server is not responsive do not spend 75 secs on that server, but
+  try other servers with lower rtt.
+o NSID rfc 5001 support.

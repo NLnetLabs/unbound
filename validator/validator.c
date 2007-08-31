@@ -514,7 +514,7 @@ validate_nodata_response(struct query_info* qchase,
 
 	/* check to see if we have a wildcard NODATA proof. */
 
-	/* The wildcard NODATA is 1 NSEC proving that qname does not exists 
+	/* The wildcard NODATA is 1 NSEC proving that qname does not exist 
 	 * (and also proving what the closest encloser is), and 1 NSEC 
 	 * showing the matching wildcard, which must be *.closest_encloser. */
 	if(wc && !ce)
