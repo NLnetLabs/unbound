@@ -173,8 +173,10 @@ use_free_buffer(struct outside_network* outnet)
 		if(outnet->tcp_wait_last == w)
 			outnet->tcp_wait_last = NULL;
 		if(!outnet_tcp_take_into_use(w, w->pkt, w->pkt_len)) {
-			(void)(*w->cb)(NULL, w->cb_arg, NETEVENT_CLOSED, NULL);
+			comm_point_callback_t* cb = w->cb;
+			void* cb_arg = w->cb_arg;
 			waiting_tcp_delete(w);
+			(void)(*cb)(NULL, cb_arg, NETEVENT_CLOSED, NULL);
 		}
 	}
 }
@@ -712,6 +714,8 @@ outnet_tcptimer(void* arg)
 {
 	struct waiting_tcp* w = (struct waiting_tcp*)arg;
 	struct outside_network* outnet = w->outnet;
+	comm_point_callback_t* cb;
+	void* cb_arg;
 	if(w->pkt) {
 		/* it is on the waiting list */
 		struct waiting_tcp* p=outnet->tcp_wait_first, *prev=NULL;
@@ -733,8 +737,10 @@ outnet_tcptimer(void* arg)
 		pend->next_free = outnet->tcp_free;
 		outnet->tcp_free = pend;
 	}
-	(void)(*w->cb)(NULL, w->cb_arg, NETEVENT_TIMEOUT, NULL);
+	cb = w->cb;
+	cb_arg = w->cb_arg;
 	waiting_tcp_delete(w);
+	(void)(*cb)(NULL, cb_arg, NETEVENT_TIMEOUT, NULL);
 	use_free_buffer(outnet);
 }
 

@@ -3,6 +3,7 @@
 	  validator. CNAME to a NXDOMAIN response was collated into a response
 	  with both a CNAME and the NXDOMAIN rcode. Added a test that the
 	  rcode is changed to NOERROR (because of the CNAME).
+	- timeout on tcp does not lead to spurious leakage detect.
 
 31 August 2007: Wouter
 	- can read bind trusted-keys { ... }; files, in a compatibility mode. 
