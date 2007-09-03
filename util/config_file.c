@@ -90,7 +90,7 @@ config_create()
 	cfg->bogus_ttl = 900;
 	cfg->infra_cache_slabs = 4;
 	cfg->infra_cache_numhosts = 10000;
-	cfg->infra_cache_numlame = 1000;
+	cfg->infra_cache_lame_size = 10240; /* easily 40 or more entries */
 	if(!(cfg->username = strdup(""))) goto error_exit;
 	if(!(cfg->chrootdir = strdup(""))) goto error_exit;
 	if(!(cfg->directory = strdup("/etc/unbound"))) goto error_exit;

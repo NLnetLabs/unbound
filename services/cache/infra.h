@@ -103,8 +103,8 @@ struct infra_cache {
 	int host_ttl;
 	/** TTL for Lameness information, in seconds */
 	int lame_ttl;
-	/** infra lame cache max memory per host, for this many entries */
-	size_t max_lame;
+	/** infra lame cache max memory per host, in bytes */
+	size_t max_lame_size;
 };
 
 /** infra host cache default hash lookup size */

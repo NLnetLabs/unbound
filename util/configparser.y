@@ -74,7 +74,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_MSG_CACHE_SIZE VAR_MSG_CACHE_SLABS VAR_NUM_QUERIES_PER_THREAD
 %token VAR_RRSET_CACHE_SIZE VAR_RRSET_CACHE_SLABS VAR_OUTGOING_NUM_TCP
 %token VAR_INFRA_HOST_TTL VAR_INFRA_LAME_TTL VAR_INFRA_CACHE_SLABS
-%token VAR_INFRA_CACHE_NUMHOSTS VAR_INFRA_CACHE_NUMLAME VAR_NAME
+%token VAR_INFRA_CACHE_NUMHOSTS VAR_INFRA_CACHE_LAME_SIZE VAR_NAME
 %token VAR_STUB_ZONE VAR_STUB_HOST VAR_STUB_ADDR VAR_TARGET_FETCH_POLICY
 %token VAR_HARDEN_SHORT_BUFSIZE VAR_HARDEN_LARGE_QUERIES
 %token VAR_FORWARD_ZONE VAR_FORWARD_HOST VAR_FORWARD_ADDR
@@ -112,7 +112,7 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_rrset_cache_slabs | server_outgoing_num_tcp | 
 	server_infra_host_ttl | server_infra_lame_ttl | 
 	server_infra_cache_slabs | server_infra_cache_numhosts |
-	server_infra_cache_numlame | server_target_fetch_policy | 
+	server_infra_cache_lame_size | server_target_fetch_policy | 
 	server_harden_short_bufsize | server_harden_large_queries |
 	server_do_not_query_address | server_hide_identity |
 	server_hide_version | server_identity | server_version |
@@ -448,12 +448,12 @@ server_infra_cache_numhosts: VAR_INFRA_CACHE_NUMHOSTS STRING
 		free($2);
 	}
 	;
-server_infra_cache_numlame: VAR_INFRA_CACHE_NUMLAME STRING
+server_infra_cache_lame_size: VAR_INFRA_CACHE_LAME_SIZE STRING
 	{
-		OUTYY(("P(server_infra_cache_numlame:%s)\n", $2));
+		OUTYY(("P(server_infra_cache_lame_size:%s)\n", $2));
 		if(atoi($2) == 0)
 			yyerror("number expected");
-		else cfg_parser->cfg->infra_cache_numlame = atoi($2);
+		else cfg_parser->cfg->infra_cache_lame_size = atoi($2);
 		free($2);
 	}
 	;

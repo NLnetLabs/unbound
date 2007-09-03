@@ -6,6 +6,8 @@
 	- timeout on tcp does not lead to spurious leakage detect.
 	- account memory for name of lame zones, so that memory leakages does
 	  not show lame cache growth as a leakage growth.
+	- config setting for lameness cache expressed in bytes, instead of
+	  number of entries.
 
 31 August 2007: Wouter
 	- can read bind trusted-keys { ... }; files, in a compatibility mode. 

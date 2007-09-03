@@ -105,7 +105,7 @@ infra_create(struct config_file* cfg)
 	}
 	infra->host_ttl = cfg->host_ttl;
 	infra->lame_ttl = cfg->lame_ttl;
-	infra->max_lame = cfg->infra_cache_numlame;
+	infra->max_lame_size = cfg->infra_cache_lame_size;
 	return infra;
 }
 
@@ -126,7 +126,7 @@ infra_adjust(struct infra_cache* infra, struct config_file* cfg)
 		return infra_create(cfg);
 	infra->host_ttl = cfg->host_ttl;
 	infra->lame_ttl = cfg->lame_ttl;
-	infra->max_lame = cfg->infra_cache_numlame;
+	infra->max_lame_size = cfg->infra_cache_lame_size;
 	maxmem = cfg->infra_cache_numhosts * 
 		(sizeof(struct infra_host_key)+sizeof(struct infra_host_data));
 	if(maxmem != slabhash_get_size(infra->hosts) ||
@@ -388,8 +388,7 @@ infra_set_lame(struct infra_cache* infra,
 	if(!data->lameness) {
 		/* create hash table if not there already */
 		data->lameness = lruhash_create(INFRA_LAME_STARTSIZE,
-			infra->max_lame*(sizeof(struct infra_lame_key)+
-			sizeof(struct infra_lame_data)), infra_lame_sizefunc, 
+			infra->max_lame_size, infra_lame_sizefunc, 
 			infra_lame_compfunc, infra_lame_delkeyfunc,
 			infra_lame_deldatafunc, NULL);
 		if(!data->lameness) {

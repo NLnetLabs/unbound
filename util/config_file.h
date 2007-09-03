@@ -95,8 +95,8 @@ struct config_file {
 	size_t infra_cache_slabs;
 	/** max number of hosts in the infra cache */
 	size_t infra_cache_numhosts;
-	/** max number of lame zones per host in the infra cache */
-	size_t infra_cache_numlame;
+	/** max size of lame zones per host in the infra cache */
+	size_t infra_cache_lame_size;
 
 	/** the target fetch policy for the iterator */
 	char* target_fetch_policy;

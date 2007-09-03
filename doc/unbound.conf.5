@@ -123,8 +123,10 @@ Number of slabs in the infrastructure cache. Slabs reduce lock contention
 by threads. Must be set to a power of 2. 
 .It \fBinfra-cache-numhosts:\fR <number>
 Number of hosts for which information is cached. Default is 10000.
-.It \fBinfra-cache-numlame:\fR <number>
-Number of zones per host for which lameness is cached. Default is 1000.
+.It \fBinfra-cache-lame-size:\fR <number>
+Number of bytes that the lameness cache per host is allowed to use. Default
+is 10 kb, which gives maximum storage for a couple score zones, depending on 
+the lame zone name lengths.
 .It \fBdo-ip4:\fR <yes or no>
 Enable or disable whether ip4 queries are answered. Default is yes.
 .It \fBdo-ip6:\fR <yes or no>

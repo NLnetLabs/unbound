@@ -125,7 +125,7 @@ infra-host-ttl{COLON}	{ YDOUT; return VAR_INFRA_HOST_TTL;}
 infra-lame-ttl{COLON}	{ YDOUT; return VAR_INFRA_LAME_TTL;}
 infra-cache-slabs{COLON}	{ YDOUT; return VAR_INFRA_CACHE_SLABS;}
 infra-cache-numhosts{COLON}	{ YDOUT; return VAR_INFRA_CACHE_NUMHOSTS;}
-infra-cache-numlame{COLON}	{ YDOUT; return VAR_INFRA_CACHE_NUMLAME;}
+infra-cache-lame-size{COLON}	{ YDOUT; return VAR_INFRA_CACHE_LAME_SIZE;}
 num-queries-per-thread{COLON}	{ YDOUT; return VAR_NUM_QUERIES_PER_THREAD;}
 target-fetch-policy{COLON}	{ YDOUT; return VAR_TARGET_FETCH_POLICY;}
 harden-short-bufsize{COLON}	{ YDOUT; return VAR_HARDEN_SHORT_BUFSIZE;}
