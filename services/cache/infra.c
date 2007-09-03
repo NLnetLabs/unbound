@@ -297,7 +297,7 @@ infra_lame_sizefunc(void* k, void* ATTR_UNUSED(d))
 {
 	struct infra_lame_key* key = (struct infra_lame_key*)k;
 	return sizeof(*key) + sizeof(struct infra_lame_data)
-		+ lock_get_mem(&key->entry.lock);
+		+ key->namelen + lock_get_mem(&key->entry.lock);
 }
 
 /** compare zone names, returns -1, 0, +1 */

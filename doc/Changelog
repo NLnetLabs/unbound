@@ -4,6 +4,8 @@
 	  with both a CNAME and the NXDOMAIN rcode. Added a test that the
 	  rcode is changed to NOERROR (because of the CNAME).
 	- timeout on tcp does not lead to spurious leakage detect.
+	- account memory for name of lame zones, so that memory leakages does
+	  not show lame cache growth as a leakage growth.
 
 31 August 2007: Wouter
 	- can read bind trusted-keys { ... }; files, in a compatibility mode. 
