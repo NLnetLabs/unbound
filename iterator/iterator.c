@@ -244,6 +244,11 @@ iter_prepend(struct iter_qstate* iq, struct dns_msg* msg,
 	for(p = iq->prepend_list; p; p = p->next) {
 		sets[num++] = p->rrset;
 	}
+	/* if the rcode was NXDOMAIN, and we prepended DNAME/CNAMEs, then
+	 * it should now be NOERROR. */
+	if(FLAGS_GET_RCODE(msg->rep->flags) == LDNS_RCODE_NXDOMAIN) {
+		FLAGS_SET_RCODE(msg->rep->flags, LDNS_RCODE_NOERROR);
+	}
 	msg->rep->rrset_count += num;
 	msg->rep->an_numrrsets += num;
 	msg->rep->rrsets = sets;

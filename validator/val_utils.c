@@ -68,6 +68,9 @@ val_classify_response(uint16_t query_flags, struct query_info* qinf,
 	if(!(query_flags&BIT_RD))
 		return VAL_CLASS_REFERRAL;
 	
+	/* dump bad messages */
+	if(rcode != LDNS_RCODE_NOERROR)
+		return VAL_CLASS_UNKNOWN;
 	log_assert(rcode == LDNS_RCODE_NOERROR);
 	/* next check if the skip into the answer section shows no answer */
 	if(skip>0 && rep->an_numrrsets <= skip)

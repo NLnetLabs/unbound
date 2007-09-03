@@ -66,6 +66,8 @@
 #define BIT_QR 0x8000
 /** get RCODE bits from uint16 flags */
 #define FLAGS_GET_RCODE(f) ((f) & 0xf)
+/** set RCODE bits in uint16 flags */
+#define FLAGS_SET_RCODE(f, r) (f = (((f) & 0xfff0) | (r)))
 
 /** timeout in seconds for UDP queries to auth servers. */
 #define UDP_QUERY_TIMEOUT 4
