@@ -132,7 +132,7 @@ get_codeline(rbtree_t* tree, char* key, char* func)
 		if(!cl->func) return 0;
 		cl->alloc = 0;
 		cl->node.key = cl->codeline;
-		rbtree_insert(tree, &cl->node);
+		(void)rbtree_insert(tree, &cl->node);
 	}
 	return cl;
 }
@@ -200,16 +200,16 @@ static void
 readfile(rbtree_t* tree, const char* fname, struct alloc_misc* misc)
 {
 	off_t total = get_file_size(fname);
-	off_t done = 0;
+	off_t done = (off_t)0;
 	int report = 0;
 	FILE* in = fopen(fname, "r");
 	char buf[102400];
 	if(!in)
 		fatal_exit("could not open %s: %s", fname, strerror(errno));
-	printf("Reading %s of size %lld\n", fname, (uint64_t)total);
+	printf("Reading %s of size %lld\n", fname, (long long)total);
 	while(fgets(buf, 102400, in)) {
 		buf[102400-1] = 0;
-		done += strlen(buf);
+		done += (off_t)strlen(buf);
 		/* progress count */
 		if((int)(((double)done / (double)total)*100.) > report) {
 			report = (int)(((double)done / (double)total)*100.);
@@ -239,14 +239,16 @@ printstats(rbtree_t* tree, struct alloc_misc* misc)
 {
 	struct codeline* cl;
 	uint64_t total = 0;
-	printf("%12lld in region alloc\n", misc->region_alloc);
+	printf("%12lld in region alloc\n", (long long)misc->region_alloc);
 	total += misc->region_alloc;
 	RBTREE_FOR(cl, struct codeline*, tree) {
-		printf("%12lld in %s %s\n", cl->alloc, cl->codeline, cl->func);
+		printf("%12lld in %s %s\n", (long long)cl->alloc, 
+			cl->codeline, cl->func);
 		total += cl->alloc;
 	}
 	printf("------------\n");
-	printf("%12lld total in %ld code lines\n", total, (long)tree->count);
+	printf("%12lld total in %ld code lines\n", (long long)total, 
+		(long)tree->count);
 	printf("\n");
 }
 
