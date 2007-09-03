@@ -8,6 +8,7 @@
 	  not show lame cache growth as a leakage growth.
 	- config setting for lameness cache expressed in bytes, instead of
 	  number of entries.
+	- tool too summarize allocations per code line.
 
 31 August 2007: Wouter
 	- can read bind trusted-keys { ... }; files, in a compatibility mode. 
