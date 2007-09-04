@@ -53,6 +53,8 @@
 
 /** maximum line length for lines in the replay file. */
 #define MAX_LINE_LEN 1024
+/** the config file (removed at exit) */
+static char cfgfile[MAX_LINE_LEN];
 
 /** give commandline usage for testbound. */
 static void
@@ -179,6 +181,12 @@ setup_playback(const char* filename, char* configfile,
 	log_info("Scenario: %s", scen->title);
 	return scen;
 }
+
+/** remove config file at exit */
+void remove_configfile(void)
+{
+	unlink(cfgfile);
+}
 	
 /**
  * Main fake event test program. Setup, teardown and report errors.
@@ -195,11 +203,11 @@ main(int argc, char* argv[])
 	int init_optind = optind;
 	char* init_optarg = optarg;
 	struct replay_scenario* scen = NULL;
-	char cfgfile[MAX_LINE_LEN];
 
 	log_init(NULL);
 	log_info("Start of %s testbound program.", PACKAGE_STRING);
 	/* determine commandline options for the daemon */
+	cfgfile[0] = 0;
 	pass_argc = 1;
 	pass_argv[0] = "unbound";
 	add_opts("-d", &pass_argc, pass_argv);
@@ -224,6 +232,8 @@ main(int argc, char* argv[])
 		testbound_usage();
 		return 1;
 	}
+	if(atexit(&remove_configfile) != 0)
+		fatal_exit("atexit() failed: %s", strerror(errno));
 
 	/* setup test environment */
 	scen = setup_playback(playback_file, cfgfile, &pass_argc, pass_argv);
@@ -240,7 +250,6 @@ main(int argc, char* argv[])
 	/* run the normal daemon */
 	res = daemon_main(pass_argc, pass_argv);
 
-	unlink(cfgfile);
 	fake_event_cleanup();
 	for(c=1; c<pass_argc; c++)
 		free(pass_argv[c]);

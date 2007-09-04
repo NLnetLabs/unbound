@@ -1205,8 +1205,11 @@ processFinished(struct module_qstate* qstate, struct val_qstate* vq,
 	/* store overall validation result in orig_msg */
 	if(vq->rrset_skip == 0)
 		vq->orig_msg->rep->security = vq->chase_reply->security;
-	else {
-		/* use the lowest security status as end result. */
+	else if(vq->rrset_skip < vq->orig_msg->rep->an_numrrsets + 
+		vq->orig_msg->rep->ns_numrrsets) {
+		/* ignore sec status of additional section if a referral 
+		 * type message skips there and
+		 * use the lowest security status as end result. */
 		if(vq->chase_reply->security < vq->orig_msg->rep->security)
 			vq->orig_msg->rep->security = 
 				vq->chase_reply->security;
