@@ -927,9 +927,12 @@ processInit(struct module_qstate* qstate, struct val_qstate* vq,
 	if(vq->signer_name == NULL) {
 		lookup_name = vq->qchase.qname;
 		lookup_len = vq->qchase.qname_len;
+		log_nametypeclass(VERB_ALGO, "no signer, using", lookup_name,
+			0, 0);
 	} else {
 		lookup_name = vq->signer_name;
 		lookup_len = vq->signer_len;
+		log_nametypeclass(VERB_ALGO, "signer is", lookup_name, 0, 0);
 	}
 
 	if(vq->rrset_skip > 0 || subtype == VAL_CLASS_CNAME ||

@@ -139,10 +139,17 @@ copy_rrset(struct ub_packed_rrset_key* key, struct region* region,
 /** find closest NS or DNAME and returns the rrset (locked) */
 static struct ub_packed_rrset_key*
 find_closest_of_type(struct module_env* env, uint8_t* qname, size_t qnamelen, 
-	uint16_t qclass, uint32_t now, uint16_t searchtype)
+	uint16_t qclass, uint32_t now, uint16_t searchtype, int stripfront)
 {
 	struct ub_packed_rrset_key *rrset;
 	uint8_t lablen;
+
+	if(stripfront) {
+		/* strip off so that DNAMEs have strict subdomain match */
+		lablen = *qname;
+		qname += lablen + 1;
+		qnamelen -= lablen + 1;
+	}
 
 	/* snip off front part of qname until the type is found */
 	while(qnamelen > 0) {
@@ -324,7 +331,7 @@ dns_cache_find_delegation(struct module_env* env, uint8_t* qname,
 	struct delegpt* dp;
 
 	nskey = find_closest_of_type(env, qname, qnamelen, qclass, now,
-		LDNS_RR_TYPE_NS);
+		LDNS_RR_TYPE_NS, 0);
 	if(!nskey) /* hope the caller has hints to prime or something */
 		return NULL;
 	nsdata = (struct packed_rrset_data*)nskey->entry.data;
@@ -560,7 +567,7 @@ dns_cache_lookup(struct module_env* env,
 	 * are more important, the CNAME is resynthesized and thus 
 	 * consistent with the DNAME */
 	if( (rrset=find_closest_of_type(env, qname, qnamelen, qclass, now,
-		LDNS_RR_TYPE_DNAME))) {
+		LDNS_RR_TYPE_DNAME, 1))) {
 		/* synthesize a DNAME+CNAME message based on this */
 		struct dns_msg* msg = synth_dname_msg(rrset, region, now, &k);
 		if(msg) {

@@ -4,6 +4,9 @@
 	- testbound removes config file from /tmp on failed exit.
 	- fixup for referral cleanup of the additional section.
 	- tests for cname, referral validation.
+	- neater testbound tpkg output.
+	- DNAMEs no longer match their apex when synthesized from the cache.
+	- find correct signer name for DNAME responses.
 
 3 September 2007: Wouter
 	- Fixed error in iterator that would cause assertion failure in 

@@ -198,8 +198,7 @@ val_find_signer(enum val_classification subtype, struct query_info* qinf,
 {
 	size_t i;
 	
-	if(subtype == VAL_CLASS_POSITIVE || subtype == VAL_CLASS_CNAME 
-		|| subtype == VAL_CLASS_ANY) {
+	if(subtype == VAL_CLASS_POSITIVE || subtype == VAL_CLASS_ANY) {
 		/* check for the answer rrset */
 		for(i=skip; i<rep->an_numrrsets; i++) {
 			if(query_dname_compare(qinf->qname, 
@@ -208,6 +207,16 @@ val_find_signer(enum val_classification subtype, struct query_info* qinf,
 					signer_name, signer_len);
 				return;
 			}
+		}
+		*signer_name = NULL;
+		*signer_len = 0;
+	} else if(subtype == VAL_CLASS_CNAME) {
+		/* check for the first signed cname/dname rrset */
+		for(i=skip; i<rep->an_numrrsets; i++) {
+			val_find_rrset_signer(rep->rrsets[i], 
+				signer_name, signer_len);
+			if(signer_name)
+				return;
 		}
 		*signer_name = NULL;
 		*signer_len = 0;
