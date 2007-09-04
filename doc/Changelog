@@ -7,6 +7,7 @@
 	- neater testbound tpkg output.
 	- DNAMEs no longer match their apex when synthesized from the cache.
 	- find correct signer name for DNAME responses.
+	- wildcarded DNAME test and fixup code to detect.
 
 3 September 2007: Wouter
 	- Fixed error in iterator that would cause assertion failure in 

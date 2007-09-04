@@ -335,7 +335,7 @@ validate_msg_signatures(struct module_env* env, struct val_env* ve,
 		 * message is BAD. */
 		if(sec != sec_status_secure) {
 			log_nametypeclass(VERB_DETAIL, "validator: response "
-				"has failed ANSWER rrset: ", s->rk.dname,
+				"has failed ANSWER rrset:", s->rk.dname,
 				ntohs(s->rk.type), ntohs(s->rk.rrset_class));
 			chase_reply->security = sec_status_bogus;
 			return 0;
@@ -358,7 +358,7 @@ validate_msg_signatures(struct module_env* env, struct val_env* ve,
 		 * we have a bad message. */
 		if(sec != sec_status_secure) {
 			log_nametypeclass(VERB_DETAIL, "validator: response "
-				"has failed AUTHORITY rrset: ", s->rk.dname,
+				"has failed AUTHORITY rrset:", s->rk.dname,
 				ntohs(s->rk.type), ntohs(s->rk.rrset_class));
 			chase_reply->security = sec_status_bogus;
 			return 0;
@@ -408,7 +408,7 @@ validate_positive_response(struct query_info* qchase,
 		 * made in the authority section. */
 		if(!val_rrset_wildcard(s, &wc)) {
 			log_nametypeclass(VERB_DETAIL, "Positive response has "
-				"inconsistent wildcard sigs: ", s->rk.dname,
+				"inconsistent wildcard sigs:", s->rk.dname,
 				ntohs(s->rk.type), ntohs(s->rk.rrset_class));
 			chase_reply->security = sec_status_bogus;
 			return;
@@ -697,7 +697,7 @@ validate_cname_response(struct query_info* qchase,
 		 * made in the authority section. */
 		if(!val_rrset_wildcard(s, &wc)) {
 			log_nametypeclass(VERB_DETAIL, "Cname response has "
-				"inconsistent wildcard sigs: ", s->rk.dname,
+				"inconsistent wildcard sigs:", s->rk.dname,
 				ntohs(s->rk.type), ntohs(s->rk.rrset_class));
 			chase_reply->security = sec_status_bogus;
 			return;
@@ -707,10 +707,9 @@ validate_cname_response(struct query_info* qchase,
 		 * Do not follow a wildcarded DNAME because 
 		 * its synthesized CNAME expansion is underdefined */
 		if(qchase->qtype != LDNS_RR_TYPE_DNAME && 
-			ntohs(s->rk.type) == LDNS_RR_TYPE_DNAME &&
-			dname_is_wild(s->rk.dname)) {
+			ntohs(s->rk.type) == LDNS_RR_TYPE_DNAME && wc) {
 			log_nametypeclass(VERB_DETAIL, "cannot validate a "
-				"wildcarded DNAME: ", s->rk.dname, 
+				"wildcarded DNAME:", s->rk.dname, 
 				ntohs(s->rk.type), ntohs(s->rk.rrset_class));
 			chase_reply->security = sec_status_bogus;
 			return;
