@@ -1,3 +1,7 @@
+4 September 2007: Wouter
+	- fixup of Leakage warning when serviced queries processed multiple
+	  callbacks for the same query from the same server.
+
 3 September 2007: Wouter
 	- Fixed error in iterator that would cause assertion failure in 
 	  validator. CNAME to a NXDOMAIN response was collated into a response

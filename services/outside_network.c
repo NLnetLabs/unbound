@@ -434,6 +434,7 @@ outside_network_create(struct comm_base *base, size_t bufsize,
 	outnet->num_tcp = num_tcp;
 	outnet->infra = infra;
 	outnet->rnd = rnd;
+	outnet->svcd_overhead = 0;
 #ifndef INET6
 	do_ip6 = 0;
 #endif
@@ -996,6 +997,7 @@ serviced_callbacks(struct serviced_query* sq, int error, struct comm_point* c,
 			error = NETEVENT_CLOSED;
 			c = NULL;
 		}
+		sq->outnet->svcd_overhead = backlen;
 	}
 	while(p) {
 		n = p->next;
@@ -1007,8 +1009,10 @@ serviced_callbacks(struct serviced_query* sq, int error, struct comm_point* c,
 		(void)(*p->cb)(c, p->cb_arg, error, rep);
 		p = n;
 	}
-	if(backup_p)
+	if(backup_p) {
 		free(backup_p);
+		sq->outnet->svcd_overhead = 0;
+	}
 	verbose(VERB_ALGO, "svcd callbacks end");
 	log_assert(sq->cblist == NULL);
 	serviced_delete(sq);
@@ -1260,6 +1264,7 @@ size_t outnet_get_mem(struct outside_network* outnet)
 	s += (sizeof(struct pending) + comm_timer_get_mem(NULL)) * 
 		outnet->pending->count;
 	s += sizeof(*outnet->serviced);
+	s += outnet->svcd_overhead;
 	RBTREE_FOR(sq, struct serviced_query*, outnet->serviced) {
 		s += sizeof(*sq) + sq->qbuflen;
 		for(sb = sq->cblist; sb; sb = sb->next)

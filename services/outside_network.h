@@ -64,6 +64,9 @@ struct outside_network {
 	/** buffer shared by UDP connections, since there is only one
 	    datagram at any time. */
 	ldns_buffer* udp_buff;
+	/** serviced_callbacks malloc overhead when processing multiple
+	 * identical serviced queries to the same server. */
+	size_t svcd_overhead;
 
 	/** 
 	 * Array of udp comm point* that are used to listen to pending events.
