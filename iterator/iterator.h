@@ -182,9 +182,17 @@ struct iter_qstate {
 	 * This is a list of RRsets that must be prepended to the 
 	 * ANSWER section of a response before being sent upstream.
 	 */
-	struct iter_prep_list* prepend_list;
+	struct iter_prep_list* an_prepend_list;
 	/** Last element of the prepend list */
-	struct iter_prep_list* prepend_last;
+	struct iter_prep_list* an_prepend_last;
+
+	/**
+	 * This is the list of RRsets that must be prepended to the
+	 * AUTHORITY section of the response before being sent upstream.
+	 */
+	struct iter_prep_list* ns_prepend_list;
+	/** Last element of the authority prepend list */
+	struct iter_prep_list* ns_prepend_last;
 
 	/** query name used for chasing the results. Initially the same as
 	 * the state qinfo, but after CNAMEs this will be different. 

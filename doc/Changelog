@@ -8,6 +8,8 @@
 	- DNAMEs no longer match their apex when synthesized from the cache.
 	- find correct signer name for DNAME responses.
 	- wildcarded DNAME test and fixup code to detect.
+	- prepend NSEC and NSEC3 rrsets in the iterator while chasing CNAMEs.
+	  So that wildcarded CNAMEs get their NSEC with them to the answer.
 
 3 September 2007: Wouter
 	- Fixed error in iterator that would cause assertion failure in 

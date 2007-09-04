@@ -103,8 +103,10 @@ iter_new(struct module_qstate* qstate, int id)
 	memset(iq, 0, sizeof(*iq));
 	iq->state = INIT_REQUEST_STATE;
 	iq->final_state = FINISHED_STATE;
-	iq->prepend_list = NULL;
-	iq->prepend_last = NULL;
+	iq->an_prepend_list = NULL;
+	iq->an_prepend_last = NULL;
+	iq->ns_prepend_list = NULL;
+	iq->ns_prepend_last = NULL;
 	iq->dp = NULL;
 	iq->depth = 0;
 	iq->num_target_queries = 0;
@@ -221,49 +223,63 @@ error_response(struct module_qstate* qstate, int id, int rcode)
 	return 0;
 }
 
-/** prepend the prepend list in the answer section of dns_msg */
+/** prepend the prepend list in the answer and authority section of dns_msg */
 static int
 iter_prepend(struct iter_qstate* iq, struct dns_msg* msg, 
 	struct region* region)
 {
 	struct iter_prep_list* p;
 	struct ub_packed_rrset_key** sets;
-	size_t num = 0;
-	for(p = iq->prepend_list; p; p = p->next)
-		num++;
-	if(num == 0)
+	size_t num_an = 0, num_ns = 0;;
+	for(p = iq->an_prepend_list; p; p = p->next)
+		num_an++;
+	for(p = iq->ns_prepend_list; p; p = p->next)
+		num_ns++;
+	if(num_an + num_ns == 0)
 		return 1;
-	verbose(VERB_ALGO, "prepending %d rrsets", (int)num);
-	sets = region_alloc(region, (num+msg->rep->rrset_count) *
+	verbose(VERB_ALGO, "prepending %d rrsets", (int)num_an + (int)num_ns);
+	sets = region_alloc(region, (num_an+num_ns+msg->rep->rrset_count) *
 		sizeof(struct ub_packed_rrset_key*));
 	if(!sets) 
 		return 0;
-	memcpy(sets+num, msg->rep->rrsets, msg->rep->rrset_count *
-		sizeof(struct ub_packed_rrset_key*));
-	num = 0;
-	for(p = iq->prepend_list; p; p = p->next) {
-		sets[num++] = p->rrset;
+	/* ANSWER section */
+	num_an = 0;
+	for(p = iq->an_prepend_list; p; p = p->next) {
+		sets[num_an++] = p->rrset;
 	}
+	memcpy(sets+num_an, msg->rep->rrsets, msg->rep->an_numrrsets *
+		sizeof(struct ub_packed_rrset_key*));
+	/* AUTH section */
+	num_ns = 0;
+	for(p = iq->ns_prepend_list; p; p = p->next) {
+		sets[msg->rep->an_numrrsets + num_an + num_ns++] = p->rrset;
+	}
+	memcpy(sets + num_an + msg->rep->an_numrrsets + num_ns, 
+		msg->rep->rrsets + msg->rep->an_numrrsets, 
+		(msg->rep->ns_numrrsets + msg->rep->ar_numrrsets) *
+		sizeof(struct ub_packed_rrset_key*));
+
 	/* if the rcode was NXDOMAIN, and we prepended DNAME/CNAMEs, then
 	 * it should now be NOERROR. */
 	if(FLAGS_GET_RCODE(msg->rep->flags) == LDNS_RCODE_NXDOMAIN) {
 		FLAGS_SET_RCODE(msg->rep->flags, LDNS_RCODE_NOERROR);
 	}
-	msg->rep->rrset_count += num;
-	msg->rep->an_numrrsets += num;
+	msg->rep->rrset_count += num_an + num_ns;
+	msg->rep->an_numrrsets += num_an;
+	msg->rep->ns_numrrsets += num_ns;
 	msg->rep->rrsets = sets;
 	return 1;
 }
 
 /**
- * Add rrset to prepend list
+ * Add rrset to ANSWER prepend list
  * @param qstate: query state.
  * @param iq: iterator query state.
  * @param rrset: rrset to add.
  * @return false on failure (malloc).
  */
 static int
-iter_add_prepend(struct module_qstate* qstate, struct iter_qstate* iq,
+iter_add_prepend_answer(struct module_qstate* qstate, struct iter_qstate* iq,
 	struct ub_packed_rrset_key* rrset)
 {
 	struct iter_prep_list* p = (struct iter_prep_list*)region_alloc(
@@ -273,10 +289,35 @@ iter_add_prepend(struct module_qstate* qstate, struct iter_qstate* iq,
 	p->rrset = rrset;
 	p->next = NULL;
 	/* add at end */
-	if(iq->prepend_last)
-		iq->prepend_last->next = p;
-	else	iq->prepend_list = p;
-	iq->prepend_last = p;
+	if(iq->an_prepend_last)
+		iq->an_prepend_last->next = p;
+	else	iq->an_prepend_list = p;
+	iq->an_prepend_last = p;
+	return 1;
+}
+
+/**
+ * Add rrset to AUTHORITY prepend list
+ * @param qstate: query state.
+ * @param iq: iterator query state.
+ * @param rrset: rrset to add.
+ * @return false on failure (malloc).
+ */
+static int
+iter_add_prepend_auth(struct module_qstate* qstate, struct iter_qstate* iq,
+	struct ub_packed_rrset_key* rrset)
+{
+	struct iter_prep_list* p = (struct iter_prep_list*)region_alloc(
+		qstate->region, sizeof(struct iter_prep_list));
+	if(!p)
+		return 0;
+	p->rrset = rrset;
+	p->next = NULL;
+	/* add at end */
+	if(iq->ns_prepend_last)
+		iq->ns_prepend_last->next = p;
+	else	iq->ns_prepend_list = p;
+	iq->ns_prepend_last = p;
 	return 1;
 }
 
@@ -313,7 +354,7 @@ handle_cname_response(struct module_qstate* qstate, struct iter_qstate* iq,
 		 * directly.  */
 		if(ntohs(r->rk.type) == LDNS_RR_TYPE_DNAME &&
 			dname_strict_subdomain_c(*mname, r->rk.dname)) {
-			if(!iter_add_prepend(qstate, iq, r))
+			if(!iter_add_prepend_answer(qstate, iq, r))
 				return 0;
 			continue;
 		}
@@ -321,12 +362,23 @@ handle_cname_response(struct module_qstate* qstate, struct iter_qstate* iq,
 		if(ntohs(r->rk.type) == LDNS_RR_TYPE_CNAME &&
 			query_dname_compare(*mname, r->rk.dname) == 0) {
 			/* Add this relevant CNAME rrset to the prepend list.*/
-			if(!iter_add_prepend(qstate, iq, r))
+			if(!iter_add_prepend_answer(qstate, iq, r))
 				return 0;
 			get_cname_target(r, mname, mname_len);
 		}
 
 		/* Other rrsets in the section are ignored. */
+	}
+	/* add authority rrsets to authority prepend, for wildcarded CNAMEs */
+	for(i=msg->rep->an_numrrsets; i<msg->rep->an_numrrsets +
+		msg->rep->ns_numrrsets; i++) {
+		struct ub_packed_rrset_key* r = msg->rep->rrsets[i];
+		/* only add NSEC/NSEC3, as they may be needed for validation */
+		if(ntohs(r->rk.type) == LDNS_RR_TYPE_NSEC ||
+			ntohs(r->rk.type) == LDNS_RR_TYPE_NSEC3) {
+			if(!iter_add_prepend_auth(qstate, iq, r))
+				return 0;
+		}
 	}
 	return 1;
 }
@@ -1366,7 +1418,7 @@ processFinished(struct module_qstate* qstate, struct iter_qstate* iq,
 	/* if (mPrivateTTL > 0){IterUtils.setPrivateTTL(resp, mPrivateTTL); } */
 
 	/* prepend any items we have accumulated */
-	if(iq->prepend_list) {
+	if(iq->an_prepend_list || iq->ns_prepend_list) {
 		if(!iter_prepend(iq, iq->response, qstate->region)) {
 			log_err("prepend rrsets: out of memory");
 			return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
