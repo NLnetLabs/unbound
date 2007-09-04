@@ -10,6 +10,9 @@
 	- wildcarded DNAME test and fixup code to detect.
 	- prepend NSEC and NSEC3 rrsets in the iterator while chasing CNAMEs.
 	  So that wildcarded CNAMEs get their NSEC with them to the answer.
+	- test for a CNAME to a DNAME to a CNAME to an answer, all from
+	  different domains, for key fetching and signature checking of
+	  CNAME'd messages.
 
 3 September 2007: Wouter
 	- Fixed error in iterator that would cause assertion failure in 
