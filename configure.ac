@@ -490,6 +490,14 @@ if test x_$enable_lock_checks = x_yes; then
 	AC_DEFINE(ENABLE_LOCK_CHECKS, 1, [Define if you want to use debug lock checking (slow).])
 fi
 
+# set memory allocation checking if requested
+AC_ARG_ENABLE(alloc-checks, AC_HELP_STRING([--enable-alloc-checks],
+	[ enable to check memory allocation, for debug purposes ]), 
+	, )
+if test x_$enable_alloc_checks = x_yes; then
+	AC_DEFINE(UNBOUND_ALLOC_STATS, 1, [use statistics for allocs and frees, for debug use])
+fi
+
 # check to see if libraries are needed for these functions.
 AC_CHECK_LIB(socket, socket)
 AC_CHECK_LIB(nsl, inet_pton)
@@ -644,33 +652,11 @@ struct sockaddr_storage;
 
 #include "ldns/ldns.h"
 
-/* use statistics for allocs and frees, for debug use */
-#define UNBOUND_ALLOC_STATS
 #ifdef UNBOUND_ALLOC_STATS
-#  ifdef malloc
-#    undef malloc	/* keepoff autoheader */
-#  endif
-#  ifdef realloc
-#    undef realloc	/* keepoff autoheader */
-#  endif
-#  ifdef calloc
-#    undef calloc	/* keepoff autoheader */
-#  endif
-#  ifdef free
-#    undef free	/* keepoff autoheader */
-#  endif
-
-#if 0
 #  define malloc(s) unbound_stat_malloc_log(s, __FILE__, __LINE__, __func__)
 #  define calloc(n,s) unbound_stat_calloc_log(n, s, __FILE__, __LINE__, __func__)
 #  define free(p) unbound_stat_free_log(p, __FILE__, __LINE__, __func__)
 #  define realloc(p,s) unbound_stat_realloc_log(p, s, __FILE__, __LINE__, __func__)
-#else
-#  define malloc unbound_stat_malloc
-#  define calloc unbound_stat_calloc
-#  define free unbound_stat_free
-#  define realloc unbound_stat_realloc
-#endif
 void *unbound_stat_malloc(size_t size);
 void *unbound_stat_calloc(size_t nmemb, size_t size);
 void unbound_stat_free(void *ptr);

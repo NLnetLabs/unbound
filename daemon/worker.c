@@ -70,6 +70,7 @@
 /** Size of an UDP datagram */
 #define NORMAL_UDP_SIZE	512 /* bytes */
 
+#ifdef UNBOUND_ALLOC_STATS
 /** measure memory leakage */
 static void
 debug_memleak(size_t accounted, size_t heap, 
@@ -108,11 +109,14 @@ debug_total_mem(size_t calctotal)
 	debug_memleak(calctotal, (size_t)total, 
 		unbound_mem_alloc, unbound_mem_freed);
 }
+#endif /* UNBOUND_ALLOC_STATS */
 
 /** Report on memory usage by this thread and global */
 void
-worker_mem_report(struct worker* worker, struct serviced_query* cur_serv)
+worker_mem_report(struct worker* ATTR_UNUSED(worker), 
+	struct serviced_query* ATTR_UNUSED(cur_serv))
 {
+#ifdef UNBOUND_ALLOC_STATS
 	/* debug func in validator module */
 	size_t total, front, back, mesh, msg, rrset, infra, ac, superac;
 	size_t me, iter, val;
@@ -153,6 +157,7 @@ worker_mem_report(struct worker* worker, struct serviced_query* cur_serv)
 		(unsigned)infra, (unsigned)iter, (unsigned)val, (unsigned)ac, 
 		(unsigned)superac, (unsigned)me);
 	debug_total_mem(total);
+#endif /* UNBOUND_ALLOC_STATS */
 }
 
 void 
