@@ -47,3 +47,5 @@ o NSID rfc 5001 support.
 o Treat YXDOMAIN from a DNAME properly, in iterator (not throwaway), validator.
 o grab ports nonconsequtive and change the set after a while (change within
   a given range). Could be bad for OS if wrong port. unsure if it helps secure.
+o workaround for nxdomain responses for ENT DS queries. Not look at rcode and
+  look at valid empty nonterminal proof that is inside the packet.
