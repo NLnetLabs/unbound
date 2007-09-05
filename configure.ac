@@ -496,6 +496,8 @@ AC_ARG_ENABLE(alloc-checks, AC_HELP_STRING([--enable-alloc-checks],
 	, )
 if test x_$enable_alloc_checks = x_yes; then
 	AC_DEFINE(UNBOUND_ALLOC_STATS, 1, [use statistics for allocs and frees, for debug use])
+else
+	AC_FUNC_MALLOC
 fi
 
 # check to see if libraries are needed for these functions.
@@ -504,7 +506,6 @@ AC_CHECK_LIB(nsl, inet_pton)
 
 AC_FUNC_CHOWN
 AC_FUNC_FORK
-AC_FUNC_MALLOC
 AC_TYPE_SIGNAL
 AC_FUNC_FSEEKO
 AC_SYS_LARGEFILE
