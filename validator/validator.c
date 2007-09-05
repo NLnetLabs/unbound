@@ -934,6 +934,23 @@ processInit(struct module_qstate* qstate, struct val_qstate* vq,
 		log_nametypeclass(VERB_ALGO, "signer is", lookup_name, 0, 0);
 	}
 
+	/* for NXDOMAIN it could be signed by a parent of the trust anchor */
+	if(subtype == VAL_CLASS_NAMEERROR && vq->signer_name &&
+		dname_strict_subdomain_c(vq->trust_anchor->name, lookup_name)){
+		while(vq->trust_anchor && dname_strict_subdomain_c(
+			vq->trust_anchor->name, lookup_name)) {
+			vq->trust_anchor = vq->trust_anchor->parent;
+		}
+		if(!vq->trust_anchor) { /* unsigned parent denies anchor*/
+			verbose(VERB_DETAIL, "unsigned parent zone denies"
+				" trust anchor, indeterminate");
+			vq->chase_reply->security = sec_status_indeterminate;
+			vq->state = VAL_FINISHED_STATE;
+			return 1;
+		}
+		verbose(VERB_ALGO, "trust anchor NXDOMAIN by signed parent");
+	}
+
 	if(vq->rrset_skip > 0 || subtype == VAL_CLASS_CNAME ||
 		subtype == VAL_CLASS_REFERRAL) {
 		/* extract this part of orig_msg into chase_reply for

@@ -44,3 +44,4 @@ o improve compression of DNS packets by first puttig uncompressible rrs, then
 o if one server is not responsive do not spend 75 secs on that server, but
   try other servers with lower rtt.
 o NSID rfc 5001 support.
+o Treat YXDOMAIN from a DNAME properly, in iterator (not throwaway), validator.

@@ -4,6 +4,9 @@
 	- ANY type answers get RRSIG in answer section of replies (but not
 	  in other sections, unless DO bit is on).
 	- testbound can replay a TCP query (set MATCH TCP in the QUERY).
+	- DS and noDS referral validation test.
+	- if you configure many trust anchors, parent trust anchors can
+	  securely deny existance of child trust anchors, if validated.
 
 4 September 2007: Wouter
 	- fixup of Leakage warning when serviced queries processed multiple
