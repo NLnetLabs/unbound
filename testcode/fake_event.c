@@ -353,7 +353,9 @@ fake_front_query(struct replay_runtime* runtime, struct replay_moment *todo)
 	repinfo.c->fd = -1;
 	repinfo.c->ev = (struct internal_event*)runtime;
 	repinfo.c->buffer = ldns_buffer_new(runtime->bufsize);
-	repinfo.c->type = comm_udp;
+	if(todo->match->match_transport == transport_tcp)
+		repinfo.c->type = comm_tcp;
+	else	repinfo.c->type = comm_udp;
 	fill_buffer_with_reply(repinfo.c->buffer, todo->match, NULL);
 	log_info("testbound: incoming QUERY");
 	/* call the callback for incoming queries */

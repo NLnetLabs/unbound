@@ -216,7 +216,13 @@ log_nametypeclass(enum verbosity_value v, const char* str, uint8_t* name,
 	if(verbosity < v)
 		return;
 	dname_str(name, buf);
-	if(ldns_rr_descript(type) && ldns_rr_descript(type)->_name)
+	if(type == LDNS_RR_TYPE_TSIG) ts = "TSIG";
+	else if(type == LDNS_RR_TYPE_IXFR) ts = "IXFR";
+	else if(type == LDNS_RR_TYPE_AXFR) ts = "AXFR";
+	else if(type == LDNS_RR_TYPE_MAILB) ts = "MAILB";
+	else if(type == LDNS_RR_TYPE_MAILA) ts = "MAILA";
+	else if(type == LDNS_RR_TYPE_ANY) ts = "ANY";
+	else if(ldns_rr_descript(type) && ldns_rr_descript(type)->_name)
 		ts = ldns_rr_descript(type)->_name;
 	else {
 		snprintf(t, 12, "TYPE%d", (int)type);

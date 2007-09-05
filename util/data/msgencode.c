@@ -434,7 +434,8 @@ rrset_belongs_in_reply(ldns_pkt_section s, uint16_t rrtype, uint16_t qtype,
 		case LDNS_RR_TYPE_RRSIG:
 		case LDNS_RR_TYPE_NSEC:
 		case LDNS_RR_TYPE_DNSKEY:
-		/* FIXME: include NSEC3 here. */
+		case LDNS_RR_TYPE_NSEC3:
+		case LDNS_RR_TYPE_NSEC3PARAMS:
 			return 0;
 	}
 	return 1;
@@ -530,6 +531,8 @@ insert_section(struct reply_info* rep, size_t num_rrsets, uint16_t* num_rrs,
 	size_t i, setstart;
 	*num_rrs = 0;
 	if(s != LDNS_SECTION_ADDITIONAL) {
+		if(s == LDNS_SECTION_ANSWER && qtype == LDNS_RR_TYPE_ANY)
+			dnssec = 1; /* include all types in ANY answer */
 	  	for(i=0; i<num_rrsets; i++) {
 			setstart = ldns_buffer_position(pkt);
 			if((r=packed_rrset_encode(rep->rrsets[rrsets_before+i], 
