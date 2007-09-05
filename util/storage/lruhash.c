@@ -47,6 +47,9 @@ void
 bin_init(struct lruhash_bin* array, size_t size)
 {
 	size_t i;
+#if !defined(HAVE_PTHREAD) && !defined(HAVE_SOLARIS_THREADS)
+	(void)array;
+#endif
 	for(i=0; i<size; i++) {
 		lock_quick_init(&array[i].lock);
 		lock_protect(&array[i].lock, &array[i], 
@@ -118,7 +121,9 @@ bin_split(struct lruhash* table, struct lruhash_bin* newa,
 	/* move entries to new table. Notice that since hash x is mapped to
 	 * bin x & mask, and new mask uses one more bit, so all entries in
 	 * one bin will go into the old bin or bin | newbit */
+#if defined(HAVE_PTHREAD) || defined(HAVE_SOLARIS_THREADS)
 	int newbit = newmask - table->size_mask;
+#endif
 	/* so, really, this task could also be threaded, per bin. */
 	/* LRU list is not changed */
 	for(i=0; i<table->size; i++)
