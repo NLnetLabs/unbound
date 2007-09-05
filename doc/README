@@ -31,6 +31,11 @@ This software is under BSD license, see LICENSE for details.
   * --enable-lock-checks
   	This enables a debug option to check lock and unlock calls. It needs
 	a recent pthreads library to work.
+  * --enable-alloc-checks
+	This enables a debug option to check malloc (calloc, realloc, free).
+	The server periodically checks if the amount of memory used fits with
+	the amount of memory it thinks it should be using, and reports 
+	memory usage in detail.
 
 Known issues
 ------------
