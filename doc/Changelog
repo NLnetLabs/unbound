@@ -7,6 +7,11 @@
 	- DS and noDS referral validation test.
 	- if you configure many trust anchors, parent trust anchors can
 	  securely deny existance of child trust anchors, if validated.
+	- not all *.name NSECs are present because a wildcard was matched,
+	  and *.name NSECs can prove nodata for empty nonterminals.
+	  Also, for wildcard name NSECs, check they are not from the parent
+	  zone (for wildcarded zone cuts), and check absence of CNAME bit,
+	  for a nodata proof.
 
 4 September 2007: Wouter
 	- fixup of Leakage warning when serviced queries processed multiple

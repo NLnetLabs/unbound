@@ -258,13 +258,24 @@ int nsec_proves_nodata(struct ub_packed_rrset_key* nsec,
 			dname_remove_label(&ce, &ce_len);
 
 			/* The qname must be a strict subdomain of the 
-			 * closest encloser, and the qtype must be absent 
-			 * from the type map. */
-			if(!dname_strict_subdomain_c(qinfo->qname, ce) ||
-				nsec_has_type(nsec, qinfo->qtype)) {
-				return 0;
+			 * closest encloser, for the wildcard to apply */
+			if(dname_strict_subdomain_c(qinfo->qname, ce)) {
+				/* here we have a matching NSEC for the qname,
+				 * perform matching NSEC checks */
+				if(nsec_has_type(nsec, LDNS_RR_TYPE_CNAME)) {
+				   /* should have gotten the wildcard CNAME */
+					return 0;
+				}
+				if(nsec_has_type(nsec, LDNS_RR_TYPE_NS) && 
+				   !nsec_has_type(nsec, LDNS_RR_TYPE_SOA)) {
+				   /* wrong parentside (wildcard) NSEC used */
+					return 0;
+				}
+				if(nsec_has_type(nsec, qinfo->qtype)) {
+					return 0;
+				}
+				return 1;
 			}
-			return 1;
 		}
 
 		/* empty-non-terminal checking. */

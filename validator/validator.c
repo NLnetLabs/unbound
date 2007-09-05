@@ -501,7 +501,11 @@ validate_nodata_response(struct query_info* qchase,
 		if(ntohs(s->rk.type) == LDNS_RR_TYPE_NSEC) {
 			if(nsec_proves_nodata(s, qchase)) {
 				has_valid_nsec = 1;
-				if(dname_is_wild(s->rk.dname))
+				/* set wc only if wildcard applicable, which
+				 * is a *.name, and qname sub of .name */
+				if(dname_is_wild(s->rk.dname) &&
+					dname_strict_subdomain_c(
+					qchase->qname, s->rk.dname+2))
 					wc = s->rk.dname;
 			} 
 			if(val_nsec_proves_name_error(s, qchase->qname)) {
@@ -796,7 +800,11 @@ validate_cname_noanswer_response(struct query_info* qchase,
 		if(ntohs(s->rk.type) == LDNS_RR_TYPE_NSEC) {
 			if(nsec_proves_nodata(s, qchase)) {
 				nodata_valid_nsec = 1;
-				if(dname_is_wild(s->rk.dname))
+				/* set wc only if wildcard applicable, which
+				 * is a *.name, and qname sub of .name */
+				if(dname_is_wild(s->rk.dname) &&
+					dname_strict_subdomain_c(
+					qchase->qname, s->rk.dname+2))
 					wc = s->rk.dname;
 			} 
 			if(val_nsec_proves_name_error(s, qchase->qname)) {
