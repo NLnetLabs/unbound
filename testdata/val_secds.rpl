@@ -77,7 +77,7 @@ ns.example.com.		IN 	A	1.2.3.4
 ns.example.com. 3600    IN      RRSIG   A 3 3 3600 20070926135752 20070829135752 2854 example.com. MC0CFQCMSWxVehgOQLoYclB9PIAbNP229AIUeH0vNNGJhjnZiqgIOKvs1EhzqAo= ;{id = 2854}
 ENTRY_END
 
-; response for delagation to sub.example.com.
+; response for delegation to sub.example.com.
 ENTRY_BEGIN
 MATCH opcode qtype qname
 ADJUST copy_id

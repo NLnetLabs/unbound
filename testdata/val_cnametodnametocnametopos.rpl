@@ -139,7 +139,7 @@ SECTION AUTHORITY
 SECTION ADDITIONAL
 ENTRY_END
 
-; response for delagation to sub.example.com.
+; response for delegation to sub.example.com.
 ENTRY_BEGIN
 MATCH opcode qtype qname
 ADJUST copy_id

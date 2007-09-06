@@ -164,7 +164,7 @@ dnskey_get_algo(struct ub_packed_rrset_key* k, size_t idx)
 /** get public key rdata field from a dnskey RR and do some checks */
 static void
 dnskey_get_pubkey(struct ub_packed_rrset_key* k, size_t idx,
-	unsigned char** pk, size_t* pklen)
+	unsigned char** pk, unsigned int* pklen)
 {
 	uint8_t* rdata;
 	size_t len;
@@ -175,7 +175,7 @@ dnskey_get_pubkey(struct ub_packed_rrset_key* k, size_t idx,
 		return;
 	}
 	*pk = (unsigned char*)rdata+2+4;
-	*pklen = len-2-4;
+	*pklen = (unsigned)len-2-4;
 }
 
 int
