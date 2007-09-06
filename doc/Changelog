@@ -1,3 +1,6 @@
+6 September 2007: Wouter
+	- fixup to find libevent on mac port install.
+
 5 September 2007: Wouter
 	- cname, name error validator tests.
 	- logging of qtype ANY works.

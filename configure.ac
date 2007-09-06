@@ -359,14 +359,14 @@ CHECK_YYUNPUT
 # Checks for libraries.
 AC_ARG_WITH(ssl, AC_HELP_STRING([--with-ssl=pathname],
                                     [enable SSL (will check /usr/local/ssl
-                            /usr/lib/ssl /usr/ssl /usr/pkg /usr/local /usr/sfw /usr)]),[
+                            /usr/lib/ssl /usr/ssl /usr/pkg /usr/local /usr/sfw /usr /opt/local)]),[
         ],[
             withval="yes"
         ])
     if test x_$withval != x_no; then
         AC_MSG_CHECKING(for SSL)
         if test x_$withval = x_ -o x_$withval = x_yes; then
-            withval="/usr/local/ssl /usr/lib/ssl /usr/ssl /usr/pkg /usr/local /usr/sfw /usr"
+            withval="/usr/local/ssl /usr/lib/ssl /usr/ssl /usr/pkg /usr/local /usr/sfw /usr /opt/local"
         fi
         for dir in $withval; do
             ssldir="$dir"
@@ -434,12 +434,12 @@ fi
 AC_CHECK_LIB(rt, clock_gettime)
 # check for libevent
 AC_ARG_WITH(libevent, AC_HELP_STRING([--with-libevent=pathname],
-    [set path to libevent  (will check /usr/local /usr/lib /usr/pkg /usr/sfw /usr)]),
+    [set path to libevent  (will check /usr/local /usr/lib /usr/pkg /usr/sfw /usr /opt/local)]),
     [ ],[ withval="yes" ])
 if test x_$withval != x_no; then
         AC_MSG_CHECKING(for libevent)
         if test x_$withval = x_ -o x_$withval = x_yes; then
-            withval="/usr/local /usr/lib /usr/pkg /usr/sfw /usr";
+            withval="/usr/local /usr/lib /usr/pkg /usr/sfw /usr /opt/local";
         fi
         for dir in $withval; do
             thedir="$dir"
