@@ -1612,6 +1612,7 @@ return_bogus:
 	}
 	/* unreachable */
 	log_assert(0);
+	return 0;
 }
 
 /**

@@ -1,6 +1,7 @@
 6 September 2007: Wouter
 	- fixup to find libevent on mac port install.
 	- fixup size_t vs unsigned portability in validator/sigcrypt.
+	- please compiler on different platforms, for unreachable code.
 
 5 September 2007: Wouter
 	- cname, name error validator tests.
