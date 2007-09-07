@@ -91,6 +91,23 @@
 
 /******************* PTHREAD ************************/
 
+/** use pthread mutex for basic lock */
+typedef pthread_mutex_t lock_basic_t;
+/** small front for pthread init func, NULL is default attrs. */
+#define lock_basic_init(lock) LOCKRET(pthread_mutex_init(lock, NULL))
+#define lock_basic_destroy(lock) LOCKRET(pthread_mutex_destroy(lock))
+#define lock_basic_lock(lock) LOCKRET(pthread_mutex_lock(lock))
+#define lock_basic_unlock(lock) LOCKRET(pthread_mutex_unlock(lock))
+
+#ifndef HAVE_PTHREAD_RWLOCK_T
+/** in case rwlocks are not supported, use a mutex. */
+typedef pthread_mutex_t lock_rw_t;
+#define lock_rw_init(lock) LOCKRET(pthread_mutex_init(lock, NULL))
+#define lock_rw_destroy(lock) LOCKRET(pthread_mutex_destroy(lock))
+#define lock_rw_rdlock(lock) LOCKRET(pthread_mutex_lock(lock))
+#define lock_rw_wrlock(lock) LOCKRET(pthread_mutex_lock(lock))
+#define lock_rw_unlock(lock) LOCKRET(pthread_mutex_unlock(lock))
+#else /* HAVE_PTHREAD_RWLOCK_T */
 /** we use the pthread rwlock */
 typedef pthread_rwlock_t lock_rw_t;
 /** small front for pthread init func, NULL is default attrs. */
@@ -99,14 +116,7 @@ typedef pthread_rwlock_t lock_rw_t;
 #define lock_rw_rdlock(lock) LOCKRET(pthread_rwlock_rdlock(lock))
 #define lock_rw_wrlock(lock) LOCKRET(pthread_rwlock_wrlock(lock))
 #define lock_rw_unlock(lock) LOCKRET(pthread_rwlock_unlock(lock))
-
-/** use pthread mutex for basic lock */
-typedef pthread_mutex_t lock_basic_t;
-/** small front for pthread init func, NULL is default attrs. */
-#define lock_basic_init(lock) LOCKRET(pthread_mutex_init(lock, NULL))
-#define lock_basic_destroy(lock) LOCKRET(pthread_mutex_destroy(lock))
-#define lock_basic_lock(lock) LOCKRET(pthread_mutex_lock(lock))
-#define lock_basic_unlock(lock) LOCKRET(pthread_mutex_unlock(lock))
+#endif /* HAVE_PTHREAD_RWLOCK_T */
 
 #ifndef HAVE_PTHREAD_SPINLOCK_T
 /** in case spinlocks are not supported, use a mutex. */

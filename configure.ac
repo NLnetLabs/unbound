@@ -407,7 +407,7 @@ if test x_$withval != x_no; then
 		CFLAGS="$CFLAGS $PTHREAD_CFLAGS"
 		CC="$PTHREAD_CC"
 		ub_have_pthreads=yes
-		AC_CHECK_TYPES(pthread_spinlock_t,,,[#include <pthread.h>])
+		AC_CHECK_TYPES([pthread_spinlock_t, pthread_rwlock_t],,,[#include <pthread.h>])
 		])
 fi
 
