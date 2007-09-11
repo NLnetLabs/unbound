@@ -2,6 +2,8 @@
 	- fixup to find libevent on mac port install.
 	- fixup size_t vs unsigned portability in validator/sigcrypt.
 	- please compiler on different platforms, for unreachable code.
+	- val_nsec3 file.
+	- pthread_rwlock type is optional, in case of old pthread libs.
 
 5 September 2007: Wouter
 	- cname, name error validator tests.

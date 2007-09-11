@@ -44,6 +44,7 @@ o improve compression of DNS packets by first puttig uncompressible rrs, then
 o if one server is not responsive do not spend 75 secs on that server, but
   try other servers with lower rtt.
 o NSID rfc 5001 support.
+o timers rfc 5011 support.
 o Treat YXDOMAIN from a DNAME properly, in iterator (not throwaway), validator.
 o grab ports nonconsequtive and change the set after a while (change within
   a given range). Could be bad for OS if wrong port. unsure if it helps secure.
