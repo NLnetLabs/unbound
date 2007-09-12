@@ -153,6 +153,7 @@ val-clean-additional{COLON}	{ YDOUT; return VAR_VAL_CLEAN_ADDITIONAL;}
 val-permissive-mode{COLON}	{ YDOUT; return VAR_VAL_PERMISSIVE_MODE;}
 key-cache-size{COLON}	{ YDOUT; return VAR_KEY_CACHE_SIZE;}
 key-cache-slabs{COLON}	{ YDOUT; return VAR_KEY_CACHE_SLABS;}
+val-nsec3-keysize-iterations{COLON}	{ YDOUT; return VAR_VAL_NSEC3_KEYSIZE_ITERATIONS;}
 {NEWLINE}		{ LEXOUT(("NL\n")); cfg_parser->line++;}
 
 	/* Quoted strings. Strip leading and ending quotes */

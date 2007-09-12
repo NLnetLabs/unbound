@@ -123,6 +123,8 @@ config_create()
 	cfg->key_cache_size = 4 * 1024 * 1024;
 	cfg->key_cache_slabs = 4;
 	if(!(cfg->module_conf = strdup("validator iterator"))) goto error_exit;
+	if(!(cfg->val_nsec3_key_iterations = 
+		strdup("1024 150 2048 500 4096 2500"))) goto error_exit;
 	return cfg;
 error_exit:
 	config_delete(cfg); 
@@ -219,6 +221,7 @@ config_delete(struct config_file* cfg)
 	config_delstrlist(cfg->trust_anchor_file_list);
 	config_delstrlist(cfg->trusted_keys_file_list);
 	config_delstrlist(cfg->trust_anchor_list);
+	free(cfg->val_nsec3_key_iterations);
 	free(cfg);
 }
 
@@ -289,4 +292,29 @@ cfg_convert_timeval(const char* str)
 	/* call ldns conversion function */
 	t = mktime_from_utc(&tm);
 	return t;
+}
+
+int 
+cfg_count_numbers(const char* s)
+{
+        /* format ::= (sp num)+ sp      */
+        /* num ::= [-](0-9)+            */
+        /* sp ::= (space|tab)*          */
+        int num = 0;
+        while(*s) {
+                while(*s && isspace(*s))
+                        s++;
+                if(!*s) /* end of string */
+                        break;
+                if(*s == '-')
+                        s++;
+                if(!*s) /* only - not allowed */
+                        return 0;
+                if(!isdigit(*s)) /* bad character */
+                        return 0;
+                while(*s && isdigit(*s))
+                        s++;
+                num++;
+        }
+        return num;
 }

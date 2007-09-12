@@ -54,10 +54,50 @@
 #include "util/region-allocator.h"
 #include "util/config_file.h"
 
+/** fill up nsec3 key iterations config entry */
+static int
+fill_nsec3_iter(struct val_env* ve, char* s, int c)
+{
+	char* e;
+	int i;
+	free(ve->nsec3_keysize);
+	free(ve->nsec3_maxiter);
+	ve->nsec3_keysize = (size_t*)calloc(sizeof(size_t), (size_t)c);
+	ve->nsec3_maxiter = (size_t*)calloc(sizeof(size_t), (size_t)c);
+	if(!ve->nsec3_keysize || !ve->nsec3_maxiter) {
+		log_err("out of memory");
+		return 0;
+	}
+	for(i=0; i<c; i++) {
+		ve->nsec3_keysize[i] = (size_t)strtol(s, &e, 10);
+		if(s == e) {
+			log_err("cannot parse: %s", s);
+			return 0;
+		}
+		s = e;
+		ve->nsec3_maxiter[i] = (size_t)strtol(s, &e, 10);
+		if(s == e) {
+			log_err("cannot parse: %s", s);
+			return 0;
+		}
+		s = e;
+		if(i>0 && ve->nsec3_keysize[i-1] >= ve->nsec3_keysize[i]) {
+			log_err("nsec3 key iterations not ascending: %d %d",
+				(int)ve->nsec3_keysize[i-1], 
+				(int)ve->nsec3_keysize[i]);
+			return 0;
+		}
+		verbose(VERB_ALGO, "validator nsec3cfg keysz %d mxiter %d",
+			(int)ve->nsec3_keysize[i], (int)ve->nsec3_maxiter[i]);
+	}
+	return 1;
+}
+
 /** apply config settings to validator */
 static int
 val_apply_cfg(struct val_env* val_env, struct config_file* cfg)
 {
+	int c;
 	val_env->bogus_ttl = (uint32_t)cfg->bogus_ttl;
 	val_env->clean_additional = cfg->val_clean_additional;
 	val_env->permissive_mode = cfg->val_permissive_mode;
@@ -78,6 +118,17 @@ val_apply_cfg(struct val_env* val_env, struct config_file* cfg)
 		return 0;
 	}
 	val_env->date_override = cfg->val_date_override;
+	c = cfg_count_numbers(cfg->val_nsec3_key_iterations);
+	if(c < 1 || (c&1)) {
+		log_err("validator: unparseable or odd nsec3 key "
+			"iterations: %s", cfg->val_nsec3_key_iterations);
+		return 0;
+	}
+	val_env->nsec3_keyiter_count = c/2;
+	if(!fill_nsec3_iter(val_env, cfg->val_nsec3_key_iterations, c/2)) {
+		log_err("validator: cannot apply nsec3 key iterations");
+		return 0;
+	}
 	return 1;
 }
 
@@ -111,6 +162,8 @@ val_deinit(struct module_env* env, int id)
 	val_env = (struct val_env*)env->modinfo[id];
 	anchors_delete(val_env->anchors);
 	key_cache_delete(val_env->kcache);
+	free(val_env->nsec3_keysize);
+	free(val_env->nsec3_maxiter);
 	free(val_env);
 }
 
@@ -1819,7 +1872,8 @@ val_get_mem(struct module_env* env, int id)
 	if(!ve)
 		return 0;
 	return sizeof(*ve) + key_cache_get_mem(ve->kcache) + 
-		anchors_get_mem(ve->anchors);
+		anchors_get_mem(ve->anchors) + 
+		sizeof(size_t)*2*ve->nsec3_keyiter_count;
 }
 
 /**

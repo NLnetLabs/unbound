@@ -232,6 +232,14 @@ reply is not withheld from the client with SERVFAIL as usual. The client
 receives the bogus data. For messages that are found to be secure the AD bit 
 is set in replies. Also logging is performed as for full validation.
 The default value is "no". 
+.It \fBval-nsec3-keysize-iterations:\fR <"list of values">
+List of keysize and iteration count values, separated by spaces, surrounded
+by quotes. Default is "1024 150 2048 500 4096 2500". This determines the
+maximum allowed NSEC3 iteration count before a message is simply marked
+insecure instead of performing the many hashing iterations. The list must
+be in ascending order and have at least one entry. If you set it to 
+"1024 65535" there is no restriction to NSEC3 iteration values.
+This table must be kept short; a very long list could cause slower operation.
 .It \fBkey-cache-size:\fR <number>
 Number of bytes size of the key cache. Default is 4 megabytes.
 .It \fBkey-cache-slabs:\fR <number>

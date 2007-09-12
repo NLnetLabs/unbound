@@ -39,6 +39,29 @@
  * This file contains helper functions for the validator module.
  * The functions help with NSEC3 checking, the different NSEC3 proofs
  * for denial of existance, and proofs for presence of types.
+ *
+ * NSEC3
+ *                      1 1 1 1 1 1 1 1 1 1 2 2 2 2 2 2 2 2 2 2 3 3
+ *  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |   Hash Alg.   |     Flags     |          Iterations           |
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |  Salt Length  |                     Salt                      /
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |  Hash Length  |             Next Hashed Owner Name            /
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * /                         Type Bit Maps                         /
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ *
+ * NSEC3PARAM
+ *                      1 1 1 1 1 1 1 1 1 1 2 2 2 2 2 2 2 2 2 2 3 3
+ *  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |   Hash Alg.   |     Flags     |          Iterations           |
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |  Salt Length  |                     Salt                      /
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ *
  */
 
 #ifndef VALIDATOR_VAL_NSEC3_H
@@ -50,5 +73,24 @@ enum sec_status;
 struct reply_info;
 struct query_info;
 struct key_entry_key;
+
+/**
+ *     0 1 2 3 4 5 6 7
+ *    +-+-+-+-+-+-+-+-+
+ *    |             |O|
+ *    +-+-+-+-+-+-+-+-+
+ * The OPT-OUT bit in the NSEC3 flags field.
+ * If enabled, there can be zero or more unsigned delegations in the span.
+ * If disabled, there are zero unsigned delegations in the span.
+ */
+#define NSEC3_OPTOUT	0x01
+/**
+ * The unknown flags in the NSEC3 flags field.
+ * They must be zero, or the NSEC3 is ignored.
+ */
+#define NSEC3_UNKNOWN_FLAGS 0xFE
+
+/** The SHA1 hash algorithm for NSEC3 */
+#define NSEC3_HASH_SHA1	0x01
 
 #endif /* VALIDATOR_VAL_NSEC3_H */

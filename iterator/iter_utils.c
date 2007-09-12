@@ -57,32 +57,6 @@
 #include "util/data/msgparse.h"
 #include "util/random.h"
 
-/** count number of integers in fetch policy string */
-static int
-fetch_count(const char* s)
-{
-	/* format ::= (sp num)+ sp 	*/
-	/* num ::= [-](0-9)+ 		*/
-	/* sp ::= (space|tab)* 		*/
-	int num = 0;
-	while(*s) {
-		while(*s && isspace(*s))
-			s++;
-		if(!*s)	/* end of string */
-			break;
-		if(*s == '-')
-			s++;
-		if(!*s) /* only - not allowed */
-			return 0;
-		if(!isdigit(*s)) /* bad character */
-			return 0;
-		while(*s && isdigit(*s))
-			s++;
-		num++;
-	}
-	return num;
-}
-
 /** fillup fetch policy array */
 static void
 fetch_fill(struct iter_env* ie, const char* str)
@@ -91,7 +65,8 @@ fetch_fill(struct iter_env* ie, const char* str)
 	int i;
 	for(i=0; i<ie->max_dependency_depth+1; i++) {
 		ie->target_fetch_policy[i] = strtol(s, &e, 10);
-		log_assert(s != e); /* parsed syntax already */
+		if(s == e)
+			fatal_exit("cannot parse fetch policy number %s", s);
 		s = e;
 	}
 }
@@ -100,7 +75,7 @@ fetch_fill(struct iter_env* ie, const char* str)
 static int
 read_fetch_policy(struct iter_env* ie, const char* str)
 {
-	int count = fetch_count(str);
+	int count = cfg_count_numbers(str);
 	if(count < 1) {
 		log_err("Cannot parse target fetch policy: \"%s\"", str);
 		return 0;

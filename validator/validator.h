@@ -87,6 +87,25 @@ struct val_env {
 	 * hurting responses to clients.
 	 */
 	int permissive_mode;
+
+	/**
+	 * Number of entries in the NSEC3 maximum iteration count table.
+	 * Keep this table short, and sorted by size
+	 */
+	int nsec3_keyiter_count;
+
+	/**
+	 * NSEC3 maximum iteration count per signing key size.
+	 * This array contains key size values (in increasing order)
+	 */
+	size_t* nsec3_keysize;
+
+	/**
+	 * NSEC3 maximum iteration count per signing key size.
+	 * This array contains the maximum iteration count for the keysize
+	 * in the keysize array.
+	 */
+	size_t* nsec3_maxiter;
 };
 
 /**

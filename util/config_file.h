@@ -158,6 +158,8 @@ struct config_file {
 	int val_clean_additional;
 	/** should validator allow bogus messages to go through */
 	int val_permissive_mode;
+	/** nsec3 maximum iterations per key size, string */
+	char* val_nsec3_key_iterations;
 
 	/** size of the key cache */
 	size_t key_cache_size;
@@ -226,6 +228,18 @@ int cfg_strlist_insert(struct config_strlist** head, char* item);
  * @return time value or 0 for error.
  */
 uint32_t cfg_convert_timeval(const char* str);
+
+/**
+ * Count number of values in the string.
+ * format ::= (sp num)+ sp
+ * num ::= [-](0-9)+
+ * sp ::= (space|tab)*
+ *
+ * @param str: string
+ * @return: 0 on parse error, or empty string, else
+ *	number of integer values in the string.
+ */
+int cfg_count_numbers(const char* str);
 
 /**
  * Used during options parsing

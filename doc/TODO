@@ -37,7 +37,8 @@ o store primed key data in a overlaid keyhints file (sort of like drafttimers).
 o windows version, auto update feature, a query to check for the version.
 o autoreport of problems
 o logrotation, syslog
-o command the server with TSIG inband.
+o command the server with TSIG inband. get-config, clearcache, 
+	get stats, get memstats, get ..., reload, clear one zone from cache
 o watch for spoof nearmisses.
 o improve compression of DNS packets by first puttig uncompressible rrs, then
   compress to their rdata.

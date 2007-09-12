@@ -302,3 +302,49 @@ key_entry_get_rrset(struct key_entry_key* kkey, struct region* region)
 	packed_rrset_ptr_fixup(rrd);
 	return rrk;
 }
+
+/** Get size of key in keyset */
+static size_t
+dnskey_get_keysize(struct packed_rrset_data* data, size_t idx)
+{
+	unsigned char* pk;
+	unsigned int pklen = 0;
+	int algo;
+	if(data->rr_len[idx] < 2+5)
+		return 0;
+	algo = (int)data->rr_data[idx][2+3];
+	pk = (unsigned char*)data->rr_data[idx]+2+4;
+	pklen = (unsigned)data->rr_len[idx]-2-4;
+	return ldns_rr_dnskey_key_size_raw(pk, pklen, algo);
+}
+
+/** get dnskey flags from data */
+static uint16_t
+kd_get_flags(struct packed_rrset_data* data, size_t idx)
+{
+	uint16_t f;
+	if(data->rr_len[idx] < 2+2)
+		return 0;
+	memmove(&f, data->rr_data[idx]+2, 2);
+	f = ntohs(f);
+	return f;
+}
+
+size_t 
+key_entry_keysize(struct key_entry_key* kkey)
+{
+	struct packed_rrset_data* d;
+	/* compute size of smallest ZSK key in the rrset */
+	size_t i;
+	size_t bits = 0;
+	if(!key_entry_isgood(kkey))
+		return 0;
+	d = ((struct key_entry_data*)kkey->entry.data)->rrset_data;
+	for(i=0; i<d->count; i++) {
+		if(!(kd_get_flags(d, i) & DNSKEY_BIT_ZSK))
+			continue;
+		if(i==0 || dnskey_get_keysize(d, i) < bits)
+			bits = dnskey_get_keysize(d, i);
+	}
+	return bits;
+}

@@ -183,4 +183,11 @@ struct key_entry_key* key_entry_create_bad(struct region* region,
 struct ub_packed_rrset_key* key_entry_get_rrset(struct key_entry_key* kkey,
 	struct region* region);
 
+/**
+ * Get keysize of the keyentry.
+ * @param kkey: key, must be a good key, with contents.
+ * @return size in bits of the key.
+ */
+size_t key_entry_keysize(struct key_entry_key* kkey);
+
 #endif /* VALIDATOR_VAL_KENTRY_H */

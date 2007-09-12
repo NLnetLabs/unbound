@@ -83,7 +83,8 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_TRUST_ANCHOR_FILE VAR_TRUST_ANCHOR VAR_VAL_OVERRIDE_DATE
 %token VAR_BOGUS_TTL VAR_VAL_CLEAN_ADDITIONAL VAR_VAL_PERMISSIVE_MODE
 %token VAR_INCOMING_NUM_TCP VAR_MSG_BUFFER_SIZE VAR_KEY_CACHE_SIZE
-%token VAR_KEY_CACHE_SLABS VAR_TRUSTED_KEYS_FILE
+%token VAR_KEY_CACHE_SLABS VAR_TRUSTED_KEYS_FILE 
+%token VAR_VAL_NSEC3_KEYSIZE_ITERATIONS
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -121,7 +122,7 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_val_clean_additional | server_val_permissive_mode |
 	server_incoming_num_tcp | server_msg_buffer_size | 
 	server_key_cache_size | server_key_cache_slabs | 
-	server_trusted_keys_file
+	server_trusted_keys_file | server_val_nsec3_keysize_iterations
 	;
 stubstart: VAR_STUB_ZONE
 	{
@@ -566,6 +567,13 @@ server_val_permissive_mode: VAR_VAL_PERMISSIVE_MODE STRING
 		else cfg_parser->cfg->val_permissive_mode = 
 			(strcmp($2, "yes")==0);
 		free($2);
+	}
+	;
+server_val_nsec3_keysize_iterations: VAR_VAL_NSEC3_KEYSIZE_ITERATIONS STRING
+	{
+		OUTYY(("P(server_val_nsec3_keysize_iterations:%s)\n", $2));
+		free(cfg_parser->cfg->val_nsec3_key_iterations);
+		cfg_parser->cfg->val_nsec3_key_iterations = $2;
 	}
 	;
 server_key_cache_size: VAR_KEY_CACHE_SIZE STRING
