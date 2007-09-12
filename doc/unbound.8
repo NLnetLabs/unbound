@@ -17,7 +17,6 @@ unbound
 .Op Fl d
 .Op Fl v
 .Op Fl c Ar cfgfile
-
 .Sh DESCRIPTION
 .Ic Unbound 
 is an implementation of a DNS resolver, that does caching and 
@@ -25,27 +24,21 @@ DNSSEC validation.
 .Pp
 The available options are:
 .Bl -tag -width indent
-
 .It Fl h
 Show the version and commandline option help.
-
 .It Fl c Ar cfgfile
 Set the config file to read with settings for unbound. The syntax is
 described in 
 .Xr unbound.conf 5 .
-
 .It Fl d
 Debug flag, do not fork into the background, but stay attached to the
 console.
-
 .It Fl v
 Increase verbosity. If given multiple times, more information is logged.
 This is in addition to the verbosity (if any) from the config file.
-
 .El
 .Sh SEE ALSO
 .Xr unbound.conf 5 .
-
 .Sh AUTHORS
 .Ic Unbound
 developers are mentioned in the CREDITS file in the distribution.

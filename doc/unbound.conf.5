@@ -20,11 +20,9 @@ is used to configure
 .Xr unbound 8 .
 The file format has attributes and values. Some attributes have attributes inside them.
 The notation is: attribute: value.
-
+.Pp
 Comments start with # and last to the end of line. Empty lines are
 ignored as is whitespace at the beginning of a line.
-
-.El
 .Sh EXAMPLE
 An example config file is shown below. Copy this to /etc/unbound/unbound.conf
 and start the server with:
@@ -37,7 +35,6 @@ Most settings are the defaults. Stop the server with:
 .fi
 Below is a minimal config file. The source distribution contains an extensive
 example.conf file with all the options.
-
 .nf
 # unbound.conf(5) config file for unbound(8).
 server:
@@ -48,19 +45,15 @@ server:
 	pidfile: "/etc/unbound/unbound.pid"
 	# verbosity: 1		# uncomment and increase to get more logging.
 .fi
-
-.El
 .Sh FILE FORMAT
 There must be whitespace between keywords. Attribute keywords end with a colon ':'. An attribute
 is followed by its containing attributes, or a value.
-
 .Pp
 Files can be included using the
 .Ic include:
 directive. It can appear anywhere, and takes a single filename as an argument.
 Processing continues as if the text from the included file was copied into
 the config file at that point.
-
 .Ss Server Options
 There may only be one 
 .Ic server:
@@ -140,7 +133,7 @@ If given a chroot is done to the given directory. The default is none ("").
 .It \fBusername:\fR <name>
 If given, after binding the port the user privileges are dropped. Default is
 not to change user, username: "". 
-
+.Pp
 If this user is not capable of binding the
 port, reloads (by signal HUP) will still retain the opened ports.
 If you change the port number in the config file, and that new port number 
@@ -169,13 +162,13 @@ version is returned.
 Set the target fetch policy used by unbound to determine if it should fetch
 nameserver target addresses opportunistically. The policy is described per
 dependency depth. 
-
+.Pp
 The number of values determines the maximum dependency depth
 that unbound will pursue in answering a query.  
 A value of -1 means to fetch all targets opportunistically for that dependency
 depth. A value of 0 means to fetch on demand only. A positive value fetches
 that many targets opportunistically. 
-
+.Pp
 Enclose the list between quotes ("") and put spaces between numbers.
 The default is "3 2 1 0 0". Setting all zeroes, "0 0 0 0 0" gives behaviour
 closer to that of BIND 9, while setting "-1 -1 -1 -1 -1" gives behaviour 
@@ -246,7 +239,6 @@ Number of slabs in the key cache. Slabs reduce lock contention by threads.
 Must be set to a power of 2. Setting (close) to the number of cpus is a 
 reasonable guess.
 .El
-
 .Ss Stub Zone Options
 There may be multiple
 .Ic stub-zone:
@@ -261,7 +253,6 @@ Name of stub zone nameserver. Is itself resolved before it is used.
 IP address of stub zone nameserver. Can be IP 4 or IP 6.
 To use a nondefault port for DNS communication append '@' with the port number.
 .El
-
 .Ss Forward Zone Options
 There may be multiple
 .Ic forward-zone:
@@ -279,7 +270,6 @@ Name of server to forward to. Is itself resolved before it is used.
 IP address of server to forward to. Can be IP 4 or IP 6.
 To use a nondefault port for DNS communication append '@' with the port number.
 .El
-
 .Sh MEMORY CONTROL EXAMPLE
 In the example config settings below memory usage is reduced. Some service
 levels are lower, notable very large data and a high TCP load are no longer
@@ -287,8 +277,8 @@ supported. Very large data and high TCP loads are exceptional for the DNS.
 DNSSEC validation is enabled, just add trust anchors.
 If you do not have to worry about programs using more than 1 meg of memory,
 the below example is not for you. Use the defaults to receive full service.
+.Pp
 .nf
-
 # example settings that reduce memory usage
 server:
 	num-threads: 1
@@ -310,9 +300,6 @@ server:
 	harden-short-bufsize: "yes"
 	do-ip6: no	# save a bit of memory if not used.
 .fi
-
-.El
-
 .Sh FILES
 .Bl -tag -width indent
 .It Pa /etc/unbound
