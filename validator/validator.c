@@ -642,7 +642,7 @@ validate_nameerror_response(struct module_env* env, struct val_env* ve,
 			nsec3s_seen = 1;
 	}
 
-	if(!has_valid_nsec || !has_valid_wnsec) {
+	if((!has_valid_nsec || !has_valid_wnsec) && nsec3s_seen) {
 		/* use NSEC3 proof, both answer and auth rrsets, in case
 		 * NSEC3s end up in the answer (due to qtype=NSEC3 or so) */
 		chase_reply->security = nsec3_prove_nameerror(env, ve,
