@@ -980,6 +980,8 @@ nsec3_prove_nameerror(struct module_env* env, struct val_env* ve,
 		return sec_status_bogus; /* no valid NSEC3s, bogus */
 	rbtree_init(&ct, &nsec3_hash_cmp); /* init names-to-hash cache */
 	filter_init(&flt, list, num, qinfo); /* init RR iterator */
+	if(!flt.zone)
+		return sec_status_bogus; /* no RRs */
 	if(nsec3_iteration_count_high(ve, &flt, kkey))
 		return sec_status_insecure; /* iteration count too high */
 
