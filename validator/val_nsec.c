@@ -46,10 +46,10 @@
 #include "util/data/msgreply.h"
 #include "util/data/dname.h"
 
-/** Check type present in NSEC typemap with bitmap arg */
-static int
-nsec_has_type_rdata(uint8_t* bitmap, size_t len, uint16_t type)
+int
+nsecbitmap_has_type_rdata(uint8_t* bitmap, size_t len, uint16_t type)
 {
+	/* Check type present in NSEC typemap with bitmap arg */
 	/* bitmasks for determining type-lowerbits presence */
 	uint8_t masks[8] = {0x80, 0x40, 0x20, 0x10, 0x08, 0x04, 0x02, 0x01};
 	uint8_t type_window = type>>8;
@@ -82,12 +82,6 @@ nsec_has_type_rdata(uint8_t* bitmap, size_t len, uint16_t type)
 	return 0;
 }
 
-int
-unitest_nsec_has_type_rdata(char* bitmap, size_t len, uint16_t type)
-{
-	return nsec_has_type_rdata((uint8_t*)bitmap, len, type);
-}
-
 /**
  * Check if type is present in the NSEC typemap
  * @param nsec: the nsec RRset.
@@ -107,7 +101,7 @@ nsec_has_type(struct ub_packed_rrset_key* nsec, uint16_t type)
 	len = dname_valid(d->rr_data[0]+2, d->rr_len[0]-2);
 	if(!len)
 		return 0;
-	return nsec_has_type_rdata(d->rr_data[0]+2+len, 
+	return nsecbitmap_has_type_rdata(d->rr_data[0]+2+len, 
 		d->rr_len[0]-2-len, type);
 }
 
@@ -426,6 +420,8 @@ val_nsec_proves_no_wc(struct ub_packed_rrset_key* nsec, uint8_t* qname,
 		strip = qname;
 		striplen = qnamelen;
 		dname_remove_labels(&strip, &striplen, i);
+		if(striplen > LDNS_MAX_DOMAINLEN-2)
+			continue; /* too long to prepend wildcard */
 		buf[0] = 1;
 		buf[1] = (uint8_t)'*';
 		memmove(buf+2, strip, striplen);

@@ -74,8 +74,15 @@ enum sec_status val_nsec_prove_nodata_dsreply(struct module_env* env,
 	struct reply_info* rep, struct key_entry_key* kkey,
 	uint32_t* proof_ttl);
 
-/** Unit test call to test function for nsec typemap check */
-int unitest_nsec_has_type_rdata(char* bitmap, size_t len, uint16_t type);
+/** 
+ * nsec typemap check, takes an NSEC-type bitmap as argument, checks for type.
+ * @param bitmap: pointer to the bitmap part of wireformat rdata.
+ * @param len: length of the bitmap, in bytes.
+ * @param type: the type (in host order) to check for.
+ * @return true if the type bit was set in the bitmap. false if not, or
+ * 	if the bitmap was malformed in some way.
+ */
+int nsecbitmap_has_type_rdata(uint8_t* bitmap, size_t len, uint16_t type);
 
 /**
  * Determine if a NSEC proves the NOERROR/NODATA conditions. This will also

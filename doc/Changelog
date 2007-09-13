@@ -1,3 +1,6 @@
+13 September 2007: Wouter
+	- nsec3 find matching and covering, ce proof, prove namerror msg.
+
 12 September 2007: Wouter
 	- fixup of manual page warnings, like for NSD bugreport.
 	- nsec3 work, config, max iterations, filter, and hash cache. 

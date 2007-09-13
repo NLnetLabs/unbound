@@ -313,6 +313,13 @@ dstest_file(const char* fname)
 	ldns_buffer_free(buf);
 }
 
+/** helper for unittest of NSEC routines */
+static int
+unitest_nsec_has_type_rdata(char* bitmap, size_t len, uint16_t type)
+{
+	return nsecbitmap_has_type_rdata((uint8_t*)bitmap, len, type);
+}
+
 /** Test NSEC type bitmap routine */
 static void
 nsectest()

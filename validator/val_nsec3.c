@@ -46,9 +46,25 @@
 #include "validator/val_kentry.h"
 #include "util/region-allocator.h"
 #include "util/rbtree.h"
+#include "util/module.h"
 #include "util/data/packed_rrset.h"
 #include "util/data/dname.h"
 #include "util/data/msgreply.h"
+/* we include nsec.h for the bitmap_has_type function */
+#include "validator/val_nsec.h"
+
+/** 
+ * This function we get from ldns-compat or from base system 
+ * it returns the number of data bytes stored at the target, or <0 on error.
+ */
+int b32_ntop_extended_hex(uint8_t const *src, size_t srclength,
+	char *target, size_t targsize);
+/** 
+ * This function we get from ldns-compat or from base system 
+ * it returns the number of data bytes stored at the target, or <0 on error.
+ */
+int b32_pton_extended_hex(char const *src, size_t hashed_owner_str_len, 
+	uint8_t *target, size_t targsize);
 
 /**
  * The NSEC3 hash result storage.
@@ -89,11 +105,11 @@ struct ce_response {
 	/** NSEC3 record that proved ce. rrset */
 	struct ub_packed_rrset_key* ce_rrset;
 	/** NSEC3 record that proved ce. rr number */
-	size_t ce_rr;
+	int ce_rr;
 	/** NSEC3 record that proved nc. rrset */
 	struct ub_packed_rrset_key* nc_rrset;
 	/** NSEC3 record that proved nc. rr*/
-	size_t nc_rr;
+	int nc_rr;
 };
 
 /**
@@ -201,6 +217,61 @@ nsec3_get_salt(struct ub_packed_rrset_key* rrset, int r,
 	return 1;
 }
 
+/** return nsec3 RR next hashed owner name */
+static int
+nsec3_get_nextowner(struct ub_packed_rrset_key* rrset, int r,
+	uint8_t** next, size_t* nextlen)
+{
+	size_t saltlen;
+        struct packed_rrset_data* d = (struct packed_rrset_data*)
+	        rrset->entry.data;
+	log_assert(d && r < (int)d->count);
+	if(d->rr_len[r] < 2+5) {
+		*next = 0;
+		*nextlen = 0;
+		return 0; /* malformed */
+	}
+	saltlen = (size_t)d->rr_data[r][2+4];
+	if(d->rr_len[r] < 2+5+saltlen+1) {
+		*next = 0;
+		*nextlen = 0;
+		return 0; /* malformed */
+	}
+	*nextlen = (size_t)d->rr_data[r][2+5+saltlen];
+	if(d->rr_len[r] < 2+5+saltlen+1+*nextlen) {
+		*next = 0;
+		*nextlen = 0;
+		return 0; /* malformed */
+	}
+	*next = d->rr_data[r]+2+5+saltlen+1;
+	return 1;
+}
+
+/** see if NSEC3 RR contains given type */
+static int
+nsec3_has_type(struct ub_packed_rrset_key* rrset, int r, uint16_t type)
+{
+	uint8_t* bitmap;
+	size_t bitlen, skiplen;
+        struct packed_rrset_data* d = (struct packed_rrset_data*)
+	        rrset->entry.data;
+	log_assert(d && r < (int)d->count);
+	skiplen = 2+4;
+	/* skip salt */
+	if(d->rr_len[r] < skiplen+1)
+		return 0; /* malformed, too short */
+	skiplen += 1+(size_t)d->rr_len[skiplen]; 
+	/* skip next hashed owner */
+	if(d->rr_len[r] < skiplen+1)
+		return 0; /* malformed, too short */
+	skiplen += 1+(size_t)d->rr_len[skiplen]; 
+	if(d->rr_len[r] < skiplen)
+		return 0; /* malformed, too short */
+	bitlen = d->rr_len[r] - skiplen;
+	bitmap = d->rr_data[r]+skiplen;
+	return nsecbitmap_has_type_rdata(bitmap, bitlen, type);
+}
+	
 /** 
  * Iterate through NSEC3 list, per RR 
  * This routine gives the next RR in the list (or sets rrset null). 
@@ -470,10 +541,6 @@ nsec3_calc_hash(struct region* region, ldns_buffer* buf,
 	return 1;
 }
 
-/** This function we get from ldns-compat or from base system */
-int b32_ntop_extended_hex(uint8_t const *src, size_t srclength,
-             char *target, size_t targsize);
-
 /** perform b32 encoding of hash */
 static int
 nsec3_calc_b32(struct region* region, ldns_buffer* buf, 
@@ -550,33 +617,390 @@ nsec3_hash_name(rbtree_t* table, struct region* region, ldns_buffer* buf,
 }
 
 /**
+ * compare a label lowercased
+ */
+static int
+label_compare_lower(uint8_t* lab1, uint8_t* lab2, size_t lablen)
+{
+	size_t i;
+	for(i=0; i<lablen; i++) {
+		if(tolower((int)*lab1) != tolower((int)*lab2)) {
+			if(tolower((int)*lab1) < tolower((int)*lab2))
+				return -1;
+			return 1;
+		}
+		lab1++;
+		lab2++;
+	}
+	return 0;
+}
+
+/**
+ * Compare a hashed name with the owner name of an NSEC3 RRset.
+ * @param flt: filter with zone name.
+ * @param hash: the hashed name.
+ * @param s: rrset with owner name.
+ * @return true if matches exactly, false if not.
+ */
+static int
+nsec3_hash_matches_owner(struct nsec3_filter* flt, 
+	struct nsec3_cached_hash* hash, struct ub_packed_rrset_key* s)
+{
+	uint8_t* nm = s->rk.dname;
+	/* compare, does hash of name based on params in this NSEC3
+	 * match the owner name of this NSEC3? 
+	 * name must be: <hashlength>base32 . zone name 
+	 * so; first label must not be root label (not zero length),
+	 * and match the b32 encoded hash length, 
+	 * and the label content match the b32 encoded hash
+	 * and the rest must be the zone name.
+	 */
+	if(hash->b32_len != 0 && (size_t)nm[0] == hash->b32_len &&
+		label_compare_lower(nm+1, hash->b32, hash->b32_len) == 0 &&
+		query_dname_compare(nm+(size_t)nm[0]+1, flt->zone) == 0) {
+		return 1;
+	}
+	return 0;
+}
+
+/**
  * Find matching NSEC3
  * Find the NSEC3Record that matches a hash of a name.
+ * @param env: module environment with temporary region and buffer.
+ * @param flt: the NSEC3 RR filter, contains zone name and RRs.
+ * @param ct: cached hashes table.
+ * @param nm: name to look for.
+ * @param nmlen: length of name.
+ * @param rrset: nsec3 that matches is returned here.
+ * @param rr: rr number in nsec3 rrset that matches.
+ * @return true if a matching NSEC3 is found, false if not.
  */
+static int
+find_matching_nsec3(struct module_env* env, struct nsec3_filter* flt,
+	rbtree_t* ct, uint8_t* nm, size_t nmlen, 
+	struct ub_packed_rrset_key** rrset, int* rr)
+{
+	size_t i_rs;
+	int i_rr;
+	struct ub_packed_rrset_key* s;
+	struct nsec3_cached_hash* hash;
+	int r;
+
+	/* this loop skips other-zone and unknown NSEC3s, also non-NSEC3 RRs */
+	for(s=filter_first(flt, &i_rs, &i_rr); s; 
+		s=filter_next(flt, &i_rs, &i_rr)) {
+		/* get name hashed for this NSEC3 RR */
+		r = nsec3_hash_name(ct, env->scratch, env->scratch_buffer,
+			s, i_rr, nm, nmlen, &hash);
+		if(r == 0) {
+			log_err("nsec3: malloc failure");
+			break; /* alloc failure */
+		} else if(r < 0)
+			continue; /* malformed NSEC3 */
+		else if(nsec3_hash_matches_owner(flt, hash, s)) {
+			*rrset = s; /* rrset with this name */
+			*rr = i_rr; /* matches hash with these parameters */
+			return 1;
+		}
+	}
+	*rrset = NULL;
+	*rr = 0;
+	return 0;
+}
 
 /**
  * nsec3Covers
  * Given a hash and a candidate NSEC3Record, determine if that NSEC3Record
  * covers the hash. Covers specifically means that the hash is in between
  * the owner and next hashes and does not equal either.
+ *
+ * @param flt: the NSEC3 RR filter, contains zone name.
+ * @param hash: the hash of the name
+ * @param rrset: the rrset of the NSEC3.
+ * @param rr: which rr in the rrset.
+ * @param buf: temporary buffer.
+ * @return true if covers, false if not.
  */
+static int
+nsec3_covers(struct nsec3_filter* flt, struct nsec3_cached_hash* hash,
+	struct ub_packed_rrset_key* rrset, int rr, ldns_buffer* buf)
+{
+	uint8_t* next, *owner;
+	size_t nextlen;
+	int len;
+	if(!nsec3_get_nextowner(rrset, rr, &next, &nextlen))
+		return 0; /* malformed RR proves nothing */
+
+	/* check the owner name is a hashed value . apex
+	 * base32 encoded values must have equal length. 
+	 * hash_value and next hash value must have equal length. */
+	if(nextlen != hash->hash_len || hash->hash_len==0||hash->b32_len==0|| 
+		(size_t)*rrset->rk.dname != hash->b32_len ||
+		query_dname_compare(rrset->rk.dname+1+
+			(size_t)*rrset->rk.dname, flt->zone) != 0)
+		return 0; /* bad lengths or owner name */
+
+	/* This is the "normal case: owner < next and owner < hash < next */
+	if(label_compare_lower(rrset->rk.dname+1, hash->b32, 
+		hash->b32_len) < 0 && 
+		memcmp(hash->hash, next, nextlen) < 0)
+		return 1;
+
+	/* convert owner name from text to binary */
+	ldns_buffer_clear(buf);
+	owner = ldns_buffer_begin(buf);
+	len = b32_pton_extended_hex((char*)rrset->rk.dname+1, hash->b32_len, 
+		owner, ldns_buffer_limit(buf));
+	if(len<1)
+		return 0; /* bad owner name in some way */
+	if((size_t)len != hash->hash_len || (size_t)len != nextlen)
+		return 0; /* wrong length */
+
+	/* this is the end of zone case: next <= owner && 
+	 * 	(hash > owner || hash < next) 
+	 * this also covers the only-apex case of next==owner.
+	 */
+	if(memcmp(next, owner, nextlen) <= 0 &&
+		( memcmp(hash->hash, owner, nextlen) > 0 ||
+		  memcmp(hash->hash, next, nextlen) < 0)) {
+		return 1;
+	}
+	return 0;
+}
 
 /**
  * findCoveringNSEC3
- * Given a pre-hashed name, find a covering NSEC3 from among a list of
- * NSEC3s.
+ * Given a name, find a covering NSEC3 from among a list of NSEC3s.
+ *
+ * @param env: module environment with temporary region and buffer.
+ * @param flt: the NSEC3 RR filter, contains zone name and RRs.
+ * @param ct: cached hashes table.
+ * @param nm: name to check if covered.
+ * @param nmlen: length of name.
+ * @param rrset: covering NSEC3 rrset is returned here.
+ * @param rr: rr of cover is returned here.
+ * @return true if a covering NSEC3 is found, false if not.
  */
+static int
+find_covering_nsec3(struct module_env* env, struct nsec3_filter* flt,
+        rbtree_t* ct, uint8_t* nm, size_t nmlen, 
+	struct ub_packed_rrset_key** rrset, int* rr)
+{
+	size_t i_rs;
+	int i_rr;
+	struct ub_packed_rrset_key* s;
+	struct nsec3_cached_hash* hash;
+	int r;
+
+	/* this loop skips other-zone and unknown NSEC3s, also non-NSEC3 RRs */
+	for(s=filter_first(flt, &i_rs, &i_rr); s; 
+		s=filter_next(flt, &i_rs, &i_rr)) {
+		/* get name hashed for this NSEC3 RR */
+		r = nsec3_hash_name(ct, env->scratch, env->scratch_buffer,
+			s, i_rr, nm, nmlen, &hash);
+		if(r == 0) {
+			log_err("nsec3: malloc failure");
+			break; /* alloc failure */
+		} else if(r < 0)
+			continue; /* malformed NSEC3 */
+		else if(nsec3_covers(flt, hash, s, i_rr, 
+			env->scratch_buffer)) {
+			*rrset = s; /* rrset with this name */
+			*rr = i_rr; /* covers hash with these parameters */
+			return 1;
+		}
+	}
+	*rrset = NULL;
+	*rr = 0;
+	return 0;
+}
 
 /**
  * findClosestEncloser
  * Given a name and a list of NSEC3s, find the candidate closest encloser.
  * This will be the first ancestor of 'name' (including itself) to have a
  * matching NSEC3 RR.
+ * @param env: module environment with temporary region and buffer.
+ * @param flt: the NSEC3 RR filter, contains zone name and RRs.
+ * @param ct: cached hashes table.
+ * @param qinfo: query that is verified for.
+ * @param ce: closest encloser information is returned in here.
+ * @return true if a closest encloser candidate is found, false if not.
  */
+static int
+nsec3_find_closest_encloser(struct module_env* env, struct nsec3_filter* flt, 
+	rbtree_t* ct, struct query_info* qinfo, struct ce_response* ce)
+{
+	uint8_t* nm = qinfo->qname;
+	size_t nmlen = qinfo->qname_len;
+
+	/* This scans from longest name to shortest, so the first match 
+	 * we find is the only viable candidate. */
+
+	/* (David:) FIXME: modify so that the NSEC3 matching the zone apex need 
+	 * not be present. (Mark Andrews idea).
+	 * (Wouter:) But make sure you check for DNAME bit in zone apex,
+	 * if the NSEC3 you find is the only NSEC3 in the zone, then this
+	 * may be the case. */
+
+	while(dname_subdomain_c(nm, flt->zone)) {
+		if(find_matching_nsec3(env, flt, ct, nm, nmlen, 
+			&ce->ce_rrset, &ce->ce_rr)) {
+			ce->ce = nm;
+			ce->ce_len = nmlen;
+			return 1;
+		}
+		dname_remove_label(&nm, &nmlen);
+	}
+	return 0;
+}
+
+/**
+ * Given a qname and its proven closest encloser, calculate the "next
+ * closest" name. Basically, this is the name that is one label longer than
+ * the closest encloser that is still a subdomain of qname.
+ *
+ * @param qname: query name.
+ * @param qnamelen: length of qname.
+ * @param ce: closest encloser
+ * @param nm: result name.
+ * @param nmlen: length of nm.
+ */
+static void
+next_closer(uint8_t* qname, size_t qnamelen, uint8_t* ce, 
+	uint8_t** nm, size_t* nmlen)
+{
+	int strip = dname_count_labels(qname) - dname_count_labels(ce) -1;
+	*nm = qname;
+	*nmlen = qnamelen;
+	if(strip>0)
+		dname_remove_labels(nm, nmlen, strip);
+}
 
 /**
  * proveClosestEncloser
  * Given a List of nsec3 RRs, find and prove the closest encloser to qname.
+ * @param env: module environment with temporary region and buffer.
+ * @param flt: the NSEC3 RR filter, contains zone name and RRs.
+ * @param ct: cached hashes table.
+ * @param qinfo: query that is verified for.
+ * @param prove_does_not_exist: If true, then if the closest encloser 
+ * 	turns out to be qname, then null is returned.
+ * @param ce: closest encloser information is returned in here.
+ * @return false if no closest encloser could be proven.
+ * 	true if a closest encloser could be proven, ce is set.
  */
+static int
+nsec3_prove_closest_encloser(struct module_env* env, struct nsec3_filter* flt, 
+	rbtree_t* ct, struct query_info* qinfo, int prove_does_not_exist,
+	struct ce_response* ce)
+{
+	uint8_t* nc;
+	size_t nc_len;
+	/* robust: clean out ce, in case it gets abused later */
+	memset(ce, 0, sizeof(*ce));
 
+	if(!nsec3_find_closest_encloser(env, flt, ct, qinfo, ce)) {
+		verbose(VERB_ALGO, "nsec3 proveClosestEncloser: could "
+			"not find a candidate for the closest encloser.");
+		return 0;
+	}
 
+	if(query_dname_compare(ce->ce, qinfo->qname) == 0) {
+		if(prove_does_not_exist) {
+			verbose(VERB_ALGO, "nsec3 proveClosestEncloser: "
+				"proved that qname existed, bad");
+			return 0;
+		}
+		/* otherwise, we need to nothing else to prove that qname 
+		 * is its own closest encloser. */
+		return 1;
+	}
+
+	/* If the closest encloser is actually a delegation, then the 
+	 * response should have been a referral. If it is a DNAME, then 
+	 * it should have been a DNAME response. */
+	if(nsec3_has_type(ce->ce_rrset, ce->ce_rr, LDNS_RR_TYPE_NS) &&
+		!nsec3_has_type(ce->ce_rrset, ce->ce_rr, LDNS_RR_TYPE_SOA)) {
+		verbose(VERB_ALGO, "nsec3 proveClosestEncloser: closest "
+			"encloser was a delegation, bad");
+		return 0;
+	}
+	if(nsec3_has_type(ce->ce_rrset, ce->ce_rr, LDNS_RR_TYPE_DNAME)) {
+		verbose(VERB_ALGO, "nsec3 proveClosestEncloser: closest "
+			"encloser was a DNAME, bad");
+		return 0;
+	}
+	
+	/* Otherwise, we need to show that the next closer name is covered. */
+	next_closer(qinfo->qname, qinfo->qname_len, ce->ce, &nc, &nc_len);
+	if(!find_covering_nsec3(env, flt, ct, nc, nc_len, 
+		&ce->nc_rrset, &ce->nc_rr)) {
+		verbose(VERB_ALGO, "nsec3: Could not find proof that the "
+		          "candidate encloser was the closest encloser");
+		return 0;
+	}
+	return 1;
+}
+
+/** allocate a wildcard for the closest encloser */
+static uint8_t*
+nsec3_ce_wildcard(struct region* region, uint8_t* ce, size_t celen,
+	size_t* len)
+{
+	uint8_t* nm;
+	if(celen > LDNS_MAX_DOMAINLEN - 2)
+		return 0; /* too long */
+	nm = (uint8_t*)region_alloc(region, celen+2);
+	if(!nm) {
+		log_err("nsec3 wildcard: out of memory");
+		return 0; /* alloc failure */
+	}
+	nm[0] = 1;
+	nm[1] = (uint8_t)'*'; /* wildcard label */
+	memmove(nm+2, ce, celen);
+	*len = celen+2;
+	return nm;
+}
+
+enum sec_status
+nsec3_prove_nameerror(struct module_env* env, struct val_env* ve,
+	struct ub_packed_rrset_key** list, size_t num,
+	struct query_info* qinfo, struct key_entry_key* kkey)
+{
+	rbtree_t ct;
+	struct nsec3_filter flt;
+	struct ce_response ce;
+	uint8_t* wc;
+	size_t wclen;
+	struct ub_packed_rrset_key* wc_rrset;
+	int wc_rr;
+
+	if(!list || num == 0 || !kkey || !key_entry_isgood(kkey))
+		return sec_status_bogus; /* no valid NSEC3s, bogus */
+	rbtree_init(&ct, &nsec3_hash_cmp); /* init names-to-hash cache */
+	filter_init(&flt, list, num, qinfo); /* init RR iterator */
+	if(nsec3_iteration_count_high(ve, &flt, kkey))
+		return sec_status_insecure; /* iteration count too high */
+
+	/* First locate and prove the closest encloser to qname. We will 
+	 * use the variant that fails if the closest encloser turns out 
+	 * to be qname. */
+	if(!nsec3_prove_closest_encloser(env, &flt, &ct, qinfo, 1, &ce)) {
+		verbose(VERB_ALGO, "nsec3 nameerror proof: failed to prove "
+			"a closest encloser");
+		return sec_status_bogus;
+	}
+
+	/* At this point, we know that qname does not exist. Now we need 
+	 * to prove that the wildcard does not exist. */
+	log_assert(ce.ce);
+	wc = nsec3_ce_wildcard(env->scratch, ce.ce, ce.ce_len, &wclen);
+	if(!wc || !find_covering_nsec3(env, &flt, &ct, wc, wclen, 
+		&wc_rrset, &wc_rr)) {
+		verbose(VERB_ALGO, "nsec3 nameerror proof: could not prove "
+			"that the applicable wildcard did not exist.");
+		return sec_status_bogus;
+	}
+	return sec_status_secure;
+}

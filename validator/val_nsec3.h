@@ -93,4 +93,25 @@ struct key_entry_key;
 /** The SHA1 hash algorithm for NSEC3 */
 #define NSEC3_HASH_SHA1	0x01
 
+/**
+ * Determine if the set of NSEC3 records provided with a response prove NAME
+ * ERROR. This means that the NSEC3s prove a) the closest encloser exists,
+ * b) the direct child of the closest encloser towards qname doesn't exist,
+ * and c) *.closest encloser does not exist.
+ *
+ * @param env: module environment with temporary region and buffer.
+ * @param ve: validator environment, with iteration count settings.
+ * @param list: array of RRsets, some of which are NSEC3s.
+ * @param num: number of RRsets in the array to examine.
+ * @param qinfo: query that is verified for.
+ * @param kkey: key entry that signed the NSEC3s.
+ * @return:
+ * 	sec_status SECURE of the Name Error is proven by the NSEC3 RRs, 
+ * 	BOGUS if not, INSECURE if all of the NSEC3s could be validly ignored.
+ */
+enum sec_status
+nsec3_prove_nameerror(struct module_env* env, struct val_env* ve,
+	struct ub_packed_rrset_key** list, size_t num, 
+	struct query_info* qinfo, struct key_entry_key* kkey);
+
 #endif /* VALIDATOR_VAL_NSEC3_H */

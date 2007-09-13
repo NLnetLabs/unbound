@@ -46,6 +46,7 @@
 #include "validator/val_kentry.h"
 #include "validator/val_utils.h"
 #include "validator/val_nsec.h"
+#include "validator/val_nsec3.h"
 #include "services/cache/dns.h"
 #include "util/data/dname.h"
 #include "util/module.h"
@@ -610,12 +611,17 @@ validate_nodata_response(struct query_info* qchase,
  * 
  * The answer and authority RRsets must have already been verified as secure.
  *
+ * @param env: module env for verify.
+ * @param ve: validator env for verify.
  * @param qchase: query that was made.
  * @param chase_reply: answer to that query to validate.
+ * @param kkey: the key entry, which is trusted, and which matches
+ * 	the signer of the answer. The key entry isgood().
  */
 static void
-validate_nameerror_response(struct query_info* qchase, 
-	struct reply_info* chase_reply)
+validate_nameerror_response(struct module_env* env, struct val_env* ve,
+	struct query_info* qchase, struct reply_info* chase_reply,
+	struct key_entry_key* kkey)
 {
 	int has_valid_nsec = 0;
 	int has_valid_wnsec = 0;
@@ -637,7 +643,17 @@ validate_nameerror_response(struct query_info* qchase,
 	}
 
 	if(!has_valid_nsec || !has_valid_wnsec) {
-		/* TODO: use NSEC3 proof */
+		/* use NSEC3 proof, both answer and auth rrsets, in case
+		 * NSEC3s end up in the answer (due to qtype=NSEC3 or so) */
+		chase_reply->security = nsec3_prove_nameerror(env, ve,
+			chase_reply->rrsets, chase_reply->an_numrrsets+
+			chase_reply->ns_numrrsets, qchase, kkey);
+		if(chase_reply->security != sec_status_secure) {
+			verbose(VERB_DETAIL, "NameError response failed nsec, "
+				"nsec3 proof was %s", sec_status_to_string(
+				chase_reply->security));
+			return;
+		}
 	}
 
 	/* If the message fails to prove either condition, it is bogus. */
@@ -1229,8 +1245,8 @@ processValidate(struct module_qstate* qstate, struct val_qstate* vq,
 
 		case VAL_CLASS_NAMEERROR:
 			verbose(VERB_ALGO, "Validating a nxdomain response");
-			validate_nameerror_response(&vq->qchase, 
-				vq->chase_reply);
+			validate_nameerror_response(qstate->env, ve, 
+				&vq->qchase, vq->chase_reply, vq->key_entry);
 			break;
 
 		case VAL_CLASS_CNAME:
