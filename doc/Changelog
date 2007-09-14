@@ -1,3 +1,8 @@
+14 September 2007: Wouter
+	- nsec3 nodata proof, nods proof, wildcard proof.
+	- nsec3 support for cname chain ending in noerror or nodata.
+	- validator calls nsec3 proof routines if no NSECs prove anything.
+
 13 September 2007: Wouter
 	- nsec3 find matching and covering, ce proof, prove namerror msg.
 

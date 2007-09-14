@@ -440,12 +440,17 @@ validate_msg_signatures(struct module_env* env, struct val_env* ve,
  *
  * The answer and authority RRsets must already be verified as secure.
  * 
+ * @param env: module env for verify.
+ * @param ve: validator env for verify.
  * @param qchase: query that was made.
  * @param chase_reply: answer to that query to validate.
+ * @param kkey: the key entry, which is trusted, and which matches
+ * 	the signer of the answer. The key entry isgood().
  */
 static void
-validate_positive_response(struct query_info* qchase, 
-	struct reply_info* chase_reply)
+validate_positive_response(struct module_env* env, struct val_env* ve,
+	struct query_info* qchase, struct reply_info* chase_reply,
+	struct key_entry_key* kkey)
 {
 	uint8_t* wc = NULL;
 	int wc_NSEC_ok = 0;
@@ -497,8 +502,16 @@ validate_positive_response(struct query_info* qchase,
 	 * proven, and we have NSEC3 records, try to prove it using the NSEC3
 	 * records. */
 	if(wc != NULL && !wc_NSEC_ok && nsec3s_seen) {
-		/* TODO NSEC3 positive wildcard proof */
-		/* possibly: wc_NSEC_ok = 1; */
+		enum sec_status sec = nsec3_prove_wildcard(env, ve, 
+			chase_reply->rrsets+chase_reply->an_numrrsets,
+			chase_reply->ns_numrrsets, qchase, kkey, wc);
+		if(sec == sec_status_insecure) {
+			verbose(VERB_ALGO, "Positive wildcard response is "
+				"insecure");
+			chase_reply->security = sec_status_insecure;
+			return;
+		} else if(sec == sec_status_secure)
+			wc_NSEC_ok = 1;
 	}
 
 	/* If after all this, we still haven't proven the positive wildcard
@@ -523,12 +536,17 @@ validate_positive_response(struct query_info* qchase,
  *
  * The answer and authority RRsets must already be verified as secure.
  *
+ * @param env: module env for verify.
+ * @param ve: validator env for verify.
  * @param qchase: query that was made.
  * @param chase_reply: answer to that query to validate.
+ * @param kkey: the key entry, which is trusted, and which matches
+ * 	the signer of the answer. The key entry isgood().
  */
 static void
-validate_nodata_response(struct query_info* qchase, 
-	struct reply_info* chase_reply)
+validate_nodata_response(struct module_env* env, struct val_env* ve,
+	struct query_info* qchase, struct reply_info* chase_reply,
+	struct key_entry_key* kkey)
 {
 	/* Since we are here, there must be nothing in the ANSWER section to
 	 * validate. */
@@ -586,8 +604,15 @@ validate_nodata_response(struct query_info* qchase,
 	}
 	
 	if(!has_valid_nsec && nsec3s_seen) {
-		/* TODO handle NSEC3 proof here */
-		/* and set has_valid_nsec=1; if so */
+		enum sec_status sec = nsec3_prove_nodata(env, ve, 
+			chase_reply->rrsets+chase_reply->an_numrrsets,
+			chase_reply->ns_numrrsets, qchase, kkey);
+		if(sec == sec_status_insecure) {
+			verbose(VERB_ALGO, "NODATA response is insecure");
+			chase_reply->security = sec_status_insecure;
+			return;
+		} else if(sec == sec_status_secure)
+			has_valid_nsec = 1;
 	}
 
 	if(!has_valid_nsec) {
@@ -748,12 +773,17 @@ validate_any_response(struct query_info* qchase,
  * 
  * The answer and authority rrsets must already be verified as secure.
  * 
+ * @param env: module env for verify.
+ * @param ve: validator env for verify.
  * @param qchase: query that was made.
  * @param chase_reply: answer to that query to validate.
+ * @param kkey: the key entry, which is trusted, and which matches
+ * 	the signer of the answer. The key entry isgood().
  */
 static void
-validate_cname_response(struct query_info* qchase, 
-	struct reply_info* chase_reply)
+validate_cname_response(struct module_env* env, struct val_env* ve,
+	struct query_info* qchase, struct reply_info* chase_reply,
+	struct key_entry_key* kkey)
 {
 	uint8_t* wc = NULL;
 	int wc_NSEC_ok = 0;
@@ -816,8 +846,16 @@ validate_cname_response(struct query_info* qchase,
 	 * proven, and we have NSEC3 records, try to prove it using the NSEC3
 	 * records. */
 	if(wc != NULL && !wc_NSEC_ok && nsec3s_seen) {
-		/* TODO NSEC3 positive wildcard proof */
-		/* possibly: wc_NSEC_ok = 1; */
+		enum sec_status sec = nsec3_prove_wildcard(env, ve, 
+			chase_reply->rrsets+chase_reply->an_numrrsets,
+			chase_reply->ns_numrrsets, qchase, kkey, wc);
+		if(sec == sec_status_insecure) {
+			verbose(VERB_ALGO, "wildcard CNAME response is "
+				"insecure");
+			chase_reply->security = sec_status_insecure;
+			return;
+		} else if(sec == sec_status_secure)
+			wc_NSEC_ok = 1;
 	}
 
 	/* If after all this, we still haven't proven the positive wildcard
@@ -841,12 +879,17 @@ validate_cname_response(struct query_info* qchase,
  * 
  * The answer and authority rrsets must already be verified as secure.
  * 
+ * @param env: module env for verify.
+ * @param ve: validator env for verify.
  * @param qchase: query that was made.
  * @param chase_reply: answer to that query to validate.
+ * @param kkey: the key entry, which is trusted, and which matches
+ * 	the signer of the answer. The key entry isgood().
  */
 static void
-validate_cname_noanswer_response(struct query_info* qchase, 
-	struct reply_info* chase_reply)
+validate_cname_noanswer_response(struct module_env* env, struct val_env* ve,
+	struct query_info* qchase, struct reply_info* chase_reply,
+	struct key_entry_key* kkey)
 {
 	int nodata_valid_nsec = 0; /* If true, then NODATA has been proven.*/
 	uint8_t* ce = NULL; /* for wildcard nodata responses. This is the 
@@ -914,8 +957,20 @@ validate_cname_noanswer_response(struct query_info* qchase,
 		return;
 	}
 	if(!nodata_valid_nsec && !nxdomain_valid_nsec && nsec3s_seen) {
-		/* TODO handle NSEC3 proof here */
-		/* and set nodata_valid_nsec=1; if so */
+		int nodata;
+		enum sec_status sec = nsec3_prove_nxornodata(env, ve, 
+			chase_reply->rrsets+chase_reply->an_numrrsets,
+			chase_reply->ns_numrrsets, qchase, kkey, &nodata);
+		if(sec == sec_status_insecure) {
+			verbose(VERB_ALGO, "CNAMEchain to noanswer response "
+				"is insecure");
+			chase_reply->security = sec_status_insecure;
+			return;
+		} else if(sec == sec_status_secure) {
+			if(nodata)
+				nodata_valid_nsec = 1;
+			else	nxdomain_valid_nsec = 1;
+		}
 	}
 
 	if(!nodata_valid_nsec && !nxdomain_valid_nsec) {
@@ -1234,13 +1289,14 @@ processValidate(struct module_qstate* qstate, struct val_qstate* vq,
 	switch(subtype) {
 		case VAL_CLASS_POSITIVE:
 			verbose(VERB_ALGO, "Validating a positive response");
-			validate_positive_response(&vq->qchase, 
-				vq->chase_reply);
+			validate_positive_response(qstate->env, ve,
+				&vq->qchase, vq->chase_reply, vq->key_entry);
 			break;
 			
 		case VAL_CLASS_NODATA:
 			verbose(VERB_ALGO, "Validating a nodata response");
-			validate_nodata_response(&vq->qchase, vq->chase_reply);
+			validate_nodata_response(qstate->env, ve,
+				&vq->qchase, vq->chase_reply, vq->key_entry);
 			break;
 
 		case VAL_CLASS_NAMEERROR:
@@ -1251,14 +1307,15 @@ processValidate(struct module_qstate* qstate, struct val_qstate* vq,
 
 		case VAL_CLASS_CNAME:
 			verbose(VERB_ALGO, "Validating a cname response");
-			validate_cname_response(&vq->qchase, vq->chase_reply);
+			validate_cname_response(qstate->env, ve,
+				&vq->qchase, vq->chase_reply, vq->key_entry);
 			break;
 
 		case VAL_CLASS_CNAMENOANSWER:
 			verbose(VERB_ALGO, "Validating a cname noanswer "
 				"response");
-			validate_cname_noanswer_response(&vq->qchase, 
-				vq->chase_reply);
+			validate_cname_noanswer_response(qstate->env, ve,
+				&vq->qchase, vq->chase_reply, vq->key_entry);
 			break;
 
 		case VAL_CLASS_REFERRAL:
@@ -1662,7 +1719,32 @@ ds_response_to_ke(struct module_qstate* qstate, struct val_qstate* vq,
 				break;
 		}
 
-		/* Or it could be using NSEC3. TODO */
+		sec = nsec3_prove_nods(qstate->env, ve, 
+			msg->rep->rrsets + msg->rep->an_numrrsets,
+			msg->rep->ns_numrrsets, qinfo, vq->key_entry);
+		switch(sec) {
+			case sec_status_secure:
+				verbose(VERB_ALGO, "NSEC3s for the "
+					"referral proved no DS.");
+				*ke = key_entry_create_null(qstate->region, 
+					qinfo->qname, qinfo->qname_len, 
+					qinfo->qclass, proof_ttl);
+				return (*ke) != NULL;
+			case sec_status_indeterminate:
+				verbose(VERB_ALGO, "NSEC3s for the "
+				  "referral proved no delegation");
+				*ke = NULL;
+				return 1;
+			case sec_status_bogus:
+				verbose(VERB_DETAIL, "NSEC3s for the "
+					"referral did not prove no DS.");
+				goto return_bogus;
+			case sec_status_insecure:
+			case sec_status_unchecked:
+			default:
+				/* NSEC3 proof did not work */
+				break;
+		}
 
 		/* Apparently, no available NSEC/NSEC3 proved NODATA, so 
 		 * this is BOGUS. */

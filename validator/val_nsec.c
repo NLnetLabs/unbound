@@ -151,11 +151,13 @@ val_nsec_proves_no_ds(struct ub_packed_rrset_key* nsec,
 	/* this proof may also work if qname is a subdomain */
 	log_assert(query_dname_compare(nsec->rk.dname, qinfo->qname) == 0);
 
-	if(nsec_has_type(nsec, LDNS_RR_TYPE_SOA) || 
-		nsec_has_type(nsec, LDNS_RR_TYPE_DS)) {
+	if(nsec_has_type(nsec, LDNS_RR_TYPE_SOA) && qinfo->qname_len != 1) {
 		/* SOA present means that this is the NSEC from the child, 
-		 * not the parent (so it is the wrong one).
-		 * DS present means that there should have been a positive 
+		 * not the parent (so it is the wrong one). */
+		return sec_status_bogus;
+	}
+	if(nsec_has_type(nsec, LDNS_RR_TYPE_DS)) {
+		/* DS present means that there should have been a positive 
 		 * response to the DS query, so there is something wrong. */
 		return sec_status_bogus;
 	}

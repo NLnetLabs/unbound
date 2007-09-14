@@ -114,4 +114,101 @@ nsec3_prove_nameerror(struct module_env* env, struct val_env* ve,
 	struct ub_packed_rrset_key** list, size_t num, 
 	struct query_info* qinfo, struct key_entry_key* kkey);
 
+/**
+ * Determine if the NSEC3s provided in a response prove the NOERROR/NODATA
+ * status. There are a number of different variants to this:
+ * 
+ * 1) Normal NODATA -- qname is matched to an NSEC3 record, type is not
+ * present.
+ * 
+ * 2) ENT NODATA -- because there must be NSEC3 record for
+ * empty-non-terminals, this is the same as #1.
+ * 
+ * 3) NSEC3 ownername NODATA -- qname matched an existing, lone NSEC3
+ * ownername, but qtype was not NSEC3. NOTE: as of nsec-05, this case no
+ * longer exists.
+ * 
+ * 4) Wildcard NODATA -- A wildcard matched the name, but not the type.
+ * 
+ * 5) Opt-In DS NODATA -- the qname is covered by an opt-in span and qtype ==
+ * DS. (or maybe some future record with the same parent-side-only property)
+ *
+ * @param env: module environment with temporary region and buffer.
+ * @param ve: validator environment, with iteration count settings.
+ * @param list: array of RRsets, some of which are NSEC3s.
+ * @param num: number of RRsets in the array to examine.
+ * @param qinfo: query that is verified for.
+ * @param kkey: key entry that signed the NSEC3s.
+ * @return:
+ * 	sec_status SECURE of the proposition is proven by the NSEC3 RRs, 
+ * 	BOGUS if not, INSECURE if all of the NSEC3s could be validly ignored.
+ */
+enum sec_status
+nsec3_prove_nodata(struct module_env* env, struct val_env* ve,
+	struct ub_packed_rrset_key** list, size_t num, 
+	struct query_info* qinfo, struct key_entry_key* kkey);
+
+
+/**
+ * Prove that a positive wildcard match was appropriate (no direct match
+ * RRset).
+ *
+ * @param env: module environment with temporary region and buffer.
+ * @param ve: validator environment, with iteration count settings.
+ * @param list: array of RRsets, some of which are NSEC3s.
+ * @param num: number of RRsets in the array to examine.
+ * @param qinfo: query that is verified for.
+ * @param kkey: key entry that signed the NSEC3s.
+ * @param wc: The purported wildcard that matched.
+ * @return:
+ * 	sec_status SECURE of the proposition is proven by the NSEC3 RRs, 
+ * 	BOGUS if not, INSECURE if all of the NSEC3s could be validly ignored.
+ */
+enum sec_status
+nsec3_prove_wildcard(struct module_env* env, struct val_env* ve,
+	struct ub_packed_rrset_key** list, size_t num, 
+	struct query_info* qinfo, struct key_entry_key* kkey, uint8_t* wc);
+
+/**
+ * Prove that a DS response either had no DS, or wasn't a delegation point.
+ *
+ * Fundamentally there are two cases here: normal NODATA and Opt-In NODATA.
+ *
+ * @param env: module environment with temporary region and buffer.
+ * @param ve: validator environment, with iteration count settings.
+ * @param list: array of RRsets, some of which are NSEC3s.
+ * @param num: number of RRsets in the array to examine.
+ * @param qinfo: query that is verified for.
+ * @param kkey: key entry that signed the NSEC3s.
+ * @return:
+ * 	sec_status SECURE of the proposition is proven by the NSEC3 RRs, 
+ * 	BOGUS if not, INSECURE if all of the NSEC3s could be validly ignored.
+ * 	or if there was no DS in an insecure (i.e., opt-in) way,
+ * 	INDETERMINATE if it was clear that this wasn't a delegation point.
+ */
+enum sec_status
+nsec3_prove_nods(struct module_env* env, struct val_env* ve,
+	struct ub_packed_rrset_key** list, size_t num, 
+	struct query_info* qinfo, struct key_entry_key* kkey);
+
+/**
+ * Prove NXDOMAIN or NODATA.
+ *
+ * @param env: module environment with temporary region and buffer.
+ * @param ve: validator environment, with iteration count settings.
+ * @param list: array of RRsets, some of which are NSEC3s.
+ * @param num: number of RRsets in the array to examine.
+ * @param qinfo: query that is verified for.
+ * @param kkey: key entry that signed the NSEC3s.
+ * @param nodata: if return value is secure, this indicates if nodata or
+ * 	nxdomain was proven.
+ * @return:
+ * 	sec_status SECURE of the proposition is proven by the NSEC3 RRs, 
+ * 	BOGUS if not, INSECURE if all of the NSEC3s could be validly ignored.
+ */
+enum sec_status
+nsec3_prove_nxornodata(struct module_env* env, struct val_env* ve,
+	struct ub_packed_rrset_key** list, size_t num, 
+	struct query_info* qinfo, struct key_entry_key* kkey, int* nodata);
+
 #endif /* VALIDATOR_VAL_NSEC3_H */

@@ -151,6 +151,18 @@ nsec3_unknown_flags(struct ub_packed_rrset_key* rrset, int r)
 	return (int)(d->rr_data[r][2+1] & NSEC3_UNKNOWN_FLAGS);
 }
 
+/** return if nsec3 RR has the optout flag */
+static int
+nsec3_has_optout(struct ub_packed_rrset_key* rrset, int r)
+{
+        struct packed_rrset_data* d = (struct packed_rrset_data*)
+	        rrset->entry.data;
+	log_assert(d && r < (int)d->count);
+	if(d->rr_len[r] < 2+2)
+		return 0; /* malformed */
+	return (int)(d->rr_data[r][2+1] & NSEC3_OPTOUT);
+}
+
 /** return nsec3 RR algorithm */
 static int
 nsec3_get_algo(struct ub_packed_rrset_key* rrset, int r)
@@ -886,6 +898,8 @@ next_closer(uint8_t* qname, size_t qnamelen, uint8_t* ce,
  * @param qinfo: query that is verified for.
  * @param prove_does_not_exist: If true, then if the closest encloser 
  * 	turns out to be qname, then null is returned.
+ * 	If set true, and the return value is true, then you can be 
+ * 	certain that the ce.nc_rrset and ce.nc_rr are set properly.
  * @param ce: closest encloser information is returned in here.
  * @return false if no closest encloser could be proven.
  * 	true if a closest encloser could be proven, ce is set.
@@ -963,6 +977,39 @@ nsec3_ce_wildcard(struct region* region, uint8_t* ce, size_t celen,
 	return nm;
 }
 
+/** Do the name error proof */
+static enum sec_status
+nsec3_do_prove_nameerror(struct module_env* env, struct nsec3_filter* flt, 
+	rbtree_t* ct, struct query_info* qinfo)
+{
+	struct ce_response ce;
+	uint8_t* wc;
+	size_t wclen;
+	struct ub_packed_rrset_key* wc_rrset;
+	int wc_rr;
+
+	/* First locate and prove the closest encloser to qname. We will 
+	 * use the variant that fails if the closest encloser turns out 
+	 * to be qname. */
+	if(!nsec3_prove_closest_encloser(env, flt, ct, qinfo, 1, &ce)) {
+		verbose(VERB_ALGO, "nsec3 nameerror proof: failed to prove "
+			"a closest encloser");
+		return sec_status_bogus;
+	}
+
+	/* At this point, we know that qname does not exist. Now we need 
+	 * to prove that the wildcard does not exist. */
+	log_assert(ce.ce);
+	wc = nsec3_ce_wildcard(env->scratch, ce.ce, ce.ce_len, &wclen);
+	if(!wc || !find_covering_nsec3(env, flt, ct, wc, wclen, 
+		&wc_rrset, &wc_rr)) {
+		verbose(VERB_ALGO, "nsec3 nameerror proof: could not prove "
+			"that the applicable wildcard did not exist.");
+		return sec_status_bogus;
+	}
+	return sec_status_secure;
+}
+
 enum sec_status
 nsec3_prove_nameerror(struct module_env* env, struct val_env* ve,
 	struct ub_packed_rrset_key** list, size_t num,
@@ -970,11 +1017,163 @@ nsec3_prove_nameerror(struct module_env* env, struct val_env* ve,
 {
 	rbtree_t ct;
 	struct nsec3_filter flt;
+
+	if(!list || num == 0 || !kkey || !key_entry_isgood(kkey))
+		return sec_status_bogus; /* no valid NSEC3s, bogus */
+	rbtree_init(&ct, &nsec3_hash_cmp); /* init names-to-hash cache */
+	filter_init(&flt, list, num, qinfo); /* init RR iterator */
+	if(!flt.zone)
+		return sec_status_bogus; /* no RRs */
+	if(nsec3_iteration_count_high(ve, &flt, kkey))
+		return sec_status_insecure; /* iteration count too high */
+	return nsec3_do_prove_nameerror(env, &flt, &ct, qinfo);
+}
+
+/* 
+ * No code to handle qtype=NSEC3 specially. 
+ * This existed in early drafts, but was later (-05) removed.
+ */
+
+/** Do the nodata proof */
+static enum sec_status
+nsec3_do_prove_nodata(struct module_env* env, struct nsec3_filter* flt, 
+	rbtree_t* ct, struct query_info* qinfo)
+{
 	struct ce_response ce;
 	uint8_t* wc;
 	size_t wclen;
-	struct ub_packed_rrset_key* wc_rrset;
-	int wc_rr;
+	struct ub_packed_rrset_key* rrset;
+	int rr;
+
+	if(find_matching_nsec3(env, flt, ct, qinfo->qname, qinfo->qname_len, 
+		&rrset, &rr)) {
+		/* cases 1 and 2 */
+		if(nsec3_has_type(rrset, rr, qinfo->qtype)) {
+			verbose(VERB_ALGO, "proveNodata: Matching NSEC3 "
+				"proved that type existed, bogus");
+			return sec_status_bogus;
+		} else if(nsec3_has_type(rrset, rr, LDNS_RR_TYPE_CNAME)) {
+			verbose(VERB_ALGO, "proveNodata: Matching NSEC3 "
+				"proved that a CNAME existed, bogus");
+			return sec_status_bogus;
+		}
+
+		/* 
+		 * If type DS: filter_init zone find already found a parent
+		 *   zone, so this nsec3 is from a parent zone. 
+		 *   o can be not a delegation (unusual query for normal name,
+		 *   	no DS anyway, but we can verify that).
+		 *   o can be a delegation (which is the usual DS check).
+		 *   o may not have the SOA bit set (only the top of the
+		 *   	zone, which must have been above the name, has that).
+		 *   	Except for the root; which is checked by itself.
+		 *
+		 * If not type DS: matching nsec3 must not be a delegation.
+		 */
+		if(qinfo->qtype == LDNS_RR_TYPE_DS && qinfo->qname_len != 1 
+			&& nsec3_has_type(rrset, rr, LDNS_RR_TYPE_SOA)) {
+			verbose(VERB_ALGO, "proveNodata: apex NSEC3 "
+				"abused for no DS proof, bogus");
+			return sec_status_bogus;
+		} else if(qinfo->qtype != LDNS_RR_TYPE_DS && 
+			nsec3_has_type(rrset, rr, LDNS_RR_TYPE_NS) &&
+			!nsec3_has_type(rrset, rr, LDNS_RR_TYPE_SOA)) {
+			verbose(VERB_ALGO, "proveNodata: matching "
+				"NSEC3 is a delegation, bogus");
+			return sec_status_bogus;
+		}
+		return sec_status_secure;
+	}
+
+	/* For cases 3 - 5, we need the proven closest encloser, and it 
+	 * can't match qname. Although, at this point, we know that it 
+	 * won't since we just checked that. */
+	if(!nsec3_prove_closest_encloser(env, flt, ct, qinfo, 1, &ce)) {
+		verbose(VERB_ALGO, "proveNodata: did not match qname, "
+		          "nor found a proven closest encloser.");
+		return sec_status_bogus;
+	}
+
+	/* Case 3: removed */
+
+	/* Case 4: */
+	log_assert(ce.ce);
+	wc = nsec3_ce_wildcard(env->scratch, ce.ce, ce.ce_len, &wclen);
+	if(wc && find_matching_nsec3(env, flt, ct, wc, wclen, &rrset, &rr)) {
+		/* found wildcard */
+		if(nsec3_has_type(rrset, rr, qinfo->qtype)) {
+			verbose(VERB_ALGO, "nsec3 nodata proof: matching "
+				"wildcard had qtype, bogus");
+			return sec_status_bogus;
+		} else if(nsec3_has_type(rrset, rr, LDNS_RR_TYPE_CNAME)) {
+			verbose(VERB_ALGO, "nsec3 nodata proof: matching "
+				"wildcard had a CNAME, bogus");
+			return sec_status_bogus;
+		}
+		if(qinfo->qtype == LDNS_RR_TYPE_DS && qinfo->qname_len != 1 
+			&& nsec3_has_type(rrset, rr, LDNS_RR_TYPE_SOA)) {
+			verbose(VERB_ALGO, "nsec3 nodata proof: matching "
+				"wildcard for no DS proof has a SOA, bogus");
+			return sec_status_bogus;
+		} else if(qinfo->qtype != LDNS_RR_TYPE_DS && 
+			nsec3_has_type(rrset, rr, LDNS_RR_TYPE_NS) &&
+			!nsec3_has_type(rrset, rr, LDNS_RR_TYPE_SOA)) {
+			verbose(VERB_ALGO, "nsec3 nodata proof: matching "
+				"wilcard is a delegation, bogus");
+			return sec_status_bogus;
+		}
+		return sec_status_secure;
+	}
+
+	/* Case 5: */
+	if(qinfo->qtype != LDNS_RR_TYPE_DS) {
+		verbose(VERB_ALGO, "proveNodata: could not find matching "
+			"NSEC3, nor matching wildcard, and qtype is not DS "
+			"-- no more options, bogus.");
+		return sec_status_bogus;
+	}
+
+	/* We need to make sure that the covering NSEC3 is opt-out. */
+	log_assert(ce.nc_rrset);
+	if(!nsec3_has_optout(ce.nc_rrset, ce.nc_rr)) {
+		verbose(VERB_ALGO, "proveNodata: covering NSEC3 was not "
+			"opt-out in an opt-out DS NOERROR/NODATA case.");
+		return sec_status_bogus;
+	}
+	return sec_status_secure;
+}
+
+enum sec_status
+nsec3_prove_nodata(struct module_env* env, struct val_env* ve,
+	struct ub_packed_rrset_key** list, size_t num,
+	struct query_info* qinfo, struct key_entry_key* kkey)
+{
+	rbtree_t ct;
+	struct nsec3_filter flt;
+
+	if(!list || num == 0 || !kkey || !key_entry_isgood(kkey))
+		return sec_status_bogus; /* no valid NSEC3s, bogus */
+	rbtree_init(&ct, &nsec3_hash_cmp); /* init names-to-hash cache */
+	filter_init(&flt, list, num, qinfo); /* init RR iterator */
+	if(!flt.zone)
+		return sec_status_bogus; /* no RRs */
+	if(nsec3_iteration_count_high(ve, &flt, kkey))
+		return sec_status_insecure; /* iteration count too high */
+	return nsec3_do_prove_nodata(env, &flt, &ct, qinfo);
+}
+
+enum sec_status
+nsec3_prove_wildcard(struct module_env* env, struct val_env* ve,
+        struct ub_packed_rrset_key** list, size_t num,
+	struct query_info* qinfo, struct key_entry_key* kkey, uint8_t* wc)
+{
+	rbtree_t ct;
+	struct nsec3_filter flt;
+	struct ce_response ce;
+	uint8_t* nc;
+	size_t nc_len;
+	size_t wclen;
+	(void)dname_count_size_labels(wc, &wclen);
 
 	if(!list || num == 0 || !kkey || !key_entry_isgood(kkey))
 		return sec_status_bogus; /* no valid NSEC3s, bogus */
@@ -985,24 +1184,117 @@ nsec3_prove_nameerror(struct module_env* env, struct val_env* ve,
 	if(nsec3_iteration_count_high(ve, &flt, kkey))
 		return sec_status_insecure; /* iteration count too high */
 
-	/* First locate and prove the closest encloser to qname. We will 
-	 * use the variant that fails if the closest encloser turns out 
-	 * to be qname. */
-	if(!nsec3_prove_closest_encloser(env, &flt, &ct, qinfo, 1, &ce)) {
-		verbose(VERB_ALGO, "nsec3 nameerror proof: failed to prove "
-			"a closest encloser");
-		return sec_status_bogus;
-	}
+	/* We know what the (purported) closest encloser is by just 
+	 * looking at the supposed generating wildcard. */
+	memset(&ce, 0, sizeof(ce));
+	ce.ce = wc;
+	ce.ce_len = wclen;
+	dname_remove_label(&ce.ce, &ce.ce_len);
 
-	/* At this point, we know that qname does not exist. Now we need 
-	 * to prove that the wildcard does not exist. */
-	log_assert(ce.ce);
-	wc = nsec3_ce_wildcard(env->scratch, ce.ce, ce.ce_len, &wclen);
-	if(!wc || !find_covering_nsec3(env, &flt, &ct, wc, wclen, 
-		&wc_rrset, &wc_rr)) {
-		verbose(VERB_ALGO, "nsec3 nameerror proof: could not prove "
-			"that the applicable wildcard did not exist.");
+	/* Now we still need to prove that the original data did not exist.
+	 * Otherwise, we need to show that the next closer name is covered. */
+	next_closer(qinfo->qname, qinfo->qname_len, ce.ce, &nc, &nc_len);
+	if(!find_covering_nsec3(env, &flt, &ct, nc, nc_len, 
+		&ce.nc_rrset, &ce.nc_rr)) {
+		verbose(VERB_ALGO, "proveWildcard: did not find a covering "
+			"NSEC3 that covered the next closer name.");
 		return sec_status_bogus;
 	}
 	return sec_status_secure;
+}
+
+enum sec_status
+nsec3_prove_nods(struct module_env* env, struct val_env* ve,
+	struct ub_packed_rrset_key** list, size_t num,
+	struct query_info* qinfo, struct key_entry_key* kkey)
+{
+	rbtree_t ct;
+	struct nsec3_filter flt;
+	struct ce_response ce;
+	struct ub_packed_rrset_key* rrset;
+	int rr;
+	log_assert(qinfo->qtype == LDNS_RR_TYPE_DS);
+
+	if(!list || num == 0 || !kkey || !key_entry_isgood(kkey))
+		return sec_status_bogus; /* no valid NSEC3s, bogus */
+	rbtree_init(&ct, &nsec3_hash_cmp); /* init names-to-hash cache */
+	filter_init(&flt, list, num, qinfo); /* init RR iterator */
+	if(!flt.zone)
+		return sec_status_bogus; /* no RRs */
+	if(nsec3_iteration_count_high(ve, &flt, kkey))
+		return sec_status_insecure; /* iteration count too high */
+
+	/* Look for a matching NSEC3 to qname -- this is the normal 
+	 * NODATA case. */
+	if(find_matching_nsec3(env, &flt, &ct, qinfo->qname, qinfo->qname_len, 
+		&rrset, &rr)) {
+		/* If the matching NSEC3 has the SOA bit set, it is from 
+		 * the wrong zone (the child instead of the parent). If 
+		 * it has the DS bit set, then we were lied to. */
+		if(nsec3_has_type(rrset, rr, LDNS_RR_TYPE_SOA) && 
+			qinfo->qname_len != 1) {
+			verbose(VERB_ALGO, "nsec3 provenods: NSEC3 is from"
+				" child zone, bogus");
+			return sec_status_bogus;
+		} else if(nsec3_has_type(rrset, rr, LDNS_RR_TYPE_DS)) {
+			verbose(VERB_ALGO, "nsec3 provenods: NSEC3 has qtype"
+				" DS, bogus");
+			return sec_status_bogus;
+		}
+		/* If the NSEC3 RR doesn't have the NS bit set, then 
+		 * this wasn't a delegation point. */
+		if(!nsec3_has_type(rrset, rr, LDNS_RR_TYPE_NS))
+			return sec_status_indeterminate;
+		/* Otherwise, this proves no DS. */
+		return sec_status_secure;
+	}
+
+	/* Otherwise, we are probably in the opt-out case. */
+	if(!nsec3_prove_closest_encloser(env, &flt, &ct, qinfo, 1, &ce)) {
+		verbose(VERB_ALGO, "nsec3 provenods: did not match qname, "
+		          "nor found a proven closest encloser.");
+		return sec_status_bogus;
+	}
+
+	/* we had the closest encloser proof, then we need to check that the
+	 * covering NSEC3 was opt-out -- the proveClosestEncloser step already
+	 * checked to see if the closest encloser was a delegation or DNAME.
+	 */
+	log_assert(ce.nc_rrset);
+	if(!nsec3_has_optout(ce.nc_rrset, ce.nc_rr)) {
+		verbose(VERB_ALGO, "nsec3 provenods: covering NSEC3 was not "
+			"opt-out in an opt-out DS NOERROR/NODATA case.");
+		return sec_status_bogus;
+	}
+	return sec_status_secure;
+}
+
+enum sec_status
+nsec3_prove_nxornodata(struct module_env* env, struct val_env* ve,
+	struct ub_packed_rrset_key** list, size_t num, 
+	struct query_info* qinfo, struct key_entry_key* kkey, int* nodata)
+{
+	rbtree_t ct;
+	struct nsec3_filter flt;
+	*nodata = 0;
+
+	if(!list || num == 0 || !kkey || !key_entry_isgood(kkey))
+		return sec_status_bogus; /* no valid NSEC3s, bogus */
+	rbtree_init(&ct, &nsec3_hash_cmp); /* init names-to-hash cache */
+	filter_init(&flt, list, num, qinfo); /* init RR iterator */
+	if(!flt.zone)
+		return sec_status_bogus; /* no RRs */
+	if(nsec3_iteration_count_high(ve, &flt, kkey))
+		return sec_status_insecure; /* iteration count too high */
+
+	/* try nxdomain and nodata after another, while keeping the
+	 * hash cache intact */
+
+	if(nsec3_do_prove_nameerror(env, &flt, &ct, qinfo)==sec_status_secure)
+		return sec_status_secure;
+	if(nsec3_do_prove_nodata(env, &flt, &ct, qinfo)==sec_status_secure) {
+		*nodata = 1;
+		return sec_status_secure;
+	}
+	return sec_status_bogus;
 }
