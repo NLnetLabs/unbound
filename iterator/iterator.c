@@ -1423,6 +1423,8 @@ processFinished(struct module_qstate* qstate, struct iter_qstate* iq,
 			log_err("prepend rrsets: out of memory");
 			return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
 		}
+		/* reset the query name back */
+		iq->response->qinfo = qstate->qinfo;
 		/* store message with the finished prepended items,
 		 * but only if we did recursion. The nonrecursion referral
 		 * from cache does not need to be stored in the msg cache. */

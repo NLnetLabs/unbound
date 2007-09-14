@@ -2,6 +2,9 @@
 	- nsec3 nodata proof, nods proof, wildcard proof.
 	- nsec3 support for cname chain ending in noerror or nodata.
 	- validator calls nsec3 proof routines if no NSECs prove anything.
+	- fixup iterator bug where it stored the answer to a cname under
+	  the wrong qname into the cache. When prepending the cnames, the
+	  qname has to be reset to the original qname.
 
 13 September 2007: Wouter
 	- nsec3 find matching and covering, ce proof, prove namerror msg.
