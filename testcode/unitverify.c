@@ -43,12 +43,15 @@
 #include "testcode/unitmain.h"
 #include "validator/val_sigcrypt.h"
 #include "validator/val_nsec.h"
+#include "validator/val_nsec3.h"
 #include "validator/validator.h"
 #include "testcode/ldns-testpkts.h"
 #include "util/data/msgreply.h"
 #include "util/data/msgparse.h"
+#include "util/data/dname.h"
 #include "util/region-allocator.h"
 #include "util/alloc.h"
+#include "util/rbtree.h"
 #include "util/net_help.h"
 #include "util/module.h"
 #include "util/config_file.h"
@@ -91,7 +94,6 @@ entry_to_repinfo(struct entry* e, struct alloc_cache* alloc, struct region*
 	struct edns_data edns;
 	entry_to_buf(e, pkt);
 	ret = reply_info_parse(pkt, alloc, qi, rep, region, &edns);
-	region_free_all(region);
 	if(ret != 0) {
 		printf("parse code %d: %s\n", ret,
 			ldns_lookup_by_id(ldns_rcodes, ret)->name);
@@ -228,6 +230,7 @@ dstest_entry(struct entry* e, struct alloc_cache* alloc, struct region*
 			printf("result(no)= %s\n", ret?"yes":"no");
 		}
 		unit_assert(!ret);
+		verbose(VERB_DETAIL, "DS fail: OK; matched unit test");
 	} else {
 		fatal_exit("Bad qname in DS unit test, yes or no");
 	}
@@ -362,6 +365,87 @@ nsectest()
 	unit_assert(!unitest_nsec_has_type_rdata(bitmap, len, 2230));
 }
 
+/** Test hash algo - NSEC3 hash it and compare result */
+static void
+nsec3_hash_test_entry(struct entry* e, rbtree_t* ct,
+	struct alloc_cache* alloc, struct region* region, 
+	ldns_buffer* buf)
+{
+	struct query_info qinfo;
+	struct reply_info* rep = NULL;
+	struct ub_packed_rrset_key* answer, *nsec3;
+	struct nsec3_cached_hash* hash;
+	int ret;
+	uint8_t* qname;
+
+	if(vsig) {
+		printf("verifying NSEC3 hash:\n");
+		ldns_pkt_print(stdout, e->reply_list->reply);
+		printf("\n");
+	}
+	entry_to_repinfo(e, alloc, region, buf, &qinfo, &rep);
+	nsec3 = find_rrset_type(rep, LDNS_RR_TYPE_NSEC3);
+	answer = find_rrset_type(rep, LDNS_RR_TYPE_AAAA);
+	qname = region_alloc_init(region, qinfo.qname, qinfo.qname_len);
+	/* check test is OK */
+	unit_assert(nsec3 && answer && qname);
+
+	ret = nsec3_hash_name(ct, region, buf, nsec3, 0, qname,
+		qinfo.qname_len, &hash);
+	if(ret != 1) {
+		printf("Bad nsec3_hash_name retcode %d\n", ret);
+		unit_assert(ret == 1);
+	}
+	unit_assert(hash->dname && hash->hash && hash->hash_len &&
+		hash->b32 && hash->b32_len);
+	unit_assert(hash->b32_len == (size_t)answer->rk.dname[0]);
+	/* does not do lowercasing. */
+	unit_assert(memcmp(hash->b32, answer->rk.dname+1, hash->b32_len) 
+		== 0);
+
+	reply_info_parsedelete(rep, alloc);
+	query_info_clear(&qinfo);
+}
+
+
+/** Read file to test NSEC3 hash algo */
+static void
+nsec3_hash_test(const char* fname)
+{
+	/* 
+	 * The list contains a list of ldns-testpkts entries.
+	 * Every entry is a test.
+	 * 	The qname is hashed.
+	 * 	The answer section AAAA RR name is the required result.
+	 * 	The auth section NSEC3 is used to get hash parameters.
+	 * The hash cache is maintained per file.
+	 *
+	 * The test does not perform canonicalization during the compare.
+	 */
+	rbtree_t ct;
+	struct region* region = region_create(malloc, free);
+	struct alloc_cache alloc;
+	ldns_buffer* buf = ldns_buffer_new(65535);
+	struct entry* e;
+	struct entry* list = read_datafile(fname);
+
+	if(!list)
+		fatal_exit("could not read %s: %s", fname, strerror(errno));
+	rbtree_init(&ct, &nsec3_hash_cmp);
+	alloc_init(&alloc, NULL, 1);
+	unit_assert(region && buf);
+
+	/* ready to go! */
+	for(e = list; e; e = e->next) {
+		nsec3_hash_test_entry(e, &ct, &alloc, region, buf);
+	}
+
+	delete_entry(list);
+	region_destroy(region);
+	alloc_clear(&alloc);
+	ldns_buffer_free(buf);
+}
+
 void 
 verify_test()
 {
@@ -369,4 +453,5 @@ verify_test()
 	verifytest_file("testdata/test_signatures.1", "20070818005004");
 	dstest_file("testdata/test_ds_sig.1");
 	nsectest();
+	nsec3_hash_test("testdata/test_nsec3_hash.1");
 }

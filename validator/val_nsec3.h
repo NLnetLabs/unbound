@@ -66,7 +66,9 @@
 
 #ifndef VALIDATOR_VAL_NSEC3_H
 #define VALIDATOR_VAL_NSEC3_H
+#include "util/rbtree.h"
 struct val_env;
+struct region;
 struct module_env;
 struct ub_packed_rrset_key;
 enum sec_status;
@@ -210,5 +212,61 @@ enum sec_status
 nsec3_prove_nxornodata(struct module_env* env, struct val_env* ve,
 	struct ub_packed_rrset_key** list, size_t num, 
 	struct query_info* qinfo, struct key_entry_key* kkey, int* nodata);
+
+/**
+ * The NSEC3 hash result storage.
+ * Consists of an rbtree, with these nodes in it.
+ * The nodes detail how a set of parameters (from nsec3 rr) plus
+ * a dname result in a hash.
+ */
+struct nsec3_cached_hash {
+	/** rbtree node, key is this structure */
+	rbnode_t node;
+	/** where are the parameters for conversion, in this rrset data */
+	struct ub_packed_rrset_key* nsec3;
+	/** where are the parameters for conversion, this RR number in data */
+	int rr;
+	/** the name to convert */
+	uint8_t* dname;
+	/** length of the dname */
+	size_t dname_len;
+	/** the hash result (not base32 encoded) */
+	uint8_t* hash;
+	/** length of hash in bytes */
+	size_t hash_len;
+	/** the hash result in base32 encoding */
+	uint8_t* b32;
+	/** length of base32 encoding (as a label) */
+	size_t b32_len;
+};
+
+/**
+ * Rbtree for hash cache comparison function
+ */
+int nsec3_hash_cmp(const void* c1, const void* c2);
+
+/**
+ * Obtain the hash of an owner name.
+ * Used internally by the nsec3 proof functions in this file.
+ * published to enable unit testing of hash algorithms and cache.
+ *
+ * @param table: the cache table. Must be inited at start.
+ * @param region: scratch region to use for allocation.
+ * 	This region holds the tree, if you wipe the region, reinit the tree.
+ * @param buf: temporary buffer.
+ * @param nsec3: the rrset with parameters
+ * @param rr: rr number from d that has the NSEC3 parameters to hash to.
+ * @param dname: name to hash
+ * 	This pointer is used inside the tree, assumed region-alloced.
+ * @param dname_len: the length of the name.
+ * @param hash: the hash node is returned on success.
+ * @return:
+ * 	1 on success, either from cache or newly hashed hash is returned.
+ * 	0 on a malloc failure.
+ * 	-1 if the NSEC3 rr was badly formatted (i.e. formerr).
+ */
+int nsec3_hash_name(rbtree_t* table, struct region* region, ldns_buffer* buf,
+	struct ub_packed_rrset_key* nsec3, int rr, uint8_t* dname, 
+	size_t dname_len, struct nsec3_cached_hash** hash);
 
 #endif /* VALIDATOR_VAL_NSEC3_H */

@@ -67,33 +67,6 @@ int b32_pton_extended_hex(char const *src, size_t hashed_owner_str_len,
 	uint8_t *target, size_t targsize);
 
 /**
- * The NSEC3 hash result storage.
- * Consists of an rbtree, with these nodes in it.
- * The nodes detail how a set of parameters (from nsec3 rr) plus
- * a dname result in a hash.
- */
-struct nsec3_cached_hash {
-	/** rbtree node, key is this structure */
-	rbnode_t node;
-	/** where are the parameters for conversion, in this rrset data */
-	struct ub_packed_rrset_key* nsec3;
-	/** where are the parameters for conversion, this RR number in data */
-	int rr;
-	/** the name to convert */
-	uint8_t* dname;
-	/** length of the dname */
-	size_t dname_len;
-	/** the hash result (not base32 encoded) */
-	uint8_t* hash;
-	/** length of hash in bytes */
-	size_t hash_len;
-	/** the hash result in base32 encoding */
-	uint8_t* b32;
-	/** length of base32 encoding (as a label) */
-	size_t b32_len;
-};
-
-/**
  * Closest encloser (ce) proof results
  * Contains the ce and the next-closer (nc) proof.
  */
@@ -472,7 +445,7 @@ nsec3_iteration_count_high(struct val_env* ve, struct nsec3_filter* filter,
 }
 
 /** nsec3_cache_compare for rbtree */
-static int
+int
 nsec3_hash_cmp(const void* c1, const void* c2) 
 {
 	struct nsec3_cached_hash* h1 = (struct nsec3_cached_hash*)c1;
@@ -545,6 +518,7 @@ nsec3_calc_hash(struct region* region, ldns_buffer* buf,
 					(unsigned long)ldns_buffer_limit(buf),
 					(unsigned char*)c->hash);
 			}
+			break;
 #endif /* SHA_DIGEST_LENGTH */
 		default:
 			log_err("nsec3 hash of unknown algo %d", algo);
@@ -573,22 +547,7 @@ nsec3_calc_b32(struct region* region, ldns_buffer* buf,
 	return 1;
 }
 
-/**
- * Obtain the hash of an owner name.
- * @param table: the cache table. Must be inited at start.
- * @param region: scratch region to use for allocation.
- * @param buf: temporary buffer.
- * @param nsec3: the rrset with parameters
- * @param rr: rr number from d that has the NSEC3 parameters to hash to.
- * @param dname: name to hash
- * @param dname_len: the length of the name.
- * @param hash: the hash node is returned on success.
- * @return:
- * 	1 on success, either from cache or newly hashed hash is returned.
- * 	0 on a malloc failure.
- * 	-1 if the NSEC3 rr was badly formatted (i.e. formerr).
- */
-static int
+int
 nsec3_hash_name(rbtree_t* table, struct region* region, ldns_buffer* buf,
 	struct ub_packed_rrset_key* nsec3, int rr, uint8_t* dname, 
 	size_t dname_len, struct nsec3_cached_hash** hash)
