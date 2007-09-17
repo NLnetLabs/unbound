@@ -879,6 +879,7 @@ nsec3_prove_closest_encloser(struct module_env* env, struct nsec3_filter* flt,
 			"not find a candidate for the closest encloser.");
 		return 0;
 	}
+	log_nametypeclass(VERB_ALGO, "ce candidate", ce->ce, 0, 0);
 
 	if(query_dname_compare(ce->ce, qinfo->qname) == 0) {
 		if(prove_does_not_exist) {
