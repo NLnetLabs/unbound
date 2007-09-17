@@ -184,6 +184,8 @@ static void replyline(const char* line, ldns_pkt *reply)
 			ldns_pkt_set_ra(reply, true);
 		} else if(str_keyword(&parse, "AD")) {
 			ldns_pkt_set_ad(reply, true);
+		} else if(str_keyword(&parse, "DO")) {
+			ldns_pkt_set_edns_do(reply, true);
 		} else {
 			error("could not parse REPLY: '%s'", parse);
 		}
@@ -200,6 +202,8 @@ static void adjustline(const char* line, struct entry* e,
 			return;
 		if(str_keyword(&parse, "copy_id")) {
 			e->copy_id = true;
+		} else if(str_keyword(&parse, "copy_query")) {
+			e->copy_query = true;
 		} else if(str_keyword(&parse, "sleep=")) {
 			e->sleeptime = (unsigned int) strtol(parse, (char**)&parse, 10);
 			while(isspace(*parse)) 
@@ -230,6 +234,7 @@ static struct entry* new_entry()
 	e->match_transport = transport_any;
 	e->reply_list = NULL;
 	e->copy_id = false;
+	e->copy_query = false;
 	e->sleeptime = 0;
 	e->next = NULL;
 	return e;
@@ -692,6 +697,12 @@ adjust_packet(struct entry* match, ldns_pkt* answer_pkt, ldns_pkt* query_pkt)
 	/* copy & adjust packet */
 	if(match->copy_id)
 		ldns_pkt_set_id(answer_pkt, ldns_pkt_id(query_pkt));
+	if(match->copy_query) {
+		ldns_rr_list* list = ldns_pkt_get_section_clone(query_pkt,
+			LDNS_SECTION_QUESTION);
+		ldns_rr_list_deep_free(ldns_pkt_question(answer_pkt));
+		ldns_pkt_set_question(answer_pkt, list);
+	}
 	if(match->sleeptime > 0) {
 		verbose(3, "sleeping for %d seconds\n", match->sleeptime);
 		sleep(match->sleeptime);

@@ -679,6 +679,8 @@ validate_nameerror_response(struct module_env* env, struct val_env* ve,
 				chase_reply->security));
 			return;
 		}
+		has_valid_nsec = 1;
+		has_valid_wnsec = 1;
 	}
 
 	/* If the message fails to prove either condition, it is bogus. */

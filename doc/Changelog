@@ -1,5 +1,6 @@
 17 September 2007: Wouter
 	- NSEC3 hash cache unit test.
+	- validator nsec3 nameerror test.
 
 14 September 2007: Wouter
 	- nsec3 nodata proof, nods proof, wildcard proof.

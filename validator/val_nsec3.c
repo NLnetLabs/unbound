@@ -47,6 +47,7 @@
 #include "util/region-allocator.h"
 #include "util/rbtree.h"
 #include "util/module.h"
+#include "util/net_help.h"
 #include "util/data/packed_rrset.h"
 #include "util/data/dname.h"
 #include "util/data/msgreply.h"
@@ -955,6 +956,7 @@ nsec3_do_prove_nameerror(struct module_env* env, struct nsec3_filter* flt,
 			"a closest encloser");
 		return sec_status_bogus;
 	}
+	log_nametypeclass(VERB_ALGO, "nsec3 namerror: proven ce=", ce.ce,0,0);
 
 	/* At this point, we know that qname does not exist. Now we need 
 	 * to prove that the wildcard does not exist. */
@@ -985,6 +987,8 @@ nsec3_prove_nameerror(struct module_env* env, struct val_env* ve,
 		return sec_status_bogus; /* no RRs */
 	if(nsec3_iteration_count_high(ve, &flt, kkey))
 		return sec_status_insecure; /* iteration count too high */
+	log_nametypeclass(VERB_ALGO, "start nsec3 nameerror proof, zone", 
+		flt.zone, 0, 0);
 	return nsec3_do_prove_nameerror(env, &flt, &ct, qinfo);
 }
 

@@ -54,11 +54,13 @@
 		(opcode)  QUERY IQUERY STATUS NOTIFY UPDATE
 		(rcode)   NOERROR FORMERR SERVFAIL NXDOMAIN NOTIMPL YXDOMAIN
 		 		YXRRSET NXRRSET NOTAUTH NOTZONE
-		(flags)   QR AA TC RD CD RA AD
+		(flags)   QR AA TC RD CD RA AD DO
 	REPLY ...
 	; any additional actions to do.
 	; 'copy_id' copies the ID from the query to the answer.
 	ADJUST copy_id
+	; 'copy_query' copies the query name, type and class to the answer.
+	ADJUST copy_query
 	; 'sleep=10' sleeps for 10 seconds before giving the answer (TCP is open)
 	ADJUST [sleep=<num>]    ; sleep before giving any reply
 	ADJUST [packet_sleep=<num>]  ; sleep before this packet in sequence
@@ -174,6 +176,8 @@ struct entry {
 	/** how to adjust the reply packet */
 	/** copy over the ID from the query into the answer */
 	bool copy_id; 
+	/** copy the query nametypeclass from query into the answer */
+	bool copy_query;
 	/** in seconds */
 	unsigned int sleeptime; 
 

@@ -111,8 +111,13 @@ void analyze_rdata(ldns_buffer*pkt, const ldns_rr_descriptor* desc,
 		}
 		rdf++;
 	}
-	if(rdlen)
+	if(rdlen) {
+		size_t i;
 		printf(" remain[%d]\n", (int)rdlen);
+		for(i=0; i<rdlen; i++)
+			printf(" %2.2X", (unsigned)ldns_buffer_current(pkt)[i]);
+		printf("\n");
+	}
 	else	printf("\n");
 	ldns_buffer_skip(pkt, (ssize_t)rdlen);
 }
