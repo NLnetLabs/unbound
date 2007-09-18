@@ -1,5 +1,6 @@
 18 September 2007: Wouter
 	- wildcard nsec3 testcases, and fixup to get correct wildcard name.
+	- validator prints subtype classification for debug.
 
 17 September 2007: Wouter
 	- NSEC3 hash cache unit test.

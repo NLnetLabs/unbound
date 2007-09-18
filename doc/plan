@@ -153,9 +153,22 @@ Styleguide:
 *** Bigger and Better
 * Config file syntax checker program. Tests on checker.
 * Logging first class feature with config options.
+	* with logfile turnover to avoid Gbs of logs.
 * donotqueryaddresses with trie for blocking entire netblocks.
 * Memory overhaul, special allocators for hashtable caches, and mesh qstates.
+	* keep a preallocated list of region-chunks per worker thread.
+	* allocate region struct and cleanup list in region itself; use
+	  linked list cleanup list. unit test on this. do not call region
+	  to avoid name-collision with nsd regions, 'regional'.
 * read root hints from file.
+* failure to return answer, w. reason (donotq, noanswer servers, cannot
+  find servers, validationfail w.classification, error), 
+  with threadno, starttime and endtime and qname/type/class, prime/qflags, 
+  from-clients, from-internal, has-subrequests, a nice error report,
+  so that an excerpt from those times can be made from the logs.
+  logfileparsing tool that makes these excerpts and emails them.
+* ANS failure workaround (nxdomain for ENT; check if nxdomain is ENTnodata).
+* clear cache as a callback from the new-rrset-id routine.
 
 *** Local zones feature.
 * Build in local zone features. First the total stop for1912.
@@ -205,7 +218,9 @@ Styleguide:
 * Be able to prime roots using several queries (like, get only NS first).
 * Nicer statistics
 * private TTL, dTLS features.
-
+* retry-mode, where a bogus result triggers a retry-mode query, where a list
+  of responses over a time interval is collected, and each is validated.
+* draft-timers, DLV features.
 
 treeshrew/
 	validator/ *.c *.h

@@ -250,4 +250,11 @@ void val_mark_insecure(struct reply_info* rep, struct key_entry_key* kkey,
  */
 size_t val_next_unchecked(struct reply_info* rep, size_t skip);
 
+/**
+ * Get string to denote the classification result.
+ * @param subtype: from classification function.
+ * @return static string to describe the classification.
+ */
+const char* val_classification_to_string(enum val_classification subtype);
+
 #endif /* VALIDATOR_VAL_UTILS_H */

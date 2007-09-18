@@ -1019,6 +1019,8 @@ processInit(struct module_qstate* qstate, struct val_qstate* vq,
 	enum val_classification subtype = val_classify_response(
 		qstate->query_flags, &vq->qchase, vq->orig_msg->rep, 
 		vq->rrset_skip);
+	verbose(VERB_ALGO, "validator classification %s", 
+		val_classification_to_string(subtype));
 	if(subtype == VAL_CLASS_REFERRAL && 
 		vq->rrset_skip < vq->orig_msg->rep->rrset_count) {
 		/* referral uses the rrset name as qchase, to find keys for

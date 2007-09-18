@@ -698,3 +698,21 @@ val_next_unchecked(struct reply_info* rep, size_t skip)
 	}
 	return rep->rrset_count;
 }
+
+const char*
+val_classification_to_string(enum val_classification subtype)
+{
+	switch(subtype) {
+		case VAL_CLASS_UNTYPED: 	return "untyped";
+		case VAL_CLASS_UNKNOWN: 	return "unknown";
+		case VAL_CLASS_POSITIVE: 	return "positive";
+		case VAL_CLASS_CNAME: 		return "cname";
+		case VAL_CLASS_NODATA: 		return "nodata";
+		case VAL_CLASS_NAMEERROR: 	return "nameerror";
+		case VAL_CLASS_CNAMENOANSWER: 	return "cnamenoanswer";
+		case VAL_CLASS_REFERRAL: 	return "referral";
+		case VAL_CLASS_ANY: 		return "qtype_any";
+		default:
+			return "bad_val_classification";
+	}
+}
