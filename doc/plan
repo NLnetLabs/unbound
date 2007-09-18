@@ -202,6 +202,9 @@ Styleguide:
 	* read a file with cache contents and settings, provide fake
 	  environment for module-handle-state-X functions, then check
 	  resulting module state structure to correct answer.
+* speed test cache responses.
+* using two servers, compare answer differences between bind and unbound.
+  this gives false differences due to changes in the rest of internet.
 
 *** Beta release. 
 * Run shadow for a resolver in production for several weeks.
