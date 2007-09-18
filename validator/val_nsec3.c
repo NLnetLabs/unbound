@@ -1149,11 +1149,12 @@ nsec3_prove_wildcard(struct module_env* env, struct val_env* ve,
 		return sec_status_insecure; /* iteration count too high */
 
 	/* We know what the (purported) closest encloser is by just 
-	 * looking at the supposed generating wildcard. */
+	 * looking at the supposed generating wildcard. 
+	 * The *. has already been removed from the wc name.
+	 */
 	memset(&ce, 0, sizeof(ce));
 	ce.ce = wc;
 	ce.ce_len = wclen;
-	dname_remove_label(&ce.ce, &ce.ce_len);
 
 	/* Now we still need to prove that the original data did not exist.
 	 * Otherwise, we need to show that the next closer name is covered. */

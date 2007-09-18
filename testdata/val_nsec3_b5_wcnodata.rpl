@@ -1,0 +1,138 @@
+; config options
+server:
+	trust-anchor: "example. DNSKEY  257 3 133 (AQOnsGyJvywVjYmiLbh0EwIRuWYcDiB/8blX cpkoxtpe19Oicv6Zko+8brVsTMeMOpcUeGB1 zsYKWJ7BvR2894hX )"
+	val-override-date: "20120420235959"
+
+stub-zone:
+	name: "."
+	stub-addr: 193.0.14.129 	# K.ROOT-SERVERS.NET.
+CONFIG_END
+
+SCENARIO_BEGIN Test validator NSEC3 B.5 wildcard nodata.
+
+; K.ROOT-SERVERS.NET.
+RANGE_BEGIN 0 100
+	ADDRESS 193.0.14.129 
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR NOERROR
+SECTION QUESTION
+. IN NS
+SECTION ANSWER
+. IN NS	K.ROOT-SERVERS.NET.
+SECTION ADDITIONAL
+K.ROOT-SERVERS.NET.	IN	A	193.0.14.129
+ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode
+ADJUST copy_id copy_query
+REPLY QR NOERROR
+SECTION QUESTION
+. IN A
+SECTION AUTHORITY
+example.	IN NS	ns1.example.
+; leave out to make unbound take ns1
+;example.	IN NS	ns2.example.
+SECTION ADDITIONAL
+ns1.example.	IN A 192.0.2.1
+; leave out to make unbound take ns1
+;ns2.example.	IN A 192.0.2.2
+ENTRY_END
+RANGE_END
+
+; ns1.example.
+RANGE_BEGIN 0 100
+	ADDRESS 192.0.2.1
+
+; response to DNSKEY priming query
+
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR NOERROR
+SECTION QUESTION
+example. IN DNSKEY
+SECTION ANSWER
+example. DNSKEY  256 3 133 ( AQO0gEmbZUL6xbD/xQczHbnwYnf+jQjwz/sU 5k44rHTt0Ty+3aOdYoome9TjGMhwkkGby1TL ExXT48OGGdbfIme5 )
+example. DNSKEY  257 3 133 ( AQOnsGyJvywVjYmiLbh0EwIRuWYcDiB/8blX cpkoxtpe19Oicv6Zko+8brVsTMeMOpcUeGB1 zsYKWJ7BvR2894hX )
+example. RRSIG   DNSKEY 133 1 3600 20150420235959 ( 20051021000000 22088 example.  Xpo9ptByXb8M1JR1i0KuRmKGc/YeOLcc6Ptn RJOx6ADLSL2mU6AYX5tAJRMTKTXk6waLIaxu liqUBOkCjLUZMw== )
+ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR AA DO NOERROR
+SECTION QUESTION
+a.z.w.example.      IN AAAA
+SECTION ANSWER
+SECTION AUTHORITY
+example.       SOA     ns1.example. bugs.x.w.example. 1 3600 300 ( 3600000 3600 )
+example.       RRSIG   SOA 133 1 3600 20150420235959 20051021000000 ( 62827 example.  hNIkW1xzn+c+9P3W7PUVVptI72xEmOtn+eqQ ux0BE7Pfc6ikx4m7ivOVWETjbwHjqfY0X5G+ rynLZNqsbLm40Q== )
+
+;; NSEC3 RR that matches the closest encloser (w.example)
+;; H(w.example) = k8udemvp1j2f7eg6jebps17vp3n8i58h
+k8udemvp1j2f7eg6jebps17vp3n8i58h.example. NSEC3 1 1 12 aabbccdd ( kohar7mbb8dc2ce8a9qvl8hon4k53uhi )
+k8udemvp1j2f7eg6jebps17vp3n8i58h.example. RRSIG NSEC3 133 2 3600 ( 20150420235959 20051021000000 62827 example.  IKJfInxfypsDiXKgT6HDvCPEIBu9lZCc0CWl c46+Gj/Jrg1NBkSJkKMjCERp1HT8tKU+zYp5 Kyio/cddEaa5Gg== )
+
+;; NSEC3 RR that covers the "next closer" name (z.w.example)
+;; H(z.w.example) = qlu7gtfaeh0ek0c05ksfhdpbcgglbe03
+
+q04jkcevqvmu85r014c7dkba38o0ji5r.example. NSEC3 1 1 12 aabbccdd ( r53bq7cc2uvmubfu5ocmm6pers9tk9en A RRSIG )
+q04jkcevqvmu85r014c7dkba38o0ji5r.example. RRSIG NSEC3 133 2 3600 ( 20150420235959 20051021000000 62827 example.  ktIfH8VRjEKYPB0Qf4EdTuSlYn4DVSRRaGWc kVGmKzreEU5zs97CL8OQSa6C0JZX2yMBXijC Wu6EvgCXrflgiQ== )
+
+;; NSEC3 RR that matches a wildcard at the closest encloser.
+;; H(*.w.example) = r53bq7cc2uvmubfu5ocmm6pers9tk9en
+
+r53bq7cc2uvmubfu5ocmm6pers9tk9en.example. NSEC3 1 1 12 aabbccdd ( t644ebqk9bibcna874givr6joj62mlhv MX RRSIG )
+r53bq7cc2uvmubfu5ocmm6pers9tk9en.example. RRSIG NSEC3 133 2 3600 ( 20150420235959 20051021000000 62827 example.  SzeyaiFOy9dFO1RKHAK4uVCb5GF4rNnxFMXu 6hpM44cmLcDgshlnG1CwkkcihfKOiPIBWd7I bGhsbhqrBrn5Dg== )
+
+SECTION ADDITIONAL
+ENTRY_END
+
+; catch glue queries
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR AA DO NOERROR
+SECTION QUESTION
+ns2.example. IN      A
+SECTION ANSWER
+; nothing to make sure the ns1 server is used for queries.
+ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR AA DO NOERROR
+SECTION QUESTION
+ns2.example. IN      AAAA
+SECTION ANSWER
+; nothing to make sure the ns1 server is used for queries.
+ENTRY_END
+
+
+RANGE_END
+
+STEP 1 QUERY
+ENTRY_BEGIN
+REPLY RD
+SECTION QUESTION
+a.z.w.example.      IN AAAA
+ENTRY_END
+
+; recursion happens here.
+STEP 10 CHECK_ANSWER
+ENTRY_BEGIN
+MATCH all
+REPLY QR RD RA AD NOERROR
+SECTION QUESTION
+a.z.w.example.      IN AAAA
+SECTION ANSWER
+SECTION AUTHORITY
+example.       SOA     ns1.example. bugs.x.w.example. 1 3600 300 ( 3600000 3600 )
+SECTION ADDITIONAL
+ENTRY_END
+
+SCENARIO_END

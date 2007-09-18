@@ -161,7 +161,8 @@ nsec3_prove_nodata(struct module_env* env, struct val_env* ve,
  * @param num: number of RRsets in the array to examine.
  * @param qinfo: query that is verified for.
  * @param kkey: key entry that signed the NSEC3s.
- * @param wc: The purported wildcard that matched.
+ * @param wc: The purported wildcard that matched. This is the wildcard name
+ * 	as *.wildcard.name., with the *. label already removed.
  * @return:
  * 	sec_status SECURE of the proposition is proven by the NSEC3 RRs, 
  * 	BOGUS if not, INSECURE if all of the NSEC3s could be validly ignored.

@@ -1,0 +1,137 @@
+; config options
+server:
+	trust-anchor: "example. DNSKEY  257 3 133 (AQOnsGyJvywVjYmiLbh0EwIRuWYcDiB/8blX cpkoxtpe19Oicv6Zko+8brVsTMeMOpcUeGB1 zsYKWJ7BvR2894hX )"
+	val-override-date: "20120420235959"
+
+stub-zone:
+	name: "."
+	stub-addr: 193.0.14.129 	# K.ROOT-SERVERS.NET.
+CONFIG_END
+
+SCENARIO_BEGIN Test validator NSEC3 B.4 wildcard expansion.
+
+; K.ROOT-SERVERS.NET.
+RANGE_BEGIN 0 100
+	ADDRESS 193.0.14.129 
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR NOERROR
+SECTION QUESTION
+. IN NS
+SECTION ANSWER
+. IN NS	K.ROOT-SERVERS.NET.
+SECTION ADDITIONAL
+K.ROOT-SERVERS.NET.	IN	A	193.0.14.129
+ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode
+ADJUST copy_id copy_query
+REPLY QR NOERROR
+SECTION QUESTION
+. IN A
+SECTION AUTHORITY
+example.	IN NS	ns1.example.
+; leave out to make unbound take ns1
+;example.	IN NS	ns2.example.
+SECTION ADDITIONAL
+ns1.example.	IN A 192.0.2.1
+; leave out to make unbound take ns1
+;ns2.example.	IN A 192.0.2.2
+ENTRY_END
+RANGE_END
+
+; ns1.example.
+RANGE_BEGIN 0 100
+	ADDRESS 192.0.2.1
+
+; response to DNSKEY priming query
+
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR NOERROR
+SECTION QUESTION
+example. IN DNSKEY
+SECTION ANSWER
+example. DNSKEY  256 3 133 ( AQO0gEmbZUL6xbD/xQczHbnwYnf+jQjwz/sU 5k44rHTt0Ty+3aOdYoome9TjGMhwkkGby1TL ExXT48OGGdbfIme5 )
+example. DNSKEY  257 3 133 ( AQOnsGyJvywVjYmiLbh0EwIRuWYcDiB/8blX cpkoxtpe19Oicv6Zko+8brVsTMeMOpcUeGB1 zsYKWJ7BvR2894hX )
+example. RRSIG   DNSKEY 133 1 3600 20150420235959 ( 20051021000000 22088 example.  Xpo9ptByXb8M1JR1i0KuRmKGc/YeOLcc6Ptn RJOx6ADLSL2mU6AYX5tAJRMTKTXk6waLIaxu liqUBOkCjLUZMw== )
+ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR AA DO NOERROR
+SECTION QUESTION
+a.z.w.example. IN MX
+SECTION ANSWER
+a.z.w.example. MX      1 ai.example.
+a.z.w.example. RRSIG   MX 133 2 3600 20150420235959 20051021000000 ( 62827 example.  DnT0Y6dRBM8f3v8HdKmZUsGVkXh+b+htujCR c423x6c8erEMGVnxcrmcrZ53qGXcMYJ+TDkq a7Xfz/f9xzvSTw== )
+SECTION AUTHORITY
+example.       NS      ns1.example.
+example.       NS      ns2.example.
+example.       RRSIG   NS 133 1 3600 20150420235959 20051021000000 ( 62827 example.  D9+iBwcbeKL5+TorTfYn4/pLr2lSFwyGYCyM gfq4TpFaZpxrCJPLxHbKjdkR18jAt7+SR7B5 JpiZcff2Cj2B0w== )
+
+;; NSEC3 RR that covers the "next closer" name (z.w.example)
+;; H(z.w.example) = qlu7gtfaeh0ek0c05ksfhdpbcgglbe03
+q04jkcevqvmu85r014c7dkba38o0ji5r.example. NSEC3 1 1 12 aabbccdd ( r53bq7cc2uvmubfu5ocmm6pers9tk9en A RRSIG )
+q04jkcevqvmu85r014c7dkba38o0ji5r.example. RRSIG NSEC3 133 2 3600 ( 20150420235959 20051021000000 62827 example.  ktIfH8VRjEKYPB0Qf4EdTuSlYn4DVSRRaGWc kVGmKzreEU5zs97CL8OQSa6C0JZX2yMBXijC Wu6EvgCXrflgiQ== )
+
+SECTION ADDITIONAL
+ai.example.    A       192.0.2.9
+ai.example.    RRSIG   A 133 2 3600 20150420235959 20051021000000 ( 62827 example.  qfXAvKr5o3Jixy5KXnVMEhABo3DDHYSR5+Ag lVxWCExWGMokdkafjW8Hb54+GrOFp/xmDoj5 BXfXAqURwLqznA== )
+ai.example.    AAAA    2001:db8:0:0:0:0:f00:baa9
+ai.example.    RRSIG   AAAA 133 2 3600 20150420235959 ( 20051021000000 62827 example.  m65zc0A16Xbx3jYb0t5vPwMzE2xS15mKh76M hSuKfiFVhBFcQ9IilEM0pXnLzt3ozrM/3X0x 2ruyuN0zC+PABA== )
+ENTRY_END
+
+; catch glue queries
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR AA DO NOERROR
+SECTION QUESTION
+ns2.example. IN      A
+SECTION ANSWER
+; nothing to make sure the ns1 server is used for queries.
+ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR AA DO NOERROR
+SECTION QUESTION
+ns2.example. IN      AAAA
+SECTION ANSWER
+; nothing to make sure the ns1 server is used for queries.
+ENTRY_END
+
+
+RANGE_END
+
+STEP 1 QUERY
+ENTRY_BEGIN
+REPLY RD
+SECTION QUESTION
+a.z.w.example. IN MX
+ENTRY_END
+
+; recursion happens here.
+STEP 10 CHECK_ANSWER
+ENTRY_BEGIN
+MATCH all
+REPLY QR RD RA AD NOERROR
+SECTION QUESTION
+a.z.w.example. IN MX
+SECTION ANSWER
+a.z.w.example. MX      1 ai.example.
+SECTION AUTHORITY
+example.       NS      ns1.example.
+example.       NS      ns2.example.
+SECTION ADDITIONAL
+ai.example.    A       192.0.2.9
+ai.example.    AAAA    2001:db8:0:0:0:0:f00:baa9
+ENTRY_END
+
+SCENARIO_END
