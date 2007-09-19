@@ -815,6 +815,11 @@ struct serviced_query* outnet_serviced_query(struct outside_network* outnet,
 	ldns_status status;
 	(void)arg_compare;
 	log_assert(pend);
+	log_nametypeclass(VERB_OPS, "pending serviced query", 
+		qname, qtype, qclass);
+	verbose(VERB_OPS, "pending serviced query flags%s%s%s%s", 
+		(flags&BIT_RD)?" RD":"", (flags&BIT_CD)?" CD":"",
+		(flags&~(BIT_RD|BIT_CD))?" MORE":"", (dnssec)?" DO":"");
 
 	/* create packet with EDNS */
 	pend->buffer = ldns_buffer_new(512);
@@ -856,7 +861,7 @@ struct serviced_query* outnet_serviced_query(struct outside_network* outnet,
 			ldns_get_errorstr_by_id(status));
 		fatal_exit("internal error");
 	}
-	log_pkt("pending serviced query: ", pend->pkt);
+	/*log_pkt("pending serviced query: ", pend->pkt);*/
 
 	/* see if it matches the current moment */
 	if(runtime->now && runtime->now->evt_type == repevt_back_query &&

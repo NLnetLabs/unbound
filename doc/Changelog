@@ -1,6 +1,10 @@
 19 September 2007: Wouter
 	- comments about non-packed usage.
 	- plan for overload support in 0.6.
+	- added testbound tests for a failed resolution from the logs
+	  and for failed prime when missing glue.
+	- fixup so useless delegation points are not returned from the
+	  cache. Also the safety belt is used if priming fails to complete.
 
 18 September 2007: Wouter
 	- wildcard nsec3 testcases, and fixup to get correct wildcard name.

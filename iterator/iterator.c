@@ -484,6 +484,12 @@ prime_root(struct module_qstate* qstate, struct iter_qstate* iq,
 		verbose(VERB_ALGO, "Cannot prime due to lack of hints");
 		return 0;
 	}
+	/* copy dp; to avoid messing up available list for other thr/queries */
+	dp = delegpt_copy(dp, qstate->region);
+	if(!dp) {
+		log_err("out of memory priming root, copydp");
+		return 0;
+	}
 	/* Priming requests start at the QUERYTARGETS state, skipping 
 	 * the normal INIT state logic (which would cause an infloop). */
 	if(!generate_sub_request((uint8_t*)"\000", 1, LDNS_RR_TYPE_NS, 
@@ -550,7 +556,14 @@ prime_stub(struct module_qstate* qstate, struct iter_qstate* iq,
 			(struct iter_qstate*)subq->minfo[id];
 
 		/* Set the initial delegation point to the hint. */
-		subiq->dp = stub_dp;
+		/* make copy to avoid use of stub dp by different qs/threads */
+		subiq->dp = delegpt_copy(stub_dp, subq->region);
+		if(!subiq->dp) {
+			log_err("out of memory priming stub, copydp");
+			(*qstate->env->kill_sub)(subq);
+			(void)error_response(qstate, id, LDNS_RCODE_SERVFAIL);
+			return 1; /* return 1 to make module stop, with error */
+		}
 		/* there should not be any target queries -- although there 
 		 * wouldn't be anyway, since stub hints never have 
 		 * missing targets. */
@@ -704,29 +717,75 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 		/* do not adjust root label, remove first label from delname */
 		dname_remove_label(&delname, &delnamelen);
 	}
-	
-	/* Lookup the delegation in the cache. If null, then the cache needs 
-	 * to be primed for the qclass. */
-	iq->dp = dns_cache_find_delegation(qstate->env, delname, delnamelen,
-		iq->qchase.qtype, iq->qchase.qclass, qstate->region, 
-		&iq->deleg_msg, (uint32_t)time(NULL));
+	while(1) {
+		
+		/* Lookup the delegation in the cache. If null, then the cache needs 
+		 * to be primed for the qclass. */
+		iq->dp = dns_cache_find_delegation(qstate->env, delname, 
+			delnamelen, iq->qchase.qtype, iq->qchase.qclass, 
+			qstate->region, &iq->deleg_msg, (uint32_t)time(NULL));
 
-	/* If the cache has returned nothing, then we have a root priming
-	 * situation. */
-	if(iq->dp == NULL) {
-		/* Note that the result of this will set a new
-		 * DelegationPoint based on the result of priming. */
-		if(!prime_root(qstate, iq, ie, id, iq->qchase.qclass))
-			return error_response(qstate, id, LDNS_RCODE_REFUSED);
+		/* If the cache has returned nothing, then we have a 
+		 * root priming situation. */
+		if(iq->dp == NULL) {
+			/* Note that the result of this will set a new
+			 * DelegationPoint based on the result of priming. */
+			if(!prime_root(qstate, iq, ie, id, iq->qchase.qclass))
+				return error_response(qstate, id, 
+					LDNS_RCODE_REFUSED);
 
-		/* priming creates and sends a subordinate query, with 
-		 * this query as the parent. So further processing for 
-		 * this event will stop until reactivated by the results 
-		 * of priming. */
-		return 0;
+			/* priming creates and sends a subordinate query, with 
+			 * this query as the parent. So further processing for 
+			 * this event will stop until reactivated by the 
+			 * results of priming. */
+			return 0;
+		}
+
+		/* see if this dp not useless.
+		 * It is useless if:
+		 *	o all NS items are required glue.
+		 *	o no addresses are provided.
+		 *	o RD qflag is on.
+		 * Instead, go up one level, and try to get even further
+		 * If the root was useless, use safety belt information. 
+		 * Only check cache returns, because replies for servers
+		 * could be useless but lead to loops (bumping into the
+		 * same server reply) if useless-checked.
+		 */
+		if(iter_dp_is_useless(qstate->query_flags, iq->dp)) {
+			if(dname_is_root(iq->dp->name)) {
+				/* use safety belt */
+				verbose(VERB_OPS, "Priming problem: NS but "
+				"no addresses. Fallback to the safety belt.");
+				iq->dp = hints_lookup_root(ie->hints, 
+					iq->qchase.qclass);
+				/* note deleg_msg is from previous lookup,
+				 * but RD is on, so it is not used */
+				if(!iq->dp) {
+					log_err("internal error: no hints dp");
+					return error_response(qstate, id, 
+						LDNS_RCODE_REFUSED);
+				}
+				iq->dp = delegpt_copy(iq->dp, qstate->region);
+				if(!iq->dp) {
+					log_err("out of memory in safety belt");
+					return error_response(qstate, id, 
+						LDNS_RCODE_SERVFAIL);
+				}
+				break;
+			} else {
+				log_info("cache delegation was useless:");
+				delegpt_log(iq->dp);
+				/* go up */
+				delname = iq->dp->name;
+				delnamelen = iq->dp->namelen;
+				dname_remove_label(&delname, &delnamelen);
+			}
+		} else break;
 	}
+
 	if(verbosity >= VERB_ALGO) {
-		log_info("dns_cache_find_delegation returns delegpt");
+		log_info("cache delegation returns delegpt");
 		delegpt_log(iq->dp);
 	}
 

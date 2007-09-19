@@ -55,6 +55,7 @@
 #include "util/config_file.h"
 #include "util/region-allocator.h"
 #include "util/data/msgparse.h"
+#include "util/data/dname.h"
 #include "util/random.h"
 
 /** fillup fetch policy array */
@@ -319,4 +320,28 @@ iter_mark_cycle_targets(struct module_qstate* qstate, struct delegpt* dp)
 			ns->resolved = 1;
 		}
 	}
+}
+
+int 
+iter_dp_is_useless(uint16_t flags, struct delegpt* dp)
+{
+	struct delegpt_ns* ns;
+	/* check:
+	 *      o all NS items are required glue.
+	 *      o no addresses are provided.
+	 *      o RD qflag is on.
+	 */
+	if(!(flags&BIT_RD))
+		return 0;
+	/* either available or unused targets */
+	if(dp->usable_list || dp->result_list) 
+		return 0;
+	
+	for(ns = dp->nslist; ns; ns = ns->next) {
+		if(ns->resolved) /* skip failed targets */
+			continue;
+		if(!dname_subdomain_c(ns->name, dp->name))
+			return 0; /* one address is not required glue */
+	}
+	return 1;
 }

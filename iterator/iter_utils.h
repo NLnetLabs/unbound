@@ -128,4 +128,12 @@ int iter_ns_probability(struct ub_randstate* rnd, int n, int m);
  */
 void iter_mark_cycle_targets(struct module_qstate* qstate, struct delegpt* dp);
 
+/**
+ * See if delegation is useful or offers immediately no targets for 
+ * further recursion.
+ * @param flags: query flags.
+ * @param dp: delegpt to check.
+ */
+int iter_dp_is_useless(uint16_t flags, struct delegpt* dp);
+
 #endif /* ITERATOR_ITER_UTILS_H */
