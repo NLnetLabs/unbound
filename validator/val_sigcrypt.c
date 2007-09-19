@@ -899,7 +899,6 @@ canonicalize_rdata(ldns_buffer* buf, struct ub_packed_rrset_key* rrset,
 	uint8_t* datstart = ldns_buffer_current(buf)-len+2;
 	switch(ntohs(rrset->rk.type)) {
 		case LDNS_RR_TYPE_NXT: 
-		case LDNS_RR_TYPE_NSEC: /* type starts with the name */
 		case LDNS_RR_TYPE_NS:
 		case LDNS_RR_TYPE_MD:
 		case LDNS_RR_TYPE_MF:
@@ -987,6 +986,10 @@ canonicalize_rdata(ldns_buffer* buf, struct ub_packed_rrset_key* rrset,
 			datstart += 6;
 			query_dname_tolower(datstart);
 			return;
+
+		/* do not canonicalize NSEC rdata name, compat with bug
+		 * from bind 9.4 signer, where it does not do so */
+		case LDNS_RR_TYPE_NSEC: /* type starts with the name */
 		/* A6 not supported */
 		default:	
 			/* nothing to do for unknown types */
