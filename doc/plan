@@ -169,6 +169,16 @@ Styleguide:
   logfileparsing tool that makes these excerpts and emails them.
 * ANS failure workaround (nxdomain for ENT; check if nxdomain is ENTnodata).
 * clear cache as a callback from the new-rrset-id routine.
+* make overload mode work; phase 0 all ok, phase 1 some threads close ports,
+  to let other threads pick up work. phase 2, all threads closed, so all open
+  the ports again and drop all non-cache-reply queries.
+  Keep mutexed num-overloaded-threads counter. thread incs it when it hits
+  max number of user queries serviced in mesh. threads decs it when it
+  falls below 90% of the max. if incs, and not all threads closed, phase 1,
+  else, phase 2 start is broadcast over command pipes. if decs, open ports
+  if phase 1, start servicing, phase is 0 again. Make robust against delays.
+  readme: max about 1 second worth of incoming queries, 10k perhaps,
+	or 1/number of seconds it takes start up of 10k.
 
 *** Local zones feature.
 * Build in local zone features. First the total stop for1912.

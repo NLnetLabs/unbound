@@ -748,7 +748,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 			lock_rw_unlock(&e->lock);
 			return 1;
 		}
-		verbose(VERB_DETAIL, "answer from the cache -- data has timed out");
+		verbose(VERB_ALGO, "answer from the cache failed");
 		lock_rw_unlock(&e->lock);
 	}
 	if(!LDNS_RD_WIRE(ldns_buffer_begin(c->buffer))) {
@@ -758,7 +758,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 			&edns)) {
 			return 1;
 		}
-		verbose(VERB_DETAIL, "answer norec from cache -- "
+		verbose(VERB_ALGO, "answer norec from cache -- "
 			"need to validate or not primed");
 	}
 	ldns_buffer_rewind(c->buffer);

@@ -89,6 +89,10 @@ struct rrset_ref {
  *	o struct
  *	o rrset_ref array
  *	o packed_rrset_key* array.
+ *
+ * Memory layout is sometimes not packed, when the message is synthesized,
+ * for easy of the generation. It is allocated packed when it is copied
+ * from the region allocation to the malloc allocation.
  */
 struct reply_info {
 	/** the flags for the answer, host byte order. */
