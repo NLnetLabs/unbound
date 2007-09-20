@@ -2,6 +2,9 @@
 	- fixup and test for NSEC wildcard with empty nonterminals. 
 	- makedist.sh fixup for svn info.
 	- acl features request in plan.
+	- improved DS empty nonterminal handling.
+	- compat with ANS nxdomain for empty nonterminals. Attempts the nodata
+	  proof anyway, which succeeds in ANS failure case.
 
 19 September 2007: Wouter
 	- comments about non-packed usage.

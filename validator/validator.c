@@ -1677,10 +1677,16 @@ ds_response_to_ke(struct module_qstate* qstate, struct val_qstate* vq,
 		*ke = key_entry_create_rrset(qstate->region,
 			qinfo->qname, qinfo->qname_len, qinfo->qclass, ds);
 		return (*ke) != NULL;
-	} else if(subtype == VAL_CLASS_NODATA) {
+	} else if(subtype == VAL_CLASS_NODATA || 
+		subtype == VAL_CLASS_NAMEERROR) {
 		/* NODATA means that the qname exists, but that there was 
 		 * no DS.  This is a pretty normal case. */
 		uint32_t proof_ttl = 0;
+
+		/* For subtype Name Error.
+		 * attempt ANS 2.8.1.0 compatibility where it sets rcode
+		 * to nxdomain, but really this is an Nodata/Noerror response.
+		 * Find and prove the empty nonterminal in that case */
 
 		/* Try to prove absence of the DS with NSEC */
 		enum sec_status sec = val_nsec_prove_nodata_dsreply(
@@ -1738,10 +1744,8 @@ ds_response_to_ke(struct module_qstate* qstate, struct val_qstate* vq,
 
 		/* Apparently, no available NSEC/NSEC3 proved NODATA, so 
 		 * this is BOGUS. */
-		verbose(VERB_DETAIL, "DS ran out of options, so return bogus");
-		goto return_bogus;
-	} else if(subtype == VAL_CLASS_NAMEERROR) {
-		verbose(VERB_DETAIL, "DS response was NAMEERROR, thus bogus.");
+		verbose(VERB_DETAIL, "DS %s ran out of options, so return "
+			"bogus", val_classification_to_string(subtype));
 		goto return_bogus;
 	} else {
 		verbose(VERB_DETAIL, "Encountered an unhandled type of "

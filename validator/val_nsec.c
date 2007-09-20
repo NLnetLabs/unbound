@@ -156,8 +156,6 @@ val_nsec_proves_no_ds(struct ub_packed_rrset_key* nsec,
 {
 	log_assert(qinfo->qtype == LDNS_RR_TYPE_DS);
 	log_assert(ntohs(nsec->rk.type) == LDNS_RR_TYPE_NSEC);
-	/* this proof may also work if qname is a subdomain */
-	log_assert(query_dname_compare(nsec->rk.dname, qinfo->qname) == 0);
 
 	if(nsec_has_type(nsec, LDNS_RR_TYPE_SOA) && qinfo->qname_len != 1) {
 		/* SOA present means that this is the NSEC from the child, 
@@ -191,6 +189,7 @@ val_nsec_prove_nodata_dsreply(struct module_env* env, struct val_env* ve,
 	size_t i;
 	uint8_t* wc = NULL, *ce = NULL;
 	int valid_nsec = 0;
+	struct ub_packed_rrset_key* wc_nsec = NULL;
 
 	/* If we have a NSEC at the same name, it must prove one 
 	 * of two things
@@ -237,6 +236,8 @@ val_nsec_prove_nodata_dsreply(struct module_env* env, struct val_env* ve,
 			verbose(VERB_ALGO, "NSEC for empty non-terminal "
 				"proved no DS.");
 			*proof_ttl = rrset_get_ttl(rep->rrsets[i]);
+			if(wc && dname_is_wild(rep->rrsets[i]->rk.dname)) 
+				wc_nsec = rep->rrsets[i];
 			valid_nsec = 1;
 		}
 		if(val_nsec_proves_name_error(rep->rrsets[i], qinfo->qname)) {
@@ -250,9 +251,16 @@ val_nsec_prove_nodata_dsreply(struct module_env* env, struct val_env* ve,
 		/* ce and wc must match */
 		if(query_dname_compare(wc, ce) != 0) 
 			valid_nsec = 0;
+		else if(!wc_nsec)
+			valid_nsec = 0;
 	}
 	if(valid_nsec) {
-		return sec_status_secure;
+		if(wc) {
+			/* check if this is a delegation */
+			return val_nsec_proves_no_ds(wc_nsec, qinfo);
+		}
+		/* valid nsec proves empty nonterminal */
+		return sec_status_insecure;
 	}
 
 	/* NSEC proof did not conlusively point to DS or no DS */
