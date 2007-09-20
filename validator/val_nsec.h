@@ -93,10 +93,14 @@ int nsecbitmap_has_type_rdata(uint8_t* bitmap, size_t len, uint16_t type);
  *
  * @param nsec: the nsec record to check against.
  * @param qinfo: the query info.
+ * @param wc: if the nodata is proven for a wildcard match, the wildcard
+ * 	closest encloser is returned, else NULL (wc is unchanged).
+ * 	This closest encloser must then match the nameerror given for the
+ * 	nextcloser of qname.
  * @return true if NSEC proves this.
  */
 int nsec_proves_nodata(struct ub_packed_rrset_key* nsec, 
-	struct query_info* qinfo);
+	struct query_info* qinfo, uint8_t** wc);
 
 /**
  * Determine if the given NSEC proves a NameError (NXDOMAIN) for a given

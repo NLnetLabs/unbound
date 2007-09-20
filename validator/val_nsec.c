@@ -46,6 +46,14 @@
 #include "util/data/msgreply.h"
 #include "util/data/dname.h"
 
+/** get ttl of rrset */
+static uint32_t 
+rrset_get_ttl(struct ub_packed_rrset_key* k)
+{
+	struct packed_rrset_data* d = (struct packed_rrset_data*)k->entry.data;
+	return d->ttl;
+}
+
 int
 nsecbitmap_has_type_rdata(uint8_t* bitmap, size_t len, uint16_t type)
 {
@@ -181,6 +189,8 @@ val_nsec_prove_nodata_dsreply(struct module_env* env, struct val_env* ve,
 		qinfo->qclass);
 	enum sec_status sec;
 	size_t i;
+	uint8_t* wc = NULL, *ce = NULL;
+	int valid_nsec = 0;
 
 	/* If we have a NSEC at the same name, it must prove one 
 	 * of two things
@@ -223,11 +233,26 @@ val_nsec_prove_nodata_dsreply(struct module_env* env, struct val_env* ve,
 				"did not verify.");
 			return sec_status_bogus;
 		}
-		if(nsec_proves_nodata(rep->rrsets[i], qinfo)) {
+		if(nsec_proves_nodata(rep->rrsets[i], qinfo, &wc)) {
 			verbose(VERB_ALGO, "NSEC for empty non-terminal "
 				"proved no DS.");
-			return sec_status_secure;
+			*proof_ttl = rrset_get_ttl(rep->rrsets[i]);
+			valid_nsec = 1;
 		}
+		if(val_nsec_proves_name_error(rep->rrsets[i], qinfo->qname)) {
+			ce = nsec_closest_encloser(qinfo->qname, 
+				rep->rrsets[i]);
+		}
+	}
+	if(wc && !ce)
+		valid_nsec = 0;
+	else if(wc && ce) {
+		/* ce and wc must match */
+		if(query_dname_compare(wc, ce) != 0) 
+			valid_nsec = 0;
+	}
+	if(valid_nsec) {
+		return sec_status_secure;
 	}
 
 	/* NSEC proof did not conlusively point to DS or no DS */
@@ -235,11 +260,28 @@ val_nsec_prove_nodata_dsreply(struct module_env* env, struct val_env* ve,
 }
 
 int nsec_proves_nodata(struct ub_packed_rrset_key* nsec, 
-	struct query_info* qinfo)
+	struct query_info* qinfo, uint8_t** wc)
 {
+	log_assert(wc);
 	if(query_dname_compare(nsec->rk.dname, qinfo->qname) != 0) {
 		uint8_t* nm;
 		size_t ln;
+
+		/* empty-non-terminal checking. 
+		 * Done before wildcard, because this is an exact match,
+		 * and would prevent a wildcard from matching. */
+
+		/* If the nsec is proving that qname is an ENT, the nsec owner 
+		 * will be less than qname, and the next name will be a child 
+		 * domain of the qname. */
+		if(!nsec_get_next(nsec, &nm, &ln))
+			return 0; /* bad nsec */
+		if(dname_strict_subdomain_c(nm, qinfo->qname) &&
+			dname_canonical_compare(nsec->rk.dname, 
+				qinfo->qname) < 0) {
+			return 1; /* proves ENT */
+		}
+
 		/* wildcard checking. */
 
 		/* If this is a wildcard NSEC, make sure that a) it was 
@@ -254,7 +296,8 @@ int nsec_proves_nodata(struct ub_packed_rrset_key* nsec,
 			dname_remove_label(&ce, &ce_len);
 
 			/* The qname must be a strict subdomain of the 
-			 * closest encloser, for the wildcard to apply */
+			 * closest encloser, for the wildcard to apply 
+			 */
 			if(dname_strict_subdomain_c(qinfo->qname, ce)) {
 				/* here we have a matching NSEC for the qname,
 				 * perform matching NSEC checks */
@@ -270,24 +313,13 @@ int nsec_proves_nodata(struct ub_packed_rrset_key* nsec,
 				if(nsec_has_type(nsec, qinfo->qtype)) {
 					return 0;
 				}
+				*wc = ce;
 				return 1;
 			}
 		}
 
-		/* empty-non-terminal checking. */
-
-		/* If the nsec is proving that qname is an ENT, the nsec owner 
-		 * will be less than qname, and the next name will be a child 
-		 * domain of the qname. */
-		if(!nsec_get_next(nsec, &nm, &ln))
-			return 0; /* bad nsec */
-		if(dname_strict_subdomain_c(nm, qinfo->qname) &&
-			dname_canonical_compare(nsec->rk.dname, 
-				qinfo->qname) < 0) {
-			return 1; /* proves ENT */
-		}
-		/* Otherwise, this NSEC does not prove ENT, so it does not 
-		 * prove NODATA. */
+		/* Otherwise, this NSEC does not prove ENT and is not a 
+		 * wildcard, so it does not prove NODATA. */
 		return 0;
 	}
 

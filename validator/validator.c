@@ -571,14 +571,9 @@ validate_nodata_response(struct module_env* env, struct val_env* ve,
 		 * NODATA.
 		 * This needs to handle the ENT NODATA case. */
 		if(ntohs(s->rk.type) == LDNS_RR_TYPE_NSEC) {
-			if(nsec_proves_nodata(s, qchase)) {
+			if(nsec_proves_nodata(s, qchase, &wc)) {
 				has_valid_nsec = 1;
-				/* set wc only if wildcard applicable, which
-				 * is a *.name, and qname sub of .name */
-				if(dname_is_wild(s->rk.dname) &&
-					dname_strict_subdomain_c(
-					qchase->qname, s->rk.dname+2))
-					wc = s->rk.dname;
+				/* sets wc-encloser if wildcard applicable */
 			} 
 			if(val_nsec_proves_name_error(s, qchase->qname)) {
 				ce = nsec_closest_encloser(qchase->qname, s);
@@ -596,9 +591,7 @@ validate_nodata_response(struct module_env* env, struct val_env* ve,
 	if(wc && !ce)
 		has_valid_nsec = 0;
 	else if(wc && ce) {
-		log_assert(dname_is_wild(wc));
-		/* first label wc is \001*, so remove and compare to ce */
-		if(query_dname_compare(wc+2, ce) != 0) {
+		if(query_dname_compare(wc, ce) != 0) {
 			has_valid_nsec = 0;
 		}
 	}
@@ -912,14 +905,9 @@ validate_cname_noanswer_response(struct module_env* env, struct val_env* ve,
 		 * NODATA. This needs to handle the ENT NODATA case. 
 		 * Also try to prove NAMEERROR, and absence of a wildcard */
 		if(ntohs(s->rk.type) == LDNS_RR_TYPE_NSEC) {
-			if(nsec_proves_nodata(s, qchase)) {
+			if(nsec_proves_nodata(s, qchase, &wc)) {
 				nodata_valid_nsec = 1;
-				/* set wc only if wildcard applicable, which
-				 * is a *.name, and qname sub of .name */
-				if(dname_is_wild(s->rk.dname) &&
-					dname_strict_subdomain_c(
-					qchase->qname, s->rk.dname+2))
-					wc = s->rk.dname;
+				/* set wc encloser if wildcard applicable */
 			} 
 			if(val_nsec_proves_name_error(s, qchase->qname)) {
 				ce = nsec_closest_encloser(qchase->qname, s);
@@ -941,9 +929,7 @@ validate_cname_noanswer_response(struct module_env* env, struct val_env* ve,
 	if(wc && !ce)
 		nodata_valid_nsec = 0;
 	else if(wc && ce) {
-		log_assert(dname_is_wild(wc));
-		/* first label wc is \001*, so remove and compare to ce */
-		if(query_dname_compare(wc+2, ce) != 0) {
+		if(query_dname_compare(wc, ce) != 0) {
 			nodata_valid_nsec = 0;
 		}
 	}

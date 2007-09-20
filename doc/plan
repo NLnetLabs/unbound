@@ -179,6 +179,11 @@ Styleguide:
   if phase 1, start servicing, phase is 0 again. Make robust against delays.
   readme: max about 1 second worth of incoming queries, 10k perhaps,
 	or 1/number of seconds it takes start up of 10k.
+* features from Jakob's graph.
+	* acl for allowed recursion (RD=1), then drop or refused query.
+	* static answers for queries, option
+	* blacklist (return fixed nxdomain), option
+	* after checking acl, static, blacklist, do iter forwards, recurse.
 
 *** Local zones feature.
 * Build in local zone features. First the total stop for1912.

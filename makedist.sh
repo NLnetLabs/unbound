@@ -134,7 +134,7 @@ done
 # Check if SVNROOT is specified.
 if [ -z "$SVNROOT" ]; then
     if test -f .svn/entries; then
-	  eval `grep 'url=' .svn/entries | head -1`
+	  eval `svn info | grep 'URL:' | sed -e 's/URL: /url=/' | head -1`
 	  SVNROOT="$url"
     fi
     if test -z "$SVNROOT"; then

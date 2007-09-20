@@ -1,3 +1,8 @@
+20 September 2007: Wouter
+	- fixup and test for NSEC wildcard with empty nonterminals. 
+	- makedist.sh fixup for svn info.
+	- acl features request in plan.
+
 19 September 2007: Wouter
 	- comments about non-packed usage.
 	- plan for overload support in 0.6.
