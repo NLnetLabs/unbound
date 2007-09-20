@@ -1168,12 +1168,15 @@ processFindKey(struct module_qstate* qstate, struct val_qstate* vq, int id)
 		LDNS_RR_TYPE_DNSKEY, LDNS_RR_CLASS_IN);
 	/* assert we are walking down the DNS tree */
 	log_assert(dname_subdomain_c(target_key_name, current_key_name));
-	/* so this value is >= 0 */
+	/* so this value is >= -1 */
 	strip_lab = dname_count_labels(target_key_name) - 
 		dname_count_labels(current_key_name) - 1;
-	log_assert(strip_lab >= 0);
+	log_assert(strip_lab >= -1);
 	verbose(VERB_ALGO, "striplab %d", strip_lab);
-	dname_remove_labels(&target_key_name, &target_key_len, strip_lab);
+	if(strip_lab > 0) {
+		dname_remove_labels(&target_key_name, &target_key_len, 
+			strip_lab);
+	}
 	log_nametypeclass(VERB_ALGO, "next keyname", target_key_name,
 		LDNS_RR_TYPE_DNSKEY, LDNS_RR_CLASS_IN);
 
