@@ -5,6 +5,8 @@
 	- improved DS empty nonterminal handling.
 	- compat with ANS nxdomain for empty nonterminals. Attempts the nodata
 	  proof anyway, which succeeds in ANS failure case.
+	- striplab protection in case it becomes -1.
+	- plans for static and blacklist config.
 
 19 September 2007: Wouter
 	- comments about non-packed usage.

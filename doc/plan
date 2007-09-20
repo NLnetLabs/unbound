@@ -167,7 +167,6 @@ Styleguide:
   from-clients, from-internal, has-subrequests, a nice error report,
   so that an excerpt from those times can be made from the logs.
   logfileparsing tool that makes these excerpts and emails them.
-* ANS failure workaround (nxdomain for ENT; check if nxdomain is ENTnodata).
 * clear cache as a callback from the new-rrset-id routine.
 * make overload mode work; phase 0 all ok, phase 1 some threads close ports,
   to let other threads pick up work. phase 2, all threads closed, so all open
@@ -179,18 +178,21 @@ Styleguide:
   if phase 1, start servicing, phase is 0 again. Make robust against delays.
   readme: max about 1 second worth of incoming queries, 10k perhaps,
 	or 1/number of seconds it takes start up of 10k.
-* features from Jakob's graph.
-	* acl for allowed recursion (RD=1), then drop or refused query.
-	* static answers for queries, option
-	* blacklist (return fixed nxdomain), option
-	* after checking acl, static, blacklist, do iter forwards, recurse.
 
 *** Local zones feature.
 * Build in local zone features. First the total stop for1912.
 * Then 'local content' for minimal serving of localhost.localdomain,
   and so on. 
-* Remember jakob's diagram.
-	* views support, selective recursive service
+* Remember jakob's diagram. views support, selective recursive service:
+	* acl for allowed recursion (RD=1), then drop or refused query.
+	  like 10.0.0.0/8 allow, 0.0.0.0/0 refuse, ... in-order.
+	  perhaps also, same list to disallow RD=0 access, like;
+	  allow_recursion, drop_recursion, refuse_recursion, drop_all
+	* static answers for queries, fixed RRs from cfg, option
+	  query for that RR returns answer with that RR.
+	* blacklist (return fixed nxdomain for domain and below), option
+	  can be used to block AS112 traffic, option to unblock a zone.
+	* after checking acl, do iter: static, blacklist, forwards, recurse.
 * Forward-local-zone to NSD.
 	- include in package, autoforkexec on localhost to do so.
 * forward local zone to remote server.
