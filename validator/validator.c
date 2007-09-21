@@ -1183,6 +1183,9 @@ processFindKey(struct module_qstate* qstate, struct val_qstate* vq, int id)
 	/* The next step is either to query for the next DS, or to query 
 	 * for the next DNSKEY. */
 
+	if(vq->ds_rrset)
+		log_info("No DS RRset");
+	else log_nametypeclass(VERB_ALGO, "DS RRset", vq->ds_rrset->rk.dname, LDNS_RR_TYPE_DS, LDNS_RR_CLASS_IN);
 	if(!vq->ds_rrset || query_dname_compare(vq->ds_rrset->rk.dname,
 		target_key_name) != 0) {
 		if(!generate_request(qstate, id, target_key_name, 
