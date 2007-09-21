@@ -396,7 +396,7 @@ AC_CHECK_HEADERS([openssl/err.h],,, [AC_INCLUDES_DEFAULT])
 
 # check for thread library.
 AC_ARG_WITH(pthreads, AC_HELP_STRING([--with-pthreads], 
- [use pthreads library, or --without--pthreads to disable threading support.]), 
+ [use pthreads library, or --without-pthreads to disable threading support.]), 
  [ ],[ withval="yes" ])
 ub_have_pthreads=no
 if test x_$withval != x_no; then
