@@ -1789,7 +1789,14 @@ process_ds_response(struct module_qstate* qstate, struct val_qstate* vq,
 			return;
 	}
 	if(dske == NULL) {
-		vq->empty_DS_name = qinfo->qname;
+		vq->empty_DS_name = region_alloc_init(qstate->region,
+			qinfo->qname, qinfo->qname_len);
+		if(!vq->empty_DS_name) {
+			log_err("malloc failure in empty_DS_name");
+			vq->key_entry = NULL; /* make it error */
+			vq->state = VAL_VALIDATE_STATE;
+			return;
+		}
 		vq->empty_DS_len = qinfo->qname_len;
 		/* ds response indicated that we aren't on a delegation point.
 		 * Keep the forState.state on FINDKEY. */

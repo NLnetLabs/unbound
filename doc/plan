@@ -178,6 +178,8 @@ Styleguide:
   if phase 1, start servicing, phase is 0 again. Make robust against delays.
   readme: max about 1 second worth of incoming queries, 10k perhaps,
 	or 1/number of seconds it takes start up of 10k.
+* should the source include a copy of the ldns lib for ease of building by 
+  new users.
 
 *** Local zones feature.
 * Build in local zone features. First the total stop for1912.

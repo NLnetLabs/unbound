@@ -52,3 +52,4 @@ o grab ports nonconsequtive and change the set after a while (change within
 o workaround for nxdomain responses for ENT DS queries. Not look at rcode and
   look at valid empty nonterminal proof that is inside the packet.
 o make timeout backoffs randomized (a couple percent random) to spread traffic.
+o inspect date on executable, then warn user in log if its more than 1 year.
