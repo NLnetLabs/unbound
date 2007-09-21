@@ -1158,6 +1158,14 @@ processFindKey(struct module_qstate* qstate, struct val_qstate* vq, int id)
 	}
 
 	if(vq->empty_DS_name) {
+		if(query_dname_compare(target_key_name, 
+			vq->empty_DS_name) == 0) {
+			/* do not query for empty_DS_name again */
+			verbose(VERB_ALGO, "Cannot retrieve DS for signature");
+			vq->chase_reply->security = sec_status_bogus;
+			vq->state = VAL_FINISHED_STATE;
+			return 1;
+		}
 		current_key_name = vq->empty_DS_name;
 		current_key_len = vq->empty_DS_len;
 	}
@@ -1184,8 +1192,8 @@ processFindKey(struct module_qstate* qstate, struct val_qstate* vq, int id)
 	 * for the next DNSKEY. */
 
 	if(vq->ds_rrset)
-		log_info("No DS RRset");
-	else log_nametypeclass(VERB_ALGO, "DS RRset", vq->ds_rrset->rk.dname, LDNS_RR_TYPE_DS, LDNS_RR_CLASS_IN);
+		log_nametypeclass(VERB_ALGO, "DS RRset", vq->ds_rrset->rk.dname, LDNS_RR_TYPE_DS, LDNS_RR_CLASS_IN);
+	else log_info("No DS RRset");
 	if(!vq->ds_rrset || query_dname_compare(vq->ds_rrset->rk.dname,
 		target_key_name) != 0) {
 		if(!generate_request(qstate, id, target_key_name, 
@@ -1626,9 +1634,9 @@ primeResponseToKE(int rcode, struct dns_msg* msg, struct trust_anchor* ta,
  * @param msg: result message (if rcode is OK).
  * @param qinfo: from the sub query state, query info.
  * @param ke: the key entry to return. It returns
- *	bad if the DS response fails to validate, null if the
- *	DS response indicated an end to secure space, good if the DS
- *	validated. It returns null if the DS response indicated that the
+ *	is_bad if the DS response fails to validate, is_null if the
+ *	DS response indicated an end to secure space, is_good if the DS
+ *	validated. It returns ke=NULL if the DS response indicated that the
  *	request wasn't a delegation point.
  * @return 0 on servfail error (malloc failure).
  */
@@ -1785,6 +1793,7 @@ process_ds_response(struct module_qstate* qstate, struct val_qstate* vq,
 	int id, int rcode, struct dns_msg* msg, struct query_info* qinfo)
 {
 	struct key_entry_key* dske = NULL;
+	vq->empty_DS_name = NULL;
 	if(!ds_response_to_ke(qstate, vq, id, rcode, msg, qinfo, &dske)) {
 			log_err("malloc failure in process_ds_response");
 			vq->key_entry = NULL; /* make it error */

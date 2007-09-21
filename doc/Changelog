@@ -3,6 +3,11 @@
 	- fixup testcode lock safety (port FreeBSD).
 	- removes subscript has type char warnings (port Solaris 9).
 	- fixup of field with format type to int (port MacOS/X intel).
+	- added test for infinite loop case in nonRD answer validation.
+	  It was a more general problem, but hard to reproduce. When an
+	  unsigned rrset is being validated and the key fetched, the DS
+	  sequence is followed, but if the final name has no DS, then no
+	  proof is possible - the signature has been stripped off.
 
 20 September 2007: Wouter
 	- fixup and test for NSEC wildcard with empty nonterminals. 
