@@ -92,7 +92,7 @@ strip_end_white(char* p)
 {
 	size_t i;
 	for(i = strlen(p); i > 0; i--) {
-		if(isspace(p[i-1]))
+		if(isspace((int)p[i-1]))
 			p[i-1] = 0;
 		else return;
 	}
@@ -133,12 +133,12 @@ replay_range_read(char* remain, FILE* in, const char* name, int* lineno,
 	while(fgets(line, MAX_LINE_LEN-1, in)) {
 		(*lineno)++;
 		parse = line;
-		while(isspace(*parse))
+		while(isspace((int)*parse))
 			parse++;
 		if(!*parse || *parse == ';')
 			continue;
 		if(parse_keyword(&parse, "ADDRESS")) {
-			while(isspace(*parse))
+			while(isspace((int)*parse))
 				parse++;
 			strip_end_white(parse);
 			if(!extstrtoaddr(parse, &rng->addr, &rng->addrlen)) {
@@ -199,7 +199,7 @@ replay_moment_read(char* remain, FILE* in, const char* name, int* lineno,
 		return NULL;
 	}
 	remain += skip;
-	while(isspace(*remain))
+	while(isspace((int)*remain))
 		remain++;
 	if(parse_keyword(&remain, "NOTHING")) {
 		mom->evt_type = repevt_nothing;
@@ -224,7 +224,7 @@ replay_moment_read(char* remain, FILE* in, const char* name, int* lineno,
 		free(mom);
 		return NULL;
 	}
-	while(isspace(*remain))
+	while(isspace((int)*remain))
 		remain++;
 	if(parse_keyword(&remain, "ADDRESS")) {
 		if(!extstrtoaddr(remain, &mom->addr, &mom->addrlen)) {
@@ -251,7 +251,7 @@ static struct replay_scenario*
 make_scenario(char* line)
 {
 	struct replay_scenario* scen;
-	while(isspace(*line))
+	while(isspace((int)*line))
 		line++;
 	if(!*line) {
 		log_err("scenario: no title given");
@@ -283,7 +283,7 @@ replay_scenario_read(FILE* in, const char* name, int* lineno)
 	while(fgets(line, MAX_LINE_LEN-1, in)) {
 		parse=line;
 		(*lineno)++;
-		while(isspace(*parse))
+		while(isspace((int)*parse))
 			parse++;
 		if(!*parse) 
 			continue; /* empty line */

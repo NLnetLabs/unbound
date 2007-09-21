@@ -302,7 +302,7 @@ cfg_count_numbers(const char* s)
         /* sp ::= (space|tab)*          */
         int num = 0;
         while(*s) {
-                while(*s && isspace(*s))
+                while(*s && isspace((int)*s))
                         s++;
                 if(!*s) /* end of string */
                         break;
@@ -310,9 +310,9 @@ cfg_count_numbers(const char* s)
                         s++;
                 if(!*s) /* only - not allowed */
                         return 0;
-                if(!isdigit(*s)) /* bad character */
+                if(!isdigit((int)*s)) /* bad character */
                         return 0;
-                while(*s && isdigit(*s))
+                while(*s && isdigit((int)*s))
                         s++;
                 num++;
         }

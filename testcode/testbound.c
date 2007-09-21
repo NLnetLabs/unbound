@@ -84,7 +84,7 @@ add_opts(char* optarg, int* pass_argc, char* pass_argv[])
 {
 	char *p = optarg, *np;
 	size_t len;
-	while(p && isspace(*p)) 
+	while(p && isspace((int)*p)) 
 		p++;
 	while(p && *p) {
 		/* find location of next string and length of this one */
@@ -102,7 +102,7 @@ add_opts(char* optarg, int* pass_argc, char* pass_argv[])
 		(*pass_argc)++;
 		/* go to next option */
 	        p = np;
-		while(p && isspace(*p)) 
+		while(p && isspace((int)*p)) 
 			p++;
 	}
 }
@@ -138,7 +138,7 @@ setup_config(FILE* in, char* configfile, int* lineno,
 	while(fgets(line, MAX_LINE_LEN-1, in)) {
 		parse = line;
 		(*lineno)++;
-		while(isspace(*parse))
+		while(isspace((int)*parse))
 			parse++;
 		if(!*parse || parse[0] == ';')
 			continue;

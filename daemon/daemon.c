@@ -156,12 +156,12 @@ count_modules(const char* s)
 		return 0;
 	while(*s) {
 		/* skip whitespace */
-		while(*s && isspace(*s))
+		while(*s && isspace((int)*s))
 			s++;
-		if(*s && !isspace(*s)) {
+		if(*s && !isspace((int)*s)) {
 			/* skip identifier */
 			num++;
-			while(*s && !isspace(*s))
+			while(*s && !isspace((int)*s))
 				s++;
 		}
 	}
@@ -184,7 +184,7 @@ daemon_module_factory(const char** str)
 
 	int i;
 	const char* s = *str;
-	while(*s && isspace(*s))
+	while(*s && isspace((int)*s))
 		s++;
 	for(i=0; i<num; i++) {
 		if(strncmp(names[i], s, strlen(names[i])) == 0) {

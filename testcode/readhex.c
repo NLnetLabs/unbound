@@ -46,7 +46,7 @@ static void
 skip_whites(const char** p)
 {
 	while(1) {
-		while(isspace(**p))
+		while(isspace((int)**p))
 			(*p)++;
 		if(**p == ';') {
 			/* comment, skip until newline */
@@ -68,11 +68,11 @@ void hex_to_buf(ldns_buffer* pkt, const char* hex)
 		skip_whites(&p);
 		if(ldns_buffer_position(pkt) == ldns_buffer_limit(pkt))
 			fatal_exit("hex_to_buf: buffer too small");
-		if(!isalnum(*p))
+		if(!isalnum((int)*p))
 			break;
 		val = ldns_hexdigit_to_int(*p++) << 4;
 		skip_whites(&p);
-		log_assert(*p && isalnum(*p));
+		log_assert(*p && isalnum((int)*p));
 		val |= ldns_hexdigit_to_int(*p++);
 		ldns_buffer_write_u8(pkt, (uint8_t)val);
 		skip_whites(&p);

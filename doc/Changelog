@@ -1,6 +1,7 @@
 21 September 2007: Wouter
 	- fixup empty_DS_name allocated in wrong region.
 	- fixup testcode lock safety. 
+	- removes subscript has type char warnings.
 
 20 September 2007: Wouter
 	- fixup and test for NSEC wildcard with empty nonterminals. 
