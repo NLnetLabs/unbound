@@ -782,9 +782,11 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 		ldns_buffer_read_u16_at(c->buffer, 2),
 		&edns, repinfo, *(uint16_t*)ldns_buffer_begin(c->buffer));
 
+	if(0) { /* TODO overload mode does not work yet. */
 	if(worker->env.mesh->all.count == worker->request_size)  {
 		/* the max request number has been reached, stop accepting */
 		listen_pushback(worker->front);
+	}
 	}
 	worker_mem_report(worker, NULL);
 	return 0;
