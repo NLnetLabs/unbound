@@ -93,7 +93,13 @@ entry_to_repinfo(struct entry* e, struct alloc_cache* alloc, struct region*
 	int ret;
 	struct edns_data edns;
 	entry_to_buf(e, pkt);
+	/* lock alloc lock to please lock checking software. 
+	 * alloc_special_obtain assumes it is talking to a ub-alloc,
+	 * and does not need to perform locking. Here the alloc is
+	 * the only one, so we lock it here */
+	lock_quick_lock(&alloc->lock);
 	ret = reply_info_parse(pkt, alloc, qi, rep, region, &edns);
+	lock_quick_unlock(&alloc->lock);
 	if(ret != 0) {
 		printf("parse code %d: %s\n", ret,
 			ldns_lookup_by_id(ldns_rcodes, ret)->name);
