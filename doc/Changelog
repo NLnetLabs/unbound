@@ -1,6 +1,11 @@
 24 September 2007: Wouter
 	- do not make test programs by default.
 	- But 'make test' will perform all of the tests.
+	- Advertise builtin select libevent alternative when no libevent
+	  is found.
+	- signit can generate NSEC3 hashes, for generating tests.
+	- multiple nsec3 paramaters in message test.
+	- too high nsec3 iterations becomes insecure test.
 
 21 September 2007: Wouter
 	- fixup empty_DS_name allocated in wrong region (port DEC Alpha).

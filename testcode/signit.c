@@ -67,6 +67,9 @@ usage()
 	printf("usage:	signit expi ince keytag owner keyfile\n");
 	printf("present rrset data on stdin.\n");
 	printf("signed data is printed to stdout.\n");
+	printf("\n");
+	printf("Or use:	signit NSEC3PARAM hash flags iter salt\n");
+	printf("present names on stdin, hashed names are printed to stdout.\n");
 	exit(1);
 }
 
@@ -174,15 +177,15 @@ signit(ldns_rr_list* rrs, ldns_key_list* keys)
 	}
 }
 
-/** main program */
-int main(int argc, char* argv[])
+/** process keys and signit */
+static void
+process_keys(int argc, char* argv[])
 {
 	ldns_rr_list* rrs;
 	ldns_key_list* keys;
 	struct keysets settings;
-	if(argc < 6) {
-		usage();
-	}
+	log_assert(argc == 6);
+
 	parse_cmdline(argv, &settings);
 	keys = read_keys(1, argv+5, &settings);
 	rrs = read_rrs(stdin);
@@ -190,5 +193,57 @@ int main(int argc, char* argv[])
 
 	ldns_rr_list_deep_free(rrs);
 	ldns_key_list_free(keys);
+}
+
+/** process nsec3 params and perform hashing */
+static void
+process_nsec3(int argc, char* argv[])
+{
+	char line[10240];
+	ldns_rdf* salt;
+	ldns_rdf* in, *out;
+	ldns_status status;
+	status = ldns_str2rdf_nsec3_salt(&salt, argv[5]);
+	if(status != LDNS_STATUS_OK)
+		fatal_exit("Could not parse salt %s: %s", argv[5],
+			ldns_get_errorstr_by_id(status));
+	log_assert(argc == 6);
+	while(fgets(line, (int)sizeof(line), stdin)) {
+		if(strlen(line) > 0)
+			line[strlen(line)-1] = 0; /* remove trailing newline */
+		if(line[0]==0)
+			continue;
+		status = ldns_str2rdf_dname(&in, line);
+		if(status != LDNS_STATUS_OK)
+			fatal_exit("Could not parse name %s: %s", line,
+				ldns_get_errorstr_by_id(status));
+		ldns_rdf_print(stdout, in);
+		printf(" -> ");
+		/* arg 3 is flags, unused */
+		out = ldns_nsec3_hash_name(in, (uint8_t)atoi(argv[2]), 
+			(uint16_t)atoi(argv[4]),
+			ldns_rdf_data(salt)[0], ldns_rdf_data(salt)+1);
+		if(!out)
+			fatal_exit("Could not hash %s", line);
+		ldns_rdf_print(stdout, out);
+		printf("\n");
+		ldns_rdf_deep_free(in);
+		ldns_rdf_deep_free(out);
+	}
+	ldns_rdf_deep_free(salt);
+}
+
+/** main program */
+int main(int argc, char* argv[])
+{
+	log_init(NULL);
+	if(argc != 6) {
+		usage();
+	}
+	if(strcmp(argv[1], "NSEC3PARAM") == 0) {
+		process_nsec3(argc, argv);
+		return 0;
+	}
+	process_keys(argc, argv);
 	return 0;
 }
