@@ -90,9 +90,14 @@ $(BUILD)%.o:    $(srcdir)/%.c
 	@if test ! -d $(dir $@); then $(INSTALL) -d $(patsubst %/,%,$(dir $@)); fi
 	$Q$(COMPILE) -c $< -o $@
 
-.PHONY:	clean realclean doc lint all install uninstall
+.PHONY:	clean realclean doc lint all install uninstall tests test
 
-all:	$(COMMON_OBJ) unbound unittest testbound lock-verify pktview signit memstats
+all:	$(COMMON_OBJ) unbound 
+
+tests:	unittest testbound lock-verify pktview signit memstats
+
+test:	tests
+	bash testcode/do-tests.sh
 
 unbound:	$(DAEMON_OBJ)
 	$(INFO) Link $@

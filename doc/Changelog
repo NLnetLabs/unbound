@@ -1,3 +1,7 @@
+24 September 2007: Wouter
+	- do not make test programs by default.
+	- But 'make test' will perform all of the tests.
+
 21 September 2007: Wouter
 	- fixup empty_DS_name allocated in wrong region (port DEC Alpha).
 	- fixup testcode lock safety (port FreeBSD).

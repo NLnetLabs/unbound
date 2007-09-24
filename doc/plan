@@ -161,6 +161,7 @@ Styleguide:
 	  linked list cleanup list. unit test on this. do not call region
 	  to avoid name-collision with nsd regions, 'regional'.
 * read root hints from file.
+* failover to next server in 1 second, instead of 100 seconds on one server.
 * failure to return answer, w. reason (donotq, noanswer servers, cannot
   find servers, validationfail w.classification, error), 
   with threadno, starttime and endtime and qname/type/class, prime/qflags, 

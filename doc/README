@@ -37,6 +37,9 @@ This software is under BSD license, see LICENSE for details.
 	the amount of memory it thinks it should be using, and reports 
 	memory usage in detail.
 
+* 'make test' attempts to run a series of tests, depending on the support
+  programs that are installed.
+
 Known issues
 ------------
 o If libevent is older (before 1.3c), unbound will exit instead of reload
