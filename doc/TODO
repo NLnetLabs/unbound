@@ -23,7 +23,6 @@ o memory profile; and if needed put serviced queries under qstate->region
 o check query, option to enforce presence of qdsection in noerror answers.
 o configuration option where port 53 is used for send and receive, no other
   ports are used.
-o prime sequence in multiple queries, if glue missing from prime sequence.
 o (option) to not send replies to clients after a timeout of (say 5 secs) has
   passed, but keep task active for later retries by client.
 o private TTL feature
@@ -49,7 +48,5 @@ o timers rfc 5011 support.
 o Treat YXDOMAIN from a DNAME properly, in iterator (not throwaway), validator.
 o grab ports nonconsequtive and change the set after a while (change within
   a given range). Could be bad for OS if wrong port. unsure if it helps secure.
-o workaround for nxdomain responses for ENT DS queries. Not look at rcode and
-  look at valid empty nonterminal proof that is inside the packet.
 o make timeout backoffs randomized (a couple percent random) to spread traffic.
 o inspect date on executable, then warn user in log if its more than 1 year.

@@ -240,7 +240,6 @@ Styleguide:
 * check query, enforce qdsection, checking for forgery-resilience.
 * NSID support.
 * support TSIG on queries, for validating resolver deployment.
-* Be able to prime roots using several queries (like, get only NS first).
 * Nicer statistics
 * private TTL, dTLS features.
 * retry-mode, where a bogus result triggers a retry-mode query, where a list
@@ -302,10 +301,10 @@ treeshrew/
 		unbound.c for validating caching recursive dns server.
 		scheduler.c for the modules.
 
-	libunbound-all/
+	libunbound/
 		app linkable. Can be configged to do whatever,
 		validator, iterator, validating iterator, forwarding stub.
-	libunbound-fwd/
+	libforwardbound/
 		app linkable forwarding stub. Small lib.
 
 	ask_cachor/ *.c *.h
