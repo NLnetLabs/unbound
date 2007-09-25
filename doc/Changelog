@@ -1,5 +1,9 @@
 25 September 2007: Wouter
 	- tests for NSEC3. Fixup bitmap checks for NSEC3.
+	- positive ANY response needs to check if wildcard expansion, and
+	  check that original data did not exist.
+	- tests for NSEC3 that wrong use of OPTOUT is bad. For insecure
+	  delegation, for abuse of child zone apex nsec3.
 
 24 September 2007: Wouter
 	- do not make test programs by default.
