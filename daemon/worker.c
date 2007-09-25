@@ -765,7 +765,8 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 	server_stats_querymiss(&worker->stats, worker);
 
 	/* grab a work request structure for this new request */
-	if(worker->env.mesh->all.count > worker->request_size) {
+	/* @@@ TODO implement overload mode */
+	if(0 && worker->env.mesh->all.count > worker->request_size) {
 		/* we could get this due to a slow tcp incoming query, 
 		   that started before we performed listen_pushback */
 		verbose(VERB_DETAIL, "worker: too many incoming requests "
