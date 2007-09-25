@@ -181,6 +181,8 @@ Styleguide:
 	or 1/number of seconds it takes start up of 10k.
 * should the source include a copy of the ldns lib for ease of building by 
   new users.
+* no greedy TTL algo (and test). 
+* maximum TTL, cap incoming values, and config option.
 
 *** Local zones feature.
 * Build in local zone features. First the total stop for1912.

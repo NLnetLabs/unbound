@@ -43,12 +43,13 @@ fi
 shift
 
 # do not execute if the disk is too full
-DISKLIMIT=100000
-avail=`df . | tail -1 | awk '{print $4}'`
-if test "$avail" -lt "$DISKLIMIT"; then
-	echo "minitpkg: The disk is too full! Only $avail."
-	exit 1
-fi
+#DISKLIMIT=100000
+# This check is not portable (to Solaris 10).
+#avail=`df . | tail -1 | awk '{print $4}'`
+#if test "$avail" -lt "$DISKLIMIT"; then
+	#echo "minitpkg: The disk is too full! Only $avail."
+	#exit 1
+#fi
 
 name=`basename $1 .tpkg`
 dir=$name.$$

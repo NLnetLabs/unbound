@@ -77,12 +77,11 @@ EOF
 		# echossh $1 "gtar xzf unbound_ttt.tar.gz && rm unbound_ttt.tar.gz"
 	fi
 	echossh $1 "cd $2; $MAKE_CMD -f makeconf.mak.$$ Makefile"
-	echossh $1 "cd $2; $MAKE_CMD"
+	echossh $1 "cd $2; $MAKE_CMD all tests"
 	echossh $1 "cd $2; $MAKE_CMD doc"
 	if test $RUN_TEST = yes; then
-	echossh $1 "cd $2/testdata; tpkg clean"
 	echossh $1 "cd $2; bash testcode/do-tests.sh"
-	echossh $1 "cd $2/testdata; tpkg -q report" | tee -a $REPORT_FILE
+	echossh $1 "cd $2/testdata; sh ../testcode/mini_tpkg.sh -q report" | tee -a $REPORT_FILE
 	fi
 	echossh $1 "cd $2; rm -f makeconf.mak.$$"
 	rm -f makeconf.mak.$$
