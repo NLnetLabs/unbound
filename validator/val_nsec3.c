@@ -246,11 +246,11 @@ nsec3_has_type(struct ub_packed_rrset_key* rrset, int r, uint16_t type)
 	/* skip salt */
 	if(d->rr_len[r] < skiplen+1)
 		return 0; /* malformed, too short */
-	skiplen += 1+(size_t)d->rr_len[skiplen]; 
+	skiplen += 1+(size_t)d->rr_data[r][skiplen]; 
 	/* skip next hashed owner */
 	if(d->rr_len[r] < skiplen+1)
 		return 0; /* malformed, too short */
-	skiplen += 1+(size_t)d->rr_len[skiplen]; 
+	skiplen += 1+(size_t)d->rr_data[r][skiplen]; 
 	if(d->rr_len[r] < skiplen)
 		return 0; /* malformed, too short */
 	bitlen = d->rr_len[r] - skiplen;

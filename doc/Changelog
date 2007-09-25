@@ -1,3 +1,6 @@
+25 September 2007: Wouter
+	- tests for NSEC3. Fixup bitmap checks for NSEC3.
+
 24 September 2007: Wouter
 	- do not make test programs by default.
 	- But 'make test' will perform all of the tests.
