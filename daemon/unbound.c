@@ -284,7 +284,7 @@ do_chroot(struct daemon* daemon, struct config_file* cfg, int debug_mode)
 	}
 
 	/* init logfile just before fork */
-	log_init(cfg->logfile);
+	log_init(cfg->logfile, cfg->use_syslog);
 	if(!debug_mode && cfg->do_daemonize) {
 		detach(cfg);
 	}
@@ -329,7 +329,7 @@ run_daemon(const char* cfgfile, int cmdline_verbose, int debug_mode)
 		if(!done_chroot) { 
 			do_chroot(daemon, cfg, debug_mode); 
 			done_chroot = 1; 
-		}
+		} else log_init(cfg->logfile, cfg->use_syslog);
 		/* work */
 		daemon_fork(daemon);
 
@@ -366,7 +366,7 @@ main(int argc, char* argv[])
 	/* take debug snapshot of heap */
 	unbound_start_brk = sbrk(0);
 
-	log_init(NULL);
+	log_init(NULL, 0);
 	/* parse the options */
 	while( (c=getopt(argc, argv, "c:dhv")) != -1) {
 		switch(c) {
@@ -396,6 +396,6 @@ main(int argc, char* argv[])
 	}
 
 	run_daemon(cfgfile, cmdline_verbose, debug_mode);
-	log_init(NULL); /* close logfile */
+	log_init(NULL, 0); /* close logfile */
 	return 0;
 }

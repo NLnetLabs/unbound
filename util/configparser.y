@@ -84,7 +84,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_BOGUS_TTL VAR_VAL_CLEAN_ADDITIONAL VAR_VAL_PERMISSIVE_MODE
 %token VAR_INCOMING_NUM_TCP VAR_MSG_BUFFER_SIZE VAR_KEY_CACHE_SIZE
 %token VAR_KEY_CACHE_SLABS VAR_TRUSTED_KEYS_FILE 
-%token VAR_VAL_NSEC3_KEYSIZE_ITERATIONS
+%token VAR_VAL_NSEC3_KEYSIZE_ITERATIONS VAR_USE_SYSLOG
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -122,7 +122,8 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_val_clean_additional | server_val_permissive_mode |
 	server_incoming_num_tcp | server_msg_buffer_size | 
 	server_key_cache_size | server_key_cache_slabs | 
-	server_trusted_keys_file | server_val_nsec3_keysize_iterations
+	server_trusted_keys_file | server_val_nsec3_keysize_iterations |
+	server_use_syslog
 	;
 stubstart: VAR_STUB_ZONE
 	{
@@ -268,6 +269,20 @@ server_do_tcp: VAR_DO_TCP STRING
 		free($2);
 	}
 	;
+server_use_syslog: VAR_USE_SYSLOG STRING
+	{
+		OUTYY(("P(server_use_syslog:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->use_syslog = (strcmp($2, "yes")==0);
+#ifndef HAVE_SYSLOG_H
+		if(strcmp($2, "yes") == 0)
+			yyerror("no syslog services are available. "
+				"(reconfigure and compile to add)");
+#endif
+		free($2);
+	}
+	;
 server_chroot: VAR_CHROOT STRING
 	{
 		OUTYY(("P(server_chroot:%s)\n", $2));
@@ -294,6 +309,7 @@ server_logfile: VAR_LOGFILE STRING
 		OUTYY(("P(server_logfile:%s)\n", $2));
 		free(cfg_parser->cfg->logfile);
 		cfg_parser->cfg->logfile = $2;
+		cfg_parser->cfg->use_syslog = 0;
 	}
 	;
 server_pidfile: VAR_PIDFILE STRING

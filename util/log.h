@@ -77,8 +77,9 @@ void verbose(enum verbosity_value level,
 /**
  * call this to initialize logging services.
  * @param filename: if NULL stderr is used.
+ * @param use_syslog: set to true to ignore filename and use syslog(3).
  */
-void log_init(const char* filename);
+void log_init(const char* filename, int use_syslog);
 
 /**
  * Init a thread (will print this number for the thread log entries).
@@ -133,11 +134,12 @@ void fatal_exit(const char* format, ...) ATTR_FORMAT(printf, 1, 2);
 
 /**
  * va_list argument version of log_info.
+ * @param pri: priority type, for example 5 (INFO).
  * @param type: string to designate type of message (info, error).
  * @param format: the printf style format to print. no newline.
  * @param args: arguments for format string.
  */
-void log_vmsg(const char* type, const char* format, va_list args);
+void log_vmsg(int pri, const char* type, const char* format, va_list args);
 
 /** always assert for now. */
 #define UNBOUND_ASSERT 1

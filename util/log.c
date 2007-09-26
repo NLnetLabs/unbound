@@ -43,7 +43,19 @@
 #ifdef HAVE_TIME_H
 #include <time.h>
 #endif
+#ifdef HAVE_SYSLOG_H
+#  include <syslog.h>
+#else
+/**define LOG_ constants */
+#  define LOG_CRIT 2
+#  define LOG_ERR 3
+#  define LOG_WARNING 4
+#  define LOG_NOTICE 5
+#  define LOG_INFO 6
+#  define LOG_DEBUG 7
+#endif
 
+/* default verbosity */
 enum verbosity_value verbosity = 4;
 /** the file logged to. */
 static FILE* logfile = 0;
@@ -53,19 +65,36 @@ static int key_created = 0;
 static ub_thread_key_t logkey;
 /** the identity of this executable/process */
 static const char* ident="unbound";
+#ifdef HAVE_SYSLOG_H
+/** are we using syslog(3) to log to */
+static int log_to_syslog = 0;
+#endif /* HAVE_SYSLOG_H */
 
 void
-log_init(const char* filename)
+log_init(const char* filename, int use_syslog)
 {
 	FILE *f;
 	if(!key_created) {
 		key_created = 1;
 		ub_thread_key_create(&logkey, NULL);
 	}
-
+	if(logfile || log_to_syslog)
+		verbose(VERB_DETAIL, "switching log to %s", 
+		use_syslog?"syslog":(filename&&filename[0]?filename:"stderr"));
+	if(logfile && logfile != stderr)
+		fclose(logfile);
+#ifdef HAVE_SYSLOG_H
+	if(log_to_syslog) {
+		closelog();
+		log_to_syslog = 0;
+	}
+	if(use_syslog) {
+		openlog(ident, 0, LOG_DAEMON);
+		log_to_syslog = 1;
+		return;
+	}
+#endif /* HAVE_SYSLOG_H */
 	if(!filename || !filename[0]) {
-		if(logfile && logfile != stderr)
-			fclose(logfile);
 		logfile = stderr;
 		return;
 	}
@@ -76,9 +105,6 @@ log_init(const char* filename)
 			strerror(errno));
 		return;
 	}
-	verbose(VERB_DETAIL, "switching to logfile %s", filename);
-	if(logfile && logfile != stderr)
-		fclose(logfile);
 	logfile = f;
 }
 
@@ -93,14 +119,22 @@ void log_ident_set(const char* id)
 }
 
 void
-log_vmsg(const char* type, const char *format, va_list args)
+log_vmsg(int pri, const char* type,
+	const char *format, va_list args)
 {
-	char message[MAXSYSLOGMSGLEN * 10];
+	char message[MAXSYSLOGMSGLEN];
 	unsigned int* tid = (unsigned int*)ub_thread_key_get(logkey);
+	(void)pri;
 	vsnprintf(message, sizeof(message), format, args);
-	fprintf(logfile, "[%d] %s[%d:%x] %s: %s\n",
-		(int)time(NULL), ident, (int)getpid(), 
-		tid?*tid:0, type, message);
+#ifdef HAVE_SYSLOG_H
+	if(log_to_syslog) {
+		syslog(pri, "[%d:%x] %s: %s", 
+			(int)getpid(), tid?*tid:0, type, message);
+		return;
+	}
+#endif /* HAVE_SYSLOG_H */
+	fprintf(logfile, "[%d] %s[%d:%x] %s: %s\n", (int)time(NULL), 
+		ident, (int)getpid(), tid?*tid:0, type, message);
 	fflush(logfile);
 }
 
@@ -113,7 +147,7 @@ log_info(const char *format, ...)
 {
         va_list args;
 	va_start(args, format);
-	log_vmsg("info", format, args);
+	log_vmsg(LOG_INFO, "info", format, args);
 	va_end(args);
 }
 
@@ -126,7 +160,7 @@ log_err(const char *format, ...)
 {
         va_list args;
 	va_start(args, format);
-	log_vmsg("error", format, args);
+	log_vmsg(LOG_ERR, "error", format, args);
 	va_end(args);
 }
 
@@ -139,7 +173,7 @@ log_warn(const char *format, ...)
 {
         va_list args;
 	va_start(args, format);
-	log_vmsg("warning", format, args);
+	log_vmsg(LOG_WARNING, "warning", format, args);
 	va_end(args);
 }
 
@@ -152,7 +186,7 @@ fatal_exit(const char *format, ...)
 {
         va_list args;
 	va_start(args, format);
-	log_vmsg("fatal error", format, args);
+	log_vmsg(LOG_CRIT, "fatal error", format, args);
 	va_end(args);
 	exit(1);
 }
@@ -167,8 +201,13 @@ verbose(enum verbosity_value level, const char* format, ...)
 {
         va_list args;
 	va_start(args, format);
-	if(verbosity >= level)
-		log_vmsg("note", format, args);
+	if(verbosity >= level) {
+		if(level == VERB_OPS)
+			log_vmsg(LOG_NOTICE, "notice", format, args);
+		else if(level == VERB_DETAIL)
+			log_vmsg(LOG_INFO, "info", format, args);
+		else	log_vmsg(LOG_DEBUG, "debug", format, args);
+	}
 	va_end(args);
 }
 

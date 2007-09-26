@@ -39,9 +39,9 @@ example.conf file with all the options.
 # unbound.conf(5) config file for unbound(8).
 server:
 	directory: "/etc/unbound"
-	username: unbound 	# make sure it can write to pidfile, logfile.
+	username: unbound 	# make sure it can write to pidfile.
 	chroot: "/etc/unbound"
-	logfile: "/etc/unbound/unbound.log"
+	# logfile: "/etc/unbound/unbound.log"  #uncomment to use logfile.
 	pidfile: "/etc/unbound/unbound.pid"
 	# verbosity: 1		# uncomment and increase to get more logging.
 .fi
@@ -144,6 +144,13 @@ Sets the working directory for the program.
 If "" is given, logging goes to stderr, or nowhere once daemonized.
 The logfile is appended to, in the following format: 
 [seconds since 1970] unbound[pid:tid]: type: message. 
+If this option is given, the use-syslog is option is set to "no".
+.It \fBuse-syslog:\fR <yes or no>
+Sets unbound to send log messages to the syslogd, using 
+.Xr syslog 3 .
+The log facility LOG_DAEMON is used, with identity "unbound".
+The logfile setting is overridden when use-syslog is turned on.
+The default is to log to syslog.
 .It \fBpidfile:\fR <filename>
 The process id is written to the file. Default is "unbound.pid". So,
 kill -HUP `cat /etc/unbound/unbound.pid` will trigger a reload,

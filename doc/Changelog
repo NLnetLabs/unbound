@@ -1,3 +1,7 @@
+26 September 2007: Wouter
+	- SIGHUP will reopen the log file.
+	- Option to log to syslog.
+
 25 September 2007: Wouter
 	- tests for NSEC3. Fixup bitmap checks for NSEC3.
 	- positive ANY response needs to check if wildcard expansion, and

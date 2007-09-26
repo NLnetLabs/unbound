@@ -154,6 +154,7 @@ val-permissive-mode{COLON}	{ YDOUT; return VAR_VAL_PERMISSIVE_MODE;}
 key-cache-size{COLON}	{ YDOUT; return VAR_KEY_CACHE_SIZE;}
 key-cache-slabs{COLON}	{ YDOUT; return VAR_KEY_CACHE_SLABS;}
 val-nsec3-keysize-iterations{COLON}	{ YDOUT; return VAR_VAL_NSEC3_KEYSIZE_ITERATIONS;}
+use-syslog{COLON}	{ YDOUT; return VAR_USE_SYSLOG;}
 {NEWLINE}		{ LEXOUT(("NL\n")); cfg_parser->line++;}
 
 	/* Quoted strings. Strip leading and ending quotes */

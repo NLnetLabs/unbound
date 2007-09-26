@@ -135,6 +135,7 @@ setup_config(FILE* in, char* configfile, int* lineno,
 	if(!cfg) fatal_exit("could not open %s: %s", 
 			configfile, strerror(errno));
 	line[MAX_LINE_LEN-1] = 0;
+	fprintf(cfg, "server:	use-syslog: no\n");
 	while(fgets(line, MAX_LINE_LEN-1, in)) {
 		parse = line;
 		(*lineno)++;
@@ -204,7 +205,7 @@ main(int argc, char* argv[])
 	char* init_optarg = optarg;
 	struct replay_scenario* scen = NULL;
 
-	log_init(NULL);
+	log_init(NULL, 0);
 	log_info("Start of %s testbound program.", PACKAGE_STRING);
 	/* determine commandline options for the daemon */
 	cfgfile[0] = 0;

@@ -403,7 +403,7 @@ main(int argc, char* argv[])
 		usage();
 		return 1;
 	}
-	log_init(NULL);
+	log_init(NULL, 0);
 	log_ident_set("lock-verify");
 	/* init */
 	all_locks = rbtree_create(order_lock_cmp);

@@ -75,6 +75,7 @@ config_create()
 	cfg->do_ip6 = 1;
 	cfg->do_udp = 1;
 	cfg->do_tcp = 1;
+	cfg->use_syslog = 1;
 	cfg->outgoing_base_port = cfg->port + 2000;
 	cfg->outgoing_num_ports = 16;
 	cfg->outgoing_num_tcp = 10;

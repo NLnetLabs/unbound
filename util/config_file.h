@@ -131,6 +131,9 @@ struct config_file {
 	/** pidfile to write pid to. */
 	char* pidfile;
 
+	/** should log messages be sent to syslogd */
+	int use_syslog;
+
 	/** do not report identity (id.server, hostname.bind) */
 	int hide_identity;
 	/** do not report version (version.server, version.bind) */
