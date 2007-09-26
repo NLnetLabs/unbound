@@ -94,11 +94,8 @@ toplevelvar: serverstart contents_server | stubstart contents_stub |
 
 /* server: declaration */
 serverstart: VAR_SERVER
-	{ OUTYY(("\nP(server:)\n")); 
-		if(cfg_parser->server_settings_seen) {
-			yyerror("duplicate server: element.");
-		}
-		cfg_parser->server_settings_seen = 1;
+	{ 
+		OUTYY(("\nP(server:)\n")); 
 	}
 	;
 contents_server: contents_server content_server 

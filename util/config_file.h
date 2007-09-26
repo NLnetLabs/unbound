@@ -256,8 +256,6 @@ struct config_parser_state {
 	int errors;
 	/** the result of parsing is stored here. */
 	struct config_file* cfg;
-	/** has server: already been seen. */
-	int server_settings_seen;
 };
 
 /** global config parser object used during config parsing */
