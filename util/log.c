@@ -78,7 +78,11 @@ log_init(const char* filename, int use_syslog)
 		key_created = 1;
 		ub_thread_key_create(&logkey, NULL);
 	}
-	if(logfile || log_to_syslog)
+	if(logfile 
+#ifdef HAVE_SYSLOG_H
+	|| log_to_syslog
+#endif
+	)
 		verbose(VERB_DETAIL, "switching log to %s", 
 		use_syslog?"syslog":(filename&&filename[0]?filename:"stderr"));
 	if(logfile && logfile != stderr)
