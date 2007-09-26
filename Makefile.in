@@ -62,6 +62,8 @@ UNITTEST_SRC=$(wildcard testcode/unit*.c) testcode/readhex.c \
 UNITTEST_OBJ=$(addprefix $(BUILD),$(UNITTEST_SRC:.c=.o)) $(COMPAT_OBJ)
 DAEMON_SRC=$(wildcard daemon/*.c) $(COMMON_SRC)
 DAEMON_OBJ=$(addprefix $(BUILD),$(DAEMON_SRC:.c=.o)) $(COMPAT_OBJ)
+CHECKCONF_SRC=checkconf/unbound-checkconf.c $(COMMON_SRC)
+CHECKCONF_OBJ=$(addprefix $(BUILD),$(CHECKCONF_SRC:.c=.o)) $(COMPAT_OBJ)
 TESTBOUND_SRC=testcode/testbound.c testcode/ldns-testpkts.c \
 	daemon/worker.c daemon/daemon.c daemon/stats.c testcode/replay.c \
 	testcode/fake_event.c $(filter-out util/netevent.c \
@@ -92,7 +94,7 @@ $(BUILD)%.o:    $(srcdir)/%.c
 
 .PHONY:	clean realclean doc lint all install uninstall tests test
 
-all:	$(COMMON_OBJ) unbound 
+all:	$(COMMON_OBJ) unbound unbound-checkconf
 
 tests:	unittest testbound lock-verify pktview signit memstats
 
@@ -100,6 +102,10 @@ test:	tests
 	bash testcode/do-tests.sh
 
 unbound:	$(DAEMON_OBJ)
+	$(INFO) Link $@
+	$Q$(LINK) -o $@ $^ $(LIBS)
+
+unbound-checkconf:	$(CHECKCONF_OBJ)
 	$(INFO) Link $@
 	$Q$(LINK) -o $@ $^ $(LIBS)
 
@@ -181,12 +187,14 @@ install:
 	$(INSTALL) -d $(mandir)/man8
 	$(INSTALL) -d $(mandir)/man5
 	$(LIBTOOL) --mode=install cp unbound $(bindir)/unbound
+	$(LIBTOOL) --mode=install cp unbound-checkconf $(bindir)/unbound-checkconf
 	$(INSTALL) -c -m 644 $(srcdir)/doc/unbound.8 $(mandir)/man8
+	$(INSTALL) -c -m 644 $(srcdir)/doc/unbound-checkconf.8 $(mandir)/man8
 	$(INSTALL) -c -m 644 $(srcdir)/doc/unbound.conf.5 $(mandir)/man5
 
 uninstall:
-	rm -f -- $(bindir)/unbound 
-	rm -f -- $(mandir)/man8/unbound.8 $(mandir)/man5/unbound.conf.5
+	rm -f -- $(bindir)/unbound $(bindir)/unbound-checkconf
+	rm -f -- $(mandir)/man8/unbound.8 $(mandir)/man8/unbound-checkconf.8 $(mandir)/man5/unbound.conf.5
 
 # Automatic dependencies.
 $(BUILD)%.d: $(srcdir)/%.c

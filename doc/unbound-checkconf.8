@@ -1,0 +1,39 @@
+.\"
+.\" unbound-checkconf.8 -- unbound configuration checker manual
+.\"
+.\" Copyright (c) 2007, NLnet Labs. All rights reserved.
+.\"
+.\" See LICENSE for the license.
+.\"
+.\"
+.Dd @date@
+.Dt unbound-checkconf 8
+.Sh NAME
+unbound-checkconf
+.Nd Check unbound configuration file for errors.
+.Sh SYNOPSIS
+.Nm unbound-checkconf
+.Op Fl h
+cfgfile
+.Sh DESCRIPTION
+.Ic Unbound-checkconf
+checks the configuration file for the
+.Xr unbound 8
+DNS resolver for syntax and other errors. 
+The config file syntax is
+described in 
+.Xr unbound.conf 5 .
+.Pp
+The available options are:
+.Bl -tag -width indent
+.It Fl h
+Show the version and commandline option help.
+.It cfgfile
+The config file to read with settings for unbound. It is checked.
+.Sh EXIT CODE
+The unbound-checkconf program exits with status code 1 on error, 
+0 for a correct config file.
+.El
+.Sh SEE ALSO
+.Xr unbound.conf 5 , 
+.Xr unbound 8 .

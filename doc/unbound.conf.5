@@ -23,6 +23,10 @@ The notation is: attribute: value.
 .Pp
 Comments start with # and last to the end of line. Empty lines are
 ignored as is whitespace at the beginning of a line.
+.Pp
+The utility 
+.Xr unbound-checkconf 8
+can be used to check unbound.conf prior to usage.
 .Sh EXAMPLE
 An example config file is shown below. Copy this to /etc/unbound/unbound.conf
 and start the server with:
@@ -55,7 +59,7 @@ directive. It can appear anywhere, and takes a single filename as an argument.
 Processing continues as if the text from the included file was copied into
 the config file at that point.
 .Ss Server Options
-There may only be one 
+These options are part of the
 .Ic server:
 clause.
 .Bl -tag -width indent
@@ -327,7 +331,8 @@ default unbound pidfile with process ID of the running daemon.
 unbound log file.
 .El
 .Sh SEE ALSO
-.Xr unbound 8
+.Xr unbound 8 , 
+.Xr unbound-checkconf 8 .
 .Sh AUTHORS
 .Ic Unbound 
 was written by NLnet Labs. Please see CREDITS file

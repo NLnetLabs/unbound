@@ -2,6 +2,7 @@
 	- SIGHUP will reopen the log file.
 	- Option to log to syslog.
 	- please lint, fixup tests (that went to syslog on open, oops).
+	- config check program.
 
 25 September 2007: Wouter
 	- tests for NSEC3. Fixup bitmap checks for NSEC3.
