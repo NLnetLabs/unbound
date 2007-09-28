@@ -143,7 +143,7 @@ hide-identity{COLON}	{ YDOUT; return VAR_HIDE_IDENTITY;}
 hide-version{COLON}     { YDOUT; return VAR_HIDE_VERSION;}
 identity{COLON}		{ YDOUT; return VAR_IDENTITY;}
 version{COLON}     	{ YDOUT; return VAR_VERSION;}
-module-conf{COLON}     	{ YDOUT; return VAR_MODULE_CONF;}
+module-config{COLON}     	{ YDOUT; return VAR_MODULE_CONF;}
 trust-anchor-file{COLON}	{ YDOUT; return VAR_TRUST_ANCHOR_FILE;}
 trusted-keys-file{COLON}	{ YDOUT; return VAR_TRUSTED_KEYS_FILE;}
 trust-anchor{COLON}	{ YDOUT; return VAR_TRUST_ANCHOR;}

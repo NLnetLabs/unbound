@@ -95,7 +95,7 @@ donotq_insert(struct iter_donotq* dq, struct sockaddr_storage* addr,
 	memcpy(&node->addr, addr, addrlen);
 	node->addrlen = addrlen;
 	if(!rbtree_insert(dq->tree, &node->node)) {
-		log_warn("duplicate donotquery address ignored.");
+		verbose(VERB_DETAIL, "duplicate donotquery address ignored.");
 	}
 	return 1;
 }

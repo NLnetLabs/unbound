@@ -1,3 +1,7 @@
+28 September 2007: Wouter
+	- test case for unbound-checkconf, fixed so it also checks the
+	  interface: statements.
+
 26 September 2007: Wouter
 	- SIGHUP will reopen the log file.
 	- Option to log to syslog.

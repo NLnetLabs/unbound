@@ -46,6 +46,7 @@
 #include "util/log.h"
 #include "util/config_file.h"
 #include "util/module.h"
+#include "util/net_help.h"
 #include "util/region-allocator.h"
 #include "iterator/iterator.h"
 #include "validator/validator.h"
@@ -85,6 +86,16 @@ check_mod(struct config_file* cfg, struct module_func_block* fb)
 static void
 morechecks(struct config_file* cfg)
 {
+	int i;
+	for(i=0; i<cfg->num_ifs; i++) {
+		struct sockaddr_storage a;
+		socklen_t alen;
+		if(!ipstrtoaddr(cfg->ifs[i], UNBOUND_DNS_PORT, &a, &alen)) {
+			fatal_exit("cannot parse interface specified as '%s'",
+				cfg->ifs[i]);
+		}
+	}
+
 	if(cfg->verbosity < 0)
 		fatal_exit("verbosity value < 0");
 	if(cfg->num_threads < 0 || cfg->num_threads > 10000)
