@@ -706,6 +706,10 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 	 * When re-fetching glue we also need to ask the parent.
 	 */
 	if(iq->refetch_glue) {
+		if(!iq->dp) {
+			log_err("internal or malloc fail: no dp for refetch");
+			return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
+		}
 		delname = iq->dp->name;
 		delnamelen = iq->dp->namelen;
 	} else {
@@ -716,6 +720,7 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 		&& !dname_is_root(delname)) {
 		/* do not adjust root label, remove first label from delname */
 		dname_remove_label(&delname, &delnamelen);
+		iq->refetch_glue = 0; /* if CNAME causes restart, no refetch */
 	}
 	while(1) {
 		

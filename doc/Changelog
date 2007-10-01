@@ -1,5 +1,7 @@
 1 October 2007: Wouter
 	- skip F77, CXX, objC tests in configure step.
+	- fixup crash in refetch glue after a CNAME.
+	  and protection against similar failures (with error print).
 
 28 September 2007: Wouter
 	- test case for unbound-checkconf, fixed so it also checks the
