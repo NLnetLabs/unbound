@@ -251,6 +251,15 @@ if test "$srcdir" != "."; then
 	CPPFLAGS="$CPPFLAGS -I$srcdir";
 fi
 
+# skip these tests, we do not need them.
+AC_DEFUN([AC_PROG_F77], [:])
+AC_DEFUN([AC_PROG_FC], [:])
+AC_DEFUN([AC_PROG_CXX], [:])
+AC_DEFUN([AC_PROG_CXXCPP], [:])
+AC_DEFUN([AC_PROG_OBJC], [:])
+AC_DEFUN([AC_PROG_OBJCCPP], [:])
+AC_DEFUN([AC_LIBTOOL_CXX], [:])
+AC_DEFUN([AC_LIBTOOL_F77], [:])
 # Use libtool 
 AC_CHECK_PROGS(libtool, [glibtool libtool15 libtool], [./libtool])
 AC_PATH_TOOL(AR, ar, [false])
