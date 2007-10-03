@@ -57,6 +57,12 @@ struct reply_info;
 struct outbound_entry;
 struct timehist;
 
+/**
+ * Maximum number of mesh state activations. Any more is likely an
+ * infinite loop in the module. It is then terminated.
+ */
+#define MESH_MAX_ACTIVATION 1000
+
 /** 
  * Mesh of query states
  */
@@ -117,6 +123,8 @@ struct mesh_state {
 	/** set of substates (that this state needs to continue)
 	 * contains struct mesh_state_ref* */
 	rbtree_t sub_set;
+	/** number of activations for the mesh state */
+	size_t num_activated;
 };
 
 /**

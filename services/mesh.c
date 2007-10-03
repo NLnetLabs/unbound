@@ -215,6 +215,7 @@ mesh_state_create(struct module_env* env, struct query_info* qinfo,
 	mstate->reply_list = NULL;
 	rbtree_init(&mstate->super_set, &mesh_state_ref_compare);
 	rbtree_init(&mstate->sub_set, &mesh_state_ref_compare);
+	mstate->num_activated = 0;
 	/* init module qstate */
 	mstate->s.qinfo.qtype = qinfo->qtype;
 	mstate->s.qinfo.qclass = qinfo->qclass;
@@ -550,6 +551,14 @@ static int
 mesh_continue(struct mesh_area* mesh, struct mesh_state* mstate,
 	enum module_ext_state s, enum module_ev* ev)
 {
+	mstate->num_activated++;
+	if(mstate->num_activated > MESH_MAX_ACTIVATION) {
+		/* module is looping. Stop it. */
+		log_err("internal error: looping module stopped");
+		log_query_info(VERB_DETAIL, "pass error for qstate",
+			&mstate->s.qinfo);
+		s = module_error;
+	}
 	if(s == module_wait_module) {
 		/* start next module */
 		mstate->s.curmod++;
@@ -557,7 +566,6 @@ mesh_continue(struct mesh_area* mesh, struct mesh_state* mstate,
 			log_err("Cannot pass to next module; at last module");
 			log_query_info(VERB_DETAIL, "pass error for qstate",
 				&mstate->s.qinfo);
-			log_assert(0); /* catch this for now */
 			mstate->s.curmod--;
 			return mesh_continue(mesh, mstate, module_error, ev);
 		}

@@ -1240,7 +1240,11 @@ processFindKey(struct module_qstate* qstate, struct val_qstate* vq, int id)
 		return 1;
 	}
 
-	if(vq->empty_DS_name) {
+	if(vq->empty_DS_name && dname_strict_subdomain_c(vq->empty_DS_name,
+		current_key_name)) {
+		/* if the last empty nonterminal/emptyDS name we detected is
+		 * below the current key, use that name to make progress
+		 * along the chain of trust */
 		if(query_dname_compare(target_key_name, 
 			vq->empty_DS_name) == 0) {
 			/* do not query for empty_DS_name again */

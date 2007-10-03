@@ -1,4 +1,7 @@
 3 October 2007: Wouter
+	- fix for multiple empty nonterminals, after multiple DSes in the
+	  chain of trust.
+	- mesh checks if modules are looping, and stops them.
 	- refetch with CNAMEd nameserver address regression test added.
 
 1 October 2007: Wouter
