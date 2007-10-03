@@ -3,6 +3,9 @@
 	  chain of trust.
 	- mesh checks if modules are looping, and stops them.
 	- refetch with CNAMEd nameserver address regression test added.
+	- fixup line count bug in testcode, so testbound prints correct line
+	  number with parse errors.
+	- unit test for multiple ENT case.
 
 1 October 2007: Wouter
 	- skip F77, CXX, objC tests in configure step.

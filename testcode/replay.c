@@ -135,8 +135,10 @@ replay_range_read(char* remain, FILE* in, const char* name, int* lineno,
 		parse = line;
 		while(isspace((int)*parse))
 			parse++;
-		if(!*parse || *parse == ';')
+		if(!*parse || *parse == ';') {
+			pos = ftello(in);
 			continue;
+		}
 		if(parse_keyword(&parse, "ADDRESS")) {
 			while(isspace((int)*parse))
 				parse++;

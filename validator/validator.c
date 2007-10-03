@@ -1240,8 +1240,7 @@ processFindKey(struct module_qstate* qstate, struct val_qstate* vq, int id)
 		return 1;
 	}
 
-	if(vq->empty_DS_name && dname_strict_subdomain_c(vq->empty_DS_name,
-		current_key_name)) {
+	if(vq->empty_DS_name) {
 		/* if the last empty nonterminal/emptyDS name we detected is
 		 * below the current key, use that name to make progress
 		 * along the chain of trust */
@@ -1277,10 +1276,21 @@ processFindKey(struct module_qstate* qstate, struct val_qstate* vq, int id)
 
 	/* The next step is either to query for the next DS, or to query 
 	 * for the next DNSKEY. */
-
 	if(vq->ds_rrset)
 		log_nametypeclass(VERB_ALGO, "DS RRset", vq->ds_rrset->rk.dname, LDNS_RR_TYPE_DS, LDNS_RR_CLASS_IN);
 	else log_info("No DS RRset");
+
+	if(vq->ds_rrset && query_dname_compare(vq->ds_rrset->rk.dname,
+		vq->key_entry->name) != 0) {
+		if(!generate_request(qstate, id, vq->ds_rrset->rk.dname, 
+			vq->ds_rrset->rk.dname_len, LDNS_RR_TYPE_DNSKEY, 
+			vq->qchase.qclass)) {
+			log_err("mem error generating DNSKEY request");
+			return val_error(qstate, id);
+		}
+		return 0;
+	}
+
 	if(!vq->ds_rrset || query_dname_compare(vq->ds_rrset->rk.dname,
 		target_key_name) != 0) {
 		if(!generate_request(qstate, id, target_key_name, 
