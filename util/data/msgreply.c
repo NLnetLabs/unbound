@@ -596,13 +596,13 @@ repinfo_copy_rrsets(struct reply_info* dest, struct reply_info* from,
 		fk = from->rrsets[i];
 		dk = dest->rrsets[i];
 		fd = (struct packed_rrset_data*)fk->entry.data;
-		dk->id = fk->id;
 		dk->entry.hash = fk->entry.hash;
 		dk->rk = fk->rk;
-		if(region)
+		if(region) {
+			dk->id = fk->id;
 			dk->rk.dname = (uint8_t*)region_alloc_init(region,
 				fk->rk.dname, fk->rk.dname_len);
-		else	
+		} else	
 			dk->rk.dname = (uint8_t*)memdup(fk->rk.dname, 
 				fk->rk.dname_len);
 		if(!dk->rk.dname)

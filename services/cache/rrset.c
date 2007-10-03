@@ -177,6 +177,7 @@ rrset_cache_update(struct rrset_cache* r, struct rrset_ref* ref,
 	hashvalue_t h = k->entry.hash;
 	uint16_t rrset_type = ntohs(k->rk.type);
 	int equal = 0;
+	log_assert(ref->id != 0 && k->id != 0);
 	/* looks up item with a readlock - no editing! */
 	if((e=slabhash_lookup(&r->table, h, k, 0)) != 0) {
 		/* return id and key as they will be used in the cache
@@ -206,6 +207,7 @@ rrset_cache_update(struct rrset_cache* r, struct rrset_ref* ref,
 		/* use insert to update entry to manage lruhash
 		 * cache size values nicely. */
 	}
+	log_assert(ref->key->id != 0);
 	slabhash_insert(&r->table, h, &k->entry, k->entry.data, alloc);
 	if(e) {
 		/* For NSEC, NSEC3, DNAME, when rdata is updated, update 
@@ -261,6 +263,7 @@ rrset_array_lock(struct rrset_ref* ref, size_t count, uint32_t timenow)
 		if(i>0 && ref[i].key == ref[i-1].key)
 			continue; /* only lock items once */
 		lock_rw_rdlock(&ref[i].key->entry.lock);
+		log_assert(ref[i].id != 0 && ref[i].key->id != 0);
 		if(ref[i].id != ref[i].key->id || timenow >
 			((struct packed_rrset_data*)(ref[i].key->entry.data))
 			->ttl) {

@@ -7,6 +7,8 @@
 	  number with parse errors.
 	- unit test for multiple ENT case.
 	- fix for cname out of validated unsec zone.
+	- fixup nasty id=0 reuse. Also added assertions to detect its
+	  return (the assertion catches in the existing test cases).
 
 1 October 2007: Wouter
 	- skip F77, CXX, objC tests in configure step.
