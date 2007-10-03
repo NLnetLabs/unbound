@@ -1115,6 +1115,9 @@ processInit(struct module_qstate* qstate, struct val_qstate* vq,
 
 	val_mark_indeterminate(vq->chase_reply, ve->anchors, 
 		qstate->env->rrset_cache);
+	vq->key_entry = NULL;
+	vq->empty_DS_name = NULL;
+	vq->ds_rrset = 0;
 	vq->trust_anchor = anchors_lookup(ve->anchors, vq->qchase.qname,
 		vq->qchase.qname_len, vq->qchase.qclass);
 	if(vq->trust_anchor == NULL) {

@@ -6,6 +6,7 @@
 	- fixup line count bug in testcode, so testbound prints correct line
 	  number with parse errors.
 	- unit test for multiple ENT case.
+	- fix for cname out of validated unsec zone.
 
 1 October 2007: Wouter
 	- skip F77, CXX, objC tests in configure step.
