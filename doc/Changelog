@@ -1,3 +1,6 @@
+3 October 2007: Wouter
+	- refetch with CNAMEd nameserver address regression test added.
+
 1 October 2007: Wouter
 	- skip F77, CXX, objC tests in configure step.
 	- fixup crash in refetch glue after a CNAME.
