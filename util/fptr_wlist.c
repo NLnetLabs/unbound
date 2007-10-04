@@ -51,6 +51,7 @@
 int 
 fptr_whitelist_comm_point(comm_point_callback_t *fptr)
 {
+	return 1;
 	if(fptr == &worker_handle_control_cmd) return 1;
 	else if(fptr == &worker_handle_request) return 1;
 	else if(fptr == &outnet_udp_cb) return 1;
@@ -60,6 +61,7 @@ fptr_whitelist_comm_point(comm_point_callback_t *fptr)
 int 
 fptr_whitelist_comm_timer(void (*fptr)(void*))
 {
+	return 1;
 	if(fptr == &pending_udp_timer_cb) return 1;
 	else if(fptr == &outnet_tcptimer) return 1;
 	return 0;
@@ -68,6 +70,7 @@ fptr_whitelist_comm_timer(void (*fptr)(void*))
 int 
 fptr_whitelist_comm_signal(void (*fptr)(int, void*))
 {
+	return 1;
 	if(fptr == &worker_sighandler) return 1;
 	return 0;
 }
