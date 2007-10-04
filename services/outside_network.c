@@ -219,8 +219,7 @@ outnet_tcp_cb(struct comm_point* c, void* arg, int error,
 	return 0;
 }
 
-/** callback for incoming udp answers from the network */
-static int 
+int 
 outnet_udp_cb(struct comm_point* c, void* arg, int error,
 	struct comm_reply *reply_info)
 {
@@ -381,8 +380,7 @@ calc_num46(char** ifs, int num_ifs, int do_ip4, int do_ip6,
 
 }
 
-/** callback for udp timeout */
-static void 
+void 
 pending_udp_timer_cb(void *arg)
 {
 	struct pending* p = (struct pending*)arg;
@@ -709,8 +707,7 @@ pending_udp_query(struct outside_network* outnet, ldns_buffer* packet,
 	return pend;
 }
 
-/** callback for outgoing TCP timer event */
-static void
+void
 outnet_tcptimer(void* arg)
 {
 	struct waiting_tcp* w = (struct waiting_tcp*)arg;

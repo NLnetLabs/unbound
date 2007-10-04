@@ -1,3 +1,9 @@
+4 October 2007: Wouter
+	- overwrite sensitive random seed value after use.
+	- switch to logfile very soon if not -d (console attached).
+	- error messages do not reveal the trustanchor contents.
+	- start work on function pointer whitelists.
+
 3 October 2007: Wouter
 	- fix for multiple empty nonterminals, after multiple DSes in the
 	  chain of trust.

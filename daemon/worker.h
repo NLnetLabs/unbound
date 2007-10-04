@@ -192,4 +192,18 @@ struct outbound_entry* worker_send_query(uint8_t* qname, size_t qnamelen,
 	struct sockaddr_storage* addr, socklen_t addrlen,
 	struct module_qstate* q);
 
+/** 
+ * process control messages from the main thread. 
+ * @param c: comm point to read from.
+ * @param arg: worker.
+ * @param error: error status of comm point.
+ * @param reply_info: not used.
+ */
+int worker_handle_control_cmd(struct comm_point* c, void* arg, int error, 
+	struct comm_reply* reply_info);
+
+/** handles callbacks from listening event interface */
+int worker_handle_request(struct comm_point* c, void* arg, int error,
+	struct comm_reply* repinfo);
+
 #endif /* DAEMON_WORKER_H */

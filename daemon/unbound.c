@@ -111,7 +111,8 @@ checkrlimits(struct config_file* cfg)
 
 /** to changedir, logfile */
 static void
-apply_dir(struct daemon* daemon, struct config_file* cfg, int cmdline_verbose)
+apply_dir(struct daemon* daemon, struct config_file* cfg, int cmdline_verbose,
+	int debug_mode)
 {
 	/* apply if they have changed */
 	daemon->cfg = cfg;
@@ -126,6 +127,9 @@ apply_dir(struct daemon* daemon, struct config_file* cfg, int cmdline_verbose)
 			if(!(daemon->cwd = strdup(cfg->directory)))
 				log_err("cwd: malloc failed");
 		}
+	}
+	if(!debug_mode) {
+		log_init(cfg->logfile, cfg->use_syslog);
 	}
 	if(!daemon->env->msg_cache ||
 	   cfg->msg_cache_size != slabhash_get_size(daemon->env->msg_cache) ||
@@ -321,7 +325,7 @@ run_daemon(const char* cfgfile, int cmdline_verbose, int debug_mode)
 			fatal_exit("Could not alloc config defaults");
 		if(!config_read(cfg, cfgfile))
 			fatal_exit("Could not read config file: %s", cfgfile);
-		apply_dir(daemon, cfg, cmdline_verbose);
+		apply_dir(daemon, cfg, cmdline_verbose, debug_mode);
 	
 		/* prepare */
 		if(!daemon_open_shared_ports(daemon))

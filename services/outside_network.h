@@ -369,4 +369,14 @@ size_t outnet_get_mem(struct outside_network* outnet);
  */
 size_t serviced_get_mem(struct serviced_query* sq);
 
+/** callback for incoming udp answers from the network */
+int outnet_udp_cb(struct comm_point* c, void* arg, int error,
+	struct comm_reply *reply_info);
+
+/** callback for udp timeout */
+void pending_udp_timer_cb(void *arg);
+
+/** callback for outgoing TCP timer event */
+void outnet_tcptimer(void* arg);
+
 #endif /* OUTSIDE_NETWORK_H */

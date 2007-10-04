@@ -959,4 +959,23 @@ size_t serviced_get_mem(struct serviced_query* ATTR_UNUSED(c))
 	return 0;
 }
 
+/* fake for fptr wlist */
+int outnet_udp_cb(struct comm_point* ATTR_UNUSED(c), 
+	void* ATTR_UNUSED(arg), int ATTR_UNUSED(error),
+        struct comm_reply *ATTR_UNUSED(reply_info))
+{
+	log_assert(0);
+	return 0;
+}
+
+void pending_udp_timer_cb(void *ATTR_UNUSED(arg))
+{
+	log_assert(0);
+}
+
+void outnet_tcptimer(void* ATTR_UNUSED(arg))
+{
+	log_assert(0);
+}
+
 /*********** End of Dummy routines ***********/

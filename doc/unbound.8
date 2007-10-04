@@ -32,7 +32,8 @@ described in
 .Xr unbound.conf 5 .
 .It Fl d
 Debug flag, do not fork into the background, but stay attached to the
-console.
+console. This flag will also delay writing to the logfile until the
+thread-spawn time. So that most config and setup errors appear on stderr.
 .It Fl v
 Increase verbosity. If given multiple times, more information is logged.
 This is in addition to the verbosity (if any) from the config file.

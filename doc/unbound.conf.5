@@ -149,6 +149,8 @@ If "" is given, logging goes to stderr, or nowhere once daemonized.
 The logfile is appended to, in the following format: 
 [seconds since 1970] unbound[pid:tid]: type: message. 
 If this option is given, the use-syslog is option is set to "no".
+The logfile is reopened (for append) when the config file is reread, on 
+SIGHUP.
 .It \fBuse-syslog:\fR <yes or no>
 Sets unbound to send log messages to the syslogd, using 
 .Xr syslog 3 .

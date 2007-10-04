@@ -496,8 +496,8 @@ skip_to_special(FILE* in, ldns_buffer* buf, int* line, int spec)
 		}
 		if(rdlen != 1 || *ldns_buffer_begin(buf) != (uint8_t)spec) {
 			ldns_buffer_write_u8(buf, 0);
-			log_err("trusted-keys, line %d, expected %c got %s", 
-				*line, spec, ldns_buffer_begin(buf));
+			log_err("trusted-keys, line %d, expected %c", 
+				*line, spec);
 			return 0;
 		}
 		return 1;
@@ -544,8 +544,7 @@ process_bind_contents(struct val_anchors* anchors, ldns_buffer* buf,
 			ldns_buffer_skip(buf, -1);
 			if(contnum > 0 && quoted) {
 				if(ldns_buffer_remaining(buf) < 8+1) {
-					log_err("line %d, too long, %s",
-						*line, ldns_buffer_begin(buf));
+					log_err("line %d, too long", *line);
 					return 0;
 				}
 				ldns_buffer_write(buf, " DNSKEY ", 8);
@@ -558,8 +557,7 @@ process_bind_contents(struct val_anchors* anchors, ldns_buffer* buf,
 
 			if(contnum < 5) {
 				ldns_buffer_write_u8(buf, 0);
-				log_err("line %d, bad key, %s",
-					*line, ldns_buffer_begin(buf));
+				log_err("line %d, bad key", *line);
 				return 0;
 			}
 			ldns_buffer_skip(buf, -1);
@@ -570,7 +568,7 @@ process_bind_contents(struct val_anchors* anchors, ldns_buffer* buf,
 				return 0;
 			}
 			if(!anchor_store_str(anchors, buf, str)) {
-				log_err("line %d, bad key, %s", *line, str);
+				log_err("line %d, bad key", *line);
 				free(str);
 				return 0;
 			}
@@ -583,8 +581,7 @@ process_bind_contents(struct val_anchors* anchors, ldns_buffer* buf,
 		} else if(rdlen == 1 && ldns_buffer_current(buf)[-1] == '}') {
 			if(contnum > 0) {
 				ldns_buffer_write_u8(buf, 0);
-				log_err("line %d, bad key before }, %s",
-					*line, ldns_buffer_begin(buf));
+				log_err("line %d, bad key before }", *line);
 				return 0;
 			}
 			return 1;
@@ -596,8 +593,7 @@ process_bind_contents(struct val_anchors* anchors, ldns_buffer* buf,
 			contnum ++;
 			if(contnum == 1 && !quoted) {
 				if(ldns_buffer_remaining(buf) < 8+1) {
-					log_err("line %d, too long, %s",
-						*line, ldns_buffer_begin(buf));
+					log_err("line %d, too long", *line);
 					return 0;
 				}	
 				ldns_buffer_write(buf, " DNSKEY ", 8);

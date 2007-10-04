@@ -41,6 +41,7 @@
 
 #include "util/netevent.h"
 #include "util/log.h"
+#include "util/fptr_wlist.h"
 
 /* -------- Start of local definitions -------- */
 /** The TCP reading or writing query timeout in seconds */
@@ -247,6 +248,7 @@ comm_point_udp_callback(int fd, short event, void* arg)
 	}
 	ldns_buffer_skip(rep.c->buffer, recv);
 	ldns_buffer_flip(rep.c->buffer);
+	log_assert(fptr_whitelist_comm_point(rep.c->callback));
 	if((*rep.c->callback)(rep.c, rep.c->cb_arg, NETEVENT_NOERROR, &rep)) {
 		/* send back immediate reply */
 		(void)comm_point_send_udp_msg(rep.c, rep.c->buffer,
@@ -356,6 +358,7 @@ tcp_callback_reader(struct comm_point* c)
 		comm_point_stop_listening(c);
 	rep.c = c;
 	rep.addrlen = 0;
+	log_assert(fptr_whitelist_comm_point(c->callback));
 	if( (*c->callback)(c, c->cb_arg, NETEVENT_NOERROR, &rep) ) {
 		comm_point_start_listening(c, -1, TCP_QUERY_TIMEOUT);
 	}
@@ -502,27 +505,35 @@ comm_point_tcp_handle_callback(int fd, short event, void* arg)
 	if(event&EV_READ) {
 		if(!comm_point_tcp_handle_read(fd, c, 0)) {
 			reclaim_tcp_handler(c);
-			if(!c->tcp_do_close)
+			if(!c->tcp_do_close) {
+				log_assert(fptr_whitelist_comm_point(
+					c->callback));
 				(void)(*c->callback)(c, c->cb_arg, 
 					NETEVENT_CLOSED, NULL);
+			}
 		}
 		return;
 	}
 	if(event&EV_WRITE) {
 		if(!comm_point_tcp_handle_write(fd, c)) {
 			reclaim_tcp_handler(c);
-			if(!c->tcp_do_close)
+			if(!c->tcp_do_close) {
+				log_assert(fptr_whitelist_comm_point(
+					c->callback));
 				(void)(*c->callback)(c, c->cb_arg, 
 					NETEVENT_CLOSED, NULL);
+			}
 		}
 		return;
 	}
 	if(event&EV_TIMEOUT) {
 		verbose(VERB_DETAIL, "tcp took too long, dropped");
 		reclaim_tcp_handler(c);
-		if(!c->tcp_do_close)
+		if(!c->tcp_do_close) {
+			log_assert(fptr_whitelist_comm_point(c->callback));
 			(void)(*c->callback)(c, c->cb_arg,
 				NETEVENT_TIMEOUT, NULL);
+		}
 		return;
 	}
 	log_err("Ignored event %d for tcphdl.", event);
@@ -535,6 +546,7 @@ static void comm_point_local_handle_callback(int fd, short event, void* arg)
 
 	if(event&EV_READ) {
 		if(!comm_point_tcp_handle_read(fd, c, 1)) {
+			log_assert(fptr_whitelist_comm_point(c->callback));
 			(void)(*c->callback)(c, c->cb_arg, NETEVENT_CLOSED, 
 				NULL);
 		}
@@ -1064,6 +1076,7 @@ comm_timer_callback(int ATTR_UNUSED(fd), short event, void* arg)
 	if(!(event&EV_TIMEOUT))
 		return;
 	tm->ev_timer->enabled = 0;
+	log_assert(fptr_whitelist_comm_timer(tm->callback));
 	(*tm->callback)(tm->cb_arg);
 }
 
@@ -1102,6 +1115,7 @@ comm_signal_callback(int sig, short event, void* arg)
 	struct comm_signal* comsig = (struct comm_signal*)arg;
 	if(!(event & EV_SIGNAL))
 		return;
+	log_assert(fptr_whitelist_comm_signal(comsig->callback));
 	(*comsig->callback)(sig, comsig->cb_arg);
 }
 

@@ -286,13 +286,7 @@ worker_check_request(ldns_buffer* pkt, struct worker* worker)
 	return 0;
 }
 
-/** process control messages from the main thread. 
- * @param c: comm point to read from.
- * @param arg: worker.
- * @param error: error status of comm point.
- * @param reply_info: not used.
- */
-static int 
+int 
 worker_handle_control_cmd(struct comm_point* c, void* arg, int error, 
 	struct comm_reply* ATTR_UNUSED(reply_info))
 {
@@ -655,8 +649,7 @@ answer_chaos(struct worker* w, struct query_info* qinfo,
 	return 0;
 }
 
-/** handles callbacks from listening event interface */
-static int 
+int 
 worker_handle_request(struct comm_point* c, void* arg, int error,
 	struct comm_reply* repinfo)
 {
@@ -793,7 +786,6 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 	return 0;
 }
 
-/** worker signal callback */
 void 
 worker_sighandler(int sig, void* arg)
 {
@@ -901,10 +893,12 @@ worker_init(struct worker* worker, struct config_file *cfg,
 		(((unsigned int)worker->thread_num)<<17);
 		/* shift thread_num so it does not match out pid bits */
 	if(!ub_initstate(seed, worker->rndstate, RND_STATE_SIZE)) {
+		seed = 0;
 		log_err("could not init random numbers.");
 		worker_delete(worker);
 		return 0;
 	}
+	seed = 0;
 	worker->front = listen_create(worker->base, ports,
 		cfg->msg_buffer_size, (int)cfg->incoming_num_tcp, 
 		worker_handle_request, worker);
