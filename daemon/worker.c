@@ -60,6 +60,7 @@
 #include "util/data/msgparse.h"
 #include "util/data/msgencode.h"
 #include "util/data/dname.h"
+#include "util/fptr_wlist.h"
 
 #ifdef HAVE_SYS_TYPES_H
 #  include <sys/types.h>
