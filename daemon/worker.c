@@ -174,8 +174,7 @@ worker_send_cmd(struct worker* worker, ldns_buffer* buffer,
 		log_err("write socket: %s", strerror(errno));
 }
 
-/** process incoming replies from the network */
-static int 
+int 
 worker_handle_reply(struct comm_point* c, void* arg, int error, 
 	struct comm_reply* reply_info)
 {
@@ -206,8 +205,7 @@ worker_handle_reply(struct comm_point* c, void* arg, int error,
 	return 0;
 }
 
-/** process incoming serviced query replies from the network */
-static int 
+int 
 worker_handle_service_reply(struct comm_point* c, void* arg, int error, 
 	struct comm_reply* reply_info)
 {

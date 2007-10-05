@@ -1,3 +1,6 @@
+5 October 2007: Wouter
+	- function pointer whitelist.
+
 4 October 2007: Wouter
 	- overwrite sensitive random seed value after use.
 	- switch to logfile very soon if not -d (console attached).

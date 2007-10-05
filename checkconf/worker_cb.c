@@ -61,6 +61,22 @@ int worker_handle_request(struct comm_point* ATTR_UNUSED(c),
 	return 0;
 }
 
+int worker_handle_reply(struct comm_point* ATTR_UNUSED(c), 
+	void* ATTR_UNUSED(arg), int ATTR_UNUSED(error),
+        struct comm_reply* ATTR_UNUSED(reply_info))
+{
+	log_assert(0);
+	return 0;
+}
+
+int worker_handle_service_reply(struct comm_point* ATTR_UNUSED(c), 
+	void* ATTR_UNUSED(arg), int ATTR_UNUSED(error),
+        struct comm_reply* ATTR_UNUSED(reply_info))
+{
+	log_assert(0);
+	return 0;
+}
+
 void worker_sighandler(int ATTR_UNUSED(sig), void* ATTR_UNUSED(arg))
 {
 	log_assert(0);

@@ -51,17 +51,16 @@
 int 
 fptr_whitelist_comm_point(comm_point_callback_t *fptr)
 {
-	return 1;
-	if(fptr == &worker_handle_control_cmd) return 1;
-	else if(fptr == &worker_handle_request) return 1;
+	if(fptr == &worker_handle_request) return 1;
 	else if(fptr == &outnet_udp_cb) return 1;
+	else if(fptr == &outnet_tcp_cb) return 1;
+	else if(fptr == &worker_handle_control_cmd) return 1;
 	return 0;
 }
 
 int 
 fptr_whitelist_comm_timer(void (*fptr)(void*))
 {
-	return 1;
 	if(fptr == &pending_udp_timer_cb) return 1;
 	else if(fptr == &outnet_tcptimer) return 1;
 	return 0;
@@ -70,7 +69,6 @@ fptr_whitelist_comm_timer(void (*fptr)(void*))
 int 
 fptr_whitelist_comm_signal(void (*fptr)(int, void*))
 {
-	return 1;
 	if(fptr == &worker_sighandler) return 1;
 	return 0;
 }
@@ -78,5 +76,34 @@ fptr_whitelist_comm_signal(void (*fptr)(int, void*))
 int 
 fptr_whitelist_event(void (*fptr)(int, short, void *))
 {
+	if(fptr == &comm_point_udp_callback) return 1;
+	else if(fptr == &comm_point_tcp_accept_callback) return 1;
+	else if(fptr == &comm_point_tcp_handle_callback) return 1;
+	else if(fptr == &comm_timer_callback) return 1;
+	else if(fptr == &comm_signal_callback) return 1;
+	else if(fptr == &comm_point_local_handle_callback) return 1;
+	return 0;
+}
+
+int 
+fptr_whitelist_pending_udp(comm_point_callback_t *fptr)
+{
+	if(fptr == &serviced_udp_callback) return 1;
+	else if(fptr == &worker_handle_reply) return 1;
+	return 0;
+}
+
+int 
+fptr_whitelist_pending_tcp(comm_point_callback_t *fptr)
+{
+	if(fptr == &serviced_tcp_callback) return 1;
+	else if(fptr == &worker_handle_reply) return 1;
+	return 0;
+}
+
+int 
+fptr_whitelist_serviced_query(comm_point_callback_t *fptr)
+{
+	if(fptr == &worker_handle_service_reply) return 1;
 	return 0;
 }

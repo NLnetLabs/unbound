@@ -206,4 +206,12 @@ int worker_handle_control_cmd(struct comm_point* c, void* arg, int error,
 int worker_handle_request(struct comm_point* c, void* arg, int error,
 	struct comm_reply* repinfo);
 
+/** process incoming replies from the network */
+int worker_handle_reply(struct comm_point* c, void* arg, int error, 
+	struct comm_reply* reply_info);
+
+/** process incoming serviced query replies from the network */
+int worker_handle_service_reply(struct comm_point* c, void* arg, int error, 
+	struct comm_reply* reply_info);
+
 #endif /* DAEMON_WORKER_H */

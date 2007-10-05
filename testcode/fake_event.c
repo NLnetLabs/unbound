@@ -968,6 +968,14 @@ int outnet_udp_cb(struct comm_point* ATTR_UNUSED(c),
 	return 0;
 }
 
+int outnet_tcp_cb(struct comm_point* ATTR_UNUSED(c), 
+	void* ATTR_UNUSED(arg), int ATTR_UNUSED(error),
+        struct comm_reply *ATTR_UNUSED(reply_info))
+{
+	log_assert(0);
+	return 0;
+}
+
 void pending_udp_timer_cb(void *ATTR_UNUSED(arg))
 {
 	log_assert(0);
@@ -976,6 +984,58 @@ void pending_udp_timer_cb(void *ATTR_UNUSED(arg))
 void outnet_tcptimer(void* ATTR_UNUSED(arg))
 {
 	log_assert(0);
+}
+
+void comm_point_udp_callback(int ATTR_UNUSED(fd), short ATTR_UNUSED(event), 
+	void* ATTR_UNUSED(arg))
+{
+	log_assert(0);
+}
+
+void comm_point_tcp_accept_callback(int ATTR_UNUSED(fd), 
+	short ATTR_UNUSED(event), void* ATTR_UNUSED(arg))
+{
+	log_assert(0);
+}
+
+void comm_point_tcp_handle_callback(int ATTR_UNUSED(fd), 
+	short ATTR_UNUSED(event), void* ATTR_UNUSED(arg))
+{
+	log_assert(0);
+}
+
+void comm_timer_callback(int ATTR_UNUSED(fd), 
+	short ATTR_UNUSED(event), void* ATTR_UNUSED(arg))
+{
+	log_assert(0);
+}
+
+void comm_signal_callback(int ATTR_UNUSED(fd), 
+	short ATTR_UNUSED(event), void* ATTR_UNUSED(arg))
+{
+	log_assert(0);
+}
+
+void comm_point_local_handle_callback(int ATTR_UNUSED(fd), 
+	short ATTR_UNUSED(event), void* ATTR_UNUSED(arg))
+{
+	log_assert(0);
+}
+
+int serviced_udp_callback(struct comm_point* ATTR_UNUSED(c), 
+	void* ATTR_UNUSED(arg), int ATTR_UNUSED(error),
+        struct comm_reply* ATTR_UNUSED(reply_info))
+{
+	log_assert(0);
+	return 0;
+}
+
+int serviced_tcp_callback(struct comm_point* ATTR_UNUSED(c), 
+	void* ATTR_UNUSED(arg), int ATTR_UNUSED(error),
+        struct comm_reply* ATTR_UNUSED(reply_info))
+{
+	log_assert(0);
+	return 0;
 }
 
 /*********** End of Dummy routines ***********/

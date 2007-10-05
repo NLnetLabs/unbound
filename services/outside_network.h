@@ -373,10 +373,22 @@ size_t serviced_get_mem(struct serviced_query* sq);
 int outnet_udp_cb(struct comm_point* c, void* arg, int error,
 	struct comm_reply *reply_info);
 
+/** callback for pending tcp connections */
+int outnet_tcp_cb(struct comm_point* c, void* arg, int error,
+	struct comm_reply *reply_info);
+
 /** callback for udp timeout */
 void pending_udp_timer_cb(void *arg);
 
 /** callback for outgoing TCP timer event */
 void outnet_tcptimer(void* arg);
+
+/** callback for serviced query UDP answers */
+int serviced_udp_callback(struct comm_point* c, void* arg, int error,
+        struct comm_reply* rep);
+
+/** TCP reply or error callback for serviced queries */
+int serviced_tcp_callback(struct comm_point* c, void* arg, int error,
+        struct comm_reply* rep);
 
 #endif /* OUTSIDE_NETWORK_H */

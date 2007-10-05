@@ -93,54 +93,6 @@ struct internal_signal {
 	struct internal_signal* next;
 };
 
-/**
- * handle libevent callback for udp comm point.
- * @param fd: file descriptor.
- * @param event: event bits from libevent: 
- *	EV_READ, EV_WRITE, EV_SIGNAL, EV_TIMEOUT.
- * @param arg: the comm_point structure.
- */
-static void comm_point_udp_callback(int fd, short event, void* arg);
-
-/**
- * handle libevent callback for tcp accept comm point
- * @param fd: file descriptor.
- * @param event: event bits from libevent: 
- *	EV_READ, EV_WRITE, EV_SIGNAL, EV_TIMEOUT.
- * @param arg: the comm_point structure.
- */
-static void comm_point_tcp_accept_callback(int fd, short event, void* arg);
-
-/**
- * handle libevent callback for tcp data comm point
- * @param fd: file descriptor.
- * @param event: event bits from libevent: 
- *	EV_READ, EV_WRITE, EV_SIGNAL, EV_TIMEOUT.
- * @param arg: the comm_point structure.
- */
-static void comm_point_tcp_handle_callback(int fd, short event, void* arg);
-
-/**
- * handle libevent callback for timer comm.
- * @param fd: file descriptor (always -1).
- * @param event: event bits from libevent: 
- *	EV_READ, EV_WRITE, EV_SIGNAL, EV_TIMEOUT.
- * @param arg: the comm_timer structure.
- */
-static void comm_timer_callback(int fd, short event, void* arg);
-
-/**
- * handle libevent callback for signal comm.
- * @param fd: file descriptor (used for the signal number).
- * @param event: event bits from libevent: 
- *	EV_READ, EV_WRITE, EV_SIGNAL, EV_TIMEOUT.
- * @param arg: the internal commsignal structure.
- */
-static void comm_signal_callback(int fd, short event, void* arg);
-
-/** libevent callback for AF_UNIX fds */
-static void comm_point_local_handle_callback(int fd, short event, void* arg);
-
 /** create a tcp handler with a parent */
 static struct comm_point* comm_point_create_tcp_handler(
 	struct comm_base *base, struct comm_point* parent, size_t bufsize,
@@ -223,7 +175,7 @@ comm_point_send_udp_msg(struct comm_point *c, ldns_buffer* packet,
 	return 1;
 }
 
-static void 
+void 
 comm_point_udp_callback(int fd, short event, void* arg)
 {
 	struct comm_reply rep;
@@ -254,6 +206,7 @@ comm_point_udp_callback(int fd, short event, void* arg)
 		(void)comm_point_send_udp_msg(rep.c, rep.c->buffer,
 			(struct sockaddr*)&rep.addr, rep.addrlen);
 	}
+	log_assert(fptr_whitelist_event(rep.c->ev->ev.ev_callback));
 }
 
 /** Use a new tcp handler for new query fd, set to read query */
@@ -268,7 +221,7 @@ setup_tcp_handler(struct comm_point* c, int fd)
 	comm_point_start_listening(c, fd, TCP_QUERY_TIMEOUT);
 }
 
-static void 
+void 
 comm_point_tcp_accept_callback(int fd, short event, void* arg)
 {
 	struct comm_point* c = (struct comm_point*)arg, *c_hdl;
@@ -310,6 +263,7 @@ comm_point_tcp_accept_callback(int fd, short event, void* arg)
 	}
 	/* addr is dropped. Not needed for tcp reply. */
 	setup_tcp_handler(c_hdl, new_fd);
+	log_assert(fptr_whitelist_event(c->ev->ev.ev_callback));
 }
 
 /** Make tcp handler free for next assignment */
@@ -496,7 +450,7 @@ comm_point_tcp_handle_write(int fd, struct comm_point* c)
 	return 1;
 }
 
-static void 
+void 
 comm_point_tcp_handle_callback(int fd, short event, void* arg)
 {
 	struct comm_point* c = (struct comm_point*)arg;
@@ -512,6 +466,7 @@ comm_point_tcp_handle_callback(int fd, short event, void* arg)
 					NETEVENT_CLOSED, NULL);
 			}
 		}
+		log_assert(fptr_whitelist_event(c->ev->ev.ev_callback));
 		return;
 	}
 	if(event&EV_WRITE) {
@@ -524,6 +479,7 @@ comm_point_tcp_handle_callback(int fd, short event, void* arg)
 					NETEVENT_CLOSED, NULL);
 			}
 		}
+		log_assert(fptr_whitelist_event(c->ev->ev.ev_callback));
 		return;
 	}
 	if(event&EV_TIMEOUT) {
@@ -534,12 +490,14 @@ comm_point_tcp_handle_callback(int fd, short event, void* arg)
 			(void)(*c->callback)(c, c->cb_arg,
 				NETEVENT_TIMEOUT, NULL);
 		}
+		log_assert(fptr_whitelist_event(c->ev->ev.ev_callback));
 		return;
 	}
 	log_err("Ignored event %d for tcphdl.", event);
+	log_assert(fptr_whitelist_event(c->ev->ev.ev_callback));
 }
 
-static void comm_point_local_handle_callback(int fd, short event, void* arg)
+void comm_point_local_handle_callback(int fd, short event, void* arg)
 {
 	struct comm_point* c = (struct comm_point*)arg;
 	log_assert(c->type == comm_local);
@@ -550,9 +508,11 @@ static void comm_point_local_handle_callback(int fd, short event, void* arg)
 			(void)(*c->callback)(c, c->cb_arg, NETEVENT_CLOSED, 
 				NULL);
 		}
+		log_assert(fptr_whitelist_event(c->ev->ev.ev_callback));
 		return;
 	}
 	log_err("Ignored event %d for localhdl.", event);
+	log_assert(fptr_whitelist_event(c->ev->ev.ev_callback));
 }
 
 struct comm_point* 
@@ -1069,7 +1029,7 @@ comm_timer_delete(struct comm_timer* timer)
 	free(timer);
 }
 
-static void 
+void 
 comm_timer_callback(int ATTR_UNUSED(fd), short event, void* arg)
 {
 	struct comm_timer* tm = (struct comm_timer*)arg;
@@ -1078,6 +1038,7 @@ comm_timer_callback(int ATTR_UNUSED(fd), short event, void* arg)
 	tm->ev_timer->enabled = 0;
 	log_assert(fptr_whitelist_comm_timer(tm->callback));
 	(*tm->callback)(tm->cb_arg);
+	log_assert(fptr_whitelist_event(tm->ev_timer->ev.ev_callback));
 }
 
 int 
@@ -1109,7 +1070,7 @@ comm_signal_create(struct comm_base* base,
 	return com;
 }
 
-static void 
+void 
 comm_signal_callback(int sig, short event, void* arg)
 {
 	struct comm_signal* comsig = (struct comm_signal*)arg;
@@ -1117,6 +1078,7 @@ comm_signal_callback(int sig, short event, void* arg)
 		return;
 	log_assert(fptr_whitelist_comm_signal(comsig->callback));
 	(*comsig->callback)(sig, comsig->cb_arg);
+	log_assert(fptr_whitelist_event(comsig->ev_signal->ev.ev_callback));
 }
 
 int 

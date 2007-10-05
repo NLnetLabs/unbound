@@ -461,4 +461,68 @@ int comm_signal_bind(struct comm_signal* comsig, int sig);
  */
 void comm_signal_delete(struct comm_signal* comsig);
 
+
+/**** internal routines ****/
+
+/**
+ * This routine is published for checks and tests, and is only used internally.
+ * handle libevent callback for udp comm point.
+ * @param fd: file descriptor.
+ * @param event: event bits from libevent: 
+ *	EV_READ, EV_WRITE, EV_SIGNAL, EV_TIMEOUT.
+ * @param arg: the comm_point structure.
+ */
+void comm_point_udp_callback(int fd, short event, void* arg);
+
+/**
+ * This routine is published for checks and tests, and is only used internally.
+ * handle libevent callback for tcp accept comm point
+ * @param fd: file descriptor.
+ * @param event: event bits from libevent: 
+ *	EV_READ, EV_WRITE, EV_SIGNAL, EV_TIMEOUT.
+ * @param arg: the comm_point structure.
+ */
+void comm_point_tcp_accept_callback(int fd, short event, void* arg);
+
+/**
+ * This routine is published for checks and tests, and is only used internally.
+ * handle libevent callback for tcp data comm point
+ * @param fd: file descriptor.
+ * @param event: event bits from libevent: 
+ *	EV_READ, EV_WRITE, EV_SIGNAL, EV_TIMEOUT.
+ * @param arg: the comm_point structure.
+ */
+void comm_point_tcp_handle_callback(int fd, short event, void* arg);
+
+/**
+ * This routine is published for checks and tests, and is only used internally.
+ * handle libevent callback for timer comm.
+ * @param fd: file descriptor (always -1).
+ * @param event: event bits from libevent: 
+ *	EV_READ, EV_WRITE, EV_SIGNAL, EV_TIMEOUT.
+ * @param arg: the comm_timer structure.
+ */
+void comm_timer_callback(int fd, short event, void* arg);
+
+/**
+ * This routine is published for checks and tests, and is only used internally.
+ * handle libevent callback for signal comm.
+ * @param fd: file descriptor (used for the signal number).
+ * @param event: event bits from libevent: 
+ *	EV_READ, EV_WRITE, EV_SIGNAL, EV_TIMEOUT.
+ * @param arg: the internal commsignal structure.
+ */
+void comm_signal_callback(int fd, short event, void* arg);
+
+/**
+ * This routine is published for checks and tests, and is only used internally.
+ * libevent callback for AF_UNIX fds
+ * @param fd: file descriptor.
+ * @param event: event bits from libevent: 
+ *	EV_READ, EV_WRITE, EV_SIGNAL, EV_TIMEOUT.
+ * @param arg: the comm_point structure.
+ */
+void comm_point_local_handle_callback(int fd, short event, void* arg);
+
+
 #endif /* NET_EVENT_H */

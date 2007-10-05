@@ -87,4 +87,32 @@ int fptr_whitelist_comm_signal(void (*fptr)(int, void*));
  */
 int fptr_whitelist_event(void (*fptr)(int, short, void *));
 
+/**
+ * Check function pointer whitelist for pending udp callback values.
+ * This is not called by libevent itself, but checked by netevent.
+ *
+ * @param fptr: function pointer to check.
+ * @return false if not in whitelist.
+ */
+int fptr_whitelist_pending_udp(comm_point_callback_t *fptr);
+
+/**
+ * Check function pointer whitelist for pending tcp callback values.
+ * This is not called by libevent itself, but checked by netevent.
+ *
+ * @param fptr: function pointer to check.
+ * @return false if not in whitelist.
+ */
+int fptr_whitelist_pending_tcp(comm_point_callback_t *fptr);
+
+/**
+ * Check function pointer whitelist for serviced query callback values.
+ * This is not called by libevent itself, but checked by netevent.
+ *
+ * @param fptr: function pointer to check.
+ * @return false if not in whitelist.
+ */
+int fptr_whitelist_serviced_query(comm_point_callback_t *fptr);
+
+
 #endif /* UTIL_FPTR_WLIST_H */
