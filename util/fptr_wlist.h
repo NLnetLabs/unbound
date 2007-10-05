@@ -56,11 +56,7 @@
 #define UTIL_FPTR_WLIST_H
 #include "util/netevent.h"
 #include "util/storage/lruhash.h"
-struct module_qstate;
-struct module_env;
-enum module_ev;
-struct outbound_entry;
-struct query_info;
+#include "util/module.h"
 
 /**
  * Check function pointer whitelist for comm_point callback values.
