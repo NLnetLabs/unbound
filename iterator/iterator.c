@@ -57,9 +57,9 @@
 #include "util/region-allocator.h"
 #include "util/data/dname.h"
 #include "util/data/msgencode.h"
+#include "util/fptr_wlist.h"
 
-/** iterator init */
-static int 
+int 
 iter_init(struct module_env* env, int id)
 {
 	struct iter_env* iter_env = (struct iter_env*)calloc(1,
@@ -76,8 +76,7 @@ iter_init(struct module_env* env, int id)
 	return 1;
 }
 
-/** iterator deinit */
-static void 
+void 
 iter_deinit(struct module_env* env, int id)
 {
 	struct iter_env* iter_env;
@@ -432,6 +431,7 @@ generate_sub_request(uint8_t* qname, size_t qnamelen, uint16_t qtype,
 	qflags |= BIT_CD;
 
 	/* attach subquery, lookup existing or make a new one */
+	log_assert(fptr_whitelist_modenv_attach_sub(qstate->env->attach_sub));
 	if(!(*qstate->env->attach_sub)(qstate, &qinf, qflags, prime, &subq)) {
 		return 0;
 	}
@@ -444,6 +444,8 @@ generate_sub_request(uint8_t* qname, size_t qnamelen, uint16_t qtype,
 			sizeof(struct iter_qstate));
 		if(!subq->minfo[id]) {
 			log_err("init subq: out of memory");
+			log_assert(fptr_whitelist_modenv_kill_sub(
+				qstate->env->kill_sub));
 			(*qstate->env->kill_sub)(subq);
 			return 0;
 		}
@@ -560,6 +562,8 @@ prime_stub(struct module_qstate* qstate, struct iter_qstate* iq,
 		subiq->dp = delegpt_copy(stub_dp, subq->region);
 		if(!subiq->dp) {
 			log_err("out of memory priming stub, copydp");
+			log_assert(fptr_whitelist_modenv_kill_sub(
+				qstate->env->kill_sub));
 			(*qstate->env->kill_sub)(subq);
 			(void)error_response(qstate, id, LDNS_RCODE_SERVFAIL);
 			return 1; /* return 1 to make module stop, with error */
@@ -1131,6 +1135,7 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 	log_query_info(VERB_DETAIL, "sending query:", &iq->qchase);
 	log_name_addr(VERB_DETAIL, "sending to target:", iq->dp->name, 
 		&target->addr, target->addrlen);
+	log_assert(fptr_whitelist_modenv_send_query(qstate->env->send_query));
 	outq = (*qstate->env->send_query)(
 		iq->qchase.qname, iq->qchase.qname_len, 
 		iq->qchase.qtype, iq->qchase.qclass, 
@@ -1189,6 +1194,8 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		/* close down outstanding requests to be discarded */
 		outbound_list_clear(&iq->outlist);
 		iq->num_current_queries = 0;
+		log_assert(fptr_whitelist_modenv_detach_subs(
+			qstate->env->detach_subs));
 		(*qstate->env->detach_subs)(qstate);
 		iq->num_target_queries = 0;
 		return final_state(iq);
@@ -1221,6 +1228,8 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		 */
 		outbound_list_clear(&iq->outlist);
 		iq->num_current_queries = 0;
+		log_assert(fptr_whitelist_modenv_detach_subs(
+			qstate->env->detach_subs));
 		(*qstate->env->detach_subs)(qstate);
 		iq->num_target_queries = 0;
 		verbose(VERB_ALGO, "cleared outbound list for next round");
@@ -1258,6 +1267,8 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		 */
 		outbound_list_clear(&iq->outlist);
 		iq->num_current_queries = 0;
+		log_assert(fptr_whitelist_modenv_detach_subs(
+			qstate->env->detach_subs));
 		(*qstate->env->detach_subs)(qstate);
 		iq->num_target_queries = 0;
 		verbose(VERB_ALGO, "cleared outbound list for query restart");
@@ -1509,7 +1520,7 @@ processFinished(struct module_qstate* qstate, struct iter_qstate* iq,
 	return 0;
 }
 
-/**
+/*
  * Return priming query results to interestes super querystates.
  * 
  * Sets the delegation point and delegation message (not nonRD queries).
@@ -1519,7 +1530,7 @@ processFinished(struct module_qstate* qstate, struct iter_qstate* iq,
  * @param id: module id.
  * @param super: the qstate to inform.
  */
-static void
+void
 iter_inform_super(struct module_qstate* qstate, int id, 
 	struct module_qstate* super)
 {
@@ -1666,8 +1677,7 @@ handle_it:
 	iter_handle(qstate, iq, ie, id);
 }
 
-/** iterator operate on a query */
-static void 
+void 
 iter_operate(struct module_qstate* qstate, enum module_ev event, int id,
 	struct outbound_entry* outbound)
 {
@@ -1710,8 +1720,7 @@ iter_operate(struct module_qstate* qstate, enum module_ev event, int id,
 	(void)error_response(qstate, id, LDNS_RCODE_SERVFAIL);
 }
 
-/** iterator cleanup query state */
-static void 
+void 
 iter_clear(struct module_qstate* qstate, int id)
 {
 	struct iter_qstate* iq;
@@ -1725,8 +1734,8 @@ iter_clear(struct module_qstate* qstate, int id)
 	qstate->minfo[id] = NULL;
 }
 
-/** iterator alloc size routine */
-static size_t iter_get_mem(struct module_env* env, int id)
+size_t 
+iter_get_mem(struct module_env* env, int id)
 {
 	struct iter_env* ie = (struct iter_env*)env->modinfo[id];
 	if(!ie)

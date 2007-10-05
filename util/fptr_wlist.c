@@ -50,9 +50,11 @@
 #include "services/outside_network.h"
 #include "services/mesh.h"
 #include "services/cache/infra.h"
+#include "iterator/iterator.h"
 #include "iterator/iter_donotq.h"
 #include "iterator/iter_fwd.h"
 #include "iterator/iter_hints.h"
+#include "validator/validator.h"
 #include "validator/val_anchor.h"
 #include "validator/val_nsec3.h"
 #include "validator/val_sigcrypt.h"
@@ -202,5 +204,107 @@ fptr_whitelist_hash_deldatafunc(lruhash_deldatafunc_t fptr)
 	else if(fptr == &key_entry_deldatafunc) return 1;
 	else if(fptr == &infra_lame_deldatafunc) return 1;
 	else if(fptr == &test_slabhash_deldata) return 1;
+	return 0;
+}
+
+int 
+fptr_whitelist_modenv_send_packet(int (*fptr)(ldns_buffer* pkt,
+        struct sockaddr_storage* addr, socklen_t addrlen, int timeout,
+        struct module_qstate* q, int use_tcp))
+{
+	if(fptr == &worker_send_packet) return 1;
+	return 0;
+}
+
+int 
+fptr_whitelist_modenv_send_query(struct outbound_entry* (*fptr)(
+        uint8_t* qname, size_t qnamelen, uint16_t qtype, uint16_t qclass,
+        uint16_t flags, int dnssec, struct sockaddr_storage* addr,
+        socklen_t addrlen, struct module_qstate* q))
+{
+	if(fptr == &worker_send_query) return 1;
+	return 0;
+}
+
+int 
+fptr_whitelist_modenv_detach_subs(void (*fptr)(
+        struct module_qstate* qstate))
+{
+	if(fptr == &mesh_detach_subs) return 1;
+	return 0;
+}
+
+int 
+fptr_whitelist_modenv_attach_sub(int (*fptr)(
+        struct module_qstate* qstate, struct query_info* qinfo,
+        uint16_t qflags, int prime, struct module_qstate** newq))
+{
+	if(fptr == &mesh_attach_sub) return 1;
+	return 0;
+}
+
+int 
+fptr_whitelist_modenv_kill_sub(void (*fptr)(struct module_qstate* newq))
+{
+	if(fptr == &mesh_state_delete) return 1;
+	return 0;
+}
+
+int 
+fptr_whitelist_modenv_detect_cycle(int (*fptr)(        
+	struct module_qstate* qstate, struct query_info* qinfo,         
+	uint16_t flags, int prime))
+{
+	if(fptr == &mesh_detect_cycle) return 1;
+	return 0;
+}
+
+int 
+fptr_whitelist_mod_init(int (*fptr)(struct module_env* env, int id))
+{
+	if(fptr == &iter_init) return 1;
+	else if(fptr == &val_init) return 1;
+	return 0;
+}
+
+int 
+fptr_whitelist_mod_deinit(void (*fptr)(struct module_env* env, int id))
+{
+	if(fptr == &iter_deinit) return 1;
+	else if(fptr == &val_deinit) return 1;
+	return 0;
+}
+
+int 
+fptr_whitelist_mod_operate(void (*fptr)(struct module_qstate* qstate,
+        enum module_ev event, int id, struct outbound_entry* outbound))
+{
+	if(fptr == &iter_operate) return 1;
+	else if(fptr == &val_operate) return 1;
+	return 0;
+}
+
+int 
+fptr_whitelist_mod_inform_super(void (*fptr)(
+        struct module_qstate* qstate, int id, struct module_qstate* super))
+{
+	if(fptr == &iter_inform_super) return 1;
+	else if(fptr == &val_inform_super) return 1;
+	return 0;
+}
+
+int 
+fptr_whitelist_mod_clear(void (*fptr)(struct module_qstate* qstate,
+        int id))
+{
+	if(fptr == &iter_clear) return 1;
+	else if(fptr == &val_clear) return 1;
+	return 0;
+}
+
+int 
+fptr_whitelist_mod_get_mem(size_t (*fptr)(struct module_env* env, int id))
+{
+	if(fptr == &iter_get_mem) return 1;
 	return 0;
 }

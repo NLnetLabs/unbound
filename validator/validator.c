@@ -54,6 +54,7 @@
 #include "util/net_help.h"
 #include "util/region-allocator.h"
 #include "util/config_file.h"
+#include "util/fptr_wlist.h"
 
 /** fill up nsec3 key iterations config entry */
 static int
@@ -133,8 +134,7 @@ val_apply_cfg(struct val_env* val_env, struct config_file* cfg)
 	return 1;
 }
 
-/** validator init */
-static int
+int
 val_init(struct module_env* env, int id)
 {
 	struct val_env* val_env = (struct val_env*)calloc(1,
@@ -153,8 +153,7 @@ val_init(struct module_env* env, int id)
 	return 1;
 }
 
-/** validator deinit */
-static void
+void
 val_deinit(struct module_env* env, int id)
 {
 	struct val_env* val_env;
@@ -297,6 +296,7 @@ generate_request(struct module_qstate* qstate, int id, uint8_t* name,
 	ask.qtype = qtype;
 	ask.qclass = qclass;
 	log_query_info(VERB_ALGO, "generate request", &ask);
+	log_assert(fptr_whitelist_modenv_attach_sub(qstate->env->attach_sub));
 	if(!(*qstate->env->attach_sub)(qstate, &ask, 
 		(uint16_t)(BIT_RD|BIT_CD), 0, &newq)){
 		log_err("Could not generate request: out of memory");
@@ -1579,8 +1579,7 @@ val_handle(struct module_qstate* qstate, struct val_qstate* vq,
 	}
 }
 
-/** validator operate on a query */
-static void
+void
 val_operate(struct module_qstate* qstate, enum module_ev event, int id,
         struct outbound_entry* outbound)
 {
@@ -2026,14 +2025,14 @@ process_prime_response(struct module_qstate* qstate, struct val_qstate* vq,
 	/* the qstate will be reactivated after inform_super is done */
 }
 
-/** 
+/* 
  * inform validator super.
  * 
  * @param qstate: query state that finished.
  * @param id: module id.
  * @param super: the qstate to inform.
  */
-static void
+void
 val_inform_super(struct module_qstate* qstate, int id,
 	struct module_qstate* super)
 {
@@ -2063,8 +2062,7 @@ val_inform_super(struct module_qstate* qstate, int id,
 	log_err("internal error in validator: no inform_supers possible");
 }
 
-/** validator cleanup query state */
-static void
+void
 val_clear(struct module_qstate* qstate, int id)
 {
 	if(!qstate)
@@ -2073,14 +2071,7 @@ val_clear(struct module_qstate* qstate, int id)
 	qstate->minfo[id] = NULL;
 }
 
-/**
- * Debug helper routine that assists worker in determining memory in 
- * use.
- * @param env: module environment 
- * @param id: module id.
- * @return memory in use in bytes.
- */
-static size_t 
+size_t 
 val_get_mem(struct module_env* env, int id)
 {
 	struct val_env* ve = (struct val_env*)env->modinfo[id];

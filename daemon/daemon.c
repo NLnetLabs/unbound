@@ -52,6 +52,7 @@
 #include "util/module.h"
 #include "iterator/iterator.h"
 #include "validator/validator.h"
+#include "util/fptr_wlist.h"
 #include <signal.h>
 
 /** How many quit requests happened. */
@@ -243,6 +244,8 @@ daemon_desetup_modules(struct daemon* daemon)
 {
 	int i;
 	for(i=0; i<daemon->num_modules; i++) {
+		log_assert(fptr_whitelist_mod_deinit(
+			daemon->modfunc[i]->deinit));
 		(*daemon->modfunc[i]->deinit)(daemon->env, i);
 	}
 	daemon->num_modules = 0;
@@ -271,6 +274,7 @@ static void daemon_setup_modules(struct daemon* daemon)
 	daemon->env->need_to_validate = 0; /* set by module init below */
 	for(i=0; i<daemon->num_modules; i++) {
 		log_info("init module %d: %s", i, daemon->modfunc[i]->name);
+		log_assert(fptr_whitelist_mod_init(daemon->modfunc[i]->init));
 		if(!(*daemon->modfunc[i]->init)(daemon->env, i)) {
 			fatal_exit("module init for module %s failed",
 				daemon->modfunc[i]->name);

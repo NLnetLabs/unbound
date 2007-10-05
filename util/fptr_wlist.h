@@ -56,6 +56,11 @@
 #define UTIL_FPTR_WLIST_H
 #include "util/netevent.h"
 #include "util/storage/lruhash.h"
+struct module_qstate;
+struct module_env;
+enum module_ev;
+struct outbound_entry;
+struct query_info;
 
 /**
  * Check function pointer whitelist for comm_point callback values.
@@ -169,5 +174,114 @@ int fptr_whitelist_hash_delkeyfunc(lruhash_delkeyfunc_t fptr);
  * @return false if not in whitelist.
  */
 int fptr_whitelist_hash_deldatafunc(lruhash_deldatafunc_t fptr);
+
+/**
+ * Check function pointer whitelist for module_env send_packet callback values.
+ *
+ * @param fptr: function pointer to check.
+ * @return false if not in whitelist.
+ */
+int fptr_whitelist_modenv_send_packet(int (*fptr)(ldns_buffer* pkt, 
+	struct sockaddr_storage* addr, socklen_t addrlen, int timeout, 
+	struct module_qstate* q, int use_tcp));
+
+/**
+ * Check function pointer whitelist for module_env send_query callback values.
+ *
+ * @param fptr: function pointer to check.
+ * @return false if not in whitelist.
+ */
+int fptr_whitelist_modenv_send_query(struct outbound_entry* (*fptr)(
+	uint8_t* qname, size_t qnamelen, uint16_t qtype, uint16_t qclass, 
+	uint16_t flags, int dnssec, struct sockaddr_storage* addr, 
+	socklen_t addrlen, struct module_qstate* q));
+
+/**
+ * Check function pointer whitelist for module_env detach_subs callback values.
+ *
+ * @param fptr: function pointer to check.
+ * @return false if not in whitelist.
+ */
+int fptr_whitelist_modenv_detach_subs(void (*fptr)(
+	struct module_qstate* qstate));
+
+/**
+ * Check function pointer whitelist for module_env attach_sub callback values.
+ *
+ * @param fptr: function pointer to check.
+ * @return false if not in whitelist.
+ */
+int fptr_whitelist_modenv_attach_sub(int (*fptr)(
+	struct module_qstate* qstate, struct query_info* qinfo, 
+	uint16_t qflags, int prime, struct module_qstate** newq));
+
+/**
+ * Check function pointer whitelist for module_env kill_sub callback values.
+ *
+ * @param fptr: function pointer to check.
+ * @return false if not in whitelist.
+ */
+int fptr_whitelist_modenv_kill_sub(void (*fptr)(struct module_qstate* newq));
+
+/**
+ * Check function pointer whitelist for module_env detect_cycle callback values.
+ *
+ * @param fptr: function pointer to check.
+ * @return false if not in whitelist.
+ */
+int fptr_whitelist_modenv_detect_cycle(int (*fptr)(
+	struct module_qstate* qstate, struct query_info* qinfo, 
+	uint16_t flags, int prime));
+
+/**
+ * Check function pointer whitelist for module init call values.
+ *
+ * @param fptr: function pointer to check.
+ * @return false if not in whitelist.
+ */
+int fptr_whitelist_mod_init(int (*fptr)(struct module_env* env, int id));
+
+/**
+ * Check function pointer whitelist for module deinit call values.
+ *
+ * @param fptr: function pointer to check.
+ * @return false if not in whitelist.
+ */
+int fptr_whitelist_mod_deinit(void (*fptr)(struct module_env* env, int id));
+
+/**
+ * Check function pointer whitelist for module operate call values.
+ *
+ * @param fptr: function pointer to check.
+ * @return false if not in whitelist.
+ */
+int fptr_whitelist_mod_operate(void (*fptr)(struct module_qstate* qstate, 
+	enum module_ev event, int id, struct outbound_entry* outbound));
+
+/**
+ * Check function pointer whitelist for module inform_super call values.
+ *
+ * @param fptr: function pointer to check.
+ * @return false if not in whitelist.
+ */
+int fptr_whitelist_mod_inform_super(void (*fptr)(
+	struct module_qstate* qstate, int id, struct module_qstate* super));
+
+/**
+ * Check function pointer whitelist for module clear call values.
+ *
+ * @param fptr: function pointer to check.
+ * @return false if not in whitelist.
+ */
+int fptr_whitelist_mod_clear(void (*fptr)(struct module_qstate* qstate, 
+	int id));
+
+/**
+ * Check function pointer whitelist for module get_mem call values.
+ *
+ * @param fptr: function pointer to check.
+ * @return false if not in whitelist.
+ */
+int fptr_whitelist_mod_get_mem(size_t (*fptr)(struct module_env* env, int id));
 
 #endif /* UTIL_FPTR_WLIST_H */

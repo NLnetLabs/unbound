@@ -43,6 +43,10 @@
 #ifndef VALIDATOR_VALIDATOR_H
 #define VALIDATOR_VALIDATOR_H
 struct module_func_block;
+struct module_env;
+enum module_ev;
+struct outbound_entry;
+struct module_qstate;
 #include "util/data/msgreply.h"
 #include "validator/val_utils.h"
 struct val_anchors;
@@ -201,5 +205,37 @@ struct module_func_block* val_get_funcblock();
  * @return constant string that is printable.
  */
 const char* val_state_to_string(enum val_state state);
+
+/** validator init */
+int val_init(struct module_env* env, int id);
+
+/** validator deinit */
+void val_deinit(struct module_env* env, int id);
+
+/** validator operate on a query */
+void val_operate(struct module_qstate* qstate, enum module_ev event, int id,
+        struct outbound_entry* outbound);
+
+/** 
+ * inform validator super.
+ * 
+ * @param qstate: query state that finished.
+ * @param id: module id.
+ * @param super: the qstate to inform.
+ */
+void val_inform_super(struct module_qstate* qstate, int id,
+	struct module_qstate* super);
+
+/** validator cleanup query state */
+void val_clear(struct module_qstate* qstate, int id);
+
+/**
+ * Debug helper routine that assists worker in determining memory in 
+ * use.
+ * @param env: module environment 
+ * @param id: module id.
+ * @return memory in use in bytes.
+ */
+size_t val_get_mem(struct module_env* env, int id);
 
 #endif /* VALIDATOR_VALIDATOR_H */

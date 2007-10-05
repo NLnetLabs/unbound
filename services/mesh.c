@@ -52,6 +52,7 @@
 #include "util/region-allocator.h"
 #include "util/data/msgencode.h"
 #include "util/timehist.h"
+#include "util/fptr_wlist.h"
 
 int
 mesh_state_compare(const void* ap, const void* bp)
@@ -252,6 +253,7 @@ mesh_state_cleanup(struct mesh_state* mstate)
 	/* de-init modules */
 	mesh = mstate->s.env->mesh;
 	for(i=0; i<mesh->num_modules; i++) {
+		log_assert(fptr_whitelist_mod_clear(mesh->modfunc[i]->clear));
 		(*mesh->modfunc[i]->clear)(&mstate->s, i);
 		mstate->s.minfo[i] = NULL;
 		mstate->s.ext_state[i] = module_finished;
@@ -489,6 +491,8 @@ void mesh_walk_supers(struct mesh_area* mesh, struct mesh_state* mstate)
 		/* make super runnable */
 		(void)rbtree_insert(&mesh->run, &ref->s->run_node);
 		/* callback the function to inform super of result */
+		log_assert(fptr_whitelist_mod_inform_super(
+			mesh->modfunc[ref->s->s.curmod]->inform_super));
 		(*mesh->modfunc[ref->s->s.curmod]->inform_super)(&mstate->s, 
 			ref->s->s.curmod, &ref->s->s);
 	}
@@ -596,6 +600,8 @@ void mesh_run(struct mesh_area* mesh, struct mesh_state* mstate,
 	verbose(VERB_ALGO, "mesh_run: start");
 	while(mstate) {
 		/* run the module */
+		log_assert(fptr_whitelist_mod_operate(
+			mesh->modfunc[mstate->s.curmod]->operate));
 		(*mesh->modfunc[mstate->s.curmod]->operate)
 			(&mstate->s, ev, mstate->s.curmod, e);
 

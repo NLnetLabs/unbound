@@ -134,6 +134,8 @@ worker_mem_report(struct worker* ATTR_UNUSED(worker),
 	iter = 0;
 	val = 0;
 	for(i=0; i<worker->env.mesh->num_modules; i++) {
+		log_assert(fptr_whitelist_mod_get_mem(worker->env.mesh->
+			modfunc[i]->get_mem));
 		if(strcmp(worker->env.mesh->modfunc[i]->name, "validator")==0)
 			val += (*worker->env.mesh->modfunc[i]->get_mem)
 				(&worker->env, i);

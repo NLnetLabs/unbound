@@ -45,6 +45,8 @@
 #include "services/outbound_list.h"
 #include "util/data/msgreply.h"
 struct module_func_block;
+enum module_ev;
+struct module_env;
 struct delegpt;
 struct iter_hints;
 struct iter_forwards;
@@ -272,5 +274,34 @@ const char* iter_state_to_string(enum iter_state state);
  * @return true if response state.
  */
 int iter_state_is_responsestate(enum iter_state s);
+
+/** iterator init */
+int iter_init(struct module_env* env, int id);
+
+/** iterator deinit */
+void iter_deinit(struct module_env* env, int id);
+
+/** iterator operate on a query */
+void iter_operate(struct module_qstate* qstate, enum module_ev event, int id,
+	struct outbound_entry* outbound);
+
+/**
+ * Return priming query results to interestes super querystates.
+ * 
+ * Sets the delegation point and delegation message (not nonRD queries).
+ * This is a callback from walk_supers.
+ *
+ * @param qstate: query state that finished.
+ * @param id: module id.
+ * @param super: the qstate to inform.
+ */
+void iter_inform_super(struct module_qstate* qstate, int id, 
+	struct module_qstate* super);
+
+/** iterator cleanup query state */
+void iter_clear(struct module_qstate* qstate, int id);
+
+/** iterator alloc size routine */
+size_t iter_get_mem(struct module_env* env, int id);
 
 #endif /* ITERATOR_ITERATOR_H */
