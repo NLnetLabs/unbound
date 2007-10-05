@@ -42,11 +42,7 @@
 
 #ifndef VALIDATOR_VALIDATOR_H
 #define VALIDATOR_VALIDATOR_H
-struct module_func_block;
-struct module_env;
-enum module_ev;
-struct outbound_entry;
-struct module_qstate;
+#include "util/module.h"
 #include "util/data/msgreply.h"
 #include "validator/val_utils.h"
 struct val_anchors;

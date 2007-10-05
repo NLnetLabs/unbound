@@ -44,9 +44,7 @@
 #define ITERATOR_ITERATOR_H
 #include "services/outbound_list.h"
 #include "util/data/msgreply.h"
-struct module_func_block;
-enum module_ev;
-struct module_env;
+#include "util/module.h"
 struct delegpt;
 struct iter_hints;
 struct iter_forwards;
