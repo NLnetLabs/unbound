@@ -48,8 +48,7 @@
 #include "util/config_file.h"
 #include "util/net_help.h"
 
-/** compare two donotq entries */
-static int
+int
 donotq_cmp(const void* k1, const void* k2)
 {
 	struct iter_donotq_addr* n1 = (struct iter_donotq_addr*)k1;

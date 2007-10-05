@@ -53,8 +53,7 @@
 #include "util/data/msgencode.h"
 #include "util/timehist.h"
 
-/** compare two mesh_states */
-static int
+int
 mesh_state_compare(const void* ap, const void* bp)
 {
 	struct mesh_state* a = (struct mesh_state*)ap;
@@ -78,8 +77,7 @@ mesh_state_compare(const void* ap, const void* bp)
 	return query_info_compare(&a->s.qinfo, &b->s.qinfo);
 }
 
-/** compare two mesh references */
-static int
+int
 mesh_state_ref_compare(const void* ap, const void* bp)
 {
 	struct mesh_state_ref* a = (struct mesh_state_ref*)ap;

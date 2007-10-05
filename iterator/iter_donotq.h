@@ -110,5 +110,7 @@ int donotq_lookup(struct iter_donotq* donotq, struct sockaddr_storage* addr,
  */
 size_t donotq_get_mem(struct iter_donotq* donotq);
 
+/** compare two donotq entries */
+int donotq_cmp(const void* k1, const void* k2);
 
 #endif /* ITERATOR_ITER_DONOTQ_H */

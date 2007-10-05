@@ -161,4 +161,28 @@ size_t slabhash_get_mem(struct slabhash* table);
  */
 struct lruhash* slabhash_gettable(struct slabhash* table, hashvalue_t hash);
 
+/* --- test representation --- */
+/** test structure contains test key */
+struct slabhash_testkey {
+	/** the key id */
+	int id;
+	/** the entry */
+	struct lruhash_entry entry;
+};
+/** test structure contains test data */
+struct slabhash_testdata {
+	/** data value */
+	int data;
+};
+
+/** test sizefunc for lruhash */
+size_t test_slabhash_sizefunc(void*, void*);
+/** test comparefunc for lruhash */
+int test_slabhash_compfunc(void*, void*);
+/** test delkey for lruhash */
+void test_slabhash_delkey(void*, void*, int);
+/** test deldata for lruhash */
+void test_slabhash_deldata(void*, void*);
+/* --- end test representation --- */
+
 #endif /* UTIL_STORAGE_SLABHASH_H */

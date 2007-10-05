@@ -42,6 +42,8 @@
 #include "config.h"
 #include "util/log.h"
 #include "util/rbtree.h"
+#include "util/locks.h"
+#include "testcode/checklocks.h"
 #include <sys/stat.h>
 
 /**
@@ -75,13 +77,6 @@ usage()
 	printf("usage:	memstats <logfile>\n");
 	printf("statistics are printed on stdout.\n");
 	exit(1);
-}
-
-/** compare two codeline structs for rbtree */
-static int
-codeline_cmp(const void* a, const void* b)
-{
-	return strcmp((const char*)a, (const char*)b);
 }
 
 /** match logfile line to see if it needs accounting processing */

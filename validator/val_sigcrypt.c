@@ -794,10 +794,7 @@ canonical_compare(struct ub_packed_rrset_key* rrset, size_t i, size_t j)
 	return 0;
 }
 
-/**
- * canonical compare for two tree entries
- */
-static int
+int
 canonical_tree_compare(const void* k1, const void* k2)
 {
 	struct canon_rr* r1 = (struct canon_rr*)k1;

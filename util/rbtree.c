@@ -41,6 +41,7 @@
 
 #include "config.h"
 #include "log.h"
+#include "fptr_wlist.h"
 #include "util/rbtree.h"
 
 /** Node colour black */
@@ -232,6 +233,7 @@ rbtree_insert (rbtree_t *rbtree, rbnode_t *data)
 	rbnode_t	*node = rbtree->root;
 	rbnode_t	*parent = RBTREE_NULL;
 
+	log_assert(fptr_whitelist_rbtree_cmp(rbtree->cmp));
 	/* Lets find the new parent... */
 	while (node != RBTREE_NULL) {
 		/* Compare two keys, do we have a duplicate? */
@@ -513,7 +515,8 @@ rbtree_find_less_equal(rbtree_t *rbtree, const void *key, rbnode_t **result)
 	node = rbtree->root;
 
 	*result = NULL;
-	
+	log_assert(fptr_whitelist_rbtree_cmp(rbtree->cmp));
+
 	/* While there are children... */
 	while (node != RBTREE_NULL) {
 		r = rbtree->cmp(key, node->key);

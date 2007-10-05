@@ -242,4 +242,30 @@ int infra_get_lame_rtt(struct infra_cache* infra,
  */
 size_t infra_get_mem(struct infra_cache* infra);
 
+/** calculate size for the hashtable, does not count size of lameness,
+ * so the hashtable is a fixed number of items */
+size_t infra_host_sizefunc(void* k, void* d);
+
+/** compare two addresses, returns -1, 0, or +1 */
+int infra_host_compfunc(void* key1, void* key2);
+
+/** delete key, and destroy the lock */
+void infra_host_delkeyfunc(void* k, void* arg, int il);
+
+/** delete data and destroy the lameness hashtable */
+void infra_host_deldatafunc(void* d, void* arg);
+
+/** calculate size, which is fixed, zonename does not count so that
+ * a fixed number of items is stored */
+size_t infra_lame_sizefunc(void* k, void* d);
+
+/** compare zone names, returns -1, 0, +1 */
+int infra_lame_compfunc(void* key1, void* key2);
+
+/** free key, lock and zonename */
+void infra_lame_delkeyfunc(void* k, void* arg, int il);
+
+/** free the lameness data */
+void infra_lame_deldatafunc(void* d, void* arg);
+
 #endif /* SERVICES_CACHE_INFRA_H */

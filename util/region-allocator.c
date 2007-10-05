@@ -43,6 +43,7 @@
 #include "config.h"
 #include "util/log.h"
 #include "util/region-allocator.h"
+#include "util/fptr_wlist.h"
 
 #ifdef ALIGNMENT
 #  undef ALIGNMENT
@@ -146,9 +147,11 @@ alloc_region_base(void *(*allocator)(size_t size),
 	log_assert(initial_cleanup_count > 0);
 	result->maximum_cleanup_count = initial_cleanup_count;
 	result->cleanup_count = 0;
+	log_assert(fptr_whitelist_region_allocator(allocator));
 	result->cleanups = (cleanup_type *) allocator(
 		result->maximum_cleanup_count * sizeof(cleanup_type));
 	if (!result->cleanups) {
+		log_assert(fptr_whitelist_region_deallocator(deallocator));
 		deallocator(result);
 		return NULL;
 	}
@@ -168,12 +171,14 @@ region_create(void *(*allocator)(size_t), void (*deallocator)(void *))
 	allocator = &unbound_stat_malloc_region;
 	deallocator = &unbound_stat_free_region;
 #endif
+	log_assert(fptr_whitelist_region_allocator(allocator));
 	result = alloc_region_base(allocator, deallocator, 
 		DEFAULT_INITIAL_CLEANUP_SIZE);
 	if(!result)
 		return NULL;
 	result->data = (char *) allocator(result->chunk_size);
 	if (!result->data) {
+		log_assert(fptr_whitelist_region_deallocator(deallocator));
 		deallocator(result->cleanups);
 		deallocator(result);
 		return NULL;
@@ -198,6 +203,7 @@ region_type *region_create_custom(void *(*allocator)(size_t),
 	allocator = &unbound_stat_malloc_region;
 	deallocator = &unbound_stat_free_region;
 #endif
+	log_assert(fptr_whitelist_region_allocator(allocator));
 	result = alloc_region_base(allocator, deallocator, 
 		initial_cleanup_size);
 	if(!result)
@@ -208,6 +214,8 @@ region_type *region_create_custom(void *(*allocator)(size_t),
 	if(result->chunk_size > 0) {
 		result->data = (char *) allocator(result->chunk_size);
 		if (!result->data) {
+			log_assert(fptr_whitelist_region_deallocator(
+				deallocator));
 			deallocator(result->cleanups);
 			deallocator(result);
 			return NULL;
@@ -236,6 +244,7 @@ region_destroy(region_type *region)
 		return;
 
 	deallocator = region->deallocator;
+	log_assert(fptr_whitelist_region_deallocator(deallocator));
 
 	region_free_all(region);
 	deallocator(region->cleanups);
@@ -251,6 +260,7 @@ region_add_cleanup(region_type *region, void (*action)(void *), void *data)
 {
 	log_assert(action);
     
+	log_assert(fptr_whitelist_region_allocator(region->allocator));
 	if (region->cleanup_count >= region->maximum_cleanup_count) {
 		cleanup_type *cleanups = (cleanup_type *) region->allocator(
 			2 * region->maximum_cleanup_count * sizeof(cleanup_type));
@@ -258,6 +268,8 @@ region_add_cleanup(region_type *region, void (*action)(void *), void *data)
 
 		memcpy(cleanups, region->cleanups,
 		       region->cleanup_count * sizeof(cleanup_type));
+		log_assert(fptr_whitelist_region_deallocator(
+			region->deallocator));
 		region->deallocator(region->cleanups);
 
 		region->cleanups = cleanups;
@@ -283,9 +295,12 @@ region_alloc(region_type *region, size_t size)
 	aligned_size = ALIGN_UP(size, ALIGNMENT);
 
 	if (aligned_size >= region->large_object_size) {
+		log_assert(fptr_whitelist_region_allocator(region->allocator));
 		result = region->allocator(size);
 		if (!result) return NULL;
         
+		log_assert(fptr_whitelist_region_deallocator(
+			region->deallocator));
 		if (!region_add_cleanup(region, region->deallocator, result)) {
 			region->deallocator(result);
 			return NULL;
@@ -305,6 +320,7 @@ region_alloc(region_type *region, size_t size)
 		return result;
 	}
     
+	log_assert(fptr_whitelist_region_allocator(region->allocator));
 	if (region->allocated + aligned_size > region->chunk_size) {
 		void *chunk = region->allocator(region->chunk_size);
 		size_t wasted;
@@ -321,6 +337,8 @@ region_alloc(region_type *region, size_t size)
 		++region->chunk_count;
 		region->unused_space += region->chunk_size - region->allocated;
 		
+		log_assert(fptr_whitelist_region_deallocator(
+			region->deallocator));
 		if(!region_add_cleanup(region, region->deallocator, chunk)) {
 			region->deallocator(chunk);
 			region->chunk_count--;

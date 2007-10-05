@@ -67,8 +67,7 @@
 static void serviced_tcp_initiate(struct outside_network* outnet, 
 	struct serviced_query* sq, ldns_buffer* buff);
 
-/** compare function of pending rbtree */
-static int 
+int 
 pending_cmp(const void* key1, const void* key2)
 {
 	struct pending *p1 = (struct pending*)key1;
@@ -81,8 +80,7 @@ pending_cmp(const void* key1, const void* key2)
 	return sockaddr_cmp(&p1->addr, p1->addrlen, &p2->addr, p2->addrlen);
 }
 
-/** compare function of serviced query rbtree */
-static int 
+int 
 serviced_cmp(const void* key1, const void* key2)
 {
 	struct serviced_query* q1 = (struct serviced_query*)key1;

@@ -391,4 +391,10 @@ int serviced_udp_callback(struct comm_point* c, void* arg, int error,
 int serviced_tcp_callback(struct comm_point* c, void* arg, int error,
         struct comm_reply* rep);
 
+/** compare function of pending rbtree */
+int pending_cmp(const void* key1, const void* key2);
+
+/** compare function of serviced query rbtree */
+int serviced_cmp(const void* key1, const void* key2);
+
 #endif /* OUTSIDE_NETWORK_H */

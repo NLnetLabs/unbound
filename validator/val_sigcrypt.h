@@ -200,4 +200,9 @@ enum sec_status dnskey_verify_rrset_sig(struct region* region,
 	size_t dnskey_idx, size_t sig_idx,
 	struct rbtree_t** sortree, int* buf_canon);
 
+/**
+ * canonical compare for two tree entries
+ */
+int canonical_tree_compare(const void* k1, const void* k2);
+
 #endif /* VALIDATOR_VAL_SIGCRYPT_H */

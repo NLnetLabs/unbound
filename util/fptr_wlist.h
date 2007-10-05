@@ -47,12 +47,15 @@
  * Function pointers are used in
  * 	o network code callbacks.
  * 	o rbtree, lruhash, region data manipulation
+ *		in lruhash, the assertions are before the critical regions.
+ *		in other places, assertions are before the callback.
  * 	o module operations.
  */
 
 #ifndef UTIL_FPTR_WLIST_H
 #define UTIL_FPTR_WLIST_H
 #include "util/netevent.h"
+#include "util/storage/lruhash.h"
 
 /**
  * Check function pointer whitelist for comm_point callback values.
@@ -89,7 +92,6 @@ int fptr_whitelist_event(void (*fptr)(int, short, void *));
 
 /**
  * Check function pointer whitelist for pending udp callback values.
- * This is not called by libevent itself, but checked by netevent.
  *
  * @param fptr: function pointer to check.
  * @return false if not in whitelist.
@@ -98,7 +100,6 @@ int fptr_whitelist_pending_udp(comm_point_callback_t *fptr);
 
 /**
  * Check function pointer whitelist for pending tcp callback values.
- * This is not called by libevent itself, but checked by netevent.
  *
  * @param fptr: function pointer to check.
  * @return false if not in whitelist.
@@ -107,12 +108,66 @@ int fptr_whitelist_pending_tcp(comm_point_callback_t *fptr);
 
 /**
  * Check function pointer whitelist for serviced query callback values.
- * This is not called by libevent itself, but checked by netevent.
  *
  * @param fptr: function pointer to check.
  * @return false if not in whitelist.
  */
 int fptr_whitelist_serviced_query(comm_point_callback_t *fptr);
 
+/**
+ * Check function pointer whitelist for region allocator callback values.
+ *
+ * @param fptr: function pointer to check.
+ * @return false if not in whitelist.
+ */
+int fptr_whitelist_region_allocator(void *(*fptr)(size_t));
+
+/**
+ * Check function pointer whitelist for region deallocator callback values.
+ *
+ * @param fptr: function pointer to check.
+ * @return false if not in whitelist.
+ */
+int fptr_whitelist_region_deallocator(void (*fptr)(void*));
+
+/**
+ * Check function pointer whitelist for rbtree cmp callback values.
+ *
+ * @param fptr: function pointer to check.
+ * @return false if not in whitelist.
+ */
+int fptr_whitelist_rbtree_cmp(int (*fptr) (const void *, const void *));
+
+/**
+ * Check function pointer whitelist for lruhash sizefunc callback values.
+ *
+ * @param fptr: function pointer to check.
+ * @return false if not in whitelist.
+ */
+int fptr_whitelist_hash_sizefunc(lruhash_sizefunc_t fptr);
+
+/**
+ * Check function pointer whitelist for lruhash compfunc callback values.
+ *
+ * @param fptr: function pointer to check.
+ * @return false if not in whitelist.
+ */
+int fptr_whitelist_hash_compfunc(lruhash_compfunc_t fptr);
+
+/**
+ * Check function pointer whitelist for lruhash delkeyfunc callback values.
+ *
+ * @param fptr: function pointer to check.
+ * @return false if not in whitelist.
+ */
+int fptr_whitelist_hash_delkeyfunc(lruhash_delkeyfunc_t fptr);
+
+/**
+ * Check function pointer whitelist for lruhash deldata callback values.
+ *
+ * @param fptr: function pointer to check.
+ * @return false if not in whitelist.
+ */
+int fptr_whitelist_hash_deldatafunc(lruhash_deldatafunc_t fptr);
 
 #endif /* UTIL_FPTR_WLIST_H */

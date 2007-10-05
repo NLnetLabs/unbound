@@ -48,8 +48,7 @@
 #include "util/net_help.h"
 #include "util/data/dname.h"
 
-/** compare two fwd entries */
-static int
+int
 fwd_cmp(const void* k1, const void* k2)
 {
 	int m;

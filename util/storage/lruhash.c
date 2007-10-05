@@ -42,6 +42,7 @@
 
 #include "config.h"
 #include "util/storage/lruhash.h"
+#include "util/fptr_wlist.h"
 
 void
 bin_init(struct lruhash_bin* array, size_t size)
@@ -298,6 +299,10 @@ lruhash_insert(struct lruhash* table, hashvalue_t hash,
 	struct lruhash_bin* bin;
 	struct lruhash_entry* found, *reclaimlist=NULL;
 	size_t need_size;
+	log_assert(fptr_whitelist_hash_sizefunc(table->sizefunc));
+	log_assert(fptr_whitelist_hash_delkeyfunc(table->delkeyfunc));
+	log_assert(fptr_whitelist_hash_deldatafunc(table->deldatafunc));
+	log_assert(fptr_whitelist_hash_compfunc(table->compfunc));
 	need_size = table->sizefunc(entry->key, data);
 	if(cb_arg == NULL) cb_arg = table->cb_arg;
 
@@ -347,6 +352,7 @@ lruhash_lookup(struct lruhash* table, hashvalue_t hash, void* key, int wr)
 {
 	struct lruhash_entry* entry;
 	struct lruhash_bin* bin;
+	log_assert(fptr_whitelist_hash_compfunc(table->compfunc));
 
 	lock_quick_lock(&table->lock);
 	bin = &table->array[hash & table->size_mask];
@@ -369,6 +375,10 @@ lruhash_remove(struct lruhash* table, hashvalue_t hash, void* key)
 	struct lruhash_entry* entry;
 	struct lruhash_bin* bin;
 	void *d;
+	log_assert(fptr_whitelist_hash_sizefunc(table->sizefunc));
+	log_assert(fptr_whitelist_hash_delkeyfunc(table->delkeyfunc));
+	log_assert(fptr_whitelist_hash_deldatafunc(table->deldatafunc));
+	log_assert(fptr_whitelist_hash_compfunc(table->compfunc));
 
 	lock_quick_lock(&table->lock);
 	bin = &table->array[hash & table->size_mask];

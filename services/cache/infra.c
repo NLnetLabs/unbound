@@ -47,9 +47,7 @@
 #include "util/net_help.h"
 #include "util/config_file.h"
 
-/** calculate size for the hashtable, does not count size of lameness,
- * so the hashtable is a fixed number of items */
-static size_t 
+size_t 
 infra_host_sizefunc(void* k, void* ATTR_UNUSED(d))
 {
 	struct infra_host_key* key = (struct infra_host_key*)k;
@@ -57,8 +55,7 @@ infra_host_sizefunc(void* k, void* ATTR_UNUSED(d))
 		+ lock_get_mem(&key->entry.lock);
 }
 
-/** compare two addresses, returns -1, 0, or +1 */
-static int 
+int 
 infra_host_compfunc(void* key1, void* key2)
 {
 	struct infra_host_key* k1 = (struct infra_host_key*)key1;
@@ -66,8 +63,7 @@ infra_host_compfunc(void* key1, void* key2)
 	return sockaddr_cmp(&k1->addr, k1->addrlen, &k2->addr, k2->addrlen);
 }
 
-/** delete key, and destroy the lock */
-static void 
+void 
 infra_host_delkeyfunc(void* k, void* ATTR_UNUSED(arg), int il)
 {
 	struct infra_host_key* key = (struct infra_host_key*)k;
@@ -78,8 +74,7 @@ infra_host_delkeyfunc(void* k, void* ATTR_UNUSED(arg), int il)
 	free(key);
 }
 
-/** delete data and destroy the lameness hashtable */
-static void 
+void 
 infra_host_deldatafunc(void* d, void* ATTR_UNUSED(arg))
 {
 	struct infra_host_data* data = (struct infra_host_data*)d;
@@ -290,9 +285,7 @@ infra_lookup_lame(struct infra_host_data* host,
 	return 1;
 }
 
-/** calculate size, which is fixed, zonename does not count so that
- * a fixed number of items is stored */
-static size_t 
+size_t 
 infra_lame_sizefunc(void* k, void* ATTR_UNUSED(d))
 {
 	struct infra_lame_key* key = (struct infra_lame_key*)k;
@@ -300,8 +293,7 @@ infra_lame_sizefunc(void* k, void* ATTR_UNUSED(d))
 		+ key->namelen + lock_get_mem(&key->entry.lock);
 }
 
-/** compare zone names, returns -1, 0, +1 */
-static int 
+int 
 infra_lame_compfunc(void* key1, void* key2) 
 {
 	struct infra_lame_key* k1 = (struct infra_lame_key*)key1;
@@ -314,8 +306,7 @@ infra_lame_compfunc(void* key1, void* key2)
 	return query_dname_compare(k1->zonename, k2->zonename);
 }
 
-/** free key, lock and zonename */
-static void 
+void 
 infra_lame_delkeyfunc(void* k, void* ATTR_UNUSED(arg), int il)
 {
 	struct infra_lame_key* key = (struct infra_lame_key*)k;
@@ -327,8 +318,7 @@ infra_lame_delkeyfunc(void* k, void* ATTR_UNUSED(arg), int il)
 	free(key);
 }
 
-/** free the lameness data */
-static void 
+void 
 infra_lame_deldatafunc(void* d, void* ATTR_UNUSED(arg))
 {
 	if(!d) 

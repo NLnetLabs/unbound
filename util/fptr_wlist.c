@@ -45,8 +45,23 @@
  */
 #include "config.h"
 #include "util/fptr_wlist.h"
+#include "util/mini_event.h"
 #include "daemon/worker.h"
 #include "services/outside_network.h"
+#include "services/mesh.h"
+#include "services/cache/infra.h"
+#include "iterator/iter_donotq.h"
+#include "iterator/iter_fwd.h"
+#include "iterator/iter_hints.h"
+#include "validator/val_anchor.h"
+#include "validator/val_nsec3.h"
+#include "validator/val_sigcrypt.h"
+#include "validator/val_kentry.h"
+#include "util/data/msgreply.h"
+#include "util/data/packed_rrset.h"
+#include "util/storage/slabhash.h"
+#include "util/locks.h"
+#include "testcode/checklocks.h"
 
 int 
 fptr_whitelist_comm_point(comm_point_callback_t *fptr)
@@ -105,5 +120,87 @@ int
 fptr_whitelist_serviced_query(comm_point_callback_t *fptr)
 {
 	if(fptr == &worker_handle_service_reply) return 1;
+	return 0;
+}
+
+int 
+fptr_whitelist_region_allocator(void *(*fptr)(size_t))
+{
+	/* TODO: remove callbacks from new region type */
+	if(fptr == &malloc) return 1;
+	return 0;
+}
+
+int 
+fptr_whitelist_region_deallocator(void (*fptr)(void*))
+{
+	if(fptr == &free) return 1;
+	return 0;
+}
+
+int 
+fptr_whitelist_rbtree_cmp(int (*fptr) (const void *, const void *))
+{
+	if(fptr == &mesh_state_compare) return 1;
+	else if(fptr == &mesh_state_ref_compare) return 1;
+	else if(fptr == &donotq_cmp) return 1;
+	else if(fptr == &fwd_cmp) return 1;
+	else if(fptr == &stub_cmp) return 1;
+	else if(fptr == &pending_cmp) return 1;
+	else if(fptr == &serviced_cmp) return 1;
+	else if(fptr == &order_lock_cmp) return 1;
+	else if(fptr == &codeline_cmp) return 1;
+	else if(fptr == &nsec3_hash_cmp) return 1;
+	else if(fptr == &mini_ev_cmp) return 1;
+	else if(fptr == &anchor_cmp) return 1;
+	else if(fptr == &canonical_tree_compare) return 1;
+	return 0;
+}
+
+int 
+fptr_whitelist_hash_sizefunc(lruhash_sizefunc_t fptr)
+{
+	if(fptr == &msgreply_sizefunc) return 1;
+	else if(fptr == &ub_rrset_sizefunc) return 1;
+	else if(fptr == &infra_host_sizefunc) return 1;
+	else if(fptr == &key_entry_sizefunc) return 1;
+	else if(fptr == &infra_lame_sizefunc) return 1;
+	else if(fptr == &test_slabhash_sizefunc) return 1;
+	return 0;
+}
+
+int 
+fptr_whitelist_hash_compfunc(lruhash_compfunc_t fptr)
+{
+	if(fptr == &query_info_compare) return 1;
+	else if(fptr == &ub_rrset_compare) return 1;
+	else if(fptr == &infra_host_compfunc) return 1;
+	else if(fptr == &key_entry_compfunc) return 1;
+	else if(fptr == &infra_lame_compfunc) return 1;
+	else if(fptr == &test_slabhash_compfunc) return 1;
+	return 0;
+}
+
+int 
+fptr_whitelist_hash_delkeyfunc(lruhash_delkeyfunc_t fptr)
+{
+	if(fptr == &query_entry_delete) return 1;
+	else if(fptr == &ub_rrset_key_delete) return 1;
+	else if(fptr == &infra_host_delkeyfunc) return 1;
+	else if(fptr == &key_entry_delkeyfunc) return 1;
+	else if(fptr == &infra_lame_delkeyfunc) return 1;
+	else if(fptr == &test_slabhash_delkey) return 1;
+	return 0;
+}
+
+int 
+fptr_whitelist_hash_deldatafunc(lruhash_deldatafunc_t fptr)
+{
+	if(fptr == &reply_info_delete) return 1;
+	else if(fptr == &rrset_data_delete) return 1;
+	else if(fptr == &infra_host_deldatafunc) return 1;
+	else if(fptr == &key_entry_deldatafunc) return 1;
+	else if(fptr == &infra_lame_deldatafunc) return 1;
+	else if(fptr == &test_slabhash_deldata) return 1;
 	return 0;
 }

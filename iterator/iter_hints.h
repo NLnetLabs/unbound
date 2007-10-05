@@ -134,4 +134,7 @@ struct delegpt* hints_lookup_stub(struct iter_hints* hints,
  */
 size_t hints_get_mem(struct iter_hints* hints);
 
+/** compare two hint entries */
+int stub_cmp(const void* k1, const void* k2);
+
 #endif /* ITERATOR_ITER_HINTS_H */

@@ -158,3 +158,38 @@ struct lruhash* slabhash_gettable(struct slabhash* sl, hashvalue_t hash)
 {
 	return sl->array[slab_idx(sl, hash)];
 }
+
+/* test code, here to avoid linking problems with fptr_wlist */
+/** delete key */
+static void delkey(struct slabhash_testkey* k) {
+	lock_rw_destroy(&k->entry.lock); free(k);}
+/** delete data */
+static void deldata(struct slabhash_testdata* d) {free(d);}
+
+size_t test_slabhash_sizefunc(void* ATTR_UNUSED(key), void* ATTR_UNUSED(data))
+{
+	return sizeof(struct slabhash_testkey) + 
+		sizeof(struct slabhash_testdata);
+}
+
+int test_slabhash_compfunc(void* key1, void* key2)
+{
+	struct slabhash_testkey* k1 = (struct slabhash_testkey*)key1;
+	struct slabhash_testkey* k2 = (struct slabhash_testkey*)key2;
+	if(k1->id == k2->id)
+		return 0;
+	if(k1->id > k2->id)
+		return 1;
+	return -1;
+}
+
+void test_slabhash_delkey(void* key, void* ATTR_UNUSED(arg), int l)
+{
+	if(l) { lock_rw_unlock(&((struct slabhash_testkey*)key)->entry.lock); }
+	delkey((struct slabhash_testkey*)key);
+}
+
+void test_slabhash_deldata(void* data, void* ATTR_UNUSED(arg))
+{
+	deldata((struct slabhash_testdata*)data);
+}

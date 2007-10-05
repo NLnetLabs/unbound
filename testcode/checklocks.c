@@ -830,3 +830,20 @@ checklock_thrjoin(pthread_t thread)
 }
 
 #endif /* USE_THREAD_DEBUG */
+
+int order_lock_cmp(const void* e1, const void* e2)
+{
+	struct order_id* o1 = (struct order_id*)e1;
+	struct order_id* o2 = (struct order_id*)e2;
+	if(o1->thr < o2->thr) return -1;
+	if(o1->thr > o2->thr) return 1;
+	if(o1->instance < o2->instance) return -1;
+	if(o1->instance > o2->instance) return 1;
+	return 0;
+}
+
+int
+codeline_cmp(const void* a, const void* b)
+{
+	return strcmp((const char*)a, (const char*)b);
+}

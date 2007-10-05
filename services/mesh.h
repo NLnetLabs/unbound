@@ -378,4 +378,10 @@ size_t mesh_get_mem(struct mesh_area* mesh);
 int mesh_detect_cycle(struct module_qstate* qstate, struct query_info* qinfo,
 	uint16_t flags, int prime);
 
+/** compare two mesh_states */
+int mesh_state_compare(const void* ap, const void* bp);
+
+/** compare two mesh references */
+int mesh_state_ref_compare(const void* ap, const void* bp);
+
 #endif /* SERVICES_MESH_H */

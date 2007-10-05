@@ -47,7 +47,7 @@
 #include "util/mini_event.h"
 
 /** compare events in tree, based on timevalue, ptr for uniqueness */
-static int ev_cmp(const void* a, const void* b)
+int mini_ev_cmp(const void* a, const void* b)
 {
 	const struct event *e = (const struct event*)a;
 	const struct event *f = (const struct event*)b;
@@ -74,7 +74,7 @@ void *event_init(void)
 	if(!base)
 		return NULL;
 	memset(base, 0, sizeof(*base));
-	base->times = rbtree_create(ev_cmp);
+	base->times = rbtree_create(mini_ev_cmp);
 	if(!base->times) {
 		event_base_free(base);
 		return NULL;
@@ -338,4 +338,9 @@ int signal_del(struct event* ev)
 	return 0;
 }
 
+#else /* USE_MINI_EVENT */
+int mini_ev_cmp(const void* ATTR_UNUSED(a), const void* ATTR_UNUSED(b))
+{
+	return 0;
+}
 #endif /* USE_MINI_EVENT */

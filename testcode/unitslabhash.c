@@ -43,29 +43,14 @@
 #include "util/log.h"
 #include "util/storage/slabhash.h"
 
-/* --- test representation --- */
-/** structure contains test key */
-struct slabtestkey {
-	/** the key id */
-	int id;
-	/** the entry */
-	struct lruhash_entry entry;
-};
-/** structure contains test data */
-struct slabtestdata {
-	/** data value */
-	int data;
-};
+/** use this type for the slabhash test key */
+typedef struct slabhash_testkey testkey_t;
+/** use this type for the slabhash test data */
+typedef struct slabhash_testdata testdata_t;
 
-/** sizefunc for lruhash */
-static size_t test_sizefunc(void*, void*);
-/** comparefunc for lruhash */
-static int test_compfunc(void*, void*);
-/** delkey for lruhash */
-static void test_delkey(void*, void*, int);
-/** deldata for lruhash */
-static void test_deldata(void*, void*);
-/* --- end test representation --- */
+/** delete key */
+static void delkey(struct slabhash_testkey* k) {
+	lock_rw_destroy(&k->entry.lock); free(k);}
 
 /** hash func, very bad to improve collisions, both high and low bits */
 static hashvalue_t myhash(int id) {
@@ -75,8 +60,8 @@ static hashvalue_t myhash(int id) {
 }
 
 /** allocate new key, fill in hash */
-static struct slabtestkey* newkey(int id) {
-	struct slabtestkey* k = (struct slabtestkey*)calloc(1, sizeof(struct slabtestkey));
+static testkey_t* newkey(int id) {
+	testkey_t* k = (testkey_t*)calloc(1, sizeof(testkey_t));
 	if(!k) fatal_exit("out of memory");
 	k->id = id;
 	k->entry.hash = myhash(id);
@@ -85,27 +70,22 @@ static struct slabtestkey* newkey(int id) {
 	return k;
 }
 /** new data el */
-static struct slabtestdata* newdata(int val) {
-	struct slabtestdata* d = (struct slabtestdata*)calloc(1, 
-		sizeof(struct slabtestdata));
+static testdata_t* newdata(int val) {
+	testdata_t* d = (testdata_t*)calloc(1, 
+		sizeof(testdata_t));
 	if(!d) fatal_exit("out of memory");
 	d->data = val;
 	return d;
 }
-/** delete key */
-static void delkey(struct slabtestkey* k) {	
-	lock_rw_destroy(&k->entry.lock); free(k);}
-/** delete data */
-static void deldata(struct slabtestdata* d) {free(d);}
 
 /** test hashtable using short sequence */
 static void
 test_short_table(struct slabhash* table) 
 {
-	struct slabtestkey* k = newkey(12);
-	struct slabtestkey* k2 = newkey(14);
-	struct slabtestdata* d = newdata(128);
-	struct slabtestdata* d2 = newdata(129);
+	testkey_t* k = newkey(12);
+	testkey_t* k2 = newkey(14);
+	testdata_t* d = newdata(128);
+	testdata_t* d2 = newdata(129);
 	
 	k->entry.data = d;
 	k2->entry.data = d2;
@@ -126,11 +106,11 @@ test_short_table(struct slabhash* table)
 
 /** test adding a random element */
 static void
-testadd(struct slabhash* table, struct slabtestdata* ref[])
+testadd(struct slabhash* table, testdata_t* ref[])
 {
 	int numtoadd = random() % HASHTESTMAX;
-	struct slabtestdata* data = newdata(numtoadd);
-	struct slabtestkey* key = newkey(numtoadd);
+	testdata_t* data = newdata(numtoadd);
+	testkey_t* key = newkey(numtoadd);
 	key->entry.data = data;
 	slabhash_insert(table, myhash(numtoadd), &key->entry, data, NULL);
 	ref[numtoadd] = data;
@@ -138,10 +118,10 @@ testadd(struct slabhash* table, struct slabtestdata* ref[])
 
 /** test adding a random element */
 static void
-testremove(struct slabhash* table, struct slabtestdata* ref[])
+testremove(struct slabhash* table, testdata_t* ref[])
 {
 	int num = random() % HASHTESTMAX;
-	struct slabtestkey* key = newkey(num);
+	testkey_t* key = newkey(num);
 	slabhash_remove(table, myhash(num), key);
 	ref[num] = NULL;
 	delkey(key);
@@ -149,12 +129,12 @@ testremove(struct slabhash* table, struct slabtestdata* ref[])
 
 /** test adding a random element */
 static void
-testlookup(struct slabhash* table, struct slabtestdata* ref[])
+testlookup(struct slabhash* table, testdata_t* ref[])
 {
 	int num = random() % HASHTESTMAX;
-	struct slabtestkey* key = newkey(num);
+	testkey_t* key = newkey(num);
 	struct lruhash_entry* en = slabhash_lookup(table, myhash(num), key, 0);
-	struct slabtestdata* data = en? (struct slabtestdata*)en->data : NULL;
+	testdata_t* data = en? (testdata_t*)en->data : NULL;
 	if(en) {
 		unit_assert(en->key);
 		unit_assert(en->data);
@@ -198,7 +178,7 @@ check_lru_table(struct lruhash* table)
 
 	/* this assertion is specific to the unit test */
 	unit_assert( table->space_used == 
-		table->num * test_sizefunc(NULL, NULL) );
+		table->num * test_slabhash_sizefunc(NULL, NULL) );
 	lock_quick_unlock(&table->lock);
 }
 
@@ -213,11 +193,11 @@ check_table(struct slabhash* table)
 
 /** test adding a random element (unlimited range) */
 static void
-testadd_unlim(struct slabhash* table, struct slabtestdata** ref)
+testadd_unlim(struct slabhash* table, testdata_t** ref)
 {
 	int numtoadd = random() % (HASHTESTMAX * 10);
-	struct slabtestdata* data = newdata(numtoadd);
-	struct slabtestkey* key = newkey(numtoadd);
+	testdata_t* data = newdata(numtoadd);
+	testkey_t* key = newkey(numtoadd);
 	key->entry.data = data;
 	slabhash_insert(table, myhash(numtoadd), &key->entry, data, NULL);
 	if(ref)
@@ -226,10 +206,10 @@ testadd_unlim(struct slabhash* table, struct slabtestdata** ref)
 
 /** test adding a random element (unlimited range) */
 static void
-testremove_unlim(struct slabhash* table, struct slabtestdata** ref)
+testremove_unlim(struct slabhash* table, testdata_t** ref)
 {
 	int num = random() % (HASHTESTMAX*10);
-	struct slabtestkey* key = newkey(num);
+	testkey_t* key = newkey(num);
 	slabhash_remove(table, myhash(num), key);
 	if(ref)
 		ref[num] = NULL;
@@ -238,12 +218,12 @@ testremove_unlim(struct slabhash* table, struct slabtestdata** ref)
 
 /** test adding a random element (unlimited range) */
 static void
-testlookup_unlim(struct slabhash* table, struct slabtestdata** ref)
+testlookup_unlim(struct slabhash* table, testdata_t** ref)
 {
 	int num = random() % (HASHTESTMAX*10);
-	struct slabtestkey* key = newkey(num);
+	testkey_t* key = newkey(num);
 	struct lruhash_entry* en = slabhash_lookup(table, myhash(num), key, 0);
-	struct slabtestdata* data = en? (struct slabtestdata*)en->data : NULL;
+	testdata_t* data = en? (testdata_t*)en->data : NULL;
 	if(en) {
 		unit_assert(en->key);
 		unit_assert(en->data);
@@ -263,7 +243,7 @@ static void
 test_long_table(struct slabhash* table) 
 {
 	/* assuming it all fits in the hastable, this check will work */
-	struct slabtestdata* ref[HASHTESTMAX * 100];
+	testdata_t* ref[HASHTESTMAX * 100];
 	size_t i;
 	memset(ref, 0, sizeof(ref));
 	/* test assumption */
@@ -378,39 +358,14 @@ void slabhash_test()
 	struct slabhash* table;
 	printf("slabhash test\n");
 	table = slabhash_create(4, 2, 5200, 
-		test_sizefunc, test_compfunc, test_delkey, test_deldata, NULL);
+		test_slabhash_sizefunc, test_slabhash_compfunc, 
+		test_slabhash_delkey, test_slabhash_deldata, NULL);
 	test_short_table(table);
 	test_long_table(table);
 	slabhash_delete(table);
 	table = slabhash_create(4, 2, 5200, 
-		test_sizefunc, test_compfunc, test_delkey, test_deldata, NULL);
+		test_slabhash_sizefunc, test_slabhash_compfunc, 
+		test_slabhash_delkey, test_slabhash_deldata, NULL);
 	test_threaded_table(table);
 	slabhash_delete(table);
-}
-
-static size_t test_sizefunc(void* ATTR_UNUSED(key), void* ATTR_UNUSED(data))
-{
-	return sizeof(struct slabtestkey) + sizeof(struct slabtestdata);
-}
-
-static int test_compfunc(void* key1, void* key2)
-{
-	struct slabtestkey* k1 = (struct slabtestkey*)key1;
-	struct slabtestkey* k2 = (struct slabtestkey*)key2;
-	if(k1->id == k2->id)
-		return 0;
-	if(k1->id > k2->id)
-		return 1;
-	return -1;
-}
-
-static void test_delkey(void* key, void* ATTR_UNUSED(arg), int l)
-{
-	if(l) { lock_rw_unlock(&((struct slabtestkey*)key)->entry.lock); }
-	delkey((struct slabtestkey*)key);
-}
-
-static void test_deldata(void* data, void* ATTR_UNUSED(arg))
-{
-	deldata((struct slabtestdata*)data);
 }

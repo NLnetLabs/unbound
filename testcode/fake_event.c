@@ -1038,4 +1038,16 @@ int serviced_tcp_callback(struct comm_point* ATTR_UNUSED(c),
 	return 0;
 }
 
+int pending_cmp(const void* ATTR_UNUSED(a), const void* ATTR_UNUSED(b))
+{
+	log_assert(0);
+	return 0;
+}
+
+int serviced_cmp(const void* ATTR_UNUSED(a), const void* ATTR_UNUSED(b))
+{
+	log_assert(0);
+	return 0;
+}
+
 /*********** End of Dummy routines ***********/

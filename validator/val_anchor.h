@@ -158,4 +158,7 @@ int anchor_store_str(struct val_anchors* anchors, ldns_buffer* buffer,
  */
 size_t anchors_get_mem(struct val_anchors* anchors);
 
+/** compare two trust anchors */
+int anchor_cmp(const void* k1, const void* k2);
+
 #endif /* VALIDATOR_VAL_ANCHOR_H */

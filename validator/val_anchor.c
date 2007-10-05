@@ -47,8 +47,7 @@
 #include "util/region-allocator.h"
 #include "util/config_file.h"
 
-/** compare two trust anchors */
-static int
+int
 anchor_cmp(const void* k1, const void* k2)
 {
 	int m;

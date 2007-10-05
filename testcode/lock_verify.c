@@ -46,17 +46,11 @@
 #include "config.h"
 #include "util/log.h"
 #include "util/rbtree.h"
+#include "util/locks.h"
+#include "testcode/checklocks.h"
 
 /* --- data structures --- */
 struct lock_ref;
-
-/** key for lock lookup */
-struct order_id {
-	/** the thread id that created it */
-	int thr;
-	/** the instance number of creation */
-	int instance;
-};
 
 /** a lock */
 struct order_lock {
@@ -101,18 +95,6 @@ static void
 usage()
 {
 	printf("lock_verify <trace files>\n");
-}
-
-/** compare two order_ids */
-int order_lock_cmp(const void* e1, const void* e2)
-{
-	struct order_id* o1 = (struct order_id*)e1;
-	struct order_id* o2 = (struct order_id*)e2;
-	if(o1->thr < o2->thr) return -1;
-	if(o1->thr > o2->thr) return 1;
-	if(o1->instance < o2->instance) return -1;
-	if(o1->instance > o2->instance) return 1;
-	return 0;
 }
 
 /** read header entry. 

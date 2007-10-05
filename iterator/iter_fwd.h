@@ -125,4 +125,7 @@ struct delegpt* forwards_lookup(struct iter_forwards* fwd,
  */
 size_t forwards_get_mem(struct iter_forwards* fwd);
 
+/** compare two fwd entries */
+int fwd_cmp(const void* k1, const void* k2);
+
 #endif /* ITERATOR_ITER_FWD_H */

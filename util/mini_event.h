@@ -156,4 +156,8 @@ int signal_add(struct event *, struct timeval *);
 int signal_del(struct event *);
 
 #endif /* USE_MINI_EVENT */
+
+/** compare events in tree, based on timevalue, ptr for uniqueness */
+int mini_ev_cmp(const void* a, const void* b);
+
 #endif /* MINI_EVENT_H */
