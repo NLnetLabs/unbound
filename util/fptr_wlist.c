@@ -129,6 +129,7 @@ int
 fptr_whitelist_region_allocator(void *(*fptr)(size_t))
 {
 	/* TODO: remove callbacks from new region type */
+	return 1; /* DEBUG for different mem allocs */
 	if(fptr == &malloc) return 1;
 	return 0;
 }
@@ -136,6 +137,7 @@ fptr_whitelist_region_allocator(void *(*fptr)(size_t))
 int 
 fptr_whitelist_region_deallocator(void (*fptr)(void*))
 {
+	return 1; /* DEBUG for different mem allocs */
 	if(fptr == &free) return 1;
 	return 0;
 }
@@ -306,5 +308,6 @@ int
 fptr_whitelist_mod_get_mem(size_t (*fptr)(struct module_env* env, int id))
 {
 	if(fptr == &iter_get_mem) return 1;
+	else if(fptr == &val_get_mem) return 1;
 	return 0;
 }
