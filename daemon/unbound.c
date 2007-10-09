@@ -111,8 +111,7 @@ checkrlimits(struct config_file* cfg)
 
 /** to changedir, logfile */
 static void
-apply_dir(struct daemon* daemon, struct config_file* cfg, int cmdline_verbose,
-	int debug_mode)
+apply_dir(struct daemon* daemon, struct config_file* cfg, int cmdline_verbose)
 {
 	/* apply if they have changed */
 	daemon->cfg = cfg;
@@ -322,7 +321,7 @@ run_daemon(const char* cfgfile, int cmdline_verbose, int debug_mode)
 			fatal_exit("Could not alloc config defaults");
 		if(!config_read(cfg, cfgfile))
 			fatal_exit("Could not read config file: %s", cfgfile);
-		apply_dir(daemon, cfg, cmdline_verbose, debug_mode);
+		apply_dir(daemon, cfg, cmdline_verbose);
 	
 		/* prepare */
 		if(!daemon_open_shared_ports(daemon))
