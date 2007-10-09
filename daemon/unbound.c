@@ -128,10 +128,6 @@ apply_dir(struct daemon* daemon, struct config_file* cfg, int cmdline_verbose,
 				log_err("cwd: malloc failed");
 		}
 	}
-	/*** TODO this has bad permissions on the logfile 
-	if(!debug_mode) {
-		log_init(cfg->logfile, cfg->use_syslog);
-	} */
 	if(!daemon->env->msg_cache ||
 	   cfg->msg_cache_size != slabhash_get_size(daemon->env->msg_cache) ||
 	   cfg->msg_cache_slabs != daemon->env->msg_cache->size) {
