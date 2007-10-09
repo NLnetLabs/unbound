@@ -5,6 +5,8 @@
 	- callback checks for event callbacks done from mini_event. Because
 	  of deletions cannot do this from netevent. This means when using
 	  libevent the protection does not work on event-callbacks.
+	- fixup too small reply (did not zero counts).
+	- fixup reply no longer AD bit when query without DO bit.
 
 5 October 2007: Wouter
 	- function pointer whitelist.

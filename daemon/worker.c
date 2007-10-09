@@ -723,6 +723,8 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 		LDNS_RCODE_SET(ldns_buffer_begin(c->buffer), 
 			LDNS_RCODE_SERVFAIL);
 		ldns_buffer_set_position(c->buffer, LDNS_HEADER_SIZE);
+		ldns_buffer_write_at(c->buffer, 4, 
+			(uint8_t*)"\0\0\0\0\0\0\0\0", 8);
 		ldns_buffer_flip(c->buffer);
 		return 1;
 	}

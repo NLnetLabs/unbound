@@ -359,6 +359,7 @@ fake_front_query(struct replay_runtime* runtime, struct replay_moment *todo)
 	else	repinfo.c->type = comm_udp;
 	fill_buffer_with_reply(repinfo.c->buffer, todo->match, NULL);
 	log_info("testbound: incoming QUERY");
+	log_pkt("query pkt", todo->match->reply_list->reply);
 	/* call the callback for incoming queries */
 	if((*runtime->callback_query)(repinfo.c, runtime->cb_arg, 
 		NETEVENT_NOERROR, &repinfo)) {

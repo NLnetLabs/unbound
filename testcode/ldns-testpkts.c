@@ -185,6 +185,7 @@ static void replyline(const char* line, ldns_pkt *reply)
 		} else if(str_keyword(&parse, "AD")) {
 			ldns_pkt_set_ad(reply, true);
 		} else if(str_keyword(&parse, "DO")) {
+			ldns_pkt_set_edns_udp_size(reply, 4096);
 			ldns_pkt_set_edns_do(reply, true);
 		} else {
 			error("could not parse REPLY: '%s'", parse);
