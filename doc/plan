@@ -153,7 +153,8 @@ Styleguide:
 *** Bigger and Better
 * Config file syntax checker program. Tests on checker.
 * Logging first class feature with config options.
-	* with logfile turnover to avoid Gbs of logs.
+	X with logfile turnover to avoid Gbs of logs.
+	* use syslog optional.
 * donotqueryaddresses with trie for blocking entire netblocks.
 * Memory overhaul, special allocators for hashtable caches, and mesh qstates.
 	* keep a preallocated list of region-chunks per worker thread.
@@ -162,14 +163,15 @@ Styleguide:
 	  to avoid name-collision with nsd regions, 'regional'.
 * read root hints from file.
 * failover to next server in 1 second, instead of 100 seconds on one server.
-* failure to return answer, w. reason (donotq, noanswer servers, cannot
+X failure to return answer, w. reason (donotq, noanswer servers, cannot
   find servers, validationfail w.classification, error), 
   with threadno, starttime and endtime and qname/type/class, prime/qflags, 
   from-clients, from-internal, has-subrequests, a nice error report,
   so that an excerpt from those times can be made from the logs.
   logfileparsing tool that makes these excerpts and emails them.
+  Not done; user can change verbosity and kill -HUP.
 * clear cache as a callback from the new-rrset-id routine.
-* make overload mode work; phase 0 all ok, phase 1 some threads close ports,
+X make overload mode work; phase 0 all ok, phase 1 some threads close ports,
   to let other threads pick up work. phase 2, all threads closed, so all open
   the ports again and drop all non-cache-reply queries.
   Keep mutexed num-overloaded-threads counter. thread incs it when it hits
@@ -179,8 +181,10 @@ Styleguide:
   if phase 1, start servicing, phase is 0 again. Make robust against delays.
   readme: max about 1 second worth of incoming queries, 10k perhaps,
 	or 1/number of seconds it takes start up of 10k.
-* should the source include a copy of the ldns lib for ease of building by 
-  new users.
+  Not done. Implement drop when full. 
+* the source includes a copy of the ldns lib for ease of building by 
+  new users. Detect system installed ldns, if installed ldns is OK; use 
+  dynamic linking against it, otherwise static linking against packaged ldns.
 * no greedy TTL algo (and test). 
 * maximum TTL, cap incoming values, and config option.
 
