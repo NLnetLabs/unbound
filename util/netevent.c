@@ -206,8 +206,6 @@ comm_point_udp_callback(int fd, short event, void* arg)
 		(void)comm_point_send_udp_msg(rep.c, rep.c->buffer,
 			(struct sockaddr*)&rep.addr, rep.addrlen);
 	}
-	/* may be deleted
-	log_assert(fptr_whitelist_event(rep.c->ev->ev.ev_callback)); */
 }
 
 /** Use a new tcp handler for new query fd, set to read query */
@@ -264,8 +262,6 @@ comm_point_tcp_accept_callback(int fd, short event, void* arg)
 	}
 	/* addr is dropped. Not needed for tcp reply. */
 	setup_tcp_handler(c_hdl, new_fd);
-	/* may be deleted
-	log_assert(fptr_whitelist_event(c->ev->ev.ev_callback)); */
 }
 
 /** Make tcp handler free for next assignment */
@@ -468,8 +464,6 @@ comm_point_tcp_handle_callback(int fd, short event, void* arg)
 					NETEVENT_CLOSED, NULL);
 			}
 		}
-		/* may be deleted 
-		log_assert(fptr_whitelist_event(c->ev->ev.ev_callback)); */
 		return;
 	}
 	if(event&EV_WRITE) {
@@ -482,8 +476,6 @@ comm_point_tcp_handle_callback(int fd, short event, void* arg)
 					NETEVENT_CLOSED, NULL);
 			}
 		}
-		/*
-		log_assert(fptr_whitelist_event(c->ev->ev.ev_callback)); */
 		return;
 	}
 	if(event&EV_TIMEOUT) {
@@ -494,13 +486,9 @@ comm_point_tcp_handle_callback(int fd, short event, void* arg)
 			(void)(*c->callback)(c, c->cb_arg,
 				NETEVENT_TIMEOUT, NULL);
 		}
-		/*
-		log_assert(fptr_whitelist_event(c->ev->ev.ev_callback)); */
 		return;
 	}
 	log_err("Ignored event %d for tcphdl.", event);
-	/*
-	log_assert(fptr_whitelist_event(c->ev->ev.ev_callback)); */
 }
 
 void comm_point_local_handle_callback(int fd, short event, void* arg)
@@ -514,11 +502,9 @@ void comm_point_local_handle_callback(int fd, short event, void* arg)
 			(void)(*c->callback)(c, c->cb_arg, NETEVENT_CLOSED, 
 				NULL);
 		}
-		/* log_assert(fptr_whitelist_event(c->ev->ev.ev_callback));*/
 		return;
 	}
 	log_err("Ignored event %d for localhdl.", event);
-	/*log_assert(fptr_whitelist_event(c->ev->ev.ev_callback));*/
 }
 
 struct comm_point* 
@@ -1044,7 +1030,6 @@ comm_timer_callback(int ATTR_UNUSED(fd), short event, void* arg)
 	tm->ev_timer->enabled = 0;
 	log_assert(fptr_whitelist_comm_timer(tm->callback));
 	(*tm->callback)(tm->cb_arg);
-	/* it was deleted log_assert(fptr_whitelist_event(tm->ev_timer->ev.ev_callback)); */
 }
 
 int 
@@ -1084,7 +1069,6 @@ comm_signal_callback(int sig, short event, void* arg)
 		return;
 	log_assert(fptr_whitelist_comm_signal(comsig->callback));
 	(*comsig->callback)(sig, comsig->cb_arg);
-	/*log_assert(fptr_whitelist_event(comsig->ev_signal->ev.ev_callback));*/
 }
 
 int 

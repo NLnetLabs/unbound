@@ -2,6 +2,9 @@
 	- removed logfile open early. It did not have the proper permissions;
 	  it was opened as root instead of the user. And we cannot change user
 	  id yet, since chroot and bind ports need to be done.
+	- callback checks for event callbacks done from mini_event. Because
+	  of deletions cannot do this from netevent. This means when using
+	  libevent the protection does not work on event-callbacks.
 
 5 October 2007: Wouter
 	- function pointer whitelist.
