@@ -80,7 +80,7 @@ RANGE_END
 
 STEP 1 QUERY
 ENTRY_BEGIN
-REPLY RD
+REPLY RD DO
 SECTION QUESTION
 ns1.example.        IN MX
 ENTRY_END
@@ -95,6 +95,9 @@ ns1.example.        IN MX
 SECTION ANSWER
 SECTION AUTHORITY
 example.       3600 IN SOA     ns1.example. bugs.x.w.example. 1 3600 300 ( 3600000 3600 )
+example.       RRSIG   SOA 133 1 3600 20150420235959 20051021000000 ( 62827 example.  hNIkW1xzn+c+9P3W7PUVVptI72xEmOtn+eqQ ux0BE7Pfc6ikx4m7ivOVWETjbwHjqfY0X5G+ rynLZNqsbLm40Q== )
+2t7b4g4vsa5smi47k61mv5bv1a22bojr.example. NSEC3 1 1 12 aabbccdd ( 2vptu5timamqttgl4luu9kg21e0aor3s A RRSIG )
+2t7b4g4vsa5smi47k61mv5bv1a22bojr.example. RRSIG NSEC3 133 2 3600 ( 20150420235959 20051021000000 62827 example.  fJER1Z3nGoN0HmZm99lqNLSpIf7jLXTMoGm2 k4gIwlc0R4DztJp6Sq37OV6XnGdre4MfgRpB mAcgpPWC5A5eiw== )
 SECTION ADDITIONAL
 ENTRY_END
 

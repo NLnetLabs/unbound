@@ -148,7 +148,7 @@ RANGE_END
 
 STEP 1 QUERY
 ENTRY_BEGIN
-REPLY RD
+REPLY RD DO
 SECTION QUESTION
 www.sub.example.com. IN DS
 ENTRY_END
@@ -162,8 +162,12 @@ SECTION QUESTION
 www.sub.example.com. IN DS
 SECTION ANSWER
 www.sub.example.com. IN CNAME sub.example.com.
+www.sub.example.com.      3600    IN      RRSIG   CNAME 3 3 3600 20070926135752 20070829135752 2854 sub.example.com. MCwCFFyXwAzONbrkZD3oQ50zRYXOr1vvAhQAmzDTm7YYloe6F96eBS1L+KE9hg== ;{id = 2854}
 sub.example.com.        3600    IN      DS      2854 DSA 1 be4d46cd7489cce25a31af0dff2968ce0425dd31
+sub.example.com.        3600    IN      RRSIG   DS 3 3 3600 20070926135752 20070829135752 2854 example.com. MC0CFQC1WMTfb25sTgeUEXCFR4+YiJqecwIUc2R/jrO4amyQxovSnld2reg8eyo= ;{id = 2854}
 SECTION AUTHORITY
+ecllopkacmb753v6jlld4d371l1u7gme.sub.example.com. IN NSEC3 1 1 123 aabb00123456bbccdd ecllopkacmb753v6jlld4d371l1u9gme A RRSIG
+ecllopkacmb753v6jlld4d371l1u7gme.sub.example.com.       3600    IN      RRSIG  NSEC3 3 4 3600 20070926135752 20070829135752 2854 sub.example.com. MCwCFD4bIeWulXj9lhAGsqCfsKg6jQheAhQ9kkYqd9AVdomcl2YzWOupJnV5wQ== ;{id = 2854}
 SECTION ADDITIONAL
 ENTRY_END
 

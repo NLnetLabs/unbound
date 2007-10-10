@@ -236,7 +236,7 @@ RANGE_END
 ; prime cache with example.com. NS rrset.
 STEP 1 QUERY
 ENTRY_BEGIN
-REPLY RD
+REPLY RD DO
 SECTION QUESTION
 www.example.com. IN A
 ENTRY_END
@@ -250,6 +250,7 @@ SECTION QUESTION
 www.example.com. IN A
 SECTION ANSWER
 www.example.com. IN	A	11.12.13.14
+www.example.com.        3600    IN      RRSIG   A 3 3 3600 20070926135752 20070829135752 2854 example.com. MC0CFC6+BbFcL95vH6SOhMLGotcBospIAhUAhjfof+1VY5GsCp5b9UOD7UydBzI= ;{id = 2854}
 SECTION AUTHORITY
 SECTION ADDITIONAL
 ENTRY_END
@@ -257,7 +258,7 @@ ENTRY_END
 ; test nonrec referral validation
 STEP 11 QUERY
 ENTRY_BEGIN
-REPLY
+REPLY DO
 SECTION QUESTION
 bla.example.com. IN A
 ENTRY_END
@@ -272,8 +273,10 @@ SECTION ANSWER
 SECTION AUTHORITY
 example.com.	IN NS	ns.example.com.
 example.com.	IN NS	ns.example.net.
+example.com.    3600    IN      RRSIG   NS 3 2 3600 20070926135752 20070829135752 2854 example.com. MCwCFEsWNXjGDFwH/0NGClonWUQlBaiFAhR/dt0asVj8M0VKs7PdTEKN/Y9i5w== ;{id = 2854}
 SECTION ADDITIONAL
 ns.example.com.		IN 	A	1.2.3.4
+ns.example.com. 3600    IN      RRSIG   A 3 3 3600 20070926135752 20070829135752 2854 example.com. MC0CFQCMSWxVehgOQLoYclB9PIAbNP229AIUeH0vNNGJhjnZiqgIOKvs1EhzqAo= ;{id = 2854}
 ENTRY_END
 
 SCENARIO_END

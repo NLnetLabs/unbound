@@ -121,7 +121,7 @@ ENTRY_END
 ; note, no recursion desired
 STEP 5 QUERY
 ENTRY_BEGIN
-REPLY 
+REPLY DO
 SECTION QUESTION
 bla.example.com. IN A
 ENTRY_END
@@ -135,8 +135,10 @@ bla.example.com. IN A
 SECTION ANSWER
 SECTION AUTHORITY
 example.com.	IN NS	ns.example.com.
+example.com.    3600    IN      RRSIG   NS 3 2 3600 20070926134150 20070829134150 2854 example.com. MC0CFQCN+qHdJxoI/2tNKwsb08pra/G7aAIUAWA5sDdJTbrXA1/3OaesGBAO3sI= ;{id = 2854}
 SECTION ADDITIONAL
 ns.example.com.		IN 	A	1.2.3.4
+ns.example.com. 3600    IN      RRSIG   A 3 3 3600 20070926134150 20070829134150 2854 example.com. MC0CFQCQMyTjn7WWwpwAR1LlVeLpRgZGuQIUCcJDEkwAuzytTDRlYK7nIMwH1CM= ;{id = 2854}
 ENTRY_END
 
 SCENARIO_END

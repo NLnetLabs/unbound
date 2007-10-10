@@ -117,7 +117,7 @@ RANGE_END
 
 STEP 1 QUERY
 ENTRY_BEGIN
-REPLY RD
+REPLY RD DO
 SECTION QUESTION
 a.z.w.example.      IN AAAA
 ENTRY_END
@@ -132,6 +132,14 @@ a.z.w.example.      IN AAAA
 SECTION ANSWER
 SECTION AUTHORITY
 example.       SOA     ns1.example. bugs.x.w.example. 1 3600 300 ( 3600000 3600 )
+example.       RRSIG   SOA 133 1 3600 20150420235959 20051021000000 ( 62827 example.  hNIkW1xzn+c+9P3W7PUVVptI72xEmOtn+eqQ ux0BE7Pfc6ikx4m7ivOVWETjbwHjqfY0X5G+ rynLZNqsbLm40Q== )
+k8udemvp1j2f7eg6jebps17vp3n8i58h.example. NSEC3 1 1 12 aabbccdd ( kohar7mbb8dc2ce8a9qvl8hon4k53uhi )
+k8udemvp1j2f7eg6jebps17vp3n8i58h.example. RRSIG NSEC3 133 2 3600 ( 20150420235959 20051021000000 62827 example.  IKJfInxfypsDiXKgT6HDvCPEIBu9lZCc0CWl c46+Gj/Jrg1NBkSJkKMjCERp1HT8tKU+zYp5 Kyio/cddEaa5Gg== )
+q04jkcevqvmu85r014c7dkba38o0ji5r.example. NSEC3 1 1 12 aabbccdd ( r53bq7cc2uvmubfu5ocmm6pers9tk9en A RRSIG )
+q04jkcevqvmu85r014c7dkba38o0ji5r.example. RRSIG NSEC3 133 2 3600 ( 20150420235959 20051021000000 62827 example.  ktIfH8VRjEKYPB0Qf4EdTuSlYn4DVSRRaGWc kVGmKzreEU5zs97CL8OQSa6C0JZX2yMBXijC Wu6EvgCXrflgiQ== )
+r53bq7cc2uvmubfu5ocmm6pers9tk9en.example. NSEC3 1 1 12 aabbccdd ( t644ebqk9bibcna874givr6joj62mlhv MX RRSIG )
+r53bq7cc2uvmubfu5ocmm6pers9tk9en.example. RRSIG NSEC3 133 2 3600 ( 20150420235959 20051021000000 62827 example.  SzeyaiFOy9dFO1RKHAK4uVCb5GF4rNnxFMXu 6hpM44cmLcDgshlnG1CwkkcihfKOiPIBWd7I bGhsbhqrBrn5Dg== )
+
 SECTION ADDITIONAL
 ENTRY_END
 
