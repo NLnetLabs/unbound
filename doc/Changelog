@@ -1,3 +1,7 @@
+8 October 2007: Wouter
+	- --disable-rpath option in configure for 64bit systems with
+	  several dynamic lib dirs.
+
 7 October 2007: Wouter
 	- fixup tests for no AD bit in non-DO queries.
 	- test that makes sure AD bit is not set on non-DO query.
