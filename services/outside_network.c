@@ -124,7 +124,7 @@ outnet_tcp_take_into_use(struct waiting_tcp* w, uint8_t* pkt, size_t pkt_len)
 	log_assert(pkt);
 	/* open socket */
 #ifdef INET6
-	if(addr_is_ip6(&w->addr))
+	if(addr_is_ip6(&w->addr, w->addrlen))
 		s = socket(PF_INET6, SOCK_STREAM, IPPROTO_TCP);
 	else
 #endif
@@ -643,7 +643,7 @@ select_port(struct outside_network* outnet, struct pending* pend,
 
 	log_assert(outnet && pend);
 	/* first select ip4 or ip6. */
-	if(addr_is_ip6(&pend->addr))
+	if(addr_is_ip6(&pend->addr, pend->addrlen))
 		nummax = (int)outnet->num_udp6;
 	else 	nummax = (int)outnet->num_udp4;
 
@@ -663,7 +663,7 @@ select_port(struct outside_network* outnet, struct pending* pend,
 	if(chosen < 0) chosen = 0;
 	if(chosen >= nummax) chosen = nummax-1;
 
-	if(addr_is_ip6(&pend->addr))
+	if(addr_is_ip6(&pend->addr, pend->addrlen))
 		pend->c = outnet->udp6_ports[chosen];
 	else	pend->c = outnet->udp4_ports[chosen];
 	log_assert(pend->c);

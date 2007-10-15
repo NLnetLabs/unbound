@@ -4,6 +4,7 @@
 	- fixup the fact that the query section was not compressed to,
 	  the code was there but was called by value instead of by reference.
 	  And test for the case, uses xxd and nc.
+	- more portable ip6 check for sockaddr types.
 
 8 October 2007: Wouter
 	- --disable-rpath option in configure for 64bit systems with

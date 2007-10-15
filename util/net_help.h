@@ -203,8 +203,9 @@ int sockaddr_cmp(struct sockaddr_storage* addr1, socklen_t len1,
 /**
  * Checkout address family.
  * @param addr: the sockaddr to examine.
+ * @param len: the length of addr.
  * return: true if sockaddr is ip6.
  */
-int addr_is_ip6(struct sockaddr_storage* addr);
+int addr_is_ip6(struct sockaddr_storage* addr, socklen_t len);
 
 #endif /* NET_HELP_H */

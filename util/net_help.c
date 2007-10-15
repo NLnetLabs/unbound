@@ -312,10 +312,10 @@ sockaddr_cmp(struct sockaddr_storage* addr1, socklen_t len1,
 }
 
 int
-addr_is_ip6(struct sockaddr_storage* addr)
+addr_is_ip6(struct sockaddr_storage* addr, socklen_t len)
 {
-	short family = *(short*)addr;
-	if(family == AF_INET6)
+	if(len == (socklen_t)sizeof(struct sockaddr_in6) &&
+		((struct sockaddr_in6*)addr)->sin6_family == AF_INET6)
 		return 1;
 	else    return 0;
 }

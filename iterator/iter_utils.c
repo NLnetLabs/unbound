@@ -136,7 +136,7 @@ iter_filter_unsuitable(struct iter_env* iter_env, struct module_env* env,
 	if(donotq_lookup(iter_env->donotq, &a->addr, a->addrlen)) {
 		return -1; /* server is on the donotquery list */
 	}
-	if(!iter_env->supports_ipv6 && addr_is_ip6(&a->addr)) {
+	if(!iter_env->supports_ipv6 && addr_is_ip6(&a->addr, a->addrlen)) {
 		return -1; /* there is no ip6 available */
 	}
 	/* check lameness - need zone , class info */
