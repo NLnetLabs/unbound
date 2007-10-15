@@ -123,8 +123,8 @@ outnet_tcp_take_into_use(struct waiting_tcp* w, uint8_t* pkt, size_t pkt_len)
 	log_assert(pend);
 	log_assert(pkt);
 	/* open socket */
-#ifndef INET6
-	if(addr_is_ip6(addr))
+#ifdef INET6
+	if(addr_is_ip6(&w->addr))
 		s = socket(PF_INET6, SOCK_STREAM, IPPROTO_TCP);
 	else
 #endif

@@ -318,7 +318,8 @@ iter_mark_cycle_targets(struct module_qstate* qstate, struct delegpt* dp)
 			LDNS_RR_TYPE_A, qstate->qinfo.qclass)) {
 			log_nametypeclass(VERB_DETAIL, "skipping target due "
 			 	"to dependency cycle (harden-glue: no may "
-				"fix this)", ns->name, LDNS_RR_TYPE_A, 
+				"fix some of the cycles)", 
+				ns->name, LDNS_RR_TYPE_A, 
 				qstate->qinfo.qclass);
 			ns->resolved = 1;
 		}

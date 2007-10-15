@@ -1,3 +1,7 @@
+15 October 2007: Wouter
+	- nicer warning.
+	- fix IP6 TCP, wrong definition check. With test package.
+
 8 October 2007: Wouter
 	- --disable-rpath option in configure for 64bit systems with
 	  several dynamic lib dirs.
