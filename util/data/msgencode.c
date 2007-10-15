@@ -573,13 +573,13 @@ insert_section(struct reply_info* rep, size_t num_rrsets, uint16_t* num_rrs,
 
 /** store query section in wireformat buffer, return RETVAL */
 static int
-insert_query(struct query_info* qinfo, struct compress_tree_node* tree, 
+insert_query(struct query_info* qinfo, struct compress_tree_node** tree, 
 	ldns_buffer* buffer, struct region* region)
 {
 	if(ldns_buffer_remaining(buffer) < 
 		qinfo->qname_len+sizeof(uint16_t)*2)
 		return RETVAL_TRUNC; /* buffer too small */
-	if(!compress_tree_store(&tree, qinfo->qname, 
+	if(!compress_tree_store(tree, qinfo->qname, 
 		dname_count_labels(qinfo->qname), 
 		ldns_buffer_position(buffer), region, NULL))
 		return RETVAL_OUTMEM;
@@ -612,7 +612,7 @@ reply_info_encode(struct query_info* qinfo, struct reply_info* rep,
 
 	/* insert query section */
 	if(rep->qdcount) {
-		if((r=insert_query(qinfo, tree, buffer, region)) != 
+		if((r=insert_query(qinfo, &tree, buffer, region)) != 
 			RETVAL_OK) {
 			if(r == RETVAL_TRUNC) {
 				/* create truncated message */

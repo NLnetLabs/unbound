@@ -662,7 +662,8 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 	struct edns_data edns;
 
 	if(error != NETEVENT_NOERROR) {
-		log_err("handle request called with err=%d", error);
+		/* some bad tcp query DNS formats give these error calls */
+		verbose(VERB_ALGO, "handle request called with err=%d", error);
 		return 0;
 	}
 	if((ret=worker_check_request(c->buffer, worker)) != 0) {

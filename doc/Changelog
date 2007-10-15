@@ -1,6 +1,9 @@
 15 October 2007: Wouter
 	- nicer warning.
 	- fix IP6 TCP, wrong definition check. With test package.
+	- fixup the fact that the query section was not compressed to,
+	  the code was there but was called by value instead of by reference.
+	  And test for the case, uses xxd and nc.
 
 8 October 2007: Wouter
 	- --disable-rpath option in configure for 64bit systems with
