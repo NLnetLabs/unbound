@@ -152,8 +152,8 @@ loopcheck(uint8_t loop[], size_t pos)
 	const uint8_t bits[8] = {0x1, 0x2, 0x4, 0x8, 0x10, 0x20, 0x40, 0x80};
 	uint8_t ret;
 	log_assert(pos < MAX_COMPRESS_POS);
-	ret = loop[ pos / 8 ] & bits[ pos % 8 ];
-	loop[ pos / 8 ] |= bits[ pos % 8 ];	
+	ret = loop[ pos / 8 ] & bits[ pos & 0x7 ];
+	loop[ pos / 8 ] |= bits[ pos & 0x7 ];	
 	return ret;
 }
 
@@ -305,6 +305,7 @@ dname_pkt_hash(ldns_buffer* pkt, uint8_t* dname, hashvalue_t h)
 void dname_pkt_copy(ldns_buffer* pkt, uint8_t* to, uint8_t* dname)
 {
 	/* copy over the dname and decompress it at the same time */
+	size_t len = 0;
 	uint8_t lablen;
 	lablen = *dname++;
 	while(lablen) {
@@ -315,6 +316,12 @@ void dname_pkt_copy(ldns_buffer* pkt, uint8_t* to, uint8_t* dname)
 			continue;
 		}
 		log_assert(lablen <= LDNS_MAX_LABELLEN);
+		len += (size_t)lablen+1;
+		if(len >= LDNS_MAX_DOMAINLEN) {
+			*to = 0; /* end the result prematurely */
+			log_err("bad dname in dname_pkt_copy");
+			return;
+		}
 		*to++ = lablen;
 		memmove(to, dname, lablen);
 		dname += lablen;

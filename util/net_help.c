@@ -164,6 +164,7 @@ log_addr(const char* str, struct sockaddr_storage* addr, socklen_t addrlen)
         if(inet_ntop(af, sinaddr, dest, (socklen_t)sizeof(dest)) == 0) {
                 strncpy(dest, "(inet_ntop error)", sizeof(dest));
         }
+	dest[sizeof(dest)-1] = 0;
         port = ntohs(((struct sockaddr_in*)addr)->sin_port);
         verbose(VERB_DETAIL, "%s %s %s %d (len %d)",
                 str, family, dest, (int)port, (int)addrlen);
@@ -244,14 +245,14 @@ log_nametypeclass(enum verbosity_value v, const char* str, uint8_t* name,
 	else if(ldns_rr_descript(type) && ldns_rr_descript(type)->_name)
 		ts = ldns_rr_descript(type)->_name;
 	else {
-		snprintf(t, 12, "TYPE%d", (int)type);
+		snprintf(t, sizeof(t), "TYPE%d", (int)type);
 		ts = t;
 	}
 	if(ldns_lookup_by_id(ldns_rr_classes, (int)dclass) &&
 		ldns_lookup_by_id(ldns_rr_classes, (int)dclass)->name)
 		cs = ldns_lookup_by_id(ldns_rr_classes, (int)dclass)->name;
 	else {
-		snprintf(c, 12, "CLASS%d", (int)dclass);
+		snprintf(c, sizeof(c), "CLASS%d", (int)dclass);
 		cs = c;
 	}
 	log_info("%s <%s %s %s>", str, buf, ts, cs);
@@ -279,6 +280,7 @@ void log_name_addr(enum verbosity_value v, const char* str, uint8_t* zone,
         if(inet_ntop(af, sinaddr, dest, (socklen_t)sizeof(dest)) == 0) {
                 strncpy(dest, "(inet_ntop error)", sizeof(dest));
         }
+	dest[sizeof(dest)-1] = 0;
         port = ntohs(((struct sockaddr_in*)addr)->sin_port);
 	dname_str(zone, namebuf);
 	if(af != AF_INET && af != AF_INET6)

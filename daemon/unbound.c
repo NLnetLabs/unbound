@@ -183,6 +183,7 @@ readpid (const char* file)
 		return -1;
 	}
 
+	pidbuf[sizeof(pidbuf)-1] = 0;
 	pid = (pid_t)strtol(pidbuf, &t, 10);
 	
 	if (*t && *t != '\n') {

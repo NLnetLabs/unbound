@@ -2,6 +2,14 @@
 	- no malloc in log_hex.
 	- assertions around system calls.
 	- protect against gethostname without ending zero.
+	- ntop output is null terminated by unbound.
+	- pidfile content null termination
+	- various snprintf use sizeof(stringbuf) instead of fixed constant.
+	- changed loopdetect % 8 with & 0x7 since % can become negative for
+	  weird negative input and particular interpretation of integer math.
+	- dname_pkt_copy checks length of result, to protect result buffers.
+	  prints an error, this should not happen. Bad strings should have
+	  been rejected earlier in the program.
 
 15 October 2007: Wouter
 	- nicer warning.

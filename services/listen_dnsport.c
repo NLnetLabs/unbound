@@ -74,6 +74,7 @@ verbose_print_addr(struct addrinfo *addr)
 			(socklen_t)sizeof(buf)) == 0) {
 			strncpy(buf, "(null)", sizeof(buf));
 		}
+		buf[sizeof(buf)-1] = 0;
 		verbose(VERB_ALGO, "creating %s%s socket %s %d", 
 			addr->ai_socktype==SOCK_DGRAM?"udp":
 			addr->ai_socktype==SOCK_STREAM?"tcp":"otherproto",
