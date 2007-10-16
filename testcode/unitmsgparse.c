@@ -206,10 +206,8 @@ test_buffers(ldns_buffer* pkt, ldns_buffer* out)
 	s1 = ldns_buffer2pkt_wire(&p1, pkt);
 	s2 = ldns_buffer2pkt_wire(&p2, out);
 	if(vbmp) {
-		log_hex("orig in hex", ldns_buffer_begin(pkt),
-			ldns_buffer_limit(pkt));
-		log_hex("unbound out in hex", ldns_buffer_begin(out),
-			ldns_buffer_limit(out));
+		log_buf(0, "orig in hex", pkt);
+		log_buf(0, "unbound out in hex", out);
 		printf("\npacket from unbound (%d):\n", 
 			(int)ldns_buffer_limit(out));
 		ldns_pkt_print(stdout, p2);

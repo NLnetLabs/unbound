@@ -98,7 +98,7 @@ int str_is_ip6(const char* str);
 
 /**
  * Write (blocking) to a nonblocking socket.
- * @param s: fd.
+ * @param s: fd. Is set to be nonblocking at exit.
  * @param buf: data buffer.
  * @param size: length of data to send.
  * @return: 0 on error. errno is set.
@@ -112,6 +112,13 @@ write_socket(int s, const void *buf, size_t size);
  * @return: 0 on error (error is printed to log).
  */
 int fd_set_nonblock(int s); 
+
+/**
+ * Set fd (back to) blocking.
+ * @param s: file descriptor.
+ * @return: 0 on error (error is printed to log).
+ */
+int fd_set_block(int s); 
 
 /**
  * See if number is a power of 2.

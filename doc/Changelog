@@ -1,3 +1,8 @@
+16 October 2007: Wouter
+	- no malloc in log_hex.
+	- assertions around system calls.
+	- protect against gethostname without ending zero.
+
 15 October 2007: Wouter
 	- nicer warning.
 	- fix IP6 TCP, wrong definition check. With test package.

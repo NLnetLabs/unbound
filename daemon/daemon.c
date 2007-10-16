@@ -269,8 +269,6 @@ static void daemon_setup_modules(struct daemon* daemon)
 	daemon->env->cfg = daemon->cfg;
 	daemon->env->alloc = &daemon->superalloc;
 	daemon->env->worker = NULL;
-	daemon->env->send_packet = &worker_send_packet;
-	daemon->env->send_query = &worker_send_query;
 	daemon->env->need_to_validate = 0; /* set by module init below */
 	for(i=0; i<daemon->num_modules; i++) {
 		log_info("init module %d: %s", i, daemon->modfunc[i]->name);
@@ -384,7 +382,7 @@ daemon_stop_others(struct daemon* daemon)
 		worker_send_cmd(daemon->workers[i], 
 			daemon->workers[0]->front->udp_buff, worker_cmd_quit);
 	}
-	/** wait for them to quit */
+	/* wait for them to quit */
 	for(i=1; i<daemon->num; i++) {
 		/* join it to make sure its dead */
 		verbose(VERB_ALGO, "join %d", i);

@@ -701,8 +701,7 @@ add_rr_to_rrset(struct rrset_parse* rrset, ldns_buffer* pkt,
 		/*
 		verbose(VERB_DETAIL, "Packet contains rrset data in "
 			"multiple sections, dropped last part.");
-		log_hex("packet was: ", ldns_buffer_begin(pkt), 
-			ldns_buffer_limit(pkt));
+		log_buf(VERB_DETAIL, "packet was", pkt);
 		*/
 		/* forwards */
 		if(!skip_ttl_rdata(pkt))

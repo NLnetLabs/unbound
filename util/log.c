@@ -83,7 +83,7 @@ log_init(const char* filename, int use_syslog)
 	|| log_to_syslog
 #endif
 	)
-		verbose(VERB_DETAIL, "switching log to %s", 
+	verbose(VERB_DETAIL, "switching log to %s", 
 		use_syslog?"syslog":(filename&&filename[0]?filename:"stderr"));
 	if(logfile && logfile != stderr)
 		fclose(logfile);
@@ -218,23 +218,35 @@ verbose(enum verbosity_value level, const char* format, ...)
 void 
 log_hex(const char* msg, void* data, size_t length)
 {
-	size_t i;
+	size_t i, j;
 	uint8_t* data8 = (uint8_t*)data;
 	const char* hexchar = "0123456789ABCDEF";
-	char* buf = malloc(length*2 + 1); /* alloc hex chars + \0 */
-	size_t blocksize = 1024;
-	for(i=0; i<length; i++) {
-		buf[i*2] = hexchar[ data8[i] >> 4 ];
-		buf[i*2 + 1] = hexchar[ data8[i] & 0xF ];
+	char buf[1024+1]; /* alloc blocksize hex chars + \0 */
+	const size_t blocksize = 1024;
+	size_t len;
+
+	if(length == 0) {
+		log_info("%s[%u]", msg, (unsigned)length);
+		return;
 	}
-	buf[length*2] = 0;
-	if(length < blocksize/2)
-		log_info("%s[%u] %s", msg, (unsigned)length, buf);
-	else {
-		for(i=0; i<length*2; i+=blocksize) {
-			log_info("%s[%u:%u] %.*s", msg, (unsigned)length, 
-				(unsigned)i/2, (int)blocksize, buf+i);
+
+	for(i=0; i<length; i+=blocksize/2) {
+		len = blocksize/2;
+		if(length - i < blocksize/2)
+			len = length - i;
+		for(j=0; j<len; j++) {
+			buf[j*2] = hexchar[ data8[i+j] >> 4 ];
+			buf[j*2 + 1] = hexchar[ data8[i+j] & 0xF ];
 		}
+		buf[len*2] = 0;
+		log_info("%s[%u:%u] %.*s", msg, (unsigned)length, 
+			(unsigned)i, (int)len*2, buf);
 	}
-	free(buf);
+}
+
+void log_buf(enum verbosity_value level, const char* msg, ldns_buffer* buf)
+{
+	if(verbosity < level)
+		return;
+	log_hex(msg, ldns_buffer_begin(buf), ldns_buffer_limit(buf));
 }

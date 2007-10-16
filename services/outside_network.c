@@ -91,7 +91,7 @@ serviced_cmp(const void* key1, const void* key2)
 	if(q1->qbuflen > q2->qbuflen)
 		return 1;
 	log_assert(q1->qbuflen == q2->qbuflen);
-	/* FIXME: will not detect alternate casing of qname */
+	/* will not detect alternate casing of qname */
 	if((r = memcmp(q1->qbuf, q2->qbuf, q1->qbuflen)) != 0)
 		return r;
 	if(q1->dnssec != q2->dnssec) {
@@ -122,6 +122,7 @@ outnet_tcp_take_into_use(struct waiting_tcp* w, uint8_t* pkt, size_t pkt_len)
 	int s;
 	log_assert(pend);
 	log_assert(pkt);
+	log_assert(w->addrlen > 0);
 	/* open socket */
 #ifdef INET6
 	if(addr_is_ip6(&w->addr, w->addrlen))
@@ -249,17 +250,12 @@ outnet_udp_cb(struct comm_point* c, void* arg, int error,
 	p = (struct pending*)rbtree_search(outnet->pending, &key);
 	if(!p) {
 		verbose(VERB_DETAIL, "received unwanted or unsolicited udp reply dropped.");
-		if(verbosity >= VERB_ALGO)
-			log_hex("dropped message", 
-				ldns_buffer_begin(c->buffer), 
-				ldns_buffer_limit(c->buffer));
+		log_buf(VERB_ALGO, "dropped message", c->buffer);
 		return 0;
 	}
 
 	verbose(VERB_ALGO, "received udp reply.");
-	if(verbosity >= VERB_ALGO)
-		log_hex("udp message", ldns_buffer_begin(c->buffer), 
-				ldns_buffer_limit(c->buffer));
+	log_buf(VERB_ALGO, "udp message", c->buffer);
 	if(p->c != c) {
 		verbose(VERB_DETAIL, "received reply id,addr on wrong port. "
 			"dropped.");
@@ -1125,6 +1121,7 @@ serviced_udp_callback(struct comm_point* c, void* arg, int error,
 		int roundtime = (now.tv_sec - sq->last_sent_time.tv_sec)*1000
 		  + ((int)now.tv_usec - (int)sq->last_sent_time.tv_usec)/1000;
 		verbose(VERB_ALGO, "measured roundtrip at %d msec", roundtime);
+		log_assert(roundtime >= 0);
 		if(!infra_rtt_update(outnet->infra, &sq->addr, sq->addrlen, 
 			roundtime, (time_t)now.tv_sec))
 			log_err("out of memory noting rtt.");

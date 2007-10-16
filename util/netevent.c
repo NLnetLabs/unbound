@@ -161,6 +161,9 @@ comm_point_send_udp_msg(struct comm_point *c, ldns_buffer* packet,
 	struct sockaddr* addr, socklen_t addrlen) 
 {
 	ssize_t sent;
+	log_assert(c->fd != -1);
+	log_assert(ldns_buffer_remaining(packet) > 0);
+	log_assert(addr && addrlen > 0);
 	sent = sendto(c->fd, ldns_buffer_begin(packet), 
 		ldns_buffer_remaining(packet), 0,
 		addr, addrlen);
@@ -189,6 +192,8 @@ comm_point_udp_callback(int fd, short event, void* arg)
 	log_assert(rep.c && rep.c->buffer && rep.c->fd == fd);
 	ldns_buffer_clear(rep.c->buffer);
 	rep.addrlen = (socklen_t)sizeof(rep.addr);
+	log_assert(fd != -1);
+	log_assert(ldns_buffer_remaining(rep.c->buffer) > 0);
 	recv = recvfrom(fd, ldns_buffer_begin(rep.c->buffer), 
 		ldns_buffer_remaining(rep.c->buffer), 0, 
 		(struct sockaddr*)&rep.addr, &rep.addrlen);
@@ -234,6 +239,7 @@ comm_point_tcp_accept_callback(int fd, short event, void* arg)
 	/* accept incoming connection. */
 	rep.c = NULL;
 	rep.addrlen = (socklen_t)sizeof(rep.addr);
+	log_assert(fd != -1);
 	new_fd = accept(fd, (struct sockaddr*)&rep.addr, &rep.addrlen);
 	if(new_fd == -1) {
 		/* EINTR is signal interrupt. others are closed connection. */
@@ -244,7 +250,8 @@ comm_point_tcp_accept_callback(int fd, short event, void* arg)
 			&& errno != EPROTO
 #endif /* EPROTO */
 			)
-			log_err("accept failed: %s", strerror(errno));
+			return;
+		log_err("accept failed: %s", strerror(errno));
 		return;
 	}
 	/* find free tcp handler. */
@@ -330,6 +337,7 @@ comm_point_tcp_handle_read(int fd, struct comm_point* c, int short_ok)
 	if(!c->tcp_is_reading)
 		return 0;
 
+	log_assert(fd != -1);
 	if(c->tcp_byte_count < sizeof(uint16_t)) {
 		/* read length bytes */
 		r = read(fd, ldns_buffer_at(c->buffer, c->tcp_byte_count), 
@@ -361,6 +369,7 @@ comm_point_tcp_handle_read(int fd, struct comm_point* c, int short_ok)
 			(int)ldns_buffer_limit(c->buffer));
 	}
 
+	log_assert(ldns_buffer_remaining(c->buffer) > 0);
 	r = read(fd, ldns_buffer_current(c->buffer), 
 		ldns_buffer_remaining(c->buffer));
 	if(r == 0) {
@@ -391,6 +400,7 @@ comm_point_tcp_handle_write(int fd, struct comm_point* c)
 	log_assert(c->type == comm_tcp);
 	if(c->tcp_is_reading)
 		return 0;
+	log_assert(fd != -1);
 	if(c->tcp_byte_count == 0 && c->tcp_check_nb_connect) {
 		/* check for pending error from nonblocking connect */
 		/* from Stevens, unix network programming, vol1, 3rd ed, p450*/
@@ -414,6 +424,8 @@ comm_point_tcp_handle_write(int fd, struct comm_point* c)
 		iov[0].iov_len = sizeof(uint16_t) - c->tcp_byte_count;
 		iov[1].iov_base = ldns_buffer_begin(c->buffer);
 		iov[1].iov_len = ldns_buffer_limit(c->buffer);
+		log_assert(iov[0].iov_len > 0);
+		log_assert(iov[1].iov_len > 0);
 		r = writev(fd, iov, 2);
 		if(r == -1) {
 			if(errno == EINTR || errno == EAGAIN)
@@ -431,6 +443,7 @@ comm_point_tcp_handle_write(int fd, struct comm_point* c)
 		}
 		return 1;
 	}
+	log_assert(ldns_buffer_remaining(c->buffer) > 0);
 	r = write(fd, ldns_buffer_current(c->buffer), 
 		ldns_buffer_remaining(c->buffer));
 	if(r == -1) {
@@ -832,6 +845,8 @@ comm_point_send_reply_iov(struct comm_reply* repinfo, struct iovec* iov,
         size_t iovlen)
 {
 	log_assert(repinfo && repinfo->c);
+	log_assert(repinfo->c->fd != -1);
+	log_assert(repinfo->addrlen > 0);
 	if(repinfo->c->type == comm_udp) {
 		struct msghdr hdr;
 		memset(&hdr, 0, sizeof(hdr));
@@ -1005,6 +1020,7 @@ comm_timer_disable(struct comm_timer* timer)
 void 
 comm_timer_set(struct comm_timer* timer, struct timeval* tv)
 {
+	log_assert(tv);
 	if(timer->ev_timer->enabled)
 		comm_timer_disable(timer);
 	evtimer_add(&timer->ev_timer->ev, tv);

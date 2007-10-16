@@ -624,10 +624,11 @@ answer_chaos(struct worker* w, struct query_info* qinfo,
 		if(cfg->hide_identity) 
 			return 0;
 		if(cfg->identity==NULL || cfg->identity[0]==0) {
-			char buf[MAXHOSTNAMELEN];
-			if (gethostname(buf, MAXHOSTNAMELEN) == 0)
+			char buf[MAXHOSTNAMELEN+1];
+			if (gethostname(buf, MAXHOSTNAMELEN) == 0) {
+				buf[MAXHOSTNAMELEN] = 0;
 				chaos_replystr(pkt, buf, edns);
-			else 	{
+			} else 	{
 				log_err("gethostname: %s", strerror(errno));
 				chaos_replystr(pkt, "no hostname", edns);
 			}
@@ -797,22 +798,22 @@ worker_sighandler(int sig, void* arg)
 	struct worker* worker = (struct worker*)arg;
 	switch(sig) {
 		case SIGHUP:
-			log_info("caught signal SIGHUP");
+			verbose(VERB_DETAIL, "caught signal SIGHUP");
 			worker->need_to_restart = 1;
 			comm_base_exit(worker->base);
 			break;
 		case SIGINT:
-			log_info("caught signal SIGINT");
+			verbose(VERB_DETAIL, "caught signal SIGINT");
 			worker->need_to_restart = 0;
 			comm_base_exit(worker->base);
 			break;
 		case SIGQUIT:
-			log_info("caught signal SIGQUIT");
+			verbose(VERB_DETAIL, "caught signal SIGQUIT");
 			worker->need_to_restart = 0;
 			comm_base_exit(worker->base);
 			break;
 		case SIGTERM:
-			log_info("caught signal SIGTERM");
+			verbose(VERB_DETAIL, "caught signal SIGTERM");
 			worker->need_to_restart = 0;
 			comm_base_exit(worker->base);
 			break;
@@ -949,6 +950,8 @@ worker_init(struct worker* worker, struct config_file *cfg,
 		worker->thread_num);
 	worker->env = *worker->daemon->env;
 	worker->env.worker = worker;
+	worker->env.send_packet = &worker_send_packet;
+	worker->env.send_query = &worker_send_query;
 	worker->env.alloc = &worker->alloc;
 	worker->env.rnd = worker->rndstate;
 	worker->env.scratch = worker->scratchpad;
