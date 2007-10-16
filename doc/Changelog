@@ -10,6 +10,7 @@
 	- dname_pkt_copy checks length of result, to protect result buffers.
 	  prints an error, this should not happen. Bad strings should have
 	  been rejected earlier in the program.
+	- remove a size_t underflow from msgreply size func.
 
 15 October 2007: Wouter
 	- nicer warning.
