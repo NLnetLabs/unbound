@@ -104,6 +104,8 @@ struct delegpt_addr {
 	struct sockaddr_storage addr;
 	/** length of addr */
 	socklen_t addrlen;
+	/** number of attempts for this addr */
+	int attempts;
 };
 
 /**

@@ -199,11 +199,20 @@ int infra_set_lame(struct infra_cache* infra,
  * @param roundtrip: estimate of roundtrip time in milliseconds or -1 for 
  * 	timeout.
  * @param timenow: what time it is now.
- * @return: 0 on error.
+ * @return: 0 on error. new rto otherwise.
  */
 int infra_rtt_update(struct infra_cache* infra,
         struct sockaddr_storage* addr, socklen_t addrlen,
 	int roundtrip, time_t timenow);
+
+/**
+ * Update information for the host, store that a TCP transaction works.
+ * @param infra: infrastructure cache.
+ * @param addr: host address.
+ * @param addrlen: length of addr.
+ */
+void infra_update_tcp_works(struct infra_cache* infra,
+        struct sockaddr_storage* addr, socklen_t addrlen);
 
 /**
  * Update edns information for the host.

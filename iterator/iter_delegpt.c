@@ -152,6 +152,7 @@ delegpt_add_addr(struct delegpt* dp, struct region* region,
 	dp->usable_list = a;
 	memcpy(&a->addr, addr, addrlen);
 	a->addrlen = addrlen;
+	a->attempts = 0;
 	return 1;
 }
 

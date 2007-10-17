@@ -401,6 +401,23 @@ infra_set_lame(struct infra_cache* infra,
 	return 1;
 }
 
+void 
+infra_update_tcp_works(struct infra_cache* infra,
+        struct sockaddr_storage* addr, socklen_t addrlen)
+{
+	struct lruhash_entry* e = infra_lookup_host_nottl(infra, addr, 
+		addrlen, 1);
+	struct infra_host_data* data;
+	if(!e)
+		return; /* doesn't exist */
+	data = (struct infra_host_data*)e->data;
+	if(data->rtt.rto >= RTT_MAX_TIMEOUT)
+		/* do not disqualify this server altogether, it is better
+		 * than nothing */
+		data->rtt.rto = RTT_MAX_TIMEOUT-1;
+	lock_rw_unlock(&e->lock);
+}
+
 int 
 infra_rtt_update(struct infra_cache* infra,
         struct sockaddr_storage* addr, socklen_t addrlen,
@@ -410,6 +427,7 @@ infra_rtt_update(struct infra_cache* infra,
 		addrlen, 1);
 	struct infra_host_data* data;
 	int needtoinsert = 0;
+	int rto = 1;
 	if(!e) {
 		if(!(e = new_host_entry(infra, addr, addrlen, timenow)))
 			return 0;
@@ -421,11 +439,13 @@ infra_rtt_update(struct infra_cache* infra,
 	if(roundtrip == -1)
 		rtt_lost(&data->rtt);
 	else	rtt_update(&data->rtt, roundtrip);
+	if(data->rtt.rto > 0)
+		rto = data->rtt.rto;
 
 	if(needtoinsert)
 		slabhash_insert(infra->hosts, e->hash, e, e->data, NULL);
 	else 	{ lock_rw_unlock(&e->lock); }
-	return 1;
+	return rto;
 }
 
 int 

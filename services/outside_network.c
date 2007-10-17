@@ -61,7 +61,7 @@
 /** number of times to retry making a random ID that is unique. */
 #define MAX_ID_RETRY 1000
 /** number of retries on outgoing UDP queries */
-#define OUTBOUND_UDP_RETRY 4
+#define OUTBOUND_UDP_RETRY 1
 
 /** initiate TCP transaction for serviced query */
 static void serviced_tcp_initiate(struct outside_network* outnet, 
@@ -1021,6 +1021,9 @@ serviced_tcp_callback(struct comm_point* c, void* arg, int error,
 	sq->pending = NULL; /* removed after this callback */
 	if(error != NETEVENT_NOERROR && verbosity >= VERB_DETAIL)
 		log_addr("tcp error for address", &sq->addr, sq->addrlen);
+	if(error==NETEVENT_NOERROR)
+		infra_update_tcp_works(sq->outnet->infra, &sq->addr,
+			sq->addrlen);
 	if(error==NETEVENT_NOERROR && LDNS_RCODE_WIRE(ldns_buffer_begin(
 		c->buffer)) == LDNS_RCODE_FORMERR && 
 		sq->status == serviced_query_TCP_EDNS) {
@@ -1066,6 +1069,7 @@ serviced_udp_callback(struct comm_point* c, void* arg, int error,
 	struct serviced_query* sq = (struct serviced_query*)arg;
 	struct outside_network* outnet = sq->outnet;
 	struct timeval now;
+	int fallback_tcp = 0;
 	if(gettimeofday(&now, NULL) < 0) {
 		log_err("gettimeofday: %s", strerror(errno));
 		/* this option does not need current time */
@@ -1073,9 +1077,10 @@ serviced_udp_callback(struct comm_point* c, void* arg, int error,
 	}
 	sq->pending = NULL; /* removed after callback */
 	if(error == NETEVENT_TIMEOUT) {
+		int rto = 0;
 		sq->retry++;
-		if(!infra_rtt_update(outnet->infra, &sq->addr, sq->addrlen,
-			-1, (time_t)now.tv_sec))
+		if(!(rto=infra_rtt_update(outnet->infra, &sq->addr, sq->addrlen,
+			-1, (time_t)now.tv_sec)))
 			log_err("out of memory in UDP exponential backoff");
 		if(sq->retry < OUTBOUND_UDP_RETRY) {
 			log_name_addr(VERB_ALGO, "retry query", sq->qbuf+10,
@@ -1085,8 +1090,13 @@ serviced_udp_callback(struct comm_point* c, void* arg, int error,
 			}
 			return 0;
 		}
-		error = NETEVENT_TIMEOUT;
-		/* UDP does not work, fallback to TCP below */
+		if(rto >= RTT_MAX_TIMEOUT) {
+			fallback_tcp = 1;
+			/* UDP does not work, fallback to TCP below */
+		} else {
+			serviced_callbacks(sq, NETEVENT_TIMEOUT, c, rep);
+			return 0;
+		}
 	}
 	if(error == NETEVENT_NOERROR && sq->status == serviced_query_UDP_EDNS 
 		&& LDNS_RCODE_WIRE(ldns_buffer_begin(c->buffer)) 
@@ -1103,8 +1113,8 @@ serviced_udp_callback(struct comm_point* c, void* arg, int error,
 		}
 		return 0;
 	}
-	if(error != NETEVENT_NOERROR || 
-		LDNS_TC_WIRE(ldns_buffer_begin(c->buffer))) {
+	if(LDNS_TC_WIRE(ldns_buffer_begin(c->buffer)) ||
+		(error != NETEVENT_NOERROR && fallback_tcp)  ) {
 		/* fallback to TCP */
 		/* this discards partial UDP contents */
 		if(sq->status == serviced_query_UDP_EDNS)

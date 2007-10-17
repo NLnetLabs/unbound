@@ -214,6 +214,8 @@ iter_server_selection(struct iter_env* iter_env,
 		return NULL;
 	if(num == 1) {
 		a = dp->result_list;
+		if(++a->attempts < OUTBOUND_MSG_RETRY)
+			return a;
 		dp->result_list = a->next_result;
 		return a;
 	}
@@ -231,6 +233,8 @@ iter_server_selection(struct iter_env* iter_env,
 	}
 	if(!a)  /* robustness */
 		return NULL;
+	if(++a->attempts < OUTBOUND_MSG_RETRY)
+		return a;
 	/* remove it from the delegation point result list */
 	if(prev)
 		prev->next_result = a->next_result;

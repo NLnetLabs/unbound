@@ -17,6 +17,7 @@
 	- fixup removal of nonsecure items from the additional.
 	- reduced timeout values to more realistic, 376 msec (262 msec has
 	  90% of roundtrip times, 512 msec has 99% of roundtrip times.)
+	- server selection failover to next server after timeout (376 msec).
 
 16 October 2007: Wouter
 	- no malloc in log_hex.

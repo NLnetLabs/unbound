@@ -64,6 +64,8 @@ struct iter_prep_list;
  * Equals RTT_MAX_TIMEOUT
  */
 #define USEFUL_SERVER_TOP_TIMEOUT	120000
+/** number of retries on outgoing queries */
+#define OUTBOUND_MSG_RETRY 4
 
 /**
  * Global state for the iterator. 
