@@ -131,9 +131,9 @@ void iter_mark_cycle_targets(struct module_qstate* qstate, struct delegpt* dp);
 /**
  * See if delegation is useful or offers immediately no targets for 
  * further recursion.
- * @param flags: query flags.
+ * @param qstate: query state with RD flag and query name.
  * @param dp: delegpt to check.
  */
-int iter_dp_is_useless(uint16_t flags, struct delegpt* dp);
+int iter_dp_is_useless(struct module_qstate* qstate, struct delegpt* dp);
 
 #endif /* ITERATOR_ITER_UTILS_H */

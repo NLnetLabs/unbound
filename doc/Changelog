@@ -1,3 +1,11 @@
+17 October 2007: Wouter
+	- fixup another cycle detect and ns-addr timeout resolution bug.
+	  This time by refusing delegations from the cache without addresses
+	  when resolving a mandatory-glue nameserver-address for that zone.
+	  We're going to have to ask a TLD server anyway; might as well be
+	  the TLD server for this name. And this resolves a lot of cases where
+	  the other nameserver names lead to cycles or are not available.
+
 16 October 2007: Wouter
 	- no malloc in log_hex.
 	- assertions around system calls.

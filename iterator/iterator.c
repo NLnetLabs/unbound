@@ -752,7 +752,8 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 
 		/* see if this dp not useless.
 		 * It is useless if:
-		 *	o all NS items are required glue.
+		 *	o all NS items are required glue. 
+		 *	  or the query is for NS item that is required glue.
 		 *	o no addresses are provided.
 		 *	o RD qflag is on.
 		 * Instead, go up one level, and try to get even further
@@ -761,7 +762,7 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 		 * could be useless but lead to loops (bumping into the
 		 * same server reply) if useless-checked.
 		 */
-		if(iter_dp_is_useless(qstate->query_flags, iq->dp)) {
+		if(iter_dp_is_useless(qstate, iq->dp)) {
 			if(dname_is_root(iq->dp->name)) {
 				/* use safety belt */
 				verbose(VERB_OPS, "Priming problem: NS but "
