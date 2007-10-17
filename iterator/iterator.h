@@ -58,7 +58,7 @@ struct iter_prep_list;
 /** how nice is a server without further information, in msec 
  * Equals rtt initial timeout value.
  */
-#define UNKNOWN_SERVER_NICENESS 3000
+#define UNKNOWN_SERVER_NICENESS 376
 /** maximum timeout before a host is deemed unsuitable, in msec. 
  * After host_ttl this will be timed out and the host will be tried again. 
  * Equals RTT_MAX_TIMEOUT

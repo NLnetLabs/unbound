@@ -60,9 +60,10 @@ void
 rtt_init(struct rtt_info* rtt)
 {
 	rtt->srtt = 0;
-	rtt->rttvar = 750;
+	rtt->rttvar = 94;
 	rtt->rto = calc_rto(rtt);
-	/* first RTO is 0 + 4*0.75 = 3 seconds */
+	/* default value from the book is 0 + 4*0.75 = 3 seconds */
+	/* first RTO is 0 + 4*0.094 = 0.376 seconds */
 }
 
 int 
