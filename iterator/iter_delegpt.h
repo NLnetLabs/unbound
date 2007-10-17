@@ -42,12 +42,12 @@
 
 #ifndef ITERATOR_ITER_DELEGPT_H
 #define ITERATOR_ITER_DELEGPT_H
+#include "util/log.h"
 struct region;
 struct delegpt_ns;
 struct delegpt_addr;
 struct dns_msg;
 struct ub_packed_rrset_key;
-enum verbosity_value;
 
 /**
  * Delegation Point.
