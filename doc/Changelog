@@ -5,6 +5,9 @@
 	  We're going to have to ask a TLD server anyway; might as well be
 	  the TLD server for this name. And this resolves a lot of cases where
 	  the other nameserver names lead to cycles or are not available.
+	- changed random generator from random(3) clone to arc4random wrapped
+	  for thread safety. The random generator is initialised with
+	  entropy from the system.
 
 16 October 2007: Wouter
 	- no malloc in log_hex.

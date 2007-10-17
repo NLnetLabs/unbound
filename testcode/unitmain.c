@@ -197,6 +197,27 @@ infra_test()
 	config_delete(cfg);
 }
 
+#include "util/random.h"
+/** test randomness */
+static void
+rnd_test()
+{
+	struct ub_randstate r;
+	int num = 100, i;
+	long int a[100];
+	unit_assert( ub_initstate((unsigned)time(NULL), &r, 256) );
+	for(i=0; i<num; i++) {
+		a[i] = ub_random(&r);
+		unit_assert(a[i] >= 0);
+		unit_assert((size_t)a[i] <= (size_t)RAND_MAX);
+		if(i > 5)
+			unit_assert(a[i] != a[i-1] || a[i] != a[i-2] ||
+				a[i] != a[i-3] || a[i] != a[i-4] ||
+				a[i] != a[i-5] || a[i] != a[i-6]);
+	}
+	ub_randfree(&r);
+}
+
 /**
  * Main unit test program. Setup, teardown and report errors.
  * @param argc: arg count.
@@ -213,6 +234,7 @@ main(int argc, char* argv[])
 	}
 	printf("Start of %s unit test.\n", PACKAGE_STRING);
 	checklock_start();
+	rnd_test();
 	verify_test();
 	net_test();
 	dname_test();

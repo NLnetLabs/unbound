@@ -38,34 +38,27 @@
 
 /**
  * \file
- * Thread safe random functions. Similar to random(3) and initstate(3).
+ * Thread safe random functions. Similar to arc4random() with an explicit
+ * initialisation routine.
  */
+
+struct ub_hiddenstate;
 
 /**
  * random state structure.
  */
 struct ub_randstate {
-	/** state array, malloced */
-	long int* state;
-	/** front ptr */
-	long int* fptr;
-	/** rear ptr */
-	long int* rptr;
-	/** rng type */
-	int rand_type;
-	/** rng degree */
-	int rand_deg;
-	/** rng sep */
-	int rand_sep;
-	/** rng end ptr */
-	long int* end_ptr;
+	/** state hidden type. */
+	struct ub_hiddenstate* s;
 };
 
 /**
  * Initialize a random generator state for use 
  * @param seed: seed value to create state contents.
+ *	(ignored for arc4random).
  * @param state: struct allocated by caller.
  * @param n: size of state->state. 8, 32, 64, 128, or 256 bytes.
+ *	(ignored for arc4random).
  * @return false alloc failure.
  */
 int ub_initstate(unsigned int seed, struct ub_randstate* state, 
