@@ -1662,8 +1662,9 @@ primeResponseToKE(int rcode, struct dns_msg* msg, struct trust_anchor* ta,
 			ta->dclass);
 	}
 	if(!dnskey_rrset) {
-		log_query_info(VERB_OPS, "failed to prime trust anchor -- "
-			"could not fetch DNSKEY rrset", &msg->qinfo);
+		log_nametypeclass(VERB_OPS, "failed to prime trust anchor -- "
+			"could not fetch DNSKEY rrset", 
+			ta->name, LDNS_RR_TYPE_DNSKEY, ta->dclass);
 		kkey = key_entry_create_null(qstate->region, ta->name,
 			ta->namelen, ta->dclass, NULL_KEY_TTL);
 		if(!kkey) {
@@ -1703,8 +1704,9 @@ primeResponseToKE(int rcode, struct dns_msg* msg, struct trust_anchor* ta,
 	}
 
 	if(sec != sec_status_secure) {
-		log_query_info(VERB_OPS, "failed to prime trust anchor -- "
-			"could not fetch secure DNSKEY rrset", &msg->qinfo);
+		log_nametypeclass(VERB_OPS, "failed to prime trust anchor -- "
+			"could not fetch secure DNSKEY rrset", 
+			ta->name, LDNS_RR_TYPE_DNSKEY, ta->dclass);
 		/* NOTE: in this case, we should probably reject the trust 
 		 * anchor for longer, perhaps forever. */
 		kkey = key_entry_create_null(qstate->region, ta->name,
@@ -1717,8 +1719,8 @@ primeResponseToKE(int rcode, struct dns_msg* msg, struct trust_anchor* ta,
 		return kkey;
 	}
 
-	log_query_info(VERB_ALGO, "Successfully primed trust anchor", 
-		&msg->qinfo);
+	log_nametypeclass(VERB_ALGO, "Successfully primed trust anchor", 
+		ta->name, LDNS_RR_TYPE_DNSKEY, ta->dclass);
 	/* store the freshly primed entry in the cache */
 	key_cache_insert(ve->kcache, kkey);
 	return kkey;
@@ -2016,7 +2018,7 @@ process_prime_response(struct module_qstate* qstate, struct val_qstate* vq,
 {
 	/* Fetch and validate the keyEntry that corresponds to the 
 	 * current trust anchor. */
-	vq->key_entry = primeResponseToKE(rcode, msg, vq->trust_anchor,
+	vq->key_entry = primeResponseToKE(rcode, msg, vq->trust_anchor, 
 		qstate, id);
 
 	/* If the result of the prime is a null key, skip the FINDKEY state.*/

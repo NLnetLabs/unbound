@@ -8,6 +8,8 @@
 	- changed random generator from random(3) clone to arc4random wrapped
 	  for thread safety. The random generator is initialised with
 	  entropy from the system.
+	- fix crash where failure to prime DNSKEY tried to print null pointer
+	  in the log message.
 
 16 October 2007: Wouter
 	- no malloc in log_hex.
