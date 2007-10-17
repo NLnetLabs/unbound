@@ -1164,7 +1164,8 @@ processInit(struct module_qstate* qstate, struct val_qstate* vq,
 		/* extract this part of orig_msg into chase_reply for
 		 * the eventual VALIDATE stage */
 		val_fill_reply(vq->chase_reply, vq->orig_msg->rep, 
-			vq->rrset_skip, lookup_name, lookup_len);
+			vq->rrset_skip, lookup_name, lookup_len, 
+			vq->signer_name);
 		if(verbosity >= VERB_ALGO)
 			log_dns_msg("chased extract", &vq->qchase, 
 				vq->chase_reply);

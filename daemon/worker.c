@@ -359,6 +359,7 @@ deleg_remove_nonsecure_additional(struct reply_info* rep)
 				(rep->rrset_count - i - 1));
 			rep->ar_numrrsets--; 
 			rep->rrset_count--;
+			i--;
 		}
 	}
 }

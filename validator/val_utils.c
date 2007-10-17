@@ -550,11 +550,8 @@ rrset_has_signer(struct ub_packed_rrset_key* rrset, uint8_t* name, size_t len)
 
 void 
 val_fill_reply(struct reply_info* chase, struct reply_info* orig, 
-	size_t skip, uint8_t* name, size_t len)
+	size_t skip, uint8_t* name, size_t len, uint8_t* signer)
 {
-	/* unsigned RRsets are never copied, but should not happen in 
-	 * secure answers anyway. Except for the synthesized CNAME after 
-	 * a DNAME. */
 	size_t i;
 	int seen_dname = 0;
 	chase->rrset_count = 0;
@@ -563,7 +560,12 @@ val_fill_reply(struct reply_info* chase, struct reply_info* orig,
 	chase->ar_numrrsets = 0;
 	/* ANSWER section */
 	for(i=skip; i<orig->an_numrrsets; i++) {
-		if(seen_dname && ntohs(orig->rrsets[i]->rk.type) == 
+		if(!signer) {
+			if(query_dname_compare(name, 
+				orig->rrsets[i]->rk.dname) == 0)
+				chase->rrsets[chase->an_numrrsets++] = 
+					orig->rrsets[i];
+		} else if(seen_dname && ntohs(orig->rrsets[i]->rk.type) == 
 			LDNS_RR_TYPE_CNAME) {
 			chase->rrsets[chase->an_numrrsets++] = orig->rrsets[i];
 			seen_dname = 0;
@@ -579,7 +581,12 @@ val_fill_reply(struct reply_info* chase, struct reply_info* orig,
 	for(i = (skip > orig->an_numrrsets)?skip:orig->an_numrrsets;
 		i<orig->an_numrrsets+orig->ns_numrrsets; 
 		i++) {
-		if(rrset_has_signer(orig->rrsets[i], name, len)) {
+		if(!signer) {
+			if(query_dname_compare(name, 
+				orig->rrsets[i]->rk.dname) == 0)
+				chase->rrsets[chase->an_numrrsets+
+				    chase->ns_numrrsets++] = orig->rrsets[i];
+		} else if(rrset_has_signer(orig->rrsets[i], name, len)) {
 			chase->rrsets[chase->an_numrrsets+
 				chase->ns_numrrsets++] = orig->rrsets[i];
 		}
@@ -588,7 +595,13 @@ val_fill_reply(struct reply_info* chase, struct reply_info* orig,
 	for(i= (skip>orig->an_numrrsets+orig->ns_numrrsets)?
 		skip:orig->an_numrrsets+orig->ns_numrrsets; 
 		i<orig->rrset_count; i++) {
-		if(rrset_has_signer(orig->rrsets[i], name, len)) {
+		if(!signer) {
+			if(query_dname_compare(name, 
+				orig->rrsets[i]->rk.dname) == 0)
+			    chase->rrsets[chase->an_numrrsets
+				+orig->ns_numrrsets+chase->ar_numrrsets++] 
+				= orig->rrsets[i];
+		} else if(rrset_has_signer(orig->rrsets[i], name, len)) {
 			chase->rrsets[chase->an_numrrsets+orig->ns_numrrsets+
 				chase->ar_numrrsets++] = orig->rrsets[i];
 		}
@@ -643,6 +656,7 @@ val_check_nonsecure(struct val_env* ve, struct reply_info* rep)
 				(rep->rrset_count - i - 1));
 			rep->ar_numrrsets--;
 			rep->rrset_count--;
+			i--;
 		}
 	}
 }

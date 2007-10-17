@@ -13,6 +13,8 @@
 	- removed some debug prints, only verb_algo (4) enables them.
 	- fixup test; new random generator took new paths; such as one 
 	  where no scripted answer was available.
+	- mark insecure RRs as insecure.
+	- fixup removal of nonsecure items from the additional.
 
 16 October 2007: Wouter
 	- no malloc in log_hex.

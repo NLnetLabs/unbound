@@ -206,9 +206,11 @@ int val_chase_cname(struct query_info* qchase, struct reply_info* rep,
  * 	The skipped part contains CNAME(and DNAME)s that have been chased.
  * @param name: the signer name to look for.
  * @param len: length of name.
+ * @param signer: signer name or NULL if an unsigned RRset is considered.
+ *	If NULL, rrsets with the lookup name are copied over.
  */
 void val_fill_reply(struct reply_info* chase, struct reply_info* orig, 
-	size_t cname_skip, uint8_t* name, size_t len);
+	size_t cname_skip, uint8_t* name, size_t len, uint8_t* signer);
 
 /**
  * Remove all unsigned or non-secure status rrsets from NS and AR sections.
