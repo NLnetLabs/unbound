@@ -189,12 +189,14 @@ delegpt_count_addr(struct delegpt* dp, size_t* numaddr, size_t* numres,
 	}
 }
 
-void delegpt_log(struct delegpt* dp)
+void delegpt_log(enum verbosity_value v, struct delegpt* dp)
 {
 	char buf[LDNS_MAX_DOMAINLEN+1];
 	struct delegpt_ns* ns;
 	struct delegpt_addr* a;
 	size_t missing=0, numns=0, numaddr=0, numres=0, numavail=0;
+	if(verbosity < v)
+		return;
 	dname_str(dp->name, buf);
 	if(dp->nslist == NULL && dp->target_list == NULL) {
 		log_info("DelegationPoint<%s>: empty", buf);

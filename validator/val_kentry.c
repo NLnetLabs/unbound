@@ -248,7 +248,6 @@ key_entry_create_rrset(struct region* region,
 		rrset->entry.data;
 	if(!key_entry_setup(region, name, namelen, dclass, &k, &d))
 		return NULL;
-	log_info("New key entry TTL is now+%d", (int)rd->ttl);
 	d->ttl = rd->ttl + time(NULL);
 	d->isbad = 0;
 	d->rrset_type = ntohs(rrset->rk.type);

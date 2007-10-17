@@ -1281,7 +1281,7 @@ processFindKey(struct module_qstate* qstate, struct val_qstate* vq, int id)
 	 * for the next DNSKEY. */
 	if(vq->ds_rrset)
 		log_nametypeclass(VERB_ALGO, "DS RRset", vq->ds_rrset->rk.dname, LDNS_RR_TYPE_DS, LDNS_RR_CLASS_IN);
-	else log_info("No DS RRset");
+	else verbose(VERB_ALGO, "No DS RRset");
 
 	if(vq->ds_rrset && query_dname_compare(vq->ds_rrset->rk.dname,
 		vq->key_entry->name) != 0) {
@@ -1685,7 +1685,8 @@ primeResponseToKE(int rcode, struct dns_msg* msg, struct trust_anchor* ta,
 			sec = sec_status_secure;
 		else
 			sec = sec_status_bogus;
-		log_info("priming DS result %s", sec_status_to_string(sec));
+		verbose(VERB_ALGO, "priming DS result %s", 
+			sec_status_to_string(sec));
 	}
 	if(sec != sec_status_secure && ta->dnskey_rrset) {
 		sec = val_verify_rrset(qstate->env, ve, dnskey_rrset,

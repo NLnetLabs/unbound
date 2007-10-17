@@ -186,7 +186,7 @@ error_supers(struct module_qstate* qstate, int id, struct module_qstate* super)
 			/* not interested */
 			verbose(VERB_ALGO, "subq error, but not interested");
 			log_query_info(VERB_ALGO, "superq", &super->qinfo);
-			delegpt_log(super_iq->dp);
+			delegpt_log(VERB_ALGO, super_iq->dp);
 			log_assert(0);
 			return;
 		}
@@ -784,8 +784,9 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 				}
 				break;
 			} else {
-				log_info("cache delegation was useless:");
-				delegpt_log(iq->dp);
+				verbose(VERB_ALGO, 
+					"cache delegation was useless:");
+				delegpt_log(VERB_ALGO, iq->dp);
 				/* go up */
 				delname = iq->dp->name;
 				delnamelen = iq->dp->namelen;
@@ -794,10 +795,8 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 		} else break;
 	}
 
-	if(verbosity >= VERB_ALGO) {
-		log_info("cache delegation returns delegpt");
-		delegpt_log(iq->dp);
-	}
+	verbose(VERB_ALGO, "cache delegation returns delegpt");
+	delegpt_log(VERB_ALGO, iq->dp);
 
 	/* Reset the RD flag. If this is a query restart, then the RD 
 	 * will have been turned off. */
@@ -1041,7 +1040,7 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 		verbose(VERB_DETAIL, "Failed to get a delegation, giving up");
 		return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
 	}
-	delegpt_log(iq->dp);
+	delegpt_log(VERB_ALGO, iq->dp);
 
 	if(iq->num_current_queries>0) {
 		/* already busy answering a query, this restart is because
@@ -1219,7 +1218,7 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		if(!cache_fill_missing(qstate->env, iq->qchase.qclass, 
 			qstate->region, iq->dp))
 			return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
-		delegpt_log(iq->dp);
+		delegpt_log(VERB_ALGO, iq->dp);
 		/* Count this as a referral. */
 		iq->referral_count++;
 
@@ -1334,7 +1333,7 @@ prime_supers(struct module_qstate* qstate, int id, struct module_qstate* forq)
 	}
 
 	log_query_info(VERB_DETAIL, "priming successful for", &qstate->qinfo);
-	delegpt_log(dp);
+	delegpt_log(VERB_ALGO, dp);
 	foriq->dp = dp;
 	foriq->deleg_msg = dns_copy_msg(qstate->return_msg, forq->region);
 	if(!foriq->deleg_msg) {
@@ -1447,7 +1446,7 @@ processTargetResponse(struct module_qstate* qstate, int id,
 		if(!delegpt_add_rrset(foriq->dp, forq->region, rrset))
 			log_err("out of memory adding targets");
 		verbose(VERB_ALGO, "added target response");
-		delegpt_log(foriq->dp);
+		delegpt_log(VERB_ALGO, foriq->dp);
 	} else {
 		verbose(VERB_ALGO, "iterator TargetResponse failed");
 		dpns->resolved = 1; /* fail the target */

@@ -285,8 +285,7 @@ read_stubs(struct iter_hints* hints, struct config_file* cfg)
 			return 0;
 		if(!hints_insert(hints, LDNS_RR_CLASS_IN, dp))
 			return 0;
-		if(verbosity >= VERB_DETAIL)
-			delegpt_log(dp);
+		delegpt_log(VERB_DETAIL, dp);
 	}
 	return 1;
 }
@@ -312,8 +311,7 @@ hints_apply_cfg(struct iter_hints* hints, struct config_file* cfg)
 			return 0;
 		if(!hints_insert(hints, LDNS_RR_CLASS_IN, dp))
 			return 0;
-		if(verbosity >= VERB_DETAIL)
-			delegpt_log(dp);
+		delegpt_log(VERB_DETAIL, dp);
 	}
 
 	init_parents(hints);

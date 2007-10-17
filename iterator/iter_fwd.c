@@ -228,8 +228,8 @@ read_forwards(struct iter_forwards* fwd, struct config_file* cfg)
 			return 0;
 		if(!forwards_insert(fwd, LDNS_RR_CLASS_IN, dp))
 			return 0;
-		log_info("Forward zone server list:");
-		delegpt_log(dp);
+		verbose(VERB_DETAIL, "Forward zone server list:");
+		delegpt_log(VERB_DETAIL, dp);
 	}
 	return 1;
 }

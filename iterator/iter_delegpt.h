@@ -47,6 +47,7 @@ struct delegpt_ns;
 struct delegpt_addr;
 struct dns_msg;
 struct ub_packed_rrset_key;
+enum verbosity_value;
 
 /**
  * Delegation Point.
@@ -216,9 +217,10 @@ struct delegpt_ns* delegpt_find_ns(struct delegpt* dp, uint8_t* name,
 
 /**
  * Print the delegation point to the log. For debugging.
+ * @param v: verbosity value that is needed to emit to log.
  * @param dp: delegation point.
  */
-void delegpt_log(struct delegpt* dp);
+void delegpt_log(enum verbosity_value v, struct delegpt* dp);
 
 /**
  * Add all usable targets to the result list.
