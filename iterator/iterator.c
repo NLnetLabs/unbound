@@ -665,7 +665,9 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 		/* handle positive cache response */
 		enum response_type type = response_type_from_cache(msg, 
 			&iq->qchase);
-		log_dns_msg("msg from cache lookup", &msg->qinfo, msg->rep);
+		if(verbosity >= VERB_ALGO)
+			log_dns_msg("msg from cache lookup", &msg->qinfo, 
+				msg->rep);
 
 		if(type == RESPONSE_TYPE_CNAME) {
 			uint8_t* sname = 0;
@@ -1241,7 +1243,9 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		 * reset of the query state and go back to INIT_REQUEST_STATE).
 		 */
 		verbose(VERB_DETAIL, "query response was CNAME");
-		log_dns_msg("cname msg", &iq->response->qinfo, iq->response->rep);
+		if(verbosity >= VERB_ALGO)
+			log_dns_msg("cname msg", &iq->response->qinfo, 
+				iq->response->rep);
 		/* Process the CNAME response. */
 		if(!handle_cname_response(qstate, iq, iq->response, 
 			&sname, &snamelen))

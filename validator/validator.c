@@ -1165,7 +1165,9 @@ processInit(struct module_qstate* qstate, struct val_qstate* vq,
 		 * the eventual VALIDATE stage */
 		val_fill_reply(vq->chase_reply, vq->orig_msg->rep, 
 			vq->rrset_skip, lookup_name, lookup_len);
-		log_dns_msg("chased extract", &vq->qchase, vq->chase_reply);
+		if(verbosity >= VERB_ALGO)
+			log_dns_msg("chased extract", &vq->qchase, 
+				vq->chase_reply);
 	}
 
 	vq->key_entry = key_cache_obtain(ve->kcache, lookup_name, lookup_len,

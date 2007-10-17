@@ -96,7 +96,7 @@ val_classify_response(uint16_t query_flags, struct query_info* qinf,
 		if(ntohs(rep->rrsets[i]->rk.type) == LDNS_RR_TYPE_CNAME)
 			return VAL_CLASS_CNAME;
 	}
-	log_dns_msg("validator: failed to classify response message: ",
+	log_dns_msg("validator: error. failed to classify response message: ",
 		qinf, rep);
 	return VAL_CLASS_UNKNOWN;
 }

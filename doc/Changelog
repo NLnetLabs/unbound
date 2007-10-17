@@ -10,6 +10,9 @@
 	  entropy from the system.
 	- fix crash where failure to prime DNSKEY tried to print null pointer
 	  in the log message.
+	- removed some debug prints, only verb_algo (4) enables them.
+	- fixup test; new random generator took new paths; such as one 
+	  where no scripted answer was available.
 
 16 October 2007: Wouter
 	- no malloc in log_hex.
