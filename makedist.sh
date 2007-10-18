@@ -148,15 +148,11 @@ if test -z "$LDNSDIR"; then
 	  eval `grep 'ldnsdir=' Makefile`
 	  LDNSDIR="$ldnsdir"
     fi
-    if test -z "$LDNSDIR"; then
-	error "LDNSDIR not detected in Makefile, specify manually (using -l)"
-    fi
 fi
 
 # Start the packaging process.
 info "SVNROOT  is $SVNROOT"
 info "SNAPSHOT is $SNAPSHOT"
-info "LDNSDIR  is $LDNSDIR"
 
 #question "Do you wish to continue with these settings?" || error "User abort."
 
@@ -185,9 +181,15 @@ echo "#include \"util/configyyrename.h\"" > util/configlexer.c || error_cleanup 
 flex -i -t util/configlexer.lex >> util/configlexer.c  || error_cleanup "Failed to create configlexer"
 bison -y -d -o util/configparser.c util/configparser.y || error_cleanup "Failed to create configparser"
 
-# copy ldns-testpkts from ldns examples
-#cp $LDNSDIR/examples/ldns-testpkts.c testcode/ldns-testpkts.c || error_cleanup "copy ldns/examples/.. failed"
-#cp $LDNSDIR/examples/ldns-testpkts.h testcode/ldns-testpkts.h || error_cleanup "copy ldns/examples/.. failed"
+# check shared code, ldns-testpkts from ldns examples, if possible.
+if test ! -z "$LDNSDIR"; then
+	if diff -q $LDNSDIR/examples/ldns-testpkts.c testcode/ldns-testpkts.c &&
+	   diff -q $LDNSDIR/examples/ldns-testpkts.h testcode/ldns-testpkts.h; then
+	   	info "ldns-testpkts.c and ldns-testpkts.h are OK"
+	else
+		error_cleanup "ldns-testpkts is different in ldns and unbound"
+	fi
+fi
 
 find . -name .c-mode-rc.el -exec rm {} \;
 find . -name .cvsignore -exec rm {} \;

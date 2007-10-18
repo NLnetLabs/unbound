@@ -532,6 +532,49 @@ AC_TYPE_SIGNAL
 AC_FUNC_FSEEKO
 AC_SYS_LARGEFILE
 
+# check this after all other compilation checks, since the linking of the lib
+# may break checks after this.
+AC_ARG_WITH(ldns,
+        AC_HELP_STRING([--with-ldns=PATH        specify prefix of path of ldns library to use])
+	, [ specialldnsdir="$withval"
+	CPPFLAGS="$CPPFLAGS -I$withval/include"
+	LDFLAGS="$LDFLAGS -L$withval -L$withval/lib -lldns"
+	ldnsdir="$withval"
+	AC_SUBST(ldnsdir)
+])
+
+AC_CHECK_LIB(ldns, ldns_rr_new,, [
+dnl use the builtin ldns-src.tar.gz file to build ldns.
+if test ! -f ldns-src.tar.gz; then
+	AC_MSG_ERROR([No ldns library found and no ldns-src.tar.gz, use --with-ldns=path.])
+fi
+echo "****************************************************************"
+echo "***                                                          ***"
+echo "*** ldns library not found (--with-ldns= to specify by hand) ***"
+echo "*** Building ldns library from package included in this one. ***"
+echo "***                                                          ***"
+echo "****************************************************************"
+if test -d ldns-src; then rm -rf ldns-src; fi
+mkdir ldns-src; (cd ldns-src; gzip -cd ../ldns-src.tar.gz | tar xf -)
+ldnsdir=`ls -d ldns-src/ldns*`
+AC_MSG_NOTICE([Configure $ldnsdir])
+echo "(cd $ldnsdir; ./configure)"
+(cd $ldnsdir; ./configure)
+AC_MSG_NOTICE([Build $ldnsdir])
+if test ! -x "`which gmake`"; then
+	echo "(cd $ldnsdir; make)"
+	(cd $ldnsdir; make)
+else
+	echo "(cd $ldnsdir; gmake)"
+	(cd $ldnsdir; gmake)
+fi
+AC_MSG_NOTICE([Finished $ldnsdir])
+CPPFLAGS="$CPPFLAGS -I$ldnsdir/include"
+LDFLAGS="$LDFLAGS $ldnsdir/lib/*.o"
+AC_SUBST(ldnsdir)
+])
+
+# check func replacements after ldns had a chance to already provide them.
 AC_REPLACE_FUNCS(inet_aton)
 AC_REPLACE_FUNCS(inet_pton)
 AC_REPLACE_FUNCS(inet_ntop)
@@ -544,18 +587,6 @@ if test $ac_cv_func_getaddrinfo = no; then
 AC_LIBOBJ([fake-rfc2553])
 fi
 
-# check this after all other compilation checks, since the linking of the lib
-# may break checks after this.
-AC_ARG_WITH(ldns,
-        AC_HELP_STRING([--with-ldns=PATH        specify prefix of path of ldns library to use])
-	, [ specialldnsdir="$withval"
-	CPPFLAGS="$CPPFLAGS -I$withval/include"
-	LDFLAGS="$LDFLAGS -L$withval -L$withval/lib -lldns"
-	ldnsdir="$withval"
-	AC_SUBST(ldnsdir)
-])
-
-AC_CHECK_LIB(ldns, ldns_rr_new,, [AC_MSG_ERROR([Can't find ldns library])])
 
 AC_DEFINE_UNQUOTED([MAXSYSLOGMSGLEN], [5120], [Define to the maximum message length to pass to syslog.])
 

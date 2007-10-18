@@ -93,7 +93,7 @@ $(BUILD)%.o:    $(srcdir)/%.c
 	@if test ! -d $(dir $@); then $(INSTALL) -d $(patsubst %/,%,$(dir $@)); fi
 	$Q$(COMPILE) -c $< -o $@
 
-.PHONY:	clean realclean doc lint all install uninstall tests test
+.PHONY:	clean realclean doc lint all install uninstall tests test download_ldns strip
 
 all:	$(COMMON_OBJ) unbound unbound-checkconf
 
@@ -164,6 +164,7 @@ realclean: clean
 	rm -f config.status config.log config.h.in config.h
 	rm -f configure config.sub config.guess ltmain.sh aclocal.m4 libtool
 	rm -f util/configlexer.c util/configparser.c util/configparser.h
+	if test -d ldns-src; then rm -rf ldns-src; fi
 	rm -f Makefile 
 
 $(BUILD)%.lint:    $(srcdir)/%.c 
@@ -182,6 +183,10 @@ ifdef doxygen
 	$(doxygen) $(srcdir)/doc/unbound.doxygen
 endif
 
+strip:
+	strip unbound
+	strip unbound-checkconf
+
 install:
 	$(INSTALL) -d $(bindir)
 	$(INSTALL) -d $(mandir)
@@ -196,6 +201,12 @@ install:
 uninstall:
 	rm -f -- $(bindir)/unbound $(bindir)/unbound-checkconf
 	rm -f -- $(mandir)/man8/unbound.8 $(mandir)/man8/unbound-checkconf.8 $(mandir)/man5/unbound.conf.5
+
+download_ldns:
+	svn export https://www.nlnetlabs.nl/ldns/svn/trunk/makedist.sh ldns_makedist.sh
+	./ldns_makedist.sh -s -d https://www.nlnetlabs.nl/ldns/svn/trunk
+	mv ldns-*_pre_*.tar.gz ldns-src.tar.gz
+	rm ldns-*_pre_*.tar.gz.sha1 ldns_makedist.sh
 
 # Automatic dependencies.
 $(BUILD)%.d: $(srcdir)/%.c

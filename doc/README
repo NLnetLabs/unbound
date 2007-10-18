@@ -9,7 +9,7 @@ This software is under BSD license, see LICENSE for details.
   or get a beta version from the svn repository at 
   	http://unbound.net/svn/
 
-* Needs the following libraries
+* Uses the following libraries; 
   * ldns	http://www.nlnetlabs.nl/ldns/			(BSD license)
   * libevent	http://www.monkey.org/~provos/libevent/		(BSD license)
 
@@ -19,6 +19,9 @@ This software is under BSD license, see LICENSE for details.
 
 * Make and install: ./configure; make; make install
   * --with-ldns=/path/to/ldns
+  	If ldns is not detected on the system, a prepackaged incuded tarball
+	of the ldns library is used to compile and statically link against.
+	If detected on the system, it will dynamically link against it.
   * --with-libevent=/path/to/libevent
   	Can be set to either the system install or the build directory.
 	--with-libevent=no gives a builtin alternative implementation.
