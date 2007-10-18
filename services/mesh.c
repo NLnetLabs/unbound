@@ -53,6 +53,7 @@
 #include "util/data/msgencode.h"
 #include "util/timehist.h"
 #include "util/fptr_wlist.h"
+#include "util/alloc.h"
 
 int
 mesh_state_compare(const void* ap, const void* bp)
@@ -195,7 +196,7 @@ struct mesh_state*
 mesh_state_create(struct module_env* env, struct query_info* qinfo, 
 	uint16_t qflags, int prime)
 {
-	struct regional* region = regional_create();
+	struct regional* region = alloc_reg_obtain(env->alloc);
 	struct mesh_state* mstate;
 	int i;
 	if(!region)
@@ -203,7 +204,7 @@ mesh_state_create(struct module_env* env, struct query_info* qinfo,
 	mstate = (struct mesh_state*)regional_alloc(region, 
 		sizeof(struct mesh_state));
 	if(!mstate) {
-		regional_destroy(region);
+		alloc_reg_release(env->alloc, region);
 		return NULL;
 	}
 	memset(mstate, 0, sizeof(*mstate));
@@ -222,7 +223,7 @@ mesh_state_create(struct module_env* env, struct query_info* qinfo,
 	mstate->s.qinfo.qname = regional_alloc_init(region, qinfo->qname,
 		qinfo->qname_len);
 	if(!mstate->s.qinfo.qname) {
-		regional_destroy(region);
+		alloc_reg_release(env->alloc, region);
 		return NULL;
 	}
 	/* remove all weird bits from qflags */
@@ -258,7 +259,7 @@ mesh_state_cleanup(struct mesh_state* mstate)
 		mstate->s.minfo[i] = NULL;
 		mstate->s.ext_state[i] = module_finished;
 	}
-	regional_destroy(mstate->s.region);
+	alloc_reg_release(mstate->s.env->alloc, mstate->s.region);
 }
 
 void 

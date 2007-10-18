@@ -13,6 +13,9 @@
 	- start of regional allocator code.
 	- regional uses less memory and variables, simplified code.
 	- remove of region-allocator.
+	- alloc cache keeps a cache of recently released regional blocks,
+	  up to a maximum.
+	- make unit test cleanly free memory.
 
 17 October 2007: Wouter
 	- fixup another cycle detect and ns-addr timeout resolution bug.

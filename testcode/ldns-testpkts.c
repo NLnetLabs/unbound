@@ -534,6 +534,8 @@ read_datafile(const char* name)
 	verbose(1, "%s: Read %d entries\n", prog_name, entry_num);
 
 	fclose(in);
+	ldns_rdf_deep_free(origin);
+	ldns_rdf_deep_free(prev_rr);
 	return list;
 }
 

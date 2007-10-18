@@ -282,6 +282,7 @@ verifytest_file(const char* fname, const char* at_date)
 		verifytest_entry(e, &alloc, region, buf, dnskey, &env, &ve);
 	}
 
+	ub_packed_rrset_parsedelete(dnskey, &alloc);
 	delete_entry(list);
 	regional_destroy(region);
 	alloc_clear(&alloc);

@@ -41,8 +41,11 @@
 
 #include "config.h"
 #include "util/alloc.h"
+#include "util/regional.h"
 #include "util/data/packed_rrset.h"
 
+/** custom size of cached regional blocks */
+#define ALLOC_REG_SIZE	16384
 /** number of bits for ID part of uint64, rest for number of threads. */
 #define THRNUM_SHIFT	48	/* for 65k threads, 2^48 rrsets per thr. */
 
@@ -74,6 +77,21 @@ prealloc(struct alloc_cache* alloc)
 	}
 }
 
+/** prealloc region blocks */
+static void
+prealloc_blocks(struct alloc_cache* alloc, size_t num)
+{
+	size_t i;
+	struct regional* r;
+	for(i=0; i<num; i++) {
+		r = regional_create_custom(ALLOC_REG_SIZE);
+		if(!r) fatal_exit("prealloc blocks: out of memory");
+		r->next = (char*)alloc->reg_list;
+		alloc->reg_list = r;
+		alloc->num_reg_blocks ++;
+	}
+}
+
 void 
 alloc_init(struct alloc_cache* alloc, struct alloc_cache* super,
 	int thread_num)
@@ -88,6 +106,11 @@ alloc_init(struct alloc_cache* alloc, struct alloc_cache* super,
 	alloc->last_id -= 1; 			/* for compiler portability. */
 	alloc->last_id |= alloc->next_id;
 	alloc->next_id += 1;			/* because id=0 is special. */
+	alloc->max_reg_blocks = 100;
+	alloc->num_reg_blocks = 0;
+	alloc->reg_list = NULL;
+	if(alloc->super)
+		prealloc_blocks(alloc, alloc->max_reg_blocks);
 	if(!alloc->super) {
 		lock_quick_init(&alloc->lock);
 		lock_protect(&alloc->lock, alloc, sizeof(*alloc));
@@ -98,6 +121,7 @@ void
 alloc_clear(struct alloc_cache* alloc)
 {
 	alloc_special_t* p, *np;
+	struct regional* r, *nr;
 	if(!alloc)
 		return;
 	if(!alloc->super) {
@@ -126,6 +150,14 @@ alloc_clear(struct alloc_cache* alloc)
 	}
 	alloc->quar = 0;
 	alloc->num_quar = 0;
+	r = alloc->reg_list;
+	while(r) {
+		nr = (struct regional*)r->next;
+		free(r);
+		r = nr;
+	}
+	alloc->reg_list = NULL;
+	alloc->num_reg_blocks = 0;
 }
 
 uint64_t
@@ -236,8 +268,8 @@ alloc_special_release(struct alloc_cache* alloc, alloc_special_t* mem)
 void 
 alloc_stats(struct alloc_cache* alloc)
 {
-	log_info("%salloc: %d in cache.", alloc->super?"":"sup",
-		(int)alloc->num_quar);
+	log_info("%salloc: %d in cache, %d blocks.", alloc->super?"":"sup",
+		(int)alloc->num_quar, (int)alloc->num_reg_blocks);
 }
 
 size_t alloc_get_mem(struct alloc_cache* alloc)
@@ -251,10 +283,38 @@ size_t alloc_get_mem(struct alloc_cache* alloc)
 	for(p = alloc->quar; p; p = alloc_special_next(p)) {
 		s += lock_get_mem(&p->entry.lock);
 	}
+	s += alloc->num_reg_blocks * ALLOC_REG_SIZE;
 	if(!alloc->super) {
 		lock_quick_unlock(&alloc->lock);
 	}
 	return s;
+}
+
+struct regional* 
+alloc_reg_obtain(struct alloc_cache* alloc)
+{
+	if(alloc->num_reg_blocks > 0) {
+		struct regional* r = alloc->reg_list;
+		alloc->reg_list = (struct regional*)r->next;
+		r->next = NULL;
+		alloc->num_reg_blocks--;
+		return r;
+	}
+	return regional_create_custom(ALLOC_REG_SIZE);
+}
+
+void 
+alloc_reg_release(struct alloc_cache* alloc, struct regional* r)
+{
+	if(alloc->num_reg_blocks >= alloc->max_reg_blocks) {
+		regional_destroy(r);
+		return;
+	}
+	regional_free_all(r);
+	log_assert(r->next == NULL);
+	r->next = (char*)alloc->reg_list;
+	alloc->reg_list = r;
+	alloc->num_reg_blocks++;
 }
 
 /** global debug value to keep track of total memory mallocs */

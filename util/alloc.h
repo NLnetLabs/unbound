@@ -50,6 +50,7 @@
 
 #include "util/locks.h"
 struct ub_packed_rrset_key;
+struct regional;
 
 /** The special type, packed rrset. Not allowed to be used for other memory */
 typedef struct ub_packed_rrset_key alloc_special_t;
@@ -83,6 +84,13 @@ struct alloc_cache {
 	uint64_t next_id;
 	/** last id number possible */
 	uint64_t last_id;
+
+	/** how many regional blocks to keep back max */
+	size_t max_reg_blocks;
+	/** how many regional blocks are kept now */
+	size_t num_reg_blocks;
+	/** linked list of regional blocks, using regional->next */
+	struct regional* reg_list;
 };
 
 /**
@@ -139,5 +147,19 @@ size_t alloc_get_mem(struct alloc_cache* alloc);
  * @param alloc: on what alloc.
  */
 void alloc_stats(struct alloc_cache* alloc);
+
+/**
+ * Get a new regional for query states
+ * @param alloc: where to alloc it.
+ * @return regional for use or NULL on alloc failure.
+ */
+struct regional* alloc_reg_obtain(struct alloc_cache* alloc);
+
+/**
+ * Put regional for query states back into alloc cache.
+ * @param alloc: where to alloc it.
+ * @param r: regional to put back.
+ */
+void alloc_reg_release(struct alloc_cache* alloc, struct regional* r);
 
 #endif /* UTIL_ALLOC_H */
