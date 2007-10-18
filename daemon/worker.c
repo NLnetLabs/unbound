@@ -796,6 +796,9 @@ void
 worker_sighandler(int sig, void* arg)
 {
 	/* note that log, print, syscalls here give race conditions. */
+	/* we still print DETAIL logs, because this is extensive per message
+	 * logging anyway, and the operator may then have an interest
+	 * in the cause for unbound to exit */
 	struct worker* worker = (struct worker*)arg;
 	switch(sig) {
 		case SIGHUP:

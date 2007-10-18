@@ -380,6 +380,9 @@ fake_pending_callback(struct replay_runtime* runtime,
 	struct fake_pending* p = runtime->pending_list;
 	struct comm_reply repinfo;
 	struct comm_point c;
+	void* cb_arg = p->cb_arg;
+	comm_point_callback_t* cb = p->callback;
+
 	memset(&c, 0, sizeof(c));
 	if(!p) fatal_exit("No pending queries.");
 	log_assert(todo->qname == NULL); /* or find that one */
@@ -393,12 +396,12 @@ fake_pending_callback(struct replay_runtime* runtime,
 	repinfo.c = &c;
 	repinfo.addrlen = p->addrlen;
 	memcpy(&repinfo.addr, &p->addr, p->addrlen);
-	if((*p->callback)(&c, p->cb_arg, error, &repinfo)) {
+	pending_list_delete(runtime, p);
+	if((*cb)(&c, cb_arg, error, &repinfo)) {
 		fatal_exit("unexpected: pending callback returned 1");
 	}
 	/* delete the pending item. */
 	ldns_buffer_free(c.buffer);
-	pending_list_delete(runtime, p);
 }
 
 /**
