@@ -45,7 +45,7 @@
 #include "util/data/msgparse.h"
 #include "util/data/dname.h"
 #include "util/log.h"
-#include "util/region-allocator.h"
+#include "util/regional.h"
 #include "util/net_help.h"
 
 /** return code that means the function ran out of memory. negative so it does
@@ -162,12 +162,12 @@ compress_tree_lookup(struct compress_tree_node* tree, uint8_t* dname,
  */
 static struct compress_tree_node*
 compress_tree_insert(struct compress_tree_node** tree, uint8_t* dname,
-	int labs, size_t offset, region_type* region)
+	int labs, size_t offset, struct regional* region)
 {
 	int c, m;
 	struct compress_tree_node* p, **prev;
 	struct compress_tree_node* n = (struct compress_tree_node*)
-		region_alloc(region, sizeof(struct compress_tree_node));
+		regional_alloc(region, sizeof(struct compress_tree_node));
 	if(!n) return 0;
 	n->left = 0;
 	n->right = 0;
@@ -209,7 +209,7 @@ compress_tree_insert(struct compress_tree_node** tree, uint8_t* dname,
  */
 static int
 compress_tree_store(struct compress_tree_node** tree, uint8_t* dname,
-	int labs, size_t offset, region_type* region,
+	int labs, size_t offset, struct regional* region,
 	struct compress_tree_node* closest)
 {
 	uint8_t lablen;
@@ -284,7 +284,7 @@ write_compressed_dname(ldns_buffer* pkt, uint8_t* dname, int labs,
 /** compress owner name of RR, return RETVAL_OUTMEM RETVAL_TRUNC */
 static int
 compress_owner(struct ub_packed_rrset_key* key, ldns_buffer* pkt, 
-	region_type* region, struct compress_tree_node** tree, 
+	struct regional* region, struct compress_tree_node** tree, 
 	size_t owner_pos, uint16_t* owner_ptr, int owner_labs)
 {
 	struct compress_tree_node* p;
@@ -332,7 +332,7 @@ compress_owner(struct ub_packed_rrset_key* key, ldns_buffer* pkt,
 /** compress any domain name to the packet, return RETVAL_* */
 static int
 compress_any_dname(uint8_t* dname, ldns_buffer* pkt, int labs, 
-	region_type* region, struct compress_tree_node** tree)
+	struct regional* region, struct compress_tree_node** tree)
 {
 	struct compress_tree_node* p;
 	size_t pos = ldns_buffer_position(pkt);
@@ -362,7 +362,7 @@ type_rdata_compressable(struct ub_packed_rrset_key* key)
 /** compress domain names in rdata, return RETVAL_* */
 static int
 compress_rdata(ldns_buffer* pkt, uint8_t* rdata, size_t todolen, 
-	region_type* region, struct compress_tree_node** tree, 
+	struct regional* region, struct compress_tree_node** tree, 
 	const ldns_rr_descriptor* desc)
 {
 	int labs, r, rdf = 0;
@@ -444,7 +444,7 @@ rrset_belongs_in_reply(ldns_pkt_section s, uint16_t rrtype, uint16_t qtype,
 /** store rrset in buffer in wireformat, return RETVAL_* */
 static int
 packed_rrset_encode(struct ub_packed_rrset_key* key, ldns_buffer* pkt, 
-	uint16_t* num_rrs, uint32_t timenow, region_type* region,
+	uint16_t* num_rrs, uint32_t timenow, struct regional* region,
 	int do_data, int do_sig, struct compress_tree_node** tree,
 	ldns_pkt_section s, uint16_t qtype, int dnssec)
 {
@@ -524,7 +524,7 @@ packed_rrset_encode(struct ub_packed_rrset_key* key, ldns_buffer* pkt,
 static int
 insert_section(struct reply_info* rep, size_t num_rrsets, uint16_t* num_rrs,
 	ldns_buffer* pkt, size_t rrsets_before, uint32_t timenow, 
-	region_type* region, struct compress_tree_node** tree,
+	struct regional* region, struct compress_tree_node** tree,
 	ldns_pkt_section s, uint16_t qtype, int dnssec)
 {
 	int r;
@@ -574,7 +574,7 @@ insert_section(struct reply_info* rep, size_t num_rrsets, uint16_t* num_rrs,
 /** store query section in wireformat buffer, return RETVAL */
 static int
 insert_query(struct query_info* qinfo, struct compress_tree_node** tree, 
-	ldns_buffer* buffer, struct region* region)
+	ldns_buffer* buffer, struct regional* region)
 {
 	if(ldns_buffer_remaining(buffer) < 
 		qinfo->qname_len+sizeof(uint16_t)*2)
@@ -592,7 +592,7 @@ insert_query(struct query_info* qinfo, struct compress_tree_node** tree,
 int 
 reply_info_encode(struct query_info* qinfo, struct reply_info* rep, 
 	uint16_t id, uint16_t flags, ldns_buffer* buffer, uint32_t timenow, 
-	region_type* region, uint16_t udpsize, int dnssec)
+	struct regional* region, uint16_t udpsize, int dnssec)
 {
 	uint16_t ancount=0, nscount=0, arcount=0;
 	struct compress_tree_node* tree = 0;
@@ -708,7 +708,7 @@ attach_edns_record(ldns_buffer* pkt, struct edns_data* edns)
 int 
 reply_info_answer_encode(struct query_info* qinf, struct reply_info* rep, 
 	uint16_t id, uint16_t qflags, ldns_buffer* pkt, uint32_t timenow,
-	int cached, struct region* region, uint16_t udpsize, 
+	int cached, struct regional* region, uint16_t udpsize, 
 	struct edns_data* edns, int dnssec, int secure)
 {
 	uint16_t flags;

@@ -42,7 +42,7 @@
 #include "util/data/dname.h"
 #include "util/data/packed_rrset.h"
 #include "util/storage/lookup3.h"
-#include "util/region-allocator.h"
+#include "util/regional.h"
 
 /** smart comparison of (compressed, valid) dnames from packet */
 static int
@@ -68,9 +68,10 @@ smart_compare(ldns_buffer* pkt, uint8_t* dnow,
 static struct rrset_parse* 
 new_rrset(struct msg_parse* msg, uint8_t* dname, size_t dnamelen, 
 	uint16_t type, uint16_t dclass, hashvalue_t hash, 
-	uint32_t rrset_flags, ldns_pkt_section section, region_type* region)
+	uint32_t rrset_flags, ldns_pkt_section section, 
+	struct regional* region)
 {
-	struct rrset_parse* p = region_alloc(region, sizeof(*p));
+	struct rrset_parse* p = regional_alloc(region, sizeof(*p));
 	if(!p) return NULL;
 	p->rrset_bucket_next = msg->hashtable[hash & (PARSE_TABLE_SIZE-1)];
 	msg->hashtable[hash & (PARSE_TABLE_SIZE-1)] = p;
@@ -301,7 +302,7 @@ rrset_has_sigover(ldns_buffer* pkt, struct rrset_parse* rrset, uint16_t type,
 
 /** move rrsigs from sigset to dataset */
 static int
-moveover_rrsigs(ldns_buffer* pkt, region_type* region, 
+moveover_rrsigs(ldns_buffer* pkt, struct regional* region, 
 	struct rrset_parse* sigset, struct rrset_parse* dataset, int duplicate)
 {
 	struct rr_parse* sig = sigset->rr_first;
@@ -312,8 +313,8 @@ moveover_rrsigs(ldns_buffer* pkt, region_type* region,
 			dataset->type)) {
 			if(duplicate) {
 				/* new */
-				insert = (struct rr_parse*)region_alloc(region,
-					sizeof(struct rr_parse));
+				insert = (struct rr_parse*)regional_alloc(
+					region, sizeof(struct rr_parse));
 				insert->outside_packet = 0;
 				insert->ttl_data = sig->ttl_data;
 				insert->size = sig->size;
@@ -346,7 +347,7 @@ moveover_rrsigs(ldns_buffer* pkt, region_type* region,
 static struct rrset_parse*
 change_rrsig_rrset(struct rrset_parse* sigset, struct msg_parse* msg, 
 	ldns_buffer* pkt, uint16_t datatype, uint32_t rrset_flags,
-	int hasother, ldns_pkt_section section, region_type* region)
+	int hasother, ldns_pkt_section section, struct regional* region)
 {
 	struct rrset_parse* dataset = sigset;
 	hashvalue_t hash = pkt_hash_rrset(pkt, sigset->dname, datatype, 
@@ -420,7 +421,7 @@ find_rrset(struct msg_parse* msg, ldns_buffer* pkt, uint8_t* dname,
 	uint8_t** prev_dname_first, uint8_t** prev_dname_last,
 	size_t* prev_dnamelen, uint16_t* prev_type,
 	uint16_t* prev_dclass, struct rrset_parse** rrset_prev,
-	ldns_pkt_section section, region_type* region)
+	ldns_pkt_section section, struct regional* region)
 {
 	uint16_t covtype;
 	if(rrset_prev) {
@@ -686,7 +687,7 @@ sig_is_double(ldns_buffer* pkt, struct rrset_parse* rrset, uint8_t* ttldata)
 /** Add rr (from packet here) to rrset, skips rr */
 static int
 add_rr_to_rrset(struct rrset_parse* rrset, ldns_buffer* pkt, 
-	struct msg_parse* msg, region_type* region, 
+	struct msg_parse* msg, struct regional* region, 
 	ldns_pkt_section section, uint16_t type)
 {
 	struct rr_parse* rr;
@@ -718,7 +719,7 @@ add_rr_to_rrset(struct rrset_parse* rrset, ldns_buffer* pkt,
 	}
 	
 	/* create rr */
-	if(!(rr = (struct rr_parse*)region_alloc(region, sizeof(*rr))))
+	if(!(rr = (struct rr_parse*)regional_alloc(region, sizeof(*rr))))
 		return LDNS_RCODE_SERVFAIL;
 	rr->outside_packet = 0;
 	rr->ttl_data = ldns_buffer_current(pkt);
@@ -757,8 +758,9 @@ add_rr_to_rrset(struct rrset_parse* rrset, ldns_buffer* pkt,
  * @return: 0 if OK, or rcode on error.
  */
 static int
-parse_section(ldns_buffer* pkt, struct msg_parse* msg, region_type* region,
-	ldns_pkt_section section, uint16_t num_rrs, size_t* num_rrsets)
+parse_section(ldns_buffer* pkt, struct msg_parse* msg, 
+	struct regional* region, ldns_pkt_section section, 
+	uint16_t num_rrs, size_t* num_rrsets)
 {
 	uint16_t i;
 	uint8_t* dname, *prev_dname_f = NULL, *prev_dname_l = NULL;
@@ -829,7 +831,7 @@ parse_section(ldns_buffer* pkt, struct msg_parse* msg, region_type* region,
 }
 
 int
-parse_packet(ldns_buffer* pkt, struct msg_parse* msg, region_type* region)
+parse_packet(ldns_buffer* pkt, struct msg_parse* msg, struct regional* region)
 {
 	int ret;
 	if(ldns_buffer_remaining(pkt) < LDNS_HEADER_SIZE)

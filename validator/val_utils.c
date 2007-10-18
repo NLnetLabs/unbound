@@ -50,7 +50,7 @@
 #include "util/data/dname.h"
 #include "util/net_help.h"
 #include "util/module.h"
-#include "util/region-allocator.h"
+#include "util/regional.h"
 
 enum val_classification 
 val_classify_response(uint16_t query_flags, struct query_info* qinf, 
@@ -311,7 +311,7 @@ val_verify_rrset(struct module_env* env, struct val_env* ve,
 		ntohs(rrset->rk.type), ntohs(rrset->rk.rrset_class));
 	sec = dnskeyset_verify_rrset(env, ve, rrset, keys);
 	verbose(VERB_ALGO, "verify result: %s", sec_status_to_string(sec));
-	region_free_all(env->scratch);
+	regional_free_all(env->scratch);
 
 	/* update rrset security status 
 	 * only improves security status 
@@ -395,7 +395,7 @@ verify_dnskeys_with_ds_rr(struct module_env* env, struct val_env* ve,
 }
 
 struct key_entry_key* 
-val_verify_new_DNSKEYs(struct region* region, struct module_env* env, 
+val_verify_new_DNSKEYs(struct regional* region, struct module_env* env, 
 	struct val_env* ve, struct ub_packed_rrset_key* dnskey_rrset, 
 	struct ub_packed_rrset_key* ds_rrset)
 {

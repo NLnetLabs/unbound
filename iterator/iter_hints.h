@@ -46,14 +46,14 @@
 struct iter_env;
 struct config_file;
 struct delegpt;
-struct region;
+struct regional;
 
 /**
  * Iterator hints structure
  */
 struct iter_hints {
-	/** region where hints are allocated */
-	struct region* region;
+	/** regional where hints are allocated */
+	struct regional* region;
 	/** 
 	 * Hints are stored in this tree. Sort order is specially chosen.
 	 * first sorted on qtype. Then on dname in nsec-like order, so that

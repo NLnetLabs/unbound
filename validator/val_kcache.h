@@ -45,7 +45,7 @@
 struct key_entry_key;
 struct key_entry_data;
 struct config_file;
-struct region;
+struct regional;
 
 /**
  * Key cache
@@ -92,7 +92,7 @@ void key_cache_insert(struct key_cache* kcache, struct key_entry_key* kkey);
  */
 struct key_entry_key* key_cache_obtain(struct key_cache* kcache,
 	uint8_t* name, size_t namelen, uint16_t key_class, 
-	struct region* region);
+	struct regional* region);
 
 /**
  * Get memory in use by the key cache.

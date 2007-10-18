@@ -42,7 +42,7 @@
 #include "config.h"
 #include "iterator/iter_hints.h"
 #include "iterator/iter_delegpt.h"
-#include "util/region-allocator.h"
+#include "util/regional.h"
 #include "util/log.h"
 #include "util/config_file.h"
 #include "util/net_help.h"
@@ -70,7 +70,7 @@ hints_create()
 		sizeof(struct iter_hints));
 	if(!hints)
 		return NULL;
-	hints->region = region_create(malloc, free);
+	hints->region = regional_create();
 	if(!hints->region) {
 		hints_delete(hints);
 		return NULL;
@@ -83,14 +83,14 @@ hints_delete(struct iter_hints* hints)
 {
 	if(!hints) 
 		return;
-	region_destroy(hints->region);
+	regional_destroy(hints->region);
 	free(hints->tree);
 	free(hints);
 }
 
 /** add hint to delegation hints */
 static int
-ah(struct delegpt* dp, struct region* r, const char* sv, const char* ip)
+ah(struct delegpt* dp, struct regional* r, const char* sv, const char* ip)
 {
 	struct sockaddr_storage addr;
 	socklen_t addrlen;
@@ -112,7 +112,7 @@ ah(struct delegpt* dp, struct region* r, const char* sv, const char* ip)
 
 /** obtain compiletime provided root hints */
 static struct delegpt* 
-compile_time_root_prime(struct region* r)
+compile_time_root_prime(struct regional* r)
 {
 	/* from:
 	 ;       This file is made available by InterNIC
@@ -149,13 +149,13 @@ compile_time_root_prime(struct region* r)
 static int
 hints_insert(struct iter_hints* hints, uint16_t c, struct delegpt* dp)
 {
-	struct iter_hints_stub* node = region_alloc(hints->region,
+	struct iter_hints_stub* node = regional_alloc(hints->region,
 		sizeof(struct iter_hints_stub));
 	if(!node)
 		return 0;
 	node->node.key = node;
 	node->hint_class = c;
-	node->name = region_alloc_init(hints->region, dp->name, dp->namelen);
+	node->name = regional_alloc_init(hints->region, dp->name, dp->namelen);
 	if(!node->name)
 		return 0;
 	node->namelen = dp->namelen;
@@ -379,5 +379,5 @@ size_t
 hints_get_mem(struct iter_hints* hints)
 {
 	if(!hints) return 0;
-	return sizeof(*hints) + region_get_mem(hints->region);
+	return sizeof(*hints) + regional_get_mem(hints->region);
 }

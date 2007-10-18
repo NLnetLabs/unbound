@@ -57,7 +57,7 @@ struct config_file;
 struct daemon;
 struct listen_port;
 struct ub_randstate;
-struct region;
+struct regional;
 
 /** size of table used for random numbers. large to be more secure. */
 #define RND_STATE_SIZE 256
@@ -105,8 +105,8 @@ struct worker {
 	struct alloc_cache alloc;
 	/** per thread statistics */
 	struct server_stats stats;
-	/** thread scratch region */
-	struct region* scratchpad;
+	/** thread scratch regional */
+	struct regional* scratchpad;
 
 	/** module environment passed to modules, changed for this thread */
 	struct module_env env;

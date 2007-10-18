@@ -54,7 +54,7 @@
 #include "util/module.h"
 #include "util/netevent.h"
 #include "util/net_help.h"
-#include "util/region-allocator.h"
+#include "util/regional.h"
 #include "util/data/dname.h"
 #include "util/data/msgencode.h"
 #include "util/fptr_wlist.h"
@@ -94,7 +94,7 @@ iter_deinit(struct module_env* env, int id)
 static int
 iter_new(struct module_qstate* qstate, int id)
 {
-	struct iter_qstate* iq = (struct iter_qstate*)region_alloc(
+	struct iter_qstate* iq = (struct iter_qstate*)regional_alloc(
 		qstate->region, sizeof(struct iter_qstate));
 	qstate->minfo[id] = iq;
 	if(!iq) 
@@ -225,7 +225,7 @@ error_response(struct module_qstate* qstate, int id, int rcode)
 /** prepend the prepend list in the answer and authority section of dns_msg */
 static int
 iter_prepend(struct iter_qstate* iq, struct dns_msg* msg, 
-	struct region* region)
+	struct regional* region)
 {
 	struct iter_prep_list* p;
 	struct ub_packed_rrset_key** sets;
@@ -237,7 +237,7 @@ iter_prepend(struct iter_qstate* iq, struct dns_msg* msg,
 	if(num_an + num_ns == 0)
 		return 1;
 	verbose(VERB_ALGO, "prepending %d rrsets", (int)num_an + (int)num_ns);
-	sets = region_alloc(region, (num_an+num_ns+msg->rep->rrset_count) *
+	sets = regional_alloc(region, (num_an+num_ns+msg->rep->rrset_count) *
 		sizeof(struct ub_packed_rrset_key*));
 	if(!sets) 
 		return 0;
@@ -281,7 +281,7 @@ static int
 iter_add_prepend_answer(struct module_qstate* qstate, struct iter_qstate* iq,
 	struct ub_packed_rrset_key* rrset)
 {
-	struct iter_prep_list* p = (struct iter_prep_list*)region_alloc(
+	struct iter_prep_list* p = (struct iter_prep_list*)regional_alloc(
 		qstate->region, sizeof(struct iter_prep_list));
 	if(!p)
 		return 0;
@@ -306,7 +306,7 @@ static int
 iter_add_prepend_auth(struct module_qstate* qstate, struct iter_qstate* iq,
 	struct ub_packed_rrset_key* rrset)
 {
-	struct iter_prep_list* p = (struct iter_prep_list*)region_alloc(
+	struct iter_prep_list* p = (struct iter_prep_list*)regional_alloc(
 		qstate->region, sizeof(struct iter_prep_list));
 	if(!p)
 		return 0;
@@ -440,7 +440,7 @@ generate_sub_request(uint8_t* qname, size_t qnamelen, uint16_t qtype,
 		/* initialise the new subquery */
 		subq->curmod = id;
 		subq->ext_state[id] = module_state_initial;
-		subq->minfo[id] = region_alloc(subq->region, 
+		subq->minfo[id] = regional_alloc(subq->region, 
 			sizeof(struct iter_qstate));
 		if(!subq->minfo[id]) {
 			log_err("init subq: out of memory");
@@ -1641,7 +1641,7 @@ process_response(struct module_qstate* qstate, struct iter_qstate* iq,
 	}
 
 	/* parse message */
-	prs = (struct msg_parse*)region_alloc(qstate->env->scratch, 
+	prs = (struct msg_parse*)regional_alloc(qstate->env->scratch, 
 		sizeof(struct msg_parse));
 	if(!prs) {
 		log_err("out of memory on incoming message");

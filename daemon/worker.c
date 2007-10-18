@@ -48,7 +48,7 @@
 #include "util/netevent.h"
 #include "util/config_file.h"
 #include "util/module.h"
-#include "util/region-allocator.h"
+#include "util/regional.h"
 #include "util/storage/slabhash.h"
 #include "services/listen_dnsport.h"
 #include "services/outside_network.h"
@@ -144,10 +144,11 @@ worker_mem_report(struct worker* ATTR_UNUSED(worker),
 				(&worker->env, i);
 	}
 	me = sizeof(*worker) + sizeof(*worker->base) + sizeof(*worker->comsig)
-		+ comm_point_get_mem(worker->cmd_com) + 
-		sizeof(worker->rndstate) + region_get_mem(worker->scratchpad)+
-		sizeof(*worker->env.scratch_buffer) + 
-		ldns_buffer_capacity(worker->env.scratch_buffer);
+		+ comm_point_get_mem(worker->cmd_com) 
+		+ sizeof(worker->rndstate) 
+		+ regional_get_mem(worker->scratchpad) 
+		+ sizeof(*worker->env.scratch_buffer) 
+		+ ldns_buffer_capacity(worker->env.scratch_buffer);
 	if(cur_serv) {
 		me += serviced_get_mem(cur_serv);
 	}
@@ -390,7 +391,7 @@ answer_norec_from_cache(struct worker* worker, struct query_info* qinfo,
 		qinfo->qname_len, qinfo->qtype, qinfo->qclass,
 		worker->scratchpad, &msg, timenow);
 	if(!dp) { /* no delegation, need to reprime */
-		region_free_all(worker->scratchpad);
+		regional_free_all(worker->scratchpad);
 		return 0;
 	}
 	if(must_validate) {
@@ -398,7 +399,7 @@ answer_norec_from_cache(struct worker* worker, struct query_info* qinfo,
 		case sec_status_unchecked:
 			/* some rrsets have not been verified yet, go and 
 			 * let validator do that */
-			region_free_all(worker->scratchpad);
+			regional_free_all(worker->scratchpad);
 			return 0;
 		case sec_status_bogus:
 			/* some rrsets are bogus, reply servfail */
@@ -408,7 +409,7 @@ answer_norec_from_cache(struct worker* worker, struct query_info* qinfo,
 			edns->bits &= EDNS_DO;
 			error_encode(repinfo->c->buffer, LDNS_RCODE_SERVFAIL, 
 				&msg->qinfo, id, flags, edns);
-			region_free_all(worker->scratchpad);
+			regional_free_all(worker->scratchpad);
 			return 1;
 		case sec_status_secure:
 			/* all rrsets are secure */
@@ -437,7 +438,7 @@ answer_norec_from_cache(struct worker* worker, struct query_info* qinfo,
 		error_encode(repinfo->c->buffer, LDNS_RCODE_SERVFAIL, 
 			&msg->qinfo, id, flags, edns);
 	}
-	region_free_all(worker->scratchpad);
+	regional_free_all(worker->scratchpad);
 	return 1;
 }
 
@@ -510,7 +511,7 @@ answer_from_cache(struct worker* worker, struct lruhash_entry* e, uint16_t id,
 		bail_out:
 			rrset_array_unlock_touch(worker->env.rrset_cache, 
 				worker->scratchpad, rep->ref, rep->rrset_count);
-			region_free_all(worker->scratchpad);
+			regional_free_all(worker->scratchpad);
 			return 0;
 		}
 	}
@@ -525,7 +526,7 @@ answer_from_cache(struct worker* worker, struct lruhash_entry* e, uint16_t id,
 			&mrentry->key, id, flags, edns);
 		rrset_array_unlock_touch(worker->env.rrset_cache, 
 			worker->scratchpad, rep->ref, rep->rrset_count);
-		region_free_all(worker->scratchpad);
+		regional_free_all(worker->scratchpad);
 		return 1;
 	} else if( rep->security == sec_status_unchecked && must_validate) {
 		verbose(VERB_ALGO, "Cache reply: unchecked entry needs "
@@ -558,7 +559,7 @@ answer_from_cache(struct worker* worker, struct lruhash_entry* e, uint16_t id,
 	 * is bad while holding locks. */
 	rrset_array_unlock_touch(worker->env.rrset_cache, worker->scratchpad,
 		rep->ref, rep->rrset_count);
-	region_free_all(worker->scratchpad);
+	regional_free_all(worker->scratchpad);
 	/* go and return this buffer to the client */
 	return 1;
 }
@@ -940,8 +941,7 @@ worker_init(struct worker* worker, struct config_file *cfg,
 	}
 	/* we use the msg_buffer_size as a good estimate for what the 
 	 * user wants for memory usage sizes */
-	worker->scratchpad = region_create_custom(malloc, free, 
-		cfg->msg_buffer_size, cfg->msg_buffer_size/4, 32, 1);
+	worker->scratchpad = regional_create_custom(cfg->msg_buffer_size);
 	if(!worker->scratchpad) {
 		log_err("malloc failure");
 		worker_delete(worker);
@@ -1006,7 +1006,7 @@ worker_delete(struct worker* worker)
 		close(worker->cmd_recv_fd);
 	worker->cmd_recv_fd = -1;
 	alloc_clear(&worker->alloc);
-	region_destroy(worker->scratchpad);
+	regional_destroy(worker->scratchpad);
 	free(worker);
 }
 
@@ -1043,7 +1043,7 @@ worker_send_query(uint8_t* qname, size_t qnamelen, uint16_t qtype,
 	struct module_qstate* q)
 {
 	struct worker* worker = q->env->worker;
-	struct outbound_entry* e = (struct outbound_entry*)region_alloc(
+	struct outbound_entry* e = (struct outbound_entry*)regional_alloc(
 		q->region, sizeof(*e));
 	if(!e) 
 		return NULL;

@@ -35,15 +35,17 @@
 
 /**
  * \file
- * Region allocator. Allocates small portions of of larger chunks.
+ * Regional allocator. Allocates small portions of of larger chunks.
+ * Based on region-allocator from NSD, but rewritten to be light.
  *
  * Different from (nsd) region-allocator.h
  * 	o does not have recycle bin
- * 	o does not collect stats
+ * 	o does not collect stats; just enough to answer get_mem() in use.
  * 	o does not keep cleanup list
  * 	o does not have function pointers to setup
  * 	o allocs the regional struct inside the first block.
  * 	o can take a block to create regional from.
+ * 	o blocks and large allocations are kept on singly linked lists.
  */
 
 #ifndef UTIL_REGIONAL_H_
@@ -56,40 +58,39 @@
  */
 struct regional
 {
-	/** next chunk. NULL if first chunk is the only chunk. */
-	char* next;
-	/** number of bytes allocated in the current chunk. */
-	size_t allocated;
-	/** initial chunk size */
-	size_t first_size;
-	/** current chunk size */
-	size_t size;
-	/** total large size */
-	size_t total_large;
 	/** 
-	 * current chunk 
-	 * can be cast to char** to obtain next chunk pointer.
+	 * next chunk. NULL if first chunk is the only chunk. 
+	 * first inside that chunk is the char* next pointer. 
+	 * When regional_free_all() has been called this value is NULL.
 	 */
-	char *data;
+	char* next;
 	/** first large object, cast to char** to obtain next ptr */
 	char* large_list;
+	/** total large size */
+	size_t total_large;
+	/** initial chunk size */
+	size_t first_size;
+	/** number of bytes available in the current chunk. */
+	size_t available;
+	/** current chunk data position. */
+	char* data;
 };
 
 /**
  * Create a new regional.
+ * @return: newly allocated regional.
  */
 struct regional* regional_create();
 
 /**
  * Create a new region, with custom settings.
- * @param block: initial data block 
- * 	The regional returned is allocated in the block (start of it).
- * @param size: length of block.
+ * @param size: length of first block.
+ * @return: newly allocated regional.
  */
-struct regional* regional_create_custom(void* block, size_t size);
+struct regional* regional_create_custom(size_t size);
 	
 /**
- * Free all memory associated with REGION. Only keeps the first block with
+ * Free all memory associated with regional. Only keeps the first block with
  * the regional inside it.
  * @param r: the region.
  */
@@ -103,7 +104,7 @@ void regional_free_all(struct regional *r);
 void regional_destroy(struct regional *r);
 
 /**
- * Allocate SIZE bytes of memory inside REGION.  The memory is
+ * Allocate size bytes of memory inside regional.  The memory is
  * deallocated when region_free_all is called for this region.
  * @param r: the region.
  * @param size: number of bytes.
@@ -112,7 +113,7 @@ void regional_destroy(struct regional *r);
 void *regional_alloc(struct regional *r, size_t size);
 
 /**
- * Allocate SIZE bytes of memory inside REGION and copy INIT into it.
+ * Allocate size bytes of memory inside regional and copy INIT into it.
  * The memory is deallocated when region_free_all is called for this
  * region.
  * @param r: the region.
@@ -123,7 +124,7 @@ void *regional_alloc(struct regional *r, size_t size);
 void *regional_alloc_init(struct regional* r, const void *init, size_t size);
 
 /**
- * Allocate SIZE bytes of memory inside REGION that are initialized to
+ * Allocate size bytes of memory inside regional that are initialized to
  * 0.  The memory is deallocated when region_free_all is called for
  * this region.
  * @param r: the region.
@@ -133,13 +134,14 @@ void *regional_alloc_init(struct regional* r, const void *init, size_t size);
 void *regional_alloc_zero(struct regional *r, size_t size);
 
 /**
- * Duplicate STRING and allocate the result in REGION.
+ * Duplicate string and allocate the result in regional.
  * @param r: the region.
  * @param string: null terminated string.
+ * @return: pointer to memory allocated.
  */
 char *regional_strdup(struct regional *r, const char *string);
 
-/** Debug print REGION statistics to LOG */
+/** Debug print regional statistics to log */
 void regional_log_stats(struct regional *r);
 
 /** get total memory size in use by region */

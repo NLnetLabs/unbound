@@ -50,7 +50,7 @@ struct config_file;
 struct slabhash;
 struct query_info;
 struct edns_data;
-struct region;
+struct regional;
 struct worker;
 struct module_qstate;
 struct ub_randstate;
@@ -180,7 +180,7 @@ struct module_env {
 		struct query_info* qinfo, uint16_t flags, int prime);
 
 	/** region for temporary usage. May be cleared after operate() call. */
-	struct region* scratch;
+	struct regional* scratch;
 	/** buffer for temporary usage. May be cleared after operate() call. */
 	ldns_buffer* scratch_buffer;
 	/** internal data for daemon - worker thread. */
@@ -254,7 +254,7 @@ struct module_qstate {
 	/** the rcode, in case of error, instead of a reply message */
 	int return_rcode;
 	/** region for this query. Cleared when query process finishes. */
-	struct region* region;
+	struct regional* region;
 
 	/** which module is executing */
 	int curmod;

@@ -46,7 +46,7 @@
 struct comm_reply;
 struct alloc_cache;
 struct iovec;
-struct region;
+struct regional;
 struct edns_data;
 struct msg_parse;
 struct rrset_parse;
@@ -202,7 +202,7 @@ int query_info_parse(struct query_info* m, ldns_buffer* query);
  */
 int reply_info_parse(ldns_buffer* pkt, struct alloc_cache* alloc,
 	struct query_info* qinf, struct reply_info** rep, 
-	struct region* region, struct edns_data* edns);
+	struct regional* region, struct edns_data* edns);
 
 /**
  * Allocate and decompress parsed message and rrsets.
@@ -221,7 +221,7 @@ int reply_info_parse(ldns_buffer* pkt, struct alloc_cache* alloc,
  */
 int parse_create_msg(ldns_buffer* pkt, struct msg_parse* msg,
         struct alloc_cache* alloc, struct query_info* qinf,
-	struct reply_info** rep, struct region* region);
+	struct reply_info** rep, struct regional* region);
 
 /**
  * Sorts the ref array.
@@ -298,7 +298,7 @@ struct msgreply_entry* query_info_entrysetup(struct query_info* q,
  * @return new reply info or NULL on memory error.
  */
 struct reply_info* reply_info_copy(struct reply_info* rep, 
-	struct alloc_cache* alloc, struct region* region);
+	struct alloc_cache* alloc, struct regional* region);
 
 /**
  * Copy a parsed rrset into given key, decompressing and allocating rdata.
@@ -312,7 +312,7 @@ struct reply_info* reply_info_copy(struct reply_info* rep,
  * @return false on alloc failure.
  */
 int parse_copy_decompress_rrset(ldns_buffer* pkt, struct msg_parse* msg,
-	struct rrset_parse *pset, struct region* region, 
+	struct rrset_parse *pset, struct regional* region, 
 	struct ub_packed_rrset_key* pk);
 
 /**

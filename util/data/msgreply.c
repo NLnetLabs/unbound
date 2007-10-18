@@ -47,18 +47,18 @@
 #include "util/netevent.h"
 #include "util/net_help.h"
 #include "util/data/dname.h"
-#include "util/region-allocator.h"
+#include "util/regional.h"
 #include "util/data/msgparse.h"
 #include "util/data/msgencode.h"
 
 /** allocate qinfo, return 0 on error */
 static int
 parse_create_qinfo(ldns_buffer* pkt, struct msg_parse* msg, 
-	struct query_info* qinf, struct region* region)
+	struct query_info* qinf, struct regional* region)
 {
 	if(msg->qname) {
 		if(region)
-			qinf->qname = (uint8_t*)region_alloc(region, 
+			qinf->qname = (uint8_t*)regional_alloc(region, 
 				msg->qname_len);
 		else	qinf->qname = (uint8_t*)malloc(msg->qname_len);
 		if(!qinf->qname) return 0;
@@ -72,7 +72,7 @@ parse_create_qinfo(ldns_buffer* pkt, struct msg_parse* msg,
 
 /** constructor for replyinfo */
 static struct reply_info*
-construct_reply_info_base(struct region* region, uint16_t flags, size_t qd,
+construct_reply_info_base(struct regional* region, uint16_t flags, size_t qd,
 	uint32_t ttl, size_t an, size_t ns, size_t ar, size_t total,
 	enum sec_status sec)
 {
@@ -81,7 +81,7 @@ construct_reply_info_base(struct region* region, uint16_t flags, size_t qd,
 	size_t s = sizeof(struct reply_info) - sizeof(struct rrset_ref) +
 		sizeof(struct ub_packed_rrset_key*) * total;
 	if(region)
-		rep = (struct reply_info*)region_alloc(region, s);
+		rep = (struct reply_info*)regional_alloc(region, s);
 	else	rep = (struct reply_info*)malloc(s + 
 			sizeof(struct rrset_ref) * (total));
 	if(!rep) 
@@ -108,7 +108,7 @@ construct_reply_info_base(struct region* region, uint16_t flags, size_t qd,
 /** allocate replyinfo, return 0 on error */
 static int
 parse_create_repinfo(struct msg_parse* msg, struct reply_info** rep,
-	struct region* region)
+	struct regional* region)
 {
 	*rep = construct_reply_info_base(region, msg->flags, msg->qdcount, 0,
 		msg->an_rrsets, msg->ns_rrsets, msg->ar_rrsets, 
@@ -121,13 +121,13 @@ parse_create_repinfo(struct msg_parse* msg, struct reply_info** rep,
 /** allocate (special) rrset keys, return 0 on error */
 static int
 repinfo_alloc_rrset_keys(struct reply_info* rep, struct alloc_cache* alloc, 
-	struct region* region)
+	struct regional* region)
 {
 	size_t i;
 	for(i=0; i<rep->rrset_count; i++) {
 		if(region) {
 			rep->rrsets[i] = (struct ub_packed_rrset_key*)
-				region_alloc(region, 
+				regional_alloc(region, 
 				sizeof(struct ub_packed_rrset_key));
 			if(rep->rrsets[i]) {
 				memset(rep->rrsets[i], 0, 
@@ -264,7 +264,7 @@ parse_rr_copy(ldns_buffer* pkt, struct rrset_parse* pset,
 /** create rrset return 0 on failure */
 static int
 parse_create_rrset(ldns_buffer* pkt, struct rrset_parse* pset,
-	struct packed_rrset_data** data, struct region* region)
+	struct packed_rrset_data** data, struct regional* region)
 {
 	/* allocate */
 	size_t s = sizeof(struct packed_rrset_data) + 
@@ -272,7 +272,7 @@ parse_create_rrset(ldns_buffer* pkt, struct rrset_parse* pset,
 		(sizeof(size_t)+sizeof(uint8_t*)+sizeof(uint32_t)) + 
 		pset->size;
 	if(region)
-		*data = region_alloc(region, s);
+		*data = regional_alloc(region, s);
 	else	*data = malloc(s);
 	if(!*data)
 		return 0;
@@ -303,14 +303,14 @@ get_rrset_trust(struct msg_parse* msg, struct rrset_parse* rrset)
 
 int
 parse_copy_decompress_rrset(ldns_buffer* pkt, struct msg_parse* msg,
-	struct rrset_parse *pset, struct region* region, 
+	struct rrset_parse *pset, struct regional* region, 
 	struct ub_packed_rrset_key* pk)
 {
 	struct packed_rrset_data* data;
 	pk->rk.flags = pset->flags;
 	pk->rk.dname_len = pset->dname_len;
 	if(region)
-		pk->rk.dname = (uint8_t*)region_alloc(
+		pk->rk.dname = (uint8_t*)regional_alloc(
 			region, pset->dname_len);
 	else	pk->rk.dname = 
 			(uint8_t*)malloc(pset->dname_len);
@@ -341,7 +341,7 @@ parse_copy_decompress_rrset(ldns_buffer* pkt, struct msg_parse* msg,
  */
 static int
 parse_copy_decompress(ldns_buffer* pkt, struct msg_parse* msg,
-	struct reply_info* rep, struct region* region)
+	struct reply_info* rep, struct regional* region)
 {
 	size_t i;
 	struct rrset_parse *pset = msg->rrset_first;
@@ -368,7 +368,7 @@ parse_copy_decompress(ldns_buffer* pkt, struct msg_parse* msg,
 int 
 parse_create_msg(ldns_buffer* pkt, struct msg_parse* msg,
 	struct alloc_cache* alloc, struct query_info* qinf, 
-	struct reply_info** rep, struct region* region)
+	struct reply_info** rep, struct regional* region)
 {
 	log_assert(pkt && msg);
 	if(!parse_create_qinfo(pkt, msg, qinf, region))
@@ -383,8 +383,8 @@ parse_create_msg(ldns_buffer* pkt, struct msg_parse* msg,
 }
 
 int reply_info_parse(ldns_buffer* pkt, struct alloc_cache* alloc,
-        struct query_info* qinf, struct reply_info** rep, struct region* region,
-	struct edns_data* edns)
+        struct query_info* qinf, struct reply_info** rep, 
+	struct regional* region, struct edns_data* edns)
 {
 	/* use scratch pad region-allocator during parsing. */
 	struct msg_parse* msg;
@@ -392,7 +392,7 @@ int reply_info_parse(ldns_buffer* pkt, struct alloc_cache* alloc,
 	
 	qinf->qname = NULL;
 	*rep = NULL;
-	if(!(msg = region_alloc(region, sizeof(*msg)))) {
+	if(!(msg = regional_alloc(region, sizeof(*msg)))) {
 		return LDNS_RCODE_SERVFAIL;
 	}
 	memset(msg, 0, sizeof(*msg));
@@ -588,7 +588,7 @@ query_info_entrysetup(struct query_info* q, struct reply_info* r,
 /** copy rrsets from replyinfo to dest replyinfo */
 static int
 repinfo_copy_rrsets(struct reply_info* dest, struct reply_info* from, 
-	struct region* region)
+	struct regional* region)
 {
 	size_t i, s;
 	struct packed_rrset_data* fd, *dd;
@@ -601,7 +601,7 @@ repinfo_copy_rrsets(struct reply_info* dest, struct reply_info* from,
 		dk->rk = fk->rk;
 		if(region) {
 			dk->id = fk->id;
-			dk->rk.dname = (uint8_t*)region_alloc_init(region,
+			dk->rk.dname = (uint8_t*)regional_alloc_init(region,
 				fk->rk.dname, fk->rk.dname_len);
 		} else	
 			dk->rk.dname = (uint8_t*)memdup(fk->rk.dname, 
@@ -610,7 +610,7 @@ repinfo_copy_rrsets(struct reply_info* dest, struct reply_info* from,
 			return 0;
 		s = packed_rrset_sizeof(fd);
 		if(region)
-			dd = (struct packed_rrset_data*)region_alloc_init(
+			dd = (struct packed_rrset_data*)regional_alloc_init(
 				region, fd, s);
 		else	dd = (struct packed_rrset_data*)memdup(fd, s);
 		if(!dd) 
@@ -623,7 +623,7 @@ repinfo_copy_rrsets(struct reply_info* dest, struct reply_info* from,
 
 struct reply_info* 
 reply_info_copy(struct reply_info* rep, struct alloc_cache* alloc, 
-	struct region* region)
+	struct regional* region)
 {
 	struct reply_info* cp;
 	cp = construct_reply_info_base(region, rep->flags, rep->qdcount, 
@@ -708,7 +708,7 @@ log_dns_msg(const char* str, struct query_info* qinfo, struct reply_info* rep)
 {
 	/* not particularly fast but flexible, make wireformat and print */
 	ldns_buffer* buf = ldns_buffer_new(65535);
-	struct region* region = region_create(malloc, free);
+	struct regional* region = regional_create();
 	if(!reply_info_encode(qinfo, rep, 0, rep->flags, buf, 0, 
 		region, 65535, 1)) {
 		log_info("%s: log_dns_msg: out of memory", str);
@@ -733,7 +733,7 @@ log_dns_msg(const char* str, struct query_info* qinfo, struct reply_info* rep)
 		ldns_pkt_free(pkt);
 	}
 	ldns_buffer_free(buf);
-	region_destroy(region);
+	regional_destroy(region);
 }
 
 void 

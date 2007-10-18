@@ -42,7 +42,7 @@
 #ifndef VALIDATOR_VAL_KENTRY_H
 #define VALIDATOR_VAL_KENTRY_H
 struct packed_rrset_data;
-struct region;
+struct regional;
 struct ub_packed_rrset_key;
 #include "util/storage/lruhash.h"
 
@@ -108,7 +108,7 @@ void key_entry_hash(struct key_entry_key* kk);
  * @return newly region-allocated entry or NULL on a failure to allocate.
  */
 struct key_entry_key* key_entry_copy_toregion(struct key_entry_key* kkey, 
-	struct region* region);
+	struct regional* region);
 
 /**
  * Copy a key entry, malloced.
@@ -147,7 +147,7 @@ int key_entry_isbad(struct key_entry_key* kkey);
  * @param ttl: what ttl should the key have. relative.
  * @return new key entry or NULL on alloc failure
  */
-struct key_entry_key* key_entry_create_null(struct region* region,
+struct key_entry_key* key_entry_create_null(struct regional* region,
 	uint8_t* name, size_t namelen, uint16_t dclass, uint32_t ttl);
 
 /**
@@ -159,7 +159,7 @@ struct key_entry_key* key_entry_create_null(struct region* region,
  * @param rrset: data for key entry. This is copied to the region.
  * @return new key entry or NULL on alloc failure
  */
-struct key_entry_key* key_entry_create_rrset(struct region* region,
+struct key_entry_key* key_entry_create_rrset(struct regional* region,
         uint8_t* name, size_t namelen, uint16_t dclass, 
 	struct ub_packed_rrset_key* rrset);
 
@@ -171,7 +171,7 @@ struct key_entry_key* key_entry_create_rrset(struct region* region,
  * @param dclass: class of key entry. (host order);
  * @return new key entry or NULL on alloc failure
  */
-struct key_entry_key* key_entry_create_bad(struct region* region,
+struct key_entry_key* key_entry_create_bad(struct regional* region,
 	uint8_t* name, size_t namelen, uint16_t dclass);
 
 /**
@@ -181,7 +181,7 @@ struct key_entry_key* key_entry_create_bad(struct region* region,
  * @return rrset copy; if no rrset or alloc error returns NULL.
  */
 struct ub_packed_rrset_key* key_entry_get_rrset(struct key_entry_key* kkey,
-	struct region* region);
+	struct regional* region);
 
 /**
  * Get keysize of the keyentry.

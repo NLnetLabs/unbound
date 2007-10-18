@@ -47,7 +47,7 @@
 #include "util/config_file.h"
 #include "util/module.h"
 #include "util/net_help.h"
-#include "util/region-allocator.h"
+#include "util/regional.h"
 #include "iterator/iterator.h"
 #include "validator/validator.h"
 #include <pwd.h>
@@ -72,14 +72,16 @@ check_mod(struct config_file* cfg, struct module_func_block* fb)
 	struct module_env env;
 	memset(&env, 0, sizeof(env));
 	env.cfg = cfg;
-	env.scratch = region_create(malloc, free);
+	env.scratch = regional_create();
 	env.scratch_buffer = ldns_buffer_new(BUFSIZ);
+	if(!env.scratch || !env.scratch_buffer)
+		fatal_exit("out of memory");
 	if(!(*fb->init)(&env, 0)) {
 		fatal_exit("bad config for %s module", fb->name);
 	}
 	(*fb->deinit)(&env, 0);
 	ldns_buffer_free(env.scratch_buffer);
-	region_destroy(env.scratch);
+	regional_destroy(env.scratch);
 }
 
 /** check configuration for errors */

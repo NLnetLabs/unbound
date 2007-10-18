@@ -46,7 +46,7 @@
 struct module_env;
 struct query_info;
 struct reply_info;
-struct region;
+struct regional;
 struct delegpt;
 
 /**
@@ -107,7 +107,7 @@ void dns_cache_store_msg(struct module_env* env, struct query_info* qinfo,
  */
 struct delegpt* dns_cache_find_delegation(struct module_env* env, 
 	uint8_t* qname, size_t qnamelen, uint16_t qtype, uint16_t qclass, 
-	struct region* region, struct dns_msg** msg, uint32_t timenow);
+	struct regional* region, struct dns_msg** msg, uint32_t timenow);
 
 /** 
  * Find cached message 
@@ -124,7 +124,7 @@ struct delegpt* dns_cache_find_delegation(struct module_env* env,
  */
 struct dns_msg* dns_cache_lookup(struct module_env* env,
 	uint8_t* qname, size_t qnamelen, uint16_t qtype, uint16_t qclass,
-	struct region* region, struct region* scratch);
+	struct regional* region, struct regional* scratch);
 
 /** 
  * find and add A and AAAA records for missing nameservers in delegpt 
@@ -135,7 +135,7 @@ struct dns_msg* dns_cache_lookup(struct module_env* env,
  * @return false on alloc failure.
  */
 int cache_fill_missing(struct module_env* env, uint16_t qclass, 
-	struct region* region, struct delegpt* dp);
+	struct regional* region, struct delegpt* dp);
 
 /** Find covering DNAME */
 

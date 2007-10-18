@@ -47,7 +47,7 @@ struct val_env;
 struct module_env;
 struct ub_packed_rrset_key;
 struct key_entry_key;
-struct region;
+struct regional;
 struct val_anchors;
 struct rrset_cache;
 enum sec_status;
@@ -150,7 +150,7 @@ enum sec_status val_verify_rrset_entry(struct module_env* env,
  *         this sort of thing is checked before fetching the matching DNSKEY
  *         rrset.
  */
-struct key_entry_key* val_verify_new_DNSKEYs(struct region* region, 
+struct key_entry_key* val_verify_new_DNSKEYs(struct regional* region, 
 	struct module_env* env, struct val_env* ve, 
 	struct ub_packed_rrset_key* dnskey_rrset, 
 	struct ub_packed_rrset_key* ds_rrset);

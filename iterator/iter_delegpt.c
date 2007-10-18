@@ -42,23 +42,24 @@
 #include "config.h"
 #include "iterator/iter_delegpt.h"
 #include "services/cache/dns.h"
-#include "util/region-allocator.h"
+#include "util/regional.h"
 #include "util/data/dname.h"
 #include "util/data/packed_rrset.h"
 #include "util/data/msgreply.h"
 #include "util/net_help.h"
 
 struct delegpt* 
-delegpt_create(struct region* region)
+delegpt_create(struct regional* region)
 {
-	struct delegpt* dp=(struct delegpt*)region_alloc(region, sizeof(*dp));
+	struct delegpt* dp=(struct delegpt*)regional_alloc(
+		region, sizeof(*dp));
 	if(!dp)
 		return NULL;
 	memset(dp, 0, sizeof(*dp));
 	return dp;
 }
 
-struct delegpt* delegpt_copy(struct delegpt* dp, struct region* region)
+struct delegpt* delegpt_copy(struct delegpt* dp, struct regional* region)
 {
 	struct delegpt* copy = delegpt_create(region);
 	struct delegpt_ns* ns;
@@ -80,15 +81,15 @@ struct delegpt* delegpt_copy(struct delegpt* dp, struct region* region)
 }
 
 int 
-delegpt_set_name(struct delegpt* dp, struct region* region, uint8_t* name)
+delegpt_set_name(struct delegpt* dp, struct regional* region, uint8_t* name)
 {
 	dp->namelabs = dname_count_size_labels(name, &dp->namelen);
-	dp->name = region_alloc_init(region, name, dp->namelen);
+	dp->name = regional_alloc_init(region, name, dp->namelen);
 	return dp->name != 0;
 }
 
 int 
-delegpt_add_ns(struct delegpt* dp, struct region* region, uint8_t* name)
+delegpt_add_ns(struct delegpt* dp, struct regional* region, uint8_t* name)
 {
 	struct delegpt_ns* ns;
 	size_t len;
@@ -97,14 +98,14 @@ delegpt_add_ns(struct delegpt* dp, struct region* region, uint8_t* name)
 	 * adding the same server as a dependency twice */
 	if(delegpt_find_ns(dp, name, len))
 		return 1;
-	ns = (struct delegpt_ns*)region_alloc(region,
+	ns = (struct delegpt_ns*)regional_alloc(region,
 		sizeof(struct delegpt_ns));
 	if(!ns)
 		return 0;
 	ns->next = dp->nslist;
 	ns->namelen = len;
 	dp->nslist = ns;
-	ns->name = region_alloc_init(region, name, ns->namelen);
+	ns->name = regional_alloc_init(region, name, ns->namelen);
 	ns->resolved = 0;
 	return 1;
 }
@@ -124,7 +125,7 @@ delegpt_find_ns(struct delegpt* dp, uint8_t* name, size_t namelen)
 }
 
 int 
-delegpt_add_target(struct delegpt* dp, struct region* region, 
+delegpt_add_target(struct delegpt* dp, struct regional* region, 
 	uint8_t* name, size_t namelen, struct sockaddr_storage* addr, 
 	socklen_t addrlen)
 {
@@ -138,10 +139,10 @@ delegpt_add_target(struct delegpt* dp, struct region* region,
 }
 
 int 
-delegpt_add_addr(struct delegpt* dp, struct region* region, 
+delegpt_add_addr(struct delegpt* dp, struct regional* region, 
 	struct sockaddr_storage* addr, socklen_t addrlen)
 {
-	struct delegpt_addr* a = (struct delegpt_addr*)region_alloc(region,
+	struct delegpt_addr* a = (struct delegpt_addr*)regional_alloc(region,
 		sizeof(struct delegpt_addr));
 	if(!a)
 		return 0;
@@ -256,7 +257,7 @@ find_NS(struct reply_info* rep, size_t from, size_t to)
 }
 
 struct delegpt* 
-delegpt_from_message(struct dns_msg* msg, struct region* region)
+delegpt_from_message(struct dns_msg* msg, struct regional* region)
 {
 	struct ub_packed_rrset_key* ns_rrset = NULL;
 	struct delegpt* dp;
@@ -305,7 +306,7 @@ delegpt_from_message(struct dns_msg* msg, struct region* region)
 }
 
 int 
-delegpt_rrset_add_ns(struct delegpt* dp, struct region* region,
+delegpt_rrset_add_ns(struct delegpt* dp, struct regional* region,
         struct ub_packed_rrset_key* ns_rrset)
 {
 	struct packed_rrset_data* nsdata = (struct packed_rrset_data*)
@@ -324,7 +325,7 @@ delegpt_rrset_add_ns(struct delegpt* dp, struct region* region,
 }
 
 int 
-delegpt_add_rrset_A(struct delegpt* dp, struct region* region,
+delegpt_add_rrset_A(struct delegpt* dp, struct regional* region,
 	struct ub_packed_rrset_key* ak)
 {
         struct packed_rrset_data* d=(struct packed_rrset_data*)ak->entry.data;
@@ -347,7 +348,7 @@ delegpt_add_rrset_A(struct delegpt* dp, struct region* region,
 }
 
 int 
-delegpt_add_rrset_AAAA(struct delegpt* dp, struct region* region,
+delegpt_add_rrset_AAAA(struct delegpt* dp, struct regional* region,
 	struct ub_packed_rrset_key* ak)
 {
         struct packed_rrset_data* d=(struct packed_rrset_data*)ak->entry.data;
@@ -370,7 +371,7 @@ delegpt_add_rrset_AAAA(struct delegpt* dp, struct region* region,
 }
 
 int 
-delegpt_add_rrset(struct delegpt* dp, struct region* region,
+delegpt_add_rrset(struct delegpt* dp, struct regional* region,
         struct ub_packed_rrset_key* rrset)
 {
 	if(!rrset)

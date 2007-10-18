@@ -47,7 +47,7 @@
 #include "util/data/dname.h"
 #include "util/module.h"
 #include "util/net_help.h"
-#include "util/region-allocator.h"
+#include "util/regional.h"
 
 /** store rrsets in the rrset cache. 
  * @param env: module environment with caches.
@@ -103,10 +103,10 @@ dns_cache_store_msg(struct module_env* env, struct query_info* qinfo,
 
 /** allocate rrset in region - no more locks needed */
 static struct ub_packed_rrset_key*
-copy_rrset(struct ub_packed_rrset_key* key, struct region* region, 
+copy_rrset(struct ub_packed_rrset_key* key, struct regional* region, 
 	uint32_t now)
 {
-	struct ub_packed_rrset_key* ck = region_alloc(region, 
+	struct ub_packed_rrset_key* ck = regional_alloc(region, 
 		sizeof(struct ub_packed_rrset_key));
 	struct packed_rrset_data* d;
 	struct packed_rrset_data* data = (struct packed_rrset_data*)
@@ -119,12 +119,12 @@ copy_rrset(struct ub_packed_rrset_key* key, struct region* region,
 	ck->entry.hash = key->entry.hash;
 	ck->entry.key = ck;
 	ck->rk = key->rk;
-	ck->rk.dname = region_alloc_init(region, key->rk.dname, 
+	ck->rk.dname = regional_alloc_init(region, key->rk.dname, 
 		key->rk.dname_len);
 	if(!ck->rk.dname)
 		return NULL;
 	dsize = packed_rrset_sizeof(data);
-	d = (struct packed_rrset_data*)region_alloc_init(region, data, dsize);
+	d = (struct packed_rrset_data*)regional_alloc_init(region, data, dsize);
 	if(!d)
 		return NULL;
 	ck->entry.data = d;
@@ -167,7 +167,7 @@ find_closest_of_type(struct module_env* env, uint8_t* qname, size_t qnamelen,
 
 /** add addr to additional section */
 static void
-addr_to_additional(struct ub_packed_rrset_key* rrset, struct region* region,
+addr_to_additional(struct ub_packed_rrset_key* rrset, struct regional* region,
 	struct dns_msg* msg, uint32_t now)
 {
 	if((msg->rep->rrsets[msg->rep->rrset_count] = 
@@ -179,8 +179,9 @@ addr_to_additional(struct ub_packed_rrset_key* rrset, struct region* region,
 
 /** find and add A and AAAA records for nameservers in delegpt */
 static int
-find_add_addrs(struct module_env* env, uint16_t qclass, struct region* region,
-	struct delegpt* dp, uint32_t now, struct dns_msg** msg)
+find_add_addrs(struct module_env* env, uint16_t qclass, 
+	struct regional* region, struct delegpt* dp, uint32_t now, 
+	struct dns_msg** msg)
 {
 	struct delegpt_ns* ns;
 	struct ub_packed_rrset_key* akey;
@@ -214,7 +215,7 @@ find_add_addrs(struct module_env* env, uint16_t qclass, struct region* region,
 /** find and add A and AAAA records for missing nameservers in delegpt */
 int
 cache_fill_missing(struct module_env* env, uint16_t qclass, 
-	struct region* region, struct delegpt* dp)
+	struct regional* region, struct delegpt* dp)
 {
 	struct delegpt_ns* ns;
 	struct ub_packed_rrset_key* akey;
@@ -250,7 +251,7 @@ cache_fill_missing(struct module_env* env, uint16_t qclass,
 
 /** find and add DS or NSEC to delegation msg */
 static void
-find_add_ds(struct module_env* env, struct region* region, 
+find_add_ds(struct module_env* env, struct regional* region, 
 	struct dns_msg* msg, struct delegpt* dp, uint32_t now)
 {
 	/* Lookup the DS or NSEC at the delegation point. */
@@ -281,21 +282,21 @@ find_add_ds(struct module_env* env, struct region* region,
 /** create referral message with NS and query */
 static struct dns_msg*
 create_msg(uint8_t* qname, size_t qnamelen, uint16_t qtype, uint16_t qclass, 
-	struct region* region, struct ub_packed_rrset_key* nskey, 
+	struct regional* region, struct ub_packed_rrset_key* nskey, 
 	struct packed_rrset_data* nsdata, uint32_t now)
 {
-	struct dns_msg* msg = (struct dns_msg*)region_alloc(region,
+	struct dns_msg* msg = (struct dns_msg*)regional_alloc(region,
 		sizeof(struct dns_msg));
 	if(!msg)
 		return NULL;
-	msg->qinfo.qname = region_alloc_init(region, qname, qnamelen);
+	msg->qinfo.qname = regional_alloc_init(region, qname, qnamelen);
 	if(!msg->qinfo.qname)
 		return NULL;
 	msg->qinfo.qname_len = qnamelen;
 	msg->qinfo.qtype = qtype;
 	msg->qinfo.qclass = qclass;
 	/* non-packed reply_info, because it needs to grow the array */
-	msg->rep = (struct reply_info*)region_alloc(region, 
+	msg->rep = (struct reply_info*)regional_alloc(region, 
 		sizeof(struct reply_info)-sizeof(struct rrset_ref));
 	if(!msg->rep)
 		return NULL;
@@ -308,7 +309,8 @@ create_msg(uint8_t* qname, size_t qnamelen, uint16_t qtype, uint16_t qclass,
 	 *	A rrset for every NS RR
 	 *	AAAA rrset for every NS RR
 	 */
-	msg->rep->rrsets = (struct ub_packed_rrset_key**)region_alloc(region,
+	msg->rep->rrsets = (struct ub_packed_rrset_key**)
+		regional_alloc(region, 
 		(2 + nsdata->count*2)*sizeof(struct ub_packed_rrset_key*));
 	if(!msg->rep->rrsets)
 		return NULL;
@@ -323,7 +325,7 @@ create_msg(uint8_t* qname, size_t qnamelen, uint16_t qtype, uint16_t qclass,
 struct delegpt* 
 dns_cache_find_delegation(struct module_env* env, uint8_t* qname, 
 	size_t qnamelen, uint16_t qtype, uint16_t qclass, 
-	struct region* region, struct dns_msg** msg, uint32_t now)
+	struct regional* region, struct dns_msg** msg, uint32_t now)
 {
 	/* try to find closest NS rrset */
 	struct ub_packed_rrset_key* nskey;
@@ -366,22 +368,23 @@ dns_cache_find_delegation(struct module_env* env, uint8_t* qname,
 
 /** allocate dns_msg from query_info and reply_info */
 static struct dns_msg*
-gen_dns_msg(struct region* region, struct query_info* q, size_t num)
+gen_dns_msg(struct regional* region, struct query_info* q, size_t num)
 {
-	struct dns_msg* msg = (struct dns_msg*)region_alloc(region, 
+	struct dns_msg* msg = (struct dns_msg*)regional_alloc(region, 
 		sizeof(struct dns_msg));
 	if(!msg)
 		return NULL;
 	memcpy(&msg->qinfo, q, sizeof(struct query_info));
-	msg->qinfo.qname = region_alloc_init(region, q->qname, q->qname_len);
+	msg->qinfo.qname = regional_alloc_init(region, q->qname, q->qname_len);
 	if(!msg->qinfo.qname)
 		return NULL;
 	/* allocate replyinfo struct and rrset key array separately */
-	msg->rep = (struct reply_info*)region_alloc(region,
+	msg->rep = (struct reply_info*)regional_alloc(region,
 		sizeof(struct reply_info) - sizeof(struct rrset_ref));
 	if(!msg->rep)
 		return NULL;
-	msg->rep->rrsets = (struct ub_packed_rrset_key**)region_alloc(region,
+	msg->rep->rrsets = (struct ub_packed_rrset_key**)
+		regional_alloc(region,
 		num * sizeof(struct ub_packed_rrset_key*));
 	if(!msg->rep->rrsets)
 		return NULL;
@@ -391,7 +394,7 @@ gen_dns_msg(struct region* region, struct query_info* q, size_t num)
 /** generate dns_msg from cached message */
 static struct dns_msg*
 tomsg(struct module_env* env, struct msgreply_entry* e, struct reply_info* r, 
-	struct region* region, uint32_t now, struct region* scratch)
+	struct regional* region, uint32_t now, struct regional* scratch)
 {
 	struct dns_msg* msg;
 	size_t i;
@@ -424,7 +427,7 @@ tomsg(struct module_env* env, struct msgreply_entry* e, struct reply_info* r,
 
 /** synthesize RRset-only response from cached RRset item */
 static struct dns_msg*
-rrset_msg(struct ub_packed_rrset_key* rrset, struct region* region, 
+rrset_msg(struct ub_packed_rrset_key* rrset, struct regional* region, 
 	uint32_t now, struct query_info* q)
 {
 	struct dns_msg* msg;
@@ -451,7 +454,7 @@ rrset_msg(struct ub_packed_rrset_key* rrset, struct region* region,
 
 /** synthesize DNAME+CNAME response from cached DNAME item */
 static struct dns_msg*
-synth_dname_msg(struct ub_packed_rrset_key* rrset, struct region* region, 
+synth_dname_msg(struct ub_packed_rrset_key* rrset, struct regional* region, 
 	uint32_t now, struct query_info* q)
 {
 	struct dns_msg* msg;
@@ -485,7 +488,7 @@ synth_dname_msg(struct ub_packed_rrset_key* rrset, struct region* region,
 		msg->rep->flags |= LDNS_RCODE_YXDOMAIN;
 		return msg;
 	}
-	newname = (uint8_t*)region_alloc(region, newlen);
+	newname = (uint8_t*)regional_alloc(region, newlen);
 	if(!newname)
 		return NULL;
 	/* new name is concatenation of qname front (without DNAME owner)
@@ -493,7 +496,7 @@ synth_dname_msg(struct ub_packed_rrset_key* rrset, struct region* region,
 	memcpy(newname, q->qname, q->qname_len-rrset->rk.dname_len);
 	memmove(newname+(q->qname_len-rrset->rk.dname_len), dtarg, dtarglen);
 	/* create rest of CNAME rrset */
-	ck = (struct ub_packed_rrset_key*)region_alloc(region, 
+	ck = (struct ub_packed_rrset_key*)regional_alloc(region, 
 		sizeof(struct ub_packed_rrset_key));
 	if(!ck)
 		return NULL;
@@ -503,12 +506,12 @@ synth_dname_msg(struct ub_packed_rrset_key* rrset, struct region* region,
 	ck->rk.type = htons(LDNS_RR_TYPE_CNAME);
 	ck->rk.rrset_class = rrset->rk.rrset_class;
 	ck->rk.flags = 0;
-	ck->rk.dname = region_alloc_init(region, q->qname, q->qname_len);
+	ck->rk.dname = regional_alloc_init(region, q->qname, q->qname_len);
 	if(!ck->rk.dname)
 		return NULL;
 	ck->rk.dname_len = q->qname_len;
 	ck->entry.hash = rrset_key_hash(&ck->rk);
-	newd = (struct packed_rrset_data*)region_alloc(region,
+	newd = (struct packed_rrset_data*)regional_alloc(region,
 		sizeof(struct packed_rrset_data) + sizeof(size_t) + 
 		sizeof(uint8_t*) + sizeof(uint32_t) + sizeof(uint16_t) 
 		+ newlen);
@@ -535,7 +538,7 @@ synth_dname_msg(struct ub_packed_rrset_key* rrset, struct region* region,
 struct dns_msg* 
 dns_cache_lookup(struct module_env* env,
 	uint8_t* qname, size_t qnamelen, uint16_t qtype, uint16_t qclass,
-	struct region* region, struct region* scratch)
+	struct regional* region, struct regional* scratch)
 {
 	struct lruhash_entry* e;
 	struct query_info k;

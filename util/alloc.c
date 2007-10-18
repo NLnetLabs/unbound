@@ -393,23 +393,4 @@ void *unbound_stat_realloc_log(void *ptr, size_t size, const char* file,
 	return unbound_stat_realloc(ptr, size);
 }
 
-/** special routine for region-allocator, print to log */
-void *unbound_stat_malloc_region(size_t size)
-{
-	log_info("region malloc(%u)", (unsigned)size);
-	return unbound_stat_malloc(size);
-}
-
-/** special routine for region-allocator, print to log */
-void unbound_stat_free_region(void *ptr)
-{
-	if(ptr && memcmp(ptr-8, &mem_special, sizeof(mem_special)) == 0) {
-		size_t s;
-		memcpy(&s, ptr-16, sizeof(s));
-		log_info("region free(%p) size %u", ptr, (unsigned)s);
-	} else
-		log_info("region unmatched free(%p)", ptr);
-	unbound_stat_free(ptr);
-}
-
 #endif /* UNBOUND_ALLOC_STATS */

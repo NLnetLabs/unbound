@@ -43,7 +43,7 @@
 #ifndef ITERATOR_ITER_DELEGPT_H
 #define ITERATOR_ITER_DELEGPT_H
 #include "util/log.h"
-struct region;
+struct regional;
 struct delegpt_ns;
 struct delegpt_addr;
 struct dns_msg;
@@ -110,51 +110,53 @@ struct delegpt_addr {
 
 /**
  * Create new delegation point.
- * @param region: where to allocate it.
+ * @param regional: where to allocate it.
  * @return new delegation point or NULL on error.
  */
-struct delegpt* delegpt_create(struct region* region);
+struct delegpt* delegpt_create(struct regional* regional);
 
 /**
  * Create a copy of a delegation point.
  * @param dp: delegation point to copy.
- * @param region: where to allocate it.
+ * @param regional: where to allocate it.
  * @return new delegation point or NULL on error.
  */
-struct delegpt* delegpt_copy(struct delegpt* dp, struct region* region);
+struct delegpt* delegpt_copy(struct delegpt* dp, struct regional* regional);
 
 /**
  * Set name of delegation point.
  * @param dp: delegation point.
- * @param region: where to allocate the name copy.
+ * @param regional: where to allocate the name copy.
  * @param name: name to use.
  * @return false on error.
  */
-int delegpt_set_name(struct delegpt* dp, struct region* region, uint8_t* name);
+int delegpt_set_name(struct delegpt* dp, struct regional* regional, 
+	uint8_t* name);
 
 /**
  * Add a name to the delegation point.
  * @param dp: delegation point.
- * @param region: where to allocate the info.
+ * @param regional: where to allocate the info.
  * @param name: domain name in wire format.
  * @return false on error.
  */
-int delegpt_add_ns(struct delegpt* dp, struct region* region, uint8_t* name);
+int delegpt_add_ns(struct delegpt* dp, struct regional* regional, 
+	uint8_t* name);
 
 /**
  * Add NS rrset; calls add_ns repeatedly.
  * @param dp: delegation point.
- * @param region: where to allocate the info.
+ * @param regional: where to allocate the info.
  * @param ns_rrset: NS rrset.
  * return 0 on alloc error.
  */
-int delegpt_rrset_add_ns(struct delegpt* dp, struct region* region,
+int delegpt_rrset_add_ns(struct delegpt* dp, struct regional* regional,
 	struct ub_packed_rrset_key* ns_rrset);
 
 /**
  * Add target address to the delegation point.
  * @param dp: delegation point.
- * @param region: where to allocate the info.
+ * @param regional: where to allocate the info.
  * @param name: name for which target was found (must be in nslist).
  *	This name is marked resolved.
  * @param namelen: length of name.
@@ -162,49 +164,49 @@ int delegpt_rrset_add_ns(struct delegpt* dp, struct region* region,
  * @param addrlen: the length of addr.
  * @return false on error.
  */
-int delegpt_add_target(struct delegpt* dp, struct region* region, 
+int delegpt_add_target(struct delegpt* dp, struct regional* regional, 
 	uint8_t* name, size_t namelen, struct sockaddr_storage* addr, 
 	socklen_t addrlen);
 
 /**
  * Add A RRset to delegpt.
  * @param dp: delegation point.
- * @param region: where to allocate the info.
+ * @param regional: where to allocate the info.
  * @param rrset: RRset A to add.
  * @return 0 on alloc error.
  */
-int delegpt_add_rrset_A(struct delegpt* dp, struct region* region, 
+int delegpt_add_rrset_A(struct delegpt* dp, struct regional* regional, 
 	struct ub_packed_rrset_key* rrset);
 
 /**
  * Add AAAA RRset to delegpt.
  * @param dp: delegation point.
- * @param region: where to allocate the info.
+ * @param regional: where to allocate the info.
  * @param rrset: RRset AAAA to add.
  * @return 0 on alloc error.
  */
-int delegpt_add_rrset_AAAA(struct delegpt* dp, struct region* region, 
+int delegpt_add_rrset_AAAA(struct delegpt* dp, struct regional* regional, 
 	struct ub_packed_rrset_key* rrset);
 
 /**
  * Add any RRset to delegpt.
  * @param dp: delegation point.
- * @param region: where to allocate the info.
+ * @param regional: where to allocate the info.
  * @param rrset: RRset to add, NS, A, AAAA.
  * @return 0 on alloc error.
  */
-int delegpt_add_rrset(struct delegpt* dp, struct region* region, 
+int delegpt_add_rrset(struct delegpt* dp, struct regional* regional, 
 	struct ub_packed_rrset_key* rrset);
 
 /**
  * Add address to the delegation point. No servername is associated or checked.
  * @param dp: delegation point.
- * @param region: where to allocate the info.
+ * @param regional: where to allocate the info.
  * @param addr: the address.
  * @param addrlen: the length of addr.
  * @return false on error.
  */
-int delegpt_add_addr(struct delegpt* dp, struct region* region, 
+int delegpt_add_addr(struct delegpt* dp, struct regional* regional, 
 	struct sockaddr_storage* addr, socklen_t addrlen);
 
 /** 
@@ -251,11 +253,11 @@ size_t delegpt_count_missing_targets(struct delegpt* dp);
  * find "glue" in either the ADDITIONAL section or the ANSWER section.
  *
  * @param msg: the dns message, referral.
- * @param region: where to allocate delegation point.
+ * @param regional: where to allocate delegation point.
  * @return new delegation point or NULL on alloc error, or if the
  *         message was not appropriate.
  */
 struct delegpt* delegpt_from_message(struct dns_msg* msg, 
-	struct region* region);
+	struct regional* regional);
 
 #endif /* ITERATOR_ITER_DELEGPT_H */

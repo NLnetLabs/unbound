@@ -44,7 +44,7 @@
 #include "services/cache/rrset.h"
 #include "util/log.h"
 #include "util/net_help.h"
-#include "util/region-allocator.h"
+#include "util/regional.h"
 #include "util/config_file.h"
 #include "util/module.h"
 #include "util/data/msgparse.h"
@@ -224,22 +224,22 @@ synth_cname(uint8_t* qname, size_t qnamelen, struct rrset_parse* dname_rrset,
 /** synthesize a CNAME rrset */
 static struct rrset_parse*
 synth_cname_rrset(uint8_t** sname, size_t* snamelen, uint8_t* alias, 
-	size_t aliaslen, struct region* region, struct msg_parse* msg, 
+	size_t aliaslen, struct regional* region, struct msg_parse* msg, 
 	struct rrset_parse* rrset, struct rrset_parse* prev,
 	struct rrset_parse* nx, ldns_buffer* pkt)
 {
-	struct rrset_parse* cn = (struct rrset_parse*)region_alloc(region,
+	struct rrset_parse* cn = (struct rrset_parse*)regional_alloc(region,
 		sizeof(struct rrset_parse));
 	if(!cn)
 		return NULL;
 	memset(cn, 0, sizeof(*cn));
-	cn->rr_first = (struct rr_parse*)region_alloc(region, 
+	cn->rr_first = (struct rr_parse*)regional_alloc(region, 
 		sizeof(struct rr_parse));
 	if(!cn->rr_first)
 		return NULL;
 	cn->rr_last = cn->rr_first;
 	/* CNAME from sname to alias */
-	cn->dname = (uint8_t*)region_alloc(region, *snamelen);
+	cn->dname = (uint8_t*)regional_alloc(region, *snamelen);
 	if(!cn->dname)
 		return NULL;
 	dname_pkt_copy(pkt, cn->dname, *sname);
@@ -253,7 +253,7 @@ synth_cname_rrset(uint8_t** sname, size_t* snamelen, uint8_t* alias,
 	/* allocate TTL + rdatalen + uncompressed dname */
 	memset(cn->rr_first, 0, sizeof(struct rr_parse));
 	cn->rr_first->outside_packet = 1;
-	cn->rr_first->ttl_data = (uint8_t*)region_alloc(region, 
+	cn->rr_first->ttl_data = (uint8_t*)regional_alloc(region, 
 		sizeof(uint32_t)+sizeof(uint16_t)+aliaslen);
 	if(!cn->rr_first->ttl_data)
 		return NULL;
@@ -312,7 +312,7 @@ pkt_sub(ldns_buffer* pkt, uint8_t* comprname, uint8_t* zone)
  */
 static int
 scrub_normalize(ldns_buffer* pkt, struct msg_parse* msg, 
-	struct query_info* qinfo, struct region* region)
+	struct query_info* qinfo, struct regional* region)
 {
 	uint8_t* sname = qinfo->qname;
 	size_t snamelen = qinfo->qname_len;
@@ -545,7 +545,7 @@ scrub_sanitize(ldns_buffer* pkt, struct msg_parse* msg, uint8_t* zonename,
 
 int 
 scrub_message(ldns_buffer* pkt, struct msg_parse* msg, 
-	struct query_info* qinfo, uint8_t* zonename, struct region* region,
+	struct query_info* qinfo, uint8_t* zonename, struct regional* region,
 	struct module_env* env)
 {
 	/* basic sanity checks */

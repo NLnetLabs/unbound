@@ -45,14 +45,14 @@
 #include "util/rbtree.h"
 struct iter_env;
 struct config_file;
-struct region;
+struct regional;
 
 /**
  * Iterator donotqueryaddresses structure
  */
 struct iter_donotq {
-	/** region for allocation */
-	struct region* region;
+	/** regional for allocation */
+	struct regional* region;
 	/** 
 	 * Tree of the single addresses that are blocked.
 	 * contents of type iter_donotq_addr.

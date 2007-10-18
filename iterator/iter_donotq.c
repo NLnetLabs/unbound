@@ -43,7 +43,7 @@
  */
 #include "config.h"
 #include "iterator/iter_donotq.h"
-#include "util/region-allocator.h"
+#include "util/regional.h"
 #include "util/log.h"
 #include "util/config_file.h"
 #include "util/net_help.h"
@@ -63,7 +63,7 @@ donotq_create()
 		sizeof(struct iter_donotq));
 	if(!dq)
 		return NULL;
-	dq->region = region_create(malloc, free);
+	dq->region = regional_create();
 	if(!dq->region) {
 		donotq_delete(dq);
 		return NULL;
@@ -76,7 +76,7 @@ donotq_delete(struct iter_donotq* dq)
 {
 	if(!dq) 
 		return;
-	region_destroy(dq->region);
+	regional_destroy(dq->region);
 	free(dq->tree);
 	free(dq);
 }
@@ -86,7 +86,7 @@ static int
 donotq_insert(struct iter_donotq* dq, struct sockaddr_storage* addr, 
 	socklen_t addrlen)
 {
-	struct iter_donotq_addr* node = region_alloc(dq->region,
+	struct iter_donotq_addr* node = regional_alloc(dq->region,
 		sizeof(struct iter_donotq_addr));
 	if(!node)
 		return 0;
@@ -151,5 +151,5 @@ size_t
 donotq_get_mem(struct iter_donotq* donotq)
 {
 	if(!donotq) return 0;
-	return sizeof(*donotq) + region_get_mem(donotq->region);
+	return sizeof(*donotq) + regional_get_mem(donotq->region);
 }

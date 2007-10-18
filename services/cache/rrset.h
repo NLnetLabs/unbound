@@ -47,7 +47,7 @@
 struct config_file;
 struct alloc_cache;
 struct rrset_ref;
-struct region;
+struct regional;
 
 /**
  * The rrset cache
@@ -181,7 +181,7 @@ void rrset_array_unlock(struct rrset_ref* ref, size_t count);
  *	duplicate references are allowed and handled.
  * @param count: size of array.
  */
-void rrset_array_unlock_touch(struct rrset_cache* r, struct region* scratch,
+void rrset_array_unlock_touch(struct rrset_cache* r, struct regional* scratch,
 	struct rrset_ref* ref, size_t count);
 
 /**

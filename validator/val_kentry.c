@@ -43,7 +43,7 @@
 #include "util/data/packed_rrset.h"
 #include "util/data/dname.h"
 #include "util/storage/lookup3.h"
-#include "util/region-allocator.h"
+#include "util/regional.h"
 #include "util/net_help.h"
 
 size_t 
@@ -102,13 +102,13 @@ key_entry_hash(struct key_entry_key* kk)
 }
 
 struct key_entry_key* 
-key_entry_copy_toregion(struct key_entry_key* kkey, struct region* region)
+key_entry_copy_toregion(struct key_entry_key* kkey, struct regional* region)
 {
 	struct key_entry_key* newk;
-	newk = region_alloc_init(region, kkey, sizeof(*kkey));
+	newk = regional_alloc_init(region, kkey, sizeof(*kkey));
 	if(!newk)
 		return NULL;
-	newk->name = region_alloc_init(region, kkey->name, kkey->namelen);
+	newk->name = regional_alloc_init(region, kkey->name, kkey->namelen);
 	if(!newk->name)
 		return NULL;
 	newk->entry.key = newk;
@@ -117,12 +117,12 @@ key_entry_copy_toregion(struct key_entry_key* kkey, struct region* region)
 		struct key_entry_data *d = (struct key_entry_data*)
 			kkey->entry.data;
 		struct key_entry_data *newd;
-		newd = region_alloc_init(region, d, sizeof(*d));
+		newd = regional_alloc_init(region, d, sizeof(*d));
 		if(!newd)
 			return NULL;
 		/* copy rrset */
 		if(d->rrset_data) {
-			newd->rrset_data = region_alloc_init(region,
+			newd->rrset_data = regional_alloc_init(region,
 				d->rrset_data, 
 				packed_rrset_sizeof(d->rrset_data));
 			if(!newd->rrset_data)
@@ -201,21 +201,21 @@ key_entry_isbad(struct key_entry_key* kkey)
 
 /** setup key entry in region */
 static int
-key_entry_setup(struct region* region,
+key_entry_setup(struct regional* region,
 	uint8_t* name, size_t namelen, uint16_t dclass, 
 	struct key_entry_key** k, struct key_entry_data** d)
 {
-	*k = region_alloc(region, sizeof(**k));
+	*k = regional_alloc(region, sizeof(**k));
 	if(!*k)
 		return 0;
 	memset(*k, 0, sizeof(**k));
 	(*k)->entry.key = *k;
-	(*k)->name = region_alloc_init(region, name, namelen);
+	(*k)->name = regional_alloc_init(region, name, namelen);
 	if(!(*k)->name)
 		return 0;
 	(*k)->namelen = namelen;
 	(*k)->key_class = dclass;
-	*d = region_alloc(region, sizeof(**d));
+	*d = regional_alloc(region, sizeof(**d));
 	if(!*d)
 		return 0;
 	(*k)->entry.data = *d;
@@ -223,7 +223,7 @@ key_entry_setup(struct region* region,
 }
 
 struct key_entry_key* 
-key_entry_create_null(struct region* region,
+key_entry_create_null(struct regional* region,
 	uint8_t* name, size_t namelen, uint16_t dclass, uint32_t ttl)
 {
 	struct key_entry_key* k;
@@ -238,7 +238,7 @@ key_entry_create_null(struct region* region,
 }
 
 struct key_entry_key* 
-key_entry_create_rrset(struct region* region,
+key_entry_create_rrset(struct regional* region,
 	uint8_t* name, size_t namelen, uint16_t dclass,
 	struct ub_packed_rrset_key* rrset)
 {
@@ -251,7 +251,7 @@ key_entry_create_rrset(struct region* region,
 	d->ttl = rd->ttl + time(NULL);
 	d->isbad = 0;
 	d->rrset_type = ntohs(rrset->rk.type);
-	d->rrset_data = (struct packed_rrset_data*)region_alloc_init(region,
+	d->rrset_data = (struct packed_rrset_data*)regional_alloc_init(region,
 		rd, packed_rrset_sizeof(rd));
 	if(!d->rrset_data)
 		return NULL;
@@ -260,7 +260,7 @@ key_entry_create_rrset(struct region* region,
 }
 
 struct key_entry_key* 
-key_entry_create_bad(struct region* region,
+key_entry_create_bad(struct regional* region,
 	uint8_t* name, size_t namelen, uint16_t dclass)
 {
 	struct key_entry_key* k;
@@ -275,25 +275,25 @@ key_entry_create_bad(struct region* region,
 }
 
 struct ub_packed_rrset_key* 
-key_entry_get_rrset(struct key_entry_key* kkey, struct region* region)
+key_entry_get_rrset(struct key_entry_key* kkey, struct regional* region)
 {
 	struct key_entry_data* d = (struct key_entry_data*)kkey->entry.data;
 	struct ub_packed_rrset_key* rrk;
 	struct packed_rrset_data* rrd;
 	if(!d || !d->rrset_data)
 		return NULL;
-	rrk = region_alloc(region, sizeof(*rrk));
+	rrk = regional_alloc(region, sizeof(*rrk));
 	if(!rrk)
 		return NULL;
 	memset(rrk, 0, sizeof(*rrk));
-	rrk->rk.dname = region_alloc_init(region, kkey->name, kkey->namelen);
+	rrk->rk.dname = regional_alloc_init(region, kkey->name, kkey->namelen);
 	if(!rrk->rk.dname)
 		return NULL;
 	rrk->rk.dname_len = kkey->namelen;
 	rrk->rk.type = htons(d->rrset_type);
 	rrk->rk.rrset_class = htons(kkey->key_class);
 	rrk->entry.key = rrk;
-	rrd = region_alloc_init(region, d->rrset_data, 
+	rrd = regional_alloc_init(region, d->rrset_data, 
 		packed_rrset_sizeof(d->rrset_data));
 	if(!rrd)
 		return NULL;

@@ -126,23 +126,6 @@ fptr_whitelist_serviced_query(comm_point_callback_t *fptr)
 }
 
 int 
-fptr_whitelist_region_allocator(void *(*fptr)(size_t))
-{
-	/* TODO: remove callbacks from new region type */
-	return 1; /* DEBUG for different mem allocs */
-	if(fptr == &malloc) return 1;
-	return 0;
-}
-
-int 
-fptr_whitelist_region_deallocator(void (*fptr)(void*))
-{
-	return 1; /* DEBUG for different mem allocs */
-	if(fptr == &free) return 1;
-	return 0;
-}
-
-int 
 fptr_whitelist_rbtree_cmp(int (*fptr) (const void *, const void *))
 {
 	if(fptr == &mesh_state_compare) return 1;

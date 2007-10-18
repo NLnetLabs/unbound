@@ -44,7 +44,7 @@
 #include "util/data/dname.h"
 #include "util/log.h"
 #include "util/net_help.h"
-#include "util/region-allocator.h"
+#include "util/regional.h"
 #include "util/config_file.h"
 
 int
@@ -69,7 +69,7 @@ anchors_create()
 	struct val_anchors* a = (struct val_anchors*)calloc(1, sizeof(*a));
 	if(!a)
 		return NULL;
-	a->region = region_create(malloc, free);
+	a->region = regional_create();
 	if(!a->region) {
 		free(a);
 		return NULL;
@@ -88,7 +88,7 @@ anchors_delete(struct val_anchors* anchors)
 	if(!anchors)
 		return;
 	free(anchors->tree);
-	region_destroy(anchors->region);
+	regional_destroy(anchors->region);
 	free(anchors);
 }
 
@@ -153,13 +153,13 @@ anchor_new_ta(struct val_anchors* anchors, uint8_t* name, int namelabs,
 	size_t namelen, uint16_t dclass)
 {
 	rbnode_t* r;
-	struct trust_anchor* ta = (struct trust_anchor*)region_alloc(
+	struct trust_anchor* ta = (struct trust_anchor*)regional_alloc(
 		anchors->region, sizeof(struct trust_anchor));
 	if(!ta)
 		return NULL;
 	memset(ta, 0, sizeof(*ta));
 	ta->node.key = ta;
-	ta->name = region_alloc_init(anchors->region, name, namelen);
+	ta->name = regional_alloc_init(anchors->region, name, namelen);
 	if(!ta->name)
 		return NULL;
 	ta->namelabs = namelabs;
@@ -189,12 +189,12 @@ static struct ta_key*
 anchor_new_ta_key(struct val_anchors* anchors, uint8_t* rdata, size_t rdata_len,
 	uint16_t type)
 {
-	struct ta_key* k = (struct ta_key*)region_alloc(anchors->region,
+	struct ta_key* k = (struct ta_key*)regional_alloc(anchors->region,
 		sizeof(*k));
 	if(!k)
 		return NULL;
 	memset(k, 0, sizeof(*k));
-	k->data = region_alloc_init(anchors->region, rdata, rdata_len);
+	k->data = regional_alloc_init(anchors->region, rdata, rdata_len);
 	if(!k->data)
 		return NULL;
 	k->len = rdata_len;
@@ -663,18 +663,18 @@ anchor_read_bind_file(struct val_anchors* anchors, ldns_buffer* buffer,
  * @return rrset or NULL on error.
  */
 static struct ub_packed_rrset_key*
-assemble_it(struct region* region, struct trust_anchor* ta, size_t num, 
+assemble_it(struct regional* region, struct trust_anchor* ta, size_t num, 
 	uint16_t type)
 {
 	struct ub_packed_rrset_key* pkey = (struct ub_packed_rrset_key*)
-		region_alloc(region, sizeof(*pkey));
+		regional_alloc(region, sizeof(*pkey));
 	struct packed_rrset_data* pd;
 	struct ta_key* tk;
 	size_t i;
 	if(!pkey)
 		return NULL;
 	memset(pkey, 0, sizeof(*pkey));
-	pkey->rk.dname = region_alloc_init(region, ta->name, ta->namelen);
+	pkey->rk.dname = regional_alloc_init(region, ta->name, ta->namelen);
 	if(!pkey->rk.dname)
 		return NULL;
 	
@@ -683,19 +683,19 @@ assemble_it(struct region* region, struct trust_anchor* ta, size_t num,
 	pkey->rk.rrset_class = htons(ta->dclass);
 	/* The rrset is build in an uncompressed way. This means it
 	 * cannot be copied in the normal way. */
-	pd = (struct packed_rrset_data*)region_alloc(region, sizeof(*pd));
+	pd = (struct packed_rrset_data*)regional_alloc(region, sizeof(*pd));
 	if(!pd)
 		return NULL;
 	memset(pd, 0, sizeof(*pd));
 	pd->count = num;
 	pd->trust = rrset_trust_ultimate;
-	pd->rr_len = (size_t*)region_alloc(region, num*sizeof(size_t));
+	pd->rr_len = (size_t*)regional_alloc(region, num*sizeof(size_t));
 	if(!pd->rr_len)
 		return NULL;
-	pd->rr_ttl = (uint32_t*)region_alloc(region, num*sizeof(uint32_t));
+	pd->rr_ttl = (uint32_t*)regional_alloc(region, num*sizeof(uint32_t));
 	if(!pd->rr_ttl)
 		return NULL;
-	pd->rr_data = (uint8_t**)region_alloc(region, num*sizeof(uint8_t*));
+	pd->rr_data = (uint8_t**)regional_alloc(region, num*sizeof(uint8_t*));
 	if(!pd->rr_data)
 		return NULL;
 	/* fill in rrs */
@@ -829,5 +829,5 @@ anchors_lookup(struct val_anchors* anchors,
 size_t 
 anchors_get_mem(struct val_anchors* anchors)
 {
-	return sizeof(*anchors) + region_get_mem(anchors->region);
+	return sizeof(*anchors) + regional_get_mem(anchors->region);
 }

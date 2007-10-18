@@ -49,7 +49,7 @@
 #include "util/data/msgreply.h"
 #include "util/data/msgparse.h"
 #include "util/data/dname.h"
-#include "util/region-allocator.h"
+#include "util/regional.h"
 #include "util/alloc.h"
 #include "util/rbtree.h"
 #include "util/net_help.h"
@@ -86,8 +86,8 @@ entry_to_buf(struct entry* e, ldns_buffer* pkt)
 
 /** entry to reply info conversion */
 static void
-entry_to_repinfo(struct entry* e, struct alloc_cache* alloc, struct region* 
-	region, ldns_buffer* pkt, struct query_info* qi, 
+entry_to_repinfo(struct entry* e, struct alloc_cache* alloc, 
+	struct regional* region, ldns_buffer* pkt, struct query_info* qi, 
 	struct reply_info** rep)
 {
 	int ret;
@@ -109,8 +109,8 @@ entry_to_repinfo(struct entry* e, struct alloc_cache* alloc, struct region*
 
 /** extract DNSKEY rrset from answer and convert it */
 static struct ub_packed_rrset_key* 
-extract_keys(struct entry* e, struct alloc_cache* alloc, struct region*
-        region, ldns_buffer* pkt)
+extract_keys(struct entry* e, struct alloc_cache* alloc, 
+	struct regional* region, ldns_buffer* pkt)
 {
 	struct ub_packed_rrset_key* dnskey = NULL;
 	struct query_info qinfo;
@@ -167,15 +167,16 @@ verifytest_rrset(struct module_env* env, struct val_env* ve,
 
 /** verify and test an entry - every rr in the message */
 static void
-verifytest_entry(struct entry* e, struct alloc_cache* alloc, struct region*
-        region, ldns_buffer* pkt, struct ub_packed_rrset_key* dnskey,
-	struct module_env* env, struct val_env* ve)
+verifytest_entry(struct entry* e, struct alloc_cache* alloc, 
+	struct regional* region, ldns_buffer* pkt, 
+	struct ub_packed_rrset_key* dnskey, struct module_env* env, 
+	struct val_env* ve)
 {
 	struct query_info qinfo;
 	struct reply_info* rep = NULL;
 	size_t i;
 
-	region_free_all(region);
+	regional_free_all(region);
 	if(vsig) {
 		printf("verifying pkt:\n");
 		ldns_pkt_print(stdout, e->reply_list->reply);
@@ -205,15 +206,15 @@ find_rrset_type(struct reply_info* rep, uint16_t type)
 
 /** DS sig test an entry - get DNSKEY and DS in entry and verify */
 static void
-dstest_entry(struct entry* e, struct alloc_cache* alloc, struct region*
-        region, ldns_buffer* pkt, struct module_env* env)
+dstest_entry(struct entry* e, struct alloc_cache* alloc, 
+	struct regional* region, ldns_buffer* pkt, struct module_env* env)
 {
 	struct query_info qinfo;
 	struct reply_info* rep = NULL;
 	struct ub_packed_rrset_key* ds, *dnskey;
 	int ret;
 
-	region_free_all(region);
+	regional_free_all(region);
 	if(vsig) {
 		printf("verifying DS-DNSKEY match:\n");
 		ldns_pkt_print(stdout, e->reply_list->reply);
@@ -255,7 +256,7 @@ verifytest_file(const char* fname, const char* at_date)
 	 * The answer rrset is the keyset that will be used for verification
 	 */
 	struct ub_packed_rrset_key* dnskey;
-	struct region* region = region_create(malloc, free);
+	struct regional* region = regional_create();
 	struct alloc_cache alloc;
 	ldns_buffer* buf = ldns_buffer_new(65535);
 	struct entry* e;
@@ -282,7 +283,7 @@ verifytest_file(const char* fname, const char* at_date)
 	}
 
 	delete_entry(list);
-	region_destroy(region);
+	regional_destroy(region);
 	alloc_clear(&alloc);
 	ldns_buffer_free(buf);
 }
@@ -296,7 +297,7 @@ dstest_file(const char* fname)
 	 * The first entry must be a query for DNSKEY.
 	 * The answer rrset is the keyset that will be used for verification
 	 */
-	struct region* region = region_create(malloc, free);
+	struct regional* region = regional_create();
 	struct alloc_cache alloc;
 	ldns_buffer* buf = ldns_buffer_new(65535);
 	struct entry* e;
@@ -317,7 +318,7 @@ dstest_file(const char* fname)
 	}
 
 	delete_entry(list);
-	region_destroy(region);
+	regional_destroy(region);
 	alloc_clear(&alloc);
 	ldns_buffer_free(buf);
 }
@@ -374,7 +375,7 @@ nsectest()
 /** Test hash algo - NSEC3 hash it and compare result */
 static void
 nsec3_hash_test_entry(struct entry* e, rbtree_t* ct,
-	struct alloc_cache* alloc, struct region* region, 
+	struct alloc_cache* alloc, struct regional* region, 
 	ldns_buffer* buf)
 {
 	struct query_info qinfo;
@@ -392,7 +393,7 @@ nsec3_hash_test_entry(struct entry* e, rbtree_t* ct,
 	entry_to_repinfo(e, alloc, region, buf, &qinfo, &rep);
 	nsec3 = find_rrset_type(rep, LDNS_RR_TYPE_NSEC3);
 	answer = find_rrset_type(rep, LDNS_RR_TYPE_AAAA);
-	qname = region_alloc_init(region, qinfo.qname, qinfo.qname_len);
+	qname = regional_alloc_init(region, qinfo.qname, qinfo.qname_len);
 	/* check test is OK */
 	unit_assert(nsec3 && answer && qname);
 
@@ -429,7 +430,7 @@ nsec3_hash_test(const char* fname)
 	 * The test does not perform canonicalization during the compare.
 	 */
 	rbtree_t ct;
-	struct region* region = region_create(malloc, free);
+	struct regional* region = regional_create();
 	struct alloc_cache alloc;
 	ldns_buffer* buf = ldns_buffer_new(65535);
 	struct entry* e;
@@ -447,7 +448,7 @@ nsec3_hash_test(const char* fname)
 	}
 
 	delete_entry(list);
-	region_destroy(region);
+	regional_destroy(region);
 	alloc_clear(&alloc);
 	ldns_buffer_free(buf);
 }

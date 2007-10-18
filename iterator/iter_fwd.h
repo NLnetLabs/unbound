@@ -46,14 +46,14 @@
 struct iter_env;
 struct config_file;
 struct delegpt;
-struct region;
+struct regional;
 
 /**
  * Iterator forward zones structure
  */
 struct iter_forwards {
-	/** region where forward zone server addresses are allocated */
-	struct region* region;
+	/** regional where forward zone server addresses are allocated */
+	struct regional* region;
 	/** 
 	 * Zones are stored in this tree. Sort order is specially chosen.
 	 * first sorted on qtype. Then on dname in nsec-like order, so that

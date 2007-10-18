@@ -42,7 +42,7 @@
 #include "config.h"
 #include "iterator/iter_fwd.h"
 #include "iterator/iter_delegpt.h"
-#include "util/region-allocator.h"
+#include "util/regional.h"
 #include "util/log.h"
 #include "util/config_file.h"
 #include "util/net_help.h"
@@ -70,7 +70,7 @@ forwards_create()
 		sizeof(struct iter_forwards));
 	if(!fwd)
 		return NULL;
-	fwd->region = region_create(malloc, free);
+	fwd->region = regional_create();
 	if(!fwd->region) {
 		forwards_delete(fwd);
 		return NULL;
@@ -83,7 +83,7 @@ forwards_delete(struct iter_forwards* fwd)
 {
 	if(!fwd) 
 		return;
-	region_destroy(fwd->region);
+	regional_destroy(fwd->region);
 	free(fwd->tree);
 	free(fwd);
 }
@@ -92,13 +92,13 @@ forwards_delete(struct iter_forwards* fwd)
 static int
 forwards_insert(struct iter_forwards* fwd, uint16_t c, struct delegpt* dp)
 {
-	struct iter_forward_zone* node = region_alloc(fwd->region,
+	struct iter_forward_zone* node = regional_alloc(fwd->region,
 		sizeof(struct iter_forward_zone));
 	if(!node)
 		return 0;
 	node->node.key = node;
 	node->dclass = c;
-	node->name = region_alloc_init(fwd->region, dp->name, dp->namelen);
+	node->name = regional_alloc_init(fwd->region, dp->name, dp->namelen);
 	if(!node->name)
 		return 0;
 	node->namelen = dp->namelen;
@@ -288,5 +288,5 @@ forwards_get_mem(struct iter_forwards* fwd)
 {
 	if(!fwd)
 		return 0;
-	return sizeof(*fwd) + region_get_mem(fwd->region);
+	return sizeof(*fwd) + regional_get_mem(fwd->region);
 }

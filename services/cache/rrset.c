@@ -44,7 +44,7 @@
 #include "util/config_file.h"
 #include "util/data/packed_rrset.h"
 #include "util/data/msgreply.h"
-#include "util/region-allocator.h"
+#include "util/regional.h"
 #include "util/alloc.h"
 
 struct rrset_cache* rrset_cache_create(struct config_file* cfg, 
@@ -287,12 +287,12 @@ rrset_array_unlock(struct rrset_ref* ref, size_t count)
 }
 
 void 
-rrset_array_unlock_touch(struct rrset_cache* r, struct region* scratch,         
+rrset_array_unlock_touch(struct rrset_cache* r, struct regional* scratch,
 	struct rrset_ref* ref, size_t count)
 {
 	hashvalue_t* h;
 	size_t i;
-	if(!(h = (hashvalue_t*)region_alloc(scratch, 
+	if(!(h = (hashvalue_t*)regional_alloc(scratch, 
 		sizeof(hashvalue_t)*count)))
 		log_warn("rrset LRU: memory allocation failed");
 	else 	/* store hash values */

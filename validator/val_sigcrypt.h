@@ -48,7 +48,7 @@ struct module_env;
 struct ub_packed_rrset_key;
 enum sec_status;
 struct rbtree_t;
-struct region;
+struct regional;
 
 /** 
  * Check if dnskey matches a DS digest 
@@ -194,7 +194,7 @@ enum sec_status dnskeyset_verify_rrset_sig(struct module_env* env,
  * @return secure if this key signs this signature. unchecked on error or 
  *	bogus if it did not validate.
  */
-enum sec_status dnskey_verify_rrset_sig(struct region* region, 
+enum sec_status dnskey_verify_rrset_sig(struct regional* region, 
 	ldns_buffer* buf, struct val_env* ve, 
 	struct ub_packed_rrset_key* rrset, struct ub_packed_rrset_key* dnskey, 
 	size_t dnskey_idx, size_t sig_idx,

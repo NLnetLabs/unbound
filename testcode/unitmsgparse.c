@@ -45,7 +45,7 @@
 #include "util/data/msgreply.h"
 #include "util/data/msgencode.h"
 #include "util/alloc.h"
-#include "util/region-allocator.h"
+#include "util/regional.h"
 #include "util/net_help.h"
 #include "testcode/readhex.h"
 
@@ -258,7 +258,7 @@ testpkt(ldns_buffer* pkt, struct alloc_cache* alloc, ldns_buffer* out,
 	uint16_t id;
 	uint16_t flags;
 	uint32_t timenow = 0;
-	region_type *region = region_create(malloc, free);
+	struct regional* region = regional_create();
 	struct edns_data edns;
 
 	hex_to_buf(pkt, hex);
@@ -307,7 +307,7 @@ testpkt(ldns_buffer* pkt, struct alloc_cache* alloc, ldns_buffer* out,
 
 	query_info_clear(&qi);
 	reply_info_parsedelete(rep, alloc);
-	region_destroy(region);
+	regional_destroy(region);
 }
 
 /** simple test of parsing */

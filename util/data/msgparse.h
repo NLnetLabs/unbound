@@ -65,7 +65,7 @@
 #include "util/storage/lruhash.h"
 struct rrset_parse;
 struct rr_parse;
-struct region;
+struct regional;
 
 /** number of buckets in parse rrset hash table. Must be power of 2. */
 #define PARSE_TABLE_SIZE 1024
@@ -227,7 +227,7 @@ size_t get_rdf_size(ldns_rdf_type rdf);
  * @return: 0 if OK, or rcode on error.
  */
 int parse_packet(ldns_buffer* pkt, struct msg_parse* msg, 
-	struct region* region);
+	struct regional* region);
 
 /**
  * After parsing the packet, extract EDNS data from packet.

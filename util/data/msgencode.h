@@ -44,7 +44,7 @@
 #define UTIL_DATA_MSGENCODE_H
 struct query_info;
 struct reply_info;
-struct region;
+struct regional;
 struct edns_data;
 
 /** 
@@ -67,7 +67,7 @@ struct edns_data;
  */
 int reply_info_answer_encode(struct query_info* qinf, struct reply_info* rep, 
 	uint16_t id, uint16_t qflags, ldns_buffer* dest, uint32_t timenow,
-	int cached, struct region* region, uint16_t udpsize, 
+	int cached, struct regional* region, uint16_t udpsize, 
 	struct edns_data* edns, int dnssec, int secure);
 
 /**
@@ -89,7 +89,7 @@ int reply_info_answer_encode(struct query_info* qinf, struct reply_info* rep,
  */
 int reply_info_encode(struct query_info* qinfo, struct reply_info* rep, 
 	uint16_t id, uint16_t flags, ldns_buffer* buffer, uint32_t timenow, 
-	struct region* region, uint16_t udpsize, int dnssec);
+	struct regional* region, uint16_t udpsize, int dnssec);
 
 /**
  * Encode query packet. Assumes the buffer is large enough.

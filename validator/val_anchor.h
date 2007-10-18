@@ -42,7 +42,7 @@
 #ifndef VALIDATOR_VAL_ANCHOR_H
 #define VALIDATOR_VAL_ANCHOR_H
 #include "util/rbtree.h"
-struct region;
+struct regional;
 struct trust_anchor;
 struct config_file;
 struct ub_packed_rrset_key;
@@ -52,7 +52,7 @@ struct ub_packed_rrset_key;
  */
 struct val_anchors {
 	/** region where trust anchors are allocated */
-	struct region* region;
+	struct regional* region;
 	/**
 	 * Anchors are store in this tree. Sort order is chosen, so that
 	 * dnames are in nsec-like order. A lookup on class, name will return

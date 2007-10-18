@@ -116,22 +116,6 @@ int fptr_whitelist_pending_tcp(comm_point_callback_t *fptr);
 int fptr_whitelist_serviced_query(comm_point_callback_t *fptr);
 
 /**
- * Check function pointer whitelist for region allocator callback values.
- *
- * @param fptr: function pointer to check.
- * @return false if not in whitelist.
- */
-int fptr_whitelist_region_allocator(void *(*fptr)(size_t));
-
-/**
- * Check function pointer whitelist for region deallocator callback values.
- *
- * @param fptr: function pointer to check.
- * @return false if not in whitelist.
- */
-int fptr_whitelist_region_deallocator(void (*fptr)(void*));
-
-/**
  * Check function pointer whitelist for rbtree cmp callback values.
  *
  * @param fptr: function pointer to check.

@@ -37,7 +37,7 @@
 
 /**
  * \file
- * Region allocator. Allocates small portions of of larger chunks.
+ * Regional allocator. Allocates small portions of of larger chunks.
  */
 
 #include "config.h"
@@ -60,28 +60,27 @@
 struct regional* 
 regional_create()
 {
-	void *block = malloc(REGIONAL_CHUNK_SIZE);
-	if(!block) return NULL;
-	return regional_create_custom(block, REGIONAL_CHUNK_SIZE);
+	return regional_create_custom(REGIONAL_CHUNK_SIZE);
 }
 
 /** init regional struct with first block */
 static void
 regional_init(struct regional* r)
 {
+	size_t a = ALIGN_UP(sizeof(struct regional), ALIGNMENT);
+	r->data = (char*)r + a;
+	r->available = r->first_size - a;
 	r->next = NULL;
-	r->size = r->first_size;
-	r->allocated = ALIGN_UP(sizeof(struct regional), ALIGNMENT);
-	r->data = (char*)r;
-	r->total_large = 0;
 	r->large_list = NULL;
+	r->total_large = 0;
 }
 
 struct regional* 
-regional_create_custom(void* block, size_t size)
+regional_create_custom(size_t size)
 {
-	struct regional* r = (struct regional*)block;
+	struct regional* r = (struct regional*)malloc(size);
 	log_assert(sizeof(struct regional) <= size);
+	if(!r) return NULL;
 	r->first_size = size;
 	regional_init(r);
 	return r;
@@ -108,6 +107,7 @@ regional_free_all(struct regional *r)
 void 
 regional_destroy(struct regional *r)
 {
+	if(!r) return;
 	regional_free_all(r);
 	free(r);
 }
@@ -127,17 +127,18 @@ regional_alloc(struct regional *r, size_t size)
 		return s+ALIGNMENT;
 	}
 	/* create a new chunk */
-	if(r->allocated + a > r->size) {
+	if(a > r->available) {
 		s = malloc(REGIONAL_CHUNK_SIZE);
 		if(!s) return NULL;
-		*(char**)s = r->data;
-		r->data = s;
-		r->allocated = ALIGNMENT;
-		r->size = REGIONAL_CHUNK_SIZE;
+		*(char**)s = r->next;
+		r->next = (char*)s;
+		r->data = (char*)s + ALIGNMENT;
+		r->available = REGIONAL_CHUNK_SIZE - ALIGNMENT;
 	}
 	/* put in this chunk */
-	s = r->data + r->allocated;
-	r->allocated += a;
+	r->available -= a;
+	s = r->data;
+	r->data += a;
 	return s;
 }
 
@@ -145,8 +146,7 @@ void *
 regional_alloc_init(struct regional* r, const void *init, size_t size)
 {
 	void *s = regional_alloc(r, size);
-	if(!s)
-		return NULL;
+	if(!s) return NULL;
 	memcpy(s, init, size);
 	return s;
 }
@@ -155,8 +155,7 @@ void *
 regional_alloc_zero(struct regional *r, size_t size)
 {
 	void *s = regional_alloc(r, size);
-	if(!s)
-		return NULL;
+	if(!s) return NULL;
 	memset(s, 0, size);
 	return s;
 }
@@ -164,7 +163,7 @@ regional_alloc_zero(struct regional *r, size_t size)
 char *
 regional_strdup(struct regional *r, const char *string)
 {
-	return regional_alloc_init(r, string, strlen(string)+1);
+	return (char*)regional_alloc_init(r, string, strlen(string)+1);
 }
 
 /**
@@ -201,6 +200,12 @@ count_large(struct regional* r)
 void 
 regional_log_stats(struct regional *r)
 {
+	/* some basic assertions put here (non time critical code) */
+	log_assert(ALIGNMENT >= sizeof(char*));
+	log_assert(REGIONAL_CHUNK_SIZE > ALIGNMENT);
+	log_assert(REGIONAL_CHUNK_SIZE-ALIGNMENT > REGIONAL_LARGE_OBJECT_SIZE);
+	log_assert(REGIONAL_CHUNK_SIZE >= sizeof(struct regional));
+	/* debug print */
 	log_info("regional %u chunks, %u large",
 		(unsigned)count_chunks(r), (unsigned)count_large(r));
 }

@@ -53,7 +53,7 @@
 #include "util/module.h"
 #include "util/log.h"
 #include "util/config_file.h"
-#include "util/region-allocator.h"
+#include "util/regional.h"
 #include "util/data/msgparse.h"
 #include "util/data/dname.h"
 #include "util/random.h"
@@ -243,9 +243,10 @@ iter_server_selection(struct iter_env* iter_env,
 }
 
 struct dns_msg* 
-dns_alloc_msg(ldns_buffer* pkt, struct msg_parse* msg, struct region* region)
+dns_alloc_msg(ldns_buffer* pkt, struct msg_parse* msg, 
+	struct regional* region)
 {
-	struct dns_msg* m = (struct dns_msg*)region_alloc(region,
+	struct dns_msg* m = (struct dns_msg*)regional_alloc(region,
 		sizeof(struct dns_msg));
 	if(!m)
 		return NULL;
@@ -258,14 +259,14 @@ dns_alloc_msg(ldns_buffer* pkt, struct msg_parse* msg, struct region* region)
 }
 
 struct dns_msg* 
-dns_copy_msg(struct dns_msg* from, struct region* region)
+dns_copy_msg(struct dns_msg* from, struct regional* region)
 {
-	struct dns_msg* m = (struct dns_msg*)region_alloc(region,
+	struct dns_msg* m = (struct dns_msg*)regional_alloc(region,
 		sizeof(struct dns_msg));
 	if(!m)
 		return NULL;
 	m->qinfo = from->qinfo;
-	if(!(m->qinfo.qname = region_alloc_init(region, from->qinfo.qname,
+	if(!(m->qinfo.qname = regional_alloc_init(region, from->qinfo.qname,
 		from->qinfo.qname_len)))
 		return NULL;
 	if(!(m->rep = reply_info_copy(from->rep, NULL, region)))

@@ -49,7 +49,7 @@
 #include "util/rbtree.h"
 #include "util/module.h"
 #include "util/net_help.h"
-#include "util/region-allocator.h"
+#include "util/regional.h"
 
 #ifndef HAVE_SSL
 #error "Need SSL library to do digital signature cryptography"
@@ -342,7 +342,7 @@ int ds_digest_match_dnskey(struct module_env* env,
 		return 0; /* DS algorithm and digest do not match */
 	}
 
-	digest = region_alloc(env->scratch, digestlen);
+	digest = regional_alloc(env->scratch, digestlen);
 	if(!digest) {
 		verbose(VERB_DETAIL, "DS fail: out of memory");
 		return 0; /* mem error */
@@ -1007,7 +1007,7 @@ canonicalize_rdata(ldns_buffer* buf, struct ub_packed_rrset_key* rrset,
  * @return false on alloc error.
  */
 static int
-rrset_canonical(struct region* region, ldns_buffer* buf, 
+rrset_canonical(struct regional* region, ldns_buffer* buf, 
 	struct ub_packed_rrset_key* k, uint8_t* sig, size_t siglen,
 	struct rbtree_t** sortree)
 {
@@ -1018,11 +1018,11 @@ rrset_canonical(struct region* region, ldns_buffer* buf,
 	struct canon_rr* rrs;
 
 	if(!*sortree) {
-		*sortree = (struct rbtree_t*)region_alloc(region, 
+		*sortree = (struct rbtree_t*)regional_alloc(region, 
 			sizeof(rbtree_t));
 		if(!*sortree)
 			return 0;
-		rrs = region_alloc(region, sizeof(struct canon_rr)*d->count);
+		rrs = regional_alloc(region, sizeof(struct canon_rr)*d->count);
 		if(!rrs) {
 			*sortree = NULL;
 			return 0;
@@ -1272,7 +1272,7 @@ verify_canonrrset(ldns_buffer* buf, int algo, unsigned char* sigblock,
 }
 
 enum sec_status 
-dnskey_verify_rrset_sig(struct region* region, ldns_buffer* buf, 
+dnskey_verify_rrset_sig(struct regional* region, ldns_buffer* buf, 
 	struct val_env* ve,
         struct ub_packed_rrset_key* rrset, struct ub_packed_rrset_key* dnskey,
         size_t dnskey_idx, size_t sig_idx,

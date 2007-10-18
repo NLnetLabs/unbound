@@ -47,7 +47,7 @@ struct config_file;
 struct module_env;
 struct delegpt_addr;
 struct delegpt;
-struct region;
+struct regional;
 struct msg_parse;
 struct ub_randstate;
 struct query_info;
@@ -81,22 +81,22 @@ struct delegpt_addr* iter_server_selection(struct iter_env* iter_env,
 	size_t namelen);
 
 /**
- * Allocate dns_msg from parsed msg, in region.
+ * Allocate dns_msg from parsed msg, in regional.
  * @param pkt: packet.
- * @param msg: parsed message (cleaned and ready for region allocation).
- * @param region: region to use for allocation.
+ * @param msg: parsed message (cleaned and ready for regional allocation).
+ * @param regional: regional to use for allocation.
  * @return newly allocated dns_msg, or NULL on memory error.
  */
 struct dns_msg* dns_alloc_msg(ldns_buffer* pkt, struct msg_parse* msg, 
-	struct region* region);
+	struct regional* regional);
 
 /**
- * Copy a dns_msg to this region.
- * @param from: dns message, also in region.
- * @param region: region to use for allocation.
+ * Copy a dns_msg to this regional.
+ * @param from: dns message, also in regional.
+ * @param regional: regional to use for allocation.
  * @return newly allocated dns_msg, or NULL on memory error.
  */
-struct dns_msg* dns_copy_msg(struct dns_msg* from, struct region* region);
+struct dns_msg* dns_copy_msg(struct dns_msg* from, struct regional* regional);
 
 /**
  * Allocate a dns_msg with malloc/alloc structure and store in dns cache.

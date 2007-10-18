@@ -44,7 +44,7 @@
 #include "validator/val_nsec3.h"
 #include "validator/validator.h"
 #include "validator/val_kentry.h"
-#include "util/region-allocator.h"
+#include "util/regional.h"
 #include "util/rbtree.h"
 #include "util/module.h"
 #include "util/net_help.h"
@@ -484,7 +484,7 @@ nsec3_hash_cmp(const void* c1, const void* c2)
 
 /** perform hash of name */
 static int
-nsec3_calc_hash(struct region* region, ldns_buffer* buf, 
+nsec3_calc_hash(struct regional* region, ldns_buffer* buf, 
 	struct nsec3_cached_hash* c)
 {
 	int algo = nsec3_get_algo(c->nsec3, c->rr);
@@ -503,7 +503,8 @@ nsec3_calc_hash(struct region* region, ldns_buffer* buf,
 #ifdef SHA_DIGEST_LENGTH
 		case NSEC3_HASH_SHA1:
 			c->hash_len = SHA_DIGEST_LENGTH;
-			c->hash = (uint8_t*)region_alloc(region, c->hash_len);
+			c->hash = (uint8_t*)regional_alloc(region, 
+				c->hash_len);
 			if(!c->hash)
 				return 0;
 			(void)SHA1((unsigned char*)ldns_buffer_begin(buf),
@@ -530,7 +531,7 @@ nsec3_calc_hash(struct region* region, ldns_buffer* buf,
 
 /** perform b32 encoding of hash */
 static int
-nsec3_calc_b32(struct region* region, ldns_buffer* buf, 
+nsec3_calc_b32(struct regional* region, ldns_buffer* buf, 
 	struct nsec3_cached_hash* c)
 {
 	int r;
@@ -542,14 +543,15 @@ nsec3_calc_b32(struct region* region, ldns_buffer* buf,
 		return 0;
 	}
 	c->b32_len = (size_t)r;
-	c->b32 = region_alloc_init(region, ldns_buffer_begin(buf), c->b32_len);
+	c->b32 = regional_alloc_init(region, ldns_buffer_begin(buf), 
+		c->b32_len);
 	if(!c->b32)
 		return 0;
 	return 1;
 }
 
 int
-nsec3_hash_name(rbtree_t* table, struct region* region, ldns_buffer* buf,
+nsec3_hash_name(rbtree_t* table, struct regional* region, ldns_buffer* buf,
 	struct ub_packed_rrset_key* nsec3, int rr, uint8_t* dname, 
 	size_t dname_len, struct nsec3_cached_hash** hash)
 {
@@ -569,7 +571,7 @@ nsec3_hash_name(rbtree_t* table, struct region* region, ldns_buffer* buf,
 		return 1;
 	}
 	/* create a new entry */
-	c = (struct nsec3_cached_hash*)region_alloc(region, sizeof(*c));
+	c = (struct nsec3_cached_hash*)regional_alloc(region, sizeof(*c));
 	if(!c) return 0;
 	c->node.key = c;
 	c->nsec3 = nsec3;
@@ -920,13 +922,13 @@ nsec3_prove_closest_encloser(struct module_env* env, struct nsec3_filter* flt,
 
 /** allocate a wildcard for the closest encloser */
 static uint8_t*
-nsec3_ce_wildcard(struct region* region, uint8_t* ce, size_t celen,
+nsec3_ce_wildcard(struct regional* region, uint8_t* ce, size_t celen,
 	size_t* len)
 {
 	uint8_t* nm;
 	if(celen > LDNS_MAX_DOMAINLEN - 2)
 		return 0; /* too long */
-	nm = (uint8_t*)region_alloc(region, celen+2);
+	nm = (uint8_t*)regional_alloc(region, celen+2);
 	if(!nm) {
 		log_err("nsec3 wildcard: out of memory");
 		return 0; /* alloc failure */

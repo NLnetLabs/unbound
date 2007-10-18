@@ -52,7 +52,7 @@
 #include "util/module.h"
 #include "util/log.h"
 #include "util/net_help.h"
-#include "util/region-allocator.h"
+#include "util/regional.h"
 #include "util/config_file.h"
 #include "util/fptr_wlist.h"
 
@@ -171,7 +171,7 @@ val_deinit(struct module_env* env, int id)
 static struct val_qstate*
 val_new(struct module_qstate* qstate, int id)
 {
-	struct val_qstate* vq = (struct val_qstate*)region_alloc(
+	struct val_qstate* vq = (struct val_qstate*)regional_alloc(
 		qstate->region, sizeof(*vq));
 	log_assert(!qstate->minfo[id]);
 	if(!vq)
@@ -182,12 +182,12 @@ val_new(struct module_qstate* qstate, int id)
 	if(!qstate->return_msg || qstate->return_rcode != LDNS_RCODE_NOERROR) {
 		/* create a message to verify */
 		verbose(VERB_ALGO, "constructing reply for validation");
-		vq->orig_msg = (struct dns_msg*)region_alloc(qstate->region,
+		vq->orig_msg = (struct dns_msg*)regional_alloc(qstate->region,
 			sizeof(struct dns_msg));
 		if(!vq->orig_msg)
 			return NULL;
 		vq->orig_msg->qinfo = qstate->qinfo;
-		vq->orig_msg->rep = (struct reply_info*)region_alloc(
+		vq->orig_msg->rep = (struct reply_info*)regional_alloc(
 			qstate->region, sizeof(struct reply_info));
 		if(!vq->orig_msg->rep)
 			return NULL;
@@ -200,11 +200,12 @@ val_new(struct module_qstate* qstate, int id)
 	}
 	vq->qchase = qstate->qinfo;
 	/* chase reply will be an edited (sub)set of the orig msg rrset ptrs */
-	vq->chase_reply = region_alloc_init(qstate->region, vq->orig_msg->rep,
+	vq->chase_reply = regional_alloc_init(qstate->region, 
+		vq->orig_msg->rep, 
 		sizeof(struct reply_info) - sizeof(struct rrset_ref));
 	if(!vq->chase_reply)
 		return NULL;
-	vq->chase_reply->rrsets = region_alloc_init(qstate->region,
+	vq->chase_reply->rrsets = regional_alloc_init(qstate->region,
 		vq->orig_msg->rep->rrsets, sizeof(struct ub_packed_rrset_key*)
 			* vq->orig_msg->rep->rrset_count);
 	if(!vq->chase_reply->rrsets)
@@ -1907,7 +1908,7 @@ process_ds_response(struct module_qstate* qstate, struct val_qstate* vq,
 			return;
 	}
 	if(dske == NULL) {
-		vq->empty_DS_name = region_alloc_init(qstate->region,
+		vq->empty_DS_name = regional_alloc_init(qstate->region,
 			qinfo->qname, qinfo->qname_len);
 		if(!vq->empty_DS_name) {
 			log_err("malloc failure in empty_DS_name");

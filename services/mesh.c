@@ -49,7 +49,7 @@
 #include "util/log.h"
 #include "util/net_help.h"
 #include "util/module.h"
-#include "util/region-allocator.h"
+#include "util/regional.h"
 #include "util/data/msgencode.h"
 #include "util/timehist.h"
 #include "util/fptr_wlist.h"
@@ -195,15 +195,15 @@ struct mesh_state*
 mesh_state_create(struct module_env* env, struct query_info* qinfo, 
 	uint16_t qflags, int prime)
 {
-	region_type* region = region_create(malloc, free);
+	struct regional* region = regional_create();
 	struct mesh_state* mstate;
 	int i;
 	if(!region)
 		return NULL;
-	mstate = (struct mesh_state*)region_alloc(region, 
+	mstate = (struct mesh_state*)regional_alloc(region, 
 		sizeof(struct mesh_state));
 	if(!mstate) {
-		region_destroy(region);
+		regional_destroy(region);
 		return NULL;
 	}
 	memset(mstate, 0, sizeof(*mstate));
@@ -219,10 +219,10 @@ mesh_state_create(struct module_env* env, struct query_info* qinfo,
 	mstate->s.qinfo.qtype = qinfo->qtype;
 	mstate->s.qinfo.qclass = qinfo->qclass;
 	mstate->s.qinfo.qname_len = qinfo->qname_len;
-	mstate->s.qinfo.qname = region_alloc_init(region, qinfo->qname,
+	mstate->s.qinfo.qname = regional_alloc_init(region, qinfo->qname,
 		qinfo->qname_len);
 	if(!mstate->s.qinfo.qname) {
-		region_destroy(region);
+		regional_destroy(region);
 		return NULL;
 	}
 	/* remove all weird bits from qflags */
@@ -258,7 +258,7 @@ mesh_state_cleanup(struct mesh_state* mstate)
 		mstate->s.minfo[i] = NULL;
 		mstate->s.ext_state[i] = module_finished;
 	}
-	region_destroy(mstate->s.region);
+	regional_destroy(mstate->s.region);
 }
 
 void 
@@ -349,9 +349,9 @@ int mesh_state_attachment(struct mesh_state* super, struct mesh_state* sub)
 	struct rbnode_t* n;
 	struct mesh_state_ref* subref; /* points to sub, inserted in super */
 	struct mesh_state_ref* superref; /* points to super, inserted in sub */
-	if( !(subref = region_alloc(super->s.region,
+	if( !(subref = regional_alloc(super->s.region,
 		sizeof(struct mesh_state_ref))) ||
-		!(superref = region_alloc(sub->s.region,
+		!(superref = regional_alloc(sub->s.region,
 		sizeof(struct mesh_state_ref))) ) {
 		log_err("mesh_state_attachment: out of memory");
 		return 0;
@@ -516,7 +516,7 @@ struct mesh_state* mesh_area_find(struct mesh_area* mesh,
 int mesh_state_add_reply(struct mesh_state* s, struct edns_data* edns,
         struct comm_reply* rep, uint16_t qid, uint16_t qflags)
 {
-	struct mesh_reply* r = region_alloc(s->s.region, 
+	struct mesh_reply* r = regional_alloc(s->s.region, 
 		sizeof(struct mesh_reply));
 	if(!r)
 		return 0;
@@ -607,7 +607,7 @@ void mesh_run(struct mesh_area* mesh, struct mesh_state* mstate,
 
 		/* examine results */
 		mstate->s.reply = NULL;
-		region_free_all(mstate->s.env->scratch);
+		regional_free_all(mstate->s.env->scratch);
 		s = mstate->s.ext_state[mstate->s.curmod];
 		verbose(VERB_ALGO, "mesh_run: %s module exit state is %s", 
 			mesh->modfunc[mstate->s.curmod]->name, strextstate(s));
@@ -675,7 +675,7 @@ mesh_get_mem(struct mesh_area* mesh)
 		sizeof(struct th_buck)*mesh->histogram->num;
 	RBTREE_FOR(m, struct mesh_state*, &mesh->all) {
 		/* all, including m itself allocated in qstate region */
-		s += region_get_mem(m->s.region);
+		s += regional_get_mem(m->s.region);
 	}
 	return s;
 }

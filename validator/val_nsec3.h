@@ -68,7 +68,7 @@
 #define VALIDATOR_VAL_NSEC3_H
 #include "util/rbtree.h"
 struct val_env;
-struct region;
+struct regional;
 struct module_env;
 struct ub_packed_rrset_key;
 enum sec_status;
@@ -266,7 +266,7 @@ int nsec3_hash_cmp(const void* c1, const void* c2);
  * 	0 on a malloc failure.
  * 	-1 if the NSEC3 rr was badly formatted (i.e. formerr).
  */
-int nsec3_hash_name(rbtree_t* table, struct region* region, ldns_buffer* buf,
+int nsec3_hash_name(rbtree_t* table, struct regional* region, ldns_buffer* buf,
 	struct ub_packed_rrset_key* nsec3, int rr, uint8_t* dname, 
 	size_t dname_len, struct nsec3_cached_hash** hash);
 
