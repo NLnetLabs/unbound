@@ -495,7 +495,8 @@ EXCLUDE                = ./build \
                          util/configparser.c \
                          util/configparser.h \
                          util/configlexer.c \
-                         util/locks.h
+                         util/locks.h \
+			 ./ldns-src
 
 # The EXCLUDE_SYMLINKS tag can be used select whether or not files or 
 # directories that are symbolic links (a Unix filesystem feature) are excluded 

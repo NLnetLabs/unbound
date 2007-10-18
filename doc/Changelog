@@ -10,6 +10,7 @@
 	  make download_ldns refreshes the tarball with ldns svn trunk.
 	- ldns-src.tar.gz is used if no ldns is found on the system, and
 	  statically linked into unbound.
+	- start of regional allocator code.
 
 17 October 2007: Wouter
 	- fixup another cycle detect and ns-addr timeout resolution bug.
