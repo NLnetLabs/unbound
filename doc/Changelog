@@ -1,6 +1,7 @@
 19 October 2007: Wouter
 	- added configure (and its files) to svn, so that the trunk is easier
-	  to use. ./configure, config.guess, config.sub, ltmain.sh.
+	  to use. ./configure, config.guess, config.sub, ltmain.sh,
+	  and config.h.in.
 	  
 18 October 2007: Wouter
 	- addresses are logged with errors.
