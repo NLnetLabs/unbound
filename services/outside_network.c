@@ -132,14 +132,14 @@ outnet_tcp_take_into_use(struct waiting_tcp* w, uint8_t* pkt, size_t pkt_len)
 		s = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
 	if(s == -1) {
 		log_err("outgoing tcp: socket: %s", strerror(errno));
-		log_addr("failed address", &w->addr, w->addrlen);
+		log_addr(0, "failed address", &w->addr, w->addrlen);
 		return 0;
 	}
 	fd_set_nonblock(s);
 	if(connect(s, (struct sockaddr*)&w->addr, w->addrlen) == -1) {
 		if(errno != EINPROGRESS) {
 			log_err("outgoing tcp: connect: %s", strerror(errno));
-			log_addr("failed address", &w->addr, w->addrlen);
+			log_addr(0, "failed address", &w->addr, w->addrlen);
 			close(s);
 			return 0;
 		}
@@ -206,7 +206,8 @@ outnet_tcp_cb(struct comm_point* c, void* arg, int error,
 		/* check ID */
 		if(ldns_buffer_limit(c->buffer) < sizeof(uint16_t) ||
 			LDNS_ID_WIRE(ldns_buffer_begin(c->buffer))!=pend->id) {
-			log_addr("outnettcp: bad ID in reply, from:",
+			log_addr(VERB_DETAIL, 
+				"outnettcp: bad ID in reply, from:",
 				&pend->query->addr, pend->query->addrlen);
 			error = NETEVENT_CLOSED;
 		}
@@ -241,9 +242,8 @@ outnet_udp_cb(struct comm_point* c, void* arg, int error,
 	memcpy(&key.addr, &reply_info->addr, reply_info->addrlen);
 	key.addrlen = reply_info->addrlen;
 	verbose(VERB_ALGO, "Incoming reply id = %4.4x", key.id);
-	if(verbosity >= VERB_ALGO) {
-		log_addr("Incoming reply addr =", &reply_info->addr, reply_info->addrlen);
-	}
+	log_addr(VERB_ALGO, "Incoming reply addr =", 
+		&reply_info->addr, reply_info->addrlen);
 
 	/* find it, see if this thing is a valid query response */
 	verbose(VERB_ALGO, "lookup size is %d entries", (int)outnet->pending->count);
@@ -1019,8 +1019,9 @@ serviced_tcp_callback(struct comm_point* c, void* arg, int error,
 	struct serviced_query* sq = (struct serviced_query*)arg;
 	struct comm_reply r2;
 	sq->pending = NULL; /* removed after this callback */
-	if(error != NETEVENT_NOERROR && verbosity >= VERB_DETAIL)
-		log_addr("tcp error for address", &sq->addr, sq->addrlen);
+	if(error != NETEVENT_NOERROR)
+		log_addr(VERB_DETAIL, "tcp error for address", 
+			&sq->addr, sq->addrlen);
 	if(error==NETEVENT_NOERROR)
 		infra_update_tcp_works(sq->outnet->infra, &sq->addr,
 			sq->addrlen);

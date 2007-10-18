@@ -178,7 +178,7 @@ pending_find_match(struct replay_runtime* runtime, struct entry** entry,
 				"with entry line %d", timenow, 
 				p->start_step, p->end_step, (*entry)->lineno);
 			if(p->addrlen != 0)
-				log_addr("matched ip", &p->addr, p->addrlen);
+				log_addr(0, "matched ip", &p->addr, p->addrlen);
 			log_pkt("matched pkt: ", (*entry)->reply_list->reply);
 			return 1;
 		}

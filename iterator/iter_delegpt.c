@@ -215,7 +215,7 @@ void delegpt_log(enum verbosity_value v, struct delegpt* dp)
 			log_info("  %s%s", buf, (ns->resolved?"*":""));
 		}
 		for(a = dp->target_list; a; a = a->next_target) {
-			log_addr("  ", &a->addr, a->addrlen);
+			log_addr(VERB_ALGO, "  ", &a->addr, a->addrlen);
 		}
 	}
 }

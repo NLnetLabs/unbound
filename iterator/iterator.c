@@ -1145,7 +1145,8 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 		&target->addr, target->addrlen, qstate);
 	if(!outq) {
 		log_err("error sending query to auth server; skip this address");
-		log_addr("error for address:", &target->addr, target->addrlen);
+		log_addr(0, "error for address:", 
+			&target->addr, target->addrlen);
 		return next_state(iq, QUERYTARGETS_STATE);
 	}
 	outbound_list_insert(&iq->outlist, outq);

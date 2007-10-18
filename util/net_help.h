@@ -145,12 +145,13 @@ void* memdup(void* data, size_t len);
 
 /**
  * Prints the sockaddr in readable format with log_info. Debug helper.
+ * @param v: at what verbosity level to print this.
  * @param str: descriptive string printed with it.
  * @param addr: the sockaddr to print. Can be ip4 or ip6.
  * @param addrlen: length of addr.
  */
-void log_addr(const char* str, struct sockaddr_storage* addr, 
-	socklen_t addrlen);
+void log_addr(enum verbosity_value v, const char* str, 
+	struct sockaddr_storage* addr, socklen_t addrlen);
 
 /**
  * Prints zone name and sockaddr in readable format with log_info. Debug.

@@ -146,13 +146,16 @@ memdup(void* data, size_t len)
 }
 
 void
-log_addr(const char* str, struct sockaddr_storage* addr, socklen_t addrlen)
+log_addr(enum verbosity_value v, const char* str, 
+	struct sockaddr_storage* addr, socklen_t addrlen)
 {
         uint16_t port;
         const char* family = "unknown";
         char dest[100];
         int af = (int)((struct sockaddr_in*)addr)->sin_family;
         void* sinaddr = &((struct sockaddr_in*)addr)->sin_addr;
+	if(verbosity < v)
+		return;
         switch(af) {
                 case AF_INET: family="ip4"; break;
                 case AF_INET6: family="ip6";
@@ -166,8 +169,8 @@ log_addr(const char* str, struct sockaddr_storage* addr, socklen_t addrlen)
         }
 	dest[sizeof(dest)-1] = 0;
         port = ntohs(((struct sockaddr_in*)addr)->sin_port);
-        verbose(VERB_DETAIL, "%s %s %s %d (len %d)",
-                str, family, dest, (int)port, (int)addrlen);
+        log_info("%s %s %s %d (len %d)", str, family, dest, (int)port, 
+		(int)addrlen);
 }
 
 int 

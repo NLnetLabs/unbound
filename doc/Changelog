@@ -1,3 +1,6 @@
+18 October 2007: Wouter
+	- addresses are logged with errors.
+
 17 October 2007: Wouter
 	- fixup another cycle detect and ns-addr timeout resolution bug.
 	  This time by refusing delegations from the cache without addresses
