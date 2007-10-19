@@ -106,6 +106,8 @@ config_create()
 	cfg->do_daemonize = 1;
 	cfg->num_ifs = 0;
 	cfg->ifs = NULL;
+	cfg->num_out_ifs = 0;
+	cfg->out_ifs = NULL;
 	cfg->stubs = NULL;
 	cfg->forwards = NULL;
 	cfg->harden_short_bufsize = 0;
@@ -211,6 +213,12 @@ config_delete(struct config_file* cfg)
 		for(i=0; i<cfg->num_ifs; i++)
 			free(cfg->ifs[i]);
 		free(cfg->ifs);
+	}
+	if(cfg->out_ifs) {
+		int i;
+		for(i=0; i<cfg->num_out_ifs; i++)
+			free(cfg->out_ifs[i]);
+		free(cfg->out_ifs);
 	}
 	config_delstubs(cfg->stubs);
 	config_delstubs(cfg->forwards);

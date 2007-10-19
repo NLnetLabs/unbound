@@ -7,6 +7,7 @@
 	- without lex no attempt to use it.
 	- unsecure response validation collated into one block.
 	- remove warning about const cast of cfgfile name.
+	- outgoing-interfaces can be different from service interfaces.
 	  
 18 October 2007: Wouter
 	- addresses are logged with errors.

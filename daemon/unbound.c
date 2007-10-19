@@ -81,7 +81,8 @@ checkrlimits(struct config_file* cfg)
 			(int)cfg->incoming_num_tcp:0));
 	size_t ifs = (size_t)(cfg->num_ifs==0?1:cfg->num_ifs);
 	size_t listen_num = list*ifs;
-	size_t outnum = cfg->outgoing_num_ports*ifs + cfg->outgoing_num_tcp;
+	size_t out_ifs = (size_t)(cfg->num_out_ifs==0?1:cfg->num_out_ifs);
+	size_t outnum = cfg->outgoing_num_ports*out_ifs + cfg->outgoing_num_tcp;
 	size_t misc = 4; /* logfile, pidfile, stdout... */
 	size_t perthread = listen_num + outnum + 2/*cmdpipe*/ + 2/*libevent*/
 		+ misc; 

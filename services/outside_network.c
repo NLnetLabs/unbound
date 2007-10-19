@@ -485,6 +485,11 @@ outside_network_create(struct comm_base *base, size_t bufsize,
 		outnet->num_udp6 = done_6;
 		outnet->num_udp4 = done_4;
 	}
+	if(outnet->num_udp4 + outnet->num_udp6 == 0) {
+		log_err("Could not open any ports on outgoing interfaces");
+		outside_network_delete(outnet);
+		return NULL;
+	}
 	return outnet;
 }
 

@@ -921,8 +921,8 @@ worker_init(struct worker* worker, struct config_file *cfg,
 		cfg->outgoing_num_ports * worker->thread_num;
 	worker->back = outside_network_create(worker->base,
 		cfg->msg_buffer_size, (size_t)cfg->outgoing_num_ports, 
-		cfg->ifs, cfg->num_ifs, cfg->do_ip4, cfg->do_ip6, startport, 
-		cfg->do_tcp?cfg->outgoing_num_tcp:0, 
+		cfg->out_ifs, cfg->num_out_ifs, cfg->do_ip4, cfg->do_ip6, 
+		startport, cfg->do_tcp?cfg->outgoing_num_tcp:0, 
 		worker->daemon->env->infra_cache, worker->rndstate);
 	if(!worker->back) {
 		log_err("could not create outgoing sockets");
@@ -985,7 +985,8 @@ worker_delete(struct worker* worker)
 {
 	if(!worker) 
 		return;
-	mesh_stats(worker->env.mesh, "mesh has");
+	if(worker->env.mesh)
+		mesh_stats(worker->env.mesh, "mesh has");
 	server_stats_log(&worker->stats, worker->thread_num);
 	worker_mem_report(worker, NULL);
 	mesh_delete(worker->env.mesh);

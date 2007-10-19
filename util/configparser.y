@@ -84,7 +84,8 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_BOGUS_TTL VAR_VAL_CLEAN_ADDITIONAL VAR_VAL_PERMISSIVE_MODE
 %token VAR_INCOMING_NUM_TCP VAR_MSG_BUFFER_SIZE VAR_KEY_CACHE_SIZE
 %token VAR_KEY_CACHE_SLABS VAR_TRUSTED_KEYS_FILE 
-%token VAR_VAL_NSEC3_KEYSIZE_ITERATIONS VAR_USE_SYSLOG
+%token VAR_VAL_NSEC3_KEYSIZE_ITERATIONS VAR_USE_SYSLOG 
+%token VAR_OUTGOING_INTERFACE
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -120,7 +121,7 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_incoming_num_tcp | server_msg_buffer_size | 
 	server_key_cache_size | server_key_cache_slabs | 
 	server_trusted_keys_file | server_val_nsec3_keysize_iterations |
-	server_use_syslog
+	server_use_syslog | server_outgoing_interface
 	;
 stubstart: VAR_STUB_ZONE
 	{
@@ -192,6 +193,21 @@ server_interface: VAR_INTERFACE STRING
 			yyerror("out of memory");
 		else
 			cfg_parser->cfg->ifs[cfg_parser->cfg->num_ifs++] = $2;
+	}
+	;
+server_outgoing_interface: VAR_OUTGOING_INTERFACE STRING
+	{
+		OUTYY(("P(server_outgoing_interface:%s)\n", $2));
+		if(cfg_parser->cfg->num_out_ifs == 0)
+			cfg_parser->cfg->out_ifs = calloc(1, sizeof(char*));
+		else 	cfg_parser->cfg->out_ifs = realloc(
+			cfg_parser->cfg->out_ifs, 
+			(cfg_parser->cfg->num_out_ifs+1)*sizeof(char*));
+		if(!cfg_parser->cfg->out_ifs)
+			yyerror("out of memory");
+		else
+			cfg_parser->cfg->out_ifs[
+				cfg_parser->cfg->num_out_ifs++] = $2;
 	}
 	;
 server_outgoing_port: VAR_OUTGOING_PORT STRING

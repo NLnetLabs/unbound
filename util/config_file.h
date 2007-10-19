@@ -106,6 +106,12 @@ struct config_file {
 	/** interface description strings (IP addresses) */
 	char **ifs;
 
+	/** number of outgoing interfaces to open. 
+	 * If 0 default all interfaces. */
+	int num_out_ifs;
+	/** outgoing interface description strings (IP addresses) */
+	char **out_ifs;
+
 	/** the stub definitions, linked list */
 	struct config_stub* stubs;
 	/** the forward zone definitions, linked list */

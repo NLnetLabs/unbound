@@ -89,12 +89,19 @@ static void
 morechecks(struct config_file* cfg)
 {
 	int i;
+	struct sockaddr_storage a;
+	socklen_t alen;
 	for(i=0; i<cfg->num_ifs; i++) {
-		struct sockaddr_storage a;
-		socklen_t alen;
 		if(!ipstrtoaddr(cfg->ifs[i], UNBOUND_DNS_PORT, &a, &alen)) {
 			fatal_exit("cannot parse interface specified as '%s'",
 				cfg->ifs[i]);
+		}
+	}
+	for(i=0; i<cfg->num_out_ifs; i++) {
+		if(!ipstrtoaddr(cfg->out_ifs[i], UNBOUND_DNS_PORT, 
+			&a, &alen)) {
+			fatal_exit("cannot parse outgoing-interface "
+				"specified as '%s'", cfg->out_ifs[i]);
 		}
 	}
 
