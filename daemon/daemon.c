@@ -68,6 +68,8 @@ static int sig_record_reload = 0;
 static RETSIGTYPE record_sigh(int sig)
 {
 #ifdef LIBEVENT_SIGNAL_PROBLEM
+	verbose(VERB_OPS, "quit on signal, no cleanup and statistics, "
+		"because installed libevent version is not threadsafe");
 	exit(0);
 #endif 
 	switch(sig)

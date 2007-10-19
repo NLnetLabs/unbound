@@ -603,7 +603,6 @@ new_pending(struct outside_network* outnet, ldns_buffer* packet,
 		return NULL;
 	}
 	/* set */
-	/* id uses lousy random() TODO use better and entropy */
 	pend->id = ((unsigned)ub_random(rnd)>>8) & 0xffff;
 	LDNS_ID_SET(ldns_buffer_begin(packet), pend->id);
 	memcpy(&pend->addr, addr, addrlen);
@@ -655,7 +654,6 @@ select_port(struct outside_network* outnet, struct pending* pend,
 	}
 
 	/* choose a random outgoing port and interface */
-	/* TODO: entropy source. */
 	precho = (double)ub_random(rnd) * (double)nummax / 
 		((double)RAND_MAX + 1.0);
 	chosen = (int)precho;
@@ -765,7 +763,6 @@ pending_tcp_query(struct outside_network* outnet, ldns_buffer* packet,
 	}
 	w->pkt = NULL;
 	w->pkt_len = 0;
-	/* id uses lousy random() TODO use better and entropy */
 	id = ((unsigned)ub_random(rnd)>>8) & 0xffff;
 	LDNS_ID_SET(ldns_buffer_begin(packet), id);
 	memcpy(&w->addr, addr, addrlen);
