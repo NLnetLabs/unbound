@@ -8,6 +8,9 @@
 	- unsecure response validation collated into one block.
 	- remove warning about const cast of cfgfile name.
 	- outgoing-interfaces can be different from service interfaces.
+	- ldns-src configure is done during unbound configure and
+	  ldns-src make is done during unbound make, and so inherits the
+	  make arguments from the unbound make invocation.
 	  
 18 October 2007: Wouter
 	- addresses are logged with errors.

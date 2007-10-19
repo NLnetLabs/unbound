@@ -88,12 +88,14 @@ COMPILE=$(LIBTOOL) --tag=CC --mode=compile $(CC) $(CPPFLAGS) $(CFLAGS)
 LINK=$(LIBTOOL) --tag=CC --mode=link $(CC) $(staticexe) $(RUNTIME_PATH) $(CFLAGS) $(LDFLAGS)
 LINK_LIB=$(LIBTOOL) --tag=CC --mode=link $(CC) $(CFLAGS) $(LDFLAGS) -release $(VERSION)
 
+.PHONY:	clean realclean doc lint all install uninstall tests test download_ldns strip
+
 $(BUILD)%.o:    $(srcdir)/%.c 
 	$(INFO) Build $<
+	@if test ! -z "$(ldnsdir)" -a ! -e $(ldnsdir)/include/ldns/ldns.h; \
+		then (cd $(ldnsdir); $(MAKE) copy-headers); fi
 	@if test ! -d $(dir $@); then $(INSTALL) -d $(patsubst %/,%,$(dir $@)); fi
 	$Q$(COMPILE) -c $< -o $@
-
-.PHONY:	clean realclean doc lint all install uninstall tests test download_ldns strip
 
 all:	$(COMMON_OBJ) unbound unbound-checkconf
 
@@ -102,37 +104,46 @@ tests:	unittest testbound lock-verify pktview signit memstats
 test:	tests
 	bash testcode/do-tests.sh
 
-unbound:	$(DAEMON_OBJ)
-	$(INFO) Link $@
-	$Q$(LINK) -o $@ $^ $(LIBS)
+ifeq ($(patsubst ldns-src%,ldns-src,$(ldnsdir)),ldns-src)
+ldnslib=$(ldnsdir)/lib/libldns.a
+$(ldnslib):
+	@if test ! -z "$(ldnsdir)"; \
+	then (cd $(ldnsdir) && $(MAKE)); fi
+else
+ldnslib=
+endif
 
-unbound-checkconf:	$(CHECKCONF_OBJ)
+unbound:	$(DAEMON_OBJ) $(ldnslib)
 	$(INFO) Link $@
-	$Q$(LINK) -o $@ $^ $(LIBS)
+	$Q$(LINK) -o $@ $(sort $(DAEMON_OBJ)) $(LIBS)
 
-unittest:	$(UNITTEST_OBJ)
+unbound-checkconf:	$(CHECKCONF_OBJ) $(ldnslib)
 	$(INFO) Link $@
-	$Q$(LINK) -o $@ $^ $(LIBS)
+	$Q$(LINK) -o $@ $(sort $(CHECKCONF_OBJ)) $(LIBS)
 
-testbound:	$(TESTBOUND_OBJ)
+unittest:	$(UNITTEST_OBJ) $(ldnslib)
 	$(INFO) Link $@
-	$Q$(LINK) -o $@ $^ $(LIBS)
+	$Q$(LINK) -o $@ $(sort $(UNITTEST_OBJ)) $(LIBS)
 
-lock-verify:	$(LOCKVERIFY_OBJ)
+testbound:	$(TESTBOUND_OBJ) $(ldnslib)
 	$(INFO) Link $@
-	$Q$(LINK) -o $@ $^ $(LIBS)
+	$Q$(LINK) -o $@ $(sort $(TESTBOUND_OBJ)) $(LIBS)
 
-pktview:	$(PKTVIEW_OBJ)
+lock-verify:	$(LOCKVERIFY_OBJ) $(ldnslib)
 	$(INFO) Link $@
-	$Q$(LINK) -o $@ $^ $(LIBS)
+	$Q$(LINK) -o $@ $(sort $(LOCKVERIFY_OBJ)) $(LIBS)
 
-signit:	$(SIGNIT_OBJ)
+pktview:	$(PKTVIEW_OBJ) $(ldnslib)
 	$(INFO) Link $@
-	$Q$(LINK) -o $@ $^ $(LIBS)
+	$Q$(LINK) -o $@ $(sort $(PKTVIEW_OBJ)) $(LIBS)
 
-memstats:	$(MEMSTATS_OBJ)
+signit:	$(SIGNIT_OBJ) $(ldnslib)
 	$(INFO) Link $@
-	$Q$(LINK) -o $@ $^ $(LIBS)
+	$Q$(LINK) -o $@ $(sort $(SIGNIT_OBJ)) $(LIBS)
+
+memstats:	$(MEMSTATS_OBJ) $(ldnslib)
+	$(INFO) Link $@
+	$Q$(LINK) -o $@ $(sort $(MEMSTATS_OBJ)) $(LIBS)
 
 #testcode/ldns-testpkts.c:	$(ldnsdir)/examples/ldns-testpkts.c \
 #			$(ldnsdir)/examples/ldns-testpkts.h
@@ -210,6 +221,8 @@ download_ldns:
 # Automatic dependencies.
 $(BUILD)%.d: $(srcdir)/%.c
 	$(INFO) Depend $<
+	@if test ! -z "$(ldnsdir)" -a ! -e $(ldnsdir)/include/ldns/ldns.h; \
+		then (cd $(ldnsdir); $(MAKE) copy-headers); fi
 	@if test ! -d $(dir $@); then $(INSTALL) -d $(patsubst %/,%,$(dir $@)); fi
 	$Q$(SHELL) -ec '$(CC) -MM $(CPPFLAGS) $(CFLAGS) $< \
 	              | sed '\''s!\(.*\)\.o[ :]*!$(dir $@)\1.o $@ : !g'\'' > $@; \

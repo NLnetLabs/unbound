@@ -543,7 +543,21 @@ AC_ARG_WITH(ldns,
 	AC_SUBST(ldnsdir)
 ])
 
-AC_CHECK_LIB(ldns, ldns_rr_new,, [
+AC_CHECK_LIB(ldns, ldns_rr_new, [
+dnl ldns was found, check compat functions
+AC_REPLACE_FUNCS(inet_aton)
+AC_REPLACE_FUNCS(inet_pton)
+AC_REPLACE_FUNCS(inet_ntop)
+AC_REPLACE_FUNCS(snprintf)
+AC_REPLACE_FUNCS(strlcpy)
+AC_REPLACE_FUNCS(memmove)
+
+AC_CHECK_FUNCS([getaddrinfo])
+if test $ac_cv_func_getaddrinfo = no; then
+AC_LIBOBJ([fake-rfc2553])
+fi
+
+] , [
 dnl use the builtin ldns-src.tar.gz file to build ldns.
 if test ! -f ldns-src.tar.gz; then
 	AC_MSG_ERROR([No ldns library found and no ldns-src.tar.gz, use --with-ldns=path.])
@@ -560,33 +574,19 @@ ldnsdir=`ls -d ldns-src/ldns*`
 AC_MSG_NOTICE([Configure $ldnsdir])
 echo "(cd $ldnsdir; ./configure)"
 (cd $ldnsdir; ./configure)
-AC_MSG_NOTICE([Build $ldnsdir])
-if test ! -x "`which gmake`"; then
-	echo "(cd $ldnsdir; make)"
-	(cd $ldnsdir; make)
-else
-	echo "(cd $ldnsdir; gmake)"
-	(cd $ldnsdir; gmake)
-fi
-AC_MSG_NOTICE([Finished $ldnsdir])
+AC_MSG_NOTICE([Finished $ldnsdir configure])
 CPPFLAGS="$CPPFLAGS -I$ldnsdir/include"
 LDFLAGS="$LDFLAGS $ldnsdir/lib/*.o"
 AC_SUBST(ldnsdir)
+dnl use ldns compat functions
+AC_DEFINE(HAVE_INET_ATON)
+AC_DEFINE(HAVE_INET_PTON)
+AC_DEFINE(HAVE_INET_NTOP)
+AC_DEFINE(HAVE_SNPRINTF)
+AC_DEFINE(HAVE_STRLCPY)
+AC_DEFINE(HAVE_MEMMOVE)
+AC_DEFINE(HAVE_GETADDRINFO)
 ])
-
-# check func replacements after ldns had a chance to already provide them.
-AC_REPLACE_FUNCS(inet_aton)
-AC_REPLACE_FUNCS(inet_pton)
-AC_REPLACE_FUNCS(inet_ntop)
-AC_REPLACE_FUNCS(snprintf)
-AC_REPLACE_FUNCS(strlcpy)
-AC_REPLACE_FUNCS(memmove)
-
-AC_CHECK_FUNCS([getaddrinfo])
-if test $ac_cv_func_getaddrinfo = no; then
-AC_LIBOBJ([fake-rfc2553])
-fi
-
 
 AC_DEFINE_UNQUOTED([MAXSYSLOGMSGLEN], [5120], [Define to the maximum message length to pass to syslog.])
 

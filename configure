@@ -23693,7 +23693,6 @@ if test "${with_ldns+set}" = set; then
 fi
 
 
-
 { echo "$as_me:$LINENO: checking for ldns_rr_new in -lldns" >&5
 echo $ECHO_N "checking for ldns_rr_new in -lldns... $ECHO_C" >&6; }
 if test "${ac_cv_lib_ldns_ldns_rr_new+set}" = set; then
@@ -23756,51 +23755,7 @@ fi
 { echo "$as_me:$LINENO: result: $ac_cv_lib_ldns_ldns_rr_new" >&5
 echo "${ECHO_T}$ac_cv_lib_ldns_ldns_rr_new" >&6; }
 if test $ac_cv_lib_ldns_ldns_rr_new = yes; then
-  cat >>confdefs.h <<_ACEOF
-#define HAVE_LIBLDNS 1
-_ACEOF
 
-  LIBS="-lldns $LIBS"
-
-else
-
-if test ! -f ldns-src.tar.gz; then
-	{ { echo "$as_me:$LINENO: error: No ldns library found and no ldns-src.tar.gz, use --with-ldns=path." >&5
-echo "$as_me: error: No ldns library found and no ldns-src.tar.gz, use --with-ldns=path." >&2;}
-   { (exit 1); exit 1; }; }
-fi
-echo "****************************************************************"
-echo "***                                                          ***"
-echo "*** ldns library not found (--with-ldns= to specify by hand) ***"
-echo "*** Building ldns library from package included in this one. ***"
-echo "***                                                          ***"
-echo "****************************************************************"
-if test -d ldns-src; then rm -rf ldns-src; fi
-mkdir ldns-src; (cd ldns-src; gzip -cd ../ldns-src.tar.gz | tar xf -)
-ldnsdir=`ls -d ldns-src/ldns*`
-{ echo "$as_me:$LINENO: Configure $ldnsdir" >&5
-echo "$as_me: Configure $ldnsdir" >&6;}
-echo "(cd $ldnsdir; ./configure)"
-(cd $ldnsdir; ./configure)
-{ echo "$as_me:$LINENO: Build $ldnsdir" >&5
-echo "$as_me: Build $ldnsdir" >&6;}
-if test ! -x "`which gmake`"; then
-	echo "(cd $ldnsdir; make)"
-	(cd $ldnsdir; make)
-else
-	echo "(cd $ldnsdir; gmake)"
-	(cd $ldnsdir; gmake)
-fi
-{ echo "$as_me:$LINENO: Finished $ldnsdir" >&5
-echo "$as_me: Finished $ldnsdir" >&6;}
-CPPFLAGS="$CPPFLAGS -I$ldnsdir/include"
-LDFLAGS="$LDFLAGS $ldnsdir/lib/*.o"
-
-
-fi
-
-
-# check func replacements after ldns had a chance to already provide them.
 
 for ac_func in inet_aton
 do
@@ -24514,6 +24469,63 @@ case " $LIBOBJS " in
   *) LIBOBJS="$LIBOBJS fake-rfc2553.$ac_objext"
  ;;
 esac
+
+fi
+
+
+else
+
+if test ! -f ldns-src.tar.gz; then
+	{ { echo "$as_me:$LINENO: error: No ldns library found and no ldns-src.tar.gz, use --with-ldns=path." >&5
+echo "$as_me: error: No ldns library found and no ldns-src.tar.gz, use --with-ldns=path." >&2;}
+   { (exit 1); exit 1; }; }
+fi
+echo "****************************************************************"
+echo "***                                                          ***"
+echo "*** ldns library not found (--with-ldns= to specify by hand) ***"
+echo "*** Building ldns library from package included in this one. ***"
+echo "***                                                          ***"
+echo "****************************************************************"
+if test -d ldns-src; then rm -rf ldns-src; fi
+mkdir ldns-src; (cd ldns-src; gzip -cd ../ldns-src.tar.gz | tar xf -)
+ldnsdir=`ls -d ldns-src/ldns*`
+{ echo "$as_me:$LINENO: Configure $ldnsdir" >&5
+echo "$as_me: Configure $ldnsdir" >&6;}
+echo "(cd $ldnsdir; ./configure)"
+(cd $ldnsdir; ./configure)
+{ echo "$as_me:$LINENO: Finished $ldnsdir configure" >&5
+echo "$as_me: Finished $ldnsdir configure" >&6;}
+CPPFLAGS="$CPPFLAGS -I$ldnsdir/include"
+LDFLAGS="$LDFLAGS $ldnsdir/lib/*.o"
+
+cat >>confdefs.h <<\_ACEOF
+#define HAVE_INET_ATON 1
+_ACEOF
+
+cat >>confdefs.h <<\_ACEOF
+#define HAVE_INET_PTON 1
+_ACEOF
+
+cat >>confdefs.h <<\_ACEOF
+#define HAVE_INET_NTOP 1
+_ACEOF
+
+cat >>confdefs.h <<\_ACEOF
+#define HAVE_SNPRINTF 1
+_ACEOF
+
+cat >>confdefs.h <<\_ACEOF
+#define HAVE_STRLCPY 1
+_ACEOF
+
+cat >>confdefs.h <<\_ACEOF
+#define HAVE_MEMMOVE 1
+_ACEOF
+
+cat >>confdefs.h <<\_ACEOF
+#define HAVE_GETADDRINFO 1
+_ACEOF
+
 
 fi
 
