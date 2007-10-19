@@ -99,7 +99,7 @@ config_create()
 	if(!(cfg->pidfile = strdup("unbound.pid"))) goto error_exit;
 	if(!(cfg->target_fetch_policy = strdup("3 2 1 0 0"))) goto error_exit;
 	cfg->donotqueryaddrs = NULL;
-	if(!cfg_strlist_insert(&cfg->donotqueryaddrs, strdup("127.0.0.1")))
+	if(!cfg_strlist_insert(&cfg->donotqueryaddrs, strdup("127.0.0.0/8")))
 		goto error_exit;
 	if(!cfg_strlist_insert(&cfg->donotqueryaddrs, strdup("::1")))
 		goto error_exit;

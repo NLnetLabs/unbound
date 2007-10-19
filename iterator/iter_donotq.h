@@ -71,6 +71,10 @@ struct iter_donotq_addr {
 	struct sockaddr_storage addr;
 	/** length of addr */
 	socklen_t addrlen;
+	/** netblock size */
+	int net;
+	/** parent node in donotq tree that encompasses this entry */
+	struct iter_donotq_addr* parent;
 };
 
 /**

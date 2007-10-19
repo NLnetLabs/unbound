@@ -53,7 +53,13 @@ donotq_cmp(const void* k1, const void* k2)
 {
 	struct iter_donotq_addr* n1 = (struct iter_donotq_addr*)k1;
 	struct iter_donotq_addr* n2 = (struct iter_donotq_addr*)k2;
-	return sockaddr_cmp(&n1->addr, n1->addrlen, &n2->addr, n2->addrlen);
+	int r = sockaddr_cmp(&n1->addr, n1->addrlen, &n2->addr, n2->addrlen);
+	if(r != 0) return r;
+	if(n1->net < n2->net)
+		return -1;
+	if(n1->net > n2->net)
+		return 1;
+	return 0;
 }
 
 struct iter_donotq* 
@@ -84,7 +90,7 @@ donotq_delete(struct iter_donotq* dq)
 /** insert new address into donotq structure */
 static int
 donotq_insert(struct iter_donotq* dq, struct sockaddr_storage* addr, 
-	socklen_t addrlen)
+	socklen_t addrlen, int net)
 {
 	struct iter_donotq_addr* node = regional_alloc(dq->region,
 		sizeof(struct iter_donotq_addr));
@@ -93,10 +99,34 @@ donotq_insert(struct iter_donotq* dq, struct sockaddr_storage* addr,
 	node->node.key = node;
 	memcpy(&node->addr, addr, addrlen);
 	node->addrlen = addrlen;
+	node->net = net;
+	node->parent = NULL;
 	if(!rbtree_insert(dq->tree, &node->node)) {
 		verbose(VERB_DETAIL, "duplicate donotquery address ignored.");
 	}
 	return 1;
+}
+
+/** make sure the netblock ends in zeroes for compare in tree */
+static void
+mask_block(int ip6, struct sockaddr_storage* addr, int net)
+{
+	uint8_t mask[8] = {0x0, 0x1, 0x3, 0x7, 0xf, 0x1f, 0x3f, 0x7f};
+	int i, max;
+	uint8_t* s;
+	if(ip6) {
+		s = (uint8_t*)&((struct sockaddr_in6*)addr)->sin6_addr;
+		max = 128;
+	} else {
+		s = (uint8_t*)&((struct sockaddr_in*)addr)->sin_addr;
+		max = 32;
+	}
+	if(net >= max)
+		return;
+	for(i=net/8+1; i<max/8; i++) {
+		s[i] = 0;
+	}
+	s[net/8] &= mask[net&0x7];
 }
 
 /** read donotq config */
@@ -105,20 +135,105 @@ read_donotq(struct iter_donotq* dq, struct config_file* cfg)
 {
 	struct config_strlist* p;
 	struct sockaddr_storage addr;
+	int net;
+	char* s;
 	socklen_t addrlen;
 	for(p = cfg->donotqueryaddrs; p; p = p->next) {
 		log_assert(p->str);
-		if(!extstrtoaddr(p->str, &addr, &addrlen)) {
+		net = (str_is_ip6(p->str)?128:32);
+		if((s=strchr(p->str, '/'))) {
+			if(atoi(s+1) > net) {
+				log_err("netblock too large: %s", p->str);
+				return 0;
+			}
+			net = atoi(s+1);
+			if(net == 0 && strcmp(s+1, "0") != 0) {
+				log_err("cannot parse donotquery netblock:"
+					" '%s'", p->str);
+				return 0;
+			}
+			*s = '\0';
+		}
+		if(!ipstrtoaddr(p->str, UNBOUND_DNS_PORT, &addr, &addrlen)) {
+			if(s) *s = '/';
 			log_err("cannot parse donotquery ip address: '%s'", 
 				p->str);
 			return 0;
 		}
-		if(!donotq_insert(dq, &addr, addrlen)) {
+		if(s) {
+			*s = '/';
+			mask_block(str_is_ip6(p->str), &addr, net);
+		}
+		if(!donotq_insert(dq, &addr, addrlen, net)) {
 			log_err("out of memory");
 			return 0;
 		}
 	}
 	return 1;
+}
+
+/** number of bits that two addrs share (are equal) */
+static int
+addr_in_common(struct sockaddr_storage* addr1, int net1, 
+	struct sockaddr_storage* addr2, int net2, socklen_t addrlen)
+{
+	int min = (net1<net2)?net1:net2;
+	int i, to;
+	int match = 0;
+	uint8_t* s1, *s2;
+	if(addr_is_ip6(addr1, addrlen)) {
+		s1 = (uint8_t*)&((struct sockaddr_in6*)addr1)->sin6_addr;
+		s2 = (uint8_t*)&((struct sockaddr_in6*)addr2)->sin6_addr;
+		to = 16;
+	} else {
+		s1 = (uint8_t*)&((struct sockaddr_in*)addr1)->sin_addr;
+		s2 = (uint8_t*)&((struct sockaddr_in*)addr2)->sin_addr;
+		to = 4;
+	}
+	/* match = bits_in_common(s1, s2, to); */
+	for(i=0; i<to; i++) {
+		if(s1[i] == s2[i]) {
+			match += 8;
+		} else {
+			uint8_t z = s1[i]^s2[i];
+			log_assert(z);
+			while(!(z&0x80)) {
+				match++;
+				z<<=1;
+			}
+			break;
+		}
+	}
+	if(match > min) match = min;
+	return match;
+}
+
+/** initialise parent pointers in the tree */
+static void
+donotq_init_parents(struct iter_donotq* donotq)
+{
+	struct iter_donotq_addr* node, *prev = NULL, *p;
+	int m;
+	RBTREE_FOR(node, struct iter_donotq_addr*, donotq->tree) {
+		node->parent = NULL;
+		if(!prev || prev->addrlen != node->addrlen) {
+			prev = node;
+			continue;
+		}
+		m = addr_in_common(&prev->addr, prev->net, &node->addr, 
+			node->net, node->addrlen);
+		/* sort order like: ::/0, 1::/2, 1::/4, ... 2::/2 */
+		/* find the previous, or parent-parent-parent */
+		for(p = prev; p; p = p->parent)
+			if(p->net <= m) {
+				/* ==: since prev matched m, this is closest*/
+				/* <: prev matches more, but is not a parent,
+				* this one is a (grand)parent */
+				node->parent = p;
+				break;
+			}
+		prev = node;
+	}
 }
 
 int 
@@ -130,6 +245,7 @@ donotq_apply_cfg(struct iter_donotq* dq, struct config_file* cfg)
 		return 0;
 	if(!read_donotq(dq, cfg))
 		return 0;
+	donotq_init_parents(dq);
 	return 1;
 }
 
@@ -138,12 +254,31 @@ donotq_lookup(struct iter_donotq* donotq, struct sockaddr_storage* addr,
         socklen_t addrlen)
 {
 	/* lookup in the tree */
+	rbnode_t* res = NULL;
+	struct iter_donotq_addr* result;
 	struct iter_donotq_addr key;
 	key.node.key = &key;
 	memcpy(&key.addr, addr, addrlen);
 	key.addrlen = addrlen;
-	if(rbtree_search(donotq->tree, &key))
+	key.net = (addr_is_ip6(addr, addrlen)?128:32);
+	if(rbtree_find_less_equal(donotq->tree, &key, &res)) {
+		/* exact */
 		return 1;
+	} else {
+		/* smaller element (or no element) */
+		int m;
+		result = (struct iter_donotq_addr*)res;
+		if(!result || result->addrlen != addrlen)
+			return 0;
+		/* count number of bits matched */
+		m = addr_in_common(&result->addr, result->net, addr, 
+			key.net, addrlen);
+		while(result) { /* go up until addr is inside netblock */
+			if(result->net <= m)
+				return 1;
+			result = result->parent;
+		}
+	}
 	return 0;
 }
 
