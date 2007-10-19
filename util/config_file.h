@@ -112,6 +112,8 @@ struct config_file {
 	/** outgoing interface description strings (IP addresses) */
 	char **out_ifs;
 
+	/** the root hints */
+	struct config_strlist* root_hints;
 	/** the stub definitions, linked list */
 	struct config_stub* stubs;
 	/** the forward zone definitions, linked list */

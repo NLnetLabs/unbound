@@ -173,6 +173,11 @@ The default is to log to syslog.
 The process id is written to the file. Default is "unbound.pid". So,
 kill -HUP `cat /etc/unbound/unbound.pid` will trigger a reload,
 kill -QUIT `cat /etc/unbound/unbound.pid` will gracefully terminate.
+.It \fBroot-hints:\fR <filename>
+Read the root hints from this file. Default is nothing, using builtin hints
+for the IN class. The file has the format of zone files, with root 
+nameserver names and addresses only. The default may become outdated,
+when servers change, therefore it is good practice to use a root-hints file.
 .It \fBhide-identity:\fR <yes or no>
 If enabled id.server and hostname.bind queries are refused.
 .It \fBidentity:\fR <string>

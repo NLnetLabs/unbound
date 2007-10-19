@@ -117,6 +117,7 @@ username{COLON}		{ YDOUT; return VAR_USERNAME;}
 directory{COLON}	{ YDOUT; return VAR_DIRECTORY;}
 logfile{COLON}		{ YDOUT; return VAR_LOGFILE;}
 pidfile{COLON}		{ YDOUT; return VAR_PIDFILE;}
+root-hints{COLON}	{ YDOUT; return VAR_ROOT_HINTS;}
 msg-buffer-size{COLON}	{ YDOUT; return VAR_MSG_BUFFER_SIZE;}
 msg-cache-size{COLON}	{ YDOUT; return VAR_MSG_CACHE_SIZE;}
 msg-cache-slabs{COLON}	{ YDOUT; return VAR_MSG_CACHE_SLABS;}

@@ -103,6 +103,7 @@ config_create()
 		goto error_exit;
 	if(!cfg_strlist_insert(&cfg->donotqueryaddrs, strdup("::1")))
 		goto error_exit;
+	cfg->root_hints = NULL;
 	cfg->do_daemonize = 1;
 	cfg->num_ifs = 0;
 	cfg->ifs = NULL;
@@ -223,6 +224,7 @@ config_delete(struct config_file* cfg)
 	config_delstubs(cfg->stubs);
 	config_delstubs(cfg->forwards);
 	config_delstrlist(cfg->donotqueryaddrs);
+	config_delstrlist(cfg->root_hints);
 	free(cfg->identity);
 	free(cfg->version);
 	free(cfg->module_conf);

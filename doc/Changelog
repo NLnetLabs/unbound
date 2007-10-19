@@ -12,6 +12,7 @@
 	  ldns-src make is done during unbound make, and so inherits the
 	  make arguments from the unbound make invocation.
 	- nicer error when libevent problem causes instant exit on signal.
+	- read root hints from a root hint file (like BIND does).
 	  
 18 October 2007: Wouter
 	- addresses are logged with errors.

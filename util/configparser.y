@@ -85,7 +85,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_INCOMING_NUM_TCP VAR_MSG_BUFFER_SIZE VAR_KEY_CACHE_SIZE
 %token VAR_KEY_CACHE_SLABS VAR_TRUSTED_KEYS_FILE 
 %token VAR_VAL_NSEC3_KEYSIZE_ITERATIONS VAR_USE_SYSLOG 
-%token VAR_OUTGOING_INTERFACE
+%token VAR_OUTGOING_INTERFACE VAR_ROOT_HINTS
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -121,7 +121,7 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_incoming_num_tcp | server_msg_buffer_size | 
 	server_key_cache_size | server_key_cache_slabs | 
 	server_trusted_keys_file | server_val_nsec3_keysize_iterations |
-	server_use_syslog | server_outgoing_interface
+	server_use_syslog | server_outgoing_interface | server_root_hints
 	;
 stubstart: VAR_STUB_ZONE
 	{
@@ -330,6 +330,13 @@ server_pidfile: VAR_PIDFILE STRING
 		OUTYY(("P(server_pidfile:%s)\n", $2));
 		free(cfg_parser->cfg->pidfile);
 		cfg_parser->cfg->pidfile = $2;
+	}
+	;
+server_root_hints: VAR_ROOT_HINTS STRING
+	{
+		OUTYY(("P(server_root_hints:%s)\n", $2));
+		if(!cfg_strlist_insert(&cfg_parser->cfg->root_hints, $2))
+			yyerror("out of memory");
 	}
 	;
 server_trust_anchor_file: VAR_TRUST_ANCHOR_FILE STRING

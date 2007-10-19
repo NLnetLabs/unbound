@@ -104,7 +104,8 @@
      VAR_TRUSTED_KEYS_FILE = 320,
      VAR_VAL_NSEC3_KEYSIZE_ITERATIONS = 321,
      VAR_USE_SYSLOG = 322,
-     VAR_OUTGOING_INTERFACE = 323
+     VAR_OUTGOING_INTERFACE = 323,
+     VAR_ROOT_HINTS = 324
    };
 #endif
 /* Tokens.  */
@@ -174,6 +175,7 @@
 #define VAR_VAL_NSEC3_KEYSIZE_ITERATIONS 321
 #define VAR_USE_SYSLOG 322
 #define VAR_OUTGOING_INTERFACE 323
+#define VAR_ROOT_HINTS 324
 
 
 
@@ -185,7 +187,7 @@ typedef union YYSTYPE
 	char*	str;
 }
 /* Line 1489 of yacc.c.  */
-#line 189 "util/configparser.h"
+#line 191 "util/configparser.h"
 	YYSTYPE;
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */
 # define YYSTYPE_IS_DECLARED 1

@@ -290,6 +290,126 @@ read_stubs(struct iter_hints* hints, struct config_file* cfg)
 	return 1;
 }
 
+/** read root hints from file */
+static int 
+read_root_hints(struct iter_hints* hints, char* fname)
+{
+	int lineno = 0;
+	uint32_t default_ttl = 0;
+	ldns_rdf* origin = NULL;
+	ldns_rdf* prev_rr = NULL;
+	struct delegpt* dp;
+	ldns_rr* rr = NULL;
+	ldns_status status;
+	uint16_t c = LDNS_RR_CLASS_IN;
+	FILE* f = fopen(fname, "r");
+	if(!f) {
+		log_err("could not read root hints %s: %s",
+			fname, strerror(errno));
+		return 0;
+	}
+	dp = delegpt_create(hints->region);
+	if(!dp) {
+		log_err("out of memory reading root hints");
+		fclose(f);
+		return 0;
+	}
+	verbose(VERB_DETAIL, "Reading root hints from %s", fname);
+	while(!feof(f)) {
+		status = ldns_rr_new_frm_fp_l(&rr, f, 
+			&default_ttl, &origin, &prev_rr, &lineno);
+		if(status == LDNS_STATUS_SYNTAX_EMPTY ||
+			status == LDNS_STATUS_SYNTAX_TTL ||
+			status == LDNS_STATUS_SYNTAX_ORIGIN)
+			continue;
+		if(status != LDNS_STATUS_OK) {
+			log_err("reading root hints %s %d: %s", fname,
+				lineno, ldns_get_errorstr_by_id(status));
+			fclose(f);
+			return 0;
+		}
+		if(ldns_rr_get_type(rr) == LDNS_RR_TYPE_NS) {
+			if(!delegpt_add_ns(dp, hints->region,
+				ldns_rdf_data(ldns_rr_rdf(rr, 0)))) {
+				log_err("out of memory reading root hints");
+				fclose(f);
+				return 0;
+			}
+			c = ldns_rr_get_class(rr);
+			if(!dp->name) {
+				if(!delegpt_set_name(dp, hints->region, 
+					ldns_rdf_data(ldns_rr_owner(rr)))){
+					log_err("out of memory.");
+					fclose(f);
+					return 0;
+				}
+			}
+		} else if(ldns_rr_get_type(rr) == LDNS_RR_TYPE_A) {
+			struct sockaddr_in sa;
+			socklen_t len = (socklen_t)sizeof(sa);
+			memset(&sa, 0, len);
+			sa.sin_family = AF_INET;
+			sa.sin_port = (in_port_t)htons(UNBOUND_DNS_PORT);
+			memmove(&sa.sin_addr, 
+				ldns_rdf_data(ldns_rr_rdf(rr, 0)), INET_SIZE);
+			if(!delegpt_add_target(dp, hints->region,
+					ldns_rdf_data(ldns_rr_owner(rr)),
+					ldns_rdf_size(ldns_rr_owner(rr)),
+					(struct sockaddr_storage*)&sa, len)) {
+				log_err("out of memory reading root hints");
+				fclose(f);
+				return 0;
+			}
+		} else if(ldns_rr_get_type(rr) == LDNS_RR_TYPE_AAAA) {
+			struct sockaddr_in6 sa;
+			socklen_t len = (socklen_t)sizeof(sa);
+			memset(&sa, 0, len);
+			sa.sin6_family = AF_INET6;
+			sa.sin6_port = (in_port_t)htons(UNBOUND_DNS_PORT);
+			memmove(&sa.sin6_addr, 
+				ldns_rdf_data(ldns_rr_rdf(rr, 0)), INET6_SIZE);
+			if(!delegpt_add_target(dp, hints->region,
+					ldns_rdf_data(ldns_rr_owner(rr)),
+					ldns_rdf_size(ldns_rr_owner(rr)),
+					(struct sockaddr_storage*)&sa, len)) {
+				log_err("out of memory reading root hints");
+				fclose(f);
+				return 0;
+			}
+		} else {
+			log_warn("root hints %s:%d skipping type %d",
+				fname, lineno, ldns_rr_get_type(rr));
+		}
+
+		ldns_rr_free(rr);
+	}
+	fclose(f);
+	if(!dp->name) {
+		log_warn("root hints %s: no NS content", fname);
+		return 1;
+	}
+	if(!hints_insert(hints, c, dp)) {
+		return 0;
+	}
+	delegpt_log(VERB_DETAIL, dp);
+	return 1;
+}
+
+/** read root hints list */
+static int 
+read_root_hints_list(struct iter_hints* hints, struct config_file* cfg)
+{
+	struct config_strlist* p;
+	for(p = cfg->root_hints; p; p = p->next) {
+		log_assert(p->str);
+		if(p->str && p->str[0]) {
+			if(!read_root_hints(hints, p->str))
+				return 0;
+		}
+	}
+	return 1;
+}
+
 int 
 hints_apply_cfg(struct iter_hints* hints, struct config_file* cfg)
 {
@@ -297,7 +417,10 @@ hints_apply_cfg(struct iter_hints* hints, struct config_file* cfg)
 	hints->tree = rbtree_create(stub_cmp);
 	if(!hints->tree)
 		return 0;
-	/* TODO: read root hints from file named in cfg */
+	
+	/* read root hints */
+	if(!read_root_hints_list(hints, cfg))
+		return 0;
 
 	/* read stub hints */
 	if(!read_stubs(hints, cfg))
