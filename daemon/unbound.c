@@ -304,7 +304,7 @@ do_chroot(struct daemon* daemon, struct config_file* cfg, int debug_mode)
  * @param debug_mode: if set, do not daemonize.
  */
 static void 
-run_daemon(const char* cfgfile, int cmdline_verbose, int debug_mode)
+run_daemon(char* cfgfile, int cmdline_verbose, int debug_mode)
 {
 	struct config_file* cfg = NULL;
 	struct daemon* daemon = NULL;
@@ -360,7 +360,7 @@ int
 main(int argc, char* argv[])
 {
 	int c;
-	const char* cfgfile = NULL;
+	char* cfgfile = NULL;
 	int cmdline_verbose = 0;
 	int debug_mode = 0;
 

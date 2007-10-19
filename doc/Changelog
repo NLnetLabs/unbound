@@ -4,6 +4,9 @@
 	  and config.h.in.
 	- added yacc/lex generated files, util/configlexer.c, 
 	  util/configparser.c util/configparser.h, to svn. 
+	- without lex no attempt to use it.
+	- unsecure response validation collated into one block.
+	- remove warning about const cast of cfgfile name.
 	  
 18 October 2007: Wouter
 	- addresses are logged with errors.

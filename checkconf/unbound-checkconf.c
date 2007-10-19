@@ -138,7 +138,7 @@ morechecks(struct config_file* cfg)
 
 /** check config file */
 static void
-checkconf(const char* cfgfile)
+checkconf(char* cfgfile)
 {
 	struct config_file* cfg = config_create();
 	if(!cfg)

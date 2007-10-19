@@ -1348,20 +1348,21 @@ processValidate(struct module_qstate* qstate, struct val_qstate* vq,
 	/* This is the default next state. */
 	vq->state = VAL_FINISHED_STATE;
 
+	/* Unsigned responses must be underneath a "null" key entry.*/
+	if(key_entry_isnull(vq->key_entry)) {
+		verbose(VERB_ALGO, "Verified that %sresponse is INSECURE",
+			vq->signer_name?"":"unsigned ");
+		vq->chase_reply->security = sec_status_insecure;
+		val_mark_insecure(vq->chase_reply, vq->key_entry, 
+			qstate->env->rrset_cache);
+		return 1;
+	}
+
 	/* signerName being null is the indicator that this response was 
 	 * unsigned */
 	if(vq->signer_name == NULL) {
 		log_query_info(VERB_ALGO, "processValidate: state has no "
 			"signer name", &vq->qchase);
-		/* Unsigned responses must be underneath a "null" key entry.*/
-		if(key_entry_isnull(vq->key_entry)) {
-			verbose(VERB_ALGO, "Unsigned response was proven to "
-				"be validly INSECURE");
-			vq->chase_reply->security = sec_status_insecure;
-			val_mark_insecure(vq->chase_reply, vq->key_entry, 
-				qstate->env->rrset_cache);
-			return 1;
-		}
 		verbose(VERB_DETAIL, "Could not establish validation of "
 		          "INSECURE status of unsigned response.");
 		vq->chase_reply->security = sec_status_bogus;
@@ -1373,14 +1374,6 @@ processValidate(struct module_qstate* qstate, struct val_qstate* vq,
 			"of trust to keys for", vq->key_entry->name,
 			LDNS_RR_TYPE_DNSKEY, vq->key_entry->key_class);
 		vq->chase_reply->security = sec_status_bogus;
-		return 1;
-	}
-
-	if(key_entry_isnull(vq->key_entry)) {
-		verbose(VERB_ALGO, "Verified that response is INSECURE");
-		vq->chase_reply->security = sec_status_insecure;
-		val_mark_insecure(vq->chase_reply, vq->key_entry, 
-			qstate->env->rrset_cache);
 		return 1;
 	}
 

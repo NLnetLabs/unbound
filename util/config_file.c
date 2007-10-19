@@ -145,7 +145,7 @@ create_cfg_parser(struct config_file* cfg, char* filename)
 }
 
 int 
-config_read(struct config_file* cfg, const char* filename)
+config_read(struct config_file* cfg, char* filename)
 {
 	FILE *in;
 	if(!filename)
@@ -155,7 +155,7 @@ config_read(struct config_file* cfg, const char* filename)
 		log_err("Could not open %s: %s", filename, strerror(errno));
 		return 0;
 	}
-	create_cfg_parser(cfg, (char*)filename);
+	create_cfg_parser(cfg, filename);
 	ub_c_in = in;
 	ub_c_parse();
 	fclose(in);

@@ -209,7 +209,7 @@ struct config_file* config_create();
  * @param filename: name of configfile. If NULL nothing is done.
  * @return: false on error.
  */
-int config_read(struct config_file* config, const char* filename);
+int config_read(struct config_file* config, char* filename);
 
 /**
  * Destroy the config file structure.
