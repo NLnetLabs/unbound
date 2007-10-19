@@ -214,9 +214,9 @@ payload is very large.
 .It \fBharden-glue:\fR <yes or no>
 Will trust glue only if it is within the servers authority. Default is on.
 .It \fBdo-not-query-address:\fR <IP address>
-Do not query the given IP address. Can be IP4 or IP6. By default the
-DNS port is blocked for that address. Appending the character '@' and then
-the portnumber will block other port numbers. 
+Do not query the given IP address. Can be IP4 or IP6. Append /num to 
+indicate a classless delegation netblock, for example like
+10.2.3.4/24 or 2001::11/64.
 .It \fBmodule-config:\fR <"module names">
 Module configuration, a list of module names separated by spaces, surround
 the string with quotes (""). The modules can be validator, iterator.
