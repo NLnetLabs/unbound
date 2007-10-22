@@ -1,6 +1,7 @@
 22 October 2007: Wouter
 	- added donotquerylocalhost config option. Can be turned off for
 	  out test cases.
+	- ISO C compat changes.
 
 19 October 2007: Wouter
 	- added configure (and its files) to svn, so that the trunk is easier

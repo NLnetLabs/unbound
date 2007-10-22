@@ -43,10 +43,10 @@
 
 #ifndef VALIDATOR_VAL_SIGCRYPT_H
 #define VALIDATOR_VAL_SIGCRYPT_H
+#include "util/data/packed_rrset.h"
 struct val_env;
 struct module_env;
 struct ub_packed_rrset_key;
-enum sec_status;
 struct rbtree_t;
 struct regional;
 

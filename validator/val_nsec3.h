@@ -67,11 +67,11 @@
 #ifndef VALIDATOR_VAL_NSEC3_H
 #define VALIDATOR_VAL_NSEC3_H
 #include "util/rbtree.h"
+#include "util/data/packed_rrset.h"
 struct val_env;
 struct regional;
 struct module_env;
 struct ub_packed_rrset_key;
-enum sec_status;
 struct reply_info;
 struct query_info;
 struct key_entry_key;

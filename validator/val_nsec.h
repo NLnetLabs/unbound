@@ -43,10 +43,10 @@
 
 #ifndef VALIDATOR_VAL_NSEC_H
 #define VALIDATOR_VAL_NSEC_H
+#include "util/data/packed_rrset.h"
 struct val_env;
 struct module_env;
 struct ub_packed_rrset_key;
-enum sec_status;
 struct reply_info;
 struct query_info;
 struct key_entry_key;

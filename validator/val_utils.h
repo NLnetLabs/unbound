@@ -41,6 +41,7 @@
 
 #ifndef VALIDATOR_VAL_UTILS_H
 #define VALIDATOR_VAL_UTILS_H
+#include "util/data/packed_rrset.h"
 struct query_info;
 struct reply_info;
 struct val_env;
@@ -50,7 +51,6 @@ struct key_entry_key;
 struct regional;
 struct val_anchors;
 struct rrset_cache;
-enum sec_status;
 
 /**
  * Response classifications for the validator. The different types of proofs.

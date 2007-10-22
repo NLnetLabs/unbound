@@ -124,7 +124,7 @@ regional_alloc(struct regional *r, size_t size)
 		r->total_large += ALIGNMENT+size;
 		*(char**)s = r->large_list;
 		r->large_list = (char*)s;
-		return s+ALIGNMENT;
+		return (char*)s+ALIGNMENT;
 	}
 	/* create a new chunk */
 	if(a > r->available) {
