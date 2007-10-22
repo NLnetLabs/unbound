@@ -107,13 +107,14 @@ enum response_type response_type_from_cache(struct dns_msg* msg,
  * relies somewhat on the originating zone to be accurate (for lameness
  * detection, mostly).
  *
+ * @param rdset: if RD bit was sent in query sent by unbound.
  * @param msg: the message from the cache.
  * @param request: the request that generated the response.
  * @param dp: The delegation point that was being queried
  *          when the response was returned.
  * @return the response type (CNAME or ANSWER).
  */
-enum response_type response_type_from_server(struct dns_msg* msg, 
-	struct query_info* request, struct delegpt* dp);
+enum response_type response_type_from_server(int rdset, 
+	struct dns_msg* msg, struct query_info* request, struct delegpt* dp);
 
 #endif /* ITERATOR_ITER_RESPTYPE_H */

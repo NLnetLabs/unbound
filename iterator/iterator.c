@@ -1179,7 +1179,8 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		verbose(VERB_ALGO, "query response was timeout");
 		return next_state(iq, QUERYTARGETS_STATE);
 	}
-	type = response_type_from_server(iq->response, &iq->qchase, iq->dp);
+	type = response_type_from_server((int)(iq->chase_flags&BIT_RD),
+		iq->response, &iq->qchase, iq->dp);
 	if(type == RESPONSE_TYPE_REFERRAL && (iq->chase_flags&BIT_RD)) {
 		/* When forwarding (RD bit is set), we handle referrals 
 		 * differently. No queries should be sent elsewhere */
@@ -1373,7 +1374,7 @@ static int
 processPrimeResponse(struct module_qstate* qstate, int id)
 {
 	struct iter_qstate* iq = (struct iter_qstate*)qstate->minfo[id];
-	enum response_type type = response_type_from_server(iq->response, 
+	enum response_type type = response_type_from_server(0, iq->response, 
 		&iq->qchase, iq->dp);
 	if(type == RESPONSE_TYPE_ANSWER) {
 		qstate->return_rcode = LDNS_RCODE_NOERROR;

@@ -2,6 +2,7 @@
 	- added donotquerylocalhost config option. Can be turned off for
 	  out test cases.
 	- ISO C compat changes.
+	- detect RA-no-AA lameness, as LAME.
 
 19 October 2007: Wouter
 	- added configure (and its files) to svn, so that the trunk is easier

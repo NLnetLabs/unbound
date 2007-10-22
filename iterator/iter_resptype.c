@@ -100,8 +100,8 @@ response_type_from_cache(struct dns_msg* msg,
 }
 
 enum response_type 
-response_type_from_server(struct dns_msg* msg, struct query_info* request,
-	struct delegpt* dp)
+response_type_from_server(int rdset,
+	struct dns_msg* msg, struct query_info* request, struct delegpt* dp)
 {
 	uint8_t* origzone = (uint8_t*)"\000"; /* the default */
 	size_t origzonelen = 1;
@@ -111,8 +111,13 @@ response_type_from_server(struct dns_msg* msg, struct query_info* request,
 		return RESPONSE_TYPE_THROWAWAY;
 	
 	/* If the message is NXDOMAIN, then it answers the question. */
-	if(FLAGS_GET_RCODE(msg->rep->flags) == LDNS_RCODE_NXDOMAIN)
+	if(FLAGS_GET_RCODE(msg->rep->flags) == LDNS_RCODE_NXDOMAIN) {
+		/* make sure its not recursive when we don't want it to */
+		if( (msg->rep->flags&BIT_RA) &&
+			!(msg->rep->flags&BIT_AA) && !rdset)
+				return RESPONSE_TYPE_LAME;
 		return RESPONSE_TYPE_ANSWER;
+	}
 	
 	/* Other response codes mean (so far) to throw the response away as
 	 * meaningless and move on to the next nameserver. */
@@ -193,6 +198,10 @@ response_type_from_server(struct dns_msg* msg, struct query_info* request,
 		/* The normal way of detecting NOERROR/NODATA. */
 		if(ntohs(s->rk.type) == LDNS_RR_TYPE_SOA &&
 			dname_subdomain_c(request->qname, s->rk.dname)) {
+			/* we do our own recursion, thank you */
+			if( (msg->rep->flags&BIT_RA) &&
+				!(msg->rep->flags&BIT_AA) && !rdset)
+				return RESPONSE_TYPE_LAME;
 			return RESPONSE_TYPE_ANSWER;
 		}
 
@@ -203,6 +212,11 @@ response_type_from_server(struct dns_msg* msg, struct query_info* request,
 			 * thought we were contacting, then it is an answer.*/
 			/* FIXME: is this correct? */
 			if(query_dname_compare(s->rk.dname, origzone) == 0) {
+				/* see if mistakenly a recursive server was
+				 * deployed and is responding nonAA */
+				if( (msg->rep->flags&BIT_RA) &&
+					!(msg->rep->flags&BIT_AA) && !rdset)
+					return RESPONSE_TYPE_LAME;
 				return RESPONSE_TYPE_ANSWER;
 			}
 			/* If we are getting a referral upwards (or to 
@@ -231,5 +245,8 @@ response_type_from_server(struct dns_msg* msg, struct query_info* request,
 
 	/* If we've gotten this far, this is NOERROR/NODATA (which could 
 	 * be an entirely empty message) */
+	/* check if recursive answer; saying it has empty cache */
+	if( (msg->rep->flags&BIT_RA) && !(msg->rep->flags&BIT_AA) && !rdset)
+		return RESPONSE_TYPE_LAME;
 	return RESPONSE_TYPE_ANSWER;
 }
