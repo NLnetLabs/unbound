@@ -53,7 +53,8 @@ donotq_cmp(const void* k1, const void* k2)
 {
 	struct iter_donotq_addr* n1 = (struct iter_donotq_addr*)k1;
 	struct iter_donotq_addr* n2 = (struct iter_donotq_addr*)k2;
-	int r = sockaddr_cmp(&n1->addr, n1->addrlen, &n2->addr, n2->addrlen);
+	int r = sockaddr_cmp_addr(&n1->addr, n1->addrlen, &n2->addr, 
+		n2->addrlen);
 	if(r != 0) return r;
 	if(n1->net < n2->net)
 		return -1;
@@ -129,45 +130,57 @@ mask_block(int ip6, struct sockaddr_storage* addr, int net)
 	s[net/8] &= mask[net&0x7];
 }
 
+/** apply donotq string */
+static int
+donotq_str_cfg(struct iter_donotq* dq, const char* str)
+{
+	struct sockaddr_storage addr;
+	int net;
+	char* s = NULL;
+	socklen_t addrlen;
+	net = (str_is_ip6(str)?128:32);
+	if((s=strchr(str, '/'))) {
+		if(atoi(s+1) > net) {
+			log_err("netblock too large: %s", str);
+			return 0;
+		}
+		net = atoi(s+1);
+		if(net == 0 && strcmp(s+1, "0") != 0) {
+			log_err("cannot parse donotquery netblock:"
+				" '%s'", str);
+			return 0;
+		}
+		if(!(s = strdup(str))) {
+			log_err("out of memory");
+			return 0;
+		}
+		*strchr(s, '/') = '\0';
+	}
+	if(!ipstrtoaddr(s?s:str, UNBOUND_DNS_PORT, &addr, &addrlen)) {
+		free(s);
+		log_err("cannot parse donotquery ip address: '%s'", str);
+		return 0;
+	}
+	if(s) {
+		free(s);
+		mask_block(str_is_ip6(str), &addr, net);
+	}
+	if(!donotq_insert(dq, &addr, addrlen, net)) {
+		log_err("out of memory");
+		return 0;
+	}
+	return 1;
+}
+
 /** read donotq config */
 static int 
 read_donotq(struct iter_donotq* dq, struct config_file* cfg)
 {
 	struct config_strlist* p;
-	struct sockaddr_storage addr;
-	int net;
-	char* s;
-	socklen_t addrlen;
 	for(p = cfg->donotqueryaddrs; p; p = p->next) {
 		log_assert(p->str);
-		net = (str_is_ip6(p->str)?128:32);
-		if((s=strchr(p->str, '/'))) {
-			if(atoi(s+1) > net) {
-				log_err("netblock too large: %s", p->str);
-				return 0;
-			}
-			net = atoi(s+1);
-			if(net == 0 && strcmp(s+1, "0") != 0) {
-				log_err("cannot parse donotquery netblock:"
-					" '%s'", p->str);
-				return 0;
-			}
-			*s = '\0';
-		}
-		if(!ipstrtoaddr(p->str, UNBOUND_DNS_PORT, &addr, &addrlen)) {
-			if(s) *s = '/';
-			log_err("cannot parse donotquery ip address: '%s'", 
-				p->str);
+		if(!donotq_str_cfg(dq, p->str))
 			return 0;
-		}
-		if(s) {
-			*s = '/';
-			mask_block(str_is_ip6(p->str), &addr, net);
-		}
-		if(!donotq_insert(dq, &addr, addrlen, net)) {
-			log_err("out of memory");
-			return 0;
-		}
 	}
 	return 1;
 }
@@ -245,6 +258,12 @@ donotq_apply_cfg(struct iter_donotq* dq, struct config_file* cfg)
 		return 0;
 	if(!read_donotq(dq, cfg))
 		return 0;
+	if(cfg->donotquery_localhost) {
+		if(!donotq_str_cfg(dq, "127.0.0.0/8"))
+			return 0;
+		if(!donotq_str_cfg(dq, "::1"))
+			return 0;
+	}
 	donotq_init_parents(dq);
 	return 1;
 }

@@ -120,6 +120,8 @@ struct config_file {
 	struct config_stub* forwards;
 	/** list of donotquery addresses, linked list */
 	struct config_strlist* donotqueryaddrs;
+	/** use default localhost donotqueryaddr entries */
+	int donotquery_localhost;
 
 	/** harden against very small edns buffer sizes */
 	int harden_short_bufsize;

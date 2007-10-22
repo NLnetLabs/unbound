@@ -85,7 +85,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_INCOMING_NUM_TCP VAR_MSG_BUFFER_SIZE VAR_KEY_CACHE_SIZE
 %token VAR_KEY_CACHE_SLABS VAR_TRUSTED_KEYS_FILE 
 %token VAR_VAL_NSEC3_KEYSIZE_ITERATIONS VAR_USE_SYSLOG 
-%token VAR_OUTGOING_INTERFACE VAR_ROOT_HINTS
+%token VAR_OUTGOING_INTERFACE VAR_ROOT_HINTS VAR_DO_NOT_QUERY_LOCALHOST
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -121,7 +121,8 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_incoming_num_tcp | server_msg_buffer_size | 
 	server_key_cache_size | server_key_cache_slabs | 
 	server_trusted_keys_file | server_val_nsec3_keysize_iterations |
-	server_use_syslog | server_outgoing_interface | server_root_hints
+	server_use_syslog | server_outgoing_interface | server_root_hints |
+	server_do_not_query_localhost
 	;
 stubstart: VAR_STUB_ZONE
 	{
@@ -549,6 +550,16 @@ server_do_not_query_address: VAR_DO_NOT_QUERY_ADDRESS STRING
 		OUTYY(("P(server_do_not_query_address:%s)\n", $2));
 		if(!cfg_strlist_insert(&cfg_parser->cfg->donotqueryaddrs, $2))
 			yyerror("out of memory");
+	}
+	;
+server_do_not_query_localhost: VAR_DO_NOT_QUERY_LOCALHOST STRING
+	{
+		OUTYY(("P(server_do_not_query_localhost:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->donotquery_localhost = 
+			(strcmp($2, "yes")==0);
+		free($2);
 	}
 	;
 server_module_conf: VAR_MODULE_CONF STRING

@@ -141,6 +141,7 @@ forward-zone{COLON}	{ YDOUT; return VAR_FORWARD_ZONE;}
 forward-addr{COLON}	{ YDOUT; return VAR_FORWARD_ADDR;}
 forward-host{COLON}	{ YDOUT; return VAR_FORWARD_HOST;}
 do-not-query-address{COLON}	{ YDOUT; return VAR_DO_NOT_QUERY_ADDRESS;}
+do-not-query-localhost{COLON}	{ YDOUT; return VAR_DO_NOT_QUERY_LOCALHOST;}
 hide-identity{COLON}	{ YDOUT; return VAR_HIDE_IDENTITY;}
 hide-version{COLON}     { YDOUT; return VAR_HIDE_VERSION;}
 identity{COLON}		{ YDOUT; return VAR_IDENTITY;}

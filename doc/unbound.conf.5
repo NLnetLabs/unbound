@@ -217,6 +217,10 @@ Will trust glue only if it is within the servers authority. Default is on.
 Do not query the given IP address. Can be IP4 or IP6. Append /num to 
 indicate a classless delegation netblock, for example like
 10.2.3.4/24 or 2001::11/64.
+.It \fBdo-not-query-localhost:\fR <yes or no>
+If yes, localhost is added to the do-not-query-address entries, both
+IP6 ::1 and IP4 127.0.0.1/8. If no, then localhost can be used to send
+queries to. Default is yes.
 .It \fBmodule-config:\fR <"module names">
 Module configuration, a list of module names separated by spaces, surround
 the string with quotes (""). The modules can be validator, iterator.
