@@ -194,6 +194,11 @@ struct module_env {
 	/** is validation required for messages, controls client-facing
 	 * validation status (AD bits) and servfails */
 	int need_to_validate;
+	/** trusted key storage; these are the configured keys, if not NULL,
+	 * otherwise configured by validator. These are the trust anchors,
+	 * and are not primed and ready for validation, but on the bright
+	 * side, they are read only memory, thus no locks and fast. */
+	struct val_anchors* anchors;
 	/** module specific data. indexed by module id. */
 	void* modinfo[MAX_MODULE];
 };

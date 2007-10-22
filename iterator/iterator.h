@@ -225,6 +225,13 @@ struct iter_qstate {
 	/** the number of times this query as followed a referral. */
 	int referral_count;
 
+	/** 
+	 * expected dnssec information for this iteration step. 
+	 * If dnssec rrsigs are expected and not given, the server is marked
+	 * lame (dnssec-lame).
+	 */
+	int dnssec_expected;
+
 	/**
 	 * This is flag that, if true, means that this event is 
 	 * waiting for a stub priming query. 

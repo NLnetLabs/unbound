@@ -3,6 +3,11 @@
 	  out test cases.
 	- ISO C compat changes.
 	- detect RA-no-AA lameness, as LAME.
+	- DNSSEC-lameness detection, as LAME.
+	  See notes in requirements.txt for choices made.
+	- tests for lameness detection.
+	- added all to make test target; need unbound for fwd tests.
+	- testbound does not pollute /etc/unbound.
 
 19 October 2007: Wouter
 	- added configure (and its files) to svn, so that the trunk is easier

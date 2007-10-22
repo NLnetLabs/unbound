@@ -136,4 +136,26 @@ void iter_mark_cycle_targets(struct module_qstate* qstate, struct delegpt* dp);
  */
 int iter_dp_is_useless(struct module_qstate* qstate, struct delegpt* dp);
 
+/**
+ * See if delegation is expected to have DNSSEC information (RRSIGs) in 
+ * its answers, or not. Inspects delegation point (name), trust anchors,
+ * and delegation message (DS RRset) to determine this.
+ * @param env: module env with trust anchors.
+ * @param dp: delegation point.
+ * @param msg: delegation message, with DS if a secure referral.
+ * @return 1 if dnssec is expected, 0 if not.
+ */
+int iter_indicates_dnssec(struct module_env* env, struct delegpt* dp,
+	struct dns_msg* msg);
+
+/**
+ * See if a message contains DNSSEC.
+ * This is examined by looking for RRSIGs. With DNSSEC a valid answer, 
+ * nxdomain, nodata, referral or cname reply has RRSIGs in answer or auth 
+ * sections, sigs on answer data, SOA, DS, or NSEC/NSEC3 records.
+ * @param msg: message to examine.
+ * @return true if DNSSEC information was found.
+ */
+int iter_msg_has_dnssec(struct dns_msg* msg);
+
 #endif /* ITERATOR_ITER_UTILS_H */

@@ -135,7 +135,9 @@ setup_config(FILE* in, char* configfile, int* lineno,
 	if(!cfg) fatal_exit("could not open %s: %s", 
 			configfile, strerror(errno));
 	line[MAX_LINE_LEN-1] = 0;
+	/* some basic settings to not pollute the host system */
 	fprintf(cfg, "server:	use-syslog: no\n");
+	fprintf(cfg, "		directory: \"\"\n");
 	while(fgets(line, MAX_LINE_LEN-1, in)) {
 		parse = line;
 		(*lineno)++;

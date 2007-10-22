@@ -121,16 +121,7 @@ init_parents(struct val_anchors* anchors)
 	}
 }
 
-/**
- * Find a trust anchor. Exact matching.
- * @param anchors: anchor storage.
- * @param name: name of trust anchor (wireformat)
- * @param namelabs: labels in name
- * @param namelen: length of name
- * @param dclass: class of trust anchor
- * @return NULL if not found.
- */
-static struct trust_anchor*
+struct trust_anchor*
 anchor_find(struct val_anchors* anchors, uint8_t* name, int namelabs,
 	size_t namelen, uint16_t dclass)
 {

@@ -59,9 +59,6 @@ struct key_entry_key;
  * Global state for the validator. 
  */
 struct val_env {
-	/** trusted key storage; these are the configured keys */
-	struct val_anchors* anchors;
-
 	/** key cache; these are validated keys. trusted keys only
 	 * end up here after being primed. */
 	struct key_cache* kcache;

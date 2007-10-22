@@ -99,7 +99,7 @@ $(BUILD)%.o:    $(srcdir)/%.c
 
 all:	$(COMMON_OBJ) unbound unbound-checkconf
 
-tests:	unittest testbound lock-verify pktview signit memstats
+tests:	all unittest testbound lock-verify pktview signit memstats
 
 test:	tests
 	bash testcode/do-tests.sh

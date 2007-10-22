@@ -121,3 +121,22 @@ o The harden-glue feature, when yes all out of zone glue is deleted, when
   as more glue is present for the recursive service to use. The feature
   is implemented so as to minimise the security risk, while trying to 
   keep this performance gain.
+o The method by which dnssec-lameness is detected is not secure. DNSSEC lame
+  is when a server has the zone in question, but lacks dnssec data, such as
+  signatures. The method to detect dnssec lameness looks at nonvalidated 
+  data from the parent of a zone. This can be used, by spoofing the parent,
+  to create a false sense of dnssec-lameness in the child, or a false sense
+  or dnssec-non-lameness in the child. The first results in the server marked
+  lame, and not used for 900 seconds, and the second will result in a 
+  validator failure (SERVFAIL again), when the query is validated later on.
+
+  Concluding, a spoof of the parent delegation can be used for many cases
+  of denial of service. I.e. a completely different NS set could be returned,
+  or the information withheld. All of these alterations can be caught by
+  the validator if the parent is signed, and result in 900 seconds bogus. 
+  The dnssec-lameness detection is used to detect operator failures, 
+  before the validator will properly verify the messages.
+
+  Also for zones for which no chain of trust exists, but a DS is given by the
+  parent, dnssec-lameness detection enables. This delivers dnnsec to our 
+  clients when possible (for client validators).

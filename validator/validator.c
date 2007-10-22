@@ -97,15 +97,16 @@ fill_nsec3_iter(struct val_env* ve, char* s, int c)
 
 /** apply config settings to validator */
 static int
-val_apply_cfg(struct val_env* val_env, struct config_file* cfg)
+val_apply_cfg(struct module_env* env, struct val_env* val_env, 
+	struct config_file* cfg)
 {
 	int c;
 	val_env->bogus_ttl = (uint32_t)cfg->bogus_ttl;
 	val_env->clean_additional = cfg->val_clean_additional;
 	val_env->permissive_mode = cfg->val_permissive_mode;
-	if(!val_env->anchors)
-		val_env->anchors = anchors_create();
-	if(!val_env->anchors) {
+	if(!env->anchors)
+		env->anchors = anchors_create();
+	if(!env->anchors) {
 		log_err("out of memory");
 		return 0;
 	}
@@ -115,7 +116,7 @@ val_apply_cfg(struct val_env* val_env, struct config_file* cfg)
 		log_err("out of memory");
 		return 0;
 	}
-	if(!anchors_apply_cfg(val_env->anchors, cfg)) {
+	if(!anchors_apply_cfg(env->anchors, cfg)) {
 		log_err("validator: error in trustanchors config");
 		return 0;
 	}
@@ -146,7 +147,7 @@ val_init(struct module_env* env, int id)
 	env->modinfo[id] = (void*)val_env;
 	env->need_to_validate = 1;
 	val_env->permissive_mode = 0;
-	if(!val_apply_cfg(val_env, env->cfg)) {
+	if(!val_apply_cfg(env, val_env, env->cfg)) {
 		log_err("validator: could not apply configuration settings.");
 		return 0;
 	}
@@ -160,7 +161,7 @@ val_deinit(struct module_env* env, int id)
 	if(!env || !env->modinfo || !env->modinfo[id])
 		return;
 	val_env = (struct val_env*)env->modinfo[id];
-	anchors_delete(val_env->anchors);
+	anchors_delete(env->anchors);
 	key_cache_delete(val_env->kcache);
 	free(val_env->nsec3_keysize);
 	free(val_env->nsec3_maxiter);
@@ -1114,13 +1115,13 @@ processInit(struct module_qstate* qstate, struct val_qstate* vq,
 		}
 	}
 
-	val_mark_indeterminate(vq->chase_reply, ve->anchors, 
+	val_mark_indeterminate(vq->chase_reply, qstate->env->anchors, 
 		qstate->env->rrset_cache);
 	vq->key_entry = NULL;
 	vq->empty_DS_name = NULL;
 	vq->ds_rrset = 0;
-	vq->trust_anchor = anchors_lookup(ve->anchors, vq->qchase.qname,
-		vq->qchase.qname_len, vq->qchase.qclass);
+	vq->trust_anchor = anchors_lookup(qstate->env->anchors, 
+		vq->qchase.qname, vq->qchase.qname_len, vq->qchase.qclass);
 	if(vq->trust_anchor == NULL) {
 		/*response isn't under a trust anchor, so we cannot validate.*/
 		vq->chase_reply->security = sec_status_indeterminate;
@@ -2078,7 +2079,7 @@ val_get_mem(struct module_env* env, int id)
 	if(!ve)
 		return 0;
 	return sizeof(*ve) + key_cache_get_mem(ve->kcache) + 
-		anchors_get_mem(ve->anchors) + 
+		anchors_get_mem(env->anchors) + 
 		sizeof(size_t)*2*ve->nsec3_keyiter_count;
 }
 

@@ -58,6 +58,7 @@
 #include "util/data/dname.h"
 #include "util/random.h"
 #include "util/fptr_wlist.h"
+#include "validator/val_anchor.h"
 
 /** fillup fetch policy array */
 static void
@@ -366,4 +367,38 @@ iter_dp_is_useless(struct module_qstate* qstate, struct delegpt* dp)
 			return 0; /* one address is not required glue */
 	}
 	return 1;
+}
+
+int 
+iter_indicates_dnssec(struct module_env* env, struct delegpt* dp,
+        struct dns_msg* msg)
+{
+	/* information not available, !env->anchors can be common */
+	if(!env || !env->anchors || !dp || !dp->name || !msg || !msg->rep)
+		return 0;
+	/* a trust anchor exists with this name, RRSIGs expected */
+	if(anchor_find(env->anchors, dp->name, dp->namelabs, dp->namelen,
+		msg->qinfo.qclass))
+		return 1;
+	/* see if DS rrset was given, in AUTH section */
+	if(reply_find_rrset_section_ns(msg->rep, dp->name, dp->namelen,
+		LDNS_RR_TYPE_DS, msg->qinfo.qclass))
+		return 1;
+	return 0;
+}
+
+int 
+iter_msg_has_dnssec(struct dns_msg* msg)
+{
+	size_t i;
+	if(!msg || !msg->rep)
+		return 0;
+	for(i=0; i<msg->rep->an_numrrsets + msg->rep->ns_numrrsets; i++) {
+		if(((struct packed_rrset_data*)msg->rep->rrsets[i]->
+			entry.data)->rrsig_count > 0)
+			return 1;
+	}
+	/* empty message has no DNSSEC info, with DNSSEC the reply is
+	 * not empty (NSEC) */
+	return 0;
 }

@@ -114,6 +114,7 @@ iter_new(struct module_qstate* qstate, int id)
 	iq->referral_count = 0;
 	iq->wait_priming_stub = 0;
 	iq->refetch_glue = 0;
+	iq->dnssec_expected = 0;
 	iq->chase_flags = qstate->query_flags;
 	/* Start with the (current) qname. */
 	iq->qchase = qstate->qinfo;
@@ -730,8 +731,8 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 	}
 	while(1) {
 		
-		/* Lookup the delegation in the cache. If null, then the cache needs 
-		 * to be primed for the qclass. */
+		/* Lookup the delegation in the cache. If null, then the 
+		 * cache needs to be primed for the qclass. */
 		iq->dp = dns_cache_find_delegation(qstate->env, delname, 
 			delnamelen, iq->qchase.qtype, iq->qchase.qclass, 
 			qstate->region, &iq->deleg_msg, (uint32_t)time(NULL));
@@ -799,6 +800,11 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 
 	verbose(VERB_ALGO, "cache delegation returns delegpt");
 	delegpt_log(VERB_ALGO, iq->dp);
+
+	/* if the cache reply dp equals a validation anchor or msg has DS,
+	 * then DNSSEC RRSIGs are expected in the reply */
+	iq->dnssec_expected = iter_indicates_dnssec(qstate->env, iq->dp, 
+		iq->deleg_msg);
 
 	/* Reset the RD flag. If this is a query restart, then the RD 
 	 * will have been turned off. */
@@ -1186,6 +1192,14 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		 * differently. No queries should be sent elsewhere */
 		type = RESPONSE_TYPE_ANSWER;
 	}
+	if(!(iq->chase_flags&BIT_RD) && type != RESPONSE_TYPE_LAME && 
+		type != RESPONSE_TYPE_THROWAWAY && 
+		type != RESPONSE_TYPE_UNTYPED && iq->dnssec_expected) {
+		/* a possible answer, see if it is missing DNSSEC */
+		/* but not when forwarding, so we dont mark fwder lame */
+		if(!iter_msg_has_dnssec(iq->response))
+			type = RESPONSE_TYPE_LAME;
+	}
 
 	/* handle each of the type cases */
 	if(type == RESPONSE_TYPE_ANSWER) {
@@ -1225,6 +1239,10 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		delegpt_log(VERB_ALGO, iq->dp);
 		/* Count this as a referral. */
 		iq->referral_count++;
+		/* see if the next dp is a trust anchor, or a DS was sent
+		 * along, indicating dnssec is expected for next zone */
+		iq->dnssec_expected = iter_indicates_dnssec(qstate->env, 
+			iq->dp, iq->response);
 
 		/* stop current outstanding queries. 
 		 * FIXME: should the outstanding queries be waited for and
@@ -1264,6 +1282,7 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		/* Clear the query state, since this is a query restart. */
 		iq->deleg_msg = NULL;
 		iq->dp = NULL;
+		iq->dnssec_expected = 0;
 		/* Note the query restart. */
 		iq->query_restart_count++;
 
