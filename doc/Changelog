@@ -1,3 +1,9 @@
+23 October 2007: Wouter
+	- fixup (grand-)parent problem for dnssec-lameness detection.
+	- fixup tests to do additional section processing for lame replies,
+	  since the detection needs that.
+	- no longer trust in query section in reply during dnssec lame detect.
+
 22 October 2007: Wouter
 	- added donotquerylocalhost config option. Can be turned off for
 	  out test cases.

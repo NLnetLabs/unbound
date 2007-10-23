@@ -140,3 +140,22 @@ o The method by which dnssec-lameness is detected is not secure. DNSSEC lame
   Also for zones for which no chain of trust exists, but a DS is given by the
   parent, dnssec-lameness detection enables. This delivers dnnsec to our 
   clients when possible (for client validators).
+
+  The following issue needs to be resolved:
+	a server that serves both a parent and child zone, where
+	parent is signed, but child is not. The server must not be marked 
+	lame for the parent zone, because the child answer is not signed. 
+  Instead of a false positive, we want false negatives; failure to 
+  detect dnssec-lameness is less of a problem than marking honest 
+  servers lame. dnssec-lameness is a config error and deserves the trouble.
+  So, only messages that identify the zone are used to mark the zone
+  lame. The zone is identified by SOA or NS RRsets in the answer/auth.
+  That includes almost all negative responses and also A, AAAA qtypes.
+  That would be most responses from servers.
+  For referrals, delegations that add a single label can be checked to be
+  from their zone, this covers most delegation-centric zones.
+
+  So possibly, for complicated setups, with multiple (parent-child) zones 
+  on a server, dnssec-lameness detection does not work - no dnssec-lameness 
+  is detected. Instead the zone that is dnssec-lame becomes bogus.
+

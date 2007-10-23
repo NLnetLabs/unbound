@@ -204,6 +204,12 @@ www.example.com. IN A
 SECTION ANSWER
 ; the wrong answer.
 www.example.com. IN A	10.20.30.40
+SECTION AUTHORITY
+; dnssec-lameness detection depends on this information
+example.com.	IN NS	ns.example.com.
+example.com.	IN NS	ns.example.net.
+SECTION ADDITIONAL
+ns.example.com. IN A	1.2.3.55
 ENTRY_END
 RANGE_END
 

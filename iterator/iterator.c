@@ -804,7 +804,7 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 	/* if the cache reply dp equals a validation anchor or msg has DS,
 	 * then DNSSEC RRSIGs are expected in the reply */
 	iq->dnssec_expected = iter_indicates_dnssec(qstate->env, iq->dp, 
-		iq->deleg_msg);
+		iq->deleg_msg, iq->qchase.qclass);
 
 	/* Reset the RD flag. If this is a query restart, then the RD 
 	 * will have been turned off. */
@@ -1192,12 +1192,18 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		 * differently. No queries should be sent elsewhere */
 		type = RESPONSE_TYPE_ANSWER;
 	}
-	if(!(iq->chase_flags&BIT_RD) && type != RESPONSE_TYPE_LAME && 
-		type != RESPONSE_TYPE_THROWAWAY && 
-		type != RESPONSE_TYPE_UNTYPED && iq->dnssec_expected) {
+	if(iq->dnssec_expected && !(iq->chase_flags&BIT_RD) 
+		&& type != RESPONSE_TYPE_LAME 
+		&& type != RESPONSE_TYPE_THROWAWAY 
+		&& type != RESPONSE_TYPE_UNTYPED) {
 		/* a possible answer, see if it is missing DNSSEC */
 		/* but not when forwarding, so we dont mark fwder lame */
-		if(!iter_msg_has_dnssec(iq->response))
+		/* also make sure the answer is from the zone we expected,
+		 * otherwise, (due to parent,child on same server), we
+		 * might mark the server,zone lame inappropriately */
+		if(!iter_msg_has_dnssec(iq->response) &&
+			iter_msg_from_zone(iq->response, iq->dp, type,
+				iq->qchase.qclass))
 			type = RESPONSE_TYPE_LAME;
 	}
 
@@ -1242,7 +1248,7 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		/* see if the next dp is a trust anchor, or a DS was sent
 		 * along, indicating dnssec is expected for next zone */
 		iq->dnssec_expected = iter_indicates_dnssec(qstate->env, 
-			iq->dp, iq->response);
+			iq->dp, iq->response, iq->qchase.qclass);
 
 		/* stop current outstanding queries. 
 		 * FIXME: should the outstanding queries be waited for and

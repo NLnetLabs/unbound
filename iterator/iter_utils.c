@@ -371,18 +371,18 @@ iter_dp_is_useless(struct module_qstate* qstate, struct delegpt* dp)
 
 int 
 iter_indicates_dnssec(struct module_env* env, struct delegpt* dp,
-        struct dns_msg* msg)
+        struct dns_msg* msg, uint16_t dclass)
 {
 	/* information not available, !env->anchors can be common */
 	if(!env || !env->anchors || !dp || !dp->name || !msg || !msg->rep)
 		return 0;
 	/* a trust anchor exists with this name, RRSIGs expected */
 	if(anchor_find(env->anchors, dp->name, dp->namelabs, dp->namelen,
-		msg->qinfo.qclass))
+		dclass))
 		return 1;
 	/* see if DS rrset was given, in AUTH section */
 	if(reply_find_rrset_section_ns(msg->rep, dp->name, dp->namelen,
-		LDNS_RR_TYPE_DS, msg->qinfo.qclass))
+		LDNS_RR_TYPE_DS, dclass))
 		return 1;
 	return 0;
 }
@@ -400,5 +400,47 @@ iter_msg_has_dnssec(struct dns_msg* msg)
 	}
 	/* empty message has no DNSSEC info, with DNSSEC the reply is
 	 * not empty (NSEC) */
+	return 0;
+}
+
+int iter_msg_from_zone(struct dns_msg* msg, struct delegpt* dp,
+        enum response_type type, uint16_t dclass)
+{
+	if(!msg || !dp || !msg->rep || !dp->name)
+		return 0;
+	/* SOA RRset - always from reply zone */
+	if(reply_find_rrset_section_an(msg->rep, dp->name, dp->namelen,
+		LDNS_RR_TYPE_SOA, dclass) ||
+	   reply_find_rrset_section_ns(msg->rep, dp->name, dp->namelen,
+		LDNS_RR_TYPE_SOA, dclass))
+		return 1;
+	if(type == RESPONSE_TYPE_REFERRAL) {
+		size_t i;
+		/* if it adds a single label, i.e. we expect .com,
+		 * and referral to example.com. NS ... , then origin zone
+		 * is .com. For a referral to sub.example.com. NS ... then
+		 * we do not know, since example.com. may be in between. */
+		for(i=0; i<msg->rep->an_numrrsets+msg->rep->ns_numrrsets; 
+			i++) {
+			struct ub_packed_rrset_key* s = msg->rep->rrsets[i];
+			if(ntohs(s->rk.type) == LDNS_RR_TYPE_NS &&
+				ntohs(s->rk.rrset_class) == dclass) {
+				int l = dname_count_labels(s->rk.dname);
+				if(l == dp->namelabs + 1 &&
+					dname_strict_subdomain(s->rk.dname,
+					l, dp->name, dp->namelabs))
+					return 1;
+			}
+		}
+		return 0;
+	}
+	log_assert(type==RESPONSE_TYPE_ANSWER || type==RESPONSE_TYPE_CNAME);
+	/* not a referral, and not lame delegation (upwards), so, 
+	 * any NS rrset must be from the zone itself */
+	if(reply_find_rrset_section_an(msg->rep, dp->name, dp->namelen,
+		LDNS_RR_TYPE_NS, dclass) ||
+	   reply_find_rrset_section_ns(msg->rep, dp->name, dp->namelen,
+		LDNS_RR_TYPE_NS, dclass))
+		return 1;
 	return 0;
 }

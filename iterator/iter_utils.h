@@ -42,6 +42,7 @@
 
 #ifndef ITERATOR_ITER_UTILS_H
 #define ITERATOR_ITER_UTILS_H
+#include "iterator/iter_resptype.h"
 struct iter_env;
 struct config_file;
 struct module_env;
@@ -143,10 +144,11 @@ int iter_dp_is_useless(struct module_qstate* qstate, struct delegpt* dp);
  * @param env: module env with trust anchors.
  * @param dp: delegation point.
  * @param msg: delegation message, with DS if a secure referral.
+ * @param dclass: class of query.
  * @return 1 if dnssec is expected, 0 if not.
  */
 int iter_indicates_dnssec(struct module_env* env, struct delegpt* dp,
-	struct dns_msg* msg);
+	struct dns_msg* msg, uint16_t dclass);
 
 /**
  * See if a message contains DNSSEC.
@@ -157,5 +159,20 @@ int iter_indicates_dnssec(struct module_env* env, struct delegpt* dp,
  * @return true if DNSSEC information was found.
  */
 int iter_msg_has_dnssec(struct dns_msg* msg);
+
+/**
+ * See if a message is known to be from a certain zone.
+ * This looks for SOA or NS rrsets, for answers.
+ * For referrals, when one label is delegated, the zone is detected.
+ * Does not look at signatures.
+ * @param msg: the message to inspect.
+ * @param dp: delegation point with zone name to look for.
+ * @param type: type of message.
+ * @param dclass: class of query.
+ * @return true if message is certain to be from zone in dp->name.
+ *	false if not sure (empty msg), or not from the zone.
+ */
+int iter_msg_from_zone(struct dns_msg* msg, struct delegpt* dp, 
+	enum response_type type, uint16_t dclass);
 
 #endif /* ITERATOR_ITER_UTILS_H */

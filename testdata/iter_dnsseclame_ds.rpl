@@ -270,10 +270,13 @@ www.sub.example.com. IN A
 SECTION ANSWER
 www.sub.example.com. IN A       11.11.11.11
 SECTION AUTHORITY
+; dnssec-lameness detection depends on this information
+sub.example.com. IN     NS ns.sub.example.com.
+sub.example.com. IN     NS ns.example.net.
 SECTION ADDITIONAL
+ns.sub.example.com. IN A 1.2.3.6
 ENTRY_END
 RANGE_END
-
 
 
 STEP 1 QUERY
