@@ -266,6 +266,7 @@ infra_lookup_lame(struct infra_host_data* host,
 	struct lruhash_entry* e;
 	struct infra_lame_key k;
 	struct infra_lame_data *d;
+	int dl;
 	if(!host->lameness)
 		return 0;
 	k.entry.hash = hash_lameness(name, namelen);
@@ -281,8 +282,9 @@ infra_lookup_lame(struct infra_host_data* host,
 		lock_rw_unlock(&e->lock);
 		return 0;
 	}
+	dl = d->isdnsseclame;
 	lock_rw_unlock(&e->lock);
-	return 1;
+	return dl?2:1;
 }
 
 size_t 
@@ -329,7 +331,7 @@ infra_lame_deldatafunc(void* d, void* ATTR_UNUSED(arg))
 int 
 infra_set_lame(struct infra_cache* infra,
         struct sockaddr_storage* addr, socklen_t addrlen,
-        uint8_t* name, size_t namelen, time_t timenow)
+        uint8_t* name, size_t namelen, time_t timenow, int dnsseclame)
 {
 	struct infra_host_data* data;
 	struct lruhash_entry* e;
@@ -360,6 +362,7 @@ infra_set_lame(struct infra_cache* infra,
 	k->entry.key = (void*)k;
 	k->entry.data = (void*)d;
 	d->ttl = timenow + infra->lame_ttl;
+	d->isdnsseclame = dnsseclame;
 	k->namelen = namelen;
 	e = infra_lookup_host_nottl(infra, addr, addrlen, 1);
 	if(!e) {
@@ -476,22 +479,31 @@ infra_edns_update(struct infra_cache* infra,
 int 
 infra_get_lame_rtt(struct infra_cache* infra,
         struct sockaddr_storage* addr, socklen_t addrlen,
-        uint8_t* name, size_t namelen, int* lame, int* rtt, time_t timenow)
+        uint8_t* name, size_t namelen, int* lame, int* dnsseclame,
+	int* rtt, time_t timenow)
 {
 	struct infra_host_data* host;
 	struct lruhash_entry* e = infra_lookup_host_nottl(infra, addr, 
 		addrlen, 0);
+	int lm;
 	if(!e) 
 		return 0;
 	host = (struct infra_host_data*)e->data;
 	*rtt = rtt_unclamped(&host->rtt);
 	/* check lameness first, if so, ttl on host does not matter anymore */
-	if(infra_lookup_lame(host, name, namelen, timenow)) {
+	if((lm=infra_lookup_lame(host, name, namelen, timenow))) {
 		lock_rw_unlock(&e->lock);
-		*lame = 1;
+		if(lm == 1) {
+			*lame = 1;
+			*dnsseclame = 0;
+		} else {
+			*lame = 0;
+			*dnsseclame = 1;
+		}
 		return 1;
 	}
 	*lame = 0;
+	*dnsseclame = 0;
 	if(timenow > host->ttl) {
 		lock_rw_unlock(&e->lock);
 		return 0;

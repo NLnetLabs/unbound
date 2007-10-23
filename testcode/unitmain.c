@@ -184,12 +184,12 @@ infra_test()
 	unit_assert( vs == 0 && to == init );
 	
 	unit_assert( infra_set_lame(slab, (struct sockaddr_storage*)&one, 
-		(socklen_t)sizeof(int), zone, zonelen, now) );
+		(socklen_t)sizeof(int), zone, zonelen, now, 0) );
 	unit_assert( (d=infra_lookup_host(slab, (struct sockaddr_storage*)&one,
 		(socklen_t)sizeof(int), 0, now, &k)) );
 	unit_assert( d->ttl == now+cfg->host_ttl );
 	unit_assert( d->edns_version == 0 );
-	unit_assert( infra_lookup_lame(d, zone, zonelen, now) );
+	unit_assert( infra_lookup_lame(d, zone, zonelen, now)==1 );
 	unit_assert( !infra_lookup_lame(d, zone, zonelen, 
 		now+cfg->lame_ttl+10) );
 	unit_assert( !infra_lookup_lame(d, (uint8_t*)"\000", 1, now) );

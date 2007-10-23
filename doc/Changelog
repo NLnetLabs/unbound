@@ -3,6 +3,11 @@
 	- fixup tests to do additional section processing for lame replies,
 	  since the detection needs that.
 	- no longer trust in query section in reply during dnssec lame detect.
+	- dnssec lameness does not make the server never ever queried, but
+	  non-preferred. If no other servers exist or answer, the dnssec lame
+	  server is used; the fastest dnssec lame server is chosen.
+	- added test then when trust anchor cannot be primed (nodata), the
+	  insecure mode from unbound works.
 
 22 October 2007: Wouter
 	- added donotquerylocalhost config option. Can be turned off for

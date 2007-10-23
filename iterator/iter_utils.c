@@ -134,6 +134,7 @@ iter_filter_unsuitable(struct iter_env* iter_env, struct module_env* env,
 {
 	int rtt;
 	int lame;
+	int dnsseclame;
 	if(donotq_lookup(iter_env->donotq, &a->addr, a->addrlen)) {
 		return -1; /* server is on the donotquery list */
 	}
@@ -142,11 +143,13 @@ iter_filter_unsuitable(struct iter_env* iter_env, struct module_env* env,
 	}
 	/* check lameness - need zone , class info */
 	if(infra_get_lame_rtt(env->infra_cache, &a->addr, a->addrlen, 
-		name, namelen, &lame, &rtt, now)) {
+		name, namelen, &lame, &dnsseclame, &rtt, now)) {
 		if(lame)
 			return -1; /* server is lame */
 		else if(rtt >= USEFUL_SERVER_TOP_TIMEOUT)
 			return -1; /* server is unresponsive */
+		else if(dnsseclame)
+			return rtt+USEFUL_SERVER_TOP_TIMEOUT; /* nonpref */
 		else	return rtt;
 	}
 	/* no server information present */
@@ -157,7 +160,8 @@ iter_filter_unsuitable(struct iter_env* iter_env, struct module_env* env,
  * returns number of best targets (or 0, no suitable targets) */
 static int
 iter_filter_order(struct iter_env* iter_env, struct module_env* env,
-	uint8_t* name, size_t namelen, time_t now, struct delegpt* dp)
+	uint8_t* name, size_t namelen, time_t now, struct delegpt* dp,
+	int* best_rtt)
 {
 	int got_num = 0, got_rtt = 0, thisrtt, swap_to_front;
 	struct delegpt_addr* a, *n, *prev=NULL;
@@ -198,21 +202,26 @@ iter_filter_order(struct iter_env* iter_env, struct module_env* env,
 			a = a->next_result;
 		}
 	}
+	*best_rtt = got_rtt;
 	return got_num;
 }
 
 struct delegpt_addr* 
 iter_server_selection(struct iter_env* iter_env, 
 	struct module_env* env, struct delegpt* dp, 
-	uint8_t* name, size_t namelen)
+	uint8_t* name, size_t namelen, int* dnssec_expected)
 {
 	time_t now = time(NULL);
 	int sel;
+	int selrtt;
 	struct delegpt_addr* a, *prev;
-	int num = iter_filter_order(iter_env, env, name, namelen, now, dp);
+	int num = iter_filter_order(iter_env, env, name, namelen, now, dp,
+		&selrtt);
 
 	if(num == 0)
 		return NULL;
+	if(selrtt >= USEFUL_SERVER_TOP_TIMEOUT)
+		*dnssec_expected = 0;
 	if(num == 1) {
 		a = dp->result_list;
 		if(++a->attempts < OUTBOUND_MSG_RETRY)

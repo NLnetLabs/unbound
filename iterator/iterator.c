@@ -1082,7 +1082,7 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 
 	/* Select the next usable target, filtering out unsuitable targets. */
 	target = iter_server_selection(ie, qstate->env, iq->dp, 
-		iq->dp->name, iq->dp->namelen);
+		iq->dp->name, iq->dp->namelen, &iq->dnssec_expected);
 
 	/* If no usable target was selected... */
 	if(!target) {
@@ -1179,6 +1179,7 @@ static int
 processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 	int id)
 {
+	int dnsseclame = 0;
 	enum response_type type;
 	iq->num_current_queries--;
 	if(iq->response == NULL) {
@@ -1203,8 +1204,10 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		 * might mark the server,zone lame inappropriately */
 		if(!iter_msg_has_dnssec(iq->response) &&
 			iter_msg_from_zone(iq->response, iq->dp, type,
-				iq->qchase.qclass))
+				iq->qchase.qclass)) {
 			type = RESPONSE_TYPE_LAME;
+			dnsseclame = 1;
+		}
 	}
 
 	/* handle each of the type cases */
@@ -1307,15 +1310,18 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		return next_state(iq, INIT_REQUEST_STATE);
 	} else if(type == RESPONSE_TYPE_LAME) {
 		/* Cache the LAMEness. */
-		verbose(VERB_DETAIL, "query response was LAME");
+		verbose(VERB_DETAIL, "query response was %sLAME",
+			dnsseclame?"DNSSEC ":"");
 		if(qstate->reply) {
 			/* need addr for lameness cache, but we may have
 			 * gotten this from cache, so test to be sure */
 			if(!infra_set_lame(qstate->env->infra_cache, 
 				&qstate->reply->addr, qstate->reply->addrlen, 
-				iq->dp->name, iq->dp->namelen, time(NULL)))
+				iq->dp->name, iq->dp->namelen, time(NULL),
+				dnsseclame))
 				log_err("mark host lame: out of memory");
-		} else log_err("lame response from cache");
+		} else log_err("%slame response from cache",
+			dnsseclame?"DNSSEC ":"");
 	} else if(type == RESPONSE_TYPE_THROWAWAY) {
 		/* LAME and THROWAWAY responses are handled the same way. 
 		 * In this case, the event is just sent directly back to 
