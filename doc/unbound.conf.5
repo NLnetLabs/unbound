@@ -117,6 +117,9 @@ Must be set to a power of 2. Setting (close) to the number of cpus is a
 reasonable guess.
 .It \fBnum-queries-per-thread:\fR <number>
 The number of queries that every thread will service simultaneously.
+If more queries arrive that need servicing, they are dropped. This forces
+the client to resend after a timeout; allowing the server time to work on
+the existing queries. Default 1024.
 .It \fBrrset-cache-size:\fR <number>
 Number of bytes size of the RRset cache. Default is 4 megabytes.
 .It \fBrrset-cache-slabs:\fR <number>

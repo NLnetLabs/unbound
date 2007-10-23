@@ -765,30 +765,16 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 	server_stats_querymiss(&worker->stats, worker);
 
 	/* grab a work request structure for this new request */
-	/* @@@ TODO implement overload mode */
-	if(0 && worker->env.mesh->all.count > worker->request_size) {
-		/* we could get this due to a slow tcp incoming query, 
-		   that started before we performed listen_pushback */
-		verbose(VERB_DETAIL, "worker: too many incoming requests "
-			"active. dropping incoming query.");
-		verbose(VERB_ALGO, "currently servicing %d of %d queries", 
-			(int)worker->env.mesh->all.count, 
-			(int)worker->request_size);
+	if(worker->env.mesh->all.count > worker->request_size) {
+		verbose(VERB_ALGO, "Too many requests active. "
+			"dropping incoming query.");
 		worker->stats.num_query_list_exceeded++;
 		comm_point_drop_reply(repinfo);
-		query_info_clear(&qinfo);
 		return 0;
 	}
 	mesh_new_client(worker->env.mesh, &qinfo, 
 		ldns_buffer_read_u16_at(c->buffer, 2),
 		&edns, repinfo, *(uint16_t*)ldns_buffer_begin(c->buffer));
-
-	if(0) { /* TODO overload mode does not work yet. */
-	if(worker->env.mesh->all.count == worker->request_size)  {
-		/* the max request number has been reached, stop accepting */
-		listen_pushback(worker->front);
-	}
-	}
 	worker_mem_report(worker, NULL);
 	return 0;
 }

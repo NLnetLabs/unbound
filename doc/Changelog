@@ -8,6 +8,7 @@
 	  server is used; the fastest dnssec lame server is chosen.
 	- added test then when trust anchor cannot be primed (nodata), the
 	  insecure mode from unbound works.
+	- Fixup max queries per thread, any more are dropped.
 
 22 October 2007: Wouter
 	- added donotquerylocalhost config option. Can be turned off for
