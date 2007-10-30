@@ -347,6 +347,8 @@ comm_point_tcp_handle_read(int fd, struct comm_point* c, int short_ok)
 		else if(r == -1) {
 			if(errno == EINTR || errno == EAGAIN)
 				return 1;
+			if(errno == ECONNRESET && verbosity < 2)
+				return 0; /* silence reset by peer */
 			log_err("read (in tcp s): %s", strerror(errno));
 			return 0;
 		} 
@@ -411,6 +413,8 @@ comm_point_tcp_handle_write(int fd, struct comm_point* c)
 		}
 		if(error == EINPROGRESS || error == EWOULDBLOCK)
 			return 1; /* try again later */
+		if(error == ECONNREFUSED && verbosity < 2)
+			return 0; /* silence 'connection refused' */
 		if(error != 0) {
 			log_err("tcp connect: %s", strerror(error));
 			return 0;
