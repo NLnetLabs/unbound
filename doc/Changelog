@@ -3,6 +3,7 @@
 	  smaller than uncompressed names. A packet from comrite.com was seen
 	  to be compressed to a larger size. Added it as unit test.
 	- quieter logging at low verbosity level for common tcp messages.
+	- no greedy TTL update.
 
 23 October 2007: Wouter
 	- fixup (grand-)parent problem for dnssec-lameness detection.

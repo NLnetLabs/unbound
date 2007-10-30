@@ -396,7 +396,8 @@ fake_pending_callback(struct replay_runtime* runtime,
 	repinfo.c = &c;
 	repinfo.addrlen = p->addrlen;
 	memcpy(&repinfo.addr, &p->addr, p->addrlen);
-	pending_list_delete(runtime, p);
+	if(!p->serviced)
+		pending_list_delete(runtime, p);
 	if((*cb)(&c, cb_arg, error, &repinfo)) {
 		fatal_exit("unexpected: pending callback returned 1");
 	}

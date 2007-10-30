@@ -134,21 +134,6 @@ need_to_update_rrset(void* nd, void* cd, uint32_t timenow, int equal)
         /*      o same trust, but different in data - insert it */
         if( newd->trust == cached->trust && !equal )
                 return 1;
-        /*      o see if TTL is better than TTL in cache. */
-        /*        if so, see if rrset+rdata is the same */
-        /*        if so, update TTL in cache, even if trust is worse. */
-        if( newd->ttl > cached->ttl && equal ) {
-		/* if the cached rrset is bogus, and this one equal,
-		 * do not update the TTL - let it expire. */
-		if(cached->security == sec_status_bogus)
-			return 0;
-		/* since all else is the same, use the best trust value */
-		if(newd->trust < cached->trust) {
-			newd->trust = cached->trust;
-			newd->security = cached->security;
-		}
-                return 1;
-	}
         return 0;
 }
 
