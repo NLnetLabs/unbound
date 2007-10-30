@@ -175,7 +175,6 @@ rdata_copy(ldns_buffer* pkt, struct packed_rrset_data* data, uint8_t* to,
 	pkt_len = ldns_buffer_read_u16(pkt);
 	if(ldns_buffer_remaining(pkt) < pkt_len)
 		return 0;
-	log_assert((size_t)pkt_len+2 <= rr->size);
 	desc = ldns_rr_descript(type);
 	if(pkt_len > 0 && desc && desc->_dname_count > 0) {
 		int count = (int)desc->_dname_count;

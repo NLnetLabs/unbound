@@ -1,3 +1,8 @@
+30 October 2007: Wouter
+	- fixup assertion failure that relied on compressed names to be
+	  smaller than uncompressed names. A packet from comrite.com was seen
+	  to be compressed to a larger size. Added it as unit test.
+
 23 October 2007: Wouter
 	- fixup (grand-)parent problem for dnssec-lameness detection.
 	- fixup tests to do additional section processing for lame replies,
