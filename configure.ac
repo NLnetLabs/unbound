@@ -559,7 +559,7 @@ fi
 
 ] , [
 dnl use the builtin ldns-src.tar.gz file to build ldns.
-if test ! -f ldns-src.tar.gz; then
+if test ! -f $srcdir/ldns-src.tar.gz; then
 	AC_MSG_ERROR([No ldns library found and no ldns-src.tar.gz, use --with-ldns=path.])
 fi
 echo "****************************************************************"
@@ -569,7 +569,7 @@ echo "*** Building ldns library from package included in this one. ***"
 echo "***                                                          ***"
 echo "****************************************************************"
 if test -d ldns-src; then rm -rf ldns-src; fi
-mkdir ldns-src; (cd ldns-src; gzip -cd ../ldns-src.tar.gz | tar xf -)
+mkdir ldns-src; cp $srcdir/ldns-src.tar.gz ldns-src/ldns-src.tar.gz; (cd ldns-src; gzip -cd ldns-src.tar.gz | tar xf -); rm -f ldns-src/ldns-src.tar.gz
 ldnsdir=`ls -d ldns-src/ldns*`
 AC_MSG_NOTICE([Configure $ldnsdir])
 echo "(cd $ldnsdir; ./configure)"

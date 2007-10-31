@@ -52,15 +52,19 @@ LINTFLAGS+="-DBN_ULONG=unsigned long" -Dkrb5_int32=int "-Dkrb5_ui_4=unsigned int
 
 INSTALL=$(srcdir)/install-sh
 
-COMMON_SRC=$(wildcard services/*.c services/cache/*.c util/*.c \
-	util/data/*.c util/storage/*.c iterator/*.c validator/*.c) \
+COMMON_SRC=$(patsubst $(srcdir)/%,%, $(wildcard $(srcdir)/services/*.c \
+	$(srcdir)/services/cache/*.c $(srcdir)/util/*.c \
+	$(srcdir)/util/data/*.c $(srcdir)/util/storage/*.c \
+	$(srcdir)/iterator/*.c $(srcdir)/validator/*.c)) \
 	util/configparser.c util/configlexer.c testcode/checklocks.c
 COMMON_OBJ=$(addprefix $(BUILD),$(COMMON_SRC:.c=.o))
 COMPAT_OBJ=$(addprefix $(BUILD)compat/,$(LIBOBJS))
-UNITTEST_SRC=$(wildcard testcode/unit*.c) testcode/readhex.c \
-	testcode/ldns-testpkts.c checkconf/worker_cb.c $(COMMON_SRC)
+UNITTEST_SRC=$(patsubst $(srcdir)/%,%, $(wildcard $(srcdir)/testcode/unit*.c)) \
+	testcode/readhex.c testcode/ldns-testpkts.c checkconf/worker_cb.c \
+	$(COMMON_SRC)
 UNITTEST_OBJ=$(addprefix $(BUILD),$(UNITTEST_SRC:.c=.o)) $(COMPAT_OBJ)
-DAEMON_SRC=$(wildcard daemon/*.c) $(COMMON_SRC)
+DAEMON_SRC=$(patsubst $(srcdir)/%,%, $(wildcard $(srcdir)/daemon/*.c)) \
+	$(COMMON_SRC)
 DAEMON_OBJ=$(addprefix $(BUILD),$(DAEMON_SRC:.c=.o)) $(COMPAT_OBJ)
 CHECKCONF_SRC=checkconf/unbound-checkconf.c checkconf/worker_cb.c $(COMMON_SRC)
 CHECKCONF_OBJ=$(addprefix $(BUILD),$(CHECKCONF_SRC:.c=.o)) $(COMPAT_OBJ)

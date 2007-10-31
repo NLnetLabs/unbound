@@ -24475,7 +24475,7 @@ fi
 
 else
 
-if test ! -f ldns-src.tar.gz; then
+if test ! -f $srcdir/ldns-src.tar.gz; then
 	{ { echo "$as_me:$LINENO: error: No ldns library found and no ldns-src.tar.gz, use --with-ldns=path." >&5
 echo "$as_me: error: No ldns library found and no ldns-src.tar.gz, use --with-ldns=path." >&2;}
    { (exit 1); exit 1; }; }
@@ -24487,7 +24487,7 @@ echo "*** Building ldns library from package included in this one. ***"
 echo "***                                                          ***"
 echo "****************************************************************"
 if test -d ldns-src; then rm -rf ldns-src; fi
-mkdir ldns-src; (cd ldns-src; gzip -cd ../ldns-src.tar.gz | tar xf -)
+mkdir ldns-src; cp $srcdir/ldns-src.tar.gz ldns-src/ldns-src.tar.gz; (cd ldns-src; gzip -cd ldns-src.tar.gz | tar xf -); rm -f ldns-src/ldns-src.tar.gz
 ldnsdir=`ls -d ldns-src/ldns*`
 { echo "$as_me:$LINENO: Configure $ldnsdir" >&5
 echo "$as_me: Configure $ldnsdir" >&6;}
