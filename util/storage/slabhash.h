@@ -91,6 +91,12 @@ struct slabhash* slabhash_create(size_t numtables, size_t start_size,
 void slabhash_delete(struct slabhash* table);
 
 /**
+ * Clear hash table. Entries are all deleted.
+ * @param table: to make empty.
+ */
+void slabhash_clear(struct slabhash* table);
+
+/**
  * Insert a new element into the hashtable, uses lruhash_insert. 
  * If key is already present data pointer in that entry is updated.
  *

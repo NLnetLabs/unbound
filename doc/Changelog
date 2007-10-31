@@ -9,6 +9,7 @@
 	  sort per reference key pointer, not on referencepointer itself.
 	- pidfile: "/etc/unbound/unbound.pid" is now the default.
 	- tests changed to reflect the updated default.
+	- created hashtable clear() function that respects locks.
 
 30 October 2007: Wouter
 	- fixup assertion failure that relied on compressed names to be

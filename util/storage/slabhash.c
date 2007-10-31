@@ -97,6 +97,15 @@ void slabhash_delete(struct slabhash* sl)
 	free(sl);
 }
 
+void slabhash_clear(struct slabhash* sl)
+{
+	size_t i;
+	if(!sl)
+		return;
+	for(i=0; i<sl->size; i++)
+		lruhash_clear(sl->array[i]);
+}
+
 /** helper routine to calculate the slabhash index */
 static unsigned int
 slab_idx(struct slabhash* sl, hashvalue_t hash)

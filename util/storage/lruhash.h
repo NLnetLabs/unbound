@@ -244,6 +244,13 @@ struct lruhash* lruhash_create(size_t start_size, size_t maxmem,
 void lruhash_delete(struct lruhash* table);
 
 /**
+ * Clear hash table. Entries are all deleted, while locking them before 
+ * doing so. At end the table is empty.
+ * @param table: to make empty.
+ */
+void lruhash_clear(struct lruhash* table);
+
+/**
  * Insert a new element into the hashtable. 
  * If key is already present data pointer in that entry is updated.
  * The space calculation function is called with the key, data.

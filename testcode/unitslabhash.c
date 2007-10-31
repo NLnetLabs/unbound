@@ -251,6 +251,11 @@ test_long_table(struct slabhash* table)
 	srandom(48);
 	for(i=0; i<1000; i++) {
 		/* what to do? */
+		if(i == 500) {
+			slabhash_clear(table);
+			memset(ref, 0, sizeof(ref));
+			continue;
+		}
 		switch(random() % 4) {
 			case 0:
 			case 3:

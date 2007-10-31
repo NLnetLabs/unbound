@@ -402,6 +402,45 @@ lruhash_remove(struct lruhash* table, hashvalue_t hash, void* key)
 	(*table->deldatafunc)(d, table->cb_arg);
 }
 
+/** clear bin, respecting locks, does not do space, LRU */
+static void
+bin_clear(struct lruhash* table, struct lruhash_bin* bin)
+{
+	struct lruhash_entry* p, *np;
+	void *d;
+	lock_quick_lock(&bin->lock);
+	p = bin->overflow_list; 
+	while(p) {
+		lock_rw_wrlock(&p->lock);
+		np = p->overflow_next;
+		d = p->data;
+		(*table->delkeyfunc)(p->key, table->cb_arg, 1);
+		(*table->deldatafunc)(d, table->cb_arg);
+		p = np;
+	}
+	bin->overflow_list = NULL;
+	lock_quick_unlock(&bin->lock);
+}
+
+void
+lruhash_clear(struct lruhash* table)
+{
+	size_t i;
+	log_assert(fptr_whitelist_hash_delkeyfunc(table->delkeyfunc));
+	log_assert(fptr_whitelist_hash_deldatafunc(table->deldatafunc));
+	if(!table)
+		return;
+
+	lock_quick_lock(&table->lock);
+	for(i=0; i<table->size; i++) {
+		bin_clear(table, &table->array[i]);
+	}
+	table->lru_start = NULL;
+	table->lru_end = NULL;
+	table->num = 0;
+	table->space_used = 0;
+	lock_quick_unlock(&table->lock);
+}
 
 void 
 lruhash_status(struct lruhash* table, const char* id, int extended)
