@@ -421,8 +421,10 @@ int reply_info_parse(ldns_buffer* pkt, struct alloc_cache* alloc,
 static int
 reply_info_sortref_cmp(const void* a, const void* b)
 {
-	if(a < b) return -1;
-	if(a > b) return 1;
+	struct rrset_ref* x = (struct rrset_ref*)a;
+	struct rrset_ref* y = (struct rrset_ref*)b;
+	if(x->key < y->key) return -1;
+	if(x->key > y->key) return 1;
 	return 0;
 }
 

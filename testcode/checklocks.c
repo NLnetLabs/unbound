@@ -63,7 +63,7 @@ static ub_thread_key_t thr_debug_key;
 /** the list of threads, so all threads can be examined. NULL if unused. */
 static struct thr_check* thread_infos[THRDEBUG_MAX_THREADS];
 /** do we check locking order */
-int check_locking_order = 0;
+int check_locking_order = 1;
 /** the pid of this runset, reasonably unique. */
 static pid_t check_lock_pid;
 

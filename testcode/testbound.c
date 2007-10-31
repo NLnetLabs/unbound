@@ -140,6 +140,7 @@ setup_config(FILE* in, char* configfile, int* lineno,
 	fprintf(cfg, "		directory: \"\"\n");
 	fprintf(cfg, "		chroot: \"\"\n");
 	fprintf(cfg, "		username: \"\"\n");
+	fprintf(cfg, "		pidfile: \"\"\n");
 	while(fgets(line, MAX_LINE_LEN-1, in)) {
 		parse = line;
 		(*lineno)++;

@@ -173,6 +173,7 @@ int main(int argc, char* argv[])
 	int c;
 	log_ident_set("unbound-checkconf");
 	log_init(NULL, 0, NULL);
+	checklock_start();
 	/* parse the options */
 	while( (c=getopt(argc, argv, "h")) != -1) {
 		switch(c) {
@@ -187,5 +188,6 @@ int main(int argc, char* argv[])
 	if(argc != 1)
 		usage();
 	checkconf(argv[0]);
+	checklock_stop();
 	return 0;
 }

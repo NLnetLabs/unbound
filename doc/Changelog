@@ -5,6 +5,10 @@
 		username: "unbound"
 		chroot: "/etc/unbound"
 	  The operator can override them to be less secure ("") if necessary.
+	- fix horrible oversight in sorting rrset references in a message,
+	  sort per reference key pointer, not on referencepointer itself.
+	- pidfile: "/etc/unbound/unbound.pid" is now the default.
+	- tests changed to reflect the updated default.
 
 30 October 2007: Wouter
 	- fixup assertion failure that relied on compressed names to be

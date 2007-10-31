@@ -181,9 +181,16 @@ The log facility LOG_DAEMON is used, with identity "unbound".
 The logfile setting is overridden when use-syslog is turned on.
 The default is to log to syslog.
 .It \fBpidfile:\fR <filename>
-The process id is written to the file. Default is "unbound.pid". So,
-kill -HUP `cat /etc/unbound/unbound.pid` will trigger a reload,
-kill -QUIT `cat /etc/unbound/unbound.pid` will gracefully terminate.
+The process id is written to the file. Default is "/etc/unbound/unbound.pid". 
+So,
+.nf
+kill -HUP `cat /etc/unbound/unbound.pid` 
+.fi
+triggers a reload,
+.nf
+kill -QUIT `cat /etc/unbound/unbound.pid` 
+.fi
+gracefully terminates.
 .It \fBroot-hints:\fR <filename>
 Read the root hints from this file. Default is nothing, using builtin hints
 for the IN class. The file has the format of zone files, with root 

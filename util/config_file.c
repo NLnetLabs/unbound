@@ -97,7 +97,8 @@ config_create()
 	if(!(cfg->chrootdir = strdup("/etc/unbound"))) goto error_exit;
 	if(!(cfg->directory = strdup("/etc/unbound"))) goto error_exit;
 	if(!(cfg->logfile = strdup(""))) goto error_exit;
-	if(!(cfg->pidfile = strdup("unbound.pid"))) goto error_exit;
+	if(!(cfg->pidfile = strdup("/etc/unbound/unbound.pid"))) 
+		goto error_exit;
 	if(!(cfg->target_fetch_policy = strdup("3 2 1 0 0"))) goto error_exit;
 	cfg->donotqueryaddrs = NULL;
 	cfg->donotquery_localhost = 1;
