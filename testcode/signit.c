@@ -236,7 +236,7 @@ process_nsec3(int argc, char* argv[])
 /** main program */
 int main(int argc, char* argv[])
 {
-	log_init(NULL, 0);
+	log_init(NULL, 0, NULL);
 	if(argc != 6) {
 		usage();
 	}

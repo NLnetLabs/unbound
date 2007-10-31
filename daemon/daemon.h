@@ -58,8 +58,6 @@ struct rrset_cache;
 struct daemon {
 	/** The config settings */
 	struct config_file* cfg;
-	/** current working directory */
-	char* cwd;
 	/** pidfile that is used */
 	char* pidfile;
 	/** port number that has ports opened. */

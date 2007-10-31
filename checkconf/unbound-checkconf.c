@@ -172,7 +172,7 @@ int main(int argc, char* argv[])
 {
 	int c;
 	log_ident_set("unbound-checkconf");
-	log_init(NULL, 0);
+	log_init(NULL, 0, NULL);
 	/* parse the options */
 	while( (c=getopt(argc, argv, "h")) != -1) {
 		switch(c) {

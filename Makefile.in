@@ -32,8 +32,8 @@ staticexe=@staticexe@
 YACC=@YACC@
 LEX=@LEX@
 CC=@CC@
-CPPFLAGS=-I. @CPPFLAGS@ @DEFS@
-CFLAGS=-I. @CFLAGS@
+CPPFLAGS=-I$(srcdir) @CPPFLAGS@ @DEFS@
+CFLAGS=@CFLAGS@
 LDFLAGS=@LDFLAGS@
 LIBS=@LIBS@
 LIBOBJS=@LIBOBJS@
@@ -59,7 +59,8 @@ COMMON_SRC=$(patsubst $(srcdir)/%,%, $(wildcard $(srcdir)/services/*.c \
 	util/configparser.c util/configlexer.c testcode/checklocks.c
 COMMON_OBJ=$(addprefix $(BUILD),$(COMMON_SRC:.c=.o))
 COMPAT_OBJ=$(addprefix $(BUILD)compat/,$(LIBOBJS))
-UNITTEST_SRC=$(patsubst $(srcdir)/%,%, $(wildcard $(srcdir)/testcode/unit*.c)) \
+UNITTEST_SRC=$(patsubst $(srcdir)/%,%, \
+	$(wildcard $(srcdir)/testcode/unit*.c)) \
 	testcode/readhex.c testcode/ldns-testpkts.c checkconf/worker_cb.c \
 	$(COMMON_SRC)
 UNITTEST_OBJ=$(addprefix $(BUILD),$(UNITTEST_SRC:.c=.o)) $(COMPAT_OBJ)

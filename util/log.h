@@ -78,8 +78,9 @@ void verbose(enum verbosity_value level,
  * call this to initialize logging services.
  * @param filename: if NULL stderr is used.
  * @param use_syslog: set to true to ignore filename and use syslog(3).
+ * @param chrootdir: to which directory we have been chrooted, if any.
  */
-void log_init(const char* filename, int use_syslog);
+void log_init(const char* filename, int use_syslog, const char* chrootdir);
 
 /**
  * Init a thread (will print this number for the thread log entries).

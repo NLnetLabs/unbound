@@ -228,7 +228,7 @@ rnd_test()
 int 
 main(int argc, char* argv[])
 {
-	log_init(NULL, 0);
+	log_init(NULL, 0, NULL);
 	if(argc != 1) {
 		printf("usage: %s\n", argv[0]);
 		printf("\tperforms unit tests.\n");

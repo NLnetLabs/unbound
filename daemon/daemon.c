@@ -460,7 +460,6 @@ daemon_delete(struct daemon* daemon)
 		infra_delete(daemon->env->infra_cache);
 	}
 	alloc_clear(&daemon->superalloc);
-	free(daemon->cwd);
 	free(daemon->pidfile);
 	free(daemon->env);
 	free(daemon);

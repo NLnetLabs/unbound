@@ -1,6 +1,10 @@
 31 October 2007: Wouter
 	- cache-max-ttl config option.
 	- building outside sourcedir works again.
+	- defaults more secure:
+		username: "unbound"
+		chroot: "/etc/unbound"
+	  The operator can override them to be less secure ("") if necessary.
 
 30 October 2007: Wouter
 	- fixup assertion failure that relied on compressed names to be

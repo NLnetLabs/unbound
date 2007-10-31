@@ -155,10 +155,11 @@ Enable or disable whether UDP queries are answered. Default is yes.
 .It \fBdo-tcp:\fR <yes or no>
 Enable or disable whether TCP queries are answered. Default is yes.
 .It \fBchroot:\fR <directory>
-If given a chroot is done to the given directory. The default is none ("").
+If given a chroot is done to the given directory. The default is 
+"/etc/unbound". If you give "" no chroot is performed.
 .It \fBusername:\fR <name>
 If given, after binding the port the user privileges are dropped. Default is
-not to change user, username: "". 
+"unbound". If you give username: "" no user change is performed. 
 .Pp
 If this user is not capable of binding the
 port, reloads (by signal HUP) will still retain the opened ports.
@@ -355,13 +356,16 @@ server:
 .Sh FILES
 .Bl -tag -width indent
 .It Pa /etc/unbound
-default unbound working directory
+default unbound working directory and default 
+.Xr chroot 2 
+location.
 .It Pa unbound.conf
 unbound configuration file.
 .It Pa unbound.pid
 default unbound pidfile with process ID of the running daemon.
 .It Pa unbound.log
-unbound log file.
+unbound log file. default is to log to 
+.Xr syslog 3 .
 .El
 .Sh SEE ALSO
 .Xr unbound 8 , 

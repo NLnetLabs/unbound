@@ -110,25 +110,15 @@ checkrlimits(struct config_file* cfg)
 	}
 }
 
-/** to changedir, logfile */
+/** set verbosity, check rlimits, cache settings */
 static void
-apply_dir(struct daemon* daemon, struct config_file* cfg, int cmdline_verbose)
+apply_settings(struct daemon* daemon, struct config_file* cfg, 
+	int cmdline_verbose)
 {
 	/* apply if they have changed */
 	daemon->cfg = cfg;
 	verbosity = cmdline_verbose + cfg->verbosity;
 	config_apply(cfg);
-	if(cfg->directory && cfg->directory[0]) {
-		if(!daemon->cwd || strcmp(daemon->cwd, cfg->directory) != 0) {
-			if(chdir(cfg->directory)) {
-				log_err("Could not chdir to %s: %s",
-					cfg->directory, strerror(errno));
-			}
-			free(daemon->cwd);
-			if(!(daemon->cwd = strdup(cfg->directory)))
-				log_err("cwd: malloc failed");
-		}
-	}
 	if(!daemon->env->msg_cache ||
 	   cfg->msg_cache_size != slabhash_get_size(daemon->env->msg_cache) ||
 	   cfg->msg_cache_slabs != daemon->env->msg_cache->size) {
@@ -223,7 +213,12 @@ static void
 checkoldpid(struct config_file* cfg)
 {
 	pid_t old;
-	if((old = readpid(cfg->pidfile)) != -1) {
+	char* file = cfg->pidfile;
+	if(cfg->chrootdir && cfg->chrootdir[0] &&
+		strncmp(file, cfg->chrootdir, strlen(cfg->chrootdir))==0) {
+		file += strlen(cfg->chrootdir);
+	}
+	if((old = readpid(file)) != -1) {
 		/* see if it is still alive */
 		if(kill(old, 0) == 0 || errno == EPERM)
 			log_warn("unbound is already running as pid %u.", 
@@ -268,9 +263,15 @@ do_chroot(struct daemon* daemon, struct config_file* cfg, int debug_mode)
 	log_assert(cfg);
 
 	/* daemonize last to be able to print error to user */
+	if(cfg->directory && cfg->directory[0])
+		if(chdir(cfg->directory)) {
+			fatal_exit("Could not chdir to %s: %s",
+				cfg->directory, strerror(errno));
+		}
 	if(cfg->chrootdir && cfg->chrootdir[0])
 		if(chroot(cfg->chrootdir))
-			fatal_exit("unable to chroot: %s", strerror(errno));
+			fatal_exit("unable to chroot to %s: %s", 
+				cfg->chrootdir, strerror(errno));
 	if(cfg->username && cfg->username[0]) {
 		struct passwd *pwd;
 		if((pwd = getpwnam(cfg->username)) == NULL)
@@ -287,13 +288,17 @@ do_chroot(struct daemon* daemon, struct config_file* cfg, int debug_mode)
 	}
 
 	/* init logfile just before fork */
-	log_init(cfg->logfile, cfg->use_syslog);
+	log_init(cfg->logfile, cfg->use_syslog, cfg->chrootdir);
 	if(!debug_mode && cfg->do_daemonize) {
 		detach(cfg);
 	}
 	if(cfg->pidfile && cfg->pidfile[0]) {
-		writepid(cfg->pidfile, getpid());
-		if(!(daemon->pidfile = strdup(cfg->pidfile)))
+		char* pf = cfg->pidfile;
+		if(cfg->chrootdir && cfg->chrootdir[0] &&
+			strncmp(pf, cfg->chrootdir, strlen(cfg->chrootdir))==0)
+			pf += strlen(cfg->chrootdir);
+		writepid(pf, getpid());
+		if(!(daemon->pidfile = strdup(pf)))
 			log_err("pidf: malloc failed");
 	}
 }
@@ -324,7 +329,7 @@ run_daemon(char* cfgfile, int cmdline_verbose, int debug_mode)
 			fatal_exit("Could not alloc config defaults");
 		if(!config_read(cfg, cfgfile))
 			fatal_exit("Could not read config file: %s", cfgfile);
-		apply_dir(daemon, cfg, cmdline_verbose);
+		apply_settings(daemon, cfg, cmdline_verbose);
 	
 		/* prepare */
 		if(!daemon_open_shared_ports(daemon))
@@ -332,7 +337,7 @@ run_daemon(char* cfgfile, int cmdline_verbose, int debug_mode)
 		if(!done_chroot) { 
 			do_chroot(daemon, cfg, debug_mode); 
 			done_chroot = 1; 
-		} else log_init(cfg->logfile, cfg->use_syslog);
+		} else log_init(cfg->logfile, cfg->use_syslog, cfg->chrootdir);
 		/* work */
 		daemon_fork(daemon);
 
@@ -369,7 +374,7 @@ main(int argc, char* argv[])
 	/* take debug snapshot of heap */
 	unbound_start_brk = sbrk(0);
 
-	log_init(NULL, 0);
+	log_init(NULL, 0, NULL);
 	/* parse the options */
 	while( (c=getopt(argc, argv, "c:dhv")) != -1) {
 		switch(c) {
@@ -399,6 +404,6 @@ main(int argc, char* argv[])
 	}
 
 	run_daemon(cfgfile, cmdline_verbose, debug_mode);
-	log_init(NULL, 0); /* close logfile */
+	log_init(NULL, 0, NULL); /* close logfile */
 	return 0;
 }

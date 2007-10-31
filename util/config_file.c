@@ -93,8 +93,8 @@ config_create()
 	cfg->infra_cache_slabs = 4;
 	cfg->infra_cache_numhosts = 10000;
 	cfg->infra_cache_lame_size = 10240; /* easily 40 or more entries */
-	if(!(cfg->username = strdup(""))) goto error_exit;
-	if(!(cfg->chrootdir = strdup(""))) goto error_exit;
+	if(!(cfg->username = strdup("unbound"))) goto error_exit;
+	if(!(cfg->chrootdir = strdup("/etc/unbound"))) goto error_exit;
 	if(!(cfg->directory = strdup("/etc/unbound"))) goto error_exit;
 	if(!(cfg->logfile = strdup(""))) goto error_exit;
 	if(!(cfg->pidfile = strdup("unbound.pid"))) goto error_exit;

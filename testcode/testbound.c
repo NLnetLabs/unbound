@@ -138,6 +138,8 @@ setup_config(FILE* in, char* configfile, int* lineno,
 	/* some basic settings to not pollute the host system */
 	fprintf(cfg, "server:	use-syslog: no\n");
 	fprintf(cfg, "		directory: \"\"\n");
+	fprintf(cfg, "		chroot: \"\"\n");
+	fprintf(cfg, "		username: \"\"\n");
 	while(fgets(line, MAX_LINE_LEN-1, in)) {
 		parse = line;
 		(*lineno)++;
@@ -207,7 +209,7 @@ main(int argc, char* argv[])
 	char* init_optarg = optarg;
 	struct replay_scenario* scen = NULL;
 
-	log_init(NULL, 0);
+	log_init(NULL, 0, NULL);
 	log_info("Start of %s testbound program.", PACKAGE_STRING);
 	/* determine commandline options for the daemon */
 	cfgfile[0] = 0;

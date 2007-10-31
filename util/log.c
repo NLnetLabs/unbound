@@ -71,7 +71,7 @@ static int log_to_syslog = 0;
 #endif /* HAVE_SYSLOG_H */
 
 void
-log_init(const char* filename, int use_syslog)
+log_init(const char* filename, int use_syslog, const char* chrootdir)
 {
 	FILE *f;
 	if(!key_created) {
@@ -103,6 +103,9 @@ log_init(const char* filename, int use_syslog)
 		return;
 	}
 	/* open the file for logging */
+	if(chrootdir && chrootdir[0] && strncmp(filename, chrootdir,
+		strlen(chrootdir)) == 0)
+		filename += strlen(chrootdir);
 	f = fopen(filename, "a");
 	if(!f) {
 		log_err("Could not open logfile %s: %s", filename, 
