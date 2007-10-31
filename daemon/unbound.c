@@ -117,6 +117,7 @@ apply_dir(struct daemon* daemon, struct config_file* cfg, int cmdline_verbose)
 	/* apply if they have changed */
 	daemon->cfg = cfg;
 	verbosity = cmdline_verbose + cfg->verbosity;
+	config_apply(cfg);
 	if(cfg->directory && cfg->directory[0]) {
 		if(!daemon->cwd || strcmp(daemon->cwd, cfg->directory) != 0) {
 			if(chdir(cfg->directory)) {

@@ -51,6 +51,9 @@
 #include "util/data/msgparse.h"
 #include "util/data/msgencode.h"
 
+/** MAX TTL default for messages and rrsets */
+uint32_t MAX_TTL = 3600 * 24 * 10; /* ten days */
+
 /** allocate qinfo, return 0 on error */
 static int
 parse_create_qinfo(ldns_buffer* pkt, struct msg_parse* msg, 

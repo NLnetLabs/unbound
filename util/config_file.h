@@ -163,6 +163,8 @@ struct config_file {
 	/** files with trusted DNSKEYs in named.conf format, list */
 	struct config_strlist* trusted_keys_file_list;
 
+	/** the number of seconds maximal TTL used for RRsets and messages */
+	int max_ttl;
 	/** if not 0, this value is the validation date for RRSIGs */
 	int32_t val_date_override;
 	/** this value sets the number of seconds before revalidating bogus */
@@ -226,6 +228,12 @@ int config_read(struct config_file* config, char* filename);
  * @param config: to delete.
  */
 void config_delete(struct config_file* config);
+
+/**
+ * Apply config to global constants; this routine is called in single thread.
+ * @param config: to apply. Side effect: global constants change.
+ */
+void config_apply(struct config_file* config);
 
 /**
  * Insert string into strlist.

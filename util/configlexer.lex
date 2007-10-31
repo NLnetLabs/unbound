@@ -123,6 +123,7 @@ msg-cache-size{COLON}	{ YDOUT; return VAR_MSG_CACHE_SIZE;}
 msg-cache-slabs{COLON}	{ YDOUT; return VAR_MSG_CACHE_SLABS;}
 rrset-cache-size{COLON}	{ YDOUT; return VAR_RRSET_CACHE_SIZE;}
 rrset-cache-slabs{COLON}	{ YDOUT; return VAR_RRSET_CACHE_SLABS;}
+cache-max-ttl{COLON}     	{ YDOUT; return VAR_CACHE_MAX_TTL;}
 infra-host-ttl{COLON}	{ YDOUT; return VAR_INFRA_HOST_TTL;}
 infra-lame-ttl{COLON}	{ YDOUT; return VAR_INFRA_LAME_TTL;}
 infra-cache-slabs{COLON}	{ YDOUT; return VAR_INFRA_CACHE_SLABS;}

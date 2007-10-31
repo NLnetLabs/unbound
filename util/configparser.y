@@ -86,6 +86,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_KEY_CACHE_SLABS VAR_TRUSTED_KEYS_FILE 
 %token VAR_VAL_NSEC3_KEYSIZE_ITERATIONS VAR_USE_SYSLOG 
 %token VAR_OUTGOING_INTERFACE VAR_ROOT_HINTS VAR_DO_NOT_QUERY_LOCALHOST
+%token VAR_CACHE_MAX_TTL
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -122,7 +123,7 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_key_cache_size | server_key_cache_slabs | 
 	server_trusted_keys_file | server_val_nsec3_keysize_iterations |
 	server_use_syslog | server_outgoing_interface | server_root_hints |
-	server_do_not_query_localhost
+	server_do_not_query_localhost | server_cache_max_ttl
 	;
 stubstart: VAR_STUB_ZONE
 	{
@@ -584,6 +585,15 @@ server_val_override_date: VAR_VAL_OVERRIDE_DATE STRING
 				yyerror("number expected");
 			cfg_parser->cfg->val_date_override = atoi($2);
 		}
+		free($2);
+	}
+	;
+server_cache_max_ttl: VAR_CACHE_MAX_TTL STRING
+	{
+		OUTYY(("P(server_cache_max_ttl:%s)\n", $2));
+		if(atoi($2) == 0 && strcmp($2, "0") != 0)
+			yyerror("number expected");
+		else cfg_parser->cfg->max_ttl = atoi($2);
 		free($2);
 	}
 	;

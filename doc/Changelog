@@ -1,3 +1,6 @@
+31 October 2007: Wouter
+	- cache-max-ttl config option.
+
 30 October 2007: Wouter
 	- fixup assertion failure that relied on compressed names to be
 	  smaller than uncompressed names. A packet from comrite.com was seen
