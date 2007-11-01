@@ -7,6 +7,8 @@
 	- VERB_DETAIL prints out what chdir, username, chroot is being done.
 	- when id numbers run out, caches are cleared, as in design notes.
 	  Tested with a mock setup with very few bits in id, it worked.
+	- harden-dnssec-stripped: yes is now default. It insists on dnssec
+	  data for trust anchors. Included tests for the feature.
 
 31 October 2007: Wouter
 	- cache-max-ttl config option.

@@ -86,7 +86,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_KEY_CACHE_SLABS VAR_TRUSTED_KEYS_FILE 
 %token VAR_VAL_NSEC3_KEYSIZE_ITERATIONS VAR_USE_SYSLOG 
 %token VAR_OUTGOING_INTERFACE VAR_ROOT_HINTS VAR_DO_NOT_QUERY_LOCALHOST
-%token VAR_CACHE_MAX_TTL
+%token VAR_CACHE_MAX_TTL VAR_HARDEN_DNNSEC_STRIPPED
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -123,7 +123,8 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_key_cache_size | server_key_cache_slabs | 
 	server_trusted_keys_file | server_val_nsec3_keysize_iterations |
 	server_use_syslog | server_outgoing_interface | server_root_hints |
-	server_do_not_query_localhost | server_cache_max_ttl
+	server_do_not_query_localhost | server_cache_max_ttl |
+	server_harden_dnssec_stripped
 	;
 stubstart: VAR_STUB_ZONE
 	{
@@ -542,6 +543,16 @@ server_harden_glue: VAR_HARDEN_GLUE STRING
 		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
 			yyerror("expected yes or no.");
 		else cfg_parser->cfg->harden_glue = 
+			(strcmp($2, "yes")==0);
+		free($2);
+	}
+	;
+server_harden_dnssec_stripped: VAR_HARDEN_DNNSEC_STRIPPED STRING
+	{
+		OUTYY(("P(server_harden_dnssec_stripped:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->harden_dnssec_stripped = 
 			(strcmp($2, "yes")==0);
 		free($2);
 	}

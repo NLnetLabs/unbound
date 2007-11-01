@@ -129,6 +129,8 @@ struct config_file {
 	int harden_large_queries;
 	/** harden against spoofed glue (out of zone data) */
 	int harden_glue;
+	/** harden against receiving no DNSSEC data for trust anchor */
+	int harden_dnssec_stripped;
 
 	/** chrootdir, if not "" or chroot will be done */
 	char* chrootdir;

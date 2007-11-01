@@ -134,6 +134,7 @@ target-fetch-policy{COLON}	{ YDOUT; return VAR_TARGET_FETCH_POLICY;}
 harden-short-bufsize{COLON}	{ YDOUT; return VAR_HARDEN_SHORT_BUFSIZE;}
 harden-large-queries{COLON}	{ YDOUT; return VAR_HARDEN_LARGE_QUERIES;}
 harden-glue{COLON}	{ YDOUT; return VAR_HARDEN_GLUE;}
+harden-dnssec-stripped{COLON}	{ YDOUT; return VAR_HARDEN_DNNSEC_STRIPPED;}
 stub-zone{COLON}	{ YDOUT; return VAR_STUB_ZONE;}
 name{COLON}		{ YDOUT; return VAR_NAME;}
 stub-addr{COLON}	{ YDOUT; return VAR_STUB_ADDR;}

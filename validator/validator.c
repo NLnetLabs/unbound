@@ -1665,10 +1665,13 @@ primeResponseToKE(int rcode, struct dns_msg* msg, struct trust_anchor* ta,
 		log_nametypeclass(VERB_OPS, "failed to prime trust anchor -- "
 			"could not fetch DNSKEY rrset", 
 			ta->name, LDNS_RR_TYPE_DNSKEY, ta->dclass);
-		kkey = key_entry_create_null(qstate->region, ta->name,
-			ta->namelen, ta->dclass, NULL_KEY_TTL);
+		if(qstate->env->cfg->harden_dnssec_stripped)
+			kkey = key_entry_create_bad(qstate->region, ta->name,
+				ta->namelen, ta->dclass);
+		else 	kkey = key_entry_create_null(qstate->region, ta->name,
+				ta->namelen, ta->dclass, NULL_KEY_TTL);
 		if(!kkey) {
-			log_err("out of memory: allocate null prime key");
+			log_err("out of memory: allocate fail prime key");
 			return NULL;
 		}
 		key_cache_insert(ve->kcache, kkey);
@@ -1709,8 +1712,11 @@ primeResponseToKE(int rcode, struct dns_msg* msg, struct trust_anchor* ta,
 			ta->name, LDNS_RR_TYPE_DNSKEY, ta->dclass);
 		/* NOTE: in this case, we should probably reject the trust 
 		 * anchor for longer, perhaps forever. */
-		kkey = key_entry_create_null(qstate->region, ta->name,
-			ta->namelen, ta->dclass, NULL_KEY_TTL);
+		if(qstate->env->cfg->harden_dnssec_stripped)
+			kkey = key_entry_create_bad(qstate->region, ta->name,
+				ta->namelen, ta->dclass);
+		else 	kkey = key_entry_create_null(qstate->region, ta->name,
+				ta->namelen, ta->dclass, NULL_KEY_TTL);
 		if(!kkey) {
 			log_err("out of memory: allocate null prime key");
 			return NULL;
@@ -2022,7 +2028,8 @@ process_prime_response(struct module_qstate* qstate, struct val_qstate* vq,
 		qstate, id);
 
 	/* If the result of the prime is a null key, skip the FINDKEY state.*/
-	if(!vq->key_entry || key_entry_isnull(vq->key_entry)) {
+	if(!vq->key_entry || key_entry_isnull(vq->key_entry) ||
+		key_entry_isbad(vq->key_entry)) {
 		vq->state = VAL_VALIDATE_STATE;
 	}
 	/* the qstate will be reactivated after inform_super is done */

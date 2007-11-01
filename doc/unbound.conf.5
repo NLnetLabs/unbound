@@ -231,6 +231,15 @@ wise to send these, and could be necessary for operation if TSIG or EDNS
 payload is very large.
 .It \fBharden-glue:\fR <yes or no>
 Will trust glue only if it is within the servers authority. Default is on.
+.It \fBharden-dnssec-stripped:\fR <yes or no>
+Require DNSSEC data for trust-anchored zones, if such data is absent,
+the zone becomes bogus. If turned off, and no DNSSEC data is received
+(no DNSKEY data to be precise), then the zone is made insecure, this behaves
+like there is no trust anchor. You could turn this off if you are sometimes
+behind an intrusive firewall (of some sort) that removes DNSSEC data from 
+packets, or a zone changes from signed to unsigned often. If turned off you
+run the risk of a downgrade attack that disables security for a zone. 
+Default is on.
 .It \fBdo-not-query-address:\fR <IP address>
 Do not query the given IP address. Can be IP4 or IP6. Append /num to 
 indicate a classless delegation netblock, for example like
