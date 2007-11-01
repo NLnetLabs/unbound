@@ -1,6 +1,8 @@
 1 November 2007: Wouter
 	- Fixup of crash on reload, due to anchors in env not NULLed after
 	  dealloc during deinit.
+	- Fixup of chroot call. Happens after privileges are dropped, so
+	  that checking the passwd entry still works.
 
 31 October 2007: Wouter
 	- cache-max-ttl config option.

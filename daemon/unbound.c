@@ -268,10 +268,6 @@ do_chroot(struct daemon* daemon, struct config_file* cfg, int debug_mode)
 			fatal_exit("Could not chdir to %s: %s",
 				cfg->directory, strerror(errno));
 		}
-	if(cfg->chrootdir && cfg->chrootdir[0])
-		if(chroot(cfg->chrootdir))
-			fatal_exit("unable to chroot to %s: %s", 
-				cfg->chrootdir, strerror(errno));
 	if(cfg->username && cfg->username[0]) {
 		struct passwd *pwd;
 		if((pwd = getpwnam(cfg->username)) == NULL)
@@ -282,6 +278,10 @@ do_chroot(struct daemon* daemon, struct config_file* cfg, int debug_mode)
 			fatal_exit("unable to set user id: %s", strerror(errno));
 		endpwent();
 	}
+	if(cfg->chrootdir && cfg->chrootdir[0])
+		if(chroot(cfg->chrootdir))
+			fatal_exit("unable to chroot to %s: %s", 
+				cfg->chrootdir, strerror(errno));
 	/* check old pid file before forking */
 	if(cfg->pidfile && cfg->pidfile[0]) {
 		checkoldpid(cfg);
