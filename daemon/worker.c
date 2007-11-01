@@ -938,6 +938,7 @@ worker_init(struct worker* worker, struct config_file *cfg,
 	server_stats_init(&worker->stats);
 	alloc_init(&worker->alloc, &worker->daemon->superalloc, 
 		worker->thread_num);
+	alloc_set_id_cleanup(&worker->alloc, &worker_alloc_cleanup, worker);
 	worker->env = *worker->daemon->env;
 	worker->env.worker = worker;
 	worker->env.send_packet = &worker_send_packet;
@@ -1043,4 +1044,12 @@ worker_send_query(uint8_t* qname, size_t qnamelen, uint16_t qtype,
 		return NULL;
 	}
 	return e;
+}
+
+void 
+worker_alloc_cleanup(void* arg)
+{
+	struct worker* worker = (struct worker*)arg;
+	slabhash_clear(&worker->env.rrset_cache->table);
+	slabhash_clear(worker->env.msg_cache);
 }

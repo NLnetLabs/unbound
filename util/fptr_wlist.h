@@ -264,4 +264,12 @@ int fptr_whitelist_mod_clear(void (*fptr)(struct module_qstate* qstate,
  */
 int fptr_whitelist_mod_get_mem(size_t (*fptr)(struct module_env* env, int id));
 
+/**
+ * Check function pointer whitelist for alloc clear on id overflow call values.
+ *
+ * @param fptr: function pointer to check.
+ * @return false if not in whitelist.
+ */
+int fptr_whitelist_alloc_cleanup(void (*fptr)(void*));
+
 #endif /* UTIL_FPTR_WLIST_H */

@@ -43,6 +43,7 @@
 #include "util/alloc.h"
 #include "util/regional.h"
 #include "util/data/packed_rrset.h"
+#include "util/fptr_wlist.h"
 
 /** custom size of cached regional blocks */
 #define ALLOC_REG_SIZE	16384
@@ -109,6 +110,8 @@ alloc_init(struct alloc_cache* alloc, struct alloc_cache* super,
 	alloc->max_reg_blocks = 100;
 	alloc->num_reg_blocks = 0;
 	alloc->reg_list = NULL;
+	alloc->cleanup = NULL;
+	alloc->cleanup_arg = NULL;
 	if(alloc->super)
 		prealloc_blocks(alloc, alloc->max_reg_blocks);
 	if(!alloc->super) {
@@ -165,8 +168,10 @@ alloc_get_id(struct alloc_cache* alloc)
 {
 	uint64_t id = alloc->next_id++;
 	if(id == alloc->last_id) {
-		/* TODO: clear the rrset cache */
-		log_warn("Out of ids. Clearing cache.");
+		log_warn("rrset alloc: out of 64bit ids. Clearing cache.");
+		fptr_whitelist_alloc_cleanup(alloc->cleanup);
+		(*alloc->cleanup)(alloc->cleanup_arg);
+
 		/* start back at first number */   	/* like in alloc_init*/
 		alloc->next_id = (uint64_t)alloc->thread_num; 	
 		alloc->next_id <<= THRNUM_SHIFT; 	/* in steps for comp. */
@@ -315,6 +320,14 @@ alloc_reg_release(struct alloc_cache* alloc, struct regional* r)
 	r->next = (char*)alloc->reg_list;
 	alloc->reg_list = r;
 	alloc->num_reg_blocks++;
+}
+
+void 
+alloc_set_id_cleanup(struct alloc_cache* alloc, void (*cleanup)(void*),
+        void* arg)
+{
+	alloc->cleanup = cleanup;
+	alloc->cleanup_arg = arg;
 }
 
 /** global debug value to keep track of total memory mallocs */

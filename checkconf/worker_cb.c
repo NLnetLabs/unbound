@@ -101,3 +101,9 @@ struct outbound_entry* worker_send_query(uint8_t* ATTR_UNUSED(qname),
 	log_assert(0);
 	return 0;
 }
+
+void 
+worker_alloc_cleanup(void* ATTR_UNUSED(arg))
+{
+	log_assert(0);
+}

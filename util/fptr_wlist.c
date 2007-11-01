@@ -294,3 +294,10 @@ fptr_whitelist_mod_get_mem(size_t (*fptr)(struct module_env* env, int id))
 	else if(fptr == &val_get_mem) return 1;
 	return 0;
 }
+
+int 
+fptr_whitelist_alloc_cleanup(void (*fptr)(void*))
+{
+	if(fptr == &worker_alloc_cleanup) return 1;
+	return 0;
+}

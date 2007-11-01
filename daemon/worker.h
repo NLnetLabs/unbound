@@ -214,4 +214,7 @@ int worker_handle_reply(struct comm_point* c, void* arg, int error,
 int worker_handle_service_reply(struct comm_point* c, void* arg, int error, 
 	struct comm_reply* reply_info);
 
+/** cleanup the cache to remove all rrset IDs from it, arg is worker */
+void worker_alloc_cleanup(void* arg);
+
 #endif /* DAEMON_WORKER_H */

@@ -5,6 +5,8 @@
 	  that checking the passwd entry still works.
 	- minor touch up of clear() hashtable function.
 	- VERB_DETAIL prints out what chdir, username, chroot is being done.
+	- when id numbers run out, caches are cleared, as in design notes.
+	  Tested with a mock setup with very few bits in id, it worked.
 
 31 October 2007: Wouter
 	- cache-max-ttl config option.

@@ -84,6 +84,10 @@ struct alloc_cache {
 	uint64_t next_id;
 	/** last id number possible */
 	uint64_t last_id;
+	/** what function to call to cleanup when last id is reached */
+	void (*cleanup)(void*);
+	/** user arg for cleanup */
+	void* cleanup_arg;
 
 	/** how many regional blocks to keep back max */
 	size_t max_reg_blocks;
@@ -161,5 +165,15 @@ struct regional* alloc_reg_obtain(struct alloc_cache* alloc);
  * @param r: regional to put back.
  */
 void alloc_reg_release(struct alloc_cache* alloc, struct regional* r);
+
+/**
+ * Set cleanup on ID overflow callback function. This should remove all
+ * RRset ID references from the program. Clear the caches.
+ * @param alloc: the alloc
+ * @param cleanup: the callback function, called as cleanup(arg).
+ * @param arg: user argument to callback function.
+ */
+void alloc_set_id_cleanup(struct alloc_cache* alloc, void (*cleanup)(void*),
+	void* arg);
 
 #endif /* UTIL_ALLOC_H */
