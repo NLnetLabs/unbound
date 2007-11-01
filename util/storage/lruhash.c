@@ -426,10 +426,10 @@ void
 lruhash_clear(struct lruhash* table)
 {
 	size_t i;
-	log_assert(fptr_whitelist_hash_delkeyfunc(table->delkeyfunc));
-	log_assert(fptr_whitelist_hash_deldatafunc(table->deldatafunc));
 	if(!table)
 		return;
+	log_assert(fptr_whitelist_hash_delkeyfunc(table->delkeyfunc));
+	log_assert(fptr_whitelist_hash_deldatafunc(table->deldatafunc));
 
 	lock_quick_lock(&table->lock);
 	for(i=0; i<table->size; i++) {

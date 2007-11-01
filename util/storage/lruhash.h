@@ -134,6 +134,7 @@ typedef int (*lruhash_compfunc_t)(void*, void*);
  * If is_locked is not set, then this item is not locked. This allows the 
  * routine to perform operations within the critical region of the lock 
  * of the key. The critical region has been locked before the delete happened.
+ * The RRset type has to revoke its ID number inside the critical region.
  * This function is called: func(key, userarg, is_locked) */
 typedef void (*lruhash_delkeyfunc_t)(void*, void*, int);
 

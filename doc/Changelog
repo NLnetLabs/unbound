@@ -3,6 +3,8 @@
 	  dealloc during deinit.
 	- Fixup of chroot call. Happens after privileges are dropped, so
 	  that checking the passwd entry still works.
+	- minor touch up of clear() hashtable function.
+	- VERB_DETAIL prints out what chdir, username, chroot is being done.
 
 31 October 2007: Wouter
 	- cache-max-ttl config option.
