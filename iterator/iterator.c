@@ -88,6 +88,7 @@ iter_deinit(struct module_env* env, int id)
 	forwards_delete(iter_env->fwds);
 	donotq_delete(iter_env->donotq);
 	free(iter_env);
+	env->modinfo[id] = NULL;
 }
 
 /** new query for iterator */

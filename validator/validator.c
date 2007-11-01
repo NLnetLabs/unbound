@@ -162,10 +162,12 @@ val_deinit(struct module_env* env, int id)
 		return;
 	val_env = (struct val_env*)env->modinfo[id];
 	anchors_delete(env->anchors);
+	env->anchors = NULL;
 	key_cache_delete(val_env->kcache);
 	free(val_env->nsec3_keysize);
 	free(val_env->nsec3_maxiter);
 	free(val_env);
+	env->modinfo[id] = NULL;
 }
 
 /** allocate new validator query state */

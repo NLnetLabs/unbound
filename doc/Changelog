@@ -1,3 +1,7 @@
+1 November 2007: Wouter
+	- Fixup of crash on reload, due to anchors in env not NULLed after
+	  dealloc during deinit.
+
 31 October 2007: Wouter
 	- cache-max-ttl config option.
 	- building outside sourcedir works again.
