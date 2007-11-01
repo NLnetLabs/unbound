@@ -95,20 +95,13 @@ SECTION QUESTION
 www.example.com. IN A
 ENTRY_END
 
-; recursion happens here.
-; Should return insecure as answer.
 STEP 10 CHECK_ANSWER
 ENTRY_BEGIN
 MATCH all
-REPLY QR RD RA NOERROR
+REPLY QR RD RA SERVFAIL
 SECTION QUESTION
 www.example.com. IN A
 SECTION ANSWER
-www.example.com. IN A	10.20.30.40
-SECTION AUTHORITY
-example.com.	IN NS	ns.example.com.
-SECTION ADDITIONAL
-ns.example.com.		IN 	A	1.2.3.4
 ENTRY_END
 
 SCENARIO_END
