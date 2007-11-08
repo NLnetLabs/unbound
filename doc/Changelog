@@ -1,5 +1,6 @@
 8 November 2007: Wouter
 	- Fixup chroot and drop user privileges.
+	- new L root ip address in default hints.
 
 1 November 2007: Wouter
 	- Fixup of crash on reload, due to anchors in env not NULLed after

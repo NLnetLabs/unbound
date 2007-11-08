@@ -140,7 +140,7 @@ compile_time_root_prime(struct regional* r)
 	if(!ah(dp, r, "I.ROOT-SERVERS.NET.", "192.36.148.17"))	return 0;
 	if(!ah(dp, r, "J.ROOT-SERVERS.NET.", "192.58.128.30"))	return 0;
 	if(!ah(dp, r, "K.ROOT-SERVERS.NET.", "193.0.14.129"))	return 0;
-	if(!ah(dp, r, "L.ROOT-SERVERS.NET.", "198.32.64.12"))	return 0;
+	if(!ah(dp, r, "L.ROOT-SERVERS.NET.", "199.7.83.42"))	return 0;
 	if(!ah(dp, r, "M.ROOT-SERVERS.NET.", "202.12.27.33"))	return 0;
 	return dp;
 }
