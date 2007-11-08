@@ -260,6 +260,11 @@ detach(struct config_file* cfg)
 static void
 do_chroot(struct daemon* daemon, struct config_file* cfg, int debug_mode)
 {
+	uid_t uid;
+	gid_t gid;
+	/* initialize, but not to 0 (root) */
+	memset(&uid, -12, sizeof(uid));
+	memset(&gid, -12, sizeof(gid));
 	log_assert(cfg);
 
 	/* daemonize last to be able to print error to user */
@@ -274,19 +279,23 @@ do_chroot(struct daemon* daemon, struct config_file* cfg, int debug_mode)
 		struct passwd *pwd;
 		if((pwd = getpwnam(cfg->username)) == NULL)
 			fatal_exit("user '%s' does not exist.", cfg->username);
-		if(setgid(pwd->pw_gid) != 0)
-			fatal_exit("unable to set group id: %s", strerror(errno));
-		if(setuid(pwd->pw_uid) != 0)
-			fatal_exit("unable to set user id: %s", strerror(errno));
+		uid = pwd->pw_uid;
+		gid = pwd->pw_gid;
 		endpwent();
-		verbose(VERB_DETAIL, "drop user privileges, run as %s", 
-			cfg->username);
 	}
 	if(cfg->chrootdir && cfg->chrootdir[0]) {
 		if(chroot(cfg->chrootdir))
 			fatal_exit("unable to chroot to %s: %s", 
 				cfg->chrootdir, strerror(errno));
 		verbose(VERB_DETAIL, "chroot to %s", cfg->chrootdir);
+	}
+	if(cfg->username && cfg->username[0]) {
+		if(setgid(gid) != 0)
+			fatal_exit("unable to set group id: %s", strerror(errno));
+		if(setuid(uid) != 0)
+			fatal_exit("unable to set user id: %s", strerror(errno));
+		verbose(VERB_DETAIL, "drop user privileges, run as %s", 
+			cfg->username);
 	}
 	/* check old pid file before forking */
 	if(cfg->pidfile && cfg->pidfile[0]) {
