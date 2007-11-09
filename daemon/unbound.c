@@ -61,10 +61,11 @@ void* unbound_start_brk = 0;
 /** print usage. */
 static void usage()
 {
-	printf("usage: unbound [options]\n");
+	printf("usage:  unbound [options]\n");
 	printf("	start unbound daemon DNS resolver.\n");
 	printf("-h	this help\n");
-	printf("-c file	config file to read, unbound.conf(5).\n");
+	printf("-c file	config file to read instead of %s\n", CONFIGFILE);
+	printf("	file format is described in unbound.conf(5).\n");
 	printf("-d	do not fork into the background.\n");
 	printf("-v	verbose (multiple times increase verbosity)\n");
 	printf("Version %s\n", PACKAGE_VERSION);
@@ -382,7 +383,7 @@ int
 main(int argc, char* argv[])
 {
 	int c;
-	char* cfgfile = NULL;
+	char* cfgfile = CONFIGFILE;
 	int cmdline_verbose = 0;
 	int debug_mode = 0;
 

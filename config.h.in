@@ -1,5 +1,8 @@
 /* config.h.in.  Generated from configure.ac by autoheader.  */
 
+/* Pathname to the Unbound configuration file */
+#undef CONFIGFILE
+
 /* Define if you want to use debug lock checking (slow). */
 #undef ENABLE_LOCK_CHECKS
 

@@ -56,8 +56,9 @@
 static void
 usage()
 {
-	printf("Usage:	unbound-checkconf [options] file\n");
+	printf("Usage:	unbound-checkconf [file]\n");
 	printf("	Checks unbound configuration file for errors.\n");
+	printf("file	if omitted %s is used.\n", CONFIGFILE);
 	printf("-h	show this usage help.\n");
 	printf("Version %s\n", PACKAGE_VERSION);
 	printf("BSD licensed, see LICENSE in source package for details.\n");
@@ -171,6 +172,7 @@ extern char* optarg;
 int main(int argc, char* argv[])
 {
 	int c;
+	char* f;
 	log_ident_set("unbound-checkconf");
 	log_init(NULL, 0, NULL);
 	checklock_start();
@@ -185,9 +187,12 @@ int main(int argc, char* argv[])
 	}
 	argc -= optind;
 	argv += optind;
-	if(argc != 1)
+	if(argc != 0 && argc != 1)
 		usage();
-	checkconf(argv[0]);
+	if(argc == 1)
+		f = argv[0];
+	else	f = CONFIGFILE;
+	checkconf(f);
 	checklock_stop();
 	return 0;
 }

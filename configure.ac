@@ -7,6 +7,36 @@ AC_INIT(unbound, 0.6, wouter@nlnetlabs.nl, unbound)
 CFLAGS=
 AC_AIX
 
+dnl
+dnl By default set $sysconfdir to /etc and $localstatedir to /var
+dnl
+case "$prefix" in
+        NONE)
+                case "$sysconfdir" in
+                        '${prefix}/etc')
+                                sysconfdir=/etc
+                        ;;
+                esac
+                case "$localstatedir" in
+                        '${prefix}/var')
+                                localstatedir=/var
+                        ;;
+                esac
+        ;;
+esac
+
+#
+# Determine configuration file
+ub_conf_file=${sysconfdir}/unbound/unbound.conf
+AC_ARG_WITH([conf_file],
+        AC_HELP_STRING([--with-conf-file=path], [Pathname to the Unbound configuration file]),
+	[ub_conf_file=$withval])
+AC_SUBST(ub_conf_file)
+# the eval is to evaluate shell expansion twice, once
+# for $nsd_conf_file and once for the ${prefix} within it.
+AC_DEFINE_UNQUOTED(CONFIGFILE, ["`eval echo $ub_conf_file`"], [Pathname to the Unbound configuration file])
+echo $ub_conf_file
+
 dnl routine to help check for compiler flags.
 AC_DEFUN([CHECK_COMPILER_FLAG],
 [

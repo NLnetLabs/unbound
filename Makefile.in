@@ -28,6 +28,7 @@ doxygen=@doxygen@
 libtool=@libtool@
 ldnsdir=@ldnsdir@
 staticexe=@staticexe@
+configfile=@ub_conf_file@
 
 YACC=@YACC@
 LEX=@LEX@
@@ -212,10 +213,13 @@ install:
 	$(INSTALL) -c -m 644 $(srcdir)/doc/unbound.8 $(mandir)/man8
 	$(INSTALL) -c -m 644 $(srcdir)/doc/unbound-checkconf.8 $(mandir)/man8
 	$(INSTALL) -c -m 644 $(srcdir)/doc/unbound.conf.5 $(mandir)/man5
+	if test ! -e $(configfile); then $(INSTALL) -d `dirname $(configfile)`; $(INSTALL) -c -m 644 $(srcdir)/doc/example.conf $(configfile); fi
 
 uninstall:
 	rm -f -- $(bindir)/unbound $(bindir)/unbound-checkconf
 	rm -f -- $(mandir)/man8/unbound.8 $(mandir)/man8/unbound-checkconf.8 $(mandir)/man5/unbound.conf.5
+	@echo
+	@echo "You still need to remove `dirname $(configfile)` , $(configfile) by hand"
 
 download_ldns:
 	svn export https://www.nlnetlabs.nl/ldns/svn/trunk/makedist.sh ldns_makedist.sh
