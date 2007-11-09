@@ -225,6 +225,8 @@ int event_base_loopexit(struct event_base* base,
 /** free event base, free events yourself */
 void event_base_free(struct event_base* base)
 {
+	if(!base)
+		return;
 	if(base->times)
 		free(base->times);
 	if(base->fds)
@@ -271,7 +273,7 @@ int event_add(struct event* ev, struct timeval* tv)
 		if(ev->ev_fd > ev->ev_base->maxfd)
 			ev->ev_base->maxfd = ev->ev_fd;
 	}
-	if(tv && ev->ev_events&EV_TIMEOUT) {
+	if(tv && (ev->ev_events&EV_TIMEOUT)) {
 #ifndef S_SPLINT_S
 		struct timeval now;
 		if(gettimeofday(&now, NULL) < 0)
@@ -294,7 +296,7 @@ int event_del(struct event* ev)
 {
 	if(ev->ev_fd != -1 && ev->ev_fd >= ev->ev_base->capfd)
 		return -1;
-	if(ev->ev_events&EV_TIMEOUT)
+	if((ev->ev_events&EV_TIMEOUT))
 		(void)rbtree_delete(ev->ev_base->times, &ev->node);
 	if((ev->ev_events&(EV_READ|EV_WRITE)) && ev->ev_fd != -1) {
 		ev->ev_base->fds[ev->ev_fd] = NULL;
