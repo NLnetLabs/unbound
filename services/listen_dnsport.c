@@ -409,7 +409,7 @@ listening_ports_open(struct config_file* cfg)
 	if(cfg->num_ifs == 0) {
 		if(do_ip6) {
 			hints.ai_family = AF_INET6;
-			if(!ports_create_if(NULL, cfg->do_udp, do_tcp, 
+			if(!ports_create_if("::1", cfg->do_udp, do_tcp, 
 				&hints, portbuf, &list)) {
 				listening_ports_free(list);
 				return NULL;
@@ -417,7 +417,7 @@ listening_ports_open(struct config_file* cfg)
 		}
 		if(do_ip4) {
 			hints.ai_family = AF_INET;
-			if(!ports_create_if(NULL, cfg->do_udp, do_tcp, 
+			if(!ports_create_if("127.0.0.1", cfg->do_udp, do_tcp, 
 				&hints, portbuf, &list)) {
 				listening_ports_free(list);
 				return NULL;

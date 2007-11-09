@@ -3,6 +3,7 @@
 	- default config file is /etc/unbound/unbound.conf.
 	  If it doesn't exist, it is installed with the doc/example.conf file.
 	  The file is not deleted on uninstall.
+	- default listening is not all, but localhost interfaces.
 	
 8 November 2007: Wouter
 	- Fixup chroot and drop user privileges.

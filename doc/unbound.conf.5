@@ -78,7 +78,7 @@ The port number, default 53, on which the server responds to queries.
 Interface to use to connect to the network. This interface is listened to
 for queries from clients, and answers to clients are given from it.
 Can be given multiple times to work on several interfaces. If none are 
-given the default (all) is used.
+given the default is to listen to localhost.
 .It \fBoutgoing-interface:\fR <ip address>
 Interface to use to connect to the network. This interface is used to send
 queries to authoritative servers and receive their replies. Can be given 
@@ -87,8 +87,8 @@ default (all) is used. You can specify the same interfaces in
 .Ic interface:
 and
 .Ic outgoing-interface:
-lines, the interfaces are then used for both purposes. Queries are sent
-via a random interface to counter spoofing.
+lines, the interfaces are then used for both purposes. Outgoing queries are 
+sent via a random outgoing interface to counter spoofing.
 .It \fBoutgoing-port:\fR <port number>
 The starting port number where the outgoing query port range is allocated.
 Default is 1053.
