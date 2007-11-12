@@ -790,22 +790,21 @@ worker_sighandler(int sig, void* arg)
 	switch(sig) {
 		case SIGHUP:
 			verbose(VERB_DETAIL, "caught signal SIGHUP");
-			worker->need_to_restart = 1;
 			comm_base_exit(worker->base);
 			break;
 		case SIGINT:
 			verbose(VERB_DETAIL, "caught signal SIGINT");
-			worker->need_to_restart = 0;
+			worker->need_to_exit = 1;
 			comm_base_exit(worker->base);
 			break;
 		case SIGQUIT:
 			verbose(VERB_DETAIL, "caught signal SIGQUIT");
-			worker->need_to_restart = 0;
+			worker->need_to_exit = 1;
 			comm_base_exit(worker->base);
 			break;
 		case SIGTERM:
 			verbose(VERB_DETAIL, "caught signal SIGTERM");
-			worker->need_to_restart = 0;
+			worker->need_to_exit = 1;
 			comm_base_exit(worker->base);
 			break;
 		default:
@@ -851,7 +850,7 @@ worker_init(struct worker* worker, struct config_file *cfg,
 {
 	unsigned int seed;
 	int startport;
-	worker->need_to_restart = 0;
+	worker->need_to_exit = 0;
 	worker->base = comm_base_create();
 	if(!worker->base) {
 		log_err("could not create event handling base");

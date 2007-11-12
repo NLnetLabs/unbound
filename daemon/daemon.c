@@ -108,10 +108,10 @@ signal_handling_record()
 static void
 signal_handling_playback(struct worker* wrk)
 {
-	if(sig_record_quit)
-		worker_sighandler(SIGTERM, wrk);
 	if(sig_record_reload)
 		worker_sighandler(SIGHUP, wrk);
+	if(sig_record_quit)
+		worker_sighandler(SIGTERM, wrk);
 	sig_record_quit = 0;
 	sig_record_reload = 0;
 }
@@ -425,9 +425,7 @@ daemon_fork(struct daemon* daemon)
 	/* we exited! a signal happened! Stop other threads */
 	daemon_stop_others(daemon);
 
-	if(daemon->workers[0]->need_to_restart)
-		daemon->need_to_exit = 0;
-	else	daemon->need_to_exit = 1;
+	daemon->need_to_exit = daemon->workers[0]->need_to_exit;
 }
 
 void 

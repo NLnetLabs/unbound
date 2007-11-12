@@ -99,8 +99,8 @@ struct worker {
 
 	/** random() table for this worker. */
 	struct ub_randstate* rndstate;
-	/** do we need to restart (instead of exit) ? */
-	int need_to_restart;
+	/** do we need to restart or quit (on signal) */
+	int need_to_exit;
 	/** allocation cache for this thread */
 	struct alloc_cache alloc;
 	/** per thread statistics */
