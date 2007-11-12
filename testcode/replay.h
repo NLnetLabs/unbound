@@ -228,6 +228,8 @@ struct replay_runtime {
 	void (*sig_cb)(int, void*);
 	/** signal handler user arg */
 	void *sig_cb_arg;
+	/** time to exit cleanly */
+	int exit_cleanly;
 
 	/** size of buffers */
 	size_t bufsize;

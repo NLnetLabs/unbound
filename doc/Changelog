@@ -1,6 +1,9 @@
 12 November 2007: Wouter
 	- fixup signal handling where SIGTERM could be ignored if a SIGHUP
 	  arrives later on.
+	- bugreports to unbound-bugs@nlnetlabs.nl
+	- fixup testbound so it exits cleanly.
+	- cleanup the caches on a reload, so that rrsetID numbers won't clash.
 
 9 November 2007: Wouter
 	- took ldns snapshot in repo.

@@ -437,6 +437,13 @@ daemon_cleanup(struct daemon* daemon)
 	   don't die on multiple reload signals for example. */
 	signal_handling_record();
 	log_thread_set(NULL);
+	/* clean up caches because
+	 * a) RRset IDs will be recycled after a reload, causing collisions
+	 * b) validation config can change, thus rrset, msg, keycache clear 
+	 * The infra cache is kept, the timing and edns info is still valid */
+	slabhash_clear(&daemon->env->rrset_cache->table);
+	slabhash_clear(daemon->env->msg_cache);
+	/* key cache is cleared by module desetup during next daemon_init() */
 	for(i=0; i<daemon->num; i++)
 		worker_delete(daemon->workers[i]);
 	free(daemon->workers);

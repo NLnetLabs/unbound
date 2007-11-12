@@ -79,6 +79,7 @@ Interface to use to connect to the network. This interface is listened to
 for queries from clients, and answers to clients are given from it.
 Can be given multiple times to work on several interfaces. If none are 
 given the default is to listen to localhost.
+The interfaces are not changed on a reload (kill -HUP) but only on restart.
 .It \fBoutgoing-interface:\fR <ip address>
 Interface to use to connect to the network. This interface is used to send
 queries to authoritative servers and receive their replies. Can be given 

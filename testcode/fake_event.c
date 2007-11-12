@@ -56,6 +56,7 @@
 #include "testcode/replay.h"
 #include "testcode/ldns-testpkts.h"
 #include "util/log.h"
+#include <signal.h>
 
 /** Global variable: the scenario. Saved here for when event_init is done. */
 static struct replay_scenario* saved_scenario = NULL;
@@ -522,6 +523,7 @@ run_scenario(struct replay_runtime* runtime)
 		fatal_exit("testbound: there are unmatched answers.");
 	}
 	log_info("testbound: exiting fake runloop.");
+	runtime->exit_cleanly = 1;
 }
 
 /*********** Dummy routines ***********/
@@ -595,13 +597,17 @@ comm_base_dispatch(struct comm_base* b)
 {
 	struct replay_runtime* runtime = (struct replay_runtime*)b;
 	run_scenario(runtime);
+	(*runtime->sig_cb)(SIGTERM, runtime->sig_cb_arg);
 }
 
 void 
-comm_base_exit(struct comm_base* ATTR_UNUSED(b))
+comm_base_exit(struct comm_base* b)
 {
-	/* some sort of failure */
-	fatal_exit("testbound: comm_base_exit was called.");
+	struct replay_runtime* runtime = (struct replay_runtime*)b;
+	if(!runtime->exit_cleanly) {
+		/* some sort of failure */
+		fatal_exit("testbound: comm_base_exit was called.");
+	}
 }
 
 struct comm_signal* 

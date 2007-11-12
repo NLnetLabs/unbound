@@ -248,7 +248,6 @@ rrset_array_lock(struct rrset_ref* ref, size_t count, uint32_t timenow)
 		if(i>0 && ref[i].key == ref[i-1].key)
 			continue; /* only lock items once */
 		lock_rw_rdlock(&ref[i].key->entry.lock);
-		log_assert(ref[i].id != 0 && ref[i].key->id != 0);
 		if(ref[i].id != ref[i].key->id || timenow >
 			((struct packed_rrset_data*)(ref[i].key->entry.data))
 			->ttl) {

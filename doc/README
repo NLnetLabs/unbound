@@ -59,4 +59,4 @@ o Other code origins are from the NSD (NLnet Labs) and LDNS (NLnet Labs)
   projects. Such as buffer, region-allocator and red-black tree code.
 o See Credits file for contributors.
 
-* mailto:wouter@nlnetlabs.nl
+* mailto:unbound-bugs@nlnetlabs.nl
