@@ -597,7 +597,9 @@ comm_base_dispatch(struct comm_base* b)
 {
 	struct replay_runtime* runtime = (struct replay_runtime*)b;
 	run_scenario(runtime);
-	(*runtime->sig_cb)(SIGTERM, runtime->sig_cb_arg);
+	if(runtime->sig_cb)
+		(*runtime->sig_cb)(SIGTERM, runtime->sig_cb_arg);
+	else	exit(0); /* OK exit when LIBEVENT_SIGNAL_PROBLEM exists */
 }
 
 void 

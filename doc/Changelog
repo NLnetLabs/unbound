@@ -1,5 +1,6 @@
 13 November 2007: Wouter
 	- remove debug print.
+	- fixup testbound exit when LIBEVENT_SIGNAL_PROBLEM exists.
 
 12 November 2007: Wouter
 	- fixup signal handling where SIGTERM could be ignored if a SIGHUP
