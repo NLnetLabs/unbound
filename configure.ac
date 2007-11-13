@@ -35,7 +35,6 @@ AC_SUBST(ub_conf_file)
 # the eval is to evaluate shell expansion twice, once
 # for $nsd_conf_file and once for the ${prefix} within it.
 AC_DEFINE_UNQUOTED(CONFIGFILE, ["`eval echo $ub_conf_file`"], [Pathname to the Unbound configuration file])
-echo $ub_conf_file
 
 dnl routine to help check for compiler flags.
 AC_DEFUN([CHECK_COMPILER_FLAG],
