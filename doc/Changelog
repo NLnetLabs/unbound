@@ -2,6 +2,7 @@
 	- testbed script does not recreate configure, since its in svn now.
 	- fixup checkconf test so that it does not test 
 	  /etc/unbound/unbound.conf.
+	- tag 0.6.
 
 13 November 2007: Wouter
 	- remove debug print.
