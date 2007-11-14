@@ -43,10 +43,10 @@ function dotest()
 	fi
 
 	cat >makeconf.mak.$$ << EOF 
-configure:	configure.ac
-	$AC_CMD
-	touch configure
-Makefile:	configure Makefile.in
+#configure:	configure.ac
+#	$AC_CMD
+#	touch configure
+Makefile:	Makefile.in #configure
 	./configure $CONFIGURE_FLAGS $DISABLE
 	touch Makefile 
 EOF
