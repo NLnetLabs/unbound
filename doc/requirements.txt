@@ -159,3 +159,19 @@ o The method by which dnssec-lameness is detected is not secure. DNSSEC lame
   on a server, dnssec-lameness detection does not work - no dnssec-lameness 
   is detected. Instead the zone that is dnssec-lame becomes bogus.
 
+o authority features.
+  This is a recursive server, and authority features are out of scope.
+  However, some authority features are expected in a recursor. Things like
+  localhost, reverse lookup for 127.0.0.1, or blocking AS112 traffic.
+  Also redirection of domain names with fixed data is needed by service
+  providers. Limited support is added specifically to address this.
+
+  Adding full authority support, requires much more code, and more complex
+  maintenance.
+
+  The limited support allows adding some static data (for localhost and so),
+  and to respond with a fixed rcode (NXDOMAIN) for domains (such as AS112).
+
+  You can put authority data on a separate server, and set the server in 
+  unbound.conf as stub for those zones, this allows clients to access data 
+  from the server without making unbound authoritative for the zones.
