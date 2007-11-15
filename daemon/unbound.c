@@ -67,7 +67,7 @@ static void usage()
 	printf("-c file	config file to read instead of %s\n", CONFIGFILE);
 	printf("	file format is described in unbound.conf(5).\n");
 	printf("-d	do not fork into the background.\n");
-	printf("-v	verbose (multiple times increase verbosity)\n");
+	printf("-v	verbose (more times to increase verbosity)\n");
 	printf("Version %s\n", PACKAGE_VERSION);
 	printf("BSD licensed, see LICENSE in source package for details.\n");
 	printf("Report bugs to %s\n", PACKAGE_BUGREPORT);
@@ -292,9 +292,11 @@ do_chroot(struct daemon* daemon, struct config_file* cfg, int debug_mode)
 	}
 	if(cfg->username && cfg->username[0]) {
 		if(setgid(gid) != 0)
-			fatal_exit("unable to set group id: %s", strerror(errno));
+			fatal_exit("unable to set group id of %s: %s", 
+				cfg->username, strerror(errno));
 		if(setuid(uid) != 0)
-			fatal_exit("unable to set user id: %s", strerror(errno));
+			fatal_exit("unable to set user id of %s: %s", 
+				cfg->username, strerror(errno));
 		verbose(VERB_DETAIL, "drop user privileges, run as %s", 
 			cfg->username);
 	}
