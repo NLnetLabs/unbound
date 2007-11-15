@@ -5,3 +5,5 @@ from the University of California and from Verisign. The Java prototype
 was made in further cooperation with Geoff Sisson and Roy Arends from Nominet.
 
 At NLnet Labs, Jelte Jansen and Mark Santcroos reviewed the unbound C sources.
+
+Jakob Schlyter - for advice on secure settings, random numbers and blacklists.
