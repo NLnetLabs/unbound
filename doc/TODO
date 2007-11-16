@@ -53,5 +53,6 @@ o inspect date on executable, then warn user in log if its more than 1 year.
 o proactively prime root, stubs and trust anchors, feature.
   early failure, faster on first query, but more traffic.
 o use privilege separation, to change privilege options during reload securely
+  not needed.
 o check if for PowerDNS(2.9.21) CNAME in Answer section & rcode=NXDOMAIN needs
   to be fixed up to be rcode=NOERROR?
