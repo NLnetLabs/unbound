@@ -1,5 +1,5 @@
 /*
- * iterator/iter_donotq.c - iterative resolver donotqueryaddresses storage.
+ * daemon/acl_list.h - client access control storage for the server.
  *
  * Copyright (c) 2007, NLnet Labs. All rights reserved.
  *
@@ -36,23 +36,21 @@
 /**
  * \file
  *
- * This file contains functions to assist the iterator module.
- * The donotqueryaddresses are stored and looked up. These addresses
- * (like 127.0.0.1) must not be used to send queries to, and can be
- * discarded immediately from the server selection.
+ * This file helps the server keep out queries from outside sources, that
+ * should not be answered.
  */
 #include "config.h"
-#include "iterator/iter_donotq.h"
+#include "daemon/acl_list.h"
 #include "util/regional.h"
 #include "util/log.h"
 #include "util/config_file.h"
 #include "util/net_help.h"
 
 int
-donotq_cmp(const void* k1, const void* k2)
+acl_list_cmp(const void* k1, const void* k2)
 {
-	struct iter_donotq_addr* n1 = (struct iter_donotq_addr*)k1;
-	struct iter_donotq_addr* n2 = (struct iter_donotq_addr*)k2;
+	struct acl_addr* n1 = (struct acl_addr*)k1;
+	struct acl_addr* n2 = (struct acl_addr*)k2;
 	int r = sockaddr_cmp_addr(&n1->addr, n1->addrlen, &n2->addr, 
 		n2->addrlen);
 	if(r != 0) return r;
@@ -63,38 +61,39 @@ donotq_cmp(const void* k1, const void* k2)
 	return 0;
 }
 
-struct iter_donotq* 
-donotq_create()
+struct acl_list* 
+acl_list_create()
 {
-	struct iter_donotq* dq = (struct iter_donotq*)calloc(1,
-		sizeof(struct iter_donotq));
-	if(!dq)
+	struct acl_list* acl = (struct acl_list*)calloc(1,
+		sizeof(struct acl_list));
+	if(!acl)
 		return NULL;
-	dq->region = regional_create();
-	if(!dq->region) {
-		donotq_delete(dq);
+	acl->region = regional_create();
+	if(!acl->region) {
+		acl_list_delete(acl);
 		return NULL;
 	}
-	return dq;
+	return acl;
 }
 
 void 
-donotq_delete(struct iter_donotq* dq)
+acl_list_delete(struct acl_list* acl)
 {
-	if(!dq) 
+	if(!acl) 
 		return;
-	regional_destroy(dq->region);
-	free(dq->tree);
-	free(dq);
+	regional_destroy(acl->region);
+	free(acl->tree);
+	free(acl);
 }
 
-/** insert new address into donotq structure */
+/** insert new address into acl_list structure */
 static int
-donotq_insert(struct iter_donotq* dq, struct sockaddr_storage* addr, 
-	socklen_t addrlen, int net)
+acl_list_insert(struct acl_list* acl, struct sockaddr_storage* addr, 
+	socklen_t addrlen, int net, enum acl_access control, 
+	int complain_duplicates)
 {
-	struct iter_donotq_addr* node = regional_alloc(dq->region,
-		sizeof(struct iter_donotq_addr));
+	struct acl_addr* node = regional_alloc(acl->region,
+		sizeof(struct acl_addr));
 	if(!node)
 		return 0;
 	node->node.key = node;
@@ -102,29 +101,43 @@ donotq_insert(struct iter_donotq* dq, struct sockaddr_storage* addr,
 	node->addrlen = addrlen;
 	node->net = net;
 	node->parent = NULL;
-	if(!rbtree_insert(dq->tree, &node->node)) {
-		verbose(VERB_DETAIL, "duplicate donotquery address ignored.");
+	node->control = control;
+	if(!rbtree_insert(acl->tree, &node->node)) {
+		if(complain_duplicates)
+			verbose(VERB_DETAIL, "duplicate acl address ignored.");
 	}
 	return 1;
 }
 
-/** apply donotq string */
+/** apply acl_list string */
 static int
-donotq_str_cfg(struct iter_donotq* dq, const char* str)
+acl_list_str_cfg(struct acl_list* acl, const char* str, const char* s2,
+	int complain_duplicates)
 {
 	struct sockaddr_storage addr;
 	int net;
 	char* s = NULL;
 	socklen_t addrlen;
+	enum acl_access control;
+	if(strcmp(s2, "allow") == 0)
+		control = acl_allow;
+	else if(strcmp(s2, "deny") == 0)
+		control = acl_deny;
+	else if(strcmp(s2, "refuse") == 0)
+		control = acl_refuse;
+	else {
+		log_err("access control type %s unknown", str);
+		return 0;
+	}
 	net = (str_is_ip6(str)?128:32);
 	if((s=strchr(str, '/'))) {
 		if(atoi(s+1) > net) {
-			log_err("netblock too large: %s", str);
+			log_err("acl netblock too large: %s", str);
 			return 0;
 		}
 		net = atoi(s+1);
 		if(net == 0 && strcmp(s+1, "0") != 0) {
-			log_err("cannot parse donotquery netblock:"
+			log_err("cannot parse acl netblock:"
 				" '%s'", str);
 			return 0;
 		}
@@ -136,28 +149,29 @@ donotq_str_cfg(struct iter_donotq* dq, const char* str)
 	}
 	if(!ipstrtoaddr(s?s:str, UNBOUND_DNS_PORT, &addr, &addrlen)) {
 		free(s);
-		log_err("cannot parse donotquery ip address: '%s'", str);
+		log_err("cannot parse acl ip address: '%s'", str);
 		return 0;
 	}
 	if(s) {
 		free(s);
 		addr_mask(&addr, addrlen, net);
 	}
-	if(!donotq_insert(dq, &addr, addrlen, net)) {
+	if(!acl_list_insert(acl, &addr, addrlen, net, control, 
+		complain_duplicates)) {
 		log_err("out of memory");
 		return 0;
 	}
 	return 1;
 }
 
-/** read donotq config */
+/** read acl_list config */
 static int 
-read_donotq(struct iter_donotq* dq, struct config_file* cfg)
+read_acl_list(struct acl_list* acl, struct config_file* cfg)
 {
-	struct config_strlist* p;
-	for(p = cfg->donotqueryaddrs; p; p = p->next) {
-		log_assert(p->str);
-		if(!donotq_str_cfg(dq, p->str))
+	struct config_acl* p;
+	for(p = cfg->acls; p; p = p->next) {
+		log_assert(p->address && p->control);
+		if(!acl_list_str_cfg(acl, p->address, p->control, 1))
 			return 0;
 	}
 	return 1;
@@ -165,11 +179,11 @@ read_donotq(struct iter_donotq* dq, struct config_file* cfg)
 
 /** initialise parent pointers in the tree */
 static void
-donotq_init_parents(struct iter_donotq* donotq)
+acl_list_init_parents(struct acl_list* acl)
 {
-	struct iter_donotq_addr* node, *prev = NULL, *p;
+	struct acl_addr* node, *prev = NULL, *p;
 	int m;
-	RBTREE_FOR(node, struct iter_donotq_addr*, donotq->tree) {
+	RBTREE_FOR(node, struct acl_addr*, acl->tree) {
 		node->parent = NULL;
 		if(!prev || prev->addrlen != node->addrlen) {
 			prev = node;
@@ -192,60 +206,65 @@ donotq_init_parents(struct iter_donotq* donotq)
 }
 
 int 
-donotq_apply_cfg(struct iter_donotq* dq, struct config_file* cfg)
+acl_list_apply_cfg(struct acl_list* acl, struct config_file* cfg)
 {
-	free(dq->tree);
-	dq->tree = rbtree_create(donotq_cmp);
-	if(!dq->tree)
+	regional_free_all(acl->region);
+	free(acl->tree);
+	acl->tree = rbtree_create(acl_list_cmp);
+	if(!acl->tree)
 		return 0;
-	if(!read_donotq(dq, cfg))
+	if(!read_acl_list(acl, cfg))
 		return 0;
-	if(cfg->donotquery_localhost) {
-		if(!donotq_str_cfg(dq, "127.0.0.0/8"))
-			return 0;
-		if(!donotq_str_cfg(dq, "::1"))
-			return 0;
-	}
-	donotq_init_parents(dq);
+	/* insert defaults, with '0' to ignore them if they are duplicates */
+	if(!acl_list_str_cfg(acl, "0.0.0.0/0", "refuse", 0))
+		return 0;
+	if(!acl_list_str_cfg(acl, "::0/0", "refuse", 0))
+		return 0;
+	if(!acl_list_str_cfg(acl, "127.0.0.0/8", "allow", 0))
+		return 0;
+	if(!acl_list_str_cfg(acl, "::1", "allow", 0))
+		return 0;
+	acl_list_init_parents(acl);
 	return 1;
 }
 
-int 
-donotq_lookup(struct iter_donotq* donotq, struct sockaddr_storage* addr,
+enum acl_access 
+acl_list_lookup(struct acl_list* acl, struct sockaddr_storage* addr,
         socklen_t addrlen)
 {
 	/* lookup in the tree */
 	rbnode_t* res = NULL;
-	struct iter_donotq_addr* result;
-	struct iter_donotq_addr key;
+	struct acl_addr* result;
+	struct acl_addr key;
 	key.node.key = &key;
 	memcpy(&key.addr, addr, addrlen);
 	key.addrlen = addrlen;
 	key.net = (addr_is_ip6(addr, addrlen)?128:32);
-	if(rbtree_find_less_equal(donotq->tree, &key, &res)) {
+	if(rbtree_find_less_equal(acl->tree, &key, &res)) {
 		/* exact */
-		return 1;
+		result = (struct acl_addr*)res;
+		return result->control;
 	} else {
 		/* smaller element (or no element) */
 		int m;
-		result = (struct iter_donotq_addr*)res;
+		result = (struct acl_addr*)res;
 		if(!result || result->addrlen != addrlen)
-			return 0;
+			return acl_deny;
 		/* count number of bits matched */
 		m = addr_in_common(&result->addr, result->net, addr, 
 			key.net, addrlen);
 		while(result) { /* go up until addr is inside netblock */
 			if(result->net <= m)
-				return 1;
+				return result->control;
 			result = result->parent;
 		}
 	}
-	return 0;
+	return acl_deny;
 }
 
 size_t 
-donotq_get_mem(struct iter_donotq* donotq)
+acl_list_get_mem(struct acl_list* acl)
 {
-	if(!donotq) return 0;
-	return sizeof(*donotq) + regional_get_mem(donotq->region);
+	if(!acl) return 0;
+	return sizeof(*acl) + regional_get_mem(acl->region);
 }

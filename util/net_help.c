@@ -58,25 +58,25 @@ str_is_ip6(const char* str)
 int 
 write_socket(int s, const void *buf, size_t size)
 {
-        const char* data = (const char*)buf;
-        size_t total_count = 0;
+	const char* data = (const char*)buf;
+	size_t total_count = 0;
 
 	fd_set_block(s);
-        while (total_count < size) {
-                ssize_t count
-                        = write(s, data + total_count, size - total_count);
-                if (count == -1) {
-                        if (errno != EAGAIN && errno != EINTR) {
+	while (total_count < size) {
+		ssize_t count
+			= write(s, data + total_count, size - total_count);
+		if (count == -1) {
+			if (errno != EAGAIN && errno != EINTR) {
 				fd_set_nonblock(s);
-                                return 0;
-                        } else {
-                                continue;
-                        }
-                }
-                total_count += count;
-        }
+				return 0;
+			} else {
+				continue;
+			}
+		}
+		total_count += count;
+	}
 	fd_set_nonblock(s);
-        return 1;
+	return 1;
 }
 
 int 
@@ -149,27 +149,27 @@ void
 log_addr(enum verbosity_value v, const char* str, 
 	struct sockaddr_storage* addr, socklen_t addrlen)
 {
-        uint16_t port;
-        const char* family = "unknown";
-        char dest[100];
-        int af = (int)((struct sockaddr_in*)addr)->sin_family;
-        void* sinaddr = &((struct sockaddr_in*)addr)->sin_addr;
+	uint16_t port;
+	const char* family = "unknown";
+	char dest[100];
+	int af = (int)((struct sockaddr_in*)addr)->sin_family;
+	void* sinaddr = &((struct sockaddr_in*)addr)->sin_addr;
 	if(verbosity < v)
 		return;
-        switch(af) {
-                case AF_INET: family="ip4"; break;
-                case AF_INET6: family="ip6";
-                        sinaddr = &((struct sockaddr_in6*)addr)->sin6_addr;
-                        break;
-                case AF_UNIX: family="unix"; break;
-                default: break;
-        }
-        if(inet_ntop(af, sinaddr, dest, (socklen_t)sizeof(dest)) == 0) {
-                strncpy(dest, "(inet_ntop error)", sizeof(dest));
-        }
+	switch(af) {
+		case AF_INET: family="ip4"; break;
+		case AF_INET6: family="ip6";
+			sinaddr = &((struct sockaddr_in6*)addr)->sin6_addr;
+			break;
+		case AF_UNIX: family="unix"; break;
+		default: break;
+	}
+	if(inet_ntop(af, sinaddr, dest, (socklen_t)sizeof(dest)) == 0) {
+		strncpy(dest, "(inet_ntop error)", sizeof(dest));
+	}
 	dest[sizeof(dest)-1] = 0;
-        port = ntohs(((struct sockaddr_in*)addr)->sin_port);
-        log_info("%s %s %s %d (len %d)", str, family, dest, (int)port, 
+	port = ntohs(((struct sockaddr_in*)addr)->sin_port);
+	log_info("%s %s %s %d (len %d)", str, family, dest, (int)port, 
 		(int)addrlen);
 }
 
@@ -264,32 +264,32 @@ log_nametypeclass(enum verbosity_value v, const char* str, uint8_t* name,
 void log_name_addr(enum verbosity_value v, const char* str, uint8_t* zone, 
 	struct sockaddr_storage* addr, socklen_t addrlen)
 {
-        uint16_t port;
-        const char* family = "unknown_family ";
+	uint16_t port;
+	const char* family = "unknown_family ";
 	char namebuf[LDNS_MAX_DOMAINLEN+1];
-        char dest[100];
-        int af = (int)((struct sockaddr_in*)addr)->sin_family;
-        void* sinaddr = &((struct sockaddr_in*)addr)->sin_addr;
+	char dest[100];
+	int af = (int)((struct sockaddr_in*)addr)->sin_family;
+	void* sinaddr = &((struct sockaddr_in*)addr)->sin_addr;
 	if(verbosity < v)
 		return;
-        switch(af) {
-                case AF_INET: family=""; break;
-                case AF_INET6: family="";
-                        sinaddr = &((struct sockaddr_in6*)addr)->sin6_addr;
-                        break;
-                case AF_UNIX: family="unix_family "; break;
-                default: break;
-        }
-        if(inet_ntop(af, sinaddr, dest, (socklen_t)sizeof(dest)) == 0) {
-                strncpy(dest, "(inet_ntop error)", sizeof(dest));
-        }
+	switch(af) {
+		case AF_INET: family=""; break;
+		case AF_INET6: family="";
+			sinaddr = &((struct sockaddr_in6*)addr)->sin6_addr;
+			break;
+		case AF_UNIX: family="unix_family "; break;
+		default: break;
+	}
+	if(inet_ntop(af, sinaddr, dest, (socklen_t)sizeof(dest)) == 0) {
+		strncpy(dest, "(inet_ntop error)", sizeof(dest));
+	}
 	dest[sizeof(dest)-1] = 0;
-        port = ntohs(((struct sockaddr_in*)addr)->sin_port);
+	port = ntohs(((struct sockaddr_in*)addr)->sin_port);
 	dname_str(zone, namebuf);
 	if(af != AF_INET && af != AF_INET6)
 		verbose(VERB_DETAIL, "%s <%s> %s%s#%d (addrlen %d)",
 			str, namebuf, family, dest, (int)port, (int)addrlen);
-        else	verbose(VERB_DETAIL, "%s <%s> %s%s#%d",
+	else	verbose(VERB_DETAIL, "%s <%s> %s%s#%d",
 			str, namebuf, family, dest, (int)port);
 }
 
@@ -372,4 +372,60 @@ addr_is_ip6(struct sockaddr_storage* addr, socklen_t len)
 		((struct sockaddr_in6*)addr)->sin6_family == AF_INET6)
 		return 1;
 	else    return 0;
+}
+
+void
+addr_mask(struct sockaddr_storage* addr, socklen_t len, int net)
+{
+	uint8_t mask[8] = {0x0, 0x1, 0x3, 0x7, 0xf, 0x1f, 0x3f, 0x7f};
+	int i, max;
+	uint8_t* s;
+	if(addr_is_ip6(addr, len)) {
+		s = (uint8_t*)&((struct sockaddr_in6*)addr)->sin6_addr;
+		max = 128;
+	} else {
+		s = (uint8_t*)&((struct sockaddr_in*)addr)->sin_addr;
+		max = 32;
+	}
+	if(net >= max)
+		return;
+	for(i=net/8+1; i<max/8; i++) {
+		s[i] = 0;
+	}
+	s[net/8] &= mask[net&0x7];
+}
+
+int
+addr_in_common(struct sockaddr_storage* addr1, int net1,
+	struct sockaddr_storage* addr2, int net2, socklen_t addrlen)
+{
+	int min = (net1<net2)?net1:net2;
+	int i, to;
+	int match = 0;
+	uint8_t* s1, *s2;
+	if(addr_is_ip6(addr1, addrlen)) {
+		s1 = (uint8_t*)&((struct sockaddr_in6*)addr1)->sin6_addr;
+		s2 = (uint8_t*)&((struct sockaddr_in6*)addr2)->sin6_addr;
+		to = 16;
+	} else {
+		s1 = (uint8_t*)&((struct sockaddr_in*)addr1)->sin_addr;
+		s2 = (uint8_t*)&((struct sockaddr_in*)addr2)->sin_addr;
+		to = 4;
+	}
+	/* match = bits_in_common(s1, s2, to); */
+	for(i=0; i<to; i++) {
+		if(s1[i] == s2[i]) {
+			match += 8;
+		} else {
+			uint8_t z = s1[i]^s2[i];
+			log_assert(z);
+			while(!(z&0x80)) {
+				match++;
+				z<<=1;
+			}
+			break;
+		}
+	}
+	if(match > min) match = min;
+	return match;
 }

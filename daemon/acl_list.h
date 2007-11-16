@@ -1,5 +1,5 @@
 /*
- * iterator/iter_donotq.h - iterative resolver donotqueryaddresses storage.
+ * daemon/acl_list.h - client access control storage for the server.
  *
  * Copyright (c) 2007, NLnet Labs. All rights reserved.
  *
@@ -36,35 +36,47 @@
 /**
  * \file
  *
- * This file contains functions to assist the iterator module.
- * Keep track of the donotquery addresses and lookup fast.
+ * This file keeps track of the list of clients that are allowed to 
+ * access the server.
  */
 
-#ifndef ITERATOR_ITER_DONOTQ_H
-#define ITERATOR_ITER_DONOTQ_H
+#ifndef DAEMON_ACL_LIST_H
+#define DAEMON_ACL_LIST_H
 #include "util/rbtree.h"
-struct iter_env;
 struct config_file;
 struct regional;
 
 /**
- * Iterator donotqueryaddresses structure
+ * Enumeration of access control options for an address range.
+ * Allow or deny access.
  */
-struct iter_donotq {
+enum acl_access {
+	/** disallow any access whatsoever, drop it */
+	acl_deny = 0,
+	/** disallow access, send a polite 'REFUSED' reply */
+	acl_refuse,
+	/** allow full access */
+	acl_allow
+};
+
+/**
+ * Access control storage structure
+ */
+struct acl_list {
 	/** regional for allocation */
 	struct regional* region;
 	/** 
-	 * Tree of the address spans that are blocked.
-	 * contents of type iter_donotq_addr.
+	 * Tree of the addresses that are allowed/blocked.
+	 * contents of type acl_addr.
 	 */
 	rbtree_t* tree;
 };
 
 /**
- * Iterator donotquery address.
- * An address span that must not be used to send queries to.
+ *
+ * An address span with access control information
  */
-struct iter_donotq_addr {
+struct acl_addr {
 	/** redblacktree node, key is this structure: addr and addrlen, net */
 	rbnode_t node;
 	/** address */
@@ -73,48 +85,50 @@ struct iter_donotq_addr {
 	socklen_t addrlen;
 	/** netblock size */
 	int net;
-	/** parent node in donotq tree that encompasses this entry */
-	struct iter_donotq_addr* parent;
+	/** parent node in acl tree that encompasses this entry */
+	struct acl_addr* parent;
+	/** access control on this netblock */
+	enum acl_access control;
 };
 
 /**
- * Create donotqueryaddresses structure 
+ * Create acl structure 
  * @return new structure or NULL on error.
  */
-struct iter_donotq* donotq_create();
+struct acl_list* acl_list_create();
 
 /**
- * Delete donotqueryaddresses structure.
- * @param donotq: to delete.
+ * Delete acl structure.
+ * @param acl: to delete.
  */
-void donotq_delete(struct iter_donotq* donotq);
+void acl_list_delete(struct acl_list* acl);
 
 /**
- * Process donotqueryaddresses config.
- * @param donotq: where to store.
+ * Process access control config.
+ * @param acl: where to store.
  * @param cfg: config options.
  * @return 0 on error.
  */
-int donotq_apply_cfg(struct iter_donotq* donotq, struct config_file* cfg);
+int acl_list_apply_cfg(struct acl_list* acl, struct config_file* cfg);
 
 /**
- * See if an address is blocked.
- * @param donotq: structure for address storage.
+ * Lookup address to see its access control status.
+ * @param acl: structure for address storage.
  * @param addr: address to check
  * @param addrlen: length of addr.
- * @return: true if the address must not be queried. false if unlisted.
+ * @return: what to do with message from this address.
  */
-int donotq_lookup(struct iter_donotq* donotq, struct sockaddr_storage* addr,
-	socklen_t addrlen);
+enum acl_access acl_list_lookup(struct acl_list* acl, 
+	struct sockaddr_storage* addr, socklen_t addrlen);
 
 /**
- * Get memory used by donotqueryaddresses structure.
- * @param donotq: structure for address storage.
+ * Get memory used by acl structure.
+ * @param acl: structure for address storage.
  * @return bytes in use.
  */
-size_t donotq_get_mem(struct iter_donotq* donotq);
+size_t acl_list_get_mem(struct acl_list* acl);
 
-/** compare two donotq entries */
-int donotq_cmp(const void* k1, const void* k2);
+/** compare two acl list entries */
+int acl_list_cmp(const void* k1, const void* k2);
 
-#endif /* ITERATOR_ITER_DONOTQ_H */
+#endif /* DAEMON_ACL_LIST_H */

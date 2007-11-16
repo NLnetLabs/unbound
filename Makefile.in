@@ -71,8 +71,8 @@ DAEMON_OBJ=$(addprefix $(BUILD),$(DAEMON_SRC:.c=.o)) $(COMPAT_OBJ)
 CHECKCONF_SRC=checkconf/unbound-checkconf.c checkconf/worker_cb.c $(COMMON_SRC)
 CHECKCONF_OBJ=$(addprefix $(BUILD),$(CHECKCONF_SRC:.c=.o)) $(COMPAT_OBJ)
 TESTBOUND_SRC=testcode/testbound.c testcode/ldns-testpkts.c \
-	daemon/worker.c daemon/daemon.c daemon/stats.c testcode/replay.c \
-	testcode/fake_event.c $(filter-out util/netevent.c \
+	daemon/worker.c daemon/acl_list.c daemon/daemon.c daemon/stats.c \
+	testcode/replay.c testcode/fake_event.c $(filter-out util/netevent.c \
 	services/listen_dnsport.c services/outside_network.c, $(COMMON_SRC))
 TESTBOUND_OBJ=$(addprefix $(BUILD),$(TESTBOUND_SRC:.c=.o)) $(COMPAT_OBJ)
 LOCKVERIFY_SRC=testcode/lock_verify.c checkconf/worker_cb.c $(COMMON_SRC)

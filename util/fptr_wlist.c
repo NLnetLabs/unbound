@@ -64,6 +64,7 @@
 #include "util/storage/slabhash.h"
 #include "util/locks.h"
 #include "testcode/checklocks.h"
+#include "daemon/acl_list.h"
 
 int 
 fptr_whitelist_comm_point(comm_point_callback_t *fptr)
@@ -130,6 +131,7 @@ fptr_whitelist_rbtree_cmp(int (*fptr) (const void *, const void *))
 {
 	if(fptr == &mesh_state_compare) return 1;
 	else if(fptr == &mesh_state_ref_compare) return 1;
+	else if(fptr == &acl_list_cmp) return 1;
 	else if(fptr == &donotq_cmp) return 1;
 	else if(fptr == &fwd_cmp) return 1;
 	else if(fptr == &stub_cmp) return 1;

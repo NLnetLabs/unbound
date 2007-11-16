@@ -228,4 +228,27 @@ int sockaddr_cmp_addr(struct sockaddr_storage* addr1, socklen_t len1,
  */
 int addr_is_ip6(struct sockaddr_storage* addr, socklen_t len);
 
+/**
+ * Make sure the sockaddr ends in zeroes. For tree insertion and subsequent
+ * comparison.
+ * @param addr: the ip4 or ip6 addr.
+ * @Param len: lentgh of addr.
+ * @param net: number of bits to leave untouched, the rest of the netblock
+ * 	address is zeroed.
+ */
+void addr_mask(struct sockaddr_storage* addr, socklen_t len, int net);
+
+/**
+ * See how many bits are shared, equal, between two addrs.
+ * @param addr1: first addr.
+ * @param net1: netblock size of first addr.
+ * @param addr2: second addr.
+ * @param net2: netblock size of second addr.
+ * @param addrlen: length of first addr and of second addr.
+ * 	They must be of the same length (i.e. same type IP4, IP6).
+ * @return: number of bits the same.
+ */
+int addr_in_common(struct sockaddr_storage* addr1, int net1,
+	struct sockaddr_storage* addr2, int net2, socklen_t addrlen);
+
 #endif /* NET_HELP_H */

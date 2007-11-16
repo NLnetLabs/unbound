@@ -110,6 +110,7 @@ config_create()
 	cfg->out_ifs = NULL;
 	cfg->stubs = NULL;
 	cfg->forwards = NULL;
+	cfg->acls = NULL;
 	cfg->harden_short_bufsize = 0;
 	cfg->harden_large_queries = 0;
 	cfg->harden_glue = 1;
@@ -184,6 +185,20 @@ config_delstrlist(struct config_strlist* p)
 	}
 }
 
+/** delete config acl list */
+static void
+config_delacllist(struct config_acl* p)
+{
+	struct config_acl *np;
+	while(p) {
+		np = p->next;
+		free(p->address);
+		free(p->control);
+		free(p);
+		p = np;
+	}
+}
+
 /** delete config stublist */
 static void
 config_delstubs(struct config_stub* p)
@@ -231,6 +246,7 @@ config_delete(struct config_file* cfg)
 	config_delstrlist(cfg->trust_anchor_file_list);
 	config_delstrlist(cfg->trusted_keys_file_list);
 	config_delstrlist(cfg->trust_anchor_list);
+	config_delacllist(cfg->acls);
 	free(cfg->val_nsec3_key_iterations);
 	free(cfg);
 }

@@ -4,6 +4,7 @@
 	- created beta-0.7 branch for support.
 	- tagged 0.7 for beta release.
 	- moved trunk to 0.8 for 0.8(auth features) development.
+	- 0.8: access control list setup.
 
 15 November 2007: Wouter
 	- review fixups from Jelte.
