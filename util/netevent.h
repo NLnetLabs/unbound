@@ -88,6 +88,18 @@ struct comm_base {
 	struct internal_base* eb;
 };
 
+/**
+ * Reply information for a communication point.
+ */
+struct comm_reply {
+	/** the comm_point with fd to send reply on to. */
+	struct comm_point* c;
+	/** the address (for UDP based communication) */
+	struct sockaddr_storage addr;
+	/** length of address */
+	socklen_t addrlen;
+};
+
 /** 
  * Communication point to the network 
  * These behaviours can be accomplished by setting the flags
@@ -117,6 +129,8 @@ struct comm_point {
 	size_t tcp_byte_count;
 	/** parent communication point (for TCP sockets) */
 	struct comm_point* tcp_parent;
+	/** sockaddr from peer, for TCP handlers */
+	struct comm_reply repinfo;
 
 	/* -------- TCP Accept -------- */
 	/** the number of TCP handlers for this tcp-accept socket */
@@ -185,18 +199,6 @@ struct comm_point {
 	comm_point_callback_t* callback;
 	/** argument to pass to callback. */
 	void *cb_arg;
-};
-
-/**
- * Reply information for a communication point.
- */
-struct comm_reply {
-	/** the comm_point with fd to send reply on to. */
-	struct comm_point* c;
-	/** the address (for UDP based communication) */
-	struct sockaddr_storage addr;
-	/** length of address */
-	socklen_t addrlen;
 };
 
 /**

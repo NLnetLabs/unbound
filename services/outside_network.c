@@ -150,6 +150,8 @@ outnet_tcp_take_into_use(struct waiting_tcp* w, uint8_t* pkt, size_t pkt_len)
 	w->outnet->tcp_free = pend->next_free;
 	pend->next_free = NULL;
 	pend->query = w;
+	pend->c->repinfo.addrlen = w->addrlen;
+	memcpy(&pend->c->repinfo.addr, &w->addr, w->addrlen);
 	ldns_buffer_clear(pend->c->buffer);
 	ldns_buffer_write(pend->c->buffer, pkt, pkt_len);
 	ldns_buffer_flip(pend->c->buffer);

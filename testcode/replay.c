@@ -208,6 +208,8 @@ replay_moment_read(char* remain, FILE* in, const char* name, int* lineno,
 	} else if(parse_keyword(&remain, "QUERY")) {
 		mom->evt_type = repevt_front_query;
 		readentry = 1;
+		if(!extstrtoaddr("127.0.0.1", &mom->addr, &mom->addrlen))
+			fatal_exit("internal error");
 	} else if(parse_keyword(&remain, "CHECK_ANSWER")) {
 		mom->evt_type = repevt_front_reply;
 		readentry = 1;
@@ -240,7 +242,7 @@ replay_moment_read(char* remain, FILE* in, const char* name, int* lineno,
 			free(mom);
 			return NULL;
 		}
-	}
+	} 
 
 	if(readentry) {
 		mom->match = read_entry(in, name, lineno, ttl, or, prev);

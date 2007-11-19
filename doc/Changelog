@@ -9,6 +9,7 @@
 	  and unit test for addr_in_common().
 	- 0.8: access-control config file element.
 	  and unit test rpl replay file.
+	- 0.8: fixup address reporting from netevent.
 
 16 November 2007: Wouter
 	- privilege separation is not needed in unbound at this time.
