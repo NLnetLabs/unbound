@@ -229,6 +229,39 @@ ipstrtoaddr(const char* ip, int port, struct sockaddr_storage* addr,
 	return 1;
 }
 
+int netblockstrtoaddr(const char* str, int port, struct sockaddr_storage* addr,
+        socklen_t* addrlen, int* net)
+{
+	char* s = NULL;
+	*net = (str_is_ip6(str)?128:32);
+	if((s=strchr(str, '/'))) {
+		if(atoi(s+1) > *net) {
+			log_err("netblock too large: %s", str);
+			return 0;
+		}
+		*net = atoi(s+1);
+		if(net == 0 && strcmp(s+1, "0") != 0) {
+			log_err("cannot parse netblock: '%s'", str);
+			return 0;
+		}
+		if(!(s = strdup(str))) {
+			log_err("out of memory");
+			return 0;
+		}
+		*strchr(s, '/') = '\0';
+	}
+	if(!ipstrtoaddr(s?s:str, port, addr, addrlen)) {
+		free(s);
+		log_err("cannot parse ip address: '%s'", str);
+		return 0;
+	}
+	if(s) {
+		free(s);
+		addr_mask(addr, *addrlen, *net);
+	}
+	return 1;
+}
+
 void
 log_nametypeclass(enum verbosity_value v, const char* str, uint8_t* name, 
 	uint16_t type, uint16_t dclass)

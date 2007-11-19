@@ -86,7 +86,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_KEY_CACHE_SLABS VAR_TRUSTED_KEYS_FILE 
 %token VAR_VAL_NSEC3_KEYSIZE_ITERATIONS VAR_USE_SYSLOG 
 %token VAR_OUTGOING_INTERFACE VAR_ROOT_HINTS VAR_DO_NOT_QUERY_LOCALHOST
-%token VAR_CACHE_MAX_TTL VAR_HARDEN_DNNSEC_STRIPPED
+%token VAR_CACHE_MAX_TTL VAR_HARDEN_DNNSEC_STRIPPED VAR_ACCESS_CONTROL
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -124,7 +124,7 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_trusted_keys_file | server_val_nsec3_keysize_iterations |
 	server_use_syslog | server_outgoing_interface | server_root_hints |
 	server_do_not_query_localhost | server_cache_max_ttl |
-	server_harden_dnssec_stripped
+	server_harden_dnssec_stripped | server_access_control
 	;
 stubstart: VAR_STUB_ZONE
 	{
@@ -572,6 +572,23 @@ server_do_not_query_localhost: VAR_DO_NOT_QUERY_LOCALHOST STRING
 		else cfg_parser->cfg->donotquery_localhost = 
 			(strcmp($2, "yes")==0);
 		free($2);
+	}
+	;
+server_access_control: VAR_ACCESS_CONTROL STRING STRING
+	{
+		OUTYY(("P(server_access_control:%s %s)\n", $2, $3));
+		if(strcmp($3, "deny")!=0 && strcmp($3, "refuse")!=0 &&
+			strcmp($3, "allow")!=0) {
+			yyerror("expected deny, refuse or allow in "
+				"access control action");
+		} else {
+			struct config_acl* n = calloc(1, sizeof(*n));
+			if(!n) fatal_exit("out of memory adding acl");
+			n->address = $2;
+			n->control = $3;
+			n->next = cfg_parser->cfg->acls;
+			cfg_parser->cfg->acls = n;
+		}
 	}
 	;
 server_module_conf: VAR_MODULE_CONF STRING

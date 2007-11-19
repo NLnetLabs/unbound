@@ -187,6 +187,19 @@ int ipstrtoaddr(const char* ip, int port, struct sockaddr_storage* addr,
 	socklen_t* addrlen);
 
 /**
+ * Convert ip netblock (ip/netsize) string and port to sockaddr.
+ * *SLOW*, does a malloc internally to avoid writing over 'ip' string.
+ * @param ip: ip4 or ip6 address string.
+ * @param port: port number, host format.
+ * @param addr: where to store sockaddr.
+ * @param addrlen: length of stored sockaddr is returned.
+ * @param net: netblock size is returned.
+ * @return 0 on error.
+ */
+int netblockstrtoaddr(const char* ip, int port, struct sockaddr_storage* addr,
+	socklen_t* addrlen, int* net);
+
+/**
  * Print string with neat domain name, type and class.
  * @param v: at what verbosity level to print this.
  * @param str: string of message.

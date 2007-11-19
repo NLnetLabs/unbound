@@ -50,6 +50,7 @@ struct listen_port;
 struct slabhash;
 struct module_env;
 struct rrset_cache;
+struct acl_list;
 
 /**
  * Structure holding worker list.
@@ -78,6 +79,8 @@ struct daemon {
 	int num_modules;
 	/** the module callbacks, array of num_modules length */
 	struct module_func_block** modfunc;
+	/** access control, which client IPs are allowed to connect */
+	struct acl_list* acl;
 };
 
 /**

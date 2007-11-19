@@ -229,6 +229,11 @@ replay_moment_read(char* remain, FILE* in, const char* name, int* lineno,
 	while(isspace((int)*remain))
 		remain++;
 	if(parse_keyword(&remain, "ADDRESS")) {
+		while(isspace((int)*remain))
+			remain++;
+		if(strlen(remain) > 0) /* remove \n */
+			remain[strlen(remain)-1] = 0;
+		printf("remain '%s'\n", remain);
 		if(!extstrtoaddr(remain, &mom->addr, &mom->addrlen)) {
 			log_err("line %d: could not parse ADDRESS: %s", 
 				*lineno, remain);

@@ -48,6 +48,12 @@ server:
 	# logfile: "/etc/unbound/unbound.log"  #uncomment to use logfile.
 	pidfile: "/etc/unbound/unbound.pid"
 	# verbosity: 1		# uncomment and increase to get more logging.
+
+	# listen on all interfaces, answer queries from the local subnet.
+	interface: 0.0.0.0
+	interface: ::0
+	access-control: 10.0.0.0/8 allow
+	access-control: 2001:DB8::/64 allow
 .fi
 .Sh FILE FORMAT
 There must be whitespace between keywords. Attribute keywords end with a colon ':'. An attribute
@@ -155,6 +161,13 @@ Enable or disable whether ip6 queries are answered. Default is yes.
 Enable or disable whether UDP queries are answered. Default is yes.
 .It \fBdo-tcp:\fR <yes or no>
 Enable or disable whether TCP queries are answered. Default is yes.
+.It \fBaccess-control:\fR <IP netblock> <action>
+The netblock is given as an IP4 or IP6 address with /size appended for a 
+classless network block. The action can be deny, refuse or allow.
+Deny stops queries from hosts from that netblock.
+Refuse stops queries too, but sends a DNS rcode REFUSED error message back.
+Allow gives access to clients from that netblock.
+By default only localhost is allowed, the rest is refused.
 .It \fBchroot:\fR <directory>
 If given a chroot is done to the given directory. The default is 
 "/etc/unbound". If you give "" no chroot is performed.

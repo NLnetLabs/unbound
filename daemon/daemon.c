@@ -42,6 +42,7 @@
 #include "config.h"
 #include "daemon/daemon.h"
 #include "daemon/worker.h"
+#include "daemon/acl_list.h"
 #include "util/log.h"
 #include "util/config_file.h"
 #include "util/data/msgreply.h"
@@ -134,6 +135,12 @@ daemon_init()
 		return NULL;
 	}
 	alloc_init(&daemon->superalloc, NULL, 0);
+	daemon->acl = acl_list_create();
+	if(!daemon->acl) {
+		free(daemon->env);
+		free(daemon);
+		return NULL;
+	}
 	return daemon;	
 }
 
@@ -397,6 +404,8 @@ void
 daemon_fork(struct daemon* daemon)
 {
 	log_assert(daemon);
+	if(!acl_list_apply_cfg(daemon->acl, daemon->cfg))
+		fatal_exit("Could not setup access control list");
 
 	/* setup modules */
 	daemon_setup_modules(daemon);
@@ -465,6 +474,7 @@ daemon_delete(struct daemon* daemon)
 		infra_delete(daemon->env->infra_cache);
 	}
 	alloc_clear(&daemon->superalloc);
+	acl_list_delete(daemon->acl);
 	free(daemon->pidfile);
 	free(daemon->env);
 	free(daemon);

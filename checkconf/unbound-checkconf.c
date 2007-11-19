@@ -92,6 +92,7 @@ morechecks(struct config_file* cfg)
 	int i;
 	struct sockaddr_storage a;
 	socklen_t alen;
+	struct config_acl* acl;
 	for(i=0; i<cfg->num_ifs; i++) {
 		if(!ipstrtoaddr(cfg->ifs[i], UNBOUND_DNS_PORT, &a, &alen)) {
 			fatal_exit("cannot parse interface specified as '%s'",
@@ -103,6 +104,13 @@ morechecks(struct config_file* cfg)
 			&a, &alen)) {
 			fatal_exit("cannot parse outgoing-interface "
 				"specified as '%s'", cfg->out_ifs[i]);
+		}
+	}
+	for(acl=cfg->acls; acl; acl = acl->next) {
+		if(!netblockstrtoaddr(acl->address, UNBOUND_DNS_PORT, 
+			&a, &alen, &i)) {
+			fatal_exit("cannot parse access control address %s %s",
+				acl->address, acl->control);
 		}
 	}
 

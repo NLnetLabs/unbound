@@ -114,34 +114,10 @@ donotq_str_cfg(struct iter_donotq* dq, const char* str)
 {
 	struct sockaddr_storage addr;
 	int net;
-	char* s = NULL;
 	socklen_t addrlen;
-	net = (str_is_ip6(str)?128:32);
-	if((s=strchr(str, '/'))) {
-		if(atoi(s+1) > net) {
-			log_err("netblock too large: %s", str);
-			return 0;
-		}
-		net = atoi(s+1);
-		if(net == 0 && strcmp(s+1, "0") != 0) {
-			log_err("cannot parse donotquery netblock:"
-				" '%s'", str);
-			return 0;
-		}
-		if(!(s = strdup(str))) {
-			log_err("out of memory");
-			return 0;
-		}
-		*strchr(s, '/') = '\0';
-	}
-	if(!ipstrtoaddr(s?s:str, UNBOUND_DNS_PORT, &addr, &addrlen)) {
-		free(s);
-		log_err("cannot parse donotquery ip address: '%s'", str);
+	if(!netblockstrtoaddr(str, UNBOUND_DNS_PORT, &addr, &addrlen, &net)) {
+		log_err("cannot parse donotquery netblock: %s", str);
 		return 0;
-	}
-	if(s) {
-		free(s);
-		addr_mask(&addr, addrlen, net);
 	}
 	if(!donotq_insert(dq, &addr, addrlen, net)) {
 		log_err("out of memory");

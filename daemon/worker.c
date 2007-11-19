@@ -45,6 +45,7 @@
 #include "util/random.h"
 #include "daemon/worker.h"
 #include "daemon/daemon.h"
+#include "daemon/acl_list.h"
 #include "util/netevent.h"
 #include "util/config_file.h"
 #include "util/module.h"
@@ -663,11 +664,27 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 	struct lruhash_entry* e;
 	struct query_info qinfo;
 	struct edns_data edns;
+	enum acl_access acl;
 
 	if(error != NETEVENT_NOERROR) {
 		/* some bad tcp query DNS formats give these error calls */
 		verbose(VERB_ALGO, "handle request called with err=%d", error);
 		return 0;
+	}
+	acl = acl_list_lookup(worker->daemon->acl, &repinfo->addr, 
+		repinfo->addrlen);
+	if(acl == acl_deny) {
+		comm_point_drop_reply(repinfo);
+		return 0;
+	} else if(acl == acl_refuse) {
+		ldns_buffer_set_limit(c->buffer, LDNS_HEADER_SIZE);
+		ldns_buffer_write_at(c->buffer, 4, 
+			(uint8_t*)"\0\0\0\0\0\0\0\0", 8);
+		LDNS_QR_SET(ldns_buffer_begin(c->buffer));
+		LDNS_RCODE_SET(ldns_buffer_begin(c->buffer), 
+			LDNS_RCODE_REFUSED);
+		log_buf(VERB_ALGO, "refuse", c->buffer);
+		return 1;
 	}
 	if((ret=worker_check_request(c->buffer, worker)) != 0) {
 		verbose(VERB_ALGO, "worker check request: bad query.");

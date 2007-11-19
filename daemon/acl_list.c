@@ -116,7 +116,6 @@ acl_list_str_cfg(struct acl_list* acl, const char* str, const char* s2,
 {
 	struct sockaddr_storage addr;
 	int net;
-	char* s = NULL;
 	socklen_t addrlen;
 	enum acl_access control;
 	if(strcmp(s2, "allow") == 0)
@@ -129,32 +128,9 @@ acl_list_str_cfg(struct acl_list* acl, const char* str, const char* s2,
 		log_err("access control type %s unknown", str);
 		return 0;
 	}
-	net = (str_is_ip6(str)?128:32);
-	if((s=strchr(str, '/'))) {
-		if(atoi(s+1) > net) {
-			log_err("acl netblock too large: %s", str);
-			return 0;
-		}
-		net = atoi(s+1);
-		if(net == 0 && strcmp(s+1, "0") != 0) {
-			log_err("cannot parse acl netblock:"
-				" '%s'", str);
-			return 0;
-		}
-		if(!(s = strdup(str))) {
-			log_err("out of memory");
-			return 0;
-		}
-		*strchr(s, '/') = '\0';
-	}
-	if(!ipstrtoaddr(s?s:str, UNBOUND_DNS_PORT, &addr, &addrlen)) {
-		free(s);
-		log_err("cannot parse acl ip address: '%s'", str);
+	if(!netblockstrtoaddr(str, UNBOUND_DNS_PORT, &addr, &addrlen, &net)) {
+		log_err("cannot parse access control: %s %s", str, s2);
 		return 0;
-	}
-	if(s) {
-		free(s);
-		addr_mask(&addr, addrlen, net);
 	}
 	if(!acl_list_insert(acl, &addr, addrlen, net, control, 
 		complain_duplicates)) {

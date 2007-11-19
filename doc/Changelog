@@ -7,6 +7,8 @@
 	- README talks about gnu make.
 	- 0.8: unit test for addr_mask and fixups for it.
 	  and unit test for addr_in_common().
+	- 0.8: access-control config file element.
+	  and unit test rpl replay file.
 
 16 November 2007: Wouter
 	- privilege separation is not needed in unbound at this time.
