@@ -18,6 +18,7 @@ This software is under BSD license, see LICENSE for details.
   * autoreconf (autoheader && autoconf), if ./configure is missing.
 
 * Make and install: ./configure; make; make install
+  * Use GNU make; default on linux, often called 'gmake' on BSD and Solaris.
   * --with-ldns=/path/to/ldns
   	If ldns is not detected on the system, a prepackaged tarball
 	of the ldns library is used to compile and statically link against.
