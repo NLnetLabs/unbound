@@ -112,7 +112,7 @@ donotq_insert(struct iter_donotq* dq, struct sockaddr_storage* addr,
 static void
 mask_block(int ip6, struct sockaddr_storage* addr, int net)
 {
-	uint8_t mask[8] = {0x0, 0x1, 0x3, 0x7, 0xf, 0x1f, 0x3f, 0x7f};
+	uint8_t mask[8] = {0x0, 0x80, 0xc0, 0xe0, 0xf0, 0xf8, 0xfc, 0xfe};
 	int i, max;
 	uint8_t* s;
 	if(ip6) {
