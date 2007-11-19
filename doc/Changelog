@@ -1,5 +1,5 @@
 19 November 2007: Wouter
-	- version 0.71:
+	- version 0.7.1:
 		* includes tpkg fixes to kill daemons at end of test
 		* includes NSEC/RRSIG not downcasing fixup from
 		dnssec-bis-updates draft-06.
