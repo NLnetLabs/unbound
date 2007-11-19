@@ -748,7 +748,6 @@ canonical_compare(struct ub_packed_rrset_key* rrset, size_t i, size_t j)
 		 */
 		/* type starts with the name; remainder is binary compared */
 		case LDNS_RR_TYPE_NXT: 
-		case LDNS_RR_TYPE_NSEC: 
 		/* use rdata field formats */
 		case LDNS_RR_TYPE_MINFO:
 		case LDNS_RR_TYPE_RP:
@@ -758,7 +757,6 @@ canonical_compare(struct ub_packed_rrset_key* rrset, size_t i, size_t j)
 		case LDNS_RR_TYPE_KX:
 		case LDNS_RR_TYPE_MX:
 		case LDNS_RR_TYPE_SIG:
-		case LDNS_RR_TYPE_RRSIG:
 		case LDNS_RR_TYPE_PX:
 		case LDNS_RR_TYPE_NAPTR:
 		case LDNS_RR_TYPE_SRV:
@@ -773,6 +771,8 @@ canonical_compare(struct ub_packed_rrset_key* rrset, size_t i, size_t j)
 		case LDNS_RR_TYPE_HINFO:
 			return canonical_compare_hinfo(d, i, j);
 
+		case LDNS_RR_TYPE_NSEC: 
+		case LDNS_RR_TYPE_RRSIG:
 	default:
 		/* For unknown RR types, or types not listed above,
 		 * no canonicalization is needed, do binary compare */
