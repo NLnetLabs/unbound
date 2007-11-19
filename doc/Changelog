@@ -3,6 +3,8 @@
 		* includes tpkg fixes to kill daemons at end of test
 		* includes NSEC/RRSIG not downcasing fixup from
 		dnssec-bis-updates draft-06.
+		* README file updated.
+		* nice libevent not found error.
 
 15 November 2007: Wouter
 	- review fixups from Jelte.

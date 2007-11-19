@@ -25,6 +25,9 @@ This software is under BSD license, see LICENSE for details.
   * --with-libevent=/path/to/libevent
   	Can be set to either the system install or the build directory.
 	--with-libevent=no gives a builtin alternative implementation.
+	libevent is useful when having many (thousands) of outgoing ports.
+	This improves randomization and spoof resistance. For the default 
+	of 16 ports the builtin alternative works well.
   * --without-pthreads 
 	This disables pthreads, and uses Solaris thr library or no threading. 
 	Without this option the pthreads library is detected automatically.
