@@ -2,6 +2,9 @@
 	- do not downcase NSEC and RRSIG for verification. Follows 
 	  draft-ietf-dnsext-dnssec-bis-updates-06.txt.
 	- fixup leaking unbound daemons at end of tests.
+	- README file updated.
+	- nice libevent not found error.
+	- README talks about gnu make.
 
 16 November 2007: Wouter
 	- privilege separation is not needed in unbound at this time.

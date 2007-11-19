@@ -21692,11 +21692,11 @@ echo "${ECHO_T}found in $thedir" >&6; }
             		LDFLAGS="$thedir/.libs/*.o $LDFLAGS";
 		else
             		{ { echo "$as_me:$LINENO: error: Cannot find the libevent library in $withval
-You can restart configure with --with-libevent=no to use a builtin alternative.
+You can restart ./configure --with-libevent=no to use a builtin alternative.
 Please note that this alternative is not as capable as libevent when using
 many outgoing ports.  " >&5
 echo "$as_me: error: Cannot find the libevent library in $withval
-You can restart configure with --with-libevent=no to use a builtin alternative.
+You can restart ./configure --with-libevent=no to use a builtin alternative.
 Please note that this alternative is not as capable as libevent when using
 many outgoing ports.  " >&2;}
    { (exit 1); exit 1; }; }
