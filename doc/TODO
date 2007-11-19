@@ -56,3 +56,4 @@ o use privilege separation, to change privilege options during reload securely
   not needed.
 o check if for PowerDNS(2.9.21) CNAME in Answer section & rcode=NXDOMAIN needs
   to be fixed up to be rcode=NOERROR?
+o On Windows use CryptGenRandom() to get random seed for arc4random.

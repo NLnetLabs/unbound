@@ -1,3 +1,7 @@
+19 November 2007: Wouter
+	- do not downcase NSEC and RRSIG for verification. Follows 
+	  draft-ietf-dnsext-dnssec-bis-updates-06.txt.
+
 16 November 2007: Wouter
 	- privilege separation is not needed in unbound at this time.
 	  TODO item marked as such.
