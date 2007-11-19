@@ -377,7 +377,7 @@ addr_is_ip6(struct sockaddr_storage* addr, socklen_t len)
 void
 addr_mask(struct sockaddr_storage* addr, socklen_t len, int net)
 {
-	uint8_t mask[8] = {0x0, 0x1, 0x3, 0x7, 0xf, 0x1f, 0x3f, 0x7f};
+	uint8_t mask[8] = {0x0, 0x80, 0xc0, 0xe0, 0xf0, 0xf8, 0xfc, 0xfe};
 	int i, max;
 	uint8_t* s;
 	if(addr_is_ip6(addr, len)) {

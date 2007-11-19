@@ -5,6 +5,7 @@
 	- README file updated.
 	- nice libevent not found error.
 	- README talks about gnu make.
+	- 0.8: unit test for addr_mask and fixups for it.
 
 16 November 2007: Wouter
 	- privilege separation is not needed in unbound at this time.
