@@ -5,6 +5,7 @@
 		dnssec-bis-updates draft-06.
 		* README file updated.
 		* nice libevent not found error.
+		* README talks about gnu make.
 
 15 November 2007: Wouter
 	- review fixups from Jelte.
