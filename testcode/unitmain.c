@@ -89,6 +89,42 @@ alloc_test() {
 static void 
 net_test()
 {
+	char* t4[] = {"\000\000\000\000",
+		"\200\000\000\000",
+		"\300\000\000\000",
+		"\340\000\000\000",
+		"\360\000\000\000",
+		"\370\000\000\000",
+		"\374\000\000\000",
+		"\376\000\000\000",
+		"\377\000\000\000",
+		"\377\200\000\000",
+		"\377\300\000\000",
+		"\377\340\000\000",
+		"\377\360\000\000",
+		"\377\370\000\000",
+		"\377\374\000\000",
+		"\377\376\000\000",
+		"\377\377\000\000",
+		"\377\377\200\000",
+		"\377\377\300\000",
+		"\377\377\340\000",
+		"\377\377\360\000",
+		"\377\377\370\000",
+		"\377\377\374\000",
+		"\377\377\376\000",
+		"\377\377\377\000",
+		"\377\377\377\200",
+		"\377\377\377\300",
+		"\377\377\377\340",
+		"\377\377\377\360",
+		"\377\377\377\370",
+		"\377\377\377\374",
+		"\377\377\377\376",
+		"\377\377\377\377",
+		"\377\377\377\377",
+		"\377\377\377\377",
+	};
 	unit_assert( str_is_ip6("::") );
 	unit_assert( str_is_ip6("::1") );
 	unit_assert( str_is_ip6("2001:7b8:206:1:240:f4ff:fe37:8810") );
@@ -124,42 +160,6 @@ net_test()
 		struct sockaddr_in6 a6;
 		socklen_t l4 = (socklen_t)sizeof(a4);
 		socklen_t l6 = (socklen_t)sizeof(a6);
-		char* t4[] = {"\000\000\000\000",
-			"\200\000\000\000",
-			"\300\000\000\000",
-			"\340\000\000\000",
-			"\360\000\000\000",
-			"\370\000\000\000",
-			"\374\000\000\000",
-			"\376\000\000\000",
-			"\377\000\000\000",
-			"\377\200\000\000",
-			"\377\300\000\000",
-			"\377\340\000\000",
-			"\377\360\000\000",
-			"\377\370\000\000",
-			"\377\374\000\000",
-			"\377\376\000\000",
-			"\377\377\000\000",
-			"\377\377\200\000",
-			"\377\377\300\000",
-			"\377\377\340\000",
-			"\377\377\360\000",
-			"\377\377\370\000",
-			"\377\377\374\000",
-			"\377\377\376\000",
-			"\377\377\377\000",
-			"\377\377\377\200",
-			"\377\377\377\300",
-			"\377\377\377\340",
-			"\377\377\377\360",
-			"\377\377\377\370",
-			"\377\377\377\374",
-			"\377\377\377\376",
-			"\377\377\377\377",
-			"\377\377\377\377",
-			"\377\377\377\377",
-		};
 		int i;
 		a4.sin_family = AF_INET;
 		a6.sin6_family = AF_INET6;
@@ -180,6 +180,63 @@ net_test()
 		unit_assert(memcmp(&a6.sin6_addr, "\377\377\377\377\377\377\377\377\000\000\000\000\000\000\000\000", 16) == 0);
 		addr_mask((struct sockaddr_storage*)&a6, l6, 0);
 		unit_assert(memcmp(&a6.sin6_addr, "\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000", 16) == 0);
+	}
+
+	/* test addr_in_common */
+	if(1) {
+		struct sockaddr_in a4, b4;
+		struct sockaddr_in6 a6, b6;
+		socklen_t l4 = (socklen_t)sizeof(a4);
+		socklen_t l6 = (socklen_t)sizeof(a6);
+		int i;
+		a4.sin_family = AF_INET;
+		b4.sin_family = AF_INET;
+		a6.sin6_family = AF_INET6;
+		b6.sin6_family = AF_INET6;
+		memcpy(&a4.sin_addr, "abcd", 4);
+		memcpy(&b4.sin_addr, "abcd", 4);
+		unit_assert(addr_in_common((struct sockaddr_storage*)&a4, 32,
+			(struct sockaddr_storage*)&b4, 32, l4) == 32);
+		unit_assert(addr_in_common((struct sockaddr_storage*)&a4, 34,
+			(struct sockaddr_storage*)&b4, 32, l4) == 32);
+		for(i=0; i<=32; i++) {
+			unit_assert(addr_in_common(
+				(struct sockaddr_storage*)&a4, 32,
+				(struct sockaddr_storage*)&b4, i, l4) == i);
+			unit_assert(addr_in_common(
+				(struct sockaddr_storage*)&a4, i,
+				(struct sockaddr_storage*)&b4, 32, l4) == i);
+			unit_assert(addr_in_common(
+				(struct sockaddr_storage*)&a4, i,
+				(struct sockaddr_storage*)&b4, i, l4) == i);
+		}
+		for(i=0; i<=32; i++) {
+			memcpy(&a4.sin_addr, "\377\377\377\377", 4);
+			memcpy(&b4.sin_addr, t4[i], 4);
+			unit_assert(addr_in_common(
+				(struct sockaddr_storage*)&a4, 32,
+				(struct sockaddr_storage*)&b4, 32, l4) == i);
+			unit_assert(addr_in_common(
+				(struct sockaddr_storage*)&b4, 32,
+				(struct sockaddr_storage*)&a4, 32, l4) == i);
+		}
+		memcpy(&a6.sin6_addr, "abcdefghabcdefgh", 16);
+		memcpy(&b6.sin6_addr, "abcdefghabcdefgh", 16);
+		unit_assert(addr_in_common((struct sockaddr_storage*)&a6, 128,
+			(struct sockaddr_storage*)&b6, 128, l6) == 128);
+		unit_assert(addr_in_common((struct sockaddr_storage*)&a6, 129,
+			(struct sockaddr_storage*)&b6, 128, l6) == 128);
+		for(i=0; i<=128; i++) {
+			unit_assert(addr_in_common(
+				(struct sockaddr_storage*)&a6, 128,
+				(struct sockaddr_storage*)&b6, i, l6) == i);
+			unit_assert(addr_in_common(
+				(struct sockaddr_storage*)&a6, i,
+				(struct sockaddr_storage*)&b6, 128, l6) == i);
+			unit_assert(addr_in_common(
+				(struct sockaddr_storage*)&a6, i,
+				(struct sockaddr_storage*)&b6, i, l6) == i);
+		}
 	}
 }
 
