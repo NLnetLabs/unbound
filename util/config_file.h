@@ -271,7 +271,7 @@ int cfg_strlist_insert(struct config_strlist** head, char* item);
  * Insert string into str2list.
  * @param head: pointer to str2list head variable.
  * @param item: new item. malloced by caller. If NULL the insertion fails.
- * @param item: 2nd string, malloced by caller. If NULL the insertion fails.
+ * @param i2: 2nd string, malloced by caller. If NULL the insertion fails.
  * @return: true on success.
  */
 int cfg_str2list_insert(struct config_str2list** head, char* item, char* i2);

@@ -326,7 +326,7 @@ Configure a local zone. The type determines the answer to give if there is
 no match from local-data. The types are deny, refuse, static, transparent, 
 redirect, nodefault, and are explained below. After that the default settings
 are listed. Use local-data: to enter data into the local zone. Answers for
-local zones are authoritative DNS answers.
+local zones are authoritative DNS answers. By default the zones are class IN.
 .Bl -tag -width indent
 .It \fIdeny\fR 
 Do not send an answer, drop the query.
