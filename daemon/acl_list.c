@@ -144,10 +144,10 @@ acl_list_str_cfg(struct acl_list* acl, const char* str, const char* s2,
 static int 
 read_acl_list(struct acl_list* acl, struct config_file* cfg)
 {
-	struct config_acl* p;
+	struct config_str2list* p;
 	for(p = cfg->acls; p; p = p->next) {
-		log_assert(p->address && p->control);
-		if(!acl_list_str_cfg(acl, p->address, p->control, 1))
+		log_assert(p->str && p->str2);
+		if(!acl_list_str_cfg(acl, p->str, p->str2, 1))
 			return 0;
 	}
 	return 1;

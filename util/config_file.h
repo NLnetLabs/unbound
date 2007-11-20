@@ -43,7 +43,7 @@
 #define UTIL_CONFIG_FILE_H
 struct config_stub;
 struct config_strlist;
-struct config_acl;
+struct config_str2list;
 
 /**
  * The configuration options.
@@ -122,7 +122,7 @@ struct config_file {
 	/** list of donotquery addresses, linked list */
 	struct config_strlist* donotqueryaddrs;
 	/** list of access control entries, linked list */
-	struct config_acl* acls;
+	struct config_str2list* acls;
 	/** use default localhost donotqueryaddr entries */
 	int donotquery_localhost;
 
@@ -186,6 +186,13 @@ struct config_file {
 	/** slabs in the key cache. */
 	size_t key_cache_slabs;
 
+	/** local zones config */
+	struct config_str2list* local_zones;
+	/** local zones nodefault list */
+	struct config_strlist* local_zones_nodefault;
+	/** local data RRs configged */
+	struct config_strlist* local_data;
+
 	/** daemonize, i.e. fork into the background. */
 	int do_daemonize;
 };
@@ -215,15 +222,15 @@ struct config_strlist {
 };
 
 /**
- * List of access control options
+ * List of two strings for config options
  */
-struct config_acl {
+struct config_str2list {
 	/** next item in list */
-	struct config_acl* next;
-	/** ip addr string */
-	char* address;
-	/** control string */
-	char* control;
+	struct config_str2list* next;
+	/** first string */
+	char* str;
+	/** second string */
+	char* str2;
 };
 
 /**
@@ -259,6 +266,27 @@ void config_apply(struct config_file* config);
  * @return: true on success.
  */
 int cfg_strlist_insert(struct config_strlist** head, char* item);
+
+/**
+ * Insert string into str2list.
+ * @param head: pointer to str2list head variable.
+ * @param item: new item. malloced by caller. If NULL the insertion fails.
+ * @param item: 2nd string, malloced by caller. If NULL the insertion fails.
+ * @return: true on success.
+ */
+int cfg_str2list_insert(struct config_str2list** head, char* item, char* i2);
+
+/**
+ * Delete items in config string list.
+ * @param list: list.
+ */
+void config_delstrlist(struct config_strlist* list);
+
+/**
+ * Delete items in config double string list.
+ * @param list: list.
+ */
+void config_deldblstrlist(struct config_str2list* list);
 
 /**
  * Convert 14digit to time value

@@ -321,6 +321,100 @@ Number of bytes size of the key cache. Default is 4 megabytes.
 Number of slabs in the key cache. Slabs reduce lock contention by threads.
 Must be set to a power of 2. Setting (close) to the number of cpus is a 
 reasonable guess.
+.It \fBlocal-zone:\fR <zone> <type>
+Configure a local zone. The type determines the answer to give if there is
+no match from local-data. The types are deny, refuse, static, transparent, 
+redirect, nodefault, and are explained below. After that the default settings
+are listed. Use local-data: to enter data into the local zone. Answers for
+local zones are authoritative DNS answers.
+.Bl -tag -width indent
+.It \fIdeny\fR 
+Do not send an answer, drop the query.
+If there is a match from local data, the query is answered.
+.It \fIrefuse\fR 
+Send an error message reply, with rcode REFUSED.
+If there is a match from local data, the query is answered.
+.It \fIstatic\fR 
+If there is a match from local data, the query is answered.
+Otherwise, the query is answered with nodata or nxdomain.
+For a negative answer a SOA is included in the answer if present
+as local-data for the zone apex domain.
+.It \fItransparent\fR 
+If there is a match from local data, the query is answered.
+Otherwise, the query is resolved normally.
+If no local-zone is given local-data causes a transparent zone
+to be created by default.
+.It \fIredirect\fR 
+The query is answered from the local data for the zone name. 
+There may be no local data beneath the zone name.
+This answers queries for the zone, and all subdomains of the zone
+with the local data for the zone.
+It can be used to redirect a domain to a different address, with 
+local-zone: "example.com." redirect and 
+local-data: "example.com. A 127.0.0.1"
+queries for www.example.com and www.foo.example.com are redirected.
+.It \fInodefault\fR 
+Used to turn off default contents for AS112 zones. The other types
+also turn off default contents for the zone. The 'nodefault' option 
+has no other effect than turning off default contents for the 
+given zone.
+.El
+The default zones are localhost, reverse 127.0.0.1 and ::1, and the AS112
+zones. The AS112 zones are reverse DNS zones for private use and reserved
+IP addresses for which the servers on the internet cannot provide correct
+answers. They are configured by default to give nxdomain (no reverse 
+information) answers. The defaults can be turned off by specifying your
+own local-zone of that name, or using the 'nodefault' type. Below is a 
+list of the default zone contents.
+.Bl -tag -width indent
+.It \fIlocalhost\fR 
+The IP4 and IP6 localhost information is given. NS and SOA records are provided
+for completeness and to satisfy some DNS update tools. Default content:
+.nf
+local-zone: "localhost." static
+local-data: "localhost. 10800 IN NS localhost."
+local-data: "localhost. 10800 IN SOA localhost. nobody.invalid. 1 3600 1200 604800 10800"
+local-data: "localhost. 10800 IN A 127.0.0.1"
+local-data: "localhost. 10800 IN AAAA ::1"
+.fi
+.It \fIreverse IPv4 loopback\fR 
+Default content:
+.nf
+local-zone: "127.in-addr.arpa." static
+local-data: "127.in-addr.arpa. 10800 IN NS localhost."
+local-data: "127.in-addr.arpa. 10800 IN SOA localhost. nobody.invalid. 1 3600 1200 604800 10800"
+local-data: "1.0.0.127.in-addr.arpa. 10800 IN PTR localhost."
+.fi
+.It \fIreverse IPv6 loopback\fR 
+Default content:
+.nf
+local-zone: "1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.ip6.arpa." static
+local-data: "1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.ip6.arpa. 10800 IN NS localhost."
+local-data: "1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.ip6.arpa. 10800 IN SOA localhost. nobody.invalid. 1 3600 1200 604800 10800"
+local-data: "1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.ip6.arpa. 10800 IN PTR localhost."
+.fi
+.It \fIreverse RFC1918 local use zones\fR 
+Reverse data for zones 10.IN-ADDR.ARPA, 16.172.IN-ADDR.ARPA to 
+31.172.IN-ADDR.ARPA, 168.192.IN-ADDR.ARPA.
+The \fBlocal-zone:\fR is set static and as \fBlocal-data:\fR SOA and NS 
+records are provided.
+.It \fIreverse RFC3330 IP4 this, link-local, testnet and broadcast\fR 
+Reverse data for zones 0.IN-ADDR.ARPA, 254.169.IN-ADDR.ARPA, 
+2.0.192.IN-ADDR.ARPA, 255.255.255.255.IN-ADDR.ARPA.
+.It \fIreverse RFC4291 IP6 unspecified\fR
+Reverse data for zone 0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.IP6.ARPA.
+.It \fIreverse RFC4193 IPv6 Locally Assigned Local Addresses\fR
+Reverse data for zone D.F.IP6.ARPA.
+.It \fIreverse RFC4291 IPv6 Link Local Addresses\fR
+Reverse data for zones 8.E.F.IP6.ARPA to B.E.F.IP6.ARPA.
+.El
+.\" End of local-zone listing.
+.It \fBlocal-data:\fR "<resource record string>"
+Configure local data, which is served in reply to queries for it.
+The query has to match exactly unless you configure the local-zone as 
+redirect. If not matched exactly, the local-zone type determines
+further processing. If local-data is configured that is not a subdomain of
+a local-zone, a transparent local-zone is configured. 
 .El
 .Ss Stub Zone Options
 There may be multiple

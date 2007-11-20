@@ -161,6 +161,8 @@ key-cache-size{COLON}	{ YDOUT; return VAR_KEY_CACHE_SIZE;}
 key-cache-slabs{COLON}	{ YDOUT; return VAR_KEY_CACHE_SLABS;}
 val-nsec3-keysize-iterations{COLON}	{ YDOUT; return VAR_VAL_NSEC3_KEYSIZE_ITERATIONS;}
 use-syslog{COLON}	{ YDOUT; return VAR_USE_SYSLOG;}
+local-zone{COLON}	{ YDOUT; return VAR_LOCAL_ZONE;}
+local-data{COLON}	{ YDOUT; return VAR_LOCAL_DATA;}
 {NEWLINE}		{ LEXOUT(("NL\n")); cfg_parser->line++;}
 
 	/* Quoted strings. Strip leading and ending quotes */

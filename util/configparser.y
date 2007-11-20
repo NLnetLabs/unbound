@@ -87,6 +87,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_VAL_NSEC3_KEYSIZE_ITERATIONS VAR_USE_SYSLOG 
 %token VAR_OUTGOING_INTERFACE VAR_ROOT_HINTS VAR_DO_NOT_QUERY_LOCALHOST
 %token VAR_CACHE_MAX_TTL VAR_HARDEN_DNNSEC_STRIPPED VAR_ACCESS_CONTROL
+%token VAR_LOCAL_ZONE VAR_LOCAL_DATA
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -124,7 +125,8 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_trusted_keys_file | server_val_nsec3_keysize_iterations |
 	server_use_syslog | server_outgoing_interface | server_root_hints |
 	server_do_not_query_localhost | server_cache_max_ttl |
-	server_harden_dnssec_stripped | server_access_control
+	server_harden_dnssec_stripped | server_access_control |
+	server_local_zone | server_local_data
 	;
 stubstart: VAR_STUB_ZONE
 	{
@@ -582,12 +584,8 @@ server_access_control: VAR_ACCESS_CONTROL STRING STRING
 			yyerror("expected deny, refuse or allow in "
 				"access control action");
 		} else {
-			struct config_acl* n = calloc(1, sizeof(*n));
-			if(!n) fatal_exit("out of memory adding acl");
-			n->address = $2;
-			n->control = $3;
-			n->next = cfg_parser->cfg->acls;
-			cfg_parser->cfg->acls = n;
+			if(!cfg_str2list_insert(&cfg_parser->cfg->acls, $2, $3))
+				fatal_exit("out of memory adding acl");
 		}
 	}
 	;
@@ -681,6 +679,32 @@ server_key_cache_slabs: VAR_KEY_CACHE_SLABS STRING
 				yyerror("must be a power of 2");
 		}
 		free($2);
+	}
+	;
+server_local_zone: VAR_LOCAL_ZONE STRING STRING
+	{
+		OUTYY(("P(server_local_zone:%s %s)\n", $2, $3));
+		if(strcmp($3, "static")!=0 && strcmp($3, "deny")!=0 &&
+		   strcmp($3, "refuse")!=0 && strcmp($3, "redirect")!=0 &&
+		   strcmp($3, "transparent")!=0 && strcmp($3, "nodefault")!=0)
+			yyerror("local-zone type: expected static, deny, "
+				"refuse, redirect, transparent or nodefault");
+		else if(strcmp($3, "nodefault")==0) {
+			if(!cfg_strlist_insert(&cfg_parser->cfg->
+				local_zones_nodefault, $2))
+				fatal_exit("out of memory adding local-zone");
+		} else {
+			if(!cfg_str2list_insert(&cfg_parser->cfg->local_zones, 
+				$2, $3))
+				fatal_exit("out of memory adding local-zone");
+		}
+	}
+	;
+server_local_data: VAR_LOCAL_DATA STRING
+	{
+		OUTYY(("P(server_local_data:%s)\n", $2));
+		if(!cfg_strlist_insert(&cfg_parser->cfg->local_data, $2))
+			fatal_exit("out of memory adding local-data");
 	}
 	;
 stub_name: VAR_NAME STRING

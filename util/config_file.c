@@ -127,6 +127,9 @@ config_create()
 	cfg->val_permissive_mode = 0;
 	cfg->key_cache_size = 4 * 1024 * 1024;
 	cfg->key_cache_slabs = 4;
+	cfg->local_zones = NULL;
+	cfg->local_zones_nodefault = NULL;
+	cfg->local_data = NULL;
 	if(!(cfg->module_conf = strdup("validator iterator"))) goto error_exit;
 	if(!(cfg->val_nsec3_key_iterations = 
 		strdup("1024 150 2048 500 4096 2500"))) goto error_exit;
@@ -172,8 +175,7 @@ config_read(struct config_file* cfg, char* filename)
 	return 1;
 }
 
-/** delete config strlist */
-static void
+void
 config_delstrlist(struct config_strlist* p)
 {
 	struct config_strlist *np;
@@ -185,15 +187,14 @@ config_delstrlist(struct config_strlist* p)
 	}
 }
 
-/** delete config acl list */
-static void
-config_delacllist(struct config_acl* p)
+void
+config_deldblstrlist(struct config_str2list* p)
 {
-	struct config_acl *np;
+	struct config_str2list *np;
 	while(p) {
 		np = p->next;
-		free(p->address);
-		free(p->control);
+		free(p->str);
+		free(p->str2);
 		free(p);
 		p = np;
 	}
@@ -246,8 +247,11 @@ config_delete(struct config_file* cfg)
 	config_delstrlist(cfg->trust_anchor_file_list);
 	config_delstrlist(cfg->trusted_keys_file_list);
 	config_delstrlist(cfg->trust_anchor_list);
-	config_delacllist(cfg->acls);
+	config_deldblstrlist(cfg->acls);
 	free(cfg->val_nsec3_key_iterations);
+	config_deldblstrlist(cfg->local_zones);
+	config_delstrlist(cfg->local_zones_nodefault);
+	config_delstrlist(cfg->local_data);
 	free(cfg);
 }
 
@@ -292,6 +296,22 @@ cfg_strlist_insert(struct config_strlist** head, char* item)
 	if(!s)
 		return 0;
 	s->str = item;
+	s->next = *head;
+	*head = s;
+	return 1;
+}
+
+int 
+cfg_str2list_insert(struct config_str2list** head, char* item, char* i2)
+{
+	struct config_str2list *s;
+	if(!item || !i2 || !head)
+		return 0;
+	s = (struct config_str2list*)calloc(1, sizeof(struct config_str2list));
+	if(!s)
+		return 0;
+	s->str = item;
+	s->str2 = i2;
 	s->next = *head;
 	*head = s;
 	return 1;

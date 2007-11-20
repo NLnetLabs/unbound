@@ -109,7 +109,9 @@
      VAR_DO_NOT_QUERY_LOCALHOST = 325,
      VAR_CACHE_MAX_TTL = 326,
      VAR_HARDEN_DNNSEC_STRIPPED = 327,
-     VAR_ACCESS_CONTROL = 328
+     VAR_ACCESS_CONTROL = 328,
+     VAR_LOCAL_ZONE = 329,
+     VAR_LOCAL_DATA = 330
    };
 #endif
 /* Tokens.  */
@@ -184,6 +186,8 @@
 #define VAR_CACHE_MAX_TTL 326
 #define VAR_HARDEN_DNNSEC_STRIPPED 327
 #define VAR_ACCESS_CONTROL 328
+#define VAR_LOCAL_ZONE 329
+#define VAR_LOCAL_DATA 330
 
 
 
@@ -195,7 +199,7 @@ typedef union YYSTYPE
 	char*	str;
 }
 /* Line 1489 of yacc.c.  */
-#line 199 "util/configparser.h"
+#line 203 "util/configparser.h"
 	YYSTYPE;
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */
 # define YYSTYPE_IS_DECLARED 1
