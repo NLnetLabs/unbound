@@ -44,6 +44,7 @@
 #include "util/rbtree.h"
 struct ub_packed_rrset_key;
 struct regional;
+struct config_file;
 
 /**
  * Local zone type
@@ -67,12 +68,12 @@ enum localzone_type {
 };
 
 /**
- * Local zones storage, shared.
- * Fixed at startup, so, readonly, no locks or mutexes necessary.
+ * Authoritative local zones storage, shared.
+ * This tree is fixed at startup, so, readonly, no locks or mutexes necessary.
  */
 struct local_zones {
 	/** rbtree of struct local_zone */
-	rbtree_t zones;
+	rbtree_t ztree;
 };
 
 /**
@@ -87,10 +88,11 @@ struct local_zone {
 	/** zone name, in uncompressed wireformat */
 	uint8_t* name;
 	/** length of zone name */
-	size_t name_len;
+	size_t namelen;
 	/** number of labels in zone name */
-	int name_labs;
-	/** the class of this zone */
+	int namelabs;
+	/** the class of this zone. 
+	 * uses 'dclass' to not conflict with c++ keyword class. */
 	uint16_t dclass;
 
 	/** how to process zone */
@@ -103,7 +105,7 @@ struct local_zone {
 	 * rbtree of struct local_data */
 	rbtree_t data;
 	/** if data contains zone apex SOA data, this is a ptr to it. */
-	struct ub_packed_rrset_key* apex;
+	struct ub_packed_rrset_key* soa;
 };
 
 /**
@@ -118,7 +120,7 @@ struct local_data {
 	size_t namelen;
 	/** number of labels in name */
 	int namelabs;
-	/** the data rrsets, match type and class, linked list */
+	/** the data rrsets, with different types, linked list */
 	struct local_rrset* rrsets;
 };
 
@@ -131,5 +133,66 @@ struct local_rrset {
 	/** RRset data item */
 	struct ub_packed_rrset_key* rrset;
 };
+
+/**
+ * Create local zones storage
+ * @return new struct or NULL on error.
+ */
+struct local_zones* local_zones_create();
+
+/**
+ * Delete local zones storage
+ * @param zones: to delete.
+ */
+void local_zones_delete(struct local_zones* zones);
+
+/**
+ * Apply config settings; setup the local authoritative data. 
+ * @param zones: is set up.
+ * @param cfg: config data.
+ * @return false on error.
+ */
+int local_zones_apply_cfg(struct local_zones* zones, struct config_file* cfg);
+
+/**
+ * Compare two local_zone entries in rbtree. Sort hierarchical but not
+ * canonical
+ * @param z1: zone 1
+ * @param z2: zone 2
+ * @return: -1, 0, +1 comparison value.
+ */
+int local_zone_cmp(const void* z1, const void* z2);
+
+/**
+ * Compare two local_data entries in rbtree. Sort canonical.
+ * @param d1: data 1
+ * @param d2: data 2
+ * @return: -1, 0, +1 comparison value.
+ */
+int local_data_cmp(const void* d1, const void* d2);
+
+/**
+ * Delete one zone
+ * @param z: to delete.
+ */
+void local_zone_delete(struct local_zone* z);
+
+/**
+ * Lookup zone that contains the given name, class.
+ * @param zones: the zones tree
+ * @param name: dname to lookup
+ * @param len: length of name.
+ * @param labs: labelcount of name.
+ * @param dclass: class to lookup.
+ * @return closest local_zone or NULL if no covering zone is found.
+ */
+struct local_zone* local_zones_lookup(struct local_zones* zones, 
+	uint8_t* name, size_t len, int labs, uint16_t dclass);
+
+/**
+ * Debug helper. Print all zones 
+ * @param zones: the zones tree
+ */
+void local_zones_print(struct local_zones* zones);
 
 #endif /* SERVICES_LOCALZONE_H */

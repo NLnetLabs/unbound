@@ -49,6 +49,7 @@
 #include "daemon/worker.h"
 #include "services/outside_network.h"
 #include "services/mesh.h"
+#include "services/localzone.h"
 #include "services/cache/infra.h"
 #include "iterator/iterator.h"
 #include "iterator/iter_donotq.h"
@@ -132,6 +133,8 @@ fptr_whitelist_rbtree_cmp(int (*fptr) (const void *, const void *))
 	if(fptr == &mesh_state_compare) return 1;
 	else if(fptr == &mesh_state_ref_compare) return 1;
 	else if(fptr == &acl_list_cmp) return 1;
+	else if(fptr == &local_zone_cmp) return 1;
+	else if(fptr == &local_data_cmp) return 1;
 	else if(fptr == &donotq_cmp) return 1;
 	else if(fptr == &fwd_cmp) return 1;
 	else if(fptr == &stub_cmp) return 1;

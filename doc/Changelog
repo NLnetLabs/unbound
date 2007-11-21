@@ -1,3 +1,6 @@
+21 November 2007: Wouter
+	- local zone internal data setup.
+
 20 November 2007: Wouter
 	- 0.8 - str2list config support for double string config options.
 	- local-zone and local-data options, config storage and documentation.
