@@ -710,6 +710,7 @@ lz_setup_implicit(struct local_zones* zones, struct config_file* cfg)
 				have_name = 1;
 			} else {
 				int m;
+				free(rr_name);
 				if(rr_class != dclass) {
 					/* process other classes later */
 					have_other_classes = 1;
@@ -721,8 +722,7 @@ lz_setup_implicit(struct local_zones* zones, struct config_file* cfg)
 				if(m < match)
 					match = m;
 			}
-		}
-		free(rr_name);
+		} else free(rr_name);
 	}
 	if(have_name) {
 		uint8_t* n2;
@@ -917,7 +917,7 @@ local_encode(struct query_info* qinfo, struct edns_data* edns,
 		ldns_buffer_read_u16_at(buf, 2),
 		buf, 0, 0, temp, udpsize, edns, 
 		(int)(edns->bits&EDNS_DO), 0))
-		error_encode(buf, LDNS_RCODE_SERVFAIL, qinfo,
+		error_encode(buf, (LDNS_RCODE_SERVFAIL|BIT_AA), qinfo,
 			*(uint16_t*)ldns_buffer_begin(buf),
 		       ldns_buffer_read_u16_at(buf, 2), edns);
 	return 1;
@@ -979,9 +979,10 @@ lz_zone_answer(struct local_zone* z, struct query_info* qinfo,
 	if(z->type == local_zone_deny) {
 		/** no reply at all, signal caller by clearing buffer. */
 		ldns_buffer_clear(buf);
+		ldns_buffer_flip(buf);
 		return 1;
 	} else if(z->type == local_zone_refuse) {
-		error_encode(buf, LDNS_RCODE_REFUSED, qinfo,
+		error_encode(buf, (LDNS_RCODE_REFUSED|BIT_AA), qinfo,
 			*(uint16_t*)ldns_buffer_begin(buf),
 		       ldns_buffer_read_u16_at(buf, 2), edns);
 		return 1;
@@ -998,7 +999,7 @@ lz_zone_answer(struct local_zone* z, struct query_info* qinfo,
 		if(z->soa)
 			return local_encode(qinfo, edns, buf, temp, 
 				z->soa, 0, rcode);
-		error_encode(buf, rcode, qinfo, 
+		error_encode(buf, (rcode|BIT_AA), qinfo, 
 			*(uint16_t*)ldns_buffer_begin(buf), 
 			ldns_buffer_read_u16_at(buf, 2), edns);
 		return 1;

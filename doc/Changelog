@@ -9,6 +9,10 @@
 		* empty-nonterminal answer.
 		* But not: wildcard, nsec, referral, rrsig, cname/dname,
 			or additional section processing, NS put in auth.
+	- test for correct working of static and transparent and couple
+	  of important defaults (localhost, as112, reverses). 
+	  Also checks deny and refuse settings.
+	- fixup implicit zone generation and AA bit for NXDOMAIN on localdata.
 
 21 November 2007: Wouter
 	- local zone internal data setup.
