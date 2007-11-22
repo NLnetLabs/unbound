@@ -1,3 +1,8 @@
+22 November 2007: Wouter
+	- noted EDNS in-the-middle dropping trouble as a TODO.
+	  At this point theoretical, no user trouble has been reported.
+	- added all default AS112 zones.
+
 21 November 2007: Wouter
 	- local zone internal data setup.
 

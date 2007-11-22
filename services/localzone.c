@@ -392,7 +392,7 @@ lz_enter_rr_into_zone(struct local_zone* z, ldns_buffer* buf,
 			log_err("out of memory adding local data");
 			return 0;
 		}
-		node->node.key = &node;
+		node->node.key = node;
 		node->name = regional_alloc_init(z->region, key.name, 
 			key.namelen);
 		if(!node->name) {
@@ -496,6 +496,27 @@ lz_nodefault(struct config_file* cfg, const char* name)
 	return 0;
 }
 
+/** enter AS112 default zone */
+static int
+add_as112_default(struct local_zones* zones, struct config_file* cfg,
+        ldns_buffer* buf, char* name)
+{
+	struct local_zone* z;
+	char str[1024]; /* known long enough */
+	if(lz_exists(zones, name) || lz_nodefault(cfg, name))
+		return 1; /* do not enter default content */
+	if(!(z=lz_enter_zone(zones, name, "static", LDNS_RR_CLASS_IN)))
+		return 0;
+	snprintf(str, sizeof(str), "%s 10800 IN SOA localhost. "
+		"nobody.invalid. 1 3600 1200 604800 10800", name);
+	if(!lz_enter_rr_into_zone(z, buf, str))
+		return 0;
+	snprintf(str, sizeof(str), "%s 10800 IN NS localhost. ", name);
+	if(!lz_enter_rr_into_zone(z, buf, str))
+		return 0;
+	return 1;
+}
+
 /** enter default zones */
 static int
 lz_enter_defaults(struct local_zones* zones, struct config_file* cfg,
@@ -521,8 +542,70 @@ lz_enter_defaults(struct local_zones* zones, struct config_file* cfg,
 			return 0;
 		}
 	}
-	/* @@@ TODO other zones */
-	return 0;
+	/* reverse ip4 zone */
+	if(!lz_exists(zones, "127.in-addr.arpa.") &&
+		!lz_nodefault(cfg, "127.in-addr.arpa.")) {
+		if(!(z=lz_enter_zone(zones, "127.in-addr.arpa.", "static", 
+			LDNS_RR_CLASS_IN)) ||
+		   !lz_enter_rr_into_zone(z, buf,
+			"127.in-addr.arpa. 10800 IN NS localhost.") ||
+		   !lz_enter_rr_into_zone(z, buf,
+			"127.in-addr.arpa. 10800 IN SOA localhost. "
+			"nobody.invalid. 1 3600 1200 604800 10800") ||
+		   !lz_enter_rr_into_zone(z, buf,
+			"1.0.0.127.in-addr.arpa. 10800 IN PTR localhost.")) {
+			log_err("out of memory adding default zone");
+			return 0;
+		}
+	}
+	/* reverse ip6 zone */
+	if(!lz_exists(zones, "1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.ip6.arpa.") &&
+		!lz_nodefault(cfg, "1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.ip6.arpa.")) {
+		if(!(z=lz_enter_zone(zones, "1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.ip6.arpa.", "static", 
+			LDNS_RR_CLASS_IN)) ||
+		   !lz_enter_rr_into_zone(z, buf,
+			"1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.ip6.arpa. 10800 IN NS localhost.") ||
+		   !lz_enter_rr_into_zone(z, buf,
+			"1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.ip6.arpa. 10800 IN SOA localhost. "
+			"nobody.invalid. 1 3600 1200 604800 10800") ||
+		   !lz_enter_rr_into_zone(z, buf,
+			"1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.ip6.arpa. 10800 IN PTR localhost.")) {
+			log_err("out of memory adding default zone");
+			return 0;
+		}
+	}
+	if (	!add_as112_default(zones, cfg, buf, "10.in-addr.arpa") ||
+		!add_as112_default(zones, cfg, buf, "16.172.in-addr.arpa") ||
+		!add_as112_default(zones, cfg, buf, "17.172.in-addr.arpa") ||
+		!add_as112_default(zones, cfg, buf, "18.172.in-addr.arpa") ||
+		!add_as112_default(zones, cfg, buf, "19.172.in-addr.arpa") ||
+		!add_as112_default(zones, cfg, buf, "20.172.in-addr.arpa") ||
+		!add_as112_default(zones, cfg, buf, "21.172.in-addr.arpa") ||
+		!add_as112_default(zones, cfg, buf, "22.172.in-addr.arpa") ||
+		!add_as112_default(zones, cfg, buf, "23.172.in-addr.arpa") ||
+		!add_as112_default(zones, cfg, buf, "24.172.in-addr.arpa") ||
+		!add_as112_default(zones, cfg, buf, "25.172.in-addr.arpa") ||
+		!add_as112_default(zones, cfg, buf, "26.172.in-addr.arpa") ||
+		!add_as112_default(zones, cfg, buf, "27.172.in-addr.arpa") ||
+		!add_as112_default(zones, cfg, buf, "28.172.in-addr.arpa") ||
+		!add_as112_default(zones, cfg, buf, "29.172.in-addr.arpa") ||
+		!add_as112_default(zones, cfg, buf, "30.172.in-addr.arpa") ||
+		!add_as112_default(zones, cfg, buf, "31.172.in-addr.arpa") ||
+		!add_as112_default(zones, cfg, buf, "168.192.in-addr.arpa") ||
+		!add_as112_default(zones, cfg, buf, "0.in-addr.arpa") ||
+		!add_as112_default(zones, cfg, buf, "254.169.in-addr.arpa") ||
+		!add_as112_default(zones, cfg, buf, "2.0.192.in-addr.arpa") ||
+		!add_as112_default(zones, cfg, buf, "255.255.255.255.in-addr.arpa") ||
+		!add_as112_default(zones, cfg, buf, "0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.ip6.arpa.") ||
+		!add_as112_default(zones, cfg, buf, "d.f.ip6.arpa.") ||
+		!add_as112_default(zones, cfg, buf, "8.e.f.ip6.arpa.") ||
+		!add_as112_default(zones, cfg, buf, "9.e.f.ip6.arpa.") ||
+		!add_as112_default(zones, cfg, buf, "a.e.f.ip6.arpa.") ||
+		!add_as112_default(zones, cfg, buf, "b.e.f.ip6.arpa.")) {
+		log_err("out of memory adding default zone");
+		return 0;
+	}
+	return 1;
 }
 
 /** setup parent pointers, so that a lookup can be done for closest match */
@@ -625,7 +708,7 @@ lz_setup_implicit(struct local_zones* zones, struct config_file* cfg)
 		/* restart to setup other class */
 		return lz_setup_implicit(zones, cfg);
 	}
-	return 0;
+	return 1;
 }
 
 /** enter auth data */
@@ -745,21 +828,27 @@ void local_zones_print(struct local_zones* zones)
 		case local_zone_deny:
 			log_nametypeclass(0, "deny zone", 
 				z->name, 0, z->dclass);
+			break;
 		case local_zone_refuse:
 			log_nametypeclass(0, "refuse zone", 
 				z->name, 0, z->dclass);
+			break;
 		case local_zone_redirect:
 			log_nametypeclass(0, "redirect zone", 
 				z->name, 0, z->dclass);
+			break;
 		case local_zone_transparent:
 			log_nametypeclass(0, "transparent zone", 
 				z->name, 0, z->dclass);
+			break;
 		case local_zone_static:
 			log_nametypeclass(0, "static zone", 
 				z->name, 0, z->dclass);
+			break;
 		default:
 			log_nametypeclass(0, "badtyped zone", 
 				z->name, 0, z->dclass);
+			break;
 		}
 		local_zone_out(z);
 	}

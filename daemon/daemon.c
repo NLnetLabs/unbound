@@ -50,6 +50,7 @@
 #include "services/listen_dnsport.h"
 #include "services/cache/rrset.h"
 #include "services/cache/infra.h"
+#include "services/localzone.h"
 #include "util/module.h"
 #include "iterator/iterator.h"
 #include "validator/validator.h"
@@ -406,6 +407,10 @@ daemon_fork(struct daemon* daemon)
 	log_assert(daemon);
 	if(!acl_list_apply_cfg(daemon->acl, daemon->cfg))
 		fatal_exit("Could not setup access control list");
+	if(!(daemon->local_zones = local_zones_create()))
+		fatal_exit("Could not create local zones: out of memory");
+	if(!local_zones_apply_cfg(daemon->local_zones, daemon->cfg))
+		fatal_exit("Could not set up local zones");
 
 	/* setup modules */
 	daemon_setup_modules(daemon);
@@ -452,6 +457,8 @@ daemon_cleanup(struct daemon* daemon)
 	 * The infra cache is kept, the timing and edns info is still valid */
 	slabhash_clear(&daemon->env->rrset_cache->table);
 	slabhash_clear(daemon->env->msg_cache);
+	local_zones_delete(daemon->local_zones);
+	daemon->local_zones = NULL;
 	/* key cache is cleared by module desetup during next daemon_init() */
 	for(i=0; i<daemon->num; i++)
 		worker_delete(daemon->workers[i]);

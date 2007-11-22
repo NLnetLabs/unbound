@@ -51,6 +51,7 @@ struct slabhash;
 struct module_env;
 struct rrset_cache;
 struct acl_list;
+struct local_zones;
 
 /**
  * Structure holding worker list.
@@ -81,6 +82,8 @@ struct daemon {
 	struct module_func_block** modfunc;
 	/** access control, which client IPs are allowed to connect */
 	struct acl_list* acl;
+	/** local authority zones */
+	struct local_zones* local_zones;
 };
 
 /**
