@@ -2,6 +2,13 @@
 	- noted EDNS in-the-middle dropping trouble as a TODO.
 	  At this point theoretical, no user trouble has been reported.
 	- added all default AS112 zones.
+	- answers from local zone content.
+		* positive answer, the rrset in question
+		* nodata answer (exist, but not that type).
+		* nxdomain answer (domain does not exist).
+		* empty-nonterminal answer.
+		* But not: wildcard, nsec, referral, rrsig, cname/dname,
+			or additional section processing, NS put in auth.
 
 21 November 2007: Wouter
 	- local zone internal data setup.

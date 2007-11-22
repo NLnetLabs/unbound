@@ -175,3 +175,8 @@ o authority features.
   You can put authority data on a separate server, and set the server in 
   unbound.conf as stub for those zones, this allows clients to access data 
   from the server without making unbound authoritative for the zones.
+
+o the access control denies queries before any other processing.
+  This denies queries that are not authoritative, or version.bind, or any.
+  And thus prevents cache-snooping (denied hosts cannot make non-recursive
+  queries and get answers from the cache).

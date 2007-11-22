@@ -45,6 +45,8 @@
 struct ub_packed_rrset_key;
 struct regional;
 struct config_file;
+struct edns_data;
+struct query_info;
 
 /**
  * Local zone type
@@ -120,7 +122,8 @@ struct local_data {
 	size_t namelen;
 	/** number of labels in name */
 	int namelabs;
-	/** the data rrsets, with different types, linked list */
+	/** the data rrsets, with different types, linked list.
+	 * If this list is NULL, the node is an empty non-terminal. */
 	struct local_rrset* rrsets;
 };
 
@@ -194,5 +197,19 @@ struct local_zone* local_zones_lookup(struct local_zones* zones,
  * @param zones: the zones tree
  */
 void local_zones_print(struct local_zones* zones);
+
+/**
+ * Answer authoritatively for local zones.
+ * @param zones: the stored zones (shared, read only).
+ * @param qinfo: query info (parsed).
+ * @param edns: edns info (parsed).
+ * @param buf: buffer with query ID and flags, also for reply.
+ * @param temp: temporary storage region.
+ * @return true if answer is in buffer. false if query is not answered 
+ * by authority data. If the reply should be dropped altogether, the return 
+ * value is true, but the buffer is cleared (empty).
+ */
+int local_zones_answer(struct local_zones* zones, struct query_info* qinfo,
+	struct edns_data* edns, ldns_buffer* buf, struct regional* temp);
 
 #endif /* SERVICES_LOCALZONE_H */

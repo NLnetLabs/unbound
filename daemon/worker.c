@@ -58,6 +58,7 @@
 #include "services/cache/infra.h"
 #include "services/cache/dns.h"
 #include "services/mesh.h"
+#include "services/localzone.h"
 #include "util/data/msgparse.h"
 #include "util/data/msgencode.h"
 #include "util/data/dname.h"
@@ -754,6 +755,10 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 	if(qinfo.qclass == LDNS_RR_CLASS_CH && answer_chaos(worker, &qinfo,
 		&edns, c->buffer)) {
 		return 1;
+	}
+	if(local_zones_answer(worker->daemon->local_zones, &qinfo, &edns, 
+		c->buffer, worker->scratchpad)) {
+		return (ldns_buffer_limit(c->buffer) != 0);
 	}
 	h = query_info_hash(&qinfo);
 	if((e=slabhash_lookup(worker->env.msg_cache, h, &qinfo, 0))) {
