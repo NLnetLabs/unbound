@@ -1,5 +1,11 @@
 27 November 2007: Wouter
 	- per suggestion in rfc2308, replaced default max-ttl value with 1 day.
+	- set size of msgparse lookup table to 32, from 1024, so that its size
+	  is below the 2048 regional large size threshold, and does not cause
+	  a call to malloc when a message is parsed.
+	- update of memstats tool to print number of allocation calls.
+	  This is what is taking time (not space) and indicates the avg size
+	  of the allocations as well. region_alloc stat is removed.
 
 22 November 2007: Wouter
 	- noted EDNS in-the-middle dropping trouble as a TODO.

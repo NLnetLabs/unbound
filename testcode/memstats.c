@@ -60,14 +60,8 @@ struct codeline {
 	uint64_t alloc;
 	/** number of bytes freed */
 	uint64_t free;
-};
-
-/**
- * Other allocation stats
- */
-struct alloc_misc {
-	/** number of region allocs */
-	uint64_t region_alloc;
+	/** number allocations and frees */
+	uint64_t calls;
 };
 
 /** print usage and exit */
@@ -99,18 +93,6 @@ match(char* line)
 		return 1;
 	/* skip reallocs */
 	return 0;
-}
-
-/** read up the region stats */
-static void
-read_region_stat(char* line, struct alloc_misc* misc)
-{
-	long num = 0;
-	if(sscanf(line+50, "%ld", &num) != 1) {
-		printf("%s\n%s\n", line, line+50);
-		fatal_exit("unhandled region");
-	}
-	misc->region_alloc += num;
 }
 
 /** find or alloc codeline in tree */
@@ -153,6 +135,7 @@ read_malloc_stat(char* line, rbtree_t* tree)
 	if(!cl)
 		fatal_exit("alloc failure");
 	cl->alloc += num;
+	cl->calls ++;
 }
 
 /** read up the calloc stats */
@@ -177,6 +160,7 @@ read_calloc_stat(char* line, rbtree_t* tree)
 	if(!cl)
 		fatal_exit("alloc failure");
 	cl->alloc += num*sz;
+	cl->calls ++;
 }
 
 /** get size of file */
@@ -192,7 +176,7 @@ get_file_size(const char* fname)
 
 /** read the logfile */
 static void
-readfile(rbtree_t* tree, const char* fname, struct alloc_misc* misc)
+readfile(rbtree_t* tree, const char* fname)
 {
 	off_t total = get_file_size(fname);
 	off_t done = (off_t)0;
@@ -213,8 +197,6 @@ readfile(rbtree_t* tree, const char* fname, struct alloc_misc* misc)
 
 		if(!match(buf))
 			continue;
-		if(strncmp(buf+36, "region ", 7) == 0)
-			read_region_stat(buf, misc);
 		else if(strstr(buf+36, "malloc("))
 			read_malloc_stat(buf, tree);
 		else if(strstr(buf+36, "calloc("))
@@ -230,20 +212,19 @@ readfile(rbtree_t* tree, const char* fname, struct alloc_misc* misc)
 
 /** print memory stats */
 static void
-printstats(rbtree_t* tree, struct alloc_misc* misc)
+printstats(rbtree_t* tree)
 {
 	struct codeline* cl;
-	uint64_t total = 0;
-	printf("%12lld in region alloc\n", (long long)misc->region_alloc);
-	total += misc->region_alloc;
+	uint64_t total = 0, tcalls = 0;
 	RBTREE_FOR(cl, struct codeline*, tree) {
-		printf("%12lld in %s %s\n", (long long)cl->alloc, 
-			cl->codeline, cl->func);
+		printf("%12lld / %8lld in %s %s\n", (long long)cl->alloc, 
+			(long long)cl->calls, cl->codeline, cl->func);
 		total += cl->alloc;
+		tcalls += cl->calls;
 	}
 	printf("------------\n");
-	printf("%12lld total in %ld code lines\n", (long long)total, 
-		(long)tree->count);
+	printf("%12lld / %8lld total in %ld code lines\n", (long long)total, 
+		(long long)tcalls, (long)tree->count);
 	printf("\n");
 }
 
@@ -251,15 +232,13 @@ printstats(rbtree_t* tree, struct alloc_misc* misc)
 int main(int argc, const char* argv[])
 {
 	rbtree_t* tree = 0;
-	struct alloc_misc misc;
 	if(argc != 2) {
 		usage();
 	}
 	tree = rbtree_create(codeline_cmp);
 	if(!tree)
 		fatal_exit("alloc failure");
-	memset(&misc, 0, sizeof(misc));
-	readfile(tree, argv[1], &misc);
-	printstats(tree, &misc);
+	readfile(tree, argv[1]);
+	printstats(tree);
 	return 0;
 }

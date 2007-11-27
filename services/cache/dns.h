@@ -137,6 +137,4 @@ struct dns_msg* dns_cache_lookup(struct module_env* env,
 int cache_fill_missing(struct module_env* env, uint16_t qclass, 
 	struct regional* region, struct delegpt* dp);
 
-/** Find covering DNAME */
-
 #endif /* SERVICES_CACHE_DNS_H */

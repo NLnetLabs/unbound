@@ -68,7 +68,7 @@ struct rr_parse;
 struct regional;
 
 /** number of buckets in parse rrset hash table. Must be power of 2. */
-#define PARSE_TABLE_SIZE 1024
+#define PARSE_TABLE_SIZE 32
 /** Maximum TTL that is allowed. */
 extern uint32_t MAX_TTL;
 /** Negative cache time (for entries without any RRs.) */
