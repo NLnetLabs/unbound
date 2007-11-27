@@ -769,7 +769,7 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 		if(iter_dp_is_useless(qstate, iq->dp)) {
 			if(dname_is_root(iq->dp->name)) {
 				/* use safety belt */
-				verbose(VERB_OPS, "Priming problem: NS but "
+				verbose(VERB_DETAIL, "Cache has root NS but "
 				"no addresses. Fallback to the safety belt.");
 				iq->dp = hints_lookup_root(ie->hints, 
 					iq->qchase.qclass);
