@@ -1,3 +1,6 @@
+27 November 2007: Wouter
+	- per suggestion in rfc2308, replaced default max-ttl value with 1 day.
+
 22 November 2007: Wouter
 	- noted EDNS in-the-middle dropping trouble as a TODO.
 	  At this point theoretical, no user trouble has been reported.

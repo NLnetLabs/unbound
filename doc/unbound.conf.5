@@ -134,7 +134,7 @@ Number of slabs in the RRset cache. Slabs reduce lock contention by threads.
 Must be set to a power of 2. 
 .It \fBcache-max-ttl:\fR <seconds>
 Time to live maximum for RRsets and messages in the cache. Default is 
-864000 seconds (10 days). If the maximum kicks in, responses to clients 
+86400 seconds (1 day). If the maximum kicks in, responses to clients 
 still get decrementing TTLs based on the original (larger) values. 
 When the internal TTL expires, the cache item has expired.
 Can be set lower to force the resolver to query for data often, and not

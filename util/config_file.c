@@ -89,7 +89,7 @@ config_create()
 	cfg->host_ttl = 900;
 	cfg->lame_ttl = 900;
 	cfg->bogus_ttl = 900;
-	cfg->max_ttl = 3600 * 24 * 10;
+	cfg->max_ttl = 3600 * 24;
 	cfg->infra_cache_slabs = 4;
 	cfg->infra_cache_numhosts = 10000;
 	cfg->infra_cache_lame_size = 10240; /* easily 40 or more entries */
