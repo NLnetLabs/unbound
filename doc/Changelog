@@ -11,6 +11,8 @@
 	  the packet got rcode NXDOMAIN into rcode NOERROR. (since the initial
 	  domain exists).
 	- nicer verbosity: 0 and 1 levels.
+	- lower nonRDquery chance of eliciting wrongly typed validation
+	  requiring message from the cache.
 
 27 November 2007: Wouter
 	- per suggestion in rfc2308, replaced default max-ttl value with 1 day.

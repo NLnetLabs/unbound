@@ -65,7 +65,7 @@ val_classify_response(uint16_t query_flags, struct query_info* qinf,
 		return VAL_CLASS_NAMEERROR;
 
 	/* check for referral: nonRD query */
-	if(!(query_flags&BIT_RD))
+	if(!(query_flags&BIT_RD) && rep->an_numrrsets == 0)
 		return VAL_CLASS_REFERRAL;
 	
 	/* dump bad messages */
