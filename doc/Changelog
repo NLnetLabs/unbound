@@ -18,6 +18,7 @@
 	  have a SOA record in authority, so this is OK for the validator),
 	  and NS record is needed to be a referral.
 	- duplicate checking when adding NSECs for a CNAME, and test.
+	- created svn tag 0.8, after completing testbed tests.
 
 27 November 2007: Wouter
 	- per suggestion in rfc2308, replaced default max-ttl value with 1 day.
