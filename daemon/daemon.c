@@ -281,7 +281,8 @@ static void daemon_setup_modules(struct daemon* daemon)
 	daemon->env->worker = NULL;
 	daemon->env->need_to_validate = 0; /* set by module init below */
 	for(i=0; i<daemon->num_modules; i++) {
-		log_info("init module %d: %s", i, daemon->modfunc[i]->name);
+		verbose(VERB_OPS, "init module %d: %s", 
+			i, daemon->modfunc[i]->name);
 		log_assert(fptr_whitelist_mod_init(daemon->modfunc[i]->init));
 		if(!(*daemon->modfunc[i]->init)(daemon->env, i)) {
 			fatal_exit("module init for module %s failed",
@@ -435,6 +436,7 @@ daemon_fork(struct daemon* daemon)
 	/* Start resolver service on main thread. */
 	log_info("start of service (%s).", PACKAGE_STRING);
 	worker_work(daemon->workers[0]);
+	log_info("service stopped (%s).", PACKAGE_STRING);
 
 	/* we exited! a signal happened! Stop other threads */
 	daemon_stop_others(daemon);

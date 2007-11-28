@@ -993,10 +993,11 @@ worker_delete(struct worker* worker)
 {
 	if(!worker) 
 		return;
-	if(worker->env.mesh)
+	if(worker->env.mesh && verbosity >= VERB_OPS) {
 		mesh_stats(worker->env.mesh, "mesh has");
-	server_stats_log(&worker->stats, worker->thread_num);
-	worker_mem_report(worker, NULL);
+		server_stats_log(&worker->stats, worker->thread_num);
+		worker_mem_report(worker, NULL);
+	}
 	mesh_delete(worker->env.mesh);
 	ldns_buffer_free(worker->env.scratch_buffer);
 	listen_delete(worker->front);

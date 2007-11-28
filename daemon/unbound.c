@@ -339,8 +339,8 @@ run_daemon(char* cfgfile, int cmdline_verbose, int debug_mode)
 		fatal_exit("alloc failure");
 	while(!daemon->need_to_exit) {
 		if(done_chroot)
-			log_info("Restart of %s.", PACKAGE_STRING);
-		else	log_info("Start of %s.", PACKAGE_STRING);
+			verbose(VERB_OPS, "Restart of %s.", PACKAGE_STRING);
+		else	verbose(VERB_OPS, "Start of %s.", PACKAGE_STRING);
 
 		/* config stuff */
 		if(!(cfg = config_create()))
