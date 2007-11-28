@@ -180,3 +180,23 @@ o the access control denies queries before any other processing.
   This denies queries that are not authoritative, or version.bind, or any.
   And thus prevents cache-snooping (denied hosts cannot make non-recursive
   queries and get answers from the cache).
+
+o If a client makes a query without RD bit, in the case of a returned 
+  message from cache which is:
+	answer section: empty
+	auth section: NS record present, no SOA record, no DS record, 
+		maybe NSEC or NSEC3 records present.
+	additional: A records or other relevant records.
+  A SOA record would indicate that this was a NODATA answer.
+  A DS records would indicate a referral.
+  Absence of NS record would indicate a NODATA answer as well.
+
+  Then the receiver does not know whether this was a referral
+  with attempt at no-DS proof) or a nodata answer with attempt
+  at no-data proof. It could be determined by attempting to prove
+  either condition; and looking if only one is valid, but both 
+  proofs could be valid, or neither could be valid, which creates
+  doubt. This case is validated by unbound as a 'referral' which
+  ascertains that RRSIGs are OK (and not omitted), but does not
+  check NSEC/NSEC3. 
+

@@ -13,6 +13,10 @@
 	- nicer verbosity: 0 and 1 levels.
 	- lower nonRDquery chance of eliciting wrongly typed validation
 	  requiring message from the cache.
+	- fix for nonRDquery validation typing; nodata is detected when
+	  SOA record in auth section (all validation-requiring nodata messages
+	  have a SOA record in authority, so this is OK for the validator),
+	  and NS record is needed to be a referral.
 
 27 November 2007: Wouter
 	- per suggestion in rfc2308, replaced default max-ttl value with 1 day.

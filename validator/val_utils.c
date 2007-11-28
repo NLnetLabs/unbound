@@ -64,9 +64,24 @@ val_classify_response(uint16_t query_flags, struct query_info* qinf,
 	if(rcode == LDNS_RCODE_NXDOMAIN && rep->an_numrrsets == 0)
 		return VAL_CLASS_NAMEERROR;
 
-	/* check for referral: nonRD query */
-	if(!(query_flags&BIT_RD) && rep->an_numrrsets == 0)
-		return VAL_CLASS_REFERRAL;
+	/* check for referral: nonRD query and it looks like a nodata */
+	if(!(query_flags&BIT_RD) && rep->an_numrrsets == 0 &&
+		rcode == LDNS_RCODE_NOERROR) {
+		/* SOA record in auth indicates it is NODATA instead.
+		 * All validation requiring NODATA messages have SOA in 
+		 * authority section. */
+		/* uses fact that answer section is empty */
+		int saw_ns = 0;
+		for(i=0; i<rep->ns_numrrsets; i++) {
+			if(ntohs(rep->rrsets[i]->rk.type) == LDNS_RR_TYPE_SOA)
+				return VAL_CLASS_NODATA;
+			if(ntohs(rep->rrsets[i]->rk.type) == LDNS_RR_TYPE_DS)
+				return VAL_CLASS_REFERRAL;
+			if(ntohs(rep->rrsets[i]->rk.type) == LDNS_RR_TYPE_NS)
+				saw_ns = 1;
+		}
+		return saw_ns?VAL_CLASS_REFERRAL:VAL_CLASS_NODATA;
+	}
 	
 	/* dump bad messages */
 	if(rcode != LDNS_RCODE_NOERROR)
