@@ -224,6 +224,23 @@ error_response(struct module_qstate* qstate, int id, int rcode)
 	return 0;
 }
 
+/** check if prepend item is duplicate item */
+static int
+prepend_is_duplicate(struct ub_packed_rrset_key** sets, size_t to,
+	struct ub_packed_rrset_key* dup)
+{
+	size_t i;
+	for(i=0; i<to; i++) {
+		if(sets[i]->rk.type == dup->rk.type &&
+			sets[i]->rk.rrset_class == dup->rk.rrset_class &&
+			sets[i]->rk.dname_len == dup->rk.dname_len &&
+			query_dname_compare(sets[i]->rk.dname, dup->rk.dname)
+			== 0)
+			return 1;
+	}
+	return 0;
+}
+
 /** prepend the prepend list in the answer and authority section of dns_msg */
 static int
 iter_prepend(struct iter_qstate* iq, struct dns_msg* msg, 
@@ -253,6 +270,11 @@ iter_prepend(struct iter_qstate* iq, struct dns_msg* msg,
 	/* AUTH section */
 	num_ns = 0;
 	for(p = iq->ns_prepend_list; p; p = p->next) {
+		if(prepend_is_duplicate(sets+msg->rep->an_numrrsets+num_an,
+			num_ns, p->rrset) || prepend_is_duplicate(
+			msg->rep->rrsets+msg->rep->an_numrrsets, 
+			msg->rep->ns_numrrsets, p->rrset))
+			continue;
 		sets[msg->rep->an_numrrsets + num_an + num_ns++] = p->rrset;
 	}
 	memcpy(sets + num_an + msg->rep->an_numrrsets + num_ns, 
