@@ -7,6 +7,9 @@
 	- test for implicit zone creation and multiple RR RRsets local data.
 	- local-zone nodefault test.
 	- show testbound testlist on commit.
+	- iterator normalizer changes CNAME chains ending in NXDOMAIN where
+	  the packet got rcode NXDOMAIN into rcode NOERROR. (since the initial
+	  domain exists).
 
 27 November 2007: Wouter
 	- per suggestion in rfc2308, replaced default max-ttl value with 1 day.
