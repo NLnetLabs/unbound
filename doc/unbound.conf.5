@@ -415,6 +415,8 @@ The query has to match exactly unless you configure the local-zone as
 redirect. If not matched exactly, the local-zone type determines
 further processing. If local-data is configured that is not a subdomain of
 a local-zone, a transparent local-zone is configured. 
+For record types such as TXT, use single quotes, as in 
+local-data: 'example. TXT "text"'.
 .El
 .Ss Stub Zone Options
 There may be multiple

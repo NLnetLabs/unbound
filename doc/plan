@@ -203,14 +203,18 @@ X make overload mode work; phase 0 all ok, phase 1 some threads close ports,
 	  can be used to block AS112 traffic, option to unblock a zone.
 	* after checking acl, do iter: static, blacklist, forwards, recurse.
 * Forward-local-zone to NSD.
-	- include in package, autoforkexec on localhost to do so.
+	- in package, autoforkexec on localhost to do so.
+	- not included. Not necessary for localhost and AS112 service.
 * forward local zone to remote server.
+	- not included. Not necessary for localhost and AS112 service.
 * stub zones - send queries for a zone to configged nameserver.
+	- Can be used for complicated setups. So, run auth server on a 
+	  different port or pc, and stub it on the resolver. Resolver is
+	  not auth for zones, but resolution works. This enforces the split
+	  of recursive and auth servers.
 * test local zones
 	* for speed
 	* for correctness on corner cases
-	* for validation
-	* in case you get data on localzone in an answer (from rootserver).
 
 *** Library use
 * Create library that can do:
@@ -240,8 +244,6 @@ X make overload mode work; phase 0 all ok, phase 1 some threads close ports,
 *** Features features
 * aggressive negative caching for NSEC, NSEC3.
 * multiple queries per question, server exploration, server selection.
-* option to use real entropy for randomness (mix it in once in a while).
-* check query, enforce qdsection, checking for forgery-resilience.
 * NSID support.
 * support TSIG on queries, for validating resolver deployment.
 * Nicer statistics

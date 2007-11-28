@@ -1,3 +1,11 @@
+28 November 2007: Wouter
+	- Changeup plan for 0.8 - no complication needed, a simple solution
+	  has been chosen for authoritative features.
+	- you can use single quotes in the config file, so it is possible
+	  to specify TXT records in local data.
+	- fixup small memory problem in implicit transparent zone creation.
+	- test for implicit zone creation and multiple RR RRsets local data.
+
 27 November 2007: Wouter
 	- per suggestion in rfc2308, replaced default max-ttl value with 1 day.
 	- set size of msgparse lookup table to 32, from 1024, so that its size

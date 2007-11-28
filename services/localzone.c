@@ -710,15 +710,16 @@ lz_setup_implicit(struct local_zones* zones, struct config_file* cfg)
 				have_name = 1;
 			} else {
 				int m;
-				free(rr_name);
 				if(rr_class != dclass) {
 					/* process other classes later */
+					free(rr_name);
 					have_other_classes = 1;
 					continue;
 				}
 				/* find smallest shared topdomain */
 				(void)dname_lab_cmp(nm, nmlabs, 
 					rr_name, labs, &m);
+				free(rr_name);
 				if(m < match)
 					match = m;
 			}
@@ -735,6 +736,8 @@ lz_setup_implicit(struct local_zones* zones, struct config_file* cfg)
 			log_err("out of memory");
 			return 0;
 		}
+		log_nametypeclass(VERB_ALGO, "implicit transparent local-zone", 
+			n2, 0, dclass);
 		if(!lz_enter_zone_dname(zones, n2, nmlen, match, 
 			local_zone_transparent, dclass)) {
 			return 0;

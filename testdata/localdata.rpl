@@ -7,12 +7,18 @@ server:
 
 	; implicit transparent zone should not block id.server
 	local-data: "mydata.server. CH A 10.11.12.13"
+	local-data: "myd2.server. CH A 10.11.12.14"
+	local-data: 'myd3.server. CH TXT "a text record"'
+	; together implicit CH top domain .server is created transparent.
 
 	; static zone
 	local-zone: "local" static
 	local-data: "local SOA nobody nobody 1 2 3 4 5"
 	local-data: "serv.local. A 20.30.40.50"
+	; multiple RRs in this RRset.
 	local-data: "bla.bla.local. A 20.30.40.51"
+	local-data: "bla.bla.local. A 20.30.40.52"
+	local-data: "bla.bla.local. A 20.30.40.53"
 	
 	; static zone (no soa)
 	local-zone: "noso.local" static
@@ -23,6 +29,13 @@ server:
 	
 	; refuse zone (error)
 	local-zone: "refuse.top." refuse
+
+	; create implicit data in the IN domain as well
+	local-data: "a.a.implicit. A 20.30.41.50"
+	local-data: "b.a.implicit. A 20.30.42.50"
+	local-data: "b.b.implicit. A 20.30.43.50"
+	local-data: "b.c.implicit. A 20.30.45.50"
+	local-data: "c.c.implicit. A 20.30.44.50"
 
 CONFIG_END
 SCENARIO_BEGIN Test local data queries
@@ -167,6 +180,40 @@ MATCH all
 REPLY QR RA AA NXDOMAIN
 SECTION QUESTION
 doing.noso.local. IN MX
+ENTRY_END
+
+; positive multiple RR
+STEP 19 QUERY
+ENTRY_BEGIN
+SECTION QUESTION
+bla.bla.local. IN A
+ENTRY_END
+STEP 20 CHECK_ANSWER
+ENTRY_BEGIN
+MATCH all
+REPLY QR RA AA
+SECTION QUESTION
+bla.bla.local. IN A
+SECTION ANSWER
+bla.bla.local. IN A 20.30.40.51
+bla.bla.local. IN A 20.30.40.52
+bla.bla.local. IN A 20.30.40.53
+ENTRY_END
+
+; second implicit transparent zone.
+STEP 21 QUERY
+ENTRY_BEGIN
+SECTION QUESTION
+b.b.implicit. IN A
+ENTRY_END
+STEP 22 CHECK_ANSWER
+ENTRY_BEGIN
+MATCH all
+REPLY QR RA AA
+SECTION QUESTION
+b.b.implicit. IN A
+SECTION ANSWER
+b.b.implicit. 3600 IN A 20.30.43.50
 ENTRY_END
 
 ; localhost A default

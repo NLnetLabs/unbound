@@ -87,13 +87,14 @@ static void config_end_include(void)
 
 SPACE   [ \t]
 LETTER  [a-zA-Z]
-UNQUOTEDLETTER [^\"\n\r \t\\]|\\.
+UNQUOTEDLETTER [^\'\"\n\r \t\\]|\\.
 NEWLINE [\r\n]
 COMMENT \#
 COLON 	\:
-ANY     [^\"\n\r\\]|\\.
+DQANY     [^\"\n\r\\]|\\.
+SQANY     [^\'\n\r\\]|\\.
 
-%x	quotedstring include include_quoted
+%x	quotedstring singlequotedstr include include_quoted
 
 %%
 {SPACE}* 		{ LEXOUT(("SP ")); /* ignore */ }
@@ -171,10 +172,28 @@ local-data{COLON}	{ YDOUT; return VAR_LOCAL_DATA;}
         yyerror("EOF inside quoted string");
         BEGIN(INITIAL);
 }
-<quotedstring>{ANY}*    { LEXOUT(("STR(%s) ", yytext)); yymore(); }
+<quotedstring>{DQANY}*  { LEXOUT(("STR(%s) ", yytext)); yymore(); }
 <quotedstring>\n        { cfg_parser->line++; yymore(); }
 <quotedstring>\" {
         LEXOUT(("QE "));
+        BEGIN(INITIAL);
+        yytext[yyleng - 1] = '\0';
+	yylval.str = strdup(yytext);
+	if(!yylval.str)
+		yyerror("out of memory");
+        return STRING;
+}
+
+	/* Single Quoted strings. Strip leading and ending quotes */
+\'			{ BEGIN(singlequotedstr); LEXOUT(("SQS ")); }
+<singlequotedstr><<EOF>>   {
+        yyerror("EOF inside quoted string");
+        BEGIN(INITIAL);
+}
+<singlequotedstr>{SQANY}*  { LEXOUT(("STR(%s) ", yytext)); yymore(); }
+<singlequotedstr>\n        { cfg_parser->line++; yymore(); }
+<singlequotedstr>\' {
+        LEXOUT(("SQE "));
         BEGIN(INITIAL);
         yytext[yyleng - 1] = '\0';
 	yylval.str = strdup(yytext);
@@ -201,7 +220,7 @@ include{COLON}		{ LEXOUT(("v(%s) ", yytext)); BEGIN(include); }
         yyerror("EOF inside quoted string");
         BEGIN(INITIAL);
 }
-<include_quoted>{ANY}*	{ LEXOUT(("ISTR(%s) ", yytext)); yymore(); }
+<include_quoted>{DQANY}*	{ LEXOUT(("ISTR(%s) ", yytext)); yymore(); }
 <include_quoted>{NEWLINE}	{ cfg_parser->line++; yymore(); }
 <include_quoted>\"	{
 	LEXOUT(("IQE "));
