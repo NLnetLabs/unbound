@@ -52,6 +52,20 @@
 struct ub_val_ctx;
 
 /**
+ * The validation and resolution results.
+ * Allocated by the resolver, and need to be freed by the application
+ * with ub_val_result_free().
+ */
+struct ub_val_result {
+	/** a list of network order DNS rdata items, terminated with a 
+	 * NULL pointer, so that data[0] is the first result entry,
+	 * data[1] the second, and the last entry is NULL. */
+	char** data;
+	/** the length in bytes of the data items */
+	size_t* len;
+};
+
+/**
  * Create a resolving and validation context.
  * @return a new context. default initialisation.
  * 	returns NULL on error (malloc failure).
@@ -85,7 +99,7 @@ int ub_val_ctx_config(struct ub_val_ctx* ctx, char* fname);
  * 	<domainname> <TTL optional> <type> <class optional> <rdata contents>
  * @return 0 if OK, else error.
  */
-int ub_val_ctx_add_ta(struct ub_val_ctx* ctx, char* fname);
+int ub_val_ctx_add_ta(struct ub_val_ctx* ctx, char* ta);
 
 /**
  * Add trust anchors to the given context.
@@ -113,11 +127,13 @@ int ub_val_ctx_async(struct ub_val_ctx* ctx, int async);
  * and then check, or wait using the wait routine.
  * @param ctx: asynchronous context.
  * @return: 0 if nothing to read, or nonzero if a result is available.
+ * 	If nonzero, call ctx_process() to get do any callbacks.
  */
 int ub_val_ctx_poll(struct ub_val_ctx* ctx);
 
 /**
- * Wait for an context to finish with results.
+ * Wait for a context to finish with results. Calls ctx_process() after
+ * the wait for you. After the wait, there are no more outstanding queries.
  * @param ctx: asynchronous context.
  * @return: 0 if OK, else error.
  */
@@ -126,9 +142,71 @@ int ub_val_ctx_wait(struct ub_val_ctx* ctx);
 /**
  * Get file descriptor. Wait for it to become readable, at this point
  * answers are returned from the asynchronous validating resolver.
+ * Then call the ub_val_ctx_process to continue processing.
  * @param ctx: asynchronous context.
  * @return: -1 on error, or file descriptor to use select(2) with.
  */
 int ub_val_ctx_fd(struct ub_val_ctx* ctx);
+
+/**
+ * Call this routine to continue processing results from the validating
+ * resolver (when the fd becomes readable).
+ * Will perform necessary callbacks.
+ * @param ctx: context, asynchronous
+ * @return: 0 if OK, else error.
+ */
+int ub_val_ctx_process(struct ub_val_ctx* ctx);
+
+/**
+ * Perform resolution and validation of the target name.
+ * @param ctx: context.
+ * @param name: domain name in text format (a string).
+ * @param rrtype: type of RR in host order, 1 is A.
+ * @param rrclass: class of RR in host order, 1 is IN (for internet).
+ * @param secure: returns true if the answer validated securely.
+ * 	false if not.
+ * @param data: returns false if there was no data, or the domain did not exist,
+ * 	else true.
+ * @param result: the result data is returned in a newly allocated result
+ * 	structure.
+ * @return 0 if OK, else error.
+ */
+int ub_val_resolve(struct ub_val_ctx* ctx, char* name, int rrtype, 
+	int rrclass, int* secure, int* data, struct ub_val_result** data);
+
+/**
+ * Perform resolution and validation of the target name.
+ * Asynchronous, after a while, the callback will be called with your
+ * data and the result + secure status.
+ * @param ctx: context, asynchronous.
+ * @param name: domain name in text format (a string).
+ * @param rrtype: type of RR in host order, 1 is A.
+ * @param rrclass: class of RR in host order, 1 is IN (for internet).
+ * @param mydata: this data is your own data (you can pass NULL),
+ * 	and is passed on to the callback function.
+ * @param callback: this is called on completion of the resolution.
+ * 	It is called as:
+ * 	void callback(void* mydata, int secure, int data, 
+ * 		struct ub_val_result* result)
+ * 	with mydata, the same as passed here,
+ * 	with secure true if the answer validated securely.
+ * 	with data true if any data was found.
+ * 	with result newly allocated result structure.
+ * 	TODO return errors in async case.
+ * @return 0 if OK, else error.
+ */
+int ub_val_resolve_async(struct ub_val_ctx* ctx, char* name, int rrtype, 
+	int rrclass, void* mydata, void (*callback)(void*, int, int, 
+	struct ub_val_result*));
+
+/* function to get dns result message in its entirety (a buf) */
+/* convenience function to get A */
+/* convenience to get AAAA */
+/* convenience to get PTR */
+/* convenience to get 'addrinfo', A, AAAA, canonname */
+
+/* neat error; with errnumber to string conversion. the enum is hidden. */
+
+/* more detail function. with lots of information */
 
 #endif /* _UB_UNBOUND_H */
