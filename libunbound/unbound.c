@@ -203,8 +203,12 @@ int
 ub_val_ctx_poll(struct ub_val_ctx* ctx)
 {
 	struct timeval t;
+	int r;
 	memset(&t, 0, sizeof(t));
-	return pollit(ctx, &t);
+	lock_basic_lock(&ctx->rrpipe_lock);
+	r = pollit(ctx, &t);
+	lock_basic_unlock(&ctx->rrpipe_lock);
+	return r;
 }
 
 int 
@@ -212,7 +216,9 @@ ub_val_ctx_wait(struct ub_val_ctx* ctx)
 {
 	/* TODO until no more queries outstanding */
 	while(1) {
+		lock_basic_lock(&ctx->rrpipe_lock);
 		(void)pollit(ctx, NULL);
+		lock_basic_unlock(&ctx->rrpipe_lock);
 		ub_val_ctx_process(ctx);
 	}
 	return UB_NOERROR;
