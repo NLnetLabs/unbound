@@ -84,17 +84,20 @@ SIGNIT_SRC=testcode/signit.c checkconf/worker_cb.c $(COMMON_SRC)
 SIGNIT_OBJ=$(addprefix $(BUILD),$(SIGNIT_SRC:.c=.o)) $(COMPAT_OBJ)
 MEMSTATS_SRC=testcode/memstats.c checkconf/worker_cb.c $(COMMON_SRC)
 MEMSTATS_OBJ=$(addprefix $(BUILD),$(MEMSTATS_SRC:.c=.o)) $(COMPAT_OBJ)
+LIBUNBOUND_SRC=$(patsubst $(srcdir)/%,%, \
+	$(wildcard $(srcdir)/libunbound/*.c) $(COMMON_SRC))
+LIBUNBOUND_OBJ=$(addprefix $(BUILD),$(LIBUNBOUND_SRC:.c=.o)) $(COMPAT_OBJ)
 ALL_SRC=$(COMMON_SRC) $(UNITTEST_SRC) $(DAEMON_SRC) \
 	$(TESTBOUND_SRC) $(LOCKVERIFY_SRC) $(PKTVIEW_SRC) $(SIGNIT_SRC) \
-	$(MEMSTATS_SRC) $(CHECKCONF_SRC)
+	$(MEMSTATS_SRC) $(CHECKCONF_SRC) $(LIBUNBOUND_SRC)
 ALL_OBJ=$(addprefix $(BUILD),$(ALL_SRC:.c=.o) \
 	$(addprefix compat/,$(LIBOBJS))) $(COMPAT_OBJ)
 
 COMPILE=$(LIBTOOL) --tag=CC --mode=compile $(CC) $(CPPFLAGS) $(CFLAGS)
 LINK=$(LIBTOOL) --tag=CC --mode=link $(CC) $(staticexe) $(RUNTIME_PATH) $(CFLAGS) $(LDFLAGS)
-LINK_LIB=$(LIBTOOL) --tag=CC --mode=link $(CC) $(CFLAGS) $(LDFLAGS) -release $(VERSION)
+LINK_LIB=$(LIBTOOL) --tag=CC --mode=link $(CC) $(CFLAGS) $(LDFLAGS) $(staticexe) -release $(VERSION) -no-undefined
 
-.PHONY:	clean realclean doc lint all install uninstall tests test download_ldns strip
+.PHONY:	clean realclean doc lint all install uninstall tests test download_ldns strip lib
 
 $(BUILD)%.o:    $(srcdir)/%.c 
 	$(INFO) Build $<
@@ -103,12 +106,18 @@ $(BUILD)%.o:    $(srcdir)/%.c
 	@if test ! -d $(dir $@); then $(INSTALL) -d $(patsubst %/,%,$(dir $@)); fi
 	$Q$(COMPILE) -c $< -o $@
 
-all:	$(COMMON_OBJ) unbound unbound-checkconf
+all:	$(COMMON_OBJ) unbound unbound-checkconf lib
 
 tests:	all unittest testbound lock-verify pktview signit memstats
 
 test:	tests
 	bash testcode/do-tests.sh
+
+lib:	libunbound.la
+
+libunbound.la:	$(LIBUNBOUND_OBJ)
+	$(INFO) Link $@
+	$Q$(LINK_LIB) --export-symbols $(srcdir)/libunbound/ubsyms.def -o $@ $(sort $(LIBUNBOUND_OBJ:.o=.lo)) -rpath $(libdir) $(RUNTIME_PATH)
 
 ifeq ($(patsubst ldns-src%,ldns-src,$(ldnsdir)),ldns-src)
 ldnslib=$(ldnsdir)/lib/libldns.a
@@ -208,16 +217,20 @@ install:
 	$(INSTALL) -d $(mandir)
 	$(INSTALL) -d $(mandir)/man8
 	$(INSTALL) -d $(mandir)/man5
+	$(INSTALL) -m 755 -d $(libdir)
 	$(LIBTOOL) --mode=install cp unbound $(bindir)/unbound
 	$(LIBTOOL) --mode=install cp unbound-checkconf $(bindir)/unbound-checkconf
 	$(INSTALL) -c -m 644 $(srcdir)/doc/unbound.8 $(mandir)/man8
 	$(INSTALL) -c -m 644 $(srcdir)/doc/unbound-checkconf.8 $(mandir)/man8
 	$(INSTALL) -c -m 644 $(srcdir)/doc/unbound.conf.5 $(mandir)/man5
 	if test ! -e $(configfile); then $(INSTALL) -d `dirname $(configfile)`; $(INSTALL) -c -m 644 $(srcdir)/doc/example.conf $(configfile); fi
+	$(LIBTOOL) --mode=install cp libunbound.la $(libdir)
+	$(LIBTOOL) --mode=finish $(libdir)
 
 uninstall:
 	rm -f -- $(bindir)/unbound $(bindir)/unbound-checkconf
 	rm -f -- $(mandir)/man8/unbound.8 $(mandir)/man8/unbound-checkconf.8 $(mandir)/man5/unbound.conf.5
+	$(LIBTOOL) --mode=uninstall rm -f $(libdir)/libunbound.la
 	@echo
 	@echo "You still need to remove `dirname $(configfile)` , $(configfile) by hand"
 
