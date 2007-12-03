@@ -186,12 +186,15 @@ ub_val_ctx_async(struct ub_val_ctx* ctx, int dothread)
 	return UB_NOERROR;
 }
 
+/** perform a select() on the result read pipe */
 static int 
 pollit(struct ub_val_ctx* ctx, struct timeval* t)
 {
 	fd_set r;
+#ifndef S_SPLINT_S
 	FD_ZERO(&r);
 	FD_SET(ctx->rrpipe[0], &r);
+#endif
 	if(select(ctx->rrpipe[0]+1, &r, NULL, NULL, t) == -1) {
 		return 0;
 	}

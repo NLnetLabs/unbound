@@ -62,27 +62,27 @@ COMMON_OBJ=$(addprefix $(BUILD),$(COMMON_SRC:.c=.o))
 COMPAT_OBJ=$(addprefix $(BUILD)compat/,$(LIBOBJS))
 UNITTEST_SRC=$(patsubst $(srcdir)/%,%, \
 	$(wildcard $(srcdir)/testcode/unit*.c)) \
-	testcode/readhex.c testcode/ldns-testpkts.c checkconf/worker_cb.c \
+	testcode/readhex.c testcode/ldns-testpkts.c smallapp/worker_cb.c \
 	$(COMMON_SRC)
 UNITTEST_OBJ=$(addprefix $(BUILD),$(UNITTEST_SRC:.c=.o)) $(COMPAT_OBJ)
 DAEMON_SRC=$(patsubst $(srcdir)/%,%, $(wildcard $(srcdir)/daemon/*.c)) \
 	$(COMMON_SRC)
 DAEMON_OBJ=$(addprefix $(BUILD),$(DAEMON_SRC:.c=.o)) $(COMPAT_OBJ)
-CHECKCONF_SRC=checkconf/unbound-checkconf.c checkconf/worker_cb.c $(COMMON_SRC)
+CHECKCONF_SRC=smallapp/unbound-checkconf.c smallapp/worker_cb.c $(COMMON_SRC)
 CHECKCONF_OBJ=$(addprefix $(BUILD),$(CHECKCONF_SRC:.c=.o)) $(COMPAT_OBJ)
 TESTBOUND_SRC=testcode/testbound.c testcode/ldns-testpkts.c \
 	daemon/worker.c daemon/acl_list.c daemon/daemon.c daemon/stats.c \
 	testcode/replay.c testcode/fake_event.c $(filter-out util/netevent.c \
 	services/listen_dnsport.c services/outside_network.c, $(COMMON_SRC))
 TESTBOUND_OBJ=$(addprefix $(BUILD),$(TESTBOUND_SRC:.c=.o)) $(COMPAT_OBJ)
-LOCKVERIFY_SRC=testcode/lock_verify.c checkconf/worker_cb.c $(COMMON_SRC)
+LOCKVERIFY_SRC=testcode/lock_verify.c smallapp/worker_cb.c $(COMMON_SRC)
 LOCKVERIFY_OBJ=$(addprefix $(BUILD),$(LOCKVERIFY_SRC:.c=.o)) $(COMPAT_OBJ)
-PKTVIEW_SRC=testcode/pktview.c testcode/readhex.c checkconf/worker_cb.c \
+PKTVIEW_SRC=testcode/pktview.c testcode/readhex.c smallapp/worker_cb.c \
 	$(COMMON_SRC)
 PKTVIEW_OBJ=$(addprefix $(BUILD),$(PKTVIEW_SRC:.c=.o)) $(COMPAT_OBJ)
-SIGNIT_SRC=testcode/signit.c checkconf/worker_cb.c $(COMMON_SRC)
+SIGNIT_SRC=testcode/signit.c smallapp/worker_cb.c $(COMMON_SRC)
 SIGNIT_OBJ=$(addprefix $(BUILD),$(SIGNIT_SRC:.c=.o)) $(COMPAT_OBJ)
-MEMSTATS_SRC=testcode/memstats.c checkconf/worker_cb.c $(COMMON_SRC)
+MEMSTATS_SRC=testcode/memstats.c smallapp/worker_cb.c $(COMMON_SRC)
 MEMSTATS_OBJ=$(addprefix $(BUILD),$(MEMSTATS_SRC:.c=.o)) $(COMPAT_OBJ)
 LIBUNBOUND_SRC=$(patsubst $(srcdir)/%,%, \
 	$(wildcard $(srcdir)/libunbound/*.c) $(COMMON_SRC))
@@ -213,10 +213,10 @@ strip:
 	strip unbound-checkconf
 
 install:
-	$(INSTALL) -d $(bindir)
-	$(INSTALL) -d $(mandir)
-	$(INSTALL) -d $(mandir)/man8
-	$(INSTALL) -d $(mandir)/man5
+	$(INSTALL) -m 755 -d $(bindir)
+	$(INSTALL) -m 755 -d $(mandir)
+	$(INSTALL) -m 755 -d $(mandir)/man8
+	$(INSTALL) -m 755 -d $(mandir)/man5
 	$(INSTALL) -m 755 -d $(libdir)
 	$(LIBTOOL) --mode=install cp unbound $(bindir)/unbound
 	$(LIBTOOL) --mode=install cp unbound-checkconf $(bindir)/unbound-checkconf

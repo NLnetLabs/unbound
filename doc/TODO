@@ -58,3 +58,6 @@ o check if for PowerDNS(2.9.21) CNAME in Answer section & rcode=NXDOMAIN needs
   to be fixed up to be rcode=NOERROR?
 o On Windows use CryptGenRandom() to get random seed for arc4random.
 o Think about intermediate firewalls dropping EDNS UDP & handling that.
+o library add convenience functions for A, AAAA, PTR, getaddrinfo, libresolve.
+o library add function to get signature data (or whole reply message).
+o library add function to validate input from app that is signed.

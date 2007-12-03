@@ -205,7 +205,7 @@ int ub_val_ctx_config(struct ub_val_ctx* ctx, char* fname);
  *	At this time it is only possible to add trusted keys before the
  *	first resolve is done.
  * @param ta: string, with zone-format RR on one line.
- * 	<domainname> <TTL optional> <type> <class optional> <rdata contents>
+ * 	[domainname] [TTL optional] [type] [class optional] [rdata contents]
  * @return 0 if OK, else error.
  */
 int ub_val_ctx_add_ta(struct ub_val_ctx* ctx, char* ta);
@@ -329,15 +329,10 @@ int ub_val_resolve_async(struct ub_val_ctx* ctx, char* name, int rrtype,
  * Its callback will not be called.
  *
  * @param ctx: context.
+ * @param async_id: which query to cancel.
  * @return 0 if OK, else error.
  */
 int ub_val_cancel(struct ub_val_ctx* ctx, int async_id);
-
-/* function to get dns result message in its entirety (a buf) */
-/* convenience function to get A */
-/* convenience to get AAAA */
-/* convenience to get PTR */
-/* convenience to get 'addrinfo', A, AAAA, canonname */
 
 /**
  * Free storage associated with a result structure.

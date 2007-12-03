@@ -1,3 +1,10 @@
+3 December 2007: Wouter
+	- changed checkconf/ to smallapp/ to make room for more support tools.
+	  (such as unbound-host).
+	- install dirs created with -m 755 because they need to be accessible.
+	- library extensive featurelist added to TODO.
+	- please doxygen, lint.
+
 30 November 2007: Wouter
 	- makefile that creates libunbound.la, basic file or libunbound.a
 	  when creating static executables (no libtool).
