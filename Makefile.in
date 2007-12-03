@@ -97,7 +97,7 @@ ALL_OBJ=$(addprefix $(BUILD),$(ALL_SRC:.c=.o) \
 
 COMPILE=$(LIBTOOL) --tag=CC --mode=compile $(CC) $(CPPFLAGS) $(CFLAGS)
 LINK=$(LIBTOOL) --tag=CC --mode=link $(CC) $(staticexe) $(RUNTIME_PATH) $(CFLAGS) $(LDFLAGS)
-LINK_LIB=$(LIBTOOL) --tag=CC --mode=link $(CC) $(CFLAGS) $(LDFLAGS) $(staticexe) -release $(VERSION) -no-undefined
+LINK_LIB=$(LIBTOOL) --tag=CC --mode=link $(CC) $(RUNTIME_PATH) $(CFLAGS) $(LDFLAGS) $(staticexe) -release $(VERSION) -no-undefined
 
 .PHONY:	clean realclean doc lint all install uninstall tests test download_ldns strip lib
 
@@ -119,7 +119,7 @@ lib:	libunbound.la
 
 libunbound.la:	$(LIBUNBOUND_OBJ)
 	$(INFO) Link $@
-	$Q$(LINK_LIB) --export-symbols $(srcdir)/libunbound/ubsyms.def -o $@ $(sort $(LIBUNBOUND_OBJ:.o=.lo)) -rpath $(libdir) $(RUNTIME_PATH)
+	$Q$(LINK_LIB) --export-symbols $(srcdir)/libunbound/ubsyms.def -o $@ $(sort $(LIBUNBOUND_OBJ:.o=.lo)) -rpath $(libdir)
 
 ifeq ($(patsubst ldns-src%,ldns-src,$(ldnsdir)),ldns-src)
 ldnslib=$(ldnsdir)/lib/libldns.a
