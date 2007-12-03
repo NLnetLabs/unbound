@@ -70,6 +70,8 @@ DAEMON_SRC=$(patsubst $(srcdir)/%,%, $(wildcard $(srcdir)/daemon/*.c)) \
 DAEMON_OBJ=$(addprefix $(BUILD),$(DAEMON_SRC:.c=.o)) $(COMPAT_OBJ)
 CHECKCONF_SRC=smallapp/unbound-checkconf.c smallapp/worker_cb.c $(COMMON_SRC)
 CHECKCONF_OBJ=$(addprefix $(BUILD),$(CHECKCONF_SRC:.c=.o)) $(COMPAT_OBJ)
+HOST_SRC=smallapp/unbound-host.c
+HOST_OBJ=$(addprefix $(BUILD),$(HOST_SRC:.c=.o)) $(COMPAT_OBJ)
 TESTBOUND_SRC=testcode/testbound.c testcode/ldns-testpkts.c \
 	daemon/worker.c daemon/acl_list.c daemon/daemon.c daemon/stats.c \
 	testcode/replay.c testcode/fake_event.c $(filter-out util/netevent.c \
@@ -85,7 +87,7 @@ SIGNIT_OBJ=$(addprefix $(BUILD),$(SIGNIT_SRC:.c=.o)) $(COMPAT_OBJ)
 MEMSTATS_SRC=testcode/memstats.c smallapp/worker_cb.c $(COMMON_SRC)
 MEMSTATS_OBJ=$(addprefix $(BUILD),$(MEMSTATS_SRC:.c=.o)) $(COMPAT_OBJ)
 LIBUNBOUND_SRC=$(patsubst $(srcdir)/%,%, \
-	$(wildcard $(srcdir)/libunbound/*.c) $(COMMON_SRC))
+	$(wildcard $(srcdir)/libunbound/*.c) smallapp/worker_cb.c $(COMMON_SRC))
 LIBUNBOUND_OBJ=$(addprefix $(BUILD),$(LIBUNBOUND_SRC:.c=.o)) $(COMPAT_OBJ)
 ALL_SRC=$(COMMON_SRC) $(UNITTEST_SRC) $(DAEMON_SRC) \
 	$(TESTBOUND_SRC) $(LOCKVERIFY_SRC) $(PKTVIEW_SRC) $(SIGNIT_SRC) \
@@ -106,7 +108,7 @@ $(BUILD)%.o:    $(srcdir)/%.c
 	@if test ! -d $(dir $@); then $(INSTALL) -d $(patsubst %/,%,$(dir $@)); fi
 	$Q$(COMPILE) -c $< -o $@
 
-all:	$(COMMON_OBJ) unbound unbound-checkconf lib
+all:	$(COMMON_OBJ) unbound unbound-checkconf lib unbound-host
 
 tests:	all unittest testbound lock-verify pktview signit memstats
 
@@ -135,6 +137,10 @@ unbound:	$(DAEMON_OBJ) $(ldnslib)
 unbound-checkconf:	$(CHECKCONF_OBJ) $(ldnslib)
 	$(INFO) Link $@
 	$Q$(LINK) -o $@ $(sort $(CHECKCONF_OBJ)) $(LIBS)
+
+unbound-host:	$(HOST_OBJ) lib
+	$(INFO) Link $@
+	$Q$(LINK) -o $@ $(sort $(HOST_OBJ)) -L. -L.libs -lunbound $(LIBS)
 
 unittest:	$(UNITTEST_OBJ) $(ldnslib)
 	$(INFO) Link $@
@@ -218,18 +224,22 @@ install:
 	$(INSTALL) -m 755 -d $(mandir)/man8
 	$(INSTALL) -m 755 -d $(mandir)/man5
 	$(INSTALL) -m 755 -d $(libdir)
+	$(INSTALL) -m 755 -d $(includedir)
 	$(LIBTOOL) --mode=install cp unbound $(bindir)/unbound
 	$(LIBTOOL) --mode=install cp unbound-checkconf $(bindir)/unbound-checkconf
+	$(LIBTOOL) --mode=install cp unbound-host $(bindir)/unbound-host
 	$(INSTALL) -c -m 644 $(srcdir)/doc/unbound.8 $(mandir)/man8
 	$(INSTALL) -c -m 644 $(srcdir)/doc/unbound-checkconf.8 $(mandir)/man8
 	$(INSTALL) -c -m 644 $(srcdir)/doc/unbound.conf.5 $(mandir)/man5
 	if test ! -e $(configfile); then $(INSTALL) -d `dirname $(configfile)`; $(INSTALL) -c -m 644 $(srcdir)/doc/example.conf $(configfile); fi
+	$(LIBTOOL) --mode=install cp $(srcdir)/libunbound/unbound.h $(includedir)/unbound.h
 	$(LIBTOOL) --mode=install cp libunbound.la $(libdir)
 	$(LIBTOOL) --mode=finish $(libdir)
 
 uninstall:
-	rm -f -- $(bindir)/unbound $(bindir)/unbound-checkconf
+	rm -f -- $(bindir)/unbound $(bindir)/unbound-checkconf $(bindir)/unbound-host
 	rm -f -- $(mandir)/man8/unbound.8 $(mandir)/man8/unbound-checkconf.8 $(mandir)/man5/unbound.conf.5
+	rm -f -- $(includedir)/unbound.h
 	$(LIBTOOL) --mode=uninstall rm -f $(libdir)/libunbound.la
 	@echo
 	@echo "You still need to remove `dirname $(configfile)` , $(configfile) by hand"

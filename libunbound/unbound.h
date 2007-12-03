@@ -133,6 +133,12 @@ struct ub_val_result {
 	 */
 	char* canonname;
 
+	/**
+	 * DNS RCODE for the result. May contain additional error code if
+	 * there was no data due to an error. 0 (NOERROR) if okay.
+	 */
+	int rcode;
+
 	/** 
 	 * If there was no data, and the domain did not exist, this is true.
 	 * If it is false, and there was no data, then the domain name 

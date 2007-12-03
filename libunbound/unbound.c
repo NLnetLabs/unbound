@@ -109,6 +109,7 @@ ub_val_ctx_create()
 		errno = ENOMEM;
 		return NULL;
 	}
+	checklock_start();
 	if(socketpair(AF_UNIX, SOCK_STREAM, 0, ctx->qqpipe) == -1) {
 		free(ctx);
 		return NULL;
@@ -144,6 +145,8 @@ ub_val_ctx_delete(struct ub_val_ctx* ctx)
 	close(ctx->rrpipe[1]);
 	config_delete(ctx->cfg);
 	free(ctx);
+	checklock_stop(); /* assumes during checklock tests libunbound users
+		only create one context */
 }
 
 int 
@@ -236,7 +239,7 @@ ub_val_ctx_fd(struct ub_val_ctx* ctx)
 int 
 ub_val_ctx_process(struct ub_val_ctx* ctx)
 {
-	return UB_NOERROR;
+	return UB_NOMEM;
 }
 
 int 
@@ -245,20 +248,20 @@ ub_val_resolve(struct ub_val_ctx* ctx, char* name, int rrtype,
 {
 	/* become a resolver thread for a bit */
 
-	return UB_NOERROR;
+	return UB_NOMEM;
 }
 
 int 
 ub_val_resolve_async(struct ub_val_ctx* ctx, char* name, int rrtype, 
 	int rrclass, void* mydata, ub_val_callback_t callback, int* async_id)
 {
-	return UB_NOERROR;
+	return UB_NOMEM;
 }
 
 int 
 ub_val_cancel(struct ub_val_ctx* ctx, int async_id)
 {
-	return UB_NOERROR;
+	return UB_NOMEM;
 }
 
 void 
