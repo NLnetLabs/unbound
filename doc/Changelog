@@ -6,6 +6,7 @@
 	- please doxygen, lint.
 	- library test application, with basic functionality.
 	- fix for building in a subdirectory. 
+	- link lib fix for Leopard.
 
 30 November 2007: Wouter
 	- makefile that creates libunbound.la, basic file or libunbound.a

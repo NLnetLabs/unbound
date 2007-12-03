@@ -119,7 +119,7 @@ lib:	libunbound.la
 
 libunbound.la:	$(LIBUNBOUND_OBJ)
 	$(INFO) Link $@
-	$Q$(LINK_LIB) --export-symbols $(srcdir)/libunbound/ubsyms.def -o $@ $(sort $(LIBUNBOUND_OBJ:.o=.lo)) -rpath $(libdir)
+	$Q$(LINK_LIB) --export-symbols $(srcdir)/libunbound/ubsyms.def -o $@ $(sort $(LIBUNBOUND_OBJ:.o=.lo)) -rpath $(libdir) $(LIBS)
 
 ifeq ($(patsubst ldns-src%,ldns-src,$(ldnsdir)),ldns-src)
 ldnslib=$(ldnsdir)/lib/libldns.a
