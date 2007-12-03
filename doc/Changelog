@@ -1,3 +1,6 @@
+3 December 2007: Wouter
+	- Fixup building in a subdirectory. (for 0.7.2)
+
 19 November 2007: Wouter
 	- version 0.7.1:
 		* includes tpkg fixes to kill daemons at end of test
