@@ -164,8 +164,8 @@ static const char*
 statstr(int sec, struct ub_val_result* result)
 {
 	if(sec) return "[secure]";
-	if(result->bogus) return "[not-secure (BOGUS)]";
-	return "[not-secure (insecure)]";
+	if(result->bogus) return "[BOGUS (security failure)]";
+	return "[insecure]";
 }
 
 /** nice string for type */

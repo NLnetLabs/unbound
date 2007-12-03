@@ -67,8 +67,13 @@ struct ub_val_ctx {
 
 	/** configuration options */
 	struct config_file* cfg;
-	/** do threading (instead of forking) */
+	/** do threading (instead of forking) for async resolution */
 	int dothread;
+
+	/** shared data */
+	/* list of alloc-cache-id points and nextthreadnum */
+	/*struct shareddata* shared;*/
+	/** outstanding querylist and next querynum (to try) */
 
 	/** shared caches, and so on */
 	struct alloc_cache superalloc;
@@ -145,8 +150,6 @@ ub_val_ctx_delete(struct ub_val_ctx* ctx)
 	close(ctx->rrpipe[1]);
 	config_delete(ctx->cfg);
 	free(ctx);
-	checklock_stop(); /* assumes during checklock tests libunbound users
-		only create one context */
 }
 
 int 
@@ -239,6 +242,7 @@ ub_val_ctx_fd(struct ub_val_ctx* ctx)
 int 
 ub_val_ctx_process(struct ub_val_ctx* ctx)
 {
+	/* TODO */
 	return UB_NOMEM;
 }
 
@@ -248,6 +252,7 @@ ub_val_resolve(struct ub_val_ctx* ctx, char* name, int rrtype,
 {
 	/* become a resolver thread for a bit */
 
+	/* TODO */
 	return UB_NOMEM;
 }
 
@@ -255,12 +260,14 @@ int
 ub_val_resolve_async(struct ub_val_ctx* ctx, char* name, int rrtype, 
 	int rrclass, void* mydata, ub_val_callback_t callback, int* async_id)
 {
+	/* TODO */
 	return UB_NOMEM;
 }
 
 int 
 ub_val_cancel(struct ub_val_ctx* ctx, int async_id)
 {
+	/* TODO */
 	return UB_NOMEM;
 }
 
