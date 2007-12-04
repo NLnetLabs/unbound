@@ -279,8 +279,10 @@ parse_create_rrset(ldns_buffer* pkt, struct rrset_parse* pset,
 	if(!*data)
 		return 0;
 	/* copy & decompress */
-	if(!parse_rr_copy(pkt, pset, *data))
+	if(!parse_rr_copy(pkt, pset, *data)) {
+		if(!region) free(*data);
 		return 0;
+	}
 	return 1;
 }
 

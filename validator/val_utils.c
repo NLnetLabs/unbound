@@ -230,7 +230,7 @@ val_find_signer(enum val_classification subtype, struct query_info* qinf,
 		for(i=skip; i<rep->an_numrrsets; i++) {
 			val_find_rrset_signer(rep->rrsets[i], 
 				signer_name, signer_len);
-			if(signer_name)
+			if(*signer_name)
 				return;
 		}
 		*signer_name = NULL;

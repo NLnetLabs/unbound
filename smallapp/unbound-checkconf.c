@@ -147,8 +147,7 @@ morechecks(struct config_file* cfg)
 	}
 
 	if(cfg->username && cfg->username[0]) {
-		struct passwd *pwd;
-		if((pwd = getpwnam(cfg->username)) == NULL)
+		if(getpwnam(cfg->username) == NULL)
 			fatal_exit("user '%s' does not exist.", cfg->username);
 		endpwent();
 	}

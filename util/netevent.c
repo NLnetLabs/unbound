@@ -1024,7 +1024,8 @@ comm_timer_set(struct comm_timer* timer, struct timeval* tv)
 	log_assert(tv);
 	if(timer->ev_timer->enabled)
 		comm_timer_disable(timer);
-	evtimer_add(&timer->ev_timer->ev, tv);
+	if(evtimer_add(&timer->ev_timer->ev, tv) != 0)
+		log_err("comm_timer_set: evtimer_add failed.");
 	timer->ev_timer->enabled = 1;
 }
 

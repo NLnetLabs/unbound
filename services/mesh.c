@@ -434,6 +434,8 @@ mesh_send_reply(struct mesh_state* m, int rcode, struct reply_info* rep,
 	if(rep && rep->security == sec_status_secure)
 		secure = 1;
 	else	secure = 0;
+	if(!rep && rcode == LDNS_RCODE_NOERROR)
+		rcode = LDNS_RCODE_SERVFAIL;
 	/* send the reply */
 	if(rcode) {
 		error_encode(r->query_reply.c->buffer, rcode, &m->s.qinfo,

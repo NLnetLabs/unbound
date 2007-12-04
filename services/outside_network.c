@@ -1172,7 +1172,7 @@ outnet_serviced_query(struct outside_network* outnet,
 	sq = lookup_serviced(outnet, buff, dnssec, addr, addrlen);
 	if(sq) {
 		/* see if it is a duplicate notification request for cb_arg */
-		if((cb = callback_list_find(sq, callback_arg, arg_compare))) {
+		if(callback_list_find(sq, callback_arg, arg_compare)) {
 			return sq;
 		}
 	}

@@ -323,6 +323,8 @@ cfg_convert_timeval(const char* str)
 	uint32_t t;
 	struct tm tm;
 	memset(&tm, 0, sizeof(tm));
+	if(strlen(str) < 14)
+		return 0;
 	if(sscanf(str, "%4d%2d%2d%2d%2d%2d", &tm.tm_year, &tm.tm_mon, 
 		&tm.tm_mday, &tm.tm_hour, &tm.tm_min, &tm.tm_sec) != 6)
 		return 0;

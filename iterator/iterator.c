@@ -80,7 +80,7 @@ void
 iter_deinit(struct module_env* env, int id)
 {
 	struct iter_env* iter_env;
-	if(!env || !env->modinfo || !env->modinfo[id])
+	if(!env || !env->modinfo[id])
 		return;
 	iter_env = (struct iter_env*)env->modinfo[id];
 	free(iter_env->target_fetch_policy);
@@ -188,7 +188,8 @@ error_supers(struct module_qstate* qstate, int id, struct module_qstate* super)
 			/* not interested */
 			verbose(VERB_ALGO, "subq error, but not interested");
 			log_query_info(VERB_ALGO, "superq", &super->qinfo);
-			delegpt_log(VERB_ALGO, super_iq->dp);
+			if(super_iq->dp)
+				delegpt_log(VERB_ALGO, super_iq->dp);
 			log_assert(0);
 			return;
 		}
@@ -1762,11 +1763,11 @@ iter_operate(struct module_qstate* qstate, enum module_ev event, int id,
 		process_request(qstate, iq, ie, id);
 		return;
 	}
-	if(event == module_event_pass) {
+	if(iq && event == module_event_pass) {
 		iter_handle(qstate, iq, ie, id);
 		return;
 	}
-	if(outbound) {
+	if(iq && outbound) {
 		process_response(qstate, iq, ie, id, outbound, event);
 		return;
 	}

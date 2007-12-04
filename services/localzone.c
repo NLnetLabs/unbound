@@ -195,6 +195,7 @@ lz_enter_zone(struct local_zones* zones, const char* name, const char* type,
 		t = local_zone_redirect;
 	else {
 		log_err("bad lz_enter_zone type %s %s", name, type);
+		free(nm);
 		return NULL;
 	}
 	if(!(z=lz_enter_zone_dname(zones, nm, len, labs, t, dclass))) {
@@ -234,6 +235,8 @@ get_rr_content(const char* str, uint8_t** nm, uint16_t* type,
         if(status != LDNS_STATUS_OK) {
                 log_err("error converting RR '%s' to wireformat: %s",
                         str, ldns_get_errorstr_by_id(status));
+		free(*nm);
+		*nm = NULL;
                 return 0;
         }
         ldns_buffer_flip(rdata);
@@ -434,6 +437,7 @@ lz_enter_rr_into_zone(struct local_zone* z, ldns_buffer* buf,
 		query_dname_compare(z->name, nm) != 0) {
 		log_err("local-data in redirect zone must reside at top of zone"
 			", not at %s", rrstr);
+		free(nm);
 		return 0;
 	}
 	nmlabs = dname_count_size_labels(nm, &nmlen);

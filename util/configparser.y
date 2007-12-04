@@ -63,7 +63,7 @@ extern struct config_parser_state* cfg_parser;
 %}
 %union {
 	char*	str;
-}
+};
 
 %token SPACE LETTER NEWLINE COMMENT COLON ANY ZONESTR
 %token <str> STRING

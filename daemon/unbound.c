@@ -264,8 +264,8 @@ do_chroot(struct daemon* daemon, struct config_file* cfg, int debug_mode)
 	uid_t uid;
 	gid_t gid;
 	/* initialize, but not to 0 (root) */
-	memset(&uid, -12, sizeof(uid));
-	memset(&gid, -12, sizeof(gid));
+	memset(&uid, 112, sizeof(uid));
+	memset(&gid, 112, sizeof(gid));
 	log_assert(cfg);
 
 	/* daemonize last to be able to print error to user */

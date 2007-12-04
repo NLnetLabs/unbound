@@ -65,6 +65,7 @@ void rrset_cache_delete(struct rrset_cache* r)
 	if(!r) 
 		return;
 	slabhash_delete(&r->table);
+	/* slabhash delete also does free(r), since table is first in struct*/
 }
 
 struct rrset_cache* rrset_cache_adjust(struct rrset_cache *r, 

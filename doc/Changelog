@@ -4,6 +4,18 @@
 	  preparing for code-reuse.
 	- move context into own header file.
 	- context query structure.
+	- removed unused variable pwd from checkconf.
+	- removed unused assignment from outside netw.
+	- check timeval length of string.
+	- fixup error in val_utils getsigner.
+	- fixup same (*var) error in netblocktostr.
+	- fixup memleak on parse error in localzone.
+	- fixup memleak on packet parse error.
+	- put ; after union in parser.y.
+	- small hardening in iter_operate against iq==NULL.
+	- hardening, if error reply with rcode=0 (noerror) send servfail.
+	- fixup same (*var) error in find_rrset in msgparse, was harmless.
+	- check return value of evtimer_add().
 
 3 December 2007: Wouter
 	- changed checkconf/ to smallapp/ to make room for more support tools.

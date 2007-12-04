@@ -7,3 +7,5 @@ was made in further cooperation with Geoff Sisson and Roy Arends from Nominet.
 At NLnet Labs, Jelte Jansen and Mark Santcroos reviewed the unbound C sources.
 
 Jakob Schlyter - for advice on secure settings, random numbers and blacklists.
+
+Ondřej Surý - running coverity analysis tool on 0.9 dev version.

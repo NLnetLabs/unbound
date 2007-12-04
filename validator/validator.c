@@ -158,7 +158,7 @@ void
 val_deinit(struct module_env* env, int id)
 {
 	struct val_env* val_env;
-	if(!env || !env->modinfo || !env->modinfo[id])
+	if(!env || !env->modinfo[id])
 		return;
 	val_env = (struct val_env*)env->modinfo[id];
 	anchors_delete(env->anchors);

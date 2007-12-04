@@ -424,7 +424,7 @@ find_rrset(struct msg_parse* msg, ldns_buffer* pkt, uint8_t* dname,
 	ldns_pkt_section section, struct regional* region)
 {
 	uint16_t covtype;
-	if(rrset_prev) {
+	if(*rrset_prev) {
 		/* check if equal to previous item */
 		if(type == *prev_type && dclass == *prev_dclass &&
 			dnamelen == *prev_dnamelen &&
