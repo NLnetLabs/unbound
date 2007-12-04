@@ -44,67 +44,16 @@
 /* include the public api first, it should be able to stand alone */
 #include "libunbound/unbound.h"
 #include "config.h"
+#include "libunbound/context.h"
 #include "util/locks.h"
 #include "util/config_file.h"
 #include "util/alloc.h"
-
-/**
- * The context structure
- *
- * Contains two pipes for async service
- *	qq : write queries to the async service pid/tid.
- *	rr : read results from the async service pid/tid.
- */
-struct ub_val_ctx {
-	/** mutex on query write pipe */
-	lock_basic_t qqpipe_lock;
-	/** the query write pipe, [0] read from, [1] write on */
-	int qqpipe[2];
-	/** mutex on result read pipe */
-	lock_basic_t rrpipe_lock;
-	/** the result read pipe, [0] read from, [1] write on */
-	int rrpipe[2];
-
-	/** configuration options */
-	struct config_file* cfg;
-	/** do threading (instead of forking) for async resolution */
-	int dothread;
-
-	/** shared data */
-	/* list of alloc-cache-id points and nextthreadnum */
-	/*struct shareddata* shared;*/
-	/** outstanding querylist and next querynum (to try) */
-
-	/** shared caches, and so on */
-	struct alloc_cache superalloc;
-	/** module env master value */
-	struct module_env* env;
-	/** number of modules active, ids from 0 to num-1. */
-	int num_modules;
-	/** the module callbacks, array of num_modules length */
-	struct module_func_block** modfunc;
-	/** local authority zones */
-	struct local_zones* local_zones;
-
-	/** TODO list of outstanding queries */
-};
-
-/**
- * The error constants
- */
-enum ub_ctx_err {
-	/** no error */
-	UB_NOERROR = 0,
-	/** alloc failure */
-	UB_NOMEM,
-	/** socket operation */
-	UB_SOCKET,
-	/** syntax error */
-	UB_SYNTAX,
-	/** DNS service failed */
-	UB_SERVFAIL
-};
-
+#include "util/module.h"
+#include "util/log.h"
+#include "services/modstack.h"
+#include "services/localzone.h"
+#include "services/cache/infra.h"
+#include "services/cache/rrset.h"
 
 struct ub_val_ctx* 
 ub_val_ctx_create()
@@ -115,6 +64,10 @@ ub_val_ctx_create()
 		return NULL;
 	}
 	checklock_start();
+	log_ident_set("libunbound");
+	verbosity = 0; /* errors only */
+	log_init(NULL, 0, NULL); /* logs to stderr */
+	alloc_init(&ctx->superalloc, NULL, 0);
 	if(socketpair(AF_UNIX, SOCK_STREAM, 0, ctx->qqpipe) == -1) {
 		free(ctx);
 		return NULL;
@@ -129,35 +82,80 @@ ub_val_ctx_create()
 	}
 	lock_basic_init(&ctx->qqpipe_lock);
 	lock_basic_init(&ctx->rrpipe_lock);
-	ctx->cfg = config_create();
-	if(!ctx->cfg) {
+	lock_basic_init(&ctx->cfglock);
+	ctx->env = (struct module_env*)calloc(1, sizeof(*ctx->env));
+	if(!ctx->env) {
 		ub_val_ctx_delete(ctx);
 		errno = ENOMEM;
 		return NULL;
 	}
+	ctx->env->cfg = config_create();
+	if(!ctx->env->cfg) {
+		ub_val_ctx_delete(ctx);
+		errno = ENOMEM;
+		return NULL;
+	}
+	ctx->env->alloc = &ctx->superalloc;
+	ctx->env->worker = NULL;
+	ctx->env->need_to_validate = 0;
+	modstack_init(&ctx->mods);
+	rbtree_init(&ctx->queries, &context_query_cmp);
 	return ctx;
+}
+
+/** delete q */
+static void
+delq(rbnode_t* n, void* ATTR_UNUSED(arg))
+{
+	struct ctx_query* q = (struct ctx_query*)n;
+	if(!q) return;
+	ub_val_result_free(q->res);
+	free(q);
 }
 
 void 
 ub_val_ctx_delete(struct ub_val_ctx* ctx)
 {
+	struct alloc_cache* a, *na;
 	if(!ctx) return;
+	modstack_desetup(&ctx->mods, ctx->env);
+	a = ctx->alloc_list;
+	while(a) {
+		na = a->super;
+		a->super = &ctx->superalloc;
+		alloc_clear(a);
+		a = na;
+	}
+	alloc_clear(&ctx->superalloc);
+	local_zones_delete(ctx->local_zones);
 	lock_basic_destroy(&ctx->qqpipe_lock);
 	lock_basic_destroy(&ctx->rrpipe_lock);
+	lock_basic_destroy(&ctx->cfglock);
 	close(ctx->qqpipe[0]);
 	close(ctx->qqpipe[1]);
 	close(ctx->rrpipe[0]);
 	close(ctx->rrpipe[1]);
-	config_delete(ctx->cfg);
+	if(ctx->env) {
+		slabhash_delete(ctx->env->msg_cache);
+		rrset_cache_delete(ctx->env->rrset_cache);
+		infra_delete(ctx->env->infra_cache);
+		config_delete(ctx->env->cfg);
+		free(ctx->env);
+	}
+	traverse_postorder(&ctx->queries, delq, NULL);
 	free(ctx);
 }
 
 int 
 ub_val_ctx_config(struct ub_val_ctx* ctx, char* fname)
 {
-	if(!config_read(ctx->cfg, fname)) {
+	lock_basic_lock(&ctx->cfglock);
+	ctx->finalized = 0;
+	if(!config_read(ctx->env->cfg, fname)) {
+		lock_basic_unlock(&ctx->cfglock);
 		return UB_SYNTAX;
 	}
+	lock_basic_unlock(&ctx->cfglock);
 	return UB_NOERROR;
 }
 
@@ -166,10 +164,14 @@ ub_val_ctx_add_ta(struct ub_val_ctx* ctx, char* ta)
 {
 	char* dup = strdup(ta);
 	if(!dup) return UB_NOMEM;
-	if(!cfg_strlist_insert(&ctx->cfg->trust_anchor_list, dup)) {
+	lock_basic_lock(&ctx->cfglock);
+	ctx->finalized = 0;
+	if(!cfg_strlist_insert(&ctx->env->cfg->trust_anchor_list, dup)) {
+		lock_basic_unlock(&ctx->cfglock);
 		free(dup);
 		return UB_NOMEM;
 	}
+	lock_basic_unlock(&ctx->cfglock);
 	return UB_NOERROR;
 }
 
@@ -178,17 +180,24 @@ ub_val_ctx_trustedkeys(struct ub_val_ctx* ctx, char* fname)
 {
 	char* dup = strdup(fname);
 	if(!dup) return UB_NOMEM;
-	if(!cfg_strlist_insert(&ctx->cfg->trusted_keys_file_list, dup)) {
+	lock_basic_lock(&ctx->cfglock);
+	ctx->finalized = 0;
+	if(!cfg_strlist_insert(&ctx->env->cfg->trusted_keys_file_list, dup)) {
+		lock_basic_unlock(&ctx->cfglock);
 		free(dup);
 		return UB_NOMEM;
 	}
+	lock_basic_unlock(&ctx->cfglock);
 	return UB_NOERROR;
 }
 
 int 
 ub_val_ctx_async(struct ub_val_ctx* ctx, int dothread)
 {
+	lock_basic_lock(&ctx->cfglock);
+	ctx->finalized = 0;
 	ctx->dothread = dothread;
+	lock_basic_unlock(&ctx->cfglock);
 	return UB_NOERROR;
 }
 
@@ -223,13 +232,17 @@ ub_val_ctx_poll(struct ub_val_ctx* ctx)
 int 
 ub_val_ctx_wait(struct ub_val_ctx* ctx)
 {
+	lock_basic_lock(&ctx->cfglock);
 	/* TODO until no more queries outstanding */
-	while(1) {
+	while(ctx->num_async > 0) {
+		lock_basic_unlock(&ctx->cfglock);
 		lock_basic_lock(&ctx->rrpipe_lock);
 		(void)pollit(ctx, NULL);
 		lock_basic_unlock(&ctx->rrpipe_lock);
 		ub_val_ctx_process(ctx);
+		lock_basic_lock(&ctx->cfglock);
 	}
+	lock_basic_unlock(&ctx->cfglock);
 	return UB_NOERROR;
 }
 
@@ -243,6 +256,7 @@ int
 ub_val_ctx_process(struct ub_val_ctx* ctx)
 {
 	/* TODO */
+	/* ctx->num_asynx-- when handled; */
 	return UB_NOMEM;
 }
 
@@ -250,7 +264,25 @@ int
 ub_val_resolve(struct ub_val_ctx* ctx, char* name, int rrtype, 
 	int rrclass, int* secure, int* data, struct ub_val_result** result)
 {
+	struct ctx_query* q;
+
+	lock_basic_lock(&ctx->cfglock);
+	if(!ctx->finalized) {
+		int r = context_finalize(ctx);
+		if(r) {
+			lock_basic_unlock(&ctx->cfglock);
+			return r;
+		}
+	}
+	/* create new ctx_query and attempt to add to the list */
+	q = context_new(ctx, name, rrtype, rrclass, NULL, NULL);
+	lock_basic_unlock(&ctx->cfglock);
+	if(!q)
+		return UB_NOMEM;
 	/* become a resolver thread for a bit */
+	*secure = 0;
+	*data = 0;
+	*result = NULL;
 
 	/* TODO */
 	return UB_NOMEM;
@@ -260,14 +292,41 @@ int
 ub_val_resolve_async(struct ub_val_ctx* ctx, char* name, int rrtype, 
 	int rrclass, void* mydata, ub_val_callback_t callback, int* async_id)
 {
-	/* TODO */
+	struct ctx_query* q;
+
+	lock_basic_lock(&ctx->cfglock);
+	if(!ctx->finalized) {
+		int r = context_finalize(ctx);
+		if(r) {
+			lock_basic_unlock(&ctx->cfglock);
+			return r;
+		}
+	}
+	/* create new ctx_query and attempt to add to the list */
+	q = context_new(ctx, name, rrtype, rrclass, callback, mydata);
+	lock_basic_unlock(&ctx->cfglock);
+	if(!q)
+		return UB_NOMEM;
+	/* TODO write over pipe to background worker */
+	*async_id = q->querynum;
 	return UB_NOMEM;
 }
 
 int 
 ub_val_cancel(struct ub_val_ctx* ctx, int async_id)
 {
-	/* TODO */
+	struct ctx_query* q;
+	lock_basic_lock(&ctx->cfglock);
+	q = (struct ctx_query*)rbtree_search(&ctx->queries, &async_id);
+	lock_basic_unlock(&ctx->cfglock);
+	if(!q || !q->async) /* it is not there, so nothing to do */
+		return UB_NOERROR;
+	/* TODO ; send cancel to background worker */
+
+	lock_basic_lock(&ctx->cfglock);
+	(void)rbtree_delete(&ctx->queries, &async_id);
+	ctx->num_async--;
+	lock_basic_unlock(&ctx->cfglock);
 	return UB_NOMEM;
 }
 
@@ -294,6 +353,7 @@ ub_val_strerror(int err)
 		case UB_SOCKET: return "socket io error";
 		case UB_SYNTAX: return "syntax error";
 		case UB_SERVFAIL: return "server failure";
+		case UB_INITFAIL: return "initialization failure";
 		default: return "unknown error";
 	}
 }
