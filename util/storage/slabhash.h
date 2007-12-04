@@ -167,6 +167,13 @@ size_t slabhash_get_mem(struct slabhash* table);
  */
 struct lruhash* slabhash_gettable(struct slabhash* table, hashvalue_t hash);
 
+/**
+ * Set markdel function
+ * @param table: slabbed hash table.
+ * @param md: markdel function ptr.
+ */
+void slabhash_setmarkdel(struct slabhash* table, lruhash_markdelfunc_t md);
+
 /* --- test representation --- */
 /** test structure contains test key */
 struct slabhash_testkey {

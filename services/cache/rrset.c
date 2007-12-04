@@ -47,6 +47,14 @@
 #include "util/regional.h"
 #include "util/alloc.h"
 
+/** mark rrset to be deleted */
+static void
+rrset_markdel(void* key)
+{
+	struct ub_packed_rrset_key* r = (struct ub_packed_rrset_key*)key;
+	r->id = 0;
+}
+
 struct rrset_cache* rrset_cache_create(struct config_file* cfg, 
 	struct alloc_cache* alloc)
 {
@@ -57,6 +65,7 @@ struct rrset_cache* rrset_cache_create(struct config_file* cfg,
 	struct rrset_cache *r = (struct rrset_cache*)slabhash_create(slabs,
 		startarray, maxmem, ub_rrset_sizefunc, ub_rrset_compare,
 		ub_rrset_key_delete, rrset_data_delete, alloc);
+	slabhash_setmarkdel(&r->table, &rrset_markdel);
 	return r;
 }
 

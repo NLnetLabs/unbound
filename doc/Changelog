@@ -16,6 +16,8 @@
 	- hardening, if error reply with rcode=0 (noerror) send servfail.
 	- fixup same (*var) error in find_rrset in msgparse, was harmless.
 	- check return value of evtimer_add().
+	- fixup lockorder in lruhash_reclaim(), building up a list of locked
+	  entries one at a time. Instead they are removed and unlocked.
 
 3 December 2007: Wouter
 	- changed checkconf/ to smallapp/ to make room for more support tools.

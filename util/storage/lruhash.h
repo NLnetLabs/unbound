@@ -141,6 +141,10 @@ typedef void (*lruhash_delkeyfunc_t)(void*, void*, int);
 /** old data is deleted. This function is called: func(data, userarg). */
 typedef void (*lruhash_deldatafunc_t)(void*, void*);
 
+/** mark a key as pending to be deleted (and not to be used by anyone). 
+ * called: func(key) */
+typedef void (*lruhash_markdelfunc_t)(void*);
+
 /**
  * Hash table that keeps LRU list of entries.
  */
@@ -155,6 +159,8 @@ struct lruhash {
 	lruhash_delkeyfunc_t delkeyfunc;
 	/** how to delete data. */
 	lruhash_deldatafunc_t deldatafunc;
+	/** how to mark a key pending deletion */
+	lruhash_markdelfunc_t markdelfunc;
 	/** user argument for user functions */
 	void* cb_arg;
 
@@ -293,6 +299,11 @@ struct lruhash_entry* lruhash_lookup(struct lruhash* table, hashvalue_t hash,
  * @param entry: entry to make first in LRU.
  */
 void lru_touch(struct lruhash* table, struct lruhash_entry* entry);
+
+/**
+ * Set the markdelfunction (or NULL)
+ */
+void lruhash_setmarkdel(struct lruhash* table, lruhash_markdelfunc_t md);
 
 /************************* Internal functions ************************/
 /*** these are only exposed for unit tests. ***/

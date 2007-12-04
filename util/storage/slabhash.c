@@ -202,3 +202,11 @@ void test_slabhash_deldata(void* data, void* ATTR_UNUSED(arg))
 {
 	deldata((struct slabhash_testdata*)data);
 }
+
+void slabhash_setmarkdel(struct slabhash* sl, lruhash_markdelfunc_t md)
+{
+	size_t i;
+	for(i=0; i<sl->size; i++) {
+		lruhash_setmarkdel(sl->array[i], md);
+	}
+}
