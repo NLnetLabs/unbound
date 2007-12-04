@@ -50,6 +50,7 @@
 #include "util/netevent.h"
 #include "util/data/msgparse.h"
 #include "util/module.h"
+#include "services/modstack.h"
 struct mesh_state;
 struct mesh_reply;
 struct query_info;
@@ -67,10 +68,8 @@ struct timehist;
  * Mesh of query states
  */
 struct mesh_area {
-	/** the number of modules */
-	int num_modules;
-	/** the module callbacks, array of num_modules length (ref only) */
-	struct module_func_block** modfunc;
+	/** active module stack */
+	struct module_stack mods;
 	/** environment for new states */
 	struct module_env* env;
 
@@ -160,14 +159,12 @@ struct mesh_reply {
 
 /**
  * Allocate mesh, to empty.
- * @param num_modules: number of modules that are present.
- * @param modfunc: array passed (alloced and deleted by caller), that has
- * 	num_modules function callbacks for the modules.
+ * @param stack: module stack to activate, copied (as readonly reference).
  * @param env: environment for new queries.
  * @return mesh: the new mesh or NULL on error.
  */
-struct mesh_area* mesh_create(int num_modules, 
-	struct module_func_block** modfunc, struct module_env* env);
+struct mesh_area* mesh_create(struct module_stack* stack, 
+	struct module_env* env);
 
 /**
  * Delete mesh, and all query states and replies in it.

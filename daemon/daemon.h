@@ -44,6 +44,7 @@
 
 #include "util/locks.h"
 #include "util/alloc.h"
+#include "services/modstack.h"
 struct config_file;
 struct worker;
 struct listen_port;
@@ -76,10 +77,8 @@ struct daemon {
 	struct alloc_cache superalloc;
 	/** the module environment master value, copied and changed by threads*/
 	struct module_env* env;
-	/** number of modules active, ids from 0 to num-1. */
-	int num_modules;
-	/** the module callbacks, array of num_modules length */
-	struct module_func_block** modfunc;
+	/** stack of module callbacks */
+	struct module_stack mods;
 	/** access control, which client IPs are allowed to connect */
 	struct acl_list* acl;
 	/** local authority zones */

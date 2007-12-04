@@ -88,8 +88,7 @@ mesh_state_ref_compare(const void* ap, const void* bp)
 }
 
 struct mesh_area* 
-mesh_create(int num_modules, struct module_func_block** modfunc,
-	struct module_env* env)
+mesh_create(struct module_stack* stack, struct module_env* env)
 {
 	struct mesh_area* mesh = calloc(1, sizeof(struct mesh_area));
 	if(!mesh) {
@@ -102,8 +101,7 @@ mesh_create(int num_modules, struct module_func_block** modfunc,
 		log_err("mesh area alloc: out of memory");
 		return NULL;
 	}
-	mesh->num_modules = num_modules;
-	mesh->modfunc = modfunc;
+	mesh->mods = *stack;
 	mesh->env = env;
 	rbtree_init(&mesh->run, &mesh_state_compare);
 	rbtree_init(&mesh->all, &mesh_state_compare);
@@ -237,7 +235,7 @@ mesh_state_create(struct module_env* env, struct query_info* qinfo,
 	mstate->s.env = env;
 	mstate->s.mesh_info = mstate;
 	/* init modules */
-	for(i=0; i<env->mesh->num_modules; i++) {
+	for(i=0; i<env->mesh->mods.num; i++) {
 		mstate->s.minfo[i] = NULL;
 		mstate->s.ext_state[i] = module_state_initial;
 	}
@@ -253,9 +251,9 @@ mesh_state_cleanup(struct mesh_state* mstate)
 		return;
 	/* de-init modules */
 	mesh = mstate->s.env->mesh;
-	for(i=0; i<mesh->num_modules; i++) {
-		log_assert(fptr_whitelist_mod_clear(mesh->modfunc[i]->clear));
-		(*mesh->modfunc[i]->clear)(&mstate->s, i);
+	for(i=0; i<mesh->mods.num; i++) {
+		log_assert(fptr_whitelist_mod_clear(mesh->mods.mod[i]->clear));
+		(*mesh->mods.mod[i]->clear)(&mstate->s, i);
 		mstate->s.minfo[i] = NULL;
 		mstate->s.ext_state[i] = module_finished;
 	}
@@ -493,8 +491,8 @@ void mesh_walk_supers(struct mesh_area* mesh, struct mesh_state* mstate)
 		(void)rbtree_insert(&mesh->run, &ref->s->run_node);
 		/* callback the function to inform super of result */
 		log_assert(fptr_whitelist_mod_inform_super(
-			mesh->modfunc[ref->s->s.curmod]->inform_super));
-		(*mesh->modfunc[ref->s->s.curmod]->inform_super)(&mstate->s, 
+			mesh->mods.mod[ref->s->s.curmod]->inform_super));
+		(*mesh->mods.mod[ref->s->s.curmod]->inform_super)(&mstate->s, 
 			ref->s->s.curmod, &ref->s->s);
 	}
 }
@@ -565,7 +563,7 @@ mesh_continue(struct mesh_area* mesh, struct mesh_state* mstate,
 	if(s == module_wait_module) {
 		/* start next module */
 		mstate->s.curmod++;
-		if(mesh->num_modules == mstate->s.curmod) {
+		if(mesh->mods.num == mstate->s.curmod) {
 			log_err("Cannot pass to next module; at last module");
 			log_query_info(VERB_DETAIL, "pass error for qstate",
 				&mstate->s.qinfo);
@@ -602,8 +600,8 @@ void mesh_run(struct mesh_area* mesh, struct mesh_state* mstate,
 	while(mstate) {
 		/* run the module */
 		log_assert(fptr_whitelist_mod_operate(
-			mesh->modfunc[mstate->s.curmod]->operate));
-		(*mesh->modfunc[mstate->s.curmod]->operate)
+			mesh->mods.mod[mstate->s.curmod]->operate));
+		(*mesh->mods.mod[mstate->s.curmod]->operate)
 			(&mstate->s, ev, mstate->s.curmod, e);
 
 		/* examine results */
@@ -611,7 +609,7 @@ void mesh_run(struct mesh_area* mesh, struct mesh_state* mstate,
 		regional_free_all(mstate->s.env->scratch);
 		s = mstate->s.ext_state[mstate->s.curmod];
 		verbose(VERB_ALGO, "mesh_run: %s module exit state is %s", 
-			mesh->modfunc[mstate->s.curmod]->name, strextstate(s));
+			mesh->mods.mod[mstate->s.curmod]->name, strextstate(s));
 		e = NULL;
 		if(mesh_continue(mesh, mstate, s, &ev))
 			continue;

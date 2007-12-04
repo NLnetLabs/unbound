@@ -967,8 +967,7 @@ worker_init(struct worker* worker, struct config_file *cfg,
 	worker->env.alloc = &worker->alloc;
 	worker->env.rnd = worker->rndstate;
 	worker->env.scratch = worker->scratchpad;
-	worker->env.mesh = mesh_create(worker->daemon->num_modules,
-		worker->daemon->modfunc, &worker->env);
+	worker->env.mesh = mesh_create(&worker->daemon->mods, &worker->env);
 	worker->env.detach_subs = &mesh_detach_subs;
 	worker->env.attach_sub = &mesh_attach_sub;
 	worker->env.kill_sub = &mesh_state_delete;

@@ -1,3 +1,8 @@
+4 December 2007: Wouter
+	- minor Makefile fixup.
+	- moved module-stack code out of daemon/daemon into services/modstack,
+	  preparing for code-reuse.
+
 3 December 2007: Wouter
 	- changed checkconf/ to smallapp/ to make room for more support tools.
 	  (such as unbound-host).

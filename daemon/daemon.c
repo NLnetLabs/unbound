@@ -51,10 +51,8 @@
 #include "services/cache/rrset.h"
 #include "services/cache/infra.h"
 #include "services/localzone.h"
+#include "services/modstack.h"
 #include "util/module.h"
-#include "iterator/iterator.h"
-#include "validator/validator.h"
-#include "util/fptr_wlist.h"
 #include <signal.h>
 
 /** How many quit requests happened. */
@@ -129,7 +127,7 @@ daemon_init()
 	checklock_start();
 	ERR_load_crypto_strings();
 	daemon->need_to_exit = 0;
-	daemon->num_modules = 0;
+	modstack_init(&daemon->mods);
 	if(!(daemon->env = (struct module_env*)calloc(1, 
 		sizeof(*daemon->env)))) {
 		free(daemon);
@@ -158,136 +156,19 @@ daemon_open_shared_ports(struct daemon* daemon)
 	return 1;
 }
 
-/** count number of modules (words) in the string */
-static int
-count_modules(const char* s)
-{
-	int num = 0;
-	if(!s)
-		return 0;
-	while(*s) {
-		/* skip whitespace */
-		while(*s && isspace((int)*s))
-			s++;
-		if(*s && !isspace((int)*s)) {
-			/* skip identifier */
-			num++;
-			while(*s && !isspace((int)*s))
-				s++;
-		}
-	}
-	return num;
-}
-
 /**
- * Get funcblock for module name
- * @param str: string with module name. Advanced to next value on success.
- * @return funcblock or NULL on error.
- */
-static struct module_func_block*
-daemon_module_factory(const char** str)
-{
-	/* these are the modules available */
-	int num = 2;
-	const char* names[] = {"iterator", "validator", NULL};
-	struct module_func_block* (*fb[])(void) = 
-		{&iter_get_funcblock, &val_get_funcblock, NULL};
-
-	int i;
-	const char* s = *str;
-	while(*s && isspace((int)*s))
-		s++;
-	for(i=0; i<num; i++) {
-		if(strncmp(names[i], s, strlen(names[i])) == 0) {
-			s += strlen(names[i]);
-			*str = s;
-			return (*fb[i])();
-		}
-	}
-	return NULL;
-}
-
-/**
- * Read config file module settings and set up the modfunc block
- * @param daemon: the daemon.
- * @return false on error
- */
-static int
-daemon_config_modules(struct daemon* daemon)
-{
-	const char* str = daemon->cfg->module_conf;
-	int i;
-	verbose(VERB_DETAIL, "module config: \"%s\"", str);
-	daemon->num_modules = count_modules(str);
-	if(daemon->num_modules == 0) {
-		log_err("error: no modules specified");
-		return 0;
-	}
-	if(daemon->num_modules > MAX_MODULE) {
-		log_err("error: too many modules (%d max %d)",
-			daemon->num_modules, MAX_MODULE);
-		return 0;
-	}
-	daemon->modfunc = (struct module_func_block**)calloc((size_t)
-		daemon->num_modules, sizeof(struct module_func_block*));
-	if(!daemon->modfunc) {
-		log_err("out of memory");
-		return 0;
-	}
-	for(i=0; i<daemon->num_modules; i++) {
-		daemon->modfunc[i] = daemon_module_factory(&str);
-		if(!daemon->modfunc[i]) {
-			log_err("Unknown value for first module in: '%s'",
-				str);
-			return 0;
-		}
-	}
-	return 1;
-}
-
-/**
- * Desetup the modules, deinit, delete.
- * @param daemon: the daemon.
- */
-static void
-daemon_desetup_modules(struct daemon* daemon)
-{
-	int i;
-	for(i=0; i<daemon->num_modules; i++) {
-		log_assert(fptr_whitelist_mod_deinit(
-			daemon->modfunc[i]->deinit));
-		(*daemon->modfunc[i]->deinit)(daemon->env, i);
-	}
-	daemon->num_modules = 0;
-	free(daemon->modfunc);
-	daemon->modfunc = 0;
-}
-
-/**
- * Setup modules. Assigns ids and calls module_init.
+ * Setup modules. setup module stack.
  * @param daemon: the daemon
  */
 static void daemon_setup_modules(struct daemon* daemon)
 {
-	int i;
-	if(daemon->num_modules != 0)
-		daemon_desetup_modules(daemon);
-	/* fixed setup of the modules */
-	if(!daemon_config_modules(daemon)) {
-		fatal_exit("failed to setup modules");
-	}
 	daemon->env->cfg = daemon->cfg;
 	daemon->env->alloc = &daemon->superalloc;
 	daemon->env->worker = NULL;
 	daemon->env->need_to_validate = 0; /* set by module init below */
-	for(i=0; i<daemon->num_modules; i++) {
-		verbose(VERB_OPS, "init module %d: %s", 
-			i, daemon->modfunc[i]->name);
-		log_assert(fptr_whitelist_mod_init(daemon->modfunc[i]->init));
-		if(!(*daemon->modfunc[i]->init)(daemon->env, i)) {
-			fatal_exit("module init for module %s failed",
-				daemon->modfunc[i]->name);
-		}
+	if(!modstack_setup(&daemon->mods, daemon->cfg->module_conf, 
+		daemon->env)) {
+		fatal_exit("failed to setup modules");
 	}
 }
 
@@ -475,7 +356,7 @@ daemon_delete(struct daemon* daemon)
 {
 	if(!daemon)
 		return;
-	daemon_desetup_modules(daemon);
+	modstack_desetup(&daemon->mods, daemon->env);
 	listening_ports_free(daemon->ports);
 	if(daemon->env) {
 		slabhash_delete(daemon->env->msg_cache);
