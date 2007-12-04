@@ -72,14 +72,11 @@ key_entry_compfunc(void* k1, void* k2)
 }
 
 void 
-key_entry_delkeyfunc(void* key, void* ATTR_UNUSED(userarg), int islocked)
+key_entry_delkeyfunc(void* key, void* ATTR_UNUSED(userarg))
 {
 	struct key_entry_key* kk = (struct key_entry_key*)key;
 	if(!key)
 		return;
-	if(islocked) {
-		lock_rw_unlock(&kk->entry.lock);
-	}
 	free(kk->name);
 	free(kk);
 }

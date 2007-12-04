@@ -121,14 +121,11 @@ ub_rrset_compare(void* k1, void* k2)
 }
 
 void 
-ub_rrset_key_delete(void* key, void* userdata, int is_locked)
+ub_rrset_key_delete(void* key, void* userdata)
 {
 	struct ub_packed_rrset_key* k = (struct ub_packed_rrset_key*)key;
 	struct alloc_cache* a = (struct alloc_cache*)userdata;
 	k->id = 0;
-	if(is_locked) {
-		lock_rw_unlock(&k->entry.lock);
-	}
 	free(k->rk.dname);
 	k->rk.dname = NULL;
 	alloc_special_release(a, k);

@@ -207,4 +207,7 @@ void rrset_update_sec_status(struct rrset_cache* r,
 void rrset_check_sec_status(struct rrset_cache* r, 
 	struct ub_packed_rrset_key* rrset);
 
+/** mark rrset to be deleted, set id=0 */
+void rrset_markdel(void* key);
+
 #endif /* SERVICES_CACHE_RRSET_H */

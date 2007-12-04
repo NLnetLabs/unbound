@@ -156,6 +156,14 @@ int fptr_whitelist_hash_delkeyfunc(lruhash_delkeyfunc_t fptr);
 int fptr_whitelist_hash_deldatafunc(lruhash_deldatafunc_t fptr);
 
 /**
+ * Check function pointer whitelist for lruhash markdel callback values.
+ *
+ * @param fptr: function pointer to check.
+ * @return false if not in whitelist.
+ */
+int fptr_whitelist_hash_markdelfunc(lruhash_markdelfunc_t fptr);
+
+/**
  * Check function pointer whitelist for module_env send_packet callback values.
  *
  * @param fptr: function pointer to check.

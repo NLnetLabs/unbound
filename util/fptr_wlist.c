@@ -51,6 +51,7 @@
 #include "services/mesh.h"
 #include "services/localzone.h"
 #include "services/cache/infra.h"
+#include "services/cache/rrset.h"
 #include "iterator/iterator.h"
 #include "iterator/iter_donotq.h"
 #include "iterator/iter_fwd.h"
@@ -194,6 +195,14 @@ fptr_whitelist_hash_deldatafunc(lruhash_deldatafunc_t fptr)
 	else if(fptr == &key_entry_deldatafunc) return 1;
 	else if(fptr == &infra_lame_deldatafunc) return 1;
 	else if(fptr == &test_slabhash_deldata) return 1;
+	return 0;
+}
+
+int 
+fptr_whitelist_hash_markdelfunc(lruhash_markdelfunc_t fptr)
+{
+	if(fptr == NULL) return 1;
+	else if(fptr == &rrset_markdel) return 1;
 	return 0;
 }
 

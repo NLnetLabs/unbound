@@ -267,7 +267,7 @@ size_t infra_host_sizefunc(void* k, void* d);
 int infra_host_compfunc(void* key1, void* key2);
 
 /** delete key, and destroy the lock */
-void infra_host_delkeyfunc(void* k, void* arg, int il);
+void infra_host_delkeyfunc(void* k, void* arg);
 
 /** delete data and destroy the lameness hashtable */
 void infra_host_deldatafunc(void* d, void* arg);
@@ -280,7 +280,7 @@ size_t infra_lame_sizefunc(void* k, void* d);
 int infra_lame_compfunc(void* key1, void* key2);
 
 /** free key, lock and zonename */
-void infra_lame_delkeyfunc(void* k, void* arg, int il);
+void infra_lame_delkeyfunc(void* k, void* arg);
 
 /** free the lameness data */
 void infra_lame_deldatafunc(void* d, void* arg);

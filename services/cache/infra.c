@@ -64,12 +64,11 @@ infra_host_compfunc(void* key1, void* key2)
 }
 
 void 
-infra_host_delkeyfunc(void* k, void* ATTR_UNUSED(arg), int il)
+infra_host_delkeyfunc(void* k, void* ATTR_UNUSED(arg))
 {
 	struct infra_host_key* key = (struct infra_host_key*)k;
 	if(!key)
 		return;
-	if(il) { lock_rw_unlock(&key->entry.lock); }
 	lock_rw_destroy(&key->entry.lock);
 	free(key);
 }
@@ -309,12 +308,11 @@ infra_lame_compfunc(void* key1, void* key2)
 }
 
 void 
-infra_lame_delkeyfunc(void* k, void* ATTR_UNUSED(arg), int il)
+infra_lame_delkeyfunc(void* k, void* ATTR_UNUSED(arg))
 {
 	struct infra_lame_key* key = (struct infra_lame_key*)k;
 	if(!key) 
 		return;
-	if(il) { lock_rw_unlock(&key->entry.lock); }
 	lock_rw_destroy(&key->entry.lock);
 	free(key->zonename);
 	free(key);

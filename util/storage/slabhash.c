@@ -192,9 +192,8 @@ int test_slabhash_compfunc(void* key1, void* key2)
 	return -1;
 }
 
-void test_slabhash_delkey(void* key, void* ATTR_UNUSED(arg), int l)
+void test_slabhash_delkey(void* key, void* ATTR_UNUSED(arg))
 {
-	if(l) { lock_rw_unlock(&((struct slabhash_testkey*)key)->entry.lock); }
 	delkey((struct slabhash_testkey*)key);
 }
 

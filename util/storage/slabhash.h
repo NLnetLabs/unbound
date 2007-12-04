@@ -193,7 +193,7 @@ size_t test_slabhash_sizefunc(void*, void*);
 /** test comparefunc for lruhash */
 int test_slabhash_compfunc(void*, void*);
 /** test delkey for lruhash */
-void test_slabhash_delkey(void*, void*, int);
+void test_slabhash_delkey(void*, void*);
 /** test deldata for lruhash */
 void test_slabhash_deldata(void*, void*);
 /* --- end test representation --- */

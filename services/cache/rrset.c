@@ -47,8 +47,7 @@
 #include "util/regional.h"
 #include "util/alloc.h"
 
-/** mark rrset to be deleted */
-static void
+void
 rrset_markdel(void* key)
 {
 	struct ub_packed_rrset_key* r = (struct ub_packed_rrset_key*)key;

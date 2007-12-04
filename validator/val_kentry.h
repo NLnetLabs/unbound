@@ -91,7 +91,7 @@ size_t key_entry_sizefunc(void* key, void* data);
 int key_entry_compfunc(void* k1, void* k2);
 
 /** function for lruhash operation */
-void key_entry_delkeyfunc(void* key, void* userarg, int islocked);
+void key_entry_delkeyfunc(void* key, void* userarg);
 
 /** function for lruhash operation */
 void key_entry_deldatafunc(void* data, void* userarg);
