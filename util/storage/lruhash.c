@@ -144,6 +144,7 @@ bin_split(struct lruhash* table, struct lruhash_bin* newa,
 		}
 		lock_quick_unlock(&newa[i].lock);
 		lock_quick_unlock(&newa[newbit|i].lock);
+		lock_quick_unlock(&table->array[i].lock);
 	}
 }
 
@@ -248,7 +249,6 @@ table_grow(struct lruhash* table)
 	/* delete the old bins */
 	lock_unprotect(&table->lock, table->array);
 	for(i=0; i<table->size; i++) {
-		lock_quick_unlock(&table->array[i].lock);
 		lock_quick_destroy(&table->array[i].lock);
 	}
 	free(table->array);
