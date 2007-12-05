@@ -1,5 +1,6 @@
 5 December 2007: Wouter
 	- locking in context_new() inside the function.
+	- setup of libworker.
 
 4 December 2007: Wouter
 	- minor Makefile fixup.

@@ -45,6 +45,7 @@
 #include "util/rbtree.h"
 #include "services/modstack.h"
 #include "libunbound/unbound.h"
+#include "util/data/packed_rrset.h"
 
 /**
  * The context structure
@@ -127,6 +128,13 @@ struct ctx_query {
 	ub_val_callback_t cb;
 	/** for async query, the callback user arg */
 	void* cb_arg;
+
+	/** answer message, result from resolver lookup. */
+	uint8_t* msg;
+	/** resulting message length. */
+	size_t msg_len;
+	/** validation status on security */
+	enum sec_status msg_security;
 
 	/** result structure, also contains original query, type, class.
 	 * malloced ptr ready to hand to the client. */
