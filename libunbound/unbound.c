@@ -275,8 +275,8 @@ ub_val_resolve(struct ub_val_ctx* ctx, char* name, int rrtype,
 		}
 	}
 	/* create new ctx_query and attempt to add to the list */
-	q = context_new(ctx, name, rrtype, rrclass, NULL, NULL);
 	lock_basic_unlock(&ctx->cfglock);
+	q = context_new(ctx, name, rrtype, rrclass, NULL, NULL);
 	if(!q)
 		return UB_NOMEM;
 	/* become a resolver thread for a bit */
@@ -303,8 +303,8 @@ ub_val_resolve_async(struct ub_val_ctx* ctx, char* name, int rrtype,
 		}
 	}
 	/* create new ctx_query and attempt to add to the list */
-	q = context_new(ctx, name, rrtype, rrclass, callback, mydata);
 	lock_basic_unlock(&ctx->cfglock);
+	q = context_new(ctx, name, rrtype, rrclass, callback, mydata);
 	if(!q)
 		return UB_NOMEM;
 	/* TODO write over pipe to background worker */

@@ -1,3 +1,6 @@
+5 December 2007: Wouter
+	- locking in context_new() inside the function.
+
 4 December 2007: Wouter
 	- minor Makefile fixup.
 	- moved module-stack code out of daemon/daemon into services/modstack,

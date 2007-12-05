@@ -116,10 +116,13 @@ context_new(struct ub_val_ctx* ctx, char* name, int rrtype, int rrclass,
 {
 	struct ctx_query* q = (struct ctx_query*)calloc(1, sizeof(*q));
 	if(!q) return NULL;
+	lock_basic_lock(&ctx->cfglock);
 	if(!find_id(ctx, &q->querynum)) {
+		lock_basic_unlock(&ctx->cfglock);
 		free(q);
 		return NULL;
 	}
+	lock_basic_unlock(&ctx->cfglock);
 	q->node.key = &q->querynum;
 	q->async = (cb != NULL);
 	q->cb = cb;
@@ -139,8 +142,10 @@ context_new(struct ub_val_ctx* ctx, char* name, int rrtype, int rrclass,
 	q->res->qclass = rrclass;
 
 	/* add to query list */
+	lock_basic_lock(&ctx->cfglock);
 	if(q->async)
 		ctx->num_async ++;
 	(void)rbtree_insert(&ctx->queries, &q->node);
+	lock_basic_unlock(&ctx->cfglock);
 	return q;
 }
