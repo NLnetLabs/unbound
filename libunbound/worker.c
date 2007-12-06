@@ -47,6 +47,7 @@
 #include "libunbound/unbound.h"
 #include "services/outside_network.h"
 #include "services/mesh.h"
+#include "services/localzone.h"
 #include "services/cache/rrset.h"
 #include "services/outbound_list.h"
 #include "util/module.h"
@@ -327,13 +328,20 @@ int libworker_fg(struct ub_val_ctx* ctx, struct ctx_query* q)
 	qflags = BIT_RD;
 	d.q = q;
 	d.w = w;
-	if(!mesh_new_callback(w->env->mesh, &qinfo, qflags, &edns, 
-		w->back->udp_buff, qid, libworker_fg_done_cb, &d)) {
-		free(qinfo.qname);
-		return UB_NOMEM;
+	if(local_zones_answer(ctx->local_zones, &qinfo, &edns, 
+		w->back->udp_buff, w->env->scratch)) {
+		libworker_fg_done_cb(&d, LDNS_RCODE_NOERROR, 
+			w->back->udp_buff, sec_status_insecure);
 	}
-	free(qinfo.qname);
-	comm_base_dispatch(w->base);
+	else {
+		if(!mesh_new_callback(w->env->mesh, &qinfo, qflags, &edns, 
+			w->back->udp_buff, qid, libworker_fg_done_cb, &d)) {
+			free(qinfo.qname);
+			return UB_NOMEM;
+		}
+		free(qinfo.qname);
+		comm_base_dispatch(w->base);
+	}
 	libworker_delete(w);
 	return UB_NOERROR;
 }

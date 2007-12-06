@@ -75,7 +75,7 @@ isip4(const char* nm, char** res)
 	if(inet_pton(AF_INET, nm, &addr) <= 0) {
 		return 0;
 	}
-	snprintf(buf, sizeof(buf), "%u.%u.%u.%u.in-addr.arpa.",
+	snprintf(buf, sizeof(buf), "%u.%u.%u.%u.in-addr.arpa",
 		((uint8_t*)&addr)[3], ((uint8_t*)&addr)[2],
 		((uint8_t*)&addr)[1], ((uint8_t*)&addr)[0]);
 	*res = strdup(buf);
@@ -103,7 +103,7 @@ isip6(const char* nm, char** res)
 		*p++ = hex[ (b&0xf0) >> 4 ];
 		*p++ = '.';
 	}
-	snprintf(buf+16*4, sizeof(buf)-16*4, "ip6.arpa.");
+	snprintf(buf+16*4, sizeof(buf)-16*4, "ip6.arpa");
 	*res = strdup(buf);
 	return 1;
 }
@@ -167,9 +167,9 @@ massage_class(const char* c)
 static const char* 
 statstr(int sec, struct ub_val_result* result)
 {
-	if(sec) return "[secure]";
-	if(result->bogus) return "[BOGUS (security failure)]";
-	return "[insecure]";
+	if(sec) return "(secure)";
+	if(result->bogus) return "(BOGUS (security failure))]";
+	return "(insecure)";
 }
 
 /** nice string for type */
@@ -212,23 +212,30 @@ pretty_rcode(char* s, size_t len, int r)
 static void
 print_rd(int t, char* data, size_t len)
 {
-	/*
 	size_t i, pos = 0;
+	uint8_t* rd = malloc(len+2);
+	ldns_rr* rr = ldns_rr_new();
 	ldns_status status;
-	ldns_rr* rr = ldns_rr_new_frm_type(t);
+	if(!rd || !rr) {
+		fprintf(stderr, "out of memory");
+		exit(1);
+	}
+	ldns_rr_set_type(rr, t);
+	ldns_write_uint16(rd, len);
+	memmove(rd+2, data, len);
 	ldns_rr_set_owner(rr, NULL);
-	status = ldns_wire2rdf(rr, (uint8_t*)data, len, &pos);
+	status = ldns_wire2rdf(rr, rd, len+2, &pos);
 	if(status != LDNS_STATUS_OK) {
 	
+		free(rd);
 		printf("error_printing_data");
 	}
-	printf("len = %d\n", len);
 	for(i=0; i<ldns_rr_rd_count(rr); i++) {
+		printf(" ");
 		ldns_rdf_print(stdout, ldns_rr_rdf(rr, i));
 	}
 	ldns_rr_free(rr);
-	*/
-	printf("TODO");
+	free(rd);
 }
 
 /** pretty line of RR data for results */
@@ -240,12 +247,14 @@ pretty_rdata(char* q, char* cstr, char* tstr, int t, const char* sec,
 	if(strcmp(cstr, "IN") != 0)
 		printf(" in class %s", cstr);
 	if(t == LDNS_RR_TYPE_A)
-		printf(" has address ");
+		printf(" has address");
 	else if(t == LDNS_RR_TYPE_AAAA)
-		printf(" has IPv6 address ");
+		printf(" has IPv6 address");
 	else if(t == LDNS_RR_TYPE_MX)
-		printf(" mail is handled by ");
-	else	printf(" has %s record ", tstr);
+		printf(" mail is handled by");
+	else if(t == LDNS_RR_TYPE_PTR)
+		printf(" domain name pointer");
+	else	printf(" has %s record", tstr);
 	print_rd(t, data, len);
 	printf(" %s", sec);
 	printf("\n");
