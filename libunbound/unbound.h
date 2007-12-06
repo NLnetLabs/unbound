@@ -218,7 +218,18 @@ int ub_val_ctx_add_ta(struct ub_val_ctx* ctx, char* ta);
 
 /**
  * Add trust anchors to the given context.
- * The trust anchor the name of a bind-style config file with trusted-keys{}.
+ * Pass name of a file with DS and DNSKEY records (like from dig or drill).
+ * @param ctx: context.
+ *	At this time it is only possible to add trusted keys before the
+ *	first resolve is done.
+ * @param fname: filename of file with keyfile with trust anchors.
+ * @return 0 if OK, else error.
+ */
+int ub_val_ctx_add_ta_file(struct ub_val_ctx* ctx, char* fname);
+
+/**
+ * Add trust anchors to the given context.
+ * Pass the name of a bind-style config file with trusted-keys{}.
  * @param ctx: context.
  *	At this time it is only possible to add trusted keys before the
  *	first resolve is done.

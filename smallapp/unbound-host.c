@@ -52,13 +52,19 @@ static void
 usage()
 {
 	printf("Usage:	unbound-host [-c class] [-t type] hostname\n");
+	printf("                     [-y key] [-f keyfile] [-F named.conf]\n");
 	printf("  Queries the DNS for information.\n");
 	printf("  The hostname is looked up for IP4, IP6 and mail.\n");
 	printf("  If an ip-address is given a reverse lookup is done.\n");
-	printf("-t type		what type to look for.\n");
-	printf("-c class	what class to look for, if not class IN.\n");
-	printf("-v		be more verbose.\n");
-	printf("-h		show this usage help.\n");
+	printf("  Use the -v option to see DNSSEC security information.\n");
+	printf("    -t type		what type to look for.\n");
+	printf("    -c class		what class to look for, if not class IN.\n");
+	printf("    -y 'keystring'	specify trust anchor, DS or DNSKEY, like\n");
+	printf("			-y 'example.com DS 31560 5 1 1CFED8478...'\n");
+	printf("    -f keyfile		read trust anchors from file, with lines as -y.\n");
+	printf("    -F keyfile		read named.conf-style trust anchors.\n");
+	printf("    -v			be more verbose, shows nodata and security.\n");
+	printf("    -h			show this usage help.\n");
 	printf("Version %s\n", PACKAGE_VERSION);
 	printf("BSD licensed, see LICENSE in source package for details.\n");
 	printf("Report bugs to %s\n", PACKAGE_BUGREPORT);
@@ -256,7 +262,8 @@ pretty_rdata(char* q, char* cstr, char* tstr, int t, const char* sec,
 		printf(" domain name pointer");
 	else	printf(" has %s record", tstr);
 	print_rd(t, data, len);
-	printf(" %s", sec);
+	if(verb > 0)
+		printf(" %s", sec);
 	printf("\n");
 }
 
@@ -284,9 +291,21 @@ pretty_output(char* q, int t, int c, int sec, int haved,
 		printf("%s is an alias for %s\n", result->qname, 
 			result->canonname);
 	if(!haved) {
-		if(verb > 0)
-			printf("%s %s %s: no data. %s\n",
-				q, cstr, tstr, secstatus);
+		if(verb > 0) {
+			printf("%s", q);
+			if(strcmp(cstr, "IN") != 0)
+				printf(" in class %s", cstr);
+			if(t == LDNS_RR_TYPE_A)
+				printf(" has no address");
+			else if(t == LDNS_RR_TYPE_AAAA)
+				printf(" has no IPv6 address");
+			else if(t == LDNS_RR_TYPE_PTR)
+				printf(" has no domain name ptr");
+			else if(t == LDNS_RR_TYPE_MX)
+				printf(" has no mail handler record");
+			else	printf(" has no %s record", tstr);
+			printf(" %s\n", secstatus);
+		}
 		/* else: emptiness to indicate no data */
 		return;
 	}
@@ -321,7 +340,7 @@ dnslook(struct ub_val_ctx* ctx, char* q, int t, int c, int docname)
 
 /** perform host lookup */
 static void
-lookup(const char* nm, const char* qt, const char* qc)
+lookup(struct ub_val_ctx* ctx, const char* nm, const char* qt, const char* qc)
 {
 	/* massage input into a query name, type and class */
 	int multi = 0;	 /* no type, so do A, AAAA, MX */
@@ -331,16 +350,6 @@ lookup(const char* nm, const char* qt, const char* qc)
 	int c = massage_class(qc);
 
 	/* perform the query */
-	struct ub_val_ctx* ctx = NULL;
-	
-	if(verb>0)
-		printf("lookup %s %d %d reverse=%d multi=%d\n", 
-			realq, t, c, reverse, multi);
-	ctx = ub_val_ctx_create();
-	if(!ctx) {
-		fprintf(stderr, "error: out of memory\n");
-		exit(1);
-	}
 	if(multi) {
 		if(!dnslook(ctx, realq, LDNS_RR_TYPE_A, c, 1)) {
 			/* domain exists, lookup more */
@@ -365,8 +374,16 @@ int main(int argc, char* argv[])
 	int c;
 	char* qclass = NULL;
 	char* qtype = NULL;
+	struct ub_val_ctx* ctx = NULL;
+	
+	ctx = ub_val_ctx_create();
+	if(!ctx) {
+		fprintf(stderr, "error: out of memory\n");
+		exit(1);
+	}
+
 	/* parse the options */
-	while( (c=getopt(argc, argv, "c:ht:v")) != -1) {
+	while( (c=getopt(argc, argv, "F:c:f:ht:vy:")) != -1) {
 		switch(c) {
 		case 'c':
 			qclass = optarg;
@@ -376,6 +393,15 @@ int main(int argc, char* argv[])
 			break;
 		case 'v':
 			verb++;
+			break;
+		case 'y':
+			ub_val_ctx_add_ta(ctx, optarg);
+			break;
+		case 'f':
+			ub_val_ctx_add_ta_file(ctx, optarg);
+			break;
+		case 'F':
+			ub_val_ctx_trustedkeys(ctx, optarg);
 			break;
 		case '?':
 		case 'h':
@@ -388,6 +414,6 @@ int main(int argc, char* argv[])
 	if(argc != 1)
 		usage();
 
-	lookup(argv[0], qtype, qclass);
+	lookup(ctx, argv[0], qtype, qclass);
 	return 0;
 }

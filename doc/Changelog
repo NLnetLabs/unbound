@@ -2,6 +2,8 @@
 	- library resolution works in foreground mode, unbound-host app
 	  receives data.
 	- unbound-host prints rdata using ldns.
+	- unbound-host accepts trust anchors, and prints validation
+	  information when you give -v.
 
 5 December 2007: Wouter
 	- locking in context_new() inside the function.

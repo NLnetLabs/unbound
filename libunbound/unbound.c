@@ -184,6 +184,25 @@ ub_val_ctx_add_ta(struct ub_val_ctx* ctx, char* ta)
 }
 
 int 
+ub_val_ctx_add_ta_file(struct ub_val_ctx* ctx, char* fname)
+{
+	char* dup = strdup(fname);
+	if(!dup) return UB_NOMEM;
+	lock_basic_lock(&ctx->cfglock);
+	if(ctx->finalized) {
+		lock_basic_unlock(&ctx->cfglock);
+		return UB_AFTERFINAL;
+	}
+	if(!cfg_strlist_insert(&ctx->env->cfg->trust_anchor_file_list, dup)) {
+		lock_basic_unlock(&ctx->cfglock);
+		free(dup);
+		return UB_NOMEM;
+	}
+	lock_basic_unlock(&ctx->cfglock);
+	return UB_NOERROR;
+}
+
+int 
 ub_val_ctx_trustedkeys(struct ub_val_ctx* ctx, char* fname)
 {
 	char* dup = strdup(fname);
