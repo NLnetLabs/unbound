@@ -1174,8 +1174,9 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 		iq->chase_flags, EDNS_DO|BIT_CD, 
 		&target->addr, target->addrlen, qstate);
 	if(!outq) {
-		log_err("error sending query to auth server; skip this address");
-		log_addr(0, "error for address:", 
+		verbose(VERB_OPS, "error sending query to auth server; "
+			"skip this address");
+		log_addr(VERB_OPS, "error for address:", 
 			&target->addr, target->addrlen);
 		return next_state(iq, QUERYTARGETS_STATE);
 	}

@@ -49,6 +49,10 @@ struct comm_base;
 struct outside_network;
 struct ub_randstate;
 struct ctx_query;
+struct outbound_entry;
+struct module_qstate;
+struct comm_point;
+struct comm_reply;
 
 /** 
  * The library-worker status structure
@@ -72,8 +76,16 @@ struct libworker {
 
 	/** random() table for this worker. */
 	struct ub_randstate* rndstate;
-	/** do we need to exit (when done) */
-	int need_to_exit;
+};
+
+/**
+ * Foreground query cb struct
+ */
+struct libworker_fg_data {
+	/** the worker involved */
+	struct libworker* w;
+	/** the query involved */
+	struct ctx_query* q;
 };
 
 /**
@@ -96,5 +108,49 @@ int libworker_bg(struct ub_val_ctx* ctx);
  * @return 0 if finished OK, else error.
  */
 int libworker_fg(struct ub_val_ctx* ctx, struct ctx_query* q);
+
+/** cleanup the cache to remove all rrset IDs from it, arg is libworker */
+void libworker_alloc_cleanup(void* arg);
+
+/**
+ * Worker service routine to send udp messages for modules.
+ * @param pkt: packet to send.
+ * @param addr: where to.
+ * @param addrlen: length of addr.
+ * @param timeout: seconds to wait until timeout.
+ * @param q: wich query state to reactivate upon return.
+ * @param use_tcp: true to use TCP, false for UDP.
+ * @return: false on failure (memory or socket related). no query was
+ *      sent.
+ */
+int libworker_send_packet(ldns_buffer* pkt, struct sockaddr_storage* addr,
+        socklen_t addrlen, int timeout, struct module_qstate* q, int use_tcp);
+
+/**
+ * Worker service routine to send serviced queries to authoritative servers.
+ * @param qname: query name. (host order)
+ * @param qnamelen: length in bytes of qname, including trailing 0.
+ * @param qtype: query type. (host order)
+ * @param qclass: query class. (host order)
+ * @param flags: host order flags word, with opcode and CD bit.
+ * @param dnssec: if set, EDNS record will have DO bit set.
+ * @param addr: where to.
+ * @param addrlen: length of addr.
+ * @param q: wich query state to reactivate upon return.
+ * @return: false on failure (memory or socket related). no query was
+ *      sent.
+ */
+struct outbound_entry* libworker_send_query(uint8_t* qname, size_t qnamelen,
+        uint16_t qtype, uint16_t qclass, uint16_t flags, int dnssec,
+        struct sockaddr_storage* addr, socklen_t addrlen,
+        struct module_qstate* q);
+
+/** process incoming replies from the network */
+int libworker_handle_reply(struct comm_point* c, void* arg, int error,
+        struct comm_reply* reply_info);
+
+/** process incoming serviced query replies from the network */
+int libworker_handle_service_reply(struct comm_point* c, void* arg, int error,
+        struct comm_reply* reply_info);
 
 #endif /* LIBUNBOUND_WORKER_H */

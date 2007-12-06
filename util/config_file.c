@@ -45,6 +45,7 @@
 #include "util/configyyrename.h"
 #include "util/config_file.h"
 #include "util/configparser.h"
+#include "util/net_help.h"
 /** global config during parsing */
 struct config_parser_state* cfg_parser = 0;
 /** lex in file */
@@ -137,6 +138,24 @@ config_create()
 error_exit:
 	config_delete(cfg); 
 	return NULL;
+}
+
+struct config_file* config_create_forlib()
+{
+	struct config_file* cfg = config_create();
+	if(!cfg) return NULL;
+	/* modifications for library use, less verbose, less memory */
+	cfg->verbosity = 0;
+	cfg->outgoing_num_tcp = 2;
+	cfg->msg_cache_size = 1024*1024;
+	cfg->msg_cache_slabs = 1;
+	cfg->rrset_cache_size = 1024*1024;
+	cfg->rrset_cache_slabs = 1;
+	cfg->infra_cache_slabs = 1;
+	cfg->use_syslog = 0;
+	cfg->key_cache_size = 1024*1024;
+	cfg->key_cache_slabs = 1;
+	return cfg;
 }
 
 /** initialize the global cfg_parser object */
@@ -375,3 +394,4 @@ config_apply(struct config_file* config)
 {
 	MAX_TTL = (uint32_t)config->max_ttl;
 }
+

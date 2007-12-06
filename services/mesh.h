@@ -53,6 +53,7 @@
 #include "services/modstack.h"
 struct mesh_state;
 struct mesh_reply;
+struct mesh_cb;
 struct query_info;
 struct reply_info;
 struct outbound_entry;
@@ -116,6 +117,8 @@ struct mesh_state {
 	struct module_qstate s;
 	/** the list of replies to clients for the results */
 	struct mesh_reply* reply_list;
+	/** the list of callbacks for the results */
+	struct mesh_cb* cb_list;
 	/** set of superstates (that want this state's result) 
 	 * contains struct mesh_state_ref* */
 	rbtree_t super_set;
@@ -155,6 +158,35 @@ struct mesh_reply {
 	uint16_t qflags;
 };
 
+/** 
+ * Mesh result callback func.
+ * called as func(cb_arg, rcode, buffer_with_reply, security);
+ * */
+typedef void (*mesh_cb_func_t)(void*, int, ldns_buffer*, enum sec_status);
+
+/**
+ * Callback to result routine
+ */
+struct mesh_cb {
+	/** next in list */
+	struct mesh_cb* next;
+	/** edns data from query */
+	struct edns_data edns;
+	/** id of query, in network byteorder. */
+	uint16_t qid;
+	/** flags of query, for reply flags */
+	uint16_t qflags;
+	/** buffer for reply */
+	ldns_buffer* buf;
+
+	/** callback routine for results. if rcode != 0 buf has message.
+	 * called as cb(cb_arg, rcode, buf);
+	 */
+	mesh_cb_func_t cb;
+	/** user arg for callback */
+	void* cb_arg;
+};
+
 /* ------------------- Functions for worker -------------------- */
 
 /**
@@ -187,6 +219,25 @@ void mesh_delete(struct mesh_area* mesh);
 void mesh_new_client(struct mesh_area* mesh, struct query_info* qinfo,
 	uint16_t qflags, struct edns_data* edns, struct comm_reply* rep, 
 	uint16_t qid);
+
+/**
+ * New query with callback. Create new query state if needed, and
+ * add mesh_cb to it. 
+ * Will run the mesh area queries to process if a new query state is created.
+ *
+ * @param mesh: the mesh.
+ * @param qinfo: query from client.
+ * @param qflags: flags from client query.
+ * @param edns: edns data from client query.
+ * @param buf: buffer for reply contents.
+ * @param qid: query id to reply with.
+ * @param cb: callback function.
+ * @param cb_arg: callback user arg.
+ * @return 0 on error.
+ */
+int mesh_new_callback(struct mesh_area* mesh, struct query_info* qinfo,
+	uint16_t qflags, struct edns_data* edns, ldns_buffer* buf, 
+	uint16_t qid, mesh_cb_func_t cb, void* cb_arg);
 
 /**
  * Handle new event from the wire. A serviced query has returned.
@@ -328,6 +379,22 @@ int mesh_state_attachment(struct mesh_state* super, struct mesh_state* sub);
  */
 int mesh_state_add_reply(struct mesh_state* s, struct edns_data* edns, 
 	struct comm_reply* rep, uint16_t qid, uint16_t qflags);
+
+/**
+ * Create new callback structure and attach it to a mesh state.
+ * Does not update stat items in mesh area.
+ * @param s: the mesh state.
+ * @param edns: edns data for reply (bufsize).
+ * @param buf: buffer for reply
+ * @param cb: callback to call with results.
+ * @param cb_arg: callback user arg.
+ * @param qid: ID of reply.
+ * @param qflags: original query flags.
+ * @return: 0 on alloc error.
+ */
+int mesh_state_add_cb(struct mesh_state* s, struct edns_data* edns,
+        ldns_buffer* buf, mesh_cb_func_t cb, void* cb_arg, uint16_t qid, 
+	uint16_t qflags);
 
 /**
  * Run the mesh. Run all runnable mesh states. Which can create new

@@ -44,6 +44,9 @@
 #include "libunbound/unbound.h"
 #include <ldns/ldns.h>
 
+/** verbosity for unbound-host app */
+static int verb = 0;
+
 /** Give unbound-host usage, and exit (1). */
 static void
 usage()
@@ -54,6 +57,7 @@ usage()
 	printf("  If an ip-address is given a reverse lookup is done.\n");
 	printf("-t type		what type to look for.\n");
 	printf("-c class	what class to look for, if not class IN.\n");
+	printf("-v		be more verbose.\n");
 	printf("-h		show this usage help.\n");
 	printf("Version %s\n", PACKAGE_VERSION);
 	printf("BSD licensed, see LICENSE in source package for details.\n");
@@ -204,11 +208,55 @@ pretty_rcode(char* s, size_t len, int r)
 	}
 }
 
+/** convert and print rdata */
+static void
+print_rd(int t, char* data, size_t len)
+{
+	/*
+	size_t i, pos = 0;
+	ldns_status status;
+	ldns_rr* rr = ldns_rr_new_frm_type(t);
+	ldns_rr_set_owner(rr, NULL);
+	status = ldns_wire2rdf(rr, (uint8_t*)data, len, &pos);
+	if(status != LDNS_STATUS_OK) {
+	
+		printf("error_printing_data");
+	}
+	printf("len = %d\n", len);
+	for(i=0; i<ldns_rr_rd_count(rr); i++) {
+		ldns_rdf_print(stdout, ldns_rr_rdf(rr, i));
+	}
+	ldns_rr_free(rr);
+	*/
+	printf("TODO");
+}
+
+/** pretty line of RR data for results */
+static void
+pretty_rdata(char* q, char* cstr, char* tstr, int t, const char* sec, 
+	char* data, size_t len)
+{
+	printf("%s", q);
+	if(strcmp(cstr, "IN") != 0)
+		printf(" in class %s", cstr);
+	if(t == LDNS_RR_TYPE_A)
+		printf(" has address ");
+	else if(t == LDNS_RR_TYPE_AAAA)
+		printf(" has IPv6 address ");
+	else if(t == LDNS_RR_TYPE_MX)
+		printf(" mail is handled by ");
+	else	printf(" has %s record ", tstr);
+	print_rd(t, data, len);
+	printf(" %s", sec);
+	printf("\n");
+}
+
 /** pretty line of output for results */
 static void
 pretty_output(char* q, int t, int c, int sec, int haved, 
-	struct ub_val_result* result)
+	struct ub_val_result* result, int docname)
 {
+	int i;
 	const char *secstatus = statstr(sec, result);
 	char tstr[16];
 	char cstr[16];
@@ -222,29 +270,41 @@ pretty_output(char* q, int t, int c, int sec, int haved,
 			q, result->rcode, rcodestr, secstatus);
 		return;
 	}
+	if(docname && result->canonname &&
+		result->canonname != result->qname)
+		printf("%s is an alias for %s\n", result->qname, 
+			result->canonname);
 	if(!haved) {
-		printf("%s %s %s: no data. %s\n",
-			q, cstr, tstr, secstatus);
+		if(verb > 0)
+			printf("%s %s %s: no data. %s\n",
+				q, cstr, tstr, secstatus);
+		/* else: emptiness to indicate no data */
 		return;
 	}
-	printf("%s %s %s: have data. %s\n",
-		q, cstr, tstr, secstatus);
-	/* TODO print the data nicely */
+	i=0;
+	while(result->data[i])
+	{
+		pretty_rdata(
+			result->canonname?result->canonname:q,
+			cstr, tstr, t, secstatus, result->data[i],
+			result->len[i]);
+		i++;
+	}
 }
 
 /** perform a lookup and printout return if domain existed */
 static int
-dnslook(struct ub_val_ctx* ctx, char* q, int t, int c)
+dnslook(struct ub_val_ctx* ctx, char* q, int t, int c, int docname)
 {
 	int ret, sec, haved;
 	struct ub_val_result* result;
 
 	ret = ub_val_resolve(ctx, q, t, c, &sec, &haved, &result);
 	if(ret != 0) {
-		fprintf(stderr, "error: %s\n", ub_val_strerror(ret));
+		fprintf(stderr, "resolve error: %s\n", ub_val_strerror(ret));
 		exit(1);
 	}
-	pretty_output(q, t, c, sec, haved, result);
+	pretty_output(q, t, c, sec, haved, result, docname);
 	ret = result->nxdomain;
 	ub_val_result_free(result);
 	return ret;
@@ -264,21 +324,22 @@ lookup(const char* nm, const char* qt, const char* qc)
 	/* perform the query */
 	struct ub_val_ctx* ctx = NULL;
 	
-	printf("lookup %s %d %d reverse=%d multi=%d\n", 
-		realq, t, c, reverse, multi);
+	if(verb>0)
+		printf("lookup %s %d %d reverse=%d multi=%d\n", 
+			realq, t, c, reverse, multi);
 	ctx = ub_val_ctx_create();
 	if(!ctx) {
 		fprintf(stderr, "error: out of memory\n");
 		exit(1);
 	}
 	if(multi) {
-		if(!dnslook(ctx, realq, LDNS_RR_TYPE_A, c)) {
+		if(!dnslook(ctx, realq, LDNS_RR_TYPE_A, c, 1)) {
 			/* domain exists, lookup more */
-			(void)dnslook(ctx, realq, LDNS_RR_TYPE_AAAA, c);
-			(void)dnslook(ctx, realq, LDNS_RR_TYPE_MX, c);
+			(void)dnslook(ctx, realq, LDNS_RR_TYPE_AAAA, c, 0);
+			(void)dnslook(ctx, realq, LDNS_RR_TYPE_MX, c, 0);
 		}
 	} else {
-		(void)dnslook(ctx, realq, t, c);
+		(void)dnslook(ctx, realq, t, c, 1);
 	}
 	ub_val_ctx_delete(ctx);
 	free(realq);
@@ -296,13 +357,16 @@ int main(int argc, char* argv[])
 	char* qclass = NULL;
 	char* qtype = NULL;
 	/* parse the options */
-	while( (c=getopt(argc, argv, "c:ht:")) != -1) {
+	while( (c=getopt(argc, argv, "c:ht:v")) != -1) {
 		switch(c) {
 		case 'c':
 			qclass = optarg;
 			break;
 		case 't':
 			qtype = optarg;
+			break;
+		case 'v':
+			verb++;
 			break;
 		case '?':
 		case 'h':

@@ -45,39 +45,109 @@
 #include "libunbound/worker.h"
 #include "libunbound/context.h"
 #include "libunbound/unbound.h"
+#include "services/outside_network.h"
+#include "services/mesh.h"
+#include "services/cache/rrset.h"
+#include "services/outbound_list.h"
+#include "util/module.h"
+#include "util/regional.h"
+#include "util/random.h"
+#include "util/config_file.h"
+#include "util/netevent.h"
+#include "util/storage/slabhash.h"
+#include "util/net_help.h"
+#include "util/data/dname.h"
+
+/** size of table used for random numbers. large to be more secure. */
+#define RND_STATE_SIZE 256
 
 /** delete libworker struct */
 static void
 libworker_delete(struct libworker* w)
 {
 	if(!w) return;
-	lock_basic_lock(&w->ctx->cfglock);
-	/* return alloc */
-	lock_basic_unlock(&w->ctx->cfglock);
-
+	if(w->env) {
+		mesh_delete(w->env->mesh);
+		context_release_alloc(w->ctx, w->env->alloc);
+		ldns_buffer_free(w->env->scratch_buffer);
+		regional_destroy(w->env->scratch);
+		ub_randfree(w->env->rnd);
+		free(w->env->rnd);
+		free(w->env);
+	}
+	outside_network_delete(w->back);
+	comm_base_delete(w->base);
+	free(w);
 }
 
 /** setup fresh libworker struct */
 static struct libworker*
 libworker_setup(struct ub_val_ctx* ctx)
 {
+	unsigned int seed;
 	struct libworker* w = (struct libworker*)calloc(1, sizeof(*w));
+	struct config_file* cfg = ctx->env->cfg;
 	if(!w) return NULL;
 	w->ctx = ctx;
-	lock_basic_lock(&ctx->cfglock);
-	/* obtain a new alloc */
-	lock_basic_unlock(&ctx->cfglock);
-	/* setup event base */
-	/* setup outnet */
-	/* setup rnd */
-	/* setup env */
-	/* setup env.scratch */
-	/* setup env.scratch_buffer */
-	/* setup env.worker */
-	/* setup env.mesh */
-	/* setup env.alloc */
-	/* setup env.rnd */
-	/* setup env - callback ptrs */
+	w->env = (struct module_env*)malloc(sizeof(*w->env));
+	if(!w->env) {
+		free(w);
+		return NULL;
+	}
+	*w->env = *ctx->env;
+	w->env->alloc = context_obtain_alloc(ctx);
+	if(!w->env->alloc) {
+		libworker_delete(w);
+		return NULL;
+	}
+	alloc_set_id_cleanup(w->env->alloc, &libworker_alloc_cleanup, w);
+	w->env->scratch = regional_create_custom(cfg->msg_buffer_size);
+	w->env->scratch_buffer = ldns_buffer_new(cfg->msg_buffer_size);
+	if(!w->env->scratch || !w->env->scratch_buffer) {
+		libworker_delete(w);
+		return NULL;
+	}
+	w->env->rnd = (struct ub_randstate*)calloc(1, sizeof(*w->env->rnd));
+	if(!w->env->rnd) {
+		libworker_delete(w);
+		return NULL;
+	}
+	w->env->worker = (struct worker*)w;
+	seed = (unsigned int)time(NULL) ^ (unsigned int)getpid() ^
+		(((unsigned int)w->thread_num)<<17);
+	seed ^= (unsigned int)w->env->alloc->next_id;
+	if(!ub_initstate(seed, w->env->rnd, RND_STATE_SIZE)) {
+		seed = 0;
+		libworker_delete(w);
+		return NULL;
+	}
+	seed = 0;
+
+	w->base = comm_base_create();
+	if(!w->base) {
+		libworker_delete(w);
+		return NULL;
+	}
+	w->back = outside_network_create(w->base, cfg->msg_buffer_size,
+		(size_t)cfg->outgoing_num_ports, cfg->out_ifs,
+		cfg->num_out_ifs, cfg->do_ip4, cfg->do_ip6, -1, 
+		cfg->do_tcp?cfg->outgoing_num_tcp:0,
+		w->env->infra_cache, w->env->rnd);
+	if(!w->back) {
+		libworker_delete(w);
+		return NULL;
+	}
+	w->env->mesh = mesh_create(&ctx->mods, w->env);
+	if(!w->env->mesh) {
+		libworker_delete(w);
+		return NULL;
+	}
+	w->env->send_packet = &libworker_send_packet;
+	w->env->send_query = &libworker_send_query;
+	w->env->detach_subs = &mesh_detach_subs;
+	w->env->attach_sub = &mesh_attach_sub;
+	w->env->kill_sub = &mesh_state_delete;
+	w->env->detect_cycle = &mesh_detect_cycle;
 	return w;
 }
 
@@ -96,38 +166,350 @@ libworker_dobg(void* arg)
 int libworker_bg(struct ub_val_ctx* ctx)
 {
 	/* fork or threadcreate */
-	lock_basic_lock(&ctx->cfglock);
 	if(ctx->dothread) {
-		ub_thread_t t;
-		lock_basic_unlock(&ctx->cfglock);
-		ub_thread_create(&t, libworker_dobg, ctx);
-		/* ctx.tid = t or so */
+		ub_thread_create(&ctx->bg_tid, libworker_dobg, ctx);
 	} else {
-		pid_t p;
-		lock_basic_unlock(&ctx->cfglock);
-		switch((p=fork())) {
+		switch((ctx->bg_pid=fork())) {
 			case 0:
+				lock_basic_unlock(&ctx->cfglock);
 				(void)libworker_dobg(ctx);
 				exit(0);
 				break;
 			case -1:
-				/* TODO make UB_FORKFAILED */
-				return UB_SOCKET;
+				lock_basic_unlock(&ctx->cfglock);
+				return UB_FORKFAIL;
 			default:
-				/* ctx.pid = p or so */
 				break;
 		}
 	}
+	lock_basic_unlock(&ctx->cfglock);
 	return UB_NOERROR;
+}
+
+/** get msg reply struct (in temp region) */
+static struct reply_info*
+parse_reply(ldns_buffer* pkt, struct regional* region, struct query_info* qi)
+{
+	struct reply_info* rep;
+	struct msg_parse* msg;
+	if(!(msg = regional_alloc(region, sizeof(*msg)))) {
+		return NULL;
+	}
+	memset(msg, 0, sizeof(*msg));
+	ldns_buffer_set_position(pkt, 0);
+	if(parse_packet(pkt, msg, region) != 0)
+		return 0;
+	if(!parse_create_msg(pkt, msg, NULL, qi, &rep, region)) {
+		return 0;
+	}
+	return rep;
+}
+
+/** fill data into result */
+static int
+fill_res(struct ub_val_result* res, struct ub_packed_rrset_key* answer,
+	struct query_info* rq)
+{
+	size_t i;
+	struct packed_rrset_data* data;
+	if(!answer) {
+		res->data = calloc(1, sizeof(char*));
+		res->len = calloc(1, sizeof(size_t));
+		return (res->data && res->len);
+	}
+	data = (struct packed_rrset_data*)answer->entry.data;
+	if(query_dname_compare(rq->qname, answer->rk.dname) != 0) {
+		char buf[255+2];
+		dname_str(answer->rk.dname, buf);
+		res->canonname = strdup(buf);
+		if(!res->canonname)
+			return 0; /* out of memory */
+	} else
+		res->canonname = res->qname;
+	res->data = calloc(data->count+1, sizeof(char*));
+	res->len = calloc(data->count+1, sizeof(size_t));
+	if(!res->data || !res->len)
+		return 0; /* out of memory */
+	for(i=0; i<data->count; i++) {
+		/* remove rdlength from rdata */
+		res->len[i] = data->rr_len[i] - 2;
+		res->data[i] = memdup(data->rr_data[i]+2, res->len[i]);
+		if(!res->data[i])
+			return 0; /* out of memory */
+	}
+	res->data[data->count] = NULL;
+	res->len[data->count] = 0;
+	return 1;
+}
+
+/** callback with fg results */
+static void
+libworker_fg_done_cb(void* arg, int rcode, ldns_buffer* buf, enum sec_status s)
+{
+	struct query_info rq; /* replied query */
+	struct reply_info* rep;
+	struct libworker_fg_data* d = (struct libworker_fg_data*)arg;
+	/* fg query is done; exit comm base */
+	comm_base_exit(d->w->base);
+
+	if(rcode != 0) {
+		d->q->res->rcode = rcode;
+		d->q->msg_security = 0;
+		return;
+	}
+
+	d->q->res->rcode = LDNS_RCODE_SERVFAIL;
+	d->q->msg_security = 0;
+	d->q->msg = memdup(ldns_buffer_begin(buf), ldns_buffer_limit(buf));
+	d->q->msg_len = ldns_buffer_limit(buf);
+	if(!d->q->msg) {
+		return; /* error in rcode */
+	}
+
+	/* canonname and results */
+	rep = parse_reply(buf, d->w->env->scratch, &rq);
+	if(!rep) {
+		return; /* error parsing buf, or out of memory */
+	}
+	/* log_dns_msg("fg reply", &rq, rep); @@@ DEBUG */
+	if(!fill_res(d->q->res, reply_find_answer_rrset(&rq, rep), &rq))
+		return; /* out of memory */
+	/* rcode, nxdomain, bogus */
+	d->q->res->rcode = (int)LDNS_RCODE_WIRE(d->q->msg);
+	if(d->q->res->rcode == LDNS_RCODE_NXDOMAIN)
+		d->q->res->nxdomain = 1;
+	if(d->q->msg_security == sec_status_bogus)
+		d->q->res->bogus = 1;
+
+	d->q->msg_security = s;
+}
+
+/** setup qinfo and edns */
+static int
+setup_qinfo_edns(struct libworker* w, struct ctx_query* q, 
+	struct query_info* qinfo, struct edns_data* edns)
+{
+	ldns_rdf* rdf;
+	qinfo->qtype = (uint16_t)q->res->qtype;
+	qinfo->qclass = (uint16_t)q->res->qclass;
+	rdf = ldns_dname_new_frm_str(q->res->qname);
+	if(!rdf) {
+		return 0;
+	}
+	qinfo->qname = ldns_rdf_data(rdf);
+	qinfo->qname_len = ldns_rdf_size(rdf);
+	edns->edns_present = 1;
+	edns->ext_rcode = 0;
+	edns->edns_version = 0;
+	edns->bits = EDNS_DO;
+	if(ldns_buffer_capacity(w->back->udp_buff) < 65535)
+		edns->udp_size = (uint16_t)ldns_buffer_capacity(
+			w->back->udp_buff);
+	else	edns->udp_size = 65535;
+	ldns_rdf_free(rdf);
+	return 1;
 }
 
 int libworker_fg(struct ub_val_ctx* ctx, struct ctx_query* q)
 {
 	struct libworker* w = libworker_setup(ctx);
+	uint16_t qflags, qid;
+	struct query_info qinfo;
+	struct edns_data edns;
+	struct libworker_fg_data d;
 	if(!w)
+		return UB_INITFAIL;
+	if(!setup_qinfo_edns(w, q, &qinfo, &edns)) {
+		libworker_delete(w);
+		return UB_SYNTAX;
+	}
+	qid = 0;
+	qflags = BIT_RD;
+	d.q = q;
+	d.w = w;
+	if(!mesh_new_callback(w->env->mesh, &qinfo, qflags, &edns, 
+		w->back->udp_buff, qid, libworker_fg_done_cb, &d)) {
+		free(qinfo.qname);
 		return UB_NOMEM;
-	/* TODO */
-	q->res->bogus = 1;
+	}
+	free(qinfo.qname);
+	comm_base_dispatch(w->base);
 	libworker_delete(w);
 	return UB_NOERROR;
+}
+
+void libworker_alloc_cleanup(void* arg)
+{
+	struct libworker* w = (struct libworker*)arg;
+	slabhash_clear(&w->env->rrset_cache->table);
+        slabhash_clear(w->env->msg_cache);
+}
+
+int libworker_send_packet(ldns_buffer* pkt, struct sockaddr_storage* addr,
+        socklen_t addrlen, int timeout, struct module_qstate* q, int use_tcp)
+{
+	struct libworker* w = (struct libworker*)q->env->worker;
+	if(use_tcp) {
+		return pending_tcp_query(w->back, pkt, addr, addrlen,
+			timeout, libworker_handle_reply, q, 
+			q->env->rnd) != 0;
+	}
+	return pending_udp_query(w->back, pkt, addr, addrlen,
+		timeout*1000, libworker_handle_reply, q, 
+		q->env->rnd) != 0;
+}
+
+/** compare outbound entry qstates */
+static int
+outbound_entry_compare(void* a, void* b)
+{
+        struct outbound_entry* e1 = (struct outbound_entry*)a;
+        struct outbound_entry* e2 = (struct outbound_entry*)b;
+        if(e1->qstate == e2->qstate)
+                return 1;
+        return 0;
+}
+
+struct outbound_entry* libworker_send_query(uint8_t* qname, size_t qnamelen,
+        uint16_t qtype, uint16_t qclass, uint16_t flags, int dnssec,
+        struct sockaddr_storage* addr, socklen_t addrlen,
+        struct module_qstate* q)
+{
+	struct libworker* w = (struct libworker*)q->env->worker;
+	struct outbound_entry* e = (struct outbound_entry*)regional_alloc(
+		q->region, sizeof(*e));
+	if(!e)
+		return NULL;
+	e->qstate = q;
+	e->qsent = outnet_serviced_query(w->back, qname,
+		qnamelen, qtype, qclass, flags, dnssec, addr, addrlen,
+		libworker_handle_service_reply, e, w->back->udp_buff,
+		&outbound_entry_compare);
+	if(!e->qsent) {
+		return NULL;
+	}
+	return e;
+}
+
+int 
+libworker_handle_reply(struct comm_point* c, void* arg, int error,
+        struct comm_reply* reply_info)
+{
+	struct module_qstate* q = (struct module_qstate*)arg;
+	struct libworker* lw = (struct libworker*)q->env->worker;
+	struct outbound_entry e;
+	e.qstate = q;
+	e.qsent = NULL;
+
+	if(error != 0) {
+		mesh_report_reply(lw->env->mesh, &e, 0, reply_info);
+		return 0;
+	}
+	/* sanity check. */
+	if(!LDNS_QR_WIRE(ldns_buffer_begin(c->buffer))
+		|| LDNS_OPCODE_WIRE(ldns_buffer_begin(c->buffer)) !=
+			LDNS_PACKET_QUERY
+		|| LDNS_QDCOUNT(ldns_buffer_begin(c->buffer)) > 1) {
+		/* error becomes timeout for the module as if this reply
+		 * never arrived. */
+		mesh_report_reply(lw->env->mesh, &e, 0, reply_info);
+		return 0;
+	}
+	mesh_report_reply(lw->env->mesh, &e, 1, reply_info);
+	return 0;
+}
+
+int 
+libworker_handle_service_reply(struct comm_point* c, void* arg, int error,
+        struct comm_reply* reply_info)
+{
+	struct outbound_entry* e = (struct outbound_entry*)arg;
+	struct libworker* lw = (struct libworker*)e->qstate->env->worker;
+
+	if(error != 0) {
+		mesh_report_reply(lw->env->mesh, e, 0, reply_info);
+		return 0;
+	}
+	/* sanity check. */
+	if(!LDNS_QR_WIRE(ldns_buffer_begin(c->buffer))
+		|| LDNS_OPCODE_WIRE(ldns_buffer_begin(c->buffer)) !=
+			LDNS_PACKET_QUERY
+		|| LDNS_QDCOUNT(ldns_buffer_begin(c->buffer)) > 1) {
+		/* error becomes timeout for the module as if this reply
+		 * never arrived. */
+		mesh_report_reply(lw->env->mesh, e, 0, reply_info);
+		return 0;
+	}
+	mesh_report_reply(lw->env->mesh,  e, 1, reply_info);
+	return 0;
+}
+
+/* --- fake callbacks for fptr_wlist to work --- */
+int worker_handle_control_cmd(struct comm_point* ATTR_UNUSED(c), 
+	void* ATTR_UNUSED(arg), int ATTR_UNUSED(error),
+        struct comm_reply* ATTR_UNUSED(reply_info))
+{
+	log_assert(0);
+	return 0;
+}
+
+int worker_handle_request(struct comm_point* ATTR_UNUSED(c), 
+	void* ATTR_UNUSED(arg), int ATTR_UNUSED(error),
+        struct comm_reply* ATTR_UNUSED(repinfo))
+{
+	log_assert(0);
+	return 0;
+}
+
+int worker_handle_reply(struct comm_point* ATTR_UNUSED(c), 
+	void* ATTR_UNUSED(arg), int ATTR_UNUSED(error),
+        struct comm_reply* ATTR_UNUSED(reply_info))
+{
+	log_assert(0);
+	return 0;
+}
+
+int worker_handle_service_reply(struct comm_point* ATTR_UNUSED(c), 
+	void* ATTR_UNUSED(arg), int ATTR_UNUSED(error),
+        struct comm_reply* ATTR_UNUSED(reply_info))
+{
+	log_assert(0);
+	return 0;
+}
+
+void worker_sighandler(int ATTR_UNUSED(sig), void* ATTR_UNUSED(arg))
+{
+	log_assert(0);
+}
+
+int worker_send_packet(ldns_buffer* ATTR_UNUSED(pkt), 
+	struct sockaddr_storage* ATTR_UNUSED(addr), 
+	socklen_t ATTR_UNUSED(addrlen), int ATTR_UNUSED(timeout), 
+	struct module_qstate* ATTR_UNUSED(q), int ATTR_UNUSED(use_tcp))
+{
+	log_assert(0);
+	return 0;
+}
+
+struct outbound_entry* worker_send_query(uint8_t* ATTR_UNUSED(qname), 
+	size_t ATTR_UNUSED(qnamelen), uint16_t ATTR_UNUSED(qtype), 
+	uint16_t ATTR_UNUSED(qclass), uint16_t ATTR_UNUSED(flags), 
+	int ATTR_UNUSED(dnssec), struct sockaddr_storage* ATTR_UNUSED(addr), 
+	socklen_t ATTR_UNUSED(addrlen), struct module_qstate* ATTR_UNUSED(q))
+{
+	log_assert(0);
+	return 0;
+}
+
+void 
+worker_alloc_cleanup(void* ATTR_UNUSED(arg))
+{
+	log_assert(0);
+}
+
+int
+acl_list_cmp(const void* ATTR_UNUSED(k1), const void* ATTR_UNUSED(k2))
+{
+	log_assert(0);
+	return 0;
 }

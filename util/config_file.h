@@ -240,6 +240,12 @@ struct config_str2list {
 struct config_file* config_create();
 
 /**
+ * Create config file structure for library use. Filled with default values.
+ * @return: the new structure or NULL on memory error.
+ */
+struct config_file* config_create_forlib();
+
+/**
  * Read the config file from the specified filename.
  * @param config: where options are stored into, must be freshly created.
  * @param filename: name of configfile. If NULL nothing is done.

@@ -195,6 +195,7 @@ fatal_exit(const char *format, ...)
 	va_start(args, format);
 	log_vmsg(LOG_CRIT, "fatal error", format, args);
 	va_end(args);
+	abort();
 	exit(1);
 }
 

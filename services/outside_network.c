@@ -288,6 +288,11 @@ open_udp_port_range(const char* ifname, struct addrinfo* hints, int porthint)
 	char portstr[32];
 	if(porthint != -1)
 		snprintf(portstr, sizeof(portstr), "%d", porthint);
+	else if(!ifname) {
+		if(hints->ai_family == AF_INET)
+			ifname = "0.0.0.0";
+		else	ifname="::";
+	}
 
 	if((r=getaddrinfo(ifname, ((porthint==-1)?NULL:portstr), hints, 
 		&res)) != 0 || !res) {

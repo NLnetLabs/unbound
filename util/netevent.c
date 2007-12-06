@@ -168,7 +168,7 @@ comm_point_send_udp_msg(struct comm_point *c, ldns_buffer* packet,
 		ldns_buffer_remaining(packet), 0,
 		addr, addrlen);
 	if(sent == -1) {
-		log_err("sendto failed: %s", strerror(errno));
+		verbose(VERB_OPS, "sendto failed: %s", strerror(errno));
 		return 0;
 	} else if((size_t)sent != ldns_buffer_remaining(packet)) {
 		log_err("sent %d in place of %d bytes", 

@@ -45,6 +45,7 @@
 #include "libunbound/unbound.h"
 #include "config.h"
 #include "libunbound/context.h"
+#include "libunbound/worker.h"
 #include "util/locks.h"
 #include "util/config_file.h"
 #include "util/alloc.h"
@@ -89,7 +90,7 @@ ub_val_ctx_create()
 		errno = ENOMEM;
 		return NULL;
 	}
-	ctx->env->cfg = config_create();
+	ctx->env->cfg = config_create_forlib();
 	if(!ctx->env->cfg) {
 		ub_val_ctx_delete(ctx);
 		errno = ENOMEM;
@@ -124,9 +125,9 @@ ub_val_ctx_delete(struct ub_val_ctx* ctx)
 		na = a->super;
 		a->super = &ctx->superalloc;
 		alloc_clear(a);
+		free(a);
 		a = na;
 	}
-	alloc_clear(&ctx->superalloc);
 	local_zones_delete(ctx->local_zones);
 	lock_basic_destroy(&ctx->qqpipe_lock);
 	lock_basic_destroy(&ctx->rrpipe_lock);
@@ -142,6 +143,7 @@ ub_val_ctx_delete(struct ub_val_ctx* ctx)
 		config_delete(ctx->env->cfg);
 		free(ctx->env);
 	}
+	alloc_clear(&ctx->superalloc);
 	traverse_postorder(&ctx->queries, delq, NULL);
 	free(ctx);
 }
@@ -150,7 +152,10 @@ int
 ub_val_ctx_config(struct ub_val_ctx* ctx, char* fname)
 {
 	lock_basic_lock(&ctx->cfglock);
-	ctx->finalized = 0;
+	if(ctx->finalized) {
+		lock_basic_unlock(&ctx->cfglock);
+		return UB_AFTERFINAL;
+	}
 	if(!config_read(ctx->env->cfg, fname)) {
 		lock_basic_unlock(&ctx->cfglock);
 		return UB_SYNTAX;
@@ -165,7 +170,10 @@ ub_val_ctx_add_ta(struct ub_val_ctx* ctx, char* ta)
 	char* dup = strdup(ta);
 	if(!dup) return UB_NOMEM;
 	lock_basic_lock(&ctx->cfglock);
-	ctx->finalized = 0;
+	if(ctx->finalized) {
+		lock_basic_unlock(&ctx->cfglock);
+		return UB_AFTERFINAL;
+	}
 	if(!cfg_strlist_insert(&ctx->env->cfg->trust_anchor_list, dup)) {
 		lock_basic_unlock(&ctx->cfglock);
 		free(dup);
@@ -181,7 +189,10 @@ ub_val_ctx_trustedkeys(struct ub_val_ctx* ctx, char* fname)
 	char* dup = strdup(fname);
 	if(!dup) return UB_NOMEM;
 	lock_basic_lock(&ctx->cfglock);
-	ctx->finalized = 0;
+	if(ctx->finalized) {
+		lock_basic_unlock(&ctx->cfglock);
+		return UB_AFTERFINAL;
+	}
 	if(!cfg_strlist_insert(&ctx->env->cfg->trusted_keys_file_list, dup)) {
 		lock_basic_unlock(&ctx->cfglock);
 		free(dup);
@@ -195,7 +206,10 @@ int
 ub_val_ctx_async(struct ub_val_ctx* ctx, int dothread)
 {
 	lock_basic_lock(&ctx->cfglock);
-	ctx->finalized = 0;
+	if(ctx->finalized) {
+		lock_basic_unlock(&ctx->cfglock);
+		return UB_AFTERFINAL;
+	}
 	ctx->dothread = dothread;
 	lock_basic_unlock(&ctx->cfglock);
 	return UB_NOERROR;
@@ -233,10 +247,9 @@ int
 ub_val_ctx_wait(struct ub_val_ctx* ctx)
 {
 	lock_basic_lock(&ctx->cfglock);
-	/* TODO until no more queries outstanding */
 	while(ctx->num_async > 0) {
-		lock_basic_unlock(&ctx->cfglock);
 		lock_basic_lock(&ctx->rrpipe_lock);
+		lock_basic_unlock(&ctx->cfglock);
 		(void)pollit(ctx, NULL);
 		lock_basic_unlock(&ctx->rrpipe_lock);
 		ub_val_ctx_process(ctx);
@@ -265,10 +278,11 @@ ub_val_resolve(struct ub_val_ctx* ctx, char* name, int rrtype,
 	int rrclass, int* secure, int* data, struct ub_val_result** result)
 {
 	struct ctx_query* q;
+	int r;
 
 	lock_basic_lock(&ctx->cfglock);
 	if(!ctx->finalized) {
-		int r = context_finalize(ctx);
+		r = context_finalize(ctx);
 		if(r) {
 			lock_basic_unlock(&ctx->cfglock);
 			return r;
@@ -284,8 +298,23 @@ ub_val_resolve(struct ub_val_ctx* ctx, char* name, int rrtype,
 	*data = 0;
 	*result = NULL;
 
-	/* TODO */
-	return UB_NOMEM;
+	r = libworker_fg(ctx, q);
+	if(r) {
+		ub_val_result_free(q->res);
+		free(q);
+		return r;
+	}
+
+	if(q->msg_security == sec_status_secure)
+		*secure = 1;
+	if(q->res->data && q->res->data[0])
+		*data = 1;
+	*result = q->res;
+
+	(void)rbtree_delete(&ctx->queries, q->node.key);
+	free(q->msg);
+	free(q);
+	return UB_NOERROR;
 }
 
 int 
@@ -302,8 +331,17 @@ ub_val_resolve_async(struct ub_val_ctx* ctx, char* name, int rrtype,
 			return r;
 		}
 	}
-	/* create new ctx_query and attempt to add to the list */
+	if(!ctx->created_bg) {
+		int r = libworker_bg(ctx);
+		if(r) {
+			lock_basic_unlock(&ctx->cfglock);
+			return r;
+		}
+		ctx->created_bg = 1;
+	}
 	lock_basic_unlock(&ctx->cfglock);
+
+	/* create new ctx_query and attempt to add to the list */
 	q = context_new(ctx, name, rrtype, rrclass, callback, mydata);
 	if(!q)
 		return UB_NOMEM;
@@ -336,9 +374,11 @@ ub_val_result_free(struct ub_val_result* result)
 	char** p;
 	if(!result) return;
 	free(result->qname);
-	free(result->canonname);
-	for(p = result->data; *p; p++)
-		free(*p);
+	if(result->canonname != result->qname)
+		free(result->canonname);
+	if(result->data)
+		for(p = result->data; *p; p++)
+			free(*p);
 	free(result->data);
 	free(result->len);
 	free(result);
@@ -353,7 +393,9 @@ ub_val_strerror(int err)
 		case UB_SOCKET: return "socket io error";
 		case UB_SYNTAX: return "syntax error";
 		case UB_SERVFAIL: return "server failure";
+		case UB_FORKFAIL: return "could not fork";
 		case UB_INITFAIL: return "initialization failure";
+		case UB_AFTERFINAL: return "setting change after finalize";
 		default: return "unknown error";
 	}
 }

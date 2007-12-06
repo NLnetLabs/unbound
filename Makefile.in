@@ -87,7 +87,7 @@ SIGNIT_OBJ=$(addprefix $(BUILD),$(SIGNIT_SRC:.c=.o)) $(COMPAT_OBJ)
 MEMSTATS_SRC=testcode/memstats.c smallapp/worker_cb.c $(COMMON_SRC)
 MEMSTATS_OBJ=$(addprefix $(BUILD),$(MEMSTATS_SRC:.c=.o)) $(COMPAT_OBJ)
 LIBUNBOUND_SRC=$(patsubst $(srcdir)/%,%, \
-	$(wildcard $(srcdir)/libunbound/*.c) smallapp/worker_cb.c $(COMMON_SRC))
+	$(wildcard $(srcdir)/libunbound/*.c) $(COMMON_SRC))
 LIBUNBOUND_OBJ=$(addprefix $(BUILD),$(LIBUNBOUND_SRC:.c=.o)) $(COMPAT_OBJ)
 ALL_SRC=$(COMMON_SRC) $(UNITTEST_SRC) $(DAEMON_SRC) \
 	$(TESTBOUND_SRC) $(LOCKVERIFY_SRC) $(PKTVIEW_SRC) $(SIGNIT_SRC) \

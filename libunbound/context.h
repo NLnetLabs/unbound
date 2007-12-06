@@ -75,6 +75,13 @@ struct ub_val_ctx {
 	 */
 	int finalized;
 
+	/** is bg worker created yet ? */
+	int created_bg;
+	/** pid of bg worker process */
+	pid_t bg_pid;
+	/** tid of bg worker thread */
+	ub_thread_t bg_tid;
+
 	/** do threading (instead of forking) for async resolution */
 	int dothread;
 	/** next thread number for new threads */
@@ -155,6 +162,10 @@ enum ub_ctx_err {
 	UB_SYNTAX,
 	/** DNS service failed */
 	UB_SERVFAIL,
+	/** fork() failed */
+	UB_FORKFAIL,
+	/** cfg change after finalize() */
+	UB_AFTERFINAL,
 	/** initialization failed (bad settings) */
 	UB_INITFAIL
 };
@@ -181,5 +192,19 @@ int context_query_cmp(const void* a, const void* b);
  */
 struct ctx_query* context_new(struct ub_val_ctx* ctx, char* name, int rrtype,
         int rrclass, ub_val_callback_t cb, void* cbarg);
+
+/**
+ * Get a new alloc. Creates a new one or uses a cached one.
+ * @param ctx: context
+ * @return an alloc, or NULL on mem error.
+ */
+struct alloc_cache* context_obtain_alloc(struct ub_val_ctx* ctx);
+
+/**
+ * Release an alloc. Puts it into the cache.
+ * @param ctx: context
+ * @param alloc: alloc to relinquish.
+ */
+void context_release_alloc(struct ub_val_ctx* ctx, struct alloc_cache* alloc);
 
 #endif /* LIBUNBOUND_CONTEXT_H */

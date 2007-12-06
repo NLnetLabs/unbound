@@ -281,6 +281,7 @@ int ub_val_ctx_process(struct ub_val_ctx* ctx);
 /**
  * Perform resolution and validation of the target name.
  * @param ctx: context.
+ *	The context is finalized, and can no longer accept config changes.
  * @param name: domain name in text format (a zero terminated text string).
  * @param rrtype: type of RR in host order, 1 is A (address).
  * @param rrclass: class of RR in host order, 1 is IN (for internet).
@@ -305,6 +306,7 @@ int ub_val_resolve(struct ub_val_ctx* ctx, char* name, int rrtype,
  * @param ctx: context.
  *	If no thread or process has been created yet to perform the
  *	work in the background, it is created now.
+ *	The context is finalized, and can no longer accept config changes.
  * @param name: domain name in text format (a string).
  * @param rrtype: type of RR in host order, 1 is A.
  * @param rrclass: class of RR in host order, 1 is IN (for internet).

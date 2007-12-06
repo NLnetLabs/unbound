@@ -114,3 +114,44 @@ acl_list_cmp(const void* ATTR_UNUSED(k1), const void* ATTR_UNUSED(k2))
 	log_assert(0);
 	return 0;
 }
+
+int libworker_send_packet(ldns_buffer* ATTR_UNUSED(pkt), 
+	struct sockaddr_storage* ATTR_UNUSED(addr), 
+	socklen_t ATTR_UNUSED(addrlen), int ATTR_UNUSED(timeout), 
+	struct module_qstate* ATTR_UNUSED(q), int ATTR_UNUSED(use_tcp))
+{
+	log_assert(0);
+	return 0;
+}
+
+struct outbound_entry* libworker_send_query(uint8_t* ATTR_UNUSED(qname), 
+	size_t ATTR_UNUSED(qnamelen), uint16_t ATTR_UNUSED(qtype), 
+	uint16_t ATTR_UNUSED(qclass), uint16_t ATTR_UNUSED(flags), 
+	int ATTR_UNUSED(dnssec), struct sockaddr_storage* ATTR_UNUSED(addr), 
+	socklen_t ATTR_UNUSED(addrlen), struct module_qstate* ATTR_UNUSED(q))
+{
+	log_assert(0);
+	return 0;
+}
+
+int libworker_handle_reply(struct comm_point* ATTR_UNUSED(c), 
+	void* ATTR_UNUSED(arg), int ATTR_UNUSED(error),
+        struct comm_reply* ATTR_UNUSED(reply_info))
+{
+	log_assert(0);
+	return 0;
+}
+
+int libworker_handle_service_reply(struct comm_point* ATTR_UNUSED(c), 
+	void* ATTR_UNUSED(arg), int ATTR_UNUSED(error),
+        struct comm_reply* ATTR_UNUSED(reply_info))
+{
+	log_assert(0);
+	return 0;
+}
+
+int context_query_cmp(const void* ATTR_UNUSED(a), const void* ATTR_UNUSED(b))
+{
+	log_assert(0);
+	return 0;
+}
