@@ -291,7 +291,7 @@ libworker_fg_done_cb(void* arg, int rcode, ldns_buffer* buf, enum sec_status s)
 	d->q->res->rcode = (int)LDNS_RCODE_WIRE(d->q->msg);
 	if(d->q->res->rcode == LDNS_RCODE_NXDOMAIN)
 		d->q->res->nxdomain = 1;
-	if(d->q->msg_security == sec_status_bogus)
+	if(s == sec_status_bogus)
 		d->q->res->bogus = 1;
 
 	d->q->msg_security = s;
