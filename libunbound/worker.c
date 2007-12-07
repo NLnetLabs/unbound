@@ -246,7 +246,7 @@ fill_res(struct ub_val_result* res, struct ub_packed_rrset_key* answer,
 	for(i=0; i<data->count; i++) {
 		/* remove rdlength from rdata */
 		res->len[i] = (int)(data->rr_len[i] - 2);
-		res->data[i] = memdup(data->rr_data[i]+2, res->len[i]);
+		res->data[i] = memdup(data->rr_data[i]+2, (size_t)res->len[i]);
 		if(!res->data[i])
 			return 0; /* out of memory */
 	}
