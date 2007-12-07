@@ -72,7 +72,7 @@ usage()
 	exit(1);
 }
 
-/** determine if str is ip4 */
+/** determine if str is ip4 and put into reverse lookup format */
 static int
 isip4(const char* nm, char** res)
 {
@@ -83,13 +83,13 @@ isip4(const char* nm, char** res)
 		return 0;
 	}
 	snprintf(buf, sizeof(buf), "%u.%u.%u.%u.in-addr.arpa",
-		((uint8_t*)&addr)[3], ((uint8_t*)&addr)[2],
-		((uint8_t*)&addr)[1], ((uint8_t*)&addr)[0]);
+		(unsigned)((uint8_t*)&addr)[3], (unsigned)((uint8_t*)&addr)[2],
+		(unsigned)((uint8_t*)&addr)[1], (unsigned)((uint8_t*)&addr)[0]);
 	*res = strdup(buf);
 	return 1;
 }
 
-/** determine if str is ip6 */
+/** determine if str is ip6 and put into reverse lookup format */
 static int
 isip6(const char* nm, char** res)
 {
@@ -112,6 +112,10 @@ isip6(const char* nm, char** res)
 	}
 	snprintf(buf+16*4, sizeof(buf)-16*4, "ip6.arpa");
 	*res = strdup(buf);
+	if(!*res) {
+		fprintf(stderr, "error: out of memory\n");
+		exit(1);
+	}
 	return 1;
 }
 
@@ -183,7 +187,7 @@ statstr(int sec, struct ub_val_result* result)
 static void
 pretty_type(char* s, size_t len, int t)
 {
-	const ldns_rr_descriptor *d = ldns_rr_descript(t);
+	const ldns_rr_descriptor *d = ldns_rr_descript((uint16_t)t);
 	if(d) {
 		snprintf(s, len, "%s", d->_name);
 	} else {

@@ -7,6 +7,7 @@
 	- updated ldns-src.tar.gz with ldns-trunk today (1.2.2 fixes).
 	- size_t to int for portability of the header file.
 	- fixup bogus handling.
+	- dependencies and lint for unbound-host.
 
 6 December 2007: Wouter
 	- library resolution works in foreground mode, unbound-host app
