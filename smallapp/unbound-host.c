@@ -51,7 +51,7 @@ static int verb = 0;
 static void
 usage()
 {
-	printf("Usage:	unbound-host [-c class] [-t type] hostname\n");
+	printf("Usage:	unbound-host [-vdh] [-c class] [-t type] hostname\n");
 	printf("                     [-y key] [-f keyfile] [-F named.conf]\n");
 	printf("  Queries the DNS for information.\n");
 	printf("  The hostname is looked up for IP4, IP6 and mail.\n");

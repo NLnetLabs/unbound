@@ -1,0 +1,79 @@
+.\"
+.\" unbound-host.1 -- unbound DNS lookup utility
+.\"
+.\" Copyright (c) 2007, NLnet Labs. All rights reserved.
+.\"
+.\" See LICENSE for the license.
+.\"
+.\"
+.Dd @date@
+.Dt unbound-host 1
+.Sh NAME
+unbound-host
+.Nd unbound DNS lookup utility
+.Sh SYNOPSIS
+.Nm unbound-host
+.Op Fl vdh
+.Op Fl c Ar class
+.Op Fl t Ar type
+hostname
+.Op Fl y Ar key
+.Op Fl f Ar keyfile
+.Op Fl F Ar namedkeyfile
+.Sh DESCRIPTION
+.Ic Unbound-host
+Uses the unbound validating resolver to query for the hostname and display
+results. With the \fB-v\fR option it displays validation 
+status: secure, insecure, bogus (security failure).
+
+.Pp
+The available options are:
+.Bl -tag -width indent
+.It hostname
+This name is resolved (looked up in the DNS).
+If a IPv4 or IPv6 address is given, a reverse lookup is performed.
+.It Fl h
+Show the version and commandline option help.
+.It Fl v
+Enable verbose output and it shows validation results, on every line.
+Secure means that the NXDOMAIN (no such domain name), nodata (no such data)
+or positive data response validated correctly with one of the keys.
+Insecure means that that domain name has no security set up for it.
+Bogus (security failure) means that the response failed one or more checks,
+it is likely wrong, outdated, tampered with, or broken.
+.It Fl d
+Enable debug output to stderr. One -d shows what the resolver and validator
+are doing and may tell you what is going on. More times, -d -d, gives a
+lot of output, with every packet sent and received.
+.It Fl c Ar class
+Specify the class to lookup for, the default is IN the internet class.
+.It Fl t Ar type
+Specify the type of data to lookup. The default looks for IPv4, IPv6 and
+mail handler data, or domain name pointers for reverse queries.
+.It Fl y Ar key
+Specify a public key to use as trust anchor. This is the base for a chain
+of trust that is built up from the trust anchor to the response, in order
+to validate the response message. Can be given as a DS or DNSKEY record.
+For example -y "example.com DS 31560 5 1 1CFED84787E6E19CCF9372C1187325972FE546CD".
+.It Fl f Ar keyfile
+Reads keys from a file. Every line has a DS or DNSKEY record, in the format
+as for -y. The zone file format, the same as dig and drill produce.
+.It Fl F Ar namedkeyfile
+Reads keys from a BIND-style named.conf file. Only the trusted-key {}; entries
+are read.
+.El
+.Sh EXAMPLES
+Some examples of use.
+.Pp
+$ unbound-host www.example.com
+.Pp
+$ unbound-host -v -y "example.com DS 31560 5 1 1CFED84787E6E19CCF9372C1187325972FE546CD" www.example.com
+.Pp
+$ unbound-host -v -y "example.com DS 31560 5 1 1CFED84787E6E19CCF9372C1187325972FE546CD" 192.0.2.153
+.Sh EXIT CODE
+The unbound-host program exits with status code 1 on error, 
+0 on no error. The data may not be available on exit code 0, exit code 1
+means the lookup encountered a fatal error.
+.Sh SEE ALSO
+.Xr unbound.conf 5 , 
+.Xr unbound 8 .
