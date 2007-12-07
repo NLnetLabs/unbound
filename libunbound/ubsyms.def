@@ -4,6 +4,7 @@ ub_val_ctx_config
 ub_val_ctx_add_ta
 ub_val_ctx_add_ta_file
 ub_val_ctx_trustedkeys
+ub_val_ctx_debuglevel
 ub_val_ctx_async
 ub_val_ctx_poll
 ub_val_ctx_wait

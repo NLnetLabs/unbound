@@ -64,6 +64,7 @@ usage()
 	printf("    -f keyfile		read trust anchors from file, with lines as -y.\n");
 	printf("    -F keyfile		read named.conf-style trust anchors.\n");
 	printf("    -v			be more verbose, shows nodata and security.\n");
+	printf("    -d			debug, traces the action, -d -d shows more.\n");
 	printf("    -h			show this usage help.\n");
 	printf("Version %s\n", PACKAGE_VERSION);
 	printf("BSD licensed, see LICENSE in source package for details.\n");
@@ -375,6 +376,7 @@ int main(int argc, char* argv[])
 	char* qclass = NULL;
 	char* qtype = NULL;
 	struct ub_val_ctx* ctx = NULL;
+	int debuglevel = 0;
 	
 	ctx = ub_val_ctx_create();
 	if(!ctx) {
@@ -383,10 +385,16 @@ int main(int argc, char* argv[])
 	}
 
 	/* parse the options */
-	while( (c=getopt(argc, argv, "F:c:f:ht:vy:")) != -1) {
+	while( (c=getopt(argc, argv, "F:c:df:ht:vy:")) != -1) {
 		switch(c) {
 		case 'c':
 			qclass = optarg;
+			break;
+		case 'd':
+			debuglevel++;
+			if(debuglevel < 2) 
+				debuglevel = 2; /* at least VERB_DETAIL */
+			ub_val_ctx_debuglevel(ctx, debuglevel);
 			break;
 		case 't':
 			qtype = optarg;

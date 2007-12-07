@@ -221,6 +221,16 @@ ub_val_ctx_trustedkeys(struct ub_val_ctx* ctx, char* fname)
 	return UB_NOERROR;
 }
 
+int
+ub_val_ctx_debuglevel(struct ub_val_ctx* ctx, int d)
+{
+	lock_basic_lock(&ctx->cfglock);
+	verbosity = d;
+	ctx->env->cfg->verbosity = d;
+	lock_basic_unlock(&ctx->cfglock);
+	return UB_NOERROR;
+}
+
 int 
 ub_val_ctx_async(struct ub_val_ctx* ctx, int dothread)
 {

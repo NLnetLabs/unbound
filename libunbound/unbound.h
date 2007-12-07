@@ -240,6 +240,16 @@ int ub_val_ctx_add_ta_file(struct ub_val_ctx* ctx, char* fname);
 int ub_val_ctx_trustedkeys(struct ub_val_ctx* ctx, char* fname);
 
 /**
+ * Set debug verbosity for the context
+ * Output is directed to stderr.
+ * @param ctx: context.
+ * @param d: debug level, 0 is off, 1 is very minimal, 2 is detailed, 
+ *	and 3 is lots.
+ * @return 0 if OK, else error.
+ */
+int ub_val_ctx_debuglevel(struct ub_val_ctx* ctx, int d);
+
+/**
  * Set a context behaviour for asynchronous action.
  * @param ctx: context.
  * @param dothread: if true, enables threading and a call to resolve_async() 
