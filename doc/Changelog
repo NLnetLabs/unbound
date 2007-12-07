@@ -2,6 +2,8 @@
 	- unbound-host has a -d option to show what happens. This can help
 	  with debugging (why do I get this answer).
 	- fixup CNAME handling, on nodata, sets and display canonname.
+	- dot removed from CNAME display.
+	- respect -v for NXDOMAINs.
 
 6 December 2007: Wouter
 	- library resolution works in foreground mode, unbound-host app

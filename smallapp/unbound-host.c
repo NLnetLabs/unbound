@@ -52,7 +52,7 @@ static void
 usage()
 {
 	printf("Usage:	unbound-host [-vdh] [-c class] [-t type] hostname\n");
-	printf("                     [-y key] [-f keyfile] [-F named.conf]\n");
+	printf("                     [-y key] [-f keyfile] [-F namedkeyfile]\n");
 	printf("  Queries the DNS for information.\n");
 	printf("  The hostname is looked up for IP4, IP6 and mail.\n");
 	printf("  If an ip-address is given a reverse lookup is done.\n");
@@ -283,8 +283,11 @@ pretty_output(char* q, int t, int c, int sec, int haved,
 	pretty_rcode(rcodestr, 16, result->rcode);
 
 	if(!haved && result->rcode) {
-		printf("Host %s not found: %d(%s). %s\n",
-			q, result->rcode, rcodestr, secstatus);
+		printf("Host %s not found: %d(%s).",
+			q, result->rcode, rcodestr);
+		if(verb > 0)
+			printf(" %s", secstatus);
+		printf("\n");
 		return;
 	}
 	if(docname && result->canonname &&
@@ -295,6 +298,9 @@ pretty_output(char* q, int t, int c, int sec, int haved,
 			printf(" %s", secstatus);
 		printf("\n");
 	}
+	/* remove trailing . from long canonnames for nicer output */
+	if(result->canonname && strlen(result->canonname) > 1)
+		result->canonname[strlen(result->canonname)-1] = 0;
 	if(!haved) {
 		if(verb > 0) {
 			printf("%s", result->canonname?result->canonname:q);
