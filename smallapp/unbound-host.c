@@ -288,12 +288,16 @@ pretty_output(char* q, int t, int c, int sec, int haved,
 		return;
 	}
 	if(docname && result->canonname &&
-		result->canonname != result->qname)
-		printf("%s is an alias for %s\n", result->qname, 
+		result->canonname != result->qname) {
+		printf("%s is an alias for %s", result->qname, 
 			result->canonname);
+		if(verb > 0)
+			printf(" %s", secstatus);
+		printf("\n");
+	}
 	if(!haved) {
 		if(verb > 0) {
-			printf("%s", q);
+			printf("%s", result->canonname?result->canonname:q);
 			if(strcmp(cstr, "IN") != 0)
 				printf(" in class %s", cstr);
 			if(t == LDNS_RR_TYPE_A)

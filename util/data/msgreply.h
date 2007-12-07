@@ -316,6 +316,15 @@ int parse_copy_decompress_rrset(ldns_buffer* pkt, struct msg_parse* msg,
 	struct ub_packed_rrset_key* pk);
 
 /**
+ * Find final cname target in reply, the one matching qinfo. Follows CNAMEs.
+ * @param qinfo: what to start with.
+ * @param rep: looks in answer section of this message.
+ * @return: pointer dname, or NULL if not found.
+ */
+uint8_t* reply_find_final_cname_target(struct query_info* qinfo,
+	struct reply_info* rep);
+
+/**
  * Find answer rrset in reply, the one matching qinfo. Follows CNAMEs, so the
  * result may have a different owner name.
  * @param qinfo: what to look for.

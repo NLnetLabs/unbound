@@ -58,6 +58,7 @@
 #include "util/storage/slabhash.h"
 #include "util/net_help.h"
 #include "util/data/dname.h"
+#include "util/data/msgreply.h"
 
 /** size of table used for random numbers. large to be more secure. */
 #define RND_STATE_SIZE 256
@@ -206,24 +207,35 @@ parse_reply(ldns_buffer* pkt, struct regional* region, struct query_info* qi)
 	return rep;
 }
 
+/** insert canonname */
+static int
+fill_canon(struct ub_val_result* res, uint8_t* s)
+{
+	char buf[255+2];
+	dname_str(s, buf);
+	res->canonname = strdup(buf);
+	return res->canonname != 0;
+}
+
 /** fill data into result */
 static int
 fill_res(struct ub_val_result* res, struct ub_packed_rrset_key* answer,
-	struct query_info* rq)
+	uint8_t* finalcname, struct query_info* rq)
 {
 	size_t i;
 	struct packed_rrset_data* data;
 	if(!answer) {
+		if(finalcname) {
+			if(!fill_canon(res, finalcname))
+				return 0; /* out of memory */
+		}
 		res->data = calloc(1, sizeof(char*));
 		res->len = calloc(1, sizeof(size_t));
 		return (res->data && res->len);
 	}
 	data = (struct packed_rrset_data*)answer->entry.data;
 	if(query_dname_compare(rq->qname, answer->rk.dname) != 0) {
-		char buf[255+2];
-		dname_str(answer->rk.dname, buf);
-		res->canonname = strdup(buf);
-		if(!res->canonname)
+		if(!fill_canon(res, answer->rk.dname))
 			return 0; /* out of memory */
 	} else
 		res->canonname = res->qname;
@@ -272,8 +284,8 @@ libworker_fg_done_cb(void* arg, int rcode, ldns_buffer* buf, enum sec_status s)
 	if(!rep) {
 		return; /* error parsing buf, or out of memory */
 	}
-	/* log_dns_msg("fg reply", &rq, rep); @@@ DEBUG */
-	if(!fill_res(d->q->res, reply_find_answer_rrset(&rq, rep), &rq))
+	if(!fill_res(d->q->res, reply_find_answer_rrset(&rq, rep), 
+		reply_find_final_cname_target(&rq, rep), &rq))
 		return; /* out of memory */
 	/* rcode, nxdomain, bogus */
 	d->q->res->rcode = (int)LDNS_RCODE_WIRE(d->q->msg);
