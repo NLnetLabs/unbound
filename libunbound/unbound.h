@@ -91,7 +91,6 @@
  */
 #ifndef _UB_UNBOUND_H
 #define _UB_UNBOUND_H
-#include <stdlib.h>
 
 /**
  * The validation context is created to hold the resolver status,
@@ -124,7 +123,7 @@ struct ub_val_result {
 	char** data;
 
 	/** the length in bytes of the data items, len[i] for data[i] */
-	size_t* len;
+	int* len;
 
 	/** 
 	 * canonical name for the result (the final cname). 

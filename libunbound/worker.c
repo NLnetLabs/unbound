@@ -229,8 +229,8 @@ fill_res(struct ub_val_result* res, struct ub_packed_rrset_key* answer,
 			if(!fill_canon(res, finalcname))
 				return 0; /* out of memory */
 		}
-		res->data = calloc(1, sizeof(char*));
-		res->len = calloc(1, sizeof(size_t));
+		res->data = (char**)calloc(1, sizeof(char*));
+		res->len = (int*)calloc(1, sizeof(int));
 		return (res->data && res->len);
 	}
 	data = (struct packed_rrset_data*)answer->entry.data;
@@ -239,13 +239,13 @@ fill_res(struct ub_val_result* res, struct ub_packed_rrset_key* answer,
 			return 0; /* out of memory */
 	} else
 		res->canonname = res->qname;
-	res->data = calloc(data->count+1, sizeof(char*));
-	res->len = calloc(data->count+1, sizeof(size_t));
+	res->data = (char**)calloc(data->count+1, sizeof(char*));
+	res->len = (int*)calloc(data->count+1, sizeof(int));
 	if(!res->data || !res->len)
 		return 0; /* out of memory */
 	for(i=0; i<data->count; i++) {
 		/* remove rdlength from rdata */
-		res->len[i] = data->rr_len[i] - 2;
+		res->len[i] = (int)(data->rr_len[i] - 2);
 		res->data[i] = memdup(data->rr_data[i]+2, res->len[i]);
 		if(!res->data[i])
 			return 0; /* out of memory */

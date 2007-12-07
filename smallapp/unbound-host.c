@@ -220,7 +220,7 @@ static void
 print_rd(int t, char* data, size_t len)
 {
 	size_t i, pos = 0;
-	uint8_t* rd = malloc(len+2);
+	uint8_t* rd = (uint8_t*)malloc(len+2);
 	ldns_rr* rr = ldns_rr_new();
 	ldns_status status;
 	if(!rd || !rr) {
@@ -326,7 +326,7 @@ pretty_output(char* q, int t, int c, int sec, int haved,
 		pretty_rdata(
 			result->canonname?result->canonname:q,
 			cstr, tstr, t, secstatus, result->data[i],
-			result->len[i]);
+			(size_t)result->len[i]);
 		i++;
 	}
 }
