@@ -138,7 +138,7 @@ o The method by which dnssec-lameness is detected is not secure. DNSSEC lame
   before the validator will properly verify the messages.
 
   Also for zones for which no chain of trust exists, but a DS is given by the
-  parent, dnssec-lameness detection enables. This delivers dnnsec to our 
+  parent, dnssec-lameness detection enables. This delivers dnssec to our 
   clients when possible (for client validators).
 
   The following issue needs to be resolved:
