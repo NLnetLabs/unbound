@@ -1,3 +1,8 @@
+2 January 2008: Wouter
+	- fixup typo in requirements.
+	- document that 'refused' is a better choice than 'drop' for 
+	  the access control list, as refused will stop retries.
+
 7 December 2007: Wouter
 	- unbound-host has a -d option to show what happens. This can help
 	  with debugging (why do I get this answer).

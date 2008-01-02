@@ -168,6 +168,9 @@ Deny stops queries from hosts from that netblock.
 Refuse stops queries too, but sends a DNS rcode REFUSED error message back.
 Allow gives access to clients from that netblock.
 By default only localhost is allowed, the rest is refused.
+The default is refused, because that is protocol-friendly. The DNS protocol
+is not designed to handle dropped packets due to policy, and dropping may 
+result in (possibly excessive) retried queries.
 .It \fBchroot:\fR <directory>
 If given a chroot is done to the given directory. The default is 
 "/etc/unbound". If you give "" no chroot is performed.
