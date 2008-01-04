@@ -34,7 +34,7 @@ then interface with the modules to perform the necessary processing.
 
 In Section 2 the origins of the Unbound project are documented. Section
 3 lists the goals, while Section 4 lists the explicit non-goals of the
-project.
+project. Section 5 discusses choices made during development.
 
 
 2. History
