@@ -53,6 +53,12 @@ o If libevent is older (before 1.3c), unbound will exit instead of reload
   on sighup. On a restart 'did not exit gracefully last time' warning is 
   printed. Perform ./configure --with-libevent=no or update libevent, rerun 
   configure and recompile unbound to make sighup work correctly.
+o If you receive no answers deploying unbound on a private network.
+  Check that the zone you configure as a stub zone is correct, listing working 
+  ip-addresses. Check that the NS data in the zone, those hostnames, are
+  in fact those same, working, ip-addresses. Unbound will fetch the NS data
+  from the zone and use that information in preference to the config 
+  information. 
 
 Acknowledgements
 ----------------
