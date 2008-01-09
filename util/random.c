@@ -104,7 +104,14 @@ ub_initstate(unsigned int seed, struct ub_randstate* state,
 	/* RAND_ is threadsafe, by the way */
 	if(!RAND_status()) {
 		/* try to seed it */
-		RAND_seed(&seed, (int)sizeof(seed));
+		unsigned char buf[256];
+		unsigned int v = seed;
+		size_t i;
+		for(i=0; i<256/sizeof(seed); i++) {
+			memmove(buf+i*sizeof(seed), &v, sizeof(seed));
+			v = v*seed + (unsigned int)i;
+		}
+		RAND_seed(buf, 256);
 		if(!RAND_status()) {
 			log_err("Random generator has no entropy (error %ld)",
 				ERR_get_error());
