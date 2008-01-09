@@ -1,6 +1,7 @@
 9 January 2008: Wouter
 	- fixup openssl RAND problem, when the system is not configured to
 	  give entropy, and the rng needs to be seeded. (for 0.7.2)
+	- created 0.7.2 release tag.
 
 3 December 2007: Wouter
 	- Fixup building in a subdirectory. (for 0.7.2)
