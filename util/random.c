@@ -110,6 +110,7 @@ ub_initstate(unsigned int seed, struct ub_randstate* state,
 				ERR_get_error());
 			return 0;
 		}
+		log_warn("openssl has no entropy, seeding with time");
 	}
 	ub_arc4random_stir(state->s);
 	return 1;
