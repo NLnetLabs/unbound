@@ -92,7 +92,7 @@ ub_arc4random_stir(struct ub_hiddenstate* s)
 }
 
 int 
-ub_initstate(unsigned int ATTR_UNUSED(seed), struct ub_randstate* state, 
+ub_initstate(unsigned int seed, struct ub_randstate* state, 
 	unsigned long ATTR_UNUSED(n))
 {
 	state->s = calloc(1, sizeof(*state->s));
@@ -103,9 +103,13 @@ ub_initstate(unsigned int ATTR_UNUSED(seed), struct ub_randstate* state,
 
 	/* RAND_ is threadsafe, by the way */
 	if(!RAND_status()) {
-		log_err("Random generator has no entropy (error %ld)",
-		    ERR_get_error());
-		return 0;
+		/* try to seed it */
+		RAND_seed(&seed, (int)sizeof(seed));
+		if(!RAND_status()) {
+			log_err("Random generator has no entropy (error %ld)",
+				ERR_get_error());
+			return 0;
+		}
 	}
 	ub_arc4random_stir(state->s);
 	return 1;
