@@ -496,11 +496,11 @@ if test x_$withval != x_no; then
             fi
         done
         if test x_$found_libevent != x_yes; then
-		if test -f "$dir/event.h" -a -f "$dir/.libs/libevent.a"; then
+		if test -f "$dir/event.h" -a -f "$dir/libevent.la"; then
 			# libevent source directory
             		AC_MSG_RESULT(found in $thedir)
                 	CPPFLAGS="$CPPFLAGS -I$thedir";
-            		LDFLAGS="$thedir/.libs/*.o $LDFLAGS";
+            		LDFLAGS="$thedir/*.lo $LDFLAGS";
 		else
             		AC_MSG_ERROR([Cannot find the libevent library in $withval
 You can restart ./configure --with-libevent=no to use a builtin alternative.
