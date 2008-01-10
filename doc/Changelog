@@ -4,6 +4,7 @@
 	  by linking with .lo instead of .o files in the ldns package.
 	- nicer do-ip6: yes/no documentation.
 	- nicer linking of libevent .o files.
+	- man pages render correctly on solaris.
 
 9 January 2008: Wouter
 	- fixup openssl RAND problem, when the system is not configured to
