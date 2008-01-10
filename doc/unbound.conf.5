@@ -154,13 +154,15 @@ Number of bytes that the lameness cache per host is allowed to use. Default
 is 10 kb, which gives maximum storage for a couple score zones, depending on 
 the lame zone name lengths.
 .It \fBdo-ip4:\fR <yes or no>
-Enable or disable whether ip4 queries are answered. Default is yes.
+Enable or disable whether ip4 queries are answered or issued. Default is yes.
 .It \fBdo-ip6:\fR <yes or no>
-Enable or disable whether ip6 queries are answered. Default is yes.
+Enable or disable whether ip6 queries are answered or issued. Default is yes.
+If disabled, queries are not answered on IPv6, and queries are not sent on
+IPv6 to the internet nameservers.
 .It \fBdo-udp:\fR <yes or no>
-Enable or disable whether UDP queries are answered. Default is yes.
+Enable or disable whether UDP queries are answered or issued. Default is yes.
 .It \fBdo-tcp:\fR <yes or no>
-Enable or disable whether TCP queries are answered. Default is yes.
+Enable or disable whether TCP queries are answered or issued. Default is yes.
 .It \fBaccess-control:\fR <IP netblock> <action>
 The netblock is given as an IP4 or IP6 address with /size appended for a 
 classless network block. The action can be deny, refuse or allow.

@@ -2,6 +2,7 @@
 	- typo in example.conf.
 	- made using ldns-src that is included the package more portable
 	  by linking with .lo instead of .o files in the ldns package.
+	- nicer do-ip6: yes/no documentation.
 
 9 January 2008: Wouter
 	- fixup openssl RAND problem, when the system is not configured to
