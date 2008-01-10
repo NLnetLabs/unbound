@@ -79,14 +79,14 @@ struct acl_list {
 struct acl_addr {
 	/** redblacktree node, key is this structure: addr and addrlen, net */
 	rbnode_t node;
+	/** parent node in acl tree that encompasses this entry */
+	struct acl_addr* parent;
 	/** address */
 	struct sockaddr_storage addr;
 	/** length of addr */
 	socklen_t addrlen;
 	/** netblock size */
 	int net;
-	/** parent node in acl tree that encompasses this entry */
-	struct acl_addr* parent;
 	/** access control on this netblock */
 	enum acl_access control;
 };

@@ -24531,7 +24531,7 @@ echo "(cd $ldnsdir; ./configure)"
 { echo "$as_me:$LINENO: Finished $ldnsdir configure" >&5
 echo "$as_me: Finished $ldnsdir configure" >&6;}
 CPPFLAGS="$CPPFLAGS -I$ldnsdir/include"
-LDFLAGS="$LDFLAGS $ldnsdir/lib/*.o"
+LDFLAGS="$LDFLAGS $ldnsdir/*.lo"
 
 cat >>confdefs.h <<\_ACEOF
 #define HAVE_INET_ATON 1

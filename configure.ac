@@ -605,7 +605,7 @@ echo "(cd $ldnsdir; ./configure)"
 (cd $ldnsdir; ./configure)
 AC_MSG_NOTICE([Finished $ldnsdir configure])
 CPPFLAGS="$CPPFLAGS -I$ldnsdir/include"
-LDFLAGS="$LDFLAGS $ldnsdir/lib/*.o"
+LDFLAGS="$LDFLAGS $ldnsdir/*.lo"
 AC_SUBST(ldnsdir)
 dnl use ldns compat functions
 AC_DEFINE(HAVE_INET_ATON)
