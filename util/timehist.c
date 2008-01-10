@@ -153,6 +153,10 @@ void timehist_log(struct timehist* hist)
 {
 #ifndef S_SPLINT_S
 	size_t i;
+	log_info("[25%%]=%g median[50%%]=%g [75%%]=%g",
+		timehist_quartile(hist, 0.25),
+		timehist_quartile(hist, 0.50),
+		timehist_quartile(hist, 0.75));
 	/*        0000.000000 0000.000000 0 */
 	log_info("lower(secs) upper(secs) replycount");
 	for(i=0; i<hist->num; i++) {
@@ -166,4 +170,41 @@ void timehist_log(struct timehist* hist)
 		}
 	}
 #endif
+}
+
+/** total number in histogram */
+size_t
+timehist_count(struct timehist* hist)
+{
+	size_t i, res = 0;
+	for(i=0; i<hist->num; i++)
+		res += hist->buckets[i].count;
+	return res;
+}
+
+double 
+timehist_quartile(struct timehist* hist, double q)
+{
+	double lookfor, passed, res;
+	double low = 0, up = 0;
+	size_t i;
+	if(!hist || hist->num == 0)
+		return 0.;
+	/* look for i'th element, interpolated */
+	lookfor = (double)timehist_count(hist) * q;
+	passed = 0;
+	i = 0;
+	while(i+1 < hist->num && 
+		passed+(double)hist->buckets[i].count < lookfor) {
+		passed += (double)hist->buckets[i++].count;
+	}
+	/* got the right bucket */
+#ifndef S_SPLINT_S
+	low = (double)hist->buckets[i].lower.tv_sec + 
+		(double)hist->buckets[i].lower.tv_usec/1000000.;
+	up = (double)hist->buckets[i].upper.tv_sec + 
+		(double)hist->buckets[i].upper.tv_usec/1000000.;
+#endif
+	res = (lookfor - passed)*(up-low)/((double)hist->buckets[i].count);
+	return res;
 }

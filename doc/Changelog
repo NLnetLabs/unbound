@@ -2,6 +2,9 @@
 	- fixup openssl RAND problem, when the system is not configured to
 	  give entropy, and the rng needs to be seeded.
 
+8 January 2008: Wouter
+	- print median and quartiles with extensive logging.
+
 4 January 2008: Wouter
 	- document misconfiguration in private network.
 

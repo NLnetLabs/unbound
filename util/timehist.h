@@ -84,6 +84,16 @@ void timehist_delete(struct timehist* hist);
 void timehist_insert(struct timehist* hist, struct timeval* tv);
 
 /**
+ * Find time value for given quartile, such as 0.25, 0.50, 0.75.
+ * The looks up the value for the i-th element in the sorted list of time 
+ * values, as approximated using the histogram.
+ * @param hist: histogram. Interpolated information is used from it.
+ * @param q: quartile, 0.50 results in the median. Must be >0 and <1.
+ * @return: the time in seconds for that percentage.
+ */
+double timehist_quartile(struct timehist* hist, double q);
+
+/**
  * Printout histogram
  * @param hist: histogram
  */
