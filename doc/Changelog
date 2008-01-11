@@ -1,3 +1,7 @@
+11 January 2008: Wouter
+	- man page, warning removed.
+	- added text describing the use of stub zones for private zones.
+
 10 January 2008: Wouter
 	- typo in example.conf.
 	- made using ldns-src that is included the package more portable

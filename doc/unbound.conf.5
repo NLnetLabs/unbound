@@ -395,6 +395,10 @@ no match from local\-data. The types are deny, refuse, static, transparent,
 redirect, nodefault, and are explained below. After that the default settings
 are listed. Use local\-data: to enter data into the local zone. Answers for
 local zones are authoritative DNS answers. By default the zones are class IN.
+.IP
+If you need more complicated authoritative data, with referrals, wildcards,
+CNAME/DNAME support, or DNSSEC authoritative service, setup a stub\-zone for
+it as detailed in the stub zone section below.
 .TP 10
 \h'5'\fIdeny\fR
 Do not send an answer, drop the query.
@@ -500,12 +504,34 @@ further processing. If local\-data is configured that is not a subdomain of
 a local\-zone, a transparent local\-zone is configured. 
 For record types such as TXT, use single quotes, as in 
 local\-data: 'example. TXT "text"'.
+.IP
+If you need more complicated authoritative data, with referrals, wildcards,
+CNAME/DNAME support, or DNSSEC authoritative service, setup a stub\-zone for
+it as detailed in the stub zone section below.
 .SS "Stub Zone Options"
 .LP
 There may be multiple
 .B stub\-zone:
 clauses. Each with a name: and zero or more hostnames or IP addresses.
 For the stub zone this list of nameservers is used. Class IN is assumed.
+.P
+The stub zone can be used to configure authoritative data to be used
+by the resolver that cannot be accessed using the public internet servers.
+This is useful for company\-local data or private zones. Setup an 
+authoritative server on a different host (or different port). Enter a config 
+entry for unbound with 
+.B stub\-addr:
+<ip address of host[@port]>. 
+The unbound resolver can then access the data, without referring to the 
+public internet for it. 
+.P
+This setup allows DNSSEC signed zones to be served by that 
+authoritative server, in which case a trusted key entry with the public key
+can be put in config, so that unbound can validate the data and set the AD 
+bit on replies for the private zone (authoritative servers do not set the 
+AD bit).  This setup makes unbound capable of answering queries for the 
+private zone, and can even set the AD bit ('authentic'), but the AA 
+('authoritative') bit is not set on these replies. 
 .TP
 .B name: \fI<domain name>
 Name of the stub zone.
