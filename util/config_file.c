@@ -386,6 +386,60 @@ cfg_count_numbers(const char* s)
         return num;
 }
 
+/** all digit number */
+static int isalldigit(const char* str, size_t l)
+{
+	size_t i;
+	for(i=0; i<l; i++)
+		if(!isdigit(str[i]))
+			return 0;
+	return 1;
+}
+
+int 
+cfg_parse_memsize(const char* str, size_t* res)
+{
+	size_t len = (size_t)strlen(str);
+	size_t mult = 1;
+	if(!str || len == 0) {
+		log_err("not a size: '%s'", str);
+		return 0;
+	}
+	if(isalldigit(str, len)) {
+		*res = (size_t)atol(str);
+		return 1;
+	}
+	/* check appended num */
+	while(len>0 && str[len-1]==' ')
+		len--;
+	if(len > 1 && str[len-1] == 'b') 
+		len--;
+	else if(len > 1 && str[len-1] == 'B') 
+		len--;
+	
+	if(len > 1 && tolower(str[len-1]) == 'g')
+		mult = 1024*1024*1024;
+	else if(len > 1 && tolower(str[len-1]) == 'm')
+		mult = 1024*1024;
+	else if(len > 1 && tolower(str[len-1]) == 'k')
+		mult = 1024;
+	else if(len > 0 && isdigit(str[len-1]))
+		mult = 1;
+	else {
+		log_err("unknown size specifier: '%s'", str);
+		return 0;
+	}
+	while(len>1 && str[len-2]==' ')
+		len--;
+
+	if(!isalldigit(str, len-1)) {
+		log_err("unknown size specifier: '%s'", str);
+		return 0;
+	}
+	*res = ((size_t)atol(str)) * mult;
+	return 1;
+}
+
 /** the MAX_TTL global */
 extern uint32_t MAX_TTL;
 

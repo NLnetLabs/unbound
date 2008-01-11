@@ -413,9 +413,8 @@ server_msg_buffer_size: VAR_MSG_BUFFER_SIZE STRING
 server_msg_cache_size: VAR_MSG_CACHE_SIZE STRING
 	{
 		OUTYY(("P(server_msg_cache_size:%s)\n", $2));
-		if(atoi($2) == 0)
-			yyerror("number expected");
-		else cfg_parser->cfg->msg_cache_size = atoi($2);
+		if(!cfg_parse_memsize($2, &cfg_parser->cfg->msg_cache_size))
+			yyerror("memory size expected");
 		free($2);
 	}
 	;
@@ -444,9 +443,8 @@ server_num_queries_per_thread: VAR_NUM_QUERIES_PER_THREAD STRING
 server_rrset_cache_size: VAR_RRSET_CACHE_SIZE STRING
 	{
 		OUTYY(("P(server_rrset_cache_size:%s)\n", $2));
-		if(atoi($2) == 0)
-			yyerror("number expected");
-		else cfg_parser->cfg->rrset_cache_size = atoi($2);
+		if(!cfg_parse_memsize($2, &cfg_parser->cfg->rrset_cache_size))
+			yyerror("memory size expected");
 		free($2);
 	}
 	;
@@ -493,9 +491,9 @@ server_infra_cache_numhosts: VAR_INFRA_CACHE_NUMHOSTS STRING
 server_infra_cache_lame_size: VAR_INFRA_CACHE_LAME_SIZE STRING
 	{
 		OUTYY(("P(server_infra_cache_lame_size:%s)\n", $2));
-		if(atoi($2) == 0)
+		if(!cfg_parse_memsize($2, &cfg_parser->cfg->
+			infra_cache_lame_size))
 			yyerror("number expected");
-		else cfg_parser->cfg->infra_cache_lame_size = atoi($2);
 		free($2);
 	}
 	;
@@ -662,9 +660,8 @@ server_val_nsec3_keysize_iterations: VAR_VAL_NSEC3_KEYSIZE_ITERATIONS STRING
 server_key_cache_size: VAR_KEY_CACHE_SIZE STRING
 	{
 		OUTYY(("P(server_key_cache_size:%s)\n", $2));
-		if(atoi($2) == 0)
-			yyerror("number expected");
-		else cfg_parser->cfg->key_cache_size = atoi($2);
+		if(cfg_parse_memsize($2, &cfg_parser->cfg->key_cache_size))
+			yyerror("memory size expected");
 		free($2);
 	}
 	;

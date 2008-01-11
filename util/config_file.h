@@ -314,6 +314,17 @@ uint32_t cfg_convert_timeval(const char* str);
 int cfg_count_numbers(const char* str);
 
 /**
+ * Convert a 'nice' memory or file size into a bytecount
+ * From '100k' to 102400. and so on. Understands kKmMgG.
+ * k=1024, m=1024*1024, g=1024*1024*1024.
+ * @param str: string
+ * @param res: result is stored here, size in bytes.
+ * @return: true if parsed correctly, or 0 on a parse error (and an error 
+ * is logged).
+ */
+int cfg_parse_memsize(const char* str, size_t* res);
+
+/**
  * Used during options parsing
  */
 struct config_parser_state {

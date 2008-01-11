@@ -134,6 +134,8 @@ reply to the client.
 .TP
 .B msg\-cache\-size: \fI<number>
 Number of bytes size of the message cache. Default is 4 megabytes.
+A plain number is in bytes, append 'k', 'm' or 'g' for kilobytes, megabytes
+or gigabytes (1024*1024 bytes in a megabyte).
 .TP
 .B msg\-cache\-slabs: \fI<number>
 Number of slabs in the message cache. Slabs reduce lock contention by threads.
@@ -148,6 +150,8 @@ the existing queries. Default 1024.
 .TP
 .B rrset\-cache\-size: \fI<number>
 Number of bytes size of the RRset cache. Default is 4 megabytes.
+A plain number is in bytes, append 'k', 'm' or 'g' for kilobytes, megabytes
+or gigabytes (1024*1024 bytes in a megabyte).
 .TP
 .B rrset\-cache\-slabs: \fI<number>
 Number of slabs in the RRset cache. Slabs reduce lock contention by threads.
@@ -383,6 +387,8 @@ This table must be kept short; a very long list could cause slower operation.
 .TP
 .B key\-cache\-size: \fI<number>
 Number of bytes size of the key cache. Default is 4 megabytes.
+A plain number is in bytes, append 'k', 'm' or 'g' for kilobytes, megabytes
+or gigabytes (1024*1024 bytes in a megabyte).
 .TP
 .B key\-cache\-slabs: \fI<number>
 Number of slabs in the key cache. Slabs reduce lock contention by threads.

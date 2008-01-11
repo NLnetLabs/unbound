@@ -240,6 +240,44 @@ net_test()
 	}
 }
 
+#include "util/config_file.h"
+/** test config_file: cfg_parse_memsize */
+static void
+config_memsize_test() 
+{
+	size_t v = 0;
+	if(0) {
+		/* these emit errors */
+		unit_assert( cfg_parse_memsize("", &v) == 0);
+		unit_assert( cfg_parse_memsize("bla", &v) == 0);
+		unit_assert( cfg_parse_memsize("nop", &v) == 0);
+		unit_assert( cfg_parse_memsize("n0b", &v) == 0);
+		unit_assert( cfg_parse_memsize("gb", &v) == 0);
+		unit_assert( cfg_parse_memsize("b", &v) == 0);
+		unit_assert( cfg_parse_memsize("kb", &v) == 0);
+		unit_assert( cfg_parse_memsize("kk kb", &v) == 0);
+	}
+	unit_assert( cfg_parse_memsize("0", &v) && v==0);
+	unit_assert( cfg_parse_memsize("1", &v) && v==1);
+	unit_assert( cfg_parse_memsize("10", &v) && v==10);
+	unit_assert( cfg_parse_memsize("10b", &v) && v==10);
+	unit_assert( cfg_parse_memsize("5b", &v) && v==5);
+	unit_assert( cfg_parse_memsize("1024", &v) && v==1024);
+	unit_assert( cfg_parse_memsize("1k", &v) && v==1024);
+	unit_assert( cfg_parse_memsize("1K", &v) && v==1024);
+	unit_assert( cfg_parse_memsize("1Kb", &v) && v==1024);
+	unit_assert( cfg_parse_memsize("1kb", &v) && v==1024);
+	unit_assert( cfg_parse_memsize("1 kb", &v) && v==1024);
+	unit_assert( cfg_parse_memsize("10 kb", &v) && v==10240);
+	unit_assert( cfg_parse_memsize("2k", &v) && v==2048);
+	unit_assert( cfg_parse_memsize("2m", &v) && v==2048*1024);
+	unit_assert( cfg_parse_memsize("3M", &v) && v==3072*1024);
+	unit_assert( cfg_parse_memsize("40m", &v) && v==40960*1024);
+	unit_assert( cfg_parse_memsize("1G", &v) && v==1024*1024*1024);
+	unit_assert( cfg_parse_memsize("1 Gb", &v) && v==1024*1024*1024);
+	unit_assert( cfg_parse_memsize("0 Gb", &v) && v==0*1024*1024);
+}
+
 #include "util/rtt.h"
 /** test RTT code */
 static void
@@ -360,6 +398,7 @@ main(int argc, char* argv[])
 	rnd_test();
 	verify_test();
 	net_test();
+	config_memsize_test();
 	dname_test();
 	anchors_test();
 	rtt_test();

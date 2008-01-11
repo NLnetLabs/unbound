@@ -3,6 +3,7 @@
 	- added text describing the use of stub zones for private zones.
 	- checkconf tests for bad hostnames (IP address), and for doubled
 	  interface lines.
+	- memory sizes can be given with 'k', 'Kb', or M or G appended.
 
 10 January 2008: Wouter
 	- typo in example.conf.
