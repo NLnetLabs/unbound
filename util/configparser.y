@@ -660,7 +660,7 @@ server_val_nsec3_keysize_iterations: VAR_VAL_NSEC3_KEYSIZE_ITERATIONS STRING
 server_key_cache_size: VAR_KEY_CACHE_SIZE STRING
 	{
 		OUTYY(("P(server_key_cache_size:%s)\n", $2));
-		if(cfg_parse_memsize($2, &cfg_parser->cfg->key_cache_size))
+		if(!cfg_parse_memsize($2, &cfg_parser->cfg->key_cache_size))
 			yyerror("memory size expected");
 		free($2);
 	}
