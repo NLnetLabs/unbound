@@ -434,7 +434,6 @@ hints_apply_cfg(struct iter_hints* hints, struct config_file* cfg)
 			return 0;
 		if(!hints_insert(hints, LDNS_RR_CLASS_IN, dp))
 			return 0;
-		delegpt_log(VERB_DETAIL, dp);
 	}
 
 	init_parents(hints);

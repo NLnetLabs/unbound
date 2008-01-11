@@ -182,14 +182,12 @@ extstrtoaddr(const char* str, struct sockaddr_storage* addr,
 	if((s=strchr(str, '@'))) {
 		char buf[MAX_ADDR_STRLEN];
 		if(s-str >= MAX_ADDR_STRLEN) {
-			log_err("address too long: '%s'", str);
 			return 0;
 		}
 		strncpy(buf, str, MAX_ADDR_STRLEN);
 		buf[s-str] = 0;
 		port = atoi(s+1);
 		if(port == 0 && strcmp(s+1,"0")!=0) {
-			log_err("bad port spec in address: '%s", str);
 			return 0;
 		}
 		return ipstrtoaddr(buf, port, addr, addrlen);
@@ -212,7 +210,6 @@ ipstrtoaddr(const char* ip, int port, struct sockaddr_storage* addr,
 		sa->sin6_family = AF_INET6;
 		sa->sin6_port = (in_port_t)htons(p);
 		if(inet_pton((int)sa->sin6_family, ip, &sa->sin6_addr) <= 0) {
-			log_err("Bad ip6 address %s", ip);
 			return 0;
 		}
 	} else { /* ip4 */
@@ -222,7 +219,6 @@ ipstrtoaddr(const char* ip, int port, struct sockaddr_storage* addr,
 		sa->sin_family = AF_INET;
 		sa->sin_port = (in_port_t)htons(p);
 		if(inet_pton((int)sa->sin_family, ip, &sa->sin_addr) <= 0) {
-			log_err("Bad ip4 address %s", ip);
 			return 0;
 		}
 	}

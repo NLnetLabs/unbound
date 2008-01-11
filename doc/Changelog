@@ -1,6 +1,8 @@
 11 January 2008: Wouter
 	- man page, warning removed.
 	- added text describing the use of stub zones for private zones.
+	- checkconf tests for bad hostnames (IP address), and for doubled
+	  interface lines.
 
 10 January 2008: Wouter
 	- typo in example.conf.

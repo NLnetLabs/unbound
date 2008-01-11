@@ -86,19 +86,57 @@ check_mod(struct config_file* cfg, struct module_func_block* fb)
 	regional_destroy(env.scratch);
 }
 
-/** check configuration for errors */
+/** check localzones */
 static void
-morechecks(struct config_file* cfg)
+localzonechecks(struct config_file* cfg)
 {
-	int i;
+	struct local_zones* zs;
+	if(!(zs = local_zones_create()))
+		fatal_exit("out of memory");
+	if(!local_zones_apply_cfg(zs, cfg))
+		fatal_exit("failed local-zone, local-data configuration");
+	local_zones_delete(zs);
+}
+
+/** emit warnings for IP in hosts */
+static void
+warn_hosts(const char* typ, struct config_stub* list)
+{
 	struct sockaddr_storage a;
 	socklen_t alen;
-	struct config_str2list* acl;
-	struct local_zones* zs;
+	struct config_stub* s;
+	struct config_strlist* h;
+	for(s=list; s; s=s->next) {
+		for(h=s->hosts; h; h=h->next) {
+			if(extstrtoaddr(h->str, &a, &alen)) {
+				fprintf(stderr, "unbound-checkconf: warning:"
+				  " %s %s: \"%s\" is an IP%s address, "
+				  "and when looked up as a host name "
+				  "during use may not resolve.\n", 
+				  s->name, typ, h->str,
+				  addr_is_ip6(&a, alen)?"6":"4");
+			}
+		}
+	}
+}
+
+/** check interface strings */
+static void
+interfacechecks(struct config_file* cfg)
+{
+	struct sockaddr_storage a;
+	socklen_t alen;
+	int i, j;
 	for(i=0; i<cfg->num_ifs; i++) {
 		if(!ipstrtoaddr(cfg->ifs[i], UNBOUND_DNS_PORT, &a, &alen)) {
 			fatal_exit("cannot parse interface specified as '%s'",
 				cfg->ifs[i]);
+		}
+		for(j=0; j<cfg->num_ifs; j++) {
+			if(i!=j && strcmp(cfg->ifs[i], cfg->ifs[j])==0)
+				fatal_exit("interface: %s present twice, "
+					"cannot bind same ports twice.",
+					cfg->ifs[i]);
 		}
 	}
 	for(i=0; i<cfg->num_out_ifs; i++) {
@@ -107,14 +145,40 @@ morechecks(struct config_file* cfg)
 			fatal_exit("cannot parse outgoing-interface "
 				"specified as '%s'", cfg->out_ifs[i]);
 		}
+		for(j=0; j<cfg->num_out_ifs; j++) {
+			if(i!=j && strcmp(cfg->out_ifs[i], cfg->out_ifs[j])==0)
+				fatal_exit("outgoing-interface: %s present "
+					"twice, cannot bind same ports twice.",
+					cfg->out_ifs[i]);
+		}
 	}
+}
+
+/** check acl ips */
+static void
+aclchecks(struct config_file* cfg)
+{
+	int d;
+	struct sockaddr_storage a;
+	socklen_t alen;
+	struct config_str2list* acl;
 	for(acl=cfg->acls; acl; acl = acl->next) {
 		if(!netblockstrtoaddr(acl->str, UNBOUND_DNS_PORT, &a, &alen, 
-			&i)) {
+			&d)) {
 			fatal_exit("cannot parse access control address %s %s",
 				acl->str, acl->str2);
 		}
 	}
+}
+
+/** check configuration for errors */
+static void
+morechecks(struct config_file* cfg)
+{
+	warn_hosts("stub-host", cfg->stubs);
+	warn_hosts("forward-host", cfg->forwards);
+	interfacechecks(cfg);
+	aclchecks(cfg);
 
 	if(cfg->verbosity < 0)
 		fatal_exit("verbosity value < 0");
@@ -152,12 +216,7 @@ morechecks(struct config_file* cfg)
 		endpwent();
 	}
 
-	if(!(zs = local_zones_create()))
-		fatal_exit("out of memory");
-	if(!local_zones_apply_cfg(zs, cfg))
-		fatal_exit("failed local-zone, local-data configuration");
-	local_zones_print(zs); /* @@@ DEBUG */
-	local_zones_delete(zs);
+	localzonechecks(cfg);
 }
 
 /** check config file */
