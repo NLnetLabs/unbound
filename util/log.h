@@ -151,12 +151,10 @@ void fatal_exit(const char* format, ...) ATTR_FORMAT(printf, 1, 2);
  */
 void log_vmsg(int pri, const char* type, const char* format, va_list args);
 
-/** always assert for now. */
-#define UNBOUND_ASSERT 1
 /**
  * an assertion that is thrown to the logfile.
  */
-#ifdef UNBOUND_ASSERT
+#ifdef UNBOUND_DEBUG
 #  define log_assert(x) \
 	do { if(!(x)) \
 		fatal_exit("%s:%d: %s: assertion %s failed", \

@@ -1,3 +1,9 @@
+14 January 2008: Wouter
+	- in no debug sets NDEBUG to remove asserts.
+	- configure --enable-debug is needed for dependency generation
+	  for assertions and for compiler warnings.
+	- ldns.tgz updated with ldns-trunk (where buffer.h is updated).
+	
 11 January 2008: Wouter
 	- man page, warning removed.
 	- added text describing the use of stub zones for private zones.

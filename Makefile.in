@@ -1,9 +1,13 @@
 # Copyright 2007 NLnet Labs
 # See the file LICENSE for the license
-# 
-# Standard installation pathnames
 
-QUIET=yes
+debug_enabled=@debug_enabled@
+ifeq ($(debug_enabled),yes)
+  QUIET=yes
+else
+  QUIET=no
+endif
+
 ifeq "$(QUIET)" "yes"
   Q=@
   INFO=@echo
@@ -262,6 +266,8 @@ $(BUILD)%.d: $(srcdir)/%.c
 
 ifneq ($(MAKECMDGOALS),clean)
 ifneq ($(MAKECMDGOALS),realclean)
+ifeq ($(debug_enabled),yes)
 -include $(addprefix $(BUILD),$(ALL_SRC:.c=.d))
+endif
 endif
 endif

@@ -223,10 +223,21 @@ int test() {
 CHECK_COMPILER_FLAG(xO4, [CFLAGS="$CFLAGS -xO4"])
 CHECK_COMPILER_FLAG(xtarget=generic, [CFLAGS="$CFLAGS -xtarget=generic"])
 # flag warnings.
-CHECK_COMPILER_FLAG(W, [CFLAGS="$CFLAGS -W"])
-CHECK_COMPILER_FLAG(Wall, [CFLAGS="$CFLAGS -Wall"])
-CHECK_COMPILER_FLAG(Wextra, [CFLAGS="$CFLAGS -Wextra"])
-CHECK_COMPILER_FLAG(Wdeclaration-after-statement, [CFLAGS="$CFLAGS -Wdeclaration-after-statement"])
+AC_ARG_ENABLE(debug, AC_HELP_STRING([--enable-debug], [Enable debug warnings, asserts, makefile-dependencies]))
+debug_enabled="$enable_debug"
+AC_SUBST(debug_enabled)
+case "$enable_debug" in
+        yes)
+		CHECK_COMPILER_FLAG(W, [CFLAGS="$CFLAGS -W"])
+		CHECK_COMPILER_FLAG(Wall, [CFLAGS="$CFLAGS -Wall"])
+		CHECK_COMPILER_FLAG(Wextra, [CFLAGS="$CFLAGS -Wextra"])
+		CHECK_COMPILER_FLAG(Wdeclaration-after-statement, [CFLAGS="$CFLAGS -Wdeclaration-after-statement"])
+		AC_DEFINE([UNBOUND_DEBUG], [], [define this to enable debug checks.])
+		;;
+	no|*)
+		# nothing to do.
+		;;
+esac
 
 AC_C_INLINE
 
@@ -620,6 +631,10 @@ AC_DEFINE(HAVE_GETADDRINFO)
 AC_DEFINE_UNQUOTED([MAXSYSLOGMSGLEN], [5120], [Define to the maximum message length to pass to syslog.])
 
 AH_BOTTOM([
+#ifndef UNBOUND_DEBUG
+#  define NDEBUG
+#endif
+
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
