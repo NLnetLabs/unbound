@@ -3,6 +3,7 @@
 	- configure --enable-debug is needed for dependency generation
 	  for assertions and for compiler warnings.
 	- ldns.tgz updated with ldns-trunk (where buffer.h is updated).
+	- fix lint, unit test in optimize mode.
 	
 11 January 2008: Wouter
 	- man page, warning removed.

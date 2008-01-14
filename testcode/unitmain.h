@@ -45,7 +45,11 @@
 /** number of tests done */
 extern int testcount;
 /** test bool x, exits on failure, increases testcount. */
+#ifdef DEBUG_UNBOUND
 #define unit_assert(x) do {testcount++; log_assert(x);} while(0)
+#else
+#define unit_assert(x) do {testcount++; if(!(x)) { fprintf(stderr, "assertion failure %s:%d\n", __FILE__, __LINE__); exit(1);}} while(0)
+#endif
 
 /** unit test lruhashtable implementation */
 void lruhash_test();
