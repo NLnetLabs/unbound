@@ -4,6 +4,7 @@
 	- removed debug prints.
 	- porting experience, define for Solaris, test refined for BSD
 	  compatibility. The feature probably will not work on OpenBSD.
+	- makedist fixup for ldns-src in build-dir.
 
 14 January 2008: Wouter
 	- in no debug sets NDEBUG to remove asserts.

@@ -146,7 +146,9 @@ if test -z "$LDNSDIR"; then
     # try to autodetect from Makefile (if present)
     if test -f Makefile; then
 	  eval `grep 'ldnsdir=' Makefile`
-	  LDNSDIR="$ldnsdir"
+	  if echo "$ldnsdir" | grep -v ldns-src/ >/dev/null 2>&1; then
+	  	LDNSDIR="$ldnsdir"
+	  fi
     fi
 fi
 
