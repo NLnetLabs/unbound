@@ -487,8 +487,12 @@ if test x_$withval != x_no; then
 	fi
 fi
 
+# check to see if libraries are needed for these functions.
+AC_CHECK_LIB(nsl, inet_pton)
+AC_CHECK_LIB(socket, socket)
 # check for library used by libevent after 1.3c
 AC_CHECK_LIB(rt, clock_gettime)
+
 # check for libevent
 AC_ARG_WITH(libevent, AC_HELP_STRING([--with-libevent=pathname],
     [set path to libevent  (will check /usr/local /opt/local /usr/lib /usr/pkg /usr/sfw /usr)]),
@@ -564,10 +568,6 @@ if test x_$enable_alloc_checks = x_yes; then
 else
 	AC_FUNC_MALLOC
 fi
-
-# check to see if libraries are needed for these functions.
-AC_CHECK_LIB(socket, socket)
-AC_CHECK_LIB(nsl, inet_pton)
 
 AC_FUNC_CHOWN
 AC_FUNC_FORK
