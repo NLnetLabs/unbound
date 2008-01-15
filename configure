@@ -3780,9 +3780,9 @@ done
 
 
 
-{ echo "$as_me:$LINENO: checking whether we need -std=c99 -D__EXTENSIONS__ -D_BSD_SOURCE -D_POSIX_C_SOURCE=200112 -D_XOPEN_SOURCE=600 -D_ALL_SOURCE as a flag for $CC" >&5
-echo $ECHO_N "checking whether we need -std=c99 -D__EXTENSIONS__ -D_BSD_SOURCE -D_POSIX_C_SOURCE=200112 -D_XOPEN_SOURCE=600 -D_ALL_SOURCE as a flag for $CC... $ECHO_C" >&6; }
-cache=`echo -std=c99 -D__EXTENSIONS__ -D_BSD_SOURCE -D_POSIX_C_SOURCE=200112 -D_XOPEN_SOURCE=600 -D_ALL_SOURCE | sed 'y%.=/+- %___p__%'`
+{ echo "$as_me:$LINENO: checking whether we need -std=c99 -D__EXTENSIONS__ -D_BSD_SOURCE -D_POSIX_C_SOURCE=200112 -D_XOPEN_SOURCE=600 -D_XOPEN_SOURCE_EXTENDED=1 -D_ALL_SOURCE as a flag for $CC" >&5
+echo $ECHO_N "checking whether we need -std=c99 -D__EXTENSIONS__ -D_BSD_SOURCE -D_POSIX_C_SOURCE=200112 -D_XOPEN_SOURCE=600 -D_XOPEN_SOURCE_EXTENDED=1 -D_ALL_SOURCE as a flag for $CC... $ECHO_C" >&6; }
+cache=`echo -std=c99 -D__EXTENSIONS__ -D_BSD_SOURCE -D_POSIX_C_SOURCE=200112 -D_XOPEN_SOURCE=600 -D_XOPEN_SOURCE_EXTENDED=1 -D_ALL_SOURCE | sed 'y%.=/+- %___p__%'`
 if { as_var=cv_prog_cc_flag_needed_$cache; eval "test \"\${$as_var+set}\" = set"; }; then
   echo $ECHO_N "(cached) $ECHO_C" >&6
 else
@@ -3823,14 +3823,14 @@ if test -z "`$CC $CFLAGS -Werror -Wall -c conftest.c 2>&1`"; then
 eval "cv_prog_cc_flag_needed_$cache=no"
 else
 
-if test -z "`$CC $CFLAGS -std=c99 -D__EXTENSIONS__ -D_BSD_SOURCE -D_POSIX_C_SOURCE=200112 -D_XOPEN_SOURCE=600 -D_ALL_SOURCE -Werror -Wall -c conftest.c 2>&1`"; then
+if test -z "`$CC $CFLAGS -std=c99 -D__EXTENSIONS__ -D_BSD_SOURCE -D_POSIX_C_SOURCE=200112 -D_XOPEN_SOURCE=600 -D_XOPEN_SOURCE_EXTENDED=1 -D_ALL_SOURCE -Werror -Wall -c conftest.c 2>&1`"; then
 eval "cv_prog_cc_flag_needed_$cache=yes"
 else
 eval "cv_prog_cc_flag_needed_$cache=fail"
 #echo 'Test with flag fails too!'
 #cat conftest.c
-#echo "$CC $CFLAGS -std=c99 -D__EXTENSIONS__ -D_BSD_SOURCE -D_POSIX_C_SOURCE=200112 -D_XOPEN_SOURCE=600 -D_ALL_SOURCE -Werror -Wall -c conftest.c 2>&1"
-#echo `$CC $CFLAGS -std=c99 -D__EXTENSIONS__ -D_BSD_SOURCE -D_POSIX_C_SOURCE=200112 -D_XOPEN_SOURCE=600 -D_ALL_SOURCE -Werror -Wall -c conftest.c`
+#echo "$CC $CFLAGS -std=c99 -D__EXTENSIONS__ -D_BSD_SOURCE -D_POSIX_C_SOURCE=200112 -D_XOPEN_SOURCE=600 -D_XOPEN_SOURCE_EXTENDED=1 -D_ALL_SOURCE -Werror -Wall -c conftest.c 2>&1"
+#echo `$CC $CFLAGS -std=c99 -D__EXTENSIONS__ -D_BSD_SOURCE -D_POSIX_C_SOURCE=200112 -D_XOPEN_SOURCE=600 -D_XOPEN_SOURCE_EXTENDED=1 -D_ALL_SOURCE -Werror -Wall -c conftest.c`
 #exit 1
 fi
 
@@ -3843,7 +3843,7 @@ if eval "test \"`echo '$cv_prog_cc_flag_needed_'$cache`\" = yes"; then
 { echo "$as_me:$LINENO: result: yes" >&5
 echo "${ECHO_T}yes" >&6; }
 :
-CFLAGS="$CFLAGS -std=c99 -D__EXTENSIONS__ -D_BSD_SOURCE -D_POSIX_C_SOURCE=200112 -D_XOPEN_SOURCE=600 -D_ALL_SOURCE"
+CFLAGS="$CFLAGS -std=c99 -D__EXTENSIONS__ -D_BSD_SOURCE -D_POSIX_C_SOURCE=200112 -D_XOPEN_SOURCE=600 -D_XOPEN_SOURCE_EXTENDED=1 -D_ALL_SOURCE"
 else
 if eval "test \"`echo '$cv_prog_cc_flag_needed_'$cache`\" = no"; then
 { echo "$as_me:$LINENO: result: no" >&5
@@ -21711,7 +21711,7 @@ echo $ECHO_N "checking for libevent... $ECHO_C" >&6; }
             		{ echo "$as_me:$LINENO: result: found in $thedir" >&5
 echo "${ECHO_T}found in $thedir" >&6; }
                 	CPPFLAGS="$CPPFLAGS -I$thedir";
-            		LDFLAGS="$thedir/*.lo $LDFLAGS";
+            		LATE_LDFLAGS="$thedir/*.lo";
 		else
             		{ { echo "$as_me:$LINENO: error: Cannot find the libevent library in $withval
 You can restart ./configure --with-libevent=no to use a builtin alternative.
@@ -24586,6 +24586,7 @@ _ACEOF
 
 fi
 
+LDFLAGS="$LATE_LDFLAGS $LDFLAGS";
 
 
 cat >>confdefs.h <<_ACEOF

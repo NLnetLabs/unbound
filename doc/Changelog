@@ -2,6 +2,8 @@
 	- interface-automatic feature. experimental. Nice for anycast.
 	- tpkg test for ip6 ancillary data.
 	- removed debug prints.
+	- porting experience, define for Solaris, test refined for BSD
+	  compatibility. The feature probably will not work on OpenBSD.
 
 14 January 2008: Wouter
 	- in no debug sets NDEBUG to remove asserts.
