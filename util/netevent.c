@@ -188,7 +188,9 @@ comm_point_send_udp_msg_if(struct comm_point *c, ldns_buffer* packet,
 	struct msghdr msg;
 	struct iovec iov[1];
 	char control[256];
+#ifndef S_SPLINT_S
 	struct cmsghdr *cmsg;
+#endif /* S_SPLINT_S */
 
 	log_assert(c->fd != -1);
 	log_assert(ldns_buffer_remaining(packet) > 0);
@@ -206,8 +208,8 @@ comm_point_send_udp_msg_if(struct comm_point *c, ldns_buffer* packet,
 #endif /* S_SPLINT_S */
 	msg.msg_flags = 0;
 
-	cmsg = CMSG_FIRSTHDR(&msg);
 #ifndef S_SPLINT_S
+	cmsg = CMSG_FIRSTHDR(&msg);
 	cmsg->cmsg_level = IPPROTO_IPV6;
 	cmsg->cmsg_type = IPV6_PKTINFO;
 	cmsg->cmsg_len = CMSG_LEN(sizeof(struct in6_pktinfo));
