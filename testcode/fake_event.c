@@ -1005,6 +1005,12 @@ void comm_point_udp_callback(int ATTR_UNUSED(fd), short ATTR_UNUSED(event),
 	log_assert(0);
 }
 
+void comm_point_udp_ancil_callback(int ATTR_UNUSED(fd), 
+	short ATTR_UNUSED(event), void* ATTR_UNUSED(arg))
+{
+	log_assert(0);
+}
+
 void comm_point_tcp_accept_callback(int ATTR_UNUSED(fd), 
 	short ATTR_UNUSED(event), void* ATTR_UNUSED(arg))
 {

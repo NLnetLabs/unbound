@@ -75,6 +75,18 @@ struct listen_list {
 };
 
 /**
+ * type of ports
+ */
+enum listen_type {
+	/** udp type */
+	listen_type_udp,
+	/** tcp type */
+	listen_type_tcp,
+	/** udp ipv6 (v4mapped) for use with ancillary data */
+	listen_type_udpancil
+};
+
+/**
  * Single linked list to store shared ports that have been 
  * opened for use by all threads.
  */
@@ -84,7 +96,7 @@ struct listen_port {
 	/** file descriptor, open and ready for use */
 	int fd;
 	/** type of file descriptor, udp or tcp */
-	int is_udp;
+	enum listen_type ftype;
 };
 
 /**
@@ -154,8 +166,9 @@ size_t listen_get_mem(struct listen_dnsport* listen);
 /**
  * Create and bind nonblocking UDP socket
  * @param addr: address info ready to make socket.
+ * @param v6only: if enabled, IP6 sockets get IP6ONLY option set.
  * @return: the socket. -1 on error.
  */
-int create_udp_sock(struct addrinfo* addr);
+int create_udp_sock(struct addrinfo* addr, int v6only);
 
 #endif /* LISTEN_DNSPORT_H */

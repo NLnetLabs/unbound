@@ -684,6 +684,8 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 		LDNS_QR_SET(ldns_buffer_begin(c->buffer));
 		LDNS_RCODE_SET(ldns_buffer_begin(c->buffer), 
 			LDNS_RCODE_REFUSED);
+		log_addr(VERB_ALGO, "refused query from",
+			&repinfo->addr, repinfo->addrlen);
 		log_buf(VERB_ALGO, "refuse", c->buffer);
 		return 1;
 	}

@@ -86,7 +86,7 @@ verbose_print_addr(struct addrinfo *addr)
 }
 
 int
-create_udp_sock(struct addrinfo *addr)
+create_udp_sock(struct addrinfo *addr, int v6only)
 {
 	int s;
 # if defined(IPV6_V6ONLY)
@@ -99,11 +99,13 @@ create_udp_sock(struct addrinfo *addr)
 	}
 	if(addr->ai_family == AF_INET6) {
 # if defined(IPV6_V6ONLY)
-		if (setsockopt(s, IPPROTO_IPV6, IPV6_V6ONLY, 
-			&on, (socklen_t)sizeof(on)) < 0) {
-			log_err("setsockopt(..., IPV6_V6ONLY, ...) failed: %s",
-				strerror(errno));
-			return -1;
+		if(v6only) {
+			if (setsockopt(s, IPPROTO_IPV6, IPV6_V6ONLY, 
+				&on, (socklen_t)sizeof(on)) < 0) {
+				log_err("setsockopt(..., IPV6_V6ONLY"
+					", ...) failed: %s", strerror(errno));
+				return -1;
+			}
 		}
 # endif
 # if defined(IPV6_USE_MIN_MTU)
@@ -135,10 +137,11 @@ create_udp_sock(struct addrinfo *addr)
 /**
  * Create and bind TCP listening socket
  * @param addr: address info ready to make socket.
+ * @param v6only: enable ip6 only flag on ip6 sockets.
  * @return: the socket. -1 on error.
  */
 static int
-create_tcp_accept_sock(struct addrinfo *addr)
+create_tcp_accept_sock(struct addrinfo *addr, int v6only)
 {
 	int s, flag;
 #if defined(SO_REUSEADDR) || defined(IPV6_V6ONLY)
@@ -158,7 +161,7 @@ create_tcp_accept_sock(struct addrinfo *addr)
 	}
 #endif /* SO_REUSEADDR */
 #if defined(IPV6_V6ONLY)
-	if(addr->ai_family == AF_INET6) {
+	if(addr->ai_family == AF_INET6 && v6only) {
 		if(setsockopt(s, IPPROTO_IPV6, IPV6_V6ONLY, 
 			&on, (socklen_t)sizeof(on)) < 0) {
 			log_err("setsockopt(..., IPV6_V6ONLY, ...) failed: %s",
@@ -192,7 +195,7 @@ create_tcp_accept_sock(struct addrinfo *addr)
  */
 static int
 make_sock(int stype, const char* ifname, const char* port, 
-	struct addrinfo *hints)
+	struct addrinfo *hints, int v6only)
 {
 	struct addrinfo *res = NULL;
 	int r, s;
@@ -204,8 +207,8 @@ make_sock(int stype, const char* ifname, const char* port,
 		return -1;
 	}
 	if(stype == SOCK_DGRAM)
-		s = create_udp_sock(res);
-	else	s = create_tcp_accept_sock(res);
+		s = create_udp_sock(res, v6only);
+	else	s = create_tcp_accept_sock(res, v6only);
 	freeaddrinfo(res);
 	return s;
 }
@@ -214,11 +217,11 @@ make_sock(int stype, const char* ifname, const char* port,
  * Add port to open ports list.
  * @param list: list head. changed.
  * @param s: fd.
- * @param is_udp: if fd is UDP.
+ * @param ftype: if fd is UDP.
  * @return false on failure. list in unchanged then.
  */
 static int
-port_insert(struct listen_port** list, int s, int is_udp)
+port_insert(struct listen_port** list, int s, enum listen_type ftype)
 {
 	struct listen_port* item = (struct listen_port*)malloc(
 		sizeof(struct listen_port));
@@ -226,14 +229,32 @@ port_insert(struct listen_port** list, int s, int is_udp)
 		return 0;
 	item->next = *list;
 	item->fd = s;
-	item->is_udp = is_udp;
+	item->ftype = ftype;
 	*list = item;
 	return 1;
 }
 
+#ifdef IPV6_RECVPKTINFO
+/** set IPV6_RECVPKTINFO on fd */
+static int
+set_ip6_recvpktinfo(int s) 
+{
+	int on = 1;
+	if(setsockopt(s, IPPROTO_IPV6, IPV6_RECVPKTINFO,
+		&on, (socklen_t)sizeof(on)) < 0) {
+		log_err("setsockopt(..., IPV6_RECVPKTINFO, ...) failed: %s",
+			strerror(errno));
+		return 0;
+	}
+	return 1;
+}
+#endif /* defined IPV6_RECVPKTINFO */
+
 /**
  * Helper for ports_open. Creates one interface (or NULL for default).
  * @param ifname: The interface ip address.
+ * @param do_auto: use automatic interface detection.
+ * 	If enabled, then ifname must be the wildcard name.
  * @param do_udp: if udp should be used.
  * @param do_tcp: if udp should be used.
  * @param hints: for getaddrinfo. family and flags have to be set by caller.
@@ -242,25 +263,45 @@ port_insert(struct listen_port** list, int s, int is_udp)
  * @return: returns false on error.
  */
 static int
-ports_create_if(const char* ifname, int do_udp, int do_tcp, 
+ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp, 
 	struct addrinfo *hints, const char* port, struct listen_port** list)
 {
 	int s;
 	if(!do_udp && !do_tcp)
 		return 0;
-	if(do_udp) {
-		if((s = make_sock(SOCK_DGRAM, ifname, port, hints)) == -1)
+	if(do_auto) {
+		/* skip ip4 sockets, ip4 udp gets mapped to v6 */
+		if(hints->ai_family == AF_INET6) {
+			if((s = make_sock(SOCK_DGRAM, ifname, port, hints, 0))
+				== -1)
+				return 0;
+#ifdef IPV6_RECVPKTINFO
+			if(!set_ip6_recvpktinfo(s))
+				return 0;
+#else
+			log_err("no IPV6_RECVPKTINFO option, please "
+				"disable interface-automatic in config");
 			return 0;
-		if(!port_insert(list, s, 1)) {
+#endif
+			if(!port_insert(list, s, listen_type_udpancil)) {
+				close(s);
+				return 0;
+			}
+		}
+	} else if(do_udp) {
+		/* regular udp socket */
+		if((s = make_sock(SOCK_DGRAM, ifname, port, hints, 1)) == -1)
+			return 0;
+		if(!port_insert(list, s, listen_type_udp)) {
 			close(s);
 			return 0;
 		}
 	}
 	if(do_tcp) {
-		if((s = make_sock(SOCK_STREAM, ifname, port, hints)) == -1) {
+		if((s = make_sock(SOCK_STREAM, ifname, port, hints, 1)) == -1) {
 			return 0;
 		}
-		if(!port_insert(list, s, 0)) {
+		if(!port_insert(list, s, listen_type_tcp)) {
 			close(s);
 			return 0;
 		}
@@ -306,11 +347,15 @@ listen_create(struct comm_base* base, struct listen_port* ports,
 	/* create comm points as needed */
 	while(ports) {
 		struct comm_point* cp = NULL;
-		if(ports->is_udp) 
+		if(ports->ftype == listen_type_udp) 
 			cp = comm_point_create_udp(base, ports->fd, 
 				front->udp_buff, cb, cb_arg);
-		else 	cp = comm_point_create_tcp(base, ports->fd, 
+		else if(ports->ftype == listen_type_tcp)
+			cp = comm_point_create_tcp(base, ports->fd, 
 				tcp_accept_count, bufsize, cb, cb_arg);
+		else if(ports->ftype == listen_type_udpancil) 
+			cp = comm_point_create_udp_ancil(base, ports->fd, 
+				front->udp_buff, cb, cb_arg);
 		if(!cp) {
 			log_err("can't create commpoint");	
 			listen_delete(front);
@@ -383,12 +428,13 @@ listening_ports_open(struct config_file* cfg)
 	struct listen_port* list = NULL;
 	struct addrinfo hints;
 	int i, do_ip4, do_ip6;
-	int do_tcp;
+	int do_tcp, do_auto;
 	char portbuf[32];
 	snprintf(portbuf, sizeof(portbuf), "%d", cfg->port);
 	do_ip4 = cfg->do_ip4;
 	do_ip6 = cfg->do_ip6;
 	do_tcp = cfg->do_tcp;
+	do_auto = cfg->if_automatic && cfg->do_udp;
 	if(cfg->incoming_num_tcp == 0)
 		do_tcp = 0;
 
@@ -405,11 +451,16 @@ listening_ports_open(struct config_file* cfg)
 	if(!do_ip4 && !do_ip6) {
 		return NULL;
 	}
+	if(do_auto && (!do_ip4 || !do_ip6)) {
+		log_warn("interface_automatic option does not work when IP4 or IP6 is not enabled. Disabling option.");
+		do_auto = 0;
+	}
 	/* create ip4 and ip6 ports so that return addresses are nice. */
-	if(cfg->num_ifs == 0) {
+	if(do_auto || cfg->num_ifs == 0) {
 		if(do_ip6) {
 			hints.ai_family = AF_INET6;
-			if(!ports_create_if("::1", cfg->do_udp, do_tcp, 
+			if(!ports_create_if(do_auto?"::0":"::1", 
+				do_auto, cfg->do_udp, do_tcp, 
 				&hints, portbuf, &list)) {
 				listening_ports_free(list);
 				return NULL;
@@ -417,7 +468,8 @@ listening_ports_open(struct config_file* cfg)
 		}
 		if(do_ip4) {
 			hints.ai_family = AF_INET;
-			if(!ports_create_if("127.0.0.1", cfg->do_udp, do_tcp, 
+			if(!ports_create_if(do_auto?"0.0.0.0":"127.0.0.1", 
+				do_auto, cfg->do_udp, do_tcp, 
 				&hints, portbuf, &list)) {
 				listening_ports_free(list);
 				return NULL;
@@ -428,7 +480,7 @@ listening_ports_open(struct config_file* cfg)
 			if(!do_ip6)
 				continue;
 			hints.ai_family = AF_INET6;
-			if(!ports_create_if(cfg->ifs[i], cfg->do_udp, 
+			if(!ports_create_if(cfg->ifs[i], 0, cfg->do_udp, 
 				do_tcp, &hints, portbuf, &list)) {
 				listening_ports_free(list);
 				return NULL;
@@ -437,7 +489,7 @@ listening_ports_open(struct config_file* cfg)
 			if(!do_ip4)
 				continue;
 			hints.ai_family = AF_INET;
-			if(!ports_create_if(cfg->ifs[i], cfg->do_udp, 
+			if(!ports_create_if(cfg->ifs[i], 0, cfg->do_udp, 
 				do_tcp, &hints, portbuf, &list)) {
 				listening_ports_free(list);
 				return NULL;

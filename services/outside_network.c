@@ -302,7 +302,7 @@ open_udp_port_range(const char* ifname, struct addrinfo* hints, int porthint)
 			r==EAI_SYSTEM?(char*)strerror(errno):"");
 		return -1;
 	}
-	s = create_udp_sock(res);
+	s = create_udp_sock(res, 1);
 	freeaddrinfo(res);
 	return s;
 }

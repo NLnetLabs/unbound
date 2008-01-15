@@ -105,6 +105,7 @@ config_create()
 	cfg->donotquery_localhost = 1;
 	cfg->root_hints = NULL;
 	cfg->do_daemonize = 1;
+	cfg->if_automatic = 0;
 	cfg->num_ifs = 0;
 	cfg->ifs = NULL;
 	cfg->num_out_ifs = 0;

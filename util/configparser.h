@@ -111,7 +111,8 @@
      VAR_HARDEN_DNNSEC_STRIPPED = 327,
      VAR_ACCESS_CONTROL = 328,
      VAR_LOCAL_ZONE = 329,
-     VAR_LOCAL_DATA = 330
+     VAR_LOCAL_DATA = 330,
+     VAR_INTERFACE_AUTOMATIC = 331
    };
 #endif
 /* Tokens.  */
@@ -188,6 +189,7 @@
 #define VAR_ACCESS_CONTROL 328
 #define VAR_LOCAL_ZONE 329
 #define VAR_LOCAL_DATA 330
+#define VAR_INTERFACE_AUTOMATIC 331
 
 
 
@@ -199,7 +201,7 @@ typedef union YYSTYPE
 	char*	str;
 }
 /* Line 1489 of yacc.c.  */
-#line 203 "util/configparser.h"
+#line 205 "util/configparser.h"
 	YYSTYPE;
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */
 # define YYSTYPE_IS_DECLARED 1

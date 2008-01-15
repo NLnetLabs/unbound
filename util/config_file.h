@@ -102,6 +102,10 @@ struct config_file {
 	/** the target fetch policy for the iterator */
 	char* target_fetch_policy;
 
+	/** automatic interface for incoming messages. Uses ipv6 remapping,
+	 * and recvmsg/sendmsg ancillary data to detect interfaces, boolean */
+	int if_automatic;
+
 	/** number of interfaces to open. If 0 default all interfaces. */
 	int num_ifs;
 	/** interface description strings (IP addresses) */

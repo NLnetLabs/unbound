@@ -1,9 +1,13 @@
+15 January 2008: Wouter
+	- interface-automatic feature. experimental. Nice for anycast.
+
 14 January 2008: Wouter
 	- in no debug sets NDEBUG to remove asserts.
 	- configure --enable-debug is needed for dependency generation
 	  for assertions and for compiler warnings.
 	- ldns.tgz updated with ldns-trunk (where buffer.h is updated).
 	- fix lint, unit test in optimize mode.
+	- default access control allows ::ffff:127.0.0.1 v6mapped localhost.
 	
 11 January 2008: Wouter
 	- man page, warning removed.

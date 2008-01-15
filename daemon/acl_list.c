@@ -200,6 +200,8 @@ acl_list_apply_cfg(struct acl_list* acl, struct config_file* cfg)
 		return 0;
 	if(!acl_list_str_cfg(acl, "::1", "allow", 0))
 		return 0;
+	if(!acl_list_str_cfg(acl, "::ffff:127.0.0.1", "allow", 0))
+		return 0;
 	acl_list_init_parents(acl);
 	return 1;
 }

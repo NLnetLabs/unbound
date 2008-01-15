@@ -62,3 +62,6 @@ o library add convenience functions for A, AAAA, PTR, getaddrinfo, libresolve.
 o library add function to get signature data (or whole reply message).
 o library add function to validate input from app that is signed.
 o add dynamic-update requests (making a dynupd request) to libunbound api.
+o in an ipv6 connected only environment unbound cannot use outgoing IP6 
+  to send to ip4to6 mapped hosts, need ip4to6map of NS and disable 
+  V6ONLY socket option.

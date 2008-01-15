@@ -96,6 +96,14 @@ Can be given multiple times to work on several interfaces. If none are
 given the default is to listen to localhost.
 The interfaces are not changed on a reload (kill \-HUP) but only on restart.
 .TP
+.B interface-automatic: \fI<yes or no>
+Detect all interfaces and use them. This feature is experimental, and needs
+support in your OS for IPv6 (and its socket options). You have to set access
+control for IPv4, IPv6 addresses and also for mapped IPv4 to IPv6 addresses
+(i.e. ::ffff:192.168.0.0/112 and so on). IPv4 TCP connections use the IPv4
+access control, IPv4 UDP queries use the mapped access control.
+Default value is no.
+.TP
 .B outgoing\-interface: \fI<ip address>
 Interface to use to connect to the network. This interface is used to send
 queries to authoritative servers and receive their replies. Can be given 

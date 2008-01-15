@@ -113,6 +113,7 @@ do-udp{COLON}		{ YDOUT; return VAR_DO_UDP;}
 do-tcp{COLON}		{ YDOUT; return VAR_DO_TCP;}
 interface{COLON}	{ YDOUT; return VAR_INTERFACE;}
 outgoing-interface{COLON}	{ YDOUT; return VAR_OUTGOING_INTERFACE;}
+interface-automatic{COLON}	{ YDOUT; return VAR_INTERFACE_AUTOMATIC;}
 chroot{COLON}		{ YDOUT; return VAR_CHROOT;}
 username{COLON}		{ YDOUT; return VAR_USERNAME;}
 directory{COLON}	{ YDOUT; return VAR_DIRECTORY;}

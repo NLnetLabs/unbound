@@ -98,6 +98,8 @@ struct comm_reply {
 	struct sockaddr_storage addr;
 	/** length of address */
 	socklen_t addrlen;
+	/** the interface received (for UDPautomaticinterface) or 0 */
+	int ifnum;
 };
 
 /** 
@@ -269,6 +271,22 @@ void comm_base_exit(struct comm_base* b);
  * Sets timeout to NULL. Turns off TCP options.
  */
 struct comm_point* comm_point_create_udp(struct comm_base* base,
+	int fd, ldns_buffer* buffer, 
+	comm_point_callback_t* callback, void* callback_arg);
+
+/**
+ * Create an UDP with ancillary data comm point. Calls malloc.
+ * Uses recvmsg instead of recv to get udp message.
+ * setups the structure with the parameters you provide.
+ * @param base: in which base to alloc the commpoint.
+ * @param fd : file descriptor of open UDP socket.
+ * @param buffer: shared buffer by UDP sockets from this thread.
+ * @param callback: callback function pointer.
+ * @param callback_arg: will be passed to your callback function.
+ * @return: returns the allocated communication point. NULL on error.
+ * Sets timeout to NULL. Turns off TCP options.
+ */
+struct comm_point* comm_point_create_udp_ancil(struct comm_base* base,
 	int fd, ldns_buffer* buffer, 
 	comm_point_callback_t* callback, void* callback_arg);
 
@@ -475,6 +493,16 @@ void comm_signal_delete(struct comm_signal* comsig);
  * @param arg: the comm_point structure.
  */
 void comm_point_udp_callback(int fd, short event, void* arg);
+
+/**
+ * This routine is published for checks and tests, and is only used internally.
+ * handle libevent callback for udp ancillary data comm point.
+ * @param fd: file descriptor.
+ * @param event: event bits from libevent: 
+ *	EV_READ, EV_WRITE, EV_SIGNAL, EV_TIMEOUT.
+ * @param arg: the comm_point structure.
+ */
+void comm_point_udp_ancil_callback(int fd, short event, void* arg);
 
 /**
  * This routine is published for checks and tests, and is only used internally.

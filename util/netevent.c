@@ -178,6 +178,122 @@ comm_point_send_udp_msg(struct comm_point *c, ldns_buffer* packet,
 	return 1;
 }
 
+/** send a UDP reply over specified interface*/
+int
+comm_point_send_udp_msg_if(struct comm_point *c, ldns_buffer* packet,
+	struct sockaddr* addr, socklen_t addrlen, int ifnum) 
+{
+#if defined(AF_INET6) && defined(IPV6_PKTINFO)
+	ssize_t sent;
+	struct msghdr msg;
+	struct iovec iov[1];
+	char control[256];
+	struct cmsghdr *cmsg;
+
+	log_assert(c->fd != -1);
+	log_assert(ldns_buffer_remaining(packet) > 0);
+	log_assert(addr && addrlen > 0);
+
+	msg.msg_name = addr;
+	msg.msg_namelen = addrlen;
+	iov[0].iov_base = ldns_buffer_begin(packet);
+	iov[0].iov_len = ldns_buffer_remaining(packet);
+	msg.msg_iov = iov;
+	msg.msg_iovlen = 1;
+	msg.msg_control = control;
+	msg.msg_controllen = sizeof(control);
+	msg.msg_flags = 0;
+
+	cmsg = CMSG_FIRSTHDR(&msg);
+	cmsg->cmsg_level = IPPROTO_IPV6;
+	cmsg->cmsg_type = IPV6_PKTINFO;
+	cmsg->cmsg_len = CMSG_LEN(sizeof(struct in6_pktinfo));
+	memset(&((struct in6_pktinfo*)CMSG_DATA(cmsg))->ipi6_addr, 0,
+		sizeof(struct in6_addr));
+	((struct in6_pktinfo*)CMSG_DATA(cmsg))->ipi6_ifindex = 
+		(TYPE_MSGIOVLEN)ifnum;
+	msg.msg_controllen = cmsg->cmsg_len;
+
+	log_info("using interface to sendmsg %d", ifnum);
+	sent = sendmsg(c->fd, &msg, 0);
+	if(sent == -1) {
+		verbose(VERB_OPS, "sendto failed: %s", strerror(errno));
+		return 0;
+	} else if((size_t)sent != ldns_buffer_remaining(packet)) {
+		log_err("sent %d in place of %d bytes", 
+			(int)sent, (int)ldns_buffer_remaining(packet));
+		return 0;
+	}
+	return 1;
+#else
+	log_err("sendmsg: IPV6_PKTINFO not supported");
+	return 0;
+#endif
+}
+
+void 
+comm_point_udp_ancil_callback(int fd, short event, void* arg)
+{
+#if defined(AF_INET6) && defined(IPV6_PKTINFO)
+	struct comm_reply rep;
+	struct msghdr msg;
+	struct iovec iov[1];
+	ssize_t recv;
+	char ancil[256];
+	struct cmsghdr* cmsg;
+
+	rep.c = (struct comm_point*)arg;
+	log_assert(rep.c->type == comm_udp);
+
+	if(!(event&EV_READ))
+		return;
+	log_assert(rep.c && rep.c->buffer && rep.c->fd == fd);
+	ldns_buffer_clear(rep.c->buffer);
+	rep.addrlen = (socklen_t)sizeof(rep.addr);
+	log_assert(fd != -1);
+	log_assert(ldns_buffer_remaining(rep.c->buffer) > 0);
+	msg.msg_name = &rep.addr;
+	msg.msg_namelen = (socklen_t)sizeof(rep.addr);
+	iov[0].iov_base = ldns_buffer_begin(rep.c->buffer);
+	iov[0].iov_len = ldns_buffer_remaining(rep.c->buffer);
+	msg.msg_iov = iov;
+	msg.msg_iovlen = 1;
+	msg.msg_control = ancil;
+	msg.msg_controllen = sizeof(ancil);
+	msg.msg_flags = 0;
+	recv = recvmsg(fd, &msg, 0);
+	if(recv == -1) {
+		if(errno != EAGAIN && errno != EINTR) {
+			log_err("recvfrom failed: %s", strerror(errno));
+		}
+		return;
+	}
+	rep.addrlen = msg.msg_namelen;
+	ldns_buffer_skip(rep.c->buffer, recv);
+	ldns_buffer_flip(rep.c->buffer);
+	rep.ifnum = 0;
+	for(cmsg = CMSG_FIRSTHDR(&msg); cmsg != NULL;
+		cmsg = CMSG_NXTHDR(&msg, cmsg)) {
+		if( cmsg->cmsg_level == IPPROTO_IPV6 &&
+			cmsg->cmsg_type == IPV6_PKTINFO) {
+			rep.ifnum = (int)((struct in6_pktinfo*)CMSG_DATA(
+				cmsg))->ipi6_ifindex;
+			/* ignored ipi6_addr with the dest ipv6 address */
+		}
+	}
+	log_info("recvmsg if %d", rep.ifnum);
+	log_assert(fptr_whitelist_comm_point(rep.c->callback));
+	if((*rep.c->callback)(rep.c, rep.c->cb_arg, NETEVENT_NOERROR, &rep)) {
+		/* send back immediate reply */
+		(void)comm_point_send_udp_msg_if(rep.c, rep.c->buffer,
+			(struct sockaddr*)&rep.addr, rep.addrlen, rep.ifnum);
+	}
+#else
+	fatal_exit("recvmsg: No support for IPV6_PKTINFO. "
+		"Please disable interface-automatic");
+#endif
+}
+
 void 
 comm_point_udp_callback(int fd, short event, void* arg)
 {
@@ -205,6 +321,7 @@ comm_point_udp_callback(int fd, short event, void* arg)
 	}
 	ldns_buffer_skip(rep.c->buffer, recv);
 	ldns_buffer_flip(rep.c->buffer);
+	rep.ifnum = 0;
 	log_assert(fptr_whitelist_comm_point(rep.c->callback));
 	if((*rep.c->callback)(rep.c, rep.c->cb_arg, NETEVENT_NOERROR, &rep)) {
 		/* send back immediate reply */
@@ -562,6 +679,50 @@ comm_point_create_udp(struct comm_base *base, int fd, ldns_buffer* buffer,
 	return c;
 }
 
+struct comm_point* 
+comm_point_create_udp_ancil(struct comm_base *base, int fd, 
+	ldns_buffer* buffer, 
+	comm_point_callback_t* callback, void* callback_arg)
+{
+	struct comm_point* c = (struct comm_point*)calloc(1,
+		sizeof(struct comm_point));
+	short evbits;
+	if(!c)
+		return NULL;
+	c->ev = (struct internal_event*)calloc(1,
+		sizeof(struct internal_event));
+	if(!c->ev) {
+		free(c);
+		return NULL;
+	}
+	c->fd = fd;
+	c->buffer = buffer;
+	c->timeout = NULL;
+	c->tcp_is_reading = 0;
+	c->tcp_byte_count = 0;
+	c->tcp_parent = NULL;
+	c->max_tcp_count = 0;
+	c->tcp_handlers = NULL;
+	c->tcp_free = NULL;
+	c->type = comm_udp;
+	c->tcp_do_close = 0;
+	c->do_not_close = 0;
+	c->tcp_do_toggle_rw = 0;
+	c->tcp_check_nb_connect = 0;
+	c->callback = callback;
+	c->cb_arg = callback_arg;
+	evbits = EV_READ | EV_PERSIST;
+	/* libevent stuff */
+	event_set(&c->ev->ev, c->fd, evbits, comm_point_udp_ancil_callback, c);
+	if(event_base_set(base->eb->base, &c->ev->ev) != 0 ||
+		event_add(&c->ev->ev, c->timeout) != 0 ) {
+		log_err("could not add udp event");
+		comm_point_delete(c);
+		return NULL;
+	}
+	return c;
+}
+
 static struct comm_point* 
 comm_point_create_tcp_handler(struct comm_base *base, 
 	struct comm_point* parent, size_t bufsize,
@@ -834,7 +995,12 @@ comm_point_send_reply(struct comm_reply *repinfo)
 {
 	log_assert(repinfo && repinfo->c);
 	if(repinfo->c->type == comm_udp) {
-		comm_point_send_udp_msg(repinfo->c, repinfo->c->buffer,
+		if(repinfo->ifnum)
+			comm_point_send_udp_msg_if(repinfo->c, 
+			repinfo->c->buffer, (struct sockaddr*)&repinfo->addr, 
+			repinfo->addrlen, repinfo->ifnum);
+		else
+			comm_point_send_udp_msg(repinfo->c, repinfo->c->buffer,
 			(struct sockaddr*)&repinfo->addr, repinfo->addrlen);
 	} else {
 		comm_point_start_listening(repinfo->c, -1, TCP_QUERY_TIMEOUT);
