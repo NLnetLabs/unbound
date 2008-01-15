@@ -152,6 +152,39 @@ int test() {
 }
 ], [CFLAGS="$CFLAGS -std=c99 -D__EXTENSIONS__ -D_BSD_SOURCE -D_POSIX_C_SOURCE=200112 -D_XOPEN_SOURCE=600 -D_XOPEN_SOURCE_EXTENDED=1 -D_ALL_SOURCE"])
 
+CHECK_COMPILER_FLAG_NEEDED(-std=c99 -D__EXTENSIONS__ -D_BSD_SOURCE -D_POSIX_C_SOURCE=200112 -D_XOPEN_SOURCE=600 -D_ALL_SOURCE,
+[
+#include "confdefs.h"
+#include <stdlib.h>
+#include <ctype.h>
+#include <sys/time.h>
+#ifdef HAVE_TIME_H
+#include <time.h>
+#endif
+#include <unistd.h>
+#include <netdb.h>
+#ifdef HAVE_GETOPT_H
+#include <getopt.h>
+#endif
+
+int test() {
+	int a;
+	char **opts = NULL;
+	struct timeval tv;
+	char *t;
+	time_t time = 0;
+	char *buf = NULL;
+	const char* str = NULL;
+	t = ctime_r(&time, buf);
+	tv.tv_usec = 10;
+	srandom(32);
+	a = getopt(2, opts, "a");
+	a = isascii(32);
+	str = gai_strerror(0);
+	return a;
+}
+], [CFLAGS="$CFLAGS -std=c99 -D__EXTENSIONS__ -D_BSD_SOURCE -D_POSIX_C_SOURCE=200112 -D_XOPEN_SOURCE=600 -D_ALL_SOURCE"])
+
 CHECK_COMPILER_FLAG_NEEDED(-std=c99,
 [
 #include <stdbool.h>
