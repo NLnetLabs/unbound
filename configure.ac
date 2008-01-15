@@ -506,12 +506,14 @@ if test x_$withval != x_no; then
                 break;
             fi
         done
+	BAK_LDFLAGS="$LDFLAGS"
         if test x_$found_libevent != x_yes; then
 		if test -f "$dir/event.h" -a -f "$dir/libevent.la"; then
 			# libevent source directory
             		AC_MSG_RESULT(found in $thedir)
                 	CPPFLAGS="$CPPFLAGS -I$thedir";
             		LATE_LDFLAGS="$thedir/*.lo";
+			LDFLAGS="$LATE_LDFLAGS $LDFLAGS"
 		else
             		AC_MSG_ERROR([Cannot find the libevent library in $withval
 You can restart ./configure --with-libevent=no to use a builtin alternative.
@@ -530,6 +532,7 @@ many outgoing ports.  ])
 	AC_CHECK_HEADERS([event.h],,, [AC_INCLUDES_DEFAULT])
 	AC_CHECK_FUNCS([event_base_free]) # only in libevent 1.2 and later
 	AC_CHECK_FUNCS([event_base_once]) # only in libevent 1.4? and later
+	LDFLAGS="$BAK_LDFLAGS"
 else
 	AC_DEFINE(USE_MINI_EVENT, 1, [Define if you want to use internal select based events])
 fi

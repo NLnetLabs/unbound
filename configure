@@ -21705,6 +21705,7 @@ echo $ECHO_N "checking for libevent... $ECHO_C" >&6; }
                 break;
             fi
         done
+	BAK_LDFLAGS="$LDFLAGS"
         if test x_$found_libevent != x_yes; then
 		if test -f "$dir/event.h" -a -f "$dir/libevent.la"; then
 			# libevent source directory
@@ -21712,6 +21713,7 @@ echo $ECHO_N "checking for libevent... $ECHO_C" >&6; }
 echo "${ECHO_T}found in $thedir" >&6; }
                 	CPPFLAGS="$CPPFLAGS -I$thedir";
             		LATE_LDFLAGS="$thedir/*.lo";
+			LDFLAGS="$LATE_LDFLAGS $LDFLAGS"
 		else
             		{ { echo "$as_me:$LINENO: error: Cannot find the libevent library in $withval
 You can restart ./configure --with-libevent=no to use a builtin alternative.
@@ -22061,6 +22063,7 @@ _ACEOF
 fi
 done
  # only in libevent 1.4? and later
+	LDFLAGS="$BAK_LDFLAGS"
 else
 
 cat >>confdefs.h <<\_ACEOF
