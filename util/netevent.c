@@ -221,7 +221,7 @@ comm_point_send_udp_msg_if(struct comm_point *c, ldns_buffer* packet,
 
 	sent = sendmsg(c->fd, &msg, 0);
 	if(sent == -1) {
-		verbose(VERB_OPS, "sendto failed: %s", strerror(errno));
+		verbose(VERB_OPS, "sendmsg failed: %s", strerror(errno));
 		return 0;
 	} else if((size_t)sent != ldns_buffer_remaining(packet)) {
 		log_err("sent %d in place of %d bytes", 
@@ -272,7 +272,7 @@ comm_point_udp_ancil_callback(int fd, short event, void* arg)
 	recv = recvmsg(fd, &msg, 0);
 	if(recv == -1) {
 		if(errno != EAGAIN && errno != EINTR) {
-			log_err("recvfrom failed: %s", strerror(errno));
+			log_err("recvmsg failed: %s", strerror(errno));
 		}
 		return;
 	}
