@@ -91,6 +91,8 @@ create_udp_sock(struct addrinfo *addr, int v6only)
 	int s;
 # if defined(IPV6_V6ONLY)
 	int on=1;
+# else
+	(void)v6only;
 # endif
 	verbose_print_addr(addr);
 	if((s = socket(addr->ai_family, addr->ai_socktype, 0)) == -1) {
@@ -169,6 +171,8 @@ create_tcp_accept_sock(struct addrinfo *addr, int v6only)
 			return -1;
 		}
 	}
+#else
+	(void)v6only;
 #endif /* IPV6_V6ONLY */
 	if(bind(s, (struct sockaddr*)addr->ai_addr, addr->ai_addrlen) != 0) {
 		log_err("can't bind socket: %s", strerror(errno));
