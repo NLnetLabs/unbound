@@ -89,7 +89,7 @@ int
 create_udp_sock(struct addrinfo *addr, int v6only)
 {
 	int s;
-# if defined(IPV6_V6ONLY)
+# if defined(IPV6_USE_MIN_MTU)
 	int on=1;
 # else
 	(void)v6only;
@@ -102,8 +102,9 @@ create_udp_sock(struct addrinfo *addr, int v6only)
 	if(addr->ai_family == AF_INET6) {
 # if defined(IPV6_V6ONLY)
 		if(v6only) {
+			int val=(v6only==2)?0:1;
 			if (setsockopt(s, IPPROTO_IPV6, IPV6_V6ONLY, 
-				&on, (socklen_t)sizeof(on)) < 0) {
+				&val, (socklen_t)sizeof(val)) < 0) {
 				log_err("setsockopt(..., IPV6_V6ONLY"
 					", ...) failed: %s", strerror(errno));
 				return -1;
@@ -250,16 +251,6 @@ set_ip6_recvpktinfo(int s)
 			strerror(errno));
 		return 0;
 	}
-#ifdef IPV6_V6ONLY
-	on = 0;
-	if(setsockopt(s, IPPROTO_IPV6, IPV6_V6ONLY,
-		&on, (socklen_t)sizeof(on)) < 0) {
-		log_err("disable sockopt(..., IPV6_V6ONLY, ...) failed: %s"
-			" (on BSD may be due to net.inet6.ip6.v6only sysctl)",
-			strerror(errno));
-		return 0;
-	}
-#endif /* defined IPV6_V6ONLY */
 	return 1;
 }
 #endif /* defined IPV6_RECVPKTINFO */
@@ -286,7 +277,7 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 	if(do_auto) {
 		/* skip ip4 sockets, ip4 udp gets mapped to v6 */
 		if(hints->ai_family == AF_INET6) {
-			if((s = make_sock(SOCK_DGRAM, ifname, port, hints, 0))
+			if((s = make_sock(SOCK_DGRAM, ifname, port, hints, 2))
 				== -1)
 				return 0;
 #ifdef IPV6_RECVPKTINFO

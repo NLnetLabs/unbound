@@ -167,6 +167,7 @@ size_t listen_get_mem(struct listen_dnsport* listen);
  * Create and bind nonblocking UDP socket
  * @param addr: address info ready to make socket.
  * @param v6only: if enabled, IP6 sockets get IP6ONLY option set.
+ * 	if enabled with value 2 IP6ONLY option is disabled.
  * @return: the socket. -1 on error.
  */
 int create_udp_sock(struct addrinfo* addr, int v6only);
