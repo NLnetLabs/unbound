@@ -102,9 +102,9 @@ support in your OS for IPv6 (and its socket options). You have to set access
 control for IPv4, IPv6 addresses and also for mapped IPv4 to IPv6 addresses
 (i.e. ::ffff:192.168.0.0/112 and so on). IPv4 TCP connections use the IPv4
 access control, IPv4 UDP queries use the mapped access control.
-On FreeBSD it needs net.inet6.ip6.v6only=0 in /etc/sysctl.conf. OpenBSD may
-not support it at all.
-Default value is no.
+On FreeBSD sysconfig is associated with this, net.inet6.ip6.v6only in 
+/etc/sysctl.conf, it should work with this set or unset. OpenBSD may not 
+support it at all.  Default value is no.
 .TP
 .B outgoing\-interface: \fI<ip address>
 Interface to use to connect to the network. This interface is used to send
