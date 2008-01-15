@@ -21849,13 +21849,13 @@ echo $ECHO_N "checking for libevent... $ECHO_C" >&6; }
                 break;
             fi
         done
-	BAK_LDFLAGS="$LDFLAGS"
         if test x_$found_libevent != x_yes; then
 		if test -f "$dir/event.h" -a -f "$dir/libevent.la"; then
 			# libevent source directory
             		{ echo "$as_me:$LINENO: result: found in $thedir" >&5
 echo "${ECHO_T}found in $thedir" >&6; }
                 	CPPFLAGS="$CPPFLAGS -I$thedir";
+			BAK_LDFLAGS="$LDFLAGS"
             		LATE_LDFLAGS="$thedir/*.lo";
 			LDFLAGS="$thedir/*.o $LDFLAGS"
 		else
@@ -22207,7 +22207,9 @@ _ACEOF
 fi
 done
  # only in libevent 1.4? and later
-	LDFLAGS="$BAK_LDFLAGS"
+	if test -n "$BAK_LDFLAGS"; then
+		LDFLAGS="$BAK_LDFLAGS"
+	fi
 else
 
 cat >>confdefs.h <<\_ACEOF
