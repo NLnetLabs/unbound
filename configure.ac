@@ -513,7 +513,7 @@ if test x_$withval != x_no; then
             		AC_MSG_RESULT(found in $thedir)
                 	CPPFLAGS="$CPPFLAGS -I$thedir";
             		LATE_LDFLAGS="$thedir/*.lo";
-			LDFLAGS="$LATE_LDFLAGS $LDFLAGS"
+			LDFLAGS="$thedir/*.o $LDFLAGS"
 		else
             		AC_MSG_ERROR([Cannot find the libevent library in $withval
 You can restart ./configure --with-libevent=no to use a builtin alternative.

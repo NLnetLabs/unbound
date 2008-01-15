@@ -21713,7 +21713,7 @@ echo $ECHO_N "checking for libevent... $ECHO_C" >&6; }
 echo "${ECHO_T}found in $thedir" >&6; }
                 	CPPFLAGS="$CPPFLAGS -I$thedir";
             		LATE_LDFLAGS="$thedir/*.lo";
-			LDFLAGS="$LATE_LDFLAGS $LDFLAGS"
+			LDFLAGS="$thedir/*.o $LDFLAGS"
 		else
             		{ { echo "$as_me:$LINENO: error: Cannot find the libevent library in $withval
 You can restart ./configure --with-libevent=no to use a builtin alternative.
