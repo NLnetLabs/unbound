@@ -246,6 +246,16 @@ set_ip6_recvpktinfo(int s)
 			strerror(errno));
 		return 0;
 	}
+#ifdef IPV6_V6ONLY
+	on = 0;
+	if(setsockopt(s, IPPROTO_IPV6, IPV6_V6ONLY,
+		&on, (socklen_t)sizeof(on)) < 0) {
+		log_err("disable sockopt(..., IPV6_V6ONLY, ...) failed: %s"
+			" (on BSD may be due to net.inet6.ip6.v6only sysctl)",
+			strerror(errno));
+		return 0;
+	}
+#endif /* defined IPV6_V6ONLY */
 	return 1;
 }
 #endif /* defined IPV6_RECVPKTINFO */
