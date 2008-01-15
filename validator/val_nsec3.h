@@ -243,6 +243,9 @@ struct nsec3_cached_hash {
 
 /**
  * Rbtree for hash cache comparison function
+ * @param c1: key 1.
+ * @param c2: key 2.
+ * @return comparison code, -1, 0, 1, of the keys.
  */
 int nsec3_hash_cmp(const void* c1, const void* c2);
 

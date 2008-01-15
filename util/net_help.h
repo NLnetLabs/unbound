@@ -245,7 +245,7 @@ int addr_is_ip6(struct sockaddr_storage* addr, socklen_t len);
  * Make sure the sockaddr ends in zeroes. For tree insertion and subsequent
  * comparison.
  * @param addr: the ip4 or ip6 addr.
- * @Param len: lentgh of addr.
+ * @param len: length of addr.
  * @param net: number of bits to leave untouched, the rest of the netblock
  * 	address is zeroed.
  */

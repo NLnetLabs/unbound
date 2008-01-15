@@ -1,5 +1,7 @@
 15 January 2008: Wouter
 	- interface-automatic feature. experimental. Nice for anycast.
+	- tpkg test for ip6 ancillary data.
+	- removed debug prints.
 
 14 January 2008: Wouter
 	- in no debug sets NDEBUG to remove asserts.

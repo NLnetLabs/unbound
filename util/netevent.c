@@ -201,20 +201,22 @@ comm_point_send_udp_msg_if(struct comm_point *c, ldns_buffer* packet,
 	msg.msg_iov = iov;
 	msg.msg_iovlen = 1;
 	msg.msg_control = control;
+#ifndef S_SPLINT_S
 	msg.msg_controllen = sizeof(control);
+#endif /* S_SPLINT_S */
 	msg.msg_flags = 0;
 
 	cmsg = CMSG_FIRSTHDR(&msg);
+#ifndef S_SPLINT_S
 	cmsg->cmsg_level = IPPROTO_IPV6;
 	cmsg->cmsg_type = IPV6_PKTINFO;
 	cmsg->cmsg_len = CMSG_LEN(sizeof(struct in6_pktinfo));
 	memset(&((struct in6_pktinfo*)CMSG_DATA(cmsg))->ipi6_addr, 0,
 		sizeof(struct in6_addr));
-	((struct in6_pktinfo*)CMSG_DATA(cmsg))->ipi6_ifindex = 
-		(TYPE_MSGIOVLEN)ifnum;
+	((struct in6_pktinfo*)CMSG_DATA(cmsg))->ipi6_ifindex = ifnum;
 	msg.msg_controllen = cmsg->cmsg_len;
+#endif /* S_SPLINT_S */
 
-	log_info("using interface to sendmsg %d", ifnum);
 	sent = sendmsg(c->fd, &msg, 0);
 	if(sent == -1) {
 		verbose(VERB_OPS, "sendto failed: %s", strerror(errno));
@@ -240,7 +242,9 @@ comm_point_udp_ancil_callback(int fd, short event, void* arg)
 	struct iovec iov[1];
 	ssize_t recv;
 	char ancil[256];
+#ifndef S_SPLINT_S
 	struct cmsghdr* cmsg;
+#endif /* S_SPLINT_S */
 
 	rep.c = (struct comm_point*)arg;
 	log_assert(rep.c->type == comm_udp);
@@ -259,7 +263,9 @@ comm_point_udp_ancil_callback(int fd, short event, void* arg)
 	msg.msg_iov = iov;
 	msg.msg_iovlen = 1;
 	msg.msg_control = ancil;
+#ifndef S_SPLINT_S
 	msg.msg_controllen = sizeof(ancil);
+#endif /* S_SPLINT_S */
 	msg.msg_flags = 0;
 	recv = recvmsg(fd, &msg, 0);
 	if(recv == -1) {
@@ -272,16 +278,17 @@ comm_point_udp_ancil_callback(int fd, short event, void* arg)
 	ldns_buffer_skip(rep.c->buffer, recv);
 	ldns_buffer_flip(rep.c->buffer);
 	rep.ifnum = 0;
+#ifndef S_SPLINT_S
 	for(cmsg = CMSG_FIRSTHDR(&msg); cmsg != NULL;
 		cmsg = CMSG_NXTHDR(&msg, cmsg)) {
 		if( cmsg->cmsg_level == IPPROTO_IPV6 &&
 			cmsg->cmsg_type == IPV6_PKTINFO) {
-			rep.ifnum = (int)((struct in6_pktinfo*)CMSG_DATA(
-				cmsg))->ipi6_ifindex;
+			rep.ifnum = ((struct in6_pktinfo*)CMSG_DATA(cmsg))->
+				ipi6_ifindex;
 			/* ignored ipi6_addr with the dest ipv6 address */
 		}
 	}
-	log_info("recvmsg if %d", rep.ifnum);
+#endif /* S_SPLINT_S */
 	log_assert(fptr_whitelist_comm_point(rep.c->callback));
 	if((*rep.c->callback)(rep.c, rep.c->cb_arg, NETEVENT_NOERROR, &rep)) {
 		/* send back immediate reply */
