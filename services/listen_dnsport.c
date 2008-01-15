@@ -239,21 +239,32 @@ port_insert(struct listen_port** list, int s, enum listen_type ftype)
 	return 1;
 }
 
-#ifdef IPV6_RECVPKTINFO
 /** set IPV6_RECVPKTINFO on fd */
 static int
 set_ip6_recvpktinfo(int s) 
 {
 	int on = 1;
+#ifdef IPV6_RECVPKTINFO
 	if(setsockopt(s, IPPROTO_IPV6, IPV6_RECVPKTINFO,
 		&on, (socklen_t)sizeof(on)) < 0) {
 		log_err("setsockopt(..., IPV6_RECVPKTINFO, ...) failed: %s",
 			strerror(errno));
 		return 0;
 	}
+#elif defined(IPV6_PKTINFO)
+	if(setsockopt(s, IPPROTO_IPV6, IPV6_PKTINFO,
+		&on, (socklen_t)sizeof(on)) < 0) {
+		log_err("setsockopt(..., IPV6_PKTINFO, ...) failed: %s",
+			strerror(errno));
+		return 0;
+	}
+#else
+	log_err("no IPV6_RECVPKTINFO and no IPV6_PKTINFO option, please "
+		"disable interface-automatic in config");
+	return 0;
+#endif /* defined IPV6_RECVPKTINFO */
 	return 1;
 }
-#endif /* defined IPV6_RECVPKTINFO */
 
 /**
  * Helper for ports_open. Creates one interface (or NULL for default).
@@ -280,14 +291,8 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 			if((s = make_sock(SOCK_DGRAM, ifname, port, hints, 2))
 				== -1)
 				return 0;
-#ifdef IPV6_RECVPKTINFO
 			if(!set_ip6_recvpktinfo(s))
 				return 0;
-#else
-			log_err("no IPV6_RECVPKTINFO option, please "
-				"disable interface-automatic in config");
-			return 0;
-#endif
 			if(!port_insert(list, s, listen_type_udpancil)) {
 				close(s);
 				return 0;
