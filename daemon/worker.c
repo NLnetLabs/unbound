@@ -262,6 +262,11 @@ worker_check_request(ldns_buffer* pkt, struct worker* worker)
 		verbose(VERB_DETAIL, "request has QR bit on, discarded");
 		return -1;
 	}
+	if(LDNS_TC_WIRE(ldns_buffer_begin(pkt))) {
+		LDNS_TC_CLR(ldns_buffer_begin(pkt));
+		verbose(VERB_DETAIL, "request bad, has TC bit on");
+		return LDNS_RCODE_FORMERR;
+	}
 	if(LDNS_OPCODE_WIRE(ldns_buffer_begin(pkt)) != LDNS_PACKET_QUERY) {
 		verbose(VERB_DETAIL, "request unknown opcode %d", 
 			LDNS_OPCODE_WIRE(ldns_buffer_begin(pkt)));

@@ -1,3 +1,6 @@
+16 January 2008: Wouter
+	- incoming queries to the server with TC bit on are replied FORMERR.
+
 15 January 2008: Wouter
 	- interface-automatic feature. experimental. Nice for anycast.
 	- tpkg test for ip6 ancillary data.
