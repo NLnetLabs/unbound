@@ -330,7 +330,7 @@ comm_point_udp_callback(int fd, short event, void* arg)
 	}
 	ldns_buffer_skip(rep.c->buffer, recv);
 	ldns_buffer_flip(rep.c->buffer);
-	rep.ifnum = 0;
+	rep.ifnum = -1;
 	log_assert(fptr_whitelist_comm_point(rep.c->callback));
 	if((*rep.c->callback)(rep.c, rep.c->cb_arg, NETEVENT_NOERROR, &rep)) {
 		/* send back immediate reply */
@@ -1004,7 +1004,7 @@ comm_point_send_reply(struct comm_reply *repinfo)
 {
 	log_assert(repinfo && repinfo->c);
 	if(repinfo->c->type == comm_udp) {
-		if(repinfo->ifnum)
+		if(repinfo->ifnum != -1)
 			comm_point_send_udp_msg_if(repinfo->c, 
 			repinfo->c->buffer, (struct sockaddr*)&repinfo->addr, 
 			repinfo->addrlen, repinfo->ifnum);

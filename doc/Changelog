@@ -1,5 +1,8 @@
 16 January 2008: Wouter
 	- incoming queries to the server with TC bit on are replied FORMERR.
+	- interface-automatic replied the wrong source address on localhost
+	  queries. Seems to be due to ifnum=0 in recvmsg PKTINFO. Trying
+	  to use ifnum=-1 to mean 'no interface, use kernel route'.
 
 15 January 2008: Wouter
 	- interface-automatic feature. experimental. Nice for anycast.
