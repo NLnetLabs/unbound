@@ -181,7 +181,7 @@ comm_point_send_udp_msg(struct comm_point *c, ldns_buffer* packet,
 /** send a UDP reply over specified interface*/
 int
 comm_point_send_udp_msg_if(struct comm_point *c, ldns_buffer* packet,
-	struct sockaddr* addr, socklen_t addrlen, int ifnum) 
+	struct sockaddr* addr, socklen_t addrlen, void* ifaddr, int ifnum) 
 {
 #if defined(AF_INET6) && defined(IPV6_PKTINFO)
 	ssize_t sent;
@@ -213,8 +213,8 @@ comm_point_send_udp_msg_if(struct comm_point *c, ldns_buffer* packet,
 	cmsg->cmsg_level = IPPROTO_IPV6;
 	cmsg->cmsg_type = IPV6_PKTINFO;
 	cmsg->cmsg_len = CMSG_LEN(sizeof(struct in6_pktinfo));
-	memset(&((struct in6_pktinfo*)CMSG_DATA(cmsg))->ipi6_addr, 0,
-		sizeof(struct in6_addr));
+	memmove(&((struct in6_pktinfo*)CMSG_DATA(cmsg))->ipi6_addr, 
+		ifaddr, sizeof(struct in6_addr));
 	((struct in6_pktinfo*)CMSG_DATA(cmsg))->ipi6_ifindex = ifnum;
 	msg.msg_controllen = cmsg->cmsg_len;
 #endif /* S_SPLINT_S */
@@ -287,7 +287,9 @@ comm_point_udp_ancil_callback(int fd, short event, void* arg)
 			cmsg->cmsg_type == IPV6_PKTINFO) {
 			rep.ifnum = ((struct in6_pktinfo*)CMSG_DATA(cmsg))->
 				ipi6_ifindex;
-			/* ignored ipi6_addr with the dest ipv6 address */
+			memmove(&rep.ifaddr, &((struct in6_pktinfo*)
+				CMSG_DATA(cmsg))->ipi6_addr, 
+				sizeof(struct in6_addr));
 		}
 	}
 #endif /* S_SPLINT_S */
@@ -295,7 +297,8 @@ comm_point_udp_ancil_callback(int fd, short event, void* arg)
 	if((*rep.c->callback)(rep.c, rep.c->cb_arg, NETEVENT_NOERROR, &rep)) {
 		/* send back immediate reply */
 		(void)comm_point_send_udp_msg_if(rep.c, rep.c->buffer,
-			(struct sockaddr*)&rep.addr, rep.addrlen, rep.ifnum);
+			(struct sockaddr*)&rep.addr, rep.addrlen, 
+			&rep.ifaddr, rep.ifnum);
 	}
 #else
 	fatal_exit("recvmsg: No support for IPV6_PKTINFO. "
@@ -1007,7 +1010,7 @@ comm_point_send_reply(struct comm_reply *repinfo)
 		if(repinfo->ifnum != -1)
 			comm_point_send_udp_msg_if(repinfo->c, 
 			repinfo->c->buffer, (struct sockaddr*)&repinfo->addr, 
-			repinfo->addrlen, repinfo->ifnum);
+			repinfo->addrlen, &repinfo->ifaddr, repinfo->ifnum);
 		else
 			comm_point_send_udp_msg(repinfo->c, repinfo->c->buffer,
 			(struct sockaddr*)&repinfo->addr, repinfo->addrlen);

@@ -98,6 +98,10 @@ struct comm_reply {
 	struct sockaddr_storage addr;
 	/** length of address */
 	socklen_t addrlen;
+#ifdef AF_INET6
+	/** the interface address */
+	struct in6_addr ifaddr;
+#endif
 	/** the interface received (for UDPautomaticinterface) or 0 */
 	int ifnum;
 };

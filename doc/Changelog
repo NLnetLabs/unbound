@@ -1,6 +1,8 @@
 17 January 2008: Wouter
 	- fixup configure in case -lldns is installed.
 	- fixup a couple of doxygen warnings, about enum variables.
+	- interface-automatic now copies the interface address from the
+	  PKT_INFO structure as well.
 
 16 January 2008: Wouter
 	- incoming queries to the server with TC bit on are replied FORMERR.
