@@ -155,7 +155,9 @@ struct replay_moment {
 		repevt_back_query,
 		/** an error happens to outbound query */
 		repevt_error
-	} evt_type;
+	} 
+		/** variable with what is to happen this moment */
+		evt_type;
 
 	/** The sent packet must match this. Incoming events, the data. */
 	struct entry* match;

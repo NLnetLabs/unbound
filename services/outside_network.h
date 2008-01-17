@@ -225,7 +225,9 @@ struct serviced_query {
 		serviced_query_TCP_EDNS,
 		/** TCP without EDNS sent */
 		serviced_query_TCP
-	} status;
+	} 	
+		/** variable with current status */ 
+		status;
 	/** true if serviced_query is scheduled for deletion already */
 	int to_be_deleted;
 	/** number of UDP retries */

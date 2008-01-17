@@ -154,7 +154,9 @@ struct comm_point {
 		comm_tcp,
 		/** AF_UNIX socket - for internal commands. */
 		comm_local
-	} type;
+	} 
+		/** variable with type of socket, UDP,TCP-accept,TCP,pipe */
+		type;
 
 	/* ---------- Behaviour ----------- */
 	/** if set the connection is NOT closed on delete. */
