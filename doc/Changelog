@@ -1,3 +1,6 @@
+17 January 2008: Wouter
+	- fixup configure in case -lldns is installed.
+
 16 January 2008: Wouter
 	- incoming queries to the server with TC bit on are replied FORMERR.
 	- interface-automatic replied the wrong source address on localhost

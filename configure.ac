@@ -521,10 +521,10 @@ if test x_$withval != x_no; then
 fi
 
 # check to see if libraries are needed for these functions.
-AC_CHECK_LIB(nsl, inet_pton)
-AC_CHECK_LIB(socket, socket)
+AC_SEARCH_LIBS([inet_pton], [nsl])
+AC_SEARCH_LIBS([socket], [socket])
 # check for library used by libevent after 1.3c
-AC_CHECK_LIB(rt, clock_gettime)
+AC_SEARCH_LIBS([clock_gettime], [rt])
 
 # check for libevent
 AC_ARG_WITH(libevent, AC_HELP_STRING([--with-libevent=pathname],
@@ -623,6 +623,7 @@ AC_ARG_WITH(ldns,
 
 AC_CHECK_LIB(ldns, ldns_rr_new, [
 dnl ldns was found, check compat functions
+AC_CHECK_LIB(ldns, [ldns_rr_free])
 AC_REPLACE_FUNCS(inet_aton)
 AC_REPLACE_FUNCS(inet_pton)
 AC_REPLACE_FUNCS(inet_ntop)
