@@ -3,6 +3,8 @@
 	- fixup a couple of doxygen warnings, about enum variables.
 	- interface-automatic now copies the interface address from the
 	  PKT_INFO structure as well.
+	- manual page with library API, all on one page 'man libunbound'.
+	- rewrite of PKTINFO structure, it also captures IP4 PKTINFO.
 
 16 January 2008: Wouter
 	- incoming queries to the server with TC bit on are replied FORMERR.

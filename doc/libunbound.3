@@ -1,0 +1,264 @@
+.TH "libunbound" "3" "@date@" "NLnet Labs" "unbound @version@"
+.\"
+.\" libunbound.3 -- unbound library functions manual
+.\"
+.\" Copyright (c) 2007, NLnet Labs. All rights reserved.
+.\"
+.\" See LICENSE for the license.
+.\"
+.\"
+.SH "NAME"
+.LP
+.B libunbound,
+.B unbound.h,
+.B ub_val_ctx,
+.B ub_val_result,
+.B ub_val_callback_t,
+.B ub_val_ctx_create,
+.B ub_val_ctx_delete,
+.B ub_val_ctx_config,
+.B ub_val_ctx_add_ta,
+.B ub_val_ctx_add_ta_file,
+.B ub_val_ctx_trustedkeys,
+.B ub_val_ctx_debuglevel,
+.B ub_val_ctx_async,
+.B ub_val_ctx_poll,
+.B ub_val_ctx_wait,
+.B ub_val_ctx_fd,
+.B ub_val_ctx_process,
+.B ub_val_resolve,
+.B ub_val_resolve_async,
+.B ub_val_cancel,
+.B ub_val_result_free,
+.B ub_val_strerror
+\- Unbound DNS validating resolver @version@ functions.
+.SH "SYNOPSIS"
+.LP
+.B #include <unbound.h>
+.LP
+\fIstruct ub_val_ctx *\fR
+\fBub_val_ctx_create\fR(\fIvoid\fR);
+.LP
+\fIvoid\fR
+\fBub_val_ctx_delete\fR(\fIstruct ub_val_ctx*\fR ctx);
+.LP
+\fIint\fR
+\fBub_val_ctx_config\fR(\fIstruct ub_val_ctx*\fR ctx, \fIchar*\fR fname);
+.LP
+\fIint\fR
+\fBub_val_ctx_add_ta\fR(\fIstruct ub_val_ctx*\fR ctx, \fIchar*\fR ta);
+.LP
+\fIint\fR
+\fBub_val_ctx_add_ta_file\fR(\fIstruct ub_val_ctx*\fR ctx, \fIchar*\fR fname);
+.LP
+\fIint\fR
+\fBub_val_ctx_trustedkeys\fR(\fIstruct ub_val_ctx*\fR ctx, \fIchar*\fR fname);
+.LP
+\fIint\fR
+\fBub_val_ctx_debuglevel\fR(\fIstruct ub_val_ctx*\fR ctx, \fIint\fR d);
+.LP
+\fIint\fR
+\fBub_val_ctx_async\fR(\fIstruct ub_val_ctx*\fR ctx, \fIint\fR dothread);
+.LP
+\fIint\fR
+\fBub_val_ctx_poll\fR(\fIstruct ub_val_ctx*\fR ctx);
+.LP
+\fIint\fR
+\fBub_val_ctx_wait\fR(\fIstruct ub_val_ctx*\fR ctx);
+.LP
+\fIint\fR
+\fBub_val_ctx_fd\fR(\fIstruct ub_val_ctx*\fR ctx);
+.LP
+\fIint\fR
+\fBub_val_ctx_process\fR(\fIstruct ub_val_ctx*\fR ctx);
+.LP
+\fIint\fR
+\fBub_val_resolve\fR(\fIstruct ub_val_ctx*\fR ctx, \fIchar*\fR name, 
+.br
+                   \fIint\fR rrtype, \fIint\fR rrclass, \fIint*\fR secure, 
+.br
+                   \fIint*\fR data, \fIstruct ub_val_result**\fR result);
+.LP
+\fIint\fR
+\fBub_val_resolve_async\fR(\fIstruct ub_val_ctx*\fR ctx, \fIchar*\fR name, 
+.br
+                         \fIint\fR rrtype, \fIint\fR rrclass, \fIvoid*\fR mydata, 
+.br
+                         \fIub_val_callback_t\fR callback, \fIint*\fR async_id);
+.LP
+\fIint\fR
+\fBub_val_cancel\fR(\fIstruct ub_val_ctx*\fR ctx, \fIint\fR async_id);
+.LP
+\fIvoid\fR
+\fBub_val_result_free\fR(\fIstruct ub_val_result*\fR result);
+.LP
+\fIconst char *\fR
+\fBub_val_strerror\fR(\fIint\fR err);
+.SH "DESCRIPTION"
+.LP
+.B Unbound 
+is an implementation of a DNS resolver, that does caching and 
+DNSSEC validation. This is the library API, for using the \-lunbound library.
+The server daemon is described in \fIunbound\fR(8).
+The library can be used to convert hostnames to ip addresses, and back,
+and obtain other information from the DNS. The library performs public\-key
+validation of results with DNSSEC.
+.P
+The library uses a variable of type \fIstruct ub_val_ctx\fR to keep context
+between calls. The user must maintain it, creating it with
+.B ub_val_ctx_create
+and deleting it with
+.B ub_val_ctx_delete\fR.
+It can be created and deleted at any time. Creating it anew removes any 
+previous configuration (such as trusted keys) and clears any cached results.
+.P
+The functions are thread\-safe, and a context an be used in a threaded (as 
+well as in a non\-threaded) environment. Also resolution (and validation) 
+can be performed blocking and non\-blocking (also called asynchronous). 
+The async method returns from the call immediately, so that processing 
+can go on, while the results become available later. 
+.P
+The functions are discussed in turn below.
+.SH "FUNCTIONS"
+.TP 
+.B ub_val_ctx_create
+Create a new context, initialised with defaults.
+.TP
+.B ub_val_ctx_delete
+Delete validation context and free associated resources.
+Outstanding async queries are killed and callbacks are not called for them.
+.TP
+.B ub_val_ctx_config
+A power\-user interface that lets you specify an unbound config file, see
+\fIunbound.conf\fR(5), which is read for configuration. Not all options are
+relevant. For some specific options, such as adding trust anchors, special
+routines exist.
+.TP
+.B
+ub_val_ctx_add_ta
+Add a trust anchor to the given context.
+At this time it is only possible to add trusted keys before the
+first resolve is done.
+The format is a string, similar to the zone-file format,
+[domainname] [type] [rdata contents]. Both DS and DNSKEY records are accepted.
+.TP
+.B ub_val_ctx_add_ta_file
+Add trust anchors to the given context.
+Pass name of a file with DS and DNSKEY records in zone file format.
+At this time it is only possible to add trusted keys before the
+first resolve is done.
+.TP
+.B ub_val_ctx_trustedkeys
+Add trust anchors to the given context.
+Pass the name of a bind-style config file with trusted-keys{}.
+At this time it is only possible to add trusted keys before the
+first resolve is done.
+.TP
+.B ub_val_ctx_debuglevel
+Set debug verbosity for the context. Output is directed to stderr.
+Higher debug level gives more output.
+.TP
+.B ub_val_ctx_async
+Set a context behaviour for asynchronous action.
+if set to true, enables threading and a call to resolve_async() 
+creates a thread to handle work in the background.
+If false, a process is forked to handle work in the background.
+Changes to this setting after async() calls have been made have 
+no effect (delete and re\-create the context to change).
+.TP
+.B ub_val_ctx_poll
+Poll a context to see if it has any new results.
+Do not poll in a loop, instead extract the fd below to poll for readiness,
+and then check, or wait using the wait routine.
+Returns 0 if nothing to read, or nonzero if a result is available.
+If nonzero, call 
+.B ctx_process 
+to do callbacks.
+.TP
+.B ub_val_ctx_wait
+Wait for a context to finish with results. Calls 
+.B ub_val_ctx_process after
+the wait for you. After the wait, there are no more outstanding asynchronous
+queries.
+.TP
+.B ub_val_ctx_fd
+Get file descriptor. Wait for it to become readable, at this point
+answers are returned from the asynchronous validating resolver.
+Then call the \fBub_val_ctx_process\fR to continue processing.
+.TP
+.B ub_val_ctx_process
+Call this routine to continue processing results from the validating
+resolver (when the fd becomes readable).
+Will perform necessary callbacks.
+.TP
+.B ub_val_resolve
+Perform resolution and validation of the target name.
+The name is a domain name in a zero terminated text string.
+The rrtype and rrclass are DNS type and class codes.
+The value secure returns true if the answer validated securely.
+The value data returns true if there was data.
+The result structure is newly allocated with the resulting data.
+.TP
+.B ub_val_resolve_async
+Perform asynchronous resolution and validation of the target name.
+Arguments mean the same as for \fBub_val_resolve\fR except no
+data is returned immediately, instead a callback is called later.
+The callback receives a copy of the mydata point, that you can use to pass
+information to the callback. The callback type is a function pointer to
+a function declared as
+.IP
+void my_callback_function(void* my_arg, int err, 
+.br
+                          int secure, int havedata, 
+.br
+                          struct ub_val_result* result);
+.IP
+The async_id is returned so you can (at your option) decide to track it
+and cancel the request if needed.
+.TP
+.B ub_val_cancel
+Cancel an async query in progress.
+.TP
+.B ub_val_result_free
+Free struct ub_val_result contents after use.
+.TP
+.B ub_val_strerror
+Convert error value from one of the unbound library functions 
+to a human readable string.
+.SH "RESULT DATA STRUCTURE"
+.LP
+The result of the DNS resolution and validation is returned as 
+\fIstruct ub_val_result\fR. The result structure contains the following entries.
+.P
+.nf
+	struct ub_val_result {
+		char* qname; /* text string, original question */
+		int qtype;   /* type code asked for */
+		int qclass;  /* class code asked for */
+		char** data; /* array of rdata items, NULL terminated*/
+		int* len;    /* array with lengths of rdata items */
+		char* canonname; /* canonical name of result */
+		int rcode;   /* additional error code in case of error */
+		int nxdomain; /* if nodata because no domain */
+		int bogus;   /* if not secure due to security failure */
+	};
+.fi
+.SH "RETURN VALUES"
+Many routines return an error code. The value 0 (zero) denotes no error
+happened. Other values can be passed to
+.B ub_val_strerror
+to obtain a readable error string.
+.B ub_val_strerror
+returns a zero terminated string.
+.B ub_val_ctx_create
+returns NULL on an error (a malloc failure).
+.B ub_val_ctx_poll
+returns true if some information may be available, false otherwise.
+.B ub_val_ctx_fd
+returns a file descriptor or -1 on error.
+.SH "SEE ALSO"
+\fIunbound.conf\fR(5), 
+\fIunbound\fR(8).
+.SH "AUTHORS"
+.B Unbound
+developers are mentioned in the CREDITS file in the distribution.

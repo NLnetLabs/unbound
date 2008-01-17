@@ -266,13 +266,14 @@ int ub_val_ctx_async(struct ub_val_ctx* ctx, int dothread);
  * and then check, or wait using the wait routine.
  * @param ctx: context.
  * @return: 0 if nothing to read, or nonzero if a result is available.
- * 	If nonzero, call ctx_process() to get do any callbacks.
+ * 	If nonzero, call ctx_process() to do callbacks.
  */
 int ub_val_ctx_poll(struct ub_val_ctx* ctx);
 
 /**
  * Wait for a context to finish with results. Calls ctx_process() after
- * the wait for you. After the wait, there are no more outstanding queries.
+ * the wait for you. After the wait, there are no more outstanding 
+ * asynchronous queries.
  * @param ctx: context.
  * @return: 0 if OK, else error.
  */

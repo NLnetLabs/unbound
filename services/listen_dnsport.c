@@ -263,6 +263,18 @@ set_ip6_recvpktinfo(int s)
 		"disable interface-automatic in config");
 	return 0;
 #endif /* defined IPV6_RECVPKTINFO */
+
+#ifdef IP_PKTINFO
+	if(setsockopt(s, IPPROTO_IP, IP_PKTINFO,
+		&on, (socklen_t)sizeof(on)) < 0) {
+		log_err("setsockopt(..., IP_PKTINFO, ...) failed: %s",
+			strerror(errno));
+	}
+#else
+	log_err("no IP_PKTINFO option, please disable "
+		"interface-automatic in config");
+	return 0;
+#endif /* IP_PKTINFO */
 	return 1;
 }
 

@@ -98,12 +98,19 @@ struct comm_reply {
 	struct sockaddr_storage addr;
 	/** length of address */
 	socklen_t addrlen;
-#ifdef AF_INET6
-	/** the interface address */
-	struct in6_addr ifaddr;
+	/** return type 0 (none), 4(IP4), 6(IP6) */
+	int srctype;
+	/** the return source interface data */
+	union {
+#ifdef IPV6_PKTINFO
+		struct in6_pktinfo v6info;
 #endif
-	/** the interface received (for UDPautomaticinterface) or 0 */
-	int ifnum;
+#ifdef IP_PKTINFO
+		struct in_pktinfo v4info;
+#endif
+	} 	
+		/** variable with return source data */
+		pktinfo;
 };
 
 /** 

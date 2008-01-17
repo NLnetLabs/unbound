@@ -155,19 +155,19 @@ enum ub_ctx_err {
 	/** no error */
 	UB_NOERROR = 0,
 	/** alloc failure */
-	UB_NOMEM,
+	UB_NOMEM = -1,
 	/** socket operation */
-	UB_SOCKET,
+	UB_SOCKET = -2,
 	/** syntax error */
-	UB_SYNTAX,
+	UB_SYNTAX = -3,
 	/** DNS service failed */
-	UB_SERVFAIL,
+	UB_SERVFAIL = -4,
 	/** fork() failed */
-	UB_FORKFAIL,
+	UB_FORKFAIL = -5,
 	/** cfg change after finalize() */
-	UB_AFTERFINAL,
+	UB_AFTERFINAL = -6,
 	/** initialization failed (bad settings) */
-	UB_INITFAIL
+	UB_INITFAIL = -7
 };
 
 /** 
