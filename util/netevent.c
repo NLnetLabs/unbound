@@ -181,7 +181,7 @@ comm_point_send_udp_msg(struct comm_point *c, ldns_buffer* packet,
 /** print debug ancillary info */
 void p_ancil(const char* str, struct comm_reply* r)
 {
-#if defined(AF_INET6) && defined(IPV6_PKTINFO) && defined(IP_PKTINFO)
+#if defined(AF_INET6) && defined(IPV6_PKTINFO)
 	if(r->srctype != 4 && r->srctype != 6) {
 		log_info("%s: unknown srctype %d", str, r->srctype);
 		return;
@@ -195,6 +195,15 @@ void p_ancil(const char* str, struct comm_reply* r)
 		buf[sizeof(buf)-1]=0;
 		log_info("%s: %s %d", str, buf, r->pktinfo.v6info.ipi6_ifindex);
 	} else if(r->srctype == 4) {
+#ifdef IP_RECVDSTADDR
+		char buf1[1024];
+		if(inet_ntop(AF_INET, &r->pktinfo.v4addr, 
+			buf1, (socklen_t)sizeof(buf1)) == 0) {
+			strncpy(buf1, "(inet_ntop error)", sizeof(buf1));
+		}
+		buf1[sizeof(buf1)-1]=0;
+		log_info("%s: %s", str, buf1);
+#elif defined(IP_PKTINFO)
 		char buf1[1024], buf2[1024];
 		if(inet_ntop(AF_INET, &r->pktinfo.v4info.ipi_addr, 
 			buf1, (socklen_t)sizeof(buf1)) == 0) {
@@ -208,6 +217,7 @@ void p_ancil(const char* str, struct comm_reply* r)
 		buf2[sizeof(buf2)-1]=0;
 		log_info("%s: %d %s %s", str, r->pktinfo.v4info.ipi_ifindex,
 			buf1, buf2);
+#endif
 	}
 #endif
 }
@@ -217,7 +227,7 @@ int
 comm_point_send_udp_msg_if(struct comm_point *c, ldns_buffer* packet,
 	struct sockaddr* addr, socklen_t addrlen, struct comm_reply* r) 
 {
-#if defined(AF_INET6) && defined(IPV6_PKTINFO) && defined(IP_PKTINFO)
+#if defined(AF_INET6) && defined(IPV6_PKTINFO)
 	ssize_t sent;
 	struct msghdr msg;
 	struct iovec iov[1];
@@ -245,11 +255,19 @@ comm_point_send_udp_msg_if(struct comm_point *c, ldns_buffer* packet,
 #ifndef S_SPLINT_S
 	cmsg = CMSG_FIRSTHDR(&msg);
 	if(r->srctype == 4) {
+#ifdef IP_RECVDSTADDR
+		cmsg->cmsg_level = IPPROTO_IP;
+		cmsg->cmsg_type = IP_RECVDSTADDR;
+		memmove(CMSG_DATA(cmsg), &r->pktinfo.v4addr,
+			sizeof(struct in_addr));
+		cmsg->cmsg_len = CMSG_LEN(sizeof(struct in_addr));
+#elif defined(IP_PKTINFO)
 		cmsg->cmsg_level = IPPROTO_IP;
 		cmsg->cmsg_type = IP_PKTINFO;
 		memmove(CMSG_DATA(cmsg), &r->pktinfo.v4info,
 			sizeof(struct in_pktinfo));
 		cmsg->cmsg_len = CMSG_LEN(sizeof(struct in_pktinfo));
+#endif
 	} else if(r->srctype == 6) {
 		cmsg->cmsg_level = IPPROTO_IPV6;
 		cmsg->cmsg_type = IPV6_PKTINFO;
@@ -286,7 +304,7 @@ comm_point_send_udp_msg_if(struct comm_point *c, ldns_buffer* packet,
 void 
 comm_point_udp_ancil_callback(int fd, short event, void* arg)
 {
-#if defined(AF_INET6) && defined(IPV6_PKTINFO) && defined(IP_PKTINFO)
+#if defined(AF_INET6) && defined(IPV6_PKTINFO)
 	struct comm_reply rep;
 	struct msghdr msg;
 	struct iovec iov[1];
@@ -334,19 +352,34 @@ comm_point_udp_ancil_callback(int fd, short event, void* arg)
 		log_info("looking at hdr %d %d (need %d %d or %d %d)",
 			cmsg->cmsg_level, cmsg->cmsg_type,
 			IPPROTO_IPV6, IPV6_PKTINFO,
-			IPPROTO_IP, IP_PKTINFO);
+			IPPROTO_IP, 
+#ifdef IP_RECVDSTADDR
+			IP_RECVDSTADDR
+#elif defined(IP_PKTINFO)
+			IP_PKTINFO
+#endif
+			);
 		if( cmsg->cmsg_level == IPPROTO_IPV6 &&
 			cmsg->cmsg_type == IPV6_PKTINFO) {
 			rep.srctype = 6;
 			memmove(&rep.pktinfo.v6info, CMSG_DATA(cmsg),
 				sizeof(struct in6_pktinfo));
 			break;
+#ifdef IP_RECVDSTADDR
+		} else if( cmsg->cmsg_level == IPPROTO_IP &&
+			cmsg->cmsg_type == IP_RECVDSTADDR) {
+			rep.srctype = 4;
+			memmove(&rep.v4addr, CMSG_DATA(cmsg),
+				sizeof(struct in_addr));
+			break;
+#elif defined(IP_PKTINFO)
 		} else if( cmsg->cmsg_level == IPPROTO_IP &&
 			cmsg->cmsg_type == IP_PKTINFO) {
 			rep.srctype = 4;
 			memmove(&rep.pktinfo.v4info, CMSG_DATA(cmsg),
 				sizeof(struct in_pktinfo));
 			break;
+#endif
 		}
 	}
 	p_ancil("receive_udp on interface", &rep);
