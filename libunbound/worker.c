@@ -78,6 +78,8 @@ libworker_delete(struct libworker* w)
 		free(w->env);
 	}
 	outside_network_delete(w->back);
+	comm_point_delete(w->cmd_com);
+	comm_point_delete(w->res_com);
 	comm_base_delete(w->base);
 	free(w);
 }
@@ -153,14 +155,86 @@ libworker_setup(struct ub_val_ctx* ctx)
 	return w;
 }
 
+static int 
+libworker_handle_control_cmd(struct comm_point* c, void* arg, 
+	int err, struct comm_reply* ATTR_UNUSED(rep))
+{
+	/*struct ub_val_ctx* ctx = (struct ub_val_ctx*)arg;*/
+	if(err != NETEVENT_NOERROR) {
+		if(err == NETEVENT_CLOSED) {
+			/* parent closed pipe, must have exited somehow */
+			/* it is of no use to go on, exit */
+			exit(0);
+		}
+		log_err("internal error: control cmd err %d", err);
+		exit(0);
+	}
+	return 0;
+}
+
+static int 
+libworker_handle_result_write(struct comm_point* c, void* arg, 
+	int err, struct comm_reply* ATTR_UNUSED(rep))
+{
+	/*struct ub_val_ctx* ctx = (struct ub_val_ctx*)arg;*/
+	if(err != NETEVENT_NOERROR) {
+		if(err == NETEVENT_CLOSED) {
+			/* parent closed pipe, must have exited somehow */
+			/* it is of no use to go on, exit */
+			exit(0);
+		}
+		log_err("internal error: pipe comm err %d", err);
+		exit(0);
+	}
+	return 0;
+}
+
+/** get bufsize for cfg */
+static size_t
+getbufsz(struct ub_val_ctx* ctx)
+{
+	size_t s = 65535;
+	lock_basic_lock(&ctx->cfglock);
+	s = ctx->env->cfg->msg_buffer_size;
+	lock_basic_unlock(&ctx->cfglock);
+	return s;
+}
+
 /** the background thread func */
 static void*
 libworker_dobg(void* arg)
 {
+	/* setup */
 	struct ub_val_ctx* ctx = (struct ub_val_ctx*)arg;
 	struct libworker* w = libworker_setup(ctx);
+	size_t bufsz = getbufsz(ctx);
 	log_thread_set(&w->thread_num);
-	/* TODO do bg thread */
+	if(!w) {
+		log_err("libunbound bg worker init failed, nomem");
+		return NULL;
+	}
+	lock_basic_lock(&ctx->qqpipe_lock);
+	if(!(w->cmd_com=comm_point_create_local(w->base, ctx->qqpipe[0], 
+		bufsz, libworker_handle_control_cmd, w))) {
+		lock_basic_unlock(&ctx->qqpipe_lock);
+		log_err("libunbound bg worker init failed, no cmdcom");
+		return NULL;
+	}
+	lock_basic_unlock(&ctx->qqpipe_lock);
+	lock_basic_lock(&ctx->rrpipe_lock);
+	/* TODO create writing local commpoint */
+	if(!(w->res_com=comm_point_create_local(w->base, ctx->rrpipe[1], 
+		bufsz, libworker_handle_result_write, w))) {
+		lock_basic_unlock(&ctx->qqpipe_lock);
+		log_err("libunbound bg worker init failed, no cmdcom");
+		return NULL;
+	}
+	lock_basic_unlock(&ctx->rrpipe_lock);
+
+	/* do the work */
+	comm_base_dispatch(w->base);
+
+	/* cleanup */
 	libworker_delete(w);
 	return NULL;
 }
@@ -287,10 +361,14 @@ libworker_fg_done_cb(void* arg, int rcode, ldns_buffer* buf, enum sec_status s)
 	if(!fill_res(d->q->res, reply_find_answer_rrset(&rq, rep), 
 		reply_find_final_cname_target(&rq, rep), &rq))
 		return; /* out of memory */
-	/* rcode, nxdomain, bogus */
+	/* rcode, havedata, nxdomain, secure, bogus */
 	d->q->res->rcode = (int)LDNS_RCODE_WIRE(d->q->msg);
+	if(d->q->res->data && d->q->res->data[0])
+		d->q->res->havedata = 1;
 	if(d->q->res->rcode == LDNS_RCODE_NXDOMAIN)
 		d->q->res->nxdomain = 1;
+	if(s == sec_status_secure)
+		d->q->res->secure = 1;
 	if(s == sec_status_bogus)
 		d->q->res->bogus = 1;
 
@@ -340,20 +418,25 @@ int libworker_fg(struct ub_val_ctx* ctx, struct ctx_query* q)
 	qflags = BIT_RD;
 	d.q = q;
 	d.w = w;
+	/* see if there is a fixed answer */
 	if(local_zones_answer(ctx->local_zones, &qinfo, &edns, 
 		w->back->udp_buff, w->env->scratch)) {
 		libworker_fg_done_cb(&d, LDNS_RCODE_NOERROR, 
 			w->back->udp_buff, sec_status_insecure);
+		libworker_delete(w);
+		return UB_NOERROR;
 	}
-	else {
-		if(!mesh_new_callback(w->env->mesh, &qinfo, qflags, &edns, 
-			w->back->udp_buff, qid, libworker_fg_done_cb, &d)) {
-			free(qinfo.qname);
-			return UB_NOMEM;
-		}
+	/* process new query */
+	if(!mesh_new_callback(w->env->mesh, &qinfo, qflags, &edns, 
+		w->back->udp_buff, qid, libworker_fg_done_cb, &d)) {
 		free(qinfo.qname);
-		comm_base_dispatch(w->base);
+		return UB_NOMEM;
 	}
+	free(qinfo.qname);
+
+	/* wait for reply */
+	comm_base_dispatch(w->base);
+
 	libworker_delete(w);
 	return UB_NOERROR;
 }

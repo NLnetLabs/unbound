@@ -176,10 +176,10 @@ massage_class(const char* c)
 
 /** nice security status string */
 static const char* 
-statstr(int sec, struct ub_val_result* result)
+secure_str(struct ub_val_result* result)
 {
-	if(sec) return "(secure)";
-	if(result->bogus) return "(BOGUS (security failure))]";
+	if(result->secure) return "(secure)";
+	if(result->bogus) return "(BOGUS (security failure))";
 	return "(insecure)";
 }
 
@@ -274,11 +274,10 @@ pretty_rdata(char* q, char* cstr, char* tstr, int t, const char* sec,
 
 /** pretty line of output for results */
 static void
-pretty_output(char* q, int t, int c, int sec, int haved, 
-	struct ub_val_result* result, int docname)
+pretty_output(char* q, int t, int c, struct ub_val_result* result, int docname)
 {
 	int i;
-	const char *secstatus = statstr(sec, result);
+	const char *secstatus = secure_str(result);
 	char tstr[16];
 	char cstr[16];
 	char rcodestr[16];
@@ -286,7 +285,7 @@ pretty_output(char* q, int t, int c, int sec, int haved,
 	pretty_class(cstr, 16, c);
 	pretty_rcode(rcodestr, 16, result->rcode);
 
-	if(!haved && result->rcode) {
+	if(!result->havedata && result->rcode) {
 		printf("Host %s not found: %d(%s).",
 			q, result->rcode, rcodestr);
 		if(verb > 0)
@@ -305,7 +304,7 @@ pretty_output(char* q, int t, int c, int sec, int haved,
 	/* remove trailing . from long canonnames for nicer output */
 	if(result->canonname && strlen(result->canonname) > 1)
 		result->canonname[strlen(result->canonname)-1] = 0;
-	if(!haved) {
+	if(!result->havedata) {
 		if(verb > 0) {
 			printf("%s", result->canonname?result->canonname:q);
 			if(strcmp(cstr, "IN") != 0)
@@ -339,15 +338,15 @@ pretty_output(char* q, int t, int c, int sec, int haved,
 static int
 dnslook(struct ub_val_ctx* ctx, char* q, int t, int c, int docname)
 {
-	int ret, sec, haved;
+	int ret;
 	struct ub_val_result* result;
 
-	ret = ub_val_resolve(ctx, q, t, c, &sec, &haved, &result);
+	ret = ub_val_resolve(ctx, q, t, c, &result);
 	if(ret != 0) {
 		fprintf(stderr, "resolve error: %s\n", ub_val_strerror(ret));
 		exit(1);
 	}
-	pretty_output(q, t, c, sec, haved, result, docname);
+	pretty_output(q, t, c, result, docname);
 	ret = result->nxdomain;
 	ub_val_result_free(result);
 	return ret;

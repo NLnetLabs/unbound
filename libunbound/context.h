@@ -154,10 +154,11 @@ struct ctx_query {
 enum ub_ctx_err {
 	/** no error */
 	UB_NOERROR = 0,
+	/** socket operation. Set to -1, so that if an error from _fd() is
+	 * passed (-1) it gives a socket error. */
+	UB_SOCKET = -1,
 	/** alloc failure */
-	UB_NOMEM = -1,
-	/** socket operation */
-	UB_SOCKET = -2,
+	UB_NOMEM = -2,
 	/** syntax error */
 	UB_SYNTAX = -3,
 	/** DNS service failed */

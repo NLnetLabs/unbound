@@ -304,7 +304,7 @@ ub_val_ctx_process(struct ub_val_ctx* ctx)
 
 int 
 ub_val_resolve(struct ub_val_ctx* ctx, char* name, int rrtype, 
-	int rrclass, int* secure, int* data, struct ub_val_result** result)
+	int rrclass, struct ub_val_result** result)
 {
 	struct ctx_query* q;
 	int r;
@@ -323,8 +323,6 @@ ub_val_resolve(struct ub_val_ctx* ctx, char* name, int rrtype,
 	if(!q)
 		return UB_NOMEM;
 	/* become a resolver thread for a bit */
-	*secure = 0;
-	*data = 0;
 	*result = NULL;
 
 	r = libworker_fg(ctx, q);
@@ -333,11 +331,6 @@ ub_val_resolve(struct ub_val_ctx* ctx, char* name, int rrtype,
 		free(q);
 		return r;
 	}
-
-	if(q->msg_security == sec_status_secure)
-		*secure = 1;
-	if(q->res->data && q->res->data[0])
-		*data = 1;
 	*result = q->res;
 
 	(void)rbtree_delete(&ctx->queries, q->node.key);
@@ -418,8 +411,8 @@ ub_val_strerror(int err)
 {
 	switch(err) {
 		case UB_NOERROR: return "no error";
-		case UB_NOMEM: return "out of memory";
 		case UB_SOCKET: return "socket io error";
+		case UB_NOMEM: return "out of memory";
 		case UB_SYNTAX: return "syntax error";
 		case UB_SERVFAIL: return "server failure";
 		case UB_FORKFAIL: return "could not fork";

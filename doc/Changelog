@@ -6,6 +6,8 @@
 	- goodbye ip4to6 mapping.
 	- update ldns-testpkts with latest version from ldns-trunk.
 	- updated makedist for relative ldns pathnames.
+	- library API with more information inside the result structure.
+	- work on background resolves.
 
 17 January 2008: Wouter
 	- fixup configure in case -lldns is installed.

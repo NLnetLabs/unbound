@@ -73,11 +73,12 @@
  *	shared cache data from the context.
  *
  * Application threaded. Non-blocking ('asynchronous').
+ *	... setup threaded-asynchronous config option
  *	err = ub_val_ctx_async(ctx, 1);
  *	... same as async for non-threaded
  *	... the callbacks are called in the thread that calls process(ctx)
  *
- * If not threading is compiled in, the above async example uses fork(2) to
+ * If no threading is compiled in, the above async example uses fork(2) to
  * create a process to perform the work. The forked process exits when the 
  * calling process exits, or ctx_delete() is called.
  * Otherwise, for asynchronous with threading, a worker thread is created.
@@ -85,9 +86,9 @@
  * The blocking calls use shared ctx-cache when threaded. Thus
  * ub_val_resolve() and ub_val_resolve_async() && ub_val_ctx_wait() are
  * not the same. The first makes the current thread do the work, setting
- * up buffers, etc, to perform its thing (but using shared cache data).
+ * up buffers, etc, to perform the work (but using shared cache data).
  * The second calls another worker thread (or process) to perform the work.
- * And no buffers need to be setup, but a context-switch happens.
+ * And no buffers need to be set up, but a context-switch happens.
  */
 #ifndef _UB_UNBOUND_H
 #define _UB_UNBOUND_H
@@ -138,12 +139,28 @@ struct ub_val_result {
 	 */
 	int rcode;
 
+	/**
+	 * If there is any data, this is true.
+	 * If false, there was no data (nxdomain may be true, rcode can be set).
+	 */
+	int havedata;
+
 	/** 
 	 * If there was no data, and the domain did not exist, this is true.
 	 * If it is false, and there was no data, then the domain name 
 	 * is purported to exist, but the requested data type is not available.
 	 */
 	int nxdomain;
+
+	/**
+	 * True, if the result is validated securely.
+	 * False, if validation failed or domain queried has no security info.
+	 *
+	 * It is possible to get a result with no data (havedata is false),
+	 * and secure is true. This means that the non-existance of the data
+	 * was cryptographically proven (with signatures).
+	 */
+	int secure;
 
 	/** 
 	 * If the result was not secure (secure==0), and this result is due 
@@ -165,16 +182,15 @@ struct ub_val_result {
  * void my_callback(void* my_arg, int err, int secure, int havedata,
  *	struct ub_val_result* result);
  * It is called with
- *	my_arg: your pointer to a (struct of) data of your choice, or NULL.
- *	err: if 0 all is OK, otherwise an error occured and no results
+ *	void* my_arg: your pointer to a (struct of) data of your choice, 
+ *		or NULL.
+ *	int err: if 0 all is OK, otherwise an error occured and no results
  *	     are forthcoming.
- *	secure: if true, the result is validated securely.
- *	havedata: if true, there was data, false if no data.
- *	result: pointer to more detailed result structure.
+ *	struct result: pointer to more detailed result structure.
  *		This structure is allocated on the heap and needs to be
  *		freed with ub_val_result_free(result);
  */
-typedef void (*ub_val_callback_t)(void*, int, int, int, struct ub_val_result*);
+typedef void (*ub_val_callback_t)(void*, int, struct ub_val_result*);
 
 /**
  * Create a resolving and validation context.
@@ -306,19 +322,13 @@ int ub_val_ctx_process(struct ub_val_ctx* ctx);
  * @param name: domain name in text format (a zero terminated text string).
  * @param rrtype: type of RR in host order, 1 is A (address).
  * @param rrclass: class of RR in host order, 1 is IN (for internet).
- * @param secure: returns true if the answer validated securely.
- * 	false if not.
- * 	It is possible to get a result with no data (data is false),
- * 	and secure is true. This means that the non-existance of the data
- * 	was cryptographically proven (with signatures).
- * @param data: returns false if there was no data, or the domain did not exist,
- * 	else true.
  * @param result: the result data is returned in a newly allocated result
- * 	structure.
+ * 	structure. May be NULL on return, return value is set to an error 
+ * 	in that case (out of memory).
  * @return 0 if OK, else error.
  */
 int ub_val_resolve(struct ub_val_ctx* ctx, char* name, int rrtype, 
-	int rrclass, int* secure, int* data, struct ub_val_result** result);
+	int rrclass, struct ub_val_result** result);
 
 /**
  * Perform resolution and validation of the target name.
@@ -337,14 +347,13 @@ int ub_val_resolve(struct ub_val_ctx* ctx, char* name, int rrtype,
  * 	It is called as:
  * 	void callback(void* mydata, int err, int secure, int havedata, 
  * 		struct ub_val_result* result)
- * 	with mydata, the same as passed here,
- * 	with err is 0 when a result has been found.
- * 	with secure true if the answer validated securely.
- * 	with havedata true if any data was found.
- * 	with result newly allocated result structure.
+ * 	with mydata: the same as passed here, you may pass NULL,
+ * 	with err: is 0 when a result has been found.
+ * 	with result: a newly allocated result structure.
+ *		The result may be NULL, in that case err is set.
  *
  * 	If an error happens during processing, your callback will be called
- * 	with error set to a nonzero value (and secure=0, data=0, result=0).
+ * 	with error set to a nonzero value (and result==NULL).
  * @param async_id: if you pass a non-NULL value, an identifier number is
  *	returned for the query as it is in progress. It can be used to 
  *	cancel the query.

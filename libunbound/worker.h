@@ -76,6 +76,10 @@ struct libworker {
 
 	/** random() table for this worker. */
 	struct ub_randstate* rndstate;
+	/** commpoint to listen to commands */
+	struct comm_point* cmd_com;
+	/** commpoint to write results back (nonblocking) */
+	struct comm_point* res_com;
 };
 
 /**
