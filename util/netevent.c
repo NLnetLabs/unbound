@@ -178,6 +178,11 @@ comm_point_send_udp_msg(struct comm_point *c, ldns_buffer* packet,
 	return 1;
 }
 
+/** if no CMSG_LEN (Solaris 9) define something reasonable for one element */
+#ifndef CMSG_LEN
+#define CMSG_LEN(x) (sizeof(struct cmsghdr)+(x))
+#endif
+
 /** print debug ancillary info */
 void p_ancil(const char* str, struct comm_reply* r)
 {
