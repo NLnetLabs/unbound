@@ -310,10 +310,9 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 	if(!do_udp && !do_tcp)
 		return 0;
 	if(do_auto) {
-		/* skip ip4 sockets, ip4 udp gets mapped to v6 */
-		/* TODO no mapping! */
 		if((s = make_sock(SOCK_DGRAM, ifname, port, hints, 1)) == -1)
 			return 0;
+		/* getting source addr packet info is highly non-portable */
 		if(!set_recvpktinfo(s, hints->ai_family))
 			return 0;
 		if(!port_insert(list, s, listen_type_udpancil)) {
