@@ -1,6 +1,8 @@
 18 January 2008: Wouter
 	- touch up of manpage for libunbound.
 	- support for IP_RECVDSTADDR (for *BSD ip4).
+	- fix for BSD, do not use ip4to6 mapping, make two sockets, once
+	  ip6 and once ip4, uses socket options.
 
 17 January 2008: Wouter
 	- fixup configure in case -lldns is installed.

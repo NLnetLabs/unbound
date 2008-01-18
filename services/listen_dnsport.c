@@ -239,48 +239,54 @@ port_insert(struct listen_port** list, int s, enum listen_type ftype)
 	return 1;
 }
 
-/** set IPV6_RECVPKTINFO on fd */
+/** set fd to receive source address packet info */
 static int
-set_ip6_recvpktinfo(int s) 
+set_recvpktinfo(int s, int family) 
 {
 	int on = 1;
-#ifdef IPV6_RECVPKTINFO
-	if(setsockopt(s, IPPROTO_IPV6, IPV6_RECVPKTINFO,
-		&on, (socklen_t)sizeof(on)) < 0) {
-		log_err("setsockopt(..., IPV6_RECVPKTINFO, ...) failed: %s",
-			strerror(errno));
+	if(family == AF_INET6) {
+#           ifdef IPV6_RECVPKTINFO
+		if(setsockopt(s, IPPROTO_IPV6, IPV6_RECVPKTINFO,
+			&on, (socklen_t)sizeof(on)) < 0) {
+			log_err("setsockopt(..., IPV6_RECVPKTINFO, ...) failed: %s",
+				strerror(errno));
+			return 0;
+		}
+#           elif defined(IPV6_PKTINFO)
+		if(setsockopt(s, IPPROTO_IPV6, IPV6_PKTINFO,
+			&on, (socklen_t)sizeof(on)) < 0) {
+			log_err("setsockopt(..., IPV6_PKTINFO, ...) failed: %s",
+				strerror(errno));
+			return 0;
+		}
+#           else
+		log_err("no IPV6_RECVPKTINFO and no IPV6_PKTINFO option, please "
+			"disable interface-automatic in config");
 		return 0;
-	}
-#elif defined(IPV6_PKTINFO)
-	if(setsockopt(s, IPPROTO_IPV6, IPV6_PKTINFO,
-		&on, (socklen_t)sizeof(on)) < 0) {
-		log_err("setsockopt(..., IPV6_PKTINFO, ...) failed: %s",
-			strerror(errno));
-		return 0;
-	}
-#else
-	log_err("no IPV6_RECVPKTINFO and no IPV6_PKTINFO option, please "
-		"disable interface-automatic in config");
-	return 0;
-#endif /* defined IPV6_RECVPKTINFO */
+#           endif /* defined IPV6_RECVPKTINFO */
 
-#ifdef IP_RECVDSTADDR
-	if(setsockopt(s, IPPROTO_IP, IP_RECVDSTADDR,
-		&on, (socklen_t)sizeof(on)) < 0) {
-		log_err("setsockopt(..., IP_RECVDSTADDR, ...) failed: %s",
-			strerror(errno));
+	} else if(family == AF_INET) {
+#           ifdef IP_RECVDSTADDR
+		if(setsockopt(s, IPPROTO_IP, IP_RECVDSTADDR,
+			&on, (socklen_t)sizeof(on)) < 0) {
+			log_err("setsockopt(..., IP_RECVDSTADDR, ...) failed: %s",
+				strerror(errno));
+			return 0;
+		}
+#           elif defined(IP_PKTINFO)
+		if(setsockopt(s, IPPROTO_IP, IP_PKTINFO,
+			&on, (socklen_t)sizeof(on)) < 0) {
+			log_err("setsockopt(..., IP_PKTINFO, ...) failed: %s",
+				strerror(errno));
+			return 0;
+		}
+#           else
+		log_err("no IP_RECVDSTADDR or IP_PKTINFO option, please disable "
+			"interface-automatic in config");
+		return 0;
+#           endif /* IP_PKTINFO */
+
 	}
-#elif defined(IP_PKTINFO)
-	if(setsockopt(s, IPPROTO_IP, IP_PKTINFO,
-		&on, (socklen_t)sizeof(on)) < 0) {
-		log_err("setsockopt(..., IP_PKTINFO, ...) failed: %s",
-			strerror(errno));
-	}
-#else
-	log_err("no IP_RECVDSTADDR or IP_PKTINFO option, please disable "
-		"interface-automatic in config");
-	return 0;
-#endif /* IP_PKTINFO */
 	return 1;
 }
 
@@ -305,16 +311,14 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 		return 0;
 	if(do_auto) {
 		/* skip ip4 sockets, ip4 udp gets mapped to v6 */
-		if(hints->ai_family == AF_INET6) {
-			if((s = make_sock(SOCK_DGRAM, ifname, port, hints, 2))
-				== -1)
-				return 0;
-			if(!set_ip6_recvpktinfo(s))
-				return 0;
-			if(!port_insert(list, s, listen_type_udpancil)) {
-				close(s);
-				return 0;
-			}
+		/* TODO no mapping! */
+		if((s = make_sock(SOCK_DGRAM, ifname, port, hints, 1)) == -1)
+			return 0;
+		if(!set_recvpktinfo(s, hints->ai_family))
+			return 0;
+		if(!port_insert(list, s, listen_type_udpancil)) {
+			close(s);
+			return 0;
 		}
 	} else if(do_udp) {
 		/* regular udp socket */

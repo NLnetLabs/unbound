@@ -369,7 +369,7 @@ comm_point_udp_ancil_callback(int fd, short event, void* arg)
 		} else if( cmsg->cmsg_level == IPPROTO_IP &&
 			cmsg->cmsg_type == IP_RECVDSTADDR) {
 			rep.srctype = 4;
-			memmove(&rep.v4addr, CMSG_DATA(cmsg),
+			memmove(&rep.pktinfo.v4addr, CMSG_DATA(cmsg),
 				sizeof(struct in_addr));
 			break;
 #elif defined(IP_PKTINFO)
