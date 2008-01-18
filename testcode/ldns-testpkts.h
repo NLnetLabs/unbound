@@ -78,7 +78,7 @@
 				; with the SECTION keywords (only SECTION QUERY
 				; is used to match queries). If the data cannot
 				; be parsed, ADJUST rules for the answer packet
-				; are ignored
+				; are ignored. Only copy_id is done.
 	HEX_ANSWER_END
 	ENTRY_END
 

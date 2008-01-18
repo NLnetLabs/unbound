@@ -781,9 +781,14 @@ handle_query(uint8_t* inbuf, ssize_t inlen, struct entry* entries, int* count,
 				answer_pkt = NULL;
 			} else {
 				verbose(3, "Could not parse hex data (%s), sending hex data directly.\n", ldns_get_errorstr_by_id(status));
+				/* still try to adjust ID */
 				answer_size = ldns_buffer_capacity(p->reply_from_hex);
 				outbuf = LDNS_XMALLOC(uint8_t, answer_size);
 				memcpy(outbuf, ldns_buffer_export(p->reply_from_hex), answer_size);
+				if(entry->copy_id) {
+					ldns_write_uint16(outbuf, 
+						ldns_pkt_id(query_pkt));
+				}
 			}
 		} else {
 			answer_pkt = ldns_pkt_clone(p->reply);

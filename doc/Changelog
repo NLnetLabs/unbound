@@ -4,6 +4,7 @@
 	- fix for BSD, do not use ip4to6 mapping, make two sockets, once
 	  ip6 and once ip4, uses socket options.
 	- goodbye ip4to6 mapping.
+	- update ldns-testpkts with latest version from ldns-trunk.
 
 17 January 2008: Wouter
 	- fixup configure in case -lldns is installed.
