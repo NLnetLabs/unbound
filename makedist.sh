@@ -184,6 +184,7 @@ flex -i -t util/configlexer.lex >> util/configlexer.c  || error_cleanup "Failed 
 bison -y -d -o util/configparser.c util/configparser.y || error_cleanup "Failed to create configparser"
 
 # check shared code, ldns-testpkts from ldns examples, if possible.
+cd ../..
 if test ! -z "$LDNSDIR"; then
 	if diff -q $LDNSDIR/examples/ldns-testpkts.c testcode/ldns-testpkts.c &&
 	   diff -q $LDNSDIR/examples/ldns-testpkts.h testcode/ldns-testpkts.h; then
@@ -192,6 +193,7 @@ if test ! -z "$LDNSDIR"; then
 		error_cleanup "ldns-testpkts is different in ldns and unbound"
 	fi
 fi
+cd $temp_dir/unbound
 
 find . -name .c-mode-rc.el -exec rm {} \;
 find . -name .cvsignore -exec rm {} \;
