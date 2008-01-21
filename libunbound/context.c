@@ -42,6 +42,7 @@
 #include "libunbound/context.h"
 #include "util/module.h"
 #include "util/config_file.h"
+#include "util/net_help.h"
 #include "services/modstack.h"
 #include "services/localzone.h"
 #include "services/cache/rrset.h"
@@ -182,4 +183,159 @@ context_release_alloc(struct ub_val_ctx* ctx, struct alloc_cache* alloc)
 	alloc->super = ctx->alloc_list;
 	ctx->alloc_list = alloc;
 	lock_basic_unlock(&ctx->cfglock);
+}
+
+uint8_t* 
+context_serialize_new_query(struct ctx_query* q, uint32_t* len)
+{
+	/* format for new query is
+	 * 	o uint32 cmd
+	 * 	o uint32 id
+	 * 	o uint32 type
+	 * 	o uint32 class
+	 * 	o rest queryname (string)
+	 */
+	uint8_t* p;
+	size_t slen = strlen(q->res->qname) + 1/*end of string*/;
+	*len = sizeof(uint32_t)*4 + slen;
+	p = (uint8_t*)malloc(*len);
+	if(!p) return NULL;
+	ldns_write_uint32(p, UB_LIBCMD_NEWQUERY);
+	ldns_write_uint32(p+sizeof(uint32_t), (uint32_t)q->querynum);
+	ldns_write_uint32(p+2*sizeof(uint32_t), (uint32_t)q->res->qtype);
+	ldns_write_uint32(p+3*sizeof(uint32_t), (uint32_t)q->res->qclass);
+	memmove(p+4*sizeof(uint32_t), q->res->qname, slen);
+	return p;
+}
+
+struct ctx_query* 
+context_deserialize_new_query(struct ub_val_ctx* ctx, uint8_t* p, uint32_t len)
+{
+	struct ctx_query* q = (struct ctx_query*)calloc(1, sizeof(*q));
+	if(!q) return NULL;
+	if(len < 4*sizeof(uint32_t)+1) {
+		free(q);
+		return NULL;
+	}
+	log_assert( ldns_read_uint32(p) == UB_LIBCMD_NEWQUERY);
+	q->querynum = (int)ldns_read_uint32(p+sizeof(uint32_t));
+	q->node.key = &q->querynum;
+	q->async = 1;
+	q->res = (struct ub_val_result*)calloc(1, sizeof(*q->res));
+	if(!q->res) {
+		free(q);
+		return NULL;
+	}
+	q->res->qtype = (int)ldns_read_uint32(p+2*sizeof(uint32_t));
+	q->res->qclass = (int)ldns_read_uint32(p+3*sizeof(uint32_t));
+	q->res->qname = strdup((char*)(p+4*sizeof(uint32_t)));
+	if(!q->res->qname) {
+		free(q->res);
+		free(q);
+		return NULL;
+	}
+
+	/** add to query list */
+	ctx->num_async++;
+	(void)rbtree_insert(&ctx->queries, &q->node);
+	return q;
+}
+
+uint8_t* 
+context_serialize_answer(struct ctx_query* q, int err, uint32_t* len)
+{
+	/* answer format
+	 * 	o uint32 cmd
+	 * 	o uint32 id
+	 * 	o uint32 error_code
+	 * 	o uint32 msg_security
+	 * 	o the remainder is the answer msg from resolver lookup.
+	 * 	  remainder can be length 0.
+	 */
+	uint8_t* p;
+	*len = sizeof(uint32_t)*4 + q->msg_len;
+	p = (uint8_t*)malloc(*len);
+	if(!p) return NULL;
+	ldns_write_uint32(p, UB_LIBCMD_ANSWER);
+	ldns_write_uint32(p+sizeof(uint32_t), (uint32_t)q->querynum);
+	ldns_write_uint32(p+2*sizeof(uint32_t), (uint32_t)err);
+	ldns_write_uint32(p+3*sizeof(uint32_t), (uint32_t)q->msg_security);
+	memmove(p+4*sizeof(uint32_t), q->msg, q->msg_len);
+	return p;
+}
+
+struct ctx_query* 
+context_deserialize_answer(struct ub_val_ctx* ctx,
+        uint8_t* p, uint32_t len, int* err)
+{
+	struct ctx_query* q = NULL ;
+	int id;
+	if(len < 4*sizeof(uint32_t)) return NULL;
+	log_assert( ldns_read_uint32(p) == UB_LIBCMD_ANSWER);
+	id = (int)ldns_read_uint32(p+sizeof(uint32_t));
+	q = (struct ctx_query*)rbtree_search(&ctx->queries, &id);
+	if(!q) return NULL;
+	*err = (int)ldns_read_uint32(p+2*sizeof(uint32_t));
+	q->msg_security = ldns_read_uint32(p+3*sizeof(uint32_t));
+	if(len > 4*sizeof(uint32_t)) {
+		q->msg_len = len - 4*sizeof(uint32_t);
+		q->msg = (uint8_t*)memdup(p+4*sizeof(uint32_t), q->msg_len);
+		if(!q->msg) {
+			/* pass malloc failure to the user callback */
+			q->msg_len = 0;
+			*err = UB_NOMEM;
+			return q;
+		}
+	} else {
+		q->msg_len = 0;
+		free(q->msg);
+		q->msg = NULL;
+	}
+	return q;
+}
+
+uint8_t* 
+context_serialize_cancel(struct ctx_query* q, uint32_t* len)
+{
+	/* format of cancel:
+	 * 	o uint32 cmd
+	 * 	o uint32 async-id */
+	uint8_t* p = (uint8_t*)malloc(2*sizeof(uint32_t));
+	if(!p) return NULL;
+	*len = 2*sizeof(uint32_t);
+	ldns_write_uint32(p, UB_LIBCMD_CANCEL);
+	ldns_write_uint32(p+sizeof(uint32_t), (uint32_t)q->querynum);
+	return p;
+}
+
+struct ctx_query* context_deserialize_cancel(struct ub_val_ctx* ctx,
+        uint8_t* p, uint32_t len)
+{
+	struct ctx_query* q;
+	int id;
+	if(len != 2*sizeof(uint32_t)) return NULL;
+	log_assert( ldns_read_uint32(p) == UB_LIBCMD_CANCEL);
+	id = (int)ldns_read_uint32(p+sizeof(uint32_t));
+	q = (struct ctx_query*)rbtree_search(&ctx->queries, &id);
+	return q;
+}
+
+uint8_t* 
+context_serialize_quit(uint32_t* len)
+{
+	uint8_t* p = (uint8_t*)malloc(sizeof(uint32_t));
+	if(!p)
+		return NULL;
+	*len = sizeof(uint32_t);
+	ldns_write_uint32(p, UB_LIBCMD_QUIT);
+	return p;
+}
+
+enum ub_ctx_cmd context_serial_getcmd(uint8_t* p, uint32_t len)
+{
+	uint32_t v;
+	if((size_t)len < sizeof(v))
+		return UB_LIBCMD_QUIT;
+	v = ldns_read_uint32(p);
+	return v;
 }

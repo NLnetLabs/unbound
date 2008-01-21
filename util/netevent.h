@@ -166,7 +166,9 @@ struct comm_point {
 		/** TCP handler socket - handle byteperbyte readwrite. */
 		comm_tcp,
 		/** AF_UNIX socket - for internal commands. */
-		comm_local
+		comm_local,
+		/** raw - not DNS format - for pipe readers and writers */
+		comm_raw
 	} 
 		/** variable with type of socket, UDP,TCP-accept,TCP,pipe */
 		type;
@@ -348,6 +350,19 @@ struct comm_point* comm_point_create_tcp_out(struct comm_base* base,
  */
 struct comm_point* comm_point_create_local(struct comm_base* base,
 	int fd, size_t bufsize, 
+	comm_point_callback_t* callback, void* callback_arg);
+
+/**
+ * Create commpoint to listen to a local domain pipe descriptor.
+ * @param base: in which base to alloc the commpoint.
+ * @param fd: file descriptor.
+ * @param writing: true if you want to listen to writes, false for reads.
+ * @param callback: callback function pointer for the handler.
+ * @param callback_arg: will be passed to your callback function.
+ * @return: the commpoint or NULL on error.
+ */
+struct comm_point* comm_point_create_raw(struct comm_base* base,
+	int fd, int writing, 
 	comm_point_callback_t* callback, void* callback_arg);
 
 /**
@@ -569,5 +584,14 @@ void comm_signal_callback(int fd, short event, void* arg);
  */
 void comm_point_local_handle_callback(int fd, short event, void* arg);
 
+/**
+ * This routine is published for checks and tests, and is only used internally.
+ * libevent callback for raw fd access.
+ * @param fd: file descriptor.
+ * @param event: event bits from libevent: 
+ *	EV_READ, EV_WRITE, EV_SIGNAL, EV_TIMEOUT.
+ * @param arg: the comm_point structure.
+ */
+void comm_point_raw_handle_callback(int fd, short event, void* arg);
 
 #endif /* NET_EVENT_H */

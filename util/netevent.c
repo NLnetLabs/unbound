@@ -743,6 +743,15 @@ void comm_point_local_handle_callback(int fd, short event, void* arg)
 	log_err("Ignored event %d for localhdl.", event);
 }
 
+void comm_point_raw_handle_callback(int ATTR_UNUSED(fd), 
+	short ATTR_UNUSED(event), void* arg)
+{
+	struct comm_point* c = (struct comm_point*)arg;
+	log_assert(c->type == comm_raw);
+
+	(void)(*c->callback)(c, c->cb_arg, NETEVENT_NOERROR, NULL);
+}
+
 struct comm_point* 
 comm_point_create_udp(struct comm_base *base, int fd, ldns_buffer* buffer,
 	comm_point_callback_t* callback, void* callback_arg)
@@ -1048,7 +1057,55 @@ comm_point_create_local(struct comm_base *base, int fd, size_t bufsize,
 	if(event_base_set(base->eb->base, &c->ev->ev) != 0 ||
 		event_add(&c->ev->ev, c->timeout) != 0 )
 	{
-		log_err("could not add tcphdl event");
+		log_err("could not add localhdl event");
+		free(c->ev);
+		free(c);
+		return NULL;
+	}
+	return c;
+}
+
+struct comm_point* 
+comm_point_create_raw(struct comm_base* base, int fd, int writing, 
+	comm_point_callback_t* callback, void* callback_arg)
+{
+	struct comm_point* c = (struct comm_point*)calloc(1,
+		sizeof(struct comm_point));
+	short evbits;
+	if(!c)
+		return NULL;
+	c->ev = (struct internal_event*)calloc(1,
+		sizeof(struct internal_event));
+	if(!c->ev) {
+		free(c);
+		return NULL;
+	}
+	c->fd = fd;
+	c->buffer = NULL;
+	c->timeout = NULL;
+	c->tcp_is_reading = 0;
+	c->tcp_byte_count = 0;
+	c->tcp_parent = NULL;
+	c->max_tcp_count = 0;
+	c->tcp_handlers = NULL;
+	c->tcp_free = NULL;
+	c->type = comm_raw;
+	c->tcp_do_close = 0;
+	c->do_not_close = 1;
+	c->tcp_do_toggle_rw = 0;
+	c->tcp_check_nb_connect = 0;
+	c->callback = callback;
+	c->cb_arg = callback_arg;
+	/* libevent stuff */
+	if(writing)
+		evbits = EV_PERSIST | EV_WRITE;
+	else 	evbits = EV_PERSIST | EV_READ;
+	event_set(&c->ev->ev, c->fd, evbits, comm_point_raw_handle_callback, 
+		c);
+	if(event_base_set(base->eb->base, &c->ev->ev) != 0 ||
+		event_add(&c->ev->ev, c->timeout) != 0 )
+	{
+		log_err("could not add rawhdl event");
 		free(c->ev);
 		free(c);
 		return NULL;

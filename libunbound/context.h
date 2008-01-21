@@ -130,6 +130,8 @@ struct ctx_query {
 	int querynum;
 	/** was this an async query? */
 	int async;
+	/** has this query been cancelled? (for bg thread) */
+	int cancelled;
 
 	/** for async query, the callback function */
 	ub_val_callback_t cb;
@@ -171,6 +173,25 @@ enum ub_ctx_err {
 	UB_INITFAIL = -7
 };
 
+/**
+ * Command codes for libunbound pipe.
+ *
+ * Serialization looks like this:
+ * 	o length (of remainder) uint32.
+ * 	o uint32 command code.
+ * 	o per command format.
+ */
+enum ub_ctx_cmd {
+	/** QUIT */
+	UB_LIBCMD_QUIT = 0,
+	/** New query, sent to bg worker */
+	UB_LIBCMD_NEWQUERY,
+	/** Cancel query, sent to bg worker */
+	UB_LIBCMD_CANCEL,
+	/** Query result, originates from bg worker */
+	UB_LIBCMD_ANSWER
+};
+
 /** 
  * finalize a context.
  * @param ctx: context to finalize. creates shared data.
@@ -207,5 +228,81 @@ struct alloc_cache* context_obtain_alloc(struct ub_val_ctx* ctx);
  * @param alloc: alloc to relinquish.
  */
 void context_release_alloc(struct ub_val_ctx* ctx, struct alloc_cache* alloc);
+
+/**
+ * Serialize a context query that questions data.
+ * This serializes the query name, type, ...
+ * As well as command code 'new_query'.
+ * @param q: context query
+ * @param len: the length of the allocation is returned.
+ * @return: an alloc, or NULL on mem error.
+ */
+uint8_t* context_serialize_new_query(struct ctx_query* q, uint32_t* len);
+
+/**
+ * Serialize a context_query result to hand back to user.
+ * This serializes the query name, type, ..., and result.
+ * As well as command code 'answer'.
+ * @param q: context query
+ * @param err: error code to pass to client.
+ * @param len: the length of the allocation is returned.
+ * @return: an alloc, or NULL on mem error.
+ */
+uint8_t* context_serialize_answer(struct ctx_query* q, int err, uint32_t* len);
+
+/**
+ * Serialize a query cancellation. Serializes query async id
+ * as well as command code 'cancel'
+ * @param q: context query
+ * @param len: the length of the allocation is returned.
+ * @return: an alloc, or NULL on mem error.
+ */
+uint8_t* context_serialize_cancel(struct ctx_query* q, uint32_t* len);
+
+/**
+ * Serialize a 'quit' command.
+ * @param len: the length of the allocation is returned.
+ * @return: an alloc, or NULL on mem error.
+ */
+uint8_t* context_serialize_quit(uint32_t* len);
+
+/**
+ * Obtain command code from serialized buffer
+ * @param p: buffer serialized.
+ * @param len: length of buffer.
+ * @return command code or QUIT on error.
+ */
+enum ub_ctx_cmd context_serial_getcmd(uint8_t* p, uint32_t len);
+
+/**
+ * Deserialize a new_query buffer.
+ * @param ctx: context
+ * @param p: buffer serialized.
+ * @param len: length of buffer.
+ * @return new ctx_query or NULL for malloc failure.
+ */
+struct ctx_query* context_deserialize_new_query(struct ub_val_ctx* ctx, 
+	uint8_t* p, uint32_t len);
+
+/**
+ * Deserialize an answer buffer.
+ * @param ctx: context
+ * @param p: buffer serialized.
+ * @param len: length of buffer.
+ * @param err: error code to be returned to client is passed.
+ * @return ctx_query with answer added or NULL for malloc failure.
+ */
+struct ctx_query* context_deserialize_answer(struct ub_val_ctx* ctx, 
+	uint8_t* p, uint32_t len, int* err);
+
+/**
+ * Deserialize a cancel buffer.
+ * @param ctx: context
+ * @param p: buffer serialized.
+ * @param len: length of buffer.
+ * @return ctx_query to cancel or NULL for failure.
+ */
+struct ctx_query* context_deserialize_cancel(struct ub_val_ctx* ctx, 
+	uint8_t* p, uint32_t len);
 
 #endif /* LIBUNBOUND_CONTEXT_H */

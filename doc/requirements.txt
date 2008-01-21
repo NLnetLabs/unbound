@@ -200,3 +200,9 @@ o If a client makes a query without RD bit, in the case of a returned
   ascertains that RRSIGs are OK (and not omitted), but does not
   check NSEC/NSEC3. 
 
+o Case preservation
+  Unbound preserves the casing received from authority servers as best 
+  as possible. It compresses without case, so case can get lost there.
+  The casing from the authority server is used in preference to the casing
+  of the query name. This is different from BIND. RFC4343 allows either 
+  behaviour.

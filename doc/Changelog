@@ -1,3 +1,6 @@
+21 January 2008: Wouter
+	- libworker work, netevent raw commpoints, write_msg, serialize.
+
 18 January 2008: Wouter
 	- touch up of manpage for libunbound.
 	- support for IP_RECVDSTADDR (for *BSD ip4).

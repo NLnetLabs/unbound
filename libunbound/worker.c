@@ -63,6 +63,9 @@
 /** size of table used for random numbers. large to be more secure. */
 #define RND_STATE_SIZE 256
 
+/** handle new query command for bg worker */
+static void handle_newq(struct libworker* w, uint8_t* buf, uint32_t len);
+
 /** delete libworker struct */
 static void
 libworker_delete(struct libworker* w)
@@ -155,49 +158,87 @@ libworker_setup(struct ub_val_ctx* ctx)
 	return w;
 }
 
-static int 
+/** handle cancel command for bg worker */
+static void
+handle_cancel(struct libworker* w, uint8_t* buf, uint32_t len)
+{
+	struct ctx_query* q = context_deserialize_cancel(w->ctx, buf, len);
+	if(!q) {
+		log_err("deserialize cancel failed");
+		return;
+	}
+	q->cancelled = 1;
+}
+
+/** handle control command coming into server */
+int 
 libworker_handle_control_cmd(struct comm_point* c, void* arg, 
-	int err, struct comm_reply* ATTR_UNUSED(rep))
+	int ATTR_UNUSED(err), struct comm_reply* ATTR_UNUSED(rep))
 {
-	/*struct ub_val_ctx* ctx = (struct ub_val_ctx*)arg;*/
-	if(err != NETEVENT_NOERROR) {
-		if(err == NETEVENT_CLOSED) {
-			/* parent closed pipe, must have exited somehow */
-			/* it is of no use to go on, exit */
-			exit(0);
-		}
-		log_err("internal error: control cmd err %d", err);
-		exit(0);
+	struct libworker* w = (struct libworker*)arg;
+	uint32_t len = 0;
+	uint8_t* buf = NULL;
+	int r = libworker_read_msg(c->fd, &buf, &len, 1);
+	if(r==0) {
+		/* error has happened or */
+		/* parent closed pipe, must have exited somehow */
+		/* it is of no use to go on, exit */
+		comm_base_exit(w->base);
+		return 0;
+	}
+	if(r==-1) /* nothing to read now, try later */
+		return 0;
+	
+	switch(context_serial_getcmd(buf, len)) {
+		default:
+		case UB_LIBCMD_ANSWER:
+			log_err("unknown command for bg worker %d", 
+				(int)context_serial_getcmd(buf, len));
+			/* and fall through to quit */
+		case UB_LIBCMD_QUIT:
+			comm_base_exit(w->base);
+			break;
+		case UB_LIBCMD_NEWQUERY:
+			handle_newq(w, buf, len);
+			break;
+		case UB_LIBCMD_CANCEL:
+			handle_cancel(w, buf, len);
+			break;
 	}
 	return 0;
 }
 
-static int 
+/** handle opportunity to write result back */
+int 
 libworker_handle_result_write(struct comm_point* c, void* arg, 
-	int err, struct comm_reply* ATTR_UNUSED(rep))
+	int ATTR_UNUSED(err), struct comm_reply* ATTR_UNUSED(rep))
 {
-	/*struct ub_val_ctx* ctx = (struct ub_val_ctx*)arg;*/
-	if(err != NETEVENT_NOERROR) {
-		if(err == NETEVENT_CLOSED) {
-			/* parent closed pipe, must have exited somehow */
-			/* it is of no use to go on, exit */
-			exit(0);
-		}
-		log_err("internal error: pipe comm err %d", err);
-		exit(0);
+	struct libworker* w = (struct libworker*)arg;
+	struct libworker_res_list* item = w->res_list;
+	int r;
+	if(!item) {
+		comm_point_stop_listening(c);
+		return 0;
+	}
+	r = libworker_write_msg(c->fd, item->buf, item->len, 1);
+	if(r == -1)
+		return 0; /* try again later */
+	if(r == 0) {
+		/* error on pipe, must have exited somehow */
+		/* it is of no use to go on, exit */
+		comm_base_exit(w->base);
+		return 0;
+	}
+	/* done this result, remove it */
+	free(item->buf);
+	item->buf = NULL;
+	w->res_list = w->res_list->next;
+	free(item);
+	if(!w->res_list) {
+		w->res_last = NULL;
+		comm_point_stop_listening(c);
 	}
 	return 0;
-}
-
-/** get bufsize for cfg */
-static size_t
-getbufsz(struct ub_val_ctx* ctx)
-{
-	size_t s = 65535;
-	lock_basic_lock(&ctx->cfglock);
-	s = ctx->env->cfg->msg_buffer_size;
-	lock_basic_unlock(&ctx->cfglock);
-	return s;
 }
 
 /** the background thread func */
@@ -207,24 +248,22 @@ libworker_dobg(void* arg)
 	/* setup */
 	struct ub_val_ctx* ctx = (struct ub_val_ctx*)arg;
 	struct libworker* w = libworker_setup(ctx);
-	size_t bufsz = getbufsz(ctx);
 	log_thread_set(&w->thread_num);
 	if(!w) {
 		log_err("libunbound bg worker init failed, nomem");
 		return NULL;
 	}
 	lock_basic_lock(&ctx->qqpipe_lock);
-	if(!(w->cmd_com=comm_point_create_local(w->base, ctx->qqpipe[0], 
-		bufsz, libworker_handle_control_cmd, w))) {
+	if(!(w->cmd_com=comm_point_create_raw(w->base, ctx->qqpipe[0], 0, 
+		libworker_handle_control_cmd, w))) {
 		lock_basic_unlock(&ctx->qqpipe_lock);
 		log_err("libunbound bg worker init failed, no cmdcom");
 		return NULL;
 	}
 	lock_basic_unlock(&ctx->qqpipe_lock);
 	lock_basic_lock(&ctx->rrpipe_lock);
-	/* TODO create writing local commpoint */
-	if(!(w->res_com=comm_point_create_local(w->base, ctx->rrpipe[1], 
-		bufsz, libworker_handle_result_write, w))) {
+	if(!(w->res_com=comm_point_create_raw(w->base, ctx->rrpipe[1], 1,
+		libworker_handle_result_write, w))) {
 		lock_basic_unlock(&ctx->qqpipe_lock);
 		log_err("libunbound bg worker init failed, no cmdcom");
 		return NULL;
@@ -441,6 +480,18 @@ int libworker_fg(struct ub_val_ctx* ctx, struct ctx_query* q)
 	return UB_NOERROR;
 }
 
+/** handle new query command for bg worker */
+static void
+handle_newq(struct libworker* w, uint8_t* buf, uint32_t len)
+{
+	struct ctx_query* q = context_deserialize_new_query(w->ctx, buf, len);
+	if(!q) {
+		log_err("failed to deserialize newq");
+		return;
+	}
+	/* TODO start new query in bg mode */
+}
+
 void libworker_alloc_cleanup(void* arg)
 {
 	struct libworker* w = (struct libworker*)arg;
@@ -545,6 +596,83 @@ libworker_handle_service_reply(struct comm_point* c, void* arg, int error,
 	}
 	mesh_report_reply(lw->env->mesh,  e, 1, reply_info);
 	return 0;
+}
+
+int 
+libworker_write_msg(int fd, uint8_t* buf, uint32_t len, int nonblock)
+{
+	ssize_t r;
+	/* test */
+	if(nonblock) {
+		r = write(fd, &len, sizeof(len));
+		if(r == -1) {
+			if(errno==EINTR || errno==EAGAIN)
+				return -1;
+			log_err("msg write failed: %s", strerror(errno));
+			return -1; /* can still continue, perhaps */
+		}
+	} else r = 0;
+	if(!fd_set_block(fd))
+		return 0;
+	/* write remainder */
+	if(r != (ssize_t)sizeof(len)) {
+		if(write(fd, (char*)(&len)+r, sizeof(len)-r) == -1) {
+			log_err("msg write failed: %s", strerror(errno));
+			return 0;
+		}
+	}
+	if(write(fd, buf, len) == -1) {
+		log_err("msg write failed: %s", strerror(errno));
+		return 0;
+	}
+	if(!fd_set_nonblock(fd))
+		return 0;
+	return 1;
+}
+
+int 
+libworker_read_msg(int fd, uint8_t** buf, uint32_t* len, int nonblock)
+{
+	ssize_t r;
+
+	/* test */
+	*len = 0;
+	if(nonblock) {
+		r = read(fd, len, sizeof(*len));
+		if(r == -1) {
+			if(errno==EINTR || errno==EAGAIN)
+				return -1;
+			log_err("msg read failed: %s", strerror(errno));
+			return -1; /* we can still continue, perhaps */
+		}
+		if(r == 0) /* EOF */
+			return 0;
+	} else r = 0;
+	if(!fd_set_block(fd))
+		return 0;
+	/* read remainder */
+	if(r != (ssize_t)sizeof(*len)) {
+		if((r=read(fd, (char*)(len)+r, sizeof(*len)-r)) == -1) {
+			log_err("msg read failed: %s", strerror(errno));
+			return 0;
+		}
+		if(r == 0) /* EOF */
+			return 0;
+	}
+	*buf = (uint8_t*)malloc(*len);
+	if(!*buf) {
+		log_err("out of memory");
+		return 0;
+	}
+	if((r=read(fd, *buf, *len)) == -1) {
+		log_err("msg read failed: %s", strerror(errno));
+		return 0;
+	}
+	if(r == 0) /* EOF */
+		return 0;
+	if(!fd_set_nonblock(fd))
+		return 0;
+	return 1;
 }
 
 /* --- fake callbacks for fptr_wlist to work --- */
