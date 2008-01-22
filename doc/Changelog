@@ -3,6 +3,8 @@
 	- fix link testbound.
 	- fixup exit bug in mini_event.
 	- background worker query enter and result functions.
+	- bg query test application asynclook, it looks up multiple
+	  hostaddresses (A records) at the same time.
 
 21 January 2008: Wouter
 	- libworker work, netevent raw commpoints, write_msg, serialize.

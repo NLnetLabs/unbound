@@ -190,6 +190,7 @@ libworker_handle_control_cmd(struct comm_point* c, void* arg,
 	if(r==-1) /* nothing to read now, try later */
 		return 0;
 	
+	log_info("bg got cmd %d",  (int)context_serial_getcmd(buf, len));
 	switch(context_serial_getcmd(buf, len)) {
 		default:
 		case UB_LIBCMD_ANSWER:
@@ -221,6 +222,8 @@ libworker_handle_result_write(struct comm_point* c, void* arg,
 		comm_point_stop_listening(c);
 		return 0;
 	}
+	log_info("bg write msg %d",  (int)context_serial_getcmd(
+		item->buf, item->len));
 	r = libworker_write_msg(c->fd, item->buf, item->len, 1);
 	if(r == -1)
 		return 0; /* try again later */
@@ -250,6 +253,8 @@ libworker_dobg(void* arg)
 	struct ub_val_ctx* ctx = (struct ub_val_ctx*)arg;
 	struct libworker* w = libworker_setup(ctx);
 	log_thread_set(&w->thread_num);
+	log_info("start bg"); /* @@@ DEBUG */
+	/*verbosity=3; @@@ DEBUG */
 	if(!w) {
 		log_err("libunbound bg worker init failed, nomem");
 		return NULL;
