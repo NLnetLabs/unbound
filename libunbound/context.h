@@ -204,6 +204,12 @@ int context_finalize(struct ub_val_ctx* ctx);
 /** compare two ctx_query elements */
 int context_query_cmp(const void* a, const void* b);
 
+/** 
+ * delete context query
+ * @param q: query to delete, including message packet and prealloc result
+ */
+void context_query_delete(struct ctx_query* q);
+
 /**
  * Create new query in context, add to querynum list.
  * @param ctx: context
@@ -247,10 +253,12 @@ uint8_t* context_serialize_new_query(struct ctx_query* q, uint32_t* len);
  * As well as command code 'answer'.
  * @param q: context query
  * @param err: error code to pass to client.
+ * @param pkt: the packet to add, can be NULL.
  * @param len: the length of the allocation is returned.
  * @return: an alloc, or NULL on mem error.
  */
-uint8_t* context_serialize_answer(struct ctx_query* q, int err, uint32_t* len);
+uint8_t* context_serialize_answer(struct ctx_query* q, int err, 
+	ldns_buffer* pkt, uint32_t* len);
 
 /**
  * Serialize a query cancellation. Serializes query async id

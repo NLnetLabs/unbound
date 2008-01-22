@@ -92,9 +92,9 @@ struct libworker {
 };
 
 /**
- * Foreground query cb struct
+ * Libworker query cb struct
  */
-struct libworker_fg_data {
+struct libworker_cb_data {
 	/** the worker involved */
 	struct libworker* w;
 	/** the query involved */

@@ -59,6 +59,7 @@
 #include "util/net_help.h"
 #include "util/data/dname.h"
 #include "util/data/msgreply.h"
+#include "util/data/msgencode.h"
 
 /** size of table used for random numbers. large to be more secure. */
 #define RND_STATE_SIZE 256
@@ -350,8 +351,7 @@ fill_res(struct ub_val_result* res, struct ub_packed_rrset_key* answer,
 	if(query_dname_compare(rq->qname, answer->rk.dname) != 0) {
 		if(!fill_canon(res, answer->rk.dname))
 			return 0; /* out of memory */
-	} else
-		res->canonname = res->qname;
+	} else	res->canonname = NULL;
 	res->data = (char**)calloc(data->count+1, sizeof(char*));
 	res->len = (int*)calloc(data->count+1, sizeof(int));
 	if(!res->data || !res->len)
@@ -399,7 +399,7 @@ libworker_enter_result(struct ub_val_result* res, ldns_buffer* buf,
 static void
 libworker_fg_done_cb(void* arg, int rcode, ldns_buffer* buf, enum sec_status s)
 {
-	struct libworker_fg_data* d = (struct libworker_fg_data*)arg;
+	struct libworker_cb_data* d = (struct libworker_cb_data*)arg;
 	/* fg query is done; exit comm base */
 	comm_base_exit(d->w->base);
 
@@ -454,7 +454,7 @@ int libworker_fg(struct ub_val_ctx* ctx, struct ctx_query* q)
 	uint16_t qflags, qid;
 	struct query_info qinfo;
 	struct edns_data edns;
-	struct libworker_fg_data d;
+	struct libworker_cb_data d;
 	if(!w)
 		return UB_INITFAIL;
 	if(!setup_qinfo_edns(w, q, &qinfo, &edns)) {
@@ -471,6 +471,7 @@ int libworker_fg(struct ub_val_ctx* ctx, struct ctx_query* q)
 		libworker_fg_done_cb(&d, LDNS_RCODE_NOERROR, 
 			w->back->udp_buff, sec_status_insecure);
 		libworker_delete(w);
+		free(qinfo.qname);
 		return UB_NOERROR;
 	}
 	/* process new query */
@@ -488,16 +489,93 @@ int libworker_fg(struct ub_val_ctx* ctx, struct ctx_query* q)
 	return UB_NOERROR;
 }
 
+/** add result to the bg worker result queue */
+static void
+add_bg_result(struct libworker* w, struct ctx_query* q, ldns_buffer* pkt, 
+	int err)
+{
+	uint8_t* msg = NULL;
+	uint32_t len = 0;
+	struct libworker_res_list* item;
+
+	/* serialize and delete unneeded q */
+	msg = context_serialize_answer(q, err, pkt, &len);
+	(void)rbtree_delete(&w->ctx->queries, q->node.key);
+	context_query_delete(q);
+
+	if(!msg) {
+		log_err("out of memory for async answer");
+		return;
+	}
+	item = (struct libworker_res_list*)malloc(sizeof(*item));
+	if(!item) {
+		free(msg);
+		log_err("out of memory for async answer");
+		return;
+	}
+	item->buf = msg;
+	item->len = len;
+	item->next = NULL;
+	/* add at back of list */
+	if(w->res_last)
+		w->res_last->next = item;
+	else	w->res_list = item;
+	w->res_last = item;
+	if(w->res_list == w->res_last) {
+		/* first added item, start the write process */
+		comm_point_start_listening(w->res_com, -1, -1);
+	}
+}
+
+/** callback with bg results */
+static void
+libworker_bg_done_cb(void* arg, int rcode, ldns_buffer* buf, enum sec_status s)
+{
+	struct libworker_cb_data* d = (struct libworker_cb_data*)arg;
+
+	d->q->msg_security = s;
+	if(rcode != 0) {
+		error_encode(buf, rcode, NULL, 0, BIT_RD, NULL);
+	}
+	add_bg_result(d->w, d->q, buf, UB_NOERROR);
+}
+
+
 /** handle new query command for bg worker */
 static void
 handle_newq(struct libworker* w, uint8_t* buf, uint32_t len)
 {
+	uint16_t qflags, qid;
+	struct query_info qinfo;
+	struct edns_data edns;
+	struct libworker_cb_data d;
 	struct ctx_query* q = context_deserialize_new_query(w->ctx, buf, len);
 	if(!q) {
 		log_err("failed to deserialize newq");
 		return;
 	}
-	/* TODO start new query in bg mode */
+	if(!setup_qinfo_edns(w, q, &qinfo, &edns)) {
+		add_bg_result(w, q, NULL, UB_SYNTAX);
+		return;
+	}
+	qid = 0;
+	qflags = BIT_RD;
+	d.q = q;
+	d.w = w;
+	/* see if there is a fixed answer */
+	if(local_zones_answer(w->ctx->local_zones, &qinfo, &edns, 
+		w->back->udp_buff, w->env->scratch)) {
+		q->msg_security = sec_status_insecure;
+		add_bg_result(w, q, w->back->udp_buff, UB_NOERROR);
+		free(qinfo.qname);
+		return;
+	}
+	/* process new query */
+	if(!mesh_new_callback(w->env->mesh, &qinfo, qflags, &edns, 
+		w->back->udp_buff, qid, libworker_bg_done_cb, &d)) {
+		add_bg_result(w, q, NULL, UB_NOMEM);
+	}
+	free(qinfo.qname);
 }
 
 void libworker_alloc_cleanup(void* arg)

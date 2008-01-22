@@ -105,16 +105,6 @@ ub_val_ctx_create()
 	return ctx;
 }
 
-/** delete context query */
-static void
-context_query_delete(struct ctx_query* q) 
-{
-	if(!q) return;
-	ub_val_result_free(q->res);
-	free(q->msg);
-	free(q);
-}
-
 /** delete q */
 static void
 delq(rbnode_t* n, void* ATTR_UNUSED(arg))

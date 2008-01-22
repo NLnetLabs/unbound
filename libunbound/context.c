@@ -95,6 +95,15 @@ int context_query_cmp(const void* a, const void* b)
 	return 0;
 }
 
+void
+context_query_delete(struct ctx_query* q) 
+{
+	if(!q) return;
+	ub_val_result_free(q->res);
+	free(q->msg);
+	free(q);
+}
+
 /** How many times to try to find an unused query-id-number for async */
 #define NUM_ID_TRIES 100000
 /** find next useful id number of 0 on error */
@@ -242,7 +251,8 @@ context_deserialize_new_query(struct ub_val_ctx* ctx, uint8_t* p, uint32_t len)
 }
 
 uint8_t* 
-context_serialize_answer(struct ctx_query* q, int err, uint32_t* len)
+context_serialize_answer(struct ctx_query* q, int err, ldns_buffer* pkt,
+	uint32_t* len)
 {
 	/* answer format
 	 * 	o uint32 cmd
@@ -252,15 +262,17 @@ context_serialize_answer(struct ctx_query* q, int err, uint32_t* len)
 	 * 	o the remainder is the answer msg from resolver lookup.
 	 * 	  remainder can be length 0.
 	 */
+	size_t pkt_len = pkt?ldns_buffer_remaining(pkt):0;
 	uint8_t* p;
-	*len = sizeof(uint32_t)*4 + q->msg_len;
+	*len = sizeof(uint32_t)*4 + pkt_len;
 	p = (uint8_t*)malloc(*len);
 	if(!p) return NULL;
 	ldns_write_uint32(p, UB_LIBCMD_ANSWER);
 	ldns_write_uint32(p+sizeof(uint32_t), (uint32_t)q->querynum);
 	ldns_write_uint32(p+2*sizeof(uint32_t), (uint32_t)err);
 	ldns_write_uint32(p+3*sizeof(uint32_t), (uint32_t)q->msg_security);
-	memmove(p+4*sizeof(uint32_t), q->msg, q->msg_len);
+	if(pkt_len > 0)
+		memmove(p+4*sizeof(uint32_t), ldns_buffer_begin(pkt), pkt_len);
 	return p;
 }
 
