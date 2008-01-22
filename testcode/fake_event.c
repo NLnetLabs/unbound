@@ -1041,6 +1041,12 @@ void comm_point_local_handle_callback(int ATTR_UNUSED(fd),
 	log_assert(0);
 }
 
+void comm_point_raw_handle_callback(int ATTR_UNUSED(fd), 
+	short ATTR_UNUSED(event), void* ATTR_UNUSED(arg))
+{
+	log_assert(0);
+}
+
 int serviced_udp_callback(struct comm_point* ATTR_UNUSED(c), 
 	void* ATTR_UNUSED(arg), int ATTR_UNUSED(error),
         struct comm_reply* ATTR_UNUSED(reply_info))

@@ -43,6 +43,7 @@
  */
 #ifndef LIBUNBOUND_WORKER_H
 #define LIBUNBOUND_WORKER_H
+#include "util/data/packed_rrset.h"
 struct ub_val_ctx;
 struct ub_val_result;
 struct module_env;
@@ -56,7 +57,6 @@ struct comm_point;
 struct comm_reply;
 struct libworker_res_list;
 struct regional;
-enum sec_status;
 
 /** 
  * The library-worker status structure
