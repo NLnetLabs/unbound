@@ -44,6 +44,7 @@
 #ifndef LIBUNBOUND_WORKER_H
 #define LIBUNBOUND_WORKER_H
 struct ub_val_ctx;
+struct ub_val_result;
 struct module_env;
 struct comm_base;
 struct outside_network;
@@ -54,6 +55,8 @@ struct module_qstate;
 struct comm_point;
 struct comm_reply;
 struct libworker_res_list;
+struct regional;
+enum sec_status;
 
 /** 
  * The library-worker status structure
@@ -216,5 +219,17 @@ int libworker_write_msg(int fd, uint8_t* buf, uint32_t len, int nonblock);
  * 	return 1 if all OK.
  */
 int libworker_read_msg(int fd, uint8_t** buf, uint32_t* len, int nonblock);
+
+/** 
+ * fill result from parsed message, on error fills servfail 
+ * @param res: is clear at start, filled in at end.
+ * @param buf: contains DNS message.
+ * @param temp: temporary buffer for parse.
+ * @param msg_security: security status of the DNS message.
+ *   On error, the res may contain a different status 
+ *   (out of memory is not secure, not bogus).
+ */
+void libworker_enter_result(struct ub_val_result* res, ldns_buffer* buf,
+	struct regional* temp, enum sec_status msg_security);
 
 #endif /* LIBUNBOUND_WORKER_H */

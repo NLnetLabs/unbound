@@ -368,12 +368,37 @@ fill_res(struct ub_val_result* res, struct ub_packed_rrset_key* answer,
 	return 1;
 }
 
+/** fill result from parsed message, on error fills servfail */
+void
+libworker_enter_result(struct ub_val_result* res, ldns_buffer* buf,
+	struct regional* temp, enum sec_status msg_security)
+{
+	struct query_info rq;
+	struct reply_info* rep;
+	res->rcode = LDNS_RCODE_SERVFAIL;
+	rep = parse_reply(buf, temp, &rq);
+	if(!rep) {
+		return; /* error parsing buf, or out of memory */
+	}
+	if(!fill_res(res, reply_find_answer_rrset(&rq, rep), 
+		reply_find_final_cname_target(&rq, rep), &rq))
+		return; /* out of memory */
+	/* rcode, havedata, nxdomain, secure, bogus */
+	res->rcode = (int)FLAGS_GET_RCODE(rep->flags);
+	if(res->data && res->data[0])
+		res->havedata = 1;
+	if(res->rcode == LDNS_RCODE_NXDOMAIN)
+		res->nxdomain = 1;
+	if(msg_security == sec_status_secure)
+		res->secure = 1;
+	if(msg_security == sec_status_bogus)
+		res->bogus = 1;
+}
+
 /** callback with fg results */
 static void
 libworker_fg_done_cb(void* arg, int rcode, ldns_buffer* buf, enum sec_status s)
 {
-	struct query_info rq; /* replied query */
-	struct reply_info* rep;
 	struct libworker_fg_data* d = (struct libworker_fg_data*)arg;
 	/* fg query is done; exit comm base */
 	comm_base_exit(d->w->base);
@@ -389,29 +414,13 @@ libworker_fg_done_cb(void* arg, int rcode, ldns_buffer* buf, enum sec_status s)
 	d->q->msg = memdup(ldns_buffer_begin(buf), ldns_buffer_limit(buf));
 	d->q->msg_len = ldns_buffer_limit(buf);
 	if(!d->q->msg) {
-		return; /* error in rcode */
+		return; /* the error is in the rcode */
 	}
 
 	/* canonname and results */
-	rep = parse_reply(buf, d->w->env->scratch, &rq);
-	if(!rep) {
-		return; /* error parsing buf, or out of memory */
-	}
-	if(!fill_res(d->q->res, reply_find_answer_rrset(&rq, rep), 
-		reply_find_final_cname_target(&rq, rep), &rq))
-		return; /* out of memory */
-	/* rcode, havedata, nxdomain, secure, bogus */
-	d->q->res->rcode = (int)LDNS_RCODE_WIRE(d->q->msg);
-	if(d->q->res->data && d->q->res->data[0])
-		d->q->res->havedata = 1;
-	if(d->q->res->rcode == LDNS_RCODE_NXDOMAIN)
-		d->q->res->nxdomain = 1;
-	if(s == sec_status_secure)
-		d->q->res->secure = 1;
-	if(s == sec_status_bogus)
-		d->q->res->bogus = 1;
-
 	d->q->msg_security = s;
+
+	libworker_enter_result(d->q->res, buf, d->w->env->scratch, s);
 }
 
 /** setup qinfo and edns */

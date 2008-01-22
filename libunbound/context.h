@@ -170,7 +170,9 @@ enum ub_ctx_err {
 	/** cfg change after finalize() */
 	UB_AFTERFINAL = -6,
 	/** initialization failed (bad settings) */
-	UB_INITFAIL = -7
+	UB_INITFAIL = -7,
+	/** error in pipe communication with async bg worker */
+	UB_PIPE = -8
 };
 
 /**

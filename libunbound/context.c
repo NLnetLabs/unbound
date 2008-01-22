@@ -102,13 +102,13 @@ static int
 find_id(struct ub_val_ctx* ctx, int* id)
 {
 	size_t tries = 0;
+	ctx->next_querynum++;
 	while(rbtree_search(&ctx->queries, &ctx->next_querynum)) {
 		ctx->next_querynum++; /* numerical wraparound is fine */
 		if(tries++ > NUM_ID_TRIES)
 			return 0;
 	}
 	*id = ctx->next_querynum;
-	ctx->next_querynum++;
 	return 1;
 }
 

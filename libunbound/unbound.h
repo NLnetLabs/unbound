@@ -179,8 +179,7 @@ struct ub_val_result {
 /**
  * Callback for results of async queries.
  * The readable function definition looks like:
- * void my_callback(void* my_arg, int err, int secure, int havedata,
- *	struct ub_val_result* result);
+ * void my_callback(void* my_arg, int err, struct ub_val_result* result);
  * It is called with
  *	void* my_arg: your pointer to a (struct of) data of your choice, 
  *		or NULL.
@@ -333,7 +332,7 @@ int ub_val_resolve(struct ub_val_ctx* ctx, char* name, int rrtype,
 /**
  * Perform resolution and validation of the target name.
  * Asynchronous, after a while, the callback will be called with your
- * data and the result + secure status.
+ * data and the result.
  * @param ctx: context.
  *	If no thread or process has been created yet to perform the
  *	work in the background, it is created now.
@@ -345,8 +344,7 @@ int ub_val_resolve(struct ub_val_ctx* ctx, char* name, int rrtype,
  * 	and is passed on to the callback function.
  * @param callback: this is called on completion of the resolution.
  * 	It is called as:
- * 	void callback(void* mydata, int err, int secure, int havedata, 
- * 		struct ub_val_result* result)
+ * 	void callback(void* mydata, int err, struct ub_val_result* result)
  * 	with mydata: the same as passed here, you may pass NULL,
  * 	with err: is 0 when a result has been found.
  * 	with result: a newly allocated result structure.
