@@ -405,7 +405,7 @@ libworker_fg_done_cb(void* arg, int rcode, ldns_buffer* buf, enum sec_status s)
 
 	if(rcode != 0) {
 		d->q->res->rcode = rcode;
-		d->q->msg_security = 0;
+		d->q->msg_security = s;
 		return;
 	}
 
@@ -419,7 +419,6 @@ libworker_fg_done_cb(void* arg, int rcode, ldns_buffer* buf, enum sec_status s)
 
 	/* canonname and results */
 	d->q->msg_security = s;
-
 	libworker_enter_result(d->q->res, buf, d->w->env->scratch, s);
 }
 

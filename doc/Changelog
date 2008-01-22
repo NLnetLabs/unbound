@@ -1,6 +1,7 @@
 22 January 2008: Wouter
 	- library code for async in libunbound/unbound.c.
 	- fix link testbound.
+	- fixup exit bug in mini_event.
 
 21 January 2008: Wouter
 	- libworker work, netevent raw commpoints, write_msg, serialize.

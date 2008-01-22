@@ -302,7 +302,8 @@ pretty_output(char* q, int t, int c, struct ub_val_result* result, int docname)
 		printf("\n");
 	}
 	/* remove trailing . from long canonnames for nicer output */
-	if(result->canonname && strlen(result->canonname) > 1)
+	if(result->canonname && strlen(result->canonname) > 1 &&
+		result->canonname[strlen(result->canonname)-1] == '.')
 		result->canonname[strlen(result->canonname)-1] = 0;
 	if(!result->havedata) {
 		if(verb > 0) {
