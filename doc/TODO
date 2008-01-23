@@ -56,3 +56,4 @@ o in an ipv6 connected only environment unbound cannot use outgoing IP6
   V6ONLY socket option.
 o support multiple dns messages in a TCP query stream for the unbound server.
 o SIG(0) and TSIG.
+o support OPT record placement on recv anywhere in the additional section. 
