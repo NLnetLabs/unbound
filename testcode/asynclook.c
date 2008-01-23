@@ -65,6 +65,8 @@ void usage(char* argv[])
 {
 	printf("usage: %s name ...\n", argv[0]);
 	printf("names are looked up at the same time, asynchronously.\n");
+	printf("-d : enable debug output\n");
+	printf("-t : use a resolver thread instead of forking a process\n");
 	exit(1);
 }
 
@@ -89,8 +91,27 @@ int main(int argc, char** argv)
 	if(argc == 1) {
 		usage(argv);
 	}
+	if(argc > 1 && strcmp(argv[1], "-h") == 0)
+		usage(argv);
 	argc--;
 	argv++;
+
+	/* create context */
+	ctx = ub_val_ctx_create();
+	if(!ctx) {
+		printf("could not create context, %s", strerror(errno));
+		return 1;
+	}
+	if(argc > 0 && strcmp(argv[0], "-d") == 0) {
+		ub_val_ctx_debuglevel(ctx, 3);
+		argc--;
+		argv++;
+	} 
+	if(argc > 0 && strcmp(argv[0], "-t") == 0) {
+		ub_val_ctx_async(ctx, 1);
+		argc--;
+		argv++;
+	}
 
 	/* allocate array for results. */
 	lookups = (struct lookinfo*)calloc((size_t)argc, 
@@ -99,20 +120,10 @@ int main(int argc, char** argv)
 		printf("out of memory\n");
 		return 1;
 	}
-	/* create context */
-	ctx = ub_val_ctx_create();
-	if(!ctx) {
-		printf("could not create context, %s", strerror(errno));
-		return 1;
-	}
 
 	/* perform asyncronous calls */
 	num_wait = argc;
 	for(i=0; i<argc; i++) {
-		if(strcmp(argv[i], "-d") == 0) {
-			ub_val_ctx_debuglevel(ctx, 3);
-			continue;
-		}
 		fprintf(stderr, "start lookup %s\n", argv[i]);
 		lookups[i].qname = argv[i];
 		r = ub_val_resolve_async(ctx, argv[i], LDNS_RR_TYPE_A,
@@ -142,22 +153,30 @@ int main(int argc, char** argv)
 	/* print lookup results */
 	for(i=0; i<argc; i++) {
 		char buf[100];
-		if(lookups[i].err)
+		if(lookups[i].err) /* error (from libunbound) */
 			printf("%s: error %s\n", lookups[i].qname,
 				ub_val_strerror(lookups[i].err));
-		else if(lookups[i].result->rcode != 0)
-			printf("%s: DNS error %d\n", lookups[i].qname,
-				lookups[i].result->rcode);
-		else if(!lookups[i].result->havedata)
-			printf("%s: no data %s\n", lookups[i].qname,
+		else if(lookups[i].result->havedata)
+			printf("%s: %s\n", lookups[i].qname,
+				inet_ntop(AF_INET, lookups[i].result->data[0],
+				buf, (socklen_t)sizeof(buf)));
+		else {
+			/* there is no data, why that? */
+			if(lookups[i].result->rcode == 0 /*noerror*/ ||
+				lookups[i].result->nxdomain)
+				printf("%s: no data %s\n", lookups[i].qname,
 				lookups[i].result->nxdomain?"(no such host)":
 				"(no IP4 address)");
-		else 	printf("%s: %s\n", lookups[i].qname,
-				inet_ntop(AF_INET, lookups[i].result->data[0],
-					buf, (socklen_t)sizeof(buf)));
+			else	/* some error (from the server) */
+				printf("%s: DNS error %d\n", lookups[i].qname,
+					lookups[i].result->rcode);
+		}
 	}
 
 	ub_val_ctx_delete(ctx);
+	for(i=0; i<argc; i++) {
+		ub_val_result_free(lookups[i].result);
+	}
 	free(lookups);
 	return 0;
 }

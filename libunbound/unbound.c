@@ -118,6 +118,30 @@ ub_val_ctx_delete(struct ub_val_ctx* ctx)
 {
 	struct alloc_cache* a, *na;
 	if(!ctx) return;
+	/* stop the bg thread */
+	lock_basic_lock(&ctx->cfglock);
+	if(ctx->created_bg) {
+		uint8_t* msg;
+		uint32_t len;
+		uint32_t cmd = UB_LIBCMD_QUIT;
+		lock_basic_unlock(&ctx->cfglock);
+		lock_basic_lock(&ctx->qqpipe_lock);
+		(void)libworker_write_msg(ctx->qqpipe[1], (uint8_t*)&cmd, 
+			(uint32_t)sizeof(cmd), 0);
+		lock_basic_unlock(&ctx->qqpipe_lock);
+		lock_basic_lock(&ctx->rrpipe_lock);
+		while(libworker_read_msg(ctx->rrpipe[0], &msg, &len, 0)) {
+			/* discard all results except a quit confirm */
+			if(context_serial_getcmd(msg, len) == UB_LIBCMD_QUIT) {
+				free(msg);
+				break;
+			}
+			free(msg);
+		}
+		lock_basic_unlock(&ctx->rrpipe_lock);
+	}
+	else lock_basic_unlock(&ctx->cfglock);
+
 	modstack_desetup(&ctx->mods, ctx->env);
 	a = ctx->alloc_list;
 	while(a) {
@@ -131,10 +155,18 @@ ub_val_ctx_delete(struct ub_val_ctx* ctx)
 	lock_basic_destroy(&ctx->qqpipe_lock);
 	lock_basic_destroy(&ctx->rrpipe_lock);
 	lock_basic_destroy(&ctx->cfglock);
-	close(ctx->qqpipe[0]);
-	close(ctx->qqpipe[1]);
-	close(ctx->rrpipe[0]);
-	close(ctx->rrpipe[1]);
+	if(ctx->qqpipe[0] != -1)
+		close(ctx->qqpipe[0]);
+	if(ctx->qqpipe[1] != -1)
+		close(ctx->qqpipe[1]);
+	if(ctx->rrpipe[0] != -1)
+		close(ctx->rrpipe[0]);
+	if(ctx->rrpipe[1] != -1)
+		close(ctx->rrpipe[1]);
+	ctx->qqpipe[0] = -1;
+	ctx->qqpipe[1] = -1;
+	ctx->rrpipe[0] = -1;
+	ctx->rrpipe[1] = -1;
 	if(ctx->env) {
 		slabhash_delete(ctx->env->msg_cache);
 		rrset_cache_delete(ctx->env->rrset_cache);
@@ -233,6 +265,10 @@ ub_val_ctx_debuglevel(struct ub_val_ctx* ctx, int d)
 int 
 ub_val_ctx_async(struct ub_val_ctx* ctx, int dothread)
 {
+#if !defined(HAVE_PTHREAD) && !defined(HAVE_SOLARIS_THREADS)
+	if(dothread) /* cannot do threading */
+		return UB_NOERROR;
+#endif
 	lock_basic_lock(&ctx->cfglock);
 	if(ctx->finalized) {
 		lock_basic_unlock(&ctx->cfglock);
@@ -406,14 +442,19 @@ ub_val_resolve(struct ub_val_ctx* ctx, char* name, int rrtype,
 
 	r = libworker_fg(ctx, q);
 	if(r) {
+		lock_basic_lock(&ctx->cfglock);
+		(void)rbtree_delete(&ctx->queries, q->node.key);
 		context_query_delete(q);
+		lock_basic_unlock(&ctx->cfglock);
 		return r;
 	}
 	*result = q->res;
 	q->res = NULL;
 
+	lock_basic_lock(&ctx->cfglock);
 	(void)rbtree_delete(&ctx->queries, q->node.key);
 	context_query_delete(q);
+	lock_basic_unlock(&ctx->cfglock);
 	return UB_NOERROR;
 }
 
@@ -435,14 +476,17 @@ ub_val_resolve_async(struct ub_val_ctx* ctx, char* name, int rrtype,
 		}
 	}
 	if(!ctx->created_bg) {
-		int r = libworker_bg(ctx);
+		int r;
+		ctx->created_bg = 1;
+		lock_basic_unlock(&ctx->cfglock);
+		r = libworker_bg(ctx);
 		if(r) {
+			lock_basic_lock(&ctx->cfglock);
+			ctx->created_bg = 0;
 			lock_basic_unlock(&ctx->cfglock);
 			return r;
 		}
-		ctx->created_bg = 1;
-	}
-	lock_basic_unlock(&ctx->cfglock);
+	} else lock_basic_unlock(&ctx->cfglock);
 
 	/* create new ctx_query and attempt to add to the list */
 	q = context_new(ctx, name, rrtype, rrclass, callback, mydata);
@@ -490,9 +534,11 @@ ub_val_cancel(struct ub_val_ctx* ctx, int async_id)
 	}
 	
 	/* delete it */
-	(void)rbtree_delete(&ctx->queries, q->node.key);
-	ctx->num_async--;
-	context_query_delete(q);
+	if(!ctx->dothread) { /* if forked */
+		(void)rbtree_delete(&ctx->queries, q->node.key);
+		ctx->num_async--;
+		context_query_delete(q);
+	}
 	lock_basic_unlock(&ctx->cfglock);
 
 	/* send cancel to background worker */

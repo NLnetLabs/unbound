@@ -108,6 +108,7 @@ libworker_setup(struct ub_val_ctx* ctx)
 		libworker_delete(w);
 		return NULL;
 	}
+	w->thread_num = w->env->alloc->thread_num;
 	alloc_set_id_cleanup(w->env->alloc, &libworker_alloc_cleanup, w);
 	w->env->scratch = regional_create_custom(cfg->msg_buffer_size);
 	w->env->scratch_buffer = ldns_buffer_new(cfg->msg_buffer_size);
@@ -169,6 +170,7 @@ handle_cancel(struct libworker* w, uint8_t* buf, uint32_t len)
 		return;
 	}
 	q->cancelled = 1;
+	free(buf);
 }
 
 /** handle control command coming into server */
@@ -190,7 +192,6 @@ libworker_handle_control_cmd(struct comm_point* c, void* arg,
 	if(r==-1) /* nothing to read now, try later */
 		return 0;
 	
-	log_info("bg got cmd %d",  (int)context_serial_getcmd(buf, len));
 	switch(context_serial_getcmd(buf, len)) {
 		default:
 		case UB_LIBCMD_ANSWER:
@@ -198,6 +199,7 @@ libworker_handle_control_cmd(struct comm_point* c, void* arg,
 				(int)context_serial_getcmd(buf, len));
 			/* and fall through to quit */
 		case UB_LIBCMD_QUIT:
+			free(buf);
 			comm_base_exit(w->base);
 			break;
 		case UB_LIBCMD_NEWQUERY:
@@ -222,8 +224,6 @@ libworker_handle_result_write(struct comm_point* c, void* arg,
 		comm_point_stop_listening(c);
 		return 0;
 	}
-	log_info("bg write msg %d",  (int)context_serial_getcmd(
-		item->buf, item->len));
 	r = libworker_write_msg(c->fd, item->buf, item->len, 1);
 	if(r == -1)
 		return 0; /* try again later */
@@ -250,60 +250,85 @@ static void*
 libworker_dobg(void* arg)
 {
 	/* setup */
-	struct ub_val_ctx* ctx = (struct ub_val_ctx*)arg;
-	struct libworker* w = libworker_setup(ctx);
+	uint32_t m;
+	int fd;
+	struct libworker* w = (struct libworker*)arg;
+	struct ub_val_ctx* ctx = w->ctx;
 	log_thread_set(&w->thread_num);
-	log_info("start bg"); /* @@@ DEBUG */
-	/*verbosity=3; @@@ DEBUG */
+#if !defined(HAVE_PTHREAD) && !defined(HAVE_SOLARIS_THREADS)
+	/* we are forked */
+	w->is_bg_thread = 0;
+	/* close non-used parts of the pipes */
+	if(ctx->qqpipe[1] != -1) {
+		close(ctx->qqpipe[1]);
+		ctx->qqpipe[1] = -1;
+	}
+	if(ctx->rrpipe[0] != -1) {
+		close(ctx->rrpipe[0]);
+		ctx->rrpipe[0] = -1;
+	}
+#endif
 	if(!w) {
 		log_err("libunbound bg worker init failed, nomem");
 		return NULL;
 	}
-	lock_basic_lock(&ctx->qqpipe_lock);
 	if(!(w->cmd_com=comm_point_create_raw(w->base, ctx->qqpipe[0], 0, 
 		libworker_handle_control_cmd, w))) {
-		lock_basic_unlock(&ctx->qqpipe_lock);
 		log_err("libunbound bg worker init failed, no cmdcom");
 		return NULL;
 	}
-	lock_basic_unlock(&ctx->qqpipe_lock);
-	lock_basic_lock(&ctx->rrpipe_lock);
 	if(!(w->res_com=comm_point_create_raw(w->base, ctx->rrpipe[1], 1,
 		libworker_handle_result_write, w))) {
-		lock_basic_unlock(&ctx->qqpipe_lock);
-		log_err("libunbound bg worker init failed, no cmdcom");
+		log_err("libunbound bg worker init failed, no rescom");
 		return NULL;
 	}
-	lock_basic_unlock(&ctx->rrpipe_lock);
 
 	/* do the work */
 	comm_base_dispatch(w->base);
 
 	/* cleanup */
+	fd = ctx->rrpipe[1];
+	ctx->rrpipe[1] = -1;
+	m = UB_LIBCMD_QUIT;
+	close(ctx->qqpipe[0]);
+	ctx->qqpipe[0] = -1;
 	libworker_delete(w);
+	(void)libworker_write_msg(fd, (uint8_t*)&m, (uint32_t)sizeof(m), 0);
+	close(fd);
 	return NULL;
 }
 
 int libworker_bg(struct ub_val_ctx* ctx)
 {
+	struct libworker* w;
 	/* fork or threadcreate */
+	lock_basic_lock(&ctx->cfglock);
 	if(ctx->dothread) {
-		ub_thread_create(&ctx->bg_tid, libworker_dobg, ctx);
+		lock_basic_unlock(&ctx->cfglock);
+		w = libworker_setup(ctx);
+		w->is_bg_thread = 1;
+		if(!w) return UB_NOMEM;
+		ub_thread_create(&ctx->bg_tid, libworker_dobg, w);
 	} else {
+		lock_basic_unlock(&ctx->cfglock);
 		switch((ctx->bg_pid=fork())) {
 			case 0:
-				lock_basic_unlock(&ctx->cfglock);
-				(void)libworker_dobg(ctx);
+				w = libworker_setup(ctx);
+				if(!w) fatal_exit("out of memory");
+				/* close non-used parts of the pipes */
+				close(ctx->qqpipe[1]);
+				close(ctx->rrpipe[0]);
+				ctx->qqpipe[1] = -1;
+				ctx->rrpipe[0] = -1;
+				(void)libworker_dobg(w);
 				exit(0);
 				break;
 			case -1:
-				lock_basic_unlock(&ctx->cfglock);
 				return UB_FORKFAIL;
 			default:
 				break;
 		}
 	}
-	lock_basic_unlock(&ctx->cfglock);
 	return UB_NOERROR;
 }
 
@@ -383,6 +408,7 @@ libworker_enter_result(struct ub_val_result* res, ldns_buffer* buf,
 	res->rcode = LDNS_RCODE_SERVFAIL;
 	rep = parse_reply(buf, temp, &rq);
 	if(!rep) {
+		log_err("cannot parse buf");
 		return; /* error parsing buf, or out of memory */
 	}
 	if(!fill_res(res, reply_find_answer_rrset(&rq, rep), 
@@ -404,27 +430,27 @@ libworker_enter_result(struct ub_val_result* res, ldns_buffer* buf,
 static void
 libworker_fg_done_cb(void* arg, int rcode, ldns_buffer* buf, enum sec_status s)
 {
-	struct libworker_cb_data* d = (struct libworker_cb_data*)arg;
+	struct ctx_query* q = (struct ctx_query*)arg;
 	/* fg query is done; exit comm base */
-	comm_base_exit(d->w->base);
+	comm_base_exit(q->w->base);
 
 	if(rcode != 0) {
-		d->q->res->rcode = rcode;
-		d->q->msg_security = s;
+		q->res->rcode = rcode;
+		q->msg_security = s;
 		return;
 	}
 
-	d->q->res->rcode = LDNS_RCODE_SERVFAIL;
-	d->q->msg_security = 0;
-	d->q->msg = memdup(ldns_buffer_begin(buf), ldns_buffer_limit(buf));
-	d->q->msg_len = ldns_buffer_limit(buf);
-	if(!d->q->msg) {
+	q->res->rcode = LDNS_RCODE_SERVFAIL;
+	q->msg_security = 0;
+	q->msg = memdup(ldns_buffer_begin(buf), ldns_buffer_limit(buf));
+	q->msg_len = ldns_buffer_limit(buf);
+	if(!q->msg) {
 		return; /* the error is in the rcode */
 	}
 
 	/* canonname and results */
-	d->q->msg_security = s;
-	libworker_enter_result(d->q->res, buf, d->w->env->scratch, s);
+	q->msg_security = s;
+	libworker_enter_result(q->res, buf, q->w->env->scratch, s);
 }
 
 /** setup qinfo and edns */
@@ -459,7 +485,6 @@ int libworker_fg(struct ub_val_ctx* ctx, struct ctx_query* q)
 	uint16_t qflags, qid;
 	struct query_info qinfo;
 	struct edns_data edns;
-	struct libworker_cb_data d;
 	if(!w)
 		return UB_INITFAIL;
 	if(!setup_qinfo_edns(w, q, &qinfo, &edns)) {
@@ -468,12 +493,11 @@ int libworker_fg(struct ub_val_ctx* ctx, struct ctx_query* q)
 	}
 	qid = 0;
 	qflags = BIT_RD;
-	d.q = q;
-	d.w = w;
+	q->w = w;
 	/* see if there is a fixed answer */
 	if(local_zones_answer(ctx->local_zones, &qinfo, &edns, 
 		w->back->udp_buff, w->env->scratch)) {
-		libworker_fg_done_cb(&d, LDNS_RCODE_NOERROR, 
+		libworker_fg_done_cb(q, LDNS_RCODE_NOERROR, 
 			w->back->udp_buff, sec_status_insecure);
 		libworker_delete(w);
 		free(qinfo.qname);
@@ -481,7 +505,7 @@ int libworker_fg(struct ub_val_ctx* ctx, struct ctx_query* q)
 	}
 	/* process new query */
 	if(!mesh_new_callback(w->env->mesh, &qinfo, qflags, &edns, 
-		w->back->udp_buff, qid, libworker_fg_done_cb, &d)) {
+		w->back->udp_buff, qid, libworker_fg_done_cb, q)) {
 		free(qinfo.qname);
 		return UB_NOMEM;
 	}
@@ -504,9 +528,20 @@ add_bg_result(struct libworker* w, struct ctx_query* q, ldns_buffer* pkt,
 	struct libworker_res_list* item;
 
 	/* serialize and delete unneeded q */
-	msg = context_serialize_answer(q, err, pkt, &len);
-	(void)rbtree_delete(&w->ctx->queries, q->node.key);
-	context_query_delete(q);
+	if(w->is_bg_thread) {
+		lock_basic_lock(&w->ctx->cfglock);
+		q->msg_len = ldns_buffer_remaining(pkt);
+		q->msg = memdup(ldns_buffer_begin(pkt), q->msg_len);
+		if(!q->msg)
+			msg = context_serialize_answer(q, UB_NOMEM, NULL, &len);
+		else	msg = context_serialize_answer(q, err, NULL, &len);
+		lock_basic_unlock(&w->ctx->cfglock);
+	} else {
+		msg = context_serialize_answer(q, err, pkt, &len);
+		(void)rbtree_delete(&w->ctx->queries, q->node.key);
+		w->ctx->num_async--;
+		context_query_delete(q);
+	}
 
 	if(!msg) {
 		log_err("out of memory for async answer");
@@ -536,13 +571,26 @@ add_bg_result(struct libworker* w, struct ctx_query* q, ldns_buffer* pkt,
 static void
 libworker_bg_done_cb(void* arg, int rcode, ldns_buffer* buf, enum sec_status s)
 {
-	struct libworker_cb_data* d = (struct libworker_cb_data*)arg;
+	struct ctx_query* q = (struct ctx_query*)arg;
 
-	d->q->msg_security = s;
+	if(q->cancelled) {
+		if(q->w->is_bg_thread) {
+			/* delete it now */
+			struct ub_val_ctx* ctx = q->w->ctx;
+			lock_basic_lock(&ctx->cfglock);
+			(void)rbtree_delete(&ctx->queries, q->node.key);
+			ctx->num_async--;
+			context_query_delete(q);
+			lock_basic_unlock(&ctx->cfglock);
+		}
+		/* cancelled, do not give answer */
+		return;
+	}
+	q->msg_security = s;
 	if(rcode != 0) {
 		error_encode(buf, rcode, NULL, 0, BIT_RD, NULL);
 	}
-	add_bg_result(d->w, d->q, buf, UB_NOERROR);
+	add_bg_result(q->w, q, buf, UB_NOERROR);
 }
 
 
@@ -553,8 +601,13 @@ handle_newq(struct libworker* w, uint8_t* buf, uint32_t len)
 	uint16_t qflags, qid;
 	struct query_info qinfo;
 	struct edns_data edns;
-	struct libworker_cb_data d;
-	struct ctx_query* q = context_deserialize_new_query(w->ctx, buf, len);
+	struct ctx_query* q;
+	if(w->is_bg_thread) {
+		q = context_lookup_new_query(w->ctx, buf, len);
+	} else {
+		q = context_deserialize_new_query(w->ctx, buf, len);
+	}
+	free(buf);
 	if(!q) {
 		log_err("failed to deserialize newq");
 		return;
@@ -565,8 +618,6 @@ handle_newq(struct libworker* w, uint8_t* buf, uint32_t len)
 	}
 	qid = 0;
 	qflags = BIT_RD;
-	d.q = q;
-	d.w = w;
 	/* see if there is a fixed answer */
 	if(local_zones_answer(w->ctx->local_zones, &qinfo, &edns, 
 		w->back->udp_buff, w->env->scratch)) {
@@ -575,9 +626,10 @@ handle_newq(struct libworker* w, uint8_t* buf, uint32_t len)
 		free(qinfo.qname);
 		return;
 	}
+	q->w = w;
 	/* process new query */
 	if(!mesh_new_callback(w->env->mesh, &qinfo, qflags, &edns, 
-		w->back->udp_buff, qid, libworker_bg_done_cb, &d)) {
+		w->back->udp_buff, qid, libworker_bg_done_cb, q)) {
 		add_bg_result(w, q, NULL, UB_NOMEM);
 	}
 	free(qinfo.qname);

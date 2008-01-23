@@ -1,5 +1,9 @@
 23 January 2008: Wouter
 	- removed debug prints from if-auto, verb-algo enables some.
+	- libunbound QUIT setup, remove memory leaks, when using threads
+	  will share memory for passing results instead of writing it over
+	  the pipe, only writes ID number over the pipe (towards the handler
+	  thread that does process() ).
 
 22 January 2008: Wouter
 	- library code for async in libunbound/unbound.c.

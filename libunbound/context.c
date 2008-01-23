@@ -250,6 +250,24 @@ context_deserialize_new_query(struct ub_val_ctx* ctx, uint8_t* p, uint32_t len)
 	return q;
 }
 
+struct ctx_query* 
+context_lookup_new_query(struct ub_val_ctx* ctx, uint8_t* p, uint32_t len)
+{
+	struct ctx_query* q;
+	int querynum;
+	if(len < 4*sizeof(uint32_t)+1) {
+		return NULL;
+	}
+	log_assert( ldns_read_uint32(p) == UB_LIBCMD_NEWQUERY);
+	querynum = (int)ldns_read_uint32(p+sizeof(uint32_t));
+	q = (struct ctx_query*)rbtree_search(&ctx->queries, &querynum);
+	if(!q) {
+		return NULL;
+	}
+	log_assert(q->async);
+	return q;
+}
+
 uint8_t* 
 context_serialize_answer(struct ctx_query* q, int err, ldns_buffer* pkt,
 	uint32_t* len)
@@ -298,11 +316,7 @@ context_deserialize_answer(struct ub_val_ctx* ctx,
 			*err = UB_NOMEM;
 			return q;
 		}
-	} else {
-		q->msg_len = 0;
-		free(q->msg);
-		q->msg = NULL;
-	}
+	} 
 	return q;
 }
 

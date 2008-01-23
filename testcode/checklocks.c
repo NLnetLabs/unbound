@@ -658,7 +658,9 @@ static void* checklock_main(void* arg)
 	/* Hack to get same numbers as in log file */
 	thr->num = *(int*)(thr->arg);
 	log_assert(thr->num < THRDEBUG_MAX_THREADS);
-	log_assert(thread_infos[thr->num] == NULL);
+	/* as an aside, due to this, won't work for libunbound bg thread */
+	if(thread_infos[thr->num] != NULL)
+		log_warn("thread warning, thr->num %d not NULL", thr->num);
 	thread_infos[thr->num] = thr;
 	LOCKRET(pthread_setspecific(thr_debug_key, thr));
 	if(check_locking_order)

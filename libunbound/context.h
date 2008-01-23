@@ -46,6 +46,7 @@
 #include "services/modstack.h"
 #include "libunbound/unbound.h"
 #include "util/data/packed_rrset.h"
+struct libworker;
 
 /**
  * The context structure
@@ -130,7 +131,7 @@ struct ctx_query {
 	int querynum;
 	/** was this an async query? */
 	int async;
-	/** has this query been cancelled? (for bg thread) */
+	/** was this query cancelled (for bg worker) */
 	int cancelled;
 
 	/** for async query, the callback function */
@@ -144,6 +145,8 @@ struct ctx_query {
 	size_t msg_len;
 	/** validation status on security */
 	enum sec_status msg_security;
+	/** store libworker that is handling this query */
+	struct libworker* w;
 
 	/** result structure, also contains original query, type, class.
 	 * malloced ptr ready to hand to the client. */
@@ -283,6 +286,16 @@ uint8_t* context_serialize_quit(uint32_t* len);
  * @return command code or QUIT on error.
  */
 enum ub_ctx_cmd context_serial_getcmd(uint8_t* p, uint32_t len);
+
+/**
+ * Lookup query from new_query buffer.
+ * @param ctx: context
+ * @param p: buffer serialized.
+ * @param len: length of buffer.
+ * @return looked up ctx_query or NULL for malloc failure.
+ */
+struct ctx_query* context_lookup_new_query(struct ub_val_ctx* ctx, 
+	uint8_t* p, uint32_t len);
 
 /**
  * Deserialize a new_query buffer.

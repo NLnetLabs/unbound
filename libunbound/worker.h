@@ -68,8 +68,8 @@ struct libworker {
 	/** context we are operating under */
 	struct ub_val_ctx* ctx;
 
-	/** is this a background worker? */
-	int is_bg;
+	/** is this a bg worker that is threaded (not forked)? */
+	int is_bg_thread;
 
 	/** copy of the module environment with worker local entries. */
 	struct module_env* env;
@@ -89,16 +89,6 @@ struct libworker {
 	struct libworker_res_list* res_list;
 	/** last in list */
 	struct libworker_res_list* res_last;
-};
-
-/**
- * Libworker query cb struct
- */
-struct libworker_cb_data {
-	/** the worker involved */
-	struct libworker* w;
-	/** the query involved */
-	struct ctx_query* q;
 };
 
 /**
