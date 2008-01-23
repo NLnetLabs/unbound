@@ -289,7 +289,8 @@ comm_point_send_udp_msg_if(struct comm_point *c, ldns_buffer* packet,
 	msg.msg_controllen = cmsg->cmsg_len;
 #endif /* S_SPLINT_S */
 
-	p_ancil("send_udp over interface", r);
+	if(verbosity >= VERB_ALGO)
+		p_ancil("send_udp over interface", r);
 	sent = sendmsg(c->fd, &msg, 0);
 	if(sent == -1) {
 		verbose(VERB_OPS, "sendmsg failed: %s", strerror(errno));
@@ -354,16 +355,6 @@ comm_point_udp_ancil_callback(int fd, short event, void* arg)
 #ifndef S_SPLINT_S
 	for(cmsg = CMSG_FIRSTHDR(&msg); cmsg != NULL;
 		cmsg = CMSG_NXTHDR(&msg, cmsg)) {
-		log_info("looking at hdr %d %d (need %d %d or %d %d)",
-			cmsg->cmsg_level, cmsg->cmsg_type,
-			IPPROTO_IPV6, IPV6_PKTINFO,
-			IPPROTO_IP, 
-#ifdef IP_RECVDSTADDR
-			IP_RECVDSTADDR
-#elif defined(IP_PKTINFO)
-			IP_PKTINFO
-#endif
-			);
 		if( cmsg->cmsg_level == IPPROTO_IPV6 &&
 			cmsg->cmsg_type == IPV6_PKTINFO) {
 			rep.srctype = 6;
@@ -387,7 +378,8 @@ comm_point_udp_ancil_callback(int fd, short event, void* arg)
 #endif
 		}
 	}
-	p_ancil("receive_udp on interface", &rep);
+	if(verbosity >= VERB_ALGO)
+		p_ancil("receive_udp on interface", &rep);
 #endif /* S_SPLINT_S */
 	log_assert(fptr_whitelist_comm_point(rep.c->callback));
 	if((*rep.c->callback)(rep.c, rep.c->cb_arg, NETEVENT_NOERROR, &rep)) {

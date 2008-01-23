@@ -1,3 +1,6 @@
+23 January 2008: Wouter
+	- removed debug prints from if-auto, verb-algo enables some.
+
 22 January 2008: Wouter
 	- library code for async in libunbound/unbound.c.
 	- fix link testbound.

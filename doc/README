@@ -59,6 +59,12 @@ o If you receive no answers deploying unbound on a private network.
   in fact those same, working, ip-addresses. Unbound will fetch the NS data
   from the zone and use that information in preference to the config 
   information. 
+o If you are not receiving the correct source IP address on replies (e.g.
+  you are running a multihomed, anycast server), the interface-automatic
+  option can be enabled to set socket options to achieve the correct
+  source IP address on UDP replies. Listing all IP addresses explicitly in
+  the config file is an alternative. The interface-automatic option uses
+  non portable socket options, Linux and FreeBSD should work fine.
 
 Acknowledgements
 ----------------
