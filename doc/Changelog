@@ -3,6 +3,7 @@
 	- asynclook -c (cancel) feature.
 	- fix fail to allocate context actions.
 	- make pipe nonblocking at start.
+	- update plane for retry mode with caution to limit bandwidth.
 
 23 January 2008: Wouter
 	- removed debug prints from if-auto, verb-algo enables some.

@@ -250,6 +250,8 @@ X make overload mode work; phase 0 all ok, phase 1 some threads close ports,
 * private TTL, dTLS features.
 * retry-mode, where a bogus result triggers a retry-mode query, where a list
   of responses over a time interval is collected, and each is validated.
+  or try in TCP mode. Do not 'try all servers several times', since we must
+  not create packet storms with operator errors.
 * draft-timers, DLV features.
 
 treeshrew/
