@@ -319,7 +319,7 @@ pollit(struct ub_val_ctx* ctx, struct timeval* t)
 }
 
 int 
-ub_val_ctx_poll(struct ub_val_ctx* ctx)
+ub_val_poll(struct ub_val_ctx* ctx)
 {
 	struct timeval t;
 	int r;
@@ -331,7 +331,7 @@ ub_val_ctx_poll(struct ub_val_ctx* ctx)
 }
 
 int 
-ub_val_ctx_wait(struct ub_val_ctx* ctx)
+ub_val_wait(struct ub_val_ctx* ctx)
 {
 	int r;
 	lock_basic_lock(&ctx->cfglock);
@@ -341,7 +341,7 @@ ub_val_ctx_wait(struct ub_val_ctx* ctx)
 		r = pollit(ctx, NULL);
 		lock_basic_unlock(&ctx->rrpipe_lock);
 		if(r)
-			ub_val_ctx_process(ctx);
+			ub_val_process(ctx);
 		lock_basic_lock(&ctx->cfglock);
 	}
 	lock_basic_unlock(&ctx->cfglock);
@@ -349,7 +349,7 @@ ub_val_ctx_wait(struct ub_val_ctx* ctx)
 }
 
 int 
-ub_val_ctx_fd(struct ub_val_ctx* ctx)
+ub_val_fd(struct ub_val_ctx* ctx)
 {
 	int fd;
 	lock_basic_lock(&ctx->rrpipe_lock);
@@ -418,7 +418,7 @@ process_answer(struct ub_val_ctx* ctx, uint8_t* msg, uint32_t len)
 }
 
 int 
-ub_val_ctx_process(struct ub_val_ctx* ctx)
+ub_val_process(struct ub_val_ctx* ctx)
 {
 	int r;
 	uint8_t* msg = NULL;
@@ -601,6 +601,127 @@ ub_val_strerror(int err)
 		case UB_INITFAIL: return "initialization failure";
 		case UB_AFTERFINAL: return "setting change after finalize";
 		case UB_PIPE: return "error in pipe communication with async";
+		case UB_READFILE: return "error reading file";
 		default: return "unknown error";
 	}
+}
+
+int 
+ub_val_ctx_set_fwd(struct ub_val_ctx* ctx, char* addr)
+{
+	struct sockaddr_storage storage;
+	socklen_t stlen;
+	struct config_stub* s;
+	char* dupl;
+	lock_basic_lock(&ctx->cfglock);
+	if(ctx->finalized) {
+		lock_basic_unlock(&ctx->cfglock);
+		errno=EINVAL;
+		return UB_AFTERFINAL;
+	}
+	if(!addr) {
+		/* disable fwd mode - the root stub should be first. */
+		if(ctx->env->cfg->forwards &&
+			strcmp(ctx->env->cfg->forwards->name, ".") == 0) {
+			s = ctx->env->cfg->forwards;
+			ctx->env->cfg->forwards = s->next;
+			s->next = NULL;
+			config_delstubs(s);
+		}
+		lock_basic_unlock(&ctx->cfglock);
+		return UB_NOERROR;
+	}
+	lock_basic_unlock(&ctx->cfglock);
+
+	/* check syntax for addr */
+	if(!extstrtoaddr(addr, &storage, &stlen)) {
+		errno=EINVAL;
+		return UB_SYNTAX;
+	}
+	
+	/* it parses, add root stub in front of list */
+	lock_basic_lock(&ctx->cfglock);
+	if(!ctx->env->cfg->forwards ||
+		strcmp(ctx->env->cfg->forwards->name, ".") != 0) {
+		s = calloc(1, sizeof(*s));
+		if(!s) {
+			lock_basic_unlock(&ctx->cfglock);
+			errno=ENOMEM;
+			return UB_NOMEM;
+		}
+		s->name = strdup(".");
+		if(!s->name) {
+			free(s);
+			lock_basic_unlock(&ctx->cfglock);
+			errno=ENOMEM;
+			return UB_NOMEM;
+		}
+		s->next = ctx->env->cfg->forwards;
+		ctx->env->cfg->forwards = s;
+	} else {
+		log_assert(ctx->env->cfg->forwards);
+		s = ctx->env->cfg->forwards;
+	}
+	dupl = strdup(addr);
+	if(!dupl) {
+		lock_basic_unlock(&ctx->cfglock);
+		errno=ENOMEM;
+		return UB_NOMEM;
+	}
+	if(!cfg_strlist_insert(&s->addrs, dupl)) {
+		free(dupl);
+		lock_basic_unlock(&ctx->cfglock);
+		errno=ENOMEM;
+		return UB_NOMEM;
+	}
+	lock_basic_unlock(&ctx->cfglock);
+	return UB_NOERROR;
+}
+
+int 
+ub_val_ctx_resolvconf(struct ub_val_ctx* ctx, char* fname)
+{
+	FILE* in;
+	int numserv = 0;
+	char buf[1024];
+	char* parse, *addr;
+	int r;
+	if(fname == NULL)
+		fname = "/etc/resolv.conf";
+	in = fopen(fname, "r");
+	if(!in) {
+		/* error in errno! perror(fname) */
+		return UB_READFILE;
+	}
+	while(fgets(buf, (int)sizeof(buf), in)) {
+		buf[sizeof(buf)-1] = 0;
+		parse=buf;
+		while(*parse == ' ' || *parse == '\t')
+			parse++;
+		if(strncmp(parse, "nameserver", 10) == 0) {
+			numserv++;
+			parse += 10; /* skip 'nameserver' */
+			/* skip whitespace */
+			while(*parse == ' ' || *parse == '\t')
+				parse++;
+			addr = parse;
+			/* skip [0-9a-fA-F.:]*, i.e. IP4 and IP6 address */
+			while(isxdigit(*parse) || *parse=='.' || *parse==':')
+				parse++;
+			/* terminate after the address, remove newline */
+			*parse = 0;
+			
+			if((r = ub_val_ctx_set_fwd(ctx, addr)) != UB_NOERROR) {
+				fclose(in);
+				return r;
+			}
+		}
+	}
+	fclose(in);
+	if(numserv == 0) {
+		/* from resolv.conf(5) if none given, use localhost */
+		log_info("resconf: no nameservers, using localhost");
+		return ub_val_ctx_set_fwd(ctx, "127.0.0.1");
+	}
+	return UB_NOERROR;
 }

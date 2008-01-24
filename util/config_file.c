@@ -220,8 +220,7 @@ config_deldblstrlist(struct config_str2list* p)
 	}
 }
 
-/** delete config stublist */
-static void
+void
 config_delstubs(struct config_stub* p)
 {
 	struct config_stub* np;

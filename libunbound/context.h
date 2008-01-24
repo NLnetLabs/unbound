@@ -175,7 +175,9 @@ enum ub_ctx_err {
 	/** initialization failed (bad settings) */
 	UB_INITFAIL = -7,
 	/** error in pipe communication with async bg worker */
-	UB_PIPE = -8
+	UB_PIPE = -8,
+	/** error reading from file (resolv.conf) */
+	UB_READFILE = -9
 };
 
 /**

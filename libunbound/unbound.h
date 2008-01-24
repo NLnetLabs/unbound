@@ -57,15 +57,15 @@
  * Application not threaded. Non-blocking ('asynchronous').
  *      err = ub_val_resolve_async(ctx, "www.example.com", ... my_callback);
  *	... application resumes processing ...
- *	... and when either ub_val_ctx_poll(ctx) is true
- *	... or when the file descriptor ub_val_ctx_fd(ctx) is readable,
+ *	... and when either ub_val_poll(ctx) is true
+ *	... or when the file descriptor ub_val_fd(ctx) is readable,
  *	... or whenever, the app calls ...
- *	ub_val_ctx_process(ctx);
+ *	ub_val_process(ctx);
  *	... if no result is ready, the app resumes processing above,
  *	... or process() calls my_callback() with results.
  *
  *      ... if the application has nothing more to do, wait for answer
- *      ub_val_ctx_wait(ctx); 
+ *      ub_val_wait(ctx); 
  *
  * Application threaded. Blocking.
  *	Blocking, same as above. The current thread does the work.
@@ -84,7 +84,7 @@
  * Otherwise, for asynchronous with threading, a worker thread is created.
  *
  * The blocking calls use shared ctx-cache when threaded. Thus
- * ub_val_resolve() and ub_val_resolve_async() && ub_val_ctx_wait() are
+ * ub_val_resolve() and ub_val_resolve_async() && ub_val_wait() are
  * not the same. The first makes the current thread do the work, setting
  * up buffers, etc, to perform the work (but using shared cache data).
  * The second calls another worker thread (or process) to perform the work.
@@ -218,6 +218,41 @@ void ub_val_ctx_delete(struct ub_val_ctx* ctx);
 int ub_val_ctx_config(struct ub_val_ctx* ctx, char* fname);
 
 /**
+ * Set machine to forward DNS queries to, the caching resolver to use. 
+ * IP4 or IP6 address. Forwards all DNS requests to that machine, which 
+ * is expected to run a recursive resolver. If the proxy is not 
+ * DNSSEC-capable, validation may fail. Can be called several times, in 
+ * that case the addresses are used as backup servers.
+ *
+ * To read the list of nameservers from /etc/resolv.conf (from DHCP or so),
+ * use the call ub_val_ctx_resolvconf.
+ *
+ * @param ctx: context.
+ *	At this time it is only possible to set configuration before the
+ *	first resolve is done.
+ * @param addr: address, IP4 or IP6 in string format.
+ * 	If the addr is NULL, forwarding is disabled.
+ * @return 0 if OK, else error.
+ */
+int ub_val_ctx_set_fwd(struct ub_val_ctx* ctx, char* addr);
+
+/**
+ * Read list of nameservers to use from the filename given.
+ * Usually "/etc/resolv.conf". Uses those nameservers as caching proxies.
+ * If they do not support DNSSEC, validation may fail.
+ *
+ * Only nameservers are picked up, the searchdomain, ndots and other
+ * settings from resolv.conf(5) are ignored.
+ *
+ * @param ctx: context.
+ *	At this time it is only possible to set configuration before the
+ *	first resolve is done.
+ * @param fname: file name string. If NULL "/etc/resolv.conf" is used.
+ * @return 0 if OK, else error.
+ */
+int ub_val_ctx_resolvconf(struct ub_val_ctx* ctx, char* fname);
+
+/**
  * Add a trust anchor to the given context.
  * The trust anchor is a string, on one line, that holds a valid DNSKEY or
  * DS RR. 
@@ -283,27 +318,27 @@ int ub_val_ctx_async(struct ub_val_ctx* ctx, int dothread);
  * @return: 0 if nothing to read, or nonzero if a result is available.
  * 	If nonzero, call ctx_process() to do callbacks.
  */
-int ub_val_ctx_poll(struct ub_val_ctx* ctx);
+int ub_val_poll(struct ub_val_ctx* ctx);
 
 /**
- * Wait for a context to finish with results. Calls ctx_process() after
+ * Wait for a context to finish with results. Calls ub_val_process() after
  * the wait for you. After the wait, there are no more outstanding 
  * asynchronous queries.
  * @param ctx: context.
  * @return: 0 if OK, else error.
  */
-int ub_val_ctx_wait(struct ub_val_ctx* ctx);
+int ub_val_wait(struct ub_val_ctx* ctx);
 
 /**
  * Get file descriptor. Wait for it to become readable, at this point
  * answers are returned from the asynchronous validating resolver.
- * Then call the ub_val_ctx_process to continue processing.
+ * Then call the ub_val_process to continue processing.
  * This routine works immediately after context creation, the fd
  * does not change.
  * @param ctx: context.
  * @return: -1 on error, or file descriptor to use select(2) with.
  */
-int ub_val_ctx_fd(struct ub_val_ctx* ctx);
+int ub_val_fd(struct ub_val_ctx* ctx);
 
 /**
  * Call this routine to continue processing results from the validating
@@ -312,7 +347,7 @@ int ub_val_ctx_fd(struct ub_val_ctx* ctx);
  * @param ctx: context
  * @return: 0 if OK, else error.
  */
-int ub_val_ctx_process(struct ub_val_ctx* ctx);
+int ub_val_process(struct ub_val_ctx* ctx);
 
 /**
  * Perform resolution and validation of the target name.

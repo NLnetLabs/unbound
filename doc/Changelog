@@ -5,6 +5,8 @@
 	- make pipe nonblocking at start.
 	- update plane for retry mode with caution to limit bandwidth.
 	- fix Makefile for concurrent make of unbound-host.
+	- renamed ub_val_ctx_wait/poll/process/fd to ub_val*.
+	- new calls to set forwarding added to header and docs.
 
 23 January 2008: Wouter
 	- removed debug prints from if-auto, verb-algo enables some.

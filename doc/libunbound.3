@@ -17,15 +17,17 @@
 .B ub_val_ctx_create,
 .B ub_val_ctx_delete,
 .B ub_val_ctx_config,
+.B ub_val_ctx_set_fwd,
+.B ub_val_ctx_resolvconf,
 .B ub_val_ctx_add_ta,
 .B ub_val_ctx_add_ta_file,
 .B ub_val_ctx_trustedkeys,
 .B ub_val_ctx_debuglevel,
 .B ub_val_ctx_async,
-.B ub_val_ctx_poll,
-.B ub_val_ctx_wait,
-.B ub_val_ctx_fd,
-.B ub_val_ctx_process,
+.B ub_val_poll,
+.B ub_val_wait,
+.B ub_val_fd,
+.B ub_val_process,
 .B ub_val_resolve,
 .B ub_val_resolve_async,
 .B ub_val_cancel,
@@ -44,6 +46,12 @@
 .LP
 \fIint\fR
 \fBub_val_ctx_config\fR(\fIstruct ub_val_ctx*\fR ctx, \fIchar*\fR fname);
+.LP
+\fIint\fR
+\fBub_val_ctx_set_fwd\fR(\fIstruct ub_val_ctx*\fR ctx, \fIchar*\fR addr);
+.LP
+\fIint\fR
+\fBub_val_ctx_resolvconf\fR(\fIstruct ub_val_ctx*\fR ctx, \fIchar*\fR fname);
 .LP
 \fIint\fR
 \fBub_val_ctx_add_ta\fR(\fIstruct ub_val_ctx*\fR ctx, \fIchar*\fR ta);
@@ -65,16 +73,16 @@
 \fBub_val_ctx_async\fR(\fIstruct ub_val_ctx*\fR ctx, \fIint\fR dothread);
 .LP
 \fIint\fR
-\fBub_val_ctx_poll\fR(\fIstruct ub_val_ctx*\fR ctx);
+\fBub_val_poll\fR(\fIstruct ub_val_ctx*\fR ctx);
 .LP
 \fIint\fR
-\fBub_val_ctx_wait\fR(\fIstruct ub_val_ctx*\fR ctx);
+\fBub_val_wait\fR(\fIstruct ub_val_ctx*\fR ctx);
 .LP
 \fIint\fR
-\fBub_val_ctx_fd\fR(\fIstruct ub_val_ctx*\fR ctx);
+\fBub_val_fd\fR(\fIstruct ub_val_ctx*\fR ctx);
 .LP
 \fIint\fR
-\fBub_val_ctx_process\fR(\fIstruct ub_val_ctx*\fR ctx);
+\fBub_val_process\fR(\fIstruct ub_val_ctx*\fR ctx);
 .LP
 \fIint\fR
 \fBub_val_resolve\fR(\fIstruct ub_val_ctx*\fR ctx, \fIchar*\fR name, 
@@ -138,6 +146,25 @@ A power\-user interface that lets you specify an unbound config file, see
 relevant. For some specific options, such as adding trust anchors, special
 routines exist.
 .TP
+.B ub_val_ctx_set_fwd
+Set machine to forward DNS queries to, the caching resolver to use. 
+IP4 or IP6 address. Forwards all DNS requests to that machine, which 
+is expected to run a recursive resolver. If the proxy is not 
+DNSSEC capable, validation may fail. Can be called several times, in 
+that case the addresses are used as backup servers.
+At this time it is only possible to set configuration before the
+first resolve is done.
+.TP
+.B ub_val_ctx_resolvconf
+Read list of nameservers to use from the filename given.
+Usually "/etc/resolv.conf". Uses those nameservers as caching proxies.
+If they do not support DNSSEC, validation may fail.
+Only nameservers are picked up, the searchdomain, ndots and other
+settings from \fIresolv.conf\fR(5) are ignored.
+If fname NULL is passed, "/etc/resolv.conf" is used.
+At this time it is only possible to set configuration before the
+first resolve is done.
+.TP
 .B
 ub_val_ctx_add_ta
 Add a trust anchor to the given context.
@@ -173,27 +200,27 @@ Changes to this setting after
 calls have been made have no effect (delete and re\-create the context 
 to change).
 .TP
-.B ub_val_ctx_poll
+.B ub_val_poll
 Poll a context to see if it has any new results.
 Do not poll in a loop, instead extract the fd below to poll for readiness,
 and then check, or wait using the wait routine.
 Returns 0 if nothing to read, or nonzero if a result is available.
 If nonzero, call 
-.B ub_val_ctx_process 
+.B ub_val_process 
 to do callbacks.
 .TP
-.B ub_val_ctx_wait
+.B ub_val_wait
 Wait for a context to finish with results. Calls 
-.B ub_val_ctx_process 
+.B ub_val_process 
 after the wait for you. After the wait, there are no more outstanding 
 asynchronous queries.
 .TP
-.B ub_val_ctx_fd
+.B ub_val_fd
 Get file descriptor. Wait for it to become readable, at this point
 answers are returned from the asynchronous validating resolver.
-Then call the \fBub_val_ctx_process\fR to continue processing.
+Then call the \fBub_val_process\fR to continue processing.
 .TP
-.B ub_val_ctx_process
+.B ub_val_process
 Call this routine to continue processing results from the validating
 resolver (when the fd becomes readable).
 Will perform necessary callbacks.
@@ -264,9 +291,9 @@ to obtain a readable error string.
 returns a zero terminated string.
 .B ub_val_ctx_create
 returns NULL on an error (a malloc failure).
-.B ub_val_ctx_poll
+.B ub_val_poll
 returns true if some information may be available, false otherwise.
-.B ub_val_ctx_fd
+.B ub_val_fd
 returns a file descriptor or -1 on error.
 .SH "SEE ALSO"
 \fIunbound.conf\fR(5), 

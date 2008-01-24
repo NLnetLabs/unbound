@@ -299,6 +299,12 @@ void config_delstrlist(struct config_strlist* list);
 void config_deldblstrlist(struct config_str2list* list);
 
 /**
+ * Delete items in config stub list.
+ * @param list: list.
+ */
+void config_delstubs(struct config_stub* list);
+
+/**
  * Convert 14digit to time value
  * @param str: string of 14 digits
  * @return time value or 0 for error.

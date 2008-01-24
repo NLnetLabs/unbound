@@ -69,6 +69,8 @@ void usage(char* argv[])
 	printf("-d : enable debug output\n");
 	printf("-t : use a resolver thread instead of forking a process\n");
 	printf("-c : cancel the requests\n");
+	printf("-r fname : read resolv.conf from fname\n");
+	printf("-f addr : use addr, forward to that server\n");
 	exit(1);
 }
 
@@ -119,6 +121,26 @@ int main(int argc, char** argv)
 		argc--;
 		argv++;
 	}
+	if(argc > 1 && strcmp(argv[0], "-r") == 0) {
+		r = ub_val_ctx_resolvconf(ctx, argv[1]);
+		if(r != 0) {
+			printf("ub_val_ctx_resolvconf error: %s : %s\n",
+				ub_val_strerror(r), strerror(errno));
+			return 1;
+		}
+		argc-=2;
+		argv+=2;
+	}
+	if(argc > 1 && strcmp(argv[0], "-f") == 0) {
+		r = ub_val_ctx_set_fwd(ctx, argv[1]);
+		if(r != 0) {
+			printf("ub_val_ctx_set_fwd error: %s\n",
+				ub_val_strerror(r));
+			return 1;
+		}
+		argc-=2;
+		argv+=2;
+	}
 
 	/* allocate array for results. */
 	lookups = (struct lookinfo*)calloc((size_t)argc, 
@@ -136,6 +158,11 @@ int main(int argc, char** argv)
 		r = ub_val_resolve_async(ctx, argv[i], LDNS_RR_TYPE_A,
 			LDNS_RR_CLASS_IN, &lookups[i], &lookup_is_done, 
 			&lookups[i].async_id);
+		if(r != 0) {
+			printf("ub_val_resolve_async error: %s\n",
+				ub_val_strerror(r));
+			return 1;
+		}
 	}
 	if(cancel) {
 		for(i=0; i<argc; i++) {
@@ -149,9 +176,9 @@ int main(int argc, char** argv)
 	for(i=0; i<1000; i++) {
 		usleep(100000);
 		fprintf(stderr, "%g seconds passed\n", 0.1*(double)i);
-		r = ub_val_ctx_process(ctx);
+		r = ub_val_process(ctx);
 		if(r != 0) {
-			printf("ub_val_ctx_process error: %s\n",
+			printf("ub_val_process error: %s\n",
 				ub_val_strerror(r));
 			return 1;
 		}
