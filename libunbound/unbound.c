@@ -52,6 +52,7 @@
 #include "util/module.h"
 #include "util/regional.h"
 #include "util/log.h"
+#include "util/net_help.h"
 #include "services/modstack.h"
 #include "services/localzone.h"
 #include "services/cache/infra.h"
@@ -82,18 +83,40 @@ ub_val_ctx_create()
 		errno = e;
 		return NULL;
 	}
+	if(!fd_set_nonblock(ctx->rrpipe[0]) ||
+	   !fd_set_nonblock(ctx->rrpipe[1]) ||
+	   !fd_set_nonblock(ctx->qqpipe[0]) ||
+	   !fd_set_nonblock(ctx->qqpipe[1])) {
+		int e = errno;
+		close(ctx->rrpipe[0]);
+		close(ctx->rrpipe[1]);
+		close(ctx->qqpipe[0]);
+		close(ctx->qqpipe[1]);
+		free(ctx);
+		errno = e;
+		return NULL;
+	}
 	lock_basic_init(&ctx->qqpipe_lock);
 	lock_basic_init(&ctx->rrpipe_lock);
 	lock_basic_init(&ctx->cfglock);
 	ctx->env = (struct module_env*)calloc(1, sizeof(*ctx->env));
 	if(!ctx->env) {
-		ub_val_ctx_delete(ctx);
+		close(ctx->rrpipe[0]);
+		close(ctx->rrpipe[1]);
+		close(ctx->qqpipe[0]);
+		close(ctx->qqpipe[1]);
+		free(ctx);
 		errno = ENOMEM;
 		return NULL;
 	}
 	ctx->env->cfg = config_create_forlib();
 	if(!ctx->env->cfg) {
-		ub_val_ctx_delete(ctx);
+		close(ctx->rrpipe[0]);
+		close(ctx->rrpipe[1]);
+		close(ctx->qqpipe[0]);
+		close(ctx->qqpipe[1]);
+		free(ctx->env);
+		free(ctx);
 		errno = ENOMEM;
 		return NULL;
 	}

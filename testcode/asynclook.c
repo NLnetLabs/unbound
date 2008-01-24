@@ -48,7 +48,7 @@
  */
 struct lookinfo {
 	/** name to look up */
-	char* qname;
+	char* name;
 	/** tracking number that can be used to cancel the query */
 	int async_id;
 	/** error code from libunbound */
@@ -65,8 +65,10 @@ void usage(char* argv[])
 {
 	printf("usage: %s name ...\n", argv[0]);
 	printf("names are looked up at the same time, asynchronously.\n");
+	printf("options only in this order, before any domain names.\n");
 	printf("-d : enable debug output\n");
 	printf("-t : use a resolver thread instead of forking a process\n");
+	printf("-c : cancel the requests\n");
 	exit(1);
 }
 
@@ -75,7 +77,7 @@ void lookup_is_done(void* mydata, int err, struct ub_val_result* result)
 {
 	/* cast mydata back to the correct type */
 	struct lookinfo* info = (struct lookinfo*)mydata;
-	fprintf(stderr, "name %s resolved\n", info->qname);
+	fprintf(stderr, "name %s resolved\n", info->name);
 	info->err = err;
 	info->result = result;
 	/* one less to wait for */
@@ -87,7 +89,7 @@ int main(int argc, char** argv)
 {
 	struct ub_val_ctx* ctx;
 	struct lookinfo* lookups;
-	int i, r;
+	int i, r, cancel=0;
 	if(argc == 1) {
 		usage(argv);
 	}
@@ -112,6 +114,11 @@ int main(int argc, char** argv)
 		argc--;
 		argv++;
 	}
+	if(argc > 0 && strcmp(argv[0], "-c") == 0) {
+		cancel=1;
+		argc--;
+		argv++;
+	}
 
 	/* allocate array for results. */
 	lookups = (struct lookinfo*)calloc((size_t)argc, 
@@ -125,16 +132,23 @@ int main(int argc, char** argv)
 	num_wait = argc;
 	for(i=0; i<argc; i++) {
 		fprintf(stderr, "start lookup %s\n", argv[i]);
-		lookups[i].qname = argv[i];
+		lookups[i].name = argv[i];
 		r = ub_val_resolve_async(ctx, argv[i], LDNS_RR_TYPE_A,
 			LDNS_RR_CLASS_IN, &lookups[i], &lookup_is_done, 
 			&lookups[i].async_id);
+	}
+	if(cancel) {
+		for(i=0; i<argc; i++) {
+			fprintf(stderr, "cancel %s\n", argv[i]);
+			ub_val_cancel(ctx, lookups[i].async_id);
+		}
+		num_wait = 0;
 	}
 
 	/* wait while the hostnames are looked up. Do something useful here */
 	for(i=0; i<1000; i++) {
 		usleep(100000);
-		printf("%g seconds passed\n", 0.1*(double)i);
+		fprintf(stderr, "%g seconds passed\n", 0.1*(double)i);
 		r = ub_val_ctx_process(ctx);
 		if(r != 0) {
 			printf("ub_val_ctx_process error: %s\n",
@@ -154,21 +168,23 @@ int main(int argc, char** argv)
 	for(i=0; i<argc; i++) {
 		char buf[100];
 		if(lookups[i].err) /* error (from libunbound) */
-			printf("%s: error %s\n", lookups[i].qname,
+			printf("%s: error %s\n", lookups[i].name,
 				ub_val_strerror(lookups[i].err));
+		else if(!lookups[i].result)
+			printf("%s: cancelled\n", lookups[i].name);
 		else if(lookups[i].result->havedata)
-			printf("%s: %s\n", lookups[i].qname,
+			printf("%s: %s\n", lookups[i].name,
 				inet_ntop(AF_INET, lookups[i].result->data[0],
 				buf, (socklen_t)sizeof(buf)));
 		else {
 			/* there is no data, why that? */
 			if(lookups[i].result->rcode == 0 /*noerror*/ ||
 				lookups[i].result->nxdomain)
-				printf("%s: no data %s\n", lookups[i].qname,
+				printf("%s: no data %s\n", lookups[i].name,
 				lookups[i].result->nxdomain?"(no such host)":
 				"(no IP4 address)");
 			else	/* some error (from the server) */
-				printf("%s: DNS error %d\n", lookups[i].qname,
+				printf("%s: DNS error %d\n", lookups[i].name,
 					lookups[i].result->rcode);
 		}
 	}

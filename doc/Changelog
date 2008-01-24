@@ -1,3 +1,9 @@
+24 January 2008: Wouter
+	- tested the cancel() function.
+	- asynclook -c (cancel) feature.
+	- fix fail to allocate context actions.
+	- make pipe nonblocking at start.
+
 23 January 2008: Wouter
 	- removed debug prints from if-auto, verb-algo enables some.
 	- libunbound QUIT setup, remove memory leaks, when using threads
