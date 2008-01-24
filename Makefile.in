@@ -145,7 +145,7 @@ unbound-checkconf:	$(CHECKCONF_OBJ) $(ldnslib)
 	$(INFO) Link $@
 	$Q$(LINK) -o $@ $(sort $(CHECKCONF_OBJ)) $(LIBS)
 
-unbound-host:	$(HOST_OBJ) libunbound.la
+unbound-host:	$(HOST_OBJ) libunbound.la $(ldnslib)
 	$(INFO) Link $@
 	$Q$(LINK) -o $@ $(sort $(HOST_OBJ)) -L. -L.libs -lunbound $(LIBS)
 
