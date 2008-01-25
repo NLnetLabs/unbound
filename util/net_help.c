@@ -46,7 +46,7 @@
 /** max length of an IP address (the address portion) that we allow */
 #define MAX_ADDR_STRLEN 128 /* characters */
 
-/** returns true is string addr is an ip6 specced address */
+/* returns true is string addr is an ip6 specced address */
 int
 str_is_ip6(const char* str)
 {

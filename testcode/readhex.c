@@ -58,7 +58,7 @@ skip_whites(const char** p)
 	}
 }
 
-/** takes a hex string and puts into buffer */
+/* takes a hex string and puts into buffer */
 void hex_to_buf(ldns_buffer* pkt, const char* hex)
 {
 	const char* p = hex;

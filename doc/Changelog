@@ -3,6 +3,7 @@
 	- allows localhost to be queried when as a library.
 	- fixup race condition between cancel and answer (in case of
 	  really fast answers that beat the cancel).
+	- please doxygen, put doxygen comment in one place.
 
 24 January 2008: Wouter
 	- tested the cancel() function.

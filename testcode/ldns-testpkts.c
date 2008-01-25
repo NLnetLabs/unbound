@@ -504,7 +504,7 @@ read_entry(FILE* in, const char* name, int *lineno, uint32_t* default_ttl,
 	return 0;
 }
 
-/** reads the canned reply file and returns a list of structs */
+/* reads the canned reply file and returns a list of structs */
 struct entry* 
 read_datafile(const char* name)
 {
@@ -645,7 +645,7 @@ match_all(ldns_pkt* q, ldns_pkt* p, bool mttl)
 	return 1;
 }
 
-/** finds entry in list, or returns NULL */
+/* finds entry in list, or returns NULL */
 struct entry* 
 find_match(struct entry* entries, ldns_pkt* query_pkt,
 	enum transport_type transport)

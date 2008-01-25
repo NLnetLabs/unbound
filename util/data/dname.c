@@ -45,7 +45,7 @@
 #include "util/log.h"
 #include "util/storage/lookup3.h"
 
-/** determine length of a dname in buffer, no compression pointers allowed */
+/* determine length of a dname in buffer, no compression pointers allowed */
 size_t
 query_dname_len(ldns_buffer* query)
 {

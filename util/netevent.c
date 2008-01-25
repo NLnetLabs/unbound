@@ -155,7 +155,7 @@ void comm_base_exit(struct comm_base* b)
 	}
 }
 
-/** send a UDP reply */
+/* send a UDP reply */
 int
 comm_point_send_udp_msg(struct comm_point *c, ldns_buffer* packet,
 	struct sockaddr* addr, socklen_t addrlen) 

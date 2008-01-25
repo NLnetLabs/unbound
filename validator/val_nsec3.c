@@ -445,7 +445,7 @@ nsec3_iteration_count_high(struct val_env* ve, struct nsec3_filter* filter,
 	return 0;
 }
 
-/** nsec3_cache_compare for rbtree */
+/* nsec3_cache_compare for rbtree */
 int
 nsec3_hash_cmp(const void* c1, const void* c2) 
 {
