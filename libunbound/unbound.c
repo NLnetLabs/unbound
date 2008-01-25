@@ -377,7 +377,9 @@ process_answer(struct ub_val_ctx* ctx, uint8_t* msg, uint32_t len)
 	q = context_deserialize_answer(ctx, msg, len, &err);
 	if(!q) {
 		lock_basic_unlock(&ctx->cfglock);
-		return 0;
+		/* probably simply the lookup that failed, i.e.
+		 * response returned before cancel was sent out, so noerror */
+		return 1;
 	}
 	log_assert(q->async);
 

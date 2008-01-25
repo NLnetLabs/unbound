@@ -166,7 +166,8 @@ handle_cancel(struct libworker* w, uint8_t* buf, uint32_t len)
 {
 	struct ctx_query* q = context_deserialize_cancel(w->ctx, buf, len);
 	if(!q) {
-		log_err("deserialize cancel failed");
+		/* probably simply lookup failed, i.e. the message had been
+		 * processed and answered before the cancel arrived */
 		return;
 	}
 	q->cancelled = 1;
