@@ -43,6 +43,7 @@
 #include "config.h"
 #include "libunbound/unbound.h"
 #include "util/locks.h"
+#include "util/log.h"
 
 /**
  * result list for the lookups
@@ -73,6 +74,7 @@ void usage(char* argv[])
 	printf("	-h : this help message\n");
 	printf("	-r fname : read resolv.conf from fname\n");
 	printf("	-t : use a resolver thread instead of forking a process\n");
+	printf("	-x : perform extended threaded test\n");
 	exit(1);
 }
 
@@ -104,7 +106,8 @@ print_result(struct lookinfo* info)
 }
 
 /** this is a function of type ub_val_callback_t */
-void lookup_is_done(void* mydata, int err, struct ub_val_result* result)
+static void 
+lookup_is_done(void* mydata, int err, struct ub_val_result* result)
 {
 	/* cast mydata back to the correct type */
 	struct lookinfo* info = (struct lookinfo*)mydata;
@@ -116,12 +119,136 @@ void lookup_is_done(void* mydata, int err, struct ub_val_result* result)
 }
 
 /** check error, if bad, exit with error message */
-static void checkerr(const char* desc, int err)
+static void 
+checkerr(const char* desc, int err)
 {
 	if(err != 0) {
 		printf("%s error: %s\n", desc, ub_val_strerror(err));
 		exit(1);
 	}
+}
+
+/** number of threads to make in extended test */
+#define NUMTHR 10
+
+/** struct for extended thread info */
+struct ext_thr_info {
+	/** thread num for debug */
+	int thread_num;
+	/** thread id */
+	ub_thread_t tid;
+	/** context */
+	struct ub_val_ctx* ctx;
+	/** size of array to query */
+	int argc;
+	/** array of names to query */
+	char** argv;
+	/** number of queries to do */
+	int numq;
+};
+
+/** extended bg result callback, this function is ub_val_callback_t */
+static void 
+ext_callback(void* mydata, int err, struct ub_val_result* result)
+{
+	int* my_id = (int*)mydata;
+	int doprint = 0;
+	if(my_id) {
+		/* I have an id, make sure we are not cancelled */
+		if(*my_id == 0) {
+			printf("error: query returned, but was cancelled\n");
+			exit(1);
+		}
+		if(doprint) 
+			printf("cb %d: ", *my_id);
+	}
+	checkerr("ext_callback", err);
+	log_assert(result);
+	if(doprint) {
+		struct lookinfo pi;
+		pi.name = result?result->qname:"noname";
+		pi.result = result;
+		pi.err = 0;
+		print_result(&pi);
+	}
+	ub_val_result_free(result);
+}
+
+/** extended thread worker */
+static void*
+ext_thread(void* arg)
+{
+	struct ext_thr_info* inf = (struct ext_thr_info*)arg;
+	int i, r;
+	struct ub_val_result* result;
+	int* async_ids = NULL;
+	log_thread_set(&inf->thread_num);
+	if(inf->thread_num > NUMTHR*2/3) {
+		async_ids = (int*)calloc((size_t)inf->numq, sizeof(int));
+		if(!async_ids) {
+			printf("out of memory\n");
+			exit(1);
+		}
+	}
+	for(i=0; i<inf->numq; i++) {
+		if(async_ids) {
+			r = ub_val_resolve_async(inf->ctx, 
+				inf->argv[i%inf->argc], LDNS_RR_TYPE_A, 
+				LDNS_RR_CLASS_IN, &async_ids[i], ext_callback, 
+				&async_ids[i]);
+			checkerr("ub_val_resolve_async", r);
+			if(i > 100) {
+				r = ub_val_cancel(inf->ctx, async_ids[i-100]);
+				checkerr("ub_val_cancel", r);
+				async_ids[i-100]=0;
+			}
+		} else if(inf->thread_num > NUMTHR/2) {
+			/* async */
+			r = ub_val_resolve_async(inf->ctx, 
+				inf->argv[i%inf->argc], LDNS_RR_TYPE_A, 
+				LDNS_RR_CLASS_IN, NULL, ext_callback, NULL);
+			checkerr("ub_val_resolve_async", r);
+		} else  {
+			/* blocking */
+			r = ub_val_resolve(inf->ctx, inf->argv[i%inf->argc], 
+				LDNS_RR_TYPE_A, LDNS_RR_CLASS_IN, &result);
+			checkerr("ub_val_resolve", r);
+		}
+	}
+	if(inf->thread_num > NUMTHR/2) {
+		r = ub_val_wait(inf->ctx);
+		checkerr("ub_val_ctx_wait", r);
+	}
+	free(async_ids);
+	
+	return NULL;
+}
+
+/** perform extended threaded test */
+static int
+ext_test(struct ub_val_ctx* ctx, int argc, char** argv)
+{
+	struct ext_thr_info inf[NUMTHR];
+	int i;
+	printf("extended test start (%d threads)\n", NUMTHR);
+	for(i=0; i<NUMTHR; i++) {
+		/* 0 = this, 1 = library bg worker */
+		inf[i].thread_num = i+2;
+		inf[i].ctx = ctx;
+		inf[i].argc = argc;
+		inf[i].argv = argv;
+		inf[i].numq = 1000;
+		ub_thread_create(&inf[i].tid, ext_thread, &inf[i]);
+	}
+	/* the work happens here */
+	for(i=0; i<NUMTHR; i++) {
+		ub_thread_join(inf[i].tid);
+	}
+	printf("extended test end\n");
+	ub_val_ctx_delete(ctx);
+	sleep(1); /* give bg thread time to exit */
+	checklock_stop();
+	return 0;
 }
 
 /** getopt global, in case header files fail to declare it. */
@@ -135,7 +262,7 @@ int main(int argc, char** argv)
 	int c;
 	struct ub_val_ctx* ctx;
 	struct lookinfo* lookups;
-	int i, r, cancel=0, blocking=0;
+	int i, r, cancel=0, blocking=0, ext=0;
 
 	/* lock debug start (if any) */
 	checklock_start();
@@ -151,7 +278,7 @@ int main(int argc, char** argv)
 	if(argc == 1) {
 		usage(argv);
 	}
-	while( (c=getopt(argc, argv, "bcdf:hr:t")) != -1) {
+	while( (c=getopt(argc, argv, "bcdf:hr:tx")) != -1) {
 		switch(c) {
 			case 'd':
 				r = ub_val_ctx_debuglevel(ctx, 3);
@@ -181,6 +308,9 @@ int main(int argc, char** argv)
 				r = ub_val_ctx_set_fwd(ctx, optarg);
 				checkerr("ub_val_ctx_set_fwd", r);
 				break;
+			case 'x':
+				ext = 1;
+				break;
 			case 'h':
 			case '?':
 			default:
@@ -189,6 +319,9 @@ int main(int argc, char** argv)
 	}
 	argc -= optind;
 	argv += optind;
+
+	if(ext)
+		return ext_test(ctx, argc, argv);
 
 	/* allocate array for results. */
 	lookups = (struct lookinfo*)calloc((size_t)argc, 

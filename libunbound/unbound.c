@@ -322,51 +322,24 @@ int
 ub_val_poll(struct ub_val_ctx* ctx)
 {
 	struct timeval t;
-	int r;
 	memset(&t, 0, sizeof(t));
-	lock_basic_lock(&ctx->rrpipe_lock);
-	r = pollit(ctx, &t);
-	lock_basic_unlock(&ctx->rrpipe_lock);
-	return r;
-}
-
-int 
-ub_val_wait(struct ub_val_ctx* ctx)
-{
-	int r;
-	lock_basic_lock(&ctx->cfglock);
-	while(ctx->num_async > 0) {
-		lock_basic_unlock(&ctx->cfglock);
-		lock_basic_lock(&ctx->rrpipe_lock);
-		r = pollit(ctx, NULL);
-		lock_basic_unlock(&ctx->rrpipe_lock);
-		if(r)
-			ub_val_process(ctx);
-		lock_basic_lock(&ctx->cfglock);
-	}
-	lock_basic_unlock(&ctx->cfglock);
-	return UB_NOERROR;
+	/* no need to hold lock while testing for readability. */
+	return pollit(ctx, &t);
 }
 
 int 
 ub_val_fd(struct ub_val_ctx* ctx)
 {
-	int fd;
-	lock_basic_lock(&ctx->rrpipe_lock);
-	fd = ctx->rrpipe[0];
-	lock_basic_unlock(&ctx->rrpipe_lock);
-	return fd;
+	return ctx->rrpipe[0];
 }
 
 /** process answer from bg worker */
 static int
-process_answer(struct ub_val_ctx* ctx, uint8_t* msg, uint32_t len)
+process_answer_detail(struct ub_val_ctx* ctx, uint8_t* msg, uint32_t len,
+	ub_val_callback_t* cb, void** cbarg, int* err,
+	struct ub_val_result** res)
 {
-	int err;
 	struct ctx_query* q;
-	ub_val_callback_t cb;
-	void* cbarg;
-	struct ub_val_result* res;
 	if(context_serial_getcmd(msg, len) != UB_LIBCMD_ANSWER) {
 		log_err("error: bad data from bg worker %d",
 			(int)context_serial_getcmd(msg, len));
@@ -374,7 +347,7 @@ process_answer(struct ub_val_ctx* ctx, uint8_t* msg, uint32_t len)
 	}
 
 	lock_basic_lock(&ctx->cfglock);
-	q = context_deserialize_answer(ctx, msg, len, &err);
+	q = context_deserialize_answer(ctx, msg, len, err);
 	if(!q) {
 		lock_basic_unlock(&ctx->cfglock);
 		/* probably simply the lookup that failed, i.e.
@@ -384,22 +357,27 @@ process_answer(struct ub_val_ctx* ctx, uint8_t* msg, uint32_t len)
 	log_assert(q->async);
 
 	/* grab cb while locked */
-	cb = q->cb;
-	cbarg = q->cb_arg;
-	if(err) {
-		res = NULL;
+	if(q->cancelled) {
+		*cb = NULL;
+		*cbarg = NULL;
+	} else {
+		*cb = q->cb;
+		*cbarg = q->cb_arg;
+	}
+	if(*err) {
+		*res = NULL;
 		ub_val_result_free(q->res);
 	} else {
 		/* parse the message, extract rcode, fill result */
 		ldns_buffer* buf = ldns_buffer_new(q->msg_len);
 		struct regional* region = regional_create();
-		res = q->res;
-		res->rcode = LDNS_RCODE_SERVFAIL;
+		*res = q->res;
+		(*res)->rcode = LDNS_RCODE_SERVFAIL;
 		if(region && buf) {
 			ldns_buffer_clear(buf);
 			ldns_buffer_write(buf, q->msg, q->msg_len);
 			ldns_buffer_flip(buf);
-			libworker_enter_result(res, buf, region,
+			libworker_enter_result(*res, buf, region,
 				q->msg_security);
 		}
 		ldns_buffer_free(buf);
@@ -412,20 +390,38 @@ process_answer(struct ub_val_ctx* ctx, uint8_t* msg, uint32_t len)
 	context_query_delete(q);
 	lock_basic_unlock(&ctx->cfglock);
 
+	if(*cb) return 2;
+	return 1;
+}
+
+/** process answer from bg worker */
+static int
+process_answer(struct ub_val_ctx* ctx, uint8_t* msg, uint32_t len)
+{
+	int err;
+	ub_val_callback_t cb;
+	void* cbarg;
+	struct ub_val_result* res;
+	int r;
+
+	r = process_answer_detail(ctx, msg, len, &cb, &cbarg, &err, &res);
+
 	/* no locks held while calling callback, so that library is
 	 * re-entrant. */
-	(*cb)(cbarg, err, res);
+	if(r == 2)
+		(*cb)(cbarg, err, res);
 
-	return 1;
+	return r;
 }
 
 int 
 ub_val_process(struct ub_val_ctx* ctx)
 {
 	int r;
-	uint8_t* msg = NULL;
-	uint32_t len = 0;
+	uint8_t* msg;
+	uint32_t len;
 	while(1) {
+		msg = NULL;
 		lock_basic_lock(&ctx->rrpipe_lock);
 		r = libworker_read_msg(ctx->rrpipe[0], &msg, &len, 1);
 		lock_basic_unlock(&ctx->rrpipe_lock);
@@ -438,6 +434,59 @@ ub_val_process(struct ub_val_ctx* ctx)
 			return UB_PIPE;
 		}
 		free(msg);
+	}
+	return UB_NOERROR;
+}
+
+int 
+ub_val_wait(struct ub_val_ctx* ctx)
+{
+	int err;
+	ub_val_callback_t cb;
+	void* cbarg;
+	struct ub_val_result* res;
+	int r;
+	uint8_t* msg;
+	uint32_t len;
+	/* this is basically the same loop as _process(), but with changes.
+	 * holds the rrpipe lock and waits with pollit */
+	while(1) {
+		lock_basic_lock(&ctx->rrpipe_lock);
+		lock_basic_lock(&ctx->cfglock);
+		if(ctx->num_async == 0) {
+			lock_basic_unlock(&ctx->cfglock);
+			lock_basic_unlock(&ctx->rrpipe_lock);
+			break;
+		}
+		lock_basic_unlock(&ctx->cfglock);
+
+		/* keep rrpipe locked, while
+		 * 	o waiting for pipe readable
+		 * 	o parsing message
+		 * 	o possibly decrementing num_async
+		 * do callback without lock
+		 */
+		r = pollit(ctx, NULL);
+		if(r) {
+			r = libworker_read_msg(ctx->rrpipe[0], &msg, &len, 1);
+			if(r == 0) {
+				lock_basic_unlock(&ctx->rrpipe_lock);
+				return UB_PIPE;
+			}
+			if(r == -1) {
+				lock_basic_unlock(&ctx->rrpipe_lock);
+				continue;
+			}
+			r = process_answer_detail(ctx, msg, len, 
+				&cb, &cbarg, &err, &res);
+			lock_basic_unlock(&ctx->rrpipe_lock);
+			if(r == 0)
+				return UB_PIPE;
+			if(r == 2)
+				(*cb)(cbarg, err, res);
+		} else {
+			lock_basic_unlock(&ctx->rrpipe_lock);
+		}
 	}
 	return UB_NOERROR;
 }
@@ -491,7 +540,8 @@ ub_val_resolve_async(struct ub_val_ctx* ctx, char* name, int rrtype,
 	uint8_t* msg = NULL;
 	uint32_t len = 0;
 
-	*async_id = 0;
+	if(async_id)
+		*async_id = 0;
 	lock_basic_lock(&ctx->cfglock);
 	if(!ctx->finalized) {
 		int r = context_finalize(ctx);
@@ -528,7 +578,8 @@ ub_val_resolve_async(struct ub_val_ctx* ctx, char* name, int rrtype,
 		lock_basic_unlock(&ctx->cfglock);
 		return UB_NOMEM;
 	}
-	*async_id = q->querynum;
+	if(async_id)
+		*async_id = q->querynum;
 	lock_basic_unlock(&ctx->cfglock);
 	
 	lock_basic_lock(&ctx->qqpipe_lock);
@@ -557,6 +608,7 @@ ub_val_cancel(struct ub_val_ctx* ctx, int async_id)
 		lock_basic_unlock(&ctx->cfglock);
 		return UB_NOMEM;
 	}
+	q->cancelled = 1;
 	
 	/* delete it */
 	if(!ctx->dothread) { /* if forked */
@@ -722,7 +774,6 @@ ub_val_ctx_resolvconf(struct ub_val_ctx* ctx, char* fname)
 	fclose(in);
 	if(numserv == 0) {
 		/* from resolv.conf(5) if none given, use localhost */
-		log_info("resconf: no nameservers, using localhost");
 		return ub_val_ctx_set_fwd(ctx, "127.0.0.1");
 	}
 	return UB_NOERROR;

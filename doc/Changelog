@@ -6,6 +6,11 @@
 	- please doxygen, put doxygen comment in one place.
 	- asynclook -b blocking mode and test.
 	- refactor asynclook, nicer code.
+	- fixup race problems from opensll in rand init from library, with
+	  a mutex around the rand init.
+	- fix pass async_id=NULL to _async resolve().
+	- rewrote _wait() routine, so that it is threadsafe.
+	- cancelation is threadsafe.
 
 24 January 2008: Wouter
 	- tested the cancel() function.

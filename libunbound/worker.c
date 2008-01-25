@@ -125,11 +125,16 @@ libworker_setup(struct ub_val_ctx* ctx)
 	seed = (unsigned int)time(NULL) ^ (unsigned int)getpid() ^
 		(((unsigned int)w->thread_num)<<17);
 	seed ^= (unsigned int)w->env->alloc->next_id;
+	lock_basic_lock(&ctx->cfglock);
+	/* Openssl RAND_... functions are not as threadsafe as documented,
+	 * put a lock around them. */
 	if(!ub_initstate(seed, w->env->rnd, RND_STATE_SIZE)) {
+		lock_basic_unlock(&ctx->cfglock);
 		seed = 0;
 		libworker_delete(w);
 		return NULL;
 	}
+	lock_basic_unlock(&ctx->cfglock);
 	seed = 0;
 
 	w->base = comm_base_create();
@@ -308,6 +313,9 @@ int libworker_bg(struct ub_val_ctx* ctx)
 		lock_basic_unlock(&ctx->cfglock);
 		w = libworker_setup(ctx);
 		w->is_bg_thread = 1;
+#ifdef ENABLE_LOCK_CHECKS
+		w->thread_num = 1; /* for nicer DEBUG checklocks */
+#endif
 		if(!w) return UB_NOMEM;
 		ub_thread_create(&ctx->bg_tid, libworker_dobg, w);
 	} else {
@@ -762,11 +770,13 @@ libworker_write_msg(int fd, uint8_t* buf, uint32_t len, int nonblock)
 	if(r != (ssize_t)sizeof(len)) {
 		if(write(fd, (char*)(&len)+r, sizeof(len)-r) == -1) {
 			log_err("msg write failed: %s", strerror(errno));
+			(void)fd_set_nonblock(fd);
 			return 0;
 		}
 	}
 	if(write(fd, buf, len) == -1) {
 		log_err("msg write failed: %s", strerror(errno));
+		(void)fd_set_nonblock(fd);
 		return 0;
 	}
 	if(!fd_set_nonblock(fd))
@@ -798,22 +808,29 @@ libworker_read_msg(int fd, uint8_t** buf, uint32_t* len, int nonblock)
 	if(r != (ssize_t)sizeof(*len)) {
 		if((r=read(fd, (char*)(len)+r, sizeof(*len)-r)) == -1) {
 			log_err("msg read failed: %s", strerror(errno));
+			(void)fd_set_nonblock(fd);
 			return 0;
 		}
-		if(r == 0) /* EOF */
+		if(r == 0) /* EOF */ {
+			(void)fd_set_nonblock(fd);
 			return 0;
+		}
 	}
 	*buf = (uint8_t*)malloc(*len);
 	if(!*buf) {
 		log_err("out of memory");
+		(void)fd_set_nonblock(fd);
 		return 0;
 	}
 	if((r=read(fd, *buf, *len)) == -1) {
 		log_err("msg read failed: %s", strerror(errno));
+		(void)fd_set_nonblock(fd);
 		return 0;
 	}
-	if(r == 0) /* EOF */
+	if(r == 0) { /* EOF */
+		(void)fd_set_nonblock(fd);
 		return 0;
+	}
 	if(!fd_set_nonblock(fd))
 		return 0;
 	return 1;
