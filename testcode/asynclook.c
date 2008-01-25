@@ -42,6 +42,7 @@
 
 #include "config.h"
 #include "libunbound/unbound.h"
+#include "util/locks.h"
 
 /**
  * result list for the lookups
@@ -63,15 +64,43 @@ static int num_wait = 0;
 /** usage information for asynclook */
 void usage(char* argv[])
 {
-	printf("usage: %s name ...\n", argv[0]);
+	printf("usage: %s [options] name ...\n", argv[0]);
 	printf("names are looked up at the same time, asynchronously.\n");
-	printf("options only in this order, before any domain names.\n");
-	printf("-d : enable debug output\n");
-	printf("-t : use a resolver thread instead of forking a process\n");
-	printf("-c : cancel the requests\n");
-	printf("-r fname : read resolv.conf from fname\n");
-	printf("-f addr : use addr, forward to that server\n");
+	printf("	-b : use blocking requests\n");
+	printf("	-c : cancel the requests\n");
+	printf("	-d : enable debug output\n");
+	printf("	-f addr : use addr, forward to that server\n");
+	printf("	-h : this help message\n");
+	printf("	-r fname : read resolv.conf from fname\n");
+	printf("	-t : use a resolver thread instead of forking a process\n");
 	exit(1);
+}
+
+/** print result from lookup nicely */
+static void
+print_result(struct lookinfo* info)
+{
+	char buf[100];
+	if(info->err) /* error (from libunbound) */
+		printf("%s: error %s\n", info->name,
+			ub_val_strerror(info->err));
+	else if(!info->result)
+		printf("%s: cancelled\n", info->name);
+	else if(info->result->havedata)
+		printf("%s: %s\n", info->name,
+			inet_ntop(AF_INET, info->result->data[0],
+			buf, (socklen_t)sizeof(buf)));
+	else {
+		/* there is no data, why that? */
+		if(info->result->rcode == 0 /*noerror*/ ||
+			info->result->nxdomain)
+			printf("%s: no data %s\n", info->name,
+			info->result->nxdomain?"(no such host)":
+			"(no IP4 address)");
+		else	/* some error (from the server) */
+			printf("%s: DNS error %d\n", info->name,
+				info->result->rcode);
+	}
 }
 
 /** this is a function of type ub_val_callback_t */
@@ -86,61 +115,80 @@ void lookup_is_done(void* mydata, int err, struct ub_val_result* result)
 	num_wait--;
 }
 
+/** check error, if bad, exit with error message */
+static void checkerr(const char* desc, int err)
+{
+	if(err != 0) {
+		printf("%s error: %s\n", desc, ub_val_strerror(err));
+		exit(1);
+	}
+}
+
+/** getopt global, in case header files fail to declare it. */
+extern int optind;
+/** getopt global, in case header files fail to declare it. */
+extern char* optarg;
+
 /** main program for asynclook */
 int main(int argc, char** argv) 
 {
+	int c;
 	struct ub_val_ctx* ctx;
 	struct lookinfo* lookups;
-	int i, r, cancel=0;
-	if(argc == 1) {
-		usage(argv);
-	}
-	if(argc > 1 && strcmp(argv[1], "-h") == 0)
-		usage(argv);
-	argc--;
-	argv++;
+	int i, r, cancel=0, blocking=0;
+
+	/* lock debug start (if any) */
+	checklock_start();
 
 	/* create context */
 	ctx = ub_val_ctx_create();
 	if(!ctx) {
-		printf("could not create context, %s", strerror(errno));
+		printf("could not create context, %s\n", strerror(errno));
 		return 1;
 	}
-	if(argc > 0 && strcmp(argv[0], "-d") == 0) {
-		ub_val_ctx_debuglevel(ctx, 3);
-		argc--;
-		argv++;
-	} 
-	if(argc > 0 && strcmp(argv[0], "-t") == 0) {
-		ub_val_ctx_async(ctx, 1);
-		argc--;
-		argv++;
+
+	/* command line options */
+	if(argc == 1) {
+		usage(argv);
 	}
-	if(argc > 0 && strcmp(argv[0], "-c") == 0) {
-		cancel=1;
-		argc--;
-		argv++;
-	}
-	if(argc > 1 && strcmp(argv[0], "-r") == 0) {
-		r = ub_val_ctx_resolvconf(ctx, argv[1]);
-		if(r != 0) {
-			printf("ub_val_ctx_resolvconf error: %s : %s\n",
-				ub_val_strerror(r), strerror(errno));
-			return 1;
+	while( (c=getopt(argc, argv, "bcdf:hr:t")) != -1) {
+		switch(c) {
+			case 'd':
+				r = ub_val_ctx_debuglevel(ctx, 3);
+				checkerr("ub_val_ctx_debuglevel", r);
+				break;
+			case 't':
+				r = ub_val_ctx_async(ctx, 1);
+				checkerr("ub_val_ctx_async", r);
+				break;
+			case 'c':
+				cancel = 1;
+				break;
+			case 'b':
+				blocking = 1;
+				break;
+			case 'r':
+				r = ub_val_ctx_resolvconf(ctx, optarg);
+				if(r != 0) {
+					printf("ub_val_ctx_resolvconf "
+						"error: %s : %s\n",
+						ub_val_strerror(r), 
+						strerror(errno));
+					return 1;
+				}
+				break;
+			case 'f':
+				r = ub_val_ctx_set_fwd(ctx, optarg);
+				checkerr("ub_val_ctx_set_fwd", r);
+				break;
+			case 'h':
+			case '?':
+			default:
+				usage(argv);
 		}
-		argc-=2;
-		argv+=2;
 	}
-	if(argc > 1 && strcmp(argv[0], "-f") == 0) {
-		r = ub_val_ctx_set_fwd(ctx, argv[1]);
-		if(r != 0) {
-			printf("ub_val_ctx_set_fwd error: %s\n",
-				ub_val_strerror(r));
-			return 1;
-		}
-		argc-=2;
-		argv+=2;
-	}
+	argc -= optind;
+	argv += optind;
 
 	/* allocate array for results. */
 	lookups = (struct lookinfo*)calloc((size_t)argc, 
@@ -153,35 +201,38 @@ int main(int argc, char** argv)
 	/* perform asyncronous calls */
 	num_wait = argc;
 	for(i=0; i<argc; i++) {
-		fprintf(stderr, "start lookup %s\n", argv[i]);
 		lookups[i].name = argv[i];
-		r = ub_val_resolve_async(ctx, argv[i], LDNS_RR_TYPE_A,
-			LDNS_RR_CLASS_IN, &lookups[i], &lookup_is_done, 
-			&lookups[i].async_id);
-		if(r != 0) {
-			printf("ub_val_resolve_async error: %s\n",
-				ub_val_strerror(r));
-			return 1;
+		if(blocking) {
+			fprintf(stderr, "lookup %s\n", argv[i]);
+			r = ub_val_resolve(ctx, argv[i], LDNS_RR_TYPE_A,
+				LDNS_RR_CLASS_IN, &lookups[i].result);
+			checkerr("ub_val_resolve", r);
+		} else {
+			fprintf(stderr, "start async lookup %s\n", argv[i]);
+			r = ub_val_resolve_async(ctx, argv[i], LDNS_RR_TYPE_A,
+				LDNS_RR_CLASS_IN, &lookups[i], &lookup_is_done, 
+				&lookups[i].async_id);
+			checkerr("ub_val_resolve_async", r);
 		}
 	}
-	if(cancel) {
+	if(blocking)
+		num_wait = 0;
+	else if(cancel) {
 		for(i=0; i<argc; i++) {
 			fprintf(stderr, "cancel %s\n", argv[i]);
-			ub_val_cancel(ctx, lookups[i].async_id);
+			r = ub_val_cancel(ctx, lookups[i].async_id);
+			checkerr("ub_val_cancel", r);
 		}
 		num_wait = 0;
 	}
 
 	/* wait while the hostnames are looked up. Do something useful here */
-	for(i=0; i<1000; i++) {
+	if(num_wait > 0)
+	    for(i=0; i<1000; i++) {
 		usleep(100000);
 		fprintf(stderr, "%g seconds passed\n", 0.1*(double)i);
 		r = ub_val_process(ctx);
-		if(r != 0) {
-			printf("ub_val_process error: %s\n",
-				ub_val_strerror(r));
-			return 1;
-		}
+		checkerr("ub_val_process", r);
 		if(num_wait == 0)
 			break;
 	}
@@ -193,33 +244,12 @@ int main(int argc, char** argv)
 
 	/* print lookup results */
 	for(i=0; i<argc; i++) {
-		char buf[100];
-		if(lookups[i].err) /* error (from libunbound) */
-			printf("%s: error %s\n", lookups[i].name,
-				ub_val_strerror(lookups[i].err));
-		else if(!lookups[i].result)
-			printf("%s: cancelled\n", lookups[i].name);
-		else if(lookups[i].result->havedata)
-			printf("%s: %s\n", lookups[i].name,
-				inet_ntop(AF_INET, lookups[i].result->data[0],
-				buf, (socklen_t)sizeof(buf)));
-		else {
-			/* there is no data, why that? */
-			if(lookups[i].result->rcode == 0 /*noerror*/ ||
-				lookups[i].result->nxdomain)
-				printf("%s: no data %s\n", lookups[i].name,
-				lookups[i].result->nxdomain?"(no such host)":
-				"(no IP4 address)");
-			else	/* some error (from the server) */
-				printf("%s: DNS error %d\n", lookups[i].name,
-					lookups[i].result->rcode);
-		}
+		print_result(&lookups[i]);
+		ub_val_result_free(lookups[i].result);
 	}
 
 	ub_val_ctx_delete(ctx);
-	for(i=0; i<argc; i++) {
-		ub_val_result_free(lookups[i].result);
-	}
 	free(lookups);
+	checklock_stop();
 	return 0;
 }

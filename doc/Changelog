@@ -4,6 +4,8 @@
 	- fixup race condition between cancel and answer (in case of
 	  really fast answers that beat the cancel).
 	- please doxygen, put doxygen comment in one place.
+	- asynclook -b blocking mode and test.
+	- refactor asynclook, nicer code.
 
 24 January 2008: Wouter
 	- tested the cancel() function.
