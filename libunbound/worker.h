@@ -68,6 +68,8 @@ struct libworker {
 	/** context we are operating under */
 	struct ub_val_ctx* ctx;
 
+	/** is this the bg worker? */
+	int is_bg;
 	/** is this a bg worker that is threaded (not forked)? */
 	int is_bg_thread;
 

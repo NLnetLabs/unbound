@@ -11,6 +11,10 @@
 	- fix pass async_id=NULL to _async resolve().
 	- rewrote _wait() routine, so that it is threadsafe.
 	- cancelation is threadsafe.
+	- asynclook extended test in tpkg.
+	- fixed two races where forked bg process waits for (somehow shared?)
+	  locks, so does not service the query pipe on the bg side.
+	  Now those locks are only held for fg_threads and for bg_as_a_thread.
 
 24 January 2008: Wouter
 	- tested the cancel() function.

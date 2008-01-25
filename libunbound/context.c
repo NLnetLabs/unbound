@@ -162,16 +162,20 @@ context_new(struct ub_val_ctx* ctx, char* name, int rrtype, int rrclass,
 }
 
 struct alloc_cache* 
-context_obtain_alloc(struct ub_val_ctx* ctx)
+context_obtain_alloc(struct ub_val_ctx* ctx, int locking)
 {
 	struct alloc_cache* a;
 	int tnum = 0;
-	lock_basic_lock(&ctx->cfglock);
+	if(locking) {
+		lock_basic_lock(&ctx->cfglock);
+	}
 	a = ctx->alloc_list;
 	if(a)
 		ctx->alloc_list = a->super; /* snip off list */
 	else	tnum = ctx->thr_next_num++;
-	lock_basic_unlock(&ctx->cfglock);
+	if(locking) {
+		lock_basic_unlock(&ctx->cfglock);
+	}
 	if(a) {
 		a->super = &ctx->superalloc;
 		return a;
@@ -184,14 +188,19 @@ context_obtain_alloc(struct ub_val_ctx* ctx)
 }
 
 void 
-context_release_alloc(struct ub_val_ctx* ctx, struct alloc_cache* alloc)
+context_release_alloc(struct ub_val_ctx* ctx, struct alloc_cache* alloc,
+	int locking)
 {
 	if(!ctx || !alloc)
 		return;
-	lock_basic_lock(&ctx->cfglock);
+	if(locking) {
+		lock_basic_lock(&ctx->cfglock);
+	}
 	alloc->super = ctx->alloc_list;
 	ctx->alloc_list = alloc;
-	lock_basic_unlock(&ctx->cfglock);
+	if(locking) {
+		lock_basic_unlock(&ctx->cfglock);
+	}
 }
 
 uint8_t* 

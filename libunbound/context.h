@@ -231,16 +231,19 @@ struct ctx_query* context_new(struct ub_val_ctx* ctx, char* name, int rrtype,
 /**
  * Get a new alloc. Creates a new one or uses a cached one.
  * @param ctx: context
+ * @param locking: if true, cfglock is locked while getting alloc.
  * @return an alloc, or NULL on mem error.
  */
-struct alloc_cache* context_obtain_alloc(struct ub_val_ctx* ctx);
+struct alloc_cache* context_obtain_alloc(struct ub_val_ctx* ctx, int locking);
 
 /**
  * Release an alloc. Puts it into the cache.
  * @param ctx: context
+ * @param locking: if true, cfglock is locked while releasing alloc.
  * @param alloc: alloc to relinquish.
  */
-void context_release_alloc(struct ub_val_ctx* ctx, struct alloc_cache* alloc);
+void context_release_alloc(struct ub_val_ctx* ctx, struct alloc_cache* alloc,
+	int locking);
 
 /**
  * Serialize a context query that questions data.

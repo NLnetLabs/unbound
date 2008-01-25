@@ -74,7 +74,8 @@ libworker_delete(struct libworker* w)
 	if(!w) return;
 	if(w->env) {
 		mesh_delete(w->env->mesh);
-		context_release_alloc(w->ctx, w->env->alloc);
+		context_release_alloc(w->ctx, w->env->alloc, 
+			!w->is_bg || w->is_bg_thread);
 		ldns_buffer_free(w->env->scratch_buffer);
 		regional_destroy(w->env->scratch);
 		ub_randfree(w->env->rnd);
@@ -90,12 +91,13 @@ libworker_delete(struct libworker* w)
 
 /** setup fresh libworker struct */
 static struct libworker*
-libworker_setup(struct ub_val_ctx* ctx)
+libworker_setup(struct ub_val_ctx* ctx, int is_bg)
 {
 	unsigned int seed;
 	struct libworker* w = (struct libworker*)calloc(1, sizeof(*w));
 	struct config_file* cfg = ctx->env->cfg;
 	if(!w) return NULL;
+	w->is_bg = is_bg;
 	w->ctx = ctx;
 	w->env = (struct module_env*)malloc(sizeof(*w->env));
 	if(!w->env) {
@@ -103,7 +105,7 @@ libworker_setup(struct ub_val_ctx* ctx)
 		return NULL;
 	}
 	*w->env = *ctx->env;
-	w->env->alloc = context_obtain_alloc(ctx);
+	w->env->alloc = context_obtain_alloc(ctx, !w->is_bg || w->is_bg_thread);
 	if(!w->env->alloc) {
 		libworker_delete(w);
 		return NULL;
@@ -125,16 +127,20 @@ libworker_setup(struct ub_val_ctx* ctx)
 	seed = (unsigned int)time(NULL) ^ (unsigned int)getpid() ^
 		(((unsigned int)w->thread_num)<<17);
 	seed ^= (unsigned int)w->env->alloc->next_id;
-	lock_basic_lock(&ctx->cfglock);
-	/* Openssl RAND_... functions are not as threadsafe as documented,
-	 * put a lock around them. */
+	if(!w->is_bg || w->is_bg_thread) {
+		/* Openssl RAND_... functions are not as threadsafe 
+		 * as documented, put a lock around them. */
+		lock_basic_lock(&ctx->cfglock);
+	}
 	if(!ub_initstate(seed, w->env->rnd, RND_STATE_SIZE)) {
 		lock_basic_unlock(&ctx->cfglock);
 		seed = 0;
 		libworker_delete(w);
 		return NULL;
 	}
-	lock_basic_unlock(&ctx->cfglock);
+	if(!w->is_bg || w->is_bg_thread) {
+		lock_basic_unlock(&ctx->cfglock);
+	}
 	seed = 0;
 
 	w->base = comm_base_create();
@@ -311,7 +317,7 @@ int libworker_bg(struct ub_val_ctx* ctx)
 	lock_basic_lock(&ctx->cfglock);
 	if(ctx->dothread) {
 		lock_basic_unlock(&ctx->cfglock);
-		w = libworker_setup(ctx);
+		w = libworker_setup(ctx, 1);
 		w->is_bg_thread = 1;
 #ifdef ENABLE_LOCK_CHECKS
 		w->thread_num = 1; /* for nicer DEBUG checklocks */
@@ -322,7 +328,7 @@ int libworker_bg(struct ub_val_ctx* ctx)
 		lock_basic_unlock(&ctx->cfglock);
 		switch((ctx->bg_pid=fork())) {
 			case 0:
-				w = libworker_setup(ctx);
+				w = libworker_setup(ctx, 1);
 				if(!w) fatal_exit("out of memory");
 				/* close non-used parts of the pipes */
 				close(ctx->qqpipe[1]);
@@ -490,7 +496,7 @@ setup_qinfo_edns(struct libworker* w, struct ctx_query* q,
 
 int libworker_fg(struct ub_val_ctx* ctx, struct ctx_query* q)
 {
-	struct libworker* w = libworker_setup(ctx);
+	struct libworker* w = libworker_setup(ctx, 0);
 	uint16_t qflags, qid;
 	struct query_info qinfo;
 	struct edns_data edns;
