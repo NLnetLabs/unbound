@@ -280,6 +280,7 @@ libworker_dobg(void* arg)
 		ctx->rrpipe[0] = -1;
 	}
 #endif
+	log_info("dobg start");
 	if(!w) {
 		log_err("libunbound bg worker init failed, nomem");
 		return NULL;

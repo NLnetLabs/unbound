@@ -246,7 +246,6 @@ ext_test(struct ub_val_ctx* ctx, int argc, char** argv)
 	}
 	printf("extended test end\n");
 	ub_val_ctx_delete(ctx);
-	sleep(1); /* give bg thread time to exit */
 	checklock_stop();
 	return 0;
 }

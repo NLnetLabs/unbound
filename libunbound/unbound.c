@@ -162,8 +162,21 @@ ub_val_ctx_delete(struct ub_val_ctx* ctx)
 			free(msg);
 		}
 		lock_basic_unlock(&ctx->rrpipe_lock);
+
+		/* if bg worker is a thread, wait for it to exit, so that all
+	 	 * resources are really gone. */
+		lock_basic_lock(&ctx->cfglock);
+		if(ctx->dothread) {
+			lock_basic_unlock(&ctx->cfglock);
+			ub_thread_join(ctx->bg_tid);
+		} else {
+			lock_basic_unlock(&ctx->cfglock);
+		}
 	}
-	else lock_basic_unlock(&ctx->cfglock);
+	else {
+		lock_basic_unlock(&ctx->cfglock);
+	}
+
 
 	modstack_desetup(&ctx->mods, ctx->env);
 	a = ctx->alloc_list;
@@ -561,7 +574,9 @@ ub_val_resolve_async(struct ub_val_ctx* ctx, char* name, int rrtype,
 			lock_basic_unlock(&ctx->cfglock);
 			return r;
 		}
-	} else lock_basic_unlock(&ctx->cfglock);
+	} else {
+		lock_basic_unlock(&ctx->cfglock);
+	}
 
 	/* create new ctx_query and attempt to add to the list */
 	q = context_new(ctx, name, rrtype, rrclass, callback, mydata);
@@ -583,7 +598,11 @@ ub_val_resolve_async(struct ub_val_ctx* ctx, char* name, int rrtype,
 	lock_basic_unlock(&ctx->cfglock);
 	
 	lock_basic_lock(&ctx->qqpipe_lock);
-	libworker_write_msg(ctx->qqpipe[1], msg, len, 0);
+	if(!libworker_write_msg(ctx->qqpipe[1], msg, len, 0)) {
+		lock_basic_unlock(&ctx->qqpipe_lock);
+		free(msg);
+		return UB_PIPE;
+	}
 	lock_basic_unlock(&ctx->qqpipe_lock);
 	free(msg);
 	return UB_NOERROR;
@@ -620,7 +639,11 @@ ub_val_cancel(struct ub_val_ctx* ctx, int async_id)
 
 	/* send cancel to background worker */
 	lock_basic_lock(&ctx->qqpipe_lock);
-	libworker_write_msg(ctx->qqpipe[1], msg, len, 0);
+	if(!libworker_write_msg(ctx->qqpipe[1], msg, len, 0)) {
+		lock_basic_unlock(&ctx->qqpipe_lock);
+		free(msg);
+		return UB_PIPE;
+	}
 	lock_basic_unlock(&ctx->qqpipe_lock);
 	free(msg);
 	return UB_NOERROR;
