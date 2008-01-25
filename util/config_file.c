@@ -132,6 +132,8 @@ config_create()
 	cfg->local_zones = NULL;
 	cfg->local_zones_nodefault = NULL;
 	cfg->local_data = NULL;
+	cfg->donotquery_localhost = 0; /* allow, so that you can ask a
+		forward nameserver running on localhost */
 	if(!(cfg->module_conf = strdup("validator iterator"))) goto error_exit;
 	if(!(cfg->val_nsec3_key_iterations = 
 		strdup("1024 150 2048 500 4096 2500"))) goto error_exit;
