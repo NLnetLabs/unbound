@@ -290,7 +290,6 @@ libworker_dobg(void* arg)
 		ctx->rrpipe[0] = -1;
 	}
 #endif
-	log_info("dobg start");
 	if(!w) {
 		log_err("libunbound bg worker init failed, nomem");
 		return NULL;
@@ -313,9 +312,9 @@ libworker_dobg(void* arg)
 	fd = ctx->rrpipe[1];
 	ctx->rrpipe[1] = -1;
 	m = UB_LIBCMD_QUIT;
+	libworker_delete(w);
 	close(ctx->qqpipe[0]);
 	ctx->qqpipe[0] = -1;
-	libworker_delete(w);
 	(void)libworker_write_msg(fd, (uint8_t*)&m, (uint32_t)sizeof(m), 0);
 	close(fd);
 	return NULL;
@@ -452,14 +451,11 @@ libworker_enter_result(struct ub_val_result* res, ldns_buffer* buf,
 		res->bogus = 1;
 }
 
-/** callback with fg results */
+/** fillup fg results */
 static void
-libworker_fg_done_cb(void* arg, int rcode, ldns_buffer* buf, enum sec_status s)
+libworker_fillup_fg(struct ctx_query* q, int rcode, ldns_buffer* buf, 
+	enum sec_status s)
 {
-	struct ctx_query* q = (struct ctx_query*)arg;
-	/* fg query is done; exit comm base */
-	comm_base_exit(q->w->base);
-
 	if(rcode != 0) {
 		q->res->rcode = rcode;
 		q->msg_security = s;
@@ -477,6 +473,17 @@ libworker_fg_done_cb(void* arg, int rcode, ldns_buffer* buf, enum sec_status s)
 	/* canonname and results */
 	q->msg_security = s;
 	libworker_enter_result(q->res, buf, q->w->env->scratch, s);
+}
+
+/** callback with fg results */
+static void
+libworker_fg_done_cb(void* arg, int rcode, ldns_buffer* buf, enum sec_status s)
+{
+	struct ctx_query* q = (struct ctx_query*)arg;
+	/* fg query is done; exit comm base */
+	comm_base_exit(q->w->base);
+
+	libworker_fillup_fg(q, rcode, buf, s);
 }
 
 /** setup qinfo and edns */
@@ -525,7 +532,7 @@ int libworker_fg(struct ub_val_ctx* ctx, struct ctx_query* q)
 	ldns_buffer_write_u16_at(w->back->udp_buff, 2, qflags);
 	if(local_zones_answer(ctx->local_zones, &qinfo, &edns, 
 		w->back->udp_buff, w->env->scratch)) {
-		libworker_fg_done_cb(q, LDNS_RCODE_NOERROR, 
+		libworker_fillup_fg(q, LDNS_RCODE_NOERROR, 
 			w->back->udp_buff, sec_status_insecure);
 		libworker_delete(w);
 		free(qinfo.qname);
