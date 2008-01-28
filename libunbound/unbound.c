@@ -52,6 +52,7 @@
 #include "util/module.h"
 #include "util/regional.h"
 #include "util/log.h"
+#include "util/random.h"
 #include "util/net_help.h"
 #include "services/modstack.h"
 #include "services/localzone.h"
@@ -62,6 +63,7 @@ struct ub_val_ctx*
 ub_val_ctx_create()
 {
 	struct ub_val_ctx* ctx = (struct ub_val_ctx*)calloc(1, sizeof(*ctx));
+	unsigned int seed;
 	if(!ctx) {
 		errno = ENOMEM;
 		return NULL;
@@ -71,7 +73,17 @@ ub_val_ctx_create()
 	verbosity = 0; /* errors only */
 	log_init(NULL, 0, NULL); /* logs to stderr */
 	alloc_init(&ctx->superalloc, NULL, 0);
+	seed = (unsigned int)time(NULL) ^ (unsigned int)getpid();
+	if(!(ctx->seed_rnd = ub_initstate(seed, NULL))) {
+		seed = 0;
+		ub_randfree(ctx->seed_rnd);
+		free(ctx);
+		errno = ENOMEM;
+		return NULL;
+	}
+	seed = 0;
 	if(socketpair(AF_UNIX, SOCK_STREAM, 0, ctx->qqpipe) == -1) {
+		ub_randfree(ctx->seed_rnd);
 		free(ctx);
 		return NULL;
 	}
@@ -79,6 +91,7 @@ ub_val_ctx_create()
 		int e = errno;
 		close(ctx->qqpipe[0]);
 		close(ctx->qqpipe[1]);
+		ub_randfree(ctx->seed_rnd);
 		free(ctx);
 		errno = e;
 		return NULL;
@@ -92,6 +105,7 @@ ub_val_ctx_create()
 		close(ctx->rrpipe[1]);
 		close(ctx->qqpipe[0]);
 		close(ctx->qqpipe[1]);
+		ub_randfree(ctx->seed_rnd);
 		free(ctx);
 		errno = e;
 		return NULL;
@@ -105,6 +119,7 @@ ub_val_ctx_create()
 		close(ctx->rrpipe[1]);
 		close(ctx->qqpipe[0]);
 		close(ctx->qqpipe[1]);
+		ub_randfree(ctx->seed_rnd);
 		free(ctx);
 		errno = ENOMEM;
 		return NULL;
@@ -116,6 +131,7 @@ ub_val_ctx_create()
 		close(ctx->qqpipe[0]);
 		close(ctx->qqpipe[1]);
 		free(ctx->env);
+		ub_randfree(ctx->seed_rnd);
 		free(ctx);
 		errno = ENOMEM;
 		return NULL;
@@ -210,6 +226,7 @@ ub_val_ctx_delete(struct ub_val_ctx* ctx)
 		config_delete(ctx->env->cfg);
 		free(ctx->env);
 	}
+	ub_randfree(ctx->seed_rnd);
 	alloc_clear(&ctx->superalloc);
 	traverse_postorder(&ctx->queries, delq, NULL);
 	free(ctx);

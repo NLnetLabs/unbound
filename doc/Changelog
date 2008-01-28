@@ -6,6 +6,9 @@
 	- made openssl entropy warning more silent for library use. Needs
 	  verbosity 1 now.
 	- fixup forgotten locks for rbtree_searches on ctx->query tree.
+	- random generator cleanup - RND_STATE_SIZE removed, and instead
+	  a super-rnd can be passed at init to chain init random states.
+	- test also does lock checks if available.
 
 25 January 2008: Wouter
 	- added tpkg for asynclook and library use. 

@@ -147,6 +147,9 @@ struct ext_thr_info {
 	int numq;
 };
 
+/** if true, we are testing against 'localhost' and extra checking is done */
+static int q_is_localhost = 0;
+
 /** check result structure for the 'correct' answer */
 static void
 ext_check_result(const char* desc, int err, struct ub_val_result* result)
@@ -156,54 +159,57 @@ ext_check_result(const char* desc, int err, struct ub_val_result* result)
 		printf("%s: error result is NULL.\n", desc);
 		exit(1);
 	}
-	/* DEBUG */
-	if(strcmp(result->qname, "localhost") != 0) {
-		printf("%s: error result has wrong qname.\n", desc);
-		exit(1);
-	}
-	if(result->qtype != LDNS_RR_TYPE_A) {
-		printf("%s: error result has wrong qtype.\n", desc);
-		exit(1);
-	}
-	if(result->qclass != LDNS_RR_CLASS_IN) {
-		printf("%s: error result has wrong qclass.\n", desc);
-		exit(1);
-	}
-	if(result->data == NULL) {
-		printf("%s: error result->data is NULL.\n", desc);
-		exit(1);
-	}
-	if(result->len == NULL) {
-		printf("%s: error result->len is NULL.\n", desc);
-		exit(1);
-	}
-	if(result->rcode != 0) {
-		printf("%s: error result->rcode is set.\n", desc);
-		exit(1);
-	}
-	if(result->havedata == 0) {
-		printf("%s: error result->havedata is unset.\n", desc);
-		exit(1);
-	}
-	if(result->nxdomain != 0) {
-		printf("%s: error result->nxdomain is set.\n", desc);
-		exit(1);
-	}
-	if(result->secure || result->bogus) {
-		printf("%s: error result->secure or bogus is set.\n", desc);
-		exit(1);
-	}
-	if(result->data[0] == NULL) {
-		printf("%s: error result->data[0] is NULL.\n", desc);
-		exit(1);
-	}
-	if(result->len[0] != 4) {
-		printf("%s: error result->len[0] is wrong.\n", desc);
-		exit(1);
-	}
-	if(result->len[1] != 0 || result->data[1] != NULL) {
-		printf("%s: error result->data[1] or len[1] is wrong.\n", desc);
-		exit(1);
+	if(q_is_localhost) {
+		if(strcmp(result->qname, "localhost") != 0) {
+			printf("%s: error result has wrong qname.\n", desc);
+			exit(1);
+		}
+		if(result->qtype != LDNS_RR_TYPE_A) {
+			printf("%s: error result has wrong qtype.\n", desc);
+			exit(1);
+		}
+		if(result->qclass != LDNS_RR_CLASS_IN) {
+			printf("%s: error result has wrong qclass.\n", desc);
+			exit(1);
+		}
+		if(result->data == NULL) {
+			printf("%s: error result->data is NULL.\n", desc);
+			exit(1);
+		}
+		if(result->len == NULL) {
+			printf("%s: error result->len is NULL.\n", desc);
+			exit(1);
+		}
+		if(result->rcode != 0) {
+			printf("%s: error result->rcode is set.\n", desc);
+			exit(1);
+		}
+		if(result->havedata == 0) {
+			printf("%s: error result->havedata is unset.\n", desc);
+			exit(1);
+		}
+		if(result->nxdomain != 0) {
+			printf("%s: error result->nxdomain is set.\n", desc);
+			exit(1);
+		}
+		if(result->secure || result->bogus) {
+			printf("%s: error result->secure or bogus is set.\n", 
+				desc);
+			exit(1);
+		}
+		if(result->data[0] == NULL) {
+			printf("%s: error result->data[0] is NULL.\n", desc);
+			exit(1);
+		}
+		if(result->len[0] != 4) {
+			printf("%s: error result->len[0] is wrong.\n", desc);
+			exit(1);
+		}
+		if(result->len[1] != 0 || result->data[1] != NULL) {
+			printf("%s: error result->data[1] or len[1] is "
+				"wrong.\n", desc);
+			exit(1);
+		}
 	}
 }
 
@@ -291,6 +297,8 @@ ext_test(struct ub_val_ctx* ctx, int argc, char** argv)
 {
 	struct ext_thr_info inf[NUMTHR];
 	int i;
+	if(argc == 1 && strcmp(argv[0], "localhost") == 0)
+		q_is_localhost = 1;
 	printf("extended test start (%d threads)\n", NUMTHR);
 	for(i=0; i<NUMTHR; i++) {
 		/* 0 = this, 1 = library bg worker */

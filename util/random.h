@@ -42,27 +42,22 @@
  * initialisation routine.
  */
 
-struct ub_hiddenstate;
-
 /**
  * random state structure.
  */
-struct ub_randstate {
-	/** state hidden type. */
-	struct ub_hiddenstate* s;
-};
+struct ub_randstate;
 
 /**
  * Initialize a random generator state for use 
  * @param seed: seed value to create state contents.
  *	(ignored for arc4random).
- * @param state: struct allocated by caller.
- * @param n: size of state->state. 8, 32, 64, 128, or 256 bytes.
- *	(ignored for arc4random).
- * @return false alloc failure.
+ * @param from: if not NULL, the seed is taken from this random structure.
+ * 	can be used to seed random states via a parent-random-state that
+ * 	is itself seeded with entropy.
+ * @return new state or NULL alloc failure.
  */
-int ub_initstate(unsigned int seed, struct ub_randstate* state, 
-	unsigned long n);
+struct ub_randstate* ub_initstate(unsigned int seed, 
+	struct ub_randstate* from);
 
 /**
  * Generate next random number from the state passed along.

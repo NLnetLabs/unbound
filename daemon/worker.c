@@ -906,17 +906,10 @@ worker_init(struct worker* worker, struct config_file *cfg,
 	} else { /* !do_sigs */
 		worker->comsig = 0;
 	}
-	/* init random(), large table size. */
-	if(!(worker->rndstate = (struct ub_randstate*)calloc(1,
-		sizeof(struct ub_randstate)))) {
-		log_err("malloc rndtable failed.");
-		worker_delete(worker);
-		return 0;
-	}
 	seed = (unsigned int)time(NULL) ^ (unsigned int)getpid() ^
 		(((unsigned int)worker->thread_num)<<17);
 		/* shift thread_num so it does not match out pid bits */
-	if(!ub_initstate(seed, worker->rndstate, RND_STATE_SIZE)) {
+	if(!(worker->rndstate = ub_initstate(seed, NULL))) {
 		seed = 0;
 		log_err("could not init random numbers.");
 		worker_delete(worker);
@@ -1012,7 +1005,6 @@ worker_delete(struct worker* worker)
 	comm_point_delete(worker->cmd_com);
 	comm_base_delete(worker->base);
 	ub_randfree(worker->rndstate);
-	free(worker->rndstate);
 	/* close fds after deleting commpoints, to be sure.
 	   Also epoll does not like closing fd before event_del */
 	if(worker->cmd_send_fd != -1)

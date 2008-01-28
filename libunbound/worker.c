@@ -61,9 +61,6 @@
 #include "util/data/msgreply.h"
 #include "util/data/msgencode.h"
 
-/** size of table used for random numbers. large to be more secure. */
-#define RND_STATE_SIZE 256
-
 /** handle new query command for bg worker */
 static void handle_newq(struct libworker* w, uint8_t* buf, uint32_t len);
 
@@ -79,7 +76,6 @@ libworker_delete(struct libworker* w)
 		ldns_buffer_free(w->env->scratch_buffer);
 		regional_destroy(w->env->scratch);
 		ub_randfree(w->env->rnd);
-		free(w->env->rnd);
 		free(w->env);
 	}
 	outside_network_delete(w->back);
@@ -118,21 +114,17 @@ libworker_setup(struct ub_val_ctx* ctx, int is_bg)
 		libworker_delete(w);
 		return NULL;
 	}
-	w->env->rnd = (struct ub_randstate*)calloc(1, sizeof(*w->env->rnd));
-	if(!w->env->rnd) {
-		libworker_delete(w);
-		return NULL;
-	}
 	w->env->worker = (struct worker*)w;
 	seed = (unsigned int)time(NULL) ^ (unsigned int)getpid() ^
 		(((unsigned int)w->thread_num)<<17);
 	seed ^= (unsigned int)w->env->alloc->next_id;
 	if(!w->is_bg || w->is_bg_thread) {
-		/* put lock around RAND*() */
 		lock_basic_lock(&ctx->cfglock);
 	}
-	if(!ub_initstate(seed, w->env->rnd, RND_STATE_SIZE)) {
-		lock_basic_unlock(&ctx->cfglock);
+	if(!(w->env->rnd = ub_initstate(seed, ctx->seed_rnd))) {
+		if(!w->is_bg || w->is_bg_thread) {
+			lock_basic_unlock(&ctx->cfglock);
+		}
 		seed = 0;
 		libworker_delete(w);
 		return NULL;

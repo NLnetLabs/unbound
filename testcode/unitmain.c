@@ -363,12 +363,12 @@ infra_test()
 static void
 rnd_test()
 {
-	struct ub_randstate r;
+	struct ub_randstate* r;
 	int num = 100, i;
 	long int a[100];
-	unit_assert( ub_initstate((unsigned)time(NULL), &r, 256) );
+	unit_assert( (r = ub_initstate((unsigned)time(NULL), NULL)) );
 	for(i=0; i<num; i++) {
-		a[i] = ub_random(&r);
+		a[i] = ub_random(r);
 		unit_assert(a[i] >= 0);
 		unit_assert((size_t)a[i] <= (size_t)RAND_MAX);
 		if(i > 5)
@@ -376,7 +376,7 @@ rnd_test()
 				a[i] != a[i-3] || a[i] != a[i-4] ||
 				a[i] != a[i-5] || a[i] != a[i-6]);
 	}
-	ub_randfree(&r);
+	ub_randfree(r);
 }
 
 /**

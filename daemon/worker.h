@@ -59,9 +59,6 @@ struct listen_port;
 struct ub_randstate;
 struct regional;
 
-/** size of table used for random numbers. large to be more secure. */
-#define RND_STATE_SIZE 256
-
 /** worker commands */
 enum worker_commands {
 	/** make the worker quit */

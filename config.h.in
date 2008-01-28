@@ -76,6 +76,9 @@
 /* Define to 1 if you have the <openssl/err.h> header file. */
 #undef HAVE_OPENSSL_ERR_H
 
+/* Define to 1 if you have the <openssl/rand.h> header file. */
+#undef HAVE_OPENSSL_RAND_H
+
 /* Define to 1 if you have the <openssl/ssl.h> header file. */
 #undef HAVE_OPENSSL_SSL_H
 
@@ -330,6 +333,10 @@
 
 #ifdef HAVE_OPENSSL_ERR_H
 #include <openssl/err.h>
+#endif
+
+#ifdef HAVE_OPENSSL_RAND_H
+#include <openssl/rand.h>
 #endif
 
 #ifdef HAVE_ATTR_FORMAT

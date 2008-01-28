@@ -375,5 +375,6 @@ daemon_delete(struct daemon* daemon)
 	CRYPTO_cleanup_all_ex_data(); /* safe, no more threads right now */
 	ERR_remove_state(0);
 	ERR_free_strings();
+	RAND_cleanup();
 	checklock_stop();
 }

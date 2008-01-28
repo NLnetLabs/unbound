@@ -103,6 +103,8 @@ struct ub_val_ctx {
 	struct module_stack mods;
 	/** local authority zones */
 	struct local_zones* local_zones;
+	/** random state used to seed new random state structures */
+	struct ub_randstate* seed_rnd;
 
 	/** next query number (to try) to use */
 	int next_querynum;

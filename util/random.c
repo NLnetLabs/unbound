@@ -53,7 +53,7 @@
  * Struct with per-thread random state.
  * Keeps SSL types away from the header file.
  */
-struct ub_hiddenstate {
+struct ub_randstate {
 	/** key used for arc4random generation */
 	RC4_KEY rc4;
 	/** keeps track of key usage */
@@ -68,17 +68,22 @@ struct ub_hiddenstate {
 
 /** reseed random generator */
 static void
-ub_arc4random_stir(struct ub_hiddenstate* s)
+ub_arc4random_stir(struct ub_randstate* s, struct ub_randstate* from)
 {
 	unsigned char rand_buf[SEED_SIZE];
 	int i;
 
 	memset(&s->rc4, 0, sizeof(s->rc4));
 	memset(rand_buf, 0xc, sizeof(rand_buf));
-	if (RAND_bytes(rand_buf, (int)sizeof(rand_buf)) <= 0)
-		fatal_exit("Couldn't obtain random bytes (error %ld)",
-			    ERR_get_error());
-	RC4_set_key(&s->rc4, (int)sizeof(rand_buf), rand_buf);
+	if (from) {
+		for(i=0; i<SEED_SIZE; i++)
+			rand_buf[i] = (unsigned char)ub_random(from);
+	} else {
+		if (RAND_bytes(rand_buf, (int)sizeof(rand_buf)) <= 0)
+			fatal_exit("Couldn't obtain random bytes (error %ld)",
+				    ERR_get_error());
+	}
+	RC4_set_key(&s->rc4, SEED_SIZE, rand_buf);
 
 	/*
 	 * Discard early keystream, as per recommendations in:
@@ -92,14 +97,13 @@ ub_arc4random_stir(struct ub_hiddenstate* s)
 	s->rc4_ready = REKEY_BYTES;
 }
 
-int 
-ub_initstate(unsigned int seed, struct ub_randstate* state, 
-	unsigned long ATTR_UNUSED(n))
+struct ub_randstate* 
+ub_initstate(unsigned int seed, struct ub_randstate* from)
 {
-	state->s = calloc(1, sizeof(*state->s));
-	if(!state->s) {
+	struct ub_randstate* s = (struct ub_randstate*)calloc(1, sizeof(*s));
+	if(!s) {
 		log_err("malloc failure in random init");
-		return 0;
+		return NULL;
 	}
 
 	/* RAND_ is threadsafe, by the way */
@@ -112,37 +116,36 @@ ub_initstate(unsigned int seed, struct ub_randstate* state,
 			memmove(buf+i*sizeof(seed), &v, sizeof(seed));
 			v = v*seed + (unsigned int)i;
 		}
-		log_hex("seed with", buf, 256);
 		RAND_seed(buf, 256);
 		if(!RAND_status()) {
 			log_err("Random generator has no entropy (error %ld)",
 				ERR_get_error());
-			return 0;
+			return NULL;
 		}
 		verbose(VERB_OPS, "openssl has no entropy, seeding with time");
 	}
-	ub_arc4random_stir(state->s);
-	return 1;
+	ub_arc4random_stir(s, from);
+	return s;
 }
 
 long int 
-ub_random(struct ub_randstate* state)
+ub_random(struct ub_randstate* s)
 {
 	unsigned int r = 0;
-	if (state->s->rc4_ready <= 0) {
-		ub_arc4random_stir(state->s);
+	if (s->rc4_ready <= 0) {
+		ub_arc4random_stir(s, NULL);
 	}
 
-	RC4(&state->s->rc4, sizeof(r), 
+	RC4(&s->rc4, sizeof(r), 
 		(unsigned char *)&r, (unsigned char *)&r);
-	state->s->rc4_ready -= sizeof(r);
+	s->rc4_ready -= sizeof(r);
 	return (long int)((r) % (((unsigned)RAND_MAX + 1)));
 }
 
 void 
-ub_randfree(struct ub_randstate* state)
+ub_randfree(struct ub_randstate* s)
 {
-	if(state)
-		free(state->s);
-	RAND_cleanup();
+	if(s)
+		free(s);
+	/* user app must do RAND_cleanup(); */
 }
