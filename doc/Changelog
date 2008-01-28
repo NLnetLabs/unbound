@@ -1,3 +1,9 @@
+28 January 2008: Wouter
+	- fixup uninit use of buffer by libunbound (query id, flags) for
+	  local_zone answers.
+	- fixup uninit warning from random.c; also seems to fix sporadic
+	  sigFPE coming out of openssl.
+
 25 January 2008: Wouter
 	- added tpkg for asynclook and library use. 
 	- allows localhost to be queried when as a library.

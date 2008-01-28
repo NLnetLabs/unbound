@@ -511,6 +511,8 @@ int libworker_fg(struct ub_val_ctx* ctx, struct ctx_query* q)
 	qflags = BIT_RD;
 	q->w = w;
 	/* see if there is a fixed answer */
+	ldns_buffer_write_u16_at(w->back->udp_buff, 0, qid);
+	ldns_buffer_write_u16_at(w->back->udp_buff, 2, qflags);
 	if(local_zones_answer(ctx->local_zones, &qinfo, &edns, 
 		w->back->udp_buff, w->env->scratch)) {
 		libworker_fg_done_cb(q, LDNS_RCODE_NOERROR, 
@@ -635,6 +637,8 @@ handle_newq(struct libworker* w, uint8_t* buf, uint32_t len)
 	qid = 0;
 	qflags = BIT_RD;
 	/* see if there is a fixed answer */
+	ldns_buffer_write_u16_at(w->back->udp_buff, 0, qid);
+	ldns_buffer_write_u16_at(w->back->udp_buff, 2, qflags);
 	if(local_zones_answer(w->ctx->local_zones, &qinfo, &edns, 
 		w->back->udp_buff, w->env->scratch)) {
 		q->msg_security = sec_status_insecure;

@@ -74,6 +74,7 @@ ub_arc4random_stir(struct ub_hiddenstate* s)
 	int i;
 
 	memset(&s->rc4, 0, sizeof(s->rc4));
+	memset(rand_buf, 0xc, sizeof(rand_buf));
 	if (RAND_bytes(rand_buf, (int)sizeof(rand_buf)) <= 0)
 		fatal_exit("Couldn't obtain random bytes (error %ld)",
 			    ERR_get_error());
