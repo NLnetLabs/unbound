@@ -108,8 +108,14 @@ libworker_setup(struct ub_val_ctx* ctx, int is_bg)
 	}
 	w->thread_num = w->env->alloc->thread_num;
 	alloc_set_id_cleanup(w->env->alloc, &libworker_alloc_cleanup, w);
+	if(!w->is_bg || w->is_bg_thread) {
+		lock_basic_lock(&ctx->cfglock);
+	}
 	w->env->scratch = regional_create_custom(cfg->msg_buffer_size);
 	w->env->scratch_buffer = ldns_buffer_new(cfg->msg_buffer_size);
+	if(!w->is_bg || w->is_bg_thread) {
+		lock_basic_unlock(&ctx->cfglock);
+	}
 	if(!w->env->scratch || !w->env->scratch_buffer) {
 		libworker_delete(w);
 		return NULL;
@@ -139,11 +145,17 @@ libworker_setup(struct ub_val_ctx* ctx, int is_bg)
 		libworker_delete(w);
 		return NULL;
 	}
+	if(!w->is_bg || w->is_bg_thread) {
+		lock_basic_lock(&ctx->cfglock);
+	}
 	w->back = outside_network_create(w->base, cfg->msg_buffer_size,
 		(size_t)cfg->outgoing_num_ports, cfg->out_ifs,
 		cfg->num_out_ifs, cfg->do_ip4, cfg->do_ip6, -1, 
 		cfg->do_tcp?cfg->outgoing_num_tcp:0,
 		w->env->infra_cache, w->env->rnd);
+	if(!w->is_bg || w->is_bg_thread) {
+		lock_basic_unlock(&ctx->cfglock);
+	}
 	if(!w->back) {
 		libworker_delete(w);
 		return NULL;

@@ -9,6 +9,7 @@
 	- random generator cleanup - RND_STATE_SIZE removed, and instead
 	  a super-rnd can be passed at init to chain init random states.
 	- test also does lock checks if available.
+	- protect config access in libworker_setup().
 
 25 January 2008: Wouter
 	- added tpkg for asynclook and library use. 
