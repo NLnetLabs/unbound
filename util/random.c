@@ -112,13 +112,14 @@ ub_initstate(unsigned int seed, struct ub_randstate* state,
 			memmove(buf+i*sizeof(seed), &v, sizeof(seed));
 			v = v*seed + (unsigned int)i;
 		}
+		log_hex("seed with", buf, 256);
 		RAND_seed(buf, 256);
 		if(!RAND_status()) {
 			log_err("Random generator has no entropy (error %ld)",
 				ERR_get_error());
 			return 0;
 		}
-		log_warn("openssl has no entropy, seeding with time");
+		verbose(VERB_OPS, "openssl has no entropy, seeding with time");
 	}
 	ub_arc4random_stir(state->s);
 	return 1;

@@ -622,11 +622,6 @@ ub_val_cancel(struct ub_val_ctx* ctx, int async_id)
 		return UB_NOERROR;
 	}
 	log_assert(q->async);
-	msg = context_serialize_cancel(q, &len);
-	if(!msg) {
-		lock_basic_unlock(&ctx->cfglock);
-		return UB_NOMEM;
-	}
 	q->cancelled = 1;
 	
 	/* delete it */
@@ -634,18 +629,23 @@ ub_val_cancel(struct ub_val_ctx* ctx, int async_id)
 		(void)rbtree_delete(&ctx->queries, q->node.key);
 		ctx->num_async--;
 		context_query_delete(q);
-	}
-	lock_basic_unlock(&ctx->cfglock);
-
-	/* send cancel to background worker */
-	lock_basic_lock(&ctx->qqpipe_lock);
-	if(!libworker_write_msg(ctx->qqpipe[1], msg, len, 0)) {
+		msg = context_serialize_cancel(q, &len);
+		lock_basic_unlock(&ctx->cfglock);
+		if(!msg) {
+			return UB_NOMEM;
+		}
+		/* send cancel to background worker */
+		lock_basic_lock(&ctx->qqpipe_lock);
+		if(!libworker_write_msg(ctx->qqpipe[1], msg, len, 0)) {
+			lock_basic_unlock(&ctx->qqpipe_lock);
+			free(msg);
+			return UB_PIPE;
+		}
 		lock_basic_unlock(&ctx->qqpipe_lock);
 		free(msg);
-		return UB_PIPE;
+	} else {
+		lock_basic_unlock(&ctx->cfglock);
 	}
-	lock_basic_unlock(&ctx->qqpipe_lock);
-	free(msg);
 	return UB_NOERROR;
 }
 

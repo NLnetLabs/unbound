@@ -3,6 +3,9 @@
 	  local_zone answers.
 	- fixup uninit warning from random.c; also seems to fix sporadic
 	  sigFPE coming out of openssl.
+	- made openssl entropy warning more silent for library use. Needs
+	  verbosity 1 now.
+	- fixup forgotten locks for rbtree_searches on ctx->query tree.
 
 25 January 2008: Wouter
 	- added tpkg for asynclook and library use. 

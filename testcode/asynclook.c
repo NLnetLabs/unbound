@@ -147,6 +147,66 @@ struct ext_thr_info {
 	int numq;
 };
 
+/** check result structure for the 'correct' answer */
+static void
+ext_check_result(const char* desc, int err, struct ub_val_result* result)
+{
+	checkerr(desc, err);
+	if(result == NULL) {
+		printf("%s: error result is NULL.\n", desc);
+		exit(1);
+	}
+	/* DEBUG */
+	if(strcmp(result->qname, "localhost") != 0) {
+		printf("%s: error result has wrong qname.\n", desc);
+		exit(1);
+	}
+	if(result->qtype != LDNS_RR_TYPE_A) {
+		printf("%s: error result has wrong qtype.\n", desc);
+		exit(1);
+	}
+	if(result->qclass != LDNS_RR_CLASS_IN) {
+		printf("%s: error result has wrong qclass.\n", desc);
+		exit(1);
+	}
+	if(result->data == NULL) {
+		printf("%s: error result->data is NULL.\n", desc);
+		exit(1);
+	}
+	if(result->len == NULL) {
+		printf("%s: error result->len is NULL.\n", desc);
+		exit(1);
+	}
+	if(result->rcode != 0) {
+		printf("%s: error result->rcode is set.\n", desc);
+		exit(1);
+	}
+	if(result->havedata == 0) {
+		printf("%s: error result->havedata is unset.\n", desc);
+		exit(1);
+	}
+	if(result->nxdomain != 0) {
+		printf("%s: error result->nxdomain is set.\n", desc);
+		exit(1);
+	}
+	if(result->secure || result->bogus) {
+		printf("%s: error result->secure or bogus is set.\n", desc);
+		exit(1);
+	}
+	if(result->data[0] == NULL) {
+		printf("%s: error result->data[0] is NULL.\n", desc);
+		exit(1);
+	}
+	if(result->len[0] != 4) {
+		printf("%s: error result->len[0] is wrong.\n", desc);
+		exit(1);
+	}
+	if(result->len[1] != 0 || result->data[1] != NULL) {
+		printf("%s: error result->data[1] or len[1] is wrong.\n", desc);
+		exit(1);
+	}
+}
+
 /** extended bg result callback, this function is ub_val_callback_t */
 static void 
 ext_callback(void* mydata, int err, struct ub_val_result* result)
@@ -157,12 +217,13 @@ ext_callback(void* mydata, int err, struct ub_val_result* result)
 		/* I have an id, make sure we are not cancelled */
 		if(*my_id == 0) {
 			printf("error: query returned, but was cancelled\n");
+			abort();
 			exit(1);
 		}
 		if(doprint) 
 			printf("cb %d: ", *my_id);
 	}
-	checkerr("ext_callback", err);
+	ext_check_result("ext_callback", err, result);
 	log_assert(result);
 	if(doprint) {
 		struct lookinfo pi;
@@ -212,7 +273,7 @@ ext_thread(void* arg)
 			/* blocking */
 			r = ub_val_resolve(inf->ctx, inf->argv[i%inf->argc], 
 				LDNS_RR_TYPE_A, LDNS_RR_CLASS_IN, &result);
-			checkerr("ub_val_resolve", r);
+			ext_check_result("ub_val_resolve", r, result);
 		}
 	}
 	if(inf->thread_num > NUMTHR/2) {

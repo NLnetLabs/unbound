@@ -128,8 +128,7 @@ libworker_setup(struct ub_val_ctx* ctx, int is_bg)
 		(((unsigned int)w->thread_num)<<17);
 	seed ^= (unsigned int)w->env->alloc->next_id;
 	if(!w->is_bg || w->is_bg_thread) {
-		/* Openssl RAND_... functions are not as threadsafe 
-		 * as documented, put a lock around them. */
+		/* put lock around RAND*() */
 		lock_basic_lock(&ctx->cfglock);
 	}
 	if(!ub_initstate(seed, w->env->rnd, RND_STATE_SIZE)) {
@@ -175,7 +174,14 @@ libworker_setup(struct ub_val_ctx* ctx, int is_bg)
 static void
 handle_cancel(struct libworker* w, uint8_t* buf, uint32_t len)
 {
-	struct ctx_query* q = context_deserialize_cancel(w->ctx, buf, len);
+	struct ctx_query* q;
+	if(w->is_bg_thread) {
+		lock_basic_lock(&w->ctx->cfglock);
+		q = context_deserialize_cancel(w->ctx, buf, len);
+		lock_basic_unlock(&w->ctx->cfglock);
+	} else {
+		q = context_deserialize_cancel(w->ctx, buf, len);
+	}
 	if(!q) {
 		/* probably simply lookup failed, i.e. the message had been
 		 * processed and answered before the cancel arrived */
@@ -621,7 +627,9 @@ handle_newq(struct libworker* w, uint8_t* buf, uint32_t len)
 	struct edns_data edns;
 	struct ctx_query* q;
 	if(w->is_bg_thread) {
+		lock_basic_lock(&w->ctx->cfglock);
 		q = context_lookup_new_query(w->ctx, buf, len);
+		lock_basic_unlock(&w->ctx->cfglock);
 	} else {
 		q = context_deserialize_new_query(w->ctx, buf, len);
 	}

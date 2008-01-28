@@ -313,7 +313,7 @@ context_deserialize_answer(struct ub_val_ctx* ctx,
 	log_assert( ldns_read_uint32(p) == UB_LIBCMD_ANSWER);
 	id = (int)ldns_read_uint32(p+sizeof(uint32_t));
 	q = (struct ctx_query*)rbtree_search(&ctx->queries, &id);
-	if(!q) return NULL;
+	if(!q) return NULL; 
 	*err = (int)ldns_read_uint32(p+2*sizeof(uint32_t));
 	q->msg_security = ldns_read_uint32(p+3*sizeof(uint32_t));
 	if(len > 4*sizeof(uint32_t)) {
