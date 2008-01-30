@@ -185,9 +185,6 @@
 /* Define to 1 if you have the ANSI C header files. */
 #undef STDC_HEADERS
 
-/* Define to 'int' or type of struct msghdr.msg_iovlen. */
-#undef TYPE_MSGIOVLEN
-
 /* use statistics for allocs and frees, for debug use */
 #undef UNBOUND_ALLOC_STATS
 

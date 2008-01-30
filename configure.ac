@@ -395,29 +395,6 @@ AC_INCLUDES_DEFAULT
 #endif
 ])
 
-# Check the type of struct msghdr msg_iovlen.
-AC_MSG_CHECKING([sign of struct msghdr.msg_iovlen])
-AC_RUN_IFELSE([
-#include <stdlib.h>
-#include <stdio.h>
-#include <sys/socket.h>
-int main()
-{
-	struct msghdr h;
-	h.msg_iovlen = -1;
-	if(10/h.msg_iovlen == 0) return 0; /* unsigned */
-	return 1; /* signed */
-}
-], [ 
-# if compiled and exit status 0
-cv_msgiovlen_type="unsigned" ], [ 
-# not compiled or bad exit status
-cv_msgiovlen_type="int" ], 
-# when cross compiling
-[ cv_msgiovlen_type="int" ])
-AC_MSG_RESULT($cv_msgiovlen_type)
-AC_DEFINE_UNQUOTED([TYPE_MSGIOVLEN], $cv_msgiovlen_type, [Define to 'int' or type of struct msghdr.msg_iovlen.])
-
 # Check for yyunput
 AC_DEFUN([CHECK_YYUNPUT],
 [AC_MSG_CHECKING(whether lex can not generate yyunput)

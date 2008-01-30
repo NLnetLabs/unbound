@@ -663,15 +663,6 @@ comm_point_send_reply(struct comm_reply* repinfo)
 }
 
 void 
-comm_point_send_reply_iov(struct comm_reply* repinfo, struct iovec* iov,
-        size_t iovlen)
-{
-	/* skip tcp len at [0]. */
-	write_iov_buffer(repinfo->c->buffer, iov+1, iovlen-1);
-	comm_point_send_reply(repinfo);
-}
-
-void 
 comm_point_drop_reply(struct comm_reply* repinfo)
 {
 	log_info("comm_point_drop_reply fake");
@@ -863,7 +854,7 @@ struct serviced_query* outnet_serviced_query(struct outside_network* outnet,
 	pend->addrlen = addrlen;
 	pend->callback = callback;
 	pend->cb_arg = callback_arg;
-	pend->timeout = UDP_QUERY_TIMEOUT;
+	pend->timeout = UDP_AUTH_QUERY_TIMEOUT;
 	pend->transport = transport_udp; /* pretend UDP */
 	pend->pkt = NULL;
 	pend->runtime = runtime;

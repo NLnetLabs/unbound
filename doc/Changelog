@@ -1,6 +1,10 @@
 29 January 2008: Wouter
 	- check trailing / on chrootdir in checkconf.
 	- check if root hints and anchor files are in chrootdir.
+	- no route to host tcp error is verbosity level 2. 
+	- removed unused send_reply_iov. and its configure check.
+	- added prints of 'remote address is 1.2.3.4 port 53' to errors
+	  from netevent; the basic socket errors.
 
 28 January 2008: Wouter
 	- fixup uninit use of buffer by libunbound (query id, flags) for

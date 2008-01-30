@@ -392,18 +392,6 @@ void comm_point_set_cb_arg(struct comm_point* c, void* arg);
 void comm_point_send_reply(struct comm_reply* repinfo);
 
 /**
- * Send reply. Message is not put into commpoint buffer, but in iovec.
- * If it cannot be sent immediately (TCP) the message is copied to the buffer.
- * @param repinfo: reply info copied from commpoint callback call.
- * @param iov: iovector, array of base, len parts to send out.
- *	caller must keep entry 0 free for use by tcp handler. Start at entry 1.
- * @param iovlen: number of iov items to concatenate and send out.
- *	this includes the entry 0, which is not filled in by caller.
- */
-void comm_point_send_reply_iov(struct comm_reply* repinfo, struct iovec* iov,
-	size_t iovlen);
-
-/**
  * Drop reply. Cleans up.
  * @param repinfo: The reply info copied from a commpoint callback call.
  */

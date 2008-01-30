@@ -1062,7 +1062,7 @@ serviced_tcp_initiate(struct outside_network* outnet,
 {
 	serviced_encode(sq, buff, sq->status == serviced_query_TCP_EDNS);
 	sq->pending = pending_tcp_query(outnet, buff, &sq->addr,
-		sq->addrlen, TCP_QUERY_TIMEOUT, serviced_tcp_callback, 
+		sq->addrlen, TCP_AUTH_QUERY_TIMEOUT, serviced_tcp_callback, 
 		sq, outnet->rnd);
 	if(!sq->pending) {
 		/* delete from tree so that a retry by above layer does not
@@ -1100,7 +1100,7 @@ serviced_udp_callback(struct comm_point* c, void* arg, int error,
 			}
 			return 0;
 		}
-		if(rto >= RTT_MAX_TIMEOUT) {
+		if(1 || /* @@@ DEBUG */ rto >= RTT_MAX_TIMEOUT) {
 			fallback_tcp = 1;
 			/* UDP does not work, fallback to TCP below */
 		} else {

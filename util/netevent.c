@@ -41,6 +41,7 @@
 
 #include "util/netevent.h"
 #include "util/log.h"
+#include "util/net_help.h"
 #include "util/fptr_wlist.h"
 
 /* -------- Start of local definitions -------- */
@@ -169,6 +170,8 @@ comm_point_send_udp_msg(struct comm_point *c, ldns_buffer* packet,
 		addr, addrlen);
 	if(sent == -1) {
 		verbose(VERB_OPS, "sendto failed: %s", strerror(errno));
+		log_addr(VERB_OPS, "remote address is", 
+			(struct sockaddr_storage*)addr, addrlen);
 		return 0;
 	} else if((size_t)sent != ldns_buffer_remaining(packet)) {
 		log_err("sent %d in place of %d bytes", 
@@ -294,6 +297,8 @@ comm_point_send_udp_msg_if(struct comm_point *c, ldns_buffer* packet,
 	sent = sendmsg(c->fd, &msg, 0);
 	if(sent == -1) {
 		verbose(VERB_OPS, "sendmsg failed: %s", strerror(errno));
+		log_addr(VERB_OPS, "remote address is", 
+			(struct sockaddr_storage*)addr, addrlen);
 		return 0;
 	} else if((size_t)sent != ldns_buffer_remaining(packet)) {
 		log_err("sent %d in place of %d bytes", 
@@ -473,6 +478,8 @@ comm_point_tcp_accept_callback(int fd, short event, void* arg)
 			)
 			return;
 		log_err("accept failed: %s", strerror(errno));
+		log_addr(0, "remote address is", &c_hdl->repinfo.addr,
+			c_hdl->repinfo.addrlen);
 		return;
 	}
 	/* grab the tcp handler buffers */
@@ -561,6 +568,8 @@ comm_point_tcp_handle_read(int fd, struct comm_point* c, int short_ok)
 			if(errno == ECONNRESET && verbosity < 2)
 				return 0; /* silence reset by peer */
 			log_err("read (in tcp s): %s", strerror(errno));
+			log_addr(0, "remote address is", &c->repinfo.addr,
+				c->repinfo.addrlen);
 			return 0;
 		} 
 		c->tcp_byte_count += r;
@@ -591,6 +600,8 @@ comm_point_tcp_handle_read(int fd, struct comm_point* c, int short_ok)
 		if(errno == EINTR || errno == EAGAIN)
 			return 1;
 		log_err("read (in tcp r): %s", strerror(errno));
+		log_addr(0, "remote address is", &c->repinfo.addr,
+			c->repinfo.addrlen);
 		return 0;
 	}
 	ldns_buffer_skip(c->buffer, r);
@@ -624,10 +635,18 @@ comm_point_tcp_handle_write(int fd, struct comm_point* c)
 		}
 		if(error == EINPROGRESS || error == EWOULDBLOCK)
 			return 1; /* try again later */
-		if(error == ECONNREFUSED && verbosity < 2)
-			return 0; /* silence 'connection refused' */
-		if(error != 0) {
+#ifdef ECONNREFUSED
+                else if(error == ECONNREFUSED && verbosity < 2)
+                        return 0; /* silence 'connection refused' */
+#endif
+#ifdef EHOSTUNREACH
+                else if(error == EHOSTUNREACH && verbosity < 2)
+                        return 0; /* silence 'no route to host' */
+#endif
+                else if(error != 0) {
 			log_err("tcp connect: %s", strerror(error));
+			log_addr(0, "remote address is", &c->repinfo.addr, 
+				c->repinfo.addrlen);
 			return 0;
 		}
 	}
@@ -646,6 +665,8 @@ comm_point_tcp_handle_write(int fd, struct comm_point* c)
 			if(errno == EINTR || errno == EAGAIN)
 				return 1;
 			log_err("tcp writev: %s", strerror(errno));
+			log_addr(0, "remote address is", &c->repinfo.addr,
+				c->repinfo.addrlen);
 			return 0;
 		}
 		c->tcp_byte_count += r;
@@ -665,6 +686,8 @@ comm_point_tcp_handle_write(int fd, struct comm_point* c)
 		if(errno == EINTR || errno == EAGAIN)
 			return 1;
 		log_err("tcp write: %s", strerror(errno));
+		log_addr(0, "remote address is", &c->repinfo.addr,
+			c->repinfo.addrlen);
 		return 0;
 	}
 	ldns_buffer_skip(c->buffer, r);
@@ -1160,69 +1183,6 @@ comm_point_send_reply(struct comm_reply *repinfo)
 			(struct sockaddr*)&repinfo->addr, repinfo->addrlen);
 	} else {
 		comm_point_start_listening(repinfo->c, -1, TCP_QUERY_TIMEOUT);
-	}
-}
-
-void 
-comm_point_send_reply_iov(struct comm_reply* repinfo, struct iovec* iov,
-        size_t iovlen)
-{
-	log_assert(repinfo && repinfo->c);
-	log_assert(repinfo->c->fd != -1);
-	log_assert(repinfo->addrlen > 0);
-	if(repinfo->c->type == comm_udp) {
-		struct msghdr hdr;
-		memset(&hdr, 0, sizeof(hdr));
-		hdr.msg_name = &repinfo->addr;
-		hdr.msg_namelen = repinfo->addrlen;
-		hdr.msg_iov = iov + 1;
-		hdr.msg_iovlen = (TYPE_MSGIOVLEN)(iovlen - 1);
-		/* note that number of characters sent is not checked. */
-		if(sendmsg(repinfo->c->fd, &hdr, 0) == -1)
-			log_err("sendmsg: %s", strerror(errno));
-	} else {
-		/* try if it can be sent in writev right now */
-		size_t i;
-		uint16_t len = 0;
-		ssize_t done;
-		for(i=1; i<iovlen; i++)
-			len += iov[i].iov_len;
-		len = htons(len);
-		iov[0].iov_base = (void*)&len;
-		iov[0].iov_len = sizeof(uint16_t);
-		if((done=writev(repinfo->c->fd, iov, (int)iovlen)) == -1) {
-#ifdef S_SPLINT_S
-			/* don't complain about returning stack references */
-			iov[0].iov_base = NULL;
-#endif
-			if(errno != EINTR && errno != EAGAIN) {
-				log_err("writev: %s", strerror(errno));
-				comm_point_drop_reply(repinfo);
-				return;
-			}
-			done = 0;
-		}
-#ifdef S_SPLINT_S
-		/* don't complain about returning stack references */
-		iov[0].iov_base = NULL;
-#endif
-		if((size_t)done == ntohs(len) + sizeof(uint16_t)) {
-			/* done in one call */
-			comm_point_drop_reply(repinfo);
-		} else {
-			/* sending remaining bytes */
-			ldns_buffer_clear(repinfo->c->buffer);
-			repinfo->c->tcp_byte_count = (size_t)done;
-			for(i=1; i<iovlen; i++)
-				ldns_buffer_write(repinfo->c->buffer,
-					iov[i].iov_base, iov[i].iov_len);
-			ldns_buffer_flip(repinfo->c->buffer);
-			if((size_t)done >= sizeof(uint16_t))
-				ldns_buffer_set_position(repinfo->c->buffer,
-					(size_t)done - sizeof(uint16_t));
-			comm_point_start_listening(repinfo->c, -1, 
-				TCP_QUERY_TIMEOUT);
-		}
 	}
 }
 

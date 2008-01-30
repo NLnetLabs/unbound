@@ -70,9 +70,9 @@
 #define FLAGS_SET_RCODE(f, r) (f = (((f) & 0xfff0) | (r)))
 
 /** timeout in seconds for UDP queries to auth servers. */
-#define UDP_QUERY_TIMEOUT 4
+#define UDP_AUTH_QUERY_TIMEOUT 4
 /** timeout in seconds for TCP queries to auth servers. */
-#define TCP_QUERY_TIMEOUT 30
+#define TCP_AUTH_QUERY_TIMEOUT 30
 /** Advertised version of EDNS capabilities */
 #define EDNS_ADVERTISED_VERSION         0
 /** Advertised size of EDNS capabilities */
