@@ -1100,7 +1100,7 @@ serviced_udp_callback(struct comm_point* c, void* arg, int error,
 			}
 			return 0;
 		}
-		if(1 || /* @@@ DEBUG */ rto >= RTT_MAX_TIMEOUT) {
+		if(rto >= RTT_MAX_TIMEOUT) {
 			fallback_tcp = 1;
 			/* UDP does not work, fallback to TCP below */
 		} else {
