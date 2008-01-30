@@ -148,6 +148,8 @@ struct config_file* config_create_forlib()
 	struct config_file* cfg = config_create();
 	if(!cfg) return NULL;
 	/* modifications for library use, less verbose, less memory */
+	free(cfg->chrootdir);
+	cfg->chrootdir = NULL;
 	cfg->verbosity = 0;
 	cfg->outgoing_num_tcp = 2;
 	cfg->msg_cache_size = 1024*1024;

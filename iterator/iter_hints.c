@@ -403,7 +403,12 @@ read_root_hints_list(struct iter_hints* hints, struct config_file* cfg)
 	for(p = cfg->root_hints; p; p = p->next) {
 		log_assert(p->str);
 		if(p->str && p->str[0]) {
-			if(!read_root_hints(hints, p->str))
+			char* f = p->str;
+			if(cfg->chrootdir && cfg->chrootdir[0] &&
+				strncmp(p->str, cfg->chrootdir, 
+				strlen(cfg->chrootdir)) == 0)
+				f += strlen(cfg->chrootdir);
+			if(!read_root_hints(hints, f))
 				return 0;
 		}
 	}

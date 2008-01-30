@@ -171,6 +171,22 @@ aclchecks(struct config_file* cfg)
 	}
 }
 
+/** check file list, every file must be inside the chroot location */
+static void
+check_chroot_filelist(const char* desc, struct config_strlist* list,
+	const char* chrootdir)
+{
+	struct config_strlist* p;
+	if(!chrootdir) return;
+	for(p=list; p; p=p->next) {
+		if(p->str && p->str[0] && strncmp(chrootdir, p->str,
+			strlen(chrootdir)) != 0) {
+			fatal_exit("%s: \"%s\" not in chrootdir %s", 
+				desc, p->str, chrootdir);
+		}
+	}
+}
+
 /** check configuration for errors */
 static void
 morechecks(struct config_file* cfg)
@@ -189,6 +205,10 @@ morechecks(struct config_file* cfg)
 	if(!cfg->do_udp && !cfg->do_tcp)
 		fatal_exit("udp and tcp are both disabled, pointless");
 
+	if(cfg->chrootdir && cfg->chrootdir[0] && 
+		cfg->chrootdir[strlen(cfg->chrootdir)-1] == '/')
+		fatal_exit("chootdir %s has trailing slash '/' please remove.",
+			cfg->chrootdir);
 	if(cfg->chrootdir && strncmp(cfg->chrootdir, cfg->directory,
 		strlen(cfg->chrootdir)) != 0)
 		fatal_exit("working directory %s not in chrootdir %s",
@@ -203,6 +223,12 @@ morechecks(struct config_file* cfg)
 			strlen(cfg->chrootdir)) != 0)
 		fatal_exit("log file %s not in chrootdir %s",
 			cfg->logfile, cfg->chrootdir);
+	check_chroot_filelist("file with root-hints", 
+		cfg->root_hints, cfg->chrootdir);
+	check_chroot_filelist("trust-anchor-file", 
+		cfg->trust_anchor_file_list, cfg->chrootdir);
+	check_chroot_filelist("trusted-keys-file", 
+		cfg->trusted_keys_file_list, cfg->chrootdir);
 	
 	if(strcmp(cfg->module_conf, "iterator") != 0 &&
 		strcmp(cfg->module_conf, "validator iterator") != 0) {

@@ -1,3 +1,7 @@
+29 January 2008: Wouter
+	- check trailing / on chrootdir in checkconf.
+	- check if root hints and anchor files are in chrootdir.
+
 28 January 2008: Wouter
 	- fixup uninit use of buffer by libunbound (query id, flags) for
 	  local_zone answers.

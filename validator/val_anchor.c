@@ -750,11 +750,16 @@ int
 anchors_apply_cfg(struct val_anchors* anchors, struct config_file* cfg)
 {
 	struct config_strlist* f;
+	char* nm;
 	ldns_buffer* parsebuf = ldns_buffer_new(65535);
 	for(f = cfg->trust_anchor_file_list; f; f = f->next) {
 		if(!f->str || f->str[0] == 0) /* empty "" */
 			continue;
-		if(!anchor_read_file(anchors, parsebuf, f->str)) {
+		nm = f->str;
+		if(cfg->chrootdir && cfg->chrootdir[0] && strncmp(nm,
+			cfg->chrootdir, strlen(cfg->chrootdir)) == 0)
+			nm += strlen(cfg->chrootdir);
+		if(!anchor_read_file(anchors, parsebuf, nm)) {
 			log_err("error reading trust-anchor-file: %s", f->str);
 			ldns_buffer_free(parsebuf);
 			return 0;
@@ -763,7 +768,11 @@ anchors_apply_cfg(struct val_anchors* anchors, struct config_file* cfg)
 	for(f = cfg->trusted_keys_file_list; f; f = f->next) {
 		if(!f->str || f->str[0] == 0) /* empty "" */
 			continue;
-		if(!anchor_read_bind_file(anchors, parsebuf, f->str)) {
+		nm = f->str;
+		if(cfg->chrootdir && cfg->chrootdir[0] && strncmp(nm,
+			cfg->chrootdir, strlen(cfg->chrootdir)) == 0)
+			nm += strlen(cfg->chrootdir);
+		if(!anchor_read_bind_file(anchors, parsebuf, nm)) {
 			log_err("error reading trusted-keys-file: %s", f->str);
 			ldns_buffer_free(parsebuf);
 			return 0;
