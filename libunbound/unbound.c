@@ -62,16 +62,17 @@
 struct ub_val_ctx* 
 ub_val_ctx_create()
 {
-	struct ub_val_ctx* ctx = (struct ub_val_ctx*)calloc(1, sizeof(*ctx));
+	struct ub_val_ctx* ctx;
 	unsigned int seed;
+	log_init(NULL, 0, NULL); /* logs to stderr */
+	log_ident_set("libunbound");
+	verbosity = 0; /* errors only */
+	checklock_start();
+	ctx = (struct ub_val_ctx*)calloc(1, sizeof(*ctx));
 	if(!ctx) {
 		errno = ENOMEM;
 		return NULL;
 	}
-	checklock_start();
-	log_ident_set("libunbound");
-	verbosity = 0; /* errors only */
-	log_init(NULL, 0, NULL); /* logs to stderr */
 	alloc_init(&ctx->superalloc, NULL, 0);
 	seed = (unsigned int)time(NULL) ^ (unsigned int)getpid();
 	if(!(ctx->seed_rnd = ub_initstate(seed, NULL))) {
