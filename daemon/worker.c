@@ -136,13 +136,13 @@ worker_mem_report(struct worker* ATTR_UNUSED(worker),
 	superac = alloc_get_mem(&worker->daemon->superalloc);
 	iter = 0;
 	val = 0;
-	for(i=0; i<worker->env.mesh->num_modules; i++) {
+	for(i=0; i<worker->env.mesh->mods.num; i++) {
 		log_assert(fptr_whitelist_mod_get_mem(worker->env.mesh->
-			modfunc[i]->get_mem));
-		if(strcmp(worker->env.mesh->modfunc[i]->name, "validator")==0)
-			val += (*worker->env.mesh->modfunc[i]->get_mem)
+			mods.mod[i]->get_mem));
+		if(strcmp(worker->env.mesh->mods.mod[i]->name, "validator")==0)
+			val += (*worker->env.mesh->mods.mod[i]->get_mem)
 				(&worker->env, i);
-		else	iter += (*worker->env.mesh->modfunc[i]->get_mem)
+		else	iter += (*worker->env.mesh->mods.mod[i]->get_mem)
 				(&worker->env, i);
 	}
 	me = sizeof(*worker) + sizeof(*worker->base) + sizeof(*worker->comsig)
