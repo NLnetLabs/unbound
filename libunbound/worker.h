@@ -79,14 +79,23 @@ struct libworker {
 	struct comm_base* base;
 	/** the backside outside network interface to the auth servers */
 	struct outside_network* back;
-
 	/** random() table for this worker. */
 	struct ub_randstate* rndstate;
+	
 	/** commpoint to listen to commands */
 	struct comm_point* cmd_com;
+	/** are we currently reading a command, 0 if not, else bytecount */
+	size_t cmd_read;
+	/** size of current read command, may be partially read */
+	uint32_t cmd_len;
+	/** the current read command content, malloced, can be partially read*/
+	uint8_t* cmd_msg;
+
 	/** commpoint to write results back */
 	struct comm_point* res_com;
-
+	/** are we curently writing a result, 0 if not, else bytecount into
+	 * the res_list first entry. */
+	size_t res_write;
 	/** list of outstanding results to be written back */
 	struct libworker_res_list* res_list;
 	/** last in list */
