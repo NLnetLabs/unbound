@@ -129,10 +129,12 @@ comm_base_delete(struct comm_base* b)
 {
 	if(!b)
 		return;
-#ifdef HAVE_EVENT_BASE_FREE
-	/* only libevent 1.2+ has it */
+#if defined(HAVE_EVENT_BASE_FREE) && defined(HAVE_EVENT_BASE_ONCE)
+	/* only libevent 1.2+ has it, but in 1.2 it is broken - 
+	   assertion fails on signal handling ev that is not deleted
+ 	   in libevent 1.3c (event_base_once appears) this is fixed. */
 	event_base_free(b->eb->base);
-#endif /* HAVE_EVENT_BASE_FREE */
+#endif /* HAVE_EVENT_BASE_FREE and HAVE_EVENT_BASE_ONCE */
 	b->eb->base = NULL;
 	free(b->eb);
 	free(b);
