@@ -112,7 +112,7 @@ $(BUILD)%.o:    $(srcdir)/%.c
 	$(INFO) Build $<
 	@if test ! -z "$(ldnsdir)" -a ! -e $(ldnsdir)/include/ldns/ldns.h; \
 		then (cd $(ldnsdir); $(MAKE) copy-headers); fi
-	@if test ! -d $(dir $@); then $(INSTALL) -d $(patsubst %/,%,$(dir $@)); fi
+	@-if test ! -d $(dir $@); then $(INSTALL) -d $(patsubst %/,%,$(dir $@)); fi
 	$Q$(COMPILE) -c $< -o $@
 
 all:	$(COMMON_OBJ) unbound unbound-checkconf lib unbound-host
@@ -188,14 +188,14 @@ util/configlexer.c:  $(srcdir)/util/configlexer.lex util/configparser.h
 ifeq "$(strip $(LEX))" ":"
 	$Qecho "rebuild lexer, but no lex program, skipped"
 else
-	@if test ! -d util; then $(INSTALL) -d util; fi
+	@-if test ! -d util; then $(INSTALL) -d util; fi
 	$Qecho "#include \"util/configyyrename.h\"" > $@
 	$Q$(LEX) -t $< >> $@
 endif
 
 util/configparser.c util/configparser.h:  $(srcdir)/util/configparser.y
 	$(INFO) Yacc $<
-	@if test ! -d util; then $(INSTALL) -d util; fi
+	@-if test ! -d util; then $(INSTALL) -d util; fi
 	$Q$(YACC) -d -o util/configparser.c $<
 
 clean:
@@ -211,7 +211,7 @@ realclean: clean
 
 $(BUILD)%.lint:    $(srcdir)/%.c 
 	$(INFO) Lint $<
-	@if test ! -d $(dir $@); then $(INSTALL) -d $(patsubst %/,%,$(dir $@)); fi
+	@-if test ! -d $(dir $@); then $(INSTALL) -d $(patsubst %/,%,$(dir $@)); fi
 	$Q$(LINT) $(LINTFLAGS) -I. -I$(srcdir) -I$(ldnsdir)/include $<
 	$Qtouch $@
 
@@ -266,7 +266,7 @@ $(BUILD)%.d: $(srcdir)/%.c
 	$(INFO) Depend $<
 	@if test ! -z "$(ldnsdir)" -a ! -e $(ldnsdir)/include/ldns/ldns.h; \
 		then (cd $(ldnsdir); $(MAKE) copy-headers); fi
-	@if test ! -d $(dir $@); then $(INSTALL) -d $(patsubst %/,%,$(dir $@)); fi
+	@-if test ! -d $(dir $@); then $(INSTALL) -d $(patsubst %/,%,$(dir $@)); fi
 	$Q$(SHELL) -ec '$(CC) -MM $(CPPFLAGS) $(CFLAGS) $< \
 	              | sed '\''s!\(.*\)\.o[ :]*!$(dir $@)\1.o $@ : !g'\'' > $@; \
 	              [ -s $@ ] || rm -f $@'
