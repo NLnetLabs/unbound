@@ -77,6 +77,12 @@ struct timehist* timehist_setup();
 void timehist_delete(struct timehist* hist);
 
 /**
+ * Clear histogram
+ * @param hist: to clear all data from
+ */
+void timehist_clear(struct timehist* hist);
+
+/**
  * Add time value to histogram.
  * @param hist: histogram
  * @param tv: time value

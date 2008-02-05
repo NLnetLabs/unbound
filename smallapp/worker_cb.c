@@ -155,3 +155,8 @@ int context_query_cmp(const void* ATTR_UNUSED(a), const void* ATTR_UNUSED(b))
 	log_assert(0);
 	return 0;
 }
+
+void worker_stat_timer_cb(void* ATTR_UNUSED(arg))
+{
+	log_assert(0);
+}

@@ -129,7 +129,9 @@ comm_base_delete(struct comm_base* b)
 {
 	if(!b)
 		return;
-#if defined(HAVE_EVENT_BASE_FREE) && defined(HAVE_EVENT_BASE_ONCE)
+#ifdef USE_MINI_EVENT
+	event_base_free(b->eb->base);
+#elif defined(HAVE_EVENT_BASE_FREE) && defined(HAVE_EVENT_BASE_ONCE)
 	/* only libevent 1.2+ has it, but in 1.2 it is broken - 
 	   assertion fails on signal handling ev that is not deleted
  	   in libevent 1.3c (event_base_once appears) this is fixed. */
@@ -1308,6 +1310,8 @@ comm_timer_set(struct comm_timer* timer, struct timeval* tv)
 	log_assert(tv);
 	if(timer->ev_timer->enabled)
 		comm_timer_disable(timer);
+	event_set(&timer->ev_timer->ev, -1, EV_PERSIST|EV_TIMEOUT,
+		comm_timer_callback, timer);
 	if(evtimer_add(&timer->ev_timer->ev, tv) != 0)
 		log_err("comm_timer_set: evtimer_add failed.");
 	timer->ev_timer->enabled = 1;

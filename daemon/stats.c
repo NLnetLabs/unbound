@@ -46,7 +46,7 @@
 
 void server_stats_init(struct server_stats* stats)
 {
-	memset(stats, 0, sizeof(stats));
+	memset(stats, 0, sizeof(*stats));
 }
 
 void server_stats_querymiss(struct server_stats* stats, struct worker* worker)

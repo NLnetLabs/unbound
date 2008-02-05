@@ -416,6 +416,12 @@ void mesh_run(struct mesh_area* mesh, struct mesh_state* mstate,
 void mesh_stats(struct mesh_area* mesh, const char* str);
 
 /**
+ * Clear the stats that the mesh keeps (number of queries serviced)
+ * @param mesh: the mesh
+ */
+void mesh_stats_clear(struct mesh_area* mesh);
+
+/**
  * Print all the states in the mesh to the log.
  * @param mesh: the mesh to print all states of.
  */

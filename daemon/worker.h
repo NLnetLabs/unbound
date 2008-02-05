@@ -90,6 +90,8 @@ struct worker {
 	struct comm_signal* comsig;
 	/** commpoint to listen to commands. */
 	struct comm_point* cmd_com;
+	/** timer for statistics */
+	struct comm_timer* stat_timer;
 
 	/** number of requests that can be handled by this worker */
 	size_t request_size;
@@ -213,5 +215,8 @@ int worker_handle_service_reply(struct comm_point* c, void* arg, int error,
 
 /** cleanup the cache to remove all rrset IDs from it, arg is worker */
 void worker_alloc_cleanup(void* arg);
+
+/** statistics timer callback handler */
+void worker_stat_timer_cb(void* arg);
 
 #endif /* DAEMON_WORKER_H */

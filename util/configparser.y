@@ -88,6 +88,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_OUTGOING_INTERFACE VAR_ROOT_HINTS VAR_DO_NOT_QUERY_LOCALHOST
 %token VAR_CACHE_MAX_TTL VAR_HARDEN_DNNSEC_STRIPPED VAR_ACCESS_CONTROL
 %token VAR_LOCAL_ZONE VAR_LOCAL_DATA VAR_INTERFACE_AUTOMATIC
+%token VAR_STATISTICS_INTERVAL
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -126,7 +127,8 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_use_syslog | server_outgoing_interface | server_root_hints |
 	server_do_not_query_localhost | server_cache_max_ttl |
 	server_harden_dnssec_stripped | server_access_control |
-	server_local_zone | server_local_data | server_interface_automatic
+	server_local_zone | server_local_data | server_interface_automatic |
+	server_statistics_interval
 	;
 stubstart: VAR_STUB_ZONE
 	{
@@ -175,6 +177,17 @@ server_verbosity: VAR_VERBOSITY STRING
 		if(atoi($2) == 0 && strcmp($2, "0") != 0)
 			yyerror("number expected");
 		else cfg_parser->cfg->verbosity = atoi($2);
+		free($2);
+	}
+	;
+server_statistics_interval: VAR_STATISTICS_INTERVAL STRING 
+	{ 
+		OUTYY(("P(server_statistics_interval:%s)\n", $2)); 
+		if(strcmp($2, "") == 0 || strcmp($2, "0") == 0)
+			cfg_parser->cfg->stat_interval = 0;
+		else if(atoi($2) == 0)
+			yyerror("number expected");
+		else cfg_parser->cfg->stat_interval = atoi($2);
 		free($2);
 	}
 	;

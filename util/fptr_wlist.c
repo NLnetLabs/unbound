@@ -85,6 +85,7 @@ fptr_whitelist_comm_timer(void (*fptr)(void*))
 {
 	if(fptr == &pending_udp_timer_cb) return 1;
 	else if(fptr == &outnet_tcptimer) return 1;
+	else if(fptr == &worker_stat_timer_cb) return 1;
 	return 0;
 }
 

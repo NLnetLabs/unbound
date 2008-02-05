@@ -70,6 +70,7 @@ config_create()
 		return NULL;
 	/* the defaults if no config is present */
 	cfg->verbosity = 1;
+	cfg->stat_interval = 0;
 	cfg->num_threads = 1;
 	cfg->port = UNBOUND_DNS_PORT;
 	cfg->do_ip4 = 1;

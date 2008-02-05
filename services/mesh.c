@@ -785,6 +785,17 @@ mesh_stats(struct mesh_area* mesh, const char* str)
 	}
 }
 
+void 
+mesh_stats_clear(struct mesh_area* mesh)
+{
+	if(!mesh)
+		return;
+	mesh->replies_sent = 0;
+	mesh->replies_sum_wait.tv_sec = 0;
+	mesh->replies_sum_wait.tv_usec = 0;
+	timehist_clear(mesh->histogram);
+}
+
 size_t 
 mesh_get_mem(struct mesh_area* mesh)
 {

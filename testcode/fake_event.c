@@ -1066,4 +1066,26 @@ int serviced_cmp(const void* ATTR_UNUSED(a), const void* ATTR_UNUSED(b))
 	return 0;
 }
 
+/* no statistics timers in testbound */
+struct comm_timer* comm_timer_create(struct comm_base* ATTR_UNUSED(base), 
+	void (*cb)(void*), void* ATTR_UNUSED(cb_arg))
+{
+	(void)cb;
+	return malloc(1);
+}
+
+void comm_timer_disable(struct comm_timer* ATTR_UNUSED(timer))
+{
+}
+
+void comm_timer_set(struct comm_timer* ATTR_UNUSED(timer), 
+	struct timeval* ATTR_UNUSED(tv))
+{
+}
+
+void comm_timer_delete(struct comm_timer* timer)
+{
+	free(timer);
+}
+
 /*********** End of Dummy routines ***********/

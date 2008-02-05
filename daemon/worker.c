@@ -163,6 +163,23 @@ worker_mem_report(struct worker* ATTR_UNUSED(worker),
 		(unsigned)infra, (unsigned)iter, (unsigned)val, (unsigned)ac, 
 		(unsigned)superac, (unsigned)me);
 	debug_total_mem(total);
+#else /* no UNBOUND_ALLOC_STATS */
+	size_t val = 0;
+	int i;
+	if(verbosity < VERB_DETAIL)
+		return;
+	for(i=0; i<worker->env.mesh->mods.num; i++) {
+		log_assert(fptr_whitelist_mod_get_mem(worker->env.mesh->
+			mods.mod[i]->get_mem));
+		if(strcmp(worker->env.mesh->mods.mod[i]->name, "validator")==0)
+			val += (*worker->env.mesh->mods.mod[i]->get_mem)
+				(&worker->env, i);
+	}
+	verbose(VERB_DETAIL, "cache memory msg=%u rrset=%u infra=%u val=%u",
+		slabhash_get_mem(worker->env.msg_cache),
+		slabhash_get_mem(&worker->env.rrset_cache->table),
+		infra_get_mem(worker->env.infra_cache),
+		val);
 #endif /* UNBOUND_ALLOC_STATS */
 }
 
@@ -842,6 +859,30 @@ worker_sighandler(int sig, void* arg)
 	}
 }
 
+/** restart statistics timer for worker, if enabled */
+static void
+worker_restart_timer(struct worker* worker)
+{
+	if(worker->env.cfg->stat_interval > 0) {
+		struct timeval tv;
+		tv.tv_sec = worker->env.cfg->stat_interval;
+		tv.tv_usec = 0;
+		comm_timer_set(worker->stat_timer, &tv);
+	}
+}
+
+void worker_stat_timer_cb(void* arg)
+{
+	struct worker* worker = (struct worker*)arg;
+	mesh_stats(worker->env.mesh, "mesh has");
+	server_stats_log(&worker->stats, worker->thread_num);
+	worker_mem_report(worker, NULL);
+	server_stats_init(&worker->stats);
+	mesh_stats_clear(worker->env.mesh);
+	/* start next timer */
+	worker_restart_timer(worker);
+}
+
 struct worker* 
 worker_create(struct daemon* daemon, int id)
 {
@@ -946,6 +987,12 @@ worker_init(struct worker* worker, struct config_file *cfg,
 			return 0;
 		}
 	}
+	worker->stat_timer = comm_timer_create(worker->base, 
+		worker_stat_timer_cb, worker);
+	if(!worker->stat_timer) {
+		log_err("could not create statistics timer");
+	}
+
 	/* we use the msg_buffer_size as a good estimate for what the 
 	 * user wants for memory usage sizes */
 	worker->scratchpad = regional_create_custom(cfg->msg_buffer_size);
@@ -978,6 +1025,10 @@ worker_init(struct worker* worker, struct config_file *cfg,
 		return 0;
 	}
 	worker_mem_report(worker, NULL);
+	/* if statistics enabled start timer */
+	verbose(VERB_ALGO, "set statistics interval %d secs", 
+		worker->env.cfg->stat_interval);
+	worker_restart_timer(worker);
 	return 1;
 }
 
@@ -1003,6 +1054,7 @@ worker_delete(struct worker* worker)
 	outside_network_delete(worker->back);
 	comm_signal_delete(worker->comsig);
 	comm_point_delete(worker->cmd_com);
+	comm_timer_delete(worker->stat_timer);
 	comm_base_delete(worker->base);
 	ub_randfree(worker->rndstate);
 	/* close fds after deleting commpoints, to be sure.

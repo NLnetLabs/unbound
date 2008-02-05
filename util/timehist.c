@@ -102,6 +102,13 @@ void timehist_delete(struct timehist* hist)
 	free(hist);
 }
 
+void timehist_clear(struct timehist* hist)
+{
+	size_t i;
+	for(i=0; i<hist->num; i++)
+		hist->buckets[i].count = 0;
+}
+
 /** histogram compare of time values */
 static int
 timeval_smaller(struct timeval* x, struct timeval* y)

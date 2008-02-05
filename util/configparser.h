@@ -112,7 +112,8 @@
      VAR_ACCESS_CONTROL = 328,
      VAR_LOCAL_ZONE = 329,
      VAR_LOCAL_DATA = 330,
-     VAR_INTERFACE_AUTOMATIC = 331
+     VAR_INTERFACE_AUTOMATIC = 331,
+     VAR_STATISTICS_INTERVAL = 332
    };
 #endif
 /* Tokens.  */
@@ -190,6 +191,7 @@
 #define VAR_LOCAL_ZONE 329
 #define VAR_LOCAL_DATA 330
 #define VAR_INTERFACE_AUTOMATIC 331
+#define VAR_STATISTICS_INTERVAL 332
 
 
 
@@ -201,7 +203,7 @@ typedef union YYSTYPE
 	char*	str;
 }
 /* Line 1489 of yacc.c.  */
-#line 205 "util/configparser.h"
+#line 207 "util/configparser.h"
 	YYSTYPE;
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */
 # define YYSTYPE_IS_DECLARED 1

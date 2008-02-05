@@ -1014,3 +1014,8 @@ acl_list_cmp(const void* ATTR_UNUSED(k1), const void* ATTR_UNUSED(k2))
 	log_assert(0);
 	return 0;
 }
+
+void worker_stat_timer_cb(void* ATTR_UNUSED(arg))
+{
+	log_assert(0);
+}
