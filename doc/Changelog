@@ -2,6 +2,7 @@
 	- statistics-interval: seconds option added.
 	- test for statistics option
 	- ignore errors making directories, these can occur in parallel builds
+	- fixup Makefile strip command and libunbound docs typo.
 
 31 January 2008: Wouter
 	- bg thread/process reads and writes the pipe nonblocking all the time

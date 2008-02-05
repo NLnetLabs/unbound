@@ -228,6 +228,7 @@ endif
 strip:
 	strip unbound
 	strip unbound-checkconf
+	strip unbound-host
 
 install:
 	$(INSTALL) -m 755 -d $(bindir)
