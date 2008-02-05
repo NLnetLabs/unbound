@@ -1,5 +1,6 @@
 5 February 2008: Wouter
 	- statistics-interval: seconds option added.
+	- test for statistics option
 
 31 January 2008: Wouter
 	- bg thread/process reads and writes the pipe nonblocking all the time

@@ -57,3 +57,4 @@ o in an ipv6 connected only environment unbound cannot use outgoing IP6
 o support multiple dns messages in a TCP query stream for the unbound server.
 o SIG(0) and TSIG.
 o support OPT record placement on recv anywhere in the additional section. 
+o add local-file: config with authority features.
