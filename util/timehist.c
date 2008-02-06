@@ -198,7 +198,10 @@ timehist_quartile(struct timehist* hist, double q)
 	if(!hist || hist->num == 0)
 		return 0.;
 	/* look for i'th element, interpolated */
-	lookfor = (double)timehist_count(hist) * q;
+	lookfor = (double)timehist_count(hist);
+	if(lookfor < 4)
+		return 0.; /* not enough elements for a good estimate */
+	lookfor *= q;
 	passed = 0;
 	i = 0;
 	while(i+1 < hist->num && 
