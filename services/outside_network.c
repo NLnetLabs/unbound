@@ -1034,9 +1034,10 @@ serviced_tcp_callback(struct comm_point* c, void* arg, int error,
 	if(error==NETEVENT_NOERROR)
 		infra_update_tcp_works(sq->outnet->infra, &sq->addr,
 			sq->addrlen);
-	if(error==NETEVENT_NOERROR && LDNS_RCODE_WIRE(ldns_buffer_begin(
-		c->buffer)) == LDNS_RCODE_FORMERR && 
-		sq->status == serviced_query_TCP_EDNS) {
+	if(error==NETEVENT_NOERROR && sq->status == serviced_query_TCP_EDNS &&
+		(LDNS_RCODE_WIRE(ldns_buffer_begin(c->buffer)) == 
+		LDNS_RCODE_FORMERR || LDNS_RCODE_WIRE(ldns_buffer_begin(
+		c->buffer)) == LDNS_RCODE_NOTIMPL) ) {
 		if(!infra_edns_update(sq->outnet->infra, &sq->addr, 
 			sq->addrlen, -1, time(0)))
 			log_err("Out of memory caching no edns for host");
@@ -1109,8 +1110,9 @@ serviced_udp_callback(struct comm_point* c, void* arg, int error,
 		}
 	}
 	if(error == NETEVENT_NOERROR && sq->status == serviced_query_UDP_EDNS 
-		&& LDNS_RCODE_WIRE(ldns_buffer_begin(c->buffer)) 
-			== LDNS_RCODE_FORMERR) {
+		&& (LDNS_RCODE_WIRE(ldns_buffer_begin(c->buffer)) 
+			== LDNS_RCODE_FORMERR || LDNS_RCODE_WIRE(
+			ldns_buffer_begin(c->buffer)) == LDNS_RCODE_NOTIMPL)) {
 		/* note no EDNS, fallback without EDNS */
 		if(!infra_edns_update(outnet->infra, &sq->addr, sq->addrlen,
 			-1, (time_t)now.tv_sec)) {

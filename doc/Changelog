@@ -5,6 +5,7 @@
 	- changed name of ub_val_result_free to ub_val_resolve_free.
 	- removes warning message during library linking, renamed
 	  libunbound/unbound.c -> libunbound.c and worker to libworker.
+	- fallback without EDNS if result is NOTIMPL as well as on FORMERR.
 
 5 February 2008: Wouter
 	- statistics-interval: seconds option added.
