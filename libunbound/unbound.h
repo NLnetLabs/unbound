@@ -105,7 +105,7 @@ struct ub_val_ctx;
 /**
  * The validation and resolution results.
  * Allocated by the resolver, and need to be freed by the application
- * with ub_val_result_free().
+ * with ub_val_resolve_free().
  */
 struct ub_val_result {
 	/** The original question, name text string. */
@@ -187,7 +187,7 @@ struct ub_val_result {
  *	     are forthcoming.
  *	struct result: pointer to more detailed result structure.
  *		This structure is allocated on the heap and needs to be
- *		freed with ub_val_result_free(result);
+ *		freed with ub_val_resolve_free(result);
  */
 typedef void (*ub_val_callback_t)(void*, int, struct ub_val_result*);
 
@@ -196,7 +196,7 @@ typedef void (*ub_val_callback_t)(void*, int, struct ub_val_result*);
  * @return a new context. default initialisation.
  * 	returns NULL on error.
  */
-struct ub_val_ctx* ub_val_ctx_create();
+struct ub_val_ctx* ub_val_ctx_create(void);
 
 /**
  * Destroy a validation context and free all its resources.
@@ -409,7 +409,7 @@ int ub_val_cancel(struct ub_val_ctx* ctx, int async_id);
  * Free storage associated with a result structure.
  * @param result: to free
  */
-void ub_val_result_free(struct ub_val_result* result);
+void ub_val_resolve_free(struct ub_val_result* result);
 
 /** 
  * Convert error value to a human readable string.

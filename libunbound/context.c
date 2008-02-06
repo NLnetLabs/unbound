@@ -99,7 +99,7 @@ void
 context_query_delete(struct ctx_query* q) 
 {
 	if(!q) return;
-	ub_val_result_free(q->res);
+	ub_val_resolve_free(q->res);
 	free(q->msg);
 	free(q);
 }

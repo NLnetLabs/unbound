@@ -31,7 +31,7 @@
 .B ub_val_resolve,
 .B ub_val_resolve_async,
 .B ub_val_cancel,
-.B ub_val_result_free,
+.B ub_val_resolve_free,
 .B ub_val_strerror
 \- Unbound DNS validating resolver @version@ functions.
 .SH "SYNOPSIS"
@@ -102,7 +102,7 @@
 \fBub_val_cancel\fR(\fIstruct ub_val_ctx*\fR ctx, \fIint\fR async_id);
 .LP
 \fIvoid\fR
-\fBub_val_result_free\fR(\fIstruct ub_val_result*\fR result);
+\fBub_val_resolve_free\fR(\fIstruct ub_val_result*\fR result);
 .LP
 \fIconst char *\fR
 \fBub_val_strerror\fR(\fIint\fR err);
@@ -251,7 +251,7 @@ and cancel the request if needed.
 .B ub_val_cancel
 Cancel an async query in progress.
 .TP
-.B ub_val_result_free
+.B ub_val_resolve_free
 Free struct ub_val_result contents after use.
 .TP
 .B ub_val_strerror

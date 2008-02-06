@@ -15,5 +15,5 @@ ub_val_process
 ub_val_resolve
 ub_val_resolve_async
 ub_val_cancel
-ub_val_result_free
+ub_val_resolve_free
 ub_val_strerror

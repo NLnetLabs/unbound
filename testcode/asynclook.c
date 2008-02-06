@@ -243,7 +243,7 @@ ext_callback(void* mydata, int err, struct ub_val_result* result)
 		pi.err = 0;
 		print_result(&pi);
 	}
-	ub_val_result_free(result);
+	ub_val_resolve_free(result);
 }
 
 /** extended thread worker */
@@ -451,7 +451,7 @@ int main(int argc, char** argv)
 	/* print lookup results */
 	for(i=0; i<argc; i++) {
 		print_result(&lookups[i]);
-		ub_val_result_free(lookups[i].result);
+		ub_val_resolve_free(lookups[i].result);
 	}
 
 	ub_val_ctx_delete(ctx);

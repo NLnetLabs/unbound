@@ -397,7 +397,7 @@ process_answer_detail(struct ub_val_ctx* ctx, uint8_t* msg, uint32_t len,
 	}
 	if(*err) {
 		*res = NULL;
-		ub_val_result_free(q->res);
+		ub_val_resolve_free(q->res);
 	} else {
 		/* parse the message, extract rcode, fill result */
 		ldns_buffer* buf = ldns_buffer_new(q->msg_len);
@@ -668,7 +668,7 @@ ub_val_cancel(struct ub_val_ctx* ctx, int async_id)
 }
 
 void 
-ub_val_result_free(struct ub_val_result* result)
+ub_val_resolve_free(struct ub_val_result* result)
 {
 	char** p;
 	if(!result) return;

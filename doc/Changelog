@@ -2,6 +2,7 @@
 	- clearer explanation of threading configure options.
 	- fixup asynclook test for nothreading (it creates only one process
 	  to do the extended test).
+	- changed name of ub_val_result_free to ub_val_resolve_free.
 
 5 February 2008: Wouter
 	- statistics-interval: seconds option added.

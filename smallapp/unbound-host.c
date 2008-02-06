@@ -349,7 +349,7 @@ dnslook(struct ub_val_ctx* ctx, char* q, int t, int c, int docname)
 	}
 	pretty_output(q, t, c, result, docname);
 	ret = result->nxdomain;
-	ub_val_result_free(result);
+	ub_val_resolve_free(result);
 	return ret;
 }
 
