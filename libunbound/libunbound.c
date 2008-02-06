@@ -45,7 +45,7 @@
 #include "libunbound/unbound.h"
 #include "config.h"
 #include "libunbound/context.h"
-#include "libunbound/worker.h"
+#include "libunbound/libworker.h"
 #include "util/locks.h"
 #include "util/config_file.h"
 #include "util/alloc.h"

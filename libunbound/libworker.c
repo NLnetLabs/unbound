@@ -42,7 +42,7 @@
  * returns from the procedure when done.
  */
 #include "config.h"
-#include "libunbound/worker.h"
+#include "libunbound/libworker.h"
 #include "libunbound/context.h"
 #include "libunbound/unbound.h"
 #include "services/outside_network.h"
