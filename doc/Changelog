@@ -1,3 +1,8 @@
+6 February 2008: Wouter
+	- clearer explanation of threading configure options.
+	- fixup asynclook test for nothreading (it creates only one process
+	  to do the extended test).
+
 5 February 2008: Wouter
 	- statistics-interval: seconds option added.
 	- test for statistics option

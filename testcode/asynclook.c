@@ -128,8 +128,13 @@ checkerr(const char* desc, int err)
 	}
 }
 
+#if !defined(HAVE_PTHREAD) && !defined(HAVE_SOLARIS_THREADS)
+/** only one process can communicate with async worker */
+#define NUMTHR 1
+#else /* have threads */
 /** number of threads to make in extended test */
 #define NUMTHR 10
+#endif
 
 /** struct for extended thread info */
 struct ext_thr_info {
