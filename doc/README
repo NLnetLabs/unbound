@@ -54,6 +54,8 @@ o If libevent is older (before 1.3c), unbound will exit instead of reload
   on sighup. On a restart 'did not exit gracefully last time' warning is 
   printed. Perform ./configure --with-libevent=no or update libevent, rerun 
   configure and recompile unbound to make sighup work correctly.
+  It is strongly suggested to use the latest version of libevent (1.4 or more)
+  on Solaris, because of fixes in the solaris event port code in libevent.
 o If you receive no answers deploying unbound on a private network.
   Check that the zone you configure as a stub zone is correct, listing working 
   ip-addresses. Check that the NS data in the zone, those hostnames, are

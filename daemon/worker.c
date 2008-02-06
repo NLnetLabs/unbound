@@ -1026,9 +1026,11 @@ worker_init(struct worker* worker, struct config_file *cfg,
 	}
 	worker_mem_report(worker, NULL);
 	/* if statistics enabled start timer */
-	verbose(VERB_ALGO, "set statistics interval %d secs", 
-		worker->env.cfg->stat_interval);
-	worker_restart_timer(worker);
+	if(worker->env.cfg->stat_interval > 0) {
+		verbose(VERB_ALGO, "set statistics interval %d secs", 
+			worker->env.cfg->stat_interval);
+		worker_restart_timer(worker);
+	}
 	return 1;
 }
 
