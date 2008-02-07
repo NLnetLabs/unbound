@@ -4,6 +4,7 @@
 	  for operators.
 	- verbosity level 2. Describes recursion and validation.
 	- cleaner configure script and fixes for libevent solaris.
+	- signedness for log output memory sizes in high verbosity.
 
 6 February 2008: Wouter
 	- clearer explanation of threading configure options.
