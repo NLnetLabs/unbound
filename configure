@@ -4614,7 +4614,7 @@ fi
 
 
 if test "$srcdir" != "."; then
-	CPPFLAGS="$CPPFLAGS -I$srcdir";
+	CPPFLAGS="$CPPFLAGS -I$srcdir"
 fi
 
 # skip these tests, we do not need them.
@@ -20601,13 +20601,13 @@ echo $ECHO_N "checking for SSL... $ECHO_C" >&6; }
         for dir in $withval; do
             ssldir="$dir"
             if test -f "$dir/include/openssl/ssl.h"; then
-                found_ssl="yes";
+                found_ssl="yes"
 
 cat >>confdefs.h <<_ACEOF
 #define HAVE_SSL
 _ACEOF
 
-                CPPFLAGS="$CPPFLAGS -I$ssldir/include";
+                CPPFLAGS="$CPPFLAGS -I$ssldir/include"
                 break;
             fi
         done
@@ -20619,7 +20619,7 @@ echo "$as_me: error: Cannot find the SSL libraries in $withval" >&2;}
             { echo "$as_me:$LINENO: result: found in $ssldir" >&5
 echo "${ECHO_T}found in $ssldir" >&6; }
             HAVE_SSL=yes
-            LDFLAGS="$LDFLAGS -L$ssldir/lib";
+            LDFLAGS="$LDFLAGS -L$ssldir/lib"
 	    if test "x$enable_rpath" = xyes; then
 	        RUNTIME_PATH="$RUNTIME_PATH -R$ssldir/lib"
 	    fi
@@ -21948,13 +21948,13 @@ if test x_$withval != x_no; then
         { echo "$as_me:$LINENO: checking for libevent" >&5
 echo $ECHO_N "checking for libevent... $ECHO_C" >&6; }
         if test x_$withval = x_ -o x_$withval = x_yes; then
-            withval="/usr/local /opt/local /usr/lib /usr/pkg /usr/sfw /usr";
+            withval="/usr/local /opt/local /usr/lib /usr/pkg /usr/sfw /usr"
         fi
         for dir in $withval; do
             thedir="$dir"
             if test -f "$dir/include/event.h"; then
-                found_libevent="yes";
-                CPPFLAGS="$CPPFLAGS -I$thedir/include";
+                found_libevent="yes"
+                CPPFLAGS="$CPPFLAGS -I$thedir/include"
                 break;
             fi
         done
@@ -21963,10 +21963,20 @@ echo $ECHO_N "checking for libevent... $ECHO_C" >&6; }
 			# libevent source directory
             		{ echo "$as_me:$LINENO: result: found in $thedir" >&5
 echo "${ECHO_T}found in $thedir" >&6; }
-                	CPPFLAGS="$CPPFLAGS -I$thedir";
+                	CPPFLAGS="$CPPFLAGS -I$thedir"
 			BAK_LDFLAGS="$LDFLAGS"
-            		LATE_LDFLAGS="$thedir/*.lo";
-			LDFLAGS="$thedir/*.o $LDFLAGS"
+			# remove evdns from linking
+			mkdir build >/dev/null 2>&1
+			mkdir build/libevent >/dev/null 2>&1
+			mkdir build/libevent/.libs >/dev/null 2>&1
+			ev_files_o=`ls $thedir/*.o | grep -v evdns\.o`
+			ev_files_lo=`ls $thedir/*.lo | grep -v evdns\.lo`
+			ev_files_libso=`ls $thedir/.libs/*.o | grep -v evdns\.o`
+			cp $ev_files_o build/libevent
+			cp $ev_files_lo build/libevent
+			cp $ev_files_libso build/libevent/.libs
+            		LATE_LDFLAGS="build/libevent/*.lo"
+			LDFLAGS="build/libevent/*.o $LDFLAGS"
 		else
             		{ { echo "$as_me:$LINENO: error: Cannot find the libevent library in $withval
 You can restart ./configure --with-libevent=no to use a builtin alternative.
@@ -21981,7 +21991,7 @@ many outgoing ports.  " >&2;}
         else
             { echo "$as_me:$LINENO: result: found in $thedir" >&5
 echo "${ECHO_T}found in $thedir" >&6; }
-            LDFLAGS="$LDFLAGS -L$thedir/lib";
+            LDFLAGS="$LDFLAGS -L$thedir/lib"
 	    if test "x$enable_rpath" = xyes; then
 	        RUNTIME_PATH="$RUNTIME_PATH -R$thedir/lib"
 	    fi
@@ -24771,7 +24781,7 @@ _ACEOF
 
 fi
 
-LDFLAGS="$LATE_LDFLAGS $LDFLAGS";
+LDFLAGS="$LATE_LDFLAGS $LDFLAGS"
 
 
 cat >>confdefs.h <<_ACEOF

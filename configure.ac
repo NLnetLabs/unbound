@@ -321,7 +321,7 @@ AC_CHECK_FORMAT_ATTRIBUTE
 AC_CHECK_UNUSED_ATTRIBUTE
 
 if test "$srcdir" != "."; then
-	CPPFLAGS="$CPPFLAGS -I$srcdir";
+	CPPFLAGS="$CPPFLAGS -I$srcdir"
 fi
 
 # skip these tests, we do not need them.
@@ -436,9 +436,9 @@ AC_ARG_WITH(ssl, AC_HELP_STRING([--with-ssl=pathname],
         for dir in $withval; do
             ssldir="$dir"
             if test -f "$dir/include/openssl/ssl.h"; then
-                found_ssl="yes";
+                found_ssl="yes"
                 AC_DEFINE_UNQUOTED([HAVE_SSL], [], [Define if you have the SSL libraries installed.])
-                CPPFLAGS="$CPPFLAGS -I$ssldir/include";
+                CPPFLAGS="$CPPFLAGS -I$ssldir/include"
                 break;
             fi
         done
@@ -447,7 +447,7 @@ AC_ARG_WITH(ssl, AC_HELP_STRING([--with-ssl=pathname],
         else
             AC_MSG_RESULT(found in $ssldir)
             HAVE_SSL=yes
-            LDFLAGS="$LDFLAGS -L$ssldir/lib";
+            LDFLAGS="$LDFLAGS -L$ssldir/lib"
 	    if test "x$enable_rpath" = xyes; then
 	        RUNTIME_PATH="$RUNTIME_PATH -R$ssldir/lib"
 	    fi
@@ -511,13 +511,13 @@ AC_ARG_WITH(libevent, AC_HELP_STRING([--with-libevent=pathname],
 if test x_$withval != x_no; then
         AC_MSG_CHECKING(for libevent)
         if test x_$withval = x_ -o x_$withval = x_yes; then
-            withval="/usr/local /opt/local /usr/lib /usr/pkg /usr/sfw /usr";
+            withval="/usr/local /opt/local /usr/lib /usr/pkg /usr/sfw /usr"
         fi
         for dir in $withval; do
             thedir="$dir"
             if test -f "$dir/include/event.h"; then
-                found_libevent="yes";
-                CPPFLAGS="$CPPFLAGS -I$thedir/include";
+                found_libevent="yes"
+                CPPFLAGS="$CPPFLAGS -I$thedir/include"
                 break;
             fi
         done
@@ -525,7 +525,7 @@ if test x_$withval != x_no; then
 		if test -f "$dir/event.h" -a -f "$dir/libevent.la"; then
 			# libevent source directory
             		AC_MSG_RESULT(found in $thedir)
-                	CPPFLAGS="$CPPFLAGS -I$thedir";
+                	CPPFLAGS="$CPPFLAGS -I$thedir"
 			BAK_LDFLAGS="$LDFLAGS"
 			# remove evdns from linking
 			mkdir build >/dev/null 2>&1
@@ -547,7 +547,7 @@ many outgoing ports.  ])
 		fi
         else
             AC_MSG_RESULT(found in $thedir)
-            LDFLAGS="$LDFLAGS -L$thedir/lib";
+            LDFLAGS="$LDFLAGS -L$thedir/lib"
 	    if test "x$enable_rpath" = xyes; then
 	        RUNTIME_PATH="$RUNTIME_PATH -R$thedir/lib"
 	    fi
