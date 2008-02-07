@@ -176,10 +176,10 @@ worker_mem_report(struct worker* ATTR_UNUSED(worker),
 				(&worker->env, i);
 	}
 	verbose(VERB_QUERY, "cache memory msg=%u rrset=%u infra=%u val=%u",
-		slabhash_get_mem(worker->env.msg_cache),
-		slabhash_get_mem(&worker->env.rrset_cache->table),
-		infra_get_mem(worker->env.infra_cache),
-		val);
+		(unsigned)slabhash_get_mem(worker->env.msg_cache),
+		(unsigned)slabhash_get_mem(&worker->env.rrset_cache->table),
+		(unsigned)infra_get_mem(worker->env.infra_cache),
+		(unsigned)val);
 #endif /* UNBOUND_ALLOC_STATS */
 }
 
