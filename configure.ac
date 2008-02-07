@@ -527,8 +527,18 @@ if test x_$withval != x_no; then
             		AC_MSG_RESULT(found in $thedir)
                 	CPPFLAGS="$CPPFLAGS -I$thedir";
 			BAK_LDFLAGS="$LDFLAGS"
-            		LATE_LDFLAGS="$thedir/*.lo";
-			LDFLAGS="$thedir/*.o $LDFLAGS"
+			# remove evdns from linking
+			mkdir build >/dev/null 2>&1
+			mkdir build/libevent >/dev/null 2>&1
+			mkdir build/libevent/.libs >/dev/null 2>&1
+			ev_files_o=`ls $thedir/*.o | grep -v evdns\.o`
+			ev_files_lo=`ls $thedir/*.lo | grep -v evdns\.lo`
+			ev_files_libso=`ls $thedir/.libs/*.o | grep -v evdns\.o`
+			cp $ev_files_o build/libevent
+			cp $ev_files_lo build/libevent
+			cp $ev_files_libso build/libevent/.libs
+            		LATE_LDFLAGS="build/libevent/*.lo"
+			LDFLAGS="build/libevent/*.o $LDFLAGS"
 		else
             		AC_MSG_ERROR([Cannot find the libevent library in $withval
 You can restart ./configure --with-libevent=no to use a builtin alternative.
@@ -644,7 +654,7 @@ AC_DEFINE(HAVE_STRLCPY)
 AC_DEFINE(HAVE_MEMMOVE)
 AC_DEFINE(HAVE_GETADDRINFO)
 ])
-LDFLAGS="$LATE_LDFLAGS $LDFLAGS";
+LDFLAGS="$LATE_LDFLAGS $LDFLAGS"
 
 AC_DEFINE_UNQUOTED([MAXSYSLOGMSGLEN], [5120], [Define to the maximum message length to pass to syslog.])
 
