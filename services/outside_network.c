@@ -202,13 +202,13 @@ outnet_tcp_cb(struct comm_point* c, void* arg, int error,
 	struct outside_network* outnet = pend->query->outnet;
 	verbose(VERB_ALGO, "outnettcp cb");
 	if(error != NETEVENT_NOERROR) {
-		verbose(VERB_DETAIL, "outnettcp got tcp error %d", error);
+		verbose(VERB_QUERY, "outnettcp got tcp error %d", error);
 		/* pass error below and exit */
 	} else {
 		/* check ID */
 		if(ldns_buffer_limit(c->buffer) < sizeof(uint16_t) ||
 			LDNS_ID_WIRE(ldns_buffer_begin(c->buffer))!=pend->id) {
-			log_addr(VERB_DETAIL, 
+			log_addr(VERB_QUERY, 
 				"outnettcp: bad ID in reply, from:",
 				&pend->query->addr, pend->query->addrlen);
 			error = NETEVENT_CLOSED;
@@ -230,11 +230,11 @@ outnet_udp_cb(struct comm_point* c, void* arg, int error,
 	verbose(VERB_ALGO, "answer cb");
 
 	if(error != NETEVENT_NOERROR) {
-		verbose(VERB_DETAIL, "outnetudp got udp error %d", error);
+		verbose(VERB_QUERY, "outnetudp got udp error %d", error);
 		return 0;
 	}
 	if(ldns_buffer_limit(c->buffer) < LDNS_HEADER_SIZE) {
-		verbose(VERB_DETAIL, "outnetudp udp too short");
+		verbose(VERB_QUERY, "outnetudp udp too short");
 		return 0;
 	}
 	log_assert(reply_info);
@@ -251,7 +251,7 @@ outnet_udp_cb(struct comm_point* c, void* arg, int error,
 	verbose(VERB_ALGO, "lookup size is %d entries", (int)outnet->pending->count);
 	p = (struct pending*)rbtree_search(outnet->pending, &key);
 	if(!p) {
-		verbose(VERB_DETAIL, "received unwanted or unsolicited udp reply dropped.");
+		verbose(VERB_QUERY, "received unwanted or unsolicited udp reply dropped.");
 		log_buf(VERB_ALGO, "dropped message", c->buffer);
 		return 0;
 	}
@@ -259,7 +259,7 @@ outnet_udp_cb(struct comm_point* c, void* arg, int error,
 	verbose(VERB_ALGO, "received udp reply.");
 	log_buf(VERB_ALGO, "udp message", c->buffer);
 	if(p->c != c) {
-		verbose(VERB_DETAIL, "received reply id,addr on wrong port. "
+		verbose(VERB_QUERY, "received reply id,addr on wrong port. "
 			"dropped.");
 		return 0;
 	}
@@ -1029,7 +1029,7 @@ serviced_tcp_callback(struct comm_point* c, void* arg, int error,
 	struct comm_reply r2;
 	sq->pending = NULL; /* removed after this callback */
 	if(error != NETEVENT_NOERROR)
-		log_addr(VERB_DETAIL, "tcp error for address", 
+		log_addr(VERB_QUERY, "tcp error for address", 
 			&sq->addr, sq->addrlen);
 	if(error==NETEVENT_NOERROR)
 		infra_update_tcp_works(sq->outnet->infra, &sq->addr,

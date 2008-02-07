@@ -270,7 +270,7 @@ anchor_store_new_rr(struct val_anchors* anchors, ldns_buffer* buffer,
 		ldns_buffer_begin(buffer), ldns_buffer_limit(buffer))) {
 		return 0;
 	}
-	log_nametypeclass(VERB_DETAIL, "adding trusted key",
+	log_nametypeclass(VERB_QUERY, "adding trusted key",
 		ldns_rdf_data(owner), 
 		ldns_rr_get_type(rr), ldns_rr_get_class(rr));
 	return 1;
@@ -613,7 +613,7 @@ anchor_read_bind_file(struct val_anchors* anchors, ldns_buffer* buffer,
 		log_err("error opening file %s: %s", fname, strerror(errno));
 		return 0;
 	}
-	verbose(VERB_DETAIL, "reading in bind-compat-mode: '%s'", fname);
+	verbose(VERB_QUERY, "reading in bind-compat-mode: '%s'", fname);
 	/* scan for  trusted-keys  keyword, ignore everything else */
 	ldns_buffer_clear(buffer);
 	while((rdlen=readkeyword_bindfile(in, buffer, &line_nr, 1)) != 0) {

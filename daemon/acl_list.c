@@ -104,7 +104,7 @@ acl_list_insert(struct acl_list* acl, struct sockaddr_storage* addr,
 	node->control = control;
 	if(!rbtree_insert(acl->tree, &node->node)) {
 		if(complain_duplicates)
-			verbose(VERB_DETAIL, "duplicate acl address ignored.");
+			verbose(VERB_QUERY, "duplicate acl address ignored.");
 	}
 	return 1;
 }

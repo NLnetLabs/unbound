@@ -273,7 +273,7 @@ val_find_signer(enum val_classification subtype, struct query_info* qinf,
 		*signer_name = NULL;
 		*signer_len = 0;
 	} else {
-		verbose(VERB_DETAIL, "find_signer: could not find signer name"
+		verbose(VERB_QUERY, "find_signer: could not find signer name"
 			" for unknown type response");
 		*signer_name = NULL;
 		*signer_len = 0;
@@ -423,7 +423,7 @@ val_verify_new_DNSKEYs(struct regional* region, struct module_env* env,
 	if(dnskey_rrset->rk.dname_len != ds_rrset->rk.dname_len ||
 		query_dname_compare(dnskey_rrset->rk.dname, ds_rrset->rk.dname)
 		!= 0) {
-		verbose(VERB_DETAIL, "DNSKEY RRset did not match DS RRset "
+		verbose(VERB_QUERY, "DNSKEY RRset did not match DS RRset "
 			"by name");
 		return key_entry_create_bad(region, ds_rrset->rk.dname,
 			ds_rrset->rk.dname_len, 
@@ -465,7 +465,7 @@ val_verify_new_DNSKEYs(struct regional* region, struct module_env* env,
 			rrset_get_ttl(ds_rrset));
 	}
 	/* If any were understandable, then it is bad. */
-	verbose(VERB_DETAIL, "Failed to match any usable DS to a DNSKEY.");
+	verbose(VERB_QUERY, "Failed to match any usable DS to a DNSKEY.");
 	return key_entry_create_bad(region, ds_rrset->rk.dname,
 		ds_rrset->rk.dname_len, ntohs(ds_rrset->rk.rrset_class));
 }
@@ -642,7 +642,7 @@ val_check_nonsecure(struct val_env* ve, struct reply_info* rep)
 			 * But this rrset did not verify.
 			 * Therefore the message is bogus.
 			 */
-			log_nametypeclass(VERB_DETAIL, "message is bogus, "
+			log_nametypeclass(VERB_QUERY, "message is bogus, "
 				"non secure rrset",
 				rep->rrsets[i]->rk.dname, 
 				ntohs(rep->rrsets[i]->rk.type),

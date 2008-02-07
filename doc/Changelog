@@ -1,3 +1,8 @@
+7 February 2008: Wouter
+	- moved up all current level 2 to be level 3. And 3 to 4.
+	  to make room for new debug level 2 for detailed information 
+	  for operators.
+
 6 February 2008: Wouter
 	- clearer explanation of threading configure options.
 	- fixup asynclook test for nothreading (it creates only one process

@@ -150,7 +150,7 @@ verifytest_rrset(struct module_env* env, struct val_env* ve,
 {
 	enum sec_status sec;
 	if(vsig) {
-		log_nametypeclass(VERB_DETAIL, "verify of rrset",
+		log_nametypeclass(VERB_QUERY, "verify of rrset",
 			rrset->rk.dname, ntohs(rrset->rk.type),
 			ntohs(rrset->rk.rrset_class));
 	}
@@ -237,7 +237,7 @@ dstest_entry(struct entry* e, struct alloc_cache* alloc,
 			printf("result(no)= %s\n", ret?"yes":"no");
 		}
 		unit_assert(!ret);
-		verbose(VERB_DETAIL, "DS fail: OK; matched unit test");
+		verbose(VERB_QUERY, "DS fail: OK; matched unit test");
 	} else {
 		fatal_exit("Bad qname in DS unit test, yes or no");
 	}
@@ -274,7 +274,7 @@ verifytest_file(const char* fname, const char* at_date)
 	ve.date_override = cfg_convert_timeval(at_date);
 	unit_assert(region && buf);
 	dnskey = extract_keys(list, &alloc, region, buf);
-	if(vsig) log_nametypeclass(VERB_DETAIL, "test dnskey",
+	if(vsig) log_nametypeclass(VERB_QUERY, "test dnskey",
 			dnskey->rk.dname, ntohs(dnskey->rk.type), 
 			ntohs(dnskey->rk.rrset_class));
 	/* ready to go! */

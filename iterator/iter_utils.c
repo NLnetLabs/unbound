@@ -102,7 +102,7 @@ iter_apply_cfg(struct iter_env* iter_env, struct config_file* cfg)
 	if(!read_fetch_policy(iter_env, cfg->target_fetch_policy))
 		return 0;
 	for(i=0; i<iter_env->max_dependency_depth+1; i++)
-		verbose(VERB_DETAIL, "target fetch policy for level %d is %d",
+		verbose(VERB_QUERY, "target fetch policy for level %d is %d",
 			i, iter_env->target_fetch_policy[i]);
 	
 	if(!iter_env->hints)
@@ -331,7 +331,7 @@ iter_mark_cycle_targets(struct module_qstate* qstate, struct delegpt* dp)
 			LDNS_RR_TYPE_AAAA, qstate->qinfo.qclass) ||
 		   causes_cycle(qstate, ns->name, ns->namelen, 
 			LDNS_RR_TYPE_A, qstate->qinfo.qclass)) {
-			log_nametypeclass(VERB_DETAIL, "skipping target due "
+			log_nametypeclass(VERB_QUERY, "skipping target due "
 			 	"to dependency cycle (harden-glue: no may "
 				"fix some of the cycles)", 
 				ns->name, LDNS_RR_TYPE_A, 

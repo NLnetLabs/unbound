@@ -581,14 +581,14 @@ comm_point_tcp_handle_read(int fd, struct comm_point* c, int short_ok)
 			return 1;
 		if(ldns_buffer_read_u16_at(c->buffer, 0) >
 			ldns_buffer_capacity(c->buffer)) {
-			verbose(VERB_DETAIL, "tcp: dropped larger than buffer");
+			verbose(VERB_QUERY, "tcp: dropped larger than buffer");
 			return 0;
 		}
 		ldns_buffer_set_limit(c->buffer, 
 			ldns_buffer_read_u16_at(c->buffer, 0));
 		if(!short_ok && 
 			ldns_buffer_limit(c->buffer) < LDNS_HEADER_SIZE) {
-			verbose(VERB_DETAIL, "tcp: dropped bogus too short.");
+			verbose(VERB_QUERY, "tcp: dropped bogus too short.");
 			return 0;
 		}
 		verbose(VERB_ALGO, "Reading tcp query of length %d", 
@@ -734,7 +734,7 @@ comm_point_tcp_handle_callback(int fd, short event, void* arg)
 		return;
 	}
 	if(event&EV_TIMEOUT) {
-		verbose(VERB_DETAIL, "tcp took too long, dropped");
+		verbose(VERB_QUERY, "tcp took too long, dropped");
 		reclaim_tcp_handler(c);
 		if(!c->tcp_do_close) {
 			log_assert(fptr_whitelist_comm_point(c->callback));

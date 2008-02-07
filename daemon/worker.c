@@ -166,7 +166,7 @@ worker_mem_report(struct worker* ATTR_UNUSED(worker),
 #else /* no UNBOUND_ALLOC_STATS */
 	size_t val = 0;
 	int i;
-	if(verbosity < VERB_DETAIL)
+	if(verbosity < VERB_QUERY)
 		return;
 	for(i=0; i<worker->env.mesh->mods.num; i++) {
 		log_assert(fptr_whitelist_mod_get_mem(worker->env.mesh->
@@ -175,7 +175,7 @@ worker_mem_report(struct worker* ATTR_UNUSED(worker),
 			val += (*worker->env.mesh->mods.mod[i]->get_mem)
 				(&worker->env, i);
 	}
-	verbose(VERB_DETAIL, "cache memory msg=%u rrset=%u infra=%u val=%u",
+	verbose(VERB_QUERY, "cache memory msg=%u rrset=%u infra=%u val=%u",
 		slabhash_get_mem(worker->env.msg_cache),
 		slabhash_get_mem(&worker->env.rrset_cache->table),
 		infra_get_mem(worker->env.infra_cache),
@@ -267,45 +267,45 @@ static int
 worker_check_request(ldns_buffer* pkt, struct worker* worker)
 {
 	if(ldns_buffer_limit(pkt) < LDNS_HEADER_SIZE) {
-		verbose(VERB_DETAIL, "request too short, discarded");
+		verbose(VERB_QUERY, "request too short, discarded");
 		return -1;
 	}
 	if(ldns_buffer_limit(pkt) > NORMAL_UDP_SIZE && 
 		worker->daemon->cfg->harden_large_queries) {
-		verbose(VERB_DETAIL, "request too large, discarded");
+		verbose(VERB_QUERY, "request too large, discarded");
 		return -1;
 	}
 	if(LDNS_QR_WIRE(ldns_buffer_begin(pkt))) {
-		verbose(VERB_DETAIL, "request has QR bit on, discarded");
+		verbose(VERB_QUERY, "request has QR bit on, discarded");
 		return -1;
 	}
 	if(LDNS_TC_WIRE(ldns_buffer_begin(pkt))) {
 		LDNS_TC_CLR(ldns_buffer_begin(pkt));
-		verbose(VERB_DETAIL, "request bad, has TC bit on");
+		verbose(VERB_QUERY, "request bad, has TC bit on");
 		return LDNS_RCODE_FORMERR;
 	}
 	if(LDNS_OPCODE_WIRE(ldns_buffer_begin(pkt)) != LDNS_PACKET_QUERY) {
-		verbose(VERB_DETAIL, "request unknown opcode %d", 
+		verbose(VERB_QUERY, "request unknown opcode %d", 
 			LDNS_OPCODE_WIRE(ldns_buffer_begin(pkt)));
 		return LDNS_RCODE_NOTIMPL;
 	}
 	if(LDNS_QDCOUNT(ldns_buffer_begin(pkt)) != 1) {
-		verbose(VERB_DETAIL, "request wrong nr qd=%d", 
+		verbose(VERB_QUERY, "request wrong nr qd=%d", 
 			LDNS_QDCOUNT(ldns_buffer_begin(pkt)));
 		return LDNS_RCODE_FORMERR;
 	}
 	if(LDNS_ANCOUNT(ldns_buffer_begin(pkt)) != 0) {
-		verbose(VERB_DETAIL, "request wrong nr an=%d", 
+		verbose(VERB_QUERY, "request wrong nr an=%d", 
 			LDNS_ANCOUNT(ldns_buffer_begin(pkt)));
 		return LDNS_RCODE_FORMERR;
 	}
 	if(LDNS_NSCOUNT(ldns_buffer_begin(pkt)) != 0) {
-		verbose(VERB_DETAIL, "request wrong nr ns=%d", 
+		verbose(VERB_QUERY, "request wrong nr ns=%d", 
 			LDNS_NSCOUNT(ldns_buffer_begin(pkt)));
 		return LDNS_RCODE_FORMERR;
 	}
 	if(LDNS_ARCOUNT(ldns_buffer_begin(pkt)) > 1) {
-		verbose(VERB_DETAIL, "request wrong nr ar=%d", 
+		verbose(VERB_QUERY, "request wrong nr ar=%d", 
 			LDNS_ARCOUNT(ldns_buffer_begin(pkt)));
 		return LDNS_RCODE_FORMERR;
 	}
@@ -758,7 +758,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 	}
 	if(edns.edns_present && edns.udp_size < NORMAL_UDP_SIZE &&
 		worker->daemon->cfg->harden_short_bufsize) {
-		verbose(VERB_DETAIL, "worker request: EDNS bufsize %d ignored",
+		verbose(VERB_QUERY, "worker request: EDNS bufsize %d ignored",
 			(int)edns.udp_size);
 		edns.udp_size = NORMAL_UDP_SIZE;
 	}
@@ -835,21 +835,21 @@ worker_sighandler(int sig, void* arg)
 	struct worker* worker = (struct worker*)arg;
 	switch(sig) {
 		case SIGHUP:
-			verbose(VERB_DETAIL, "caught signal SIGHUP");
+			verbose(VERB_QUERY, "caught signal SIGHUP");
 			comm_base_exit(worker->base);
 			break;
 		case SIGINT:
-			verbose(VERB_DETAIL, "caught signal SIGINT");
+			verbose(VERB_QUERY, "caught signal SIGINT");
 			worker->need_to_exit = 1;
 			comm_base_exit(worker->base);
 			break;
 		case SIGQUIT:
-			verbose(VERB_DETAIL, "caught signal SIGQUIT");
+			verbose(VERB_QUERY, "caught signal SIGQUIT");
 			worker->need_to_exit = 1;
 			comm_base_exit(worker->base);
 			break;
 		case SIGTERM:
-			verbose(VERB_DETAIL, "caught signal SIGTERM");
+			verbose(VERB_QUERY, "caught signal SIGTERM");
 			worker->need_to_exit = 1;
 			comm_base_exit(worker->base);
 			break;

@@ -285,7 +285,7 @@ read_stubs(struct iter_hints* hints, struct config_file* cfg)
 			return 0;
 		if(!hints_insert(hints, LDNS_RR_CLASS_IN, dp))
 			return 0;
-		delegpt_log(VERB_DETAIL, dp);
+		delegpt_log(VERB_QUERY, dp);
 	}
 	return 1;
 }
@@ -314,7 +314,7 @@ read_root_hints(struct iter_hints* hints, char* fname)
 		fclose(f);
 		return 0;
 	}
-	verbose(VERB_DETAIL, "Reading root hints from %s", fname);
+	verbose(VERB_QUERY, "Reading root hints from %s", fname);
 	while(!feof(f)) {
 		status = ldns_rr_new_frm_fp_l(&rr, f, 
 			&default_ttl, &origin, &prev_rr, &lineno);
@@ -391,7 +391,7 @@ read_root_hints(struct iter_hints* hints, char* fname)
 	if(!hints_insert(hints, c, dp)) {
 		return 0;
 	}
-	delegpt_log(VERB_DETAIL, dp);
+	delegpt_log(VERB_QUERY, dp);
 	return 1;
 }
 

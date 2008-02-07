@@ -83,7 +83,7 @@ log_init(const char* filename, int use_syslog, const char* chrootdir)
 	|| log_to_syslog
 #endif
 	)
-	verbose(VERB_DETAIL, "switching log to %s", 
+	verbose(VERB_QUERY, "switching log to %s", 
 		use_syslog?"syslog":(filename&&filename[0]?filename:"stderr"));
 	if(logfile && logfile != stderr)
 		fclose(logfile);

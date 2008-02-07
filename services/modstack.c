@@ -77,7 +77,7 @@ int
 modstack_config(struct module_stack* stack, const char* module_conf)
 {
         int i;
-        verbose(VERB_DETAIL, "module config: \"%s\"", module_conf);
+        verbose(VERB_QUERY, "module config: \"%s\"", module_conf);
         stack->num = count_modules(module_conf);
         if(stack->num == 0) {
                 log_err("error: no modules specified");

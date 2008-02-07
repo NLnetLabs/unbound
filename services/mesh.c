@@ -673,7 +673,7 @@ mesh_continue(struct mesh_area* mesh, struct mesh_state* mstate,
 	if(mstate->num_activated > MESH_MAX_ACTIVATION) {
 		/* module is looping. Stop it. */
 		log_err("internal error: looping module stopped");
-		log_query_info(VERB_DETAIL, "pass error for qstate",
+		log_query_info(VERB_QUERY, "pass error for qstate",
 			&mstate->s.qinfo);
 		s = module_error;
 	}
@@ -682,7 +682,7 @@ mesh_continue(struct mesh_area* mesh, struct mesh_state* mstate,
 		mstate->s.curmod++;
 		if(mesh->mods.num == mstate->s.curmod) {
 			log_err("Cannot pass to next module; at last module");
-			log_query_info(VERB_DETAIL, "pass error for qstate",
+			log_query_info(VERB_QUERY, "pass error for qstate",
 				&mstate->s.qinfo);
 			mstate->s.curmod--;
 			return mesh_continue(mesh, mstate, module_error, ev);

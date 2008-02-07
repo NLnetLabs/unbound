@@ -318,9 +318,9 @@ void log_name_addr(enum verbosity_value v, const char* str, uint8_t* zone,
 	port = ntohs(((struct sockaddr_in*)addr)->sin_port);
 	dname_str(zone, namebuf);
 	if(af != AF_INET && af != AF_INET6)
-		verbose(VERB_DETAIL, "%s <%s> %s%s#%d (addrlen %d)",
+		verbose(VERB_QUERY, "%s <%s> %s%s#%d (addrlen %d)",
 			str, namebuf, family, dest, (int)port, (int)addrlen);
-	else	verbose(VERB_DETAIL, "%s <%s> %s%s#%d",
+	else	verbose(VERB_QUERY, "%s <%s> %s%s#%d",
 			str, namebuf, family, dest, (int)port);
 }
 

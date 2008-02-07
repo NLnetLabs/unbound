@@ -103,7 +103,7 @@ donotq_insert(struct iter_donotq* dq, struct sockaddr_storage* addr,
 	node->net = net;
 	node->parent = NULL;
 	if(!rbtree_insert(dq->tree, &node->node)) {
-		verbose(VERB_DETAIL, "duplicate donotquery address ignored.");
+		verbose(VERB_QUERY, "duplicate donotquery address ignored.");
 	}
 	return 1;
 }

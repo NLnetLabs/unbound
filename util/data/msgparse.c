@@ -700,9 +700,9 @@ add_rr_to_rrset(struct rrset_parse* rrset, ldns_buffer* pkt,
 		 * also the last part is more likely to be incomplete.
 		 * RFC 2181: must put RRset only once in response. */
 		/*
-		verbose(VERB_DETAIL, "Packet contains rrset data in "
+		verbose(VERB_QUERY, "Packet contains rrset data in "
 			"multiple sections, dropped last part.");
-		log_buf(VERB_DETAIL, "packet was", pkt);
+		log_buf(VERB_QUERY, "packet was", pkt);
 		*/
 		/* forwards */
 		if(!skip_ttl_rdata(pkt))

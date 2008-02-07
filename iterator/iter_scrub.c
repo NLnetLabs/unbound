@@ -60,11 +60,11 @@ static void
 remove_rrset(const char* str, ldns_buffer* pkt, struct msg_parse* msg, 
 	struct rrset_parse* prev, struct rrset_parse** rrset)
 {
-	if(verbosity >= VERB_DETAIL 
+	if(verbosity >= VERB_QUERY 
 		&& (*rrset)->dname_len <= LDNS_MAX_DOMAINLEN) {
 		uint8_t buf[LDNS_MAX_DOMAINLEN+1];
 		dname_pkt_copy(pkt, buf, (*rrset)->dname);
-		log_nametypeclass(VERB_DETAIL, str, buf, 
+		log_nametypeclass(VERB_QUERY, str, buf, 
 			(*rrset)->type, ntohs((*rrset)->rrset_class));
 	}
 	if(prev)

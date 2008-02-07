@@ -216,7 +216,7 @@ error_supers(struct module_qstate* qstate, int id, struct module_qstate* super)
 static int
 error_response(struct module_qstate* qstate, int id, int rcode)
 {
-	verbose(VERB_DETAIL, "return error response %s", 
+	verbose(VERB_QUERY, "return error response %s", 
 		ldns_lookup_by_id(ldns_rcodes, rcode)?
 		ldns_lookup_by_id(ldns_rcodes, rcode)->name:"??");
 	qstate->return_rcode = rcode;
@@ -566,7 +566,7 @@ prime_stub(struct module_qstate* qstate, struct iter_qstate* iq,
 		return 0;
 
 	/* Otherwise, we need to (re)prime the stub. */
-	log_nametypeclass(VERB_DETAIL, "priming stub", stub_dp->name, 
+	log_nametypeclass(VERB_QUERY, "priming stub", stub_dp->name, 
 		LDNS_RR_TYPE_NS, qclass);
 
 	/* Stub priming events start at the QUERYTARGETS state to avoid the
@@ -656,13 +656,13 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 	size_t delnamelen;
 	struct dns_msg* msg;
 
-	log_query_info(VERB_DETAIL, "resolving", &qstate->qinfo);
+	log_query_info(VERB_QUERY, "resolving", &qstate->qinfo);
 	/* check effort */
 
 	/* We enforce a maximum number of query restarts. This is primarily a
 	 * cheap way to prevent CNAME loops. */
 	if(iq->query_restart_count > MAX_RESTART_COUNT) {
-		verbose(VERB_DETAIL, "request has exceeded the maximum number"
+		verbose(VERB_QUERY, "request has exceeded the maximum number"
 			" of query restarts with %d", iq->query_restart_count);
 		return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
 	}
@@ -673,7 +673,7 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 	 * of work required to answer a given query. */
 	verbose(VERB_ALGO, "request has dependency depth of %d", iq->depth);
 	if(iq->depth > ie->max_dependency_depth) {
-		verbose(VERB_DETAIL, "request has exceeded the maximum "
+		verbose(VERB_QUERY, "request has exceeded the maximum "
 			"dependency depth with depth of %d", iq->depth);
 		return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
 	}
@@ -792,7 +792,7 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 		if(iter_dp_is_useless(qstate, iq->dp)) {
 			if(dname_is_root(iq->dp->name)) {
 				/* use safety belt */
-				verbose(VERB_DETAIL, "Cache has root NS but "
+				verbose(VERB_QUERY, "Cache has root NS but "
 				"no addresses. Fallback to the safety belt.");
 				iq->dp = hints_lookup_root(ie->hints, 
 					iq->qchase.qclass);
@@ -861,7 +861,7 @@ static int
 processInitRequest2(struct module_qstate* qstate, struct iter_qstate* iq,
 	struct iter_env* ie, int id)
 {
-	log_query_info(VERB_DETAIL, "resolving (init part 2): ", 
+	log_query_info(VERB_QUERY, "resolving (init part 2): ", 
 		&qstate->qinfo);
 
 	/* Check to see if we need to prime a stub zone. */
@@ -888,7 +888,7 @@ processInitRequest2(struct module_qstate* qstate, struct iter_qstate* iq,
 static int
 processInitRequest3(struct module_qstate* qstate, struct iter_qstate* iq)
 {
-	log_query_info(VERB_DETAIL, "resolving (init part 3): ", 
+	log_query_info(VERB_QUERY, "resolving (init part 3): ", 
 		&qstate->qinfo);
 	/* If the RD flag wasn't set, then we just finish with the 
 	 * cached referral as the response. */
@@ -938,7 +938,7 @@ generate_target_query(struct module_qstate* qstate, struct iter_qstate* iq,
 			subiq->dp = delegpt_copy(iq->dp, subq->region);
 		}
 	}
-	log_nametypeclass(VERB_DETAIL, "new target", name, qtype, qclass);
+	log_nametypeclass(VERB_QUERY, "new target", name, qtype, qclass);
 	return 1;
 }
 
@@ -1052,7 +1052,7 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 	 * needs to send a query to. That is, at least one per referral, 
 	 * more if some targets timeout or return throwaway answers. */
 
-	log_query_info(VERB_DETAIL, "processQueryTargets:", &qstate->qinfo);
+	log_query_info(VERB_QUERY, "processQueryTargets:", &qstate->qinfo);
 	verbose(VERB_ALGO, "processQueryTargets: targetqueries %d, "
 		"currentqueries %d", iq->num_target_queries, 
 		iq->num_current_queries);
@@ -1061,7 +1061,7 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 	/* Make sure that we haven't run away */
 	/* FIXME: is this check even necessary? */
 	if(iq->referral_count > MAX_REFERRAL_COUNT) {
-		verbose(VERB_DETAIL, "request has exceeded the maximum "
+		verbose(VERB_QUERY, "request has exceeded the maximum "
 			"number of referrrals with %d", iq->referral_count);
 		return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
 	}
@@ -1069,7 +1069,7 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 	/* Make sure we have a delegation point, otherwise priming failed
 	 * or another failure occurred */
 	if(!iq->dp) {
-		verbose(VERB_DETAIL, "Failed to get a delegation, giving up");
+		verbose(VERB_QUERY, "Failed to get a delegation, giving up");
 		return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
 	}
 	delegpt_log(VERB_ALGO, iq->dp);
@@ -1137,7 +1137,7 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 			/* Since a target query might have been made, we 
 			 * need to check again. */
 			if(iq->num_target_queries == 0) {
-				verbose(VERB_DETAIL, "out of query targets -- "
+				verbose(VERB_QUERY, "out of query targets -- "
 					"returning SERVFAIL");
 				/* fail -- no more targets, no more hope 
 				 * of targets, no hope of a response. */
@@ -1164,8 +1164,8 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 	}
 
 	/* We have a valid target. */
-	log_query_info(VERB_DETAIL, "sending query:", &iq->qchase);
-	log_name_addr(VERB_DETAIL, "sending to target:", iq->dp->name, 
+	log_query_info(VERB_QUERY, "sending query:", &iq->qchase);
+	log_name_addr(VERB_QUERY, "sending to target:", iq->dp->name, 
 		&target->addr, target->addrlen);
 	log_assert(fptr_whitelist_modenv_send_query(qstate->env->send_query));
 	outq = (*qstate->env->send_query)(
@@ -1239,7 +1239,7 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 	if(type == RESPONSE_TYPE_ANSWER) {
 		/* ANSWER type responses terminate the query algorithm, 
 		 * so they sent on their */
-		verbose(VERB_DETAIL, "query response was ANSWER");
+		verbose(VERB_QUERY, "query response was ANSWER");
 		if(!iter_dns_store(qstate->env, &iq->response->qinfo,
 			iq->response->rep, 0))
 			return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
@@ -1254,7 +1254,7 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 	} else if(type == RESPONSE_TYPE_REFERRAL) {
 		/* REFERRAL type responses get a reset of the 
 		 * delegation point, and back to the QUERYTARGETS_STATE. */
-		verbose(VERB_DETAIL, "query response was REFERRAL");
+		verbose(VERB_QUERY, "query response was REFERRAL");
 
 		/* Store the referral under the current query */
 		if(!iter_dns_store(qstate->env, &iq->response->qinfo,
@@ -1296,7 +1296,7 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		/* CNAME type responses get a query restart (i.e., get a 
 		 * reset of the query state and go back to INIT_REQUEST_STATE).
 		 */
-		verbose(VERB_DETAIL, "query response was CNAME");
+		verbose(VERB_QUERY, "query response was CNAME");
 		if(verbosity >= VERB_ALGO)
 			log_dns_msg("cname msg", &iq->response->qinfo, 
 				iq->response->rep);
@@ -1335,7 +1335,7 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		return next_state(iq, INIT_REQUEST_STATE);
 	} else if(type == RESPONSE_TYPE_LAME) {
 		/* Cache the LAMEness. */
-		verbose(VERB_DETAIL, "query response was %sLAME",
+		verbose(VERB_QUERY, "query response was %sLAME",
 			dnsseclame?"DNSSEC ":"");
 		if(qstate->reply) {
 			/* need addr for lameness cache, but we may have
@@ -1352,7 +1352,7 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		 * In this case, the event is just sent directly back to 
 		 * the QUERYTARGETS_STATE without resetting anything, 
 		 * because, clearly, the next target must be tried. */
-		verbose(VERB_DETAIL, "query response was THROWAWAY");
+		verbose(VERB_QUERY, "query response was THROWAWAY");
 	} else {
 		log_warn("A query response came back with an unknown type: %d",
 			(int)type);
@@ -1394,7 +1394,7 @@ prime_supers(struct module_qstate* qstate, int id, struct module_qstate* forq)
 		return;
 	}
 
-	log_query_info(VERB_DETAIL, "priming successful for", &qstate->qinfo);
+	log_query_info(VERB_QUERY, "priming successful for", &qstate->qinfo);
 	delegpt_log(VERB_ALGO, dp);
 	foriq->dp = dp;
 	foriq->deleg_msg = dns_copy_msg(qstate->return_msg, forq->region);
@@ -1529,7 +1529,7 @@ static int
 processFinished(struct module_qstate* qstate, struct iter_qstate* iq,
 	int id)
 {
-	log_query_info(VERB_DETAIL, "finishing processing for", 
+	log_query_info(VERB_QUERY, "finishing processing for", 
 		&qstate->qinfo);
 
 	if(!iq->response) {
@@ -1728,7 +1728,7 @@ process_response(struct module_qstate* qstate, struct iter_qstate* iq,
 	iq->response = dns_alloc_msg(pkt, prs, qstate->region);
 	if(!iq->response)
 		goto handle_it;
-	log_name_addr(VERB_DETAIL, "incoming packet from target:", iq->dp->name, 
+	log_name_addr(VERB_QUERY, "incoming packet from target:", iq->dp->name, 
 		&qstate->reply->addr, qstate->reply->addrlen);
 	if(verbosity >= VERB_ALGO)
 		log_dns_msg("incoming scrubbed packet:", &iq->response->qinfo, 
@@ -1745,12 +1745,12 @@ iter_operate(struct module_qstate* qstate, enum module_ev event, int id,
 {
 	struct iter_env* ie = (struct iter_env*)qstate->env->modinfo[id];
 	struct iter_qstate* iq = (struct iter_qstate*)qstate->minfo[id];
-	verbose(VERB_DETAIL, "iterator[module %d] operate: extstate:%s event:%s", 
+	verbose(VERB_QUERY, "iterator[module %d] operate: extstate:%s event:%s", 
 		id, strextstate(qstate->ext_state[id]), strmodulevent(event));
-	if(iq) log_query_info(VERB_DETAIL, "iterator operate: query", 
+	if(iq) log_query_info(VERB_QUERY, "iterator operate: query", 
 		&qstate->qinfo);
 	if(iq && qstate->qinfo.qname != iq->qchase.qname)
-		log_query_info(VERB_DETAIL, "iterator operate: chased to", 
+		log_query_info(VERB_QUERY, "iterator operate: chased to", 
 			&iq->qchase);
 
 	/* perform iterator state machine */

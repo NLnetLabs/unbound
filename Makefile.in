@@ -221,9 +221,8 @@ tags:	$(srcdir)/*.[ch] $(srcdir)/*/*.[ch]
 	ctags  -f $(srcdir)/tags $(srcdir)/*.[ch] $(srcdir)/*/*.[ch]
 
 doc:
-ifdef doxygen
-	$(doxygen) $(srcdir)/doc/unbound.doxygen
-endif
+	if test -n "$(doxygen)"; then \
+		$(doxygen) $(srcdir)/doc/unbound.doxygen; fi
 
 strip:
 	strip unbound

@@ -55,9 +55,11 @@ enum verbosity_value {
 	NO_VERBOSE = 0,
  /** 1 - operational information */
  	VERB_OPS,
- /** 2 - query level information */
+ /** 2 - detailed information */
  	VERB_DETAIL,
- /** 3 - algorithm level information */
+ /** 3 - query level information */
+ 	VERB_QUERY,
+ /** 4 - algorithm level information */
  	VERB_ALGO
 };
 
