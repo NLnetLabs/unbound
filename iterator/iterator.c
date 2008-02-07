@@ -503,7 +503,7 @@ prime_root(struct module_qstate* qstate, struct iter_qstate* iq,
 {
 	struct delegpt* dp;
 	struct module_qstate* subq;
-	verbose(VERB_ALGO, "priming . NS %s", 
+	verbose(VERB_DETAIL, "priming . %s NS", 
 		ldns_lookup_by_id(ldns_rr_classes, (int)qclass)?
 		ldns_lookup_by_id(ldns_rr_classes, (int)qclass)->name:"??");
 	dp = hints_lookup_root(ie->hints, qclass);
@@ -566,7 +566,7 @@ prime_stub(struct module_qstate* qstate, struct iter_qstate* iq,
 		return 0;
 
 	/* Otherwise, we need to (re)prime the stub. */
-	log_nametypeclass(VERB_QUERY, "priming stub", stub_dp->name, 
+	log_nametypeclass(VERB_DETAIL, "priming stub", stub_dp->name, 
 		LDNS_RR_TYPE_NS, qclass);
 
 	/* Stub priming events start at the QUERYTARGETS state to avoid the
@@ -656,7 +656,7 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 	size_t delnamelen;
 	struct dns_msg* msg;
 
-	log_query_info(VERB_QUERY, "resolving", &qstate->qinfo);
+	log_query_info(VERB_DETAIL, "resolving", &qstate->qinfo);
 	/* check effort */
 
 	/* We enforce a maximum number of query restarts. This is primarily a
@@ -1239,7 +1239,7 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 	if(type == RESPONSE_TYPE_ANSWER) {
 		/* ANSWER type responses terminate the query algorithm, 
 		 * so they sent on their */
-		verbose(VERB_QUERY, "query response was ANSWER");
+		verbose(VERB_DETAIL, "query response was ANSWER");
 		if(!iter_dns_store(qstate->env, &iq->response->qinfo,
 			iq->response->rep, 0))
 			return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
@@ -1254,7 +1254,7 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 	} else if(type == RESPONSE_TYPE_REFERRAL) {
 		/* REFERRAL type responses get a reset of the 
 		 * delegation point, and back to the QUERYTARGETS_STATE. */
-		verbose(VERB_QUERY, "query response was REFERRAL");
+		verbose(VERB_DETAIL, "query response was REFERRAL");
 
 		/* Store the referral under the current query */
 		if(!iter_dns_store(qstate->env, &iq->response->qinfo,
@@ -1296,7 +1296,7 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		/* CNAME type responses get a query restart (i.e., get a 
 		 * reset of the query state and go back to INIT_REQUEST_STATE).
 		 */
-		verbose(VERB_QUERY, "query response was CNAME");
+		verbose(VERB_DETAIL, "query response was CNAME");
 		if(verbosity >= VERB_ALGO)
 			log_dns_msg("cname msg", &iq->response->qinfo, 
 				iq->response->rep);
@@ -1335,7 +1335,7 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		return next_state(iq, INIT_REQUEST_STATE);
 	} else if(type == RESPONSE_TYPE_LAME) {
 		/* Cache the LAMEness. */
-		verbose(VERB_QUERY, "query response was %sLAME",
+		verbose(VERB_DETAIL, "query response was %sLAME",
 			dnsseclame?"DNSSEC ":"");
 		if(qstate->reply) {
 			/* need addr for lameness cache, but we may have
@@ -1352,7 +1352,7 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		 * In this case, the event is just sent directly back to 
 		 * the QUERYTARGETS_STATE without resetting anything, 
 		 * because, clearly, the next target must be tried. */
-		verbose(VERB_QUERY, "query response was THROWAWAY");
+		verbose(VERB_DETAIL, "query response was THROWAWAY");
 	} else {
 		log_warn("A query response came back with an unknown type: %d",
 			(int)type);
@@ -1394,7 +1394,7 @@ prime_supers(struct module_qstate* qstate, int id, struct module_qstate* forq)
 		return;
 	}
 
-	log_query_info(VERB_QUERY, "priming successful for", &qstate->qinfo);
+	log_query_info(VERB_DETAIL, "priming successful for", &qstate->qinfo);
 	delegpt_log(VERB_ALGO, dp);
 	foriq->dp = dp;
 	foriq->deleg_msg = dns_copy_msg(qstate->return_msg, forq->region);
@@ -1728,7 +1728,8 @@ process_response(struct module_qstate* qstate, struct iter_qstate* iq,
 	iq->response = dns_alloc_msg(pkt, prs, qstate->region);
 	if(!iq->response)
 		goto handle_it;
-	log_name_addr(VERB_QUERY, "incoming packet from target:", iq->dp->name, 
+	log_query_info(VERB_DETAIL, "reponse for", &qstate->qinfo);
+	log_name_addr(VERB_DETAIL, "reply from", iq->dp->name, 
 		&qstate->reply->addr, qstate->reply->addrlen);
 	if(verbosity >= VERB_ALGO)
 		log_dns_msg("incoming scrubbed packet:", &iq->response->qinfo, 

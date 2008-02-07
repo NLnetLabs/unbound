@@ -1183,7 +1183,7 @@ processInit(struct module_qstate* qstate, struct val_qstate* vq,
 	if(vq->key_entry == NULL || dname_strict_subdomain_c(
 		vq->trust_anchor->name, vq->key_entry->name)) {
 		/* fire off a trust anchor priming query. */
-		verbose(VERB_ALGO, "prime trust anchor");
+		verbose(VERB_DETAIL, "prime trust anchor");
 		if(!prime_trust_anchor(qstate, vq, id, vq->trust_anchor))
 			return val_error(qstate, id);
 		/* and otherwise, don't continue processing this event.
@@ -1353,7 +1353,7 @@ processValidate(struct module_qstate* qstate, struct val_qstate* vq,
 
 	/* Unsigned responses must be underneath a "null" key entry.*/
 	if(key_entry_isnull(vq->key_entry)) {
-		verbose(VERB_ALGO, "Verified that %sresponse is INSECURE",
+		verbose(VERB_DETAIL, "Verified that %sresponse is INSECURE",
 			vq->signer_name?"":"unsigned ");
 		vq->chase_reply->security = sec_status_insecure;
 		val_mark_insecure(vq->chase_reply, vq->key_entry, 
@@ -1366,14 +1366,14 @@ processValidate(struct module_qstate* qstate, struct val_qstate* vq,
 	if(vq->signer_name == NULL) {
 		log_query_info(VERB_ALGO, "processValidate: state has no "
 			"signer name", &vq->qchase);
-		verbose(VERB_QUERY, "Could not establish validation of "
+		verbose(VERB_DETAIL, "Could not establish validation of "
 		          "INSECURE status of unsigned response.");
 		vq->chase_reply->security = sec_status_bogus;
 		return 1;
 	}
 
 	if(key_entry_isbad(vq->key_entry)) {
-		log_nametypeclass(VERB_QUERY, "Could not establish a chain "
+		log_nametypeclass(VERB_DETAIL, "Could not establish a chain "
 			"of trust to keys for", vq->key_entry->name,
 			LDNS_RR_TYPE_DNSKEY, vq->key_entry->key_class);
 		vq->chase_reply->security = sec_status_bogus;
@@ -1384,7 +1384,7 @@ processValidate(struct module_qstate* qstate, struct val_qstate* vq,
 	 * answer and authority must be valid, additional is only checked. */
 	if(!validate_msg_signatures(qstate->env, ve, &vq->qchase, 
 		vq->chase_reply, vq->key_entry)) {
-		verbose(VERB_QUERY, "Validate: message contains bad rrsets");
+		verbose(VERB_DETAIL, "Validate: message contains bad rrsets");
 		return 1;
 	}
 
@@ -1395,24 +1395,36 @@ processValidate(struct module_qstate* qstate, struct val_qstate* vq,
 			verbose(VERB_ALGO, "Validating a positive response");
 			validate_positive_response(qstate->env, ve,
 				&vq->qchase, vq->chase_reply, vq->key_entry);
+			verbose(VERB_DETAIL, "validate(positive): %s",
+			  	sec_status_to_string(
+				vq->chase_reply->security));
 			break;
 			
 		case VAL_CLASS_NODATA:
 			verbose(VERB_ALGO, "Validating a nodata response");
 			validate_nodata_response(qstate->env, ve,
 				&vq->qchase, vq->chase_reply, vq->key_entry);
+			verbose(VERB_DETAIL, "validate(nodata): %s",
+			  	sec_status_to_string(
+				vq->chase_reply->security));
 			break;
 
 		case VAL_CLASS_NAMEERROR:
 			verbose(VERB_ALGO, "Validating a nxdomain response");
 			validate_nameerror_response(qstate->env, ve, 
 				&vq->qchase, vq->chase_reply, vq->key_entry);
+			verbose(VERB_DETAIL, "validate(nxdomain): %s",
+			  	sec_status_to_string(
+				vq->chase_reply->security));
 			break;
 
 		case VAL_CLASS_CNAME:
 			verbose(VERB_ALGO, "Validating a cname response");
 			validate_cname_response(qstate->env, ve,
 				&vq->qchase, vq->chase_reply, vq->key_entry);
+			verbose(VERB_DETAIL, "validate(cname): %s",
+			  	sec_status_to_string(
+				vq->chase_reply->security));
 			break;
 
 		case VAL_CLASS_CNAMENOANSWER:
@@ -1420,11 +1432,17 @@ processValidate(struct module_qstate* qstate, struct val_qstate* vq,
 				"response");
 			validate_cname_noanswer_response(qstate->env, ve,
 				&vq->qchase, vq->chase_reply, vq->key_entry);
+			verbose(VERB_DETAIL, "validate(cname_noanswer): %s",
+			  	sec_status_to_string(
+				vq->chase_reply->security));
 			break;
 
 		case VAL_CLASS_REFERRAL:
 			verbose(VERB_ALGO, "Validating a referral response");
 			validate_referral_response(vq->chase_reply);
+			verbose(VERB_DETAIL, "validate(referral): %s",
+			  	sec_status_to_string(
+				vq->chase_reply->security));
 			break;
 
 		case VAL_CLASS_ANY:
@@ -1432,6 +1450,9 @@ processValidate(struct module_qstate* qstate, struct val_qstate* vq,
 				"response");
 			validate_any_response(qstate->env, ve, &vq->qchase, 
 				vq->chase_reply, vq->key_entry);
+			verbose(VERB_DETAIL, "validate(positive_any): %s",
+			  	sec_status_to_string(
+				vq->chase_reply->security));
 			break;
 
 		default:
@@ -1510,6 +1531,8 @@ processFinished(struct module_qstate* qstate, struct val_qstate* vq,
 		 * that are not secure (if clean-additional option is set) */
 		/* this may cause the msg to be marked bogus */
 		val_check_nonsecure(ve, vq->orig_msg->rep);
+		log_query_info(VERB_DETAIL, "validation success", 
+			&qstate->qinfo);
 	}
 
 	/* if the result is bogus - set message ttl to bogus ttl to avoid
@@ -1689,12 +1712,14 @@ primeResponseToKE(int rcode, struct dns_msg* msg, struct trust_anchor* ta,
 			sec = sec_status_secure;
 		else
 			sec = sec_status_bogus;
-		verbose(VERB_ALGO, "priming DS result %s", 
+		verbose(VERB_DETAIL, "validate keys with anchor(DS): %s", 
 			sec_status_to_string(sec));
 	}
 	if(sec != sec_status_secure && ta->dnskey_rrset) {
 		sec = val_verify_rrset(qstate->env, ve, dnskey_rrset,
 			ta->dnskey_rrset);
+		verbose(VERB_DETAIL, "validate keys with anchor(DNSKEY): %s", 
+			sec_status_to_string(sec));
 		if(sec == sec_status_secure) {
 			kkey = key_entry_create_rrset(qstate->region, 
 				ta->name, ta->namelen, ta->dclass, 
@@ -1725,7 +1750,7 @@ primeResponseToKE(int rcode, struct dns_msg* msg, struct trust_anchor* ta,
 		return kkey;
 	}
 
-	log_nametypeclass(VERB_ALGO, "Successfully primed trust anchor", 
+	log_nametypeclass(VERB_DETAIL, "Successfully primed trust anchor", 
 		ta->name, LDNS_RR_TYPE_DNSKEY, ta->dclass);
 	/* store the freshly primed entry in the cache */
 	key_cache_insert(ve->kcache, kkey);
@@ -1758,7 +1783,7 @@ ds_response_to_ke(struct module_qstate* qstate, struct val_qstate* vq,
 	enum val_classification subtype;
 	if(rcode != LDNS_RCODE_NOERROR) {
 		/* errors here pretty much break validation */
-		verbose(VERB_QUERY, "DS response was error, thus bogus");
+		verbose(VERB_DETAIL, "DS response was error, thus bogus");
 		goto return_bogus;
 	}
 
@@ -1779,7 +1804,7 @@ ds_response_to_ke(struct module_qstate* qstate, struct val_qstate* vq,
 		sec = val_verify_rrset_entry(qstate->env, ve, ds, 
 			vq->key_entry);
 		if(sec != sec_status_secure) {
-			verbose(VERB_QUERY, "DS rrset in DS response did "
+			verbose(VERB_DETAIL, "DS rrset in DS response did "
 				"not verify");
 			goto return_bogus;
 		}
@@ -1796,7 +1821,7 @@ ds_response_to_ke(struct module_qstate* qstate, struct val_qstate* vq,
 		}
 
 		/* Otherwise, we return the positive response. */
-		log_query_info(VERB_ALGO, "DS rrset was good.", qinfo);
+		log_query_info(VERB_DETAIL, "validated DS", qinfo);
 		*ke = key_entry_create_rrset(qstate->region,
 			qinfo->qname, qinfo->qname_len, qinfo->qclass, ds);
 		return (*ke) != NULL;
@@ -1817,19 +1842,19 @@ ds_response_to_ke(struct module_qstate* qstate, struct val_qstate* vq,
 			&proof_ttl);
 		switch(sec) {
 			case sec_status_secure:
-				verbose(VERB_ALGO, "NSEC RRset for the "
+				verbose(VERB_DETAIL, "NSEC RRset for the "
 					"referral proved no DS.");
 				*ke = key_entry_create_null(qstate->region, 
 					qinfo->qname, qinfo->qname_len, 
 					qinfo->qclass, proof_ttl);
 				return (*ke) != NULL;
 			case sec_status_insecure:
-				verbose(VERB_ALGO, "NSEC RRset for the "
+				verbose(VERB_DETAIL, "NSEC RRset for the "
 				  "referral proved not a delegation point");
 				*ke = NULL;
 				return 1;
 			case sec_status_bogus:
-				verbose(VERB_QUERY, "NSEC RRset for the "
+				verbose(VERB_DETAIL, "NSEC RRset for the "
 					"referral did not prove no DS.");
 				goto return_bogus;
 			case sec_status_unchecked:
@@ -1843,19 +1868,19 @@ ds_response_to_ke(struct module_qstate* qstate, struct val_qstate* vq,
 			msg->rep->ns_numrrsets, qinfo, vq->key_entry);
 		switch(sec) {
 			case sec_status_secure:
-				verbose(VERB_ALGO, "NSEC3s for the "
+				verbose(VERB_DETAIL, "NSEC3s for the "
 					"referral proved no DS.");
 				*ke = key_entry_create_null(qstate->region, 
 					qinfo->qname, qinfo->qname_len, 
 					qinfo->qclass, proof_ttl);
 				return (*ke) != NULL;
 			case sec_status_indeterminate:
-				verbose(VERB_ALGO, "NSEC3s for the "
+				verbose(VERB_DETAIL, "NSEC3s for the "
 				  "referral proved no delegation");
 				*ke = NULL;
 				return 1;
 			case sec_status_bogus:
-				verbose(VERB_QUERY, "NSEC3s for the "
+				verbose(VERB_DETAIL, "NSEC3s for the "
 					"referral did not prove no DS.");
 				goto return_bogus;
 			case sec_status_insecure:
@@ -1867,7 +1892,7 @@ ds_response_to_ke(struct module_qstate* qstate, struct val_qstate* vq,
 
 		/* Apparently, no available NSEC/NSEC3 proved NODATA, so 
 		 * this is BOGUS. */
-		verbose(VERB_QUERY, "DS %s ran out of options, so return "
+		verbose(VERB_DETAIL, "DS %s ran out of options, so return "
 			"bogus", val_classification_to_string(subtype));
 		goto return_bogus;
 	} else {
@@ -1967,7 +1992,7 @@ process_dnskey_response(struct module_qstate* qstate, struct val_qstate* vq,
 
 	if(dnskey == NULL) {
 		/* bad response */
-		verbose(VERB_QUERY, "Missing DNSKEY RRset in response to "
+		verbose(VERB_DETAIL, "Missing DNSKEY RRset in response to "
 			"DNSKEY query.");
 		vq->key_entry = key_entry_create_bad(qstate->region, 
 			qinfo->qname, qinfo->qname_len, qinfo->qclass);
@@ -1996,7 +2021,7 @@ process_dnskey_response(struct module_qstate* qstate, struct val_qstate* vq,
 	 * state. */
 	if(!key_entry_isgood(vq->key_entry)) {
 		if(key_entry_isbad(vq->key_entry))
-			verbose(VERB_QUERY, "Did not match a DS to a DNSKEY, "
+			verbose(VERB_DETAIL, "Did not match a DS to a DNSKEY, "
 				"thus bogus.");
 		vq->state = VAL_VALIDATE_STATE;
 		return;
@@ -2006,6 +2031,7 @@ process_dnskey_response(struct module_qstate* qstate, struct val_qstate* vq,
 	key_cache_insert(ve->kcache, vq->key_entry);
 
 	/* If good, we stay in the FINDKEY state. */
+	log_query_info(VERB_DETAIL, "validated DNSKEY", qinfo);
 }
 	
 /**

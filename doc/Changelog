@@ -2,6 +2,7 @@
 	- moved up all current level 2 to be level 3. And 3 to 4.
 	  to make room for new debug level 2 for detailed information 
 	  for operators.
+	- verbosity level 2. Describes recursion and validation.
 
 6 February 2008: Wouter
 	- clearer explanation of threading configure options.
