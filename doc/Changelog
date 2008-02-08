@@ -5,6 +5,9 @@
 	- fixup misclassification of root referral with NS in answer
 	  when validating a nonrec query.
 	- tag 0.9
+	- layout of manpages, spelling fix in header, manpages process by
+	  makedist, list asynclook and tcpstream tests as ldns-testns
+	  required.
 
 7 February 2008: Wouter
 	- moved up all current level 2 to be level 3. And 3 to 4.

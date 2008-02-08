@@ -272,7 +272,7 @@ void comm_base_dispatch(struct comm_base* b);
 
 /**
  * Exit from dispatch loop.
- * @param b: the communicatio base that is in dispatch().
+ * @param b: the communication base that is in dispatch().
  */
 void comm_base_exit(struct comm_base* b);
 

@@ -2,7 +2,7 @@
 
 NEED_SPLINT='00-lint.tpkg'
 NEED_DOXYGEN='01-doc.tpkg'
-NEED_LDNS_TESTNS='fwd_no_edns.tpkg fwd_tcp_tc.tpkg fwd_tcp.tpkg fwd_three_service.tpkg fwd_three.tpkg fwd_ttlexpire.tpkg fwd_udp.tpkg fwd_tcp_tc6.tpkg fwd_compress_c00c.tpkg fwd_ancil.tpkg stat_timer.tpkg'
+NEED_LDNS_TESTNS='fwd_no_edns.tpkg fwd_tcp_tc.tpkg fwd_tcp.tpkg fwd_three_service.tpkg fwd_three.tpkg fwd_ttlexpire.tpkg fwd_udp.tpkg fwd_tcp_tc6.tpkg fwd_compress_c00c.tpkg fwd_ancil.tpkg stat_timer.tpkg 05-asynclook.tpkg stream_tcp.tpkg'
 NEED_XXD='fwd_compress_c00c.tpkg'
 NEED_NC='fwd_compress_c00c.tpkg'
 
