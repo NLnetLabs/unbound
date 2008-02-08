@@ -1090,8 +1090,8 @@ processInit(struct module_qstate* qstate, struct val_qstate* vq,
 	uint8_t* lookup_name;
 	size_t lookup_len;
 	enum val_classification subtype = val_classify_response(
-		qstate->query_flags, &vq->qchase, vq->orig_msg->rep, 
-		vq->rrset_skip);
+		qstate->query_flags, &qstate->qinfo, &vq->qchase, 
+		vq->orig_msg->rep, vq->rrset_skip);
 	verbose(VERB_ALGO, "validator classification %s", 
 		val_classification_to_string(subtype));
 	if(subtype == VAL_CLASS_REFERRAL && 
@@ -1388,8 +1388,8 @@ processValidate(struct module_qstate* qstate, struct val_qstate* vq,
 		return 1;
 	}
 
-	subtype = val_classify_response(qstate->query_flags, &vq->qchase, 
-		vq->orig_msg->rep, vq->rrset_skip);
+	subtype = val_classify_response(qstate->query_flags, &qstate->qinfo,
+		&vq->qchase, vq->orig_msg->rep, vq->rrset_skip);
 	switch(subtype) {
 		case VAL_CLASS_POSITIVE:
 			verbose(VERB_ALGO, "Validating a positive response");
@@ -1478,8 +1478,8 @@ processFinished(struct module_qstate* qstate, struct val_qstate* vq,
 	struct val_env* ve, int id)
 {
 	enum val_classification subtype = val_classify_response(
-		qstate->query_flags, &vq->qchase, vq->orig_msg->rep, 
-		vq->rrset_skip);
+		qstate->query_flags, &qstate->qinfo, &vq->qchase, 
+		vq->orig_msg->rep, vq->rrset_skip);
 
 	/* store overall validation result in orig_msg */
 	if(vq->rrset_skip == 0)
@@ -1787,7 +1787,7 @@ ds_response_to_ke(struct module_qstate* qstate, struct val_qstate* vq,
 		goto return_bogus;
 	}
 
-	subtype = val_classify_response(BIT_RD, qinfo, msg->rep, 0);
+	subtype = val_classify_response(BIT_RD, qinfo, qinfo, msg->rep, 0);
 	if(subtype == VAL_CLASS_POSITIVE) {
 		struct ub_packed_rrset_key* ds;
 		enum sec_status sec;
