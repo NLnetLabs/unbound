@@ -80,6 +80,7 @@ enum val_classification {
 /**
  * Given a response, classify ANSWER responses into a subtype.
  * @param query_flags: query flags for the original query.
+ * @param origqinf: query info. The original query name.
  * @param qinf: query info. The chased query name.
  * @param rep: response. The original response.
  * @param skip: offset into the original response answer section.
@@ -88,7 +89,8 @@ enum val_classification {
  * 	Then, another CNAME type, CNAME_NOANSWER or POSITIVE are possible.
  */
 enum val_classification val_classify_response(uint16_t query_flags,
-	struct query_info* qinf, struct reply_info* rep, size_t skip);
+	struct query_info* origqinf, struct query_info* qinf, 
+	struct reply_info* rep, size_t skip);
 
 /**
  * Given a response, determine the name of the "signer". This is primarily

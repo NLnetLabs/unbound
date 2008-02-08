@@ -53,8 +53,8 @@
 #include "util/regional.h"
 
 enum val_classification 
-val_classify_response(uint16_t query_flags, struct query_info* qinf, 
-	struct reply_info* rep, size_t skip)
+val_classify_response(uint16_t query_flags, struct query_info* origqinf,
+	struct query_info* qinf, struct reply_info* rep, size_t skip)
 {
 	int rcode = (int)FLAGS_GET_RCODE(rep->flags);
 	size_t i;
@@ -82,7 +82,14 @@ val_classify_response(uint16_t query_flags, struct query_info* qinf,
 		}
 		return saw_ns?VAL_CLASS_REFERRAL:VAL_CLASS_NODATA;
 	}
-	
+	/* root referral where NS set is in the answer section */
+	if(!(query_flags&BIT_RD) && rep->ns_numrrsets == 0 &&
+		rep->an_numrrsets == 1 && rcode == LDNS_RCODE_NOERROR &&
+		ntohs(rep->rrsets[0]->rk.type) == LDNS_RR_TYPE_NS &&
+		query_dname_compare(rep->rrsets[0]->rk.dname, 
+			origqinf->qname) != 0)
+		return VAL_CLASS_REFERRAL;
+
 	/* dump bad messages */
 	if(rcode != LDNS_RCODE_NOERROR)
 		return VAL_CLASS_UNKNOWN;

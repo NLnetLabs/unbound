@@ -2,6 +2,9 @@
 	- test program for multiple queries over a TCP channel.
 	- tpkg test for stream tcp queries.
 	- unbound replies to multiple TCP queries on a TCP channel.
+	- fixup misclassification of root referral with NS in answer
+	  when validating a nonrec query.
+	- tag 0.9
 
 7 February 2008: Wouter
 	- moved up all current level 2 to be level 3. And 3 to 4.
