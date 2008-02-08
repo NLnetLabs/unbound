@@ -467,7 +467,8 @@ for completeness and to satisfy some DNS update tools. Default content:
 .nf
 local\-zone: "localhost." static
 local\-data: "localhost. 10800 IN NS localhost."
-local\-data: "localhost. 10800 IN SOA localhost. nobody.invalid. 1 3600 1200 604800 10800"
+local\-data: "localhost. 10800 IN 
+    SOA localhost. nobody.invalid. 1 3600 1200 604800 10800"
 local\-data: "localhost. 10800 IN A 127.0.0.1"
 local\-data: "localhost. 10800 IN AAAA ::1"
 .fi
@@ -477,17 +478,26 @@ Default content:
 .nf
 local\-zone: "127.in\-addr.arpa." static
 local\-data: "127.in\-addr.arpa. 10800 IN NS localhost."
-local\-data: "127.in\-addr.arpa. 10800 IN SOA localhost. nobody.invalid. 1 3600 1200 604800 10800"
-local\-data: "1.0.0.127.in\-addr.arpa. 10800 IN PTR localhost."
+local\-data: "127.in\-addr.arpa. 10800 IN 
+    SOA localhost. nobody.invalid. 1 3600 1200 604800 10800"
+local\-data: "1.0.0.127.in\-addr.arpa. 10800 IN 
+    PTR localhost."
 .fi
 .TP 10
 \h'5'\fIreverse IPv6 loopback\fR 
 Default content:
 .nf
-local\-zone: "1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.ip6.arpa." static
-local\-data: "1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.ip6.arpa. 10800 IN NS localhost."
-local\-data: "1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.ip6.arpa. 10800 IN SOA localhost. nobody.invalid. 1 3600 1200 604800 10800"
-local\-data: "1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.ip6.arpa. 10800 IN PTR localhost."
+local\-zone: "1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.
+    0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.ip6.arpa." static
+local\-data: "1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.
+    0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.ip6.arpa. 10800 IN 
+    NS localhost."
+local\-data: "1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.
+    0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.ip6.arpa. 10800 IN 
+    SOA localhost. nobody.invalid. 1 3600 1200 604800 10800"
+local\-data: "1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.
+    0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.ip6.arpa. 10800 IN 
+    PTR localhost."
 .fi
 .TP 10
 \h'5'\fIreverse RFC1918 local use zones\fR 
@@ -503,7 +513,8 @@ Reverse data for zones 0.in\-addr.arpa, 254.169.in\-addr.arpa,
 \h'5'\fIreverse RFC4291 IP6 unspecified\fR
 Reverse data for zone 
 .nf
-0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.ip6.arpa.
+0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.
+0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.ip6.arpa.
 .fi
 .TP 10
 \h'5'\fIreverse RFC4193 IPv6 Locally Assigned Local Addresses\fR
