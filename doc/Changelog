@@ -1,3 +1,8 @@
+8 February 2008: Wouter
+	- test program for multiple queries over a TCP channel.
+	- tpkg test for stream tcp queries.
+	- unbound replies to multiple TCP queries on a TCP channel.
+
 7 February 2008: Wouter
 	- moved up all current level 2 to be level 3. And 3 to 4.
 	  to make room for new debug level 2 for detailed information 

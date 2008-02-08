@@ -521,11 +521,9 @@ tcp_callback_writer(struct comm_point* c)
 	if(c->tcp_do_toggle_rw)
 		c->tcp_is_reading = 1;
 	c->tcp_byte_count = 0;
+	/* switch from listening(write) to listening(read) */
 	comm_point_stop_listening(c);
-	if(c->tcp_parent) /* for listening socket */
-		reclaim_tcp_handler(c);
-	else	/* its outgoing socket, start listening for reading */
-		comm_point_start_listening(c, -1, -1);
+	comm_point_start_listening(c, -1, -1);
 }
 
 /** do the callback when reading is done */
