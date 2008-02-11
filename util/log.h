@@ -85,6 +85,13 @@ void verbose(enum verbosity_value level,
 void log_init(const char* filename, int use_syslog, const char* chrootdir);
 
 /**
+ * Set logging to go to the specified file *.
+ * This setting does not affect the use_syslog setting.
+ * @param f: to that file, or pass NULL to disable logging.
+ */
+void log_file(FILE *f);
+
+/**
  * Init a thread (will print this number for the thread log entries).
  * Must be called from the thread itself. If not called 0 is printed.
  * @param num: number to print for this thread. Owned by caller, must

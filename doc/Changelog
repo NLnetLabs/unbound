@@ -2,6 +2,8 @@
 	- changed library to use ub_ instead of ub_val_ as prefix.
 	- statistics output text nice.
 	- etc/hosts handling.
+	- library function to put logging to a stream.
+	- set any option interface.
 
 8 February 2008: Wouter
 	- test program for multiple queries over a TCP channel.

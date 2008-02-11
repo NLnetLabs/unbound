@@ -272,6 +272,17 @@ void config_delete(struct config_file* config);
 void config_apply(struct config_file* config);
 
 /**
+ * Set the given keyword to the given value.
+ * @param config: where to store config
+ * @param option: option name, including the ':' character.
+ * @param value: value, this string is copied if needed, or parsed.
+ * 	The caller owns the value string.
+ * @return 0 on error (malloc or syntax error).
+ */
+int config_set_option(struct config_file* config, const char* option,
+	const char* value);
+
+/**
  * Insert string into strlist.
  * @param head: pointer to strlist head variable.
  * @param item: new item. malloced by caller. If NULL the insertion fails.

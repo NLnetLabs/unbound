@@ -208,6 +208,21 @@ struct ub_ctx* ub_ctx_create(void);
 void ub_ctx_delete(struct ub_ctx* ctx);
 
 /**
+ * Set an option for the context.
+ * @param ctx: context.
+ * @param opt: option name from the unbound.conf config file format.
+ *	(not all settings applicable). The name includes the trailing ':'
+ *	for example ub_ctx_set_option("logfile:", "mylog.txt");
+ * 	This is a power-users interface that lets you specify all sorts
+ * 	of options.
+ * 	For some specific options, such as adding trust anchors, special
+ * 	routines exist.
+ * @param val: value of the option.
+ * @return: 0 if OK, else error.
+ */
+int ub_ctx_set_option(struct ub_ctx* ctx, char* opt, char* val);
+
+/**
  * setup configuration for the given context.
  * @param ctx: context.
  * @param fname: unbound config file (not all settings applicable).
@@ -302,6 +317,16 @@ int ub_ctx_add_ta_file(struct ub_ctx* ctx, char* fname);
  * @return 0 if OK, else error.
  */
 int ub_ctx_trustedkeys(struct ub_ctx* ctx, char* fname);
+
+/**
+ * Set debug output (and error output) to the specified stream.
+ * Pass NULL to disable. Default is stderr.
+ * @param ctx: context.
+ * @param out: FILE* out file stream to log to.
+ * 	Type void* to avoid stdio dependency of this header file.
+ * @return 0 if OK, else error.
+ */
+int ub_ctx_debugout(struct ub_ctx* ctx, void* out);
 
 /**
  * Set debug verbosity for the context

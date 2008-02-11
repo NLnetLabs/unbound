@@ -55,3 +55,4 @@ o support multiple dns messages in a TCP query stream for the unbound server.
 o SIG(0) and TSIG.
 o support OPT record placement on recv anywhere in the additional section. 
 o add local-file: config with authority features.
+o option to make local-data answers be secure for libunbound (default=no)

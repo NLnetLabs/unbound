@@ -87,6 +87,10 @@ struct ub_ctx {
 	int dothread;
 	/** next thread number for new threads */
 	int thr_next_num;
+	/** if logfile is overriden */
+	int logfile_override;
+	/** what logfile to use instead */
+	FILE* log_out;
 	/** 
 	 * List of alloc-cache-id points per threadnum for notinuse threads.
 	 * Simply the entire struct alloc_cache with the 'super' member used

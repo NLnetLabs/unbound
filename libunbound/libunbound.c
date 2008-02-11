@@ -234,6 +234,22 @@ ub_ctx_delete(struct ub_ctx* ctx)
 }
 
 int 
+ub_ctx_set_option(struct ub_ctx* ctx, char* opt, char* val)
+{
+	lock_basic_lock(&ctx->cfglock);
+	if(ctx->finalized) {
+		lock_basic_unlock(&ctx->cfglock);
+		return UB_AFTERFINAL;
+	}
+	if(!config_set_option(ctx->env->cfg, opt, val)) {
+		lock_basic_unlock(&ctx->cfglock);
+		return UB_SYNTAX;
+	}
+	lock_basic_unlock(&ctx->cfglock);
+	return UB_NOERROR;
+}
+
+int 
 ub_ctx_config(struct ub_ctx* ctx, char* fname)
 {
 	lock_basic_lock(&ctx->cfglock);
@@ -312,6 +328,16 @@ ub_ctx_debuglevel(struct ub_ctx* ctx, int d)
 	lock_basic_lock(&ctx->cfglock);
 	verbosity = d;
 	ctx->env->cfg->verbosity = d;
+	lock_basic_unlock(&ctx->cfglock);
+	return UB_NOERROR;
+}
+
+int ub_ctx_debugout(struct ub_ctx* ctx, void* out)
+{
+	lock_basic_lock(&ctx->cfglock);
+	log_file((FILE*)out);
+	ctx->logfile_override = 1;
+	ctx->log_out = out;
 	lock_basic_unlock(&ctx->cfglock);
 	return UB_NOERROR;
 }

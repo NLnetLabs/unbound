@@ -16,6 +16,7 @@
 .B ub_callback_t,
 .B ub_ctx_create,
 .B ub_ctx_delete,
+.B ub_ctx_set_option,
 .B ub_ctx_config,
 .B ub_ctx_set_fwd,
 .B ub_ctx_resolvconf,
@@ -23,6 +24,7 @@
 .B ub_ctx_add_ta,
 .B ub_ctx_add_ta_file,
 .B ub_ctx_trustedkeys,
+.B ub_ctx_debugout,
 .B ub_ctx_debuglevel,
 .B ub_ctx_async,
 .B ub_poll,
@@ -46,6 +48,9 @@
 \fBub_ctx_delete\fR(\fIstruct ub_ctx*\fR ctx);
 .LP
 \fIint\fR
+\fBub_ctx_set_option\fR(\fIstruct ub_ctx*\fR ctx, \fIchar*\fR opt, \fIchar*\fR val);
+.LP
+\fIint\fR
 \fBub_ctx_config\fR(\fIstruct ub_ctx*\fR ctx, \fIchar*\fR fname);
 .LP
 \fIint\fR
@@ -65,6 +70,9 @@
 .LP
 \fIint\fR
 \fBub_ctx_trustedkeys\fR(\fIstruct ub_ctx*\fR ctx, \fIchar*\fR fname);
+.LP
+\fIint\fR
+\fBub_ctx_debugout\fR(\fIstruct ub_ctx*\fR ctx, \fIFILE*\fR out);
 .LP
 \fIint\fR
 \fBub_ctx_debuglevel\fR(\fIstruct ub_ctx*\fR ctx, \fIint\fR d);
@@ -146,6 +154,12 @@ to read them.
 Delete validation context and free associated resources.
 Outstanding async queries are killed and callbacks are not called for them.
 .TP
+.B ub_ctx_set_option
+A power\-user interface that lets you specify one of the options from the
+config file format, see \fIunbound.conf\fR(5). Not all options are
+relevant. For some specific options, such as adding trust anchors, special
+routines exist. Pass the option name with the trailing ':'.
+.TP
 .B ub_ctx_config
 A power\-user interface that lets you specify an unbound config file, see
 \fIunbound.conf\fR(5), which is read for configuration. Not all options are
@@ -197,6 +211,11 @@ Add trust anchors to the given context.
 Pass the name of a bind-style config file with trusted-keys{}.
 At this time it is only possible to add trusted keys before the
 first resolve is done.
+.TP
+.B ub_ctx_debugout
+Set debug and error log output to the given stream. Pass NULL to disable
+output. Default is stderr. File-names or using syslog can be enabled
+using config options, this routine is for using your own stream.
 .TP
 .B ub_ctx_debuglevel
 Set debug verbosity for the context. Output is directed to stderr.
