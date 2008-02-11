@@ -176,7 +176,7 @@ massage_class(const char* c)
 
 /** nice security status string */
 static const char* 
-secure_str(struct ub_val_result* result)
+secure_str(struct ub_result* result)
 {
 	if(result->secure) return "(secure)";
 	if(result->bogus) return "(BOGUS (security failure))";
@@ -274,7 +274,7 @@ pretty_rdata(char* q, char* cstr, char* tstr, int t, const char* sec,
 
 /** pretty line of output for results */
 static void
-pretty_output(char* q, int t, int c, struct ub_val_result* result, int docname)
+pretty_output(char* q, int t, int c, struct ub_result* result, int docname)
 {
 	int i;
 	const char *secstatus = secure_str(result);
@@ -337,25 +337,25 @@ pretty_output(char* q, int t, int c, struct ub_val_result* result, int docname)
 
 /** perform a lookup and printout return if domain existed */
 static int
-dnslook(struct ub_val_ctx* ctx, char* q, int t, int c, int docname)
+dnslook(struct ub_ctx* ctx, char* q, int t, int c, int docname)
 {
 	int ret;
-	struct ub_val_result* result;
+	struct ub_result* result;
 
-	ret = ub_val_resolve(ctx, q, t, c, &result);
+	ret = ub_resolve(ctx, q, t, c, &result);
 	if(ret != 0) {
-		fprintf(stderr, "resolve error: %s\n", ub_val_strerror(ret));
+		fprintf(stderr, "resolve error: %s\n", ub_strerror(ret));
 		exit(1);
 	}
 	pretty_output(q, t, c, result, docname);
 	ret = result->nxdomain;
-	ub_val_resolve_free(result);
+	ub_resolve_free(result);
 	return ret;
 }
 
 /** perform host lookup */
 static void
-lookup(struct ub_val_ctx* ctx, const char* nm, const char* qt, const char* qc)
+lookup(struct ub_ctx* ctx, const char* nm, const char* qt, const char* qc)
 {
 	/* massage input into a query name, type and class */
 	int multi = 0;	 /* no type, so do A, AAAA, MX */
@@ -374,7 +374,7 @@ lookup(struct ub_val_ctx* ctx, const char* nm, const char* qt, const char* qc)
 	} else {
 		(void)dnslook(ctx, realq, t, c, 1);
 	}
-	ub_val_ctx_delete(ctx);
+	ub_ctx_delete(ctx);
 	free(realq);
 }
 
@@ -389,10 +389,10 @@ int main(int argc, char* argv[])
 	int c;
 	char* qclass = NULL;
 	char* qtype = NULL;
-	struct ub_val_ctx* ctx = NULL;
+	struct ub_ctx* ctx = NULL;
 	int debuglevel = 0;
 	
-	ctx = ub_val_ctx_create();
+	ctx = ub_ctx_create();
 	if(!ctx) {
 		fprintf(stderr, "error: out of memory\n");
 		exit(1);
@@ -408,7 +408,7 @@ int main(int argc, char* argv[])
 			debuglevel++;
 			if(debuglevel < 2) 
 				debuglevel = 2; /* at least VERB_DETAIL */
-			ub_val_ctx_debuglevel(ctx, debuglevel);
+			ub_ctx_debuglevel(ctx, debuglevel);
 			break;
 		case 't':
 			qtype = optarg;
@@ -417,13 +417,13 @@ int main(int argc, char* argv[])
 			verb++;
 			break;
 		case 'y':
-			ub_val_ctx_add_ta(ctx, optarg);
+			ub_ctx_add_ta(ctx, optarg);
 			break;
 		case 'f':
-			ub_val_ctx_add_ta_file(ctx, optarg);
+			ub_ctx_add_ta_file(ctx, optarg);
 			break;
 		case 'F':
-			ub_val_ctx_trustedkeys(ctx, optarg);
+			ub_ctx_trustedkeys(ctx, optarg);
 			break;
 		case '?':
 		case 'h':

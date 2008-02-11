@@ -59,16 +59,16 @@
 #include "services/cache/infra.h"
 #include "services/cache/rrset.h"
 
-struct ub_val_ctx* 
-ub_val_ctx_create()
+struct ub_ctx* 
+ub_ctx_create()
 {
-	struct ub_val_ctx* ctx;
+	struct ub_ctx* ctx;
 	unsigned int seed;
 	log_init(NULL, 0, NULL); /* logs to stderr */
 	log_ident_set("libunbound");
 	verbosity = 0; /* errors only */
 	checklock_start();
-	ctx = (struct ub_val_ctx*)calloc(1, sizeof(*ctx));
+	ctx = (struct ub_ctx*)calloc(1, sizeof(*ctx));
 	if(!ctx) {
 		errno = ENOMEM;
 		return NULL;
@@ -154,7 +154,7 @@ delq(rbnode_t* n, void* ATTR_UNUSED(arg))
 }
 
 void 
-ub_val_ctx_delete(struct ub_val_ctx* ctx)
+ub_ctx_delete(struct ub_ctx* ctx)
 {
 	struct alloc_cache* a, *na;
 	if(!ctx) return;
@@ -234,7 +234,23 @@ ub_val_ctx_delete(struct ub_val_ctx* ctx)
 }
 
 int 
-ub_val_ctx_config(struct ub_val_ctx* ctx, char* fname)
+ub_ctx_set_option(struct ub_ctx* ctx, char* opt, char* val)
+{
+	lock_basic_lock(&ctx->cfglock);
+	if(ctx->finalized) {
+		lock_basic_unlock(&ctx->cfglock);
+		return UB_AFTERFINAL;
+	}
+	if(!config_set_option(ctx->env->cfg, opt, val)) {
+		lock_basic_unlock(&ctx->cfglock);
+		return UB_SYNTAX;
+	}
+	lock_basic_unlock(&ctx->cfglock);
+	return UB_NOERROR;
+}
+
+int 
+ub_ctx_config(struct ub_ctx* ctx, char* fname)
 {
 	lock_basic_lock(&ctx->cfglock);
 	if(ctx->finalized) {
@@ -250,7 +266,7 @@ ub_val_ctx_config(struct ub_val_ctx* ctx, char* fname)
 }
 
 int 
-ub_val_ctx_add_ta(struct ub_val_ctx* ctx, char* ta)
+ub_ctx_add_ta(struct ub_ctx* ctx, char* ta)
 {
 	char* dup = strdup(ta);
 	if(!dup) return UB_NOMEM;
@@ -269,7 +285,7 @@ ub_val_ctx_add_ta(struct ub_val_ctx* ctx, char* ta)
 }
 
 int 
-ub_val_ctx_add_ta_file(struct ub_val_ctx* ctx, char* fname)
+ub_ctx_add_ta_file(struct ub_ctx* ctx, char* fname)
 {
 	char* dup = strdup(fname);
 	if(!dup) return UB_NOMEM;
@@ -288,7 +304,7 @@ ub_val_ctx_add_ta_file(struct ub_val_ctx* ctx, char* fname)
 }
 
 int 
-ub_val_ctx_trustedkeys(struct ub_val_ctx* ctx, char* fname)
+ub_ctx_trustedkeys(struct ub_ctx* ctx, char* fname)
 {
 	char* dup = strdup(fname);
 	if(!dup) return UB_NOMEM;
@@ -307,7 +323,7 @@ ub_val_ctx_trustedkeys(struct ub_val_ctx* ctx, char* fname)
 }
 
 int
-ub_val_ctx_debuglevel(struct ub_val_ctx* ctx, int d)
+ub_ctx_debuglevel(struct ub_ctx* ctx, int d)
 {
 	lock_basic_lock(&ctx->cfglock);
 	verbosity = d;
@@ -316,8 +332,18 @@ ub_val_ctx_debuglevel(struct ub_val_ctx* ctx, int d)
 	return UB_NOERROR;
 }
 
+int ub_ctx_debugout(struct ub_ctx* ctx, void* out)
+{
+	lock_basic_lock(&ctx->cfglock);
+	log_file((FILE*)out);
+	ctx->logfile_override = 1;
+	ctx->log_out = out;
+	lock_basic_unlock(&ctx->cfglock);
+	return UB_NOERROR;
+}
+
 int 
-ub_val_ctx_async(struct ub_val_ctx* ctx, int dothread)
+ub_ctx_async(struct ub_ctx* ctx, int dothread)
 {
 #if !defined(HAVE_PTHREAD) && !defined(HAVE_SOLARIS_THREADS)
 	if(dothread) /* cannot do threading */
@@ -335,7 +361,7 @@ ub_val_ctx_async(struct ub_val_ctx* ctx, int dothread)
 
 /** perform a select() on the result read pipe */
 static int 
-pollit(struct ub_val_ctx* ctx, struct timeval* t)
+pollit(struct ub_ctx* ctx, struct timeval* t)
 {
 	fd_set r;
 #ifndef S_SPLINT_S
@@ -350,7 +376,7 @@ pollit(struct ub_val_ctx* ctx, struct timeval* t)
 }
 
 int 
-ub_val_poll(struct ub_val_ctx* ctx)
+ub_poll(struct ub_ctx* ctx)
 {
 	struct timeval t;
 	memset(&t, 0, sizeof(t));
@@ -359,16 +385,16 @@ ub_val_poll(struct ub_val_ctx* ctx)
 }
 
 int 
-ub_val_fd(struct ub_val_ctx* ctx)
+ub_fd(struct ub_ctx* ctx)
 {
 	return ctx->rrpipe[0];
 }
 
 /** process answer from bg worker */
 static int
-process_answer_detail(struct ub_val_ctx* ctx, uint8_t* msg, uint32_t len,
-	ub_val_callback_t* cb, void** cbarg, int* err,
-	struct ub_val_result** res)
+process_answer_detail(struct ub_ctx* ctx, uint8_t* msg, uint32_t len,
+	ub_callback_t* cb, void** cbarg, int* err,
+	struct ub_result** res)
 {
 	struct ctx_query* q;
 	if(context_serial_getcmd(msg, len) != UB_LIBCMD_ANSWER) {
@@ -397,7 +423,7 @@ process_answer_detail(struct ub_val_ctx* ctx, uint8_t* msg, uint32_t len,
 	}
 	if(*err) {
 		*res = NULL;
-		ub_val_resolve_free(q->res);
+		ub_resolve_free(q->res);
 	} else {
 		/* parse the message, extract rcode, fill result */
 		ldns_buffer* buf = ldns_buffer_new(q->msg_len);
@@ -427,12 +453,12 @@ process_answer_detail(struct ub_val_ctx* ctx, uint8_t* msg, uint32_t len,
 
 /** process answer from bg worker */
 static int
-process_answer(struct ub_val_ctx* ctx, uint8_t* msg, uint32_t len)
+process_answer(struct ub_ctx* ctx, uint8_t* msg, uint32_t len)
 {
 	int err;
-	ub_val_callback_t cb;
+	ub_callback_t cb;
 	void* cbarg;
-	struct ub_val_result* res;
+	struct ub_result* res;
 	int r;
 
 	r = process_answer_detail(ctx, msg, len, &cb, &cbarg, &err, &res);
@@ -446,7 +472,7 @@ process_answer(struct ub_val_ctx* ctx, uint8_t* msg, uint32_t len)
 }
 
 int 
-ub_val_process(struct ub_val_ctx* ctx)
+ub_process(struct ub_ctx* ctx)
 {
 	int r;
 	uint8_t* msg;
@@ -470,12 +496,12 @@ ub_val_process(struct ub_val_ctx* ctx)
 }
 
 int 
-ub_val_wait(struct ub_val_ctx* ctx)
+ub_wait(struct ub_ctx* ctx)
 {
 	int err;
-	ub_val_callback_t cb;
+	ub_callback_t cb;
 	void* cbarg;
-	struct ub_val_result* res;
+	struct ub_result* res;
 	int r;
 	uint8_t* msg;
 	uint32_t len;
@@ -523,8 +549,8 @@ ub_val_wait(struct ub_val_ctx* ctx)
 }
 
 int 
-ub_val_resolve(struct ub_val_ctx* ctx, char* name, int rrtype, 
-	int rrclass, struct ub_val_result** result)
+ub_resolve(struct ub_ctx* ctx, char* name, int rrtype, 
+	int rrclass, struct ub_result** result)
 {
 	struct ctx_query* q;
 	int r;
@@ -564,8 +590,8 @@ ub_val_resolve(struct ub_val_ctx* ctx, char* name, int rrtype,
 }
 
 int 
-ub_val_resolve_async(struct ub_val_ctx* ctx, char* name, int rrtype, 
-	int rrclass, void* mydata, ub_val_callback_t callback, int* async_id)
+ub_resolve_async(struct ub_ctx* ctx, char* name, int rrtype, 
+	int rrclass, void* mydata, ub_callback_t callback, int* async_id)
 {
 	struct ctx_query* q;
 	uint8_t* msg = NULL;
@@ -627,7 +653,7 @@ ub_val_resolve_async(struct ub_val_ctx* ctx, char* name, int rrtype,
 }
 
 int 
-ub_val_cancel(struct ub_val_ctx* ctx, int async_id)
+ub_cancel(struct ub_ctx* ctx, int async_id)
 {
 	struct ctx_query* q;
 	uint8_t* msg = NULL;
@@ -668,7 +694,7 @@ ub_val_cancel(struct ub_val_ctx* ctx, int async_id)
 }
 
 void 
-ub_val_resolve_free(struct ub_val_result* result)
+ub_resolve_free(struct ub_result* result)
 {
 	char** p;
 	if(!result) return;
@@ -684,7 +710,7 @@ ub_val_resolve_free(struct ub_val_result* result)
 }
 
 const char* 
-ub_val_strerror(int err)
+ub_strerror(int err)
 {
 	switch(err) {
 		case UB_NOERROR: return "no error";
@@ -702,7 +728,7 @@ ub_val_strerror(int err)
 }
 
 int 
-ub_val_ctx_set_fwd(struct ub_val_ctx* ctx, char* addr)
+ub_ctx_set_fwd(struct ub_ctx* ctx, char* addr)
 {
 	struct sockaddr_storage storage;
 	socklen_t stlen;
@@ -774,7 +800,7 @@ ub_val_ctx_set_fwd(struct ub_val_ctx* ctx, char* addr)
 }
 
 int 
-ub_val_ctx_resolvconf(struct ub_val_ctx* ctx, char* fname)
+ub_ctx_resolvconf(struct ub_ctx* ctx, char* fname)
 {
 	FILE* in;
 	int numserv = 0;
@@ -806,7 +832,7 @@ ub_val_ctx_resolvconf(struct ub_val_ctx* ctx, char* fname)
 			/* terminate after the address, remove newline */
 			*parse = 0;
 			
-			if((r = ub_val_ctx_set_fwd(ctx, addr)) != UB_NOERROR) {
+			if((r = ub_ctx_set_fwd(ctx, addr)) != UB_NOERROR) {
 				fclose(in);
 				return r;
 			}
@@ -815,7 +841,83 @@ ub_val_ctx_resolvconf(struct ub_val_ctx* ctx, char* fname)
 	fclose(in);
 	if(numserv == 0) {
 		/* from resolv.conf(5) if none given, use localhost */
-		return ub_val_ctx_set_fwd(ctx, "127.0.0.1");
+		return ub_ctx_set_fwd(ctx, "127.0.0.1");
 	}
+	return UB_NOERROR;
+}
+
+int
+ub_ctx_hosts(struct ub_ctx* ctx, char* fname)
+{
+	FILE* in;
+	char buf[1024], ldata[1024];
+	char* parse, *addr, *name, *ins;
+	lock_basic_lock(&ctx->cfglock);
+	if(ctx->finalized) {
+		lock_basic_unlock(&ctx->cfglock);
+		errno=EINVAL;
+		return UB_AFTERFINAL;
+	}
+	lock_basic_unlock(&ctx->cfglock);
+	if(fname == NULL)
+		fname = "/etc/hosts";
+	in = fopen(fname, "r");
+	if(!in) {
+		/* error in errno! perror(fname) */
+		return UB_READFILE;
+	}
+	while(fgets(buf, (int)sizeof(buf), in)) {
+		buf[sizeof(buf)-1] = 0;
+		parse=buf;
+		while(*parse == ' ' || *parse == '\t')
+			parse++;
+		if(*parse == '#')
+			continue; /* skip comment */
+		/* format: <addr> spaces <name> spaces <name> ... */
+		addr = parse;
+		/* skip addr */
+		while(isxdigit(*parse) || *parse == '.' || *parse == ':')
+			parse++;
+		if(*parse != ' ' && *parse != '\t') {
+			/* must have whitespace after address */
+			fclose(in);
+			errno=EINVAL;
+			return UB_SYNTAX;
+		}
+		*parse++ = 0; /* end delimiter for addr ... */
+		/* go to names and add them */
+		while(*parse) {
+			while(*parse == ' ' || *parse == '\t' || *parse=='\n')
+				parse++;
+			if(*parse == 0 || *parse == '#')
+				break;
+			/* skip name, allows (too) many printable characters */
+			name = parse;
+			while('!' <= *parse && *parse <= '~')
+				parse++;
+			if(*parse)
+				*parse++ = 0; /* end delimiter for name */
+			snprintf(ldata, sizeof(ldata), "%s %s %s",
+				name, str_is_ip6(addr)?"AAAA":"A", addr);
+			ins = strdup(ldata);
+			if(!ins) {
+				/* out of memory */
+				fclose(in);
+				errno=ENOMEM;
+				return UB_NOMEM;
+			}
+			lock_basic_lock(&ctx->cfglock);
+			if(!cfg_strlist_insert(&ctx->env->cfg->local_data, 
+				ins)) {
+				lock_basic_unlock(&ctx->cfglock);
+				fclose(in);
+				free(ins);
+				errno=ENOMEM;
+				return UB_NOMEM;
+			}
+			lock_basic_unlock(&ctx->cfglock);
+		}
+	}
+	fclose(in);
 	return UB_NOERROR;
 }

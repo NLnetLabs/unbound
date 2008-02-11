@@ -88,7 +88,7 @@ libworker_delete(struct libworker* w)
 
 /** setup fresh libworker struct */
 static struct libworker*
-libworker_setup(struct ub_val_ctx* ctx, int is_bg)
+libworker_setup(struct ub_ctx* ctx, int is_bg)
 {
 	unsigned int seed;
 	struct libworker* w = (struct libworker*)calloc(1, sizeof(*w));
@@ -354,7 +354,7 @@ libworker_dobg(void* arg)
 	uint32_t m;
 	int fd;
 	struct libworker* w = (struct libworker*)arg;
-	struct ub_val_ctx* ctx = w->ctx;
+	struct ub_ctx* ctx = w->ctx;
 	log_thread_set(&w->thread_num);
 #if !defined(HAVE_PTHREAD) && !defined(HAVE_SOLARIS_THREADS)
 	/* we are forked */
@@ -399,7 +399,7 @@ libworker_dobg(void* arg)
 	return NULL;
 }
 
-int libworker_bg(struct ub_val_ctx* ctx)
+int libworker_bg(struct ub_ctx* ctx)
 {
 	struct libworker* w;
 	/* fork or threadcreate */
@@ -457,7 +457,7 @@ parse_reply(ldns_buffer* pkt, struct regional* region, struct query_info* qi)
 
 /** insert canonname */
 static int
-fill_canon(struct ub_val_result* res, uint8_t* s)
+fill_canon(struct ub_result* res, uint8_t* s)
 {
 	char buf[255+2];
 	dname_str(s, buf);
@@ -467,7 +467,7 @@ fill_canon(struct ub_val_result* res, uint8_t* s)
 
 /** fill data into result */
 static int
-fill_res(struct ub_val_result* res, struct ub_packed_rrset_key* answer,
+fill_res(struct ub_result* res, struct ub_packed_rrset_key* answer,
 	uint8_t* finalcname, struct query_info* rq)
 {
 	size_t i;
@@ -504,7 +504,7 @@ fill_res(struct ub_val_result* res, struct ub_packed_rrset_key* answer,
 
 /** fill result from parsed message, on error fills servfail */
 void
-libworker_enter_result(struct ub_val_result* res, ldns_buffer* buf,
+libworker_enter_result(struct ub_result* res, ldns_buffer* buf,
 	struct regional* temp, enum sec_status msg_security)
 {
 	struct query_info rq;
@@ -591,7 +591,7 @@ setup_qinfo_edns(struct libworker* w, struct ctx_query* q,
 	return 1;
 }
 
-int libworker_fg(struct ub_val_ctx* ctx, struct ctx_query* q)
+int libworker_fg(struct ub_ctx* ctx, struct ctx_query* q)
 {
 	struct libworker* w = libworker_setup(ctx, 0);
 	uint16_t qflags, qid;
@@ -690,7 +690,7 @@ libworker_bg_done_cb(void* arg, int rcode, ldns_buffer* buf, enum sec_status s)
 	if(q->cancelled) {
 		if(q->w->is_bg_thread) {
 			/* delete it now */
-			struct ub_val_ctx* ctx = q->w->ctx;
+			struct ub_ctx* ctx = q->w->ctx;
 			lock_basic_lock(&ctx->cfglock);
 			(void)rbtree_delete(&ctx->queries, q->node.key);
 			ctx->num_async--;

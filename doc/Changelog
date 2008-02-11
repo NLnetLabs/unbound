@@ -1,3 +1,8 @@
+11 February 2008: Wouter
+	- nicer statistic output (from trunk).
+	- ub_val to ub_ for library API (from trunk).
+	- (from trunk) set_option, set_debugout, etc/hosts handling.
+
 8 February 2008: Wouter
 	- test program for multiple queries over a TCP channel.
 	- tpkg test for stream tcp queries.

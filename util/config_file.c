@@ -164,6 +164,168 @@ struct config_file* config_create_forlib()
 	return cfg;
 }
 
+/** check that the value passed is >= 0 */
+#define IS_NUMBER_OR_ZERO \
+	if(atoi(val) == 0 && strcmp(val, "0") != 0) return 0
+/** check that the value passed is > 0 */
+#define IS_NONZERO_NUMBER \
+	if(atoi(val) == 0) return 0
+/** check that the value passed is not 0 and a power of 2 */
+#define IS_POW2_NUMBER \
+	if(atoi(val) == 0 || !is_pow2((size_t)atoi(val))) return 0
+/** check that the value passed is yes or no */
+#define IS_YES_OR_NO \
+	if(strcmp(val, "yes") != 0 && strcmp(val, "no") != 0) return 0
+
+int config_set_option(struct config_file* cfg, const char* opt,
+        const char* val)
+{
+	if(strcmp(opt, "verbosity:") == 0) {
+		IS_NUMBER_OR_ZERO;
+		cfg->verbosity = atoi(val);
+	} else if(strcmp(opt, "statistics-interval:") == 0) {
+		if(strcmp(val, "0") == 0 || strcmp(val, "") == 0)
+			cfg->stat_interval = 0;
+		else if(atoi(val) == 0)
+			return 0;
+		else cfg->stat_interval = atoi(val);
+	} else if(strcmp(opt, "num_threads:") == 0) {
+		/* not supported, library must have 1 thread in bgworker */
+		return 0;
+	} else if(strcmp(opt, "do-ip4:") == 0) {
+		IS_YES_OR_NO;
+		cfg->do_ip4 = (strcmp(val, "yes") == 0);
+	} else if(strcmp(opt, "do-ip6:") == 0) {
+		IS_YES_OR_NO;
+		cfg->do_ip6 = (strcmp(val, "yes") == 0);
+	} else if(strcmp(opt, "do-udp:") == 0) {
+		IS_YES_OR_NO;
+		cfg->do_udp = (strcmp(val, "yes") == 0);
+	} else if(strcmp(opt, "do-tcp:") == 0) {
+		IS_YES_OR_NO;
+		cfg->do_tcp = (strcmp(val, "yes") == 0);
+	} else if(strcmp(opt, "outgoing-port:") == 0) {
+		IS_NUMBER_OR_ZERO;
+		cfg->outgoing_base_port = atoi(val);
+	} else if(strcmp(opt, "outgoing-range:") == 0) {
+		IS_NONZERO_NUMBER;
+		cfg->outgoing_num_ports = atoi(val);
+	} else if(strcmp(opt, "outgoing-num-tcp:") == 0) {
+		IS_NUMBER_OR_ZERO;
+		cfg->outgoing_num_tcp = (size_t)atoi(val);
+	} else if(strcmp(opt, "incoming-num-tcp:") == 0) {
+		IS_NUMBER_OR_ZERO;
+		cfg->incoming_num_tcp = (size_t)atoi(val);
+	} else if(strcmp(opt, "msg-buffer-size:") == 0) {
+		IS_NONZERO_NUMBER;
+		cfg->msg_buffer_size = (size_t)atoi(val);
+	} else if(strcmp(opt, "msg-cache-size:") == 0) {
+		return cfg_parse_memsize(val, &cfg->msg_cache_size);
+	} else if(strcmp(opt, "msg-cache-slabs:") == 0) {
+		IS_POW2_NUMBER;
+		cfg->msg_cache_slabs = (size_t)atoi(val);
+	} else if(strcmp(opt, "num-queries-per-thread:") == 0) {
+		IS_NONZERO_NUMBER;
+		cfg->num_queries_per_thread = (size_t)atoi(val);
+	} else if(strcmp(opt, "rrset-cache-size:") == 0) {
+		return cfg_parse_memsize(val, &cfg->rrset_cache_size);
+	} else if(strcmp(opt, "rrset-cache-slabs:") == 0) {
+		IS_POW2_NUMBER;
+		cfg->rrset_cache_slabs = (size_t)atoi(val);
+	} else if(strcmp(opt, "cache-max-ttl:") == 0) {
+		IS_NUMBER_OR_ZERO;
+		cfg->max_ttl = atoi(val);
+	} else if(strcmp(opt, "infra-host-ttl:") == 0) {
+		IS_NUMBER_OR_ZERO;
+		cfg->host_ttl = atoi(val);
+	} else if(strcmp(opt, "infra-lame-ttl:") == 0) {
+		IS_NUMBER_OR_ZERO;
+		cfg->lame_ttl = atoi(val);
+	} else if(strcmp(opt, "infra-cache-slabs:") == 0) {
+		IS_POW2_NUMBER;
+		cfg->infra_cache_slabs = (size_t)atoi(val);
+	} else if(strcmp(opt, "infra-cache-numhosts:") == 0) {
+		IS_NONZERO_NUMBER;
+		cfg->infra_cache_numhosts = (size_t)atoi(val);
+	} else if(strcmp(opt, "infra-cache-lame-size:") == 0) {
+		return cfg_parse_memsize(val, &cfg->infra_cache_lame_size);
+	} else if(strcmp(opt, "logfile:") == 0) {
+		cfg->use_syslog = 0;
+		free(cfg->logfile);
+		return (cfg->logfile = strdup(val)) != NULL;
+	} else if(strcmp(opt, "use-syslog:") == 0) {
+		IS_YES_OR_NO;
+		cfg->use_syslog = (strcmp(val, "yes") == 0);
+	} else if(strcmp(opt, "root-hints:") == 0) {
+		return cfg_strlist_insert(&cfg->root_hints, strdup(val));
+	} else if(strcmp(opt, "target-fetch-policy:") == 0) {
+		free(cfg->target_fetch_policy);
+		return (cfg->target_fetch_policy = strdup(val)) != NULL;
+	} else if(strcmp(opt, "harden-glue:") == 0) {
+		IS_YES_OR_NO;
+		cfg->harden_glue = (strcmp(val, "yes") == 0);
+	} else if(strcmp(opt, "harden-short-bufsize:") == 0) {
+		IS_YES_OR_NO;
+		cfg->harden_short_bufsize = (strcmp(val, "yes") == 0);
+	} else if(strcmp(opt, "harden-large-queries:") == 0) {
+		IS_YES_OR_NO;
+		cfg->harden_large_queries = (strcmp(val, "yes") == 0);
+	} else if(strcmp(opt, "harden-dnssec-stripped:") == 0) {
+		IS_YES_OR_NO;
+		cfg->harden_dnssec_stripped = (strcmp(val, "yes") == 0);
+	} else if(strcmp(opt, "do-not-query-localhost:") == 0) {
+		IS_YES_OR_NO;
+		cfg->donotquery_localhost = (strcmp(val, "yes") == 0);
+	} else if(strcmp(opt, "do-not-query-address:") == 0) {
+		return cfg_strlist_insert(&cfg->donotqueryaddrs, strdup(val));
+	} else if(strcmp(opt, "trust-anchor-file:") == 0) {
+		return cfg_strlist_insert(&cfg->trust_anchor_file_list, 
+			strdup(val));
+	} else if(strcmp(opt, "trust-anchor:") == 0) {
+		return cfg_strlist_insert(&cfg->trust_anchor_list, 
+			strdup(val));
+	} else if(strcmp(opt, "trusted-keys-file:") == 0) {
+		return cfg_strlist_insert(&cfg->trusted_keys_file_list, 
+			strdup(val));
+	} else if(strcmp(opt, "val-override-date:") == 0) {
+		if(strcmp(val, "") == 0 || strcmp(val, "0") == 0) {
+			cfg->val_date_override = 0;
+		} else if(strlen(val) == 14) {
+			cfg->val_date_override = cfg_convert_timeval(val);
+			return cfg->val_date_override != 0;
+		} else {
+			if(atoi(val) == 0) return 0;
+			cfg->val_date_override = (uint32_t)atoi(val);
+		}
+	} else if(strcmp(opt, "val-bogus-ttl:") == 0) {
+		IS_NUMBER_OR_ZERO;
+		cfg->bogus_ttl = atoi(val);
+	} else if(strcmp(opt, "val-clean-additional:") == 0) {
+		IS_YES_OR_NO;
+		cfg->val_clean_additional = (strcmp(val, "yes") == 0);
+	} else if(strcmp(opt, "val-permissive-mode:") == 0) {
+		IS_YES_OR_NO;
+		cfg->val_permissive_mode = (strcmp(val, "yes") == 0);
+	} else if(strcmp(opt, "val-nsec3-keysize-iterations:") == 0) {
+		free(cfg->val_nsec3_key_iterations);
+		return (cfg->val_nsec3_key_iterations = strdup(val)) != NULL;
+	} else if(strcmp(opt, "key-cache-size:") == 0) {
+		return cfg_parse_memsize(val, &cfg->key_cache_size);
+	} else if(strcmp(opt, "key-cache-slabs:") == 0) {
+		IS_POW2_NUMBER;
+		cfg->key_cache_slabs = (size_t)atoi(val);
+	} else if(strcmp(opt, "local-data:") == 0) {
+		return cfg_strlist_insert(&cfg->local_data, strdup(val));
+	} else if(strcmp(opt, "module-config:") == 0) {
+		free(cfg->module_conf);
+		return (cfg->module_conf = strdup(val)) != NULL;
+	} else {
+		/* unknown or unsupported (from the library interface) */
+		return 0;
+	}
+	return 1;
+}
+
 /** initialize the global cfg_parser object */
 static void
 create_cfg_parser(struct config_file* cfg, char* filename)

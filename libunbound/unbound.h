@@ -43,29 +43,29 @@
  * to perform (validated) DNS lookups.
  *
  * All start with
- *	ctx = ub_val_ctx_create();
- *	err = ub_val_ctx_add_ta(ctx, "...");
- *	err = ub_val_ctx_add_ta(ctx, "...");
+ *	ctx = ub_ctx_create();
+ *	err = ub_ctx_add_ta(ctx, "...");
+ *	err = ub_ctx_add_ta(ctx, "...");
  *	... some lookups
- *	... call ub_val_ctx_delete(ctx); when you want to stop.
+ *	... call ub_ctx_delete(ctx); when you want to stop.
  *
  * Application not threaded. Blocking.
- *	int err = ub_val_resolve(ctx, "www.example.com", ...
- *	if(err) fprintf(stderr, "lookup error: %s\n", ub_val_strerror(err));
+ *	int err = ub_resolve(ctx, "www.example.com", ...
+ *	if(err) fprintf(stderr, "lookup error: %s\n", ub_strerror(err));
  *	... use the answer
  *
  * Application not threaded. Non-blocking ('asynchronous').
- *      err = ub_val_resolve_async(ctx, "www.example.com", ... my_callback);
+ *      err = ub_resolve_async(ctx, "www.example.com", ... my_callback);
  *	... application resumes processing ...
- *	... and when either ub_val_poll(ctx) is true
- *	... or when the file descriptor ub_val_fd(ctx) is readable,
+ *	... and when either ub_poll(ctx) is true
+ *	... or when the file descriptor ub_fd(ctx) is readable,
  *	... or whenever, the app calls ...
- *	ub_val_process(ctx);
+ *	ub_process(ctx);
  *	... if no result is ready, the app resumes processing above,
  *	... or process() calls my_callback() with results.
  *
  *      ... if the application has nothing more to do, wait for answer
- *      ub_val_wait(ctx); 
+ *      ub_wait(ctx); 
  *
  * Application threaded. Blocking.
  *	Blocking, same as above. The current thread does the work.
@@ -74,7 +74,7 @@
  *
  * Application threaded. Non-blocking ('asynchronous').
  *	... setup threaded-asynchronous config option
- *	err = ub_val_ctx_async(ctx, 1);
+ *	err = ub_ctx_async(ctx, 1);
  *	... same as async for non-threaded
  *	... the callbacks are called in the thread that calls process(ctx)
  *
@@ -84,7 +84,7 @@
  * Otherwise, for asynchronous with threading, a worker thread is created.
  *
  * The blocking calls use shared ctx-cache when threaded. Thus
- * ub_val_resolve() and ub_val_resolve_async() && ub_val_wait() are
+ * ub_resolve() and ub_resolve_async() && ub_wait() are
  * not the same. The first makes the current thread do the work, setting
  * up buffers, etc, to perform the work (but using shared cache data).
  * The second calls another worker thread (or process) to perform the work.
@@ -100,14 +100,14 @@
  *
  * Its contents are internally defined.
  */
-struct ub_val_ctx;
+struct ub_ctx;
 
 /**
  * The validation and resolution results.
  * Allocated by the resolver, and need to be freed by the application
- * with ub_val_resolve_free().
+ * with ub_resolve_free().
  */
-struct ub_val_result {
+struct ub_result {
 	/** The original question, name text string. */
 	char* qname;
 	/** the type asked for */
@@ -179,7 +179,7 @@ struct ub_val_result {
 /**
  * Callback for results of async queries.
  * The readable function definition looks like:
- * void my_callback(void* my_arg, int err, struct ub_val_result* result);
+ * void my_callback(void* my_arg, int err, struct ub_result* result);
  * It is called with
  *	void* my_arg: your pointer to a (struct of) data of your choice, 
  *		or NULL.
@@ -187,23 +187,40 @@ struct ub_val_result {
  *	     are forthcoming.
  *	struct result: pointer to more detailed result structure.
  *		This structure is allocated on the heap and needs to be
- *		freed with ub_val_resolve_free(result);
+ *		freed with ub_resolve_free(result);
  */
-typedef void (*ub_val_callback_t)(void*, int, struct ub_val_result*);
+typedef void (*ub_callback_t)(void*, int, struct ub_result*);
 
 /**
  * Create a resolving and validation context.
+ * The information from /etc/resolv.conf and /etc/hosts is not utilised by
+ * default. Use ub_ctx_resolvconf and ub_ctx_hosts to read them.
  * @return a new context. default initialisation.
  * 	returns NULL on error.
  */
-struct ub_val_ctx* ub_val_ctx_create(void);
+struct ub_ctx* ub_ctx_create(void);
 
 /**
  * Destroy a validation context and free all its resources.
  * Outstanding async queries are killed and callbacks are not called for them.
  * @param ctx: context to delete.
  */
-void ub_val_ctx_delete(struct ub_val_ctx* ctx);
+void ub_ctx_delete(struct ub_ctx* ctx);
+
+/**
+ * Set an option for the context.
+ * @param ctx: context.
+ * @param opt: option name from the unbound.conf config file format.
+ *	(not all settings applicable). The name includes the trailing ':'
+ *	for example ub_ctx_set_option("logfile:", "mylog.txt");
+ * 	This is a power-users interface that lets you specify all sorts
+ * 	of options.
+ * 	For some specific options, such as adding trust anchors, special
+ * 	routines exist.
+ * @param val: value of the option.
+ * @return: 0 if OK, else error.
+ */
+int ub_ctx_set_option(struct ub_ctx* ctx, char* opt, char* val);
 
 /**
  * setup configuration for the given context.
@@ -215,7 +232,7 @@ void ub_val_ctx_delete(struct ub_val_ctx* ctx);
  * 	routines exist.
  * @return: 0 if OK, else error.
  */
-int ub_val_ctx_config(struct ub_val_ctx* ctx, char* fname);
+int ub_ctx_config(struct ub_ctx* ctx, char* fname);
 
 /**
  * Set machine to forward DNS queries to, the caching resolver to use. 
@@ -225,7 +242,7 @@ int ub_val_ctx_config(struct ub_val_ctx* ctx, char* fname);
  * that case the addresses are used as backup servers.
  *
  * To read the list of nameservers from /etc/resolv.conf (from DHCP or so),
- * use the call ub_val_ctx_resolvconf.
+ * use the call ub_ctx_resolvconf.
  *
  * @param ctx: context.
  *	At this time it is only possible to set configuration before the
@@ -234,7 +251,7 @@ int ub_val_ctx_config(struct ub_val_ctx* ctx, char* fname);
  * 	If the addr is NULL, forwarding is disabled.
  * @return 0 if OK, else error.
  */
-int ub_val_ctx_set_fwd(struct ub_val_ctx* ctx, char* addr);
+int ub_ctx_set_fwd(struct ub_ctx* ctx, char* addr);
 
 /**
  * Read list of nameservers to use from the filename given.
@@ -250,7 +267,20 @@ int ub_val_ctx_set_fwd(struct ub_val_ctx* ctx, char* addr);
  * @param fname: file name string. If NULL "/etc/resolv.conf" is used.
  * @return 0 if OK, else error.
  */
-int ub_val_ctx_resolvconf(struct ub_val_ctx* ctx, char* fname);
+int ub_ctx_resolvconf(struct ub_ctx* ctx, char* fname);
+
+/**
+ * Read list of hosts from the filename given.
+ * Usually "/etc/hosts". 
+ * These addresses are not flagged as DNSSEC secure when queried for.
+ *
+ * @param ctx: context.
+ *	At this time it is only possible to set configuration before the
+ *	first resolve is done.
+ * @param fname: file name string. If NULL "/etc/hosts" is used.
+ * @return 0 if OK, else error.
+ */
+int ub_ctx_hosts(struct ub_ctx* ctx, char* fname);
 
 /**
  * Add a trust anchor to the given context.
@@ -263,7 +293,7 @@ int ub_val_ctx_resolvconf(struct ub_val_ctx* ctx, char* fname);
  * 	[domainname] [TTL optional] [type] [class optional] [rdata contents]
  * @return 0 if OK, else error.
  */
-int ub_val_ctx_add_ta(struct ub_val_ctx* ctx, char* ta);
+int ub_ctx_add_ta(struct ub_ctx* ctx, char* ta);
 
 /**
  * Add trust anchors to the given context.
@@ -274,7 +304,7 @@ int ub_val_ctx_add_ta(struct ub_val_ctx* ctx, char* ta);
  * @param fname: filename of file with keyfile with trust anchors.
  * @return 0 if OK, else error.
  */
-int ub_val_ctx_add_ta_file(struct ub_val_ctx* ctx, char* fname);
+int ub_ctx_add_ta_file(struct ub_ctx* ctx, char* fname);
 
 /**
  * Add trust anchors to the given context.
@@ -286,7 +316,17 @@ int ub_val_ctx_add_ta_file(struct ub_val_ctx* ctx, char* fname);
  * 	anchors.
  * @return 0 if OK, else error.
  */
-int ub_val_ctx_trustedkeys(struct ub_val_ctx* ctx, char* fname);
+int ub_ctx_trustedkeys(struct ub_ctx* ctx, char* fname);
+
+/**
+ * Set debug output (and error output) to the specified stream.
+ * Pass NULL to disable. Default is stderr.
+ * @param ctx: context.
+ * @param out: FILE* out file stream to log to.
+ * 	Type void* to avoid stdio dependency of this header file.
+ * @return 0 if OK, else error.
+ */
+int ub_ctx_debugout(struct ub_ctx* ctx, void* out);
 
 /**
  * Set debug verbosity for the context
@@ -296,7 +336,7 @@ int ub_val_ctx_trustedkeys(struct ub_val_ctx* ctx, char* fname);
  *	and 3 is lots.
  * @return 0 if OK, else error.
  */
-int ub_val_ctx_debuglevel(struct ub_val_ctx* ctx, int d);
+int ub_ctx_debuglevel(struct ub_ctx* ctx, int d);
 
 /**
  * Set a context behaviour for asynchronous action.
@@ -308,7 +348,7 @@ int ub_val_ctx_debuglevel(struct ub_val_ctx* ctx, int d);
  *	no effect (delete and re-create the context to change).
  * @return 0 if OK, else error.
  */
-int ub_val_ctx_async(struct ub_val_ctx* ctx, int dothread);
+int ub_ctx_async(struct ub_ctx* ctx, int dothread);
 
 /**
  * Poll a context to see if it has any new results
@@ -318,27 +358,27 @@ int ub_val_ctx_async(struct ub_val_ctx* ctx, int dothread);
  * @return: 0 if nothing to read, or nonzero if a result is available.
  * 	If nonzero, call ctx_process() to do callbacks.
  */
-int ub_val_poll(struct ub_val_ctx* ctx);
+int ub_poll(struct ub_ctx* ctx);
 
 /**
- * Wait for a context to finish with results. Calls ub_val_process() after
+ * Wait for a context to finish with results. Calls ub_process() after
  * the wait for you. After the wait, there are no more outstanding 
  * asynchronous queries.
  * @param ctx: context.
  * @return: 0 if OK, else error.
  */
-int ub_val_wait(struct ub_val_ctx* ctx);
+int ub_wait(struct ub_ctx* ctx);
 
 /**
  * Get file descriptor. Wait for it to become readable, at this point
  * answers are returned from the asynchronous validating resolver.
- * Then call the ub_val_process to continue processing.
+ * Then call the ub_process to continue processing.
  * This routine works immediately after context creation, the fd
  * does not change.
  * @param ctx: context.
  * @return: -1 on error, or file descriptor to use select(2) with.
  */
-int ub_val_fd(struct ub_val_ctx* ctx);
+int ub_fd(struct ub_ctx* ctx);
 
 /**
  * Call this routine to continue processing results from the validating
@@ -347,7 +387,7 @@ int ub_val_fd(struct ub_val_ctx* ctx);
  * @param ctx: context
  * @return: 0 if OK, else error.
  */
-int ub_val_process(struct ub_val_ctx* ctx);
+int ub_process(struct ub_ctx* ctx);
 
 /**
  * Perform resolution and validation of the target name.
@@ -361,8 +401,8 @@ int ub_val_process(struct ub_val_ctx* ctx);
  * 	in that case (out of memory).
  * @return 0 if OK, else error.
  */
-int ub_val_resolve(struct ub_val_ctx* ctx, char* name, int rrtype, 
-	int rrclass, struct ub_val_result** result);
+int ub_resolve(struct ub_ctx* ctx, char* name, int rrtype, 
+	int rrclass, struct ub_result** result);
 
 /**
  * Perform resolution and validation of the target name.
@@ -379,7 +419,7 @@ int ub_val_resolve(struct ub_val_ctx* ctx, char* name, int rrtype,
  * 	and is passed on to the callback function.
  * @param callback: this is called on completion of the resolution.
  * 	It is called as:
- * 	void callback(void* mydata, int err, struct ub_val_result* result)
+ * 	void callback(void* mydata, int err, struct ub_result* result)
  * 	with mydata: the same as passed here, you may pass NULL,
  * 	with err: is 0 when a result has been found.
  * 	with result: a newly allocated result structure.
@@ -392,8 +432,8 @@ int ub_val_resolve(struct ub_val_ctx* ctx, char* name, int rrtype,
  *	cancel the query.
  * @return 0 if OK, else error.
  */
-int ub_val_resolve_async(struct ub_val_ctx* ctx, char* name, int rrtype, 
-	int rrclass, void* mydata, ub_val_callback_t callback, int* async_id);
+int ub_resolve_async(struct ub_ctx* ctx, char* name, int rrtype, 
+	int rrclass, void* mydata, ub_callback_t callback, int* async_id);
 
 /**
  * Cancel an async query in progress.
@@ -403,19 +443,19 @@ int ub_val_resolve_async(struct ub_val_ctx* ctx, char* name, int rrtype,
  * @param async_id: which query to cancel.
  * @return 0 if OK, else error.
  */
-int ub_val_cancel(struct ub_val_ctx* ctx, int async_id);
+int ub_cancel(struct ub_ctx* ctx, int async_id);
 
 /**
  * Free storage associated with a result structure.
  * @param result: to free
  */
-void ub_val_resolve_free(struct ub_val_result* result);
+void ub_resolve_free(struct ub_result* result);
 
 /** 
  * Convert error value to a human readable string.
  * @param err: error code from one of the ub_val* functions.
  * @return pointer to constant text string, zero terminated.
  */
-const char* ub_val_strerror(int err);
+const char* ub_strerror(int err);
 
 #endif /* _UB_UNBOUND_H */

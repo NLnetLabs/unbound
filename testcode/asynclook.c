@@ -56,7 +56,7 @@ struct lookinfo {
 	/** error code from libunbound */
 	int err;
 	/** result from lookup */
-	struct ub_val_result* result;
+	struct ub_result* result;
 };
 
 /** global variable to see how many queries we have left */
@@ -72,6 +72,7 @@ void usage(char* argv[])
 	printf("	-d : enable debug output\n");
 	printf("	-f addr : use addr, forward to that server\n");
 	printf("	-h : this help message\n");
+	printf("	-H fname : read hosts from fname\n");
 	printf("	-r fname : read resolv.conf from fname\n");
 	printf("	-t : use a resolver thread instead of forking a process\n");
 	printf("	-x : perform extended threaded test\n");
@@ -85,7 +86,7 @@ print_result(struct lookinfo* info)
 	char buf[100];
 	if(info->err) /* error (from libunbound) */
 		printf("%s: error %s\n", info->name,
-			ub_val_strerror(info->err));
+			ub_strerror(info->err));
 	else if(!info->result)
 		printf("%s: cancelled\n", info->name);
 	else if(info->result->havedata)
@@ -105,9 +106,9 @@ print_result(struct lookinfo* info)
 	}
 }
 
-/** this is a function of type ub_val_callback_t */
+/** this is a function of type ub_callback_t */
 static void 
-lookup_is_done(void* mydata, int err, struct ub_val_result* result)
+lookup_is_done(void* mydata, int err, struct ub_result* result)
 {
 	/* cast mydata back to the correct type */
 	struct lookinfo* info = (struct lookinfo*)mydata;
@@ -123,7 +124,7 @@ static void
 checkerr(const char* desc, int err)
 {
 	if(err != 0) {
-		printf("%s error: %s\n", desc, ub_val_strerror(err));
+		printf("%s error: %s\n", desc, ub_strerror(err));
 		exit(1);
 	}
 }
@@ -143,7 +144,7 @@ struct ext_thr_info {
 	/** thread id */
 	ub_thread_t tid;
 	/** context */
-	struct ub_val_ctx* ctx;
+	struct ub_ctx* ctx;
 	/** size of array to query */
 	int argc;
 	/** array of names to query */
@@ -157,7 +158,7 @@ static int q_is_localhost = 0;
 
 /** check result structure for the 'correct' answer */
 static void
-ext_check_result(const char* desc, int err, struct ub_val_result* result)
+ext_check_result(const char* desc, int err, struct ub_result* result)
 {
 	checkerr(desc, err);
 	if(result == NULL) {
@@ -218,9 +219,9 @@ ext_check_result(const char* desc, int err, struct ub_val_result* result)
 	}
 }
 
-/** extended bg result callback, this function is ub_val_callback_t */
+/** extended bg result callback, this function is ub_callback_t */
 static void 
-ext_callback(void* mydata, int err, struct ub_val_result* result)
+ext_callback(void* mydata, int err, struct ub_result* result)
 {
 	int* my_id = (int*)mydata;
 	int doprint = 0;
@@ -243,7 +244,7 @@ ext_callback(void* mydata, int err, struct ub_val_result* result)
 		pi.err = 0;
 		print_result(&pi);
 	}
-	ub_val_resolve_free(result);
+	ub_resolve_free(result);
 }
 
 /** extended thread worker */
@@ -252,7 +253,7 @@ ext_thread(void* arg)
 {
 	struct ext_thr_info* inf = (struct ext_thr_info*)arg;
 	int i, r;
-	struct ub_val_result* result;
+	struct ub_result* result;
 	int* async_ids = NULL;
 	log_thread_set(&inf->thread_num);
 	if(inf->thread_num > NUMTHR*2/3) {
@@ -264,32 +265,32 @@ ext_thread(void* arg)
 	}
 	for(i=0; i<inf->numq; i++) {
 		if(async_ids) {
-			r = ub_val_resolve_async(inf->ctx, 
+			r = ub_resolve_async(inf->ctx, 
 				inf->argv[i%inf->argc], LDNS_RR_TYPE_A, 
 				LDNS_RR_CLASS_IN, &async_ids[i], ext_callback, 
 				&async_ids[i]);
-			checkerr("ub_val_resolve_async", r);
+			checkerr("ub_resolve_async", r);
 			if(i > 100) {
-				r = ub_val_cancel(inf->ctx, async_ids[i-100]);
-				checkerr("ub_val_cancel", r);
+				r = ub_cancel(inf->ctx, async_ids[i-100]);
+				checkerr("ub_cancel", r);
 				async_ids[i-100]=0;
 			}
 		} else if(inf->thread_num > NUMTHR/2) {
 			/* async */
-			r = ub_val_resolve_async(inf->ctx, 
+			r = ub_resolve_async(inf->ctx, 
 				inf->argv[i%inf->argc], LDNS_RR_TYPE_A, 
 				LDNS_RR_CLASS_IN, NULL, ext_callback, NULL);
-			checkerr("ub_val_resolve_async", r);
+			checkerr("ub_resolve_async", r);
 		} else  {
 			/* blocking */
-			r = ub_val_resolve(inf->ctx, inf->argv[i%inf->argc], 
+			r = ub_resolve(inf->ctx, inf->argv[i%inf->argc], 
 				LDNS_RR_TYPE_A, LDNS_RR_CLASS_IN, &result);
-			ext_check_result("ub_val_resolve", r, result);
+			ext_check_result("ub_resolve", r, result);
 		}
 	}
 	if(inf->thread_num > NUMTHR/2) {
-		r = ub_val_wait(inf->ctx);
-		checkerr("ub_val_ctx_wait", r);
+		r = ub_wait(inf->ctx);
+		checkerr("ub_ctx_wait", r);
 	}
 	free(async_ids);
 	
@@ -298,7 +299,7 @@ ext_thread(void* arg)
 
 /** perform extended threaded test */
 static int
-ext_test(struct ub_val_ctx* ctx, int argc, char** argv)
+ext_test(struct ub_ctx* ctx, int argc, char** argv)
 {
 	struct ext_thr_info inf[NUMTHR];
 	int i;
@@ -319,7 +320,7 @@ ext_test(struct ub_val_ctx* ctx, int argc, char** argv)
 		ub_thread_join(inf[i].tid);
 	}
 	printf("extended test end\n");
-	ub_val_ctx_delete(ctx);
+	ub_ctx_delete(ctx);
 	checklock_stop();
 	return 0;
 }
@@ -333,7 +334,7 @@ extern char* optarg;
 int main(int argc, char** argv) 
 {
 	int c;
-	struct ub_val_ctx* ctx;
+	struct ub_ctx* ctx;
 	struct lookinfo* lookups;
 	int i, r, cancel=0, blocking=0, ext=0;
 
@@ -341,7 +342,7 @@ int main(int argc, char** argv)
 	checklock_start();
 
 	/* create context */
-	ctx = ub_val_ctx_create();
+	ctx = ub_ctx_create();
 	if(!ctx) {
 		printf("could not create context, %s\n", strerror(errno));
 		return 1;
@@ -351,15 +352,15 @@ int main(int argc, char** argv)
 	if(argc == 1) {
 		usage(argv);
 	}
-	while( (c=getopt(argc, argv, "bcdf:hr:tx")) != -1) {
+	while( (c=getopt(argc, argv, "bcdf:hH:r:tx")) != -1) {
 		switch(c) {
 			case 'd':
-				r = ub_val_ctx_debuglevel(ctx, 3);
-				checkerr("ub_val_ctx_debuglevel", r);
+				r = ub_ctx_debuglevel(ctx, 3);
+				checkerr("ub_ctx_debuglevel", r);
 				break;
 			case 't':
-				r = ub_val_ctx_async(ctx, 1);
-				checkerr("ub_val_ctx_async", r);
+				r = ub_ctx_async(ctx, 1);
+				checkerr("ub_ctx_async", r);
 				break;
 			case 'c':
 				cancel = 1;
@@ -368,18 +369,28 @@ int main(int argc, char** argv)
 				blocking = 1;
 				break;
 			case 'r':
-				r = ub_val_ctx_resolvconf(ctx, optarg);
+				r = ub_ctx_resolvconf(ctx, optarg);
 				if(r != 0) {
-					printf("ub_val_ctx_resolvconf "
+					printf("ub_ctx_resolvconf "
 						"error: %s : %s\n",
-						ub_val_strerror(r), 
+						ub_strerror(r), 
+						strerror(errno));
+					return 1;
+				}
+				break;
+			case 'H':
+				r = ub_ctx_hosts(ctx, optarg);
+				if(r != 0) {
+					printf("ub_ctx_hosts "
+						"error: %s : %s\n",
+						ub_strerror(r), 
 						strerror(errno));
 					return 1;
 				}
 				break;
 			case 'f':
-				r = ub_val_ctx_set_fwd(ctx, optarg);
-				checkerr("ub_val_ctx_set_fwd", r);
+				r = ub_ctx_set_fwd(ctx, optarg);
+				checkerr("ub_ctx_set_fwd", r);
 				break;
 			case 'x':
 				ext = 1;
@@ -410,15 +421,15 @@ int main(int argc, char** argv)
 		lookups[i].name = argv[i];
 		if(blocking) {
 			fprintf(stderr, "lookup %s\n", argv[i]);
-			r = ub_val_resolve(ctx, argv[i], LDNS_RR_TYPE_A,
+			r = ub_resolve(ctx, argv[i], LDNS_RR_TYPE_A,
 				LDNS_RR_CLASS_IN, &lookups[i].result);
-			checkerr("ub_val_resolve", r);
+			checkerr("ub_resolve", r);
 		} else {
 			fprintf(stderr, "start async lookup %s\n", argv[i]);
-			r = ub_val_resolve_async(ctx, argv[i], LDNS_RR_TYPE_A,
+			r = ub_resolve_async(ctx, argv[i], LDNS_RR_TYPE_A,
 				LDNS_RR_CLASS_IN, &lookups[i], &lookup_is_done, 
 				&lookups[i].async_id);
-			checkerr("ub_val_resolve_async", r);
+			checkerr("ub_resolve_async", r);
 		}
 	}
 	if(blocking)
@@ -426,8 +437,8 @@ int main(int argc, char** argv)
 	else if(cancel) {
 		for(i=0; i<argc; i++) {
 			fprintf(stderr, "cancel %s\n", argv[i]);
-			r = ub_val_cancel(ctx, lookups[i].async_id);
-			checkerr("ub_val_cancel", r);
+			r = ub_cancel(ctx, lookups[i].async_id);
+			checkerr("ub_cancel", r);
 		}
 		num_wait = 0;
 	}
@@ -437,8 +448,8 @@ int main(int argc, char** argv)
 	    for(i=0; i<1000; i++) {
 		usleep(100000);
 		fprintf(stderr, "%g seconds passed\n", 0.1*(double)i);
-		r = ub_val_process(ctx);
-		checkerr("ub_val_process", r);
+		r = ub_process(ctx);
+		checkerr("ub_process", r);
 		if(num_wait == 0)
 			break;
 	}
@@ -451,10 +462,10 @@ int main(int argc, char** argv)
 	/* print lookup results */
 	for(i=0; i<argc; i++) {
 		print_result(&lookups[i]);
-		ub_val_resolve_free(lookups[i].result);
+		ub_resolve_free(lookups[i].result);
 	}
 
-	ub_val_ctx_delete(ctx);
+	ub_ctx_delete(ctx);
 	free(lookups);
 	checklock_stop();
 	return 0;

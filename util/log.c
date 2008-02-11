@@ -104,7 +104,7 @@ log_init(const char* filename, int use_syslog, const char* chrootdir)
 	}
 	/* open the file for logging */
 	if(chrootdir && chrootdir[0] && strncmp(filename, chrootdir,
-		strlen(chrootdir)) == 0)
+		strlen(chrootdir)) == 0) 
 		filename += strlen(chrootdir);
 	f = fopen(filename, "a");
 	if(!f) {
@@ -112,6 +112,11 @@ log_init(const char* filename, int use_syslog, const char* chrootdir)
 			strerror(errno));
 		return;
 	}
+	logfile = f;
+}
+
+void log_file(FILE *f)
+{
 	logfile = f;
 }
 
@@ -140,6 +145,7 @@ log_vmsg(int pri, const char* type,
 		return;
 	}
 #endif /* HAVE_SYSLOG_H */
+	if(!logfile) return;
 	fprintf(logfile, "[%d] %s[%d:%x] %s: %s\n", (int)time(NULL), 
 		ident, (int)getpid(), tid?*tid:0, type, message);
 	fflush(logfile);

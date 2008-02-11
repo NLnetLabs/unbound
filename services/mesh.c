@@ -768,20 +768,21 @@ mesh_log_list(struct mesh_area* mesh)
 void 
 mesh_stats(struct mesh_area* mesh, const char* str)
 {
-	log_info("%s %u states (%u with reply, %u detached), "
-		"%u waiting replies", str, (unsigned)mesh->all.count, 
+	verbose(VERB_DETAIL, "%s %u recursion states (%u with reply, "
+		"%u detached), %u waiting replies, %u recursion replies "
+		"sent", str, (unsigned)mesh->all.count, 
 		(unsigned)mesh->num_reply_states,
 		(unsigned)mesh->num_detached_states,
-		(unsigned)mesh->num_reply_addrs);
+		(unsigned)mesh->num_reply_addrs,
+		(unsigned)mesh->replies_sent);
 	if(mesh->replies_sent > 0) {
 		struct timeval avg;
 		timeval_divide(&avg, &mesh->replies_sum_wait, 
 			mesh->replies_sent);
-		log_info("sent %u replies, with average wait "
-			"of %d.%6.6d sec", (unsigned)mesh->replies_sent,
-			(int)avg.tv_sec, (int)avg.tv_usec);
-		log_info("histogram of reply wait times");
-		timehist_log(mesh->histogram);
+		log_info("average recursion processing time "
+			"%d.%6.6d sec", (int)avg.tv_sec, (int)avg.tv_usec);
+		log_info("histogram of recursion processing times");
+		timehist_log(mesh->histogram, "recursions");
 	}
 }
 

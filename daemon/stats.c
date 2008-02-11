@@ -59,10 +59,12 @@ void server_stats_querymiss(struct server_stats* stats, struct worker* worker)
 
 void server_stats_log(struct server_stats* stats, int threadnum)
 {
-	log_info("server stats for thread %d: %u queries, %u from cache", 
+	log_info("server stats for thread %d: %u queries, "
+		"%u answers from cache, %u recursions", 
 		threadnum, (unsigned)stats->num_queries, 
 		(unsigned)(stats->num_queries - 
-			stats->num_queries_missed_cache));
+			stats->num_queries_missed_cache),
+		(unsigned)stats->num_queries_missed_cache);
 	log_info("server stats for thread %d: requestlist max %u avg %g "
 		"exceeded %u", threadnum, (unsigned)stats->max_query_list_size,
 		stats->num_queries_missed_cache?

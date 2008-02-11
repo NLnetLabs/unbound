@@ -108,7 +108,8 @@ void timehist_print(struct timehist* hist);
 /**
  * Log histogram, print it to the logfile.
  * @param hist: histogram
+ * @param name: the name of the value column
  */
-void timehist_log(struct timehist* hist);
+void timehist_log(struct timehist* hist, const char* name);
 
 #endif /* UTIL_TIMEHIST_H */

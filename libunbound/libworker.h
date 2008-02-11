@@ -44,8 +44,8 @@
 #ifndef LIBUNBOUND_WORKER_H
 #define LIBUNBOUND_WORKER_H
 #include "util/data/packed_rrset.h"
-struct ub_val_ctx;
-struct ub_val_result;
+struct ub_ctx;
+struct ub_result;
 struct module_env;
 struct comm_base;
 struct outside_network;
@@ -66,7 +66,7 @@ struct libworker {
 	/** every worker has a unique thread_num. (first in struct) */
 	int thread_num;
 	/** context we are operating under */
-	struct ub_val_ctx* ctx;
+	struct ub_ctx* ctx;
 
 	/** is this the bg worker? */
 	int is_bg;
@@ -122,7 +122,7 @@ struct libworker_res_list {
  * @return 0 if OK, else error.
  *	Further communication is done via the pipes in ctx. 
  */
-int libworker_bg(struct ub_val_ctx* ctx);
+int libworker_bg(struct ub_ctx* ctx);
 
 /**
  * Create a foreground worker.
@@ -133,7 +133,7 @@ int libworker_bg(struct ub_val_ctx* ctx);
  * @param q: query (result is stored in here).
  * @return 0 if finished OK, else error.
  */
-int libworker_fg(struct ub_val_ctx* ctx, struct ctx_query* q);
+int libworker_fg(struct ub_ctx* ctx, struct ctx_query* q);
 
 /** cleanup the cache to remove all rrset IDs from it, arg is libworker */
 void libworker_alloc_cleanup(void* arg);
@@ -230,7 +230,7 @@ int libworker_read_msg(int fd, uint8_t** buf, uint32_t* len, int nonblock);
  *   On error, the res may contain a different status 
  *   (out of memory is not secure, not bogus).
  */
-void libworker_enter_result(struct ub_val_result* res, ldns_buffer* buf,
+void libworker_enter_result(struct ub_result* res, ldns_buffer* buf,
 	struct regional* temp, enum sec_status msg_security);
 
 #endif /* LIBUNBOUND_WORKER_H */

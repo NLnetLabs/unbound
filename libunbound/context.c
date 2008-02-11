@@ -51,11 +51,13 @@
 #include "util/storage/slabhash.h"
 
 int 
-context_finalize(struct ub_val_ctx* ctx)
+context_finalize(struct ub_ctx* ctx)
 {
 	struct config_file* cfg = ctx->env->cfg;
 	verbosity = cfg->verbosity;
-	log_init(cfg->logfile, cfg->use_syslog, NULL);
+	if(ctx->logfile_override)
+		log_file(ctx->log_out);
+	else	log_init(cfg->logfile, cfg->use_syslog, NULL);
 	config_apply(cfg);
 	if(!modstack_setup(&ctx->mods, cfg->module_conf, ctx->env))
 		return UB_INITFAIL;
@@ -99,7 +101,7 @@ void
 context_query_delete(struct ctx_query* q) 
 {
 	if(!q) return;
-	ub_val_resolve_free(q->res);
+	ub_resolve_free(q->res);
 	free(q->msg);
 	free(q);
 }
@@ -108,7 +110,7 @@ context_query_delete(struct ctx_query* q)
 #define NUM_ID_TRIES 100000
 /** find next useful id number of 0 on error */
 static int
-find_id(struct ub_val_ctx* ctx, int* id)
+find_id(struct ub_ctx* ctx, int* id)
 {
 	size_t tries = 0;
 	ctx->next_querynum++;
@@ -122,8 +124,8 @@ find_id(struct ub_val_ctx* ctx, int* id)
 }
 
 struct ctx_query* 
-context_new(struct ub_val_ctx* ctx, char* name, int rrtype, int rrclass, 
-	ub_val_callback_t cb, void* cbarg)
+context_new(struct ub_ctx* ctx, char* name, int rrtype, int rrclass, 
+	ub_callback_t cb, void* cbarg)
 {
 	struct ctx_query* q = (struct ctx_query*)calloc(1, sizeof(*q));
 	if(!q) return NULL;
@@ -138,7 +140,7 @@ context_new(struct ub_val_ctx* ctx, char* name, int rrtype, int rrclass,
 	q->async = (cb != NULL);
 	q->cb = cb;
 	q->cb_arg = cbarg;
-	q->res = (struct ub_val_result*)calloc(1, sizeof(*q->res));
+	q->res = (struct ub_result*)calloc(1, sizeof(*q->res));
 	if(!q->res) {
 		free(q);
 		return NULL;
@@ -162,7 +164,7 @@ context_new(struct ub_val_ctx* ctx, char* name, int rrtype, int rrclass,
 }
 
 struct alloc_cache* 
-context_obtain_alloc(struct ub_val_ctx* ctx, int locking)
+context_obtain_alloc(struct ub_ctx* ctx, int locking)
 {
 	struct alloc_cache* a;
 	int tnum = 0;
@@ -188,7 +190,7 @@ context_obtain_alloc(struct ub_val_ctx* ctx, int locking)
 }
 
 void 
-context_release_alloc(struct ub_val_ctx* ctx, struct alloc_cache* alloc,
+context_release_alloc(struct ub_ctx* ctx, struct alloc_cache* alloc,
 	int locking)
 {
 	if(!ctx || !alloc)
@@ -227,7 +229,7 @@ context_serialize_new_query(struct ctx_query* q, uint32_t* len)
 }
 
 struct ctx_query* 
-context_deserialize_new_query(struct ub_val_ctx* ctx, uint8_t* p, uint32_t len)
+context_deserialize_new_query(struct ub_ctx* ctx, uint8_t* p, uint32_t len)
 {
 	struct ctx_query* q = (struct ctx_query*)calloc(1, sizeof(*q));
 	if(!q) return NULL;
@@ -239,7 +241,7 @@ context_deserialize_new_query(struct ub_val_ctx* ctx, uint8_t* p, uint32_t len)
 	q->querynum = (int)ldns_read_uint32(p+sizeof(uint32_t));
 	q->node.key = &q->querynum;
 	q->async = 1;
-	q->res = (struct ub_val_result*)calloc(1, sizeof(*q->res));
+	q->res = (struct ub_result*)calloc(1, sizeof(*q->res));
 	if(!q->res) {
 		free(q);
 		return NULL;
@@ -260,7 +262,7 @@ context_deserialize_new_query(struct ub_val_ctx* ctx, uint8_t* p, uint32_t len)
 }
 
 struct ctx_query* 
-context_lookup_new_query(struct ub_val_ctx* ctx, uint8_t* p, uint32_t len)
+context_lookup_new_query(struct ub_ctx* ctx, uint8_t* p, uint32_t len)
 {
 	struct ctx_query* q;
 	int querynum;
@@ -304,7 +306,7 @@ context_serialize_answer(struct ctx_query* q, int err, ldns_buffer* pkt,
 }
 
 struct ctx_query* 
-context_deserialize_answer(struct ub_val_ctx* ctx,
+context_deserialize_answer(struct ub_ctx* ctx,
         uint8_t* p, uint32_t len, int* err)
 {
 	struct ctx_query* q = NULL ;
@@ -343,7 +345,7 @@ context_serialize_cancel(struct ctx_query* q, uint32_t* len)
 	return p;
 }
 
-struct ctx_query* context_deserialize_cancel(struct ub_val_ctx* ctx,
+struct ctx_query* context_deserialize_cancel(struct ub_ctx* ctx,
         uint8_t* p, uint32_t len)
 {
 	struct ctx_query* q;
