@@ -874,8 +874,8 @@ worker_restart_timer(struct worker* worker)
 void worker_stat_timer_cb(void* arg)
 {
 	struct worker* worker = (struct worker*)arg;
-	mesh_stats(worker->env.mesh, "mesh has");
 	server_stats_log(&worker->stats, worker->thread_num);
+	mesh_stats(worker->env.mesh, "mesh has");
 	worker_mem_report(worker, NULL);
 	server_stats_init(&worker->stats);
 	mesh_stats_clear(worker->env.mesh);
@@ -1046,8 +1046,8 @@ worker_delete(struct worker* worker)
 	if(!worker) 
 		return;
 	if(worker->env.mesh && verbosity >= VERB_OPS) {
-		mesh_stats(worker->env.mesh, "mesh has");
 		server_stats_log(&worker->stats, worker->thread_num);
+		mesh_stats(worker->env.mesh, "mesh has");
 		worker_mem_report(worker, NULL);
 	}
 	mesh_delete(worker->env.mesh);

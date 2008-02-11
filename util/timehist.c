@@ -156,7 +156,7 @@ void timehist_print(struct timehist* hist)
 #endif
 }
 
-void timehist_log(struct timehist* hist)
+void timehist_log(struct timehist* hist, const char* name)
 {
 #ifndef S_SPLINT_S
 	size_t i;
@@ -165,7 +165,7 @@ void timehist_log(struct timehist* hist)
 		timehist_quartile(hist, 0.50),
 		timehist_quartile(hist, 0.75));
 	/*        0000.000000 0000.000000 0 */
-	log_info("lower(secs) upper(secs) replycount");
+	log_info("lower(secs) upper(secs) %s", name);
 	for(i=0; i<hist->num; i++) {
 		if(hist->buckets[i].count != 0) {
 			log_info("%4d.%6.6d %4d.%6.6d %u",

@@ -1,5 +1,6 @@
 11 February 2008: Wouter
 	- changed library to use ub_ instead of ub_val_ as prefix.
+	- statistics output text nice.
 
 8 February 2008: Wouter
 	- test program for multiple queries over a TCP channel.
