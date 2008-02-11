@@ -164,18 +164,22 @@ struct config_file* config_create_forlib()
 	return cfg;
 }
 
-int config_set_option(struct config_file* cfg, const char* opt,
-        const char* val)
-{
+/** check that the value passed is >= 0 */
 #define IS_NUMBER_OR_ZERO \
 	if(atoi(val) == 0 && strcmp(val, "0") != 0) return 0
+/** check that the value passed is > 0 */
 #define IS_NONZERO_NUMBER \
 	if(atoi(val) == 0) return 0
+/** check that the value passed is not 0 and a power of 2 */
 #define IS_POW2_NUMBER \
-	if(atoi(val) == 0 || !is_pow2(atoi(val))) return 0
+	if(atoi(val) == 0 || !is_pow2((size_t)atoi(val))) return 0
+/** check that the value passed is yes or no */
 #define IS_YES_OR_NO \
 	if(strcmp(val, "yes") != 0 && strcmp(val, "no") != 0) return 0
 
+int config_set_option(struct config_file* cfg, const char* opt,
+        const char* val)
+{
 	if(strcmp(opt, "verbosity:") == 0) {
 		IS_NUMBER_OR_ZERO;
 		cfg->verbosity = atoi(val);
@@ -208,26 +212,26 @@ int config_set_option(struct config_file* cfg, const char* opt,
 		cfg->outgoing_num_ports = atoi(val);
 	} else if(strcmp(opt, "outgoing-num-tcp:") == 0) {
 		IS_NUMBER_OR_ZERO;
-		cfg->outgoing_num_tcp = atoi(val);
+		cfg->outgoing_num_tcp = (size_t)atoi(val);
 	} else if(strcmp(opt, "incoming-num-tcp:") == 0) {
 		IS_NUMBER_OR_ZERO;
-		cfg->incoming_num_tcp = atoi(val);
+		cfg->incoming_num_tcp = (size_t)atoi(val);
 	} else if(strcmp(opt, "msg-buffer-size:") == 0) {
 		IS_NONZERO_NUMBER;
-		cfg->msg_buffer_size = atoi(val);
+		cfg->msg_buffer_size = (size_t)atoi(val);
 	} else if(strcmp(opt, "msg-cache-size:") == 0) {
 		return cfg_parse_memsize(val, &cfg->msg_cache_size);
 	} else if(strcmp(opt, "msg-cache-slabs:") == 0) {
 		IS_POW2_NUMBER;
-		cfg->msg_cache_slabs = atoi(val);
+		cfg->msg_cache_slabs = (size_t)atoi(val);
 	} else if(strcmp(opt, "num-queries-per-thread:") == 0) {
 		IS_NONZERO_NUMBER;
-		cfg->num_queries_per_thread = atoi(val);
+		cfg->num_queries_per_thread = (size_t)atoi(val);
 	} else if(strcmp(opt, "rrset-cache-size:") == 0) {
 		return cfg_parse_memsize(val, &cfg->rrset_cache_size);
 	} else if(strcmp(opt, "rrset-cache-slabs:") == 0) {
 		IS_POW2_NUMBER;
-		cfg->rrset_cache_slabs = atoi(val);
+		cfg->rrset_cache_slabs = (size_t)atoi(val);
 	} else if(strcmp(opt, "cache-max-ttl:") == 0) {
 		IS_NUMBER_OR_ZERO;
 		cfg->max_ttl = atoi(val);
@@ -239,10 +243,10 @@ int config_set_option(struct config_file* cfg, const char* opt,
 		cfg->lame_ttl = atoi(val);
 	} else if(strcmp(opt, "infra-cache-slabs:") == 0) {
 		IS_POW2_NUMBER;
-		cfg->infra_cache_slabs = atoi(val);
+		cfg->infra_cache_slabs = (size_t)atoi(val);
 	} else if(strcmp(opt, "infra-cache-numhosts:") == 0) {
 		IS_NONZERO_NUMBER;
-		cfg->infra_cache_numhosts = atoi(val);
+		cfg->infra_cache_numhosts = (size_t)atoi(val);
 	} else if(strcmp(opt, "infra-cache-lame-size:") == 0) {
 		return cfg_parse_memsize(val, &cfg->infra_cache_lame_size);
 	} else if(strcmp(opt, "logfile:") == 0) {
@@ -291,7 +295,7 @@ int config_set_option(struct config_file* cfg, const char* opt,
 			return cfg->val_date_override != 0;
 		} else {
 			if(atoi(val) == 0) return 0;
-			cfg->val_date_override = atoi(val);
+			cfg->val_date_override = (uint32_t)atoi(val);
 		}
 	} else if(strcmp(opt, "val-bogus-ttl:") == 0) {
 		IS_NUMBER_OR_ZERO;
@@ -309,7 +313,7 @@ int config_set_option(struct config_file* cfg, const char* opt,
 		return cfg_parse_memsize(val, &cfg->key_cache_size);
 	} else if(strcmp(opt, "key-cache-slabs:") == 0) {
 		IS_POW2_NUMBER;
-		cfg->key_cache_slabs = atoi(val);
+		cfg->key_cache_slabs = (size_t)atoi(val);
 	} else if(strcmp(opt, "local-data:") == 0) {
 		return cfg_strlist_insert(&cfg->local_data, strdup(val));
 	} else if(strcmp(opt, "module-config:") == 0) {
