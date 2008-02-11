@@ -55,7 +55,7 @@ struct libworker;
  *	qq : write queries to the async service pid/tid.
  *	rr : read results from the async service pid/tid.
  */
-struct ub_val_ctx {
+struct ub_ctx {
 	/* --- pipes --- */
 	/** mutex on query write pipe */
 	lock_basic_t qqpipe_lock;
@@ -137,7 +137,7 @@ struct ctx_query {
 	int cancelled;
 
 	/** for async query, the callback function */
-	ub_val_callback_t cb;
+	ub_callback_t cb;
 	/** for async query, the callback user arg */
 	void* cb_arg;
 
@@ -152,7 +152,7 @@ struct ctx_query {
 
 	/** result structure, also contains original query, type, class.
 	 * malloced ptr ready to hand to the client. */
-	struct ub_val_result* res;
+	struct ub_result* res;
 };
 
 /**
@@ -206,7 +206,7 @@ enum ub_ctx_cmd {
  * @param ctx: context to finalize. creates shared data.
  * @return 0 if OK, or errcode.
  */
-int context_finalize(struct ub_val_ctx* ctx);
+int context_finalize(struct ub_ctx* ctx);
 
 /** compare two ctx_query elements */
 int context_query_cmp(const void* a, const void* b);
@@ -227,8 +227,8 @@ void context_query_delete(struct ctx_query* q);
  * @param cbarg: user arg for async queries.
  * @return new ctx_query or NULL for malloc failure.
  */
-struct ctx_query* context_new(struct ub_val_ctx* ctx, char* name, int rrtype,
-        int rrclass, ub_val_callback_t cb, void* cbarg);
+struct ctx_query* context_new(struct ub_ctx* ctx, char* name, int rrtype,
+        int rrclass, ub_callback_t cb, void* cbarg);
 
 /**
  * Get a new alloc. Creates a new one or uses a cached one.
@@ -236,7 +236,7 @@ struct ctx_query* context_new(struct ub_val_ctx* ctx, char* name, int rrtype,
  * @param locking: if true, cfglock is locked while getting alloc.
  * @return an alloc, or NULL on mem error.
  */
-struct alloc_cache* context_obtain_alloc(struct ub_val_ctx* ctx, int locking);
+struct alloc_cache* context_obtain_alloc(struct ub_ctx* ctx, int locking);
 
 /**
  * Release an alloc. Puts it into the cache.
@@ -244,7 +244,7 @@ struct alloc_cache* context_obtain_alloc(struct ub_val_ctx* ctx, int locking);
  * @param locking: if true, cfglock is locked while releasing alloc.
  * @param alloc: alloc to relinquish.
  */
-void context_release_alloc(struct ub_val_ctx* ctx, struct alloc_cache* alloc,
+void context_release_alloc(struct ub_ctx* ctx, struct alloc_cache* alloc,
 	int locking);
 
 /**
@@ -301,7 +301,7 @@ enum ub_ctx_cmd context_serial_getcmd(uint8_t* p, uint32_t len);
  * @param len: length of buffer.
  * @return looked up ctx_query or NULL for malloc failure.
  */
-struct ctx_query* context_lookup_new_query(struct ub_val_ctx* ctx, 
+struct ctx_query* context_lookup_new_query(struct ub_ctx* ctx, 
 	uint8_t* p, uint32_t len);
 
 /**
@@ -311,7 +311,7 @@ struct ctx_query* context_lookup_new_query(struct ub_val_ctx* ctx,
  * @param len: length of buffer.
  * @return new ctx_query or NULL for malloc failure.
  */
-struct ctx_query* context_deserialize_new_query(struct ub_val_ctx* ctx, 
+struct ctx_query* context_deserialize_new_query(struct ub_ctx* ctx, 
 	uint8_t* p, uint32_t len);
 
 /**
@@ -322,7 +322,7 @@ struct ctx_query* context_deserialize_new_query(struct ub_val_ctx* ctx,
  * @param err: error code to be returned to client is passed.
  * @return ctx_query with answer added or NULL for malloc failure.
  */
-struct ctx_query* context_deserialize_answer(struct ub_val_ctx* ctx, 
+struct ctx_query* context_deserialize_answer(struct ub_ctx* ctx, 
 	uint8_t* p, uint32_t len, int* err);
 
 /**
@@ -332,7 +332,7 @@ struct ctx_query* context_deserialize_answer(struct ub_val_ctx* ctx,
  * @param len: length of buffer.
  * @return ctx_query to cancel or NULL for failure.
  */
-struct ctx_query* context_deserialize_cancel(struct ub_val_ctx* ctx, 
+struct ctx_query* context_deserialize_cancel(struct ub_ctx* ctx, 
 	uint8_t* p, uint32_t len);
 
 #endif /* LIBUNBOUND_CONTEXT_H */
