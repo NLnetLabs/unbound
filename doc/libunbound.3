@@ -19,6 +19,7 @@
 .B ub_ctx_config,
 .B ub_ctx_set_fwd,
 .B ub_ctx_resolvconf,
+.B ub_ctx_hosts,
 .B ub_ctx_add_ta,
 .B ub_ctx_add_ta_file,
 .B ub_ctx_trustedkeys,
@@ -52,6 +53,9 @@
 .LP
 \fIint\fR
 \fBub_ctx_resolvconf\fR(\fIstruct ub_ctx*\fR ctx, \fIchar*\fR fname);
+.LP
+\fIint\fR
+\fBub_ctx_hosts\fR(\fIstruct ub_ctx*\fR ctx, \fIchar*\fR fname);
 .LP
 \fIint\fR
 \fBub_ctx_add_ta\fR(\fIstruct ub_ctx*\fR ctx, \fIchar*\fR ta);
@@ -131,6 +135,12 @@ The functions are discussed in turn below.
 .TP 
 .B ub_ctx_create
 Create a new context, initialised with defaults.
+The information from /etc/resolv.conf and /etc/hosts is not utilised 
+by default. Use 
+.B ub_ctx_resolvconf
+and
+.B ub_ctx_hosts
+to read them.
 .TP
 .B ub_ctx_delete
 Delete validation context and free associated resources.
@@ -158,6 +168,13 @@ If they do not support DNSSEC, validation may fail.
 Only nameservers are picked up, the searchdomain, ndots and other
 settings from \fIresolv.conf\fR(5) are ignored.
 If fname NULL is passed, "/etc/resolv.conf" is used.
+At this time it is only possible to set configuration before the
+first resolve is done.
+.TP
+.B ub_ctx_hosts
+Read list of hosts from the filename given.
+Usually "/etc/hosts". When queried for, these addresses are not marked 
+DNSSEC secure. If fname NULL is passed, "/etc/hosts" is used.
 At this time it is only possible to set configuration before the
 first resolve is done.
 .TP

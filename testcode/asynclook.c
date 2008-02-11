@@ -72,6 +72,7 @@ void usage(char* argv[])
 	printf("	-d : enable debug output\n");
 	printf("	-f addr : use addr, forward to that server\n");
 	printf("	-h : this help message\n");
+	printf("	-H fname : read hosts from fname\n");
 	printf("	-r fname : read resolv.conf from fname\n");
 	printf("	-t : use a resolver thread instead of forking a process\n");
 	printf("	-x : perform extended threaded test\n");
@@ -351,7 +352,7 @@ int main(int argc, char** argv)
 	if(argc == 1) {
 		usage(argv);
 	}
-	while( (c=getopt(argc, argv, "bcdf:hr:tx")) != -1) {
+	while( (c=getopt(argc, argv, "bcdf:hH:r:tx")) != -1) {
 		switch(c) {
 			case 'd':
 				r = ub_ctx_debuglevel(ctx, 3);
@@ -371,6 +372,16 @@ int main(int argc, char** argv)
 				r = ub_ctx_resolvconf(ctx, optarg);
 				if(r != 0) {
 					printf("ub_ctx_resolvconf "
+						"error: %s : %s\n",
+						ub_strerror(r), 
+						strerror(errno));
+					return 1;
+				}
+				break;
+			case 'H':
+				r = ub_ctx_hosts(ctx, optarg);
+				if(r != 0) {
+					printf("ub_ctx_hosts "
 						"error: %s : %s\n",
 						ub_strerror(r), 
 						strerror(errno));

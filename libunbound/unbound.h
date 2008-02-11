@@ -193,6 +193,8 @@ typedef void (*ub_callback_t)(void*, int, struct ub_result*);
 
 /**
  * Create a resolving and validation context.
+ * The information from /etc/resolv.conf and /etc/hosts is not utilised by
+ * default. Use ub_ctx_resolvconf and ub_ctx_hosts to read them.
  * @return a new context. default initialisation.
  * 	returns NULL on error.
  */
@@ -251,6 +253,19 @@ int ub_ctx_set_fwd(struct ub_ctx* ctx, char* addr);
  * @return 0 if OK, else error.
  */
 int ub_ctx_resolvconf(struct ub_ctx* ctx, char* fname);
+
+/**
+ * Read list of hosts from the filename given.
+ * Usually "/etc/hosts". 
+ * These addresses are not flagged as DNSSEC secure when queried for.
+ *
+ * @param ctx: context.
+ *	At this time it is only possible to set configuration before the
+ *	first resolve is done.
+ * @param fname: file name string. If NULL "/etc/hosts" is used.
+ * @return 0 if OK, else error.
+ */
+int ub_ctx_hosts(struct ub_ctx* ctx, char* fname);
 
 /**
  * Add a trust anchor to the given context.

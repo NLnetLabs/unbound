@@ -819,3 +819,79 @@ ub_ctx_resolvconf(struct ub_ctx* ctx, char* fname)
 	}
 	return UB_NOERROR;
 }
+
+int
+ub_ctx_hosts(struct ub_ctx* ctx, char* fname)
+{
+	FILE* in;
+	char buf[1024], ldata[1024];
+	char* parse, *addr, *name, *ins;
+	lock_basic_lock(&ctx->cfglock);
+	if(ctx->finalized) {
+		lock_basic_unlock(&ctx->cfglock);
+		errno=EINVAL;
+		return UB_AFTERFINAL;
+	}
+	lock_basic_unlock(&ctx->cfglock);
+	if(fname == NULL)
+		fname = "/etc/hosts";
+	in = fopen(fname, "r");
+	if(!in) {
+		/* error in errno! perror(fname) */
+		return UB_READFILE;
+	}
+	while(fgets(buf, (int)sizeof(buf), in)) {
+		buf[sizeof(buf)-1] = 0;
+		parse=buf;
+		while(*parse == ' ' || *parse == '\t')
+			parse++;
+		if(*parse == '#')
+			continue; /* skip comment */
+		/* format: <addr> spaces <name> spaces <name> ... */
+		addr = parse;
+		/* skip addr */
+		while(isxdigit(*parse) || *parse == '.' || *parse == ':')
+			parse++;
+		if(*parse != ' ' && *parse != '\t') {
+			/* must have whitespace after address */
+			fclose(in);
+			errno=EINVAL;
+			return UB_SYNTAX;
+		}
+		*parse++ = 0; /* end delimiter for addr ... */
+		/* go to names and add them */
+		while(*parse) {
+			while(*parse == ' ' || *parse == '\t' || *parse=='\n')
+				parse++;
+			if(*parse == 0 || *parse == '#')
+				break;
+			/* skip name, allows (too) many printable characters */
+			name = parse;
+			while('!' <= *parse && *parse <= '~')
+				parse++;
+			if(*parse)
+				*parse++ = 0; /* end delimiter for name */
+			snprintf(ldata, sizeof(ldata), "%s %s %s",
+				name, str_is_ip6(addr)?"AAAA":"A", addr);
+			ins = strdup(ldata);
+			if(!ins) {
+				/* out of memory */
+				fclose(in);
+				errno=ENOMEM;
+				return UB_NOMEM;
+			}
+			lock_basic_lock(&ctx->cfglock);
+			if(!cfg_strlist_insert(&ctx->env->cfg->local_data, 
+				ins)) {
+				lock_basic_unlock(&ctx->cfglock);
+				fclose(in);
+				free(ins);
+				errno=ENOMEM;
+				return UB_NOMEM;
+			}
+			lock_basic_unlock(&ctx->cfglock);
+		}
+	}
+	fclose(in);
+	return UB_NOERROR;
+}
