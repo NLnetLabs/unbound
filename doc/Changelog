@@ -1,3 +1,7 @@
+12 February 2008: Wouter
+	- fixup problem with configure calling itself if ldns-src tarball
+	  is not present.
+
 11 February 2008: Wouter
 	- changed library to use ub_ instead of ub_val_ as prefix.
 	- statistics output text nice.

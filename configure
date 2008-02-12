@@ -24743,8 +24743,8 @@ mkdir ldns-src; cp $srcdir/ldns-src.tar.gz ldns-src/ldns-src.tar.gz; (cd ldns-sr
 ldnsdir=`ls -d ldns-src/ldns*`
 { echo "$as_me:$LINENO: Configure $ldnsdir" >&5
 echo "$as_me: Configure $ldnsdir" >&6;}
-echo "(cd $ldnsdir; ./configure)"
-(cd $ldnsdir; ./configure)
+echo "(cd $ldnsdir && ./configure)"
+(cd $ldnsdir && ./configure)
 { echo "$as_me:$LINENO: Finished $ldnsdir configure" >&5
 echo "$as_me: Finished $ldnsdir configure" >&6;}
 CPPFLAGS="$CPPFLAGS -I$ldnsdir/include"

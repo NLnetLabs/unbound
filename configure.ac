@@ -639,8 +639,8 @@ if test -d ldns-src; then rm -rf ldns-src; fi
 mkdir ldns-src; cp $srcdir/ldns-src.tar.gz ldns-src/ldns-src.tar.gz; (cd ldns-src; gzip -cd ldns-src.tar.gz | tar xf -); rm -f ldns-src/ldns-src.tar.gz
 ldnsdir=`ls -d ldns-src/ldns*`
 AC_MSG_NOTICE([Configure $ldnsdir])
-echo "(cd $ldnsdir; ./configure)"
-(cd $ldnsdir; ./configure)
+echo "(cd $ldnsdir && ./configure)"
+(cd $ldnsdir && ./configure)
 AC_MSG_NOTICE([Finished $ldnsdir configure])
 CPPFLAGS="$CPPFLAGS -I$ldnsdir/include"
 LDFLAGS="$LDFLAGS $ldnsdir/*.lo"
