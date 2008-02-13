@@ -878,6 +878,8 @@ ub_ctx_hosts(struct ub_ctx* ctx, char* fname)
 		/* skip addr */
 		while(isxdigit(*parse) || *parse == '.' || *parse == ':')
 			parse++;
+		if(*parse == '\n' || *parse == 0)
+			continue;
 		if(*parse != ' ' && *parse != '\t') {
 			/* must have whitespace after address */
 			fclose(in);

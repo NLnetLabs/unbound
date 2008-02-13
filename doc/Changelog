@@ -2,6 +2,7 @@
 	- 0.9 released.
 	- 1.0 development. Printout ldns version on unbound -h.
 	- start of perf tool.
+	- bugfix to read empty lines from /etc/hosts.
 
 12 February 2008: Wouter
 	- fixup problem with configure calling itself if ldns-src tarball
