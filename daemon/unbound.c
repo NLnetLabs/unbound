@@ -55,6 +55,13 @@
 #include <pwd.h>
 #include <sys/resource.h>
 
+
+#ifdef USE_MINI_EVENT
+#include "util/mini_event.h"
+#else
+#include <event.h>
+#endif
+
 /** global debug value to keep track of heap memory allocation */
 void* unbound_start_brk = 0;
 
@@ -69,6 +76,8 @@ static void usage()
 	printf("-d	do not fork into the background.\n");
 	printf("-v	verbose (more times to increase verbosity)\n");
 	printf("Version %s\n", PACKAGE_VERSION);
+	printf("libevent %s, libldns %s\n", 
+		event_get_version(), ldns_version());
 	printf("BSD licensed, see LICENSE in source package for details.\n");
 	printf("Report bugs to %s\n", PACKAGE_BUGREPORT);
 }
