@@ -1,6 +1,7 @@
 13 February 2008: Wouter
 	- 0.9 released.
 	- 1.0 development. Printout ldns version on unbound -h.
+	- start of perf tool.
 
 12 February 2008: Wouter
 	- fixup problem with configure calling itself if ldns-src tarball
