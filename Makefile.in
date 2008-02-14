@@ -94,13 +94,15 @@ ASYNCLOOK_SRC=testcode/asynclook.c
 ASYNCLOOK_OBJ=$(addprefix $(BUILD),$(ASYNCLOOK_SRC:.c=.o)) $(COMPAT_OBJ)
 STREAMTCP_SRC=testcode/streamtcp.c smallapp/worker_cb.c $(COMMON_SRC)
 STREAMTCP_OBJ=$(addprefix $(BUILD),$(STREAMTCP_SRC:.c=.o)) $(COMPAT_OBJ)
+PERF_SRC=testcode/perf.c smallapp/worker_cb.c $(COMMON_SRC)
+PERF_OBJ=$(addprefix $(BUILD),$(PERF_SRC:.c=.o)) $(COMPAT_OBJ)
 LIBUNBOUND_SRC=$(patsubst $(srcdir)/%,%, \
 	$(wildcard $(srcdir)/libunbound/*.c) $(COMMON_SRC))
 LIBUNBOUND_OBJ=$(addprefix $(BUILD),$(LIBUNBOUND_SRC:.c=.o)) $(COMPAT_OBJ)
 ALL_SRC=$(sort $(COMMON_SRC) $(UNITTEST_SRC) $(DAEMON_SRC) \
 	$(TESTBOUND_SRC) $(LOCKVERIFY_SRC) $(PKTVIEW_SRC) $(SIGNIT_SRC) \
 	$(MEMSTATS_SRC) $(CHECKCONF_SRC) $(LIBUNBOUND_SRC) $(HOST_SRC) \
-	$(ASYNCLOOK_SRC) $(STREAMTCP_SRC))
+	$(ASYNCLOOK_SRC) $(STREAMTCP_SRC) $(PERF_SRC))
 ALL_OBJ=$(addprefix $(BUILD),$(ALL_SRC:.c=.o) \
 	$(addprefix compat/,$(LIBOBJS))) $(COMPAT_OBJ)
 
@@ -120,7 +122,7 @@ $(BUILD)%.o:    $(srcdir)/%.c
 all:	$(COMMON_OBJ) unbound unbound-checkconf lib unbound-host
 
 tests:	all unittest testbound lock-verify pktview signit memstats \
-	asynclook streamtcp
+	asynclook streamtcp perf
 
 test:	tests
 	bash testcode/do-tests.sh
@@ -183,6 +185,10 @@ asynclook:	$(ASYNCLOOK_OBJ) $(ldnslib) libunbound.la
 streamtcp:	$(STREAMTCP_OBJ) $(ldnslib)
 	$(INFO) Link $@
 	$Q$(LINK) -o $@ $(sort $(STREAMTCP_OBJ)) $(LIBS)
+
+perf:	$(PERF_OBJ) $(ldnslib)
+	$(INFO) Link $@
+	$Q$(LINK) -o $@ $(sort $(PERF_OBJ)) $(LIBS)
 
 #testcode/ldns-testpkts.c:	$(ldnsdir)/examples/ldns-testpkts.c \
 #			$(ldnsdir)/examples/ldns-testpkts.h

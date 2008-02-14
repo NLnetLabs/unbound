@@ -39,17 +39,27 @@
  * This program estimates DNS name server performance.
  */
 
+#include <signal.h>
 #include "config.h"
 #include "util/log.h"
 #include "util/locks.h"
-#include "util/netevent.h"
+#include "util/net_help.h"
+#include "util/data/msgencode.h"
+#include "util/data/msgreply.h"
+#include "util/data/msgparse.h"
 
 /** usage information for perf */
-static void usage(char* argv[])
+static void usage(char* nm) 
 {
-	printf("usage: %s [options] server\n", argv[0]);
+	printf("usage: %s [options] server\n", nm);
 	printf("server: ip address of server, IP4 or IP6.\n");
 	printf("	If not on port %d add @port.\n", UNBOUND_DNS_PORT);
+	printf("-d sec	duration of test in whole seconds (0: wait for ^C)\n");
+	printf("-a str	query to ask, interpreted as a line from qfile\n");
+	printf("-f fnm	query list to read from file\n");
+	printf("	every line has format: qname qclass qtype [+-]{E}\n");
+	printf("	where + means RD set, E means EDNS enabled\n");
+	printf("-q 	quiet mode, print only final qps\n");
 	exit(1);
 }
 
@@ -58,24 +68,34 @@ struct perfio;
 
 /** Global info for perf */
 struct perfinfo { 
-	/** communication base */
-	struct comm_base* base;
-	/** timer to send out new queries */
-	struct comm_timer* sendout_timer;
-	/** all purpose buffer */
-	ldns_buffer* udpbuffer;
+	/** need to exit */
+	volatile int exit;
+	/** all purpose buffer (for UDP send and receive) */
+	ldns_buffer* buf;
 
 	/** destination */
 	struct sockaddr_storage dest;
 	/** length of dest socket addr */
 	socklen_t destlen;
 
-	/** number of seconds elapsed in total */
-	struct timeval time_cumul;
+	/** when did this time slice start */
+	struct timeval since;
 	/** number of queries received in that time */
 	size_t numrecv;
 	/** number of queries sent out in that time */
 	size_t numsent;
+
+	/** duration of test in seconds */
+	int duration;
+	/** quiet mode? */
+	int quiet;
+
+	/** when did the total test start */
+	struct timeval start;
+	/** total number recvd */
+	size_t total_recv;
+	/** total number sent */
+	size_t total_sent;
 	/** numbers by rcode */
 	size_t by_rcode[32];
 	
@@ -83,13 +103,19 @@ struct perfinfo {
 	size_t io_num;
 	/** I/O ports array */
 	struct perfio* io;
+	/** max fd value in io ports */
+	int maxfd;
+	/** readset */
+	fd_set rset;
 
 	/** size of querylist */
 	size_t qlist_size;
+	/** allocated size of qlist array */
+	size_t qlist_capacity;
 	/** list of query packets (data) */
 	uint8_t** qlist_data;
 	/** list of query packets (length of a packet) */
-	size_t** qlist_len;
+	size_t* qlist_len;
 	/** index into querylist, for walking the list */
 	size_t qlist_idx;
 };
@@ -97,42 +123,422 @@ struct perfinfo {
 /** I/O port for perf */
 struct perfio {
 	/** id number */
-	int id;
+	size_t id;
 	/** file descriptor of socket */
 	int fd;
+	/** timeout value */
+	struct timeval timeout;
 	/** ptr back to perfinfo */
 	struct perfinfo* info;
 };
 
+/** number of msec between starting io ports */
+#define START_IO_INTERVAL 10
+/** number of msec timeout on io ports */
+#define IO_TIMEOUT 100
+
+/** signal handler global info */
+static struct perfinfo* sig_info;
+
+/** signal handler for user quit */
+static RETSIGTYPE perf_sigh(int sig)
+{
+	log_assert(sig_info);
+	if(!sig_info->quiet)
+		printf("exit on signal %d\n", sig);
+	sig_info->exit = 1;
+}
+
+/** timeval compare, t1 < t2 */
+static int
+perf_tv_smaller(struct timeval* t1, struct timeval* t2) 
+{
+#ifndef S_SPLINT_S
+	if(t1->tv_sec < t2->tv_sec)
+		return 1;
+	if(t1->tv_sec == t2->tv_sec &&
+		t1->tv_usec < t2->tv_usec)
+		return 1;
+#endif
+	return 0;
+}
+
+/** timeval add, t1 += t2 */
+static void
+perf_tv_add(struct timeval* t1, struct timeval* t2) 
+{
+#ifndef S_SPLINT_S
+	t1->tv_sec += t2->tv_sec;
+	t1->tv_usec += t2->tv_usec;
+	while(t1->tv_usec > 1000000) {
+		t1->tv_usec -= 1000000;
+		t1->tv_sec++;
+	}
+#endif
+}
+
+/** timeval subtract, t1 -= t2 */
+static void
+perf_tv_subtract(struct timeval* t1, struct timeval* t2) 
+{
+#ifndef S_SPLINT_S
+	t1->tv_sec -= t2->tv_sec;
+	if(t1->tv_usec >= t2->tv_usec) {
+		t1->tv_usec -= t2->tv_usec;
+	} else {
+		t1->tv_sec--;
+		t1->tv_usec = 1000000-(t2->tv_usec-t1->tv_usec);
+	}
+#endif
+}
+
+
 /** setup perf test environment */
 static void
-perfsetup(struct perfinfo* info, struct sockaddr_storage* dest, 
-	socklen_t destlen)
+perfsetup(struct perfinfo* info)
 {
-	info->base = comm_base_create();
-	if(!info->base) fatal_exit("out of memory");
-	info->sendout_timer = comm_timer_create(...);
-	if(!info->sendout_timer) fatal_exit("out of memory");
-	info->udpbuffer = ldns_buffer_new(65553);
-	if(!info->udpbuffer) fatal_exit("out of memory");
+	size_t i;
+	if(gettimeofday(&info->start, NULL) < 0)
+		fatal_exit("gettimeofday: %s", strerror(errno));
+	sig_info = info;
+	if( signal(SIGINT, perf_sigh) == SIG_ERR || 
+		signal(SIGTERM, perf_sigh) == SIG_ERR ||
+		signal(SIGHUP, perf_sigh) == SIG_ERR ||
+		signal(SIGQUIT, perf_sigh) == SIG_ERR)
+		fatal_exit("could not bind to signal");
+	info->io = (struct perfio*)calloc(sizeof(struct perfio), info->io_num);
+	if(!info->io) fatal_exit("out of memory");
+#ifndef S_SPLINT_S
+	FD_ZERO(&info->rset);
+#endif
+	info->since = info->start;
+	for(i=0; i<info->io_num; i++) {
+		info->io[i].id = i;
+		info->io[i].info = info;
+		info->io[i].fd = socket(
+			addr_is_ip6(&info->dest, info->destlen)?
+			AF_INET6:AF_INET, SOCK_DGRAM, 0);
+		if(info->io[i].fd == -1)
+			fatal_exit("socket: %s", strerror(errno));
+		if(info->io[i].fd > info->maxfd)
+			info->maxfd = info->io[i].fd;
+#ifndef S_SPLINT_S
+		FD_SET(info->io[i].fd, &info->rset);
+		info->io[i].timeout.tv_usec = ((START_IO_INTERVAL*i)%1000)
+						*1000;
+		info->io[i].timeout.tv_sec = (START_IO_INTERVAL*i)/1000;
+		perf_tv_add(&info->io[i].timeout, &info->since);
+#endif
+	}
 }
 
 /** cleanup perf test environment */
 static void
 perffree(struct perfinfo* info)
 {
-	comm_timer_delete(info->sendout_timer);
-	comm_base_free(info->base);
-	ldns_buffer_free(info->udpbuffer);
+	size_t i;
+	if(!info) return;
+	if(info->io) {
+		for(i=0; i<info->io_num; i++) {
+			close(info->io[i].fd);
+		}
+		free(info->io);
+	}
+	for(i=0; i<info->qlist_size; i++)
+		free(info->qlist_data[i]);
+	free(info->qlist_data);
+	free(info->qlist_len);
+}
+
+/** send new query for io */
+static void
+perfsend(struct perfinfo* info, size_t n, struct timeval* now)
+{
+	ssize_t r;
+	r = sendto(info->io[n].fd, info->qlist_data[info->qlist_idx],
+		info->qlist_len[info->qlist_idx], 0,
+		(struct sockaddr*)&info->dest, info->destlen);
+	/*log_hex("send", info->qlist_data[info->qlist_idx],
+		info->qlist_len[info->qlist_idx]);*/
+	if(r == -1)
+		log_err("sendto: %s", strerror(errno));
+	else if(r != (ssize_t)info->qlist_len[info->qlist_idx]) {
+		log_err("partial sendto");
+	}
+	info->qlist_idx = (info->qlist_idx+1) % info->qlist_size;
+	info->numsent++;
+
+	info->io[n].timeout.tv_sec = IO_TIMEOUT/1000;
+	info->io[n].timeout.tv_usec = (IO_TIMEOUT%1000)*1000;
+	perf_tv_add(&info->io[n].timeout, now);
+}
+
+/** got reply for io */
+static void
+perfreply(struct perfinfo* info, size_t n, struct timeval* now)
+{
+	ssize_t r;
+	r = recv(info->io[n].fd, ldns_buffer_begin(info->buf),
+		ldns_buffer_capacity(info->buf), 0);
+	if(r == -1) {
+		log_err("recv: %s", strerror(errno));
+	} else {
+		info->by_rcode[LDNS_RCODE_WIRE(ldns_buffer_begin(
+			info->buf))]++;
+		info->numrecv++;
+	}
+	/*ldns_buffer_set_limit(info->buf, r);
+	log_buf(0, "reply", info->buf);*/
+	perfsend(info, n, now);
+}
+
+/** got timeout for io */
+static void
+perftimeout(struct perfinfo* info, size_t n, struct timeval* now)
+{
+	/* may not be a dropped packet, this is also used to start
+	 * up the sending IOs */
+	perfsend(info, n, now);
+}
+
+/** print nice stats about qps */
+static void
+stat_printout(struct perfinfo* info, struct timeval* now, 
+	struct timeval* elapsed)
+{
+	/* calculate qps */
+	double dt, qps = 0;
+#ifndef S_SPLINT_S
+	dt = (double)(elapsed->tv_sec*1000000 + elapsed->tv_usec) / 1000000;
+#endif
+	if(dt > 0.001)
+		qps = (double)(info->numrecv) / dt;
+	if(!info->quiet)
+		printf("qps: %g\n", qps);
+	/* setup next slice */
+	info->since = *now;
+	info->total_sent += info->numsent;
+	info->total_recv += info->numrecv;
+	info->numrecv = 0;
+	info->numsent = 0;
+}
+
+/** wait for new events for performance test */
+static void
+perfselect(struct perfinfo* info)
+{
+	fd_set rset = info->rset;
+	struct timeval timeout, now;
+	int num;
+	size_t i;
+	if(gettimeofday(&now, NULL) < 0)
+		fatal_exit("gettimeofday: %s", strerror(errno));
+	/* time to exit? */
+	if(info->duration > 0) {
+		timeout = now;
+		perf_tv_subtract(&timeout, &info->start);
+		if((int)timeout.tv_sec >= info->duration) {
+			info->exit = 1;
+			return;
+		}
+	}
+	/* time for stats printout? */
+	timeout = now;
+	perf_tv_subtract(&timeout, &info->since);
+	if(timeout.tv_sec > 0) {
+		stat_printout(info, &now, &timeout);
+	}
+	/* see what is closest port to timeout; or if there is a timeout */
+	timeout = info->io[0].timeout;
+	for(i=0; i<info->io_num; i++) {
+		if(perf_tv_smaller(&info->io[i].timeout, &now)) {
+			perftimeout(info, i, &now);
+			return;
+		}
+		if(perf_tv_smaller(&info->io[i].timeout, &timeout)) {
+			timeout = info->io[i].timeout;
+		}
+	}
+	perf_tv_subtract(&timeout, &now);
+	
+	num = select(info->maxfd+1, &rset, NULL, NULL, &timeout);
+	if(num == -1) {
+		if(errno == EAGAIN || errno == EINTR)
+			return;
+		log_err("select: %s", strerror(errno));
+	}
+
+	/* handle new events */
+	for(i=0; num && i<info->io_num; i++) {
+		if(FD_ISSET(info->io[i].fd, &rset)) {
+			perfreply(info, i, &now);
+			num--;
+		}
+	}
+}
+
+/** show end stats */
+static void
+perfendstats(struct perfinfo* info)
+{
+	double dt, qps;
+	struct timeval timeout, now;
+	int i, lost; 
+	if(gettimeofday(&now, NULL) < 0)
+		fatal_exit("gettimeofday: %s", strerror(errno));
+	timeout = now;
+	perf_tv_subtract(&timeout, &info->since);
+	stat_printout(info, &now, &timeout);
+	
+	timeout = now;
+	perf_tv_subtract(&timeout, &info->start);
+	dt = (double)(timeout.tv_sec*1000000 + timeout.tv_usec) / 1000000.0;
+	qps = (double)(info->total_recv) / dt;
+	lost = (int)(info->total_sent - info->total_recv) - (int)info->io_num;
+	if(!info->quiet) {
+		printf("overall time: 	%g sec\n", 
+			(double)timeout.tv_sec + 
+			(double)timeout.tv_usec/1000000.);
+		if(lost > 0) 
+			printf("Packets lost: 	%d\n", (int)lost);
+	
+		for(i=0; i<(int)(sizeof(info->by_rcode)/sizeof(size_t)); i++)
+		{
+			if(info->by_rcode[i] > 0) {
+				printf("%d(%5s): 	%u replies\n",
+					i, ldns_lookup_by_id(ldns_rcodes, i)?
+					ldns_lookup_by_id(ldns_rcodes, 
+					i)->name:"??", 
+					(unsigned)info->by_rcode[i]);
+			}
+		}
+	}
+	printf("average qps: 	%g\n", qps);
 }
 
 /** perform the performance test */
 static void
 perfmain(struct perfinfo* info)
 {
-	perfsetup(info, dest, destlen);
-	comm_base_dispatch(info->base);
+	perfsetup(info);
+	while(!info->exit) {
+		perfselect(info);
+	}
+	perfendstats(info);
 	perffree(info);
+}
+
+/** parse a query line to a packet into buffer */
+static int
+qlist_parse_line(ldns_buffer* buf, char* p)
+{
+	char nm[1024], cl[1024], tp[1024], fl[1024];
+	int r; 
+	int rec = 1, edns = 0;
+	struct query_info qinfo;
+	ldns_rdf* rdf;
+	nm[0] = 0; cl[0] = 0; tp[0] = 0; fl[0] = 0;
+	r = sscanf(p, " %1023s %1023s %1023s %1023s", nm, cl, tp, fl);
+	if(r != 3 && r != 4)
+		return 0;
+	/*printf("nm='%s', cl='%s', tp='%s', fl='%s'\n", nm, cl, tp, fl);*/
+	if(strcmp(tp, "IN") == 0 || strcmp(tp, "CH") == 0) {
+		qinfo.qtype = ldns_get_rr_type_by_name(cl);
+		qinfo.qclass = ldns_get_rr_class_by_name(tp);
+	} else {
+		qinfo.qtype = ldns_get_rr_type_by_name(tp);
+		qinfo.qclass = ldns_get_rr_class_by_name(cl);
+	}
+	if(fl[0] == '+') rec = 1;
+	else if(fl[0] == '-') rec = 0;
+	else if(fl[0] == 'E') edns = 1;
+	if((fl[0] == '+' || fl[0] == '-') && fl[1] == 'E')
+		edns = 1;
+	rdf = ldns_dname_new_frm_str(nm);
+	if(!rdf)
+		return 0;
+	qinfo.qname = ldns_rdf_data(rdf);
+	qinfo.qname_len = ldns_rdf_size(rdf);
+	qinfo_query_encode(buf, &qinfo);
+	ldns_buffer_write_u16_at(buf, 0, 0); /* zero ID */
+	if(rec) LDNS_RD_SET(ldns_buffer_begin(buf));
+	if(edns) {
+		struct edns_data edns;
+		memset(&edns, 0, sizeof(edns));
+		edns.edns_present = 1;
+		edns.udp_size = EDNS_ADVERTISED_SIZE;
+		/* Set DO bit in all EDNS datagrams ... */
+		edns.bits = EDNS_DO;
+		attach_edns_record(buf, &edns);
+	}
+	ldns_rdf_deep_free(rdf);
+	return 1;
+}
+
+/** grow query list capacity */
+static void
+qlist_grow_capacity(struct perfinfo* info)
+{
+	size_t newcap = (size_t)((info->qlist_capacity==0)?16:
+		info->qlist_capacity*2);
+	uint8_t** d = (uint8_t**)calloc(sizeof(uint8_t*), newcap);
+	size_t* l = (size_t*)calloc(sizeof(size_t), newcap);
+	if(!d || !l) fatal_exit("out of memory");
+	memcpy(d, info->qlist_data, sizeof(uint8_t*)*
+		info->qlist_capacity);
+	memcpy(l, info->qlist_len, sizeof(size_t)*
+		info->qlist_capacity);
+	free(info->qlist_data);
+	free(info->qlist_len);
+	info->qlist_data = d;
+	info->qlist_len = l;
+	info->qlist_capacity = newcap;
+}
+
+/** setup query list in info */
+static void
+qlist_add_line(struct perfinfo* info, char* line, int no)
+{
+	if(!qlist_parse_line(info->buf, line)) {
+		printf("error parsing query %d: %s\n", no, line);
+		exit(1);
+	}
+	ldns_buffer_write_u16_at(info->buf, 0, (uint16_t)info->qlist_size); 
+	if(info->qlist_size + 1 > info->qlist_capacity) {
+		qlist_grow_capacity(info);
+	}
+	info->qlist_len[info->qlist_size] = ldns_buffer_limit(info->buf);
+	info->qlist_data[info->qlist_size] = memdup(
+		ldns_buffer_begin(info->buf), ldns_buffer_limit(info->buf));
+	if(!info->qlist_data[info->qlist_size])
+		fatal_exit("out of memory");
+	info->qlist_size ++;
+}
+
+/** setup query list in info */
+static void
+qlist_read_file(struct perfinfo* info, char* fname)
+{
+	char buf[1024];
+	char *p;
+	FILE* in = fopen(fname, "r");
+	int lineno = 0;
+	if(!in) {
+		perror(fname);
+		exit(1);
+	}
+	while(fgets(buf, (int)sizeof(buf), in)) {
+		lineno++;
+		buf[sizeof(buf)-1] = 0;
+		p = buf;
+		while(*p == ' ' || *p == '\t')
+			p++;
+		if(p[0] == 0 || p[0] == '\n' || p[0] == ';' || p[0] == '#')
+			continue;
+		qlist_add_line(info, p, lineno);
+	}
+	printf("Read %s, got %u queries\n", fname, (unsigned)info->qlist_size);
+	fclose(in);
 }
 
 /** getopt global, in case header files fail to declare it. */
@@ -143,6 +549,7 @@ extern char* optarg;
 /** main program for perf */
 int main(int argc, char* argv[]) 
 {
+	char* nm = argv[0];
 	int c;
 	struct perfinfo info;
 
@@ -151,30 +558,57 @@ int main(int argc, char* argv[])
 	info.io_num = 16;
 
 	log_init(NULL, 0, NULL);
+	log_ident_set("perf");
 	checklock_start();
 
+	info.buf = ldns_buffer_new(65553);
+	if(!info.buf) fatal_exit("out of memory");
+
 	/* parse the options */
-	while( (c=getopt(argc, argv, "h")) != -1) {
+	while( (c=getopt(argc, argv, "d:ha:f:q")) != -1) {
 		switch(c) {
+		case 'q':
+			info.quiet = 1;
+			break;
+		case 'd':
+			if(atoi(optarg)==0 && strcmp(optarg, "0")!=0) {
+				printf("-d not a number %s", optarg);
+				return 1;
+			}
+			info.duration = atoi(optarg);
+			break;
+		case 'a':
+			qlist_add_line(&info, optarg, 0);
+			break;
+		case 'f':
+			qlist_read_file(&info, optarg);
+			break;
 		case '?':
 		case 'h':
 		default:
-			usage();
+			usage(nm);
 		}
 	}
 	argc -= optind;
 	argv += optind;
 
-	if(argc != 1)
-		usage();
-	if(!extstrtoaddr(argv[0], &info->dest, &info->destlen)) {
+	if(argc != 1) {
+		printf("error: pass server IP address on commandline.\n");
+		usage(nm);
+	}
+	if(!extstrtoaddr(argv[0], &info.dest, &info.destlen)) {
 		printf("Could not parse ip: %s\n", argv[0]);
+		return 1;
+	}
+	if(info.qlist_size == 0) {
+		printf("No queries to make, use -f or -a.\n");
 		return 1;
 	}
 	
 	/* do the performance test */
-	perf_main(&dest, destlen);
+	perfmain(&info);
 
+	ldns_buffer_free(info.buf);
 	checklock_stop();
 	return 0;
 }

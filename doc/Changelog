@@ -1,6 +1,7 @@
 14 February 2008: Wouter
 	- start without a config file (will complain, but start with
 	  defaults).
+	- perf test program works.
 
 13 February 2008: Wouter
 	- 0.9 released.

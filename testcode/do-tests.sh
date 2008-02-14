@@ -8,6 +8,7 @@ NEED_NC='fwd_compress_c00c.tpkg'
 
 cd testdata;
 sh ../testcode/mini_tpkg.sh clean
+rm -f .perfstats.txt
 for test in `ls *.tpkg`; do
 	SKIP=0
 	if echo $NEED_SPLINT | grep $test >/dev/null; then
@@ -43,3 +44,4 @@ for test in `ls *.tpkg`; do
 	fi
 done
 sh ../testcode/mini_tpkg.sh report
+cat .perfstats.txt
