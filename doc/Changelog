@@ -1,3 +1,7 @@
+14 February 2008: Wouter
+	- start without a config file (will complain, but start with
+	  defaults).
+
 13 February 2008: Wouter
 	- 0.9 released.
 	- 1.0 development. Printout ldns version on unbound -h.

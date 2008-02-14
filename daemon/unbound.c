@@ -354,8 +354,12 @@ run_daemon(char* cfgfile, int cmdline_verbose, int debug_mode)
 		/* config stuff */
 		if(!(cfg = config_create()))
 			fatal_exit("Could not alloc config defaults");
-		if(!config_read(cfg, cfgfile))
-			fatal_exit("Could not read config file: %s", cfgfile);
+		if(!config_read(cfg, cfgfile)) {
+			if(errno != ENOENT)
+				fatal_exit("Could not read config file: %s",
+					cfgfile);
+			log_warn("Continuing with default config settings");
+		}
 		apply_settings(daemon, cfg, cmdline_verbose);
 	
 		/* prepare */

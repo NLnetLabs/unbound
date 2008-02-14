@@ -357,6 +357,7 @@ config_read(struct config_file* cfg, char* filename)
 	if(cfg_parser->errors != 0) {
 		fprintf(stderr, "read %s failed: %d errors in configuration file\n",
 			cfg_parser->filename, cfg_parser->errors);
+		errno=EINVAL;
 		return 0;
 	}
 	return 1;

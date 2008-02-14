@@ -255,7 +255,8 @@ struct config_file* config_create_forlib();
  * Read the config file from the specified filename.
  * @param config: where options are stored into, must be freshly created.
  * @param filename: name of configfile. If NULL nothing is done.
- * @return: false on error.
+ * @return: false on error. In that case errno is set, ENOENT means 
+ * 	file not found.
  */
 int config_read(struct config_file* config, char* filename);
 
