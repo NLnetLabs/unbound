@@ -1,5 +1,8 @@
 /* config.h.in.  Generated from configure.ac by autoheader.  */
 
+/* Directory to chroot to */
+#undef CHROOT_DIR
+
 /* Pathname to the Unbound configuration file */
 #undef CONFIGFILE
 
@@ -175,12 +178,18 @@
 /* Define to the version of this package. */
 #undef PACKAGE_VERSION
 
+/* Pathname to unbound process id file */
+#undef PIDFILE
+
 /* Define to necessary symbol if this constant uses a non-standard name on
    your system. */
 #undef PTHREAD_CREATE_JOINABLE
 
 /* Define as the return type of signal handlers (`int' or `void'). */
 #undef RETSIGTYPE
+
+/* Directory to chdir to */
+#undef RUN_DIR
 
 /* Define to 1 if you have the ANSI C header files. */
 #undef STDC_HEADERS

@@ -1,5 +1,7 @@
 15 February 2008: Wouter
 	- added FreeBSD rc.d script to contrib.
+	- --prefix option for configure also changes directory: pidfile:
+	  and chroot: defaults in config file.
 
 14 February 2008: Wouter
 	- start without a config file (will complain, but start with

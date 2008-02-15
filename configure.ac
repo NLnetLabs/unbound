@@ -36,6 +36,13 @@ AC_SUBST(ub_conf_file)
 # for $nsd_conf_file and once for the ${prefix} within it.
 AC_DEFINE_UNQUOTED(CONFIGFILE, ["`eval echo $ub_conf_file`"], [Pathname to the Unbound configuration file])
 
+# Determine run, chroot directory and pidfile locations
+ub_cfg=`eval echo $ub_conf_file`
+ub_dir=`dirname $ub_cfg`
+AC_DEFINE_UNQUOTED(RUN_DIR, ["$ub_dir"], [Directory to chdir to])
+AC_DEFINE_UNQUOTED(CHROOT_DIR, ["$ub_dir"], [Directory to chroot to])
+AC_DEFINE_UNQUOTED(PIDFILE, ["$ub_dir/unbound.pid"], [Pathname to unbound process id file])
+
 dnl routine to help check for compiler flags.
 AC_DEFUN([CHECK_COMPILER_FLAG],
 [

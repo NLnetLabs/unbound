@@ -96,11 +96,10 @@ config_create()
 	cfg->infra_cache_numhosts = 10000;
 	cfg->infra_cache_lame_size = 10240; /* easily 40 or more entries */
 	if(!(cfg->username = strdup("unbound"))) goto error_exit;
-	if(!(cfg->chrootdir = strdup("/etc/unbound"))) goto error_exit;
-	if(!(cfg->directory = strdup("/etc/unbound"))) goto error_exit;
+	if(!(cfg->chrootdir = strdup(CHROOT_DIR))) goto error_exit;
+	if(!(cfg->directory = strdup(RUN_DIR))) goto error_exit;
 	if(!(cfg->logfile = strdup(""))) goto error_exit;
-	if(!(cfg->pidfile = strdup("/etc/unbound/unbound.pid"))) 
-		goto error_exit;
+	if(!(cfg->pidfile = strdup(PIDFILE))) goto error_exit;
 	if(!(cfg->target_fetch_policy = strdup("3 2 1 0 0"))) goto error_exit;
 	cfg->donotqueryaddrs = NULL;
 	cfg->donotquery_localhost = 1;
