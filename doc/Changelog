@@ -1,3 +1,6 @@
+15 February 2008: Wouter
+	- added FreeBSD rc.d script to contrib.
+
 14 February 2008: Wouter
 	- start without a config file (will complain, but start with
 	  defaults).

@@ -1,0 +1,4 @@
+These files are contributed to unbound, and are not part of the official
+distribution but may be helpful.
+
+* rc_d_unbound: FreeBSD compatible /etc/rc.d script.
