@@ -91,10 +91,11 @@ dname_valid(uint8_t* dname, size_t maxlen)
 	return len;
 }
 
+/** compare uncompressed, noncanonical, registers are hints for speed */
 int 
-query_dname_compare(uint8_t* d1, uint8_t* d2)
+query_dname_compare(register uint8_t* d1, register uint8_t* d2)
 {
-	uint8_t lab1, lab2;
+	register uint8_t lab1, lab2;
 	log_assert(d1 && d2);
 	lab1 = *d1++;
 	lab2 = *d2++;
@@ -109,7 +110,9 @@ query_dname_compare(uint8_t* d1, uint8_t* d2)
 		log_assert(lab1 == lab2 && lab1 != 0);
 		/* compare lowercased labels. */
 		while(lab1--) {
-			if(tolower((int)*d1) != tolower((int)*d2)) {
+			/* compare bytes first for speed */
+			if(*d1 != *d2 && 
+				tolower((int)*d1) != tolower((int)*d2)) {
 				if(tolower((int)*d1) < tolower((int)*d2))
 					return -1;
 				return 1;
@@ -259,16 +262,15 @@ dname_query_hash(uint8_t* dname, hashvalue_t h)
 	int i;
 
 	/* preserve case of query, make hash label by label */
-	lablen = *dname;
+	lablen = *dname++;
 	while(lablen) {
 		log_assert(lablen <= LDNS_MAX_LABELLEN);
 		labuf[0] = lablen;
-		dname++;
 		i=0;
 		while(lablen--)
 			labuf[++i] = (uint8_t)tolower((int)*dname++);
 		h = hashlittle(labuf, labuf[0] + 1, h);
-		lablen = *dname;
+		lablen = *dname++;
 	}
 
 	return h;
@@ -407,11 +409,13 @@ static int
 memlowercmp(uint8_t* p1, uint8_t* p2, uint8_t len)
 {
 	while(len--) {
-		if(tolower((int)*p1++) != tolower((int)*p2++)) {
-			if(tolower((int)p1[-1]) < tolower((int)p2[-1]))
+		if(*p1 != *p2 && tolower((int)*p1) != tolower((int)*p2)) {
+			if(tolower((int)*p1) < tolower((int)*p2))
 				return -1;
 			return 1;
 		}
+		p1++;
+		p2++;
 	}
 	return 0;
 }
@@ -457,9 +461,7 @@ dname_lab_cmp(uint8_t* d1, int labs1, uint8_t* d2, int labs2, int* mlabs)
 			else	lastdiff = 1;
 			lastmlabs = atlabel;
 		} else if((c=memlowercmp(d1, d2, len1)) != 0) { 
-			if(c<0)
-				lastdiff = -1;
-			else	lastdiff = 1;
+			lastdiff = c;
 			lastmlabs = atlabel;
 		}
 

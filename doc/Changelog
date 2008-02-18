@@ -8,6 +8,9 @@
 	- fixup iterator operating in no cache conditions (RD flag unset
 	  after a CNAME).
 	- streamlined code for RD flag setting.
+	- profiled code and changed dname compares to be faster. 
+	  The speedup is about +3% to +8% (depending on the test).
+	- minievent tests for eintr and eagain.
 
 15 February 2008: Wouter
 	- added FreeBSD rc.d script to contrib.

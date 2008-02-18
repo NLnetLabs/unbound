@@ -165,6 +165,8 @@ static int handle_select(struct event_base* base, struct timeval* wait)
 	memmove(&w, &base->writes, sizeof(fd_set));
 
 	if((ret = select(base->maxfd+1, &r, &w, NULL, wait)) == -1) {
+		if(errno == EAGAIN || errno == EINTR)
+			return 0;
 		return -1;
 	}
 	
