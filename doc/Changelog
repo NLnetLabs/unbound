@@ -1,6 +1,12 @@
 18 February 2008: Wouter
 	- patch to unbound-host from Jan-Piet Mens.
 	- unbound host prints errors if fails to configure context.
+	- fixup perf to resend faster, so that long waiting requests do
+	  not hold up the queue, they become lost packets or SERVFAILs,
+	  or can be sent a little while later (i.e. processing time may 
+	  take long, but throughput has to be high).
+	- fixup iterator operating in no cache conditions (RD flag unset
+	  after a CNAME).
 
 15 February 2008: Wouter
 	- added FreeBSD rc.d script to contrib.

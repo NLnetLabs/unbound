@@ -135,7 +135,7 @@ struct perfio {
 /** number of msec between starting io ports */
 #define START_IO_INTERVAL 10
 /** number of msec timeout on io ports */
-#define IO_TIMEOUT 100
+#define IO_TIMEOUT 10
 
 /** signal handler global info */
 static struct perfinfo* sig_info;

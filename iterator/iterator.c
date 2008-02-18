@@ -825,17 +825,6 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 	verbose(VERB_ALGO, "cache delegation returns delegpt");
 	delegpt_log(VERB_ALGO, iq->dp);
 
-	/* if the cache reply dp equals a validation anchor or msg has DS,
-	 * then DNSSEC RRSIGs are expected in the reply */
-	iq->dnssec_expected = iter_indicates_dnssec(qstate->env, iq->dp, 
-		iq->deleg_msg, iq->qchase.qclass);
-
-	/* Reset the RD flag. If this is a query restart, then the RD 
-	 * will have been turned off. */
-	if(qstate->query_flags & BIT_RD)
-		iq->chase_flags |= BIT_RD;
-	else	iq->chase_flags &= ~BIT_RD;
-
 	/* Otherwise, set the current delegation point and move on to the 
 	 * next state. */
 	return next_state(iq, INIT_REQUEST_2_STATE);
@@ -890,6 +879,17 @@ processInitRequest3(struct module_qstate* qstate, struct iter_qstate* iq)
 {
 	log_query_info(VERB_QUERY, "resolving (init part 3): ", 
 		&qstate->qinfo);
+	/* if the cache reply dp equals a validation anchor or msg has DS,
+	 * then DNSSEC RRSIGs are expected in the reply */
+	iq->dnssec_expected = iter_indicates_dnssec(qstate->env, iq->dp, 
+		iq->deleg_msg, iq->qchase.qclass);
+
+	/* Reset the RD flag. If this is a query restart, then the RD 
+	 * will have been turned off. */
+	if(qstate->query_flags & BIT_RD)
+		iq->chase_flags |= BIT_RD;
+	else	iq->chase_flags &= ~BIT_RD;
+
 	/* If the RD flag wasn't set, then we just finish with the 
 	 * cached referral as the response. */
 	if(!(iq->chase_flags & BIT_RD)) {
