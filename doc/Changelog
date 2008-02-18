@@ -7,6 +7,7 @@
 	  take long, but throughput has to be high).
 	- fixup iterator operating in no cache conditions (RD flag unset
 	  after a CNAME).
+	- streamlined code for RD flag setting.
 
 15 February 2008: Wouter
 	- added FreeBSD rc.d script to contrib.
