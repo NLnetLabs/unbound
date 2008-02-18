@@ -53,6 +53,7 @@ usage()
 {
 	printf("Usage:	unbound-host [-vdh] [-c class] [-t type] hostname\n");
 	printf("                     [-y key] [-f keyfile] [-F namedkeyfile]\n");
+	printf("                     [-C configfile]\n");
 	printf("  Queries the DNS for information.\n");
 	printf("  The hostname is looked up for IP4, IP6 and mail.\n");
 	printf("  If an ip-address is given a reverse lookup is done.\n");
@@ -63,6 +64,7 @@ usage()
 	printf("			-y 'example.com DS 31560 5 1 1CFED8478...'\n");
 	printf("    -f keyfile		read trust anchors from file, with lines as -y.\n");
 	printf("    -F keyfile		read named.conf-style trust anchors.\n");
+	printf("    -C config		use the specified unbound.conf\n");
 	printf("    -v			be more verbose, shows nodata and security.\n");
 	printf("    -d			debug, traces the action, -d -d shows more.\n");
 	printf("    -h			show this usage help.\n");
@@ -378,6 +380,16 @@ lookup(struct ub_ctx* ctx, const char* nm, const char* qt, const char* qc)
 	free(realq);
 }
 
+/** print error if any */
+static void
+check_ub_res(int r)
+{
+	if(r != 0) {
+		fprintf(stderr, "error: %s\n", ub_strerror(r));
+		exit(1);
+	}
+}
+
 /** getopt global, in case header files fail to declare it. */
 extern int optind;
 /** getopt global, in case header files fail to declare it. */
@@ -399,16 +411,19 @@ int main(int argc, char* argv[])
 	}
 
 	/* parse the options */
-	while( (c=getopt(argc, argv, "F:c:df:ht:vy:")) != -1) {
+	while( (c=getopt(argc, argv, "F:c:df:ht:vy:C:")) != -1) {
 		switch(c) {
 		case 'c':
 			qclass = optarg;
+			break;
+		case 'C':
+			check_ub_res(ub_ctx_config(ctx, optarg));
 			break;
 		case 'd':
 			debuglevel++;
 			if(debuglevel < 2) 
 				debuglevel = 2; /* at least VERB_DETAIL */
-			ub_ctx_debuglevel(ctx, debuglevel);
+			check_ub_res(ub_ctx_debuglevel(ctx, debuglevel));
 			break;
 		case 't':
 			qtype = optarg;
@@ -417,13 +432,13 @@ int main(int argc, char* argv[])
 			verb++;
 			break;
 		case 'y':
-			ub_ctx_add_ta(ctx, optarg);
+			check_ub_res(ub_ctx_add_ta(ctx, optarg));
 			break;
 		case 'f':
-			ub_ctx_add_ta_file(ctx, optarg);
+			check_ub_res(ub_ctx_add_ta_file(ctx, optarg));
 			break;
 		case 'F':
-			ub_ctx_trustedkeys(ctx, optarg);
+			check_ub_res(ub_ctx_trustedkeys(ctx, optarg));
 			break;
 		case '?':
 		case 'h':

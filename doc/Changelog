@@ -1,3 +1,7 @@
+18 February 2008: Wouter
+	- patch to unbound-host from Jan-Piet Mens.
+	- unbound host prints errors if fails to configure context.
+
 15 February 2008: Wouter
 	- added FreeBSD rc.d script to contrib.
 	- --prefix option for configure also changes directory: pidfile:
