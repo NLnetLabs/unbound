@@ -273,7 +273,9 @@ ext_thread(void* arg)
 			if(i > 100) {
 				r = ub_cancel(inf->ctx, async_ids[i-100]);
 				checkerr("ub_cancel", r);
-				async_ids[i-100]=0;
+			}
+			if(i > 200) {
+				async_ids[i-200]=0;
 			}
 		} else if(inf->thread_num > NUMTHR/2) {
 			/* async */

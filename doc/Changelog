@@ -10,6 +10,15 @@
 	- perform several reads per UDP operation. This improves performance
 	  in DoS conditions, and costs very little in normal conditions.
 	  improves cache response +50%, and recursions +10%.
+	- modified asynclook test. because the callback from async is not
+	  in any sort of lock (and thus can use all library functions freely),
+	  this causes a tiny race condition window when the last lock is 
+	  released for a callback and a new cancel() for that callback.
+	  The only way to remove this is by putting callbacks into some 
+	  lock window. I'd rather have the small possibility of a callback
+	  for a cancelled function then no use of library functions in 
+	  callbacks. Could be possible to only outlaw process() and wait()
+	  in callbacks, by adding another lock, but I'd rather not.
 
 18 February 2008: Wouter
 	- patch to unbound-host from Jan-Piet Mens.
