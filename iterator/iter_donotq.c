@@ -115,6 +115,7 @@ donotq_str_cfg(struct iter_donotq* dq, const char* str)
 	struct sockaddr_storage addr;
 	int net;
 	socklen_t addrlen;
+	verbose(VERB_ALGO, "donotq: %s", str);
 	if(!netblockstrtoaddr(str, UNBOUND_DNS_PORT, &addr, &addrlen, &net)) {
 		log_err("cannot parse donotquery netblock: %s", str);
 		return 0;

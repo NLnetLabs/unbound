@@ -1,5 +1,7 @@
 19 February 2008: Wouter
 	- applied patch to unbound-host man page from Jan-Piet Mens.
+	- fix donotquery-localhost: yes default (it erroneously was switched
+	  to default 'no').
 
 18 February 2008: Wouter
 	- patch to unbound-host from Jan-Piet Mens.
