@@ -17,8 +17,8 @@
 	  The only way to remove this is by putting callbacks into some 
 	  lock window. I'd rather have the small possibility of a callback
 	  for a cancelled function then no use of library functions in 
-	  callbacks. Could be possible to only outlaw process() and wait()
-	  in callbacks, by adding another lock, but I'd rather not.
+	  callbacks. Could be possible to only outlaw process(), wait(),
+	  cancel() from callbacks, by adding another lock, but I'd rather not.
 
 18 February 2008: Wouter
 	- patch to unbound-host from Jan-Piet Mens.
