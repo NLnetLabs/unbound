@@ -221,13 +221,14 @@ key_entry_setup(struct regional* region,
 
 struct key_entry_key* 
 key_entry_create_null(struct regional* region,
-	uint8_t* name, size_t namelen, uint16_t dclass, uint32_t ttl)
+	uint8_t* name, size_t namelen, uint16_t dclass, uint32_t ttl,
+	uint32_t now)
 {
 	struct key_entry_key* k;
 	struct key_entry_data* d;
 	if(!key_entry_setup(region, name, namelen, dclass, &k, &d))
 		return NULL;
-	d->ttl = time(0) + ttl;
+	d->ttl = now + ttl;
 	d->isbad = 0;
 	d->rrset_type = LDNS_RR_TYPE_DNSKEY;
 	d->rrset_data = NULL;
@@ -237,7 +238,7 @@ key_entry_create_null(struct regional* region,
 struct key_entry_key* 
 key_entry_create_rrset(struct regional* region,
 	uint8_t* name, size_t namelen, uint16_t dclass,
-	struct ub_packed_rrset_key* rrset)
+	struct ub_packed_rrset_key* rrset, uint32_t now)
 {
 	struct key_entry_key* k;
 	struct key_entry_data* d;
@@ -245,7 +246,7 @@ key_entry_create_rrset(struct regional* region,
 		rrset->entry.data;
 	if(!key_entry_setup(region, name, namelen, dclass, &k, &d))
 		return NULL;
-	d->ttl = rd->ttl + time(NULL);
+	d->ttl = rd->ttl + now;
 	d->isbad = 0;
 	d->rrset_type = ntohs(rrset->rk.type);
 	d->rrset_data = (struct packed_rrset_data*)regional_alloc_init(region,

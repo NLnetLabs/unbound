@@ -164,6 +164,7 @@ enum sec_status dnskey_verify_rrset(struct module_env* env,
  * verify rrset, with dnskey rrset, for a specific rrsig in rrset
  * @param env: module environment, scratch space is used.
  * @param ve: validator environment, date settings.
+ * @param now: current time for validation (can be overridden).
  * @param rrset: to be validated.
  * @param dnskey: DNSKEY rrset, keyset to try.
  * @param sig_idx: which signature to try to validate.
@@ -173,7 +174,7 @@ enum sec_status dnskey_verify_rrset(struct module_env* env,
  *	or unchecked on error.
  */
 enum sec_status dnskeyset_verify_rrset_sig(struct module_env* env, 
-	struct val_env* ve, struct ub_packed_rrset_key* rrset, 
+	struct val_env* ve, uint32_t now, struct ub_packed_rrset_key* rrset, 
 	struct ub_packed_rrset_key* dnskey, size_t sig_idx, 
 	struct rbtree_t** sortree);
 
@@ -182,6 +183,7 @@ enum sec_status dnskeyset_verify_rrset_sig(struct module_env* env,
  * @param region: scratch region used for temporary allocation.
  * @param buf: scratch buffer used for canonicalized rrset data.
  * @param ve: validator environment, date settings.
+ * @param now: current time for validation (can be overridden).
  * @param rrset: to be validated.
  * @param dnskey: DNSKEY rrset, keyset.
  * @param dnskey_idx: which key from the rrset to try.
@@ -195,7 +197,7 @@ enum sec_status dnskeyset_verify_rrset_sig(struct module_env* env,
  *	bogus if it did not validate.
  */
 enum sec_status dnskey_verify_rrset_sig(struct regional* region, 
-	ldns_buffer* buf, struct val_env* ve, 
+	ldns_buffer* buf, struct val_env* ve, uint32_t now,
 	struct ub_packed_rrset_key* rrset, struct ub_packed_rrset_key* dnskey, 
 	size_t dnskey_idx, size_t sig_idx,
 	struct rbtree_t** sortree, int* buf_canon);

@@ -408,7 +408,7 @@ int dnskey_algo_is_supported(struct ub_packed_rrset_key* dnskey_rrset,
 
 enum sec_status 
 dnskeyset_verify_rrset(struct module_env* env, struct val_env* ve,
-        struct ub_packed_rrset_key* rrset, struct ub_packed_rrset_key* dnskey)
+	struct ub_packed_rrset_key* rrset, struct ub_packed_rrset_key* dnskey)
 {
 	enum sec_status sec;
 	size_t i, num;
@@ -420,8 +420,8 @@ dnskeyset_verify_rrset(struct module_env* env, struct val_env* ve,
 		return sec_status_bogus;
 	}
 	for(i=0; i<num; i++) {
-		sec = dnskeyset_verify_rrset_sig(env, ve, rrset, dnskey, i,
-			&sortree);
+		sec = dnskeyset_verify_rrset_sig(env, ve, *env->now, rrset, 
+			dnskey, i, &sortree);
 		if(sec == sec_status_secure)
 			return sec;
 	}
@@ -454,8 +454,8 @@ dnskey_verify_rrset(struct module_env* env, struct val_env* ve,
 			continue;
 		buf_canon = 0;
 		sec = dnskey_verify_rrset_sig(env->scratch, 
-			env->scratch_buffer, ve, rrset, dnskey, dnskey_idx, i,
-			&sortree, &buf_canon);
+			env->scratch_buffer, ve, *env->now, rrset, 
+			dnskey, dnskey_idx, i, &sortree, &buf_canon);
 		if(sec == sec_status_secure)
 			return sec;
 	}
@@ -464,9 +464,10 @@ dnskey_verify_rrset(struct module_env* env, struct val_env* ve,
 }
 
 enum sec_status 
-dnskeyset_verify_rrset_sig(struct module_env* env, struct val_env* ve,
-        struct ub_packed_rrset_key* rrset, struct ub_packed_rrset_key* dnskey,
-	size_t sig_idx, struct rbtree_t** sortree)
+dnskeyset_verify_rrset_sig(struct module_env* env, struct val_env* ve, 
+	uint32_t now, struct ub_packed_rrset_key* rrset, 
+	struct ub_packed_rrset_key* dnskey, size_t sig_idx, 
+	struct rbtree_t** sortree)
 {
 	/* find matching keys and check them */
 	enum sec_status sec = sec_status_bogus;
@@ -486,8 +487,8 @@ dnskeyset_verify_rrset_sig(struct module_env* env, struct val_env* ve,
 		numchecked ++;
 		/* see if key verifies */
 		sec = dnskey_verify_rrset_sig(env->scratch, 
-			env->scratch_buffer, ve, rrset, dnskey, i, sig_idx,
-			sortree, &buf_canon);
+			env->scratch_buffer, ve, now, rrset, dnskey, i, 
+			sig_idx, sortree, &buf_canon);
 		if(sec == sec_status_secure)
 			return sec;
 	}
@@ -1087,7 +1088,8 @@ sigdate_error(const char* str, int32_t expi, int32_t incep, int32_t now)
 
 /** check rrsig dates */
 static int
-check_dates(struct val_env* ve, uint8_t* expi_p, uint8_t* incep_p)
+check_dates(struct val_env* ve, uint32_t unow,
+	uint8_t* expi_p, uint8_t* incep_p)
 {
 	/* read out the dates */
 	int32_t expi, incep, now;
@@ -1100,7 +1102,7 @@ check_dates(struct val_env* ve, uint8_t* expi_p, uint8_t* incep_p)
 	if(ve->date_override) {
 		now = ve->date_override;
 		verbose(VERB_ALGO, "date override option %d", (int)now); 
-	} else	now = (int32_t)time(0);
+	} else	now = (int32_t)unow;
 
 	/* check them */
 	if(incep - expi > 0) {
@@ -1123,8 +1125,9 @@ check_dates(struct val_env* ve, uint8_t* expi_p, uint8_t* incep_p)
 
 /** adjust rrset TTL for verified rrset, compare to original TTL and expi */
 static void
-adjust_ttl(struct val_env* ve, struct ub_packed_rrset_key* rrset, 
-	uint8_t* orig_p, uint8_t* expi_p, uint8_t* incep_p)
+adjust_ttl(struct val_env* ve, uint32_t unow, 
+	struct ub_packed_rrset_key* rrset, uint8_t* orig_p, 
+	uint8_t* expi_p, uint8_t* incep_p)
 {
 	struct packed_rrset_data* d = 
 		(struct packed_rrset_data*)rrset->entry.data;
@@ -1140,7 +1143,7 @@ adjust_ttl(struct val_env* ve, struct ub_packed_rrset_key* rrset,
 	/* get current date */
 	if(ve->date_override) {
 		now = ve->date_override;
-	} else	now = (int32_t)time(0);
+	} else	now = (int32_t)unow;
 	expittl = expi - now;
 
 	/* so now:
@@ -1273,7 +1276,7 @@ verify_canonrrset(ldns_buffer* buf, int algo, unsigned char* sigblock,
 
 enum sec_status 
 dnskey_verify_rrset_sig(struct regional* region, ldns_buffer* buf, 
-	struct val_env* ve,
+	struct val_env* ve, uint32_t now,
         struct ub_packed_rrset_key* rrset, struct ub_packed_rrset_key* dnskey,
         size_t dnskey_idx, size_t sig_idx,
 	struct rbtree_t** sortree, int* buf_canon)
@@ -1357,7 +1360,7 @@ dnskey_verify_rrset_sig(struct regional* region, ldns_buffer* buf,
 	/* original ttl, always ok */
 
 	/* verify inception, expiration dates */
-	if(!check_dates(ve, sig+2+8, sig+2+12)) {
+	if(!check_dates(ve, now, sig+2+8, sig+2+12)) {
 		return sec_status_bogus;
 	}
 
@@ -1385,7 +1388,7 @@ dnskey_verify_rrset_sig(struct regional* region, ldns_buffer* buf,
 
 	/* check if TTL is too high - reduce if so */
 	if(sec == sec_status_secure) {
-		adjust_ttl(ve, rrset, sig+2+4, sig+2+8, sig+2+12);
+		adjust_ttl(ve, now, rrset, sig+2+4, sig+2+8, sig+2+12);
 	}
 
 	return sec;

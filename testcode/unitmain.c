@@ -314,7 +314,7 @@ infra_test()
 	size_t zonelen = 13;
 	struct infra_cache* slab;
 	struct config_file* cfg = config_create();
-	time_t now = 0;
+	uint32_t now = 0;
 	int vs, to;
 	struct infra_host_key* k;
 	struct infra_host_data* d;
@@ -409,5 +409,7 @@ main(int argc, char* argv[])
 	msgparse_test();
 	checklock_stop();
 	printf("%d checks ok.\n", testcount);
+	EVP_cleanup();
+	CRYPTO_cleanup_all_ex_data();
 	return 0;
 }

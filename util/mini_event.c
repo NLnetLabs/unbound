@@ -67,14 +67,29 @@ int mini_ev_cmp(const void* a, const void* b)
 	return 0;
 }
 
+/** set time */
+static int
+settime(struct event_base* base)
+{
+	if(gettimeofday(base->time_tv, NULL) < 0) {
+		return -1;
+	}
+#ifndef S_SPLINT_S
+	*base->time_secs = (uint32_t)base->time_tv->tv_sec;
+#endif
+	return 0;
+}
+
 /** create event base */
-void *event_init(void)
+void *event_init(uint32_t* time_secs, struct timeval* time_tv)
 {
 	struct event_base* base = (struct event_base*)malloc(
 		sizeof(struct event_base));
 	if(!base)
 		return NULL;
 	memset(base, 0, sizeof(*base));
+	base->time_secs = time_secs;
+	base->time_tv = time_tv;
 	base->times = rbtree_create(mini_ev_cmp);
 	if(!base->times) {
 		event_base_free(base);
@@ -165,10 +180,16 @@ static int handle_select(struct event_base* base, struct timeval* wait)
 	memmove(&w, &base->writes, sizeof(fd_set));
 
 	if((ret = select(base->maxfd+1, &r, &w, NULL, wait)) == -1) {
-		if(errno == EAGAIN || errno == EINTR)
+		ret = errno;
+		if(settime(base) < 0)
+			return -1;
+		errno = ret;
+		if(ret == EAGAIN || ret == EINTR)
 			return 0;
 		return -1;
 	}
+	if(settime(base) < 0)
+		return -1;
 	
 	for(i=0; i<base->maxfd+1; i++) {
 		short bits = 0;
@@ -199,13 +220,13 @@ static int handle_select(struct event_base* base, struct timeval* wait)
 /** run select in a loop */
 int event_base_dispatch(struct event_base* base)
 {
-	struct timeval now, wait;
+	struct timeval wait;
+	if(settime(base) < 0)
+		return -1;
 	while(!base->need_to_exit)
 	{
-		if(gettimeofday(&now, NULL) < 0)
-			return -1;
 		/* see if timeouts need handling */
-		handle_timeouts(base, &now, &wait);
+		handle_timeouts(base, base->time_tv, &wait);
 		if(base->need_to_exit)
 			return 0;
 		/* do select */
@@ -279,11 +300,9 @@ int event_add(struct event* ev, struct timeval* tv)
 	}
 	if(tv && (ev->ev_events&EV_TIMEOUT)) {
 #ifndef S_SPLINT_S
-		struct timeval now;
-		if(gettimeofday(&now, NULL) < 0)
-			return -1;
-		ev->ev_timeout.tv_sec = tv->tv_sec + now.tv_sec;
-		ev->ev_timeout.tv_usec = tv->tv_usec + now.tv_usec;
+		struct timeval *now = ev->ev_base->time_tv;
+		ev->ev_timeout.tv_sec = tv->tv_sec + now->tv_sec;
+		ev->ev_timeout.tv_usec = tv->tv_usec + now->tv_usec;
 		while(ev->ev_timeout.tv_usec > 1000000) {
 			ev->ev_timeout.tv_usec -= 1000000;
 			ev->ev_timeout.tv_sec++;

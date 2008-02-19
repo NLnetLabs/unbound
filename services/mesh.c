@@ -516,6 +516,7 @@ mesh_send_reply(struct mesh_state* m, int rcode, struct reply_info* rep,
 	struct mesh_reply* r)
 {
 	struct timeval end_time;
+	struct timeval duration;
 	int secure;
 	/* examine security status */
 	if(m->s.env->need_to_validate && !(r->qflags&BIT_CD) && rep && 
@@ -551,18 +552,13 @@ mesh_send_reply(struct mesh_state* m, int rcode, struct reply_info* rep,
 	}
 	/* account */
 	m->s.env->mesh->num_reply_addrs--;
-	if(gettimeofday(&end_time, NULL) < 0) {
-		log_err("gettimeofday: %s", strerror(errno));
-		return;
-	} else {
-		struct timeval duration;
-		timeval_subtract(&duration, &end_time, &r->start_time);
-		verbose(VERB_ALGO, "query took %d.%6.6d sec",
-			(int)duration.tv_sec, (int)duration.tv_usec);
-		m->s.env->mesh->replies_sent++;
-		timeval_add(&m->s.env->mesh->replies_sum_wait, &duration);
-		timehist_insert(m->s.env->mesh->histogram, &duration);
-	}
+	end_time = *m->s.env->now_tv;
+	timeval_subtract(&duration, &end_time, &r->start_time);
+	verbose(VERB_ALGO, "query took %d.%6.6d sec",
+		(int)duration.tv_sec, (int)duration.tv_usec);
+	m->s.env->mesh->replies_sent++;
+	timeval_add(&m->s.env->mesh->replies_sum_wait, &duration);
+	timehist_insert(m->s.env->mesh->histogram, &duration);
 }
 
 void mesh_query_done(struct mesh_state* mstate)
@@ -640,10 +636,7 @@ int mesh_state_add_reply(struct mesh_state* s, struct edns_data* edns,
 	r->edns = *edns;
 	r->qid = qid;
 	r->qflags = qflags;
-	if(gettimeofday(&r->start_time, NULL) < 0) {
-		log_err("addrep: gettimeofday: %s", strerror(errno));
-		memset(&r->start_time, 0, sizeof(r->start_time));
-	}
+	r->start_time = *s->s.env->now_tv;
 	r->next = s->reply_list;
 	s->reply_list = r;
 	return 1;

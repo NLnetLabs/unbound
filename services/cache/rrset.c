@@ -309,9 +309,8 @@ rrset_array_unlock_touch(struct rrset_cache* r, struct regional* scratch,
 
 void 
 rrset_update_sec_status(struct rrset_cache* r, 
-	struct ub_packed_rrset_key* rrset)
+	struct ub_packed_rrset_key* rrset, uint32_t now)
 {
-	uint32_t now = (uint32_t)time(0);
 	struct packed_rrset_data* updata = 
 		(struct packed_rrset_data*)rrset->entry.data;
 	struct lruhash_entry* e;
@@ -339,9 +338,8 @@ rrset_update_sec_status(struct rrset_cache* r,
 
 void 
 rrset_check_sec_status(struct rrset_cache* r, 
-	struct ub_packed_rrset_key* rrset)
+	struct ub_packed_rrset_key* rrset, uint32_t now)
 {
-	uint32_t now = (uint32_t)time(0);
 	struct packed_rrset_data* updata = 
 		(struct packed_rrset_data*)rrset->entry.data;
 	struct lruhash_entry* e;

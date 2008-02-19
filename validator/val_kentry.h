@@ -145,10 +145,12 @@ int key_entry_isbad(struct key_entry_key* kkey);
  * @param namelen: length of name
  * @param dclass: class of key entry. (host order);
  * @param ttl: what ttl should the key have. relative.
+ * @param now: current time (added to ttl).
  * @return new key entry or NULL on alloc failure
  */
 struct key_entry_key* key_entry_create_null(struct regional* region,
-	uint8_t* name, size_t namelen, uint16_t dclass, uint32_t ttl);
+	uint8_t* name, size_t namelen, uint16_t dclass, uint32_t ttl, 
+	uint32_t now);
 
 /**
  * Create a key entry from an rrset, in the given region.
@@ -157,11 +159,12 @@ struct key_entry_key* key_entry_create_null(struct regional* region,
  * @param namelen: length of name
  * @param dclass: class of key entry. (host order);
  * @param rrset: data for key entry. This is copied to the region.
+ * @param now: current time (added to ttl of rrset)
  * @return new key entry or NULL on alloc failure
  */
 struct key_entry_key* key_entry_create_rrset(struct regional* region,
         uint8_t* name, size_t namelen, uint16_t dclass, 
-	struct ub_packed_rrset_key* rrset);
+	struct ub_packed_rrset_key* rrset, uint32_t now);
 
 /**
  * Create a bad entry, in the given region.

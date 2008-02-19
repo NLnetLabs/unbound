@@ -592,6 +592,14 @@ comm_base_delete(struct comm_base* b)
 	free(runtime);
 }
 
+void
+comm_base_timept(struct comm_base* b, uint32_t** tt, struct timeval** tv)
+{
+	struct replay_runtime* runtime = (struct replay_runtime*)b;
+	*tt = &runtime->now_secs;
+	*tv = &runtime->now_tv;
+}
+
 void 
 comm_base_dispatch(struct comm_base* b)
 {

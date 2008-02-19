@@ -1118,7 +1118,7 @@ processInit(struct module_qstate* qstate, struct val_qstate* vq,
 	}
 
 	val_mark_indeterminate(vq->chase_reply, qstate->env->anchors, 
-		qstate->env->rrset_cache);
+		qstate->env->rrset_cache, qstate->env);
 	vq->key_entry = NULL;
 	vq->empty_DS_name = NULL;
 	vq->ds_rrset = 0;
@@ -1176,7 +1176,7 @@ processInit(struct module_qstate* qstate, struct val_qstate* vq,
 	}
 
 	vq->key_entry = key_cache_obtain(ve->kcache, lookup_name, lookup_len,
-		vq->qchase.qclass, qstate->region);
+		vq->qchase.qclass, qstate->region, *qstate->env->now);
 	
 	/* if not key, or if keyentry is *above* the trustanchor, i.e.
 	 * the keyentry is based on another (higher) trustanchor */
@@ -1196,7 +1196,7 @@ processInit(struct module_qstate* qstate, struct val_qstate* vq,
 		 * essentially proven insecure. */
 		vq->chase_reply->security = sec_status_insecure;
 		val_mark_insecure(vq->chase_reply, vq->key_entry, 
-			qstate->env->rrset_cache);
+			qstate->env->rrset_cache, qstate->env);
 		/* go to finished state to cache this result */
 		vq->state = VAL_FINISHED_STATE;
 		return 1;
@@ -1357,7 +1357,7 @@ processValidate(struct module_qstate* qstate, struct val_qstate* vq,
 			vq->signer_name?"":"unsigned ");
 		vq->chase_reply->security = sec_status_insecure;
 		val_mark_insecure(vq->chase_reply, vq->key_entry, 
-			qstate->env->rrset_cache);
+			qstate->env->rrset_cache, qstate->env);
 		return 1;
 	}
 
@@ -1538,7 +1538,7 @@ processFinished(struct module_qstate* qstate, struct val_qstate* vq,
 	/* if the result is bogus - set message ttl to bogus ttl to avoid
 	 * endless bogus revalidation */
 	if(vq->orig_msg->rep->security == sec_status_bogus) {
-		vq->orig_msg->rep->ttl = time(0) + ve->bogus_ttl;
+		vq->orig_msg->rep->ttl = *qstate->env->now + ve->bogus_ttl;
 		/* If we are in permissive mode, bogus gets indeterminate */
 		if(ve->permissive_mode)
 			vq->orig_msg->rep->security = sec_status_indeterminate;
@@ -1692,7 +1692,8 @@ primeResponseToKE(int rcode, struct dns_msg* msg, struct trust_anchor* ta,
 			kkey = key_entry_create_bad(qstate->region, ta->name,
 				ta->namelen, ta->dclass);
 		else 	kkey = key_entry_create_null(qstate->region, ta->name,
-				ta->namelen, ta->dclass, NULL_KEY_TTL);
+				ta->namelen, ta->dclass, NULL_KEY_TTL,
+				*qstate->env->now);
 		if(!kkey) {
 			log_err("out of memory: allocate fail prime key");
 			return NULL;
@@ -1723,7 +1724,7 @@ primeResponseToKE(int rcode, struct dns_msg* msg, struct trust_anchor* ta,
 		if(sec == sec_status_secure) {
 			kkey = key_entry_create_rrset(qstate->region, 
 				ta->name, ta->namelen, ta->dclass, 
-				dnskey_rrset);
+				dnskey_rrset, *qstate->env->now);
 			if(!kkey) {
 				log_err("out of memory: allocate primed key");
 				return NULL;
@@ -1741,7 +1742,8 @@ primeResponseToKE(int rcode, struct dns_msg* msg, struct trust_anchor* ta,
 			kkey = key_entry_create_bad(qstate->region, ta->name,
 				ta->namelen, ta->dclass);
 		else 	kkey = key_entry_create_null(qstate->region, ta->name,
-				ta->namelen, ta->dclass, NULL_KEY_TTL);
+				ta->namelen, ta->dclass, NULL_KEY_TTL,
+				*qstate->env->now);
 		if(!kkey) {
 			log_err("out of memory: allocate null prime key");
 			return NULL;
@@ -1816,14 +1818,15 @@ ds_response_to_ke(struct module_qstate* qstate, struct val_qstate* vq,
 			 * there was no DS. */
 			*ke = key_entry_create_null(qstate->region, 
 				qinfo->qname, qinfo->qname_len, qinfo->qclass, 
-				ub_packed_rrset_ttl(ds));
+				ub_packed_rrset_ttl(ds), *qstate->env->now);
 			return (*ke) != NULL;
 		}
 
 		/* Otherwise, we return the positive response. */
 		log_query_info(VERB_DETAIL, "validated DS", qinfo);
 		*ke = key_entry_create_rrset(qstate->region,
-			qinfo->qname, qinfo->qname_len, qinfo->qclass, ds);
+			qinfo->qname, qinfo->qname_len, qinfo->qclass, ds,
+			*qstate->env->now);
 		return (*ke) != NULL;
 	} else if(subtype == VAL_CLASS_NODATA || 
 		subtype == VAL_CLASS_NAMEERROR) {
@@ -1846,7 +1849,8 @@ ds_response_to_ke(struct module_qstate* qstate, struct val_qstate* vq,
 					"referral proved no DS.");
 				*ke = key_entry_create_null(qstate->region, 
 					qinfo->qname, qinfo->qname_len, 
-					qinfo->qclass, proof_ttl);
+					qinfo->qclass, proof_ttl,
+					*qstate->env->now);
 				return (*ke) != NULL;
 			case sec_status_insecure:
 				verbose(VERB_DETAIL, "NSEC RRset for the "
@@ -1872,7 +1876,8 @@ ds_response_to_ke(struct module_qstate* qstate, struct val_qstate* vq,
 					"referral proved no DS.");
 				*ke = key_entry_create_null(qstate->region, 
 					qinfo->qname, qinfo->qname_len, 
-					qinfo->qclass, proof_ttl);
+					qinfo->qclass, proof_ttl,
+					*qstate->env->now);
 				return (*ke) != NULL;
 			case sec_status_indeterminate:
 				verbose(VERB_DETAIL, "NSEC3s for the "

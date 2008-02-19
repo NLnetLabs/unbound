@@ -230,9 +230,11 @@ void val_check_nonsecure(struct val_env* ve, struct reply_info* rep);
  * @param rep: the reply with rrsets.
  * @param anchors: the trust anchors.
  * @param r: rrset cache to store updated security status into.
+ * @param env: module environment
  */
 void val_mark_indeterminate(struct reply_info* rep, 
-	struct val_anchors* anchors, struct rrset_cache* r);
+	struct val_anchors* anchors, struct rrset_cache* r, 
+	struct module_env* env);
 
 /**
  * Mark all unchecked rrset entries below a NULL key entry as insecure.
@@ -241,9 +243,10 @@ void val_mark_indeterminate(struct reply_info* rep,
  * @param kkey: key entry, key_entry_isnull() for it. A key entry that marks
  * 	the end of secure space into insecure space.
  * @param r: rrset cache to store updated security status into.
+ * @param env: module environment
  */
 void val_mark_insecure(struct reply_info* rep, struct key_entry_key* kkey,
-	struct rrset_cache* r);
+	struct rrset_cache* r, struct module_env* env);
 
 /**
  * Find next unchecked rrset position, return it for skip.

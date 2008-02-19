@@ -191,6 +191,10 @@ struct module_env {
 	struct alloc_cache* alloc;
 	/** random table to generate random numbers */
 	struct ub_randstate* rnd;
+	/** time in seconds, converted to integer */
+	uint32_t* now;
+	/** time in microseconds. Relatively recent. */
+	struct timeval* now_tv;
 	/** is validation required for messages, controls client-facing
 	 * validation status (AD bits) and servfails */
 	int need_to_validate;

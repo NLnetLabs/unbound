@@ -172,6 +172,7 @@ libworker_setup(struct ub_ctx* ctx, int is_bg)
 	w->env->attach_sub = &mesh_attach_sub;
 	w->env->kill_sub = &mesh_state_delete;
 	w->env->detect_cycle = &mesh_detect_cycle;
+	comm_base_timept(w->base, &w->env->now, &w->env->now_tv);
 	return w;
 }
 

@@ -106,6 +106,13 @@ void log_thread_set(int* num);
 void log_ident_set(const char* id);
 
 /**
+ * Set the time value to print in log entries.
+ * @param t: the point is copied and used to find the time.
+ * 	if NULL, time(2) is used.
+ */
+void log_set_time(uint32_t* t);
+
+/**
  * Log informational message.
  * Pass printf formatted arguments. No trailing newline is needed.
  * @param format: printf-style format string. Arguments follow.

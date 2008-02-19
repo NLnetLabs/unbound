@@ -406,7 +406,7 @@ answer_norec_from_cache(struct worker* worker, struct query_info* qinfo,
 	 */
 	uint16_t udpsize = edns->udp_size;
 	int secure = 0;
-	uint32_t timenow = (uint32_t)time(0);
+	uint32_t timenow = *worker->env.now;
 	int must_validate = !(flags&BIT_CD) && worker->env.need_to_validate;
 	struct dns_msg *msg = NULL;
 	struct delegpt *dp;
@@ -510,7 +510,7 @@ answer_from_cache(struct worker* worker, struct lruhash_entry* e, uint16_t id,
 {
 	struct msgreply_entry* mrentry = (struct msgreply_entry*)e->key;
 	struct reply_info* rep = (struct reply_info*)e->data;
-	uint32_t timenow = time(0);
+	uint32_t timenow = *worker->env.now;
 	uint16_t udpsize = edns->udp_size;
 	int secure;
 	int must_validate = !(flags&BIT_CD) && worker->env.need_to_validate;
@@ -1008,6 +1008,9 @@ worker_init(struct worker* worker, struct config_file *cfg,
 		worker->thread_num);
 	alloc_set_id_cleanup(&worker->alloc, &worker_alloc_cleanup, worker);
 	worker->env = *worker->daemon->env;
+	comm_base_timept(worker->base, &worker->env.now, &worker->env.now_tv);
+	if(worker->thread_num == 0)
+		log_set_time(worker->env.now);
 	worker->env.worker = worker;
 	worker->env.send_packet = &worker_send_packet;
 	worker->env.send_query = &worker_send_query;
@@ -1057,6 +1060,8 @@ worker_delete(struct worker* worker)
 	comm_signal_delete(worker->comsig);
 	comm_point_delete(worker->cmd_com);
 	comm_timer_delete(worker->stat_timer);
+	if(worker->thread_num == 0)
+		log_set_time(NULL);
 	comm_base_delete(worker->base);
 	ub_randfree(worker->rndstate);
 	/* close fds after deleting commpoints, to be sure.

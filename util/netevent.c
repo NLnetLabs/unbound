@@ -62,6 +62,8 @@
  * Possibly other structures (list, tree) this is part of.
  */
 struct internal_event {
+	/** the comm base */
+	struct comm_base* base;
 	/** libevent event type, alloced here */
 	struct event ev;
 };
@@ -72,12 +74,18 @@ struct internal_event {
 struct internal_base {
 	/** libevent event_base type. */
 	struct event_base* base;
+	/** seconds time pointer points here */
+	uint32_t secs;
+	/** timeval with current time */
+	struct timeval now;
 };
 
 /**
  * Internal timer structure, to store timer event in.
  */
 struct internal_timer {
+	/** the comm base */
+	struct comm_base* base;
 	/** libevent event type, alloced here */
 	struct event ev;
 	/** is timer enabled */
@@ -101,6 +109,20 @@ static struct comm_point* comm_point_create_tcp_handler(
 
 /* -------- End of local definitions -------- */
 
+#ifdef USE_MINI_EVENT
+#define comm_base_now(x) /* nothing to do */
+#else /* !USE_MINI_EVENT */
+/** fillup the time values in the event base */
+static void
+comm_base_now(struct comm_base* b)
+{
+	if(gettimeofday(&b->eb->now, NULL) < 0) {
+		log_err("gettimeofday: %s", strerror(errno));
+	}
+	b->eb->secs = (uint32_t)b->eb->now.tv_sec;
+}
+#endif /* USE_MINI_EVENT */
+
 struct comm_base* 
 comm_base_create()
 {
@@ -113,12 +135,18 @@ comm_base_create()
 		free(b);
 		return NULL;
 	}
+#ifdef USE_MINI_EVENT
+	/* use mini event time-sharing feature */
+	b->eb->base = event_init(&b->eb->secs, &b->eb->now);
+#else
 	b->eb->base = event_init();
+#endif
 	if(!b->eb->base) {
 		free(b->eb);
 		free(b);
 		return NULL;
 	}
+	comm_base_now(b);
 	verbose(VERB_ALGO, "libevent %s uses %s method.", 
 		event_get_version(), event_get_method());
 	return b;
@@ -140,6 +168,13 @@ comm_base_delete(struct comm_base* b)
 	b->eb->base = NULL;
 	free(b->eb);
 	free(b);
+}
+
+void 
+comm_base_timept(struct comm_base* b, uint32_t** tt, struct timeval** tv)
+{
+	*tt = &b->eb->secs;
+	*tv = &b->eb->now;
 }
 
 void 
@@ -335,6 +370,7 @@ comm_point_udp_ancil_callback(int fd, short event, void* arg)
 	if(!(event&EV_READ))
 		return;
 	log_assert(rep.c && rep.c->buffer && rep.c->fd == fd);
+	comm_base_now(rep.c->ev->base);
 	ldns_buffer_clear(rep.c->buffer);
 	rep.addrlen = (socklen_t)sizeof(rep.addr);
 	log_assert(fd != -1);
@@ -414,6 +450,7 @@ comm_point_udp_callback(int fd, short event, void* arg)
 	if(!(event&EV_READ))
 		return;
 	log_assert(rep.c && rep.c->buffer && rep.c->fd == fd);
+	comm_base_now(rep.c->ev->base);
 	ldns_buffer_clear(rep.c->buffer);
 	rep.addrlen = (socklen_t)sizeof(rep.addr);
 	log_assert(fd != -1);
@@ -460,6 +497,7 @@ comm_point_tcp_accept_callback(int fd, short event, void* arg)
 		log_info("ignoring tcp accept event %d", (int)event);
 		return;
 	}
+	comm_base_now(c->ev->base);
 	/* find free tcp handler. */
 	if(!c->tcp_free) {
 		log_warn("accepted too many tcp, connections full");
@@ -706,6 +744,7 @@ comm_point_tcp_handle_callback(int fd, short event, void* arg)
 {
 	struct comm_point* c = (struct comm_point*)arg;
 	log_assert(c->type == comm_tcp);
+	comm_base_now(c->ev->base);
 
 	if(event&EV_READ) {
 		if(!comm_point_tcp_handle_read(fd, c, 0)) {
@@ -748,6 +787,7 @@ void comm_point_local_handle_callback(int fd, short event, void* arg)
 {
 	struct comm_point* c = (struct comm_point*)arg;
 	log_assert(c->type == comm_local);
+	comm_base_now(c->ev->base);
 
 	if(event&EV_READ) {
 		if(!comm_point_tcp_handle_read(fd, c, 1)) {
@@ -765,6 +805,7 @@ void comm_point_raw_handle_callback(int ATTR_UNUSED(fd),
 {
 	struct comm_point* c = (struct comm_point*)arg;
 	log_assert(c->type == comm_raw);
+	comm_base_now(c->ev->base);
 
 	(void)(*c->callback)(c, c->cb_arg, NETEVENT_NOERROR, NULL);
 }
@@ -784,6 +825,7 @@ comm_point_create_udp(struct comm_base *base, int fd, ldns_buffer* buffer,
 		free(c);
 		return NULL;
 	}
+	c->ev->base = base;
 	c->fd = fd;
 	c->buffer = buffer;
 	c->timeout = NULL;
@@ -828,6 +870,7 @@ comm_point_create_udp_ancil(struct comm_base *base, int fd,
 		free(c);
 		return NULL;
 	}
+	c->ev->base = base;
 	c->fd = fd;
 	c->buffer = buffer;
 	c->timeout = NULL;
@@ -872,6 +915,7 @@ comm_point_create_tcp_handler(struct comm_base *base,
 		free(c);
 		return NULL;
 	}
+	c->ev->base = base;
 	c->fd = -1;
 	c->buffer = ldns_buffer_new(bufsize);
 	if(!c->buffer) {
@@ -934,6 +978,7 @@ comm_point_create_tcp(struct comm_base *base, int fd, int num, size_t bufsize,
 		free(c);
 		return NULL;
 	}
+	c->ev->base = base;
 	c->fd = fd;
 	c->buffer = NULL;
 	c->timeout = NULL;
@@ -995,6 +1040,7 @@ comm_point_create_tcp_out(struct comm_base *base, size_t bufsize,
 		free(c);
 		return NULL;
 	}
+	c->ev->base = base;
 	c->fd = -1;
 	c->buffer = ldns_buffer_new(bufsize);
 	if(!c->buffer) {
@@ -1046,6 +1092,7 @@ comm_point_create_local(struct comm_base *base, int fd, size_t bufsize,
 		free(c);
 		return NULL;
 	}
+	c->ev->base = base;
 	c->fd = fd;
 	c->buffer = ldns_buffer_new(bufsize);
 	if(!c->buffer) {
@@ -1097,6 +1144,7 @@ comm_point_create_raw(struct comm_base* base, int fd, int writing,
 		free(c);
 		return NULL;
 	}
+	c->ev->base = base;
 	c->fd = fd;
 	c->buffer = NULL;
 	c->timeout = NULL;
@@ -1280,6 +1328,7 @@ comm_timer_create(struct comm_base* base, void (*cb)(void*), void* cb_arg)
 		free(tm);
 		return NULL;
 	}
+	tm->ev_timer->base = base;
 	tm->callback = cb;
 	tm->cb_arg = cb_arg;
 	event_set(&tm->ev_timer->ev, -1, EV_PERSIST|EV_TIMEOUT, 
@@ -1331,6 +1380,7 @@ comm_timer_callback(int ATTR_UNUSED(fd), short event, void* arg)
 	struct comm_timer* tm = (struct comm_timer*)arg;
 	if(!(event&EV_TIMEOUT))
 		return;
+	comm_base_now(tm->ev_timer->base);
 	tm->ev_timer->enabled = 0;
 	log_assert(fptr_whitelist_comm_timer(tm->callback));
 	(*tm->callback)(tm->cb_arg);
@@ -1371,6 +1421,7 @@ comm_signal_callback(int sig, short event, void* arg)
 	struct comm_signal* comsig = (struct comm_signal*)arg;
 	if(!(event & EV_SIGNAL))
 		return;
+	comm_base_now(comsig->base);
 	log_assert(fptr_whitelist_comm_signal(comsig->callback));
 	(*comsig->callback)(sig, comsig->cb_arg);
 }

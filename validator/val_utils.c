@@ -322,7 +322,7 @@ val_verify_rrset(struct module_env* env, struct val_env* ve,
 		return d->security;
 	}
 	/* check in the cache if verification has already been done */
-	rrset_check_sec_status(env->rrset_cache, rrset);
+	rrset_check_sec_status(env->rrset_cache, rrset, *env->now);
 	if(d->security == sec_status_secure) {
 		log_nametypeclass(VERB_ALGO, "verify rrset from cache", 
 			rrset->rk.dname, ntohs(rrset->rk.type), 
@@ -349,7 +349,7 @@ val_verify_rrset(struct module_env* env, struct val_env* ve,
 			 * if RRset timed out and clients see proper value. */
 		}
 		/* if status updated - store in cache for reuse */
-		rrset_update_sec_status(env->rrset_cache, rrset);
+		rrset_update_sec_status(env->rrset_cache, rrset, *env->now);
 	}
 
 	return sec;
@@ -456,7 +456,8 @@ val_verify_new_DNSKEYs(struct regional* region, struct module_env* env,
 			verbose(VERB_ALGO, "DS matched DNSKEY.");
 			return key_entry_create_rrset(region, 
 				ds_rrset->rk.dname, ds_rrset->rk.dname_len,
-				ntohs(ds_rrset->rk.rrset_class), dnskey_rrset);
+				ntohs(ds_rrset->rk.rrset_class), dnskey_rrset,
+				*env->now);
 		}
 	}
 
@@ -469,7 +470,7 @@ val_verify_new_DNSKEYs(struct regional* region, struct module_env* env,
 		return key_entry_create_null(region, ds_rrset->rk.dname,
 			ds_rrset->rk.dname_len, 
 			ntohs(ds_rrset->rk.rrset_class),
-			rrset_get_ttl(ds_rrset));
+			rrset_get_ttl(ds_rrset), *env->now);
 	}
 	/* If any were understandable, then it is bad. */
 	verbose(VERB_QUERY, "Failed to match any usable DS to a DNSKEY.");
@@ -685,7 +686,7 @@ val_check_nonsecure(struct val_env* ve, struct reply_info* rep)
 
 void 
 val_mark_indeterminate(struct reply_info* rep, struct val_anchors* anchors, 
-	struct rrset_cache* r)
+	struct rrset_cache* r, struct module_env* env)
 {
 	size_t i;
 	struct packed_rrset_data* d;
@@ -698,14 +699,14 @@ val_mark_indeterminate(struct reply_info* rep, struct val_anchors* anchors,
 		{ 	
 			/* mark as indeterminate */
 			d->security = sec_status_indeterminate;
-			rrset_update_sec_status(r, rep->rrsets[i]);
+			rrset_update_sec_status(r, rep->rrsets[i], *env->now);
 		}
 	}
 }
 
 void 
 val_mark_insecure(struct reply_info* rep, struct key_entry_key* kkey,
-	struct rrset_cache* r)
+	struct rrset_cache* r, struct module_env* env)
 {
 	size_t i;
 	struct packed_rrset_data* d;
@@ -716,7 +717,7 @@ val_mark_insecure(struct reply_info* rep, struct key_entry_key* kkey,
 		   dname_subdomain_c(rep->rrsets[i]->rk.dname, kkey->name)) {
 			/* mark as insecure */
 			d->security = sec_status_insecure;
-			rrset_update_sec_status(r, rep->rrsets[i]);
+			rrset_update_sec_status(r, rep->rrsets[i], *env->now);
 		}
 	}
 }

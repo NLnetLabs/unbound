@@ -430,6 +430,7 @@ outside_network_create(struct comm_base *base, size_t bufsize,
 		log_err("malloc failed");
 		return NULL;
 	}
+	comm_base_timept(base, &outnet->now_secs, &outnet->now_tv);
 	outnet->base = base;
 	outnet->num_tcp = num_tcp;
 	outnet->infra = infra;
@@ -947,7 +948,7 @@ static int
 serviced_udp_send(struct serviced_query* sq, ldns_buffer* buff)
 {
 	int rtt, vs;
-	time_t now = time(0);
+	uint32_t now = *sq->outnet->now_secs;
 
 	if(!infra_host(sq->outnet->infra, &sq->addr, sq->addrlen, now, &vs,
 		&rtt))
@@ -958,10 +959,7 @@ serviced_udp_send(struct serviced_query* sq, ldns_buffer* buff)
 		else 	sq->status = serviced_query_UDP;
 	}
 	serviced_encode(sq, buff, sq->status == serviced_query_UDP_EDNS);
-	if(gettimeofday(&sq->last_sent_time, NULL) < 0) {
-		log_err("gettimeofday: %s", strerror(errno));
-		return 0;
-	}
+	sq->last_sent_time = *sq->outnet->now_tv;
 	verbose(VERB_ALGO, "serviced query UDP timeout=%d msec", rtt);
 	sq->pending = pending_udp_query(sq->outnet, buff, &sq->addr, 
 		sq->addrlen, rtt, serviced_udp_callback, sq, sq->outnet->rnd);
@@ -1039,7 +1037,7 @@ serviced_tcp_callback(struct comm_point* c, void* arg, int error,
 		LDNS_RCODE_FORMERR || LDNS_RCODE_WIRE(ldns_buffer_begin(
 		c->buffer)) == LDNS_RCODE_NOTIMPL) ) {
 		if(!infra_edns_update(sq->outnet->infra, &sq->addr, 
-			sq->addrlen, -1, time(0)))
+			sq->addrlen, -1, *sq->outnet->now_secs))
 			log_err("Out of memory caching no edns for host");
 		sq->status = serviced_query_TCP;
 		serviced_tcp_initiate(sq->outnet, sq, c->buffer);
@@ -1079,19 +1077,15 @@ serviced_udp_callback(struct comm_point* c, void* arg, int error,
 {
 	struct serviced_query* sq = (struct serviced_query*)arg;
 	struct outside_network* outnet = sq->outnet;
-	struct timeval now;
+	struct timeval now = *sq->outnet->now_tv;
 	int fallback_tcp = 0;
-	if(gettimeofday(&now, NULL) < 0) {
-		log_err("gettimeofday: %s", strerror(errno));
-		/* this option does not need current time */
-		error = NETEVENT_CLOSED; 
-	}
+
 	sq->pending = NULL; /* removed after callback */
 	if(error == NETEVENT_TIMEOUT) {
 		int rto = 0;
 		sq->retry++;
 		if(!(rto=infra_rtt_update(outnet->infra, &sq->addr, sq->addrlen,
-			-1, (time_t)now.tv_sec)))
+			-1, (uint32_t)now.tv_sec)))
 			log_err("out of memory in UDP exponential backoff");
 		if(sq->retry < OUTBOUND_UDP_RETRY) {
 			log_name_addr(VERB_ALGO, "retry query", sq->qbuf+10,
@@ -1115,7 +1109,7 @@ serviced_udp_callback(struct comm_point* c, void* arg, int error,
 			ldns_buffer_begin(c->buffer)) == LDNS_RCODE_NOTIMPL)) {
 		/* note no EDNS, fallback without EDNS */
 		if(!infra_edns_update(outnet->infra, &sq->addr, sq->addrlen,
-			-1, (time_t)now.tv_sec)) {
+			-1, (uint32_t)now.tv_sec)) {
 			log_err("Out of memory caching no edns for host");
 		}
 		sq->status = serviced_query_UDP;
@@ -1145,7 +1139,7 @@ serviced_udp_callback(struct comm_point* c, void* arg, int error,
 		verbose(VERB_ALGO, "measured roundtrip at %d msec", roundtime);
 		log_assert(roundtime >= 0);
 		if(!infra_rtt_update(outnet->infra, &sq->addr, sq->addrlen, 
-			roundtime, (time_t)now.tv_sec))
+			roundtime, (uint32_t)now.tv_sec))
 			log_err("out of memory noting rtt.");
 	}
 	serviced_callbacks(sq, error, c, rep);

@@ -226,6 +226,11 @@ struct replay_runtime {
 	/** user argument for incoming query callback */
 	void *cb_arg;
 
+	/** the current time in seconds */
+	uint32_t now_secs;
+	/** the current time in microseconds */
+	struct timeval now_tv;
+
 	/** signal handler callback */
 	void (*sig_cb)(int, void*);
 	/** signal handler user arg */

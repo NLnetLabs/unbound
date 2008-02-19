@@ -60,6 +60,10 @@ struct infra_cache;
 struct outside_network {
 	/** Base for select calls */
 	struct comm_base* base;
+	/** pointer to time in seconds */
+	uint32_t* now_secs;
+	/** pointer to time in microseconds */
+	struct timeval* now_tv;
 
 	/** buffer shared by UDP connections, since there is only one
 	    datagram at any time. */

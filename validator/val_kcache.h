@@ -86,13 +86,14 @@ void key_cache_insert(struct key_cache* kcache, struct key_entry_key* kkey);
  * @param namelen: length of the name.
  * @param key_class: class of the key.
  * @param region: a copy of the key_entry is allocated in this region.
+ * @param now: current time.
  * @return pointer to a newly allocated key_entry copy in the region, if
  * 	a key entry could be found, and allocation succeeded and TTL was OK.
  * 	Otherwise, NULL is returned.
  */
 struct key_entry_key* key_cache_obtain(struct key_cache* kcache,
 	uint8_t* name, size_t namelen, uint16_t key_class, 
-	struct regional* region);
+	struct regional* region, uint32_t now);
 
 /**
  * Get memory in use by the key cache.

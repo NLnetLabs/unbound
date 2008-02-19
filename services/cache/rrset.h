@@ -192,9 +192,10 @@ void rrset_array_unlock_touch(struct rrset_cache* r, struct regional* scratch,
  * @param r: the rrset cache. 
  * @param rrset: which rrset to attempt to update. This rrset is left 
  * 	untouched. The rrset in the cache is updated in-place.
+ * @param now: current time.
  */
 void rrset_update_sec_status(struct rrset_cache* r, 
-	struct ub_packed_rrset_key* rrset);
+	struct ub_packed_rrset_key* rrset, uint32_t now);
 
 /**
  * Looks up security status of an rrset. Looks up the rrset.
@@ -203,9 +204,10 @@ void rrset_update_sec_status(struct rrset_cache* r,
  * @param r: the rrset cache. 
  * @param rrset: This rrset may change security status due to the cache.
  * 	But its status will only improve, towards secure.
+ * @param now: current time.
  */
 void rrset_check_sec_status(struct rrset_cache* r, 
-	struct ub_packed_rrset_key* rrset);
+	struct ub_packed_rrset_key* rrset, uint32_t now);
 
 /** mark rrset to be deleted, set id=0 */
 void rrset_markdel(void* key);

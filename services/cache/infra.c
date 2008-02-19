@@ -158,7 +158,7 @@ infra_lookup_host_nottl(struct infra_cache* infra,
 struct infra_host_data* 
 infra_lookup_host(struct infra_cache* infra,
         struct sockaddr_storage* addr, socklen_t addrlen, int wr,
-        time_t timenow, struct infra_host_key** key)
+        uint32_t timenow, struct infra_host_key** key)
 {
 	struct infra_host_data* data;
 	struct lruhash_entry* e = infra_lookup_host_nottl(infra, addr, 
@@ -186,7 +186,7 @@ infra_lookup_host(struct infra_cache* infra,
  */
 static struct lruhash_entry*
 new_host_entry(struct infra_cache* infra, struct sockaddr_storage* addr, 
-	socklen_t addrlen, time_t tm)
+	socklen_t addrlen, uint32_t tm)
 {
 	struct infra_host_data* data;
 	struct infra_host_key* key = (struct infra_host_key*)malloc(
@@ -214,7 +214,7 @@ new_host_entry(struct infra_cache* infra, struct sockaddr_storage* addr,
 
 int 
 infra_host(struct infra_cache* infra, struct sockaddr_storage* addr,
-        socklen_t addrlen, time_t timenow, int* edns_vs, int* to)
+        socklen_t addrlen, uint32_t timenow, int* edns_vs, int* to)
 {
 	struct lruhash_entry* e = infra_lookup_host_nottl(infra, addr, 
 		addrlen, 0);
@@ -260,7 +260,7 @@ hash_lameness(uint8_t* name, size_t namelen)
 
 int 
 infra_lookup_lame(struct infra_host_data* host,
-        uint8_t* name, size_t namelen, time_t timenow)
+        uint8_t* name, size_t namelen, uint32_t timenow)
 {
 	struct lruhash_entry* e;
 	struct infra_lame_key k;
@@ -329,7 +329,7 @@ infra_lame_deldatafunc(void* d, void* ATTR_UNUSED(arg))
 int 
 infra_set_lame(struct infra_cache* infra,
         struct sockaddr_storage* addr, socklen_t addrlen,
-        uint8_t* name, size_t namelen, time_t timenow, int dnsseclame)
+        uint8_t* name, size_t namelen, uint32_t timenow, int dnsseclame)
 {
 	struct infra_host_data* data;
 	struct lruhash_entry* e;
@@ -422,7 +422,7 @@ infra_update_tcp_works(struct infra_cache* infra,
 int 
 infra_rtt_update(struct infra_cache* infra,
         struct sockaddr_storage* addr, socklen_t addrlen,
-        int roundtrip, time_t timenow)
+        int roundtrip, uint32_t timenow)
 {
 	struct lruhash_entry* e = infra_lookup_host_nottl(infra, addr, 
 		addrlen, 1);
@@ -452,7 +452,7 @@ infra_rtt_update(struct infra_cache* infra,
 int 
 infra_edns_update(struct infra_cache* infra,
         struct sockaddr_storage* addr, socklen_t addrlen,
-        int edns_version, time_t timenow)
+        int edns_version, uint32_t timenow)
 {
 	struct lruhash_entry* e = infra_lookup_host_nottl(infra, addr, 
 		addrlen, 1);
@@ -478,7 +478,7 @@ int
 infra_get_lame_rtt(struct infra_cache* infra,
         struct sockaddr_storage* addr, socklen_t addrlen,
         uint8_t* name, size_t namelen, int* lame, int* dnsseclame,
-	int* rtt, time_t timenow)
+	int* rtt, uint32_t timenow)
 {
 	struct infra_host_data* host;
 	struct lruhash_entry* e = infra_lookup_host_nottl(infra, addr, 

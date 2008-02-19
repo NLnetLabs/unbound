@@ -263,6 +263,7 @@ verifytest_file(const char* fname, const char* at_date)
 	struct entry* list = read_datafile(fname);
 	struct module_env env;
 	struct val_env ve;
+	uint32_t now = time(NULL);
 
 	if(!list)
 		fatal_exit("could not read %s: %s", fname, strerror(errno));
@@ -271,6 +272,7 @@ verifytest_file(const char* fname, const char* at_date)
 	memset(&ve, 0, sizeof(ve));
 	env.scratch = region;
 	env.scratch_buffer = buf;
+	env.now = &now;
 	ve.date_override = cfg_convert_timeval(at_date);
 	unit_assert(region && buf);
 	dnskey = extract_keys(list, &alloc, region, buf);

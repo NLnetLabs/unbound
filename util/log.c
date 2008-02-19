@@ -69,6 +69,8 @@ static const char* ident="unbound";
 /** are we using syslog(3) to log to */
 static int log_to_syslog = 0;
 #endif /* HAVE_SYSLOG_H */
+/** time to print in log, if NULL, use time(2) */
+static uint32_t* log_now = NULL;
 
 void
 log_init(const char* filename, int use_syslog, const char* chrootdir)
@@ -130,12 +132,18 @@ void log_ident_set(const char* id)
 	ident = id;
 }
 
+void log_set_time(uint32_t* t)
+{
+	log_now = t;
+}
+
 void
 log_vmsg(int pri, const char* type,
 	const char *format, va_list args)
 {
 	char message[MAXSYSLOGMSGLEN];
 	unsigned int* tid = (unsigned int*)ub_thread_key_get(logkey);
+	uint32_t now;
 	(void)pri;
 	vsnprintf(message, sizeof(message), format, args);
 #ifdef HAVE_SYSLOG_H
@@ -146,7 +154,10 @@ log_vmsg(int pri, const char* type,
 	}
 #endif /* HAVE_SYSLOG_H */
 	if(!logfile) return;
-	fprintf(logfile, "[%d] %s[%d:%x] %s: %s\n", (int)time(NULL), 
+	if(log_now)
+		now = *log_now;
+	else	now = (uint32_t)time(NULL);
+	fprintf(logfile, "[%u] %s[%d:%x] %s: %s\n", (unsigned)now, 
 		ident, (int)getpid(), tid?*tid:0, type, message);
 	fflush(logfile);
 }

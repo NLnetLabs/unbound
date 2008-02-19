@@ -265,6 +265,15 @@ struct comm_base* comm_base_create();
 void comm_base_delete(struct comm_base* b);
 
 /**
+ * Obtain two pointers. The pointers never change (until base_delete()).
+ * The pointers point to time values that are updated regularly.
+ * @param b: the communication base that will update the time values.
+ * @param tt: pointer to time in seconds is returned.
+ * @param tv: pointer to time in microseconds is returned.
+ */
+void comm_base_timept(struct comm_base* b, uint32_t** tt, struct timeval** tv);
+
+/**
  * Dispatch the comm base events.
  * @param b: the communication to perform.
  */

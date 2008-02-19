@@ -63,7 +63,7 @@ struct infra_host_key {
  */
 struct infra_host_data {
 	/** TTL value for this entry. absolute time. */
-	time_t ttl;
+	uint32_t ttl;
 	/** round trip times for timeout calculation */
 	struct rtt_info rtt;
 	/** Names of the zones that are lame. NULL=no lame zones. */
@@ -90,7 +90,7 @@ struct infra_lame_key {
  */
 struct infra_lame_data {
 	/** TTL of this entry. absolute time. */
-	time_t ttl;
+	uint32_t ttl;
 	/** is the host lame (does not serve the zone authoritatively),
 	 * or is the host dnssec lame (does not serve DNSSEC data) */
 	int isdnsseclame;
@@ -151,7 +151,7 @@ struct infra_cache* infra_adjust(struct infra_cache* infra,
  */
 struct infra_host_data* infra_lookup_host(struct infra_cache* infra, 
 	struct sockaddr_storage* addr, socklen_t addrlen, int wr, 
-	time_t timenow, struct infra_host_key** key);
+	uint32_t timenow, struct infra_host_key** key);
 
 /**
  * Find host information to send a packet. Creates new entry if not found.
@@ -166,7 +166,7 @@ struct infra_host_data* infra_lookup_host(struct infra_cache* infra,
  * @return: 0 on error.
  */
 int infra_host(struct infra_cache* infra, struct sockaddr_storage* addr, 
-	socklen_t addrlen, time_t timenow, int* edns_vs, int* to);
+	socklen_t addrlen, uint32_t timenow, int* edns_vs, int* to);
 
 /**
  * Check for lameness of this server for a particular zone.
@@ -178,7 +178,7 @@ int infra_host(struct infra_cache* infra, struct sockaddr_storage* addr,
  * @return: 0 if not lame or unknown or timed out, 1 if lame, 2 if dnsseclame.
  */
 int infra_lookup_lame(struct infra_host_data* host,
-	uint8_t* name, size_t namelen, time_t timenow);
+	uint8_t* name, size_t namelen, uint32_t timenow);
 
 /**
  * Set a host to be lame for the given zone.
@@ -194,7 +194,7 @@ int infra_lookup_lame(struct infra_host_data* host,
  */
 int infra_set_lame(struct infra_cache* infra,
         struct sockaddr_storage* addr, socklen_t addrlen,
-	uint8_t* name, size_t namelen, time_t timenow, int dnsseclame);
+	uint8_t* name, size_t namelen, uint32_t timenow, int dnsseclame);
 
 /**
  * Update rtt information for the host.
@@ -208,7 +208,7 @@ int infra_set_lame(struct infra_cache* infra,
  */
 int infra_rtt_update(struct infra_cache* infra,
         struct sockaddr_storage* addr, socklen_t addrlen,
-	int roundtrip, time_t timenow);
+	int roundtrip, uint32_t timenow);
 
 /**
  * Update information for the host, store that a TCP transaction works.
@@ -230,7 +230,7 @@ void infra_update_tcp_works(struct infra_cache* infra,
  */
 int infra_edns_update(struct infra_cache* infra,
         struct sockaddr_storage* addr, socklen_t addrlen,
-	int edns_version, time_t timenow);
+	int edns_version, uint32_t timenow);
 
 /**
  * Get Lameness information and average RTT if host is in the cache.
@@ -250,7 +250,7 @@ int infra_edns_update(struct infra_cache* infra,
 int infra_get_lame_rtt(struct infra_cache* infra,
         struct sockaddr_storage* addr, socklen_t addrlen, 
 	uint8_t* name, size_t namelen, int* lame, int* dnsseclame,
-	int* rtt, time_t timenow);
+	int* rtt, uint32_t timenow);
 
 /**
  * Get memory used by the infra cache.

@@ -52,7 +52,7 @@
 /** store rrsets in the rrset cache. 
  * @param env: module environment with caches.
  * @param rep: contains list of rrsets to store.
- * @param now: current time(NULL).
+ * @param now: current time.
  */
 static void
 store_rrsets(struct module_env* env, struct reply_info* rep, uint32_t now)
@@ -73,7 +73,7 @@ dns_cache_store_msg(struct module_env* env, struct query_info* qinfo,
 	hashvalue_t hash, struct reply_info* rep)
 {
 	struct msgreply_entry* e;
-	uint32_t now = time(NULL), ttl = rep->ttl;
+	uint32_t ttl = rep->ttl;
 	size_t i;
 
 	/* store RRsets */
@@ -82,8 +82,8 @@ dns_cache_store_msg(struct module_env* env, struct query_info* qinfo,
 		rep->ref[i].id = rep->rrsets[i]->id;
 	}
 	reply_info_sortref(rep);
-	reply_info_set_ttls(rep, now);
-	store_rrsets(env, rep, now);
+	reply_info_set_ttls(rep, *env->now);
+	store_rrsets(env, rep, *env->now);
 	if(ttl == 0) {
 		/* we do not store the message, but we did store the RRs,
 		 * which could be useful for delegation information */
@@ -219,7 +219,7 @@ cache_fill_missing(struct module_env* env, uint16_t qclass,
 {
 	struct delegpt_ns* ns;
 	struct ub_packed_rrset_key* akey;
-	uint32_t now = time(NULL);
+	uint32_t now = *env->now;
 	for(ns = dp->nslist; ns; ns = ns->next) {
 		if(ns->resolved)
 			continue;
@@ -543,7 +543,7 @@ dns_cache_lookup(struct module_env* env,
 	struct lruhash_entry* e;
 	struct query_info k;
 	hashvalue_t h;
-	uint32_t now = (uint32_t)time(NULL);
+	uint32_t now = *env->now;
 	struct ub_packed_rrset_key* rrset;
 
 	/* lookup first, this has both NXdomains and ANSWER responses */
@@ -630,16 +630,15 @@ dns_cache_store(struct module_env* env, struct query_info* msgqinf,
 	if(is_referral) {
 		/* store rrsets */
 		struct rrset_ref ref;
-		uint32_t now = time(NULL);
 		size_t i;
 		for(i=0; i<rep->rrset_count; i++) {
 			packed_rrset_ttl_add((struct packed_rrset_data*)
-				rep->rrsets[i]->entry.data, now);
+				rep->rrsets[i]->entry.data, *env->now);
 			ref.key = rep->rrsets[i];
 			ref.id = rep->rrsets[i]->id;
 			/*ignore ret: it was in the cache, ref updated */
 			(void)rrset_cache_update(env->rrset_cache, &ref, 
-				env->alloc, now);
+				env->alloc, *env->now);
 		}
 		free(rep);
 		return 1;

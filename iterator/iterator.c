@@ -759,7 +759,7 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 		 * cache needs to be primed for the qclass. */
 		iq->dp = dns_cache_find_delegation(qstate->env, delname, 
 			delnamelen, iq->qchase.qtype, iq->qchase.qclass, 
-			qstate->region, &iq->deleg_msg, (uint32_t)time(NULL));
+			qstate->region, &iq->deleg_msg, *qstate->env->now);
 
 		/* If the cache has returned nothing, then we have a 
 		 * root priming situation. */
@@ -1336,8 +1336,8 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 			 * gotten this from cache, so test to be sure */
 			if(!infra_set_lame(qstate->env->infra_cache, 
 				&qstate->reply->addr, qstate->reply->addrlen, 
-				iq->dp->name, iq->dp->namelen, time(NULL),
-				dnsseclame))
+				iq->dp->name, iq->dp->namelen, 
+				*qstate->env->now, dnsseclame))
 				log_err("mark host lame: out of memory");
 		} else log_err("%slame response from cache",
 			dnsseclame?"DNSSEC ":"");

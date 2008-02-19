@@ -2,6 +2,10 @@
 	- applied patch to unbound-host man page from Jan-Piet Mens.
 	- fix donotquery-localhost: yes default (it erroneously was switched
 	  to default 'no').
+	- time is only gotten once and the value is shared across unbound.
+	- unittest cleans up crypto, so that it has no memory leaks.
+	- mini_event shares the time value with unbound this results in 
+	  +3% speed for cache responses and +9% for recursions.
 
 18 February 2008: Wouter
 	- patch to unbound-host from Jan-Piet Mens.

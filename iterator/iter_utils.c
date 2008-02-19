@@ -130,7 +130,7 @@ iter_apply_cfg(struct iter_env* iter_env, struct config_file* cfg)
 /** filter out unsuitable targets, return rtt or -1 */
 static int
 iter_filter_unsuitable(struct iter_env* iter_env, struct module_env* env,
-	uint8_t* name, size_t namelen, time_t now, struct delegpt_addr* a)
+	uint8_t* name, size_t namelen, uint32_t now, struct delegpt_addr* a)
 {
 	int rtt;
 	int lame;
@@ -160,7 +160,7 @@ iter_filter_unsuitable(struct iter_env* iter_env, struct module_env* env,
  * returns number of best targets (or 0, no suitable targets) */
 static int
 iter_filter_order(struct iter_env* iter_env, struct module_env* env,
-	uint8_t* name, size_t namelen, time_t now, struct delegpt* dp,
+	uint8_t* name, size_t namelen, uint32_t now, struct delegpt* dp,
 	int* best_rtt)
 {
 	int got_num = 0, got_rtt = 0, thisrtt, swap_to_front;
@@ -211,12 +211,11 @@ iter_server_selection(struct iter_env* iter_env,
 	struct module_env* env, struct delegpt* dp, 
 	uint8_t* name, size_t namelen, int* dnssec_expected)
 {
-	time_t now = time(NULL);
 	int sel;
 	int selrtt;
 	struct delegpt_addr* a, *prev;
-	int num = iter_filter_order(iter_env, env, name, namelen, now, dp,
-		&selrtt);
+	int num = iter_filter_order(iter_env, env, name, namelen, 
+		*env->now, dp, &selrtt);
 
 	if(num == 0)
 		return NULL;
