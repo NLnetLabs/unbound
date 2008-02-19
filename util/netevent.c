@@ -48,6 +48,9 @@
 /** The TCP reading or writing query timeout in seconds */
 #define TCP_QUERY_TIMEOUT 120 
 
+/** number of UDP reads to perform per read indication from select */
+#define NUM_UDP_PER_SELECT 100
+
 /* We define libevent structures here to hide the libevent stuff. */
 
 #ifdef USE_MINI_EVENT
@@ -110,6 +113,7 @@ static struct comm_point* comm_point_create_tcp_handler(
 /* -------- End of local definitions -------- */
 
 #ifdef USE_MINI_EVENT
+/** minievent updates the time when it blocks. */
 #define comm_base_now(x) /* nothing to do */
 #else /* !USE_MINI_EVENT */
 /** fillup the time values in the event base */
@@ -360,6 +364,7 @@ comm_point_udp_ancil_callback(int fd, short event, void* arg)
 	struct iovec iov[1];
 	ssize_t recv;
 	char ancil[256];
+	int i;
 #ifndef S_SPLINT_S
 	struct cmsghdr* cmsg;
 #endif /* S_SPLINT_S */
@@ -371,66 +376,68 @@ comm_point_udp_ancil_callback(int fd, short event, void* arg)
 		return;
 	log_assert(rep.c && rep.c->buffer && rep.c->fd == fd);
 	comm_base_now(rep.c->ev->base);
-	ldns_buffer_clear(rep.c->buffer);
-	rep.addrlen = (socklen_t)sizeof(rep.addr);
-	log_assert(fd != -1);
-	log_assert(ldns_buffer_remaining(rep.c->buffer) > 0);
-	msg.msg_name = &rep.addr;
-	msg.msg_namelen = (socklen_t)sizeof(rep.addr);
-	iov[0].iov_base = ldns_buffer_begin(rep.c->buffer);
-	iov[0].iov_len = ldns_buffer_remaining(rep.c->buffer);
-	msg.msg_iov = iov;
-	msg.msg_iovlen = 1;
-	msg.msg_control = ancil;
+	for(i=0; i<NUM_UDP_PER_SELECT; i++) {
+		ldns_buffer_clear(rep.c->buffer);
+		rep.addrlen = (socklen_t)sizeof(rep.addr);
+		log_assert(fd != -1);
+		log_assert(ldns_buffer_remaining(rep.c->buffer) > 0);
+		msg.msg_name = &rep.addr;
+		msg.msg_namelen = (socklen_t)sizeof(rep.addr);
+		iov[0].iov_base = ldns_buffer_begin(rep.c->buffer);
+		iov[0].iov_len = ldns_buffer_remaining(rep.c->buffer);
+		msg.msg_iov = iov;
+		msg.msg_iovlen = 1;
+		msg.msg_control = ancil;
 #ifndef S_SPLINT_S
-	msg.msg_controllen = sizeof(ancil);
+		msg.msg_controllen = sizeof(ancil);
 #endif /* S_SPLINT_S */
-	msg.msg_flags = 0;
-	recv = recvmsg(fd, &msg, 0);
-	if(recv == -1) {
-		if(errno != EAGAIN && errno != EINTR) {
-			log_err("recvmsg failed: %s", strerror(errno));
+		msg.msg_flags = 0;
+		recv = recvmsg(fd, &msg, 0);
+		if(recv == -1) {
+			if(errno != EAGAIN && errno != EINTR) {
+				log_err("recvmsg failed: %s", strerror(errno));
+			}
+			return;
 		}
-		return;
-	}
-	rep.addrlen = msg.msg_namelen;
-	ldns_buffer_skip(rep.c->buffer, recv);
-	ldns_buffer_flip(rep.c->buffer);
-	rep.srctype = 0;
+		rep.addrlen = msg.msg_namelen;
+		ldns_buffer_skip(rep.c->buffer, recv);
+		ldns_buffer_flip(rep.c->buffer);
+		rep.srctype = 0;
 #ifndef S_SPLINT_S
-	for(cmsg = CMSG_FIRSTHDR(&msg); cmsg != NULL;
-		cmsg = CMSG_NXTHDR(&msg, cmsg)) {
-		if( cmsg->cmsg_level == IPPROTO_IPV6 &&
-			cmsg->cmsg_type == IPV6_PKTINFO) {
-			rep.srctype = 6;
-			memmove(&rep.pktinfo.v6info, CMSG_DATA(cmsg),
-				sizeof(struct in6_pktinfo));
-			break;
+		for(cmsg = CMSG_FIRSTHDR(&msg); cmsg != NULL;
+			cmsg = CMSG_NXTHDR(&msg, cmsg)) {
+			if( cmsg->cmsg_level == IPPROTO_IPV6 &&
+				cmsg->cmsg_type == IPV6_PKTINFO) {
+				rep.srctype = 6;
+				memmove(&rep.pktinfo.v6info, CMSG_DATA(cmsg),
+					sizeof(struct in6_pktinfo));
+				break;
 #ifdef IP_RECVDSTADDR
-		} else if( cmsg->cmsg_level == IPPROTO_IP &&
-			cmsg->cmsg_type == IP_RECVDSTADDR) {
-			rep.srctype = 4;
-			memmove(&rep.pktinfo.v4addr, CMSG_DATA(cmsg),
-				sizeof(struct in_addr));
-			break;
+			} else if( cmsg->cmsg_level == IPPROTO_IP &&
+				cmsg->cmsg_type == IP_RECVDSTADDR) {
+				rep.srctype = 4;
+				memmove(&rep.pktinfo.v4addr, CMSG_DATA(cmsg),
+					sizeof(struct in_addr));
+				break;
 #elif defined(IP_PKTINFO)
-		} else if( cmsg->cmsg_level == IPPROTO_IP &&
-			cmsg->cmsg_type == IP_PKTINFO) {
-			rep.srctype = 4;
-			memmove(&rep.pktinfo.v4info, CMSG_DATA(cmsg),
-				sizeof(struct in_pktinfo));
-			break;
+			} else if( cmsg->cmsg_level == IPPROTO_IP &&
+				cmsg->cmsg_type == IP_PKTINFO) {
+				rep.srctype = 4;
+				memmove(&rep.pktinfo.v4info, CMSG_DATA(cmsg),
+					sizeof(struct in_pktinfo));
+				break;
 #endif
+			}
 		}
-	}
-	if(verbosity >= VERB_ALGO)
-		p_ancil("receive_udp on interface", &rep);
+		if(verbosity >= VERB_ALGO)
+			p_ancil("receive_udp on interface", &rep);
 #endif /* S_SPLINT_S */
-	log_assert(fptr_whitelist_comm_point(rep.c->callback));
-	if((*rep.c->callback)(rep.c, rep.c->cb_arg, NETEVENT_NOERROR, &rep)) {
-		/* send back immediate reply */
-		(void)comm_point_send_udp_msg_if(rep.c, rep.c->buffer,
-			(struct sockaddr*)&rep.addr, rep.addrlen, &rep);
+		log_assert(fptr_whitelist_comm_point(rep.c->callback));
+		if((*rep.c->callback)(rep.c, rep.c->cb_arg, NETEVENT_NOERROR, &rep)) {
+			/* send back immediate reply */
+			(void)comm_point_send_udp_msg_if(rep.c, rep.c->buffer,
+				(struct sockaddr*)&rep.addr, rep.addrlen, &rep);
+		}
 	}
 #else
 	fatal_exit("recvmsg: No support for IPV6_PKTINFO. "
@@ -443,6 +450,7 @@ comm_point_udp_callback(int fd, short event, void* arg)
 {
 	struct comm_reply rep;
 	ssize_t recv;
+	int i;
 
 	rep.c = (struct comm_point*)arg;
 	log_assert(rep.c->type == comm_udp);
@@ -451,27 +459,29 @@ comm_point_udp_callback(int fd, short event, void* arg)
 		return;
 	log_assert(rep.c && rep.c->buffer && rep.c->fd == fd);
 	comm_base_now(rep.c->ev->base);
-	ldns_buffer_clear(rep.c->buffer);
-	rep.addrlen = (socklen_t)sizeof(rep.addr);
-	log_assert(fd != -1);
-	log_assert(ldns_buffer_remaining(rep.c->buffer) > 0);
-	recv = recvfrom(fd, ldns_buffer_begin(rep.c->buffer), 
-		ldns_buffer_remaining(rep.c->buffer), 0, 
-		(struct sockaddr*)&rep.addr, &rep.addrlen);
-	if(recv == -1) {
-		if(errno != EAGAIN && errno != EINTR) {
-			log_err("recvfrom failed: %s", strerror(errno));
+	for(i=0; i<NUM_UDP_PER_SELECT; i++) {
+		ldns_buffer_clear(rep.c->buffer);
+		rep.addrlen = (socklen_t)sizeof(rep.addr);
+		log_assert(fd != -1);
+		log_assert(ldns_buffer_remaining(rep.c->buffer) > 0);
+		recv = recvfrom(fd, ldns_buffer_begin(rep.c->buffer), 
+			ldns_buffer_remaining(rep.c->buffer), 0, 
+			(struct sockaddr*)&rep.addr, &rep.addrlen);
+		if(recv == -1) {
+			if(errno != EAGAIN && errno != EINTR) {
+				log_err("recvfrom failed: %s", strerror(errno));
+			}
+			return;
 		}
-		return;
-	}
-	ldns_buffer_skip(rep.c->buffer, recv);
-	ldns_buffer_flip(rep.c->buffer);
-	rep.srctype = 0;
-	log_assert(fptr_whitelist_comm_point(rep.c->callback));
-	if((*rep.c->callback)(rep.c, rep.c->cb_arg, NETEVENT_NOERROR, &rep)) {
-		/* send back immediate reply */
-		(void)comm_point_send_udp_msg(rep.c, rep.c->buffer,
-			(struct sockaddr*)&rep.addr, rep.addrlen);
+		ldns_buffer_skip(rep.c->buffer, recv);
+		ldns_buffer_flip(rep.c->buffer);
+		rep.srctype = 0;
+		log_assert(fptr_whitelist_comm_point(rep.c->callback));
+		if((*rep.c->callback)(rep.c, rep.c->cb_arg, NETEVENT_NOERROR, &rep)) {
+			/* send back immediate reply */
+			(void)comm_point_send_udp_msg(rep.c, rep.c->buffer,
+				(struct sockaddr*)&rep.addr, rep.addrlen);
+		}
 	}
 }
 

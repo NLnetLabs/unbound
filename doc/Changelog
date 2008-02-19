@@ -7,6 +7,9 @@
 	- mini_event shares the time value with unbound this results in 
 	  +3% speed for cache responses and +9% for recursions.
 	- ldns tarball update with new NSEC3 sign code numbers.
+	- perform several reads per UDP operation. This improves performance
+	  in DoS conditions, and costs very little in normal conditions.
+	  improves cache response +50%, and recursions +10%.
 
 18 February 2008: Wouter
 	- patch to unbound-host from Jan-Piet Mens.
