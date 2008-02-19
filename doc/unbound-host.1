@@ -26,6 +26,8 @@
 .IR keyfile ]
 .RB [ \-F
 .IR namedkeyfile ]
+.RB [ \-C
+.IR configfile ]
 .SH "DESCRIPTION"
 .LP
 .B Unbound\-host
@@ -75,6 +77,10 @@ as for \-y. The zone file format, the same as dig and drill produce.
 .B \-F \fInamedkeyfile
 Reads keys from a BIND\-style named.conf file. Only the trusted\-key {}; entries
 are read.
+.TP
+.B \-C \fIconfigfile
+Uses the specified unbound.conf to prime
+.IR libunbound (3).
 .SH "EXAMPLES"
 .LP
 Some examples of use.

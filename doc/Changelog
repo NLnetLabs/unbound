@@ -1,3 +1,6 @@
+19 February 2008: Wouter
+	- applied patch to unbound-host man page from Jan-Piet Mens.
+
 18 February 2008: Wouter
 	- patch to unbound-host from Jan-Piet Mens.
 	- unbound host prints errors if fails to configure context.
