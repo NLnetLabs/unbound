@@ -456,7 +456,7 @@ generate_sub_request(uint8_t* qname, size_t qnamelen, uint16_t qtype,
 	qflags |= BIT_CD;
 
 	/* attach subquery, lookup existing or make a new one */
-	log_assert(fptr_whitelist_modenv_attach_sub(qstate->env->attach_sub));
+	fptr_ok(fptr_whitelist_modenv_attach_sub(qstate->env->attach_sub));
 	if(!(*qstate->env->attach_sub)(qstate, &qinf, qflags, prime, &subq)) {
 		return 0;
 	}
@@ -469,7 +469,7 @@ generate_sub_request(uint8_t* qname, size_t qnamelen, uint16_t qtype,
 			sizeof(struct iter_qstate));
 		if(!subq->minfo[id]) {
 			log_err("init subq: out of memory");
-			log_assert(fptr_whitelist_modenv_kill_sub(
+			fptr_ok(fptr_whitelist_modenv_kill_sub(
 				qstate->env->kill_sub));
 			(*qstate->env->kill_sub)(subq);
 			return 0;
@@ -587,7 +587,7 @@ prime_stub(struct module_qstate* qstate, struct iter_qstate* iq,
 		subiq->dp = delegpt_copy(stub_dp, subq->region);
 		if(!subiq->dp) {
 			log_err("out of memory priming stub, copydp");
-			log_assert(fptr_whitelist_modenv_kill_sub(
+			fptr_ok(fptr_whitelist_modenv_kill_sub(
 				qstate->env->kill_sub));
 			(*qstate->env->kill_sub)(subq);
 			(void)error_response(qstate, id, LDNS_RCODE_SERVFAIL);
@@ -1161,7 +1161,7 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 	log_query_info(VERB_QUERY, "sending query:", &iq->qchase);
 	log_name_addr(VERB_QUERY, "sending to target:", iq->dp->name, 
 		&target->addr, target->addrlen);
-	log_assert(fptr_whitelist_modenv_send_query(qstate->env->send_query));
+	fptr_ok(fptr_whitelist_modenv_send_query(qstate->env->send_query));
 	outq = (*qstate->env->send_query)(
 		iq->qchase.qname, iq->qchase.qname_len, 
 		iq->qchase.qtype, iq->qchase.qclass, 
@@ -1240,7 +1240,7 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		/* close down outstanding requests to be discarded */
 		outbound_list_clear(&iq->outlist);
 		iq->num_current_queries = 0;
-		log_assert(fptr_whitelist_modenv_detach_subs(
+		fptr_ok(fptr_whitelist_modenv_detach_subs(
 			qstate->env->detach_subs));
 		(*qstate->env->detach_subs)(qstate);
 		iq->num_target_queries = 0;
@@ -1278,7 +1278,7 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		 */
 		outbound_list_clear(&iq->outlist);
 		iq->num_current_queries = 0;
-		log_assert(fptr_whitelist_modenv_detach_subs(
+		fptr_ok(fptr_whitelist_modenv_detach_subs(
 			qstate->env->detach_subs));
 		(*qstate->env->detach_subs)(qstate);
 		iq->num_target_queries = 0;
@@ -1320,7 +1320,7 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		 */
 		outbound_list_clear(&iq->outlist);
 		iq->num_current_queries = 0;
-		log_assert(fptr_whitelist_modenv_detach_subs(
+		fptr_ok(fptr_whitelist_modenv_detach_subs(
 			qstate->env->detach_subs));
 		(*qstate->env->detach_subs)(qstate);
 		iq->num_target_queries = 0;

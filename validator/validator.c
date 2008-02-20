@@ -300,7 +300,7 @@ generate_request(struct module_qstate* qstate, int id, uint8_t* name,
 	ask.qtype = qtype;
 	ask.qclass = qclass;
 	log_query_info(VERB_ALGO, "generate request", &ask);
-	log_assert(fptr_whitelist_modenv_attach_sub(qstate->env->attach_sub));
+	fptr_ok(fptr_whitelist_modenv_attach_sub(qstate->env->attach_sub));
 	if(!(*qstate->env->attach_sub)(qstate, &ask, 
 		(uint16_t)(BIT_RD|BIT_CD), 0, &newq)){
 		log_err("Could not generate request: out of memory");

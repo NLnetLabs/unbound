@@ -143,7 +143,7 @@ modstack_setup(struct module_stack* stack, const char* module_conf,
         for(i=0; i<stack->num; i++) {
                 verbose(VERB_OPS, "init module %d: %s",
                         i, stack->mod[i]->name);
-                log_assert(fptr_whitelist_mod_init(stack->mod[i]->init));
+                fptr_ok(fptr_whitelist_mod_init(stack->mod[i]->init));
                 if(!(*stack->mod[i]->init)(env, i)) {
                         log_err("module init for module %s failed",
                                 stack->mod[i]->name);
@@ -158,7 +158,7 @@ modstack_desetup(struct module_stack* stack, struct module_env* env)
 {
         int i;
         for(i=0; i<stack->num; i++) {
-                log_assert(fptr_whitelist_mod_deinit(stack->mod[i]->deinit));
+                fptr_ok(fptr_whitelist_mod_deinit(stack->mod[i]->deinit));
                 (*stack->mod[i]->deinit)(env, i);
         }
         stack->num = 0;

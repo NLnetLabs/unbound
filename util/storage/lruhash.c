@@ -302,11 +302,11 @@ lruhash_insert(struct lruhash* table, hashvalue_t hash,
 	struct lruhash_bin* bin;
 	struct lruhash_entry* found, *reclaimlist=NULL;
 	size_t need_size;
-	log_assert(fptr_whitelist_hash_sizefunc(table->sizefunc));
-	log_assert(fptr_whitelist_hash_delkeyfunc(table->delkeyfunc));
-	log_assert(fptr_whitelist_hash_deldatafunc(table->deldatafunc));
-	log_assert(fptr_whitelist_hash_compfunc(table->compfunc));
-	log_assert(fptr_whitelist_hash_markdelfunc(table->markdelfunc));
+	fptr_ok(fptr_whitelist_hash_sizefunc(table->sizefunc));
+	fptr_ok(fptr_whitelist_hash_delkeyfunc(table->delkeyfunc));
+	fptr_ok(fptr_whitelist_hash_deldatafunc(table->deldatafunc));
+	fptr_ok(fptr_whitelist_hash_compfunc(table->compfunc));
+	fptr_ok(fptr_whitelist_hash_markdelfunc(table->markdelfunc));
 	need_size = table->sizefunc(entry->key, data);
 	if(cb_arg == NULL) cb_arg = table->cb_arg;
 
@@ -356,7 +356,7 @@ lruhash_lookup(struct lruhash* table, hashvalue_t hash, void* key, int wr)
 {
 	struct lruhash_entry* entry;
 	struct lruhash_bin* bin;
-	log_assert(fptr_whitelist_hash_compfunc(table->compfunc));
+	fptr_ok(fptr_whitelist_hash_compfunc(table->compfunc));
 
 	lock_quick_lock(&table->lock);
 	bin = &table->array[hash & table->size_mask];
@@ -379,11 +379,11 @@ lruhash_remove(struct lruhash* table, hashvalue_t hash, void* key)
 	struct lruhash_entry* entry;
 	struct lruhash_bin* bin;
 	void *d;
-	log_assert(fptr_whitelist_hash_sizefunc(table->sizefunc));
-	log_assert(fptr_whitelist_hash_delkeyfunc(table->delkeyfunc));
-	log_assert(fptr_whitelist_hash_deldatafunc(table->deldatafunc));
-	log_assert(fptr_whitelist_hash_compfunc(table->compfunc));
-	log_assert(fptr_whitelist_hash_markdelfunc(table->markdelfunc));
+	fptr_ok(fptr_whitelist_hash_sizefunc(table->sizefunc));
+	fptr_ok(fptr_whitelist_hash_delkeyfunc(table->delkeyfunc));
+	fptr_ok(fptr_whitelist_hash_deldatafunc(table->deldatafunc));
+	fptr_ok(fptr_whitelist_hash_compfunc(table->compfunc));
+	fptr_ok(fptr_whitelist_hash_markdelfunc(table->markdelfunc));
 
 	lock_quick_lock(&table->lock);
 	bin = &table->array[hash & table->size_mask];
@@ -439,9 +439,9 @@ lruhash_clear(struct lruhash* table)
 	size_t i;
 	if(!table)
 		return;
-	log_assert(fptr_whitelist_hash_delkeyfunc(table->delkeyfunc));
-	log_assert(fptr_whitelist_hash_deldatafunc(table->deldatafunc));
-	log_assert(fptr_whitelist_hash_markdelfunc(table->markdelfunc));
+	fptr_ok(fptr_whitelist_hash_delkeyfunc(table->delkeyfunc));
+	fptr_ok(fptr_whitelist_hash_deldatafunc(table->deldatafunc));
+	fptr_ok(fptr_whitelist_hash_markdelfunc(table->markdelfunc));
 
 	lock_quick_lock(&table->lock);
 	for(i=0; i<table->size; i++) {

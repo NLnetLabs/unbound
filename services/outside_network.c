@@ -175,7 +175,7 @@ use_free_buffer(struct outside_network* outnet)
 			comm_point_callback_t* cb = w->cb;
 			void* cb_arg = w->cb_arg;
 			waiting_tcp_delete(w);
-			log_assert(fptr_whitelist_pending_tcp(cb));
+			fptr_ok(fptr_whitelist_pending_tcp(cb));
 			(void)(*cb)(NULL, cb_arg, NETEVENT_CLOSED, NULL);
 		}
 	}
@@ -214,7 +214,7 @@ outnet_tcp_cb(struct comm_point* c, void* arg, int error,
 			error = NETEVENT_CLOSED;
 		}
 	}
-	log_assert(fptr_whitelist_pending_tcp(pend->query->cb));
+	fptr_ok(fptr_whitelist_pending_tcp(pend->query->cb));
 	(void)(*pend->query->cb)(c, pend->query->cb_arg, error, reply_info);
 	decomission_pending_tcp(outnet, pend);
 	return 0;
@@ -267,7 +267,7 @@ outnet_udp_cb(struct comm_point* c, void* arg, int error,
 	verbose(VERB_ALGO, "outnet handle udp reply");
 	/* delete from tree first in case callback creates a retry */
 	(void)rbtree_delete(outnet->pending, p->node.key);
-	log_assert(fptr_whitelist_pending_udp(p->cb));
+	fptr_ok(fptr_whitelist_pending_udp(p->cb));
 	(void)(*p->cb)(p->c, p->cb_arg, NETEVENT_NOERROR, reply_info);
 	pending_delete(NULL, p);
 	return 0;
@@ -387,7 +387,7 @@ pending_udp_timer_cb(void *arg)
 	struct pending* p = (struct pending*)arg;
 	/* it timed out */
 	verbose(VERB_ALGO, "timeout udp");
-	log_assert(fptr_whitelist_pending_udp(p->cb));
+	fptr_ok(fptr_whitelist_pending_udp(p->cb));
 	(void)(*p->cb)(p->c, p->cb_arg, NETEVENT_TIMEOUT, NULL);
 	pending_delete(p->outnet, p);
 }
@@ -744,7 +744,7 @@ outnet_tcptimer(void* arg)
 	cb = w->cb;
 	cb_arg = w->cb_arg;
 	waiting_tcp_delete(w);
-	log_assert(fptr_whitelist_pending_tcp(cb));
+	fptr_ok(fptr_whitelist_pending_tcp(cb));
 	(void)(*cb)(NULL, cb_arg, NETEVENT_TIMEOUT, NULL);
 	use_free_buffer(outnet);
 }
@@ -1006,7 +1006,7 @@ serviced_callbacks(struct serviced_query* sq, int error, struct comm_point* c,
 			ldns_buffer_write(c->buffer, backup_p, backlen);
 			ldns_buffer_flip(c->buffer);
 		}
-		log_assert(fptr_whitelist_serviced_query(p->cb));
+		fptr_ok(fptr_whitelist_serviced_query(p->cb));
 		(void)(*p->cb)(c, p->cb_arg, error, rep);
 		p = n;
 	}

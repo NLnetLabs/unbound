@@ -298,7 +298,7 @@ mesh_state_cleanup(struct mesh_state* mstate)
 	/* de-init modules */
 	mesh = mstate->s.env->mesh;
 	for(i=0; i<mesh->mods.num; i++) {
-		log_assert(fptr_whitelist_mod_clear(mesh->mods.mod[i]->clear));
+		fptr_ok(fptr_whitelist_mod_clear(mesh->mods.mod[i]->clear));
 		(*mesh->mods.mod[i]->clear)(&mstate->s, i);
 		mstate->s.minfo[i] = NULL;
 		mstate->s.ext_state[i] = module_finished;
@@ -583,7 +583,7 @@ void mesh_walk_supers(struct mesh_area* mesh, struct mesh_state* mstate)
 		/* make super runnable */
 		(void)rbtree_insert(&mesh->run, &ref->s->run_node);
 		/* callback the function to inform super of result */
-		log_assert(fptr_whitelist_mod_inform_super(
+		fptr_ok(fptr_whitelist_mod_inform_super(
 			mesh->mods.mod[ref->s->s.curmod]->inform_super));
 		(*mesh->mods.mod[ref->s->s.curmod]->inform_super)(&mstate->s, 
 			ref->s->s.curmod, &ref->s->s);
@@ -709,7 +709,7 @@ void mesh_run(struct mesh_area* mesh, struct mesh_state* mstate,
 	verbose(VERB_ALGO, "mesh_run: start");
 	while(mstate) {
 		/* run the module */
-		log_assert(fptr_whitelist_mod_operate(
+		fptr_ok(fptr_whitelist_mod_operate(
 			mesh->mods.mod[mstate->s.curmod]->operate));
 		(*mesh->mods.mod[mstate->s.curmod]->operate)
 			(&mstate->s, ev, mstate->s.curmod, e);

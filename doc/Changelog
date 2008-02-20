@@ -1,3 +1,9 @@
+20 February 2008: Wouter
+	- setup speec_cache for need-ldns-testns in dotests.
+	- check number of queued replies on incoming queries to avoid overload
+	  on that account.
+	- fptr whitelist checks are not disabled in optimize mode.
+
 19 February 2008: Wouter
 	- applied patch to unbound-host man page from Jan-Piet Mens.
 	- fix donotquery-localhost: yes default (it erroneously was switched

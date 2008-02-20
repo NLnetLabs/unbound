@@ -432,7 +432,7 @@ comm_point_udp_ancil_callback(int fd, short event, void* arg)
 		if(verbosity >= VERB_ALGO)
 			p_ancil("receive_udp on interface", &rep);
 #endif /* S_SPLINT_S */
-		log_assert(fptr_whitelist_comm_point(rep.c->callback));
+		fptr_ok(fptr_whitelist_comm_point(rep.c->callback));
 		if((*rep.c->callback)(rep.c, rep.c->cb_arg, NETEVENT_NOERROR, &rep)) {
 			/* send back immediate reply */
 			(void)comm_point_send_udp_msg_if(rep.c, rep.c->buffer,
@@ -476,7 +476,7 @@ comm_point_udp_callback(int fd, short event, void* arg)
 		ldns_buffer_skip(rep.c->buffer, recv);
 		ldns_buffer_flip(rep.c->buffer);
 		rep.srctype = 0;
-		log_assert(fptr_whitelist_comm_point(rep.c->callback));
+		fptr_ok(fptr_whitelist_comm_point(rep.c->callback));
 		if((*rep.c->callback)(rep.c, rep.c->cb_arg, NETEVENT_NOERROR, &rep)) {
 			/* send back immediate reply */
 			(void)comm_point_send_udp_msg(rep.c, rep.c->buffer,
@@ -585,7 +585,7 @@ tcp_callback_reader(struct comm_point* c)
 	c->tcp_byte_count = 0;
 	if(c->type == comm_tcp)
 		comm_point_stop_listening(c);
-	log_assert(fptr_whitelist_comm_point(c->callback));
+	fptr_ok(fptr_whitelist_comm_point(c->callback));
 	if( (*c->callback)(c, c->cb_arg, NETEVENT_NOERROR, &c->repinfo) ) {
 		comm_point_start_listening(c, -1, TCP_QUERY_TIMEOUT);
 	}
@@ -760,7 +760,7 @@ comm_point_tcp_handle_callback(int fd, short event, void* arg)
 		if(!comm_point_tcp_handle_read(fd, c, 0)) {
 			reclaim_tcp_handler(c);
 			if(!c->tcp_do_close) {
-				log_assert(fptr_whitelist_comm_point(
+				fptr_ok(fptr_whitelist_comm_point(
 					c->callback));
 				(void)(*c->callback)(c, c->cb_arg, 
 					NETEVENT_CLOSED, NULL);
@@ -772,7 +772,7 @@ comm_point_tcp_handle_callback(int fd, short event, void* arg)
 		if(!comm_point_tcp_handle_write(fd, c)) {
 			reclaim_tcp_handler(c);
 			if(!c->tcp_do_close) {
-				log_assert(fptr_whitelist_comm_point(
+				fptr_ok(fptr_whitelist_comm_point(
 					c->callback));
 				(void)(*c->callback)(c, c->cb_arg, 
 					NETEVENT_CLOSED, NULL);
@@ -784,7 +784,7 @@ comm_point_tcp_handle_callback(int fd, short event, void* arg)
 		verbose(VERB_QUERY, "tcp took too long, dropped");
 		reclaim_tcp_handler(c);
 		if(!c->tcp_do_close) {
-			log_assert(fptr_whitelist_comm_point(c->callback));
+			fptr_ok(fptr_whitelist_comm_point(c->callback));
 			(void)(*c->callback)(c, c->cb_arg,
 				NETEVENT_TIMEOUT, NULL);
 		}
@@ -801,7 +801,7 @@ void comm_point_local_handle_callback(int fd, short event, void* arg)
 
 	if(event&EV_READ) {
 		if(!comm_point_tcp_handle_read(fd, c, 1)) {
-			log_assert(fptr_whitelist_comm_point(c->callback));
+			fptr_ok(fptr_whitelist_comm_point(c->callback));
 			(void)(*c->callback)(c, c->cb_arg, NETEVENT_CLOSED, 
 				NULL);
 		}
@@ -1392,7 +1392,7 @@ comm_timer_callback(int ATTR_UNUSED(fd), short event, void* arg)
 		return;
 	comm_base_now(tm->ev_timer->base);
 	tm->ev_timer->enabled = 0;
-	log_assert(fptr_whitelist_comm_timer(tm->callback));
+	fptr_ok(fptr_whitelist_comm_timer(tm->callback));
 	(*tm->callback)(tm->cb_arg);
 }
 
@@ -1432,7 +1432,7 @@ comm_signal_callback(int sig, short event, void* arg)
 	if(!(event & EV_SIGNAL))
 		return;
 	comm_base_now(comsig->base);
-	log_assert(fptr_whitelist_comm_signal(comsig->callback));
+	fptr_ok(fptr_whitelist_comm_signal(comsig->callback));
 	(*comsig->callback)(sig, comsig->cb_arg);
 }
 

@@ -161,7 +161,7 @@ static void handle_timeouts(struct event_base* base, struct timeval* now,
 		/* event times out, remove it */
 		(void)rbtree_delete(base->times, p);
 		p->ev_events &= ~EV_TIMEOUT;
-		log_assert(fptr_whitelist_event(p->ev_callback));
+		fptr_ok(fptr_whitelist_event(p->ev_callback));
 		(*p->ev_callback)(p->ev_fd, EV_TIMEOUT, p->ev_arg);
 	}
 }
@@ -206,7 +206,7 @@ static int handle_select(struct event_base* base, struct timeval* wait)
 		}
 		bits &= base->fds[i]->ev_events;
 		if(bits) {
-			log_assert(fptr_whitelist_event(
+			fptr_ok(fptr_whitelist_event(
 				base->fds[i]->ev_callback));
 			(*base->fds[i]->ev_callback)(base->fds[i]->ev_fd, 
 				bits, base->fds[i]->ev_arg);
@@ -269,7 +269,7 @@ void event_set(struct event* ev, int fd, short bits,
 	ev->ev_fd = fd;
 	ev->ev_events = bits;
 	ev->ev_callback = cb;
-	log_assert(fptr_whitelist_event(ev->ev_callback));
+	fptr_ok(fptr_whitelist_event(ev->ev_callback));
 	ev->ev_arg = arg;
 	ev->added = 0;
 }
@@ -341,7 +341,7 @@ static RETSIGTYPE sigh(int sig)
 	ev = signal_base->signals[sig];
 	if(!ev)
 		return;
-	log_assert(fptr_whitelist_event(ev->ev_callback));
+	fptr_ok(fptr_whitelist_event(ev->ev_callback));
 	(*ev->ev_callback)(sig, EV_SIGNAL, ev->ev_arg);
 }
 

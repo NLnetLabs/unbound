@@ -59,6 +59,16 @@
 #include "util/module.h"
 
 /**
+ * Macro to perform an assertion check for fptr wlist checks.
+ * Does not get disabled in optimize mode. Check adds security by layers.
+ */
+#define fptr_ok(x) \
+	do { if(!(x)) \
+		fatal_exit("%s:%d: %s: pointer whitelist %s failed", \
+		__FILE__, __LINE__, __func__, #x); \
+	} while(0);
+
+/**
  * Check function pointer whitelist for comm_point callback values.
  *
  * @param fptr: function pointer to check.
