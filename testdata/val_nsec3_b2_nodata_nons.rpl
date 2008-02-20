@@ -1,6 +1,6 @@
 ; config options
 server:
-	trust-anchor: "example. DNSKEY  257 3 133 (AQOnsGyJvywVjYmiLbh0EwIRuWYcDiB/8blX cpkoxtpe19Oicv6Zko+8brVsTMeMOpcUeGB1 zsYKWJ7BvR2894hX )"
+        trust-anchor: "example. DNSKEY  257 3 7 AwEAAcUlFV1vhmqx6NSOUOq2R/dsR7Xm3upJ ( j7IommWSpJABVfW8Q0rOvXdM6kzt+TAu92L9 AbsUdblMFin8CVF3n4s= )"
 	val-override-date: "20120420235959"
 
 stub-zone:
@@ -55,9 +55,9 @@ REPLY QR NOERROR
 SECTION QUESTION
 example. IN DNSKEY
 SECTION ANSWER
-example. DNSKEY  256 3 133 ( AQO0gEmbZUL6xbD/xQczHbnwYnf+jQjwz/sU 5k44rHTt0Ty+3aOdYoome9TjGMhwkkGby1TL ExXT48OGGdbfIme5 )
-example. DNSKEY  257 3 133 ( AQOnsGyJvywVjYmiLbh0EwIRuWYcDiB/8blX cpkoxtpe19Oicv6Zko+8brVsTMeMOpcUeGB1 zsYKWJ7BvR2894hX )
-example. RRSIG   DNSKEY 133 1 3600 20150420235959 ( 20051021000000 22088 example.  Xpo9ptByXb8M1JR1i0KuRmKGc/YeOLcc6Ptn RJOx6ADLSL2mU6AYX5tAJRMTKTXk6waLIaxu liqUBOkCjLUZMw== )
+example. DNSKEY  256 3 7 AwEAAaetidLzsKWUt4swWR8yu0wPHPiUi8LU ( sAD0QPWU+wzt89epO6tHzkMBVDkC7qphQO2h TY4hHn9npWFRw5BYubE= )
+example. DNSKEY  257 3 7 AwEAAcUlFV1vhmqx6NSOUOq2R/dsR7Xm3upJ ( j7IommWSpJABVfW8Q0rOvXdM6kzt+TAu92L9 AbsUdblMFin8CVF3n4s= )
+example. RRSIG   DNSKEY 7 1 3600 20150420235959 ( 20051021000000 12708 example.  AuU4juU9RaxescSmStrQks3Gh9FblGBlVU31 uzMZ/U/FpsUb8aC6QZS+sTsJXnLnz7flGOsm MGQZf3bH+QsCtg== )
 ENTRY_END
 
 ; response to DS query
@@ -77,11 +77,12 @@ SECTION QUESTION
 ns1.example.        IN MX
 SECTION AUTHORITY
 example.       SOA     ns1.example. bugs.x.w.example. 1 3600 300 ( 3600000 3600 )
-example.       RRSIG   SOA 133 1 3600 20150420235959 20051021000000 ( 62827 example.  hNIkW1xzn+c+9P3W7PUVVptI72xEmOtn+eqQ ux0BE7Pfc6ikx4m7ivOVWETjbwHjqfY0X5G+ rynLZNqsbLm40Q== )
+example.        RRSIG   SOA 7 1 3600 20150420235959 20051021000000 ( 40430 example.  Hu25UIyNPmvPIVBrldN+9Mlp9Zql39qaUd8i q4ZLlYWfUUbbAS41pG+68z81q1xhkYAcEyHd VI2LmKusbZsT0Q== )
 
 ;; NSEC3 RR matches the QNAME and shows that the MX type bit is not set.
-;2t7b4g4vsa5smi47k61mv5bv1a22bojr.example. NSEC3 1 1 12 aabbccdd ( 2vptu5timamqttgl4luu9kg21e0aor3s A RRSIG )
-;2t7b4g4vsa5smi47k61mv5bv1a22bojr.example. RRSIG NSEC3 133 2 3600 ( 20150420235959 20051021000000 62827 example.  fJER1Z3nGoN0HmZm99lqNLSpIf7jLXTMoGm2 k4gIwlc0R4DztJp6Sq37OV6XnGdre4MfgRpB mAcgpPWC5A5eiw== )
+;2t7b4g4vsa5smi47k61mv5bv1a22bojr.example. NSEC3   1 1 12 aabbccdd ( 2vptu5timamqttgl4luu9kg21e0aor3s A RRSIG )
+;2t7b4g4vsa5smi47k61mv5bv1a22bojr.example. RRSIG   NSEC3 7 2 3600 20150420235959 20051021000000 ( 40430 example.  OmBvJ1Vgg1hCKMXHFiNeIYHK9XVW0iLDLwJN 4TFoNxZuP03gAXEI634YwOc4YBNITrj413iq NI6mRk/r1dOSUw== )
+
 SECTION ADDITIONAL
 ENTRY_END
 

@@ -1,6 +1,6 @@
 ; config options
 server:
-	trust-anchor: "example. DNSKEY  257 3 133 (AQOnsGyJvywVjYmiLbh0EwIRuWYcDiB/8blX cpkoxtpe19Oicv6Zko+8brVsTMeMOpcUeGB1 zsYKWJ7BvR2894hX )"
+        trust-anchor: "example. DNSKEY  257 3 7 AwEAAcUlFV1vhmqx6NSOUOq2R/dsR7Xm3upJ ( j7IommWSpJABVfW8Q0rOvXdM6kzt+TAu92L9 AbsUdblMFin8CVF3n4s= )"
 	val-override-date: "20120420235959"
 
 stub-zone:
@@ -55,9 +55,9 @@ REPLY QR NOERROR
 SECTION QUESTION
 example. IN DNSKEY
 SECTION ANSWER
-example. DNSKEY  256 3 133 ( AQO0gEmbZUL6xbD/xQczHbnwYnf+jQjwz/sU 5k44rHTt0Ty+3aOdYoome9TjGMhwkkGby1TL ExXT48OGGdbfIme5 )
-example. DNSKEY  257 3 133 ( AQOnsGyJvywVjYmiLbh0EwIRuWYcDiB/8blX cpkoxtpe19Oicv6Zko+8brVsTMeMOpcUeGB1 zsYKWJ7BvR2894hX )
-example. RRSIG   DNSKEY 133 1 3600 20150420235959 ( 20051021000000 22088 example.  Xpo9ptByXb8M1JR1i0KuRmKGc/YeOLcc6Ptn RJOx6ADLSL2mU6AYX5tAJRMTKTXk6waLIaxu liqUBOkCjLUZMw== )
+example. DNSKEY  256 3 7 AwEAAaetidLzsKWUt4swWR8yu0wPHPiUi8LU ( sAD0QPWU+wzt89epO6tHzkMBVDkC7qphQO2h TY4hHn9npWFRw5BYubE= )
+example. DNSKEY  257 3 7 AwEAAcUlFV1vhmqx6NSOUOq2R/dsR7Xm3upJ ( j7IommWSpJABVfW8Q0rOvXdM6kzt+TAu92L9 AbsUdblMFin8CVF3n4s= )
+example. RRSIG   DNSKEY 7 1 3600 20150420235959 ( 20051021000000 12708 example.  AuU4juU9RaxescSmStrQks3Gh9FblGBlVU31 uzMZ/U/FpsUb8aC6QZS+sTsJXnLnz7flGOsm MGQZf3bH+QsCtg== )
 ENTRY_END
 
 ENTRY_BEGIN
@@ -73,12 +73,12 @@ c.example. 	NS      ns2.c.example.
 ;; NSEC3 RR that covers the "next closer" name (c.example)
 ;; H(c.example) = 4g6p9u5gvfshp30pqecj98b3maqbn1ck
 35mthgpgcu1qg68fab165klnsnk3dpvl.example. NSEC3 1 1 12 aabbccdd ( b4um86eghhds6nea196smvmlo4ors995 NS DS RRSIG )
-35mthgpgcu1qg68fab165klnsnk3dpvl.example. RRSIG NSEC3 133 2 3600 ( 20150420235959 20051021000000 62827 example.  QrjOpXVIvodCw0O8uPMNA+yEeS/o3KKkEIPX r5DoEShq2hymAsRTc/t9BvRKpcSTExyc5m3T vYN3GgN0W/0WHQ== )
+35mthgpgcu1qg68fab165klnsnk3dpvl.example. RRSIG   NSEC3 7 2 3600 20150420235959 20051021000000 ( 40430 example.  g6jPUUpduAJKRljUsN8gB4UagAX0NxY9shwQ Aynzo8EUWH+z6hEIBlUTPGj15eZll6VhQqgZ XtAIR3chwgW+SA== )
 
 ;; NSEC3 RR that matches the closest encloser (example)
 ;; H(example) = 0p9mhaveqvm6t7vbl5lop2u3t2rp3tom
 0p9mhaveqvm6t7vbl5lop2u3t2rp3tom.example. NSEC3 1 1 12 aabbccdd ( 2t7b4g4vsa5smi47k61mv5bv1a22bojr MX DNSKEY NS SOA NSEC3PARAM RRSIG )
-0p9mhaveqvm6t7vbl5lop2u3t2rp3tom.example. RRSIG NSEC3 133 2 3600 ( 20150420235959 20051021000000 62827 example.  rn2tv99+9StXbc7JaEnjT1+8I8f2vVOMOIbF xzlrn94lQLxEOYxQR4SrxDRP4/fC54Jui0Ix 4eI9tMfaTVgehQ== )
+0p9mhaveqvm6t7vbl5lop2u3t2rp3tom.example. RRSIG   NSEC3 7 2 3600 20150420235959 20051021000000 ( 40430 example.  OSgWSm26B+cS+dDL8b5QrWr/dEWhtCsKlwKL IBHYH6blRxK9rC0bMJPwQ4mLIuw85H2EY762 BOCXJZMnpuwhpA== )
 
 SECTION ADDITIONAL
 ns1.c.example. A       192.0.2.7
@@ -96,12 +96,12 @@ SECTION AUTHORITY
 ;; NSEC3 RR that covers the "next closer" name (c.example)
 ;; H(c.example) = 4g6p9u5gvfshp30pqecj98b3maqbn1ck
 35mthgpgcu1qg68fab165klnsnk3dpvl.example. NSEC3 1 1 12 aabbccdd ( b4um86eghhds6nea196smvmlo4ors995 NS DS RRSIG )
-35mthgpgcu1qg68fab165klnsnk3dpvl.example. RRSIG NSEC3 133 2 3600 ( 20150420235959 20051021000000 62827 example.  QrjOpXVIvodCw0O8uPMNA+yEeS/o3KKkEIPX r5DoEShq2hymAsRTc/t9BvRKpcSTExyc5m3T vYN3GgN0W/0WHQ== )
+35mthgpgcu1qg68fab165klnsnk3dpvl.example. RRSIG   NSEC3 7 2 3600 20150420235959 20051021000000 ( 40430 example.  g6jPUUpduAJKRljUsN8gB4UagAX0NxY9shwQ Aynzo8EUWH+z6hEIBlUTPGj15eZll6VhQqgZ XtAIR3chwgW+SA== )
 
 ;; NSEC3 RR that matches the closest encloser (example)
 ;; H(example) = 0p9mhaveqvm6t7vbl5lop2u3t2rp3tom
 ;0p9mhaveqvm6t7vbl5lop2u3t2rp3tom.example. NSEC3 1 1 12 aabbccdd ( 2t7b4g4vsa5smi47k61mv5bv1a22bojr MX DNSKEY NS SOA NSEC3PARAM RRSIG )
-;0p9mhaveqvm6t7vbl5lop2u3t2rp3tom.example. RRSIG NSEC3 133 2 3600 ( 20150420235959 20051021000000 62827 example.  rn2tv99+9StXbc7JaEnjT1+8I8f2vVOMOIbF xzlrn94lQLxEOYxQR4SrxDRP4/fC54Jui0Ix 4eI9tMfaTVgehQ== )
+;0p9mhaveqvm6t7vbl5lop2u3t2rp3tom.example. RRSIG   NSEC3 7 2 3600 20150420235959 20051021000000 ( 40430 example.  OSgWSm26B+cS+dDL8b5QrWr/dEWhtCsKlwKL IBHYH6blRxK9rC0bMJPwQ4mLIuw85H2EY762 BOCXJZMnpuwhpA== )
 ENTRY_END
 
 RANGE_END

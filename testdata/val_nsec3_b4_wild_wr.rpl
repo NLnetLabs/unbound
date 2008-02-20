@@ -1,6 +1,6 @@
 ; config options
 server:
-	trust-anchor: "example. DNSKEY  257 3 133 (AQOnsGyJvywVjYmiLbh0EwIRuWYcDiB/8blX cpkoxtpe19Oicv6Zko+8brVsTMeMOpcUeGB1 zsYKWJ7BvR2894hX )"
+	trust-anchor: "example. DNSKEY  257 3 7 AwEAAcUlFV1vhmqx6NSOUOq2R/dsR7Xm3upJ ( j7IommWSpJABVfW8Q0rOvXdM6kzt+TAu92L9 AbsUdblMFin8CVF3n4s= )"
 	val-override-date: "20120420235959"
 
 stub-zone:
@@ -55,9 +55,9 @@ REPLY QR NOERROR
 SECTION QUESTION
 example. IN DNSKEY
 SECTION ANSWER
-example. DNSKEY  256 3 133 ( AQO0gEmbZUL6xbD/xQczHbnwYnf+jQjwz/sU 5k44rHTt0Ty+3aOdYoome9TjGMhwkkGby1TL ExXT48OGGdbfIme5 )
-example. DNSKEY  257 3 133 ( AQOnsGyJvywVjYmiLbh0EwIRuWYcDiB/8blX cpkoxtpe19Oicv6Zko+8brVsTMeMOpcUeGB1 zsYKWJ7BvR2894hX )
-example. RRSIG   DNSKEY 133 1 3600 20150420235959 ( 20051021000000 22088 example.  Xpo9ptByXb8M1JR1i0KuRmKGc/YeOLcc6Ptn RJOx6ADLSL2mU6AYX5tAJRMTKTXk6waLIaxu liqUBOkCjLUZMw== )
+example. DNSKEY  256 3 7 AwEAAaetidLzsKWUt4swWR8yu0wPHPiUi8LU ( sAD0QPWU+wzt89epO6tHzkMBVDkC7qphQO2h TY4hHn9npWFRw5BYubE= )
+example. DNSKEY  257 3 7 AwEAAcUlFV1vhmqx6NSOUOq2R/dsR7Xm3upJ ( j7IommWSpJABVfW8Q0rOvXdM6kzt+TAu92L9 AbsUdblMFin8CVF3n4s= )
+example. RRSIG   DNSKEY 7 1 3600 20150420235959 ( 20051021000000 12708 example.  AuU4juU9RaxescSmStrQks3Gh9FblGBlVU31 uzMZ/U/FpsUb8aC6QZS+sTsJXnLnz7flGOsm MGQZf3bH+QsCtg== )
 ENTRY_END
 
 ENTRY_BEGIN
@@ -68,26 +68,26 @@ SECTION QUESTION
 a.z.w.example. IN MX
 SECTION ANSWER
 a.z.w.example. MX      1 ai.example.
-a.z.w.example. RRSIG   MX 133 2 3600 20150420235959 20051021000000 ( 62827 example.  DnT0Y6dRBM8f3v8HdKmZUsGVkXh+b+htujCR c423x6c8erEMGVnxcrmcrZ53qGXcMYJ+TDkq a7Xfz/f9xzvSTw== )
+a.z.w.example. RRSIG   MX 7 2 3600 20150420235959 20051021000000 ( 40430 example.  CikebjQwGQPwijVcxgcZcSJKtfynugtlBiKb 9FcBTrmOoyQ4InoWVudhCWsh/URX3lc4WRUM ivEBP6+4KS3ldA== )
 SECTION AUTHORITY
 example.       NS      ns1.example.
 example.       NS      ns2.example.
-example.       RRSIG   NS 133 1 3600 20150420235959 20051021000000 ( 62827 example.  D9+iBwcbeKL5+TorTfYn4/pLr2lSFwyGYCyM gfq4TpFaZpxrCJPLxHbKjdkR18jAt7+SR7B5 JpiZcff2Cj2B0w== )
+example. RRSIG   NS 7 1 3600 20150420235959 20051021000000 ( 40430 example.  PVOgtMK1HHeSTau+HwDWC8Ts+6C8qtqd4pQJ qOtdEVgg+MA+ai4fWDEhu3qHJyLcQ9tbD2vv CnMXjtz6SyObxA== )
 
 ;; NSEC3 RR that covers the "next closer" name (z.w.example)
 ;; H(z.w.example) = qlu7gtfaeh0ek0c05ksfhdpbcgglbe03
 ;q04jkcevqvmu85r014c7dkba38o0ji5r.example. NSEC3 1 1 12 aabbccdd ( r53bq7cc2uvmubfu5ocmm6pers9tk9en A RRSIG )
-;q04jkcevqvmu85r014c7dkba38o0ji5r.example. RRSIG NSEC3 133 2 3600 ( 20150420235959 20051021000000 62827 example.  ktIfH8VRjEKYPB0Qf4EdTuSlYn4DVSRRaGWc kVGmKzreEU5zs97CL8OQSa6C0JZX2yMBXijC Wu6EvgCXrflgiQ== )
+;q04jkcevqvmu85r014c7dkba38o0ji5r.example. RRSIG   NSEC3 7 2 3600 20150420235959 20051021000000 ( 40430 example.  hV5I89b+4FHJDATp09g4bbN0R1F845CaXpL3 ZxlMKimoPAyqletMlEWwLfFia7sdpSzn+ZlN NlkxWcLsIlMmUg== )
 
 ; The wrong NSEC3 here
 k8udemvp1j2f7eg6jebps17vp3n8i58h.example. NSEC3 1 1 12 aabbccdd ( kohar7mbb8dc2ce8a9qvl8hon4k53uhi )
-k8udemvp1j2f7eg6jebps17vp3n8i58h.example. RRSIG NSEC3 133 2 3600 ( 20150420235959 20051021000000 62827 example.  IKJfInxfypsDiXKgT6HDvCPEIBu9lZCc0CWl c46+Gj/Jrg1NBkSJkKMjCERp1HT8tKU+zYp5 Kyio/cddEaa5Gg== )
+k8udemvp1j2f7eg6jebps17vp3n8i58h.example. RRSIG   NSEC3 7 2 3600 20150420235959 20051021000000 ( 40430 example.  FtXGbvF0+wf8iWkyo73enAuVx03klN+pILBK S6qCcftVtfH4yVzsEZquJ27NHR7ruxJWDNMt Otx7w9WfcIg62A== )
 
 SECTION ADDITIONAL
 ai.example.    A       192.0.2.9
-ai.example.    RRSIG   A 133 2 3600 20150420235959 20051021000000 ( 62827 example.  qfXAvKr5o3Jixy5KXnVMEhABo3DDHYSR5+Ag lVxWCExWGMokdkafjW8Hb54+GrOFp/xmDoj5 BXfXAqURwLqznA== )
+ai.example.    RRSIG   A 7 2 3600 20150420235959 20051021000000 ( 40430 example.  hVe+wKYMlObTRPhX0NL67GxeZfdxqr/QeR6F tfdAj5+FgYxyzPEjIzvKWy00hWIl6wD3Vws+ rznEn8sQ64UdqA== )
 ai.example.    AAAA    2001:db8:0:0:0:0:f00:baa9
-ai.example.    RRSIG   AAAA 133 2 3600 20150420235959 ( 20051021000000 62827 example.  m65zc0A16Xbx3jYb0t5vPwMzE2xS15mKh76M hSuKfiFVhBFcQ9IilEM0pXnLzt3ozrM/3X0x 2ruyuN0zC+PABA== )
+ai.example.    RRSIG   AAAA 7 2 3600 20150420235959 20051021000000 ( 40430 example.  LcdxKaCB5bGZwPDg+3JJ4O02zoMBrjxqlf6W uaHQZZfTUpb9Nf2nxFGe2XRPfR5tpJT6GdRG cHueLuXkMjBArQ== )
 ENTRY_END
 
 ; catch glue queries
