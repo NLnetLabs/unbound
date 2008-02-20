@@ -247,6 +247,76 @@ checkformerr(ldns_buffer* pkt)
 	unit_assert(status != LDNS_STATUS_OK);
 }
 
+/** performance test message encoding */
+static void
+perf_encode(struct query_info* qi, struct reply_info* rep, uint16_t id, 
+	uint16_t flags, ldns_buffer* out, uint32_t timenow, 
+	struct edns_data* edns)
+{
+	static int num = 0;
+	int ret;
+	size_t max = 100000;
+	size_t i;
+	struct timeval start, end;
+	double dt;
+	struct regional* r2 = regional_create();
+	if(gettimeofday(&start, NULL) < 0)
+		fatal_exit("gettimeofday: %s", strerror(errno));
+	/* encode a couple times */
+	for(i=0; i<max; i++) {
+		ret = reply_info_encode(qi, rep, id, flags, out, timenow,
+			r2, 65535, (int)(edns->bits & EDNS_DO) );
+		unit_assert(ret != 0); /* udp packets should fit */
+		attach_edns_record(out, edns);
+		regional_free_all(r2);
+	}
+	if(gettimeofday(&end, NULL) < 0)
+		fatal_exit("gettimeofday: %s", strerror(errno));
+	/* time in millisec */
+	dt = (double)(end.tv_sec - start.tv_sec)*1000. + 
+		((double)end.tv_usec - (double)start.tv_usec)/1000.;
+	printf("[%d] did %u in %g msec for %g encode/sec size %d\n", num++,
+		(unsigned)max, dt, (double)max / (dt/1000.), 
+		(int)ldns_buffer_limit(out));
+	regional_destroy(r2);
+}
+
+/** perf test a packet */
+static void
+perftestpkt(ldns_buffer* pkt, struct alloc_cache* alloc, ldns_buffer* out, 
+	const char* hex)
+{
+	struct query_info qi;
+	struct reply_info* rep = 0;
+	int ret;
+	uint16_t id;
+	uint16_t flags;
+	uint32_t timenow = 0;
+	struct regional* region = regional_create();
+	struct edns_data edns;
+
+	hex_to_buf(pkt, hex);
+	memmove(&id, ldns_buffer_begin(pkt), sizeof(id));
+	if(ldns_buffer_limit(pkt) < 2)
+		flags = 0;
+	else	memmove(&flags, ldns_buffer_at(pkt, 2), sizeof(flags));
+	flags = ntohs(flags);
+	ret = reply_info_parse(pkt, alloc, &qi, &rep, region, &edns);
+	if(ret != 0) {
+		if(vbmp) printf("parse code %d: %s\n", ret, 
+			ldns_lookup_by_id(ldns_rcodes, ret)->name);
+		if(ret == LDNS_RCODE_FORMERR)
+			checkformerr(pkt);
+		unit_assert(ret != LDNS_RCODE_SERVFAIL);
+	} else {
+		perf_encode(&qi, rep, id, flags, out, timenow, &edns);
+	} 
+
+	query_info_clear(&qi);
+	reply_info_parsedelete(rep, alloc);
+	regional_destroy(region);
+}
+
 /** test a packet */
 static void
 testpkt(ldns_buffer* pkt, struct alloc_cache* alloc, ldns_buffer* out, 
@@ -359,6 +429,12 @@ simpletest(ldns_buffer* pkt, struct alloc_cache* alloc, ldns_buffer* out)
 	" 00 01 00 01 00 02 64 b9 00 04 c6 29 00 04 01 4a 0c 52 4f 4f    ;        441- 460\n"
 	" 54 2d 53 45 52 56 45 52 53 03 4e 45 54 00 00 01 00 01 00 02    ;        461- 480\n"
 	" 64 b9 00 04 c0 3a 80 1e  ");
+
+	/* root delegation from unbound trace with new AAAA glue */
+	perftestpkt(pkt, alloc, out,
+	"55BC84000001000D00000014000002000100000200010007E900001401610C726F6F742D73657276657273036E65740000000200010007E90000040162C01E00000200010007E90000040163C01E00000200010007E90000040164C01E00000200010007E90000040165C01E00000200010007E90000040166C01E00000200010007E90000040167C01E00000200010007E90000040168C01E00000200010007E90000040169C01E00000200010007E9000004016AC01E00000200010007E9000004016BC01E00000200010007E9000004016CC01E00000200010007E9000004016DC01EC01C000100010007E9000004C6290004C03B000100010007E9000004C0E44FC9C04A000100010007E9000004C021040CC059000100010007E900000480080A5AC068000100010007E9000004C0CBE60AC077000100010007E9000004C00505F1C086000100010007E9000004C0702404C095000100010007E9000004803F0235C0A4000100010007E9000004C0249411C0B3000100010007E9000004C03A801EC0C2000100010007E9000004C1000E81C0D1000100010007E9000004C707532AC0E0000100010007E9000004CA0C1B21C01C001C00010007E900001020010503BA3E00000000000000020030C077001C00010007E900001020010500002F0000000000000000000FC095001C00010007E90000102001050000010000"
+	"00000000803F0235C0B3001C00010007E9000010200105030C2700000000000000020030C0C2001C00010007E9000010200107FD000000000000000000000001C0E0001C00010007E900001020010DC30000000000000000000000350000291000000000000000"
+	);
 }
 
 /** simple test of parsing, pcat file */

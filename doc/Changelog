@@ -6,6 +6,7 @@
 	- do-daemonize config file option.
 	- minievent time share initializes time at start.
 	- updated testdata for nsec3 new algorithm numbers (6, 7).
+	- small performance test of packet encoding (root delegation).
 
 19 February 2008: Wouter
 	- applied patch to unbound-host man page from Jan-Piet Mens.
