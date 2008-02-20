@@ -209,6 +209,10 @@ Enable or disable whether UDP queries are answered or issued. Default is yes.
 .B do\-tcp: \fI<yes or no>
 Enable or disable whether TCP queries are answered or issued. Default is yes.
 .TP
+.B do\-daemonize: \fI<yes or no>
+Enable or disable whether the unbound server forks into the background as
+a daemon. Default is yes.
+.TP
 .B access\-control: \fI<IP netblock> <action>
 The netblock is given as an IP4 or IP6 address with /size appended for a 
 classless network block. The action can be deny, refuse or allow.

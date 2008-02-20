@@ -111,6 +111,7 @@ do-ip4{COLON}		{ YDOUT; return VAR_DO_IP4;}
 do-ip6{COLON}		{ YDOUT; return VAR_DO_IP6;}
 do-udp{COLON}		{ YDOUT; return VAR_DO_UDP;}
 do-tcp{COLON}		{ YDOUT; return VAR_DO_TCP;}
+do-daemonize{COLON}		{ YDOUT; return VAR_DO_DAEMONIZE;}
 interface{COLON}	{ YDOUT; return VAR_INTERFACE;}
 outgoing-interface{COLON}	{ YDOUT; return VAR_OUTGOING_INTERFACE;}
 interface-automatic{COLON}	{ YDOUT; return VAR_INTERFACE_AUTOMATIC;}
