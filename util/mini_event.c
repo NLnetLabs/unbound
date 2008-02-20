@@ -90,6 +90,10 @@ void *event_init(uint32_t* time_secs, struct timeval* time_tv)
 	memset(base, 0, sizeof(*base));
 	base->time_secs = time_secs;
 	base->time_tv = time_tv;
+	if(settime(base) < 0) {
+		event_base_free(base);
+		return NULL;
+	}
 	base->times = rbtree_create(mini_ev_cmp);
 	if(!base->times) {
 		event_base_free(base);
