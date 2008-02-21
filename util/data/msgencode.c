@@ -93,15 +93,18 @@ struct compress_tree_node {
  *	can be null if the tree is empty.
  * @param matchlabels: number of labels that match with closest match.
  *	can be zero is there is no match.
+ * @param insertpt: insert location for dname, if not found.
  * @return: 0 if no exact match.
  */
 static int
-compress_tree_search(struct compress_tree_node* tree, uint8_t* dname,
-	int labs, struct compress_tree_node** match, int* matchlabels)
+compress_tree_search(struct compress_tree_node** tree, uint8_t* dname,
+	int labs, struct compress_tree_node** match, int* matchlabels,
+	struct compress_tree_node*** insertpt)
 {
 	int c, n, closen=0;
-	struct compress_tree_node* p = tree;
+	struct compress_tree_node* p = *tree;
 	struct compress_tree_node* close = 0;
+	*insertpt = tree;
 	while(p) {
 		if((c = dname_lab_cmp(dname, labs, p->dname, p->labs, &n)) 
 			== 0) {
@@ -109,10 +112,13 @@ compress_tree_search(struct compress_tree_node* tree, uint8_t* dname,
 			*match = p;
 			return 1;
 		}
-		if(c<0) p = p->left;
-		else	{
+		if(c<0) {
+			*insertpt = &p->left;
+			p = p->left;
+		} else	{
 			closen = n;
 			close = p; /* p->dname is smaller than dname */
+			*insertpt = &p->right;
 			p = p->right;
 		}
 	}
@@ -126,17 +132,18 @@ compress_tree_search(struct compress_tree_node* tree, uint8_t* dname,
  * @param tree: root of tree (not the node with '.').
  * @param dname: pointer to uncompressed dname.
  * @param labs: number of labels in domain name.
+ * @param insertpt: insert location for dname, if not found.
  * @return: 0 if not found or compress treenode with best compression.
  */
 static struct compress_tree_node*
-compress_tree_lookup(struct compress_tree_node* tree, uint8_t* dname,
-	int labs)
+compress_tree_lookup(struct compress_tree_node** tree, uint8_t* dname,
+	int labs, struct compress_tree_node*** insertpt)
 {
 	struct compress_tree_node* p;
 	int m;
 	if(labs <= 1)
 		return 0; /* do not compress root node */
-	if(compress_tree_search(tree, dname, labs, &p, &m)) {
+	if(compress_tree_search(tree, dname, labs, &p, &m, insertpt)) {
 		/* exact match */
 		return p;
 	}
@@ -152,8 +159,7 @@ compress_tree_lookup(struct compress_tree_node* tree, uint8_t* dname,
 }
 
 /**
- * Insert node into domain name compression tree.
- * @param tree: root of tree (may be modified)
+ * Create node for domain name compression tree.
  * @param dname: pointer to uncompressed dname (stored in tree).
  * @param labs: number of labels in dname.
  * @param offset: offset into packet for dname.
@@ -161,11 +167,9 @@ compress_tree_lookup(struct compress_tree_node* tree, uint8_t* dname,
  * @return new node or 0 on malloc failure.
  */
 static struct compress_tree_node*
-compress_tree_insert(struct compress_tree_node** tree, uint8_t* dname,
-	int labs, size_t offset, struct regional* region)
+compress_tree_newnode(uint8_t* dname, int labs, size_t offset, 
+	struct regional* region)
 {
-	int c, m;
-	struct compress_tree_node* p, **prev;
 	struct compress_tree_node* n = (struct compress_tree_node*)
 		regional_alloc(region, sizeof(struct compress_tree_node));
 	if(!n) return 0;
@@ -175,29 +179,11 @@ compress_tree_insert(struct compress_tree_node** tree, uint8_t* dname,
 	n->dname = dname;
 	n->labs = labs;
 	n->offset = offset;
-
-	/* find spot to insert it into */
-	prev = tree;
-	p = *tree;
-	while(p) {
-		c = dname_lab_cmp(dname, labs, p->dname, p->labs, &m);
-		log_assert(c != 0); /* may not already be in tree */
-		if(c==0) return p; /* insert only once */
-		if(c<0)	{
-			prev = &p->left;
-			p = p->left;
-		} else {
-			prev = &p->right;
-			p = p->right;
-		}
-	}
-	*prev = n;
 	return n;
 }
 
 /**
  * Store domain name and ancestors into compression tree.
- * @param tree: root of tree (may be modified)
  * @param dname: pointer to uncompressed dname (stored in tree).
  * @param labs: number of labels in dname.
  * @param offset: offset into packet for dname.
@@ -205,44 +191,51 @@ compress_tree_insert(struct compress_tree_node** tree, uint8_t* dname,
  * @param closest: match from previous lookup, used to compress dname.
  *	may be NULL if no previous match.
  *	if the tree has an ancestor of dname already, this must be it.
+ * @param insertpt: where to insert the dname in tree. 
  * @return: 0 on memory error.
  */
 static int
-compress_tree_store(struct compress_tree_node** tree, uint8_t* dname,
-	int labs, size_t offset, struct regional* region,
-	struct compress_tree_node* closest)
+compress_tree_store(uint8_t* dname, int labs, size_t offset, 
+	struct regional* region, struct compress_tree_node* closest, 
+	struct compress_tree_node** insertpt)
 {
 	uint8_t lablen;
-	struct compress_tree_node** lastparentptr = 0;
 	struct compress_tree_node* newnode;
+	struct compress_tree_node* prevnode = NULL;
 	int uplabs = labs-1; /* does not store root in tree */
 	if(closest) uplabs = labs - closest->labs;
 	log_assert(uplabs >= 0);
+	/* algorithms builds up a vine of dname-labels to hang into tree */
 	while(uplabs--) {
 		if(offset > PTR_MAX_OFFSET) {
-			if(lastparentptr) 
-				*lastparentptr = closest;
+			/* insertion failed, drop vine */
 			return 1; /* compression pointer no longer useful */
 		}
-		/* store dname, labs, offset */
-		if(!(newnode = compress_tree_insert(tree, dname, labs, offset, 
+		if(!(newnode = compress_tree_newnode(dname, labs, offset, 
 			region))) {
-			if(lastparentptr) 
-				*lastparentptr = closest;
+			/* insertion failed, drop vine */
 			return 0;
 		}
-		if(lastparentptr)
-			*lastparentptr = newnode;
-		lastparentptr = &newnode->parent;
+
+		if(prevnode) {
+			/* chain nodes together, last one has one label more,
+			 * so is larger than newnode, thus goes right. */
+			newnode->right = prevnode;
+			prevnode->parent = newnode;
+		}
 
 		/* next label */
 		lablen = *dname++;
 		dname += lablen;
 		offset += lablen+1;
+		prevnode = newnode;
 		labs--;
 	}
-	if(lastparentptr)
-		*lastparentptr = closest;
+	/* if we have a vine, hang the vine into the tree */
+	if(prevnode) {
+		*insertpt = prevnode;
+		prevnode->parent = closest;
+	}
 	return 1;
 }
 
@@ -288,10 +281,11 @@ compress_owner(struct ub_packed_rrset_key* key, ldns_buffer* pkt,
 	size_t owner_pos, uint16_t* owner_ptr, int owner_labs)
 {
 	struct compress_tree_node* p;
+	struct compress_tree_node** insertpt;
 	if(!*owner_ptr) {
 		/* compress first time dname */
-		if((p = compress_tree_lookup(*tree, key->rk.dname, 
-			owner_labs))) {
+		if((p = compress_tree_lookup(tree, key->rk.dname, 
+			owner_labs, &insertpt))) {
 			if(p->labs == owner_labs) 
 				/* avoid ptr chains, since some software is
 				 * not capable of decoding ptr after a ptr. */
@@ -311,8 +305,8 @@ compress_owner(struct ub_packed_rrset_key* key, ldns_buffer* pkt,
 			if(owner_pos <= PTR_MAX_OFFSET)
 				*owner_ptr = htons(PTR_CREATE(owner_pos));
 		}
-		if(!compress_tree_store(tree, key->rk.dname, 
-			owner_labs, owner_pos, region, p))
+		if(!compress_tree_store(key->rk.dname, owner_labs, 
+			owner_pos, region, p, insertpt))
 			return RETVAL_OUTMEM;
 	} else {
 		/* always compress 2nd-further RRs in RRset */
@@ -335,15 +329,16 @@ compress_any_dname(uint8_t* dname, ldns_buffer* pkt, int labs,
 	struct regional* region, struct compress_tree_node** tree)
 {
 	struct compress_tree_node* p;
+	struct compress_tree_node** insertpt;
 	size_t pos = ldns_buffer_position(pkt);
-	if((p = compress_tree_lookup(*tree, dname, labs))) {
+	if((p = compress_tree_lookup(tree, dname, labs, &insertpt))) {
 		if(!write_compressed_dname(pkt, dname, labs, p))
 			return RETVAL_TRUNC;
 	} else {
 		if(!dname_buffer_write(pkt, dname))
 			return RETVAL_TRUNC;
 	}
-	if(!compress_tree_store(tree, dname, labs, pos, region, p))
+	if(!compress_tree_store(dname, labs, pos, region, p, insertpt))
 		return RETVAL_OUTMEM;
 	return RETVAL_OK;
 }
@@ -579,9 +574,10 @@ insert_query(struct query_info* qinfo, struct compress_tree_node** tree,
 	if(ldns_buffer_remaining(buffer) < 
 		qinfo->qname_len+sizeof(uint16_t)*2)
 		return RETVAL_TRUNC; /* buffer too small */
-	if(!compress_tree_store(tree, qinfo->qname, 
+	/* the query is the first name inserted into the tree */
+	if(!compress_tree_store(qinfo->qname, 
 		dname_count_labels(qinfo->qname), 
-		ldns_buffer_position(buffer), region, NULL))
+		ldns_buffer_position(buffer), region, NULL, tree))
 		return RETVAL_OUTMEM;
 	ldns_buffer_write(buffer, qinfo->qname, qinfo->qname_len);
 	ldns_buffer_write_u16(buffer, qinfo->qtype);

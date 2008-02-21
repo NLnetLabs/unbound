@@ -255,7 +255,7 @@ perf_encode(struct query_info* qi, struct reply_info* rep, uint16_t id,
 {
 	static int num = 0;
 	int ret;
-	size_t max = 100000;
+	size_t max = 10000;
 	size_t i;
 	struct timeval start, end;
 	double dt;
@@ -275,7 +275,7 @@ perf_encode(struct query_info* qi, struct reply_info* rep, uint16_t id,
 	/* time in millisec */
 	dt = (double)(end.tv_sec - start.tv_sec)*1000. + 
 		((double)end.tv_usec - (double)start.tv_usec)/1000.;
-	printf("[%d] did %u in %g msec for %g encode/sec size %d\n", num++,
+	printf("[%d] did %u in %g msec for %f encode/sec size %d\n", num++,
 		(unsigned)max, dt, (double)max / (dt/1000.), 
 		(int)ldns_buffer_limit(out));
 	regional_destroy(r2);

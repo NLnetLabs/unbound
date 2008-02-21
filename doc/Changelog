@@ -1,3 +1,6 @@
+21 February 2008: Wouter
+	- speedup of root-delegation message encoding by 15%.
+
 20 February 2008: Wouter
 	- setup speec_cache for need-ldns-testns in dotests.
 	- check number of queued replies on incoming queries to avoid overload
