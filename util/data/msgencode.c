@@ -104,7 +104,7 @@ compress_tree_search(struct compress_tree_node** tree, uint8_t* dname,
 	int c, n, closen=0;
 	struct compress_tree_node* p = *tree;
 	struct compress_tree_node* close = 0;
-	*insertpt = tree;
+	struct compress_tree_node** prev = tree;
 	while(p) {
 		if((c = dname_lab_cmp(dname, labs, p->dname, p->labs, &n)) 
 			== 0) {
@@ -113,15 +113,16 @@ compress_tree_search(struct compress_tree_node** tree, uint8_t* dname,
 			return 1;
 		}
 		if(c<0) {
-			*insertpt = &p->left;
+			prev = &p->left;
 			p = p->left;
 		} else	{
 			closen = n;
 			close = p; /* p->dname is smaller than dname */
-			*insertpt = &p->right;
+			prev = &p->right;
 			p = p->right;
 		}
 	}
+	*insertpt = prev;
 	*matchlabels = closen;
 	*match = close;
 	return 0;

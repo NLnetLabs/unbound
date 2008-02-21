@@ -1,5 +1,8 @@
 21 February 2008: Wouter
 	- speedup of root-delegation message encoding by 15%.
+	- minor speedup of compress tree_lookup, maybe 1%.
+	- speedup of dname_lab_cmp and memlowercmp - the top functions in 
+	  profiler output, maybe a couple percent when it matters.
 
 20 February 2008: Wouter
 	- setup speec_cache for need-ldns-testns in dotests.

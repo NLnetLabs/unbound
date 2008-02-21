@@ -420,7 +420,6 @@ memlowercmp(uint8_t* p1, uint8_t* p2, uint8_t len)
 	return 0;
 }
 
-
 int 
 dname_lab_cmp(uint8_t* d1, int labs1, uint8_t* d2, int labs2, int* mlabs)
 {
@@ -428,7 +427,6 @@ dname_lab_cmp(uint8_t* d1, int labs1, uint8_t* d2, int labs2, int* mlabs)
 	int atlabel = labs1;
 	int lastmlabs;
 	int lastdiff = 0;
-	int c;
 	/* first skip so that we compare same label. */
 	if(labs1 > labs2) {
 		while(atlabel > labs2) {
@@ -460,13 +458,35 @@ dname_lab_cmp(uint8_t* d1, int labs1, uint8_t* d2, int labs2, int* mlabs)
 				lastdiff = -1;
 			else	lastdiff = 1;
 			lastmlabs = atlabel;
-		} else if((c=memlowercmp(d1, d2, len1)) != 0) { 
-			lastdiff = c;
-			lastmlabs = atlabel;
+			d1 += len1;
+			d2 += len2;
+		} else {
+			/* memlowercmp is inlined here; or just like
+			 * if((c=memlowercmp(d1, d2, len1)) != 0) { 
+			 *	lastdiff = c;
+			 *	lastmlabs = atlabel; } apart from d1++,d2++ */
+			while(len1) {
+				if(*d1 != *d2 && tolower((int)*d1) 
+					!= tolower((int)*d2)) {
+					if(tolower((int)*d1) < 
+						tolower((int)*d2)) {
+						lastdiff = -1;
+						lastmlabs = atlabel;
+						d1 += len1;
+						d2 += len1;
+						break;
+					}
+					lastdiff = 1;
+					lastmlabs = atlabel;
+					d1 += len1;
+					d2 += len1;
+					break; /* out of memlowercmp */
+				}
+				d1++;
+				d2++;
+				len1--;
+			}
 		}
-
-		d1 += len1;
-		d2 += len2;
 		atlabel--;
 	}
 	/* last difference atlabel number, so number of labels matching,
