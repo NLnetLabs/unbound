@@ -96,13 +96,15 @@ STREAMTCP_SRC=testcode/streamtcp.c smallapp/worker_cb.c $(COMMON_SRC)
 STREAMTCP_OBJ=$(addprefix $(BUILD),$(STREAMTCP_SRC:.c=.o)) $(COMPAT_OBJ)
 PERF_SRC=testcode/perf.c smallapp/worker_cb.c $(COMMON_SRC)
 PERF_OBJ=$(addprefix $(BUILD),$(PERF_SRC:.c=.o)) $(COMPAT_OBJ)
+DELAYER_SRC=testcode/delayer.c smallapp/worker_cb.c $(COMMON_SRC)
+DELAYER_OBJ=$(addprefix $(BUILD),$(DELAYER_SRC:.c=.o)) $(COMPAT_OBJ)
 LIBUNBOUND_SRC=$(patsubst $(srcdir)/%,%, \
 	$(wildcard $(srcdir)/libunbound/*.c) $(COMMON_SRC))
 LIBUNBOUND_OBJ=$(addprefix $(BUILD),$(LIBUNBOUND_SRC:.c=.o)) $(COMPAT_OBJ)
 ALL_SRC=$(sort $(COMMON_SRC) $(UNITTEST_SRC) $(DAEMON_SRC) \
 	$(TESTBOUND_SRC) $(LOCKVERIFY_SRC) $(PKTVIEW_SRC) $(SIGNIT_SRC) \
 	$(MEMSTATS_SRC) $(CHECKCONF_SRC) $(LIBUNBOUND_SRC) $(HOST_SRC) \
-	$(ASYNCLOOK_SRC) $(STREAMTCP_SRC) $(PERF_SRC))
+	$(ASYNCLOOK_SRC) $(STREAMTCP_SRC) $(PERF_SRC) $(DELAYER_SRC))
 ALL_OBJ=$(addprefix $(BUILD),$(ALL_SRC:.c=.o) \
 	$(addprefix compat/,$(LIBOBJS))) $(COMPAT_OBJ)
 
@@ -122,7 +124,7 @@ $(BUILD)%.o:    $(srcdir)/%.c
 all:	$(COMMON_OBJ) unbound unbound-checkconf lib unbound-host
 
 tests:	all unittest testbound lock-verify pktview signit memstats \
-	asynclook streamtcp perf
+	asynclook streamtcp perf delayer
 
 test:	tests
 	bash testcode/do-tests.sh
@@ -189,6 +191,10 @@ streamtcp:	$(STREAMTCP_OBJ) $(ldnslib)
 perf:	$(PERF_OBJ) $(ldnslib)
 	$(INFO) Link $@
 	$Q$(LINK) -o $@ $(sort $(PERF_OBJ)) $(LIBS)
+
+delayer:	$(DELAYER_OBJ) $(ldnslib)
+	$(INFO) Link $@
+	$Q$(LINK) -o $@ $(sort $(DELAYER_OBJ)) $(LIBS)
 
 #testcode/ldns-testpkts.c:	$(ldnsdir)/examples/ldns-testpkts.c \
 #			$(ldnsdir)/examples/ldns-testpkts.h

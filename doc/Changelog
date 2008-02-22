@@ -17,6 +17,7 @@
 	  www with DO bit set : BIND 8269.31 Ub 28735.6 qps.
 	  So, unbound can be about equal qps to NSD in cache hits.
 	  And about 3.4x faster than BIND in cache performance.
+	- delay utility for testing.
 
 21 February 2008: Wouter
 	- speedup of root-delegation message encoding by 15%.
