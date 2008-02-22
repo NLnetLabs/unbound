@@ -8,6 +8,7 @@
 	- loop check different speedup pkt-dname-reading, 1% faster for
 	  nocache-recursion check.
 	- less hashing during msg parse, 4% for recursion.
+	- small speed fix for dname_count_size_labels, +1 or +2% recursion.
 
 21 February 2008: Wouter
 	- speedup of root-delegation message encoding by 15%.

@@ -370,17 +370,17 @@ dname_count_size_labels(uint8_t* dname, size_t* size)
 {	
 	uint8_t lablen;
 	int labs = 1;
-	*size = 1;
+	size_t sz = 1;
 
 	lablen = *dname++;
 	while(lablen) {
 		labs++;
-		*size += lablen+1;
+		sz += lablen+1;
 		dname += lablen;
 		lablen = *dname++;
 	}
+	*size = sz;
 	return labs;
-
 }
 
 /**
