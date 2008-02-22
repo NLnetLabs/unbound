@@ -9,6 +9,14 @@
 	  nocache-recursion check.
 	- less hashing during msg parse, 4% for recursion.
 	- small speed fix for dname_count_size_labels, +1 or +2% recursion.
+	- some speed results noted:
+	  optimization resulted in +40% for recursion (cache miss) and
+	  +70 to +80 for cache hits, and +96% for version.bind.
+	  zone nsec3 example, 100 NXDOMAIN queries, NSD 35182.8 Ub 36048.4
+	  www.nlnetlabs.nl from cache: BIND 8987.99 Ub 31218.3
+	  www with DO bit set : BIND 8269.31 Ub 28735.6 qps.
+	  So, unbound can be about equal qps to NSD in cache hits.
+	  And about 3.4x faster than BIND in cache performance.
 
 21 February 2008: Wouter
 	- speedup of root-delegation message encoding by 15%.
