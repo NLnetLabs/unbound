@@ -145,34 +145,19 @@ query_dname_tolower(uint8_t* dname)
 
 /** maximum compression pointer position pointed to */
 #define MAX_COMPRESS_POS 16384
-/** size of bitmap for loop detection */
-#define LOOP_BITMAP_SIZE (MAX_COMPRESS_POS/8)
-
-/** check bit in bitmap for loop detection, then set it for next check */
-static uint8_t 
-loopcheck(uint8_t loop[], size_t pos)
-{
-	const uint8_t bits[8] = {0x1, 0x2, 0x4, 0x8, 0x10, 0x20, 0x40, 0x80};
-	uint8_t ret;
-	log_assert(pos < MAX_COMPRESS_POS);
-	ret = loop[ pos / 8 ] & bits[ pos & 0x7 ];
-	loop[ pos / 8 ] |= bits[ pos & 0x7 ];	
-	return ret;
-}
-
+/** max number of compression ptrs to follow */
+#define MAX_COMPRESS_PTRS 256
 
 size_t
 pkt_dname_len(ldns_buffer* pkt)
 {
 	size_t len = 0;
-	uint8_t loop[LOOP_BITMAP_SIZE]; /* loopcheck array. */
+	int ptrcount = 0;
 	uint8_t labellen;
 	size_t endpos = 0;
 
 	/* read dname and determine length */
 	/* check compression pointers, loops, out of bounds */
-	memset(loop, 0, sizeof(loop));
-
 	while(1) {
 		/* read next label */
 		if(ldns_buffer_remaining(pkt) < 1)
@@ -184,7 +169,7 @@ pkt_dname_len(ldns_buffer* pkt)
 			if(ldns_buffer_remaining(pkt) < 1)
 				return 0;
 			ptr = PTR_OFFSET(labellen, ldns_buffer_read_u8(pkt));
-			if(loopcheck(loop, ptr))
+			if(ptrcount++ > MAX_COMPRESS_PTRS)
 				return 0; /* loop! */
 			if(ldns_buffer_limit(pkt) <= ptr)
 				return 0; /* out of bounds! */

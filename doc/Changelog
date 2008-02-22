@@ -5,6 +5,8 @@
 	  profile reports.
 	- default is now minievent - not libevent. As its faster and
 	  not needed for regular installs, only for very large port ranges.
+	- loop check different speedup pkt-dname-reading, 1% faster for
+	  nocache-recursion check.
 
 21 February 2008: Wouter
 	- speedup of root-delegation message encoding by 15%.
