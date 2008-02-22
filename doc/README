@@ -11,7 +11,9 @@ This software is under BSD license, see LICENSE for details.
 
 * Uses the following libraries; 
   * ldns	http://www.nlnetlabs.nl/ldns/			(BSD license)
+    (required) can use tarball from source directory.
   * libevent	http://www.monkey.org/~provos/libevent/		(BSD license)
+    (optional) can use builtin alternative instead.
 
 * Create build environment 
   * run libtoolize -c if config.sub is missing, or run glibtoolize.
@@ -25,10 +27,11 @@ This software is under BSD license, see LICENSE for details.
 	If detected on the system, it will dynamically link against it.
   * --with-libevent=/path/to/libevent
   	Can be set to either the system install or the build directory.
-	--with-libevent=no gives a builtin alternative implementation.
-	libevent is useful when having many (thousands) of outgoing ports.
-	This improves randomization and spoof resistance. For the default 
-	of 16 ports the builtin alternative works well.
+	--with-libevent=no (default) gives a builtin alternative 
+	implementation. libevent is useful when having many (thousands) 
+	of outgoing ports. This improves randomization and spoof 
+	resistance. For the default of 16 ports the builtin alternative 
+	works well and is a little faster.
   * --without-pthreads 
 	This disables pthreads. Without this option the pthreads library 
 	is detected automatically. Use this option to disable threading

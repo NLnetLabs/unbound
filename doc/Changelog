@@ -3,6 +3,8 @@
 	  and query ID) in the reply list, avoid re-encoding the answer.
 	- removed TODO items for optimizations that do not show up in
 	  profile reports.
+	- default is now minievent - not libevent. As its faster and
+	  not needed for regular installs, only for very large port ranges.
 
 21 February 2008: Wouter
 	- speedup of root-delegation message encoding by 15%.

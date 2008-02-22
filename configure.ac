@@ -513,9 +513,9 @@ AC_SEARCH_LIBS([clock_gettime], [rt])
 
 # check for libevent
 AC_ARG_WITH(libevent, AC_HELP_STRING([--with-libevent=pathname],
-    [set path to libevent  (will check /usr/local /opt/local /usr/lib /usr/pkg /usr/sfw /usr)]),
-    [ ],[ withval="yes" ])
-if test x_$withval != x_no; then
+    [use libevent (will check /usr/local /opt/local /usr/lib /usr/pkg /usr/sfw /usr  or you can specify an explicit path). Slower, but allows use of large outgoing port ranges.]),
+    [ ],[ withval="no" ])
+if test x_$withval == x_yes -o x_$withval != x_no; then
         AC_MSG_CHECKING(for libevent)
         if test x_$withval = x_ -o x_$withval = x_yes; then
             withval="/usr/local /opt/local /usr/lib /usr/pkg /usr/sfw /usr"
@@ -550,7 +550,7 @@ if test x_$withval != x_no; then
             		AC_MSG_ERROR([Cannot find the libevent library in $withval
 You can restart ./configure --with-libevent=no to use a builtin alternative.
 Please note that this alternative is not as capable as libevent when using
-many outgoing ports.  ])
+large outgoing port ranges.  ])
 		fi
         else
             AC_MSG_RESULT(found in $thedir)
