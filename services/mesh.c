@@ -510,10 +510,11 @@ mesh_do_callback(struct mesh_state* m, int rcode, struct reply_info* rep,
  * @param rcode: if not 0, error code.
  * @param rep: reply to send (or NULL if rcode is set).
  * @param r: reply entry
+ * @param prev: previous reply, already has its answer encoded in buffer.
  */
 static void
 mesh_send_reply(struct mesh_state* m, int rcode, struct reply_info* rep,
-	struct mesh_reply* r)
+	struct mesh_reply* r, struct mesh_reply* prev)
 {
 	struct timeval end_time;
 	struct timeval duration;
@@ -529,7 +530,18 @@ mesh_send_reply(struct mesh_state* m, int rcode, struct reply_info* rep,
 	if(!rep && rcode == LDNS_RCODE_NOERROR)
 		rcode = LDNS_RCODE_SERVFAIL;
 	/* send the reply */
-	if(rcode) {
+	if(prev && prev->qflags == r->qflags && 
+		prev->edns.edns_present == r->edns.edns_present && 
+		prev->edns.bits == r->edns.bits && 
+		prev->edns.udp_size == r->edns.udp_size) {
+		/* if the previous reply is identical to this one, fix ID */
+		if(prev->query_reply.c->buffer != r->query_reply.c->buffer)
+			ldns_buffer_copy(r->query_reply.c->buffer, 
+				prev->query_reply.c->buffer);
+		ldns_buffer_write_at(r->query_reply.c->buffer, 0, 
+			&r->qid, sizeof(uint16_t));
+		comm_point_send_reply(&r->query_reply);
+	} else if(rcode) {
 		error_encode(r->query_reply.c->buffer, rcode, &m->s.qinfo,
 			r->qid, r->qflags, &r->edns);
 		comm_point_send_reply(&r->query_reply);
@@ -564,11 +576,13 @@ mesh_send_reply(struct mesh_state* m, int rcode, struct reply_info* rep,
 void mesh_query_done(struct mesh_state* mstate)
 {
 	struct mesh_reply* r;
+	struct mesh_reply* prev = NULL;
 	struct mesh_cb* c;
 	struct reply_info* rep = (mstate->s.return_msg?
 		mstate->s.return_msg->rep:NULL);
 	for(r = mstate->reply_list; r; r = r->next) {
-		mesh_send_reply(mstate, mstate->s.return_rcode, rep, r);
+		mesh_send_reply(mstate, mstate->s.return_rcode, rep, r, prev);
+		prev = r;
 	}
 	for(c = mstate->cb_list; c; c = c->next) {
 		mesh_do_callback(mstate, mstate->s.return_rcode, rep, c);
