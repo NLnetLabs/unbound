@@ -1,13 +1,7 @@
 TODO items.
-o #define BIT_... different on bigendian and smallendian systems so that
-  the htons on flags is not needed to send a message from the cache.
-o speed up pkt domain name decompression loop detection using counter perhaps.
-o detect OS/400 pthreads implementation that allows upgrading to writelock
-  on pthreads rwlocks and use it to examine-rd before storing-wr rrset cache.
 o understand synthesized DNAMEs, so those TTL=0 packets are cached properly.
 o understand NSEC/NSEC3, aggressive negative caching, so that updates to
   NSEC/NSEC3 will result in proper negative responses.
-o scrubber has slow pkt_subdomain and pkt_strict_subdomain functions.
 o get serverselection algorithm out of local optimum.
   make subtargets to get rtt info for a couple of targets, like fetch-policy.
   or send out multiple queries to multiple servers.
@@ -27,8 +21,8 @@ o command the server with TSIG inband. get-config, clearcache,
 	get stats, get memstats, get ..., reload, clear one zone from cache
 o watch for spoof nearmisses. Keep counter of nearmisses and print that
   in the stats lines, operator can determine what level is a redalert.
-o improve compression of DNS packets by first puttig uncompressible rrs, then
-  compress to their rdata.
+o improve compression of DNS packets by first putting uncompressible rrs, then
+  compress to their rdata. Messes up the ordering of RRs, so bad for interop.
 o NSID rfc 5001 support.
 o timers rfc 5011 support.
 o Treat YXDOMAIN from a DNAME properly, in iterator (not throwaway), validator.

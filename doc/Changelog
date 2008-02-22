@@ -1,6 +1,8 @@
 22 February 2008: Wouter
 	- +2% for recursions, if identical queries (except for destination
 	  and query ID) in the reply list, avoid re-encoding the answer.
+	- removed TODO items for optimizations that do not show up in
+	  profile reports.
 
 21 February 2008: Wouter
 	- speedup of root-delegation message encoding by 15%.
