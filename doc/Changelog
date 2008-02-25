@@ -1,3 +1,6 @@
+23 February 2008: Wouter
+	- delay utility works. Gets decent thoughput too (>20000).
+
 22 February 2008: Wouter
 	- +2% for recursions, if identical queries (except for destination
 	  and query ID) in the reply list, avoid re-encoding the answer.
