@@ -1566,11 +1566,6 @@ processFinished(struct module_qstate* qstate, struct iter_qstate* iq,
 					LDNS_RCODE_SERVFAIL);
 		}
 	}
-	if(query_dname_compare(qstate->qinfo.qname, 
-		iq->response->qinfo.qname) == 0) {
-		/* use server supplied upper/lower case */
-		qstate->qinfo.qname = iq->response->qinfo.qname;
-	}
 	qstate->return_rcode = LDNS_RCODE_NOERROR;
 	qstate->return_msg = iq->response;
 	return 0;

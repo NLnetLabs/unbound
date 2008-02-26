@@ -156,6 +156,8 @@ struct mesh_reply {
 	uint16_t qid;
 	/** flags of query, for reply flags */
 	uint16_t qflags;
+	/** qname from this query. len same as mesh qinfo. */
+	uint8_t* qname;
 };
 
 /** 
@@ -375,10 +377,11 @@ int mesh_state_attachment(struct mesh_state* super, struct mesh_state* sub);
  * @param rep: comm point reply info.
  * @param qid: ID of reply.
  * @param qflags: original query flags.
+ * @param qname: original query name.
  * @return: 0 on alloc error.
  */
 int mesh_state_add_reply(struct mesh_state* s, struct edns_data* edns, 
-	struct comm_reply* rep, uint16_t qid, uint16_t qflags);
+	struct comm_reply* rep, uint16_t qid, uint16_t qflags, uint8_t* qname);
 
 /**
  * Create new callback structure and attach it to a mesh state.

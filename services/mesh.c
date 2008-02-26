@@ -160,7 +160,7 @@ void mesh_new_client(struct mesh_area* mesh, struct query_info* qinfo,
 	if(!s->reply_list && !s->cb_list)
 		was_noreply = 1;
 	/* add reply to s */
-	if(!mesh_state_add_reply(s, edns, rep, qid, qflags)) {
+	if(!mesh_state_add_reply(s, edns, rep, qid, qflags, qinfo->qname)) {
 			log_err("mesh_new_client: out of memory; SERVFAIL");
 			error_encode(rep->c->buffer, LDNS_RCODE_SERVFAIL,
 				qinfo, qid, qflags, edns);
@@ -540,8 +540,11 @@ mesh_send_reply(struct mesh_state* m, int rcode, struct reply_info* rep,
 				prev->query_reply.c->buffer);
 		ldns_buffer_write_at(r->query_reply.c->buffer, 0, 
 			&r->qid, sizeof(uint16_t));
+		ldns_buffer_write_at(r->query_reply.c->buffer, 12, 
+			r->qname, m->s.qinfo.qname_len);
 		comm_point_send_reply(&r->query_reply);
 	} else if(rcode) {
+		m->s.qinfo.qname = r->qname;
 		error_encode(r->query_reply.c->buffer, rcode, &m->s.qinfo,
 			r->qid, r->qflags, &r->edns);
 		comm_point_send_reply(&r->query_reply);
@@ -551,6 +554,7 @@ mesh_send_reply(struct mesh_state* m, int rcode, struct reply_info* rep,
 		r->edns.udp_size = EDNS_ADVERTISED_SIZE;
 		r->edns.ext_rcode = 0;
 		r->edns.bits &= EDNS_DO;
+		m->s.qinfo.qname = r->qname;
 		if(!reply_info_answer_encode(&m->s.qinfo, rep, r->qid, 
 			r->qflags, r->query_reply.c->buffer, 0, 1, 
 			m->s.env->scratch, udp_size, &r->edns, 
@@ -640,7 +644,7 @@ int mesh_state_add_cb(struct mesh_state* s, struct edns_data* edns,
 }
 
 int mesh_state_add_reply(struct mesh_state* s, struct edns_data* edns,
-        struct comm_reply* rep, uint16_t qid, uint16_t qflags)
+        struct comm_reply* rep, uint16_t qid, uint16_t qflags, uint8_t* qname)
 {
 	struct mesh_reply* r = regional_alloc(s->s.region, 
 		sizeof(struct mesh_reply));
@@ -652,6 +656,10 @@ int mesh_state_add_reply(struct mesh_state* s, struct edns_data* edns,
 	r->qflags = qflags;
 	r->start_time = *s->s.env->now_tv;
 	r->next = s->reply_list;
+	r->qname = regional_alloc_init(s->s.region, qname, 
+		s->s.qinfo.qname_len);
+	if(!r->qname)
+		return 0;
 	s->reply_list = r;
 	return 1;
 

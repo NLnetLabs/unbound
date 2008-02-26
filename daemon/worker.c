@@ -505,11 +505,10 @@ all_rrsets_secure(struct reply_info* rep) {
 
 /** answer query from the cache */
 static int
-answer_from_cache(struct worker* worker, struct lruhash_entry* e, uint16_t id,
-	uint16_t flags, struct comm_reply* repinfo, struct edns_data* edns)
+answer_from_cache(struct worker* worker, struct query_info* qinfo,
+	struct reply_info* rep, uint16_t id, uint16_t flags, 
+	struct comm_reply* repinfo, struct edns_data* edns)
 {
-	struct msgreply_entry* mrentry = (struct msgreply_entry*)e->key;
-	struct reply_info* rep = (struct reply_info*)e->data;
 	uint32_t timenow = *worker->env.now;
 	uint16_t udpsize = edns->udp_size;
 	int secure;
@@ -547,7 +546,7 @@ answer_from_cache(struct worker* worker, struct lruhash_entry* e, uint16_t id,
 		edns->ext_rcode = 0;
 		edns->bits &= EDNS_DO;
 		error_encode(repinfo->c->buffer, LDNS_RCODE_SERVFAIL, 
-			&mrentry->key, id, flags, edns);
+			qinfo, id, flags, edns);
 		rrset_array_unlock_touch(worker->env.rrset_cache, 
 			worker->scratchpad, rep->ref, rep->rrset_count);
 		regional_free_all(worker->scratchpad);
@@ -573,11 +572,11 @@ answer_from_cache(struct worker* worker, struct lruhash_entry* e, uint16_t id,
 	edns->udp_size = EDNS_ADVERTISED_SIZE;
 	edns->ext_rcode = 0;
 	edns->bits &= EDNS_DO;
-	if(!reply_info_answer_encode(&mrentry->key, rep, id, flags, 
+	if(!reply_info_answer_encode(qinfo, rep, id, flags, 
 		repinfo->c->buffer, timenow, 1, worker->scratchpad,
 		udpsize, edns, (int)(edns->bits & EDNS_DO), secure)) {
 		error_encode(repinfo->c->buffer, LDNS_RCODE_SERVFAIL, 
-			&mrentry->key, id, flags, edns);
+			qinfo, id, flags, edns);
 	}
 	/* cannot send the reply right now, because blocking network syscall
 	 * is bad while holding locks. */
@@ -787,7 +786,8 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 	h = query_info_hash(&qinfo);
 	if((e=slabhash_lookup(worker->env.msg_cache, h, &qinfo, 0))) {
 		/* answer from cache - we have acquired a readlock on it */
-		if(answer_from_cache(worker, e, 
+		if(answer_from_cache(worker, &qinfo, 
+			(struct reply_info*)e->data, 
 			*(uint16_t*)ldns_buffer_begin(c->buffer), 
 			ldns_buffer_read_u16_at(c->buffer, 2), repinfo, 
 			&edns)) {
@@ -817,8 +817,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 		worker->stats.num_query_list_exceeded++;
 		comm_point_drop_reply(repinfo);
 		return 0;
-	} else if(worker->env.mesh->num_reply_addrs > 
-		worker->request_size*256) {
+	} else if(worker->env.mesh->num_reply_addrs>worker->request_size*16) {
 		verbose(VERB_ALGO, "Too many requests queued. "
 			"dropping incoming query.");
 		worker->stats.num_query_list_exceeded++;

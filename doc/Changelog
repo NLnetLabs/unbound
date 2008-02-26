@@ -2,6 +2,7 @@
 	- delay utility delays TCP as well. If the server that is forwarded 
 	  to has a TCP error, the delay utility closes the connection.
 	- delay does REUSE_ADDR, and can handle a server that closes its end.
+	- answers use casing from query.
 
 25 February 2008: Wouter
 	- delay utility works. Gets decent thoughput too (>20000).
