@@ -1001,7 +1001,7 @@ int main(int argc, char** argv)
 	size_t memsize = 10*1024*1024;
 	int delay = 100;
 
-	verbosity = 1;
+	verbosity = 0;
 	log_init(0, 0, 0);
 	log_ident_set("delayer");
 	srandom(time(NULL) ^ getpid());
