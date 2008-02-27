@@ -143,10 +143,25 @@ query_dname_tolower(uint8_t* dname)
 	}
 }
 
-/** maximum compression pointer position pointed to */
-#define MAX_COMPRESS_POS 16384
-/** max number of compression ptrs to follow */
-#define MAX_COMPRESS_PTRS 256
+void 
+pkt_dname_tolower(ldns_buffer* pkt, uint8_t* dname)
+{
+	uint8_t lablen;
+	lablen = *dname++;
+	while(lablen) {
+		if(LABEL_IS_PTR(lablen)) {
+			dname = ldns_buffer_at(pkt, PTR_OFFSET(lablen, *dname));
+			lablen = *dname++;
+			continue;
+		}
+		while(lablen--) {
+			*dname = (uint8_t)tolower((int)*dname);
+			dname++;
+		}
+		lablen = *dname++;
+	}
+}
+
 
 size_t
 pkt_dname_len(ldns_buffer* pkt)

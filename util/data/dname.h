@@ -46,6 +46,9 @@
 #define UTIL_DATA_DNAME_H
 #include "util/storage/lruhash.h"
 
+/** max number of compression ptrs to follow */
+#define MAX_COMPRESS_PTRS 256
+
 /** 
  * Determine length of dname in buffer, no compression ptrs allowed, 
  * @param query: the ldns buffer, current position at start of dname.
@@ -64,6 +67,14 @@ size_t dname_valid(uint8_t* dname, size_t len);
 
 /** lowercase query dname */
 void query_dname_tolower(uint8_t* dname);
+
+/** 
+ * lowercase pkt dname (follows compression pointers)
+ * @param pkt: the packet, used to follow compression pointers. Position 
+ *	is unchanged.
+ * @param dname: start of dname in packet.
+ */
+void pkt_dname_tolower(ldns_buffer* pkt, uint8_t* dname);
 
 /**
  * Compare query dnames (uncompressed storage). The Dnames passed do not

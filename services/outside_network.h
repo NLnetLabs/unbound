@@ -71,6 +71,8 @@ struct outside_network {
 	/** serviced_callbacks malloc overhead when processing multiple
 	 * identical serviced queries to the same server. */
 	size_t svcd_overhead;
+	/** use x20 bits to encode additional ID random bits */
+	int use_caps_for_id;
 
 	/** 
 	 * Array of udp comm point* that are used to listen to pending events.
@@ -261,12 +263,14 @@ struct serviced_query {
  * @param num_tcp: number of outgoing tcp buffers to preallocate.
  * @param infra: pointer to infra cached used for serviced queries.
  * @param rnd: stored to create random numbers for serviced queries.
+ * @param use_caps_for_id: enable to use 0x20 bits to encode id randomness.
  * @return: the new structure (with no pending answers) or NULL on error.
  */
 struct outside_network* outside_network_create(struct comm_base* base,
 	size_t bufsize, size_t num_ports, char** ifs, int num_ifs,
 	int do_ip4, int do_ip6, int port_base, size_t num_tcp, 
-	struct infra_cache* infra, struct ub_randstate* rnd);
+	struct infra_cache* infra, struct ub_randstate* rnd,
+	int use_caps_for_id);
 
 /**
  * Delete outside_network structure.

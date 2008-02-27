@@ -46,6 +46,7 @@
 #include "util/data/msgparse.h"
 #include "util/data/msgreply.h"
 #include "util/data/msgencode.h"
+#include "util/data/dname.h"
 #include "util/netevent.h"
 #include "util/log.h"
 #include "util/net_help.h"
@@ -91,14 +92,19 @@ serviced_cmp(const void* key1, const void* key2)
 	if(q1->qbuflen > q2->qbuflen)
 		return 1;
 	log_assert(q1->qbuflen == q2->qbuflen);
-	/* will not detect alternate casing of qname */
-	if((r = memcmp(q1->qbuf, q2->qbuf, q1->qbuflen)) != 0)
+	log_assert(q1->qbuflen >= 15 /* 10 header, root, type, class */);
+	/* alternate casing of qname is still the same query */
+	if((r = memcmp(q1->qbuf, q2->qbuf, 10)) != 0)
+		return r;
+	if((r = memcmp(q1->qbuf+q1->qbuflen-4, q2->qbuf+q2->qbuflen-4, 4)) != 0)
 		return r;
 	if(q1->dnssec != q2->dnssec) {
 		if(q1->dnssec < q2->dnssec)
 			return -1;
 		return 1;
 	}
+	if((r = query_dname_compare(q1->qbuf+10, q2->qbuf+10)) != 0)
+		return r;
 	return sockaddr_cmp(&q1->addr, q1->addrlen, &q2->addr, q2->addrlen);
 }
 
@@ -421,7 +427,7 @@ struct outside_network*
 outside_network_create(struct comm_base *base, size_t bufsize, 
 	size_t num_ports, char** ifs, int num_ifs, int do_ip4, 
 	int do_ip6, int port_base, size_t num_tcp, struct infra_cache* infra,
-	struct ub_randstate* rnd)
+	struct ub_randstate* rnd, int use_caps_for_id)
 {
 	struct outside_network* outnet = (struct outside_network*)
 		calloc(1, sizeof(struct outside_network));
@@ -436,6 +442,7 @@ outside_network_create(struct comm_base *base, size_t bufsize,
 	outnet->infra = infra;
 	outnet->rnd = rnd;
 	outnet->svcd_overhead = 0;
+	outnet->use_caps_for_id = use_caps_for_id;
 #ifndef INET6
 	do_ip6 = 0;
 #endif
@@ -912,10 +919,52 @@ serviced_delete(struct serviced_query* sq)
 	serviced_node_del(&sq->node, NULL);
 }
 
+/** perturb a dname capitalization randomly */
+static void
+serviced_perturb_qname(struct ub_randstate* rnd, uint8_t* qbuf, size_t len)
+{
+	uint8_t lablen;
+	uint8_t* d = qbuf + 10;
+	long int random = 0;
+	int bits = 0;
+	log_assert(len >= 10 + 5 /* offset qname, root, qtype, qclass */);
+	lablen = *d++;
+	while(lablen) {
+		while(lablen--) {
+			/* only perturb A-Z, a-z */
+			if(isalpha((int)*d)) {
+				/* get a random bit */	
+				if(bits == 0) {
+					random = ub_random(rnd);
+					bits = 30;
+				}
+				if(random & 0x1) {
+					*d = (uint8_t)toupper((int)*d);
+				} else {
+					*d = (uint8_t)tolower((int)*d);
+				}
+				random >>= 1;
+				bits--;
+			}
+			d++;
+		}
+		lablen = *d++;
+	}
+	if(verbosity >= VERB_ALGO) {
+		char buf[LDNS_MAX_DOMAINLEN+1];
+		dname_str(qbuf+10, buf);
+		verbose(VERB_ALGO, "qname perturbed to %s", buf);
+	}
+}
+
 /** put serviced query into a buffer */
 static void
 serviced_encode(struct serviced_query* sq, ldns_buffer* buff, int with_edns)
 {
+	/* if we are using 0x20 bits for ID randomness, perturb them */
+	if(sq->outnet->use_caps_for_id) {
+		serviced_perturb_qname(sq->outnet->rnd, sq->qbuf, sq->qbuflen);
+	}
 	/* generate query */
 	ldns_buffer_clear(buff);
 	ldns_buffer_write_u16(buff, 0); /* id placeholder */
@@ -968,6 +1017,49 @@ serviced_udp_send(struct serviced_query* sq, ldns_buffer* buff)
 	return 1;
 }
 
+/** check that perturbed qname is identical */
+static int
+serviced_check_qname(ldns_buffer* pkt, uint8_t* qbuf, size_t qbuflen)
+{
+	uint8_t* d1 = ldns_buffer_at(pkt, 12);
+	uint8_t* d2 = qbuf+10;
+	uint8_t len1, len2;
+	int count = 0;
+	log_assert(qbuflen >= 15 /* 10 header, root, type, class */);
+	len1 = *d1++;
+	len2 = *d2++;
+	if(ldns_buffer_limit(pkt) < 12+1+4) /* packet too small for qname */
+		return 0;
+	while(len1 != 0 || len2 != 0) {
+		if(LABEL_IS_PTR(len1)) {
+			d1 = ldns_buffer_at(pkt, PTR_OFFSET(len1, *d1));
+			if(d1 >= ldns_buffer_at(pkt, ldns_buffer_limit(pkt)))
+				return 0;
+			len1 = *d1++;
+			if(count++ > MAX_COMPRESS_PTRS)
+				return 0;
+			continue;
+		}
+		if(d2 > qbuf+qbuflen)
+			return 0;
+		if(len1 != len2)
+			return 0;
+		if(len1 > LDNS_MAX_LABELLEN)
+			return 0;
+		log_assert(len1 <= LDNS_MAX_LABELLEN);
+		log_assert(len2 <= LDNS_MAX_LABELLEN);
+		log_assert(len1 == len2 && len1 != 0);
+		/* compare the labels - bitwise identical */
+		if(memcmp(d1, d2, len1) != 0)
+			return 0;
+		d1 += len1;
+		d2 += len2;
+		len1 = *d1++;
+		len2 = *d2++;
+	}
+	return 1;
+}
+
 /** call the callbacks for a serviced query */
 static void
 serviced_callbacks(struct serviced_query* sq, int error, struct comm_point* c,
@@ -985,6 +1077,36 @@ serviced_callbacks(struct serviced_query* sq, int error, struct comm_point* c,
 	log_assert(rem); /* should have been present */
 	sq->to_be_deleted = 1; 
 	verbose(VERB_ALGO, "svcd callbacks start");
+	if(sq->outnet->use_caps_for_id && error == NETEVENT_NOERROR && c) {
+		/* noerror and nxdomain must have a qname in reply */
+		if(ldns_buffer_read_u16_at(c->buffer, 4) == 0 &&
+			(LDNS_RCODE_WIRE(ldns_buffer_begin(c->buffer))
+				== LDNS_RCODE_NOERROR || 
+			 LDNS_RCODE_WIRE(ldns_buffer_begin(c->buffer))
+				== LDNS_RCODE_NXDOMAIN)) {
+			verbose(VERB_OPS, "no qname in reply to check 0x20ID");
+			log_addr(VERB_OPS, "from server", 
+				&sq->addr, sq->addrlen);
+			log_buf(VERB_OPS, "for packet", c->buffer);
+			error = NETEVENT_CLOSED;
+			c = NULL;
+		} else if(ldns_buffer_read_u16_at(c->buffer, 4) > 0 &&
+			!serviced_check_qname(c->buffer, sq->qbuf, 
+			sq->qbuflen)) {
+			verbose(VERB_OPS, "wrong 0x20-ID in reply qname, "
+				"answer dropped");
+			log_addr(VERB_OPS, "from server", 
+				&sq->addr, sq->addrlen);
+			log_buf(VERB_OPS, "for packet", c->buffer);
+			error = NETEVENT_CLOSED;
+			c = NULL;
+		} else {
+			verbose(VERB_ALGO, "good 0x20-ID in reply qname");
+			/* cleanup caps, prettier cache contents. */
+			pkt_dname_tolower(c->buffer, 
+				ldns_buffer_at(c->buffer, 12));
+		}
+	}
 	if(dobackup && c) {
 		/* make a backup of the query, since the querystate processing
 		 * may send outgoing queries that overwrite the buffer.

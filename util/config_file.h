@@ -140,6 +140,8 @@ struct config_file {
 	int harden_glue;
 	/** harden against receiving no DNSSEC data for trust anchor */
 	int harden_dnssec_stripped;
+	/** use 0x20 bits in query as random ID bits */
+	int use_caps_bits_for_id;
 
 	/** chrootdir, if not "" or chroot will be done */
 	char* chrootdir;

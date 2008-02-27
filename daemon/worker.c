@@ -977,7 +977,8 @@ worker_init(struct worker* worker, struct config_file *cfg,
 		cfg->msg_buffer_size, (size_t)cfg->outgoing_num_ports, 
 		cfg->out_ifs, cfg->num_out_ifs, cfg->do_ip4, cfg->do_ip6, 
 		startport, cfg->do_tcp?cfg->outgoing_num_tcp:0, 
-		worker->daemon->env->infra_cache, worker->rndstate);
+		worker->daemon->env->infra_cache, worker->rndstate,
+		cfg->use_caps_bits_for_id);
 	if(!worker->back) {
 		log_err("could not create outgoing sockets");
 		worker_delete(worker);
