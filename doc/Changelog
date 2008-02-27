@@ -1,6 +1,7 @@
 27 February 2008: Wouter
 	- option to use caps for id randomness.
 	- config file option use-caps-for-id: yes
+	- harvest debug tool
 
 26 February 2008: Wouter
 	- delay utility delays TCP as well. If the server that is forwarded 

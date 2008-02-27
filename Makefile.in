@@ -98,13 +98,16 @@ PERF_SRC=testcode/perf.c smallapp/worker_cb.c $(COMMON_SRC)
 PERF_OBJ=$(addprefix $(BUILD),$(PERF_SRC:.c=.o)) $(COMPAT_OBJ)
 DELAYER_SRC=testcode/delayer.c smallapp/worker_cb.c $(COMMON_SRC)
 DELAYER_OBJ=$(addprefix $(BUILD),$(DELAYER_SRC:.c=.o)) $(COMPAT_OBJ)
+HARVEST_SRC=testcode/harvest.c
+HARVEST_OBJ=$(addprefix $(BUILD),$(HARVEST_SRC:.c=.o)) $(COMPAT_OBJ)
 LIBUNBOUND_SRC=$(patsubst $(srcdir)/%,%, \
 	$(wildcard $(srcdir)/libunbound/*.c) $(COMMON_SRC))
 LIBUNBOUND_OBJ=$(addprefix $(BUILD),$(LIBUNBOUND_SRC:.c=.o)) $(COMPAT_OBJ)
 ALL_SRC=$(sort $(COMMON_SRC) $(UNITTEST_SRC) $(DAEMON_SRC) \
 	$(TESTBOUND_SRC) $(LOCKVERIFY_SRC) $(PKTVIEW_SRC) $(SIGNIT_SRC) \
 	$(MEMSTATS_SRC) $(CHECKCONF_SRC) $(LIBUNBOUND_SRC) $(HOST_SRC) \
-	$(ASYNCLOOK_SRC) $(STREAMTCP_SRC) $(PERF_SRC) $(DELAYER_SRC))
+	$(ASYNCLOOK_SRC) $(STREAMTCP_SRC) $(PERF_SRC) $(DELAYER_SRC) \
+	$(HARVEST_SRC) )
 ALL_OBJ=$(addprefix $(BUILD),$(ALL_SRC:.c=.o) \
 	$(addprefix compat/,$(LIBOBJS))) $(COMPAT_OBJ)
 
@@ -124,7 +127,7 @@ $(BUILD)%.o:    $(srcdir)/%.c
 all:	$(COMMON_OBJ) unbound unbound-checkconf lib unbound-host
 
 tests:	all unittest testbound lock-verify pktview signit memstats \
-	asynclook streamtcp perf delayer
+	asynclook streamtcp perf delayer harvest
 
 test:	tests
 	bash testcode/do-tests.sh
@@ -195,6 +198,10 @@ perf:	$(PERF_OBJ) $(ldnslib)
 delayer:	$(DELAYER_OBJ) $(ldnslib)
 	$(INFO) Link $@
 	$Q$(LINK) -o $@ $(sort $(DELAYER_OBJ)) $(LIBS)
+
+harvest:	$(HARVEST_OBJ) $(ldnslib) libunbound.la
+	$(INFO) Link $@
+	$Q$(LINK) -o $@ $(sort $(HARVEST_OBJ)) $(LIBS) -L. -L.libs -lunbound
 
 #testcode/ldns-testpkts.c:	$(ldnsdir)/examples/ldns-testpkts.c \
 #			$(ldnsdir)/examples/ldns-testpkts.h
