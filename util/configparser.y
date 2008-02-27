@@ -88,7 +88,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_OUTGOING_INTERFACE VAR_ROOT_HINTS VAR_DO_NOT_QUERY_LOCALHOST
 %token VAR_CACHE_MAX_TTL VAR_HARDEN_DNNSEC_STRIPPED VAR_ACCESS_CONTROL
 %token VAR_LOCAL_ZONE VAR_LOCAL_DATA VAR_INTERFACE_AUTOMATIC
-%token VAR_STATISTICS_INTERVAL VAR_DO_DAEMONIZE
+%token VAR_STATISTICS_INTERVAL VAR_DO_DAEMONIZE VAR_USE_CAPS_FOR_ID
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -128,7 +128,8 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_do_not_query_localhost | server_cache_max_ttl |
 	server_harden_dnssec_stripped | server_access_control |
 	server_local_zone | server_local_data | server_interface_automatic |
-	server_statistics_interval | server_do_daemonize
+	server_statistics_interval | server_do_daemonize | 
+	server_use_caps_for_id
 	;
 stubstart: VAR_STUB_ZONE
 	{
@@ -584,6 +585,16 @@ server_harden_dnssec_stripped: VAR_HARDEN_DNNSEC_STRIPPED STRING
 		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
 			yyerror("expected yes or no.");
 		else cfg_parser->cfg->harden_dnssec_stripped = 
+			(strcmp($2, "yes")==0);
+		free($2);
+	}
+	;
+server_use_caps_for_id: VAR_USE_CAPS_FOR_ID STRING
+	{
+		OUTYY(("P(server_use_caps_for_id:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->use_caps_bits_for_id = 
 			(strcmp($2, "yes")==0);
 		free($2);
 	}
