@@ -252,8 +252,8 @@ find_create_lab(struct harvest_data* data, ldns_rdf* name)
 	struct labdata* nextlab;
 	ldns_rdf* next;
 	uint8_t numlab = ldns_dname_label_count(name);
-	if(numlab > data->maxlabels)
-		data->maxlabels = numlab;
+	if((int)numlab > data->maxlabels)
+		data->maxlabels = (int)numlab;
 	while(numlab--) {
 		next = ldns_dname_label(name, numlab);
 		if(!next) error_exit("ldns_dname_label");
@@ -277,7 +277,8 @@ find_create_lab(struct harvest_data* data, ldns_rdf* name)
 				!= LDNS_STATUS_OK) error_exit("outofmem");
 			nextlab->rrlist = ldns_rr_list_new();
 			if(!nextlab->rrlist) error_exit("out of memory");
-			ldns_rbtree_insert(lab->sublabels, &nextlab->node);
+			(void)ldns_rbtree_insert(lab->sublabels, 
+				&nextlab->node);
 			if(hverb) {
 				printf("new label: ");
 				ldns_rdf_print(stdout, nextlab->name);
@@ -313,9 +314,10 @@ new_todo_item(struct harvest_data* data, ldns_rdf* qname, int qtype,
 	if(hverb) {
 		printf("new todo: ");
 		ldns_rdf_print(stdout, it->qname);
-		if(ldns_rr_descript(it->qtype) && 
-			ldns_rr_descript(it->qtype)->_name)
-			printf(" %s", ldns_rr_descript(it->qtype)->_name);
+		if(ldns_rr_descript((uint16_t)it->qtype) && 
+			ldns_rr_descript((uint16_t)it->qtype)->_name)
+			printf(" %s", ldns_rr_descript((uint16_t)
+			it->qtype)->_name);
 		if(ldns_lookup_by_id(ldns_rr_classes, it->qclass) && 
 			ldns_lookup_by_id(ldns_rr_classes, it->qclass)->name) 
 			printf(" %s", ldns_lookup_by_id(ldns_rr_classes, 
@@ -364,9 +366,10 @@ process(struct harvest_data* data, struct todo_item* it)
 	if(hverb) {
 		printf("process: ");
 		ldns_rdf_print(stdout, it->qname);
-		if(ldns_rr_descript(it->qtype) && 
-			ldns_rr_descript(it->qtype)->_name)
-			printf(" %s", ldns_rr_descript(it->qtype)->_name);
+		if(ldns_rr_descript((uint16_t)it->qtype) && 
+			ldns_rr_descript((uint16_t)it->qtype)->_name)
+			printf(" %s", ldns_rr_descript((uint16_t)
+			it->qtype)->_name);
 		if(ldns_lookup_by_id(ldns_rr_classes, it->qclass) && 
 			ldns_lookup_by_id(ldns_rr_classes, it->qclass)->name) 
 			printf(" %s", ldns_lookup_by_id(ldns_rr_classes, 
