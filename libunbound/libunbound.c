@@ -438,7 +438,7 @@ process_answer_detail(struct ub_ctx* ctx, uint8_t* msg, uint32_t len,
 				q->msg_security);
 		}
 		(*res)->answer_packet = q->msg;
-		(*res)->answer_len = q->msg_len;
+		(*res)->answer_len = (int)q->msg_len;
 		q->msg = NULL;
 		ldns_buffer_free(buf);
 		regional_destroy(region);
@@ -585,7 +585,7 @@ ub_resolve(struct ub_ctx* ctx, char* name, int rrtype,
 		return r;
 	}
 	q->res->answer_packet = q->msg;
-	q->res->answer_len = q->msg_len;
+	q->res->answer_len = (int)q->msg_len;
 	q->msg = NULL;
 	*result = q->res;
 	q->res = NULL;
