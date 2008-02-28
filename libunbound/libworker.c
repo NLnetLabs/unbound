@@ -935,14 +935,18 @@ libworker_read_msg(int fd, uint8_t** buf, uint32_t* len, int nonblock)
 	if((r=read(fd, *buf, *len)) == -1) {
 		log_err("msg read failed: %s", strerror(errno));
 		(void)fd_set_nonblock(fd);
+		free(*buf);
 		return 0;
 	}
 	if(r == 0) { /* EOF */
 		(void)fd_set_nonblock(fd);
+		free(*buf);
 		return 0;
 	}
-	if(!fd_set_nonblock(fd))
+	if(!fd_set_nonblock(fd)) {
+		free(*buf);
 		return 0;
+	}
 	return 1;
 }
 

@@ -437,6 +437,9 @@ process_answer_detail(struct ub_ctx* ctx, uint8_t* msg, uint32_t len,
 			libworker_enter_result(*res, buf, region,
 				q->msg_security);
 		}
+		(*res)->answer_packet = q->msg;
+		(*res)->answer_len = q->msg_len;
+		q->msg = NULL;
 		ldns_buffer_free(buf);
 		regional_destroy(region);
 	}
@@ -448,6 +451,7 @@ process_answer_detail(struct ub_ctx* ctx, uint8_t* msg, uint32_t len,
 	lock_basic_unlock(&ctx->cfglock);
 
 	if(*cb) return 2;
+	ub_resolve_free(*res);
 	return 1;
 }
 
@@ -537,6 +541,7 @@ ub_wait(struct ub_ctx* ctx)
 			r = process_answer_detail(ctx, msg, len, 
 				&cb, &cbarg, &err, &res);
 			lock_basic_unlock(&ctx->rrpipe_lock);
+			free(msg);
 			if(r == 0)
 				return UB_PIPE;
 			if(r == 2)
@@ -579,6 +584,9 @@ ub_resolve(struct ub_ctx* ctx, char* name, int rrtype,
 		lock_basic_unlock(&ctx->cfglock);
 		return r;
 	}
+	q->res->answer_packet = q->msg;
+	q->res->answer_len = q->msg_len;
+	q->msg = NULL;
 	*result = q->res;
 	q->res = NULL;
 
@@ -672,8 +680,8 @@ ub_cancel(struct ub_ctx* ctx, int async_id)
 	if(!ctx->dothread) { /* if forked */
 		(void)rbtree_delete(&ctx->queries, q->node.key);
 		ctx->num_async--;
-		context_query_delete(q);
 		msg = context_serialize_cancel(q, &len);
+		context_query_delete(q);
 		lock_basic_unlock(&ctx->cfglock);
 		if(!msg) {
 			return UB_NOMEM;
@@ -706,6 +714,7 @@ ub_resolve_free(struct ub_result* result)
 			free(*p);
 	free(result->data);
 	free(result->len);
+	free(result->answer_packet);
 	free(result);
 }
 

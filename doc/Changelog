@@ -1,3 +1,10 @@
+28 February 2008: Wouter
+	- fixed memory leaks in libunbound (during cancellation and wait).
+	- libunbound returns the answer packet in full.
+	- snprintf compat update.
+	- harvest performs lookup.
+	- ldns-tarball update with fix for ldns_dname_label.
+
 27 February 2008: Wouter
 	- option to use caps for id randomness.
 	- config file option use-caps-for-id: yes

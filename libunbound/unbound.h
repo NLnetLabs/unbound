@@ -140,6 +140,13 @@ struct ub_result {
 	int rcode;
 
 	/**
+	 * The DNS answer packet. Network formatted. Can contain DNSSEC types.
+	 */
+	void* answer_packet;
+	/** length of the answer packet in octets. */
+	int answer_len;
+
+	/**
 	 * If there is any data, this is true.
 	 * If false, there was no data (nxdomain may be true, rcode can be set).
 	 */

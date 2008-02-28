@@ -216,6 +216,16 @@ ext_check_result(const char* desc, int err, struct ub_result* result)
 				"wrong.\n", desc);
 			exit(1);
 		}
+		if(result->answer_packet == NULL) {
+			printf("%s: error result->answer_packet is NULL.\n", 
+				desc);
+			exit(1);
+		}
+		if(result->answer_len != 54) {
+			printf("%s: error result->answer_len is wrong.\n", 
+				desc);
+			exit(1);
+		}
 	}
 }
 
@@ -288,6 +298,7 @@ ext_thread(void* arg)
 			r = ub_resolve(inf->ctx, inf->argv[i%inf->argc], 
 				LDNS_RR_TYPE_A, LDNS_RR_CLASS_IN, &result);
 			ext_check_result("ub_resolve", r, result);
+			ub_resolve_free(result);
 		}
 	}
 	if(inf->thread_num > NUMTHR/2) {

@@ -232,6 +232,7 @@ lab_create(char* name)
 	if(!lab) error_exit("out of memory");
 	lab->label = ldns_dname_new_frm_str(name);
 	if(!lab->label) error_exit("out of memory");
+	printf("labcount %d\n", ldns_dname_label_count(lab->label));
 	lab->name = ldns_dname_new_frm_str(name);
 	if(!lab->name) error_exit("out of memory");
 	lab->node.key = lab->label;
@@ -264,8 +265,12 @@ find_create_lab(struct harvest_data* data, ldns_rdf* name)
 			/* create it */
 			nextlab = (struct labdata*)calloc(1, sizeof(*lab));
 			if(!nextlab) error_exit("out of memory");
+			printf("nextcount %d len %d\n", 
+				ldns_dname_label_count(next),
+				ldns_rdf_size(next));
 			nextlab->label = ldns_rdf_clone(next);
 			if(!nextlab->label) error_exit("out of memory");
+			printf("labcount %d\n", ldns_dname_label_count(nextlab->label));
 			nextlab->node.key = nextlab->label;
 			nextlab->node.data = nextlab;
 			nextlab->sublabels = ldns_rbtree_create(lab_cmp);
@@ -342,6 +347,10 @@ new_todo_infra(struct harvest_data* data, struct todo_item* it)
 			LDNS_RR_CLASS_IN, it->depth);
 		new_todo_item(data, lab->name, LDNS_RR_TYPE_DS, 
 			LDNS_RR_CLASS_IN, it->depth);
+		new_todo_item(data, lab->name, LDNS_RR_TYPE_A, 
+			LDNS_RR_CLASS_IN, it->depth);
+		new_todo_item(data, lab->name, LDNS_RR_TYPE_AAAA, 
+			LDNS_RR_CLASS_IN, it->depth);
 		lab->done = 1;
 	}
 }
@@ -359,10 +368,63 @@ make_todo(struct harvest_data* data)
 	}
 }
 
-/** get result and store it */
+/** store RR and make new work items for it if needed */
+static void
+process_rr(struct harvest_data* data, ldns_rr* rr, int depth)
+{
+	/* must free or store rr */
+	struct labdata* lab = find_create_lab(data, ldns_rr_owner(rr));
+	if(!lab) error_exit("cannot find/create label");
+	/* generate extra queries */
+	if(ldns_rr_get_type(rr) == LDNS_RR_TYPE_NS) {
+		new_todo_item(data, ldns_rr_ns_nsdname(rr), LDNS_RR_TYPE_A, 
+			LDNS_RR_CLASS_IN, depth+1);
+		new_todo_item(data, ldns_rr_ns_nsdname(rr), LDNS_RR_TYPE_AAAA, 
+			LDNS_RR_CLASS_IN, depth+1);
+	} else if(ldns_rr_get_type(rr) == LDNS_RR_TYPE_MX) {
+		new_todo_item(data, ldns_rr_mx_exchange(rr), LDNS_RR_TYPE_A, 
+			LDNS_RR_CLASS_IN, depth+1);
+		new_todo_item(data, ldns_rr_mx_exchange(rr), LDNS_RR_TYPE_AAAA, 
+			LDNS_RR_CLASS_IN, depth+1);
+	} else if(ldns_rr_get_type(rr) == LDNS_RR_TYPE_SOA) {
+		new_todo_item(data, ldns_rr_rdf(rr, 0), LDNS_RR_TYPE_A, 
+			LDNS_RR_CLASS_IN, depth+1);
+		new_todo_item(data, ldns_rr_rdf(rr, 0), LDNS_RR_TYPE_AAAA, 
+			LDNS_RR_CLASS_IN, depth+1);
+	}
+	/* store it */
+	if(!ldns_rr_list_contains_rr(lab->rrlist, rr)) {
+		if(hverb) printf("store RR\n");
+		if(!ldns_rr_list_push_rr(lab->rrlist, rr))
+			error_exit("outofmem ldns_rr_list_push_rr");
+	} else {
+		if(hverb) printf("duplicate RR\n");
+		ldns_rr_free(rr);
+	}
+}
+
+/** store RRs and make new work items if needed */
+static void
+process_pkt(struct harvest_data* data, ldns_pkt* pkt, int depth)
+{
+	size_t i;
+	ldns_rr_list* list;
+	list = ldns_pkt_get_section_clone(pkt, LDNS_SECTION_ANY_NOQUESTION);
+	if(!list) error_exit("outofmemory");
+	for(i=0; i<ldns_rr_list_rr_count(list); i++) {
+		process_rr(data, ldns_rr_list_rr(list, i), depth);
+	}
+	ldns_rr_list_free(list);
+}
+
 static void
 process(struct harvest_data* data, struct todo_item* it)
 {
+	int r;
+	char* nm;
+	struct ub_result* result = NULL;
+	ldns_pkt* pkt = NULL;
+	ldns_status s;
 	if(hverb) {
 		printf("process: ");
 		ldns_rdf_print(stdout, it->qname);
@@ -377,11 +439,36 @@ process(struct harvest_data* data, struct todo_item* it)
 		printf("\n");
 	}
 	/* do lookup */
-
+	nm = ldns_rdf2str(it->qname);
+	if(!nm) error_exit("ldns_rdf2str");
+	r = ub_resolve(data->ctx, nm, it->qtype, it->qclass, &result);
+	if(r != 0) {
+		printf("ub_resolve(%s, %d, %d): %s\n", nm, it->qtype, 
+			it->qclass, ub_strerror(r));
+		free(nm);
+		return;
+	}
+	/* even if result is a negative, try to store resulting SOA/NSEC */
 
 	/* create ldns pkt */
-	/* create recursive todo items */
-	/* store results */
+	s = ldns_wire2pkt(&pkt, result->answer_packet, result->answer_len);
+	if(s != LDNS_STATUS_OK) {
+		printf("ldns_wire2pkt failed! %s %d %d %s", nm, 
+			it->qtype, it->qclass, ldns_get_errorstr_by_id(s));
+		free(nm);
+		return;
+	}
+	if(hverb >= 2) {
+		printf("answer: ");
+		ldns_pkt_print(stdout, pkt);
+		printf("\n");
+	}
+	/* process results */
+	process_pkt(data, pkt, it->depth);
+
+	ldns_pkt_free(pkt);
+	free(nm);
+	ub_resolve_free(result);
 }
 
 /** perform main harvesting */
@@ -404,6 +491,7 @@ harvest_main(struct harvest_data* data)
 		}
 		data->numtodo--;
 		process(data, it);
+		exit(1);
 	}
 }
 
@@ -417,11 +505,11 @@ int main(int argc, char* argv[])
 {
 	struct harvest_data data;
 	char* nm = argv[0];
-	struct ub_ctx* ctx = ub_ctx_create();
 	int c;
 
 	/* defaults */
 	memset(&data, 0, sizeof(data));
+	data.ctx = ub_ctx_create();
 	data.resultdir = strdup("harvested_zones");
 	if(!data.resultdir) error_exit("out of memory");
 	data.maxdepth = 10;
@@ -451,6 +539,6 @@ int main(int argc, char* argv[])
 	harvest_main(&data);
 
 	/* no cleanup except the context (to close open sockets) */
-	ub_ctx_delete(ctx);
+	ub_ctx_delete(data.ctx);
 	return 0;
 }
