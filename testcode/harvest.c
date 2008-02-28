@@ -101,6 +101,8 @@ struct harvest_data {
 
 	/** max depth of labels */
 	int maxlabels;
+	/** number of RRs stored */
+	int num_rrs;
 };
 
 /**
@@ -152,11 +154,12 @@ static void usage(char* nm)
 	printf("usage: %s [options]\n", nm);
 	printf("-f fnm	query list to read from file\n");
 	printf("	every line has format: qname qclass qtype\n");
+	printf("-v 	verbose (-v -v even more)\n");
 	exit(1);
 }
 
 /** verbosity for harvest */
-static int hverb = 1;
+static int hverb = 0;
 
 /** exit with error */
 static void error_exit(char* str)
@@ -232,7 +235,6 @@ lab_create(char* name)
 	if(!lab) error_exit("out of memory");
 	lab->label = ldns_dname_new_frm_str(name);
 	if(!lab->label) error_exit("out of memory");
-	printf("labcount %d\n", ldns_dname_label_count(lab->label));
 	lab->name = ldns_dname_new_frm_str(name);
 	if(!lab->name) error_exit("out of memory");
 	lab->node.key = lab->label;
@@ -265,12 +267,8 @@ find_create_lab(struct harvest_data* data, ldns_rdf* name)
 			/* create it */
 			nextlab = (struct labdata*)calloc(1, sizeof(*lab));
 			if(!nextlab) error_exit("out of memory");
-			printf("nextcount %d len %d\n", 
-				ldns_dname_label_count(next),
-				ldns_rdf_size(next));
 			nextlab->label = ldns_rdf_clone(next);
 			if(!nextlab->label) error_exit("out of memory");
-			printf("labcount %d\n", ldns_dname_label_count(nextlab->label));
 			nextlab->node.key = nextlab->label;
 			nextlab->node.data = nextlab;
 			nextlab->sublabels = ldns_rbtree_create(lab_cmp);
@@ -333,24 +331,24 @@ new_todo_item(struct harvest_data* data, ldns_rdf* qname, int qtype,
 
 /** add infra todo items for this query */
 static void
-new_todo_infra(struct harvest_data* data, struct todo_item* it)
+new_todo_infra(struct harvest_data* data, struct labdata* startlab, int depth)
 {
 	struct labdata* lab;
-	for(lab = it->lab; lab; lab = lab->parent) {
+	for(lab = startlab; lab; lab = lab->parent) {
 		if(lab->done)
 			return;
 		new_todo_item(data, lab->name, LDNS_RR_TYPE_NS, 
-			LDNS_RR_CLASS_IN, it->depth);
+			LDNS_RR_CLASS_IN, depth);
 		new_todo_item(data, lab->name, LDNS_RR_TYPE_SOA, 
-			LDNS_RR_CLASS_IN, it->depth);
+			LDNS_RR_CLASS_IN, depth);
 		new_todo_item(data, lab->name, LDNS_RR_TYPE_DNSKEY, 
-			LDNS_RR_CLASS_IN, it->depth);
+			LDNS_RR_CLASS_IN, depth);
 		new_todo_item(data, lab->name, LDNS_RR_TYPE_DS, 
-			LDNS_RR_CLASS_IN, it->depth);
+			LDNS_RR_CLASS_IN, depth);
 		new_todo_item(data, lab->name, LDNS_RR_TYPE_A, 
-			LDNS_RR_CLASS_IN, it->depth);
+			LDNS_RR_CLASS_IN, depth);
 		new_todo_item(data, lab->name, LDNS_RR_TYPE_AAAA, 
-			LDNS_RR_CLASS_IN, it->depth);
+			LDNS_RR_CLASS_IN, depth);
 		lab->done = 1;
 	}
 }
@@ -364,7 +362,8 @@ make_todo(struct harvest_data* data)
 		/* create todo item for this query itself */
 		new_todo_item(data, it->qname, it->qtype, it->qclass, 0);
 		/* create todo items for infra queries to support it */
-		new_todo_infra(data, data->todo_list);
+		new_todo_infra(data, data->todo_list->lab, 
+			data->todo_list->depth);
 	}
 }
 
@@ -377,28 +376,31 @@ process_rr(struct harvest_data* data, ldns_rr* rr, int depth)
 	if(!lab) error_exit("cannot find/create label");
 	/* generate extra queries */
 	if(ldns_rr_get_type(rr) == LDNS_RR_TYPE_NS) {
-		new_todo_item(data, ldns_rr_ns_nsdname(rr), LDNS_RR_TYPE_A, 
-			LDNS_RR_CLASS_IN, depth+1);
-		new_todo_item(data, ldns_rr_ns_nsdname(rr), LDNS_RR_TYPE_AAAA, 
-			LDNS_RR_CLASS_IN, depth+1);
+		new_todo_infra(data, find_create_lab(data, 
+			ldns_rr_ns_nsdname(rr)), depth+1);
 	} else if(ldns_rr_get_type(rr) == LDNS_RR_TYPE_MX) {
-		new_todo_item(data, ldns_rr_mx_exchange(rr), LDNS_RR_TYPE_A, 
-			LDNS_RR_CLASS_IN, depth+1);
-		new_todo_item(data, ldns_rr_mx_exchange(rr), LDNS_RR_TYPE_AAAA, 
-			LDNS_RR_CLASS_IN, depth+1);
+		new_todo_infra(data, find_create_lab(data, 
+			ldns_rr_mx_exchange(rr)), depth+1);
 	} else if(ldns_rr_get_type(rr) == LDNS_RR_TYPE_SOA) {
-		new_todo_item(data, ldns_rr_rdf(rr, 0), LDNS_RR_TYPE_A, 
-			LDNS_RR_CLASS_IN, depth+1);
-		new_todo_item(data, ldns_rr_rdf(rr, 0), LDNS_RR_TYPE_AAAA, 
-			LDNS_RR_CLASS_IN, depth+1);
+		new_todo_infra(data, find_create_lab(data, 
+			ldns_rr_rdf(rr, 0)), depth+1);
 	}
 	/* store it */
 	if(!ldns_rr_list_contains_rr(lab->rrlist, rr)) {
-		if(hverb) printf("store RR\n");
+		if(hverb >= 2) {
+			printf("store RR ");
+			ldns_rr_print(stdout, rr);
+			printf("\n");
+		}
 		if(!ldns_rr_list_push_rr(lab->rrlist, rr))
 			error_exit("outofmem ldns_rr_list_push_rr");
+		data->num_rrs++;
 	} else {
-		if(hverb) printf("duplicate RR\n");
+		if(hverb >= 2) {
+			printf("duplicate RR ");
+			ldns_rr_print(stdout, rr);
+			printf("\n");
+		}
 		ldns_rr_free(rr);
 	}
 }
@@ -417,6 +419,7 @@ process_pkt(struct harvest_data* data, ldns_pkt* pkt, int depth)
 	ldns_rr_list_free(list);
 }
 
+/** process a todo item */
 static void
 process(struct harvest_data* data, struct todo_item* it)
 {
@@ -451,7 +454,8 @@ process(struct harvest_data* data, struct todo_item* it)
 	/* even if result is a negative, try to store resulting SOA/NSEC */
 
 	/* create ldns pkt */
-	s = ldns_wire2pkt(&pkt, result->answer_packet, result->answer_len);
+	s = ldns_wire2pkt(&pkt, result->answer_packet, 
+		(size_t)result->answer_len);
 	if(s != LDNS_STATUS_OK) {
 		printf("ldns_wire2pkt failed! %s %d %d %s", nm, 
 			it->qtype, it->qclass, ldns_get_errorstr_by_id(s));
@@ -476,22 +480,24 @@ static void
 harvest_main(struct harvest_data* data)
 {
 	struct todo_item* it;
+	int numdone = 0;
 	/* register todo queries for all original queries */
 	make_todo(data);
-	printf("depth 0: todo list %d\n", data->numtodo);
+	printf("depth 0: todo %d list %d\n", 0, data->numtodo);
 	/* pick up a todo item and process it */
 	while(data->todo_list) {
+		numdone++;
 		it = data->todo_list;
 		data->todo_list = it->next;
 		if(!data->todo_list) data->todo_last = NULL;
-		if(it->depth > data->curdepth) {
+		if(numdone%1000==0 || it->depth > data->curdepth) {
 			data->curdepth = it->depth;
-			printf("depth %d: todo list %d\n", it->depth,
-				data->numtodo);
+			printf("depth %d: todo %d list %d, %d rrs\n", 
+				it->depth, numdone, data->numtodo, 
+				data->num_rrs);
 		}
 		data->numtodo--;
 		process(data, it);
-		exit(1);
 	}
 }
 
@@ -515,10 +521,13 @@ int main(int argc, char* argv[])
 	data.maxdepth = 10;
 
 	/* parse the options */
-	while( (c=getopt(argc, argv, "hf:")) != -1) {
+	while( (c=getopt(argc, argv, "hf:v")) != -1) {
 		switch(c) {
 		case 'f':
 			qlist_read_file(&data, optarg);
+			break;
+		case 'v':
+			hverb++;
 			break;
 		case '?':
 		case 'h':
