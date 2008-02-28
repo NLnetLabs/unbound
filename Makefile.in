@@ -22,6 +22,7 @@ srcdir=@srcdir@
 prefix=@prefix@
 exec_prefix=@exec_prefix@
 bindir=@bindir@
+sbindir=@sbindir@
 mandir=@mandir@
 libdir=@libdir@
 # datarootdir is here to please some checkers, use datadir.
@@ -256,26 +257,31 @@ strip:
 	strip unbound-host
 
 install:
-	$(INSTALL) -m 755 -d $(bindir)
+	$(INSTALL) -m 755 -d $(sbindir)
 	$(INSTALL) -m 755 -d $(mandir)
 	$(INSTALL) -m 755 -d $(mandir)/man8
 	$(INSTALL) -m 755 -d $(mandir)/man5
+	$(INSTALL) -m 755 -d $(mandir)/man3
+	$(INSTALL) -m 755 -d $(mandir)/man1
 	$(INSTALL) -m 755 -d $(libdir)
 	$(INSTALL) -m 755 -d $(includedir)
-	$(LIBTOOL) --mode=install cp unbound $(bindir)/unbound
-	$(LIBTOOL) --mode=install cp unbound-checkconf $(bindir)/unbound-checkconf
-	$(LIBTOOL) --mode=install cp unbound-host $(bindir)/unbound-host
+	$(LIBTOOL) --mode=install cp unbound $(sbindir)/unbound
+	$(LIBTOOL) --mode=install cp unbound-checkconf $(sbindir)/unbound-checkconf
+	$(LIBTOOL) --mode=install cp unbound-host $(sbindir)/unbound-host
 	$(INSTALL) -c -m 644 $(srcdir)/doc/unbound.8 $(mandir)/man8
 	$(INSTALL) -c -m 644 $(srcdir)/doc/unbound-checkconf.8 $(mandir)/man8
 	$(INSTALL) -c -m 644 $(srcdir)/doc/unbound.conf.5 $(mandir)/man5
+	$(INSTALL) -c -m 644 $(srcdir)/doc/unbound-host.1 $(mandir)/man1
+	$(INSTALL) -c -m 644 $(srcdir)/doc/libunbound.3 $(mandir)/man3
 	if test ! -e $(configfile); then $(INSTALL) -d `dirname $(configfile)`; $(INSTALL) -c -m 644 $(srcdir)/doc/example.conf $(configfile); fi
 	$(LIBTOOL) --mode=install cp $(srcdir)/libunbound/unbound.h $(includedir)/unbound.h
 	$(LIBTOOL) --mode=install cp libunbound.la $(libdir)
 	$(LIBTOOL) --mode=finish $(libdir)
 
 uninstall:
-	rm -f -- $(bindir)/unbound $(bindir)/unbound-checkconf $(bindir)/unbound-host
+	rm -f -- $(sbindir)/unbound $(sbindir)/unbound-checkconf $(sbindir)/unbound-host
 	rm -f -- $(mandir)/man8/unbound.8 $(mandir)/man8/unbound-checkconf.8 $(mandir)/man5/unbound.conf.5
+	rm -f -- $(mandir)/man1/unbound-host.1 $(mandir)/man3/libunbound.3
 	rm -f -- $(includedir)/unbound.h
 	$(LIBTOOL) --mode=uninstall rm -f $(libdir)/libunbound.la
 	@echo

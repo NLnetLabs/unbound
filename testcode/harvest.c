@@ -483,7 +483,7 @@ harvest_main(struct harvest_data* data)
 	int numdone = 0;
 	/* register todo queries for all original queries */
 	make_todo(data);
-	printf("depth 0: todo %d list %d\n", 0, data->numtodo);
+	printf("depth 0: done %d todo %d\n", 0, data->numtodo);
 	/* pick up a todo item and process it */
 	while(data->todo_list) {
 		numdone++;
@@ -492,9 +492,14 @@ harvest_main(struct harvest_data* data)
 		if(!data->todo_list) data->todo_last = NULL;
 		if(numdone%1000==0 || it->depth > data->curdepth) {
 			data->curdepth = it->depth;
-			printf("depth %d: todo %d list %d, %d rrs\n", 
+			printf("depth %d: done %d todo %d, %d rrs\n", 
 				it->depth, numdone, data->numtodo, 
 				data->num_rrs);
+		}
+		if(it->depth >= data->maxdepth) {
+			printf("obtained %d rrs to a max of %d labels.\n",
+				data->num_rrs, data->maxlabels);
+			return;
 		}
 		data->numtodo--;
 		process(data, it);
@@ -518,7 +523,7 @@ int main(int argc, char* argv[])
 	data.ctx = ub_ctx_create();
 	data.resultdir = strdup("harvested_zones");
 	if(!data.resultdir) error_exit("out of memory");
-	data.maxdepth = 10;
+	data.maxdepth = 2;
 
 	/* parse the options */
 	while( (c=getopt(argc, argv, "hf:v")) != -1) {

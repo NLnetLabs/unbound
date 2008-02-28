@@ -4,6 +4,8 @@
 	- snprintf compat update.
 	- harvest performs lookup.
 	- ldns-tarball update with fix for ldns_dname_label.
+	- installs to sbin by default.
+	- install all manual pages (unbound-host and libunbound too).
 
 27 February 2008: Wouter
 	- option to use caps for id randomness.
