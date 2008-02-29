@@ -1,6 +1,7 @@
 29 February 2008: Wouter
 	- documentation update.
 	- fixup port to Solaris of perf test tool.
+	- updated ldns-tarball with decl-after-statement fixes.
 
 28 February 2008: Wouter
 	- fixed memory leaks in libunbound (during cancellation and wait).
