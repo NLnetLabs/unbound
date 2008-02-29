@@ -1,8 +1,8 @@
 README.svn
 
 For a svn checkout
-* Create build environment - see README.
-  * possibly copy aclocal.m4 from your autoconf/libtool setup.
+* configure script, aclocal.m4, as well as yacc/lex output files are
+  committed to the repository.
 
 * Note changes in the Changelog.
 * Every check-in a postcommit hook is run

@@ -1,3 +1,6 @@
+29 February 2008: Wouter
+	- documentation update.
+
 28 February 2008: Wouter
 	- fixed memory leaks in libunbound (during cancellation and wait).
 	- libunbound returns the answer packet in full.

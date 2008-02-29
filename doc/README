@@ -4,7 +4,7 @@ http://unbound.net
 
 This software is under BSD license, see LICENSE for details.
 
-* Download the latest version of this software from 
+* Download the latest release version of this software from 
   	http://unbound.net 
   or get a beta version from the svn repository at 
   	http://unbound.net/svn/
@@ -14,10 +14,6 @@ This software is under BSD license, see LICENSE for details.
     (required) can use tarball from source directory.
   * libevent	http://www.monkey.org/~provos/libevent/		(BSD license)
     (optional) can use builtin alternative instead.
-
-* Create build environment 
-  * run libtoolize -c if config.sub is missing, or run glibtoolize.
-  * autoreconf (autoheader && autoconf), if ./configure is missing.
 
 * Make and install: ./configure; make; make install
   * Use GNU make; default on linux, often called 'gmake' on BSD and Solaris.
@@ -74,6 +70,7 @@ o If you are not receiving the correct source IP address on replies (e.g.
 
 Acknowledgements
 ----------------
+o Unbound was written in portable C by Wouter Wijngaards (NLnet Labs).
 o Thanks to David Blacka and Matt Larson (Verisign) for the unbound-java
   prototype. Design and code from that prototype has been used to create
   this program. Such as the iterator state machine and the cache design.

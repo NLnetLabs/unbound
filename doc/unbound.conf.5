@@ -608,8 +608,9 @@ In the example config settings below memory usage is reduced. Some service
 levels are lower, notable very large data and a high TCP load are no longer
 supported. Very large data and high TCP loads are exceptional for the DNS.
 DNSSEC validation is enabled, just add trust anchors.
-If you do not have to worry about programs using more than 1 meg of memory,
-the below example is not for you. Use the defaults to receive full service.
+If you do not have to worry about programs using more than 3 Mb of memory,
+the below example is not for you. Use the defaults to receive full service,
+which on BSD-32bit tops out at 30-40 Mb after heavy usage. 
 .P
 .nf
 # example settings that reduce memory usage
@@ -619,19 +620,19 @@ server:
 	incoming\-num\-tcp: 1
 	outgoing\-range: 1	# uses less memory, but less port randomness.
 	msg\-buffer\-size: 8192   # note this limits service, 'no huge stuff'.
-	msg\-cache\-size: 102400  # 100 Kb.
+	msg\-cache\-size: 100k
 	msg\-cache\-slabs: 1
-	rrset\-cache\-size: 102400  # 100 Kb.
+	rrset\-cache\-size: 100k
 	rrset\-cache\-slabs: 1
 	infra\-cache\-numhosts: 200
-	infra\-cache\-numlame: 10
-	key\-cache\-size: 102400  # 100 Kb.
+	infra\-cache\-slabs: 1
+	infra\-cache\-lame\-size: 1k
+	key\-cache\-size: 100k
 	key\-cache\-slabs: 1
 	num\-queries\-per\-thread: 30
 	target\-fetch\-policy: "2 1 0 0 0 0"
 	harden\-large\-queries: "yes"
 	harden\-short\-bufsize: "yes"
-	do\-ip6: no	# save a bit of memory if not used.
 .fi
 .SH "FILES"
 .TP
