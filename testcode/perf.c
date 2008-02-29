@@ -39,8 +39,8 @@
  * This program estimates DNS name server performance.
  */
 
-#include <signal.h>
 #include "config.h"
+#include <signal.h>
 #include "util/log.h"
 #include "util/locks.h"
 #include "util/net_help.h"

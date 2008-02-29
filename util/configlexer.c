@@ -94,7 +94,7 @@ typedef unsigned int flex_uint32_t;
 
 #else	/* ! __cplusplus */
 
-#if __STDC__
+#ifdef __STDC__
 
 #define YY_USE_CONST
 

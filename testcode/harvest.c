@@ -68,11 +68,11 @@
  * This creates a snapshot that represents the data as this resolver saw it.
  */
 
-#include <signal.h>
 #include "config.h"
+#include <signal.h>
 #include "libunbound/unbound.h"
 #ifdef HAVE_SYS_STAT_H
-#include "sys/stat.h"
+#include <sys/stat.h>
 #endif
 struct todo_item;
 struct labdata;
