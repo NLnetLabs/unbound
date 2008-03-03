@@ -164,9 +164,9 @@ rrset_key_hash(struct packed_rrset_key* key)
 	/* this routine does not have a compressed name */
 	hashvalue_t h = 0xab;
 	h = dname_query_hash(key->dname, h);
-        h = hashlittle(&t, sizeof(t), h);
-        h = hashlittle(&key->rrset_class, sizeof(uint16_t), h);
-        h = hashlittle(&key->flags, sizeof(uint32_t), h);
+	h = hashlittle(&t, sizeof(t), h);
+	h = hashlittle(&key->rrset_class, sizeof(uint16_t), h);
+	h = hashlittle(&key->flags, sizeof(uint32_t), h);
 	return h;
 }
 
