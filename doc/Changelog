@@ -2,6 +2,9 @@
 	- From report by Jinmei Tatuya, rfc2181 trust value for remainder
 	  of a cname trust chain is lower; not full answer_AA. 
 	- test for this fix.
+	- default config file location is /usr/local/etc/unbound.
+	  Thus prefix is used to determine the location. This is also the
+	  chroot and pidfile default location.
 
 3 March 2008: Wouter
 	- Create 0.10 svn tag.

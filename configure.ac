@@ -8,20 +8,11 @@ CFLAGS=
 AC_AIX
 
 dnl
-dnl By default set $sysconfdir to /etc and $localstatedir to /var
+dnl By default set prefix to /usr/local
 dnl
 case "$prefix" in
         NONE)
-                case "$sysconfdir" in
-                        '${prefix}/etc')
-                                sysconfdir=/etc
-                        ;;
-                esac
-                case "$localstatedir" in
-                        '${prefix}/var')
-                                localstatedir=/var
-                        ;;
-                esac
+		prefix="/usr/local"
         ;;
 esac
 
