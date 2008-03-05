@@ -1,3 +1,6 @@
+5 March 2008: Wouter
+	- patch from Hugo Koji Kobayashi for iterator logs spelling.
+
 4 March 2008: Wouter
 	- From report by Jinmei Tatuya, rfc2181 trust value for remainder
 	  of a cname trust chain is lower; not full answer_AA. 

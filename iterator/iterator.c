@@ -1717,7 +1717,7 @@ process_response(struct module_qstate* qstate, struct iter_qstate* iq,
 	iq->response = dns_alloc_msg(pkt, prs, qstate->region);
 	if(!iq->response)
 		goto handle_it;
-	log_query_info(VERB_DETAIL, "reponse for", &qstate->qinfo);
+	log_query_info(VERB_DETAIL, "response for", &qstate->qinfo);
 	log_name_addr(VERB_DETAIL, "reply from", iq->dp->name, 
 		&qstate->reply->addr, qstate->reply->addrlen);
 	if(verbosity >= VERB_ALGO)
