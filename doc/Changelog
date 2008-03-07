@@ -1,5 +1,6 @@
 7 March 2008: Wouter
 	- -C config feature for harvest program. 
+	- harvest handles CNAMEs too.
 
 5 March 2008: Wouter
 	- patch from Hugo Koji Kobayashi for iterator logs spelling.

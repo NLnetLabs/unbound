@@ -390,6 +390,18 @@ process_rr(struct harvest_data* data, ldns_rr* rr, int depth)
 	} else if(ldns_rr_get_type(rr) == LDNS_RR_TYPE_SOA) {
 		new_todo_infra(data, find_create_lab(data, 
 			ldns_rr_rdf(rr, 0)), depth+1);
+	} else if(ldns_rr_get_type(rr) == LDNS_RR_TYPE_CNAME) {
+		int t = ldns_rr_get_type(rr);
+		if(t!=LDNS_RR_TYPE_A && t!=LDNS_RR_TYPE_AAAA &&
+			t!=LDNS_RR_TYPE_SOA && t!=LDNS_RR_TYPE_NS &&
+			t!=LDNS_RR_TYPE_DS && t!=LDNS_RR_TYPE_DNSKEY)
+			new_todo_item(data, ldns_rr_rdf(rr, 0), t,
+				ldns_rr_get_class(rr), depth+1);
+			/* can get caught in CNAME loop, but depth will
+			 * catch that; unbound cache helps too(servfails on
+			 * a cname loop) */
+		new_todo_infra(data, find_create_lab(data, 
+			ldns_rr_rdf(rr, 0)), depth+1);
 	}
 	/* store it */
 	if(ldns_rr_get_type(rr) == LDNS_RR_TYPE_NSEC) {
