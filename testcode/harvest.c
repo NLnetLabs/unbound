@@ -160,6 +160,7 @@ static void usage(char* nm)
 	printf("-f fnm	query list to read from file\n");
 	printf("	every line has format: qname qclass qtype\n");
 	printf("-v 	verbose (-v -v even more)\n");
+	printf("-C cfg	config file with resolver options\n");
 	exit(1);
 }
 
@@ -479,14 +480,19 @@ process(struct harvest_data* data, struct todo_item* it)
 		free(nm);
 		return;
 	}
+	if(result->rcode == LDNS_RCODE_SERVFAIL) {
+		free(nm);
+		return;
+	}
 	/* even if result is a negative, try to store resulting SOA/NSEC */
 
 	/* create ldns pkt */
 	s = ldns_wire2pkt(&pkt, result->answer_packet, 
 		(size_t)result->answer_len);
 	if(s != LDNS_STATUS_OK) {
-		printf("ldns_wire2pkt failed! %s %d %d %s", nm, 
-			it->qtype, it->qclass, ldns_get_errorstr_by_id(s));
+		printf("ldns_wire2pkt failed! %s %d %d %s %d\n", nm, 
+			it->qtype, it->qclass, ldns_get_errorstr_by_id(s),
+			result->answer_len);
 		free(nm);
 		return;
 	}
@@ -531,6 +537,7 @@ harvest_main(struct harvest_data* data)
 		}
 		data->numtodo--;
 		process(data, it);
+		usleep(1000000/100);
 	}
 }
 
@@ -785,8 +792,12 @@ int main(int argc, char* argv[])
 	data.maxdepth = 2;
 
 	/* parse the options */
-	while( (c=getopt(argc, argv, "hf:v")) != -1) {
+	while( (c=getopt(argc, argv, "hf:vC:")) != -1) {
 		switch(c) {
+		case 'C':
+			if(ub_ctx_config(data.ctx, optarg) != 0)
+				error_exit("config read failed");
+			break;
 		case 'f':
 			qlist_read_file(&data, optarg);
 			break;
