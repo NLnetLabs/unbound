@@ -7,6 +7,8 @@
 	  sure nothing gets into the RRset cache. Also, this looks like a
 	  timeout (instead of an allocation failure) and this retries are
 	  done (which is useful in a spoofing situation).
+	- RTT banding. Band size 400 msec, this makes band around zero (fast)
+	  include unknown servers. This makes unbound explore unknown servers.
 
 7 March 2008: Wouter
 	- -C config feature for harvest program. 

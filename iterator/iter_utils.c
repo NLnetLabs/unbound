@@ -156,38 +156,61 @@ iter_filter_unsuitable(struct iter_env* iter_env, struct module_env* env,
 	return UNKNOWN_SERVER_NICENESS;
 }
 
+/** lookup RTT information, and also store fastest rtt (if any) */
+static int
+iter_fill_rtt(struct iter_env* iter_env, struct module_env* env,
+	uint8_t* name, size_t namelen, uint32_t now, struct delegpt* dp,
+	int* best_rtt)
+{
+	int got_it = 0;
+	struct delegpt_addr* a;
+	for(a=dp->result_list; a; a = a->next_result) {
+		a->sel_rtt = iter_filter_unsuitable(iter_env, env, 
+			name, namelen, now, a);
+		if(a->sel_rtt != -1) {
+			if(!got_it) {
+				*best_rtt = a->sel_rtt;
+				got_it = 1;
+			} else if(a->sel_rtt < *best_rtt) {
+				*best_rtt = a->sel_rtt;
+			}
+		}
+	}
+	return got_it;
+}
+
 /** filter the addres list, putting best targets at front,
  * returns number of best targets (or 0, no suitable targets) */
 static int
 iter_filter_order(struct iter_env* iter_env, struct module_env* env,
 	uint8_t* name, size_t namelen, uint32_t now, struct delegpt* dp,
-	int* best_rtt)
+	int* selected_rtt)
 {
-	int got_num = 0, got_rtt = 0, thisrtt, swap_to_front;
+	int got_num = 0, low_rtt = 0, swap_to_front;
 	struct delegpt_addr* a, *n, *prev=NULL;
 
+	/* fillup sel_rtt and find best rtt in the bunch */
+	got_num = iter_fill_rtt(iter_env, env, name, namelen, now, dp, 
+		&low_rtt);
+	if(got_num == 0) 
+		return 0;
+
+	got_num = 0;
 	a = dp->result_list;
 	while(a) {
-		/* filter out unsuitable targets */
-		thisrtt = iter_filter_unsuitable(iter_env, env, name, namelen, 
-			now, a);
-		if(thisrtt == -1) {
+		/* skip unsuitable targets */
+		if(a->sel_rtt == -1) {
 			prev = a;
 			a = a->next_result;
 			continue;
 		}
 		/* classify the server address and determine what to do */
 		swap_to_front = 0;
-		if(got_num == 0) {
-			got_rtt = thisrtt;
-			got_num = 1;
-			swap_to_front = 1;
-		} else if(thisrtt == got_rtt) {
+		if(a->sel_rtt >= low_rtt && a->sel_rtt - low_rtt <= RTT_BAND) {
 			got_num++;
 			swap_to_front = 1;
-		} else if(thisrtt < got_rtt) {
-			got_rtt = thisrtt;
-			got_num = 1; /* start back at count of 1 */
+		} else if(a->sel_rtt<low_rtt && low_rtt-a->sel_rtt<=RTT_BAND) {
+			got_num++;
 			swap_to_front = 1;
 		}
 		/* swap to front if necessary, or move to next result */
@@ -202,7 +225,7 @@ iter_filter_order(struct iter_env* iter_env, struct module_env* env,
 			a = a->next_result;
 		}
 	}
-	*best_rtt = got_rtt;
+	*selected_rtt = low_rtt;
 	return got_num;
 }
 

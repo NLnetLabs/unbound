@@ -106,6 +106,8 @@ struct delegpt_addr {
 	socklen_t addrlen;
 	/** number of attempts for this addr */
 	int attempts;
+	/** rtt stored here in the selection algorithm */
+	int sel_rtt;
 };
 
 /**
