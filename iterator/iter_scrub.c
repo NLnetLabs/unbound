@@ -564,6 +564,14 @@ scrub_message(ldns_buffer* pkt, struct msg_parse* msg,
 	if( !(msg->flags&BIT_QR) )
 		return 0;
 	
+	/* make sure that a query is echoed back when NOERROR or NXDOMAIN */
+	/* this is not required for basic operation but is a forgery 
+	 * resistance (security) feature */
+	if((FLAGS_GET_RCODE(msg->flags) == LDNS_RCODE_NOERROR ||
+		FLAGS_GET_RCODE(msg->flags) == LDNS_RCODE_NXDOMAIN) &&
+		msg->qdcount == 0)
+		return 0;
+
 	/* if a query is echoed back, make sure it is correct. Otherwise,
 	 * this may be not a reply to our query. */
 	if(msg->qdcount == 1) {

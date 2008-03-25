@@ -1,3 +1,13 @@
+25 March 2008: Wouter
+	- implemented check that for NXDOMAIN and NOERROR answers a query
+	  section must be present in the reply (by the scrubber). And it must
+	  be equal to the question sent, at least lowercase folded.
+	  Previously this feature happened because the cache code refused
+	  to store such messages. However blocking by the scrubber makes 
+	  sure nothing gets into the RRset cache. Also, this looks like a
+	  timeout (instead of an allocation failure) and this retries are
+	  done (which is useful in a spoofing situation).
+
 7 March 2008: Wouter
 	- -C config feature for harvest program. 
 	- harvest handles CNAMEs too.
