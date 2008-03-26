@@ -1,3 +1,9 @@
+26 March 2008: Wouter
+	- implemented AD bit signaling. If a query sets AD bit (but not DO)
+	  then the AD bit is set in the reply if the answer validated.
+	  Without including DNSSEC signatures. Useful if you have a trusted
+	  path from the client to the resolver. Follows dnssec-updates draft.
+
 25 March 2008: Wouter
 	- implemented check that for NXDOMAIN and NOERROR answers a query
 	  section must be present in the reply (by the scrubber). And it must

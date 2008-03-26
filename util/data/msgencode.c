@@ -718,7 +718,7 @@ reply_info_answer_encode(struct query_info* qinf, struct reply_info* rep,
 		/* remove AA bit, copy RD and CD bits from query. */
 		flags = (rep->flags & ~BIT_AA) | (qflags & (BIT_RD|BIT_CD)); 
 	}
-	if(secure && dnssec)
+	if(secure && (dnssec || (qflags&BIT_AD)))
 		flags |= BIT_AD;
 	log_assert(flags & BIT_QR); /* QR bit must be on in our replies */
 	if(udpsize < LDNS_HEADER_SIZE)
