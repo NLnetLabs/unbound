@@ -67,6 +67,8 @@ o If you are not receiving the correct source IP address on replies (e.g.
   source IP address on UDP replies. Listing all IP addresses explicitly in
   the config file is an alternative. The interface-automatic option uses
   non portable socket options, Linux and FreeBSD should work fine.
+o The warning 'openssl has no entropy, seeding with time', with chroot 
+  enabled, may be solved with a symbolic link to /dev/random from <chrootdir>.
 
 Acknowledgements
 ----------------

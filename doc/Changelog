@@ -1,3 +1,6 @@
+27 March 2008: Wouter
+	- documented /dev/random symlink from chrootdir as FAQ entry.
+
 26 March 2008: Wouter
 	- implemented AD bit signaling. If a query sets AD bit (but not DO)
 	  then the AD bit is set in the reply if the answer validated.
