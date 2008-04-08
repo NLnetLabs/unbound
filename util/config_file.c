@@ -79,7 +79,7 @@ config_create()
 	cfg->do_tcp = 1;
 	cfg->use_syslog = 1;
 	cfg->outgoing_base_port = cfg->port + 2000;
-	cfg->outgoing_num_ports = 16;
+	cfg->outgoing_num_ports = 256;
 	cfg->outgoing_num_tcp = 10;
 	cfg->incoming_num_tcp = 10;
 	cfg->msg_buffer_size = 65552; /* 64 k + a small margin */
@@ -150,6 +150,8 @@ struct config_file* config_create_forlib()
 	free(cfg->chrootdir);
 	cfg->chrootdir = NULL;
 	cfg->verbosity = 0;
+	cfg->outgoing_num_ports = 16; /* in library use, this is 'reasonable'
+		and probably within the ulimit(maxfds) of the user */
 	cfg->outgoing_num_tcp = 2;
 	cfg->msg_cache_size = 1024*1024;
 	cfg->msg_cache_slabs = 1;

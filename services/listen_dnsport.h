@@ -168,8 +168,9 @@ size_t listen_get_mem(struct listen_dnsport* listen);
  * @param addr: address info ready to make socket.
  * @param v6only: if enabled, IP6 sockets get IP6ONLY option set.
  * 	if enabled with value 2 IP6ONLY option is disabled.
+ * @param inuse: on error, this is set true if the port was in use.
  * @return: the socket. -1 on error.
  */
-int create_udp_sock(struct addrinfo* addr, int v6only);
+int create_udp_sock(struct addrinfo* addr, int v6only, int* inuse);
 
 #endif /* LISTEN_DNSPORT_H */

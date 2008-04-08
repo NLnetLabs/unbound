@@ -86,7 +86,7 @@ verbose_print_addr(struct addrinfo *addr)
 }
 
 int
-create_udp_sock(struct addrinfo *addr, int v6only)
+create_udp_sock(struct addrinfo *addr, int v6only, int* inuse)
 {
 	int s;
 # if defined(IPV6_USE_MIN_MTU)
@@ -97,6 +97,7 @@ create_udp_sock(struct addrinfo *addr, int v6only)
 	verbose_print_addr(addr);
 	if((s = socket(addr->ai_family, addr->ai_socktype, 0)) == -1) {
 		log_err("can't create socket: %s", strerror(errno));
+		*inuse = 0;
 		return -1;
 	}
 	if(addr->ai_family == AF_INET6) {
@@ -107,6 +108,7 @@ create_udp_sock(struct addrinfo *addr, int v6only)
 				&val, (socklen_t)sizeof(val)) < 0) {
 				log_err("setsockopt(..., IPV6_V6ONLY"
 					", ...) failed: %s", strerror(errno));
+				*inuse = 0;
 				return -1;
 			}
 		}
@@ -124,16 +126,23 @@ create_udp_sock(struct addrinfo *addr, int v6only)
 			&on, (socklen_t)sizeof(on)) < 0) {
 			log_err("setsockopt(..., IPV6_USE_MIN_MTU, "
 				"...) failed: %s", strerror(errno));
+			*inuse = 0;
 			return -1;
 		}
 # endif
 	}
 	if(bind(s, (struct sockaddr*)addr->ai_addr, addr->ai_addrlen) != 0) {
-		log_err("can't bind socket: %s", strerror(errno));
+#ifdef EADDRINUSE
+		*inuse = (errno == EADDRINUSE);
+		if(errno != EADDRINUSE)
+#endif
+			log_err("can't bind socket: %s", strerror(errno));
 		return -1;
 	}
-	if(!fd_set_nonblock(s))
+	if(!fd_set_nonblock(s)) {
+		*inuse = 0;
 		return -1;
+	}
 	return s;
 }
 
@@ -203,7 +212,7 @@ make_sock(int stype, const char* ifname, const char* port,
 	struct addrinfo *hints, int v6only)
 {
 	struct addrinfo *res = NULL;
-	int r, s;
+	int r, s, inuse;
 	hints->ai_socktype = stype;
 	if((r=getaddrinfo(ifname, port, hints, &res)) != 0 || !res) {
 		log_err("node %s:%s getaddrinfo: %s %s", 
@@ -211,9 +220,12 @@ make_sock(int stype, const char* ifname, const char* port,
 			r==EAI_SYSTEM?(char*)strerror(errno):"");
 		return -1;
 	}
-	if(stype == SOCK_DGRAM)
-		s = create_udp_sock(res, v6only);
-	else	s = create_tcp_accept_sock(res, v6only);
+	if(stype == SOCK_DGRAM) {
+		s = create_udp_sock(res, v6only, &inuse);
+		if(s == -1 && inuse) {
+			log_err("bind: address already in use");
+		}
+	}	else	s = create_tcp_accept_sock(res, v6only);
 	freeaddrinfo(res);
 	return s;
 }

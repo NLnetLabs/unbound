@@ -284,10 +284,12 @@ outnet_udp_cb(struct comm_point* c, void* arg, int error,
   * @param ifname: on which interface to open the port.
   * @param hints: hints on family and passiveness preset.
   * @param porthint: if not -1, it gives the port to base range on.
+  * @param inuse: on error, true if the port was in use.
   * @return: file descriptor
   */
 static int 
-open_udp_port_range(const char* ifname, struct addrinfo* hints, int porthint)
+open_udp_port_range(const char* ifname, struct addrinfo* hints, int porthint,
+	int* inuse)
 {
 	struct addrinfo *res = NULL;
 	int r, s;
@@ -308,7 +310,7 @@ open_udp_port_range(const char* ifname, struct addrinfo* hints, int porthint)
 			r==EAI_SYSTEM?(char*)strerror(errno):"");
 		return -1;
 	}
-	s = create_udp_sock(res, 1);
+	s = create_udp_sock(res, 1, inuse);
 	freeaddrinfo(res);
 	return s;
 }
@@ -346,11 +348,23 @@ make_udp_range(struct comm_point** coms, const char* ifname,
 		hints.ai_family = AF_INET6;
 	hints.ai_socktype = SOCK_DGRAM;
 	for(i=0; i<num_ports; i++) {
-		int fd = open_udp_port_range(ifname, &hints, porthint);
-		if(porthint != -1) 
-			porthint++;
-		if(fd == -1)
-			continue;
+		int fd = -1;
+		int inuse = 1;
+		while(fd == -1 && inuse) {
+			inuse = 0;
+			fd = open_udp_port_range(ifname, &hints, 
+				porthint, &inuse);
+			if(fd == -1 && porthint != -1 && inuse)
+				verbose(VERB_DETAIL, "%sport %d already in use, skipped", 
+					(do_ip6?"IP6 ":""), porthint);
+			if(porthint != -1) {
+				porthint++;
+				if(porthint > 65535) {
+					log_err("ports maxed. cannot open ports");
+					return done;
+				}
+			}
+		}
 		coms[done] = comm_point_create_udp(outnet->base, fd, 
 			outnet->udp_buff, outnet_udp_cb, outnet);
 		if(coms[done])

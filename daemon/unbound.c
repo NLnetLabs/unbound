@@ -91,17 +91,22 @@ checkrlimits(struct config_file* cfg)
 			(int)cfg->incoming_num_tcp:0));
 	size_t ifs = (size_t)(cfg->num_ifs==0?1:cfg->num_ifs);
 	size_t listen_num = list*ifs;
-	size_t out_ifs = (size_t)(cfg->num_out_ifs==0?1:cfg->num_out_ifs);
-	size_t outnum = cfg->outgoing_num_ports*out_ifs + cfg->outgoing_num_tcp;
+	size_t out_ifs = (size_t)(cfg->num_out_ifs==0?
+		( (cfg->do_ip4?1:0) + (cfg->do_ip6?1:0) ) :cfg->num_out_ifs);
+	size_t outudpnum = cfg->outgoing_num_ports*out_ifs;
+	size_t outtcpnum = cfg->outgoing_num_tcp;
 	size_t misc = 4; /* logfile, pidfile, stdout... */
-	size_t perthread = listen_num + outnum + 2/*cmdpipe*/ + 2/*libevent*/
-		+ misc; 
+	size_t perthread_noudp = listen_num + outtcpnum + 
+		2/*cmdpipe*/ + 2/*libevent*/ + misc; 
+	size_t perthread = perthread_noudp + outudpnum;
+
 #if !defined(HAVE_PTHREAD) && !defined(HAVE_SOLARIS_THREADS)
 	int numthread = 1; /* it forks */
 #else
 	int numthread = cfg->num_threads;
 #endif
 	size_t total = numthread * perthread + misc;
+	size_t avail;
 	struct rlimit rlim;
 	if(getrlimit(RLIMIT_NOFILE, &rlim) < 0) {
 		log_warn("getrlimit: %s", strerror(errno));
@@ -110,13 +115,24 @@ checkrlimits(struct config_file* cfg)
 	if(rlim.rlim_cur == (rlim_t)RLIM_INFINITY)
 		return;
 	if((size_t)rlim.rlim_cur < total) {
-		log_err("Not enough sockets available. Increase "
-			"ulimit(open files).");
-		log_err("or decrease number of threads, outgoing num ports, "
-			"outgoing num tcp or number of interfaces");
-		log_err("estimate %u fds high mark, %u available", 
-			(unsigned)total, (unsigned)rlim.rlim_cur);
-		fatal_exit("Not enough file descriptors available");
+		avail = (size_t)rlim.rlim_cur;
+		rlim.rlim_cur = (rlim_t)(total + 10);
+		rlim.rlim_max = (rlim_t)(total + 10);
+		if(setrlimit(RLIMIT_NOFILE, &rlim) < 0) {
+			log_warn("setrlimit: %s", strerror(errno));
+			log_warn("cannot increase max open fds from %u to %u",
+				(unsigned)avail, (unsigned)total+10);
+			cfg->outgoing_num_ports = (int)((avail 
+				- numthread*perthread_noudp 
+				- 10 /* safety margin */)
+				/(numthread*out_ifs));
+			log_warn("continuing with less udp ports: %u",
+				cfg->outgoing_num_ports);
+			log_warn("increase ulimit or decrease threads, ports in config to remove this warning");
+			return;
+		}
+		log_warn("increased limit(open files) from %u to %u",
+			(unsigned)avail, (unsigned)total+10);
 	}
 }
 
