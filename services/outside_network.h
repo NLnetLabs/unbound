@@ -79,6 +79,8 @@ struct outside_network {
 	 * Each is on a different port. This is for ip4 ports.
 	 */
 	struct comm_point** udp4_ports;
+	/** number of queries open on each port */
+	int* udp4_inuse;
 	/** number of udp4 ports */
 	size_t num_udp4;
 
@@ -86,6 +88,8 @@ struct outside_network {
 	 * The opened ip6 ports.
 	 */
 	struct comm_point** udp6_ports;
+	/** number of queries open on each port */
+	int* udp6_inuse;
 	/** number of udp6 ports */
 	size_t num_udp6;
 

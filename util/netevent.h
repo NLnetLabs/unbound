@@ -191,6 +191,10 @@ struct comm_point {
 	/** if set, checks for pending error from nonblocking connect() call.*/
 	int tcp_check_nb_connect;
 
+	/** number of queries outstanding on this socket, used by
+	 * outside network for udp ports */
+	int inuse;
+
 	/** callback when done.
 	    tcp_accept does not get called back, is NULL then.
 	    If a timeout happens, callback with timeout=1 is called.

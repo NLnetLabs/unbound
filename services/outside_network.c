@@ -275,6 +275,9 @@ outnet_udp_cb(struct comm_point* c, void* arg, int error,
 	(void)rbtree_delete(outnet->pending, p->node.key);
 	fptr_ok(fptr_whitelist_pending_udp(p->cb));
 	(void)(*p->cb)(p->c, p->cb_arg, NETEVENT_NOERROR, reply_info);
+	p->c->inuse--;
+	if(p->c->inuse == 0)
+		comm_point_stop_listening(p->c);
 	pending_delete(NULL, p);
 	return 0;
 }
@@ -367,8 +370,11 @@ make_udp_range(struct comm_point** coms, const char* ifname,
 		}
 		coms[done] = comm_point_create_udp(outnet->base, fd, 
 			outnet->udp_buff, outnet_udp_cb, outnet);
-		if(coms[done])
+		if(coms[done]) {
+			log_assert(coms[done]->inuse == 0);
+			comm_point_stop_listening(coms[done]);
 			done++;
+		}
 	}
 	return done;
 }
@@ -409,6 +415,9 @@ pending_udp_timer_cb(void *arg)
 	verbose(VERB_ALGO, "timeout udp");
 	fptr_ok(fptr_whitelist_pending_udp(p->cb));
 	(void)(*p->cb)(p->c, p->cb_arg, NETEVENT_TIMEOUT, NULL);
+	p->c->inuse--;
+	if(p->c->inuse == 0)
+		comm_point_stop_listening(p->c);
 	pending_delete(p->outnet, p);
 }
 
@@ -528,6 +537,9 @@ pending_node_del(rbnode_t* node, void* arg)
 {
 	struct pending* pend = (struct pending*)node;
 	struct outside_network* outnet = (struct outside_network*)arg;
+	pend->c->inuse--;
+	if(pend->c->inuse == 0)
+		comm_point_stop_listening(pend->c);
 	pending_delete(outnet, pend);
 }
 
@@ -725,6 +737,9 @@ pending_udp_query(struct outside_network* outnet, ldns_buffer* packet,
 		pending_delete(outnet, pend);
 		return NULL;
 	}
+	if(pend->c->inuse == 0)
+		comm_point_start_listening(pend->c, -1, -1);
+	pend->c->inuse++;
 
 	/* system calls to set timeout after sending UDP to make roundtrip
 	   smaller. */
@@ -916,6 +931,9 @@ serviced_delete(struct serviced_query* sq)
 		if(sq->status == serviced_query_UDP_EDNS ||
 			sq->status == serviced_query_UDP) {
 			struct pending* p = (struct pending*)sq->pending;
+			p->c->inuse--;
+			if(p->c->inuse == 0)
+				comm_point_stop_listening(p->c);
 			pending_delete(sq->outnet, p);
 		} else {
 			struct waiting_tcp* p = (struct waiting_tcp*)

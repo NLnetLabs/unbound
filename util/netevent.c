@@ -850,6 +850,7 @@ comm_point_create_udp(struct comm_base *base, int fd, ldns_buffer* buffer,
 	c->do_not_close = 0;
 	c->tcp_do_toggle_rw = 0;
 	c->tcp_check_nb_connect = 0;
+	c->inuse = 0;
 	c->callback = callback;
 	c->cb_arg = callback_arg;
 	evbits = EV_READ | EV_PERSIST;
@@ -893,6 +894,7 @@ comm_point_create_udp_ancil(struct comm_base *base, int fd,
 	c->type = comm_udp;
 	c->tcp_do_close = 0;
 	c->do_not_close = 0;
+	c->inuse = 0;
 	c->tcp_do_toggle_rw = 0;
 	c->tcp_check_nb_connect = 0;
 	c->callback = callback;
