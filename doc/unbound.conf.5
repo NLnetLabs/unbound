@@ -132,6 +132,19 @@ query interface. Must be at least 1. Default is 256.
 Larger numbers give more protection against spoofing attempts, but need
 extra resources from the operating system.
 .TP
+.B outgoing\-port\-permit: \fI<port number or range>
+Permit unbound to open this port or range of ports for use to send queries.
+Make sure these ports are not needed by other daemons. By default only
+ports above 1024 that have not been assigned by IANA are used.
+Give a port number or a range of the form "low-high", without spaces.
+.TP
+.B outgoing\-port\-avoid: \fI<port number or range>
+Do not permit unbound to open this port or range of ports for use to send 
+queries. Use this to make sure unbound does not grab a port that another
+daemon needs. The port is avoided on all outgoing interfaces, both IP4 and IP6.
+By default only ports above 1024 that have not been assigned by IANA are used.
+Give a port number or a range of the form "low-high", without spaces.
+.TP
 .B outgoing\-num\-tcp: \fI<number>
 Number of outgoing TCP buffers to allocate per thread. Default is 10. If set
 to 0, or if do_tcp is "no", no TCP queries to authoritative servers are done.

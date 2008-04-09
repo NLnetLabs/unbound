@@ -89,7 +89,8 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_CACHE_MAX_TTL VAR_HARDEN_DNNSEC_STRIPPED VAR_ACCESS_CONTROL
 %token VAR_LOCAL_ZONE VAR_LOCAL_DATA VAR_INTERFACE_AUTOMATIC
 %token VAR_STATISTICS_INTERVAL VAR_DO_DAEMONIZE VAR_USE_CAPS_FOR_ID
-%token VAR_STATISTICS_CUMULATIVE
+%token VAR_STATISTICS_CUMULATIVE VAR_OUTGOING_PORT_PERMIT 
+%token VAR_OUTGOING_PORT_AVOID
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -130,7 +131,8 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_harden_dnssec_stripped | server_access_control |
 	server_local_zone | server_local_data | server_interface_automatic |
 	server_statistics_interval | server_do_daemonize | 
-	server_use_caps_for_id | server_statistics_cumulative
+	server_use_caps_for_id | server_statistics_cumulative |
+	server_outgoing_port_permit | server_outgoing_port_avoid
 	;
 stubstart: VAR_STUB_ZONE
 	{
@@ -254,6 +256,24 @@ server_outgoing_range: VAR_OUTGOING_RANGE STRING
 		if(atoi($2) == 0)
 			yyerror("number expected");
 		else cfg_parser->cfg->outgoing_num_ports = atoi($2);
+		free($2);
+	}
+	;
+server_outgoing_port_permit: VAR_OUTGOING_PORT_PERMIT STRING
+	{
+		OUTYY(("P(server_outgoing_port_permit:%s)\n", $2));
+		if(!cfg_mark_ports($2, 1, 
+			cfg_parser->cfg->outgoing_avail_ports, 65536))
+			yyerror("port number or range (\"low-high\") expected");
+		free($2);
+	}
+	;
+server_outgoing_port_avoid: VAR_OUTGOING_PORT_AVOID STRING
+	{
+		OUTYY(("P(server_outgoing_port_avoid:%s)\n", $2));
+		if(!cfg_mark_ports($2, 0, 
+			cfg_parser->cfg->outgoing_avail_ports, 65536))
+			yyerror("port number or range (\"low-high\") expected");
 		free($2);
 	}
 	;

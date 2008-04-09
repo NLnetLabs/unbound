@@ -80,6 +80,8 @@ struct config_file {
 	size_t outgoing_num_tcp;
 	/** number of incoming tcp buffers per (per thread) */
 	size_t incoming_num_tcp;
+	/** allowed udp port numbers, array with 0 if not allowed */
+	int* outgoing_avail_ports;
 
 	/** number of bytes buffer size for DNS messages */
 	size_t msg_buffer_size;
@@ -352,6 +354,25 @@ int cfg_count_numbers(const char* str);
  * is logged).
  */
 int cfg_parse_memsize(const char* str, size_t* res);
+
+/**
+ * Mark "number" or "low-high" as available or not in ports array.
+ * @param str: string in input
+ * @param allow: give true if this range is permitted.
+ * @param avail: the array from cfg.
+ * @param num: size of the array (65536).
+ * @return: true if parsed correctly, or 0 on a parse error (and an error 
+ * is logged).
+ */
+int cfg_mark_ports(const char* str, int allow, int* avail, int num);
+
+/**
+ * Scan ports available
+ * @param avail: the array from cfg.
+ * @param num: size of the array (65536).
+ * @return the number of ports available for use.
+ */
+int cfg_scan_ports(int* avail, int num);
 
 /**
  * Used during options parsing

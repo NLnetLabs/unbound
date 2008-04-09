@@ -108,6 +108,9 @@ checkrlimits(struct config_file* cfg)
 	size_t total = numthread * perthread + misc;
 	size_t avail;
 	struct rlimit rlim;
+
+	verbose(VERB_ALGO, "%d ports available in config",
+		cfg_scan_ports(cfg->outgoing_avail_ports, 65536));
 	if(getrlimit(RLIMIT_NOFILE, &rlim) < 0) {
 		log_warn("getrlimit: %s", strerror(errno));
 		return;

@@ -61,6 +61,9 @@ int ub_c_wrap(void);
 /** print error with file and line number */
 void ub_c_error(const char *message);
 
+/** init ports possible for use */
+static void init_outgoing_availports(int* array, int num);
+
 struct config_file* 
 config_create()
 {
@@ -96,6 +99,9 @@ config_create()
 	cfg->infra_cache_slabs = 4;
 	cfg->infra_cache_numhosts = 10000;
 	cfg->infra_cache_lame_size = 10240; /* easily 40 or more entries */
+	if(!(cfg->outgoing_avail_ports = (int*)calloc(65536, sizeof(int))))
+		goto error_exit;
+	init_outgoing_availports(cfg->outgoing_avail_ports, 65536);
 	if(!(cfg->username = strdup("unbound"))) goto error_exit;
 	if(!(cfg->chrootdir = strdup(CHROOT_DIR))) goto error_exit;
 	if(!(cfg->directory = strdup(RUN_DIR))) goto error_exit;
@@ -434,6 +440,7 @@ config_delete(struct config_file* cfg)
 	free(cfg->identity);
 	free(cfg->version);
 	free(cfg->module_conf);
+	free(cfg->outgoing_avail_ports);
 	config_delstrlist(cfg->trust_anchor_file_list);
 	config_delstrlist(cfg->trusted_keys_file_list);
 	config_delstrlist(cfg->trust_anchor_list);
@@ -443,6 +450,80 @@ config_delete(struct config_file* cfg)
 	config_delstrlist(cfg->local_zones_nodefault);
 	config_delstrlist(cfg->local_data);
 	free(cfg);
+}
+
+static void 
+init_outgoing_availports(int* a, int num)
+{
+	/* generated with
+	   grep "/udp" /etc/services | awk '{print $2;}' | sed -e 's?/udp??' | sort -n | grep -v 0 | sed -e 's/^\(.*\)$/\1,/' > util/iana_ports.inc
+	 */
+	const int iana_assigned[] = {
+#include "util/iana_ports.inc"
+		0 }; /* trailing 0 to put behind trailing comma */
+
+	int i;
+	/* do not use <1024, that could be trouble with the system, privs */
+	for(i=1024; i<num; i++) {
+		a[i] = i;
+	}
+	/* pick out all the IANA assigned ports */
+	for(i=0; iana_assigned[i]; i++) {
+		if(iana_assigned[i] < num)
+			a[iana_assigned[i]] = 0;
+	}
+}
+
+int 
+cfg_mark_ports(const char* str, int allow, int* avail, int num)
+{
+	char* mid = strchr(str, '-');
+	if(!mid) {
+		int port = atoi(str);
+		if(port == 0 && strcmp(str, "0") != 0) {
+			log_err("cannot parse port number '%s'", str);
+			return 0;
+		}
+		if(port < num)
+			avail[port] = (allow?port:0);
+	} else {
+		int i, low, high = atoi(mid+1);
+		char buf[16];
+		if(high == 0 && strcmp(mid+1, "0") != 0) {
+			log_err("cannot parse port number '%s'", mid+1);
+			return 0;
+		}
+		if( (int)(mid-str)+1 >= (int)sizeof(buf) ) {
+			log_err("cannot parse port number '%s'", str);
+			return 0;
+		}
+		if(mid > str)
+			memcpy(buf, str, (size_t)(mid-str));
+		buf[mid-str] = 0;
+		low = atoi(buf);
+		if(low == 0 && strcmp(buf, "0") != 0) {
+			log_err("cannot parse port number '%s'", buf);
+			return 0;
+		}
+		for(i=low; i<=high; i++) {
+			if(i < num)
+				avail[i] = (allow?i:0);
+		}
+		return 1;
+	}
+	return 1;
+}
+
+int 
+cfg_scan_ports(int* avail, int num)
+{
+	int i;
+	int count = 0;
+	for(i=0; i<num; i++) {
+		if(avail[i])
+			count++;
+	}
+	return count;
 }
 
 /** print error with file and line number */

@@ -105,6 +105,8 @@ verbosity{COLON}	{ YDOUT; return VAR_VERBOSITY;}
 port{COLON}		{ YDOUT; return VAR_PORT;}
 outgoing-port{COLON}	{ YDOUT; return VAR_OUTGOING_PORT;}
 outgoing-range{COLON}	{ YDOUT; return VAR_OUTGOING_RANGE;}
+outgoing-port-permit{COLON}	{ YDOUT; return VAR_OUTGOING_PORT_PERMIT;}
+outgoing-port-avoid{COLON}	{ YDOUT; return VAR_OUTGOING_PORT_AVOID;}
 outgoing-num-tcp{COLON}	{ YDOUT; return VAR_OUTGOING_NUM_TCP;}
 incoming-num-tcp{COLON}	{ YDOUT; return VAR_INCOMING_NUM_TCP;}
 do-ip4{COLON}		{ YDOUT; return VAR_DO_IP4;}

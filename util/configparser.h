@@ -116,7 +116,9 @@
      VAR_STATISTICS_INTERVAL = 332,
      VAR_DO_DAEMONIZE = 333,
      VAR_USE_CAPS_FOR_ID = 334,
-     VAR_STATISTICS_CUMULATIVE = 335
+     VAR_STATISTICS_CUMULATIVE = 335,
+     VAR_OUTGOING_PORT_PERMIT = 336,
+     VAR_OUTGOING_PORT_AVOID = 337
    };
 #endif
 /* Tokens.  */
@@ -198,6 +200,8 @@
 #define VAR_DO_DAEMONIZE 333
 #define VAR_USE_CAPS_FOR_ID 334
 #define VAR_STATISTICS_CUMULATIVE 335
+#define VAR_OUTGOING_PORT_PERMIT 336
+#define VAR_OUTGOING_PORT_AVOID 337
 
 
 
@@ -209,7 +213,7 @@ typedef union YYSTYPE
 	char*	str;
 }
 /* Line 1489 of yacc.c.  */
-#line 213 "util/configparser.h"
+#line 217 "util/configparser.h"
 	YYSTYPE;
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */
 # define YYSTYPE_IS_DECLARED 1
