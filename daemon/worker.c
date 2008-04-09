@@ -883,8 +883,10 @@ void worker_stat_timer_cb(void* arg)
 	server_stats_log(&worker->stats, worker->thread_num);
 	mesh_stats(worker->env.mesh, "mesh has");
 	worker_mem_report(worker, NULL);
-	server_stats_init(&worker->stats);
-	mesh_stats_clear(worker->env.mesh);
+	if(!worker->daemon->cfg->stat_cumulative) {
+		server_stats_init(&worker->stats);
+		mesh_stats_clear(worker->env.mesh);
+	}
 	/* start next timer */
 	worker_restart_timer(worker);
 }

@@ -88,6 +88,10 @@ see
 The number of seconds between printing statistics to the log for every thread.
 Disable with value 0 or "". Default is disabled. 
 .TP
+.B statistics-cumulative: \fI<yes or no>
+If enabled, statistics are cumulative since starting unbound, without clearing
+the statistics counters after logging the statistics. Default is no.
+.TP
 .B num\-threads: \fI<number>
 The number of threads to create to serve clients. Use 1 for no threading.
 .TP

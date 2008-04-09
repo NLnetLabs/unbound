@@ -115,7 +115,8 @@
      VAR_INTERFACE_AUTOMATIC = 331,
      VAR_STATISTICS_INTERVAL = 332,
      VAR_DO_DAEMONIZE = 333,
-     VAR_USE_CAPS_FOR_ID = 334
+     VAR_USE_CAPS_FOR_ID = 334,
+     VAR_STATISTICS_CUMULATIVE = 335
    };
 #endif
 /* Tokens.  */
@@ -196,6 +197,7 @@
 #define VAR_STATISTICS_INTERVAL 332
 #define VAR_DO_DAEMONIZE 333
 #define VAR_USE_CAPS_FOR_ID 334
+#define VAR_STATISTICS_CUMULATIVE 335
 
 
 
@@ -207,7 +209,7 @@ typedef union YYSTYPE
 	char*	str;
 }
 /* Line 1489 of yacc.c.  */
-#line 211 "util/configparser.h"
+#line 213 "util/configparser.h"
 	YYSTYPE;
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */
 # define YYSTYPE_IS_DECLARED 1

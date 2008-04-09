@@ -52,8 +52,11 @@ struct config_str2list;
 struct config_file {
 	/** verbosity level as specified in the config file */
 	int verbosity;
+
 	/** statistics interval (in seconds) */
 	int stat_interval;
+	/** if false, statistics values are reset after printing them */
+	int stat_cumulative;
 
 	/** number of threads to create */
 	int num_threads;

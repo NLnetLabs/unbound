@@ -168,6 +168,7 @@ use-syslog{COLON}	{ YDOUT; return VAR_USE_SYSLOG;}
 local-zone{COLON}	{ YDOUT; return VAR_LOCAL_ZONE;}
 local-data{COLON}	{ YDOUT; return VAR_LOCAL_DATA;}
 statistics-interval{COLON}	{ YDOUT; return VAR_STATISTICS_INTERVAL;}
+statistics-cumulative{COLON}	{ YDOUT; return VAR_STATISTICS_CUMULATIVE;}
 {NEWLINE}		{ LEXOUT(("NL\n")); cfg_parser->line++;}
 
 	/* Quoted strings. Strip leading and ending quotes */

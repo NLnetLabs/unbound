@@ -3,6 +3,7 @@
 	  --with-libevent=/home/wouter/libev-3.2
 	  libev-3.2 is a little faster than libevent-1.4.3-stable (about 5%).
 	- unused commpoints not listed in epoll list.
+	- statistics-cumulative option so that the values are not reset.
 
 8 April 2008: Wouter
 	- unbound tries to set the ulimit fds when started as server.

@@ -89,6 +89,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_CACHE_MAX_TTL VAR_HARDEN_DNNSEC_STRIPPED VAR_ACCESS_CONTROL
 %token VAR_LOCAL_ZONE VAR_LOCAL_DATA VAR_INTERFACE_AUTOMATIC
 %token VAR_STATISTICS_INTERVAL VAR_DO_DAEMONIZE VAR_USE_CAPS_FOR_ID
+%token VAR_STATISTICS_CUMULATIVE
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -129,7 +130,7 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_harden_dnssec_stripped | server_access_control |
 	server_local_zone | server_local_data | server_interface_automatic |
 	server_statistics_interval | server_do_daemonize | 
-	server_use_caps_for_id
+	server_use_caps_for_id | server_statistics_cumulative
 	;
 stubstart: VAR_STUB_ZONE
 	{
@@ -189,6 +190,15 @@ server_statistics_interval: VAR_STATISTICS_INTERVAL STRING
 		else if(atoi($2) == 0)
 			yyerror("number expected");
 		else cfg_parser->cfg->stat_interval = atoi($2);
+		free($2);
+	}
+	;
+server_statistics_cumulative: VAR_STATISTICS_CUMULATIVE STRING
+	{
+		OUTYY(("P(server_statistics_cumulative:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->stat_cumulative = (strcmp($2, "yes")==0);
 		free($2);
 	}
 	;
