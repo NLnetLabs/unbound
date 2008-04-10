@@ -523,7 +523,7 @@ if test x_$withval == x_yes -o x_$withval != x_no; then
 		if test -f "$dir/event.h" -a \( -f "$dir/libevent.la" -o -f "$dir/libev.la" \) ; then
 			# libevent source directory
             		AC_MSG_RESULT(found in $thedir)
-                	CPPFLAGS="$CPPFLAGS -I$thedir"
+                	CPPFLAGS="$CPPFLAGS -I$thedir -I$thedir/include"
 			BAK_LDFLAGS="$LDFLAGS"
 			# remove evdns from linking
 			mkdir build >/dev/null 2>&1

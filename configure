@@ -21975,7 +21975,7 @@ echo $ECHO_N "checking for libevent... $ECHO_C" >&6; }
 			# libevent source directory
             		{ echo "$as_me:$LINENO: result: found in $thedir" >&5
 echo "${ECHO_T}found in $thedir" >&6; }
-                	CPPFLAGS="$CPPFLAGS -I$thedir"
+                	CPPFLAGS="$CPPFLAGS -I$thedir -I$thedir/include"
 			BAK_LDFLAGS="$LDFLAGS"
 			# remove evdns from linking
 			mkdir build >/dev/null 2>&1

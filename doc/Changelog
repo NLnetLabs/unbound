@@ -1,3 +1,6 @@
+10 April 2008: Wouter
+	- --with-libevent works with latest libevent 1.4.99-trunk.
+
 9 April 2008: Wouter
 	- configure can detect libev(from its build directory) when passed
 	  --with-libevent=/home/wouter/libev-3.2
