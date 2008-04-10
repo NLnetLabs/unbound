@@ -293,6 +293,13 @@ download_ldns:
 	mv ldns-*_pre_*.tar.gz ldns-src.tar.gz
 	rm ldns-*_pre_*.tar.gz.sha1 ldns_makedist.sh
 
+iana_update:
+	curl http://www.iana.org/assignments/port-numbers -o port-numbers.tmp
+	egrep -v "Unassigned|Reserved" port-numbers.tmp | awk '{ match($$0, "[0-9]+/udp"); if (RLENGTH > 0) print substr($$0, RSTART, RLENGTH - 4) ","}' | sort -nu > portslist.tmp
+	-diff util/iana_ports.inc portslist.tmp
+	cat portslist.tmp > util/iana_ports.inc
+	rm -f port-numbers.tmp portslist.tmp
+
 # Automatic dependencies.
 $(BUILD)%.d: $(srcdir)/%.c
 	$(INFO) Depend $<

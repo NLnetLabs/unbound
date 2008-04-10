@@ -455,12 +455,10 @@ config_delete(struct config_file* cfg)
 static void 
 init_outgoing_availports(int* a, int num)
 {
-	/* generated with
-	   grep "/udp" /etc/services | awk '{print $2;}' | sed -e 's?/udp??' | sort -n | grep -v 0 | sed -e 's/^\(.*\)$/\1,/' > util/iana_ports.inc
-	 */
+	/* generated with make iana_update */
 	const int iana_assigned[] = {
 #include "util/iana_ports.inc"
-		0 }; /* trailing 0 to put behind trailing comma */
+		-1 }; /* end marker to put behind trailing comma */
 
 	int i;
 	/* do not use <1024, that could be trouble with the system, privs */
@@ -468,7 +466,7 @@ init_outgoing_availports(int* a, int num)
 		a[i] = i;
 	}
 	/* pick out all the IANA assigned ports */
-	for(i=0; iana_assigned[i]; i++) {
+	for(i=0; iana_assigned[i]!=-1; i++) {
 		if(iana_assigned[i] < num)
 			a[iana_assigned[i]] = 0;
 	}

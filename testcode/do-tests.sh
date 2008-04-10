@@ -5,6 +5,7 @@ NEED_DOXYGEN='01-doc.tpkg'
 NEED_LDNS_TESTNS='fwd_no_edns.tpkg fwd_tcp_tc.tpkg fwd_tcp.tpkg fwd_three_service.tpkg fwd_three.tpkg fwd_ttlexpire.tpkg fwd_udp.tpkg fwd_tcp_tc6.tpkg fwd_compress_c00c.tpkg fwd_ancil.tpkg stat_timer.tpkg 05-asynclook.tpkg stream_tcp.tpkg speed_cache.tpkg'
 NEED_XXD='fwd_compress_c00c.tpkg'
 NEED_NC='fwd_compress_c00c.tpkg'
+NEED_CURL='06-ianaports.tpkg'
 
 cd testdata;
 sh ../testcode/mini_tpkg.sh clean
@@ -18,6 +19,11 @@ for test in `ls *.tpkg`; do
 	fi
 	if echo $NEED_DOXYGEN | grep $test >/dev/null; then
 		if test ! -x "`which doxygen`"; then
+			SKIP=1;
+		fi
+	fi
+	if echo $NEED_CURL | grep $test >/dev/null; then
+		if test ! -x "`which curl`"; then
 			SKIP=1;
 		fi
 	fi
