@@ -1,5 +1,6 @@
 10 April 2008: Wouter
 	- --with-libevent works with latest libevent 1.4.99-trunk.
+	- added log file statistics perl script to contrib.
 
 9 April 2008: Wouter
 	- configure can detect libev(from its build directory) when passed
