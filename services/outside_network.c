@@ -241,12 +241,14 @@ portcomm_loweruse(struct outside_network* outnet, struct port_comm* pc)
 		return;
 	}
 	/* close it and replace in unused list */
+	verbose(VERB_ALGO, "close of port %d", pc->number);
 	comm_point_close(pc->cp);
 	pif = pc->pif;
 	log_assert(pif->inuse > 0);
 	pif->avail_ports[pif->avail_total - pif->inuse] = pc->number;
 	pif->inuse--;
 	pif->out[pc->index] = pif->out[pif->inuse];
+	pif->out[pc->index]->index = pc->index;
 	pc->next = outnet->unused_fds;
 	outnet->unused_fds = pc;
 }
