@@ -103,7 +103,6 @@ server{COLON}		{ YDOUT; return VAR_SERVER;}
 num-threads{COLON}	{ YDOUT; return VAR_NUM_THREADS;}
 verbosity{COLON}	{ YDOUT; return VAR_VERBOSITY;}
 port{COLON}		{ YDOUT; return VAR_PORT;}
-outgoing-port{COLON}	{ YDOUT; return VAR_OUTGOING_PORT;}
 outgoing-range{COLON}	{ YDOUT; return VAR_OUTGOING_RANGE;}
 outgoing-port-permit{COLON}	{ YDOUT; return VAR_OUTGOING_PORT_PERMIT;}
 outgoing-port-avoid{COLON}	{ YDOUT; return VAR_OUTGOING_PORT_AVOID;}

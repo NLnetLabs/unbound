@@ -72,9 +72,7 @@ struct config_file {
 	/** do tcp query support. */
 	int do_tcp;
 
-	/** outgoing port range base number */
-	int outgoing_base_port;
-	/** outgoing port range number of ports (per thread, per if) */
+	/** outgoing port range number of ports (per thread) */
 	int outgoing_num_ports;
 	/** number of outgoing tcp buffers per (per thread) */
 	size_t outgoing_num_tcp;

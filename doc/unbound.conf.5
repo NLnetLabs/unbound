@@ -122,20 +122,16 @@ and
 lines, the interfaces are then used for both purposes. Outgoing queries are 
 sent via a random outgoing interface to counter spoofing.
 .TP
-.B outgoing\-port: \fI<port number>
-The starting port number where the outgoing query port range is allocated.
-Default is 1053.
-.TP
 .B outgoing\-range: \fI<number>
-Number of ports to open. This number is opened per thread for every outgoing
-query interface. Must be at least 1. Default is 256.
-Larger numbers give more protection against spoofing attempts, but need
-extra resources from the operating system.
+Number of ports to open. This number of file descriptors can be opened per 
+thread. Must be at least 1. Default is 256. Larger numbers need extra 
+resources from the operating system.
 .TP
 .B outgoing\-port\-permit: \fI<port number or range>
 Permit unbound to open this port or range of ports for use to send queries.
-Make sure these ports are not needed by other daemons. By default only
-ports above 1024 that have not been assigned by IANA are used.
+A larger number of permitted outgoing ports increases resilience against
+spoofing attempts. Make sure these ports are not needed by other daemons. 
+By default only ports above 1024 that have not been assigned by IANA are used.
 Give a port number or a range of the form "low-high", without spaces.
 .TP
 .B outgoing\-port\-avoid: \fI<port number or range>

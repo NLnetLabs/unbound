@@ -62,7 +62,7 @@
 /** number of times to retry making a random ID that is unique. */
 #define MAX_ID_RETRY 1000
 /** number of times to retry finding interface, port that can be opened. */
-#define MAX_PORT_RETRY 1000
+#define MAX_PORT_RETRY 10000
 /** number of retries on outgoing UDP queries */
 #define OUTBOUND_UDP_RETRY 1
 
@@ -422,7 +422,7 @@ static int setup_if(struct port_if* pif, const char* addrstr,
 struct outside_network* 
 outside_network_create(struct comm_base *base, size_t bufsize, 
 	size_t num_ports, char** ifs, int num_ifs, int do_ip4, 
-	int do_ip6, int port_base, size_t num_tcp, struct infra_cache* infra,
+	int do_ip6, size_t num_tcp, struct infra_cache* infra,
 	struct ub_randstate* rnd, int use_caps_for_id, int* availports, 
 	int numavailports)
 {

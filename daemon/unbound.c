@@ -91,9 +91,7 @@ checkrlimits(struct config_file* cfg)
 			(int)cfg->incoming_num_tcp:0));
 	size_t ifs = (size_t)(cfg->num_ifs==0?1:cfg->num_ifs);
 	size_t listen_num = list*ifs;
-	size_t out_ifs = (size_t)(cfg->num_out_ifs==0?
-		( (cfg->do_ip4?1:0) + (cfg->do_ip6?1:0) ) :cfg->num_out_ifs);
-	size_t outudpnum = cfg->outgoing_num_ports*out_ifs;
+	size_t outudpnum = (size_t)cfg->outgoing_num_ports;
 	size_t outtcpnum = cfg->outgoing_num_tcp;
 	size_t misc = 4; /* logfile, pidfile, stdout... */
 	size_t perthread_noudp = listen_num + outtcpnum + 
@@ -109,8 +107,6 @@ checkrlimits(struct config_file* cfg)
 	size_t avail;
 	struct rlimit rlim;
 
-	verbose(VERB_ALGO, "%d ports available in config",
-		cfg_scan_ports(cfg->outgoing_avail_ports, 65536));
 	if(getrlimit(RLIMIT_NOFILE, &rlim) < 0) {
 		log_warn("getrlimit: %s", strerror(errno));
 		return;
@@ -127,8 +123,7 @@ checkrlimits(struct config_file* cfg)
 				(unsigned)avail, (unsigned)total+10);
 			cfg->outgoing_num_ports = (int)((avail 
 				- numthread*perthread_noudp 
-				- 10 /* safety margin */)
-				/(numthread*out_ifs));
+				- 10 /* safety margin */) /numthread);
 			log_warn("continuing with less udp ports: %u",
 				cfg->outgoing_num_ports);
 			log_warn("increase ulimit or decrease threads, ports in config to remove this warning");

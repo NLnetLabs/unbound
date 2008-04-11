@@ -68,7 +68,7 @@ extern struct config_parser_state* cfg_parser;
 %token SPACE LETTER NEWLINE COMMENT COLON ANY ZONESTR
 %token <str> STRING
 %token VAR_SERVER VAR_VERBOSITY VAR_NUM_THREADS VAR_PORT
-%token VAR_OUTGOING_PORT VAR_OUTGOING_RANGE VAR_INTERFACE
+%token VAR_OUTGOING_RANGE VAR_INTERFACE
 %token VAR_DO_IP4 VAR_DO_IP6 VAR_DO_UDP VAR_DO_TCP 
 %token VAR_CHROOT VAR_USERNAME VAR_DIRECTORY VAR_LOGFILE VAR_PIDFILE
 %token VAR_MSG_CACHE_SIZE VAR_MSG_CACHE_SLABS VAR_NUM_QUERIES_PER_THREAD
@@ -107,7 +107,7 @@ serverstart: VAR_SERVER
 contents_server: contents_server content_server 
 	| ;
 content_server: server_num_threads | server_verbosity | server_port |
-	server_outgoing_port | server_outgoing_range | server_do_ip4 |
+	server_outgoing_range | server_do_ip4 |
 	server_do_ip6 | server_do_udp | server_do_tcp | 
 	server_interface | server_chroot | server_username | 
 	server_directory | server_logfile | server_pidfile |
@@ -239,15 +239,6 @@ server_outgoing_interface: VAR_OUTGOING_INTERFACE STRING
 		else
 			cfg_parser->cfg->out_ifs[
 				cfg_parser->cfg->num_out_ifs++] = $2;
-	}
-	;
-server_outgoing_port: VAR_OUTGOING_PORT STRING
-	{
-		OUTYY(("P(server_outgoing_port:%s)\n", $2));
-		if(atoi($2) == 0)
-			yyerror("port number expected");
-		else cfg_parser->cfg->outgoing_base_port = atoi($2);
-		free($2);
 	}
 	;
 server_outgoing_range: VAR_OUTGOING_RANGE STRING

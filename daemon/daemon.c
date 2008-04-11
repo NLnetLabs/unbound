@@ -228,6 +228,7 @@ daemon_create_workers(struct daemon* daemon)
 	if(!shufport)
 		fatal_exit("out of memory during daemon init");
 	numport = daemon_get_shufport(daemon, shufport);
+	verbose(VERB_ALGO, "total of %d outgoing ports available", numport);
 	
 	daemon->num = daemon->cfg->num_threads;
 	daemon->workers = (struct worker**)calloc((size_t)daemon->num, 

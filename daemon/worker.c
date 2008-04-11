@@ -933,7 +933,6 @@ worker_init(struct worker* worker, struct config_file *cfg,
 	struct listen_port* ports, int do_sigs)
 {
 	unsigned int seed;
-	int startport;
 	worker->need_to_exit = 0;
 	worker->base = comm_base_create();
 	if(!worker->base) {
@@ -979,12 +978,10 @@ worker_init(struct worker* worker, struct config_file *cfg,
 		worker_delete(worker);
 		return 0;
 	}
-	startport  = cfg->outgoing_base_port + 
-		cfg->outgoing_num_ports * worker->thread_num;
 	worker->back = outside_network_create(worker->base,
 		cfg->msg_buffer_size, (size_t)cfg->outgoing_num_ports, 
 		cfg->out_ifs, cfg->num_out_ifs, cfg->do_ip4, cfg->do_ip6, 
-		startport, cfg->do_tcp?cfg->outgoing_num_tcp:0, 
+		cfg->do_tcp?cfg->outgoing_num_tcp:0, 
 		worker->daemon->env->infra_cache, worker->rndstate,
 		cfg->use_caps_bits_for_id, worker->ports, worker->numports);
 	if(!worker->back) {

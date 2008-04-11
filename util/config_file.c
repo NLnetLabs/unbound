@@ -82,7 +82,6 @@ config_create()
 	cfg->do_udp = 1;
 	cfg->do_tcp = 1;
 	cfg->use_syslog = 1;
-	cfg->outgoing_base_port = cfg->port + 2000;
 	cfg->outgoing_num_ports = 256;
 	cfg->outgoing_num_tcp = 10;
 	cfg->incoming_num_tcp = 10;
@@ -213,12 +212,15 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	} else if(strcmp(opt, "do-tcp:") == 0) {
 		IS_YES_OR_NO;
 		cfg->do_tcp = (strcmp(val, "yes") == 0);
-	} else if(strcmp(opt, "outgoing-port:") == 0) {
-		IS_NUMBER_OR_ZERO;
-		cfg->outgoing_base_port = atoi(val);
 	} else if(strcmp(opt, "outgoing-range:") == 0) {
 		IS_NONZERO_NUMBER;
 		cfg->outgoing_num_ports = atoi(val);
+	} else if(strcmp(opt, "outgoing-port-permit:") == 0) {
+		return cfg_mark_ports(val, 1, 
+			cfg->outgoing_avail_ports, 65536);
+	} else if(strcmp(opt, "outgoing-port-avoid:") == 0) {
+		return cfg_mark_ports(val, 0, 
+			cfg->outgoing_avail_ports, 65536);
 	} else if(strcmp(opt, "outgoing-num-tcp:") == 0) {
 		IS_NUMBER_OR_ZERO;
 		cfg->outgoing_num_tcp = (size_t)atoi(val);
@@ -465,6 +467,10 @@ init_outgoing_availports(int* a, int num)
 	for(i=1024; i<num; i++) {
 		a[i] = i;
 	}
+	/* create empty spot at 49152 to keep ephemeral ports available 
+	 * to other programs */
+	for(i=49152; i<49152+256; i++)
+		a[i] = 0;
 	/* pick out all the IANA assigned ports */
 	for(i=0; iana_assigned[i]!=-1; i++) {
 		if(iana_assigned[i] < num)

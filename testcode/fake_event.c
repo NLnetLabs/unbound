@@ -684,8 +684,8 @@ struct outside_network*
 outside_network_create(struct comm_base* base, size_t bufsize, 
 	size_t ATTR_UNUSED(num_ports), char** ATTR_UNUSED(ifs), 
 	int ATTR_UNUSED(num_ifs), int ATTR_UNUSED(do_ip4), 
-	int ATTR_UNUSED(do_ip6), int ATTR_UNUSED(port_base),
-	size_t ATTR_UNUSED(num_tcp), struct infra_cache* ATTR_UNUSED(infra),
+	int ATTR_UNUSED(do_ip6), size_t ATTR_UNUSED(num_tcp), 
+	struct infra_cache* ATTR_UNUSED(infra),
 	struct ub_randstate* ATTR_UNUSED(rnd), 
 	int ATTR_UNUSED(use_caps_for_id), int* ATTR_UNUSED(availports),
 	int ATTR_UNUSED(numavailports))

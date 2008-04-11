@@ -1,6 +1,8 @@
 11 April 2008: Wouter
 	- random port selection out of the configged ports.
 	- fixup threadsafety for libevent-1.4.3+ (event_base_get_method).
+	- removed base_port.
+	- created 256-port ephemeral space for the OS, 59802 available.
 
 10 April 2008: Wouter
 	- --with-libevent works with latest libevent 1.4.99-trunk.

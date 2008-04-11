@@ -320,8 +320,6 @@ struct serviced_query {
  * @param num_ifs: number of names in array ifs.
  * @param do_ip4: service IP4.
  * @param do_ip6: service IP6.
- * @param port_base: if -1 system assigns ports, otherwise try to get
- *    the ports numbered from this starting number.
  * @param num_tcp: number of outgoing tcp buffers to preallocate.
  * @param infra: pointer to infra cached used for serviced queries.
  * @param rnd: stored to create random numbers for serviced queries.
@@ -332,9 +330,9 @@ struct serviced_query {
  */
 struct outside_network* outside_network_create(struct comm_base* base,
 	size_t bufsize, size_t num_ports, char** ifs, int num_ifs,
-	int do_ip4, int do_ip6, int port_base, size_t num_tcp, 
-	struct infra_cache* infra, struct ub_randstate* rnd,
-	int use_caps_for_id, int* availports, int numavailports);
+	int do_ip4, int do_ip6, size_t num_tcp, struct infra_cache* infra, 
+	struct ub_randstate* rnd, int use_caps_for_id, int* availports, 
+	int numavailports);
 
 /**
  * Delete outside_network structure.
