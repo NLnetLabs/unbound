@@ -51,7 +51,10 @@ struct pending_timeout;
 struct ub_randstate;
 struct pending_tcp;
 struct waiting_tcp;
+struct waiting_udp;
 struct infra_cache;
+struct port_comm;
+struct port_if;
 
 /**
  * Send queries to outside servers and wait for answers from servers.
@@ -74,24 +77,24 @@ struct outside_network {
 	/** use x20 bits to encode additional ID random bits */
 	int use_caps_for_id;
 
-	/** 
-	 * Array of udp comm point* that are used to listen to pending events.
-	 * Each is on a different port. This is for ip4 ports.
-	 */
-	struct comm_point** udp4_ports;
-	/** number of queries open on each port */
-	int* udp4_inuse;
-	/** number of udp4 ports */
-	size_t num_udp4;
+	/** linked list of available commpoints, unused file descriptors,
+	 * for use as outgoing UDP ports. cp.fd=-1 in them. */
+	struct port_comm* unused_fds;
 
-	/**
-	 * The opened ip6 ports.
-	 */
-	struct comm_point** udp6_ports;
-	/** number of queries open on each port */
-	int* udp6_inuse;
-	/** number of udp6 ports */
-	size_t num_udp6;
+	/** array of outgoing IP4 interfaces */
+	struct port_if* ip4_ifs;
+	/** number of outgoing IP4 interfaces */
+	int num_ip4;
+
+	/** array of outgoing IP6 interfaces */
+	struct port_if* ip6_ifs;
+	/** number of outgoing IP6 interfaces */
+	int num_ip6;
+
+	/** pending udp queries waiting to be sent out, waiting for fd */
+	struct pending* udp_wait_first;
+	/** last pending udp query in list */
+	struct pending* udp_wait_last;
 
 	/** pending udp answers. sorted by id, addr */
 	rbtree_t* pending;
@@ -120,19 +123,64 @@ struct outside_network {
 };
 
 /**
+ * Outgoing interface. Ports available and currently used are tracked
+ * per interface
+ */
+struct port_if {
+	/** address ready to allocate new socket (except port no). */
+	struct sockaddr_storage addr;
+	/** length of addr field */
+	socklen_t addrlen;
+
+	/** the available ports array. These are unused.
+	 * Only the first total-inuse part is filled. */
+	int* avail_ports;
+	/** the total number of available ports (size of the array) */
+	int avail_total;
+
+	/** array of the commpoints currently in use. 
+	 * allocated for max number of fds, first part in use. */
+	struct port_comm** out;
+	/** max number of fds, size of out array */
+	int maxout;
+	/** number of commpoints (and thus also ports) in use */
+	int inuse;
+};
+
+/**
+ * Outgoing commpoint for UDP port.
+ */
+struct port_comm {
+	/** next in free list */
+	struct port_comm* next;
+	/** which port number (when in use) */
+	int number;
+	/** interface it is used in */
+	struct port_if* pif;
+	/** index in the out array of the interface */
+	int index;
+	/** number of outstanding queries on this port */
+	int num_outstanding;
+	/** UDP commpoint, fd=-1 if not in use */
+	struct comm_point* cp;
+};
+
+/**
  * A query that has an answer pending for it.
  */
 struct pending {
 	/** redblacktree entry, key is the pending struct(id, addr). */
 	rbnode_t node;
-	/** the ID for the query */
-	uint16_t id;
+	/** the ID for the query. int so that a value out of range can
+	 * be used to signify a pending that is for certain not present in
+	 * the rbtree. (and for which deletion is safe). */
+	unsigned int id;
 	/** remote address. */
 	struct sockaddr_storage addr;
 	/** length of addr field in use. */
 	socklen_t addrlen;
 	/** comm point it was sent on (and reply must come back on). */
-	struct comm_point* c;
+	struct port_comm* pc;
 	/** timeout event */
 	struct comm_timer* timer;
 	/** callback for the timeout, error or reply to the message */
@@ -141,6 +189,16 @@ struct pending {
 	void* cb_arg;
 	/** the outside network it is part of */
 	struct outside_network* outnet;
+
+	/*---- filled if udp pending is waiting -----*/
+	/** next in waiting list. */
+	struct pending* next_waiting;
+	/** timeout in msec */
+	int timeout;
+	/** The query itself, the query packet to send. */
+	uint8_t* pkt;
+	/** length of query packet. */
+	size_t pkt_len;
 };
 
 /**
@@ -268,13 +326,15 @@ struct serviced_query {
  * @param infra: pointer to infra cached used for serviced queries.
  * @param rnd: stored to create random numbers for serviced queries.
  * @param use_caps_for_id: enable to use 0x20 bits to encode id randomness.
+ * @param availports: array of available ports. 
+ * @param numavailports: number of available ports in array.
  * @return: the new structure (with no pending answers) or NULL on error.
  */
 struct outside_network* outside_network_create(struct comm_base* base,
 	size_t bufsize, size_t num_ports, char** ifs, int num_ifs,
 	int do_ip4, int do_ip6, int port_base, size_t num_tcp, 
 	struct infra_cache* infra, struct ub_randstate* rnd,
-	int use_caps_for_id);
+	int use_caps_for_id, int* availports, int numavailports);
 
 /**
  * Delete outside_network structure.
@@ -292,13 +352,12 @@ void outside_network_delete(struct outside_network* outnet);
  * @param timeout: in milliseconds from now.
  * @param callback: function to call on error, timeout or reply.
  * @param callback_arg: user argument for callback function.
- * @param rnd: random state for generating ID and port.
  * @return: NULL on error for malloc or socket. Else the pending query object.
  */
 struct pending* pending_udp_query(struct outside_network* outnet, 
 	ldns_buffer* packet, struct sockaddr_storage* addr, 
 	socklen_t addrlen, int timeout, comm_point_callback_t* callback, 
-	void* callback_arg, struct ub_randstate* rnd);
+	void* callback_arg);
 
 /**
  * Send TCP query. May wait for TCP buffer. Selects ID to be random, and 
@@ -312,13 +371,12 @@ struct pending* pending_udp_query(struct outside_network* outnet,
  *    without any query been sent to the server yet.
  * @param callback: function to call on error, timeout or reply.
  * @param callback_arg: user argument for callback function.
- * @param rnd: random state for generating ID.
  * @return: false on error for malloc or socket. Else the pending TCP object.
  */
 struct waiting_tcp* pending_tcp_query(struct outside_network* outnet, 
 	ldns_buffer* packet, struct sockaddr_storage* addr, 
 	socklen_t addrlen, int timeout, comm_point_callback_t* callback, 
-	void* callback_arg, struct ub_randstate* rnd);
+	void* callback_arg);
 
 /**
  * Delete pending answer.

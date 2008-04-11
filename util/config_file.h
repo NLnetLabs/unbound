@@ -367,6 +367,14 @@ int cfg_parse_memsize(const char* str, size_t* res);
 int cfg_mark_ports(const char* str, int allow, int* avail, int num);
 
 /**
+ * Get a condensed list of ports returned. allocated.
+ * @param cfg: config file.
+ * @param avail: the available ports array is returned here.
+ * @return: number of ports in array or 0 on error.
+ */
+int cfg_condense_ports(struct config_file* cfg, int** avail);
+
+/**
  * Scan ports available
  * @param avail: the array from cfg.
  * @param num: size of the array (65536).

@@ -152,7 +152,13 @@ comm_base_create()
 	}
 	comm_base_now(b);
 	verbose(VERB_ALGO, "libevent %s uses %s method.", 
-		event_get_version(), event_get_method());
+		event_get_version(), 
+#ifdef HAVE_EVENT_BASE_GET_METHOD
+		event_base_get_method(b->eb->base)
+#else
+		event_get_method()
+#endif
+	);
 	return b;
 }
 
@@ -438,6 +444,8 @@ comm_point_udp_ancil_callback(int fd, short event, void* arg)
 			(void)comm_point_send_udp_msg_if(rep.c, rep.c->buffer,
 				(struct sockaddr*)&rep.addr, rep.addrlen, &rep);
 		}
+		if(rep.c->fd == -1) /* commpoint closed */
+			break;
 	}
 #else
 	fatal_exit("recvmsg: No support for IPV6_PKTINFO. "
@@ -482,6 +490,8 @@ comm_point_udp_callback(int fd, short event, void* arg)
 			(void)comm_point_send_udp_msg(rep.c, rep.c->buffer,
 				(struct sockaddr*)&rep.addr, rep.addrlen);
 		}
+		if(rep.c->fd == -1) /* commpoint closed */
+			break;
 	}
 }
 
@@ -856,8 +866,12 @@ comm_point_create_udp(struct comm_base *base, int fd, ldns_buffer* buffer,
 	evbits = EV_READ | EV_PERSIST;
 	/* libevent stuff */
 	event_set(&c->ev->ev, c->fd, evbits, comm_point_udp_callback, c);
-	if(event_base_set(base->eb->base, &c->ev->ev) != 0 ||
-		event_add(&c->ev->ev, c->timeout) != 0 ) {
+	if(event_base_set(base->eb->base, &c->ev->ev) != 0) {
+		log_err("could not baseset udp event");
+		comm_point_delete(c);
+		return NULL;
+	}
+	if(fd!=-1 && event_add(&c->ev->ev, c->timeout) != 0 ) {
 		log_err("could not add udp event");
 		comm_point_delete(c);
 		return NULL;
@@ -902,8 +916,12 @@ comm_point_create_udp_ancil(struct comm_base *base, int fd,
 	evbits = EV_READ | EV_PERSIST;
 	/* libevent stuff */
 	event_set(&c->ev->ev, c->fd, evbits, comm_point_udp_ancil_callback, c);
-	if(event_base_set(base->eb->base, &c->ev->ev) != 0 ||
-		event_add(&c->ev->ev, c->timeout) != 0 ) {
+	if(event_base_set(base->eb->base, &c->ev->ev) != 0) {
+		log_err("could not baseset udp event");
+		comm_point_delete(c);
+		return NULL;
+	}
+	if(fd!=-1 && event_add(&c->ev->ev, c->timeout) != 0 ) {
 		log_err("could not add udp event");
 		comm_point_delete(c);
 		return NULL;
@@ -1200,8 +1218,10 @@ comm_point_close(struct comm_point* c)
 			log_err("could not event_del on close");
 		}
 	/* close fd after removing from event lists, or epoll.. is messed up */
-	if(c->fd != -1 && !c->do_not_close)
+	if(c->fd != -1 && !c->do_not_close) {
+		verbose(VERB_ALGO, "close fd %d", c->fd);
 		close(c->fd);
+	}
 	c->fd = -1;
 }
 
@@ -1272,7 +1292,8 @@ comm_point_stop_listening(struct comm_point* c)
 void 
 comm_point_start_listening(struct comm_point* c, int newfd, int sec)
 {
-	verbose(VERB_ALGO, "comm point start listening %d", c->fd);
+	verbose(VERB_ALGO, "comm point start listening %d", 
+		c->fd==-1?newfd:c->fd);
 	if(c->type == comm_tcp_accept && !c->tcp_free) {
 		/* no use to start listening no free slots. */
 		return;

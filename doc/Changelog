@@ -1,7 +1,11 @@
+11 April 2008: Wouter
+	- random port selection out of the configged ports.
+	- fixup threadsafety for libevent-1.4.3+ (event_base_get_method).
+
 10 April 2008: Wouter
 	- --with-libevent works with latest libevent 1.4.99-trunk.
 	- added log file statistics perl script to contrib.
-	- automatic iana ports update from makefile.
+	- automatic iana ports update from makefile. 60058 available.
 
 9 April 2008: Wouter
 	- configure can detect libev(from its build directory) when passed

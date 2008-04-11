@@ -686,7 +686,9 @@ outside_network_create(struct comm_base* base, size_t bufsize,
 	int ATTR_UNUSED(num_ifs), int ATTR_UNUSED(do_ip4), 
 	int ATTR_UNUSED(do_ip6), int ATTR_UNUSED(port_base),
 	size_t ATTR_UNUSED(num_tcp), struct infra_cache* ATTR_UNUSED(infra),
-	struct ub_randstate* ATTR_UNUSED(rnd), int ATTR_UNUSED(use_caps_for_id))
+	struct ub_randstate* ATTR_UNUSED(rnd), 
+	int ATTR_UNUSED(use_caps_for_id), int* ATTR_UNUSED(availports),
+	int ATTR_UNUSED(numavailports))
 {
 	struct outside_network* outnet =  calloc(1, 
 		sizeof(struct outside_network));
@@ -711,8 +713,7 @@ outside_network_delete(struct outside_network* outnet)
 struct pending* 
 pending_udp_query(struct outside_network* outnet, ldns_buffer* packet,
 	struct sockaddr_storage* addr, socklen_t addrlen, int timeout,
-	comm_point_callback_t* callback, void* callback_arg,
-	struct ub_randstate* ATTR_UNUSED(rnd))
+	comm_point_callback_t* callback, void* callback_arg)
 {
 	struct replay_runtime* runtime = (struct replay_runtime*)outnet->base;
 	struct fake_pending* pend = (struct fake_pending*)calloc(1,
@@ -764,8 +765,7 @@ pending_udp_query(struct outside_network* outnet, ldns_buffer* packet,
 struct waiting_tcp* 
 pending_tcp_query(struct outside_network* outnet, ldns_buffer* packet,
 	struct sockaddr_storage* addr, socklen_t addrlen, int timeout,
-	comm_point_callback_t* callback, void* callback_arg,
-	struct ub_randstate* ATTR_UNUSED(rnd))
+	comm_point_callback_t* callback, void* callback_arg)
 {
 	struct replay_runtime* runtime = (struct replay_runtime*)outnet->base;
 	struct fake_pending* pend = (struct fake_pending*)calloc(1,

@@ -524,6 +524,24 @@ cfg_scan_ports(int* avail, int num)
 	return count;
 }
 
+int cfg_condense_ports(struct config_file* cfg, int** avail)
+{
+	int num = cfg_scan_ports(cfg->outgoing_avail_ports, 65536);
+	int i, at = 0;
+	*avail = NULL;
+	if(num == 0)
+		return 0;
+	*avail = (int*)malloc(sizeof(int)*num);
+	if(!*avail)
+		return 0;
+	for(i=0; i<65536; i++) {
+		if(cfg->outgoing_avail_ports[i])
+			(*avail)[at++] = cfg->outgoing_avail_ports[i];
+	}
+	log_assert(at == num);
+	return num;
+}
+
 /** print error with file and line number */
 void ub_c_error_va_list(const char *fmt, va_list args)
 {

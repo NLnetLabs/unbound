@@ -53,6 +53,7 @@ struct module_env;
 struct rrset_cache;
 struct acl_list;
 struct local_zones;
+struct ub_randstate;
 
 /**
  * Structure holding worker list.
@@ -73,6 +74,8 @@ struct daemon {
 	struct worker** workers;
 	/** do we need to exit unbound (or is it only a reload?) */
 	int need_to_exit;
+	/** master random table ; used for port div between threads on reload*/
+	struct ub_randstate* rand;
 	/** master allocation cache */
 	struct alloc_cache superalloc;
 	/** the module environment master value, copied and changed by threads*/

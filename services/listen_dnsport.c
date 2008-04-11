@@ -86,7 +86,8 @@ verbose_print_addr(struct addrinfo *addr)
 }
 
 int
-create_udp_sock(struct addrinfo *addr, int v6only, int* inuse)
+create_udp_sock(int family, int socktype, struct sockaddr* addr,
+        socklen_t addrlen, int v6only, int* inuse)
 {
 	int s;
 # if defined(IPV6_USE_MIN_MTU)
@@ -94,13 +95,12 @@ create_udp_sock(struct addrinfo *addr, int v6only, int* inuse)
 # else
 	(void)v6only;
 # endif
-	verbose_print_addr(addr);
-	if((s = socket(addr->ai_family, addr->ai_socktype, 0)) == -1) {
+	if((s = socket(family, socktype, 0)) == -1) {
 		log_err("can't create socket: %s", strerror(errno));
 		*inuse = 0;
 		return -1;
 	}
-	if(addr->ai_family == AF_INET6) {
+	if(family == AF_INET6) {
 # if defined(IPV6_V6ONLY)
 		if(v6only) {
 			int val=(v6only==2)?0:1;
@@ -131,7 +131,7 @@ create_udp_sock(struct addrinfo *addr, int v6only, int* inuse)
 		}
 # endif
 	}
-	if(bind(s, (struct sockaddr*)addr->ai_addr, addr->ai_addrlen) != 0) {
+	if(bind(s, (struct sockaddr*)addr, addrlen) != 0) {
 #ifdef EADDRINUSE
 		*inuse = (errno == EADDRINUSE);
 		if(errno != EADDRINUSE)
@@ -184,7 +184,7 @@ create_tcp_accept_sock(struct addrinfo *addr, int v6only)
 #else
 	(void)v6only;
 #endif /* IPV6_V6ONLY */
-	if(bind(s, (struct sockaddr*)addr->ai_addr, addr->ai_addrlen) != 0) {
+	if(bind(s, addr->ai_addr, addr->ai_addrlen) != 0) {
 		log_err("can't bind socket: %s", strerror(errno));
 		return -1;
 	}
@@ -221,7 +221,10 @@ make_sock(int stype, const char* ifname, const char* port,
 		return -1;
 	}
 	if(stype == SOCK_DGRAM) {
-		s = create_udp_sock(res, v6only, &inuse);
+		verbose_print_addr(res);
+		s = create_udp_sock(res->ai_family, res->ai_socktype,
+			(struct sockaddr*)res->ai_addr, 
+			res->ai_addrlen, v6only, &inuse);
 		if(s == -1 && inuse) {
 			log_err("bind: address already in use");
 		}

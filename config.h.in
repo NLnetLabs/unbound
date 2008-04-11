@@ -27,6 +27,9 @@
 /* Define to 1 if you have the `event_base_free' function. */
 #undef HAVE_EVENT_BASE_FREE
 
+/* Define to 1 if you have the `event_base_get_method' function. */
+#undef HAVE_EVENT_BASE_GET_METHOD
+
 /* Define to 1 if you have the `event_base_once' function. */
 #undef HAVE_EVENT_BASE_ONCE
 

@@ -53,6 +53,7 @@
 #include "services/localzone.h"
 #include "services/modstack.h"
 #include "util/module.h"
+#include "util/random.h"
 #include <signal.h>
 
 /** How many quit requests happened. */
@@ -173,22 +174,72 @@ static void daemon_setup_modules(struct daemon* daemon)
 }
 
 /**
+ * Obtain allowed port numbers, concatenate the list, and shuffle them
+ * (ready to be handed out to threads).
+ * @param daemon: the daemon. Uses rand and cfg.
+ * @param shufport: the portlist output.
+ * @return number of ports available.
+ */
+int daemon_get_shufport(struct daemon* daemon, int* shufport)
+{
+	int i, n, k, temp;
+	int avail = 0;
+	for(i=0; i<65536; i++) {
+		if(daemon->cfg->outgoing_avail_ports[i]) {
+			shufport[avail++] = daemon->cfg->
+				outgoing_avail_ports[i];
+		}
+	}
+	if(avail == 0)
+		fatal_exit("no ports are permitted for UDP, add "
+			"with outgoing-port-permit");
+        /* Knuth shuffle */
+	n = avail;
+	while(--n > 0) {
+		k = ub_random(daemon->rand) % (n+1); /* 0<= k<= n */
+		temp = shufport[k];
+		shufport[k] = shufport[n];
+		shufport[n] = temp;
+	}
+	return avail;
+}
+
+/**
  * Allocate empty worker structures. With backptr and thread-number,
  * from 0..numthread initialised. Used as user arguments to new threads.
+ * Creates the daemon random generator if it does not exist yet.
+ * The random generator stays existing between reloads with a unique state.
  * @param daemon: the daemon with (new) config settings.
  */
 static void 
 daemon_create_workers(struct daemon* daemon)
 {
-	int i;
+	int i, numport;
+	int* shufport;
 	log_assert(daemon && daemon->cfg);
+	if(!daemon->rand) {
+		unsigned int seed = (unsigned int)time(NULL) ^ 
+			(unsigned int)getpid() ^ 0x438;
+		daemon->rand = ub_initstate(seed, NULL);
+		if(!daemon->rand)
+			fatal_exit("could not init random generator");
+	}
+	shufport = (int*)calloc(65536, sizeof(int));
+	if(!shufport)
+		fatal_exit("out of memory during daemon init");
+	numport = daemon_get_shufport(daemon, shufport);
+	
 	daemon->num = daemon->cfg->num_threads;
 	daemon->workers = (struct worker**)calloc((size_t)daemon->num, 
 		sizeof(struct worker*));
 	for(i=0; i<daemon->num; i++) {
-		if(!(daemon->workers[i] = worker_create(daemon, i)))
+		if(!(daemon->workers[i] = worker_create(daemon, i,
+			shufport+numport*i/daemon->num, 
+			numport*(i+1)/daemon->num - numport*i/daemon->num)))
+			/* the above is not ports/numthr, due to rounding */
 			fatal_exit("could not create worker");
 	}
+	free(shufport);
 }
 
 /**
@@ -363,6 +414,7 @@ daemon_delete(struct daemon* daemon)
 		rrset_cache_delete(daemon->env->rrset_cache);
 		infra_delete(daemon->env->infra_cache);
 	}
+	ub_randfree(daemon->rand);
 	alloc_clear(&daemon->superalloc);
 	acl_list_delete(daemon->acl);
 	free(daemon->pidfile);

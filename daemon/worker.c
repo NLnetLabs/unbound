@@ -892,12 +892,18 @@ void worker_stat_timer_cb(void* arg)
 }
 
 struct worker* 
-worker_create(struct daemon* daemon, int id)
+worker_create(struct daemon* daemon, int id, int* ports, int n)
 {
 	struct worker* worker = (struct worker*)calloc(1, 
 		sizeof(struct worker));
 	if(!worker) 
 		return NULL;
+	worker->numports = n;
+	worker->ports = (int*)memdup(ports, sizeof(int)*n);
+	if(!worker->ports) {
+		free(worker);
+		return NULL;
+	}
 	worker->daemon = daemon;
 	worker->thread_num = id;
 	worker->cmd_send_fd = -1;
@@ -980,7 +986,7 @@ worker_init(struct worker* worker, struct config_file *cfg,
 		cfg->out_ifs, cfg->num_out_ifs, cfg->do_ip4, cfg->do_ip6, 
 		startport, cfg->do_tcp?cfg->outgoing_num_tcp:0, 
 		worker->daemon->env->infra_cache, worker->rndstate,
-		cfg->use_caps_bits_for_id);
+		cfg->use_caps_bits_for_id, worker->ports, worker->numports);
 	if(!worker->back) {
 		log_err("could not create outgoing sockets");
 		worker_delete(worker);
@@ -1069,6 +1075,7 @@ worker_delete(struct worker* worker)
 	comm_signal_delete(worker->comsig);
 	comm_point_delete(worker->cmd_com);
 	comm_timer_delete(worker->stat_timer);
+	free(worker->ports);
 	if(worker->thread_num == 0)
 		log_set_time(NULL);
 	comm_base_delete(worker->base);
@@ -1093,12 +1100,10 @@ worker_send_packet(ldns_buffer* pkt, struct sockaddr_storage* addr,
 	struct worker* worker = q->env->worker;
 	if(use_tcp) {
 		return pending_tcp_query(worker->back, pkt, addr, addrlen, 
-			timeout, worker_handle_reply, q, 
-			worker->rndstate) != 0;
+			timeout, worker_handle_reply, q) != 0;
 	}
 	return pending_udp_query(worker->back, pkt, addr, addrlen, 
-		timeout*1000, worker_handle_reply, q, 
-		worker->rndstate) != 0;
+		timeout*1000, worker_handle_reply, q) != 0;
 }
 
 /** compare outbound entry qstates */

@@ -61,12 +61,17 @@
 
 /** number of times to retry making a random ID that is unique. */
 #define MAX_ID_RETRY 1000
+/** number of times to retry finding interface, port that can be opened. */
+#define MAX_PORT_RETRY 1000
 /** number of retries on outgoing UDP queries */
 #define OUTBOUND_UDP_RETRY 1
 
 /** initiate TCP transaction for serviced query */
 static void serviced_tcp_initiate(struct outside_network* outnet, 
 	struct serviced_query* sq, ldns_buffer* buff);
+/** with a fd available, randomize and send UDP */
+static int randomize_and_send_udp(struct outside_network* outnet, 
+	struct pending* pend, ldns_buffer* packet, int timeout);
 
 int 
 pending_cmp(const void* key1, const void* key2)
@@ -226,6 +231,53 @@ outnet_tcp_cb(struct comm_point* c, void* arg, int error,
 	return 0;
 }
 
+/** lower use count on pc, see if it can be closed */
+static void
+portcomm_loweruse(struct outside_network* outnet, struct port_comm* pc)
+{
+	struct port_if* pif;
+	pc->num_outstanding--;
+	if(pc->num_outstanding > 0) {
+		return;
+	}
+	/* close it and replace in unused list */
+	comm_point_close(pc->cp);
+	pif = pc->pif;
+	log_assert(pif->inuse > 0);
+	pif->avail_ports[pif->avail_total - pif->inuse] = pc->number;
+	pif->inuse--;
+	pif->out[pc->index] = pif->out[pif->inuse];
+	pc->next = outnet->unused_fds;
+	outnet->unused_fds = pc;
+}
+
+/** try to send waiting UDP queries */
+static void
+outnet_send_wait_udp(struct outside_network* outnet)
+{
+	struct pending* pend;
+	/* process waiting queries */
+	while(outnet->udp_wait_first && outnet->unused_fds) {
+		pend = outnet->udp_wait_first;
+		outnet->udp_wait_first = pend->next_waiting;
+		if(!pend->next_waiting) outnet->udp_wait_last = NULL;
+		ldns_buffer_clear(outnet->udp_buff);
+		ldns_buffer_write(outnet->udp_buff, pend->pkt, pend->pkt_len);
+		ldns_buffer_flip(outnet->udp_buff);
+		free(pend->pkt); /* freeing now makes get_mem correct */
+		pend->pkt = NULL; 
+		pend->pkt_len = 0;
+		if(!randomize_and_send_udp(outnet, pend, outnet->udp_buff, 
+			pend->timeout)) {
+			/* callback error on pending */
+			fptr_ok(fptr_whitelist_pending_udp(pend->cb));
+			(void)(*pend->cb)(pend->pc->cp, pend->cb_arg, 
+				NETEVENT_CLOSED, NULL);
+			pending_delete(outnet, pend);
+		}
+	}
+}
+
 int 
 outnet_udp_cb(struct comm_point* c, void* arg, int error,
 	struct comm_reply *reply_info)
@@ -246,7 +298,7 @@ outnet_udp_cb(struct comm_point* c, void* arg, int error,
 	log_assert(reply_info);
 
 	/* setup lookup key */
-	key.id = LDNS_ID_WIRE(ldns_buffer_begin(c->buffer));
+	key.id = (unsigned)LDNS_ID_WIRE(ldns_buffer_begin(c->buffer));
 	memcpy(&key.addr, &reply_info->addr, reply_info->addrlen);
 	key.addrlen = reply_info->addrlen;
 	verbose(VERB_ALGO, "Incoming reply id = %4.4x", key.id);
@@ -264,7 +316,7 @@ outnet_udp_cb(struct comm_point* c, void* arg, int error,
 
 	verbose(VERB_ALGO, "received udp reply.");
 	log_buf(VERB_ALGO, "udp message", c->buffer);
-	if(p->c != c) {
+	if(p->pc->cp != c) {
 		verbose(VERB_QUERY, "received reply id,addr on wrong port. "
 			"dropped.");
 		return 0;
@@ -274,134 +326,36 @@ outnet_udp_cb(struct comm_point* c, void* arg, int error,
 	/* delete from tree first in case callback creates a retry */
 	(void)rbtree_delete(outnet->pending, p->node.key);
 	fptr_ok(fptr_whitelist_pending_udp(p->cb));
-	(void)(*p->cb)(p->c, p->cb_arg, NETEVENT_NOERROR, reply_info);
-	p->c->inuse--;
-	if(p->c->inuse == 0)
-		comm_point_stop_listening(p->c);
+	(void)(*p->cb)(p->pc->cp, p->cb_arg, NETEVENT_NOERROR, reply_info);
+	portcomm_loweruse(outnet, p->pc);
 	pending_delete(NULL, p);
+	outnet_send_wait_udp(outnet);
 	return 0;
 }
 
-/** open another udp port to listen to, every thread has its own range
-  * of open ports.
-  * @param ifname: on which interface to open the port.
-  * @param hints: hints on family and passiveness preset.
-  * @param porthint: if not -1, it gives the port to base range on.
-  * @param inuse: on error, true if the port was in use.
-  * @return: file descriptor
-  */
-static int 
-open_udp_port_range(const char* ifname, struct addrinfo* hints, int porthint,
-	int* inuse)
-{
-	struct addrinfo *res = NULL;
-	int r, s;
-	char portstr[32];
-	if(porthint != -1)
-		snprintf(portstr, sizeof(portstr), "%d", porthint);
-	else if(!ifname) {
-		if(hints->ai_family == AF_INET)
-			ifname = "0.0.0.0";
-		else	ifname="::";
-	}
-
-	if((r=getaddrinfo(ifname, ((porthint==-1)?NULL:portstr), hints, 
-		&res)) != 0 || !res) {
-		log_err("node %s %s getaddrinfo: %s %s",
-			ifname?ifname:"default", (porthint!=-1)?portstr:"eph", 
-			gai_strerror(r), 
-			r==EAI_SYSTEM?(char*)strerror(errno):"");
-		return -1;
-	}
-	s = create_udp_sock(res, 1, inuse);
-	freeaddrinfo(res);
-	return s;
-}
-
-/**
- * Create range of UDP ports on the given interface.
- * Returns number of ports bound.
- * @param coms: communication point array start position. Filled with entries.
- * @param ifname: name of interface to make port on.
- * @param num_ports: number of ports opened.
- * @param do_ip4: if true make ip4 ports.
- * @param do_ip6: if true make ip6 ports.
- * @param porthint: -1 for system chosen port, or a base of port range.
- * @param outnet: network structure with comm base, shared udp buffer.
- * @return: the number of ports successfully opened, entries filled in coms.
- */
-static size_t 
-make_udp_range(struct comm_point** coms, const char* ifname, 
-	size_t num_ports, int do_ip4, int do_ip6, int porthint,
-	struct outside_network* outnet)
-{
-	size_t i;
-	size_t done = 0;
-	struct addrinfo hints;
-	memset(&hints, 0, sizeof(hints));
-	hints.ai_flags = AI_PASSIVE;
-	if(ifname)
-		hints.ai_flags |= AI_NUMERICHOST;
-	hints.ai_family = AF_UNSPEC;
-	if(do_ip4 && do_ip6)
-		hints.ai_family = AF_UNSPEC;
-	else if(do_ip4)
-		hints.ai_family = AF_INET;
-	else if(do_ip6)
-		hints.ai_family = AF_INET6;
-	hints.ai_socktype = SOCK_DGRAM;
-	for(i=0; i<num_ports; i++) {
-		int fd = -1;
-		int inuse = 1;
-		while(fd == -1 && inuse) {
-			inuse = 0;
-			fd = open_udp_port_range(ifname, &hints, 
-				porthint, &inuse);
-			if(fd == -1 && porthint != -1 && inuse)
-				verbose(VERB_DETAIL, "%sport %d already in use, skipped", 
-					(do_ip6?"IP6 ":""), porthint);
-			if(porthint != -1) {
-				porthint++;
-				if(porthint > 65535) {
-					log_err("ports maxed. cannot open ports");
-					return done;
-				}
-			}
-		}
-		coms[done] = comm_point_create_udp(outnet->base, fd, 
-			outnet->udp_buff, outnet_udp_cb, outnet);
-		if(coms[done]) {
-			log_assert(coms[done]->inuse == 0);
-			comm_point_stop_listening(coms[done]);
-			done++;
-		}
-	}
-	return done;
-}
-
-/** calculate number of ip4 and ip6 interfaces, times multiplier */
+/** calculate number of ip4 and ip6 interfaces*/
 static void 
 calc_num46(char** ifs, int num_ifs, int do_ip4, int do_ip6, 
-	size_t multiplier, size_t* num_ip4, size_t* num_ip6)
+	int* num_ip4, int* num_ip6)
 {
 	int i;
 	*num_ip4 = 0;
 	*num_ip6 = 0;
 	if(num_ifs <= 0) {
 		if(do_ip4)
-			*num_ip4 = multiplier;
+			*num_ip4 = 1;
 		if(do_ip6)
-			*num_ip6 = multiplier;
+			*num_ip6 = 1;
 		return;
 	}
 	for(i=0; i<num_ifs; i++)
 	{
 		if(str_is_ip6(ifs[i])) {
 			if(do_ip6)
-				*num_ip6 += multiplier;
+				(*num_ip6)++;
 		} else {
 			if(do_ip4)
-				*num_ip4 += multiplier;
+				(*num_ip4)++;
 		}
 	}
 
@@ -411,14 +365,14 @@ void
 pending_udp_timer_cb(void *arg)
 {
 	struct pending* p = (struct pending*)arg;
+	struct outside_network* outnet = p->outnet;
 	/* it timed out */
 	verbose(VERB_ALGO, "timeout udp");
 	fptr_ok(fptr_whitelist_pending_udp(p->cb));
-	(void)(*p->cb)(p->c, p->cb_arg, NETEVENT_TIMEOUT, NULL);
-	p->c->inuse--;
-	if(p->c->inuse == 0)
-		comm_point_stop_listening(p->c);
-	pending_delete(p->outnet, p);
+	(void)(*p->cb)(p->pc->cp, p->cb_arg, NETEVENT_TIMEOUT, NULL);
+	portcomm_loweruse(outnet, p->pc);
+	pending_delete(outnet, p);
+	outnet_send_wait_udp(outnet);
 }
 
 /** create pending_tcp buffers */
@@ -446,15 +400,35 @@ create_pending_tcp(struct outside_network* outnet, size_t bufsize)
 	return 1;
 }
 
+/** setup an outgoing interface, ready address */
+static int setup_if(struct port_if* pif, const char* addrstr, 
+	int* avail, int numavail, size_t numfd)
+{
+	pif->avail_total = numavail;
+	pif->avail_ports = (int*)memdup(avail, (size_t)numavail*sizeof(int));
+	if(!pif->avail_ports)
+		return 0;
+	if(!ipstrtoaddr(addrstr, UNBOUND_DNS_PORT, &pif->addr, &pif->addrlen))
+		return 0;
+	pif->maxout = (int)numfd;
+	pif->inuse = 0;
+	pif->out = (struct port_comm**)calloc(numfd, 
+		sizeof(struct port_comm*));
+	if(!pif->out)
+		return 0;
+	return 1;
+}
+
 struct outside_network* 
 outside_network_create(struct comm_base *base, size_t bufsize, 
 	size_t num_ports, char** ifs, int num_ifs, int do_ip4, 
 	int do_ip6, int port_base, size_t num_tcp, struct infra_cache* infra,
-	struct ub_randstate* rnd, int use_caps_for_id)
+	struct ub_randstate* rnd, int use_caps_for_id, int* availports, 
+	int numavailports)
 {
 	struct outside_network* outnet = (struct outside_network*)
 		calloc(1, sizeof(struct outside_network));
-	int k;
+	size_t k;
 	if(!outnet) {
 		log_err("malloc failed");
 		return NULL;
@@ -466,17 +440,33 @@ outside_network_create(struct comm_base *base, size_t bufsize,
 	outnet->rnd = rnd;
 	outnet->svcd_overhead = 0;
 	outnet->use_caps_for_id = use_caps_for_id;
+	if(numavailports == 0) {
+		log_err("no outgoing ports available");
+		outside_network_delete(outnet);
+		return NULL;
+	}
 #ifndef INET6
 	do_ip6 = 0;
 #endif
-	calc_num46(ifs, num_ifs, do_ip4, do_ip6, num_ports, 
-		&outnet->num_udp4, &outnet->num_udp6);
-	/* adds +1 to portnums so we do not allocate zero bytes. */
+	calc_num46(ifs, num_ifs, do_ip4, do_ip6, 
+		&outnet->num_ip4, &outnet->num_ip6);
+	if(outnet->num_ip4 != 0) {
+		if(!(outnet->ip4_ifs = (struct port_if*)calloc(
+			(size_t)outnet->num_ip4, sizeof(struct port_if)))) {
+			log_err("malloc failed");
+			outside_network_delete(outnet);
+			return NULL;
+		}
+	}
+	if(outnet->num_ip6 != 0) {
+		if(!(outnet->ip6_ifs = (struct port_if*)calloc(
+			(size_t)outnet->num_ip6, sizeof(struct port_if)))) {
+			log_err("malloc failed");
+			outside_network_delete(outnet);
+			return NULL;
+		}
+	}
 	if(	!(outnet->udp_buff = ldns_buffer_new(bufsize)) ||
-		!(outnet->udp4_ports = (struct comm_point **)calloc(
-			outnet->num_udp4+1, sizeof(struct comm_point*))) ||
-		!(outnet->udp6_ports = (struct comm_point **)calloc(
-			outnet->num_udp6+1, sizeof(struct comm_point*))) ||
 		!(outnet->pending = rbtree_create(pending_cmp)) ||
 		!(outnet->serviced = rbtree_create(serviced_cmp)) ||
 		!create_pending_tcp(outnet, bufsize)) {
@@ -484,49 +474,65 @@ outside_network_create(struct comm_base *base, size_t bufsize,
 		outside_network_delete(outnet);
 		return NULL;
 	}
-	/* Try to get ip6 and ip4 ports. Ip6 first, in case second fails. */
+
+	/* allocate commpoints */
+	for(k=0; k<num_ports; k++) {
+		struct port_comm* pc;
+		pc = (struct port_comm*)calloc(1, sizeof(*pc));
+		if(!pc) {
+			log_err("malloc failed");
+			outside_network_delete(outnet);
+			return NULL;
+		}
+		pc->cp = comm_point_create_udp(outnet->base, -1, 
+			outnet->udp_buff, outnet_udp_cb, outnet);
+		if(!pc->cp) {
+			log_err("malloc failed");
+			free(pc);
+			outside_network_delete(outnet);
+			return NULL;
+		}
+		pc->next = outnet->unused_fds;
+		outnet->unused_fds = pc;
+	}
+
+	/* allocate interfaces */
 	if(num_ifs == 0) {
-		if(do_ip6) {
-		   	outnet->num_udp6 = make_udp_range(outnet->udp6_ports, 
-				NULL, num_ports, 0, 1, port_base, outnet);
-		}
-		if(do_ip4) {
-			outnet->num_udp4 = make_udp_range(outnet->udp4_ports, 
-				NULL, num_ports, 1, 0, port_base, outnet);
-		}
-		if( (do_ip4 && outnet->num_udp4 != num_ports) || 
-			(do_ip6 && outnet->num_udp6 != num_ports)) {
-			log_err("Could not open all networkside ports");
+		if(do_ip4 && !setup_if(&outnet->ip4_ifs[0], "0.0.0.0", 
+			availports, numavailports, num_ports)) {
+			log_err("malloc failed");
 			outside_network_delete(outnet);
 			return NULL;
 		}
-	}
-	else {
+		if(do_ip6 && !setup_if(&outnet->ip6_ifs[0], "::", 
+			availports, numavailports, num_ports)) {
+			log_err("malloc failed");
+			outside_network_delete(outnet);
+			return NULL;
+		}
+	} else {
 		size_t done_4 = 0, done_6 = 0;
-		for(k=0; k<num_ifs; k++) {
-			if(str_is_ip6(ifs[k]) && do_ip6) {
-				done_6 += make_udp_range(
-					outnet->udp6_ports+done_6, ifs[k],
-					num_ports, 0, 1, port_base, outnet);
+		int i;
+		for(i=0; i<num_ifs; i++) {
+			if(str_is_ip6(ifs[i]) && do_ip6) {
+				if(!setup_if(&outnet->ip6_ifs[done_6], ifs[i],
+					availports, numavailports, num_ports)){
+					log_err("malloc failed");
+					outside_network_delete(outnet);
+					return NULL;
+				}
+				done_6++;
 			}
-			if(!str_is_ip6(ifs[k]) && do_ip4) {
-				done_4 += make_udp_range(
-					outnet->udp4_ports+done_4, ifs[k],
-					num_ports, 1, 0, port_base, outnet);
+			if(!str_is_ip6(ifs[i]) && do_ip4) {
+				if(!setup_if(&outnet->ip4_ifs[done_4], ifs[i],
+					availports, numavailports, num_ports)){
+					log_err("malloc failed");
+					outside_network_delete(outnet);
+					return NULL;
+				}
+				done_4++;
 			}
 		}
-		if(done_6 != outnet->num_udp6 || done_4 != outnet->num_udp4) {
-			log_err("Could not open all ports on all interfaces");
-			outside_network_delete(outnet);
-			return NULL;
-		}
-		outnet->num_udp6 = done_6;
-		outnet->num_udp4 = done_4;
-	}
-	if(outnet->num_udp4 + outnet->num_udp6 == 0) {
-		log_err("Could not open any ports on outgoing interfaces");
-		outside_network_delete(outnet);
-		return NULL;
 	}
 	return outnet;
 }
@@ -537,9 +543,6 @@ pending_node_del(rbnode_t* node, void* arg)
 {
 	struct pending* pend = (struct pending*)node;
 	struct outside_network* outnet = (struct outside_network*)arg;
-	pend->c->inuse--;
-	if(pend->c->inuse == 0)
-		comm_point_stop_listening(pend->c);
 	pending_delete(outnet, pend);
 }
 
@@ -575,17 +578,43 @@ outside_network_delete(struct outside_network* outnet)
 	}
 	if(outnet->udp_buff)
 		ldns_buffer_free(outnet->udp_buff);
-	if(outnet->udp4_ports) {
-		size_t i;
-		for(i=0; i<outnet->num_udp4; i++)
-			comm_point_delete(outnet->udp4_ports[i]);
-		free(outnet->udp4_ports);
+	if(outnet->unused_fds) {
+		struct port_comm* p = outnet->unused_fds, *np;
+		while(p) {
+			np = p->next;
+			comm_point_delete(p->cp);
+			free(p);
+			p = np;
+		}
+		outnet->unused_fds = NULL;
 	}
-	if(outnet->udp6_ports) {
-		size_t i;
-		for(i=0; i<outnet->num_udp6; i++)
-			comm_point_delete(outnet->udp6_ports[i]);
-		free(outnet->udp6_ports);
+	if(outnet->ip4_ifs) {
+		int i, k;
+		for(i=0; i<outnet->num_ip4; i++) {
+			for(k=0; k<outnet->ip4_ifs[i].inuse; k++) {
+				struct port_comm* pc = outnet->ip4_ifs[i].
+					out[k];
+				comm_point_delete(pc->cp);
+				free(pc);
+			}
+			free(outnet->ip4_ifs[i].avail_ports);
+			free(outnet->ip4_ifs[i].out);
+		}
+		free(outnet->ip4_ifs);
+	}
+	if(outnet->ip6_ifs) {
+		int i, k;
+		for(i=0; i<outnet->num_ip6; i++) {
+			for(k=0; k<outnet->ip6_ifs[i].inuse; k++) {
+				struct port_comm* pc = outnet->ip6_ifs[i].
+					out[k];
+				comm_point_delete(pc->cp);
+				free(pc);
+			}
+			free(outnet->ip6_ifs[i].avail_ports);
+			free(outnet->ip6_ifs[i].out);
+		}
+		free(outnet->ip6_ifs);
 	}
 	if(outnet->tcp_conns) {
 		size_t i;
@@ -605,7 +634,14 @@ outside_network_delete(struct outside_network* outnet)
 			p = np;
 		}
 	}
-
+	if(outnet->udp_wait_first) {
+		struct pending* p = outnet->udp_wait_first, *np;
+		while(p) {
+			np = p->next_waiting;
+			pending_delete(NULL, p);
+			p = np;
+		}
+	}
 	free(outnet);
 }
 
@@ -619,133 +655,216 @@ pending_delete(struct outside_network* outnet, struct pending* p)
 	}
 	if(p->timer)
 		comm_timer_delete(p->timer);
+	free(p->pkt);
 	free(p);
 }
 
-/** create a new pending item with given characteristics, false on failure */
-static struct pending*
-new_pending(struct outside_network* outnet, ldns_buffer* packet, 
-	struct sockaddr_storage* addr, socklen_t addrlen,
-	comm_point_callback_t* callback, void* callback_arg, 
-	struct ub_randstate* rnd)
+/**
+ * Try to open a UDP socket for outgoing communication.
+ * Sets sockets options as needed.
+ * @param addr: socket address.
+ * @param addrlen: length of address.
+ * @param port: port override for addr.
+ * @param inuse: if -1 is returned, this bool means the port was in use.
+ * @return fd or -1
+ */
+static int
+udp_sockport(struct sockaddr_storage* addr, socklen_t addrlen, int port, 
+	int* inuse)
 {
-	/* alloc */
+	int fd;
+	if(addr_is_ip6(addr, addrlen)) {
+		struct sockaddr_in6* sa = (struct sockaddr_in6*)addr;
+		sa->sin6_port = (in_port_t)htons((uint16_t)port);
+		fd = create_udp_sock(AF_INET6, SOCK_DGRAM, 
+			(struct sockaddr*)addr, addrlen, 1, inuse);
+	} else {
+		struct sockaddr_in* sa = (struct sockaddr_in*)addr;
+		sa->sin_port = (in_port_t)htons((uint16_t)port);
+		fd = create_udp_sock(AF_INET, SOCK_DGRAM, 
+			(struct sockaddr*)addr, addrlen, 1, inuse);
+	}
+	return fd;
+}
+
+/** Select random ID */
+static int
+select_id(struct outside_network* outnet, struct pending* pend,
+	ldns_buffer* packet)
+{
 	int id_tries = 0;
-	struct pending* pend = (struct pending*)calloc(1, 
-		sizeof(struct pending));
-	if(!pend) {
-		log_err("malloc failure");
-		return NULL;
-	}
-	pend->timer = comm_timer_create(outnet->base, pending_udp_timer_cb, 
-		pend);
-	if(!pend->timer) {
-		free(pend);
-		return NULL;
-	}
-	/* set */
-	pend->id = ((unsigned)ub_random(rnd)>>8) & 0xffff;
+	pend->id = ((unsigned)ub_random(outnet->rnd)>>8) & 0xffff;
 	LDNS_ID_SET(ldns_buffer_begin(packet), pend->id);
-	memcpy(&pend->addr, addr, addrlen);
-	pend->addrlen = addrlen;
-	pend->cb = callback;
-	pend->cb_arg = callback_arg;
-	pend->outnet = outnet;
 
 	/* insert in tree */
 	pend->node.key = pend;
 	while(!rbtree_insert(outnet->pending, &pend->node)) {
 		/* change ID to avoid collision */
-		pend->id = ((unsigned)ub_random(rnd)>>8) & 0xffff;
+		pend->id = ((unsigned)ub_random(outnet->rnd)>>8) & 0xffff;
 		LDNS_ID_SET(ldns_buffer_begin(packet), pend->id);
 		id_tries++;
 		if(id_tries == MAX_ID_RETRY) {
+			pend->id=99999; /* non existant ID */
 			log_err("failed to generate unique ID, drop msg");
-			pending_delete(NULL, pend);
-			return NULL;
+			return 0;
 		}
 	}
 	verbose(VERB_ALGO, "inserted new pending reply id=%4.4x", pend->id);
-	return pend;
+	return 1;
 }
 
-/** 
- * Select outgoing comm point for a query. Fills in c. 
- * @param outnet: network structure that has arrays of ports to choose from.
- * @param pend: the message to send. c is filled in, randomly chosen.
- * @param rnd: random state for generating ID and port.
- */
-static void 
-select_port(struct outside_network* outnet, struct pending* pend,
-	struct ub_randstate* rnd)
+/** Select random interface and port */
+static int
+select_ifport(struct outside_network* outnet, struct pending* pend,
+	int num_if, struct port_if* ifs)
 {
-	double precho;
-	int chosen, nummax;
-
-	log_assert(outnet && pend);
-	/* first select ip4 or ip6. */
-	if(addr_is_ip6(&pend->addr, pend->addrlen))
-		nummax = (int)outnet->num_udp6;
-	else 	nummax = (int)outnet->num_udp4;
-
-	if(nummax == 0) {
-		/* could try ip4to6 mapping if no ip4 ports available */
-		log_err("Need to send query but have no ports of that family");
-		return;
+	int my_if, my_port, fd, portno, inuse, tries=0;
+	struct port_if* pif;
+	/* randomly select interface and port */
+	if(num_if == 0) {
+		verbose(VERB_QUERY, "Need to send query but have no "
+			"outgoing interfaces of that family");
+		return 0;
 	}
+	log_assert(outnet->unused_fds);
+	tries = 0;
+	while(1) {
+		my_if = ub_random(outnet->rnd) % num_if;
+		pif = &ifs[my_if];
+		my_port = ub_random(outnet->rnd) % pif->avail_total;
+		if(my_port < pif->inuse) {
+			/* port already open */
+			pend->pc = pif->out[my_port];
+			verbose(VERB_ALGO, "using UDP if=%d port=%d", 
+				my_if, pend->pc->number);
+			break;
+		}
+		/* try to open new port, if fails, loop to try again */
+		log_assert(pif->inuse < pif->maxout);
+		portno = pif->avail_ports[my_port - pif->inuse];
+		fd = udp_sockport(&pif->addr, pif->addrlen, portno, &inuse);
+		if(fd == -1 && !inuse) {
+			/* nonrecoverable error making socket */
+			return 0;
+		}
+		if(fd != -1) {
+			verbose(VERB_ALGO, "opened UDP if=%d port=%d", 
+				my_if, portno);
+			/* grab fd */
+			pend->pc = outnet->unused_fds;
+			outnet->unused_fds = pend->pc->next;
 
-	/* choose a random outgoing port and interface */
-	precho = (double)ub_random(rnd) * (double)nummax / 
-		((double)RAND_MAX + 1.0);
-	chosen = (int)precho;
+			/* setup portcomm */
+			pend->pc->next = NULL;
+			pend->pc->number = portno;
+			pend->pc->pif = pif;
+			pend->pc->index = pif->inuse;
+			pend->pc->num_outstanding = 0;
+			comm_point_start_listening(pend->pc->cp, fd, -1);
 
-	/* don't trust in perfect double rounding */
-	if(chosen < 0) chosen = 0;
-	if(chosen >= nummax) chosen = nummax-1;
+			/* grab port in interface */
+			pif->out[pif->inuse] = pend->pc;
+			pif->avail_ports[my_port - pif->inuse] =
+				pif->avail_ports[pif->avail_total-pif->inuse-1];
+			pif->inuse++;
+			break;
+		}
+		/* failed, already in use */
+		verbose(VERB_QUERY, "port %d in use, trying another", portno);
+		tries++;
+		if(tries == MAX_PORT_RETRY) {
+			log_err("failed to find an open port, drop msg");
+			return 0;
+		}
+	}
+	log_assert(pend->pc);
+	pend->pc->num_outstanding++;
 
-	if(addr_is_ip6(&pend->addr, pend->addrlen))
-		pend->c = outnet->udp6_ports[chosen];
-	else	pend->c = outnet->udp4_ports[chosen];
-	log_assert(pend->c);
-
-	verbose(VERB_ALGO, "query %x outbound on port %d of %d", pend->id, chosen, nummax);
+	return 1;
 }
 
-
-struct pending* 
-pending_udp_query(struct outside_network* outnet, ldns_buffer* packet, 
-	struct sockaddr_storage* addr, socklen_t addrlen, int timeout,
-	comm_point_callback_t* cb, void* cb_arg, struct ub_randstate* rnd)
+static int
+randomize_and_send_udp(struct outside_network* outnet, struct pending* pend,
+	ldns_buffer* packet, int timeout)
 {
-	struct pending* pend;
 	struct timeval tv;
 
-	/* create pending struct and change ID to be unique */
-	if(!(pend=new_pending(outnet, packet, addr, addrlen, cb, cb_arg, 
-		rnd))) {
-		return NULL;
-	}
-	select_port(outnet, pend, rnd);
-	if(!pend->c) {
-		pending_delete(outnet, pend);
-		return NULL;
+	/* select id */
+	if(!select_id(outnet, pend, packet)) {
+		return 0;
 	}
 
-	/* send it over the commlink */
-	if(!comm_point_send_udp_msg(pend->c, packet, (struct sockaddr*)addr, 
-		addrlen)) {
-		pending_delete(outnet, pend);
-		return NULL;
+	/* select src_if, port */
+	if(addr_is_ip6(&pend->addr, pend->addrlen)) {
+		if(!select_ifport(outnet, pend, 
+			outnet->num_ip6, outnet->ip6_ifs))
+			return 0;
+	} else {
+		if(!select_ifport(outnet, pend, 
+			outnet->num_ip4, outnet->ip4_ifs))
+			return 0;
 	}
-	if(pend->c->inuse == 0)
-		comm_point_start_listening(pend->c, -1, -1);
-	pend->c->inuse++;
+	log_assert(pend->pc && pend->pc->cp);
+
+	/* send it over the commlink */
+	if(!comm_point_send_udp_msg(pend->pc->cp, packet, 
+		(struct sockaddr*)&pend->addr, pend->addrlen)) {
+		portcomm_loweruse(outnet, pend->pc);
+		return 0;
+	}
 
 	/* system calls to set timeout after sending UDP to make roundtrip
 	   smaller. */
 	tv.tv_sec = timeout/1000;
 	tv.tv_usec = (timeout%1000)*1000;
 	comm_timer_set(pend->timer, &tv);
+	return 1;
+}
+
+struct pending* 
+pending_udp_query(struct outside_network* outnet, ldns_buffer* packet, 
+	struct sockaddr_storage* addr, socklen_t addrlen, int timeout,
+	comm_point_callback_t* cb, void* cb_arg)
+{
+	struct pending* pend = (struct pending*)calloc(1, sizeof(*pend));
+	if(!pend) return NULL;
+	pend->outnet = outnet;
+	pend->addrlen = addrlen;
+	memmove(&pend->addr, addr, addrlen);
+	pend->cb = cb;
+	pend->cb_arg = cb_arg;
+	pend->node.key = pend;
+	pend->timer = comm_timer_create(outnet->base, pending_udp_timer_cb, 
+		pend);
+	if(!pend->timer) {
+		free(pend);
+		return NULL;
+	}
+
+	if(outnet->unused_fds == NULL) {
+		/* no unused fd, cannot create a new port (randomly) */
+		verbose(VERB_ALGO, "no fds available, udp query waiting");
+		pend->timeout = timeout;
+		pend->pkt_len = ldns_buffer_limit(packet);
+		pend->pkt = (uint8_t*)memdup(ldns_buffer_begin(packet),
+			pend->pkt_len);
+		if(!pend->pkt) {
+			comm_timer_delete(pend->timer);
+			free(pend);
+			return NULL;
+		}
+		/* put at end of waiting list */
+		if(outnet->udp_wait_last)
+			outnet->udp_wait_last->next_waiting = pend;
+		else 
+			outnet->udp_wait_first = pend;
+		outnet->udp_wait_last = pend;
+		return pend;
+	}
+	if(!randomize_and_send_udp(outnet, pend, packet, timeout)) {
+		pending_delete(outnet, pend);
+		return NULL;
+	}
 	return pend;
 }
 
@@ -788,8 +907,7 @@ outnet_tcptimer(void* arg)
 struct waiting_tcp* 
 pending_tcp_query(struct outside_network* outnet, ldns_buffer* packet, 
 	struct sockaddr_storage* addr, socklen_t addrlen, int timeout,
-	comm_point_callback_t* callback, void* callback_arg,
-	struct ub_randstate* rnd)
+	comm_point_callback_t* callback, void* callback_arg)
 {
 	struct pending_tcp* pend = outnet->tcp_free;
 	struct waiting_tcp* w;
@@ -807,7 +925,7 @@ pending_tcp_query(struct outside_network* outnet, ldns_buffer* packet,
 	}
 	w->pkt = NULL;
 	w->pkt_len = 0;
-	id = ((unsigned)ub_random(rnd)>>8) & 0xffff;
+	id = ((unsigned)ub_random(outnet->rnd)>>8) & 0xffff;
 	LDNS_ID_SET(ldns_buffer_begin(packet), id);
 	memcpy(&w->addr, addr, addrlen);
 	w->addrlen = addrlen;
@@ -931,10 +1049,9 @@ serviced_delete(struct serviced_query* sq)
 		if(sq->status == serviced_query_UDP_EDNS ||
 			sq->status == serviced_query_UDP) {
 			struct pending* p = (struct pending*)sq->pending;
-			p->c->inuse--;
-			if(p->c->inuse == 0)
-				comm_point_stop_listening(p->c);
+			portcomm_loweruse(sq->outnet, p->pc);
 			pending_delete(sq->outnet, p);
+			outnet_send_wait_udp(sq->outnet);
 		} else {
 			struct waiting_tcp* p = (struct waiting_tcp*)
 				sq->pending;
@@ -1043,7 +1160,7 @@ serviced_udp_send(struct serviced_query* sq, ldns_buffer* buff)
 	sq->last_sent_time = *sq->outnet->now_tv;
 	verbose(VERB_ALGO, "serviced query UDP timeout=%d msec", rtt);
 	sq->pending = pending_udp_query(sq->outnet, buff, &sq->addr, 
-		sq->addrlen, rtt, serviced_udp_callback, sq, sq->outnet->rnd);
+		sq->addrlen, rtt, serviced_udp_callback, sq);
 	if(!sq->pending)
 		return 0;
 	return 1;
@@ -1216,7 +1333,7 @@ serviced_tcp_initiate(struct outside_network* outnet,
 	serviced_encode(sq, buff, sq->status == serviced_query_TCP_EDNS);
 	sq->pending = pending_tcp_query(outnet, buff, &sq->addr,
 		sq->addrlen, TCP_AUTH_QUERY_TIMEOUT, serviced_tcp_callback, 
-		sq, outnet->rnd);
+		sq);
 	if(!sq->pending) {
 		/* delete from tree so that a retry by above layer does not
 		 * clash with this entry */
@@ -1399,22 +1516,52 @@ waiting_tcp_get_mem(struct waiting_tcp* w)
 	return s;
 }
 
+/** get memory used by port if */
+static size_t
+if_get_mem(struct port_if* pif)
+{
+	size_t s;
+	int i;
+	s = sizeof(*pif) + sizeof(int)*pif->avail_total +
+		sizeof(struct port_comm*)*pif->maxout;
+	for(i=0; i<pif->inuse; i++)
+		s += sizeof(*pif->out[i]) + 
+			comm_point_get_mem(pif->out[i]->cp);
+	return s;
+}
+
+/** get memory used by waiting udp */
+static size_t
+waiting_udp_get_mem(struct pending* w)
+{
+	size_t s;
+	s = sizeof(*w) + comm_timer_get_mem(w->timer) + w->pkt_len;
+	return s;
+}
+
 size_t outnet_get_mem(struct outside_network* outnet)
 {
 	size_t i;
+	int k;
 	struct waiting_tcp* w;
+	struct pending* u;
 	struct serviced_query* sq;
 	struct service_callback* sb;
+	struct port_comm* pc;
 	size_t s = sizeof(*outnet) + sizeof(*outnet->base) + 
 		sizeof(*outnet->udp_buff) + 
 		ldns_buffer_capacity(outnet->udp_buff);
 	/* second buffer is not ours */
-	s += sizeof(struct comm_point*)*outnet->num_udp4;
-	for(i=0; i<outnet->num_udp4; i++)
-		s += comm_point_get_mem(outnet->udp4_ports[i]);
-	s += sizeof(struct comm_point*)*outnet->num_udp6;
-	for(i=0; i<outnet->num_udp6; i++)
-		s += comm_point_get_mem(outnet->udp6_ports[i]);
+	for(pc = outnet->unused_fds; pc; pc = pc->next) {
+		s += sizeof(*pc) + comm_point_get_mem(pc->cp);
+	}
+	for(k=0; k<outnet->num_ip4; k++)
+		s += if_get_mem(&outnet->ip4_ifs[k]);
+	for(k=0; k<outnet->num_ip6; k++)
+		s += if_get_mem(&outnet->ip6_ifs[k]);
+	for(u=outnet->udp_wait_first; u; u=u->next_waiting)
+		s += waiting_udp_get_mem(u);
+	
 	s += sizeof(struct pending_tcp*)*outnet->num_tcp;
 	for(i=0; i<outnet->num_tcp; i++) {
 		s += sizeof(struct pending_tcp);

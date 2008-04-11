@@ -93,6 +93,8 @@ libworker_setup(struct ub_ctx* ctx, int is_bg)
 	unsigned int seed;
 	struct libworker* w = (struct libworker*)calloc(1, sizeof(*w));
 	struct config_file* cfg = ctx->env->cfg;
+	int* ports;
+	int numports;
 	if(!w) return NULL;
 	w->is_bg = is_bg;
 	w->ctx = ctx;
@@ -149,14 +151,21 @@ libworker_setup(struct ub_ctx* ctx, int is_bg)
 	if(!w->is_bg || w->is_bg_thread) {
 		lock_basic_lock(&ctx->cfglock);
 	}
+	numports = cfg_condense_ports(cfg, &ports);
+	if(numports == 0) {
+		libworker_delete(w);
+		return NULL;
+	}
 	w->back = outside_network_create(w->base, cfg->msg_buffer_size,
 		(size_t)cfg->outgoing_num_ports, cfg->out_ifs,
 		cfg->num_out_ifs, cfg->do_ip4, cfg->do_ip6, -1, 
 		cfg->do_tcp?cfg->outgoing_num_tcp:0,
-		w->env->infra_cache, w->env->rnd, cfg->use_caps_bits_for_id);
+		w->env->infra_cache, w->env->rnd, cfg->use_caps_bits_for_id,
+		ports, numports);
 	if(!w->is_bg || w->is_bg_thread) {
 		lock_basic_unlock(&ctx->cfglock);
 	}
+	free(ports);
 	if(!w->back) {
 		libworker_delete(w);
 		return NULL;
@@ -767,12 +776,10 @@ int libworker_send_packet(ldns_buffer* pkt, struct sockaddr_storage* addr,
 	struct libworker* w = (struct libworker*)q->env->worker;
 	if(use_tcp) {
 		return pending_tcp_query(w->back, pkt, addr, addrlen,
-			timeout, libworker_handle_reply, q, 
-			q->env->rnd) != 0;
+			timeout, libworker_handle_reply, q) != 0;
 	}
 	return pending_udp_query(w->back, pkt, addr, addrlen,
-		timeout*1000, libworker_handle_reply, q, 
-		q->env->rnd) != 0;
+		timeout*1000, libworker_handle_reply, q) != 0;
 }
 
 /** compare outbound entry qstates */

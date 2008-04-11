@@ -555,6 +555,7 @@ large outgoing port ranges.  ])
 	AC_CHECK_HEADERS([event.h],,, [AC_INCLUDES_DEFAULT])
 	AC_CHECK_FUNCS([event_base_free]) # only in libevent 1.2 and later
 	AC_CHECK_FUNCS([event_base_once]) # only in libevent 1.4? and later
+	AC_CHECK_FUNCS([event_base_get_method]) # only in libevent 1.4.3 and later
 	if test -n "$BAK_LDFLAGS"; then
 		LDFLAGS="$BAK_LDFLAGS"
 	fi
