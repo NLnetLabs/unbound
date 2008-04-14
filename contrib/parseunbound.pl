@@ -28,11 +28,14 @@ my @totalstats = ();
 # there is a special key 'thread' that indicates the thread.
 my $stats = {};
 my $inblock = 0;
-my @records = ('thread', 'queries', 'answers', 'recursions', 'recursionavg',
+my @records = ('thread', 'queries', 'cachehits', 'recursions', 'recursionavg',
 		'outstandingmax', 'outstandingavg', 'outstandingexc',
-		'us_0', 'us_128', 'us_256', 'us_512', 'us_1024', 'us_2048', 'us_4096', 'us_8192',
-		'us_16384', 'us_32768', 'us_65536', 'us_131072', 'us_262144', 'us_524288',
-		'ms_1', 'ms_2', 'ms_4', 'ms_8', 'ms_16', 'ms_32', 'ms_64', 'ms_256', 'ms_128','ms_512');
+        'median25', 'median50', 'median75',
+        'us_0', 'us_1', 'us_2', 'us_4', 'us_8', 'us_16', 'us_32', 'us_64',
+        'us_128', 'us_256', 'us_512', 'us_1024', 'us_2048', 'us_4096',
+        'us_8192', 'us_16384', 'us_32768', 'us_65536', 'us_131072',
+        'us_262144', 'us_524288', 's_1', 's_2', 's_4', 's_8', 's_16',
+        's_32', 's_64', 's_128', 's_256', 's_512');
 
 
 for my $line ( <$in> ) {
@@ -45,28 +48,28 @@ for my $line ( <$in> ) {
 		$stats = {
 			thread => $1,
 			queries => $2,
-			answers => $3,
+            		cachehits => $3,
 			recursions => $4,
 		};
 		#print STDERR "Parsing stats from thread " . $stats->{thread} . "\n"; 
 	}
 	elsif ( $inblock && $line =~ m/info: server stats for thread (\d+): requestlist max (\d+) avg ([0-9\.]+) exceeded (\d+)/ ) {
 		$stats->{outstandingmax} = $2;
-		$stats->{outstandingavg} = $3;
+        	$stats->{outstandingavg} = int($3); # This is a float; rrdtool only handles ints.
 		$stats->{outstandingexc} = $4;
 	}
 	if ( $inblock && $line =~ m/info: average recursion processing time ([0-9\.]+) sec/ ) {
-		$stats->{recursionavg} = $1;
+        	$stats->{recursionavg} = int($1 * 1000); # change sec to milisec.
 	}
 	if ( $inblock && $line =~ m/info: histogram of recursion processing times/ ) {
 		next;
 	}
-	if ( $inblock && $line =~ m/info: [25%]=([0-9\.]+) median[50%]=([0-9\.]+) [75%]=([0-9\.]+)/ ) {
-		$stats->{median25} = $1;
-		$stats->{median50} = $2;
-		$stats->{median75} = $3;
+    	if ( $inblock && $line =~ m/info: \[25%\]=([0-9\.]+) median\[50%\]=([0-9\.]+) \[75%\]=([0-9\.]+)/ ) {
+        	$stats->{median25} = int($1 * 1000000); # change seconds to usec
+        	$stats->{median50} = int($2 * 1000000);
+        	$stats->{median75} = int($3 * 1000000);
 	}
-	if ( $inblock && $line =~ m/info: lower(secs) upper(secs) recursions/ ) {
+    	if ( $inblock && $line =~ m/info: lower\(secs\) upper\(secs\) recursions/ ) {
 		next;
 	}
 	elsif ( $inblock && $line =~ m/info:\s+(\d+)\.(\d+)\s+(\d+)\.(\d+)\s+(\d+)/ ) {
@@ -94,7 +97,8 @@ if ( ! $stats ) {
 
 my @result;
 for my $key ( @records ) {
-	print STDERR "$key = " . $stats->{$key} . "\n";
+    	$stats->{$key} ||= 0;
+    	print STDERR "$key = " . $stats->{$key} . "\n" if $DEBUG;
 	push @result, $stats->{$key};
 }
 print join("\n", @result), "\n";
