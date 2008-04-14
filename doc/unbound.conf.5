@@ -345,10 +345,9 @@ downgrade attack that disables security for a zone. Default is on.
 Use 0x20-encoded random bits in the query to foil spoof attempts.
 This perturbs the lowercase and uppercase of query names sent to 
 authority servers and checks if the reply still has the correct casing. 
-Use together with a large outgoing port range to obtain a high spoof resistance.
 Disabled by default, because some caching forwarders may not
-support this. If you have no forward\-zones it should be possible to enable
-this without problem, it works with most authority servers.
+support this. It is known that some authority servers do not support 0x20, 
+and resolution will fail for them. A solution is on the TODO list.
 This feature is an experimental implementation of draft dns\-0x20.
 .TP
 .B do\-not\-query\-address: \fI<IP address>
@@ -631,7 +630,7 @@ server:
 	num\-threads: 1
 	outgoing\-num\-tcp: 1	# this limits TCP service, uses less buffers.
 	incoming\-num\-tcp: 1
-	outgoing\-range: 1	# uses less memory, but less port randomness.
+	outgoing\-range: 16	# uses less memory, but less performance.
 	msg\-buffer\-size: 8192   # note this limits service, 'no huge stuff'.
 	msg\-cache\-size: 100k
 	msg\-cache\-slabs: 1

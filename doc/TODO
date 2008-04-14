@@ -46,3 +46,4 @@ o (option) for extended statistics. If enabled (not by default) collect print
 	bits(RD, CD, DO, EDNS-present, AD)query, (Secure, Bogus)reply.
 o overhaul outside-network servicedquery to merge with udpwait and tcpwait,
   to make timers in servicedquery independent of udpwait queues.
+o 0x20 fallback so it can be enabled without trouble.

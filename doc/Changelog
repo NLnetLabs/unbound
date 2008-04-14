@@ -1,6 +1,8 @@
 14 April 2008: Wouter
 	- got update for parseunbound.pl statistics script from Kai Storbeck.
 	- tpkg tests for udp wait list.
+	- documented 0x20 status.
+	- fixup chroot and checkconf, it is much smarter now.
 
 11 April 2008: Wouter
 	- random port selection out of the configged ports.
