@@ -214,7 +214,13 @@ is_dir(const char* fname)
 	return 1;
 }
 
-/** convert a filename to full pathname in original filesys. return static */
+/** convert a filename to full pathname in original filesys
+ * @param fname: the path name to convert.
+ * 	Must not be null or empty.
+ * @param cfg: config struct for chroot and chdir (if set).
+ * @param use_chdir: if false, only chroot is applied.
+ * @return pointer to static buffer which is: [chroot][chdir]fname
+ */
 static char*
 fname_after_chroot(const char* fname, struct config_file* cfg, int use_chdir)
 {
