@@ -461,6 +461,7 @@ verify_test()
 {
 	printf("verify test\n");
 	verifytest_file("testdata/test_signatures.1", "20070818005004");
+	verifytest_file("testdata/test_signatures.2", "20080414005004");
 	dstest_file("testdata/test_ds_sig.1");
 	nsectest();
 	nsec3_hash_test("testdata/test_nsec3_hash.1");

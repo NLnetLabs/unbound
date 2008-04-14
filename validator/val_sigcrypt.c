@@ -1183,6 +1183,48 @@ log_crypto_error(const char* str, unsigned long e)
 }
 
 /**
+ * Setup DSA key digest in DER encoding ... 
+ * @param sig: input is signature output alloced ptr (unless failure).
+ * 	caller must free alloced ptr if this routine returns true.
+ * @param len: intput is initial siglen, output is output len.
+ * @return false on failure.
+ */
+static int
+setup_dsa_sig(unsigned char** sig, unsigned int* len)
+{
+	unsigned char* orig = *sig;
+	unsigned int origlen = *len;
+
+	uint8_t t;
+	BIGNUM *R, *S;
+	DSA_SIG *dsasig;
+
+	/* extract the R and S field from the sig buffer */
+	if(origlen < 1 + 2*SHA_DIGEST_LENGTH)
+		return 0;
+	t = orig[0];
+	R = BN_new();
+	if(!R) return 0;
+	(void) BN_bin2bn(orig + 1, SHA_DIGEST_LENGTH, R);
+	S = BN_new();
+	if(!S) return 0;
+	(void) BN_bin2bn(orig + 21, SHA_DIGEST_LENGTH, S);
+	dsasig = DSA_SIG_new();
+	if(!dsasig) return 0;
+
+	dsasig->r = R;
+	dsasig->s = S;
+	*sig = NULL;
+	*len = i2d_DSA_SIG(dsasig, sig);
+	if(*len == 0) {
+		free(sig);
+		return 0;
+	}
+	DSA_SIG_free(dsasig);
+	return 1;
+}
+
+/**
  * Setup key and digest for verification. Adjust sig if necessary.
  *
  * @param algo: key algorithm
@@ -1255,6 +1297,13 @@ verify_canonrrset(ldns_buffer* buf, int algo, unsigned char* sigblock,
 		EVP_PKEY_free(evp_key);
 		return sec_status_bogus;
 	}
+	if(algo == LDNS_DSA || algo == LDNS_DSA_NSEC3) {
+		if(!setup_dsa_sig(&sigblock, &sigblock_len)) {
+			verbose(VERB_QUERY, "verify: failed to setup DSA sig");
+			EVP_PKEY_free(evp_key);
+			return sec_status_bogus;
+		}
+	}
 
 	/* do the signature cryptography work */
 	EVP_MD_CTX_init(&ctx);
@@ -1264,6 +1313,10 @@ verify_canonrrset(ldns_buffer* buf, int algo, unsigned char* sigblock,
 	res = EVP_VerifyFinal(&ctx, sigblock, sigblock_len, evp_key);
 	EVP_MD_CTX_cleanup(&ctx);
 	EVP_PKEY_free(evp_key);
+
+	if(algo == LDNS_DSA || algo == LDNS_DSA_NSEC3) {
+		free(sigblock);
+	}
 
 	if(res == 1) {
 		return sec_status_secure;
