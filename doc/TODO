@@ -39,3 +39,10 @@ o SIG(0) and TSIG.
 o support OPT record placement on recv anywhere in the additional section. 
 o add local-file: config with authority features.
 o (option) to make local-data answers be secure for libunbound (default=no)
+o (option) to make chroot: copy all needed files into jail (or make jail)
+	perhaps also print reminder to link /dev/random and sysloghack.
+o (option) for extended statistics. If enabled (not by default) collect print
+	rcode, uptime, spoofnearmisses, cache size, qtype, 
+	bits(RD, CD, DO, EDNS-present, AD)query, (Secure, Bogus)reply.
+o overhaul outside-network servicedquery to merge with udpwait and tcpwait,
+  to make timers in servicedquery independent of udpwait queues.

@@ -1,5 +1,6 @@
 14 April 2008: Wouter
 	- got update for parseunbound.pl statistics script from Kai Storbeck.
+	- tpkg tests for udp wait list.
 
 11 April 2008: Wouter
 	- random port selection out of the configged ports.
