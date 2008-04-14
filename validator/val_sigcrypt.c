@@ -1194,6 +1194,7 @@ setup_dsa_sig(unsigned char** sig, unsigned int* len)
 {
 	unsigned char* orig = *sig;
 	unsigned int origlen = *len;
+	int newlen;
 
 	uint8_t t;
 	BIGNUM *R, *S;
@@ -1215,11 +1216,12 @@ setup_dsa_sig(unsigned char** sig, unsigned int* len)
 	dsasig->r = R;
 	dsasig->s = S;
 	*sig = NULL;
-	*len = i2d_DSA_SIG(dsasig, sig);
-	if(*len == 0) {
+	newlen = i2d_DSA_SIG(dsasig, sig);
+	if(newlen < 0) {
 		free(sig);
 		return 0;
 	}
+	*len = (unsigned int)newlen;
 	DSA_SIG_free(dsasig);
 	return 1;
 }
@@ -1285,7 +1287,7 @@ verify_canonrrset(ldns_buffer* buf, int algo, unsigned char* sigblock,
 {
 	const EVP_MD *digest_type;
 	EVP_MD_CTX ctx;
-	int res;
+	int res, dofree = 0;
 	EVP_PKEY *evp_key = EVP_PKEY_new();
 	if(!evp_key) {
 		log_err("verify: malloc failure in crypto");
@@ -1297,12 +1299,14 @@ verify_canonrrset(ldns_buffer* buf, int algo, unsigned char* sigblock,
 		EVP_PKEY_free(evp_key);
 		return sec_status_bogus;
 	}
-	if(algo == LDNS_DSA || algo == LDNS_DSA_NSEC3) {
+	/* if it is a DSA signature in XXX format, convert to DER format */
+	if((algo == LDNS_DSA || algo == LDNS_DSA_NSEC3) && 
+		sigblock_len > 0 && sigblock[0] == 0) {
 		if(!setup_dsa_sig(&sigblock, &sigblock_len)) {
 			verbose(VERB_QUERY, "verify: failed to setup DSA sig");
-			EVP_PKEY_free(evp_key);
 			return sec_status_bogus;
 		}
+		dofree = 1;
 	}
 
 	/* do the signature cryptography work */
@@ -1314,15 +1318,15 @@ verify_canonrrset(ldns_buffer* buf, int algo, unsigned char* sigblock,
 	EVP_MD_CTX_cleanup(&ctx);
 	EVP_PKEY_free(evp_key);
 
-	if(algo == LDNS_DSA || algo == LDNS_DSA_NSEC3) {
+	if(dofree)
 		free(sigblock);
-	}
 
 	if(res == 1) {
 		return sec_status_secure;
 	} else if(res == 0) {
 		return sec_status_bogus;
 	}
+
 	log_crypto_error("verify:", ERR_get_error());
 	return sec_status_unchecked;
 }
@@ -1438,7 +1442,7 @@ dnskey_verify_rrset_sig(struct regional* region, ldns_buffer* buf,
 	/* verify */
 	sec = verify_canonrrset(buf, (int)sig[2+2],
 		sigblock, sigblock_len, key, keylen);
-
+	
 	/* check if TTL is too high - reduce if so */
 	if(sec == sec_status_secure) {
 		adjust_ttl(ve, now, rrset, sig+2+4, sig+2+8, sig+2+12);

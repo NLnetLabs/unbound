@@ -108,6 +108,7 @@ create_udp_sock(int family, int socktype, struct sockaddr* addr,
 				&val, (socklen_t)sizeof(val)) < 0) {
 				log_err("setsockopt(..., IPV6_V6ONLY"
 					", ...) failed: %s", strerror(errno));
+				close(s);
 				*inuse = 0;
 				return -1;
 			}
@@ -126,6 +127,7 @@ create_udp_sock(int family, int socktype, struct sockaddr* addr,
 			&on, (socklen_t)sizeof(on)) < 0) {
 			log_err("setsockopt(..., IPV6_USE_MIN_MTU, "
 				"...) failed: %s", strerror(errno));
+			close(s);
 			*inuse = 0;
 			return -1;
 		}
@@ -137,10 +139,12 @@ create_udp_sock(int family, int socktype, struct sockaddr* addr,
 		if(errno != EADDRINUSE)
 #endif
 			log_err("can't bind socket: %s", strerror(errno));
+		close(s);
 		return -1;
 	}
 	if(!fd_set_nonblock(s)) {
 		*inuse = 0;
+		close(s);
 		return -1;
 	}
 	return s;

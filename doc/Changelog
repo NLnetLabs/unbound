@@ -4,6 +4,7 @@
 	- documented 0x20 status.
 	- fixup chroot and checkconf, it is much smarter now.
 	- fixup DSA EVP signature decoding. Solution that Jelte found copied.
+	- and check first sig byte for the encoding type.
 
 11 April 2008: Wouter
 	- random port selection out of the configged ports.
