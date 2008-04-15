@@ -16,7 +16,7 @@ name="unbound"
 rcvar=`set_rcvar`
 
 command="/usr/local/sbin/unbound"
-pidfile="/etc/unbound/unbound.pid"
+pidfile="/usr/local/etc/unbound/unbound.pid"
 extra_commands="reload"
 
 load_rc_config $name
