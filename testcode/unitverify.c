@@ -462,17 +462,22 @@ verify_test()
 	printf("verify test\n");
 	verifytest_file("testdata/test_signatures.1", "20070818005004");
 	log_info("test_signatures.2");
+	verbosity=3;
+	/*
 	verifytest_file("testdata/test_signatures.2", "20080414005004");
 	log_info("test_signatures.3");
 	verifytest_file("testdata/test_signatures.3", "20080416005004");
-	/*
 	log_info("test_signatures.4");
 	verifytest_file("testdata/test_signatures.4", "20080416005004");
+	*/
 	log_info("test_signatures.5");
 	verifytest_file("testdata/test_signatures.5", "20080416005004");
 	log_info("test_signatures.6");
 	verifytest_file("testdata/test_signatures.6", "20080416005004");
-	*/
+	log_info("test_signatures.7");
+	verifytest_file("testdata/test_signatures.7", "20070829144150");
+	log_info("test_signatures.8");
+	verifytest_file("testdata/test_signatures.8", "20070829144150");
 	dstest_file("testdata/test_ds_sig.1");
 	nsectest();
 	nsec3_hash_test("testdata/test_nsec3_hash.1");

@@ -1240,11 +1240,19 @@ static int
 setup_key_digest(int algo, EVP_PKEY* evp_key, const EVP_MD** digest_type, 
 	unsigned char* key, size_t keylen)
 {
+	DSA* dsa;
+	RSA* rsa;
+
 	switch(algo) {
 		case LDNS_DSA:
 		case LDNS_DSA_NSEC3:
-			if(EVP_PKEY_assign_DSA(evp_key, 
-				ldns_key_buf2dsa_raw(key, keylen)) == 0) {
+			dsa = ldns_key_buf2dsa_raw(key, keylen);
+			if(!dsa) {
+				verbose(VERB_QUERY, "verify: "
+					"ldns_key_buf2dsa_raw failed");
+				return 0;
+			}
+			if(EVP_PKEY_assign_DSA(evp_key, dsa) == 0) {
 				verbose(VERB_QUERY, "verify: "
 					"EVP_PKEY_assign_DSA failed");
 				return 0;
@@ -1254,8 +1262,13 @@ setup_key_digest(int algo, EVP_PKEY* evp_key, const EVP_MD** digest_type,
 			break;
 		case LDNS_RSASHA1:
 		case LDNS_RSASHA1_NSEC3:
-			if(EVP_PKEY_assign_RSA(evp_key, 
-				ldns_key_buf2rsa_raw(key, keylen)) == 0) {
+			rsa = ldns_key_buf2rsa_raw(key, keylen);
+			if(!rsa) {
+				verbose(VERB_QUERY, "verify: "
+					"ldns_key_buf2rsa_raw SHA1 failed");
+				return 0;
+			}
+			if(EVP_PKEY_assign_RSA(evp_key, rsa) == 0) {
 				verbose(VERB_QUERY, "verify: "
 					"EVP_PKEY_assign_RSA SHA1 failed");
 				return 0;
@@ -1264,8 +1277,13 @@ setup_key_digest(int algo, EVP_PKEY* evp_key, const EVP_MD** digest_type,
 
 			break;
 		case LDNS_RSAMD5:
-			if(EVP_PKEY_assign_RSA(evp_key, 
-				ldns_key_buf2rsa_raw(key, keylen)) == 0) {
+			rsa = ldns_key_buf2rsa_raw(key, keylen);
+			if(!rsa) {
+				verbose(VERB_QUERY, "verify: "
+					"ldns_key_buf2rsa_raw MD5 failed");
+				return 0;
+			}
+			if(EVP_PKEY_assign_RSA(evp_key, rsa) == 0) {
 				verbose(VERB_QUERY, "verify: "
 					"EVP_PKEY_assign_RSA MD5 failed");
 				return 0;
@@ -1313,7 +1331,7 @@ verify_canonrrset(ldns_buffer* buf, int algo, unsigned char* sigblock,
 	}
 	/* if it is a DSA signature in XXX format, convert to DER format */
 	if((algo == LDNS_DSA || algo == LDNS_DSA_NSEC3) && 
-		sigblock_len > 0 && sigblock[0] == 0) {
+		0) { /*sigblock_len > 0 && sigblock[0] == 0) {*/
 		log_info("setup_dsa_sig_needed");
 		if(!setup_dsa_sig(&sigblock, &sigblock_len)) {
 			verbose(VERB_QUERY, "verify: failed to setup DSA sig");
@@ -1354,6 +1372,7 @@ verify_canonrrset(ldns_buffer* buf, int algo, unsigned char* sigblock,
 	if(res == 1) {
 		return sec_status_secure;
 	} else if(res == 0) {
+		verbose(VERB_QUERY, "verify: signature mismatch");
 		return sec_status_bogus;
 	}
 
