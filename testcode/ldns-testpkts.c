@@ -3,7 +3,7 @@
  *
  * Data storage for specially crafted replies for testing purposes.
  *
- * (c) NLnet Labs, 2005, 2006, 2007
+ * (c) NLnet Labs, 2005, 2006, 2007, 2008
  * See the file LICENSE for the license
  */
 
