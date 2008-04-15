@@ -1243,21 +1243,33 @@ setup_key_digest(int algo, EVP_PKEY* evp_key, const EVP_MD** digest_type,
 	switch(algo) {
 		case LDNS_DSA:
 		case LDNS_DSA_NSEC3:
-			EVP_PKEY_assign_DSA(evp_key, 
-				ldns_key_buf2dsa_raw(key, keylen));
+			if(EVP_PKEY_assign_DSA(evp_key, 
+				ldns_key_buf2dsa_raw(key, keylen)) == 0) {
+				verbose(VERB_QUERY, "verify: "
+					"EVP_PKEY_assign_DSA failed");
+				return 0;
+			}
 			*digest_type = EVP_dss1();
 
 			break;
 		case LDNS_RSASHA1:
 		case LDNS_RSASHA1_NSEC3:
-			EVP_PKEY_assign_RSA(evp_key, 
-				ldns_key_buf2rsa_raw(key, keylen));
+			if(EVP_PKEY_assign_RSA(evp_key, 
+				ldns_key_buf2rsa_raw(key, keylen)) == 0) {
+				verbose(VERB_QUERY, "verify: "
+					"EVP_PKEY_assign_RSA SHA1 failed");
+				return 0;
+			}
 			*digest_type = EVP_sha1();
 
 			break;
 		case LDNS_RSAMD5:
-			EVP_PKEY_assign_RSA(evp_key, 
-				ldns_key_buf2rsa_raw(key, keylen));
+			if(EVP_PKEY_assign_RSA(evp_key, 
+				ldns_key_buf2rsa_raw(key, keylen)) == 0) {
+				verbose(VERB_QUERY, "verify: "
+					"EVP_PKEY_assign_RSA MD5 failed");
+				return 0;
+			}
 			*digest_type = EVP_md5();
 
 			break;
@@ -1302,20 +1314,38 @@ verify_canonrrset(ldns_buffer* buf, int algo, unsigned char* sigblock,
 	/* if it is a DSA signature in XXX format, convert to DER format */
 	if((algo == LDNS_DSA || algo == LDNS_DSA_NSEC3) && 
 		sigblock_len > 0 && sigblock[0] == 0) {
+		log_info("setup_dsa_sig_needed");
 		if(!setup_dsa_sig(&sigblock, &sigblock_len)) {
 			verbose(VERB_QUERY, "verify: failed to setup DSA sig");
 			return sec_status_bogus;
 		}
 		dofree = 1;
-	}
+	} else if(algo == LDNS_DSA || algo == LDNS_DSA_NSEC3)
+		log_info("setup_dsa_sig_nope");
 
 	/* do the signature cryptography work */
 	EVP_MD_CTX_init(&ctx);
-	EVP_VerifyInit(&ctx, digest_type);
-	EVP_VerifyUpdate(&ctx, (unsigned char*)ldns_buffer_begin(buf), 
-		(unsigned int)ldns_buffer_limit(buf));
+	if(EVP_VerifyInit(&ctx, digest_type) == 0) {
+		verbose(VERB_QUERY, "verify: EVP_VerifyInit failed");
+		EVP_PKEY_free(evp_key);
+		if(dofree) free(sigblock);
+		return sec_status_unchecked;
+	}
+	if(EVP_VerifyUpdate(&ctx, (unsigned char*)ldns_buffer_begin(buf), 
+		(unsigned int)ldns_buffer_limit(buf)) == 0) {
+		verbose(VERB_QUERY, "verify: EVP_VerifyUpdate failed");
+		EVP_PKEY_free(evp_key);
+		if(dofree) free(sigblock);
+		return sec_status_unchecked;
+	}
+		
 	res = EVP_VerifyFinal(&ctx, sigblock, sigblock_len, evp_key);
-	EVP_MD_CTX_cleanup(&ctx);
+	if(EVP_MD_CTX_cleanup(&ctx) == 0) {
+		verbose(VERB_QUERY, "verify: EVP_MD_CTX_cleanup failed");
+		EVP_PKEY_free(evp_key);
+		if(dofree) free(sigblock);
+		return sec_status_unchecked;
+	}
 	EVP_PKEY_free(evp_key);
 
 	if(dofree)

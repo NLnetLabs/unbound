@@ -6,6 +6,7 @@
 	  chroot dir.
 	- documented 'gcc: unrecognized -KPIC option' errors on Solaris.
 	- example.conf values changed to /usr/local/etc/unbound
+	- DSA test work.
 
 14 April 2008: Wouter
 	- got update for parseunbound.pl statistics script from Kai Storbeck.
