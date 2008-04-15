@@ -1,5 +1,9 @@
 15 April 2008: Wouter
 	- fixup default rc.d pidfile location to /usr/local/etc.
+	- iana ports updated.
+	- copyright updated in ldns-testpkts to keep same as in ldns.
+	- fixup checkconf chroot tests a bit more, chdir must be inside
+	  chroot dir.
 
 14 April 2008: Wouter
 	- got update for parseunbound.pl statistics script from Kai Storbeck.

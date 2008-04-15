@@ -321,8 +321,14 @@ morechecks(struct config_file* cfg)
 		!is_dir(cfg->chrootdir)) {
 		fatal_exit("bad chroot directory");
 	}
-	if(cfg->directory && cfg->directory[0] && 
-		!is_dir(fname_after_chroot(cfg->directory, cfg, 0))) {
+	if((cfg->chrootdir && cfg->chrootdir[0]) 
+	    && (cfg->directory && cfg->directory[0])
+	    && strncmp(cfg->chrootdir, cfg->directory, 
+		strlen(cfg->chrootdir)) != 0) {
+		fatal_exit("chdir directory '%s' not inside the chroot "
+			"directory '%s'", cfg->directory, cfg->chrootdir);
+	}
+	if(cfg->directory && cfg->directory[0] && !is_dir(cfg->directory)) {
 		fatal_exit("bad chdir directory");
 	}
 	if( (cfg->chrootdir && cfg->chrootdir[0]) ||
