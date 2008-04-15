@@ -4,6 +4,7 @@
 	- copyright updated in ldns-testpkts to keep same as in ldns.
 	- fixup checkconf chroot tests a bit more, chdir must be inside
 	  chroot dir.
+	- documented 'gcc: unrecognized -KPIC option' errors on Solaris.
 
 14 April 2008: Wouter
 	- got update for parseunbound.pl statistics script from Kai Storbeck.
