@@ -1329,17 +1329,16 @@ verify_canonrrset(ldns_buffer* buf, int algo, unsigned char* sigblock,
 		EVP_PKEY_free(evp_key);
 		return sec_status_bogus;
 	}
-	/* if it is a DSA signature in XXX format, convert to DER format */
+	/* if it is a DSA signature in bind format, convert to DER format */
 	if((algo == LDNS_DSA || algo == LDNS_DSA_NSEC3) && 
-		0) { /*sigblock_len > 0 && sigblock[0] == 0) {*/
-		log_info("setup_dsa_sig_needed");
+		sigblock_len == 1+2*SHA_DIGEST_LENGTH) {
 		if(!setup_dsa_sig(&sigblock, &sigblock_len)) {
 			verbose(VERB_QUERY, "verify: failed to setup DSA sig");
+			EVP_PKEY_free(evp_key);
 			return sec_status_bogus;
 		}
 		dofree = 1;
-	} else if(algo == LDNS_DSA || algo == LDNS_DSA_NSEC3)
-		log_info("setup_dsa_sig_nope");
+	} 
 
 	/* do the signature cryptography work */
 	EVP_MD_CTX_init(&ctx);

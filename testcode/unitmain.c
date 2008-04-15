@@ -394,6 +394,7 @@ main(int argc, char* argv[])
 		return 1;
 	}
 	printf("Start of %s unit test.\n", PACKAGE_STRING);
+	ERR_load_crypto_strings();
 	checklock_start();
 	rnd_test();
 	verify_test();
@@ -411,5 +412,7 @@ main(int argc, char* argv[])
 	printf("%d checks ok.\n", testcount);
 	EVP_cleanup();
 	CRYPTO_cleanup_all_ex_data();
+	ERR_remove_state(0);
+	ERR_free_strings();
 	return 0;
 }
