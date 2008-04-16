@@ -1,3 +1,6 @@
+16 April 2008: Wouter
+	- requirements doc, updated clean query returns.
+
 15 April 2008: Wouter
 	- fixup default rc.d pidfile location to /usr/local/etc.
 	- iana ports updated.
