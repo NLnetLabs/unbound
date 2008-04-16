@@ -53,8 +53,10 @@
 #include <signal.h>
 #include <fcntl.h>
 #include <pwd.h>
-#include <sys/resource.h>
 
+#ifdef HAVE_SYS_RESOURCE_H
+#include <sys/resource.h>
+#endif
 
 #ifdef USE_MINI_EVENT
 #include "util/mini_event.h"

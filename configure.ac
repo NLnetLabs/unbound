@@ -349,7 +349,7 @@ AC_PROG_LIBTOOL
 
 # Checks for header files.
 AC_HEADER_STDC
-AC_CHECK_HEADERS([stdarg.h stdbool.h netinet/in.h sys/param.h sys/socket.h sys/uio.h arpa/inet.h syslog.h],,, [AC_INCLUDES_DEFAULT])
+AC_CHECK_HEADERS([stdarg.h stdbool.h netinet/in.h sys/param.h sys/socket.h sys/uio.h sys/resource.h arpa/inet.h syslog.h],,, [AC_INCLUDES_DEFAULT])
 
 # check for types
 AC_CHECK_TYPE(int8_t, char)
@@ -367,6 +367,13 @@ AC_TYPE_PID_T
 AC_TYPE_OFF_T
 AC_CHECK_TYPE(u_char, unsigned char)
 
+AC_CHECK_TYPE(rlim_t, , 
+	[AC_DEFINE([rlim_t], [unsigned long], [Define to 'int' if not defined])], [
+AC_INCLUDES_DEFAULT
+#if HAVE_SYS_RESOURCE_H
+#  include <sys/resource.h>
+#endif
+])
 AC_CHECK_TYPE(socklen_t, , 
 	[AC_DEFINE([socklen_t], [int], [Define to 'int' if not defined])], [
 AC_INCLUDES_DEFAULT

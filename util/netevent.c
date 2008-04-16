@@ -276,6 +276,9 @@ void p_ancil(const char* str, struct comm_reply* r)
 			buf1, buf2);
 #endif
 	}
+#else
+	(void)str;
+	(void)r;
 #endif
 }
 
@@ -356,6 +359,11 @@ comm_point_send_udp_msg_if(struct comm_point *c, ldns_buffer* packet,
 	}
 	return 1;
 #else
+	(void)c;
+	(void)packet;
+	(void)addr;
+	(void)addrlen;
+	(void)r;
 	log_err("sendmsg: IPV6_PKTINFO not supported");
 	return 0;
 #endif
@@ -448,6 +456,9 @@ comm_point_udp_ancil_callback(int fd, short event, void* arg)
 			break;
 	}
 #else
+	(void)fd;
+	(void)event;
+	(void)arg;
 	fatal_exit("recvmsg: No support for IPV6_PKTINFO. "
 		"Please disable interface-automatic");
 #endif

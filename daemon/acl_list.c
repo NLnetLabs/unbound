@@ -194,14 +194,16 @@ acl_list_apply_cfg(struct acl_list* acl, struct config_file* cfg)
 	/* insert defaults, with '0' to ignore them if they are duplicates */
 	if(!acl_list_str_cfg(acl, "0.0.0.0/0", "refuse", 0))
 		return 0;
-	if(!acl_list_str_cfg(acl, "::0/0", "refuse", 0))
-		return 0;
 	if(!acl_list_str_cfg(acl, "127.0.0.0/8", "allow", 0))
 		return 0;
-	if(!acl_list_str_cfg(acl, "::1", "allow", 0))
-		return 0;
-	if(!acl_list_str_cfg(acl, "::ffff:127.0.0.1", "allow", 0))
-		return 0;
+	if(cfg->do_ip6) {
+		if(!acl_list_str_cfg(acl, "::0/0", "refuse", 0))
+			return 0;
+		if(!acl_list_str_cfg(acl, "::1", "allow", 0))
+			return 0;
+		if(!acl_list_str_cfg(acl, "::ffff:127.0.0.1", "allow", 0))
+			return 0;
+	}
 	acl_list_init_parents(acl);
 	return 1;
 }

@@ -180,8 +180,10 @@ donotq_apply_cfg(struct iter_donotq* dq, struct config_file* cfg)
 	if(cfg->donotquery_localhost) {
 		if(!donotq_str_cfg(dq, "127.0.0.0/8"))
 			return 0;
-		if(!donotq_str_cfg(dq, "::1"))
-			return 0;
+		if(cfg->do_ip6) {
+			if(!donotq_str_cfg(dq, "::1"))
+				return 0;
+		}
 	}
 	donotq_init_parents(dq);
 	return 1;

@@ -262,7 +262,11 @@ port_insert(struct listen_port** list, int s, enum listen_type ftype)
 static int
 set_recvpktinfo(int s, int family) 
 {
+#if defined(IPV6_RECVPKTINFO) || defined(IPV6_PKTINFO) || defined(IP_RECVDSTADDR) || defined(IP_PKTINFO)
 	int on = 1;
+#else
+	(void)s;
+#endif
 	if(family == AF_INET6) {
 #           ifdef IPV6_RECVPKTINFO
 		if(setsockopt(s, IPPROTO_IPV6, IPV6_RECVPKTINFO,
