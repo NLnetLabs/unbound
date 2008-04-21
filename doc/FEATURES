@@ -28,7 +28,7 @@ RFC 1918.
 RFC 2181: completely, including the trust model, keeping rrsets together.
 RFC 2672: DNAME support.
 RFC 3597: Unknown RR type support.
-EDNS0 support, default advertisement 4Kb size. 
+RFC 2671: EDNS0 support, default advertisement 4Kb size. 
 RFC 5155: NSEC3, NSEC3PARAM types
 AAAA type. and IP6 dual stack support.
 type ANY queries are supported.
