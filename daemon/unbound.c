@@ -284,7 +284,8 @@ detach(struct config_file* cfg)
 
 /** daemonize, drop user priviliges and chroot if needed */
 static void
-do_chroot(struct daemon* daemon, struct config_file* cfg, int debug_mode)
+do_chroot(struct daemon* daemon, struct config_file* cfg, int debug_mode,
+	char** cfgfile)
 {
 	uid_t uid;
 	gid_t gid;
@@ -314,6 +315,9 @@ do_chroot(struct daemon* daemon, struct config_file* cfg, int debug_mode)
 			fatal_exit("unable to chroot to %s: %s", 
 				cfg->chrootdir, strerror(errno));
 		verbose(VERB_QUERY, "chroot to %s", cfg->chrootdir);
+		if(strncmp(*cfgfile, cfg->chrootdir, 
+			strlen(cfg->chrootdir)) == 0) 
+			(*cfgfile) += strlen(cfg->chrootdir);
 	}
 	if(cfg->username && cfg->username[0]) {
 		if(setgid(gid) != 0)
@@ -382,7 +386,7 @@ run_daemon(char* cfgfile, int cmdline_verbose, int debug_mode)
 		if(!daemon_open_shared_ports(daemon))
 			fatal_exit("could not open ports");
 		if(!done_chroot) { 
-			do_chroot(daemon, cfg, debug_mode); 
+			do_chroot(daemon, cfg, debug_mode, &cfgfile); 
 			done_chroot = 1; 
 		} else log_init(cfg->logfile, cfg->use_syslog, cfg->chrootdir);
 		/* work */

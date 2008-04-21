@@ -1,5 +1,7 @@
 21 April 2008: Wouter
 	- FEATURES document.
+	- fixup reread of config file if it was given as a full path
+	  and chroot was used.
 
 16 April 2008: Wouter
 	- requirements doc, updated clean query returns.
