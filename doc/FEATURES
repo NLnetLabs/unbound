@@ -33,6 +33,7 @@ RFC 5155: NSEC3, NSEC3PARAM types
 AAAA type. and IP6 dual stack support.
 type ANY queries are supported.
 RFC 2308: TTL directive, and the rest of the RFC too.
+RFC 4592: wildcards.
 
 RFC 1995, 1996, 2136: not authoritative, so no AXFR, IXFR, NOTIFY or
   dynamic update services are appropriate.
