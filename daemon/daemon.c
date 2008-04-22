@@ -83,6 +83,8 @@ static RETSIGTYPE record_sigh(int sig)
 		case SIGHUP:
 			sig_record_reload++;
 			break;
+		case SIGPIPE:
+			break;
 		default:
 			log_err("ignoring signal %d", sig);
 	}
@@ -98,7 +100,8 @@ signal_handling_record()
 	if( signal(SIGTERM, record_sigh) == SIG_ERR ||
 		signal(SIGQUIT, record_sigh) == SIG_ERR ||
 		signal(SIGINT, record_sigh) == SIG_ERR ||
-		signal(SIGHUP, record_sigh) == SIG_ERR)
+		signal(SIGHUP, record_sigh) == SIG_ERR ||
+		signal(SIGPIPE, SIG_IGN) == SIG_ERR)
 		log_err("install sighandler: %s", strerror(errno));
 }
 
