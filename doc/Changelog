@@ -1,5 +1,6 @@
 22 April 2008: Wouter
 	- ignore SIGPIPE.
+	- unit test for SIGPIPE ignore.
 
 21 April 2008: Wouter
 	- FEATURES document.
