@@ -1,3 +1,6 @@
+23 April 2008: Wouter
+	- parseunbound.pl contrib update from Kai Storbeck for threads.
+
 22 April 2008: Wouter
 	- ignore SIGPIPE.
 	- unit test for SIGPIPE ignore.
