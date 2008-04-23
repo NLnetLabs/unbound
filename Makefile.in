@@ -294,9 +294,8 @@ download_ldns:
 	rm ldns-*_pre_*.tar.gz.sha1 ldns_makedist.sh
 
 iana_update:
-	curl http://www.iana.org/assignments/port-numbers -o port-numbers.tmp
+	curl -o port-numbers.tmp http://www.iana.org/assignments/port-numbers
 	egrep -v "Unassigned|Reserved" port-numbers.tmp | awk '{ match($$0, "[0-9]+/udp"); if (RLENGTH > 0) print substr($$0, RSTART, RLENGTH - 4) ","}' | sort -nu > portslist.tmp
-	-diff util/iana_ports.inc portslist.tmp
 	cat portslist.tmp > util/iana_ports.inc
 	rm -f port-numbers.tmp portslist.tmp
 
