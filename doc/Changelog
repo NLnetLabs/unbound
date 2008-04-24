@@ -1,6 +1,7 @@
 24 April 2008: Wouter
 	- chroot checks improved. working directory relative to chroot.
 	  checks if config file path is inside chroot. Documentation on it.
+	- nicer example.conf text.
 
 23 April 2008: Wouter
 	- parseunbound.pl contrib update from Kai Storbeck for threads.
