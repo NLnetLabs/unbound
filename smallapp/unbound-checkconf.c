@@ -297,7 +297,7 @@ check_chroot_filelist(const char* desc, struct config_strlist* list,
 
 /** check configuration for errors */
 static void
-morechecks(struct config_file* cfg)
+morechecks(struct config_file* cfg, char* fname)
 {
 	warn_hosts("stub-host", cfg->stubs);
 	warn_hosts("forward-host", cfg->forwards);
@@ -321,14 +321,21 @@ morechecks(struct config_file* cfg)
 		!is_dir(cfg->chrootdir)) {
 		fatal_exit("bad chroot directory");
 	}
-	if((cfg->chrootdir && cfg->chrootdir[0]) 
-	    && (cfg->directory && cfg->directory[0])
-	    && strncmp(cfg->chrootdir, cfg->directory, 
-		strlen(cfg->chrootdir)) != 0) {
-		fatal_exit("chdir directory '%s' not inside the chroot "
-			"directory '%s'", cfg->directory, cfg->chrootdir);
+	if(cfg->chrootdir && cfg->chrootdir[0]) {
+		char buf[10240];
+		buf[0] = 0;
+		if(fname[0] != '/') {
+			if(getcwd(buf, sizeof(buf)) == NULL)
+				fatal_exit("getcwd: %s", strerror(errno));
+			strncat(buf, "/", sizeof(buf));
+		}
+		strncat(buf, fname, sizeof(buf));
+		if(strncmp(buf, cfg->chrootdir, strlen(cfg->chrootdir)) != 0)
+			fatal_exit("config file %s is not inside chroot %s",
+				buf, cfg->chrootdir);
 	}
-	if(cfg->directory && cfg->directory[0] && !is_dir(cfg->directory)) {
+	if(cfg->directory && cfg->directory[0] && !is_dir(
+		fname_after_chroot(cfg->directory, cfg, 0))) {
 		fatal_exit("bad chdir directory");
 	}
 	if( (cfg->chrootdir && cfg->chrootdir[0]) ||
@@ -341,7 +348,7 @@ morechecks(struct config_file* cfg)
 		if(cfg->logfile && cfg->logfile[0] &&
 		   basedir(cfg->logfile, cfg) &&
 		   !is_dir(basedir(cfg->logfile, cfg))) {
-			fatal_exit("pidfile directory does not exist");
+			fatal_exit("logfile directory does not exist");
 		}
 	}
 
@@ -382,7 +389,7 @@ checkconf(char* cfgfile)
 		config_delete(cfg);
 		exit(1);
 	}
-	morechecks(cfg);
+	morechecks(cfg, cfgfile);
 	check_mod(cfg, iter_get_funcblock());
 	check_mod(cfg, val_get_funcblock());
 	config_delete(cfg);

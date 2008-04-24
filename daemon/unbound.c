@@ -295,13 +295,6 @@ do_chroot(struct daemon* daemon, struct config_file* cfg, int debug_mode,
 	log_assert(cfg);
 
 	/* daemonize last to be able to print error to user */
-	if(cfg->directory && cfg->directory[0]) {
-		if(chdir(cfg->directory)) {
-			fatal_exit("Could not chdir to %s: %s",
-				cfg->directory, strerror(errno));
-		}
-		verbose(VERB_QUERY, "chdir to %s", cfg->directory);
-	}
 	if(cfg->username && cfg->username[0]) {
 		struct passwd *pwd;
 		if((pwd = getpwnam(cfg->username)) == NULL)
@@ -311,6 +304,11 @@ do_chroot(struct daemon* daemon, struct config_file* cfg, int debug_mode,
 		endpwent();
 	}
 	if(cfg->chrootdir && cfg->chrootdir[0]) {
+		if(chdir(cfg->chrootdir)) {
+			fatal_exit("unable to chdir to chroot %s: %s",
+				cfg->chrootdir, strerror(errno));
+		}
+		verbose(VERB_QUERY, "chdir to %s", cfg->chrootdir);
 		if(chroot(cfg->chrootdir))
 			fatal_exit("unable to chroot to %s: %s", 
 				cfg->chrootdir, strerror(errno));
@@ -318,6 +316,18 @@ do_chroot(struct daemon* daemon, struct config_file* cfg, int debug_mode,
 		if(strncmp(*cfgfile, cfg->chrootdir, 
 			strlen(cfg->chrootdir)) == 0) 
 			(*cfgfile) += strlen(cfg->chrootdir);
+	}
+	if(cfg->directory && cfg->directory[0]) {
+		char* dir = cfg->directory;
+		if(cfg->chrootdir && cfg->chrootdir[0] &&
+			strncmp(dir, cfg->chrootdir, 
+			strlen(cfg->chrootdir)) == 0)
+			dir += strlen(cfg->chrootdir);
+		if(chdir(dir)) {
+			fatal_exit("Could not chdir to %s: %s",
+				dir, strerror(errno));
+		}
+		verbose(VERB_QUERY, "chdir to %s", dir);
 	}
 	if(cfg->username && cfg->username[0]) {
 		if(setgid(gid) != 0)

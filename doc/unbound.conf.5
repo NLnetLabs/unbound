@@ -238,8 +238,23 @@ is not designed to handle dropped packets due to policy, and dropping may
 result in (possibly excessive) retried queries.
 .TP
 .B chroot: \fI<directory>
+If chroot is enabled, you should pass the configfile (from the
+commandline) as a full path from the original root. After the
+chroot has been performed the now defunct portion of the config 
+file path is removed to be able to reread the config after a reload. 
+.IP
+All other file paths (working dir, pidfile, logfile, roothints,
+key files) can be specified in several ways:
+as an absolute path relative to the new root,
+as a relative path to the working directory, or
+as an absolute path relative to the original root.
+In the last case the path is adjusted to remove the unused portion.
+.IP
+Additionally, unbound may need to access /dev/random (for entropy)
+and to /dev/log (if you use syslog) from inside the chroot.
+.IP
 If given a chroot is done to the given directory. The default is 
-"/etc/unbound". If you give "" no chroot is performed.
+"/usr/local/etc/unbound". If you give "" no chroot is performed.
 .TP
 .B username: \fI<name>
 If given, after binding the port the user privileges are dropped. Default is
@@ -271,14 +286,14 @@ The logfile setting is overridden when use\-syslog is turned on.
 The default is to log to syslog.
 .TP
 .B pidfile: \fI<filename>
-The process id is written to the file. Default is "/etc/unbound/unbound.pid". 
+The process id is written to the file. Default is "/usr/local/etc/unbound/unbound.pid". 
 So,
 .nf
-kill \-HUP `cat /etc/unbound/unbound.pid` 
+kill \-HUP `cat /usr/local/etc/unbound/unbound.pid` 
 .fi
 triggers a reload,
 .nf
-kill \-QUIT `cat /etc/unbound/unbound.pid` 
+kill \-QUIT `cat /usr/local/etc/unbound/unbound.pid` 
 .fi
 gracefully terminates.
 .TP
@@ -648,7 +663,7 @@ server:
 .fi
 .SH "FILES"
 .TP
-.I /etc/unbound
+.I /usr/local/etc/unbound
 default unbound working directory and default 
 \fIchroot\fR(2)
 location.
