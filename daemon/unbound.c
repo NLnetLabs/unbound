@@ -323,11 +323,13 @@ do_chroot(struct daemon* daemon, struct config_file* cfg, int debug_mode,
 			strncmp(dir, cfg->chrootdir, 
 			strlen(cfg->chrootdir)) == 0)
 			dir += strlen(cfg->chrootdir);
-		if(chdir(dir)) {
-			fatal_exit("Could not chdir to %s: %s",
-				dir, strerror(errno));
+		if(dir[0]) {
+			if(chdir(dir)) {
+				fatal_exit("Could not chdir to %s: %s",
+					dir, strerror(errno));
+			}
+			verbose(VERB_QUERY, "chdir to %s", dir);
 		}
-		verbose(VERB_QUERY, "chdir to %s", dir);
 	}
 	if(cfg->username && cfg->username[0]) {
 		if(setgid(gid) != 0)
