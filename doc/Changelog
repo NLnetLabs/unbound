@@ -1,5 +1,8 @@
 25 April 2008: Wouter
 	- DESTDIR is honored by the Makefile for rpms.
+	- contrib files unbound.spec and unbound.init, builds working RPM
+	  on FC7 Linux, a chrooted caching resolver, and libunbound.
+	- iana ports update.
 
 24 April 2008: Wouter
 	- chroot checks improved. working directory relative to chroot.
