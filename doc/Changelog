@@ -1,3 +1,6 @@
+25 April 2008: Wouter
+	- DESTDIR is honored by the Makefile for rpms.
+
 24 April 2008: Wouter
 	- chroot checks improved. working directory relative to chroot.
 	  checks if config file path is inside chroot. Documentation on it.
