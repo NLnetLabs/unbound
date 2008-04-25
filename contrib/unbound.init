@@ -37,21 +37,25 @@ start() {
     echo -n $"Starting $prog: "
 
     # setup root jail
-    if [ -s /etc/localtime ] && /usr/bin/cmp -s /etc/localtime ${rootdir}/etc/localtime; then
-	mkdir -p ${rootdir}/etc
-	cp -fp /etc/localtime ${rootdir}/etc/localtime
+    if [ -s /etc/localtime ]; then 
+	[ -d ${rootdir}/etc ] || mkdir -p ${rootdir}/etc ;
+	if [ ! -e ${rootdir}/etc/localtime ] || /usr/bin/cmp -s /etc/localtime ${rootdir}/etc/localtime; then
+	    cp -fp /etc/localtime ${rootdir}/etc/localtime
+	fi;
     fi;
-    if [ -s /etc/resolv.conf ] && /usr/bin/cmp -s /etc/resolv.conf ${rootdir}/etc/resolv.conf; then
-	mkdir -p ${rootdir}/etc
-	cp -fp /etc/resolv.conf ${rootdir}/etc/resolv.conf
+    if [ -s /etc/resolv.conf ]; then
+	[ -d ${rootdir}/etc ] || mkdir -p ${rootdir}/etc ;
+	if [ ! -e ${rootdir}/etc/resolv.conf ] || /usr/bin/cmp -s /etc/resolv.conf ${rootdir}/etc/resolv.conf; then
+	    cp -fp /etc/resolv.conf ${rootdir}/etc/resolv.conf
+	fi;
     fi;
     if ! egrep -q '^/[^[:space:]]+[[:space:]]+'${rootdir}'/dev/log' /proc/mounts; then
-	mkdir -p ${rootdir}/dev
+	[ -d ${rootdir}/dev ] || mkdir -p ${rootdir}/dev ;
 	[ -e ${rootdir}/dev/log ] || touch ${rootdir}/dev/log
 	mount --bind -n /dev/log ${rootdir}/dev/log >/dev/null 2>&1;
     fi;
     if ! egrep -q '^/[^[:space:]]+[[:space:]]+'${rootdir}'/dev/random' /proc/mounts; then
-	mkdir -p ${rootdir}/dev
+	[ -d ${rootdir}/dev ] || mkdir -p ${rootdir}/dev ;
 	[ -e ${rootdir}/dev/random ] || touch ${rootdir}/dev/random
 	mount --bind -n /dev/random ${rootdir}/dev/random >/dev/null 2>&1;
     fi;

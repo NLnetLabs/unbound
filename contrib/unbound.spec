@@ -78,15 +78,16 @@ exit 0
 if [ $1 -eq 0 ]; then
 	/sbin/service %{name} stop >/dev/null 2>&1
 	/sbin/chkconfig --del %{name}
+	# remove root jail 
+	rm -f /var/unbound/dev/log /var/unbound/dev/random /var/unbound/etc/localtime /var/unbound/etc/resolv.conf >/dev/null 2>&1
+	rmdir /var/unbound/dev >/dev/null 2>&1 || :
+	rmdir /var/unbound/etc >/dev/null 2>&1 || :
+	rmdir /var/unbound >/dev/null 2>&1 || :
 fi
 
 %postun
 if [ "$1" -ge "1" ]; then
 	/sbin/service %{name} condrestart >/dev/null 2>&1 || :
-else
-	# remove root jail 
-	rm -f /var/unbound/dev/log /var/unbound/dev/random /var/unbound/etc/localtime /var/unbound/etc/resolv.conf >/dev/null 2>&1
-	rmdir /var/unbound >/dev/null 2>&1 || :
 fi
 
 %changelog
