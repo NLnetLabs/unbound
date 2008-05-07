@@ -1,3 +1,6 @@
+7 May 2008: Wouter
+	- fixup no-ip4 problem with error callback in outside network.
+
 25 April 2008: Wouter
 	- DESTDIR is honored by the Makefile for rpms.
 	- contrib files unbound.spec and unbound.init, builds working RPM

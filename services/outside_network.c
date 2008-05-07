@@ -273,7 +273,7 @@ outnet_send_wait_udp(struct outside_network* outnet)
 			pend->timeout)) {
 			/* callback error on pending */
 			fptr_ok(fptr_whitelist_pending_udp(pend->cb));
-			(void)(*pend->cb)(pend->pc->cp, pend->cb_arg, 
+			(void)(*pend->cb)(outnet->unused_fds->cp, pend->cb_arg, 
 				NETEVENT_CLOSED, NULL);
 			pending_delete(outnet, pend);
 		}
