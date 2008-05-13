@@ -112,7 +112,7 @@ ah(struct delegpt* dp, struct regional* r, const char* sv, const char* ip)
 
 /** obtain compiletime provided root hints */
 static struct delegpt* 
-compile_time_root_prime(struct regional* r)
+compile_time_root_prime(struct regional* r, int do_ip4, int do_ip6)
 {
 	/* from:
 	 ;       This file is made available by InterNIC
@@ -121,14 +121,14 @@ compile_time_root_prime(struct regional* r)
 	 ;           on server           FTP.INTERNIC.NET
 	 ;       -OR-                    RS.INTERNIC.NET
 	 ;
-	 ;       last update:    Jan 29, 2004
-	 ;       related version of root zone:   2004012900
+	 ;       related version of root zone:   2008051300
 	 */
 	struct delegpt* dp = delegpt_create(r);
 	if(!dp)
 		return NULL;
 	if(!delegpt_set_name(dp, r, (uint8_t*)"\000"))
 		return NULL;
+      if(do_ip4) {
 	if(!ah(dp, r, "A.ROOT-SERVERS.NET.", "198.41.0.4"))	return 0;
 	if(!ah(dp, r, "B.ROOT-SERVERS.NET.", "192.228.79.201")) return 0;
 	if(!ah(dp, r, "C.ROOT-SERVERS.NET.", "192.33.4.12"))	return 0;
@@ -142,6 +142,15 @@ compile_time_root_prime(struct regional* r)
 	if(!ah(dp, r, "K.ROOT-SERVERS.NET.", "193.0.14.129"))	return 0;
 	if(!ah(dp, r, "L.ROOT-SERVERS.NET.", "199.7.83.42"))	return 0;
 	if(!ah(dp, r, "M.ROOT-SERVERS.NET.", "202.12.27.33"))	return 0;
+      }
+      if(do_ip6) {
+	if(!ah(dp, r, "A.ROOT-SERVERS.NET.", "2001:503:ba3e::2:30")) return 0;
+	if(!ah(dp, r, "F.ROOT-SERVERS.NET.", "2001:500:2f::f")) return 0;
+	if(!ah(dp, r, "H.ROOT-SERVERS.NET.", "2001:500:1::803f:235")) return 0;
+	if(!ah(dp, r, "J.ROOT-SERVERS.NET.", "2001:503:c27::2:30")) return 0;
+	if(!ah(dp, r, "K.ROOT-SERVERS.NET.", "2001:7fd::1")) return 0;
+	if(!ah(dp, r, "M.ROOT-SERVERS.NET.", "2001:dc3::35")) return 0;
+      }
 	return dp;
 }
 
@@ -433,7 +442,8 @@ hints_apply_cfg(struct iter_hints* hints, struct config_file* cfg)
 
 	/* use fallback compiletime root hints */
 	if(!hints_lookup_root(hints, LDNS_RR_CLASS_IN)) {
-		struct delegpt* dp = compile_time_root_prime(hints->region);
+		struct delegpt* dp = compile_time_root_prime(hints->region,
+			cfg->do_ip4, cfg->do_ip6);
 		verbose(VERB_ALGO, "no config, using builtin root hints.");
 		if(!dp) 
 			return 0;

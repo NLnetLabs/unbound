@@ -1,4 +1,4 @@
-TODO items.
+TODO items. These are interesting todo items.
 o understand synthesized DNAMEs, so those TTL=0 packets are cached properly.
 o NSEC/NSEC3 aggressive negative caching, so that updates to NSEC/NSEC3 
   will result in proper negative responses.
@@ -49,3 +49,19 @@ o overhaul outside-network servicedquery to merge with udpwait and tcpwait,
   to make timers in servicedquery independent of udpwait queues.
 o 0x20 fallback so it can be enabled without trouble.
 o check into rebinding ports for efficiency, configure time test.
+o DLV is considered.
+o EVP hardware crypto support.
+
+Features soon after 1.0.
+o EDNS fallback after timeout (firewall drops all edns traffic problem).
+
+For 1.x; features that have been requested during the beta test.
+o command channel for couple of tasks. Like rndc.
+  o see delegation; what servers would be used to get data for a name.
+  o force stats display; easier than parsing logfiles.
+    stats display added over threads, displayed in rddtool easy format.
+  o flush names or domains (all under a name) from the cache. Include NSes.
+    And the A, AAAA for its NSes.
+  o add/del static preload data to change the domain redirections.
+  o and maybe also start, stop, reload.
+

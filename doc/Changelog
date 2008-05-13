@@ -1,3 +1,7 @@
+13 May 2008: Wouter
+	- Added root ipv6 addresses to builtin root hints.
+	- TODO modified for post 1.0 plans.
+
 7 May 2008: Wouter
 	- fixup no-ip4 problem with error callback in outside network.
 
