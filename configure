@@ -21932,8 +21932,71 @@ if test "$ac_res" != no; then
 
 fi
 
-# check for library used by libevent after 1.3c
-{ echo "$as_me:$LINENO: checking for library containing clock_gettime" >&5
+
+# check for libevent
+
+# Check whether --with-libevent was given.
+if test "${with_libevent+set}" = set; then
+  withval=$with_libevent;
+else
+   withval="no"
+fi
+
+if test x_$withval == x_yes -o x_$withval != x_no; then
+        { echo "$as_me:$LINENO: checking for libevent" >&5
+echo $ECHO_N "checking for libevent... $ECHO_C" >&6; }
+        if test x_$withval = x_ -o x_$withval = x_yes; then
+            withval="/usr/local /opt/local /usr/lib /usr/pkg /usr/sfw /usr"
+        fi
+        for dir in $withval; do
+            thedir="$dir"
+            if test -f "$dir/include/event.h"; then
+                found_libevent="yes"
+                CPPFLAGS="$CPPFLAGS -I$thedir/include"
+                break;
+            fi
+        done
+        if test x_$found_libevent != x_yes; then
+		if test -f "$dir/event.h" -a \( -f "$dir/libevent.la" -o -f "$dir/libev.la" \) ; then
+			# libevent source directory
+            		{ echo "$as_me:$LINENO: result: found in $thedir" >&5
+echo "${ECHO_T}found in $thedir" >&6; }
+                	CPPFLAGS="$CPPFLAGS -I$thedir -I$thedir/include"
+			BAK_LDFLAGS="$LDFLAGS"
+			# remove evdns from linking
+			mkdir build >/dev/null 2>&1
+			mkdir build/libevent >/dev/null 2>&1
+			mkdir build/libevent/.libs >/dev/null 2>&1
+			ev_files_o=`ls $thedir/*.o | grep -v evdns\.o`
+			ev_files_lo=`ls $thedir/*.lo | grep -v evdns\.lo`
+			ev_files_libso=`ls $thedir/.libs/*.o | grep -v evdns\.o`
+			cp $ev_files_o build/libevent
+			cp $ev_files_lo build/libevent
+			cp $ev_files_libso build/libevent/.libs
+            		LATE_LDFLAGS="build/libevent/*.lo -lm"
+			LDFLAGS="build/libevent/*.o $LDFLAGS -lm"
+		else
+            		{ { echo "$as_me:$LINENO: error: Cannot find the libevent library in $withval
+You can restart ./configure --with-libevent=no to use a builtin alternative.
+Please note that this alternative is not as capable as libevent when using
+large outgoing port ranges.  " >&5
+echo "$as_me: error: Cannot find the libevent library in $withval
+You can restart ./configure --with-libevent=no to use a builtin alternative.
+Please note that this alternative is not as capable as libevent when using
+large outgoing port ranges.  " >&2;}
+   { (exit 1); exit 1; }; }
+		fi
+        else
+            { echo "$as_me:$LINENO: result: found in $thedir" >&5
+echo "${ECHO_T}found in $thedir" >&6; }
+            LDFLAGS="$LDFLAGS -L$thedir/lib"
+	    if test "x$enable_rpath" = xyes; then
+	        RUNTIME_PATH="$RUNTIME_PATH -R$thedir/lib"
+	    fi
+        fi
+
+	# check for library used by libevent after 1.3c
+	{ echo "$as_me:$LINENO: checking for library containing clock_gettime" >&5
 echo $ECHO_N "checking for library containing clock_gettime... $ECHO_C" >&6; }
 if test "${ac_cv_search_clock_gettime+set}" = set; then
   echo $ECHO_N "(cached) $ECHO_C" >&6
@@ -22016,68 +22079,6 @@ if test "$ac_res" != no; then
 
 fi
 
-
-# check for libevent
-
-# Check whether --with-libevent was given.
-if test "${with_libevent+set}" = set; then
-  withval=$with_libevent;
-else
-   withval="no"
-fi
-
-if test x_$withval == x_yes -o x_$withval != x_no; then
-        { echo "$as_me:$LINENO: checking for libevent" >&5
-echo $ECHO_N "checking for libevent... $ECHO_C" >&6; }
-        if test x_$withval = x_ -o x_$withval = x_yes; then
-            withval="/usr/local /opt/local /usr/lib /usr/pkg /usr/sfw /usr"
-        fi
-        for dir in $withval; do
-            thedir="$dir"
-            if test -f "$dir/include/event.h"; then
-                found_libevent="yes"
-                CPPFLAGS="$CPPFLAGS -I$thedir/include"
-                break;
-            fi
-        done
-        if test x_$found_libevent != x_yes; then
-		if test -f "$dir/event.h" -a \( -f "$dir/libevent.la" -o -f "$dir/libev.la" \) ; then
-			# libevent source directory
-            		{ echo "$as_me:$LINENO: result: found in $thedir" >&5
-echo "${ECHO_T}found in $thedir" >&6; }
-                	CPPFLAGS="$CPPFLAGS -I$thedir -I$thedir/include"
-			BAK_LDFLAGS="$LDFLAGS"
-			# remove evdns from linking
-			mkdir build >/dev/null 2>&1
-			mkdir build/libevent >/dev/null 2>&1
-			mkdir build/libevent/.libs >/dev/null 2>&1
-			ev_files_o=`ls $thedir/*.o | grep -v evdns\.o`
-			ev_files_lo=`ls $thedir/*.lo | grep -v evdns\.lo`
-			ev_files_libso=`ls $thedir/.libs/*.o | grep -v evdns\.o`
-			cp $ev_files_o build/libevent
-			cp $ev_files_lo build/libevent
-			cp $ev_files_libso build/libevent/.libs
-            		LATE_LDFLAGS="build/libevent/*.lo -lm"
-			LDFLAGS="build/libevent/*.o $LDFLAGS -lm"
-		else
-            		{ { echo "$as_me:$LINENO: error: Cannot find the libevent library in $withval
-You can restart ./configure --with-libevent=no to use a builtin alternative.
-Please note that this alternative is not as capable as libevent when using
-large outgoing port ranges.  " >&5
-echo "$as_me: error: Cannot find the libevent library in $withval
-You can restart ./configure --with-libevent=no to use a builtin alternative.
-Please note that this alternative is not as capable as libevent when using
-large outgoing port ranges.  " >&2;}
-   { (exit 1); exit 1; }; }
-		fi
-        else
-            { echo "$as_me:$LINENO: result: found in $thedir" >&5
-echo "${ECHO_T}found in $thedir" >&6; }
-            LDFLAGS="$LDFLAGS -L$thedir/lib"
-	    if test "x$enable_rpath" = xyes; then
-	        RUNTIME_PATH="$RUNTIME_PATH -R$thedir/lib"
-	    fi
-        fi
 
 	{ echo "$as_me:$LINENO: checking for library containing event_set" >&5
 echo $ECHO_N "checking for library containing event_set... $ECHO_C" >&6; }

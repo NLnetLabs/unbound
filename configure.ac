@@ -506,8 +506,6 @@ fi
 # check to see if libraries are needed for these functions.
 AC_SEARCH_LIBS([inet_pton], [nsl])
 AC_SEARCH_LIBS([socket], [socket])
-# check for library used by libevent after 1.3c
-AC_SEARCH_LIBS([clock_gettime], [rt])
 
 # check for libevent
 AC_ARG_WITH(libevent, AC_HELP_STRING([--with-libevent=pathname],
@@ -558,6 +556,9 @@ large outgoing port ranges.  ])
 	    fi
         fi
 	AC_SUBST(RUNTIME_PATH)
+	# check for library used by libevent after 1.3c
+	AC_SEARCH_LIBS([clock_gettime], [rt])
+
 	AC_SEARCH_LIBS(event_set, [event])
 	AC_CHECK_HEADERS([event.h],,, [AC_INCLUDES_DEFAULT])
 	AC_CHECK_FUNCS([event_base_free]) # only in libevent 1.2 and later

@@ -2,6 +2,7 @@
 	- Added root ipv6 addresses to builtin root hints.
 	- TODO modified for post 1.0 plans.
 	- trunk version set to 1.0.0.
+	- no unnecessary linking with librt (only when libevent/libev used).
 
 7 May 2008: Wouter
 	- fixup no-ip4 problem with error callback in outside network.
