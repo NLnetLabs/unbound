@@ -114,7 +114,7 @@ ALL_OBJ=$(addprefix $(BUILD),$(ALL_SRC:.c=.o) \
 
 COMPILE=$(LIBTOOL) --tag=CC --mode=compile $(CC) $(CPPFLAGS) $(CFLAGS)
 LINK=$(LIBTOOL) --tag=CC --mode=link $(CC) $(staticexe) $(RUNTIME_PATH) $(CFLAGS) $(LDFLAGS)
-LINK_LIB=$(LIBTOOL) --tag=CC --mode=link $(CC) $(RUNTIME_PATH) $(CFLAGS) $(LDFLAGS) $(staticexe) -release $(VERSION) -no-undefined
+LINK_LIB=$(LIBTOOL) --tag=CC --mode=link $(CC) $(RUNTIME_PATH) $(CFLAGS) $(LDFLAGS) $(staticexe) -version-number @LIBUNBOUND_CURRENT@:@LIBUNBOUND_REVISION@:@LIBUNBOUND_AGE@ -no-undefined
 
 .PHONY:	clean realclean doc lint all install uninstall tests test download_ldns strip lib
 
@@ -227,6 +227,7 @@ util/configparser.c util/configparser.h:  $(srcdir)/util/configparser.y
 
 clean:
 	rm -f *.o *.d *.lo *~ tags
+	rm -f unbound unbound-checkconf unbound-host
 	rm -rf autom4te.cache .libs build doc/html
 
 realclean: clean
@@ -285,7 +286,7 @@ uninstall:
 	rm -f -- $(DESTDIR)$(includedir)/unbound.h
 	$(LIBTOOL) --mode=uninstall rm -f $(DESTDIR)$(libdir)/libunbound.la
 	@echo
-	@echo "You still need to remove `dirname $(DESTDIR)$(configfile)` , $(DESTDIR)$(configfile) by hand"
+	@echo "You still need to remove "`dirname $(DESTDIR)$(configfile)`" , $(DESTDIR)$(configfile) by hand"
 
 download_ldns:
 	svn export https://www.nlnetlabs.nl/ldns/svn/trunk/makedist.sh ldns_makedist.sh

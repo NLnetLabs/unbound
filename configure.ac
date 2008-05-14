@@ -4,6 +4,33 @@ AC_PREREQ(2.57)
 
 AC_INIT(unbound,1.0.0, unbound-bugs@nlnetlabs.nl, unbound)
 
+LIBUNBOUND_CURRENT=0
+LIBUNBOUND_REVISION=12
+LIBUNBOUND_AGE=0
+# 1.0.0 had 0:12:0
+
+#   Current  -- the number of the binary API that we're implementing
+#   Revision -- which iteration of the implementation of the binary
+#               API are we supplying?
+#   Age      -- How many previous binary API versions do we also
+#               support?
+#
+# If we release a new version that does not change the binary API,
+# increment Revision.
+#
+# If we release a new version that changes the binary API, but does
+# not break programs compiled against the old binary API, increment
+# Current and Age.  Set Revision to 0, since this is the first
+# implementation of the new API.
+#
+# Otherwise, we're changing the binary API and breaking bakward
+# compatibility with old binaries.  Increment Current.  Set Age to 0,
+# since we're backward compatible with no previous APIs.  Set Revision
+# to 0 too.
+AC_SUBST(LIBUNBOUND_CURRENT)
+AC_SUBST(LIBUNBOUND_REVISION)
+AC_SUBST(LIBUNBOUND_AGE)
+
 CFLAGS=
 AC_AIX
 
@@ -331,7 +358,6 @@ AC_DEFUN([AC_PROG_OBJC], [:])
 AC_DEFUN([AC_PROG_OBJCCPP], [:])
 AC_DEFUN([AC_LIBTOOL_CXX], [:])
 AC_DEFUN([AC_LIBTOOL_F77], [:])
-# Use libtool 
 AC_CHECK_PROGS(libtool, [glibtool libtool15 libtool], [./libtool])
 AC_PATH_TOOL(AR, ar, [false])
 if test $AR = false; then
@@ -425,6 +451,14 @@ dnl Check whether to use rpath or not
 AC_ARG_ENABLE(rpath,
         [  --disable-rpath         disable hardcoded rpath (default=enabled)],
 	enable_rpath=$enableval, enable_rpath=yes)
+if test "x$enable_rpath" = xno; then
+	AC_MSG_RESULT([Fixing libtool for -rpath problems.])
+	sed < libtool > libtool-2 \
+	's/^hardcode_libdir_flag_spec.*$'/'hardcode_libdir_flag_spec=" -D__LIBTOOL_RPATH_SED__ "/'
+	mv libtool-2 libtool
+	chmod 755 libtool
+	libtool="./libtool"
+fi
 
 # Checks for libraries.
 AC_ARG_WITH(ssl, AC_HELP_STRING([--with-ssl=pathname],

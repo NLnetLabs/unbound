@@ -1,3 +1,8 @@
+14 May 2008: Wouter
+	- accepted patch from Ondrej Sury for library version libtool option.
+	- configure --disable-rpath fixes up libtool for rpath trouble.
+	  Adapted from debian package patch file.
+
 13 May 2008: Wouter
 	- Added root ipv6 addresses to builtin root hints.
 	- TODO modified for post 1.0 plans.
