@@ -1,5 +1,6 @@
 16 May 2008: Wouter
 	- fixup for MacOSX hosts file reading (reported by John Dickinson).
+	- created 1.0.0 svn tag.
 
 14 May 2008: Wouter
 	- accepted patch from Ondrej Sury for library version libtool option.
