@@ -889,6 +889,8 @@ ub_ctx_hosts(struct ub_ctx* ctx, char* fname)
 			parse++;
 		if(*parse == '\n' || *parse == 0)
 			continue;
+		if(*parse == '%') 
+			continue; /* ignore macOSX fe80::1%lo0 localhost */
 		if(*parse != ' ' && *parse != '\t') {
 			/* must have whitespace after address */
 			fclose(in);

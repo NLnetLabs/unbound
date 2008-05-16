@@ -1,3 +1,6 @@
+16 May 2008: Wouter
+	- fixup for MacOSX hosts file reading (reported by John Dickinson).
+
 14 May 2008: Wouter
 	- accepted patch from Ondrej Sury for library version libtool option.
 	- configure --disable-rpath fixes up libtool for rpath trouble.
