@@ -24235,9 +24235,9 @@ if test "${with_ldns+set}" = set; then
 fi
 
 
-{ echo "$as_me:$LINENO: checking for ldns_rr_new in -lldns" >&5
-echo $ECHO_N "checking for ldns_rr_new in -lldns... $ECHO_C" >&6; }
-if test "${ac_cv_lib_ldns_ldns_rr_new+set}" = set; then
+{ echo "$as_me:$LINENO: checking for ldns_buffer_copy in -lldns" >&5
+echo $ECHO_N "checking for ldns_buffer_copy in -lldns... $ECHO_C" >&6; }
+if test "${ac_cv_lib_ldns_ldns_buffer_copy+set}" = set; then
   echo $ECHO_N "(cached) $ECHO_C" >&6
 else
   ac_check_lib_save_LIBS=$LIBS
@@ -24255,11 +24255,11 @@ cat >>conftest.$ac_ext <<_ACEOF
 #ifdef __cplusplus
 extern "C"
 #endif
-char ldns_rr_new ();
+char ldns_buffer_copy ();
 int
 main ()
 {
-return ldns_rr_new ();
+return ldns_buffer_copy ();
   ;
   return 0;
 }
@@ -24282,21 +24282,21 @@ eval "echo \"\$as_me:$LINENO: $ac_try_echo\"") >&5
 	 test ! -s conftest.err
        } && test -s conftest$ac_exeext &&
        $as_test_x conftest$ac_exeext; then
-  ac_cv_lib_ldns_ldns_rr_new=yes
+  ac_cv_lib_ldns_ldns_buffer_copy=yes
 else
   echo "$as_me: failed program was:" >&5
 sed 's/^/| /' conftest.$ac_ext >&5
 
-	ac_cv_lib_ldns_ldns_rr_new=no
+	ac_cv_lib_ldns_ldns_buffer_copy=no
 fi
 
 rm -f core conftest.err conftest.$ac_objext conftest_ipa8_conftest.oo \
       conftest$ac_exeext conftest.$ac_ext
 LIBS=$ac_check_lib_save_LIBS
 fi
-{ echo "$as_me:$LINENO: result: $ac_cv_lib_ldns_ldns_rr_new" >&5
-echo "${ECHO_T}$ac_cv_lib_ldns_ldns_rr_new" >&6; }
-if test $ac_cv_lib_ldns_ldns_rr_new = yes; then
+{ echo "$as_me:$LINENO: result: $ac_cv_lib_ldns_ldns_buffer_copy" >&5
+echo "${ECHO_T}$ac_cv_lib_ldns_ldns_buffer_copy" >&6; }
+if test $ac_cv_lib_ldns_ldns_buffer_copy = yes; then
 
 
 { echo "$as_me:$LINENO: checking for ldns_rr_free in -lldns" >&5
@@ -25108,7 +25108,7 @@ echo "(cd $ldnsdir && ./configure)"
 (cd $ldnsdir && ./configure)
 { echo "$as_me:$LINENO: Finished $ldnsdir configure" >&5
 echo "$as_me: Finished $ldnsdir configure" >&6;}
-CPPFLAGS="$CPPFLAGS -I$ldnsdir/include"
+CPPFLAGS="-I$ldnsdir/include $CPPFLAGS"
 LDFLAGS="$LDFLAGS $ldnsdir/*.lo"
 
 cat >>confdefs.h <<\_ACEOF

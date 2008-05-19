@@ -1,6 +1,7 @@
 19 May 2008: Wouter
 	- fedora 9, check in6_pktinfo define in configure.
 	- CREDITS fixup of history.
+	- ignore ldns-1.2.2 if installed, use builtin 1.3.0-pre alternative.
 
 16 May 2008: Wouter
 	- fixup for MacOSX hosts file reading (reported by John Dickinson).
