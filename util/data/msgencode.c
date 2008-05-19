@@ -330,7 +330,7 @@ compress_any_dname(uint8_t* dname, ldns_buffer* pkt, int labs,
 	struct regional* region, struct compress_tree_node** tree)
 {
 	struct compress_tree_node* p;
-	struct compress_tree_node** insertpt;
+	struct compress_tree_node** insertpt = NULL;
 	size_t pos = ldns_buffer_position(pkt);
 	if((p = compress_tree_lookup(tree, dname, labs, &insertpt))) {
 		if(!write_compressed_dname(pkt, dname, labs, p))

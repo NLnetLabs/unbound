@@ -1,3 +1,6 @@
+19 May 2008: Wouter
+	- fedora 9, check in6_pktinfo define in configure.
+
 16 May 2008: Wouter
 	- fixup for MacOSX hosts file reading (reported by John Dickinson).
 	- created 1.0.0 svn tag.

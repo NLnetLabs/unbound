@@ -232,6 +232,17 @@ int test() {
 }
 ], [CFLAGS="$CFLAGS -D_BSD_SOURCE"])
 
+CHECK_COMPILER_FLAG_NEEDED(-D_GNU_SOURCE,
+[
+#include <netinet/in.h>
+
+int test() {
+        struct in6_pktinfo inf;
+	int a = (int)sizeof(inf);
+        return a;
+}
+], [CFLAGS="$CFLAGS -D_GNU_SOURCE"])
+
 CHECK_COMPILER_FLAG_NEEDED(-D_POSIX_C_SOURCE=200112,
 [
 #include "confdefs.h"
