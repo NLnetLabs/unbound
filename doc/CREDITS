@@ -1,10 +1,14 @@
 Unbound was developed at NLnet Labs by Wouter Wijngaards.
 
-Unbound was devised by Bill Manning, David Blacka, and Matt Larson 
-from the University of California and from Verisign. The Java prototype
-was made in further cooperation with Geoff Sisson and Roy Arends from Nominet.
+Unbound was architected in January of 2004 by Jakob Schlyter of Kirei 
+and Roy Arends of Nominet. VeriSign and EP.Net funded development of 
+the prototype, which was built by David Blacka and Matt Larson of VeriSign. 
+Late in 2006, NLnet Labs joined the effort, writing an implementation in C 
+based on the existing prototype and using experience NLnet Labs gained
+during the development of NSD, an authoritative DNS server.
 
-At NLnet Labs, Jelte Jansen and Mark Santcroos reviewed the unbound C sources.
+At NLnet Labs, Jelte Jansen, Mark Santcroos and Matthijs Mekking 
+reviewed the unbound C sources.
 
 Jakob Schlyter - for advice on secure settings, random numbers and blacklists.
 

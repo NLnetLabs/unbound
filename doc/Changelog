@@ -1,5 +1,6 @@
 19 May 2008: Wouter
 	- fedora 9, check in6_pktinfo define in configure.
+	- CREDITS fixup of history.
 
 16 May 2008: Wouter
 	- fixup for MacOSX hosts file reading (reported by John Dickinson).
