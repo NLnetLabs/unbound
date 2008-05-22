@@ -1,11 +1,11 @@
 Summary: Validating, recursive, and caching DNS resolver
 Name: unbound
-Version: 0.12
+Version: 1.0.0
 Release: 1%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
 Source: http://www.unbound.net/downloads/%{name}-%{version}.tar.gz
-Source1: unbound.init
+#Source1: unbound.init
 Group: System Environment/Daemons
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 BuildRequires: flex, openssl-devel
@@ -32,17 +32,18 @@ The source code is under a BSD License.
 # This is a build using libldns builtin version, the resulting binaries
 # do not require libldns and this package does not have version dependencies.
 # Could be smaller using a dependency on libldns (use --with-ldns=).
-%configure --enable-debug --with-conf-file=%{_localstatedir}/%{name}/unbound.conf --disable-static --disable-rpath
+%configure --with-conf-file=%{_localstatedir}/%{name}/unbound.conf --disable-rpath
 
 %build
-%{__make} %{?_smp_mflags}
+#%{__make} %{?_smp_mflags}
+make
 
 %install
 rm -rf %{buildroot}
 %{__make} DESTDIR=%{buildroot} install
 install -d 0700 %{buildroot}%{_localstatedir}/%{name}
 install -d 0755 %{buildroot}%{_initrddir}
-install -m 0755 %{SOURCE1} %{buildroot}%{_initrddir}/unbound
+install -m 0755 contrib/unbound.init %{buildroot}%{_initrddir}/unbound
 # add symbolic link from /etc/unbound.conf -> /var/unbound/unbound.conf
 ln -s %{_localstatedir}/unbound/unbound.conf %{buildroot}%{_sysconfdir}/unbound.conf 
 # remove static library from install (fedora packaging guidelines)
@@ -91,6 +92,9 @@ if [ "$1" -ge "1" ]; then
 fi
 
 %changelog
+* Thu May 22 2008 Wouter Wijngaards <wouter@nlnetlabs.nl> - 1.0.0
+- contrib changes from Patrick Vande Walle.
+
 * Thu Apr 25 2008 Wouter Wijngaards <wouter@nlnetlabs.nl> - 0.12
 - Using parts from ports collection entry by Jaap Akkerhuis.
 - Using Fedoraproject wiki guidelines.
