@@ -84,6 +84,8 @@ static void config_end_include(void)
 #endif
 
 %}
+%option noinput
+%option nounput
 
 SPACE   [ \t]
 LETTER  [a-zA-Z]

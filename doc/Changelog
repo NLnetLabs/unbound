@@ -2,6 +2,7 @@
 	- contrib unbound.spec from Patrick Vande Walle.
 	- fixup bug#175: call tzset before chroot to have correct timestamps
 	  in system log.
+	- do not generate lex input and lex unput functions.
 
 19 May 2008: Wouter
 	- fedora 9, check in6_pktinfo define in configure.
