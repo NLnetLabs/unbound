@@ -20804,30 +20804,6 @@ _ACEOF
 fi
 
 
-# Check for yyunput
-
-{ echo "$as_me:$LINENO: checking whether lex can not generate yyunput" >&5
-echo $ECHO_N "checking whether lex can not generate yyunput... $ECHO_C" >&6; }
-if test "${ac_cv_c_yy_unput+set}" = set; then
-  echo $ECHO_N "(cached) $ECHO_C" >&6
-else
-  ac_cv_c_yy_unput=no
-if $LEX --nounput -h 2>&1 | grep "do not generate" 2>&1 >/dev/null; then
-   ac_cv_c_yy_unput="yes"
-else
-   ac_cv_c_yy_unput="no"
-fi
-
-fi
-
-
-{ echo "$as_me:$LINENO: result: $ac_cv_c_yy_unput" >&5
-echo "${ECHO_T}$ac_cv_c_yy_unput" >&6; }
-if test $ac_cv_c_yy_unput = yes; then
-	LEX="$LEX --nounput"
-fi
-
-
 # add option to disable the evil rpath
 # Check whether --enable-rpath was given.
 if test "${enable_rpath+set}" = set; then
