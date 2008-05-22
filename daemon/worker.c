@@ -67,7 +67,9 @@
 #ifdef HAVE_SYS_TYPES_H
 #  include <sys/types.h>
 #endif
+#ifdef HAVE_NETDB_H
 #include <netdb.h>
+#endif
 #include <signal.h>
 
 /** Size of an UDP datagram */

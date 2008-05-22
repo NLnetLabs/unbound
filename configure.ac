@@ -1,6 +1,6 @@
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
-AC_PREREQ(2.57)
+AC_PREREQ(2.56)
 
 AC_INIT(unbound,1.0.1, unbound-bugs@nlnetlabs.nl, unbound)
 
@@ -61,6 +61,8 @@ ub_dir=`dirname $ub_cfg`
 AC_DEFINE_UNQUOTED(RUN_DIR, ["$ub_dir"], [Directory to chdir to])
 AC_DEFINE_UNQUOTED(CHROOT_DIR, ["$ub_dir"], [Directory to chroot to])
 AC_DEFINE_UNQUOTED(PIDFILE, ["$ub_dir/unbound.pid"], [Pathname to unbound process id file])
+
+AC_DEFINE(WINVER, 0x0502, [the version of the windows API enabled])
 
 dnl routine to help check for compiler flags.
 AC_DEFUN([CHECK_COMPILER_FLAG],
@@ -144,6 +146,10 @@ CHECK_COMPILER_FLAG(g, [CFLAGS="$CFLAGS -g"])
 CHECK_COMPILER_FLAG(O2, [CFLAGS="$CFLAGS -O2"])
 
 AC_CHECK_HEADERS([getopt.h time.h],,, [AC_INCLUDES_DEFAULT])
+
+# MinGW32 tests
+AC_CHECK_HEADERS([winsock2.h ws2tcpip.h],,, [AC_INCLUDES_DEFAULT])
+# end mingw32 tests
 
 CHECK_COMPILER_FLAG_NEEDED(-std=c99 -D__EXTENSIONS__ -D_BSD_SOURCE -D_POSIX_C_SOURCE=200112 -D_XOPEN_SOURCE=600 -D_XOPEN_SOURCE_EXTENDED=1 -D_ALL_SOURCE,
 [
@@ -387,7 +393,7 @@ AC_PROG_LIBTOOL
 
 # Checks for header files.
 AC_HEADER_STDC
-AC_CHECK_HEADERS([stdarg.h stdbool.h netinet/in.h sys/param.h sys/socket.h sys/uio.h sys/resource.h arpa/inet.h syslog.h],,, [AC_INCLUDES_DEFAULT])
+AC_CHECK_HEADERS([stdarg.h stdbool.h netinet/in.h sys/param.h sys/socket.h sys/uio.h sys/resource.h arpa/inet.h syslog.h netdb.h],,, [AC_INCLUDES_DEFAULT])
 
 # check for types
 AC_CHECK_TYPE(int8_t, char)
@@ -631,6 +637,71 @@ AC_TYPE_SIGNAL
 AC_FUNC_FSEEKO
 AC_SYS_LARGEFILE
 
+AC_CHECK_FUNCS([tzset])
+
+AC_DEFUN([AC_CHECK_GETADDRINFO_WITH_INCLUDES],
+[AC_REQUIRE([AC_PROG_CC])
+AC_MSG_CHECKING(for getaddrinfo)
+AC_CACHE_VAL(ac_cv_func_getaddrinfo,
+[ac_cv_func_getaddrinfo=no
+AC_LINK_IFELSE(
+[
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+char* getaddrinfo();
+char* (*f) () = getaddrinfo;
+#ifdef __cplusplus
+}
+#endif
+int main() {
+        ;
+        return 0;
+}
+],
+dnl this case on linux, solaris, bsd
+[ac_cv_func_getaddrinfo="yes"],
+dnl no quick getaddrinfo, try mingw32 and winsock2 library.
+ORIGLIBS="$LIBS"
+LIBS="$LIBS -lws2_32"
+AC_LINK_IFELSE(
+AC_LANG_PROGRAM(
+[
+#ifdef HAVE_WS2TCPIP_H
+#include <ws2tcpip.h>
+#endif
+],
+[
+        (void)getaddrinfo(NULL, NULL, NULL, NULL);
+]
+),
+[ac_cv_func_getaddrinfo="yes"
+LDFLAGS="$LDFLAGS -lws2_32"
+],
+[ac_cv_func_getaddrinfo="no"
+LIBS="$ORIGLIBS"
+])
+)
+])
+
+AC_MSG_RESULT($ac_cv_func_getaddrinfo)
+if test $ac_cv_func_getaddrinfo = yes; then
+  AC_DEFINE(HAVE_GETADDRINFO, 1, [Whether getaddrinfo is available])
+fi
+])dnl
+
+AC_CHECK_GETADDRINFO_WITH_INCLUDES
+if test $ac_cv_func_getaddrinfo = no; then
+AC_LIBOBJ([fake-rfc2553])
+fi
+AC_REPLACE_FUNCS(inet_aton)
+AC_REPLACE_FUNCS(inet_pton)
+AC_REPLACE_FUNCS(inet_ntop)
+AC_REPLACE_FUNCS(snprintf)
+AC_REPLACE_FUNCS(strlcpy)
+AC_REPLACE_FUNCS(memmove)
+
 # check this after all other compilation checks, since the linking of the lib
 # may break checks after this.
 AC_ARG_WITH(ldns,
@@ -645,19 +716,6 @@ AC_ARG_WITH(ldns,
 AC_CHECK_LIB(ldns, ldns_buffer_copy, [
 dnl ldns was found, check compat functions
 AC_CHECK_LIB(ldns, [ldns_rr_free])
-AC_REPLACE_FUNCS(inet_aton)
-AC_REPLACE_FUNCS(inet_pton)
-AC_REPLACE_FUNCS(inet_ntop)
-AC_REPLACE_FUNCS(snprintf)
-AC_REPLACE_FUNCS(strlcpy)
-AC_REPLACE_FUNCS(memmove)
-AC_CHECK_FUNCS([tzset])
-
-AC_CHECK_FUNCS([getaddrinfo])
-if test $ac_cv_func_getaddrinfo = no; then
-AC_LIBOBJ([fake-rfc2553])
-fi
-
 ] , [
 dnl use the builtin ldns-src.tar.gz file to build ldns.
 if test ! -f $srcdir/ldns-src.tar.gz; then
@@ -679,14 +737,6 @@ AC_MSG_NOTICE([Finished $ldnsdir configure])
 CPPFLAGS="-I$ldnsdir/include $CPPFLAGS"
 LDFLAGS="$LDFLAGS $ldnsdir/*.lo"
 AC_SUBST(ldnsdir)
-dnl use ldns compat functions
-AC_DEFINE(HAVE_INET_ATON)
-AC_DEFINE(HAVE_INET_PTON)
-AC_DEFINE(HAVE_INET_NTOP)
-AC_DEFINE(HAVE_SNPRINTF)
-AC_DEFINE(HAVE_STRLCPY)
-AC_DEFINE(HAVE_MEMMOVE)
-AC_DEFINE(HAVE_GETADDRINFO)
 ])
 LDFLAGS="$LATE_LDFLAGS $LDFLAGS"
 
@@ -731,6 +781,14 @@ AH_BOTTOM([
 
 #ifdef HAVE_ARPA_INET_H
 #include <arpa/inet.h>
+#endif
+
+#ifdef HAVE_WINSOCK2_H
+#include <winsock2.h>
+#endif
+
+#ifdef HAVE_WS2TCPIP_H
+#include <ws2tcpip.h>
 #endif
 
 #ifdef HAVE_GETOPT_H
@@ -790,26 +848,37 @@ AH_BOTTOM([
 #define MAXINCLUDES 10
 
 #ifndef HAVE_SNPRINTF
+#define snprintf snprintf_unbound
+#define vsnprintf vsnprintf_unbound
 #include <stdarg.h>
 int snprintf (char *str, size_t count, const char *fmt, ...);
 int vsnprintf (char *str, size_t count, const char *fmt, va_list arg);
 #endif /* HAVE_SNPRINTF */
 #ifndef HAVE_INET_PTON
+#define inet_pton inet_pton_unbound
 int inet_pton(int af, const char* src, void* dst);
 #endif /* HAVE_INET_PTON */
 #ifndef HAVE_INET_NTOP
+#define inet_ntop inet_ntop_unbound
 const char *inet_ntop(int af, const void *src, char *dst, size_t size);
 #endif
 #ifndef HAVE_INET_ATON
+#define inet_aton inet_aton_unbound
 int inet_aton(const char *cp, struct in_addr *addr);
 #endif
 #ifndef HAVE_MEMMOVE
+#define memmove memmove_unbound
 void *memmove(void *dest, const void *src, size_t n);
 #endif
 #ifndef HAVE_STRLCPY
+#define strlcpy strlcpy_unbound
 size_t strlcpy(char *dst, const char *src, size_t siz);
 #endif
 #ifndef HAVE_GETADDRINFO
+#define getaddrinfo getaddrinfo_unbound
+#define gai_strerror gai_strerror_unbound
+#define freeaddrinfo freeaddrinfo_unbound
+#define getnameinfo getnameinfo_unbound
 struct sockaddr_storage;
 #include "compat/fake-rfc2553.h"
 #endif

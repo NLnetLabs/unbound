@@ -49,7 +49,9 @@
 #ifdef HAVE_SYS_TYPES_H
 #  include <sys/types.h>
 #endif
+#ifdef HAVE_NETDB_H
 #include <netdb.h>
+#endif
 #include <fcntl.h>
 
 /** number of queued TCP connections for listen() */
@@ -105,7 +107,7 @@ create_udp_sock(int family, int socktype, struct sockaddr* addr,
 		if(v6only) {
 			int val=(v6only==2)?0:1;
 			if (setsockopt(s, IPPROTO_IPV6, IPV6_V6ONLY, 
-				&val, (socklen_t)sizeof(val)) < 0) {
+				(void*)&val, (socklen_t)sizeof(val)) < 0) {
 				log_err("setsockopt(..., IPV6_V6ONLY"
 					", ...) failed: %s", strerror(errno));
 				close(s);
@@ -124,7 +126,7 @@ create_udp_sock(int family, int socktype, struct sockaddr* addr,
 		 * network stack supports IPV6_USE_MIN_MTU.
 		 */
 		if (setsockopt(s, IPPROTO_IPV6, IPV6_USE_MIN_MTU,
-			&on, (socklen_t)sizeof(on)) < 0) {
+			(void*)&on, (socklen_t)sizeof(on)) < 0) {
 			log_err("setsockopt(..., IPV6_USE_MIN_MTU, "
 				"...) failed: %s", strerror(errno));
 			close(s);
@@ -159,7 +161,7 @@ create_udp_sock(int family, int socktype, struct sockaddr* addr,
 static int
 create_tcp_accept_sock(struct addrinfo *addr, int v6only)
 {
-	int s, flag;
+	int s;
 #if defined(SO_REUSEADDR) || defined(IPV6_V6ONLY)
 	int on = 1;
 #endif /* SO_REUSEADDR || IPV6_V6ONLY */
@@ -169,7 +171,7 @@ create_tcp_accept_sock(struct addrinfo *addr, int v6only)
 		return -1;
 	}
 #ifdef SO_REUSEADDR
-	if(setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &on, 
+	if(setsockopt(s, SOL_SOCKET, SO_REUSEADDR, (void*)&on, 
 		(socklen_t)sizeof(on)) < 0) {
 		log_err("setsockopt(.. SO_REUSEADDR ..) failed: %s",
 			strerror(errno));
@@ -179,7 +181,7 @@ create_tcp_accept_sock(struct addrinfo *addr, int v6only)
 #if defined(IPV6_V6ONLY)
 	if(addr->ai_family == AF_INET6 && v6only) {
 		if(setsockopt(s, IPPROTO_IPV6, IPV6_V6ONLY, 
-			&on, (socklen_t)sizeof(on)) < 0) {
+			(void*)&on, (socklen_t)sizeof(on)) < 0) {
 			log_err("setsockopt(..., IPV6_V6ONLY, ...) failed: %s",
 				strerror(errno));
 			return -1;
@@ -192,13 +194,7 @@ create_tcp_accept_sock(struct addrinfo *addr, int v6only)
 		log_err("can't bind socket: %s", strerror(errno));
 		return -1;
 	}
-	if((flag = fcntl(s, F_GETFL)) == -1) {
-		log_err("can't fcntl F_GETFL: %s", strerror(errno));
-		flag = 0;
-	}
-	flag |= O_NONBLOCK;
-	if(fcntl(s, F_SETFL, flag) == -1) {
-		log_err("can't fcntl F_SETFL: %s", strerror(errno));
+	if(!fd_set_nonblock(s)) {
 		return -1;
 	}
 	if(listen(s, TCP_BACKLOG) == -1) {
@@ -221,7 +217,12 @@ make_sock(int stype, const char* ifname, const char* port,
 	if((r=getaddrinfo(ifname, port, hints, &res)) != 0 || !res) {
 		log_err("node %s:%s getaddrinfo: %s %s", 
 			ifname?ifname:"default", port, gai_strerror(r),
-			r==EAI_SYSTEM?(char*)strerror(errno):"");
+#ifdef EAI_SYSTEM
+			r==EAI_SYSTEM?(char*)strerror(errno):""
+#else
+			""
+#endif
+		);
 		return -1;
 	}
 	if(stype == SOCK_DGRAM) {
@@ -270,14 +271,14 @@ set_recvpktinfo(int s, int family)
 	if(family == AF_INET6) {
 #           ifdef IPV6_RECVPKTINFO
 		if(setsockopt(s, IPPROTO_IPV6, IPV6_RECVPKTINFO,
-			&on, (socklen_t)sizeof(on)) < 0) {
+			(void*)&on, (socklen_t)sizeof(on)) < 0) {
 			log_err("setsockopt(..., IPV6_RECVPKTINFO, ...) failed: %s",
 				strerror(errno));
 			return 0;
 		}
 #           elif defined(IPV6_PKTINFO)
 		if(setsockopt(s, IPPROTO_IPV6, IPV6_PKTINFO,
-			&on, (socklen_t)sizeof(on)) < 0) {
+			(void*)&on, (socklen_t)sizeof(on)) < 0) {
 			log_err("setsockopt(..., IPV6_PKTINFO, ...) failed: %s",
 				strerror(errno));
 			return 0;
@@ -291,14 +292,14 @@ set_recvpktinfo(int s, int family)
 	} else if(family == AF_INET) {
 #           ifdef IP_RECVDSTADDR
 		if(setsockopt(s, IPPROTO_IP, IP_RECVDSTADDR,
-			&on, (socklen_t)sizeof(on)) < 0) {
+			(void*)&on, (socklen_t)sizeof(on)) < 0) {
 			log_err("setsockopt(..., IP_RECVDSTADDR, ...) failed: %s",
 				strerror(errno));
 			return 0;
 		}
 #           elif defined(IP_PKTINFO)
 		if(setsockopt(s, IPPROTO_IP, IP_PKTINFO,
-			&on, (socklen_t)sizeof(on)) < 0) {
+			(void*)&on, (socklen_t)sizeof(on)) < 0) {
 			log_err("setsockopt(..., IP_PKTINFO, ...) failed: %s",
 				strerror(errno));
 			return 0;

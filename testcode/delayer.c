@@ -960,7 +960,7 @@ service(char* bind_str, int bindport, char* serv_str, size_t memsize,
 #ifdef SO_REUSEADDR
 	if(1) {
 		int on = 1;
-		if(setsockopt(listen_s, SOL_SOCKET, SO_REUSEADDR, &on,
+		if(setsockopt(listen_s, SOL_SOCKET, SO_REUSEADDR, (void*)&on,
 			(socklen_t)sizeof(on)) < 0)
 			fatal_exit("setsockopt(.. SO_REUSEADDR ..) failed: %s",
 				strerror(errno));
