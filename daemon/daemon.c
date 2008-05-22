@@ -130,6 +130,10 @@ daemon_init()
 	signal_handling_record();
 	checklock_start();
 	ERR_load_crypto_strings();
+#ifdef HAVE_TZSET
+	/* init timezone info while we are not chrooted yet */
+	tzset();
+#endif
 	daemon->need_to_exit = 0;
 	modstack_init(&daemon->mods);
 	if(!(daemon->env = (struct module_env*)calloc(1, 

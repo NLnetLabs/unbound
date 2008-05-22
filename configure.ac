@@ -671,6 +671,7 @@ AC_REPLACE_FUNCS(inet_ntop)
 AC_REPLACE_FUNCS(snprintf)
 AC_REPLACE_FUNCS(strlcpy)
 AC_REPLACE_FUNCS(memmove)
+AC_CHECK_FUNCS([tzset])
 
 AC_CHECK_FUNCS([getaddrinfo])
 if test $ac_cv_func_getaddrinfo = no; then
