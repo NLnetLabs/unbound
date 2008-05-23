@@ -54,6 +54,10 @@ o EVP hardware crypto support.
 
 Features soon after 1.0.
 o EDNS fallback after timeout (firewall drops all edns traffic problem).
+o IPv6 reverse, IP4 reverse local-data shorthand for PTR records (?).
+  cumbersome to reverse notate by hand for the operator.
+o zone name appending for local-data. Perhaps read zonefiles. Perhaps it is
+  too much authority feature creep.
 
 For 1.x; features that have been requested during the beta test.
 o command channel for couple of tasks. Like rndc.
