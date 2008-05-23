@@ -23,8 +23,12 @@
 
 #include <sys/param.h>
 #include <sys/types.h>
+#ifdef HAVE_SYS_SOCKET_H
 #include <sys/socket.h>
+#endif
+#ifdef HAVE_NETINET_IN_H
 #include <netinet/in.h>
+#endif
 #include <string.h>
 #include <errno.h>
 #include <stdio.h>
@@ -62,7 +66,11 @@ inet_ntop(int af, const void *src, char *dst, size_t size)
 	case AF_INET6:
 		return (inet_ntop6(src, dst, size));
 	default:
+#ifdef EAFNOSUPPORT
 		errno = EAFNOSUPPORT;
+#else
+		errno = ENOSYS;
+#endif
 		return (NULL);
 	}
 	/* NOTREACHED */

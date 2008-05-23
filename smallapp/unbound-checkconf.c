@@ -51,7 +51,9 @@
 #include "iterator/iterator.h"
 #include "validator/validator.h"
 #include "services/localzone.h"
+#ifdef HAVE_PWD_H
 #include <pwd.h>
+#endif
 #ifdef HAVE_SYS_STAT_H
 #include <sys/stat.h>
 #endif
@@ -368,11 +370,13 @@ morechecks(struct config_file* cfg, char* fname)
 			cfg->module_conf);
 	}
 
+#ifdef HAVE_GETPWNAM
 	if(cfg->username && cfg->username[0]) {
 		if(getpwnam(cfg->username) == NULL)
 			fatal_exit("user '%s' does not exist.", cfg->username);
 		endpwent();
 	}
+#endif
 
 	localzonechecks(cfg);
 }

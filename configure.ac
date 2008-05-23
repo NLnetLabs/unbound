@@ -393,7 +393,7 @@ AC_PROG_LIBTOOL
 
 # Checks for header files.
 AC_HEADER_STDC
-AC_CHECK_HEADERS([stdarg.h stdbool.h netinet/in.h sys/param.h sys/socket.h sys/uio.h sys/resource.h arpa/inet.h syslog.h netdb.h],,, [AC_INCLUDES_DEFAULT])
+AC_CHECK_HEADERS([stdarg.h stdbool.h netinet/in.h sys/param.h sys/socket.h sys/uio.h sys/resource.h arpa/inet.h syslog.h netdb.h sys/wait.h pwd.h],,, [AC_INCLUDES_DEFAULT])
 
 # check for types
 AC_CHECK_TYPE(int8_t, char)
@@ -637,8 +637,6 @@ AC_TYPE_SIGNAL
 AC_FUNC_FSEEKO
 AC_SYS_LARGEFILE
 
-AC_CHECK_FUNCS([tzset])
-
 AC_DEFUN([AC_CHECK_GETADDRINFO_WITH_INCLUDES],
 [AC_REQUIRE([AC_PROG_CC])
 AC_MSG_CHECKING(for getaddrinfo)
@@ -695,12 +693,28 @@ AC_CHECK_GETADDRINFO_WITH_INCLUDES
 if test $ac_cv_func_getaddrinfo = no; then
 AC_LIBOBJ([fake-rfc2553])
 fi
+AC_CHECK_FUNCS([tzset sigprocmask fcntl getpwnam getrlimit setsid sbrk chroot kill])
+
+# check ioctlsocket
+AC_MSG_CHECKING(for ioctlsocket)
+AC_LINK_IFELSE(AC_LANG_PROGRAM([
+#ifdef HAVE_WINSOCK2_H
+#include <winsock2.h>
+#endif
+], [
+	(void)ioctlsocket(0, 0, NULL);
+]), [
+AC_MSG_RESULT(yes)
+AC_DEFINE(HAVE_IOCTLSOCKET, 1, [if the function 'ioctlsocket' is available])
+],[AC_MSG_RESULT(no)])
+
 AC_REPLACE_FUNCS(inet_aton)
 AC_REPLACE_FUNCS(inet_pton)
 AC_REPLACE_FUNCS(inet_ntop)
 AC_REPLACE_FUNCS(snprintf)
 AC_REPLACE_FUNCS(strlcpy)
 AC_REPLACE_FUNCS(memmove)
+AC_REPLACE_FUNCS(gmtime_r)
 
 # check this after all other compilation checks, since the linking of the lib
 # may break checks after this.
@@ -831,6 +845,10 @@ AH_BOTTOM([
 #define RAND_MAX	2147483647
 #endif
 
+#ifndef MAXHOSTNAMELEN
+#define MAXHOSTNAMELEN 256
+#endif
+
 #ifndef IPV6_MIN_MTU
 #define IPV6_MIN_MTU 1280
 #endif /* IPV6_MIN_MTU */
@@ -873,6 +891,10 @@ void *memmove(void *dest, const void *src, size_t n);
 #ifndef HAVE_STRLCPY
 #define strlcpy strlcpy_unbound
 size_t strlcpy(char *dst, const char *src, size_t siz);
+#endif
+#ifndef HAVE_GMTIME_T
+#define gmtime_r gmtime_r_unbound
+struct tm *gmtime_r(const time_t *timep, struct tm *result);
 #endif
 #ifndef HAVE_GETADDRINFO
 #define getaddrinfo getaddrinfo_unbound

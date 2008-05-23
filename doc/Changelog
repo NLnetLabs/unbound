@@ -1,3 +1,18 @@
+23 May 2008: Wouter
+	- mingw32 porting.
+	  - test for sys/wait.h
+	  - WSAEWOULDBLOCK test after nonblocking TCP connect.
+	  - write_iov_buffer removed: unused and no struct iov on windows.
+	  - signed/unsigned warning fixup mini_event.
+	  - use ioctlsocket to set nonblocking I/O if fnctl is unavailable.
+	  - skip signals that are not defined
+	  - detect pwd.h.
+	  - detect getpwnam, getrlimit, setsid, sbrk, chroot.
+	  - default config has no chroot if chroot() unavailable.
+	  - if no kill() then no pidfile is read or written.
+	  - gmtime_r is replaced by nonthreadsafe alternative if unavail.
+	    used in rrsig time validation errors.
+
 22 May 2008: Wouter
 	- contrib unbound.spec from Patrick Vande Walle.
 	- fixup bug#175: call tzset before chroot to have correct timestamps

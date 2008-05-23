@@ -150,7 +150,13 @@ outnet_tcp_take_into_use(struct waiting_tcp* w, uint8_t* pkt, size_t pkt_len)
 	}
 	fd_set_nonblock(s);
 	if(connect(s, (struct sockaddr*)&w->addr, w->addrlen) == -1) {
+#ifdef EINPROGRESS
 		if(errno != EINPROGRESS) {
+#elif defined(WSAEWOULDBLOCK)
+		if(errno != WSAEWOULDBLOCK) {
+#else
+		if(1) {
+#endif
 			log_err("outgoing tcp: connect: %s", strerror(errno));
 			log_addr(0, "failed address", &w->addr, w->addrlen);
 			close(s);

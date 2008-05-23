@@ -104,6 +104,7 @@ debug_memleak(size_t accounted, size_t heap,
 static void
 debug_total_mem(size_t calctotal)
 {
+#ifdef HAVE_SBRK
 	extern void* unbound_start_brk;
 	extern size_t unbound_mem_alloc, unbound_mem_freed;
 	void* cur = sbrk(0);
@@ -113,6 +114,9 @@ debug_total_mem(size_t calctotal)
 		(unsigned)unbound_mem_alloc, (unsigned)unbound_mem_freed);
 	debug_memleak(calctotal, (size_t)total, 
 		unbound_mem_alloc, unbound_mem_freed);
+#else
+	(void)calctotal;
+#endif /* HAVE_SBRK */
 }
 #endif /* UNBOUND_ALLOC_STATS */
 
@@ -842,20 +846,24 @@ worker_sighandler(int sig, void* arg)
 	 * in the cause for unbound to exit */
 	struct worker* worker = (struct worker*)arg;
 	switch(sig) {
+#ifdef SIGHUP
 		case SIGHUP:
 			verbose(VERB_QUERY, "caught signal SIGHUP");
 			comm_base_exit(worker->base);
 			break;
+#endif
 		case SIGINT:
 			verbose(VERB_QUERY, "caught signal SIGINT");
 			worker->need_to_exit = 1;
 			comm_base_exit(worker->base);
 			break;
+#ifdef SIGQUIT
 		case SIGQUIT:
 			verbose(VERB_QUERY, "caught signal SIGQUIT");
 			worker->need_to_exit = 1;
 			comm_base_exit(worker->base);
 			break;
+#endif
 		case SIGTERM:
 			verbose(VERB_QUERY, "caught signal SIGTERM");
 			worker->need_to_exit = 1;
@@ -943,17 +951,26 @@ worker_init(struct worker* worker, struct config_file *cfg,
 		return 0;
 	}
 	if(do_sigs) {
+#ifdef SIGHUP
 		ub_thread_sig_unblock(SIGHUP);
+#endif
 		ub_thread_sig_unblock(SIGINT);
+#ifdef SIGQUIT
 		ub_thread_sig_unblock(SIGQUIT);
+#endif
 		ub_thread_sig_unblock(SIGTERM);
 #ifndef LIBEVENT_SIGNAL_PROBLEM
 		worker->comsig = comm_signal_create(worker->base, 
 			worker_sighandler, worker);
-		if(!worker->comsig || !comm_signal_bind(worker->comsig, SIGHUP)
-			|| !comm_signal_bind(worker->comsig, SIGINT)
+		if(!worker->comsig 
+#ifdef SIGHUP
+			|| !comm_signal_bind(worker->comsig, SIGHUP)
+#endif
+#ifdef SIGQUIT
+			|| !comm_signal_bind(worker->comsig, SIGQUIT)
+#endif
 			|| !comm_signal_bind(worker->comsig, SIGTERM)
-			|| !comm_signal_bind(worker->comsig, SIGQUIT)) {
+			|| !comm_signal_bind(worker->comsig, SIGINT)) {
 			log_err("could not create signal handlers");
 			worker_delete(worker);
 			return 0;

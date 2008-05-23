@@ -82,6 +82,7 @@ write_socket(int s, const void *buf, size_t size)
 int 
 fd_set_nonblock(int s) 
 {
+#ifdef HAVE_FCNTL
 	int flag;
 	if((flag = fcntl(s, F_GETFL)) == -1) {
 		log_err("can't fcntl F_GETFL: %s", strerror(errno));
@@ -92,12 +93,19 @@ fd_set_nonblock(int s)
 		log_err("can't fcntl F_SETFL: %s", strerror(errno));
 		return 0;
 	}
+#elif defined(HAVE_IOCTLSOCKET)
+	unsigned long on = 1;
+	if(ioctlsocket(s, FIONBIO, &on) != 0) {
+		log_err("can't ioctlsocket FIONBIO on: %d", WSAGetLastError());
+	}
+#endif
 	return 1;
 }
 
 int 
 fd_set_block(int s) 
 {
+#ifdef HAVE_FCNTL
 	int flag;
 	if((flag = fcntl(s, F_GETFL)) == -1) {
 		log_err("cannot fcntl F_GETFL: %s", strerror(errno));
@@ -108,6 +116,12 @@ fd_set_block(int s)
 		log_err("cannot fcntl F_SETFL: %s", strerror(errno));
 		return 0;
 	}
+#elif defined(HAVE_IOCTLSOCKET)
+	unsigned long off = 0;
+	if(ioctlsocket(s, FIONBIO, &off) != 0) {
+		log_err("can't ioctlsocket FIONBIO off: %d", WSAGetLastError());
+	}
+#endif	
 	return 1;
 }
 
@@ -116,21 +130,6 @@ is_pow2(size_t num)
 {
 	if(num == 0) return 1;
 	return (num & (num-1)) == 0;
-}
-
-void 
-write_iov_buffer(ldns_buffer* buffer, struct iovec* iov, size_t iovlen)
-{
-	size_t i;
-	size_t s = 0;
-	ldns_buffer_clear(buffer);
-	for(i=0; i<iovlen; i++) {
-		log_assert(ldns_buffer_position(buffer)+iov[i].iov_len
-			<= ldns_buffer_capacity(buffer));
-		s += iov[i].iov_len;
-		ldns_buffer_write(buffer, iov[i].iov_base, iov[i].iov_len);
-	}
-	ldns_buffer_flip(buffer);
 }
 
 void* 

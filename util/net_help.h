@@ -128,14 +128,6 @@ int fd_set_block(int s);
 int is_pow2(size_t num);
 
 /**
- * Write iov vector into a buffer.
- * @param buffer: to write data into. 
- * @param iov: iov vector
- * @param iovlen: length of iov vector
- */
-void write_iov_buffer(ldns_buffer* buffer, struct iovec* iov, size_t iovlen);
-
-/**
  * Allocate memory and copy over contents.
  * @param data: what to copy over.
  * @param len: length of data.

@@ -42,12 +42,15 @@
 #include "config.h"
 #include "util/locks.h"
 #include <signal.h>
+#ifdef HAVE_SYS_WAIT_H
 #include <sys/wait.h>
+#endif
 
 /** block all signals, masks them away. */
 void 
 ub_thread_blocksigs()
 {
+#if defined(HAVE_PTHREAD) || defined(HAVE_SOLARIS_THREADS) || defined(HAVE_SIGPROCMASK)
 	int err;
 	sigset_t sigset;
 	sigfillset(&sigset);
@@ -64,11 +67,13 @@ ub_thread_blocksigs()
 		fatal_exit("sigprocmask: %s", strerror(errno));
 #  endif /* HAVE_SOLARIS_THREADS */
 #endif /* HAVE_PTHREAD */
+#endif /* have signal stuff */
 }
 
 /** unblock one signal, so we can catch it */
 void ub_thread_sig_unblock(int sig)
 {
+#if defined(HAVE_PTHREAD) || defined(HAVE_SOLARIS_THREADS) || defined(HAVE_SIGPROCMASK)
 	int err;
 	sigset_t sigset;
 	sigemptyset(&sigset);
@@ -86,6 +91,9 @@ void ub_thread_sig_unblock(int sig)
 		fatal_exit("sigprocmask: %s", strerror(errno));
 #  endif /* HAVE_SOLARIS_THREADS */
 #endif /* HAVE_PTHREAD */
+#else
+	(void)sig;
+#endif /* have signal stuff */
 }
 
 #if !defined(HAVE_PTHREAD) && !defined(HAVE_SOLARIS_THREADS)

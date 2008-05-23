@@ -76,15 +76,24 @@ static RETSIGTYPE record_sigh(int sig)
 	switch(sig)
 	{
 		case SIGTERM:
+#ifdef SIGQUIT
 		case SIGQUIT:
+#endif
+#ifdef SIGBREAK
+		case SIGBREAK:
+#endif
 		case SIGINT:
 			sig_record_quit++;
 			break;
+#ifdef SIGHUP
 		case SIGHUP:
 			sig_record_reload++;
 			break;
+#endif
+#ifdef SIGPIPE
 		case SIGPIPE:
 			break;
+#endif
 		default:
 			log_err("ignoring signal %d", sig);
 	}
@@ -98,10 +107,20 @@ static void
 signal_handling_record()
 {
 	if( signal(SIGTERM, record_sigh) == SIG_ERR ||
+#ifdef SIGQUIT
 		signal(SIGQUIT, record_sigh) == SIG_ERR ||
-		signal(SIGINT, record_sigh) == SIG_ERR ||
+#endif
+#ifdef SIGBREAK
+		signal(SIGBREAK, record_sigh) == SIG_ERR ||
+#endif
+#ifdef SIGHUP
 		signal(SIGHUP, record_sigh) == SIG_ERR ||
-		signal(SIGPIPE, SIG_IGN) == SIG_ERR)
+#endif
+#ifdef SIGPIPE
+		signal(SIGPIPE, SIG_IGN) == SIG_ERR ||
+#endif
+		signal(SIGINT, record_sigh) == SIG_ERR
+		)
 		log_err("install sighandler: %s", strerror(errno));
 }
 
@@ -112,8 +131,10 @@ signal_handling_record()
 static void
 signal_handling_playback(struct worker* wrk)
 {
+#ifdef SIGHUP
 	if(sig_record_reload)
 		worker_sighandler(SIGHUP, wrk);
+#endif
 	if(sig_record_quit)
 		worker_sighandler(SIGTERM, wrk);
 	sig_record_quit = 0;

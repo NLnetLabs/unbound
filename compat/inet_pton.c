@@ -70,7 +70,11 @@ inet_pton(af, src, dst)
 	case AF_INET6:
 		return (inet_pton6(src, dst));
 	default:
+#ifdef EAFNOSUPPORT
 		errno = EAFNOSUPPORT;
+#else
+		errno = ENOSYS;
+#endif
 		return (-1);
 	}
 	/* NOTREACHED */
