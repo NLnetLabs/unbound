@@ -892,7 +892,7 @@ void *memmove(void *dest, const void *src, size_t n);
 #define strlcpy strlcpy_unbound
 size_t strlcpy(char *dst, const char *src, size_t siz);
 #endif
-#ifndef HAVE_GMTIME_T
+#ifndef HAVE_GMTIME_R
 #define gmtime_r gmtime_r_unbound
 struct tm *gmtime_r(const time_t *timep, struct tm *result);
 #endif
