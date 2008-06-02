@@ -1,3 +1,15 @@
+2 June 2008: Wouter
+	- Jelte fixed bugs in my absence
+	  - bug 178: fixed unportable shell usage in configure (relied on 
+	    bash shell).
+	  - bug 180: fixed buffer overflow in unbound-checkconf use of strncat.
+	  - bug 181: fixed buffer overflow in ldns (called by unbound to parse
+	    config file parts).
+	- fixes by Wouter
+	  - bug 177: fixed compilation failure on opensuse, the 
+	    --disable-static configure flag caused problems.  (Patch from 
+	    Klaus Singvogel)
+
 23 May 2008: Wouter
 	- mingw32 porting.
 	  - test for sys/wait.h
