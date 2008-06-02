@@ -376,7 +376,11 @@ AC_DEFUN([AC_PROG_OBJC], [:])
 AC_DEFUN([AC_PROG_OBJCCPP], [:])
 AC_DEFUN([AC_LIBTOOL_CXX], [:])
 AC_DEFUN([AC_LIBTOOL_F77], [:])
-AC_CHECK_PROGS(libtool, [glibtool libtool15 libtool], [./libtool])
+# always use ./libtool unless override from commandline (libtool=mylibtool)
+if test -z "$libtool"; then
+	libtool="./libtool"
+fi
+AC_SUBST(libtool)
 AC_PATH_TOOL(AR, ar, [false])
 if test $AR = false; then
 	AC_MSG_ERROR([Cannot find 'ar', please extend PATH to include it])
@@ -744,10 +748,8 @@ echo "****************************************************************"
 if test -d ldns-src; then rm -rf ldns-src; fi
 mkdir ldns-src; cp $srcdir/ldns-src.tar.gz ldns-src/ldns-src.tar.gz; (cd ldns-src; gzip -cd ldns-src.tar.gz | tar xf -); rm -f ldns-src/ldns-src.tar.gz
 ldnsdir=`ls -d ldns-src/ldns*`
-AC_MSG_NOTICE([Configure $ldnsdir])
-echo "(cd $ldnsdir && ./configure)"
-(cd $ldnsdir && ./configure)
-AC_MSG_NOTICE([Finished $ldnsdir configure])
+AC_MSG_NOTICE([Configure $ldnsdir scheduled after config.status])
+AC_CONFIG_SUBDIRS([ldns-src/ldns*])
 CPPFLAGS="-I$ldnsdir/include $CPPFLAGS"
 LDFLAGS="$LDFLAGS $ldnsdir/*.lo"
 AC_SUBST(ldnsdir)

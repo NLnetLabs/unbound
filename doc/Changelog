@@ -9,6 +9,14 @@
 	  - bug 177: fixed compilation failure on opensuse, the 
 	    --disable-static configure flag caused problems.  (Patch from 
 	    Klaus Singvogel)
+	  - bug 179: same fix as 177.
+	  - bug 185: --disable-shared not passed along to ldns included with 
+	    unbound. Fixed so that configure parameters are passed to the
+	    subdir configure script.
+	    fixed that ./libtool is used always, you can still override
+	    manually with ./configure libtool=mylibtool or set $libtool in
+	    the environment.
+	- update of the ldns tarball to current ldns svn version (fix 181).
 
 23 May 2008: Wouter
 	- mingw32 porting.
