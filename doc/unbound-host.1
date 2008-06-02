@@ -14,7 +14,7 @@
 .SH "SYNOPSIS"
 .LP
 .B unbound\-host
-.RB [ \-vdh ]
+.RB [ \-vdhr ]
 .RB [ \-c 
 .IR class ]
 .RB [ \-t
@@ -81,6 +81,12 @@ are read.
 .B \-C \fIconfigfile
 Uses the specified unbound.conf to prime
 .IR libunbound (3).
+.TP
+.B \-r
+Read /etc/resolv.conf, and use the forward DNS servers from there (those could
+have been set by DHCP).  More info in
+.IR resolv.conf (5).
+Breaks validation if those servers do not support DNSSEC.
 .SH "EXAMPLES"
 .LP
 Some examples of use. The keys shown below are fakes, thus a security failure

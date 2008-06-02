@@ -17,6 +17,9 @@
 	    manually with ./configure libtool=mylibtool or set $libtool in
 	    the environment.
 	- update of the ldns tarball to current ldns svn version (fix 181).
+	- bug 184: -r option for unbound-host, read resolv.conf for 
+	  forwarder. (Note that forwarder must support DNSSEC for validation
+	  to succeed).
 
 23 May 2008: Wouter
 	- mingw32 porting.
