@@ -1,3 +1,7 @@
+3 June 2008: Wouter
+	- fixup local-zone: "30.172.in-addr.arpa." nodefault, so that the
+	  trailing dot is not used during comparison.
+
 2 June 2008: Wouter
 	- Jelte fixed bugs in my absence
 	  - bug 178: fixed unportable shell usage in configure (relied on 
