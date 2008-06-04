@@ -1,3 +1,7 @@
+4 June 2008: Wouter
+	- updated libtool files with newer version.
+	- iana portlist updated.
+
 3 June 2008: Wouter
 	- fixup local-zone: "30.172.in-addr.arpa." nodefault, so that the
 	  trailing dot is not used during comparison.
