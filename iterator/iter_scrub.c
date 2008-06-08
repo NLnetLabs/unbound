@@ -189,7 +189,11 @@ parse_get_cname_target(struct rrset_parse* rrset, uint8_t** sname,
 	if(rrset->rr_count != 1) {
 		verbose(VERB_ALGO, "Found CNAME rrset with "
 			"size > 1: %u", (unsigned)rrset->rr_count);
-		return 0;
+		/* use the first CNAME! */
+		rrset->rr_count = 1;
+		rrset->size = rrset->rr_first->size;
+		rrset->rr_last = rrset->rr_first;
+		rrset->rr_first->next = NULL;
 	}
 	if(rrset->rr_first->size < sizeof(uint16_t)+1)
 		return 0; /* CNAME rdata too small */
