@@ -162,7 +162,7 @@ server:
 	# How to do this is specific to your OS.
 	#
 	# If you give "" no chroot is performed. The path must not end in a /.
-	# chroot: "/usr/local/etc/unbound"
+	# chroot: "@UNBOUND_CHROOT_DIR@"
 
 	# if given, user privileges are dropped (after binding port),
 	# and the given username is assumed. Default is user "unbound".
@@ -172,7 +172,7 @@ server:
 	# the working directory. The relative files in this config are 
 	# relative to this directory. If you give "" the working directory
 	# is not changed.
-	# directory: "/usr/local/etc/unbound"
+	# directory: "@UNBOUND_RUN_DIR@"
 
 	# the log file, "" means log to stderr. 
 	# Use of this option sets use-syslog to "no".
@@ -183,7 +183,7 @@ server:
 	# use-syslog: yes 
 
 	# the pid file.
-	# pidfile: "/usr/local/etc/unbound/unbound.pid"
+	# pidfile: "@UNBOUND_PIDFILE@"
 	
 	# file to read root hints from.
 	# get one from ftp://FTP.INTERNIC.NET/domain/named.cache

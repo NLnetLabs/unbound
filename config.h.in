@@ -232,7 +232,7 @@
 /* Define to the version of this package. */
 #undef PACKAGE_VERSION
 
-/* Pathname to unbound process id file */
+/* default pidfile location */
 #undef PIDFILE
 
 /* Define to necessary symbol if this constant uses a non-standard name on

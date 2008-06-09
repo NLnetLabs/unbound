@@ -254,7 +254,7 @@ Additionally, unbound may need to access /dev/random (for entropy)
 and to /dev/log (if you use syslog) from inside the chroot.
 .IP
 If given a chroot is done to the given directory. The default is 
-"/usr/local/etc/unbound". If you give "" no chroot is performed.
+"@UNBOUND_CHROOT_DIR@". If you give "" no chroot is performed.
 .TP
 .B username: \fI<name>
 If given, after binding the port the user privileges are dropped. Default is
@@ -266,7 +266,7 @@ If you change the port number in the config file, and that new port number
 requires privileges, then a reload will fail; a restart is needed.
 .TP
 .B directory: \fI<directory>
-Sets the working directory for the program.
+Sets the working directory for the program. Default is "@UNBOUND_RUN_DIR@".
 .TP
 .B logfile: \fI<filename>
 If "" is given, logging goes to stderr, or nowhere once daemonized.
@@ -286,14 +286,14 @@ The logfile setting is overridden when use\-syslog is turned on.
 The default is to log to syslog.
 .TP
 .B pidfile: \fI<filename>
-The process id is written to the file. Default is "/usr/local/etc/unbound/unbound.pid". 
+The process id is written to the file. Default is "@UNBOUND_PIDFILE@". 
 So,
 .nf
-kill \-HUP `cat /usr/local/etc/unbound/unbound.pid` 
+kill \-HUP `cat @UNBOUND_PIDFILE@` 
 .fi
 triggers a reload,
 .nf
-kill \-QUIT `cat /usr/local/etc/unbound/unbound.pid` 
+kill \-QUIT `cat @UNBOUND_PIDFILE@` 
 .fi
 gracefully terminates.
 .TP
@@ -663,15 +663,18 @@ server:
 .fi
 .SH "FILES"
 .TP
-.I /usr/local/etc/unbound
-default unbound working directory and default 
+.I @UNBOUND_RUN_DIR@
+default unbound working directory.
+.TP
+.I @UNBOUND_CHROOT_DIR@
+default
 \fIchroot\fR(2)
 location.
 .TP
-.I unbound.conf
+.I @ub_conf_file@
 unbound configuration file.
 .TP
-.I unbound.pid
+.I @UNBOUND_PIDFILE@
 default unbound pidfile with process ID of the running daemon.
 .TP
 .I unbound.log

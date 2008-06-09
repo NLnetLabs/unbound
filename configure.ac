@@ -46,21 +46,39 @@ esac
 
 #
 # Determine configuration file
-ub_conf_file=${sysconfdir}/unbound/unbound.conf
+# the eval is to evaluate shell expansion twice
+ub_conf_file=`eval echo "${sysconfdir}/unbound/unbound.conf"`
 AC_ARG_WITH([conf_file],
-        AC_HELP_STRING([--with-conf-file=path], [Pathname to the Unbound configuration file]),
-	[ub_conf_file=$withval])
+        AC_HELP_STRING([--with-conf-file=path], 
+	[Pathname to the Unbound configuration file]),
+	[ub_conf_file="$withval"])
 AC_SUBST(ub_conf_file)
-# the eval is to evaluate shell expansion twice, once
-# for $nsd_conf_file and once for the ${prefix} within it.
-AC_DEFINE_UNQUOTED(CONFIGFILE, ["`eval echo $ub_conf_file`"], [Pathname to the Unbound configuration file])
+AC_DEFINE_UNQUOTED(CONFIGFILE, ["$ub_conf_file"], [Pathname to the Unbound configuration file])
 
 # Determine run, chroot directory and pidfile locations
-ub_cfg=`eval echo $ub_conf_file`
-ub_dir=`dirname $ub_cfg`
-AC_DEFINE_UNQUOTED(RUN_DIR, ["$ub_dir"], [Directory to chdir to])
-AC_DEFINE_UNQUOTED(CHROOT_DIR, ["$ub_dir"], [Directory to chroot to])
-AC_DEFINE_UNQUOTED(PIDFILE, ["$ub_dir/unbound.pid"], [Pathname to unbound process id file])
+AC_ARG_WITH(run-dir, 
+    AC_HELP_STRING([--with-run-dir=path], 
+    [set default directory to chdir to (by default dir part of cfg file)]), 
+    UNBOUND_RUN_DIR="$withval", 
+    UNBOUND_RUN_DIR=`dirname "$ub_conf_file"`)
+AC_SUBST(UNBOUND_RUN_DIR)
+AC_DEFINE_UNQUOTED(RUN_DIR, ["$UNBOUND_RUN_DIR"], [Directory to chdir to])
+
+AC_ARG_WITH(chroot-dir, 
+    AC_HELP_STRING([--with-chroot-dir=path], 
+    [set default directory to chroot to (by default same as run-dir)]), 
+    UNBOUND_CHROOT_DIR="$withval", 
+    UNBOUND_CHROOT_DIR="$UNBOUND_RUN_DIR")
+AC_SUBST(UNBOUND_CHROOT_DIR)
+AC_DEFINE_UNQUOTED(CHROOT_DIR, ["$UNBOUND_CHROOT_DIR"], [Directory to chroot to])
+
+AC_ARG_WITH(pidfile, 
+    AC_HELP_STRING([--with-pidfile=filename], 
+    [set default pathname to unbound pidfile (default run-dir/unbound.pid)]), 
+    UNBOUND_PIDFILE="$withval", 
+    UNBOUND_PIDFILE="$UNBOUND_RUN_DIR/unbound.pid")
+AC_SUBST(UNBOUND_PIDFILE)
+AC_DEFINE_UNQUOTED(PIDFILE, ["$UNBOUND_PIDFILE"], [default pidfile location])
 
 AC_DEFINE(WINVER, 0x0502, [the version of the windows API enabled])
 
@@ -932,6 +950,6 @@ void *unbound_stat_realloc_log(void *ptr, size_t size, const char* file,
 #define UNBOUND_DNS_PORT 53
 ])
 
-AC_CONFIG_FILES([Makefile])
+AC_CONFIG_FILES([Makefile doc/example.conf doc/libunbound.3 doc/unbound.8 doc/unbound-checkconf.8 doc/unbound.conf.5])
 AC_CONFIG_HEADER([config.h])
 AC_OUTPUT

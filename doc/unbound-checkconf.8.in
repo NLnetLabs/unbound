@@ -36,7 +36,7 @@ The unbound-checkconf program exits with status code 1 on error,
 0 for a correct config file.
 .SH "FILES"
 .TP
-.I /usr/local/etc/unbound/unbound.conf
+.I @ub_conf_file@
 unbound configuration file.
 .SH "SEE ALSO"
 \fIunbound.conf\fR(5), 

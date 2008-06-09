@@ -5,6 +5,13 @@
 	  * check if no AA bit for non-forwarder, and thus lame zone.
 	    In response to error report by Richard Doty for mail.opusnet.com.
 	- fixup unput warning from lexer on freeBSD.
+	- bug#183. pidfile, rundir, and chroot configure options. Also the
+	  example.conf and manual pages get the configured defaults.
+	  You can use: (or accept the defaults to /usr/local/etc/unbound/)
+	  --with-conf-file=filename
+	  --with-pidfile=filename
+	  --with-run-dir=path
+	  --with-chroot-dir=path
 
 8 June 2008: Wouter
 	- if multiple CNAMEs, use the first one. Fixup akamai CNAME bug.

@@ -815,6 +815,9 @@ CPP
 GREP
 EGREP
 ub_conf_file
+UNBOUND_RUN_DIR
+UNBOUND_CHROOT_DIR
+UNBOUND_PIDFILE
 debug_enabled
 libtool
 AR
@@ -1455,6 +1458,12 @@ Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
   --without-PACKAGE       do not use PACKAGE (same as --with-PACKAGE=no)
   --with-conf-file=path   Pathname to the Unbound configuration file
+  --with-run-dir=path     set default directory to chdir to (by default dir
+                          part of cfg file)
+  --with-chroot-dir=path  set default directory to chroot to (by default same
+                          as run-dir)
+  --with-pidfile=filename set default pathname to unbound pidfile (default
+                          run-dir/unbound.pid)
   --with-gnu-ld           assume the C compiler uses GNU ld [default=no]
   --with-pic              try to use only PIC/non-PIC objects [default=use
                           both]
@@ -3301,38 +3310,64 @@ esac
 
 #
 # Determine configuration file
-ub_conf_file=${sysconfdir}/unbound/unbound.conf
+# the eval is to evaluate shell expansion twice
+ub_conf_file=`eval echo "${sysconfdir}/unbound/unbound.conf"`
 
 # Check whether --with-conf_file was given.
 if test "${with_conf_file+set}" = set; then
-  withval=$with_conf_file; ub_conf_file=$withval
+  withval=$with_conf_file; ub_conf_file="$withval"
 fi
 
 
-# the eval is to evaluate shell expansion twice, once
-# for $nsd_conf_file and once for the ${prefix} within it.
 
 cat >>confdefs.h <<_ACEOF
-#define CONFIGFILE "`eval echo $ub_conf_file`"
+#define CONFIGFILE "$ub_conf_file"
 _ACEOF
 
 
 # Determine run, chroot directory and pidfile locations
-ub_cfg=`eval echo $ub_conf_file`
-ub_dir=`dirname $ub_cfg`
+
+# Check whether --with-run-dir was given.
+if test "${with_run_dir+set}" = set; then
+  withval=$with_run_dir; UNBOUND_RUN_DIR="$withval"
+else
+  UNBOUND_RUN_DIR=`dirname "$ub_conf_file"`
+fi
+
+
 
 cat >>confdefs.h <<_ACEOF
-#define RUN_DIR "$ub_dir"
+#define RUN_DIR "$UNBOUND_RUN_DIR"
 _ACEOF
 
 
+
+# Check whether --with-chroot-dir was given.
+if test "${with_chroot_dir+set}" = set; then
+  withval=$with_chroot_dir; UNBOUND_CHROOT_DIR="$withval"
+else
+  UNBOUND_CHROOT_DIR="$UNBOUND_RUN_DIR"
+fi
+
+
+
 cat >>confdefs.h <<_ACEOF
-#define CHROOT_DIR "$ub_dir"
+#define CHROOT_DIR "$UNBOUND_CHROOT_DIR"
 _ACEOF
 
 
+
+# Check whether --with-pidfile was given.
+if test "${with_pidfile+set}" = set; then
+  withval=$with_pidfile; UNBOUND_PIDFILE="$withval"
+else
+  UNBOUND_PIDFILE="$UNBOUND_RUN_DIR/unbound.pid"
+fi
+
+
+
 cat >>confdefs.h <<_ACEOF
-#define PIDFILE "$ub_dir/unbound.pid"
+#define PIDFILE "$UNBOUND_PIDFILE"
 _ACEOF
 
 
@@ -5873,7 +5908,7 @@ ia64-*-hpux*)
   ;;
 *-*-irix6*)
   # Find out which ABI we are using.
-  echo '#line 5876 "configure"' > conftest.$ac_ext
+  echo '#line 5911 "configure"' > conftest.$ac_ext
   if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
   (eval $ac_compile) 2>&5
   ac_status=$?
@@ -7187,11 +7222,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:7190: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:7225: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>conftest.err)
    ac_status=$?
    cat conftest.err >&5
-   echo "$as_me:7194: \$? = $ac_status" >&5
+   echo "$as_me:7229: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s "$ac_outfile"; then
      # The compiler can only warn and ignore the option if not recognized
      # So say no if there are warnings other than the usual output.
@@ -7477,11 +7512,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:7480: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:7515: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>conftest.err)
    ac_status=$?
    cat conftest.err >&5
-   echo "$as_me:7484: \$? = $ac_status" >&5
+   echo "$as_me:7519: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s "$ac_outfile"; then
      # The compiler can only warn and ignore the option if not recognized
      # So say no if there are warnings other than the usual output.
@@ -7581,11 +7616,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:7584: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:7619: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>out/conftest.err)
    ac_status=$?
    cat out/conftest.err >&5
-   echo "$as_me:7588: \$? = $ac_status" >&5
+   echo "$as_me:7623: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s out/conftest2.$ac_objext
    then
      # The compiler can only warn and ignore the option if not recognized
@@ -9932,7 +9967,7 @@ else
   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
   lt_status=$lt_dlunknown
   cat > conftest.$ac_ext <<EOF
-#line 9935 "configure"
+#line 9970 "configure"
 #include "confdefs.h"
 
 #if HAVE_DLFCN_H
@@ -10032,7 +10067,7 @@ else
   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
   lt_status=$lt_dlunknown
   cat > conftest.$ac_ext <<EOF
-#line 10035 "configure"
+#line 10070 "configure"
 #include "confdefs.h"
 
 #if HAVE_DLFCN_H
@@ -12452,11 +12487,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:12455: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:12490: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>conftest.err)
    ac_status=$?
    cat conftest.err >&5
-   echo "$as_me:12459: \$? = $ac_status" >&5
+   echo "$as_me:12494: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s "$ac_outfile"; then
      # The compiler can only warn and ignore the option if not recognized
      # So say no if there are warnings other than the usual output.
@@ -12556,11 +12591,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:12559: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:12594: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>out/conftest.err)
    ac_status=$?
    cat out/conftest.err >&5
-   echo "$as_me:12563: \$? = $ac_status" >&5
+   echo "$as_me:12598: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s out/conftest2.$ac_objext
    then
      # The compiler can only warn and ignore the option if not recognized
@@ -14120,11 +14155,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:14123: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:14158: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>conftest.err)
    ac_status=$?
    cat conftest.err >&5
-   echo "$as_me:14127: \$? = $ac_status" >&5
+   echo "$as_me:14162: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s "$ac_outfile"; then
      # The compiler can only warn and ignore the option if not recognized
      # So say no if there are warnings other than the usual output.
@@ -14224,11 +14259,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:14227: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:14262: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>out/conftest.err)
    ac_status=$?
    cat out/conftest.err >&5
-   echo "$as_me:14231: \$? = $ac_status" >&5
+   echo "$as_me:14266: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s out/conftest2.$ac_objext
    then
      # The compiler can only warn and ignore the option if not recognized
@@ -16413,11 +16448,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:16416: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:16451: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>conftest.err)
    ac_status=$?
    cat conftest.err >&5
-   echo "$as_me:16420: \$? = $ac_status" >&5
+   echo "$as_me:16455: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s "$ac_outfile"; then
      # The compiler can only warn and ignore the option if not recognized
      # So say no if there are warnings other than the usual output.
@@ -16703,11 +16738,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:16706: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:16741: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>conftest.err)
    ac_status=$?
    cat conftest.err >&5
-   echo "$as_me:16710: \$? = $ac_status" >&5
+   echo "$as_me:16745: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s "$ac_outfile"; then
      # The compiler can only warn and ignore the option if not recognized
      # So say no if there are warnings other than the usual output.
@@ -16807,11 +16842,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:16810: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:16845: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>out/conftest.err)
    ac_status=$?
    cat out/conftest.err >&5
-   echo "$as_me:16814: \$? = $ac_status" >&5
+   echo "$as_me:16849: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s out/conftest2.$ac_objext
    then
      # The compiler can only warn and ignore the option if not recognized
@@ -25428,7 +25463,7 @@ _ACEOF
 
 
 
-ac_config_files="$ac_config_files Makefile"
+ac_config_files="$ac_config_files Makefile doc/example.conf doc/libunbound.3 doc/unbound.8 doc/unbound-checkconf.8 doc/unbound.conf.5"
 
 ac_config_headers="$ac_config_headers config.h"
 
@@ -25985,6 +26020,11 @@ for ac_config_target in $ac_config_targets
 do
   case $ac_config_target in
     "Makefile") CONFIG_FILES="$CONFIG_FILES Makefile" ;;
+    "doc/example.conf") CONFIG_FILES="$CONFIG_FILES doc/example.conf" ;;
+    "doc/libunbound.3") CONFIG_FILES="$CONFIG_FILES doc/libunbound.3" ;;
+    "doc/unbound.8") CONFIG_FILES="$CONFIG_FILES doc/unbound.8" ;;
+    "doc/unbound-checkconf.8") CONFIG_FILES="$CONFIG_FILES doc/unbound-checkconf.8" ;;
+    "doc/unbound.conf.5") CONFIG_FILES="$CONFIG_FILES doc/unbound.conf.5" ;;
     "config.h") CONFIG_HEADERS="$CONFIG_HEADERS config.h" ;;
 
   *) { { echo "$as_me:$LINENO: error: invalid argument: $ac_config_target" >&5
@@ -26098,6 +26138,9 @@ CPP!$CPP$ac_delim
 GREP!$GREP$ac_delim
 EGREP!$EGREP$ac_delim
 ub_conf_file!$ub_conf_file$ac_delim
+UNBOUND_RUN_DIR!$UNBOUND_RUN_DIR$ac_delim
+UNBOUND_CHROOT_DIR!$UNBOUND_CHROOT_DIR$ac_delim
+UNBOUND_PIDFILE!$UNBOUND_PIDFILE$ac_delim
 debug_enabled!$debug_enabled$ac_delim
 libtool!$libtool$ac_delim
 AR!$AR$ac_delim
@@ -26134,7 +26177,7 @@ subdirs!$subdirs$ac_delim
 LTLIBOBJS!$LTLIBOBJS$ac_delim
 _ACEOF
 
-  if test `sed -n "s/.*$ac_delim\$/X/p" conf$$subs.sed | grep -c X` = 85; then
+  if test `sed -n "s/.*$ac_delim\$/X/p" conf$$subs.sed | grep -c X` = 88; then
     break
   elif $ac_last_try; then
     { { echo "$as_me:$LINENO: error: could not make $CONFIG_STATUS" >&5
