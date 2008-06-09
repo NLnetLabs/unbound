@@ -19,8 +19,6 @@
 #include "util/configparser.h"
 void ub_c_error(const char *message);
 
-#define YY_NO_UNPUT 1
-
 #if 0
 #define LEXOUT(s)  printf s /* used ONLY when debugging */
 #else
@@ -86,6 +84,14 @@ static void config_end_include(void)
 %}
 %option noinput
 %option nounput
+%{
+#ifndef YY_NO_UNPUT
+#define YY_NO_UNPUT 1
+#endif
+#ifndef YY_NO_INPUT
+#define YY_NO_INPUT 1
+#endif
+%}
 
 SPACE   [ \t]
 LETTER  [a-zA-Z]
