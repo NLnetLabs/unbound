@@ -4,6 +4,7 @@
 	    and lameness.
 	  * check if no AA bit for non-forwarder, and thus lame zone.
 	    In response to error report by Richard Doty for mail.opusnet.com.
+	- fixup unput warning from lexer on freeBSD.
 
 8 June 2008: Wouter
 	- if multiple CNAMEs, use the first one. Fixup akamai CNAME bug.

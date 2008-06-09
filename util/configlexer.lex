@@ -19,7 +19,7 @@
 #include "util/configparser.h"
 void ub_c_error(const char *message);
 
-#define YY_NO_UNPUT
+#define YY_NO_UNPUT 1
 
 #if 0
 #define LEXOUT(s)  printf s /* used ONLY when debugging */
