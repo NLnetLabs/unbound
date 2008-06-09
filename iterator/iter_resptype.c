@@ -104,6 +104,7 @@ response_type_from_server(int rdset,
 	struct dns_msg* msg, struct query_info* request, struct delegpt* dp)
 {
 	uint8_t* origzone = (uint8_t*)"\000"; /* the default */
+	struct ub_packed_rrset_key* s;
 	size_t origzonelen = 1;
 	size_t i;
 
@@ -188,12 +189,10 @@ response_type_from_server(int rdset,
 	}
 
 	/* Looking at the authority section, we just look and see if 
-	 * there is a delegation NS set, turning it into a delegation. 
-	 * Otherwise, we will have to conclude ANSWER (either it is 
-	 * NOERROR/NODATA, or an non-authoritative answer). */
+	 * there is a SOA record, that means a NOERROR/NODATA */
 	for(i = msg->rep->an_numrrsets; i < (msg->rep->an_numrrsets +
 		msg->rep->ns_numrrsets); i++) {
-		struct ub_packed_rrset_key* s = msg->rep->rrsets[i];
+		s = msg->rep->rrsets[i];
 
 		/* The normal way of detecting NOERROR/NODATA. */
 		if(ntohs(s->rk.type) == LDNS_RR_TYPE_SOA &&
@@ -204,17 +203,30 @@ response_type_from_server(int rdset,
 				return RESPONSE_TYPE_LAME;
 			return RESPONSE_TYPE_ANSWER;
 		}
+	}
+	/* Looking at the authority section, we just look and see if 
+	 * there is a delegation NS set, turning it into a delegation. 
+	 * Otherwise, we will have to conclude ANSWER (either it is 
+	 * NOERROR/NODATA, or an non-authoritative answer). */
+	for(i = msg->rep->an_numrrsets; i < (msg->rep->an_numrrsets +
+		msg->rep->ns_numrrsets); i++) {
+		s = msg->rep->rrsets[i];
 
 		/* Detect REFERRAL/LAME/ANSWER based on the relationship 
 		 * of the NS set to the originating zone name. */
 		if(ntohs(s->rk.type) == LDNS_RR_TYPE_NS) {
 			/* If we are getting an NS set for the zone we 
 			 * thought we were contacting, then it is an answer.*/
-			/* FIXME: is this correct? */
 			if(query_dname_compare(s->rk.dname, origzone) == 0) {
 				/* see if mistakenly a recursive server was
 				 * deployed and is responding nonAA */
 				if( (msg->rep->flags&BIT_RA) &&
+					!(msg->rep->flags&BIT_AA) && !rdset)
+					return RESPONSE_TYPE_LAME;
+				/* Or if a lame server is deployed,
+				 * which gives ns==zone delegation from cache 
+				 * without AA bit as well, with nodata nosoa*/
+				if(msg->rep->an_numrrsets==0 &&
 					!(msg->rep->flags&BIT_AA) && !rdset)
 					return RESPONSE_TYPE_LAME;
 				return RESPONSE_TYPE_ANSWER;

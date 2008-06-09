@@ -1,3 +1,10 @@
+9 June 2008: Wouter
+	- in iteration response type code
+	  * first check for SOA record (negative answer) before NS record
+	    and lameness.
+	  * check if no AA bit for non-forwarder, and thus lame zone.
+	    In response to error report by Richard Doty for mail.opusnet.com.
+
 8 June 2008: Wouter
 	- if multiple CNAMEs, use the first one. Fixup akamai CNAME bug.
 	  Reported by Robert Edmonds.
