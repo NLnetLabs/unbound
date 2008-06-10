@@ -658,6 +658,15 @@ AC_FUNC_FORK
 AC_TYPE_SIGNAL
 AC_FUNC_FSEEKO
 AC_SYS_LARGEFILE
+dnl try to see if an additional _LARGEFILE_SOURCE 1 is needed to get fseeko
+CHECK_COMPILER_FLAG_NEEDED(-D_LARGEFILE_SOURCE=1,
+[
+#include <stdio.h>
+int test() {
+        int a = fseeko(stdin, 0, 0);
+        return a;
+}
+], [CFLAGS="$CFLAGS -D_LARGEFILE_SOURCE=1"])
 
 AC_DEFUN([AC_CHECK_GETADDRINFO_WITH_INCLUDES],
 [AC_REQUIRE([AC_PROG_CC])

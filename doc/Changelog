@@ -1,3 +1,6 @@
+10 June 2008: Wouter
+	- fixup warnings compiling on eeepc xandros linux.
+
 9 June 2008: Wouter
 	- in iteration response type code
 	  * first check for SOA record (negative answer) before NS record
