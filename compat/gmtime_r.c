@@ -25,19 +25,6 @@
 #define TM_FRIDAY	5
 #define TM_SATURDAY	6
 
-#define TM_JANUARY	0
-#define TM_FEBRUARY	1
-#define TM_MARCH	2
-#define TM_APRIL	3
-#define TM_MAY		4
-#define TM_JUNE		5
-#define TM_JULY		6
-#define TM_AUGUST	7
-#define TM_SEPTEMBER	8
-#define TM_OCTOBER	9
-#define TM_NOVEMBER	10
-#define TM_DECEMBER	11
-
 #define TM_YEAR_BASE	1900
 
 #define EPOCH_YEAR	1970
