@@ -734,6 +734,9 @@ AC_TRY_COMPILE([
 #ifdef HAVE_WINSOCK2_H
 #include <winsock2.h>
 #endif
+#ifdef HAVE_SYS_STAT_H
+#include <sys/stat.h>
+#endif
 ], [
 	(void)mkdir("directory");
 ],
