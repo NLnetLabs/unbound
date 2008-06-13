@@ -557,7 +557,11 @@ harvest_main(struct harvest_data* data)
 static void
 hv_mkdir(char* dir)
 {
+#ifdef MKDIR_HAS_ONE_ARG
+	if(mkdir(dir) == -1) {
+#else
 	if(mkdir(dir, 0755) == -1) {
+#endif
 		if(errno == EEXIST)
 			return;
 		perror(dir);

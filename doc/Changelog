@@ -1,3 +1,8 @@
+13 June 2008: Wouter
+	- port mingw32, more signal ifdefs, detect sleep, usleep, 
+	  random, srandom (used inside the tests).
+	- signed or unsigned FD_SET is cast.
+
 10 June 2008: Wouter
 	- fixup warnings compiling on eeepc xandros linux.
 

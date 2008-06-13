@@ -202,9 +202,16 @@ perfsetup(struct perfinfo* info)
 		fatal_exit("gettimeofday: %s", strerror(errno));
 	sig_info = info;
 	if( signal(SIGINT, perf_sigh) == SIG_ERR || 
-		signal(SIGTERM, perf_sigh) == SIG_ERR ||
+#ifdef SIGQUIT
+		signal(SIGQUIT, perf_sigh) == SIG_ERR ||
+#endif
+#ifdef SIGHUP
 		signal(SIGHUP, perf_sigh) == SIG_ERR ||
-		signal(SIGQUIT, perf_sigh) == SIG_ERR)
+#endif
+#ifdef SIGBREAK
+		signal(SIGBREAK, perf_sigh) == SIG_ERR ||
+#endif
+		signal(SIGTERM, perf_sigh) == SIG_ERR)
 		fatal_exit("could not bind to signal");
 	info->io = (struct perfio*)calloc(sizeof(struct perfio), info->io_num);
 	if(!info->io) fatal_exit("out of memory");
@@ -223,7 +230,7 @@ perfsetup(struct perfinfo* info)
 		if(info->io[i].fd > info->maxfd)
 			info->maxfd = info->io[i].fd;
 #ifndef S_SPLINT_S
-		FD_SET(info->io[i].fd, &info->rset);
+		FD_SET(FD_SET_T info->io[i].fd, &info->rset);
 		info->io[i].timeout.tv_usec = ((START_IO_INTERVAL*i)%1000)
 						*1000;
 		info->io[i].timeout.tv_sec = (START_IO_INTERVAL*i)/1000;

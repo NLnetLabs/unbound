@@ -724,7 +724,24 @@ AC_CHECK_GETADDRINFO_WITH_INCLUDES
 if test $ac_cv_func_getaddrinfo = no; then
 AC_LIBOBJ([fake-rfc2553])
 fi
-AC_CHECK_FUNCS([tzset sigprocmask fcntl getpwnam getrlimit setsid sbrk chroot kill])
+AC_CHECK_FUNCS([tzset sigprocmask fcntl getpwnam getrlimit setsid sbrk chroot kill sleep usleep random srandom])
+
+# check mkdir
+AC_MSG_CHECKING([whether mkdir has one arg])
+AC_TRY_COMPILE([
+#include <stdio.h>
+#include <unistd.h>
+#ifdef HAVE_WINSOCK2_H
+#include <winsock2.h>
+#endif
+], [
+	(void)mkdir("directory");
+],
+AC_MSG_RESULT(yes)
+AC_DEFINE(MKDIR_HAS_ONE_ARG, 1, [Define if mkdir has one argument.])
+,
+AC_MSG_RESULT(no)
+)
 
 # check ioctlsocket
 AC_MSG_CHECKING(for ioctlsocket)
@@ -932,6 +949,26 @@ struct tm *gmtime_r(const time_t *timep, struct tm *result);
 #define getnameinfo getnameinfo_unbound
 struct sockaddr_storage;
 #include "compat/fake-rfc2553.h"
+#endif
+
+#ifndef HAVE_SLEEP
+#define sleep(x) Sleep((x)*1000) /* on win32 */
+#endif /* HAVE_SLEEP */
+#ifndef HAVE_USLEEP
+#define usleep(x) Sleep((x)/1000 + 1) /* on win32 */
+#endif /* HAVE_USLEEP */
+#ifndef HAVE_RANDOM
+#define random rand /* on win32, for tests only (bad random) */
+#endif /* HAVE_RANDOM */
+#ifndef HAVE_SRANDOM
+#define srandom(x) srand(x) /* on win32, for tests only (bad random) */
+#endif /* HAVE_SRANDOM */
+
+/* detect if we need to cast to unsigned int for FD_SET to avoid warnings */
+#ifdef HAVE_WINSOCK2_H
+#define FD_SET_T (u_int)
+#else
+#define FD_SET_T 
 #endif
 
 #include "ldns/ldns.h"

@@ -180,6 +180,7 @@ send_em(char* svr, int num, char** qs)
 	printf("orderly exit\n");
 }
 
+#ifdef SIGPIPE
 /** SIGPIPE handler */
 static RETSIGTYPE sigh(int sig)
 {
@@ -190,6 +191,7 @@ static RETSIGTYPE sigh(int sig)
 	printf("Got unhandled signal %d\n", sig);
 	exit(1);
 }
+#endif /* SIGPIPE */
 
 /** getopt global, in case header files fail to declare it. */
 extern int optind;
@@ -206,10 +208,12 @@ int main(int argc, char** argv)
 	log_init(0, 0, 0);
 	checklock_start();
 
+#ifdef SIGPIPE
 	if(signal(SIGPIPE, &sigh) == SIG_ERR) {
 		perror("could not install signal handler");
 		return 1;
 	}
+#endif
 
 	/* command line options */
 	if(argc == 1) {

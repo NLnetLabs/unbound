@@ -124,6 +124,9 @@
 /* Define to 1 if you have the <pwd.h> header file. */
 #undef HAVE_PWD_H
 
+/* Define to 1 if you have the `random' function. */
+#undef HAVE_RANDOM
+
 /* Define to 1 if you have the `sbrk' function. */
 #undef HAVE_SBRK
 
@@ -133,11 +136,17 @@
 /* Define to 1 if you have the `sigprocmask' function. */
 #undef HAVE_SIGPROCMASK
 
+/* Define to 1 if you have the `sleep' function. */
+#undef HAVE_SLEEP
+
 /* Define to 1 if you have the `snprintf' function. */
 #undef HAVE_SNPRINTF
 
 /* Using Solaris threads */
 #undef HAVE_SOLARIS_THREADS
+
+/* Define to 1 if you have the `srandom' function. */
+#undef HAVE_SRANDOM
 
 /* Define if you have the SSL libraries installed. */
 #undef HAVE_SSL
@@ -196,6 +205,9 @@
 /* Define to 1 if you have the <unistd.h> header file. */
 #undef HAVE_UNISTD_H
 
+/* Define to 1 if you have the `usleep' function. */
+#undef HAVE_USLEEP
+
 /* Define to 1 if you have the `vfork' function. */
 #undef HAVE_VFORK
 
@@ -216,6 +228,9 @@
 
 /* Define to the maximum message length to pass to syslog. */
 #undef MAXSYSLOGMSGLEN
+
+/* Define if mkdir has one argument. */
+#undef MKDIR_HAS_ONE_ARG
 
 /* Define to the address where bug reports for this package should be sent. */
 #undef PACKAGE_BUGREPORT
@@ -292,11 +307,9 @@
 /* in_port_t */
 #undef in_port_t
 
-/* Define to `__inline__' or `__inline' if that's what the C compiler
-   calls it, or to nothing if 'inline' is not supported under any name.  */
-#ifndef __cplusplus
+/* Define as `__inline' if that's what the C compiler calls it, or to nothing
+   if it is not supported. */
 #undef inline
-#endif
 
 /* Define to `short' if <sys/types.h> does not define. */
 #undef int16_t
@@ -313,7 +326,7 @@
 /* Define to rpl_malloc if the replacement function should be used. */
 #undef malloc
 
-/* Define to `long int' if <sys/types.h> does not define. */
+/* Define to `long' if <sys/types.h> does not define. */
 #undef off_t
 
 /* Define to `int' if <sys/types.h> does not define. */
@@ -322,7 +335,7 @@
 /* Define to 'int' if not defined */
 #undef rlim_t
 
-/* Define to `unsigned int' if <sys/types.h> does not define. */
+/* Define to `unsigned' if <sys/types.h> does not define. */
 #undef size_t
 
 /* Define to 'int' if not defined */
@@ -499,6 +512,25 @@ struct tm *gmtime_r(const time_t *timep, struct tm *result);
 #define getnameinfo getnameinfo_unbound
 struct sockaddr_storage;
 #include "compat/fake-rfc2553.h"
+#endif
+
+#ifndef HAVE_SLEEP
+#define sleep(x) Sleep((x)*1000) /* on win32 */
+#endif /* HAVE_SLEEP */
+#ifndef HAVE_USLEEP
+#define usleep(x) Sleep((x)/1000 + 1) /* on win32 */
+#endif /* HAVE_USLEEP */
+#ifndef HAVE_RANDOM
+#define random rand /* on win32, for tests only (bad random) */
+#endif /* HAVE_RANDOM */
+#ifndef HAVE_SRANDOM
+#define srandom(x) srand(x) /* on win32, for tests only (bad random) */
+#endif /* HAVE_SRANDOM */
+
+#ifdef HAVE_WINSOCK2_H
+#define FD_SET_T (u_int)
+#else
+#define FD_SET_T 
 #endif
 
 #include "ldns/ldns.h"

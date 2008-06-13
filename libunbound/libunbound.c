@@ -366,7 +366,7 @@ pollit(struct ub_ctx* ctx, struct timeval* t)
 	fd_set r;
 #ifndef S_SPLINT_S
 	FD_ZERO(&r);
-	FD_SET(ctx->rrpipe[0], &r);
+	FD_SET(FD_SET_T ctx->rrpipe[0], &r);
 #endif
 	if(select(ctx->rrpipe[0]+1, &r, NULL, NULL, t) == -1) {
 		return 0;

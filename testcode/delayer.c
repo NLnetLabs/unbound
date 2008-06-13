@@ -451,7 +451,7 @@ find_create_proxy(struct sockaddr_storage* from, socklen_t from_len,
 	p->addr_len = from_len;
 	p->next = *proxies;
 	*proxies = p;
-	FD_SET(p->s, rorig);
+	FD_SET(FD_SET_T p->s, rorig);
 	if(p->s+1 > *max)
 		*max = p->s+1;
 	return p;
@@ -548,8 +548,13 @@ service_tcp_listen(int s, fd_set* rorig, int* max, struct tcp_proxy** proxies,
 	fd_set_nonblock(p->client_s);
 	fd_set_nonblock(p->server_s);
 	if(connect(p->server_s, (struct sockaddr*)srv_addr, srv_len) == -1) {
+#ifdef EINPROGRESS
 		if(errno != EINPROGRESS) {
 			log_err("tcp connect: %s", strerror(errno));
+#else
+		if(WSAGetLastError() != WSAEWOULDBLOCK) {
+			log_err("tcp connect: %d", WSAGetLastError());
+#endif
 			close(p->server_s);
 			close(p->client_s);
 			free(p);
@@ -560,8 +565,8 @@ service_tcp_listen(int s, fd_set* rorig, int* max, struct tcp_proxy** proxies,
 	dl_tv_add(&p->timeout, tcp_timeout);
 
 	/* listen to client and server */
-	FD_SET(p->client_s, rorig);
-	FD_SET(p->server_s, rorig);
+	FD_SET(FD_SET_T p->client_s, rorig);
+	FD_SET(FD_SET_T p->server_s, rorig);
 	if(p->client_s+1 > *max)
 		*max = p->client_s+1;
 	if(p->server_s+1 > *max)
@@ -689,8 +694,8 @@ service_tcp_relay(struct tcp_proxy** tcp_proxies, struct timeval* now,
 			if(!tcp_relay_read(p->server_s, &p->answerlist, 
 				&p->answerlast, now, delay, pkt)) {
 				close(p->server_s);
-				FD_CLR(p->server_s, worig);
-				FD_CLR(p->server_s, rorig);
+				FD_CLR(FD_SET_T p->server_s, worig);
+				FD_CLR(FD_SET_T p->server_s, rorig);
 				p->server_s = -1;
 			}
 		}
@@ -705,8 +710,8 @@ service_tcp_relay(struct tcp_proxy** tcp_proxies, struct timeval* now,
 				delete_it = 1;
 			if(p->querylist && p->server_s != -1 &&
 				dl_tv_smaller(&p->querylist->wait, now))
-				FD_SET(p->server_s, worig);
-			else 	FD_CLR(p->server_s, worig);
+				FD_SET(FD_SET_T p->server_s, worig);
+			else 	FD_CLR(FD_SET_T p->server_s, worig);
 		}
 
 		/* can we send on further answers */
@@ -720,8 +725,8 @@ service_tcp_relay(struct tcp_proxy** tcp_proxies, struct timeval* now,
 				delete_it = 1;
 			if(p->answerlist && dl_tv_smaller(&p->answerlist->wait,
 				now))
-				FD_SET(p->client_s, worig);
-			else 	FD_CLR(p->client_s, worig);
+				FD_SET(FD_SET_T p->client_s, worig);
+			else 	FD_CLR(FD_SET_T p->client_s, worig);
 			if(!p->answerlist && p->server_s == -1)
 				delete_it = 1;
 		}
@@ -733,11 +738,11 @@ service_tcp_relay(struct tcp_proxy** tcp_proxies, struct timeval* now,
 		if(delete_it) {
 			struct tcp_proxy* np = p->next;
 			*prev = np;
-			FD_CLR(p->client_s, rorig);
-			FD_CLR(p->client_s, worig);
+			FD_CLR(FD_SET_T p->client_s, rorig);
+			FD_CLR(FD_SET_T p->client_s, worig);
 			if(p->server_s != -1) {
-				FD_CLR(p->server_s, rorig);
-				FD_CLR(p->server_s, worig);
+				FD_CLR(FD_SET_T p->server_s, rorig);
+				FD_CLR(FD_SET_T p->server_s, worig);
 			}
 			tcp_proxy_delete(p);
 			p = np;
@@ -853,8 +858,8 @@ service_loop(int udp_s, int listen_s, struct ringbuf* ring,
 #ifndef S_SPLINT_S
 	FD_ZERO(&rorig);
 	FD_ZERO(&worig);
-	FD_SET(udp_s, &rorig);
-	FD_SET(listen_s, &rorig);
+	FD_SET(FD_SET_T udp_s, &rorig);
+	FD_SET(FD_SET_T listen_s, &rorig);
 #endif
 	max = udp_s + 1;
 	if(listen_s + 1 > max) max = listen_s + 1;
@@ -926,10 +931,19 @@ service(char* bind_str, int bindport, char* serv_str, size_t memsize,
 	if(!pkt)
 		fatal_exit("out of memory");
 	if( signal(SIGINT, delayer_sigh) == SIG_ERR ||
-		signal(SIGTERM, delayer_sigh) == SIG_ERR ||
+#ifdef SIGHUP
 		signal(SIGHUP, delayer_sigh) == SIG_ERR ||
+#endif
+#ifdef SIGQUIT
 		signal(SIGQUIT, delayer_sigh) == SIG_ERR ||
-		signal(SIGALRM, delayer_sigh) == SIG_ERR)
+#endif
+#ifdef SIGBREAK
+		signal(SIGBREAK, delayer_sigh) == SIG_ERR ||
+#endif
+#ifdef SIGALRM
+		signal(SIGALRM, delayer_sigh) == SIG_ERR ||
+#endif
+		signal(SIGTERM, delayer_sigh) == SIG_ERR)
 		fatal_exit("could not bind to signal");
 	/* bind UDP port */
 	if((s = socket(str_is_ip6(bind_str)?AF_INET6:AF_INET,
