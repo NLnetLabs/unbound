@@ -238,7 +238,7 @@ comm_point_send_udp_msg(struct comm_point *c, ldns_buffer* packet,
 /** print debug ancillary info */
 void p_ancil(const char* str, struct comm_reply* r)
 {
-#if defined(AF_INET6) && defined(IPV6_PKTINFO)
+#if defined(AF_INET6) && defined(IPV6_PKTINFO) && (defined(HAVE_RECVMSG) || defined(HAVE_SENDMSG))
 	if(r->srctype != 4 && r->srctype != 6) {
 		log_info("%s: unknown srctype %d", str, r->srctype);
 		return;
@@ -287,7 +287,7 @@ int
 comm_point_send_udp_msg_if(struct comm_point *c, ldns_buffer* packet,
 	struct sockaddr* addr, socklen_t addrlen, struct comm_reply* r) 
 {
-#if defined(AF_INET6) && defined(IPV6_PKTINFO)
+#if defined(AF_INET6) && defined(IPV6_PKTINFO) && defined(HAVE_SENDMSG)
 	ssize_t sent;
 	struct msghdr msg;
 	struct iovec iov[1];
@@ -372,7 +372,7 @@ comm_point_send_udp_msg_if(struct comm_point *c, ldns_buffer* packet,
 void 
 comm_point_udp_ancil_callback(int fd, short event, void* arg)
 {
-#if defined(AF_INET6) && defined(IPV6_PKTINFO)
+#if defined(AF_INET6) && defined(IPV6_PKTINFO) && defined(HAVE_RECVMSG)
 	struct comm_reply rep;
 	struct msghdr msg;
 	struct iovec iov[1];
@@ -543,8 +543,12 @@ comm_point_tcp_accept_callback(int fd, short event, void* arg)
 	if(new_fd == -1) {
 		/* EINTR is signal interrupt. others are closed connection. */
 		if(	errno != EINTR 
+#ifdef EWOULDBLOCK
 			&& errno != EWOULDBLOCK 
+#endif
+#ifdef ECONNABORTED
 			&& errno != ECONNABORTED 
+#endif
 #ifdef EPROTO
 			&& errno != EPROTO
 #endif /* EPROTO */
@@ -636,8 +640,10 @@ comm_point_tcp_handle_read(int fd, struct comm_point* c, int short_ok)
 		else if(r == -1) {
 			if(errno == EINTR || errno == EAGAIN)
 				return 1;
+#ifdef ECONNRESET
 			if(errno == ECONNRESET && verbosity < 2)
 				return 0; /* silence reset by peer */
+#endif
 			log_err("read (in tcp s): %s", strerror(errno));
 			log_addr(0, "remote address is", &c->repinfo.addr,
 				c->repinfo.addrlen);
@@ -701,11 +707,14 @@ comm_point_tcp_handle_write(int fd, struct comm_point* c)
 		/* from Stevens, unix network programming, vol1, 3rd ed, p450*/
 		int error = 0;
 		socklen_t len = (socklen_t)sizeof(error);
-		if(getsockopt(fd, SOL_SOCKET, SO_ERROR, &error, &len) < 0){
+		if(getsockopt(fd, SOL_SOCKET, SO_ERROR, (void*)&error, 
+			&len) < 0){
 			error = errno; /* on solaris errno is error */
 		}
+#if defined(EINPROGRESS) && defined(EWOULDBLOCK)
 		if(error == EINPROGRESS || error == EWOULDBLOCK)
 			return 1; /* try again later */
+#endif
 #ifdef ECONNREFUSED
                 else if(error == ECONNREFUSED && verbosity < 2)
                         return 0; /* silence 'connection refused' */
@@ -724,6 +733,7 @@ comm_point_tcp_handle_write(int fd, struct comm_point* c)
 
 	if(c->tcp_byte_count < sizeof(uint16_t)) {
 		uint16_t len = htons(ldns_buffer_limit(c->buffer));
+#ifdef HAVE_WRITEV
 		struct iovec iov[2];
 		iov[0].iov_base = (uint8_t*)&len + c->tcp_byte_count;
 		iov[0].iov_len = sizeof(uint16_t) - c->tcp_byte_count;
@@ -732,6 +742,9 @@ comm_point_tcp_handle_write(int fd, struct comm_point* c)
 		log_assert(iov[0].iov_len > 0);
 		log_assert(iov[1].iov_len > 0);
 		r = writev(fd, iov, 2);
+#else /* HAVE_WRITEV */
+		r = write(fd, &len, sizeof(uint16_t));
+#endif /* HAVE_WRITEV */
 		if(r == -1) {
 			if(errno == EINTR || errno == EAGAIN)
 				return 1;

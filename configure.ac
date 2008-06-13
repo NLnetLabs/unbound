@@ -541,6 +541,7 @@ fi
 # check solaris thread library 
 AC_ARG_WITH(solaris-threads, AC_HELP_STRING([--with-solaris-threads], 
 	[use solaris native thread library.]), [ ],[ withval="no" ])
+ub_have_sol_threads=no
 if test x_$withval != x_no; then
 	if test x_$ub_have_pthreads != x_no; then
 	    AC_WARN([Have pthreads already, ignoring --with-solaris-threads])
@@ -551,10 +552,29 @@ if test x_$withval != x_no; then
 
 		CHECK_COMPILER_FLAG(mt, [CFLAGS="$CFLAGS -mt"],
 			[CFLAGS="$CFLAGS -D_REENTRANT"])
+		ub_have_sol_threads=yes
 	] , [ 
 		AC_ERROR([no solaris threads found.]) 
 	])
 	fi
+fi
+
+# check windows threads
+if test x_$ub_have_pthreads = x_no -a x_$ub_have_sol_threads = x_no; then
+	AC_CHECK_HEADERS([windows.h],,, [AC_INCLUDES_DEFAULT])
+	AC_MSG_CHECKING([for CreateThread])
+	AC_TRY_COMPILE([
+#ifdef HAVE_WINDOWS_H
+#include <windows.h>
+#endif
+], [
+	HANDLE t = CreateThread(NULL, 0, NULL, NULL, 0, NULL);
+],
+	AC_MSG_RESULT(yes)
+	AC_DEFINE(HAVE_WINDOWS_THREADS, 1, [Using Windows threads])
+,	
+	AC_MSG_RESULT(no)
+)
 fi
 
 # check to see if libraries are needed for these functions.
@@ -724,7 +744,7 @@ AC_CHECK_GETADDRINFO_WITH_INCLUDES
 if test $ac_cv_func_getaddrinfo = no; then
 AC_LIBOBJ([fake-rfc2553])
 fi
-AC_CHECK_FUNCS([tzset sigprocmask fcntl getpwnam getrlimit setsid sbrk chroot kill sleep usleep random srandom])
+AC_CHECK_FUNCS([tzset sigprocmask fcntl getpwnam getrlimit setsid sbrk chroot kill sleep usleep random srandom recvmsg sendmsg writev])
 
 # check mkdir
 AC_MSG_CHECKING([whether mkdir has one arg])
@@ -766,6 +786,7 @@ AC_REPLACE_FUNCS(snprintf)
 AC_REPLACE_FUNCS(strlcpy)
 AC_REPLACE_FUNCS(memmove)
 AC_REPLACE_FUNCS(gmtime_r)
+AC_REPLACE_FUNCS(socketpair) dnl for mingw32
 
 # check this after all other compilation checks, since the linking of the lib
 # may break checks after this.
@@ -966,6 +987,9 @@ struct sockaddr_storage;
 #ifndef HAVE_SRANDOM
 #define srandom(x) srand(x) /* on win32, for tests only (bad random) */
 #endif /* HAVE_SRANDOM */
+#ifndef HAVE_SOCKETPAIR
+int socketpair(int d, int type, int protocol, int *sv);
+#endif
 
 /* detect if we need to cast to unsigned int for FD_SET to avoid warnings */
 #ifdef HAVE_WINSOCK2_H

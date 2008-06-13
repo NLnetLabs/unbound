@@ -195,7 +195,45 @@ typedef thread_key_t ub_thread_key_t;
 #define ub_thread_key_set(key, v) LOCKRET(thr_setspecific(key, v))
 void* ub_thread_key_get(ub_thread_key_t key);
 
+
 #else /* we do not HAVE_SOLARIS_THREADS and no PTHREADS */
+/******************* WINDOWS THREADS ************************/
+#ifdef HAVE_WINDOWS_THREADS
+#include <windows.h>
+
+/* use basic mutex */
+typedef HANDLE lock_rw_t;
+#define lock_rw_init(lock) windows_lock_init(lock)
+#define lock_rw_destroy(lock) LOCKRET(rwlock_destroy(lock))
+#define lock_rw_rdlock(lock) LOCKRET(rw_rdlock(lock))
+#define lock_rw_wrlock(lock) LOCKRET(rw_wrlock(lock))
+#define lock_rw_unlock(lock) LOCKRET(rw_unlock(lock))
+
+/** use mutex */
+typedef HANDLE lock_basic_t;
+#define lock_basic_init(lock) LOCKRET(mutex_init(lock, USYNC_THREAD, NULL))
+#define lock_basic_destroy(lock) LOCKRET(mutex_destroy(lock))
+#define lock_basic_lock(lock) LOCKRET(mutex_lock(lock))
+#define lock_basic_unlock(lock) LOCKRET(mutex_unlock(lock))
+
+/** Use mutex. */
+typedef HANDLE lock_quick_t;
+#define lock_quick_init(lock) LOCKRET(mutex_init(lock, USYNC_THREAD, NULL))
+#define lock_quick_destroy(lock) LOCKRET(mutex_destroy(lock))
+#define lock_quick_lock(lock) LOCKRET(mutex_lock(lock))
+#define lock_quick_unlock(lock) LOCKRET(mutex_unlock(lock))
+
+/** Thread creation, create a default thread. */
+typedef HANDLE ub_thread_t;
+#define ub_thread_create(thr, func, arg) windows_thread_create(thr, func, arg);
+#define ub_thread_self() windows_thread_self()
+#define ub_thread_join(thread) windows_thread_join(thread)
+typedef DWORD ub_thread_key_t;
+#define ub_thread_key_create(key, f) windows_thread_key_create(key, f)
+#define ub_thread_key_set(key, v) windows_thread_key_set(key, v)
+void* ub_thread_key_get(ub_thread_key_t key);
+
+#else /* we do not HAVE_SOLARIS_THREADS, PTHREADS or WINDOWS_THREADS */
 
 /******************* NO THREADS ************************/
 /** In case there is no thread support, define locks to do nothing */
@@ -235,6 +273,7 @@ typedef void* ub_thread_key_t;
 #define ub_thread_key_set(key, v) (key) = (v)
 #define ub_thread_key_get(key) (key)
 
+#endif /* HAVE_WINDOWS_THREADS */
 #endif /* HAVE_SOLARIS_THREADS */
 #endif /* HAVE_PTHREAD */
 #endif /* USE_THREAD_DEBUG */
