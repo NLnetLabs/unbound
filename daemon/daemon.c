@@ -146,8 +146,19 @@ daemon_init()
 {
 	struct daemon* daemon = (struct daemon*)calloc(1, 
 		sizeof(struct daemon));
+#ifdef USE_WINSOCK
+	int r;
+	WSADATA wsa_data;
+#endif
 	if(!daemon)
 		return NULL;
+#ifdef USE_WINSOCK
+	r = WSAStartup(MAKEWORD(2,2), &wsa_data);
+	if(r != 0) {
+		fatal_exit("could not init winsock. WSAStartup: %s",
+			wsa_strerror(r));
+	}
+#endif /* USE_WINSOCK */
 	signal_handling_record();
 	checklock_start();
 	ERR_load_crypto_strings();
@@ -458,4 +469,10 @@ daemon_delete(struct daemon* daemon)
 	ERR_free_strings();
 	RAND_cleanup();
 	checklock_stop();
+#ifdef USE_WINSOCK
+	if(WSACleanup() != 0) {
+		log_err("Could not WSACleanup: %s", 
+			wsa_strerror(WSAGetLastError()));
+	}
+#endif
 }

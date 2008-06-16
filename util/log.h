@@ -180,4 +180,13 @@ void log_vmsg(int pri, const char* type, const char* format, va_list args);
 #  define log_assert(x) /*nothing*/
 #endif
 
+#ifdef USE_WINSOCK
+/**
+ * Convert WSA error into string.
+ * @param err: from WSAGetLastError()
+ * @return: string.
+ */
+char* wsa_strerror(DWORD err);
+#endif /* USE_WINSOCK */
+
 #endif /* UTIL_LOG_H */

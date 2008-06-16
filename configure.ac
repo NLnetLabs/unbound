@@ -701,8 +701,7 @@ int test() {
 AC_DEFUN([AC_CHECK_GETADDRINFO_WITH_INCLUDES],
 [AC_REQUIRE([AC_PROG_CC])
 AC_MSG_CHECKING(for getaddrinfo)
-AC_CACHE_VAL(ac_cv_func_getaddrinfo,
-[ac_cv_func_getaddrinfo=no
+ac_cv_func_getaddrinfo=no
 AC_LINK_IFELSE(
 [
 #ifdef __cplusplus
@@ -735,14 +734,16 @@ AC_LANG_PROGRAM(
         (void)getaddrinfo(NULL, NULL, NULL, NULL);
 ]
 ),
-[ac_cv_func_getaddrinfo="yes"
+[
+ac_cv_func_getaddrinfo="yes"
 dnl already: LIBS="$LIBS -lws2_32"
+AC_DEFINE(USE_WINSOCK, 1, [Whether the windows socket API is used])
 ],
-[ac_cv_func_getaddrinfo="no"
+[
+ac_cv_func_getaddrinfo="no"
 LIBS="$ORIGLIBS"
 ])
 )
-])
 
 AC_MSG_RESULT($ac_cv_func_getaddrinfo)
 if test $ac_cv_func_getaddrinfo = yes; then

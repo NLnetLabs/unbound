@@ -290,6 +290,9 @@
 /* Define if you want to use internal select based events */
 #undef USE_MINI_EVENT
 
+/* Whether the windows socket API is used */
+#undef USE_WINSOCK
+
 /* the version of the windows API enabled */
 #undef WINVER
 

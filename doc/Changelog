@@ -2,6 +2,9 @@
 	- on windows, use windows threads, mutex and thread-local-storage(Tls).
 	- detect if openssl needs gdi32.
 	- if no threading, THREADS_DISABLED is defined for use in the code.
+	- sets USE_WINSOCK if using ws2_32 on windows.
+	- wsa_strerror() function for more readable errors.
+	- WSA Startup and Cleanup called in unbound.exe.
 
 13 June 2008: Wouter
 	- port mingw32, more signal ifdefs, detect sleep, usleep, 
