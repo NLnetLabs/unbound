@@ -201,41 +201,42 @@ void* ub_thread_key_get(ub_thread_key_t key);
 #ifdef HAVE_WINDOWS_THREADS
 #include <windows.h>
 
-/* use basic mutex */
+/* Use a mutex */
 typedef HANDLE lock_rw_t;
-#define lock_rw_init(lock) windows_lock_init(lock)
-#define lock_rw_destroy(lock) LOCKRET(rwlock_destroy(lock))
-#define lock_rw_rdlock(lock) LOCKRET(rw_rdlock(lock))
-#define lock_rw_wrlock(lock) LOCKRET(rw_wrlock(lock))
-#define lock_rw_unlock(lock) LOCKRET(rw_unlock(lock))
+#define lock_rw_init(lock) lock_basic_init(lock)
+#define lock_rw_destroy(lock) lock_basic_destroy(lock)
+#define lock_rw_rdlock(lock) lock_basic_lock(lock)
+#define lock_rw_wrlock(lock) lock_basic_lock(lock)
+#define lock_rw_unlock(lock) lock_basic_unlock(lock)
 
-/** use mutex */
+/** the basic lock is a mutex, implemented opaquely, for error handling. */
 typedef HANDLE lock_basic_t;
-#define lock_basic_init(lock) LOCKRET(mutex_init(lock, USYNC_THREAD, NULL))
-#define lock_basic_destroy(lock) LOCKRET(mutex_destroy(lock))
-#define lock_basic_lock(lock) LOCKRET(mutex_lock(lock))
-#define lock_basic_unlock(lock) LOCKRET(mutex_unlock(lock))
+void lock_basic_init(lock_basic_t* lock);
+void lock_basic_destroy(lock_basic_t* lock);
+void lock_basic_lock(lock_basic_t* lock);
+void lock_basic_unlock(lock_basic_t* lock);
 
-/** Use mutex. */
+/** on windows no spinlock, use mutex too. */
 typedef HANDLE lock_quick_t;
-#define lock_quick_init(lock) LOCKRET(mutex_init(lock, USYNC_THREAD, NULL))
-#define lock_quick_destroy(lock) LOCKRET(mutex_destroy(lock))
-#define lock_quick_lock(lock) LOCKRET(mutex_lock(lock))
-#define lock_quick_unlock(lock) LOCKRET(mutex_unlock(lock))
+#define lock_quick_init(lock) lock_basic_init(lock)
+#define lock_quick_destroy(lock) lock_basic_destroy(lock)
+#define lock_quick_lock(lock) lock_basic_lock(lock)
+#define lock_quick_unlock(lock) lock_basic_unlock(lock)
 
 /** Thread creation, create a default thread. */
 typedef HANDLE ub_thread_t;
-#define ub_thread_create(thr, func, arg) windows_thread_create(thr, func, arg);
-#define ub_thread_self() windows_thread_self()
-#define ub_thread_join(thread) windows_thread_join(thread)
+void ub_thread_create(ub_thread_t* thr, void* (*func)(void*), void* arg);
+ub_thread_t ub_thread_self(void);
+void ub_thread_join(ub_thread_t thr);
 typedef DWORD ub_thread_key_t;
-#define ub_thread_key_create(key, f) windows_thread_key_create(key, f)
-#define ub_thread_key_set(key, v) windows_thread_key_set(key, v)
+void ub_thread_key_create(ub_thread_key_t* key, void* f);
+void ub_thread_key_set(ub_thread_key_t key, void* v);
 void* ub_thread_key_get(ub_thread_key_t key);
 
 #else /* we do not HAVE_SOLARIS_THREADS, PTHREADS or WINDOWS_THREADS */
 
 /******************* NO THREADS ************************/
+#define THREADS_DISABLED 1
 /** In case there is no thread support, define locks to do nothing */
 typedef int lock_rw_t;
 #define lock_rw_init(lock) /* nop */

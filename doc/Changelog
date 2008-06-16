@@ -1,3 +1,8 @@
+16 June 2008: Wouter
+	- on windows, use windows threads, mutex and thread-local-storage(Tls).
+	- detect if openssl needs gdi32.
+	- if no threading, THREADS_DISABLED is defined for use in the code.
+
 13 June 2008: Wouter
 	- port mingw32, more signal ifdefs, detect sleep, usleep, 
 	  random, srandom (used inside the tests).

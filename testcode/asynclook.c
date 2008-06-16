@@ -129,7 +129,7 @@ checkerr(const char* desc, int err)
 	}
 }
 
-#if !defined(HAVE_PTHREAD) && !defined(HAVE_SOLARIS_THREADS)
+#ifdef THREADS_DISABLED
 /** only one process can communicate with async worker */
 #define NUMTHR 1
 #else /* have threads */

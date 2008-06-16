@@ -511,8 +511,18 @@ AC_ARG_WITH(ssl, AC_HELP_STRING([--with-ssl=pathname],
 	        RUNTIME_PATH="$RUNTIME_PATH -R$ssldir/lib"
 	    fi
             AC_CHECK_LIB(crypto, HMAC_CTX_init,, [
+	    	# check if -lwsock32 or -lgdi32 are needed.	
+		LIBS="$LIBS -lcrypto -lgdi32"
+		AC_MSG_CHECKING([if -lcrypto needs -lgdi32])
+		AC_TRY_COMPILE([], [
+	void HMAC_CTX_init(void);
+	(void)HMAC_CTX_init();
+		], [
+		    AC_MSG_RESULT(yes) ],[
+		    AC_MSG_RESULT(no)
                     AC_MSG_ERROR([OpenSSL found in $ssldir, but version 0.9.7 or higher is required])
-                ])
+		])
+            ])
         fi
         AC_SUBST(HAVE_SSL)
 	AC_SUBST(RUNTIME_PATH)
@@ -726,7 +736,7 @@ AC_LANG_PROGRAM(
 ]
 ),
 [ac_cv_func_getaddrinfo="yes"
-LDFLAGS="$LDFLAGS -lws2_32"
+dnl already: LIBS="$LIBS -lws2_32"
 ],
 [ac_cv_func_getaddrinfo="no"
 LIBS="$ORIGLIBS"

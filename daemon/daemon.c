@@ -303,7 +303,7 @@ thread_start(void* arg)
 	struct worker* worker = (struct worker*)arg;
 	log_thread_set(&worker->thread_num);
 	ub_thread_blocksigs();
-#if !defined(HAVE_PTHREAD) && !defined(HAVE_SOLARIS_THREADS)
+#ifdef THREADS_DISABLED
 	/* close pipe ends used by main */
 	close(worker->cmd_send_fd);
 	worker->cmd_send_fd = -1;
@@ -330,7 +330,7 @@ daemon_start_others(struct daemon* daemon)
 	for(i=1; i<daemon->num; i++) {
 		ub_thread_create(&daemon->workers[i]->thr_id,
 			thread_start, daemon->workers[i]);
-#if !defined(HAVE_PTHREAD) && !defined(HAVE_SOLARIS_THREADS)
+#ifdef THREADS_DISABLED
 		/* close pipe end of child */
 		close(daemon->workers[i]->cmd_recv_fd);
 		daemon->workers[i]->cmd_recv_fd = -1;

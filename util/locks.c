@@ -96,7 +96,7 @@ void ub_thread_sig_unblock(int sig)
 #endif /* have signal stuff */
 }
 
-#if !defined(HAVE_PTHREAD) && !defined(HAVE_SOLARIS_THREADS)
+#if !defined(HAVE_PTHREAD) && !defined(HAVE_SOLARIS_THREADS) && !defined(HAVE_WINDOWS_THREADS)
 /**
  * No threading available: fork a new process.
  * This means no shared data structure, and no locking.
@@ -136,7 +136,7 @@ void ub_thr_fork_wait(ub_thread_t thread)
 		log_warn("process %d abnormal exit with status %d",
 			(int)thread, status);
 }
-#endif /* !defined(HAVE_PTHREAD) && !defined(HAVE_SOLARIS_THREADS) */
+#endif /* !defined(HAVE_PTHREAD) && !defined(HAVE_SOLARIS_THREADS) && !defined(HAVE_WINDOWS_THREADS) */
 
 #ifdef HAVE_SOLARIS_THREADS
 void* ub_thread_key_get(ub_thread_key_t key)
@@ -146,3 +146,119 @@ void* ub_thread_key_get(ub_thread_key_t key)
 	return ret;
 }
 #endif
+
+#ifdef HAVE_WINDOWS_THREADS
+/** log a windows GetLastError message */
+static void log_win_err(const char* str, DWORD err)
+{
+	LPTSTR buf;
+	if(FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM | 
+		FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_ALLOCATE_BUFFER, 
+		NULL, err, 0, (LPTSTR)&buf, 0, NULL) == 0) {
+		/* could not format error message */
+		log_err("%s, GetLastError=%d", str, (int)err);
+		return;
+	}
+	log_err("%s, (err=%d): %s", str, (int)err, buf);
+	LocalFree(buf);
+}
+
+void lock_basic_init(lock_basic_t* lock)
+{
+	*lock = CreateMutex(NULL, /* security attrs NULL, not process inherit*/
+		0,  /* false, we do not hold the lock initially */
+		NULL); /* create anonymous mutex */
+	if(*lock == NULL) {
+		log_win_err("CreateMutex failed", GetLastError());
+		fatal_exit("lock init failed");
+	}
+}
+
+void lock_basic_destroy(lock_basic_t* lock)
+{
+	if(!CloseHandle(*lock)) {
+		log_win_err("CloseHandle(Mutex) failed", GetLastError());
+	}
+	*lock = NULL;
+}
+
+void lock_basic_lock(lock_basic_t* lock)
+{
+	DWORD ret = WaitForSingleObject(*lock, INFINITE);
+	if(ret == WAIT_FAILED) {
+		log_win_err("WaitForSingleObject(Mutex):WAIT_FAILED", 
+			GetLastError());
+	} else if(ret == WAIT_TIMEOUT) {
+		log_win_err("WaitForSingleObject(Mutex):WAIT_TIMEOUT", 
+			GetLastError());
+	}
+	/* both WAIT_ABANDONED and WAIT_OBJECT_0 mean we have the lock */
+}
+
+void lock_basic_unlock(lock_basic_t* lock)
+{
+	if(!ReleaseMutex(*lock)) {
+		log_win_err("ReleaseMutex failed", GetLastError());
+	}
+}
+
+void ub_thread_key_create(ub_thread_key_t* key, void* f)
+{
+	*key = TlsAlloc();
+	if(*key == TLS_OUT_OF_INDEXES) {
+		*key = 0;
+		log_win_err("TlsAlloc Failed(OUT_OF_INDEXES)", GetLastError());
+	}
+	else ub_thread_key_set(*key, f);
+}
+
+void ub_thread_key_set(ub_thread_key_t key, void* v)
+{
+	if(!TlsSetValue(key, v)) {
+		log_win_err("TlsSetValue failed", GetLastError());
+	}
+}
+
+void* ub_thread_key_get(ub_thread_key_t key)
+{
+	void* ret = (void*)TlsGetValue(key);
+	if(ret == NULL && GetLastError() != ERROR_SUCCESS) {
+		log_win_err("TlsGetValue failed", GetLastError());
+	}
+	return ret;
+}
+
+void ub_thread_create(ub_thread_t* thr, void* (*func)(void*), void* arg)
+{
+	*thr = CreateThread(NULL, /* default security (no inherit handle) */
+		0, /* default stack size */
+		(LPTHREAD_START_ROUTINE)func, arg,
+		0, /* default flags, run immediately */
+		NULL); /* do not store thread identifier anywhere */
+	if(*thr == NULL) {
+		log_win_err("CreateThread failed", GetLastError());
+		fatal_exit("thread create failed");
+	}
+}
+
+ub_thread_t ub_thread_self(void)
+{
+	return GetCurrentThread();
+}
+
+void ub_thread_join(ub_thread_t thr)
+{
+	DWORD ret = WaitForSingleObject(thr, INFINITE);
+	if(ret == WAIT_FAILED) {
+		log_win_err("WaitForSingleObject(Thread):WAIT_FAILED", 
+			GetLastError());
+	} else if(ret == WAIT_TIMEOUT) {
+		log_win_err("WaitForSingleObject(Thread):WAIT_TIMEOUT", 
+			GetLastError());
+	}
+	/* and close the handle to the thread */
+	if(!CloseHandle(thr)) {
+		log_win_err("CloseHandle(Thread) failed", GetLastError());
+	}
+}
+#endif /* HAVE_WINDOWS_THREADS */

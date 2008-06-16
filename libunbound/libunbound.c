@@ -345,7 +345,7 @@ int ub_ctx_debugout(struct ub_ctx* ctx, void* out)
 int 
 ub_ctx_async(struct ub_ctx* ctx, int dothread)
 {
-#if !defined(HAVE_PTHREAD) && !defined(HAVE_SOLARIS_THREADS)
+#ifdef THREADS_DISABLED
 	if(dothread) /* cannot do threading */
 		return UB_NOERROR;
 #endif

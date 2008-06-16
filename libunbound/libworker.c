@@ -366,7 +366,7 @@ libworker_dobg(void* arg)
 	struct libworker* w = (struct libworker*)arg;
 	struct ub_ctx* ctx = w->ctx;
 	log_thread_set(&w->thread_num);
-#if !defined(HAVE_PTHREAD) && !defined(HAVE_SOLARIS_THREADS)
+#ifdef THREADS_DISABLED
 	/* we are forked */
 	w->is_bg_thread = 0;
 	/* close non-used parts of the pipes */
@@ -425,6 +425,10 @@ int libworker_bg(struct ub_ctx* ctx)
 		ub_thread_create(&ctx->bg_tid, libworker_dobg, w);
 	} else {
 		lock_basic_unlock(&ctx->cfglock);
+#ifndef HAVE_FORK
+		/* no fork on windows */
+		return UB_FORKFAIL;
+#else /* HAVE_FORK */
 		switch((ctx->bg_pid=fork())) {
 			case 0:
 				w = libworker_setup(ctx, 1);
@@ -442,6 +446,7 @@ int libworker_bg(struct ub_ctx* ctx)
 			default:
 				break;
 		}
+#endif /* HAVE_FORK */ 
 	}
 	return UB_NOERROR;
 }
