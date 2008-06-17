@@ -127,8 +127,13 @@ setup_config(FILE* in, char* configfile, int* lineno,
 	char line[MAX_LINE_LEN];
 	char* parse;
 	FILE* cfg;
+#ifdef USE_WINSOCK
+	snprintf(configfile, MAX_LINE_LEN, "testbound_cfg_%u.tmp", 
+		(unsigned)getpid());
+#else
 	snprintf(configfile, MAX_LINE_LEN, "/tmp/testbound_cfg_%u.tmp", 
 		(unsigned)getpid());
+#endif
 	add_opts("-c", pass_argc, pass_argv);
 	add_opts(configfile, pass_argc, pass_argv);
 	cfg = fopen(configfile, "w");

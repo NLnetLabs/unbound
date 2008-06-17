@@ -56,7 +56,11 @@ dir=$name.$$
 result=result.$name
 done=.done-$name
 success="no"
-shell="bash"
+if test -x "`which bash`"; then
+	shell="bash"
+else
+	shell="sh"
+fi
 
 # check already done
 if test -f .done-$name; then
