@@ -54,11 +54,15 @@
 /* We define libevent structures here to hide the libevent stuff. */
 
 #ifdef USE_MINI_EVENT
-#include "util/mini_event.h"
-#else
-/* we use libevent */
-#include <event.h>
-#endif
+#  ifdef USE_WINSOCK
+#    include "util/winsock_event.h"
+#  else
+#    include "util/mini_event.h"
+#  endif /* USE_WINSOCK */
+#else /* USE_MINI_EVENT */
+   /* we use libevent */
+#  include <event.h>
+#endif /* USE_MINI_EVENT */
 
 /**
  * The internal event structure for keeping libevent info for the event.

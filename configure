@@ -19675,14 +19675,11 @@ echo "${ECHO_T}found in $ssldir" >&6
 	        RUNTIME_PATH="$RUNTIME_PATH -R$ssldir/lib"
 	    fi
 
-echo "$as_me:$LINENO: checking for HMAC_CTX_init in -lcrypto" >&5
+	    echo "$as_me:$LINENO: checking for HMAC_CTX_init in -lcrypto" >&5
 echo $ECHO_N "checking for HMAC_CTX_init in -lcrypto... $ECHO_C" >&6
-if test "${ac_cv_lib_crypto_HMAC_CTX_init+set}" = set; then
-  echo $ECHO_N "(cached) $ECHO_C" >&6
-else
-  ac_check_lib_save_LIBS=$LIBS
-LIBS="-lcrypto  $LIBS"
-cat >conftest.$ac_ext <<_ACEOF
+	    ORIGLIBS="$LIBS"
+	    LIBS="$LIBS -lcrypto"
+	    cat >conftest.$ac_ext <<_ACEOF
 #line $LINENO "configure"
 /* confdefs.h.  */
 _ACEOF
@@ -19690,17 +19687,13 @@ cat confdefs.h >>conftest.$ac_ext
 cat >>conftest.$ac_ext <<_ACEOF
 /* end confdefs.h.  */
 
-/* Override any gcc2 internal prototype to avoid an error.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-/* We use char because int might match the return type of a gcc2
-   builtin and then its argument prototype would still apply.  */
-char HMAC_CTX_init ();
 int
 main ()
 {
-HMAC_CTX_init ();
+
+		int HMAC_CTX_init(void);
+		(void)HMAC_CTX_init();
+
   ;
   return 0;
 }
@@ -19717,29 +19710,24 @@ if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
   ac_status=$?
   echo "$as_me:$LINENO: \$? = $ac_status" >&5
   (exit $ac_status); }; }; then
-  ac_cv_lib_crypto_HMAC_CTX_init=yes
+
+		echo "$as_me:$LINENO: result: yes" >&5
+echo "${ECHO_T}yes" >&6
+
+cat >>confdefs.h <<\_ACEOF
+#define HAVE_HMAC_CTX_INIT 1
+_ACEOF
+
+
 else
   echo "$as_me: failed program was:" >&5
 sed 's/^/| /' conftest.$ac_ext >&5
 
-ac_cv_lib_crypto_HMAC_CTX_init=no
-fi
-rm -f conftest.$ac_objext conftest$ac_exeext conftest.$ac_ext
-LIBS=$ac_check_lib_save_LIBS
-fi
-echo "$as_me:$LINENO: result: $ac_cv_lib_crypto_HMAC_CTX_init" >&5
-echo "${ECHO_T}$ac_cv_lib_crypto_HMAC_CTX_init" >&6
-if test $ac_cv_lib_crypto_HMAC_CTX_init = yes; then
-  cat >>confdefs.h <<_ACEOF
-#define HAVE_LIBCRYPTO 1
-_ACEOF
 
-  LIBS="-lcrypto $LIBS"
-
-else
-
+		echo "$as_me:$LINENO: result: no" >&5
+echo "${ECHO_T}no" >&6
 	    	# check if -lwsock32 or -lgdi32 are needed.
-		LIBS="$LIBS -lcrypto -lgdi32"
+		LIBS="$LIBS -lgdi32"
 		echo "$as_me:$LINENO: checking if -lcrypto needs -lgdi32" >&5
 echo $ECHO_N "checking if -lcrypto needs -lgdi32... $ECHO_C" >&6
 		cat >conftest.$ac_ext <<_ACEOF
@@ -19754,28 +19742,34 @@ int
 main ()
 {
 
-	void HMAC_CTX_init(void);
-	(void)HMAC_CTX_init();
+		    int HMAC_CTX_init(void);
+		    (void)HMAC_CTX_init();
 
   ;
   return 0;
 }
 _ACEOF
-rm -f conftest.$ac_objext
-if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
-  (eval $ac_compile) 2>&5
+rm -f conftest.$ac_objext conftest$ac_exeext
+if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
+  (eval $ac_link) 2>&5
   ac_status=$?
   echo "$as_me:$LINENO: \$? = $ac_status" >&5
   (exit $ac_status); } &&
-         { ac_try='test -s conftest.$ac_objext'
+         { ac_try='test -s conftest$ac_exeext'
   { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
   (eval $ac_try) 2>&5
   ac_status=$?
   echo "$as_me:$LINENO: \$? = $ac_status" >&5
   (exit $ac_status); }; }; then
 
+
+cat >>confdefs.h <<\_ACEOF
+#define HAVE_HMAC_CTX_INIT 1
+_ACEOF
+
 		    echo "$as_me:$LINENO: result: yes" >&5
 echo "${ECHO_T}yes" >&6
+
 else
   echo "$as_me: failed program was:" >&5
 sed 's/^/| /' conftest.$ac_ext >&5
@@ -19788,10 +19782,10 @@ echo "$as_me: error: OpenSSL found in $ssldir, but version 0.9.7 or higher is re
    { (exit 1); exit 1; }; }
 
 fi
-rm -f conftest.$ac_objext conftest.$ac_ext
+rm -f conftest.$ac_objext conftest$ac_exeext conftest.$ac_ext
 
 fi
-
+rm -f conftest.$ac_objext conftest$ac_exeext conftest.$ac_ext
         fi
 
 

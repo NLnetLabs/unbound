@@ -1,8 +1,8 @@
 /*
- * mini-event.h - micro implementation of libevent api, using select() only.
+ * util/winsock_event.h - unbound event handling for winsock on windows
  *
- * Copyright (c) 2007, NLnet Labs. All rights reserved.
- * 
+ * Copyright (c) 2008, NLnet Labs. All rights reserved.
+ *
  * This software is open source.
  * 
  * Redistribution and use in source and binary forms, with or without
@@ -35,63 +35,84 @@
 
 /**
  * \file
- * This file implements part of the event(3) libevent api.
- * The back end is only select. Max number of fds is limited.
- * Max number of signals is limited, one handler per signal only.
- * And one handler per fd.
  *
- * Although limited to select() and a max (1024) open fds, it
- * is efficient:
- * o dispatch call caches fd_sets to use. 
- * o handler calling takes time ~ to the number of fds.
- * o timeouts are stored in a redblack tree, sorted, so take log(n).
- * Timeouts are only accurate to the second (no subsecond accuracy).
- * To avoid cpu hogging, fractional timeouts are rounded up to a whole second.
+ * This file contains interface functions with the WinSock2 API on Windows.
+ * It uses the winsock WSAWaitForMultipleEvents interface on a number of
+ * sockets.
+ *
+ * Note that windows can only wait for max 64 events at one time.
+ * 
+ * Also, file descriptors cannot be waited for.
+ *
+ * Named pipes are not easily available (and are not usable in select() ).
+ * For interprocess communication, it is possible to wait for a hEvent to
+ * be signaled by another thread.
+ *
+ * When a socket becomes readable, then it will not be flagged as 
+ * readable again until you have gotten WOULDBLOCK from a recv routine.
+ * That means the event handler must store the readability (edge notify)
+ * and process the incoming data until it blocks. 
+ * The function performing recv then has to inform the event handler that
+ * the socket has blocked, and the event handler can mark it as such.
+ * Thus, this file transforms the edge notify from windows to a level notify
+ * that is compatible with UNIX.
+ * However, the WSAEventSelect page says that it does do level notify, as long
+ * as you call a recv/write/accept at least once when it is signalled.
+ *
+ * To stay 'fair', instead of emptying a socket completely, the event handler
+ * can test the other (marked as blocking) sockets for new events.
+ *
+ * Additionally, TCP accept sockets get special event support.
+ *
+ * Socket numbers are not starting small, they can be any number (say 33060).
+ * Therefore, bitmaps are not used, but arrays.
  */
 
-#ifndef MINI_EVENT_H
-#define MINI_EVENT_H
+#ifndef UTIL_WINSOCK_EVENT_H
+#define UTIL_WINSOCK_EVENT_H
 
-#if defined(USE_MINI_EVENT) && !defined(USE_WINSOCK)
+#ifdef USE_WINSOCK
 
 #ifndef HAVE_EVENT_BASE_FREE
 #define HAVE_EVENT_BASE_FREE
-#endif 
+#endif
 
 /** event timeout */
-#define EV_TIMEOUT	0x01
+#define EV_TIMEOUT      0x01
 /** event fd readable */
-#define EV_READ		0x02
+#define EV_READ         0x02
 /** event fd writable */
-#define EV_WRITE	0x04
+#define EV_WRITE        0x04
 /** event signal */
-#define EV_SIGNAL	0x08
+#define EV_SIGNAL       0x08
 /** event must persist */
-#define EV_PERSIST	0x10
+#define EV_PERSIST      0x10
 
 /* needs our redblack tree */
 #include "rbtree.h"
 
-/** max number of file descriptors to support */
-#define MAX_FDS 1024
 /** max number of signals to support */
 #define MAX_SIG 32
 
-/** event base */
+/** The number of items that the winsock event handler can service.
+ * Windows cannot handle more anyway */
+#define WSK_MAX_ITEMS 64
+
+/**
+ * event base for winsock event handler
+ */
 struct event_base
 {
 	/** sorted by timeout (absolute), ptr */
 	rbtree_t* times;
-	/** array of 0 - maxfd of ptr to event for it */
-	struct event** fds;
-	/** max fd in use */
-	int maxfd;
-	/** capacity - size of the fds array */
-	int capfd;
-	/** fdset for read write */
-	fd_set reads, writes;
+	/** array (first part in use) of handles to work on */
+	struct event** items;
+	/** number of items in use in array */
+	int max;
+	/** capacity of array, size of array in items */
+	int cap;
 	/** array of 0 - maxsig of ptr to event for it */
-	struct event** signals;
+        struct event** signals;
 	/** if we need to exit */
 	int need_to_exit;
 	/** where to store time in seconds */
@@ -104,32 +125,37 @@ struct event_base
  * Event structure. Has some of the event elements.
  */
 struct event {
-	/** node in timeout rbtree */
-	rbnode_t node;
-	/** is event already added */
-	int added;
+        /** node in timeout rbtree */
+        rbnode_t node;
+        /** is event already added */
+        int added;
 
-	/** event base it belongs to */
-	struct event_base *ev_base;
-	/** fd to poll or -1 for timeouts. signal number for sigs. */
-	int ev_fd;
-	/** what events this event is interested in, see EV_.. above. */
-	short ev_events;
-	/** timeout value */
-	struct timeval ev_timeout;
+        /** event base it belongs to */
+        struct event_base *ev_base;
+        /** fd to poll or -1 for timeouts. signal number for sigs. */
+        int ev_fd;
+        /** what events this event is interested in, see EV_.. above. */
+        short ev_events;
+        /** timeout value */
+        struct timeval ev_timeout;
 
-	/** callback to call: fd, eventbits, userarg */
-	void (*ev_callback)(int, short, void *arg);
-	/** callback user arg */
-	void *ev_arg;
+        /** callback to call: fd, eventbits, userarg */
+        void (*ev_callback)(int, short, void *arg);
+        /** callback user arg */
+        void *ev_arg;
+
+	/* ----- nonpublic part, for winsock_event only ----- */
+	/** index of this event in the items array (if added) */
+	int idx;
+	/** the event handle to wait for new events to become ready */
+	WSAEVENT hEvent;
 };
 
-/* function prototypes (some are as they appear in event.h) */
 /** create event base */
 void *event_init(uint32_t* time_secs, struct timeval* time_tv);
 /** get version */
 const char *event_get_version(void);
-/** get polling method, select */
+/** get polling method (select,epoll) */
 const char *event_get_method(void);
 /** run select in a loop */
 int event_base_dispatch(struct event_base *);
@@ -139,6 +165,7 @@ int event_base_loopexit(struct event_base *, struct timeval *);
 void event_base_free(struct event_base *);
 /** set content of event */
 void event_set(struct event *, int, short, void (*)(int, short, void *), void *);
+
 /** add event to a base. You *must* call this for every event. */
 int event_base_set(struct event_base *, struct event *);
 /** add event to make it active. You may not change it with event_set anymore */
@@ -159,9 +186,8 @@ int signal_add(struct event *, struct timeval *);
 /** remove signal handler */
 int signal_del(struct event *);
 
-#endif /* USE_MINI_EVENT and not USE_WINSOCK */
-
 /** compare events in tree, based on timevalue, ptr for uniqueness */
 int mini_ev_cmp(const void* a, const void* b);
 
-#endif /* MINI_EVENT_H */
+#endif /* USE_WINSOCK */
+#endif /* UTIL_WINSOCK_EVENT_H */

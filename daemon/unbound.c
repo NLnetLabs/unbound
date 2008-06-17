@@ -61,9 +61,13 @@
 #endif
 
 #ifdef USE_MINI_EVENT
-#include "util/mini_event.h"
+#  ifdef USE_WINSOCK
+#    include "util/winsock_event.h"
+#  else
+#    include "util/mini_event.h"
+#  endif
 #else
-#include <event.h>
+#  include <event.h>
 #endif
 
 /** global debug value to keep track of heap memory allocation */

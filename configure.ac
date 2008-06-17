@@ -510,15 +510,30 @@ AC_ARG_WITH(ssl, AC_HELP_STRING([--with-ssl=pathname],
 	    if test "x$enable_rpath" = xyes; then
 	        RUNTIME_PATH="$RUNTIME_PATH -R$ssldir/lib"
 	    fi
-            AC_CHECK_LIB(crypto, HMAC_CTX_init,, [
+	
+	    AC_MSG_CHECKING([for HMAC_CTX_init in -lcrypto])
+	    ORIGLIBS="$LIBS"
+	    LIBS="$LIBS -lcrypto"
+	    AC_TRY_LINK(, [
+		int HMAC_CTX_init(void);
+		(void)HMAC_CTX_init();
+	      ], [
+		AC_MSG_RESULT(yes)
+		AC_DEFINE([HAVE_HMAC_CTX_INIT], 1, 
+			[If you have HMAC_CTX_init])
+	      ], [
+		AC_MSG_RESULT(no)
 	    	# check if -lwsock32 or -lgdi32 are needed.	
-		LIBS="$LIBS -lcrypto -lgdi32"
+		LIBS="$LIBS -lgdi32"
 		AC_MSG_CHECKING([if -lcrypto needs -lgdi32])
-		AC_TRY_COMPILE([], [
-	void HMAC_CTX_init(void);
-	(void)HMAC_CTX_init();
-		], [
-		    AC_MSG_RESULT(yes) ],[
+		AC_TRY_LINK([], [
+		    int HMAC_CTX_init(void);
+		    (void)HMAC_CTX_init();
+		  ],[
+		    AC_DEFINE([HAVE_HMAC_CTX_INIT], 1, 
+			[If you have HMAC_CTX_init])
+		    AC_MSG_RESULT(yes) 
+		  ],[
 		    AC_MSG_RESULT(no)
                     AC_MSG_ERROR([OpenSSL found in $ssldir, but version 0.9.7 or higher is required])
 		])

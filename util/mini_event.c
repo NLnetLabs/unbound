@@ -42,7 +42,7 @@
 
 #include "config.h"
 
-#ifdef USE_MINI_EVENT
+#if defined(USE_MINI_EVENT) && !defined(USE_WINSOCK)
 #include <signal.h>
 #include "util/mini_event.h"
 #include "util/fptr_wlist.h"
@@ -376,8 +376,10 @@ int signal_del(struct event* ev)
 }
 
 #else /* USE_MINI_EVENT */
+#ifndef USE_WINSOCK
 int mini_ev_cmp(const void* ATTR_UNUSED(a), const void* ATTR_UNUSED(b))
 {
 	return 0;
 }
+#endif /* not USE_WINSOCK */
 #endif /* USE_MINI_EVENT */

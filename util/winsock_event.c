@@ -1,0 +1,478 @@
+/*
+ * util/winsock_event.c - implementation of the unbound winsock event handler. 
+ *
+ * Copyright (c) 2008, NLnet Labs. All rights reserved.
+ *
+ * This software is open source.
+ * 
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 
+ * Redistributions of source code must retain the above copyright notice,
+ * this list of conditions and the following disclaimer.
+ * 
+ * Redistributions in binary form must reproduce the above copyright notice,
+ * this list of conditions and the following disclaimer in the documentation
+ * and/or other materials provided with the distribution.
+ * 
+ * Neither the name of the NLNET LABS nor the names of its contributors may
+ * be used to endorse or promote products derived from this software without
+ * specific prior written permission.
+ * 
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+ * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ */
+/**
+ * \file
+ * Implementation of the unbound WinSock2 API event notification handler
+ * for the Windows port.
+ */
+
+#include "config.h"
+#ifdef USE_WINSOCK
+#include <signal.h>
+#include "util/winsock_event.h"
+#include "util/fptr_wlist.h"
+
+int mini_ev_cmp(const void* a, const void* b)
+{
+        const struct event *e = (const struct event*)a;
+        const struct event *f = (const struct event*)b;
+        if(e->ev_timeout.tv_sec < f->ev_timeout.tv_sec)
+                return -1;
+        if(e->ev_timeout.tv_sec > f->ev_timeout.tv_sec)
+                return 1;
+        if(e->ev_timeout.tv_usec < f->ev_timeout.tv_usec)
+                return -1;
+        if(e->ev_timeout.tv_usec > f->ev_timeout.tv_usec)
+                return 1;
+        if(e < f)
+                return -1;
+        if(e > f)
+                return 1;
+	return 0;
+}
+
+/** set time */
+static int
+settime(struct event_base* base)
+{
+        if(gettimeofday(base->time_tv, NULL) < 0) {
+                return -1;
+        }
+#ifndef S_SPLINT_S
+        *base->time_secs = (uint32_t)base->time_tv->tv_sec;
+#endif
+        return 0;
+}
+
+/**
+ * Find a fd in the list of items.
+ * Note that not all items have a fd associated (those are -1).
+ * Signals are stored separately, and not searched.
+ * @param base: event base to look in.
+ * @param fd: what socket to look for.
+ * @return the index in the array, or -1 on failure.
+ */
+static int
+find_fd(struct event_base* base, int fd)
+{
+	int i;
+	for(i=0; i<base->max; i++) {
+		if(base->items[i]->ev_fd == fd)
+			return i;
+	}
+	return -1;
+}
+
+void *event_init(uint32_t* time_secs, struct timeval* time_tv)
+{
+        struct event_base* base = (struct event_base*)malloc(
+		sizeof(struct event_base));
+        if(!base)
+                return NULL;
+        memset(base, 0, sizeof(*base));
+        base->time_secs = time_secs;
+        base->time_tv = time_tv;
+        if(settime(base) < 0) {
+                event_base_free(base);
+                return NULL;
+        }
+	base->items = (struct event**)calloc(WSK_MAX_ITEMS, 
+		sizeof(struct event*));
+	if(!base->items) {
+                event_base_free(base);
+                return NULL;
+	}
+	base->cap = WSK_MAX_ITEMS;
+	base->max = 0;
+        base->times = rbtree_create(mini_ev_cmp);
+        if(!base->times) {
+                event_base_free(base);
+                return NULL;
+        }
+        base->signals = (struct event**)calloc(MAX_SIG, sizeof(struct event*));
+        if(!base->signals) {
+                event_base_free(base);
+                return NULL;
+        }
+        return base;
+}
+
+const char *event_get_version(void)
+{
+	return "winsock-event-"PACKAGE_VERSION;
+}
+
+const char *event_get_method(void)
+{
+	return "WSAWaitForMultipleEvents";
+}
+
+/** call timeouts handlers, and return how long to wait for next one or -1 */
+static void handle_timeouts(struct event_base* base, struct timeval* now,
+        struct timeval* wait)
+{
+        struct event* p;
+#ifndef S_SPLINT_S
+        wait->tv_sec = (time_t)-1;
+#endif
+
+        while((rbnode_t*)(p = (struct event*)rbtree_first(base->times))
+                !=RBTREE_NULL) {
+#ifndef S_SPLINT_S
+                if(p->ev_timeout.tv_sec > now->tv_sec ||
+                        (p->ev_timeout.tv_sec==now->tv_sec &&
+                        p->ev_timeout.tv_usec > now->tv_usec)) {
+                        /* there is a next larger timeout. wait for it */
+                        wait->tv_sec = p->ev_timeout.tv_sec - now->tv_sec;
+                        if(now->tv_usec > p->ev_timeout.tv_usec) {
+                                wait->tv_sec--;
+                                wait->tv_usec = 1000000 - (now->tv_usec -
+                                        p->ev_timeout.tv_usec);
+                        } else {
+                                wait->tv_usec = p->ev_timeout.tv_usec
+                                        - now->tv_usec;
+                        }
+                        return;
+                }
+#endif
+                /* event times out, remove it */
+                (void)rbtree_delete(base->times, p);
+                p->ev_events &= ~EV_TIMEOUT;
+                fptr_ok(fptr_whitelist_event(p->ev_callback));
+                (*p->ev_callback)(p->ev_fd, EV_TIMEOUT, p->ev_arg);
+        }
+}
+
+/** call select and callbacks for that */
+static int handle_select(struct event_base* base, struct timeval* wait)
+{
+	DWORD timeout = 0; /* in milliseconds */	
+	DWORD ret;
+	WSAEVENT waitfor[WSK_MAX_ITEMS];
+	struct event* eventlist[WSK_MAX_ITEMS];
+	WSANETWORKEVENTS netev;
+	int i, numwait = 0, startidx = 0, was_timeout = 0;
+
+#ifndef S_SPLINT_S
+        if(wait->tv_sec==(time_t)-1)
+                wait = NULL;
+	if(wait)
+		timeout = wait->tv_sec*1000 + wait->tv_usec/1000;
+#endif
+
+	/* prepare event array */
+	for(i=0; i<base->max; i++) {
+		if(base->items[i]->ev_fd == -1)
+			continue; /* skip timer only events */
+		eventlist[numwait] = base->items[i];
+		waitfor[numwait++] = base->items[i]->hEvent;
+	}
+	log_assert(numwait <= WSA_MAXIMUM_WAIT_EVENTS);
+
+
+	/* do the wait */
+	if(numwait == 0) {
+		/* WSAWaitFor.. doesn't like 0 event objects */
+		if(wait) {
+			Sleep(timeout);
+		}
+		was_timeout = 1;
+	} else {
+		ret = WSAWaitForMultipleEvents(numwait, waitfor,
+			0 /* do not wait for all, just one will do */,
+			wait?timeout:WSA_INFINITE,
+			0); /* we are not alertable (IO completion events) */
+		if(ret == WSA_WAIT_IO_COMPLETION) {
+			log_err("WSAWaitForMultipleEvents failed: WSA_WAIT_IO_COMPLETION");
+			return -1;
+		} else if(ret == WSA_WAIT_FAILED) {
+			log_err("WSAWaitForMultipleEvents failed: %s", 
+				wsa_strerror(WSAGetLastError()));
+			return -1;
+		} else if(ret == WSA_WAIT_TIMEOUT) {
+			was_timeout = 1;
+		} else
+			startidx = ret - WSA_WAIT_EVENT_0;
+	}
+
+	/* get new time after wait */
+        if(settime(base) < 0)
+               return -1;
+
+	/* callbacks */
+	if(was_timeout)
+		return 0;
+
+	for(i=startidx; i<numwait; i++) {
+		short bits = 0;
+		/* eventlist[i] fired */
+		if(WSAEnumNetworkEvents(eventlist[i]->ev_fd, 
+			/*waitfor[i],*/ /* reset the event handle */
+			NULL, /* do not reset the event handle */
+			&netev) != 0) {
+			log_err("WSAEnumNetworkEvents failed: %s", 
+				wsa_strerror(WSAGetLastError()));
+			return -1;
+		}
+		if((netev.lNetworkEvents & FD_READ)) {
+			if(netev.iErrorCode[FD_READ_BIT] != 0)
+				log_err("FD_READ_BIT error: %s",
+				wsa_strerror(netev.iErrorCode[FD_READ_BIT]));
+			bits |= EV_READ;
+		}
+		if((netev.lNetworkEvents & FD_WRITE)) {
+			if(netev.iErrorCode[FD_WRITE_BIT] != 0)
+				log_err("FD_WRITE_BIT error: %s",
+				wsa_strerror(netev.iErrorCode[FD_WRITE_BIT]));
+			bits |= EV_WRITE;
+		}
+		if((netev.lNetworkEvents & FD_CONNECT)) {
+			if(netev.iErrorCode[FD_CONNECT_BIT] != 0)
+				log_err("FD_CONNECT_BIT error: %s",
+				wsa_strerror(netev.iErrorCode[FD_CONNECT_BIT]));
+			bits |= EV_READ;
+			bits |= EV_WRITE;
+		}
+		if((netev.lNetworkEvents & FD_ACCEPT)) {
+			if(netev.iErrorCode[FD_ACCEPT_BIT] != 0)
+				log_err("FD_ACCEPT_BIT error: %s",
+				wsa_strerror(netev.iErrorCode[FD_ACCEPT_BIT]));
+			bits |= EV_READ;
+		}
+		if((netev.lNetworkEvents & FD_CLOSE)) {
+			if(netev.iErrorCode[FD_CLOSE_BIT] != 0)
+				log_err("FD_CLOSE_BIT error: %s",
+				wsa_strerror(netev.iErrorCode[FD_CLOSE_BIT]));
+			bits |= EV_READ;
+			bits |= EV_WRITE;
+		}
+		if(bits) {
+                        fptr_ok(fptr_whitelist_event(
+                                eventlist[i]->ev_callback));
+                        (*eventlist[i]->ev_callback)(eventlist[i]->ev_fd,
+                                bits, eventlist[i]->ev_arg);
+		}
+	}
+        return 0;
+}
+
+int event_base_dispatch(struct event_base *base)
+{
+        struct timeval wait;
+        if(settime(base) < 0)
+                return -1;
+        while(!base->need_to_exit)
+        {
+                /* see if timeouts need handling */
+                handle_timeouts(base, base->time_tv, &wait);
+                if(base->need_to_exit)
+                        return 0;
+                /* do select */
+                if(handle_select(base, &wait) < 0) {
+                        if(base->need_to_exit)
+                                return 0;
+                        return -1;
+                }
+        }
+        return 0;
+}
+
+int event_base_loopexit(struct event_base *base, 
+	struct timeval * ATTR_UNUSED(tv))
+{
+        base->need_to_exit = 1;
+        return 0;
+}
+
+void event_base_free(struct event_base *base)
+{
+        if(!base)
+                return;
+	if(base->items)
+		free(base->items);
+        if(base->times)
+                free(base->times);
+        if(base->signals)
+                free(base->signals);
+        free(base);
+}
+
+void event_set(struct event *ev, int fd, short bits, 
+	void (*cb)(int, short, void *), void *arg)
+{
+        ev->node.key = ev;
+        ev->ev_fd = fd;
+        ev->ev_events = bits;
+        ev->ev_callback = cb;
+        fptr_ok(fptr_whitelist_event(ev->ev_callback));
+        ev->ev_arg = arg;
+        ev->added = 0;
+}
+
+int event_base_set(struct event_base *base, struct event *ev)
+{
+        ev->ev_base = base;
+        ev->added = 0;
+        return 0;
+}
+
+int event_add(struct event *ev, struct timeval *tv)
+{
+        if(ev->added)
+                event_del(ev);
+	log_assert(ev->ev_fd==-1 || find_fd(ev->ev_base, ev->ev_fd) == -1);
+	if(ev->ev_base->max == ev->ev_base->cap)
+		return -1;
+	ev->idx = ev->ev_base->max++;
+	ev->ev_base->items[ev->idx] = ev;
+
+        if((ev->ev_events&(EV_READ|EV_WRITE)) && ev->ev_fd != -1) {
+		BOOL b=0;
+		int t, l;
+		long events = 0;
+		if( (ev->ev_events&EV_READ) )
+			events |= FD_READ;
+		if( (ev->ev_events&EV_WRITE) )
+			events |= FD_WRITE;
+		l = sizeof(t);
+		if(getsockopt(ev->ev_fd, SOL_SOCKET, SO_TYPE,
+			(void*)&t, &l) != 0)
+			log_err("getsockopt(SO_TYPE) failed: %s",
+				wsa_strerror(WSAGetLastError()));
+		if(t == SOCK_STREAM) {
+			/* TCP socket */
+			events |= FD_CLOSE;
+			if( (ev->ev_events&EV_WRITE) )
+				events |= FD_CONNECT;
+			l = sizeof(b);
+			if(getsockopt(ev->ev_fd, SOL_SOCKET, SO_ACCEPTCONN,
+				(void*)&b, &l) != 0)
+				log_err("getsockopt(SO_ACCEPTCONN) failed: %s",
+					wsa_strerror(WSAGetLastError()));
+			if(b) /* TCP accept socket */
+				events |= FD_ACCEPT;
+		}
+		ev->hEvent = WSACreateEvent();
+		if(ev->hEvent == WSA_INVALID_EVENT)
+			log_err("WSACreateEvent failed: %s",
+				wsa_strerror(WSAGetLastError()));
+		/* automatically sets fd to nonblocking mode.
+		 * nonblocking cannot be disabled, until wsaES(fd, NULL, 0) */
+		if(WSAEventSelect(ev->ev_fd, ev->hEvent, events) != 0) {
+			log_err("WSAEventSelect failed: %s",
+				wsa_strerror(WSAGetLastError()));
+		}
+	}
+
+	if(tv && (ev->ev_events&EV_TIMEOUT)) {
+#ifndef S_SPLINT_S
+                struct timeval *now = ev->ev_base->time_tv;
+                ev->ev_timeout.tv_sec = tv->tv_sec + now->tv_sec;
+                ev->ev_timeout.tv_usec = tv->tv_usec + now->tv_usec;
+                while(ev->ev_timeout.tv_usec > 1000000) {
+                        ev->ev_timeout.tv_usec -= 1000000;
+                        ev->ev_timeout.tv_sec++;
+                }
+#endif
+                (void)rbtree_insert(ev->ev_base->times, &ev->node);
+        }
+        ev->added = 1;
+	return 0;
+}
+
+int event_del(struct event *ev)
+{
+	if(!ev->added)
+		return 0;
+	log_assert(ev->added && ev->ev_base->max > 0)
+	/* remove item and compact the list */
+	ev->ev_base->items[ev->idx] = ev->ev_base->items[ev->ev_base->max-1];
+	ev->ev_base->items[ev->ev_base->max-1] = NULL;
+	ev->ev_base->max--;
+	if(ev->idx < ev->ev_base->max)
+		ev->ev_base->items[ev->idx]->idx = ev->idx;
+
+        if((ev->ev_events&EV_TIMEOUT))
+                (void)rbtree_delete(ev->ev_base->times, &ev->node);
+        if((ev->ev_events&(EV_READ|EV_WRITE)) && ev->ev_fd != -1) {
+		if(WSAEventSelect(ev->ev_fd, ev->hEvent, 0) != 0)
+			log_err("WSAEventSelect(disable) failed: %s",
+				wsa_strerror(WSAGetLastError()));
+		if(!WSACloseEvent(ev->hEvent))
+			log_err("WSACloseEvent failed: %s",
+				wsa_strerror(WSAGetLastError()));
+	}
+        ev->added = 0;
+        return 0;
+}
+
+/** which base gets to handle signals */
+static struct event_base* signal_base = NULL;
+/** signal handler */
+static RETSIGTYPE sigh(int sig)
+{
+        struct event* ev;
+        if(!signal_base || sig < 0 || sig >= MAX_SIG)
+                return;
+        ev = signal_base->signals[sig];
+        if(!ev)
+                return;
+        fptr_ok(fptr_whitelist_event(ev->ev_callback));
+        (*ev->ev_callback)(sig, EV_SIGNAL, ev->ev_arg);
+}
+
+int signal_add(struct event *ev, struct timeval * ATTR_UNUSED(tv))
+{
+        if(ev->ev_fd == -1 || ev->ev_fd >= MAX_SIG)
+                return -1;
+        signal_base = ev->ev_base;
+        ev->ev_base->signals[ev->ev_fd] = ev;
+        ev->added = 1;
+        if(signal(ev->ev_fd, sigh) == SIG_ERR) {
+                return -1;
+        }
+        return 0;
+}
+
+int signal_del(struct event *ev)
+{
+        if(ev->ev_fd == -1 || ev->ev_fd >= MAX_SIG)
+                return -1;
+        ev->ev_base->signals[ev->ev_fd] = NULL;
+        ev->added = 0;
+        return 0;
+}
+
+#endif /* USE_WINSOCK */

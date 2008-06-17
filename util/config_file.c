@@ -82,7 +82,11 @@ config_create()
 	cfg->do_udp = 1;
 	cfg->do_tcp = 1;
 	cfg->use_syslog = 1;
+#ifndef USE_WINSOCK
 	cfg->outgoing_num_ports = 256;
+#else
+	cfg->outgoing_num_ports = 32; /* windows is limited in num fds */
+#endif
 	cfg->outgoing_num_tcp = 10;
 	cfg->incoming_num_tcp = 10;
 	cfg->msg_buffer_size = 65552; /* 64 k + a small margin */

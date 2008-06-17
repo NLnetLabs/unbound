@@ -1,3 +1,11 @@
+17 June 2008: Wouter
+	- outgoing num fds 32 by default on windows ; it supports less
+	  fds for waiting on than unixes.
+	- winsock_event minievent handler for windows. (you could also
+	  attempt to link with libevent/libev ports for windows).
+	- neater crypto check and gdi32 detection.
+	- unbound.exe works to resolve and validate www.nlnetlabs.nl on vista.
+
 16 June 2008: Wouter
 	- on windows, use windows threads, mutex and thread-local-storage(Tls).
 	- detect if openssl needs gdi32.
