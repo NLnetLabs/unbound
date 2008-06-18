@@ -66,6 +66,9 @@
  *
  * Socket numbers are not starting small, they can be any number (say 33060).
  * Therefore, bitmaps are not used, but arrays.
+ *
+ * on winsock, you must use recv() and send() for TCP reads and writes,
+ * not read() and write(), those work only on files.
  */
 
 #ifndef UTIL_WINSOCK_EVENT_H

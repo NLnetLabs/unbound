@@ -131,7 +131,7 @@ tests:	all unittest testbound lock-verify pktview signit memstats \
 	asynclook streamtcp perf delayer harvest
 
 test:	tests
-	bash testcode/do-tests.sh
+	if test -x "`which bash`"; then bash testcode/do-tests.sh; else sh testcode/do-tests.sh; fi
 
 lib:	libunbound.la
 

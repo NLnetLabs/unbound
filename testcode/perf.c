@@ -225,8 +225,14 @@ perfsetup(struct perfinfo* info)
 		info->io[i].fd = socket(
 			addr_is_ip6(&info->dest, info->destlen)?
 			AF_INET6:AF_INET, SOCK_DGRAM, 0);
-		if(info->io[i].fd == -1)
+		if(info->io[i].fd == -1) {
+#ifndef USE_WINSOCK
 			fatal_exit("socket: %s", strerror(errno));
+#else
+			fatal_exit("socket: %s", 
+				wsa_strerror(WSAGetLastError()));
+#endif
+		}
 		if(info->io[i].fd > info->maxfd)
 			info->maxfd = info->io[i].fd;
 #ifndef S_SPLINT_S
@@ -267,9 +273,13 @@ perfsend(struct perfinfo* info, size_t n, struct timeval* now)
 		(struct sockaddr*)&info->dest, info->destlen);
 	/*log_hex("send", info->qlist_data[info->qlist_idx],
 		info->qlist_len[info->qlist_idx]);*/
-	if(r == -1)
+	if(r == -1) {
+#ifndef USE_WINSOCK
 		log_err("sendto: %s", strerror(errno));
-	else if(r != (ssize_t)info->qlist_len[info->qlist_idx]) {
+#else
+		log_err("sendto: %s", wsa_strerror(WSAGetLastError()));
+#endif
+	} else if(r != (ssize_t)info->qlist_len[info->qlist_idx]) {
 		log_err("partial sendto");
 	}
 	info->qlist_idx = (info->qlist_idx+1) % info->qlist_size;
@@ -288,7 +298,11 @@ perfreply(struct perfinfo* info, size_t n, struct timeval* now)
 	r = recv(info->io[n].fd, ldns_buffer_begin(info->buf),
 		ldns_buffer_capacity(info->buf), 0);
 	if(r == -1) {
+#ifndef USE_WINSOCK
 		log_err("recv: %s", strerror(errno));
+#else
+		log_err("recv: %s", wsa_strerror(WSAGetLastError()));
+#endif
 	} else {
 		info->by_rcode[LDNS_RCODE_WIRE(ldns_buffer_begin(
 			info->buf))]++;
@@ -559,6 +573,10 @@ int main(int argc, char* argv[])
 	char* nm = argv[0];
 	int c;
 	struct perfinfo info;
+#ifdef USE_WINSOCK
+	int r;
+	WSADATA wsa_data;
+#endif
 
 	/* defaults */
 	memset(&info, 0, sizeof(info));
@@ -567,6 +585,10 @@ int main(int argc, char* argv[])
 	log_init(NULL, 0, NULL);
 	log_ident_set("perf");
 	checklock_start();
+#ifdef USE_WINSOCK
+	if((r = WSAStartup(MAKEWORD(2,2), &wsa_data)) != 0)
+		fatal_exit("WSAStartup failed: %s", wsa_strerror(r));
+#endif
 
 	info.buf = ldns_buffer_new(65553);
 	if(!info.buf) fatal_exit("out of memory");
@@ -616,6 +638,9 @@ int main(int argc, char* argv[])
 	perfmain(&info);
 
 	ldns_buffer_free(info.buf);
+#ifdef USE_WINSOCK
+	WSACleanup();
+#endif
 	checklock_stop();
 	return 0;
 }

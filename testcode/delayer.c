@@ -364,7 +364,11 @@ service_send(struct ringbuf* ring, struct timeval* now, ldns_buffer* pkt,
 			ldns_buffer_limit(pkt), 0, 
 			(struct sockaddr*)srv_addr, srv_len);
 		if(sent == -1) {
+#ifndef USE_WINSOCK
 			log_err("sendto: %s", strerror(errno));
+#else
+			log_err("sendto: %s", wsa_strerror(WSAGetLastError()));
+#endif
 		} else if(sent != (ssize_t)ldns_buffer_limit(pkt)) {
 			log_err("sendto: partial send");
 		}
@@ -383,9 +387,16 @@ do_proxy(struct proxy* p, int retsock, ldns_buffer* pkt)
 		r = recv(p->s, ldns_buffer_begin(pkt), 
 			ldns_buffer_capacity(pkt), 0);
 		if(r == -1) {
+#ifndef USE_WINSOCK
 			if(errno == EAGAIN || errno == EINTR)
 				return;
 			log_err("recv: %s", strerror(errno));
+#else
+			if(WSAGetLastError() == WSAEINPROGRESS ||
+				WSAGetLastError() == WSAEWOULDBLOCK)
+				return;
+			log_err("recv: %s", wsa_strerror(WSAGetLastError()));
+#endif
 			return;
 		}
 		ldns_buffer_set_limit(pkt, (size_t)r);
@@ -395,7 +406,11 @@ do_proxy(struct proxy* p, int retsock, ldns_buffer* pkt)
 		r = sendto(retsock, ldns_buffer_begin(pkt), (size_t)r, 0,
 			(struct sockaddr*)&p->addr, p->addr_len);
 		if(r == -1) {
+#ifndef USE_WINSOCK
 			log_err("sendto: %s", strerror(errno));
+#else
+			log_err("sendto: %s", wsa_strerror(WSAGetLastError()));
+#endif
 		}
 	}
 }
@@ -445,7 +460,13 @@ find_create_proxy(struct sockaddr_storage* from, socklen_t from_len,
 	p = (struct proxy*)calloc(1, sizeof(*p));
 	if(!p) fatal_exit("out of memory");
 	p->s = socket(serv_ip6?AF_INET6:AF_INET, SOCK_DGRAM, 0);
-	if(p->s == -1) fatal_exit("socket: %s", strerror(errno));
+	if(p->s == -1) {
+#ifndef USE_WINSOCK
+		fatal_exit("socket: %s", strerror(errno));
+#else
+		fatal_exit("socket: %s", wsa_strerror(WSAGetLastError()));
+#endif
+	}
 	fd_set_nonblock(p->s);
 	memmove(&p->addr, from, from_len);
 	p->addr_len = from_len;
@@ -475,9 +496,17 @@ service_recv(int s, struct ringbuf* ring, ldns_buffer* pkt,
 			ldns_buffer_capacity(pkt), 0,
 			(struct sockaddr*)&from, &from_len);
 		if(len < 0) {
+#ifndef USE_WINSOCK
 			if(errno == EAGAIN || errno == EINTR)
 				return;
 			fatal_exit("recvfrom: %s", strerror(errno));
+#else
+			if(WSAGetLastError() == WSAEWOULDBLOCK || 
+				WSAGetLastError() == WSAEINPROGRESS)
+				return;
+			fatal_exit("recvfrom: %s", 
+				wsa_strerror(WSAGetLastError()));
+#endif
 		}
 		ldns_buffer_set_limit(pkt, (size_t)len);
 		/* find its proxy element */
@@ -531,9 +560,17 @@ service_tcp_listen(int s, fd_set* rorig, int* max, struct tcp_proxy** proxies,
 	socklen_t addr_len;
 	newfd = accept(s, (struct sockaddr*)&addr, &addr_len);
 	if(newfd == -1) {
+#ifndef USE_WINSOCK
 		if(errno == EAGAIN || errno == EINTR)
 			return;
 		fatal_exit("accept: %s", strerror(errno));
+#else
+		if(WSAGetLastError() == WSAEWOULDBLOCK || 
+			WSAGetLastError() == WSAEINPROGRESS ||
+			WSAGetLastError() == WSAECONNRESET)
+			return;
+		fatal_exit("accept: %s", wsa_strerror(WSAGetLastError()));
+#endif
 	}
 	p = (struct tcp_proxy*)calloc(1, sizeof(*p));
 	if(!p) fatal_exit("out of memory");
@@ -543,17 +580,24 @@ service_tcp_listen(int s, fd_set* rorig, int* max, struct tcp_proxy** proxies,
 	p->client_s = newfd;
 	p->server_s = socket(addr_is_ip6(srv_addr, srv_len)?AF_INET6:AF_INET,
 		SOCK_STREAM, 0);
-	if(p->server_s == -1)
+	if(p->server_s == -1) {
+#ifndef USE_WINSOCK
 		fatal_exit("tcp socket: %s", strerror(errno));
+#else
+		fatal_exit("tcp socket: %s", wsa_strerror(WSAGetLastError()));
+#endif
+	}
 	fd_set_nonblock(p->client_s);
 	fd_set_nonblock(p->server_s);
 	if(connect(p->server_s, (struct sockaddr*)srv_addr, srv_len) == -1) {
-#ifdef EINPROGRESS
+#ifndef USE_WINSOCK
 		if(errno != EINPROGRESS) {
 			log_err("tcp connect: %s", strerror(errno));
 #else
-		if(WSAGetLastError() != WSAEWOULDBLOCK) {
-			log_err("tcp connect: %d", WSAGetLastError());
+		if(WSAGetLastError() != WSAEWOULDBLOCK &&
+			WSAGetLastError() != WSAEINPROGRESS) {
+			log_err("tcp connect: %s", 
+				wsa_strerror(WSAGetLastError()));
 #endif
 			close(p->server_s);
 			close(p->client_s);
@@ -584,11 +628,19 @@ tcp_relay_read(int s, struct tcp_send_list** first,
 	struct timeval* delay, ldns_buffer* pkt)
 {
 	struct tcp_send_list* item;
-	ssize_t r = read(s, ldns_buffer_begin(pkt), ldns_buffer_capacity(pkt));
+	ssize_t r = recv(s, ldns_buffer_begin(pkt), 
+		ldns_buffer_capacity(pkt), 0);
 	if(r == -1) {
+#ifndef USE_WINSOCK
 		if(errno == EINTR || errno == EAGAIN)
 			return 1;
 		log_err("tcp read: %s", strerror(errno));
+#else
+		if(WSAGetLastError() == WSAEINPROGRESS || 
+			WSAGetLastError() == WSAEWOULDBLOCK)
+			return 1;
+		log_err("tcp read: %s", wsa_strerror(WSAGetLastError()));
+#endif
 		return 0;
 	} else if(r == 0) {
 		/* connection closed */
@@ -635,11 +687,19 @@ tcp_relay_write(int s, struct tcp_send_list** first,
 		if(!dl_tv_smaller(&p->wait, now))
 			return 1;
 		/* write it */
-		r = write(s, p->item + p->done, p->len - p->done);
+		r = send(s, (void*)(p->item + p->done), p->len - p->done, 0);
 		if(r == -1) {
+#ifndef USE_WINSOCK
 			if(errno == EAGAIN || errno == EINTR)
 				return 1;
 			log_err("tcp write: %s", strerror(errno));
+#else
+			if(WSAGetLastError() == WSAEWOULDBLOCK || 
+				WSAGetLastError() == WSAEINPROGRESS)
+				return 1;
+			log_err("tcp write: %s", 
+				wsa_strerror(WSAGetLastError()));
+#endif
 			return 0;
 		} else if(r == 0) {
 			/* closed */
@@ -947,8 +1007,13 @@ service(char* bind_str, int bindport, char* serv_str, size_t memsize,
 		fatal_exit("could not bind to signal");
 	/* bind UDP port */
 	if((s = socket(str_is_ip6(bind_str)?AF_INET6:AF_INET,
-		SOCK_DGRAM, 0)) == -1)
+		SOCK_DGRAM, 0)) == -1) {
+#ifndef USE_WINSOCK
 		fatal_exit("socket: %s", strerror(errno));
+#else
+		fatal_exit("socket: %s", wsa_strerror(WSAGetLastError()));
+#endif
+	}
 	i=0;
 	if(bindport == 0) {
 		bindport = 1024 + random()%64000;
@@ -969,8 +1034,13 @@ service(char* bind_str, int bindport, char* serv_str, size_t memsize,
 	fd_set_nonblock(s);
 	/* and TCP port */
 	if((listen_s = socket(str_is_ip6(bind_str)?AF_INET6:AF_INET,
-		SOCK_STREAM, 0)) == -1)
+		SOCK_STREAM, 0)) == -1) {
+#ifndef USE_WINSOCK
 		fatal_exit("tcp socket: %s", strerror(errno));
+#else
+		fatal_exit("tcp socket: %s", wsa_strerror(WSAGetLastError()));
+#endif
+	}
 #ifdef SO_REUSEADDR
 	if(1) {
 		int on = 1;

@@ -239,8 +239,8 @@ static int handle_select(struct event_base* base, struct timeval* wait)
 		short bits = 0;
 		/* eventlist[i] fired */
 		if(WSAEnumNetworkEvents(eventlist[i]->ev_fd, 
-			/*waitfor[i],*/ /* reset the event handle */
-			NULL, /* do not reset the event handle */
+			waitfor[i], /* reset the event handle */
+			/*NULL,*/ /* do not reset the event handle */
 			&netev) != 0) {
 			log_err("WSAEnumNetworkEvents failed: %s", 
 				wsa_strerror(WSAGetLastError()));
@@ -279,6 +279,20 @@ static int handle_select(struct event_base* base, struct timeval* wait)
 			bits |= EV_WRITE;
 		}
 		if(bits) {
+			verbose(VERB_ALGO, "winsock event callback %p fd=%d "
+				"%s%s%s%s%s ; %s%s%s", 
+				eventlist[i], eventlist[i]->ev_fd,
+				(netev.lNetworkEvents&FD_READ)?" FD_READ":"",
+				(netev.lNetworkEvents&FD_WRITE)?" FD_WRITE":"",
+				(netev.lNetworkEvents&FD_CONNECT)?
+					" FD_CONNECT":"",
+				(netev.lNetworkEvents&FD_ACCEPT)?
+					" FD_ACCEPT":"",
+				(netev.lNetworkEvents&FD_CLOSE)?" FD_CLOSE":"",
+				(bits&EV_READ)?" EV_READ":"",
+				(bits&EV_WRITE)?" EV_WRITE":"",
+				(bits&EV_TIMEOUT)?" EV_TIMEOUT":"");
+				
                         fptr_ok(fptr_whitelist_event(
                                 eventlist[i]->ev_callback));
                         (*eventlist[i]->ev_callback)(eventlist[i]->ev_fd,
@@ -350,6 +364,12 @@ int event_base_set(struct event_base *base, struct event *ev)
 
 int event_add(struct event *ev, struct timeval *tv)
 {
+	verbose(VERB_ALGO, "event_add %p added=%d fd=%d tv=%d %s%s%s", 
+		ev, ev->added, ev->ev_fd, 
+		(tv?(int)tv->tv_sec*1000+(int)tv->tv_usec/1000:-1),
+		(ev->ev_events&EV_READ)?" EV_READ":"",
+		(ev->ev_events&EV_WRITE)?" EV_WRITE":"",
+		(ev->ev_events&EV_TIMEOUT)?" EV_TIMEOUT":"");
         if(ev->added)
                 event_del(ev);
 	log_assert(ev->ev_fd==-1 || find_fd(ev->ev_base, ev->ev_fd) == -1);
@@ -414,6 +434,13 @@ int event_add(struct event *ev, struct timeval *tv)
 
 int event_del(struct event *ev)
 {
+	verbose(VERB_ALGO, "event_del %p added=%d fd=%d tv=%d %s%s%s", 
+		ev, ev->added, ev->ev_fd, 
+		(ev->ev_events&EV_TIMEOUT)?(int)ev->ev_timeout.tv_sec*1000+
+		(int)ev->ev_timeout.tv_usec/1000:-1,
+		(ev->ev_events&EV_READ)?" EV_READ":"",
+		(ev->ev_events&EV_WRITE)?" EV_WRITE":"",
+		(ev->ev_events&EV_TIMEOUT)?" EV_TIMEOUT":"");
 	if(!ev->added)
 		return 0;
 	log_assert(ev->added && ev->ev_base->max > 0)

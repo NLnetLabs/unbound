@@ -144,20 +144,28 @@ outnet_tcp_take_into_use(struct waiting_tcp* w, uint8_t* pkt, size_t pkt_len)
 #endif
 		s = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
 	if(s == -1) {
+#ifndef USE_WINSOCK
 		log_err("outgoing tcp: socket: %s", strerror(errno));
+#else
+		log_err("outgoing tcp: socket: %s", 
+			wsa_strerror(WSAGetLastError()));
+#endif
 		log_addr(0, "failed address", &w->addr, w->addrlen);
 		return 0;
 	}
 	fd_set_nonblock(s);
 	if(connect(s, (struct sockaddr*)&w->addr, w->addrlen) == -1) {
+#ifndef USE_WINSOCK
 #ifdef EINPROGRESS
 		if(errno != EINPROGRESS) {
-#elif defined(WSAEWOULDBLOCK)
-		if(errno != WSAEWOULDBLOCK) {
 #else
 		if(1) {
 #endif
 			log_err("outgoing tcp: connect: %s", strerror(errno));
+#else /* USE_WINSOCK */
+		if(WSAGetLastError() != WSAEINPROGRESS &&
+			WSAGetLastError() != WSAEWOULDBLOCK) {
+#endif
 			log_addr(0, "failed address", &w->addr, w->addrlen);
 			close(s);
 			return 0;
@@ -682,17 +690,17 @@ static int
 udp_sockport(struct sockaddr_storage* addr, socklen_t addrlen, int port, 
 	int* inuse)
 {
-	int fd;
+	int fd, noproto;
 	if(addr_is_ip6(addr, addrlen)) {
 		struct sockaddr_in6* sa = (struct sockaddr_in6*)addr;
 		sa->sin6_port = (in_port_t)htons((uint16_t)port);
 		fd = create_udp_sock(AF_INET6, SOCK_DGRAM, 
-			(struct sockaddr*)addr, addrlen, 1, inuse);
+			(struct sockaddr*)addr, addrlen, 1, inuse, &noproto);
 	} else {
 		struct sockaddr_in* sa = (struct sockaddr_in*)addr;
 		sa->sin_port = (in_port_t)htons((uint16_t)port);
 		fd = create_udp_sock(AF_INET, SOCK_DGRAM, 
-			(struct sockaddr*)addr, addrlen, 1, inuse);
+			(struct sockaddr*)addr, addrlen, 1, inuse, &noproto);
 	}
 	return fd;
 }

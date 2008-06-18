@@ -89,7 +89,7 @@ verbose_print_addr(struct addrinfo *addr)
 
 int
 create_udp_sock(int family, int socktype, struct sockaddr* addr,
-        socklen_t addrlen, int v6only, int* inuse)
+        socklen_t addrlen, int v6only, int* inuse, int* noproto)
 {
 	int s;
 # if defined(IPV6_USE_MIN_MTU)
@@ -98,8 +98,23 @@ create_udp_sock(int family, int socktype, struct sockaddr* addr,
 	(void)v6only;
 # endif
 	if((s = socket(family, socktype, 0)) == -1) {
-		log_err("can't create socket: %s", strerror(errno));
 		*inuse = 0;
+#ifndef USE_WINSOCK
+		if(errno == EAFNOSUPPORT || errno == EPROTONOSUPPORT) {
+			*noproto = 1;
+			return -1;
+		}
+		log_err("can't create socket: %s", strerror(errno));
+#else
+		if(WSAGetLastError() == WSAEAFNOSUPPORT || 
+			WSAGetLastError() == WSAEPROTONOSUPPORT) {
+			*noproto = 1;
+			return -1;
+		}
+		log_err("can't create socket: %s", 
+			wsa_strerror(WSAGetLastError()));
+#endif
+		*noproto = 0;
 		return -1;
 	}
 	if(family == AF_INET6) {
@@ -111,6 +126,7 @@ create_udp_sock(int family, int socktype, struct sockaddr* addr,
 				log_err("setsockopt(..., IPV6_V6ONLY"
 					", ...) failed: %s", strerror(errno));
 				close(s);
+				*noproto = 0;
 				*inuse = 0;
 				return -1;
 			}
@@ -130,12 +146,14 @@ create_udp_sock(int family, int socktype, struct sockaddr* addr,
 			log_err("setsockopt(..., IPV6_USE_MIN_MTU, "
 				"...) failed: %s", strerror(errno));
 			close(s);
+			*noproto = 0;
 			*inuse = 0;
 			return -1;
 		}
 # endif
 	}
 	if(bind(s, (struct sockaddr*)addr, addrlen) != 0) {
+		*noproto = 0;
 #ifdef EADDRINUSE
 		*inuse = (errno == EADDRINUSE);
 		if(errno != EADDRINUSE)
@@ -145,6 +163,7 @@ create_udp_sock(int family, int socktype, struct sockaddr* addr,
 		return -1;
 	}
 	if(!fd_set_nonblock(s)) {
+		*noproto = 0;
 		*inuse = 0;
 		close(s);
 		return -1;
@@ -156,18 +175,34 @@ create_udp_sock(int family, int socktype, struct sockaddr* addr,
  * Create and bind TCP listening socket
  * @param addr: address info ready to make socket.
  * @param v6only: enable ip6 only flag on ip6 sockets.
+ * @param noproto: if error caused by lack of protocol support.
  * @return: the socket. -1 on error.
  */
 static int
-create_tcp_accept_sock(struct addrinfo *addr, int v6only)
+create_tcp_accept_sock(struct addrinfo *addr, int v6only, int* noproto)
 {
 	int s;
 #if defined(SO_REUSEADDR) || defined(IPV6_V6ONLY)
 	int on = 1;
 #endif /* SO_REUSEADDR || IPV6_V6ONLY */
 	verbose_print_addr(addr);
+	*noproto = 0;
 	if((s = socket(addr->ai_family, addr->ai_socktype, 0)) == -1) {
+#ifndef USE_WINSOCK
+		if(errno == EAFNOSUPPORT || errno == EPROTONOSUPPORT) {
+			*noproto = 1;
+			return -1;
+		}
 		log_err("can't create socket: %s", strerror(errno));
+#else
+		if(WSAGetLastError() == WSAEAFNOSUPPORT ||
+			WSAGetLastError() == WSAEPROTONOSUPPORT) {
+			*noproto = 1;
+			return -1;
+		}
+		log_err("can't create socket: %s", 
+			wsa_strerror(WSAGetLastError()));
+#endif
 		return -1;
 	}
 #ifdef SO_REUSEADDR
@@ -209,11 +244,12 @@ create_tcp_accept_sock(struct addrinfo *addr, int v6only)
  */
 static int
 make_sock(int stype, const char* ifname, const char* port, 
-	struct addrinfo *hints, int v6only)
+	struct addrinfo *hints, int v6only, int* noip6)
 {
 	struct addrinfo *res = NULL;
-	int r, s, inuse;
+	int r, s, inuse, noproto;
 	hints->ai_socktype = stype;
+	*noip6 = 0;
 	if((r=getaddrinfo(ifname, port, hints, &res)) != 0 || !res) {
 		log_err("node %s:%s getaddrinfo: %s %s", 
 			ifname?ifname:"default", port, gai_strerror(r),
@@ -229,11 +265,18 @@ make_sock(int stype, const char* ifname, const char* port,
 		verbose_print_addr(res);
 		s = create_udp_sock(res->ai_family, res->ai_socktype,
 			(struct sockaddr*)res->ai_addr, 
-			res->ai_addrlen, v6only, &inuse);
+			res->ai_addrlen, v6only, &inuse, &noproto);
 		if(s == -1 && inuse) {
 			log_err("bind: address already in use");
+		} else if(s == -1 && noproto && hints->ai_family == AF_INET6){
+			*noip6 = 1;
 		}
-	}	else	s = create_tcp_accept_sock(res, v6only);
+	} else	{
+		s = create_tcp_accept_sock(res, v6only, &noproto);
+		if(s == -1 && noproto && hints->ai_family == AF_INET6){
+			*noip6 = 1;
+		}
+	}
 	freeaddrinfo(res);
 	return s;
 }
@@ -330,12 +373,18 @@ static int
 ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp, 
 	struct addrinfo *hints, const char* port, struct listen_port** list)
 {
-	int s;
+	int s, noip6=0;
 	if(!do_udp && !do_tcp)
 		return 0;
 	if(do_auto) {
-		if((s = make_sock(SOCK_DGRAM, ifname, port, hints, 1)) == -1)
+		if((s = make_sock(SOCK_DGRAM, ifname, port, hints, 1, 
+			&noip6)) == -1) {
+			if(noip6) {
+				log_warn("IPv6 protocol not available");
+				return 1;
+			}
 			return 0;
+		}
 		/* getting source addr packet info is highly non-portable */
 		if(!set_recvpktinfo(s, hints->ai_family))
 			return 0;
@@ -345,15 +394,26 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 		}
 	} else if(do_udp) {
 		/* regular udp socket */
-		if((s = make_sock(SOCK_DGRAM, ifname, port, hints, 1)) == -1)
+		if((s = make_sock(SOCK_DGRAM, ifname, port, hints, 1, 
+			&noip6)) == -1) {
+			if(noip6) {
+				log_warn("IPv6 protocol not available");
+				return 1;
+			}
 			return 0;
+		}
 		if(!port_insert(list, s, listen_type_udp)) {
 			close(s);
 			return 0;
 		}
 	}
 	if(do_tcp) {
-		if((s = make_sock(SOCK_STREAM, ifname, port, hints, 1)) == -1) {
+		if((s = make_sock(SOCK_STREAM, ifname, port, hints, 1, 
+			&noip6)) == -1) {
+			if(noip6) {
+				/*log_warn("IPv6 protocol not available");*/
+				return 1;
+			}
 			return 0;
 		}
 		if(!port_insert(list, s, listen_type_tcp)) {

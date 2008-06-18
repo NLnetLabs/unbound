@@ -6,6 +6,7 @@ NEED_LDNS_TESTNS='fwd_no_edns.tpkg fwd_tcp_tc.tpkg fwd_tcp.tpkg fwd_three_servic
 NEED_XXD='fwd_compress_c00c.tpkg'
 NEED_NC='fwd_compress_c00c.tpkg'
 NEED_CURL='06-ianaports.tpkg'
+NEED_WHOAMI='07-confroot.tpkg'
 
 cd testdata;
 sh ../testcode/mini_tpkg.sh clean
@@ -39,6 +40,11 @@ for test in `ls *.tpkg`; do
 	fi
 	if echo $NEED_NC | grep $test >/dev/null; then
 		if test ! -x "`which nc`"; then
+			SKIP=1;
+		fi
+	fi
+	if echo $NEED_WHOAMI | grep $test >/dev/null; then
+		if test ! -x "`which whoami`"; then
 			SKIP=1;
 		fi
 	fi

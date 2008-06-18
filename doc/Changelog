@@ -3,6 +3,9 @@
 	  do not work in ascii-mode on windows. The b does nothing on unix.
 	  unittest and testbound tests work on windows (xp too).
 	- ioctlsocket prints nicer error message.
+	- fixed up some TCP porting for winsock.
+	- lack of IPv6 gives a warning, no fatal error.
+	- use WSAGetLastError() on windows instead of errno for some errors.
 
 17 June 2008: Wouter
 	- outgoing num fds 32 by default on windows ; it supports less
