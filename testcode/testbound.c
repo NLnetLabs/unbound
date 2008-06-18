@@ -177,7 +177,7 @@ setup_playback(const char* filename, char* configfile,
 	int lineno = 0;
 
 	if(filename) {
-		FILE *in = fopen(filename, "r");
+		FILE *in = fopen(filename, "rb");
 		if(!in) {
 			perror(filename);
 			exit(1);

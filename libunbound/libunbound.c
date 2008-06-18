@@ -64,8 +64,20 @@ ub_ctx_create()
 {
 	struct ub_ctx* ctx;
 	unsigned int seed;
+#ifdef USE_WINSOCK
+	int r;
+	WSADATA wsa_data;
+#endif
+	
 	log_init(NULL, 0, NULL); /* logs to stderr */
 	log_ident_set("libunbound");
+#ifdef USE_WINSOCK
+	if((r = WSAStartup(MAKEWORD(2,2), &wsa_data)) != 0) {
+		log_err("could not init winsock. WSAStartup: %s",
+			wsa_strerror(r));
+		return NULL;
+	}
+#endif
 	verbosity = 0; /* errors only */
 	checklock_start();
 	ctx = (struct ub_ctx*)calloc(1, sizeof(*ctx));
@@ -231,6 +243,9 @@ ub_ctx_delete(struct ub_ctx* ctx)
 	alloc_clear(&ctx->superalloc);
 	traverse_postorder(&ctx->queries, delq, NULL);
 	free(ctx);
+#ifdef USE_WINSOCK
+	WSACleanup();
+#endif
 }
 
 int 

@@ -1,3 +1,9 @@
+18 June 2008: Wouter
+	- open testbound replay files in binary mode, because fseek/ftell
+	  do not work in ascii-mode on windows. The b does nothing on unix.
+	  unittest and testbound tests work on windows (xp too).
+	- ioctlsocket prints nicer error message.
+
 17 June 2008: Wouter
 	- outgoing num fds 32 by default on windows ; it supports less
 	  fds for waiting on than unixes.
