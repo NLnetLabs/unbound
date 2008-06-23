@@ -18,14 +18,18 @@ if test "$1" = "fake"; then
 fi
 if test "$1" = "report" || test "$2" = "report"; then
 	echo "Minitpkg Report"
-	for result in result.*; do
-		name=`echo $result | sed -e 's/result\.//'`
+	for result in *.tpkg; do
+		name=`basename $result .tpkg`
 		if test -f ".done-$name"; then
 			if test "$1" != "-q"; then
 				echo "** PASSED ** : $name"
 			fi
 		else
-			echo "!! FAILED !! : $name"
+			if test -f "result.$name"; then
+				echo "!! FAILED !! : $name"
+			else
+				echo ">> SKIPPED<< : $name"
+			fi
 		fi
 	done
 	exit 0
@@ -113,3 +117,10 @@ fi
 mv $result ..
 cd ..
 rm -rf $dir
+# compat for windows where deletion may not succeed initially (files locked
+# by processes that still have to exit).
+if test $? -eq 1; then
+	echo "minitpkg waiting for processes to terminate"
+	sleep 2 # some time to exit, and try again
+	rm -rf $dir
+fi

@@ -574,9 +574,12 @@ comm_point_tcp_accept_callback(int fd, short event, void* arg)
 		log_err("accept failed: %s", strerror(errno));
 #else /* USE_WINSOCK */
 		if(WSAGetLastError() == WSAEINPROGRESS ||
-			WSAGetLastError() == WSAEWOULDBLOCK ||
 			WSAGetLastError() == WSAECONNRESET)
 			return;
+		if(WSAGetLastError() == WSAEWOULDBLOCK) {
+			winsock_tcp_wouldblock(&c->ev->ev, EV_READ);
+			return ;
+		}
 		log_err("accept failed: %s", wsa_strerror(WSAGetLastError()));
 #endif
 		log_addr(0, "remote address is", &c_hdl->repinfo.addr,
@@ -671,10 +674,14 @@ comm_point_tcp_handle_read(int fd, struct comm_point* c, int short_ok)
 #endif
 			log_err("read (in tcp s): %s", strerror(errno));
 #else /* USE_WINSOCK */
-			if(WSAGetLastError() == WSAEINPROGRESS || 
-				WSAGetLastError() == WSAECONNRESET ||
-				WSAGetLastError() == WSAEWOULDBLOCK)
+			if(WSAGetLastError() == WSAECONNRESET)
+				return 0;
+			if(WSAGetLastError() == WSAEINPROGRESS)
 				return 1;
+			if(WSAGetLastError() == WSAEWOULDBLOCK) {
+				winsock_tcp_wouldblock(&c->ev->ev, EV_READ);
+				return 1;
+			}
 			log_err("read (in tcp s): %s", 
 				wsa_strerror(WSAGetLastError()));
 #endif
@@ -712,10 +719,14 @@ comm_point_tcp_handle_read(int fd, struct comm_point* c, int short_ok)
 			return 1;
 		log_err("read (in tcp r): %s", strerror(errno));
 #else /* USE_WINSOCK */
-		if(WSAGetLastError() == WSAEINPROGRESS || 
-			WSAGetLastError() == WSAECONNRESET ||
-			WSAGetLastError() == WSAEWOULDBLOCK)
+		if(WSAGetLastError() == WSAECONNRESET)
+			return 0;
+		if(WSAGetLastError() == WSAEINPROGRESS)
 			return 1;
+		if(WSAGetLastError() == WSAEWOULDBLOCK) {
+			winsock_tcp_wouldblock(&c->ev->ev, EV_READ);
+			return 1;
+		}
 		log_err("read (in tcp r): %s", 
 			wsa_strerror(WSAGetLastError()));
 #endif
@@ -793,9 +804,12 @@ comm_point_tcp_handle_write(int fd, struct comm_point* c)
 				return 1;
 			log_err("tcp writev: %s", strerror(errno));
 #else
-			if(WSAGetLastError() == WSAEINPROGRESS || 
-				WSAGetLastError() == WSAEWOULDBLOCK)
+			if(WSAGetLastError() == WSAEINPROGRESS)
 				return 1;
+			if(WSAGetLastError() == WSAEWOULDBLOCK) {
+				winsock_tcp_wouldblock(&c->ev->ev, EV_WRITE);
+				return 1; 
+			}
 			log_err("tcp send s: %s", 
 				wsa_strerror(WSAGetLastError()));
 #endif
@@ -822,9 +836,12 @@ comm_point_tcp_handle_write(int fd, struct comm_point* c)
 			return 1;
 		log_err("tcp send r: %s", strerror(errno));
 #else
-		if(WSAGetLastError() == WSAEINPROGRESS || 
-			WSAGetLastError() == WSAEWOULDBLOCK)
+		if(WSAGetLastError() == WSAEINPROGRESS)
 			return 1;
+		if(WSAGetLastError() == WSAEWOULDBLOCK) {
+			winsock_tcp_wouldblock(&c->ev->ev, EV_WRITE);
+			return 1; 
+		}
 		log_err("tcp send r: %s", 
 			wsa_strerror(WSAGetLastError()));
 #endif

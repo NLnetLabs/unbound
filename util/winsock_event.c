@@ -126,6 +126,8 @@ void *event_init(uint32_t* time_secs, struct timeval* time_tv)
                 event_base_free(base);
                 return NULL;
         }
+	base->tcp_stickies = 0;
+	base->tcp_reinvigorated = 0;
         return base;
 }
 
@@ -184,12 +186,20 @@ static int handle_select(struct event_base* base, struct timeval* wait)
 	struct event* eventlist[WSK_MAX_ITEMS];
 	WSANETWORKEVENTS netev;
 	int i, numwait = 0, startidx = 0, was_timeout = 0;
+	int newstickies = 0;
+	struct timeval nultm;
 
 #ifndef S_SPLINT_S
         if(wait->tv_sec==(time_t)-1)
                 wait = NULL;
 	if(wait)
 		timeout = wait->tv_sec*1000 + wait->tv_usec/1000;
+	if(base->tcp_stickies) {
+		wait = &nultm;
+		nultm.tv_sec = 0;
+		nultm.tv_usec = 0;
+		timeout = 0; /* no waiting, we have sticky events */
+	}
 #endif
 
 	/* prepare event array */
@@ -200,7 +210,6 @@ static int handle_select(struct event_base* base, struct timeval* wait)
 		waitfor[numwait++] = base->items[i]->hEvent;
 	}
 	log_assert(numwait <= WSA_MAXIMUM_WAIT_EVENTS);
-
 
 	/* do the wait */
 	if(numwait == 0) {
@@ -232,8 +241,8 @@ static int handle_select(struct event_base* base, struct timeval* wait)
                return -1;
 
 	/* callbacks */
-	if(was_timeout)
-		return 0;
+	if(base->tcp_stickies)
+		startidx = 0; /* process all events, some are sticky */
 
 	for(i=startidx; i<numwait; i++) {
 		short bits = 0;
@@ -248,37 +257,55 @@ static int handle_select(struct event_base* base, struct timeval* wait)
 		}
 		if((netev.lNetworkEvents & FD_READ)) {
 			if(netev.iErrorCode[FD_READ_BIT] != 0)
-				log_err("FD_READ_BIT error: %s",
+				verbose(VERB_ALGO, "FD_READ_BIT error: %s",
 				wsa_strerror(netev.iErrorCode[FD_READ_BIT]));
 			bits |= EV_READ;
 		}
 		if((netev.lNetworkEvents & FD_WRITE)) {
 			if(netev.iErrorCode[FD_WRITE_BIT] != 0)
-				log_err("FD_WRITE_BIT error: %s",
+				verbose(VERB_ALGO, "FD_WRITE_BIT error: %s",
 				wsa_strerror(netev.iErrorCode[FD_WRITE_BIT]));
 			bits |= EV_WRITE;
 		}
 		if((netev.lNetworkEvents & FD_CONNECT)) {
 			if(netev.iErrorCode[FD_CONNECT_BIT] != 0)
-				log_err("FD_CONNECT_BIT error: %s",
+				verbose(VERB_ALGO, "FD_CONNECT_BIT error: %s",
 				wsa_strerror(netev.iErrorCode[FD_CONNECT_BIT]));
 			bits |= EV_READ;
 			bits |= EV_WRITE;
 		}
 		if((netev.lNetworkEvents & FD_ACCEPT)) {
 			if(netev.iErrorCode[FD_ACCEPT_BIT] != 0)
-				log_err("FD_ACCEPT_BIT error: %s",
+				verbose(VERB_ALGO, "FD_ACCEPT_BIT error: %s",
 				wsa_strerror(netev.iErrorCode[FD_ACCEPT_BIT]));
 			bits |= EV_READ;
 		}
 		if((netev.lNetworkEvents & FD_CLOSE)) {
 			if(netev.iErrorCode[FD_CLOSE_BIT] != 0)
-				log_err("FD_CLOSE_BIT error: %s",
+				verbose(VERB_ALGO, "FD_CLOSE_BIT error: %s",
 				wsa_strerror(netev.iErrorCode[FD_CLOSE_BIT]));
 			bits |= EV_READ;
 			bits |= EV_WRITE;
 		}
-		if(bits) {
+		if(eventlist[i]->is_tcp && eventlist[i]->stick_events) {
+			verbose(VERB_ALGO, "winsock %d pass sticky %s%s",
+				eventlist[i]->ev_fd,
+				(eventlist[i]->old_events&EV_READ)?"EV_READ":"",
+				(eventlist[i]->old_events&EV_WRITE)?"EV_WRITE":"");
+			bits |= eventlist[i]->old_events;
+		}
+		if(eventlist[i]->is_tcp && bits) {
+			eventlist[i]->old_events = bits;
+			eventlist[i]->stick_events = 1;
+			if((eventlist[i]->ev_events & bits)) {
+				newstickies = 1;
+			}
+			verbose(VERB_ALGO, "winsock %d store sticky %s%s",
+				eventlist[i]->ev_fd,
+				(eventlist[i]->old_events&EV_READ)?"EV_READ":"",
+				(eventlist[i]->old_events&EV_WRITE)?"EV_WRITE":"");
+		}
+		if((bits & eventlist[i]->ev_events)) {
 			verbose(VERB_ALGO, "winsock event callback %p fd=%d "
 				"%s%s%s%s%s ; %s%s%s", 
 				eventlist[i], eventlist[i]->ev_fd,
@@ -296,9 +323,20 @@ static int handle_select(struct event_base* base, struct timeval* wait)
                         fptr_ok(fptr_whitelist_event(
                                 eventlist[i]->ev_callback));
                         (*eventlist[i]->ev_callback)(eventlist[i]->ev_fd,
-                                bits, eventlist[i]->ev_arg);
+                                bits & eventlist[i]->ev_events, 
+				eventlist[i]->ev_arg);
 		}
+		if(eventlist[i]->is_tcp && bits)
+			verbose(VERB_ALGO, "winsock %d got sticky %s%s",
+				eventlist[i]->ev_fd,
+				(eventlist[i]->old_events&EV_READ)?"EV_READ":"",
+				(eventlist[i]->old_events&EV_WRITE)?"EV_WRITE":"");
 	}
+	if(base->tcp_reinvigorated) {
+		base->tcp_reinvigorated = 0;
+		newstickies = 1;
+	}
+	base->tcp_stickies = newstickies;
         return 0;
 }
 
@@ -358,6 +396,8 @@ void event_set(struct event *ev, int fd, short bits,
 int event_base_set(struct event_base *base, struct event *ev)
 {
         ev->ev_base = base;
+	ev->old_events = 0;
+	ev->stick_events = 0;
         ev->added = 0;
         return 0;
 }
@@ -377,6 +417,7 @@ int event_add(struct event *ev, struct timeval *tv)
 		return -1;
 	ev->idx = ev->ev_base->max++;
 	ev->ev_base->items[ev->idx] = ev;
+	ev->is_tcp = 0;
 
         if((ev->ev_events&(EV_READ|EV_WRITE)) && ev->ev_fd != -1) {
 		BOOL b=0;
@@ -393,6 +434,7 @@ int event_add(struct event *ev, struct timeval *tv)
 				wsa_strerror(WSAGetLastError()));
 		if(t == SOCK_STREAM) {
 			/* TCP socket */
+			ev->is_tcp = 1;
 			events |= FD_CLOSE;
 			if( (ev->ev_events&EV_WRITE) )
 				events |= FD_CONNECT;
@@ -413,6 +455,11 @@ int event_add(struct event *ev, struct timeval *tv)
 		if(WSAEventSelect(ev->ev_fd, ev->hEvent, events) != 0) {
 			log_err("WSAEventSelect failed: %s",
 				wsa_strerror(WSAGetLastError()));
+		}
+		if(ev->is_tcp && ev->stick_events && 
+			(ev->ev_events & ev->old_events)) {
+			/* go to processing the sticky event right away */
+			ev->ev_base->tcp_reinvigorated = 1;
 		}
 	}
 
@@ -500,6 +547,19 @@ int signal_del(struct event *ev)
         ev->ev_base->signals[ev->ev_fd] = NULL;
         ev->added = 0;
         return 0;
+}
+
+void winsock_tcp_wouldblock(struct event* ev, int eventbits)
+{
+	verbose(VERB_ALGO, "winsock: tcp wouldblock %s", 
+		eventbits==EV_READ?"EV_READ":"EV_WRITE");
+	ev->old_events &= (~eventbits);
+	if(ev->old_events == 0)
+		ev->stick_events = 0;
+		/* in case this is the last sticky event, we could
+		 * possibly run an empty handler loop to reset the base
+		 * tcp_stickies variable 
+		 */
 }
 
 #endif /* USE_WINSOCK */

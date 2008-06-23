@@ -7,6 +7,22 @@ NEED_XXD='fwd_compress_c00c.tpkg'
 NEED_NC='fwd_compress_c00c.tpkg'
 NEED_CURL='06-ianaports.tpkg'
 NEED_WHOAMI='07-confroot.tpkg'
+NEED_IPV6='fwd_ancil.tpkg fwd_tcp_tc6.tpkg'
+NEED_JOBCONTROL='tcp_sigpipe.tpkg'
+
+# test if job control - and also signals - are available (not on mingw).
+if wait %% 2>&1 | grep "job control not enabled" >/dev/null 2>&1; then
+	JOBCONTROL=no
+else
+	JOBCONTROL=yes
+fi
+
+# test for ipv6, uses dig 9.4.2 peculiarity (test @ before -v).
+if dig @::1 -v >/dev/null 2>&1; then
+	HAVE_IPV6=yes
+else
+	HAVE_IPV6=no
+fi
 
 cd testdata;
 sh ../testcode/mini_tpkg.sh clean
@@ -45,6 +61,16 @@ for test in `ls *.tpkg`; do
 	fi
 	if echo $NEED_WHOAMI | grep $test >/dev/null; then
 		if test ! -x "`which whoami`"; then
+			SKIP=1;
+		fi
+	fi
+	if echo $NEED_IPV6 | grep $test >/dev/null; then
+		if test "$HAVE_IPV6" = no; then
+			SKIP=1;
+		fi
+	fi
+	if echo $NEED_JOBCONTROL | grep $test >/dev/null; then
+		if test "$JOBCONTROL" = no; then
 			SKIP=1;
 		fi
 	fi

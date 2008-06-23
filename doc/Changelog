@@ -1,3 +1,13 @@
+23 June 2008: Wouter
+	- fixup minitpkg to cleanup on windows with its file locking troubles.
+	- minitpkg shows skipped tests in report.
+	- skip ipv6 tests on ipv4 only hosts (requires only ipv6 localhost not
+	  ipv6 connectivity).
+	- winsock event handler keeps track of sticky TCP events, that have
+	  not been fully handled yet. when interest in the event(s) resumes,
+	  they are sent again. When WOULDBLOCK is returned events are cleared.
+	- skip tests that need signals when testing on mingw.
+
 18 June 2008: Wouter
 	- open testbound replay files in binary mode, because fseek/ftell
 	  do not work in ascii-mode on windows. The b does nothing on unix.

@@ -56,8 +56,12 @@
  * the socket has blocked, and the event handler can mark it as such.
  * Thus, this file transforms the edge notify from windows to a level notify
  * that is compatible with UNIX.
- * However, the WSAEventSelect page says that it does do level notify, as long
+ * The WSAEventSelect page says that it does do level notify, as long
  * as you call a recv/write/accept at least once when it is signalled.
+ * This last bit is not true, even though documented in server2008 api docs
+ * from microsoft, it does not happen at all. Instead you have to test for
+ * WSAEWOULDBLOCK on a tcp stream, and only then retest the socket.
+ * And before that remember the previous result as still valid.
  *
  * To stay 'fair', instead of emptying a socket completely, the event handler
  * can test the other (marked as blocking) sockets for new events.
@@ -69,6 +73,8 @@
  *
  * on winsock, you must use recv() and send() for TCP reads and writes,
  * not read() and write(), those work only on files.
+ *
+ * Also fseek and fseeko do not work if a FILE is not fopen-ed in binary mode.
  */
 
 #ifndef UTIL_WINSOCK_EVENT_H
@@ -122,6 +128,20 @@ struct event_base
 	uint32_t* time_secs;
 	/** where to store time in microseconds */
 	struct timeval* time_tv;
+	/** 
+	 * TCP streams have sticky events to them, these are not
+	 * reported by the windows event system anymore, we have to
+	 * keep reporting those events as present until wouldblock() is
+	 * signalled by the handler back to use.
+	 */
+	int tcp_stickies;
+	/**
+	 * should next cycle process reinvigorated stickies,
+	 * these are stickies that have been stored, but due to a new
+	 * event_add a sudden interest in the event has incepted.
+	 */
+	int tcp_reinvigorated;
+
 };
 
 /**
@@ -152,6 +172,13 @@ struct event {
 	int idx;
 	/** the event handle to wait for new events to become ready */
 	WSAEVENT hEvent;
+	/** true if this filedes is a TCP socket and needs special attention */
+	int is_tcp;
+	/** remembered EV_ values */
+	short old_events;
+	/** should remembered EV_ values be used for TCP streams. 
+	 * Reset after WOULDBLOCK is signaled using the function. */
+	int stick_events;
 };
 
 /** create event base */
@@ -191,6 +218,14 @@ int signal_del(struct event *);
 
 /** compare events in tree, based on timevalue, ptr for uniqueness */
 int mini_ev_cmp(const void* a, const void* b);
+
+/**
+ * Routine for windows only, where the handling layer can signal that
+ * a TCP stream encountered WSAEWOULDBLOCK for a stream and thus needs
+ * retesting the event.
+ * Pass if EV_READ or EV_WRITE gave wouldblock.
+ */
+void winsock_tcp_wouldblock(struct event* ev, int eventbit);
 
 #endif /* USE_WINSOCK */
 #endif /* UTIL_WINSOCK_EVENT_H */
