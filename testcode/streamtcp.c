@@ -191,7 +191,7 @@ recv_one(int fd, int udp, ldns_buffer* buf)
 #endif
 			exit(1);
 		}
-		ldns_buffer_set_limit(buf, l);
+		ldns_buffer_set_limit(buf, (size_t)l);
 	}
 	printf("\nnext received packet\n");
 	log_buf(0, "data", buf);
