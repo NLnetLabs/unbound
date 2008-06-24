@@ -290,4 +290,22 @@ int fptr_whitelist_mod_get_mem(size_t (*fptr)(struct module_env* env, int id));
  */
 int fptr_whitelist_alloc_cleanup(void (*fptr)(void*));
 
+/** Due to module breakage by fptr wlist, these test app declarations
+ * are presented here */
+/** 
+ * compare two order_ids from lock-verify test app 
+ * @param e1: first order_id
+ * @param e2: second order_id
+ * @return compare code -1, 0, +1 (like memcmp).
+ */
+int order_lock_cmp(const void* e1, const void* e2);
+
+/** 
+ * compare two codeline structs for rbtree from memstats test app 
+ * @param a: codeline
+ * @param b: codeline
+ * @return compare code -1, 0, +1 (like memcmp).
+ */
+int codeline_cmp(const void* a, const void* b);
+
 #endif /* UTIL_FPTR_WLIST_H */

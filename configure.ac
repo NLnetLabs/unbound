@@ -686,6 +686,8 @@ AC_ARG_ENABLE(lock_checks, AC_HELP_STRING([--enable-lock-checks],
 	, )
 if test x_$enable_lock_checks = x_yes; then
 	AC_DEFINE(ENABLE_LOCK_CHECKS, 1, [Define if you want to use debug lock checking (slow).])
+	CHECKLOCK_SRC="testcode/checklocks.c"
+	AC_SUBST(CHECKLOCK_SRC)
 fi
 
 # set memory allocation checking if requested

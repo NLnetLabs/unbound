@@ -43,7 +43,7 @@
 #include "util/log.h"
 #include "util/rbtree.h"
 #include "util/locks.h"
-#include "testcode/checklocks.h"
+#include "util/fptr_wlist.h"
 #include <sys/stat.h>
 
 /**

@@ -47,10 +47,20 @@
 #include "util/log.h"
 #include "util/rbtree.h"
 #include "util/locks.h"
-#include "testcode/checklocks.h"
+#include "util/fptr_wlist.h"
 
 /* --- data structures --- */
 struct lock_ref;
+
+/** keep track of lock id in lock-verify application 
+ * Also defined in smallapp/worker_cb.c for fptr_wlist encapsulation 
+ * breakage (the security tests break encapsulation for this test app) */
+struct order_id {
+        /** the thread id that created it */
+        int thr;
+        /** the instance number of creation */
+        int instance;
+};
 
 /** a lock */
 struct order_lock {

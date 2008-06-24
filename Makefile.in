@@ -34,6 +34,7 @@ libtool=@libtool@
 ldnsdir=@ldnsdir@
 staticexe=@staticexe@
 configfile=@ub_conf_file@
+CHECKLOCK_SRC=@CHECKLOCK_SRC@
 
 YACC=@YACC@
 LEX=@LEX@
@@ -62,7 +63,7 @@ COMMON_SRC=$(patsubst $(srcdir)/%,%, $(wildcard $(srcdir)/services/*.c \
 	$(srcdir)/services/cache/*.c $(srcdir)/util/*.c \
 	$(srcdir)/util/data/*.c $(srcdir)/util/storage/*.c \
 	$(srcdir)/iterator/*.c $(srcdir)/validator/*.c)) \
-	util/configparser.c util/configlexer.c testcode/checklocks.c
+	util/configparser.c util/configlexer.c $(CHECKLOCK_SRC)
 COMMON_OBJ=$(addprefix $(BUILD),$(COMMON_SRC:.c=.lo))
 COMPAT_OBJ=$(addprefix $(BUILD)compat/,$(LIBOBJS:.o=.lo))
 UNITTEST_SRC=$(patsubst $(srcdir)/%,%, \

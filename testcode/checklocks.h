@@ -340,17 +340,4 @@ typedef pthread_key_t ub_thread_key_t;
 #define ub_thread_key_get(key) pthread_getspecific(key)
 
 #endif /* USE_THREAD_DEBUG */
-
-/** keep track of lock id in lock-verify application */
-struct order_id {
-	/** the thread id that created it */
-	int thr;
-	/** the instance number of creation */
-	int instance;
-};
-/** compare two order_ids */
-int order_lock_cmp(const void* e1, const void* e2);
-/** compare two codeline structs for rbtree */
-int codeline_cmp(const void* a, const void* b);
-
 #endif /* TESTCODE_CHECK_LOCKS_H */

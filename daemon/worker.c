@@ -1204,3 +1204,15 @@ int context_query_cmp(const void* ATTR_UNUSED(a), const void* ATTR_UNUSED(b))
 	log_assert(0);
 	return 0;
 }
+
+int order_lock_cmp(const void* ATTR_UNUSED(e1), const void* ATTR_UNUSED(e2))
+{
+        log_assert(0);
+        return 0;
+}
+
+int codeline_cmp(const void* ATTR_UNUSED(a), const void* ATTR_UNUSED(b))
+{
+        log_assert(0);
+        return 0;
+}

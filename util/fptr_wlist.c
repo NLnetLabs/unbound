@@ -65,7 +65,6 @@
 #include "util/data/packed_rrset.h"
 #include "util/storage/slabhash.h"
 #include "util/locks.h"
-#include "testcode/checklocks.h"
 #include "daemon/acl_list.h"
 #include "libunbound/libworker.h"
 #include "libunbound/context.h"
