@@ -17,13 +17,12 @@ else
 	JOBCONTROL=yes
 fi
 
-# test for ipv6, uses dig 9.4.2 peculiarity (test @ before -v).
-if dig @::1 -v >/dev/null 2>&1; then
-	HAVE_IPV6=yes
-else
+# test for ipv6, uses streamptcp peculiarity.
+if ./streamtcp -f ::1 2>&1 | grep "not supported" >/dev/null 2>&1; then
 	HAVE_IPV6=no
+else
+	HAVE_IPV6=yes
 fi
-HAVE_IPV6=yes
 
 cd testdata;
 sh ../testcode/mini_tpkg.sh clean
