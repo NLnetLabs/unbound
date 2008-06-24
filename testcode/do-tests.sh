@@ -23,6 +23,7 @@ if dig @::1 -v >/dev/null 2>&1; then
 else
 	HAVE_IPV6=no
 fi
+HAVE_IPV6=yes
 
 cd testdata;
 sh ../testcode/mini_tpkg.sh clean

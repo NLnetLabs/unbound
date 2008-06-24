@@ -54,13 +54,15 @@ void usage(char* argv[])
 	printf("usage: %s [options] name type class ...\n", argv[0]);
 	printf("	sends the name-type-class queries over TCP.\n");
 	printf("-f server	what ipaddr@portnr to send the queries to\n");
+	printf("-u 		use UDP. No retries are attempted.\n");
+	printf("-n 		do not wait for an answer.\n");
 	printf("-h 		this help text\n");
 	exit(1);
 }
 
 /** open TCP socket to svr */
 static int
-open_svr(char* svr)
+open_svr(char* svr, int udp)
 {
 	struct sockaddr_storage addr;
 	socklen_t addrlen;
@@ -71,7 +73,7 @@ open_svr(char* svr)
 		exit(1);
 	}
 	fd = socket(addr_is_ip6(&addr, addrlen)?PF_INET6:PF_INET,
-		SOCK_STREAM, 0);
+		udp?SOCK_DGRAM:SOCK_STREAM, 0);
 	if(fd == -1) {
 #ifndef USE_WINSOCK
 		perror("socket() error");
@@ -93,7 +95,7 @@ open_svr(char* svr)
 
 /** write a query over the TCP fd */
 static void
-write_q(int fd, ldns_buffer* buf, int id, 
+write_q(int fd, int udp, ldns_buffer* buf, int id, 
 	char* strname, char* strtype, char* strclass)
 {
 	struct query_info qinfo;
@@ -121,15 +123,18 @@ write_q(int fd, ldns_buffer* buf, int id,
 	ldns_buffer_write_u16_at(buf, 2, BIT_RD);
 
 	/* send it */
-	len = (uint16_t)ldns_buffer_limit(buf);
-	len = htons(len);
-	if(send(fd, (void*)&len, sizeof(len), 0) < (ssize_t)sizeof(len)) {
+	if(!udp) {
+		len = (uint16_t)ldns_buffer_limit(buf);
+		len = htons(len);
+		if(send(fd, (void*)&len, sizeof(len), 0)<(ssize_t)sizeof(len)){
 #ifndef USE_WINSOCK
-		perror("send() len failed");
+			perror("send() len failed");
 #else
-		printf("send len: %s\n", wsa_strerror(WSAGetLastError()));
+			printf("send len: %s\n", 
+				wsa_strerror(WSAGetLastError()));
 #endif
-		exit(1);
+			exit(1);
+		}
 	}
 	if(send(fd, ldns_buffer_begin(buf), ldns_buffer_limit(buf), 0) < 
 		(ssize_t)ldns_buffer_limit(buf)) {
@@ -146,29 +151,47 @@ write_q(int fd, ldns_buffer* buf, int id,
 
 /** receive DNS datagram over TCP and print it */
 static void
-recv_one(int fd, ldns_buffer* buf)
+recv_one(int fd, int udp, ldns_buffer* buf)
 {
 	uint16_t len;
 	ldns_pkt* pkt;
 	ldns_status status;
-	if(recv(fd, (void*)&len, sizeof(len), 0) < (ssize_t)sizeof(len)) {
+	if(!udp) {
+		if(recv(fd, (void*)&len, sizeof(len), 0)<(ssize_t)sizeof(len)){
 #ifndef USE_WINSOCK
-		perror("read() len failed");
+			perror("read() len failed");
 #else
-		printf("read len: %s\n", wsa_strerror(WSAGetLastError()));
+			printf("read len: %s\n", 
+				wsa_strerror(WSAGetLastError()));
 #endif
-		exit(1);
-	}
-	len = ntohs(len);
-	ldns_buffer_clear(buf);
-	ldns_buffer_set_limit(buf, len);
-	if(recv(fd, ldns_buffer_begin(buf), len, 0) < (ssize_t)len) {
+			exit(1);
+		}
+		len = ntohs(len);
+		ldns_buffer_clear(buf);
+		ldns_buffer_set_limit(buf, len);
+		if(recv(fd, ldns_buffer_begin(buf), len, 0) < (ssize_t)len) {
 #ifndef USE_WINSOCK
-		perror("read() data failed");
+			perror("read() data failed");
 #else
-		printf("read data: %s\n", wsa_strerror(WSAGetLastError()));
+			printf("read data: %s\n", 
+				wsa_strerror(WSAGetLastError()));
 #endif
-		exit(1);
+			exit(1);
+		}
+	} else {
+		ssize_t l;
+		ldns_buffer_clear(buf);
+		if((l=recv(fd, ldns_buffer_begin(buf), 
+			ldns_buffer_capacity(buf), 0)) < 0) {
+#ifndef USE_WINSOCK
+			perror("read() data failed");
+#else
+			printf("read data: %s\n", 
+				wsa_strerror(WSAGetLastError()));
+#endif
+			exit(1);
+		}
+		ldns_buffer_set_limit(buf, l);
 	}
 	printf("\nnext received packet\n");
 	log_buf(0, "data", buf);
@@ -186,17 +209,18 @@ recv_one(int fd, ldns_buffer* buf)
 
 /** send the TCP queries and print answers */
 static void
-send_em(char* svr, int num, char** qs)
+send_em(char* svr, int udp, int noanswer, int num, char** qs)
 {
 	ldns_buffer* buf = ldns_buffer_new(65553);
-	int fd = open_svr(svr);
+	int fd = open_svr(svr, udp);
 	int i;
 	if(!buf) fatal_exit("out of memory");
 	for(i=0; i<num; i+=3) {
 		printf("\nNext query is %s %s %s\n", qs[i], qs[i+1], qs[i+2]);
-		write_q(fd, buf, i, qs[i], qs[i+1], qs[i+2]);
+		write_q(fd, udp, buf, i, qs[i], qs[i+1], qs[i+2]);
 		/* print at least one result */
-		recv_one(fd, buf);
+		if(!noanswer)
+			recv_one(fd, udp, buf);
 	}
 
 	close(fd);
@@ -227,6 +251,9 @@ int main(int argc, char** argv)
 {
 	int c;
 	char* svr = "127.0.0.1";
+	int udp = 0;
+	int noanswer = 0;
+
 #ifdef USE_WINSOCK
 	WSADATA wsa_data;
 	if(WSAStartup(MAKEWORD(2,2), &wsa_data) != 0) {
@@ -250,10 +277,16 @@ int main(int argc, char** argv)
 	if(argc == 1) {
 		usage(argv);
 	}
-	while( (c=getopt(argc, argv, "f:h")) != -1) {
+	while( (c=getopt(argc, argv, "f:hnu")) != -1) {
 		switch(c) {
 			case 'f':
 				svr = optarg;
+				break;
+			case 'n':
+				noanswer = 1;
+				break;
+			case 'u':
+				udp = 1;
 				break;
 			case 'h':
 			case '?':
@@ -268,7 +301,7 @@ int main(int argc, char** argv)
 		printf("queries must be multiples of name,type,class\n");
 		return 1;
 	}
-	send_em(svr, argc, argv);
+	send_em(svr, udp, noanswer, argc, argv);
 	checklock_stop();
 #ifdef USE_WINSOCK
 	WSACleanup();

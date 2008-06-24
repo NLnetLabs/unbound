@@ -1,5 +1,8 @@
 24 June 2008: Wouter
 	- removed testcode/checklocks from production code compilation path.
+	- streamtcp can use UDP mode (connected UDP socket), for testing IPv6
+	  on windows.
+	- fwd_ancil test fails if platform support is lacking.
 
 23 June 2008: Wouter
 	- fixup minitpkg to cleanup on windows with its file locking troubles.
