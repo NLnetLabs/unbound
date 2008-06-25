@@ -175,9 +175,9 @@ create_udp_sock(int family, int socktype, struct sockaddr* addr,
 #else /* USE_WINSOCK */
 		if(WSAGetLastError() != WSAEADDRINUSE &&
 			WSAGetLastError() != WSAEADDRNOTAVAIL)
-#endif
 			log_err("can't bind socket: %s", 
 				wsa_strerror(WSAGetLastError()));
+#endif
 		close(s);
 		return -1;
 	}
