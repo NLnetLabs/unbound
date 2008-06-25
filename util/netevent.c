@@ -762,8 +762,13 @@ comm_point_tcp_handle_write(int fd, struct comm_point* c)
 		socklen_t len = (socklen_t)sizeof(error);
 		if(getsockopt(fd, SOL_SOCKET, SO_ERROR, (void*)&error, 
 			&len) < 0){
+#ifndef USE_WINSOCK
 			error = errno; /* on solaris errno is error */
+#else /* USE_WINSOCK */
+			error = WSAGetLastError();
+#endif
 		}
+#ifndef USE_WINSOCK
 #if defined(EINPROGRESS) && defined(EWOULDBLOCK)
 		if(error == EINPROGRESS || error == EWOULDBLOCK)
 			return 1; /* try again later */
@@ -778,6 +783,18 @@ comm_point_tcp_handle_write(int fd, struct comm_point* c)
 #endif
                 else if(error != 0) {
 			log_err("tcp connect: %s", strerror(error));
+#else /* USE_WINSOCK */
+		/* examine error */
+		if(error == WSAEINPROGRESS)
+			return 1;
+		else if(error == WSAEWOULDBLOCK) {
+			winsock_tcp_wouldblock(&c->ev->ev, EV_WRITE);
+			return 1;
+		} else if(error == WSAECONNREFUSED || error == WSAEHOSTUNREACH)
+			return 0;
+		else if(error != 0) {
+			log_err("tcp connect: %s", wsa_strerror(error));
+#endif /* USE_WINSOCK */
 			log_addr(0, "remote address is", &c->repinfo.addr, 
 				c->repinfo.addrlen);
 			return 0;

@@ -109,6 +109,7 @@ ub_ctx_create()
 		errno = e;
 		return NULL;
 	}
+#ifndef USE_WINSOCK
 	if(!fd_set_nonblock(ctx->rrpipe[0]) ||
 	   !fd_set_nonblock(ctx->rrpipe[1]) ||
 	   !fd_set_nonblock(ctx->qqpipe[0]) ||
@@ -123,6 +124,7 @@ ub_ctx_create()
 		errno = e;
 		return NULL;
 	}
+#endif /* !USE_WINSOCK - it is a pipe(nonsocket) on windows) */
 	lock_basic_init(&ctx->qqpipe_lock);
 	lock_basic_init(&ctx->rrpipe_lock);
 	lock_basic_init(&ctx->cfglock);

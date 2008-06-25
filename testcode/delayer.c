@@ -1025,7 +1025,11 @@ service(char* bind_str, int bindport, char* serv_str, size_t memsize,
 			exit(1);
 		}
 		if(bind(s, (struct sockaddr*)&bind_addr, bind_len) == -1) {
+#ifndef USE_WINSOCK
 			log_err("bind: %s", strerror(errno));
+#else
+			log_err("bind: %s", wsa_strerror(WSAGetLastError()));
+#endif
 			if(i--==0)
 				fatal_exit("cannot bind any port");
 			bindport = 1024 + random()%64000;
@@ -1046,14 +1050,29 @@ service(char* bind_str, int bindport, char* serv_str, size_t memsize,
 		int on = 1;
 		if(setsockopt(listen_s, SOL_SOCKET, SO_REUSEADDR, (void*)&on,
 			(socklen_t)sizeof(on)) < 0)
+#ifndef USE_WINSOCK
 			fatal_exit("setsockopt(.. SO_REUSEADDR ..) failed: %s",
 				strerror(errno));
+#else
+			fatal_exit("setsockopt(.. SO_REUSEADDR ..) failed: %s",
+				wsa_strerror(WSAGetLastError()));
+#endif
 	}
 #endif
-	if(bind(listen_s, (struct sockaddr*)&bind_addr, bind_len) == -1)
+	if(bind(listen_s, (struct sockaddr*)&bind_addr, bind_len) == -1) {
+#ifndef USE_WINSOCK
 		fatal_exit("tcp bind: %s", strerror(errno));
-	if(listen(listen_s, 5) == -1)
+#else
+		fatal_exit("tcp bind: %s", wsa_strerror(WSAGetLastError()));
+#endif
+	}
+	if(listen(listen_s, 5) == -1) {
+#ifndef USE_WINSOCK
 		fatal_exit("tcp listen: %s", strerror(errno));
+#else
+		fatal_exit("tcp listen: %s", wsa_strerror(WSAGetLastError()));
+#endif
+	}
 	fd_set_nonblock(listen_s);
 	printf("listening on port: %d\n", bindport);
 

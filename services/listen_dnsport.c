@@ -123,8 +123,14 @@ create_udp_sock(int family, int socktype, struct sockaddr* addr,
 			int val=(v6only==2)?0:1;
 			if (setsockopt(s, IPPROTO_IPV6, IPV6_V6ONLY, 
 				(void*)&val, (socklen_t)sizeof(val)) < 0) {
+#ifndef USE_WINSOCK
 				log_err("setsockopt(..., IPV6_V6ONLY"
 					", ...) failed: %s", strerror(errno));
+#else
+				log_err("setsockopt(..., IPV6_V6ONLY"
+					", ...) failed: %s", 
+					wsa_strerror(WSAGetLastError()));
+#endif
 				close(s);
 				*noproto = 0;
 				*inuse = 0;
@@ -143,8 +149,14 @@ create_udp_sock(int family, int socktype, struct sockaddr* addr,
 		 */
 		if (setsockopt(s, IPPROTO_IPV6, IPV6_USE_MIN_MTU,
 			(void*)&on, (socklen_t)sizeof(on)) < 0) {
+#ifndef USE_WINSOCK
 			log_err("setsockopt(..., IPV6_USE_MIN_MTU, "
 				"...) failed: %s", strerror(errno));
+#else
+			log_err("setsockopt(..., IPV6_USE_MIN_MTU, "
+				"...) failed: %s", 
+				wsa_strerror(WSAGetLastError()));
+#endif
 			close(s);
 			*noproto = 0;
 			*inuse = 0;
@@ -154,11 +166,18 @@ create_udp_sock(int family, int socktype, struct sockaddr* addr,
 	}
 	if(bind(s, (struct sockaddr*)addr, addrlen) != 0) {
 		*noproto = 0;
+#ifndef USE_WINSOCK
 #ifdef EADDRINUSE
 		*inuse = (errno == EADDRINUSE);
 		if(errno != EADDRINUSE)
-#endif
 			log_err("can't bind socket: %s", strerror(errno));
+#endif
+#else /* USE_WINSOCK */
+		if(WSAGetLastError() != WSAEADDRINUSE &&
+			WSAGetLastError() != WSAEADDRNOTAVAIL)
+#endif
+			log_err("can't bind socket: %s", 
+				wsa_strerror(WSAGetLastError()));
 		close(s);
 		return -1;
 	}
@@ -208,8 +227,13 @@ create_tcp_accept_sock(struct addrinfo *addr, int v6only, int* noproto)
 #ifdef SO_REUSEADDR
 	if(setsockopt(s, SOL_SOCKET, SO_REUSEADDR, (void*)&on, 
 		(socklen_t)sizeof(on)) < 0) {
+#ifndef USE_WINSOCK
 		log_err("setsockopt(.. SO_REUSEADDR ..) failed: %s",
 			strerror(errno));
+#else
+		log_err("setsockopt(.. SO_REUSEADDR ..) failed: %s",
+			wsa_strerror(WSAGetLastError()));
+#endif
 		return -1;
 	}
 #endif /* SO_REUSEADDR */
@@ -217,8 +241,13 @@ create_tcp_accept_sock(struct addrinfo *addr, int v6only, int* noproto)
 	if(addr->ai_family == AF_INET6 && v6only) {
 		if(setsockopt(s, IPPROTO_IPV6, IPV6_V6ONLY, 
 			(void*)&on, (socklen_t)sizeof(on)) < 0) {
+#ifndef USE_WINSOCK
 			log_err("setsockopt(..., IPV6_V6ONLY, ...) failed: %s",
 				strerror(errno));
+#else
+			log_err("setsockopt(..., IPV6_V6ONLY, ...) failed: %s",
+				wsa_strerror(WSAGetLastError()));
+#endif
 			return -1;
 		}
 	}
@@ -226,14 +255,23 @@ create_tcp_accept_sock(struct addrinfo *addr, int v6only, int* noproto)
 	(void)v6only;
 #endif /* IPV6_V6ONLY */
 	if(bind(s, addr->ai_addr, addr->ai_addrlen) != 0) {
+#ifndef USE_WINSOCK
 		log_err("can't bind socket: %s", strerror(errno));
+#else
+		log_err("can't bind socket: %s", 
+			wsa_strerror(WSAGetLastError()));
+#endif
 		return -1;
 	}
 	if(!fd_set_nonblock(s)) {
 		return -1;
 	}
 	if(listen(s, TCP_BACKLOG) == -1) {
+#ifndef USE_WINSOCK
 		log_err("can't listen: %s", strerror(errno));
+#else
+		log_err("can't listen: %s", wsa_strerror(WSAGetLastError()));
+#endif
 		return -1;
 	}
 	return s;

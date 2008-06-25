@@ -75,6 +75,10 @@
  * not read() and write(), those work only on files.
  *
  * Also fseek and fseeko do not work if a FILE is not fopen-ed in binary mode.
+ *
+ * When under a high load windows gives out lots of errors, from recvfrom
+ * on udp sockets for example (WSAECONNRESET). Even though the udp socket
+ * has no connection per se.
  */
 
 #ifndef UTIL_WINSOCK_EVENT_H

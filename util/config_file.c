@@ -85,7 +85,7 @@ config_create()
 #ifndef USE_WINSOCK
 	cfg->outgoing_num_ports = 256;
 #else
-	cfg->outgoing_num_ports = 32; /* windows is limited in num fds */
+	cfg->outgoing_num_ports = 16; /* windows is limited in num fds */
 #endif
 	cfg->outgoing_num_tcp = 10;
 	cfg->incoming_num_tcp = 10;
