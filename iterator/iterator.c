@@ -1100,7 +1100,8 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 
 	/* Select the next usable target, filtering out unsuitable targets. */
 	target = iter_server_selection(ie, qstate->env, iq->dp, 
-		iq->dp->name, iq->dp->namelen, &iq->dnssec_expected);
+		iq->dp->name, iq->dp->namelen, iq->qchase.qtype,
+		&iq->dnssec_expected);
 
 	/* If no usable target was selected... */
 	if(!target) {
@@ -1337,7 +1338,8 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 			if(!infra_set_lame(qstate->env->infra_cache, 
 				&qstate->reply->addr, qstate->reply->addrlen, 
 				iq->dp->name, iq->dp->namelen, 
-				*qstate->env->now, dnsseclame))
+				*qstate->env->now, dnsseclame, 
+				iq->qchase.qtype))
 				log_err("mark host lame: out of memory");
 		} else log_err("%slame response from cache",
 			dnsseclame?"DNSSEC ":"");

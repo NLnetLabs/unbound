@@ -260,12 +260,12 @@ hash_lameness(uint8_t* name, size_t namelen)
 
 int 
 infra_lookup_lame(struct infra_host_data* host,
-        uint8_t* name, size_t namelen, uint32_t timenow)
+        uint8_t* name, size_t namelen, uint32_t timenow,
+	int* dlame, int* alame, int* olame)
 {
 	struct lruhash_entry* e;
 	struct infra_lame_key k;
 	struct infra_lame_data *d;
-	int dl;
 	if(!host->lameness)
 		return 0;
 	k.entry.hash = hash_lameness(name, namelen);
@@ -281,9 +281,11 @@ infra_lookup_lame(struct infra_host_data* host,
 		lock_rw_unlock(&e->lock);
 		return 0;
 	}
-	dl = d->isdnsseclame;
+	*dlame = d->isdnsseclame;
+	*alame = d->lame_type_A;
+	*olame = d->lame_other;
 	lock_rw_unlock(&e->lock);
-	return dl?2:1;
+	return *dlame || *alame || *olame;
 }
 
 size_t 
@@ -329,7 +331,8 @@ infra_lame_deldatafunc(void* d, void* ATTR_UNUSED(arg))
 int 
 infra_set_lame(struct infra_cache* infra,
         struct sockaddr_storage* addr, socklen_t addrlen,
-        uint8_t* name, size_t namelen, uint32_t timenow, int dnsseclame)
+        uint8_t* name, size_t namelen, uint32_t timenow, int dnsseclame,
+	uint16_t qtype)
 {
 	struct infra_host_data* data;
 	struct lruhash_entry* e;
@@ -361,6 +364,8 @@ infra_set_lame(struct infra_cache* infra,
 	k->entry.data = (void*)d;
 	d->ttl = timenow + infra->lame_ttl;
 	d->isdnsseclame = dnsseclame;
+	d->lame_type_A = (!dnsseclame && qtype == LDNS_RR_TYPE_A);
+	d->lame_other = (!dnsseclame && qtype != LDNS_RR_TYPE_A);
 	k->namelen = namelen;
 	e = infra_lookup_host_nottl(infra, addr, addrlen, 1);
 	if(!e) {
@@ -392,7 +397,18 @@ infra_set_lame(struct infra_cache* infra,
 			free(d);
 			return 0;
 		}
+	} else {
+		/* lookup existing lameness entry (if any) and merge data */
+		int dlame, alame, olame; 
+		if(infra_lookup_lame(data, name, namelen, timenow,
+			&dlame, &alame, &olame)) { 
+			/* merge data into new structure */
+			if(dlame) d->isdnsseclame = 1;
+			if(alame) d->lame_type_A = 1;
+			if(olame) d->lame_other = 1;
+		}
 	}
+
 	/* inserts new entry, or updates TTL of older entry */
 	lruhash_insert(data->lameness, k->entry.hash, &k->entry, d, NULL);
 	
@@ -477,28 +493,36 @@ infra_edns_update(struct infra_cache* infra,
 int 
 infra_get_lame_rtt(struct infra_cache* infra,
         struct sockaddr_storage* addr, socklen_t addrlen,
-        uint8_t* name, size_t namelen, int* lame, int* dnsseclame,
-	int* rtt, uint32_t timenow)
+        uint8_t* name, size_t namelen, uint16_t qtype, 
+	int* lame, int* dnsseclame, int* rtt, uint32_t timenow)
 {
 	struct infra_host_data* host;
 	struct lruhash_entry* e = infra_lookup_host_nottl(infra, addr, 
 		addrlen, 0);
-	int lm;
+	int dlm, alm, olm;
 	if(!e) 
 		return 0;
 	host = (struct infra_host_data*)e->data;
 	*rtt = rtt_unclamped(&host->rtt);
 	/* check lameness first, if so, ttl on host does not matter anymore */
-	if((lm=infra_lookup_lame(host, name, namelen, timenow))) {
-		lock_rw_unlock(&e->lock);
-		if(lm == 1) {
+	if(infra_lookup_lame(host, name, namelen, timenow, &dlm, &alm, &olm)) {
+		if(alm && qtype == LDNS_RR_TYPE_A) {
+			lock_rw_unlock(&e->lock);
 			*lame = 1;
 			*dnsseclame = 0;
-		} else {
+			return 1;
+		} else if(olm && qtype != LDNS_RR_TYPE_A) {
+			lock_rw_unlock(&e->lock);
+			*lame = 1;
+			*dnsseclame = 0;
+			return 1;
+		} else if(dlm) {
+			lock_rw_unlock(&e->lock);
 			*lame = 0;
 			*dnsseclame = 1;
+			return 1;
 		}
-		return 1;
+		/* no lameness for this type of query */
 	}
 	*lame = 0;
 	*dnsseclame = 0;

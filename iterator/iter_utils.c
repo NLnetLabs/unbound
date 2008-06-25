@@ -130,7 +130,8 @@ iter_apply_cfg(struct iter_env* iter_env, struct config_file* cfg)
 /** filter out unsuitable targets, return rtt or -1 */
 static int
 iter_filter_unsuitable(struct iter_env* iter_env, struct module_env* env,
-	uint8_t* name, size_t namelen, uint32_t now, struct delegpt_addr* a)
+	uint8_t* name, size_t namelen, uint16_t qtype, uint32_t now, 
+	struct delegpt_addr* a)
 {
 	int rtt;
 	int lame;
@@ -143,7 +144,7 @@ iter_filter_unsuitable(struct iter_env* iter_env, struct module_env* env,
 	}
 	/* check lameness - need zone , class info */
 	if(infra_get_lame_rtt(env->infra_cache, &a->addr, a->addrlen, 
-		name, namelen, &lame, &dnsseclame, &rtt, now)) {
+		name, namelen, qtype, &lame, &dnsseclame, &rtt, now)) {
 		if(lame)
 			return -1; /* server is lame */
 		else if(rtt >= USEFUL_SERVER_TOP_TIMEOUT)
@@ -159,14 +160,14 @@ iter_filter_unsuitable(struct iter_env* iter_env, struct module_env* env,
 /** lookup RTT information, and also store fastest rtt (if any) */
 static int
 iter_fill_rtt(struct iter_env* iter_env, struct module_env* env,
-	uint8_t* name, size_t namelen, uint32_t now, struct delegpt* dp,
-	int* best_rtt)
+	uint8_t* name, size_t namelen, uint16_t qtype, uint32_t now, 
+	struct delegpt* dp, int* best_rtt)
 {
 	int got_it = 0;
 	struct delegpt_addr* a;
 	for(a=dp->result_list; a; a = a->next_result) {
 		a->sel_rtt = iter_filter_unsuitable(iter_env, env, 
-			name, namelen, now, a);
+			name, namelen, qtype, now, a);
 		if(a->sel_rtt != -1) {
 			if(!got_it) {
 				*best_rtt = a->sel_rtt;
@@ -183,14 +184,14 @@ iter_fill_rtt(struct iter_env* iter_env, struct module_env* env,
  * returns number of best targets (or 0, no suitable targets) */
 static int
 iter_filter_order(struct iter_env* iter_env, struct module_env* env,
-	uint8_t* name, size_t namelen, uint32_t now, struct delegpt* dp,
-	int* selected_rtt)
+	uint8_t* name, size_t namelen, uint16_t qtype, uint32_t now, 
+	struct delegpt* dp, int* selected_rtt)
 {
 	int got_num = 0, low_rtt = 0, swap_to_front;
 	struct delegpt_addr* a, *n, *prev=NULL;
 
 	/* fillup sel_rtt and find best rtt in the bunch */
-	got_num = iter_fill_rtt(iter_env, env, name, namelen, now, dp, 
+	got_num = iter_fill_rtt(iter_env, env, name, namelen, qtype, now, dp, 
 		&low_rtt);
 	if(got_num == 0) 
 		return 0;
@@ -232,12 +233,12 @@ iter_filter_order(struct iter_env* iter_env, struct module_env* env,
 struct delegpt_addr* 
 iter_server_selection(struct iter_env* iter_env, 
 	struct module_env* env, struct delegpt* dp, 
-	uint8_t* name, size_t namelen, int* dnssec_expected)
+	uint8_t* name, size_t namelen, uint16_t qtype, int* dnssec_expected)
 {
 	int sel;
 	int selrtt;
 	struct delegpt_addr* a, *prev;
-	int num = iter_filter_order(iter_env, env, name, namelen, 
+	int num = iter_filter_order(iter_env, env, name, namelen, qtype,
 		*env->now, dp, &selrtt);
 
 	if(num == 0)

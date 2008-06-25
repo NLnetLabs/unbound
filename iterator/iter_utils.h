@@ -74,6 +74,7 @@ int iter_apply_cfg(struct iter_env* iter_env, struct config_file* cfg);
  * @param dp: delegation point with result list.
  * @param name: zone name (for lameness check).
  * @param namelen: length of name.
+ * @param qtype: query type that we want to send.
  * @param dnssec_expected: set to 0, if a known dnssec-lame server is selected
  *	these are not preferred, but are used as a last resort.
  * @return best target or NULL if no target.
@@ -81,7 +82,7 @@ int iter_apply_cfg(struct iter_env* iter_env, struct config_file* cfg);
  */
 struct delegpt_addr* iter_server_selection(struct iter_env* iter_env, 
 	struct module_env* env, struct delegpt* dp, uint8_t* name, 
-	size_t namelen, int* dnssec_expected);
+	size_t namelen, uint16_t qtype, int* dnssec_expected);
 
 /**
  * Allocate dns_msg from parsed msg, in regional.
