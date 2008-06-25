@@ -1,6 +1,7 @@
 25 June 2008: Wouter
 	- fixup fwd_ancil test typos.
 	- Fix for newegg lameness : ok for qtype=A, but lame for others.
+	- fixup unit test for infra cache, test lame merging.
 
 24 June 2008: Wouter
 	- removed testcode/checklocks from production code compilation path.
