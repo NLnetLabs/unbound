@@ -5,3 +5,5 @@ distribution but may be helpful.
 * parseunbound.pl: perl script to run from cron that parses statistics from
 	the log file and stores them.
 * unbound.spec and unbound.init: RPM specfile and Linux rc.d initfile.
+* update-anchor.sh: shell script that uses unbound-host to update a set
+	of trust anchor files. Run from cron twice a month.
