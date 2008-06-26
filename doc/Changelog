@@ -1,3 +1,6 @@
+26 June 2008: Wouter
+	- fixup streamtcp bounds setting for udp mode, in the test framework.
+
 25 June 2008: Wouter
 	- fixup fwd_ancil test typos.
 	- Fix for newegg lameness : ok for qtype=A, but lame for others.
