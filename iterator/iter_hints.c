@@ -334,23 +334,20 @@ read_root_hints(struct iter_hints* hints, char* fname)
 		if(status != LDNS_STATUS_OK) {
 			log_err("reading root hints %s %d: %s", fname,
 				lineno, ldns_get_errorstr_by_id(status));
-			fclose(f);
-			return 0;
+			goto stop_read;
 		}
 		if(ldns_rr_get_type(rr) == LDNS_RR_TYPE_NS) {
 			if(!delegpt_add_ns(dp, hints->region,
 				ldns_rdf_data(ldns_rr_rdf(rr, 0)))) {
 				log_err("out of memory reading root hints");
-				fclose(f);
-				return 0;
+				goto stop_read;
 			}
 			c = ldns_rr_get_class(rr);
 			if(!dp->name) {
 				if(!delegpt_set_name(dp, hints->region, 
 					ldns_rdf_data(ldns_rr_owner(rr)))){
 					log_err("out of memory.");
-					fclose(f);
-					return 0;
+					goto stop_read;
 				}
 			}
 		} else if(ldns_rr_get_type(rr) == LDNS_RR_TYPE_A) {
@@ -366,8 +363,7 @@ read_root_hints(struct iter_hints* hints, char* fname)
 					ldns_rdf_size(ldns_rr_owner(rr)),
 					(struct sockaddr_storage*)&sa, len)) {
 				log_err("out of memory reading root hints");
-				fclose(f);
-				return 0;
+				goto stop_read;
 			}
 		} else if(ldns_rr_get_type(rr) == LDNS_RR_TYPE_AAAA) {
 			struct sockaddr_in6 sa;
@@ -382,8 +378,7 @@ read_root_hints(struct iter_hints* hints, char* fname)
 					ldns_rdf_size(ldns_rr_owner(rr)),
 					(struct sockaddr_storage*)&sa, len)) {
 				log_err("out of memory reading root hints");
-				fclose(f);
-				return 0;
+				goto stop_read;
 			}
 		} else {
 			log_warn("root hints %s:%d skipping type %d",
@@ -392,6 +387,11 @@ read_root_hints(struct iter_hints* hints, char* fname)
 
 		ldns_rr_free(rr);
 	}
+
+	if (origin)
+		ldns_rdf_deep_free(origin);
+	if (prev_rr)
+		ldns_rdf_deep_free(prev_rr);
 	fclose(f);
 	if(!dp->name) {
 		log_warn("root hints %s: no NS content", fname);
@@ -402,6 +402,14 @@ read_root_hints(struct iter_hints* hints, char* fname)
 	}
 	delegpt_log(VERB_QUERY, dp);
 	return 1;
+
+stop_read:
+	if (origin)
+		ldns_rdf_deep_free(origin);
+	if (prev_rr)
+		ldns_rdf_deep_free(prev_rr);
+	fclose(f);
+	return 0;
 }
 
 /** read root hints list */
