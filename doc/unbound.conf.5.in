@@ -563,6 +563,14 @@ Reverse data for zone D.F.ip6.arpa.
 .TP 10
 \h'5'\fIreverse RFC4291 IPv6 Link Local Addresses\fR
 Reverse data for zones 8.E.F.ip6.arpa to B.E.F.ip6.arpa.
+.TP 10
+\h'5'\fIreverse IPv6 Example Prefix\fR
+Reverse data for zone 8.B.D.0.1.0.0.2.ip6.arpa. This zone is used for
+tutorials and examples. You can remove the block on this zone with:
+.nf
+  local-zone: 8.B.D.0.1.0.0.2.ip6.arpa. nodefault
+.fi
+This also works with the other default zones.
 .\" End of local-zone listing.
 .TP 5
 .B local\-data: \fI"<resource record string>"

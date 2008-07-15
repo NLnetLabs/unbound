@@ -1,3 +1,7 @@
+15 July 2008: Wouter
+	- Follow draft-ietf-dnsop-default-local-zones-06 added reverse
+	  IPv6 example prefix to AS112 default blocklist.
+
 3 July 2008: Wouter
 	- Matthijs fixed memory leaks in root hints file reading.
 
