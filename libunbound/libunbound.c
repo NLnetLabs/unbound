@@ -576,6 +576,7 @@ ub_resolve(struct ub_ctx* ctx, char* name, int rrtype,
 {
 	struct ctx_query* q;
 	int r;
+	*result = NULL;
 
 	lock_basic_lock(&ctx->cfglock);
 	if(!ctx->finalized) {
@@ -591,7 +592,6 @@ ub_resolve(struct ub_ctx* ctx, char* name, int rrtype,
 	if(!q)
 		return UB_NOMEM;
 	/* become a resolver thread for a bit */
-	*result = NULL;
 
 	r = libworker_fg(ctx, q);
 	if(r) {

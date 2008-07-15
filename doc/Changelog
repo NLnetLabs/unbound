@@ -2,6 +2,7 @@
 	- Follow draft-ietf-dnsop-default-local-zones-06 added reverse
 	  IPv6 example prefix to AS112 default blocklist.
 	- fixup lookup of DS records by client with trustanchor for same.
+	- libunbound ub_resolve, fix handling of error condition during setup.
 
 3 July 2008: Wouter
 	- Matthijs fixed memory leaks in root hints file reading.
