@@ -290,8 +290,8 @@ uninstall:
 	@echo "You still need to remove "`dirname $(DESTDIR)$(configfile)`" , $(DESTDIR)$(configfile) by hand"
 
 download_ldns:
-	svn export https://www.nlnetlabs.nl/ldns/svn/trunk/makedist.sh ldns_makedist.sh
-	./ldns_makedist.sh -s -d https://www.nlnetlabs.nl/ldns/svn/trunk
+	svn export https://www.nlnetlabs.nl/svn/ldns/trunk/makedist.sh ldns_makedist.sh
+	./ldns_makedist.sh -s -d https://www.nlnetlabs.nl/svn/ldns/trunk
 	mv ldns-*_pre_*.tar.gz ldns-src.tar.gz
 	rm ldns-*_pre_*.tar.gz.sha1 ldns_makedist.sh
 

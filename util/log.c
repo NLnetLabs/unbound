@@ -242,7 +242,7 @@ log_hex(const char* msg, void* data, size_t length)
 	uint8_t* data8 = (uint8_t*)data;
 	const char* hexchar = "0123456789ABCDEF";
 	char buf[1024+1]; /* alloc blocksize hex chars + \0 */
-	const size_t blocksize = 1024;
+	const size_t blocksize = 512;
 	size_t len;
 
 	if(length == 0) {

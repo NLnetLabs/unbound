@@ -305,6 +305,7 @@ static void
 do_chroot(struct daemon* daemon, struct config_file* cfg, int debug_mode,
 	char** cfgfile)
 {
+#ifdef HAVE_GETPWNAM
 	uid_t uid;
 	gid_t gid;
 	/* initialize, but not to 0 (root) */
@@ -313,7 +314,6 @@ do_chroot(struct daemon* daemon, struct config_file* cfg, int debug_mode,
 	log_assert(cfg);
 
 	/* daemonize last to be able to print error to user */
-#ifdef HAVE_GETPWNAM
 	if(cfg->username && cfg->username[0]) {
 		struct passwd *pwd;
 		if((pwd = getpwnam(cfg->username)) == NULL)

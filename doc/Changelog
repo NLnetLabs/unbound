@@ -3,6 +3,9 @@
 	  IPv6 example prefix to AS112 default blocklist.
 	- fixup lookup of DS records by client with trustanchor for same.
 	- libunbound ub_resolve, fix handling of error condition during setup.
+	- lowered log_hex blocksize to fit through BSD syslog linesize.
+	- no useless initialisation if getpwnam not available.
+	- iana, ldns snapshot updated.
 
 3 July 2008: Wouter
 	- Matthijs fixed memory leaks in root hints file reading.
