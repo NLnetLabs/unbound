@@ -212,11 +212,11 @@ if [ "$SNAPSHOT" = "yes" ]; then
 fi
 
 replace_all doc/README
-replace_all doc/unbound.8
-replace_all doc/unbound.conf.5
-replace_all doc/unbound-checkconf.8
+replace_all doc/unbound.8.in
+replace_all doc/unbound.conf.5.in
+replace_all doc/unbound-checkconf.8.in
 replace_all doc/unbound-host.1
-replace_all doc/libunbound.3
+replace_all doc/libunbound.3.in
 
 info "Renaming Unbound directory to unbound-$version."
 cd ..
