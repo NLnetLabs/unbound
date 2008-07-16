@@ -237,15 +237,19 @@ cleanup
 case $OSTYPE in
         linux*)
                 sha=`sha1sum unbound-$version.tar.gz |  awk '{ print $1 }'`
+                sha256=`sha256sum unbound-$version.tar.gz |  awk '{ print $1 }'`
                 ;;
         freebsd*)
                 sha=`sha1  unbound-$version.tar.gz |  awk '{ print $5 }'`
+                sha256=`sha256  unbound-$version.tar.gz |  awk '{ print $5 }'`
                 ;;
 	*)
                 sha=`sha1sum unbound-$version.tar.gz |  awk '{ print $1 }'`
+                sha256=`sha256sum unbound-$version.tar.gz |  awk '{ print $1 }'`
                 ;;
 esac
 echo $sha > unbound-$version.tar.gz.sha1
+echo $sha256 > unbound-$version.tar.gz.sha256
 
 info "Unbound distribution created successfully."
 info "SHA1sum: $sha"

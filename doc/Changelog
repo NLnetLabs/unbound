@@ -1,3 +1,7 @@
+16 July 2008: Wouter
+	- made svn tag 1.0.1, trunk now 1.0.2
+	- sha256 checksums enabled in makedist.sh
+
 15 July 2008: Wouter
 	- Follow draft-ietf-dnsop-default-local-zones-06 added reverse
 	  IPv6 example prefix to AS112 default blocklist.
