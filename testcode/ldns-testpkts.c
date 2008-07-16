@@ -708,7 +708,11 @@ adjust_packet(struct entry* match, ldns_pkt* answer_pkt, ldns_pkt* query_pkt)
 	}
 	if(match->sleeptime > 0) {
 		verbose(3, "sleeping for %d seconds\n", match->sleeptime);
+#ifdef HAVE_SLEEP
 		sleep(match->sleeptime);
+#else
+		Sleep(match->sleeptime * 1000);
+#endif
 	}
 }
 
@@ -808,7 +812,11 @@ handle_query(uint8_t* inbuf, ssize_t inlen, struct entry* entries, int* count,
 		if(p->packet_sleep) {
 			verbose(3, "sleeping for next packet %d secs\n", 
 				p->packet_sleep);
+#ifdef HAVE_SLEEP
 			sleep(p->packet_sleep);
+#else
+			Sleep(p->packet_sleep * 1000);
+#endif
 			verbose(3, "wakeup for next packet "
 				"(slept %d secs)\n", p->packet_sleep);
 		}
