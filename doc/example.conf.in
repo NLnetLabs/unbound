@@ -167,7 +167,7 @@ server:
 	# if given, user privileges are dropped (after binding port),
 	# and the given username is assumed. Default is user "unbound".
 	# If you give "" no privileges are dropped.
-	# username: "unbound"
+	# username: "@UNBOUND_USERNAME@"
 
 	# the working directory. The relative files in this config are 
 	# relative to this directory. If you give "" the working directory

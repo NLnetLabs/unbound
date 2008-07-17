@@ -281,6 +281,9 @@
 /* Define to 1 if you have the ANSI C header files. */
 #undef STDC_HEADERS
 
+/* default username */
+#undef UB_USERNAME
+
 /* use statistics for allocs and frees, for debug use */
 #undef UNBOUND_ALLOC_STATS
 

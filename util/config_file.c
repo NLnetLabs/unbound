@@ -105,7 +105,7 @@ config_create()
 	if(!(cfg->outgoing_avail_ports = (int*)calloc(65536, sizeof(int))))
 		goto error_exit;
 	init_outgoing_availports(cfg->outgoing_avail_ports, 65536);
-	if(!(cfg->username = strdup("unbound"))) goto error_exit;
+	if(!(cfg->username = strdup(UB_USERNAME))) goto error_exit;
 #ifdef HAVE_CHROOT
 	if(!(cfg->chrootdir = strdup(CHROOT_DIR))) goto error_exit;
 #endif

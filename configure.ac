@@ -81,6 +81,14 @@ AC_ARG_WITH(pidfile,
 AC_SUBST(UNBOUND_PIDFILE)
 AC_DEFINE_UNQUOTED(PIDFILE, ["$UNBOUND_PIDFILE"], [default pidfile location])
 
+AC_ARG_WITH(username, 
+    AC_HELP_STRING([--with-username=user], 
+    [set default user that unbound changes to (default user is unbound)]), 
+    UNBOUND_USERNAME="$withval", 
+    UNBOUND_USERNAME="unbound")
+AC_SUBST(UNBOUND_USERNAME)
+AC_DEFINE_UNQUOTED(UB_USERNAME, ["$UNBOUND_USERNAME"], [default username])
+
 AC_DEFINE(WINVER, 0x0502, [the version of the windows API enabled])
 
 dnl routine to help check for compiler flags.

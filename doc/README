@@ -55,6 +55,9 @@ This software is under BSD license, see LICENSE for details.
   * --with-chroot-dir=path
   	Set default chroot directory,
 	the default is /usr/local/etc/unbound.
+  * --with-username=user
+  	Set default user name to change to,
+	the default is the "unbound" user.
 
 * 'make test' attempts to run a series of tests, depending on the support
   programs that are installed.

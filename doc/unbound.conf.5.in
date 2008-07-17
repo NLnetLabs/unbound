@@ -258,7 +258,7 @@ If given a chroot is done to the given directory. The default is
 .TP
 .B username: \fI<name>
 If given, after binding the port the user privileges are dropped. Default is
-"unbound". If you give username: "" no user change is performed. 
+"@UNBOUND_USERNAME@". If you give username: "" no user change is performed. 
 .IP
 If this user is not capable of binding the
 port, reloads (by signal HUP) will still retain the opened ports.
