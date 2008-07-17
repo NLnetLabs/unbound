@@ -141,6 +141,21 @@ checkrlimits(struct config_file* cfg)
 		log_warn("increased limit(open files) from %u to %u",
 			(unsigned)avail, (unsigned)total+10);
 	}
+	if(total > 1024 && 
+		strncmp(event_get_version(), "mini-event", 10) == 0) {
+		log_err("too many file descriptors requested. The builtin"
+			"mini-event cannot handle more than 1024. Config "
+			"for less fds or compile with libevent");
+		fatal_exit("configuration needs too many file descriptors");
+	}
+	if(perthread > 64 && 
+		strncmp(event_get_version(), "winsock-event", 13) == 0) {
+		log_err("too many file descriptors requested. The winsock"
+			" event handler cannot handle more than 64 per "
+			" thread. Config for less fds or compile with "
+			" libevent");
+		fatal_exit("configuration needs too many file descriptors");
+	}
 #else	
 	(void)cfg;
 #endif /* HAVE_GETRLIMIT */

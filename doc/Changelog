@@ -1,6 +1,8 @@
 17 July 2008: Wouter
 	- fix bug #196, compile outside source tree.
 	- fix bug #195, add --with-username=user configure option.
+	- print error and exit if started with config that requires more
+	  fds than the builtin minievent can handle.
 
 16 July 2008: Wouter
 	- made svn tag 1.0.1, trunk now 1.0.2
