@@ -842,11 +842,11 @@ echo "*** ldns library not found (--with-ldns= to specify by hand) ***"
 echo "*** Building ldns library from package included in this one. ***"
 echo "***                                                          ***"
 echo "****************************************************************"
-if test -d ldns-src; then rm -rf ldns-src; fi
-mkdir ldns-src; cp $srcdir/ldns-src.tar.gz ldns-src/ldns-src.tar.gz; (cd ldns-src; gzip -cd ldns-src.tar.gz | tar xf -); rm -f ldns-src/ldns-src.tar.gz
-ldnsdir=`ls -d ldns-src/ldns*`
+if test -d $srcdir/ldns-src; then rm -rf $srcdir/ldns-src; fi
+mkdir $srcdir/ldns-src; cp $srcdir/ldns-src.tar.gz $srcdir/ldns-src/ldns-src.tar.gz; (cd $srcdir/ldns-src; gzip -cd ldns-src.tar.gz | tar xf -); rm -f $srcdir/ldns-src/ldns-src.tar.gz; mv $srcdir/ldns-src $srcdir/ldns-srcb; mv $srcdir/ldns-srcb/ldns* $srcdir/ldns-src; rmdir $srcdir/ldns-srcb
+ldnsdir="ldns-src"
 AC_MSG_NOTICE([Configure $ldnsdir scheduled after config.status])
-AC_CONFIG_SUBDIRS([ldns-src/ldns*])
+AC_CONFIG_SUBDIRS([ldns-src])
 CPPFLAGS="-I$ldnsdir/include $CPPFLAGS"
 LDFLAGS="$LDFLAGS $ldnsdir/*.lo"
 AC_SUBST(ldnsdir)

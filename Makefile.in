@@ -270,12 +270,12 @@ install:
 	$(LIBTOOL) --mode=install cp unbound $(DESTDIR)$(sbindir)/unbound
 	$(LIBTOOL) --mode=install cp unbound-checkconf $(DESTDIR)$(sbindir)/unbound-checkconf
 	$(LIBTOOL) --mode=install cp unbound-host $(DESTDIR)$(sbindir)/unbound-host
-	$(INSTALL) -c -m 644 $(srcdir)/doc/unbound.8 $(DESTDIR)$(mandir)/man8
-	$(INSTALL) -c -m 644 $(srcdir)/doc/unbound-checkconf.8 $(DESTDIR)$(mandir)/man8
-	$(INSTALL) -c -m 644 $(srcdir)/doc/unbound.conf.5 $(DESTDIR)$(mandir)/man5
+	$(INSTALL) -c -m 644 doc/unbound.8 $(DESTDIR)$(mandir)/man8
+	$(INSTALL) -c -m 644 doc/unbound-checkconf.8 $(DESTDIR)$(mandir)/man8
+	$(INSTALL) -c -m 644 doc/unbound.conf.5 $(DESTDIR)$(mandir)/man5
 	$(INSTALL) -c -m 644 $(srcdir)/doc/unbound-host.1 $(DESTDIR)$(mandir)/man1
-	$(INSTALL) -c -m 644 $(srcdir)/doc/libunbound.3 $(DESTDIR)$(mandir)/man3
-	if test ! -e $(DESTDIR)$(configfile); then $(INSTALL) -d `dirname $(DESTDIR)$(configfile)`; $(INSTALL) -c -m 644 $(srcdir)/doc/example.conf $(DESTDIR)$(configfile); fi
+	$(INSTALL) -c -m 644 doc/libunbound.3 $(DESTDIR)$(mandir)/man3
+	if test ! -e $(DESTDIR)$(configfile); then $(INSTALL) -d `dirname $(DESTDIR)$(configfile)`; $(INSTALL) -c -m 644 doc/example.conf $(DESTDIR)$(configfile); fi
 	$(LIBTOOL) --mode=install cp $(srcdir)/libunbound/unbound.h $(DESTDIR)$(includedir)/unbound.h
 	$(LIBTOOL) --mode=install cp libunbound.la $(DESTDIR)$(libdir)
 	$(LIBTOOL) --mode=finish $(DESTDIR)$(libdir)
