@@ -60,6 +60,7 @@
 #include "util/data/dname.h"
 #include "util/data/msgreply.h"
 #include "util/data/msgencode.h"
+#include "util/tube.h"
 
 /** handle new query command for bg worker */
 static void handle_newq(struct libworker* w, uint8_t* buf, uint32_t len);
@@ -963,12 +964,11 @@ libworker_read_msg(int fd, uint8_t** buf, uint32_t* len, int nonblock)
 }
 
 /* --- fake callbacks for fptr_wlist to work --- */
-int worker_handle_control_cmd(struct comm_point* ATTR_UNUSED(c), 
-	void* ATTR_UNUSED(arg), int ATTR_UNUSED(error),
-        struct comm_reply* ATTR_UNUSED(reply_info))
+void worker_handle_control_cmd(struct tube* ATTR_UNUSED(tube), 
+	ldns_buffer* ATTR_UNUSED(buffer), int ATTR_UNUSED(error), 
+	void* ATTR_UNUSED(arg))
 {
 	log_assert(0);
-	return 0;
 }
 
 int worker_handle_request(struct comm_point* ATTR_UNUSED(c), 

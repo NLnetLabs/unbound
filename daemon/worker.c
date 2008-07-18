@@ -999,7 +999,7 @@ worker_init(struct worker* worker, struct config_file *cfg,
 	if(worker->thread_num != 0) {
 		/* start listening to commands */
 		if(!tube_listen_cmd(worker->cmd, worker->base,
-			cfg->msg_buffer_size, worker_handle_control_cmd,
+			cfg->msg_buffer_size, &worker_handle_control_cmd,
 			worker)) {
 			log_err("could not create control compt.");
 			worker_delete(worker);

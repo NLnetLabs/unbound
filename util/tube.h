@@ -50,8 +50,7 @@ struct tube;
  * void mycallback(tube, buffer, error, argument);
  * if error is true (NETEVENT_*), buffer is probably NULL.
  */
-typedef void (tube_callback_t)(struct tube* tube, ldns_buffer* buffer,
-	int error, void* arg);
+typedef void tube_callback_t(struct tube*, ldns_buffer*, int, void*);
 
 /**
  * A pipe

@@ -199,7 +199,7 @@ struct outbound_entry* worker_send_query(uint8_t* qname, size_t qnamelen,
 /** 
  * process control messages from the main thread. 
  * @param tube: tube control message came on.
- * @param buf: buffer with message in it.
+ * @param buffer: buffer with message in it.
  * @param error: if error (NETEVENT_*) happened.
  * @param arg: user argument
  */
