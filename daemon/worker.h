@@ -58,6 +58,7 @@ struct daemon;
 struct listen_port;
 struct ub_randstate;
 struct regional;
+struct tube;
 
 /** worker commands */
 enum worker_commands {
@@ -76,10 +77,8 @@ struct worker {
 	struct daemon* daemon;
 	/** thread id */
 	ub_thread_t thr_id;
-	/** fd 0 of socketpair, write commands for worker to this one */
-	int cmd_send_fd;
-	/** fd 1 of socketpair, worker listens on this one */
-	int cmd_recv_fd;
+	/** pipe, for commands for this worker */
+	struct tube* cmd;
 	/** the event base this worker works with */
 	struct comm_base* base;
 	/** the frontside listening interface where request events come in */
@@ -199,13 +198,13 @@ struct outbound_entry* worker_send_query(uint8_t* qname, size_t qnamelen,
 
 /** 
  * process control messages from the main thread. 
- * @param c: comm point to read from.
- * @param arg: worker.
- * @param error: error status of comm point.
- * @param reply_info: not used.
+ * @param tube: tube control message came on.
+ * @param buf: buffer with message in it.
+ * @param error: if error (NETEVENT_*) happened.
+ * @param arg: user argument
  */
-int worker_handle_control_cmd(struct comm_point* c, void* arg, int error, 
-	struct comm_reply* reply_info);
+void worker_handle_control_cmd(struct tube* tube, ldns_buffer* buffer,
+	int error, void* arg);
 
 /** handles callbacks from listening event interface */
 int worker_handle_request(struct comm_point* c, void* arg, int error,

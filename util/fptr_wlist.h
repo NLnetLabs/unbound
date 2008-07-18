@@ -57,6 +57,7 @@
 #include "util/netevent.h"
 #include "util/storage/lruhash.h"
 #include "util/module.h"
+#include "util/tube.h"
 
 /**
  * Macro to perform an assertion check for fptr wlist checks.
@@ -289,6 +290,14 @@ int fptr_whitelist_mod_get_mem(size_t (*fptr)(struct module_env* env, int id));
  * @return false if not in whitelist.
  */
 int fptr_whitelist_alloc_cleanup(void (*fptr)(void*));
+
+/**
+ * Check function pointer whitelist for tube listen handler values.
+ *
+ * @param fptr: function pointer to check.
+ * @return false if not in whitelist.
+ */
+int fptr_whitelist_tube_listen(tube_callback_t* fptr);
 
 /** Due to module breakage by fptr wlist, these test app declarations
  * are presented here */

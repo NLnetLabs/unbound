@@ -68,6 +68,7 @@
 #include "daemon/acl_list.h"
 #include "libunbound/libworker.h"
 #include "libunbound/context.h"
+#include "util/tube.h"
 
 int 
 fptr_whitelist_comm_point(comm_point_callback_t *fptr)
@@ -75,7 +76,7 @@ fptr_whitelist_comm_point(comm_point_callback_t *fptr)
 	if(fptr == &worker_handle_request) return 1;
 	else if(fptr == &outnet_udp_cb) return 1;
 	else if(fptr == &outnet_tcp_cb) return 1;
-	else if(fptr == &worker_handle_control_cmd) return 1;
+	else if(fptr == &tube_handle_listen) return 1;
 	return 0;
 }
 
@@ -323,5 +324,11 @@ int
 fptr_whitelist_alloc_cleanup(void (*fptr)(void*))
 {
 	if(fptr == &worker_alloc_cleanup) return 1;
+	return 0;
+}
+
+int fptr_whitelist_tube_listen(tube_callback_t* fptr)
+{
+	if(fptr == &worker_handle_control_cmd) return 1;
 	return 0;
 }

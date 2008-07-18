@@ -1,5 +1,6 @@
 18 July 2008: Wouter
 	- branch for 1.0 support.
+	- trunk work on tube.c.
 
 17 July 2008: Wouter
 	- fix bug #196, compile outside source tree.
