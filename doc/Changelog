@@ -1,3 +1,6 @@
+19 July 2008: Wouter
+	- #198: fixup man page to suggest chroot entropy fix.
+
 18 July 2008: Wouter
 	- branch for 1.0 support.
 	- trunk work on tube.c.
