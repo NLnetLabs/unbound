@@ -51,7 +51,8 @@ server:
 	directory: "/etc/unbound"
 	username: unbound 	# make sure it can write to pidfile.
 	# make sure unbound can access entropy from inside the chroot.
-	# i.e. mount --bind -n /dev/random /etc/unbound/dev/random
+	# e.g. on linux the use these commands (on BSD, devfs(8) is used):
+	#      mount --bind -n /dev/random /etc/unbound/dev/random
 	# and  mount --bind -n /dev/log /etc/unbound/dev/log
 	chroot: "/etc/unbound"
 	# logfile: "/etc/unbound/unbound.log"  #uncomment to use logfile.
