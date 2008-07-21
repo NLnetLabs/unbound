@@ -122,7 +122,8 @@ ub_initstate(unsigned int seed, struct ub_randstate* from)
 				ERR_get_error());
 			return NULL;
 		}
-		verbose(VERB_OPS, "openssl has no entropy, seeding with time");
+		verbose(VERB_OPS, "openssl has no entropy, seeding with time"
+			" and pid");
 	}
 	ub_arc4random_stir(s, from);
 	return s;

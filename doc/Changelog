@@ -1,3 +1,6 @@
+21 July 2008: Wouter
+	- #198: nicer entropy warning message. manpage OS hints.
+
 19 July 2008: Wouter
 	- #198: fixup manpage to suggest entropy chroot fix.
 
