@@ -78,6 +78,14 @@
 int fptr_whitelist_comm_point(comm_point_callback_t *fptr);
 
 /**
+ * Check function pointer whitelist for raw comm_point callback values.
+ *
+ * @param fptr: function pointer to check.
+ * @return false if not in whitelist.
+ */
+int fptr_whitelist_comm_point_raw(comm_point_callback_t *fptr);
+
+/**
  * Check function pointer whitelist for comm_timer callback values.
  *
  * @param fptr: function pointer to check.

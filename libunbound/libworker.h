@@ -55,8 +55,8 @@ struct outbound_entry;
 struct module_qstate;
 struct comm_point;
 struct comm_reply;
-struct libworker_res_list;
 struct regional;
+struct tube;
 
 /** 
  * The library-worker status structure
@@ -81,37 +81,6 @@ struct libworker {
 	struct outside_network* back;
 	/** random() table for this worker. */
 	struct ub_randstate* rndstate;
-	
-	/** commpoint to listen to commands */
-	struct comm_point* cmd_com;
-	/** are we currently reading a command, 0 if not, else bytecount */
-	size_t cmd_read;
-	/** size of current read command, may be partially read */
-	uint32_t cmd_len;
-	/** the current read command content, malloced, can be partially read*/
-	uint8_t* cmd_msg;
-
-	/** commpoint to write results back */
-	struct comm_point* res_com;
-	/** are we curently writing a result, 0 if not, else bytecount into
-	 * the res_list first entry. */
-	size_t res_write;
-	/** list of outstanding results to be written back */
-	struct libworker_res_list* res_list;
-	/** last in list */
-	struct libworker_res_list* res_last;
-};
-
-/**
- * List of results (arbitrary command serializations) to write back
- */
-struct libworker_res_list {
-	/** next in list */
-	struct libworker_res_list* next;
-	/** serialized buffer to write */
-	uint8_t* buf;
-	/** length to write */
-	uint32_t len;
 };
 
 /**
@@ -180,46 +149,12 @@ int libworker_handle_service_reply(struct comm_point* c, void* arg, int error,
         struct comm_reply* reply_info);
 
 /** handle control command coming into server */
-int libworker_handle_control_cmd(struct comm_point* c, void* arg, 
-	int err, struct comm_reply* rep);
+void libworker_handle_control_cmd(struct tube* tube, uint8_t* msg, size_t len,
+	int err, void* arg);
 
 /** handle opportunity to write result back */
-int libworker_handle_result_write(struct comm_point* c, void* arg, 
-	int err, struct comm_reply* rep);
-
-/**
- * Write length bytes followed by message.
- * @param fd: the socket to write on. Is nonblocking.
- * 	Set to blocking by the function,
- * 	and back to non-blocking at exit of function.
- * @param buf: the message.
- * @param len: length of message.
- * @param nonblock: if set to true, the first write is nonblocking.
- * 	If the first write fails the function returns -1.
- * 	If set false, the first write is blocking.
- * @return: all remainder writes are nonblocking.
- * 	return 0 on error, in that case blocking/nonblocking of socket is
- * 		unknown.
- * 	return 1 if all OK.
- */
-int libworker_write_msg(int fd, uint8_t* buf, uint32_t len, int nonblock);
-
-/**
- * Read length bytes followed by message.
- * @param fd: the socket to write on. Is nonblocking.
- * 	Set to blocking by the function,
- * 	and back to non-blocking at exit of function.
- * @param buf: the message, malloced.
- * @param len: length of message, returned.
- * @param nonblock: if set to true, the first read is nonblocking.
- * 	If the first read fails the function returns -1.
- * 	If set false, the first read is blocking.
- * @return: all remainder reads are nonblocking.
- * 	return 0 on error, in that case blocking/nonblocking of socket is 
- * 		unknown. On EOF 0 is returned.
- * 	return 1 if all OK.
- */
-int libworker_read_msg(int fd, uint8_t** buf, uint32_t* len, int nonblock);
+void libworker_handle_result_write(struct tube* tube, uint8_t* msg, size_t len,
+	int err, void* arg);
 
 /** 
  * fill result from parsed message, on error fills servfail 

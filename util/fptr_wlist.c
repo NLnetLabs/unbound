@@ -81,6 +81,14 @@ fptr_whitelist_comm_point(comm_point_callback_t *fptr)
 }
 
 int 
+fptr_whitelist_comm_point_raw(comm_point_callback_t *fptr)
+{
+	if(fptr == &tube_handle_listen) return 1;
+	else if(fptr == &tube_handle_write) return 1;
+	return 0;
+}
+
+int 
 fptr_whitelist_comm_timer(void (*fptr)(void*))
 {
 	if(fptr == &pending_udp_timer_cb) return 1;
@@ -330,5 +338,6 @@ fptr_whitelist_alloc_cleanup(void (*fptr)(void*))
 int fptr_whitelist_tube_listen(tube_callback_t* fptr)
 {
 	if(fptr == &worker_handle_control_cmd) return 1;
+	else if(fptr == &libworker_handle_control_cmd) return 1;
 	return 0;
 }

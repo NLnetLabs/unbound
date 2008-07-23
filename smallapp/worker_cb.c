@@ -48,8 +48,8 @@ struct module_qstate;
 struct tube;
 
 void worker_handle_control_cmd(struct tube* ATTR_UNUSED(tube),
-	ldns_buffer* ATTR_UNUSED(buffer), int ATTR_UNUSED(error),
-	void* ATTR_UNUSED(arg))
+	uint8_t* ATTR_UNUSED(buffer), size_t ATTR_UNUSED(len),
+	int ATTR_UNUSED(error), void* ATTR_UNUSED(arg))
 {
 	log_assert(0);
 }
@@ -148,6 +148,13 @@ int libworker_handle_service_reply(struct comm_point* ATTR_UNUSED(c),
 {
 	log_assert(0);
 	return 0;
+}
+
+void libworker_handle_control_cmd(struct tube* ATTR_UNUSED(tube),
+        uint8_t* ATTR_UNUSED(buffer), size_t ATTR_UNUSED(len),
+        int ATTR_UNUSED(error), void* ATTR_UNUSED(arg))
+{
+        log_assert(0);
 }
 
 int context_query_cmp(const void* ATTR_UNUSED(a), const void* ATTR_UNUSED(b))

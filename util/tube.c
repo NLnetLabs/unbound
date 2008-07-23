@@ -49,19 +49,28 @@ struct tube* tube_create(void)
 {
 	struct tube* tube = (struct tube*)calloc(1, sizeof(*tube));
 	int sv[2];
-	if(!tube) return 0;
+	if(!tube) {
+		int err = errno;
+		log_err("tube_create: out of memory");
+		errno = err;
+		return NULL;
+	}
 	tube->sr = -1;
 	tube->sw = -1;
 	if(socketpair(AF_UNIX, SOCK_STREAM, 0, sv) == -1) {
+		int err = errno;
 		log_err("socketpair: %s", strerror(errno));
 		free(tube);
+		errno = err;
 		return NULL;
 	}
 	tube->sr = sv[0];
 	tube->sw = sv[1];
 	if(!fd_set_nonblock(tube->sr) || !fd_set_nonblock(tube->sw)) {
+		int err = errno;
 		log_err("tube: cannot set nonblocking");
 		tube_delete(tube);
+		errno = err;
 		return NULL;
 	}
 	return tube;
@@ -70,16 +79,60 @@ struct tube* tube_create(void)
 void tube_delete(struct tube* tube)
 {
 	if(!tube) return;
-	if(tube->listen_com) {
-		comm_point_delete(tube->listen_com);
-	}
+	tube_remove_bg_listen(tube);
+	tube_remove_bg_write(tube);
 	/* close fds after deleting commpoints, to be sure.
 	 *            Also epoll does not like closing fd before event_del */
-	if(tube->sr != -1) close(tube->sr);
-	if(tube->sw != -1) close(tube->sw);
-	tube->sr = -1;
-	tube->sw = -1;
+	tube_close_read(tube);
+	tube_close_write(tube);
 	free(tube);
+}
+
+void tube_close_read(struct tube* tube)
+{
+	if(tube->sr != -1) {
+		close(tube->sr);
+		tube->sr = -1;
+	}
+}
+
+void tube_close_write(struct tube* tube)
+{
+	if(tube->sw != -1) {
+		close(tube->sw);
+		tube->sw = -1;
+	}
+}
+
+void tube_remove_bg_listen(struct tube* tube)
+{
+	if(tube->listen_com) {
+		comm_point_delete(tube->listen_com);
+		tube->listen_com = NULL;
+	}
+	if(tube->cmd_msg) {
+		free(tube->cmd_msg);
+		tube->cmd_msg = NULL;
+	}
+}
+
+void tube_remove_bg_write(struct tube* tube)
+{
+	if(tube->res_com) {
+		comm_point_delete(tube->res_com);
+		tube->res_com = NULL;
+	}
+	if(tube->res_list) {
+		struct tube_res_list* np, *p = tube->res_list;
+		tube->res_list = NULL;
+		tube->res_last = NULL;
+		while(p) {
+			np = p->next;
+			free(p->buf);
+			free(p);
+			p = np;
+		}
+	}
 }
 
 int
@@ -87,35 +140,314 @@ tube_handle_listen(struct comm_point* c, void* arg, int error,
         struct comm_reply* ATTR_UNUSED(reply_info))
 {
 	struct tube* tube = (struct tube*)arg;
+	ssize_t r;
 	if(error != NETEVENT_NOERROR) {
 		fptr_ok(fptr_whitelist_tube_listen(tube->listen_cb));
-		(*tube->listen_cb)(tube, NULL, error, tube->listen_arg);
+		(*tube->listen_cb)(tube, NULL, 0, error, tube->listen_arg);
 		return 0;
 	}
+
+	if(tube->cmd_read < sizeof(tube->cmd_len)) {
+		/* complete reading the length of control msg */
+		r = read(c->fd, ((uint8_t*)&tube->cmd_len) + tube->cmd_read,
+			sizeof(tube->cmd_len) - tube->cmd_read);
+		if(r==0) {
+			/* error has happened or */
+			/* parent closed pipe, must have exited somehow */
+			fptr_ok(fptr_whitelist_tube_listen(tube->listen_cb));
+			(*tube->listen_cb)(tube, NULL, 0, NETEVENT_CLOSED, 
+				tube->listen_arg);
+			return 0;
+		}
+		if(r==-1) {
+			if(errno != EAGAIN && errno != EINTR) {
+				log_err("rpipe error: %s", strerror(errno));
+			}
+			/* nothing to read now, try later */
+			return 0;
+		}
+		tube->cmd_read += r;
+		if(tube->cmd_read < sizeof(tube->cmd_len)) {
+			/* not complete, try later */
+			return 0;
+		}
+		tube->cmd_msg = (uint8_t*)calloc(1, tube->cmd_len);
+		if(!tube->cmd_msg) {
+			log_err("malloc failure");
+			tube->cmd_read = 0;
+			return 0;
+		}
+	}
+	/* cmd_len has been read, read remainder */
+	r = read(c->fd, tube->cmd_msg+tube->cmd_read-sizeof(tube->cmd_len),
+		tube->cmd_len - (tube->cmd_read - sizeof(tube->cmd_len)));
+	if(r==0) {
+		/* error has happened or */
+		/* parent closed pipe, must have exited somehow */
+		fptr_ok(fptr_whitelist_tube_listen(tube->listen_cb));
+		(*tube->listen_cb)(tube, NULL, 0, NETEVENT_CLOSED, 
+			tube->listen_arg);
+		return 0;
+	}
+	if(r==-1) {
+		/* nothing to read now, try later */
+		if(errno != EAGAIN && errno != EINTR) {
+			log_err("rpipe error: %s", strerror(errno));
+		}
+		return 0;
+	}
+	tube->cmd_read += r;
+	if(tube->cmd_read < sizeof(tube->cmd_len) + tube->cmd_len) {
+		/* not complete, try later */
+		return 0;
+	}
+	tube->cmd_read = 0;
+
 	fptr_ok(fptr_whitelist_tube_listen(tube->listen_cb));
-	(*tube->listen_cb)(tube, c->buffer, error, tube->listen_arg);
+	(*tube->listen_cb)(tube, tube->cmd_msg, tube->cmd_len, 
+		NETEVENT_NOERROR, tube->listen_arg);
+		/* also frees the buf */
+	tube->cmd_msg = NULL;
 	return 0;
 }
 
-int tube_listen_cmd(struct tube* tube, struct comm_base* base,
-        size_t msg_buffer_sz, tube_callback_t* cb, void* arg)
+int
+tube_handle_write(struct comm_point* c, void* arg, int error,
+        struct comm_reply* ATTR_UNUSED(reply_info))
 {
-	tube->listen_cb = cb;
-	tube->listen_arg = arg;
-	if(!(tube->listen_com = comm_point_create_local(base, tube->sr, 
-		msg_buffer_sz, tube_handle_listen, tube))) {
-		log_err("tube_listen_cmd: commpoint creation failed");
+	struct tube* tube = (struct tube*)arg;
+	struct tube_res_list* item = tube->res_list;
+	ssize_t r;
+	if(error != NETEVENT_NOERROR) {
+		log_err("tube_handle_write net error %d", error);
+		return 0;
+	}
+
+	if(!item) {
+		comm_point_stop_listening(c);
+		return 0;
+	}
+
+	if(tube->res_write < sizeof(item->len)) {
+		r = write(c->fd, ((uint8_t*)&item->len) + tube->res_write,
+			sizeof(item->len) - tube->res_write);
+		if(r == -1) {
+			if(errno != EAGAIN && errno != EINTR) {
+				log_err("wpipe error: %s", strerror(errno));
+			}
+			return 0; /* try again later */
+		}
+		if(r == 0) {
+			/* error on pipe, must have exited somehow */
+			/* cannot signal this to pipe user */
+			return 0;
+		}
+		tube->res_write += r;
+		if(tube->res_write < sizeof(item->len))
+			return 0;
+	}
+	r = write(c->fd, item->buf + tube->res_write - sizeof(item->len),
+		item->len - (tube->res_write - sizeof(item->len)));
+	if(r == -1) {
+		if(errno != EAGAIN && errno != EINTR) {
+			log_err("wpipe error: %s", strerror(errno));
+		}
+		return 0; /* try again later */
+	}
+	if(r == 0) {
+		/* error on pipe, must have exited somehow */
+		/* cannot signal this to pipe user */
+		return 0;
+	}
+	tube->res_write += r;
+	if(tube->res_write < sizeof(item->len) + item->len)
+		return 0;
+	/* done this result, remove it */
+	free(item->buf);
+	item->buf = NULL;
+	tube->res_list = tube->res_list->next;
+	free(item);
+	if(!tube->res_list) {
+		tube->res_last = NULL;
+		comm_point_stop_listening(c);
+	}
+	tube->res_write = 0;
+	return 0;
+}
+
+int tube_write_msg(struct tube* tube, uint8_t* buf, uint32_t len, 
+        int nonblock)
+{
+	ssize_t r;
+	int fd = tube->sw;
+
+	/* test */
+	if(nonblock) {
+		r = write(fd, &len, sizeof(len));
+		if(r == -1) {
+			if(errno==EINTR || errno==EAGAIN)
+				return -1;
+			log_err("tube msg write failed: %s", strerror(errno));
+			return -1; /* can still continue, perhaps */
+		}
+	} else r = 0;
+	if(!fd_set_block(fd))
+		return 0;
+	/* write remainder */
+	if(r != (ssize_t)sizeof(len)) {
+		if(write(fd, (char*)(&len)+r, sizeof(len)-r) == -1) {
+			log_err("tube msg write failed: %s", strerror(errno));
+			(void)fd_set_nonblock(fd);
+			return 0;
+		}
+	}
+	if(write(fd, buf, len) == -1) {
+		log_err("tube msg write failed: %s", strerror(errno));
+		(void)fd_set_nonblock(fd);
+		return 0;
+	}
+	if(!fd_set_nonblock(fd))
+		return 0;
+	return 1;
+}
+
+int tube_read_msg(struct tube* tube, uint8_t** buf, uint32_t* len, 
+        int nonblock)
+{
+	ssize_t r;
+	int fd = tube->sr;
+
+	/* test */
+	*len = 0;
+	if(nonblock) {
+		r = read(fd, len, sizeof(*len));
+		if(r == -1) {
+			if(errno==EINTR || errno==EAGAIN)
+				return -1;
+			log_err("tube msg read failed: %s", strerror(errno));
+			return -1; /* we can still continue, perhaps */
+		}
+		if(r == 0) /* EOF */
+			return 0;
+	} else r = 0;
+	if(!fd_set_block(fd))
+		return 0;
+	/* read remainder */
+	if(r != (ssize_t)sizeof(*len)) {
+		if((r=read(fd, (char*)(len)+r, sizeof(*len)-r)) == -1) {
+			log_err("tube msg read failed: %s", strerror(errno));
+			(void)fd_set_nonblock(fd);
+			return 0;
+		}
+		if(r == 0) /* EOF */ {
+			(void)fd_set_nonblock(fd);
+			return 0;
+		}
+	}
+	*buf = (uint8_t*)malloc(*len);
+	if(!*buf) {
+		log_err("tube read out of memory");
+		(void)fd_set_nonblock(fd);
+		return 0;
+	}
+	if((r=read(fd, *buf, *len)) == -1) {
+		log_err("tube msg read failed: %s", strerror(errno));
+		(void)fd_set_nonblock(fd);
+		free(*buf);
+		return 0;
+	}
+	if(r == 0) { /* EOF */
+		(void)fd_set_nonblock(fd);
+		free(*buf);
+		return 0;
+	}
+	if(!fd_set_nonblock(fd)) {
+		free(*buf);
 		return 0;
 	}
 	return 1;
 }
 
-int tube_send_cmd(struct tube* tube, ldns_buffer* buffer)
+/** perform a select() on the fd */
+static int
+pollit(int fd, struct timeval* t)
 {
-	if(!write_socket(tube->sw, ldns_buffer_begin(buffer),
-		ldns_buffer_limit(buffer))) {
-		log_err("write socket: %s", strerror(errno));
+	fd_set r;
+#ifndef S_SPLINT_S
+	FD_ZERO(&r);
+	FD_SET(FD_SET_T fd, &r);
+#endif
+	if(select(fd+1, &r, NULL, NULL, t) == -1) {
 		return 0;
+	}
+	errno = 0;
+	return FD_ISSET(fd, &r);
+}
+
+int tube_poll(struct tube* tube)
+{
+	struct timeval t;
+	memset(&t, 0, sizeof(t));
+	return pollit(tube->sr, &t);
+}
+
+int tube_wait(struct tube* tube)
+{
+	return pollit(tube->sr, NULL);
+}
+
+int tube_read_fd(struct tube* tube)
+{
+	return tube->sr;
+}
+
+int tube_setup_bg_listen(struct tube* tube, struct comm_base* base,
+        tube_callback_t* cb, void* arg)
+{
+	tube->listen_cb = cb;
+	tube->listen_arg = arg;
+	if(!(tube->listen_com = comm_point_create_raw(base, tube->sr, 
+		0, tube_handle_listen, tube))) {
+		int err = errno;
+		log_err("tube_setup_bg_l: commpoint creation failed");
+		errno = err;
+		return 0;
+	}
+	return 1;
+}
+
+int tube_setup_bg_write(struct tube* tube, struct comm_base* base)
+{
+	if(!(tube->res_com = comm_point_create_raw(base, tube->sw, 
+		1, tube_handle_write, tube))) {
+		int err = errno;
+		log_err("tube_setup_bg_w: commpoint creation failed");
+		errno = err;
+		return 0;
+	}
+	return 1;
+}
+
+int tube_queue_item(struct tube* tube, uint8_t* msg, size_t len)
+{
+	struct tube_res_list* item = 
+		(struct tube_res_list*)malloc(sizeof(*item));
+	if(!item) {
+		free(msg);
+		log_err("out of memory for async answer");
+		return 0;
+	}
+	item->buf = msg;
+	item->len = len;
+	item->next = NULL;
+	/* add at back of list, since the first one may be partially written */
+	if(tube->res_last)
+		tube->res_last->next = item;
+	else    tube->res_list = item;
+	tube->res_last = item;
+	if(tube->res_list == tube->res_last) {
+		/* first added item, start the write process */
+		comm_point_start_listening(tube->res_com, -1, -1);
 	}
 	return 1;
 }

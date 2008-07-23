@@ -945,6 +945,26 @@ struct comm_point* comm_point_create_local(struct comm_base* ATTR_UNUSED(base),
 	return calloc(1, 1);
 }
 
+struct comm_point* comm_point_create_raw(struct comm_base* ATTR_UNUSED(base),
+        int ATTR_UNUSED(fd), int ATTR_UNUSED(writing),
+        comm_point_callback_t* ATTR_UNUSED(callback), 
+	void* ATTR_UNUSED(callback_arg))
+{
+	/* no pipe comm possible */
+	return calloc(1, 1);
+}
+
+void comm_point_start_listening(struct comm_point* ATTR_UNUSED(c), 
+	int ATTR_UNUSED(newfd), int ATTR_UNUSED(sec))
+{
+	/* no bg write pipe comm possible */
+}
+
+void comm_point_stop_listening(struct comm_point* ATTR_UNUSED(c))
+{
+	/* no bg write pipe comm possible */
+}
+
 /* only cmd com _local gets deleted */
 void comm_point_delete(struct comm_point* c)
 {

@@ -357,8 +357,7 @@ daemon_stop_others(struct daemon* daemon)
 	/* skip i=0, is this thread */
 	/* use i=0 buffer for sending cmds; because we are #0 */
 	for(i=1; i<daemon->num; i++) {
-		worker_send_cmd(daemon->workers[i], 
-			daemon->workers[0]->front->udp_buff, worker_cmd_quit);
+		worker_send_cmd(daemon->workers[i], worker_cmd_quit);
 	}
 	/* wait for them to quit */
 	for(i=1; i<daemon->num; i++) {

@@ -150,11 +150,9 @@ void worker_delete(struct worker* worker);
 /**
  * Send a command to a worker. Uses blocking writes.
  * @param worker: worker to send command to.
- * @param buffer: an empty buffer to use.
  * @param cmd: command to send.
  */
-void worker_send_cmd(struct worker* worker, ldns_buffer* buffer,
-        enum worker_commands cmd);
+void worker_send_cmd(struct worker* worker, enum worker_commands cmd);
 
 /**
  * Worker signal handler function. User argument is the worker itself.
@@ -199,11 +197,12 @@ struct outbound_entry* worker_send_query(uint8_t* qname, size_t qnamelen,
 /** 
  * process control messages from the main thread. 
  * @param tube: tube control message came on.
- * @param buffer: buffer with message in it.
+ * @param msg: message contents.
+ * @param len: length of message.
  * @param error: if error (NETEVENT_*) happened.
  * @param arg: user argument
  */
-void worker_handle_control_cmd(struct tube* tube, ldns_buffer* buffer,
+void worker_handle_control_cmd(struct tube* tube, uint8_t* msg, size_t len,
 	int error, void* arg);
 
 /** handles callbacks from listening event interface */

@@ -1,3 +1,8 @@
+22 July 2008: Wouter
+	- moved pipe actions to util/tube.c. easier porting and shared code.
+	- check _raw() commpoint callbacks with fptr_wlist.
+	- iana port update.
+
 21 July 2008: Wouter
 	- #198: nicer entropy warning message. manpage OS hints.
 

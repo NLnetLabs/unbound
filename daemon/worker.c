@@ -191,15 +191,10 @@ worker_mem_report(struct worker* ATTR_UNUSED(worker),
 }
 
 void 
-worker_send_cmd(struct worker* worker, ldns_buffer* buffer,
-	enum worker_commands cmd)
+worker_send_cmd(struct worker* worker, enum worker_commands cmd)
 {
-	ldns_buffer_clear(buffer);
-	/* like DNS message, length data */
-	ldns_buffer_write_u16(buffer, sizeof(uint32_t));
-	ldns_buffer_write_u32(buffer, (uint32_t)cmd);
-	ldns_buffer_flip(buffer);
-	if(!tube_send_cmd(worker->cmd, buffer)) {
+	uint32_t c = (uint32_t)cmd;
+	if(!tube_write_msg(worker->cmd, (uint8_t*)&c, sizeof(c), 0)) {
 		log_err("worker send cmd %d failed", (int)cmd);
 	}
 }
@@ -320,22 +315,23 @@ worker_check_request(ldns_buffer* pkt, struct worker* worker)
 }
 
 void 
-worker_handle_control_cmd(struct tube* ATTR_UNUSED(tube), ldns_buffer* buffer,
-	int error, void* arg)
+worker_handle_control_cmd(struct tube* ATTR_UNUSED(tube), uint8_t* msg,
+	size_t len, int error, void* arg)
 {
 	struct worker* worker = (struct worker*)arg;
 	enum worker_commands cmd;
 	if(error != NETEVENT_NOERROR) {
+		free(msg);
 		if(error == NETEVENT_CLOSED)
 			comm_base_exit(worker->base);
 		else	log_info("control event: %d", error);
 		return;
 	}
-	if(ldns_buffer_limit(buffer) != sizeof(uint32_t)) {
-		fatal_exit("bad control msg length %d", 
-			(int)ldns_buffer_limit(buffer));
+	if(len != sizeof(uint32_t)) {
+		fatal_exit("bad control msg length %d", (int)len);
 	}
-	cmd = ldns_buffer_read_u32(buffer);
+	cmd = ldns_read_uint32(msg);
+	free(msg);
 	switch(cmd) {
 	case worker_cmd_quit:
 		verbose(VERB_ALGO, "got control cmd quit");
@@ -998,9 +994,8 @@ worker_init(struct worker* worker, struct config_file *cfg,
 	}
 	if(worker->thread_num != 0) {
 		/* start listening to commands */
-		if(!tube_listen_cmd(worker->cmd, worker->base,
-			cfg->msg_buffer_size, &worker_handle_control_cmd,
-			worker)) {
+		if(!tube_setup_bg_listen(worker->cmd, worker->base,
+			&worker_handle_control_cmd, worker)) {
 			log_err("could not create control compt.");
 			worker_delete(worker);
 			return 0;
@@ -1177,6 +1172,13 @@ int libworker_handle_service_reply(struct comm_point* ATTR_UNUSED(c),
 {
 	log_assert(0);
 	return 0;
+}
+
+void libworker_handle_control_cmd(struct tube* ATTR_UNUSED(tube),
+        uint8_t* ATTR_UNUSED(buffer), size_t ATTR_UNUSED(len),
+        int ATTR_UNUSED(error), void* ATTR_UNUSED(arg))
+{
+	log_assert(0);
 }
 
 int context_query_cmp(const void* ATTR_UNUSED(a), const void* ATTR_UNUSED(b))
