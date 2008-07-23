@@ -42,9 +42,13 @@
 #ifndef UTIL_TUBE_H
 #define UTIL_TUBE_H
 struct comm_reply;
+struct comm_point;
 struct comm_base;
 struct tube;
 struct tube_res_list;
+#ifdef USE_WINSOCK
+#include "util/locks.h"
+#endif
 
 /**
  * Callback from pipe listen function
@@ -57,6 +61,7 @@ typedef void tube_callback_t(struct tube*, uint8_t*, size_t, int, void*);
  * A pipe
  */
 struct tube {
+#ifndef USE_WINSOCK
 	/** pipe end to read from */
 	int sr;
 	/** pipe end to write on */
@@ -84,6 +89,22 @@ struct tube {
 	struct tube_res_list* res_list;
 	/** last in list */
 	struct tube_res_list* res_last;
+
+#else /* USE_WINSOCK */
+	/** listen callback */
+	tube_callback_t* listen_cb;
+	/** listen callback user arg */
+	void* listen_arg;
+	/** the windows sockets event (signaled if items in pipe) */
+	WSAEVENT event;
+
+	/** lock on the list of outstanding items */
+	lock_basic_t res_lock;
+	/** list of outstanding results on pipe */
+	struct tube_res_list* res_list;
+	/** last in list */
+	struct tube_res_list* res_last;
+#endif /* USE_WINSOCK */
 };
 
 /**
