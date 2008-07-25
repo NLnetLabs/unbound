@@ -823,7 +823,6 @@ AC_REPLACE_FUNCS(snprintf)
 AC_REPLACE_FUNCS(strlcpy)
 AC_REPLACE_FUNCS(memmove)
 AC_REPLACE_FUNCS(gmtime_r)
-AC_REPLACE_FUNCS(socketpair) dnl for mingw32
 
 # check this after all other compilation checks, since the linking of the lib
 # may break checks after this.
@@ -1024,9 +1023,6 @@ struct sockaddr_storage;
 #ifndef HAVE_SRANDOM
 #define srandom(x) srand(x) /* on win32, for tests only (bad random) */
 #endif /* HAVE_SRANDOM */
-#ifndef HAVE_SOCKETPAIR
-int socketpair(int d, int type, int protocol, int *sv);
-#endif
 
 /* detect if we need to cast to unsigned int for FD_SET to avoid warnings */
 #ifdef HAVE_WINSOCK2_H

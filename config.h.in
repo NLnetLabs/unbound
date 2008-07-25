@@ -148,9 +148,6 @@
 /* Define to 1 if you have the `snprintf' function. */
 #undef HAVE_SNPRINTF
 
-/* Define to 1 if you have the `socketpair' function. */
-#undef HAVE_SOCKETPAIR
-
 /* Using Solaris threads */
 #undef HAVE_SOLARIS_THREADS
 
@@ -552,9 +549,6 @@ struct sockaddr_storage;
 #ifndef HAVE_SRANDOM
 #define srandom(x) srand(x) /* on win32, for tests only (bad random) */
 #endif /* HAVE_SRANDOM */
-#ifndef HAVE_SOCKETPAIR
-int socketpair(int d, int type, int protocol, int *sv);
-#endif
 
 /* detect if we need to cast to unsigned int for FD_SET to avoid warnings */
 #ifdef HAVE_WINSOCK2_H
