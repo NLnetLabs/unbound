@@ -204,7 +204,7 @@ static int handle_select(struct event_base* base, struct timeval* wait)
 
 	/* prepare event array */
 	for(i=0; i<base->max; i++) {
-		if(base->items[i]->ev_fd == -1)
+		if(base->items[i]->ev_fd == -1 && !base->items[i]->is_signal)
 			continue; /* skip timer only events */
 		eventlist[numwait] = base->items[i];
 		waitfor[numwait++] = base->items[i]->hEvent;
@@ -247,6 +247,15 @@ static int handle_select(struct event_base* base, struct timeval* wait)
 	for(i=startidx; i<numwait; i++) {
 		short bits = 0;
 		/* eventlist[i] fired */
+		if(eventlist[i]->is_signal) {
+			/* not a network event at all */
+			fptr_ok(fptr_whitelist_event(
+                                eventlist[i]->ev_callback));
+                        (*eventlist[i]->ev_callback)(eventlist[i]->ev_fd,
+                                eventlist[i]->ev_events, 
+				eventlist[i]->ev_arg);
+			continue;
+		}
 		if(WSAEnumNetworkEvents(eventlist[i]->ev_fd, 
 			waitfor[i], /* reset the event handle */
 			/*NULL,*/ /* do not reset the event handle */
@@ -418,6 +427,7 @@ int event_add(struct event *ev, struct timeval *tv)
 	ev->idx = ev->ev_base->max++;
 	ev->ev_base->items[ev->idx] = ev;
 	ev->is_tcp = 0;
+	ev->is_signal = 0;
 
         if((ev->ev_events&(EV_READ|EV_WRITE)) && ev->ev_fd != -1) {
 		BOOL b=0;
@@ -560,6 +570,38 @@ void winsock_tcp_wouldblock(struct event* ev, int eventbits)
 		 * possibly run an empty handler loop to reset the base
 		 * tcp_stickies variable 
 		 */
+}
+
+int winsock_register_wsaevent(struct event_base* base, struct event* ev,
+	WSAEVENT wsaevent, void (*cb)(int, short, void*), void* arg)
+{
+	if(base->max == base->cap)
+		return 0;
+	memset(ev, 0, sizeof(*ev));
+	ev->ev_fd = -1;
+	ev->ev_events = EV_READ;
+	ev->ev_callback = cb;
+	ev->ev_arg = arg;
+	ev->is_signal = 1;
+	ev->hEvent = wsaevent;
+	ev->added = 1;
+	ev->ev_base = base;
+	ev->idx = ev->ev_base->max++;
+	ev->ev_base->items[ev->idx] = ev;
+	return 1;
+}
+
+void winsock_unregister_wsaevent(struct event* ev)
+{
+	if(!ev || !ev->added) return;
+	log_assert(ev->added && ev->ev_base->max > 0)
+	/* remove item and compact the list */
+	ev->ev_base->items[ev->idx] = ev->ev_base->items[ev->ev_base->max-1];
+	ev->ev_base->items[ev->ev_base->max-1] = NULL;
+	ev->ev_base->max--;
+	if(ev->idx < ev->ev_base->max)
+		ev->ev_base->items[ev->idx]->idx = ev->idx;
+	ev->added = 0;
 }
 
 #endif /* USE_WINSOCK */

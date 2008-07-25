@@ -45,8 +45,7 @@
 #include "util/netevent.h"
 #include "util/fptr_wlist.h"
 
-/*#ifndef USE_WINSOCK       TODO */
-#if 1
+#ifndef USE_WINSOCK
 /* on unix */
 
 struct tube* tube_create(void)
@@ -456,6 +455,11 @@ int tube_queue_item(struct tube* tube, uint8_t* msg, size_t len)
 	return 1;
 }
 
+void tube_handle_signal(int ATTR_UNUSED(fd), short ATTR_UNUSED(events), 
+	void* ATTR_UNUSED(arg))
+{
+	log_assert(0);
+}
 
 #else /* USE_WINSOCK */
 /* on windows */
@@ -479,6 +483,7 @@ struct tube* tube_create(void)
 		log_err("WSACreateEvent: %s", wsa_strerror(WSAGetLastError()));
 	}
 	lock_basic_init(&tube->res_lock);
+	verbose(VERB_ALGO, "tube created");
 	return tube;
 }
 
@@ -492,15 +497,18 @@ void tube_delete(struct tube* tube)
 	if(!WSACloseEvent(tube->event))
 		log_err("WSACloseEvent: %s", wsa_strerror(WSAGetLastError()));
 	lock_basic_destroy(&tube->res_lock);
+	verbose(VERB_ALGO, "tube deleted");
 	free(tube);
 }
 
 void tube_close_read(struct tube* ATTR_UNUSED(tube))
 {
+	verbose(VERB_ALGO, "tube close_read");
 }
 
 void tube_close_write(struct tube* ATTR_UNUSED(tube))
 {
+	verbose(VERB_ALGO, "tube close_write");
 	/* wake up waiting reader with an empty queue */
 	if(!WSASetEvent(tube->event)) {
 		log_err("WSASetEvent: %s", wsa_strerror(WSAGetLastError()));
@@ -509,10 +517,13 @@ void tube_close_write(struct tube* ATTR_UNUSED(tube))
 
 void tube_remove_bg_listen(struct tube* tube)
 {
+	verbose(VERB_ALGO, "tube remove_bg_listen");
+	winsock_unregister_wsaevent(&tube->ev_listen);
 }
 
 void tube_remove_bg_write(struct tube* tube)
 {
+	verbose(VERB_ALGO, "tube remove_bg_write");
 	if(tube->res_list) {
 		struct tube_res_list* np, *p = tube->res_list;
 		tube->res_list = NULL;
@@ -529,16 +540,25 @@ void tube_remove_bg_write(struct tube* tube)
 int tube_write_msg(struct tube* tube, uint8_t* buf, uint32_t len, 
         int ATTR_UNUSED(nonblock))
 {
+	uint8_t* a;
+	verbose(VERB_ALGO, "tube write_msg len %d", (int)len);
+	a = (uint8_t*)memdup(buf, len);
+	if(!a) {
+		log_err("out of memory in tube_write_msg");
+		return 0;
+	}
 	/* always nonblocking, this pipe cannot get full */
-	return tube_queue_item(tube, buf, len);
+	return tube_queue_item(tube, a, len);
 }
 
 int tube_read_msg(struct tube* tube, uint8_t** buf, uint32_t* len, 
         int nonblock)
 {
 	struct tube_res_list* item = NULL;
+	verbose(VERB_ALGO, "tube read_msg %s", nonblock?"nonblock":"blocking");
 	*buf = NULL;
 	if(!tube_poll(tube)) {
+		verbose(VERB_ALGO, "tube read_msg nodata");
 		/* nothing ready right now, wait if we want to */
 		if(nonblock)
 			return -1; /* would block waiting for items */
@@ -552,9 +572,10 @@ int tube_read_msg(struct tube* tube, uint8_t** buf, uint32_t* len,
 		if(tube->res_last == item) {
 			/* the list is now empty */
 			tube->res_last = NULL;
-			if(!WSAResetEvent(&tube->event)) {
+			verbose(VERB_ALGO, "tube read_msg lastdata");
+			if(!WSAResetEvent(tube->event)) {
 				log_err("WSAResetEvent: %s", 
-					wsa_strerror(errno));
+					wsa_strerror(WSAGetLastError()));
 			}
 		}
 	}
@@ -564,6 +585,7 @@ int tube_read_msg(struct tube* tube, uint8_t** buf, uint32_t* len,
 	*buf = item->buf;
 	*len = item->len;
 	free(item);
+	verbose(VERB_ALGO, "tube read_msg len %d", (int)*len);
 	return 1;
 }
 
@@ -605,10 +627,11 @@ int tube_read_fd(struct tube* ATTR_UNUSED(tube))
 }
 
 int
-tube_handle_listen(struct comm_point* c, void* arg, int error,
-        struct comm_reply* ATTR_UNUSED(reply_info))
+tube_handle_listen(struct comm_point* ATTR_UNUSED(c), void* ATTR_UNUSED(arg), 
+	int ATTR_UNUSED(error), struct comm_reply* ATTR_UNUSED(reply_info))
 {
-	/* TODO */
+	log_assert(0);
+	return 0;
 }
 
 int
@@ -622,7 +645,10 @@ tube_handle_write(struct comm_point* ATTR_UNUSED(c), void* ATTR_UNUSED(arg),
 int tube_setup_bg_listen(struct tube* tube, struct comm_base* base,
         tube_callback_t* cb, void* arg)
 {
-	/* TODO register with event base */
+	tube->listen_cb = cb;
+	tube->listen_arg = arg;
+	return winsock_register_wsaevent(comm_base_internal(base), 
+		&tube->ev_listen, tube->event, &tube_handle_signal, tube);
 }
 
 int tube_setup_bg_write(struct tube* ATTR_UNUSED(tube), 
@@ -636,6 +662,7 @@ int tube_queue_item(struct tube* tube, uint8_t* msg, size_t len)
 {
 	struct tube_res_list* item = 
 		(struct tube_res_list*)malloc(sizeof(*item));
+	verbose(VERB_ALGO, "tube queue_item len %d", (int)len);
 	if(!item) {
 		free(msg);
 		log_err("out of memory for async answer");
@@ -656,6 +683,22 @@ int tube_queue_item(struct tube* tube, uint8_t* msg, size_t len)
 	}
 	lock_basic_unlock(&tube->res_lock);
 	return 1;
+}
+
+void tube_handle_signal(int ATTR_UNUSED(fd), short ATTR_UNUSED(events), 
+	void* arg)
+{
+	struct tube* tube = (struct tube*)arg;
+	uint8_t* buf;
+	uint32_t len;
+	verbose(VERB_ALGO, "tube handle_signal");
+	while(tube_poll(tube)) {
+		if(tube_read_msg(tube, &buf, &len, 1)) {
+			fptr_ok(fptr_whitelist_tube_listen(tube->listen_cb));
+			(*tube->listen_cb)(tube, buf, len, NETEVENT_NOERROR, 
+				tube->listen_arg);
+		}
+	}
 }
 
 #endif /* USE_WINSOCK */

@@ -167,7 +167,7 @@ struct event {
         struct timeval ev_timeout;
 
         /** callback to call: fd, eventbits, userarg */
-        void (*ev_callback)(int, short, void *arg);
+        void (*ev_callback)(int, short, void *);
         /** callback user arg */
         void *ev_arg;
 
@@ -183,6 +183,11 @@ struct event {
 	/** should remembered EV_ values be used for TCP streams. 
 	 * Reset after WOULDBLOCK is signaled using the function. */
 	int stick_events;
+
+	/** true if this event is a signaling WSAEvent by the user. 
+	 * User created and user closed WSAEvent. Only signaled/unsigneled,
+	 * no read/write/distinctions needed. */
+	int is_signal;
 };
 
 /** create event base */
@@ -230,6 +235,27 @@ int mini_ev_cmp(const void* a, const void* b);
  * Pass if EV_READ or EV_WRITE gave wouldblock.
  */
 void winsock_tcp_wouldblock(struct event* ev, int eventbit);
+
+/**
+ * Routine for windows only. where you pass a signal WSAEvent that
+ * you wait for. When the event is signaled, the callback gets called.
+ * The callback has to WSAResetEvent to disable the signal. 
+ * @param base: the event base.
+ * @param ev: the event structure for data storage
+ * 	can be passed uninitialised.
+ * @param wsaevent: the WSAEvent that gets signaled.
+ * @param cb: callback routine.
+ * @param arg: user argument to callback routine.
+ * @return false on error.
+ */
+int winsock_register_wsaevent(struct event_base* base, struct event* ev,
+	WSAEVENT wsaevent, void (*cb)(int, short, void*), void* arg);
+
+/**
+ * Unregister a wsaevent. User has to close the WSAEVENT itself.
+ * @param ev: event data storage.
+ */
+void winsock_unregister_wsaevent(struct event* ev);
 
 #endif /* USE_WINSOCK */
 #endif /* UTIL_WINSOCK_EVENT_H */

@@ -1116,4 +1116,10 @@ void comm_timer_delete(struct comm_timer* timer)
 	free(timer);
 }
 
+struct event_base* comm_base_internal(struct comm_base* ATTR_UNUSED(b))
+{
+	/* no pipe comm possible in testbound */
+	return NULL;
+}
+
 /*********** End of Dummy routines ***********/

@@ -1,5 +1,7 @@
 25 July 2008: Wouter
 	- added original copyright statement of OpenBSD arc4random code.
+	- created tube signaling solution on windows, as a pipe replacement.
+	  this makes background asynchronous resolution work on windows.
 
 22 July 2008: Wouter
 	- moved pipe actions to util/tube.c. easier porting and shared code.

@@ -48,6 +48,7 @@ struct tube;
 struct tube_res_list;
 #ifdef USE_WINSOCK
 #include "util/locks.h"
+#include "util/winsock_event.h"
 #endif
 
 /**
@@ -97,6 +98,8 @@ struct tube {
 	void* listen_arg;
 	/** the windows sockets event (signaled if items in pipe) */
 	WSAEVENT event;
+	/** winsock event storage when registered with event base */
+	struct event ev_listen;
 
 	/** lock on the list of outstanding items */
 	lock_basic_t res_lock;
@@ -263,5 +266,8 @@ int tube_handle_listen(struct comm_point* c, void* arg, int error,
 /** for fptr wlist, callback function */
 int tube_handle_write(struct comm_point* c, void* arg, int error, 
 	struct comm_reply* reply_info);
+
+/** for fptr wlist, winsock signal event callback function */
+void tube_handle_signal(int fd, short events, void* arg);
 
 #endif /* UTIL_TUBE_H */

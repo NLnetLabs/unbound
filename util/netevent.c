@@ -209,6 +209,11 @@ void comm_base_exit(struct comm_base* b)
 	}
 }
 
+struct event_base* comm_base_internal(struct comm_base* b)
+{
+	return b->eb->base;
+}
+
 /* send a UDP reply */
 int
 comm_point_send_udp_msg(struct comm_point *c, ldns_buffer* packet,
