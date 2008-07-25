@@ -52,6 +52,7 @@
 #include "util/module.h"
 #include <signal.h>
 #include <fcntl.h>
+#include <openssl/crypto.h>
 #ifdef HAVE_PWD_H
 #include <pwd.h>
 #endif
@@ -84,8 +85,9 @@ static void usage()
 	printf("-d	do not fork into the background.\n");
 	printf("-v	verbose (more times to increase verbosity)\n");
 	printf("Version %s\n", PACKAGE_VERSION);
-	printf("libevent %s, libldns %s\n", 
-		event_get_version(), ldns_version());
+	printf("libevent %s, libldns %s, %s\n", 
+		event_get_version(), ldns_version(), 
+		SSLeay_version(SSLEAY_VERSION));
 	printf("BSD licensed, see LICENSE in source package for details.\n");
 	printf("Report bugs to %s\n", PACKAGE_BUGREPORT);
 }

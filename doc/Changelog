@@ -4,6 +4,7 @@
 	  this makes background asynchronous resolution work on windows.
 	- removed very insecure socketpair compat code. It also did not
 	  work with event_waiting. Solved by pipe replacement.
+	- unbound -h prints openssl version number as well.
 
 22 July 2008: Wouter
 	- moved pipe actions to util/tube.c. easier porting and shared code.
