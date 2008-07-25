@@ -1,3 +1,6 @@
+25 July 2008: Wouter
+	- added original copyright statement of OpenBSD arc4random code.
+
 22 July 2008: Wouter
 	- moved pipe actions to util/tube.c. easier porting and shared code.
 	- check _raw() commpoint callbacks with fptr_wlist.
