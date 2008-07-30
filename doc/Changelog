@@ -1,3 +1,6 @@
+30 July 2008: Wouter
+	- fixup bug qtype DS for unsigned zone and signed parent validation.
+
 25 July 2008: Wouter
 	- added original copyright statement of OpenBSD arc4random code.
 	- created tube signaling solution on windows, as a pipe replacement.
