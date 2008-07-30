@@ -1,3 +1,6 @@
+30 July 2008: Wouter
+	- fixup DS qtype validation bug. (fix taken from trunk).
+
 21 July 2008: Wouter
 	- #198: nicer entropy warning message. manpage OS hints.
 

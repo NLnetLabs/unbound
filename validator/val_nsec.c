@@ -343,9 +343,14 @@ int nsec_proves_nodata(struct ub_packed_rrset_key* nsec,
 
 	/* If an NS set exists at this name, and NOT a SOA (so this is a 
 	 * zone cut, not a zone apex), then we should have gotten a 
-	 * referral (or we just got the wrong NSEC). */
-	if(nsec_has_type(nsec, LDNS_RR_TYPE_NS) && 
+	 * referral (or we just got the wrong NSEC).
+	 * The reverse of this check is used when qtype is DS, since that
+	 * must use the NSEC from above the zone cut. */
+	if(qinfo->qtype != LDNS_RR_TYPE_DS &&
+		nsec_has_type(nsec, LDNS_RR_TYPE_NS) &&
 		!nsec_has_type(nsec, LDNS_RR_TYPE_SOA)) {
+		return 0;
+	} else if(nsec_has_type(nsec, LDNS_RR_TYPE_SOA)) { /* for DS type */
 		return 0;
 	}
 
