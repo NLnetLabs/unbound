@@ -137,6 +137,12 @@ A larger number of permitted outgoing ports increases resilience against
 spoofing attempts. Make sure these ports are not needed by other daemons. 
 By default only ports above 1024 that have not been assigned by IANA are used.
 Give a port number or a range of the form "low-high", without spaces.
+.IP
+The \fBoutgoing\-port\-permit\fR and \fBoutgoing\-port\-avoid\fR statements 
+are processed in the line order of the config file, adding the permitted ports 
+and subtracting the avoided ports from the set of allowed ports.  The 
+processing starts with the non IANA allocated ports above 1024 in the set 
+of allowed ports.
 .TP
 .B outgoing\-port\-avoid: \fI<port number or range>
 Do not permit unbound to open this port or range of ports for use to send 
