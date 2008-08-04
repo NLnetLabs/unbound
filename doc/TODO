@@ -53,16 +53,15 @@ o DLV is considered.
 o EVP hardware crypto support.
 
 Features soon after 1.0.
-o EDNS fallback after timeout (firewall drops all edns traffic problem).
-o IPv6 reverse, IP4 reverse local-data shorthand for PTR records (?).
-  cumbersome to reverse notate by hand for the operator.
 o zone name appending for local-data. Perhaps read zonefiles. Perhaps it is
   too much authority feature creep.
-o option to disable cache snooping from the clients (the nonRD queries),
-  with allow, refused, drop choices.
+o on windows version, libunbound uses a NamedPipe, examine security status
+  make sure the OS makes it safe like on unix.
+o on windows version, implement that OS ancillary data capabilities for
+  interface-automatic. IPPKTINFO, IP6PKTINFO for WSARecvMsg, WSASendMsg.
 
 For 1.x; features that have been requested during the beta test.
-o command channel for couple of tasks. Like rndc.
+o command channel for couple of tasks. Like rndc. unbound-control
   o see delegation; what servers would be used to get data for a name.
   o force stats display; easier than parsing logfiles.
     stats display added over threads, displayed in rddtool easy format.
@@ -70,9 +69,11 @@ o command channel for couple of tasks. Like rndc.
     And the A, AAAA for its NSes.
   o add/del static preload data to change the domain redirections.
   o and maybe also start, stop, reload.
+o option to disable cache snooping from the clients (the nonRD queries),
+  with allow, refused, drop choices.
+o EDNS fallback after timeout (firewall drops all edns traffic problem).
+o IPv6 reverse, IP4 reverse local-data shorthand for PTR records (?).
+  cumbersome to reverse notate by hand for the operator.
+o DLV
+o look at dTLS, TLS ease of implementation.
 
-
-o on windows version, libunbound uses a NamedPipe, examine security status
-  make sure the OS makes it safe like on unix.
-o on windows version, implement that OS ancillary data capabilities for
-  interface-automatic. IPPKTINFO, IP6PKTINFO for WSARecvMsg, WSASendMsg.
