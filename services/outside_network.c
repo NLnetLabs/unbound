@@ -668,6 +668,23 @@ pending_delete(struct outside_network* outnet, struct pending* p)
 {
 	if(!p)
 		return;
+	if(outnet && outnet->udp_wait_first &&
+                (p->next_waiting || p == outnet->udp_wait_last) ) {
+                /* delete from waiting list, if it is in the waiting list */
+                struct pending* prev = NULL, *x = outnet->udp_wait_first;
+                while(x && x != p) {
+                        prev = x;
+                        x = x->next_waiting;
+                }
+                if(x) {
+                        log_assert(x == p);
+                        if(prev)
+                                prev->next_waiting = p->next_waiting;
+                        else    outnet->udp_wait_first = p->next_waiting;
+                        if(outnet->udp_wait_last == p)
+                                outnet->udp_wait_last = prev;
+                }
+        }
 	if(outnet) {
 		(void)rbtree_delete(outnet->pending, p->node.key);
 	}
@@ -1067,7 +1084,8 @@ serviced_delete(struct serviced_query* sq)
 		if(sq->status == serviced_query_UDP_EDNS ||
 			sq->status == serviced_query_UDP) {
 			struct pending* p = (struct pending*)sq->pending;
-			portcomm_loweruse(sq->outnet, p->pc);
+			if(p->pc)
+				portcomm_loweruse(sq->outnet, p->pc);
 			pending_delete(sq->outnet, p);
 			outnet_send_wait_udp(sq->outnet);
 		} else {
