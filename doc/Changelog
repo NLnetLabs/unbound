@@ -1,3 +1,6 @@
+5 August 2008: Wouter
+	- fixup DS test so apex nodata works again (from trunk).
+
 4 August 2008: Wouter
 	- Bug #201 fixup from trunk; fixes segfault on exit cleanup
 	- iana port nrs updated.
