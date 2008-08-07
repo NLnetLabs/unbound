@@ -73,11 +73,25 @@ MATCH opcode qtype qname
 ADJUST copy_id
 REPLY QR AA NOERROR
 SECTION QUESTION
-qqq.example.com. IN A
+xxx.example.com. IN A
 SECTION ANSWER
+xxx.example.com. IN CNAME yyy.example.com.
+yyy.example.com. IN A 10.20.30.40
 SECTION AUTHORITY
 example.com.	IN NS	ns.example.com.
+SECTION ADDITIONAL
+ns.example.com.		IN 	A	1.2.3.4
+ENTRY_END
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR AA NOERROR
+SECTION QUESTION
+yyy.example.com. IN A
+SECTION ANSWER
 yyy.example.com. IN A 10.20.30.42
+SECTION AUTHORITY
+example.com.	IN NS	ns.example.com.
 SECTION ADDITIONAL
 ns.example.com.		IN 	A	1.2.3.4
 ENTRY_END
@@ -102,52 +116,7 @@ www.example.com. IN A
 SECTION ANSWER
 www.example.com. IN CNAME xxx.example.com.
 xxx.example.com. IN CNAME yyy.example.com.
-yyy.example.com. IN A 10.20.30.40
-SECTION AUTHORITY
-example.com.	IN NS	ns.example.com.
-SECTION ADDITIONAL
-ns.example.com.		IN 	A	1.2.3.4
-ENTRY_END
-
-; This query creates and overwrites the cache
-STEP 20 QUERY
-ENTRY_BEGIN
-REPLY RD
-SECTION QUESTION
-qqq.example.com. IN A
-ENTRY_END
-
-STEP 21 CHECK_ANSWER
-ENTRY_BEGIN
-MATCH all
-REPLY QR RD RA NOERROR
-SECTION QUESTION
-qqq.example.com. IN A
-SECTION ANSWER
-SECTION AUTHORITY
-example.com.	IN NS	ns.example.com.
-yyy.example.com. IN A 10.20.30.42
-SECTION ADDITIONAL
-ns.example.com.		IN 	A	1.2.3.4
-ENTRY_END
-
-; get it again from cache.
-STEP 30 QUERY
-ENTRY_BEGIN
-REPLY RD
-SECTION QUESTION
-www.example.com. IN A
-ENTRY_END
-
-STEP 31 CHECK_ANSWER
-ENTRY_BEGIN
-MATCH all
-REPLY QR RD RA NOERROR
-SECTION QUESTION
-www.example.com. IN A
-SECTION ANSWER
-www.example.com. IN CNAME xxx.example.com.
-xxx.example.com. IN CNAME yyy.example.com.
+;;; did not trust the remainder of the CNAME chain!
 yyy.example.com. IN A 10.20.30.42
 SECTION AUTHORITY
 example.com.	IN NS	ns.example.com.

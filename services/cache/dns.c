@@ -465,6 +465,10 @@ synth_dname_msg(struct ub_packed_rrset_key* rrset, struct regional* region,
 	size_t newlen, dtarglen;
 	if(now > d->ttl)
 		return NULL;
+	/* only allow validated (with DNSSEC) DNAMEs used from cache 
+	 * for insecure DNAMEs, query again. */
+	if(d->security != sec_status_secure)
+		return NULL;
 	msg = gen_dns_msg(region, q, 2); /* DNAME + CNAME RRset */
 	if(!msg)
 		return NULL;

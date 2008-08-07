@@ -320,7 +320,7 @@ scrub_normalize(ldns_buffer* pkt, struct msg_parse* msg,
 {
 	uint8_t* sname = qinfo->qname;
 	size_t snamelen = qinfo->qname_len;
-	struct rrset_parse* rrset, *prev;
+	struct rrset_parse* rrset, *prev, *nsset=NULL;
 
 	if(FLAGS_GET_RCODE(msg->flags) != LDNS_RCODE_NOERROR &&
 		FLAGS_GET_RCODE(msg->flags) != LDNS_RCODE_NXDOMAIN)
@@ -416,7 +416,10 @@ scrub_normalize(ldns_buffer* pkt, struct msg_parse* msg,
 		}
 
 		/* Mark the additional names from relevant rrset as OK. */
-		mark_additional_rrset(pkt, msg, rrset);
+		/* only for RRsets that match the query name, other ones
+		 * will be removed by sanitize, so no additional for them */
+		if(dname_pkt_compare(pkt, qinfo->qname, rrset->dname) == 0)
+			mark_additional_rrset(pkt, msg, rrset);
 		
 		prev = rrset;
 		rrset = rrset->rrset_all_next;
@@ -424,6 +427,24 @@ scrub_normalize(ldns_buffer* pkt, struct msg_parse* msg,
 
 	/* Mark additional names from AUTHORITY */
 	while(rrset && rrset->section == LDNS_SECTION_AUTHORITY) {
+		if(rrset->type==LDNS_RR_TYPE_DNAME ||
+			rrset->type==LDNS_RR_TYPE_CNAME ||
+			rrset->type==LDNS_RR_TYPE_A ||
+			rrset->type==LDNS_RR_TYPE_AAAA) {
+			remove_rrset("normalize: removing irrelevant "
+				"RRset:", pkt, msg, prev, &rrset);
+			continue;
+		}
+		/* only one NS set allowed in authority section */
+		if(rrset->type==LDNS_RR_TYPE_NS) {
+			if(nsset == NULL) {
+				nsset = rrset;
+			} else {
+				remove_rrset("normalize: removing irrelevant "
+					"RRset:", pkt, msg, prev, &rrset);
+				continue;
+			}
+		}
 		mark_additional_rrset(pkt, msg, rrset);
 		prev = rrset;
 		rrset = rrset->rrset_all_next;
@@ -446,6 +467,13 @@ scrub_normalize(ldns_buffer* pkt, struct msg_parse* msg,
 					"RRset:", pkt, msg, prev, &rrset);
 				continue;
 			}
+		}
+		if(rrset->type==LDNS_RR_TYPE_DNAME || 
+			rrset->type==LDNS_RR_TYPE_CNAME ||
+			rrset->type==LDNS_RR_TYPE_NS) {
+			remove_rrset("normalize: removing irrelevant "
+				"RRset:", pkt, msg, prev, &rrset);
+			continue;
 		}
 		prev = rrset;
 		rrset = rrset->rrset_all_next;
@@ -498,17 +526,46 @@ store_rrset(ldns_buffer* pkt, struct msg_parse* msg, struct module_env* env,
  *
  * @param pkt: packet.
  * @param msg: msg to normalize.
+ * @param qinfo: the question originally asked.
  * @param zonename: name of server zone.
  * @param env: module environment with config and cache.
  * @return 0 on error.
  */
 static int
-scrub_sanitize(ldns_buffer* pkt, struct msg_parse* msg, uint8_t* zonename,
-	struct module_env* env)
+scrub_sanitize(ldns_buffer* pkt, struct msg_parse* msg, 
+	struct query_info* qinfo, uint8_t* zonename, struct module_env* env)
 {
 	struct rrset_parse* rrset, *prev;
 	prev = NULL;
 	rrset = msg->rrset_first;
+
+	/* the first DNAME is allowed to stay. It needs checking before
+	 * it can be used from the cache. After normalization, an initial 
+	 * DNAME will have a correctly synthesized CNAME after it. */
+	if(rrset && rrset->type == LDNS_RR_TYPE_DNAME && 
+		rrset->section == LDNS_SECTION_ANSWER &&
+		pkt_strict_sub(pkt, qinfo->qname, rrset->dname) &&
+		pkt_sub(pkt, rrset->dname, zonename)) {
+		prev = rrset; /* DNAME allowed to stay in answer section */
+		rrset = rrset->rrset_all_next;
+	}
+	
+	/* remove all records from the answer section that are 
+	 * not the same domain name as the query domain name.
+	 * The answer section should contain rrsets with the same name
+	 * as the question. For DNAMEs a CNAME has been synthesized.
+	 * Wildcards have the query name in answer section.
+	 * ANY queries get query name in answer section.
+	 * Remainders of CNAME chains are cut off and resolved by iterator. */
+	while(rrset && rrset->section == LDNS_SECTION_ANSWER) {
+		if(dname_pkt_compare(pkt, qinfo->qname, rrset->dname) != 0) {
+			remove_rrset("sanitize: removing extraneous answer "
+				"RRset:", pkt, msg, prev, &rrset);
+			continue;
+		}
+		prev = rrset;
+		rrset = rrset->rrset_all_next;
+	}
 
 	/* At this point, we brutally remove ALL rrsets that aren't 
 	 * children of the originating zone. The idea here is that, 
@@ -517,6 +574,8 @@ scrub_sanitize(ldns_buffer* pkt, struct msg_parse* msg, uint8_t* zonename,
 	 * be authoriative for any other zones, and of course, MAY 
 	 * NOT be authoritative for some subdomains of the originating 
 	 * zone. */
+	prev = NULL;
+	rrset = msg->rrset_first;
 	while(rrset) {
 		
 		/* skip DNAME records -- they will always be followed by a 
@@ -589,7 +648,7 @@ scrub_message(ldns_buffer* pkt, struct msg_parse* msg,
 	if(!scrub_normalize(pkt, msg, qinfo, region))
 		return 0;
 	/* delete all out-of-zone information */
-	if(!scrub_sanitize(pkt, msg, zonename, env))
+	if(!scrub_sanitize(pkt, msg, qinfo, zonename, env))
 		return 0;
 	return 1;
 }

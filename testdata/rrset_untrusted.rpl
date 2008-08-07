@@ -89,8 +89,6 @@ ENTRY_BEGIN
 	bla.example.com. IN A 10.20.30.140
 	SECTION AUTHORITY
 	SECTION ADDITIONAL
-	example.com. IN NS ns.eeeek.com.
-	example.com. IN NS ns2.eeeek.com.
 ENTRY_END
 
 
