@@ -1,6 +1,8 @@
 7 August 2008: Wouter
 	- Scrubber more strict. CNAME chains, DNAMEs from cache, other 
 	  irrelevant rrsets removed.
+	- 1.0.2 released from 1.0 support branch.
+	- fixup update-anchor.sh to work both in BSD shell and bash.
 
 5 August 2008: Wouter
 	- fixup DS test so apex nodata works again.

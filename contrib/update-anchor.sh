@@ -5,7 +5,7 @@
 # which validating lookup to use.
 ubhost=unbound-host
 
-function usage()
+usage ( )
 {
 	echo "usage: update-anchor [-b] <zone name> <trust anchor file>"
 	echo "    performs an update of trust anchor file"
@@ -39,7 +39,7 @@ if test $# -ne 2; then
 	usage
 fi
 
-function do_update() {
+do_update ( ) {
 	# arguments: <zonename> <keyfile>
 	zonename="$1"
 	keyfile="$2"
