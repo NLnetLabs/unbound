@@ -1,6 +1,7 @@
 6 August 2008: Wouter
 	- patch for scrubber that removes ends of CNAMEs, no more DNAMEs
 	  from cache. Remove more irrelevant rrsets from the message.
+	- 1.0.2 svn tag created.
 
 5 August 2008: Wouter
 	- fixup DS test so apex nodata works again (from trunk).
