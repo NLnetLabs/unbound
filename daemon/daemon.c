@@ -311,8 +311,7 @@ thread_start(void* arg)
 	ub_thread_blocksigs();
 #ifdef THREADS_DISABLED
 	/* close pipe ends used by main */
-	close(worker->cmd_send_fd);
-	worker->cmd_send_fd = -1;
+	tube_close_write(worker->cmd);
 	close_other_pipes(worker->daemon, worker->thread_num);
 #endif
 	if(!worker_init(worker, worker->daemon->cfg, worker->daemon->ports, 0))
