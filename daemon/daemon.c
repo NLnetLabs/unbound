@@ -337,8 +337,7 @@ daemon_start_others(struct daemon* daemon)
 			thread_start, daemon->workers[i]);
 #ifdef THREADS_DISABLED
 		/* close pipe end of child */
-		close(daemon->workers[i]->cmd_recv_fd);
-		daemon->workers[i]->cmd_recv_fd = -1;
+		tube_close_read(daemon->workers[i]->cmd);
 #endif /* no threads */
 	}
 }
