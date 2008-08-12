@@ -30,6 +30,25 @@ K.ROOT-SERVERS.NET.	IN	A	193.0.14.129
 ENTRY_END
 
 ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR NOERROR
+SECTION QUESTION
+a.gtld-servers.net.     IN      A
+SECTION ANSWER
+a.gtld-servers.net.     IN      A       192.5.6.30
+ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR NOERROR
+SECTION QUESTION
+a.gtld-servers.net.     IN      AAAA
+SECTION ANSWER
+ENTRY_END
+
+ENTRY_BEGIN
 MATCH opcode qname
 ADJUST copy_id copy_query
 REPLY QR NOERROR
@@ -82,6 +101,30 @@ RANGE_END
 RANGE_BEGIN 0 100
 	ADDRESS 192.5.6.30
 ENTRY_BEGIN
+MATCH opcode qname qtype
+ADJUST copy_id copy_query
+REPLY QR NOERROR
+SECTION QUESTION
+com. IN NS
+SECTION ANSWER
+com.	IN NS	a.gtld-servers.net.
+SECTION ADDITIONAL
+a.gtld-servers.net.	IN 	A	192.5.6.30
+ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode qname qtype
+ADJUST copy_id copy_query
+REPLY QR NOERROR
+SECTION QUESTION
+net. IN NS
+SECTION ANSWER
+net.	IN NS	a.gtld-servers.net.
+SECTION ADDITIONAL
+a.gtld-servers.net.	IN 	A	192.5.6.30
+ENTRY_END
+
+ENTRY_BEGIN
 MATCH opcode qname
 ADJUST copy_id copy_query
 REPLY QR NOERROR
@@ -133,6 +176,19 @@ RANGE_END
 ; ns.example.com.
 RANGE_BEGIN 0 100
 	ADDRESS 1.2.3.4
+ENTRY_BEGIN
+MATCH opcode qname qtype
+ADJUST copy_id copy_query
+REPLY QR NOERROR
+SECTION QUESTION
+example.com. IN NS
+SECTION ANSWER
+example.com.	IN NS	ns.example.com.
+example.com.    3600    IN      RRSIG   NS 3 2 3600 20070926134150 20070829134150 2854 example.com. MC0CFQCN+qHdJxoI/2tNKwsb08pra/G7aAIUAWA5sDdJTbrXA1/3OaesGBAO3sI= ;{id = 2854}
+SECTION ADDITIONAL
+ns.example.com.		IN 	A	1.2.3.4
+ns.example.com. 3600    IN      RRSIG   A 3 3 3600 20070926135752 20070829135752 2854 example.com. MC0CFQCMSWxVehgOQLoYclB9PIAbNP229AIUeH0vNNGJhjnZiqgIOKvs1EhzqAo= ;{id = 2854}
+ENTRY_END
 
 ; response to DNSKEY priming query
 ENTRY_BEGIN
@@ -170,6 +226,19 @@ RANGE_END
 ; ns.example.net.
 RANGE_BEGIN 0 100
 	ADDRESS 1.2.3.5
+ENTRY_BEGIN
+MATCH opcode qname qtype
+ADJUST copy_id copy_query
+REPLY QR NOERROR
+SECTION QUESTION
+example.net. IN NS
+SECTION ANSWER
+example.net.	IN NS	ns.example.net.
+example.net.    3600    IN      RRSIG   NS RSASHA1 2 3600 20070926134150 20070829134150 30899 example.net. E8JX0l4B+cSR5bkHQwOJy1pBmlLMTYCJ8EwfNMU/eCv0YhKwo26rHhn52FGisgv+Nwp7/NbhHqQ+kJgoZC94XA== ;{id = 30899}
+SECTION ADDITIONAL
+ns.example.net.		IN 	A	1.2.3.5
+ns.example.net. 3600    IN      RRSIG   A RSASHA1 3 3600 20070926134150 20070829134150 30899 example.net. x+tQMC9FhzT7Fcy1pM5NrOC7E8nLd7THPI3C6ie4EwL8PrxllqlR3q/DKB0d/m0qCOPcgN6HFOYURV1s4uAcsw== ;{id = 30899}
+ENTRY_END
 
 ; response to DNSKEY priming query
 ENTRY_BEGIN

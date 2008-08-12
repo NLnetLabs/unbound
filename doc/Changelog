@@ -1,3 +1,19 @@
+12 August 2008: Wouter
+	- finished adjusting testset to provide qtype NS answers.
+
+11 August 2008: Wouter
+	- Fixup rrset security updates overwriting 2181 trust status.
+	  This makes validated to be insecure data just as worthless as
+	  nonvalidated data, and 2181 rules prevent cache overwrites to them.
+	- Fix assertion fail on bogus key handling.
+	- dnssec lameness detection works on first query at trust apex.
+	- NS queries get proper cache and dnssec lameness treatment.
+	- fixup compilation without pthreads on linux.
+
+8 August 2008: Wouter
+	- NS queries are done after every referral.
+	  validator is used on those NS records (if anchors enabled).
+
 7 August 2008: Wouter
 	- Scrubber more strict. CNAME chains, DNAMEs from cache, other 
 	  irrelevant rrsets removed.

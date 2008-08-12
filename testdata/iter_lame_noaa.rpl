@@ -66,6 +66,28 @@ MATCH qname qtype opcode
 SECTION QUESTION
 www.example.com. IN A
 ENTRY_END
+
+; answer the NS queries that have been generated
+STEP 62 CHECK_OUT_QUERY
+ENTRY_BEGIN
+MATCH qname qtype opcode
+SECTION QUESTION
+com. IN NS
+ENTRY_END
+
+STEP 63 REPLY
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR AA NOERROR
+SECTION QUESTION
+com. IN NS
+SECTION ANSWER
+com. IN NS a.gtld-servers.net.
+SECTION ADDITIONAL
+a.gtld-servers.net. IN A 192.5.6.30
+ENTRY_END
+
 STEP 70 REPLY
 ENTRY_BEGIN
 MATCH opcode qtype qname
@@ -89,6 +111,29 @@ MATCH qname qtype opcode
 SECTION QUESTION
 www.example.com. IN A
 ENTRY_END
+
+STEP 82 CHECK_OUT_QUERY
+ENTRY_BEGIN
+MATCH qname qtype opcode
+SECTION QUESTION
+example.com. IN NS
+ENTRY_END
+
+STEP 83 REPLY
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR AA NOERROR
+SECTION QUESTION
+example.com. IN NS
+SECTION ANSWER
+example.com. IN NS ns1.example.com.
+example.com. IN NS ns2.example.com.
+SECTION ADDITIONAL
+ns1.example.com. IN A 168.192.2.2
+ns2.example.com. IN A 168.192.3.3
+ENTRY_END
+
 STEP 90 REPLY
 ENTRY_BEGIN
 MATCH opcode qtype qname
@@ -113,6 +158,7 @@ MATCH qname qtype opcode
 SECTION QUESTION
 www.example.com. IN A
 ENTRY_END
+
 STEP 110 REPLY
 ENTRY_BEGIN
 MATCH opcode qtype qname
@@ -129,6 +175,7 @@ SECTION ADDITIONAL
 ns1.example.com. IN A 168.192.2.2
 ns2.example.com. IN A 168.192.3.3
 ENTRY_END
+
 
 ; is the final answer correct?
 STEP 200 CHECK_ANSWER

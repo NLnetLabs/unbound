@@ -427,13 +427,14 @@ handle_cname_response(struct module_qstate* qstate, struct iter_qstate* iq,
  *          request.
  * @param subq_ret: if newly allocated, the subquerystate, or NULL if it does
  * 	not need initialisation.
+ * @param v: if true, validation is done on the subquery.
  * @return false on error (malloc).
  */
 static int
 generate_sub_request(uint8_t* qname, size_t qnamelen, uint16_t qtype, 
 	uint16_t qclass, struct module_qstate* qstate, int id,
 	struct iter_qstate* iq, enum iter_state initial_state, 
-	enum iter_state final_state, struct module_qstate** subq_ret)
+	enum iter_state final_state, struct module_qstate** subq_ret, int v)
 {
 	struct module_qstate* subq = NULL;
 	struct iter_qstate* subiq = NULL;
@@ -453,7 +454,8 @@ generate_sub_request(uint8_t* qname, size_t qnamelen, uint16_t qtype,
 	 * the resolution chain, which might have a validator. We are 
 	 * uninterested in validating things not on the direct resolution 
 	 * path.  */
-	qflags |= BIT_CD;
+	if(!v)
+		qflags |= BIT_CD;
 
 	/* attach subquery, lookup existing or make a new one */
 	fptr_ok(fptr_whitelist_modenv_attach_sub(qstate->env->attach_sub));
@@ -521,7 +523,7 @@ prime_root(struct module_qstate* qstate, struct iter_qstate* iq,
 	 * the normal INIT state logic (which would cause an infloop). */
 	if(!generate_sub_request((uint8_t*)"\000", 1, LDNS_RR_TYPE_NS, 
 		qclass, qstate, id, iq, QUERYTARGETS_STATE, PRIME_RESP_STATE,
-		&subq)) {
+		&subq, 0)) {
 		log_err("out of memory priming root");
 		return 0;
 	}
@@ -532,6 +534,8 @@ prime_root(struct module_qstate* qstate, struct iter_qstate* iq,
 		subiq->dp = dp;
 		/* there should not be any target queries. */
 		subiq->num_target_queries = 0; 
+		subiq->dnssec_expected = iter_indicates_dnssec(
+			qstate->env, subiq->dp, NULL, subq->qinfo.qclass);
 	}
 	
 	/* this module stops, our submodule starts, and does the query. */
@@ -573,7 +577,7 @@ prime_stub(struct module_qstate* qstate, struct iter_qstate* iq,
 	 * redundant INIT state processing. */
 	if(!generate_sub_request(stub_dp->name, stub_dp->namelen, 
 		LDNS_RR_TYPE_NS, qclass, qstate, id, iq,
-		QUERYTARGETS_STATE, PRIME_RESP_STATE, &subq)) {
+		QUERYTARGETS_STATE, PRIME_RESP_STATE, &subq, 0)) {
 		log_err("out of memory priming stub");
 		(void)error_response(qstate, id, LDNS_RCODE_SERVFAIL);
 		return 1; /* return 1 to make module stop, with error */
@@ -598,11 +602,57 @@ prime_stub(struct module_qstate* qstate, struct iter_qstate* iq,
 		 * missing targets. */
 		subiq->num_target_queries = 0; 
 		subiq->wait_priming_stub = 1;
+		subiq->dnssec_expected = iter_indicates_dnssec(
+			qstate->env, subiq->dp, NULL, subq->qinfo.qclass);
 	}
 	
 	/* this module stops, our submodule starts, and does the query. */
 	qstate->ext_state[id] = module_wait_subquery;
 	return 1;
+}
+
+/**
+ * Generate a NS check request to obtain authoritative information
+ * on an NS rrset.
+ *
+ * @param qstate: the qtstate that triggered the need to prime.
+ * @param iq: iterator query state.
+ * @param id: module id.
+ * @param qclass: the class.
+ */
+static void
+generate_ns_check(struct module_qstate* qstate, struct iter_qstate* iq, 
+	int id, uint16_t qclass)
+{
+	struct module_qstate* subq;
+	log_assert(iq->dp);
+
+	/* avoid the redundant INIT state processing. */
+	if(!generate_sub_request(iq->dp->name, iq->dp->namelen, 
+		LDNS_RR_TYPE_NS, qclass, qstate, id, iq,
+		INIT_REQUEST_STATE, FINISHED_STATE, &subq, 1)) {
+		log_err("out of memory generating ns check");
+		return;
+	}
+	if(subq) {
+		struct iter_qstate* subiq = 
+			(struct iter_qstate*)subq->minfo[id];
+
+		/* Set the initial delegation point to mine. */
+		/* this means it queries the referral we just got */
+		/* make copy to avoid use of stub dp by different qs/threads */
+		subiq->dp = delegpt_copy(iq->dp, subq->region);
+		if(!subiq->dp) {
+			log_err("out of memory generating ns check, copydp");
+			fptr_ok(fptr_whitelist_modenv_kill_sub(
+				qstate->env->kill_sub));
+			(*qstate->env->kill_sub)(subq);
+			return;
+		}
+	}
+	
+	/* this module stops, our submodule starts, and does the query. */
+	qstate->ext_state[id] = module_wait_subquery;
 }
 
 /**
@@ -921,7 +971,7 @@ generate_target_query(struct module_qstate* qstate, struct iter_qstate* iq,
 {
 	struct module_qstate* subq;
 	if(!generate_sub_request(name, namelen, qtype, qclass, qstate, 
-		id, iq, INIT_REQUEST_STATE, FINISHED_STATE, &subq))
+		id, iq, INIT_REQUEST_STATE, FINISHED_STATE, &subq, 0))
 		return 0;
 	if(subq) {
 		struct iter_qstate* subiq = 
@@ -930,6 +980,9 @@ generate_target_query(struct module_qstate* qstate, struct iter_qstate* iq,
 			verbose(VERB_ALGO, "refetch of target glue");
 			subiq->refetch_glue = 1;
 			subiq->dp = delegpt_copy(iq->dp, subq->region);
+			subiq->dnssec_expected = iter_indicates_dnssec(
+				qstate->env, subiq->dp, NULL, 
+				subq->qinfo.qclass);
 		}
 	}
 	log_nametypeclass(VERB_QUERY, "new target", name, qtype, qclass);
@@ -1272,6 +1325,12 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		 * along, indicating dnssec is expected for next zone */
 		iq->dnssec_expected = iter_indicates_dnssec(qstate->env, 
 			iq->dp, iq->response, iq->qchase.qclass);
+
+		/* spawn off a NS query to auth servers for the NS we just
+		 * got in the referral. This gets authoritative answer
+		 * (answer section trust level) rrset.
+		 * right after, we detach subs, we don't want the answer */
+		generate_ns_check(qstate, iq, id, iq->qchase.qclass);
 
 		/* stop current outstanding queries. 
 		 * FIXME: should the outstanding queries be waited for and

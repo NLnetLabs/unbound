@@ -124,10 +124,15 @@ need_to_update_rrset(void* nd, void* cd, uint32_t timenow, int equal)
 {
 	struct packed_rrset_data* newd = (struct packed_rrset_data*)nd;
 	struct packed_rrset_data* cached = (struct packed_rrset_data*)cd;
-	/* 	o store if rrset has been validated */
-	if( newd->security > cached->security) {
+	/* 	o store if rrset has been validated 
+	 *  		everything better than bogus data 
+	 *  		secure is preferred */
+	if( newd->security == sec_status_secure &&
+		cached->security != sec_status_secure)
 		return 1;
-	}
+	if( cached->security == sec_status_bogus && 
+		newd->security != sec_status_bogus && !equal)
+		return 1;
         /*      o if current RRset is more trustworthy - insert it */
         if( newd->trust > cached->trust ) {
 		/* if the cached rrset is bogus, and this one equal,
@@ -329,7 +334,8 @@ rrset_update_sec_status(struct rrset_cache* r,
 	}
 	/* update the cached rrset */
 	if(updata->security > cachedata->security) {
-		cachedata->trust = updata->trust;
+		if(updata->trust > cachedata->trust)
+			cachedata->trust = updata->trust;
 		cachedata->security = updata->security;
 		cachedata->ttl = updata->ttl + now;
 	}
@@ -360,7 +366,8 @@ rrset_check_sec_status(struct rrset_cache* r,
 		updata->security = cachedata->security;
 		if(cachedata->security == sec_status_bogus)
 			updata->ttl = cachedata->ttl - now;
-		updata->trust = cachedata->trust;
+		if(cachedata->trust > updata->trust)
+			updata->trust = cachedata->trust;
 	}
 	lock_rw_unlock(&e->lock);
 }

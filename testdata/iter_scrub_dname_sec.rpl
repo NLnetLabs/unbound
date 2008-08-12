@@ -10,21 +10,8 @@ CONFIG_END
 
 SCENARIO_BEGIN Test scrub of secure DNAME in answer section
 
-STEP 10 QUERY
-ENTRY_BEGIN
-REPLY RD DO
-SECTION QUESTION
-x.y.example.com. IN A
-ENTRY_END
-
-; root prime is sent
-STEP 20 CHECK_OUT_QUERY
-ENTRY_BEGIN
-MATCH qname qtype opcode
-SECTION QUESTION
-. IN NS
-ENTRY_END
-STEP 30 REPLY
+RANGE_BEGIN 0 100
+; all adresses
 ENTRY_BEGIN
 MATCH opcode qtype qname
 ADJUST copy_id
@@ -37,54 +24,42 @@ SECTION ADDITIONAL
 K.ROOT-SERVERS.NET. IN A 193.0.14.129
 ENTRY_END
 
-; query sent to root server
-STEP 40 CHECK_OUT_QUERY
-ENTRY_BEGIN
-MATCH qname qtype opcode
-SECTION QUESTION
-x.y.example.com. IN A
-ENTRY_END
-STEP 50 REPLY
+; ENTRY_BEGIN
+; MATCH opcode qtype qname
+; ADJUST copy_id
+; REPLY QR NOERROR
+; SECTION QUESTION
+; x.y.example.com. IN A
+; SECTION AUTHORITY
+; com. IN NS a.gtld-servers.net.
+; SECTION ADDITIONAL
+; a.gtld-servers.net. IN A 192.5.6.30
+; ENTRY_END
+
 ENTRY_BEGIN
 MATCH opcode qtype qname
 ADJUST copy_id
 REPLY QR NOERROR
 SECTION QUESTION
-x.y.example.com. IN A
-SECTION AUTHORITY
+com. IN NS
+SECTION ANSWER
 com. IN NS a.gtld-servers.net.
 SECTION ADDITIONAL
 a.gtld-servers.net. IN A 192.5.6.30
 ENTRY_END
 
-; query sent to .com server
-STEP 60 CHECK_OUT_QUERY
-ENTRY_BEGIN
-MATCH qname qtype opcode
-SECTION QUESTION
-x.y.example.com. IN A
-ENTRY_END
-STEP 70 REPLY
-ENTRY_BEGIN
-MATCH opcode qtype qname
-ADJUST copy_id
-REPLY QR NOERROR
-SECTION QUESTION
-x.y.example.com. IN A
-SECTION AUTHORITY
-example.com. IN NS ns1.example.com.
-SECTION ADDITIONAL
-ns1.example.com. IN A 168.192.2.2
-ENTRY_END
+; ENTRY_BEGIN
+; MATCH opcode qtype qname
+; ADJUST copy_id
+; REPLY QR NOERROR
+; SECTION QUESTION
+; x.y.example.com. IN A
+; SECTION AUTHORITY
+; example.com. IN NS ns1.example.com.
+; SECTION ADDITIONAL
+; ns1.example.com. IN A 168.192.2.2
+; ENTRY_END
 
-; query sent to example.com. server
-STEP 80 CHECK_OUT_QUERY
-ENTRY_BEGIN
-MATCH qname qtype opcode
-SECTION QUESTION
-x.y.example.com. IN A
-ENTRY_END
-STEP 90 REPLY
 ENTRY_BEGIN
 MATCH opcode qtype qname
 ADJUST copy_id
@@ -104,13 +79,6 @@ ns1.example.com. IN A 168.192.2.2
 ns1.example.com.	3600	IN	RRSIG	A 3 3 3600 20070926134150 20070829134150 2854 example.com. AKcUlwrSz2xYKnQ7b7oMblRa0rKjfUNT900bIkGjLKLWDUGc8mKZE2M= ;{id = 2854}
 ENTRY_END
 
-STEP 100 CHECK_OUT_QUERY
-ENTRY_BEGIN
-MATCH qname qtype opcode
-SECTION QUESTION
-x.z.example.com. IN A
-ENTRY_END
-STEP 110 REPLY
 ENTRY_BEGIN
 MATCH opcode qtype qname
 ADJUST copy_id
@@ -128,14 +96,20 @@ ns1.example.com. IN A 168.192.2.2
 ns1.example.com.	3600	IN	RRSIG	A 3 3 3600 20070926134150 20070829134150 2854 example.com. ACYkeSRNcLVXeL+R9AM9e1GbxTwXNXpy1M5hcyuVkhkY2d5jGrkye7I= ;{id = 2854}
 ENTRY_END
 
-; DNSKEY prime
-STEP 115 CHECK_OUT_QUERY
 ENTRY_BEGIN
-MATCH qname qtype opcode
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR NOERROR
 SECTION QUESTION
-example.com. IN DNSKEY
+example.com. IN NS
+SECTION ANSWER
+example.com. IN NS ns1.example.com.
+example.com.	3600	IN	RRSIG	NS 3 2 3600 20070926134150 20070829134150 2854 example.com. ACHcJehLt4Hz+rAdxMPE96o7HJAEFohFXbxrKYlG+0WLfYAvH2nxU8k= ;{id = 2854}
+SECTION ADDITIONAL
+ns1.example.com. IN A 168.192.2.2
+ns1.example.com.	3600	IN	RRSIG	A 3 3 3600 20070926134150 20070829134150 2854 example.com. AInP69g8uR1n/aRg4gmGu8UoM+zZYgjOqbNN2IvOxw3bk/q+g05jKg0= ;{id = 2854}
 ENTRY_END
-STEP 116 REPLY
+
 ENTRY_BEGIN
 MATCH opcode qtype qname
 ADJUST copy_id
@@ -149,8 +123,18 @@ SECTION AUTHORITY
 SECTION ADDITIONAL
 ENTRY_END
 
+
+RANGE_END
+
+STEP 10 QUERY
+ENTRY_BEGIN
+REPLY RD DO
+SECTION QUESTION
+x.y.example.com. IN A
+ENTRY_END
+
 ; answer to first query (simply puts DNAME in cache)
-STEP 120 CHECK_ANSWER
+STEP 90 CHECK_ANSWER
 ENTRY_BEGIN
 MATCH all
 REPLY QR RD RA AD DO

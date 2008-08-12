@@ -45,6 +45,14 @@ RANGE_END
 ; ns1.example.
 RANGE_BEGIN 0 100
 	ADDRESS 192.0.2.1
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id copy_query
+REPLY QR REFUSED
+SECTION QUESTION
+example. IN NS
+SECTION ANSWER
+ENTRY_END
 
 ; response to DNSKEY priming query
 

@@ -4,7 +4,7 @@ stub-zone:
 	stub-addr: 193.0.14.129 	# K.ROOT-SERVERS.NET.
 CONFIG_END
 
-SCENARIO_BEGIN Fetch cnamed glue when missing or timed out.
+SCENARIO_BEGIN Test NS record spoof protection.
 
 ; K.ROOT-SERVERS.NET.
 RANGE_BEGIN 0 100
@@ -40,7 +40,19 @@ RANGE_BEGIN 0 100
 ENTRY_BEGIN
 MATCH opcode qtype qname
 ADJUST copy_id
-REPLY QR AA NOERROR
+REPLY QR NOERROR
+SECTION QUESTION
+www.example.com. IN A
+SECTION AUTHORITY
+example.com.	IN NS	ns.example.com.
+SECTION ADDITIONAL
+ns.example.com.		IN 	A	1.2.3.4
+ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR NOERROR
 SECTION QUESTION
 com. IN NS
 SECTION ANSWER
@@ -48,79 +60,11 @@ com.	IN NS	a.gtld-servers.net.
 SECTION ADDITIONAL
 a.gtld-servers.net.	IN 	A	192.5.6.30
 ENTRY_END
-
-ENTRY_BEGIN
-MATCH opcode qtype qname
-ADJUST copy_id
-REPLY QR NOERROR
-SECTION QUESTION
-www.example.com. IN A
-SECTION AUTHORITY
-example.com.	IN NS	ns.example.com.
-; is missing the glue!
-ENTRY_END
-
-ENTRY_BEGIN
-MATCH opcode qtype qname
-ADJUST copy_id
-REPLY QR NOERROR
-SECTION QUESTION
-example.com. IN NS
-SECTION AUTHORITY
-example.com.	IN NS	ns.example.com.
-; is missing the glue!
-ENTRY_END
-
-ENTRY_BEGIN
-MATCH opcode qtype qname
-ADJUST copy_id
-REPLY AA QR NOERROR
-SECTION QUESTION
-ns.example.com. 	IN 	A
-SECTION ANSWER
-ns.example.com.		IN	CNAME	ns2.example.com.
-SECTION AUTHORITY
-example.com.		IN 	NS	ns.example.com.
-ENTRY_END
-
-ENTRY_BEGIN
-MATCH opcode qtype qname
-ADJUST copy_id
-REPLY AA QR NOERROR
-SECTION QUESTION
-ns2.example.com. 	IN 	A
-SECTION ANSWER
-ns2.example.com.	IN 	A	1.2.3.4
-SECTION AUTHORITY
-example.com.		IN 	NS	ns.example.com.
-ENTRY_END
-
-ENTRY_BEGIN
-MATCH opcode qtype qname
-ADJUST copy_id
-REPLY QR NOERROR
-SECTION QUESTION
-ns.example.com. 	IN 	AAAA
-SECTION AUTHORITY
-example.com.		IN 	NS	ns.example.com.
-ENTRY_END
 RANGE_END
 
 ; ns.example.com.
 RANGE_BEGIN 0 100
 	ADDRESS 1.2.3.4
-ENTRY_BEGIN
-MATCH opcode qtype qname
-ADJUST copy_id
-REPLY QR NOERROR
-SECTION QUESTION
-example.com. IN NS
-SECTION ANSWER
-example.com.	IN NS	ns.example.com.
-SECTION ADDITIONAL
-ns.example.com.		IN 	A	1.2.3.4
-ENTRY_END
-
 ENTRY_BEGIN
 MATCH opcode qtype qname
 ADJUST copy_id
@@ -140,11 +84,59 @@ MATCH opcode qtype qname
 ADJUST copy_id
 REPLY QR NOERROR
 SECTION QUESTION
-ns.example.com. IN A
+mail.example.com. IN A
 SECTION ANSWER
-ns.example.com. IN A	1.2.3.4
+mail.example.com. IN A	10.20.30.50
 SECTION AUTHORITY
 example.com.	IN NS	ns.example.com.
+SECTION ADDITIONAL
+ns.example.com.		IN 	A	1.2.3.4
+ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR AA NOERROR
+SECTION QUESTION
+example.com. IN NS
+SECTION ANSWER
+example.com.	IN NS	ns.example.com.
+SECTION ADDITIONAL
+ns.example.com.		IN 	A	1.2.3.4
+ENTRY_END
+
+;; answer to the spoofed query ; spoofed reply answer.
+; here we put it in the nameserver for ease.
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR NOERROR
+SECTION QUESTION
+bad123.example.com. IN A
+SECTION ANSWER
+bad123.example.com. IN A	6.6.6.6
+SECTION AUTHORITY
+; evil NS set.
+example.com.	IN NS	bad123.example.com.
+ENTRY_END
+
+RANGE_END
+
+; evil server
+RANGE_BEGIN 0 100
+	ADDRESS 6.6.6.6
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR NOERROR
+SECTION QUESTION
+www.example.com. IN A
+SECTION ANSWER
+www.example.com. IN A	6.6.6.6
+SECTION AUTHORITY
+example.com.	IN NS	bad123.example.com.
+SECTION ADDITIONAL
+bad123.example.com. IN A	6.6.6.6
 ENTRY_END
 
 ENTRY_BEGIN
@@ -152,13 +144,27 @@ MATCH opcode qtype qname
 ADJUST copy_id
 REPLY QR NOERROR
 SECTION QUESTION
-ns.example.com. IN AAAA
+mail.example.com. IN A
+SECTION ANSWER
+mail.example.com. IN A	6.6.6.6
 SECTION AUTHORITY
-example.com.	IN NS	ns.example.com.
+example.com.	IN NS	bad123.example.com.
 SECTION ADDITIONAL
-ns.example.com. IN A	1.2.3.4
+bad123.example.com. IN A	6.6.6.6
 ENTRY_END
 
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR NOERROR
+SECTION QUESTION
+bad123.example.com. IN A
+SECTION ANSWER
+bad123.example.com. IN A	6.6.6.6
+SECTION AUTHORITY
+; evil NS set.
+example.com.	IN NS	bad123.example.com.
+ENTRY_END
 RANGE_END
 
 STEP 1 QUERY
@@ -183,36 +189,52 @@ SECTION ADDITIONAL
 ns.example.com.		IN 	A	1.2.3.4
 ENTRY_END
 
-; due to ordering of answer packets, this is still outstanding, remove it
-STEP 21 CHECK_OUT_QUERY
+; spoofed query
+STEP 20 QUERY
 ENTRY_BEGIN
-ADJUST copy_id
-MATCH qname qtype
-REPLY QR
+REPLY RD
 SECTION QUESTION
-ns.example.com IN AAAA
+bad123.example.com. IN A
 ENTRY_END
 
-; some more recursion needed.
-; to finish the NS query
+; recursion happens here.
+STEP 30 CHECK_ANSWER
+ENTRY_BEGIN
+; no matching here, just accept the answer to the spoofed query.
+; it is wrong, but only one query ...
+; this test is to check further on, that we still have the right nameserver.
+;MATCH all
+REPLY QR RD RA NOERROR
+SECTION QUESTION
+bad123.example.com. IN A
+SECTION ANSWER
+bad123.example.com. IN A	6.6.6.6
+SECTION AUTHORITY
+example.com.	IN NS	ns.example.com.
+SECTION ADDITIONAL
+ns.example.com.		IN 	A	1.2.3.4
+ENTRY_END
+
+; a new query 
 STEP 40 QUERY
 ENTRY_BEGIN
 REPLY RD
 SECTION QUESTION
-. IN NS
+mail.example.com. IN A
 ENTRY_END
 
-STEP 41 CHECK_ANSWER
+STEP 50 CHECK_ANSWER
 ENTRY_BEGIN
 MATCH all
 REPLY QR RD RA NOERROR
 SECTION QUESTION
-. IN NS
+mail.example.com. IN A
 SECTION ANSWER
-. IN NS	K.ROOT-SERVERS.NET.
+mail.example.com. IN A 	10.20.30.50
 SECTION AUTHORITY
+example.com.	IN NS	ns.example.com.
 SECTION ADDITIONAL
-K.ROOT-SERVERS.NET.	IN	A	193.0.14.129
+ns.example.com.		IN 	A	1.2.3.4
 ENTRY_END
 
 SCENARIO_END

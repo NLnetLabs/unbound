@@ -42,6 +42,18 @@ MATCH opcode qtype qname
 ADJUST copy_id
 REPLY QR NOERROR
 SECTION QUESTION
+com. IN NS
+SECTION ANSWER
+com.	IN NS	a.gtld-servers.net.
+SECTION ADDITIONAL
+a.gtld-servers.net.	IN 	A	192.5.6.30
+ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR NOERROR
+SECTION QUESTION
 www.example.com. IN A
 SECTION AUTHORITY
 example.com.	IN NS	ns.example.com.
@@ -68,6 +80,18 @@ RANGE_BEGIN 0 100
 ENTRY_BEGIN
 MATCH opcode qtype qname
 ADJUST copy_id
+REPLY QR NOERROR
+SECTION QUESTION
+example.com. IN NS
+SECTION ANSWER
+example.com.	IN NS	ns.example.com.
+SECTION ADDITIONAL
+ns.example.com.		IN 	A	1.2.3.4
+ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
 REPLY QR AA NOERROR
 SECTION QUESTION
 www.example.com. IN A
@@ -91,6 +115,18 @@ SECTION ANSWER
 SECTION AUTHORITY
 next.com. 	IN SOA next.com. next.com. 2007090400 28800 7200 604800 18000
 SECTION ADDITIONAL
+ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR NOERROR
+SECTION QUESTION
+next.com. IN NS
+SECTION ANSWER
+next.com.	IN NS	ns.next.com.
+SECTION ADDITIONAL
+ns.next.com.		IN 	A	1.2.3.5
 ENTRY_END
 RANGE_END
 

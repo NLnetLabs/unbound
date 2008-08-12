@@ -1204,6 +1204,11 @@ processInit(struct module_qstate* qstate, struct val_qstate* vq,
 		/* go to finished state to cache this result */
 		vq->state = VAL_FINISHED_STATE;
 		return 1;
+	} else if(key_entry_isbad(vq->key_entry)) {
+		/* key is bad, chain is bad, reply is bogus */
+		vq->chase_reply->security = sec_status_bogus;
+		vq->state = VAL_FINISHED_STATE;
+		return 1;
 	}
 
 	/* otherwise, we have our "closest" cached key -- continue 

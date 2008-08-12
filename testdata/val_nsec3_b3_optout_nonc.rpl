@@ -45,6 +45,14 @@ RANGE_END
 ; ns1.example.
 RANGE_BEGIN 0 100
 	ADDRESS 192.0.2.1
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id copy_query
+REPLY QR REFUSED
+SECTION QUESTION
+example. IN NS
+SECTION ANSWER
+ENTRY_END
 
 ; response to DNSKEY priming query
 
@@ -114,6 +122,20 @@ MATCH opcode qtype qname
 ADJUST copy_id
 REPLY QR AA NOERROR
 SECTION QUESTION
+c.example.       IN NS
+SECTION ANSWER
+c.example.	NS      ns1.c.example.
+c.example. 	NS      ns2.c.example.
+SECTION ADDITIONAL
+ns1.c.example. A       192.0.2.7
+ns2.c.example. A       192.0.2.8
+ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR AA NOERROR
+SECTION QUESTION
 mc.c.example.       IN MX
 SECTION ANSWER
 mc.c.example.       IN MX 50 mx.c.example.
@@ -129,6 +151,20 @@ RANGE_END
 ; ns2.c.example.
 RANGE_BEGIN 0 100
 	ADDRESS 192.0.2.8
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR AA NOERROR
+SECTION QUESTION
+c.example.       IN NS
+SECTION ANSWER
+c.example.	NS      ns1.c.example.
+c.example. 	NS      ns2.c.example.
+SECTION ADDITIONAL
+ns1.c.example. A       192.0.2.7
+ns2.c.example. A       192.0.2.8
+ENTRY_END
+
 ENTRY_BEGIN
 MATCH opcode qtype qname
 ADJUST copy_id
