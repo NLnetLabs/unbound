@@ -278,20 +278,18 @@ basedir(const char* fname, struct config_file* cfg)
 
 /** check chroot for a file string */
 static void
-check_chroot_string(const char* desc, char** str,
+check_chroot_string(const char* desc, char** ss,
 	const char* chrootdir, struct config_file* cfg)
 {
-	char* old;
-	char* s = *str;
-	if(s && s[0]) {
-		if(!is_file(fname_after_chroot(s, cfg, 1))) {
+	char* str = *ss;
+	if(str && str[0]) {
+		if(!is_file(fname_after_chroot(str, cfg, 1))) {
 			fatal_exit("%s: \"%s\" does not exist in chrootdir %s", 
-				desc, s, chrootdir);
+				desc, str, chrootdir);
 		}
-		old = s;
 		/* put in a new full path for continued checking */
-		*str = strdup(fname_after_chroot(s, cfg, 1));
-		free(old);
+		*ss = strdup(fname_after_chroot(str, cfg, 1));
+		free(str);
 	}
 }
 

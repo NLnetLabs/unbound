@@ -363,7 +363,10 @@ anchor_read_file(struct val_anchors* anchors, ldns_buffer* buffer,
 	ldns_rdf_deep_free(origin);
 	ldns_rdf_deep_free(prev);
 	fclose(in);
-	return ok?ta:NULL;
+	if(!ok) return NULL;
+	/* empty file is OK when multiple anchors are allowed */
+	if(!onlyone && !ta) return (struct trust_anchor*)1;
+	return ta;
 }
 
 /** skip file to end of line */
