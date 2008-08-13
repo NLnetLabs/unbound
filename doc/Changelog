@@ -1,3 +1,9 @@
+13 August 2008: Wouter
+	- bug #203: nicer do-auto log message when user sets incompatible
+	  options.
+	- bug #204: variable name ameliorated in log.c.
+	- bug #206: in iana_update, no egrep, but awk use.
+
 12 August 2008: Wouter
 	- finished adjusting testset to provide qtype NS answers.
 

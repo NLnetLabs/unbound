@@ -297,7 +297,7 @@ download_ldns:
 
 iana_update:
 	curl -o port-numbers.tmp http://www.iana.org/assignments/port-numbers
-	egrep -v "Unassigned|Reserved" port-numbers.tmp | awk '{ match($$0, "[0-9]+/udp"); if (RLENGTH > 0) print substr($$0, RSTART, RLENGTH - 4) ","}' | sort -nu > portslist.tmp
+	awk '/Unassigned|Reserved/ {next;} { match($$0, "[0-9]+/udp"); if (RLENGTH > 0) print substr($$0, RSTART, RLENGTH - 4) ","}' port-numbers.tmp | sort -nu > portslist.tmp
 	cat portslist.tmp > util/iana_ports.inc
 	rm -f port-numbers.tmp portslist.tmp
 

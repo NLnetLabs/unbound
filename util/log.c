@@ -67,7 +67,7 @@ static ub_thread_key_t logkey;
 static const char* ident="unbound";
 #ifdef HAVE_SYSLOG_H
 /** are we using syslog(3) to log to */
-static int log_to_syslog = 0;
+static int logging_to_syslog = 0;
 #endif /* HAVE_SYSLOG_H */
 /** time to print in log, if NULL, use time(2) */
 static uint32_t* log_now = NULL;
@@ -82,7 +82,7 @@ log_init(const char* filename, int use_syslog, const char* chrootdir)
 	}
 	if(logfile 
 #ifdef HAVE_SYSLOG_H
-	|| log_to_syslog
+	|| logging_to_syslog
 #endif
 	)
 	verbose(VERB_QUERY, "switching log to %s", 
@@ -90,13 +90,13 @@ log_init(const char* filename, int use_syslog, const char* chrootdir)
 	if(logfile && logfile != stderr)
 		fclose(logfile);
 #ifdef HAVE_SYSLOG_H
-	if(log_to_syslog) {
+	if(logging_to_syslog) {
 		closelog();
-		log_to_syslog = 0;
+		logging_to_syslog = 0;
 	}
 	if(use_syslog) {
 		openlog(ident, 0, LOG_DAEMON);
-		log_to_syslog = 1;
+		logging_to_syslog = 1;
 		return;
 	}
 #endif /* HAVE_SYSLOG_H */
@@ -147,7 +147,7 @@ log_vmsg(int pri, const char* type,
 	(void)pri;
 	vsnprintf(message, sizeof(message), format, args);
 #ifdef HAVE_SYSLOG_H
-	if(log_to_syslog) {
+	if(logging_to_syslog) {
 		syslog(pri, "[%d:%x] %s: %s", 
 			(int)getpid(), tid?*tid:0, type, message);
 		return;

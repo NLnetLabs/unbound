@@ -605,7 +605,7 @@ listening_ports_open(struct config_file* cfg)
 		return NULL;
 	}
 	if(do_auto && (!do_ip4 || !do_ip6)) {
-		log_warn("interface_automatic option does not work when IP4 or IP6 is not enabled. Disabling option.");
+		log_warn("interface_automatic option does not work when either do-ip4 or do-ip6 is not enabled. Disabling option.");
 		do_auto = 0;
 	}
 	/* create ip4 and ip6 ports so that return addresses are nice. */
