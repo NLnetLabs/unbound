@@ -801,8 +801,12 @@ anchors_apply_cfg(struct val_anchors* anchors, struct config_file* cfg)
 		}
 	}
 	if(cfg->dlv_anchor_file && cfg->dlv_anchor_file[0] != 0) {
+		nm = cfg->dlv_anchor_file;
+		if(cfg->chrootdir && cfg->chrootdir[0] && strncmp(nm,
+			cfg->chrootdir, strlen(cfg->chrootdir)) == 0)
+			nm += strlen(cfg->chrootdir);
 		if(!(anchors->dlv_anchor = anchor_read_file(anchors, parsebuf,
-			cfg->dlv_anchor_file, 1))) {
+			nm, 1))) {
 			log_err("error reading dlv-anchor-file: %s", 
 				cfg->dlv_anchor_file);
 			ldns_buffer_free(parsebuf);

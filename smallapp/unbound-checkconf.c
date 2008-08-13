@@ -276,24 +276,33 @@ basedir(const char* fname, struct config_file* cfg)
 	return d;
 }
 
+/** check chroot for a file string */
+static void
+check_chroot_string(const char* desc, char** str,
+	const char* chrootdir, struct config_file* cfg)
+{
+	char* old;
+	char* s = *str;
+	if(s && s[0]) {
+		if(!is_file(fname_after_chroot(s, cfg, 1))) {
+			fatal_exit("%s: \"%s\" does not exist in chrootdir %s", 
+				desc, s, chrootdir);
+		}
+		old = s;
+		/* put in a new full path for continued checking */
+		*str = strdup(fname_after_chroot(s, cfg, 1));
+		free(old);
+	}
+}
+
 /** check file list, every file must be inside the chroot location */
 static void
 check_chroot_filelist(const char* desc, struct config_strlist* list,
 	const char* chrootdir, struct config_file* cfg)
 {
 	struct config_strlist* p;
-	char* old;
 	for(p=list; p; p=p->next) {
-		if(p->str && p->str[0]) {
-			if(!is_file(fname_after_chroot(p->str, cfg, 1))) {
-				fatal_exit("%s: \"%s\" does not exist in chrootdir %s", 
-					desc, p->str, chrootdir);
-			}
-			old = p->str;
-			/* put in a new full path for continued checking */
-			p->str = strdup(fname_after_chroot(p->str, cfg, 1));
-			free(old);
-		}
+		check_chroot_string(desc, &p->str, chrootdir, cfg);
 	}
 }
 
@@ -360,6 +369,8 @@ morechecks(struct config_file* cfg, char* fname)
 		cfg->trust_anchor_file_list, cfg->chrootdir, cfg);
 	check_chroot_filelist("trusted-keys-file", 
 		cfg->trusted_keys_file_list, cfg->chrootdir, cfg);
+	check_chroot_string("dlv-anchor-file", &cfg->dlv_anchor_file, 
+		cfg->chrootdir, cfg);
 	/* remove chroot setting so that modules are not stripping pathnames*/
 	free(cfg->chrootdir);
 	cfg->chrootdir = NULL;
