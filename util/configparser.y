@@ -90,7 +90,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_LOCAL_ZONE VAR_LOCAL_DATA VAR_INTERFACE_AUTOMATIC
 %token VAR_STATISTICS_INTERVAL VAR_DO_DAEMONIZE VAR_USE_CAPS_FOR_ID
 %token VAR_STATISTICS_CUMULATIVE VAR_OUTGOING_PORT_PERMIT 
-%token VAR_OUTGOING_PORT_AVOID
+%token VAR_OUTGOING_PORT_AVOID VAR_DLV_ANCHOR_FILE
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -132,7 +132,8 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_local_zone | server_local_data | server_interface_automatic |
 	server_statistics_interval | server_do_daemonize | 
 	server_use_caps_for_id | server_statistics_cumulative |
-	server_outgoing_port_permit | server_outgoing_port_avoid
+	server_outgoing_port_permit | server_outgoing_port_avoid |
+	server_dlv_anchor_file
 	;
 stubstart: VAR_STUB_ZONE
 	{
@@ -397,6 +398,12 @@ server_root_hints: VAR_ROOT_HINTS STRING
 			yyerror("out of memory");
 	}
 	;
+server_dlv_anchor_file: VAR_DLV_ANCHOR_FILE STRING
+	{
+		OUTYY(("P(server_dlv_anchor_file:%s)\n", $2));
+		free(cfg_parser->cfg->dlv_anchor_file);
+		cfg_parser->cfg->dlv_anchor_file = $2;
+	}
 server_trust_anchor_file: VAR_TRUST_ANCHOR_FILE STRING
 	{
 		OUTYY(("P(server_trust_anchor_file:%s)\n", $2));

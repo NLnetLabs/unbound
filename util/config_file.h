@@ -178,6 +178,8 @@ struct config_file {
 	struct config_strlist* trust_anchor_list;
 	/** files with trusted DNSKEYs in named.conf format, list */
 	struct config_strlist* trusted_keys_file_list;
+	/** DLV anchor file */
+	char* dlv_anchor_file;
 
 	/** the number of seconds maximal TTL used for RRsets and messages */
 	int max_ttl;

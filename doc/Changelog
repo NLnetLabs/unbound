@@ -3,6 +3,8 @@
 	  options.
 	- bug #204: variable name ameliorated in log.c.
 	- bug #206: in iana_update, no egrep, but awk use.
+	- ldns snapshot r2699 taken (includes DLV type).
+	- DLV work, config file element, trust anchor read in.
 
 12 August 2008: Wouter
 	- finished adjusting testset to provide qtype NS answers.

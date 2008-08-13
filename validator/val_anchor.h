@@ -60,6 +60,8 @@ struct val_anchors {
 	 * contents of type trust_anchor.
 	 */
 	rbtree_t* tree;
+	/** The DLV trust anchor (if one is configured, else NULL) */
+	struct trust_anchor* dlv_anchor;
 };
 
 /**

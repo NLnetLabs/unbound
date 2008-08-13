@@ -247,6 +247,11 @@ server:
 	# separated by spaces. "iterator" or "validator iterator"
 	# module-config: "validator iterator"
 	
+	# File with DLV trusted keys. Same format as trust-anchor-file.
+	# There can be only one DLV configured, it is trusted from root down.
+	# Download https://secure.isc.org/ops/dlv/dlv.isc.org.key
+	# dlv-anchor-file: "dlv.isc.org.key"
+
 	# File with trusted keys for validation. Specify more than one file
 	# with several entries, one file per entry.
 	# Zone file format, with DS and DNSKEY entries.
@@ -263,7 +268,7 @@ server:
 	# but has a different file format. Format is BIND-9 style format, 
 	# the trusted-keys { name flag proto algo "key"; }; clauses are read.
 	# trusted-keys-file: ""
-
+	
 	# Override the date for validation with a specific fixed date.
 	# Do not set this unless you are debugging signature inception
 	# and expiration. "" or "0" turns the feature off. 
