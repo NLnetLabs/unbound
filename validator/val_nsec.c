@@ -45,6 +45,7 @@
 #include "validator/val_utils.h"
 #include "util/data/msgreply.h"
 #include "util/data/dname.h"
+#include "util/net_help.h"
 
 /** get ttl of rrset */
 static uint32_t 
@@ -476,6 +477,82 @@ val_nsec_proves_no_wc(struct ub_packed_rrset_key* nsec, uint8_t* qname,
 		if(val_nsec_proves_name_error(nsec, buf)) {
 			return 1;
 		}
+	}
+	return 0;
+}
+
+/**
+ * Closest NONEMPTY encloser.
+ * Thus, no empty nonterminals are returned.
+ * @param qname: query name
+ * @param nsec: nsec record.
+ * @return the name (part of qname).
+ */
+static uint8_t* 
+nsec_closest_nonempty(uint8_t* qname, struct ub_packed_rrset_key* nsec)
+{
+	uint8_t* next;
+	size_t nlen;
+	uint8_t* common1, *common2;
+	if(!nsec_get_next(nsec, &next, &nlen))
+		return NULL;
+	/* shortest common with owner or next name */
+	common1 = dname_get_shared_topdomain(qname, nsec->rk.dname);
+	common2 = dname_get_shared_topdomain(qname, next);
+	if(dname_count_labels(common1) < dname_count_labels(common2))
+		return common1;
+	return common2;
+}
+
+int val_nsec_check_dlv(struct query_info* qinfo,
+        struct reply_info* rep, uint8_t** nm, size_t* nm_len)
+{
+	uint8_t* next;
+	size_t i, nlen;
+	int c;
+	/* we should now have a NOERROR/NODATA or NXDOMAIN message */
+	if(rep->an_numrrsets != 0) {
+		return 0;
+	}
+	/* is this NOERROR ? */
+	if(FLAGS_GET_RCODE(rep->flags) == LDNS_RCODE_NOERROR) {
+		/* it can be a plain NSEC match - go up one more level. */
+		/* or its an empty nonterminal - go up to nonempty level */
+		for(i=0; i<rep->ns_numrrsets; i++) {
+			if(!nsec_get_next(rep->rrsets[i], &next, &nlen))
+				continue;
+			c = dname_canonical_compare(
+				rep->rrsets[i]->rk.dname, qinfo->qname);
+			if(c == 0) {
+				/* plain match */
+				dname_remove_label(nm, nm_len);
+				return 1;
+			} else if(c < 0 && 
+				dname_strict_subdomain_c(next, qinfo->qname)) {
+				/* ENT */
+				*nm = nsec_closest_nonempty(
+					*nm, rep->rrsets[i]);
+				if(!*nm) return 0;
+				return 1;
+			}
+		}
+		return 0;
+	}
+
+	/* is this NXDOMAIN ? */
+	if(FLAGS_GET_RCODE(rep->flags) == LDNS_RCODE_NXDOMAIN) {
+		/* find the qname denial NSEC record. It can tell us
+		 * a closest encloser name; or that we not need bother */
+		for(i=0; i<rep->ns_numrrsets; i++) {
+			if(val_nsec_proves_name_error(rep->rrsets[i], 
+				qinfo->qname)) {
+				*nm = nsec_closest_nonempty(
+					*nm, rep->rrsets[i]);
+				if(!*nm) return 0;
+				return 1;
+			}
+		}
+		return 0;
 	}
 	return 0;
 }

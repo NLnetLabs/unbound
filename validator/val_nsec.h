@@ -145,4 +145,17 @@ uint8_t* nsec_closest_encloser(uint8_t* qname,
 int val_nsec_proves_no_wc(struct ub_packed_rrset_key* nsec, uint8_t* qname, 
 	size_t qnamelen);
 
+/**
+ * Determine the DLV result, what to do with NSEC DLV reply.
+ * @param qinfo: what was queried for.
+ * @param rep: the nonpositive reply.
+ * @param nm: dlv lookup name, to adjust for new lookup name (if needed).
+ * @param nm_len: length of lookup name.
+ * @return 0 on error, 1 if a higher point is found.
+ * 	If the higher point is above the dlv repo anchor, the qname does 
+ * 	not exist.
+ */
+int val_nsec_check_dlv(struct query_info* qinfo,
+	struct reply_info* rep, uint8_t** nm, size_t* nm_len);
+
 #endif /* VALIDATOR_VAL_NSEC_H */
