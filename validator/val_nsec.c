@@ -482,26 +482,26 @@ val_nsec_proves_no_wc(struct ub_packed_rrset_key* nsec, uint8_t* qname,
 }
 
 /**
- * Closest NONEMPTY encloser.
- * Thus, no empty nonterminals are returned.
- * @param qname: query name
- * @param nsec: nsec record.
- * @return the name (part of qname).
+ * Find shared topdomain that exists
  */
-static uint8_t* 
-nsec_closest_nonempty(uint8_t* qname, struct ub_packed_rrset_key* nsec)
+static void
+dlv_topdomain(struct ub_packed_rrset_key* nsec, uint8_t* qname,
+	uint8_t** nm, size_t* nm_len)
 {
-	uint8_t* next;
-	size_t nlen;
-	uint8_t* common1, *common2;
-	if(!nsec_get_next(nsec, &next, &nlen))
-		return NULL;
-	/* shortest common with owner or next name */
-	common1 = dname_get_shared_topdomain(qname, nsec->rk.dname);
-	common2 = dname_get_shared_topdomain(qname, next);
-	if(dname_count_labels(common1) < dname_count_labels(common2))
-		return common1;
-	return common2;
+	/* make sure reply is part of nm */
+	/* take shared topdomain with left of NSEC. */
+
+	/* because, if empty nonterminal, then right is subdomain of qname.
+	 * and any shared topdomain would be empty nonterminals.
+	 * 
+	 * If nxdomain, then the right is bigger, and could have an 
+	 * interesting shared topdomain, but if it does have one, it is
+	 * an empty nonterminal. An empty nonterminal shared with the left
+	 * one. */
+	int n;
+	uint8_t* common = dname_get_shared_topdomain(qname, nsec->rk.dname);
+	n = dname_count_labels(*nm) - dname_count_labels(common);
+	dname_remove_labels(nm, nm_len, n);
 }
 
 int val_nsec_check_dlv(struct query_info* qinfo,
@@ -525,14 +525,16 @@ int val_nsec_check_dlv(struct query_info* qinfo,
 				rep->rrsets[i]->rk.dname, qinfo->qname);
 			if(c == 0) {
 				/* plain match */
+				if(nsec_has_type(rep->rrsets[i],
+					LDNS_RR_TYPE_DLV))
+					return 0;
 				dname_remove_label(nm, nm_len);
 				return 1;
 			} else if(c < 0 && 
 				dname_strict_subdomain_c(next, qinfo->qname)) {
 				/* ENT */
-				*nm = nsec_closest_nonempty(
-					*nm, rep->rrsets[i]);
-				if(!*nm) return 0;
+				dlv_topdomain(rep->rrsets[i], qinfo->qname,
+					nm, nm_len);
 				return 1;
 			}
 		}
@@ -546,9 +548,8 @@ int val_nsec_check_dlv(struct query_info* qinfo,
 		for(i=0; i<rep->ns_numrrsets; i++) {
 			if(val_nsec_proves_name_error(rep->rrsets[i], 
 				qinfo->qname)) {
-				*nm = nsec_closest_nonempty(
-					*nm, rep->rrsets[i]);
-				if(!*nm) return 0;
+				dlv_topdomain(rep->rrsets[i], qinfo->qname,
+					nm, nm_len);
 				return 1;
 			}
 		}

@@ -1129,13 +1129,6 @@ processInit(struct module_qstate* qstate, struct val_qstate* vq,
 	vq->ds_rrset = 0;
 	vq->trust_anchor = anchors_lookup(qstate->env->anchors, 
 		lookup_name, lookup_len, vq->qchase.qclass);
-	if(vq->trust_anchor == NULL) {
-		/*response isn't under a trust anchor, so we cannot validate.*/
-		vq->chase_reply->security = sec_status_indeterminate;
-		/* go to finished state to cache this result */
-		vq->state = VAL_FINISHED_STATE;
-		return 1;
-	}
 
 	/* Determine the signer/lookup name */
 	val_find_signer(subtype, &vq->qchase, vq->orig_msg->rep, 
@@ -1153,6 +1146,7 @@ processInit(struct module_qstate* qstate, struct val_qstate* vq,
 
 	/* for NXDOMAIN it could be signed by a parent of the trust anchor */
 	if(subtype == VAL_CLASS_NAMEERROR && vq->signer_name &&
+		vq->trust_anchor &&
 		dname_strict_subdomain_c(vq->trust_anchor->name, lookup_name)){
 		while(vq->trust_anchor && dname_strict_subdomain_c(
 			vq->trust_anchor->name, lookup_name)) {
@@ -1182,10 +1176,18 @@ processInit(struct module_qstate* qstate, struct val_qstate* vq,
 
 	vq->key_entry = key_cache_obtain(ve->kcache, lookup_name, lookup_len,
 		vq->qchase.qclass, qstate->region, *qstate->env->now);
-	
+
+	/* there is no key(from DLV) and no trust anchor */
+	if(vq->key_entry == NULL && vq->trust_anchor == NULL) {
+		/*response isn't under a trust anchor, so we cannot validate.*/
+		vq->chase_reply->security = sec_status_indeterminate;
+		/* go to finished state to cache this result */
+		vq->state = VAL_FINISHED_STATE;
+		return 1;
+	}
 	/* if not key, or if keyentry is *above* the trustanchor, i.e.
 	 * the keyentry is based on another (higher) trustanchor */
-	if(vq->key_entry == NULL || dname_strict_subdomain_c(
+	else if(vq->key_entry == NULL || dname_strict_subdomain_c(
 		vq->trust_anchor->name, vq->key_entry->name)) {
 		/* fire off a trust anchor priming query. */
 		verbose(VERB_DETAIL, "prime trust anchor");
@@ -1739,15 +1741,32 @@ processDLVLookup(struct module_qstate* qstate, struct val_qstate* vq,
 	else if(vq->dlv_status==dlv_there_is_no_dlv)
 		verbose(VERB_ALGO, "DLV woke up with status dlv_there_is_no_dlv");
 	else 	verbose(VERB_ALGO, "DLV woke up with status unknown");
-	log_nametypeclass(VERB_ALGO, "next look", vq->dlv_lookup_name,
-		LDNS_RR_TYPE_DLV, vq->qchase.qclass);
 
 	if(vq->dlv_status == dlv_error) {
 		verbose(VERB_QUERY, "failed DLV lookup");
 		return val_error(qstate, id);
 	} else if(vq->dlv_status == dlv_success) {
+		uint8_t* nm;
+		size_t nmlen;
 		/* chain continues with DNSKEY, continue in FINDKEY */
 		vq->state = VAL_FINDKEY_STATE;
+
+		/* strip off the DLV suffix from the name; could result in . */
+		log_assert(dname_subdomain_c(vq->ds_rrset->rk.dname,
+			qstate->env->anchors->dlv_anchor->name));
+		nmlen = vq->ds_rrset->rk.dname_len -
+			qstate->env->anchors->dlv_anchor->namelen + 1;
+		nm = regional_alloc_init(qstate->region, 
+			vq->ds_rrset->rk.dname, nmlen);
+		if(!nm) {
+			log_err("Out of memory in DLVLook");
+			return val_error(qstate, id);
+		}
+		nm[nmlen-1] = 0;
+
+		vq->ds_rrset->rk.dname = nm;
+		vq->ds_rrset->rk.dname_len = nmlen;
+
 		if(!generate_request(qstate, id, vq->ds_rrset->rk.dname, 
 			vq->ds_rrset->rk.dname_len, LDNS_RR_TYPE_DNSKEY, 
 			vq->qchase.qclass, BIT_CD)) {
@@ -1779,8 +1798,8 @@ processDLVLookup(struct module_qstate* qstate, struct val_qstate* vq,
 		return 1;
 	}
 
-	if(!generate_request(qstate, id, vq->dlv_lookup_name, 
-		vq->dlv_lookup_name_len, LDNS_RR_TYPE_DLV,
+	if(!generate_request(qstate, id, vq->dlv_lookup_name,
+		vq->dlv_lookup_name_len, LDNS_RR_TYPE_DLV, 
 		vq->qchase.qclass, 0)) {
 		return val_error(qstate, id);
 	}
