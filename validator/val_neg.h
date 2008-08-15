@@ -95,13 +95,13 @@ struct val_neg_data {
 	/** next in LRU (next element was less recently used) */
 	struct val_neg_data* next;
 
-	/* reference to NSEC rrset (parent side of a zone cut) */
+	/** reference to NSEC rrset (parent side of a zone cut) */
 	struct rrset_ref nsec_above;
-	/* reference to SOA record for zone of nsec_above */
+	/** reference to SOA record for zone of nsec_above */
 	struct rrset_ref soa_above;
-	/* reference to NSEC rrset (child side of a zone cut - or elsewhere) */
+	/** reference to NSEC rrset (child side of a zone cut - or elsewhere) */
 	struct rrset_ref nsec_below;
-	/* reference to SOA record for zone of nsec_below */
+	/** reference to SOA record for zone of nsec_below */
 	struct rrset_ref soa_below;
 
 	/** class of node; host order */
