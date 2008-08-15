@@ -61,6 +61,7 @@
 #include "validator/val_nsec3.h"
 #include "validator/val_sigcrypt.h"
 #include "validator/val_kentry.h"
+#include "validator/val_neg.h"
 #include "util/data/msgreply.h"
 #include "util/data/packed_rrset.h"
 #include "util/storage/slabhash.h"
@@ -165,6 +166,7 @@ fptr_whitelist_rbtree_cmp(int (*fptr) (const void *, const void *))
 	else if(fptr == &anchor_cmp) return 1;
 	else if(fptr == &canonical_tree_compare) return 1;
 	else if(fptr == &context_query_cmp) return 1;
+	else if(fptr == &val_neg_compare) return 1;
 	return 0;
 }
 
