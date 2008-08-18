@@ -62,7 +62,7 @@ struct val_neg_cache {
 	 * Because we use a rbtree for the data (quick lookup), we need
 	 * a big lock */
 	lock_basic_t lock;
-	/** The data rbtree for NSEC. contents of type val_neg_data */
+	/** The zone rbtree. contents of type val_neg_zone */
 	rbtree_t tree;
 	/** the first and last in linked list of LRU of val_neg_data */
 	struct val_neg_data* first;
@@ -72,6 +72,36 @@ struct val_neg_cache {
 	size_t use;
 	/** max memory to use (bytes) */
 	size_t max;
+};
+
+/**
+ * Per Zone aggressive negative caching data.
+ */
+struct val_neg_zone {
+	/** rbtree node element, key is this struct: the name */
+	rbnode_t node;
+	/** name; the key */
+	uint8_t* name;
+	/** length of name */
+	size_t len;
+	/** labels in name */
+	int labs;
+
+	/** pointer to parent zone in the negative cache */
+	struct val_neg_zone* parent;
+
+	/** type of zone ; NSEC */
+
+	/** hash of zonename, SOA type, class, for lookup of SOA rrset */
+	hashvalue_t soa_hash;
+
+	/** tree of NSEC data for this zone, sort by NSEC owner name */
+	rbtree_t tree;
+	/** the children that have NULL as a parent ptr */
+	struct val_neg_data* child_first, *child_last;
+
+	/** class of node; host order */
+	uint16_t dclass;
 };
 
 /**
@@ -89,23 +119,22 @@ struct val_neg_data {
 
 	/** pointer to parent node in the negative cache */
 	struct val_neg_data* parent;
+	/** linked list of items that have this one as parent, children */
+	struct val_neg_data* child_first, *child_last;
+	/** next and previous siblings in the list of childprent with the
+	 * same value for the parent pointer */
+	struct val_neg_data* sibling_next, *sibling_prev;
+
+	/** the zone that this denial is part of */
+	struct val_neg_zone* zone;
 
 	/** previous in LRU */
 	struct val_neg_data* prev;
 	/** next in LRU (next element was less recently used) */
 	struct val_neg_data* next;
 
-	/** reference to NSEC rrset (parent side of a zone cut) */
-	struct rrset_ref nsec_above;
-	/** reference to SOA record for zone of nsec_above */
-	struct rrset_ref soa_above;
-	/** reference to NSEC rrset (child side of a zone cut - or elsewhere) */
-	struct rrset_ref nsec_below;
-	/** reference to SOA record for zone of nsec_below */
-	struct rrset_ref soa_below;
-
-	/** class of node; host order */
-	uint16_t dclass;
+	/** hash of denial rrset: owner name, NSEC, class, for rrset lookup*/
+	hashvalue_t nsec_hash;
 };
 
 /**
@@ -138,7 +167,12 @@ void neg_cache_delete(struct val_neg_cache* neg);
 /** 
  * Comparison function for rbtree val neg data elements
  */
-int val_neg_compare(const void* a, const void* b);
+int val_neg_data_compare(const void* a, const void* b);
+
+/** 
+ * Comparison function for rbtree val neg zone elements
+ */
+int val_neg_zone_compare(const void* a, const void* b);
 
 /**
  * Insert NSECs from this message into the negative cache for reference.
