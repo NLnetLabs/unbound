@@ -235,6 +235,7 @@ verbose(enum verbosity_value level, const char* format, ...)
 	va_end(args);
 }
 
+/** log hex data */
 static void 
 log_hex_f(enum verbosity_value v, const char* msg, void* data, size_t length)
 {
