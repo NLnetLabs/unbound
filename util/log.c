@@ -235,8 +235,8 @@ verbose(enum verbosity_value level, const char* format, ...)
 	va_end(args);
 }
 
-void 
-log_hex(const char* msg, void* data, size_t length)
+static void 
+log_hex_f(enum verbosity_value v, const char* msg, void* data, size_t length)
 {
 	size_t i, j;
 	uint8_t* data8 = (uint8_t*)data;
@@ -246,7 +246,7 @@ log_hex(const char* msg, void* data, size_t length)
 	size_t len;
 
 	if(length == 0) {
-		log_info("%s[%u]", msg, (unsigned)length);
+		verbose(v, "%s[%u]", msg, (unsigned)length);
 		return;
 	}
 
@@ -259,16 +259,22 @@ log_hex(const char* msg, void* data, size_t length)
 			buf[j*2 + 1] = hexchar[ data8[i+j] & 0xF ];
 		}
 		buf[len*2] = 0;
-		log_info("%s[%u:%u] %.*s", msg, (unsigned)length, 
+		verbose(v, "%s[%u:%u] %.*s", msg, (unsigned)length, 
 			(unsigned)i, (int)len*2, buf);
 	}
+}
+
+void 
+log_hex(const char* msg, void* data, size_t length)
+{
+	log_hex_f(verbosity, msg, data, length);
 }
 
 void log_buf(enum verbosity_value level, const char* msg, ldns_buffer* buf)
 {
 	if(verbosity < level)
 		return;
-	log_hex(msg, ldns_buffer_begin(buf), ldns_buffer_limit(buf));
+	log_hex_f(level, msg, ldns_buffer_begin(buf), ldns_buffer_limit(buf));
 }
 
 #ifdef USE_WINSOCK

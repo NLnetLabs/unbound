@@ -1,3 +1,8 @@
+18 August 2008: Wouter
+	- changes info: in logfile to notice: info: or debug: depending on 
+	  the verbosity of the statements.  Better logfile message
+	  classification.
+
 15 August 2008: Wouter
 	- DLV nsec code fixed for better detection of closest existing 
 	  enclosers from NSEC responses.

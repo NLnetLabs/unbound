@@ -171,9 +171,9 @@ log_addr(enum verbosity_value v, const char* str,
 	dest[sizeof(dest)-1] = 0;
 	port = ntohs(((struct sockaddr_in*)addr)->sin_port);
 	if(verbosity >= 4)
-		log_info("%s %s %s port %d (len %d)", str, family, dest, 
+		verbose(v, "%s %s %s port %d (len %d)", str, family, dest, 
 			(int)port, (int)addrlen);
-	else	log_info("%s %s port %d", str, dest, (int)port);
+	else	verbose(v, "%s %s port %d", str, dest, (int)port);
 }
 
 int 
