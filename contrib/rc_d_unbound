@@ -15,9 +15,11 @@
 name="unbound"
 rcvar=`set_rcvar`
 
+load_rc_config $name
+
 command="/usr/local/sbin/unbound"
-pidfile="/usr/local/etc/unbound/unbound.pid"
+pidfile=${unbound_pidfile:-"/usr/local/etc/unbound/unbound.pid"}
+command_args=${unbound_flags:-"-c /usr/local/etc/unbound/unbound.conf"}
 extra_commands="reload"
 
-load_rc_config $name
 run_rc_command "$1"

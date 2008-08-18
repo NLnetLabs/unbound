@@ -2,6 +2,7 @@
 	- changes info: in logfile to notice: info: or debug: depending on 
 	  the verbosity of the statements.  Better logfile message
 	  classification.
+	- bug #208: extra rc.d unbound flexibility for freebsd/nanobsd.
 
 15 August 2008: Wouter
 	- DLV nsec code fixed for better detection of closest existing 
