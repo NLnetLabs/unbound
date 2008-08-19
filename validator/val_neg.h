@@ -90,6 +90,11 @@ struct val_neg_zone {
 	/** pointer to parent zone in the negative cache */
 	struct val_neg_zone* parent;
 
+	/** the number of elements, including this one and the ones whose
+	 * parents (-parents) include this one, that are in use 
+	 * No elements have a count of zero, those are removed. */
+	int count;
+
 	/** type of zone ; NSEC */
 
 	/** hash of zonename, SOA type, class, for lookup of SOA rrset */
@@ -97,11 +102,11 @@ struct val_neg_zone {
 
 	/** tree of NSEC data for this zone, sort by NSEC owner name */
 	rbtree_t tree;
-	/** the children that have NULL as a parent ptr */
-	struct val_neg_data* child_first, *child_last;
 
 	/** class of node; host order */
 	uint16_t dclass;
+	/** if this element is in use */
+	uint8_t in_use;
 };
 
 /**
@@ -119,11 +124,11 @@ struct val_neg_data {
 
 	/** pointer to parent node in the negative cache */
 	struct val_neg_data* parent;
-	/** linked list of items that have this one as parent, children */
-	struct val_neg_data* child_first, *child_last;
-	/** next and previous siblings in the list of childprent with the
-	 * same value for the parent pointer */
-	struct val_neg_data* sibling_next, *sibling_prev;
+
+	/** the number of elements, including this one and the ones whose
+	 * parents (-parents) include this one, that are in use 
+	 * No elements have a count of zero, those are removed. */
+	int count;
 
 	/** the zone that this denial is part of */
 	struct val_neg_zone* zone;
@@ -135,6 +140,9 @@ struct val_neg_data {
 
 	/** hash of denial rrset: owner name, NSEC, class, for rrset lookup*/
 	hashvalue_t nsec_hash;
+
+	/** if this element is in use */
+	uint8_t in_use;
 };
 
 /**
