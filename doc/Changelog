@@ -1,3 +1,6 @@
+20 August 2008: Wouter
+	- negative cache code, reviewed.
+
 18 August 2008: Wouter
 	- changes info: in logfile to notice: info: or debug: depending on 
 	  the verbosity of the statements.  Better logfile message

@@ -1,7 +1,7 @@
 /*
  * validator/val_neg.c - validator aggressive negative caching functions.
  *
- * Copyright (c) 2007, NLnet Labs. All rights reserved.
+ * Copyright (c) 2008, NLnet Labs. All rights reserved.
  *
  * This software is open source.
  * 
@@ -43,9 +43,12 @@
  */
 #include "config.h"
 #include "validator/val_neg.h"
+#include "validator/val_nsec.h"
 #include "util/data/dname.h"
+#include "util/data/msgreply.h"
 #include "util/log.h"
 #include "util/net_help.h"
+#include "services/cache/rrset.h"
 
 int val_neg_data_compare(const void* a, const void* b)
 {
@@ -128,6 +131,54 @@ void neg_cache_delete(struct val_neg_cache* neg)
 }
 
 /**
+ * Put data element at the front of the LRU list.
+ * @param neg: negative cache with LRU start and end.
+ * @param data: this data is fronted.
+ */
+static void neg_lru_front(struct val_neg_cache* neg, 
+	struct val_neg_data* data)
+{
+	data->prev = NULL;
+	data->next = neg->first;
+	if(!neg->first)
+		neg->last = data;
+	else	neg->first->prev = data;
+	neg->first = data;
+}
+
+/**
+ * Remove data element from LRU list.
+ * @param neg: negative cache with LRU start and end.
+ * @param data: this data is removed from the list.
+ */
+static void neg_lru_remove(struct val_neg_cache* neg, 
+	struct val_neg_data* data)
+{
+	if(data->prev)
+		data->prev->next = data->next;
+	else	neg->first = data->next;
+	if(data->next)
+		data->next->prev = data->prev;
+	else	neg->last = data->prev;
+}
+
+/**
+ * Touch LRU for data element, put it at the start of the LRU list.
+ * @param neg: negative cache with LRU start and end.
+ * @param data: this data is used.
+ */
+static void neg_lru_touch(struct val_neg_cache* neg, 
+	struct val_neg_data* data)
+{
+	if(data == neg->first)
+		return; /* nothing to do */
+	/* remove from current lru position */
+	neg_lru_remove(neg, data);
+	/* add at front */
+	neg_lru_front(neg, data);
+}
+
+/**
  * Delete a zone element from the negative cache.
  * May delete other zone elements to keep tree coherent, or
  * only mark the element as 'not in use'.
@@ -180,12 +231,7 @@ static void neg_delete_data(struct val_neg_cache* neg, struct val_neg_data* el)
 	el->in_use = 0;
 
 	/* remove it from the lru list */
-	if(el->prev)
-		el->prev->next = el->next;
-	else	neg->first = el->next;
-	if(el->next)
-		el->next->prev = el->prev;
-	else	neg->last = el->prev;
+	neg_lru_remove(neg, el);
 	
 	/* go up the tree and reduce counts */
 	p = el;
@@ -257,9 +303,7 @@ static struct val_neg_zone* neg_find_zone(struct val_neg_cache* neg,
 static size_t calc_data_need(struct reply_info* rep)
 {
 	uint8_t* d;
-	size_t len;
-	size_t res = 0;
-	size_t i;
+	size_t i, len, res = 0;
 
 	for(i=rep->an_numrrsets; i<rep->an_numrrsets+rep->ns_numrrsets; i++) {
 		if(ntohs(rep->rrsets[i]->rk.type) == LDNS_RR_TYPE_NSEC) {
@@ -303,9 +347,8 @@ static size_t calc_zone_need(struct ub_packed_rrset_key* soa)
  * @param qclass: class.
  * @return the zone or NULL if none found.
  */
-static struct val_neg_zone* neg_closest_zone_parent(
-	struct val_neg_cache* neg, uint8_t* nm, size_t nm_len, int labs,
-	uint16_t qclass)
+static struct val_neg_zone* neg_closest_zone_parent(struct val_neg_cache* neg,
+	uint8_t* nm, size_t nm_len, int labs, uint16_t qclass)
 {
 	struct val_neg_zone key;
 	struct val_neg_zone* result;
@@ -480,7 +523,6 @@ static struct val_neg_zone* neg_create_zone(struct val_neg_cache* neg,
 		return NULL;
 	}
 	zone->in_use = 1;
-	zone->soa_hash = soa->entry.hash;
 
 	/* insert the list of zones into the tree */
 	p = zone;
@@ -581,7 +623,6 @@ static struct val_neg_data* neg_data_chain(
 		if(!el) {
 			/* need to delete other allocations in this routine!*/
 			struct val_neg_data* p = first, *np;
-			p=first;
 			while(p) {
 				np = p->parent;
 				free(p);
@@ -618,7 +659,9 @@ static void wipeout(struct val_neg_cache* neg, struct val_neg_zone* zone,
 		entry.data;
 	uint8_t* end;
 	size_t end_len;
-	int end_labs;
+	int end_labs, m;
+	rbnode_t* walk, *next;
+	struct val_neg_data* cur;
 	/* get endpoint */
 	if(!d || d->count == 0 || d->rr_len[0] < 2+1)
 		return;
@@ -632,8 +675,47 @@ static void wipeout(struct val_neg_cache* neg, struct val_neg_zone* zone,
 		return;
 
 	/* detect end of zone NSEC ; wipe until the end of zone */
+	if(query_dname_compare(end, zone->name) == 0) {
+		end = NULL;
+	}
 
-	/* TODO */
+	walk = rbtree_next(&el->node);
+	while( walk ) {
+		cur = (struct val_neg_data*)walk;
+		/* sanity check: must be larger than start */
+		if(dname_canon_lab_cmp(el->name, el->labs, 
+			cur->name, cur->labs, &m) <= 0) {
+			/* r == 0 skip original record. */
+			/* r < 0  too small! */
+			walk = rbtree_next(walk);
+			continue;
+		}
+		/* stop at endpoint, also data at empty nonterminals must be
+		 * removed (no NSECs there) so everything between 
+		 * start and end */
+		if(end && dname_canon_lab_cmp(cur->name, cur->labs,
+			end, end_labs, &m) >= 0) {
+			break;
+		}
+		/* this element has to be deleted, but we cannot do it
+		 * now, because we are walking the tree still ... */
+		/* get the next element: */
+		next = rbtree_next(walk);
+		/* now delete the original element, this may trigger
+		 * rbtree rebalances, but really, the next element is
+		 * the one we need.
+		 * But it may trigger delete of other data and the
+		 * entire zone. However, if that happens, this is done
+		 * by deleting the *parents* of the element for deletion,
+		 * and maybe also the entire zone if it is empty. 
+		 * But parents are smaller in canonical compare, thus,
+		 * if a larger element exists, then it is not a parent,
+		 * it cannot get deleted, the zone cannot get empty.
+		 * If the next==NULL, then zone can be empty. */
+		if(cur->in_use)
+			neg_delete_data(neg, cur);
+		walk = next;
+	}
 }
 
 
@@ -663,7 +745,6 @@ static void neg_insert_data(struct val_neg_cache* neg,
 		/* perfect match already exists */
 		log_assert(parent->count > 0);
 		el = parent;
-		el->nsec_hash = nsec->entry.hash;
 	} else { 
 		struct val_neg_data* p, *np;
 
@@ -677,7 +758,6 @@ static void neg_insert_data(struct val_neg_cache* neg,
 			return;
 		}
 		el->in_use = 0; /* set on below */
-		el->nsec_hash = nsec->entry.hash;
 
 		/* insert the list of zones into the tree */
 		p = el;
@@ -703,13 +783,10 @@ static void neg_insert_data(struct val_neg_cache* neg,
 			p->count++;
 		}
 
-		/** INSERT data in LRU chain */
-		el->next = neg->first;
-		el->prev = NULL;
-		if(neg->first)
-			neg->first->prev = el;
-		else	neg->last = el;
-		neg->first = el;
+		neg_lru_front(neg, el);
+	} else {
+		/* in use, bring to front, lru */
+		neg_lru_touch(neg, el);
 	}
 
 	/* wipe out the cache items between NSEC start and end */
@@ -721,22 +798,21 @@ void val_neg_addreply(struct val_neg_cache* neg, struct reply_info* rep)
 	size_t i, need;
 	struct ub_packed_rrset_key* soa;
 	struct val_neg_zone* zone;
-	/* find the zone name in message */
+	/* see if secure nsecs inside */
 	if(!reply_has_nsec(rep))
 		return;
+	/* find the zone name in message */
 	soa = reply_find_soa(rep);
 	if(!soa)
 		return;
 
-	/* find or create the zone entry */
-	lock_basic_lock(&neg->lock);
-	zone = neg_find_zone(neg, soa);
-
 	/* ask for enough space to store all of it */
-	need = calc_data_need(rep);
-	need += calc_zone_need(soa);
+	need = calc_data_need(rep) + calc_zone_need(soa);
+	lock_basic_lock(&neg->lock);
 	neg_make_space(neg, need);
 
+	/* find or create the zone entry */
+	zone = neg_find_zone(neg, soa);
 	if(!zone) {
 		if(!(zone = neg_create_zone(neg, soa))) {
 			lock_basic_unlock(&neg->lock);
@@ -749,22 +825,124 @@ void val_neg_addreply(struct val_neg_cache* neg, struct reply_info* rep)
 	for(i=rep->an_numrrsets; i< rep->an_numrrsets+rep->ns_numrrsets; i++){
 		if(ntohs(rep->rrsets[i]->rk.type) != LDNS_RR_TYPE_NSEC)
 			continue;
+		if(!dname_subdomain_c(rep->rrsets[i]->rk.dname, 
+			zone->name)) continue;
 		/* insert NSEC into this zone's tree */
-		log_assert(dname_subdomain_c(rep->rrsets[i]->rk.dname, 
-			zone->name));
 		neg_insert_data(neg, zone, rep->rrsets[i]);
 	}
 	lock_basic_unlock(&neg->lock);
 }
 
-int val_neg_dlvlookup(struct val_neg_cache* neg, uint8_t* qname, size_t len,
-        uint16_t qclass)
+/**
+ * Lookup closest data record. For NSEC denial.
+ * @param zone: zone to look in
+ * @param qname: name to look for.
+ * @param len: length of name
+ * @param labs: labels in name
+ * @param data: data element, exact or smaller or NULL
+ * @return true if exact match.
+ */
+static int neg_closest_data(struct val_neg_zone* zone,
+	uint8_t* qname, size_t len, int labs, struct val_neg_data** data)
 {
+	struct val_neg_data key;
+	rbnode_t* r;
+	key.node.key = &key;
+	key.name = qname;
+	key.len = len;
+	key.labs = labs;
+	if(rbtree_find_less_equal(&zone->tree, &key, &r)) {
+		/* exact match */
+		*data = (struct val_neg_data*)r;
+		return 1;
+	} else {
+		/* smaller match */
+		*data = (struct val_neg_data*)r;
+		return 0;
+	}
+}
+
+int val_neg_dlvlookup(struct val_neg_cache* neg, uint8_t* qname, size_t len,
+        uint16_t qclass, struct rrset_cache* rrset_cache, uint32_t now)
+{
+	/* lookup closest zone */
+	struct val_neg_zone* zone;
+	struct val_neg_data* data;
+	int labs;
+	struct ub_packed_rrset_key* nsec;
+	struct packed_rrset_data* d;
+	uint32_t flags;
+	uint8_t* wc;
+	struct query_info qinfo;
+	if(!neg) return 0;
+	
+	labs = dname_count_labels(qname);
+	lock_basic_lock(&neg->lock);
+	zone = neg_closest_zone_parent(neg, qname, len, labs, qclass);
+	while(zone && !zone->in_use)
+		zone = zone->parent;
+	if(!zone) {
+		lock_basic_unlock(&neg->lock);
+		return 0;
+	}
+
 	/* lookup closest data record */
+	(void)neg_closest_data(zone, qname, len, labs, &data);
+	while(data && !data->in_use)
+		data = data->parent;
+	if(!data) {
+		lock_basic_unlock(&neg->lock);
+		return 0;
+	}
 
-	/* examine proof */
+	/* lookup rrset in rrset cache */
+	flags = 0;
+	if(query_dname_compare(data->name, zone->name) == 0)
+		flags = PACKED_RRSET_NSEC_AT_APEX;
+	nsec = rrset_cache_lookup(rrset_cache, data->name, data->len,
+		LDNS_RR_TYPE_NSEC, zone->dclass, flags, now, 0);
 
-	/* delete closest data record if expired */
+	/* check if secure and TTL ok */
+	if(!nsec) {
+		lock_basic_unlock(&neg->lock);
+		return 0;
+	}
+	d = (struct packed_rrset_data*)nsec->entry.data;
+	if(!d || d->ttl > now) {
+		lock_rw_unlock(&nsec->entry.lock);
+		/* delete data record if expired */
+		neg_delete_data(neg, data);
+		lock_basic_unlock(&neg->lock);
+		return 0;
+	}
+	if(d->security != sec_status_secure) {
+		lock_rw_unlock(&nsec->entry.lock);
+		neg_delete_data(neg, data);
+		lock_basic_unlock(&neg->lock);
+		return 0;
+	}
 
-	/* if OK touch the LRU for it */
+	/* check NSEC security */
+	/* check if NSEC proves no DLV type exists */
+	/* check if NSEC proves NXDOMAIN for qname */
+	qinfo.qname = qname;
+	qinfo.qtype = LDNS_RR_TYPE_DLV;
+	qinfo.qclass = qclass;
+	if(!nsec_proves_nodata(nsec, &qinfo, &wc) &&
+		!val_nsec_proves_name_error(nsec, qname)) {
+		/* the NSEC is not a denial for the DLV */
+		lock_rw_unlock(&nsec->entry.lock);
+		lock_basic_unlock(&neg->lock);
+		return 0;
+	}
+	/* so the NSEC was a NODATA proof, or NXDOMAIN proof. */
+
+	/* no need to check for wildcard NSEC; no wildcards in DLV repos */
+	/* no need to lookup SOA record for client; no response message */
+
+	lock_rw_unlock(&nsec->entry.lock);
+	/* if OK touch the LRU for neg_data element */
+	neg_lru_touch(neg, data);
+	lock_basic_unlock(&neg->lock);
+	return 0;
 }

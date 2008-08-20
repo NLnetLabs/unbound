@@ -1,7 +1,7 @@
 /*
  * validator/val_neg.h - validator aggressive negative caching functions.
  *
- * Copyright (c) 2007, NLnet Labs. All rights reserved.
+ * Copyright (c) 2008, NLnet Labs. All rights reserved.
  *
  * This software is open source.
  * 
@@ -46,25 +46,26 @@
 #define VALIDATOR_VAL_NEG_H
 #include "util/locks.h"
 #include "util/rbtree.h"
-#include "util/data/msgreply.h"
 struct val_neg_data;
 struct config_file;
 struct reply_info;
+struct rrset_cache;
 
 /**
- * The negative cache. It is shared between the threads, so locked. 
- * Kept as validator-module-state.  It refers back to the rrset cache for
+ * The negative cache.  It is shared between the threads, so locked. 
+ * Kept as validator-environ-state.  It refers back to the rrset cache for
  * data elements.  It can be out of date and contain conflicting data 
  * from zone content changes.  
+ * It contains a tree of zones, every zone has a tree of data elements.
+ * The data elements are part of one big LRU list, with one memory counter.
  */
 struct val_neg_cache {
-	/** the big lock on the negative cache
-	 * Because we use a rbtree for the data (quick lookup), we need
-	 * a big lock */
+	/** the big lock on the negative cache.  Because we use a rbtree 
+	 * for the data (quick lookup), we need a big lock */
 	lock_basic_t lock;
-	/** The zone rbtree. contents of type val_neg_zone */
+	/** The zone rbtree. contents sorted canonical, type val_neg_zone */
 	rbtree_t tree;
-	/** the first and last in linked list of LRU of val_neg_data */
+	/** the first in linked list of LRU of val_neg_data */
 	struct val_neg_data* first;
 	/** last in lru (least recently used element) */
 	struct val_neg_data* last;
@@ -78,7 +79,7 @@ struct val_neg_cache {
  * Per Zone aggressive negative caching data.
  */
 struct val_neg_zone {
-	/** rbtree node element, key is this struct: the name */
+	/** rbtree node element, key is this struct: the name, class */
 	rbnode_t node;
 	/** name; the key */
 	uint8_t* name;
@@ -91,26 +92,32 @@ struct val_neg_zone {
 	struct val_neg_zone* parent;
 
 	/** the number of elements, including this one and the ones whose
-	 * parents (-parents) include this one, that are in use 
+	 * parents (-parents) include this one, that are in_use 
 	 * No elements have a count of zero, those are removed. */
 	int count;
 
-	/** type of zone ; NSEC */
+	/* type of zone ; NSEC */
 
-	/** hash of zonename, SOA type, class, for lookup of SOA rrset */
-	hashvalue_t soa_hash;
-
-	/** tree of NSEC data for this zone, sort by NSEC owner name */
+	/** tree of NSEC data for this zone, sorted canonical 
+	 * by NSEC owner name */
 	rbtree_t tree;
 
 	/** class of node; host order */
 	uint16_t dclass;
-	/** if this element is in use */
+	/** if this element is in use, boolean */
 	uint8_t in_use;
 };
 
 /**
  * Data element for aggressive negative caching.
+ * The tree of these elements acts as an index onto the rrset cache.
+ * It shows the NSEC records that (may) exist and are (possibly) secure.
+ * The rbtree allows for logN search for a covering NSEC record.
+ * To make tree insertion and deletion logN too, all the parent (one label
+ * less than the name) data elements are also in the rbtree, with a usage
+ * count for every data element.
+ * There is no actual data stored in this data element, if it is in_use,
+ * then the data can (possibly) be found in the rrset cache.
  */
 struct val_neg_data {
 	/** rbtree node element, key is this struct: the name */
@@ -138,10 +145,7 @@ struct val_neg_data {
 	/** next in LRU (next element was less recently used) */
 	struct val_neg_data* next;
 
-	/** hash of denial rrset: owner name, NSEC, class, for rrset lookup*/
-	hashvalue_t nsec_hash;
-
-	/** if this element is in use */
+	/** if this element is in use, boolean */
 	uint8_t in_use;
 };
 
@@ -199,6 +203,8 @@ void val_neg_addreply(struct val_neg_cache* neg, struct reply_info* rep);
  * @param qname: name to look for
  * @param len: length of qname.
  * @param qclass: class to look in.
+ * @param rrset_cache: the rrset cache, for NSEC lookups.
+ * @param now: current time for ttl checks.
  * @return 
  *	0 on error
  *	0 if no proof of negative
@@ -206,6 +212,6 @@ void val_neg_addreply(struct val_neg_cache* neg, struct reply_info* rep);
  *	  thus, qname DLV qclass does not exist.
  */
 int val_neg_dlvlookup(struct val_neg_cache* neg, uint8_t* qname, size_t len,
-	uint16_t qclass);
+	uint16_t qclass, struct rrset_cache* rrset_cache, uint32_t now);
 
 #endif /* VALIDATOR_VAL_NEG_H */
