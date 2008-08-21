@@ -47,6 +47,7 @@
 #include "validator/val_utils.h"
 #include "validator/val_nsec.h"
 #include "validator/val_nsec3.h"
+#include "validator/val_neg.h"
 #include "services/cache/dns.h"
 #include "util/data/dname.h"
 #include "util/module.h"
@@ -120,6 +121,16 @@ val_apply_cfg(struct module_env* env, struct val_env* val_env,
 		log_err("validator: error in trustanchors config");
 		return 0;
 	}
+	if(!val_env->neg_cache)
+		val_env->neg_cache = val_neg_create();
+	if(!val_env->neg_cache) {
+		log_err("out of memory");
+		return 0;
+	}
+	if(!val_neg_apply_cfg(val_env->neg_cache, cfg)) {
+		log_err("validator: error in negative cache config");
+		return 0;
+	}
 	val_env->date_override = cfg->val_date_override;
 	c = cfg_count_numbers(cfg->val_nsec3_key_iterations);
 	if(c < 1 || (c&1)) {
@@ -164,6 +175,7 @@ val_deinit(struct module_env* env, int id)
 	anchors_delete(env->anchors);
 	env->anchors = NULL;
 	key_cache_delete(val_env->kcache);
+	neg_cache_delete(val_env->neg_cache);
 	free(val_env->nsec3_keysize);
 	free(val_env->nsec3_maxiter);
 	free(val_env);
@@ -1575,12 +1587,11 @@ val_dlv_init(struct module_qstate* qstate, struct val_qstate* vq,
 
 	/* If we can find the name in the aggressive negative cache,
 	 * give up; insecure is the answer */
-	/* lookup, several places in the tree may qualify 
-	 *    between insecure_at and the lookup_name
-	 * Check proof thoroughly
-	 * TODO
-	 * return 1;
-	 */
+	if(val_neg_dlvlookup(ve->neg_cache, vq->dlv_lookup_name,
+		vq->dlv_lookup_name_len, vq->qchase.qclass,
+		qstate->env->rrset_cache, *qstate->env->now)) {
+		return 1;
+	}
 
 	/* perform a lookup for the DLV; with validation */
 	vq->state = VAL_DLVLOOKUP_STATE;
@@ -1794,6 +1805,16 @@ processDLVLookup(struct module_qstate* qstate, struct val_qstate* vq,
 		/* already checked a chain lower than dlv_lookup_name */
 		verbose(VERB_ALGO, "ask above insecure endpoint");
 		log_nametypeclass(0, "enpt", vq->dlv_insecure_at, 0, 0);
+		vq->state = VAL_FINISHED_STATE;
+		return 1;
+	}
+
+	/* check negative cache before making new request */
+	if(val_neg_dlvlookup(ve->neg_cache, vq->dlv_lookup_name,
+		vq->dlv_lookup_name_len, vq->qchase.qclass,
+		qstate->env->rrset_cache, *qstate->env->now)) {
+		vq->dlv_status = dlv_there_is_no_dlv;
+		/* continue with the insecure result we got */
 		vq->state = VAL_FINISHED_STATE;
 		return 1;
 	}
@@ -2383,6 +2404,8 @@ process_dlv_response(struct module_qstate* qstate, struct val_qstate* vq,
 		vq->dlv_status = dlv_success;
 		return;
 	}
+	/* store NSECs into negative cache */
+	val_neg_addreply(ve->neg_cache, msg->rep);
 
 	/* was the lookup a failure? 
 	 *   if we have to go up into the DLV for a higher DLV anchor
@@ -2460,6 +2483,7 @@ val_get_mem(struct module_env* env, int id)
 	if(!ve)
 		return 0;
 	return sizeof(*ve) + key_cache_get_mem(ve->kcache) + 
+		val_neg_get_mem(ve->neg_cache) +
 		anchors_get_mem(env->anchors) + 
 		sizeof(size_t)*2*ve->nsec3_keyiter_count;
 }

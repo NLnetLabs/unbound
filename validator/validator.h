@@ -48,6 +48,7 @@
 struct val_anchors;
 struct key_cache;
 struct key_entry_key;
+struct val_neg_cache;
 
 /**
  * This is the TTL to use when a trust anchor fails to prime. A trust anchor
@@ -62,6 +63,9 @@ struct val_env {
 	/** key cache; these are validated keys. trusted keys only
 	 * end up here after being primed. */
 	struct key_cache* kcache;
+
+	/** aggressive negative cache. index into NSECs in rrset cache. */
+	struct val_neg_cache* neg_cache;
 
 	/** for debug testing a fixed validation date can be entered.
 	 * if 0, current time is used for rrsig validation */

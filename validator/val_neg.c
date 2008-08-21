@@ -464,7 +464,7 @@ static struct val_neg_zone* neg_zone_chain(
 	struct val_neg_zone* parent)
 {
 	int i;
-	int tolabs = parent?parent->labs:-1;
+	int tolabs = parent?parent->labs:0;
 	struct val_neg_zone* zone, *prev = NULL, *first = NULL;
 
 	/* create the new subtree, i is labelcount of current creation */
@@ -612,7 +612,7 @@ static struct val_neg_data* neg_data_chain(
 	uint8_t* nm, size_t nm_len, int labs, struct val_neg_data* parent)
 {
 	int i;
-	int tolabs = parent?parent->labs:-1;
+	int tolabs = parent?parent->labs:0;
 	struct val_neg_data* el, *first = NULL, *prev = NULL;
 
 	/* create the new subtree, i is labelcount of current creation */
@@ -680,11 +680,11 @@ static void wipeout(struct val_neg_cache* neg, struct val_neg_zone* zone,
 	}
 
 	walk = rbtree_next(&el->node);
-	while( walk ) {
+	while(walk && walk != RBTREE_NULL) {
 		cur = (struct val_neg_data*)walk;
 		/* sanity check: must be larger than start */
-		if(dname_canon_lab_cmp(el->name, el->labs, 
-			cur->name, cur->labs, &m) <= 0) {
+		if(dname_canon_lab_cmp(cur->name, cur->labs, 
+			el->name, el->labs, &m) <= 0) {
 			/* r == 0 skip original record. */
 			/* r < 0  too small! */
 			walk = rbtree_next(walk);
@@ -738,6 +738,8 @@ static void neg_insert_data(struct val_neg_cache* neg,
 	d = (struct packed_rrset_data*)nsec->entry.data;
 	if(d->security != sec_status_secure)
 		return;
+	log_nametypeclass(VERB_ALGO, "negcache rr", 
+		nsec->rk.dname, LDNS_RR_TYPE_NSEC, ntohs(nsec->rk.rrset_class));
 
 	/* find closest enclosing parent data that (still) exists */
 	parent = neg_closest_data_parent(zone, nm, nm_len, labs);
@@ -766,6 +768,7 @@ static void neg_insert_data(struct val_neg_cache* neg,
 			/* mem use */
 			neg->use += sizeof(struct val_neg_data) + p->len;
 			/* insert in tree */
+			p->zone = zone;
 			(void)rbtree_insert(&zone->tree, &p->node);
 			/* last one needs proper parent pointer */
 			if(np == NULL)
@@ -806,6 +809,9 @@ void val_neg_addreply(struct val_neg_cache* neg, struct reply_info* rep)
 	if(!soa)
 		return;
 
+	log_nametypeclass(VERB_ALGO, "negcache insert for zone",
+		soa->rk.dname, LDNS_RR_TYPE_SOA, ntohs(soa->rk.rrset_class));
+	
 	/* ask for enough space to store all of it */
 	need = calc_data_need(rep) + calc_zone_need(soa);
 	lock_basic_lock(&neg->lock);
@@ -875,6 +881,9 @@ int val_neg_dlvlookup(struct val_neg_cache* neg, uint8_t* qname, size_t len,
 	uint8_t* wc;
 	struct query_info qinfo;
 	if(!neg) return 0;
+
+	log_nametypeclass(VERB_ALGO, "negcache dlvlookup", qname, 
+		LDNS_RR_TYPE_DLV, qclass);
 	
 	labs = dname_count_labels(qname);
 	lock_basic_lock(&neg->lock);
@@ -885,6 +894,8 @@ int val_neg_dlvlookup(struct val_neg_cache* neg, uint8_t* qname, size_t len,
 		lock_basic_unlock(&neg->lock);
 		return 0;
 	}
+	log_nametypeclass(VERB_ALGO, "negcache zone", zone->name, 0, 
+		zone->dclass);
 
 	/* lookup closest data record */
 	(void)neg_closest_data(zone, qname, len, labs, &data);
@@ -894,6 +905,8 @@ int val_neg_dlvlookup(struct val_neg_cache* neg, uint8_t* qname, size_t len,
 		lock_basic_unlock(&neg->lock);
 		return 0;
 	}
+	log_nametypeclass(VERB_ALGO, "negcache rr", data->name, 
+		LDNS_RR_TYPE_NSEC, zone->dclass);
 
 	/* lookup rrset in rrset cache */
 	flags = 0;
@@ -908,7 +921,7 @@ int val_neg_dlvlookup(struct val_neg_cache* neg, uint8_t* qname, size_t len,
 		return 0;
 	}
 	d = (struct packed_rrset_data*)nsec->entry.data;
-	if(!d || d->ttl > now) {
+	if(!d || now > d->ttl) {
 		lock_rw_unlock(&nsec->entry.lock);
 		/* delete data record if expired */
 		neg_delete_data(neg, data);
@@ -921,6 +934,7 @@ int val_neg_dlvlookup(struct val_neg_cache* neg, uint8_t* qname, size_t len,
 		lock_basic_unlock(&neg->lock);
 		return 0;
 	}
+	verbose(VERB_ALGO, "negcache got secure rrset");
 
 	/* check NSEC security */
 	/* check if NSEC proves no DLV type exists */
@@ -933,6 +947,7 @@ int val_neg_dlvlookup(struct val_neg_cache* neg, uint8_t* qname, size_t len,
 		/* the NSEC is not a denial for the DLV */
 		lock_rw_unlock(&nsec->entry.lock);
 		lock_basic_unlock(&neg->lock);
+		verbose(VERB_ALGO, "negcache not proven");
 		return 0;
 	}
 	/* so the NSEC was a NODATA proof, or NXDOMAIN proof. */
@@ -944,5 +959,6 @@ int val_neg_dlvlookup(struct val_neg_cache* neg, uint8_t* qname, size_t len,
 	/* if OK touch the LRU for neg_data element */
 	neg_lru_touch(neg, data);
 	lock_basic_unlock(&neg->lock);
-	return 0;
+	verbose(VERB_ALGO, "negcache DLV denial proven");
+	return 1;
 }
