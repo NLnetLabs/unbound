@@ -1,6 +1,7 @@
 21 August 2008: Wouter
 	- negative cache code linked into validator, for DLV use.
 	  negative cache works for DLV.
+	- iana portlist update.
 
 20 August 2008: Wouter
 	- negative cache code, reviewed.
