@@ -277,25 +277,26 @@ anchor_store_new_rr(struct val_anchors* anchors, ldns_buffer* buffer,
 	return ta;
 }
 
-int
+struct trust_anchor*
 anchor_store_str(struct val_anchors* anchors, ldns_buffer* buffer,
 	const char* str)
 {
+	struct trust_anchor* ta;
 	ldns_rr* rr = NULL;
 	ldns_status status = ldns_rr_new_frm_str(&rr, str, 0, NULL, NULL);
 	if(status != LDNS_STATUS_OK) {
 		log_err("error parsing trust anchor: %s", 
 			ldns_get_errorstr_by_id(status));
 		ldns_rr_free(rr);
-		return 0;
+		return NULL;
 	}
-	if(!anchor_store_new_rr(anchors, buffer, rr)) {
+	if(!(ta=anchor_store_new_rr(anchors, buffer, rr))) {
 		log_err("out of memory");
 		ldns_rr_free(rr);
-		return 0;
+		return NULL;
 	}
 	ldns_rr_free(rr);
-	return 1;
+	return ta;
 }
 
 /**
@@ -812,6 +813,16 @@ anchors_apply_cfg(struct val_anchors* anchors, struct config_file* cfg)
 			nm, 1))) {
 			log_err("error reading dlv-anchor-file: %s", 
 				cfg->dlv_anchor_file);
+			ldns_buffer_free(parsebuf);
+			return 0;
+		}
+	}
+	for(f = cfg->dlv_anchor_list; f; f = f->next) {
+		if(!f->str || f->str[0] == 0) /* empty "" */
+			continue;
+		if(!(anchors->dlv_anchor = anchor_store_str(
+			anchors, parsebuf, f->str))) {
+			log_err("error in dlv-anchor: \"%s\"", f->str);
 			ldns_buffer_free(parsebuf);
 			return 0;
 		}

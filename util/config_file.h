@@ -180,6 +180,8 @@ struct config_file {
 	struct config_strlist* trusted_keys_file_list;
 	/** DLV anchor file */
 	char* dlv_anchor_file;
+	/** DLV anchor inline */
+	struct config_strlist* dlv_anchor_list;
 
 	/** the number of seconds maximal TTL used for RRsets and messages */
 	int max_ttl;

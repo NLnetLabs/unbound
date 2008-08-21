@@ -42,6 +42,7 @@
 	; if you leave it out, any opcode matches this entry.
 	; 'qtype' makes the query match the qtype from the reply
 	; 'qname' makes the query match the qname from the reply
+	; 'subdomain' makes the query match subdomains of qname from the reply
 	; 'serial=1023' makes the query match if ixfr serial is 1023. 
 	; 'all' has to match header byte for byte and all rrs in packet.
 	; 'ttl' used with all, rrs in packet must also have matching TTLs.
@@ -157,6 +158,8 @@ struct entry {
 	bool match_qtype;  
 	/** match qname with answer qname */
 	bool match_qname;  
+	/** match qname as subdomain of answer qname */
+	bool match_subdomain;  
 	/** match SOA serial number, from auth section */
 	bool match_serial; 
 	/** match all of the packet */

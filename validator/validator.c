@@ -1199,8 +1199,9 @@ processInit(struct module_qstate* qstate, struct val_qstate* vq,
 	}
 	/* if not key, or if keyentry is *above* the trustanchor, i.e.
 	 * the keyentry is based on another (higher) trustanchor */
-	else if(vq->key_entry == NULL || dname_strict_subdomain_c(
-		vq->trust_anchor->name, vq->key_entry->name)) {
+	else if(vq->key_entry == NULL || (vq->trust_anchor &&
+		dname_strict_subdomain_c(vq->trust_anchor->name, 
+		vq->key_entry->name))) {
 		/* fire off a trust anchor priming query. */
 		verbose(VERB_DETAIL, "prime trust anchor");
 		if(!prime_trust_anchor(qstate, vq, id, vq->trust_anchor))
@@ -1295,7 +1296,12 @@ processFindKey(struct module_qstate* qstate, struct val_qstate* vq, int id)
 	log_nametypeclass(VERB_ALGO, "target keyname", target_key_name,
 		LDNS_RR_TYPE_DNSKEY, LDNS_RR_CLASS_IN);
 	/* assert we are walking down the DNS tree */
-	log_assert(dname_subdomain_c(target_key_name, current_key_name));
+	if(!dname_subdomain_c(target_key_name, current_key_name)) {
+		verbose(VERB_ALGO, "bad signer name");
+		vq->chase_reply->security = sec_status_bogus;
+		vq->state = VAL_FINISHED_STATE;
+		return 1;
+	}
 	/* so this value is >= -1 */
 	strip_lab = dname_count_labels(target_key_name) - 
 		dname_count_labels(current_key_name) - 1;

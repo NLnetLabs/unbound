@@ -160,10 +160,10 @@ struct trust_anchor* anchor_find(struct val_anchors* anchors,
  * @param anchors: anchor storage.
  * @param buffer: parsing buffer, to generate the RR wireformat in.
  * @param str: string.
- * @return false on error.
+ * @return NULL on error.
  */
-int anchor_store_str(struct val_anchors* anchors, ldns_buffer* buffer,
-	const char* str);
+struct trust_anchor* anchor_store_str(struct val_anchors* anchors, 
+	ldns_buffer* buffer, const char* str);
 
 /**
  * Get memory in use by the trust anchor storage

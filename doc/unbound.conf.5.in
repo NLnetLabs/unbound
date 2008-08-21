@@ -418,6 +418,9 @@ DNSKEY entries can be used in the file, in the same format as for
 would be slow. The DLV configured is used as a root trusted DLV, this 
 means that it is a lookaside for the root. Default is "", or no dlv anchor file.
 .TP
+.B dlv\-anchor: \fI<"Resource Record">
+Much like trust\-anchor, this is a DLV anchor with the DS or DNSKEY inline.
+.TP
 .B val\-override\-date: \fI<rrsig\-style date spec>
 Default is "" or "0", which disables this debugging feature. If enabled by
 giving a RRSIG style date, that date is used for verifying RRSIG inception

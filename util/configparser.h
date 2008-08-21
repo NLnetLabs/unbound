@@ -118,7 +118,8 @@
      VAR_STATISTICS_CUMULATIVE = 334,
      VAR_OUTGOING_PORT_PERMIT = 335,
      VAR_OUTGOING_PORT_AVOID = 336,
-     VAR_DLV_ANCHOR_FILE = 337
+     VAR_DLV_ANCHOR_FILE = 337,
+     VAR_DLV_ANCHOR = 338
    };
 #endif
 /* Tokens.  */
@@ -202,6 +203,7 @@
 #define VAR_OUTGOING_PORT_PERMIT 335
 #define VAR_OUTGOING_PORT_AVOID 336
 #define VAR_DLV_ANCHOR_FILE 337
+#define VAR_DLV_ANCHOR 338
 
 
 
@@ -213,7 +215,7 @@ typedef union YYSTYPE
 	char*	str;
 }
 /* Line 1489 of yacc.c.  */
-#line 217 "util/configparser.h"
+#line 219 "util/configparser.h"
 	YYSTYPE;
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */
 # define YYSTYPE_IS_DECLARED 1

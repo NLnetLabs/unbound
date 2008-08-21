@@ -104,6 +104,8 @@ static void matchline(const char* line, struct entry* e)
 			e->match_qtype = true;
 		} else if(str_keyword(&parse, "qname")) {
 			e->match_qname = true;
+		} else if(str_keyword(&parse, "subdomain")) {
+			e->match_subdomain = true;
 		} else if(str_keyword(&parse, "all")) {
 			e->match_all = true;
 		} else if(str_keyword(&parse, "ttl")) {
@@ -227,6 +229,7 @@ static struct entry* new_entry()
 	e->match_opcode = false;
 	e->match_qtype = false;
 	e->match_qname = false;
+	e->match_subdomain = false;
 	e->match_all = false;
 	e->match_ttl = false;
 	e->match_do = false;
@@ -669,6 +672,14 @@ find_match(struct entry* entries, ldns_pkt* query_pkt,
 				ldns_dname_compare(
 				get_owner(query_pkt), get_owner(reply)) != 0) {
 				verbose(3, "bad qname\n");
+				continue;
+			}
+		}
+		if(p->match_subdomain) {
+			if(!get_owner(query_pkt) || !get_owner(reply) ||
+				!ldns_dname_is_subdomain(
+				get_owner(query_pkt), get_owner(reply)) != 0) {
+				verbose(3, "bad subdomain\n");
 				continue;
 			}
 		}
