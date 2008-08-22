@@ -1637,8 +1637,6 @@ processFinished(struct module_qstate* qstate, struct val_qstate* vq,
 
 	/* if the result is insecure or indeterminate and we have not 
 	 * checked the DLV yet, check the DLV */
-	verbose(VERB_ALGO, "check for DLV");
-	verbose(VERB_ALGO, "sec %s", sec_status_to_string(vq->chase_reply->security));
 	if((vq->chase_reply->security == sec_status_insecure ||
 		vq->chase_reply->security == sec_status_indeterminate) &&
 		qstate->env->anchors->dlv_anchor && !vq->dlv_checked) {

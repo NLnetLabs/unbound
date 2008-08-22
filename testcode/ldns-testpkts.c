@@ -677,8 +677,11 @@ find_match(struct entry* entries, ldns_pkt* query_pkt,
 		}
 		if(p->match_subdomain) {
 			if(!get_owner(query_pkt) || !get_owner(reply) ||
+				(ldns_dname_compare(get_owner(query_pkt), 
+				get_owner(reply)) != 0 &&
 				!ldns_dname_is_subdomain(
-				get_owner(query_pkt), get_owner(reply)) != 0) {
+				get_owner(query_pkt), get_owner(reply))))
+			{
 				verbose(3, "bad subdomain\n");
 				continue;
 			}

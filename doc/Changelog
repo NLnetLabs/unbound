@@ -1,3 +1,7 @@
+22 August 2008: Wouter
+	- nicer debuglogging of DLV.
+	- test with secure delegation inside the DLV repository.
+
 21 August 2008: Wouter
 	- negative cache code linked into validator, for DLV use.
 	  negative cache works for DLV.
