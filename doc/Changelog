@@ -1,3 +1,6 @@
+25 August 2008: Wouter
+	- realclean patch from Robert Edmonds.
+
 22 August 2008: Wouter
 	- nicer debuglogging of DLV.
 	- test with secure delegation inside the DLV repository.

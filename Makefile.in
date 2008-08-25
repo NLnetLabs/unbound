@@ -128,8 +128,9 @@ $(BUILD)%.lo:    $(srcdir)/%.c
 
 all:	$(COMMON_OBJ) unbound unbound-checkconf lib unbound-host
 
-tests:	all unittest testbound lock-verify pktview signit memstats \
-	asynclook streamtcp perf delayer harvest
+TEST_BIN=asynclook delayer harvest lock-verify memstats perf pktview signit \
+	streamtcp testbound unittest
+tests:	all $(TEST_BIN)
 
 test:	tests
 	if test -x "`which bash`"; then bash testcode/do-tests.sh; else sh testcode/do-tests.sh; fi
@@ -235,6 +236,7 @@ realclean: clean
 	rm -f config.status config.log config.h.in config.h
 	rm -f configure config.sub config.guess ltmain.sh aclocal.m4 libtool
 	rm -f util/configlexer.c util/configparser.c util/configparser.h
+	rm -f $(TEST_BIN)
 	if test -d ldns-src; then rm -rf ldns-src; fi
 	rm -f Makefile 
 
