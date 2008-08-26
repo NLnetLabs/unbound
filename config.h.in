@@ -136,6 +136,18 @@
 /* Define to 1 if you have the `sendmsg' function. */
 #undef HAVE_SENDMSG
 
+/* Define to 1 if you have the `setregid' function. */
+#undef HAVE_SETREGID
+
+/* Define to 1 if you have the `setresgid' function. */
+#undef HAVE_SETRESGID
+
+/* Define to 1 if you have the `setresuid' function. */
+#undef HAVE_SETRESUID
+
+/* Define to 1 if you have the `setreuid' function. */
+#undef HAVE_SETREUID
+
 /* Define to 1 if you have the `setsid' function. */
 #undef HAVE_SETSID
 

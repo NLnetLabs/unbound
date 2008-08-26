@@ -374,10 +374,22 @@ do_chroot(struct daemon* daemon, struct config_file* cfg, int debug_mode,
 	}
 #ifdef HAVE_GETPWNAM
 	if(cfg->username && cfg->username[0]) {
+#ifdef HAVE_SETRESGID
+		if(setresgid(gid,gid,gid) != 0)
+#elif defined(HAVE_SETREGID)
+		if(setregid(gid,gid) != 0)
+#else /* use setgid */
 		if(setgid(gid) != 0)
+#endif /* HAVE_SETRESGID */
 			fatal_exit("unable to set group id of %s: %s", 
 				cfg->username, strerror(errno));
+#ifdef HAVE_SETRESUID
+		if(setresuid(uid,uid,uid) != 0)
+#elif defined(HAVE_SETREUID)
+		if(setreuid(uid,uid) != 0)
+#else /* use setuid */
 		if(setuid(uid) != 0)
+#endif /* HAVE_SETRESUID */
 			fatal_exit("unable to set user id of %s: %s", 
 				cfg->username, strerror(errno));
 		verbose(VERB_QUERY, "drop user privileges, run as %s", 
