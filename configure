@@ -24666,7 +24666,8 @@ fi
 
 
 
-for ac_func in tzset sigprocmask fcntl getpwnam getrlimit setsid sbrk chroot kill sleep usleep random srandom recvmsg sendmsg writev setresuid setreuid setresgid setregid
+
+for ac_func in tzset sigprocmask fcntl getpwnam getrlimit setsid sbrk chroot kill sleep usleep random srandom recvmsg sendmsg writev setresuid setreuid setresgid setregid daemon
 do
 as_ac_var=`echo "ac_cv_func_$ac_func" | $as_tr_sh`
 { echo "$as_me:$LINENO: checking for $ac_func" >&5

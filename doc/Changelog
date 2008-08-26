@@ -5,6 +5,7 @@
 	- added scrub filter for overreaching NSEC records and unit test.
 	- iana portlist update
 	- use of setresuid or setreuid when available.
+	- use daemon(3) if available.
 
 25 August 2008: Wouter
 	- realclean patch from Robert Edmonds.

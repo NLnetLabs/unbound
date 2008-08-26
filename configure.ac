@@ -781,7 +781,7 @@ AC_CHECK_GETADDRINFO_WITH_INCLUDES
 if test $ac_cv_func_getaddrinfo = no; then
 AC_LIBOBJ([fake-rfc2553])
 fi
-AC_CHECK_FUNCS([tzset sigprocmask fcntl getpwnam getrlimit setsid sbrk chroot kill sleep usleep random srandom recvmsg sendmsg writev setresuid setreuid setresgid setregid])
+AC_CHECK_FUNCS([tzset sigprocmask fcntl getpwnam getrlimit setsid sbrk chroot kill sleep usleep random srandom recvmsg sendmsg writev setresuid setreuid setresgid setregid daemon])
 
 # check mkdir
 AC_MSG_CHECKING([whether mkdir has one arg])
