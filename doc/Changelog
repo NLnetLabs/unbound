@@ -3,6 +3,7 @@
 	- test for trustanchor when DLV is in use (the anchor works).
 	- test for DLV used for a zone below a trustanchor.
 	- added scrub filter for overreaching NSEC records and unit test.
+	- iana portlist update
 
 25 August 2008: Wouter
 	- realclean patch from Robert Edmonds.
