@@ -519,6 +519,35 @@ store_rrset(ldns_buffer* pkt, struct msg_parse* msg, struct module_env* env,
 }
 
 /**
+ * Check if right hand name in NSEC is within zone
+ * @param rrset: the NSEC rrset
+ * @param zonename: the zone name.
+ * @return true if BAD.
+ */
+static int sanitize_nsec_is_overreach(struct rrset_parse* rrset, 
+	uint8_t* zonename)
+{
+	struct rr_parse* rr;
+	uint8_t* rhs;
+	size_t len;
+	log_assert(rrset->type == LDNS_RR_TYPE_NSEC);
+	for(rr = rrset->rr_first; rr; rr = rr->next) {
+		rhs = rr->ttl_data+4+2;
+		len = ldns_read_uint16(rr->ttl_data+4);
+		if(!(len=dname_valid(rhs, len))) {
+			/* malformed domain name in rdata */
+			return 1;
+		}
+		if(!dname_subdomain_c(rhs, zonename)) {
+			/* overreaching */
+			return 1;
+		}
+	}
+	/* all NSEC RRs OK */
+	return 0;
+}
+
+/**
  * Given a response event, remove suspect RRsets from the response.
  * "Suspect" rrsets are potentially poison. Note that this routine expects
  * the response to be in a "normalized" state -- that is, all "irrelevant"
@@ -607,6 +636,13 @@ scrub_sanitize(ldns_buffer* pkt, struct msg_parse* msg,
 				"poison RRset:", pkt, msg, prev, &rrset);
 				continue;
 			}
+		}
+		/* check if right hand side of NSEC is within zone */
+		if(rrset->type == LDNS_RR_TYPE_NSEC &&
+			sanitize_nsec_is_overreach(rrset, zonename)) {
+			remove_rrset("sanitize: removing overreaching NSEC "
+				"RRset:", pkt, msg, prev, &rrset);
+			continue;
 		}
 		prev = rrset;
 		rrset = rrset->rrset_all_next;
