@@ -1,3 +1,7 @@
+27 August 2008: Wouter
+	- daemon(3) is causing problems for people. Reverting the patch.
+	  bug#200, and 199 and 203 contain sideline discussion on it.
+
 26 August 2008: Wouter
 	- test for insecure zone when DLV is in use, also does negative cache.
 	- test for trustanchor when DLV is in use (the anchor works).

@@ -287,14 +287,6 @@ checkoldpid(struct config_file* cfg)
 static void
 detach(struct config_file* cfg)
 {
-#ifdef HAVE_DAEMON
-	int err;
-	if(daemon(1,0)!=0) {
-		err=errno;
-		unlink(cfg->pidfile);
-		fatal_exit("daemon(3) failed: %s", strerror(err));
-	}
-#else /* !HAVE_DAEMON */
 #ifdef HAVE_WORKING_FORK
 	int fd, err;
 	/* Take off... */
@@ -324,7 +316,6 @@ detach(struct config_file* cfg)
 #else
 	(void)cfg;
 #endif /* HAVE_WORKING_FORK */
-#endif /* HAVE_DAEMON */
 }
 
 /** daemonize, drop user priviliges and chroot if needed */
