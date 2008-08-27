@@ -49,7 +49,7 @@ example.conf file with all the options.
 # unbound.conf(5) config file for unbound(8).
 server:
 	directory: "/etc/unbound"
-	username: unbound 	# make sure it can write to pidfile.
+	username: unbound
 	# make sure unbound can access entropy from inside the chroot.
 	# e.g. on linux the use these commands (on BSD, devfs(8) is used):
 	#      mount --bind -n /dev/random /etc/unbound/dev/random
@@ -253,15 +253,20 @@ commandline) as a full path from the original root. After the
 chroot has been performed the now defunct portion of the config 
 file path is removed to be able to reread the config after a reload. 
 .IP
-All other file paths (working dir, pidfile, logfile, roothints,
+All other file paths (working dir, logfile, roothints, and
 key files) can be specified in several ways:
 as an absolute path relative to the new root,
 as a relative path to the working directory, or
 as an absolute path relative to the original root.
 In the last case the path is adjusted to remove the unused portion.
 .IP
+The pidfile can be either a relative path to the working directory, or
+an absolute path relative to the original root. It is written just prior
+to chroot and dropping permissions. This allows the pidfile to be 
+/var/run/unbound.pid and the chroot to be /var/unbound, for example.
+.IP
 Additionally, unbound may need to access /dev/random (for entropy)
-and to /dev/log (if you use syslog) from inside the chroot.
+from inside the chroot.
 .IP
 If given a chroot is done to the given directory. The default is 
 "@UNBOUND_CHROOT_DIR@". If you give "" no chroot is performed.

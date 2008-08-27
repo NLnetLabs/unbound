@@ -384,6 +384,18 @@ int cfg_condense_ports(struct config_file* cfg, int** avail);
  */
 int cfg_scan_ports(int* avail, int num);
 
+/** 
+ * Convert a filename to full pathname in original filesys
+ * @param fname: the path name to convert.
+ *      Must not be null or empty.
+ * @param cfg: config struct for chroot and chdir (if set).
+ * @param use_chdir: if false, only chroot is applied.
+ * @return pointer to malloced buffer which is: [chroot][chdir]fname
+ *      or NULL on malloc failure.
+ */
+char* fname_after_chroot(const char* fname, struct config_file* cfg, 
+	int use_chdir);
+
 /**
  * Used during options parsing
  */

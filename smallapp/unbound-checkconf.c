@@ -216,64 +216,17 @@ is_dir(const char* fname)
 	return 1;
 }
 
-/** convert a filename to full pathname in original filesys
- * @param fname: the path name to convert.
- * 	Must not be null or empty.
- * @param cfg: config struct for chroot and chdir (if set).
- * @param use_chdir: if false, only chroot is applied.
- * @return pointer to static buffer which is: [chroot][chdir]fname
- */
-static char*
-fname_after_chroot(const char* fname, struct config_file* cfg, int use_chdir)
-{
-	static char buf[1024];
-	int slashit = 0;
-	buf[0] = 0;
-	if(cfg->chrootdir && cfg->chrootdir[0] && 
-		strncmp(cfg->chrootdir, fname, strlen(cfg->chrootdir)) == 0) {
-		/* already full pathname, return it */
-		strncpy(buf, fname, sizeof(buf)-1);
-		buf[sizeof(buf)-1] = 0;
-		return buf;
-	}
-	/* chroot */
-	if(cfg->chrootdir && cfg->chrootdir[0]) {
-		/* start with chrootdir */
-		strncpy(buf, cfg->chrootdir, sizeof(buf)-1);
-		slashit = 1;
-	}
-	/* chdir */
-	if(fname[0] == '/' || !use_chdir) {
-		/* full path, no chdir */
-	} else if(cfg->directory && cfg->directory[0]) {
-		/* prepend chdir */
-		if(slashit && cfg->directory[0] != '/')
-			strncat(buf, "/", sizeof(buf)-strlen(buf)-1);
-		if(strncmp(cfg->chrootdir, cfg->directory, 
-			strlen(cfg->chrootdir)) == 0)
-			strncat(buf, cfg->directory+strlen(cfg->chrootdir), 
-				   sizeof(buf)-strlen(buf)-1);
-		else strncat(buf, cfg->directory, sizeof(buf)-strlen(buf)-1);
-		slashit = 1;
-	}
-	/* fname */
-	if(slashit && fname[0] != '/')
-		strncat(buf, "/", sizeof(buf)-strlen(buf)-1);
-	strncat(buf, fname, sizeof(buf)-strlen(buf)-1);
-	buf[sizeof(buf)-1] = 0;
-	return buf;
-}
-
 /** get base dir of a fname */
 static char*
-basedir(const char* fname, struct config_file* cfg)
+basedir(char* fname)
 {
-	char* d = fname_after_chroot(fname, cfg, 1);
-	char* rev = strrchr(d, '/');
+	char* rev;
+	if(!fname) fatal_exit("out of memory");
+	rev = strrchr(fname, '/');
 	if(!rev) return NULL;
-	if(d == rev) return NULL;
+	if(fname == rev) return NULL;
 	rev[0] = 0;
-	return d;
+	return fname;
 }
 
 /** check chroot for a file string */
@@ -283,12 +236,13 @@ check_chroot_string(const char* desc, char** ss,
 {
 	char* str = *ss;
 	if(str && str[0]) {
-		if(!is_file(fname_after_chroot(str, cfg, 1))) {
+		*ss = fname_after_chroot(str, cfg, 1);
+		if(!*ss) fatal_exit("out of memory");
+		if(!is_file(*ss)) {
 			fatal_exit("%s: \"%s\" does not exist in chrootdir %s", 
 				desc, str, chrootdir);
 		}
 		/* put in a new full path for continued checking */
-		*ss = strdup(fname_after_chroot(str, cfg, 1));
 		free(str);
 	}
 }
@@ -343,21 +297,28 @@ morechecks(struct config_file* cfg, char* fname)
 			fatal_exit("config file %s is not inside chroot %s",
 				buf, cfg->chrootdir);
 	}
-	if(cfg->directory && cfg->directory[0] && !is_dir(
-		fname_after_chroot(cfg->directory, cfg, 0))) {
-		fatal_exit("bad chdir directory");
+	if(cfg->directory && cfg->directory[0]) {
+		char* ad = fname_after_chroot(cfg->directory, cfg, 0);
+		if(!ad) fatal_exit("out of memory");
+		if(!is_dir(ad)) fatal_exit("bad chdir directory");
+		free(ad);
 	}
 	if( (cfg->chrootdir && cfg->chrootdir[0]) ||
 	    (cfg->directory && cfg->directory[0])) {
-		if(cfg->pidfile && cfg->pidfile[0] &&
-		   basedir(cfg->pidfile, cfg) &&
-		   !is_dir(basedir(cfg->pidfile, cfg))) {
-			fatal_exit("pidfile directory does not exist");
+		if(cfg->pidfile && cfg->pidfile[0]) {
+			char* ad = (cfg->pidfile[0]=='/')?strdup(cfg->pidfile):
+				fname_after_chroot(cfg->pidfile, cfg, 1);
+			char* bd = basedir(ad);
+			if(bd && !is_dir(bd))
+				fatal_exit("pidfile directory does not exist");
+			free(ad);
 		}
-		if(cfg->logfile && cfg->logfile[0] &&
-		   basedir(cfg->logfile, cfg) &&
-		   !is_dir(basedir(cfg->logfile, cfg))) {
-			fatal_exit("logfile directory does not exist");
+		if(cfg->logfile && cfg->logfile[0]) {
+			char* ad = fname_after_chroot(cfg->logfile, cfg, 1);
+			char* bd = basedir(ad);
+			if(bd && !is_dir(bd))
+				fatal_exit("logfile directory does not exist");
+			free(ad);
 		}
 	}
 

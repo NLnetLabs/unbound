@@ -150,15 +150,17 @@ server:
 	# chroot has been performed the now defunct portion of the config 
 	# file path is removed to be able to reread the config after a reload. 
 	#
-	# All other file paths (working dir, pidfile, logfile, roothints,
+	# All other file paths (working dir, logfile, roothints, and
 	# key files) can be specified in several ways:
 	# 	o as an absolute path relative to the new root.
 	# 	o as a relative path to the working directory.
 	# 	o as an absolute path relative to the original root.
 	# In the last case the path is adjusted to remove the unused portion.
 	#
-	# Additionally, unbound may need to access /dev/random (for entropy)
-	# and to /dev/log (if you use syslog) from inside the chroot.
+	# The pid file can be absolute and outside of the chroot, it is 
+	# written just prior to performing the chroot and dropping permissions.
+	#
+	# Additionally, unbound may need to access /dev/random (for entropy).
 	# How to do this is specific to your OS.
 	#
 	# If you give "" no chroot is performed. The path must not end in a /.
@@ -182,7 +184,7 @@ server:
 	# log to, with identity "unbound". If yes, it overrides the logfile.
 	# use-syslog: yes 
 
-	# the pid file.
+	# the pid file. Can be an absolute path outside of chroot/work dir.
 	# pidfile: "@UNBOUND_PIDFILE@"
 	
 	# file to read root hints from.

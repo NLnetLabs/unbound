@@ -739,3 +739,96 @@ config_apply(struct config_file* config)
 	MAX_TTL = (uint32_t)config->max_ttl;
 }
 
+/** 
+ * Calculate string length of full pathname in original filesys
+ * @param fname: the path name to convert.
+ * 	Must not be null or empty.
+ * @param cfg: config struct for chroot and chdir (if set).
+ * @param use_chdir: if false, only chroot is applied.
+ * @return length of string.
+ *	remember to allocate one more for 0 at end in mallocs.
+ */
+static size_t
+strlen_after_chroot(const char* fname, struct config_file* cfg, int use_chdir)
+{
+	size_t len = 0;
+	int slashit = 0;
+	if(cfg->chrootdir && cfg->chrootdir[0] && 
+		strncmp(cfg->chrootdir, fname, strlen(cfg->chrootdir)) == 0) {
+		/* already full pathname, return it */
+		return strlen(fname);
+	}
+	/* chroot */
+	if(cfg->chrootdir && cfg->chrootdir[0]) {
+		/* start with chrootdir */
+		len += strlen(cfg->chrootdir);
+		slashit = 1;
+	}
+	/* chdir */
+	if(fname[0] == '/' || !use_chdir) {
+		/* full path, no chdir */
+	} else if(cfg->directory && cfg->directory[0]) {
+		/* prepend chdir */
+		if(slashit && cfg->directory[0] != '/')
+			len++;
+		if(cfg->chrootdir && cfg->chrootdir[0] && 
+			strncmp(cfg->chrootdir, cfg->directory, 
+			strlen(cfg->chrootdir)) == 0)
+			len += strlen(cfg->directory)-strlen(cfg->chrootdir);
+		else	len += strlen(cfg->directory);
+		slashit = 1;
+	}
+	/* fname */
+	if(slashit && fname[0] != '/')
+		len++;
+	len += strlen(fname);
+	return len;
+}
+
+char*
+fname_after_chroot(const char* fname, struct config_file* cfg, int use_chdir)
+{
+	size_t len = strlen_after_chroot(fname, cfg, use_chdir);
+	int slashit = 0;
+	char* buf = (char*)malloc(len+1);
+	if(!buf)
+		return NULL;
+	buf[0] = 0;
+	/* is fname already in chroot ? */
+	if(cfg->chrootdir && cfg->chrootdir[0] && 
+		strncmp(cfg->chrootdir, fname, strlen(cfg->chrootdir)) == 0) {
+		/* already full pathname, return it */
+		strncpy(buf, fname, len);
+		buf[len] = 0;
+		return buf;
+	}
+	/* chroot */
+	if(cfg->chrootdir && cfg->chrootdir[0]) {
+		/* start with chrootdir */
+		strncpy(buf, cfg->chrootdir, len);
+		slashit = 1;
+	}
+	/* chdir */
+	if(fname[0] == '/' || !use_chdir) {
+		/* full path, no chdir */
+	} else if(cfg->directory && cfg->directory[0]) {
+		/* prepend chdir */
+		if(slashit && cfg->directory[0] != '/')
+			strncat(buf, "/", len-strlen(buf));
+		/* is the directory already in the chroot? */
+		if(cfg->chrootdir && cfg->chrootdir[0] && 
+			strncmp(cfg->chrootdir, cfg->directory, 
+			strlen(cfg->chrootdir)) == 0)
+			strncat(buf, cfg->directory+strlen(cfg->chrootdir), 
+				   len-strlen(buf));
+		else strncat(buf, cfg->directory, len-strlen(buf));
+		slashit = 1;
+	}
+	/* fname */
+	if(slashit && fname[0] != '/')
+		strncat(buf, "/", len-strlen(buf));
+	strncat(buf, fname, len-strlen(buf));
+	buf[len] = 0;
+	return buf;
+}
+
