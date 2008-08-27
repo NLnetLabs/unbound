@@ -307,6 +307,10 @@ server:
 	# the number of slabs must be a power of 2.
 	# more slabs reduce lock contention, but fragment memory usage.
 	# key-cache-slabs: 4
+	
+	# the amount of memory to use for the negative cache (used for DLV).
+	# plain value in bytes or you can append k, m or G. default is "1Mb". 
+	# neg-cache-size: 1m
 
 	# a number of locally served zones can be configured.
 	# 	local-zone: <zone> <type>

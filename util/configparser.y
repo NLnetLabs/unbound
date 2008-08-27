@@ -91,6 +91,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_STATISTICS_INTERVAL VAR_DO_DAEMONIZE VAR_USE_CAPS_FOR_ID
 %token VAR_STATISTICS_CUMULATIVE VAR_OUTGOING_PORT_PERMIT 
 %token VAR_OUTGOING_PORT_AVOID VAR_DLV_ANCHOR_FILE VAR_DLV_ANCHOR
+%token VAR_NEG_CACHE_SIZE
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -133,7 +134,7 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_statistics_interval | server_do_daemonize | 
 	server_use_caps_for_id | server_statistics_cumulative |
 	server_outgoing_port_permit | server_outgoing_port_avoid |
-	server_dlv_anchor_file | server_dlv_anchor
+	server_dlv_anchor_file | server_dlv_anchor | server_neg_cache_size
 	;
 stubstart: VAR_STUB_ZONE
 	{
@@ -753,6 +754,14 @@ server_key_cache_slabs: VAR_KEY_CACHE_SLABS STRING
 			if(!is_pow2(cfg_parser->cfg->key_cache_slabs))
 				yyerror("must be a power of 2");
 		}
+		free($2);
+	}
+	;
+server_neg_cache_size: VAR_NEG_CACHE_SIZE STRING
+	{
+		OUTYY(("P(server_neg_cache_size:%s)\n", $2));
+		if(!cfg_parse_memsize($2, &cfg_parser->cfg->neg_cache_size))
+			yyerror("memory size expected");
 		free($2);
 	}
 	;

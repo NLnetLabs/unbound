@@ -122,13 +122,9 @@ val_apply_cfg(struct module_env* env, struct val_env* val_env,
 		return 0;
 	}
 	if(!val_env->neg_cache)
-		val_env->neg_cache = val_neg_create();
+		val_env->neg_cache = val_neg_create(cfg);
 	if(!val_env->neg_cache) {
 		log_err("out of memory");
-		return 0;
-	}
-	if(!val_neg_apply_cfg(val_env->neg_cache, cfg)) {
-		log_err("validator: error in negative cache config");
 		return 0;
 	}
 	val_env->date_override = cfg->val_date_override;

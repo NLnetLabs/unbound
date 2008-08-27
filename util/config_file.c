@@ -144,6 +144,7 @@ config_create()
 	cfg->val_permissive_mode = 0;
 	cfg->key_cache_size = 4 * 1024 * 1024;
 	cfg->key_cache_slabs = 4;
+	cfg->neg_cache_size = 1 * 1024 * 1024;
 	cfg->local_zones = NULL;
 	cfg->local_zones_nodefault = NULL;
 	cfg->local_data = NULL;
@@ -175,6 +176,7 @@ struct config_file* config_create_forlib()
 	cfg->use_syslog = 0;
 	cfg->key_cache_size = 1024*1024;
 	cfg->key_cache_slabs = 1;
+	cfg->neg_cache_size = 100 * 1024;
 	cfg->donotquery_localhost = 0; /* allow, so that you can ask a
 		forward nameserver running on localhost */
 	return cfg;
@@ -339,6 +341,8 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	} else if(strcmp(opt, "key-cache-slabs:") == 0) {
 		IS_POW2_NUMBER;
 		cfg->key_cache_slabs = (size_t)atoi(val);
+	} else if(strcmp(opt, "neg-cache-size:") == 0) {
+		return cfg_parse_memsize(val, &cfg->neg_cache_size);
 	} else if(strcmp(opt, "local-data:") == 0) {
 		return cfg_strlist_insert(&cfg->local_data, strdup(val));
 	} else if(strcmp(opt, "module-config:") == 0) {

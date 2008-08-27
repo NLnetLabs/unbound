@@ -174,6 +174,7 @@ val-clean-additional{COLON}	{ YDOUT; return VAR_VAL_CLEAN_ADDITIONAL;}
 val-permissive-mode{COLON}	{ YDOUT; return VAR_VAL_PERMISSIVE_MODE;}
 key-cache-size{COLON}	{ YDOUT; return VAR_KEY_CACHE_SIZE;}
 key-cache-slabs{COLON}	{ YDOUT; return VAR_KEY_CACHE_SLABS;}
+neg-cache-size{COLON}	{ YDOUT; return VAR_NEG_CACHE_SIZE;}
 val-nsec3-keysize-iterations{COLON}	{ YDOUT; return VAR_VAL_NSEC3_KEYSIZE_ITERATIONS;}
 use-syslog{COLON}	{ YDOUT; return VAR_USE_SYSLOG;}
 local-zone{COLON}	{ YDOUT; return VAR_LOCAL_ZONE;}

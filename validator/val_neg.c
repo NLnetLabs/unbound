@@ -48,6 +48,7 @@
 #include "util/data/msgreply.h"
 #include "util/log.h"
 #include "util/net_help.h"
+#include "util/config_file.h"
 #include "services/cache/rrset.h"
 
 int val_neg_data_compare(const void* a, const void* b)
@@ -71,7 +72,7 @@ int val_neg_zone_compare(const void* a, const void* b)
 	return dname_canon_lab_cmp(x->name, x->labs, y->name, y->labs, &m);
 }
 
-struct val_neg_cache* val_neg_create()
+struct val_neg_cache* val_neg_create(struct config_file* cfg)
 {
 	struct val_neg_cache* neg = (struct val_neg_cache*)calloc(1, 
 		sizeof(*neg));
@@ -80,16 +81,11 @@ struct val_neg_cache* val_neg_create()
 		return NULL;
 	}
 	neg->max = 1024*1024; /* 1 M is thousands of entries */
+	if(cfg) neg->max = cfg->neg_cache_size;
 	rbtree_init(&neg->tree, &val_neg_zone_compare);
 	lock_basic_init(&neg->lock);
 	lock_protect(&neg->lock, neg, sizeof(*neg));
 	return neg;
-}
-
-int val_neg_apply_cfg(struct val_neg_cache* neg, struct config_file* cfg)
-{
-	/* TODO read max mem size from cfg */
-	return 1;
 }
 
 size_t val_neg_get_mem(struct val_neg_cache* neg)

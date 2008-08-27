@@ -151,17 +151,10 @@ struct val_neg_data {
 
 /**
  * Create negative cache
+ * @param cfg: config options.
  * @return neg cache, empty or NULL on failure.
  */
-struct val_neg_cache* val_neg_create();
-
-/**
- * Apply configuration settings to negative cache
- * @param neg: negative cache.
- * @param cfg: config options.
- * @return false on error.
- */
-int val_neg_apply_cfg(struct val_neg_cache* neg, struct config_file* cfg);
+struct val_neg_cache* val_neg_create(struct config_file* cfg);
 
 /**
  * see how much memory is in use by the negative cache.

@@ -200,6 +200,8 @@ struct config_file {
 	size_t key_cache_size;
 	/** slabs in the key cache. */
 	size_t key_cache_slabs;
+	/** size of the neg cache */
+	size_t neg_cache_size;
 
 	/** local zones config */
 	struct config_str2list* local_zones;
