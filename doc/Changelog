@@ -1,3 +1,9 @@
+28 August 2008: Wouter
+	- fixup logfile handling; it is created with correct permissions
+	  again. (from bugfix#199).
+	  Some errors are not written to logfile (pidfile writing, forking),
+	  and these are only visible by using the -d commandline flag.
+
 27 August 2008: Wouter
 	- daemon(3) is causing problems for people. Reverting the patch.
 	  bug#200, and 199 and 203 contain sideline discussion on it.

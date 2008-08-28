@@ -339,15 +339,11 @@ perform_setup(struct daemon* daemon, struct config_file* cfg, int debug_mode,
 	 * a fork error could not be printed since daemonize closed stderr.*/
 	if(cfg->use_syslog)
 		log_init(cfg->logfile, cfg->use_syslog, cfg->chrootdir);
-	else if(cfg->logfile && cfg->logfile[0]) {
-		/* open logfile temporary with root permissions, to log
-		 * errors happening after daemonizing, that closes stderr.
-		 * After all that we reopen the logfile with less permits. */
-		char* lf = fname_after_chroot(cfg->logfile, cfg, 1);
-		if(!lf) fatal_exit("logfile malloc: out of memory");
-		log_init(lf, 0, NULL);
-		free(lf);
-	}
+	/* if using a logfile, we cannot open it because the logfile would
+	 * be created with the wrong permissions, we cannot chown it because
+	 * we cannot chown system logfiles, so we do not open at all.
+	 * So, using a logfile, the user does not see errors unless -d is
+	 * given to unbound on the commandline. */
 
 #ifdef HAVE_KILL
 	/* check old pid file before forking */
