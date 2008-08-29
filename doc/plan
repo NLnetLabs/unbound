@@ -19,6 +19,7 @@ total 6 of 8 weeks; 2 weeks for maintenance activities.
 
 *** Security issues
 * block nonRD queries, acl like.
+	what about our authority features, those are allowed.
 * DoS vector, flush more.
 * records in the additional section should not be marked bogus
 if they have no signer or a different signed. Validate if you can,
@@ -47,10 +48,12 @@ like dnswall does.  Allow certain subdomains to do it, config options.
 
 *** Requested
 * fallback to noEDNS if all queries are dropped.
+* dnssec lameness fixen. Check to make sure.
 * SHA256 supported fully.
 * Make stub to localhost on different port work.
 * IPv6 reverse, IP4 reverse local-data shorthand for PTR records (?).
   cumbersome to reverse notate by hand for the operator. For local-data.
+  local-reverse-data: "1.2.3.4 mypc.example.com"
 
 *** from draft resolver-mitigation
 * Should be an option?   (Not right now)
@@ -59,7 +62,9 @@ like dnswall does.  Allow certain subdomains to do it, config options.
 * direct queries for A, AAAA in-bailiwick from a referral.
 * trouble counter, cache wipe threshold.
 * 0x20 default with fallback?
-* off-path validation? root NS, root glue validation after prime
+
+* off-path validation? 
+* root NS, root glue validation after prime
 * ignore bogus nameservers, pretend they always return a servfail.
 
 
