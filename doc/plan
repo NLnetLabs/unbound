@@ -1,324 +1,83 @@
-Plan for Unbound.
+Plan for Unbound 1.1.
 
-Split into a set of boxes.  Every box will take about 3 weeks to a month
-to complete.  The first set of of boxes (approx 5 months) will need coding
-by a limited set of people.  But after every box, a 0.x release is done, 
-which is then tested and code review is done.  
+2 month project writeup.
+- immediate attention: done
+- security issues:      1 week.
+- remote control:	2 week
+- requested:		1 week
+- draft-mitigation:	2 week
+total 6 of 8 weeks; 2 weeks for maintenance activities.
 
-Every box:
- * implement the features
- * documentation of those features
- * test-framework for the new features
- * tests for the new features
- * speed test of this stage
- * release of 0.x version (0.x for development only)
- * a teleconference(jabber) held to discuss.
- * code review internal couple of days, external a week or so,
-   while we continue the next box. 
+*** Immediate attention
+- DLV
+- Plus aggressive negative caching for NSEC DLV repository.
+- filter out overreaching NSEC records.
+- dev/log(syslog) opened before chroot.
+- insecure is no better than unchecked status from validation.
+- use setresuid/setresgid, more secure.
+(done)
 
-Roughly the boxes are as follows:
-0.0 initial setup - results in network code that forwards queries
-    and returns the reply (no cache), but also testbed, svn, maillist.
-    One query at a time (nonblocking IO though).
-0.1 threads - results in threaded forwarder
-0.2 LRU hashtable, results in basic caching forwarder (no DNS parse)
-0.3 First functionality - results in caching forwarder (with DNS parse,
-    query compare, RR specific updates).
-0.4 Basic resolver - module layout, iterator module, scrubber module,
-    results in resolver that can service multiple queries per thread.
-    This stage takes longer, due to complexity in the iterator module.
-    Twice as long; one box for module layout, one box for iterator module.
-0.5 Validator - validator module.
-0.6 Bigger and better - Operational useful features (config, log, memory)
-0.7 Put to a limited audience.
-    gamma/alpha core functionality test release, to a small audience.
-    partial functionality. For more extensive use and testing.
-0.8 Local zones feature - localzones stubzones fwdzones, no leak rfc1918.
-    views support; for selective recursive service.
-0.9 Library use - resolver validator lib (and test apps)
-0.10 Corner cases - be able to resolve in the wild. Run fuzzers.
-    Run as many tests as we can think of.
-    Go through logs and check for long, unresolved cases
-    Use profiler.
-0.11 Beta release. Run shadow for a resolver in production for several
-    weeks.
-0.12 Features features
-    aggressive negative caching for NSEC, NSEC3.
-    multiple queries per question, server exploration, server selection.
-    option to use real entropy for randomness (mix it in once in a while).
-    check query, option to enforce qdsection checking (forgery-resilience).
-    NSID support.
-    Be able to prime roots using several queries (only NS on first).
+*** Security issues
+* block nonRD queries, acl like.
+* DoS vector, flush more.
+* records in the additional section should not be marked bogus
+if they have no signer or a different signed. Validate if you can,
+otherwise leave unchecked.
+* block DNS rebinding attacks, block all A records from 1918 IP blocks,
+like dnswall does.  Allow certain subdomains to do it, config options.
 
-For boxes 0.5-1.0 the planning is to be revised, at the 0.5 stage external
-coders are welcome.  Since the project is bigger, there is room for them.
+*** Remote control feature
+* remote control using a TCP unbound-control commandline app.  
+* secure remote control w. TSIG.  Or TLS.
+* Nicer statistics (over that unbound-control app for ease)
+    stats display added over threads, displayed in rddtool easy format.
+* option for extended statistics. If enabled (not by default) collect print
+        rcode, uptime, spoofnearmisses, cache size, qtype,
+	bits(RD, CD, DO, EDNS-present, AD)query, (Secure, Bogus)reply.
+	perhaps also see which slow auth servers cause >1sec values.
+	stats-file possible with key: value or key=value lines in it.
+	stats on SIGUSR1. addup stats over threads.
+* remote control to add/remove localinfo, redirects.
+* remote control to load/store cache contents
+* remote control to start, stop, reload.
+* remote control to flush names or domains (all under a name) from the 
+   cache. Include NSes. And the A, AAAA for its NSes.
+* remote control to see delegation; what servers would be used to get 
+  data for a name.
 
-This is a summary of the items.  Below more detailed work items are spelled
-out with a (tentative) directory structure for the project.
+*** Requested
+* fallback to noEDNS if all queries are dropped.
+* SHA256 supported fully.
+* Make stub to localhost on different port work.
+* IPv6 reverse, IP4 reverse local-data shorthand for PTR records (?).
+  cumbersome to reverse notate by hand for the operator. For local-data.
+
+*** from draft resolver-mitigation
+* Should be an option?   (Not right now)
+* direct queries for NS records
+	* careful caching, only NS query causes referral caching.
+* direct queries for A, AAAA in-bailiwick from a referral.
+* trouble counter, cache wipe threshold.
+* 0x20 default with fallback?
+* off-path validation? root NS, root glue validation after prime
+* ignore bogus nameservers, pretend they always return a servfail.
 
 
-Styleguide:
-* write working stuff. (it starts to work with no features)
-* write tests immediately for every function, every feature.
-* document as you go. (doxygen comments, manpages and readme).
-* copyright every file BSD. comments every file. clean coding in C.
-* every day discuss state of the nation for 10 minutes.
-
-*** Initial setup
-* setup svn repo. Makefile with automatic dependencies and configure script.
-	* link with ldns.
-* listen_dnsport and outside_network services, (unit) tests for them.
-	* use libevent to listen on fds.
-* setup test infrastructure (tpkg on checkin; testbed on labs test machines).
-* daemon version that forwards queries. (listen, send) Tests for it.
-	* test by having the outside_net service grab answers from a
-	  file instead of network, file of id priority answerpacket.
-	  and what query to give this answer to, highprio matches first.
-
-*** Threads
-* first simple config file reading/writing and tests on config file.
-  (config option is forwarder: yes/no. Cache size. That sort of thing.)
-  (very simple format)
-* First simple logging (to a file).
-* Threads
-	* check if pthread lib is the one to use (sys specific is faster?).
-	* make config option to have threads.
-	* alloc threadable.
-	* locks.c
-	* Tests with and without threads.
-* alloc_service. Tests for alloc service (unit tests in internal structs).
-* threading for the network services.
-* Make sure threading/libevent starts working on all test machines.
-  Use configure to turn off threading/libevent/...
-  -- use libevent packaged together if not in system.
-  -- maybe also for pthreads/...
-* threaded forwarder version.
-	* speed test of threaded version.
-
-*** LRU hashtable.
-* mini msg/reply structure for LRU hashtable test, simple replay format. 
-* hashtable+LRU structure. Tests on structure.
-	* tests on enter/remove, finding items.
-	* tests on LRU movements.
-	* Test on speed of finding items.
-* slabbed hashtable+LRU structure. 
-	* Test locking; perhaps by having sleeps in some threads to force
-	  locks to contend. helgrind.
-* daemon upgraded to be a caching forwarder. So it stores all in cache. 
-  Replies from cache. Tests on fake-caching forwarder functionality.
-	* timeout of data test
-	* finding data in cache.
-	* finding data not in cache.
-	* lru falloff of data.
-* Speed test of fake-caching forwarder.
-
-*** First functionality
-* implement dname type and unit tests on it. (all corner cases, random cases)
-* implement rrset type and tests. (all corner cases, random cases).
-* msg-reply structure. unit tests of structure.
-	* Test of those rrset pointers
-* daemon upgraded to be a caching forwarder. So it stores all in cache. 
-  Replies from cache. Tests on caching forwarder functionality.
-	* timeout of data test
-	* finding data in cache.
-	* finding data not in cache.
-	* lru falloff of data.
-* Test update of one rrset in cached packet.
-* Speed test of caching forwarder.
-
-*** Basic Resolver
-* Create module interface and module caller algorithm.
-* Daemon config to use modules. Test the module caller.
-* Create basic iterator and scrubber modules.
-	* Test every state of the iterator by passing test data into
-	  it.
-	* And scrubber.
-* Daemon config as cache(iterator).
-	* Test daemon
-	* Speed test.
-
-*** Validator
-* Create validator 
-* Test validator on various conditions. By having stored set of
-  domains and RRs in those domains to return to validator.
-* Validating resolver.
-	* Test resolver.
-	* Speed test.
-
-*** Put to a limited audience
-* The alpha/gamma core functionality, svn access to limited audience.
-* Support features and requests as they arise.
-* Provide real-world experiences.
-
-*** Bigger and Better
-* Config file syntax checker program. Tests on checker.
-* Logging first class feature with config options.
-	X with logfile turnover to avoid Gbs of logs.
-	* use syslog optional.
-* donotqueryaddresses with trie for blocking entire netblocks.
-* Memory overhaul, special allocators for hashtable caches, and mesh qstates.
-	* keep a preallocated list of region-chunks per worker thread.
-	* allocate region struct and cleanup list in region itself; use
-	  linked list cleanup list. unit test on this. do not call region
-	  to avoid name-collision with nsd regions, 'regional'.
-* read root hints from file.
-* failover to next server in 1 second, instead of 100 seconds on one server.
-X failure to return answer, w. reason (donotq, noanswer servers, cannot
-  find servers, validationfail w.classification, error), 
-  with threadno, starttime and endtime and qname/type/class, prime/qflags, 
-  from-clients, from-internal, has-subrequests, a nice error report,
-  so that an excerpt from those times can be made from the logs.
-  logfileparsing tool that makes these excerpts and emails them.
-  Not done; user can change verbosity and kill -HUP.
-* clear cache as a callback from the new-rrset-id routine.
-X make overload mode work; phase 0 all ok, phase 1 some threads close ports,
-  to let other threads pick up work. phase 2, all threads closed, so all open
-  the ports again and drop all non-cache-reply queries.
-  Keep mutexed num-overloaded-threads counter. thread incs it when it hits
-  max number of user queries serviced in mesh. threads decs it when it
-  falls below 90% of the max. if incs, and not all threads closed, phase 1,
-  else, phase 2 start is broadcast over command pipes. if decs, open ports
-  if phase 1, start servicing, phase is 0 again. Make robust against delays.
-  readme: max about 1 second worth of incoming queries, 10k perhaps,
-	or 1/number of seconds it takes start up of 10k.
-  Not done. Implement drop when full. 
-* the source includes a copy of the ldns lib for ease of building by 
-  new users. Detect system installed ldns, if installed ldns is OK; use 
-  dynamic linking against it, otherwise static linking against packaged ldns.
-* no greedy TTL algo (and test). 
-* maximum TTL, cap incoming values, and config option.
-
-*** Local zones feature.
-* Build in local zone features. First the total stop for1912.
-* Then 'local content' for minimal serving of localhost.localdomain,
-  and so on. 
-* Remember jakob's diagram. views support, selective recursive service:
-	* acl for allowed recursion (RD=1), then drop or refused query.
-	  like 10.0.0.0/8 allow, 0.0.0.0/0 refuse, ... in-order.
-	  perhaps also, same list to disallow RD=0 access, like;
-	  allow_recursion, drop_recursion, refuse_recursion, drop_all
-	* static answers for queries, fixed RRs from cfg, option
-	  query for that RR returns answer with that RR.
-	* blacklist (return fixed nxdomain for domain and below), option
-	  can be used to block AS112 traffic, option to unblock a zone.
-	* after checking acl, do iter: static, blacklist, forwards, recurse.
-* Forward-local-zone to NSD.
-	- in package, autoforkexec on localhost to do so.
-	- not included. Not necessary for localhost and AS112 service.
-* forward local zone to remote server.
-	- not included. Not necessary for localhost and AS112 service.
-* stub zones - send queries for a zone to configged nameserver.
-	- Can be used for complicated setups. So, run auth server on a 
-	  different port or pc, and stub it on the resolver. Resolver is
-	  not auth for zones, but resolution works. This enforces the split
-	  of recursive and auth servers.
-* test local zones
-	* for speed
-	* for correctness on corner cases
-
-*** Library use
-* Create library that can do:
-	* resolver
-	* validator
-	* validating resolver.
-* Test application that links the library. (Like /usr/bin/host+validating).
-	* Test it.
-
-*** Corner cases
-* Try to setup corner cases of (mis)configured DNS service/websites.
-* Resolve msoft, google, yahoo, etc weird websites.
-* Try to resolve many many different queries, perhaps compared with bind.
-* create module testers, specific for the modules
-	* read a file with cache contents and settings, provide fake
-	  environment for module-handle-state-X functions, then check
-	  resulting module state structure to correct answer.
-* speed test cache responses.
-* using two servers, compare answer differences between bind and unbound.
-  this gives false differences due to changes in the rest of internet.
-
-*** Beta release. 
-* Run shadow for a resolver in production for several weeks.
-* Check logs for errors, long queries.
-* Run in valgrind, speed profiling (as production shadow).
-
-*** Features features
+*** Features features, for later
+* dTLS, TLS, look to need special port numbers, cert storage, recent libssl.
 * aggressive negative caching for NSEC, NSEC3.
 * multiple queries per question, server exploration, server selection.
 * NSID support.
 * support TSIG on queries, for validating resolver deployment.
-* Nicer statistics
-* private TTL, dTLS features.
+* private TTL
 * retry-mode, where a bogus result triggers a retry-mode query, where a list
   of responses over a time interval is collected, and each is validated.
   or try in TCP mode. Do not 'try all servers several times', since we must
   not create packet storms with operator errors.
-* draft-timers, DLV features.
+* draft-timers
+* Windows port features
+o on windows version, implement that OS ancillary data capabilities for
+  interface-automatic. IPPKTINFO, IP6PKTINFO for WSARecvMsg, WSASendMsg.
+o local-zone directive with authority service, full authority server 
+  is a non-goal.
 
-treeshrew/
-	validator/ *.c *.h
-		module takes qname, qtype, asks next module for answer
-		and validates that answer.
-	iterator/ *.c *.h
-		module takes qname, qtype, iterative DNS queries
-		never asks next module.
-	services/
-		- Routines that provide the callback services for modules.
-
-		alloc_service: L1, L2 alloc service
-		outside_network: pending queries helpers.
-			pending query structure
-		listen_dnsport: listen port53 service.
-			request structure
-		type_caches/
-			rrset_cache
-			msg_cache
-				rrset and msg cache check local zones.
-			infra_cache
-			trusted_key_cache
-	util/
-		- Various components from which to build the rest.
-
-		storage/
-		rbtree: redblack tree, for L1 use.
-			- copy from NSD.
-		hashtable and hashfunc: for L1 use.
-		locked_hashtable: for L2 use. -- not needed.
-		fragment_hashtable: for L2 use.
-		fragment_rbtree: for L2 use.
-		slab_allocator: perhaps to support alloc service.
-
-		(in util/ itself)
-		locks: selected lock,unlock (spinlock/mutex).
-		config: reads, stores config file
-		netio: register callbacks to select().
-			- use libevent (!)
-			- copy from NSD.
-		log: error and log handling.
-		module.h: module interface
-		misc: time() wrapper for speed.
-
-		data/
-		msg_reply: qname/qtype/CD/qclass/reply store.
-		packed_rrset: main datatype
-		dname: compare, printf, parse
-
-	testcode/
-		main programs that do unit tests, using testdata
-	testdata/
-	daemon/
-		unbound.c for validating caching recursive dns server.
-		scheduler.c for the modules.
-
-	libunbound/
-		app linkable. Can be configged to do whatever,
-		validator, iterator, validating iterator, forwarding stub.
-	libforwardbound/
-		app linkable forwarding stub. Small lib.
-
-	ask_cachor/ *.c *.h
-		module takes qname, qtype, returns answer from msgcache.
-		could ask cached for answer (and wait for network, 10 ms).
-		if not in cache, asks next module.
-	cachord/
-		main.c, simple udp proto, query or store msg in cache.
-		supports option to save cache to disk (absolute time ttls).
