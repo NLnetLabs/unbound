@@ -13,14 +13,29 @@ total 6 of 8 weeks; 2 weeks for maintenance activities.
 - Plus aggressive negative caching for NSEC DLV repository.
 - filter out overreaching NSEC records.
 - dev/log(syslog) opened before chroot.
-- insecure is no better than unchecked status from validation.
+- Fixup rrset security updates overwriting 2181 trust status.
+  This makes validated to be insecure data just as worthless as
+  nonvalidated data, and 2181 rules prevent cache overwrites to them.
 - use setresuid/setresgid, more secure.
+- make realclean works better, by Robert Edmonds.
+- nicer logfile message classification as notice, info, debug.
+- bug #208: extra rc.d unbound flexibility for freebsd/nanobsd.
+- bug #203: nicer do-auto log message when user sets incompatible options.
+- bug #204: variable name ameliorated in log.c.
+- bug #206: in iana_update, no egrep, but awk use.
+- fixup update-anchor.sh to work both in BSD shell and bash.
 (done)
 
 *** Security issues
+* current NS query retry is an option, default off, experimental on,
+  because of the added load to 3rd parties.
 * block nonRD queries, acl like.
 	what about our authority features, those are allowed.
+	one option that controls on/off of all private space.
+	note in config/man that we may consider turning on by default.
 * DoS vector, flush more.
+	50% of max is for run-to-completion
+	50% rest is for lifo queue with 100 msec timeout.
 * records in the additional section should not be marked bogus
 if they have no signer or a different signed. Validate if you can,
 otherwise leave unchecked.
