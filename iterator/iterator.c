@@ -58,6 +58,7 @@
 #include "util/data/dname.h"
 #include "util/data/msgencode.h"
 #include "util/fptr_wlist.h"
+#include "util/config_file.h"
 
 int 
 iter_init(struct module_env* env, int id)
@@ -1330,7 +1331,8 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		 * got in the referral. This gets authoritative answer
 		 * (answer section trust level) rrset.
 		 * right after, we detach subs, we don't want the answer */
-		generate_ns_check(qstate, iq, id, iq->qchase.qclass);
+		if(qstate->env->cfg->harden_referral_path)
+			generate_ns_check(qstate, iq, id, iq->qchase.qclass);
 
 		/* stop current outstanding queries. 
 		 * FIXME: should the outstanding queries be waited for and

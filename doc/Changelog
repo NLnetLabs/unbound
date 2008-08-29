@@ -1,5 +1,7 @@
 29 August 2008: Wouter
 	- version 1.1 number in trunk.
+	- harden-referral-path option for query for NS records.
+	  Default turns off expensive, experimental option.
 
 28 August 2008: Wouter
 	- fixup logfile handling; it is created with correct permissions

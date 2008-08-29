@@ -129,6 +129,7 @@ config_create()
 	cfg->harden_large_queries = 0;
 	cfg->harden_glue = 1;
 	cfg->harden_dnssec_stripped = 1;
+	cfg->harden_referral_path = 0;
 	cfg->use_caps_bits_for_id = 0;
 	cfg->hide_identity = 0;
 	cfg->hide_version = 0;

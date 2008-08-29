@@ -91,7 +91,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_STATISTICS_INTERVAL VAR_DO_DAEMONIZE VAR_USE_CAPS_FOR_ID
 %token VAR_STATISTICS_CUMULATIVE VAR_OUTGOING_PORT_PERMIT 
 %token VAR_OUTGOING_PORT_AVOID VAR_DLV_ANCHOR_FILE VAR_DLV_ANCHOR
-%token VAR_NEG_CACHE_SIZE
+%token VAR_NEG_CACHE_SIZE VAR_HARDEN_REFERRAL_PATH
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -134,7 +134,8 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_statistics_interval | server_do_daemonize | 
 	server_use_caps_for_id | server_statistics_cumulative |
 	server_outgoing_port_permit | server_outgoing_port_avoid |
-	server_dlv_anchor_file | server_dlv_anchor | server_neg_cache_size
+	server_dlv_anchor_file | server_dlv_anchor | server_neg_cache_size |
+	server_harden_referral_path
 	;
 stubstart: VAR_STUB_ZONE
 	{
@@ -622,6 +623,16 @@ server_harden_dnssec_stripped: VAR_HARDEN_DNNSEC_STRIPPED STRING
 		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
 			yyerror("expected yes or no.");
 		else cfg_parser->cfg->harden_dnssec_stripped = 
+			(strcmp($2, "yes")==0);
+		free($2);
+	}
+	;
+server_harden_referral_path: VAR_HARDEN_REFERRAL_PATH STRING
+	{
+		OUTYY(("P(server_harden_referral_path:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->harden_referral_path = 
 			(strcmp($2, "yes")==0);
 		free($2);
 	}

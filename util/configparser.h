@@ -120,7 +120,8 @@
      VAR_OUTGOING_PORT_AVOID = 336,
      VAR_DLV_ANCHOR_FILE = 337,
      VAR_DLV_ANCHOR = 338,
-     VAR_NEG_CACHE_SIZE = 339
+     VAR_NEG_CACHE_SIZE = 339,
+     VAR_HARDEN_REFERRAL_PATH = 340
    };
 #endif
 /* Tokens.  */
@@ -206,6 +207,7 @@
 #define VAR_DLV_ANCHOR_FILE 337
 #define VAR_DLV_ANCHOR 338
 #define VAR_NEG_CACHE_SIZE 339
+#define VAR_HARDEN_REFERRAL_PATH 340
 
 
 
@@ -217,7 +219,7 @@ typedef union YYSTYPE
 	char*	str;
 }
 /* Line 1489 of yacc.c.  */
-#line 221 "util/configparser.h"
+#line 223 "util/configparser.h"
 	YYSTYPE;
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */
 # define YYSTYPE_IS_DECLARED 1

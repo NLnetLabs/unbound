@@ -227,7 +227,13 @@ server:
 	# trigger insecure mode for that zone (like without a trustanchor).
 	# Default on, which insists on dnssec data for trust-anchored zones.
 	# harden-dnssec-stripped: yes
-	
+
+        # Harden the referral path by performing additional queries for
+	# infrastructure data.  Validates the replies (if possible).
+	# Default off, because it burdens the authority servers, and it is
+	# not RFC standard, and could be slower.  Experimental option.
+	# harden-referral-path: no
+
 	# Use 0x20-encoded random bits in the query to foil spoof attempts.
 	# Disabled by default, because some caching forwarders may not
 	# support this (if you have forward-zones). Most authority servers do.
