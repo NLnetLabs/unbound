@@ -381,11 +381,13 @@ fake_pending_callback(struct replay_runtime* runtime,
 	struct fake_pending* p = runtime->pending_list;
 	struct comm_reply repinfo;
 	struct comm_point c;
-	void* cb_arg = p->cb_arg;
-	comm_point_callback_t* cb = p->callback;
+	void* cb_arg;
+	comm_point_callback_t* cb;
 
 	memset(&c, 0, sizeof(c));
 	if(!p) fatal_exit("No pending queries.");
+	cb_arg = p->cb_arg;
+	cb = p->callback;
 	log_assert(todo->qname == NULL); /* or find that one */
 	c.buffer = ldns_buffer_new(runtime->bufsize);
 	c.type = comm_udp;

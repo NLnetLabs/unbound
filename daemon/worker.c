@@ -785,6 +785,19 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 		c->buffer, worker->scratchpad)) {
 		return (ldns_buffer_limit(c->buffer) != 0);
 	}
+	if(!(LDNS_RD_WIRE(ldns_buffer_begin(c->buffer))) &&
+		acl != acl_allow_snoop ) {
+		ldns_buffer_set_limit(c->buffer, LDNS_HEADER_SIZE);
+		ldns_buffer_write_at(c->buffer, 4, 
+			(uint8_t*)"\0\0\0\0\0\0\0\0", 8);
+		LDNS_QR_SET(ldns_buffer_begin(c->buffer));
+		LDNS_RCODE_SET(ldns_buffer_begin(c->buffer), 
+			LDNS_RCODE_REFUSED);
+		ldns_buffer_flip(c->buffer);
+		log_addr(VERB_ALGO, "refused nonrec (cache snoop) query from",
+			&repinfo->addr, repinfo->addrlen);
+		return 1;
+	}
 	h = query_info_hash(&qinfo);
 	if((e=slabhash_lookup(worker->env.msg_cache, h, &qinfo, 0))) {
 		/* answer from cache - we have acquired a readlock on it */

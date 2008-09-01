@@ -668,9 +668,10 @@ server_access_control: VAR_ACCESS_CONTROL STRING STRING
 	{
 		OUTYY(("P(server_access_control:%s %s)\n", $2, $3));
 		if(strcmp($3, "deny")!=0 && strcmp($3, "refuse")!=0 &&
-			strcmp($3, "allow")!=0) {
-			yyerror("expected deny, refuse or allow in "
-				"access control action");
+			strcmp($3, "allow")!=0 && 
+			strcmp($3, "allow_snoop")!=0) {
+			yyerror("expected deny, refuse, allow or allow_snoop "
+				"in access control action");
 		} else {
 			if(!cfg_str2list_insert(&cfg_parser->cfg->acls, $2, $3))
 				fatal_exit("out of memory adding acl");

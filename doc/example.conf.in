@@ -134,7 +134,8 @@ server:
 	# control which clients are allowed to make (recursive) queries
 	# to this server. Specify classless netblocks with /size and action.
 	# By default everything is refused, except for localhost.
-	# Choose deny (drop message), refuse (polite error reply), allow.
+	# Choose deny (drop message), refuse (polite error reply),
+	# allow (recursive ok), allow_snoop (recursive and nonrecursive ok)
 	# access-control: 0.0.0.0/0 refuse
 	# access-control: 127.0.0.0/8 allow
 	# access-control: ::0/0 refuse

@@ -55,8 +55,10 @@ enum acl_access {
 	acl_deny = 0,
 	/** disallow access, send a polite 'REFUSED' reply */
 	acl_refuse,
-	/** allow full access */
-	acl_allow
+	/** allow full access for recursion (+RD) queries */
+	acl_allow,
+	/** allow full access for all queries, recursion and cache snooping */
+	acl_allow_snoop
 };
 
 /**

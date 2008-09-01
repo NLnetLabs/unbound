@@ -238,14 +238,36 @@ a daemon. Default is yes.
 .TP
 .B access\-control: \fI<IP netblock> <action>
 The netblock is given as an IP4 or IP6 address with /size appended for a 
-classless network block. The action can be deny, refuse or allow.
-Deny stops queries from hosts from that netblock.
-Refuse stops queries too, but sends a DNS rcode REFUSED error message back.
-Allow gives access to clients from that netblock.
-By default only localhost is allowed, the rest is refused.
-The default is refused, because that is protocol\-friendly. The DNS protocol
-is not designed to handle dropped packets due to policy, and dropping may 
-result in (possibly excessive) retried queries.
+classless network block. The action can be \fIdeny\fR, \fIrefuse\fR, 
+\fIallow\fR or \fIallow_snoop\fR.
+.IP
+The action \fIdeny\fR stops queries from hosts from that netblock.
+.IP
+The action \fIrefuse\fR stops queries too, but sends a DNS rcode REFUSED 
+error message back.
+.IP
+The action \fIallow\fR gives access to clients from that netblock.  
+It gives only access for recursion clients (which is 
+what almost all clients need).  Nonrecursive queries are refused.
+.IP
+The \fIallow\fR action does allow nonrecursive queries to access the 
+local\-data that is configured.  The reason is that this does not involve
+the unbound server recursive lookup algorithm, and static data is served 
+in the reply.  This supports normal operations where nonrecursive queries 
+are made for the authoritative data.  For nonrecursive queries any replies 
+from the dynamic cache are refused.
+.IP
+The action \fIallow_snoop\fR gives nonrecursive access too.  This give 
+both recursive and non recursive access.  The name \fIallow_snoop\fR refers 
+to cache snooping, a technique to use nonrecursive queries to examine
+the cache contents (for malicious acts).  However, nonrecursive queries can 
+also be a valuable debugging tool (when you want to examine the cache 
+contents). In that case use \fIallow_snoop\fR for your administration host.
+.IP
+By default only localhost is \fIallow\fRed, the rest is \fIrefuse\fRd.
+The default is \fIrefuse\fRd, because that is protocol\-friendly. The DNS 
+protocol is not designed to handle dropped packets due to policy, and 
+dropping may result in (possibly excessive) retried queries.
 .TP
 .B chroot: \fI<directory>
 If chroot is enabled, you should pass the configfile (from the

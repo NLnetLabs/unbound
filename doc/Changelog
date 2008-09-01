@@ -1,3 +1,9 @@
+1 September 2008: Wouter
+	- disallow nonrecursive queries for cache snooping by default.
+	  You can allow is using access-control: <subnet> allow_snoop.
+	  The defaults do allow access no authoritative data without RD bit.
+	- two tests for it and fixups of tests for nonrec refused.
+
 29 August 2008: Wouter
 	- version 1.1 number in trunk.
 	- harden-referral-path option for query for NS records.

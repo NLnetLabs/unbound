@@ -124,6 +124,8 @@ acl_list_str_cfg(struct acl_list* acl, const char* str, const char* s2,
 		control = acl_deny;
 	else if(strcmp(s2, "refuse") == 0)
 		control = acl_refuse;
+	else if(strcmp(s2, "allow_snoop") == 0)
+		control = acl_allow_snoop;
 	else {
 		log_err("access control type %s unknown", str);
 		return 0;
