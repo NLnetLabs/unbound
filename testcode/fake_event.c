@@ -61,6 +61,20 @@
 /** Global variable: the scenario. Saved here for when event_init is done. */
 static struct replay_scenario* saved_scenario = NULL;
 
+/** add timers and the values do not overflow or become negative */
+static void
+timeval_add(struct timeval* d, struct timeval* add)
+{
+#ifndef S_SPLINT_S
+	d->tv_sec += add->tv_sec;
+	d->tv_usec += add->tv_usec;
+	while(d->tv_usec > 1000000 ) {
+		d->tv_usec -= 1000000;
+		d->tv_sec++;
+	}
+#endif
+}
+
 void 
 fake_event_init(struct replay_scenario* scen)
 {
@@ -98,6 +112,7 @@ repevt_string(enum replay_event_type t)
 	case repevt_front_query: return "QUERY";
 	case repevt_front_reply: return "CHECK_ANSWER";
 	case repevt_timeout:	 return "TIMEOUT";
+	case repevt_time_passes: return "TIME_PASSES";
 	case repevt_back_reply:  return "REPLY";
 	case repevt_back_query:  return "CHECK_OUT_QUERY";
 	case repevt_error:	 return "ERROR";
@@ -408,6 +423,19 @@ fake_pending_callback(struct replay_runtime* runtime,
 	ldns_buffer_free(c.buffer);
 }
 
+/** pass time */
+static void
+time_passes(struct replay_runtime* runtime, struct replay_moment* mom)
+{
+	timeval_add(&runtime->now_tv, &mom->elapse);
+	runtime->now_secs = (uint32_t)runtime->now_tv.tv_sec;
+#ifndef S_SPLINT_S
+	log_info("elapsed %d.%6.6d  now %d.%6.6d", 
+		(int)mom->elapse.tv_sec, (int)mom->elapse.tv_usec,
+		(int)runtime->now_tv.tv_sec, (int)runtime->now_tv.tv_usec);
+#endif
+}
+
 /**
  * Advance to the next moment.
  */
@@ -470,6 +498,10 @@ do_moment_and_advance(struct replay_runtime* runtime)
 		mom = runtime->now;
 		advance_moment(runtime);
 		fake_pending_callback(runtime, mom, NETEVENT_CLOSED);
+		break;
+	case repevt_time_passes:
+		time_passes(runtime, runtime->now);
+		advance_moment(runtime);
 		break;
 	default:
 		fatal_exit("testbound: unknown event type %d", 

@@ -58,6 +58,8 @@
  *	o CHECK_OUT_QUERY - followed by entry (if copy-id it is also reply).
  *	o REPLY - followed by entry
  *      o TIMEOUT
+ *      o TIME_PASSES ELAPSE [seconds] - increase 'now' time counter, can be 
+ *      			a floating point number.
  *      o ERROR
  * ; following entry starts on the next line, ENTRY_BEGIN.
  * ; more STEP items
@@ -149,6 +151,8 @@ struct replay_moment {
 		repevt_front_reply,
 		/** timeout */
 		repevt_timeout,
+		/** time passes */
+		repevt_time_passes,
 		/** reply arrives from the network */
 		repevt_back_reply,
 		/** test fails if query to the network does not match */
@@ -161,6 +165,9 @@ struct replay_moment {
 
 	/** The sent packet must match this. Incoming events, the data. */
 	struct entry* match;
+
+	/** the amount of time that passes */
+	struct timeval elapse;
 
 	/** address that must be matched, or packet remote host address. */
 	struct sockaddr_storage addr;

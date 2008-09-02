@@ -4,7 +4,7 @@ Plan for Unbound 1.1.
 - immediate attention: done
 - security issues:      1 week.
 - remote control:	2 week
-- requested:		1 week
+- improvements:		1 week
 - draft-mitigation:	2 week
 total 6 of 8 weeks; 2 weeks for maintenance activities.
 
@@ -27,13 +27,13 @@ total 6 of 8 weeks; 2 weeks for maintenance activities.
 (done)
 
 *** Security issues
-* current NS query retry is an option, default off, experimental on,
++ current NS query retry is an option, default off, experimental on,
   because of the added load to 3rd parties.
-* block nonRD queries, acl like.
++ block nonRD queries, acl like.
 	what about our authority features, those are allowed.
-* DoS vector, flush more.
++ DoS vector, flush more.
 	50% of max is for run-to-completion
-	50% rest is for lifo queue with 100 msec timeout.
+	50% rest is for lifo queue with 100-200 msec timeout.
 * records in the additional section should not be marked bogus
 if they have no signer or a different signed. Validate if you can,
 otherwise leave unchecked.
@@ -61,7 +61,7 @@ like dnswall does.  Allow certain subdomains to do it, config options.
 * remote control to see delegation; what servers would be used to get 
   data for a name.
 
-*** Requested
+*** Improvements
 * fallback to noEDNS if all queries are dropped.
 * dnssec lameness fixen. Check to make sure.
 * negative caching to avoid DS queries, NSEC, NSEC3 (w params).

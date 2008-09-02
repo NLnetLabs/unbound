@@ -826,13 +826,8 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 	server_stats_querymiss(&worker->stats, worker);
 
 	/* grab a work request structure for this new request */
-	if(worker->env.mesh->all.count > worker->request_size) {
-		verbose(VERB_ALGO, "Too many requests active. "
-			"dropping incoming query.");
-		worker->stats.num_query_list_exceeded++;
-		comm_point_drop_reply(repinfo);
-		return 0;
-	} else if(worker->env.mesh->num_reply_addrs>worker->request_size*16) {
+	if(worker->env.mesh->num_reply_addrs>worker->request_size*16) {
+		/* protect our memory usage from storing reply addresses */
 		verbose(VERB_ALGO, "Too many requests queued. "
 			"dropping incoming query.");
 		worker->stats.num_query_list_exceeded++;

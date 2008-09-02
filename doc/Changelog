@@ -1,3 +1,7 @@
+2 September 2008: Wouter
+	- DoS protection features. Queries are jostled out to make room.
+	- testbound can pass time, increasing the internal timer.
+
 1 September 2008: Wouter
 	- disallow nonrecursive queries for cache snooping by default.
 	  You can allow is using access-control: <subnet> allow_snoop.

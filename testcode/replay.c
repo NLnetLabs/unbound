@@ -221,6 +221,8 @@ replay_moment_read(char* remain, FILE* in, const char* name, int* lineno,
 		readentry = 1;
 	} else if(parse_keyword(&remain, "TIMEOUT")) {
 		mom->evt_type = repevt_timeout;
+	} else if(parse_keyword(&remain, "TIME_PASSES")) {
+		mom->evt_type = repevt_time_passes;
 	} else if(parse_keyword(&remain, "ERROR")) {
 		mom->evt_type = repevt_error;
 	} else {
@@ -241,6 +243,22 @@ replay_moment_read(char* remain, FILE* in, const char* name, int* lineno,
 			free(mom);
 			return NULL;
 		}
+	} 
+	if(parse_keyword(&remain, "ELAPSE")) {
+		double sec;
+		errno = 0;
+		sec = strtod(remain, &remain);
+		if(sec == 0. && errno != 0) {
+			log_err("line %d: could not parse ELAPSE: %s (%s)", 
+				*lineno, remain, strerror(errno));
+			free(mom);
+			return NULL;
+		}
+#ifndef S_SPLINT_S
+		mom->elapse.tv_sec = (int)sec;
+		mom->elapse.tv_usec = (int)((sec - (double)mom->elapse.tv_sec)
+			*1000000. + 0.5);
+#endif
 	} 
 
 	if(readentry) {

@@ -65,6 +65,12 @@ struct timehist;
  */
 #define MESH_MAX_ACTIVATION 1000
 
+/**
+ * Maximum time to live in the jostle list. usec.
+ * The entries older than this could be removed to make space for new ones.
+ */
+#define MESH_JOSTLE_USEC 200000 /* 0.200000 sec */
+
 /** 
  * Mesh of query states
  */
@@ -89,13 +95,36 @@ struct mesh_area {
 	 * an empty set of super-states, thus are 'toplevel' or detached
 	 * internal opportunistic queries */
 	size_t num_detached_states;
+	/** number of reply states in the forever list */
+	size_t num_forever_states;
 
+	/** max total number of reply states to have */
+	size_t max_reply_states;
+	/** max forever number of reply states to have */
+	size_t max_forever_states;
+
+	/** stats, cumulative number of reply states jostled out */
+	size_t stats_jostled;
+	/** stats, cumulative number of incoming client msgs dropped */
+	size_t stats_dropped;
 	/** number of replies sent */
 	size_t replies_sent;
 	/** sum of waiting times for the replies */
 	struct timeval replies_sum_wait;
 	/** histogram of time values */
 	struct timehist* histogram;
+
+	/** double linked list of the run-to-completion query states.
+	 * These are query states with a reply */
+	struct mesh_state* forever_first;
+	/** last entry in run forever list */
+	struct mesh_state* forever_last;
+
+	/** double linked list of the query states that can be jostled out
+	 * by new queries if too old.  These are query states with a reply */
+	struct mesh_state* jostle_first;
+	/** last entry in jostle list - this is the entry that is newest */
+	struct mesh_state* jostle_last;
 };
 
 /**
@@ -127,6 +156,14 @@ struct mesh_state {
 	rbtree_t sub_set;
 	/** number of activations for the mesh state */
 	size_t num_activated;
+
+	/** previous in linked list for reply states */
+	struct mesh_state* prev;
+	/** next in linked list for reply states */
+	struct mesh_state* next;
+	/** if this state is in the forever list, jostle list, or neither */
+	enum mesh_list_select { mesh_no_list, mesh_forever_list, 
+		mesh_jostle_list } list_select;
 };
 
 /**
@@ -456,5 +493,30 @@ int mesh_state_compare(const void* ap, const void* bp);
 
 /** compare two mesh references */
 int mesh_state_ref_compare(const void* ap, const void* bp);
+
+/**
+ * Make space for another recursion state for a reply in the mesh
+ * @param mesh: mesh area
+ * @return false if no space is available.
+ */
+int mesh_make_new_space(struct mesh_area* mesh);
+
+/**
+ * Insert mesh state into a double linked list.  Inserted at end.
+ * @param m: mesh state.
+ * @param fp: pointer to the first-elem-pointer of the list.
+ * @param lp: pointer to the last-elem-pointer of the list.
+ */
+void mesh_list_insert(struct mesh_state* m, struct mesh_state** fp,
+	struct mesh_state** lp);
+
+/**
+ * Remove mesh state from a double linked list.  Remove from any position.
+ * @param m: mesh state.
+ * @param fp: pointer to the first-elem-pointer of the list.
+ * @param lp: pointer to the last-elem-pointer of the list.
+ */
+void mesh_list_remove(struct mesh_state* m, struct mesh_state** fp,
+	struct mesh_state** lp);
 
 #endif /* SERVICES_MESH_H */

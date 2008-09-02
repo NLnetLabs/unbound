@@ -54,6 +54,54 @@
 #include "util/timehist.h"
 #include "util/fptr_wlist.h"
 #include "util/alloc.h"
+#include "util/config_file.h"
+
+/** subtract timers and the values do not overflow or become negative */
+static void
+timeval_subtract(struct timeval* d, struct timeval* end, struct timeval* start)
+{
+#ifndef S_SPLINT_S
+	d->tv_sec = end->tv_sec - start->tv_sec;
+	while(end->tv_usec < start->tv_usec) {
+		end->tv_usec += 1000000;
+		d->tv_sec--;
+	}
+	d->tv_usec = end->tv_usec - start->tv_usec;
+#endif
+}
+
+/** add timers and the values do not overflow or become negative */
+static void
+timeval_add(struct timeval* d, struct timeval* add)
+{
+#ifndef S_SPLINT_S
+	d->tv_sec += add->tv_sec;
+	d->tv_usec += add->tv_usec;
+	while(d->tv_usec > 1000000 ) {
+		d->tv_usec -= 1000000;
+		d->tv_sec++;
+	}
+#endif
+}
+
+/** divide sum of timers to get average */
+static void
+timeval_divide(struct timeval* avg, struct timeval* sum, size_t d)
+{
+#ifndef S_SPLINT_S
+	size_t leftover;
+	if(d == 0) {
+		avg->tv_sec = 0;
+		avg->tv_usec = 0;
+		return;
+	}
+	avg->tv_sec = sum->tv_sec / d;
+	avg->tv_usec = sum->tv_usec / d;
+	/* handle fraction from seconds divide */
+	leftover = sum->tv_sec - avg->tv_sec*d;
+	avg->tv_usec += (leftover*1000000)/d;
+#endif
+}
 
 int
 mesh_state_compare(const void* ap, const void* bp)
@@ -108,6 +156,11 @@ mesh_create(struct module_stack* stack, struct module_env* env)
 	mesh->num_reply_addrs = 0;
 	mesh->num_reply_states = 0;
 	mesh->num_detached_states = 0;
+	mesh->num_forever_states = 0;
+	mesh->stats_jostled = 0;
+	mesh->stats_dropped = 0;
+	mesh->max_reply_states = env->cfg->num_queries_per_thread;
+	mesh->max_forever_states = (mesh->max_reply_states+1)/2;
 	return mesh;
 }
 
@@ -130,6 +183,42 @@ mesh_delete(struct mesh_area* mesh)
 	free(mesh);
 }
 
+int mesh_make_new_space(struct mesh_area* mesh)
+{
+	struct mesh_state* m = mesh->jostle_last;
+	/* free space is available */
+	if(mesh->num_reply_states < mesh->max_reply_states)
+		return 1;
+	/* try to kick out a jostle-list item */
+	if(m && m->reply_list && m->list_select == mesh_jostle_list) {
+		/* how old is it? */
+		struct timeval age;
+		timeval_subtract(&age, mesh->env->now_tv, 
+			&m->reply_list->start_time);
+#ifndef S_SPLINT_S
+		if(age.tv_sec > 0 || age.tv_usec > MESH_JOSTLE_USEC) {
+			/* its a goner */
+			log_nametypeclass(VERB_ALGO, "query jostled out to "
+				"make space for a new one",
+				m->s.qinfo.qname, m->s.qinfo.qtype,
+				m->s.qinfo.qclass);
+			/* notify supers */
+			if(m->super_set.count > 0) {
+				verbose(VERB_ALGO, "notify supers of failure");
+				m->s.return_msg = NULL;
+				m->s.return_rcode = LDNS_RCODE_SERVFAIL;
+				mesh_walk_supers(mesh, m);
+			}
+			mesh->stats_jostled ++;
+			mesh_state_delete(&m->s);
+			return 1;
+		}
+#endif
+	}
+	/* no space for new item */
+	return 0;
+}
+
 void mesh_new_client(struct mesh_area* mesh, struct query_info* qinfo,
         uint16_t qflags, struct edns_data* edns, struct comm_reply* rep,
         uint16_t qid)
@@ -138,6 +227,16 @@ void mesh_new_client(struct mesh_area* mesh, struct query_info* qinfo,
 	int was_detached = 0;
 	int was_noreply = 0;
 	int added = 0;
+	/* does this create a new reply state? */
+	if(!s || s->list_select == mesh_no_list) {
+		if(!mesh_make_new_space(mesh)) {
+			verbose(VERB_ALGO, "Too many queries. dropping "
+				"incoming query.");
+			comm_point_drop_reply(rep);
+			mesh->stats_dropped ++;
+			return;
+		}
+	}
 	/* see if it already exists, if not, create one */
 	if(!s) {
 		struct rbnode_t* n;
@@ -178,6 +277,19 @@ void mesh_new_client(struct mesh_area* mesh, struct query_info* qinfo,
 		mesh->num_reply_states ++;
 	}
 	mesh->num_reply_addrs++;
+	if(s->list_select == mesh_no_list) {
+		/* move to either the forever or the jostle_list */
+		if(mesh->num_forever_states < mesh->max_forever_states) {
+			mesh->num_forever_states ++;
+			mesh_list_insert(s, &mesh->forever_first, 
+				&mesh->forever_last);
+			s->list_select = mesh_forever_list;
+		} else {
+			mesh_list_insert(s, &mesh->jostle_first, 
+				&mesh->jostle_last);
+			s->list_select = mesh_jostle_list;
+		}
+	}
 	if(added)
 		mesh_run(mesh, s, module_event_new, NULL);
 }
@@ -191,6 +303,8 @@ mesh_new_callback(struct mesh_area* mesh, struct query_info* qinfo,
 	int was_detached = 0;
 	int was_noreply = 0;
 	int added = 0;
+	/* there are no limits on the number of callbacks */
+
 	/* see if it already exists, if not, create one */
 	if(!s) {
 		struct rbnode_t* n;
@@ -257,6 +371,7 @@ mesh_state_create(struct module_env* env, struct query_info* qinfo,
 	mstate->node.key = mstate;
 	mstate->run_node.key = mstate;
 	mstate->reply_list = NULL;
+	mstate->list_select = mesh_no_list;
 	rbtree_init(&mstate->super_set, &mesh_state_ref_compare);
 	rbtree_init(&mstate->sub_set, &mesh_state_ref_compare);
 	mstate->num_activated = 0;
@@ -317,6 +432,14 @@ mesh_state_delete(struct module_qstate* qstate)
 	mstate = qstate->mesh_info;
 	mesh = mstate->s.env->mesh;
 	mesh_detach_subs(&mstate->s);
+	if(mstate->list_select == mesh_forever_list) {
+		mesh->num_forever_states --;
+		mesh_list_remove(mstate, &mesh->forever_first, 
+			&mesh->forever_last);
+	} else if(mstate->list_select == mesh_jostle_list) {
+		mesh_list_remove(mstate, &mesh->jostle_first, 
+			&mesh->jostle_last);
+	}
 	if(!mstate->reply_list && !mstate->cb_list
 		&& mstate->super_set.count == 0) {
 		log_assert(mesh->num_detached_states > 0);
@@ -412,53 +535,6 @@ int mesh_state_attachment(struct mesh_state* super, struct mesh_state* sub)
 	n = rbtree_insert(&super->sub_set, &subref->node);
 	log_assert(n != NULL);
 	return 1;
-}
-
-/** subtract timers and the values do not overflow or become negative */
-static void
-timeval_subtract(struct timeval* d, struct timeval* end, struct timeval* start)
-{
-#ifndef S_SPLINT_S
-	d->tv_sec = end->tv_sec - start->tv_sec;
-	while(end->tv_usec < start->tv_usec) {
-		end->tv_usec += 1000000;
-		d->tv_sec--;
-	}
-	d->tv_usec = end->tv_usec - start->tv_usec;
-#endif
-}
-
-/** add timers and the values do not overflow or become negative */
-static void
-timeval_add(struct timeval* d, struct timeval* add)
-{
-#ifndef S_SPLINT_S
-	d->tv_sec += add->tv_sec;
-	d->tv_usec += add->tv_usec;
-	while(d->tv_usec > 1000000 ) {
-		d->tv_usec -= 1000000;
-		d->tv_sec++;
-	}
-#endif
-}
-
-/** divide sum of timers to get average */
-static void
-timeval_divide(struct timeval* avg, struct timeval* sum, size_t d)
-{
-#ifndef S_SPLINT_S
-	size_t leftover;
-	if(d == 0) {
-		avg->tv_sec = 0;
-		avg->tv_usec = 0;
-		return;
-	}
-	avg->tv_sec = sum->tv_sec / d;
-	avg->tv_usec = sum->tv_usec / d;
-	/* handle fraction from seconds divide */
-	leftover = sum->tv_sec - avg->tv_sec*d;
-	avg->tv_usec += (leftover*1000000)/d;
-#endif
 }
 
 /**
@@ -785,11 +861,14 @@ mesh_stats(struct mesh_area* mesh, const char* str)
 {
 	verbose(VERB_DETAIL, "%s %u recursion states (%u with reply, "
 		"%u detached), %u waiting replies, %u recursion replies "
-		"sent", str, (unsigned)mesh->all.count, 
+		"sent, %d replies dropped, %d states jostled out", 
+		str, (unsigned)mesh->all.count, 
 		(unsigned)mesh->num_reply_states,
 		(unsigned)mesh->num_detached_states,
 		(unsigned)mesh->num_reply_addrs,
-		(unsigned)mesh->replies_sent);
+		(unsigned)mesh->replies_sent,
+		(unsigned)mesh->stats_dropped,
+		(unsigned)mesh->stats_jostled);
 	if(mesh->replies_sent > 0) {
 		struct timeval avg;
 		timeval_divide(&avg, &mesh->replies_sum_wait, 
@@ -809,6 +888,8 @@ mesh_stats_clear(struct mesh_area* mesh)
 	mesh->replies_sent = 0;
 	mesh->replies_sum_wait.tv_sec = 0;
 	mesh->replies_sum_wait.tv_usec = 0;
+	mesh->stats_jostled = 0;
+	mesh->stats_dropped = 0;
 	timehist_clear(mesh->histogram);
 }
 
@@ -849,4 +930,27 @@ mesh_detect_cycle(struct module_qstate* qstate, struct query_info* qinfo,
 	if(dep_m == cyc_m || find_in_subsub(dep_m, cyc_m))
 		return 1;
 	return 0;
+}
+
+void mesh_list_insert(struct mesh_state* m, struct mesh_state** fp,
+        struct mesh_state** lp)
+{
+	/* insert as last element */
+	m->prev = *lp;
+	m->next = NULL;
+	if(*lp)
+		(*lp)->next = m;
+	else	*fp = m;
+	*lp = m;
+}
+
+void mesh_list_remove(struct mesh_state* m, struct mesh_state** fp,
+        struct mesh_state** lp)
+{
+	if(m->next)
+		m->next->prev = m->prev;
+	else	*lp = m->prev;
+	if(m->prev)
+		m->prev->next = m->next;
+	else	*fp = m->next;
 }
