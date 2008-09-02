@@ -373,7 +373,8 @@ validate_msg_signatures(struct module_env* env, struct val_env* ve,
 	struct query_info* qchase, struct reply_info* chase_reply, 
 	struct key_entry_key* key_entry)
 {
-	size_t i;
+	uint8_t* sname;
+	size_t i, slen;
 	struct ub_packed_rrset_key* s;
 	enum sec_status sec;
 	int dname_seen = 0;
@@ -438,7 +439,11 @@ validate_msg_signatures(struct module_env* env, struct val_env* ve,
 	for(i=chase_reply->an_numrrsets+chase_reply->ns_numrrsets; 
 		i<chase_reply->rrset_count; i++) {
 		s = chase_reply->rrsets[i];
-		(void)val_verify_rrset_entry(env, ve, s, key_entry);
+		/* only validate rrs that have signatures with the key */
+		/* leave others unchecked, those get removed later on too */
+		val_find_rrset_signer(s, &sname, &slen);
+		if(sname && query_dname_compare(sname, key_entry->name)==0)
+			(void)val_verify_rrset_entry(env, ve, s, key_entry);
 		/* the additional section can fail to be secure, 
 		 * it is optional, check signature in case we need
 		 * to clean the additional section later. */

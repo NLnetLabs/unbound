@@ -1,6 +1,8 @@
 2 September 2008: Wouter
 	- DoS protection features. Queries are jostled out to make room.
 	- testbound can pass time, increasing the internal timer.
+	- do not mark unsigned additionals bogus, leave unchecked, which
+	  is removed too.
 
 1 September 2008: Wouter
 	- disallow nonrecursive queries for cache snooping by default.

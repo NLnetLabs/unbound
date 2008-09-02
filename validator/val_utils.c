@@ -150,13 +150,7 @@ rrsig_get_signer(uint8_t* data, size_t len, uint8_t** sname, size_t* slen)
 	*sname = data;
 }
 
-/**
- * Find the signer name for an RRset.
- * @param rrset: the rrset.
- * @param sname: signer name is returned or NULL if not signed.
- * @param slen: length of sname (or 0).
- */
-static void 
+void 
 val_find_rrset_signer(struct ub_packed_rrset_key* rrset, uint8_t** sname,
 	size_t* slen)
 {
