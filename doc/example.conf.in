@@ -141,7 +141,7 @@ server:
 	# access-control: ::0/0 refuse
 	# access-control: ::1 allow
 	# access-control: ::ffff:127.0.0.1 allow
-	
+
 	# if given, a chroot(2) is done to the given directory.
 	# i.e. you can chroot to the working directory, for example,
 	# for extra security, but make sure all files are in that directory.
@@ -243,6 +243,22 @@ server:
 	# resolution will fail for them. A solution is on the TODO list.
 	# use-caps-for-id: no
 	
+	# Enforce privacy of these addresses. Strips them away from answers. 
+	# It may cause DNSSEC validation to additionally mark it as bogus. 
+	# Protects against 'DNS Rebinding' (uses browser as network proxy). 
+	# Only 'private-domain' and 'local-data' names are allowed to have 
+	# these private addresses. No default.
+	# private-address: 10.0.0.0/8
+	# private-address: 172.16.0.0/12
+	# private-address: 192.168.0.0/16
+	# private-address: 192.254.0.0/16
+	# private-address: fd00::/8
+	# private-address: fe80::/10
+
+	# Allow the domain (and its subdomains) to contain private addresses.
+	# local-data statements are allowed to contain private addresses too.
+	# private-domain: "example.com"
+
 	# Do not query the following addresses. No DNS queries are sent there.
 	# List one address per entry. List classless netblocks with /size,
 	# do-not-query-address: 127.0.0.1/8

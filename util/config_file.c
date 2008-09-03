@@ -131,6 +131,8 @@ config_create()
 	cfg->harden_dnssec_stripped = 1;
 	cfg->harden_referral_path = 0;
 	cfg->use_caps_bits_for_id = 0;
+	cfg->private_address = NULL;
+	cfg->private_domain = NULL;
 	cfg->hide_identity = 0;
 	cfg->hide_version = 0;
 	cfg->identity = NULL;
@@ -295,6 +297,13 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	} else if(strcmp(opt, "harden-dnssec-stripped:") == 0) {
 		IS_YES_OR_NO;
 		cfg->harden_dnssec_stripped = (strcmp(val, "yes") == 0);
+	} else if(strcmp(opt, "harden-referral-path:") == 0) {
+		IS_YES_OR_NO;
+		cfg->harden_referral_path = (strcmp(val, "yes") == 0);
+	} else if(strcmp(opt, "private-address:") == 0) {
+		return cfg_strlist_insert(&cfg->private_address, strdup(val));
+	} else if(strcmp(opt, "private-domain:") == 0) {
+		return cfg_strlist_insert(&cfg->private_domain, strdup(val));
 	} else if(strcmp(opt, "do-not-query-localhost:") == 0) {
 		IS_YES_OR_NO;
 		cfg->donotquery_localhost = (strcmp(val, "yes") == 0);
@@ -462,6 +471,8 @@ config_delete(struct config_file* cfg)
 	free(cfg->version);
 	free(cfg->module_conf);
 	free(cfg->outgoing_avail_ports);
+	config_delstrlist(cfg->private_address);
+	config_delstrlist(cfg->private_domain);
 	config_delstrlist(cfg->trust_anchor_file_list);
 	config_delstrlist(cfg->trusted_keys_file_list);
 	config_delstrlist(cfg->trust_anchor_list);

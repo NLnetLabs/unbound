@@ -172,6 +172,7 @@ int
 donotq_apply_cfg(struct iter_donotq* dq, struct config_file* cfg)
 {
 	free(dq->tree);
+	regional_free_all(dq->region);
 	dq->tree = rbtree_create(donotq_cmp);
 	if(!dq->tree)
 		return 0;

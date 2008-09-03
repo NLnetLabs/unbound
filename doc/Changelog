@@ -1,3 +1,9 @@
+3 September 2008: Wouter
+	- options for 'DNS Rebinding' protection: private-address and
+	  private-domain.
+	- dnstree for reuse of routines that help with domain, addr lookups.
+	- private-address and private-domain config option read, stored.
+
 2 September 2008: Wouter
 	- DoS protection features. Queries are jostled out to make room.
 	- testbound can pass time, increasing the internal timer.

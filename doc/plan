@@ -70,6 +70,7 @@ like dnswall does.  Allow certain subdomains to do it, config options.
 * IPv6 reverse, IP4 reverse local-data shorthand for PTR records (?).
   cumbersome to reverse notate by hand for the operator. For local-data.
   local-reverse-data: "1.2.3.4 mypc.example.com"
+* dns-0x20 fallback TODO item. Consider.
 
 *** from draft resolver-mitigation
 * Should be an option?   (Not right now)

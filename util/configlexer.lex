@@ -149,6 +149,8 @@ harden-glue{COLON}	{ YDOUT; return VAR_HARDEN_GLUE;}
 harden-dnssec-stripped{COLON}	{ YDOUT; return VAR_HARDEN_DNNSEC_STRIPPED;}
 harden-referral-path{COLON}	{ YDOUT; return VAR_HARDEN_REFERRAL_PATH;}
 use-caps-for-id{COLON}	{ YDOUT; return VAR_USE_CAPS_FOR_ID;}
+private-address{COLON}	{ YDOUT; return VAR_PRIVATE_ADDRESS;}
+private-domain{COLON}	{ YDOUT; return VAR_PRIVATE_DOMAIN;}
 stub-zone{COLON}	{ YDOUT; return VAR_STUB_ZONE;}
 name{COLON}		{ YDOUT; return VAR_NAME;}
 stub-addr{COLON}	{ YDOUT; return VAR_STUB_ADDR;}

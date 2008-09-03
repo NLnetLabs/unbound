@@ -65,6 +65,7 @@
 #include "util/data/msgreply.h"
 #include "util/data/packed_rrset.h"
 #include "util/storage/slabhash.h"
+#include "util/storage/dnstree.h"
 #include "util/locks.h"
 #include "daemon/acl_list.h"
 #include "libunbound/libworker.h"
@@ -159,6 +160,8 @@ fptr_whitelist_rbtree_cmp(int (*fptr) (const void *, const void *))
 	else if(fptr == &stub_cmp) return 1;
 	else if(fptr == &pending_cmp) return 1;
 	else if(fptr == &serviced_cmp) return 1;
+	else if(fptr == &name_tree_compare) return 1;
+	else if(fptr == &addr_tree_compare) return 1;
 	else if(fptr == &order_lock_cmp) return 1;
 	else if(fptr == &codeline_cmp) return 1;
 	else if(fptr == &nsec3_hash_cmp) return 1;

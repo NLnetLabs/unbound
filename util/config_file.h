@@ -147,6 +147,10 @@ struct config_file {
 	int harden_referral_path;
 	/** use 0x20 bits in query as random ID bits */
 	int use_caps_bits_for_id;
+	/** strip away these private addrs from answers, no DNS Rebinding */
+	struct config_strlist* private_address;
+	/** allow domain (and subdomains) to use private address space */
+	struct config_strlist* private_domain;
 
 	/** chrootdir, if not "" or chroot will be done */
 	char* chrootdir;

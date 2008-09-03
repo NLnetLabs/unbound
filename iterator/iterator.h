@@ -50,6 +50,7 @@ struct iter_hints;
 struct iter_forwards;
 struct iter_donotq;
 struct iter_prep_list;
+struct iter_priv;
 
 /** max number of query restarts. Determines max number of CNAME chain. */
 #define MAX_RESTART_COUNT       8
@@ -91,6 +92,9 @@ struct iter_env {
 
 	/** A set of inetaddrs that should never be queried. */
 	struct iter_donotq* donotq;
+
+	/** private address space and private domains */
+	struct iter_priv* priv;
 
 	/** The maximum dependency depth that this resolver will pursue. */
 	int max_dependency_depth;

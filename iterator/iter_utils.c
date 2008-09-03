@@ -46,6 +46,7 @@
 #include "iterator/iter_fwd.h"
 #include "iterator/iter_donotq.h"
 #include "iterator/iter_delegpt.h"
+#include "iterator/iter_priv.h"
 #include "services/cache/infra.h"
 #include "services/cache/dns.h"
 #include "services/cache/rrset.h"
@@ -121,6 +122,12 @@ iter_apply_cfg(struct iter_env* iter_env, struct config_file* cfg)
 		iter_env->donotq = donotq_create();
 	if(!iter_env->donotq || !donotq_apply_cfg(iter_env->donotq, cfg)) {
 		log_err("Could not set donotqueryaddresses");
+		return 0;
+	}
+	if(!iter_env->priv)
+		iter_env->priv = priv_create();
+	if(!iter_env->priv || !priv_apply_cfg(iter_env->priv, cfg)) {
+		log_err("Could not set private addresses");
 		return 0;
 	}
 	iter_env->supports_ipv6 = cfg->do_ip6;

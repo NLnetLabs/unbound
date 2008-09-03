@@ -91,7 +91,8 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_STATISTICS_INTERVAL VAR_DO_DAEMONIZE VAR_USE_CAPS_FOR_ID
 %token VAR_STATISTICS_CUMULATIVE VAR_OUTGOING_PORT_PERMIT 
 %token VAR_OUTGOING_PORT_AVOID VAR_DLV_ANCHOR_FILE VAR_DLV_ANCHOR
-%token VAR_NEG_CACHE_SIZE VAR_HARDEN_REFERRAL_PATH
+%token VAR_NEG_CACHE_SIZE VAR_HARDEN_REFERRAL_PATH VAR_PRIVATE_ADDRESS
+%token VAR_PRIVATE_DOMAIN
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -135,7 +136,8 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_use_caps_for_id | server_statistics_cumulative |
 	server_outgoing_port_permit | server_outgoing_port_avoid |
 	server_dlv_anchor_file | server_dlv_anchor | server_neg_cache_size |
-	server_harden_referral_path
+	server_harden_referral_path | server_private_address |
+	server_private_domain
 	;
 stubstart: VAR_STUB_ZONE
 	{
@@ -645,6 +647,20 @@ server_use_caps_for_id: VAR_USE_CAPS_FOR_ID STRING
 		else cfg_parser->cfg->use_caps_bits_for_id = 
 			(strcmp($2, "yes")==0);
 		free($2);
+	}
+	;
+server_private_address: VAR_PRIVATE_ADDRESS STRING
+	{
+		OUTYY(("P(server_private_address:%s)\n", $2));
+		if(!cfg_strlist_insert(&cfg_parser->cfg->private_address, $2))
+			yyerror("out of memory");
+	}
+	;
+server_private_domain: VAR_PRIVATE_DOMAIN STRING
+	{
+		OUTYY(("P(server_private_domain:%s)\n", $2));
+		if(!cfg_strlist_insert(&cfg_parser->cfg->private_domain, $2))
+			yyerror("out of memory");
 	}
 	;
 server_do_not_query_address: VAR_DO_NOT_QUERY_ADDRESS STRING
