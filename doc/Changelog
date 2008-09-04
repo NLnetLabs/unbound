@@ -1,3 +1,7 @@
+4 September 2008: Wouter
+	- scrubber scrubs away private addresses.
+	- test for private addresses. man page entry.
+
 3 September 2008: Wouter
 	- options for 'DNS Rebinding' protection: private-address and
 	  private-domain.

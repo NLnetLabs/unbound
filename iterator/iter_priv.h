@@ -46,6 +46,7 @@
 struct iter_env;
 struct config_file;
 struct regional;
+struct rrset_parse;
 
 /**
  * Iterator priv structure
@@ -89,23 +90,12 @@ void priv_delete(struct iter_priv* priv);
 int priv_apply_cfg(struct iter_priv* priv, struct config_file* cfg);
 
 /**
- * See if an address is blocked.
- * @param priv: structure for address storage.
- * @param addr: address to check
- * @param addrlen: length of addr.
- * @return: true if the address must not be queried. false if unlisted.
+ * See if rrset is bad.
+ * @param priv: structure for private address storage.
+ * @param rrset: the rrset to examine, A or AAAA.
+ * @return true if the rrset is bad and should be removed.
  */
-int priv_lookup_addr(struct iter_priv* priv, struct sockaddr_storage* addr,
-	socklen_t addrlen);
-
-/**
- * See if a name is whitelisted.
- * @param priv: structure for address storage.
- * @param name: name to check.
- * @param dclass: class to check.
- * @return: true if the name is OK. false if unlisted.
- */
-int priv_lookup_name(struct iter_priv* priv, uint8_t* name, uint16_t dclass);
+int priv_rrset_bad(struct iter_priv* priv, struct rrset_parse* rrset);
 
 /**
  * Get memory used by priv structure.

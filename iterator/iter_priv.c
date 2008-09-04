@@ -46,6 +46,7 @@
 #include "util/log.h"
 #include "util/config_file.h"
 #include "util/data/dname.h"
+#include "util/data/msgparse.h"
 #include "util/net_help.h"
 #include "util/storage/dnstree.h"
 
@@ -113,7 +114,7 @@ static int read_names(struct iter_priv* priv, struct config_file* cfg)
 	int nm_labs;
 	ldns_rdf* rdf;
 
-	for(p = cfg->private_address; p; p = p->next) {
+	for(p = cfg->private_domain; p; p = p->next) {
 		log_assert(p->str);
 		rdf = ldns_dname_new_frm_str(p->str);
 		if(!rdf) {
@@ -162,13 +163,29 @@ int priv_apply_cfg(struct iter_priv* priv, struct config_file* cfg)
 	return 1;
 }
 
-int priv_lookup_addr(struct iter_priv* priv, struct sockaddr_storage* addr,
+/**
+ * See if an address is blocked.
+ * @param priv: structure for address storage.
+ * @param addr: address to check
+ * @param addrlen: length of addr.
+ * @return: true if the address must not be queried. false if unlisted.
+ */
+static int 
+priv_lookup_addr(struct iter_priv* priv, struct sockaddr_storage* addr,
 	socklen_t addrlen)
 {
 	return addr_tree_lookup(&priv->a, addr, addrlen) != NULL;
 }
 
-int priv_lookup_name(struct iter_priv* priv, uint8_t* name, uint16_t dclass)
+/**
+ * See if a name is whitelisted.
+ * @param priv: structure for address storage.
+ * @param name: name to check.
+ * @param dclass: class to check.
+ * @return: true if the name is OK. false if unlisted.
+ */
+static int 
+priv_lookup_name(struct iter_priv* priv, uint8_t* name, uint16_t dclass)
 {
 	size_t len;
 	int labs = dname_count_size_labels(name, &len);
@@ -179,4 +196,49 @@ size_t priv_get_mem(struct iter_priv* priv)
 {
 	if(!priv) return 0;
 	return sizeof(*priv) + regional_get_mem(priv->region);
+}
+
+int priv_rrset_bad(struct iter_priv* priv, struct rrset_parse* rrset)
+{
+	/* see if it is a private name, that is allowed to have any */
+	if(priv_lookup_name(priv, rrset->dname, ntohs(rrset->rrset_class))) {
+		return 0;
+	} else {
+		/* so its a public name, check the address */
+		struct sockaddr_storage addr;
+		socklen_t len;
+		struct rr_parse* rr;
+		if(rrset->type == LDNS_RR_TYPE_A) {
+			struct sockaddr_in* sa = (struct sockaddr_in*)&addr;
+			len = (socklen_t)sizeof(*sa);
+			memset(sa, 0, len);
+			sa->sin_family = AF_INET;
+			sa->sin_port = (in_port_t)htons(UNBOUND_DNS_PORT);
+			for(rr = rrset->rr_first; rr; rr = rr->next) {
+				if(ldns_read_uint16(rr->ttl_data+4) 
+					!= INET_SIZE)
+					continue;
+				memmove(&sa->sin_addr, rr->ttl_data+4+2, 
+					INET_SIZE);
+				if(priv_lookup_addr(priv, &addr, len))
+					return 1;
+			}
+		} else if(rrset->type == LDNS_RR_TYPE_AAAA) {
+			struct sockaddr_in6* sa = (struct sockaddr_in6*)&addr;
+			len = (socklen_t)sizeof(*sa);
+			memset(sa, 0, len);
+			sa->sin6_family = AF_INET6;
+			sa->sin6_port = (in_port_t)htons(UNBOUND_DNS_PORT);
+			for(rr = rrset->rr_first; rr; rr = rr->next) {
+				if(ldns_read_uint16(rr->ttl_data+4) 
+					!= INET6_SIZE)
+					continue;
+				memmove(&sa->sin6_addr, rr->ttl_data+4+2, 
+					INET6_SIZE);
+				if(priv_lookup_addr(priv, &addr, len))
+					return 1;
+			}
+		} 
+	}
+	return 0;
 }

@@ -41,6 +41,8 @@
  */
 #include "config.h"
 #include "iterator/iter_scrub.h"
+#include "iterator/iterator.h"
+#include "iterator/iter_priv.h"
 #include "services/cache/rrset.h"
 #include "util/log.h"
 #include "util/net_help.h"
@@ -558,11 +560,13 @@ static int sanitize_nsec_is_overreach(struct rrset_parse* rrset,
  * @param qinfo: the question originally asked.
  * @param zonename: name of server zone.
  * @param env: module environment with config and cache.
+ * @param ie: iterator environment with private address data.
  * @return 0 on error.
  */
 static int
 scrub_sanitize(ldns_buffer* pkt, struct msg_parse* msg, 
-	struct query_info* qinfo, uint8_t* zonename, struct module_env* env)
+	struct query_info* qinfo, uint8_t* zonename, struct module_env* env,
+	struct iter_env* ie)
 {
 	struct rrset_parse* rrset, *prev;
 	prev = NULL;
@@ -606,6 +610,18 @@ scrub_sanitize(ldns_buffer* pkt, struct msg_parse* msg,
 	prev = NULL;
 	rrset = msg->rrset_first;
 	while(rrset) {
+
+		/* remove private addresses */
+		if( (rrset->type == LDNS_RR_TYPE_A || 
+			rrset->type == LDNS_RR_TYPE_AAAA) &&
+			priv_rrset_bad(ie->priv, rrset)) {
+			/* set servfail, so the classification becomes
+			 * THROWAWAY, instead of LAME or other unwanted */
+			FLAGS_SET_RCODE(msg->flags, LDNS_RCODE_SERVFAIL);
+			remove_rrset("sanitize: removing public name with "
+				"private address", pkt, msg, prev, &rrset);
+			continue;
+		}
 		
 		/* skip DNAME records -- they will always be followed by a 
 		 * synthesized CNAME, which will be relevant.
@@ -653,7 +669,7 @@ scrub_sanitize(ldns_buffer* pkt, struct msg_parse* msg,
 int 
 scrub_message(ldns_buffer* pkt, struct msg_parse* msg, 
 	struct query_info* qinfo, uint8_t* zonename, struct regional* region,
-	struct module_env* env)
+	struct module_env* env, struct iter_env* ie)
 {
 	/* basic sanity checks */
 	log_nametypeclass(VERB_ALGO, "scrub for", zonename, LDNS_RR_TYPE_NS, 
@@ -684,7 +700,7 @@ scrub_message(ldns_buffer* pkt, struct msg_parse* msg,
 	if(!scrub_normalize(pkt, msg, qinfo, region))
 		return 0;
 	/* delete all out-of-zone information */
-	if(!scrub_sanitize(pkt, msg, qinfo, zonename, env))
+	if(!scrub_sanitize(pkt, msg, qinfo, zonename, env, ie))
 		return 0;
 	return 1;
 }

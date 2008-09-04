@@ -412,6 +412,29 @@ support this. It is known that some authority servers do not support 0x20,
 and resolution will fail for them. A solution is on the TODO list.
 This feature is an experimental implementation of draft dns\-0x20.
 .TP
+.B private\-address: \fI<IP address or subnet>
+Give IPv4 of IPv6 addresses or classless subnets. These are addresses
+on your private network, and are not allowed to be returned for public
+internet names.  Any occurence of such addresses are removed from
+DNS answers. Additionally, the DNSSEC validator may mark the answers
+bogus. This protects against so-called DNS Rebinding, where a user browser
+is turned into a network proxy, allowing remote access through the browser
+to other parts of your private network.  Some names can be allowed to
+contain your private addresses, by default all the \fBlocal\-data\fR
+that you configured is allowed to, and you can specify additional
+names using \fBprivate\-domain\fR.  No private addresses are enabled
+by default.  We consider to enable this for the RFC1918 private IP
+address space by default in later releases. That would enable private 
+addresses for 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16 192.254.0.0/16 
+fd00::/8 and fe80::/10, since the RFC standards say these addresses 
+should not be visible on the public internet.  Turning on 127.0.0.0/8 
+would hinder many spamblocklists as they use that.
+.TP
+.B private\-domain: \fI<domain name>
+Allow this domain, and all its subdomains to contain private addresses.
+Give multiple times to allow multiple domain names to contain private 
+addresses. Default is none.
+.TP
 .B do\-not\-query\-address: \fI<IP address>
 Do not query the given IP address. Can be IP4 or IP6. Append /num to 
 indicate a classless delegation netblock, for example like
