@@ -37,7 +37,7 @@ total 6 of 8 weeks; 2 weeks for maintenance activities.
 + records in the additional section should not be marked bogus
   if they have no signer or a different signed. Validate if you can,
   otherwise leave unchecked.
-* block DNS rebinding attacks, block all A records from 1918 IP blocks,
++ block DNS rebinding attacks, block all A records from 1918 IP blocks,
 like dnswall does.  Allow certain subdomains to do it, config options.
 	one option that controls on/off of all private space.
 	note in config/man that we may consider turning on by default.

@@ -42,7 +42,7 @@
 
 #ifndef ITERATOR_ITER_DONOTQ_H
 #define ITERATOR_ITER_DONOTQ_H
-#include "util/rbtree.h"
+#include "util/storage/dnstree.h"
 struct iter_env;
 struct config_file;
 struct regional;
@@ -55,26 +55,10 @@ struct iter_donotq {
 	struct regional* region;
 	/** 
 	 * Tree of the address spans that are blocked.
-	 * contents of type iter_donotq_addr.
+	 * contents of type addr_tree_node. Each node is an address span 
+	 * that must not be used to send queries to.
 	 */
-	rbtree_t* tree;
-};
-
-/**
- * Iterator donotquery address.
- * An address span that must not be used to send queries to.
- */
-struct iter_donotq_addr {
-	/** redblacktree node, key is this structure: addr and addrlen, net */
-	rbnode_t node;
-	/** address */
-	struct sockaddr_storage addr;
-	/** length of addr */
-	socklen_t addrlen;
-	/** netblock size */
-	int net;
-	/** parent node in donotq tree that encompasses this entry */
-	struct iter_donotq_addr* parent;
+	rbtree_t tree;
 };
 
 /**
@@ -113,8 +97,5 @@ int donotq_lookup(struct iter_donotq* donotq, struct sockaddr_storage* addr,
  * @return bytes in use.
  */
 size_t donotq_get_mem(struct iter_donotq* donotq);
-
-/** compare two donotq entries */
-int donotq_cmp(const void* k1, const void* k2);
 
 #endif /* ITERATOR_ITER_DONOTQ_H */

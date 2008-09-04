@@ -53,9 +53,7 @@
 #include "services/cache/infra.h"
 #include "services/cache/rrset.h"
 #include "iterator/iterator.h"
-#include "iterator/iter_donotq.h"
 #include "iterator/iter_fwd.h"
-#include "iterator/iter_hints.h"
 #include "validator/validator.h"
 #include "validator/val_anchor.h"
 #include "validator/val_nsec3.h"
@@ -67,7 +65,6 @@
 #include "util/storage/slabhash.h"
 #include "util/storage/dnstree.h"
 #include "util/locks.h"
-#include "daemon/acl_list.h"
 #include "libunbound/libworker.h"
 #include "libunbound/context.h"
 #include "util/tube.h"
@@ -152,16 +149,13 @@ fptr_whitelist_rbtree_cmp(int (*fptr) (const void *, const void *))
 {
 	if(fptr == &mesh_state_compare) return 1;
 	else if(fptr == &mesh_state_ref_compare) return 1;
-	else if(fptr == &acl_list_cmp) return 1;
+	else if(fptr == &addr_tree_compare) return 1;
 	else if(fptr == &local_zone_cmp) return 1;
 	else if(fptr == &local_data_cmp) return 1;
-	else if(fptr == &donotq_cmp) return 1;
 	else if(fptr == &fwd_cmp) return 1;
-	else if(fptr == &stub_cmp) return 1;
 	else if(fptr == &pending_cmp) return 1;
 	else if(fptr == &serviced_cmp) return 1;
 	else if(fptr == &name_tree_compare) return 1;
-	else if(fptr == &addr_tree_compare) return 1;
 	else if(fptr == &order_lock_cmp) return 1;
 	else if(fptr == &codeline_cmp) return 1;
 	else if(fptr == &nsec3_hash_cmp) return 1;

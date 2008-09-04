@@ -108,13 +108,6 @@ worker_alloc_cleanup(void* ATTR_UNUSED(arg))
 	log_assert(0);
 }
 
-int
-acl_list_cmp(const void* ATTR_UNUSED(k1), const void* ATTR_UNUSED(k2))
-{
-	log_assert(0);
-	return 0;
-}
-
 int libworker_send_packet(ldns_buffer* ATTR_UNUSED(pkt), 
 	struct sockaddr_storage* ATTR_UNUSED(addr), 
 	socklen_t ATTR_UNUSED(addrlen), int ATTR_UNUSED(timeout), 

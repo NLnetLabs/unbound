@@ -42,7 +42,7 @@
 
 #ifndef ITERATOR_ITER_HINTS_H
 #define ITERATOR_ITER_HINTS_H
-#include "util/rbtree.h"
+#include "util/storage/dnstree.h"
 struct iter_env;
 struct config_file;
 struct delegpt;
@@ -60,28 +60,19 @@ struct iter_hints {
 	 * a lookup on class, name will return an exact match or the closest
 	 * match which gives the ancestor needed.
 	 * contents of type iter_hints_stub. The class IN root is in here.
+	 * uses name_tree_node from dnstree.h.
 	 */
-	rbtree_t* tree;
+	rbtree_t tree;
 };
 
 /**
  * Iterator hints for a particular stub.
  */
 struct iter_hints_stub {
-	/** redblacktree node, key is this structure: class and name */
-	rbnode_t node;
-	/** name */
-	uint8_t* name;
-	/** length of name */
-	size_t namelen;
-	/** number of labels in name */
-	int namelabs;
+	/** tree sorted by name, class */
+	struct name_tree_node node;
 	/** delegation point with hint information for this stub. */
 	struct delegpt* dp;
-	/** pointer to parent in stub hint tree (or NULL if none) */
-	struct iter_hints_stub* parent;
-	/** class of hints. host order. */
-	uint16_t hint_class;
 };
 
 /**
@@ -133,8 +124,5 @@ struct delegpt* hints_lookup_stub(struct iter_hints* hints,
  * @return bytes in use
  */
 size_t hints_get_mem(struct iter_hints* hints);
-
-/** compare two hint entries */
-int stub_cmp(const void* k1, const void* k2);
 
 #endif /* ITERATOR_ITER_HINTS_H */

@@ -48,21 +48,6 @@
 #include "util/config_file.h"
 #include "util/net_help.h"
 
-int
-donotq_cmp(const void* k1, const void* k2)
-{
-	struct iter_donotq_addr* n1 = (struct iter_donotq_addr*)k1;
-	struct iter_donotq_addr* n2 = (struct iter_donotq_addr*)k2;
-	int r = sockaddr_cmp_addr(&n1->addr, n1->addrlen, &n2->addr, 
-		n2->addrlen);
-	if(r != 0) return r;
-	if(n1->net < n2->net)
-		return -1;
-	if(n1->net > n2->net)
-		return 1;
-	return 0;
-}
-
 struct iter_donotq* 
 donotq_create()
 {
@@ -84,7 +69,6 @@ donotq_delete(struct iter_donotq* dq)
 	if(!dq) 
 		return;
 	regional_destroy(dq->region);
-	free(dq->tree);
 	free(dq);
 }
 
@@ -93,16 +77,11 @@ static int
 donotq_insert(struct iter_donotq* dq, struct sockaddr_storage* addr, 
 	socklen_t addrlen, int net)
 {
-	struct iter_donotq_addr* node = regional_alloc(dq->region,
-		sizeof(struct iter_donotq_addr));
+	struct addr_tree_node* node = (struct addr_tree_node*)regional_alloc(
+		dq->region, sizeof(*node));
 	if(!node)
 		return 0;
-	node->node.key = node;
-	memcpy(&node->addr, addr, addrlen);
-	node->addrlen = addrlen;
-	node->net = net;
-	node->parent = NULL;
-	if(!rbtree_insert(dq->tree, &node->node)) {
+	if(!addr_tree_insert(&dq->tree, node, addr, addrlen, net)) {
 		verbose(VERB_QUERY, "duplicate donotquery address ignored.");
 	}
 	return 1;
@@ -140,42 +119,11 @@ read_donotq(struct iter_donotq* dq, struct config_file* cfg)
 	return 1;
 }
 
-/** initialise parent pointers in the tree */
-static void
-donotq_init_parents(struct iter_donotq* donotq)
-{
-	struct iter_donotq_addr* node, *prev = NULL, *p;
-	int m;
-	RBTREE_FOR(node, struct iter_donotq_addr*, donotq->tree) {
-		node->parent = NULL;
-		if(!prev || prev->addrlen != node->addrlen) {
-			prev = node;
-			continue;
-		}
-		m = addr_in_common(&prev->addr, prev->net, &node->addr, 
-			node->net, node->addrlen);
-		/* sort order like: ::/0, 1::/2, 1::/4, ... 2::/2 */
-		/* find the previous, or parent-parent-parent */
-		for(p = prev; p; p = p->parent)
-			if(p->net <= m) {
-				/* ==: since prev matched m, this is closest*/
-				/* <: prev matches more, but is not a parent,
-				* this one is a (grand)parent */
-				node->parent = p;
-				break;
-			}
-		prev = node;
-	}
-}
-
 int 
 donotq_apply_cfg(struct iter_donotq* dq, struct config_file* cfg)
 {
-	free(dq->tree);
 	regional_free_all(dq->region);
-	dq->tree = rbtree_create(donotq_cmp);
-	if(!dq->tree)
-		return 0;
+	addr_tree_init(&dq->tree);
 	if(!read_donotq(dq, cfg))
 		return 0;
 	if(cfg->donotquery_localhost) {
@@ -186,7 +134,7 @@ donotq_apply_cfg(struct iter_donotq* dq, struct config_file* cfg)
 				return 0;
 		}
 	}
-	donotq_init_parents(dq);
+	addr_tree_init_parents(&dq->tree);
 	return 1;
 }
 
@@ -194,33 +142,7 @@ int
 donotq_lookup(struct iter_donotq* donotq, struct sockaddr_storage* addr,
         socklen_t addrlen)
 {
-	/* lookup in the tree */
-	rbnode_t* res = NULL;
-	struct iter_donotq_addr* result;
-	struct iter_donotq_addr key;
-	key.node.key = &key;
-	memcpy(&key.addr, addr, addrlen);
-	key.addrlen = addrlen;
-	key.net = (addr_is_ip6(addr, addrlen)?128:32);
-	if(rbtree_find_less_equal(donotq->tree, &key, &res)) {
-		/* exact */
-		return 1;
-	} else {
-		/* smaller element (or no element) */
-		int m;
-		result = (struct iter_donotq_addr*)res;
-		if(!result || result->addrlen != addrlen)
-			return 0;
-		/* count number of bits matched */
-		m = addr_in_common(&result->addr, result->net, addr, 
-			key.net, addrlen);
-		while(result) { /* go up until addr is inside netblock */
-			if(result->net <= m)
-				return 1;
-			result = result->parent;
-		}
-	}
-	return 0;
+	return addr_tree_lookup(&donotq->tree, addr, addrlen) != NULL;
 }
 
 size_t 

@@ -42,7 +42,7 @@
 
 #ifndef DAEMON_ACL_LIST_H
 #define DAEMON_ACL_LIST_H
-#include "util/rbtree.h"
+#include "util/storage/dnstree.h"
 struct config_file;
 struct regional;
 
@@ -71,7 +71,7 @@ struct acl_list {
 	 * Tree of the addresses that are allowed/blocked.
 	 * contents of type acl_addr.
 	 */
-	rbtree_t* tree;
+	rbtree_t tree;
 };
 
 /**
@@ -79,16 +79,8 @@ struct acl_list {
  * An address span with access control information
  */
 struct acl_addr {
-	/** redblacktree node, key is this structure: addr and addrlen, net */
-	rbnode_t node;
-	/** parent node in acl tree that encompasses this entry */
-	struct acl_addr* parent;
-	/** address */
-	struct sockaddr_storage addr;
-	/** length of addr */
-	socklen_t addrlen;
-	/** netblock size */
-	int net;
+	/** node in address tree */
+	struct addr_tree_node node;
 	/** access control on this netblock */
 	enum acl_access control;
 };
@@ -129,8 +121,5 @@ enum acl_access acl_list_lookup(struct acl_list* acl,
  * @return bytes in use.
  */
 size_t acl_list_get_mem(struct acl_list* acl);
-
-/** compare two acl list entries */
-int acl_list_cmp(const void* k1, const void* k2);
 
 #endif /* DAEMON_ACL_LIST_H */

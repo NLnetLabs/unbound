@@ -54,7 +54,7 @@ int name_tree_compare(const void* k1, const void* k2)
                         return -1;
                 return 1;
         }
-        return dname_canon_lab_cmp(x->name, x->labs, y->name, y->labs, &m);
+        return dname_lab_cmp(x->name, x->labs, y->name, y->labs, &m);
 }
 
 int addr_tree_compare(const void* k1, const void* k2)
@@ -89,6 +89,7 @@ int name_tree_insert(rbtree_t* tree, struct name_tree_node* node,
 	node->len = len;
 	node->labs = labs;
 	node->dclass = dclass;
+	node->parent = NULL;
 	return rbtree_insert(tree, &node->node) != NULL;
 }
 
@@ -99,6 +100,7 @@ int addr_tree_insert(rbtree_t* tree, struct addr_tree_node* node,
 	memcpy(&node->addr, addr, addrlen);
 	node->addrlen = addrlen;
 	node->net = net;
+	node->parent = NULL;
 	return rbtree_insert(tree, &node->node) != NULL;
 }
 
