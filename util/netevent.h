@@ -524,7 +524,7 @@ void comm_signal_delete(struct comm_signal* comsig);
  * perform accept(2) with error checking.
  * @param c: commpoint with accept fd.
  * @param addr: remote end returned here.
- * @param len: length of remote end returned here.
+ * @param addrlen: length of remote end returned here.
  * @return new fd, or -1 on error.
  *	if -1, error message has been printed if necessary, simply drop
  *	out of the reading handler.
