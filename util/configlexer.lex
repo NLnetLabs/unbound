@@ -184,6 +184,14 @@ local-zone{COLON}	{ YDOUT; return VAR_LOCAL_ZONE;}
 local-data{COLON}	{ YDOUT; return VAR_LOCAL_DATA;}
 statistics-interval{COLON}	{ YDOUT; return VAR_STATISTICS_INTERVAL;}
 statistics-cumulative{COLON}	{ YDOUT; return VAR_STATISTICS_CUMULATIVE;}
+remote-control{COLON}	{ YDOUT; return VAR_REMOTE_CONTROL; }
+control-enable{COLON}	{ YDOUT; return VAR_CONTROL_ENABLE; }
+control-interface{COLON}	{ YDOUT; return VAR_CONTROL_INTERFACE; }
+control-port{COLON}	{ YDOUT; return VAR_CONTROL_PORT; }
+server-key-file{COLON}	{ YDOUT; return VAR_SERVER_KEY_FILE; }
+server-cert-file{COLON}	{ YDOUT; return VAR_SERVER_CERT_FILE; }
+control-key-file{COLON}	{ YDOUT; return VAR_CONTROL_KEY_FILE; }
+control-cert-file{COLON}	{ YDOUT; return VAR_CONTROL_CERT_FILE; }
 {NEWLINE}		{ LEXOUT(("NL\n")); cfg_parser->line++;}
 
 	/* Quoted strings. Strip leading and ending quotes */

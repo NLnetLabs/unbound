@@ -92,12 +92,14 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_STATISTICS_CUMULATIVE VAR_OUTGOING_PORT_PERMIT 
 %token VAR_OUTGOING_PORT_AVOID VAR_DLV_ANCHOR_FILE VAR_DLV_ANCHOR
 %token VAR_NEG_CACHE_SIZE VAR_HARDEN_REFERRAL_PATH VAR_PRIVATE_ADDRESS
-%token VAR_PRIVATE_DOMAIN
+%token VAR_PRIVATE_DOMAIN VAR_REMOTE_CONTROL VAR_CONTROL_ENABLE
+%token VAR_CONTROL_INTERFACE VAR_CONTROL_PORT VAR_SERVER_KEY_FILE
+%token VAR_SERVER_CERT_FILE VAR_CONTROL_KEY_FILE VAR_CONTROL_CERT_FILE
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
 toplevelvar: serverstart contents_server | stubstart contents_stub |
-	forwardstart contents_forward
+	forwardstart contents_forward | rcstart contents_rc
 	;
 
 /* server: declaration */
@@ -859,6 +861,71 @@ forward_addr: VAR_FORWARD_ADDR STRING
 		OUTYY(("P(forward-addr:%s)\n", $2));
 		if(!cfg_strlist_insert(&cfg_parser->cfg->forwards->addrs, $2))
 			yyerror("out of memory");
+	}
+	;
+rcstart: VAR_REMOTE_CONTROL
+	{ 
+		OUTYY(("\nP(remote-control:)\n")); 
+	}
+	;
+contents_rc: contents_rc content_rc 
+	| ;
+content_rc: rc_control_enable | rc_control_interface | rc_control_port |
+	rc_server_key_file | rc_server_cert_file | rc_control_key_file |
+	rc_control_cert_file
+	;
+rc_control_enable: VAR_CONTROL_ENABLE STRING
+	{
+		OUTYY(("P(control_enable:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->remote_control_enable = 
+			(strcmp($2, "yes")==0);
+		free($2);
+	}
+	;
+rc_control_port: VAR_CONTROL_PORT STRING
+	{
+		OUTYY(("P(control_port:%s)\n", $2));
+		if(atoi($2) == 0)
+			yyerror("control port number expected");
+		else cfg_parser->cfg->control_port = atoi($2);
+		free($2);
+	}
+	;
+rc_control_interface: VAR_CONTROL_INTERFACE STRING
+	{
+		OUTYY(("P(control_interface:%s)\n", $2));
+		if(!cfg_strlist_insert(&cfg_parser->cfg->control_ifs, $2))
+			yyerror("out of memory");
+	}
+	;
+rc_server_key_file: VAR_SERVER_KEY_FILE STRING
+	{
+		OUTYY(("P(rc_server_key_file:%s)\n", $2));
+		free(cfg_parser->cfg->server_key_file);
+		cfg_parser->cfg->server_key_file = $2;
+	}
+	;
+rc_server_cert_file: VAR_SERVER_CERT_FILE STRING
+	{
+		OUTYY(("P(rc_server_cert_file:%s)\n", $2));
+		free(cfg_parser->cfg->server_cert_file);
+		cfg_parser->cfg->server_cert_file = $2;
+	}
+	;
+rc_control_key_file: VAR_CONTROL_KEY_FILE STRING
+	{
+		OUTYY(("P(rc_control_key_file:%s)\n", $2));
+		free(cfg_parser->cfg->control_key_file);
+		cfg_parser->cfg->control_key_file = $2;
+	}
+	;
+rc_control_cert_file: VAR_CONTROL_CERT_FILE STRING
+	{
+		OUTYY(("P(rc_control_cert_file:%s)\n", $2));
+		free(cfg_parser->cfg->control_cert_file);
+		cfg_parser->cfg->control_cert_file = $2;
 	}
 	;
 %%

@@ -45,6 +45,7 @@
 #include "util/random.h"
 #include "daemon/worker.h"
 #include "daemon/daemon.h"
+#include "daemon/remote.h"
 #include "daemon/acl_list.h"
 #include "util/netevent.h"
 #include "util/config_file.h"
@@ -968,8 +969,18 @@ worker_init(struct worker* worker, struct config_file *cfg,
 			return 0;
 		}
 #endif /* LIBEVENT_SIGNAL_PROBLEM */
+		if(!(worker->rc = daemon_remote_create(worker))) {
+			worker_delete(worker);
+			return 0;
+		}
+		if(!daemon_remote_open_accept(worker->rc, 
+			worker->daemon->rc_ports)) {
+			worker_delete(worker);
+			return 0;
+		}
 	} else { /* !do_sigs */
-		worker->comsig = 0;
+		worker->comsig = NULL;
+		worker->rc = NULL;
 	}
 	seed = (unsigned int)time(NULL) ^ (unsigned int)getpid() ^
 		(((unsigned int)worker->thread_num)<<17);
@@ -1082,6 +1093,7 @@ worker_delete(struct worker* worker)
 	comm_signal_delete(worker->comsig);
 	tube_delete(worker->cmd);
 	comm_timer_delete(worker->stat_timer);
+	daemon_remote_delete(worker->rc);
 	free(worker->ports);
 	if(worker->thread_num == 0)
 		log_set_time(NULL);

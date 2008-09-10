@@ -216,6 +216,21 @@ struct config_file {
 	/** local data RRs configged */
 	struct config_strlist* local_data;
 
+	/** remote control section. enable toggle. */
+	int remote_control_enable;
+	/** the interfaces the remote control should listen on */
+	struct config_strlist* control_ifs;
+	/** port number for the control port */
+	int control_port;
+	/** private key file for server */
+	char* server_key_file;
+	/** certificate file for server */
+	char* server_cert_file;
+	/** private key file for unbound-control */
+	char* control_key_file;
+	/** certificate file for unbound-control */
+	char* control_cert_file;
+
 	/** daemonize, i.e. fork into the background. */
 	int do_daemonize;
 };

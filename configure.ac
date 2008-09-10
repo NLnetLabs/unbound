@@ -522,7 +522,6 @@ AC_ARG_WITH(ssl, AC_HELP_STRING([--with-ssl=pathname],
 	    fi
 	
 	    AC_MSG_CHECKING([for HMAC_CTX_init in -lcrypto])
-	    ORIGLIBS="$LIBS"
 	    LIBS="$LIBS -lcrypto"
 	    AC_TRY_LINK(, [
 		int HMAC_CTX_init(void);

@@ -20958,7 +20958,6 @@ echo "${ECHO_T}found in $ssldir" >&6; }
 
 	    { echo "$as_me:$LINENO: checking for HMAC_CTX_init in -lcrypto" >&5
 echo $ECHO_N "checking for HMAC_CTX_init in -lcrypto... $ECHO_C" >&6; }
-	    ORIGLIBS="$LIBS"
 	    LIBS="$LIBS -lcrypto"
 	    cat >conftest.$ac_ext <<_ACEOF
 /* confdefs.h.  */

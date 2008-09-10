@@ -151,6 +151,19 @@ config_create()
 	cfg->local_zones = NULL;
 	cfg->local_zones_nodefault = NULL;
 	cfg->local_data = NULL;
+
+	cfg->remote_control_enable = 0;
+	cfg->control_ifs = NULL;
+	cfg->control_port = 953;
+	if(!(cfg->server_key_file = strdup(RUN_DIR"/unbound_server.key"))) 
+		goto error_exit;
+	if(!(cfg->server_cert_file = strdup(RUN_DIR"/unbound_server.pem"))) 
+		goto error_exit;
+	if(!(cfg->control_key_file = strdup(RUN_DIR"/unbound_control.key"))) 
+		goto error_exit;
+	if(!(cfg->control_cert_file = strdup(RUN_DIR"/unbound_control.pem"))) 
+		goto error_exit;
+
 	if(!(cfg->module_conf = strdup("validator iterator"))) goto error_exit;
 	if(!(cfg->val_nsec3_key_iterations = 
 		strdup("1024 150 2048 500 4096 2500"))) goto error_exit;
@@ -355,6 +368,26 @@ int config_set_option(struct config_file* cfg, const char* opt,
 		return cfg_parse_memsize(val, &cfg->neg_cache_size);
 	} else if(strcmp(opt, "local-data:") == 0) {
 		return cfg_strlist_insert(&cfg->local_data, strdup(val));
+	} else if(strcmp(opt, "control-enable:") == 0) {
+		IS_YES_OR_NO;
+		cfg->remote_control_enable = (strcmp(val, "yes") == 0);
+	} else if(strcmp(opt, "control-interface:") == 0) {
+		return cfg_strlist_insert(&cfg->control_ifs, strdup(val));
+	} else if(strcmp(opt, "control-port:") == 0) {
+		IS_NONZERO_NUMBER;
+		cfg->control_port = atoi(val);
+	} else if(strcmp(opt, "server-key-file:") == 0) {
+		free(cfg->server_key_file);
+		return (cfg->server_key_file = strdup(val)) != NULL;
+	} else if(strcmp(opt, "server-cert-file:") == 0) {
+		free(cfg->server_cert_file);
+		return (cfg->server_cert_file = strdup(val)) != NULL;
+	} else if(strcmp(opt, "control-key-file:") == 0) {
+		free(cfg->control_key_file);
+		return (cfg->control_key_file = strdup(val)) != NULL;
+	} else if(strcmp(opt, "control-cert-file:") == 0) {
+		free(cfg->control_cert_file);
+		return (cfg->control_cert_file = strdup(val)) != NULL;
 	} else if(strcmp(opt, "module-config:") == 0) {
 		free(cfg->module_conf);
 		return (cfg->module_conf = strdup(val)) != NULL;
@@ -483,6 +516,11 @@ config_delete(struct config_file* cfg)
 	config_deldblstrlist(cfg->local_zones);
 	config_delstrlist(cfg->local_zones_nodefault);
 	config_delstrlist(cfg->local_data);
+	config_delstrlist(cfg->control_ifs);
+	free(cfg->server_key_file);
+	free(cfg->server_cert_file);
+	free(cfg->control_key_file);
+	free(cfg->control_cert_file);
 	free(cfg);
 }
 

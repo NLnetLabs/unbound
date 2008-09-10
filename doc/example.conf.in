@@ -35,7 +35,7 @@ server:
 	# interface: 2001:DB8::5
 	
 	# enable this feature to copy the source address of queries to reply.
-	# Socket options not be supported on all platforms. experimental. 
+	# Socket options are not supported on all platforms. experimental. 
 	# interface-automatic: no
 
 	# port to answer queries from
@@ -365,6 +365,31 @@ server:
 	# local-zone: "example.com" redirect
 	# local-data: "example.com A 192.0.2.3"
 
+# Remote control config section. 
+remote-control:
+	# Enable remote control with unbound-control(8) here.
+	# set up the keys and certificates with unbound-control-setup.
+	# control-enable: no
+
+	# what interfaces are listened to for remote control.
+	# give 0.0.0.0 and ::0 to listen to all interfaces.
+	# control-interface: 127.0.0.1
+	# control-interface: ::1
+
+	# port number for remote control operations. Same as BIND rndc uses.
+	# control-port: 953
+
+	# unbound server key file.
+	# server-key-file: "@UNBOUND_RUN_DIR@/unbound_server.key"
+
+	# unbound server certificate file.
+	# server-key-file: "@UNBOUND_RUN_DIR@/unbound_server.pem"
+
+	# unbound-control key file.
+	# control-key-file: "@UNBOUND_RUN_DIR@/unbound_control.key"
+
+	# unbound-control certificate file.
+	# control-key-file: "@UNBOUND_RUN_DIR@/unbound_control.pem"
 
 # Stub zones.
 # Create entries like below, to make all queries for 'example.com' and 

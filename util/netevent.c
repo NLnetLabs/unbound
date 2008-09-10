@@ -539,6 +539,44 @@ setup_tcp_handler(struct comm_point* c, int fd)
 	comm_point_start_listening(c, fd, TCP_QUERY_TIMEOUT);
 }
 
+int comm_point_perform_accept(struct comm_point* c,
+	struct sockaddr_storage* addr, socklen_t* addrlen)
+{
+	int new_fd;
+	*addrlen = (socklen_t)sizeof(*addr);
+	new_fd = accept(c->fd, (struct sockaddr*)addr, addrlen);
+	if(new_fd == -1) {
+#ifndef USE_WINSOCK
+		/* EINTR is signal interrupt. others are closed connection. */
+		if(	errno != EINTR 
+#ifdef EWOULDBLOCK
+			&& errno != EWOULDBLOCK 
+#endif
+#ifdef ECONNABORTED
+			&& errno != ECONNABORTED 
+#endif
+#ifdef EPROTO
+			&& errno != EPROTO
+#endif /* EPROTO */
+			)
+			return -1;
+		log_err("accept failed: %s", strerror(errno));
+#else /* USE_WINSOCK */
+		if(WSAGetLastError() == WSAEINPROGRESS ||
+			WSAGetLastError() == WSAECONNRESET)
+			return -1;
+		if(WSAGetLastError() == WSAEWOULDBLOCK) {
+			winsock_tcp_wouldblock(&c->ev->ev, EV_READ);
+			return -1;
+		}
+		log_err("accept failed: %s", wsa_strerror(WSAGetLastError()));
+#endif
+		log_addr(0, "remote address is", addr, *addrlen);
+		return -1;
+	}
+	return new_fd;
+}
+
 void 
 comm_point_tcp_accept_callback(int fd, short event, void* arg)
 {
@@ -557,40 +595,10 @@ comm_point_tcp_accept_callback(int fd, short event, void* arg)
 	}
 	/* accept incoming connection. */
 	c_hdl = c->tcp_free;
-	c_hdl->repinfo.addrlen = (socklen_t)sizeof(c_hdl->repinfo.addr);
 	log_assert(fd != -1);
-	new_fd = accept(fd, (struct sockaddr*)&c_hdl->repinfo.addr, 
+	new_fd = comm_point_perform_accept(c, &c_hdl->repinfo.addr,
 		&c_hdl->repinfo.addrlen);
-	if(new_fd == -1) {
-#ifndef USE_WINSOCK
-		/* EINTR is signal interrupt. others are closed connection. */
-		if(	errno != EINTR 
-#ifdef EWOULDBLOCK
-			&& errno != EWOULDBLOCK 
-#endif
-#ifdef ECONNABORTED
-			&& errno != ECONNABORTED 
-#endif
-#ifdef EPROTO
-			&& errno != EPROTO
-#endif /* EPROTO */
-			)
-			return;
-		log_err("accept failed: %s", strerror(errno));
-#else /* USE_WINSOCK */
-		if(WSAGetLastError() == WSAEINPROGRESS ||
-			WSAGetLastError() == WSAECONNRESET)
-			return;
-		if(WSAGetLastError() == WSAEWOULDBLOCK) {
-			winsock_tcp_wouldblock(&c->ev->ev, EV_READ);
-			return ;
-		}
-		log_err("accept failed: %s", wsa_strerror(WSAGetLastError()));
-#endif
-		log_addr(0, "remote address is", &c_hdl->repinfo.addr,
-			c_hdl->repinfo.addrlen);
-		return;
-	}
+
 	/* grab the tcp handler buffers */
 	c->tcp_free = c_hdl->tcp_free;
 	if(!c->tcp_free) {

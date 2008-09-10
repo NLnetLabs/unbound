@@ -1,3 +1,7 @@
+10 September 2008: Wouter
+	- remove memleak in privacy addresses on reloads and quits.
+	- remote control work.
+
 9 September 2008: Wouter
 	- smallapp/unbound-control-setup.sh script to set up certificates.
 

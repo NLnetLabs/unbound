@@ -68,6 +68,10 @@ struct daemon {
 	int listening_port;
 	/** listening ports, opened, to be shared by threads */
 	struct listen_port* ports;
+	/** port number fore remote that has ports opened. */
+	int rc_port;
+	/** listening ports for remote control */
+	struct listen_port* rc_ports;
 	/** num threads allocated */
 	int num;
 	/** the worker entries */

@@ -123,7 +123,15 @@
      VAR_NEG_CACHE_SIZE = 339,
      VAR_HARDEN_REFERRAL_PATH = 340,
      VAR_PRIVATE_ADDRESS = 341,
-     VAR_PRIVATE_DOMAIN = 342
+     VAR_PRIVATE_DOMAIN = 342,
+     VAR_REMOTE_CONTROL = 343,
+     VAR_CONTROL_ENABLE = 344,
+     VAR_CONTROL_INTERFACE = 345,
+     VAR_CONTROL_PORT = 346,
+     VAR_SERVER_KEY_FILE = 347,
+     VAR_SERVER_CERT_FILE = 348,
+     VAR_CONTROL_KEY_FILE = 349,
+     VAR_CONTROL_CERT_FILE = 350
    };
 #endif
 /* Tokens.  */
@@ -212,6 +220,14 @@
 #define VAR_HARDEN_REFERRAL_PATH 340
 #define VAR_PRIVATE_ADDRESS 341
 #define VAR_PRIVATE_DOMAIN 342
+#define VAR_REMOTE_CONTROL 343
+#define VAR_CONTROL_ENABLE 344
+#define VAR_CONTROL_INTERFACE 345
+#define VAR_CONTROL_PORT 346
+#define VAR_SERVER_KEY_FILE 347
+#define VAR_SERVER_CERT_FILE 348
+#define VAR_CONTROL_KEY_FILE 349
+#define VAR_CONTROL_CERT_FILE 350
 
 
 
@@ -223,7 +239,7 @@ typedef union YYSTYPE
 	char*	str;
 }
 /* Line 1489 of yacc.c.  */
-#line 227 "util/configparser.h"
+#line 243 "util/configparser.h"
 	YYSTYPE;
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */
 # define YYSTYPE_IS_DECLARED 1

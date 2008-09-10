@@ -49,6 +49,7 @@
 #include "iterator/iter_delegpt.h"
 #include "iterator/iter_resptype.h"
 #include "iterator/iter_scrub.h"
+#include "iterator/iter_priv.h"
 #include "services/cache/dns.h"
 #include "services/cache/infra.h"
 #include "util/module.h"
@@ -85,6 +86,7 @@ iter_deinit(struct module_env* env, int id)
 		return;
 	iter_env = (struct iter_env*)env->modinfo[id];
 	free(iter_env->target_fetch_policy);
+	priv_delete(iter_env->priv);
 	hints_delete(iter_env->hints);
 	forwards_delete(iter_env->fwds);
 	donotq_delete(iter_env->donotq);

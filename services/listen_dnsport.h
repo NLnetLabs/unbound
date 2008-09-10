@@ -46,6 +46,7 @@
 #include "util/netevent.h"
 struct listen_list;
 struct config_file;
+struct addrinfo;
 
 /**
  * Listening for queries structure.
@@ -156,6 +157,13 @@ void listen_resume(struct listen_dnsport* listen);
 void listen_delete(struct listen_dnsport* listen);
 
 /**
+ * delete listen_list of commpoints. Calls commpointdelete() on items.
+ * This may close the fds or not depending on flags.
+ * @param list: to delete.
+ */
+void listen_list_delete(struct listen_list* list);
+
+/**
  * get memory size used by the listening structs
  * @param listen: listening structure.
  * @return: size in bytes.
@@ -177,5 +185,14 @@ size_t listen_get_mem(struct listen_dnsport* listen);
  */
 int create_udp_sock(int family, int socktype, struct sockaddr* addr, 
 	socklen_t addrlen, int v6only, int* inuse, int* noproto);
+
+/**
+ * Create and bind TCP listening socket
+ * @param addr: address info ready to make socket.
+ * @param v6only: enable ip6 only flag on ip6 sockets.
+ * @param noproto: if error caused by lack of protocol support.
+ * @return: the socket. -1 on error.
+ */
+int create_tcp_accept_sock(struct addrinfo *addr, int v6only, int* noproto);
 
 #endif /* LISTEN_DNSPORT_H */

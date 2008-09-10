@@ -42,6 +42,7 @@
 #include "config.h"
 #include "daemon/daemon.h"
 #include "daemon/worker.h"
+#include "daemon/remote.h"
 #include "daemon/acl_list.h"
 #include "util/log.h"
 #include "util/config_file.h"
@@ -188,12 +189,24 @@ int
 daemon_open_shared_ports(struct daemon* daemon)
 {
 	log_assert(daemon);
-	if(daemon->cfg->port == daemon->listening_port)
-		return 1;
-	listening_ports_free(daemon->ports);
-	if(!(daemon->ports=listening_ports_open(daemon->cfg)))
-		return 0;
-	daemon->listening_port = daemon->cfg->port;
+	if(daemon->cfg->port != daemon->listening_port) {
+		listening_ports_free(daemon->ports);
+		if(!(daemon->ports=listening_ports_open(daemon->cfg)))
+			return 0;
+		daemon->listening_port = daemon->cfg->port;
+	}
+	if(!daemon->cfg->remote_control_enable && daemon->rc_port) {
+		listening_ports_free(daemon->rc_ports);
+		daemon->rc_ports = NULL;
+		daemon->rc_port = 0;
+	}
+	if(daemon->cfg->remote_control_enable && 
+		daemon->cfg->control_port != daemon->rc_port) {
+		listening_ports_free(daemon->rc_ports);
+		if(!(daemon->rc_ports=daemon_remote_open_ports(daemon->cfg)))
+			return 0;
+		daemon->rc_port = daemon->cfg->control_port;
+	}
 	return 1;
 }
 
@@ -391,7 +404,7 @@ daemon_fork(struct daemon* daemon)
 	daemon_start_others(daemon);
 
 	/* Special handling for the main thread. This is the thread
-	 * that handles signals.
+	 * that handles signals and remote control.
 	 */
 	if(!worker_init(daemon->workers[0], daemon->cfg, daemon->ports, 1))
 		fatal_exit("Could not initialize main thread");
@@ -441,6 +454,7 @@ daemon_delete(struct daemon* daemon)
 		return;
 	modstack_desetup(&daemon->mods, daemon->env);
 	listening_ports_free(daemon->ports);
+	listening_ports_free(daemon->rc_ports);
 	if(daemon->env) {
 		slabhash_delete(daemon->env->msg_cache);
 		rrset_cache_delete(daemon->env->rrset_cache);

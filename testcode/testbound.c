@@ -42,6 +42,7 @@
 #include "testcode/ldns-testpkts.h"
 #include "testcode/replay.h"
 #include "testcode/fake_event.h"
+#include "daemon/remote.h"
 
 /** 
  * include the main program from the unbound daemon.
@@ -268,3 +269,43 @@ main(int argc, char* argv[])
 		log_info("Testbound Exit Success");
 	return res;
 }
+
+/* fake remote control */
+struct listen_port* daemon_remote_open_ports(struct config_file* 
+	ATTR_UNUSED(cfg))
+{
+	return NULL;
+}
+
+struct daemon_remote* daemon_remote_create(struct worker* ATTR_UNUSED(worker))
+{
+	return (struct daemon_remote*)calloc(1,1);
+}
+
+void daemon_remote_delete(struct daemon_remote* rc)
+{
+	free(rc);
+}
+
+int daemon_remote_open_accept(struct daemon_remote* ATTR_UNUSED(rc),
+        struct listen_port* ATTR_UNUSED(ports))
+{
+	return 1;
+}
+
+int remote_accept_callback(struct comm_point* ATTR_UNUSED(c), 
+	void* ATTR_UNUSED(arg), int ATTR_UNUSED(error),
+        struct comm_reply* ATTR_UNUSED(repinfo))
+{
+	log_assert(0);
+	return 0;
+}
+
+int remote_control_callback(struct comm_point* ATTR_UNUSED(c), 
+	void* ATTR_UNUSED(arg), int ATTR_UNUSED(error),
+        struct comm_reply* ATTR_UNUSED(repinfo))
+{
+	log_assert(0);
+	return 0;
+}
+

@@ -152,7 +152,7 @@ endif
 
 unbound:	$(DAEMON_OBJ) $(ldnslib)
 	$(INFO) Link $@
-	$Q$(LINK) -o $@ $(sort $(DAEMON_OBJ)) $(LIBS)
+	$Q$(LINK) -o $@ $(sort $(DAEMON_OBJ)) -lssl $(LIBS)
 
 unbound-checkconf:	$(CHECKCONF_OBJ) $(ldnslib)
 	$(INFO) Link $@

@@ -47,6 +47,7 @@
 #include "util/fptr_wlist.h"
 #include "util/mini_event.h"
 #include "daemon/worker.h"
+#include "daemon/remote.h"
 #include "services/outside_network.h"
 #include "services/mesh.h"
 #include "services/localzone.h"
@@ -84,6 +85,8 @@ fptr_whitelist_comm_point_raw(comm_point_callback_t *fptr)
 {
 	if(fptr == &tube_handle_listen) return 1;
 	else if(fptr == &tube_handle_write) return 1;
+	else if(fptr == &remote_accept_callback) return 1;
+	else if(fptr == &remote_control_callback) return 1;
 	return 0;
 }
 
