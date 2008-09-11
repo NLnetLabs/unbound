@@ -34,6 +34,7 @@ libtool=@libtool@
 ldnsdir=@ldnsdir@
 staticexe=@staticexe@
 configfile=@ub_conf_file@
+UNBOUND_RUN_DIR=@UNBOUND_RUN_DIR@
 CHECKLOCK_SRC=@CHECKLOCK_SRC@
 
 YACC=@YACC@
@@ -128,7 +129,7 @@ $(BUILD)%.lo:    $(srcdir)/%.c
 	@-if test ! -d $(dir $@); then $(INSTALL) -d $(patsubst %/,%,$(dir $@)); fi
 	$Q$(COMPILE) -c $< -o $@
 
-all:	$(COMMON_OBJ) unbound unbound-checkconf lib unbound-host unbound-control
+all:	$(COMMON_OBJ) unbound unbound-checkconf lib unbound-host unbound-control unbound-control-setup
 
 TEST_BIN=asynclook delayer harvest lock-verify memstats perf pktview signit \
 	streamtcp testbound unittest
@@ -212,6 +213,11 @@ harvest:	$(HARVEST_OBJ) $(ldnslib) libunbound.la
 	$(INFO) Link $@
 	$Q$(LINK) -o $@ $(sort $(HARVEST_OBJ)) $(LIBS) -L. -L.libs -lunbound
 
+unbound-control-setup:	$(srcdir)/smallapp/unbound-control-setup.sh
+	$(INFO) Sed $@
+	$Qsed -e 's:^DESTDIR=.*$$:DESTDIR=$(UNBOUND_RUN_DIR):' < $< > $@
+	$Q-chmod +x $@
+
 #testcode/ldns-testpkts.c:	$(ldnsdir)/examples/ldns-testpkts.c \
 #			$(ldnsdir)/examples/ldns-testpkts.h
 #	cp $(ldnsdir)/examples/ldns-testpkts.c testcode/ldns-testpkts.c
@@ -286,13 +292,14 @@ install:
 	$(INSTALL) -c -m 644 doc/unbound.conf.5 $(DESTDIR)$(mandir)/man5
 	$(INSTALL) -c -m 644 $(srcdir)/doc/unbound-host.1 $(DESTDIR)$(mandir)/man1
 	$(INSTALL) -c -m 644 doc/libunbound.3 $(DESTDIR)$(mandir)/man3
+	$(INSTALL) -c -m 755 unbound-control-setup $(DESTDIR)$(sbindir)/unbound-control-setup
 	if test ! -e $(DESTDIR)$(configfile); then $(INSTALL) -d `dirname $(DESTDIR)$(configfile)`; $(INSTALL) -c -m 644 doc/example.conf $(DESTDIR)$(configfile); fi
 	$(LIBTOOL) --mode=install cp $(srcdir)/libunbound/unbound.h $(DESTDIR)$(includedir)/unbound.h
 	$(LIBTOOL) --mode=install cp libunbound.la $(DESTDIR)$(libdir)
 	$(LIBTOOL) --mode=finish $(DESTDIR)$(libdir)
 
 uninstall:
-	rm -f -- $(DESTDIR)$(sbindir)/unbound $(DESTDIR)$(sbindir)/unbound-checkconf $(DESTDIR)$(sbindir)/unbound-host $(DESTDIR)$(sbindir)/unbound-control
+	rm -f -- $(DESTDIR)$(sbindir)/unbound $(DESTDIR)$(sbindir)/unbound-checkconf $(DESTDIR)$(sbindir)/unbound-host $(DESTDIR)$(sbindir)/unbound-control $(DESTDIR)$(sbindir)/unbound-control-setup
 	rm -f -- $(DESTDIR)$(mandir)/man8/unbound.8 $(DESTDIR)$(mandir)/man8/unbound-checkconf.8 $(DESTDIR)$(mandir)/man5/unbound.conf.5 $(DESTDIR)$(mandir)/man8/unbound-control.8
 	rm -f -- $(DESTDIR)$(mandir)/man1/unbound-host.1 $(DESTDIR)$(mandir)/man3/libunbound.3
 	rm -f -- $(DESTDIR)$(includedir)/unbound.h
