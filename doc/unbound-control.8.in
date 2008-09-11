@@ -1,0 +1,81 @@
+.TH "unbound-control" "8" "@date@" "NLnet Labs" "unbound @version@"
+.\"
+.\" unbound-control.8 -- unbound remote control manual
+.\"
+.\" Copyright (c) 2008, NLnet Labs. All rights reserved.
+.\"
+.\" See LICENSE for the license.
+.\"
+.\"
+.SH "NAME"
+.LP
+unbound-control
+\- Unbound remote server control utility.
+.SH "SYNOPSIS"
+.B unbound-control
+.RB [ \-h ]
+.RB [ \-c 
+.IR cfgfile ]
+.RB [ \-s 
+.IR server ]
+.IR command
+.SH "DESCRIPTION"
+.B Unbound-control
+Performs remote administration on the \fIunbound\fR(8) DNS server.
+It reads the configuration file, contacts the unbound server over SSL
+sends the command and displays the result.
+.P
+The available options are:
+.TP
+.B \-h
+Show the version and commandline option help.
+.TP
+.B \-c \fIcfgfile
+The config file to read with settings.  If not given the default
+config file @ub_conf_file@ is used.
+.TP
+.B \-s \fIserver[@port]
+IPv4 or IPv6 address of the server to contact.  If not given, the
+address is read from the config file.
+.SH "COMMANDS"
+There are several commands that the server understands.
+.TP
+.B start
+Start the server. Simply execs \fIunbound\fR(8).
+.TP
+.B stop
+Stop the server.
+.TP
+.B reload
+Reload the server.
+.SH "EXIT CODE"
+The unbound-control program exits with status code 1 on error.
+.SH "SET UP"
+The setup requires a self\-signed certificate and private keys for both 
+the server and client.  The script \fIunbound\-control\-setup\fR generates
+these in the default run directory, or with \-d in another directory.
+The script preserves private keys present in the directory.
+After running the script as root, turn on \fBcontrol-enable\fR in 
+\fIunbound.conf\fR.
+.SH "BROWSER SUPPORT"
+It is also possible to administer via a browser.  The client key needs
+to be loaded into the browser, the setup script (see above) has generated
+the file \fIunbound_control_browser.pfx\fR, with the client key and 
+certificate.  By default it is stored with an empty password.
+This can be loaded into a web browser, say Firefox, in the preferences \- 
+advanced \- encryption \- view certificates \- your certs window.
+Then connect to the server control port (https://localhost:953) and 
+create a security override to accept the self-signed certificate from 
+the unbound server.  
+.SH "FILES"
+.TP
+.I @ub_conf_file@
+unbound configuration file.
+.TP
+.I @UNBOUND_RUN_DIR@
+directory with private keys (unbound_server.key and unbound_control.key), 
+self-signed certificates (unbound_server.pem and unbound_control.pem) and 
+unbound_control_browser.pfx file.
+.SH "SEE ALSO"
+\fIunbound.conf\fR(5), 
+\fIunbound\fR(8).

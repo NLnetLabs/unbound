@@ -444,6 +444,14 @@ void comm_point_stop_listening(struct comm_point* c);
 void comm_point_start_listening(struct comm_point* c, int newfd, int sec);
 
 /**
+ * Stop listening and start listening again for reading or writing.
+ * @param c: commpoint
+ * @param rd: if true, listens for reading.
+ * @param wr: if true, listens for writing.
+ */
+void comm_point_listen_for_rw(struct comm_point* c, int rd, int wr);
+
+/**
  * Get size of memory used by comm point.
  * For TCP handlers this includes subhandlers.
  * For UDP handlers, this does not include the (shared) UDP buffer.

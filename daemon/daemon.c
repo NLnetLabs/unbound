@@ -164,6 +164,9 @@ daemon_init()
 	signal_handling_record();
 	checklock_start();
 	ERR_load_crypto_strings();
+	ERR_load_SSL_strings();
+	OpenSSL_add_all_algorithms();
+	(void)SSL_library_init();
 #ifdef HAVE_TZSET
 	/* init timezone info while we are not chrooted yet */
 	tzset();

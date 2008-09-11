@@ -574,6 +574,7 @@ int comm_point_perform_accept(struct comm_point* c,
 		log_addr(0, "remote address is", addr, *addrlen);
 		return -1;
 	}
+	fd_set_nonblock(new_fd);
 	return new_fd;
 }
 
@@ -950,14 +951,17 @@ void comm_point_local_handle_callback(int fd, short event, void* arg)
 }
 
 void comm_point_raw_handle_callback(int ATTR_UNUSED(fd), 
-	short ATTR_UNUSED(event), void* arg)
+	short event, void* arg)
 {
 	struct comm_point* c = (struct comm_point*)arg;
+	int err = NETEVENT_NOERROR;
 	log_assert(c->type == comm_raw);
 	comm_base_now(c->ev->base);
-
+	
+	if(event&EV_TIMEOUT)
+		err = NETEVENT_TIMEOUT;
 	fptr_ok(fptr_whitelist_comm_point_raw(c->callback));
-	(void)(*c->callback)(c, c->cb_arg, NETEVENT_NOERROR, NULL);
+	(void)(*c->callback)(c, c->cb_arg, err, NULL);
 }
 
 struct comm_point* 
@@ -1108,7 +1112,7 @@ comm_point_create_tcp_handler(struct comm_base *base,
 	c->tcp_free = parent->tcp_free;
 	parent->tcp_free = c;
 	/* libevent stuff */
-	evbits = EV_PERSIST | EV_READ;
+	evbits = EV_PERSIST | EV_READ | EV_TIMEOUT;
 	event_set(&c->ev->ev, c->fd, evbits, comm_point_tcp_handle_callback, c);
 	if(event_base_set(base->eb->base, &c->ev->ev) != 0)
 	{
@@ -1437,6 +1441,7 @@ comm_point_start_listening(struct comm_point* c, int newfd, int sec)
 				return;
 			}
 		}
+		c->ev->ev.ev_events |= EV_TIMEOUT;
 #ifndef S_SPLINT_S /* splint fails on struct timeval. */
 		c->timeout->tv_sec = sec;
 		c->timeout->tv_usec = 0;
@@ -1456,6 +1461,20 @@ comm_point_start_listening(struct comm_point* c, int newfd, int sec)
 	}
 	if(event_add(&c->ev->ev, sec==0?NULL:c->timeout) != 0) {
 		log_err("event_add failed. in cpsl.");
+	}
+}
+
+void comm_point_listen_for_rw(struct comm_point* c, int rd, int wr)
+{
+	verbose(VERB_ALGO, "comm point listen_for_rw %d %d", c->fd, wr);
+	if(event_del(&c->ev->ev) != 0) {
+		log_err("event_del error to cplf");
+	}
+	c->ev->ev.ev_events &= ~(EV_READ|EV_WRITE);
+	if(rd) c->ev->ev.ev_events |= EV_READ;
+	if(wr) c->ev->ev.ev_events |= EV_WRITE;
+	if(event_add(&c->ev->ev, c->timeout) != 0) {
+		log_err("event_add failed. in cplf.");
 	}
 }
 

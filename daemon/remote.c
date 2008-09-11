@@ -45,6 +45,7 @@
 #include "config.h"
 #include "daemon/remote.h"
 #include "daemon/worker.h"
+#include "daemon/daemon.h"
 #include "util/log.h"
 #include "util/config_file.h"
 #include "util/net_help.h"
@@ -57,9 +58,27 @@
 #include <netdb.h>
 #endif
 
+/** log ssl crypto err */
+static void
+log_crypto_err(const char* str)
+{
+	/* error:[error code]:[library name]:[function name]:[reason string] */
+	char buf[128];
+	int e;
+	ERR_error_string_n(ERR_get_error(), buf, sizeof(buf));
+	log_err("%s crypto %s", str, buf);
+	while( (e=ERR_get_error()) ) {
+		ERR_error_string_n(e, buf, sizeof(buf));
+		log_err("and additionally crypto %s", buf);
+	}
+}
+
 struct daemon_remote*
 daemon_remote_create(struct worker* worker)
 {
+	char* s_cert;
+	char* s_key;
+	struct config_file* cfg = worker->daemon->cfg;
 	struct daemon_remote* rc = (struct daemon_remote*)calloc(1, 
 		sizeof(*rc));
 	if(!rc) {
@@ -68,7 +87,43 @@ daemon_remote_create(struct worker* worker)
 	}
 	rc->worker = worker;
 	rc->max_active = 10;
-	/* TODO setup the context */
+
+	rc->ctx = SSL_CTX_new(SSLv23_server_method());
+	if(!rc->ctx) {
+		log_crypto_err("could not SSL_CTX_new");
+		free(rc);
+		return NULL;
+	}
+	/* no SSLv2 because has defects */
+	if(!(SSL_CTX_set_options(rc->ctx, SSL_OP_NO_SSLv2) & SSL_OP_NO_SSLv2)){
+		log_crypto_err("could not set SSL_OP_NO_SSLv2");
+		daemon_remote_delete(rc);
+		return NULL;
+	}
+	s_cert = cfg->server_cert_file;
+	s_key = cfg->server_key_file;
+	if(cfg->chrootdir && cfg->chrootdir[0]) {
+		if(strncmp(s_cert, cfg->chrootdir, strlen(cfg->chrootdir))==0)
+			s_cert += strlen(cfg->chrootdir);
+		if(strncmp(s_key, cfg->chrootdir, strlen(cfg->chrootdir))==0)
+			s_key += strlen(cfg->chrootdir);
+	}
+	verbose(VERB_ALGO, "setup SSL certificates");
+	if (!SSL_CTX_use_certificate_file(rc->ctx,s_cert,SSL_FILETYPE_PEM)
+		|| !SSL_CTX_use_PrivateKey_file(rc->ctx,s_key,SSL_FILETYPE_PEM)
+		|| !SSL_CTX_check_private_key(rc->ctx)) {
+		log_crypto_err("Error setting up SSL_CTX key and cert");
+		daemon_remote_delete(rc);
+		return NULL;
+	}
+	if(!SSL_CTX_load_verify_locations(rc->ctx, s_cert, NULL)) {
+		log_crypto_err("Error setting up SSL_CTX verify locations");
+		daemon_remote_delete(rc);
+		return NULL;
+	}
+	SSL_CTX_set_client_CA_list(rc->ctx, SSL_load_client_CA_file(s_cert));
+	SSL_CTX_set_verify(rc->ctx, SSL_VERIFY_PEER, NULL);
+
 	return rc;
 }
 
@@ -256,13 +311,37 @@ int remote_accept_callback(struct comm_point* c, void* arg, int err,
 		return 0;
 	}
 	log_addr(VERB_QUERY, "new control connection from", &addr, addrlen);
+	n->c->do_not_close = 0;
+	comm_point_stop_listening(n->c);
+	comm_point_start_listening(n->c, -1, REMOTE_CONTROL_TCP_TIMEOUT);
 	memcpy(&n->c->repinfo.addr, &addr, addrlen);
 	n->c->repinfo.addrlen = addrlen;
-	/* TODO setup ssl, assign fd */
+	n->shake_state = rc_hs_read;
+	n->ssl = SSL_new(rc->ctx);
+	if(!n->ssl) {
+		log_crypto_err("could not SSL_new");
+		close(newfd);
+		free(n);
+		return 0;
+	}
+	SSL_set_accept_state(n->ssl);
+        (void)SSL_set_mode(n->ssl, SSL_MODE_AUTO_RETRY);
+	if(!SSL_set_fd(n->ssl, newfd)) {
+		log_crypto_err("could not SSL_set_fd");
+		close(newfd);
+		SSL_free(n->ssl);
+		free(n);
+		return 0;
+	}
+
 	n->rc = rc;
 	n->next = rc->busy_list;
 	rc->busy_list = n;
 	rc->active ++;
+
+	/* perform the first nonblocking read already, for windows, 
+	 * so it can return wouldblock. could be faster too. */
+	(void)remote_control_callback(n->c, n, NETEVENT_NOERROR, NULL);
 	return 0;
 }
 
@@ -285,10 +364,41 @@ clean_point(struct daemon_remote* rc, struct rc_state* s)
 {
 	state_list_remove_elem(&rc->busy_list, s->c);
 	rc->active --;
-	if(s->ssl)
+	if(s->ssl) {
+		SSL_shutdown(s->ssl);
 		SSL_free(s->ssl);
+	}
 	comm_point_delete(s->c);
 	free(s);
+}
+
+/** handle remote control request */
+static void
+handle_req(struct daemon_remote* rc, struct rc_state* s, SSL* ssl)
+{
+	char* msg = "HTTP/1.0 200 OK\r\nContent-type: text/plain\r\n\r\n"
+		"unbound server control channel\n";
+	int r;
+	char buf[1024];
+	fd_set_block(s->c->fd);
+
+	ERR_clear_error();
+	if((r=SSL_read(ssl, buf, (int)sizeof(buf)-1)) <= 0) {
+		if(SSL_get_error(ssl, r) == SSL_ERROR_ZERO_RETURN)
+			return;
+		log_crypto_err("could not SSL_read");
+		return;
+	}
+	buf[r] = 0;
+	log_info("got '%s'", buf);
+
+	ERR_clear_error();
+	if((r=SSL_write(ssl, msg, (int)strlen(msg))) <= 0) {
+		if(SSL_get_error(ssl, r) == SSL_ERROR_ZERO_RETURN)
+			return;
+		log_crypto_err("could not SSL_write");
+		return;
+	}
 }
 
 int remote_control_callback(struct comm_point* c, void* arg, int err, 
@@ -296,15 +406,64 @@ int remote_control_callback(struct comm_point* c, void* arg, int err,
 {
 	struct rc_state* s = (struct rc_state*)arg;
 	struct daemon_remote* rc = s->rc;
+	int r;
 	if(err != NETEVENT_NOERROR) {
+		if(err==NETEVENT_TIMEOUT) 
+			log_err("remote control timed out");
 		clean_point(rc, s);
 		return 0;
 	}
-	/* TODO (continue to) setup the SSL connection */
+	/* (continue to) setup the SSL connection */
+	ERR_clear_error();
+	r = SSL_do_handshake(s->ssl);
+	if(r != 1) {
+		r = SSL_get_error(s->ssl, r);
+		if(r == SSL_ERROR_WANT_READ) {
+			if(s->shake_state == rc_hs_read) {
+				/* try again later */
+				return 0;
+			}
+			s->shake_state = rc_hs_read;
+			comm_point_listen_for_rw(c, 1, 0);
+			return 0;
+		} else if(r == SSL_ERROR_WANT_WRITE) {
+			if(s->shake_state == rc_hs_write) {
+				/* try again later */
+				return 0;
+			}
+			s->shake_state = rc_hs_write;
+			comm_point_listen_for_rw(c, 0, 1);
+			return 0;
+		} else {
+			log_crypto_err("remote control failed ssl");
+			clean_point(rc, s);
+			return 0;
+		}
+	}
+	s->shake_state = rc_none;
 
 	/* once handshake has completed, check authentication */
+	if(SSL_get_verify_result(s->ssl) == X509_V_OK) {
+		X509* x = SSL_get_peer_certificate(s->ssl);
+		if(!x) {
+			verbose(VERB_DETAIL, "remote control connection "
+				"provided no client certificate");
+			clean_point(rc, s);
+			return 0;
+		}
+		verbose(VERB_ALGO, "remote control connection authenticated");
+		X509_free(x);
+	} else {
+		verbose(VERB_DETAIL, "remote control connection failed to "
+			"authenticate with client certificate");
+		clean_point(rc, s);
+		return 0;
+	}
 
 	/* if OK start to actually handle the request */
+	handle_req(rc, s, s->ssl);
 
+	verbose(VERB_ALGO, "remote control operation completed");
+	clean_point(rc, s);
 	return 0;
 }

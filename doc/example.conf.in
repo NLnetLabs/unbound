@@ -383,13 +383,13 @@ remote-control:
 	# server-key-file: "@UNBOUND_RUN_DIR@/unbound_server.key"
 
 	# unbound server certificate file.
-	# server-key-file: "@UNBOUND_RUN_DIR@/unbound_server.pem"
+	# server-cert-file: "@UNBOUND_RUN_DIR@/unbound_server.pem"
 
 	# unbound-control key file.
 	# control-key-file: "@UNBOUND_RUN_DIR@/unbound_control.key"
 
 	# unbound-control certificate file.
-	# control-key-file: "@UNBOUND_RUN_DIR@/unbound_control.pem"
+	# control-cert-file: "@UNBOUND_RUN_DIR@/unbound_control.pem"
 
 # Stub zones.
 # Create entries like below, to make all queries for 'example.com' and 

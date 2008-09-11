@@ -1,3 +1,9 @@
+11 September 2008: Wouter
+	- set nonblocking on new TCP streams, because linux does not inherit
+	  the socket options to the accepted socket.
+	- fix TCP timeouts.
+	- SSL protected connection between server and unbound-control.
+
 10 September 2008: Wouter
 	- remove memleak in privacy addresses on reloads and quits.
 	- remote control work.

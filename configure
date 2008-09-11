@@ -25788,7 +25788,7 @@ _ACEOF
 
 
 
-ac_config_files="$ac_config_files Makefile doc/example.conf doc/libunbound.3 doc/unbound.8 doc/unbound-checkconf.8 doc/unbound.conf.5"
+ac_config_files="$ac_config_files Makefile doc/example.conf doc/libunbound.3 doc/unbound.8 doc/unbound-checkconf.8 doc/unbound.conf.5 doc/unbound-control.8"
 
 ac_config_headers="$ac_config_headers config.h"
 
@@ -26350,6 +26350,7 @@ do
     "doc/unbound.8") CONFIG_FILES="$CONFIG_FILES doc/unbound.8" ;;
     "doc/unbound-checkconf.8") CONFIG_FILES="$CONFIG_FILES doc/unbound-checkconf.8" ;;
     "doc/unbound.conf.5") CONFIG_FILES="$CONFIG_FILES doc/unbound.conf.5" ;;
+    "doc/unbound-control.8") CONFIG_FILES="$CONFIG_FILES doc/unbound-control.8" ;;
     "config.h") CONFIG_HEADERS="$CONFIG_HEADERS config.h" ;;
 
   *) { { echo "$as_me:$LINENO: error: invalid argument: $ac_config_target" >&5

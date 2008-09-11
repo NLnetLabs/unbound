@@ -76,6 +76,8 @@ DAEMON_SRC=$(patsubst $(srcdir)/%,%, $(wildcard $(srcdir)/daemon/*.c)) \
 DAEMON_OBJ=$(addprefix $(BUILD),$(DAEMON_SRC:.c=.lo)) $(COMPAT_OBJ)
 CHECKCONF_SRC=smallapp/unbound-checkconf.c smallapp/worker_cb.c $(COMMON_SRC)
 CHECKCONF_OBJ=$(addprefix $(BUILD),$(CHECKCONF_SRC:.c=.lo)) $(COMPAT_OBJ)
+CONTROL_SRC=smallapp/unbound-control.c smallapp/worker_cb.c $(COMMON_SRC)
+CONTROL_OBJ=$(addprefix $(BUILD),$(CONTROL_SRC:.c=.lo)) $(COMPAT_OBJ)
 HOST_SRC=smallapp/unbound-host.c
 HOST_OBJ=$(addprefix $(BUILD),$(HOST_SRC:.c=.lo)) $(COMPAT_OBJ)
 TESTBOUND_SRC=testcode/testbound.c testcode/ldns-testpkts.c \
@@ -109,7 +111,7 @@ ALL_SRC=$(sort $(COMMON_SRC) $(UNITTEST_SRC) $(DAEMON_SRC) \
 	$(TESTBOUND_SRC) $(LOCKVERIFY_SRC) $(PKTVIEW_SRC) $(SIGNIT_SRC) \
 	$(MEMSTATS_SRC) $(CHECKCONF_SRC) $(LIBUNBOUND_SRC) $(HOST_SRC) \
 	$(ASYNCLOOK_SRC) $(STREAMTCP_SRC) $(PERF_SRC) $(DELAYER_SRC) \
-	$(HARVEST_SRC) )
+	$(HARVEST_SRC) $(CONTROL_SRC))
 ALL_OBJ=$(addprefix $(BUILD),$(ALL_SRC:.c=.lo) \
 	$(addprefix compat/,$(LIBOBJS:.o=.lo))) $(COMPAT_OBJ)
 
@@ -126,7 +128,7 @@ $(BUILD)%.lo:    $(srcdir)/%.c
 	@-if test ! -d $(dir $@); then $(INSTALL) -d $(patsubst %/,%,$(dir $@)); fi
 	$Q$(COMPILE) -c $< -o $@
 
-all:	$(COMMON_OBJ) unbound unbound-checkconf lib unbound-host
+all:	$(COMMON_OBJ) unbound unbound-checkconf lib unbound-host unbound-control
 
 TEST_BIN=asynclook delayer harvest lock-verify memstats perf pktview signit \
 	streamtcp testbound unittest
@@ -158,6 +160,10 @@ unbound-checkconf:	$(CHECKCONF_OBJ) $(ldnslib)
 	$(INFO) Link $@
 	$Q$(LINK) -o $@ $(sort $(CHECKCONF_OBJ)) $(LIBS)
 
+unbound-control:	$(CONTROL_OBJ) $(ldnslib)
+	$(INFO) Link $@
+	$Q$(LINK) -o $@ $(sort $(CONTROL_OBJ)) -lssl $(LIBS)
+
 unbound-host:	$(HOST_OBJ) libunbound.la $(ldnslib)
 	$(INFO) Link $@
 	$Q$(LINK) -o $@ $(sort $(HOST_OBJ)) -L. -L.libs -lunbound $(LIBS)
@@ -168,7 +174,7 @@ unittest:	$(UNITTEST_OBJ) $(ldnslib)
 
 testbound:	$(TESTBOUND_OBJ) $(ldnslib)
 	$(INFO) Link $@
-	$Q$(LINK) -o $@ $(sort $(TESTBOUND_OBJ)) $(LIBS)
+	$Q$(LINK) -o $@ $(sort $(TESTBOUND_OBJ)) -lssl $(LIBS)
 
 lock-verify:	$(LOCKVERIFY_OBJ) $(ldnslib)
 	$(INFO) Link $@
@@ -258,6 +264,7 @@ doc:
 strip:
 	strip unbound
 	strip unbound-checkconf
+	strip unbound-control
 	strip unbound-host
 
 install:
@@ -271,9 +278,11 @@ install:
 	$(INSTALL) -m 755 -d $(DESTDIR)$(includedir)
 	$(LIBTOOL) --mode=install cp unbound $(DESTDIR)$(sbindir)/unbound
 	$(LIBTOOL) --mode=install cp unbound-checkconf $(DESTDIR)$(sbindir)/unbound-checkconf
+	$(LIBTOOL) --mode=install cp unbound-control $(DESTDIR)$(sbindir)/unbound-control
 	$(LIBTOOL) --mode=install cp unbound-host $(DESTDIR)$(sbindir)/unbound-host
 	$(INSTALL) -c -m 644 doc/unbound.8 $(DESTDIR)$(mandir)/man8
 	$(INSTALL) -c -m 644 doc/unbound-checkconf.8 $(DESTDIR)$(mandir)/man8
+	$(INSTALL) -c -m 644 doc/unbound-control.8 $(DESTDIR)$(mandir)/man8
 	$(INSTALL) -c -m 644 doc/unbound.conf.5 $(DESTDIR)$(mandir)/man5
 	$(INSTALL) -c -m 644 $(srcdir)/doc/unbound-host.1 $(DESTDIR)$(mandir)/man1
 	$(INSTALL) -c -m 644 doc/libunbound.3 $(DESTDIR)$(mandir)/man3
@@ -283,8 +292,8 @@ install:
 	$(LIBTOOL) --mode=finish $(DESTDIR)$(libdir)
 
 uninstall:
-	rm -f -- $(DESTDIR)$(sbindir)/unbound $(DESTDIR)$(sbindir)/unbound-checkconf $(DESTDIR)$(sbindir)/unbound-host
-	rm -f -- $(DESTDIR)$(mandir)/man8/unbound.8 $(DESTDIR)$(mandir)/man8/unbound-checkconf.8 $(DESTDIR)$(mandir)/man5/unbound.conf.5
+	rm -f -- $(DESTDIR)$(sbindir)/unbound $(DESTDIR)$(sbindir)/unbound-checkconf $(DESTDIR)$(sbindir)/unbound-host $(DESTDIR)$(sbindir)/unbound-control
+	rm -f -- $(DESTDIR)$(mandir)/man8/unbound.8 $(DESTDIR)$(mandir)/man8/unbound-checkconf.8 $(DESTDIR)$(mandir)/man5/unbound.conf.5 $(DESTDIR)$(mandir)/man8/unbound-control.8
 	rm -f -- $(DESTDIR)$(mandir)/man1/unbound-host.1 $(DESTDIR)$(mandir)/man3/libunbound.3
 	rm -f -- $(DESTDIR)$(includedir)/unbound.h
 	$(LIBTOOL) --mode=uninstall rm -f $(DESTDIR)$(libdir)/libunbound.la
