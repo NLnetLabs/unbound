@@ -147,7 +147,9 @@ void daemon_remote_delete(struct daemon_remote* rc)
 		free(p);
 		p = np;
 	}
-	SSL_CTX_free(rc->ctx);
+	if(rc->ctx) {
+		SSL_CTX_free(rc->ctx);
+	}
 	free(rc);
 }
 
