@@ -64,7 +64,7 @@ log_crypto_err(const char* str)
 {
 	/* error:[error code]:[library name]:[function name]:[reason string] */
 	char buf[128];
-	int e;
+	unsigned long e;
 	ERR_error_string_n(ERR_get_error(), buf, sizeof(buf));
 	log_err("%s crypto %s", str, buf);
 	while( (e=ERR_get_error()) ) {
@@ -88,6 +88,10 @@ daemon_remote_create(struct worker* worker)
 	rc->worker = worker;
 	rc->max_active = 10;
 
+	if(!cfg->remote_control_enable) {
+		rc->ctx = NULL;
+		return rc;
+	}
 	rc->ctx = SSL_CTX_new(SSLv23_server_method());
 	if(!rc->ctx) {
 		log_crypto_err("could not SSL_CTX_new");
