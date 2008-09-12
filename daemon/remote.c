@@ -382,8 +382,7 @@ clean_point(struct daemon_remote* rc, struct rc_state* s)
 static void
 handle_req(struct daemon_remote* rc, struct rc_state* s, SSL* ssl)
 {
-	char* msg = "HTTP/1.0 200 OK\r\nContent-type: text/plain\r\n\r\n"
-		"unbound server control channel\n";
+	char* msg = "ok\n";
 	int r;
 	char buf[1024];
 	fd_set_block(s->c->fd);

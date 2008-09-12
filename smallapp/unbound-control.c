@@ -187,9 +187,20 @@ static void
 go_cmd(SSL* ssl, int argc, char* argv[])
 {
 	char* cmd = "GET / HTTP/1.0\n\n";
-	int r;
+	char* pre="UBCT";
+	char* space=" ";
+	char* newline="\n";
+	int r, i;
 	char buf[1024];
-	if(SSL_write(ssl, cmd, (int)strlen(cmd)) <= 0)
+	if(SSL_write(ssl, pre, (int)strlen(pre)) <= 0)
+		ssl_err("could not SSL_write");
+	for(i=0; i<argc; i++) {
+		if(SSL_write(ssl, space, (int)strlen(space)) <= 0)
+			ssl_err("could not SSL_write");
+		if(SSL_write(ssl, argv[i], (int)strlen(argv[i])) <= 0)
+			ssl_err("could not SSL_write");
+	}
+	if(SSL_write(ssl, newline, (int)strlen(newline)) <= 0)
 		ssl_err("could not SSL_write");
 	while(1) {
 		ERR_clear_error();
