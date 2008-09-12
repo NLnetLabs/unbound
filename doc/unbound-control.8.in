@@ -57,25 +57,14 @@ these in the default run directory, or with \-d in another directory.
 The script preserves private keys present in the directory.
 After running the script as root, turn on \fBcontrol-enable\fR in 
 \fIunbound.conf\fR.
-.SH "BROWSER SUPPORT"
-It is also possible to administer via a browser.  The client key needs
-to be loaded into the browser, the setup script (see above) has generated
-the file \fIunbound_control_browser.pfx\fR, with the client key and 
-certificate.  By default it is stored with an empty password.
-This can be loaded into a web browser, say Firefox, in the preferences \- 
-advanced \- encryption \- view certificates \- your certs window.
-Then connect to the server control port (https://localhost:953) and 
-create a security override to accept the self-signed certificate from 
-the unbound server.  
 .SH "FILES"
 .TP
 .I @ub_conf_file@
 unbound configuration file.
 .TP
 .I @UNBOUND_RUN_DIR@
-directory with private keys (unbound_server.key and unbound_control.key), 
-self-signed certificates (unbound_server.pem and unbound_control.pem) and 
-unbound_control_browser.pfx file.
+directory with private keys (unbound_server.key and unbound_control.key) and
+self-signed certificates (unbound_server.pem and unbound_control.pem).
 .SH "SEE ALSO"
 \fIunbound.conf\fR(5), 
 \fIunbound\fR(8).

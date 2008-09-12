@@ -133,15 +133,14 @@ echo "create $CTL_BASE.pem (signed client certificate)"
 openssl req -key $CTL_BASE.key -config request.cfg -new | openssl x509 -req -days $DAYS -CA $SVR_BASE"_trust.pem" -CAkey $SVR_BASE.key -CAcreateserial -out $CTL_BASE.pem
 test -f $CTL_BASE.pem || error "could not create $CTL_BASE.pem"
 # create trusted usage pem
-openssl x509 -in $CTL_BASE.pem -addtrust clientAuth -out $CTL_BASE"_trust.pem"
+# openssl x509 -in $CTL_BASE.pem -addtrust clientAuth -out $CTL_BASE"_trust.pem"
 
 # see details with openssl x509 -noout -text < $SVR_BASE.pem
-
-echo "create $CTL_BASE""_browser.pfx (web client certificate)"
-echo "create webbrowser PKCS#12 .PFX certificate file. In Firefox import in:"
-echo "preferences - advanced - encryption - view certificates - your certs"
-echo "empty password is used, simply click OK on the password dialog box."
-openssl pkcs12 -export -in $CTL_BASE"_trust.pem" -inkey $CTL_BASE.key -name "unbound remote control client cert" -out $CTL_BASE"_browser.pfx" -password "pass:" || error "could not create browser certificate"
+# echo "create $CTL_BASE""_browser.pfx (web client certificate)"
+# echo "create webbrowser PKCS#12 .PFX certificate file. In Firefox import in:"
+# echo "preferences - advanced - encryption - view certificates - your certs"
+# echo "empty password is used, simply click OK on the password dialog box."
+# openssl pkcs12 -export -in $CTL_BASE"_trust.pem" -inkey $CTL_BASE.key -name "unbound remote control client cert" -out $CTL_BASE"_browser.pfx" -password "pass:" || error "could not create browser certificate"
 
 # remove crap
 rm -f request.cfg

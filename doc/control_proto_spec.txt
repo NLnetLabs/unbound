@@ -1,0 +1,60 @@
+
+Specification for the unbound-control protocol.
+
+Server listens on 953 TCP (localhost by default). Client connects,
+SSLv3 or TLSv1 connection setup (server selfsigned certificate, 
+client has cert signed by server certificate).
+
+Query and Response
+------------------
+Client sends 
+	UBCT [commandline] \n
+	fixed string UBCT, then an ascii text line, with a command, 
+	some whitespace allowed. Line ends with '\n'.
+
+Server executes command. And sends reply in ascii text over channel, 
+closes the channel when done.
+	in case of error the first line of the response is:
+		error <descriptive text possible> \n
+	or the remainder is data of the response.
+
+Queries and responses
+---------------------
+stop
+	no output
+reload
+	no output
+stats
+	output is a list of [name]=[value] lines.
+	clears the counters.
+dump_cache
+	output is a text representation of the cache contents.
+load_cache
+	client sends cache contents (like from dump_cache), stored in the
+	cache. If client sends 'ok' or 'error' lines at start, ignored.
+	end of data indicated with a line with 'EOF' on it.
+flush_name <name>
+	flushes some information regarding the name from the cache.
+	removes the A, AAAA, NS, SOA, CNAME, DNAME, MX, PTR types.
+flush_type <name> <RR type>
+	removes rrtype entry from the cache.
+flush_zone <name>
+	removes name and everything below that name from the cache.
+	has to search through the cache item by item, so this is slow.
+delegation <domain name>
+	see what servers would be queried for the given domain name.
+info <domain name>
+	see data about the domain name
+local_zone_remove <name of local-zone entry>
+	the local-zone entry is removed.
+	All data from the local zone is also deleted.
+	If it did not exist, nothing happens.
+local_zone_add <name of local zone> <type>
+	As the config file entry. Adds new local zone or updates
+	existing zone type.
+local_data_remove <name>
+	Removes local-data (all types) name.
+local_data_add <resource record string>
+	Add new local data record (on the rest of the line).
+	local_data_add www.example.com. IN A 192.0.2.2
+

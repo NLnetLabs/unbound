@@ -376,7 +376,7 @@ remote-control:
 	# control-interface: 127.0.0.1
 	# control-interface: ::1
 
-	# port number for remote control operations. Same as BIND rndc uses.
+	# port number for remote control operations.
 	# control-port: 953
 
 	# unbound server key file.

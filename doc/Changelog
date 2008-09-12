@@ -1,3 +1,6 @@
+12 September 2008: Wouter
+	- removed browser control mentions. Proto speccy.
+
 11 September 2008: Wouter
 	- set nonblocking on new TCP streams, because linux does not inherit
 	  the socket options to the accepted socket.
