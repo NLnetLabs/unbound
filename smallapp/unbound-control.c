@@ -183,12 +183,13 @@ setup_ssl(SSL_CTX* ctx, int fd)
 }
 
 /** send command and display result */
-static void
+static int
 go_cmd(SSL* ssl, int argc, char* argv[])
 {
 	char* pre="UBCT";
 	char* space=" ";
 	char* newline="\n";
+	int was_error = 0, first_line = 1;
 	int r, i;
 	char buf[1024];
 	if(SSL_write(ssl, pre, (int)strlen(pre)) <= 0)
@@ -212,15 +213,19 @@ go_cmd(SSL* ssl, int argc, char* argv[])
 		}
 		buf[r] = 0;
 		printf("%s", buf);
+		if(first_line && strncmp(buf, "error", 5) == 0)
+			was_error = 1;
+		first_line = 0;
 	}
+	return was_error;
 }
 
 /** go ahead and read config, contact server and perform command and display */
-static void
+static int
 go(char* cfgfile, char* svr, int argc, char* argv[])
 {
 	struct config_file* cfg;
-	int fd;
+	int fd, ret;
 	SSL_CTX* ctx;
 	SSL* ssl;
 
@@ -238,12 +243,13 @@ go(char* cfgfile, char* svr, int argc, char* argv[])
 	ssl = setup_ssl(ctx, fd);
 	
 	/* send command */
-	go_cmd(ssl, argc, argv);
+	ret = go_cmd(ssl, argc, argv);
 
 	SSL_free(ssl);
 	close(fd);
 	SSL_CTX_free(ctx);
 	config_delete(cfg);
+	return ret;
 }
 
 /** getopt global, in case header files fail to declare it. */
@@ -254,7 +260,7 @@ extern char* optarg;
 /** Main routine for unbound-control */
 int main(int argc, char* argv[])
 {
-	int c;
+	int c, ret;
 	char* cfgfile = CONFIGFILE;
 	char* svr = NULL;
 	log_ident_set("unbound-control");
@@ -310,11 +316,11 @@ int main(int argc, char* argv[])
 		}
 	}
 
-	go(cfgfile, svr, argc, argv);
+	ret = go(cfgfile, svr, argc, argv);
 
 #ifdef USE_WINSOCK
         WSACleanup();
 #endif
 	checklock_stop();
-	return 0;
+	return ret;
 }
