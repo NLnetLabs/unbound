@@ -25,6 +25,8 @@ stop
 	stops the server.
 reload
 	reloads the config file, and flushes the cache.
+verbosity <new value>
+	Change logging verbosity to new value.
 stats
 	output is a list of [name]=[value] lines.
 	clears the counters.
@@ -61,7 +63,5 @@ local_data <resource record string>
 	local_data_add www.example.com. IN A 192.0.2.2
 	if no local_zone exists for it; a transparent zone with the same
 	name as the data is created.
-verbosity <new value>
-	Change logging verbosity to new value.
 
 

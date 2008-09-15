@@ -46,6 +46,7 @@
 #include "daemon/remote.h"
 #include "daemon/worker.h"
 #include "daemon/daemon.h"
+#include "daemon/stats.h"
 #include "util/log.h"
 #include "util/config_file.h"
 #include "util/net_help.h"
@@ -71,6 +72,25 @@ log_crypto_err(const char* str)
 		ERR_error_string_n(e, buf, sizeof(buf));
 		log_err("and additionally crypto %s", buf);
 	}
+}
+
+/** divide sum of timers to get average */
+static void
+timeval_divide(struct timeval* avg, struct timeval* sum, size_t d)
+{
+#ifndef S_SPLINT_S
+	size_t leftover;
+	if(d == 0) {
+		avg->tv_sec = 0;
+		avg->tv_usec = 0;
+		return;
+	}
+	avg->tv_sec = sum->tv_sec / d;
+	avg->tv_usec = sum->tv_usec / d;
+	/* handle fraction from seconds divide */
+	leftover = sum->tv_sec - avg->tv_sec*d;
+	avg->tv_usec += (leftover*1000000)/d;
+#endif
 }
 
 struct daemon_remote*
@@ -452,6 +472,16 @@ ssl_read_line(SSL* ssl, char* buf, size_t max)
 	return 0;
 }
 
+/** skip whitespace, return new pointer into string */
+static char*
+skipwhite(char* str)
+{
+	/* EOS \0 is not a space */
+	while( isspace(*str) ) 
+		str++;
+	return str;
+}
+
 /** send the OK to the control client */
 static void send_ok(SSL* ssl)
 {
@@ -460,7 +490,7 @@ static void send_ok(SSL* ssl)
 
 /** do the stop command */
 static void
-do_stop(struct daemon_remote* rc, SSL* ssl)
+do_stop(SSL* ssl, struct daemon_remote* rc)
 {
 	rc->worker->need_to_exit = 1;
 	comm_base_exit(rc->worker->base);
@@ -469,25 +499,108 @@ do_stop(struct daemon_remote* rc, SSL* ssl)
 
 /** do the reload command */
 static void
-do_reload(struct daemon_remote* rc, SSL* ssl)
+do_reload(SSL* ssl, struct daemon_remote* rc)
 {
 	rc->worker->need_to_exit = 0;
 	comm_base_exit(rc->worker->base);
 	send_ok(ssl);
 }
 
+/** do the verbosity command */
+static void
+do_verbosity(SSL* ssl, char* str)
+{
+	int val = atoi(str);
+	if(val == 0 && strcmp(str, "0") != 0) {
+		ssl_printf(ssl, "error in verbosity number syntax: %s\n", str);
+		return;
+	}
+	verbosity = val;
+	send_ok(ssl);
+}
+
+/** print stats from statinfo */
+static int
+print_stats(SSL* ssl, char* nm, struct stats_info* s)
+{
+	struct timeval avg;
+	if(!ssl_printf(ssl, "%s.num.queries: %u\n", nm, 
+		(unsigned)s->svr.num_queries)) return 0;
+	if(!ssl_printf(ssl, "%s.num.cachehits: %u\n", nm, 
+		(unsigned)(s->svr.num_queries 
+			- s->svr.num_queries_missed_cache))) return 0;
+	if(!ssl_printf(ssl, "%s.num.cachemiss: %u\n", nm, 
+		(unsigned)s->svr.num_queries_missed_cache)) return 0;
+	if(!ssl_printf(ssl, "%s.num.recursivereplies: %u\n", nm, 
+		(unsigned)s->mesh_replies_sent)) return 0;
+	if(!ssl_printf(ssl, "%s.requestlist.avg: %g\n", nm,
+		s->svr.num_queries_missed_cache?
+			(double)s->svr.sum_query_list_size/
+			s->svr.num_queries_missed_cache : 0.0)) return 0;
+	if(!ssl_printf(ssl, "%s.requestlist.max: %u\n", nm,
+		(unsigned)s->svr.max_query_list_size)) return 0;
+	if(!ssl_printf(ssl, "%s.requestlist.overwritten: %u\n", nm,
+		(unsigned)s->mesh_jostled)) return 0;
+	if(!ssl_printf(ssl, "%s.requestlist.exceeded: %u\n", nm,
+		(unsigned)s->mesh_dropped)) return 0;
+	if(!ssl_printf(ssl, "%s.requestlist.current.all: %u\n", nm,
+		(unsigned)s->mesh_num_states)) return 0;
+	if(!ssl_printf(ssl, "%s.requestlist.current.user: %u\n", nm,
+		(unsigned)s->mesh_num_reply_states)) return 0;
+	timeval_divide(&avg, &s->mesh_replies_sum_wait, s->mesh_replies_sent);
+	if(!ssl_printf(ssl, "%s.recursion.time.avg: %d.%6.6d\n", nm,
+		(int)avg.tv_sec, (int)avg.tv_usec)) return 0;
+	if(!ssl_printf(ssl, "%s.recursion.time.median: %g\n", nm, 
+		s->mesh_time_median)) return 0;
+	return 1;
+}
+
+/** print stats for one thread */
+static int
+print_thread_stats(SSL* ssl, int i, struct stats_info* s)
+{
+	char nm[16];
+	snprintf(nm, sizeof(nm), "thread%d", i);
+	nm[sizeof(nm)-1]=0;
+	return print_stats(ssl, nm, s);
+}
+
+/** do the stats command */
+static void
+do_stats(SSL* ssl, struct daemon_remote* rc)
+{
+	struct daemon* daemon = rc->worker->daemon;
+	struct stats_info total;
+	struct stats_info s;
+	int i;
+	/* gather all thread statistics in one place */
+	for(i=0; i<daemon->num; i++) {
+		server_stats_obtain(rc->worker, daemon->workers[i], &s);
+		if(!print_thread_stats(ssl, i, &s))
+			return;
+		if(i == 0)
+			total = s;
+		else	server_stats_add(&total, &s);
+	}
+	/* print the thread statistics */
+	total.mesh_time_median /= (double)daemon->num;
+	print_stats(ssl, "total", &total);
+}
+
 /** execute a remote control command */
 static void
 execute_cmd(struct daemon_remote* rc, SSL* ssl, char* cmd)
 {
-	char* p = cmd;
-	/* skip whitespace */
-	while( isspace(*p) ) p++;
-	/* compare command - check longer strings first */
+	char* p = skipwhite(cmd);
+	/* compare command - check longer strings first in case of substrings*/
 	if(strncmp(p, "stop", 4) == 0) {
-		do_stop(rc, ssl);
+		do_stop(ssl, rc);
 	} else if(strncmp(p, "reload", 6) == 0) {
-		do_reload(rc, ssl);
+		do_reload(ssl, rc);
+	} else if(strncmp(p, "verbosity", 9) == 0) {
+		do_verbosity(ssl, skipwhite(p+9));
+	} else if(strncmp(p, "stats", 5) == 0) {
+		do_stats(ssl, rc);
 	} else {
 		(void)ssl_printf(ssl, "error unknown command '%s'\n", p);
 	}

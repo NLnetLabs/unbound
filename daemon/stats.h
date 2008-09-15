@@ -58,8 +58,30 @@ struct server_stats {
 	size_t sum_query_list_size;
 	/** max value of query list size reached. */
 	size_t max_query_list_size;
-	/** number of times that the query_list_size was insufficient */
-	size_t num_query_list_exceeded;
+};
+
+/** 
+ * Statistics to send over the control pipe when asked
+ * This struct is made to be memcpied, sent in binary.
+ */
+struct stats_info {
+	/** the thread stats */
+	struct server_stats svr;
+
+	/** mesh stats: current number of states */
+	size_t mesh_num_states;
+	/** mesh stats: current number of reply (user) states */
+	size_t mesh_num_reply_states;
+	/** mesh stats: number of reply states overwritten with a new one */
+	size_t mesh_jostled;
+	/** mesh stats: number of incoming queries dropped */
+	size_t mesh_dropped;
+	/** mesh stats: replies sent */
+	size_t mesh_replies_sent;
+	/** mesh stats: sum of waiting times for the replies */
+	struct timeval mesh_replies_sum_wait;
+	/** mesh stats: median of waiting times for replies (in sec) */
+	double mesh_time_median;
 };
 
 /** 
@@ -72,6 +94,37 @@ void server_stats_init(struct server_stats* stats);
 void server_stats_querymiss(struct server_stats* stats, struct worker* worker);
 
 /** display the stats to the log */
-void server_stats_log(struct server_stats* stats, int threadnum);
+void server_stats_log(struct server_stats* stats, struct worker* worker,
+	int threadnum);
+
+/**
+ * Obtain the stats info for a given thread. Uses pipe to communicate.
+ * @param worker: the worker that is executing (the first worker).
+ * @param who: on who to get the statistics info.
+ * @param s: the stats block to fill in.
+ */
+void server_stats_obtain(struct worker* worker, struct worker* who,
+	struct stats_info* s);
+
+/**
+ * Compile stats into structure for this thread worker.
+ * Also clears the statistics counters (if that is set by config file).
+ * @param worker: the worker to compile stats for, also the executing worker.
+ * @param s: stats block.
+ */
+void server_stats_compile(struct worker* worker, struct stats_info* s);
+
+/**
+ * Send stats over comm tube in reply to query cmd
+ * @param worker: this worker.
+ */
+void server_stats_reply(struct worker* worker);
+
+/**
+ * Addup stat blocks.
+ * @param total: sum of the two entries.
+ * @param a: to add to it.
+ */
+void server_stats_add(struct stats_info* total, struct stats_info* a);
 
 #endif /* DAEMON_STATS_H */

@@ -64,7 +64,9 @@ struct daemon_remote;
 /** worker commands */
 enum worker_commands {
 	/** make the worker quit */
-	worker_cmd_quit
+	worker_cmd_quit,
+	/** obtain statistics */
+	worker_cmd_stats
 };
 
 /**

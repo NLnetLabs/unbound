@@ -50,6 +50,16 @@ Stop the server. The server daemon exits.
 .TP
 .B reload
 Reload the server. This flushes the cache and reads the config file fresh.
+.TP
+.B verbosity \fInumber
+Change verbosity value for logging. Same values as \fBverbosity\fR keyword in
+\fIunbound.conf\fR(5).  This new setting lasts until the server is issued
+a reload (taken from config file again), or the next verbosity control command.
+.TP
+.B stats
+Print statistics. Resets the internal counters to zero, this can be 
+controlled using the \fBstatistics\-cumulative\fR config statement. 
+Statistics are printed with one [name]: [value] per line.
 .SH "EXIT CODE"
 The unbound-control program exits with status code 1 on error.
 .SH "SET UP"

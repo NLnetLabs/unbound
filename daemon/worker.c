@@ -194,7 +194,7 @@ worker_mem_report(struct worker* ATTR_UNUSED(worker),
 void 
 worker_send_cmd(struct worker* worker, enum worker_commands cmd)
 {
-	uint32_t c = (uint32_t)cmd;
+	uint32_t c = (uint32_t)htonl(cmd);
 	if(!tube_write_msg(worker->cmd, (uint8_t*)&c, sizeof(c), 0)) {
 		log_err("worker send cmd %d failed", (int)cmd);
 	}
@@ -337,6 +337,10 @@ worker_handle_control_cmd(struct tube* ATTR_UNUSED(tube), uint8_t* msg,
 	case worker_cmd_quit:
 		verbose(VERB_ALGO, "got control cmd quit");
 		comm_base_exit(worker->base);
+		break;
+	case worker_cmd_stats:
+		verbose(VERB_ALGO, "got control cmd stats");
+		server_stats_reply(worker);
 		break;
 	default:
 		log_err("bad command %d", (int)cmd);
@@ -831,7 +835,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 		/* protect our memory usage from storing reply addresses */
 		verbose(VERB_ALGO, "Too many requests queued. "
 			"dropping incoming query.");
-		worker->stats.num_query_list_exceeded++;
+		worker->env.mesh->stats_dropped++;
 		comm_point_drop_reply(repinfo);
 		return 0;
 	}
@@ -895,7 +899,7 @@ worker_restart_timer(struct worker* worker)
 void worker_stat_timer_cb(void* arg)
 {
 	struct worker* worker = (struct worker*)arg;
-	server_stats_log(&worker->stats, worker->thread_num);
+	server_stats_log(&worker->stats, worker, worker->thread_num);
 	mesh_stats(worker->env.mesh, "mesh has");
 	worker_mem_report(worker, NULL);
 	if(!worker->daemon->cfg->stat_cumulative) {
@@ -921,12 +925,10 @@ worker_create(struct daemon* daemon, int id, int* ports, int n)
 	}
 	worker->daemon = daemon;
 	worker->thread_num = id;
-	if(id != 0) {
-		if(!(worker->cmd = tube_create())) {
-			free(worker->ports);
-			free(worker);
-			return NULL;
-		}
+	if(!(worker->cmd = tube_create())) {
+		free(worker->ports);
+		free(worker);
+		return NULL;
 	}
 	return worker;
 }
@@ -1011,14 +1013,12 @@ worker_init(struct worker* worker, struct config_file *cfg,
 		worker_delete(worker);
 		return 0;
 	}
-	if(worker->thread_num != 0) {
-		/* start listening to commands */
-		if(!tube_setup_bg_listen(worker->cmd, worker->base,
-			&worker_handle_control_cmd, worker)) {
-			log_err("could not create control compt.");
-			worker_delete(worker);
-			return 0;
-		}
+	/* start listening to commands */
+	if(!tube_setup_bg_listen(worker->cmd, worker->base,
+		&worker_handle_control_cmd, worker)) {
+		log_err("could not create control compt.");
+		worker_delete(worker);
+		return 0;
 	}
 	worker->stat_timer = comm_timer_create(worker->base, 
 		worker_stat_timer_cb, worker);
@@ -1082,7 +1082,7 @@ worker_delete(struct worker* worker)
 	if(!worker) 
 		return;
 	if(worker->env.mesh && verbosity >= VERB_OPS) {
-		server_stats_log(&worker->stats, worker->thread_num);
+		server_stats_log(&worker->stats, worker, worker->thread_num);
 		mesh_stats(worker->env.mesh, "mesh has");
 		worker_mem_report(worker, NULL);
 	}

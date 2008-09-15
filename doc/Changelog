@@ -1,6 +1,8 @@
 15 September 2008: Wouter
 	- working start, stop, reload commands for unbound-control.
 	- test for unbound-control working; better exit value for control.
+	- verbosity control via unbound-control.
+	- unbound-control stats.
 
 12 September 2008: Wouter
 	- removed browser control mentions. Proto speccy.

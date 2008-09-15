@@ -61,6 +61,8 @@ usage()
 	printf("  start		start server; runs unbound(8)\n");
 	printf("  stop		stops the server\n");
 	printf("  reload	reloads the server\n");
+	printf("  stats		print statistics\n");
+	printf("  verbosity [number]	change logging detail\n");
 	printf("Version %s\n", PACKAGE_VERSION);
 	printf("BSD licensed, see LICENSE in source package for details.\n");
 	printf("Report bugs to %s\n", PACKAGE_BUGREPORT);
@@ -118,6 +120,14 @@ contact_server(char* svr, struct config_file* cfg)
 		if(cfg->control_ifs)
 			svr = cfg->control_ifs->str;
 		else	svr = "127.0.0.1";
+		/* config 0 addr (everything), means ask localhost */
+		if(strcmp(svr, "0.0.0.0") == 0)
+			svr = "127.0.0.1";
+		else if(strcmp(svr, "::0") == 0 ||
+			strcmp(svr, "0::0") == 0 ||
+			strcmp(svr, "0::") == 0 ||
+			strcmp(svr, "::") == 0)
+			svr = "::1";
 	}
 	if(strchr(svr, '@')) {
 		if(!extstrtoaddr(svr, &addr, &addrlen))
