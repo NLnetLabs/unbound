@@ -41,13 +41,15 @@ address is read from the config file.
 There are several commands that the server understands.
 .TP
 .B start
-Start the server. Simply execs \fIunbound\fR(8).
+Start the server. Simply execs \fIunbound\fR(8).  The unbound executable 
+is searched for in the \fBPATH\fR set in the environment.  It is started 
+with the config file specified using \fI\-c\fR or the default config file.
 .TP
 .B stop
-Stop the server.
+Stop the server. The server daemon exits.
 .TP
 .B reload
-Reload the server.
+Reload the server. This flushes the cache and reads the config file fresh.
 .SH "EXIT CODE"
 The unbound-control program exits with status code 1 on error.
 .SH "SET UP"

@@ -186,7 +186,6 @@ setup_ssl(SSL_CTX* ctx, int fd)
 static void
 go_cmd(SSL* ssl, int argc, char* argv[])
 {
-	char* cmd = "GET / HTTP/1.0\n\n";
 	char* pre="UBCT";
 	char* space=" ";
 	char* newline="\n";
@@ -303,7 +302,7 @@ int main(int argc, char* argv[])
 	argv += optind;
 	if(argc == 0)
 		usage();
-	if(argc == 1 && strcmp(argv[0], "start")==0) {
+	if(argc >= 1 && strcmp(argv[0], "start")==0) {
 		if(execlp("unbound", "unbound", "-c", cfgfile, 
 			(char*)NULL) < 0) {
 			fatal_exit("could not exec unbound: %s",
