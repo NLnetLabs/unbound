@@ -441,6 +441,10 @@ answer_norec_from_cache(struct worker* worker, struct query_info* qinfo,
 			error_encode(repinfo->c->buffer, LDNS_RCODE_SERVFAIL, 
 				&msg->qinfo, id, flags, edns);
 			regional_free_all(worker->scratchpad);
+			if(worker->stats.extended) {
+				worker->stats.ans_bogus++;
+				worker->stats.ans_rcode[LDNS_RCODE_SERVFAIL]++;
+			}
 			return 1;
 		case sec_status_secure:
 			/* all rrsets are secure */
@@ -470,6 +474,10 @@ answer_norec_from_cache(struct worker* worker, struct query_info* qinfo,
 			&msg->qinfo, id, flags, edns);
 	}
 	regional_free_all(worker->scratchpad);
+	if(worker->stats.extended) {
+		if(secure) worker->stats.ans_secure++;
+		server_stats_insrcode(&worker->stats, repinfo->c->buffer);
+	}
 	return 1;
 }
 
@@ -557,6 +565,10 @@ answer_from_cache(struct worker* worker, struct query_info* qinfo,
 		rrset_array_unlock_touch(worker->env.rrset_cache, 
 			worker->scratchpad, rep->ref, rep->rrset_count);
 		regional_free_all(worker->scratchpad);
+		if(worker->stats.extended) {
+			worker->stats.ans_bogus ++;
+			worker->stats.ans_rcode[LDNS_RCODE_SERVFAIL] ++;
+		}
 		return 1;
 	} else if( rep->security == sec_status_unchecked && must_validate) {
 		verbose(VERB_ALGO, "Cache reply: unchecked entry needs "
@@ -590,6 +602,10 @@ answer_from_cache(struct worker* worker, struct query_info* qinfo,
 	rrset_array_unlock_touch(worker->env.rrset_cache, worker->scratchpad,
 		rep->ref, rep->rrset_count);
 	regional_free_all(worker->scratchpad);
+	if(worker->stats.extended) {
+		if(secure) worker->stats.ans_secure++;
+		server_stats_insrcode(&worker->stats, repinfo->c->buffer);
+	}
 	/* go and return this buffer to the client */
 	return 1;
 }
@@ -704,6 +720,8 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 		repinfo->addrlen);
 	if(acl == acl_deny) {
 		comm_point_drop_reply(repinfo);
+		if(worker->stats.extended)
+			worker->stats.unwanted_queries++;
 		return 0;
 	} else if(acl == acl_refuse) {
 		ldns_buffer_set_limit(c->buffer, LDNS_HEADER_SIZE);
@@ -715,6 +733,8 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 		log_addr(VERB_ALGO, "refused query from",
 			&repinfo->addr, repinfo->addrlen);
 		log_buf(VERB_ALGO, "refuse", c->buffer);
+		if(worker->stats.extended)
+			worker->stats.unwanted_queries++;
 		return 1;
 	}
 	if((ret=worker_check_request(c->buffer, worker)) != 0) {
@@ -734,6 +754,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 		LDNS_QR_SET(ldns_buffer_begin(c->buffer));
 		LDNS_RCODE_SET(ldns_buffer_begin(c->buffer), 
 			LDNS_RCODE_FORMERR);
+		server_stats_insrcode(&worker->stats, c->buffer);
 		return 1;
 	}
 	if(qinfo.qtype == LDNS_RR_TYPE_AXFR || 
@@ -742,12 +763,17 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 		LDNS_QR_SET(ldns_buffer_begin(c->buffer));
 		LDNS_RCODE_SET(ldns_buffer_begin(c->buffer), 
 			LDNS_RCODE_REFUSED);
+		if(worker->stats.extended) {
+			worker->stats.qtype[qinfo.qtype]++;
+			server_stats_insrcode(&worker->stats, c->buffer);
+		}
 		return 1;
 	}
 	if((ret=parse_edns_from_pkt(c->buffer, &edns)) != 0) {
 		verbose(VERB_ALGO, "worker parse edns: formerror.");
 		LDNS_QR_SET(ldns_buffer_begin(c->buffer));
 		LDNS_RCODE_SET(ldns_buffer_begin(c->buffer), ret);
+		server_stats_insrcode(&worker->stats, c->buffer);
 		return 1;
 	}
 	if(edns.edns_present && edns.edns_version != 0) {
@@ -780,14 +806,19 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 		ldns_buffer_flip(c->buffer);
 		return 1;
 	}
+	if(worker->stats.extended)
+		server_stats_insquery(&worker->stats, c, qinfo.qtype,
+			qinfo.qclass, &edns);
 	if(c->type != comm_udp)
 		edns.udp_size = 65535; /* max size for TCP replies */
 	if(qinfo.qclass == LDNS_RR_CLASS_CH && answer_chaos(worker, &qinfo,
 		&edns, c->buffer)) {
+		server_stats_insrcode(&worker->stats, c->buffer);
 		return 1;
 	}
 	if(local_zones_answer(worker->daemon->local_zones, &qinfo, &edns, 
 		c->buffer, worker->scratchpad)) {
+		server_stats_insrcode(&worker->stats, c->buffer);
 		return (ldns_buffer_limit(c->buffer) != 0);
 	}
 	if(!(LDNS_RD_WIRE(ldns_buffer_begin(c->buffer))) &&
@@ -799,6 +830,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 		LDNS_RCODE_SET(ldns_buffer_begin(c->buffer), 
 			LDNS_RCODE_REFUSED);
 		ldns_buffer_flip(c->buffer);
+		server_stats_insrcode(&worker->stats, c->buffer);
 		log_addr(VERB_ALGO, "refused nonrec (cache snoop) query from",
 			&repinfo->addr, repinfo->addrlen);
 		return 1;
@@ -903,8 +935,9 @@ void worker_stat_timer_cb(void* arg)
 	mesh_stats(worker->env.mesh, "mesh has");
 	worker_mem_report(worker, NULL);
 	if(!worker->daemon->cfg->stat_cumulative) {
-		server_stats_init(&worker->stats);
+		server_stats_init(&worker->stats, worker->env.cfg);
 		mesh_stats_clear(worker->env.mesh);
+		worker->back->unwanted_replies = 0;
 	}
 	/* start next timer */
 	worker_restart_timer(worker);
@@ -1036,7 +1069,7 @@ worker_init(struct worker* worker, struct config_file *cfg,
 	}
 	worker->request_size = cfg->num_queries_per_thread;
 
-	server_stats_init(&worker->stats);
+	server_stats_init(&worker->stats, cfg);
 	alloc_init(&worker->alloc, &worker->daemon->superalloc, 
 		worker->thread_num);
 	alloc_set_id_cleanup(&worker->alloc, &worker_alloc_cleanup, worker);

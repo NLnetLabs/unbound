@@ -185,6 +185,9 @@ daemon_init()
 		free(daemon);
 		return NULL;
 	}
+	if(gettimeofday(&daemon->time_boot, NULL) < 0)
+		log_err("gettimeofday: %s", strerror(errno));
+	daemon->time_last_stat = daemon->time_boot;
 	return daemon;	
 }
 

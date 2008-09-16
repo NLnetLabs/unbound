@@ -43,6 +43,18 @@
 #ifndef DAEMON_STATS_H
 #define DAEMON_STATS_H
 struct worker;
+struct config_file;
+struct comm_point;
+struct edns_data;
+
+/** number of qtype that is stored for in array */
+#define STATS_QTYPE_NUM 256
+/** number of qclass that is stored for in array */
+#define STATS_QCLASS_NUM 256
+/** number of rcodes in stats */
+#define STATS_RCODE_NUM 16
+/** number of opcodes in stats */
+#define STATS_OPCODE_NUM 16
 
 /** per worker statistics */
 struct server_stats {
@@ -58,6 +70,56 @@ struct server_stats {
 	size_t sum_query_list_size;
 	/** max value of query list size reached. */
 	size_t max_query_list_size;
+
+	/** Extended stats below (bool) */
+	int extended;
+
+	/** qtype stats */
+	size_t qtype[STATS_QTYPE_NUM];
+	/** bigger qtype values not in array */
+	size_t qtype_big;
+	/** qclass stats */
+	size_t qclass[STATS_QCLASS_NUM];
+	/** bigger qclass values not in array */
+	size_t qclass_big;
+	/** query opcodes */
+	size_t qopcode[STATS_OPCODE_NUM];
+	/** number of queries over TCP */
+	size_t qtcp;
+	/** number of queries with QR bit */
+	size_t qbit_QR;
+	/** number of queries with AA bit */
+	size_t qbit_AA;
+	/** number of queries with TC bit */
+	size_t qbit_TC;
+	/** number of queries with RD bit */
+	size_t qbit_RD;
+	/** number of queries with RA bit */
+	size_t qbit_RA;
+	/** number of queries with Z bit */
+	size_t qbit_Z;
+	/** number of queries with AD bit */
+	size_t qbit_AD;
+	/** number of queries with CD bit */
+	size_t qbit_CD;
+	/** number of queries with EDNS OPT record */
+	size_t qEDNS;
+	/** number of queries with EDNS with DO flag */
+	size_t qEDNS_DO;
+	/** answer rcodes */
+	size_t ans_rcode[STATS_RCODE_NUM];
+	/** answers with pseudo rcode 'nodata' */
+	size_t ans_rcode_nodata;
+	/** answers that were secure (AD) */
+	size_t ans_secure;
+	/** answers with bogus content */
+	size_t ans_bogus;
+	/** rrsets marked bogus by validator */
+	size_t rrset_bogus;
+	/** unwanted traffic received on server-facing ports */
+	size_t unwanted_replies;
+	/** unwanted traffic received on client-facing ports */
+	size_t unwanted_queries;
 };
 
 /** 
@@ -87,8 +149,9 @@ struct stats_info {
 /** 
  * Initialize server stats to 0.
  * @param stats: what to init (this is alloced by the caller).
+ * @param cfg: with extended statistics option.
  */
-void server_stats_init(struct server_stats* stats);
+void server_stats_init(struct server_stats* stats, struct config_file* cfg);
 
 /** add query if it missed the cache */
 void server_stats_querymiss(struct server_stats* stats, struct worker* worker);
@@ -126,5 +189,23 @@ void server_stats_reply(struct worker* worker);
  * @param a: to add to it.
  */
 void server_stats_add(struct stats_info* total, struct stats_info* a);
+
+/**
+ * Add stats for this query
+ * @param stats: the stats
+ * @param c: commpoint with type and buffer.
+ * @param qtype: query type
+ * @param qclass: query class
+ * @param edns: edns record
+ */
+void server_stats_insquery(struct server_stats* stats, struct comm_point* c,
+	uint16_t qtype, uint16_t qclass, struct edns_data* edns);
+
+/**
+ * Add rcode for this query.
+ * @param stats: the stats
+ * @param buf: buffer with rcode. If buffer is length0: not counted.
+ */
+void server_stats_insrcode(struct server_stats* stats, ldns_buffer* buf);
 
 #endif /* DAEMON_STATS_H */

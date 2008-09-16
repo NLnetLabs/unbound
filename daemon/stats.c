@@ -44,9 +44,12 @@
 #include "daemon/worker.h"
 #include "daemon/daemon.h"
 #include "services/mesh.h"
+#include "services/outside_network.h"
 #include "util/config_file.h"
 #include "util/tube.h"
 #include "util/timehist.h"
+#include "util/net_help.h"
+#include "validator/validator.h"
 
 /** add timers and the values do not overflow or become negative */
 static void
@@ -62,9 +65,10 @@ timeval_add(struct timeval* d, struct timeval* add)
 #endif
 }
 
-void server_stats_init(struct server_stats* stats)
+void server_stats_init(struct server_stats* stats, struct config_file* cfg)
 {
 	memset(stats, 0, sizeof(*stats));
+	stats->extended = cfg->stat_extended;
 }
 
 void server_stats_querymiss(struct server_stats* stats, struct worker* worker)
@@ -92,9 +96,27 @@ void server_stats_log(struct server_stats* stats, struct worker* worker,
 		(unsigned)worker->env.mesh->stats_dropped);
 }
 
+/** get rrsets bogus number from validator */
+static size_t
+get_rrset_bogus(struct worker* worker)
+{
+	int m = modstack_find(&worker->env.mesh->mods, "validator");
+	struct val_env* ve;
+	size_t r;
+	if(m == -1)
+		return 0;
+	ve = (struct val_env*)worker->env.modinfo[m];
+	r = ve->num_rrset_bogus;
+	if(!worker->env.cfg->stat_cumulative)
+		ve->num_rrset_bogus = 0;
+	return r;
+}
+
 void
 server_stats_compile(struct worker* worker, struct stats_info* s)
 {
+	int i;
+
 	s->svr = worker->stats;
 	s->mesh_num_states = worker->env.mesh->all.count;
 	s->mesh_num_reply_states = worker->env.mesh->num_reply_states;
@@ -104,9 +126,23 @@ server_stats_compile(struct worker* worker, struct stats_info* s)
 	s->mesh_replies_sum_wait = worker->env.mesh->replies_sum_wait;
 	s->mesh_time_median = timehist_quartile(worker->env.mesh->histogram,
 		0.50);
+
+	/* add in the values from the mesh */
+	s->svr.ans_secure += worker->env.mesh->ans_secure;
+	s->svr.ans_bogus += worker->env.mesh->ans_bogus;
+	s->svr.ans_rcode_nodata += worker->env.mesh->ans_nodata;
+	for(i=0; i<16; i++)
+		s->svr.ans_rcode[i] += worker->env.mesh->ans_rcode[i];
+	/* values from outside network */
+	s->svr.unwanted_replies = worker->back->unwanted_replies;
+
+	/* get and reset validator rrset bogus number */
+	s->svr.rrset_bogus = get_rrset_bogus(worker);
+
 	if(!worker->env.cfg->stat_cumulative) {
-		server_stats_init(&worker->stats);
+		server_stats_init(&worker->stats, worker->env.cfg);
 		mesh_stats_clear(worker->env.mesh);
+		worker->back->unwanted_replies = 0;
 	}
 }
 
@@ -152,6 +188,37 @@ void server_stats_add(struct stats_info* total, struct stats_info* a)
 	if(a->svr.max_query_list_size > total->svr.max_query_list_size)
 		total->svr.max_query_list_size = a->svr.max_query_list_size;
 
+	if(a->svr.extended) {
+		int i;
+		total->svr.qtype_big += a->svr.qtype_big;
+		total->svr.qclass_big += a->svr.qclass_big;
+		total->svr.qtcp += a->svr.qtcp;
+		total->svr.qbit_QR += a->svr.qbit_QR;
+		total->svr.qbit_AA += a->svr.qbit_AA;
+		total->svr.qbit_TC += a->svr.qbit_TC;
+		total->svr.qbit_RD += a->svr.qbit_RD;
+		total->svr.qbit_RA += a->svr.qbit_RA;
+		total->svr.qbit_Z += a->svr.qbit_Z;
+		total->svr.qbit_AD += a->svr.qbit_AD;
+		total->svr.qbit_CD += a->svr.qbit_CD;
+		total->svr.qEDNS += a->svr.qEDNS;
+		total->svr.qEDNS_DO += a->svr.qEDNS_DO;
+		total->svr.ans_rcode_nodata += a->svr.ans_rcode_nodata;
+		total->svr.ans_secure += a->svr.ans_secure;
+		total->svr.ans_bogus += a->svr.ans_bogus;
+		total->svr.rrset_bogus += a->svr.rrset_bogus;
+		total->svr.unwanted_replies += a->svr.unwanted_replies;
+		total->svr.unwanted_queries += a->svr.unwanted_queries;
+		for(i=0; i<STATS_QTYPE_NUM; i++)
+			total->svr.qtype[i] += a->svr.qtype[i];
+		for(i=0; i<STATS_QCLASS_NUM; i++)
+			total->svr.qclass[i] += a->svr.qclass[i];
+		for(i=0; i<STATS_OPCODE_NUM; i++)
+			total->svr.qopcode[i] += a->svr.qopcode[i];
+		for(i=0; i<STATS_RCODE_NUM; i++)
+			total->svr.ans_rcode[i] += a->svr.ans_rcode[i];
+	}
+
 	total->mesh_num_states += a->mesh_num_states;
 	total->mesh_num_reply_states += a->mesh_num_reply_states;
 	total->mesh_jostled += a->mesh_jostled;
@@ -162,4 +229,50 @@ void server_stats_add(struct stats_info* total, struct stats_info* a)
 	 * taking the median over all of the data, but is good and fast
 	 * added up here, division later*/
 	total->mesh_time_median += a->mesh_time_median;
+}
+
+void server_stats_insquery(struct server_stats* stats, struct comm_point* c,
+	uint16_t qtype, uint16_t qclass, struct edns_data* edns)
+{
+	uint16_t flags = ldns_buffer_read_u16_at(c->buffer, 2);
+	if(qtype < STATS_QTYPE_NUM)
+		stats->qtype[qtype]++;
+	else	stats->qtype_big++;
+	if(qclass < STATS_QCLASS_NUM)
+		stats->qclass[qclass]++;
+	else	stats->qclass_big++;
+	stats->qopcode[ LDNS_OPCODE_WIRE(ldns_buffer_begin(c->buffer)) ]++;
+	if(c->type != comm_udp)
+		stats->qtcp++;
+	if( (flags&BIT_QR) )
+		stats->qbit_QR++;
+	if( (flags&BIT_AA) )
+		stats->qbit_AA++;
+	if( (flags&BIT_TC) )
+		stats->qbit_TC++;
+	if( (flags&BIT_RD) )
+		stats->qbit_RD++;
+	if( (flags&BIT_RA) )
+		stats->qbit_RA++;
+	if( (flags&BIT_Z) )
+		stats->qbit_Z++;
+	if( (flags&BIT_AD) )
+		stats->qbit_AD++;
+	if( (flags&BIT_CD) )
+		stats->qbit_CD++;
+	if(edns->edns_present) {
+		stats->qEDNS++;
+		if( (edns->bits & EDNS_DO) )
+			stats->qEDNS_DO++;
+	}
+}
+
+void server_stats_insrcode(struct server_stats* stats, ldns_buffer* buf)
+{
+	if(stats->extended && ldns_buffer_limit(buf) != 0) {
+		int r = (int)LDNS_RCODE_WIRE( ldns_buffer_begin(buf) );
+		stats->ans_rcode[r] ++;
+		if(r == 0 && LDNS_ANCOUNT( ldns_buffer_begin(buf) ) == 0)
+			stats->ans_rcode_nodata ++;
+	}
 }

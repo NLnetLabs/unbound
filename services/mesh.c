@@ -599,6 +599,8 @@ mesh_send_reply(struct mesh_state* m, int rcode, struct reply_info* rep,
 	if(m->s.env->need_to_validate && !(r->qflags&BIT_CD) && rep && 
 		rep->security <= sec_status_bogus) {
 		rcode = LDNS_RCODE_SERVFAIL;
+		if(m->s.env->cfg->stat_extended) 
+			m->s.env->mesh->ans_bogus++;
 	}
 	if(rep && rep->security == sec_status_secure)
 		secure = 1;
@@ -651,6 +653,15 @@ mesh_send_reply(struct mesh_state* m, int rcode, struct reply_info* rep,
 	m->s.env->mesh->replies_sent++;
 	timeval_add(&m->s.env->mesh->replies_sum_wait, &duration);
 	timehist_insert(m->s.env->mesh->histogram, &duration);
+	if(m->s.env->cfg->stat_extended) {
+		uint16_t rc = FLAGS_GET_RCODE(ldns_buffer_read_u16_at(r->
+			query_reply.c->buffer, 2));
+		if(secure) m->s.env->mesh->ans_secure++;
+		m->s.env->mesh->ans_rcode[ rc ] ++;
+		if(rc == 0 && LDNS_ANCOUNT(ldns_buffer_begin(r->
+			query_reply.c->buffer)) == 0)
+			m->s.env->mesh->ans_nodata++;
+	}
 }
 
 void mesh_query_done(struct mesh_state* mstate)
@@ -891,6 +902,10 @@ mesh_stats_clear(struct mesh_area* mesh)
 	mesh->stats_jostled = 0;
 	mesh->stats_dropped = 0;
 	timehist_clear(mesh->histogram);
+	mesh->ans_secure = 0;
+	mesh->ans_bogus = 0;
+	memset(&mesh->ans_rcode[0], 0, sizeof(size_t)*16);
+	mesh->ans_nodata = 0;
 }
 
 size_t 

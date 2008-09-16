@@ -329,6 +329,7 @@ outnet_udp_cb(struct comm_point* c, void* arg, int error,
 	if(!p) {
 		verbose(VERB_QUERY, "received unwanted or unsolicited udp reply dropped.");
 		log_buf(VERB_ALGO, "dropped message", c->buffer);
+		outnet->unwanted_replies++;
 		return 0;
 	}
 
@@ -337,6 +338,7 @@ outnet_udp_cb(struct comm_point* c, void* arg, int error,
 	if(p->pc->cp != c) {
 		verbose(VERB_QUERY, "received reply id,addr on wrong port. "
 			"dropped.");
+		outnet->unwanted_replies++;
 		return 0;
 	}
 	comm_timer_disable(p->timer);

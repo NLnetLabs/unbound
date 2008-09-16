@@ -107,6 +107,9 @@ struct val_env {
 	 * in the keysize array.
 	 */
 	size_t* nsec3_maxiter;
+
+	/** number of times rrsets marked bogus */
+	size_t num_rrset_bogus;
 };
 
 /**

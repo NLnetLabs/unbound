@@ -76,6 +76,8 @@ struct outside_network {
 	size_t svcd_overhead;
 	/** use x20 bits to encode additional ID random bits */
 	int use_caps_for_id;
+	/** number of unwanted replies received */
+	size_t unwanted_replies;
 
 	/** linked list of available commpoints, unused file descriptors,
 	 * for use as outgoing UDP ports. cp.fd=-1 in them. */

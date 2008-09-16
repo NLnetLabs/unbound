@@ -54,6 +54,8 @@
 #define BIT_CD 0x0010
 /** AD flag */
 #define BIT_AD 0x0020
+/** Z flag */
+#define BIT_Z  0x0040
 /** RA flag */
 #define BIT_RA 0x0080
 /** RD flag */

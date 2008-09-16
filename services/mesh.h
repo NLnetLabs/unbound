@@ -113,6 +113,14 @@ struct mesh_area {
 	struct timeval replies_sum_wait;
 	/** histogram of time values */
 	struct timehist* histogram;
+	/** (extended stats) secure replies */
+	size_t ans_secure;
+	/** (extended stats) bogus replies */
+	size_t ans_bogus;
+	/** (extended stats) rcodes in replies */
+	size_t ans_rcode[16];
+	/** (extended stats) rcode nodata in replies */
+	size_t ans_nodata;
 
 	/** double linked list of the run-to-completion query states.
 	 * These are query states with a reply */

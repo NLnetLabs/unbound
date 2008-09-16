@@ -165,3 +165,14 @@ modstack_desetup(struct module_stack* stack, struct module_env* env)
         free(stack->mod);
         stack->mod = NULL;
 }
+
+int 
+modstack_find(struct module_stack* stack, const char* name)
+{
+	int i;
+        for(i=0; i<stack->num; i++) {
+		if(strcmp(stack->mod[i]->name, name) == 0)
+			return i;
+	}
+	return -1;
+}

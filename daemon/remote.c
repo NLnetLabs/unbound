@@ -50,7 +50,12 @@
 #include "util/log.h"
 #include "util/config_file.h"
 #include "util/net_help.h"
+#include "util/module.h"
 #include "services/listen_dnsport.h"
+#include "services/cache/rrset.h"
+#include "services/mesh.h"
+#include "util/storage/slabhash.h"
+#include "util/fptr_wlist.h"
 
 #ifdef HAVE_SYS_TYPES_H
 #  include <sys/types.h>
@@ -58,6 +63,16 @@
 #ifdef HAVE_NETDB_H
 #include <netdb.h>
 #endif
+
+/* just for portability */
+#ifdef SQ
+#undef SQ
+#endif
+
+/** what to put on statistics lines between var and value, ": " or "=" */
+#define SQ "="
+/** if true, inhibits a lot of =0 lines from the stats output */
+static const int inhibit_zero = 1;
 
 /** log ssl crypto err */
 static void
@@ -72,6 +87,20 @@ log_crypto_err(const char* str)
 		ERR_error_string_n(e, buf, sizeof(buf));
 		log_err("and additionally crypto %s", buf);
 	}
+}
+
+/** subtract timers and the values do not overflow or become negative */
+static void
+timeval_subtract(struct timeval* d, struct timeval* end, struct timeval* start)
+{
+#ifndef S_SPLINT_S
+	d->tv_sec = end->tv_sec - start->tv_sec;
+	while(end->tv_usec < start->tv_usec) {
+		end->tv_usec += 1000000;
+		d->tv_sec--;
+	}
+	d->tv_usec = end->tv_usec - start->tv_usec;
+#endif
 }
 
 /** divide sum of timers to get average */
@@ -524,33 +553,33 @@ static int
 print_stats(SSL* ssl, char* nm, struct stats_info* s)
 {
 	struct timeval avg;
-	if(!ssl_printf(ssl, "%s.num.queries: %u\n", nm, 
+	if(!ssl_printf(ssl, "%s.num.queries"SQ"%u\n", nm, 
 		(unsigned)s->svr.num_queries)) return 0;
-	if(!ssl_printf(ssl, "%s.num.cachehits: %u\n", nm, 
+	if(!ssl_printf(ssl, "%s.num.cachehits"SQ"%u\n", nm, 
 		(unsigned)(s->svr.num_queries 
 			- s->svr.num_queries_missed_cache))) return 0;
-	if(!ssl_printf(ssl, "%s.num.cachemiss: %u\n", nm, 
+	if(!ssl_printf(ssl, "%s.num.cachemiss"SQ"%u\n", nm, 
 		(unsigned)s->svr.num_queries_missed_cache)) return 0;
-	if(!ssl_printf(ssl, "%s.num.recursivereplies: %u\n", nm, 
+	if(!ssl_printf(ssl, "%s.num.recursivereplies"SQ"%u\n", nm, 
 		(unsigned)s->mesh_replies_sent)) return 0;
-	if(!ssl_printf(ssl, "%s.requestlist.avg: %g\n", nm,
+	if(!ssl_printf(ssl, "%s.requestlist.avg"SQ"%g\n", nm,
 		s->svr.num_queries_missed_cache?
 			(double)s->svr.sum_query_list_size/
 			s->svr.num_queries_missed_cache : 0.0)) return 0;
-	if(!ssl_printf(ssl, "%s.requestlist.max: %u\n", nm,
+	if(!ssl_printf(ssl, "%s.requestlist.max"SQ"%u\n", nm,
 		(unsigned)s->svr.max_query_list_size)) return 0;
-	if(!ssl_printf(ssl, "%s.requestlist.overwritten: %u\n", nm,
+	if(!ssl_printf(ssl, "%s.requestlist.overwritten"SQ"%u\n", nm,
 		(unsigned)s->mesh_jostled)) return 0;
-	if(!ssl_printf(ssl, "%s.requestlist.exceeded: %u\n", nm,
+	if(!ssl_printf(ssl, "%s.requestlist.exceeded"SQ"%u\n", nm,
 		(unsigned)s->mesh_dropped)) return 0;
-	if(!ssl_printf(ssl, "%s.requestlist.current.all: %u\n", nm,
+	if(!ssl_printf(ssl, "%s.requestlist.current.all"SQ"%u\n", nm,
 		(unsigned)s->mesh_num_states)) return 0;
-	if(!ssl_printf(ssl, "%s.requestlist.current.user: %u\n", nm,
+	if(!ssl_printf(ssl, "%s.requestlist.current.user"SQ"%u\n", nm,
 		(unsigned)s->mesh_num_reply_states)) return 0;
 	timeval_divide(&avg, &s->mesh_replies_sum_wait, s->mesh_replies_sent);
-	if(!ssl_printf(ssl, "%s.recursion.time.avg: %d.%6.6d\n", nm,
+	if(!ssl_printf(ssl, "%s.recursion.time.avg"SQ"%d.%6.6d\n", nm,
 		(int)avg.tv_sec, (int)avg.tv_usec)) return 0;
-	if(!ssl_printf(ssl, "%s.recursion.time.median: %g\n", nm, 
+	if(!ssl_printf(ssl, "%s.recursion.time.median"SQ"%g\n", nm, 
 		s->mesh_time_median)) return 0;
 	return 1;
 }
@@ -563,6 +592,178 @@ print_thread_stats(SSL* ssl, int i, struct stats_info* s)
 	snprintf(nm, sizeof(nm), "thread%d", i);
 	nm[sizeof(nm)-1]=0;
 	return print_stats(ssl, nm, s);
+}
+
+/** print mem stats */
+static int
+print_mem(SSL* ssl, struct worker* worker, struct daemon* daemon)
+{
+	int m;
+	size_t msg, rrset, val, iter;
+#ifdef HAVE_SBRK
+	extern void* unbound_start_brk;
+	void* cur = sbrk(0);
+	if(!ssl_printf(ssl, "mem.total.sbrk"SQ"%u\n", 
+		(unsigned)(cur-unbound_start_brk))) return 0;
+#endif /* HAVE_SBRK */
+	msg = slabhash_get_mem(daemon->env->msg_cache);
+	rrset = slabhash_get_mem(&daemon->env->rrset_cache->table);
+	val=0;
+	iter=0;
+	m = modstack_find(&worker->env.mesh->mods, "validator");
+	if(m != -1) {
+		fptr_ok(fptr_whitelist_mod_get_mem(worker->env.mesh->
+			mods.mod[m]->get_mem));
+		val = (*worker->env.mesh->mods.mod[m]->get_mem)
+			(&worker->env, m);
+	}
+	m = modstack_find(&worker->env.mesh->mods, "iterator");
+	if(m != -1) {
+		fptr_ok(fptr_whitelist_mod_get_mem(worker->env.mesh->
+			mods.mod[m]->get_mem));
+		iter = (*worker->env.mesh->mods.mod[m]->get_mem)
+			(&worker->env, m);
+	}
+
+	if(!ssl_printf(ssl, "mem.cache.rrset"SQ"%u\n", (unsigned)rrset))
+		return 0;
+	if(!ssl_printf(ssl, "mem.cache.message"SQ"%u\n", (unsigned)msg))
+		return 0;
+	if(!ssl_printf(ssl, "mem.mod.iterator"SQ"%u\n", (unsigned)iter))
+		return 0;
+	if(!ssl_printf(ssl, "mem.mod.validator"SQ"%u\n", (unsigned)val))
+		return 0;
+	return 1;
+}
+
+/** print uptime stats */
+static int
+print_uptime(SSL* ssl, struct worker* worker)
+{
+	struct timeval now = *worker->env.now_tv;
+	struct timeval up, dt;
+	timeval_subtract(&up, &now, &worker->daemon->time_boot);
+	timeval_subtract(&dt, &now, &worker->daemon->time_last_stat);
+	worker->daemon->time_last_stat = now;
+	if(!ssl_printf(ssl, "time.now"SQ"%d.%6.6d\n", 
+		(unsigned)now.tv_sec, (unsigned)now.tv_usec)) return 0;
+	if(!ssl_printf(ssl, "time.up"SQ"%d.%6.6d\n", 
+		(unsigned)up.tv_sec, (unsigned)up.tv_usec)) return 0;
+	if(!ssl_printf(ssl, "time.elapsed"SQ"%d.%6.6d\n", 
+		(unsigned)dt.tv_sec, (unsigned)dt.tv_usec)) return 0;
+	return 1;
+}
+
+/** print extended stats */
+static int
+print_ext(SSL* ssl, struct stats_info* s)
+{
+	int i;
+	char nm[16];
+	const ldns_rr_descriptor* desc;
+	const ldns_lookup_table* lt;
+	/* TYPE */
+	for(i=0; i<STATS_QTYPE_NUM; i++) {
+		if(inhibit_zero && s->svr.qtype[i] == 0)
+			continue;
+		desc = ldns_rr_descript((uint16_t)i);
+		if(desc && desc->_name) {
+			snprintf(nm, sizeof(nm), "%s", desc->_name);
+		} else {
+			snprintf(nm, sizeof(nm), "TYPE%d", i);
+		}
+		if(!ssl_printf(ssl, "num.query.type.%s"SQ"%u\n", 
+			nm, (unsigned)s->svr.qtype[i])) return 0;
+	}
+	if(!inhibit_zero || s->svr.qtype_big) {
+		if(!ssl_printf(ssl, "num.query.type.other"SQ"%u\n", 
+			(unsigned)s->svr.qtype_big)) return 0;
+	}
+	/* CLASS */
+	for(i=0; i<STATS_QCLASS_NUM; i++) {
+		if(inhibit_zero && s->svr.qclass[i] == 0)
+			continue;
+		lt = ldns_lookup_by_id(ldns_rr_classes, i);
+		if(lt && lt->name) {
+			snprintf(nm, sizeof(nm), "%s", lt->name);
+		} else {
+			snprintf(nm, sizeof(nm), "CLASS%d", i);
+		}
+		if(!ssl_printf(ssl, "num.query.class.%s"SQ"%u\n", 
+			nm, (unsigned)s->svr.qclass[i])) return 0;
+	}
+	if(!inhibit_zero || s->svr.qclass_big) {
+		if(!ssl_printf(ssl, "num.query.class.other"SQ"%u\n", 
+			(unsigned)s->svr.qclass_big)) return 0;
+	}
+	/* OPCODE */
+	for(i=0; i<STATS_OPCODE_NUM; i++) {
+		if(inhibit_zero && s->svr.qopcode[i] == 0)
+			continue;
+		lt = ldns_lookup_by_id(ldns_opcodes, i);
+		if(lt && lt->name) {
+			snprintf(nm, sizeof(nm), "%s", lt->name);
+		} else {
+			snprintf(nm, sizeof(nm), "OPCODE%d", i);
+		}
+		if(!ssl_printf(ssl, "num.query.opcode.%s"SQ"%u\n", 
+			nm, (unsigned)s->svr.qopcode[i])) return 0;
+	}
+	/* transport */
+	if(!ssl_printf(ssl, "num.query.tcp"SQ"%u\n", 
+		(unsigned)s->svr.qtcp)) return 0;
+	/* flags */
+	if(!ssl_printf(ssl, "num.query.flags.QR"SQ"%u\n", 
+		(unsigned)s->svr.qbit_QR)) return 0;
+	if(!ssl_printf(ssl, "num.query.flags.AA"SQ"%u\n", 
+		(unsigned)s->svr.qbit_AA)) return 0;
+	if(!ssl_printf(ssl, "num.query.flags.TC"SQ"%u\n", 
+		(unsigned)s->svr.qbit_TC)) return 0;
+	if(!ssl_printf(ssl, "num.query.flags.RD"SQ"%u\n", 
+		(unsigned)s->svr.qbit_RD)) return 0;
+	if(!ssl_printf(ssl, "num.query.flags.RA"SQ"%u\n", 
+		(unsigned)s->svr.qbit_RA)) return 0;
+	if(!ssl_printf(ssl, "num.query.flags.Z"SQ"%u\n", 
+		(unsigned)s->svr.qbit_Z)) return 0;
+	if(!ssl_printf(ssl, "num.query.flags.AD"SQ"%u\n", 
+		(unsigned)s->svr.qbit_AD)) return 0;
+	if(!ssl_printf(ssl, "num.query.flags.CD"SQ"%u\n", 
+		(unsigned)s->svr.qbit_CD)) return 0;
+	if(!ssl_printf(ssl, "num.query.edns.present"SQ"%u\n", 
+		(unsigned)s->svr.qEDNS)) return 0;
+	if(!ssl_printf(ssl, "num.query.edns.DO"SQ"%u\n", 
+		(unsigned)s->svr.qEDNS_DO)) return 0;
+
+	/* RCODE */
+	for(i=0; i<STATS_RCODE_NUM; i++) {
+		if(inhibit_zero && s->svr.ans_rcode[i] == 0)
+			continue;
+		lt = ldns_lookup_by_id(ldns_rcodes, i);
+		if(lt && lt->name) {
+			snprintf(nm, sizeof(nm), "%s", lt->name);
+		} else {
+			snprintf(nm, sizeof(nm), "RCODE%d", i);
+		}
+		if(!ssl_printf(ssl, "num.answer.rcode.%s"SQ"%u\n", 
+			nm, (unsigned)s->svr.qopcode[i])) return 0;
+	}
+	if(!inhibit_zero || s->svr.ans_rcode_nodata) {
+		if(!ssl_printf(ssl, "num.answer.rcode.nodata"SQ"%u\n", 
+			(unsigned)s->svr.ans_rcode_nodata)) return 0;
+	}
+	/* validation */
+	if(!ssl_printf(ssl, "num.answer.secure"SQ"%u\n", 
+		(unsigned)s->svr.ans_secure)) return 0;
+	if(!ssl_printf(ssl, "num.answer.bogus"SQ"%u\n", 
+		(unsigned)s->svr.ans_bogus)) return 0;
+	if(!ssl_printf(ssl, "num.rrset.bogus"SQ"%u\n", 
+		(unsigned)s->svr.rrset_bogus)) return 0;
+	/* threat detection */
+	if(!ssl_printf(ssl, "unwanted.queries"SQ"%u\n", 
+		(unsigned)s->svr.unwanted_queries)) return 0;
+	if(!ssl_printf(ssl, "unwanted.replies"SQ"%u\n", 
+		(unsigned)s->svr.unwanted_replies)) return 0;
+	return 1;
 }
 
 /** do the stats command */
@@ -584,7 +785,16 @@ do_stats(SSL* ssl, struct daemon_remote* rc)
 	}
 	/* print the thread statistics */
 	total.mesh_time_median /= (double)daemon->num;
-	print_stats(ssl, "total", &total);
+	if(!print_stats(ssl, "total", &total)) 
+		return;
+	if(daemon->cfg->stat_extended) {
+		if(!print_mem(ssl, rc->worker, daemon)) 
+			return;
+		if(!print_uptime(ssl, rc->worker))
+			return;
+		if(!print_ext(ssl, &total))
+			return;
+	}
 }
 
 /** execute a remote control command */

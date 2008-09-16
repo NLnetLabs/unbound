@@ -96,4 +96,12 @@ int modstack_setup(struct module_stack* stack, const char* module_conf,
  */
 void modstack_desetup(struct module_stack* stack, struct module_env* env);
 
+/**
+ * Find index of module by name.
+ * @param stack: to look in
+ * @param name: the name to look for
+ * @return -1 on failure, otherwise index number.
+ */
+int modstack_find(struct module_stack* stack, const char* name);
+
 #endif /* SERVICES_MODSTACK_H */

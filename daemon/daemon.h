@@ -90,6 +90,10 @@ struct daemon {
 	struct acl_list* acl;
 	/** local authority zones */
 	struct local_zones* local_zones;
+	/** last time of statistics printout */
+	struct timeval time_last_stat;
+	/** time when daemon started */
+	struct timeval time_boot;
 };
 
 /**
