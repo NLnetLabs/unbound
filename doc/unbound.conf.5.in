@@ -88,13 +88,17 @@ Default is level 1. The verbosity can also be increased from the commandline,
 see
 \fIunbound\fR(8).
 .TP
-.B statistics-interval: \fI<seconds>
+.B statistics\-interval: \fI<seconds>
 The number of seconds between printing statistics to the log for every thread.
 Disable with value 0 or "". Default is disabled. 
 .TP
-.B statistics-cumulative: \fI<yes or no>
+.B statistics\-cumulative: \fI<yes or no>
 If enabled, statistics are cumulative since starting unbound, without clearing
 the statistics counters after logging the statistics. Default is no.
+.TP
+.B extended\-statistics: \fI<yes or no>
+If enabled, extended statistics are printed from \fIunbound\-control\fR(8). 
+Default is off, because keeping track of more statistics takes time.
 .TP
 .B num\-threads: \fI<number>
 The number of threads to create to serve clients. Use 1 for no threading.

@@ -184,6 +184,7 @@ local-zone{COLON}	{ YDOUT; return VAR_LOCAL_ZONE;}
 local-data{COLON}	{ YDOUT; return VAR_LOCAL_DATA;}
 statistics-interval{COLON}	{ YDOUT; return VAR_STATISTICS_INTERVAL;}
 statistics-cumulative{COLON}	{ YDOUT; return VAR_STATISTICS_CUMULATIVE;}
+extended-statistics{COLON}	{ YDOUT; return VAR_EXTENDED_STATISTICS;}
 remote-control{COLON}	{ YDOUT; return VAR_REMOTE_CONTROL; }
 control-enable{COLON}	{ YDOUT; return VAR_CONTROL_ENABLE; }
 control-interface{COLON}	{ YDOUT; return VAR_CONTROL_INTERFACE; }

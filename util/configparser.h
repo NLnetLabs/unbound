@@ -131,7 +131,8 @@
      VAR_SERVER_KEY_FILE = 347,
      VAR_SERVER_CERT_FILE = 348,
      VAR_CONTROL_KEY_FILE = 349,
-     VAR_CONTROL_CERT_FILE = 350
+     VAR_CONTROL_CERT_FILE = 350,
+     VAR_EXTENDED_STATISTICS = 351
    };
 #endif
 /* Tokens.  */
@@ -228,6 +229,7 @@
 #define VAR_SERVER_CERT_FILE 348
 #define VAR_CONTROL_KEY_FILE 349
 #define VAR_CONTROL_CERT_FILE 350
+#define VAR_EXTENDED_STATISTICS 351
 
 
 
@@ -239,7 +241,7 @@ typedef union YYSTYPE
 	char*	str;
 }
 /* Line 1489 of yacc.c.  */
-#line 243 "util/configparser.h"
+#line 245 "util/configparser.h"
 	YYSTYPE;
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */
 # define YYSTYPE_IS_DECLARED 1

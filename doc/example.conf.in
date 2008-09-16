@@ -22,6 +22,10 @@ server:
 	# enable cumulative statistics, without clearing them after printing.
 	# statistics-cumulative: no
 
+	# enable extended statistics (query types, answer codes, status)
+	# printed from unbound-control. default off, because of speed.
+	# extended-statistics: no
+
 	# number of threads to create. 1 disables threading.
 	# num-threads: 1
 

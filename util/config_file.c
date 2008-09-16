@@ -75,6 +75,7 @@ config_create()
 	cfg->verbosity = 1;
 	cfg->stat_interval = 0;
 	cfg->stat_cumulative = 0;
+	cfg->stat_extended = 0;
 	cfg->num_threads = 1;
 	cfg->port = UNBOUND_DNS_PORT;
 	cfg->do_ip4 = 1;
@@ -226,6 +227,9 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	} else if(strcmp(opt, "num_threads:") == 0) {
 		/* not supported, library must have 1 thread in bgworker */
 		return 0;
+	} else if(strcmp(opt, "extended-statistics:") == 0) {
+		IS_YES_OR_NO;
+		cfg->stat_extended = (strcmp(val, "yes") == 0);
 	} else if(strcmp(opt, "do-ip4:") == 0) {
 		IS_YES_OR_NO;
 		cfg->do_ip4 = (strcmp(val, "yes") == 0);

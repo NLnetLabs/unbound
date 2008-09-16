@@ -1,3 +1,6 @@
+16 September 2008: Wouter
+	- extended-statistics: yesno config option.
+
 15 September 2008: Wouter
 	- working start, stop, reload commands for unbound-control.
 	- test for unbound-control working; better exit value for control.

@@ -95,6 +95,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_PRIVATE_DOMAIN VAR_REMOTE_CONTROL VAR_CONTROL_ENABLE
 %token VAR_CONTROL_INTERFACE VAR_CONTROL_PORT VAR_SERVER_KEY_FILE
 %token VAR_SERVER_CERT_FILE VAR_CONTROL_KEY_FILE VAR_CONTROL_CERT_FILE
+%token VAR_EXTENDED_STATISTICS
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -139,7 +140,7 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_outgoing_port_permit | server_outgoing_port_avoid |
 	server_dlv_anchor_file | server_dlv_anchor | server_neg_cache_size |
 	server_harden_referral_path | server_private_address |
-	server_private_domain
+	server_private_domain | server_extended_statistics
 	;
 stubstart: VAR_STUB_ZONE
 	{
@@ -208,6 +209,15 @@ server_statistics_cumulative: VAR_STATISTICS_CUMULATIVE STRING
 		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
 			yyerror("expected yes or no.");
 		else cfg_parser->cfg->stat_cumulative = (strcmp($2, "yes")==0);
+		free($2);
+	}
+	;
+server_extended_statistics: VAR_EXTENDED_STATISTICS STRING
+	{
+		OUTYY(("P(server_extended_statistics:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->stat_extended = (strcmp($2, "yes")==0);
 		free($2);
 	}
 	;

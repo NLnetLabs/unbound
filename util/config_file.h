@@ -57,6 +57,8 @@ struct config_file {
 	int stat_interval;
 	/** if false, statistics values are reset after printing them */
 	int stat_cumulative;
+	/** if true, the statistics are kept in greater detail */
+	int stat_extended;
 
 	/** number of threads to create */
 	int num_threads;
