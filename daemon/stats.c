@@ -106,9 +106,11 @@ get_rrset_bogus(struct worker* worker)
 	if(m == -1)
 		return 0;
 	ve = (struct val_env*)worker->env.modinfo[m];
+	lock_basic_lock(&ve->bogus_lock);
 	r = ve->num_rrset_bogus;
 	if(!worker->env.cfg->stat_cumulative)
 		ve->num_rrset_bogus = 0;
+	lock_basic_unlock(&ve->bogus_lock);
 	return r;
 }
 

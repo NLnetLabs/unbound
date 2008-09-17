@@ -154,6 +154,9 @@ val_init(struct module_env* env, int id)
 	env->modinfo[id] = (void*)val_env;
 	env->need_to_validate = 1;
 	val_env->permissive_mode = 0;
+	lock_basic_init(&val_env->bogus_lock);
+	lock_protect(&val_env->bogus_lock, &val_env->num_rrset_bogus,
+		sizeof(val->env->num_rrset_bogus));
 	if(!val_apply_cfg(env, val_env, env->cfg)) {
 		log_err("validator: could not apply configuration settings.");
 		return 0;
@@ -168,6 +171,7 @@ val_deinit(struct module_env* env, int id)
 	if(!env || !env->modinfo[id])
 		return;
 	val_env = (struct val_env*)env->modinfo[id];
+	lock_basic_destroy(&val_env->bogus_lock);
 	anchors_delete(env->anchors);
 	env->anchors = NULL;
 	key_cache_delete(val_env->kcache);

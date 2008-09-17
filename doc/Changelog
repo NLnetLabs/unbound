@@ -1,3 +1,6 @@
+17 September 2008: Wouter
+	- locking for threadsafe bogus rrset counter.
+
 16 September 2008: Wouter
 	- extended-statistics: yesno config option.
 	- unwanted replies spoof nearmiss detector.

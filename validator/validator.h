@@ -108,6 +108,8 @@ struct val_env {
 	 */
 	size_t* nsec3_maxiter;
 
+	/** lock on bogus counter */
+	lock_basic_t bogus_lock;
 	/** number of times rrsets marked bogus */
 	size_t num_rrset_bogus;
 };

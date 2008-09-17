@@ -341,7 +341,9 @@ val_verify_rrset(struct module_env* env, struct val_env* ve,
 			d->ttl = ve->bogus_ttl;
 			/* leave RR specific TTL: not used for determine
 			 * if RRset timed out and clients see proper value. */
+			lock_basic_lock(&ve->bogus_lock);
 			ve->num_rrset_bogus++;
+			lock_basic_unlock(&ve->bogus_lock);
 		}
 		/* if status updated - store in cache for reuse */
 		rrset_update_sec_status(env->rrset_cache, rrset, *env->now);
