@@ -61,7 +61,7 @@ static bool isendline(char c)
  * @param keyword: the keyword to match
  * @return: true if keyword present. False otherwise, and str unchanged.
 */
-static bool str_keyword(const char** str, const char* keyword)
+static bool str_keyword(char** str, const char* keyword)
 {
 	size_t len = strlen(keyword);
 	assert(str && keyword);
@@ -92,9 +92,9 @@ entry_add_reply(struct entry* entry)
 }
 
 /** parse MATCH line */
-static void matchline(const char* line, struct entry* e)
+static void matchline(char* line, struct entry* e)
 {
-	const char* parse = line;
+	char* parse = line;
 	while(*parse) {
 		if(isendline(*parse)) 
 			return;
@@ -131,9 +131,9 @@ static void matchline(const char* line, struct entry* e)
 }
 
 /** parse REPLY line */
-static void replyline(const char* line, ldns_pkt *reply)
+static void replyline(char* line, ldns_pkt *reply)
 {
-	const char* parse = line;
+	char* parse = line;
 	while(*parse) {
 		if(isendline(*parse)) 
 			return;
@@ -196,10 +196,10 @@ static void replyline(const char* line, ldns_pkt *reply)
 }
 
 /** parse ADJUST line */
-static void adjustline(const char* line, struct entry* e, 
+static void adjustline(char* line, struct entry* e, 
 	struct reply_packet* pkt)
 {
-	const char* parse = line;
+	char* parse = line;
 	while(*parse) {
 		if(isendline(*parse)) 
 			return;
@@ -413,7 +413,7 @@ read_entry(FILE* in, const char* name, int *lineno, uint32_t* default_ttl,
 {
 	struct entry* current = NULL;
 	char line[MAX_LINE];
-	const char* parse;
+	char* parse;
 	ldns_pkt_section add_section = LDNS_SECTION_QUESTION;
 	struct reply_packet *cur_reply = NULL;
 	bool reading_hex = false;
@@ -439,7 +439,7 @@ read_entry(FILE* in, const char* name, int *lineno, uint32_t* default_ttl,
 			cur_reply = entry_add_reply(current);
 			continue;
 		} else if(str_keyword(&parse, "$ORIGIN")) {
-			get_origin(name, *lineno, origin, (char*)parse);
+			get_origin(name, *lineno, origin, parse);
 			continue;
 		} else if(str_keyword(&parse, "$TTL")) {
 			*default_ttl = (uint32_t)atoi(parse);

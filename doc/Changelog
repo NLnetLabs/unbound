@@ -2,6 +2,7 @@
 	- locking for threadsafe bogus rrset counter.
 	- ldns trunk no longer exports b32 functions, provide compat.
 	- ldns tarball updated.
+	- testcode/ldns-testpkts.c const fixups.
 
 16 September 2008: Wouter
 	- extended-statistics: yesno config option.
