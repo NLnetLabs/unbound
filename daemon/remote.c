@@ -745,7 +745,7 @@ print_ext(SSL* ssl, struct stats_info* s)
 			snprintf(nm, sizeof(nm), "RCODE%d", i);
 		}
 		if(!ssl_printf(ssl, "num.answer.rcode.%s"SQ"%u\n", 
-			nm, (unsigned)s->svr.qopcode[i])) return 0;
+			nm, (unsigned)s->svr.ans_rcode[i])) return 0;
 	}
 	if(!inhibit_zero || s->svr.ans_rcode_nodata) {
 		if(!ssl_printf(ssl, "num.answer.rcode.nodata"SQ"%u\n", 
