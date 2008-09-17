@@ -787,10 +787,10 @@ do_stats(SSL* ssl, struct daemon_remote* rc)
 	total.mesh_time_median /= (double)daemon->num;
 	if(!print_stats(ssl, "total", &total)) 
 		return;
+	if(!print_uptime(ssl, rc->worker))
+		return;
 	if(daemon->cfg->stat_extended) {
 		if(!print_mem(ssl, rc->worker, daemon)) 
-			return;
-		if(!print_uptime(ssl, rc->worker))
 			return;
 		if(!print_ext(ssl, &total))
 			return;
