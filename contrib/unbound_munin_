@@ -98,6 +98,7 @@ conf=${unbound_conf:-/usr/local/etc/unbound/unbound.conf}
 ctrl=${unbound_control:-/usr/local/sbin/unbound-control}
 warn=${spoof_warn:-1000}
 crit=${spoof_crit:-100000}
+lock=$state.lock
 
 # number of seconds between polling attempts.
 # makes the statefile hang around for at least this many seconds,
@@ -117,20 +118,39 @@ get_value ( ) {
 
 # download the state from the unbound server.
 get_state ( ) {
+	# obtain lock for fetching the state
+	# because there is a race condition in fetching and writing to file
+	i=0
+	while test ! -f $lock || test "`cat $lock`" != $$; do
+		while test -f $lock; do
+			# wait
+			i=`expr $i + 1`
+			if test $i -gt 100000; then
+				echo "error locking $lock" "=" `cat $lock`
+				rm -f $lock
+				exit 1
+			fi
+		done
+		# try to get it
+		echo $$ >$lock
+	done
 	# do not refetch if the file exists and only LEE seconds old
 	if test -f $state; then
 		now=`date +%s`
 		get_value "time.now"
 		value="`echo $value | sed -e 's/\..*$//'`"
 		if test $now -lt `expr $value + $lee`; then
+			rm -f $lock
 			return
 		fi
 	fi
 	$ctrl -c $conf stats > $state
 	if test $? -ne 0; then
 		echo "error retrieving data from unbound server"
+		rm -f $lock
 		exit 1
 	fi
+	rm -f $lock
 }
 
 if test "$1" = "autoconf" ; then
