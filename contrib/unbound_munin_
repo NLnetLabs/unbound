@@ -290,7 +290,7 @@ if test "$1" = "config" ; then
 	by_rcode)
 		echo "graph_title Unbound DNS answers by return code"
 		echo "graph_args --base 1000 -l 0"
-		echo "graph_vlabel queries / second"
+		echo "graph_vlabel answer packets / second"
 		echo "graph_category DNS"
 		for x in `grep "^num.answer.rcode" $state`; do
 			nm=`echo $x | sed -e 's/=.*$//'`
