@@ -2,6 +2,7 @@
 	- fixup error in time calculation.
 	- munin plugin improvements.
 	- nicer abbreviations for high query types values (ixfr, axfr, any...)
+	- documented the statistics output in unbound-control man page.
 
 17 September 2008: Wouter
 	- locking for threadsafe bogus rrset counter.

@@ -69,6 +69,172 @@ these in the default run directory, or with \-d in another directory.
 The script preserves private keys present in the directory.
 After running the script as root, turn on \fBcontrol-enable\fR in 
 \fIunbound.conf\fR.
+.SH "STATISTIC COUNTERS"
+The \fIstats\fR command shows a number of statistic counters.
+.TP
+.I threadX.num.queries
+number of queries received by thread
+.TP
+.I threadX.num.cachehits
+number of queries that were successfully answered using a cache lookup
+.TP
+.I threadX.num.cachemiss
+number of queries that needed recursive processing
+.TP
+.I threadX.num.recursivereplies
+The number of replies sent to queries that needed recursive processing. Could be smaller than threadX.num.cachemiss if due to timeouts no replies were sent for some queries.
+.TP
+.I threadX.requestlist.avg
+The average number of requests in the internal recursive processing request list on insert of a new incoming recursive processing query.
+.TP
+.I threadX.requestlist.max
+Maximum size attained by the internal recursive processing request list.
+.TP
+.I threadX.requestlist.overwritten
+Number of requests in the request list that were overwritten by newer entries. This happens if there is a flood of queries that recursive processing and the server has a hard time.
+.TP
+.I threadX.requestlist.exceeded
+Queries that were dropped because the request list was full. This happens if a flood of queries need recursive processing, and the server can not keep up.
+.TP
+.I threadX.requestlist.current.all
+Current size of the request list, includes internally generated queries (such
+as priming queries and glue lookups).
+.TP
+.I threadX.requestlist.current.user
+Current size of the request list, only the requests from client queries.
+.TP
+.I threadX.recursion.time.avg
+Average time it took to answer queries that needed recursive processing. Note that queries that were answered from the cache are not in this average.
+.TP
+.I threadX.recursion.time.median
+The median of the time it took to answer queries that needed recursive
+processing.  The median means that 50% of the user queries were answered in 
+less than this time.  Because of big outliers (usually queries to non 
+responsive servers), the average can be bigger than the median.  This median
+has been calculated by interpolation from a histogram.
+.TP
+.I total.num.queries
+summed over threads.
+.TP
+.I total.num.cachehits
+summed over threads.
+.TP
+.I total.num.cachemiss
+summed over threads.
+.TP
+.I total.num.recursivereplies
+summed over threads.
+.TP
+.I total.requestlist.avg
+averaged over threads.
+.TP
+.I total.requestlist.max
+the maximum of the thread requestlist.max values.
+.TP
+.I total.requestlist.overwritten
+summed over threads.
+.TP
+.I total.requestlist.exceeded
+summed over threads.
+.TP
+.I total.requestlist.current.all
+summed over threads.
+.TP
+.I total.recursion.time.median
+averaged over threads.
+.TP
+.I time.now
+current time in seconds since 1970.
+.TP
+.I time.up
+uptime since server boot in seconds.
+.TP
+.I time.elapsed
+time since last statistics printout, in seconds.
+.SH EXTENDED STATISTICS
+.TP
+.I mem.total.sbrk
+If sbrk(2) is available, an estimate of the heap size of the program in number of bytes. Close to the total memory used by the program, as reported by top and ps.  Could be wrong if the OS allocates memory non\-contiguously.
+.TP
+.I mem.cache.rrset
+Memory in bytes in use by the RRset cache.
+.TP
+.I mem.cache.message
+Memory in bytes in use by the message cache.
+.TP
+.I mem.mod.iterator
+Memory in bytes in use by the iterator module.
+.TP
+.I mem.mod.validator
+Memory in bytes in use by the validator module. Includes the key cache and
+negative cache.
+.TP
+.I num.query.type.A
+The total number of queries over all threads with query type A.
+Printed for the other query types as well, but only for the types for which
+queries were received, thus =0 entries are omitted for brevity.
+.TP
+.I num.query.type.other
+Number of queries with query types 256-65535.
+.TP
+.I num.query.class.IN
+The total number of queries over all threads with query class IN (internet).
+Also printed for other classes (such as CH (CHAOS) sometimes used for
+debugging), or NONE, ANY, used by dynamic update.
+num.query.class.other is printed for classes 256-65535.
+.TP
+.I num.query.opcode.QUERY
+The total number of queries over all threads with query opcode QUERY.
+Also printed for other opcodes, UPDATE, ...
+.TP
+.I num.query.tcp
+Number of queries that were made using TCP towards the unbound server.
+.TP
+.I num.query.flags.RD
+The number of queries that had the RD flag set in the header.
+Also printed for flags QR, AA, TC, RA, Z, AD, CD.
+Note that queries with flags QR, AA or TC may have been rejected 
+because of that.
+.TP
+.I num.query.edns.present
+number of queries that had an EDNS OPT record present.
+.TP
+.I num.query.edns.DO
+number of queries that had an EDNS OPT record with the DO (DNSSEC OK) bit set.
+.TP
+.I num.answer.rcode.NXDOMAIN
+The number of answers to queries, from cache or from recursion, that had the
+return code NXDOMAIN. Also printed for the other return codes.
+.TP
+.I num.answer.rcode.nodata
+The number of answers to queries that had the pseudo return code nodata.
+This means the actual return code was NOERROR, but additionally, no data was
+carried in the answer (making what is called a NOERROR/NODATA answer).
+Common for AAAA lookups when an A record exists, and no AAAA.
+.TP
+.I num.answer.secure
+Number of answers that were secure.  The answer validated correctly. 
+The AD bit might have been set in some of these answers, where the client
+signalled (with DO or AD bit in the query) that they were ready to accept
+the AD bit in the answer.
+.TP
+.I num.answer.bogus
+Number of answers that were bogus.  These answers resulted in SERVFAIL
+to the client because the answer failed validation.
+.TP
+.I num.rrset.bogus
+The number of rrsets marked bogus by the validator.  Increased for every
+RRset inspection that fails.
+.TP
+.I unwanted.queries
+Number of queries that were refused or dropped because they failed the
+access control settings.
+.TP
+.I unwanted.replies
+Replies that were unwanted or unsolicited.  Could have been random traffic,
+delayed duplicates, very late answers, or could be spoofing attempts.
+Some low level of late answers and delayed duplicates are to be expected
+with the UDP protocol.  Very high values could indicate a threat (spoofing).
 .SH "FILES"
 .TP
 .I @ub_conf_file@
