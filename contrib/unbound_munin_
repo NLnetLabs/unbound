@@ -464,7 +464,7 @@ by_flags)
 	;;
 histogram)
 	get_value total.num.cachehits
-	echo hcache.value $value
+	echo hcache.value `echo scale=6';' $value / $elapsed | bc `
 	r=0
 	for x in histogram.000000.000000.to.000000.000001 \
 		histogram.000000.000001.to.000000.000002 \
@@ -486,21 +486,21 @@ histogram)
 		get_value $x
 		r=`expr $r + $value`
 	done
-	echo h64ms.value $r
+	echo h64ms.value `echo scale=6';' $r / $elapsed | bc `
 	get_value histogram.000000.065536.to.000000.131072
-	echo h128ms.value $value
+	echo h128ms.value `echo scale=6';' $value / $elapsed | bc `
 	get_value histogram.000000.131072.to.000000.262144
-	echo h256ms.value $value
+	echo h256ms.value `echo scale=6';' $value / $elapsed | bc `
 	get_value histogram.000000.262144.to.000000.524288
-	echo h512ms.value $value
+	echo h512ms.value `echo scale=6';' $value / $elapsed | bc `
 	get_value histogram.000000.524288.to.000001.000000
-	echo h1s.value $value
+	echo h1s.value `echo scale=6';' $value / $elapsed | bc `
 	get_value histogram.000001.000000.to.000002.000000
-	echo h2s.value $value
+	echo h2s.value `echo scale=6';' $value / $elapsed | bc `
 	get_value histogram.000002.000000.to.000004.000000
-	echo h4s.value $value
+	echo h4s.value `echo scale=6';' $value / $elapsed | bc `
 	get_value histogram.000004.000000.to.000008.000000
-	echo h8s.value $value
+	echo h8s.value `echo scale=6';' $value / $elapsed | bc `
 	r=0
 	for x in histogram.000008.000000.to.000016.000000 \
 		histogram.000016.000000.to.000032.000000 \
@@ -521,6 +521,6 @@ histogram)
 		get_value $x
 		r=`expr $r + $value`
 	done
-	echo h16s.value $r
+	echo h16s.value `echo scale=6';' $r / $elapsed | bc `
 	;;
 esac
