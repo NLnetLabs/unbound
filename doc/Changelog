@@ -1,5 +1,7 @@
 18 September 2008: Wouter
 	- fixup error in time calculation.
+	- munin plugin improvements.
+	- nicer abbreviations for high query types values (ixfr, axfr, any...)
 
 17 September 2008: Wouter
 	- locking for threadsafe bogus rrset counter.
