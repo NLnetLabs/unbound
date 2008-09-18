@@ -102,7 +102,7 @@ crit=${spoof_crit:-100000}
 # number of seconds between polling attempts.
 # makes the statefile hang around for at least this many seconds,
 # so that multiple links of this script can share the results.
-lee=5
+lee=55
 
 # to keep things within 19 characters
 ABBREV="-e s/total/t/ -e s/thread/t/ -e s/num/n/ -e s/query/q/ -e s/answer/a/ -e s/unwanted/u/ -e s/requestlist/ql/ -e s/type/t/ -e s/class/c/ -e s/opcode/o/ -e s/rcode/r/ -e s/edns/e/ -e s/mem/m/ -e s/cache/c/ -e s/mod/m/"
@@ -276,7 +276,7 @@ if test "$1" = "config" ; then
 		done
 		p_config "num.answer.secure" "answer secure"
 		p_config "num.answer.bogus" "answer bogus"
-		p_config "num.rrset.bogus" "rrsets bogus"
+		p_config "num.rrset.bogus" "num rrsets marked bogus"
 		echo "graph_info answers sorted by return value. rrsets bogus is the number of rrsets marked bogus per second by the validator"
 		;;
 	by_flags)
