@@ -125,8 +125,6 @@ get_state ( ) {
 		if test $now -lt `expr $value + $lee`; then
 			return
 		fi
-		#@@@ DEBUG
-		return
 	fi
 	$ctrl -c $conf stats > $state
 	if test $? -ne 0; then

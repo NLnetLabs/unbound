@@ -111,7 +111,7 @@ void timehist_clear(struct timehist* hist)
 
 /** histogram compare of time values */
 static int
-timeval_smaller(struct timeval* x, struct timeval* y)
+timeval_smaller(const struct timeval* x, const struct timeval* y)
 {
 #ifndef S_SPLINT_S
 	if(x->tv_sec < y->tv_sec)

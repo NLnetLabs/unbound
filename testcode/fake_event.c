@@ -63,7 +63,7 @@ static struct replay_scenario* saved_scenario = NULL;
 
 /** add timers and the values do not overflow or become negative */
 static void
-timeval_add(struct timeval* d, struct timeval* add)
+timeval_add(struct timeval* d, const struct timeval* add)
 {
 #ifndef S_SPLINT_S
 	d->tv_sec += add->tv_sec;

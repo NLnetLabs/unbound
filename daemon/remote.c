@@ -91,21 +91,23 @@ log_crypto_err(const char* str)
 
 /** subtract timers and the values do not overflow or become negative */
 static void
-timeval_subtract(struct timeval* d, struct timeval* end, struct timeval* start)
+timeval_subtract(struct timeval* d, const struct timeval* end, 
+	const struct timeval* start)
 {
 #ifndef S_SPLINT_S
+	time_t end_usec = end->tv_usec;;
 	d->tv_sec = end->tv_sec - start->tv_sec;
-	while(end->tv_usec < start->tv_usec) {
-		end->tv_usec += 1000000;
+	while(end_usec < start->tv_usec) {
+		end_usec += 1000000;
 		d->tv_sec--;
 	}
-	d->tv_usec = end->tv_usec - start->tv_usec;
+	d->tv_usec = end_usec - start->tv_usec;
 #endif
 }
 
 /** divide sum of timers to get average */
 static void
-timeval_divide(struct timeval* avg, struct timeval* sum, size_t d)
+timeval_divide(struct timeval* avg, const struct timeval* sum, size_t d)
 {
 #ifndef S_SPLINT_S
 	size_t leftover;
