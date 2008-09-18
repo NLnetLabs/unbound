@@ -42,6 +42,9 @@
 #ifndef UTIL_TIMEHIST_H
 #define UTIL_TIMEHIST_H
 
+/** Number of buckets in a histogram */
+#define NUM_BUCKETS_HIST 40
+
 /**
  * Bucket of time history information
  */
@@ -111,5 +114,21 @@ void timehist_print(struct timehist* hist);
  * @param name: the name of the value column
  */
 void timehist_log(struct timehist* hist, const char* name);
+
+/**
+ * Export histogram to an array.
+ * @param hist: histogram
+ * @param array: the array to export to.
+ * @param sz: number of items in array.
+ */
+void timehist_export(struct timehist* hist, size_t* array, size_t sz);
+
+/**
+ * Import histogram from an array.
+ * @param hist: histogram
+ * @param array: the array to import from.
+ * @param sz: number of items in array.
+ */
+void timehist_import(struct timehist* hist, size_t* array, size_t sz);
 
 #endif /* UTIL_TIMEHIST_H */

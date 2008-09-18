@@ -135,6 +135,8 @@ server_stats_compile(struct worker* worker, struct stats_info* s)
 	s->svr.ans_rcode_nodata += worker->env.mesh->ans_nodata;
 	for(i=0; i<16; i++)
 		s->svr.ans_rcode[i] += worker->env.mesh->ans_rcode[i];
+	timehist_export(worker->env.mesh->histogram, s->svr.hist, 
+		NUM_BUCKETS_HIST);
 	/* values from outside network */
 	s->svr.unwanted_replies = worker->back->unwanted_replies;
 
@@ -219,6 +221,8 @@ void server_stats_add(struct stats_info* total, struct stats_info* a)
 			total->svr.qopcode[i] += a->svr.qopcode[i];
 		for(i=0; i<STATS_RCODE_NUM; i++)
 			total->svr.ans_rcode[i] += a->svr.ans_rcode[i];
+		for(i=0; i<NUM_BUCKETS_HIST; i++)
+			total->svr.hist[i] += a->svr.hist[i];
 	}
 
 	total->mesh_num_states += a->mesh_num_states;

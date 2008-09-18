@@ -82,7 +82,7 @@ struct timehist* timehist_setup()
 		sizeof(struct timehist));
 	if(!hist)
 		return NULL;
-	hist->num = 40;
+	hist->num = NUM_BUCKETS_HIST;
 	hist->buckets = (struct th_buck*)calloc(hist->num, 
 		sizeof(struct th_buck));
 	if(!hist->buckets) {
@@ -217,4 +217,26 @@ timehist_quartile(struct timehist* hist, double q)
 #endif
 	res = (lookfor - passed)*(up-low)/((double)hist->buckets[i].count);
 	return res;
+}
+
+void 
+timehist_export(struct timehist* hist, size_t* array, size_t sz)
+{
+	size_t i;
+	if(!hist) return;
+	if(sz > hist->num)
+		sz = hist->num;
+	for(i=0; i<sz; i++)
+		array[i] = hist->buckets[i].count;
+}
+
+void 
+timehist_import(struct timehist* hist, size_t* array, size_t sz)
+{
+	size_t i;
+	if(!hist) return;
+	if(sz > hist->num)
+		sz = hist->num;
+	for(i=0; i<sz; i++)
+		hist->buckets[i].count = array[i];
 }

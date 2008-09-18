@@ -41,6 +41,7 @@
 #	unbound_munin_by_opcode	- incoming queries by opcode
 #	unbound_munin_by_rcode	- answers by rcode, validation status
 #	unbound_munin_by_flags	- incoming queries by flags
+#	unbound_munin_histogram	- histogram of query resolving times
 #
 # Magic markers - optional - used by installation scripts and
 # munin-config:
@@ -82,6 +83,7 @@ unbound_munin_by_class	- incoming queries by class
 unbound_munin_by_opcode	- incoming queries by opcode
 unbound_munin_by_rcode	- answers by rcode, validation status
 unbound_munin_by_flags	- incoming queries by flags
+unbound_munin_histogram - histogram of query resolving times
 
 =head1 AUTHOR
 
@@ -178,6 +180,7 @@ if test "$1" = "suggest" ; then
 	echo "by_opcode"
 	echo "by_rcode"
 	echo "by_flags"
+	echo "histogram"
 	exit 0
 fi
 
@@ -319,6 +322,49 @@ if test "$1" = "config" ; then
 		p_config "num.query.edns.DO" "DO (DNSSEC OK) flag"
 		echo "graph_info This graphs plots the flags inside incoming queries. For example, if QR, AA, TC, RA, Z flags are set, the query can be rejected. RD, AD, CD and DO are legitimately set by some software."
 		;;
+	histogram)
+		echo "graph_title Unbound DNS histogram of reply time"
+		echo "graph_args --base 1000 -l 0"
+		echo "graph_vlabel queries / second"
+		echo "graph_category DNS"
+		echo h64ms.label "0 msec - 66 msec"
+		echo h64ms.min 0
+		echo h64ms.draw AREA
+		echo h64ms.colour 0000FF
+		echo h128ms.label "66 msec - 131 msec"
+		echo h128ms.min 0
+		echo h128ms.colour 1F00DF
+		echo h128ms.draw STACK
+		echo h256ms.label "131 msec - 262 msec"
+		echo h256ms.min 0
+		echo h256ms.draw STACK
+		echo h256ms.colour 3F00BF
+		echo h512ms.label "262 msec - 524 msec"
+		echo h512ms.min 0
+		echo h512ms.draw STACK
+		echo h512ms.colour 5F009F
+		echo h1s.label "524 msec - 1 sec"
+		echo h1s.min 0
+		echo h1s.draw STACK
+		echo h1s.colour 7F007F
+		echo h2s.label "1 sec - 2 sec"
+		echo h2s.min 0
+		echo h2s.draw STACK
+		echo h2s.colour 9F005F
+		echo h4s.label "2 sec - 4 sec"
+		echo h4s.min 0
+		echo h4s.draw STACK
+		echo h4s.colour BF003F
+		echo h8s.label "4 sec - 8 sec"
+		echo h8s.min 0
+		echo h8s.draw STACK
+		echo h8s.colour DF001F
+		echo h16s.label "8 sec - ..."
+		echo h16s.min 0
+		echo h16s.draw STACK
+		echo h16s.colour FF0000
+		echo "graph_info Histogram of the reply times for queries."
+		;;
 	esac
 
 	exit 0
@@ -411,5 +457,64 @@ by_flags)
 	for x in num.query.flags.QR num.query.flags.AA num.query.flags.TC num.query.flags.RD num.query.flags.RA num.query.flags.Z num.query.flags.AD num.query.flags.CD num.query.edns.present num.query.edns.DO; do
 		print_qps $x
 	done
+	;;
+histogram)
+	r=0
+	for x in histogram.000000.000000.to.000000.000001 \
+		histogram.000000.000001.to.000000.000002 \
+		histogram.000000.000002.to.000000.000004 \
+		histogram.000000.000004.to.000000.000008 \
+		histogram.000000.000008.to.000000.000016 \
+		histogram.000000.000016.to.000000.000032 \
+		histogram.000000.000032.to.000000.000064 \
+		histogram.000000.000064.to.000000.000128 \
+		histogram.000000.000128.to.000000.000256 \
+		histogram.000000.000256.to.000000.000512 \
+		histogram.000000.000512.to.000000.001024 \
+		histogram.000000.001024.to.000000.002048 \
+		histogram.000000.002048.to.000000.004096 \
+		histogram.000000.004096.to.000000.008192 \
+		histogram.000000.008192.to.000000.016384 \
+		histogram.000000.016384.to.000000.032768 \
+		histogram.000000.032768.to.000000.065536; do
+		get_value $x
+		r=`expr $r + $value`
+	done
+	echo h64ms.value $r
+	get_value histogram.000000.065536.to.000000.131072
+	echo h128ms.value $value
+	get_value histogram.000000.131072.to.000000.262144
+	echo h256ms.value $value
+	get_value histogram.000000.262144.to.000000.524288
+	echo h512ms.value $value
+	get_value histogram.000000.524288.to.000001.000000
+	echo h1s.value $value
+	get_value histogram.000001.000000.to.000002.000000
+	echo h2s.value $value
+	get_value histogram.000002.000000.to.000004.000000
+	echo h4s.value $value
+	get_value histogram.000004.000000.to.000008.000000
+	echo h8s.value $value
+	r=0
+	for x in histogram.000008.000000.to.000016.000000 \
+		histogram.000016.000000.to.000032.000000 \
+		histogram.000032.000000.to.000064.000000 \
+		histogram.000064.000000.to.000128.000000 \
+		histogram.000128.000000.to.000256.000000 \
+		histogram.000256.000000.to.000512.000000 \
+		histogram.000512.000000.to.001024.000000 \
+		histogram.001024.000000.to.002048.000000 \
+		histogram.002048.000000.to.004096.000000 \
+		histogram.004096.000000.to.008192.000000 \
+		histogram.008192.000000.to.016384.000000 \
+		histogram.016384.000000.to.032768.000000 \
+		histogram.032768.000000.to.065536.000000 \
+		histogram.065536.000000.to.131072.000000 \
+		histogram.131072.000000.to.262144.000000 \
+		histogram.262144.000000.to.524288.000000; do
+		get_value $x
+		r=`expr $r + $value`
+	done
+	echo h16s.value $r
 	;;
 esac

@@ -169,6 +169,12 @@ Memory in bytes in use by the iterator module.
 Memory in bytes in use by the validator module. Includes the key cache and
 negative cache.
 .TP
+.I histogram.<sec>.<usec>.to.<sec>.<usec>
+Shows a histogram, summed over all threads. Every element counts the
+recursive queries whose reply time fit between the lower and upper bound.
+Times larger or equal to the lowerbound, and smaller than the upper bound.
+There are 40 buckets, with bucket sizes doubling.
+.TP
 .I num.query.type.A
 The total number of queries over all threads with query type A.
 Printed for the other query types as well, but only for the types for which

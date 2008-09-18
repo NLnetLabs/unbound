@@ -42,6 +42,7 @@
 
 #ifndef DAEMON_STATS_H
 #define DAEMON_STATS_H
+#include "util/timehist.h"
 struct worker;
 struct config_file;
 struct comm_point;
@@ -120,6 +121,12 @@ struct server_stats {
 	size_t unwanted_replies;
 	/** unwanted traffic received on client-facing ports */
 	size_t unwanted_queries;
+
+	/** histogram data exported to array 
+	 * if the array is the same size, no data is lost, and
+	 * if all histograms are same size (is so by default) then
+	 * adding up works well. */
+	size_t hist[NUM_BUCKETS_HIST];
 };
 
 /** 

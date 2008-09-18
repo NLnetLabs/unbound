@@ -656,6 +656,34 @@ print_uptime(SSL* ssl, struct worker* worker)
 	return 1;
 }
 
+/** print extended histogram */
+static int
+print_hist(SSL* ssl, struct stats_info* s)
+{
+	struct timehist* hist;
+	size_t i;
+	hist = timehist_setup();
+	if(!hist) {
+		log_err("out of memory");
+		return 0;
+	}
+	timehist_import(hist, s->svr.hist, NUM_BUCKETS_HIST);
+	for(i=0; i<hist->num; i++) {
+		if(!ssl_printf(ssl, 
+			"histogram.%6.6d.%6.6d.to.%6.6d.%6.6d=%u\n",
+			(int)hist->buckets[i].lower.tv_sec,
+			(int)hist->buckets[i].lower.tv_usec,
+			(int)hist->buckets[i].upper.tv_sec,
+			(int)hist->buckets[i].upper.tv_usec,
+			(unsigned)hist->buckets[i].count)) {
+			timehist_delete(hist);
+			return 0;
+		}
+	}
+	timehist_delete(hist);
+	return 1;
+}
+
 /** print extended stats */
 static int
 print_ext(SSL* ssl, struct stats_info* s)
@@ -803,6 +831,8 @@ do_stats(SSL* ssl, struct daemon_remote* rc)
 		return;
 	if(daemon->cfg->stat_extended) {
 		if(!print_mem(ssl, rc->worker, daemon)) 
+			return;
+		if(!print_hist(ssl, &total))
 			return;
 		if(!print_ext(ssl, &total))
 			return;

@@ -3,6 +3,7 @@
 	- munin plugin improvements.
 	- nicer abbreviations for high query types values (ixfr, axfr, any...)
 	- documented the statistics output in unbound-control man page.
+	- extended statistics prints out histogram, over unbound-control.
 
 17 September 2008: Wouter
 	- locking for threadsafe bogus rrset counter.
