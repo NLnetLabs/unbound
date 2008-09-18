@@ -254,7 +254,7 @@ if test "$1" = "config" ; then
 	by_type)
 		echo "graph_title Unbound DNS queries by type"
 		echo "graph_args --base 1000 -l 0"
-		echo "graph_vlabel queries per second"
+		echo "graph_vlabel queries / second"
 		echo "graph_category DNS"
 		for x in `grep "^num.query.type" $state`; do
 			nm=`echo $x | sed -e 's/=.*$//'`
@@ -266,7 +266,7 @@ if test "$1" = "config" ; then
 	by_class)
 		echo "graph_title Unbound DNS queries by class"
 		echo "graph_args --base 1000 -l 0"
-		echo "graph_vlabel queries per second"
+		echo "graph_vlabel queries / second"
 		echo "graph_category DNS"
 		for x in `grep "^num.query.class" $state`; do
 			nm=`echo $x | sed -e 's/=.*$//'`
@@ -278,7 +278,7 @@ if test "$1" = "config" ; then
 	by_opcode)
 		echo "graph_title Unbound DNS queries by opcode"
 		echo "graph_args --base 1000 -l 0"
-		echo "graph_vlabel queries per second"
+		echo "graph_vlabel queries / second"
 		echo "graph_category DNS"
 		for x in `grep "^num.query.opcode" $state`; do
 			nm=`echo $x | sed -e 's/=.*$//'`
@@ -290,7 +290,7 @@ if test "$1" = "config" ; then
 	by_rcode)
 		echo "graph_title Unbound DNS answers by return code"
 		echo "graph_args --base 1000 -l 0"
-		echo "graph_vlabel queries per second"
+		echo "graph_vlabel queries / second"
 		echo "graph_category DNS"
 		for x in `grep "^num.answer.rcode" $state`; do
 			nm=`echo $x | sed -e 's/=.*$//'`
@@ -305,7 +305,7 @@ if test "$1" = "config" ; then
 	by_flags)
 		echo "graph_title Unbound DNS incoming queries by flags"
 		echo "graph_args --base 1000 -l 0"
-		echo "graph_vlabel queries per second"
+		echo "graph_vlabel queries / second"
 		echo "graph_category DNS"
 		p_config "num.query.flags.QR" "QR (query reply) flag"
 		p_config "num.query.flags.AA" "AA (auth answer) flag"
