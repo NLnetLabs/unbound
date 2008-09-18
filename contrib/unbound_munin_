@@ -187,7 +187,7 @@ if test "$1" = "config" ; then
 	fi
 	case $id in
 	hits)
-		echo "graph_title DNS traffic and cache hits"
+		echo "graph_title Unbound DNS traffic and cache hits"
 		echo "graph_args --base 1000 -l 0"
 		echo "graph_vlabel queries / second"
 		echo "graph_category DNS"
@@ -208,10 +208,10 @@ if test "$1" = "config" ; then
 	queue)
 		echo "graph_title Unbound requestlist size"
 		echo "graph_args --base 1000 -l 0"
-		echo "graph_vlabel number of queries / "'${graph_period}'
+		echo "graph_vlabel number of queries"
 		echo "graph_category DNS"
-		p_config "total.requestlist.avg" "Average size of queue when not empty"
-		p_config "total.requestlist.max" 'Max size of queue over ${graph_period}'
+		p_config "total.requestlist.avg" "Average size of queue on insert"
+		p_config "total.requestlist.max" "Max size of queue (in 5 min)"
 		p_config "total.requestlist.overwritten" "Number of queries replaced by new ones"
 		p_config "total.requestlist.exceeded" "Number of queries dropped due to lack of space"
 		echo "graph_info The queries that did not hit the cache and need recursion service take up space in the requestlist. If there are too many queries, first queries get overwritten, and at last resort dropped."
@@ -229,7 +229,7 @@ if test "$1" = "config" ; then
 		echo "graph_info The memory used by unbound."
 		;;
 	by_type)
-		echo "graph_title DNS queries by type"
+		echo "graph_title Unbound DNS queries by type"
 		echo "graph_args --base 1000 -l 0"
 		echo "graph_vlabel queries per second"
 		echo "graph_category DNS"
@@ -241,7 +241,7 @@ if test "$1" = "config" ; then
 		echo "graph_info queries by DNS RR type queried for"
 		;;
 	by_class)
-		echo "graph_title DNS queries by class"
+		echo "graph_title Unbound DNS queries by class"
 		echo "graph_args --base 1000 -l 0"
 		echo "graph_vlabel queries per second"
 		echo "graph_category DNS"
@@ -253,7 +253,7 @@ if test "$1" = "config" ; then
 		echo "graph_info queries by DNS RR class queried for."
 		;;
 	by_opcode)
-		echo "graph_title DNS queries by opcode"
+		echo "graph_title Unbound DNS queries by opcode"
 		echo "graph_args --base 1000 -l 0"
 		echo "graph_vlabel queries per second"
 		echo "graph_category DNS"
@@ -265,7 +265,7 @@ if test "$1" = "config" ; then
 		echo "graph_info queries by opcode in the query packet."
 		;;
 	by_rcode)
-		echo "graph_title DNS answer by return code"
+		echo "graph_title Unbound DNS answers by return code"
 		echo "graph_args --base 1000 -l 0"
 		echo "graph_vlabel queries per second"
 		echo "graph_category DNS"
@@ -280,7 +280,7 @@ if test "$1" = "config" ; then
 		echo "graph_info answers sorted by return value. rrsets bogus is the number of rrsets marked bogus per second by the validator"
 		;;
 	by_flags)
-		echo "graph_title DNS incoming queries by flags"
+		echo "graph_title Unbound DNS incoming queries by flags"
 		echo "graph_args --base 1000 -l 0"
 		echo "graph_vlabel queries per second"
 		echo "graph_category DNS"
