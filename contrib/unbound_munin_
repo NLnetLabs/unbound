@@ -125,7 +125,10 @@ get_state ( ) {
 		while test -f $lock; do
 			# wait
 			i=`expr $i + 1`
-			if test $i -gt 100000; then
+			if test $i -gt 1000; then
+				sleep 1;
+			fi
+			if test $i -gt 1500; then
 				echo "error locking $lock" "=" `cat $lock`
 				rm -f $lock
 				exit 1
