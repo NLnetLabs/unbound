@@ -201,6 +201,7 @@ number of queries that had an EDNS OPT record present.
 .TP
 .I num.query.edns.DO
 number of queries that had an EDNS OPT record with the DO (DNSSEC OK) bit set.
+These queries are also included in the num.query.edns.present number.
 .TP
 .I num.answer.rcode.NXDOMAIN
 The number of answers to queries, from cache or from recursion, that had the
@@ -210,6 +211,7 @@ return code NXDOMAIN. Also printed for the other return codes.
 The number of answers to queries that had the pseudo return code nodata.
 This means the actual return code was NOERROR, but additionally, no data was
 carried in the answer (making what is called a NOERROR/NODATA answer).
+These queries are also included in the num.answer.rcode.NOERROR number.
 Common for AAAA lookups when an A record exists, and no AAAA.
 .TP
 .I num.answer.secure
