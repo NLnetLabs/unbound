@@ -294,7 +294,7 @@ if test "$1" = "config" ; then
 		p_config "num.query.flags.CD" "CD (check disabled) flag"
 		p_config "num.query.edns.present" "EDNS OPT present"
 		p_config "num.query.edns.DO" "DO (DNSSEC OK) flag"
-		echo "graph_info This graphs plots the flags inside incoming queries. For example, if QR, AA, TC, RA, Z flags are set, this query is junk. RD, AD, CD and DO are legitimately set by some software."
+		echo "graph_info This graphs plots the flags inside incoming queries. For example, if QR, AA, TC, RA, Z flags are set, the query can be rejected. RD, AD, CD and DO are legitimately set by some software."
 		;;
 	esac
 

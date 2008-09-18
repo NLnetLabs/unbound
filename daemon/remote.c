@@ -671,6 +671,16 @@ print_ext(SSL* ssl, struct stats_info* s)
 		desc = ldns_rr_descript((uint16_t)i);
 		if(desc && desc->_name) {
 			snprintf(nm, sizeof(nm), "%s", desc->_name);
+		} else if (i == LDNS_RR_TYPE_IXFR) {
+			snprintf(nm, sizeof(nm), "IXFR");
+		} else if (i == LDNS_RR_TYPE_AXFR) {
+			snprintf(nm, sizeof(nm), "AXFR");
+		} else if (i == LDNS_RR_TYPE_MAILA) {
+			snprintf(nm, sizeof(nm), "MAILA");
+		} else if (i == LDNS_RR_TYPE_MAILB) {
+			snprintf(nm, sizeof(nm), "MAILB");
+		} else if (i == LDNS_RR_TYPE_ANY) {
+			snprintf(nm, sizeof(nm), "ANY");
 		} else {
 			snprintf(nm, sizeof(nm), "TYPE%d", i);
 		}
