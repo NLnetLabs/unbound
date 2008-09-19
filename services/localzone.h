@@ -42,6 +42,7 @@
 #ifndef SERVICES_LOCALZONE_H
 #define SERVICES_LOCALZONE_H
 #include "util/rbtree.h"
+#include "util/locks.h"
 struct ub_packed_rrset_key;
 struct regional;
 struct config_file;
@@ -74,6 +75,8 @@ enum localzone_type {
  * This tree is fixed at startup, so, readonly, no locks or mutexes necessary.
  */
 struct local_zones {
+	/** lock on the localzone tree */
+	lock_quick_t lock;
 	/** rbtree of struct local_zone */
 	rbtree_t ztree;
 };
@@ -96,6 +99,12 @@ struct local_zone {
 	/** the class of this zone. 
 	 * uses 'dclass' to not conflict with c++ keyword class. */
 	uint16_t dclass;
+
+	/** lock on the data in the structure
+	 * For the node, parent, name, namelen, namelabs, dclass, you
+	 * need to also hold the zones_tree lock to change them (or to
+	 * delete this zone) */
+	lock_rw_t lock;
 
 	/** how to process zone */
 	enum localzone_type type;
@@ -151,6 +160,7 @@ void local_zones_delete(struct local_zones* zones);
 
 /**
  * Apply config settings; setup the local authoritative data. 
+ * Takes care of locking.
  * @param zones: is set up.
  * @param cfg: config data.
  * @return false on error.
@@ -182,6 +192,7 @@ void local_zone_delete(struct local_zone* z);
 
 /**
  * Lookup zone that contains the given name, class.
+ * User must lock the tree or result zone.
  * @param zones: the zones tree
  * @param name: dname to lookup
  * @param len: length of name.
@@ -194,12 +205,14 @@ struct local_zone* local_zones_lookup(struct local_zones* zones,
 
 /**
  * Debug helper. Print all zones 
+ * Takes care of locking.
  * @param zones: the zones tree
  */
 void local_zones_print(struct local_zones* zones);
 
 /**
  * Answer authoritatively for local zones.
+ * Takes care of locking.
  * @param zones: the stored zones (shared, read only).
  * @param qinfo: query info (parsed).
  * @param edns: edns info (parsed).
@@ -211,5 +224,75 @@ void local_zones_print(struct local_zones* zones);
  */
 int local_zones_answer(struct local_zones* zones, struct query_info* qinfo,
 	struct edns_data* edns, ldns_buffer* buf, struct regional* temp);
+
+/**
+ * Parse the string into localzone type.
+ *
+ * @param str: string to parse
+ * @param t: local zone type returned here.
+ * @return 0 on parse error.
+ */
+int local_zone_str2type(const char* str, enum localzone_type* t);
+
+/**
+ * Find zone that with exactly given name, class.
+ * User must lock the tree or result zone.
+ * @param zones: the zones tree
+ * @param name: dname to lookup
+ * @param len: length of name.
+ * @param labs: labelcount of name.
+ * @param dclass: class to lookup.
+ * @return the exact local_zone or NULL.
+ */
+struct local_zone* local_zones_find(struct local_zones* zones, 
+	uint8_t* name, size_t len, int labs, uint16_t dclass);
+
+/**
+ * Add a new zone. Caller must hold the zones lock.
+ * Adjusts the other zones as well (parent pointers) after insertion.
+ * The zone must NOT exist (returns NULL and logs error).
+ * @param zones: the zones tree
+ * @param name: dname to add
+ * @param len: length of name.
+ * @param labs: labelcount of name.
+ * @param dclass: class to add.
+ * @param tp: type.
+ * @return local_zone or NULL on error, caller must printout memory error.
+ */
+struct local_zone* local_zones_add_zone(struct local_zones* zones, 
+	uint8_t* name, size_t len, int labs, uint16_t dclass, 
+	enum localzone_type tp);
+
+/**
+ * Delete a zone. Caller must hold the zones lock.
+ * Adjusts the other zones as well (parent pointers) after insertion.
+ * @param zones: the zones tree
+ * @param zone: the zone to delete from tree. Also deletes zone from memory.
+ */
+void local_zones_del_zone(struct local_zones* zones, struct local_zone* zone);
+
+/**
+ * Add RR data into the localzone data.
+ * Looks up the zone, if no covering zone, a transparent zone with the
+ * name of the RR is created.
+ * @param zones: the zones tree. Not locked by caller.
+ * @param rr: string with on RR.
+ * @param buf: buffer for scratch.
+ * @return false on failure.
+ */
+int local_zones_add_RR(struct local_zones* zones, const char* rr, 
+	ldns_buffer* buf);
+
+/**
+ * Remove data from domain name in the tree.
+ * All types are removed. No effect if zone or name does not exist.
+ * @param zones: zones tree.
+ * @param name: dname to remove
+ * @param len: length of name.
+ * @param labs: labelcount of name.
+ * @param dclass: class to remove.
+ */
+void local_zones_del_data(struct local_zones* zones, 
+	uint8_t* name, size_t len, int labs, uint16_t dclass);
 
 #endif /* SERVICES_LOCALZONE_H */

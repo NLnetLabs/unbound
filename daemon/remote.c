@@ -54,8 +54,10 @@
 #include "services/listen_dnsport.h"
 #include "services/cache/rrset.h"
 #include "services/mesh.h"
+#include "services/localzone.h"
 #include "util/storage/slabhash.h"
 #include "util/fptr_wlist.h"
+#include "util/data/dname.h"
 
 #ifdef HAVE_SYS_TYPES_H
 #  include <sys/types.h>
@@ -839,6 +841,139 @@ do_stats(SSL* ssl, struct daemon_remote* rc)
 	}
 }
 
+/** parse commandline argument domain name */
+static int
+parse_arg_name(SSL* ssl, char* str, uint8_t** res, size_t* len, int* labs)
+{
+	ldns_rdf* rdf;
+	*res = NULL;
+	*len = 0;
+	*labs = 0;
+	rdf = ldns_dname_new_frm_str(str);
+	if(!rdf) {
+		ssl_printf(ssl, "error cannot parse name %s\n", str);
+		return 0;
+	}
+	*res = memdup(ldns_rdf_data(rdf), ldns_rdf_size(rdf));
+	ldns_rdf_deep_free(rdf);
+	if(!*res) {
+		ssl_printf(ssl, "error out of memory\n");
+		return 0;
+	}
+	*labs = dname_count_size_labels(*res, len);
+	return 1;
+}
+
+/** find second argument, modifies string */
+static int
+find_arg2(SSL* ssl, char* arg, char** arg2)
+{
+	char* as = strchr(arg, ' ');
+	char* at = strchr(arg, '\t');
+	if(as && at) {
+		if(at < as)
+			as = at;
+		as[0]=0;
+		*arg2 = skipwhite(as+1);
+	} else if(as) {
+		as[0]=0;
+		*arg2 = skipwhite(as+1);
+	} else if(at) {
+		at[0]=0;
+		*arg2 = skipwhite(at+1);
+	} else {
+		ssl_printf(ssl, "error could not find next argument "
+			"after %s\n", arg);
+		return 0;
+	}
+	return 1;
+}
+
+/** Add a new zone */
+static void
+do_zone_add(SSL* ssl, struct worker* worker, char* arg)
+{
+	uint8_t* nm;
+	int nmlabs;
+	size_t nmlen;
+	char* arg2;
+	enum localzone_type t;
+	struct local_zone* z;
+	if(!find_arg2(ssl, arg, &arg2))
+		return;
+	if(!parse_arg_name(ssl, arg, &nm, &nmlen, &nmlabs))
+		return;
+	if(!local_zone_str2type(arg2, &t)) {
+		ssl_printf(ssl, "error not a zone type. %s\n", arg2);
+		return;
+	}
+	lock_quick_lock(&worker->daemon->local_zones->lock);
+	if((z=local_zones_find(worker->daemon->local_zones, nm, nmlen, 
+		nmlabs, LDNS_RR_CLASS_IN))) {
+		/* already present in tree */
+		lock_rw_wrlock(&z->lock);
+		z->type = t; /* update type anyway */
+		lock_rw_unlock(&z->lock);
+		lock_quick_unlock(&worker->daemon->local_zones->lock);
+		send_ok(ssl);
+		return;
+	}
+	if(!local_zones_add_zone(worker->daemon->local_zones, nm, nmlen, 
+		nmlabs, LDNS_RR_CLASS_IN, t)) {
+		lock_quick_unlock(&worker->daemon->local_zones->lock);
+		ssl_printf(ssl, "error out of memory\n");
+		return;
+	}
+	lock_quick_unlock(&worker->daemon->local_zones->lock);
+	send_ok(ssl);
+}
+
+/** Remove a zone */
+static void
+do_zone_remove(SSL* ssl, struct worker* worker, char* arg)
+{
+	uint8_t* nm;
+	int nmlabs;
+	size_t nmlen;
+	struct local_zone* z;
+	if(!parse_arg_name(ssl, arg, &nm, &nmlen, &nmlabs))
+		return;
+	lock_quick_lock(&worker->daemon->local_zones->lock);
+	if((z=local_zones_find(worker->daemon->local_zones, nm, nmlen, 
+		nmlabs, LDNS_RR_CLASS_IN))) {
+		/* present in tree */
+		local_zones_del_zone(worker->daemon->local_zones, z);
+	}
+	lock_quick_unlock(&worker->daemon->local_zones->lock);
+	send_ok(ssl);
+}
+
+/** Add new RR data */
+static void
+do_data_add(SSL* ssl, struct worker* worker, char* arg)
+{
+	if(!local_zones_add_RR(worker->daemon->local_zones, arg,
+		worker->env.scratch_buffer)) {
+		ssl_printf(ssl,"error in syntax or out of memory, %s\n", arg);
+		return;
+	}
+	send_ok(ssl);
+}
+
+/** Remove RR data */
+static void
+do_data_remove(SSL* ssl, struct worker* worker, char* arg)
+{
+	uint8_t* nm;
+	int nmlabs;
+	size_t nmlen;
+	if(!parse_arg_name(ssl, arg, &nm, &nmlen, &nmlabs))
+		return;
+	local_zones_del_data(worker->daemon->local_zones, nm,
+		nmlen, nmlabs, LDNS_RR_CLASS_IN);
+	send_ok(ssl);
+}
+
 /** execute a remote control command */
 static void
 execute_cmd(struct daemon_remote* rc, SSL* ssl, char* cmd)
@@ -853,6 +988,14 @@ execute_cmd(struct daemon_remote* rc, SSL* ssl, char* cmd)
 		do_verbosity(ssl, skipwhite(p+9));
 	} else if(strncmp(p, "stats", 5) == 0) {
 		do_stats(ssl, rc);
+	} else if(strncmp(p, "local_zone_remove", 17) == 0) {
+		do_zone_remove(ssl, rc->worker, skipwhite(p+17));
+	} else if(strncmp(p, "local_zone", 10) == 0) {
+		do_zone_add(ssl, rc->worker, skipwhite(p+10));
+	} else if(strncmp(p, "local_data_remove", 17) == 0) {
+		do_data_remove(ssl, rc->worker, skipwhite(p+17));
+	} else if(strncmp(p, "local_data", 10) == 0) {
+		do_data_add(ssl, rc->worker, skipwhite(p+10));
 	} else {
 		(void)ssl_printf(ssl, "error unknown command '%s'\n", p);
 	}

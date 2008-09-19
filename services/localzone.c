@@ -57,6 +57,9 @@ local_zones_create()
 	if(!zones)
 		return NULL;
 	rbtree_init(&zones->ztree, &local_zone_cmp);
+	lock_quick_init(&zones->lock);
+	lock_protect(&zones->lock, &zones->ztree, sizeof(zones->ztree));
+	/* also lock protects the rbnode's in struct local_zone */
 	return zones;
 }
 
@@ -73,6 +76,7 @@ local_zones_delete(struct local_zones* zones)
 {
 	if(!zones)
 		return;
+	lock_quick_destroy(&zones->lock);
 	/* walk through zones and delete them all */
 	traverse_postorder(&zones->ztree, lzdel, NULL);
 	free(zones);
@@ -83,6 +87,7 @@ local_zone_delete(struct local_zone* z)
 {
 	if(!z)
 		return;
+	lock_rw_destroy(&z->lock);
 	regional_destroy(z->region);
 	free(z->name);
 	free(z);
@@ -137,14 +142,13 @@ parse_dname(const char* str, uint8_t** res, size_t* len, int* labs)
 	return 1;
 }
 
-/** enter a new zone with allocated dname */
+/** create a new localzone */
 static struct local_zone*
-lz_enter_zone_dname(struct local_zones* zones, uint8_t* nm, size_t len, 
+local_zone_create(struct local_zones* zones, uint8_t* nm, size_t len, 
 	int labs, enum localzone_type t, uint16_t dclass)
 {
 	struct local_zone* z = (struct local_zone*)calloc(1, sizeof(*z));
 	if(!z) {
-		log_err("out of memory");
 		return NULL;
 	}
 	z->node.key = z;
@@ -153,19 +157,46 @@ lz_enter_zone_dname(struct local_zones* zones, uint8_t* nm, size_t len,
 	z->name = nm;
 	z->namelen = len;
 	z->namelabs = labs;
+	lock_rw_init(&z->lock);
 	z->region = regional_create();
 	if(!z->region) {
-		log_err("out of memory");
 		free(z);
 		return NULL;
 	}
 	rbtree_init(&z->data, &local_data_cmp);
-	/* add to rbtree */
-	if(!rbtree_insert(&zones->ztree, &z->node)) {
-		log_warn("duplicate local-zone");
-		local_zone_delete(z);
+	lock_protect(&z->lock, &z->parent, sizeof(*z)-sizeof(rbnode_t));
+	lock_protect(&zones->lock, &z->node, sizeof(z->node));
+	lock_protect(&zones->lock, &z->parent, sizeof(z->parent));
+	lock_protect(&zones->lock, &z->name, sizeof(z->name));
+	lock_protect(&zones->lock, &z->namelen, sizeof(z->namelen));
+	lock_protect(&zones->lock, &z->namelabs, sizeof(z->namelabs));
+	lock_protect(&zones->lock, &z->dclass, sizeof(z->dclass));
+	(void)zones; /* avoid argument unused warning if no lock checks */
+	return z;
+}
+
+/** enter a new zone with allocated dname returns with WRlock */
+static struct local_zone*
+lz_enter_zone_dname(struct local_zones* zones, uint8_t* nm, size_t len, 
+	int labs, enum localzone_type t, uint16_t c)
+{
+	struct local_zone* z = local_zone_create(zones, nm, len, labs, t, c);
+	if(!z) {
+		log_err("out of memory");
 		return NULL;
 	}
+
+	/* add to rbtree */
+	lock_quick_lock(&zones->lock);
+	lock_rw_wrlock(&z->lock);
+	if(!rbtree_insert(&zones->ztree, &z->node)) {
+		log_warn("duplicate local-zone");
+		lock_rw_unlock(&z->lock);
+		local_zone_delete(z);
+		lock_quick_unlock(&zones->lock);
+		return NULL;
+	}
+	lock_quick_unlock(&zones->lock);
 	return z;
 }
 
@@ -183,17 +214,7 @@ lz_enter_zone(struct local_zones* zones, const char* name, const char* type,
 		log_err("bad zone name %s %s", name, type);
 		return NULL;
 	}
-	if(strcmp(type, "deny") == 0)
-		t = local_zone_deny;
-	else if(strcmp(type, "refuse") == 0)
-		t = local_zone_refuse;
-	else if(strcmp(type, "static") == 0)
-		t = local_zone_static;
-	else if(strcmp(type, "transparent") == 0)
-		t = local_zone_transparent;
-	else if(strcmp(type, "redirect") == 0)
-		t = local_zone_redirect;
-	else {
+	if(!local_zone_str2type(type, &t)) {
 		log_err("bad lz_enter_zone type %s %s", name, type);
 		free(nm);
 		return NULL;
@@ -373,18 +394,24 @@ insert_rr(struct regional* region, struct packed_rrset_data* pd,
 	return 1;
 }
 
+/** find a data node by exact name */
+static struct local_data* 
+lz_find_node(struct local_zone* z, uint8_t* nm, size_t nmlen, int nmlabs)
+{
+	struct local_data key;
+	key.node.key = &key;
+	key.name = nm;
+	key.namelen = nmlen;
+	key.namelabs = nmlabs;
+	return (struct local_data*)rbtree_search(&z->data, &key.node);
+}
+
 /** find a node, create it if not and all its empty nonterminal parents */
 static int
 lz_find_create_node(struct local_zone* z, uint8_t* nm, size_t nmlen, 
 	int nmlabs, struct local_data** res)
 {
-	struct local_data key;
-	struct local_data* ld;
-	key.node.key = &key;
-	key.name = nm;
-	key.namelen = nmlen;
-	key.namelabs = nmlabs;
-	ld = (struct local_data*)rbtree_search(&z->data, &key.node);
+	struct local_data* ld = lz_find_node(z, nm, nmlen, nmlabs);
 	if(!ld) {
 		/* create a domain name to store rr. */
 		ld = (struct local_data*)regional_alloc_zero(z->region,
@@ -480,16 +507,24 @@ lz_enter_rr_str(struct local_zones* zones, const char* rr, ldns_buffer* buf)
 	size_t len;
 	int labs;
 	struct local_zone* z;
+	int r;
 	if(!get_rr_nameclass(rr, &rr_name, &rr_class)) {
 		log_err("bad rr %s", rr);
 		return 0;
 	}
 	labs = dname_count_size_labels(rr_name, &len);
+	lock_quick_lock(&zones->lock);
 	z = local_zones_lookup(zones, rr_name, len, labs, rr_class);
-	if(!z)
+	if(!z) {
+		lock_quick_unlock(&zones->lock);
 		fatal_exit("internal error: no zone for rr %s", rr);
+	}
+	lock_rw_wrlock(&z->lock);
+	lock_quick_unlock(&zones->lock);
 	free(rr_name);
-	return lz_enter_rr_into_zone(z, buf, rr);
+	r = lz_enter_rr_into_zone(z, buf, rr);
+	lock_rw_unlock(&z->lock);
+	return r;
 }
 
 /** parse local-zone: statements */
@@ -497,9 +532,12 @@ static int
 lz_enter_zones(struct local_zones* zones, struct config_file* cfg)
 {
 	struct config_str2list* p;
+	struct local_zone* z;
 	for(p = cfg->local_zones; p; p = p->next) {
-		if(!lz_enter_zone(zones, p->str, p->str2, LDNS_RR_CLASS_IN))
+		if(!(z=lz_enter_zone(zones, p->str, p->str2, 
+			LDNS_RR_CLASS_IN)))
 			return 0;
+		lock_rw_unlock(&z->lock);
 	}
 	return 1;
 }
@@ -515,10 +553,13 @@ lz_exists(struct local_zones* zones, const char* name)
 		log_err("bad name %s", name);
 		return 0;
 	}
+	lock_quick_lock(&zones->lock);
 	if(rbtree_search(&zones->ztree, &z.node)) {
+		lock_quick_unlock(&zones->lock);
 		free(z.name);
 		return 1;
 	}
+	lock_quick_unlock(&zones->lock);
 	free(z.name);
 	return 0;
 }
@@ -555,11 +596,16 @@ add_as112_default(struct local_zones* zones, struct config_file* cfg,
 		return 0;
 	snprintf(str, sizeof(str), "%s 10800 IN SOA localhost. "
 		"nobody.invalid. 1 3600 1200 604800 10800", name);
-	if(!lz_enter_rr_into_zone(z, buf, str))
+	if(!lz_enter_rr_into_zone(z, buf, str)) {
+		lock_rw_unlock(&z->lock);
 		return 0;
+	}
 	snprintf(str, sizeof(str), "%s 10800 IN NS localhost. ", name);
-	if(!lz_enter_rr_into_zone(z, buf, str))
+	if(!lz_enter_rr_into_zone(z, buf, str)) {
+		lock_rw_unlock(&z->lock);
 		return 0;
+	}
+	lock_rw_unlock(&z->lock);
 	return 1;
 }
 
@@ -585,8 +631,10 @@ lz_enter_defaults(struct local_zones* zones, struct config_file* cfg,
 		   !lz_enter_rr_into_zone(z, buf,
 			"localhost. 10800 IN AAAA ::1")) {
 			log_err("out of memory adding default zone");
+			if(z) { lock_rw_unlock(&z->lock); }
 			return 0;
 		}
+		lock_rw_unlock(&z->lock);
 	}
 	/* reverse ip4 zone */
 	if(!lz_exists(zones, "127.in-addr.arpa.") &&
@@ -601,8 +649,10 @@ lz_enter_defaults(struct local_zones* zones, struct config_file* cfg,
 		   !lz_enter_rr_into_zone(z, buf,
 			"1.0.0.127.in-addr.arpa. 10800 IN PTR localhost.")) {
 			log_err("out of memory adding default zone");
+			if(z) { lock_rw_unlock(&z->lock); }
 			return 0;
 		}
+		lock_rw_unlock(&z->lock);
 	}
 	/* reverse ip6 zone */
 	if(!lz_exists(zones, "1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.ip6.arpa.") &&
@@ -617,8 +667,10 @@ lz_enter_defaults(struct local_zones* zones, struct config_file* cfg,
 		   !lz_enter_rr_into_zone(z, buf,
 			"1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.ip6.arpa. 10800 IN PTR localhost.")) {
 			log_err("out of memory adding default zone");
+			if(z) { lock_rw_unlock(&z->lock); }
 			return 0;
 		}
+		lock_rw_unlock(&z->lock);
 	}
 	if (	!add_as112_default(zones, cfg, buf, "10.in-addr.arpa.") ||
 		!add_as112_default(zones, cfg, buf, "16.172.in-addr.arpa.") ||
@@ -661,10 +713,13 @@ init_parents(struct local_zones* zones)
 {
         struct local_zone* node, *prev = NULL, *p;
         int m;
+	lock_quick_lock(&zones->lock);
         RBTREE_FOR(node, struct local_zone*, &zones->ztree) {
+		lock_rw_wrlock(&node->lock);
                 node->parent = NULL;
                 if(!prev || prev->dclass != node->dclass) {
                         prev = node;
+			lock_rw_unlock(&node->lock);
                         continue;
                 }
                 (void)dname_lab_cmp(prev->name, prev->namelabs, node->name,
@@ -681,7 +736,9 @@ init_parents(struct local_zones* zones)
                                 break;
                         }
                 prev = node;
+		lock_rw_unlock(&node->lock);
         }
+	lock_quick_unlock(&zones->lock);
 }
 
 /** enter implicit transparent zone for local-data: without local-zone: */
@@ -711,6 +768,7 @@ lz_setup_implicit(struct local_zones* zones, struct config_file* cfg)
 			return 0;
 		}
 		labs = dname_count_size_labels(rr_name, &len);
+		lock_quick_lock(&zones->lock);
 		if(!local_zones_lookup(zones, rr_name, len, labs, rr_class)) {
 			if(!have_name) {
 				dclass = rr_class;
@@ -725,6 +783,7 @@ lz_setup_implicit(struct local_zones* zones, struct config_file* cfg)
 					/* process other classes later */
 					free(rr_name);
 					have_other_classes = 1;
+					lock_quick_unlock(&zones->lock);
 					continue;
 				}
 				/* find smallest shared topdomain */
@@ -735,9 +794,11 @@ lz_setup_implicit(struct local_zones* zones, struct config_file* cfg)
 					match = m;
 			}
 		} else free(rr_name);
+		lock_quick_unlock(&zones->lock);
 	}
 	if(have_name) {
 		uint8_t* n2;
+		struct local_zone* z;
 		/* allocate zone of smallest shared topdomain to contain em */
 		n2 = nm;
 		dname_remove_labels(&n2, &nmlen, nmlabs - match);
@@ -749,10 +810,11 @@ lz_setup_implicit(struct local_zones* zones, struct config_file* cfg)
 		}
 		log_nametypeclass(VERB_ALGO, "implicit transparent local-zone", 
 			n2, 0, dclass);
-		if(!lz_enter_zone_dname(zones, n2, nmlen, match, 
-			local_zone_transparent, dclass)) {
+		if(!(z=lz_enter_zone_dname(zones, n2, nmlen, match, 
+			local_zone_transparent, dclass))) {
 			return 0;
 		}
+		lock_rw_unlock(&z->lock);
 	}
 	if(have_other_classes) { 
 		/* restart to setup other class */
@@ -854,6 +916,20 @@ local_zones_lookup(struct local_zones* zones,
 	}
 }
 
+struct local_zone* 
+local_zones_find(struct local_zones* zones,
+        uint8_t* name, size_t len, int labs, uint16_t dclass)
+{
+	struct local_zone key;
+	key.node.key = &key;
+	key.dclass = dclass;
+	key.name = name;
+	key.namelen = len;
+	key.namelabs = labs;
+	/* exact */
+	return (struct local_zone*)rbtree_search(&zones->ztree, &key);
+}
+
 /** print all RRsets in local zone */
 static void 
 local_zone_out(struct local_zone* z)
@@ -872,8 +948,10 @@ local_zone_out(struct local_zone* z)
 void local_zones_print(struct local_zones* zones)
 {
 	struct local_zone* z;
+	lock_quick_lock(&zones->lock);
 	log_info("number of auth zones %u", (unsigned)zones->ztree.count);
 	RBTREE_FOR(z, struct local_zone*, &zones->ztree) {
+		lock_rw_rdlock(&z->lock);
 		switch(z->type) {
 		case local_zone_deny:
 			log_nametypeclass(0, "deny zone", 
@@ -901,7 +979,9 @@ void local_zones_print(struct local_zones* zones)
 			break;
 		}
 		local_zone_out(z);
+		lock_rw_unlock(&z->lock);
 	}
+	lock_quick_unlock(&zones->lock);
 }
 
 /** encode answer consisting of 1 rrset */
@@ -1032,10 +1112,203 @@ local_zones_answer(struct local_zones* zones, struct query_info* qinfo,
 	 * 		- look at zone type for negative response. */
 	int labs = dname_count_labels(qinfo->qname);
 	struct local_data* ld;
-	struct local_zone* z = local_zones_lookup(zones, qinfo->qname,
+	struct local_zone* z;
+	int r;
+	lock_quick_lock(&zones->lock);
+	z = local_zones_lookup(zones, qinfo->qname,
 		qinfo->qname_len, labs, qinfo->qclass);
-	if(!z) return 0;
-	if(local_data_answer(z, qinfo, edns, buf, temp, labs, &ld))
+	if(!z) {
+		lock_quick_unlock(&zones->lock);
+		return 0;
+	}
+	lock_rw_rdlock(&z->lock);
+	lock_quick_unlock(&zones->lock);
+
+	if(local_data_answer(z, qinfo, edns, buf, temp, labs, &ld)) {
+		lock_rw_unlock(&z->lock);
 		return 1;
-	return lz_zone_answer(z, qinfo, edns, buf, temp, ld);
+	}
+	r = lz_zone_answer(z, qinfo, edns, buf, temp, ld);
+	lock_rw_unlock(&z->lock);
+	return r;
+}
+
+int local_zone_str2type(const char* type, enum localzone_type* t)
+{
+	if(strcmp(type, "deny") == 0)
+		*t = local_zone_deny;
+	else if(strcmp(type, "refuse") == 0)
+		*t = local_zone_refuse;
+	else if(strcmp(type, "static") == 0)
+		*t = local_zone_static;
+	else if(strcmp(type, "transparent") == 0)
+		*t = local_zone_transparent;
+	else if(strcmp(type, "redirect") == 0)
+		*t = local_zone_redirect;
+	else return 0;
+	return 1;
+}
+
+/** iterate over the kiddies of the given name and set their parent ptr */
+static void
+set_kiddo_parents(struct local_zone* z, struct local_zone* match, 
+	struct local_zone* newp)
+{
+	/* both zones and z are locked already */
+	/* in the sorted rbtree, the kiddies of z are located after z */
+	/* z must be present in the tree */
+	struct local_zone* p = z;
+	p = (struct local_zone*)rbtree_next(&p->node);
+	while(p!=(struct local_zone*)RBTREE_NULL &&
+		p->dclass == z->dclass && dname_strict_subdomain(p->name,
+		p->namelabs, z->name, z->namelabs)) {
+		/* update parent ptr */
+		/* only when matches with existing parent pointer, so that
+		 * deeper child structures are not touched, i.e.
+		 * update of x, and a.x, b.x, f.b.x, g.b.x, c.x, y
+		 * gets to update a.x, b.x and c.x */
+		lock_rw_wrlock(&p->lock);
+		if(p->parent == match)
+			p->parent = newp;
+		lock_rw_unlock(&p->lock);
+		p = (struct local_zone*)rbtree_next(&p->node);
+	}
+}
+
+struct local_zone* local_zones_add_zone(struct local_zones* zones,
+	uint8_t* name, size_t len, int labs, uint16_t dclass,
+	enum localzone_type tp)
+{
+	/* create */
+	struct local_zone* z = local_zone_create(zones, name, len, labs, tp,
+		dclass);
+	if(!z) return NULL;
+	lock_rw_wrlock(&z->lock);
+
+	/* find the closest parent */
+	z->parent = local_zones_find(zones, name, len, labs, dclass);
+
+	/* insert into the tree */
+	if(!rbtree_insert(&zones->ztree, &z->node)) {
+		/* duplicate entry! */
+		lock_rw_unlock(&z->lock);
+		local_zone_delete(z);
+		log_err("internal: duplicate entry in local_zones_add_zone");
+		return NULL;
+	}
+
+	/* set parent pointers right */
+	set_kiddo_parents(z, z->parent, z);
+
+	lock_rw_unlock(&z->lock);
+	return z;
+}
+
+void local_zones_del_zone(struct local_zones* zones, struct local_zone* z)
+{
+	/* fix up parents in tree */
+	lock_rw_wrlock(&z->lock);
+	set_kiddo_parents(z, z, z->parent);
+
+	/* remove from tree */
+	(void)rbtree_delete(&zones->ztree, z);
+
+	/* delete the zone */
+	lock_rw_unlock(&z->lock);
+	local_zone_delete(z);
+}
+
+int
+local_zones_add_RR(struct local_zones* zones, const char* rr, ldns_buffer* buf)
+{
+	uint8_t* rr_name;
+	uint16_t rr_class;
+	size_t len;
+	int labs;
+	struct local_zone* z;
+	int r;
+	if(!get_rr_nameclass(rr, &rr_name, &rr_class)) {
+		return 0;
+	}
+	labs = dname_count_size_labels(rr_name, &len);
+	lock_quick_lock(&zones->lock);
+	z = local_zones_lookup(zones, rr_name, len, labs, rr_class);
+	if(!z) {
+		z = local_zones_add_zone(zones, rr_name, len, labs, rr_class,
+			local_zone_transparent);
+		if(!z) {
+			lock_quick_unlock(&zones->lock);
+			return 0;
+		}
+	}
+	lock_rw_wrlock(&z->lock);
+	lock_quick_unlock(&zones->lock);
+	free(rr_name);
+	r = lz_enter_rr_into_zone(z, buf, rr);
+	lock_rw_unlock(&z->lock);
+	return r;
+}
+
+/** returns true if the node is terminal so no deeper domain names exist */
+static int
+is_terminal(struct local_data* d)
+{
+	/* for empty nonterminals, the deeper domain names are sorted
+	 * right after them, so simply check the next name in the tree 
+	 */
+	struct local_data* n = (struct local_data*)rbtree_next(&d->node);
+	if(n == (struct local_data*)RBTREE_NULL)
+		return 1; /* last in tree, no deeper node */
+	if(dname_strict_subdomain(n->name, n->namelabs, d->name, d->namelabs))
+		return 0; /* there is a deeper node */
+	return 1;
+}
+
+/** delete empty terminals from tree when final data is deleted */
+static void 
+del_empty_term(struct local_zone* z, struct local_data* d, 
+	uint8_t* name, size_t len, int labs)
+{
+	while(d && d->rrsets == NULL && is_terminal(d)) {
+		/* is this empty nonterminal? delete */
+		/* note, no memory recycling in zone region */
+		(void)rbtree_delete(&z->data, d);
+
+		/* go up and to the next label */
+		if(dname_is_root(name))
+			return;
+		dname_remove_label(&name, &len);
+		labs--;
+		d = lz_find_node(z, name, len, labs);
+	}
+}
+
+void local_zones_del_data(struct local_zones* zones, 
+	uint8_t* name, size_t len, int labs, uint16_t dclass)
+{
+	/* find zone */
+	struct local_zone* z;
+	struct local_data* d;
+	lock_quick_lock(&zones->lock);
+	z = local_zones_lookup(zones, name, len, labs, dclass);
+	if(!z) {
+		/* no such zone, we're done */
+		lock_quick_unlock(&zones->lock);
+		return;
+	}
+	lock_rw_wrlock(&z->lock);
+	lock_quick_unlock(&zones->lock);
+
+	/* find the domain */
+	d = lz_find_node(z, name, len, labs);
+	/* no memory recycling for zone deletions ... */
+	d->rrsets = NULL;
+	/* did we delete the soa record ? */
+	if(query_dname_compare(d->name, z->name) == 0)
+		z->soa = NULL;
+
+	/* cleanup the empty nonterminals for this name */
+	del_empty_term(z, d, name, len, labs);
+
+	lock_rw_unlock(&z->lock);
 }

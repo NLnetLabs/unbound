@@ -156,7 +156,7 @@ val_init(struct module_env* env, int id)
 	val_env->permissive_mode = 0;
 	lock_basic_init(&val_env->bogus_lock);
 	lock_protect(&val_env->bogus_lock, &val_env->num_rrset_bogus,
-		sizeof(val->env->num_rrset_bogus));
+		sizeof(val_env->num_rrset_bogus));
 	if(!val_apply_cfg(env, val_env, env->cfg)) {
 		log_err("validator: could not apply configuration settings.");
 		return 0;

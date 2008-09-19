@@ -487,9 +487,12 @@ read_entry(FILE* in, const char* name, int *lineno, uint32_t* default_ttl,
 			/* it must be a RR, parse and add to packet. */
 			ldns_rr* n = NULL;
 			ldns_status status;
-			status = ldns_rr_new_frm_str(&n, parse, *default_ttl, 
-				*origin, prev_rr);
-			if (status != LDNS_STATUS_OK)
+			if(add_section == LDNS_SECTION_QUESTION)
+				status = ldns_rr_new_question_frm_str(
+					&n, parse, *origin, prev_rr);
+			else status = ldns_rr_new_frm_str(&n, parse, 
+				*default_ttl, *origin, prev_rr);
+			if(status != LDNS_STATUS_OK)
 				error("%s line %d:\n\t%s: %s", name, *lineno,
 					ldns_get_errorstr_by_id(status), parse);
 			ldns_pkt_push_rr(cur_reply->reply, add_section, n);
@@ -637,7 +640,7 @@ match_all(ldns_pkt* q, ldns_pkt* p, bool mttl)
 	{ verbose(3, "allmatch: nscount different"); return 0;}
 	if(ldns_pkt_arcount(q) != ldns_pkt_arcount(p))
 	{ verbose(3, "allmatch: arcount different"); return 0;}
-	if(!match_list(ldns_pkt_question(q), ldns_pkt_question(p), mttl))
+	if(!match_list(ldns_pkt_question(q), ldns_pkt_question(p), 0))
 	{ verbose(3, "allmatch: qd section different"); return 0;}
 	if(!match_list(ldns_pkt_answer(q), ldns_pkt_answer(p), mttl))
 	{ verbose(3, "allmatch: an section different"); return 0;}

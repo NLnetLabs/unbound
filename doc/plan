@@ -43,19 +43,19 @@ like dnswall does.  Allow certain subdomains to do it, config options.
 	note in config/man that we may consider turning on by default.
 
 *** Remote control feature
-* remote control using a TCP unbound-control commandline app.  
-* secure remote control w. TSIG.  Or TLS.
-* Nicer statistics (over that unbound-control app for ease)
++ remote control using a TCP unbound-control commandline app.  
++ secure remote control w. TSIG.  Or TLS.
++ Nicer statistics (over that unbound-control app for ease)
     stats display added over threads, displayed in rddtool easy format.
-* option for extended statistics. If enabled (not by default) collect print
++ option for extended statistics. If enabled (not by default) collect print
         rcode, uptime, spoofnearmisses, cache size, qtype,
 	bits(RD, CD, DO, EDNS-present, AD)query, (Secure, Bogus)reply.
-	perhaps also see which slow auth servers cause >1sec values.
 	stats-file possible with key: value or key=value lines in it.
-	stats on SIGUSR1. addup stats over threads.
+	addup stats over threads.
+not	stats on SIGUSR1. perhaps also see which slow auth servers cause >1sec values.
 * remote control to add/remove localinfo, redirects.
 * remote control to load/store cache contents
-* remote control to start, stop, reload.
++ remote control to start, stop, reload.
 * remote control to flush names or domains (all under a name) from the 
    cache. Include NSes. And the A, AAAA for its NSes.
 * remote control to see delegation; what servers would be used to get 

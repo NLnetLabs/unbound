@@ -60,8 +60,30 @@ a reload (taken from config file again), or the next verbosity control command.
 Print statistics. Resets the internal counters to zero, this can be 
 controlled using the \fBstatistics\-cumulative\fR config statement. 
 Statistics are printed with one [name]: [value] per line.
+.TP
+.B local_zone \fIname\fR \fItype
+Add new local zone with name and type. Like \fBlocal\-zone\fR config statement.
+If the zone already exists, the type is changed to the given argument.
+.TP
+.B local_zone_remove \fIname
+Remove the local zone with the given name.  Removes all local data inside
+it.  If the zone does not exist, the command succeeds.
+.TP
+.B local_data \fIRR data...
+Add new local data, the given resource record. Like \fBlocal\-data\fR
+config statement, except for when no covering zone exists.  In that case
+this remote control command creates a transparent zone with the same 
+name as this record.  This command is not good at returning detailed syntax 
+errors.
+.TP
+.B local_data_remove \fIname
+Remove all RR data from local name.  If the name already has no items,
+nothing happens.  Often results in NXDOMAIN for the name (in a static zone),
+but if the name has become an empty nonterminal (there is still data in 
+domain names below the removed name), NOERROR nodata answers are the 
+result for that name.
 .SH "EXIT CODE"
-The unbound-control program exits with status code 1 on error.
+The unbound-control program exits with status code 1 on error, 0 on success.
 .SH "SET UP"
 The setup requires a self\-signed certificate and private keys for both 
 the server and client.  The script \fIunbound\-control\-setup\fR generates

@@ -62,7 +62,12 @@ usage()
 	printf("  stop		stops the server\n");
 	printf("  reload	reloads the server\n");
 	printf("  stats		print statistics\n");
-	printf("  verbosity [number]	change logging detail\n");
+	printf("  verbosity [number]		change logging detail\n");
+	printf("  local_zone [name] [type] 	add new local zone\n");
+	printf("  local_zone_remove [name]	remove local zone and its contents\n");
+	printf("  local_data [RR data...]	add local data, for example\n");
+	printf("				local_data www.example.com A 192.0.2.1\n");
+	printf("  local_data_remove [name]	remove local RR data from name\n");
 	printf("Version %s\n", PACKAGE_VERSION);
 	printf("BSD licensed, see LICENSE in source package for details.\n");
 	printf("Report bugs to %s\n", PACKAGE_BUGREPORT);

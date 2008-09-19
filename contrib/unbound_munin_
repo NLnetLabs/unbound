@@ -9,8 +9,9 @@
 #			statistics-cumulative: no
 #			statistics-interval: 0
 #	remote-control:	control-enable: yes
+# Run the command unbound-control-setup to generate the key files.
 #
-# Environment variables
+# Environment variables for this script
 #	statefile	- where to put temporary statefile.
 #	unbound_conf	- where the unbound.conf file is located.
 #	unbound_control	- where to find unbound-control executable.
