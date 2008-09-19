@@ -1,6 +1,7 @@
 19 September 2008: Wouter
 	- locking on the localdata structure.
 	- add and remove local zone and data with unbound-control.
+	- ldns trunk snapshot updated, make tests work again.
 
 18 September 2008: Wouter
 	- fixup error in time calculation.
