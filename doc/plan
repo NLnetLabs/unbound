@@ -53,7 +53,7 @@ like dnswall does.  Allow certain subdomains to do it, config options.
 	stats-file possible with key: value or key=value lines in it.
 	addup stats over threads.
 not	stats on SIGUSR1. perhaps also see which slow auth servers cause >1sec values.
-* remote control to add/remove localinfo, redirects.
++ remote control to add/remove localinfo, redirects.
 * remote control to load/store cache contents
 + remote control to start, stop, reload.
 * remote control to flush names or domains (all under a name) from the 

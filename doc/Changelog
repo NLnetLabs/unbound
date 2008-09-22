@@ -1,3 +1,8 @@
+22 September 2008: Wouter
+	- dump_cache and load_cache statements in unbound-control.
+	  RRsets are dumped and loaded correctly.
+	  Msg cache is dumped.
+
 19 September 2008: Wouter
 	- locking on the localdata structure.
 	- add and remove local zone and data with unbound-control.

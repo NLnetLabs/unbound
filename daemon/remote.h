@@ -130,4 +130,31 @@ int remote_accept_callback(struct comm_point*, void*, int, struct comm_reply*);
 /** handle remote control data callbacks */
 int remote_control_callback(struct comm_point*, void*, int, struct comm_reply*);
 
+/** 
+ * Print fixed line of text over ssl connection in blocking mode
+ * @param ssl: print to
+ * @param text: the text.
+ * @return false on connection failure.
+ */
+int ssl_print_text(SSL* ssl, const char* text);
+
+/** 
+ * printf style printing to the ssl connection
+ * @param ssl: the SSL connection to print to. Blocking.
+ * @param format: printf style format string.
+ * @return success or false on a network failure.
+ */
+int ssl_printf(SSL* ssl, const char* format, ...)
+        ATTR_FORMAT(printf, 2, 3);
+
+/**
+ * Read until \n is encountered
+ * If SSL signals EOF, the string up to then is returned (without \n).
+ * @param ssl: the SSL connection to read from. blocking.
+ * @param buf: buffer to read to.
+ * @param max: size of buffer.
+ * @return false on connection failure.
+ */
+int ssl_read_line(SSL* ssl, char* buf, size_t max);
+
 #endif /* DAEMON_REMOTE_H */

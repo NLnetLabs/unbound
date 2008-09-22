@@ -68,6 +68,8 @@ usage()
 	printf("  local_data [RR data...]	add local data, for example\n");
 	printf("				local_data www.example.com A 192.0.2.1\n");
 	printf("  local_data_remove [name]	remove local RR data from name\n");
+	printf("  dump_cache			print cache to stdout\n");
+	printf("  load_cache			load cache from stdin\n");
 	printf("Version %s\n", PACKAGE_VERSION);
 	printf("BSD licensed, see LICENSE in source package for details.\n");
 	printf("Report bugs to %s\n", PACKAGE_BUGREPORT);
@@ -197,6 +199,16 @@ setup_ssl(SSL_CTX* ctx, int fd)
 	return ssl;
 }
 
+/** send stdin to server */
+static void
+send_file(SSL* ssl, FILE* in, char* buf, size_t sz)
+{
+	while(fgets(buf, sz, in)) {
+		if(SSL_write(ssl, buf, (int)strlen(buf)) <= 0)
+			ssl_err("could not SSL_write contents");
+	}
+}
+
 /** send command and display result */
 static int
 go_cmd(SSL* ssl, int argc, char* argv[])
@@ -217,6 +229,11 @@ go_cmd(SSL* ssl, int argc, char* argv[])
 	}
 	if(SSL_write(ssl, newline, (int)strlen(newline)) <= 0)
 		ssl_err("could not SSL_write");
+
+	if(argc == 1 && strcmp(argv[0], "load_cache") == 0) {
+		send_file(ssl, stdin, buf, sizeof(buf));
+	}
+
 	while(1) {
 		ERR_clear_error();
 		if((r = SSL_read(ssl, buf, (int)sizeof(buf)-1)) <= 0) {

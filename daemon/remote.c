@@ -47,6 +47,7 @@
 #include "daemon/worker.h"
 #include "daemon/daemon.h"
 #include "daemon/stats.h"
+#include "daemon/cachedump.h"
 #include "util/log.h"
 #include "util/config_file.h"
 #include "util/net_help.h"
@@ -431,8 +432,7 @@ clean_point(struct daemon_remote* rc, struct rc_state* s)
 	free(s);
 }
 
-/** print fixed line over the ssl connection */
-static int
+int
 ssl_print_text(SSL* ssl, const char* text)
 {
 	int r;
@@ -458,16 +458,8 @@ ssl_print_vmsg(SSL* ssl, const char* format, va_list args)
 	return ssl_print_text(ssl, msg);
 }
 
-/** declare for printf format checking by gcc 
- * @param ssl: the SSL connection to print to. Blocking.
- * @param format: printf style format string.
- * @return success or false on a network failure.
- */
-static int ssl_printf(SSL* ssl, const char* format, ...) 
-	ATTR_FORMAT(printf, 2, 3);
-
 /** printf style printing to the ssl connection */
-static int ssl_printf(SSL* ssl, const char* format, ...)
+int ssl_printf(SSL* ssl, const char* format, ...)
 {
 	va_list args;
 	int ret;
@@ -477,8 +469,7 @@ static int ssl_printf(SSL* ssl, const char* format, ...)
 	return ret;
 }
 
-/** read until \n */
-static int
+int
 ssl_read_line(SSL* ssl, char* buf, size_t max)
 {
 	int r;
@@ -996,6 +987,10 @@ execute_cmd(struct daemon_remote* rc, SSL* ssl, char* cmd)
 		do_data_remove(ssl, rc->worker, skipwhite(p+17));
 	} else if(strncmp(p, "local_data", 10) == 0) {
 		do_data_add(ssl, rc->worker, skipwhite(p+10));
+	} else if(strncmp(p, "dump_cache", 10) == 0) {
+		(void)dump_cache(ssl, rc->worker);
+	} else if(strncmp(p, "load_cache", 10) == 0) {
+		if(load_cache(ssl, rc->worker)) send_ok(ssl);
 	} else {
 		(void)ssl_printf(ssl, "error unknown command '%s'\n", p);
 	}
