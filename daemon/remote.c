@@ -896,6 +896,7 @@ do_zone_add(SSL* ssl, struct worker* worker, char* arg)
 		return;
 	if(!local_zone_str2type(arg2, &t)) {
 		ssl_printf(ssl, "error not a zone type. %s\n", arg2);
+		free(nm);
 		return;
 	}
 	lock_quick_lock(&worker->daemon->local_zones->lock);
@@ -905,6 +906,7 @@ do_zone_add(SSL* ssl, struct worker* worker, char* arg)
 		lock_rw_wrlock(&z->lock);
 		z->type = t; /* update type anyway */
 		lock_rw_unlock(&z->lock);
+		free(nm);
 		lock_quick_unlock(&worker->daemon->local_zones->lock);
 		send_ok(ssl);
 		return;
@@ -934,6 +936,7 @@ do_zone_remove(SSL* ssl, struct worker* worker, char* arg)
 		nmlabs, LDNS_RR_CLASS_IN))) {
 		/* present in tree */
 		local_zones_del_zone(worker->daemon->local_zones, z);
+		free(nm);
 	}
 	lock_quick_unlock(&worker->daemon->local_zones->lock);
 	send_ok(ssl);
@@ -962,7 +965,21 @@ do_data_remove(SSL* ssl, struct worker* worker, char* arg)
 		return;
 	local_zones_del_data(worker->daemon->local_zones, nm,
 		nmlen, nmlabs, LDNS_RR_CLASS_IN);
+	free(nm);
 	send_ok(ssl);
+}
+
+/** cache lookup of nameservers */
+static void
+do_lookup(SSL* ssl, struct worker* worker, char* arg)
+{
+	uint8_t* nm;
+	int nmlabs;
+	size_t nmlen;
+	if(!parse_arg_name(ssl, arg, &nm, &nmlen, &nmlabs))
+		return;
+	(void)print_deleg_lookup(ssl, worker, nm, nmlen, nmlabs);
+	free(nm);
 }
 
 /** execute a remote control command */
@@ -991,6 +1008,8 @@ execute_cmd(struct daemon_remote* rc, SSL* ssl, char* cmd)
 		(void)dump_cache(ssl, rc->worker);
 	} else if(strncmp(p, "load_cache", 10) == 0) {
 		if(load_cache(ssl, rc->worker)) send_ok(ssl);
+	} else if(strncmp(p, "lookup", 6) == 0) {
+		do_lookup(ssl, rc->worker, skipwhite(p+6));
 	} else {
 		(void)ssl_printf(ssl, "error unknown command '%s'\n", p);
 	}

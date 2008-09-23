@@ -45,10 +45,8 @@ flush_type <name> <RR type>
 flush_zone <name>
 	removes name and everything below that name from the cache.
 	has to search through the cache item by item, so this is slow.
-delegation <name>
-	see what servers would be queried for the given name.
-info <name>
-	see data about the name. Slow, searches the cache item by item.
+lookup <name>
+	see what servers would be queried for a lookup of the given name.
 local_zone_remove <name of local-zone entry>
 	the local-zone entry is removed.
 	All data from the local zone is also deleted.

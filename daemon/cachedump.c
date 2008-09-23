@@ -48,6 +48,9 @@
 #include "util/data/msgreply.h"
 #include "util/regional.h"
 #include "util/net_help.h"
+#include "util/data/dname.h"
+#include "iterator/iter_delegpt.h"
+#include "iterator/iter_utils.h"
 
 /** convert to ldns rr */
 static ldns_rr*
@@ -775,4 +778,75 @@ load_cache(SSL* ssl, struct worker* worker)
 	if(!load_msg_cache(ssl, worker))
 		return 0;
 	return read_fixed(ssl, worker->env.scratch_buffer, "EOF");
+}
+
+int print_deleg_lookup(SSL* ssl, struct worker* worker, uint8_t* nm,
+	size_t nmlen, int ATTR_UNUSED(nmlabs))
+{
+	/* deep links into the iterator module */
+	struct delegpt* dp;
+	struct dns_msg* msg;
+	struct regional* region = worker->scratchpad;
+	char b[260];
+	struct query_info qinfo;
+	size_t i, n_ns, n_miss, n_addr, n_res, n_avail;
+	regional_free_all(region);
+	qinfo.qname = nm;
+	qinfo.qname_len = nmlen;
+	qinfo.qtype = LDNS_RR_TYPE_A;
+	qinfo.qclass = LDNS_RR_CLASS_IN;
+
+	dname_str(nm, b);
+	if(!ssl_printf(ssl, "The following name servers are used for lookup "
+		"of %s\n", b)) 
+		return 0;
+	
+	while(1) {
+		dp = dns_cache_find_delegation(&worker->env, nm, nmlen, 
+			qinfo.qtype, qinfo.qclass, region, &msg, 
+			*worker->env.now);
+		if(!dp) {
+			return ssl_printf(ssl, "no delegation from "
+				"cache; goes to configured roots\n");
+		}
+		/* print the dp */
+		for(i=0; i<msg->rep->rrset_count; i++) {
+			struct ub_packed_rrset_key* k = msg->rep->rrsets[i];
+			struct packed_rrset_data* d = 
+				(struct packed_rrset_data*)k->entry.data;
+			if(!dump_rrset(ssl, k, d, 0))
+				return 0;
+		}
+		delegpt_count_ns(dp, &n_ns, &n_miss);
+		delegpt_count_addr(dp, &n_addr, &n_res, &n_avail);
+		/* since dp has not been used by iterator, all are available*/
+		if(!ssl_printf(ssl, "Delegation with %d names, of which %d "
+			"have no addresses in cache.\n"
+			"It provides %d IP addresses.\n", 
+			(int)n_ns, (int)n_miss, (int)n_addr))
+			return 0;
+		/* go up? */
+		if(iter_dp_is_useless(&qinfo, BIT_RD, dp)) {
+			if(!ssl_printf(ssl, "cache delegation was "
+				"useless (no IP addresses)\n"))
+				return 0;
+			if(dname_is_root(nm)) {
+				/* goes to root config */
+				return ssl_printf(ssl, "no delegation from "
+					"cache; goes to configured roots\n");
+			} else {
+				/* useless, goes up */
+				nm = dp->name;
+				nmlen = dp->namelen;
+				dname_remove_label(&nm, &nmlen);
+				dname_str(nm, b);
+				if(!ssl_printf(ssl, "going up, lookup %s\n", b))
+					return 0;
+				continue;
+			}
+		} else
+			break;
+	}
+
+	return 1;
 }

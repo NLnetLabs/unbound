@@ -372,7 +372,8 @@ iter_mark_cycle_targets(struct module_qstate* qstate, struct delegpt* dp)
 }
 
 int 
-iter_dp_is_useless(struct module_qstate* qstate, struct delegpt* dp)
+iter_dp_is_useless(struct query_info* qinfo, uint16_t qflags, 
+	struct delegpt* dp)
 {
 	struct delegpt_ns* ns;
 	/* check:
@@ -385,18 +386,17 @@ iter_dp_is_useless(struct module_qstate* qstate, struct delegpt* dp)
 	 *      o the query is for one of the nameservers in dp,
 	 *        and that nameserver is a glue-name for this dp.
 	 */
-	if(!(qstate->query_flags&BIT_RD))
+	if(!(qflags&BIT_RD))
 		return 0;
 	/* either available or unused targets */
 	if(dp->usable_list || dp->result_list) 
 		return 0;
 	
 	/* see if query is for one of the nameservers, which is glue */
-	if( (qstate->qinfo.qtype == LDNS_RR_TYPE_A ||
-		qstate->qinfo.qtype == LDNS_RR_TYPE_AAAA) &&
-		dname_subdomain_c(qstate->qinfo.qname, dp->name) &&
-		delegpt_find_ns(dp, qstate->qinfo.qname, 
-			qstate->qinfo.qname_len))
+	if( (qinfo->qtype == LDNS_RR_TYPE_A ||
+		qinfo->qtype == LDNS_RR_TYPE_AAAA) &&
+		dname_subdomain_c(qinfo->qname, dp->name) &&
+		delegpt_find_ns(dp, qinfo->qname, qinfo->qname_len))
 		return 1;
 	
 	for(ns = dp->nslist; ns; ns = ns->next) {

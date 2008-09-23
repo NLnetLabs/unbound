@@ -842,7 +842,8 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 		 * could be useless but lead to loops (bumping into the
 		 * same server reply) if useless-checked.
 		 */
-		if(iter_dp_is_useless(qstate, iq->dp)) {
+		if(iter_dp_is_useless(&qstate->qinfo, qstate->query_flags, 
+			iq->dp)) {
 			if(dname_is_root(iq->dp->name)) {
 				/* use safety belt */
 				verbose(VERB_QUERY, "Cache has root NS but "

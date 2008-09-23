@@ -135,10 +135,12 @@ void iter_mark_cycle_targets(struct module_qstate* qstate, struct delegpt* dp);
 /**
  * See if delegation is useful or offers immediately no targets for 
  * further recursion.
- * @param qstate: query state with RD flag and query name.
+ * @param qinfo: query name and type
+ * @param qflags: query flags with RD flag
  * @param dp: delegpt to check.
  */
-int iter_dp_is_useless(struct module_qstate* qstate, struct delegpt* dp);
+int iter_dp_is_useless(struct query_info* qinfo, uint16_t qflags, 
+	struct delegpt* dp);
 
 /**
  * See if delegation is expected to have DNSSEC information (RRSIGs) in 

@@ -70,6 +70,7 @@ usage()
 	printf("  local_data_remove [name]	remove local RR data from name\n");
 	printf("  dump_cache			print cache to stdout\n");
 	printf("  load_cache			load cache from stdin\n");
+	printf("  lookup [name]			print nameservers for name\n");
 	printf("Version %s\n", PACKAGE_VERSION);
 	printf("BSD licensed, see LICENSE in source package for details.\n");
 	printf("Report bugs to %s\n", PACKAGE_BUGREPORT);

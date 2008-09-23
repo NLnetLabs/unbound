@@ -91,6 +91,10 @@ redirect it to a file to store the cache in a file.
 The contents of the cache is loaded from stdin.  Uses the same format as
 dump_cache uses.  Loading the cache with old, or wrong data can result
 in old or wrong data returned to clients.
+.TP
+.B lookup \fIname
+Print to stdout the name servers that would be used to look up the 
+name specified.
 .SH "EXIT CODE"
 The unbound-control program exits with status code 1 on error, 0 on success.
 .SH "SET UP"

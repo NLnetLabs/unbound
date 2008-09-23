@@ -91,4 +91,17 @@ int dump_cache(SSL* ssl, struct worker* worker);
  */
 int load_cache(SSL* ssl, struct worker* worker);
 
+/**
+ * Print the delegation used to lookup for this name.
+ * @param ssl: to read from 
+ * @param worker: worker that is available (buffers, etc) and has 
+ * 	ptrs to the caches.
+ * @param nm: name to lookup
+ * @param nmlen: length of name.
+ * @param nmlabs: labels in name.
+ * @return false on ssl error.
+ */
+int print_deleg_lookup(SSL* ssl, struct worker* worker, uint8_t* nm,
+	size_t nmlen, int nmlabs);
+
 #endif /* DAEMON_DUMPCACHE_H */

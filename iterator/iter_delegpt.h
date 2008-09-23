@@ -228,6 +228,13 @@ struct delegpt_ns* delegpt_find_ns(struct delegpt* dp, uint8_t* name,
  */
 void delegpt_log(enum verbosity_value v, struct delegpt* dp);
 
+/** count NS and number missing for logging */
+void delegpt_count_ns(struct delegpt* dp, size_t* numns, size_t* missing);
+
+/** count addresses, and number in result and available lists, for logging */
+void delegpt_count_addr(struct delegpt* dp, size_t* numaddr, size_t* numres, 
+	size_t* numavail);
+
 /**
  * Add all usable targets to the result list.
  * @param dp: delegation point.

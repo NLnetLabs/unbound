@@ -157,8 +157,7 @@ delegpt_add_addr(struct delegpt* dp, struct regional* region,
 	return 1;
 }
 
-/** count NS and number missing */
-static void
+void
 delegpt_count_ns(struct delegpt* dp, size_t* numns, size_t* missing)
 {
 	struct delegpt_ns* ns;
@@ -171,8 +170,7 @@ delegpt_count_ns(struct delegpt* dp, size_t* numns, size_t* missing)
 	}
 }
 
-/** count addresses, and number in result and available lists */
-static void
+void
 delegpt_count_addr(struct delegpt* dp, size_t* numaddr, size_t* numres, 
 	size_t* numavail)
 {
