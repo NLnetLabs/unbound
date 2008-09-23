@@ -71,6 +71,12 @@ usage()
 	printf("  dump_cache			print cache to stdout\n");
 	printf("  load_cache			load cache from stdin\n");
 	printf("  lookup [name]			print nameservers for name\n");
+	printf("  flush [name]			flushes common types for name from cache\n");
+	printf("  				types:  A, AAAA, MX, PTR, NS,\n");
+	printf("					SOA, CNAME, DNAME, SRV, NAPTR\n");
+	printf("  flush_type [name] [type]	flush name, type from cache\n");
+	printf("  flush_zone [name]		flush everything at or under name\n");
+	printf("  				from rr and dnssec caches\n");
 	printf("Version %s\n", PACKAGE_VERSION);
 	printf("BSD licensed, see LICENSE in source package for details.\n");
 	printf("Report bugs to %s\n", PACKAGE_BUGREPORT);

@@ -95,6 +95,22 @@ in old or wrong data returned to clients.
 .B lookup \fIname
 Print to stdout the name servers that would be used to look up the 
 name specified.
+.TP
+.B flush \fIname
+Remove the name from the cache. Removes the types
+A, AAAA, NS, SOA, CNAME, DNAME, MX, PTR, SRV and NAPTR.
+Because that is fast to do. Other record types can be removed using 
+.B flush_type 
+or 
+.B flush_zone\fR.
+.TP
+.B flush_type \fIname\fR \fItype
+Remove the name, type information from the cache.
+.TP
+.B flush_zone \fIname
+Remove all information at or below the name from the cache. 
+The rrsets and key entries are removed so that new lookups will be performed.
+This needs to walk and inspect the entire cache, and is a slow operation.
 .SH "EXIT CODE"
 The unbound-control program exits with status code 1 on error, 0 on success.
 .SH "SET UP"

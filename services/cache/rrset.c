@@ -371,3 +371,17 @@ rrset_check_sec_status(struct rrset_cache* r,
 	}
 	lock_rw_unlock(&e->lock);
 }
+
+void rrset_cache_remove(struct rrset_cache* r, uint8_t* nm, size_t nmlen,
+	uint16_t type, uint16_t dclass, uint32_t flags)
+{
+	struct ub_packed_rrset_key key;
+	key.entry.key = &key;
+	key.rk.dname = nm;
+	key.rk.dname_len = nmlen;
+	key.rk.rrset_class = htons(dclass);
+	key.rk.type = htons(type);
+	key.rk.flags = flags;
+	key.entry.hash = rrset_key_hash(&key.rk);
+	slabhash_remove(&r->table, key.entry.hash, &key);
+}

@@ -1,5 +1,6 @@
 23 September 2008: Wouter
 	- Msg cache is loaded. A cache load enables cache responses.
+	- unbound-control flush [name], flush_type and flush_zone.
 
 22 September 2008: Wouter
 	- dump_cache and load_cache statements in unbound-control.

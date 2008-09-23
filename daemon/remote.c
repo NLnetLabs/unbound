@@ -59,6 +59,9 @@
 #include "util/storage/slabhash.h"
 #include "util/fptr_wlist.h"
 #include "util/data/dname.h"
+#include "validator/validator.h"
+#include "validator/val_kcache.h"
+#include "validator/val_kentry.h"
 
 #ifdef HAVE_SYS_TYPES_H
 #  include <sys/types.h>
@@ -982,6 +985,182 @@ do_lookup(SSL* ssl, struct worker* worker, char* arg)
 	free(nm);
 }
 
+/** flush a type */
+static void
+do_flush_type(SSL* ssl, struct worker* worker, char* arg)
+{
+	uint8_t* nm;
+	int nmlabs;
+	size_t nmlen;
+	char* arg2;
+	uint16_t t;
+	if(!find_arg2(ssl, arg, &arg2))
+		return;
+	if(!parse_arg_name(ssl, arg, &nm, &nmlen, &nmlabs))
+		return;
+	t = ldns_get_rr_type_by_name(arg2);
+	rrset_cache_remove(worker->env.rrset_cache, nm, nmlen, 
+		t, LDNS_RR_CLASS_IN, 0);
+	
+	free(nm);
+	send_ok(ssl);
+}
+
+/**
+ * Local info for deletion functions
+ */
+struct del_info {
+	/** worker */
+	struct worker* worker;
+	/** name to delete */
+	uint8_t* name;
+	/** length */
+	size_t len;
+	/** labels */
+	int labs;
+	/** time to invalidate to */
+	uint32_t expired;
+	/** number of rrsets removed */
+	size_t num_rrsets;
+	/** number of key entries removed */
+	size_t num_keys;
+};
+
+/** callback to delete rrsets in a zone */
+static void
+zone_del_rrset(struct lruhash_entry* e, void* arg)
+{
+	/* entry is locked */
+	struct del_info* inf = (struct del_info*)arg;
+	struct ub_packed_rrset_key* k = (struct ub_packed_rrset_key*)e->key;
+	if(dname_subdomain_c(k->rk.dname, inf->name)) {
+		struct packed_rrset_data* d = 
+			(struct packed_rrset_data*)e->data;
+		d->ttl = inf->expired;
+		inf->num_rrsets++;
+	}
+}
+
+/** callback to delete keys in zone */
+static void
+zone_del_kcache(struct lruhash_entry* e, void* arg)
+{
+	/* entry is locked */
+	struct del_info* inf = (struct del_info*)arg;
+	struct key_entry_key* k = (struct key_entry_key*)e->key;
+	if(dname_subdomain_c(k->name, inf->name)) {
+		struct key_entry_data* d = (struct key_entry_data*)e->data;
+		d->ttl = inf->expired;
+		inf->num_keys++;
+	}
+}
+
+/** traverse a lruhash */
+static void 
+lruhash_traverse(struct lruhash* h, int wr, 
+	void (*func)(struct lruhash_entry*, void*), void* arg)
+{
+	size_t i;
+	struct lruhash_entry* e;
+
+	lock_quick_lock(&h->lock);
+	for(i=0; i<h->size; i++) {
+		lock_quick_lock(&h->array[i].lock);
+		for(e = h->array[i].overflow_list; e; e = e->overflow_next) {
+			if(wr) {
+				lock_rw_wrlock(&e->lock);
+			} else {
+				lock_rw_rdlock(&e->lock);
+			}
+			(*func)(e, arg);
+			lock_rw_unlock(&e->lock);
+		}
+		lock_quick_unlock(&h->array[i].lock);
+	}
+	lock_quick_unlock(&h->lock);
+}
+
+/** traverse a slabhash */
+static void 
+slabhash_traverse(struct slabhash* sh, int wr, 
+	void (*func)(struct lruhash_entry*, void*), void* arg)
+{
+	size_t i;
+	for(i=0; i<sh->size; i++)
+		lruhash_traverse(sh->array[i], wr, func, arg);
+}
+
+/** remove all rrsets and keys from zone from cache */
+static void
+do_flush_zone(SSL* ssl, struct worker* worker, char* arg)
+{
+	uint8_t* nm;
+	int nmlabs;
+	size_t nmlen;
+	struct del_info inf;
+	int idx;
+	if(!parse_arg_name(ssl, arg, &nm, &nmlen, &nmlabs))
+		return;
+	/* delete all RRs and key entries from zone */
+	/* what we do is to set them all expired */
+	inf.worker = worker;
+	inf.name = nm;
+	inf.len = nmlen;
+	inf.labs = nmlabs;
+	inf.expired = *worker->env.now;
+	inf.expired -= 3; /* handle 3 seconds skew between threads */
+	inf.num_rrsets = 0;
+	inf.num_keys = 0;
+	slabhash_traverse(&worker->env.rrset_cache->table, 1, 
+		&zone_del_rrset, &inf);
+
+	/* and validator cache */
+	idx = modstack_find(&worker->daemon->mods, "validator");
+	if(idx != -1) {
+		struct val_env* ve = (struct val_env*)worker->env.modinfo[idx];
+		slabhash_traverse(ve->kcache->slab, 1, &zone_del_kcache, &inf);
+	}
+
+	free(nm);
+
+	(void)ssl_printf(ssl, "ok removed %u rrsets and %u key entries\n",
+		(unsigned)inf.num_rrsets, (unsigned)inf.num_keys);
+}
+
+/** remove name rrset from cache */
+static void
+do_flush_name(SSL* ssl, struct worker* worker, char* arg)
+{
+	uint8_t* nm;
+	int nmlabs;
+	size_t nmlen;
+	if(!parse_arg_name(ssl, arg, &nm, &nmlen, &nmlabs))
+		return;
+	rrset_cache_remove(worker->env.rrset_cache, nm, nmlen, 
+		LDNS_RR_TYPE_A, LDNS_RR_CLASS_IN, 0);
+	rrset_cache_remove(worker->env.rrset_cache, nm, nmlen, 
+		LDNS_RR_TYPE_AAAA, LDNS_RR_CLASS_IN, 0);
+	rrset_cache_remove(worker->env.rrset_cache, nm, nmlen, 
+		LDNS_RR_TYPE_NS, LDNS_RR_CLASS_IN, 0);
+	rrset_cache_remove(worker->env.rrset_cache, nm, nmlen, 
+		LDNS_RR_TYPE_SOA, LDNS_RR_CLASS_IN, 0);
+	rrset_cache_remove(worker->env.rrset_cache, nm, nmlen, 
+		LDNS_RR_TYPE_CNAME, LDNS_RR_CLASS_IN, 0);
+	rrset_cache_remove(worker->env.rrset_cache, nm, nmlen, 
+		LDNS_RR_TYPE_DNAME, LDNS_RR_CLASS_IN, 0);
+	rrset_cache_remove(worker->env.rrset_cache, nm, nmlen, 
+		LDNS_RR_TYPE_MX, LDNS_RR_CLASS_IN, 0);
+	rrset_cache_remove(worker->env.rrset_cache, nm, nmlen, 
+		LDNS_RR_TYPE_PTR, LDNS_RR_CLASS_IN, 0);
+	rrset_cache_remove(worker->env.rrset_cache, nm, nmlen, 
+		LDNS_RR_TYPE_SRV, LDNS_RR_CLASS_IN, 0);
+	rrset_cache_remove(worker->env.rrset_cache, nm, nmlen, 
+		LDNS_RR_TYPE_NAPTR, LDNS_RR_CLASS_IN, 0);
+	
+	free(nm);
+	send_ok(ssl);
+}
+
 /** execute a remote control command */
 static void
 execute_cmd(struct daemon_remote* rc, SSL* ssl, char* cmd)
@@ -1010,6 +1189,12 @@ execute_cmd(struct daemon_remote* rc, SSL* ssl, char* cmd)
 		if(load_cache(ssl, rc->worker)) send_ok(ssl);
 	} else if(strncmp(p, "lookup", 6) == 0) {
 		do_lookup(ssl, rc->worker, skipwhite(p+6));
+	} else if(strncmp(p, "flush_zone", 10) == 0) {
+		do_flush_zone(ssl, rc->worker, skipwhite(p+10));
+	} else if(strncmp(p, "flush_type", 10) == 0) {
+		do_flush_type(ssl, rc->worker, skipwhite(p+10));
+	} else if(strncmp(p, "flush", 5) == 0) {
+		do_flush_name(ssl, rc->worker, skipwhite(p+5));
 	} else {
 		(void)ssl_printf(ssl, "error unknown command '%s'\n", p);
 	}

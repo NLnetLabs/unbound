@@ -37,10 +37,10 @@ load_cache
 	client sends cache contents (like from dump_cache), which is stored 
 	in the cache. end of data indicated with a line with 'EOF' on it.
 	The data is sent after the query line.
-flush_name <name>
+flush <name>
 	flushes some information regarding the name from the cache.
-	removes the A, AAAA, NS, SOA, CNAME, DNAME, MX, PTR types.
-	Does not remote other types.
+	removes the A, AAAA, NS, SOA, CNAME, DNAME, MX, PTR, SRV, NAPTR types.
+	Does not remove other types.
 flush_type <name> <RR type>
 	removes rrtype entry from the cache.
 flush_zone <name>
