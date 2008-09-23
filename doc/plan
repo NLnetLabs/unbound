@@ -2,8 +2,8 @@ Plan for Unbound 1.1.
 
 2 month project writeup.
 - immediate attention: done
-- security issues:      1 week.
-- remote control:	2 week
++ security issues:      1 week.
++ remote control:	2 week
 - improvements:		1 week
 - draft-mitigation:	2 week
 total 6 of 8 weeks; 2 weeks for maintenance activities.
