@@ -58,7 +58,7 @@ not	stats on SIGUSR1. perhaps also see which slow auth servers cause >1sec value
 + remote control to start, stop, reload.
 * remote control to flush names or domains (all under a name) from the 
    cache. Include NSes. And the A, AAAA for its NSes.
-* remote control to see delegation; what servers would be used to get 
++ remote control to see delegation; what servers would be used to get 
   data for a name.
 
 *** Improvements

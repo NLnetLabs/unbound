@@ -264,7 +264,6 @@ ub_packed_rrset_ttl(struct ub_packed_rrset_key* key)
 	return d->ttl;
 }
 
-/** allocate rrset in region - no more locks needed */
 struct ub_packed_rrset_key*
 packed_rrset_copy_region(struct ub_packed_rrset_key* key, 
 	struct regional* region, uint32_t now)

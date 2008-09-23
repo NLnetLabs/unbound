@@ -40,6 +40,7 @@ load_cache
 flush_name <name>
 	flushes some information regarding the name from the cache.
 	removes the A, AAAA, NS, SOA, CNAME, DNAME, MX, PTR types.
+	Does not remote other types.
 flush_type <name> <RR type>
 	removes rrtype entry from the cache.
 flush_zone <name>
