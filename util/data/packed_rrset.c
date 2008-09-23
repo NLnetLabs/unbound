@@ -45,6 +45,7 @@
 #include "util/storage/lookup3.h"
 #include "util/log.h"
 #include "util/alloc.h"
+#include "util/regional.h"
 
 void
 ub_packed_rrset_parsedelete(struct ub_packed_rrset_key* pkey,
@@ -262,3 +263,39 @@ ub_packed_rrset_ttl(struct ub_packed_rrset_key* key)
 		entry.data;
 	return d->ttl;
 }
+
+/** allocate rrset in region - no more locks needed */
+struct ub_packed_rrset_key*
+packed_rrset_copy_region(struct ub_packed_rrset_key* key, 
+	struct regional* region, uint32_t now)
+{
+	struct ub_packed_rrset_key* ck = regional_alloc(region, 
+		sizeof(struct ub_packed_rrset_key));
+	struct packed_rrset_data* d;
+	struct packed_rrset_data* data = (struct packed_rrset_data*)
+		key->entry.data;
+	size_t dsize, i;
+	if(!ck)
+		return NULL;
+	ck->id = key->id;
+	memset(&ck->entry, 0, sizeof(ck->entry));
+	ck->entry.hash = key->entry.hash;
+	ck->entry.key = ck;
+	ck->rk = key->rk;
+	ck->rk.dname = regional_alloc_init(region, key->rk.dname, 
+		key->rk.dname_len);
+	if(!ck->rk.dname)
+		return NULL;
+	dsize = packed_rrset_sizeof(data);
+	d = (struct packed_rrset_data*)regional_alloc_init(region, data, dsize);
+	if(!d)
+		return NULL;
+	ck->entry.data = d;
+	packed_rrset_ptr_fixup(d);
+	/* make TTLs relative - once per rrset */
+	for(i=0; i<d->count + d->rrsig_count; i++)
+		d->rr_ttl[i] -= now;
+	d->ttl -= now;
+	return ck;
+}
+

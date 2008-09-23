@@ -43,6 +43,7 @@
 #define UTIL_DATA_PACKED_RRSET_H
 #include "util/storage/lruhash.h"
 struct alloc_cache;
+struct regional;
 
 /** type used to uniquely identify rrsets. Cannot be reused without
  * clearing the cache. */
@@ -362,5 +363,17 @@ const char* rrset_trust_to_string(enum rrset_trust s);
  * @return printable string.
  */
 const char* sec_status_to_string(enum sec_status s);
+
+/** 
+ * Allocate rrset in region - no more locks needed 
+ * @param key: a (just from rrset cache looked up) rrset key + valid,
+ * 	packed data record.
+ * @param region: where to alloc the copy
+ * @param now: adjust the TTLs to be relative (subtract from all TTLs).
+ * @return new region-alloced rrset key or NULL on alloc failure.
+ */
+struct ub_packed_rrset_key* packed_rrset_copy_region(
+	struct ub_packed_rrset_key* key, struct regional* region, 
+	uint32_t now);
 
 #endif /* UTIL_DATA_PACKED_RRSET_H */

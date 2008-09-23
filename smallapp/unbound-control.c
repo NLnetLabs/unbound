@@ -203,7 +203,7 @@ setup_ssl(SSL_CTX* ctx, int fd)
 static void
 send_file(SSL* ssl, FILE* in, char* buf, size_t sz)
 {
-	while(fgets(buf, sz, in)) {
+	while(fgets(buf, (int)sz, in)) {
 		if(SSL_write(ssl, buf, (int)strlen(buf)) <= 0)
 			ssl_err("could not SSL_write contents");
 	}

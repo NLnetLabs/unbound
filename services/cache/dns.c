@@ -101,41 +101,6 @@ dns_cache_store_msg(struct module_env* env, struct query_info* qinfo,
 	slabhash_insert(env->msg_cache, hash, &e->entry, rep, env->alloc);
 }
 
-/** allocate rrset in region - no more locks needed */
-static struct ub_packed_rrset_key*
-copy_rrset(struct ub_packed_rrset_key* key, struct regional* region, 
-	uint32_t now)
-{
-	struct ub_packed_rrset_key* ck = regional_alloc(region, 
-		sizeof(struct ub_packed_rrset_key));
-	struct packed_rrset_data* d;
-	struct packed_rrset_data* data = (struct packed_rrset_data*)
-		key->entry.data;
-	size_t dsize, i;
-	if(!ck)
-		return NULL;
-	ck->id = key->id;
-	memset(&ck->entry, 0, sizeof(ck->entry));
-	ck->entry.hash = key->entry.hash;
-	ck->entry.key = ck;
-	ck->rk = key->rk;
-	ck->rk.dname = regional_alloc_init(region, key->rk.dname, 
-		key->rk.dname_len);
-	if(!ck->rk.dname)
-		return NULL;
-	dsize = packed_rrset_sizeof(data);
-	d = (struct packed_rrset_data*)regional_alloc_init(region, data, dsize);
-	if(!d)
-		return NULL;
-	ck->entry.data = d;
-	packed_rrset_ptr_fixup(d);
-	/* make TTLs relative - once per rrset */
-	for(i=0; i<d->count + d->rrsig_count; i++)
-		d->rr_ttl[i] -= now;
-	d->ttl -= now;
-	return ck;
-}
-
 /** find closest NS or DNAME and returns the rrset (locked) */
 static struct ub_packed_rrset_key*
 find_closest_of_type(struct module_env* env, uint8_t* qname, size_t qnamelen, 
@@ -171,7 +136,7 @@ addr_to_additional(struct ub_packed_rrset_key* rrset, struct regional* region,
 	struct dns_msg* msg, uint32_t now)
 {
 	if((msg->rep->rrsets[msg->rep->rrset_count] = 
-		copy_rrset(rrset, region, now))) {
+		packed_rrset_copy_region(rrset, region, now))) {
 		msg->rep->ar_numrrsets++;
 		msg->rep->rrset_count++;
 	}
@@ -271,7 +236,7 @@ find_add_ds(struct module_env* env, struct regional* region,
 	if(rrset) {
 		/* add it to auth section. This is the second rrset. */
 		if((msg->rep->rrsets[msg->rep->rrset_count] = 
-			copy_rrset(rrset, region, now))) {
+			packed_rrset_copy_region(rrset, region, now))) {
 			msg->rep->ns_numrrsets++;
 			msg->rep->rrset_count++;
 		}
@@ -314,7 +279,7 @@ create_msg(uint8_t* qname, size_t qnamelen, uint16_t qtype, uint16_t qclass,
 		(2 + nsdata->count*2)*sizeof(struct ub_packed_rrset_key*));
 	if(!msg->rep->rrsets)
 		return NULL;
-	msg->rep->rrsets[0] = copy_rrset(nskey, region, now);
+	msg->rep->rrsets[0] = packed_rrset_copy_region(nskey, region, now);
 	if(!msg->rep->rrsets[0])
 		return NULL;
 	msg->rep->ns_numrrsets++;
@@ -414,7 +379,8 @@ tomsg(struct module_env* env, struct msgreply_entry* e, struct reply_info* r,
 	if(!rrset_array_lock(r->ref, r->rrset_count, now))
 		return NULL;
 	for(i=0; i<msg->rep->rrset_count; i++) {
-		msg->rep->rrsets[i] = copy_rrset(r->rrsets[i], region, now);
+		msg->rep->rrsets[i] = packed_rrset_copy_region(r->rrsets[i], 
+			region, now);
 		if(!msg->rep->rrsets[i]) {
 			rrset_array_unlock(r->ref, r->rrset_count);
 			return NULL;
@@ -446,7 +412,7 @@ rrset_msg(struct ub_packed_rrset_key* rrset, struct regional* region,
 	msg->rep->ns_numrrsets = 0;
 	msg->rep->ar_numrrsets = 0;
 	msg->rep->rrset_count = 1;
-	msg->rep->rrsets[0] = copy_rrset(rrset, region, now);
+	msg->rep->rrsets[0] = packed_rrset_copy_region(rrset, region, now);
 	if(!msg->rep->rrsets[0]) /* copy CNAME */
 		return NULL;
 	return msg;
@@ -480,7 +446,7 @@ synth_dname_msg(struct ub_packed_rrset_key* rrset, struct regional* region,
 	msg->rep->ns_numrrsets = 0;
 	msg->rep->ar_numrrsets = 0;
 	msg->rep->rrset_count = 1;
-	msg->rep->rrsets[0] = copy_rrset(rrset, region, now);
+	msg->rep->rrsets[0] = packed_rrset_copy_region(rrset, region, now);
 	if(!msg->rep->rrsets[0]) /* copy DNAME */
 		return NULL;
 	/* synth CNAME rrset */

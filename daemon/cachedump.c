@@ -86,7 +86,7 @@ to_rr(struct ub_packed_rrset_key* k, struct packed_rrset_data* d,
 /** dump one rrset zonefile line */
 static int
 dump_rrset_line(SSL* ssl, struct ub_packed_rrset_key* k,
-        struct packed_rrset_data* d, uint32_t now, int i, uint16_t type)
+        struct packed_rrset_data* d, uint32_t now, size_t i, uint16_t type)
 {
 	char* s;
 	ldns_rr* rr = to_rr(k, d, now, i, type);
@@ -598,45 +598,100 @@ load_rrset_cache(SSL* ssl, struct worker* worker)
 	return 1;
 }
 
+/** read qinfo from next three words */
+static char*
+load_qinfo(char* str, struct query_info* qinfo, ldns_buffer* buf, 
+	struct regional* region, SSL* ssl)
+{
+	/* s is part of the buf */
+	char* s = str;
+	ldns_rr* rr;
+	ldns_status status;
+
+	/* skip three words */
+	s = strchr(str, ' ');
+	if(s) s = strchr(s+1, ' ');
+	if(s) s = strchr(s+1, ' ');
+	if(!s) {
+		(void)ssl_printf(ssl, "error line too short, %s\n", str);
+		return NULL;
+	}
+	s[0] = 0;
+	s++;
+
+	/* parse them */
+	status = ldns_rr_new_question_frm_str(&rr, str, NULL, NULL);
+	if(status != LDNS_STATUS_OK) {
+		(void)ssl_printf(ssl, "error cannot parse: %s %s\n",
+			ldns_get_errorstr_by_id(status), str);
+		return NULL;
+	}
+	qinfo->qtype = ldns_rr_get_type(rr);
+	qinfo->qclass = ldns_rr_get_class(rr);
+	ldns_buffer_clear(buf);
+	status = ldns_dname2buffer_wire(buf, ldns_rr_owner(rr));
+	if(status != LDNS_STATUS_OK) {
+		(void)ssl_printf(ssl, "error cannot dname2wire: %s\n", 
+			ldns_get_errorstr_by_id(status));
+		ldns_rr_free(rr);
+		return NULL;
+	}
+	ldns_rr_free(rr);
+	ldns_buffer_flip(buf);
+	qinfo->qname_len = ldns_buffer_limit(buf);
+	qinfo->qname = (uint8_t*)regional_alloc_init(region, 
+		ldns_buffer_begin(buf), ldns_buffer_limit(buf));
+	if(!qinfo->qname) {
+		(void)ssl_printf(ssl, "error out of memory\n");
+		return NULL;
+	}
+
+	return s;
+}
+
 /** load a msg rrset reference */
 static int
 load_ref(SSL* ssl, ldns_buffer* buf, struct worker* worker, 
 	struct regional *region, struct ub_packed_rrset_key** rrset, 
 	int* go_on)
 {
-	ldns_rr* rr;
-	ldns_status status;
 	char* s = (char*)ldns_buffer_begin(buf);
+	struct query_info qinfo;
+	unsigned int flags;
+	struct ub_packed_rrset_key* k;
 
 	/* read line */
 	if(!ssl_read_buf(ssl, buf))
 		return 0;
+	if(strncmp(s, "BADREF", 6) == 0) {
+		*go_on = 0; /* its bad, skip it and skip message */
+		return 1;
+	}
 
-	s += 4;
-	/* skip three words */
-	s = strchr(s, ' ');
-	if(s) s = strchr(s+1, ' ');
-	if(s) s = strchr(s+1, ' ');
+	s = load_qinfo(s, &qinfo, buf, region, ssl);
 	if(!s) {
-		(void)ssl_printf(ssl, "error ref line too short, %s\n", s);
 		return 0;
 	}
-	s[0] = 0;
-
-	status = ldns_rr_new_question_frm_str(&rr, 
-		(char*)ldns_buffer_begin(buf), NULL, NULL);
-	if(status != LDNS_STATUS_OK) {
-		(void)ssl_printf(ssl, "error cannot parse ref: %s %s\n",
-			ldns_get_errorstr_by_id(status), s);
-		ldns_rr_free(rr);
+	if(sscanf(s, " %u", &flags) != 1) {
+		(void)ssl_printf(ssl, "error cannot parse flags: %s\n", s);
 		return 0;
 	}
-	ldns_rr_free(rr);
-
 
 	/* lookup in cache */
+	k = rrset_cache_lookup(worker->env.rrset_cache, qinfo.qname,
+		qinfo.qname_len, qinfo.qtype, qinfo.qclass,
+		(uint32_t)flags, *worker->env.now, 0);
+	if(!k) {
+		/* not found or expired */
+		*go_on = 0;
+		return 1;
+	}
+
 	/* store in result */
-	return 1;
+	*rrset = packed_rrset_copy_region(k, region, *worker->env.now);
+	lock_rw_unlock(&k->entry.lock);
+
+	return (*rrset != NULL);
 }
 
 /** load a msg entry */
@@ -647,8 +702,6 @@ load_msg(SSL* ssl, ldns_buffer* buf, struct worker* worker)
 	struct query_info qinf;
 	struct reply_info rep;
 	char* s = (char*)ldns_buffer_begin(buf);
-	ldns_rr* rr;
-	ldns_status status;
 	unsigned int flags, qdcount, ttl, security, an, ns, ar;
 	size_t i;
 	int go_on = 1;
@@ -660,51 +713,15 @@ load_msg(SSL* ssl, ldns_buffer* buf, struct worker* worker)
 		return 0;
 	}
 	s += 4;
-	/* skip three words */
-	s = strchr(s, ' ');
-	if(s) s = strchr(s+1, ' ');
-	if(s) s = strchr(s+1, ' ');
+	s = load_qinfo(s, &qinf, buf, region, ssl);
 	if(!s) {
-		(void)ssl_printf(ssl, "error msg line too short, %s\n", s);
-		return 0;
-	}
-	s[0] = 0;
-
-	status = ldns_rr_new_question_frm_str(&rr, 
-		(char*)ldns_buffer_at(buf, 4), NULL, NULL);
-	if(status != LDNS_STATUS_OK) {
-		(void)ssl_printf(ssl, "error cannot parse query: %s %s\n",
-			ldns_get_errorstr_by_id(status), s);
-		ldns_rr_free(rr);
 		return 0;
 	}
 
 	/* read remainder of line */
-	if(sscanf(s+1, " %u %u %u %u %u %u %u", &flags, &qdcount, &ttl, 
+	if(sscanf(s, " %u %u %u %u %u %u %u", &flags, &qdcount, &ttl, 
 		&security, &an, &ns, &ar) != 7) {
-		(void)ssl_printf(ssl, "error cannot parse numbers: %s\n", s+1);
-		ldns_rr_free(rr);
-		return 0;
-	}
-
-	/* fill qinfo and repinfo */
-	qinf.qtype = ldns_rr_get_type(rr);
-	qinf.qclass = ldns_rr_get_class(rr);
-	ldns_buffer_clear(buf);
-	status = ldns_dname2buffer_wire(buf, ldns_rr_owner(rr));
-	if(status != LDNS_STATUS_OK) {
-		(void)ssl_printf(ssl, "error cannot dname2wire: %s\n", 
-			ldns_get_errorstr_by_id(status));
-		ldns_rr_free(rr);
-		return 0;
-	}
-	ldns_rr_free(rr);
-	ldns_buffer_flip(buf);
-	qinf.qname_len = ldns_buffer_limit(buf);
-	qinf.qname = (uint8_t*)regional_alloc_init(region, 
-		ldns_buffer_begin(buf), ldns_buffer_limit(buf));
-	if(!qinf.qname) {
-		(void)ssl_printf(ssl, "error out of memory\n");
+		(void)ssl_printf(ssl, "error cannot parse numbers: %s\n", s);
 		return 0;
 	}
 	rep.flags = (uint16_t)flags;
