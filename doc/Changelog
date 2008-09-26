@@ -1,3 +1,8 @@
+26 September 2008: Wouter
+	- tests for remote-control.
+	- small memory leak in exception during remote control fixed.
+	- fixup for lock checking but not unchecking in remote control.
+
 23 September 2008: Wouter
 	- Msg cache is loaded. A cache load enables cache responses.
 	- unbound-control flush [name], flush_type and flush_zone.

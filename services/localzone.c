@@ -144,8 +144,8 @@ parse_dname(const char* str, uint8_t** res, size_t* len, int* labs)
 
 /** create a new localzone */
 static struct local_zone*
-local_zone_create(struct local_zones* zones, uint8_t* nm, size_t len, 
-	int labs, enum localzone_type t, uint16_t dclass)
+local_zone_create(uint8_t* nm, size_t len, int labs, 
+	enum localzone_type t, uint16_t dclass)
 {
 	struct local_zone* z = (struct local_zone*)calloc(1, sizeof(*z));
 	if(!z) {
@@ -165,13 +165,7 @@ local_zone_create(struct local_zones* zones, uint8_t* nm, size_t len,
 	}
 	rbtree_init(&z->data, &local_data_cmp);
 	lock_protect(&z->lock, &z->parent, sizeof(*z)-sizeof(rbnode_t));
-	lock_protect(&zones->lock, &z->node, sizeof(z->node));
-	lock_protect(&zones->lock, &z->parent, sizeof(z->parent));
-	lock_protect(&zones->lock, &z->name, sizeof(z->name));
-	lock_protect(&zones->lock, &z->namelen, sizeof(z->namelen));
-	lock_protect(&zones->lock, &z->namelabs, sizeof(z->namelabs));
-	lock_protect(&zones->lock, &z->dclass, sizeof(z->dclass));
-	(void)zones; /* avoid argument unused warning if no lock checks */
+	/* also the zones->lock protects node, parent, name*, class */
 	return z;
 }
 
@@ -180,7 +174,7 @@ static struct local_zone*
 lz_enter_zone_dname(struct local_zones* zones, uint8_t* nm, size_t len, 
 	int labs, enum localzone_type t, uint16_t c)
 {
-	struct local_zone* z = local_zone_create(zones, nm, len, labs, t, c);
+	struct local_zone* z = local_zone_create(nm, len, labs, t, c);
 	if(!z) {
 		log_err("out of memory");
 		return NULL;
@@ -1180,8 +1174,7 @@ struct local_zone* local_zones_add_zone(struct local_zones* zones,
 	enum localzone_type tp)
 {
 	/* create */
-	struct local_zone* z = local_zone_create(zones, name, len, labs, tp,
-		dclass);
+	struct local_zone* z = local_zone_create(name, len, labs, tp, dclass);
 	if(!z) return NULL;
 	lock_rw_wrlock(&z->lock);
 

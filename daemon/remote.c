@@ -939,9 +939,9 @@ do_zone_remove(SSL* ssl, struct worker* worker, char* arg)
 		nmlabs, LDNS_RR_CLASS_IN))) {
 		/* present in tree */
 		local_zones_del_zone(worker->daemon->local_zones, z);
-		free(nm);
 	}
 	lock_quick_unlock(&worker->daemon->local_zones->lock);
+	free(nm);
 	send_ok(ssl);
 }
 

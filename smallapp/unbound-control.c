@@ -58,10 +58,10 @@ usage()
 	printf("  -s ip[@port]	server address, if omitted config is used.\n");
 	printf("  -h		show this usage help.\n");
 	printf("Commands:\n");
-	printf("  start		start server; runs unbound(8)\n");
-	printf("  stop		stops the server\n");
-	printf("  reload	reloads the server\n");
-	printf("  stats		print statistics\n");
+	printf("  start				start server; runs unbound(8)\n");
+	printf("  stop				stops the server\n");
+	printf("  reload			reloads the server\n");
+	printf("  stats				print statistics\n");
 	printf("  verbosity [number]		change logging detail\n");
 	printf("  local_zone [name] [type] 	add new local zone\n");
 	printf("  local_zone_remove [name]	remove local zone and its contents\n");
@@ -302,6 +302,11 @@ int main(int argc, char* argv[])
 	int c, ret;
 	char* cfgfile = CONFIGFILE;
 	char* svr = NULL;
+#ifdef USE_THREAD_DEBUG
+	/* stop the file output from unbound-control, overwites the servers */
+	extern int check_locking_order;
+	check_locking_order = 0;
+#endif /* USE_THREAD_DEBUG */
 	log_ident_set("unbound-control");
 	log_init(NULL, 0, NULL);
 	checklock_start();
