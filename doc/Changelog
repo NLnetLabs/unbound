@@ -2,6 +2,7 @@
 	- tests for remote-control.
 	- small memory leak in exception during remote control fixed.
 	- fixup for lock checking but not unchecking in remote control.
+	- iana portlist updated.
 
 23 September 2008: Wouter
 	- Msg cache is loaded. A cache load enables cache responses.
