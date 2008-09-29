@@ -208,13 +208,15 @@ new_host_entry(struct infra_cache* infra, struct sockaddr_storage* addr,
 	data->ttl = tm + infra->host_ttl;
 	data->lameness = NULL;
 	data->edns_version = 0;
+	data->edns_lame_known = 0;
 	rtt_init(&data->rtt);
 	return &key->entry;
 }
 
 int 
 infra_host(struct infra_cache* infra, struct sockaddr_storage* addr,
-        socklen_t addrlen, uint32_t timenow, int* edns_vs, int* to)
+        socklen_t addrlen, uint32_t timenow, int* edns_vs, 
+	uint8_t* edns_lame_known, int* to)
 {
 	struct lruhash_entry* e = infra_lookup_host_nottl(infra, addr, 
 		addrlen, 0);
@@ -231,6 +233,7 @@ infra_host(struct infra_cache* infra, struct sockaddr_storage* addr,
 			rtt_init(&data->rtt);
 			/* do not touch lameness, it may be valid still */
 			data->edns_version = 0;
+			data->edns_lame_known = 0;
 		}
 	}
 	if(!e) {
@@ -240,6 +243,7 @@ infra_host(struct infra_cache* infra, struct sockaddr_storage* addr,
 		data = (struct infra_host_data*)e->data;
 		*to = rtt_timeout(&data->rtt);
 		*edns_vs = data->edns_version;
+		*edns_lame_known = data->edns_lame_known;
 		slabhash_insert(infra->hosts, e->hash, e, data, NULL);
 		return 1;
 	}
@@ -247,6 +251,7 @@ infra_host(struct infra_cache* infra, struct sockaddr_storage* addr,
 	data = (struct infra_host_data*)e->data;
 	*to = rtt_timeout(&data->rtt);
 	*edns_vs = data->edns_version;
+	*edns_lame_known = data->edns_lame_known;
 	lock_rw_unlock(&e->lock);
 	return 1;
 }
@@ -438,7 +443,7 @@ infra_update_tcp_works(struct infra_cache* infra,
 int 
 infra_rtt_update(struct infra_cache* infra,
         struct sockaddr_storage* addr, socklen_t addrlen,
-        int roundtrip, uint32_t timenow)
+        int roundtrip, int orig_rtt, uint32_t timenow)
 {
 	struct lruhash_entry* e = infra_lookup_host_nottl(infra, addr, 
 		addrlen, 1);
@@ -454,7 +459,7 @@ infra_rtt_update(struct infra_cache* infra,
 	data = (struct infra_host_data*)e->data;
 	data->ttl = timenow + infra->host_ttl;
 	if(roundtrip == -1)
-		rtt_lost(&data->rtt);
+		rtt_lost(&data->rtt, orig_rtt);
 	else	rtt_update(&data->rtt, roundtrip);
 	if(data->rtt.rto > 0)
 		rto = data->rtt.rto;
@@ -483,6 +488,7 @@ infra_edns_update(struct infra_cache* infra,
 	data = (struct infra_host_data*)e->data;
 	data->ttl = timenow + infra->host_ttl;
 	data->edns_version = edns_version;
+	data->edns_lame_known = 1;
 
 	if(needtoinsert)
 		slabhash_insert(infra->hosts, e->hash, e, e->data, NULL);

@@ -294,7 +294,9 @@ struct serviced_query {
 		/** TCP with EDNS sent */
 		serviced_query_TCP_EDNS,
 		/** TCP without EDNS sent */
-		serviced_query_TCP
+		serviced_query_TCP,
+		/** probe to test EDNS lameness (EDNS is dropped) */
+		serviced_query_PROBE_EDNS
 	} 	
 		/** variable with current status */ 
 		status;
@@ -304,6 +306,10 @@ struct serviced_query {
 	int retry;
 	/** time last UDP was sent */
 	struct timeval last_sent_time;
+	/** rtt of last (UDP) message */
+	int last_rtt;
+	/** do we know edns probe status already, for UDP_EDNS queries */
+	int edns_lame_known;
 	/** outside network this is part of */
 	struct outside_network* outnet;
 	/** list of interested parties that need callback on results. */

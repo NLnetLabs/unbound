@@ -1084,7 +1084,8 @@ serviced_delete(struct serviced_query* sq)
 	if(sq->pending) {
 		/* clear up the pending query */
 		if(sq->status == serviced_query_UDP_EDNS ||
-			sq->status == serviced_query_UDP) {
+			sq->status == serviced_query_UDP ||
+			sq->status == serviced_query_PROBE_EDNS) {
 			struct pending* p = (struct pending*)sq->pending;
 			if(p->pc)
 				portcomm_loweruse(sq->outnet, p->pc);
@@ -1184,18 +1185,30 @@ static int
 serviced_udp_send(struct serviced_query* sq, ldns_buffer* buff)
 {
 	int rtt, vs;
+	uint8_t edns_lame_known;
 	uint32_t now = *sq->outnet->now_secs;
 
 	if(!infra_host(sq->outnet->infra, &sq->addr, sq->addrlen, now, &vs,
-		&rtt))
+		&edns_lame_known, &rtt))
 		return 0;
 	if(sq->status == serviced_initial) {
-		if(vs != -1)
+		if(edns_lame_known == 0 && rtt > 5000) {
+			/* perform EDNS lame probe - check if server is
+			 * EDNS lame (EDNS queries to it are dropped) */
+			verbose(VERB_ALGO, "serviced query: send probe to see "
+				" if use of EDNS causes timeouts");
+			rtt /= 10;
+			sq->status = serviced_query_PROBE_EDNS;
+		} else if(vs != -1) {
 			sq->status = serviced_query_UDP_EDNS;
-		else 	sq->status = serviced_query_UDP;
+		} else { 	
+			sq->status = serviced_query_UDP; 
+		}
 	}
 	serviced_encode(sq, buff, sq->status == serviced_query_UDP_EDNS);
 	sq->last_sent_time = *sq->outnet->now_tv;
+	sq->last_rtt = rtt;
+	sq->edns_lame_known = (int)edns_lame_known;
 	verbose(VERB_ALGO, "serviced query UDP timeout=%d msec", rtt);
 	sq->pending = pending_udp_query(sq->outnet, buff, &sq->addr, 
 		sq->addrlen, rtt, serviced_udp_callback, sq);
@@ -1392,9 +1405,17 @@ serviced_udp_callback(struct comm_point* c, void* arg, int error,
 	sq->pending = NULL; /* removed after callback */
 	if(error == NETEVENT_TIMEOUT) {
 		int rto = 0;
+		if(sq->status == serviced_query_PROBE_EDNS) {
+			/* non-EDNS probe failed; not an EDNS lame server */
+			if(!infra_edns_update(outnet->infra, &sq->addr, 
+				sq->addrlen, 0, (uint32_t)now.tv_sec)) {
+				log_err("Out of memory caching edns works");
+			}
+			sq->status = serviced_query_UDP_EDNS;
+		}
 		sq->retry++;
 		if(!(rto=infra_rtt_update(outnet->infra, &sq->addr, sq->addrlen,
-			-1, (uint32_t)now.tv_sec)))
+			-1, sq->last_rtt, (uint32_t)now.tv_sec)))
 			log_err("out of memory in UDP exponential backoff");
 		if(sq->retry < OUTBOUND_UDP_RETRY) {
 			log_name_addr(VERB_ALGO, "retry query", sq->qbuf+10,
@@ -1439,6 +1460,25 @@ serviced_udp_callback(struct comm_point* c, void* arg, int error,
 		return 0;
 	}
 	/* yay! an answer */
+	if(sq->status == serviced_query_PROBE_EDNS) {
+		/* probe without EDNS succeeds, so we conclude that this
+		 * host likely has EDNS packets dropped */
+		log_addr(VERB_OPS, "timeouts, concluded that connection to "
+			"host drops EDNS packets", &sq->addr, sq->addrlen);
+		if(!infra_edns_update(outnet->infra, &sq->addr, sq->addrlen,
+			-1, (uint32_t)now.tv_sec)) {
+			log_err("Out of memory caching no edns for host");
+		}
+		sq->status = serviced_query_UDP;
+	} else if(sq->status == serviced_query_UDP_EDNS && 
+		!sq->edns_lame_known) {
+		/* now we know that edns queries received answers store that */
+		if(!infra_edns_update(outnet->infra, &sq->addr, sq->addrlen, 
+			0, (uint32_t)now.tv_sec)) {
+			log_err("Out of memory caching edns works");
+		}
+		sq->edns_lame_known = 1;
+	}
 	if(now.tv_sec > sq->last_sent_time.tv_sec ||
 		(now.tv_sec == sq->last_sent_time.tv_sec &&
 		now.tv_usec > sq->last_sent_time.tv_usec)) {
@@ -1448,7 +1488,7 @@ serviced_udp_callback(struct comm_point* c, void* arg, int error,
 		verbose(VERB_ALGO, "measured roundtrip at %d msec", roundtime);
 		log_assert(roundtime >= 0);
 		if(!infra_rtt_update(outnet->infra, &sq->addr, sq->addrlen, 
-			roundtime, (uint32_t)now.tv_sec))
+			roundtime, sq->last_rtt, (uint32_t)now.tv_sec))
 			log_err("out of memory noting rtt.");
 	}
 	serviced_callbacks(sq, error, c, rep);
@@ -1631,7 +1671,8 @@ serviced_get_mem(struct serviced_query* sq)
 	for(sb = sq->cblist; sb; sb = sb->next)
 		s += sizeof(*sb);
 	if(sq->status == serviced_query_UDP_EDNS ||
-		sq->status == serviced_query_UDP) {
+		sq->status == serviced_query_UDP ||
+		sq->status == serviced_query_PROBE_EDNS) {
 		s += sizeof(struct pending);
 		s += comm_timer_get_mem(NULL);
 	} else {

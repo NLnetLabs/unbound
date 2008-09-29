@@ -95,10 +95,17 @@ rtt_update(struct rtt_info* rtt, int ms)
 }
 
 void 
-rtt_lost(struct rtt_info* rtt)
+rtt_lost(struct rtt_info* rtt, int orig)
 {
 	/* exponential backoff */
-	rtt->rto *= 2;
-	if(rtt->rto > RTT_MAX_TIMEOUT)
-		rtt->rto = RTT_MAX_TIMEOUT;
+
+	/* the original rto is doubled, not the current one to make sure
+	 * that the values in the cache are not increased by lots of
+	 * queries simultaneously as they time out at the same time */
+	orig *= 2;
+	if(rtt->rto <= orig) {
+		rtt->rto = orig;
+		if(rtt->rto > RTT_MAX_TIMEOUT)
+			rtt->rto = RTT_MAX_TIMEOUT;
+	}
 }

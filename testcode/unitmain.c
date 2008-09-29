@@ -289,15 +289,15 @@ rtt_test()
 	rtt_init(&r);
 	/* initial value sensible */
 	unit_assert( rtt_timeout(&r) == init );
-	rtt_lost(&r);
+	rtt_lost(&r, init);
 	unit_assert( rtt_timeout(&r) == init*2 );
-	rtt_lost(&r);
+	rtt_lost(&r, init*2);
 	unit_assert( rtt_timeout(&r) == init*4 );
 	rtt_update(&r, 4000);
 	unit_assert( rtt_timeout(&r) >= 2000 );
-	rtt_lost(&r);
+	rtt_lost(&r, rtt_timeout(&r) );
 	for(i=0; i<100; i++) {
-		rtt_lost(&r); 
+		rtt_lost(&r, rtt_timeout(&r) ); 
 		unit_assert( rtt_timeout(&r) > RTT_MIN_TIMEOUT-1);
 		unit_assert( rtt_timeout(&r) < RTT_MAX_TIMEOUT+1);
 	}
@@ -315,6 +315,7 @@ infra_test()
 	struct infra_cache* slab;
 	struct config_file* cfg = config_create();
 	uint32_t now = 0;
+	uint8_t edns_lame;
 	int vs, to;
 	struct infra_host_key* k;
 	struct infra_host_data* d;
@@ -323,25 +324,25 @@ infra_test()
 
 	slab = infra_create(cfg);
 	unit_assert( infra_host(slab, (struct sockaddr_storage*)&one, 
-		(socklen_t)sizeof(int), now, &vs, &to) );
-	unit_assert( vs == 0 && to == init );
+		(socklen_t)sizeof(int), now, &vs, &edns_lame, &to) );
+	unit_assert( vs == 0 && to == init && edns_lame == 0 );
 
 	unit_assert( infra_rtt_update(slab, (struct sockaddr_storage*)&one,
-		(socklen_t)sizeof(int), -1, now) );
+		(socklen_t)sizeof(int), -1, init, now) );
 	unit_assert( infra_host(slab, (struct sockaddr_storage*)&one, 
-		(socklen_t)sizeof(int), now, &vs, &to) );
-	unit_assert( vs == 0 && to == init*2 );
+		(socklen_t)sizeof(int), now, &vs, &edns_lame, &to) );
+	unit_assert( vs == 0 && to == init*2 && edns_lame == 0 );
 
 	unit_assert( infra_edns_update(slab, (struct sockaddr_storage*)&one,
 		(socklen_t)sizeof(int), -1, now) );
 	unit_assert( infra_host(slab, (struct sockaddr_storage*)&one, 
-		(socklen_t)sizeof(int), now, &vs, &to) );
-	unit_assert( vs == -1 && to == init*2 );
+		(socklen_t)sizeof(int), now, &vs, &edns_lame, &to) );
+	unit_assert( vs == -1 && to == init*2  && edns_lame == 1);
 
 	now += cfg->host_ttl + 10;
 	unit_assert( infra_host(slab, (struct sockaddr_storage*)&one, 
-		(socklen_t)sizeof(int), now, &vs, &to) );
-	unit_assert( vs == 0 && to == init );
+		(socklen_t)sizeof(int), now, &vs, &edns_lame, &to) );
+	unit_assert( vs == 0 && to == init && edns_lame == 0 );
 	
 	unit_assert( infra_set_lame(slab, (struct sockaddr_storage*)&one, 
 		(socklen_t)sizeof(int), zone, zonelen,  now, 0, 

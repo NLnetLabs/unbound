@@ -70,6 +70,10 @@ struct infra_host_data {
 	struct lruhash* lameness;
 	/** edns version that the host supports, -1 means no EDNS */
 	int edns_version;
+	/** if the EDNS lameness is already known or not.
+	 * EDNS lame is when EDNS queries or replies are dropped, 
+	 * and cause a timeout */
+	uint8_t edns_lame_known;
 };
 
 /**
@@ -166,11 +170,14 @@ struct infra_host_data* infra_lookup_host(struct infra_cache* infra,
  * @param addrlen: length of addr.
  * @param timenow: what time it is now.
  * @param edns_vs: edns version it supports, is returned.
+ * @param edns_lame_known: if EDNS lame (EDNS is dropped in transit) has
+ * 	already been probed, is returned.
  * @param to: timeout to use, is returned.
  * @return: 0 on error.
  */
 int infra_host(struct infra_cache* infra, struct sockaddr_storage* addr, 
-	socklen_t addrlen, uint32_t timenow, int* edns_vs, int* to);
+	socklen_t addrlen, uint32_t timenow, int* edns_vs, 
+	uint8_t* edns_lame_known, int* to);
 
 /**
  * Check for lameness of this server for a particular zone.
@@ -213,12 +220,14 @@ int infra_set_lame(struct infra_cache* infra,
  * @param addrlen: length of addr.
  * @param roundtrip: estimate of roundtrip time in milliseconds or -1 for 
  * 	timeout.
+ * @param orig_rtt: original rtt for the query that timed out (roundtrip==-1).
+ * 	ignored if roundtrip != -1.
  * @param timenow: what time it is now.
  * @return: 0 on error. new rto otherwise.
  */
 int infra_rtt_update(struct infra_cache* infra,
         struct sockaddr_storage* addr, socklen_t addrlen,
-	int roundtrip, uint32_t timenow);
+	int roundtrip, int orig_rtt, uint32_t timenow);
 
 /**
  * Update information for the host, store that a TCP transaction works.

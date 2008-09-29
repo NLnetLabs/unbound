@@ -1,3 +1,8 @@
+29 September 2008: Wouter
+	- EDNS lameness detection, if EDNS packets are dropped this is
+	  detected, eventually.
+	- multiple query timeout rtt backoff does not backoff too much.
+
 26 September 2008: Wouter
 	- tests for remote-control.
 	- small memory leak in exception during remote control fixed.

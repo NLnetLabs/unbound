@@ -47,6 +47,7 @@
 	; 'all' has to match header byte for byte and all rrs in packet.
 	; 'ttl' used with all, rrs in packet must also have matching TTLs.
 	; 'DO' will match only queries with DO bit set.
+	; 'noedns' matches queries without EDNS OPT records.
 	MATCH [opcode] [qtype] [qname] [serial=<value>] [all] [ttl]
 	MATCH [UDP|TCP] DO
 	MATCH ...
@@ -168,6 +169,8 @@ struct entry {
 	bool match_ttl;
 	/** match DO bit */
 	bool match_do;
+	/** match absence of EDNS OPT record in query */
+	bool match_noedns;
 	/** match query serial with this value. */
 	uint32_t ixfr_soa_serial; 
 	/** match on UDP/TCP */
