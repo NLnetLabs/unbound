@@ -140,6 +140,9 @@ should_be_bogus(struct ub_packed_rrset_key* rrset)
 		entry.data;
 	if(d->rrsig_count == 0)
 		return 1;
+	/* name 'bogus' as first label signals bogus */
+	if(rrset->rk.dname_len > 6 && memcmp(rrset->rk.dname+1, "bogus", 5)==0)
+		return 1;
 	return 0;
 }
 
@@ -468,6 +471,13 @@ verify_test()
 	verifytest_file("testdata/test_signatures.6", "20080416005004");
 	verifytest_file("testdata/test_signatures.7", "20070829144150");
 	verifytest_file("testdata/test_signatures.8", "20070829144150");
+#ifdef SHA256_DIGEST_LENGTH
+	verifytest_file("testdata/test_signatures.9", "20070829144150");
+	verifytest_file("testdata/test_signatures.11", "20070829144150");
+#endif
+#ifdef SHA512_DIGEST_LENGTH
+	verifytest_file("testdata/test_signatures.10", "20070829144150");
+#endif
 	dstest_file("testdata/test_ds_sig.1");
 	nsectest();
 	nsec3_hash_test("testdata/test_nsec3_hash.1");

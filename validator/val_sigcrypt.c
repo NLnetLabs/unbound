@@ -370,6 +370,12 @@ dnskey_algo_id_is_supported(int id)
 	case LDNS_RSASHA1:
 	case LDNS_RSASHA1_NSEC3:
 	case LDNS_RSAMD5:
+#ifdef SHA256_DIGEST_LENGTH
+	case LDNS_RSASHA256:
+#endif
+#ifdef SHA512_DIGEST_LENGTH
+	case LDNS_RSASHA512:
+#endif
 		return 1;
 	default:
 		return 0;
@@ -400,26 +406,65 @@ int dnskey_algo_is_supported(struct ub_packed_rrset_key* dnskey_rrset,
 		dnskey_idx));
 }
 
+/**
+ * Fillup needed algorithm array for DNSKEY set
+ * @param dnskey: the key
+ * @param num: number of DNSKEY RRs.
+ * @param needs: array per algorithm.
+ * @return the number of algorithms that need valid signatures
+ */
+static size_t
+dnskeyset_needs(struct ub_packed_rrset_key* dnskey, size_t num,
+	uint8_t needs[])
+{
+	uint8_t algo;
+	size_t i, total = 0;
+
+	memset(needs, 0, sizeof(uint8_t)*256);
+	for(i=0; i<num; i++) {
+		algo = (uint8_t)dnskey_get_algo(dnskey, i);
+		if(needs[algo] == 0) {
+			needs[algo] = 1;
+			total++;
+		}
+	}
+	return total;
+}
+
 enum sec_status 
 dnskeyset_verify_rrset(struct module_env* env, struct val_env* ve,
 	struct ub_packed_rrset_key* rrset, struct ub_packed_rrset_key* dnskey)
 {
 	enum sec_status sec;
-	size_t i, num;
+	size_t i, num, numneeds;
 	rbtree_t* sortree = NULL;
+	/* make sure that for all DNSKEY algorithms there are valid sigs */
+	uint8_t needs[256]; /* 1 if need sig for that algorithm */
+
 	num = rrset_get_sigcount(rrset);
 	if(num == 0) {
 		verbose(VERB_QUERY, "rrset failed to verify due to a lack of "
 			"signatures");
 		return sec_status_bogus;
 	}
+
+	numneeds = dnskeyset_needs(dnskey, num, needs);
 	for(i=0; i<num; i++) {
 		sec = dnskeyset_verify_rrset_sig(env, ve, *env->now, rrset, 
 			dnskey, i, &sortree);
-		if(sec == sec_status_secure)
-			return sec;
+		/* see which algorithm has been fixed up */
+		if(sec == sec_status_secure) {
+			uint8_t a = (uint8_t)dnskey_get_algo(dnskey, i);
+			if(needs[a] == 1) {
+				needs[a] = 0;
+				numneeds --;
+				if(numneeds == 0) /* done! */
+					return sec;
+			}
+		}
 	}
-	verbose(VERB_ALGO, "rrset failed to verify: all signatures are bogus");
+	verbose(VERB_ALGO, "rrset failed to verify: no valid signatures for "
+		"%d algorithms", (int)numneeds);
 	return sec_status_bogus;
 }
 
@@ -1256,18 +1301,36 @@ setup_key_digest(int algo, EVP_PKEY* evp_key, const EVP_MD** digest_type,
 			break;
 		case LDNS_RSASHA1:
 		case LDNS_RSASHA1_NSEC3:
+#ifdef SHA256_DIGEST_LENGTH
+		case LDNS_RSASHA256:
+#endif
+#ifdef SHA512_DIGEST_LENGTH
+		case LDNS_RSASHA512:
+#endif
 			rsa = ldns_key_buf2rsa_raw(key, keylen);
 			if(!rsa) {
 				verbose(VERB_QUERY, "verify: "
-					"ldns_key_buf2rsa_raw SHA1 failed");
+					"ldns_key_buf2rsa_raw SHA failed");
 				return 0;
 			}
 			if(EVP_PKEY_assign_RSA(evp_key, rsa) == 0) {
 				verbose(VERB_QUERY, "verify: "
-					"EVP_PKEY_assign_RSA SHA1 failed");
+					"EVP_PKEY_assign_RSA SHA failed");
 				return 0;
 			}
-			*digest_type = EVP_sha1();
+
+			/* select SHA version */
+#ifdef SHA256_DIGEST_LENGTH
+			if(algo == LDNS_RSASHA256)
+				*digest_type = EVP_sha256();
+			else
+#endif
+#ifdef SHA512_DIGEST_LENGTH
+				if(algo == LDNS_RSASHA512)
+				*digest_type = EVP_sha512();
+			else
+#endif
+				*digest_type = EVP_sha1();
 
 			break;
 		case LDNS_RSAMD5:
