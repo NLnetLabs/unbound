@@ -368,6 +368,11 @@ server:
 	# (this makes example.com, www.example.com, etc, all go to 192.0.2.3)
 	# local-zone: "example.com" redirect
 	# local-data: "example.com A 192.0.2.3"
+	#
+	# Shorthand to make PTR records, "IPv4 name" or "IPv6 name".
+	# You can also add PTR records using local-data directly, but then
+	# you need to do the reverse notation yourself.
+	# local-data-ptr: "192.0.2.3 www.example.com"
 
 # Remote control config section. 
 remote-control:

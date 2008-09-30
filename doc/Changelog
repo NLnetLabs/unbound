@@ -6,6 +6,7 @@
 	- when using stub on localhost (127.0.0.1@10053) unbound works.
 	  Like when running NSD to host a local zone, on the same machine.
 	  The noprime feature. manpages more explanation. Added a test for it.
+	- shorthand for reverse PTR,  local-data-ptr: "1.2.3.4 www.ex.com"
 
 29 September 2008: Wouter
 	- EDNS lameness detection, if EDNS packets are dropped this is

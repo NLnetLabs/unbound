@@ -182,6 +182,7 @@ val-nsec3-keysize-iterations{COLON}	{ YDOUT; return VAR_VAL_NSEC3_KEYSIZE_ITERAT
 use-syslog{COLON}	{ YDOUT; return VAR_USE_SYSLOG;}
 local-zone{COLON}	{ YDOUT; return VAR_LOCAL_ZONE;}
 local-data{COLON}	{ YDOUT; return VAR_LOCAL_DATA;}
+local-data-ptr{COLON}	{ YDOUT; return VAR_LOCAL_DATA_PTR;}
 statistics-interval{COLON}	{ YDOUT; return VAR_STATISTICS_INTERVAL;}
 statistics-cumulative{COLON}	{ YDOUT; return VAR_STATISTICS_CUMULATIVE;}
 extended-statistics{COLON}	{ YDOUT; return VAR_EXTENDED_STATISTICS;}

@@ -422,6 +422,13 @@ char* fname_after_chroot(const char* fname, struct config_file* cfg,
 	int use_chdir);
 
 /**
+ * Convert a ptr shorthand into a full reverse-notation PTR record.
+ * @param str: input string, "IP name"
+ * @return: malloced string "reversed-ip-name PTR name"
+ */
+char* cfg_ptr_reverse(char* str);
+
+/**
  * Used during options parsing
  */
 struct config_parser_state {

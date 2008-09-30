@@ -674,6 +674,11 @@ local\-data: 'example. TXT "text"'.
 If you need more complicated authoritative data, with referrals, wildcards,
 CNAME/DNAME support, or DNSSEC authoritative service, setup a stub\-zone for
 it as detailed in the stub zone section below.
+.TP 5
+.B local\-data\-ptr: \fI"IPaddr name"
+Configure local data shorthand for a PTR record with the reversed IPv4 or
+IPv6 address and the host name.  For example "192.0.2.4 www.example.com".
+TTL can be inserted like this: "2001:DB8::4 7200 www.example.com"
 .SS "Remote Control Options"
 In the
 .B remote\-control:

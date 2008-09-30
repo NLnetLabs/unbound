@@ -890,3 +890,104 @@ fname_after_chroot(const char* fname, struct config_file* cfg, int use_chdir)
 	return buf;
 }
 
+/** return next space character in string */
+static char* next_space_pos(char* str)
+{
+	char* sp = strchr(str, ' ');
+	char* tab = strchr(str, '\t');
+	if(!tab && !sp)
+		return NULL;
+	if(!sp) return tab;
+	if(!tab) return sp;
+	return (sp<tab)?sp:tab;
+}
+
+/** return last space character in string */
+static char* last_space_pos(char* str)
+{
+	char* sp = strrchr(str, ' ');
+	char* tab = strrchr(str, '\t');
+	if(!tab && !sp)
+		return NULL;
+	if(!sp) return tab;
+	if(!tab) return sp;
+	return (sp>tab)?sp:tab;
+}
+
+char* cfg_ptr_reverse(char* str)
+{
+	char* ip, *ip_end;
+	char* name;
+	char* result;
+	char buf[1024];
+	struct sockaddr_storage addr;
+	socklen_t addrlen;
+
+	/* parse it as: [IP] [between stuff] [name] */
+	ip = str;
+	while(*ip && isspace(*ip))
+		ip++;
+	if(!*ip) {
+		log_err("syntax error: too short: %s", str);
+		return NULL;
+	}
+	ip_end = next_space_pos(ip);
+	if(!ip_end || !*ip_end) {
+		log_err("syntax error: expected name: %s", str);
+		return NULL;
+	}
+
+	name = last_space_pos(ip_end);
+	if(!name || !*name) {
+		log_err("syntax error: expected name: %s", str);
+		return NULL;
+	}
+
+	sscanf(ip, "%100s", buf);
+	buf[sizeof(buf)-1]=0;
+
+	if(!ipstrtoaddr(buf, UNBOUND_DNS_PORT, &addr, &addrlen)) {
+		log_err("syntax error: cannot parse address: %s", str);
+		return NULL;
+	}
+
+	/* reverse IPv4:
+	 * ddd.ddd.ddd.ddd.in-addr-arpa.
+	 * IPv6: (h.){32}.ip6.arpa.  */
+
+	if(addr_is_ip6(&addr, addrlen)) {
+		struct in6_addr* ad = &((struct sockaddr_in6*)&addr)->sin6_addr;
+		char* hex = "0123456789abcdef";
+		char *p = buf;
+		int i;
+		for(i=15; i>=0; i--) {
+			uint8_t b = ((uint8_t*)ad)[i];
+			*p++ = hex[ (b&0x0f) ];
+			*p++ = '.';
+			*p++ = hex[ (b&0xf0) >> 4 ];
+			*p++ = '.';
+		}
+		snprintf(buf+16*4, sizeof(buf)-16*4, "ip6.arpa. ");
+	} else {
+		struct in_addr* ad = &((struct sockaddr_in*)&addr)->sin_addr;
+		snprintf(buf, sizeof(buf), "%u.%u.%u.%u.in-addr.arpa. ",
+		(unsigned)((uint8_t*)ad)[3], (unsigned)((uint8_t*)ad)[2],
+		(unsigned)((uint8_t*)ad)[1], (unsigned)((uint8_t*)ad)[0]);
+	}
+
+	/* printed the reverse address, now the between goop and name on end */
+	while(*ip_end && isspace(*ip_end))
+		ip_end++;
+	if(name>ip_end) {
+		snprintf(buf+strlen(buf), sizeof(buf)-strlen(buf), "%.*s", 
+			(int)(name-ip_end), ip_end);
+	}
+	snprintf(buf+strlen(buf), sizeof(buf)-strlen(buf), " PTR %s", name);
+
+	result = strdup(buf);
+	if(!result) {
+		log_err("out of memory parsing %s", str);
+		return NULL;
+	}
+	return result;
+}

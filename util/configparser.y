@@ -95,7 +95,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_PRIVATE_DOMAIN VAR_REMOTE_CONTROL VAR_CONTROL_ENABLE
 %token VAR_CONTROL_INTERFACE VAR_CONTROL_PORT VAR_SERVER_KEY_FILE
 %token VAR_SERVER_CERT_FILE VAR_CONTROL_KEY_FILE VAR_CONTROL_CERT_FILE
-%token VAR_EXTENDED_STATISTICS
+%token VAR_EXTENDED_STATISTICS VAR_LOCAL_DATA_PTR
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -140,7 +140,8 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_outgoing_port_permit | server_outgoing_port_avoid |
 	server_dlv_anchor_file | server_dlv_anchor | server_neg_cache_size |
 	server_harden_referral_path | server_private_address |
-	server_private_domain | server_extended_statistics
+	server_private_domain | server_extended_statistics | 
+	server_local_data_ptr
 	;
 stubstart: VAR_STUB_ZONE
 	{
@@ -829,6 +830,21 @@ server_local_data: VAR_LOCAL_DATA STRING
 		OUTYY(("P(server_local_data:%s)\n", $2));
 		if(!cfg_strlist_insert(&cfg_parser->cfg->local_data, $2))
 			fatal_exit("out of memory adding local-data");
+	}
+	;
+server_local_data_ptr: VAR_LOCAL_DATA_PTR STRING
+	{
+		char* ptr;
+		OUTYY(("P(server_local_data_ptr:%s)\n", $2));
+		ptr = cfg_ptr_reverse($2);
+		free($2);
+		if(ptr) {
+			if(!cfg_strlist_insert(&cfg_parser->cfg->
+				local_data, ptr))
+				fatal_exit("out of memory adding local-data");
+		} else {
+			yyerror("local-data-ptr could not be reversed");
+		}
 	}
 	;
 stub_name: VAR_NAME STRING
