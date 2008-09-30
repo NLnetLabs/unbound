@@ -140,7 +140,8 @@ compile_time_root_prime(struct regional* r, int do_ip4, int do_ip6)
 
 /** insert new hint info into hint structure */
 static int
-hints_insert(struct iter_hints* hints, uint16_t c, struct delegpt* dp)
+hints_insert(struct iter_hints* hints, uint16_t c, struct delegpt* dp,
+	int noprime)
 {
 	struct iter_hints_stub* node = regional_alloc(hints->region,
 		sizeof(struct iter_hints_stub));
@@ -151,6 +152,7 @@ hints_insert(struct iter_hints* hints, uint16_t c, struct delegpt* dp)
 	if(!nm)
 		return 0;
 	node->dp = dp;
+	node->noprime = (uint8_t)noprime;
 	if(!name_tree_insert(&hints->tree, &node->node, nm, dp->namelen,
 		dp->namelabs, c)) {
 		log_err("second hints ignored.");
@@ -210,13 +212,15 @@ read_stubs_host(struct iter_hints* hints, struct config_stub* s,
 /** set stub server addresses */
 static int 
 read_stubs_addr(struct iter_hints* hints, struct config_stub* s, 
-	struct delegpt* dp)
+	struct delegpt* dp, int* noprime)
 {
 	struct config_strlist* p;
 	struct sockaddr_storage addr;
 	socklen_t addrlen;
 	for(p = s->addrs; p; p = p->next) {
 		log_assert(p->str);
+		if(strchr(p->str, '@'))
+			*noprime = 1;
 		if(!extstrtoaddr(p->str, &addr, &addrlen)) {
 			log_err("cannot parse stub %s ip address: '%s'", 
 				s->name, p->str);
@@ -235,17 +239,19 @@ static int
 read_stubs(struct iter_hints* hints, struct config_file* cfg)
 {
 	struct config_stub* s;
+	int noprime;
 	for(s = cfg->stubs; s; s = s->next) {
 		struct delegpt* dp = delegpt_create(hints->region);
 		if(!dp) {
 			log_err("out of memory");
 			return 0;
 		}
+		noprime = 0;
 		if(!read_stubs_name(hints, s, dp) ||
 			!read_stubs_host(hints, s, dp) ||
-			!read_stubs_addr(hints, s, dp))
+			!read_stubs_addr(hints, s, dp, &noprime))
 			return 0;
-		if(!hints_insert(hints, LDNS_RR_CLASS_IN, dp))
+		if(!hints_insert(hints, LDNS_RR_CLASS_IN, dp, noprime))
 			return 0;
 		delegpt_log(VERB_QUERY, dp);
 	}
@@ -350,7 +356,7 @@ read_root_hints(struct iter_hints* hints, char* fname)
 		log_warn("root hints %s: no NS content", fname);
 		return 1;
 	}
-	if(!hints_insert(hints, c, dp)) {
+	if(!hints_insert(hints, c, dp, 0)) {
 		return 0;
 	}
 	delegpt_log(VERB_QUERY, dp);
@@ -406,7 +412,7 @@ hints_apply_cfg(struct iter_hints* hints, struct config_file* cfg)
 		verbose(VERB_ALGO, "no config, using builtin root hints.");
 		if(!dp) 
 			return 0;
-		if(!hints_insert(hints, LDNS_RR_CLASS_IN, dp))
+		if(!hints_insert(hints, LDNS_RR_CLASS_IN, dp, 0))
 			return 0;
 	}
 
@@ -426,7 +432,7 @@ hints_lookup_root(struct iter_hints* hints, uint16_t qclass)
 	return stub->dp;
 }
 
-struct delegpt* 
+struct iter_hints_stub* 
 hints_lookup_stub(struct iter_hints* hints, uint8_t* qname, 
 	uint16_t qclass, struct delegpt* cache_dp)
 {
@@ -439,13 +445,20 @@ hints_lookup_stub(struct iter_hints* hints, uint8_t* qname,
 	r = (struct iter_hints_stub*)name_tree_lookup(&hints->tree, qname,
 		len, labs, qclass);
 	if(!r) return NULL;
+
+	/*
+	 * If the stub is same as the delegation we got
+	 * And has noprime set, we need to 'prime' to use this stub instead.
+	 */
+	if(r->noprime && query_dname_compare(cache_dp->name, r->dp->name)==0)
+		return r; /* use this stub instead of cached dp */
 	
 	/* 
 	 * If our cached delegation point is above the hint, we need to prime.
 	 */
 	if(dname_strict_subdomain(r->dp->name, r->dp->namelabs,
 		cache_dp->name, cache_dp->namelabs))
-		return r->dp; /* need to prime this stub */
+		return r; /* need to prime this stub */
 	return NULL;
 }
 

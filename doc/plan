@@ -62,11 +62,11 @@ not	stats on SIGUSR1. perhaps also see which slow auth servers cause >1sec value
   data for a name.
 
 *** Improvements
-* fallback to noEDNS if all queries are dropped.
-* dnssec lameness fixen. Check to make sure.
++ fallback to noEDNS if all queries are dropped.
++ dnssec lameness fixen. Check to make sure.
 * negative caching to avoid DS queries, NSEC, NSEC3 (w params).
-* SHA256 supported fully.
-* Make stub to localhost on different port work.
++ SHA256 supported fully.
++ Make stub to localhost on different port work.
 * IPv6 reverse, IP4 reverse local-data shorthand for PTR records (?).
   cumbersome to reverse notate by hand for the operator. For local-data.
   local-reverse-data: "1.2.3.4 mypc.example.com"

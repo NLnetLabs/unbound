@@ -3,6 +3,9 @@
 	- tests for sha256 support and downgrade resistance.
 	- RSASHA256 and RSASHA512 support (using the draft in dnsext),
 	  using the drafted protocol numbers.
+	- when using stub on localhost (127.0.0.1@10053) unbound works.
+	  Like when running NSD to host a local zone, on the same machine.
+	  The noprime feature. manpages more explanation. Added a test for it.
 
 29 September 2008: Wouter
 	- EDNS lameness detection, if EDNS packets are dropped this is

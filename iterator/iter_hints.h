@@ -73,6 +73,8 @@ struct iter_hints_stub {
 	struct name_tree_node node;
 	/** delegation point with hint information for this stub. */
 	struct delegpt* dp;
+	/** does the stub need to forego priming (like on other ports) */
+	uint8_t noprime;
 };
 
 /**
@@ -115,7 +117,7 @@ struct delegpt* hints_lookup_root(struct iter_hints* hints, uint16_t qclass);
  * @return: A priming delegation point if there is a stub hint that must
  *         be primed, otherwise null.
  */
-struct delegpt* hints_lookup_stub(struct iter_hints* hints, 
+struct iter_hints_stub* hints_lookup_stub(struct iter_hints* hints, 
 	uint8_t* qname, uint16_t qclass, struct delegpt* dp);
 
 /**

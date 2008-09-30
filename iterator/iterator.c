@@ -565,12 +565,27 @@ prime_stub(struct module_qstate* qstate, struct iter_qstate* iq,
 {
 	/* Lookup the stub hint. This will return null if the stub doesn't 
 	 * need to be re-primed. */
-	struct delegpt* stub_dp = hints_lookup_stub(ie->hints, qname, qclass, 
-		iq->dp);
+	struct iter_hints_stub* stub = hints_lookup_stub(ie->hints, 
+		qname, qclass, iq->dp);
+	struct delegpt* stub_dp;
 	struct module_qstate* subq;
 	/* The stub (if there is one) does not need priming. */
-	if(!stub_dp)
+	if(!stub)
 		return 0;
+	stub_dp = stub->dp;
+
+	/* is it a noprime stub (always use) */
+	if(stub->noprime) {
+		iq->dp = delegpt_copy(stub_dp, qstate->region);
+		if(!iq->dp) {
+			log_err("out of memory priming stub");
+			(void)error_response(qstate, id, LDNS_RCODE_SERVFAIL);
+			return 1; /* return 1 to make module stop, with error */
+		}
+		log_nametypeclass(VERB_DETAIL, "use stub", stub_dp->name, 
+			LDNS_RR_TYPE_NS, qclass);
+		return 0;
+	}
 
 	/* Otherwise, we need to (re)prime the stub. */
 	log_nametypeclass(VERB_DETAIL, "priming stub", stub_dp->name, 

@@ -744,6 +744,12 @@ bit on replies for the private zone (authoritative servers do not set the
 AD bit).  This setup makes unbound capable of answering queries for the 
 private zone, and can even set the AD bit ('authentic'), but the AA 
 ('authoritative') bit is not set on these replies. 
+.P
+To make a stub setup work, the stub server must serve an NS record set with 
+an up to date list of servers that serve the zone.
+If the NS record set does not list any useful servers for the zone,
+then resolution fails.  When running the authority server on a specific
+port number (using the '@' notation) the NS record set does not matter.
 .TP
 .B name: \fI<domain name>
 Name of the stub zone.
