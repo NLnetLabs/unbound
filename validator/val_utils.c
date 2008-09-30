@@ -421,6 +421,7 @@ val_verify_new_DNSKEYs(struct regional* region, struct module_env* env,
 	/* as long as this is false, we can consider this DS rrset to be
 	 * equivalent to no DS rrset. */
 	int has_useful_ds = 0;
+	int d, digest_algo = 0; /* DS digest algo 0 is not used. */
 	size_t i, num;
 	enum sec_status sec;
 
@@ -435,10 +436,22 @@ val_verify_new_DNSKEYs(struct regional* region, struct module_env* env,
 	}
 
 	num = rrset_get_count(ds_rrset);
+	/* find favority algo, for now, highest number supported */
 	for(i=0; i<num; i++) {
-		/* Check to see if we can understand this DS. */
 		if(!ds_digest_algo_is_supported(ds_rrset, i) ||
 			!ds_key_algo_is_supported(ds_rrset, i)) {
+			continue;
+		}
+		d = ds_get_digest_algo(ds_rrset, i);
+		if(d > digest_algo)
+			digest_algo = d;
+	}
+	for(i=0; i<num; i++) {
+		/* Check to see if we can understand this DS. 
+		 * And check it is the strongest digest */
+		if(!ds_digest_algo_is_supported(ds_rrset, i) ||
+			!ds_key_algo_is_supported(ds_rrset, i) ||
+			ds_get_digest_algo(ds_rrset, i) != digest_algo) {
 			continue;
 		}
 

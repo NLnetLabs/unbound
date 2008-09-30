@@ -189,13 +189,7 @@ ds_get_key_algo(struct ub_packed_rrset_key* k, size_t idx)
 	return (int)rdata[2+2];
 }
 
-/**
- * Get DS RR digest algorithm
- * @param k: DS rrset.
- * @param idx: which DS.
- * @return algorithm or 0 if DS too short.
- */
-static int
+int
 ds_get_digest_algo(struct ub_packed_rrset_key* k, size_t idx)
 {
 	uint8_t* rdata;

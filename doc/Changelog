@@ -1,3 +1,7 @@
+30 September 2008: Wouter
+	- fixup SHA256 DS downgrade, no longer possible to downgrade to SHA1.
+	- tests for sha256 support and downgrade resistance.
+
 29 September 2008: Wouter
 	- EDNS lameness detection, if EDNS packets are dropped this is
 	  detected, eventually.

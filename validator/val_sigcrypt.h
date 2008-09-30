@@ -99,6 +99,14 @@ int dnskey_algo_is_supported(struct ub_packed_rrset_key* dnskey_rrset,
 int ds_digest_algo_is_supported(struct ub_packed_rrset_key* ds_rrset, 
 	size_t ds_idx);
 
+/*
+ * Get DS RR digest algorithm
+ * @param ds_rrset: DS rrset.
+ * @param ds_idx: which DS.
+ * @return algorithm or 0 if DS too short.
+ */
+int ds_get_digest_algo(struct ub_packed_rrset_key* ds_rrset, size_t ds_idx);
+
 /** 
  * See if DS key algorithm is supported 
  * @param ds_rrset: DS rrset
