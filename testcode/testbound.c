@@ -65,6 +65,7 @@ testbound_usage()
 	printf("\ttest the unbound daemon.\n");
 	printf("-h      this help\n");
 	printf("-p file	playback text file\n");
+	printf("-2 	detect SHA256 support (exit code 0 or 1)\n");
 	printf("-o str  unbound commandline options separated by spaces.\n");
 	printf("Version %s\n", PACKAGE_VERSION);
 	printf("BSD licensed, see LICENSE file in source package.\n");
@@ -223,8 +224,17 @@ main(int argc, char* argv[])
 	pass_argc = 1;
 	pass_argv[0] = "unbound";
 	add_opts("-d", &pass_argc, pass_argv);
-	while( (c=getopt(argc, argv, "ho:p:")) != -1) {
+	while( (c=getopt(argc, argv, "2ho:p:")) != -1) {
 		switch(c) {
+		case '2':
+#ifdef SHA256_DIGEST_LENGTH
+			printf("SHA256 supported\n");
+			exit(0);
+#else
+			printf("SHA256 not supported\n");
+			exit(1);
+#endif
+			break;
 		case 'p':
 			playback_file = optarg;
 			break;
