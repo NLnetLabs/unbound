@@ -1,6 +1,10 @@
 2 October 2008: Wouter
 	- fixup unlink of pidfile.
 	- fixup SHA256 algorithm collation code.
+	- contrib/update-anchor.sh does not overwrite anchors if not needed.
+	  exits 0 when a restart is needed, other values if not.
+	  so,  update-anchor.sh -d mydir && /etc/rc.d/unbound restart
+	  can restart unbound exactly when needed.
 
 30 September 2008: Wouter
 	- fixup SHA256 DS downgrade, no longer possible to downgrade to SHA1.
