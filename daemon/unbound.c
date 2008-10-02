@@ -407,6 +407,17 @@ perform_setup(struct daemon* daemon, struct config_file* cfg, int debug_mode,
 		if(strncmp(*cfgfile, cfg->chrootdir, 
 			strlen(cfg->chrootdir)) == 0) 
 			(*cfgfile) += strlen(cfg->chrootdir);
+
+		/* adjust stored pidfile for chroot */
+		if(daemon->pidfile && daemon->pidfile[0] && 
+			strncmp(daemon->pidfile, cfg->chrootdir,
+			strlen(cfg->chrootdir))==0) {
+			char* old = daemon->pidfile;
+			daemon->pidfile = strdup(old+strlen(cfg->chrootdir));
+			free(old);
+			if(!daemon->pidfile)
+				log_err("out of memory in pidfile adjust");
+		}
 	}
 #else
 	(void)cfgfile;
@@ -510,16 +521,12 @@ run_daemon(char* cfgfile, int cmdline_verbose, int debug_mode)
 	 * of the chroot/workdir or we no longer have permissions */
 	if(daemon->pidfile) {
 		int fd;
-		char* pf = daemon->pidfile;
-		if(cfg->chrootdir && cfg->chrootdir[0] &&
-			strncmp(pf, cfg->chrootdir, strlen(cfg->chrootdir)==0))
-			pf += strlen(cfg->chrootdir);
 		/* truncate pidfile */
-		fd = open(pf, O_WRONLY | O_TRUNC, 0644);
+		fd = open(daemon->pidfile, O_WRONLY | O_TRUNC, 0644);
 		if(fd != -1)
 			close(fd);
 		/* delete pidfile */
-		unlink(pf);
+		unlink(daemon->pidfile);
 	}
 	daemon_delete(daemon);
 }
