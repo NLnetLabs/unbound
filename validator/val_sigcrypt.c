@@ -409,16 +409,15 @@ int dnskey_algo_is_supported(struct ub_packed_rrset_key* dnskey_rrset,
 /**
  * Fillup needed algorithm array for DNSKEY set
  * @param dnskey: the key
- * @param num: number of DNSKEY RRs.
  * @param needs: array per algorithm.
  * @return the number of algorithms that need valid signatures
  */
 static size_t
-dnskeyset_needs(struct ub_packed_rrset_key* dnskey, size_t num,
-	uint8_t needs[])
+dnskeyset_needs(struct ub_packed_rrset_key* dnskey, uint8_t needs[])
 {
 	uint8_t algo;
 	size_t i, total = 0;
+	size_t num = rrset_get_count(dnskey);
 
 	memset(needs, 0, sizeof(uint8_t)*256);
 	for(i=0; i<num; i++) {
@@ -448,13 +447,13 @@ dnskeyset_verify_rrset(struct module_env* env, struct val_env* ve,
 		return sec_status_bogus;
 	}
 
-	numneeds = dnskeyset_needs(dnskey, num, needs);
+	numneeds = dnskeyset_needs(dnskey, needs);
 	for(i=0; i<num; i++) {
 		sec = dnskeyset_verify_rrset_sig(env, ve, *env->now, rrset, 
 			dnskey, i, &sortree);
 		/* see which algorithm has been fixed up */
 		if(sec == sec_status_secure) {
-			uint8_t a = (uint8_t)dnskey_get_algo(dnskey, i);
+			uint8_t a = (uint8_t)rrset_get_sig_algo(rrset, i);
 			if(needs[a] == 1) {
 				needs[a] = 0;
 				numneeds --;
