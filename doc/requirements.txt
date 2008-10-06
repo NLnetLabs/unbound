@@ -206,3 +206,40 @@ o Case preservation
   The casing from the query name is used in preference to the casing
   of the authority server. This is the same as BIND. RFC4343 allows either 
   behaviour.
+ 
+o Denial of service protection
+  If many queries are made, and they are made to names for which the
+  authority servers do not respond, then the requestlist for unbound
+  fills up fast.  This results in denial of service for new queries.
+  To combat this the first 50% of the requestlist can run to completion.
+  The last 50% of the requestlist get (200 msec) at least and are replaced
+  by newer queries when older (LIFO).
+  When a new query comes in, and a place in the first 50% is available, this
+  is preferred.  Otherwise, it can replace older queries out of the last 50%.
+  Thus, even long queries get a 50% chance to be resolved.  And many 'short'
+  one or two round-trip resolves can be done in the last 50% of the list.
+  The timeout can be configured.
+
+o EDNS fallback. Is done according to the EDNS RFC (and update draft-00).
+  Unbound assumes EDNS 0 support for the first query.  Then it can detect
+  support (if the servers replies) or non-support (on a NOTIMPL or FORMERR).
+  Some middleboxes drop EDNS 0 queries, mainly when forwarding, not when
+  routing packets.  To detect this, when timeouts keep happening, as the
+  timeout approached 5-10 seconds, and EDNS status has not been detected yet,
+  a single probe query is sent.  This probe has a sub-second timeout, and
+  if the server responds (quickly) without EDNS, this is cached for 15 min.
+  This works very well when detecting an address that you use much - like
+  a forwarder address - which is where the middleboxes need to be detected.
+  Otherwise, it results in a 5 second wait time before EDNS timeout is 
+  detected, which is slow but it works at least. 
+  It minimizes the chances of a dropped query making a (DNSSEC) EDNS server
+  falsely EDNS-nonsupporting, and thus DNSSEC-bogus, works well with 
+  middleboxes, and can detect the occasional authority that drops EDNS.
+
+o 0x20 backoff.
+  The draft describes to back off to the next server, and go through all
+  servers several times.  Unbound goes on get the full list of nameserver
+  addresses, and then makes 3 * number of addresses queries.
+  They are sent to a random server, but no one address more than 4 times.
+  It succeeds if one has 0x20 intact, or else all are equal.
+  Otherwise, servfail is returned to the client.
