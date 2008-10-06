@@ -65,12 +65,6 @@ struct timehist;
  */
 #define MESH_MAX_ACTIVATION 1000
 
-/**
- * Maximum time to live in the jostle list. usec.
- * The entries older than this could be removed to make space for new ones.
- */
-#define MESH_JOSTLE_USEC 200000 /* 0.200000 sec */
-
 /** 
  * Mesh of query states
  */
@@ -133,6 +127,8 @@ struct mesh_area {
 	struct mesh_state* jostle_first;
 	/** last entry in jostle list - this is the entry that is newest */
 	struct mesh_state* jostle_last;
+	/** timeout for jostling. if age is lower, it does not get jostled. */
+	struct timeval jostle_max;
 };
 
 /**

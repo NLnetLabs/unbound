@@ -1,3 +1,6 @@
+6 October 2008: Wouter
+	- jostle-timeout option, so you can config for slow links.
+
 2 October 2008: Wouter
 	- fixup unlink of pidfile.
 	- fixup SHA256 algorithm collation code.

@@ -182,9 +182,18 @@ reasonable guess.
 .TP
 .B num\-queries\-per\-thread: \fI<number>
 The number of queries that every thread will service simultaneously.
-If more queries arrive that need servicing, they are dropped. This forces
+If more queries arrive that need servicing, and no queries can be jostled out
+(see \fIjostle\-timeout\fR), then the queries are dropped. This forces
 the client to resend after a timeout; allowing the server time to work on
 the existing queries. Default 1024.
+.TP
+.B jostle\-timeout: \fI<msec>
+Timeout used when the server is very busy.  Set to a value that usually
+results in one roundtrip to the authority servers.  If too many queries 
+arrive, then 50% of the queries are allowed to run to completion, and
+the other 50% are replaced with the new incoming query if they have already 
+spent more than their allowed time.  This protects against denial of 
+service by slow queries or high query rates.  Default 200 milliseconds.
 .TP
 .B rrset\-cache\-size: \fI<number>
 Number of bytes size of the RRset cache. Default is 4 megabytes.

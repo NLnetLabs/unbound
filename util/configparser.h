@@ -133,7 +133,8 @@
      VAR_CONTROL_KEY_FILE = 349,
      VAR_CONTROL_CERT_FILE = 350,
      VAR_EXTENDED_STATISTICS = 351,
-     VAR_LOCAL_DATA_PTR = 352
+     VAR_LOCAL_DATA_PTR = 352,
+     VAR_JOSTLE_TIMEOUT = 353
    };
 #endif
 /* Tokens.  */
@@ -232,6 +233,7 @@
 #define VAR_CONTROL_CERT_FILE 350
 #define VAR_EXTENDED_STATISTICS 351
 #define VAR_LOCAL_DATA_PTR 352
+#define VAR_JOSTLE_TIMEOUT 353
 
 
 
@@ -243,7 +245,7 @@ typedef union YYSTYPE
 	char*	str;
 }
 /* Line 1489 of yacc.c.  */
-#line 247 "util/configparser.h"
+#line 249 "util/configparser.h"
 	YYSTYPE;
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */
 # define YYSTYPE_IS_DECLARED 1

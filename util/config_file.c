@@ -94,6 +94,7 @@ config_create()
 	cfg->msg_cache_size = 4 * 1024 * 1024;
 	cfg->msg_cache_slabs = 4;
 	cfg->num_queries_per_thread = 1024;
+	cfg->jostle_time = 200;
 	cfg->rrset_cache_size = 4 * 1024 * 1024;
 	cfg->rrset_cache_slabs = 4;
 	cfg->host_ttl = 900;
@@ -268,6 +269,9 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	} else if(strcmp(opt, "num-queries-per-thread:") == 0) {
 		IS_NONZERO_NUMBER;
 		cfg->num_queries_per_thread = (size_t)atoi(val);
+	} else if(strcmp(opt, "jostle-timeout:") == 0) {
+		IS_NUMBER_OR_ZERO;
+		cfg->jostle_time = (size_t)atoi(val);
 	} else if(strcmp(opt, "rrset-cache-size:") == 0) {
 		return cfg_parse_memsize(val, &cfg->rrset_cache_size);
 	} else if(strcmp(opt, "rrset-cache-slabs:") == 0) {

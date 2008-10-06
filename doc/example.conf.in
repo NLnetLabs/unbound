@@ -89,6 +89,9 @@ server:
 	# the number of queries that a thread gets to service.
 	# num-queries-per-thread: 1024
 
+	# if very busy, 50% queries run to completion, 50% get timeout in msec
+	# jostle-timeout: 200
+
 	# the amount of memory to use for the RRset cache.
 	# plain value in bytes or you can append k, m or G. default is "4Mb". 
 	# rrset-cache-size: 4m

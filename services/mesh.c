@@ -104,6 +104,22 @@ timeval_divide(struct timeval* avg, const struct timeval* sum, size_t d)
 #endif
 }
 
+/** histogram compare of time values */
+static int
+timeval_smaller(const struct timeval* x, const struct timeval* y)
+{
+#ifndef S_SPLINT_S
+	if(x->tv_sec < y->tv_sec)
+		return 1;
+	else if(x->tv_sec == y->tv_sec) {
+		if(x->tv_usec <= y->tv_usec)
+			return 1;
+		else	return 0;
+	}
+	else	return 0;
+#endif
+}
+
 int
 mesh_state_compare(const void* ap, const void* bp)
 {
@@ -162,6 +178,9 @@ mesh_create(struct module_stack* stack, struct module_env* env)
 	mesh->stats_dropped = 0;
 	mesh->max_reply_states = env->cfg->num_queries_per_thread;
 	mesh->max_forever_states = (mesh->max_reply_states+1)/2;
+	mesh->jostle_max.tv_sec = (time_t)(env->cfg->jostle_time / 1000);
+	mesh->jostle_max.tv_usec = (time_t)((env->cfg->jostle_time % 1000)
+		*1000);
 	return mesh;
 }
 
@@ -196,8 +215,7 @@ int mesh_make_new_space(struct mesh_area* mesh)
 		struct timeval age;
 		timeval_subtract(&age, mesh->env->now_tv, 
 			&m->reply_list->start_time);
-#ifndef S_SPLINT_S
-		if(age.tv_sec > 0 || age.tv_usec > MESH_JOSTLE_USEC) {
+		if(timeval_smaller(&mesh->jostle_max, &age)) {
 			/* its a goner */
 			log_nametypeclass(VERB_ALGO, "query jostled out to "
 				"make space for a new one",
@@ -214,7 +232,6 @@ int mesh_make_new_space(struct mesh_area* mesh)
 			mesh_state_delete(&m->s);
 			return 1;
 		}
-#endif
 	}
 	/* no space for new item */
 	return 0;

@@ -95,7 +95,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_PRIVATE_DOMAIN VAR_REMOTE_CONTROL VAR_CONTROL_ENABLE
 %token VAR_CONTROL_INTERFACE VAR_CONTROL_PORT VAR_SERVER_KEY_FILE
 %token VAR_SERVER_CERT_FILE VAR_CONTROL_KEY_FILE VAR_CONTROL_CERT_FILE
-%token VAR_EXTENDED_STATISTICS VAR_LOCAL_DATA_PTR
+%token VAR_EXTENDED_STATISTICS VAR_LOCAL_DATA_PTR VAR_JOSTLE_TIMEOUT
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -141,7 +141,7 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_dlv_anchor_file | server_dlv_anchor | server_neg_cache_size |
 	server_harden_referral_path | server_private_address |
 	server_private_domain | server_extended_statistics | 
-	server_local_data_ptr
+	server_local_data_ptr | server_jostle_timeout
 	;
 stubstart: VAR_STUB_ZONE
 	{
@@ -522,6 +522,15 @@ server_num_queries_per_thread: VAR_NUM_QUERIES_PER_THREAD STRING
 		if(atoi($2) == 0)
 			yyerror("number expected");
 		else cfg_parser->cfg->num_queries_per_thread = atoi($2);
+		free($2);
+	}
+	;
+server_jostle_timeout: VAR_JOSTLE_TIMEOUT STRING
+	{
+		OUTYY(("P(server_jostle_timeout:%s)\n", $2));
+		if(atoi($2) == 0 && strcmp($2, "0") != 0)
+			yyerror("number expected");
+		else cfg_parser->cfg->jostle_time = atoi($2);
 		free($2);
 	}
 	;
