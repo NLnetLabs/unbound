@@ -289,11 +289,11 @@ int mesh_new_callback(struct mesh_area* mesh, struct query_info* qinfo,
  *
  * @param mesh: the query mesh.
  * @param e: outbound entry, with query state to run and reply pointer.
- * @param is_ok: if true, reply is OK, otherwise a timeout happened.
  * @param reply: the comm point reply info.
+ * @param what: NETEVENT_* error code (if not 0, what is wrong, TIMEOUT).
  */
 void mesh_report_reply(struct mesh_area* mesh, struct outbound_entry* e,
-	int is_ok, struct comm_reply* reply);
+	struct comm_reply* reply, int what);
 
 /* ------------------- Functions for module environment --------------- */
 

@@ -218,6 +218,13 @@ struct iter_qstate {
 	 */
 	struct delegpt* dp;
 
+	/** state for 0x20 fallback when capsfail happens, 0 not a fallback */
+	int caps_fallback;
+	/** state for capsfail: current server number to try */
+	size_t caps_server;
+	/** state for capsfail: stored query for comparisons */
+	struct reply_info* caps_reply;
+
 	/** Current delegation message - returned for non-RD queries */
 	struct dns_msg* deleg_msg;
 

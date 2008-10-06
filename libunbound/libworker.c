@@ -695,7 +695,7 @@ libworker_handle_reply(struct comm_point* c, void* arg, int error,
 	e.qsent = NULL;
 
 	if(error != 0) {
-		mesh_report_reply(lw->env->mesh, &e, 0, reply_info);
+		mesh_report_reply(lw->env->mesh, &e, reply_info, error);
 		return 0;
 	}
 	/* sanity check. */
@@ -705,10 +705,11 @@ libworker_handle_reply(struct comm_point* c, void* arg, int error,
 		|| LDNS_QDCOUNT(ldns_buffer_begin(c->buffer)) > 1) {
 		/* error becomes timeout for the module as if this reply
 		 * never arrived. */
-		mesh_report_reply(lw->env->mesh, &e, 0, reply_info);
+		mesh_report_reply(lw->env->mesh, &e, reply_info, 
+			NETEVENT_TIMEOUT);
 		return 0;
 	}
-	mesh_report_reply(lw->env->mesh, &e, 1, reply_info);
+	mesh_report_reply(lw->env->mesh, &e, reply_info, NETEVENT_NOERROR);
 	return 0;
 }
 
@@ -720,7 +721,7 @@ libworker_handle_service_reply(struct comm_point* c, void* arg, int error,
 	struct libworker* lw = (struct libworker*)e->qstate->env->worker;
 
 	if(error != 0) {
-		mesh_report_reply(lw->env->mesh, e, 0, reply_info);
+		mesh_report_reply(lw->env->mesh, e, reply_info, error);
 		return 0;
 	}
 	/* sanity check. */
@@ -730,10 +731,11 @@ libworker_handle_service_reply(struct comm_point* c, void* arg, int error,
 		|| LDNS_QDCOUNT(ldns_buffer_begin(c->buffer)) > 1) {
 		/* error becomes timeout for the module as if this reply
 		 * never arrived. */
-		mesh_report_reply(lw->env->mesh, e, 0, reply_info);
+		mesh_report_reply(lw->env->mesh, e, reply_info, 
+			NETEVENT_TIMEOUT);
 		return 0;
 	}
-	mesh_report_reply(lw->env->mesh,  e, 1, reply_info);
+	mesh_report_reply(lw->env->mesh,  e, reply_info, NETEVENT_NOERROR);
 	return 0;
 }
 

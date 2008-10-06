@@ -239,6 +239,8 @@ enum module_ev {
 	module_event_reply,
 	/** no reply, timeout or other error */
 	module_event_noreply,
+	/** reply is there, but capitalisation check failed */
+	module_event_capsfail,
 	/** next module is done, and its reply is awaiting you */
 	module_event_moddone,
 	/** error */

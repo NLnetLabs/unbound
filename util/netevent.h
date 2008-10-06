@@ -80,6 +80,8 @@ typedef int comm_point_callback_t(struct comm_point*, void*, int,
 #define NETEVENT_CLOSED -1
 /** to pass timeout happened to callback function */
 #define NETEVENT_TIMEOUT -2 
+/** to pass fallback from capsforID to callback function; 0x20 failed */
+#define NETEVENT_CAPSFAIL -3
 
 /**
  * A communication point dispatcher. Thread specific.

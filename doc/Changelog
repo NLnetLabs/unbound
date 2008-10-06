@@ -1,5 +1,7 @@
 6 October 2008: Wouter
 	- jostle-timeout option, so you can config for slow links.
+	- 0x20 fallback code.  Tries 3xnumber of nameserver addresses
+	  queries that must all be the same.  Sent to random nameservers.
 
 2 October 2008: Wouter
 	- fixup unlink of pidfile.

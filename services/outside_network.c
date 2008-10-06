@@ -1284,22 +1284,23 @@ serviced_callbacks(struct serviced_query* sq, int error, struct comm_point* c,
 				== LDNS_RCODE_NOERROR || 
 			 LDNS_RCODE_WIRE(ldns_buffer_begin(c->buffer))
 				== LDNS_RCODE_NXDOMAIN)) {
-			verbose(VERB_OPS, "no qname in reply to check 0x20ID");
-			log_addr(VERB_OPS, "from server", 
+			verbose(VERB_DETAIL, "no qname in reply to check 0x20ID");
+			log_addr(VERB_DETAIL, "from server", 
 				&sq->addr, sq->addrlen);
-			log_buf(VERB_OPS, "for packet", c->buffer);
+			log_buf(VERB_DETAIL, "for packet", c->buffer);
 			error = NETEVENT_CLOSED;
 			c = NULL;
 		} else if(ldns_buffer_read_u16_at(c->buffer, 4) > 0 &&
 			!serviced_check_qname(c->buffer, sq->qbuf, 
 			sq->qbuflen)) {
-			verbose(VERB_OPS, "wrong 0x20-ID in reply qname, "
-				"answer dropped");
-			log_addr(VERB_OPS, "from server", 
+			verbose(VERB_DETAIL, "wrong 0x20-ID in reply qname");
+			log_addr(VERB_DETAIL, "from server", 
 				&sq->addr, sq->addrlen);
-			log_buf(VERB_OPS, "for packet", c->buffer);
-			error = NETEVENT_CLOSED;
-			c = NULL;
+			log_buf(VERB_DETAIL, "for packet", c->buffer);
+			error = NETEVENT_CAPSFAIL;
+			/* and cleanup too */
+			pkt_dname_tolower(c->buffer, 
+				ldns_buffer_at(c->buffer, 12));
 		} else {
 			verbose(VERB_ALGO, "good 0x20-ID in reply qname");
 			/* cleanup caps, prettier cache contents. */

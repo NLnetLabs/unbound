@@ -1153,11 +1153,41 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 		tf_policy = ie->target_fetch_policy[iq->depth];
 	}
 
+	/* if in 0x20 fallback get as many targets as possible */
+	if(iq->caps_fallback) {
+		int extra = 0;
+		size_t naddr, nres, navail;
+		if(!query_for_targets(qstate, iq, ie, id, -1, &extra)) {
+			return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
+		}
+		iq->num_target_queries += extra;
+		if(iq->num_target_queries > 0) {
+			/* wait to get all targets, we want to try em */
+			verbose(VERB_ALGO, "wait for all targets for fallback");
+			return 0;
+		}
+		/* did we do enough fallback queries already? */
+		delegpt_count_addr(iq->dp, &naddr, &nres, &navail);
+		/* the current caps_server is the number of fallbacks sent.
+		 * the original query is one that matched too, so we have
+		 * caps_server+1 number of matching queries now */
+		if(iq->caps_server+1 >= naddr*3) {
+			/* we're done, process the response */
+			verbose(VERB_ALGO, "0x20 fallback had %d responses "
+				"match for %d wanted, done.", 
+				(int)iq->caps_server+1, (int)naddr*3);
+			iq->caps_fallback = 0;
+			iq->state = QUERY_RESP_STATE;
+			return 1;
+		}
+		verbose(VERB_ALGO, "0x20 fallback number %d", 
+			(int)iq->caps_server);
+
 	/* if there is a policy to fetch missing targets 
 	 * opportunistically, do it. we rely on the fact that once a 
 	 * query (or queries) for a missing name have been issued, 
 	 * they will not be show up again. */
-	if(tf_policy != 0) {
+	} else if(tf_policy != 0) {
 		int extra = 0;
 		verbose(VERB_ALGO, "attempt to get extra %d targets", 
 			tf_policy);
@@ -1760,7 +1790,8 @@ process_response(struct module_qstate* qstate, struct iter_qstate* iq,
 	if(event == module_event_noreply || event == module_event_error) {
 		goto handle_it;
 	}
-	if(event != module_event_reply || !qstate->reply) {
+	if( (event != module_event_reply && event != module_event_capsfail)
+		|| !qstate->reply) {
 		log_err("Bad event combined with response");
 		outbound_list_remove(&iq->outlist, outbound);
 		(void)error_response(qstate, id, LDNS_RCODE_SERVFAIL);
@@ -1804,6 +1835,37 @@ process_response(struct module_qstate* qstate, struct iter_qstate* iq,
 	if(verbosity >= VERB_ALGO)
 		log_dns_msg("incoming scrubbed packet:", &iq->response->qinfo, 
 			iq->response->rep);
+	
+	if(event == module_event_capsfail) {
+		if(!iq->caps_fallback) {
+			/* start fallback */
+			iq->caps_fallback = 1;
+			iq->caps_server = 0;
+			iq->caps_reply = iq->response->rep;
+			iq->state = QUERYTARGETS_STATE;
+			iq->num_current_queries--;
+			verbose(VERB_DETAIL, "Capsforid: starting fallback");
+			goto handle_it;
+		} else {
+			/* check if reply is the same, otherwise, fail */
+			if(!reply_equal(iq->response->rep, iq->caps_reply)) {
+				verbose(VERB_DETAIL, "Capsforid fallback: "
+					"getting different replies, failed");
+				outbound_list_remove(&iq->outlist, outbound);
+				(void)error_response(qstate, id, 
+					LDNS_RCODE_SERVFAIL);
+				return;
+			}
+			/* continue the fallback procedure at next server */
+			iq->caps_server++;
+			iq->state = QUERYTARGETS_STATE;
+			iq->num_current_queries--;
+			verbose(VERB_DETAIL, "Capsforid: reply is equal. "
+				"go to next fallback");
+			goto handle_it;
+		}
+	}
+	iq->caps_fallback = 0; /* if we were in fallback, 0x20 is OK now */
 
 handle_it:
 	outbound_list_remove(&iq->outlist, outbound);

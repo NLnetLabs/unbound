@@ -211,7 +211,7 @@ worker_handle_reply(struct comm_point* c, void* arg, int error,
 	e.qsent = NULL;
 
 	if(error != 0) {
-		mesh_report_reply(worker->env.mesh, &e, 0, reply_info);
+		mesh_report_reply(worker->env.mesh, &e, reply_info, error);
 		worker_mem_report(worker, NULL);
 		return 0;
 	}
@@ -222,11 +222,12 @@ worker_handle_reply(struct comm_point* c, void* arg, int error,
 		|| LDNS_QDCOUNT(ldns_buffer_begin(c->buffer)) > 1) {
 		/* error becomes timeout for the module as if this reply
 		 * never arrived. */
-		mesh_report_reply(worker->env.mesh, &e, 0, reply_info);
+		mesh_report_reply(worker->env.mesh, &e, reply_info, 
+			NETEVENT_TIMEOUT);
 		worker_mem_report(worker, NULL);
 		return 0;
 	}
-	mesh_report_reply(worker->env.mesh, &e, 1, reply_info);
+	mesh_report_reply(worker->env.mesh, &e, reply_info, NETEVENT_NOERROR);
 	worker_mem_report(worker, NULL);
 	return 0;
 }
@@ -241,7 +242,7 @@ worker_handle_service_reply(struct comm_point* c, void* arg, int error,
 
 	verbose(VERB_ALGO, "worker svcd callback for qstate %p", e->qstate);
 	if(error != 0) {
-		mesh_report_reply(worker->env.mesh, e, 0, reply_info);
+		mesh_report_reply(worker->env.mesh, e, reply_info, error);
 		worker_mem_report(worker, sq);
 		return 0;
 	}
@@ -253,11 +254,12 @@ worker_handle_service_reply(struct comm_point* c, void* arg, int error,
 		/* error becomes timeout for the module as if this reply
 		 * never arrived. */
 		verbose(VERB_ALGO, "worker: bad reply handled as timeout");
-		mesh_report_reply(worker->env.mesh, e, 0, reply_info);
+		mesh_report_reply(worker->env.mesh, e, reply_info, 
+			NETEVENT_TIMEOUT);
 		worker_mem_report(worker, sq);
 		return 0;
 	}
-	mesh_report_reply(worker->env.mesh, e, 1, reply_info);
+	mesh_report_reply(worker->env.mesh, e, reply_info, NETEVENT_NOERROR);
 	worker_mem_report(worker, sq);
 	return 0;
 }

@@ -363,11 +363,16 @@ mesh_new_callback(struct mesh_area* mesh, struct query_info* qinfo,
 }
 
 void mesh_report_reply(struct mesh_area* mesh, struct outbound_entry* e,
-        int is_ok, struct comm_reply* reply)
+        struct comm_reply* reply, int what)
 {
+	enum module_ev event = module_event_reply;
 	e->qstate->reply = reply;
-	mesh_run(mesh, e->qstate->mesh_info,
-		is_ok?module_event_reply:module_event_noreply, e);
+	if(what != NETEVENT_NOERROR) {
+		event = module_event_noreply;
+		if(what == NETEVENT_CAPSFAIL)
+			event = module_event_capsfail;
+	}
+	mesh_run(mesh, e->qstate->mesh_info, event, e);
 }
 
 struct mesh_state* 

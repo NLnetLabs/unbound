@@ -180,4 +180,14 @@ int iter_msg_has_dnssec(struct dns_msg* msg);
 int iter_msg_from_zone(struct dns_msg* msg, struct delegpt* dp, 
 	enum response_type type, uint16_t dclass);
 
+/**
+ * Check if two replies are equal
+ * For fallback procedures
+ * @param p: reply one. The reply has rrset data pointers in region.
+ * 	Does not check rrset-IDs
+ * @param q: reply two
+ * @return if one and two are equal.
+ */
+int reply_equal(struct reply_info* p, struct reply_info* q);
+
 #endif /* ITERATOR_ITER_UTILS_H */
