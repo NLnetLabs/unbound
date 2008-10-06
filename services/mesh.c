@@ -178,9 +178,11 @@ mesh_create(struct module_stack* stack, struct module_env* env)
 	mesh->stats_dropped = 0;
 	mesh->max_reply_states = env->cfg->num_queries_per_thread;
 	mesh->max_forever_states = (mesh->max_reply_states+1)/2;
+#ifdef S_SPLINT_S
 	mesh->jostle_max.tv_sec = (time_t)(env->cfg->jostle_time / 1000);
 	mesh->jostle_max.tv_usec = (time_t)((env->cfg->jostle_time % 1000)
 		*1000);
+#endif
 	return mesh;
 }
 
