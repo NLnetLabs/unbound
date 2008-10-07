@@ -50,6 +50,9 @@ struct val_neg_data;
 struct config_file;
 struct reply_info;
 struct rrset_cache;
+struct regional;
+struct query_info;
+struct dns_msg;
 
 /**
  * The negative cache.  It is shared between the threads, so locked. 
@@ -188,6 +191,16 @@ int val_neg_zone_compare(const void* a, const void* b);
 void val_neg_addreply(struct val_neg_cache* neg, struct reply_info* rep);
 
 /**
+ * Insert NSECs from this referral into the negative cache for reference.
+ * @param neg: negative cache
+ * @param rep: referral reply with NS, NSECs.
+ * @param zone: bailiwick for the referral.
+ * Errors are ignored, means that storage is omitted.
+ */
+void val_neg_addreferral(struct val_neg_cache* neg, struct reply_info* rep,
+	uint8_t* zone);
+
+/**
  * Perform a DLV style lookup
  * During the lookup, we could find out that data has expired. In that
  * case the neg_cache entries are removed, and lookup fails.
@@ -206,5 +219,20 @@ void val_neg_addreply(struct val_neg_cache* neg, struct reply_info* rep);
  */
 int val_neg_dlvlookup(struct val_neg_cache* neg, uint8_t* qname, size_t len,
 	uint16_t qclass, struct rrset_cache* rrset_cache, uint32_t now);
+
+/**
+ * For the given query, try to get a reply out of the negative cache.
+ * The reply still needs to be validated.
+ * @param neg: negative cache.
+ * @param qinfo: query
+ * @param region: where to allocate reply.
+ * @param rrset_cache: rrset cache.
+ * @return a reply message if something was found. 
+ * 	This reply may still need validation.
+ * 	NULL if nothing found (or out of memory).
+ */
+struct dns_msg* val_neg_getmsg(struct val_neg_cache* neg, 
+	struct query_info* qinfo, struct regional* region, 
+	struct rrset_cache* rrset_cache);
 
 #endif /* VALIDATOR_VAL_NEG_H */

@@ -127,6 +127,7 @@ val_apply_cfg(struct module_env* env, struct val_env* val_env,
 		log_err("out of memory");
 		return 0;
 	}
+	env->neg_cache = val_env->neg_cache;
 	val_env->date_override = cfg->val_date_override;
 	c = cfg_count_numbers(cfg->val_nsec3_key_iterations);
 	if(c < 1 || (c&1)) {

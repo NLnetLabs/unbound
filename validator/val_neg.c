@@ -44,6 +44,7 @@
 #include "config.h"
 #include "validator/val_neg.h"
 #include "validator/val_nsec.h"
+#include "validator/val_utils.h"
 #include "util/data/dname.h"
 #include "util/data/msgreply.h"
 #include "util/log.h"
@@ -272,19 +273,21 @@ static void neg_make_space(struct val_neg_cache* neg, size_t need)
 /**
  * Find the given zone, from the SOA owner name and class
  * @param neg: negative cache
- * @param soa: what to look for.
+ * @param nm: what to look for.
+ * @param len: length of nm
+ * @param dclass: class to look for.
  * @return zone or NULL if not found.
  */
 static struct val_neg_zone* neg_find_zone(struct val_neg_cache* neg, 
-	struct ub_packed_rrset_key* soa)
+	uint8_t* nm, size_t len, uint16_t dclass)
 {
 	struct val_neg_zone lookfor;
 	struct val_neg_zone* result;
 	lookfor.node.key = &lookfor;
-	lookfor.name = soa->rk.dname;
-	lookfor.len = soa->rk.dname_len;
+	lookfor.name = nm;
+	lookfor.len = len;
 	lookfor.labs = dname_count_labels(lookfor.name);
-	lookfor.dclass = ntohs(soa->rk.rrset_class);
+	lookfor.dclass = dclass;
 
 	result = (struct val_neg_zone*)
 		rbtree_search(&neg->tree, lookfor.node.key);
@@ -318,13 +321,12 @@ static size_t calc_data_need(struct reply_info* rep)
 
 /**
  * Calculate space needed for zone and all its parents
- * @param soa: with name.
+ * @param d: name of zone
+ * @param len: length of name
  * @return size.
  */
-static size_t calc_zone_need(struct ub_packed_rrset_key* soa)
+static size_t calc_zone_need(uint8_t* d, size_t len)
 {
-	uint8_t* d = soa->rk.dname;
-	size_t len = soa->rk.dname_len;
 	size_t res = sizeof(struct val_neg_zone) + len;
 	while(!dname_is_root(d)) {
 		log_assert(len > 1); /* not root label */
@@ -419,7 +421,7 @@ static struct val_neg_data* neg_closest_data_parent(
  * @param nm: name for zone (copied)
  * @param nm_len: length of name
  * @param labs: labels in name.
- * @param dclass: class of zone.
+ * @param dclass: class of zone, host order.
  * @return new zone or NULL on failure
  */
 static struct val_neg_zone* neg_setup_zone_node(
@@ -494,19 +496,18 @@ static struct val_neg_zone* neg_zone_chain(
 /**
  * Create a new zone.
  * @param neg: negative cache
- * @param soa: what to look for.
+ * @param nm: what to look for.
+ * @param nm_len: length of name.
+ * @param dclass: class of zone, host order.
  * @return zone or NULL if out of memory.
  */
 static struct val_neg_zone* neg_create_zone(struct val_neg_cache* neg,
-	struct ub_packed_rrset_key* soa)
+	uint8_t* nm, size_t nm_len, uint16_t dclass)
 {
 	struct val_neg_zone* zone;
 	struct val_neg_zone* parent;
 	struct val_neg_zone* p, *np;
-	uint8_t* nm = soa->rk.dname;
-	size_t nm_len = soa->rk.dname_len;
 	int labs = dname_count_labels(nm);
-	uint16_t dclass = ntohs(soa->rk.rrset_class);
 
 	/* find closest enclosing parent zone that (still) exists */
 	parent = neg_closest_zone_parent(neg, nm, nm_len, labs, dclass);
@@ -809,14 +810,17 @@ void val_neg_addreply(struct val_neg_cache* neg, struct reply_info* rep)
 		soa->rk.dname, LDNS_RR_TYPE_SOA, ntohs(soa->rk.rrset_class));
 	
 	/* ask for enough space to store all of it */
-	need = calc_data_need(rep) + calc_zone_need(soa);
+	need = calc_data_need(rep) + 
+		calc_zone_need(soa->rk.dname, soa->rk.dname_len);
 	lock_basic_lock(&neg->lock);
 	neg_make_space(neg, need);
 
 	/* find or create the zone entry */
-	zone = neg_find_zone(neg, soa);
+	zone = neg_find_zone(neg, soa->rk.dname, soa->rk.dname_len,
+		ntohs(soa->rk.rrset_class));
 	if(!zone) {
-		if(!(zone = neg_create_zone(neg, soa))) {
+		if(!(zone = neg_create_zone(neg, soa->rk.dname, 
+			soa->rk.dname_len, ntohs(soa->rk.rrset_class)))) {
 			lock_basic_unlock(&neg->lock);
 			log_err("out of memory adding negative zone");
 			return;
@@ -957,4 +961,93 @@ int val_neg_dlvlookup(struct val_neg_cache* neg, uint8_t* qname, size_t len,
 	lock_basic_unlock(&neg->lock);
 	verbose(VERB_ALGO, "negcache DLV denial proven");
 	return 1;
+}
+
+/** see if the reply has signed NSEC records and return the signer */
+static uint8_t* reply_nsec_signer(struct reply_info* rep, size_t* signer_len,
+	uint16_t* dclass)
+{
+	size_t i;
+	struct packed_rrset_data* d;
+	uint8_t* s;
+	for(i=rep->an_numrrsets; i< rep->an_numrrsets+rep->ns_numrrsets; i++){
+		if(ntohs(rep->rrsets[i]->rk.type) == LDNS_RR_TYPE_NSEC) {
+			d = (struct packed_rrset_data*)rep->rrsets[i]->
+				entry.data;
+			/* return first signer name of first NSEC */
+			if(d->rrsig_count != 0) {
+				val_find_rrset_signer(rep->rrsets[i],
+					&s, signer_len);
+				if(s && *signer_len) {
+					*dclass = ntohs(rep->rrsets[i]->
+						rk.rrset_class);
+					return s;
+				}
+			}
+		}
+	}
+	return 0;
+}
+
+void val_neg_addreferral(struct val_neg_cache* neg, struct reply_info* rep,
+	uint8_t* zone_name)
+{
+	size_t i, need;
+	uint8_t* signer;
+	size_t signer_len;
+	uint16_t dclass;
+	struct val_neg_zone* zone;
+	/* no SOA in this message, find RRSIG over NSEC's signer name.
+	 * note the NSEC records are maybe not validated yet */
+	signer = reply_nsec_signer(rep, &signer_len, &dclass);
+	if(!signer) 
+		return;
+	if(!dname_subdomain_c(signer, zone_name)) {
+		/* the signer is not in the bailiwick, throw it out */
+		return;
+	}
+
+	log_nametypeclass(VERB_ALGO, "negcache insert referral ",
+		signer, LDNS_RR_TYPE_NS, dclass);
+	
+	/* ask for enough space to store all of it */
+	need = calc_data_need(rep) + calc_zone_need(signer, signer_len);
+	lock_basic_lock(&neg->lock);
+	neg_make_space(neg, need);
+
+	/* find or create the zone entry */
+	zone = neg_find_zone(neg, signer, signer_len, dclass);
+	if(!zone) {
+		if(!(zone = neg_create_zone(neg, signer, signer_len, 
+			dclass))) {
+			lock_basic_unlock(&neg->lock);
+			log_err("out of memory adding negative zone");
+			return;
+		}
+	}
+
+	/* insert the NSECs */
+	for(i=rep->an_numrrsets; i< rep->an_numrrsets+rep->ns_numrrsets; i++){
+		if(ntohs(rep->rrsets[i]->rk.type) != LDNS_RR_TYPE_NSEC)
+			continue;
+		if(!dname_subdomain_c(rep->rrsets[i]->rk.dname, 
+			zone->name)) continue;
+		/* insert NSEC into this zone's tree */
+		neg_insert_data(neg, zone, rep->rrsets[i]);
+	}
+	lock_basic_unlock(&neg->lock);
+}
+
+struct dns_msg* 
+val_neg_getmsg(struct val_neg_cache* neg, struct query_info* qinfo, 
+	struct regional* region, struct rrset_cache* rrset_cache)
+{
+	struct dns_msg* msg;
+	/* only for DS queries */
+	if(qinfo->qtype != LDNS_RR_TYPE_DS)
+		return NULL;
+
+	/* see if info from neg cache is available */
+
+	return msg;
 }
