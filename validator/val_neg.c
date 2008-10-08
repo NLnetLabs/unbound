@@ -51,6 +51,7 @@
 #include "util/net_help.h"
 #include "util/config_file.h"
 #include "services/cache/rrset.h"
+#include "services/cache/dns.h"
 
 int val_neg_data_compare(const void* a, const void* b)
 {
@@ -1038,16 +1039,119 @@ void val_neg_addreferral(struct val_neg_cache* neg, struct reply_info* rep,
 	lock_basic_unlock(&neg->lock);
 }
 
+/**
+ * See if rrset exists in rrset cache.
+ * If it does, the bit is checked, and if not expired, it is returned
+ * allocated in region.
+ * @param rrset_cache: rrset cache
+ * @param qname: to lookup rrset name
+ * @param qname_len: length of qname.
+ * @param qtype: type of rrset to lookup, host order
+ * @param qclass: class of rrset to lookup, host order
+ * @param flags: flags for rrset to lookup
+ * @param region: where to alloc result
+ * @param checkbit: if true, a bit in the nsec typemap is checked for absence.
+ * @param checktype: which bit to check
+ * @param now: to check ttl against
+ * @return rrset or NULL
+ */
+static struct ub_packed_rrset_key*
+grab_nsec(struct rrset_cache* rrset_cache, uint8_t* qname, size_t qname_len,
+	uint16_t qtype, uint16_t qclass, uint32_t flags, 
+	struct regional* region, int checkbit, uint16_t checktype, 
+	uint32_t now)
+{
+	struct ub_packed_rrset_key* r, *k = rrset_cache_lookup(rrset_cache,
+		qname, qname_len, qtype, qclass, flags, now, 0);
+	struct packed_rrset_data* d;
+	if(!k) return NULL;
+	d = (struct packed_rrset_data*)k->entry.data;
+	if(d->ttl < now) {
+		lock_rw_unlock(&k->entry.lock);
+		return NULL;
+	}
+	/* only secure or unchecked records that have signatures. */
+	if( ! ( d->security == sec_status_secure ||
+		(d->security == sec_status_unchecked &&
+		d->rrsig_count > 0) ) ) {
+		lock_rw_unlock(&k->entry.lock);
+		return NULL;
+	}
+	/* check if checktype is absent */
+	if(checkbit && qtype == LDNS_RR_TYPE_NSEC &&
+		nsec_has_type(k, checktype)) {
+		lock_rw_unlock(&k->entry.lock);
+		return NULL;
+	}
+	/* looks OK! copy to region and return it */
+	r = packed_rrset_copy_region(k, region, now);
+	/* if it failed, we return the NULL */
+	lock_rw_unlock(&k->entry.lock);
+	return r;
+}
+
 struct dns_msg* 
 val_neg_getmsg(struct val_neg_cache* neg, struct query_info* qinfo, 
-	struct regional* region, struct rrset_cache* rrset_cache)
+	struct regional* region, struct rrset_cache* rrset_cache, uint32_t now)
 {
 	struct dns_msg* msg;
+	struct ub_packed_rrset_key* rrset;
+	uint8_t* zname;
+	size_t zname_len;
+	int zname_labs;
+	struct val_neg_zone* zone;
+	struct val_neg_data* data;
 	/* only for DS queries */
 	if(qinfo->qtype != LDNS_RR_TYPE_DS)
 		return NULL;
 
-	/* see if info from neg cache is available */
+	/* see if info from neg cache is available 
+	 * For NSECs, because there is no optout; a DS next to a delegation
+	 * always has exactly an NSEC for it itself; check its DS bit.
+	 * flags=0 (not the zone apex).
+	 */
+	rrset = grab_nsec(rrset_cache, qinfo->qname, qinfo->qname_len,
+		LDNS_RR_TYPE_NSEC, qinfo->qclass, 0, region, 1, 
+		qinfo->qtype, now);
+	if(rrset) {
+		/* return msg with that rrset */
+		if(!(msg = dns_msg_create(qinfo->qname, qinfo->qname_len, 
+			qinfo->qtype, qinfo->qclass, region, 1))) 
+			return NULL;
+		if(!dns_msg_authadd(msg, region, rrset, now)) 
+			return NULL;
+		return msg;
+	}
 
-	return msg;
+	/* check NSEC3 neg cache for type DS */
+	/* need to look one zone higher for DS type */
+	zname = qinfo->qname;
+	zname_len = qinfo->qname_len;
+	dname_remove_label(&zname, &zname_len);
+	zname_labs = dname_count_labels(zname);
+
+	/* lookup closest zone */
+	lock_basic_lock(&neg->lock);
+	zone = neg_closest_zone_parent(neg, zname, zname_len, zname_labs, 
+		qinfo->qclass);
+	while(zone && !zone->in_use)
+		zone = zone->parent;
+	if(!zone) {
+		lock_basic_unlock(&neg->lock);
+		return NULL;
+	}
+
+	/* lookup closest data record TODO hash NSEC3 */
+	(void)neg_closest_data(zone, qinfo->qname, qinfo->qname_len, 
+		zname_labs+1, &data);
+	while(data && !data->in_use)
+		data = data->parent;
+	if(!data) {
+		lock_basic_unlock(&neg->lock);
+		return 0;
+	}
+
+	/* get RR and check */
+
+	return 0;
 }

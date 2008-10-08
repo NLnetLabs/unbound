@@ -50,6 +50,7 @@
 #include "iterator/iter_resptype.h"
 #include "iterator/iter_scrub.h"
 #include "iterator/iter_priv.h"
+#include "validator/val_neg.h"
 #include "services/cache/dns.h"
 #include "services/cache/infra.h"
 #include "util/module.h"
@@ -754,6 +755,13 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 	msg = dns_cache_lookup(qstate->env, iq->qchase.qname, 
 		iq->qchase.qname_len, iq->qchase.qtype, 
 		iq->qchase.qclass, qstate->region, qstate->env->scratch);
+	if(!msg && qstate->env->neg_cache) {
+		/* lookup in negative cache; may result in 
+		 * NOERROR/NODATA or NXDOMAIN answers that need validation */
+		msg = val_neg_getmsg(qstate->env->neg_cache, &iq->qchase,
+			qstate->region, qstate->env->rrset_cache,
+			*qstate->env->now);
+	}
 	if(msg) {
 		/* handle positive cache response */
 		enum response_type type = response_type_from_cache(msg, 

@@ -244,11 +244,9 @@ find_add_ds(struct module_env* env, struct regional* region,
 	}
 }
 
-/** create referral message with NS and query */
-static struct dns_msg*
-create_msg(uint8_t* qname, size_t qnamelen, uint16_t qtype, uint16_t qclass, 
-	struct regional* region, struct ub_packed_rrset_key* nskey, 
-	struct packed_rrset_data* nsdata, uint32_t now)
+struct dns_msg*
+dns_msg_create(uint8_t* qname, size_t qnamelen, uint16_t qtype, 
+	uint16_t qclass, struct regional* region, size_t capacity)
 {
 	struct dns_msg* msg = (struct dns_msg*)regional_alloc(region,
 		sizeof(struct dns_msg));
@@ -261,30 +259,29 @@ create_msg(uint8_t* qname, size_t qnamelen, uint16_t qtype, uint16_t qclass,
 	msg->qinfo.qtype = qtype;
 	msg->qinfo.qclass = qclass;
 	/* non-packed reply_info, because it needs to grow the array */
-	msg->rep = (struct reply_info*)regional_alloc(region, 
+	msg->rep = (struct reply_info*)regional_alloc_zero(region, 
 		sizeof(struct reply_info)-sizeof(struct rrset_ref));
 	if(!msg->rep)
 		return NULL;
-	memset(msg->rep, 0, 
-		sizeof(struct reply_info)-sizeof(struct rrset_ref));
 	msg->rep->flags = BIT_QR; /* with QR, no AA */
 	msg->rep->qdcount = 1;
-	/* allocate the array to as much as we could need:
-	 *	NS rrset + DS/NSEC rrset +
-	 *	A rrset for every NS RR
-	 *	AAAA rrset for every NS RR
-	 */
 	msg->rep->rrsets = (struct ub_packed_rrset_key**)
 		regional_alloc(region, 
-		(2 + nsdata->count*2)*sizeof(struct ub_packed_rrset_key*));
+		capacity*sizeof(struct ub_packed_rrset_key*));
 	if(!msg->rep->rrsets)
 		return NULL;
-	msg->rep->rrsets[0] = packed_rrset_copy_region(nskey, region, now);
-	if(!msg->rep->rrsets[0])
-		return NULL;
-	msg->rep->ns_numrrsets++;
-	msg->rep->rrset_count++;
 	return msg;
+}
+
+int
+dns_msg_authadd(struct dns_msg* msg, struct regional* region, 
+	struct ub_packed_rrset_key* rrset, uint32_t now)
+{
+	if(!(msg->rep->rrsets[msg->rep->rrset_count++] = 
+		packed_rrset_copy_region(rrset, region, now)))
+		return 0;
+	msg->rep->ns_numrrsets++;
+	return 1;
 }
 
 struct delegpt* 
@@ -311,9 +308,14 @@ dns_cache_find_delegation(struct module_env* env, uint8_t* qname,
 	}
 	/* create referral message */
 	if(msg) {
-		*msg = create_msg(qname, qnamelen, qtype, qclass, region, 
-			nskey, nsdata, now);
-		if(!*msg) {
+		/* allocate the array to as much as we could need:
+		 *	NS rrset + DS/NSEC rrset +
+		 *	A rrset for every NS RR
+		 *	AAAA rrset for every NS RR
+		 */
+		*msg = dns_msg_create(qname, qnamelen, qtype, qclass, region, 
+			2 + nsdata->count*2);
+		if(!*msg || !dns_msg_authadd(*msg, region, nskey, now)) {
 			lock_rw_unlock(&nskey->entry.lock);
 			log_err("find_delegation: out of memory");
 			return NULL;

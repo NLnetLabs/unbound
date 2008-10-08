@@ -85,6 +85,16 @@ enum sec_status val_nsec_prove_nodata_dsreply(struct module_env* env,
 int nsecbitmap_has_type_rdata(uint8_t* bitmap, size_t len, uint16_t type);
 
 /**
+ * Check if type is present in the NSEC typemap
+ * @param nsec: the nsec RRset.
+ *	If there are multiple RRs, then each must have the same typemap,
+ *	since the typemap represents the types at this domain node.
+ * @param type: type to check for, host order.
+ * @return true if present
+ */
+int nsec_has_type(struct ub_packed_rrset_key* nsec, uint16_t type);
+
+/**
  * Determine if a NSEC proves the NOERROR/NODATA conditions. This will also
  * handle the empty non-terminal (ENT) case and partially handle the
  * wildcard case. If the ownername of 'nsec' is a wildcard, the validator

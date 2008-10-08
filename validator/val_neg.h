@@ -227,12 +227,13 @@ int val_neg_dlvlookup(struct val_neg_cache* neg, uint8_t* qname, size_t len,
  * @param qinfo: query
  * @param region: where to allocate reply.
  * @param rrset_cache: rrset cache.
+ * @param now: to check TTLs against.
  * @return a reply message if something was found. 
  * 	This reply may still need validation.
  * 	NULL if nothing found (or out of memory).
  */
 struct dns_msg* val_neg_getmsg(struct val_neg_cache* neg, 
 	struct query_info* qinfo, struct regional* region, 
-	struct rrset_cache* rrset_cache);
+	struct rrset_cache* rrset_cache, uint32_t now);
 
 #endif /* VALIDATOR_VAL_NEG_H */

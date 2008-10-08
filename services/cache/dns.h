@@ -137,4 +137,30 @@ struct dns_msg* dns_cache_lookup(struct module_env* env,
 int cache_fill_missing(struct module_env* env, uint16_t qclass, 
 	struct regional* region, struct delegpt* dp);
 
+/**
+ * Utility, create new, unpacked data structure for cache response.
+ * QR bit set, no AA. Query set as indicated. Space for number of rrsets.
+ * @param qname: query section name
+ * @param qnamelen: len of qname
+ * @param qtype: query section type
+ * @param qclass: query section class
+ * @param region: where to alloc.
+ * @param capacity: number of rrsets space to create in the array.
+ * @return new dns_msg struct or NULL on mem fail.
+ */
+struct dns_msg* dns_msg_create(uint8_t* qname, size_t qnamelen, uint16_t qtype, 
+	uint16_t qclass, struct regional* region, size_t capacity);
+
+/**
+ * Add rrset to authority section in unpacked dns_msg message. Must have enough
+ * space left, does not grow the array.
+ * @param msg: msg to put it in.
+ * @param region: region to alloc in
+ * @param rrset: to add in authority section
+ * @param now: now.
+ * @return true if worked, false on fail
+ */
+int dns_msg_authadd(struct dns_msg* msg, struct regional* region, 
+	struct ub_packed_rrset_key* rrset, uint32_t now);
+
 #endif /* SERVICES_CACHE_DNS_H */

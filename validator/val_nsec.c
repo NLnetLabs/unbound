@@ -91,15 +91,7 @@ nsecbitmap_has_type_rdata(uint8_t* bitmap, size_t len, uint16_t type)
 	return 0;
 }
 
-/**
- * Check if type is present in the NSEC typemap
- * @param nsec: the nsec RRset.
- *	If there are multiple RRs, then each must have the same typemap,
- *	since the typemap represents the types at this domain node.
- * @param type: type to check for, host order.
- * @return true if present
- */
-static int
+int
 nsec_has_type(struct ub_packed_rrset_key* nsec, uint16_t type)
 {
 	struct packed_rrset_data* d = (struct packed_rrset_data*)nsec->
