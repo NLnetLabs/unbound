@@ -125,8 +125,7 @@ nsec3_unknown_flags(struct ub_packed_rrset_key* rrset, int r)
 	return (int)(d->rr_data[r][2+1] & NSEC3_UNKNOWN_FLAGS);
 }
 
-/** return if nsec3 RR has the optout flag */
-static int
+int
 nsec3_has_optout(struct ub_packed_rrset_key* rrset, int r)
 {
         struct packed_rrset_data* d = (struct packed_rrset_data*)
@@ -203,8 +202,19 @@ nsec3_get_salt(struct ub_packed_rrset_key* rrset, int r,
 	return 1;
 }
 
-/** return nsec3 RR next hashed owner name */
-static int
+int nsec3_get_params(struct ub_packed_rrset_key* rrset, int r,
+	int* algo, size_t* iter, uint8_t** salt, size_t* saltlen)
+{
+	if(!nsec3_known_algo(rrset, r) || nsec3_unknown_flags(rrset, r))
+		return 0;
+	if(!nsec3_get_salt(rrset, r, salt, saltlen))
+		return 0;
+	*algo = nsec3_get_algo(rrset, r);
+	*iter = nsec3_get_iter(rrset, r);
+	return 1;
+}
+
+int
 nsec3_get_nextowner(struct ub_packed_rrset_key* rrset, int r,
 	uint8_t** next, size_t* nextlen)
 {
@@ -233,8 +243,39 @@ nsec3_get_nextowner(struct ub_packed_rrset_key* rrset, int r,
 	return 1;
 }
 
-/** see if NSEC3 RR contains given type */
-static int
+size_t nsec3_hash_to_b32(uint8_t* hash, size_t hashlen, uint8_t* zone,
+	size_t zonelen, uint8_t* buf, size_t max)
+{
+	/* write b32 of name, leave one for length */
+	int ret;
+	if(max < hashlen*2+1) /* quick approx of b32, as if hexb16 */
+		return 0;
+	ret = b32_ntop_extended_hex(hash, hashlen, (char*)buf+1, max-1);
+	if(ret < 1) 
+		return 0;
+	buf[0] = (uint8_t)ret; /* length of b32 label */
+	ret++;
+	if(max - ret < zonelen)
+		return 0;
+	memmove(buf+ret, zone, zonelen);
+	return zonelen+(size_t)ret;
+}
+
+size_t nsec3_get_nextowner_b32(struct ub_packed_rrset_key* rrset, int r,
+	uint8_t* buf, size_t max)
+{
+	uint8_t* nm, *zone;
+	size_t nmlen, zonelen;
+	if(!nsec3_get_nextowner(rrset, r, &nm, &nmlen))
+		return 0;
+	/* append zone name; the owner name must be <b32>.zone */
+	zone = rrset->rk.dname;
+	zonelen = rrset->rk.dname_len;
+	dname_remove_label(&zone, &zonelen);
+	return nsec3_hash_to_b32(nm, nmlen, zone, zonelen, buf, max);
+}
+
+int
 nsec3_has_type(struct ub_packed_rrset_key* rrset, int r, uint16_t type)
 {
 	uint8_t* bitmap;
@@ -482,6 +523,45 @@ nsec3_hash_cmp(const void* c1, const void* c2)
 	return memcmp(s1, s2, s1len);
 }
 
+size_t
+nsec3_get_hashed(ldns_buffer* buf, uint8_t* nm, size_t nmlen, int algo, 
+	size_t iter, uint8_t* salt, size_t saltlen, uint8_t* res, size_t max)
+{
+	size_t i, hash_len;
+	/* prepare buffer for first iteration */
+	ldns_buffer_clear(buf);
+	ldns_buffer_write(buf, nm, nmlen);
+	query_dname_tolower(ldns_buffer_begin(buf));
+	ldns_buffer_write(buf, salt, saltlen);
+	ldns_buffer_flip(buf);
+	switch(algo) {
+#ifdef SHA_DIGEST_LENGTH
+		case NSEC3_HASH_SHA1:
+			hash_len = SHA_DIGEST_LENGTH;
+			if(hash_len > max)
+				return 0;
+			(void)SHA1((unsigned char*)ldns_buffer_begin(buf),
+				(unsigned long)ldns_buffer_limit(buf),
+				(unsigned char*)res);
+			for(i=0; i<iter; i++) {
+				ldns_buffer_clear(buf);
+				ldns_buffer_write(buf, res, hash_len);
+				ldns_buffer_write(buf, salt, saltlen);
+				ldns_buffer_flip(buf);
+				(void)SHA1(
+					(unsigned char*)ldns_buffer_begin(buf),
+					(unsigned long)ldns_buffer_limit(buf),
+					(unsigned char*)res);
+			}
+			break;
+#endif /* SHA_DIGEST_LENGTH */
+		default:
+			log_err("nsec3 hash of unknown algo %d", algo);
+			return 0;
+	}
+	return hash_len;
+}
+
 /** perform hash of name */
 static int
 nsec3_calc_hash(struct regional* region, ldns_buffer* buf, 
@@ -682,21 +762,8 @@ find_matching_nsec3(struct module_env* env, struct nsec3_filter* flt,
 	return 0;
 }
 
-/**
- * nsec3Covers
- * Given a hash and a candidate NSEC3Record, determine if that NSEC3Record
- * covers the hash. Covers specifically means that the hash is in between
- * the owner and next hashes and does not equal either.
- *
- * @param flt: the NSEC3 RR filter, contains zone name.
- * @param hash: the hash of the name
- * @param rrset: the rrset of the NSEC3.
- * @param rr: which rr in the rrset.
- * @param buf: temporary buffer.
- * @return true if covers, false if not.
- */
-static int
-nsec3_covers(struct nsec3_filter* flt, struct nsec3_cached_hash* hash,
+int
+nsec3_covers(uint8_t* zone, struct nsec3_cached_hash* hash,
 	struct ub_packed_rrset_key* rrset, int rr, ldns_buffer* buf)
 {
 	uint8_t* next, *owner;
@@ -711,7 +778,7 @@ nsec3_covers(struct nsec3_filter* flt, struct nsec3_cached_hash* hash,
 	if(nextlen != hash->hash_len || hash->hash_len==0||hash->b32_len==0|| 
 		(size_t)*rrset->rk.dname != hash->b32_len ||
 		query_dname_compare(rrset->rk.dname+1+
-			(size_t)*rrset->rk.dname, flt->zone) != 0)
+			(size_t)*rrset->rk.dname, zone) != 0)
 		return 0; /* bad lengths or owner name */
 
 	/* This is the "normal case: owner < next and owner < hash < next */
@@ -777,7 +844,7 @@ find_covering_nsec3(struct module_env* env, struct nsec3_filter* flt,
 			break; /* alloc failure */
 		} else if(r < 0)
 			continue; /* malformed NSEC3 */
-		else if(nsec3_covers(flt, hash, s, i_rr, 
+		else if(nsec3_covers(flt->zone, hash, s, i_rr, 
 			env->scratch_buffer)) {
 			*rrset = s; /* rrset with this name */
 			*rr = i_rr; /* covers hash with these parameters */

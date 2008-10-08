@@ -760,7 +760,7 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 		 * NOERROR/NODATA or NXDOMAIN answers that need validation */
 		msg = val_neg_getmsg(qstate->env->neg_cache, &iq->qchase,
 			qstate->region, qstate->env->rrset_cache,
-			*qstate->env->now);
+			qstate->env->scratch_buffer, *qstate->env->now);
 	}
 	if(msg) {
 		/* handle positive cache response */

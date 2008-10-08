@@ -273,4 +273,105 @@ int nsec3_hash_name(rbtree_t* table, struct regional* region, ldns_buffer* buf,
 	struct ub_packed_rrset_key* nsec3, int rr, uint8_t* dname, 
 	size_t dname_len, struct nsec3_cached_hash** hash);
 
+/**
+ * Get next owner name, converted to base32 encoding and with the
+ * zone name (taken from the nsec3 owner name) appended.
+ * @param rrset: the NSEC3 rrset.
+ * @param r: the rr num of the nsec3 in the rrset.
+ * @param buf: buffer to store name in
+ * @param max: size of buffer.
+ * @return length of name on success. 0 on failure (buffer too short or
+ *	bad format nsec3 record).
+ */
+size_t nsec3_get_nextowner_b32(struct ub_packed_rrset_key* rrset, int r,
+	uint8_t* buf, size_t max);
+
+/**
+ * Convert hash into base32 encoding and with the
+ * zone name appended.
+ * @param hash: hashed buffer
+ * @param hashlen: length of hash
+ * @param zone: name of zone
+ * @param zonelen: length of zonename.
+ * @param buf: buffer to store name in
+ * @param max: size of buffer.
+ * @return length of name on success. 0 on failure (buffer too short or
+ *	bad format nsec3 record).
+ */
+size_t nsec3_hash_to_b32(uint8_t* hash, size_t hashlen, uint8_t* zone,
+	size_t zonelen, uint8_t* buf, size_t max);
+
+/** 
+ * Get NSEC3 parameters out of rr.
+ * @param rrset: the NSEC3 rrset.
+ * @param r: the rr num of the nsec3 in the rrset.
+ * @param algo: nsec3 hash algo.
+ * @param iter: iteration count.
+ * @param salt: ptr to salt inside rdata.
+ * @param saltlen: length of salt.
+ * @return 0 if bad formatted, unknown nsec3 hash algo, or unknown flags set.
+ */
+int nsec3_get_params(struct ub_packed_rrset_key* rrset, int r,
+	int* algo, size_t* iter, uint8_t** salt, size_t* saltlen);
+
+/**
+ * Get NSEC3 hashed in a buffer
+ * @param buf: buffer for temp use.
+ * @param nm: name to hash
+ * @param nmlen: length of nm.
+ * @param algo: algo to use, must be known.
+ * @param iter: iterations
+ * @param salt: salt for nsec3
+ * @param saltlen: length of salt.
+ * @param res: result of hash stored here.
+ * @param max: maximum space for result.
+ * @return 0 on failure, otherwise bytelength stored.
+ */
+size_t nsec3_get_hashed(ldns_buffer* buf, uint8_t* nm, size_t nmlen, int algo, 
+	size_t iter, uint8_t* salt, size_t saltlen, uint8_t* res, size_t max);
+
+/** 
+ * see if NSEC3 RR contains given type
+ * @param rrset: NSEC3 rrset
+ * @param r: RR in rrset
+ * @param type: in host order to check bit for.
+ * @return true if bit set, false if not or error.
+ */
+int nsec3_has_type(struct ub_packed_rrset_key* rrset, int r, uint16_t type);
+
+/** 
+ * return if nsec3 RR has the optout flag 
+ * @param rrset: NSEC3 rrset
+ * @param r: RR in rrset
+ * @return true if optout, false on error or not optout
+ */
+int nsec3_has_optout(struct ub_packed_rrset_key* rrset, int r);
+
+/** 
+ * Return nsec3 RR next hashed owner name 
+ * @param rrset: NSEC3 rrset
+ * @param r: RR in rrset
+ * @param next: ptr into rdata to next owner hash
+ * @param nextlen: length of hash.
+ * @return false on malformed
+ */
+int nsec3_get_nextowner(struct ub_packed_rrset_key* rrset, int r,
+	uint8_t** next, size_t* nextlen);
+
+/**
+ * nsec3Covers
+ * Given a hash and a candidate NSEC3Record, determine if that NSEC3Record
+ * covers the hash. Covers specifically means that the hash is in between
+ * the owner and next hashes and does not equal either.
+ *
+ * @param zone: the zone name.
+ * @param hash: the hash of the name
+ * @param rrset: the rrset of the NSEC3.
+ * @param rr: which rr in the rrset.
+ * @param buf: temporary buffer.
+ * @return true if covers, false if not.
+ */
+int nsec3_covers(uint8_t* zone, struct nsec3_cached_hash* hash,
+	struct ub_packed_rrset_key* rrset, int rr, ldns_buffer* buf);
+
 #endif /* VALIDATOR_VAL_NSEC3_H */

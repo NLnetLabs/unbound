@@ -99,7 +99,14 @@ struct val_neg_zone {
 	 * No elements have a count of zero, those are removed. */
 	int count;
 
-	/* type of zone ; NSEC */
+	/** if 0: NSEC zone, else NSEC3 hash algorithm in use */
+	int nsec3_hash;
+	/** nsec3 iteration count in use */
+	size_t nsec3_iter;
+	/** nsec3 salt in use */
+	uint8_t* nsec3_salt;
+	/** length of salt in bytes */
+	size_t nsec3_saltlen;
 
 	/** tree of NSEC data for this zone, sorted canonical 
 	 * by NSEC owner name */
@@ -227,6 +234,7 @@ int val_neg_dlvlookup(struct val_neg_cache* neg, uint8_t* qname, size_t len,
  * @param qinfo: query
  * @param region: where to allocate reply.
  * @param rrset_cache: rrset cache.
+ * @param buf: temporary buffer.
  * @param now: to check TTLs against.
  * @return a reply message if something was found. 
  * 	This reply may still need validation.
@@ -234,6 +242,6 @@ int val_neg_dlvlookup(struct val_neg_cache* neg, uint8_t* qname, size_t len,
  */
 struct dns_msg* val_neg_getmsg(struct val_neg_cache* neg, 
 	struct query_info* qinfo, struct regional* region, 
-	struct rrset_cache* rrset_cache, uint32_t now);
+	struct rrset_cache* rrset_cache, ldns_buffer* buf, uint32_t now);
 
 #endif /* VALIDATOR_VAL_NEG_H */
