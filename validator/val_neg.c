@@ -1094,7 +1094,8 @@ void val_neg_addreferral(struct val_neg_cache* neg, struct reply_info* rep,
 
 	/* insert the NSECs */
 	for(i=rep->an_numrrsets; i< rep->an_numrrsets+rep->ns_numrrsets; i++){
-		if(ntohs(rep->rrsets[i]->rk.type) != LDNS_RR_TYPE_NSEC)
+		if(ntohs(rep->rrsets[i]->rk.type) != LDNS_RR_TYPE_NSEC &&
+			ntohs(rep->rrsets[i]->rk.type) != LDNS_RR_TYPE_NSEC3)
 			continue;
 		if(!dname_subdomain_c(rep->rrsets[i]->rk.dname, 
 			zone->name)) continue;

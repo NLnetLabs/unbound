@@ -1,5 +1,6 @@
 9 October 2008: Wouter
 	- negative cache caps max iterations of NSEC3 done.
+	- NSEC3 negative cache for qtype DS works.
 
 8 October 2008: Wouter
 	- NSEC negative cache for DS.

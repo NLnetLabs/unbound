@@ -1365,6 +1365,9 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		if(!iter_dns_store(qstate->env, &iq->response->qinfo,
 			iq->response->rep, 1))
 			return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
+		if(qstate->env->neg_cache)
+			val_neg_addreferral(qstate->env->neg_cache, 
+				iq->response->rep, iq->dp->name);
 
 		/* Reset the event state, setting the current delegation 
 		 * point to the referral. */

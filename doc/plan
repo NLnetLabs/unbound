@@ -64,13 +64,13 @@ not	stats on SIGUSR1. perhaps also see which slow auth servers cause >1sec value
 *** Improvements
 + fallback to noEDNS if all queries are dropped.
 + dnssec lameness fixen. Check to make sure.
-* negative caching to avoid DS queries, NSEC, NSEC3 (w params).
++ negative caching to avoid DS queries, NSEC, NSEC3 (w params).
 + SHA256 supported fully.
 + Make stub to localhost on different port work.
 + IPv6 reverse, IP4 reverse local-data shorthand for PTR records (?).
   cumbersome to reverse notate by hand for the operator. For local-data.
   local-data-ptr: "1.2.3.4 mypc.example.com"
-* dns-0x20 fallback TODO item. Consider.
++ dns-0x20 fallback TODO item. Consider.
 
 *** from draft resolver-mitigation
 * Should be an option?   (Not right now)
