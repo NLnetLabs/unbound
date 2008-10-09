@@ -75,7 +75,7 @@ int val_neg_zone_compare(const void* a, const void* b)
 	return dname_canon_lab_cmp(x->name, x->labs, y->name, y->labs, &m);
 }
 
-struct val_neg_cache* val_neg_create(struct config_file* cfg)
+struct val_neg_cache* val_neg_create(struct config_file* cfg, size_t maxiter)
 {
 	struct val_neg_cache* neg = (struct val_neg_cache*)calloc(1, 
 		sizeof(*neg));
@@ -83,6 +83,7 @@ struct val_neg_cache* val_neg_create(struct config_file* cfg)
 		log_err("Could not create neg cache: out of memory");
 		return NULL;
 	}
+	neg->nsec3_max_iter = maxiter;
 	neg->max = 1024*1024; /* 1 M is thousands of entries */
 	if(cfg) neg->max = cfg->neg_cache_size;
 	rbtree_init(&neg->tree, &val_neg_zone_compare);
@@ -832,6 +833,7 @@ static void neg_insert_data(struct val_neg_cache* neg,
 		uint8_t* s;
 		size_t slen, it;
 		if(nsec3_get_params(nsec, 0, &h, &it, &s, &slen) &&
+			it <= neg->nsec3_max_iter &&
 			(h != zone->nsec3_hash || it != zone->nsec3_iter ||
 			slen != zone->nsec3_saltlen || 
 			memcmp(zone->nsec3_salt, s, slen) != 0)) {

@@ -121,13 +121,6 @@ val_apply_cfg(struct module_env* env, struct val_env* val_env,
 		log_err("validator: error in trustanchors config");
 		return 0;
 	}
-	if(!val_env->neg_cache)
-		val_env->neg_cache = val_neg_create(cfg);
-	if(!val_env->neg_cache) {
-		log_err("out of memory");
-		return 0;
-	}
-	env->neg_cache = val_env->neg_cache;
 	val_env->date_override = cfg->val_date_override;
 	c = cfg_count_numbers(cfg->val_nsec3_key_iterations);
 	if(c < 1 || (c&1)) {
@@ -140,6 +133,14 @@ val_apply_cfg(struct module_env* env, struct val_env* val_env,
 		log_err("validator: cannot apply nsec3 key iterations");
 		return 0;
 	}
+	if(!val_env->neg_cache)
+		val_env->neg_cache = val_neg_create(cfg,
+			val_env->nsec3_maxiter[val_env->nsec3_keyiter_count-1]);
+	if(!val_env->neg_cache) {
+		log_err("out of memory");
+		return 0;
+	}
+	env->neg_cache = val_env->neg_cache;
 	return 1;
 }
 

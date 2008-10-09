@@ -76,6 +76,8 @@ struct val_neg_cache {
 	size_t use;
 	/** max memory to use (bytes) */
 	size_t max;
+	/** max nsec3 iterations allowed */
+	size_t nsec3_max_iter;
 };
 
 /**
@@ -162,9 +164,10 @@ struct val_neg_data {
 /**
  * Create negative cache
  * @param cfg: config options.
+ * @param maxiter: max nsec3 iterations allowed.
  * @return neg cache, empty or NULL on failure.
  */
-struct val_neg_cache* val_neg_create(struct config_file* cfg);
+struct val_neg_cache* val_neg_create(struct config_file* cfg, size_t maxiter);
 
 /**
  * see how much memory is in use by the negative cache.
