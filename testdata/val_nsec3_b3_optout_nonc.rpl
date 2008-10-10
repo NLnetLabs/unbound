@@ -80,8 +80,8 @@ c.example. 	NS      ns2.c.example.
 
 ;; NSEC3 RR that covers the "next closer" name (c.example)
 ;; H(c.example) = 4g6p9u5gvfshp30pqecj98b3maqbn1ck
-35mthgpgcu1qg68fab165klnsnk3dpvl.example. NSEC3 1 1 12 aabbccdd ( b4um86eghhds6nea196smvmlo4ors995 NS DS RRSIG )
-35mthgpgcu1qg68fab165klnsnk3dpvl.example. RRSIG   NSEC3 7 2 3600 20150420235959 20051021000000 ( 40430 example.  g6jPUUpduAJKRljUsN8gB4UagAX0NxY9shwQ Aynzo8EUWH+z6hEIBlUTPGj15eZll6VhQqgZ XtAIR3chwgW+SA== )
+; 35mthgpgcu1qg68fab165klnsnk3dpvl.example. NSEC3 1 1 12 aabbccdd ( b4um86eghhds6nea196smvmlo4ors995 NS DS RRSIG )
+; 35mthgpgcu1qg68fab165klnsnk3dpvl.example. RRSIG   NSEC3 7 2 3600 20150420235959 20051021000000 ( 40430 example.  g6jPUUpduAJKRljUsN8gB4UagAX0NxY9shwQ Aynzo8EUWH+z6hEIBlUTPGj15eZll6VhQqgZ XtAIR3chwgW+SA== )
 
 ;; NSEC3 RR that matches the closest encloser (example)
 ;; H(example) = 0p9mhaveqvm6t7vbl5lop2u3t2rp3tom

@@ -1,3 +1,7 @@
+10 October 2008: Wouter
+	- fixup tests - the negative cache contained the correct NSEC3s for
+	  two tests that are supposed to fail to validate.
+
 9 October 2008: Wouter
 	- negative cache caps max iterations of NSEC3 done.
 	- NSEC3 negative cache for qtype DS works.

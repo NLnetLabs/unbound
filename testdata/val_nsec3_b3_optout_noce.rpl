@@ -85,8 +85,8 @@ c.example. 	NS      ns2.c.example.
 
 ;; NSEC3 RR that matches the closest encloser (example)
 ;; H(example) = 0p9mhaveqvm6t7vbl5lop2u3t2rp3tom
-0p9mhaveqvm6t7vbl5lop2u3t2rp3tom.example. NSEC3 1 1 12 aabbccdd ( 2t7b4g4vsa5smi47k61mv5bv1a22bojr MX DNSKEY NS SOA NSEC3PARAM RRSIG )
-0p9mhaveqvm6t7vbl5lop2u3t2rp3tom.example. RRSIG   NSEC3 7 2 3600 20150420235959 20051021000000 ( 40430 example.  OSgWSm26B+cS+dDL8b5QrWr/dEWhtCsKlwKL IBHYH6blRxK9rC0bMJPwQ4mLIuw85H2EY762 BOCXJZMnpuwhpA== )
+; 0p9mhaveqvm6t7vbl5lop2u3t2rp3tom.example. NSEC3 1 1 12 aabbccdd ( 2t7b4g4vsa5smi47k61mv5bv1a22bojr MX DNSKEY NS SOA NSEC3PARAM RRSIG )
+; 0p9mhaveqvm6t7vbl5lop2u3t2rp3tom.example. RRSIG   NSEC3 7 2 3600 20150420235959 20051021000000 ( 40430 example.  OSgWSm26B+cS+dDL8b5QrWr/dEWhtCsKlwKL IBHYH6blRxK9rC0bMJPwQ4mLIuw85H2EY762 BOCXJZMnpuwhpA== )
 
 SECTION ADDITIONAL
 ns1.c.example. A       192.0.2.7
