@@ -2,6 +2,7 @@
 	- fixed recursion servers deployed as authoritative detection, so
 	  that as a last resort, a +RD query is sent there to get the 
 	  correct answer.
+	- iana port list update.
 
 10 October 2008: Wouter
 	- fixup tests - the negative cache contained the correct NSEC3s for
