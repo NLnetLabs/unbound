@@ -3,6 +3,7 @@
 	  that as a last resort, a +RD query is sent there to get the 
 	  correct answer.
 	- iana port list update.
+	- ldns tarball is snapshot of ldns r2759 (1.4.0-pre-20081013).
 
 10 October 2008: Wouter
 	- fixup tests - the negative cache contained the correct NSEC3s for
