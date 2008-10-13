@@ -140,9 +140,7 @@ iter_filter_unsuitable(struct iter_env* iter_env, struct module_env* env,
 	uint8_t* name, size_t namelen, uint16_t qtype, uint32_t now, 
 	struct delegpt_addr* a)
 {
-	int rtt;
-	int lame;
-	int dnsseclame;
+	int rtt, lame, reclame, dnsseclame;
 	if(donotq_lookup(iter_env->donotq, &a->addr, a->addrlen)) {
 		return -1; /* server is on the donotquery list */
 	}
@@ -151,12 +149,15 @@ iter_filter_unsuitable(struct iter_env* iter_env, struct module_env* env,
 	}
 	/* check lameness - need zone , class info */
 	if(infra_get_lame_rtt(env->infra_cache, &a->addr, a->addrlen, 
-		name, namelen, qtype, &lame, &dnsseclame, &rtt, now)) {
+		name, namelen, qtype, &lame, &dnsseclame, &reclame, 
+		&rtt, now)) {
 		if(lame)
 			return -1; /* server is lame */
 		else if(rtt >= USEFUL_SERVER_TOP_TIMEOUT)
 			return -1; /* server is unresponsive */
-		else if(dnsseclame)
+		else if(reclame)
+			return rtt+USEFUL_SERVER_TOP_TIMEOUT*2; /* nonpref */
+		else if(dnsseclame )
 			return rtt+USEFUL_SERVER_TOP_TIMEOUT; /* nonpref */
 		else	return rtt;
 	}
@@ -240,7 +241,8 @@ iter_filter_order(struct iter_env* iter_env, struct module_env* env,
 struct delegpt_addr* 
 iter_server_selection(struct iter_env* iter_env, 
 	struct module_env* env, struct delegpt* dp, 
-	uint8_t* name, size_t namelen, uint16_t qtype, int* dnssec_expected)
+	uint8_t* name, size_t namelen, uint16_t qtype, int* dnssec_expected,
+	int* chase_to_rd)
 {
 	int sel;
 	int selrtt;
@@ -250,8 +252,12 @@ iter_server_selection(struct iter_env* iter_env,
 
 	if(num == 0)
 		return NULL;
-	if(selrtt >= USEFUL_SERVER_TOP_TIMEOUT)
+	if(selrtt >= USEFUL_SERVER_TOP_TIMEOUT*2) {
+		*chase_to_rd = 1;
+	}
+	if(selrtt >= USEFUL_SERVER_TOP_TIMEOUT) {
 		*dnssec_expected = 0;
+	}
 	if(num == 1) {
 		a = dp->result_list;
 		if(++a->attempts < OUTBOUND_MSG_RETRY)

@@ -320,7 +320,7 @@ infra_test()
 	struct infra_host_key* k;
 	struct infra_host_data* d;
 	int init = 376;
-	int dlame, alame, olame;
+	int dlame, rlame, alame, olame;
 
 	slab = infra_create(cfg);
 	unit_assert( infra_host(slab, (struct sockaddr_storage*)&one, 
@@ -345,30 +345,30 @@ infra_test()
 	unit_assert( vs == 0 && to == init && edns_lame == 0 );
 	
 	unit_assert( infra_set_lame(slab, (struct sockaddr_storage*)&one, 
-		(socklen_t)sizeof(int), zone, zonelen,  now, 0, 
+		(socklen_t)sizeof(int), zone, zonelen,  now, 0, 0,
 		LDNS_RR_TYPE_A) );
 	unit_assert( (d=infra_lookup_host(slab, (struct sockaddr_storage*)&one,
 		(socklen_t)sizeof(int), 0, now, &k)) );
 	unit_assert( d->ttl == now+cfg->host_ttl );
 	unit_assert( d->edns_version == 0 );
 	unit_assert( infra_lookup_lame(d, zone, zonelen, now, 
-		&dlame, &alame, &olame) );
-	unit_assert(!dlame && alame && !olame);
+		&dlame, &rlame, &alame, &olame) );
+	unit_assert(!dlame && !rlame && alame && !olame);
 	unit_assert( !infra_lookup_lame(d, zone, zonelen, 
-		now+cfg->lame_ttl+10, &dlame, &alame, &olame) );
+		now+cfg->lame_ttl+10, &dlame, &rlame, &alame, &olame) );
 	unit_assert( !infra_lookup_lame(d, (uint8_t*)"\000", 1, now, 
-		&dlame, &alame, &olame) );
+		&dlame, &rlame, &alame, &olame) );
 	lock_rw_unlock(&k->entry.lock);
 
 	/* test merge of data */
 	unit_assert( infra_set_lame(slab, (struct sockaddr_storage*)&one, 
-		(socklen_t)sizeof(int), zone, zonelen,  now, 0, 
+		(socklen_t)sizeof(int), zone, zonelen,  now, 0, 0,
 		LDNS_RR_TYPE_AAAA) );
 	unit_assert( (d=infra_lookup_host(slab, (struct sockaddr_storage*)&one,
 		(socklen_t)sizeof(int), 0, now, &k)) );
 	unit_assert( infra_lookup_lame(d, zone, zonelen, now, 
-		&dlame, &alame, &olame) );
-	unit_assert(!dlame && alame && olame);
+		&dlame, &rlame, &alame, &olame) );
+	unit_assert(!dlame && !rlame && alame && olame);
 	lock_rw_unlock(&k->entry.lock);
 
 	infra_delete(slab);

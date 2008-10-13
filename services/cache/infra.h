@@ -98,6 +98,8 @@ struct infra_lame_data {
 	/** is the host lame (does not serve the zone authoritatively),
 	 * or is the host dnssec lame (does not serve DNSSEC data) */
 	int isdnsseclame;
+	/** is the host recursion lame (not AA, but RA) */
+	int rec_lame;
 	/** the host is lame (not authoritative) for A records */
 	int lame_type_A;
 	/** the host is lame (not authoritative) for other query types */
@@ -187,13 +189,14 @@ int infra_host(struct infra_cache* infra, struct sockaddr_storage* addr,
  * @param namelen: length of domain name.
  * @param timenow: what time it is now.
  * @param dlame: if the function returns true, is set true if dnssec lame.
+ * @param rlame: if the function returns true, is set true if recursion lame.
  * @param alame: if the function returns true, is set true if qtype A lame.
  * @param olame: if the function returns true, is set true if qtype other lame.
  * @return: 0 if not lame or unknown or timed out, 1 if lame
  */
 int infra_lookup_lame(struct infra_host_data* host,
 	uint8_t* name, size_t namelen, uint32_t timenow,
-	int* dlame, int* alame, int* olame);
+	int* dlame, int* rlame, int* alame, int* olame);
 
 /**
  * Set a host to be lame for the given zone.
@@ -205,13 +208,15 @@ int infra_lookup_lame(struct infra_host_data* host,
  * @param timenow: what time it is now.
  * @param dnsseclame: if true the host is set dnssec lame.
  *	if false, the host is marked lame (not serving the zone).
+ * @param reclame: if true host is a recursor not AA server.
+ *      if false, dnsseclame or marked lame.
  * @param qtype: the query type for which it is lame.
  * @return: 0 on error.
  */
 int infra_set_lame(struct infra_cache* infra,
         struct sockaddr_storage* addr, socklen_t addrlen,
 	uint8_t* name, size_t namelen, uint32_t timenow, int dnsseclame,
-	uint16_t qtype);
+	int reclame, uint16_t qtype);
 
 /**
  * Update rtt information for the host.
@@ -262,6 +267,7 @@ int infra_edns_update(struct infra_cache* infra,
  * @param lame: if function returns true, this returns lameness of the zone.
  * @param dnsseclame: if function returns true, this returns if the zone
  *	is dnssec-lame.
+ * @param reclame: if function returns true, this is if it is recursion lame.
  * @param rtt: if function returns true, this returns avg rtt of the server.
  * 	The rtt value is unclamped and reflects recent timeouts.
  * @param timenow: what time it is now.
@@ -270,7 +276,7 @@ int infra_edns_update(struct infra_cache* infra,
 int infra_get_lame_rtt(struct infra_cache* infra,
         struct sockaddr_storage* addr, socklen_t addrlen, 
 	uint8_t* name, size_t namelen, uint16_t qtype, 
-	int* lame, int* dnsseclame, int* rtt, uint32_t timenow);
+	int* lame, int* dnsseclame, int* reclame, int* rtt, uint32_t timenow);
 
 /**
  * Get memory used by the infra cache.

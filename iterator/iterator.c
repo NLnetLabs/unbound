@@ -1211,7 +1211,7 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 	/* Select the next usable target, filtering out unsuitable targets. */
 	target = iter_server_selection(ie, qstate->env, iq->dp, 
 		iq->dp->name, iq->dp->namelen, iq->qchase.qtype,
-		&iq->dnssec_expected);
+		&iq->dnssec_expected, &iq->chase_to_rd);
 
 	/* If no usable target was selected... */
 	if(!target) {
@@ -1276,7 +1276,7 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 	outq = (*qstate->env->send_query)(
 		iq->qchase.qname, iq->qchase.qname_len, 
 		iq->qchase.qtype, iq->qchase.qclass, 
-		iq->chase_flags, EDNS_DO|BIT_CD, 
+		iq->chase_flags | (iq->chase_to_rd?BIT_RD:0), EDNS_DO|BIT_CD, 
 		&target->addr, target->addrlen, qstate);
 	if(!outq) {
 		verbose(VERB_OPS, "error sending query to auth server; "
@@ -1313,11 +1313,14 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 	enum response_type type;
 	iq->num_current_queries--;
 	if(iq->response == NULL) {
+		iq->chase_to_rd = 0;
 		verbose(VERB_ALGO, "query response was timeout");
 		return next_state(iq, QUERYTARGETS_STATE);
 	}
-	type = response_type_from_server((int)(iq->chase_flags&BIT_RD),
+	type = response_type_from_server(
+		(int)((iq->chase_flags&BIT_RD) || iq->chase_to_rd),
 		iq->response, &iq->qchase, iq->dp);
+	iq->chase_to_rd = 0;
 	if(type == RESPONSE_TYPE_REFERRAL && (iq->chase_flags&BIT_RD)) {
 		/* When forwarding (RD bit is set), we handle referrals 
 		 * differently. No queries should be sent elsewhere */
@@ -1325,6 +1328,7 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 	}
 	if(iq->dnssec_expected && !(iq->chase_flags&BIT_RD) 
 		&& type != RESPONSE_TYPE_LAME 
+		&& type != RESPONSE_TYPE_REC_LAME 
 		&& type != RESPONSE_TYPE_THROWAWAY 
 		&& type != RESPONSE_TYPE_UNTYPED) {
 		/* a possible answer, see if it is missing DNSSEC */
@@ -1458,11 +1462,24 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 			if(!infra_set_lame(qstate->env->infra_cache, 
 				&qstate->reply->addr, qstate->reply->addrlen, 
 				iq->dp->name, iq->dp->namelen, 
-				*qstate->env->now, dnsseclame, 
+				*qstate->env->now, dnsseclame, 0,
 				iq->qchase.qtype))
 				log_err("mark host lame: out of memory");
 		} else log_err("%slame response from cache",
 			dnsseclame?"DNSSEC ":"");
+	} else if(type == RESPONSE_TYPE_REC_LAME) {
+		/* Cache the LAMEness. */
+		verbose(VERB_DETAIL, "query response REC_LAME: "
+			"recursive but not authoritative server");
+		if(qstate->reply) {
+			/* need addr for lameness cache, but we may have
+			 * gotten this from cache, so test to be sure */
+			if(!infra_set_lame(qstate->env->infra_cache, 
+				&qstate->reply->addr, qstate->reply->addrlen, 
+				iq->dp->name, iq->dp->namelen, 
+				*qstate->env->now, 0, 1, iq->qchase.qtype))
+				log_err("mark host lame: out of memory");
+		} 
 	} else if(type == RESPONSE_TYPE_THROWAWAY) {
 		/* LAME and THROWAWAY responses are handled the same way. 
 		 * In this case, the event is just sent directly back to 

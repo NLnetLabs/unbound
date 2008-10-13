@@ -81,7 +81,14 @@ enum response_type {
 	 * 'lame' means that this particular response indicates that 
 	 * the nameserver knew nothing about the question.
 	 */
-	RESPONSE_TYPE_LAME
+	RESPONSE_TYPE_LAME,
+
+	/**
+	 * Recursion lame means that the nameserver is some sort of
+	 * open recursor, and not authoritative for the question.
+	 * It may know something, but not authoritatively.
+	 */
+	RESPONSE_TYPE_REC_LAME
 };
 
 /**

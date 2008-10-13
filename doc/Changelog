@@ -1,3 +1,8 @@
+13 October 2008: Wouter
+	- fixed recursion servers deployed as authoritative detection, so
+	  that as a last resort, a +RD query is sent there to get the 
+	  correct answer.
+
 10 October 2008: Wouter
 	- fixup tests - the negative cache contained the correct NSEC3s for
 	  two tests that are supposed to fail to validate.

@@ -210,6 +210,8 @@ struct iter_qstate {
 	struct query_info qchase;
 	/** query flags to use when chasing the answer (i.e. RD flag) */
 	uint16_t chase_flags;
+	/** true if we set RD bit because of last resort recursion lame query*/
+	int chase_to_rd;
 
 	/** 
 	 * This is the current delegation point for an in-progress query. This
