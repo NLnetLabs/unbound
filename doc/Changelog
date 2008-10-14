@@ -2,7 +2,7 @@
 	- fwd_three.tpkg test was flaky.  If the three requests hit the
 	  wrong threads by chance (or bad OS) then the test would fail.
 	  Made less flaky by increasing number of retries.
-	- stub_udp.tpkg changed to work with bad ::1 ipv6 support.
+	- stub_udp.tpkg changed to work, give root hints. fixed ldns_dname_abs.
 
 13 October 2008: Wouter
 	- fixed recursion servers deployed as authoritative detection, so
