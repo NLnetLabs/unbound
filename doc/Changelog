@@ -1,3 +1,8 @@
+14 October 2008: Wouter
+	- fwd_three.tpkg test was flaky.  If the three requests hit the
+	  wrong threads by chance (or bad OS) then the test would fail.
+	  Made less flaky by increasing number of retries.
+
 13 October 2008: Wouter
 	- fixed recursion servers deployed as authoritative detection, so
 	  that as a last resort, a +RD query is sent there to get the 
