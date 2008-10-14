@@ -3,6 +3,12 @@
 	  wrong threads by chance (or bad OS) then the test would fail.
 	  Made less flaky by increasing number of retries.
 	- stub_udp.tpkg changed to work, give root hints. fixed ldns_dname_abs.
+	- ldns tarball is snapshot of ldns r2759 (1.4.0-pre-20081014).
+	  Which includes the ldns_dname_absolute fix.
+	- fwd_three test remains flaky now that unbound does not stop
+	  listening when full.  Thus, removed timeout problem.
+	  It may be serviced by three threads, or maybe by one.
+	  Mostly only useful for lock-check testing now.
 
 13 October 2008: Wouter
 	- fixed recursion servers deployed as authoritative detection, so
