@@ -420,9 +420,7 @@ extra query load that is generated.  Experimental option.
 Use 0x20-encoded random bits in the query to foil spoof attempts.
 This perturbs the lowercase and uppercase of query names sent to 
 authority servers and checks if the reply still has the correct casing. 
-Disabled by default, because some caching forwarders may not
-support this. It is known that some authority servers do not support 0x20, 
-and resolution will fail for them. A solution is on the TODO list.
+Disabled by default. 
 This feature is an experimental implementation of draft dns\-0x20.
 .TP
 .B private\-address: \fI<IP address or subnet>

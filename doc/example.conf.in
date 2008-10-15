@@ -238,16 +238,12 @@ server:
 
         # Harden the referral path by performing additional queries for
 	# infrastructure data.  Validates the replies (if possible).
-	# Default off, because it burdens the authority servers, and it is
-	# not RFC standard, and could be slower.  Experimental option.
+	# Default off, because the lookups burden the server.  Experimental 
+	# implementation of draft-wijngaards-dnsext-resolver-side-mitigation.
 	# harden-referral-path: no
 
 	# Use 0x20-encoded random bits in the query to foil spoof attempts.
-	# Disabled by default, because some caching forwarders may not
-	# support this (if you have forward-zones). Most authority servers do.
 	# This feature is an experimental implementation of draft dns-0x20.
-	# It is known that some authority servers do not support 0x20, and
-	# resolution will fail for them. A solution is on the TODO list.
 	# use-caps-for-id: no
 	
 	# Enforce privacy of these addresses. Strips them away from answers. 

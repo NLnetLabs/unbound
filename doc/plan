@@ -70,15 +70,14 @@ not	stats on SIGUSR1. perhaps also see which slow auth servers cause >1sec value
 + IPv6 reverse, IP4 reverse local-data shorthand for PTR records (?).
   cumbersome to reverse notate by hand for the operator. For local-data.
   local-data-ptr: "1.2.3.4 mypc.example.com"
-+ dns-0x20 fallback TODO item. Consider.
++ dns-0x20 fallback.
 
 *** from draft resolver-mitigation
-* Should be an option?   (Not right now)
-* direct queries for NS records
-	* careful caching, only NS query causes referral caching.
++ option harden-referral-path
++ direct queries for NS records
+* careful caching, only NS query causes referral caching.
 * direct queries for A, AAAA in-bailiwick from a referral.
 * trouble counter, cache wipe threshold.
-* 0x20 default with fallback?
 
 * off-path validation? 
 * root NS, root glue validation after prime
