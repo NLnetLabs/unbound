@@ -75,11 +75,11 @@ not	stats on SIGUSR1. perhaps also see which slow auth servers cause >1sec value
 *** from draft resolver-mitigation
 + option harden-referral-path
 + direct queries for NS records
-* careful caching, only NS query causes referral caching.
-* direct queries for A, AAAA in-bailiwick from a referral.
++ careful caching, only NS query causes referral caching.
++ direct queries for A, AAAA in-bailiwick from a referral.
 * trouble counter, cache wipe threshold.
 
-* off-path validation? 
++ off-path validation
 * root NS, root glue validation after prime
 * ignore bogus nameservers, pretend they always return a servfail.
 

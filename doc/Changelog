@@ -1,5 +1,8 @@
 15 October 2008: Wouter
 	- better documentation for 0x20; remove fallback TODO, it is done.
+	- harden-referral-path feature includes A, AAAA queries for glue,
+	  as well as very careful NS caching (only when doing NS query).
+	  A, AAAA use the delegation from the NS-query.
 
 14 October 2008: Wouter
 	- fwd_three.tpkg test was flaky.  If the three requests hit the

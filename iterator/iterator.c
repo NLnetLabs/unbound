@@ -631,24 +631,83 @@ prime_stub(struct module_qstate* qstate, struct iter_qstate* iq,
 }
 
 /**
+ * Generate A and AAAA checks for glue that is in-zone for the referral
+ * we just got to obtain authoritative information on the adresses.
+ *
+ * @param qstate: the qtstate that triggered the need to prime.
+ * @param iq: iterator query state.
+ * @param id: module id.
+ */
+static void
+generate_a_aaaa_check(struct module_qstate* qstate, struct iter_qstate* iq, 
+	int id)
+{
+	struct module_qstate* subq;
+	size_t i;
+	struct reply_info* rep = iq->response->rep;
+	struct ub_packed_rrset_key* s;
+	log_assert(iq->dp);
+
+	/* walk through additional, and check if in-zone,
+	 * only relevant A, AAAA are left after scrub anyway */
+	for(i=rep->an_numrrsets+rep->ns_numrrsets; i<rep->rrset_count; i++) {
+		s = rep->rrsets[i];
+		/* check *ALL* addresses that are transmitted in additional*/
+		/* is it an address ? */
+		if( !(ntohs(s->rk.type)==LDNS_RR_TYPE_A ||
+			ntohs(s->rk.type)==LDNS_RR_TYPE_AAAA)) {
+			continue;
+		}
+		/* is this query the same as the A/AAAA check for it */
+		if(qstate->qinfo.qtype == ntohs(s->rk.type) &&
+			qstate->qinfo.qclass == ntohs(s->rk.rrset_class) &&
+			query_dname_compare(qstate->qinfo.qname, 
+				s->rk.dname)==0 &&
+			(qstate->query_flags&BIT_RD) && 
+			!(qstate->query_flags&BIT_CD))
+			continue;
+
+		/* generate subrequest for it */
+		log_nametypeclass(VERB_ALGO, "must fetch addr", s->rk.dname, 
+			ntohs(s->rk.type), ntohs(s->rk.rrset_class));
+		if(!generate_sub_request(s->rk.dname, s->rk.dname_len, 
+			ntohs(s->rk.type), ntohs(s->rk.rrset_class),
+			qstate, id, iq,
+			INIT_REQUEST_STATE, FINISHED_STATE, &subq, 1)) {
+			log_err("out of memory generating ns check");
+			return;
+		}
+		/* ignore subq - not need for more init */
+	}
+}
+
+/**
  * Generate a NS check request to obtain authoritative information
  * on an NS rrset.
  *
  * @param qstate: the qtstate that triggered the need to prime.
  * @param iq: iterator query state.
  * @param id: module id.
- * @param qclass: the class.
  */
 static void
-generate_ns_check(struct module_qstate* qstate, struct iter_qstate* iq, 
-	int id, uint16_t qclass)
+generate_ns_check(struct module_qstate* qstate, struct iter_qstate* iq, int id)
 {
 	struct module_qstate* subq;
 	log_assert(iq->dp);
 
-	/* avoid the redundant INIT state processing. */
+	/* is this query the same as the nscheck? */
+	if(qstate->qinfo.qtype == LDNS_RR_TYPE_NS &&
+		query_dname_compare(iq->dp->name, qstate->qinfo.qname)==0 &&
+		(qstate->query_flags&BIT_RD) && !(qstate->query_flags&BIT_CD)){
+		/* spawn off A, AAAA queries for in-zone glue to check */
+		generate_a_aaaa_check(qstate, iq, id);
+		return;
+	}
+
+	log_nametypeclass(VERB_ALGO, "must fetch ns", 
+		iq->dp->name, LDNS_RR_TYPE_NS, iq->qchase.qclass);
 	if(!generate_sub_request(iq->dp->name, iq->dp->namelen, 
-		LDNS_RR_TYPE_NS, qclass, qstate, id, iq,
+		LDNS_RR_TYPE_NS, iq->qchase.qclass, qstate, id, iq,
 		INIT_REQUEST_STATE, FINISHED_STATE, &subq, 1)) {
 		log_err("out of memory generating ns check");
 		return;
@@ -657,9 +716,9 @@ generate_ns_check(struct module_qstate* qstate, struct iter_qstate* iq,
 		struct iter_qstate* subiq = 
 			(struct iter_qstate*)subq->minfo[id];
 
-		/* Set the initial delegation point to mine. */
-		/* this means it queries the referral we just got */
 		/* make copy to avoid use of stub dp by different qs/threads */
+		/* refetch glue to start higher up the tree */
+		subiq->refetch_glue = 1;
 		subiq->dp = delegpt_copy(iq->dp, subq->region);
 		if(!subiq->dp) {
 			log_err("out of memory generating ns check, copydp");
@@ -669,9 +728,6 @@ generate_ns_check(struct module_qstate* qstate, struct iter_qstate* iq,
 			return;
 		}
 	}
-	
-	/* this module stops, our submodule starts, and does the query. */
-	qstate->ext_state[id] = module_wait_subquery;
 }
 
 /**
@@ -1365,13 +1421,27 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		 * delegation point, and back to the QUERYTARGETS_STATE. */
 		verbose(VERB_DETAIL, "query response was REFERRAL");
 
-		/* Store the referral under the current query */
-		if(!iter_dns_store(qstate->env, &iq->response->qinfo,
-			iq->response->rep, 1))
-			return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
-		if(qstate->env->neg_cache)
-			val_neg_addreferral(qstate->env->neg_cache, 
-				iq->response->rep, iq->dp->name);
+		/* if hardened, only store referral if we asked for it */
+		if(!qstate->env->cfg->harden_referral_path ||
+		    (  qstate->qinfo.qtype == LDNS_RR_TYPE_NS 
+			&& (qstate->query_flags&BIT_RD) 
+			&& !(qstate->query_flags&BIT_CD)
+			   /* we know that all other NS rrsets are scrubbed
+			    * away, thus on referral only one is left.
+			    * see if that equals the query name... */
+			&& reply_find_rrset_section_ns(iq->response->rep,
+				qstate->qinfo.qname, qstate->qinfo.qname_len,
+				LDNS_RR_TYPE_NS, qstate->qinfo.qclass)
+		    )) {
+			/* Store the referral under the current query */
+			if(!iter_dns_store(qstate->env, &iq->response->qinfo,
+				iq->response->rep, 1))
+				return error_response(qstate, id, 
+					LDNS_RCODE_SERVFAIL);
+			if(qstate->env->neg_cache)
+				val_neg_addreferral(qstate->env->neg_cache, 
+					iq->response->rep, iq->dp->name);
+		}
 
 		/* Reset the event state, setting the current delegation 
 		 * point to the referral. */
@@ -1390,12 +1460,12 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		iq->dnssec_expected = iter_indicates_dnssec(qstate->env, 
 			iq->dp, iq->response, iq->qchase.qclass);
 
-		/* spawn off a NS query to auth servers for the NS we just
+		/* spawn off NS and addr to auth servers for the NS we just
 		 * got in the referral. This gets authoritative answer
-		 * (answer section trust level) rrset.
-		 * right after, we detach subs, we don't want the answer */
+		 * (answer section trust level) rrset. 
+		 * right after, we detach the subs, answer goes to cache. */
 		if(qstate->env->cfg->harden_referral_path)
-			generate_ns_check(qstate, iq, id, iq->qchase.qclass);
+			generate_ns_check(qstate, iq, id);
 
 		/* stop current outstanding queries. 
 		 * FIXME: should the outstanding queries be waited for and

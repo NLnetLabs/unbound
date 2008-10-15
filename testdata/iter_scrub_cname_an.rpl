@@ -1,6 +1,6 @@
 ; config options
 server:
-	harden-referral-path: yes
+	harden-referral-path: no
 stub-zone:
         name: "."
 	stub-addr: 193.0.14.129         # K.ROOT-SERVERS.NET.
@@ -63,24 +63,24 @@ SECTION QUESTION
 www.example.com. IN A
 ENTRY_END
 
-STEP 62 CHECK_OUT_QUERY
-ENTRY_BEGIN
-MATCH qname qtype opcode
-SECTION QUESTION
-com. IN NS
-ENTRY_END
-STEP 63 REPLY
-ENTRY_BEGIN
-MATCH opcode qtype qname
-ADJUST copy_id
-REPLY QR NOERROR
-SECTION QUESTION
-com. IN NS
-SECTION ANSWER
-com. IN NS a.gtld-servers.net.
-SECTION ADDITIONAL
-a.gtld-servers.net. IN A 192.5.6.30
-ENTRY_END
+; STEP 62 CHECK_OUT_QUERY
+; ENTRY_BEGIN
+; MATCH qname qtype opcode
+; SECTION QUESTION
+; com. IN NS
+; ENTRY_END
+; STEP 63 REPLY
+; ENTRY_BEGIN
+; MATCH opcode qtype qname
+; ADJUST copy_id
+; REPLY QR NOERROR
+; SECTION QUESTION
+; com. IN NS
+; SECTION ANSWER
+; com. IN NS a.gtld-servers.net.
+; SECTION ADDITIONAL
+; a.gtld-servers.net. IN A 192.5.6.30
+; ENTRY_END
 
 STEP 70 REPLY
 ENTRY_BEGIN
@@ -103,24 +103,24 @@ SECTION QUESTION
 www.example.com. IN A
 ENTRY_END
 
-STEP 82 CHECK_OUT_QUERY
-ENTRY_BEGIN
-MATCH qname qtype opcode
-SECTION QUESTION
-example.com. IN NS
-ENTRY_END
-STEP 83 REPLY
-ENTRY_BEGIN
-MATCH opcode qtype qname
-ADJUST copy_id
-REPLY QR NOERROR
-SECTION QUESTION
-example.com. IN NS
-SECTION ANSWER
-example.com. IN NS ns1.example.com.
-SECTION ADDITIONAL
-ns1.example.com. IN A 168.192.2.2
-ENTRY_END
+; STEP 82 CHECK_OUT_QUERY
+; ENTRY_BEGIN
+; MATCH qname qtype opcode
+; SECTION QUESTION
+; example.com. IN NS
+; ENTRY_END
+; STEP 83 REPLY
+; ENTRY_BEGIN
+; MATCH opcode qtype qname
+; ADJUST copy_id
+; REPLY QR NOERROR
+; SECTION QUESTION
+; example.com. IN NS
+; SECTION ANSWER
+; example.com. IN NS ns1.example.com.
+; SECTION ADDITIONAL
+; ns1.example.com. IN A 168.192.2.2
+; ENTRY_END
 
 STEP 90 REPLY
 ENTRY_BEGIN

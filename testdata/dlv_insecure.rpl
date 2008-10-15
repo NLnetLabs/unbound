@@ -3,7 +3,7 @@
 server:
 	dlv-anchor: "example.com.    3600    IN      DS      2854 3 1 46e4ffc6e9a4793b488954bd3f0cc6af0dfb201b"
 	val-override-date: "20070916134226"
-	harden-referral-path: yes
+	harden-referral-path: no
 
 stub-zone:
 	name: "."
@@ -140,23 +140,25 @@ ns.example.com. 3600    IN      RRSIG   A 3 3 3600 20070926135752 20070829135752
 ENTRY_END
 
 ; DLV query
-; picked out of the negative cache due to NS queries in between.
-; ENTRY_BEGIN
-; MATCH opcode qtype qname
-; ADJUST copy_id
-; REPLY QR NXDOMAIN
-; SECTION QUESTION
-; example.net.example.com. IN DLV
-; SECTION ANSWER
-; SECTION AUTHORITY
-; example.com.	IN NS	ns.example.com.
-; example.com.    3600    IN      RRSIG   NS 3 2 3600 20070926134150 20070829134150 2854 example.com. MC0CFQCN+qHdJxoI/2tNKwsb08pra/G7aAIUAWA5sDdJTbrXA1/3OaesGBAO3sI= ;{id = 2854}
-; example.com IN NSEC zazz.example.com. SOA NS RRSIG NSEC
-; example.com.	3600	IN	RRSIG	NSEC 3 2 3600 20070926135752 20070829135752 2854 example.com. AAi21jQpno6gXnrPrtK0NvNgX9B8E9U5RvTd47QiCWLF7KdtKxB7Xz0= ;{id = 2854}
-; SECTION ADDITIONAL
-; ns.example.com.		IN 	A	1.2.3.4
-; ns.example.com. 3600    IN      RRSIG   A 3 3 3600 20070926135752 20070829135752 2854 example.com. MC0CFQCMSWxVehgOQLoYclB9PIAbNP229AIUeH0vNNGJhjnZiqgIOKvs1EhzqAo= ;{id = 2854}
-; ENTRY_END
+; could be picked out of the negative cache due to NS queries in between.
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR NXDOMAIN
+SECTION QUESTION
+www.example.net.example.com. IN DLV
+SECTION ANSWER
+SECTION AUTHORITY
+example.com. IN SOA open.nlnetlabs.nl. hostmaster.nlnetlabs.nl. 2008081300 28800 7200 604800 3600
+example.com.	3600	IN	RRSIG	SOA 3 2 3600 20070926134150 20070829134150 2854 example.com. AKPJnPBqfJKxE4P2iVYkSRJno9HmiXJZtjdqE8oBeq9Lk9FytcMdcig= ;{id = 2854}
+example.com.	IN NS	ns.example.com.
+example.com.    3600    IN      RRSIG   NS 3 2 3600 20070926134150 20070829134150 2854 example.com. MC0CFQCN+qHdJxoI/2tNKwsb08pra/G7aAIUAWA5sDdJTbrXA1/3OaesGBAO3sI= ;{id = 2854}
+example.com IN NSEC zazz.example.com. SOA NS RRSIG NSEC
+example.com.	3600	IN	RRSIG	NSEC 3 2 3600 20070926135752 20070829135752 2854 example.com. AAi21jQpno6gXnrPrtK0NvNgX9B8E9U5RvTd47QiCWLF7KdtKxB7Xz0= ;{id = 2854}
+SECTION ADDITIONAL
+ns.example.com.		IN 	A	1.2.3.4
+ns.example.com. 3600    IN      RRSIG   A 3 3 3600 20070926135752 20070829135752 2854 example.com. MC0CFQCMSWxVehgOQLoYclB9PIAbNP229AIUeH0vNNGJhjnZiqgIOKvs1EhzqAo= ;{id = 2854}
+ENTRY_END
 
 ENTRY_BEGIN
 MATCH opcode qtype qname

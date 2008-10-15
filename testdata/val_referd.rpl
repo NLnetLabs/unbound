@@ -3,7 +3,7 @@
 server:
 	trust-anchor: "example.com.    3600    IN      DS      2854 3 1 46e4ffc6e9a4793b488954bd3f0cc6af0dfb201b"
 	val-override-date: "20070916134226"
-	harden-referral-path: yes
+	harden-referral-path: no
 	access-control: 127.0.0.1 allow_snoop
 
 stub-zone:
@@ -112,7 +112,7 @@ SECTION QUESTION
 www.example.com. IN A
 SECTION ANSWER
 www.example.com. IN A	10.20.30.40
-ns.example.com. 3600    IN      RRSIG   A 3 3 3600 20070926134150 20070829134150 2854 example.com. MC0CFQCQMyTjn7WWwpwAR1LlVeLpRgZGuQIUCcJDEkwAuzytTDRlYK7nIMwH1CM= ;{id = 2854}
+www.example.com.	3600	IN	RRSIG	A 3 3 3600 20070926134150 20070829134150 2854 example.com. AD8qRJvXxOtmSuy8Ogyo0roA294qOtNT2E1m05kSU0jbxN4qLYn0OmU= ;{id = 2854}
 SECTION AUTHORITY
 example.com.	IN NS	ns.example.com.
 example.com.    3600    IN      RRSIG   NS 3 2 3600 20070926134150 20070829134150 2854 example.com. MC0CFQCN+qHdJxoI/2tNKwsb08pra/G7aAIUAWA5sDdJTbrXA1/3OaesGBAO3sI= ;{id = 2854}
