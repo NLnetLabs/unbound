@@ -292,9 +292,14 @@ packed_rrset_copy_region(struct ub_packed_rrset_key* key,
 	ck->entry.data = d;
 	packed_rrset_ptr_fixup(d);
 	/* make TTLs relative - once per rrset */
-	for(i=0; i<d->count + d->rrsig_count; i++)
-		d->rr_ttl[i] -= now;
-	d->ttl -= now;
+	for(i=0; i<d->count + d->rrsig_count; i++) {
+		if(d->rr_ttl[i] < now)
+			d->rr_ttl[i] = 0;
+		else	d->rr_ttl[i] -= now;
+	}
+	if(d->ttl < now)
+		d->ttl = 0;
+	else	d->ttl -= now;
 	return ck;
 }
 

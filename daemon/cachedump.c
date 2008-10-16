@@ -67,7 +67,9 @@ to_rr(struct ub_packed_rrset_key* k, struct packed_rrset_data* d,
 	}
 	ldns_rr_set_type(rr, type);
 	ldns_rr_set_class(rr, ntohs(k->rk.rrset_class));
-	ldns_rr_set_ttl(rr, d->rr_ttl[i] - now);
+	if(d->rr_ttl[i] < now)
+		ldns_rr_set_ttl(rr, 0);
+	else	ldns_rr_set_ttl(rr, d->rr_ttl[i] - now);
 	pos = 0;
 	status = ldns_wire2dname(&rdf, k->rk.dname, k->rk.dname_len, &pos);
 	if(status != LDNS_STATUS_OK) {

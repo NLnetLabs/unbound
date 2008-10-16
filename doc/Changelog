@@ -1,3 +1,6 @@
+16 October 2008: Wouter
+	- Fixup negative TTL values appearing (reported by Attila Nagy).
+
 15 October 2008: Wouter
 	- better documentation for 0x20; remove fallback TODO, it is done.
 	- harden-referral-path feature includes A, AAAA queries for glue,

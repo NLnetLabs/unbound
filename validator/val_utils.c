@@ -337,8 +337,11 @@ val_verify_rrset(struct module_env* env, struct val_env* ve,
 		if(sec == sec_status_secure)
 			d->trust = rrset_trust_validated;
 		else if(sec == sec_status_bogus) {
+			size_t i;
 			/* update ttl for rrset to fixed value. */
 			d->ttl = ve->bogus_ttl;
+			for(i=0; i<d->count+d->rrsig_count; i++)
+				d->rr_ttl[i] = ve->bogus_ttl;
 			/* leave RR specific TTL: not used for determine
 			 * if RRset timed out and clients see proper value. */
 			lock_basic_lock(&ve->bogus_lock);

@@ -334,10 +334,13 @@ rrset_update_sec_status(struct rrset_cache* r,
 	}
 	/* update the cached rrset */
 	if(updata->security > cachedata->security) {
+		size_t i;
 		if(updata->trust > cachedata->trust)
 			cachedata->trust = updata->trust;
 		cachedata->security = updata->security;
 		cachedata->ttl = updata->ttl + now;
+		for(i=0; i<cachedata->count+cachedata->rrsig_count; i++)
+			cachedata->rr_ttl[i] = updata->rr_ttl[i]+now;
 	}
 	lock_rw_unlock(&e->lock);
 }
@@ -364,8 +367,15 @@ rrset_check_sec_status(struct rrset_cache* r,
 	}
 	if(cachedata->security > updata->security) {
 		updata->security = cachedata->security;
-		if(cachedata->security == sec_status_bogus)
+		if(cachedata->security == sec_status_bogus) {
+			size_t i;
 			updata->ttl = cachedata->ttl - now;
+			for(i=0; i<cachedata->count+cachedata->rrsig_count; i++)
+				if(cachedata->rr_ttl[i] < now)
+					updata->rr_ttl[i] = 0;
+				else updata->rr_ttl[i] = 
+					cachedata->rr_ttl[i]-now;
+		}
 		if(cachedata->trust > updata->trust)
 			updata->trust = cachedata->trust;
 	}

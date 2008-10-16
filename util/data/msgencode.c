@@ -466,7 +466,10 @@ packed_rrset_encode(struct ub_packed_rrset_key* key, ldns_buffer* pkt,
 				return r;
 			ldns_buffer_write(pkt, &key->rk.type, 2);
 			ldns_buffer_write(pkt, &key->rk.rrset_class, 2);
-			ldns_buffer_write_u32(pkt, data->rr_ttl[i]-timenow);
+			if(data->rr_ttl[i] < timenow)
+				ldns_buffer_write_u32(pkt, 0);
+			else 	ldns_buffer_write_u32(pkt, 
+					data->rr_ttl[i]-timenow);
 			if(c) {
 				if((r=compress_rdata(pkt, data->rr_data[i],
 					data->rr_len[i], region, tree, c))
@@ -500,7 +503,10 @@ packed_rrset_encode(struct ub_packed_rrset_key* key, ldns_buffer* pkt,
 			}
 			ldns_buffer_write_u16(pkt, LDNS_RR_TYPE_RRSIG);
 			ldns_buffer_write(pkt, &key->rk.rrset_class, 2);
-			ldns_buffer_write_u32(pkt, data->rr_ttl[i]-timenow);
+			if(data->rr_ttl[i] < timenow)
+				ldns_buffer_write_u32(pkt, 0);
+			else 	ldns_buffer_write_u32(pkt, 
+					data->rr_ttl[i]-timenow);
 			/* rrsig rdata cannot be compressed, perform 100+ byte
 			 * memcopy. */
 			ldns_buffer_write(pkt, data->rr_data[i],
