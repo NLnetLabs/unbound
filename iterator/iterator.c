@@ -668,8 +668,9 @@ generate_a_aaaa_check(struct module_qstate* qstate, struct iter_qstate* iq,
 			continue;
 
 		/* generate subrequest for it */
-		log_nametypeclass(VERB_ALGO, "must fetch addr", s->rk.dname, 
-			ntohs(s->rk.type), ntohs(s->rk.rrset_class));
+		log_nametypeclass(VERB_ALGO, "schedule addr fetch", 
+			s->rk.dname, ntohs(s->rk.type), 
+			ntohs(s->rk.rrset_class));
 		if(!generate_sub_request(s->rk.dname, s->rk.dname_len, 
 			ntohs(s->rk.type), ntohs(s->rk.rrset_class),
 			qstate, id, iq,
@@ -704,7 +705,7 @@ generate_ns_check(struct module_qstate* qstate, struct iter_qstate* iq, int id)
 		return;
 	}
 
-	log_nametypeclass(VERB_ALGO, "must fetch ns", 
+	log_nametypeclass(VERB_ALGO, "schedule ns fetch", 
 		iq->dp->name, LDNS_RR_TYPE_NS, iq->qchase.qclass);
 	if(!generate_sub_request(iq->dp->name, iq->dp->namelen, 
 		LDNS_RR_TYPE_NS, iq->qchase.qclass, qstate, id, iq,
@@ -1641,6 +1642,24 @@ processPrimeResponse(struct module_qstate* qstate, int id)
 	} else {
 		qstate->return_rcode = LDNS_RCODE_SERVFAIL;
 		qstate->return_msg = NULL;
+	}
+
+	/* validate the root or stub after priming (if enabled).
+	 * This is the same query as the prime query, but with validation.
+	 * Now that we are primed, the additional queries that validation
+	 * may need can be resolved, such as DLV. */
+	if(qstate->env->cfg->harden_referral_path) {
+		struct module_qstate* subq = NULL;
+		log_nametypeclass(VERB_ALGO, "schedule prime validation", 
+			qstate->qinfo.qname, qstate->qinfo.qtype,
+			qstate->qinfo.qclass);
+		if(!generate_sub_request(qstate->qinfo.qname, 
+			qstate->qinfo.qname_len, qstate->qinfo.qtype,
+			qstate->qinfo.qclass, qstate, id, iq,
+			INIT_REQUEST_STATE, FINISHED_STATE, &subq, 1)) {
+			log_err("out of memory generating prime check");
+		}
+		generate_a_aaaa_check(qstate, iq, id);
 	}
 
 	/* This event is finished. */

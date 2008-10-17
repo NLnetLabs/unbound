@@ -1,6 +1,9 @@
 17 October 2008: Wouter
 	- port Leopard/G5: fixup type conversion size_t/uint32.
 	  please ranlib, stop file without symbols warning.
+	- harden referral path now also validates the root after priming.
+	  It looks up the root NS authoritatively as well as the root servers
+	  and attemps to validate the entries.
 
 16 October 2008: Wouter
 	- Fixup negative TTL values appearing (reported by Attila Nagy).
