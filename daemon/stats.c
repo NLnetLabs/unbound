@@ -154,7 +154,7 @@ void server_stats_obtain(struct worker* worker, struct worker* who,
 	struct stats_info* s)
 {
 	uint8_t *reply = NULL;
-	size_t len = 0;
+	uint32_t len = 0;
 	if(worker == who) {
 		/* just fill it in */
 		server_stats_compile(worker, s);
@@ -166,10 +166,10 @@ void server_stats_obtain(struct worker* worker, struct worker* who,
 	verbose(VERB_ALGO, "wait for stats reply");
 	if(!tube_read_msg(worker->cmd, &reply, &len, 0))
 		fatal_exit("failed to read stats over cmd channel");
-	if(len != sizeof(*s))
+	if(len != (uint32_t)sizeof(*s))
 		fatal_exit("stats on cmd channel wrong length %d %d",
 			(int)len, (int)sizeof(*s));
-	memcpy(s, reply, len);
+	memcpy(s, reply, (size_t)len);
 	free(reply);
 }
 
