@@ -604,4 +604,7 @@ void winsock_unregister_wsaevent(struct event* ev)
 	ev->added = 0;
 }
 
+#else /* USE_WINSOCK */
+/** symbol so this codefile defines symbols. pleasing ranlib on OSX 10.5 */
+int winsock_unused_symbol = 1;
 #endif /* USE_WINSOCK */
