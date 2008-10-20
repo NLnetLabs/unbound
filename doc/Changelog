@@ -3,6 +3,17 @@
 	- iana portlist updated.
 	- do not query bogus nameservers.  It is like nameservers that have 
 	  the NS or A or AAAA record bogus are listed as donotquery.
+	- if server selection is faced with only bad choices, it will
+	  attempt to get more options to be fetched.
+	- changed bogus-ttl default value from 900 to 60 seconds.
+	  In anticipation that operator caused failures are more likely than
+	  actual attacks at this time.  And thus repeated validation helps
+	  the operators get the problem fixed sooner.  It makes validation
+	  failures go away sooner (60 seconds after the zone is fixed).
+	  Also it is likely to try different nameserver targets every minute,
+	  so that if a zone is bad on one server but not another, it is 
+	  likely to pick up the 'correct' one after a couple minutes,
+	  and if the TTL is big enough that solves validation for the zone.
 
 17 October 2008: Wouter
 	- port Leopard/G5: fixup type conversion size_t/uint32.

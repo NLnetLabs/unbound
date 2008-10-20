@@ -501,7 +501,7 @@ you are debugging signature inception and expiration.
 .B val\-bogus\-ttl: \fI<number>
 The time to live for bogus data. This is data that has failed validation;
 due to invalid signatures or other checks. The TTL from that data cannot be
-trusted, and this value is used instead. The value is in seconds, default 900.
+trusted, and this value is used instead. The value is in seconds, default 60.
 The time interval prevents repeated revalidation of bogus data.
 .TP
 .B val\-clean\-additional: \fI<yes or no>

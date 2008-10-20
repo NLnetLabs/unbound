@@ -207,6 +207,10 @@ iter_filter_order(struct iter_env* iter_env, struct module_env* env,
 		&low_rtt);
 	if(got_num == 0) 
 		return 0;
+	if(low_rtt >= USEFUL_SERVER_TOP_TIMEOUT &&
+		delegpt_count_missing_targets(dp) > 0)
+		return 0; /* we want more choice. The best choice is a bad one.
+			     return 0 to force the caller to fetch more */
 
 	got_num = 0;
 	a = dp->result_list;

@@ -99,7 +99,7 @@ config_create()
 	cfg->rrset_cache_slabs = 4;
 	cfg->host_ttl = 900;
 	cfg->lame_ttl = 900;
-	cfg->bogus_ttl = 900;
+	cfg->bogus_ttl = 60;
 	cfg->max_ttl = 3600 * 24;
 	cfg->infra_cache_slabs = 4;
 	cfg->infra_cache_numhosts = 10000;

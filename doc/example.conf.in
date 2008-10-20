@@ -304,7 +304,7 @@ server:
 	
 	# The time to live for bogus data, rrsets and messages. This avoids
 	# some of the revalidation, until the time interval expires. in secs.
-	# val-bogus-ttl: 900
+	# val-bogus-ttl: 60
 	
 	# Should additional section of secure message also be kept clean of
 	# unsecure data. Useful to shield the users of this validator from
