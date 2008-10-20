@@ -302,6 +302,10 @@ int main(int argc, char* argv[])
 	int c, ret;
 	char* cfgfile = CONFIGFILE;
 	char* svr = NULL;
+#ifdef USE_WINSOCK
+	int r;
+	WSADATA wsa_data;
+#endif
 #ifdef USE_THREAD_DEBUG
 	/* stop the file output from unbound-control, overwites the servers */
 	extern int check_locking_order;

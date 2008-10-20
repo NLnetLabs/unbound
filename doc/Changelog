@@ -14,6 +14,7 @@
 	  so that if a zone is bad on one server but not another, it is 
 	  likely to pick up the 'correct' one after a couple minutes,
 	  and if the TTL is big enough that solves validation for the zone.
+	- fixup unbound-control compilation on windows.
 
 17 October 2008: Wouter
 	- port Leopard/G5: fixup type conversion size_t/uint32.
