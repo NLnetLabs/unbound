@@ -1815,7 +1815,7 @@ processDLVLookup(struct module_qstate* qstate, struct val_qstate* vq,
 		vq->dlv_insecure_at)) {
 		/* already checked a chain lower than dlv_lookup_name */
 		verbose(VERB_ALGO, "ask above insecure endpoint");
-		log_nametypeclass(0, "enpt", vq->dlv_insecure_at, 0, 0);
+		log_nametypeclass(VERB_ALGO, "enpt", vq->dlv_insecure_at, 0, 0);
 		vq->state = VAL_FINISHED_STATE;
 		return 1;
 	}

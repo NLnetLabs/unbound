@@ -1,3 +1,6 @@
+20 October 2008: Wouter
+	- quench a log message that is debug only.
+
 17 October 2008: Wouter
 	- port Leopard/G5: fixup type conversion size_t/uint32.
 	  please ranlib, stop file without symbols warning.
