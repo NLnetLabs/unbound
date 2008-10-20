@@ -1,6 +1,8 @@
 20 October 2008: Wouter
 	- quench a log message that is debug only.
 	- iana portlist updated.
+	- do not query bogus nameservers.  It is like nameservers that have 
+	  the NS or A or AAAA record bogus are listed as donotquery.
 
 17 October 2008: Wouter
 	- port Leopard/G5: fixup type conversion size_t/uint32.

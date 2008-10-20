@@ -70,6 +70,9 @@ struct delegpt {
 	struct delegpt_addr* usable_list;
 	/** the list of returned targets; subset of target_list */
 	struct delegpt_addr* result_list;
+
+	/** if true, the NS RRset was bogus. All info is bad. */
+	int bogus;
 };
 
 /**
@@ -108,6 +111,9 @@ struct delegpt_addr {
 	int attempts;
 	/** rtt stored here in the selection algorithm */
 	int sel_rtt;
+	/** if true, the A or AAAA RR was bogus, so this address is bad.
+	 * Also check the dp->bogus to see if everything is bogus. */
+	int bogus;
 };
 
 /**
@@ -164,11 +170,12 @@ int delegpt_rrset_add_ns(struct delegpt* dp, struct regional* regional,
  * @param namelen: length of name.
  * @param addr: the address.
  * @param addrlen: the length of addr.
+ * @param bogus: security status for the address, pass true if bogus.
  * @return false on error.
  */
 int delegpt_add_target(struct delegpt* dp, struct regional* regional, 
 	uint8_t* name, size_t namelen, struct sockaddr_storage* addr, 
-	socklen_t addrlen);
+	socklen_t addrlen, int bogus);
 
 /**
  * Add A RRset to delegpt.
@@ -206,10 +213,11 @@ int delegpt_add_rrset(struct delegpt* dp, struct regional* regional,
  * @param regional: where to allocate the info.
  * @param addr: the address.
  * @param addrlen: the length of addr.
+ * @param bogus: if address is bogus.
  * @return false on error.
  */
 int delegpt_add_addr(struct delegpt* dp, struct regional* regional, 
-	struct sockaddr_storage* addr, socklen_t addrlen);
+	struct sockaddr_storage* addr, socklen_t addrlen, int bogus);
 
 /** 
  * Find NS record in name list of delegation point.

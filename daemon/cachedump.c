@@ -816,6 +816,10 @@ int print_deleg_lookup(SSL* ssl, struct worker* worker, uint8_t* nm,
 			struct ub_packed_rrset_key* k = msg->rep->rrsets[i];
 			struct packed_rrset_data* d = 
 				(struct packed_rrset_data*)k->entry.data;
+			if(d->security == sec_status_bogus) {
+				if(!ssl_printf(ssl, "Address is BOGUS:\n"))
+					return 0;
+			}
 			if(!dump_rrset(ssl, k, d, 0))
 				return 0;
 		}
@@ -824,8 +828,9 @@ int print_deleg_lookup(SSL* ssl, struct worker* worker, uint8_t* nm,
 		/* since dp has not been used by iterator, all are available*/
 		if(!ssl_printf(ssl, "Delegation with %d names, of which %d "
 			"have no addresses in cache.\n"
-			"It provides %d IP addresses.\n", 
-			(int)n_ns, (int)n_miss, (int)n_addr))
+			"It provides %d IP addresses. %s\n", 
+			(int)n_ns, (int)n_miss, (int)n_addr, 
+			(dp->bogus?"It is BOGUS":"") ))
 			return 0;
 		/* go up? */
 		if(iter_dp_is_useless(&qinfo, BIT_RD, dp)) {

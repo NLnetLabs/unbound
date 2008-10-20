@@ -74,7 +74,8 @@ struct delegpt* delegpt_copy(struct delegpt* dp, struct regional* region)
 		copy->nslist->resolved = ns->resolved;
 	}
 	for(a = dp->target_list; a; a = a->next_target) {
-		if(!delegpt_add_addr(copy, region, &a->addr, a->addrlen))
+		if(!delegpt_add_addr(copy, region, &a->addr, a->addrlen, 
+			a->bogus))
 			return NULL;
 	}
 	return copy;
@@ -127,7 +128,7 @@ delegpt_find_ns(struct delegpt* dp, uint8_t* name, size_t namelen)
 int 
 delegpt_add_target(struct delegpt* dp, struct regional* region, 
 	uint8_t* name, size_t namelen, struct sockaddr_storage* addr, 
-	socklen_t addrlen)
+	socklen_t addrlen, int bogus)
 {
 	struct delegpt_ns* ns = delegpt_find_ns(dp, name, namelen);
 	if(!ns) {
@@ -135,12 +136,12 @@ delegpt_add_target(struct delegpt* dp, struct regional* region,
 		return 1;
 	}
 	ns->resolved = 1;
-	return delegpt_add_addr(dp, region, addr, addrlen);
+	return delegpt_add_addr(dp, region, addr, addrlen, bogus);
 }
 
 int 
 delegpt_add_addr(struct delegpt* dp, struct regional* region, 
-	struct sockaddr_storage* addr, socklen_t addrlen)
+	struct sockaddr_storage* addr, socklen_t addrlen, int bogus)
 {
 	struct delegpt_addr* a = (struct delegpt_addr*)regional_alloc(region,
 		sizeof(struct delegpt_addr));
@@ -154,6 +155,7 @@ delegpt_add_addr(struct delegpt* dp, struct regional* region,
 	memcpy(&a->addr, addr, addrlen);
 	a->addrlen = addrlen;
 	a->attempts = 0;
+	a->bogus = bogus;
 	return 1;
 }
 
@@ -211,10 +213,14 @@ void delegpt_log(enum verbosity_value v, struct delegpt* dp)
 	if(verbosity >= VERB_ALGO) {
 		for(ns = dp->nslist; ns; ns = ns->next) {
 			dname_str(ns->name, buf);
-			log_info("  %s%s", buf, (ns->resolved?"*":""));
+			log_info("  %s%s%s", buf, (ns->resolved?"*":""),
+			(dp->bogus?" BOGUS":"") );
 		}
 		for(a = dp->target_list; a; a = a->next_target) {
-			log_addr(VERB_ALGO, "  ", &a->addr, a->addrlen);
+			if(a->bogus) 
+				log_addr(VERB_ALGO, "  BOGUS ", 
+					&a->addr, a->addrlen);
+			else log_addr(VERB_ALGO, "  ", &a->addr, a->addrlen);
 		}
 	}
 }
@@ -310,6 +316,8 @@ delegpt_rrset_add_ns(struct delegpt* dp, struct regional* region,
 	struct packed_rrset_data* nsdata = (struct packed_rrset_data*)
 		ns_rrset->entry.data;
 	size_t i;
+	if(nsdata->security == sec_status_bogus)
+		dp->bogus = 1;
 	for(i=0; i<nsdata->count; i++) {
 		if(nsdata->rr_len[i] < 2+1) continue; /* len + root label */
 		if(dname_valid(nsdata->rr_data[i]+2, nsdata->rr_len[i]-2) !=
@@ -339,7 +347,7 @@ delegpt_add_rrset_A(struct delegpt* dp, struct regional* region,
                 memmove(&sa.sin_addr, d->rr_data[i]+2, INET_SIZE);
                 if(!delegpt_add_target(dp, region, ak->rk.dname,
                         ak->rk.dname_len, (struct sockaddr_storage*)&sa,
-                        len))
+                        len, (d->security==sec_status_bogus) ))
                         return 0;
         }
         return 1;
@@ -362,7 +370,7 @@ delegpt_add_rrset_AAAA(struct delegpt* dp, struct regional* region,
                 memmove(&sa.sin6_addr, d->rr_data[i]+2, INET6_SIZE);
                 if(!delegpt_add_target(dp, region, ak->rk.dname,
                         ak->rk.dname_len, (struct sockaddr_storage*)&sa,
-                        len))
+                        len, (d->security==sec_status_bogus) ))
                         return 0;
         }
         return 1;

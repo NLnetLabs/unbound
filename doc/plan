@@ -81,7 +81,7 @@ not	stats on SIGUSR1. perhaps also see which slow auth servers cause >1sec value
 
 + off-path validation
 + root NS, root glue validation after prime
-* ignore bogus nameservers, pretend they always return a servfail.
++ ignore bogus nameservers, pretend they always return a servfail.
 
 
 *** Features features, for later

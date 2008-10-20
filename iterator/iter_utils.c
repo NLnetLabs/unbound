@@ -141,6 +141,8 @@ iter_filter_unsuitable(struct iter_env* iter_env, struct module_env* env,
 	struct delegpt_addr* a)
 {
 	int rtt, lame, reclame, dnsseclame;
+	if(a->bogus)
+		return -1; /* address of server is bogus */
 	if(donotq_lookup(iter_env->donotq, &a->addr, a->addrlen)) {
 		return -1; /* server is on the donotquery list */
 	}
@@ -173,6 +175,8 @@ iter_fill_rtt(struct iter_env* iter_env, struct module_env* env,
 {
 	int got_it = 0;
 	struct delegpt_addr* a;
+	if(dp->bogus)
+		return 0; /* NS bogus, all bogus, nothing found */
 	for(a=dp->result_list; a; a = a->next_result) {
 		a->sel_rtt = iter_filter_unsuitable(iter_env, env, 
 			name, namelen, qtype, now, a);
