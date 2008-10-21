@@ -647,6 +647,8 @@ int tube_setup_bg_listen(struct tube* tube, struct comm_base* base,
 {
 	tube->listen_cb = cb;
 	tube->listen_arg = arg;
+	if(!comm_base_internal(base))
+		return 1; /* ignore when no comm base - testing */
 	return winsock_register_wsaevent(comm_base_internal(base), 
 		&tube->ev_listen, tube->event, &tube_handle_signal, tube);
 }

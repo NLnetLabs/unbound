@@ -233,6 +233,12 @@ add_open(char* ip, int nr, struct listen_port** list, int noproto_is_err)
 	hints.ai_socktype = SOCK_STREAM;
 	hints.ai_flags = AI_PASSIVE | AI_NUMERICHOST;
 	if((r = getaddrinfo(ip, port, &hints, &res)) != 0 || !res) {
+#ifdef USE_WINSOCK
+		if(!noproto_is_err && r == EAI_NONAME) {
+			/* tried to lookup the address as name */
+			return 1; /* return success, but do nothing */
+		}
+#endif /* USE_WINSOCK */
                 log_err("control interface %s:%s getaddrinfo: %s %s",
 			ip?ip:"default", port, gai_strerror(r),
 #ifdef EAI_SYSTEM
@@ -1207,6 +1213,11 @@ handle_req(struct daemon_remote* rc, struct rc_state* s, SSL* ssl)
 	int r;
 	char magic[5];
 	char buf[1024];
+#ifdef USE_WINSOCK
+	/* makes it possible to set the socket blocking again. */
+	/* basically removes it from winsock_event ... */
+	WSAEventSelect(s->c->fd, NULL, 0);
+#endif
 	fd_set_block(s->c->fd);
 
 	/* try to read magic UBCT string */

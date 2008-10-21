@@ -1,6 +1,9 @@
 21 October 2008: Wouter
 	- fix update-anchors.sh, so it does not report different RR order
 	  as an update.  Sorts the keys in the file.  Updated copyright.
+	- fixup testbound on windows, the command control pipe doesn't exist.
+	- skip 08hostlib test on windows, no fork() available.
+	- made unbound-remote work on windows.
 
 20 October 2008: Wouter
 	- quench a log message that is debug only.
