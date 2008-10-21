@@ -1,6 +1,7 @@
 #!/bin/sh
 # update-anchor.sh, update a trust anchor.
-# this file is BSD licensed.
+# Copyright 2008, W.C.A. Wijngaards
+# This file is BSD licensed, see doc/LICENSE.
 
 # which validating lookup to use.
 ubhost=unbound-host
@@ -77,13 +78,13 @@ do_update ( ) {
 			grep ' has DNSKEY record 257' | \
 			sed -e 's/ (secure)$/";/' | \
 			sed -e 's/ has DNSKEY record \([0-9]*\) \([0-9]*\) \([0-9]*\) /. \1 \2 \3 "/' | \
-			sed -e 's/^\.\././' >> "$tmp2"
+			sed -e 's/^\.\././' | sort >> "$tmp2"
 		else
 			# store all keys in the anchor file
 			grep '(secure)$' $tmpfile | \
 			sed -e 's/ (secure)$/";/' | \
 			sed -e 's/ has DNSKEY record \([0-9]*\) \([0-9]*\) \([0-9]*\) /. \1 \2 \3 "/' | \
-			sed -e 's/^\.\././' >> "$tmp2"
+			sed -e 's/^\.\././' | sort >> "$tmp2"
 		fi
 		echo '};' >> "$tmp2"
 	else #not bindformat
@@ -94,13 +95,13 @@ do_update ( ) {
 			grep ' has DNSKEY record 257' | \
 			sed -e 's/ (secure)$//' | \
 			sed -e 's/ has DNSKEY record /. IN DNSKEY /' | \
-			sed -e 's/^\.\././' > "$tmp2"
+			sed -e 's/^\.\././' | sort > "$tmp2"
 		else
 			# store all keys in the anchor file
 			grep '(secure)$' $tmpfile | \
 			sed -e 's/ (secure)$//' | \
 			sed -e 's/ has DNSKEY record /. IN DNSKEY /' | \
-			sed -e 's/^\.\././' > "$tmp2"
+			sed -e 's/^\.\././' | sort > "$tmp2"
 		fi
 	fi # endif-bindformat
 
