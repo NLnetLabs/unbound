@@ -1,3 +1,6 @@
+22 October 2008: Wouter
+	- CFLAGS are picked up by configure from the environment.
+
 21 October 2008: Wouter
 	- fix update-anchors.sh, so it does not report different RR order
 	  as an update.  Sorts the keys in the file.  Updated copyright.
