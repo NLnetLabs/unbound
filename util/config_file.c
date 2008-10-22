@@ -135,6 +135,7 @@ config_create()
 	cfg->use_caps_bits_for_id = 0;
 	cfg->private_address = NULL;
 	cfg->private_domain = NULL;
+	cfg->unwanted_threshold = 0;
 	cfg->hide_identity = 0;
 	cfg->hide_version = 0;
 	cfg->identity = NULL;
@@ -325,6 +326,9 @@ int config_set_option(struct config_file* cfg, const char* opt,
 		return cfg_strlist_insert(&cfg->private_address, strdup(val));
 	} else if(strcmp(opt, "private-domain:") == 0) {
 		return cfg_strlist_insert(&cfg->private_domain, strdup(val));
+	} else if(strcmp(opt, "unwanted-reply-threshold:") == 0) {
+		IS_NUMBER_OR_ZERO;
+		cfg->unwanted_threshold = (size_t)atoi(val);
 	} else if(strcmp(opt, "do-not-query-localhost:") == 0) {
 		IS_YES_OR_NO;
 		cfg->donotquery_localhost = (strcmp(val, "yes") == 0);

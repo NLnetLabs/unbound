@@ -155,6 +155,8 @@ struct config_file {
 	struct config_strlist* private_address;
 	/** allow domain (and subdomains) to use private address space */
 	struct config_strlist* private_domain;
+	/** what threshold for unwanted action. */
+	size_t unwanted_threshold;
 
 	/** chrootdir, if not "" or chroot will be done */
 	char* chrootdir;

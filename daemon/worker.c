@@ -1042,7 +1042,8 @@ worker_init(struct worker* worker, struct config_file *cfg,
 		cfg->out_ifs, cfg->num_out_ifs, cfg->do_ip4, cfg->do_ip6, 
 		cfg->do_tcp?cfg->outgoing_num_tcp:0, 
 		worker->daemon->env->infra_cache, worker->rndstate,
-		cfg->use_caps_bits_for_id, worker->ports, worker->numports);
+		cfg->use_caps_bits_for_id, worker->ports, worker->numports,
+		cfg->unwanted_threshold, &worker_alloc_cleanup, worker);
 	if(!worker->back) {
 		log_err("could not create outgoing sockets");
 		worker_delete(worker);

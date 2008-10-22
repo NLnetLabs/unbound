@@ -159,7 +159,8 @@ libworker_setup(struct ub_ctx* ctx, int is_bg)
 		cfg->num_out_ifs, cfg->do_ip4, cfg->do_ip6, 
 		cfg->do_tcp?cfg->outgoing_num_tcp:0,
 		w->env->infra_cache, w->env->rnd, cfg->use_caps_bits_for_id,
-		ports, numports);
+		ports, numports, cfg->unwanted_threshold,
+		&libworker_alloc_cleanup, w);
 	if(!w->is_bg || w->is_bg_thread) {
 		lock_basic_unlock(&ctx->cfglock);
 	}

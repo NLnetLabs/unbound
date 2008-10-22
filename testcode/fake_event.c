@@ -722,10 +722,12 @@ outside_network_create(struct comm_base* base, size_t bufsize,
 	struct infra_cache* ATTR_UNUSED(infra),
 	struct ub_randstate* ATTR_UNUSED(rnd), 
 	int ATTR_UNUSED(use_caps_for_id), int* ATTR_UNUSED(availports),
-	int ATTR_UNUSED(numavailports))
+	int ATTR_UNUSED(numavailports), size_t ATTR_UNUSED(unwanted_threshold),
+	void (*unwanted_action)(void*), void* ATTR_UNUSED(unwanted_param))
 {
 	struct outside_network* outnet =  calloc(1, 
 		sizeof(struct outside_network));
+	(void)unwanted_action;
 	if(!outnet)
 		return NULL;
 	outnet->base = base;

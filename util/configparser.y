@@ -96,7 +96,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_CONTROL_INTERFACE VAR_CONTROL_PORT VAR_SERVER_KEY_FILE
 %token VAR_SERVER_CERT_FILE VAR_CONTROL_KEY_FILE VAR_CONTROL_CERT_FILE
 %token VAR_EXTENDED_STATISTICS VAR_LOCAL_DATA_PTR VAR_JOSTLE_TIMEOUT
-%token VAR_STUB_PRIME
+%token VAR_STUB_PRIME VAR_UNWANTED_REPLY_THRESHOLD
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -142,7 +142,8 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_dlv_anchor_file | server_dlv_anchor | server_neg_cache_size |
 	server_harden_referral_path | server_private_address |
 	server_private_domain | server_extended_statistics | 
-	server_local_data_ptr | server_jostle_timeout
+	server_local_data_ptr | server_jostle_timeout | 
+	server_unwanted_reply_threshold
 	;
 stubstart: VAR_STUB_ZONE
 	{
@@ -684,6 +685,15 @@ server_private_domain: VAR_PRIVATE_DOMAIN STRING
 		OUTYY(("P(server_private_domain:%s)\n", $2));
 		if(!cfg_strlist_insert(&cfg_parser->cfg->private_domain, $2))
 			yyerror("out of memory");
+	}
+	;
+server_unwanted_reply_threshold: VAR_UNWANTED_REPLY_THRESHOLD STRING
+	{
+		OUTYY(("P(server_unwanted_reply_threshold:%s)\n", $2));
+		if(atoi($2) == 0 && strcmp($2, "0") != 0)
+			yyerror("number expected");
+		else cfg_parser->cfg->unwanted_threshold = atoi($2);
+		free($2);
 	}
 	;
 server_do_not_query_address: VAR_DO_NOT_QUERY_ADDRESS STRING

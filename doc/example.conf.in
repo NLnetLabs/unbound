@@ -261,6 +261,13 @@ server:
 	# Allow the domain (and its subdomains) to contain private addresses.
 	# local-data statements are allowed to contain private addresses too.
 	# private-domain: "example.com"
+	
+	# If nonzero, unwanted replies are not only reported in statistics,
+	# but also a running total is kept per thread. If it reaches the
+	# threshold, a warning is printed and a defensive action is taken,
+	# the cache is cleared to flush potential poison out of it.
+	# A suggested value is 10000000, the default is 0 (turned off).
+	# unwanted-reply-threshold: 0
 
 	# Do not query the following addresses. No DNS queries are sent there.
 	# List one address per entry. List classless netblocks with /size,

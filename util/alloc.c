@@ -169,7 +169,7 @@ alloc_get_id(struct alloc_cache* alloc)
 	uint64_t id = alloc->next_id++;
 	if(id == alloc->last_id) {
 		log_warn("rrset alloc: out of 64bit ids. Clearing cache.");
-		fptr_whitelist_alloc_cleanup(alloc->cleanup);
+		fptr_ok(fptr_whitelist_alloc_cleanup(alloc->cleanup));
 		(*alloc->cleanup)(alloc->cleanup_arg);
 
 		/* start back at first number */   	/* like in alloc_init*/

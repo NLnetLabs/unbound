@@ -446,6 +446,13 @@ Allow this domain, and all its subdomains to contain private addresses.
 Give multiple times to allow multiple domain names to contain private 
 addresses. Default is none.
 .TP
+.B unwanted\-reply\-threshold: \fI<number>
+If set, a total number of unwanted replies is kept track of in every thread.
+When it reaches the threshold, a defensive action is taken and a warning
+is printed to the log.  The defensive action is to clear the rrset and
+message caches, hopefully flushing away any poison.  A value of 10 million
+is suggested.  Default is 0 (turned off).
+.TP
 .B do\-not\-query\-address: \fI<IP address>
 Do not query the given IP address. Can be IP4 or IP6. Append /num to 
 indicate a classless delegation netblock, for example like

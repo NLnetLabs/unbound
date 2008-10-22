@@ -330,6 +330,17 @@ outnet_udp_cb(struct comm_point* c, void* arg, int error,
 		verbose(VERB_QUERY, "received unwanted or unsolicited udp reply dropped.");
 		log_buf(VERB_ALGO, "dropped message", c->buffer);
 		outnet->unwanted_replies++;
+		if(outnet->unwanted_threshold && ++outnet->unwanted_total 
+			>= outnet->unwanted_threshold) {
+			log_warn("unwanted reply total reached threshold (%u)"
+				" you may be under attack."
+				" defensive action: clearing the cache",
+				(unsigned)outnet->unwanted_threshold);
+			fptr_ok(fptr_whitelist_alloc_cleanup(
+				outnet->unwanted_action));
+			(*outnet->unwanted_action)(outnet->unwanted_param);
+			outnet->unwanted_total = 0;
+		}
 		return 0;
 	}
 
@@ -339,6 +350,17 @@ outnet_udp_cb(struct comm_point* c, void* arg, int error,
 		verbose(VERB_QUERY, "received reply id,addr on wrong port. "
 			"dropped.");
 		outnet->unwanted_replies++;
+		if(outnet->unwanted_threshold && ++outnet->unwanted_total 
+			>= outnet->unwanted_threshold) {
+			log_warn("unwanted reply total reached threshold (%u)"
+				" you may be under attack."
+				" defensive action: clearing the cache",
+				(unsigned)outnet->unwanted_threshold);
+			fptr_ok(fptr_whitelist_alloc_cleanup(
+				outnet->unwanted_action));
+			(*outnet->unwanted_action)(outnet->unwanted_param);
+			outnet->unwanted_total = 0;
+		}
 		return 0;
 	}
 	comm_timer_disable(p->timer);
@@ -444,7 +466,8 @@ outside_network_create(struct comm_base *base, size_t bufsize,
 	size_t num_ports, char** ifs, int num_ifs, int do_ip4, 
 	int do_ip6, size_t num_tcp, struct infra_cache* infra,
 	struct ub_randstate* rnd, int use_caps_for_id, int* availports, 
-	int numavailports)
+	int numavailports, size_t unwanted_threshold,
+	void (*unwanted_action)(void*), void* unwanted_param)
 {
 	struct outside_network* outnet = (struct outside_network*)
 		calloc(1, sizeof(struct outside_network));
@@ -459,6 +482,9 @@ outside_network_create(struct comm_base *base, size_t bufsize,
 	outnet->infra = infra;
 	outnet->rnd = rnd;
 	outnet->svcd_overhead = 0;
+	outnet->unwanted_threshold = unwanted_threshold;
+	outnet->unwanted_action = unwanted_action;
+	outnet->unwanted_param = unwanted_param;
 	outnet->use_caps_for_id = use_caps_for_id;
 	if(numavailports == 0) {
 		log_err("no outgoing ports available");
