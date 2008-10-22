@@ -402,10 +402,12 @@ remote-control:
 # Stub zones.
 # Create entries like below, to make all queries for 'example.com' and 
 # 'example.org' go to the given list of nameservers. list zero or more 
-# nameservers by hostname or by ipaddress.
+# nameservers by hostname or by ipaddress. If you set stub-prime to yes, 
+# the list is treated as priming hints (default is no).
 # stub-zone:
 #	name: "example.com"
 #	stub-addr: 192.0.2.68
+#	stub-prime: "no"
 # stub-zone:
 #	name: "example.org"
 #	stub-host: ns.example.com.

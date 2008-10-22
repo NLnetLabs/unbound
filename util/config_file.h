@@ -251,6 +251,8 @@ struct config_stub {
 	struct config_strlist* hosts;
 	/** list of stub nameserver addresses (IP address) */
 	struct config_strlist* addrs;
+	/** if stub-prime is set */
+	int isprime;
 };
 
 /**

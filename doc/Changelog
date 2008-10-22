@@ -2,6 +2,8 @@
 	- CFLAGS are picked up by configure from the environment.
 	- iana portlist updated.
 	- updated ldns to use 1.4.0-pre20081022 so it picks up CFLAGS too.
+	- new stub-prime: yesno option. Default is off, so it does not prime.
+	  can be turned on to get same behaviour as previous unbound release.
 
 21 October 2008: Wouter
 	- fix update-anchors.sh, so it does not report different RR order

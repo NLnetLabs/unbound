@@ -96,6 +96,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_CONTROL_INTERFACE VAR_CONTROL_PORT VAR_SERVER_KEY_FILE
 %token VAR_SERVER_CERT_FILE VAR_CONTROL_KEY_FILE VAR_CONTROL_CERT_FILE
 %token VAR_EXTENDED_STATISTICS VAR_LOCAL_DATA_PTR VAR_JOSTLE_TIMEOUT
+%token VAR_STUB_PRIME
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -157,7 +158,7 @@ stubstart: VAR_STUB_ZONE
 	;
 contents_stub: contents_stub content_stub 
 	| ;
-content_stub: stub_name | stub_host | stub_addr 
+content_stub: stub_name | stub_host | stub_addr | stub_prime
 	;
 forwardstart: VAR_FORWARD_ZONE
 	{
@@ -875,6 +876,16 @@ stub_addr: VAR_STUB_ADDR STRING
 		OUTYY(("P(stub-addr:%s)\n", $2));
 		if(!cfg_strlist_insert(&cfg_parser->cfg->stubs->addrs, $2))
 			yyerror("out of memory");
+	}
+	;
+stub_prime: VAR_STUB_PRIME STRING
+	{
+		OUTYY(("P(stub-prime:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->stubs->isprime = 
+			(strcmp($2, "yes")==0);
+		free($2);
 	}
 	;
 forward_name: VAR_NAME STRING

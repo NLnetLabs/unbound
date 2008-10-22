@@ -212,15 +212,13 @@ read_stubs_host(struct iter_hints* hints, struct config_stub* s,
 /** set stub server addresses */
 static int 
 read_stubs_addr(struct iter_hints* hints, struct config_stub* s, 
-	struct delegpt* dp, int* noprime)
+	struct delegpt* dp)
 {
 	struct config_strlist* p;
 	struct sockaddr_storage addr;
 	socklen_t addrlen;
 	for(p = s->addrs; p; p = p->next) {
 		log_assert(p->str);
-		if(strchr(p->str, '@'))
-			*noprime = 1;
 		if(!extstrtoaddr(p->str, &addr, &addrlen)) {
 			log_err("cannot parse stub %s ip address: '%s'", 
 				s->name, p->str);
@@ -239,19 +237,17 @@ static int
 read_stubs(struct iter_hints* hints, struct config_file* cfg)
 {
 	struct config_stub* s;
-	int noprime;
 	for(s = cfg->stubs; s; s = s->next) {
 		struct delegpt* dp = delegpt_create(hints->region);
 		if(!dp) {
 			log_err("out of memory");
 			return 0;
 		}
-		noprime = 0;
 		if(!read_stubs_name(hints, s, dp) ||
 			!read_stubs_host(hints, s, dp) ||
-			!read_stubs_addr(hints, s, dp, &noprime))
+			!read_stubs_addr(hints, s, dp))
 			return 0;
-		if(!hints_insert(hints, LDNS_RR_CLASS_IN, dp, noprime))
+		if(!hints_insert(hints, LDNS_RR_CLASS_IN, dp, !s->isprime))
 			return 0;
 		delegpt_log(VERB_QUERY, dp);
 	}
