@@ -1492,6 +1492,10 @@ dnskey_verify_rrset_sig(struct regional* region, ldns_buffer* buf,
 	/* verify key dname == sig signer name */
 	if(query_dname_compare(signer, dnskey->rk.dname) != 0) {
 		verbose(VERB_QUERY, "verify: wrong key for rrsig");
+		log_nametypeclass(VERB_QUERY, "RRSIG signername is", 
+			signer, 0, 0);
+		log_nametypeclass(VERB_QUERY, "the key name is", 
+			dnskey->rk.dname, 0, 0);
 		return sec_status_bogus;
 	}
 

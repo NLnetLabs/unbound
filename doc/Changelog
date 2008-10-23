@@ -1,3 +1,6 @@
+23 October 2008: Wouter
+	- a little more debug info for failure on signer names. prints names.
+
 22 October 2008: Wouter
 	- CFLAGS are picked up by configure from the environment.
 	- iana portlist updated.
