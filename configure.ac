@@ -555,6 +555,19 @@ AC_CHECK_HEADERS([openssl/ssl.h],,, [AC_INCLUDES_DEFAULT])
 AC_CHECK_HEADERS([openssl/err.h],,, [AC_INCLUDES_DEFAULT])
 AC_CHECK_HEADERS([openssl/rand.h],,, [AC_INCLUDES_DEFAULT])
 
+# check if libssl needs libdl
+BAKLIBS="$LIBS"
+LIBS="-lssl $LIBS"
+AC_MSG_CHECKING([if libssl needs libdl])
+AC_TRY_LINK_FUNC([SSL_CTX_new], [
+	AC_MSG_RESULT([no])
+	LIBS="$BAKLIBS"
+] , [
+	AC_MSG_RESULT([yes])
+	LIBS="$BAKLIBS"
+	AC_SEARCH_LIBS([dlopen], [dl])
+])
+
 # check for thread library.
 AC_ARG_WITH(pthreads, AC_HELP_STRING([--with-pthreads], 
  [use pthreads library, or --without-pthreads to disable threading support.]), 

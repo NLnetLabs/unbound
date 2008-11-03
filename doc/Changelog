@@ -2,6 +2,7 @@
 	- fixup build process for Mac OSX linker, use ldns b32 compat funcs.
 	- generated configure with autoconf-2.61.
 	- iana portlist updated.
+	- detect if libssl needs libdl.  For static linking with libssl.
 
 23 October 2008: Wouter
 	- a little more debug info for failure on signer names. prints names.
