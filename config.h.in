@@ -18,12 +18,6 @@
 /* Whether the C compiler accepts the "unused" attribute */
 #undef HAVE_ATTR_UNUSED
 
-/* Define to 1 if you have the `b32_ntop' function. */
-#undef HAVE_B32_NTOP
-
-/* Define to 1 if you have the `b32_pton' function. */
-#undef HAVE_B32_PTON
-
 /* Define to 1 if your system has a working `chown' function. */
 #undef HAVE_CHOWN
 
@@ -367,7 +361,7 @@
 /* Define to rpl_malloc if the replacement function should be used. */
 #undef malloc
 
-/* Define to `long int' if <sys/types.h> does not define. */
+/* Define to `long' if <sys/types.h> does not define. */
 #undef off_t
 
 /* Define to `int' if <sys/types.h> does not define. */
@@ -376,7 +370,7 @@
 /* Define to 'int' if not defined */
 #undef rlim_t
 
-/* Define to `unsigned int' if <sys/types.h> does not define. */
+/* Define to `unsigned' if <sys/types.h> does not define. */
 #undef size_t
 
 /* Define to 'int' if not defined */
@@ -554,21 +548,6 @@ struct tm *gmtime_r(const time_t *timep, struct tm *result);
 struct sockaddr_storage;
 #include "compat/fake-rfc2553.h"
 #endif
-#ifndef B32_NTOP
-int b32_ntop(uint8_t const *src, size_t srclength,
-             char *target, size_t targsize);
-int b32_ntop_extended_hex(uint8_t const *src, size_t srclength,
-             char *target, size_t targsize);
-size_t b32_ntop_calculate_size(size_t srcsize);
-#endif /* !B32_NTOP */
-#ifndef B32_PTON
-int b32_pton(char const *src, size_t hashed_owner_str_len, 
-	uint8_t *target, size_t targsize);
-int b32_pton_extended_hex(char const *src, size_t hashed_owner_str_len, 
-	uint8_t *target, size_t targsize);
-size_t b32_pton_calculate_size(size_t srcsize);
-#endif /* !B32_PTON */
-
 #ifndef HAVE_SLEEP
 #define sleep(x) Sleep((x)*1000) /* on win32 */
 #endif /* HAVE_SLEEP */

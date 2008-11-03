@@ -58,13 +58,13 @@
  * This function we get from ldns-compat or from base system 
  * it returns the number of data bytes stored at the target, or <0 on error.
  */
-int b32_ntop_extended_hex(uint8_t const *src, size_t srclength,
+int ldns_b32_ntop_extended_hex(uint8_t const *src, size_t srclength,
 	char *target, size_t targsize);
 /** 
  * This function we get from ldns-compat or from base system 
  * it returns the number of data bytes stored at the target, or <0 on error.
  */
-int b32_pton_extended_hex(char const *src, size_t hashed_owner_str_len, 
+int ldns_b32_pton_extended_hex(char const *src, size_t hashed_owner_str_len, 
 	uint8_t *target, size_t targsize);
 
 /**
@@ -250,7 +250,7 @@ size_t nsec3_hash_to_b32(uint8_t* hash, size_t hashlen, uint8_t* zone,
 	int ret;
 	if(max < hashlen*2+1) /* quick approx of b32, as if hexb16 */
 		return 0;
-	ret = b32_ntop_extended_hex(hash, hashlen, (char*)buf+1, max-1);
+	ret = ldns_b32_ntop_extended_hex(hash, hashlen, (char*)buf+1, max-1);
 	if(ret < 1) 
 		return 0;
 	buf[0] = (uint8_t)ret; /* length of b32 label */
@@ -616,7 +616,7 @@ nsec3_calc_b32(struct regional* region, ldns_buffer* buf,
 {
 	int r;
 	ldns_buffer_clear(buf);
-	r = b32_ntop_extended_hex(c->hash, c->hash_len,
+	r = ldns_b32_ntop_extended_hex(c->hash, c->hash_len,
 		(char*)ldns_buffer_begin(buf), ldns_buffer_limit(buf));
 	if(r < 1) {
 		log_err("b32_ntop_extended_hex: error in encoding: %d", r);
@@ -790,8 +790,8 @@ nsec3_covers(uint8_t* zone, struct nsec3_cached_hash* hash,
 	/* convert owner name from text to binary */
 	ldns_buffer_clear(buf);
 	owner = ldns_buffer_begin(buf);
-	len = b32_pton_extended_hex((char*)rrset->rk.dname+1, hash->b32_len, 
-		owner, ldns_buffer_limit(buf));
+	len = ldns_b32_pton_extended_hex((char*)rrset->rk.dname+1, 
+		hash->b32_len, owner, ldns_buffer_limit(buf));
 	if(len<1)
 		return 0; /* bad owner name in some way */
 	if((size_t)len != hash->hash_len || (size_t)len != nextlen)

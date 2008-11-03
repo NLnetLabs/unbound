@@ -860,10 +860,6 @@ AC_SUBST(ldnsdir)
 ])
 LDFLAGS="$LATE_LDFLAGS $LDFLAGS"
 
-# after ldns, check if b32 is needed (might be exported by ldns ...)
-AC_REPLACE_FUNCS(b32_pton)
-AC_REPLACE_FUNCS(b32_ntop)
-
 AC_DEFINE_UNQUOTED([MAXSYSLOGMSGLEN], [5120], [Define to the maximum message length to pass to syslog.])
 
 AH_BOTTOM([
@@ -1014,21 +1010,6 @@ struct tm *gmtime_r(const time_t *timep, struct tm *result);
 struct sockaddr_storage;
 #include "compat/fake-rfc2553.h"
 #endif
-#ifndef B32_NTOP
-int b32_ntop(uint8_t const *src, size_t srclength,
-             char *target, size_t targsize);
-int b32_ntop_extended_hex(uint8_t const *src, size_t srclength,
-             char *target, size_t targsize);
-size_t b32_ntop_calculate_size(size_t srcsize);
-#endif /* !B32_NTOP */
-#ifndef B32_PTON
-int b32_pton(char const *src, size_t hashed_owner_str_len, 
-	uint8_t *target, size_t targsize);
-int b32_pton_extended_hex(char const *src, size_t hashed_owner_str_len, 
-	uint8_t *target, size_t targsize);
-size_t b32_pton_calculate_size(size_t srcsize);
-#endif /* !B32_PTON */
-
 #ifndef HAVE_SLEEP
 #define sleep(x) Sleep((x)*1000) /* on win32 */
 #endif /* HAVE_SLEEP */
