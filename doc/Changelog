@@ -3,6 +3,9 @@
 	- generated configure with autoconf-2.61.
 	- iana portlist updated.
 	- detect if libssl needs libdl.  For static linking with libssl.
+	- changed to use new algorithm identifiers for sha256/sha512
+	  from ldns 1.4.0 (need very latest version).
+	- updated the included ldns tarball.
 
 23 October 2008: Wouter
 	- a little more debug info for failure on signer names. prints names.
