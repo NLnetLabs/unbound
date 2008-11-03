@@ -248,11 +248,11 @@ static size_t
 ds_digest_size_algo(struct ub_packed_rrset_key* k, size_t idx)
 {
 	switch(ds_get_digest_algo(k, idx)) {
-#ifdef SHA_DIGEST_LENGTH
+#ifdef HAVE_EVP_SHA1
 		case LDNS_SHA1:
 			return SHA_DIGEST_LENGTH;
 #endif
-#ifdef SHA256_DIGEST_LENGTH
+#ifdef HAVE_EVP_SHA256
 		case LDNS_SHA256:
 			return SHA256_DIGEST_LENGTH;
 #endif
@@ -294,13 +294,13 @@ ds_create_dnskey_digest(struct module_env* env,
 	ldns_buffer_flip(b);
 	
 	switch(ds_get_digest_algo(ds_rrset, ds_idx)) {
-#ifdef SHA_DIGEST_LENGTH
+#ifdef HAVE_EVP_SHA1
 		case LDNS_SHA1:
 			(void)SHA1((unsigned char*)ldns_buffer_begin(b),
 				ldns_buffer_limit(b), (unsigned char*)digest);
 			return 1;
 #endif
-#ifdef SHA256_DIGEST_LENGTH
+#ifdef HAVE_EVP_SHA256
 		case LDNS_SHA256:
 			(void)SHA256((unsigned char*)ldns_buffer_begin(b),
 				ldns_buffer_limit(b), (unsigned char*)digest);
@@ -370,11 +370,11 @@ dnskey_algo_id_is_supported(int id)
 	case LDNS_RSASHA1:
 	case LDNS_RSASHA1_NSEC3:
 	case LDNS_RSAMD5:
-#ifdef SHA256_DIGEST_LENGTH
+#ifdef HAVE_EVP_SHA256
 	case LDNS_RSASHA256:
 	case LDNS_RSASHA256_NSEC3:
 #endif
-#ifdef SHA512_DIGEST_LENGTH
+#ifdef HAVE_EVP_SHA512
 	case LDNS_RSASHA512:
 	case LDNS_RSASHA512_NSEC3:
 #endif
@@ -1302,11 +1302,11 @@ setup_key_digest(int algo, EVP_PKEY* evp_key, const EVP_MD** digest_type,
 			break;
 		case LDNS_RSASHA1:
 		case LDNS_RSASHA1_NSEC3:
-#ifdef SHA256_DIGEST_LENGTH
+#ifdef HAVE_EVP_SHA256
 		case LDNS_RSASHA256:
 		case LDNS_RSASHA256_NSEC3:
 #endif
-#ifdef SHA512_DIGEST_LENGTH
+#ifdef HAVE_EVP_SHA512
 		case LDNS_RSASHA512:
 		case LDNS_RSASHA512_NSEC3:
 #endif
@@ -1323,13 +1323,13 @@ setup_key_digest(int algo, EVP_PKEY* evp_key, const EVP_MD** digest_type,
 			}
 
 			/* select SHA version */
-#ifdef SHA256_DIGEST_LENGTH
+#ifdef HAVE_EVP_SHA256
 			if(algo == LDNS_RSASHA256 || 
 				algo == LDNS_RSASHA256_NSEC3)
 				*digest_type = EVP_sha256();
 			else
 #endif
-#ifdef SHA512_DIGEST_LENGTH
+#ifdef HAVE_EVP_SHA512
 				if(algo == LDNS_RSASHA512 || 
 					algo == LDNS_RSASHA512_NSEC3)
 				*digest_type = EVP_sha512();

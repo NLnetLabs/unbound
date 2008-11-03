@@ -554,6 +554,7 @@ AC_ARG_WITH(ssl, AC_HELP_STRING([--with-ssl=pathname],
 AC_CHECK_HEADERS([openssl/ssl.h],,, [AC_INCLUDES_DEFAULT])
 AC_CHECK_HEADERS([openssl/err.h],,, [AC_INCLUDES_DEFAULT])
 AC_CHECK_HEADERS([openssl/rand.h],,, [AC_INCLUDES_DEFAULT])
+AC_CHECK_FUNCS([EVP_sha1 EVP_sha256 EVP_sha512])
 
 # check if libssl needs libdl
 BAKLIBS="$LIBS"

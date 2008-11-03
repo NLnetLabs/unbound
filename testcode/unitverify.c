@@ -471,11 +471,11 @@ verify_test()
 	verifytest_file("testdata/test_signatures.6", "20080416005004");
 	verifytest_file("testdata/test_signatures.7", "20070829144150");
 	verifytest_file("testdata/test_signatures.8", "20070829144150");
-#ifdef SHA256_DIGEST_LENGTH
+#ifdef HAVE_EVP_SHA256
 	verifytest_file("testdata/test_signatures.9", "20070829144150");
 	verifytest_file("testdata/test_signatures.11", "20070829144150");
 #endif
-#ifdef SHA512_DIGEST_LENGTH
+#ifdef HAVE_EVP_SHA512
 	verifytest_file("testdata/test_signatures.10", "20070829144150");
 #endif
 	dstest_file("testdata/test_ds_sig.1");

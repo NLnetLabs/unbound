@@ -535,7 +535,7 @@ nsec3_get_hashed(ldns_buffer* buf, uint8_t* nm, size_t nmlen, int algo,
 	ldns_buffer_write(buf, salt, saltlen);
 	ldns_buffer_flip(buf);
 	switch(algo) {
-#ifdef SHA_DIGEST_LENGTH
+#ifdef HAVE_EVP_SHA1
 		case NSEC3_HASH_SHA1:
 			hash_len = SHA_DIGEST_LENGTH;
 			if(hash_len > max)
@@ -554,7 +554,7 @@ nsec3_get_hashed(ldns_buffer* buf, uint8_t* nm, size_t nmlen, int algo,
 					(unsigned char*)res);
 			}
 			break;
-#endif /* SHA_DIGEST_LENGTH */
+#endif /* HAVE_EVP_SHA1 */
 		default:
 			log_err("nsec3 hash of unknown algo %d", algo);
 			return 0;
@@ -580,7 +580,7 @@ nsec3_calc_hash(struct regional* region, ldns_buffer* buf,
 	ldns_buffer_write(buf, salt, saltlen);
 	ldns_buffer_flip(buf);
 	switch(algo) {
-#ifdef SHA_DIGEST_LENGTH
+#ifdef HAVE_EVP_SHA1
 		case NSEC3_HASH_SHA1:
 			c->hash_len = SHA_DIGEST_LENGTH;
 			c->hash = (uint8_t*)regional_alloc(region, 
@@ -601,7 +601,7 @@ nsec3_calc_hash(struct regional* region, ldns_buffer* buf,
 					(unsigned char*)c->hash);
 			}
 			break;
-#endif /* SHA_DIGEST_LENGTH */
+#endif /* HAVE_EVP_SHA1 */
 		default:
 			log_err("nsec3 hash of unknown algo %d", algo);
 			return -1;

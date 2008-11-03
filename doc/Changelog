@@ -6,6 +6,7 @@
 	- changed to use new algorithm identifiers for sha256/sha512
 	  from ldns 1.4.0 (need very latest version).
 	- updated the included ldns tarball.
+	- proper detection of SHA256 and SHA512 functions (not just sizes).
 
 23 October 2008: Wouter
 	- a little more debug info for failure on signer names. prints names.

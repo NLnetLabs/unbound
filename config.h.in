@@ -39,6 +39,15 @@
 /* Define to 1 if you have the <event.h> header file. */
 #undef HAVE_EVENT_H
 
+/* Define to 1 if you have the `EVP_sha1' function. */
+#undef HAVE_EVP_SHA1
+
+/* Define to 1 if you have the `EVP_sha256' function. */
+#undef HAVE_EVP_SHA256
+
+/* Define to 1 if you have the `EVP_sha512' function. */
+#undef HAVE_EVP_SHA512
+
 /* Define to 1 if you have the `fcntl' function. */
 #undef HAVE_FCNTL
 
