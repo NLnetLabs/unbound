@@ -1,5 +1,6 @@
 3 November 2008: Wouter
 	- fixup build process for Mac OSX linker, use ldns b32 compat funcs.
+	- generated configure with autoconf-2.61.
 
 23 October 2008: Wouter
 	- a little more debug info for failure on signer names. prints names.
