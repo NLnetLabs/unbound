@@ -82,9 +82,9 @@ testbound_usage()
  * @param pass_argv: the argv to pass to unbound. Modified.
  */
 static void
-add_opts(char* optarg, int* pass_argc, char* pass_argv[])
+add_opts(const char* optarg, int* pass_argc, char* pass_argv[])
 {
-	char *p = optarg, *np;
+	const char *p = optarg, *np;
 	size_t len;
 	while(p && isspace((int)*p)) 
 		p++;

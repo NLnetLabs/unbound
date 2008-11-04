@@ -168,7 +168,7 @@ static void usage(char* nm)
 static int hverb = 0;
 
 /** exit with error */
-static void error_exit(char* str)
+static void error_exit(const char* str)
 {
 	printf("error: %s\n", str);
 	exit(1);
@@ -235,7 +235,7 @@ lab_cmp(const void *x, const void *y)
 
 /** create label entry */
 static struct labdata*
-lab_create(char* name)
+lab_create(const char* name)
 {
 	struct labdata* lab = (struct labdata*)calloc(1, sizeof(*lab));
 	if(!lab) error_exit("out of memory");

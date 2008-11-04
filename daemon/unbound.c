@@ -315,7 +315,7 @@ detach(void)
 /** daemonize, drop user priviliges and chroot if needed */
 static void
 perform_setup(struct daemon* daemon, struct config_file* cfg, int debug_mode,
-	char** cfgfile)
+	const char** cfgfile)
 {
 #ifdef HAVE_GETPWNAM
 	uid_t uid;
@@ -477,7 +477,7 @@ perform_setup(struct daemon* daemon, struct config_file* cfg, int debug_mode,
  * @param debug_mode: if set, do not daemonize.
  */
 static void 
-run_daemon(char* cfgfile, int cmdline_verbose, int debug_mode)
+run_daemon(const char* cfgfile, int cmdline_verbose, int debug_mode)
 {
 	struct config_file* cfg = NULL;
 	struct daemon* daemon = NULL;
@@ -546,7 +546,7 @@ int
 main(int argc, char* argv[])
 {
 	int c;
-	char* cfgfile = CONFIGFILE;
+	const char* cfgfile = CONFIGFILE;
 	int cmdline_verbose = 0;
 	int debug_mode = 0;
 

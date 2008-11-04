@@ -124,7 +124,7 @@ setup_ctx(struct config_file* cfg)
 
 /** contact the server with TCP connect */
 static int
-contact_server(char* svr, struct config_file* cfg)
+contact_server(const char* svr, struct config_file* cfg)
 {
 	struct sockaddr_storage addr;
 	socklen_t addrlen;
@@ -220,9 +220,9 @@ send_file(SSL* ssl, FILE* in, char* buf, size_t sz)
 static int
 go_cmd(SSL* ssl, int argc, char* argv[])
 {
-	char* pre="UBCT";
-	char* space=" ";
-	char* newline="\n";
+	const char* pre="UBCT";
+	const char* space=" ";
+	const char* newline="\n";
 	int was_error = 0, first_line = 1;
 	int r, i;
 	char buf[1024];
@@ -261,7 +261,7 @@ go_cmd(SSL* ssl, int argc, char* argv[])
 
 /** go ahead and read config, contact server and perform command and display */
 static int
-go(char* cfgfile, char* svr, int argc, char* argv[])
+go(const char* cfgfile, char* svr, int argc, char* argv[])
 {
 	struct config_file* cfg;
 	int fd, ret;
@@ -300,7 +300,7 @@ extern char* optarg;
 int main(int argc, char* argv[])
 {
 	int c, ret;
-	char* cfgfile = CONFIGFILE;
+	const char* cfgfile = CONFIGFILE;
 	char* svr = NULL;
 #ifdef USE_WINSOCK
 	int r;

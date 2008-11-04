@@ -1,3 +1,6 @@
+4 November 2008: Wouter
+	- fixed -Wwrite-strings warnings that result in better code.
+
 3 November 2008: Wouter
 	- fixup build process for Mac OSX linker, use ldns b32 compat funcs.
 	- generated configure with autoconf-2.61.

@@ -99,7 +99,7 @@ isip6(const char* nm, char** res)
 {
 	struct in6_addr addr;
 	/* [nibble.]{32}.ip6.arpa. is less than 128 */
-	char* hex = "0123456789abcdef";
+	const char* hex = "0123456789abcdef";
 	char buf[128];
 	char *p;
 	int i;

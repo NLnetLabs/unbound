@@ -289,7 +289,7 @@ struct module_qstate {
  */
 struct module_func_block {
 	/** text string name of module */
-	char* name;
+	const char* name;
 
 	/** 
 	 * init the module. Called once for the global state.

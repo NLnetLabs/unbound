@@ -423,7 +423,7 @@ create_cfg_parser(struct config_file* cfg, char* filename)
 }
 
 int 
-config_read(struct config_file* cfg, char* filename)
+config_read(struct config_file* cfg, const char* filename)
 {
 	FILE *in;
 	if(!filename)
@@ -433,7 +433,7 @@ config_read(struct config_file* cfg, char* filename)
 		log_err("Could not open %s: %s", filename, strerror(errno));
 		return 0;
 	}
-	create_cfg_parser(cfg, filename);
+	create_cfg_parser(cfg, (char*)filename);
 	ub_c_in = in;
 	ub_c_parse();
 	fclose(in);
@@ -965,7 +965,7 @@ char* cfg_ptr_reverse(char* str)
 
 	if(addr_is_ip6(&addr, addrlen)) {
 		struct in6_addr* ad = &((struct sockaddr_in6*)&addr)->sin6_addr;
-		char* hex = "0123456789abcdef";
+		const char* hex = "0123456789abcdef";
 		char *p = buf;
 		int i;
 		for(i=15; i>=0; i--) {

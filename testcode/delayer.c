@@ -966,8 +966,8 @@ service_loop(int udp_s, int listen_s, struct ringbuf* ring,
 
 /** delayer main service routine */
 static void
-service(char* bind_str, int bindport, char* serv_str, size_t memsize, 
-	int delay_msec)
+service(const char* bind_str, int bindport, const char* serv_str, 
+	size_t memsize, int delay_msec)
 {
 	struct sockaddr_storage bind_addr, srv_addr;
 	socklen_t bind_len, srv_len;
@@ -1098,8 +1098,8 @@ extern char* optarg;
 int main(int argc, char** argv) 
 {
 	int c;		/* defaults */
-	char* server = "127.0.0.1@53";
-	char* bindto = "0.0.0.0";
+	const char* server = "127.0.0.1@53";
+	const char* bindto = "0.0.0.0";
 	int bindport = 0;
 	size_t memsize = 10*1024*1024;
 	int delay = 100;

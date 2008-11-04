@@ -219,7 +219,7 @@ void daemon_remote_delete(struct daemon_remote* rc)
  * @return false on failure.
  */
 static int
-add_open(char* ip, int nr, struct listen_port** list, int noproto_is_err)
+add_open(const char* ip, int nr, struct listen_port** list, int noproto_is_err)
 {
 	struct addrinfo hints;
 	struct addrinfo* res;
@@ -554,7 +554,7 @@ do_verbosity(SSL* ssl, char* str)
 
 /** print stats from statinfo */
 static int
-print_stats(SSL* ssl, char* nm, struct stats_info* s)
+print_stats(SSL* ssl, const char* nm, struct stats_info* s)
 {
 	struct timeval avg;
 	if(!ssl_printf(ssl, "%s.num.queries"SQ"%u\n", nm, 

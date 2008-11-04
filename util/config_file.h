@@ -298,7 +298,7 @@ struct config_file* config_create_forlib();
  * @return: false on error. In that case errno is set, ENOENT means 
  * 	file not found.
  */
-int config_read(struct config_file* config, char* filename);
+int config_read(struct config_file* config, const char* filename);
 
 /**
  * Destroy the config file structure.

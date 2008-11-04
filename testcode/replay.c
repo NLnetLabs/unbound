@@ -54,7 +54,7 @@
  * @return: true if found, false if not. 
  */
 static int 
-parse_keyword(char** line, char* keyword)
+parse_keyword(char** line, const char* keyword)
 {
 	size_t len = (size_t)strlen(keyword);
 	if(strncmp(*line, keyword, len) == 0) {

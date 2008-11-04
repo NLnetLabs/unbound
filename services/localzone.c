@@ -580,7 +580,7 @@ lz_nodefault(struct config_file* cfg, const char* name)
 /** enter AS112 default zone */
 static int
 add_as112_default(struct local_zones* zones, struct config_file* cfg,
-        ldns_buffer* buf, char* name)
+        ldns_buffer* buf, const char* name)
 {
 	struct local_zone* z;
 	char str[1024]; /* known long enough */

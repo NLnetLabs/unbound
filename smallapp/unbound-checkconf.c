@@ -260,7 +260,7 @@ check_chroot_filelist(const char* desc, struct config_strlist* list,
 
 /** check configuration for errors */
 static void
-morechecks(struct config_file* cfg, char* fname)
+morechecks(struct config_file* cfg, const char* fname)
 {
 	warn_hosts("stub-host", cfg->stubs);
 	warn_hosts("forward-host", cfg->forwards);
@@ -353,7 +353,7 @@ morechecks(struct config_file* cfg, char* fname)
 
 /** check config file */
 static void
-checkconf(char* cfgfile)
+checkconf(const char* cfgfile)
 {
 	struct config_file* cfg = config_create();
 	if(!cfg)
@@ -379,7 +379,7 @@ extern char* optarg;
 int main(int argc, char* argv[])
 {
 	int c;
-	char* f;
+	const char* f;
 	log_ident_set("unbound-checkconf");
 	log_init(NULL, 0, NULL);
 	checklock_start();
