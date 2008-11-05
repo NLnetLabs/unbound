@@ -587,7 +587,7 @@ insert_query(struct query_info* qinfo, struct compress_tree_node** tree,
 		ldns_buffer_position(buffer), region, NULL, tree))
 		return RETVAL_OUTMEM;
 	if(ldns_buffer_current(buffer) == qinfo->qname)
-		ldns_buffer_skip(buffer, qinfo->qname_len);
+		ldns_buffer_skip(buffer, (ssize_t)qinfo->qname_len);
 	else	ldns_buffer_write(buffer, qinfo->qname, qinfo->qname_len);
 	ldns_buffer_write_u16(buffer, qinfo->qtype);
 	ldns_buffer_write_u16(buffer, qinfo->qclass);
@@ -785,7 +785,7 @@ error_encode(ldns_buffer* buf, int r, struct query_info* qinfo,
 	ldns_buffer_write(buf, &flags, sizeof(uint16_t));
 	if(qinfo) {
 		if(ldns_buffer_current(buf) == qinfo->qname)
-			ldns_buffer_skip(buf, qinfo->qname_len);
+			ldns_buffer_skip(buf, (ssize_t)qinfo->qname_len);
 		else	ldns_buffer_write(buf, qinfo->qname, qinfo->qname_len);
 		ldns_buffer_write_u16(buf, qinfo->qtype);
 		ldns_buffer_write_u16(buf, qinfo->qclass);
