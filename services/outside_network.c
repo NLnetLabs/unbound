@@ -1490,7 +1490,7 @@ serviced_udp_callback(struct comm_point* c, void* arg, int error,
 	if(sq->status == serviced_query_PROBE_EDNS) {
 		/* probe without EDNS succeeds, so we conclude that this
 		 * host likely has EDNS packets dropped */
-		log_addr(VERB_OPS, "timeouts, concluded that connection to "
+		log_addr(VERB_DETAIL, "timeouts, concluded that connection to "
 			"host drops EDNS packets", &sq->addr, sq->addrlen);
 		if(!infra_edns_update(outnet->infra, &sq->addr, sq->addrlen,
 			-1, (uint32_t)now.tv_sec)) {

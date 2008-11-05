@@ -503,7 +503,8 @@ comm_point_udp_callback(int fd, short event, void* arg)
 		if(recv == -1) {
 #ifndef USE_WINSOCK
 			if(errno != EAGAIN && errno != EINTR)
-				log_err("recvfrom failed: %s", strerror(errno));
+				log_err("recvfrom %d failed: %s", 
+					fd, strerror(errno));
 #else
 			if(WSAGetLastError() != WSAEINPROGRESS &&
 				WSAGetLastError() != WSAECONNRESET &&
@@ -522,7 +523,8 @@ comm_point_udp_callback(int fd, short event, void* arg)
 			(void)comm_point_send_udp_msg(rep.c, rep.c->buffer,
 				(struct sockaddr*)&rep.addr, rep.addrlen);
 		}
-		if(rep.c->fd == -1) /* commpoint closed */
+		if(rep.c->fd != fd) /* commpoint closed to -1 or reused for
+		another UDP port. Note rep.c cannot be reused with TCP fd. */
 			break;
 	}
 }

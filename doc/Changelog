@@ -9,6 +9,10 @@
 	- fixed file descriptor leak for localzone type deny (for TCP).
 	- fixed memleak at exit for nsec3 negative cached zones.
 	- fixed memleak for the keyword 'nodefault' when reading config.
+	- made verbosity of 'edns incapable peer' warning higher, so you
+	  do not get spammed by it.
+	- caught elusive Bad file descriptor error bug, that would print the
+	  error while unnecessarily try to listen to a closed fd. Fixed.
 
 4 November 2008: Wouter
 	- fixed -Wwrite-strings warnings that result in better code.
