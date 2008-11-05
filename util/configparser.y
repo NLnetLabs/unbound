@@ -838,6 +838,7 @@ server_local_zone: VAR_LOCAL_ZONE STRING STRING
 			if(!cfg_strlist_insert(&cfg_parser->cfg->
 				local_zones_nodefault, $2))
 				fatal_exit("out of memory adding local-zone");
+			free($3);
 		} else {
 			if(!cfg_str2list_insert(&cfg_parser->cfg->local_zones, 
 				$2, $3))

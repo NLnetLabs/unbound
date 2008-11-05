@@ -168,6 +168,9 @@ struct mesh_state {
 	/** if this state is in the forever list, jostle list, or neither */
 	enum mesh_list_select { mesh_no_list, mesh_forever_list, 
 		mesh_jostle_list } list_select;
+
+	/** true if replies have been sent out (at end for alignment) */
+	uint8_t replies_sent;
 };
 
 /**

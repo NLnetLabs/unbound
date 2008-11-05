@@ -77,6 +77,7 @@ key_entry_delkeyfunc(void* key, void* ATTR_UNUSED(userarg))
 	struct key_entry_key* kk = (struct key_entry_key*)key;
 	if(!key)
 		return;
+	lock_rw_destroy(&kk->entry.lock);
 	free(kk->name);
 	free(kk);
 }

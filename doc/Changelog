@@ -1,3 +1,15 @@
+5 November 2008: Wouter
+	- fixed possible memory leak in key_entry_key deletion.
+	  Would leak a couple bytes when trust anchors were replaced.
+	- if query and reply qname overlap, the bytes are skipped not copied.
+	- fixed file descriptor leak when messages were jostled out that
+	  had outstanding (TCP) replies.
+	- DNAMEs used from cache have their synthesized CNAMEs initialized
+	  properly.
+	- fixed file descriptor leak for localzone type deny (for TCP).
+	- fixed memleak at exit for nsec3 negative cached zones.
+	- fixed memleak for the keyword 'nodefault' when reading config.
+
 4 November 2008: Wouter
 	- fixed -Wwrite-strings warnings that result in better code.
 

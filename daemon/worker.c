@@ -820,8 +820,12 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 	}
 	if(local_zones_answer(worker->daemon->local_zones, &qinfo, &edns, 
 		c->buffer, worker->scratchpad)) {
+		if(ldns_buffer_limit(c->buffer) == 0) {
+			comm_point_drop_reply(repinfo);
+			return 0;
+		}
 		server_stats_insrcode(&worker->stats, c->buffer);
-		return (ldns_buffer_limit(c->buffer) != 0);
+		return 1;
 	}
 	if(!(LDNS_RD_WIRE(ldns_buffer_begin(c->buffer))) &&
 		acl != acl_allow_snoop ) {

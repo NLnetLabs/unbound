@@ -117,6 +117,7 @@ neg_clear_zones(rbnode_t* n, void* ATTR_UNUSED(arg))
 	struct val_neg_zone* z = (struct val_neg_zone*)n;
 	/* delete all the rrset entries in the tree */
 	traverse_postorder(&z->tree, &neg_clear_datas, NULL);
+	free(z->nsec3_salt);
 	free(z->name);
 	free(z);
 }

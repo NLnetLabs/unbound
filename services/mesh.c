@@ -397,6 +397,7 @@ mesh_state_create(struct module_env* env, struct query_info* qinfo,
 	mstate->run_node.key = mstate;
 	mstate->reply_list = NULL;
 	mstate->list_select = mesh_no_list;
+	mstate->replies_sent = 0;
 	rbtree_init(&mstate->super_set, &mesh_state_ref_compare);
 	rbtree_init(&mstate->sub_set, &mesh_state_ref_compare);
 	mstate->num_activated = 0;
@@ -435,6 +436,14 @@ mesh_state_cleanup(struct mesh_state* mstate)
 	int i;
 	if(!mstate)
 		return;
+	/* drop unsent replies */
+	if(!mstate->replies_sent) {
+		struct mesh_reply* rep;
+		for(rep=mstate->reply_list; rep; rep=rep->next) {
+			comm_point_drop_reply(&rep->query_reply);
+		}
+	}
+
 	/* de-init modules */
 	mesh = mstate->s.env->mesh;
 	for(i=0; i<mesh->mods.num; i++) {
@@ -700,6 +709,7 @@ void mesh_query_done(struct mesh_state* mstate)
 		mesh_send_reply(mstate, mstate->s.return_rcode, rep, r, prev);
 		prev = r;
 	}
+	mstate->replies_sent = 1;
 	for(c = mstate->cb_list; c; c = c->next) {
 		mesh_do_callback(mstate, mstate->s.return_rcode, rep, c);
 	}

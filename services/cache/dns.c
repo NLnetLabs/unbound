@@ -483,7 +483,7 @@ synth_dname_msg(struct ub_packed_rrset_key* rrset, struct regional* region,
 		return NULL;
 	ck->rk.dname_len = q->qname_len;
 	ck->entry.hash = rrset_key_hash(&ck->rk);
-	newd = (struct packed_rrset_data*)regional_alloc(region,
+	newd = (struct packed_rrset_data*)regional_alloc_zero(region,
 		sizeof(struct packed_rrset_data) + sizeof(size_t) + 
 		sizeof(uint8_t*) + sizeof(uint32_t) + sizeof(uint16_t) 
 		+ newlen);
