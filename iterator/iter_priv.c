@@ -182,21 +182,22 @@ priv_lookup_addr(struct iter_priv* priv, struct sockaddr_storage* addr,
  * @param priv: structure for address storage.
  * @param pkt: the packet (for compression ptrs).
  * @param name: name to check.
+ * @param name_len: uncompressed length of the name to check.
  * @param dclass: class to check.
  * @return: true if the name is OK. false if unlisted.
  */
 static int 
 priv_lookup_name(struct iter_priv* priv, ldns_buffer* pkt,
-	uint8_t* name, size_t dname_len, uint16_t dclass)
+	uint8_t* name, size_t name_len, uint16_t dclass)
 {
 	size_t len;
 	uint8_t decomp[256];
 	int labs;
-	if(dname_len >= sizeof(decomp))
+	if(name_len >= sizeof(decomp))
 		return 0;
 	dname_pkt_copy(pkt, decomp, name);
 	labs = dname_count_size_labels(decomp, &len);
-	log_assert(dname_len == len);
+	log_assert(name_len == len);
 	return name_tree_lookup(&priv->n, decomp, len, labs, dclass) != NULL;
 }
 
