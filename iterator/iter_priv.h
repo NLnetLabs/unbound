@@ -92,10 +92,12 @@ int priv_apply_cfg(struct iter_priv* priv, struct config_file* cfg);
 /**
  * See if rrset is bad.
  * @param priv: structure for private address storage.
+ * @param pkt: packet to decompress rrset name in.
  * @param rrset: the rrset to examine, A or AAAA.
  * @return true if the rrset is bad and should be removed.
  */
-int priv_rrset_bad(struct iter_priv* priv, struct rrset_parse* rrset);
+int priv_rrset_bad(struct iter_priv* priv, ldns_buffer* pkt, 
+	struct rrset_parse* rrset);
 
 /**
  * Get memory used by priv structure.

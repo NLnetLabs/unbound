@@ -1,3 +1,6 @@
+6 November 2008: Wouter
+	- dname_priv must decompress the name before comparison.
+
 5 November 2008: Wouter
 	- fixed possible memory leak in key_entry_key deletion.
 	  Would leak a couple bytes when trust anchors were replaced.

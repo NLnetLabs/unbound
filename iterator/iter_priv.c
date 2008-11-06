@@ -180,16 +180,24 @@ priv_lookup_addr(struct iter_priv* priv, struct sockaddr_storage* addr,
 /**
  * See if a name is whitelisted.
  * @param priv: structure for address storage.
+ * @param pkt: the packet (for compression ptrs).
  * @param name: name to check.
  * @param dclass: class to check.
  * @return: true if the name is OK. false if unlisted.
  */
 static int 
-priv_lookup_name(struct iter_priv* priv, uint8_t* name, uint16_t dclass)
+priv_lookup_name(struct iter_priv* priv, ldns_buffer* pkt,
+	uint8_t* name, size_t dname_len, uint16_t dclass)
 {
 	size_t len;
-	int labs = dname_count_size_labels(name, &len);
-	return name_tree_lookup(&priv->n, name, len, labs, dclass) != NULL;
+	uint8_t decomp[256];
+	int labs;
+	if(dname_len >= sizeof(decomp))
+		return 0;
+	dname_pkt_copy(pkt, decomp, name);
+	labs = dname_count_size_labels(decomp, &len);
+	log_assert(dname_len == len);
+	return name_tree_lookup(&priv->n, decomp, len, labs, dclass) != NULL;
 }
 
 size_t priv_get_mem(struct iter_priv* priv)
@@ -198,10 +206,12 @@ size_t priv_get_mem(struct iter_priv* priv)
 	return sizeof(*priv) + regional_get_mem(priv->region);
 }
 
-int priv_rrset_bad(struct iter_priv* priv, struct rrset_parse* rrset)
+int priv_rrset_bad(struct iter_priv* priv, ldns_buffer* pkt,
+	struct rrset_parse* rrset)
 {
 	/* see if it is a private name, that is allowed to have any */
-	if(priv_lookup_name(priv, rrset->dname, ntohs(rrset->rrset_class))) {
+	if(priv_lookup_name(priv, pkt, rrset->dname, rrset->dname_len,
+		ntohs(rrset->rrset_class))) {
 		return 0;
 	} else {
 		/* so its a public name, check the address */

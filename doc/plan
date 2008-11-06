@@ -77,7 +77,7 @@ not	stats on SIGUSR1. perhaps also see which slow auth servers cause >1sec value
 + direct queries for NS records
 + careful caching, only NS query causes referral caching.
 + direct queries for A, AAAA in-bailiwick from a referral.
-* trouble counter, cache wipe threshold.
++ trouble counter, cache wipe threshold.
 
 + off-path validation
 + root NS, root glue validation after prime
@@ -101,4 +101,5 @@ o on windows version, implement that OS ancillary data capabilities for
   interface-automatic. IPPKTINFO, IP6PKTINFO for WSARecvMsg, WSASendMsg.
 o local-zone directive with authority service, full authority server 
   is a non-goal.
+o configure option to force use of builtin ldns tarball.
 

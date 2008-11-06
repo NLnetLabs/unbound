@@ -614,7 +614,7 @@ scrub_sanitize(ldns_buffer* pkt, struct msg_parse* msg,
 		/* remove private addresses */
 		if( (rrset->type == LDNS_RR_TYPE_A || 
 			rrset->type == LDNS_RR_TYPE_AAAA) &&
-			priv_rrset_bad(ie->priv, rrset)) {
+			priv_rrset_bad(ie->priv, pkt, rrset)) {
 			/* set servfail, so the classification becomes
 			 * THROWAWAY, instead of LAME or other unwanted */
 			FLAGS_SET_RCODE(msg->flags, LDNS_RCODE_SERVFAIL);
