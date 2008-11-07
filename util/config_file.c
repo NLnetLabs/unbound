@@ -426,14 +426,15 @@ int
 config_read(struct config_file* cfg, const char* filename)
 {
 	FILE *in;
-	if(!filename)
+	char *fname = (char*)filename;
+	if(!fname)
 		return 1;
-	in = fopen(filename, "r");
+	in = fopen(fname, "r");
 	if(!in) {
-		log_err("Could not open %s: %s", filename, strerror(errno));
+		log_err("Could not open %s: %s", fname, strerror(errno));
 		return 0;
 	}
-	create_cfg_parser(cfg, (char*)filename);
+	create_cfg_parser(cfg, fname);
 	ub_c_in = in;
 	ub_c_parse();
 	fclose(in);
