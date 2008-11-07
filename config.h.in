@@ -6,6 +6,10 @@
 /* Pathname to the Unbound configuration file */
 #undef CONFIGFILE
 
+/* Define this if on macOSX10.4-darwin8 and setreuid and setregid do not work
+   */
+#undef DARWIN_BROKEN_SETREUID
+
 /* Define if you want to use debug lock checking (slow). */
 #undef ENABLE_LOCK_CHECKS
 

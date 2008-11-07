@@ -25003,6 +25003,15 @@ fi
 done
 
 
+# check if setreuid en setregid fail, on MacOSX10.4(darwin8).
+if echo $build_os | grep darwin8 > /dev/null; then
+
+cat >>confdefs.h <<\_ACEOF
+#define DARWIN_BROKEN_SETREUID 1
+_ACEOF
+
+fi
+
 # check mkdir
 { echo "$as_me:$LINENO: checking whether mkdir has one arg" >&5
 echo $ECHO_N "checking whether mkdir has one arg... $ECHO_C" >&6; }

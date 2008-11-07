@@ -797,6 +797,11 @@ AC_LIBOBJ([fake-rfc2553])
 fi
 AC_CHECK_FUNCS([tzset sigprocmask fcntl getpwnam getrlimit setsid sbrk chroot kill sleep usleep random srandom recvmsg sendmsg writev setresuid setreuid setresgid setregid])
 
+# check if setreuid en setregid fail, on MacOSX10.4(darwin8).
+if echo $build_os | grep darwin8 > /dev/null; then
+	AC_DEFINE(DARWIN_BROKEN_SETREUID, 1, [Define this if on macOSX10.4-darwin8 and setreuid and setregid do not work])
+fi
+
 # check mkdir
 AC_MSG_CHECKING([whether mkdir has one arg])
 AC_TRY_COMPILE([

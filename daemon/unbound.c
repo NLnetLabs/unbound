@@ -443,7 +443,7 @@ perform_setup(struct daemon* daemon, struct config_file* cfg, int debug_mode,
 	if(cfg->username && cfg->username[0]) {
 #ifdef HAVE_SETRESGID
 		if(setresgid(gid,gid,gid) != 0)
-#elif defined(HAVE_SETREGID)
+#elif defined(HAVE_SETREGID) && !defined(DARWIN_BROKEN_SETREUID)
 		if(setregid(gid,gid) != 0)
 #else /* use setgid */
 		if(setgid(gid) != 0)
@@ -452,7 +452,7 @@ perform_setup(struct daemon* daemon, struct config_file* cfg, int debug_mode,
 				cfg->username, strerror(errno));
 #ifdef HAVE_SETRESUID
 		if(setresuid(uid,uid,uid) != 0)
-#elif defined(HAVE_SETREUID)
+#elif defined(HAVE_SETREUID) && !defined(DARWIN_BROKEN_SETREUID)
 		if(setreuid(uid,uid) != 0)
 #else /* use setuid */
 		if(setuid(uid) != 0)
