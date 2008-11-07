@@ -802,6 +802,134 @@ if echo $build_os | grep darwin8 > /dev/null; then
 	AC_DEFINE(DARWIN_BROKEN_SETREUID, 1, [Define this if on macOSX10.4-darwin8 and setreuid and setregid do not work])
 fi
 
+# check if select and nonblocking sockets actually work.
+AC_MSG_CHECKING([if nonblocking sockets work])
+AC_RUN_IFELSE(AC_LANG_PROGRAM([
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <fcntl.h>
+#include <errno.h>
+#ifdef HAVE_SYS_TYPES_H
+#include <sys/types.h>
+#endif
+#ifdef HAVE_SYS_SOCKET_H
+#include <sys/socket.h>
+#endif
+#ifdef HAVE_NETINET_IN_H
+#include <netinet/in.h>
+#endif
+#ifdef HAVE_ARPA_INET_H
+#include <arpa/inet.h>
+#endif
+#ifdef HAVE_UNISTD_H
+#include <unistd.h>
+#endif
+#ifdef HAVE_TIME_H
+#include <time.h>
+#endif
+],[[
+	int port;
+	int sfd, cfd;
+	int num = 10;
+	int i, p;
+	struct sockaddr_in a;
+	/* test if select and nonblocking reads work well together */
+	/* open port.
+	   fork child to send 10 messages.
+	   select to read.
+	   then try to nonblocking read the 10 messages
+	   then, nonblocking read must give EAGAIN
+	*/
+
+	port = 12345 + (time(0)%32);
+	sfd = socket(PF_INET, SOCK_DGRAM, 0);
+	if(sfd == -1) {
+		perror("socket");
+		return 1;
+	}
+	memset(&a, 0, sizeof(a));
+	a.sin_family = AF_INET;
+	a.sin_port = htons(port);
+	a.sin_addr.s_addr = inet_addr("127.0.0.1");
+	if(bind(sfd, (struct sockaddr*)&a, sizeof(a)) < 0) {
+		perror("bind");
+		return 1;
+	}
+	if(fcntl(sfd, F_SETFL, O_NONBLOCK) == -1) {
+		perror("fcntl");
+		return 1;
+	}
+
+	cfd = socket(PF_INET, SOCK_DGRAM, 0);
+	if(cfd == -1) {
+		perror("client socket");
+		return 1;
+	}
+	a.sin_port = 0;
+	if(bind(cfd, (struct sockaddr*)&a, sizeof(a)) < 0) {
+		perror("client bind");
+		return 1;
+	}
+	a.sin_port = htons(port);
+
+	/* no handler, causes exit in 10 seconds */
+	alarm(10);
+
+	/* send and receive on the socket */
+	if((p=fork()) == 0) {
+		for(i=0; i<num; i++) {
+			if(sendto(cfd, &i, sizeof(i), 0, 
+				(struct sockaddr*)&a, sizeof(a)) < 0) {
+				perror("sendto");
+				return 1;
+			}
+		}
+	} else {
+		/* parent */
+		fd_set rset;
+		int x;
+		if(p == -1) {
+			perror("fork");
+			return 1;
+		}
+		FD_ZERO(&rset);
+		FD_SET(sfd, &rset);
+		if(select(sfd+1, &rset, NULL, NULL, NULL) < 1) {
+			perror("select");
+			return 1;
+		}
+		i = 0;
+		while(i < num) {
+			if(recv(sfd, &x, sizeof(x), 0) != sizeof(x)) {
+				if(errno == EAGAIN)
+					continue;
+				perror("recv");
+				return 1;
+			}
+			i++;
+		}
+		/* now we want to get EAGAIN: nonblocking goodness */
+		errno = 0;
+		recv(sfd, &x, sizeof(x), 0);
+		if(errno != EAGAIN) {
+			perror("trying to recv again");
+			return 1;
+		}
+		/* EAGAIN encountered */
+	}
+
+	close(sfd);
+	close(cfd);
+]]), [
+	AC_MSG_RESULT([yes])
+], [
+	AC_MSG_RESULT([no])
+	AC_DEFINE([NONBLOCKING_IS_BROKEN], 1, [Define if the network stack does not fully support nonblocking io (causes lower performance).])
+], [
+	AC_MSG_RESULT([crosscompile(yes)])
+])
+
 # check mkdir
 AC_MSG_CHECKING([whether mkdir has one arg])
 AC_TRY_COMPILE([

@@ -48,8 +48,12 @@
 /** The TCP reading or writing query timeout in seconds */
 #define TCP_QUERY_TIMEOUT 120 
 
+#ifndef NONBLOCKING_IS_BROKEN
 /** number of UDP reads to perform per read indication from select */
 #define NUM_UDP_PER_SELECT 100
+#else
+#define NUM_UDP_PER_SELECT 1
+#endif
 
 /* We define libevent structures here to hide the libevent stuff. */
 

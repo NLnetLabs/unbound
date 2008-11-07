@@ -272,6 +272,10 @@
 /* Define if mkdir has one argument. */
 #undef MKDIR_HAS_ONE_ARG
 
+/* Define if the network stack does not fully support nonblocking io (causes
+   lower performance). */
+#undef NONBLOCKING_IS_BROKEN
+
 /* Define to the address where bug reports for this package should be sent. */
 #undef PACKAGE_BUGREPORT
 
