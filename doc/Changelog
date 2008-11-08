@@ -1,3 +1,6 @@
+8 November 2008: Wouter
+	- added configure check for eee build warning.
+
 7 November 2008: Wouter
 	- fix bug 217: fixed, setreuid and setregid do not work on MacOSX10.4.
 	- detect nonblocking problems in network stack in configure script.

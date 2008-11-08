@@ -277,6 +277,20 @@ int test() {
 }
 ], [CFLAGS="$CFLAGS -D_GNU_SOURCE"])
 
+# check again for GNU_SOURCE for setresgid. May fail if setresgid
+# is not available at all. -D_FRSRESGID is to make this check unique.
+# otherwise we would get the previous cached result.
+CHECK_COMPILER_FLAG_NEEDED(-D_GNU_SOURCE -D_FRSRESGID,
+[
+#include <unistd.h>
+
+int test() {
+	int a = setresgid(0,0,0);
+	a = setresuid(0,0,0);
+        return a;
+}
+], [CFLAGS="$CFLAGS -D_GNU_SOURCE"])
+
 CHECK_COMPILER_FLAG_NEEDED(-D_POSIX_C_SOURCE=200112,
 [
 #include "confdefs.h"
