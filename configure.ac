@@ -1164,10 +1164,6 @@ size_t strlcpy(char *dst, const char *src, size_t siz);
 struct tm *gmtime_r(const time_t *timep, struct tm *result);
 #endif
 #ifndef HAVE_GETADDRINFO
-#define getaddrinfo getaddrinfo_unbound
-#define gai_strerror gai_strerror_unbound
-#define freeaddrinfo freeaddrinfo_unbound
-#define getnameinfo getnameinfo_unbound
 struct sockaddr_storage;
 #include "compat/fake-rfc2553.h"
 #endif
