@@ -598,6 +598,21 @@ print_thread_stats(SSL* ssl, int i, struct stats_info* s)
 	return print_stats(ssl, nm, s);
 }
 
+/** print long number */
+static int
+print_longnum(SSL* ssl, char* desc, size_t x)
+{
+	if(x > 1024*1024*1024) {
+		/* more than a Gb */
+		size_t front = x / (size_t)1000000;
+		size_t back = x % (size_t)1000000;
+		return ssl_printf(ssl, "%s%u%6.6u\n", desc, 
+			(unsigned)front, (unsigned)back);
+	} else {
+		return ssl_printf(ssl, "%s%u\n", desc, (unsigned)x);
+	}
+}
+
 /** print mem stats */
 static int
 print_mem(SSL* ssl, struct worker* worker, struct daemon* daemon)
@@ -607,8 +622,8 @@ print_mem(SSL* ssl, struct worker* worker, struct daemon* daemon)
 #ifdef HAVE_SBRK
 	extern void* unbound_start_brk;
 	void* cur = sbrk(0);
-	if(!ssl_printf(ssl, "mem.total.sbrk"SQ"%u\n", 
-		(unsigned)(cur-unbound_start_brk))) return 0;
+	if(!print_longnum(ssl, "mem.total.sbrk"SQ, 
+		(size_t)(cur - unbound_start_brk))) return 0;
 #endif /* HAVE_SBRK */
 	msg = slabhash_get_mem(daemon->env->msg_cache);
 	rrset = slabhash_get_mem(&daemon->env->rrset_cache->table);
@@ -629,13 +644,13 @@ print_mem(SSL* ssl, struct worker* worker, struct daemon* daemon)
 			(&worker->env, m);
 	}
 
-	if(!ssl_printf(ssl, "mem.cache.rrset"SQ"%u\n", (unsigned)rrset))
+	if(!print_longnum(ssl, "mem.cache.rrset"SQ, rrset))
 		return 0;
-	if(!ssl_printf(ssl, "mem.cache.message"SQ"%u\n", (unsigned)msg))
+	if(!print_longnum(ssl, "mem.cache.message"SQ, msg))
 		return 0;
-	if(!ssl_printf(ssl, "mem.mod.iterator"SQ"%u\n", (unsigned)iter))
+	if(!print_longnum(ssl, "mem.mod.iterator"SQ, iter))
 		return 0;
-	if(!ssl_printf(ssl, "mem.mod.validator"SQ"%u\n", (unsigned)val))
+	if(!print_longnum(ssl, "mem.mod.validator"SQ, val))
 		return 0;
 	return 1;
 }

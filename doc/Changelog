@@ -4,6 +4,8 @@
 	  in the negative cache rbtree (upcoming 1.1 feature). (Thanks to 
 	  Attila Nagy for testing).
 	- nicer comments in cachedump about failed RR to string conversion.
+	- fix 32bit wrap around when printing large (4G and more) mem usage
+	  for extended statistics.
 
 10 November 2008: Wouter
 	- fixup the getaddrinfo compat code rename.
