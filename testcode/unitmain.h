@@ -63,5 +63,7 @@ void dname_test();
 void anchors_test();
 /** unit test for verification functions */
 void verify_test();
+/** unit test for negative cache functions */
+void neg_test();
 
 #endif /* TESTCODE_UNITMAIN_H */

@@ -413,6 +413,7 @@ main(int argc, char* argv[])
 	printf("Start of %s unit test.\n", PACKAGE_STRING);
 	ERR_load_crypto_strings();
 	checklock_start();
+	neg_test();
 	rnd_test();
 	verify_test();
 	net_test();

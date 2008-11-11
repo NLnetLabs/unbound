@@ -53,6 +53,7 @@ struct rrset_cache;
 struct regional;
 struct query_info;
 struct dns_msg;
+struct ub_packed_rrset_key;
 
 /**
  * The negative cache.  It is shared between the threads, so locked. 
@@ -246,5 +247,53 @@ int val_neg_dlvlookup(struct val_neg_cache* neg, uint8_t* qname, size_t len,
 struct dns_msg* val_neg_getmsg(struct val_neg_cache* neg, 
 	struct query_info* qinfo, struct regional* region, 
 	struct rrset_cache* rrset_cache, ldns_buffer* buf, uint32_t now);
+
+
+/**** functions exposed for unit test ****/
+/**
+ * Insert data into the data tree of a zone
+ * @param neg: negative cache
+ * @param zone: zone to insert into
+ * @param nsec: record to insert.
+ */
+void neg_insert_data(struct val_neg_cache* neg,
+        struct val_neg_zone* zone, struct ub_packed_rrset_key* nsec);
+
+/**
+ * Delete a data element from the negative cache.
+ * May delete other data elements to keep tree coherent, or
+ * only mark the element as 'not in use'.
+ * @param neg: negative cache.
+ * @param el: data element to delete.
+ */
+void neg_delete_data(struct val_neg_cache* neg, struct val_neg_data* el);
+
+/**
+ * Find the given zone, from the SOA owner name and class
+ * @param neg: negative cache
+ * @param nm: what to look for.
+ * @param len: length of nm
+ * @param dclass: class to look for.
+ * @return zone or NULL if not found.
+ */
+struct val_neg_zone* neg_find_zone(struct val_neg_cache* neg,
+        uint8_t* nm, size_t len, uint16_t dclass);
+
+/**
+ * Create a new zone.
+ * @param neg: negative cache
+ * @param nm: what to look for.
+ * @param nm_len: length of name.
+ * @param dclass: class of zone, host order.
+ * @return zone or NULL if out of memory.
+ */
+struct val_neg_zone* neg_create_zone(struct val_neg_cache* neg,
+        uint8_t* nm, size_t nm_len, uint16_t dclass);
+
+/**
+ * take a zone into use. increases counts of parents.
+ * @param zone: zone to take into use.
+ */
+void val_neg_zone_take_inuse(struct val_neg_zone* zone);
 
 #endif /* VALIDATOR_VAL_NEG_H */

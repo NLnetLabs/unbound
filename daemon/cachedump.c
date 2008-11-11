@@ -73,7 +73,7 @@ to_rr(struct ub_packed_rrset_key* k, struct packed_rrset_data* d,
 	pos = 0;
 	status = ldns_wire2dname(&rdf, k->rk.dname, k->rk.dname_len, &pos);
 	if(status != LDNS_STATUS_OK) {
-		/* we have detailed error in status */
+		/* we drop detailed error in status */
 		ldns_rr_free(rr);
 		return NULL;
 	}
@@ -81,7 +81,7 @@ to_rr(struct ub_packed_rrset_key* k, struct packed_rrset_data* d,
 	pos = 0;
 	status = ldns_wire2rdf(rr, d->rr_data[i], d->rr_len[i], &pos);
 	if(status != LDNS_STATUS_OK) {
-		/* we have detailed error in status */
+		/* we drop detailed error in status */
 		ldns_rr_free(rr);
 		return NULL;
 	}

@@ -1,3 +1,10 @@
+11 November 2008: Wouter
+	- unit test for negative cache, stress tests the refcounting.
+	- fix for refcounting error that could cause fptr_wlist fatal exit
+	  in the negative cache rbtree (upcoming 1.1 feature). (Thanks to 
+	  Attila Nagy for testing).
+	- nicer comments in cachedump about failed RR to string conversion.
+
 10 November 2008: Wouter
 	- fixup the getaddrinfo compat code rename.
 

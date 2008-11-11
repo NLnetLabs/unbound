@@ -215,14 +215,7 @@ static void neg_delete_zone(struct val_neg_cache* neg, struct val_neg_zone* z)
 	}
 }
 	
-/**
- * Delete a data element from the negative cache.
- * May delete other data elements to keep tree coherent, or
- * only mark the element as 'not in use'.
- * @param neg: negative cache.
- * @param el: data element to delete.
- */
-static void neg_delete_data(struct val_neg_cache* neg, struct val_neg_data* el)
+void neg_delete_data(struct val_neg_cache* neg, struct val_neg_data* el)
 {
 	struct val_neg_zone* z;
 	struct val_neg_data* p, *np;
@@ -275,15 +268,7 @@ static void neg_make_space(struct val_neg_cache* neg, size_t need)
 	}
 }
 
-/**
- * Find the given zone, from the SOA owner name and class
- * @param neg: negative cache
- * @param nm: what to look for.
- * @param len: length of nm
- * @param dclass: class to look for.
- * @return zone or NULL if not found.
- */
-static struct val_neg_zone* neg_find_zone(struct val_neg_cache* neg, 
+struct val_neg_zone* neg_find_zone(struct val_neg_cache* neg, 
 	uint8_t* nm, size_t len, uint16_t dclass)
 {
 	struct val_neg_zone lookfor;
@@ -519,17 +504,21 @@ static struct val_neg_zone* neg_zone_chain(
 		dname_remove_label(&nm, &nm_len);
 	}
 	return first;
+}	
+
+void val_neg_zone_take_inuse(struct val_neg_zone* zone)
+{
+	if(!zone->in_use) {
+		struct val_neg_zone* p;
+		zone->in_use = 1;
+		/* increase usage count of all parents */
+		for(p=zone; p; p = p->parent) {
+			p->count++;
+		}
+	}
 }
 
-/**
- * Create a new zone.
- * @param neg: negative cache
- * @param nm: what to look for.
- * @param nm_len: length of name.
- * @param dclass: class of zone, host order.
- * @return zone or NULL if out of memory.
- */
-static struct val_neg_zone* neg_create_zone(struct val_neg_cache* neg,
+struct val_neg_zone* neg_create_zone(struct val_neg_cache* neg,
 	uint8_t* nm, size_t nm_len, uint16_t dclass)
 {
 	struct val_neg_zone* zone;
@@ -547,7 +536,6 @@ static struct val_neg_zone* neg_create_zone(struct val_neg_cache* neg,
 	if(!zone) {
 		return NULL;
 	}
-	zone->in_use = 1;
 
 	/* insert the list of zones into the tree */
 	p = zone;
@@ -561,10 +549,6 @@ static struct val_neg_zone* neg_create_zone(struct val_neg_cache* neg,
 		if(np == NULL)
 			p->parent = parent;
 		p = np;
-	}
-	/* increase usage count of all parents */
-	for(p=zone; p; p = p->parent) {
-		p->count++;
 	}
 	return zone;
 }
@@ -752,14 +736,7 @@ static void wipeout(struct val_neg_cache* neg, struct val_neg_zone* zone,
 	}
 }
 
-
-/**
- * Insert data into the data tree of a zone
- * @param neg: negative cache
- * @param zone: zone to insert into
- * @param nsec: record to insert.
- */
-static void neg_insert_data(struct val_neg_cache* neg, 
+void neg_insert_data(struct val_neg_cache* neg, 
 	struct val_neg_zone* zone, struct ub_packed_rrset_key* nsec)
 {
 	struct packed_rrset_data* d;
@@ -886,6 +863,7 @@ void val_neg_addreply(struct val_neg_cache* neg, struct reply_info* rep)
 			return;
 		}
 	}
+	val_neg_zone_take_inuse(zone);
 
 	/* insert the NSECs */
 	for(i=rep->an_numrrsets; i< rep->an_numrrsets+rep->ns_numrrsets; i++){
@@ -895,6 +873,10 @@ void val_neg_addreply(struct val_neg_cache* neg, struct reply_info* rep)
 			zone->name)) continue;
 		/* insert NSEC into this zone's tree */
 		neg_insert_data(neg, zone, rep->rrsets[i]);
+	}
+	if(zone->tree.count == 0) {
+		/* remove empty zone if inserts failed */
+		neg_delete_zone(neg, zone);
 	}
 	lock_basic_unlock(&neg->lock);
 }
@@ -1092,6 +1074,7 @@ void val_neg_addreferral(struct val_neg_cache* neg, struct reply_info* rep,
 			return;
 		}
 	}
+	val_neg_zone_take_inuse(zone);
 
 	/* insert the NSECs */
 	for(i=rep->an_numrrsets; i< rep->an_numrrsets+rep->ns_numrrsets; i++){
@@ -1102,6 +1085,10 @@ void val_neg_addreferral(struct val_neg_cache* neg, struct reply_info* rep,
 			zone->name)) continue;
 		/* insert NSEC into this zone's tree */
 		neg_insert_data(neg, zone, rep->rrsets[i]);
+	}
+	if(zone->tree.count == 0) {
+		/* remove empty zone if inserts failed */
+		neg_delete_zone(neg, zone);
 	}
 	lock_basic_unlock(&neg->lock);
 }
