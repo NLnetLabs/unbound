@@ -215,6 +215,7 @@ replace_all doc/README
 replace_all doc/unbound.8.in
 replace_all doc/unbound.conf.5.in
 replace_all doc/unbound-checkconf.8.in
+replace_all doc/unbound-control.8.in
 replace_all doc/unbound-host.1
 replace_all doc/libunbound.3.in
 
