@@ -3,6 +3,7 @@
 	- added configure check for ldns 1.4.0 (using its compat funcs).
 	- neater comments in worker.h.
 	- removed doc/plan and updated doc/TODO.
+	- silenced EHOSTDOWN (verbosity 2 or higher to see it).
 
 12 November 2008: Wouter
 	- add unbound-control manpage to makedist replace list.

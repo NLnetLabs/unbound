@@ -801,6 +801,10 @@ comm_point_tcp_handle_write(int fd, struct comm_point* c)
                 else if(error == EHOSTUNREACH && verbosity < 2)
                         return 0; /* silence 'no route to host' */
 #endif
+#ifdef EHOSTDOWN
+                else if(error == EHOSTDOWN && verbosity < 2)
+                        return 0; /* silence 'host is down' */
+#endif
                 else if(error != 0) {
 			log_err("tcp connect: %s", strerror(error));
 #else /* USE_WINSOCK */
