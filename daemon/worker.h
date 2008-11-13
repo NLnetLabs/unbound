@@ -200,9 +200,10 @@ struct outbound_entry* worker_send_query(uint8_t* qname, size_t qnamelen,
 	struct module_qstate* q);
 
 /** 
- * process control messages from the main thread. 
+ * process control messages from the main thread. Frees the control 
+ * command message.
  * @param tube: tube control message came on.
- * @param msg: message contents.
+ * @param msg: message contents.  Is freed.
  * @param len: length of message.
  * @param error: if error (NETEVENT_*) happened.
  * @param arg: user argument
