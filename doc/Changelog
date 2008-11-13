@@ -4,6 +4,7 @@
 	- neater comments in worker.h.
 	- removed doc/plan and updated doc/TODO.
 	- silenced EHOSTDOWN (verbosity 2 or higher to see it).
+	- review comments from Jelte, Matthijs. Neater code.
 
 12 November 2008: Wouter
 	- add unbound-control manpage to makedist replace list.

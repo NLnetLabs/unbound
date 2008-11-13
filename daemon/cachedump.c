@@ -99,17 +99,15 @@ dump_rrset_line(SSL* ssl, struct ub_packed_rrset_key* k,
 		return ssl_printf(ssl, "BADRR\n");
 	}
 	s = ldns_rr2str(rr);
+	ldns_rr_free(rr);
 	if(!s) {
-		ldns_rr_free(rr);
 		return ssl_printf(ssl, "BADRR\n");
 	}
 	if(!ssl_printf(ssl, "%s", s)) {
 		free(s);
-		ldns_rr_free(rr);
 		return 0;
 	}
 	free(s);
-	ldns_rr_free(rr);
 	return 1;
 }
 
@@ -635,13 +633,12 @@ load_qinfo(char* str, struct query_info* qinfo, ldns_buffer* buf,
 	qinfo->qclass = ldns_rr_get_class(rr);
 	ldns_buffer_clear(buf);
 	status = ldns_dname2buffer_wire(buf, ldns_rr_owner(rr));
+	ldns_rr_free(rr);
 	if(status != LDNS_STATUS_OK) {
 		(void)ssl_printf(ssl, "error cannot dname2wire: %s\n", 
 			ldns_get_errorstr_by_id(status));
-		ldns_rr_free(rr);
 		return NULL;
 	}
-	ldns_rr_free(rr);
 	ldns_buffer_flip(buf);
 	qinfo->qname_len = ldns_buffer_limit(buf);
 	qinfo->qname = (uint8_t*)regional_alloc_init(region, 
