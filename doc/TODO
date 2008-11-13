@@ -2,9 +2,6 @@ TODO items. These are interesting todo items.
 o understand synthesized DNAMEs, so those TTL=0 packets are cached properly.
 o NSEC/NSEC3 aggressive negative caching, so that updates to NSEC/NSEC3 
   will result in proper negative responses.
-o get serverselection algorithm out of local optimum.
-  make subtargets to get rtt info for a couple of targets, like fetch-policy.
-  or send out multiple queries to multiple servers.
 o (option) where port 53 is used for send and receive, no other ports are used.
 o (option) to not send replies to clients after a timeout of (say 5 secs) has
   passed, but keep task active for later retries by client.
@@ -17,8 +14,6 @@ o (option) store primed key data in a overlaid keyhints file (sort of like draft
 o windows version, auto update feature, a query to check for the version.
 o command the server with TSIG inband. get-config, clearcache, 
 	get stats, get memstats, get ..., reload, clear one zone from cache
-o watch for spoof nearmisses. Keep counter of nearmisses and print that
-  in the stats lines, operator can determine what level is a redalert.
 o NSID rfc 5001 support.
 o timers rfc 5011 support.
 o Treat YXDOMAIN from a DNAME properly, in iterator (not throwaway), validator.
@@ -26,7 +21,6 @@ o make timeout backoffs randomized (a couple percent random) to spread traffic.
 o inspect date on executable, then warn user in log if its more than 1 year.
 o (option) proactively prime root, stubs and trust anchors, feature.
   early failure, faster on first query, but more traffic.
-o On Windows use CryptGenRandom() to get random seed for arc4random.
 o library add convenience functions for A, AAAA, PTR, getaddrinfo, libresolve.
 o library add function to validate input from app that is signed.
 o add dynamic-update requests (making a dynupd request) to libunbound api.
@@ -38,36 +32,31 @@ o (option) to make chroot: copy all needed files into jail (or make jail)
 	perhaps also print reminder to link /dev/random and sysloghack.
 o overhaul outside-network servicedquery to merge with udpwait and tcpwait,
   to make timers in servicedquery independent of udpwait queues.
-o 0x20 fallback so it can be enabled without trouble.
 o check into rebinding ports for efficiency, configure time test.
 o EVP hardware crypto support.
+o option to ignore all inception and expiration dates for rrsigs.
+o option to use builtin ldns explicitly.  Or stop shipping builtin tarball.
+o cleaner code; return and func statements on newline.
+o memcached module that sits before validator module; checks for memcached
+  data (on local lan), stores recursion lookup.  Provides one cache for
+  multiple resolver machines, coherent reply content in anycast setup.
 
-Features soon after 1.0.
-o zone name appending for local-data. Perhaps read zonefiles. Perhaps it is
-  too much authority feature creep.
+*** Features features, for later
+* dTLS, TLS, look to need special port numbers, cert storage, recent libssl.
+* aggressive negative caching for NSEC, NSEC3.
+* multiple queries per question, server exploration, server selection.
+* NSID support.
+* support TSIG on queries, for validating resolver deployment.
+* private TTL
+* retry-mode, where a bogus result triggers a retry-mode query, where a list
+  of responses over a time interval is collected, and each is validated.
+  or try in TCP mode. Do not 'try all servers several times', since we must
+  not create packet storms with operator errors.
+* draft-timers
+* Windows port features
 o on windows version, implement that OS ancillary data capabilities for
   interface-automatic. IPPKTINFO, IP6PKTINFO for WSARecvMsg, WSASendMsg.
-o (option) for extended statistics. If enabled (not by default) collect print
-	rcode, uptime, spoofnearmisses, cache size, qtype, 
-	bits(RD, CD, DO, EDNS-present, AD)query, (Secure, Bogus)reply.
-	perhaps also see which slow auth servers cause >1sec values.
-	stats-file possible with key: value or key=value lines in it.
-	stats on SIGUSR1. addup stats over threads.
-
-For 1.x; features that have been requested during the beta test.
-o command channel for couple of tasks. Like rndc. unbound-control
-  o see delegation; what servers would be used to get data for a name.
-  o force stats display; easier than parsing logfiles.
-    stats display added over threads, displayed in rddtool easy format.
-  o flush names or domains (all under a name) from the cache. Include NSes.
-    And the A, AAAA for its NSes.
-  o add/del static preload data to change the domain redirections.
-  o and maybe also start, stop, reload.
-o option to disable cache snooping from the clients (the nonRD queries),
-  with allow, refused, drop choices.
-o EDNS fallback after timeout (firewall drops all edns traffic problem).
-o IPv6 reverse, IP4 reverse local-data shorthand for PTR records (?).
-  cumbersome to reverse notate by hand for the operator.
-o DLV
-o look at dTLS, TLS ease of implementation.
+o local-zone directive with authority service, full authority server 
+  is a non-goal.
+o configure option to force use of builtin ldns tarball.
 

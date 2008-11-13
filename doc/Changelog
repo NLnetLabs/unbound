@@ -2,6 +2,7 @@
 	- added fedora init and specfile to contrib (by Paul Wouters).
 	- added configure check for ldns 1.4.0 (using its compat funcs).
 	- neater comments in worker.h.
+	- removed doc/plan and updated doc/TODO.
 
 12 November 2008: Wouter
 	- add unbound-control manpage to makedist replace list.
