@@ -999,6 +999,8 @@ AC_ARG_WITH(ldns,
 AC_CHECK_LIB(ldns, ldns_buffer_copy, [
 dnl ldns was found, check compat functions
 AC_CHECK_LIB(ldns, [ldns_rr_free])
+AC_CHECK_FUNC([ldns_b32_ntop_extended_hex],, [
+	AC_MSG_ERROR([ldns version too old, need >=1.4.0])])
 ] , [
 dnl use the builtin ldns-src.tar.gz file to build ldns.
 if test ! -f $srcdir/ldns-src.tar.gz; then
