@@ -1,3 +1,6 @@
+14 November 2008: Wouter
+	- created 1.1.0 release tag in svn.
+
 13 November 2008: Wouter
 	- added fedora init and specfile to contrib (by Paul Wouters).
 	- added configure check for ldns 1.4.0 (using its compat funcs).
