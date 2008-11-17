@@ -87,7 +87,9 @@ struct delegpt_ns {
 	size_t namelen;
 	/** 
 	 * If the name has been resolved. false if not queried for yet.
-	 * true if the address is known, or marked true if failed.
+	 * true if the A, AAAA queries have been generated.
+	 * marked true if those queries fail.
+	 * and marked true is got4 and got6 are both true.
 	 */
 	int resolved;
 	/** if the ipv4 address is in the delegpt */
