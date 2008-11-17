@@ -60,4 +60,4 @@ o on windows version, implement that OS ancillary data capabilities for
 o local-zone directive with authority service, full authority server 
   is a non-goal.
 o configure option to force use of builtin ldns tarball.
-
+o include /etc/pki/dnssec-keys/production/*.conf with wildcard support.

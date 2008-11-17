@@ -3,6 +3,7 @@
 server:
 	trust-anchor: "example.com.    3600    IN      DS      2854 3 1 46e4ffc6e9a4793b488954bd3f0cc6af0dfb201b"
 	val-override-date: "20070916134226"
+	target-fetch-policy: "0 0 0 0 0"
 	# test that default value of harden-dnssec-stripped is still yes.
 
 stub-zone:
@@ -28,11 +29,11 @@ K.ROOT-SERVERS.NET.	IN	A	193.0.14.129
 ENTRY_END
 
 ENTRY_BEGIN
-MATCH opcode qtype qname
-ADJUST copy_id
+MATCH opcode subdomain
+ADJUST copy_id copy_query
 REPLY QR NOERROR
 SECTION QUESTION
-www.example.com. IN A
+com. IN A
 SECTION AUTHORITY
 com.	IN NS	a.gtld-servers.net.
 SECTION ADDITIONAL
@@ -56,11 +57,11 @@ a.gtld-servers.net.     IN      A       192.5.6.30
 ENTRY_END
 
 ENTRY_BEGIN
-MATCH opcode qtype qname
-ADJUST copy_id
+MATCH opcode subdomain
+ADJUST copy_id copy_query
 REPLY QR NOERROR
 SECTION QUESTION
-www.example.com. IN A
+example.com. IN A
 SECTION AUTHORITY
 example.com.	IN NS	ns.example.com.
 SECTION ADDITIONAL
@@ -121,6 +122,16 @@ SECTION ADDITIONAL
 ns.example.com.		IN 	A	1.2.3.4
 www.example.com.        3600    IN      RRSIG   A 3 3 3600 20070926134150 20070829134150 2854 example.com. MC0CFC99iE9K5y2WNgI0gFvBWaTi9wm6AhUAoUqOpDtG5Zct+Qr9F3mSdnbc6V4= ;{id = 2854}
 ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR NOERROR
+SECTION QUESTION
+ns.example.com. IN AAAA
+SECTION ANSWER
+ENTRY_END
+
 RANGE_END
 
 STEP 1 QUERY

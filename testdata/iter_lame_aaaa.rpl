@@ -1,4 +1,7 @@
 ; config options
+server:
+	target-fetch-policy: "0 0 0 0 0"
+
 stub-zone:
 	name: "."
 	stub-addr: 193.0.14.129 	# K.ROOT-SERVERS.NET.
@@ -22,11 +25,11 @@ K.ROOT-SERVERS.NET.	IN	A	193.0.14.129
 ENTRY_END
 
 ENTRY_BEGIN
-MATCH opcode qtype qname
-ADJUST copy_id
+MATCH opcode subdomain
+ADJUST copy_id copy_query
 REPLY QR NOERROR
 SECTION QUESTION
-example.com. IN AAAA
+com. IN AAAA
 SECTION AUTHORITY
 com.	IN NS	a.gtld-servers.net.
 SECTION ADDITIONAL
@@ -38,8 +41,8 @@ RANGE_END
 RANGE_BEGIN 0 100
 	ADDRESS 192.5.6.30
 ENTRY_BEGIN
-MATCH opcode qtype qname
-ADJUST copy_id
+MATCH opcode subdomain
+ADJUST copy_id copy_query
 REPLY QR NOERROR
 SECTION QUESTION
 example.com. IN AAAA
@@ -65,6 +68,15 @@ RANGE_END
 ; ns.example.com.
 RANGE_BEGIN 0 100
 	ADDRESS 1.2.3.4
+
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR NOERROR
+SECTION QUESTION
+ns.example.com. IN AAAA
+SECTION ANSWER
+ENTRY_END
 
 ENTRY_BEGIN
 MATCH opcode qtype qname

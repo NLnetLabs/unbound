@@ -86,7 +86,7 @@ ah(struct delegpt* dp, struct regional* r, const char* sv, const char* ip)
 	if(!delegpt_add_ns(dp, r, ldns_rdf_data(rdf)) ||
 	   !extstrtoaddr(ip, &addr, &addrlen) ||
 	   !delegpt_add_target(dp, r, ldns_rdf_data(rdf), ldns_rdf_size(rdf),
-		&addr, addrlen, 0)) {
+		&addr, addrlen, 0, 1)) {
 		ldns_rdf_deep_free(rdf);
 		return 0;
 	}
@@ -224,7 +224,7 @@ read_stubs_addr(struct iter_hints* hints, struct config_stub* s,
 				s->name, p->str);
 			return 0;
 		}
-		if(!delegpt_add_addr(dp, hints->region, &addr, addrlen, 0)) {
+		if(!delegpt_add_addr(dp, hints->region, &addr, addrlen, 0, 1)) {
 			log_err("out of memory");
 			return 0;
 		}
@@ -317,7 +317,7 @@ read_root_hints(struct iter_hints* hints, char* fname)
 					ldns_rdf_data(ldns_rr_owner(rr)),
 					ldns_rdf_size(ldns_rr_owner(rr)),
 					(struct sockaddr_storage*)&sa, len, 
-					0)) {
+					0, 1)) {
 				log_err("out of memory reading root hints");
 				goto stop_read;
 			}
@@ -333,7 +333,7 @@ read_root_hints(struct iter_hints* hints, char* fname)
 					ldns_rdf_data(ldns_rr_owner(rr)),
 					ldns_rdf_size(ldns_rr_owner(rr)),
 					(struct sockaddr_storage*)&sa, len,
-					0)) {
+					0, 1)) {
 				log_err("out of memory reading root hints");
 				goto stop_read;
 			}

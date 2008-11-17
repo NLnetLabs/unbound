@@ -1,4 +1,7 @@
 ; config options
+server:
+	target-fetch-policy: "0 0 0 0 0"
+
 stub-zone:
 	name: "."
 	stub-addr: 193.0.14.129 	# K.ROOT-SERVERS.NET.
@@ -26,11 +29,11 @@ K.ROOT-SERVERS.NET.	IN	A	193.0.14.129
 ENTRY_END
 
 ENTRY_BEGIN
-MATCH opcode qtype qname
-ADJUST copy_id
+MATCH opcode subdomain
+ADJUST copy_id copy_query
 REPLY QR NOERROR
 SECTION QUESTION
-www.example.com. IN A
+com. IN A
 SECTION AUTHORITY
 com.	IN NS	a.gtld-servers.net.
 SECTION ADDITIONAL
@@ -38,23 +41,11 @@ a.gtld-servers.net.	IN 	A	192.5.6.30
 ENTRY_END
 
 ENTRY_BEGIN
-MATCH opcode qtype qname
-ADJUST copy_id
+MATCH opcode subdomain
+ADJUST copy_id copy_query
 REPLY QR NOERROR
 SECTION QUESTION
-ns.example.net. IN A
-SECTION AUTHORITY
-net.	IN NS	e.gtld-servers.net.
-SECTION ADDITIONAL
-e.gtld-servers.net.	IN 	A	192.12.94.30
-ENTRY_END
-
-ENTRY_BEGIN
-MATCH opcode qtype qname
-ADJUST copy_id
-REPLY QR NOERROR
-SECTION QUESTION
-ns.example.net. IN AAAA
+net. IN A
 SECTION AUTHORITY
 net.	IN NS	e.gtld-servers.net.
 SECTION ADDITIONAL
@@ -78,11 +69,11 @@ a.gtld-servers.net.	IN 	A	192.5.6.30
 ENTRY_END
 
 ENTRY_BEGIN
-MATCH opcode qtype qname
-ADJUST copy_id
+MATCH opcode subdomain
+ADJUST copy_id copy_query
 REPLY QR NOERROR
 SECTION QUESTION
-www.example.com. IN A
+example.com. IN A
 SECTION AUTHORITY
 example.com.	IN NS	ns.example.com.
 example.com.	IN NS	ns.example.net.
@@ -109,23 +100,11 @@ e.gtld-servers.net.	IN 	A	192.12.94.30
 ENTRY_END
 
 ENTRY_BEGIN
-MATCH opcode qtype qname
-ADJUST copy_id
+MATCH opcode subdomain
+ADJUST copy_id copy_query
 REPLY QR NOERROR
 SECTION QUESTION
-ns.example.net. IN A
-SECTION AUTHORITY
-example.net.	IN NS	ns.example.net.
-SECTION ADDITIONAL
-ns.example.net.		IN 	A	1.2.3.44
-ENTRY_END
-
-ENTRY_BEGIN
-MATCH opcode qtype qname
-ADJUST copy_id
-REPLY QR NOERROR
-SECTION QUESTION
-ns.example.net. IN AAAA
+example.net. IN A
 SECTION AUTHORITY
 example.net.	IN NS	ns.example.net.
 SECTION ADDITIONAL
@@ -199,6 +178,16 @@ example.com.	IN NS	ns.example.net.
 SECTION ADDITIONAL
 ns.example.net 	IN A 	1.2.3.44
 ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR NOERROR
+SECTION QUESTION
+ns.example.com. IN AAAA
+SECTION ANSWER
+ENTRY_END
+
 RANGE_END
 
 ; ns.example.com.
@@ -225,6 +214,15 @@ SECTION QUESTION
 ns.example.com. IN A
 SECTION ANSWER
 ns.example.com. IN A	1.2.3.55
+ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR NOERROR
+SECTION QUESTION
+ns.example.com. IN AAAA
+SECTION ANSWER
 ENTRY_END
 
 ENTRY_BEGIN
@@ -275,6 +273,21 @@ example.com.	IN NS	ns.example.net.
 ; scrubbed off
 ;SECTION ADDITIONAL
 ;ns.example.net 	IN A 	1.2.3.44
+ENTRY_END
+
+; query still pending
+STEP 30 QUERY
+ENTRY_BEGIN
+REPLY RD
+SECTION QUESTION
+ns.example.net. IN AAAA
+ENTRY_END
+
+; query still pending
+STEP 40 CHECK_ANSWER
+ENTRY_BEGIN
+REPLY RD RA
+SECTION QUESTION
 ENTRY_END
 
 SCENARIO_END

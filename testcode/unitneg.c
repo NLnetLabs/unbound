@@ -201,6 +201,7 @@ static void add_item(struct val_neg_cache* neg)
 	char* zname = get_random_zone();
 	char* from, *to;
 
+	lock_basic_lock(&neg->lock);
 	if(negverbose)
 		log_nametypeclass(0, "add to zone", (uint8_t*)zname, 0, 0);
 	z = neg_find_zone(neg, (uint8_t*)zname, strlen(zname)+1, 
@@ -233,6 +234,7 @@ static void add_item(struct val_neg_cache* neg)
 	rr_data = (uint8_t*)to;
 
 	neg_insert_data(neg, z, &nsec);
+	lock_basic_unlock(&neg->lock);
 }
 
 /** remove a random item */
@@ -243,8 +245,11 @@ static void remove_item(struct val_neg_cache* neg)
 	rbnode_t* walk;
 	struct val_neg_zone* z;
 	
-	if(neg->tree.count == 0)
+	lock_basic_lock(&neg->lock);
+	if(neg->tree.count == 0) {
+		lock_basic_unlock(&neg->lock);
 		return; /* nothing to delete */
+	}
 
 	/* pick a random zone */
 	walk = rbtree_first(&neg->tree); /* first highest parent, big count */
@@ -261,10 +266,14 @@ static void remove_item(struct val_neg_cache* neg)
 		if(z->in_use)
 			i++;
 	}
-	if(!walk || walk == RBTREE_NULL)
+	if(!walk || walk == RBTREE_NULL) {
+		lock_basic_unlock(&neg->lock);
 		return;
-	if(!z->in_use)
+	}
+	if(!z->in_use) {
+		lock_basic_unlock(&neg->lock);
 		return;
+	}
 	if(negverbose)
 		log_nametypeclass(0, "delete zone", z->name, 0, 0);
 
@@ -283,13 +292,16 @@ static void remove_item(struct val_neg_cache* neg)
 		if(d->in_use)
 			i++;
 	}
-	if(!walk || walk == RBTREE_NULL)
+	if(!walk || walk == RBTREE_NULL) {
+		lock_basic_unlock(&neg->lock);
 		return;
+	}
 	if(d->in_use) {
 		if(negverbose)
 			log_nametypeclass(0, "neg delete item:", d->name, 0, 0);
 		neg_delete_data(neg, d);
 	}
+	lock_basic_unlock(&neg->lock);
 }
 
 /** sum up the zone trees */
@@ -459,6 +471,7 @@ static void check_neg_invariants(struct val_neg_cache* neg)
 {
 	struct val_neg_zone* z;
 	/* check structure of LRU list */
+	lock_basic_lock(&neg->lock);
 	check_lru(neg);
 	unit_assert(neg->max == 1024*1024);
 	unit_assert(neg->nsec3_max_iter == 1500);
@@ -470,6 +483,7 @@ static void check_neg_invariants(struct val_neg_cache* neg)
 		unit_assert(neg->first == NULL);
 		unit_assert(neg->last == NULL);
 		unit_assert(neg->use == 0);
+		lock_basic_unlock(&neg->lock);
 		return;
 	}
 
@@ -479,6 +493,7 @@ static void check_neg_invariants(struct val_neg_cache* neg)
 	RBTREE_FOR(z, struct val_neg_zone*, &neg->tree) {
 		check_zone_invariants(neg, z);
 	}
+	lock_basic_unlock(&neg->lock);
 }
 
 /** perform stress test on insert and delete in neg cache */

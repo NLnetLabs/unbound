@@ -252,6 +252,7 @@ struct dns_msg* val_neg_getmsg(struct val_neg_cache* neg,
 /**** functions exposed for unit test ****/
 /**
  * Insert data into the data tree of a zone
+ * Does not do locking.
  * @param neg: negative cache
  * @param zone: zone to insert into
  * @param nsec: record to insert.
@@ -263,6 +264,7 @@ void neg_insert_data(struct val_neg_cache* neg,
  * Delete a data element from the negative cache.
  * May delete other data elements to keep tree coherent, or
  * only mark the element as 'not in use'.
+ * Does not do locking.
  * @param neg: negative cache.
  * @param el: data element to delete.
  */
@@ -270,6 +272,7 @@ void neg_delete_data(struct val_neg_cache* neg, struct val_neg_data* el);
 
 /**
  * Find the given zone, from the SOA owner name and class
+ * Does not do locking.
  * @param neg: negative cache
  * @param nm: what to look for.
  * @param len: length of nm
@@ -281,6 +284,7 @@ struct val_neg_zone* neg_find_zone(struct val_neg_cache* neg,
 
 /**
  * Create a new zone.
+ * Does not do locking.
  * @param neg: negative cache
  * @param nm: what to look for.
  * @param nm_len: length of name.
@@ -292,6 +296,7 @@ struct val_neg_zone* neg_create_zone(struct val_neg_cache* neg,
 
 /**
  * take a zone into use. increases counts of parents.
+ * Does not do locking.
  * @param zone: zone to take into use.
  */
 void val_neg_zone_take_inuse(struct val_neg_zone* zone);

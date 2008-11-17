@@ -1126,7 +1126,7 @@ query_for_targets(struct module_qstate* qstate, struct iter_qstate* iq,
 			continue;
 		}
 
-		if(ie->supports_ipv6) {
+		if(ie->supports_ipv6 && !ns->got6) {
 			/* Send the AAAA request. */
 			if(!generate_target_query(qstate, iq, id, 
 				ns->name, ns->namelen,
@@ -1135,11 +1135,13 @@ query_for_targets(struct module_qstate* qstate, struct iter_qstate* iq,
 			query_count++;
 		}
 		/* Send the A request. */
-		if(!generate_target_query(qstate, iq, id, 
-			ns->name, ns->namelen, 
-			LDNS_RR_TYPE_A, iq->qchase.qclass))
-			return 0;
-		query_count++;
+		if(!ns->got4) {
+			if(!generate_target_query(qstate, iq, id, 
+				ns->name, ns->namelen, 
+				LDNS_RR_TYPE_A, iq->qchase.qclass))
+				return 0;
+			query_count++;
+		}
 
 		/* mark this target as in progress. */
 		ns->resolved = 1;

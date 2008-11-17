@@ -2,6 +2,7 @@
 server:
 	trust-anchor: "example.com.    3600    IN      DS      2854 3 1 46e4ffc6e9a4793b488954bd3f0cc6af0dfb201b"
 	val-override-date: "20070916134226"
+	target-fetch-policy: "0 0 0 0 0"
 
 stub-zone:
 	name: "."
@@ -330,6 +331,15 @@ www.sub.example.com. IN A
 SECTION ANSWER
 www.sub.example.com. IN A       11.11.11.11
 www.sub.example.com.    3600    IN      RRSIG   A 5 4 3600 20070926134150 20070829134150 30899 sub.example.com. 0DqqRfRtm7VSEQ4mmBbzrKRqQAay3JAE8DPDGmjtokrrjN9F1G/HxozDV7bjdIh2EChlQea8FPwf/GepJMUVxg== ;{id = 30899}
+ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR AA NOERROR
+SECTION QUESTION
+ns.sub.example.com. IN AAAA
+SECTION ANSWER
 ENTRY_END
 RANGE_END
 

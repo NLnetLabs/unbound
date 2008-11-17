@@ -90,6 +90,10 @@ struct delegpt_ns {
 	 * true if the address is known, or marked true if failed.
 	 */
 	int resolved;
+	/** if the ipv4 address is in the delegpt */
+	uint8_t got4;
+	/** if the ipv6 address is in the delegpt */
+	uint8_t got6;
 };
 
 /**
@@ -171,34 +175,39 @@ int delegpt_rrset_add_ns(struct delegpt* dp, struct regional* regional,
  * @param addr: the address.
  * @param addrlen: the length of addr.
  * @param bogus: security status for the address, pass true if bogus.
+ * @param nodup: if true, no address duplicates are made by this add. 
+ *	name duplicates are always filtered.
  * @return false on error.
  */
 int delegpt_add_target(struct delegpt* dp, struct regional* regional, 
 	uint8_t* name, size_t namelen, struct sockaddr_storage* addr, 
-	socklen_t addrlen, int bogus);
+	socklen_t addrlen, int bogus, int nodup);
 
 /**
  * Add A RRset to delegpt.
  * @param dp: delegation point.
  * @param regional: where to allocate the info.
  * @param rrset: RRset A to add.
+ * @param nodup: if true, no duplicates are made by this add. takes time.
  * @return 0 on alloc error.
  */
 int delegpt_add_rrset_A(struct delegpt* dp, struct regional* regional, 
-	struct ub_packed_rrset_key* rrset);
+	struct ub_packed_rrset_key* rrset, int nodup);
 
 /**
  * Add AAAA RRset to delegpt.
  * @param dp: delegation point.
  * @param regional: where to allocate the info.
  * @param rrset: RRset AAAA to add.
+ * @param nodup: if true, no duplicates are made by this add. takes time.
  * @return 0 on alloc error.
  */
 int delegpt_add_rrset_AAAA(struct delegpt* dp, struct regional* regional, 
-	struct ub_packed_rrset_key* rrset);
+	struct ub_packed_rrset_key* rrset, int nodup);
 
 /**
  * Add any RRset to delegpt.
+ * Does not check for duplicates added.
  * @param dp: delegation point.
  * @param regional: where to allocate the info.
  * @param rrset: RRset to add, NS, A, AAAA.
@@ -214,10 +223,11 @@ int delegpt_add_rrset(struct delegpt* dp, struct regional* regional,
  * @param addr: the address.
  * @param addrlen: the length of addr.
  * @param bogus: if address is bogus.
+ * @param nodup: if true, no duplicates are made by this add. takes time.
  * @return false on error.
  */
 int delegpt_add_addr(struct delegpt* dp, struct regional* regional, 
-	struct sockaddr_storage* addr, socklen_t addrlen, int bogus);
+	struct sockaddr_storage* addr, socklen_t addrlen, int bogus, int nodup);
 
 /** 
  * Find NS record in name list of delegation point.
@@ -228,6 +238,16 @@ int delegpt_add_addr(struct delegpt* dp, struct regional* regional,
  */
 struct delegpt_ns* delegpt_find_ns(struct delegpt* dp, uint8_t* name, 
 	size_t namelen);
+
+/** 
+ * Find address record in total list of delegation point.
+ * @param dp: delegation point.
+ * @param addr: address
+ * @param addrlen: length of addr
+ * @return the addr structure or NULL if not found.
+ */
+struct delegpt_addr* delegpt_find_addr(struct delegpt* dp, 
+	struct sockaddr_storage* addr, socklen_t addrlen);
 
 /**
  * Print the delegation point to the log. For debugging.

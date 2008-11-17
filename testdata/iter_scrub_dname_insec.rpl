@@ -1,6 +1,8 @@
 ; config options
 server:
 	harden-referral-path: no
+	target-fetch-policy: "0 0 0 0 0"
+
 stub-zone:
         name: "."
 	stub-addr: 193.0.14.129         # K.ROOT-SERVERS.NET.

@@ -154,7 +154,7 @@ find_add_addrs(struct module_env* env, uint16_t qclass,
 		akey = rrset_cache_lookup(env->rrset_cache, ns->name, 
 			ns->namelen, LDNS_RR_TYPE_A, qclass, 0, now, 0);
 		if(akey) {
-			if(!delegpt_add_rrset_A(dp, region, akey)) {
+			if(!delegpt_add_rrset_A(dp, region, akey, 0)) {
 				lock_rw_unlock(&akey->entry.lock);
 				return 0;
 			}
@@ -165,7 +165,7 @@ find_add_addrs(struct module_env* env, uint16_t qclass,
 		akey = rrset_cache_lookup(env->rrset_cache, ns->name, 
 			ns->namelen, LDNS_RR_TYPE_AAAA, qclass, 0, now, 0);
 		if(akey) {
-			if(!delegpt_add_rrset_AAAA(dp, region, akey)) {
+			if(!delegpt_add_rrset_AAAA(dp, region, akey, 0)) {
 				lock_rw_unlock(&akey->entry.lock);
 				return 0;
 			}
@@ -191,7 +191,7 @@ cache_fill_missing(struct module_env* env, uint16_t qclass,
 		akey = rrset_cache_lookup(env->rrset_cache, ns->name, 
 			ns->namelen, LDNS_RR_TYPE_A, qclass, 0, now, 0);
 		if(akey) {
-			if(!delegpt_add_rrset_A(dp, region, akey)) {
+			if(!delegpt_add_rrset_A(dp, region, akey, 1)) {
 				lock_rw_unlock(&akey->entry.lock);
 				return 0;
 			}
@@ -202,7 +202,7 @@ cache_fill_missing(struct module_env* env, uint16_t qclass,
 		akey = rrset_cache_lookup(env->rrset_cache, ns->name, 
 			ns->namelen, LDNS_RR_TYPE_AAAA, qclass, 0, now, 0);
 		if(akey) {
-			if(!delegpt_add_rrset_AAAA(dp, region, akey)) {
+			if(!delegpt_add_rrset_AAAA(dp, region, akey, 1)) {
 				lock_rw_unlock(&akey->entry.lock);
 				return 0;
 			}

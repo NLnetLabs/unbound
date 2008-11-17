@@ -49,23 +49,20 @@ SECTION ANSWER
 ENTRY_END
 
 ENTRY_BEGIN
-MATCH opcode qname
-ADJUST copy_id copy_query
+MATCH opcode qtype qname
+ADJUST copy_id
 REPLY QR NOERROR
 SECTION QUESTION
-example.com. IN A
-SECTION AUTHORITY
-com.	IN NS	a.gtld-servers.net.
-SECTION ADDITIONAL
-a.gtld-servers.net.	IN 	A	192.5.6.30
+ns.example.net.     IN      AAAA
+SECTION ANSWER
 ENTRY_END
 
 ENTRY_BEGIN
-MATCH opcode qname
+MATCH opcode subdomain
 ADJUST copy_id copy_query
 REPLY QR NOERROR
 SECTION QUESTION
-www.example.com. IN A
+com. IN A
 SECTION AUTHORITY
 com.	IN NS	a.gtld-servers.net.
 SECTION ADDITIONAL
@@ -125,23 +122,11 @@ a.gtld-servers.net.	IN 	A	192.5.6.30
 ENTRY_END
 
 ENTRY_BEGIN
-MATCH opcode qname
+MATCH opcode subdomain
 ADJUST copy_id copy_query
 REPLY QR NOERROR
 SECTION QUESTION
 example.com. IN A
-SECTION AUTHORITY
-example.com.	IN NS	ns.example.com.
-SECTION ADDITIONAL
-ns.example.com.		IN 	A	1.2.3.4
-ENTRY_END
-
-ENTRY_BEGIN
-MATCH opcode qname
-ADJUST copy_id copy_query
-REPLY QR NOERROR
-SECTION QUESTION
-www.example.com. IN A
 SECTION AUTHORITY
 example.com.	IN NS	ns.example.com.
 SECTION ADDITIONAL
@@ -188,6 +173,15 @@ example.com.    3600    IN      RRSIG   NS 3 2 3600 20070926134150 2007082913415
 SECTION ADDITIONAL
 ns.example.com.		IN 	A	1.2.3.4
 ns.example.com. 3600    IN      RRSIG   A 3 3 3600 20070926135752 20070829135752 2854 example.com. MC0CFQCMSWxVehgOQLoYclB9PIAbNP229AIUeH0vNNGJhjnZiqgIOKvs1EhzqAo= ;{id = 2854}
+ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode qname qtype
+ADJUST copy_id copy_query
+REPLY QR NOERROR
+SECTION QUESTION
+ns.example.com. IN AAAA
+SECTION ANSWER
 ENTRY_END
 
 ; response to DNSKEY priming query

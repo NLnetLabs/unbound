@@ -549,8 +549,10 @@ run_scenario(struct replay_runtime* runtime)
 	if(runtime->pending_list) {
 		struct fake_pending* p;
 		log_err("testbound: there are still messages pending.");
-		for(p = runtime->pending_list; p; p=p->next)
+		for(p = runtime->pending_list; p; p=p->next) {
 			log_pkt("pending msg", p->pkt);
+			log_addr(0, "pending to", &p->addr, p->addrlen);
+		}
 		fatal_exit("testbound: there are still messages pending.");
 	}
 	if(runtime->answer_list) {
