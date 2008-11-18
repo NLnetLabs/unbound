@@ -58,7 +58,6 @@ static void print_neg_cache(struct val_neg_cache* neg)
 	printf("neg_cache print\n");
 	printf("memuse %d of %d\n", (int)neg->use, (int)neg->max);
 	printf("maxiter %d\n", (int)neg->nsec3_max_iter);
-	printf("first=%x last=%x\n", (unsigned)neg->first, (unsigned)neg->last);
 	printf("%d zones\n", (int)neg->tree.count);
 	RBTREE_FOR(z, struct val_neg_zone*, &neg->tree) {
 		dname_str(z->name, buf);
