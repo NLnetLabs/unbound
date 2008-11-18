@@ -1,6 +1,7 @@
 18 November 2008: Wouter
 	- iana portlist updated.
 	- removed cast in unit test debug print that was not 64bit safe.
+	- trunk back to 1.1.0; copied to tags 1.1.0 release.
 
 17 November 2008: Wouter
 	- theoretical fix for problems reported on mailing list.
