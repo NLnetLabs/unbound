@@ -1,3 +1,6 @@
+18 November 2008: Wouter
+	- iana portlist updated.
+
 17 November 2008: Wouter
 	- theoretical fix for problems reported on mailing list.
 	  If a delegation point has no A but only AAAA and do-ip6 is no,
