@@ -21,7 +21,7 @@ unbound-control
 .IR command
 .SH "DESCRIPTION"
 .B Unbound-control
-Performs remote administration on the \fIunbound\fR(8) DNS server.
+performs remote administration on the \fIunbound\fR(8) DNS server.
 It reads the configuration file, contacts the unbound server over SSL
 sends the command and displays the result.
 .P
