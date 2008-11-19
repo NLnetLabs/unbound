@@ -1,3 +1,7 @@
+19 November 2008: Wouter
+	- bug #219: fixed so that syslog which delays opening until the first
+	  log line is written, gets a log line while not chroot'ed yet.
+
 18 November 2008: Wouter
 	- iana portlist updated.
 	- removed cast in unit test debug print that was not 64bit safe.
