@@ -1,5 +1,6 @@
 20 November 2008: Wouter
 	- fixup fatal error due to faulty error checking after tcp accept.
+	- add check in rlimit to avoid integer underflow. Better formula.
 
 19 November 2008: Wouter
 	- bug #219: fixed so that syslog which delays opening until the first
