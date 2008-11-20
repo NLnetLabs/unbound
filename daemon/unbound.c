@@ -97,6 +97,7 @@ static void
 checkrlimits(struct config_file* cfg)
 {
 #ifdef HAVE_GETRLIMIT
+	/* list has number of ports to listen to, ifs number addresses */
 	int list = ((cfg->do_udp?1:0) + (cfg->do_tcp?1 + 
 			(int)cfg->incoming_num_tcp:0));
 	size_t listen_ifs = (size_t)(cfg->num_ifs==0?
@@ -133,6 +134,8 @@ checkrlimits(struct config_file* cfg)
 			log_warn("setrlimit: %s", strerror(errno));
 			log_warn("cannot increase max open fds from %u to %u",
 				(unsigned)avail, (unsigned)total+10);
+			/* check that calculation below does not underflow,
+			 * with 15 as margin */
 			if(numthread*perthread_noudp+15 > avail)
 				fatal_exit("too much tcp. not enough fds.");
 			cfg->outgoing_num_ports = (int)((avail 
