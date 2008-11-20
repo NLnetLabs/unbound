@@ -605,6 +605,8 @@ comm_point_tcp_accept_callback(int fd, short event, void* arg)
 	log_assert(fd != -1);
 	new_fd = comm_point_perform_accept(c, &c_hdl->repinfo.addr,
 		&c_hdl->repinfo.addrlen);
+	if(new_fd == -1)
+		return;
 
 	/* grab the tcp handler buffers */
 	c->tcp_free = c_hdl->tcp_free;
