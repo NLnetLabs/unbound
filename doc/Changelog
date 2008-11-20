@@ -3,6 +3,7 @@
 	- add check in rlimit to avoid integer underflow.
 	- rlimit check with new formula; better estimate for number interfaces
 	- nicer comments in rlimit check.
+	- tag 1.1.1 created in svn.
 
 19 November 2008: Wouter
 	- bug #219: fixed so that syslog which delays opening until the first
