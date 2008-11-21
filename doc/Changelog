@@ -1,3 +1,6 @@
+21 November 2008: Wouter
+	- fixed tcp accept, errors were printed when they should not.
+
 20 November 2008: Wouter
 	- fixup fatal error due to faulty error checking after tcp accept.
 	- add check in rlimit to avoid integer underflow.

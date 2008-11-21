@@ -554,15 +554,15 @@ int comm_point_perform_accept(struct comm_point* c,
 	if(new_fd == -1) {
 #ifndef USE_WINSOCK
 		/* EINTR is signal interrupt. others are closed connection. */
-		if(	errno != EINTR 
+		if(	errno == EINTR || errno == EAGAIN
 #ifdef EWOULDBLOCK
-			&& errno != EWOULDBLOCK 
+			|| errno == EWOULDBLOCK 
 #endif
 #ifdef ECONNABORTED
-			&& errno != ECONNABORTED 
+			|| errno == ECONNABORTED 
 #endif
 #ifdef EPROTO
-			&& errno != EPROTO
+			|| errno == EPROTO
 #endif /* EPROTO */
 			)
 			return -1;
