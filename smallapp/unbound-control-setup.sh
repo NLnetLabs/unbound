@@ -142,6 +142,9 @@ test -f $CTL_BASE.pem || error "could not create $CTL_BASE.pem"
 # echo "empty password is used, simply click OK on the password dialog box."
 # openssl pkcs12 -export -in $CTL_BASE"_trust.pem" -inkey $CTL_BASE.key -name "unbound remote control client cert" -out $CTL_BASE"_browser.pfx" -password "pass:" || error "could not create browser certificate"
 
+# remove unused permissions
+chmod o-rw $SVR_BASE.pem $SVR_BASE.key $CTL_BASE.pem $CTL_BASE.key
+
 # remove crap
 rm -f request.cfg
 rm -f $CTL_BASE"_trust.pem" $SVR_BASE"_trust.pem" $SVR_BASE"_trust.srl"

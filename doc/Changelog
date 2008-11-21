@@ -1,5 +1,7 @@
 21 November 2008: Wouter
 	- fixed tcp accept, errors were printed when they should not.
+	- unbound-control-setup.sh removes read/write permissions other
+	  from the keys it creates (as suggested by Dmitriy Demidov).
 
 20 November 2008: Wouter
 	- fixup fatal error due to faulty error checking after tcp accept.
