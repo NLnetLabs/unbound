@@ -117,6 +117,14 @@ The unbound-control program exits with status code 1 on error, 0 on success.
 The setup requires a self\-signed certificate and private keys for both 
 the server and client.  The script \fIunbound\-control\-setup\fR generates
 these in the default run directory, or with \-d in another directory.
+Run the script under the same username as you have configured in unbound.conf
+so that the daemon is permitted to read the files, for example with:
+.nf
+    sudo \-u unbound unbound\-control\-setup
+.fi
+If you have not configured
+a username in unbound.conf, the keys need read permission for the user
+credentials under which the daemon is started.
 The script preserves private keys present in the directory.
 After running the script as root, turn on \fBcontrol-enable\fR in 
 \fIunbound.conf\fR.
