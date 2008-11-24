@@ -5,6 +5,7 @@
 	  script under the same username as the server uses suffices.
 	  i.e.  sudo -u unbound unbound-control-setup
 	- testset port to vista/mingw.
+	- tcp_sigpipe to freebsd port.
 
 21 November 2008: Wouter
 	- fixed tcp accept, errors were printed when they should not.
