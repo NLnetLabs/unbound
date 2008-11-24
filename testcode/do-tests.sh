@@ -8,14 +8,6 @@ NEED_NC='fwd_compress_c00c.tpkg'
 NEED_CURL='06-ianaports.tpkg'
 NEED_WHOAMI='07-confroot.tpkg'
 NEED_IPV6='fwd_ancil.tpkg fwd_tcp_tc6.tpkg'
-NEED_JOBCONTROL='tcp_sigpipe.tpkg'
-
-# test if job control - and also signals - are available (not on mingw).
-if wait %% 2>&1 | grep "job control not enabled" >/dev/null 2>&1; then
-	JOBCONTROL=no
-else
-	JOBCONTROL=yes
-fi
 
 # test for ipv6, uses streamptcp peculiarity.
 if ./streamtcp -f ::1 2>&1 | grep "not supported" >/dev/null 2>&1; then
