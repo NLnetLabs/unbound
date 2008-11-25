@@ -68,6 +68,7 @@ open_svr(const char* svr, int udp)
 	socklen_t addrlen;
 	int fd = -1;
 	/* svr can be ip@port */
+	memset(&addr, 0, sizeof(addr));
 	if(!extstrtoaddr(svr, &addr, &addrlen)) {
 		printf("fatal: bad server specs '%s'\n", svr);
 		exit(1);
