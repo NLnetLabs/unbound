@@ -2,6 +2,7 @@
 	- configure complains when --without-ssl is given (bug #220).
 	- skip unsupported feature tests on vista/mingw.
 	- fixup testcode/streamtcp to work on vista/mingw.
+	- root-hints test checks version of dig required.
 
 24 November 2008: Wouter
 	- document that the user of the server daemon needs read privileges
