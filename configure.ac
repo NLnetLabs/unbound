@@ -513,6 +513,9 @@ AC_ARG_WITH(ssl, AC_HELP_STRING([--with-ssl=pathname],
         ],[
             withval="yes"
         ])
+    if test x_$withval = x_no; then
+	AC_MSG_ERROR([Need SSL library to do digital signature cryptography])
+    fi
     if test x_$withval != x_no; then
         AC_MSG_CHECKING(for SSL)
         if test x_$withval = x_ -o x_$withval = x_yes; then

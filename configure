@@ -20988,6 +20988,11 @@ else
 
 fi
 
+    if test x_$withval = x_no; then
+	{ { echo "$as_me:$LINENO: error: Need SSL library to do digital signature cryptography" >&5
+echo "$as_me: error: Need SSL library to do digital signature cryptography" >&2;}
+   { (exit 1); exit 1; }; }
+    fi
     if test x_$withval != x_no; then
         { echo "$as_me:$LINENO: checking for SSL" >&5
 echo $ECHO_N "checking for SSL... $ECHO_C" >&6; }
