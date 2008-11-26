@@ -134,7 +134,43 @@ iter_apply_cfg(struct iter_env* iter_env, struct config_file* cfg)
 	return 1;
 }
 
-/** filter out unsuitable targets, return rtt or -1 */
+/** filter out unsuitable targets
+ * @param iter_env: iterator environment with ipv6-support flag.
+ * @param env: module environment with infra cache.
+ * @param name: zone name
+ * @param namelen: length of name
+ * @param qtype: query type (host order).
+ * @param now: current time
+ * @param a: address in delegation point we are examining.
+ * @return an integer that signals the target suitability.
+ *	as follows:
+ *	-1: The address should be omitted from the list.
+ *	    Because:
+ *		o The address is bogus (DNSSEC validation failure).
+ *		o Listed as donotquery
+ *		o is ipv6 but no ipv6 support (in operating system).
+ *		o is lame
+ *	Otherwise, an rtt in milliseconds.
+ *	0 .. USEFUL_SERVER_TOP_TIMEOUT-1
+ *		The roundtrip time timeout estimate. less than 2 minutes.
+ *		Note that util/rtt.c has a MIN_TIMEOUT of 50 msec, thus
+ *		values 0 .. 49 are not used, unless that is changed.
+ *	USEFUL_SERVER_TOP_TIMEOUT
+ *		This value exactly is given for unresponsive blacklisted.
+ *	USEFUL_SERVER_TOP_TIMEOUT ..
+ *		dnsseclame servers get penalty
+ *	USEFUL_SERVER_TOP_TIMEOUT*2 ..
+ *		recursion lame servers get penalty
+ *	UNKNOWN_SERVER_NICENESS 
+ *		If no information is known about the server, this is
+ *		returned. 376 msec or so.
+ *
+ * When a final value is chosen that is dnsseclame ; dnsseclameness checking
+ * is turned off (so we do not discard the reply).
+ * When a final value is chosen that is recursionlame; RD bit is set on query.
+ * Because of the numbers this means recursionlame also have dnssec lameness
+ * checking turned off. 
+ */
 static int
 iter_filter_unsuitable(struct iter_env* iter_env, struct module_env* env,
 	uint8_t* name, size_t namelen, uint16_t qtype, uint32_t now, 
@@ -156,7 +192,8 @@ iter_filter_unsuitable(struct iter_env* iter_env, struct module_env* env,
 		if(lame)
 			return -1; /* server is lame */
 		else if(rtt >= USEFUL_SERVER_TOP_TIMEOUT)
-			return -1; /* server is unresponsive */
+				/* server is unresponsive */
+			return USEFUL_SERVER_TOP_TIMEOUT; 
 		else if(reclame)
 			return rtt+USEFUL_SERVER_TOP_TIMEOUT*2; /* nonpref */
 		else if(dnsseclame )
@@ -260,12 +297,21 @@ iter_server_selection(struct iter_env* iter_env,
 
 	if(num == 0)
 		return NULL;
-	if(selrtt >= USEFUL_SERVER_TOP_TIMEOUT*2) {
+	if(selrtt > USEFUL_SERVER_TOP_TIMEOUT*2) {
 		*chase_to_rd = 1;
 	}
-	if(selrtt >= USEFUL_SERVER_TOP_TIMEOUT) {
+	if(selrtt > USEFUL_SERVER_TOP_TIMEOUT) {
 		*dnssec_expected = 0;
 	}
+	if(selrtt == USEFUL_SERVER_TOP_TIMEOUT) {
+		/* the best choice is a blacklisted, unresponsive server,
+		 * we need to throttle down our traffic towards it */
+		if(ub_random(env->rnd) % 100 != 1) {
+			/* 99% of the time, drop query */
+			return NULL;
+		}
+	}
+
 	if(num == 1) {
 		a = dp->result_list;
 		if(++a->attempts < OUTBOUND_MSG_RETRY)
@@ -273,6 +319,7 @@ iter_server_selection(struct iter_env* iter_env,
 		dp->result_list = a->next_result;
 		return a;
 	}
+
 	/* randomly select a target from the list */
 	log_assert(num > 1);
 	/* we do not need secure random numbers here, but

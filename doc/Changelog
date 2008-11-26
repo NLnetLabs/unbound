@@ -3,6 +3,8 @@
 	- skip unsupported feature tests on vista/mingw.
 	- fixup testcode/streamtcp to work on vista/mingw.
 	- root-hints test checks version of dig required.
+	- blacklisted servers are polled at a low rate (1%) to see if they
+	  come back up. But not if there is some other working server.
 
 24 November 2008: Wouter
 	- document that the user of the server daemon needs read privileges
