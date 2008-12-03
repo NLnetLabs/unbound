@@ -312,8 +312,14 @@ void close_other_pipes(struct daemon* daemon, int thr)
 	int i;
 	for(i=0; i<daemon->num; i++)
 		if(i!=thr) {
-			tube_delete(daemon->workers[i]->cmd);
-			daemon->workers[i]->cmd = NULL;
+			if(i==0) {
+				/* only close read part, need to write stats */
+				tube_close_read(daemon->workers[i]->cmd);
+			} else {
+				/* complete close channel to others */
+				tube_delete(daemon->workers[i]->cmd);
+				daemon->workers[i]->cmd = NULL;
+			}
 		}
 }
 

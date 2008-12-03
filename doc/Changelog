@@ -1,3 +1,9 @@
+3 December 2008: Wouter
+	- Fix problem reported by Jaco Engelbrecht where unbound-control stats
+	  freezes up unbound if this was compiled without threading, and
+	  was using multiple processes.
+	- iana portlist updated.
+
 1 December 2008: Wouter
 	- SElinux policy files in contrib/selinux for the unbound daemon,
 	  by Paul Wouters and Adam Tkac.
