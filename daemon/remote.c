@@ -445,6 +445,8 @@ int
 ssl_print_text(SSL* ssl, const char* text)
 {
 	int r;
+	if(!ssl) 
+		return 0;
 	ERR_clear_error();
 	if((r=SSL_write(ssl, text, (int)strlen(text))) <= 0) {
 		if(SSL_get_error(ssl, r) == SSL_ERROR_ZERO_RETURN) {
@@ -483,6 +485,8 @@ ssl_read_line(SSL* ssl, char* buf, size_t max)
 {
 	int r;
 	size_t len = 0;
+	if(!ssl)
+		return 0;
 	while(len < max) {
 		ERR_clear_error();
 		if((r=SSL_read(ssl, buf+len, 1)) <= 0) {
@@ -1182,43 +1186,94 @@ do_flush_name(SSL* ssl, struct worker* worker, char* arg)
 	send_ok(ssl);
 }
 
+/** tell other processes to execute the command */
+void
+distribute_cmd(struct daemon_remote* rc, SSL* ssl, char* cmd)
+{
+	int i;
+	if(!cmd || !ssl) 
+		return;
+	/* skip i=0 which is me */
+	for(i=1; i<rc->worker->daemon->num; i++) {
+		worker_send_cmd(rc->worker->daemon->workers[i],
+			worker_cmd_remote);
+		if(!tube_write_msg(rc->worker->daemon->workers[i]->cmd,
+			(uint8_t*)cmd, strlen(cmd)+1, 0)) {
+			ssl_printf(ssl, "error could not distribute cmd\n");
+			return;
+		}
+	}
+}
+
 /** execute a remote control command */
 static void
-execute_cmd(struct daemon_remote* rc, SSL* ssl, char* cmd)
+execute_cmd(struct daemon_remote* rc, SSL* ssl, char* cmd, 
+	struct worker* worker)
 {
 	char* p = skipwhite(cmd);
 	/* compare command - check longer strings first in case of substrings*/
 	if(strncmp(p, "stop", 4) == 0) {
 		do_stop(ssl, rc);
+		return;
 	} else if(strncmp(p, "reload", 6) == 0) {
 		do_reload(ssl, rc);
-	} else if(strncmp(p, "verbosity", 9) == 0) {
-		do_verbosity(ssl, skipwhite(p+9));
+		return;
 	} else if(strncmp(p, "stats", 5) == 0) {
 		do_stats(ssl, rc);
-	} else if(strncmp(p, "local_zone_remove", 17) == 0) {
-		do_zone_remove(ssl, rc->worker, skipwhite(p+17));
-	} else if(strncmp(p, "local_zone", 10) == 0) {
-		do_zone_add(ssl, rc->worker, skipwhite(p+10));
-	} else if(strncmp(p, "local_data_remove", 17) == 0) {
-		do_data_remove(ssl, rc->worker, skipwhite(p+17));
-	} else if(strncmp(p, "local_data", 10) == 0) {
-		do_data_add(ssl, rc->worker, skipwhite(p+10));
+		return;
 	} else if(strncmp(p, "dump_cache", 10) == 0) {
-		(void)dump_cache(ssl, rc->worker);
+		(void)dump_cache(ssl, worker);
+		return;
 	} else if(strncmp(p, "load_cache", 10) == 0) {
-		if(load_cache(ssl, rc->worker)) send_ok(ssl);
+		if(load_cache(ssl, worker)) send_ok(ssl);
+		return;
 	} else if(strncmp(p, "lookup", 6) == 0) {
-		do_lookup(ssl, rc->worker, skipwhite(p+6));
+		do_lookup(ssl, worker, skipwhite(p+6));
+		return;
+	}
+
+#ifdef THREADS_DISABLED
+	/* other processes must execute the command as well */
+	/* commands that should not be distributed, returned above. */
+	if(rc) { /* only if this thread is the master (rc) thread */
+		/* done before the code below, which may split the string */
+		distribute_cmd(rc, ssl, cmd);
+	}
+#endif
+	if(strncmp(p, "verbosity", 9) == 0) {
+		do_verbosity(ssl, skipwhite(p+9));
+	} else if(strncmp(p, "local_zone_remove", 17) == 0) {
+		do_zone_remove(ssl, worker, skipwhite(p+17));
+	} else if(strncmp(p, "local_zone", 10) == 0) {
+		do_zone_add(ssl, worker, skipwhite(p+10));
+	} else if(strncmp(p, "local_data_remove", 17) == 0) {
+		do_data_remove(ssl, worker, skipwhite(p+17));
+	} else if(strncmp(p, "local_data", 10) == 0) {
+		do_data_add(ssl, worker, skipwhite(p+10));
 	} else if(strncmp(p, "flush_zone", 10) == 0) {
-		do_flush_zone(ssl, rc->worker, skipwhite(p+10));
+		do_flush_zone(ssl, worker, skipwhite(p+10));
 	} else if(strncmp(p, "flush_type", 10) == 0) {
-		do_flush_type(ssl, rc->worker, skipwhite(p+10));
+		do_flush_type(ssl, worker, skipwhite(p+10));
 	} else if(strncmp(p, "flush", 5) == 0) {
-		do_flush_name(ssl, rc->worker, skipwhite(p+5));
+		do_flush_name(ssl, worker, skipwhite(p+5));
 	} else {
 		(void)ssl_printf(ssl, "error unknown command '%s'\n", p);
 	}
+}
+
+void 
+daemon_remote_exec(struct worker* worker)
+{
+	/* read the cmd string */
+	uint8_t* msg = NULL;
+	size_t len = 0;
+	if(!tube_read_msg(worker->cmd, &msg, &len, 0)) {
+		log_err("daemon_remote_exec: tube_read_msg failed");
+		return;
+	}
+	verbose(VERB_ALGO, "remote exec distributed: %s", (char*)msg);
+	execute_cmd(NULL, NULL, (char*)msg, worker);
+	free(msg);
 }
 
 /** handle remote control request */
@@ -1256,7 +1311,7 @@ handle_req(struct daemon_remote* rc, struct rc_state* s, SSL* ssl)
 	verbose(VERB_DETAIL, "control cmd: %s", buf);
 
 	/* figure out what to do */
-	execute_cmd(rc, ssl, buf);
+	execute_cmd(rc, ssl, buf, rc->worker);
 }
 
 int remote_control_callback(struct comm_point* c, void* arg, int err, 

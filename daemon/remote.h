@@ -124,6 +124,12 @@ struct listen_port* daemon_remote_open_ports(struct config_file* cfg);
 int daemon_remote_open_accept(struct daemon_remote* rc, 
 	struct listen_port* ports);
 
+/**
+ * Handle nonthreaded remote cmd execution.
+ * @param worker: this worker (the remote worker).
+ */
+void daemon_remote_exec(struct worker* worker);
+
 /** handle remote control accept callbacks */
 int remote_accept_callback(struct comm_point*, void*, int, struct comm_reply*);
 

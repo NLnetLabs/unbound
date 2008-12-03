@@ -4,6 +4,10 @@
 	  was using multiple processes.
 	- iana portlist updated.
 	- test for remote control with interprocess communication.
+	- created command distribution mechanism so that remote control
+	  commands other than 'stats' work on all processes in a nonthreaded
+	  compiled version. dump/load cache work, on the first process.
+	- fixup remote control local_data addition memory corruption bug.
 
 1 December 2008: Wouter
 	- SElinux policy files in contrib/selinux for the unbound daemon,

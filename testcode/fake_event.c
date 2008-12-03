@@ -57,6 +57,7 @@
 #include "testcode/ldns-testpkts.h"
 #include "util/log.h"
 #include <signal.h>
+struct worker;
 
 /** Global variable: the scenario. Saved here for when event_init is done. */
 static struct replay_scenario* saved_scenario = NULL;
@@ -1158,6 +1159,10 @@ struct event_base* comm_base_internal(struct comm_base* ATTR_UNUSED(b))
 {
 	/* no pipe comm possible in testbound */
 	return NULL;
+}
+
+void daemon_remote_exec(struct worker* ATTR_UNUSED(worker))
+{
 }
 
 /*********** End of Dummy routines ***********/

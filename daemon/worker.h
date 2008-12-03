@@ -66,7 +66,9 @@ enum worker_commands {
 	/** make the worker quit */
 	worker_cmd_quit,
 	/** obtain statistics */
-	worker_cmd_stats
+	worker_cmd_stats,
+	/** execute remote control command */
+	worker_cmd_remote
 };
 
 /**

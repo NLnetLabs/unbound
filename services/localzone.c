@@ -1233,10 +1233,11 @@ local_zones_add_RR(struct local_zones* zones, const char* rr, ldns_buffer* buf)
 			lock_quick_unlock(&zones->lock);
 			return 0;
 		}
+	} else {
+		free(rr_name);
 	}
 	lock_rw_wrlock(&z->lock);
 	lock_quick_unlock(&zones->lock);
-	free(rr_name);
 	r = lz_enter_rr_into_zone(z, buf, rr);
 	lock_rw_unlock(&z->lock);
 	return r;

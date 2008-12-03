@@ -344,6 +344,12 @@ worker_handle_control_cmd(struct tube* ATTR_UNUSED(tube), uint8_t* msg,
 		verbose(VERB_ALGO, "got control cmd stats");
 		server_stats_reply(worker);
 		break;
+#ifdef THREADS_DISABLED
+	case worker_cmd_remote:
+		verbose(VERB_ALGO, "got control cmd remote");
+		daemon_remote_exec(worker);
+		break;
+#endif
 	default:
 		log_err("bad command %d", (int)cmd);
 		break;
