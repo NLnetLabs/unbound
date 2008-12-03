@@ -3,6 +3,7 @@
 	  freezes up unbound if this was compiled without threading, and
 	  was using multiple processes.
 	- iana portlist updated.
+	- test for remote control with interprocess communication.
 
 1 December 2008: Wouter
 	- SElinux policy files in contrib/selinux for the unbound daemon,
