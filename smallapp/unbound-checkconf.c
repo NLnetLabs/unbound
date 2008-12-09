@@ -239,8 +239,12 @@ check_chroot_string(const char* desc, char** ss,
 		*ss = fname_after_chroot(str, cfg, 1);
 		if(!*ss) fatal_exit("out of memory");
 		if(!is_file(*ss)) {
-			fatal_exit("%s: \"%s\" does not exist in chrootdir %s", 
-				desc, str, chrootdir);
+			if(chrootdir && chrootdir[0])
+				fatal_exit("%s: \"%s\" does not exist in "
+					"chrootdir %s", desc, str, chrootdir);
+			else
+				fatal_exit("%s: \"%s\" does not exist", 
+					desc, str);
 		}
 		/* put in a new full path for continued checking */
 		free(str);
@@ -347,6 +351,18 @@ morechecks(struct config_file* cfg, const char* fname)
 		endpwent();
 	}
 #endif
+	if(cfg->remote_control_enable) {
+		check_chroot_string("server-key-file", &cfg->server_key_file,
+			cfg->chrootdir, cfg);
+		check_chroot_string("server-cert-file", &cfg->server_cert_file,
+			cfg->chrootdir, cfg);
+		if(!is_file(cfg->control_key_file))
+			fatal_exit("control-key-file: \"%s\" does not exist",
+				cfg->control_key_file);
+		if(!is_file(cfg->control_cert_file))
+			fatal_exit("control-cert-file: \"%s\" does not exist",
+				cfg->control_cert_file);
+	}
 
 	localzonechecks(cfg);
 }
