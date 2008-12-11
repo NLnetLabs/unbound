@@ -150,8 +150,7 @@ MULTILINE_CPP_IS_BRIEF = NO
 # will output the detailed description near the top, like JavaDoc.
 # If set to NO, the detailed description appears after the member 
 # documentation.
-
-DETAILS_AT_TOP         = NO
+#DETAILS_AT_TOP         = NO
 
 # If the INHERIT_DOCS tag is set to YES (the default) then an undocumented 
 # member inherits the documentation from any documented member that it 
