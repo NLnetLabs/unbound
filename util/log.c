@@ -95,7 +95,9 @@ log_init(const char* filename, int use_syslog, const char* chrootdir)
 		logging_to_syslog = 0;
 	}
 	if(use_syslog) {
-		openlog(ident, 0, LOG_DAEMON);
+		/* do not delay opening until first write, because we may
+		 * chroot and no longer be able to access dev/log and so on */
+		openlog(ident, LOG_NDELAY, LOG_DAEMON);
 		logging_to_syslog = 1;
 		return;
 	}

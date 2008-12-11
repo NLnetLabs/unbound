@@ -1,3 +1,7 @@
+11 December 2008: Wouter
+	- better fix for bug #219: use LOG_NDELAY with openlog() call.
+	  Thanks to Tamas Tevesz.
+
 9 December 2008: Wouter
 	- bug #221 fixed: unbound checkconf checks if key files exist if
 	  remote control is enabled. Also fixed NULL printf when not chrooted.

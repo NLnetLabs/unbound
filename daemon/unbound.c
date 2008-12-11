@@ -345,8 +345,6 @@ perform_setup(struct daemon* daemon, struct config_file* cfg, int debug_mode,
 	 * a fork error could not be printed since daemonize closed stderr.*/
 	if(cfg->use_syslog) {
 		log_init(cfg->logfile, cfg->use_syslog, cfg->chrootdir);
-		/* but syslog is not really opened by glibc until first msg */
-		log_info("open syslog, startup in progress");
 	}
 	/* if using a logfile, we cannot open it because the logfile would
 	 * be created with the wrong permissions, we cannot chown it because
