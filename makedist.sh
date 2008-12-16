@@ -207,7 +207,7 @@ info "Unbound version: $version"
 
 if [ "$SNAPSHOT" = "yes" ]; then
     info "Building Unbound snapshot."
-    version2="$version-`date +%Y%m%d`"
+    version2="$version_`date +%Y%m%d`"
     info "Snapshot version number: $version2"
 
     replace_text "configure.ac" "AC_INIT(unbound, $version" "AC_INIT(unbound, $version2"

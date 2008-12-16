@@ -1,5 +1,7 @@
 16 December 2008: Wouter
 	- follow makedist improvements from ldns, for maintainers prereleases.
+	- snapshot version uses _ not - to help rpm distinguish the
+	  version number.
 
 11 December 2008: Wouter
 	- better fix for bug #219: use LOG_NDELAY with openlog() call.
