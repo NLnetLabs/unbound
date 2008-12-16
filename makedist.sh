@@ -171,7 +171,7 @@ svn export "$SVNROOT" unbound || error_cleanup "SVN command failed"
 cd unbound || error_cleanup "Unbound not exported correctly from SVN"
 
 info "Adding libtool utils (libtoolize)."
-libtoolize -c || error_cleanup "libtoolize failed"
+libtoolize -c --install || libtoolize -c || error_cleanup "Libtoolize failed."
 
 info "Building configure script (autoreconf)."
 autoreconf || error_cleanup "Autoconf failed."
@@ -207,8 +207,14 @@ info "Unbound version: $version"
 
 if [ "$SNAPSHOT" = "yes" ]; then
     info "Building Unbound snapshot."
-    version="$version-`date +%Y%m%d`"
-    info "Snapshot version number: $version"
+    version2="$version-`date +%Y%m%d`"
+    info "Snapshot version number: $version2"
+
+    replace_text "configure.ac" "AC_INIT(unbound, $version" "AC_INIT(unbound, $version2"
+    version="$version2"
+
+    info "Rebuilding configure script (autoconf) snapshot."
+    autoreconf || error_cleanup "Autoconf failed."
 fi
 
 replace_all doc/README
