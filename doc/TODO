@@ -46,14 +46,11 @@ o no openssl_add_all_algorithms, but only the ones necessary, less space.
 * dTLS, TLS, look to need special port numbers, cert storage, recent libssl.
 * aggressive negative caching for NSEC, NSEC3.
 * multiple queries per question, server exploration, server selection.
-* NSID support.
 * support TSIG on queries, for validating resolver deployment.
-* private TTL
 * retry-mode, where a bogus result triggers a retry-mode query, where a list
   of responses over a time interval is collected, and each is validated.
   or try in TCP mode. Do not 'try all servers several times', since we must
   not create packet storms with operator errors.
-* draft-timers
 * Windows port features
 o on windows version, implement that OS ancillary data capabilities for
   interface-automatic. IPPKTINFO, IP6PKTINFO for WSARecvMsg, WSASendMsg.
@@ -62,7 +59,5 @@ o local-zone directive with authority service, full authority server
 o configure option to force use of builtin ldns tarball.
 o include /etc/pki/dnssec-keys/production/*.conf with wildcard support.
 o add extended stat counter for num queries over ipv6, ipv6 usage.
-
 o make so revoke bit keys cannot verify signatures
 o unbound-contol status to see if server is running
-o statistics for IPv4 and IPv6 queries coming in.
