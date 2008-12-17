@@ -48,6 +48,9 @@ Generate a distribution tar file for NSD.
     -h           This usage information.
     -s           Build a snapshot distribution file.  The current date is
                  automatically appended to the current NSD version number.
+    -rc <nr>     Build a release candidate, the given string will be added
+                 to the version number 
+                 (which will then be unbound-<version>_rc<number>)
     -d SVN_root  Retrieve the NSD source from the specified repository.
                  Detected from svn working copy if not specified.
     -l ldnsdir   Directory where ldns resides. Detected from Makefile.
@@ -105,6 +108,7 @@ replace_all () {
     
 
 SNAPSHOT="no"
+RC="no"
 LDNSDIR=""
 
 # Parse the command line arguments.
@@ -122,6 +126,10 @@ while [ "$1" ]; do
             ;;
         "-l")
             LDNSDIR="$2"
+            shift
+            ;;
+        "-rc")
+            RC="$2"
             shift
             ;;
         *)
@@ -205,6 +213,18 @@ version=`./configure --version | head -1 | awk '{ print $3 }'` || \
 
 info "Unbound version: $version"
 
+RECONFIGURE="no"
+
+if [ "$RC" != "no" ]; then
+    info "Building Unbound release candidate $RC."
+    version2="${version}_rc$RC"
+    info "Version number: $version2"
+
+    replace_text "configure.ac" "AC_INIT(unbound, $version" "AC_INIT(unbound, $version2"
+    version="$version2"
+    RECONFIGURE="yes"
+fi
+
 if [ "$SNAPSHOT" = "yes" ]; then
     info "Building Unbound snapshot."
     version2="$version_`date +%Y%m%d`"
@@ -212,9 +232,13 @@ if [ "$SNAPSHOT" = "yes" ]; then
 
     replace_text "configure.ac" "AC_INIT(unbound, $version" "AC_INIT(unbound, $version2"
     version="$version2"
+    RECONFIGURE="yes"
+fi
 
+if [ "$RECONFIGURE" = "yes" ]; then
     info "Rebuilding configure script (autoconf) snapshot."
     autoreconf || error_cleanup "Autoconf failed."
+    rm -r autom4te* || error_cleanup "Failed to remove autoconf cache directory."
 fi
 
 replace_all doc/README

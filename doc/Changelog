@@ -1,3 +1,6 @@
+17 December 2008: Wouter
+	- follows ldns makedist.sh. -rc option. autom4te dir removed.
+
 16 December 2008: Wouter
 	- follow makedist improvements from ldns, for maintainers prereleases.
 	- snapshot version uses _ not - to help rpm distinguish the
