@@ -773,6 +773,8 @@ print_ext(SSL* ssl, struct stats_info* s)
 	/* transport */
 	if(!ssl_printf(ssl, "num.query.tcp"SQ"%u\n", 
 		(unsigned)s->svr.qtcp)) return 0;
+	if(!ssl_printf(ssl, "num.query.ipv6"SQ"%u\n", 
+		(unsigned)s->svr.qipv6)) return 0;
 	/* flags */
 	if(!ssl_printf(ssl, "num.query.flags.QR"SQ"%u\n", 
 		(unsigned)s->svr.qbit_QR)) return 0;

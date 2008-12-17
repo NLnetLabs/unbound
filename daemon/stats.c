@@ -197,6 +197,7 @@ void server_stats_add(struct stats_info* total, struct stats_info* a)
 		total->svr.qtype_big += a->svr.qtype_big;
 		total->svr.qclass_big += a->svr.qclass_big;
 		total->svr.qtcp += a->svr.qtcp;
+		total->svr.qipv6 += a->svr.qipv6;
 		total->svr.qbit_QR += a->svr.qbit_QR;
 		total->svr.qbit_AA += a->svr.qbit_AA;
 		total->svr.qbit_TC += a->svr.qbit_TC;
@@ -238,7 +239,8 @@ void server_stats_add(struct stats_info* total, struct stats_info* a)
 }
 
 void server_stats_insquery(struct server_stats* stats, struct comm_point* c,
-	uint16_t qtype, uint16_t qclass, struct edns_data* edns)
+	uint16_t qtype, uint16_t qclass, struct edns_data* edns,
+	struct comm_reply* repinfo)
 {
 	uint16_t flags = ldns_buffer_read_u16_at(c->buffer, 2);
 	if(qtype < STATS_QTYPE_NUM)
@@ -250,6 +252,8 @@ void server_stats_insquery(struct server_stats* stats, struct comm_point* c,
 	stats->qopcode[ LDNS_OPCODE_WIRE(ldns_buffer_begin(c->buffer)) ]++;
 	if(c->type != comm_udp)
 		stats->qtcp++;
+	if(repinfo && addr_is_ip6(&repinfo->addr, repinfo->addrlen))
+		stats->qipv6++;
 	if( (flags&BIT_QR) )
 		stats->qbit_QR++;
 	if( (flags&BIT_AA) )

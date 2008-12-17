@@ -46,6 +46,7 @@
 struct worker;
 struct config_file;
 struct comm_point;
+struct comm_reply;
 struct edns_data;
 
 /** number of qtype that is stored for in array */
@@ -87,6 +88,8 @@ struct server_stats {
 	size_t qopcode[STATS_OPCODE_NUM];
 	/** number of queries over TCP */
 	size_t qtcp;
+	/** number of queries over IPv6 */
+	size_t qipv6;
 	/** number of queries with QR bit */
 	size_t qbit_QR;
 	/** number of queries with AA bit */
@@ -113,7 +116,7 @@ struct server_stats {
 	size_t ans_rcode_nodata;
 	/** answers that were secure (AD) */
 	size_t ans_secure;
-	/** answers with bogus content */
+	/** answers that were bogus (withheld as SERVFAIL) */
 	size_t ans_bogus;
 	/** rrsets marked bogus by validator */
 	size_t rrset_bogus;
@@ -204,9 +207,11 @@ void server_stats_add(struct stats_info* total, struct stats_info* a);
  * @param qtype: query type
  * @param qclass: query class
  * @param edns: edns record
+ * @param repinfo: reply info with remote address
  */
 void server_stats_insquery(struct server_stats* stats, struct comm_point* c,
-	uint16_t qtype, uint16_t qclass, struct edns_data* edns);
+	uint16_t qtype, uint16_t qclass, struct edns_data* edns, 
+	struct comm_reply* repinfo);
 
 /**
  * Add rcode for this query.

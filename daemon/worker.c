@@ -816,7 +816,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 	}
 	if(worker->stats.extended)
 		server_stats_insquery(&worker->stats, c, qinfo.qtype,
-			qinfo.qclass, &edns);
+			qinfo.qclass, &edns, repinfo);
 	if(c->type != comm_udp)
 		edns.udp_size = 65535; /* max size for TCP replies */
 	if(qinfo.qclass == LDNS_RR_CLASS_CH && answer_chaos(worker, &qinfo,

@@ -259,6 +259,9 @@ Also printed for other opcodes, UPDATE, ...
 .I num.query.tcp
 Number of queries that were made using TCP towards the unbound server.
 .TP
+.I num.query.ipv6
+Number of queries that were made using IPv6 towards the unbound server.
+.TP
 .I num.query.flags.RD
 The number of queries that had the RD flag set in the header.
 Also printed for flags QR, AA, TC, RA, Z, AD, CD.

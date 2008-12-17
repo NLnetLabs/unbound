@@ -226,6 +226,7 @@ if test "$1" = "config" ; then
 		p_config "total.num.queries" "total queries from clients"
 		p_config "total.num.cachehits" "cache hits"
 		p_config "num.query.tcp" "TCP queries"
+		p_config "num.query.ipv6" "IPv6 queries"
 		p_config "unwanted.queries" "queries that failed acl"
 		p_config "unwanted.replies" "unwanted or unsolicited replies"
 		echo "u_replies.warning $warn"
@@ -412,8 +413,8 @@ hits)
 	for x in thread0.num.queries thread1.num.queries thread2.num.queries \
 		thread3.num.queries thread4.num.queries thread5.num.queries \
 		thread6.num.queries thread7.num.queries total.num.queries \
-		total.num.cachehits num.query.tcp unwanted.queries \
-		unwanted.replies; do
+		total.num.cachehits num.query.tcp num.query.ipv6 \
+		unwanted.queries unwanted.replies; do
 		if grep "^"$x"=" $state >/dev/null 2>&1; then
 			print_qps $x
 		fi

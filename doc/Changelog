@@ -1,6 +1,8 @@
 17 December 2008: Wouter
 	- follows ldns makedist.sh. -rc option. autom4te dir removed.
 	- unbound-control status command.
+	- extended statistics has a number of ipv6 queries counter.
+	  contrib/unbound_munin_ was updated to draw ipv6 in the hits graph.
 
 16 December 2008: Wouter
 	- follow makedist improvements from ldns, for maintainers prereleases.
