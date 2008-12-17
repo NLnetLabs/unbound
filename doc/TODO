@@ -63,7 +63,6 @@ o configure option to force use of builtin ldns tarball.
 o include /etc/pki/dnssec-keys/production/*.conf with wildcard support.
 o add extended stat counter for num queries over ipv6, ipv6 usage.
 
-o key cache enforce max TTL
 o make so revoke bit keys cannot verify signatures
 o unbound-contol status to see if server is running
 o libtoolize --install for newer libtoolize (once distro-ed)
