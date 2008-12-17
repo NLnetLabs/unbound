@@ -65,5 +65,4 @@ o add extended stat counter for num queries over ipv6, ipv6 usage.
 
 o make so revoke bit keys cannot verify signatures
 o unbound-contol status to see if server is running
-o libtoolize --install for newer libtoolize (once distro-ed)
 o statistics for IPv4 and IPv6 queries coming in.
