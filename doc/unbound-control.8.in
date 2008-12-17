@@ -61,6 +61,10 @@ Print statistics. Resets the internal counters to zero, this can be
 controlled using the \fBstatistics\-cumulative\fR config statement. 
 Statistics are printed with one [name]: [value] per line.
 .TP
+.B status
+Display server status. Exit code 3 if not running (the connection to the 
+port is refused), 1 on error, 0 if running.
+.TP
 .B local_zone \fIname\fR \fItype
 Add new local zone with name and type. Like \fBlocal\-zone\fR config statement.
 If the zone already exists, the type is changed to the given argument.

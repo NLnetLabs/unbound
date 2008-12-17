@@ -72,7 +72,6 @@ enum localzone_type {
 
 /**
  * Authoritative local zones storage, shared.
- * This tree is fixed at startup, so, readonly, no locks or mutexes necessary.
  */
 struct local_zones {
 	/** lock on the localzone tree */

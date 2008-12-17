@@ -1186,6 +1186,34 @@ do_flush_name(SSL* ssl, struct worker* worker, char* arg)
 	send_ok(ssl);
 }
 
+/** do the status command */
+static void
+do_status(SSL* ssl, struct worker* worker)
+{
+	int i;
+	time_t uptime;
+	if(!ssl_printf(ssl, "version: %s\n", PACKAGE_VERSION))
+		return;
+	if(!ssl_printf(ssl, "verbosity: %d\n", verbosity))
+		return;
+	if(!ssl_printf(ssl, "threads: %d\n", worker->daemon->num))
+		return;
+	if(!ssl_printf(ssl, "modules: %d [", worker->daemon->mods.num))
+		return;
+	for(i=0; i<worker->daemon->mods.num; i++) {
+		if(!ssl_printf(ssl, " %s", worker->daemon->mods.mod[i]->name))
+			return;
+	}
+	if(!ssl_printf(ssl, " ]\n"))
+		return;
+	uptime = (time_t)time(NULL) - (time_t)worker->daemon->time_boot.tv_sec;
+	if(!ssl_printf(ssl, "uptime: %u seconds\n", (unsigned)uptime))
+		return;
+	if(!ssl_printf(ssl, "unbound (pid %d) is running...\n",
+		(int)getpid()))
+		return;
+}
+
 /** tell other processes to execute the command */
 void
 distribute_cmd(struct daemon_remote* rc, SSL* ssl, char* cmd)
@@ -1220,6 +1248,9 @@ execute_cmd(struct daemon_remote* rc, SSL* ssl, char* cmd,
 		return;
 	} else if(strncmp(p, "stats", 5) == 0) {
 		do_stats(ssl, rc);
+		return;
+	} else if(strncmp(p, "status", 6) == 0) {
+		do_status(ssl, worker);
 		return;
 	} else if(strncmp(p, "dump_cache", 10) == 0) {
 		(void)dump_cache(ssl, worker);

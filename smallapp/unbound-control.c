@@ -62,6 +62,7 @@ usage()
 	printf("  stop				stops the server\n");
 	printf("  reload			reloads the server\n");
 	printf("  stats				print statistics\n");
+	printf("  status			display status of server\n");
 	printf("  verbosity [number]		change logging detail\n");
 	printf("  local_zone [name] [type] 	add new local zone\n");
 	printf("  local_zone_remove [name]	remove local zone and its contents\n");
@@ -124,7 +125,7 @@ setup_ctx(struct config_file* cfg)
 
 /** contact the server with TCP connect */
 static int
-contact_server(const char* svr, struct config_file* cfg)
+contact_server(const char* svr, struct config_file* cfg, int statuscmd)
 {
 	struct sockaddr_storage addr;
 	socklen_t addrlen;
@@ -163,8 +164,16 @@ contact_server(const char* svr, struct config_file* cfg)
 		log_addr(0, "address", &addr, addrlen);
 #ifndef USE_WINSOCK
 		log_err("connect: %s", strerror(errno));
+		if(errno == ECONNREFUSED && statuscmd) {
+			printf("unbound is stopped\n");
+			exit(3);
+		}
 #else
 		log_err("connect: %s", wsa_strerror(WSAGetLastError()));
+		if(WSAGetLastError() == WSAECONNREFUSED && statuscmd) {
+			printf("unbound is stopped\n");
+			exit(3);
+		}
 #endif
 		exit(1);
 	}
@@ -278,7 +287,7 @@ go(const char* cfgfile, char* svr, int argc, char* argv[])
 	ctx = setup_ctx(cfg);
 	
 	/* contact server */
-	fd = contact_server(svr, cfg);
+	fd = contact_server(svr, cfg, argc>0&&strcmp(argv[0],"status")==0);
 	ssl = setup_ssl(ctx, fd);
 	
 	/* send command */

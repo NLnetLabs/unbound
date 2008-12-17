@@ -1,5 +1,6 @@
 17 December 2008: Wouter
 	- follows ldns makedist.sh. -rc option. autom4te dir removed.
+	- unbound-control status command.
 
 16 December 2008: Wouter
 	- follow makedist improvements from ldns, for maintainers prereleases.
