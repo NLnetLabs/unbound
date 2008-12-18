@@ -136,8 +136,18 @@ static hashvalue_t
 hash_addr(struct sockaddr_storage* addr, socklen_t addrlen)
 {
 	hashvalue_t h = 0xab;
-	h = hashlittle(&addrlen, sizeof(addrlen), h);
-	h = hashlittle(addr, addrlen, h);
+	/* select the pieces to hash, some OS have changing data inside */
+	if(addr_is_ip6(addr, addrlen)) {
+		struct sockaddr_in6* in6 = (struct sockaddr_in6*)addr;
+		h = hashlittle(&in6->sin6_family, sizeof(in6->sin6_family), h);
+		h = hashlittle(&in6->sin6_port, sizeof(in6->sin6_port), h);
+		h = hashlittle(&in6->sin6_addr, INET6_SIZE, h);
+	} else {
+		struct sockaddr_in* in = (struct sockaddr_in*)addr;
+		h = hashlittle(&in->sin_family, sizeof(in->sin_family), h);
+		h = hashlittle(&in->sin_port, sizeof(in->sin_port), h);
+		h = hashlittle(&in->sin_addr, INET_SIZE, h);
+	}
 	return h;
 }
 

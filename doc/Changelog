@@ -4,6 +4,7 @@
 	- follows -rc makedist from ldns changes (no _rc).
 	- ldns tarball updated with 1.4.1rc for DLV unit test.
 	- verbose prints about recursion lame detection and server selection.
+	- fixup BSD port for infra host storage. It hashed wrongly.
 
 17 December 2008: Wouter
 	- follows ldns makedist.sh. -rc option. autom4te dir removed.
