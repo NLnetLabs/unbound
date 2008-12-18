@@ -189,6 +189,11 @@ iter_filter_unsuitable(struct iter_env* iter_env, struct module_env* env,
 	if(infra_get_lame_rtt(env->infra_cache, &a->addr, a->addrlen, 
 		name, namelen, qtype, &lame, &dnsseclame, &reclame, 
 		&rtt, now)) {
+		log_addr(VERB_ALGO, "servselect", &a->addr, a->addrlen);
+		verbose(VERB_ALGO, "   rtt=%d%s%s%s", rtt,
+			lame?" LAME":"",
+			dnsseclame?" DNSSEC_LAME":"",
+			reclame?" REC_LAME":"");
 		if(lame)
 			return -1; /* server is lame */
 		else if(rtt >= USEFUL_SERVER_TOP_TIMEOUT)
@@ -297,13 +302,17 @@ iter_server_selection(struct iter_env* iter_env,
 
 	if(num == 0)
 		return NULL;
+	verbose(VERB_ALGO, "selrtt %d", selrtt);
 	if(selrtt > USEFUL_SERVER_TOP_TIMEOUT*2) {
+		verbose(VERB_ALGO, "chase to recursion lame server");
 		*chase_to_rd = 1;
 	}
 	if(selrtt > USEFUL_SERVER_TOP_TIMEOUT) {
+		verbose(VERB_ALGO, "chase to dnssec lame server");
 		*dnssec_expected = 0;
 	}
 	if(selrtt == USEFUL_SERVER_TOP_TIMEOUT) {
+		verbose(VERB_ALGO, "chase to blacklisted lame server");
 		/* the best choice is a blacklisted, unresponsive server,
 		 * we need to throttle down our traffic towards it */
 		if(ub_random(env->rnd) % 100 != 1) {

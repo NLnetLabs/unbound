@@ -1547,6 +1547,7 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		if(qstate->reply) {
 			/* need addr for lameness cache, but we may have
 			 * gotten this from cache, so test to be sure */
+			verbose(VERB_DETAIL, "mark as REC_LAME");
 			if(!infra_set_lame(qstate->env->infra_cache, 
 				&qstate->reply->addr, qstate->reply->addrlen, 
 				iq->dp->name, iq->dp->namelen, 
