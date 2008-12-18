@@ -1,6 +1,8 @@
 18 December 2008: Wouter
 	- fixed bug reported by Duane Wessels: error in DLV lookup, would make
 	  some zones that had correct DLV keys as insecure.
+	- follows -rc makedist from ldns changes (no _rc).
+	- ldns tarball updated with 1.4.1rc for DLV unit test.
 
 17 December 2008: Wouter
 	- follows ldns makedist.sh. -rc option. autom4te dir removed.

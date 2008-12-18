@@ -310,8 +310,8 @@ uninstall:
 download_ldns:
 	svn export https://www.nlnetlabs.nl/svn/ldns/trunk/makedist.sh ldns_makedist.sh
 	./ldns_makedist.sh -s -d https://www.nlnetlabs.nl/svn/ldns/trunk
-	mv ldns-*_pre_*.tar.gz ldns-src.tar.gz
-	rm ldns-*_pre_*.tar.gz.sha1 ldns_makedist.sh
+	mv ldns-[0-9]*.tar.gz ldns-src.tar.gz
+	rm ldns-*.tar.gz.sha1 ldns_makedist.sh
 
 iana_update:
 	curl -o port-numbers.tmp http://www.iana.org/assignments/port-numbers

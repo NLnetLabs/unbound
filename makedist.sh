@@ -50,7 +50,7 @@ Generate a distribution tar file for NSD.
                  automatically appended to the current NSD version number.
     -rc <nr>     Build a release candidate, the given string will be added
                  to the version number 
-                 (which will then be unbound-<version>_rc<number>)
+                 (which will then be unbound-<version>rc<number>)
     -d SVN_root  Retrieve the NSD source from the specified repository.
                  Detected from svn working copy if not specified.
     -l ldnsdir   Directory where ldns resides. Detected from Makefile.
@@ -217,7 +217,7 @@ RECONFIGURE="no"
 
 if [ "$RC" != "no" ]; then
     info "Building Unbound release candidate $RC."
-    version2="${version}_rc$RC"
+    version2="${version}rc$RC"
     info "Version number: $version2"
 
     replace_text "configure.ac" "AC_INIT(unbound, $version" "AC_INIT(unbound, $version2"
