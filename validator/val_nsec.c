@@ -511,7 +511,8 @@ int val_nsec_check_dlv(struct query_info* qinfo,
 		/* it can be a plain NSEC match - go up one more level. */
 		/* or its an empty nonterminal - go up to nonempty level */
 		for(i=0; i<rep->ns_numrrsets; i++) {
-			if(!nsec_get_next(rep->rrsets[i], &next, &nlen))
+			if(htons(rep->rrsets[i]->rk.type)!=LDNS_RR_TYPE_NSEC ||
+				!nsec_get_next(rep->rrsets[i], &next, &nlen))
 				continue;
 			c = dname_canonical_compare(
 				rep->rrsets[i]->rk.dname, qinfo->qname);
@@ -538,8 +539,13 @@ int val_nsec_check_dlv(struct query_info* qinfo,
 		/* find the qname denial NSEC record. It can tell us
 		 * a closest encloser name; or that we not need bother */
 		for(i=0; i<rep->ns_numrrsets; i++) {
+			if(htons(rep->rrsets[i]->rk.type) != LDNS_RR_TYPE_NSEC)
+				continue;
 			if(val_nsec_proves_name_error(rep->rrsets[i], 
 				qinfo->qname)) {
+				log_nametypeclass(0, "topdomain on",
+					rep->rrsets[i]->rk.dname, 
+					ntohs(rep->rrsets[i]->rk.type), 0);
 				dlv_topdomain(rep->rrsets[i], qinfo->qname,
 					nm, nm_len);
 				return 1;
