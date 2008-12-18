@@ -514,7 +514,11 @@ run_daemon(const char* cfgfile, int cmdline_verbose, int debug_mode)
 		if(!done_setup) { 
 			perform_setup(daemon, cfg, debug_mode, &cfgfile); 
 			done_setup = 1; 
-		} else log_init(cfg->logfile, cfg->use_syslog, cfg->chrootdir);
+		} else {
+			/* reopen log after HUP to facilitate log rotation */
+			if(!cfg->use_syslog)
+				log_init(cfg->logfile, 0, cfg->chrootdir);
+		}
 		/* work */
 		daemon_fork(daemon);
 
