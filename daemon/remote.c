@@ -247,6 +247,7 @@ add_open(const char* ip, int nr, struct listen_port** list, int noproto_is_err)
 			""
 #endif
 			);
+		return 0;
 	}
 
 	/* open fd */

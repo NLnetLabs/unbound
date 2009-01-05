@@ -1,3 +1,6 @@
+5 January 2009: Wouter
+	- fixup getaddrinfo failure handling for remote control port.
+
 18 December 2008: Wouter
 	- fixed bug reported by Duane Wessels: error in DLV lookup, would make
 	  some zones that had correct DLV keys as insecure.
