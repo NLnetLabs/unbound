@@ -984,7 +984,7 @@ worker_init(struct worker* worker, struct config_file *cfg,
 {
 	unsigned int seed;
 	worker->need_to_exit = 0;
-	worker->base = comm_base_create();
+	worker->base = comm_base_create(do_sigs);
 	if(!worker->base) {
 		log_err("could not create event handling base");
 		worker_delete(worker);

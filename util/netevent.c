@@ -136,7 +136,7 @@ comm_base_now(struct comm_base* b)
 #endif /* USE_MINI_EVENT */
 
 struct comm_base* 
-comm_base_create()
+comm_base_create(int sigs)
 {
 	struct comm_base* b = (struct comm_base*)calloc(1,
 		sizeof(struct comm_base));
@@ -151,7 +151,16 @@ comm_base_create()
 	/* use mini event time-sharing feature */
 	b->eb->base = event_init(&b->eb->secs, &b->eb->now);
 #else
+#  ifdef HAVE_EV_LOOP
+	/* libev */
+	if(sigs)
+		b->eb->base=(struct event_base *)ev_default_loop(EVFLAG_AUTO);
+	else
+		b->eb->base=(struct event_base *)ev_loop_new(EVFLAG_AUTO);
+#  else
+	(void)sigs;
 	b->eb->base = event_init();
+#  endif
 #endif
 	if(!b->eb->base) {
 		free(b->eb);
@@ -1553,6 +1562,9 @@ comm_timer_set(struct comm_timer* timer, struct timeval* tv)
 		comm_timer_disable(timer);
 	event_set(&timer->ev_timer->ev, -1, EV_PERSIST|EV_TIMEOUT,
 		comm_timer_callback, timer);
+	if(event_base_set(timer->ev_timer->base->eb->base, 
+		&timer->ev_timer->ev) != 0)
+		log_err("comm_timer_set: set_base failed.");
 	if(evtimer_add(&timer->ev_timer->ev, tv) != 0)
 		log_err("comm_timer_set: evtimer_add failed.");
 	timer->ev_timer->enabled = 1;

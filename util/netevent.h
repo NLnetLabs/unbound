@@ -260,9 +260,11 @@ struct comm_signal {
 
 /**
  * Create a new comm base.
+ * @param sigs: if true it attempts to create a default loop for 
+ *   signal handling.
  * @return: the new comm base. NULL on error.
  */
-struct comm_base* comm_base_create();
+struct comm_base* comm_base_create(int sigs);
 
 /**
  * Destroy a comm base.

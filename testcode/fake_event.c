@@ -596,7 +596,7 @@ listen_delete(struct listen_dnsport* listen)
 }
 
 struct comm_base* 
-comm_base_create()
+comm_base_create(int ATTR_UNUSED(sigs))
 {
 	/* we return the runtime structure instead. */
 	struct replay_runtime* runtime = (struct replay_runtime*)

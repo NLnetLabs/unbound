@@ -1,5 +1,8 @@
 5 January 2009: Wouter
 	- fixup getaddrinfo failure handling for remote control port.
+	- added L.ROOT-SERVERS.NET. AAAA 2001:500:3::42 to builtin root hints.
+	- fixup so it works with libev-3.51 from http://dist.schmorp.de/libev/
+	- comm_timer_set performs base_set operation after event_add.
 
 18 December 2008: Wouter
 	- fixed bug reported by Duane Wessels: error in DLV lookup, would make

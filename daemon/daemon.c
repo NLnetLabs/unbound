@@ -409,6 +409,12 @@ daemon_fork(struct daemon* daemon)
 	 * them to the newly created threads. 
 	 */
 	daemon_create_workers(daemon);
+
+#ifdef HAVE_EV_LOOP
+	/* in libev the first inited base gets signals */
+	if(!worker_init(daemon->workers[0], daemon->cfg, daemon->ports, 1))
+		fatal_exit("Could not initialize main thread");
+#endif
 	
 	/* Now create the threads and init the workers.
 	 * By the way, this is thread #0 (the main thread).
@@ -418,8 +424,11 @@ daemon_fork(struct daemon* daemon)
 	/* Special handling for the main thread. This is the thread
 	 * that handles signals and remote control.
 	 */
+#ifndef HAVE_EV_LOOP
+	/* libevent has the last inited base get signals (or any base) */
 	if(!worker_init(daemon->workers[0], daemon->cfg, daemon->ports, 1))
 		fatal_exit("Could not initialize main thread");
+#endif
 	signal_handling_playback(daemon->workers[0]);
 
 	/* Start resolver service on main thread. */

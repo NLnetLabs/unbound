@@ -52,6 +52,9 @@
 /* Define to 1 if you have the `EVP_sha512' function. */
 #undef HAVE_EVP_SHA512
 
+/* Define to 1 if you have the `ev_loop' function. */
+#undef HAVE_EV_LOOP
+
 /* Define to 1 if you have the `fcntl' function. */
 #undef HAVE_FCNTL
 

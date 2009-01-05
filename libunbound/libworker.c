@@ -141,7 +141,7 @@ libworker_setup(struct ub_ctx* ctx, int is_bg)
 	}
 	seed = 0;
 
-	w->base = comm_base_create();
+	w->base = comm_base_create(0);
 	if(!w->base) {
 		libworker_delete(w);
 		return NULL;
