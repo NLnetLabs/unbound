@@ -73,7 +73,10 @@ Files can be included using the
 .B include:
 directive. It can appear anywhere, and takes a single filename as an argument.
 Processing continues as if the text from the included file was copied into
-the config file at that point.
+the config file at that point.  If also using chroot, using full path names
+for the included files works, relative pathnames for the included names work
+if the directory where the daemon is started equals its chroot/working 
+directory.
 .SS "Server Options"
 These options are part of the
 .B server:

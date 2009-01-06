@@ -295,10 +295,12 @@ struct config_file* config_create_forlib();
  * Read the config file from the specified filename.
  * @param config: where options are stored into, must be freshly created.
  * @param filename: name of configfile. If NULL nothing is done.
+ * @param chroot: if not NULL, the chroot dir currently in use (for include).
  * @return: false on error. In that case errno is set, ENOENT means 
  * 	file not found.
  */
-int config_read(struct config_file* config, const char* filename);
+int config_read(struct config_file* config, const char* filename,
+	const char* chroot);
 
 /**
  * Destroy the config file structure.
@@ -446,6 +448,8 @@ struct config_parser_state {
 	int errors;
 	/** the result of parsing is stored here. */
 	struct config_file* cfg;
+	/** the current chroot dir (or NULL if none) */
+	const char* chroot;
 };
 
 /** global config parser object used during config parsing */

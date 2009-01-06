@@ -46,6 +46,10 @@ static void config_start_include(const char* filename)
 		ub_c_error_msg("includes nested too deeply, skipped (>%d)", MAXINCLUDES);
 		return;
 	}
+	if(cfg_parser->chroot && strncmp(filename, cfg_parser->chroot,
+		strlen(cfg_parser->chroot)) == 0) {
+		filename += strlen(cfg_parser->chroot);
+	}
 	input = fopen(filename, "r");
 	if(!input) {
 		ub_c_error_msg("cannot open include file '%s': %s",

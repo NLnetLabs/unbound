@@ -280,7 +280,7 @@ go(const char* cfgfile, char* svr, int argc, char* argv[])
 	/* read config */
 	if(!(cfg = config_create()))
 		fatal_exit("out of memory");
-	if(!config_read(cfg, cfgfile))
+	if(!config_read(cfg, cfgfile, NULL))
 		fatal_exit("could not read config file");
 	if(!cfg->remote_control_enable)
 		log_warn("control-enable is 'no' in the config file.");

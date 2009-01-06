@@ -854,21 +854,6 @@ insert_can_owner(ldns_buffer* buf, struct ub_packed_rrset_key* k,
 	}
 }
 
-/** 
- * Lowercase a text rdata field in a buffer.
- * @param p: pointer to start of text field (length byte).
- */
-static void
-lowercase_text_field(uint8_t* p)
-{
-	int i, len = (int)*p;
-	p++;
-	for(i=0; i<len; i++) {
-		*p = (uint8_t)tolower((int)*p);
-		p++;
-	}
-}
-
 /**
  * Canonicalize Rdata in buffer.
  * @param buf: buffer at position just after the rdata.

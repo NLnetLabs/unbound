@@ -425,6 +425,9 @@ perform_setup(struct daemon* daemon, struct config_file* cfg, int debug_mode,
 			if(!daemon->pidfile)
 				log_err("out of memory in pidfile adjust");
 		}
+		daemon->chroot = strdup(cfg->chrootdir);
+		if(!daemon->chroot)
+			log_err("out of memory in daemon chroot dir storage");
 	}
 #else
 	(void)cfgfile;
@@ -500,7 +503,7 @@ run_daemon(const char* cfgfile, int cmdline_verbose, int debug_mode)
 		/* config stuff */
 		if(!(cfg = config_create()))
 			fatal_exit("Could not alloc config defaults");
-		if(!config_read(cfg, cfgfile)) {
+		if(!config_read(cfg, cfgfile, daemon->chroot)) {
 			if(errno != ENOENT)
 				fatal_exit("Could not read config file: %s",
 					cfgfile);

@@ -246,7 +246,7 @@ ub_ctx_config(struct ub_ctx* ctx, char* fname)
 		lock_basic_unlock(&ctx->cfglock);
 		return UB_AFTERFINAL;
 	}
-	if(!config_read(ctx->env->cfg, fname)) {
+	if(!config_read(ctx->env->cfg, fname, NULL)) {
 		lock_basic_unlock(&ctx->cfglock);
 		return UB_SYNTAX;
 	}

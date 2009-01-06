@@ -412,7 +412,7 @@ int config_set_option(struct config_file* cfg, const char* opt,
 
 /** initialize the global cfg_parser object */
 static void
-create_cfg_parser(struct config_file* cfg, char* filename)
+create_cfg_parser(struct config_file* cfg, char* filename, const char* chroot)
 {
 	static struct config_parser_state st;
 	cfg_parser = &st;
@@ -420,10 +420,11 @@ create_cfg_parser(struct config_file* cfg, char* filename)
 	cfg_parser->line = 1;
 	cfg_parser->errors = 0;
 	cfg_parser->cfg = cfg;
+	cfg_parser->chroot = chroot;
 }
 
 int 
-config_read(struct config_file* cfg, const char* filename)
+config_read(struct config_file* cfg, const char* filename, const char* chroot)
 {
 	FILE *in;
 	char *fname = (char*)filename;
@@ -434,7 +435,7 @@ config_read(struct config_file* cfg, const char* filename)
 		log_err("Could not open %s: %s", fname, strerror(errno));
 		return 0;
 	}
-	create_cfg_parser(cfg, fname);
+	create_cfg_parser(cfg, fname, chroot);
 	ub_c_in = in;
 	ub_c_parse();
 	fclose(in);

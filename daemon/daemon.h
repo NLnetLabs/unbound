@@ -62,6 +62,8 @@ struct ub_randstate;
 struct daemon {
 	/** The config settings */
 	struct config_file* cfg;
+	/** the chroot dir in use, NULL if none */
+	char* chroot;
 	/** pidfile that is used */
 	char* pidfile;
 	/** port number that has ports opened. */

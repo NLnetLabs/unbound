@@ -374,7 +374,7 @@ checkconf(const char* cfgfile)
 	struct config_file* cfg = config_create();
 	if(!cfg)
 		fatal_exit("out of memory");
-	if(!config_read(cfg, cfgfile)) {
+	if(!config_read(cfg, cfgfile, NULL)) {
 		/* config_read prints messages to stderr */
 		config_delete(cfg);
 		exit(1);

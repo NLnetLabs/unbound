@@ -484,6 +484,7 @@ daemon_delete(struct daemon* daemon)
 	ub_randfree(daemon->rand);
 	alloc_clear(&daemon->superalloc);
 	acl_list_delete(daemon->acl);
+	free(daemon->chroot);
 	free(daemon->pidfile);
 	free(daemon->env);
 	free(daemon);

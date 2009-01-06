@@ -8,6 +8,9 @@
 	  get a correct NOERROR/NODATA answer.
 	- HINFO no longer downcased for validation, making unbound compatible
 	  with bind and ldns.
+	- fix reading included config files when chrooted.
+	  Give full path names for include files.
+	  Relative path names work if the start dir equals the working dir.
 
 5 January 2009: Wouter
 	- fixup getaddrinfo failure handling for remote control port.
