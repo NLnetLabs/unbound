@@ -1,6 +1,7 @@
 6 January 2009: Wouter
 	- fixup packet-of-death when compiled with --enable-debug.
 	  A malformed packet could cause an internal assertion failure.
+	- added test for HINFO canonicalisation behaviour.
 
 5 January 2009: Wouter
 	- fixup getaddrinfo failure handling for remote control port.

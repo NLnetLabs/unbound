@@ -134,7 +134,7 @@ extract_keys(struct entry* e, struct alloc_cache* alloc,
 
 /** return true if answer should be bogus */
 static int
-should_be_bogus(struct ub_packed_rrset_key* rrset)
+should_be_bogus(struct ub_packed_rrset_key* rrset, struct query_info* qinfo)
 {
 	struct packed_rrset_data* d = (struct packed_rrset_data*)rrset->
 		entry.data;
@@ -143,13 +143,16 @@ should_be_bogus(struct ub_packed_rrset_key* rrset)
 	/* name 'bogus' as first label signals bogus */
 	if(rrset->rk.dname_len > 6 && memcmp(rrset->rk.dname+1, "bogus", 5)==0)
 		return 1;
+	if(qinfo->qname_len > 6 && memcmp(qinfo->qname+1, "bogus", 5)==0)
+		return 1;
 	return 0;
 }
 
 /** verify and test one rrset against the key rrset */
 static void
 verifytest_rrset(struct module_env* env, struct val_env* ve, 
-	struct ub_packed_rrset_key* rrset, struct ub_packed_rrset_key* dnskey)
+	struct ub_packed_rrset_key* rrset, struct ub_packed_rrset_key* dnskey,
+	struct query_info* qinfo)
 {
 	enum sec_status sec;
 	if(vsig) {
@@ -161,7 +164,7 @@ verifytest_rrset(struct module_env* env, struct val_env* ve,
 	if(vsig) {
 		printf("verify outcome is: %s\n", sec_status_to_string(sec));
 	}
-	if(should_be_bogus(rrset)) {
+	if(should_be_bogus(rrset, qinfo)) {
 		unit_assert(sec == sec_status_bogus);
 	} else {
 		unit_assert(sec == sec_status_secure);
@@ -188,7 +191,7 @@ verifytest_entry(struct entry* e, struct alloc_cache* alloc,
 	entry_to_repinfo(e, alloc, region, pkt, &qinfo, &rep);
 
 	for(i=0; i<rep->rrset_count; i++) {
-		verifytest_rrset(env, ve, rep->rrsets[i], dnskey);
+		verifytest_rrset(env, ve, rep->rrsets[i], dnskey, &qinfo);
 	}
 
 	reply_info_parsedelete(rep, alloc);
@@ -478,6 +481,7 @@ verify_test()
 #ifdef HAVE_EVP_SHA512
 	verifytest_file("testdata/test_signatures.10", "20070829144150");
 #endif
+	verifytest_file("testdata/test_signatures.12", "20090107100022");
 	dstest_file("testdata/test_ds_sig.1");
 	nsectest();
 	nsec3_hash_test("testdata/test_nsec3_hash.1");
