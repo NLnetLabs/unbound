@@ -2,6 +2,10 @@
 	- fixup packet-of-death when compiled with --enable-debug.
 	  A malformed packet could cause an internal assertion failure.
 	- added test for HINFO canonicalisation behaviour.
+	- fixup reported problem with transparent local-zone data where
+	  queries with different type could get nxdomain. Now queries
+	  with a different name get resolved normally, with different type
+	  get a correct NOERROR/NODATA answer.
 
 5 January 2009: Wouter
 	- fixup getaddrinfo failure handling for remote control port.

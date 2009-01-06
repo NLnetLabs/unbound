@@ -351,7 +351,7 @@ server:
 	# o deny serves local data (if any), else, drops queries. 
 	# o refuse serves local data (if any), else, replies with error.
 	# o static serves local data, else, nxdomain or nodata answer.
-	# o transparent serves local data, else, resolves normally .
+	# o transparent gives local data, but resolves normally for other names
 	# o redirect serves the zone data for any subdomain in the zone.
 	# o nodefault can be used to normally resolve AS112 zones.
 	#

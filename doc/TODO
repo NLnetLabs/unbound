@@ -59,3 +59,5 @@ o local-zone directive with authority service, full authority server
 o configure option to force use of builtin ldns tarball.
 o include /etc/pki/dnssec-keys/production/*.conf with wildcard support.
 o make so revoke bit keys cannot verify signatures
+o option to print UTC timestamps instead of epoch in seconds.
+o print querier IP address on high loglevels.

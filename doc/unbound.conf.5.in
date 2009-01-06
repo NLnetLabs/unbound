@@ -577,7 +577,9 @@ as local\-data for the zone apex domain.
 .TP 10
 \h'5'\fItransparent\fR 
 If there is a match from local data, the query is answered.
-Otherwise, the query is resolved normally.
+Otherwise if the query has a different name, the query is resolved normally.
+If the query is for a name given in localdata but no such type of data is
+given in localdata, then a noerror nodata answer is returned.
 If no local\-zone is given local\-data causes a transparent zone
 to be created by default.
 .TP 10

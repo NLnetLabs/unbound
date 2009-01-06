@@ -1093,6 +1093,20 @@ lz_zone_answer(struct local_zone* z, struct query_info* qinfo,
 		return 1;
 	} 
 	/* else z->type == local_zone_transparent */
+
+	/* if the zone is transparent and the name exists, but the type
+	 * does not, then we should make this noerror/nodata */
+	if(ld && ld->rrsets) {
+		int rcode = LDNS_RCODE_NOERROR;
+		if(z->soa)
+			return local_encode(qinfo, edns, buf, temp, 
+				z->soa, 0, rcode);
+		error_encode(buf, (rcode|BIT_AA), qinfo, 
+			*(uint16_t*)ldns_buffer_begin(buf), 
+			ldns_buffer_read_u16_at(buf, 2), edns);
+		return 1;
+	}
+
 	/* stop here, and resolve further on */
 	return 0;
 }
