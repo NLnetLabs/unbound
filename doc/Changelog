@@ -1,3 +1,7 @@
+6 January 2009: Wouter
+	- fixup packet-of-death when compiled with --enable-debug.
+	  A malformed packet could cause an internal assertion failure.
+
 5 January 2009: Wouter
 	- fixup getaddrinfo failure handling for remote control port.
 	- added L.ROOT-SERVERS.NET. AAAA 2001:500:3::42 to builtin root hints.

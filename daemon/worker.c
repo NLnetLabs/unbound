@@ -759,6 +759,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 	/* see if query is in the cache */
 	if(!query_info_parse(&qinfo, c->buffer)) {
 		verbose(VERB_ALGO, "worker parse request: formerror.");
+		ldns_buffer_rewind(c->buffer);
 		LDNS_QR_SET(ldns_buffer_begin(c->buffer));
 		LDNS_RCODE_SET(ldns_buffer_begin(c->buffer), 
 			LDNS_RCODE_FORMERR);
@@ -779,6 +780,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 	}
 	if((ret=parse_edns_from_pkt(c->buffer, &edns)) != 0) {
 		verbose(VERB_ALGO, "worker parse edns: formerror.");
+		ldns_buffer_rewind(c->buffer);
 		LDNS_QR_SET(ldns_buffer_begin(c->buffer));
 		LDNS_RCODE_SET(ldns_buffer_begin(c->buffer), ret);
 		server_stats_insrcode(&worker->stats, c->buffer);
