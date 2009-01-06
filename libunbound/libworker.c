@@ -539,11 +539,15 @@ add_bg_result(struct libworker* w, struct ctx_query* q, ldns_buffer* pkt,
 	/* serialize and delete unneeded q */
 	if(w->is_bg_thread) {
 		lock_basic_lock(&w->ctx->cfglock);
-		q->msg_len = ldns_buffer_remaining(pkt);
-		q->msg = memdup(ldns_buffer_begin(pkt), q->msg_len);
-		if(!q->msg)
-			msg = context_serialize_answer(q, UB_NOMEM, NULL, &len);
-		else	msg = context_serialize_answer(q, err, NULL, &len);
+		if(pkt) {
+			q->msg_len = ldns_buffer_remaining(pkt);
+			q->msg = memdup(ldns_buffer_begin(pkt), q->msg_len);
+			if(!q->msg)
+				msg = context_serialize_answer(q, UB_NOMEM, 
+				NULL, &len);
+			else	msg = context_serialize_answer(q, err, 
+				NULL, &len);
+		} else msg = context_serialize_answer(q, err, NULL, &len);
 		lock_basic_unlock(&w->ctx->cfglock);
 	} else {
 		msg = context_serialize_answer(q, err, pkt, &len);

@@ -11,6 +11,7 @@
 	- fix reading included config files when chrooted.
 	  Give full path names for include files.
 	  Relative path names work if the start dir equals the working dir.
+	- fix libunbound message transport when no packet buffer is available.
 
 5 January 2009: Wouter
 	- fixup getaddrinfo failure handling for remote control port.
