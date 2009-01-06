@@ -6,6 +6,8 @@
 	  queries with different type could get nxdomain. Now queries
 	  with a different name get resolved normally, with different type
 	  get a correct NOERROR/NODATA answer.
+	- HINFO no longer downcased for validation, making unbound compatible
+	  with bind and ldns.
 
 5 January 2009: Wouter
 	- fixup getaddrinfo failure handling for remote control port.

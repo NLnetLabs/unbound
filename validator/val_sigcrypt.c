@@ -552,57 +552,6 @@ struct canon_rr {
 };
 
 /**
- * Compare HINFO rrsets. For them, the string length bytes are not lowercased,
- * but the string contents are lowercased.
- *
- * This routine works for any 'all STR' RR type. It works similar to the
- * compare_byfield routine, but stripped down, and modified to lowercase
- * STR fields.
- *
- * @param d: rrset data
- * @param i: first RR to compare
- * @param j: first RR to compare
- * @return comparison code.
- */
-static int
-canonical_compare_hinfo(struct packed_rrset_data* d, size_t i, size_t j)
-{
-	uint8_t* di = d->rr_data[i]+2; /* ptr to current rdata byte */
-	uint8_t* dj = d->rr_data[j]+2;
-	size_t ilen = d->rr_len[i]-2; /* length left in rdata */
-	size_t jlen = d->rr_len[j]-2;
-	size_t strlen_i = 0;
-	size_t strlen_j = 0;
-	while(ilen > 0 && jlen > 0) {
-		/* compare this pair of bytes */
-		if( ((strlen_i)?(uint8_t)tolower((int)*di):*di)
-		 != ((strlen_j)?(uint8_t)tolower((int)*dj):*dj)
-		 ) {
-		  if(((strlen_i)?(uint8_t)tolower((int)*di):*di)
-		  < ((strlen_j)?(uint8_t)tolower((int)*dj):*dj))
-		 	return -1;
-		    return 1;
-		}
-		ilen --;
-		jlen --;
-		/* read length byte of the string in rdata if strlen=0 */
-		if(strlen_i == 0) {
-			strlen_i = (size_t)*di;
-		} else 	strlen_i--;
-		if(strlen_j == 0) {
-			strlen_j = (size_t)*dj;
-		} else 	strlen_j--;
-		di++;
-		dj++;
-	}
-	if(ilen == 0 && jlen == 0)
-		return 0;
-	if(ilen == 0)
-		return -1;
-	return 1;
-}
-
-/**
  * Compare two RR for canonical order, in a field-style sweep.
  * @param d: rrset data
  * @param desc: ldns wireformat descriptor.
@@ -807,11 +756,7 @@ canonical_compare(struct ub_packed_rrset_key* rrset, size_t i, size_t j)
 			log_assert(desc->_minimum == desc->_maximum);
 			return canonical_compare_byfield(d, desc, i, j);
 
-		/* This RR type is special, as the contents of text fields
-		 * is lowercased. */
-		case LDNS_RR_TYPE_HINFO:
-			return canonical_compare_hinfo(d, i, j);
-
+		case LDNS_RR_TYPE_HINFO: /* no longer downcased */
 		case LDNS_RR_TYPE_NSEC: 
 		case LDNS_RR_TYPE_RRSIG:
 	default:
@@ -957,18 +902,6 @@ canonicalize_rdata(ldns_buffer* buf, struct ub_packed_rrset_key* rrset,
 			query_dname_tolower(datstart + 
 				dname_valid(datstart, len-2));
 			return;
-		case LDNS_RR_TYPE_HINFO:
-			/* lowercase text records */
-			len -= 2;
-			if(len < (size_t)datstart[0]+1)
-				return;
-			lowercase_text_field(datstart);
-			len -= (size_t)datstart[0]+1; /* and skip the 1st */
-			datstart += (size_t)datstart[0]+1;
-			if(len < (size_t)datstart[0]+1)
-				return;
-			lowercase_text_field(datstart);
-			return;
 		case LDNS_RR_TYPE_RT:
 		case LDNS_RR_TYPE_AFSDB:
 		case LDNS_RR_TYPE_KX:
@@ -1028,6 +961,7 @@ canonicalize_rdata(ldns_buffer* buf, struct ub_packed_rrset_key* rrset,
 		/* do not canonicalize NSEC rdata name, compat with bug
 		 * from bind 9.4 signer, where it does not do so */
 		case LDNS_RR_TYPE_NSEC: /* type starts with the name */
+		case LDNS_RR_TYPE_HINFO: /* not downcased */
 		/* A6 not supported */
 		default:	
 			/* nothing to do for unknown types */

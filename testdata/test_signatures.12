@@ -27,7 +27,7 @@ ENTRY_END
 ; HINFO record signed with ldns, HINFO in uppercase, signature uppercase
 ENTRY_BEGIN
 SECTION QUESTION
-bogus.jelte.nlnetlabs.nl.    IN      HINFO
+jelte.nlnetlabs.nl.    IN      HINFO
 SECTION ANSWER
 jelte.nlnetlabs.nl.	3600	IN	HINFO	"Jelte" "Machine van"
 jelte.nlnetlabs.nl.	3600	IN	RRSIG	HINFO 5 3 3600 20090203100022 20090106100022 48885 jelte.nlnetlabs.nl. eRig3NjIIgBTmQiN7AREmplgiY6OOtVwCNZgF5UAoYFAE1K1tl5WLqe9 FmTcVtaNUzFdgYv+TD93NNYdV0uxJkr+rS2sSykGf9OIlxevFm+rW2ya 4/Y+5GIN77eN9q9/6ULQRdsX3p8w1fhloiDXk+tgCaw+cJJElMEE1Avw 2dY=
@@ -47,7 +47,7 @@ ENTRY_END
 ; (signer canonicalised)
 ENTRY_BEGIN
 SECTION QUESTION
-jelte.nlnetlabs.nl.    IN      HINFO
+bogus.jelte.nlnetlabs.nl.    IN      HINFO
 SECTION ANSWER
 jelte.nlnetlabs.nl.	3600	IN	HINFO	"Jelte" "Machine van"
 jelte.nlnetlabs.nl.	3600	IN	RRSIG	HINFO 5 3 3600 20090203105558 20090106105558 48885 jelte.nlnetlabs.nl. UwFKSqH9oau3nCdJ4i6iYamo2izgMCKy1K8ec0IkhniUONKaIGiRNz8/ QrLAeBHhMnLQYNV/GBprNjvnPyYLG/6bWYUBxvP6pCG4oDEmNY7QF9di I6So5Ycv0ZWaYoT/NYStUj1fLNZ4xCdNXVLA7Oi5PRMeOvPQIvMG3hHK Ja0=
