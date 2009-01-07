@@ -265,7 +265,7 @@ check_chroot_filelist(const char* desc, struct config_strlist* list,
 	}
 }
 
-/** check file list, with wilcard processing. */
+/** check file list, with wildcard processing */
 static void
 check_chroot_filelist_wild(const char* desc, struct config_strlist* list,
 	const char* chrootdir, struct config_file* cfg)

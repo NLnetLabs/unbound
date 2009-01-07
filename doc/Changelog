@@ -2,6 +2,7 @@
 	- version 1.2.0 in preparation.
 	- feature to allow wildcards (*, ?, [], {}. ~) in trusted-keys-file
 	  statements. (Adapted from patch by Paul Wouters).
+	- typo fix and iana portlist updated.
 
 6 January 2009: Wouter
 	- fixup packet-of-death when compiled with --enable-debug.
