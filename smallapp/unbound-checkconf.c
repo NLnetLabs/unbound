@@ -57,6 +57,9 @@
 #ifdef HAVE_SYS_STAT_H
 #include <sys/stat.h>
 #endif
+#ifdef HAVE_GLOB_H
+#include <glob.h>
+#endif
 
 /** Give checkconf usage, and exit (1). */
 static void
@@ -262,6 +265,27 @@ check_chroot_filelist(const char* desc, struct config_strlist* list,
 	}
 }
 
+/** check file list, with wilcard processing. */
+static void
+check_chroot_filelist_wild(const char* desc, struct config_strlist* list,
+	const char* chrootdir, struct config_file* cfg)
+{
+	struct config_strlist* p;
+	for(p=list; p; p=p->next) {
+#ifdef HAVE_GLOB
+		if(strchr(p->str, '*') || strchr(p->str, '[') || 
+			strchr(p->str, '?') || strchr(p->str, '{') || 
+			strchr(p->str, '~')) {
+			char* s = p->str;
+			/* adjust whole pattern for chroot and check later */
+			p->str = fname_after_chroot(p->str, cfg, 1);
+			free(s);
+		} else
+#endif /* HAVE_GLOB */
+			check_chroot_string(desc, &p->str, chrootdir, cfg);
+	}
+}
+
 /** check configuration for errors */
 static void
 morechecks(struct config_file* cfg, const char* fname)
@@ -330,7 +354,7 @@ morechecks(struct config_file* cfg, const char* fname)
 		cfg->root_hints, cfg->chrootdir, cfg);
 	check_chroot_filelist("trust-anchor-file", 
 		cfg->trust_anchor_file_list, cfg->chrootdir, cfg);
-	check_chroot_filelist("trusted-keys-file", 
+	check_chroot_filelist_wild("trusted-keys-file", 
 		cfg->trusted_keys_file_list, cfg->chrootdir, cfg);
 	check_chroot_string("dlv-anchor-file", &cfg->dlv_anchor_file, 
 		cfg->chrootdir, cfg);

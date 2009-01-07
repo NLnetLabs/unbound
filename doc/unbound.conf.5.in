@@ -491,6 +491,8 @@ File with trusted keys for validation. Specify more than one file
 with several entries, one file per entry. Like \fBtrust\-anchor\-file\fR
 but has a different file format. Format is BIND\-9 style format, 
 the trusted\-keys { name flag proto algo "key"; }; clauses are read.
+It is possible to use wildcards with this statement, the wildcard is
+expanded on start and on reload.
 .TP
 .B dlv\-anchor\-file: \fI<filename>
 File with trusted keys for DLV (DNSSEC Lookaside Validation). Both DS and

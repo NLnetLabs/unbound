@@ -46,6 +46,9 @@
 #include "util/net_help.h"
 #include "util/regional.h"
 #include "util/config_file.h"
+#ifdef HAVE_GLOB_H
+#include <glob.h>
+#endif
 
 int
 anchor_cmp(const void* k1, const void* k2)
@@ -662,6 +665,77 @@ anchor_read_bind_file(struct val_anchors* anchors, ldns_buffer* buffer,
 	return 1;
 }
 
+/**
+ * Read a BIND9 like files with trust anchors in named.conf format.
+ * Performs wildcard processing of name.
+ * @param anchors: anchor storage.
+ * @param buffer: parsing buffer.
+ * @param pat: pattern string. (can be wildcarded)
+ * @return false on error.
+ */
+static int
+anchor_read_bind_file_wild(struct val_anchors* anchors, ldns_buffer* buffer,
+	const char* pat)
+{
+#ifdef HAVE_GLOB
+	glob_t g;
+	size_t i;
+	int r, flags;
+	if(!strchr(pat, '*') && !strchr(pat, '?') && !strchr(pat, '[') && 
+		!strchr(pat, '{') && !strchr(pat, '~')) {
+		return anchor_read_bind_file(anchors, buffer, pat);
+	}
+	verbose(VERB_QUERY, "wildcard found, processing %s", pat);
+	flags = 0 
+#ifdef GLOB_ERR
+		| GLOB_ERR
+#endif
+#ifdef GLOB_NOSORT
+		| GLOB_NOSORT
+#endif
+#ifdef GLOB_BRACE
+		| GLOB_BRACE
+#endif
+#ifdef GLOB_TILDE
+		| GLOB_TILDE
+#endif
+	;
+	memset(&g, 0, sizeof(g));
+	r = glob(pat, flags, NULL, &g);
+	if(r) {
+		/* some error */
+		if(r == GLOB_NOMATCH) {
+			verbose(VERB_QUERY, "trusted-keys-file: "
+				"no matches for %s", pat);
+			return 1;
+		} else if(r == GLOB_NOSPACE) {
+			log_err("wildcard trusted-keys-file %s: "
+				"pattern out of memory", pat);
+		} else if(r == GLOB_ABORTED) {
+			log_err("wildcard trusted-keys-file %s: expansion "
+				"aborted (%s)", pat, strerror(errno));
+		} else {
+			log_err("wildcard trusted-keys-file %s: expansion "
+				"failed (%s)", pat, strerror(errno));
+		}
+		return 0;
+	}
+	/* process files found, if any */
+	for(i=0; i<(size_t)g.gl_pathc; i++) {
+		if(!anchor_read_bind_file(anchors, buffer, g.gl_pathv[i])) {
+			log_err("error reading wildcard "
+				"trusted-keys-file: %s", g.gl_pathv[i]);
+			globfree(&g);
+			return 0;
+		}
+	}
+	globfree(&g);
+	return 1;
+#else /* not HAVE_GLOB */
+	return anchor_read_bind_file(anchors, buffer, pat);
+#endif /* HAVE_GLOB */
+}
+
 /** 
  * Assemble an rrset structure for the type 
  * @param region: allocated in this region.
@@ -789,7 +863,7 @@ anchors_apply_cfg(struct val_anchors* anchors, struct config_file* cfg)
 		if(cfg->chrootdir && cfg->chrootdir[0] && strncmp(nm,
 			cfg->chrootdir, strlen(cfg->chrootdir)) == 0)
 			nm += strlen(cfg->chrootdir);
-		if(!anchor_read_bind_file(anchors, parsebuf, nm)) {
+		if(!anchor_read_bind_file_wild(anchors, parsebuf, nm)) {
 			log_err("error reading trusted-keys-file: %s", f->str);
 			ldns_buffer_free(parsebuf);
 			return 0;
