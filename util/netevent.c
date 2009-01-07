@@ -148,6 +148,7 @@ comm_base_create(int sigs)
 		return NULL;
 	}
 #ifdef USE_MINI_EVENT
+	(void)sigs;
 	/* use mini event time-sharing feature */
 	b->eb->base = event_init(&b->eb->secs, &b->eb->now);
 #else
