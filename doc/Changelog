@@ -3,6 +3,7 @@
 	- feature to allow wildcards (*, ?, [], {}. ~) in trusted-keys-file
 	  statements. (Adapted from patch by Paul Wouters).
 	- typo fix and iana portlist updated.
+	- porting testsuite; unused var warning, and type fixup.
 
 6 January 2009: Wouter
 	- fixup packet-of-death when compiled with --enable-debug.

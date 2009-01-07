@@ -1300,7 +1300,7 @@ daemon_remote_exec(struct worker* worker)
 {
 	/* read the cmd string */
 	uint8_t* msg = NULL;
-	size_t len = 0;
+	uint32_t len = 0;
 	if(!tube_read_msg(worker->cmd, &msg, &len, 0)) {
 		log_err("daemon_remote_exec: tube_read_msg failed");
 		return;
