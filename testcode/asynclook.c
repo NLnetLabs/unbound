@@ -45,6 +45,16 @@
 #include "util/locks.h"
 #include "util/log.h"
 
+/** keeping track of the async ids */
+struct track_id {
+	/** the id to pass to libunbound to cancel */
+	int id;
+	/** true if cancelled */
+	int cancel;
+	/** a lock on this structure for thread safety */
+	lock_basic_t lock;
+};
+
 /**
  * result list for the lookups
  */
@@ -233,17 +243,20 @@ ext_check_result(const char* desc, int err, struct ub_result* result)
 static void 
 ext_callback(void* mydata, int err, struct ub_result* result)
 {
-	int* my_id = (int*)mydata;
+	struct track_id* my_id = (struct track_id*)mydata;
 	int doprint = 0;
 	if(my_id) {
 		/* I have an id, make sure we are not cancelled */
-		if(*my_id == 0) {
-			printf("error: query returned, but was cancelled\n");
+		lock_basic_lock(&my_id->lock);
+		if(doprint) 
+			printf("cb %d: ", my_id->id);
+		if(my_id->cancel) {
+			printf("error: query id=%d returned, but was cancelled\n",
+				my_id->id);
 			abort();
 			exit(1);
 		}
-		if(doprint) 
-			printf("cb %d: ", *my_id);
+		lock_basic_unlock(&my_id->lock);
 	}
 	ext_check_result("ext_callback", err, result);
 	log_assert(result);
@@ -264,13 +277,16 @@ ext_thread(void* arg)
 	struct ext_thr_info* inf = (struct ext_thr_info*)arg;
 	int i, r;
 	struct ub_result* result;
-	int* async_ids = NULL;
+	struct track_id* async_ids = NULL;
 	log_thread_set(&inf->thread_num);
 	if(inf->thread_num > NUMTHR*2/3) {
-		async_ids = (int*)calloc((size_t)inf->numq, sizeof(int));
+		async_ids = (struct track_id*)calloc((size_t)inf->numq, sizeof(struct track_id));
 		if(!async_ids) {
 			printf("out of memory\n");
 			exit(1);
+		}
+		for(i=0; i<inf->numq; i++) {
+			lock_basic_init(&async_ids[i].lock);
 		}
 	}
 	for(i=0; i<inf->numq; i++) {
@@ -278,14 +294,14 @@ ext_thread(void* arg)
 			r = ub_resolve_async(inf->ctx, 
 				inf->argv[i%inf->argc], LDNS_RR_TYPE_A, 
 				LDNS_RR_CLASS_IN, &async_ids[i], ext_callback, 
-				&async_ids[i]);
+				&async_ids[i].id);
 			checkerr("ub_resolve_async", r);
 			if(i > 100) {
-				r = ub_cancel(inf->ctx, async_ids[i-100]);
+				lock_basic_lock(&async_ids[i-100].lock);
+				r = ub_cancel(inf->ctx, async_ids[i-100].id);
+				async_ids[i-100].cancel=1;
+				lock_basic_unlock(&async_ids[i-100].lock);
 				checkerr("ub_cancel", r);
-			}
-			if(i > 200) {
-				async_ids[i-200]=0;
 			}
 		} else if(inf->thread_num > NUMTHR/2) {
 			/* async */
