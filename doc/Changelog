@@ -1,3 +1,7 @@
+8 January 2009: Wouter
+	- new version of ldns-trunk (today) included as tarball, fixed 
+	  bug #224, building with -j race condition.
+
 7 January 2009: Wouter
 	- version 1.2.0 in preparation.
 	- feature to allow wildcards (*, ?, [], {}. ~) in trusted-keys-file
