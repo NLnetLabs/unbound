@@ -2,6 +2,7 @@
 	- created svn tag for 1.2.0 release.
 	- svn trunk contains 1.2.1 version number.
 	- iana portlist updated for todays list.
+	- removed debug print.
 
 8 January 2009: Wouter
 	- new version of ldns-trunk (today) included as tarball, fixed 
