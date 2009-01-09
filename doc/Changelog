@@ -1,5 +1,6 @@
 9 January 2009: Wouter
 	- created svn tag for 1.2.0 release.
+	- svn trunk contains 1.2.1 version number.
 
 8 January 2009: Wouter
 	- new version of ldns-trunk (today) included as tarball, fixed 
