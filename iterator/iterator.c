@@ -1530,6 +1530,24 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		verbose(VERB_DETAIL, "query response was %sLAME",
 			dnsseclame?"DNSSEC ":"");
 		if(qstate->reply) {
+			/* @@@ DEBUG LAME @@@ */
+			if(1) {
+				log_info("LAME mark. %s time %d", 
+					dnsseclame?"dnsseclame":"lame", 
+					(int)*qstate->env->now);
+				log_addr(0, "addr", &qstate->reply->addr,
+					qstate->reply->addrlen);
+				log_nametypeclass(0, "delegpt", iq->dp->name,
+					iq->qchase.qtype, iq->qchase.qclass);
+				log_dns_msg("from msg", &iq->response->qinfo, 
+					iq->response->rep);
+				if(qstate->reply && qstate->reply->c &&
+					qstate->reply->c->buffer)
+					log_hex("hex packet", 
+					ldns_buffer_begin(qstate->reply->c->
+					buffer), ldns_buffer_limit(qstate->
+					reply->c->buffer));
+			}
 			/* need addr for lameness cache, but we may have
 			 * gotten this from cache, so test to be sure */
 			if(!infra_set_lame(qstate->env->infra_cache, 
@@ -1545,6 +1563,23 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		verbose(VERB_DETAIL, "query response REC_LAME: "
 			"recursive but not authoritative server");
 		if(qstate->reply) {
+			/* @@@ DEBUG LAME @@@ */
+			if(1) {
+				log_info("REC_LAME mark. rec_lame time %d", 
+					(int)*qstate->env->now);
+				log_addr(0, "addr", &qstate->reply->addr,
+					qstate->reply->addrlen);
+				log_nametypeclass(0, "delegpt", iq->dp->name,
+					iq->qchase.qtype, iq->qchase.qclass);
+				log_dns_msg("from msg", &iq->response->qinfo, 
+					iq->response->rep);
+				if(qstate->reply && qstate->reply->c &&
+					qstate->reply->c->buffer)
+					log_hex("hex packet", 
+					ldns_buffer_begin(qstate->reply->c->
+					buffer), ldns_buffer_limit(qstate->
+					reply->c->buffer));
+			}
 			/* need addr for lameness cache, but we may have
 			 * gotten this from cache, so test to be sure */
 			verbose(VERB_DETAIL, "mark as REC_LAME");

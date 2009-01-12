@@ -1,3 +1,8 @@
+12 January 2009: Wouter
+	- fixed bug in infrastructure lameness cache, did not lowercase
+	  name of zone to hash when setting lame.
+	- lameness debugging printouts.
+
 9 January 2009: Wouter
 	- created svn tag for 1.2.0 release.
 	- svn trunk contains 1.2.1 version number.
