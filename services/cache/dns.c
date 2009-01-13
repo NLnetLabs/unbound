@@ -142,6 +142,30 @@ addr_to_additional(struct ub_packed_rrset_key* rrset, struct regional* region,
 	}
 }
 
+/** lookup message in message cache */
+static struct msgreply_entry* 
+msg_cache_lookup(struct module_env* env, uint8_t* qname, size_t qnamelen, 
+	uint16_t qtype, uint16_t qclass, uint32_t now, int wr)
+{
+	struct lruhash_entry* e;
+	struct query_info k;
+	hashvalue_t h;
+
+	k.qname = qname;
+	k.qname_len = qnamelen;
+	k.qtype = qtype;
+	k.qclass = qclass;
+	h = query_info_hash(&k);
+	e = slabhash_lookup(env->msg_cache, h, &k, wr);
+
+	if(!e) return NULL;
+	if( now > ((struct reply_info*)e->data)->ttl ) {
+		lock_rw_unlock(&e->lock);
+		return NULL;
+	}
+	return (struct msgreply_entry*)e->key;
+}
+
 /** find and add A and AAAA records for nameservers in delegpt */
 static int
 find_add_addrs(struct module_env* env, uint16_t qclass, 
@@ -149,6 +173,7 @@ find_add_addrs(struct module_env* env, uint16_t qclass,
 	struct dns_msg** msg)
 {
 	struct delegpt_ns* ns;
+	struct msgreply_entry* neg;
 	struct ub_packed_rrset_key* akey;
 	for(ns = dp->nslist; ns; ns = ns->next) {
 		akey = rrset_cache_lookup(env->rrset_cache, ns->name, 
@@ -161,6 +186,13 @@ find_add_addrs(struct module_env* env, uint16_t qclass,
 			if(msg)
 				addr_to_additional(akey, region, *msg, now);
 			lock_rw_unlock(&akey->entry.lock);
+		} else {
+			neg = msg_cache_lookup(env, ns->name, ns->namelen,
+				LDNS_RR_TYPE_A, qclass, now, 0);
+			if(neg) {
+				delegpt_add_neg_msg(dp, neg);
+				lock_rw_unlock(&neg->entry.lock);
+			}
 		}
 		akey = rrset_cache_lookup(env->rrset_cache, ns->name, 
 			ns->namelen, LDNS_RR_TYPE_AAAA, qclass, 0, now, 0);
@@ -172,6 +204,13 @@ find_add_addrs(struct module_env* env, uint16_t qclass,
 			if(msg)
 				addr_to_additional(akey, region, *msg, now);
 			lock_rw_unlock(&akey->entry.lock);
+		} else {
+			neg = msg_cache_lookup(env, ns->name, ns->namelen,
+				LDNS_RR_TYPE_AAAA, qclass, now, 0);
+			if(neg) {
+				delegpt_add_neg_msg(dp, neg);
+				lock_rw_unlock(&neg->entry.lock);
+			}
 		}
 	}
 	return 1;
@@ -183,6 +222,7 @@ cache_fill_missing(struct module_env* env, uint16_t qclass,
 	struct regional* region, struct delegpt* dp)
 {
 	struct delegpt_ns* ns;
+	struct msgreply_entry* neg;
 	struct ub_packed_rrset_key* akey;
 	uint32_t now = *env->now;
 	for(ns = dp->nslist; ns; ns = ns->next) {
@@ -198,6 +238,13 @@ cache_fill_missing(struct module_env* env, uint16_t qclass,
 			log_nametypeclass(VERB_ALGO, "found in cache",
 				ns->name, LDNS_RR_TYPE_A, qclass);
 			lock_rw_unlock(&akey->entry.lock);
+		} else {
+			neg = msg_cache_lookup(env, ns->name, ns->namelen,
+				LDNS_RR_TYPE_A, qclass, now, 0);
+			if(neg) {
+				delegpt_add_neg_msg(dp, neg);
+				lock_rw_unlock(&neg->entry.lock);
+			}
 		}
 		akey = rrset_cache_lookup(env->rrset_cache, ns->name, 
 			ns->namelen, LDNS_RR_TYPE_AAAA, qclass, 0, now, 0);
@@ -209,6 +256,13 @@ cache_fill_missing(struct module_env* env, uint16_t qclass,
 			log_nametypeclass(VERB_ALGO, "found in cache",
 				ns->name, LDNS_RR_TYPE_AAAA, qclass);
 			lock_rw_unlock(&akey->entry.lock);
+		} else {
+			neg = msg_cache_lookup(env, ns->name, ns->namelen,
+				LDNS_RR_TYPE_AAAA, qclass, now, 0);
+			if(neg) {
+				delegpt_add_neg_msg(dp, neg);
+				lock_rw_unlock(&neg->entry.lock);
+			}
 		}
 	}
 	return 1;

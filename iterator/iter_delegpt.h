@@ -48,6 +48,7 @@ struct delegpt_ns;
 struct delegpt_addr;
 struct dns_msg;
 struct ub_packed_rrset_key;
+struct msgreply_entry;
 
 /**
  * Delegation Point.
@@ -298,5 +299,12 @@ size_t delegpt_count_missing_targets(struct delegpt* dp);
  */
 struct delegpt* delegpt_from_message(struct dns_msg* msg, 
 	struct regional* regional);
+
+/**
+ * Add negative message to delegation point.
+ * @param dp: delegation point.
+ * @param msg: the message added, marks off A or AAAA from an NS entry.
+ */
+void delegpt_add_neg_msg(struct delegpt* dp, struct msgreply_entry* msg);
 
 #endif /* ITERATOR_ITER_DELEGPT_H */

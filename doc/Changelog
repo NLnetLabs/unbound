@@ -3,6 +3,8 @@
 	- find NS rrset more cleanly for qtype NS.
 	- Moved changes to 1.2.0 for release. Thanks to Mark Zealey for
 	  reporting and logs.
+	- 1.2.1 feature: stops resolving AAAAs promiscuously when they
+	  are in the negative cache.
 
 12 January 2009: Wouter
 	- fixed bug in infrastructure lameness cache, did not lowercase
