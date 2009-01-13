@@ -268,9 +268,9 @@ infra_host(struct infra_cache* infra, struct sockaddr_storage* addr,
 
 /** hash lameness key */
 static hashvalue_t
-hash_lameness(uint8_t* name, size_t namelen)
+hash_lameness(uint8_t* name)
 {
-	return hashlittle(name, namelen, 0xab);
+	return dname_query_hash(name, 0xab);
 }
 
 int 
@@ -283,7 +283,7 @@ infra_lookup_lame(struct infra_host_data* host,
 	struct infra_lame_data *d;
 	if(!host->lameness)
 		return 0;
-	k.entry.hash = hash_lameness(name, namelen);
+	k.entry.hash = hash_lameness(name);
 	k.zonename = name;
 	k.namelen = namelen;
 	k.entry.key = (void*)&k;
@@ -375,7 +375,7 @@ infra_set_lame(struct infra_cache* infra,
 		return 0;
 	}
 	lock_rw_init(&k->entry.lock);
-	k->entry.hash = hash_lameness(name, namelen);
+	k->entry.hash = hash_lameness(name);
 	k->entry.key = (void*)k;
 	k->entry.data = (void*)d;
 	d->ttl = timenow + infra->lame_ttl;

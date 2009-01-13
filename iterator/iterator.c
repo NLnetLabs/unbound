@@ -840,6 +840,8 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 			iq->qchase.qname_len = slen;
 			/* This *is* a query restart, even if it is a cheap 
 			 * one. */
+			iq->dp = NULL;
+			iq->refetch_glue = 0;
 			iq->query_restart_count++;
 			return next_state(iq, INIT_REQUEST_STATE);
 		}
@@ -857,6 +859,7 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 			log_err("alloc failure for forward dp");
 			return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
 		}
+		iq->refetch_glue = 0;
 		/* the request has been forwarded.
 		 * forwarded requests need to be immediately sent to the 
 		 * next state, QUERYTARGETS. */
@@ -1351,6 +1354,19 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 	return 0;
 }
 
+/** find NS rrset in given list */
+static struct ub_packed_rrset_key*
+find_NS(struct reply_info* rep, size_t from, size_t to)
+{
+	size_t i;
+	for(i=from; i<to; i++) {
+		if(ntohs(rep->rrsets[i]->rk.type) == LDNS_RR_TYPE_NS)
+			return rep->rrsets[i];
+	}
+	return NULL;
+}
+
+
 /** 
  * Process the query response. All queries end up at this state first. This
  * process generally consists of analyzing the response and routing the
@@ -1400,6 +1416,18 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 				iq->qchase.qclass)) {
 			type = RESPONSE_TYPE_LAME;
 			dnsseclame = 1;
+		}
+	}
+	/* see if referral brings us close to the target */
+	if(type == RESPONSE_TYPE_REFERRAL) {
+		struct ub_packed_rrset_key* ns = find_NS(
+			iq->response->rep, iq->response->rep->an_numrrsets,
+			iq->response->rep->an_numrrsets 
+			+ iq->response->rep->ns_numrrsets);
+		if(!ns || !dname_strict_subdomain_c(ns->rk.dname, iq->dp->name) 
+			|| !dname_subdomain_c(iq->qchase.qname, ns->rk.dname)){
+			verbose(VERB_ALGO, "bad referral, throwaway");
+			type = RESPONSE_TYPE_THROWAWAY;
 		}
 	}
 
@@ -1529,7 +1557,10 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		/* Cache the LAMEness. */
 		verbose(VERB_DETAIL, "query response was %sLAME",
 			dnsseclame?"DNSSEC ":"");
-		if(qstate->reply) {
+		if(!dname_subdomain_c(iq->qchase.qname, iq->dp->name)) {
+			log_err("mark lame: mismatch in qname and dpname");
+			/* throwaway this reply below */
+		} else if(qstate->reply) {
 			/* need addr for lameness cache, but we may have
 			 * gotten this from cache, so test to be sure */
 			if(!infra_set_lame(qstate->env->infra_cache, 
@@ -1544,7 +1575,10 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		/* Cache the LAMEness. */
 		verbose(VERB_DETAIL, "query response REC_LAME: "
 			"recursive but not authoritative server");
-		if(qstate->reply) {
+		if(!dname_subdomain_c(iq->qchase.qname, iq->dp->name)) {
+			log_err("mark rec_lame: mismatch in qname and dpname");
+			/* throwaway this reply below */
+		} else if(qstate->reply) {
 			/* need addr for lameness cache, but we may have
 			 * gotten this from cache, so test to be sure */
 			verbose(VERB_DETAIL, "mark as REC_LAME");

@@ -1,3 +1,9 @@
+13 January 2009: Wouter
+	- tag updated with:
+		- removed debug printout in val_nsec.c
+		- fix lame marking
+		- iana portlist updated
+	
 8 January 2009: Wouter
 	- new version of ldns-trunk (today) included as tarball, fixed 
 	  bug #224, building with -j race condition.

@@ -543,7 +543,7 @@ int val_nsec_check_dlv(struct query_info* qinfo,
 				continue;
 			if(val_nsec_proves_name_error(rep->rrsets[i], 
 				qinfo->qname)) {
-				log_nametypeclass(0, "topdomain on",
+				log_nametypeclass(VERB_ALGO, "topdomain on",
 					rep->rrsets[i]->rk.dname, 
 					ntohs(rep->rrsets[i]->rk.type), 0);
 				dlv_topdomain(rep->rrsets[i], qinfo->qname,
