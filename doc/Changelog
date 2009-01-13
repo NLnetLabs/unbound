@@ -1,3 +1,6 @@
+13 January 2009: Wouter
+	- fixed bug in lameness marking, removed printouts.
+
 12 January 2009: Wouter
 	- fixed bug in infrastructure lameness cache, did not lowercase
 	  name of zone to hash when setting lame.

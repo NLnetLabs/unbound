@@ -300,15 +300,6 @@ infra_lookup_lame(struct infra_host_data* host,
 	*rlame = d->rec_lame;
 	*alame = d->lame_type_A;
 	*olame = d->lame_other;
-	if(*dlame || *rlame || *alame || *olame) {
-		/* @@@ DEBUG LAME @@@ */
-		log_info("infra_lookup_lame: looked up LAME d%d r%d a%d o%d",
-			*dlame, *rlame, *alame, *olame);
-		log_nametypeclass(0, "search", name, 0, 0);
-		log_nametypeclass(0, "found", 
-			((struct infra_lame_key*)e->key)->zonename, 0, 0);
-	}
-
 	lock_rw_unlock(&e->lock);
 	return *dlame || *rlame || *alame || *olame;
 }
@@ -428,8 +419,6 @@ infra_set_lame(struct infra_cache* infra,
 		int dlame, rlame, alame, olame; 
 		if(infra_lookup_lame(data, name, namelen, timenow,
 			&dlame, &rlame, &alame, &olame)) { 
-			/* @@@ DEBUG LAME ***/
-			log_info("lookup_lame merge in set_lame");
 			/* merge data into new structure */
 			if(dlame) d->isdnsseclame = 1;
 			if(rlame) d->rec_lame = 1;
@@ -537,13 +526,6 @@ infra_get_lame_rtt(struct infra_cache* infra,
 	/* check lameness first, if so, ttl on host does not matter anymore */
 	if(infra_lookup_lame(host, name, namelen, timenow, 
 		&dlm, &rlm, &alm, &olm)) {
-		/* @@@ DEBUG LAME @@@ */
-		log_info("lookup_lame in get_lame_rtt type %d", qtype);
-		log_addr(0, "for addr", addr, addrlen);
-		log_addr(0, "found addr", 
-			&((struct infra_host_key*)e->key)->addr,
-			((struct infra_host_key*)e->key)->addrlen);
-
 		if(alm && qtype == LDNS_RR_TYPE_A) {
 			lock_rw_unlock(&e->lock);
 			*lame = 1;
