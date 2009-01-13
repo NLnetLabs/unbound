@@ -1,6 +1,8 @@
 13 January 2009: Wouter
 	- fixed bug in lameness marking, removed printouts.
 	- find NS rrset more cleanly for qtype NS.
+	- Moved changes to 1.2.0 for release. Thanks to Mark Zealey for
+	  reporting and logs.
 
 12 January 2009: Wouter
 	- fixed bug in infrastructure lameness cache, did not lowercase
