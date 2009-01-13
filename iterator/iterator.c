@@ -1424,6 +1424,8 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 			iq->response->rep, iq->response->rep->an_numrrsets,
 			iq->response->rep->an_numrrsets 
 			+ iq->response->rep->ns_numrrsets);
+		if(!ns) find_NS(iq->response->rep, 0, 
+				iq->response->rep->an_numrrsets);
 		if(!ns || !dname_strict_subdomain_c(ns->rk.dname, iq->dp->name) 
 			|| !dname_subdomain_c(iq->qchase.qname, ns->rk.dname)){
 			verbose(VERB_ALGO, "bad referral, throwaway");
