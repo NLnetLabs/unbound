@@ -244,7 +244,7 @@ error_response_cache(struct module_qstate* qstate, int id, int rcode)
 	/* store in cache */
 	struct reply_info err;
 	memset(&err, 0, sizeof(err));
-	err.flags = BIT_QR | BIT_RA;
+	err.flags = (uint16_t)(BIT_QR | BIT_RA);
 	FLAGS_SET_RCODE(err.flags, rcode);
 	err.qdcount = 1;
 	err.ttl = NORR_TTL;
