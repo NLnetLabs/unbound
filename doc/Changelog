@@ -8,6 +8,7 @@
 	- retry from 4 to 5 so that EDNS drop retry is part of the first
 	  query resolve attempt, and cached error does not stop EDNS fallback.
 	- remove debug prints that protect against bad referrals.
+	- honor QUIET=no on make commandline (or QUIET=yes ).
 
 13 January 2009: Wouter
 	- fixed bug in lameness marking, removed printouts.

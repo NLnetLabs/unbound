@@ -2,10 +2,12 @@
 # See the file LICENSE for the license
 
 debug_enabled=@debug_enabled@
+ifeq "$(QUIET)" ""
 ifeq ($(debug_enabled),yes)
   QUIET=yes
 else
   QUIET=no
+endif
 endif
 
 ifeq "$(QUIET)" "yes"
