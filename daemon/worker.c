@@ -537,7 +537,7 @@ answer_from_cache(struct worker* worker, struct query_info* qinfo,
 	int secure;
 	int must_validate = !(flags&BIT_CD) && worker->env.need_to_validate;
 	/* see if it is possible */
-	if(rep->ttl <= timenow) {
+	if(rep->ttl < timenow) {
 		/* the rrsets may have been updated in the meantime.
 		 * we will refetch the message format from the
 		 * authoritative server 

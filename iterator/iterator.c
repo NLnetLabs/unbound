@@ -229,6 +229,34 @@ error_response(struct module_qstate* qstate, int id, int rcode)
 	return 0;
 }
 
+/**
+ * Return an error to the client and cache the error code in the
+ * message cache (so per qname, qtype, qclass).
+ * @param qstate: our query state
+ * @param id: module id
+ * @param rcode: error code (DNS errcode).
+ * @return: 0 for use by caller, to make notation easy, like:
+ * 	return error_response(..). 
+ */
+static int
+error_response_cache(struct module_qstate* qstate, int id, int rcode)
+{
+	/* store in cache */
+	struct reply_info err;
+	memset(&err, 0, sizeof(err));
+	err.flags = BIT_QR | BIT_RA;
+	FLAGS_SET_RCODE(err.flags, rcode);
+	err.qdcount = 1;
+	err.ttl = NORR_TTL;
+	/* do not waste time trying to validate this servfail */
+	err.security = sec_status_indeterminate;
+	verbose(VERB_ALGO, "store error response in message cache");
+	if(!iter_dns_store(qstate->env, &qstate->qinfo, &err, 0)) {
+		log_err("error_response_cache: could not store error (nomem)");
+	}
+	return error_response(qstate, id, rcode);
+}
+
 /** check if prepend item is duplicate item */
 static int
 prepend_is_duplicate(struct ub_packed_rrset_key** sets, size_t to,
@@ -1308,7 +1336,7 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 					"returning SERVFAIL");
 				/* fail -- no more targets, no more hope 
 				 * of targets, no hope of a response. */
-				return error_response(qstate, id,
+				return error_response_cache(qstate, id,
 					LDNS_RCODE_SERVFAIL);
 			}
 		}

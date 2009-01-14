@@ -1,3 +1,11 @@
+14 January 2009: Wouter
+	- 1.2.1 feature: negative caching for failed queries.
+	  Queries that failed are cached for 5 seconds (NORR_TTL).
+	  If the failure is local, like out of memory, it is not cached.
+	- the TTL comparison for the cache used different comparisons,
+	  causing many cache responses that used the iterator and validator
+	  state machines unnecessarily.
+
 13 January 2009: Wouter
 	- fixed bug in lameness marking, removed printouts.
 	- find NS rrset more cleanly for qtype NS.
