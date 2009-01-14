@@ -1457,10 +1457,6 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		if(!ns || !dname_strict_subdomain_c(ns->rk.dname, iq->dp->name) 
 			|| !dname_subdomain_c(iq->qchase.qname, ns->rk.dname)){
 			verbose(VERB_ALGO, "bad referral, throwaway");
-			if(!ns) log_info("no ns");
-			log_query_info(0, "qchase", &iq->qchase);
-			log_nametypeclass(0, "dp", iq->dp->name, 0, 0);
-			log_nametypeclass(0, "ns", ns->rk.dname, 0, 0);
 			type = RESPONSE_TYPE_THROWAWAY;
 		}
 	}
