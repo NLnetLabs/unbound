@@ -66,7 +66,7 @@ struct iter_priv;
  */
 #define USEFUL_SERVER_TOP_TIMEOUT	120000
 /** number of retries on outgoing queries */
-#define OUTBOUND_MSG_RETRY 4
+#define OUTBOUND_MSG_RETRY 5
 /** RTT band, within this amount from the best, servers are chosen randomly.
  * Chosen so that the UNKNOWN_SERVER_NICENESS falls within the band of a 
  * fast server, this causes server exploration as a side benefit. msec. */

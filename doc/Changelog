@@ -5,6 +5,8 @@
 	- the TTL comparison for the cache used different comparisons,
 	  causing many cache responses that used the iterator and validator
 	  state machines unnecessarily.
+	- retry from 4 to 5 so that EDNS drop retry is part of the first
+	  query resolve attempt, and cached error does not stop EDNS fallback.
 
 13 January 2009: Wouter
 	- fixed bug in lameness marking, removed printouts.
