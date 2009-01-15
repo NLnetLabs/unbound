@@ -48,6 +48,7 @@ LDFLAGS=@LDFLAGS@
 LIBS=@LIBS@
 LIBOBJS=@LIBOBJS@
 RUNTIME_PATH=@RUNTIME_PATH@
+DEPFLAG=@DEPFLAG@
 DATE=$(shell date +%Y%m%d)
 LIBTOOL=$(libtool)
 ifeq "$(QUIET)" "yes"
@@ -327,7 +328,7 @@ $(BUILD)%.d: $(srcdir)/%.c
 	@if test ! -z "$(ldnsdir)" -a ! -e $(ldnsdir)/include/ldns/ldns.h; \
 		then (cd $(ldnsdir); $(MAKE) copy-headers); fi
 	@-if test ! -d $(dir $@); then $(INSTALL) -d $(patsubst %/,%,$(dir $@)); fi
-	$Q$(SHELL) -ec '$(CC) -MM $(CPPFLAGS) $(CFLAGS) $< \
+	$Q$(SHELL) -ec '$(CC) $(DEPFLAG) $(CPPFLAGS) $(CFLAGS) $< \
 	              | sed '\''s!\(.*\)\.o[ :]*!$(dir $@)\1.lo $@ : !g'\'' > $@; \
 	              [ -s $@ ] || rm -f $@'
 

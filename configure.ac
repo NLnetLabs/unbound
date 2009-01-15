@@ -122,6 +122,14 @@ $3
 fi
 ])
 
+dnl setup flags for CHECK_COMPILER_FLAG_NEEDED
+AC_DEFUN([CHECK_ERROR_FLAGS],
+[
+CHECK_COMPILER_FLAG(Werror, [ERRFLAG="-Werror"], [ERRFLAG="-errwarn"])
+CHECK_COMPILER_FLAG(Wall, [ERRFLAG="$ERRFLAG -Wall"], 
+			[ERRFLAG="$ERRFLAG -errfmt"])
+])
+
 dnl routine to help check for needed compiler flags.
 # if the given code compiles without the flag, execute argument 4
 # if the given code only compiles with the flag, execute argument 3
@@ -129,24 +137,25 @@ dnl routine to help check for needed compiler flags.
 AC_DEFUN([CHECK_COMPILER_FLAG_NEEDED],
 [
 AC_REQUIRE([AC_PROG_CC])
+AC_REQUIRE([CHECK_ERROR_FLAGS])
 AC_MSG_CHECKING(whether we need $1 as a flag for $CC)
 cache=`echo $1 | sed 'y%.=/+- %___p__%'`
 AC_CACHE_VAL(cv_prog_cc_flag_needed_$cache,
 [
 echo '$2' > conftest.c
 echo 'void f(){}' >>conftest.c
-if test -z "`$CC $CFLAGS -Werror -Wall -c conftest.c 2>&1`"; then
+if test -z "`$CC $CFLAGS $ERRFLAG -c conftest.c 2>&1`"; then
 eval "cv_prog_cc_flag_needed_$cache=no"
 else
 [
-if test -z "`$CC $CFLAGS $1 -Werror -Wall -c conftest.c 2>&1`"; then
+if test -z "`$CC $CFLAGS $1 $ERRFLAG -c conftest.c 2>&1`"; then
 eval "cv_prog_cc_flag_needed_$cache=yes"
 else
 eval "cv_prog_cc_flag_needed_$cache=fail"
 #echo 'Test with flag fails too!'
 #cat conftest.c
-#echo "$CC $CFLAGS $1 -Werror -Wall -c conftest.c 2>&1"
-#echo `$CC $CFLAGS $1 -Werror -Wall -c conftest.c`
+#echo "$CC $CFLAGS $1 $ERRFLAG -c conftest.c 2>&1"
+#echo `$CC $CFLAGS $1 $ERRFLAG -c conftest.c 2>&1`
 #exit 1
 fi
 ]
@@ -160,6 +169,11 @@ $3
 else
 if eval "test \"`echo '$cv_prog_cc_flag_needed_'$cache`\" = no"; then
 AC_MSG_RESULT(no)
+#echo 'Test with flag is no!'
+#cat conftest.c
+#echo "$CC $CFLAGS $1 $ERRFLAG -c conftest.c 2>&1"
+#echo `$CC $CFLAGS $1 $ERRFLAG -c conftest.c 2>&1`
+#exit 1
 :
 $4
 else
@@ -176,13 +190,32 @@ AC_LANG_C
 CHECK_COMPILER_FLAG(g, [CFLAGS="$CFLAGS -g"])
 CHECK_COMPILER_FLAG(O2, [CFLAGS="$CFLAGS -O2"])
 
+# test DEPFLAG
+AC_MSG_CHECKING([$CC dependency flag])
+echo 'void f(){}' >conftest.c
+if test "`$CC -MM conftest.c 2>&1`" = "conftest.o: conftest.c"; then
+	DEPFLAG="-MM"
+else 
+  if test "`$CC -xM1 conftest.c 2>&1`" = "conftest.o: conftest.c"; then
+	DEPFLAG="-xM1"
+  else
+	DEPFLAG="-MM"  # dunno do something
+  fi 
+fi
+AC_MSG_RESULT($DEPFLAG)
+rm -f conftest.c
+AC_SUBST(DEPFLAG)
+
+CHECK_COMPILER_FLAG(std=c99, [C99FLAG="-std=c99"])
+CHECK_COMPILER_FLAG(xc99, [C99FLAG="-xc99"])
+
 AC_CHECK_HEADERS([getopt.h time.h],,, [AC_INCLUDES_DEFAULT])
 
 # MinGW32 tests
 AC_CHECK_HEADERS([winsock2.h ws2tcpip.h],,, [AC_INCLUDES_DEFAULT])
 # end mingw32 tests
 
-CHECK_COMPILER_FLAG_NEEDED(-std=c99 -D__EXTENSIONS__ -D_BSD_SOURCE -D_POSIX_C_SOURCE=200112 -D_XOPEN_SOURCE=600 -D_XOPEN_SOURCE_EXTENDED=1 -D_ALL_SOURCE,
+CHECK_COMPILER_FLAG_NEEDED($C99FLAG -D__EXTENSIONS__ -D_BSD_SOURCE -D_POSIX_C_SOURCE=200112 -D_XOPEN_SOURCE=600 -D_XOPEN_SOURCE_EXTENDED=1 -D_ALL_SOURCE,
 [
 #include "confdefs.h"
 #include <stdlib.h>
@@ -205,6 +238,8 @@ int test() {
 	time_t time = 0;
 	char *buf = NULL;
 	const char* str = NULL;
+	struct msghdr msg;
+	msg.msg_control = 0;
 	t = ctime_r(&time, buf);
 	tv.tv_usec = 10;
 	srandom(32);
@@ -213,9 +248,9 @@ int test() {
 	str = gai_strerror(0);
 	return a;
 }
-], [CFLAGS="$CFLAGS -std=c99 -D__EXTENSIONS__ -D_BSD_SOURCE -D_POSIX_C_SOURCE=200112 -D_XOPEN_SOURCE=600 -D_XOPEN_SOURCE_EXTENDED=1 -D_ALL_SOURCE"])
+], [CFLAGS="$CFLAGS $C99FLAG -D__EXTENSIONS__ -D_BSD_SOURCE -D_POSIX_C_SOURCE=200112 -D_XOPEN_SOURCE=600 -D_XOPEN_SOURCE_EXTENDED=1 -D_ALL_SOURCE"])
 
-CHECK_COMPILER_FLAG_NEEDED(-std=c99 -D__EXTENSIONS__ -D_BSD_SOURCE -D_POSIX_C_SOURCE=200112 -D_XOPEN_SOURCE=600 -D_ALL_SOURCE,
+CHECK_COMPILER_FLAG_NEEDED($C99FLAG -D__EXTENSIONS__ -D_BSD_SOURCE -D_POSIX_C_SOURCE=200112 -D_XOPEN_SOURCE=600 -D_ALL_SOURCE,
 [
 #include "confdefs.h"
 #include <stdlib.h>
@@ -238,6 +273,8 @@ int test() {
 	time_t time = 0;
 	char *buf = NULL;
 	const char* str = NULL;
+	struct msghdr msg;
+	msg.msg_control = 0;
 	t = ctime_r(&time, buf);
 	tv.tv_usec = 10;
 	srandom(32);
@@ -246,9 +283,9 @@ int test() {
 	str = gai_strerror(0);
 	return a;
 }
-], [CFLAGS="$CFLAGS -std=c99 -D__EXTENSIONS__ -D_BSD_SOURCE -D_POSIX_C_SOURCE=200112 -D_XOPEN_SOURCE=600 -D_ALL_SOURCE"])
+], [CFLAGS="$CFLAGS $C99FLAG -D__EXTENSIONS__ -D_BSD_SOURCE -D_POSIX_C_SOURCE=200112 -D_XOPEN_SOURCE=600 -D_ALL_SOURCE"])
 
-CHECK_COMPILER_FLAG_NEEDED(-std=c99,
+CHECK_COMPILER_FLAG_NEEDED($C99FLAG,
 [
 #include <stdbool.h>
 #include <ctype.h>
@@ -256,7 +293,7 @@ int test() {
         int a = 0;
         return a;
 }
-], [CFLAGS="$CFLAGS -std=c99"])
+], [CFLAGS="$CFLAGS $C99FLAG"])
 
 CHECK_COMPILER_FLAG_NEEDED(-D_BSD_SOURCE,
 [

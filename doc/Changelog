@@ -1,3 +1,7 @@
+15 January 2009: Wouter
+	- bug #229: fixup configure checks for compilation with Solaris 
+	  Sun cc compiler, ./configure CC=/opt/SUNWspro/bin/cc
+
 14 January 2009: Wouter
 	- 1.2.1 feature: negative caching for failed queries.
 	  Queries that failed are cached for 5 seconds (NORR_TTL).

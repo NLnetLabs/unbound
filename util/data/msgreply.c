@@ -320,6 +320,7 @@ get_rrset_trust(struct msg_parse* msg, struct rrset_parse* rrset)
 		if(AA)	return rrset_trust_add_AA;
 		else	return rrset_trust_add_noAA;
 	}
+	/* NOTREACHED */
 	return rrset_trust_none;
 }
 
