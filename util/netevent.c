@@ -169,12 +169,14 @@ comm_base_create(int sigs)
 		return NULL;
 	}
 	comm_base_now(b);
+	/* avoid event_get_method call which causes crashes even when
+	 * not printing, because its result is passed */
 	verbose(VERB_ALGO, "libevent %s uses %s method.", 
 		event_get_version(), 
 #ifdef HAVE_EVENT_BASE_GET_METHOD
 		event_base_get_method(b->eb->base)
 #else
-		event_get_method()
+		"not_obtainable"
 #endif
 	);
 	return b;

@@ -2,6 +2,7 @@
 	- bug #229: fixup configure checks for compilation with Solaris 
 	  Sun cc compiler, ./configure CC=/opt/SUNWspro/bin/cc
 	- fixup suncc warnings.
+	- fix bug where unbound could crash using libevent 1.3 and older.
 
 14 January 2009: Wouter
 	- 1.2.1 feature: negative caching for failed queries.
