@@ -460,14 +460,13 @@ ub_process(struct ub_ctx* ctx)
 		if(r == 0)
 			return UB_PIPE;
 		else if(r == -1)
-			return UB_NOERROR;
+			break;
 		if(!process_answer(ctx, msg, len)) {
 			free(msg);
 			return UB_PIPE;
 		}
 		free(msg);
 	}
-	/* NOTREACHED */
 	return UB_NOERROR;
 }
 

@@ -2182,13 +2182,12 @@ ds_response_to_ke(struct module_qstate* qstate, struct val_qstate* vq,
 	} else {
 		verbose(VERB_QUERY, "Encountered an unhandled type of "
 			"DS response, thus bogus.");
-return_bogus:
-		*ke = key_entry_create_bad(qstate->region, qinfo->qname,
-			qinfo->qname_len, qinfo->qclass);
-		return (*ke) != NULL;
+		goto return_bogus;
 	}
-	/* NOTREACHED */
-	return 0;
+return_bogus:
+	*ke = key_entry_create_bad(qstate->region, qinfo->qname,
+		qinfo->qname_len, qinfo->qclass);
+	return (*ke) != NULL;
 }
 
 /**

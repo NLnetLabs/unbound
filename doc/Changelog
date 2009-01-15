@@ -1,6 +1,7 @@
 15 January 2009: Wouter
 	- bug #229: fixup configure checks for compilation with Solaris 
 	  Sun cc compiler, ./configure CC=/opt/SUNWspro/bin/cc
+	- fixup suncc warnings.
 
 14 January 2009: Wouter
 	- 1.2.1 feature: negative caching for failed queries.
