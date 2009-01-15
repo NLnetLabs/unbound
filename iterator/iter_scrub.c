@@ -104,6 +104,7 @@ has_additional(uint16_t t)
 		default:
 			return 0;
 	}
+	/* NOTREACHED */
 	return 0;
 }
 

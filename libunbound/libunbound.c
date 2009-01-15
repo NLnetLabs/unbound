@@ -467,6 +467,7 @@ ub_process(struct ub_ctx* ctx)
 		}
 		free(msg);
 	}
+	/* NOTREACHED */
 	return UB_NOERROR;
 }
 

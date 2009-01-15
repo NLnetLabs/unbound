@@ -2187,8 +2187,7 @@ return_bogus:
 			qinfo->qname_len, qinfo->qclass);
 		return (*ke) != NULL;
 	}
-	/* unreachable */
-	log_assert(0);
+	/* NOTREACHED */
 	return 0;
 }
 
