@@ -118,7 +118,7 @@ repevt_string(enum replay_event_type t)
 	case repevt_back_query:  return "CHECK_OUT_QUERY";
 	case repevt_error:	 return "ERROR";
 	default:		 return "UNKNOWN";
-	};
+	}
 }
 
 /** delete a fake pending */
