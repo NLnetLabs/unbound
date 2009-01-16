@@ -239,13 +239,17 @@ comm_point_send_udp_msg(struct comm_point *c, ldns_buffer* packet,
 	log_assert(c->fd != -1);
 #ifdef UNBOUND_DEBUG
 	if(ldns_buffer_remaining(packet) == 0)
-		log_err("internal error: send empty UDP packet");
+		log_err("error: send empty UDP packet");
 #endif
 	log_assert(addr && addrlen > 0);
 	sent = sendto(c->fd, ldns_buffer_begin(packet), 
 		ldns_buffer_remaining(packet), 0,
 		addr, addrlen);
 	if(sent == -1) {
+#ifdef ENETUNREACH
+		if(errno == ENETUNREACH && verbosity < VERB_ALGO)
+			return 0;
+#endif
 #ifndef USE_WINSOCK
 		verbose(VERB_OPS, "sendto failed: %s", strerror(errno));
 #else

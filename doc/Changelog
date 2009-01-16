@@ -1,3 +1,8 @@
+16 January 2009: Wouter
+	- more quiet about ipv6 network failures, i.e. when ipv6 is not
+	  available (network unreachable). Debug still printed on high
+	  verbosity.
+
 15 January 2009: Wouter
 	- bug #229: fixup configure checks for compilation with Solaris 
 	  Sun cc compiler, ./configure CC=/opt/SUNWspro/bin/cc
