@@ -2,6 +2,11 @@
 	- more quiet about ipv6 network failures, i.e. when ipv6 is not
 	  available (network unreachable). Debug still printed on high
 	  verbosity.
+	- unbound-host -4 and -6 options. Stops annoying ipv6 errors when
+	  debugging with unbound -4 -d ... 
+	- more cycle detection for NS-check, addr-check, root-prime and
+	  stub-prime queries in the iterator.  Avoids possible deadlock
+	  when priming fails.
 
 15 January 2009: Wouter
 	- bug #229: fixup configure checks for compilation with Solaris 

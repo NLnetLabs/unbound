@@ -14,7 +14,7 @@
 .SH "SYNOPSIS"
 .LP
 .B unbound\-host
-.RB [ \-vdhr ]
+.RB [ \-vdhr46 ]
 .RB [ \-c 
 .IR class ]
 .RB [ \-t
@@ -87,6 +87,12 @@ Read /etc/resolv.conf, and use the forward DNS servers from there (those could
 have been set by DHCP).  More info in
 .IR resolv.conf (5).
 Breaks validation if those servers do not support DNSSEC.
+.TP
+.B \-4
+Use solely the IPv4 network for sending packets.
+.TP
+.B \-6
+Use solely the IPv6 network for sending packets.
 .SH "EXAMPLES"
 .LP
 Some examples of use. The keys shown below are fakes, thus a security failure

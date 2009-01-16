@@ -51,7 +51,7 @@ static int verb = 0;
 static void
 usage()
 {
-	printf("Usage:	unbound-host [-vdhr] [-c class] [-t type] hostname\n");
+	printf("Usage:	unbound-host [-vdhr46] [-c class] [-t type] hostname\n");
 	printf("                     [-y key] [-f keyfile] [-F namedkeyfile]\n");
 	printf("                     [-C configfile]\n");
 	printf("  Queries the DNS for information.\n");
@@ -69,6 +69,8 @@ usage()
 	printf("      			breaks validation if the fwder does not do DNSSEC.\n");
 	printf("    -v			be more verbose, shows nodata and security.\n");
 	printf("    -d			debug, traces the action, -d -d shows more.\n");
+	printf("    -4			use ipv4 network, avoid ipv6.\n");
+	printf("    -6			use ipv6 network, avoid ipv4.\n");
 	printf("    -h			show this usage help.\n");
 	printf("Version %s\n", PACKAGE_VERSION);
 	printf("BSD licensed, see LICENSE in source package for details.\n");
@@ -413,8 +415,14 @@ int main(int argc, char* argv[])
 	}
 
 	/* parse the options */
-	while( (c=getopt(argc, argv, "F:c:df:hrt:vy:C:")) != -1) {
+	while( (c=getopt(argc, argv, "46F:c:df:hrt:vy:C:")) != -1) {
 		switch(c) {
+		case '4':
+			check_ub_res(ub_ctx_set_option(ctx, "do-ip6:", "no"));
+			break;
+		case '6':
+			check_ub_res(ub_ctx_set_option(ctx, "do-ip4:", "no"));
+			break;
 		case 'c':
 			qclass = optarg;
 			break;
