@@ -56,8 +56,22 @@ o on windows version, implement that OS ancillary data capabilities for
   interface-automatic. IPPKTINFO, IP6PKTINFO for WSARecvMsg, WSASendMsg.
 o local-zone directive with authority service, full authority server 
   is a non-goal.
+ 
 o configure option to force use of builtin ldns tarball.
-o include /etc/pki/dnssec-keys/production/*.conf with wildcard support.
 o make so revoke bit keys cannot verify signatures
 o option to print UTC timestamps instead of epoch in seconds.
 o print querier IP address on high loglevels.
+
+o infra and lame cache: easier size config (in Mb), show usage in graphs.
+o #226: unbound_control dump_requestlist
+o #227: unbound_control flush_stats
+o unbound_control get_stats_noreset
+o unbound_control forward [addr {addr}] | [off]
+o #231: unbound_checkconf options to output config file data.
+o config entry to denote that a zone is to be treated as unsigned (even if 
+  a DS exists to higher trust anchor).
+o see if we can use daemon(3), cleaner posix usage.
+o see if we can include the python bindings (contrib).
+o see if we can suport var:value (nospace) by parser.
+o remote control read ssl information while priviledged.
+o call initgroups(3) to drop secondary group permissions.

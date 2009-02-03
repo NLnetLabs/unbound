@@ -1,3 +1,7 @@
+3 February 2009: Wouter
+	- noted feature requests in doc/TODO.
+	- printout more detailed errors on ssl certificate loading failures.
+
 16 January 2009: Wouter
 	- more quiet about ipv6 network failures, i.e. when ipv6 is not
 	  available (network unreachable). Debug still printed on high

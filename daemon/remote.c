@@ -170,10 +170,21 @@ daemon_remote_create(struct worker* worker)
 			s_key += strlen(cfg->chrootdir);
 	}
 	verbose(VERB_ALGO, "setup SSL certificates");
-	if (!SSL_CTX_use_certificate_file(rc->ctx,s_cert,SSL_FILETYPE_PEM)
-		|| !SSL_CTX_use_PrivateKey_file(rc->ctx,s_key,SSL_FILETYPE_PEM)
-		|| !SSL_CTX_check_private_key(rc->ctx)) {
-		log_crypto_err("Error setting up SSL_CTX key and cert");
+	if (!SSL_CTX_use_certificate_file(rc->ctx,s_cert,SSL_FILETYPE_PEM)) {
+		log_err("Error for server-cert-file: %s", s_cert);
+		log_crypto_err("Error in SSL_CTX use_certificate_file");
+		daemon_remote_delete(rc);
+		return NULL;
+	}
+	if(!SSL_CTX_use_PrivateKey_file(rc->ctx,s_key,SSL_FILETYPE_PEM)) {
+		log_err("Error for server-key-file: %s", s_key);
+		log_crypto_err("Error in SSL_CTX use_PrivateKey_file");
+		daemon_remote_delete(rc);
+		return NULL;
+	}
+	if(!SSL_CTX_check_private_key(rc->ctx)) {
+		log_err("Error for server-key-file: %s", s_key);
+		log_crypto_err("Error in SSL_CTX check_private_key");
 		daemon_remote_delete(rc);
 		return NULL;
 	}
