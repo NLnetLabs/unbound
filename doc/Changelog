@@ -8,7 +8,7 @@
 	  available (network unreachable). Debug still printed on high
 	  verbosity.
 	- unbound-host -4 and -6 options. Stops annoying ipv6 errors when
-	  debugging with unbound -4 -d ... 
+	  debugging with unbound-host -4 -d ... 
 	- more cycle detection for NS-check, addr-check, root-prime and
 	  stub-prime queries in the iterator.  Avoids possible deadlock
 	  when priming fails.
