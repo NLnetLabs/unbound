@@ -2,10 +2,10 @@
 # Process this file with autoconf to produce a configure script.
 AC_PREREQ(2.56)
 
-AC_INIT(unbound, 1.2.1, unbound-bugs@nlnetlabs.nl, unbound)
+AC_INIT(unbound, 1.3.0, unbound-bugs@nlnetlabs.nl, unbound)
 
 LIBUNBOUND_CURRENT=0
-LIBUNBOUND_REVISION=18
+LIBUNBOUND_REVISION=19
 LIBUNBOUND_AGE=0
 # 1.0.0 had 0:12:0
 # 1.0.1 had 0:13:0
@@ -14,6 +14,7 @@ LIBUNBOUND_AGE=0
 # 1.1.1 had 0:16:0
 # 1.2.0 had 0:17:0
 # 1.2.1 had 0:18:0
+# 1.3.0 had 0:19:0
 
 #   Current  -- the number of the binary API that we're implementing
 #   Revision -- which iteration of the implementation of the binary
