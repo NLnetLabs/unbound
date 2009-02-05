@@ -1,5 +1,12 @@
 5 February 2009: Wouter
 	- ldns 1.5.0 rc as tarball included.
+	- 1.3.0 development continues:
+	  change in libunbound API: ub_cancel can return an error, that
+	  the async_id did not exist, or that it was already delivered.
+	  The result could have been delivered just before the cancel 
+	  routine managed to acquire the lock, so a caller may get the
+	  result at the same time they call cancel.  For this case, 
+	  ub_cancel tries to return an error code.
 
 4 February 2009: Wouter
 	- tag for release 1.2.1.

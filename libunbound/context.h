@@ -184,7 +184,9 @@ enum ub_ctx_err {
 	/** error in pipe communication with async bg worker */
 	UB_PIPE = -8,
 	/** error reading from file (resolv.conf) */
-	UB_READFILE = -9
+	UB_READFILE = -9,
+	/** error async_id does not exist or result already been delivered */
+	UB_NOID = -10
 };
 
 /**

@@ -642,7 +642,7 @@ ub_cancel(struct ub_ctx* ctx, int async_id)
 	if(!q || !q->async) {
 		/* it is not there, so nothing to do */
 		lock_basic_unlock(&ctx->cfglock);
-		return UB_NOERROR;
+		return UB_NOID;
 	}
 	log_assert(q->async);
 	q->cancelled = 1;
@@ -703,6 +703,7 @@ ub_strerror(int err)
 		case UB_AFTERFINAL: return "setting change after finalize";
 		case UB_PIPE: return "error in pipe communication with async";
 		case UB_READFILE: return "error reading file";
+		case UB_NOID: return "error async_id does not exist";
 		default: return "unknown error";
 	}
 }

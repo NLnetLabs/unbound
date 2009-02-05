@@ -42,6 +42,7 @@
 
 #include "config.h"
 #include "libunbound/unbound.h"
+#include "libunbound/context.h"
 #include "util/locks.h"
 #include "util/log.h"
 
@@ -301,7 +302,8 @@ ext_thread(void* arg)
 				r = ub_cancel(inf->ctx, async_ids[i-100].id);
 				async_ids[i-100].cancel=1;
 				lock_basic_unlock(&async_ids[i-100].lock);
-				checkerr("ub_cancel", r);
+				if(r != UB_NOID) 
+					checkerr("ub_cancel", r);
 			}
 		} else if(inf->thread_num > NUMTHR/2) {
 			/* async */
@@ -467,7 +469,8 @@ int main(int argc, char** argv)
 		for(i=0; i<argc; i++) {
 			fprintf(stderr, "cancel %s\n", argv[i]);
 			r = ub_cancel(ctx, lookups[i].async_id);
-			checkerr("ub_cancel", r);
+			if(r != UB_NOID) 
+				checkerr("ub_cancel", r);
 		}
 		num_wait = 0;
 	}

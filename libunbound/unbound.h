@@ -449,6 +449,11 @@ int ub_resolve_async(struct ub_ctx* ctx, char* name, int rrtype,
  * @param ctx: context.
  * @param async_id: which query to cancel.
  * @return 0 if OK, else error.
+ * This routine can return an error if the async_id passed does not exist
+ * or has already been delivered. If another thread is processing results
+ * at the same time, the result may be delivered at the same time and the
+ * cancel fails with an error.  Also the cancel can fail due to a system
+ * error, no memory or socket failures.
  */
 int ub_cancel(struct ub_ctx* ctx, int async_id);
 

@@ -14,7 +14,7 @@ LIBUNBOUND_AGE=0
 # 1.1.1 had 0:16:0
 # 1.2.0 had 0:17:0
 # 1.2.1 had 0:18:0
-# 1.3.0 had 0:19:0
+# 1.3.0 had 1:0:1
 
 #   Current  -- the number of the binary API that we're implementing
 #   Revision -- which iteration of the implementation of the binary
