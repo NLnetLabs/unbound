@@ -11,6 +11,10 @@
 	- MacOSX Leopard cleaner text output from configure.
 	- initgroups(3) is called to drop secondary group permissions, if
 	  applicable.
+	- configure option --with-ldns-builtin forces the use of the 
+	  inluded ldns package with the unbound source.  The -I include
+	  is put before the others, so it avoids bad include files from
+	  an older ldns install.
 
 4 February 2009: Wouter
 	- tag for release 1.2.1.

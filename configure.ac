@@ -1032,28 +1032,40 @@ AC_REPLACE_FUNCS(gmtime_r)
 
 # check this after all other compilation checks, since the linking of the lib
 # may break checks after this.
-AC_ARG_WITH(ldns,
-        AC_HELP_STRING([--with-ldns=PATH        specify prefix of path of ldns library to use])
-	, [ specialldnsdir="$withval"
-	CPPFLAGS="$CPPFLAGS -I$withval/include"
-	LDFLAGS="$LDFLAGS -L$withval -L$withval/lib -lldns"
+use_ldns_builtin="no"
+AC_ARG_WITH(ldns, AC_HELP_STRING([--with-ldns=PATH], 
+	[specify prefix of path of ldns library to use]), 
+	[ specialldnsdir="$withval"
+	CPPFLAGS="-I$withval/include $CPPFLAGS"
+	LDFLAGS="-L$withval -L$withval/lib $LDFLAGS -lldns"
 	ldnsdir="$withval"
 	AC_SUBST(ldnsdir)
 ])
 
-AC_CHECK_LIB(ldns, ldns_buffer_copy, [
-dnl ldns was found, check compat functions
-AC_CHECK_LIB(ldns, [ldns_rr_free])
-AC_CHECK_FUNC([ldns_b32_ntop_extended_hex],, [
-	AC_MSG_ERROR([ldns version too old, need >=1.4.0])])
-] , [
+AC_ARG_WITH(ldns-builtin, AC_HELP_STRING([--with-ldns-builtin], 
+	[forces use of package included with this one]), [ 
+	use_ldns_builtin="yes"
+])
+
+# check if ldns is good enough
+if test "$use_ldns_builtin" = "no"; then
+	AC_CHECK_LIB(ldns, ldns_buffer_copy, [
+	dnl ldns was found, check compat functions
+	AC_CHECK_LIB(ldns, [ldns_rr_free])
+	AC_CHECK_FUNC([ldns_b32_ntop_extended_hex],, [
+		AC_MSG_ERROR([ldns version too old, need >=1.4.0])])
+	] , [
+		use_ldns_builtin="yes"
+	])
+fi
+
+if test "$use_ldns_builtin" = "yes"; then
 dnl use the builtin ldns-src.tar.gz file to build ldns.
 if test ! -f $srcdir/ldns-src.tar.gz; then
 	AC_MSG_ERROR([No ldns library found and no ldns-src.tar.gz, use --with-ldns=path.])
 fi
 echo "****************************************************************"
 echo "***                                                          ***"
-echo "*** ldns library not found (--with-ldns= to specify by hand) ***"
 echo "*** Building ldns library from package included in this one. ***"
 echo "***                                                          ***"
 echo "****************************************************************"
@@ -1065,7 +1077,8 @@ AC_CONFIG_SUBDIRS([ldns-src])
 CPPFLAGS="-I$ldnsdir/include $CPPFLAGS"
 LDFLAGS="$LDFLAGS $ldnsdir/*.lo"
 AC_SUBST(ldnsdir)
-])
+fi  dnl end of use_ldns_builtin == yes
+
 LDFLAGS="$LATE_LDFLAGS $LDFLAGS"
 
 AC_DEFINE_UNQUOTED([MAXSYSLOGMSGLEN], [5120], [Define to the maximum message length to pass to syslog.])

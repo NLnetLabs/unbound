@@ -57,7 +57,6 @@ o on windows version, implement that OS ancillary data capabilities for
 o local-zone directive with authority service, full authority server 
   is a non-goal.
  
-o configure option to force use of builtin ldns tarball.
 o make so revoke bit keys cannot verify signatures
 o option to print UTC timestamps instead of epoch in seconds.
 o print querier IP address on high loglevels.
@@ -74,4 +73,3 @@ o see if we can use daemon(3), cleaner posix usage.
 o see if we can include the python bindings (contrib).
 o see if we can suport var:value (nospace) by parser.
 o remote control read ssl information while priviledged.
-o call initgroups(3) to drop secondary group permissions.
