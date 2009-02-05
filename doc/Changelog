@@ -7,6 +7,8 @@
 	  routine managed to acquire the lock, so a caller may get the
 	  result at the same time they call cancel.  For this case, 
 	  ub_cancel tries to return an error code.
+	  Fixes race condition in ub_cancel() libunbound function.
+	- MacOSX Leopard cleaner text output from configure.
 
 4 February 2009: Wouter
 	- tag for release 1.2.1.

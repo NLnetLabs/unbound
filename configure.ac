@@ -110,7 +110,7 @@ eval "cv_prog_cc_flag_$cache=yes"
 else
 eval "cv_prog_cc_flag_$cache=no"
 fi
-rm -f conftest*
+rm -f conftest conftest.o conftest.c
 ])
 if eval "test \"`echo '$cv_prog_cc_flag_'$cache`\" = yes"; then
 AC_MSG_RESULT(yes)
@@ -161,7 +161,7 @@ eval "cv_prog_cc_flag_needed_$cache=fail"
 fi
 ]
 fi
-rm -f conftest
+rm -f conftest conftest.c conftest.o
 ])
 if eval "test \"`echo '$cv_prog_cc_flag_needed_'$cache`\" = yes"; then
 AC_MSG_RESULT(yes)
