@@ -15,6 +15,7 @@
 	  inluded ldns package with the unbound source.  The -I include
 	  is put before the others, so it avoids bad include files from
 	  an older ldns install.
+	- daemon(3) posix call is used when available.
 
 4 February 2009: Wouter
 	- tag for release 1.2.1.

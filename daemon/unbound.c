@@ -294,6 +294,11 @@ checkoldpid(char* pidfile, int inchroot)
 static void
 detach(void)
 {
+#ifdef HAVE_DAEMON
+	/* use POSIX daemon(3) function */
+	if(daemon(1, 0) != 0)
+		fatal_exit("daemon failed: %s", strerror(errno));
+#else /* no HAVE_DAEMON */
 #ifdef HAVE_WORKING_FORK
 	int fd;
 	/* Take off... */
@@ -319,6 +324,7 @@ detach(void)
 			(void)close(fd);
 	}
 #endif /* HAVE_WORKING_FORK */
+#endif /* HAVE_DAEMON */
 }
 
 /** daemonize, drop user priviliges and chroot if needed */

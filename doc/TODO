@@ -69,7 +69,6 @@ o unbound_control forward [addr {addr}] | [off]
 o #231: unbound_checkconf options to output config file data.
 o config entry to denote that a zone is to be treated as unsigned (even if 
   a DS exists to higher trust anchor).
-o see if we can use daemon(3), cleaner posix usage.
 o see if we can include the python bindings (contrib).
 o see if we can suport var:value (nospace) by parser.
 o remote control read ssl information while priviledged.
