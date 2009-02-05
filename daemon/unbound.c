@@ -56,6 +56,9 @@
 #ifdef HAVE_PWD_H
 #include <pwd.h>
 #endif
+#ifdef HAVE_GRP_H
+#include <grp.h>
+#endif
 
 #ifdef HAVE_SYS_RESOURCE_H
 #include <sys/resource.h>
@@ -451,6 +454,11 @@ perform_setup(struct daemon* daemon, struct config_file* cfg, int debug_mode,
 	/* drop permissions after chroot, getpwnam, pidfile, syslog done*/
 #ifdef HAVE_GETPWNAM
 	if(cfg->username && cfg->username[0]) {
+#ifdef HAVE_INITGROUPS
+		if(initgroups(cfg->username, gid) != 0)
+			log_warn("unable to initgroups %s: %s",
+				cfg->username, strerror(errno));
+#endif
 #ifdef HAVE_SETRESGID
 		if(setresgid(gid,gid,gid) != 0)
 #elif defined(HAVE_SETREGID) && !defined(DARWIN_BROKEN_SETREUID)

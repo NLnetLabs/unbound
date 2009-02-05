@@ -9,6 +9,8 @@
 	  ub_cancel tries to return an error code.
 	  Fixes race condition in ub_cancel() libunbound function.
 	- MacOSX Leopard cleaner text output from configure.
+	- initgroups(3) is called to drop secondary group permissions, if
+	  applicable.
 
 4 February 2009: Wouter
 	- tag for release 1.2.1.
