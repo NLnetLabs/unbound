@@ -3,6 +3,9 @@
 	- iana portlist updated.
 	- fixup EOL in include directive (reported by Paul Wouters).
 	  You can no longer specify newlines in the names of included files.
+	- config parser changed. Gives some syntax errors closer to where they 
+	  occurred. Does not enforce a space after keyword anymore.
+	  Does not allow literal newlines inside quoted strings anymore.
 
 5 February 2009: Wouter
 	- ldns 1.5.0 rc as tarball included.
