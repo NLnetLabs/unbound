@@ -71,6 +71,8 @@ static int logging_to_syslog = 0;
 #endif /* HAVE_SYSLOG_H */
 /** time to print in log, if NULL, use time(2) */
 static uint32_t* log_now = NULL;
+/** print time in UTC or in secondsfrom1970 */
+static int log_time_asc = 0;
 
 void
 log_init(const char* filename, int use_syslog, const char* chrootdir)
@@ -139,13 +141,20 @@ void log_set_time(uint32_t* t)
 	log_now = t;
 }
 
+void log_set_time_asc(int use_asc)
+{
+	log_time_asc = use_asc;
+}
+
 void
 log_vmsg(int pri, const char* type,
 	const char *format, va_list args)
 {
 	char message[MAXSYSLOGMSGLEN];
+	char tmbuf[32];
 	unsigned int* tid = (unsigned int*)ub_thread_key_get(logkey);
-	uint32_t now;
+	time_t now;
+	struct tm tm;
 	(void)pri;
 	vsnprintf(message, sizeof(message), format, args);
 #ifdef HAVE_SYSLOG_H
@@ -157,8 +166,16 @@ log_vmsg(int pri, const char* type,
 #endif /* HAVE_SYSLOG_H */
 	if(!logfile) return;
 	if(log_now)
-		now = *log_now;
-	else	now = (uint32_t)time(NULL);
+		now = (time_t)*log_now;
+	else	now = (time_t)time(NULL);
+#if defined(HAVE_STRFTIME) && defined(HAVE_LOCALTIME_R) 
+	if(log_time_asc && strftime(tmbuf, sizeof(tmbuf), "%b %d %H:%M:%S",
+		localtime_r(&now, &tm))%(sizeof(tmbuf)) != 0) {
+		/* %sizeof buf!=0 because old strftime returned max on error */
+		fprintf(logfile, "%s %s[%d:%x] %s: %s\n", tmbuf, 
+			ident, (int)getpid(), tid?*tid:0, type, message);
+	} else
+#endif
 	fprintf(logfile, "[%u] %s[%d:%x] %s: %s\n", (unsigned)now, 
 		ident, (int)getpid(), tid?*tid:0, type, message);
 	fflush(logfile);

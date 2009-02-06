@@ -115,6 +115,14 @@ void log_ident_set(const char* id);
 void log_set_time(uint32_t* t);
 
 /**
+ * Set if the time value is printed ascii or decimal in log entries.
+ * @param use_asc: if true, ascii is printed, otherwise decimal.
+ *	If the conversion fails or you have no time functions, 
+ *	decimal is printed.
+ */
+void log_set_time_asc(int use_asc);
+
+/**
  * Log informational message.
  * Pass printf formatted arguments. No trailing newline is needed.
  * @param format: printf-style format string. Arguments follow.

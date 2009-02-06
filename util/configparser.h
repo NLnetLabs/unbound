@@ -136,7 +136,8 @@
      VAR_LOCAL_DATA_PTR = 352,
      VAR_JOSTLE_TIMEOUT = 353,
      VAR_STUB_PRIME = 354,
-     VAR_UNWANTED_REPLY_THRESHOLD = 355
+     VAR_UNWANTED_REPLY_THRESHOLD = 355,
+     VAR_LOG_TIME_ASCII = 356
    };
 #endif
 /* Tokens.  */
@@ -238,6 +239,7 @@
 #define VAR_JOSTLE_TIMEOUT 353
 #define VAR_STUB_PRIME 354
 #define VAR_UNWANTED_REPLY_THRESHOLD 355
+#define VAR_LOG_TIME_ASCII 356
 
 
 
@@ -249,7 +251,7 @@ typedef union YYSTYPE
 	char*	str;
 }
 /* Line 1489 of yacc.c.  */
-#line 253 "util/configparser.h"
+#line 255 "util/configparser.h"
 	YYSTYPE;
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */
 # define YYSTYPE_IS_DECLARED 1

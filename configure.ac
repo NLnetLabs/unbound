@@ -854,7 +854,7 @@ AC_CHECK_GETADDRINFO_WITH_INCLUDES
 if test $ac_cv_func_getaddrinfo = no; then
 AC_LIBOBJ([fake-rfc2553])
 fi
-AC_CHECK_FUNCS([tzset sigprocmask fcntl getpwnam getrlimit setsid sbrk chroot kill sleep usleep random srandom recvmsg sendmsg writev setresuid setreuid setresgid setregid glob initgroups daemon])
+AC_CHECK_FUNCS([tzset sigprocmask fcntl getpwnam getrlimit setsid sbrk chroot kill sleep usleep random srandom recvmsg sendmsg writev setresuid setreuid setresgid setregid glob initgroups daemon strftime localtime_r])
 
 # check if setreuid en setregid fail, on MacOSX10.4(darwin8).
 if echo $build_os | grep darwin8 > /dev/null; then

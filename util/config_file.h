@@ -171,6 +171,8 @@ struct config_file {
 
 	/** should log messages be sent to syslogd */
 	int use_syslog;
+	/** log timestamp in ascii UTC */
+	int log_time_ascii;
 
 	/** do not report identity (id.server, hostname.bind) */
 	int hide_identity;

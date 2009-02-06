@@ -199,6 +199,7 @@ neg-cache-size{COLON}		{ YDVAR(1, VAR_NEG_CACHE_SIZE) }
 val-nsec3-keysize-iterations{COLON}	{ 
 				  YDVAR(1, VAR_VAL_NSEC3_KEYSIZE_ITERATIONS) }
 use-syslog{COLON}		{ YDVAR(1, VAR_USE_SYSLOG) }
+log-time-ascii{COLON}		{ YDVAR(1, VAR_LOG_TIME_ASCII) }
 local-zone{COLON}		{ YDVAR(2, VAR_LOCAL_ZONE) }
 local-data{COLON}		{ YDVAR(1, VAR_LOCAL_DATA) }
 local-data-ptr{COLON}		{ YDVAR(1, VAR_LOCAL_DATA_PTR) }

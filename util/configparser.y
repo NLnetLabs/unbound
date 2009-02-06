@@ -96,7 +96,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_CONTROL_INTERFACE VAR_CONTROL_PORT VAR_SERVER_KEY_FILE
 %token VAR_SERVER_CERT_FILE VAR_CONTROL_KEY_FILE VAR_CONTROL_CERT_FILE
 %token VAR_EXTENDED_STATISTICS VAR_LOCAL_DATA_PTR VAR_JOSTLE_TIMEOUT
-%token VAR_STUB_PRIME VAR_UNWANTED_REPLY_THRESHOLD
+%token VAR_STUB_PRIME VAR_UNWANTED_REPLY_THRESHOLD VAR_LOG_TIME_ASCII
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -143,7 +143,7 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_harden_referral_path | server_private_address |
 	server_private_domain | server_extended_statistics | 
 	server_local_data_ptr | server_jostle_timeout | 
-	server_unwanted_reply_threshold
+	server_unwanted_reply_threshold | server_log_time_ascii
 	;
 stubstart: VAR_STUB_ZONE
 	{
@@ -371,6 +371,15 @@ server_use_syslog: VAR_USE_SYSLOG STRING
 			yyerror("no syslog services are available. "
 				"(reconfigure and compile to add)");
 #endif
+		free($2);
+	}
+	;
+server_log_time_ascii: VAR_LOG_TIME_ASCII STRING
+	{
+		OUTYY(("P(server_log_time_ascii:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->log_time_ascii = (strcmp($2, "yes")==0);
 		free($2);
 	}
 	;

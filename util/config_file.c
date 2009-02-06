@@ -83,6 +83,7 @@ config_create()
 	cfg->do_udp = 1;
 	cfg->do_tcp = 1;
 	cfg->use_syslog = 1;
+	cfg->log_time_ascii = 0;
 #ifndef USE_WINSOCK
 	cfg->outgoing_num_ports = 256;
 #else
@@ -805,6 +806,7 @@ void
 config_apply(struct config_file* config)
 {
 	MAX_TTL = (uint32_t)config->max_ttl;
+	log_set_time_asc(config->log_time_ascii);
 }
 
 /** 

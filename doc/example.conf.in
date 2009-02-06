@@ -192,6 +192,9 @@ server:
 	# log to, with identity "unbound". If yes, it overrides the logfile.
 	# use-syslog: yes 
 
+	# print UTC timestamp in ascii to logfile, default is secs since 1970.
+	# log-time-ascii: no
+
 	# the pid file. Can be an absolute path outside of chroot/work dir.
 	# pidfile: "@UNBOUND_PIDFILE@"
 	
