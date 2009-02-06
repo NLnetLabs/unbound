@@ -58,7 +58,6 @@ o local-zone directive with authority service, full authority server
   is a non-goal.
  
 o make so revoke bit keys cannot verify signatures
-o option to print UTC timestamps instead of epoch in seconds.
 
 o infra and lame cache: easier size config (in Mb), show usage in graphs.
 o #226: unbound_control dump_requestlist
