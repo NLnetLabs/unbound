@@ -282,7 +282,8 @@ and cancel the request if needed.
 .TP
 .B ub_cancel
 Cancel an async query in progress.  This may return an error if the query
-does not exist, or was already delivered.
+does not exist, or the query is already being delivered, in that case you 
+may still get a callback for the query.
 .TP
 .B ub_resolve_free
 Free struct ub_result contents after use.
