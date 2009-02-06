@@ -6,6 +6,7 @@
 	- config parser changed. Gives some syntax errors closer to where they 
 	  occurred. Does not enforce a space after keyword anymore.
 	  Does not allow literal newlines inside quoted strings anymore.
+	- verbosity level 5 logs customer IP for new requestlist entries.
 
 5 February 2009: Wouter
 	- ldns 1.5.0 rc as tarball included.

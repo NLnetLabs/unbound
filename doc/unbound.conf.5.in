@@ -86,10 +86,9 @@ clause.
 The verbosity number, level 0 means no verbosity, only errors. Level 1 
 gives operational information. Level 2 gives detailed operational
 information. Level 3 gives query level information, output per query. 
-Level 4 gives algorithm level information.  
-Default is level 1. The verbosity can also be increased from the commandline,
-see
-\fIunbound\fR(8).
+Level 4 gives algorithm level information.  Level 5 logs client 
+identification for cache misses.  Default is level 1. 
+The verbosity can also be increased from the commandline, see \fIunbound\fR(8).
 .TP
 .B statistics\-interval: \fI<seconds>
 The number of seconds between printing statistics to the log for every thread.

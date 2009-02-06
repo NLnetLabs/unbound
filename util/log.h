@@ -60,7 +60,9 @@ enum verbosity_value {
  /** 3 - query level information */
  	VERB_QUERY,
  /** 4 - algorithm level information */
- 	VERB_ALGO
+ 	VERB_ALGO,
+ /** 5 - querier client information */
+	VERB_CLIENT
 };
 
 /** The global verbosity setting */
