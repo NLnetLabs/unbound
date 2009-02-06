@@ -14,7 +14,9 @@ unbound-checkconf
 .SH "SYNOPSIS"
 .B unbound-checkconf
 .RB [ \-h ]
-.IR cfgfile
+.RB [ \-o
+.IR option ]
+.RI [ cfgfile ]
 .SH "DESCRIPTION"
 .B Unbound-checkconf
 checks the configuration file for the
@@ -27,6 +29,10 @@ The available options are:
 .TP
 .B \-h
 Show the version and commandline option help.
+.TP
+.B \-o\fI option
+If given, after checking the config file the value of this option is 
+printed to stdout.  For "" (disabled) options an empty line is printed.
 .TP
 .I cfgfile
 The config file to read with settings for unbound. It is checked.

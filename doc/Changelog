@@ -11,6 +11,7 @@
 	- new option log-time-ascii: yes  if you enable it prints timestamps
 	  in the log file as Feb 06 13:45:26 (like syslog does).
 	- detect event_base_new in libevent-1.4.1 and later and use it.
+	- #231 unbound-checkconf -o option prints that value from config file.
 
 5 February 2009: Wouter
 	- ldns 1.5.0 rc as tarball included.
