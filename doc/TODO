@@ -64,7 +64,6 @@ o #226: unbound_control dump_requestlist
 o #227: unbound_control flush_stats
 o unbound_control get_stats_noreset
 o unbound_control forward [addr {addr}] | [off]
-o #231: unbound_checkconf options to output config file data.
 o config entry to denote that a zone is to be treated as unsigned (even if 
   a DS exists to higher trust anchor).
 o see if we can include the python bindings (contrib).
