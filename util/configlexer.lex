@@ -258,7 +258,8 @@ include{COLON}		{ LEXOUT(("v(%s) ", yytext)); BEGIN(include); }
         BEGIN(INITIAL);
 }
 <include_quoted>{DQANY}*	{ LEXOUT(("ISTR(%s) ", yytext)); yymore(); }
-<include_quoted>{NEWLINE}	{ cfg_parser->line++; yymore(); }
+<include_quoted>{NEWLINE}	{ yyerror("EOL before \" in include name"); 
+				  cfg_parser->line++; BEGIN(INITIAL); }
 <include_quoted>\"	{
 	LEXOUT(("IQE "));
 	yytext[yyleng - 1] = '\0';

@@ -2223,11 +2223,12 @@ case 108:
 /* rule 108 can match eol */
 YY_RULE_SETUP
 #line 261 "util/configlexer.lex"
-{ cfg_parser->line++; yymore(); }
+{ yyerror("EOL before \" in include name"); 
+				  cfg_parser->line++; BEGIN(INITIAL); }
 	YY_BREAK
 case 109:
 YY_RULE_SETUP
-#line 262 "util/configlexer.lex"
+#line 263 "util/configlexer.lex"
 {
 	LEXOUT(("IQE "));
 	yytext[yyleng - 1] = '\0';
@@ -2236,7 +2237,7 @@ YY_RULE_SETUP
 }
 	YY_BREAK
 case YY_STATE_EOF(INITIAL):
-#line 268 "util/configlexer.lex"
+#line 269 "util/configlexer.lex"
 {
 	yy_set_bol(1); /* Set beginning of line, so "^" rules match.  */
 	if (config_include_stack_ptr == 0) {
@@ -2249,16 +2250,16 @@ case YY_STATE_EOF(INITIAL):
 	YY_BREAK
 case 110:
 YY_RULE_SETUP
-#line 278 "util/configlexer.lex"
+#line 279 "util/configlexer.lex"
 { LEXOUT(("unquotedstr(%s) ", yytext)); 
 			yylval.str = strdup(yytext); return STRING; }
 	YY_BREAK
 case 111:
 YY_RULE_SETUP
-#line 281 "util/configlexer.lex"
+#line 282 "util/configlexer.lex"
 ECHO;
 	YY_BREAK
-#line 2261 "<stdout>"
+#line 2262 "<stdout>"
 
 	case YY_END_OF_BUFFER:
 		{
@@ -3217,7 +3218,7 @@ void yyfree (void * ptr )
 
 #define YYTABLES_NAME "yytables"
 
-#line 281 "util/configlexer.lex"
+#line 282 "util/configlexer.lex"
 
 
 

@@ -1,6 +1,8 @@
 6 February 2009: Wouter
 	- contrib contains specfile for fedora 1.2.1 (from Paul Wouters).
 	- iana portlist updated.
+	- fixup EOL in include directive (reported by Paul Wouters).
+	  You can no longer specify newlines in the names of included files.
 
 5 February 2009: Wouter
 	- ldns 1.5.0 rc as tarball included.
