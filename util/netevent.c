@@ -160,7 +160,11 @@ comm_base_create(int sigs)
 		b->eb->base=(struct event_base *)ev_loop_new(EVFLAG_AUTO);
 #  else
 	(void)sigs;
+#    ifdef HAVE_EVENT_BASE_NEW
+	b->eb->base = event_base_new();
+#    else
 	b->eb->base = event_init();
+#    endif
 #  endif
 #endif
 	if(!b->eb->base) {

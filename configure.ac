@@ -742,7 +742,8 @@ large outgoing port ranges.  ])
 	AC_SEARCH_LIBS(event_set, [event])
 	AC_CHECK_HEADERS([event.h],,, [AC_INCLUDES_DEFAULT])
 	AC_CHECK_FUNCS([event_base_free]) # only in libevent 1.2 and later
-	AC_CHECK_FUNCS([event_base_once]) # only in libevent 1.4? and later
+	AC_CHECK_FUNCS([event_base_once]) # only in libevent 1.4.1 and later
+	AC_CHECK_FUNCS([event_base_new]) # only in libevent 1.4.1 and later
 	AC_CHECK_FUNCS([event_base_get_method]) # only in libevent 1.4.3 and later
 	AC_CHECK_FUNCS([ev_loop]) # only in libev. (tested on 3.51)
 	if test -n "$BAK_LDFLAGS"; then
