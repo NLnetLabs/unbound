@@ -300,7 +300,8 @@ ext_thread(void* arg)
 			if(i > 100) {
 				lock_basic_lock(&async_ids[i-100].lock);
 				r = ub_cancel(inf->ctx, async_ids[i-100].id);
-				async_ids[i-100].cancel=1;
+				if(r != UB_NOID)
+					async_ids[i-100].cancel=1;
 				lock_basic_unlock(&async_ids[i-100].lock);
 				if(r != UB_NOID) 
 					checkerr("ub_cancel", r);
