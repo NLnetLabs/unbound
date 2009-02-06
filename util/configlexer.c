@@ -2131,26 +2131,28 @@ case YY_STATE_EOF(quotedstring):
 {
         yyerror("EOF inside quoted string");
 	if(--num_args == 0) { BEGIN(INITIAL); }
+	else		    { BEGIN(val); }
 }
 	YY_BREAK
 case 95:
 YY_RULE_SETUP
-#line 224 "util/configlexer.lex"
+#line 225 "util/configlexer.lex"
 { LEXOUT(("STR(%s) ", yytext)); yymore(); }
 	YY_BREAK
 case 96:
 /* rule 96 can match eol */
 YY_RULE_SETUP
-#line 225 "util/configlexer.lex"
+#line 226 "util/configlexer.lex"
 { yyerror("newline inside quoted string, no end \""); 
 			  cfg_parser->line++; BEGIN(INITIAL); }
 	YY_BREAK
 case 97:
 YY_RULE_SETUP
-#line 227 "util/configlexer.lex"
+#line 228 "util/configlexer.lex"
 {
         LEXOUT(("QE "));
 	if(--num_args == 0) { BEGIN(INITIAL); }
+	else		    { BEGIN(val); }
         yytext[yyleng - 1] = '\0';
 	yylval.str = strdup(yytext);
 	if(!yylval.str)
@@ -2161,34 +2163,36 @@ YY_RULE_SETUP
 /* Single Quoted strings. Strip leading and ending quotes */
 case 98:
 YY_RULE_SETUP
-#line 238 "util/configlexer.lex"
+#line 240 "util/configlexer.lex"
 { BEGIN(singlequotedstr); LEXOUT(("SQS ")); }
 	YY_BREAK
 case YY_STATE_EOF(singlequotedstr):
-#line 239 "util/configlexer.lex"
+#line 241 "util/configlexer.lex"
 {
         yyerror("EOF inside quoted string");
 	if(--num_args == 0) { BEGIN(INITIAL); }
+	else		    { BEGIN(val); }
 }
 	YY_BREAK
 case 99:
 YY_RULE_SETUP
-#line 243 "util/configlexer.lex"
+#line 246 "util/configlexer.lex"
 { LEXOUT(("STR(%s) ", yytext)); yymore(); }
 	YY_BREAK
 case 100:
 /* rule 100 can match eol */
 YY_RULE_SETUP
-#line 244 "util/configlexer.lex"
+#line 247 "util/configlexer.lex"
 { yyerror("newline inside quoted string, no end '"); 
 			     cfg_parser->line++; BEGIN(INITIAL); }
 	YY_BREAK
 case 101:
 YY_RULE_SETUP
-#line 246 "util/configlexer.lex"
+#line 249 "util/configlexer.lex"
 {
         LEXOUT(("SQE "));
 	if(--num_args == 0) { BEGIN(INITIAL); }
+	else		    { BEGIN(val); }
         yytext[yyleng - 1] = '\0';
 	yylval.str = strdup(yytext);
 	if(!yylval.str)
@@ -2199,12 +2203,12 @@ YY_RULE_SETUP
 /* include: directive */
 case 102:
 YY_RULE_SETUP
-#line 257 "util/configlexer.lex"
+#line 261 "util/configlexer.lex"
 { 
 	LEXOUT(("v(%s) ", yytext)); inc_prev = YYSTATE; BEGIN(include); }
 	YY_BREAK
 case YY_STATE_EOF(include):
-#line 259 "util/configlexer.lex"
+#line 263 "util/configlexer.lex"
 {
         yyerror("EOF inside include directive");
         BEGIN(inc_prev);
@@ -2212,23 +2216,23 @@ case YY_STATE_EOF(include):
 	YY_BREAK
 case 103:
 YY_RULE_SETUP
-#line 263 "util/configlexer.lex"
+#line 267 "util/configlexer.lex"
 { LEXOUT(("ISP ")); /* ignore */ }
 	YY_BREAK
 case 104:
 /* rule 104 can match eol */
 YY_RULE_SETUP
-#line 264 "util/configlexer.lex"
+#line 268 "util/configlexer.lex"
 { LEXOUT(("NL\n")); cfg_parser->line++;}
 	YY_BREAK
 case 105:
 YY_RULE_SETUP
-#line 265 "util/configlexer.lex"
+#line 269 "util/configlexer.lex"
 { LEXOUT(("IQS ")); BEGIN(include_quoted); }
 	YY_BREAK
 case 106:
 YY_RULE_SETUP
-#line 266 "util/configlexer.lex"
+#line 270 "util/configlexer.lex"
 {
 	LEXOUT(("Iunquotedstr(%s) ", yytext));
 	config_start_include(yytext);
@@ -2236,7 +2240,7 @@ YY_RULE_SETUP
 }
 	YY_BREAK
 case YY_STATE_EOF(include_quoted):
-#line 271 "util/configlexer.lex"
+#line 275 "util/configlexer.lex"
 {
         yyerror("EOF inside quoted string");
         BEGIN(inc_prev);
@@ -2244,19 +2248,19 @@ case YY_STATE_EOF(include_quoted):
 	YY_BREAK
 case 107:
 YY_RULE_SETUP
-#line 275 "util/configlexer.lex"
+#line 279 "util/configlexer.lex"
 { LEXOUT(("ISTR(%s) ", yytext)); yymore(); }
 	YY_BREAK
 case 108:
 /* rule 108 can match eol */
 YY_RULE_SETUP
-#line 276 "util/configlexer.lex"
+#line 280 "util/configlexer.lex"
 { yyerror("newline before \" in include name"); 
 				  cfg_parser->line++; BEGIN(inc_prev); }
 	YY_BREAK
 case 109:
 YY_RULE_SETUP
-#line 278 "util/configlexer.lex"
+#line 282 "util/configlexer.lex"
 {
 	LEXOUT(("IQE "));
 	yytext[yyleng - 1] = '\0';
@@ -2266,7 +2270,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case YY_STATE_EOF(INITIAL):
 case YY_STATE_EOF(val):
-#line 284 "util/configlexer.lex"
+#line 288 "util/configlexer.lex"
 {
 	yy_set_bol(1); /* Set beginning of line, so "^" rules match.  */
 	if (config_include_stack_ptr == 0) {
@@ -2279,31 +2283,31 @@ case YY_STATE_EOF(val):
 	YY_BREAK
 case 110:
 YY_RULE_SETUP
-#line 294 "util/configlexer.lex"
+#line 298 "util/configlexer.lex"
 { LEXOUT(("unquotedstr(%s) ", yytext)); 
 			if(--num_args == 0) { BEGIN(INITIAL); }
 			yylval.str = strdup(yytext); return STRING; }
 	YY_BREAK
 case 111:
 YY_RULE_SETUP
-#line 298 "util/configlexer.lex"
+#line 302 "util/configlexer.lex"
 {
 	ub_c_error_msg("unknown keyword '%s'", yytext);
 	}
 	YY_BREAK
 case 112:
 YY_RULE_SETUP
-#line 301 "util/configlexer.lex"
+#line 305 "util/configlexer.lex"
 {
 	ub_c_error_msg("stray '%s'", yytext);
 	}
 	YY_BREAK
 case 113:
 YY_RULE_SETUP
-#line 305 "util/configlexer.lex"
+#line 309 "util/configlexer.lex"
 ECHO;
 	YY_BREAK
-#line 2306 "<stdout>"
+#line 2310 "<stdout>"
 
 	case YY_END_OF_BUFFER:
 		{
@@ -3262,7 +3266,7 @@ void yyfree (void * ptr )
 
 #define YYTABLES_NAME "yytables"
 
-#line 305 "util/configlexer.lex"
+#line 309 "util/configlexer.lex"
 
 
 

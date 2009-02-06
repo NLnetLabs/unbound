@@ -220,6 +220,7 @@ control-cert-file{COLON}	{ YDVAR(1, VAR_CONTROL_CERT_FILE) }
 <quotedstring><<EOF>>   {
         yyerror("EOF inside quoted string");
 	if(--num_args == 0) { BEGIN(INITIAL); }
+	else		    { BEGIN(val); }
 }
 <quotedstring>{DQANY}*  { LEXOUT(("STR(%s) ", yytext)); yymore(); }
 <quotedstring>{NEWLINE} { yyerror("newline inside quoted string, no end \""); 
@@ -227,6 +228,7 @@ control-cert-file{COLON}	{ YDVAR(1, VAR_CONTROL_CERT_FILE) }
 <quotedstring>\" {
         LEXOUT(("QE "));
 	if(--num_args == 0) { BEGIN(INITIAL); }
+	else		    { BEGIN(val); }
         yytext[yyleng - 1] = '\0';
 	yylval.str = strdup(yytext);
 	if(!yylval.str)
@@ -239,6 +241,7 @@ control-cert-file{COLON}	{ YDVAR(1, VAR_CONTROL_CERT_FILE) }
 <singlequotedstr><<EOF>>   {
         yyerror("EOF inside quoted string");
 	if(--num_args == 0) { BEGIN(INITIAL); }
+	else		    { BEGIN(val); }
 }
 <singlequotedstr>{SQANY}*  { LEXOUT(("STR(%s) ", yytext)); yymore(); }
 <singlequotedstr>{NEWLINE} { yyerror("newline inside quoted string, no end '"); 
@@ -246,6 +249,7 @@ control-cert-file{COLON}	{ YDVAR(1, VAR_CONTROL_CERT_FILE) }
 <singlequotedstr>\' {
         LEXOUT(("SQE "));
 	if(--num_args == 0) { BEGIN(INITIAL); }
+	else		    { BEGIN(val); }
         yytext[yyleng - 1] = '\0';
 	yylval.str = strdup(yytext);
 	if(!yylval.str)
