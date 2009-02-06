@@ -747,7 +747,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 	}
 	if((ret=worker_check_request(c->buffer, worker)) != 0) {
 		verbose(VERB_ALGO, "worker check request: bad query.");
-		log_addr(VERB_CLIENT, "from", &repinfo->addr, repinfo->addrlen);
+		log_addr(VERB_CLIENT,"from",&repinfo->addr, repinfo->addrlen);
 		if(ret != -1) {
 			LDNS_QR_SET(ldns_buffer_begin(c->buffer));
 			LDNS_RCODE_SET(ldns_buffer_begin(c->buffer), ret);
@@ -760,7 +760,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 	/* see if query is in the cache */
 	if(!query_info_parse(&qinfo, c->buffer)) {
 		verbose(VERB_ALGO, "worker parse request: formerror.");
-		log_addr(VERB_CLIENT, "from", &repinfo->addr, repinfo->addrlen);
+		log_addr(VERB_CLIENT,"from",&repinfo->addr, repinfo->addrlen);
 		ldns_buffer_rewind(c->buffer);
 		LDNS_QR_SET(ldns_buffer_begin(c->buffer));
 		LDNS_RCODE_SET(ldns_buffer_begin(c->buffer), 
@@ -771,7 +771,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 	if(qinfo.qtype == LDNS_RR_TYPE_AXFR || 
 		qinfo.qtype == LDNS_RR_TYPE_IXFR) {
 		verbose(VERB_ALGO, "worker request: refused zone transfer.");
-		log_addr(VERB_CLIENT, "from", &repinfo->addr, repinfo->addrlen);
+		log_addr(VERB_CLIENT,"from",&repinfo->addr, repinfo->addrlen);
 		LDNS_QR_SET(ldns_buffer_begin(c->buffer));
 		LDNS_RCODE_SET(ldns_buffer_begin(c->buffer), 
 			LDNS_RCODE_REFUSED);
@@ -783,7 +783,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 	}
 	if((ret=parse_edns_from_pkt(c->buffer, &edns)) != 0) {
 		verbose(VERB_ALGO, "worker parse edns: formerror.");
-		log_addr(VERB_CLIENT, "from", &repinfo->addr, repinfo->addrlen);
+		log_addr(VERB_CLIENT,"from",&repinfo->addr, repinfo->addrlen);
 		ldns_buffer_rewind(c->buffer);
 		LDNS_QR_SET(ldns_buffer_begin(c->buffer));
 		LDNS_RCODE_SET(ldns_buffer_begin(c->buffer), ret);
@@ -796,7 +796,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 		edns.udp_size = EDNS_ADVERTISED_SIZE;
 		edns.bits &= EDNS_DO;
 		verbose(VERB_ALGO, "query with bad edns version.");
-		log_addr(VERB_CLIENT, "from", &repinfo->addr, repinfo->addrlen);
+		log_addr(VERB_CLIENT,"from",&repinfo->addr, repinfo->addrlen);
 		error_encode(c->buffer, EDNS_RCODE_BADVERS&0xf, &qinfo,
 			*(uint16_t*)ldns_buffer_begin(c->buffer),
 			ldns_buffer_read_u16_at(c->buffer, 2), NULL);
@@ -807,7 +807,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 		worker->daemon->cfg->harden_short_bufsize) {
 		verbose(VERB_QUERY, "worker request: EDNS bufsize %d ignored",
 			(int)edns.udp_size);
-		log_addr(VERB_CLIENT, "from", &repinfo->addr, repinfo->addrlen);
+		log_addr(VERB_CLIENT,"from",&repinfo->addr, repinfo->addrlen);
 		edns.udp_size = NORMAL_UDP_SIZE;
 	}
 	if(edns.edns_present && edns.udp_size < LDNS_HEADER_SIZE) {

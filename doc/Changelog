@@ -9,7 +9,7 @@
 	- verbosity level 5 logs customer IP for new requestlist entries.
 	- test fix, lexer and cancel test.
 	- new option log-time-ascii: yes  if you enable it prints timestamps
-	  in the log file as Feb 06 13:45:26 (just like syslog does).
+	  in the log file as Feb 06 13:45:26 (like syslog does).
 
 5 February 2009: Wouter
 	- ldns 1.5.0 rc as tarball included.
