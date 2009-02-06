@@ -1,20 +1,22 @@
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
-Version: 1.1.0
+Version: 1.2.1rc1
 Release: 1%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
 Source: http://www.unbound.net/downloads/%{name}-%{version}.tar.gz
 Source1: unbound.init
 Source2: unbound.conf
+Source3: unbound.munin
 Group: System Environment/Daemons
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
-BuildRequires: flex, openssl-devel, ldns-devel >= 1.3.0, libevent-devel
+BuildRequires: flex, openssl-devel >= 0.9.8g-12, ldns-devel >= 1.5.0, 
+BuildRequires: libevent-devel >= 1.4.5
 Requires(post): chkconfig
 Requires(preun): chkconfig
 Requires(preun): initscripts
 Requires(postun): initscripts
-Requires: ldns >= 1.3.0
+Requires: ldns >= 1.5.0
 Requires(pre): shadow-utils
 # Is this obsolete?
 #Provides: caching-nameserver
@@ -30,11 +32,19 @@ Unbound is designed as a set of modular components, so that also
 DNSSEC (secure DNS) validation and stub-resolvers (that do not run
 as a server, but are linked into an application) are easily possible.
 
+%package munin
+Summary: Plugin for the munin / munin-node monitoring package
+Group:     System Environment/Daemons
+Requires: munin-node
+Requires: %{name} = %{version}-%{release}, bc
+
+%description munin
+Plugin for the munin / munin-node monitoring package
+
 %package devel
 Summary: Development package that includes the unbound header files
 Group: Development/Libraries
 Requires: %{name}-libs = %{version}-%{release}, openssl-devel, ldns-devel
-Requires: libevent-devel
 
 %description devel
 The devel package contains the unbound library and the include files
@@ -44,6 +54,7 @@ Summary: Libraries used by the unbound server and client applications
 Group: Applications/System
 Requires(post): /sbin/ldconfig
 Requires(postun): /sbin/ldconfig
+Requires: openssl >= 0.9.8g-12
 
 %description libs
 Contains libraries used by the unbound server and client applications
@@ -52,38 +63,30 @@ Contains libraries used by the unbound server and client applications
 %setup -q 
 
 %build
-%configure  --with-ldns= --with-libevent --with-pthreads --with-ssl \
+%configure  --with-ldns= -with-libevent --with-pthreads --with-ssl \
             --disable-rpath --enable-debug --disable-static \
-            --with-run-dir=%{_localstatedir}/lib/%{name}\
-            --with-conf-file=%{_localstatedir}/lib/%{name}/unbound.conf \
+            --with-conf-file=%{_sysconfdir}/%{name}/unbound.conf \
             --with-pidfile=%{_localstatedir}/run/%{name}/%{name}.pid
 %{__make} CFLAGS="$RPM_OPT_FLAGS -D_GNU_SOURCE" QUIET=no %{?_smp_mflags}
 
 %install
 rm -rf %{buildroot}
 %{__make} DESTDIR=%{buildroot} install
-install -d 0755 %{buildroot}%{_localstatedir}/lib/%{name}
 install -d 0755 %{buildroot}%{_initrddir}
-#install -m 0755 contrib/unbound.init %{buildroot}%{_initrddir}/unbound
 install -m 0755 %{SOURCE1} %{buildroot}%{_initrddir}/unbound
-#overwrite stock unbound.conf with our own
-install -m 0755 %{SOURCE2} %{buildroot}%{_localstatedir}/lib/%{name}
+install -m 0755 %{SOURCE2} %{buildroot}%{_sysconfdir}/unbound
+# Install munin plugin and its softlinks
+install -d 0755 %{buildroot}%{_sysconfdir}/munin/plugin-conf.d
+install -m 0644 %{SOURCE3} %{buildroot}%{_sysconfdir}/munin/plugin-conf.d/unbound
+install -d 0755 %{buildroot}%{_datadir}/munin/plugins/
+install -m 0755 contrib/unbound_munin_ %{buildroot}%{_datadir}/munin/plugins/unbound
+for plugin in unbound_munin_hits unbound_munin_queue unbound_munin_memory unbound_munin_by_type unbound_munin_by_class unbound_munin_by_opcode unbound_munin_by_rcode unbound_munin_by_flags unbound_munin_histogram; do
+    ln -s unbound %{buildroot}%{_datadir}/munin/plugins/$plugin
+done 
 
-# add symbolic link from /etc/unbound.conf -> /var/unbound/unbound.conf
-
-( cd %{buildroot}%{_sysconfdir}/ ; ln -s ..%{_localstatedir}/lib/unbound/unbound.conf )
 # remove static library from install (fedora packaging guidelines)
 rm -rf %{buildroot}%{_libdir}/*.la
 
-# The chroot needs /dev/log, /dev/random, /etc/resolv.conf and /etc/localtime
-# but the init script uses mount --bind, so just create empty files
-mkdir -p %{buildroot}%{_localstatedir}/lib/unbound/etc \
-         %{buildroot}%{_localstatedir}/lib/unbound/dev 
-echo "Used for mount --bind in initscript" >  %{buildroot}%{_localstatedir}/lib/unbound/etc/resolv.conf 
-echo "Used for mount --bind in initscript" > %{buildroot}%{_localstatedir}/lib/unbound/etc/localtime
-echo "Used for mount --bind in initscript" > %{buildroot}%{_localstatedir}/lib/unbound/dev/log 
-echo "Used for mount --bind in initscript" > %{buildroot}%{_localstatedir}/lib/unbound/dev/random
-mkdir -p %{buildroot}%{_localstatedir}/lib/unbound/var/run/unbound
 mkdir -p %{buildroot}%{_localstatedir}/run/unbound
 
 %clean
@@ -93,20 +96,16 @@ rm -rf ${RPM_BUILD_ROOT}
 %defattr(-,root,root,-)
 %doc doc/README doc/CREDITS doc/LICENSE doc/FEATURES
 %attr(0755,root,root) %{_initrddir}/%{name}
-# the chroot env
-%attr(0755,root,root) %dir %{_localstatedir}/lib/%{name}
+%attr(0755,root,root) %dir %{_sysconfdir}/%{name}
 %attr(0755,unbound,unbound) %dir %{_localstatedir}/run/%{name}
-%attr(0755,root,root) %dir %{_localstatedir}/lib/%{name}/dev
-%attr(0755,root,root) %dir %{_localstatedir}/lib/%{name}/etc
-%attr(0755,root,root) %dir %{_localstatedir}/lib/%{name}/var
-%attr(0755,root,root) %dir %{_localstatedir}/lib/%{name}/var/run
-%attr(0755,root,root) %dir %{_localstatedir}/lib/%{name}/var/run/unbound
-%attr(0644,root,root) %config(noreplace) %{_sysconfdir}/unbound.conf
-%attr(0644,root,root) %config(noreplace) %{_localstatedir}/lib/%{name}/unbound.conf
-%attr(0644,root,root) %{_localstatedir}/lib/%{name}/dev/*
-%attr(0644,root,root) %{_localstatedir}/lib/%{name}/etc/*
+%attr(0644,root,root) %config(noreplace) %{_sysconfdir}/%{name}/unbound.conf
 %{_sbindir}/*
 %{_mandir}/*/*
+
+%files munin
+%defattr(-,root,root,-)
+%config(noreplace) %{_sysconfdir}/munin/plugin-conf.d/unbound
+%{_datadir}/munin/plugins/unbound*
 
 %files devel
 %defattr(-,root,root,-)
@@ -122,7 +121,7 @@ rm -rf ${RPM_BUILD_ROOT}
 %pre
 getent group unbound >/dev/null || groupadd -r unbound
 getent passwd unbound >/dev/null || \
-useradd -r -g unbound -d %{_localstatedir}/lib/%{name} -s /sbin/nologin \
+useradd -r -g unbound -d %{_sysconfdir}/unbound -s /sbin/nologin \
 -c "Unbound DNS resolver" unbound
 exit 0
 
@@ -133,7 +132,7 @@ exit 0
 
 
 %preun
-if [ $1 -eq 0 ]; then
+if [ "$1" -eq 0 ]; then
         /sbin/service %{name} stop >/dev/null 2>&1
         /sbin/chkconfig --del %{name} 
 fi
@@ -146,6 +145,70 @@ fi
 %postun libs -p /sbin/ldconfig
 
 %changelog
+* Sun Jan 18 2009 Tomas Mraz <tmraz@redhat.com> - 1.2.0-2
+- rebuild with new openssl
+
+* Wed Jan 14 2009 Paul Wouters <paul@xelerance.com - 1.2.0-1
+- Updated to 1.2.0
+- Added dependancy on minimum SSL for CVE-2008-5077
+- Added dependancy on bc for unbound-munin
+- Added minimum requirement of libevent 1.4.5. Crashes with older versions
+  (note: libevent is stale in EL-4 and not in EL-5, needs fixing there)
+- Removed dependancy on selinux-policy (will get used when available)
+- Enable options as per draft-wijngaards-dnsext-resolver-side-mitigation-00.txt
+- Enable unwanted-reply-threshold to mitigate against a Kaminsky attack
+- Enable val-clean-additional to drop addition unsigned data from signed
+  response.
+- Removed patches (got merged into upstream)
+
+* Mon Jan  5 2009 Paul Wouters <paul@xelerance.com> - 1.1.1-7
+- Modified scandir patch to silently fail when wildcard matches nothing
+- Patch to allow unbound-checkconf to find empty wildcard matches
+
+* Mon Jan  5 2009 Paul Wouters <paul@xelerance.com> - 1.1.1-6
+- Added scandir patch for trusted-keys-file: option, which
+  is used to load multiple dnssec keys in bind file format
+
+* Mon Dec  8 2008 Paul Wouters <paul@xelerance.com> - 1.1.1-4
+- Added Requires: for selinux-policy >= 3.5.13-33 for proper SElinux rules.
+
+* Mon Dec  1 2008 Paul Wouters <paul@xelerance.com> - 1.1.1-3
+- We did not own the /etc/unbound directory (#474020)
+- Fixed cvs anomalies
+
+* Fri Nov 28 2008 Adam Tkac <atkac redhat com> - 1.1.1-2
+- removed all obsolete chroot related stuff
+- label control certs after generation correctly
+
+* Thu Nov 20 2008 Paul Wouters <paul@xelerance.com> - 1.1.1-1
+- Updated to unbound 1.1.1 which fixes a crasher and
+  addresses nlnetlabs bug #219
+
+* Wed Nov 19 2008 Paul Wouters <paul@xelerance.com> - 1.1.0-3
+- Remove the chroot, obsoleted by SElinux
+- Add additional munin plugin links supported by unbound plugin
+- Move configuration directory from /var/lib/unbound to /etc/unbound
+- Modified unbound.init and unbound.conf to account for chroot changes
+- Updated unbound.conf with new available options
+- Enabled dns-0x20 protection per default
+
+* Wed Nov 19 2008 Adam Tkac <atkac redhat com> - 1.1.0-2
+- unbound-1.1.0-log_open.patch
+  - make sure log is opened before chroot call
+  - tracked as http://www.nlnetlabs.nl/bugs/show_bug.cgi?id=219
+- removed /dev/log and /var/run/unbound and /etc/resolv.conf from
+  chroot, not needed
+- don't mount files in chroot, it causes problems during updates
+- fixed typo in default config file
+
+* Fri Nov 14 2008 Paul Wouters <paul@xelerance.com> - 1.1.0-1
+- Updated to version 1.1.0
+- Updated unbound.conf's statistics options and remote-control
+  to work properly for munin
+- Added unbound-munin package
+- Generate unbound remote-control  key/certs on first startup
+- Required ldns is now 1.4.0
+
 * Wed Oct 22 2008 Paul Wouters <paul@xelerance.com> - 1.0.2-5
 - Only call ldconfig in -libs package
 - Move configure into build section
@@ -180,6 +243,3 @@ fi
 
 * Wed Apr 23 2008 Wouter Wijngaards <wouter@nlnetlabs.nl> - 0.11
 - Initial version.
-
-
-
