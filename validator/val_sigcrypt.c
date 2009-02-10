@@ -523,8 +523,11 @@ dnskeyset_verify_rrset_sig(struct module_env* env, struct val_env* ve,
 		if(algo != dnskey_get_algo(dnskey, i) ||
 			tag != dnskey_calc_keytag(dnskey, i))
 			continue;
-
 		numchecked ++;
+		/* skip revoked keys */
+		if(dnskey_get_flags(dnskey, i) & LDNS_KEY_REVOKE_KEY)
+			continue;
+
 		/* see if key verifies */
 		sec = dnskey_verify_rrset_sig(env->scratch, 
 			env->scratch_buffer, ve, now, rrset, dnskey, i, 

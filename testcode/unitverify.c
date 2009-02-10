@@ -482,6 +482,7 @@ verify_test()
 	verifytest_file("testdata/test_signatures.10", "20070829144150");
 #endif
 	verifytest_file("testdata/test_signatures.12", "20090107100022");
+	verifytest_file("testdata/test_signatures.13", "20080414005004");
 	dstest_file("testdata/test_ds_sig.1");
 	nsectest();
 	nsec3_hash_test("testdata/test_nsec3_hash.1");

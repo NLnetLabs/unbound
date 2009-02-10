@@ -56,9 +56,8 @@ o on windows version, implement that OS ancillary data capabilities for
   interface-automatic. IPPKTINFO, IP6PKTINFO for WSARecvMsg, WSASendMsg.
 o local-zone directive with authority service, full authority server 
   is a non-goal.
+o remote control read ssl information while priviledged.
  
-o make so revoke bit keys cannot verify signatures
-
 o infra and lame cache: easier size config (in Mb), show usage in graphs.
 o #226: unbound_control dump_requestlist
 o #227: unbound_control flush_stats
@@ -67,4 +66,4 @@ o unbound_control forward [addr {addr}] | [off]
 o config entry to denote that a zone is to be treated as unsigned (even if 
   a DS exists to higher trust anchor).
 o see if we can include the python bindings (contrib).
-o remote control read ssl information while priviledged.
+o include cacti setup (contrib)
