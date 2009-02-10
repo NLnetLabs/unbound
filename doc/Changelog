@@ -1,6 +1,7 @@
 10 February 2009: Wouter
 	- keys with rfc5011 REVOKE flag are skipped and not considered when
 	  validating data.
+	- iana portlist updated
 
 6 February 2009: Wouter
 	- contrib contains specfile for fedora 1.2.1 (from Paul Wouters).
