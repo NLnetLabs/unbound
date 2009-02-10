@@ -115,6 +115,11 @@ Remove the name, type information from the cache.
 Remove all information at or below the name from the cache. 
 The rrsets and key entries are removed so that new lookups will be performed.
 This needs to walk and inspect the entire cache, and is a slow operation.
+.TP
+.B dump_requestlist
+Show what is worked on.  Prints all queries that the server is currently
+working on.  Prints the time that users have been waiting.  For internal
+requests, no time is printed.  And then prints out the module status.
 .SH "EXIT CODE"
 The unbound-control program exits with status code 1 on error, 0 on success.
 .SH "SET UP"

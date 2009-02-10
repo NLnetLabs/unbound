@@ -62,6 +62,9 @@
 #include "validator/validator.h"
 #include "validator/val_kcache.h"
 #include "validator/val_kentry.h"
+#include "iterator/iterator.h"
+#include "services/outbound_list.h"
+#include "services/outside_network.h"
 
 #ifdef HAVE_SYS_TYPES_H
 #  include <sys/types.h>
@@ -1228,6 +1231,122 @@ do_status(SSL* ssl, struct worker* worker)
 		return;
 }
 
+/** get age for the mesh state */
+static void
+get_mesh_age(struct mesh_state* m, char* buf, size_t len, 
+	struct module_env* env)
+{
+	if(m->reply_list) {
+		struct timeval d;
+		struct mesh_reply* r = m->reply_list;
+		/* last reply is the oldest */
+		while(r && r->next)
+			r = r->next;
+		timeval_subtract(&d, env->now_tv, &r->start_time);
+		snprintf(buf, len, "%d.%6.6d", (int)d.tv_sec, (int)d.tv_usec);
+	} else {
+		snprintf(buf, len, "-");
+	}
+}
+
+/** get status of a mesh state */
+static void
+get_mesh_status(struct mesh_area* mesh, struct mesh_state* m, 
+	char* buf, size_t len)
+{
+	enum module_ext_state s = m->s.ext_state[m->s.curmod];
+	const char *modname = mesh->mods.mod[m->s.curmod]->name;
+	size_t l;
+	if(strcmp(modname, "iterator") == 0 && s == module_wait_reply &&
+		m->s.minfo[m->s.curmod]) {
+		/* break into iterator to find out who its waiting for */
+		struct iter_qstate* qstate = (struct iter_qstate*)
+			m->s.minfo[m->s.curmod];
+		struct outbound_list* ol = &qstate->outlist;
+		struct outbound_entry* e;
+		snprintf(buf, len, "%s wait for", modname);
+		l = strlen(buf);
+		buf += l; len -= l;
+		if(ol->first == NULL)
+			snprintf(buf, len, " (empty_list)");
+		for(e = ol->first; e; e = e->next) {
+			int af = (int)((struct sockaddr_in*)&e->qsent->addr)
+				->sin_family;
+			void* sinaddr = &((struct sockaddr_in*)&e->qsent->addr)
+				->sin_addr;
+			if(addr_is_ip6(&e->qsent->addr, e->qsent->addrlen))
+				sinaddr = &((struct sockaddr_in6*)
+					&e->qsent->addr)->sin6_addr;
+
+			snprintf(buf, len, " ");
+			l = strlen(buf);
+			buf += l; len -= l;
+
+			if(inet_ntop(af, sinaddr, buf, (socklen_t)len) == 0) {
+				snprintf(buf, len, "(inet_ntop_error)");
+			}
+			l = strlen(buf);
+			buf += l; len -= l;
+		}
+	} else if(s == module_wait_subquery) {
+		/* look in subs from mesh state to see what */
+		char nm[257];
+		struct mesh_state_ref* sub;
+		snprintf(buf, len, "%s wants", modname);
+		l = strlen(buf);
+		buf += l; len -= l;
+		if(m->sub_set.count == 0)
+			snprintf(buf, len, " (empty_list)");
+		RBTREE_FOR(sub, struct mesh_state_ref*, &m->sub_set) {
+			char* t = ldns_rr_type2str(sub->s->s.qinfo.qtype);
+			char* c = ldns_rr_class2str(sub->s->s.qinfo.qclass);
+			dname_str(sub->s->s.qinfo.qname, nm);
+			snprintf(buf, len, " %s %s %s", t, c, nm);
+			l = strlen(buf);
+			buf += l; len -= l;
+			free(t);
+			free(c);
+		}
+	} else {
+		snprintf(buf, len, "%s is %s", modname, strextstate(s));
+	}
+}
+
+/** do the dump_requestlist command */
+static void
+do_dump_requestlist(SSL* ssl, struct worker* worker)
+{
+	struct mesh_area* mesh;
+	struct mesh_state* m;
+	int num = 0;
+	char buf[257];
+	char timebuf[32];
+	char statbuf[10240];
+	if(!ssl_printf(ssl, "thread #%d\n", worker->thread_num))
+		return;
+	if(!ssl_printf(ssl, "#   type cl name    seconds    module status\n"))
+		return;
+	/* show worker mesh contents */
+	mesh = worker->env.mesh;
+	if(!mesh) return;
+	RBTREE_FOR(m, struct mesh_state*, &mesh->all) {
+		char* t = ldns_rr_type2str(m->s.qinfo.qtype);
+		char* c = ldns_rr_class2str(m->s.qinfo.qclass);
+		dname_str(m->s.qinfo.qname, buf);
+		get_mesh_age(m, timebuf, sizeof(timebuf), &worker->env);
+		get_mesh_status(mesh, m, statbuf, sizeof(statbuf));
+		if(!ssl_printf(ssl, "%3d %4s %2s %s %s %s\n", 
+			num, t, c, buf, timebuf, statbuf)) {
+			free(t);
+			free(c);
+			return;
+		}
+		num++;
+		free(t);
+		free(c);
+	}
+}
+
 /** tell other processes to execute the command */
 void
 distribute_cmd(struct daemon_remote* rc, SSL* ssl, char* cmd)
@@ -1301,6 +1420,8 @@ execute_cmd(struct daemon_remote* rc, SSL* ssl, char* cmd,
 		do_flush_type(ssl, worker, skipwhite(p+10));
 	} else if(strncmp(p, "flush", 5) == 0) {
 		do_flush_name(ssl, worker, skipwhite(p+5));
+	} else if(strncmp(p, "dump_requestlist", 16) == 0) {
+		do_dump_requestlist(ssl, worker);
 	} else {
 		(void)ssl_printf(ssl, "error unknown command '%s'\n", p);
 	}

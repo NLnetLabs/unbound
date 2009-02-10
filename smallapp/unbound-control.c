@@ -78,6 +78,7 @@ usage()
 	printf("  flush_type [name] [type]	flush name, type from cache\n");
 	printf("  flush_zone [name]		flush everything at or under name\n");
 	printf("  				from rr and dnssec caches\n");
+	printf("  dump_requestlist		show what is worked on\n");
 	printf("Version %s\n", PACKAGE_VERSION);
 	printf("BSD licensed, see LICENSE in source package for details.\n");
 	printf("Report bugs to %s\n", PACKAGE_BUGREPORT);
