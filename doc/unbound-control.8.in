@@ -61,6 +61,10 @@ Print statistics. Resets the internal counters to zero, this can be
 controlled using the \fBstatistics\-cumulative\fR config statement. 
 Statistics are printed with one [name]: [value] per line.
 .TP
+.B stats_noreset
+Peek at statistics. Prints them like the \fBstats\fR command does, but does not
+reset the internal counters to zero.
+.TP
 .B status
 Display server status. Exit code 3 if not running (the connection to the 
 port is refused), 1 on error, 0 if running.

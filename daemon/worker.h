@@ -67,6 +67,8 @@ enum worker_commands {
 	worker_cmd_quit,
 	/** obtain statistics */
 	worker_cmd_stats,
+	/** obtain statistics without statsclear */
+	worker_cmd_stats_noreset,
 	/** execute remote control command */
 	worker_cmd_remote
 };

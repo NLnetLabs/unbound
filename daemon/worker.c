@@ -342,7 +342,11 @@ worker_handle_control_cmd(struct tube* ATTR_UNUSED(tube), uint8_t* msg,
 		break;
 	case worker_cmd_stats:
 		verbose(VERB_ALGO, "got control cmd stats");
-		server_stats_reply(worker);
+		server_stats_reply(worker, 1);
+		break;
+	case worker_cmd_stats_noreset:
+		verbose(VERB_ALGO, "got control cmd stats_noreset");
+		server_stats_reply(worker, 0);
 		break;
 	case worker_cmd_remote:
 		verbose(VERB_ALGO, "got control cmd remote");

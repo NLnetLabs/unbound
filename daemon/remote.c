@@ -846,7 +846,7 @@ print_ext(SSL* ssl, struct stats_info* s)
 
 /** do the stats command */
 static void
-do_stats(SSL* ssl, struct daemon_remote* rc)
+do_stats(SSL* ssl, struct daemon_remote* rc, int reset)
 {
 	struct daemon* daemon = rc->worker->daemon;
 	struct stats_info total;
@@ -854,7 +854,7 @@ do_stats(SSL* ssl, struct daemon_remote* rc)
 	int i;
 	/* gather all thread statistics in one place */
 	for(i=0; i<daemon->num; i++) {
-		server_stats_obtain(rc->worker, daemon->workers[i], &s);
+		server_stats_obtain(rc->worker, daemon->workers[i], &s, reset);
 		if(!print_thread_stats(ssl, i, &s))
 			return;
 		if(i == 0)
@@ -1387,8 +1387,11 @@ execute_cmd(struct daemon_remote* rc, SSL* ssl, char* cmd,
 	} else if(strncmp(p, "reload", 6) == 0) {
 		do_reload(ssl, rc);
 		return;
+	} else if(strncmp(p, "stats_noreset", 13) == 0) {
+		do_stats(ssl, rc, 0);
+		return;
 	} else if(strncmp(p, "stats", 5) == 0) {
-		do_stats(ssl, rc);
+		do_stats(ssl, rc, 1);
 		return;
 	} else if(strncmp(p, "status", 6) == 0) {
 		do_status(ssl, worker);

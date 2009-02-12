@@ -115,7 +115,7 @@ get_rrset_bogus(struct worker* worker)
 }
 
 void
-server_stats_compile(struct worker* worker, struct stats_info* s)
+server_stats_compile(struct worker* worker, struct stats_info* s, int reset)
 {
 	int i;
 
@@ -143,24 +143,26 @@ server_stats_compile(struct worker* worker, struct stats_info* s)
 	/* get and reset validator rrset bogus number */
 	s->svr.rrset_bogus = get_rrset_bogus(worker);
 
-	if(!worker->env.cfg->stat_cumulative) {
+	if(reset && !worker->env.cfg->stat_cumulative) {
 		worker_stats_clear(worker);
 	}
 }
 
 void server_stats_obtain(struct worker* worker, struct worker* who,
-	struct stats_info* s)
+	struct stats_info* s, int reset)
 {
 	uint8_t *reply = NULL;
 	uint32_t len = 0;
 	if(worker == who) {
 		/* just fill it in */
-		server_stats_compile(worker, s);
+		server_stats_compile(worker, s, reset);
 		return;
 	}
 	/* communicate over tube */
 	verbose(VERB_ALGO, "write stats cmd");
-	worker_send_cmd(who, worker_cmd_stats);
+	if(reset)
+		worker_send_cmd(who, worker_cmd_stats);
+	else 	worker_send_cmd(who, worker_cmd_stats_noreset);
 	verbose(VERB_ALGO, "wait for stats reply");
 	if(!tube_read_msg(worker->cmd, &reply, &len, 0))
 		fatal_exit("failed to read stats over cmd channel");
@@ -171,10 +173,10 @@ void server_stats_obtain(struct worker* worker, struct worker* who,
 	free(reply);
 }
 
-void server_stats_reply(struct worker* worker)
+void server_stats_reply(struct worker* worker, int reset)
 {
 	struct stats_info s;
-	server_stats_compile(worker, &s);
+	server_stats_compile(worker, &s, reset);
 	verbose(VERB_ALGO, "write stats replymsg");
 	if(!tube_write_msg(worker->daemon->workers[0]->cmd, 
 		(uint8_t*)&s, sizeof(s), 0))

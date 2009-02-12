@@ -62,6 +62,7 @@ usage()
 	printf("  stop				stops the server\n");
 	printf("  reload			reloads the server\n");
 	printf("  stats				print statistics\n");
+	printf("  stats_noreset			peek at statistics\n");
 	printf("  status			display status of server\n");
 	printf("  verbosity [number]		change logging detail\n");
 	printf("  local_zone [name] [type] 	add new local zone\n");

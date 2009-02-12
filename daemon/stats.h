@@ -175,23 +175,29 @@ void server_stats_log(struct server_stats* stats, struct worker* worker,
  * @param worker: the worker that is executing (the first worker).
  * @param who: on who to get the statistics info.
  * @param s: the stats block to fill in.
+ * @param reset: if stats can be reset.
  */
 void server_stats_obtain(struct worker* worker, struct worker* who,
-	struct stats_info* s);
+	struct stats_info* s, int reset);
 
 /**
  * Compile stats into structure for this thread worker.
  * Also clears the statistics counters (if that is set by config file).
  * @param worker: the worker to compile stats for, also the executing worker.
  * @param s: stats block.
+ * @param reset: if true, depending on config stats are reset.
+ * 	if false, statistics are not reset.
  */
-void server_stats_compile(struct worker* worker, struct stats_info* s);
+void server_stats_compile(struct worker* worker, struct stats_info* s, 
+	int reset);
 
 /**
  * Send stats over comm tube in reply to query cmd
  * @param worker: this worker.
+ * @param reset: if true, depending on config stats are reset.
+ * 	if false, statistics are not reset.
  */
-void server_stats_reply(struct worker* worker);
+void server_stats_reply(struct worker* worker, int reset);
 
 /**
  * Addup stat blocks.
