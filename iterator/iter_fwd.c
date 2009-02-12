@@ -238,6 +238,7 @@ int
 forwards_apply_cfg(struct iter_forwards* fwd, struct config_file* cfg)
 {
 	free(fwd->tree);
+	regional_free_all(fwd->region);
 	fwd->tree = rbtree_create(fwd_cmp);
 	if(!fwd->tree)
 		return 0;
@@ -288,5 +289,6 @@ forwards_get_mem(struct iter_forwards* fwd)
 {
 	if(!fwd)
 		return 0;
-	return sizeof(*fwd) + regional_get_mem(fwd->region);
+	return sizeof(*fwd) + sizeof(*fwd->tree) + 
+		regional_get_mem(fwd->region);
 }

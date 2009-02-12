@@ -5,6 +5,8 @@
 	- stats_noreset feature for unbound-control.
 	- flush_requestlist feature for unbound-control.
 	- libunbound version upped API (was changed 5 feb).
+	- unbound-control status shows if root forwarding is in use.
+	- slightly nicer memory management in iter-fwd code.
 
 10 February 2009: Wouter
 	- keys with rfc5011 REVOKE flag are skipped and not considered when

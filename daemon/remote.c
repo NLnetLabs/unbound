@@ -1219,6 +1219,28 @@ do_flush_name(SSL* ssl, struct worker* worker, char* arg)
 	send_ok(ssl);
 }
 
+/** print root forwards */
+static int
+print_root_fwds(SSL* ssl, struct config_file* cfg)
+{
+	struct config_stub* s;
+	if(!ssl_printf(ssl, "root-forward:"))
+		return 0;
+	for(s = cfg->forwards; s; s = s->next) {
+		if(s->name && strcmp(s->name, ".") == 0) {
+			struct config_strlist* p;
+			for(p = s->hosts; p; p = p->next)
+				if(!ssl_printf(ssl, " %s", p->str))
+					return 0;
+			for(p = s->addrs; p; p = p->next)
+				if(!ssl_printf(ssl, " %s", p->str))
+					return 0;
+			return ssl_printf(ssl, "\n");
+		}
+	}
+	return ssl_printf(ssl, " no (using root hints)\n");
+}
+
 /** do the status command */
 static void
 do_status(SSL* ssl, struct worker* worker)
@@ -1238,6 +1260,8 @@ do_status(SSL* ssl, struct worker* worker)
 			return;
 	}
 	if(!ssl_printf(ssl, " ]\n"))
+		return;
+	if(!print_root_fwds(ssl, worker->env.cfg))
 		return;
 	uptime = (time_t)time(NULL) - (time_t)worker->daemon->time_boot.tv_sec;
 	if(!ssl_printf(ssl, "uptime: %u seconds\n", (unsigned)uptime))
