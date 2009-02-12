@@ -144,9 +144,7 @@ server_stats_compile(struct worker* worker, struct stats_info* s)
 	s->svr.rrset_bogus = get_rrset_bogus(worker);
 
 	if(!worker->env.cfg->stat_cumulative) {
-		server_stats_init(&worker->stats, worker->env.cfg);
-		mesh_stats_clear(worker->env.mesh);
-		worker->back->unwanted_replies = 0;
+		worker_stats_clear(worker);
 	}
 }
 

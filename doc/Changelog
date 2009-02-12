@@ -1,5 +1,7 @@
 12 February 2009: Wouter
 	- call setusercontext if available (on BSD).
+	- small refactor of stats clearing.
+	- #227: flush_stats feature for unbound-control.
 
 10 February 2009: Wouter
 	- keys with rfc5011 REVOKE flag are skipped and not considered when

@@ -228,6 +228,12 @@ int worker_handle_service_reply(struct comm_point* c, void* arg, int error,
 /** cleanup the cache to remove all rrset IDs from it, arg is worker */
 void worker_alloc_cleanup(void* arg);
 
+/**
+ * Init worker stats - includes server_stats_init, outside network and mesh.
+ * @param worker: the worker to init
+ */
+void worker_stats_clear(struct worker* worker);
+
 /** statistics timer callback handler */
 void worker_stat_timer_cb(void* arg);
 

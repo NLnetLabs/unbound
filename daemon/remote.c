@@ -1048,6 +1048,14 @@ do_flush_type(SSL* ssl, struct worker* worker, char* arg)
 	send_ok(ssl);
 }
 
+/** flush statistics */
+static void
+do_flush_stats(SSL* ssl, struct worker* worker)
+{
+	worker_stats_clear(worker);
+	send_ok(ssl);
+}
+
 /**
  * Local info for deletion functions
  */
@@ -1390,6 +1398,12 @@ execute_cmd(struct daemon_remote* rc, SSL* ssl, char* cmd,
 		return;
 	} else if(strncmp(p, "load_cache", 10) == 0) {
 		if(load_cache(ssl, worker)) send_ok(ssl);
+		return;
+	} else if(strncmp(p, "flush_stats", 11) == 0) {
+		/* must always distribute this cmd */
+		if(rc) 
+			distribute_cmd(rc, ssl, cmd);
+		do_flush_stats(ssl, worker);
 		return;
 	} else if(strncmp(p, "lookup", 6) == 0) {
 		do_lookup(ssl, worker, skipwhite(p+6));
