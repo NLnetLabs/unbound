@@ -333,6 +333,7 @@ perform_setup(struct daemon* daemon, struct config_file* cfg, int debug_mode,
 	const char** cfgfile)
 {
 #ifdef HAVE_GETPWNAM
+	struct passwd *pwd = NULL;
 	uid_t uid;
 	gid_t gid;
 	/* initialize, but not to 0 (root) */
@@ -341,12 +342,11 @@ perform_setup(struct daemon* daemon, struct config_file* cfg, int debug_mode,
 	log_assert(cfg);
 
 	if(cfg->username && cfg->username[0]) {
-		struct passwd *pwd;
 		if((pwd = getpwnam(cfg->username)) == NULL)
 			fatal_exit("user '%s' does not exist.", cfg->username);
 		uid = pwd->pw_uid;
 		gid = pwd->pw_gid;
-		endpwent();
+		/* endpwent below, in case we need pwd for setusercontext */
 	}
 #endif
 
@@ -396,11 +396,11 @@ perform_setup(struct daemon* daemon, struct config_file* cfg, int debug_mode,
 			/* delete of pidfile could potentially work,
 			 * chown to get permissions */
 			if(cfg->username && cfg->username[0]) {
-			if(chown(daemon->pidfile, uid, gid) == -1) {
+			  if(chown(daemon->pidfile, uid, gid) == -1) {
 				fatal_exit("cannot chown %u.%u %s: %s",
 					(unsigned)uid, (unsigned)gid,
 					daemon->pidfile, strerror(errno));
-			}
+			  }
 			}
 		}
 	}
@@ -460,11 +460,22 @@ perform_setup(struct daemon* daemon, struct config_file* cfg, int debug_mode,
 	/* drop permissions after chroot, getpwnam, pidfile, syslog done*/
 #ifdef HAVE_GETPWNAM
 	if(cfg->username && cfg->username[0]) {
-#ifdef HAVE_INITGROUPS
+#ifdef HAVE_SETUSERCONTEXT
+		/* setusercontext does initgroups, setuid, setgid, and
+		 * also resource limits from login config, but we
+		 * still call setresuid, setresgid to be sure to set all uid*/
+		if(setusercontext(NULL, pwd, uid, LOGIN_SETALL) != 0)
+			fatal_exit("could not setusercontext %s: %s",
+				cfg->username, strerror(errno));
+#else /* !HAVE_SETUSERCONTEXT */
+#  ifdef HAVE_INITGROUPS
 		if(initgroups(cfg->username, gid) != 0)
 			log_warn("unable to initgroups %s: %s",
 				cfg->username, strerror(errno));
-#endif
+#  endif /* HAVE_INITGROUPS */
+#endif /* HAVE_SETUSERCONTEXT */
+		endpwent();
+
 #ifdef HAVE_SETRESGID
 		if(setresgid(gid,gid,gid) != 0)
 #elif defined(HAVE_SETREGID) && !defined(DARWIN_BROKEN_SETREUID)
@@ -486,7 +497,7 @@ perform_setup(struct daemon* daemon, struct config_file* cfg, int debug_mode,
 		verbose(VERB_QUERY, "drop user privileges, run as %s", 
 			cfg->username);
 	}
-#endif
+#endif /* HAVE_GETPWNAM */
 	/* file logging inited after chroot,chdir,setuid is done so that 
 	 * it would succeed on SIGHUP as well */
 	if(!cfg->use_syslog)

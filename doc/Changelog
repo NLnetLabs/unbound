@@ -1,3 +1,6 @@
+12 February 2009: Wouter
+	- call setusercontext if available (on BSD).
+
 10 February 2009: Wouter
 	- keys with rfc5011 REVOKE flag are skipped and not considered when
 	  validating data.
