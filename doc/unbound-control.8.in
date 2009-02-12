@@ -123,6 +123,13 @@ This needs to walk and inspect the entire cache, and is a slow operation.
 .B flush_stats
 Reset statistics to zero.
 .TP
+.B flush_requestlist
+Drop the queries that are worked on.  Stops working on the queries that the
+server is working on now.  The cache is unaffected.  No reply is sent for
+those queries, probably making those users request again later.
+Useful to make the server restart working on queries with new settings,
+such as a higher verbosity level.
+.TP
 .B dump_requestlist
 Show what is worked on.  Prints all queries that the server is currently
 working on.  Prints the time that users have been waiting.  For internal

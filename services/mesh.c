@@ -205,6 +205,25 @@ mesh_delete(struct mesh_area* mesh)
 	free(mesh);
 }
 
+void
+mesh_delete_all(struct mesh_area* mesh)
+{
+	/* free all query states */
+	traverse_postorder(&mesh->all, &mesh_delete_helper, NULL);
+	mesh->stats_dropped += mesh->num_reply_addrs;
+	/* clear mesh area references */
+	rbtree_init(&mesh->run, &mesh_state_compare);
+	rbtree_init(&mesh->all, &mesh_state_compare);
+	mesh->num_reply_addrs = 0;
+	mesh->num_reply_states = 0;
+	mesh->num_detached_states = 0;
+	mesh->num_forever_states = 0;
+	mesh->forever_first = NULL;
+	mesh->forever_last = NULL;
+	mesh->jostle_first = NULL;
+	mesh->jostle_last = NULL;
+}
+
 int mesh_make_new_space(struct mesh_area* mesh)
 {
 	struct mesh_state* m = mesh->jostle_last;

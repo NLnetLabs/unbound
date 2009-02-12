@@ -1056,6 +1056,14 @@ do_flush_stats(SSL* ssl, struct worker* worker)
 	send_ok(ssl);
 }
 
+/** flush requestlist */
+static void
+do_flush_requestlist(SSL* ssl, struct worker* worker)
+{
+	mesh_delete_all(worker->env.mesh);
+	send_ok(ssl);
+}
+
 /**
  * Local info for deletion functions
  */
@@ -1404,9 +1412,13 @@ execute_cmd(struct daemon_remote* rc, SSL* ssl, char* cmd,
 		return;
 	} else if(strncmp(p, "flush_stats", 11) == 0) {
 		/* must always distribute this cmd */
-		if(rc) 
-			distribute_cmd(rc, ssl, cmd);
+		if(rc) distribute_cmd(rc, ssl, cmd);
 		do_flush_stats(ssl, worker);
+		return;
+	} else if(strncmp(p, "flush_requestlist", 17) == 0) {
+		/* must always distribute this cmd */
+		if(rc) distribute_cmd(rc, ssl, cmd);
+		do_flush_requestlist(ssl, worker);
 		return;
 	} else if(strncmp(p, "lookup", 6) == 0) {
 		do_lookup(ssl, worker, skipwhite(p+6));

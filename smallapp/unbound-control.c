@@ -61,6 +61,7 @@ usage()
 	printf("  start				start server; runs unbound(8)\n");
 	printf("  stop				stops the server\n");
 	printf("  reload			reloads the server\n");
+	printf("  				(this flushes data, stats, requestlist)\n");
 	printf("  stats				print statistics\n");
 	printf("  stats_noreset			peek at statistics\n");
 	printf("  status			display status of server\n");
@@ -80,6 +81,7 @@ usage()
 	printf("  flush_zone [name]		flush everything at or under name\n");
 	printf("  				from rr and dnssec caches\n");
 	printf("  flush_stats 			flush statistics, make zero\n");
+	printf("  flush_requestlist 		drop queries that are worked on\n");
 	printf("  dump_requestlist		show what is worked on\n");
 	printf("Version %s\n", PACKAGE_VERSION);
 	printf("BSD licensed, see LICENSE in source package for details.\n");

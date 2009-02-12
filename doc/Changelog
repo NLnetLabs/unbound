@@ -3,6 +3,7 @@
 	- small refactor of stats clearing.
 	- #227: flush_stats feature for unbound-control.
 	- stats_noreset feature for unbound-control.
+	- flush_requestlist feature for unbound-control.
 
 10 February 2009: Wouter
 	- keys with rfc5011 REVOKE flag are skipped and not considered when

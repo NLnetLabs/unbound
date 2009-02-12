@@ -392,6 +392,12 @@ struct mesh_state* mesh_state_create(struct module_env* env,
 void mesh_state_cleanup(struct mesh_state* mstate);
 
 /**
+ * Delete all mesh states from the mesh.
+ * @param mesh: the mesh area to clear
+ */
+void mesh_delete_all(struct mesh_area* mesh);
+
+/**
  * Find a mesh state in the mesh area. Pass relevant flags.
  *
  * @param mesh: the mesh area to look in.
