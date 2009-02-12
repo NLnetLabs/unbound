@@ -63,6 +63,9 @@
 #ifdef HAVE_SYS_RESOURCE_H
 #include <sys/resource.h>
 #endif
+#ifdef HAVE_LOGIN_CAP_H
+#include <login_cap.h>
+#endif
 
 #ifdef USE_MINI_EVENT
 #  ifdef USE_WINSOCK
@@ -465,7 +468,7 @@ perform_setup(struct daemon* daemon, struct config_file* cfg, int debug_mode,
 		 * also resource limits from login config, but we
 		 * still call setresuid, setresgid to be sure to set all uid*/
 		if(setusercontext(NULL, pwd, uid, LOGIN_SETALL) != 0)
-			fatal_exit("could not setusercontext %s: %s",
+			log_warn("unable to setusercontext %s: %s",
 				cfg->username, strerror(errno));
 #else /* !HAVE_SETUSERCONTEXT */
 #  ifdef HAVE_INITGROUPS
