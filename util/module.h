@@ -58,6 +58,7 @@ struct mesh_area;
 struct mesh_state;
 struct val_anchors;
 struct val_neg_cache;
+struct iter_forwards;
 
 /** Maximum number of modules in operation */
 #define MAX_MODULE 5
@@ -208,6 +209,9 @@ struct module_env {
 	/** negative cache, configured by the validator. if not NULL,
 	 * contains NSEC record lookup trees. */
 	struct val_neg_cache* neg_cache;
+	/** Mapping of forwarding zones to targets.
+	 * iterator forwarder information. per-thread, created by worker */
+	struct iter_forwards* fwds;
 	/** module specific data. indexed by module id. */
 	void* modinfo[MAX_MODULE];
 };

@@ -258,4 +258,15 @@ void addr_mask(struct sockaddr_storage* addr, socklen_t len, int net);
 int addr_in_common(struct sockaddr_storage* addr1, int net1,
 	struct sockaddr_storage* addr2, int net2, socklen_t addrlen);
 
+/**
+ * Put address into string, works for IPv4 and IPv6.
+ * @param addr: address
+ * @param addrlen: length of address
+ * @param buf: result string stored here
+ * @param len: length of buf.
+ * On failure a string with "error" is stored inside.
+ */
+void addr_to_str(struct sockaddr_storage* addr, socklen_t addrlen,
+	char* buf, size_t len);
+
 #endif /* NET_HELP_H */

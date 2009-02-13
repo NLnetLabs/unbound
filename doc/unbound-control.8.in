@@ -134,6 +134,27 @@ such as a higher verbosity level.
 Show what is worked on.  Prints all queries that the server is currently
 working on.  Prints the time that users have been waiting.  For internal
 requests, no time is printed.  And then prints out the module status.
+.TP
+.B forward [off | addr ... ]
+Setup forwarding mode.  Configures if the server should ask other upstream
+nameservers, should go to the internet root nameservers itself, or show 
+the current config.  You could pass the nameservers after a DHCP update.
+.IP
+Without arguments the current list of addresses used to forward all queries
+to is printed.  On startup this is from the forward-zone "." configuration.
+Afterwards it shows the status.  It prints off when no forwarding is used.
+.IP
+If \fIoff\fR is passed, forwarding is disabled and the root nameservers
+are used.  This can be used to avoid to avoid buggy or non-DNSSEC supporting
+nameservers returned from DHCP.  But may not work in hotels or hotspots.
+.IP
+If one or more IPv4 or IPv6 addresses are given, those are then used to forward
+queries to.  The addresses must be separated with spaces.  With '@port' the
+port number can be set explicitly (default port is 53 (DNS)).
+.IP
+By default the forwarder information from the config file for the root "." is
+used.  The config file is not changed, so after a reload these changes are
+gone.  Other forward zones from the config file are not affected by this command.
 .SH "EXIT CODE"
 The unbound-control program exits with status code 1 on error, 0 on success.
 .SH "SET UP"

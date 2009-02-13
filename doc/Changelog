@@ -1,3 +1,9 @@
+13 February 2009: Wouter
+	- forwarder information now per-thread duplicated.
+	  This keeps it read only for speed, with no locking necessary.
+	- forward command for unbound control to change forwarders to use
+	  on the fly.
+
 12 February 2009: Wouter
 	- call setusercontext if available (on BSD).
 	- small refactor of stats clearing.

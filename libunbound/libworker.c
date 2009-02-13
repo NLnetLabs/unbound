@@ -61,6 +61,7 @@
 #include "util/data/msgreply.h"
 #include "util/data/msgencode.h"
 #include "util/tube.h"
+#include "iterator/iter_fwd.h"
 
 /** handle new query command for bg worker */
 static void handle_newq(struct libworker* w, uint8_t* buf, uint32_t len);
@@ -76,6 +77,7 @@ libworker_delete(struct libworker* w)
 			!w->is_bg || w->is_bg_thread);
 		ldns_buffer_free(w->env->scratch_buffer);
 		regional_destroy(w->env->scratch);
+		forwards_delete(w->env->fwds);
 		ub_randfree(w->env->rnd);
 		free(w->env);
 	}
@@ -114,10 +116,15 @@ libworker_setup(struct ub_ctx* ctx, int is_bg)
 	}
 	w->env->scratch = regional_create_custom(cfg->msg_buffer_size);
 	w->env->scratch_buffer = ldns_buffer_new(cfg->msg_buffer_size);
+	w->env->fwds = forwards_create();
+	if(w->env->fwds && !forwards_apply_cfg(w->env->fwds, cfg)) { 
+		forwards_delete(w->env->fwds);
+		w->env->fwds = NULL;
+	}
 	if(!w->is_bg || w->is_bg_thread) {
 		lock_basic_unlock(&ctx->cfglock);
 	}
-	if(!w->env->scratch || !w->env->scratch_buffer) {
+	if(!w->env->scratch || !w->env->scratch_buffer || !w->env->fwds) {
 		libworker_delete(w);
 		return NULL;
 	}

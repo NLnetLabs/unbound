@@ -83,6 +83,9 @@ usage()
 	printf("  flush_stats 			flush statistics, make zero\n");
 	printf("  flush_requestlist 		drop queries that are worked on\n");
 	printf("  dump_requestlist		show what is worked on\n");
+	printf("  forward [off | addr ...]	without arg show forward setup\n");
+	printf("				or off to turn off root forwarding\n");
+	printf("				or give list of ip addresses\n");
 	printf("Version %s\n", PACKAGE_VERSION);
 	printf("BSD licensed, see LICENSE in source package for details.\n");
 	printf("Report bugs to %s\n", PACKAGE_BUGREPORT);

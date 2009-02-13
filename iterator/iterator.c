@@ -89,7 +89,6 @@ iter_deinit(struct module_env* env, int id)
 	free(iter_env->target_fetch_policy);
 	priv_delete(iter_env->priv);
 	hints_delete(iter_env->hints);
-	forwards_delete(iter_env->fwds);
 	donotq_delete(iter_env->donotq);
 	free(iter_env);
 	env->modinfo[id] = NULL;
@@ -775,16 +774,14 @@ generate_ns_check(struct module_qstate* qstate, struct iter_qstate* iq, int id)
  * 
  * @param qstate: query state.
  * @param iq: iterator query state.
- * @param ie: iterator shared global environment.
  * @return true if the request is forwarded, false if not.
  * 	If returns true but, iq->dp is NULL then a malloc failure occurred.
  */
 static int
-forward_request(struct module_qstate* qstate, struct iter_qstate* iq,
-	struct iter_env* ie)
+forward_request(struct module_qstate* qstate, struct iter_qstate* iq)
 {
-	struct delegpt* dp = forwards_lookup(ie->fwds, iq->qchase.qname,
-		iq->qchase.qclass);
+	struct delegpt* dp = forwards_lookup(qstate->env->fwds, 
+		iq->qchase.qname, iq->qchase.qclass);
 	if(!dp) 
 		return 0;
 	/* send recursion desired to forward addr */
@@ -892,7 +889,7 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 	}
 	
 	/* attempt to forward the request */
-	if(forward_request(qstate, iq, ie))
+	if(forward_request(qstate, iq))
 	{
 		if(!iq->dp) {
 			log_err("alloc failure for forward dp");
@@ -2129,8 +2126,7 @@ iter_get_mem(struct module_env* env, int id)
 	if(!ie)
 		return 0;
 	return sizeof(*ie) + sizeof(int)*((size_t)ie->max_dependency_depth+1)
-		+ hints_get_mem(ie->hints) + forwards_get_mem(ie->fwds)
-		+ donotq_get_mem(ie->donotq);
+		+ hints_get_mem(ie->hints) + donotq_get_mem(ie->donotq);
 }
 
 /**

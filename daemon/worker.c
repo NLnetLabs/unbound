@@ -65,6 +65,7 @@
 #include "util/data/dname.h"
 #include "util/fptr_wlist.h"
 #include "util/tube.h"
+#include "iterator/iter_fwd.h"
 
 #ifdef HAVE_SYS_TYPES_H
 #  include <sys/types.h>
@@ -158,7 +159,8 @@ worker_mem_report(struct worker* ATTR_UNUSED(worker),
 		+ sizeof(worker->rndstate) 
 		+ regional_get_mem(worker->scratchpad) 
 		+ sizeof(*worker->env.scratch_buffer) 
-		+ ldns_buffer_capacity(worker->env.scratch_buffer);
+		+ ldns_buffer_capacity(worker->env.scratch_buffer)
+		+ forwards_get_mem(worker->env.fwds);
 	if(cur_serv) {
 		me += serviced_get_mem(cur_serv);
 	}
@@ -1119,6 +1121,12 @@ worker_init(struct worker* worker, struct config_file *cfg,
 	worker->env.kill_sub = &mesh_state_delete;
 	worker->env.detect_cycle = &mesh_detect_cycle;
 	worker->env.scratch_buffer = ldns_buffer_new(cfg->msg_buffer_size);
+	if(!(worker->env.fwds = forwards_create()) ||
+		!forwards_apply_cfg(worker->env.fwds, cfg)) {
+		log_err("Could not set forward zones");
+		worker_delete(worker);
+		return 0;
+	}
 	if(!worker->env.mesh || !worker->env.scratch_buffer) {
 		worker_delete(worker);
 		return 0;
@@ -1151,6 +1159,7 @@ worker_delete(struct worker* worker)
 	}
 	mesh_delete(worker->env.mesh);
 	ldns_buffer_free(worker->env.scratch_buffer);
+	forwards_delete(worker->env.fwds);
 	listen_delete(worker->front);
 	outside_network_delete(worker->back);
 	comm_signal_delete(worker->comsig);

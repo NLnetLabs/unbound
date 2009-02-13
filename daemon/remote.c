@@ -63,6 +63,8 @@
 #include "validator/val_kcache.h"
 #include "validator/val_kentry.h"
 #include "iterator/iterator.h"
+#include "iterator/iter_fwd.h"
+#include "iterator/iter_delegpt.h"
 #include "services/outbound_list.h"
 #include "services/outside_network.h"
 
@@ -1221,24 +1223,102 @@ do_flush_name(SSL* ssl, struct worker* worker, char* arg)
 
 /** print root forwards */
 static int
-print_root_fwds(SSL* ssl, struct config_file* cfg)
+print_root_fwds(SSL* ssl, struct iter_forwards* fwds, uint8_t* root)
 {
-	struct config_stub* s;
-	if(!ssl_printf(ssl, "root-forward:"))
-		return 0;
-	for(s = cfg->forwards; s; s = s->next) {
-		if(s->name && strcmp(s->name, ".") == 0) {
-			struct config_strlist* p;
-			for(p = s->hosts; p; p = p->next)
-				if(!ssl_printf(ssl, " %s", p->str))
-					return 0;
-			for(p = s->addrs; p; p = p->next)
-				if(!ssl_printf(ssl, " %s", p->str))
-					return 0;
-			return ssl_printf(ssl, "\n");
+	char buf[257];
+	struct delegpt* dp;
+	struct delegpt_ns* ns;
+	struct delegpt_addr* a;
+	int f = 0;
+	dp = forwards_lookup(fwds, root, LDNS_RR_CLASS_IN);
+	if(!dp) 
+		return ssl_printf(ssl, "off (using root hints)\n");
+	/* if dp is returned it must be the root */
+	log_assert(query_dname_compare(dp->name, root)==0);
+	for(ns = dp->nslist; ns; ns = ns->next) {
+		dname_str(ns->name, buf);
+		if(!ssl_printf(ssl, "%s%s", (f?" ":""), buf))
+			return 0;
+		f = 1;
+	}
+	for(a = dp->target_list; a; a = a->next_target) {
+		addr_to_str(&a->addr, a->addrlen, buf, sizeof(buf));
+		if(!ssl_printf(ssl, "%s%s", (f?" ":""), buf))
+			return 0;
+		f = 1;
+	}
+	return ssl_printf(ssl, "\n");
+}
+
+/** parse args into delegpt */
+static struct delegpt*
+parse_delegpt(SSL* ssl, struct regional* region, char* args, uint8_t* root)
+{
+	/* parse args and add in */
+	char* p = args;
+	char* todo;
+	struct delegpt* dp = delegpt_create(region);
+	struct sockaddr_storage addr;
+	socklen_t addrlen;
+	if(!dp || !delegpt_set_name(dp, region, root)) {
+		(void)ssl_printf(ssl, "error out of memory\n");
+		return NULL;
+	}
+	while(p) {
+		todo = p;
+		p = strchr(p, ' '); /* find next spot, if any */
+		if(p) {
+			*p++ = 0;	/* end this spot */
+			p = skipwhite(p); /* position at next spot */
+		}
+		/* parse address */
+		if(!extstrtoaddr(todo, &addr, &addrlen)) {
+			(void)ssl_printf(ssl, "error cannot parse"
+				" IP address '%s'\n", todo);
+			return NULL;
+		}
+		/* add address */
+		if(!delegpt_add_addr(dp, region, &addr, addrlen, 0, 1)) {
+			(void)ssl_printf(ssl, "error out of memory\n");
+			return NULL;
 		}
 	}
-	return ssl_printf(ssl, " no (using root hints)\n");
+	return dp;
+}
+
+/** do the status command */
+static void
+do_forward(SSL* ssl, struct worker* worker, char* args)
+{
+	struct iter_forwards* fwd = worker->env.fwds;
+	uint8_t* root = (uint8_t*)"\000";
+	if(!fwd) {
+		(void)ssl_printf(ssl, "error: structure not allocated\n");
+		return;
+	}
+	if(args == NULL || args[0] == 0) {
+		(void)print_root_fwds(ssl, fwd, root);
+		return;
+	}
+	/* set root forwards for this thread. since we are in remote control
+	 * the actual mesh is not running, so we can freely edit it. */
+	/* delete all the existing queries first */
+	mesh_delete_all(worker->env.mesh);
+	/* reset the fwd structure ; the cfg is unchanged (shared by threads)*/
+	/* this reset frees up memory */
+	forwards_apply_cfg(fwd, worker->env.cfg);
+	if(strcmp(args, "off") == 0) {
+		forwards_delete_zone(fwd, LDNS_RR_CLASS_IN, root);
+	} else {
+		struct delegpt* dp;
+		if(!(dp = parse_delegpt(ssl, fwd->region, args, root)))
+			return;
+		if(!forwards_add_zone(fwd, LDNS_RR_CLASS_IN, dp)) {
+			(void)ssl_printf(ssl, "error out of memory\n");
+			return;
+		}
+	}
+	send_ok(ssl);
 }
 
 /** do the status command */
@@ -1260,8 +1340,6 @@ do_status(SSL* ssl, struct worker* worker)
 			return;
 	}
 	if(!ssl_printf(ssl, " ]\n"))
-		return;
-	if(!print_root_fwds(ssl, worker->env.cfg))
 		return;
 	uptime = (time_t)time(NULL) - (time_t)worker->daemon->time_boot.tv_sec;
 	if(!ssl_printf(ssl, "uptime: %u seconds\n", (unsigned)uptime))
@@ -1310,21 +1388,11 @@ get_mesh_status(struct mesh_area* mesh, struct mesh_state* m,
 		if(ol->first == NULL)
 			snprintf(buf, len, " (empty_list)");
 		for(e = ol->first; e; e = e->next) {
-			int af = (int)((struct sockaddr_in*)&e->qsent->addr)
-				->sin_family;
-			void* sinaddr = &((struct sockaddr_in*)&e->qsent->addr)
-				->sin_addr;
-			if(addr_is_ip6(&e->qsent->addr, e->qsent->addrlen))
-				sinaddr = &((struct sockaddr_in6*)
-					&e->qsent->addr)->sin6_addr;
-
 			snprintf(buf, len, " ");
 			l = strlen(buf);
 			buf += l; len -= l;
-
-			if(inet_ntop(af, sinaddr, buf, (socklen_t)len) == 0) {
-				snprintf(buf, len, "(inet_ntop_error)");
-			}
+			addr_to_str(&e->qsent->addr, e->qsent->addrlen, 
+				buf, len);
 			l = strlen(buf);
 			buf += l; len -= l;
 		}
@@ -1433,6 +1501,11 @@ execute_cmd(struct daemon_remote* rc, SSL* ssl, char* cmd,
 		return;
 	} else if(strncmp(p, "load_cache", 10) == 0) {
 		if(load_cache(ssl, worker)) send_ok(ssl);
+		return;
+	} else if(strncmp(p, "forward", 7) == 0) {
+		/* must always distribute this cmd */
+		if(rc) distribute_cmd(rc, ssl, cmd);
+		do_forward(ssl, worker, skipwhite(p+7));
 		return;
 	} else if(strncmp(p, "flush_stats", 11) == 0) {
 		/* must always distribute this cmd */

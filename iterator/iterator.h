@@ -87,9 +87,6 @@ struct iter_env {
 	/** A flag to indicate whether or not we have an IPv6 route */
 	int supports_ipv6;
 
-	/** Mapping of forwarding zones to targets. */
-	struct iter_forwards* fwds;
-
 	/** A set of inetaddrs that should never be queried. */
 	struct iter_donotq* donotq;
 
