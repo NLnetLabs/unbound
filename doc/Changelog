@@ -4,6 +4,7 @@
 	- forward command for unbound control to change forwarders to use
 	  on the fly.
 	- document that unbound-host reads no config file by default.
+	- updated iana portlist.
 
 12 February 2009: Wouter
 	- call setusercontext if available (on BSD).
