@@ -35,6 +35,10 @@ uses the unbound validating resolver to query for the hostname and display
 results. With the \fB\-v\fR option it displays validation 
 status: secure, insecure, bogus (security failure).
 .P
+By default it reads no configuration file whatsoever.  It attempts to reach
+the internet root servers.  With \fB\-C\fR an unbound config file and with
+\fB\-r\fR resolv.conf can be read.
+.P
 The available options are:
 .TP
 .I hostname

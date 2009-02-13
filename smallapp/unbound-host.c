@@ -64,7 +64,7 @@ usage()
 	printf("			-y 'example.com DS 31560 5 1 1CFED8478...'\n");
 	printf("    -f keyfile		read trust anchors from file, with lines as -y.\n");
 	printf("    -F keyfile		read named.conf-style trust anchors.\n");
-	printf("    -C config		use the specified unbound.conf\n");
+	printf("    -C config		use the specified unbound.conf (none read by default)\n");
 	printf("    -r			read forwarder information from /etc/resolv.conf\n");
 	printf("      			breaks validation if the fwder does not do DNSSEC.\n");
 	printf("    -v			be more verbose, shows nodata and security.\n");
