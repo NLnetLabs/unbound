@@ -1116,6 +1116,8 @@ serviced_delete(struct serviced_query* sq)
 			if(p->pc)
 				portcomm_loweruse(sq->outnet, p->pc);
 			pending_delete(sq->outnet, p);
+			/* this call can cause reentrant calls back into the
+			 * mesh */
 			outnet_send_wait_udp(sq->outnet);
 		} else {
 			struct waiting_tcp* p = (struct waiting_tcp*)

@@ -191,7 +191,10 @@ static void
 mesh_delete_helper(rbnode_t* n, void* ATTR_UNUSED(arg))
 {
 	struct mesh_state* mstate = (struct mesh_state*)n->key;
-	mesh_state_cleanup(mstate);
+	/* perform a full delete, not only 'cleanup' routine,
+	 * because other callbacks expect a clean state in the mesh.
+	 * For 're-entrant' calls */
+	mesh_state_delete(&mstate->s);
 }
 
 void 

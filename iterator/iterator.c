@@ -459,15 +459,13 @@ handle_cname_response(struct module_qstate* qstate, struct iter_qstate* iq,
  * @param subq_ret: if newly allocated, the subquerystate, or NULL if it does
  * 	not need initialisation.
  * @param v: if true, validation is done on the subquery.
- * @param detcyc: if true, cycle detection is done on the subquery.
  * @return false on error (malloc).
  */
 static int
 generate_sub_request(uint8_t* qname, size_t qnamelen, uint16_t qtype, 
 	uint16_t qclass, struct module_qstate* qstate, int id,
 	struct iter_qstate* iq, enum iter_state initial_state, 
-	enum iter_state final_state, struct module_qstate** subq_ret, int v,
-	int detcyc)
+	enum iter_state final_state, struct module_qstate** subq_ret, int v)
 {
 	struct module_qstate* subq = NULL;
 	struct iter_qstate* subiq = NULL;
@@ -490,13 +488,11 @@ generate_sub_request(uint8_t* qname, size_t qnamelen, uint16_t qtype,
 	if(!v)
 		qflags |= BIT_CD;
 	
-	if(detcyc) {
-		fptr_ok(fptr_whitelist_modenv_detect_cycle(
-			qstate->env->detect_cycle));
-		if((*qstate->env->detect_cycle)(qstate, &qinf, qflags, prime)){
-			log_query_info(VERB_DETAIL, "cycle detected", &qinf);
-			return 0;
-		}
+	fptr_ok(fptr_whitelist_modenv_detect_cycle(
+		qstate->env->detect_cycle));
+	if((*qstate->env->detect_cycle)(qstate, &qinf, qflags, prime)){
+		log_query_info(VERB_DETAIL, "cycle detected", &qinf);
+		return 0;
 	}
 
 	/* attach subquery, lookup existing or make a new one */
@@ -565,7 +561,7 @@ prime_root(struct module_qstate* qstate, struct iter_qstate* iq,
 	 * the normal INIT state logic (which would cause an infloop). */
 	if(!generate_sub_request((uint8_t*)"\000", 1, LDNS_RR_TYPE_NS, 
 		qclass, qstate, id, iq, QUERYTARGETS_STATE, PRIME_RESP_STATE,
-		&subq, 0, 1)) {
+		&subq, 0)) {
 		verbose(VERB_ALGO, "could not prime root");
 		return 0;
 	}
@@ -634,7 +630,7 @@ prime_stub(struct module_qstate* qstate, struct iter_qstate* iq,
 	 * redundant INIT state processing. */
 	if(!generate_sub_request(stub_dp->name, stub_dp->namelen, 
 		LDNS_RR_TYPE_NS, qclass, qstate, id, iq,
-		QUERYTARGETS_STATE, PRIME_RESP_STATE, &subq, 0, 1)) {
+		QUERYTARGETS_STATE, PRIME_RESP_STATE, &subq, 0)) {
 		verbose(VERB_ALGO, "could not prime stub");
 		(void)error_response(qstate, id, LDNS_RCODE_SERVFAIL);
 		return 1; /* return 1 to make module stop, with error */
@@ -712,7 +708,7 @@ generate_a_aaaa_check(struct module_qstate* qstate, struct iter_qstate* iq,
 		if(!generate_sub_request(s->rk.dname, s->rk.dname_len, 
 			ntohs(s->rk.type), ntohs(s->rk.rrset_class),
 			qstate, id, iq,
-			INIT_REQUEST_STATE, FINISHED_STATE, &subq, 1, 1)) {
+			INIT_REQUEST_STATE, FINISHED_STATE, &subq, 1)) {
 			verbose(VERB_ALGO, "could not generate addr check");
 			return;
 		}
@@ -747,7 +743,7 @@ generate_ns_check(struct module_qstate* qstate, struct iter_qstate* iq, int id)
 		iq->dp->name, LDNS_RR_TYPE_NS, iq->qchase.qclass);
 	if(!generate_sub_request(iq->dp->name, iq->dp->namelen, 
 		LDNS_RR_TYPE_NS, iq->qchase.qclass, qstate, id, iq,
-		INIT_REQUEST_STATE, FINISHED_STATE, &subq, 1, 1)) {
+		INIT_REQUEST_STATE, FINISHED_STATE, &subq, 1)) {
 		verbose(VERB_ALGO, "could not generate ns check");
 		return;
 	}
@@ -1094,7 +1090,7 @@ generate_target_query(struct module_qstate* qstate, struct iter_qstate* iq,
 {
 	struct module_qstate* subq;
 	if(!generate_sub_request(name, namelen, qtype, qclass, qstate, 
-		id, iq, INIT_REQUEST_STATE, FINISHED_STATE, &subq, 0, 0))
+		id, iq, INIT_REQUEST_STATE, FINISHED_STATE, &subq, 0))
 		return 0;
 	if(subq) {
 		struct iter_qstate* subiq = 
@@ -1729,7 +1725,7 @@ processPrimeResponse(struct module_qstate* qstate, int id)
 		if(!generate_sub_request(qstate->qinfo.qname, 
 			qstate->qinfo.qname_len, qstate->qinfo.qtype,
 			qstate->qinfo.qclass, qstate, id, iq,
-			INIT_REQUEST_STATE, FINISHED_STATE, &subq, 1, 1)) {
+			INIT_REQUEST_STATE, FINISHED_STATE, &subq, 1)) {
 			verbose(VERB_ALGO, "could not generate prime check");
 		}
 		generate_a_aaaa_check(qstate, iq, id);

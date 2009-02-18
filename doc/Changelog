@@ -1,3 +1,10 @@
+18 February 2009: Wouter
+	- more cycle detection. Also for target queries.
+	- fixup bug where during deletion of the mesh queries the callbacks
+	  that were reentrant caused assertion failures. Keep the mesh in 
+	  a reentrant safe state.  Affects libunbound, reload of server,
+	  on quit and flush_requestlist.
+
 13 February 2009: Wouter
 	- forwarder information now per-thread duplicated.
 	  This keeps it read only for speed, with no locking necessary.
