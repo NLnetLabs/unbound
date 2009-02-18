@@ -4,6 +4,7 @@
 	  that were reentrant caused assertion failures. Keep the mesh in 
 	  a reentrant safe state.  Affects libunbound, reload of server,
 	  on quit and flush_requestlist.
+	- iana portlist updated.
 
 13 February 2009: Wouter
 	- forwarder information now per-thread duplicated.
