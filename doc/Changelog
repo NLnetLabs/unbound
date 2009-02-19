@@ -1,6 +1,10 @@
 19 February 2009: Wouter
 	- unbound-checkconf and unbound print warnings when trust anchors
 	  have unsupported algorithms.
+	- added contrib/update-itar.sh  This script is similar to
+	  update-anchor.sh, and updates from the IANA ITAR repository.
+	  You can provide your own PGP key and trust repo, or can use the
+	  builtin.  The program uses wget and gpg to work.
 
 18 February 2009: Wouter
 	- more cycle detection. Also for target queries.
