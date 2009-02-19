@@ -6,6 +6,9 @@
 	  You can provide your own PGP key and trust repo, or can use the
 	  builtin.  The program uses wget and gpg to work.
 	- iana portlist updated.
+	- update-itar.sh: using ftp:// urls because https godaddy certificate
+	  is not available everywhere and then gives fatal errors.  The 
+	  security is provided by pgp signature.
 
 18 February 2009: Wouter
 	- more cycle detection. Also for target queries.

@@ -10,9 +10,9 @@ thedir="."
 # where is the file that unbound is going to read
 ub_ta_file="$thedir/anchors.mf"
 # where is the itar master file format
-itar_url="https://itar.iana.org/anchors/anchors.mf"
+itar_url="ftp://iana.org/itar/anchors.mf"
 # where is the itar PGP signature
-itar_sig="https://itar.iana.org/anchors/anchors.mf.sig"
+itar_sig="ftp://iana.org/itar/anchors.mf.sig"
 
 # which command to fetch urls, cmd $dest $url. "wget -O" "curl -o"
 fetch_cmd="wget -O"
