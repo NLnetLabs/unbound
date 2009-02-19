@@ -38,7 +38,7 @@ usage ( )
 	echo "    Exit code 0 means anchors updated, 1 no changes, "
 	echo "    others are errors. So, in a cronjob you can do:"
 	echo "    cd /usr/local/etc/unbound  # your unbound work dir"
-	echo "    update-itar.sh && unbound-control reload"
+	echo "    ./update-itar.sh && unbound-control reload"
 	exit 2
 }
 
