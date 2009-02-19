@@ -5,6 +5,7 @@
 	  update-anchor.sh, and updates from the IANA ITAR repository.
 	  You can provide your own PGP key and trust repo, or can use the
 	  builtin.  The program uses wget and gpg to work.
+	- iana portlist updated.
 
 18 February 2009: Wouter
 	- more cycle detection. Also for target queries.
