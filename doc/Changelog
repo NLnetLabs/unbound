@@ -1,3 +1,7 @@
+19 February 2009: Wouter
+	- unbound-checkconf and unbound print warnings when trust anchors
+	  have unsupported algorithms.
+
 18 February 2009: Wouter
 	- more cycle detection. Also for target queries.
 	- fixup bug where during deletion of the mesh queries the callbacks

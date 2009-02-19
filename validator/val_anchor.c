@@ -40,6 +40,7 @@
  */
 #include "config.h"
 #include "validator/val_anchor.h"
+#include "validator/val_sigcrypt.h"
 #include "util/data/packed_rrset.h"
 #include "util/data/dname.h"
 #include "util/log.h"
@@ -820,6 +821,40 @@ anchors_assemble(struct val_anchors* anchors, struct trust_anchor* ta)
 }
 
 /**
+ * Check DS algos for support, warn if not.
+ * @param ta: trust anchor
+ * @return true if all anchors are supported.
+ */
+static int
+anchors_ds_is_supported(struct trust_anchor* ta)
+{
+	size_t i;
+	for(i=0; i<ta->numDS; i++) {
+		if(!ds_digest_algo_is_supported(ta->ds_rrset, i))
+			return 0;
+		if(!ds_key_algo_is_supported(ta->ds_rrset, i))
+			return 0;
+	}
+	return 1;
+}
+
+/**
+ * Check DNSKEY algos for support, warn if not.
+ * @param ta: trust anchor
+ * @return true if all anchors are supported.
+ */
+static int
+anchors_dnskey_is_supported(struct trust_anchor* ta)
+{
+	size_t i;
+	for(i=0; i<ta->numDNSKEY; i++) {
+		if(!dnskey_algo_is_supported(ta->dnskey_rrset, i))
+			return 0;
+	}
+	return 1;
+}
+
+/**
  * Assemble the rrsets in the anchors, ready for use by validator.
  * @param anchors: trust anchor storage.
  * @return: false on error.
@@ -832,6 +867,16 @@ anchors_assemble_rrsets(struct val_anchors* anchors)
 		if(!anchors_assemble(anchors, ta)) {
 			log_err("out of memory");
 			return 0;
+		}
+		if(!anchors_ds_is_supported(ta)) {
+			log_nametypeclass(0, "warning: unsupported "
+				"algorithm for trust anchor", 
+				ta->name, LDNS_RR_TYPE_DS, ta->dclass);
+		}
+		if(!anchors_dnskey_is_supported(ta)) {
+			log_nametypeclass(0, "warning: unsupported "
+				"algorithm for trust anchor", 
+				ta->name, LDNS_RR_TYPE_DNSKEY, ta->dclass);
 		}
 	}
 	return 1;
