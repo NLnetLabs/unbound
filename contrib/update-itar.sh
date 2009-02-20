@@ -28,16 +28,16 @@ pgp_cmd="gpg"
 usage ( )
 {
 	echo "usage: update-itar"
-	echo "    updates the trust anchors from the interim trust"
-	echo "    anchor repository."
+	echo "    Updates the trust anchors from the interim trust"
+	echo "    anchor repository, https://itar.iana.org, and checks PGP sig."
 	echo
-	echo "    Updates $ub_ta_file with the latest keys"
-	echo "    read that file from the unbound config with"
+	echo "    Updates $ub_ta_file with the latest keys."
+	echo "    Read that file from the unbound config with"
 	echo "    trust-anchor-file: "'"'"$ub_ta_file"'"'
 	echo
 	echo "    Exit code 0 means anchors updated, 1 no changes, "
 	echo "    others are errors. So, in a cronjob you can do:"
-	echo "    cd /usr/local/etc/unbound  # your unbound work dir"
+	echo "    cd /usr/local/etc/unbound    # your unbound work dir"
 	echo "    ./update-itar.sh && unbound-control reload"
 	exit 2
 }
@@ -95,7 +95,10 @@ a9g3AhsMAAoJEPR9+zCB1GT0AUwAn2ZtBwAyVxppdeTqilXufUvAkvjbAJ9dUpR1
 EOF
 	fi
 	# import the new key
-	$pgp_cmd --no-default-keyring --keyring $pgp_keyring_file --primary-keyring $pgp_keyring_file --import $pgp_pub_key_file >$tmpf.log 2>&1 || error_exit "could not import pgp public key into keyring"
+	$pgp_cmd --no-default-keyring --keyring $pgp_keyring_file \
+		--primary-keyring $pgp_keyring_file \
+		--import $pgp_pub_key_file >$tmpf.log 2>&1 \
+		|| error_exit "could not import pgp public key into keyring"
 fi
 
 $fetch_cmd $tmpf $itar_url >$tmpf.log 2>&1 \
@@ -106,17 +109,19 @@ $fetch_cmd $tmpf.sig $itar_sig >$tmpf.log 2>&1 \
 	|| error_exit "fetching $itar_sig failed"
 
 # check the file with pgp
-$pgp_cmd --no-default-keyring --keyring $pgp_keyring_file --verify $tmpf.sig $tmpf >$tmpf.log 2>&1 || error_exit "the PGP signature failed!"
+$pgp_cmd --no-default-keyring --keyring $pgp_keyring_file \
+	--verify $tmpf.sig $tmpf >$tmpf.log 2>&1 \
+	|| error_exit "the PGP signature failed!"
 
 # check for differences
-val=0
+val=1
 if diff "$ub_ta_file" $tmpf; then
 	# echo "The interim trust anchor repository did not change."
 	:
 else
 	echo "Updating $ub_ta_file"
 	cp $tmpf $ub_ta_file
-	val=1
+	val=0
 fi
 
 rm -f $tmpf $tmpf.sig $tmpf.log

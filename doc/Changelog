@@ -1,3 +1,7 @@
+20 February 2009: Wouter
+	- Fixup contrib/update-itar.sh, the exit codes 1 and 0 were swapped.
+	  Nicer script layout.  Added url to site in -h output.
+
 19 February 2009: Wouter
 	- unbound-checkconf and unbound print warnings when trust anchors
 	  have unsupported algorithms.
