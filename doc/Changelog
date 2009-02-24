@@ -1,5 +1,6 @@
 24 February 2009: Wouter
 	- isc moved their dlv key download location.
+	- fixup warning on vista/mingw.
 
 20 February 2009: Wouter
 	- Fixup contrib/update-itar.sh, the exit codes 1 and 0 were swapped.

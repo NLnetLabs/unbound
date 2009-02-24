@@ -151,10 +151,12 @@ log_vmsg(int pri, const char* type,
 	const char *format, va_list args)
 {
 	char message[MAXSYSLOGMSGLEN];
-	char tmbuf[32];
 	unsigned int* tid = (unsigned int*)ub_thread_key_get(logkey);
 	time_t now;
+#if defined(HAVE_STRFTIME) && defined(HAVE_LOCALTIME_R) 
+	char tmbuf[32];
 	struct tm tm;
+#endif
 	(void)pri;
 	vsnprintf(message, sizeof(message), format, args);
 #ifdef HAVE_SYSLOG_H
