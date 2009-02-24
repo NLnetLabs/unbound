@@ -287,7 +287,7 @@ server:
 	
 	# File with DLV trusted keys. Same format as trust-anchor-file.
 	# There can be only one DLV configured, it is trusted from root down.
-	# Download https://secure.isc.org/ops/dlv/dlv.isc.org.key
+	# Download http://ftp.isc.org/www/dlv/dlv.isc.org.key
 	# dlv-anchor-file: "dlv.isc.org.key"
 
 	# File with trusted keys for validation. Specify more than one file

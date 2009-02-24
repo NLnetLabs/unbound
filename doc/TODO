@@ -59,7 +59,6 @@ o local-zone directive with authority service, full authority server
 o remote control read ssl information while priviledged.
  
 o infra and lame cache: easier size config (in Mb), show usage in graphs.
-o unbound_control forward [addr {addr}] | [off]
 o config entry to denote that a zone is to be treated as unsigned (even if 
   a DS exists to higher trust anchor).
 o see if we can include the python bindings (contrib).
