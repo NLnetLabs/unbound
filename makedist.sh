@@ -42,10 +42,11 @@ cwd=`pwd`
 # Utility functions.
 usage () {
     cat >&2 <<EOF
-Usage $0: [-h] [-s] [-d SVN_root] [-l ldns_path]
+Usage $0: [-w] [-h] [-s] [-d SVN_root] [-l ldns_path]
 Generate a distribution tar file for NSD.
 
     -h           This usage information.
+    -w           Build windows snapshot binary zip.
     -s           Build a snapshot distribution file.  The current date is
                  automatically appended to the current NSD version number.
     -rc <nr>     Build a release candidate, the given string will be added
@@ -110,6 +111,7 @@ replace_all () {
 SNAPSHOT="no"
 RC="no"
 LDNSDIR=""
+DOWIN="no"
 
 # Parse the command line arguments.
 while [ "$1" ]; do
@@ -123,6 +125,9 @@ while [ "$1" ]; do
             ;;
         "-s")
             SNAPSHOT="yes"
+            ;;
+        "-w")
+            DOWIN="yes"
             ;;
         "-l")
             LDNSDIR="$2"
@@ -138,6 +143,32 @@ while [ "$1" ]; do
     esac
     shift
 done
+
+if [ "$DOWIN" = "yes" ]; then
+    version=`./configure --version | head -1 | awk '{ print $3 }'` || \
+        error_cleanup "Cannot determine version number."
+    info "Unbound version: $version"
+    file="unbound-$version.zip"
+    rm -f $file
+    info "Creating $file"
+    mkdir tmp.$$
+    cd tmp.$$
+    cp ../doc/example.conf example.conf
+    cp ../unbound.exe unbound.exe
+    cp ../unbound-host.exe unbound-host.exe
+    cp ../unbound-control.exe unbound-control.exe
+    cp ../unbound-checkconf.exe unbound-checkconf.exe
+    cp ../LICENSE LICENSE
+    cp ../winrc/unbound-website.url unbound-website.url
+    zip ../$file LICENSE unbound.exe unbound-host.exe unbound-control.exe unbound-checkconf.exe example.conf unbound-website.url
+    rm -f example.conf
+    info "Testing $file"
+    cd ..
+    rm -rf tmp.$$
+    zip -T $file
+    info "Done"
+    exit 0
+fi
 
 # Check if SVNROOT is specified.
 if [ -z "$SVNROOT" ]; then
