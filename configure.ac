@@ -95,6 +95,11 @@ AC_SUBST(UNBOUND_USERNAME)
 AC_DEFINE_UNQUOTED(UB_USERNAME, ["$UNBOUND_USERNAME"], [default username])
 
 AC_DEFINE(WINVER, 0x0502, [the version of the windows API enabled])
+dnl compute package version for windows res files, the first four numbers.
+[
+wnvs=`echo $PACKAGE_VERSION | sed -e 's/^[^0-9]*\([0-9]\)[^0-9]*\([0-9]\)[^0-9]*\([0-9]\)[^0-9]*\([0-9]\).*$/\1,\2,\3,\4/' -e 's/^[^0-9]*\([0-9]\)[^0-9]*\([0-9]\)[^0-9]*\([0-9]\)[^0-9]*$/\1,\2,\3,0/' `
+]
+AC_DEFINE_UNQUOTED(RSRC_PACKAGE_VERSION, [$wnvs], [version number for resource files])
 
 dnl routine to help check for compiler flags.
 AC_DEFUN([CHECK_COMPILER_FLAG],
@@ -837,6 +842,9 @@ AC_LANG_PROGRAM(
 [
 ac_cv_func_getaddrinfo="yes"
 dnl already: LIBS="$LIBS -lws2_32"
+AC_DEFINE(UB_ON_WINDOWS, 1, [Use win32 resources and API])
+UB_ON_WINDOWS=yes
+AC_SUBST(UB_ON_WINDOWS)
 AC_DEFINE(USE_WINSOCK, 1, [Whether the windows socket API is used])
 ],
 [

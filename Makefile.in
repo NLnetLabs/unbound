@@ -38,6 +38,7 @@ staticexe=@staticexe@
 configfile=@ub_conf_file@
 UNBOUND_RUN_DIR=@UNBOUND_RUN_DIR@
 CHECKLOCK_SRC=@CHECKLOCK_SRC@
+UB_ON_WINDOWS=@UB_ON_WINDOWS@
 
 YACC=@YACC@
 LEX=@LEX@
@@ -118,6 +119,21 @@ ALL_SRC=$(sort $(COMMON_SRC) $(UNITTEST_SRC) $(DAEMON_SRC) \
 	$(HARVEST_SRC) $(CONTROL_SRC))
 ALL_OBJ=$(addprefix $(BUILD),$(ALL_SRC:.c=.lo) \
 	$(addprefix compat/,$(LIBOBJS:.o=.lo))) $(COMPAT_OBJ)
+
+ifeq "$(UB_ON_WINDOWS)" "yes"
+  DAEMON_OBJ+=$(BUILD)winrc/rsrc_unbound.o
+  HOST_OBJ+=$(BUILD)winrc/rsrc_unbound_host.o
+  CONTROL_OBJ+=$(BUILD)winrc/rsrc_unbound_control.o
+  CHECKCONF_OBJ+=$(BUILD)winrc/rsrc_unbound_checkconf.o
+
+$(BUILD)%.o:      $(srcdir)/%.rc
+	$(INFO) Resource $<
+	@if test ! -z "$(ldnsdir)" -a ! -e $(ldnsdir)/include/ldns/ldns.h; \
+		then (cd $(ldnsdir); $(MAKE) copy-headers); fi
+	@-if test ! -d $(dir $@); then $(INSTALL) -d $(patsubst %/,%,$(dir $@));
+ fi
+	$Q$(WINDRES) $(CPPFLAGS) $< $@
+endif
 
 COMPILE=$(LIBTOOL) --tag=CC --mode=compile $(CC) $(CPPFLAGS) $(CFLAGS)
 LINK=$(LIBTOOL) --tag=CC --mode=link $(CC) $(staticexe) $(RUNTIME_PATH) $(CFLAGS) $(LDFLAGS)
