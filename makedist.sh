@@ -42,11 +42,10 @@ cwd=`pwd`
 # Utility functions.
 usage () {
     cat >&2 <<EOF
-Usage $0: [-w] [-h] [-s] [-d SVN_root] [-l ldns_path]
+Usage $0: [-h] [-s] [-d SVN_root] [-l ldns_path] [-w ...configure args...]
 Generate a distribution tar file for NSD.
 
     -h           This usage information.
-    -w           Build windows snapshot binary zip.
     -s           Build a snapshot distribution file.  The current date is
                  automatically appended to the current NSD version number.
     -rc <nr>     Build a release candidate, the given string will be added
@@ -55,6 +54,7 @@ Generate a distribution tar file for NSD.
     -d SVN_root  Retrieve the NSD source from the specified repository.
                  Detected from svn working copy if not specified.
     -l ldnsdir   Directory where ldns resides. Detected from Makefile.
+    -w ...       Build windows snapshot binary zip. last args put to configure.
 EOF
     exit 1
 }
@@ -128,6 +128,8 @@ while [ "$1" ]; do
             ;;
         "-w")
             DOWIN="yes"
+	    shift
+	    break
             ;;
         "-l")
             LDNSDIR="$2"
@@ -147,6 +149,26 @@ done
 if [ "$DOWIN" = "yes" ]; then
     version=`./configure --version | head -1 | awk '{ print $3 }'` || \
         error_cleanup "Cannot determine version number."
+    if [ "$RC" != "no" ]; then
+	version2="${version}rc$RC"
+    	replace_text "configure.ac" "AC_INIT(unbound, $version" "AC_INIT(unbound, $version2"
+    	version="$version2"
+    	info "Rebuilding configure script (autoconf) snapshot."
+    	autoreconf || error_cleanup "Autoconf failed."
+    	rm -r autom4te* || error_cleanup "Failed to remove autoconf cache directory."
+    fi
+
+    info "Creating windows dist unbound $version"
+    info "Calling configure"
+    echo './configure --enable-debug --enable-static-exe "--with-conf-file=C:\Program Files\Unbound\service.conf" "--with-run-dir=C:\Program Files\Unbound" '"$*"
+    ./configure --enable-debug --enable-static-exe \
+	"--with-conf-file=C:\Program Files\Unbound\service.conf" \
+	"--with-run-dir=C:\Program Files\Unbound" $* \
+	|| error_cleanup "Could not configure"
+    info "Calling make"
+    make || error_cleanup "Could not make"
+    info "Make complete"
+
     info "Unbound version: $version"
     file="unbound-$version.zip"
     rm -f $file
@@ -160,8 +182,8 @@ if [ "$DOWIN" = "yes" ]; then
     cp ../unbound-checkconf.exe unbound-checkconf.exe
     cp ../LICENSE LICENSE
     cp ../winrc/unbound-website.url unbound-website.url
-    zip ../$file LICENSE unbound.exe unbound-host.exe unbound-control.exe unbound-checkconf.exe example.conf unbound-website.url
-    rm -f example.conf
+    cp ../winrc/service.conf service.conf
+    zip ../$file LICENSE unbound.exe unbound-host.exe unbound-control.exe unbound-checkconf.exe example.conf service.conf unbound-website.url
     info "Testing $file"
     cd ..
     rm -rf tmp.$$

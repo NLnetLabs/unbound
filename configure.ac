@@ -59,7 +59,9 @@ AC_ARG_WITH([conf_file],
 	[Pathname to the Unbound configuration file]),
 	[ub_conf_file="$withval"])
 AC_SUBST(ub_conf_file)
-AC_DEFINE_UNQUOTED(CONFIGFILE, ["$ub_conf_file"], [Pathname to the Unbound configuration file])
+# escape backslashes in the path for the C preprocessor
+hdr_config="`echo $ub_conf_file | sed -e 's/\\\\/\\\\\\\\/g'`"
+AC_DEFINE_UNQUOTED(CONFIGFILE, ["$hdr_config"], [Pathname to the Unbound configuration file])
 
 # Determine run, chroot directory and pidfile locations
 AC_ARG_WITH(run-dir, 
@@ -68,7 +70,8 @@ AC_ARG_WITH(run-dir,
     UNBOUND_RUN_DIR="$withval", 
     UNBOUND_RUN_DIR=`dirname "$ub_conf_file"`)
 AC_SUBST(UNBOUND_RUN_DIR)
-AC_DEFINE_UNQUOTED(RUN_DIR, ["$UNBOUND_RUN_DIR"], [Directory to chdir to])
+hdr_run="`echo $UNBOUND_RUN_DIR | sed -e 's/\\\\/\\\\\\\\/g'`"
+AC_DEFINE_UNQUOTED(RUN_DIR, ["$hdr_run"], [Directory to chdir to])
 
 AC_ARG_WITH(chroot-dir, 
     AC_HELP_STRING([--with-chroot-dir=path], 
@@ -76,7 +79,8 @@ AC_ARG_WITH(chroot-dir,
     UNBOUND_CHROOT_DIR="$withval", 
     UNBOUND_CHROOT_DIR="$UNBOUND_RUN_DIR")
 AC_SUBST(UNBOUND_CHROOT_DIR)
-AC_DEFINE_UNQUOTED(CHROOT_DIR, ["$UNBOUND_CHROOT_DIR"], [Directory to chroot to])
+hdr_chroot="`echo $UNBOUND_CHROOT_DIR | sed -e 's/\\\\/\\\\\\\\/g'`"
+AC_DEFINE_UNQUOTED(CHROOT_DIR, ["$hdr_chroot"], [Directory to chroot to])
 
 AC_ARG_WITH(pidfile, 
     AC_HELP_STRING([--with-pidfile=filename], 
@@ -84,7 +88,8 @@ AC_ARG_WITH(pidfile,
     UNBOUND_PIDFILE="$withval", 
     UNBOUND_PIDFILE="$UNBOUND_RUN_DIR/unbound.pid")
 AC_SUBST(UNBOUND_PIDFILE)
-AC_DEFINE_UNQUOTED(PIDFILE, ["$UNBOUND_PIDFILE"], [default pidfile location])
+hdr_pid="`echo $UNBOUND_PIDFILE | sed -e 's/\\\\/\\\\\\\\/g'`"
+AC_DEFINE_UNQUOTED(PIDFILE, ["$hdr_pid"], [default pidfile location])
 
 AC_ARG_WITH(username, 
     AC_HELP_STRING([--with-username=user], 

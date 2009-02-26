@@ -57,6 +57,7 @@ ifeq "$(QUIET)" "yes"
 endif
 BUILD=build/
 
+WINDRES=windres
 LINT=splint
 LINTFLAGS=+quiet -weak -warnposix -unrecog -Din_addr_t=uint32_t -Du_int=unsigned -Du_char=uint8_t -preproc -Drlimit=rlimit64 -D__gnuc_va_list=va_list
 # compat with openssl linux edition.
@@ -126,12 +127,11 @@ ifeq "$(UB_ON_WINDOWS)" "yes"
   CONTROL_OBJ+=$(BUILD)winrc/rsrc_unbound_control.o
   CHECKCONF_OBJ+=$(BUILD)winrc/rsrc_unbound_checkconf.o
 
-$(BUILD)%.o:      $(srcdir)/%.rc
+$(BUILD)%.o:      $(srcdir)/%.rc $(srcdir)/config.h
 	$(INFO) Resource $<
 	@if test ! -z "$(ldnsdir)" -a ! -e $(ldnsdir)/include/ldns/ldns.h; \
 		then (cd $(ldnsdir); $(MAKE) copy-headers); fi
-	@-if test ! -d $(dir $@); then $(INSTALL) -d $(patsubst %/,%,$(dir $@));
- fi
+	@-if test ! -d $(dir $@); then $(INSTALL) -d $(patsubst %/,%,$(dir $@)); fi
 	$Q$(WINDRES) $(CPPFLAGS) $< $@
 endif
 
