@@ -77,6 +77,10 @@
 #  include <event.h>
 #endif
 
+#ifdef UB_ON_WINDOWS
+#  include "winrc/win_svc.h"
+#endif
+
 /** global debug value to keep track of heap memory allocation */
 void* unbound_start_brk = 0;
 
@@ -90,6 +94,11 @@ static void usage()
 	printf("	file format is described in unbound.conf(5).\n");
 	printf("-d	do not fork into the background.\n");
 	printf("-v	verbose (more times to increase verbosity)\n");
+#ifdef UB_ON_WINDOWS
+	printf("-w opt	windows option: \n");
+	printf("   	install, remove - manage the services entry\n");
+	printf("   	service - used to start from services control panel\n");
+#endif
 	printf("Version %s\n", PACKAGE_VERSION);
 	printf("libevent %s, libldns %s, %s\n", 
 		event_get_version(), ldns_version(), 
@@ -181,27 +190,8 @@ apply_settings(struct daemon* daemon, struct config_file* cfg,
 	int cmdline_verbose)
 {
 	/* apply if they have changed */
-	daemon->cfg = cfg;
 	verbosity = cmdline_verbose + cfg->verbosity;
-	config_apply(cfg);
-	if(!daemon->env->msg_cache ||
-	   cfg->msg_cache_size != slabhash_get_size(daemon->env->msg_cache) ||
-	   cfg->msg_cache_slabs != daemon->env->msg_cache->size) {
-		slabhash_delete(daemon->env->msg_cache);
-		daemon->env->msg_cache = slabhash_create(cfg->msg_cache_slabs, 
-			HASH_DEFAULT_STARTARRAY, cfg->msg_cache_size, 
-			msgreply_sizefunc, query_info_compare,
-			query_entry_delete, reply_info_delete, NULL);
-		if(!daemon->env->msg_cache) {
-			fatal_exit("malloc failure updating config settings");
-		}
-	}
-	if((daemon->env->rrset_cache = rrset_cache_adjust(
-		daemon->env->rrset_cache, cfg, &daemon->superalloc)) == 0)
-		fatal_exit("malloc failure updating config settings");
-	if((daemon->env->infra_cache = infra_adjust(daemon->env->infra_cache, 
-		cfg))==0)
-		fatal_exit("malloc failure updating config settings");
+	daemon_apply_cfg(daemon, cfg);
 	checkrlimits(cfg);
 }
 
@@ -599,7 +589,7 @@ main(int argc, char* argv[])
 
 	log_init(NULL, 0, NULL);
 	/* parse the options */
-	while( (c=getopt(argc, argv, "c:dhv")) != -1) {
+	while( (c=getopt(argc, argv, "c:dhvw:")) != -1) {
 		switch(c) {
 		case 'c':
 			cfgfile = optarg;
@@ -610,6 +600,13 @@ main(int argc, char* argv[])
 			break;
 		case 'd':
 			debug_mode = 1;
+			break;
+		case 'w':
+#ifdef UB_ON_WINDOWS
+			wsvc_command_option(optarg);
+#else
+			fatal_exit("option not supported");
+#endif
 			break;
 		case '?':
 		case 'h':

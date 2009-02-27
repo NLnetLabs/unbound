@@ -132,4 +132,11 @@ void daemon_cleanup(struct daemon* daemon);
  */
 void daemon_delete(struct daemon* daemon);
 
+/**
+ * Apply config settings.
+ * @param daemon: the daemon.
+ * @param cfg: new config settings.
+ */
+void daemon_apply_cfg(struct daemon* daemon, struct config_file* cfg);
+
 #endif /* DAEMON_H */

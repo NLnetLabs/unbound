@@ -122,7 +122,8 @@ ALL_OBJ=$(addprefix $(BUILD),$(ALL_SRC:.c=.lo) \
 	$(addprefix compat/,$(LIBOBJS:.o=.lo))) $(COMPAT_OBJ)
 
 ifeq "$(UB_ON_WINDOWS)" "yes"
-  DAEMON_OBJ+=$(BUILD)winrc/rsrc_unbound.o
+  DAEMON_SRC+=$(patsubst $(srcdir)/%,%, $(wildcard $(srcdir)/winrc/*.c))
+  DAEMON_OBJ+=$(BUILD)winrc/rsrc_unbound.o $(BUILD)winrc/win_svc.lo
   HOST_OBJ+=$(BUILD)winrc/rsrc_unbound_host.o
   CONTROL_OBJ+=$(BUILD)winrc/rsrc_unbound_control.o
   CHECKCONF_OBJ+=$(BUILD)winrc/rsrc_unbound_checkconf.o

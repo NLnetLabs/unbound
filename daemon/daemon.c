@@ -504,3 +504,27 @@ daemon_delete(struct daemon* daemon)
 	}
 #endif
 }
+
+void daemon_apply_cfg(struct daemon* daemon, struct config_file* cfg)
+{
+        daemon->cfg = cfg;
+	config_apply(cfg);
+	if(!daemon->env->msg_cache ||
+	   cfg->msg_cache_size != slabhash_get_size(daemon->env->msg_cache) ||
+	   cfg->msg_cache_slabs != daemon->env->msg_cache->size) {
+		slabhash_delete(daemon->env->msg_cache);
+		daemon->env->msg_cache = slabhash_create(cfg->msg_cache_slabs,
+			HASH_DEFAULT_STARTARRAY, cfg->msg_cache_size,
+			msgreply_sizefunc, query_info_compare,
+			query_entry_delete, reply_info_delete, NULL);
+		if(!daemon->env->msg_cache) {
+			fatal_exit("malloc failure updating config settings");
+		}
+	}
+	if((daemon->env->rrset_cache = rrset_cache_adjust(
+		daemon->env->rrset_cache, cfg, &daemon->superalloc)) == 0)
+		fatal_exit("malloc failure updating config settings");
+	if((daemon->env->infra_cache = infra_adjust(daemon->env->infra_cache,
+		cfg))==0)
+		fatal_exit("malloc failure updating config settings");
+}

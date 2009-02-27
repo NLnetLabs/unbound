@@ -38,3 +38,6 @@ BEGIN
     VALUE "Translation", 0x409, 0x1252
   END
 END
+
+LANGUAGE 0x9,0x1
+1 11 "winrc/gen_msg.bin"

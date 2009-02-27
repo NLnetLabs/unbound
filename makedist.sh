@@ -147,20 +147,20 @@ while [ "$1" ]; do
 done
 
 if [ "$DOWIN" = "yes" ]; then
-    version=`./configure --version | head -1 | awk '{ print $3 }'` || \
-        error_cleanup "Cannot determine version number."
+    version=`./configure --version | head -1 | awk '{ print $3 }'` \
+	|| error_cleanup "Cannot determine version number."
     if [ "$RC" != "no" ]; then
-	version2="${version}rc$RC"
+	version2=`echo $version | sed -e 's/rc.*//'`"rc$RC"
     	replace_text "configure.ac" "AC_INIT(unbound, $version" "AC_INIT(unbound, $version2"
     	version="$version2"
     	info "Rebuilding configure script (autoconf) snapshot."
-    	autoreconf || error_cleanup "Autoconf failed."
-    	rm -r autom4te* || error_cleanup "Failed to remove autoconf cache directory."
+    	autoconf || autoheader || error_cleanup "Autoconf failed."
+    	rm -r autom4te* || echo "ignored"
     fi
 
     info "Creating windows dist unbound $version"
     info "Calling configure"
-    echo './configure --enable-debug --enable-static-exe "--with-conf-file=C:\Program Files\Unbound\service.conf" "--with-run-dir=C:\Program Files\Unbound" '"$*"
+    echo './configure --enable-debug --enable-static-exe "--with-conf-file=C:\Program Files\Unbound\service.conf" --with-run-dir="" '"$*"
     ./configure --enable-debug --enable-static-exe \
 	"--with-conf-file=C:\Program Files\Unbound\service.conf" \
 	"--with-run-dir=C:\Program Files\Unbound" $* \

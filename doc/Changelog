@@ -1,6 +1,9 @@
 27 February 2009: Wouter
 	- Fixup lexer, to not give warnings about fwrite. Appeared in
 	  new lexer features.
+	- makedistro functionality for mingw. Has RC support.
+	- support spaces and backslashes in configured defaults paths.
+	- register, deregister in service control manager.
 
 25 February 2009: Wouter
 	- windres usage for application resources.
