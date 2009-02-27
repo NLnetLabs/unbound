@@ -303,7 +303,8 @@ control-cert-file{COLON}	{ YDVAR(1, VAR_CONTROL_CERT_FILE) }
 {UNQUOTEDLETTER_NOCOLON}*	{
 	ub_c_error_msg("unknown keyword '%s'", yytext);
 	}
-.	{
+
+<*>.	{
 	ub_c_error_msg("stray '%s'", yytext);
 	}
 
