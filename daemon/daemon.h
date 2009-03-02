@@ -45,6 +45,9 @@
 #include "util/locks.h"
 #include "util/alloc.h"
 #include "services/modstack.h"
+#ifdef UB_ON_WINDOWS
+#  include "util/winsock_event.h"
+#endif
 struct config_file;
 struct worker;
 struct listen_port;
@@ -96,6 +99,12 @@ struct daemon {
 	struct timeval time_last_stat;
 	/** time when daemon started */
 	struct timeval time_boot;
+#ifdef UB_ON_WINDOWS
+	/** stop signaling event - not owned by this structure */
+	WSAEVENT stop_event;
+	/** event structure for callback */
+	struct event stop_ev;
+#endif
 };
 
 /**

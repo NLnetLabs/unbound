@@ -579,6 +579,7 @@ main(int argc, char* argv[])
 {
 	int c;
 	const char* cfgfile = CONFIGFILE;
+	const char* winopt = NULL;
 	int cmdline_verbose = 0;
 	int debug_mode = 0;
 
@@ -602,11 +603,7 @@ main(int argc, char* argv[])
 			debug_mode = 1;
 			break;
 		case 'w':
-#ifdef UB_ON_WINDOWS
-			wsvc_command_option(optarg);
-#else
-			fatal_exit("option not supported");
-#endif
+			winopt = optarg;
 			break;
 		case '?':
 		case 'h':
@@ -617,6 +614,14 @@ main(int argc, char* argv[])
 	}
 	argc -= optind;
 	argv += optind;
+
+	if(winopt) {
+#ifdef UB_ON_WINDOWS
+		wsvc_command_option(winopt, cfgfile, cmdline_verbose);
+#else
+		fatal_exit("option not supported");
+#endif
+	}
 
 	if(argc != 0) {
 		usage();

@@ -65,7 +65,11 @@ SERVICE_STATUS	service_status;
 /** global service status handle */
 SERVICE_STATUS_HANDLE service_status_handle;
 /** global service stop event */
-HANDLE service_stop_event = NULL;
+WSAEVENT service_stop_event = NULL;
+/** config file to open. global communication to service_main() */
+const char* service_cfgfile = CONFIGFILE;
+/** commandline verbosity. global communication to service_main() */
+int service_cmdline_verbose = 0;
 
 /** exit with windows error */
 static void
@@ -182,7 +186,9 @@ hdlr(DWORD ctrl)
 	if(ctrl == SERVICE_CONTROL_STOP) {
 		report_status(SERVICE_STOP_PENDING, NO_ERROR, 0);
 		/* send signal to stop */
-		SetEvent(service_stop_event);
+		if(!WSASetEvent(service_stop_event))
+			log_err("Could not WSASetEvent: %s",
+				wsa_strerror(WSAGetLastError()));
 		return;
 	} else {
 		/* ctrl == SERVICE_CONTROL_INTERROGATE or whatever */
@@ -231,7 +237,9 @@ service_init(struct daemon** d, struct config_file** c)
 {
 	struct config_file* cfg = NULL;
 	struct daemon* daemon = NULL;
-	const char* cfgfile = CONFIGFILE;
+	const char* logfile= "C:\\unbound.log";
+	verbosity=4; service_cmdline_verbose=4;
+	log_init(logfile, 0, NULL); /* DEBUG logfile */
 
 	/* create daemon */
 	daemon = daemon_init();
@@ -241,7 +249,7 @@ service_init(struct daemon** d, struct config_file** c)
 	/* read config */
 	cfg = config_create();
 	if(!cfg) return 0;
-	if(!config_read(cfg, cfgfile, daemon->chroot)) {
+	if(!config_read(cfg, service_cfgfile, daemon->chroot)) {
 		if(errno != ENOENT) {
 			/* could not read config file */
 			return 0;
@@ -251,12 +259,12 @@ service_init(struct daemon** d, struct config_file** c)
 	report_status(SERVICE_START_PENDING, NO_ERROR, 3000);
 
 	/* apply settings and init */
-	verbosity = cfg->verbosity;
+	verbosity = cfg->verbosity + service_cmdline_verbose;
 	if(cfg->directory && cfg->directory[0]) {
 		if(chdir(cfg->directory)) return 0;
 		verbose(VERB_QUERY, "chdir to %s", cfg->directory);
 	}
-	log_init(cfg->logfile, cfg->use_syslog, cfg->chrootdir);
+	/* log_init(cfg->logfile, cfg->use_syslog, cfg->chrootdir); DEBUG*/
 	report_status(SERVICE_START_PENDING, NO_ERROR, 3000);
 	daemon_apply_cfg(daemon, cfg);
 	
@@ -304,30 +312,24 @@ service_main(DWORD ATTR_UNUSED(argc), LPTSTR* ATTR_UNUSED(argv))
 
 	/* event that gets signalled when we want to quit; it
 	 * should get registered in the worker-0 waiting loop. */
-	service_stop_event = CreateEvent(NULL, 1, 0, NULL);
-	if(!service_stop_event) {
-		reportev("Could not CreateEvent");
+	service_stop_event = WSACreateEvent();
+	if(service_stop_event == WSA_INVALID_EVENT) {
+		log_err("WSACreateEvent: %s", wsa_strerror(WSAGetLastError()));
+		reportev("Could not WSACreateEvent");
 		report_status(SERVICE_STOPPED, NO_ERROR, 0);
 		return;
 	}
+	daemon->stop_event = service_stop_event;
 
 	/* SetServiceStatus SERVICE_RUNNING;*/
 	report_status(SERVICE_RUNNING, NO_ERROR, 0);
 
-	/* daemon_fork(daemon) , but wait on stop event ! */
-	/* instead of this while loop */
+	/* daemon performs work */
+	daemon_fork(daemon);
 
-	/* wait until exit */
-	while(1) {
-		WaitForSingleObject(service_stop_event, INFINITE);
-		report_status(SERVICE_STOPPED, NO_ERROR, 0);
-		FILE* out = fopen("C:\\output.txt", "a");
-		fprintf(out, "stopped!\n");
-		fclose(out);
-		return;
-	}
-
+	/* exit */
 	verbose(VERB_ALGO, "cleanup.");
+	report_status(SERVICE_STOP_PENDING, NO_ERROR, 0);
 	daemon_cleanup(daemon);
 	config_delete(cfg);
 	daemon_delete(daemon);	
@@ -336,11 +338,15 @@ service_main(DWORD ATTR_UNUSED(argc), LPTSTR* ATTR_UNUSED(argv))
 
 /** start the service */
 static void 
-service_start()
+service_start(const char* cfgfile, int v)
 {
 	SERVICE_TABLE_ENTRY myservices[2] = {
 		{SERVICE_NAME, (LPSERVICE_MAIN_FUNCTION)service_main},
 		{NULL, NULL} };
+	log_init("C:\\unbound.log", 0, 0);
+	log_info("open logfile");
+	service_cfgfile = cfgfile;
+	service_cmdline_verbose = v;
 	/* this call returns when service has stopped. */
 	if(!StartServiceCtrlDispatcher(myservices)) {
 		reportev("Could not StartServiceCtrlDispatcher");
@@ -348,14 +354,14 @@ service_start()
 }
 
 void
-wsvc_command_option(const char* str)
+wsvc_command_option(const char* wopt, const char* cfgfile, int v)
 {
-	if(strcmp(str, "install") == 0)
+	if(strcmp(wopt, "install") == 0)
 		wsvc_install();
-	else if(strcmp(str, "remove") == 0)
+	else if(strcmp(wopt, "remove") == 0)
 		wsvc_remove();
-	else if(strcmp(str, "service") == 0)
-		service_start();
-	else fatal_exit("unknown option: %s", str);
+	else if(strcmp(wopt, "service") == 0)
+		service_start(cfgfile, v);
+	else fatal_exit("unknown option: %s", wopt);
 	exit(0);
 }

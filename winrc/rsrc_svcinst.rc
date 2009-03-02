@@ -23,10 +23,10 @@ BEGIN
     BLOCK "040904E4"
     BEGIN
       VALUE "CompanyName",	"NLnet Labs"
-      VALUE "FileDescription",	"Unbound DNS Server"
+      VALUE "FileDescription",	"Unbound Service Install Util"
       VALUE "FileVersion",	PACKAGE_VERSION
-      VALUE "InternalName",	"unbound"
-      VALUE "OriginalFilename",	"unbound.exe"
+      VALUE "InternalName",	"unbound-service-install"
+      VALUE "OriginalFilename",	"unbound-service-install.exe"
       VALUE "ProductName",	"unbound"
       VALUE "ProductVersion",	PACKAGE_VERSION
       VALUE "LegalCopyright",	"(C) 2009 NLnet Labs. Source is BSD licensed."
@@ -42,3 +42,7 @@ END
 /* error message formats */
 LANGUAGE 0x9,0x1
 1 11 "winrc/gen_msg.bin"
+
+/* vista administrator access, show UAC prompt */
+1 RT_MANIFEST "winrc/vista_admin.manifest"
+

@@ -122,11 +122,21 @@ ALL_OBJ=$(addprefix $(BUILD),$(ALL_SRC:.c=.lo) \
 	$(addprefix compat/,$(LIBOBJS:.o=.lo))) $(COMPAT_OBJ)
 
 ifeq "$(UB_ON_WINDOWS)" "yes"
-  DAEMON_SRC+=$(patsubst $(srcdir)/%,%, $(wildcard $(srcdir)/winrc/*.c))
+  DAEMON_SRC+=winrc/win_svc.c
   DAEMON_OBJ+=$(BUILD)winrc/rsrc_unbound.o $(BUILD)winrc/win_svc.lo
   HOST_OBJ+=$(BUILD)winrc/rsrc_unbound_host.o
   CONTROL_OBJ+=$(BUILD)winrc/rsrc_unbound_control.o
   CHECKCONF_OBJ+=$(BUILD)winrc/rsrc_unbound_checkconf.o
+
+  WINAPPS=unbound-service-install unbound-service-remove
+  SVCINST_SRC=winrc/unbound-service-install.c
+  SVCINST_OBJ=$(addprefix $(BUILD),$(SVCINST_SRC:.c=.lo)) $(COMPAT_OBJ) \
+	$(BUILD)winrc/rsrc_svcinst.o
+  SVCUNINST_SRC=winrc/unbound-service-remove.c
+  SVCUNINST_OBJ=$(addprefix $(BUILD),$(SVCUNINST_SRC:.c=.lo)) $(COMPAT_OBJ) \
+	$(BUILD)winrc/rsrc_svcinst.o
+  ALL_SRC:=$(sort $(ALL_SRC) $(SVCINST_SRC) $(SVCUNINST_SRC))
+  ALL_OBJ:=$(sort $(ALL_OBJ) $(SVCINST_OBJ) $(SVCUNINST_OBJ))
 
 $(BUILD)%.o:      $(srcdir)/%.rc $(srcdir)/config.h
 	$(INFO) Resource $<
@@ -149,7 +159,7 @@ $(BUILD)%.lo:    $(srcdir)/%.c
 	@-if test ! -d $(dir $@); then $(INSTALL) -d $(patsubst %/,%,$(dir $@)); fi
 	$Q$(COMPILE) -c $< -o $@
 
-all:	$(COMMON_OBJ) unbound unbound-checkconf lib unbound-host unbound-control unbound-control-setup
+all:	$(COMMON_OBJ) unbound unbound-checkconf lib unbound-host unbound-control unbound-control-setup $(WINAPPS)
 
 TEST_BIN=asynclook delayer harvest lock-verify memstats perf pktview signit \
 	streamtcp testbound unittest
@@ -188,6 +198,14 @@ unbound-control:	$(CONTROL_OBJ) $(ldnslib)
 unbound-host:	$(HOST_OBJ) libunbound.la $(ldnslib)
 	$(INFO) Link $@
 	$Q$(LINK) -o $@ $(sort $(HOST_OBJ)) -L. -L.libs -lunbound $(LIBS)
+
+unbound-service-install:	$(SVCINST_OBJ)
+	$(INFO) Link $@
+	$Q$(LINK) -o $@ $(sort $(SVCINST_OBJ)) $(LIBS)
+
+unbound-service-remove:	$(SVCUNINST_OBJ)
+	$(INFO) Link $@
+	$Q$(LINK) -o $@ $(sort $(SVCUNINST_OBJ)) $(LIBS)
 
 unittest:	$(UNITTEST_OBJ) $(ldnslib)
 	$(INFO) Link $@

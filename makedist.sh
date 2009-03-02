@@ -149,8 +149,13 @@ done
 if [ "$DOWIN" = "yes" ]; then
     version=`./configure --version | head -1 | awk '{ print $3 }'` \
 	|| error_cleanup "Cannot determine version number."
-    if [ "$RC" != "no" ]; then
-	version2=`echo $version | sed -e 's/rc.*//'`"rc$RC"
+    if [ "$RC" != "no" -o "$SNAPSHOT" != "no" ]; then
+    	if [ "$RC" != "no" ]; then
+		version2=`echo $version | sed -e 's/rc.*//'`"rc$RC"
+	fi
+    	if [ "$SNAPSHOT" != "no" ]; then
+    		version2="${version}_`date +%Y%m%d`"
+	fi
     	replace_text "configure.ac" "AC_INIT(unbound, $version" "AC_INIT(unbound, $version2"
     	version="$version2"
     	info "Rebuilding configure script (autoconf) snapshot."
@@ -176,14 +181,9 @@ if [ "$DOWIN" = "yes" ]; then
     mkdir tmp.$$
     cd tmp.$$
     cp ../doc/example.conf example.conf
-    cp ../unbound.exe unbound.exe
-    cp ../unbound-host.exe unbound-host.exe
-    cp ../unbound-control.exe unbound-control.exe
-    cp ../unbound-checkconf.exe unbound-checkconf.exe
-    cp ../LICENSE LICENSE
-    cp ../winrc/unbound-website.url unbound-website.url
-    cp ../winrc/service.conf service.conf
-    zip ../$file LICENSE unbound.exe unbound-host.exe unbound-control.exe unbound-checkconf.exe example.conf service.conf unbound-website.url
+    cp ../unbound.exe ../unbound-host.exe ../unbound-control.exe ../unbound-checkconf.exe ../unbound-service-install.exe ../unbound-service-remove.exe ../LICENSE ../winrc/unbound-website.url ../winrc/service.conf .
+    strip *.exe
+    zip ../$file LICENSE unbound.exe unbound-host.exe unbound-control.exe unbound-checkconf.exe unbound-service-install.exe unbound-service-remove.exe example.conf service.conf unbound-website.url
     info "Testing $file"
     cd ..
     rm -rf tmp.$$

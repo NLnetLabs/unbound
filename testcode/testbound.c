@@ -319,7 +319,8 @@ int remote_control_callback(struct comm_point* ATTR_UNUSED(c),
 	return 0;
 }
 
-void wsvc_command_option(const char* ATTR_UNUSED(opt))
+void wsvc_command_option(const char* ATTR_UNUSED(wopt), 
+	const char* ATTR_UNUSED(cfgfile), int ATTR_UNUSED(v))
 {
 	log_assert(0);
 }
