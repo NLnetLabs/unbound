@@ -64,18 +64,16 @@ This software is under BSD license, see LICENSE for details.
 
 Known issues
 ------------
+o If there are no replies for a forward or stub zone, for a reverse zone,
+  you may need to add a local-zone: name transparent or nodefault to the
+  server: section of the config file to unblock the reverse zone.
+  Only happens for (sub)zones that are blocked by default; e.g. 10.in-addr.arpa
 o If libevent is older (before 1.3c), unbound will exit instead of reload
   on sighup. On a restart 'did not exit gracefully last time' warning is 
   printed. Perform ./configure --with-libevent=no or update libevent, rerun 
   configure and recompile unbound to make sighup work correctly.
   It is strongly suggested to use the latest version of libevent (1.4 or more)
   on Solaris, because of fixes in the solaris event port code in libevent.
-o If you receive no answers deploying unbound on a private network.
-  Check that the zone you configure as a stub zone is correct, listing working 
-  ip-addresses. Check that the NS data in the zone, those hostnames, are
-  in fact those same, working, ip-addresses. Unbound will fetch the NS data
-  from the zone and use that information in preference to the config 
-  information. 
 o If you are not receiving the correct source IP address on replies (e.g.
   you are running a multihomed, anycast server), the interface-automatic
   option can be enabled to set socket options to achieve the correct

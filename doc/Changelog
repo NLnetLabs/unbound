@@ -3,6 +3,7 @@
 	  This should fix extraneous symbols exported from libunbound.
 	  Thanks to Ondrej Sury and Robert Edmonds for finding it.
 	- iana portlist updated.
+	- document FAQ entry on stub/forward zones and default blocking.
 		
 27 February 2009: Wouter
 	- Fixup lexer, to not give warnings about fwrite. Appeared in
