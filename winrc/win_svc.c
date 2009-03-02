@@ -51,10 +51,13 @@
 /** service name for unbound (internal to ServiceManager) */
 #define SERVICE_NAME "unbound"
 
-/** from gen_msg.h */
+/** from gen_msg.h - success message record for windows message log */
 #define MSG_GENERIC_SUCCESS              ((WORD)0x00010001L)
+/** from gen_msg.h - informational message record for windows message log */
 #define MSG_GENERIC_INFO                 ((WORD)0x40010002L)
+/** from gen_msg.h - warning message record for windows message log */
 #define MSG_GENERIC_WARN                 ((WORD)0x80010003L)
+/** from gen_msg.h - error message record for windows message log */
 #define MSG_GENERIC_ERR                  ((WORD)0xC0010004L)
 
 /** global service status */
@@ -73,6 +76,7 @@ fatal_win(const char* str)
 
 /** put quotes around string. Needs one space in front 
  * @param str: to be quoted.
+ * @param maxlen: max length of the string buffer.
  */
 static void
 quote_it(char* str, size_t maxlen)
