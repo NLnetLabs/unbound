@@ -1,5 +1,5 @@
 /*
- * winrc/win_svc.h - windows services API implementation for unbound
+ * winrc/w_inst.h - install and remove functions
  *
  * Copyright (c) 2009, NLnet Labs. All rights reserved.
  *
@@ -36,26 +36,24 @@
 /**
  * \file
  *
- * This file contains functions to integrate with the windows services API.
- * This means it handles the commandline switches to install and remove
- * the service (via CreateService and DeleteService), it handles
- * the ServiceMain() main service entry point when started as a service,
- * and it handles the Handler[_ex]() to process requests to the service
- * (such as start and stop and status).
+ * Contains install and remove functions that manipulate the
+ * windows services API and windows registry.
  */
 
-#ifndef WINRC_WIN_SVC_H
-#define WINRC_WIN_SVC_H
+#ifndef WINRC_W_INST_H
+#define WINRC_W_INST_H
 
-/** service name for unbound (internal to ServiceManager) */
-#define SERVICE_NAME "unbound"
-
-/**
- * Handle commandline service for windows.
- * @param wopt: windows option string (install, remove, service). 
- * @param cfgfile: configfile to open (default or passed with -c).
- * @param v: amount of commandline verbosity added with -v.
+/** 
+ * Install service in servicecontrolmanager, setup registry 
+ * @param out: debug output printed here (errors). or NULL.
+ * @param rename: if nonNULL this executable is not unbound.exe but this name.
  */
-void wsvc_command_option(const char* wopt, const char* cfgfile, int v);
+void wsvc_install(FILE* out, const char* rename);
 
-#endif /* WINRC_WIN_SVC_H */
+/** 
+ * Remove installed service from servicecontrolmanager, registry entries 
+ * @param out: debug output printed here (errors). or NULL.
+ */
+void wsvc_remove(FILE* out);
+
+#endif /* WINRC_W_INST_H */

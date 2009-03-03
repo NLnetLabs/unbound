@@ -118,6 +118,14 @@ struct outbound_entry* worker_send_query(uint8_t* ATTR_UNUSED(qname),
 	return 0;
 }
 
+#ifdef UB_ON_WINDOWS
+void
+worker_win_stop_cb(int ATTR_UNUSED(fd), short ATTR_UNUSED(ev), void* 
+	ATTR_UNUSED(arg)) {
+	log_assert(0);
+}
+#endif
+
 void 
 worker_alloc_cleanup(void* ATTR_UNUSED(arg))
 {

@@ -20,10 +20,10 @@ BEGIN
     BLOCK "040904E4"
     BEGIN
       VALUE "CompanyName",	"NLnet Labs"
-      VALUE "FileDescription",	"Unbound Service Install Util"
+      VALUE "FileDescription",	"Unbound Service Remove Util"
       VALUE "FileVersion",	PACKAGE_VERSION
-      VALUE "InternalName",	"unbound-service-install"
-      VALUE "OriginalFilename",	"unbound-service-install.exe"
+      VALUE "InternalName",	"unbound-service-remove"
+      VALUE "OriginalFilename",	"unbound-service-remove.exe"
       VALUE "ProductName",	"unbound"
       VALUE "ProductVersion",	PACKAGE_VERSION
       VALUE "LegalCopyright",	"(C) 2009 NLnet Labs. Source is BSD licensed."

@@ -45,20 +45,18 @@
  */
 #include "config.h"
 #include "winrc/win_svc.h"
+#include "winrc/w_inst.h"
 #include "daemon/daemon.h"
 #include "util/config_file.h"
 
-/** service name for unbound (internal to ServiceManager) */
-#define SERVICE_NAME "unbound"
-
 /** from gen_msg.h - success message record for windows message log */
-#define MSG_GENERIC_SUCCESS              ((WORD)0x00010001L)
+#define MSG_GENERIC_SUCCESS              ((DWORD)0x20010001L)
 /** from gen_msg.h - informational message record for windows message log */
-#define MSG_GENERIC_INFO                 ((WORD)0x40010002L)
+#define MSG_GENERIC_INFO                 ((DWORD)0x60010002L)
 /** from gen_msg.h - warning message record for windows message log */
-#define MSG_GENERIC_WARN                 ((WORD)0x80010003L)
+#define MSG_GENERIC_WARN                 ((DWORD)0xA0010003L)
 /** from gen_msg.h - error message record for windows message log */
-#define MSG_GENERIC_ERR                  ((WORD)0xC0010004L)
+#define MSG_GENERIC_ERR                  ((DWORD)0xE0010004L)
 
 /** global service status */
 SERVICE_STATUS	service_status;
@@ -70,89 +68,6 @@ WSAEVENT service_stop_event = NULL;
 const char* service_cfgfile = CONFIGFILE;
 /** commandline verbosity. global communication to service_main() */
 int service_cmdline_verbose = 0;
-
-/** exit with windows error */
-static void
-fatal_win(const char* str)
-{
-	fatal_exit("%s (%d)", str, (int)GetLastError());
-}
-
-/** put quotes around string. Needs one space in front 
- * @param str: to be quoted.
- * @param maxlen: max length of the string buffer.
- */
-static void
-quote_it(char* str, size_t maxlen)
-{
-	if(strlen(str) == maxlen)
-		fatal_exit("string too long %s", str);
-	str[0]='"';
-	str[strlen(str)+1]=0;
-	str[strlen(str)]='"';
-}
-
-/** Install service in servicecontrolmanager */
-static void 
-wsvc_install(void)
-{
-	SC_HANDLE scm;
-	SC_HANDLE sv;
-	TCHAR path[MAX_PATH+2+256];
-	printf("installing unbound service\n");
-	if(!GetModuleFileName(NULL, path+1, MAX_PATH))
-		fatal_win("could not GetModuleFileName");
-	/* have to quote it because of spaces in directory names */
-	/* could append arguments to be sent to ServiceMain */
-	quote_it(path, sizeof(path));
-	strcat(path, " -w service");
-	scm = OpenSCManager(NULL, NULL, (int)SC_MANAGER_CREATE_SERVICE);
-	if(!scm) fatal_win("could not OpenSCManager");
-	sv = CreateService(
-		scm,
-		SERVICE_NAME, /* name of service */
-		"Unbound DNS validator", /* display name */
-		SERVICE_ALL_ACCESS, /* desired access */
-		SERVICE_WIN32_OWN_PROCESS, /* service type */
-		SERVICE_AUTO_START, /* start type */
-		SERVICE_ERROR_NORMAL, /* error control type */
-		path, /* path to service's binary */
-		NULL, /* no load ordering group */
-		NULL, /* no tag identifier */
-		NULL, /* no deps */
-		NULL, /* on LocalSystem */
-		NULL /* no password */
-		);
-	if(!sv) {
-		CloseServiceHandle(scm);
-		fatal_win("could not CreateService");
-	}
-	CloseServiceHandle(sv);
-	CloseServiceHandle(scm);
-	printf("unbound service installed\n");
-}
-
-/** Remove installed service from servicecontrolmanager */
-static void 
-wsvc_remove(void)
-{
-	SC_HANDLE scm;
-	SC_HANDLE sv;
-	printf("removing unbound service\n");
-	scm = OpenSCManager(NULL, NULL, (int)SC_MANAGER_ALL_ACCESS);
-	if(!scm) fatal_win("could not OpenSCManager");
-	sv = OpenService(scm, SERVICE_NAME, DELETE);
-	if(!sv) {
-		CloseServiceHandle(scm);
-		fatal_win("could not OpenService");
-	}
-	if(!DeleteService(sv)) {
-		fatal_win("could not DeleteService");
-	}
-	CloseServiceHandle(sv);
-	CloseServiceHandle(scm);
-	printf("unbound service removed\n");
-}
 
 /**
  * Report current service status to service control manager
@@ -244,35 +159,45 @@ service_init(struct daemon** d, struct config_file** c)
 	/* create daemon */
 	daemon = daemon_init();
 	if(!daemon) return 0;
-	report_status(SERVICE_START_PENDING, NO_ERROR, 3000);
+	report_status(SERVICE_START_PENDING, NO_ERROR, 2800);
 
 	/* read config */
 	cfg = config_create();
 	if(!cfg) return 0;
 	if(!config_read(cfg, service_cfgfile, daemon->chroot)) {
 		if(errno != ENOENT) {
-			/* could not read config file */
+			log_err("error in config file");
 			return 0;
 		}
-		/* could not open config file, using defaults */
+		log_warn("could not open config file, using defaults");
 	}
-	report_status(SERVICE_START_PENDING, NO_ERROR, 3000);
+	report_status(SERVICE_START_PENDING, NO_ERROR, 2600);
 
+	verbose(VERB_QUERY, "winservice - apply settings");
 	/* apply settings and init */
 	verbosity = cfg->verbosity + service_cmdline_verbose;
 	if(cfg->directory && cfg->directory[0]) {
-		if(chdir(cfg->directory)) return 0;
-		verbose(VERB_QUERY, "chdir to %s", cfg->directory);
+		if(chdir(cfg->directory)) {
+			log_err("could not chdir to %s: %s", 
+				cfg->directory, strerror(errno));
+			if(errno != ENOENT)
+				return 0;
+			log_warn("could not change directory - continuing");
+		} else
+			verbose(VERB_QUERY, "chdir to %s", cfg->directory);
 	}
 	/* log_init(cfg->logfile, cfg->use_syslog, cfg->chrootdir); DEBUG*/
-	report_status(SERVICE_START_PENDING, NO_ERROR, 3000);
+	report_status(SERVICE_START_PENDING, NO_ERROR, 2400);
+	verbose(VERB_QUERY, "winservice - apply cfg");
 	daemon_apply_cfg(daemon, cfg);
 	
 	/* open ports */
 	/* keep reporting that we are busy starting */
-	report_status(SERVICE_START_PENDING, NO_ERROR, 3000);
+	report_status(SERVICE_START_PENDING, NO_ERROR, 2200);
+	verbose(VERB_QUERY, "winservice - open ports");
 	if(!daemon_open_shared_ports(daemon)) return 0;
-	report_status(SERVICE_START_PENDING, NO_ERROR, 3000);
+	verbose(VERB_QUERY, "winservice - ports opened");
+	report_status(SERVICE_START_PENDING, NO_ERROR, 2000);
 
 	*d = daemon;
 	*c = cfg;
@@ -291,6 +216,8 @@ service_main(DWORD ATTR_UNUSED(argc), LPTSTR* ATTR_UNUSED(argv))
 {
 	struct config_file* cfg = NULL;
 	struct daemon* daemon = NULL;
+
+	reportev("Trying to report event");
 
 	service_status_handle = RegisterServiceCtrlHandler(SERVICE_NAME, 
 		(LPHANDLER_FUNCTION)hdlr);
@@ -323,16 +250,18 @@ service_main(DWORD ATTR_UNUSED(argc), LPTSTR* ATTR_UNUSED(argv))
 
 	/* SetServiceStatus SERVICE_RUNNING;*/
 	report_status(SERVICE_RUNNING, NO_ERROR, 0);
+	verbose(VERB_QUERY, "winservice - init complete");
 
 	/* daemon performs work */
 	daemon_fork(daemon);
 
 	/* exit */
-	verbose(VERB_ALGO, "cleanup.");
+	verbose(VERB_ALGO, "winservice - cleanup.");
 	report_status(SERVICE_STOP_PENDING, NO_ERROR, 0);
 	daemon_cleanup(daemon);
 	config_delete(cfg);
-	daemon_delete(daemon);	
+	daemon_delete(daemon);
+	verbose(VERB_QUERY, "winservice - full stop");
 	report_status(SERVICE_STOPPED, NO_ERROR, 0);
 }
 
@@ -343,8 +272,13 @@ service_start(const char* cfgfile, int v)
 	SERVICE_TABLE_ENTRY myservices[2] = {
 		{SERVICE_NAME, (LPSERVICE_MAIN_FUNCTION)service_main},
 		{NULL, NULL} };
-	log_init("C:\\unbound.log", 0, 0);
-	log_info("open logfile");
+	verbosity=v;
+	if(1) {
+		/* DEBUG log to file */
+		fclose(fopen("C:\\unbound.log", "w"));
+		log_init("C:\\unbound.log", 0, 0);
+		verbose(VERB_QUERY, "open logfile");
+	}
 	service_cfgfile = cfgfile;
 	service_cmdline_verbose = v;
 	/* this call returns when service has stopped. */
@@ -357,9 +291,9 @@ void
 wsvc_command_option(const char* wopt, const char* cfgfile, int v)
 {
 	if(strcmp(wopt, "install") == 0)
-		wsvc_install();
+		wsvc_install(stdout, NULL);
 	else if(strcmp(wopt, "remove") == 0)
-		wsvc_remove();
+		wsvc_remove(stdout);
 	else if(strcmp(wopt, "service") == 0)
 		service_start(cfgfile, v);
 	else fatal_exit("unknown option: %s", wopt);

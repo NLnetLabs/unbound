@@ -4,10 +4,7 @@
 #include "winver.h"
 #include "config.h"
 
-1 ICON "winrc/unbound64.ico"
-2 ICON "winrc/unbound48.ico"
-3 ICON "winrc/unbound32.ico"
-4 ICON "winrc/unbound16.ico"
+1 ICON "winrc/combined.ico"
 
 1 VERSIONINFO
 FILEVERSION	RSRC_PACKAGE_VERSION

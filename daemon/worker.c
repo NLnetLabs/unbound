@@ -998,8 +998,8 @@ worker_create(struct daemon* daemon, int id, int* ports, int n)
 }
 
 #ifdef UB_ON_WINDOWS
-static void
-ub_win_stop(int ATTR_UNUSED(fd), short ATTR_UNUSED(ev), void* arg)
+void
+worker_win_stop_cb(int ATTR_UNUSED(fd), short ATTR_UNUSED(ev), void* arg)
 {
 	struct worker* worker = (struct worker*)arg;
 	verbose(VERB_QUERY, "caught stop signal (wsaevent)");
@@ -1058,7 +1058,7 @@ worker_init(struct worker* worker, struct config_file *cfg,
 #ifdef UB_ON_WINDOWS
 		if(!winsock_register_wsaevent(comm_base_internal(worker->base), 
 			&worker->daemon->stop_ev, worker->daemon->stop_event, 
-			ub_win_stop, worker)) {
+			&worker_win_stop_cb, worker)) {
 			log_err("could not register wsaevent");
 			worker_delete(worker);
 			return 0;

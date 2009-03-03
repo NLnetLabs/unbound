@@ -2,13 +2,13 @@
 ; severity default Success Informational Warning Error
 
 ; .bin file created with:
-; "/c/Program Files/Microsoft SDKs/Windows/v6.1/Bin/mc" gen_msg.mc
+; "/c/Program Files/Microsoft SDKs/Windows/v6.1/Bin/mc" -c gen_msg.mc
 ; mv MSG00001.bin gen_msg.bin
 ; rm gen_msg.h
 ; and pasted contents of gen_msg.rc into rsrc_unbound.rc
 
 FacilityNames=(Server=0x1)
-MessageIdTypeDef=WORD
+MessageIdTypeDef=DWORD
 
 MessageID=0x1
 Severity=Success

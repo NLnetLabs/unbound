@@ -118,6 +118,7 @@ fptr_whitelist_event(void (*fptr)(int, short, void *))
 	else if(fptr == &comm_point_local_handle_callback) return 1;
 	else if(fptr == &comm_point_raw_handle_callback) return 1;
 	else if(fptr == &tube_handle_signal) return 1;
+	else if(fptr == &worker_win_stop_cb) return 1;
 	return 0;
 }
 

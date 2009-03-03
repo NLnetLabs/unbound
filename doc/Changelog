@@ -1,5 +1,7 @@
 3 March 2009: Wouter
 	- combined icon with 16x16(4) 32x32(4) 48x48(8) 64x64(8).
+	- service works on xp/vista, no config necessary (using defaults).
+	- windows registry settings.
 
 2 March 2009: Wouter
 	- fixup --export-symbols to be -export-symbls for libtool.

@@ -44,48 +44,12 @@
  * (such as start and stop and status).
  */
 #include "config.h"
-#include "winrc/win_svc.h"
-
-/** service name for unbound (internal to ServiceManager) */
-#define SERVICE_NAME "unbound"
-
-/** output file for diagnostics */
-static FILE* out = NULL;
-
-/** exit with windows error */
-static void
-fatal_win(const char* str)
-{
-	fprintf(out, "%s (%d)\n", str, (int)GetLastError());
-	exit(1);
-}
-
-/** Remove installed service from servicecontrolmanager */
-static void 
-wsvc_remove(void)
-{
-	SC_HANDLE scm;
-	SC_HANDLE sv;
-	fprintf(out, "removing unbound service\n");
-	scm = OpenSCManager(NULL, NULL, (int)SC_MANAGER_ALL_ACCESS);
-	if(!scm) fatal_win("could not OpenSCManager");
-	sv = OpenService(scm, SERVICE_NAME, DELETE);
-	if(!sv) {
-		CloseServiceHandle(scm);
-		fatal_win("could not OpenService");
-	}
-	if(!DeleteService(sv)) {
-		fatal_win("could not DeleteService");
-	}
-	CloseServiceHandle(sv);
-	CloseServiceHandle(scm);
-	fprintf(out, "unbound service removed\n");
-}
+#include "winrc/w_inst.h"
 
 /** Install service main */
 int main(int ATTR_UNUSED(argc), char** ATTR_UNUSED(argv))
 {
-	out = fopen("unbound-service-remove.log", "w");
-	wsvc_remove();
+	/*FILE* out = fopen("unbound-service-remove.log", "w");*/
+	wsvc_remove(NULL);
 	return 0;
 }
