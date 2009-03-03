@@ -167,7 +167,7 @@ change(FILE* out, char* path, size_t max, const char* from, const char* to)
         snprintf(path+pathlen-fromlen, max-(pathlen-fromlen), "%s", to);
 }
 
-/** Install service in servicecontrolmanager */
+/* Install service in servicecontrolmanager */
 void
 wsvc_install(FILE* out, const char* rename)
 {
@@ -213,7 +213,7 @@ wsvc_install(FILE* out, const char* rename)
         if(out) fprintf(out, "unbound service installed\n");
 }
 
-/** Remove installed service from servicecontrolmanager */
+/* Remove installed service from servicecontrolmanager */
 void
 wsvc_remove(FILE* out)
 {
