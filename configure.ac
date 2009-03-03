@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 AC_PREREQ(2.56)
 
-AC_INIT(unbound, 1.3.0_20090302, unbound-bugs@nlnetlabs.nl, unbound)
+AC_INIT(unbound, 1.3.0, unbound-bugs@nlnetlabs.nl, unbound)
 
 LIBUNBOUND_CURRENT=1
 LIBUNBOUND_REVISION=0
