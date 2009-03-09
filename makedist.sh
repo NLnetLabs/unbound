@@ -163,6 +163,7 @@ if [ "$DOWIN" = "yes" ]; then
     	rm -r autom4te* || echo "ignored"
     fi
 
+    # procedure for making unbound installer on mingw. 
     info "Creating windows dist unbound $version"
     info "Calling configure"
     echo './configure --enable-debug --enable-static-exe "--with-conf-file=C:\Program Files\Unbound\service.conf" --with-run-dir="" '"$*"
@@ -179,15 +180,32 @@ if [ "$DOWIN" = "yes" ]; then
     rm -f $file
     info "Creating $file"
     mkdir tmp.$$
+    strip unbound.exe
+    strip unbound-control.exe
+    strip unbound-host.exe
+    strip unbound-checkconf.exe
+    strip unbound-service-install.exe
+    strip unbound-service-remove.exe
     cd tmp.$$
     cp ../doc/example.conf example.conf
     cp ../unbound.exe ../unbound-host.exe ../unbound-control.exe ../unbound-checkconf.exe ../unbound-service-install.exe ../unbound-service-remove.exe ../LICENSE ../winrc/unbound-website.url ../winrc/service.conf .
-    strip *.exe
+    # zipfile
     zip ../$file LICENSE unbound.exe unbound-host.exe unbound-control.exe unbound-checkconf.exe unbound-service-install.exe unbound-service-remove.exe example.conf service.conf unbound-website.url
     info "Testing $file"
+    (cd .. ; zip -T $file )
+    # installer
+    info "Creating installer"
+    quadversion=`cat ../config.h | grep RSRC_PACKAGE_VERSION | sed -e 's/#define RSRC_PACKAGE_VERSION //' -e 's/,/\\./g'`
+    echo $quadversion
+    cat ../winrc/setup.nsi | sed -e 's/define VERSION.*$/define VERSION "'$version'"/' -e 's/define QUADVERSION.*$/define QUADVERSION "'$quadversion'"/' > ../winrc/setup_ed.nsi
+    # get tool from http://nsis.sf.net
+    c:/Program\ Files/NSIS/makensis.exe ../winrc/setup_ed.nsi
+    info "Created installer"
     cd ..
     rm -rf tmp.$$
-    zip -T $file
+    mv winrc/unbound_setup_$version.exe .
+    ls -lG unbound_setup_$version.exe
+    ls -lG unbound-$version.zip
     info "Done"
     exit 0
 fi

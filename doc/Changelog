@@ -1,3 +1,6 @@
+9 March 2009: Wouter
+	- Nullsoft NSIS installer creation script.
+
 5 March 2009: Wouter
 	- fixup memory leak introduced on 18feb in mesh reentrant fix.
 
