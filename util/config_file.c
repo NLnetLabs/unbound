@@ -835,6 +835,11 @@ strlen_after_chroot(const char* fname, struct config_file* cfg, int use_chdir)
 		slashit = 1;
 	}
 	/* chdir */
+#ifdef UB_ON_WINDOWS
+	if(fname[0] != 0 && fname[1] == ':') {
+		/* full path, no chdir */
+	} else
+#endif
 	if(fname[0] == '/' || !use_chdir) {
 		/* full path, no chdir */
 	} else if(cfg->directory && cfg->directory[0]) {
@@ -878,6 +883,11 @@ fname_after_chroot(const char* fname, struct config_file* cfg, int use_chdir)
 		strncpy(buf, cfg->chrootdir, len);
 		slashit = 1;
 	}
+#ifdef UB_ON_WINDOWS
+	if(fname[0] != 0 && fname[1] == ':') {
+		/* full path, no chdir */
+	} else
+#endif
 	/* chdir */
 	if(fname[0] == '/' || !use_chdir) {
 		/* full path, no chdir */

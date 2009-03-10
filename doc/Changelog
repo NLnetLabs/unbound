@@ -1,6 +1,7 @@
 10 March 2009: Wouter
 	- makedist -w strips out old rc.. and snapshot info from version.
 	- setup.exe starts and stops unbound after install, before uninstall.
+	- unbound-checkconf recognizes absolute pathnames on windows (C:...).
 
 9 March 2009: Wouter
 	- Nullsoft NSIS installer creation script.

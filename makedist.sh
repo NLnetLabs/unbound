@@ -149,7 +149,7 @@ done
 if [ "$DOWIN" = "yes" ]; then
     version=`./configure --version | head -1 | awk '{ print $3 }'` \
 	|| error_cleanup "Cannot determine version number."
-    version=`echo $version | sed -e 's/rc.*//' -e 's/_20.*//'`
+    version=`echo $version | sed -e 's/rc.*$//' -e 's/_20.*$//'`
     if [ "$RC" != "no" -o "$SNAPSHOT" != "no" ]; then
     	if [ "$RC" != "no" ]; then
 		version2=`echo $version | sed -e 's/rc.*//'`"rc$RC"
@@ -167,10 +167,11 @@ if [ "$DOWIN" = "yes" ]; then
     # procedure for making unbound installer on mingw. 
     info "Creating windows dist unbound $version"
     info "Calling configure"
-    echo './configure --enable-debug --enable-static-exe "--with-conf-file=C:\Program Files\Unbound\service.conf" --with-run-dir="" '"$*"
+    echo './configure --enable-debug --enable-static-exe "--with-conf-file=C:\Program Files\Unbound\service.conf" --with-run-dir="" --with-pidfile="" --with-chroot-dir="" '"$*"
     ./configure --enable-debug --enable-static-exe \
 	"--with-conf-file=C:\Program Files\Unbound\service.conf" \
-	"--with-run-dir=C:\Program Files\Unbound" $* \
+	"--with-run-dir=C:\Program Files\Unbound" --with-pidfile="" \
+	--with-chroot-dir="" $* \
 	|| error_cleanup "Could not configure"
     info "Calling make"
     make || error_cleanup "Could not make"

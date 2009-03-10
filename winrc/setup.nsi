@@ -28,22 +28,11 @@ VIProductVersion "${QUADVERSION}"
 # Global Variables
 Var StartMenuFolder
 
-# user interface pages to show
-# for the plain UI (using MUI2 now)
-#Page license
-#Page directory
-#Page instfiles
-#UninstPage uninstConfirm
-#UninstPage instfiles
-
 # use ReserveFile for files required before actual installation
 # makes the installer start faster
 #ReserveFile "System.dll"
 #ReserveFile "NsExec.dll"
-ReserveFile "..\LICENSE"
 
-#!define MUI_ICON "combined.ico"
-#!define MUI_UNICON "combined.ico"
 !define MUI_ICON "${NSISDIR}\contrib\graphics\icons\orange-install-nsis.ico"
 !define MUI_UNICON "${NSISDIR}\contrib\graphics\icons\orange-uninstall-nsis.ico"
 
@@ -52,10 +41,11 @@ ReserveFile "..\LICENSE"
 !define MUI_HEADERIMAGE_BITMAP "setup_top.bmp"
 !define MUI_WELCOMEFINISHPAGE_BITMAP "setup_left.bmp"
 !define MUI_ABORTWARNING
+#!define MUI_FINISHPAGE_NOAUTOCLOSE  # so we can inspect install log.
 
 !insertmacro MUI_PAGE_WELCOME
 !insertmacro MUI_PAGE_LICENSE "..\LICENSE"
-#!insertmacro MUI_PAGE_COMPONENTS
+!insertmacro MUI_PAGE_COMPONENTS
 !insertmacro MUI_PAGE_DIRECTORY
 
 !define MUI_STARTMENUPAGE_REGISTRY_ROOT "HKLM"
@@ -75,7 +65,26 @@ ReserveFile "..\LICENSE"
 !insertmacro MUI_LANGUAGE "English" 
 
 # default section, one per component, we have one component.
-section "Unbound section"
+section "Unbound" SectionUnbound
+	SectionIn RO  # cannot unselect this one
+	# real work in postinstall
+sectionEnd
+
+section "DLV - dlv.isc.org" SectionDLV
+	# add estimated size for key (Kb)
+	AddSize 2
+	SetOutPath $INSTDIR
+	NSISdl::download "http://ftp.isc.org/www/dlv/dlv.isc.org.key" "$INSTDIR\dlv.isc.org.key"
+	Pop $R0 # result from Inetc::get
+	${If} $R0 != "success"
+		MessageBox MB_OK|MB_ICONEXCLAMATION "Download error (ftp.isc.org: $R0), click OK to abort installation" /SD IDOK
+		SetOutPath "C:\"
+		RMDir "$INSTDIR"  # doesnt work directory in use by us ...
+		Abort
+	${EndIf}
+sectionEnd
+
+section "-hidden.postinstall"
 	# copy files
 	setOutPath $INSTDIR
 	File "..\LICENSE"
@@ -88,6 +97,19 @@ section "Unbound section"
 	File "unbound-website.url"
 	File "service.conf"
 	File "..\doc\example.conf"
+
+	# Store DLV choice
+	SectionGetFlags ${SectionDLV} $R0
+	IntOp $R0 $R0 & ${SF_SELECTED}
+	${If} $R0 == ${SF_SELECTED}
+		ClearErrors
+		FileOpen $R1 "$INSTDIR\service.conf" a
+		IfErrors done
+		FileSeek $R1 0 END
+		FileWrite $R1 "$\nserver: dlv-anchor-file: $\"$INSTDIR\dlv.isc.org.key$\"$\n"
+		FileClose $R1
+	  done:
+	${EndIf}
 
 	# store installation folder
 	WriteRegStr HKLM "Software\Unbound" "InstallLocation" $INSTDIR
@@ -113,17 +135,25 @@ section "Unbound section"
 
 	# install service entry
 	nsExec::ExecToLog '"$INSTDIR\unbound-service-install.exe"'
-
 	# start unbound service
 	!insertmacro SERVICE "start" "unbound" ""
 sectionEnd
+
+# set section descriptions
+LangString DESC_unbound ${LANG_ENGLISH} "The base unbound DNS(SEC) validating caching resolver. $\r$\n$\r$\nIt can be found in the Services control panel, and a config file is in the Program Files folder."
+LangString DESC_dlv ${LANG_ENGLISH} "Set up to use DLV with dlv.isc.org. Downloads the key with a leap of faith. $\r$\n$\r$\nThis provides public keys that are used for security verification."
+
+!insertmacro MUI_FUNCTION_DESCRIPTION_BEGIN
+  !insertmacro MUI_DESCRIPTION_TEXT ${SectionUnbound} $(DESC_unbound)
+  !insertmacro MUI_DESCRIPTION_TEXT ${SectionDLV} $(DESC_dlv)
+!insertmacro MUI_FUNCTION_DESCRIPTION_END
 
 # setup macros for uninstall functions.
 !undef UN
 !define UN "un."
 
 # uninstaller section
-section "un.Unbound section"
+section "un.Unbound"
 	# stop unbound service
 	!insertmacro SERVICE "stop" "unbound" ""
 	# uninstall service entry
@@ -141,7 +171,8 @@ section "un.Unbound section"
 	Delete "$INSTDIR\unbound-website.url"
 	Delete "$INSTDIR\service.conf"
 	Delete "$INSTDIR\example.conf"
-	RmDir "$INSTDIR"
+	Delete "$INSTDIR\dlv.isc.org.key"
+	RMDir "$INSTDIR"
 
 	# start menu items
 	!insertmacro MUI_STARTMENU_GETFOLDER UnboundStartMenu $StartMenuFolder
