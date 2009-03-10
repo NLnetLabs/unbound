@@ -149,6 +149,7 @@ done
 if [ "$DOWIN" = "yes" ]; then
     version=`./configure --version | head -1 | awk '{ print $3 }'` \
 	|| error_cleanup "Cannot determine version number."
+    version=`echo $version | sed -e 's/rc.*//' -e 's/_20.*//'`
     if [ "$RC" != "no" -o "$SNAPSHOT" != "no" ]; then
     	if [ "$RC" != "no" ]; then
 		version2=`echo $version | sed -e 's/rc.*//'`"rc$RC"
@@ -196,7 +197,6 @@ if [ "$DOWIN" = "yes" ]; then
     # installer
     info "Creating installer"
     quadversion=`cat ../config.h | grep RSRC_PACKAGE_VERSION | sed -e 's/#define RSRC_PACKAGE_VERSION //' -e 's/,/\\./g'`
-    echo $quadversion
     cat ../winrc/setup.nsi | sed -e 's/define VERSION.*$/define VERSION "'$version'"/' -e 's/define QUADVERSION.*$/define QUADVERSION "'$quadversion'"/' > ../winrc/setup_ed.nsi
     # get tool from http://nsis.sf.net
     c:/Program\ Files/NSIS/makensis.exe ../winrc/setup_ed.nsi

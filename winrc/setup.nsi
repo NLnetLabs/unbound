@@ -1,8 +1,10 @@
 # The NSIS (http://nsis.sourceforge.net) install script.
 # This script is BSD licensed.
+SetCompressor /solid /final lzma
 
 !include LogicLib.nsh
 !include MUI2.nsh
+!include setup_servicelib.nsh
 
 !define VERSION "0.0.0"
 !define QUADVERSION "0.0.0.0"
@@ -14,7 +16,6 @@ Name "Unbound"
 installDir "$PROGRAMFILES\Unbound"
 installDirRegKey HKLM "Software\Unbound" "InstallLocation"
 RequestExecutionLevel admin
-SetCompressor /solid /final lzma
 #give credits to Nullsoft: BrandingText ""
 VIAddVersionKey "ProductName" "Unbound"
 VIAddVersionKey "CompanyName" "NLnet Labs"
@@ -37,6 +38,8 @@ Var StartMenuFolder
 
 # use ReserveFile for files required before actual installation
 # makes the installer start faster
+#ReserveFile "System.dll"
+#ReserveFile "NsExec.dll"
 ReserveFile "..\LICENSE"
 
 #!define MUI_ICON "combined.ico"
@@ -109,14 +112,22 @@ section "Unbound section"
 	!insertmacro MUI_STARTMENU_WRITE_END
 
 	# install service entry
-	ExecWait '"$INSTDIR\unbound-service-install.exe"'
+	nsExec::ExecToLog '"$INSTDIR\unbound-service-install.exe"'
 
+	# start unbound service
+	!insertmacro SERVICE "start" "unbound" ""
 sectionEnd
+
+# setup macros for uninstall functions.
+!undef UN
+!define UN "un."
 
 # uninstaller section
 section "un.Unbound section"
+	# stop unbound service
+	!insertmacro SERVICE "stop" "unbound" ""
 	# uninstall service entry
-	ExecWait '"$INSTDIR\unbound-service-remove.exe"'
+	nsExec::ExecToLog '"$INSTDIR\unbound-service-remove.exe"'
 	# deregister uninstall
 	DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Unbound"
 	Delete "$INSTDIR\uninst.exe"   # delete self
