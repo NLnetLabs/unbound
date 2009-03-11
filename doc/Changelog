@@ -3,6 +3,11 @@
 	- winsock event handler tests if signals are really signalled.
 	- install and service with log to file works on XP and Vista on 
 	  default install location.
+	- on windows logging to the Application logbook works (as a service).
+	- fix RUN_DIR on windows compile setting in makedist.
+	- windows registry has Software\Unbound\ConfigFile element.
+	  If does not exist, the default is used. The -c switch overrides it.
+	- fix makedist version cleanup function.
 
 10 March 2009: Wouter
 	- makedist -w strips out old rc.. and snapshot info from version.

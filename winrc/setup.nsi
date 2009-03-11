@@ -112,7 +112,8 @@ section "-hidden.postinstall"
 	${EndIf}
 
 	# store installation folder
-	WriteRegStr HKLM "Software\Unbound" "InstallLocation" $INSTDIR
+	WriteRegStr HKLM "Software\Unbound" "InstallLocation" "$INSTDIR"
+	WriteRegStr HKLM "Software\Unbound" "ConfigFile" "$INSTDIR\service.conf"
 
 	# uninstaller
 	WriteUninstaller "uninst.exe"

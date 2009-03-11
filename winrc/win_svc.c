@@ -52,15 +52,6 @@
 #include "util/netevent.h"
 #include "util/winsock_event.h"
 
-/** from gen_msg.h - success message record for windows message log */
-#define MSG_GENERIC_SUCCESS              ((DWORD)0x20010001L)
-/** from gen_msg.h - informational message record for windows message log */
-#define MSG_GENERIC_INFO                 ((DWORD)0x60010002L)
-/** from gen_msg.h - warning message record for windows message log */
-#define MSG_GENERIC_WARN                 ((DWORD)0xA0010003L)
-/** from gen_msg.h - error message record for windows message log */
-#define MSG_GENERIC_ERR                  ((DWORD)0xE0010004L)
-
 /** global service status */
 SERVICE_STATUS	service_status;
 /** global service status handle */
@@ -70,7 +61,7 @@ WSAEVENT service_stop_event = NULL;
 /** event struct for stop callbacks */
 struct event service_stop_ev;
 /** config file to open. global communication to service_main() */
-const char* service_cfgfile = CONFIGFILE;
+char* service_cfgfile = CONFIGFILE;
 /** commandline verbosity. global communication to service_main() */
 int service_cmdline_verbose = 0;
 
@@ -80,7 +71,7 @@ int service_cmdline_verbose = 0;
  * @param exitcode: error code (when stopped)
  * @param wait: pending operation estimated time in milliseconds.
  */
-void report_status(DWORD state, DWORD exitcode, DWORD wait)
+static void report_status(DWORD state, DWORD exitcode, DWORD wait)
 {
 	static DWORD checkpoint = 1;
 	service_status.dwCurrentState = state;
@@ -146,6 +137,47 @@ reportev(const char* str)
 }
 
 /**
+ * Obtain registry string (if it exists).
+ * @param key: key string
+ * @param name: name of value to fetch.
+ * @return malloced string with the result or NULL if it did not
+ * exist on an error (logged) was encountered.
+ */
+static char*
+lookup_reg_str(const char* key, const char* name)
+{
+	HKEY hk = NULL;
+	DWORD type = 0;
+	BYTE buf[1024];
+	DWORD len = (DWORD)sizeof(buf);
+	LONG ret;
+	char* result = NULL;
+	ret = RegOpenKeyEx(HKEY_LOCAL_MACHINE, key, 0, KEY_READ, &hk);
+	if(ret == ERROR_FILE_NOT_FOUND)
+		return NULL; /* key does not exist */
+	else if(ret != ERROR_SUCCESS) {
+		reportev("RegOpenKeyEx failed");
+		return NULL;
+	}
+	ret = RegQueryValueEx(hk, (LPCTSTR)name, 0, &type, buf, &len);
+	if(RegCloseKey(hk))
+		reportev("RegCloseKey");
+	if(ret == ERROR_FILE_NOT_FOUND)
+		return NULL; /* name does not exist */
+	else if(ret != ERROR_SUCCESS) {
+		reportev("RegQueryValueEx failed");
+		return NULL;
+	}
+	if(type == REG_SZ || type == REG_MULTI_SZ || type == REG_EXPAND_SZ) {
+		buf[sizeof(buf)-1] = 0;
+		buf[sizeof(buf)-2] = 0; /* for multi_sz */
+		result = strdup(buf);
+		if(!result) reportev("out of memory");
+	}
+	return result;
+}
+
+/**
  * Init service. Keeps calling status pending to tell service control
  * manager that this process is not hanging.
  * @param d: daemon returned here.
@@ -157,9 +189,13 @@ service_init(struct daemon** d, struct config_file** c)
 {
 	struct config_file* cfg = NULL;
 	struct daemon* daemon = NULL;
-	const char* logfile= "C:\\unbound.log";
-	verbosity=4; service_cmdline_verbose=4;
-	log_init(logfile, 0, NULL); /* DEBUG logfile */
+
+	if(!service_cfgfile) {
+		char* newf = lookup_reg_str("Software\\Unbound", "ConfigFile");
+		if(newf) service_cfgfile = newf;
+		else 	service_cfgfile = strdup(CONFIGFILE);
+		if(!service_cfgfile) fatal_exit("out of memory");
+	}
 
 	/* create daemon */
 	daemon = daemon_init();
@@ -191,7 +227,7 @@ service_init(struct daemon** d, struct config_file** c)
 		} else
 			verbose(VERB_QUERY, "chdir to %s", cfg->directory);
 	}
-	/* log_init(cfg->logfile, cfg->use_syslog, cfg->chrootdir); DEBUG*/
+	log_init(cfg->logfile, cfg->use_syslog, cfg->chrootdir);
 	report_status(SERVICE_START_PENDING, NO_ERROR, 2400);
 	verbose(VERB_QUERY, "winservice - apply cfg");
 	daemon_apply_cfg(daemon, cfg);
@@ -221,8 +257,6 @@ service_main(DWORD ATTR_UNUSED(argc), LPTSTR* ATTR_UNUSED(argv))
 {
 	struct config_file* cfg = NULL;
 	struct daemon* daemon = NULL;
-
-	reportev("Trying to report event");
 
 	service_status_handle = RegisterServiceCtrlHandler(SERVICE_NAME, 
 		(LPHANDLER_FUNCTION)hdlr);
@@ -269,25 +303,29 @@ service_main(DWORD ATTR_UNUSED(argc), LPTSTR* ATTR_UNUSED(argv))
 	config_delete(cfg);
 	daemon_delete(daemon);
 	(void)WSACloseEvent(service_stop_event);
+	free(service_cfgfile);
 	verbose(VERB_QUERY, "winservice - full stop");
 	report_status(SERVICE_STOPPED, NO_ERROR, 0);
 }
 
 /** start the service */
 static void 
-service_start(const char* cfgfile, int v)
+service_start(const char* cfgfile, int v, int c)
 {
 	SERVICE_TABLE_ENTRY myservices[2] = {
 		{SERVICE_NAME, (LPSERVICE_MAIN_FUNCTION)service_main},
 		{NULL, NULL} };
 	verbosity=v;
-	if(1) {
-		/* DEBUG log to file */
+	if(verbosity >= VERB_QUERY) {
+		/* log to file about start sequence */
 		fclose(fopen("C:\\unbound.log", "w"));
 		log_init("C:\\unbound.log", 0, 0);
 		verbose(VERB_QUERY, "open logfile");
-	}
-	service_cfgfile = cfgfile;
+	} else log_init(0, 1, 0); /* otherwise, use Application log */
+	if(c) {
+		service_cfgfile = strdup(cfgfile);
+		if(!service_cfgfile) fatal_exit("out of memory");
+	} else 	service_cfgfile = NULL;
 	service_cmdline_verbose = v;
 	/* this call returns when service has stopped. */
 	if(!StartServiceCtrlDispatcher(myservices)) {
@@ -296,14 +334,14 @@ service_start(const char* cfgfile, int v)
 }
 
 void
-wsvc_command_option(const char* wopt, const char* cfgfile, int v)
+wsvc_command_option(const char* wopt, const char* cfgfile, int v, int c)
 {
 	if(strcmp(wopt, "install") == 0)
 		wsvc_install(stdout, NULL);
 	else if(strcmp(wopt, "remove") == 0)
 		wsvc_remove(stdout);
 	else if(strcmp(wopt, "service") == 0)
-		service_start(cfgfile, v);
+		service_start(cfgfile, v, c);
 	else fatal_exit("unknown option: %s", wopt);
 	exit(0);
 }

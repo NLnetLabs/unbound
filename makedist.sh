@@ -149,13 +149,14 @@ done
 if [ "$DOWIN" = "yes" ]; then
     version=`./configure --version | head -1 | awk '{ print $3 }'` \
 	|| error_cleanup "Cannot determine version number."
-    version=`echo $version | sed -e 's/rc.*$//' -e 's/_20.*$//'`
     if [ "$RC" != "no" -o "$SNAPSHOT" != "no" ]; then
     	if [ "$RC" != "no" ]; then
-		version2=`echo $version | sed -e 's/rc.*//'`"rc$RC"
+    		version2=`echo $version | sed -e 's/rc.*$//' -e 's/_20.*$//'`
+		version2=`echo $version2 | sed -e 's/rc.*//'`"rc$RC"
 	fi
     	if [ "$SNAPSHOT" != "no" ]; then
-    		version2="${version}_`date +%Y%m%d`"
+    		version2=`echo $version | sed -e 's/rc.*$//' -e 's/_20.*$//'`
+    		version2="${version2}_`date +%Y%m%d`"
 	fi
     	replace_text "configure.ac" "AC_INIT(unbound, $version" "AC_INIT(unbound, $version2"
     	version="$version2"
@@ -170,8 +171,7 @@ if [ "$DOWIN" = "yes" ]; then
     echo './configure --enable-debug --enable-static-exe "--with-conf-file=C:\Program Files\Unbound\service.conf" --with-run-dir="" --with-pidfile="" --with-chroot-dir="" '"$*"
     ./configure --enable-debug --enable-static-exe \
 	"--with-conf-file=C:\Program Files\Unbound\service.conf" \
-	"--with-run-dir=C:\Program Files\Unbound" --with-pidfile="" \
-	--with-chroot-dir="" $* \
+	--with-run-dir="" --with-pidfile="" --with-chroot-dir="" $* \
 	|| error_cleanup "Could not configure"
     info "Calling make"
     make || error_cleanup "Could not make"

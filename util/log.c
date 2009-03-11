@@ -54,6 +54,9 @@
 #  define LOG_INFO 6
 #  define LOG_DEBUG 7
 #endif
+#ifdef UB_ON_WINDOWS
+#  include "winrc/win_svc.h"
+#endif
 
 /* default verbosity */
 enum verbosity_value verbosity = 0;
@@ -65,7 +68,7 @@ static int key_created = 0;
 static ub_thread_key_t logkey;
 /** the identity of this executable/process */
 static const char* ident="unbound";
-#ifdef HAVE_SYSLOG_H
+#if defined(HAVE_SYSLOG_H) || defined(UB_ON_WINDOWS)
 /** are we using syslog(3) to log to */
 static int logging_to_syslog = 0;
 #endif /* HAVE_SYSLOG_H */
@@ -83,7 +86,7 @@ log_init(const char* filename, int use_syslog, const char* chrootdir)
 		ub_thread_key_create(&logkey, NULL);
 	}
 	if(logfile 
-#ifdef HAVE_SYSLOG_H
+#if defined(HAVE_SYSLOG_H) || defined(UB_ON_WINDOWS)
 	|| logging_to_syslog
 #endif
 	)
@@ -100,6 +103,14 @@ log_init(const char* filename, int use_syslog, const char* chrootdir)
 		/* do not delay opening until first write, because we may
 		 * chroot and no longer be able to access dev/log and so on */
 		openlog(ident, LOG_NDELAY, LOG_DAEMON);
+		logging_to_syslog = 1;
+		return;
+	}
+#elif defined(UB_ON_WINDOWS)
+	if(logging_to_syslog) {
+		logging_to_syslog = 0;
+	}
+	if(use_syslog) {
 		logging_to_syslog = 1;
 		return;
 	}
@@ -163,6 +174,32 @@ log_vmsg(int pri, const char* type,
 	if(logging_to_syslog) {
 		syslog(pri, "[%d:%x] %s: %s", 
 			(int)getpid(), tid?*tid:0, type, message);
+		return;
+	}
+#elif defined(UB_ON_WINDOWS)
+	if(logging_to_syslog) {
+		char m[32768];
+		HANDLE* s;
+		LPCTSTR str = m;
+		DWORD tp = MSG_GENERIC_ERR;
+		WORD wt = EVENTLOG_ERROR_TYPE;
+		if(strcmp(type, "info") == 0) {
+			tp=MSG_GENERIC_INFO;
+			wt=EVENTLOG_INFORMATION_TYPE;
+		} else if(strcmp(type, "warning") == 0) {
+			tp=MSG_GENERIC_WARN;
+			wt=EVENTLOG_WARNING_TYPE;
+		} else if(strcmp(type, "notice") == 0 
+			|| strcmp(type, "debug") == 0) {
+			tp=MSG_GENERIC_SUCCESS;
+			wt=EVENTLOG_SUCCESS;
+		}
+		snprintf(m, sizeof(m), "[unbound:%x] %s: %s", 
+			tid?*tid:0, type, message);
+		s = RegisterEventSource(NULL, SERVICE_NAME);
+		if(!s) return;
+		ReportEvent(s, wt, 0, tp, NULL, 1, 0, &str, NULL);
+		DeregisterEventSource(s);
 		return;
 	}
 #endif /* HAVE_SYSLOG_H */

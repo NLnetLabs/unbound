@@ -582,6 +582,7 @@ main(int argc, char* argv[])
 	const char* winopt = NULL;
 	int cmdline_verbose = 0;
 	int debug_mode = 0;
+	int cmdline_cfg = 0;
 
 #ifdef HAVE_SBRK
 	/* take debug snapshot of heap */
@@ -594,6 +595,7 @@ main(int argc, char* argv[])
 		switch(c) {
 		case 'c':
 			cfgfile = optarg;
+			cmdline_cfg = 1;
 			break;
 		case 'v':
 			cmdline_verbose ++;
@@ -617,7 +619,8 @@ main(int argc, char* argv[])
 
 	if(winopt) {
 #ifdef UB_ON_WINDOWS
-		wsvc_command_option(winopt, cfgfile, cmdline_verbose);
+		wsvc_command_option(winopt, cfgfile, cmdline_verbose, 
+			cmdline_cfg);
 #else
 		fatal_exit("option not supported");
 #endif

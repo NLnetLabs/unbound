@@ -51,13 +51,23 @@ struct worker;
 /** service name for unbound (internal to ServiceManager) */
 #define SERVICE_NAME "unbound"
 
+/** from gen_msg.h - success message record for windows message log */
+#define MSG_GENERIC_SUCCESS              ((DWORD)0x20010001L)
+/** from gen_msg.h - informational message record for windows message log */
+#define MSG_GENERIC_INFO                 ((DWORD)0x60010002L)
+/** from gen_msg.h - warning message record for windows message log */
+#define MSG_GENERIC_WARN                 ((DWORD)0xA0010003L)
+/** from gen_msg.h - error message record for windows message log */
+#define MSG_GENERIC_ERR                  ((DWORD)0xE0010004L)
+
 /**
  * Handle commandline service for windows.
  * @param wopt: windows option string (install, remove, service). 
  * @param cfgfile: configfile to open (default or passed with -c).
  * @param v: amount of commandline verbosity added with -v.
+ * @param c: true if cfgfile was set by commandline -c option.
  */
-void wsvc_command_option(const char* wopt, const char* cfgfile, int v);
+void wsvc_command_option(const char* wopt, const char* cfgfile, int v, int c);
 
 /**
  * Setup lead worker events.
