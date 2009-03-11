@@ -47,7 +47,10 @@
 #include "winrc/win_svc.h"
 #include "winrc/w_inst.h"
 #include "daemon/daemon.h"
+#include "daemon/worker.h"
 #include "util/config_file.h"
+#include "util/netevent.h"
+#include "util/winsock_event.h"
 
 /** from gen_msg.h - success message record for windows message log */
 #define MSG_GENERIC_SUCCESS              ((DWORD)0x20010001L)
@@ -64,6 +67,8 @@ SERVICE_STATUS	service_status;
 SERVICE_STATUS_HANDLE service_status_handle;
 /** global service stop event */
 WSAEVENT service_stop_event = NULL;
+/** event struct for stop callbacks */
+struct event service_stop_ev;
 /** config file to open. global communication to service_main() */
 const char* service_cfgfile = CONFIGFILE;
 /** commandline verbosity. global communication to service_main() */
@@ -246,7 +251,9 @@ service_main(DWORD ATTR_UNUSED(argc), LPTSTR* ATTR_UNUSED(argv))
 		report_status(SERVICE_STOPPED, NO_ERROR, 0);
 		return;
 	}
-	daemon->stop_event = service_stop_event;
+	if(!WSAResetEvent(service_stop_event)) {
+		log_err("WSAResetEvent: %s", wsa_strerror(WSAGetLastError()));
+	}
 
 	/* SetServiceStatus SERVICE_RUNNING;*/
 	report_status(SERVICE_RUNNING, NO_ERROR, 0);
@@ -261,6 +268,7 @@ service_main(DWORD ATTR_UNUSED(argc), LPTSTR* ATTR_UNUSED(argv))
 	daemon_cleanup(daemon);
 	config_delete(cfg);
 	daemon_delete(daemon);
+	(void)WSACloseEvent(service_stop_event);
 	verbose(VERB_QUERY, "winservice - full stop");
 	report_status(SERVICE_STOPPED, NO_ERROR, 0);
 }
@@ -299,3 +307,26 @@ wsvc_command_option(const char* wopt, const char* cfgfile, int v)
 	else fatal_exit("unknown option: %s", wopt);
 	exit(0);
 }
+
+void
+worker_win_stop_cb(int ATTR_UNUSED(fd), short ATTR_UNUSED(ev), void* arg)
+{
+        struct worker* worker = (struct worker*)arg;
+        verbose(VERB_QUERY, "caught stop signal (wsaevent)");
+        worker->need_to_exit = 1;
+        comm_base_exit(worker->base);
+}
+
+void wsvc_setup_worker(struct worker* worker)
+{
+	/* if not started with -w service, do nothing */
+	if(!service_stop_event)
+		return;
+	if(!winsock_register_wsaevent(comm_base_internal(worker->base),
+		&service_stop_ev, service_stop_event,
+		&worker_win_stop_cb, worker)) {
+		fatal_exit("could not register wsaevent");
+		return;
+	}
+}
+

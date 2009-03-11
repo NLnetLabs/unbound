@@ -74,6 +74,9 @@
 #include <netdb.h>
 #endif
 #include <signal.h>
+#ifdef UB_ON_WINDOWS
+#include "winrc/win_svc.h"
+#endif
 
 /** Size of an UDP datagram */
 #define NORMAL_UDP_SIZE	512 /* bytes */
@@ -997,17 +1000,6 @@ worker_create(struct daemon* daemon, int id, int* ports, int n)
 	return worker;
 }
 
-#ifdef UB_ON_WINDOWS
-void
-worker_win_stop_cb(int ATTR_UNUSED(fd), short ATTR_UNUSED(ev), void* arg)
-{
-	struct worker* worker = (struct worker*)arg;
-	verbose(VERB_QUERY, "caught stop signal (wsaevent)");
-	worker->need_to_exit = 1;
-	comm_base_exit(worker->base);
-}
-#endif /* UB_ON_WINDOWS */
-
 int
 worker_init(struct worker* worker, struct config_file *cfg, 
 	struct listen_port* ports, int do_sigs)
@@ -1056,13 +1048,7 @@ worker_init(struct worker* worker, struct config_file *cfg,
 			return 0;
 		}
 #ifdef UB_ON_WINDOWS
-		if(!winsock_register_wsaevent(comm_base_internal(worker->base), 
-			&worker->daemon->stop_ev, worker->daemon->stop_event, 
-			&worker_win_stop_cb, worker)) {
-			log_err("could not register wsaevent");
-			worker_delete(worker);
-			return 0;
-		}
+		wsvc_setup_worker(worker);
 #endif /* UB_ON_WINDOWS */
 	} else { /* !do_sigs */
 		worker->comsig = NULL;

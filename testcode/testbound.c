@@ -325,3 +325,13 @@ void wsvc_command_option(const char* ATTR_UNUSED(wopt),
 	log_assert(0);
 }
 
+void wsvc_setup_worker(struct worker* ATTR_UNUSED(worker))
+{
+	log_assert(0);
+}
+
+void worker_win_stop_cb(int ATTR_UNUSED(fd), short ATTR_UNUSED(ev),
+	void* ATTR_UNUSED(arg))
+{
+	log_assert(0);
+}

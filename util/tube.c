@@ -482,6 +482,9 @@ struct tube* tube_create(void)
 		free(tube);
 		log_err("WSACreateEvent: %s", wsa_strerror(WSAGetLastError()));
 	}
+	if(!WSAResetEvent(tube->event)) {
+		log_err("WSAResetEvent: %s", wsa_strerror(WSAGetLastError()));
+	}
 	lock_basic_init(&tube->res_lock);
 	verbose(VERB_ALGO, "tube created");
 	return tube;

@@ -99,12 +99,6 @@ struct daemon {
 	struct timeval time_last_stat;
 	/** time when daemon started */
 	struct timeval time_boot;
-#ifdef UB_ON_WINDOWS
-	/** stop signaling event - not owned by this structure */
-	WSAEVENT stop_event;
-	/** event structure for callback */
-	struct event stop_ev;
-#endif
 };
 
 /**

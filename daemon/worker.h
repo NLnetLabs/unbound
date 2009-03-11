@@ -239,7 +239,4 @@ void worker_stats_clear(struct worker* worker);
 /** statistics timer callback handler */
 void worker_stat_timer_cb(void* arg);
 
-/** windows worker stop event callback handler */
-void worker_win_stop_cb(int fd, short ev, void* arg);
-
 #endif /* DAEMON_WORKER_H */

@@ -46,6 +46,7 @@
 
 #ifndef WINRC_WIN_SVC_H
 #define WINRC_WIN_SVC_H
+struct worker;
 
 /** service name for unbound (internal to ServiceManager) */
 #define SERVICE_NAME "unbound"
@@ -57,5 +58,14 @@
  * @param v: amount of commandline verbosity added with -v.
  */
 void wsvc_command_option(const char* wopt, const char* cfgfile, int v);
+
+/**
+ * Setup lead worker events.
+ * @param worker: the worker
+ */
+void wsvc_setup_worker(struct worker* worker);
+
+/** windows worker stop event callback handler */
+void worker_win_stop_cb(int fd, short ev, void* arg);
 
 #endif /* WINRC_WIN_SVC_H */

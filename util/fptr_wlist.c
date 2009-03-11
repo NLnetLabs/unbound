@@ -69,6 +69,9 @@
 #include "libunbound/libworker.h"
 #include "libunbound/context.h"
 #include "util/tube.h"
+#ifdef UB_ON_WINDOWS
+#include "winrc/win_svc.h"
+#endif
 
 int 
 fptr_whitelist_comm_point(comm_point_callback_t *fptr)

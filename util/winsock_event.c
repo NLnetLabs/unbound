@@ -177,6 +177,33 @@ static void handle_timeouts(struct event_base* base, struct timeval* now,
         }
 }
 
+/** handle is_signal events and see if signalled */
+static void handle_signal(struct event* ev)
+{
+	DWORD ret;
+	log_assert(ev->is_signal && ev->hEvent);
+	/* see if the event is signalled */
+	ret = WSAWaitForMultipleEvents(1, &ev->hEvent, 0 /* any object */,
+		0 /* return immediately */, 0 /* not alertable for IOcomple*/);
+	if(ret == WSA_WAIT_IO_COMPLETION || ret == WSA_WAIT_FAILED) {
+		log_err("WSAWaitForMultipleEvents(signal) failed: %s",
+			wsa_strerror(WSAGetLastError()));
+		return;
+	}
+	if(ret == WSA_WAIT_TIMEOUT) {
+		/* not signalled */
+		return;
+	}
+
+	/* reset the signal */
+	if(!WSAResetEvent(ev->hEvent))
+		log_err("WSAResetEvent failed: %s",
+			wsa_strerror(WSAGetLastError()));
+	/* do the callback (which may set the signal again) */
+	fptr_ok(fptr_whitelist_event(ev->ev_callback));
+	(*ev->ev_callback)(ev->ev_fd, ev->ev_events, ev->ev_arg);
+}
+
 /** call select and callbacks for that */
 static int handle_select(struct event_base* base, struct timeval* wait)
 {
@@ -249,11 +276,7 @@ static int handle_select(struct event_base* base, struct timeval* wait)
 		/* eventlist[i] fired */
 		if(eventlist[i]->is_signal) {
 			/* not a network event at all */
-			fptr_ok(fptr_whitelist_event(
-                                eventlist[i]->ev_callback));
-                        (*eventlist[i]->ev_callback)(eventlist[i]->ev_fd,
-                                eventlist[i]->ev_events, 
-				eventlist[i]->ev_arg);
+			handle_signal(eventlist[i]);
 			continue;
 		}
 		if(WSAEnumNetworkEvents(eventlist[i]->ev_fd, 
