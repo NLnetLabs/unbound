@@ -366,7 +366,7 @@ server_use_syslog: VAR_USE_SYSLOG STRING
 		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
 			yyerror("expected yes or no.");
 		else cfg_parser->cfg->use_syslog = (strcmp($2, "yes")==0);
-#ifndef HAVE_SYSLOG_H
+#if !defined(HAVE_SYSLOG_H) && !defined(UB_ON_WINDOWS)
 		if(strcmp($2, "yes") == 0)
 			yyerror("no syslog services are available. "
 				"(reconfigure and compile to add)");
