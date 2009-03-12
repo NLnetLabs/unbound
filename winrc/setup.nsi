@@ -94,6 +94,7 @@ section "-hidden.postinstall"
 	File "..\unbound-host.exe"
 	File "..\unbound-service-install.exe"
 	File "..\unbound-service-remove.exe"
+	File "..\anchor-update.exe"
 	File "unbound-website.url"
 	File "service.conf"
 	File "..\doc\example.conf"
@@ -109,11 +110,15 @@ section "-hidden.postinstall"
 		FileWrite $R1 "$\nserver: dlv-anchor-file: $\"$INSTDIR\dlv.isc.org.key$\"$\n"
 		FileClose $R1
 	  done:
+		WriteRegStr HKLM "Software\Unbound" "CronAction" "$\"$INSTDIR\anchor-update.exe$\" dlv.isc.org $\"$INSTDIR\dlv.isc.org.key$\""
+	${Else}
+		WriteRegStr HKLM "Software\Unbound" "CronAction" "$\"$INSTDIR\anchor-update.exe$\" "
 	${EndIf}
 
 	# store installation folder
 	WriteRegStr HKLM "Software\Unbound" "InstallLocation" "$INSTDIR"
 	WriteRegStr HKLM "Software\Unbound" "ConfigFile" "$INSTDIR\service.conf"
+	WriteRegDWORD HKLM "Software\Unbound" "CronTime" 86400
 
 	# uninstaller
 	WriteUninstaller "uninst.exe"
@@ -169,6 +174,7 @@ section "un.Unbound"
 	Delete "$INSTDIR\unbound-host.exe"
 	Delete "$INSTDIR\unbound-service-install.exe"
 	Delete "$INSTDIR\unbound-service-remove.exe"
+	Delete "$INSTDIR\anchor-update.exe"
 	Delete "$INSTDIR\unbound-website.url"
 	Delete "$INSTDIR\service.conf"
 	Delete "$INSTDIR\example.conf"

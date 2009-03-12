@@ -124,7 +124,13 @@ worker_win_stop_cb(int ATTR_UNUSED(fd), short ATTR_UNUSED(ev), void*
 	ATTR_UNUSED(arg)) {
 	log_assert(0);
 }
-#endif
+
+void
+wsvc_cron_cb(void* ATTR_UNUSED(arg))
+{
+	log_assert(0);
+}
+#endif /* UB_ON_WINDOWS */
 
 void 
 worker_alloc_cleanup(void* ATTR_UNUSED(arg))

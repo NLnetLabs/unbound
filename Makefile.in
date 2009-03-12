@@ -128,15 +128,18 @@ ifeq "$(UB_ON_WINDOWS)" "yes"
   CONTROL_OBJ+=$(BUILD)winrc/rsrc_unbound_control.o
   CHECKCONF_OBJ+=$(BUILD)winrc/rsrc_unbound_checkconf.o
 
-  WINAPPS=unbound-service-install unbound-service-remove
+  WINAPPS=unbound-service-install unbound-service-remove anchor-update
   SVCINST_SRC=winrc/unbound-service-install.c winrc/w_inst.c
   SVCINST_OBJ=$(addprefix $(BUILD),$(SVCINST_SRC:.c=.lo)) $(COMPAT_OBJ) \
 	$(BUILD)winrc/rsrc_svcinst.o
   SVCUNINST_SRC=winrc/unbound-service-remove.c winrc/w_inst.c
   SVCUNINST_OBJ=$(addprefix $(BUILD),$(SVCUNINST_SRC:.c=.lo)) $(COMPAT_OBJ) \
 	$(BUILD)winrc/rsrc_svcuninst.o
-  ALL_SRC:=$(sort $(ALL_SRC) $(SVCINST_SRC) $(SVCUNINST_SRC))
-  ALL_OBJ:=$(sort $(ALL_OBJ) $(SVCINST_OBJ) $(SVCUNINST_OBJ))
+  ANCHORUPD_SRC=winrc/anchor-update.c
+  ANCHORUPD_OBJ=$(addprefix $(BUILD),$(ANCHORUPD_SRC:.c=.lo)) $(COMPAT_OBJ) \
+        $(BUILD)winrc/rsrc_anchorupd.o
+  ALL_SRC:=$(sort $(ALL_SRC) $(SVCINST_SRC) $(SVCUNINST_SRC) $(ANCHORUPD_SRC))
+  ALL_OBJ:=$(sort $(ALL_OBJ) $(SVCINST_OBJ) $(SVCUNINST_OBJ) $(ANCHORUPD_OBJ))
 
 $(BUILD)%.o:      $(srcdir)/%.rc $(srcdir)/config.h
 	$(INFO) Resource $<
@@ -206,6 +209,10 @@ unbound-service-install:	$(SVCINST_OBJ)
 unbound-service-remove:	$(SVCUNINST_OBJ)
 	$(INFO) Link $@
 	$Q$(LINK) -o $@ $(sort $(SVCUNINST_OBJ)) $(LIBS)
+
+anchor-update:  $(ANCHORUPD_OBJ) libunbound.la $(ldnslib)
+	$(INFO) Link $@
+	$Q$(LINK) -o $@ $(sort $(ANCHORUPD_OBJ)) -L. -L.libs -lunbound $(LIBS)
 
 unittest:	$(UNITTEST_OBJ) $(ldnslib)
 	$(INFO) Link $@

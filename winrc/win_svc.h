@@ -75,7 +75,16 @@ void wsvc_command_option(const char* wopt, const char* cfgfile, int v, int c);
  */
 void wsvc_setup_worker(struct worker* worker);
 
+/**
+ * Desetup lead worker events.
+ * @param worker: the worker
+ */
+void wsvc_desetup_worker(struct worker* worker);
+
 /** windows worker stop event callback handler */
 void worker_win_stop_cb(int fd, short ev, void* arg);
+
+/** windows cron timer callback handler */
+void wsvc_cron_cb(void* arg);
 
 #endif /* WINRC_WIN_SVC_H */

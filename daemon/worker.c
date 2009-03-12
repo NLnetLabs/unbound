@@ -1173,8 +1173,12 @@ worker_delete(struct worker* worker)
 	comm_timer_delete(worker->stat_timer);
 	daemon_remote_delete(worker->rc);
 	free(worker->ports);
-	if(worker->thread_num == 0)
+	if(worker->thread_num == 0) {
 		log_set_time(NULL);
+#ifdef UB_ON_WINDOWS
+		wsvc_desetup_worker(worker);
+#endif /* UB_ON_WINDOWS */
+	}
 	comm_base_delete(worker->base);
 	ub_randfree(worker->rndstate);
 	alloc_clear(&worker->alloc);

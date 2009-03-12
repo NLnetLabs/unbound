@@ -2,6 +2,7 @@
 	- log to App.logs on windows prints executable identity.
 	- fixup tests.
 	- munin plugin fix benign locking error printout.
+	- anchor-update for windows, called every 24 hours; unbound reloads.
 
 11 March 2009: Wouter
 	- winsock event handler resets WSAevents after signalled.
