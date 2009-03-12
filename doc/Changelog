@@ -1,6 +1,7 @@
 12 March 2009: Wouter
 	- log to App.logs on windows prints executable identity.
 	- fixup tests.
+	- munin plugin fix benign locking error printout.
 
 11 March 2009: Wouter
 	- winsock event handler resets WSAevents after signalled.

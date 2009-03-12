@@ -124,7 +124,7 @@ get_state ( ) {
 	# obtain lock for fetching the state
 	# because there is a race condition in fetching and writing to file
 	i=0
-	while test ! -f $lock || test "`cat $lock`" != $$; do
+	while test ! -f $lock || test "`cat $lock 2>&1`" != $$; do
 		while test -f $lock; do
 			# wait
 			i=`expr $i + 1`
