@@ -417,7 +417,7 @@ remote-control:
 # stub-zone:
 #	name: "example.com"
 #	stub-addr: 192.0.2.68
-#	stub-prime: "no"
+#	stub-prime: no
 # stub-zone:
 #	name: "example.org"
 #	stub-host: ns.example.com.
