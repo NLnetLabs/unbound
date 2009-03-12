@@ -49,6 +49,7 @@
 #include "util/net_help.h"
 #include "util/regional.h"
 #include "iterator/iterator.h"
+#include "iterator/iter_fwd.h"
 #include "validator/validator.h"
 #include "services/localzone.h"
 #ifdef HAVE_PWD_H
@@ -520,6 +521,17 @@ morechecks(struct config_file* cfg, const char* fname)
 	localzonechecks(cfg);
 }
 
+/** check forwards */
+static void
+check_fwd(struct config_file* cfg)
+{
+	struct iter_forwards* fwd = forwards_create();
+	if(!fwd || !forwards_apply_cfg(fwd, cfg)) {
+		fatal_exit("Could not set forward zones");
+	}
+	forwards_delete(fwd);
+}
+
 /** check config file */
 static void
 checkconf(const char* cfgfile, const char* opt)
@@ -535,6 +547,7 @@ checkconf(const char* cfgfile, const char* opt)
 	morechecks(cfg, cfgfile);
 	check_mod(cfg, iter_get_funcblock());
 	check_mod(cfg, val_get_funcblock());
+	check_fwd(cfg);
 	if(opt) print_option(cfg, opt);
 	else	printf("unbound-checkconf: no errors in %s\n", cfgfile);
 	config_delete(cfg);

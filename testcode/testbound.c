@@ -320,14 +320,15 @@ int remote_control_callback(struct comm_point* ATTR_UNUSED(c),
 }
 
 void wsvc_command_option(const char* ATTR_UNUSED(wopt), 
-	const char* ATTR_UNUSED(cfgfile), int ATTR_UNUSED(v))
+	const char* ATTR_UNUSED(cfgfile), int ATTR_UNUSED(v), 
+	int ATTR_UNUSED(c))
 {
 	log_assert(0);
 }
 
 void wsvc_setup_worker(struct worker* ATTR_UNUSED(worker))
 {
-	log_assert(0);
+	/* do nothing */
 }
 
 void worker_win_stop_cb(int ATTR_UNUSED(fd), short ATTR_UNUSED(ev),

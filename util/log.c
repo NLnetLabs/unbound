@@ -194,8 +194,8 @@ log_vmsg(int pri, const char* type,
 			tp=MSG_GENERIC_SUCCESS;
 			wt=EVENTLOG_SUCCESS;
 		}
-		snprintf(m, sizeof(m), "[unbound:%x] %s: %s", 
-			tid?*tid:0, type, message);
+		snprintf(m, sizeof(m), "[%s:%x] %s: %s", 
+			ident, tid?*tid:0, type, message);
 		s = RegisterEventSource(NULL, SERVICE_NAME);
 		if(!s) return;
 		ReportEvent(s, wt, 0, tp, NULL, 1, 0, &str, NULL);
