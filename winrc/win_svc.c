@@ -480,6 +480,7 @@ win_do_cron(void* ATTR_UNUSED(arg))
 	return NULL;
 }
 
+/** Set the timer for cron for the next wake up */
 static void
 set_cron_timer()
 {

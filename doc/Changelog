@@ -1,3 +1,6 @@
+13 March 2009: Wouter
+	- doxygen and lex/yacc on linux.
+
 12 March 2009: Wouter
 	- log to App.logs on windows prints executable identity.
 	- fixup tests.

@@ -54,6 +54,7 @@ typedef int flex_int32_t;
 typedef unsigned char flex_uint8_t; 
 typedef unsigned short int flex_uint16_t;
 typedef unsigned int flex_uint32_t;
+#endif /* ! C99 */
 
 /* Limits of integral types. */
 #ifndef INT8_MIN
@@ -83,8 +84,6 @@ typedef unsigned int flex_uint32_t;
 #ifndef UINT32_MAX
 #define UINT32_MAX             (4294967295U)
 #endif
-
-#endif /* ! C99 */
 
 #endif /* ! FLEXINT_H */
 
@@ -1380,7 +1379,7 @@ static void config_end_include(void)
 #define YY_NO_INPUT 1
 #endif
 
-#line 1383 "<stdout>"
+#line 1382 "<stdout>"
 
 #define INITIAL 0
 #define quotedstring 1
@@ -1472,7 +1471,7 @@ static int input (void );
 /* This used to be an fputs(), but since the string might contain NUL's,
  * we now use fwrite().
  */
-#define ECHO do { if (fwrite( yytext, yyleng, 1, yyout )) {} } while (0)
+#define ECHO fwrite( yytext, yyleng, 1, yyout )
 #endif
 
 /* Gets input and stuffs it into "buf".  number of characters read, or YY_NULL,
@@ -1483,7 +1482,7 @@ static int input (void );
 	if ( YY_CURRENT_BUFFER_LVALUE->yy_is_interactive ) \
 		{ \
 		int c = '*'; \
-		size_t n; \
+		unsigned n; \
 		for ( n = 0; n < max_size && \
 			     (c = getc( yyin )) != EOF && c != '\n'; ++n ) \
 			buf[n] = (char) c; \
@@ -1567,7 +1566,7 @@ YY_DECL
     
 #line 120 "util/configlexer.lex"
 
-#line 1570 "<stdout>"
+#line 1569 "<stdout>"
 
 	if ( !(yy_init) )
 		{
@@ -2320,7 +2319,7 @@ YY_RULE_SETUP
 #line 311 "util/configlexer.lex"
 ECHO;
 	YY_BREAK
-#line 2323 "<stdout>"
+#line 2322 "<stdout>"
 
 	case YY_END_OF_BUFFER:
 		{
