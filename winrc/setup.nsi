@@ -57,6 +57,7 @@ Var StartMenuFolder
 !insertmacro MUI_PAGE_INSTFILES
 !insertmacro MUI_PAGE_FINISH
 
+!define MUI_WELCOMEPAGE_TEXT "This wizard will guide you through the uninstallation of Unbound.$\r$\n$\r$\nClick Next to continue."
 !insertmacro MUI_UNPAGE_WELCOME
 !insertmacro MUI_UNPAGE_CONFIRM
 !insertmacro MUI_UNPAGE_INSTFILES

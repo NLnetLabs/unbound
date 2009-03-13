@@ -183,6 +183,7 @@ if [ "$DOWIN" = "yes" ]; then
     info "Creating $file"
     mkdir tmp.$$
     strip unbound.exe
+    strip anchor-update.exe
     strip unbound-control.exe
     strip unbound-host.exe
     strip unbound-checkconf.exe

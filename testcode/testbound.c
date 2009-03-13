@@ -331,8 +331,18 @@ void wsvc_setup_worker(struct worker* ATTR_UNUSED(worker))
 	/* do nothing */
 }
 
+void wsvc_desetup_worker(struct worker* ATTR_UNUSED(worker))
+{
+	/* do nothing */
+}
+
 void worker_win_stop_cb(int ATTR_UNUSED(fd), short ATTR_UNUSED(ev),
 	void* ATTR_UNUSED(arg))
+{
+	log_assert(0);
+}
+
+void wsvc_cron_cb(void* ATTR_UNUSED(arg))
 {
 	log_assert(0);
 }

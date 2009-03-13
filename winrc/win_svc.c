@@ -387,7 +387,6 @@ service_start(const char* cfgfile, int v, int c)
 	SERVICE_TABLE_ENTRY myservices[2] = {
 		{SERVICE_NAME, (LPSERVICE_MAIN_FUNCTION)service_main},
 		{NULL, NULL} };
-	v=4; /* DEBUG */
 	verbosity=v;
 	if(verbosity >= VERB_QUERY) {
 		/* log to file about start sequence */
@@ -488,12 +487,11 @@ set_cron_timer()
 	int crontime;
 	if(cron_was_quick == 0) {
 		cron_was_quick = 1;
-		crontime = 10; /* first update 10 seconds after boot */
+		crontime = 3600; /* first update some time after boot */
 	} else {
 		crontime = lookup_reg_int("Software\\Unbound", "CronTime");
 		if(crontime == 0) crontime = 60*60*24; /* 24 hours */
 	}
-	crontime = 10; /* DEBUG */
 	memset(&tv, 0, sizeof(tv));
 	tv.tv_sec = (time_t)crontime;
 	comm_timer_set(service_cron, &tv);

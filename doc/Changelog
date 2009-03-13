@@ -1,5 +1,10 @@
 13 March 2009: Wouter
 	- doxygen and lex/yacc on linux.
+	- strip update-anchor on makedist -w.
+	- fix testbound on windows.
+	- default log to syslog for windows.
+	- uninstaller can stop unbound - changed text on it to reflect that.
+	- remove debugging from windows 'cron' actions.
 
 12 March 2009: Wouter
 	- log to App.logs on windows prints executable identity.
