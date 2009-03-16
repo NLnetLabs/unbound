@@ -1,3 +1,6 @@
+16 March 2009: Wouter
+	- fixup diff error printout in contrib/update-itar.sh.
+
 13 March 2009: Wouter
 	- doxygen and lex/yacc on linux.
 	- strip update-anchor on makedist -w.

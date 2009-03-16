@@ -115,7 +115,7 @@ $pgp_cmd --no-default-keyring --keyring $pgp_keyring_file \
 
 # check for differences
 val=1
-if diff "$ub_ta_file" $tmpf; then
+if diff "$ub_ta_file" $tmpf 2>/dev/null ; then
 	# echo "The interim trust anchor repository did not change."
 	:
 else
