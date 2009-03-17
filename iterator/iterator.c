@@ -1288,14 +1288,14 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 	/* if there is a policy to fetch missing targets 
 	 * opportunistically, do it. we rely on the fact that once a 
 	 * query (or queries) for a missing name have been issued, 
-	 * they will not be show up again. */
+	 * they will not show up again. */
 	} else if(tf_policy != 0) {
 		int extra = 0;
 		verbose(VERB_ALGO, "attempt to get extra %d targets", 
 			tf_policy);
-		if(!query_for_targets(qstate, iq, ie, id, tf_policy, &extra)) {
-			return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
-		}
+		(void)query_for_targets(qstate, iq, ie, id, tf_policy, &extra);
+		/* errors ignored, these targets are not strictly necessary for
+		 * this result, we do not have to reply with SERVFAIL */
 		iq->num_target_queries += extra;
 	}
 
