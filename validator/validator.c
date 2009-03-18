@@ -1209,6 +1209,17 @@ processInit(struct module_qstate* qstate, struct val_qstate* vq,
 	else if(vq->key_entry == NULL || (vq->trust_anchor &&
 		dname_strict_subdomain_c(vq->trust_anchor->name, 
 		vq->key_entry->name))) {
+		/* trust anchor is an 'unsigned' trust anchor */
+		if(vq->trust_anchor && vq->trust_anchor->numDS == 0 &&
+			vq->trust_anchor->numDNSKEY == 0) {
+			vq->chase_reply->security = sec_status_insecure;
+			val_mark_insecure(vq->chase_reply, 
+				vq->trust_anchor->name, 
+				qstate->env->rrset_cache, qstate->env);
+			/* go to finished state to cache this result */
+			vq->state = VAL_FINISHED_STATE;
+			return 1;
+		}
 		/* fire off a trust anchor priming query. */
 		verbose(VERB_DETAIL, "prime trust anchor");
 		if(!prime_trust_anchor(qstate, vq, id, vq->trust_anchor))
@@ -1222,7 +1233,7 @@ processInit(struct module_qstate* qstate, struct val_qstate* vq,
 		 * However, we do set the status to INSECURE, since it is 
 		 * essentially proven insecure. */
 		vq->chase_reply->security = sec_status_insecure;
-		val_mark_insecure(vq->chase_reply, vq->key_entry, 
+		val_mark_insecure(vq->chase_reply, vq->key_entry->name, 
 			qstate->env->rrset_cache, qstate->env);
 		/* go to finished state to cache this result */
 		vq->state = VAL_FINISHED_STATE;
@@ -1394,7 +1405,7 @@ processValidate(struct module_qstate* qstate, struct val_qstate* vq,
 		verbose(VERB_DETAIL, "Verified that %sresponse is INSECURE",
 			vq->signer_name?"":"unsigned ");
 		vq->chase_reply->security = sec_status_insecure;
-		val_mark_insecure(vq->chase_reply, vq->key_entry, 
+		val_mark_insecure(vq->chase_reply, vq->key_entry->name, 
 			qstate->env->rrset_cache, qstate->env);
 		return 1;
 	}

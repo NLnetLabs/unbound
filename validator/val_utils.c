@@ -718,16 +718,15 @@ val_mark_indeterminate(struct reply_info* rep, struct val_anchors* anchors,
 }
 
 void 
-val_mark_insecure(struct reply_info* rep, struct key_entry_key* kkey,
+val_mark_insecure(struct reply_info* rep, uint8_t* kname,
 	struct rrset_cache* r, struct module_env* env)
 {
 	size_t i;
 	struct packed_rrset_data* d;
-	log_assert(key_entry_isnull(kkey));
 	for(i=0; i<rep->rrset_count; i++) {
 		d = (struct packed_rrset_data*)rep->rrsets[i]->entry.data;
 		if(d->security == sec_status_unchecked &&
-		   dname_subdomain_c(rep->rrsets[i]->rk.dname, kkey->name)) {
+		   dname_subdomain_c(rep->rrsets[i]->rk.dname, kname)) {
 			/* mark as insecure */
 			d->security = sec_status_insecure;
 			rrset_update_sec_status(r, rep->rrsets[i], *env->now);

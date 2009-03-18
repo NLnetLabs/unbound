@@ -823,35 +823,34 @@ anchors_assemble(struct val_anchors* anchors, struct trust_anchor* ta)
 /**
  * Check DS algos for support, warn if not.
  * @param ta: trust anchor
- * @return true if all anchors are supported.
+ * @return number of DS anchors with unsupported algorithms.
  */
-static int
-anchors_ds_is_supported(struct trust_anchor* ta)
+static size_t
+anchors_ds_unsupported(struct trust_anchor* ta)
 {
-	size_t i;
+	size_t i, num = 0;
 	for(i=0; i<ta->numDS; i++) {
-		if(!ds_digest_algo_is_supported(ta->ds_rrset, i))
-			return 0;
-		if(!ds_key_algo_is_supported(ta->ds_rrset, i))
-			return 0;
+		if(!ds_digest_algo_is_supported(ta->ds_rrset, i) || 
+			!ds_key_algo_is_supported(ta->ds_rrset, i))
+			num++;
 	}
-	return 1;
+	return num;
 }
 
 /**
  * Check DNSKEY algos for support, warn if not.
  * @param ta: trust anchor
- * @return true if all anchors are supported.
+ * @return number of DNSKEY anchors with unsupported algorithms.
  */
-static int
-anchors_dnskey_is_supported(struct trust_anchor* ta)
+static size_t
+anchors_dnskey_unsupported(struct trust_anchor* ta)
 {
-	size_t i;
+	size_t i, num = 0;
 	for(i=0; i<ta->numDNSKEY; i++) {
 		if(!dnskey_algo_is_supported(ta->dnskey_rrset, i))
-			return 0;
+			num++;
 	}
-	return 1;
+	return num;
 }
 
 /**
@@ -863,21 +862,35 @@ static int
 anchors_assemble_rrsets(struct val_anchors* anchors)
 {
 	struct trust_anchor* ta;
-	RBTREE_FOR(ta, struct trust_anchor*, anchors->tree) {
+	struct trust_anchor* next;
+	size_t nods, nokey;
+	ta=(struct trust_anchor*)rbtree_first(anchors->tree);
+	while((rbnode_t*)ta != RBTREE_NULL) {
+		next = (struct trust_anchor*)rbtree_next(&ta->node);
 		if(!anchors_assemble(anchors, ta)) {
 			log_err("out of memory");
 			return 0;
 		}
-		if(!anchors_ds_is_supported(ta)) {
+		nods = anchors_ds_unsupported(ta);
+		nokey = anchors_dnskey_unsupported(ta);
+		if(nods) {
 			log_nametypeclass(0, "warning: unsupported "
 				"algorithm for trust anchor", 
 				ta->name, LDNS_RR_TYPE_DS, ta->dclass);
 		}
-		if(!anchors_dnskey_is_supported(ta)) {
+		if(nokey) {
 			log_nametypeclass(0, "warning: unsupported "
 				"algorithm for trust anchor", 
 				ta->name, LDNS_RR_TYPE_DNSKEY, ta->dclass);
 		}
+		if(nods == ta->numDS && nokey == ta->numDNSKEY) {
+			char b[257];
+			dname_str(ta->name, b);
+			log_warn("trust anchor %s has no supported algorithms,"
+				" the anchor is ignored", b);
+			(void)rbtree_delete(anchors->tree, &ta->node);
+		}
+		ta = next;
 	}
 	return 1;
 }
@@ -946,8 +959,9 @@ anchors_apply_cfg(struct val_anchors* anchors, struct config_file* cfg)
 			return 0;
 		}
 	}
-	init_parents(anchors);
+	/* first assemble, since it may delete useless anchors */
 	anchors_assemble_rrsets(anchors);
+	init_parents(anchors);
 	ldns_buffer_free(parsebuf);
 	return 1;
 }

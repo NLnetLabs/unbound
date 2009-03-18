@@ -240,12 +240,11 @@ void val_mark_indeterminate(struct reply_info* rep,
  * Mark all unchecked rrset entries below a NULL key entry as insecure.
  * Only security==unchecked rrsets are updated.
  * @param rep: the reply with rrsets.
- * @param kkey: key entry, key_entry_isnull() for it. A key entry that marks
- * 	the end of secure space into insecure space.
+ * @param kname: end of secure space name.
  * @param r: rrset cache to store updated security status into.
  * @param env: module environment
  */
-void val_mark_insecure(struct reply_info* rep, struct key_entry_key* kkey,
+void val_mark_insecure(struct reply_info* rep, uint8_t* kname,
 	struct rrset_cache* r, struct module_env* env);
 
 /**

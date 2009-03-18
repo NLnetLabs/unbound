@@ -1,5 +1,9 @@
 18 March 2009: Wouter
 	- Added tests, unknown algorithms become insecure. fallback works.
+	- Fix for and test for unknown algorithms in a trust anchor
+	  definition.  Trust anchors with no supported algos are ignored.
+	  This means a (higher)DS or DLV entry for them could succeed, and
+	  otherwise they are treated as insecure.
 
 17 March 2009: Wouter
 	- unit test for unsupported algorithm in anchor warning.
