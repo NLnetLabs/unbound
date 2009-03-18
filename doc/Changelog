@@ -1,3 +1,6 @@
+18 March 2009: Wouter
+	- Added tests, unknown algorithms become insecure. fallback works.
+
 17 March 2009: Wouter
 	- unit test for unsupported algorithm in anchor warning.
 	- fixed so queries do not fail on opportunistic target queries.
