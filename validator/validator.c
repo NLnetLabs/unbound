@@ -1216,6 +1216,7 @@ processInit(struct module_qstate* qstate, struct val_qstate* vq,
 			val_mark_insecure(vq->chase_reply, 
 				vq->trust_anchor->name, 
 				qstate->env->rrset_cache, qstate->env);
+			vq->dlv_checked=1; /* skip DLV check */
 			/* go to finished state to cache this result */
 			vq->state = VAL_FINISHED_STATE;
 			return 1;

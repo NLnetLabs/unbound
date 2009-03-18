@@ -146,6 +146,7 @@ config_create()
 	cfg->trusted_keys_file_list = NULL;
 	cfg->dlv_anchor_file = NULL;
 	cfg->dlv_anchor_list = NULL;
+	cfg->domain_insecure = NULL;
 	cfg->val_date_override = 0;
 	cfg->val_clean_additional = 1;
 	cfg->val_permissive_mode = 0;
@@ -350,6 +351,8 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	} else if(strcmp(opt, "dlv-anchor:") == 0) {
 		return cfg_strlist_insert(&cfg->dlv_anchor_list, 
 			strdup(val));
+	} else if(strcmp(opt, "domain-insecure:") == 0) {
+		return cfg_strlist_insert(&cfg->domain_insecure, strdup(val));
 	} else if(strcmp(opt, "val-override-date:") == 0) {
 		if(strcmp(val, "") == 0 || strcmp(val, "0") == 0) {
 			cfg->val_date_override = 0;
@@ -524,6 +527,7 @@ config_delete(struct config_file* cfg)
 	config_delstrlist(cfg->trust_anchor_file_list);
 	config_delstrlist(cfg->trusted_keys_file_list);
 	config_delstrlist(cfg->trust_anchor_list);
+	config_delstrlist(cfg->domain_insecure);
 	free(cfg->dlv_anchor_file);
 	config_delstrlist(cfg->dlv_anchor_list);
 	config_deldblstrlist(cfg->acls);

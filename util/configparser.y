@@ -97,6 +97,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_SERVER_CERT_FILE VAR_CONTROL_KEY_FILE VAR_CONTROL_CERT_FILE
 %token VAR_EXTENDED_STATISTICS VAR_LOCAL_DATA_PTR VAR_JOSTLE_TIMEOUT
 %token VAR_STUB_PRIME VAR_UNWANTED_REPLY_THRESHOLD VAR_LOG_TIME_ASCII
+%token VAR_DOMAIN_INSECURE
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -143,7 +144,8 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_harden_referral_path | server_private_address |
 	server_private_domain | server_extended_statistics | 
 	server_local_data_ptr | server_jostle_timeout | 
-	server_unwanted_reply_threshold | server_log_time_ascii
+	server_unwanted_reply_threshold | server_log_time_ascii | 
+	server_domain_insecure
 	;
 stubstart: VAR_STUB_ZONE
 	{
@@ -460,6 +462,13 @@ server_trust_anchor: VAR_TRUST_ANCHOR STRING
 	{
 		OUTYY(("P(server_trust_anchor:%s)\n", $2));
 		if(!cfg_strlist_insert(&cfg_parser->cfg->trust_anchor_list, $2))
+			yyerror("out of memory");
+	}
+	;
+server_domain_insecure: VAR_DOMAIN_INSECURE STRING
+	{
+		OUTYY(("P(server_domain_insecure:%s)\n", $2));
+		if(!cfg_strlist_insert(&cfg_parser->cfg->domain_insecure, $2))
 			yyerror("out of memory");
 	}
 	;

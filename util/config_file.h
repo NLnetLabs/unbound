@@ -196,6 +196,8 @@ struct config_file {
 	char* dlv_anchor_file;
 	/** DLV anchor inline */
 	struct config_strlist* dlv_anchor_list;
+	/** insecure domain list */
+	struct config_strlist* domain_insecure;
 
 	/** the number of seconds maximal TTL used for RRsets and messages */
 	int max_ttl;

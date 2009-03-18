@@ -4,6 +4,9 @@
 	  definition.  Trust anchors with no supported algos are ignored.
 	  This means a (higher)DS or DLV entry for them could succeed, and
 	  otherwise they are treated as insecure.
+	- domain-insecure: "example.com" statement added. Sets domain
+	  insecure regardless of chain of trust DSs or DLVs. The inverse
+	  of a trust-anchor.
 
 17 March 2009: Wouter
 	- unit test for unsupported algorithm in anchor warning.

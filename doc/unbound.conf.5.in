@@ -508,6 +508,19 @@ means that it is a lookaside for the root. Default is "", or no dlv anchor file.
 .B dlv\-anchor: \fI<"Resource Record">
 Much like trust\-anchor, this is a DLV anchor with the DS or DNSKEY inline.
 .TP
+.B domain\-insecure: \fI<domain name>
+Sets domain name to be insecure, DNSSEC chain of trust is ignored towards
+the domain name.  So a trust anchor above the domain name can not make the
+domain secure with a DS record, such a DS record is then ignored.
+Also keys from DLV are ignored for the domain.  Can be given multiple times
+to specify multiple domains that are treated as if unsigned.  If you set
+trust anchors for the domain they override this setting (and the domain 
+is secured).
+.IP
+This can be useful if you want to make sure a trust anchor for external
+lookups does not affect an (unsigned) internal domain.  A DS record 
+externally can create validation failures for that internal domain.
+.TP
 .B val\-override\-date: \fI<rrsig\-style date spec>
 Default is "" or "0", which disables this debugging feature. If enabled by
 giving a RRSIG style date, that date is used for verifying RRSIG inception

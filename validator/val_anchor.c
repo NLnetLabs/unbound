@@ -206,6 +206,7 @@ anchor_new_ta_key(struct val_anchors* anchors, uint8_t* rdata, size_t rdata_len,
  * @param type: type or RR
  * @param dclass: class of RR
  * @param rdata: rdata wireformat, starting with rdlength.
+ *	If NULL, nothing is stored, but an entry is created.
  * @param rdata_len: length of rdata including rdlength.
  * @return: NULL on error, else the trust anchor.
  */
@@ -229,6 +230,8 @@ anchor_store_new_key(struct val_anchors* anchors, uint8_t* name, uint16_t type,
 		if(!ta)
 			return NULL;
 	}
+	if(!rdata)
+		return ta;
 	/* look for duplicates */
 	if(anchor_find_key(ta, rdata, rdata_len, type)) {
 		return ta;
@@ -278,6 +281,27 @@ anchor_store_new_rr(struct val_anchors* anchors, ldns_buffer* buffer,
 	log_nametypeclass(VERB_QUERY, "adding trusted key",
 		ldns_rdf_data(owner), 
 		ldns_rr_get_type(rr), ldns_rr_get_class(rr));
+	return ta;
+}
+
+/**
+ * Insert insecure anchor
+ * @param anchors: anchor storage.
+ * @param str: the domain name.
+ * @return NULL on error, Else last trust anchor point
+ */
+static struct trust_anchor*
+anchor_insert_insecure(struct val_anchors* anchors, const char* str)
+{
+	struct trust_anchor* ta;
+	ldns_rdf* nm = ldns_dname_new_frm_str(str);
+	if(!nm) {
+		log_err("parse error in domain name '%s'", str);
+		return NULL;
+	}
+	ta = anchor_store_new_key(anchors, ldns_rdf_data(nm), LDNS_RR_TYPE_DS,
+		LDNS_RR_CLASS_IN, NULL, 0);
+	ldns_rdf_deep_free(nm);
 	return ta;
 }
 
@@ -867,6 +891,10 @@ anchors_assemble_rrsets(struct val_anchors* anchors)
 	ta=(struct trust_anchor*)rbtree_first(anchors->tree);
 	while((rbnode_t*)ta != RBTREE_NULL) {
 		next = (struct trust_anchor*)rbtree_next(&ta->node);
+		if(ta->numDS == 0 && ta->numDNSKEY == 0) {
+			ta = next; /* skip unsigned entries, nothing to do */
+			continue;
+		}
 		if(!anchors_assemble(anchors, ta)) {
 			log_err("out of memory");
 			return 0;
@@ -901,6 +929,15 @@ anchors_apply_cfg(struct val_anchors* anchors, struct config_file* cfg)
 	struct config_strlist* f;
 	char* nm;
 	ldns_buffer* parsebuf = ldns_buffer_new(65535);
+	for(f = cfg->domain_insecure; f; f = f->next) {
+		if(!f->str || f->str[0] == 0) /* empty "" */
+			continue;
+		if(!anchor_insert_insecure(anchors, f->str)) {
+			log_err("error in domain-insecure: %s", f->str);
+			ldns_buffer_free(parsebuf);
+			return 0;
+		}
+	}
 	for(f = cfg->trust_anchor_file_list; f; f = f->next) {
 		if(!f->str || f->str[0] == 0) /* empty "" */
 			continue;
