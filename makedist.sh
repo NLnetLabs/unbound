@@ -191,9 +191,9 @@ if [ "$DOWIN" = "yes" ]; then
     strip unbound-service-remove.exe
     cd tmp.$$
     cp ../doc/example.conf example.conf
-    cp ../unbound.exe ../unbound-host.exe ../unbound-control.exe ../unbound-checkconf.exe ../unbound-service-install.exe ../unbound-service-remove.exe ../LICENSE ../winrc/unbound-website.url ../winrc/service.conf .
+    cp ../unbound.exe ../unbound-host.exe ../unbound-control.exe ../unbound-checkconf.exe ../unbound-service-install.exe ../unbound-service-remove.exe ../LICENSE ../winrc/unbound-website.url ../winrc/service.conf ../winrc/README.txt .
     # zipfile
-    zip ../$file LICENSE unbound.exe unbound-host.exe unbound-control.exe unbound-checkconf.exe unbound-service-install.exe unbound-service-remove.exe example.conf service.conf unbound-website.url
+    zip ../$file LICENSE README.txt unbound.exe unbound-host.exe unbound-control.exe unbound-checkconf.exe unbound-service-install.exe unbound-service-remove.exe example.conf service.conf unbound-website.url
     info "Testing $file"
     (cd .. ; zip -T $file )
     # installer

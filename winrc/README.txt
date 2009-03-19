@@ -1,0 +1,93 @@
+README for Unbound on Windows.
+
+(C) 2009, W.C.A. Wijngaards, NLnet Labs.
+
+See LICENSE for the license text file.
+
+
++++ Introduction
+
+Unbound is a recursive DNS server.  It does caching, full recursion, stub
+recursion, DNSSEC validation, NSEC3, IPv6.  More information can be found 
+at the http://unbound.net site.  Unbound has been built and tested on 
+Windows XP and Windows Vista.
+
+At http://unbound.net/documentation is an install and configuration manual
+for windows.
+
+email: unbound-bugs@nlnetlabs.nl
+
+
++++ How to use it
+
+In ControlPanels\SystemTasks\Services you can start/stop the daemon.
+In ControlPanels\SystemTasks\Logbooks you can see log entries (unless you
+configured unbound to log to file).
+
+By default the daemon provides service only to localhost.  See the manual
+on how to change that (you need to edit the config file).
+
+To change options, edit the service.conf file.  The example.conf file 
+contains information on the various configuration options.  The config
+file is the same as on Unix.  The options log-time-ascii, chroot, username
+and pidfile are not supported on windows.
+
+
++++ How to compile
+
+Unbound is open source under the BSD license.  You can compile it yourself.
+
+1. Install MinGW and MSYS.  http://www.mingw.org
+This is a free, open source, compiler and build environment.
+Note, if your username contains a space, create a directory
+C:\msys\...\home\user to work in (click on MSYS; type: mkdir /home/user ).
+
+2. Install openssl, or compile it yourself.  http://www.openssl.org
+Ldns and unbound need the header files and libraries.  Static linking makes
+things easier.  This is an open source library for cryptographic functions.
+
+3. Compile LDNS
+Get the source code tarball  http://nlnetlabs.nl/ldns
+Move it into the C:\msys\...\home\user directory.
+Double click on the MSYS icon and give these commands
+$ cd /home/user
+$ tar xzvf ldns-xxx.tar.gz
+$ cd ldns-xxx
+$ ./configure
+If you compiled openssl yourself, pass --with-ssl=../openssl-xxx
+$ make
+
+4. Compile Unbound
+Get the source code tarball  http://unbound.net
+Move it into the C:\msys\...\home\user directory.
+Double click on the MSYS icon and give these commands
+$ cd /home/user
+$ tar xzvf unbound-xxx.tar.gz
+$ cd unbound-xxx
+$ ./configure --enable-static-exe --with-ldns=../ldns-xxx
+  "--with-conf-file=C:\Program Files\Unbound\service.conf"
+  --with-pidfile="" --with-chroot-dir=""
+Put the entire command on one line; it is paginated for display here.
+If you compiled openssl yourself, pass --with-ssl=../openssl-xxx too.
+You can set the defaults for the config file and working directory with 
+options to configure (see ./configure -h).  Set chroot and pidfile to "".
+If you do not give these to configure you can edit the config file later.
+The configure options for libevent or threads are not applicable for 
+windows, because builtin alternatives for the windows platform are used.
+$ make
+And you have unbound.exe
+
+If you run unbound-service-install.exe (double click in the explorer),
+unbound is installed as a service in the controlpanels\systemtasks\services,
+from the current directory. unbound-service-remove.exe uninstalls the service.
+
+Unbound and its utilities also work from the commandline (like on unix) if 
+you prefer.
+
+
++++ CREDITS
+
+Unbound was written in portable C by Wouter Wijngaards (NLnet Labs).
+See the CREDITS file in the source package for more contributor information.
+Email unbound-bugs@nlnetlabs.nl
+

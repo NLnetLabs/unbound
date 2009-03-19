@@ -1,3 +1,6 @@
+19 March 2009: Wouter
+	- winrc/README.txt dos-format text file.
+
 18 March 2009: Wouter
 	- Added tests, unknown algorithms become insecure. fallback works.
 	- Fix for and test for unknown algorithms in a trust anchor

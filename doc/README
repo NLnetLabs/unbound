@@ -72,8 +72,7 @@ o If libevent is older (before 1.3c), unbound will exit instead of reload
   on sighup. On a restart 'did not exit gracefully last time' warning is 
   printed. Perform ./configure --with-libevent=no or update libevent, rerun 
   configure and recompile unbound to make sighup work correctly.
-  It is strongly suggested to use the latest version of libevent (1.4 or more)
-  on Solaris, because of fixes in the solaris event port code in libevent.
+  It is strongly suggested to use a recent version of libevent.
 o If you are not receiving the correct source IP address on replies (e.g.
   you are running a multihomed, anycast server), the interface-automatic
   option can be enabled to set socket options to achieve the correct

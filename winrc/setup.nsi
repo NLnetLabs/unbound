@@ -89,6 +89,7 @@ section "-hidden.postinstall"
 	# copy files
 	setOutPath $INSTDIR
 	File "..\LICENSE"
+	File "README.txt"
 	File "..\unbound.exe"
 	File "..\unbound-checkconf.exe"
 	File "..\unbound-control.exe"
@@ -169,6 +170,7 @@ section "un.Unbound"
 	DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Unbound"
 	Delete "$INSTDIR\uninst.exe"   # delete self
 	Delete "$INSTDIR\LICENSE"
+	Delete "$INSTDIR\README.txt"
 	Delete "$INSTDIR\unbound.exe"
 	Delete "$INSTDIR\unbound-checkconf.exe"
 	Delete "$INSTDIR\unbound-control.exe"
