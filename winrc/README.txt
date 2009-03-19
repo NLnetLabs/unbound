@@ -65,13 +65,7 @@ $ cd /home/user
 $ tar xzvf unbound-xxx.tar.gz
 $ cd unbound-xxx
 $ ./configure --enable-static-exe --with-ldns=../ldns-xxx
-  "--with-conf-file=C:\Program Files\Unbound\service.conf"
-  --with-pidfile="" --with-chroot-dir=""
-Put the entire command on one line; it is paginated for display here.
 If you compiled openssl yourself, pass --with-ssl=../openssl-xxx too.
-You can set the defaults for the config file and working directory with 
-options to configure (see ./configure -h).  Set chroot and pidfile to "".
-If you do not give these to configure you can edit the config file later.
 The configure options for libevent or threads are not applicable for 
 windows, because builtin alternatives for the windows platform are used.
 $ make

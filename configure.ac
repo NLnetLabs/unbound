@@ -50,10 +50,18 @@ case "$prefix" in
         ;;
 esac
 
+# are we on MinGW?
+if uname -s 2>&1 | grep MINGW32 >/dev/null; then on_mingw="yes"
+else on_mingw="no"; fi
+
 #
 # Determine configuration file
 # the eval is to evaluate shell expansion twice
-ub_conf_file=`eval echo "${sysconfdir}/unbound/unbound.conf"`
+if test $on_mingw = "no"; then
+  ub_conf_file=`eval echo "${sysconfdir}/unbound/unbound.conf"`
+else
+  ub_conf_file="C:\\Program Files\\Unbound\\service.conf"
+fi
 AC_ARG_WITH([conf_file],
         AC_HELP_STRING([--with-conf-file=path], 
 	[Pathname to the Unbound configuration file]),
@@ -68,7 +76,12 @@ AC_ARG_WITH(run-dir,
     AC_HELP_STRING([--with-run-dir=path], 
     [set default directory to chdir to (by default dir part of cfg file)]), 
     UNBOUND_RUN_DIR="$withval", 
-    UNBOUND_RUN_DIR=`dirname "$ub_conf_file"`)
+if test $on_mingw = no; then
+    UNBOUND_RUN_DIR=`dirname "$ub_conf_file"`
+else
+    UNBOUND_RUN_DIR=""
+fi
+)
 AC_SUBST(UNBOUND_RUN_DIR)
 hdr_run="`echo $UNBOUND_RUN_DIR | sed -e 's/\\\\/\\\\\\\\/g'`"
 AC_DEFINE_UNQUOTED(RUN_DIR, ["$hdr_run"], [Directory to chdir to])
@@ -77,7 +90,12 @@ AC_ARG_WITH(chroot-dir,
     AC_HELP_STRING([--with-chroot-dir=path], 
     [set default directory to chroot to (by default same as run-dir)]), 
     UNBOUND_CHROOT_DIR="$withval", 
-    UNBOUND_CHROOT_DIR="$UNBOUND_RUN_DIR")
+if test $on_mingw = no; then
+    UNBOUND_CHROOT_DIR="$UNBOUND_RUN_DIR"
+else
+    UNBOUND_CHROOT_DIR=""
+fi
+)
 AC_SUBST(UNBOUND_CHROOT_DIR)
 hdr_chroot="`echo $UNBOUND_CHROOT_DIR | sed -e 's/\\\\/\\\\\\\\/g'`"
 AC_DEFINE_UNQUOTED(CHROOT_DIR, ["$hdr_chroot"], [Directory to chroot to])
@@ -86,7 +104,12 @@ AC_ARG_WITH(pidfile,
     AC_HELP_STRING([--with-pidfile=filename], 
     [set default pathname to unbound pidfile (default run-dir/unbound.pid)]), 
     UNBOUND_PIDFILE="$withval", 
-    UNBOUND_PIDFILE="$UNBOUND_RUN_DIR/unbound.pid")
+if test $on_mingw = no; then
+    UNBOUND_PIDFILE="$UNBOUND_RUN_DIR/unbound.pid"
+else
+    UNBOUND_PIDFILE=""
+fi
+)
 AC_SUBST(UNBOUND_PIDFILE)
 hdr_pid="`echo $UNBOUND_PIDFILE | sed -e 's/\\\\/\\\\\\\\/g'`"
 AC_DEFINE_UNQUOTED(PIDFILE, ["$hdr_pid"], [default pidfile location])

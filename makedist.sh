@@ -168,10 +168,8 @@ if [ "$DOWIN" = "yes" ]; then
     # procedure for making unbound installer on mingw. 
     info "Creating windows dist unbound $version"
     info "Calling configure"
-    echo './configure --enable-debug --enable-static-exe "--with-conf-file=C:\Program Files\Unbound\service.conf" --with-run-dir="" --with-pidfile="" --with-chroot-dir="" '"$*"
-    ./configure --enable-debug --enable-static-exe \
-	"--with-conf-file=C:\Program Files\Unbound\service.conf" \
-	--with-run-dir="" --with-pidfile="" --with-chroot-dir="" $* \
+    echo './configure --enable-debug --enable-static-exe '"$*"
+    ./configure --enable-debug --enable-static-exe $* \
 	|| error_cleanup "Could not configure"
     info "Calling make"
     make || error_cleanup "Could not make"
