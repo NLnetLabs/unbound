@@ -1,6 +1,7 @@
 19 March 2009: Wouter
 	- winrc/README.txt dos-format text file.
 	- iana portlist updated.
+	- use _beginthreadex() when available (performs stack alignment).
 
 18 March 2009: Wouter
 	- Added tests, unknown algorithms become insecure. fallback works.

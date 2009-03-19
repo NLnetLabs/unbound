@@ -230,11 +230,16 @@ void* ub_thread_key_get(ub_thread_key_t key)
 
 void ub_thread_create(ub_thread_t* thr, void* (*func)(void*), void* arg)
 {
+#ifndef HAVE__BEGINTHREADEX
 	*thr = CreateThread(NULL, /* default security (no inherit handle) */
 		0, /* default stack size */
 		(LPTHREAD_START_ROUTINE)func, arg,
 		0, /* default flags, run immediately */
 		NULL); /* do not store thread identifier anywhere */
+#else
+	/* the begintheadex routine setups for the C lib; aligns stack */
+	*thr=(ub_thread_t)_beginthreadex(NULL, 0, (void*)func, arg, 0, NULL);
+#endif
 	if(*thr == NULL) {
 		log_win_err("CreateThread failed", GetLastError());
 		fatal_exit("thread create failed");
