@@ -1,3 +1,6 @@
+20 March 2009: Wouter
+	- bug #239: module-config entries order is important. Documented.
+
 19 March 2009: Wouter
 	- winrc/README.txt dos-format text file.
 	- iana portlist updated.
