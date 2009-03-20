@@ -100,7 +100,7 @@ SIGNIT_SRC=testcode/signit.c smallapp/worker_cb.c $(COMMON_SRC)
 SIGNIT_OBJ=$(addprefix $(BUILD),$(SIGNIT_SRC:.c=.lo)) $(COMPAT_OBJ)
 MEMSTATS_SRC=testcode/memstats.c smallapp/worker_cb.c $(COMMON_SRC)
 MEMSTATS_OBJ=$(addprefix $(BUILD),$(MEMSTATS_SRC:.c=.lo)) $(COMPAT_OBJ)
-ASYNCLOOK_SRC=testcode/asynclook.c util/log.c
+ASYNCLOOK_SRC=testcode/asynclook.c util/log.c util/locks.c
 ASYNCLOOK_OBJ=$(addprefix $(BUILD),$(ASYNCLOOK_SRC:.c=.lo)) $(COMPAT_OBJ)
 STREAMTCP_SRC=testcode/streamtcp.c smallapp/worker_cb.c $(COMMON_SRC)
 STREAMTCP_OBJ=$(addprefix $(BUILD),$(STREAMTCP_SRC:.c=.lo)) $(COMPAT_OBJ)
