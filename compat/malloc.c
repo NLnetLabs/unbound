@@ -1,9 +1,7 @@
 /* Just a replacement, if the original malloc is not
    GNU-compliant. See autoconf documentation. */
 
-#if HAVE_CONFIG_H
-#include <config.h>
-#endif
+#include "config.h"
 #undef malloc
 
 #include <sys/types.h>

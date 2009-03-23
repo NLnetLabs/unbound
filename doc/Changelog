@@ -1,6 +1,7 @@
 23 March 2009: Wouter
 	- added launchd plist example file for MacOSX to contrib.
 	- deprecation test for daemon(3).
+	- moved common configure actions to m4 include, prettier Makefile.
 
 20 March 2009: Wouter
 	- bug #239: module-config entries order is important. Documented.

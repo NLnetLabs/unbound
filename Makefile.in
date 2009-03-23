@@ -43,7 +43,11 @@ UB_ON_WINDOWS=@UB_ON_WINDOWS@
 YACC=@YACC@
 LEX=@LEX@
 CC=@CC@
-CPPFLAGS=-I$(srcdir) -I. @CPPFLAGS@ @DEFS@
+ifeq "$(srcdir)" "."
+  CPPFLAGS=-I. @CPPFLAGS@
+else
+  CPPFLAGS=-I$(srcdir) -I. @CPPFLAGS@
+endif
 CFLAGS=@CFLAGS@
 LDFLAGS=@LDFLAGS@
 LIBS=@LIBS@
@@ -370,9 +374,7 @@ $(BUILD)%.d: $(srcdir)/%.c
 	@if test ! -z "$(ldnsdir)" -a ! -e $(ldnsdir)/include/ldns/ldns.h; \
 		then (cd $(ldnsdir); $(MAKE) copy-headers); fi
 	@-if test ! -d $(dir $@); then $(INSTALL) -d $(patsubst %/,%,$(dir $@)); fi
-	$Q$(SHELL) -ec '$(CC) $(DEPFLAG) $(CPPFLAGS) $(CFLAGS) $< \
-	              | sed '\''s!\(.*\)\.o[ :]*!$(dir $@)\1.lo $@ : !g'\'' > $@; \
-	              [ -s $@ ] || rm -f $@'
+	$Q$(SHELL) -ec '$(CC) $(DEPFLAG) $(CPPFLAGS) $(CFLAGS) $< | sed '\''s!\(.*\)\.o[ :]*!$(dir $@)\1.lo $@ : !g'\'' > $@; [ -s $@ ] || rm -f $@'
 
 ifneq ($(MAKECMDGOALS),clean)
 ifneq ($(MAKECMDGOALS),realclean)
