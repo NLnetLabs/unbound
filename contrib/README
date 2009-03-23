@@ -11,3 +11,4 @@ distribution but may be helpful.
 * unbound_munin_ : plugin for munin statistics report
 * unbound_cacti.tar.gz : setup files for cacti statistics report
 * selinux: the .fc and .te files for SElinux protection of the unbound daemon
+* unbound.plist: launchd configuration file for MacOSX.

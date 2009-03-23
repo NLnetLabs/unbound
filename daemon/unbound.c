@@ -287,7 +287,7 @@ checkoldpid(char* pidfile, int inchroot)
 static void
 detach(void)
 {
-#ifdef HAVE_DAEMON
+#if defined(HAVE_DAEMON) && !defined(DEPRECATED_DAEMON)
 	/* use POSIX daemon(3) function */
 	if(daemon(1, 0) != 0)
 		fatal_exit("daemon failed: %s", strerror(errno));

@@ -10,6 +10,9 @@
    */
 #undef DARWIN_BROKEN_SETREUID
 
+/* Whether daemon is deprecated */
+#undef DEPRECATED_DAEMON
+
 /* Define if you want to use debug lock checking (slow). */
 #undef ENABLE_LOCK_CHECKS
 

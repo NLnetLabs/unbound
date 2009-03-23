@@ -891,8 +891,51 @@ AC_CHECK_GETADDRINFO_WITH_INCLUDES
 if test $ac_cv_func_getaddrinfo = no; then
 AC_LIBOBJ([fake-rfc2553])
 fi
+
+# check if a function is deprecated. defines DEPRECATED_func in config.h.
+# 1: function name
+# 2: C-statement that calls the function.
+# 3: includes for the program.
+# 4: executes if yes
+# 5: executes if no
+AC_DEFUN([CHECK_DEPRECATED],
+[
+AC_REQUIRE([AC_PROG_CC])
+AC_MSG_CHECKING(if $1 is deprecated)
+cache=`echo $1 | sed 'y%.=/+-%___p_%'`
+AC_CACHE_VAL(cv_cc_deprecated_$cache,
+[
+echo '$3' >conftest.c
+echo 'void f(){ $2 }' >>conftest.c
+if test -z "`$CC -c conftest.c 2>&1 | grep deprecated`"; then
+eval "cv_cc_deprecated_$cache=no"
+else
+eval "cv_cc_deprecated_$cache=yes"
+fi
+rm -f conftest conftest.o conftest.c
+])
+if eval "test \"`echo '$cv_cc_deprecated_'$cache`\" = yes"; then
+AC_MSG_RESULT(yes)
+AC_DEFINE_UNQUOTED(AS_TR_CPP([DEPRECATED_$1]), 1, [Whether $1 is deprecated])
+:
+$4
+else
+AC_MSG_RESULT(no)
+:
+$5
+fi
+])
+
+# see if daemon(3) exists, and if it is deprecated.
+AC_CHECK_FUNCS([daemon])
+if test $ac_cv_func_daemon = yes; then
+	CHECK_DEPRECATED([daemon], [(void)daemon(0, 0);], [
+#include <stdlib.h>
+])
+fi
+
 AC_SEARCH_LIBS([setusercontext], [util])
-AC_CHECK_FUNCS([tzset sigprocmask fcntl getpwnam getrlimit setsid sbrk chroot kill sleep usleep random srandom recvmsg sendmsg writev setresuid setreuid setresgid setregid glob initgroups daemon strftime localtime_r setusercontext _beginthreadex])
+AC_CHECK_FUNCS([tzset sigprocmask fcntl getpwnam getrlimit setsid sbrk chroot kill sleep usleep random srandom recvmsg sendmsg writev setresuid setreuid setresgid setregid glob initgroups strftime localtime_r setusercontext _beginthreadex])
 
 # check if setreuid en setregid fail, on MacOSX10.4(darwin8).
 if echo $build_os | grep darwin8 > /dev/null; then
