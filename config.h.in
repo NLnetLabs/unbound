@@ -390,6 +390,21 @@
 /* Define for large files, on AIX-style hosts. */
 #undef _LARGE_FILES
 
+/* Define for Solaris 2.5.1 so the uint32_t typedef from <sys/synch.h>,
+   <pthread.h>, or <semaphore.h> is not used. If the typedef was allowed, the
+   #define below would cause a syntax error. */
+#undef _UINT32_T
+
+/* Define for Solaris 2.5.1 so the uint64_t typedef from <sys/synch.h>,
+   <pthread.h>, or <semaphore.h> is not used. If the typedef was allowed, the
+   #define below would cause a syntax error. */
+#undef _UINT64_T
+
+/* Define for Solaris 2.5.1 so the uint8_t typedef from <sys/synch.h>,
+   <pthread.h>, or <semaphore.h> is not used. If the typedef was allowed, the
+   #define below would cause a syntax error. */
+#undef _UINT8_T
+
 /* Define to empty if `const' does not conform to ANSI C. */
 #undef const
 
@@ -408,16 +423,20 @@
 #undef inline
 #endif
 
-/* Define to `short' if <sys/types.h> does not define. */
+/* Define to the type of a signed integer type of width exactly 16 bits if
+   such a type exists and the standard includes do not define it. */
 #undef int16_t
 
-/* Define to `int' if <sys/types.h> does not define. */
+/* Define to the type of a signed integer type of width exactly 32 bits if
+   such a type exists and the standard includes do not define it. */
 #undef int32_t
 
-/* Define to `long long' if <sys/types.h> does not define. */
+/* Define to the type of a signed integer type of width exactly 64 bits if
+   such a type exists and the standard includes do not define it. */
 #undef int64_t
 
-/* Define to `char' if <sys/types.h> does not define. */
+/* Define to the type of a signed integer type of width exactly 8 bits if such
+   a type exists and the standard includes do not define it. */
 #undef int8_t
 
 /* Define to rpl_malloc if the replacement function should be used. */
@@ -447,16 +466,20 @@
 /* Define to `int' if <sys/types.h> doesn't define. */
 #undef uid_t
 
-/* Define to `unsigned short' if <sys/types.h> does not define. */
+/* Define to the type of an unsigned integer type of width exactly 16 bits if
+   such a type exists and the standard includes do not define it. */
 #undef uint16_t
 
-/* Define to `unsigned int' if <sys/types.h> does not define. */
+/* Define to the type of an unsigned integer type of width exactly 32 bits if
+   such a type exists and the standard includes do not define it. */
 #undef uint32_t
 
-/* Define to `unsigned long long' if <sys/types.h> does not define. */
+/* Define to the type of an unsigned integer type of width exactly 64 bits if
+   such a type exists and the standard includes do not define it. */
 #undef uint64_t
 
-/* Define to `unsigned char' if <sys/types.h> does not define. */
+/* Define to the type of an unsigned integer type of width exactly 8 bits if
+   such a type exists and the standard includes do not define it. */
 #undef uint8_t
 
 /* Define as `fork' if `vfork' does not work. */
@@ -523,41 +546,88 @@
 #include <openssl/rand.h>
 #endif
 
+
+
+#ifndef HAVE_INET_ATON
+#define inet_aton inet_aton_unbound
+int inet_aton(const char *cp, struct in_addr *addr);
+#endif
+
+
+
+#ifndef HAVE_MEMMOVE
+#define memmove memmove_unbound
+void *memmove(void *dest, const void *src, size_t n);
+#endif
+
+
+
+#ifndef HAVE_STRLCPY
+#define strlcpy strlcpy_unbound
+size_t strlcpy(char *dst, const char *src, size_t siz);
+#endif
+
+
+
+#ifndef HAVE_GMTIME_R
+#define gmtime_r gmtime_r_unbound
+struct tm *gmtime_r(const time_t *timep, struct tm *result);
+#endif
+
+
+
+#ifndef HAVE_SLEEP
+#define sleep(x) Sleep((x)*1000) /* on win32 */
+#endif /* HAVE_SLEEP */
+
+
+
+#ifndef HAVE_USLEEP
+#define usleep(x) Sleep((x)/1000 + 1) /* on win32 */
+#endif /* HAVE_USLEEP */
+
+
+
+#ifndef HAVE_RANDOM
+#define random rand /* on win32, for tests only (bad random) */
+#endif /* HAVE_RANDOM */
+
+
+
+#ifndef HAVE_SRANDOM
+#define srandom(x) srand(x) /* on win32, for tests only (bad random) */
+#endif /* HAVE_SRANDOM */
+
+
+
+/* detect if we need to cast to unsigned int for FD_SET to avoid warnings */
+#ifdef HAVE_WINSOCK2_H
+#define FD_SET_T (u_int)
+#else
+#define FD_SET_T 
+#endif
+
+
+
+#ifndef IPV6_MIN_MTU
+#define IPV6_MIN_MTU 1280
+#endif /* IPV6_MIN_MTU */
+
+
+
 #ifdef HAVE_ATTR_FORMAT
 #  define ATTR_FORMAT(archetype, string_index, first_to_check) \
     __attribute__ ((format (archetype, string_index, first_to_check)))
 #else /* !HAVE_ATTR_FORMAT */
 #  define ATTR_FORMAT(archetype, string_index, first_to_check) /* empty */
 #endif /* !HAVE_ATTR_FORMAT */
-#if defined(DOXYGEN)
-#  define ATTR_UNUSED(x)  x
-#elif defined(__cplusplus)
-#  define ATTR_UNUSED(x)
-#elif defined(HAVE_ATTR_UNUSED)
-#  define ATTR_UNUSED(x)  x __attribute__((unused))
-#else /* !HAVE_ATTR_UNUSED */
-#  define ATTR_UNUSED(x)  x
-#endif /* !HAVE_ATTR_UNUSED */
-#ifndef HAVE_FSEEKO
-#define fseeko fseek
-#define ftello ftell
-#endif /* HAVE_FSEEKO */
+
+
+
 #if defined(HAVE_EVENT_H) && !defined(HAVE_EVENT_BASE_ONCE) && (defined(HAVE_PTHREAD) || defined(HAVE_SOLARIS_THREADS))
    /* using version of libevent that is not threadsafe. */
 #  define LIBEVENT_SIGNAL_PROBLEM 1
 #endif
-
-#ifndef RAND_MAX
-#define RAND_MAX	2147483647
-#endif
-
-#ifndef MAXHOSTNAMELEN
-#define MAXHOSTNAMELEN 256
-#endif
-
-#ifndef IPV6_MIN_MTU
-#define IPV6_MIN_MTU 1280
-#endif /* IPV6_MIN_MTU */
 
 #ifndef CHECKED_INET6
 #  define CHECKED_INET6
@@ -570,60 +640,9 @@
 
 /* maximum nesting of included files */
 #define MAXINCLUDES 10
-
-#ifndef HAVE_SNPRINTF
-#define snprintf snprintf_unbound
-#define vsnprintf vsnprintf_unbound
-#include <stdarg.h>
-int snprintf (char *str, size_t count, const char *fmt, ...);
-int vsnprintf (char *str, size_t count, const char *fmt, va_list arg);
-#endif /* HAVE_SNPRINTF */
-#ifndef HAVE_INET_PTON
-#define inet_pton inet_pton_unbound
-int inet_pton(int af, const char* src, void* dst);
-#endif /* HAVE_INET_PTON */
-#ifndef HAVE_INET_NTOP
-#define inet_ntop inet_ntop_unbound
-const char *inet_ntop(int af, const void *src, char *dst, size_t size);
-#endif
-#ifndef HAVE_INET_ATON
-#define inet_aton inet_aton_unbound
-int inet_aton(const char *cp, struct in_addr *addr);
-#endif
-#ifndef HAVE_MEMMOVE
-#define memmove memmove_unbound
-void *memmove(void *dest, const void *src, size_t n);
-#endif
-#ifndef HAVE_STRLCPY
-#define strlcpy strlcpy_unbound
-size_t strlcpy(char *dst, const char *src, size_t siz);
-#endif
-#ifndef HAVE_GMTIME_R
-#define gmtime_r gmtime_r_unbound
-struct tm *gmtime_r(const time_t *timep, struct tm *result);
-#endif
 #ifndef HAVE_GETADDRINFO
 struct sockaddr_storage;
 #include "compat/fake-rfc2553.h"
-#endif
-#ifndef HAVE_SLEEP
-#define sleep(x) Sleep((x)*1000) /* on win32 */
-#endif /* HAVE_SLEEP */
-#ifndef HAVE_USLEEP
-#define usleep(x) Sleep((x)/1000 + 1) /* on win32 */
-#endif /* HAVE_USLEEP */
-#ifndef HAVE_RANDOM
-#define random rand /* on win32, for tests only (bad random) */
-#endif /* HAVE_RANDOM */
-#ifndef HAVE_SRANDOM
-#define srandom(x) srand(x) /* on win32, for tests only (bad random) */
-#endif /* HAVE_SRANDOM */
-
-/* detect if we need to cast to unsigned int for FD_SET to avoid warnings */
-#ifdef HAVE_WINSOCK2_H
-#define FD_SET_T (u_int)
-#else
-#define FD_SET_T 
 #endif
 
 #include "ldns/ldns.h"
@@ -649,4 +668,59 @@ void *unbound_stat_realloc_log(void *ptr, size_t size, const char* file,
 
 /** default port for DNS traffic. */
 #define UNBOUND_DNS_PORT 53
+
+
+
+#if defined(DOXYGEN)
+#  define ATTR_UNUSED(x)  x
+#elif defined(__cplusplus)
+#  define ATTR_UNUSED(x)
+#elif defined(HAVE_ATTR_UNUSED)
+#  define ATTR_UNUSED(x)  x __attribute__((unused))
+#else /* !HAVE_ATTR_UNUSED */
+#  define ATTR_UNUSED(x)  x
+#endif /* !HAVE_ATTR_UNUSED */
+
+
+
+#ifndef HAVE_FSEEKO
+#define fseeko fseek
+#define ftello ftell
+#endif /* HAVE_FSEEKO */
+
+
+
+#ifndef RAND_MAX
+#define RAND_MAX	2147483647
+#endif
+
+
+
+#ifndef MAXHOSTNAMELEN
+#define MAXHOSTNAMELEN 256
+#endif
+
+
+
+#ifndef HAVE_SNPRINTF
+#define snprintf snprintf_unbound
+#define vsnprintf vsnprintf_unbound
+#include <stdarg.h>
+int snprintf (char *str, size_t count, const char *fmt, ...);
+int vsnprintf (char *str, size_t count, const char *fmt, va_list arg);
+#endif /* HAVE_SNPRINTF */
+
+
+
+#ifndef HAVE_INET_PTON
+#define inet_pton inet_pton_unbound
+int inet_pton(int af, const char* src, void* dst);
+#endif /* HAVE_INET_PTON */
+
+
+
+#ifndef HAVE_INET_NTOP
+#define inet_ntop inet_ntop_unbound
+const char *inet_ntop(int af, const void *src, char *dst, size_t size);
+#endif
 

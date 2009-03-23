@@ -133,14 +133,14 @@ AC_LANG_C
 ACX_CHECK_COMPILER_FLAG(g, [CFLAGS="$CFLAGS -g"])
 ACX_CHECK_COMPILER_FLAG(O2, [CFLAGS="$CFLAGS -O2"])
 AC_PROG_CC
-AC_CHECK_HEADERS([winsock2.h ws2tcpip.h],,, [AC_INCLUDES_DEFAULT])
 ACX_DEPFLAG
 ACX_DETERMINE_EXT_FLAGS_UNBOUND
 
 # for Sun studio 11.
 ACX_CHECK_COMPILER_FLAG(xO4, [CFLAGS="$CFLAGS -xO4"])
 ACX_CHECK_COMPILER_FLAG(xtarget=generic, [CFLAGS="$CFLAGS -xtarget=generic"])
-# flag warnings.
+
+# debug mode flags warnings
 AC_ARG_ENABLE(debug, AC_HELP_STRING([--enable-debug], [Enable debug warnings, asserts, makefile-dependencies]))
 debug_enabled="$enable_debug"
 AC_SUBST(debug_enabled)
@@ -171,152 +171,35 @@ AC_CHECK_PROG(doxygen, doxygen, doxygen)
 ACX_LIBTOOL_C_ONLY
 
 # Checks for header files.
-AC_CHECK_HEADERS([stdarg.h stdbool.h netinet/in.h sys/param.h sys/socket.h sys/uio.h sys/resource.h arpa/inet.h syslog.h netdb.h sys/wait.h pwd.h glob.h grp.h login_cap.h],,, [AC_INCLUDES_DEFAULT])
+AC_CHECK_HEADERS([stdarg.h stdbool.h netinet/in.h sys/param.h sys/socket.h sys/uio.h sys/resource.h arpa/inet.h syslog.h netdb.h sys/wait.h pwd.h glob.h grp.h login_cap.h winsock2.h ws2tcpip.h],,, [AC_INCLUDES_DEFAULT])
 
 # check for types
-AC_CHECK_TYPE(int8_t, char)
-AC_CHECK_TYPE(int16_t, short)
-AC_CHECK_TYPE(int32_t, int)
-AC_CHECK_TYPE(int64_t, long long)
-AC_CHECK_TYPE(uint8_t, unsigned char)
-AC_CHECK_TYPE(uint16_t, unsigned short)
-AC_CHECK_TYPE(uint32_t, unsigned int)
-AC_CHECK_TYPE(uint64_t, unsigned long long)
+AC_TYPE_INT8_T
+AC_TYPE_INT16_T
+AC_TYPE_INT32_T
+AC_TYPE_INT64_T
+AC_TYPE_UINT8_T
+AC_TYPE_UINT16_T
+AC_TYPE_UINT32_T
+AC_TYPE_UINT64_T
 AC_TYPE_SIZE_T
-AC_CHECK_TYPE(ssize_t, int)
+AC_TYPE_SSIZE_T
 AC_TYPE_UID_T
 AC_TYPE_PID_T
 AC_TYPE_OFF_T
-AC_CHECK_TYPE(u_char, unsigned char)
-
-AC_CHECK_TYPE(rlim_t, , 
-	[AC_DEFINE([rlim_t], [unsigned long], [Define to 'int' if not defined])], [
-AC_INCLUDES_DEFAULT
-#if HAVE_SYS_RESOURCE_H
-#  include <sys/resource.h>
-#endif
-])
-AC_CHECK_TYPE(socklen_t, , 
-	[AC_DEFINE([socklen_t], [int], [Define to 'int' if not defined])], [
-AC_INCLUDES_DEFAULT
-#if HAVE_SYS_SOCKET_H
-#  include <sys/socket.h>
-#endif
-])
-AC_CHECK_TYPE(in_addr_t, [], [AC_DEFINE([in_addr_t], [uint32_t], [in_addr_t])], [
-AC_INCLUDES_DEFAULT
-#if HAVE_SYS_TYPES_H
-# include <sys/types.h>
-#endif
-#if HAVE_NETINET_IN_H
-# include <netinet/in.h>
-#endif
-])
-AC_CHECK_TYPE(in_port_t, [], [AC_DEFINE([in_port_t], [uint16_t], [in_port_t])], [
-AC_INCLUDES_DEFAULT
-#if HAVE_SYS_TYPES_H
-# include <sys/types.h>
-#endif
-#if HAVE_NETINET_IN_H
-# include <netinet/in.h>
-#endif
-])
+ACX_TYPE_U_CHAR
+ACX_TYPE_RLIM_T
+ACX_TYPE_SOCKLEN_T
+ACX_TYPE_IN_ADDR_T
+ACX_TYPE_IN_PORT_T
 
 # add option to disable the evil rpath
-dnl Check whether to use rpath or not
-AC_ARG_ENABLE(rpath,
-        [  --disable-rpath         disable hardcoded rpath (default=enabled)],
-	enable_rpath=$enableval, enable_rpath=yes)
-if test "x$enable_rpath" = xno; then
-	AC_MSG_RESULT([Fixing libtool for -rpath problems.])
-	sed < libtool > libtool-2 \
-	's/^hardcode_libdir_flag_spec.*$'/'hardcode_libdir_flag_spec=" -D__LIBTOOL_RPATH_SED__ "/'
-	mv libtool-2 libtool
-	chmod 755 libtool
-	libtool="./libtool"
-fi
+ACX_ARG_RPATH
 
 # Checks for libraries.
-AC_ARG_WITH(ssl, AC_HELP_STRING([--with-ssl=pathname],
-                                    [enable SSL (will check /usr/local/ssl
-                            /usr/lib/ssl /usr/ssl /usr/pkg /usr/local /opt/local /usr/sfw /usr)]),[
-        ],[
-            withval="yes"
-        ])
-    if test x_$withval = x_no; then
-	AC_MSG_ERROR([Need SSL library to do digital signature cryptography])
-    fi
-    if test x_$withval != x_no; then
-        AC_MSG_CHECKING(for SSL)
-        if test x_$withval = x_ -o x_$withval = x_yes; then
-            withval="/usr/local/ssl /usr/lib/ssl /usr/ssl /usr/pkg /usr/local /opt/local /usr/sfw /usr"
-        fi
-        for dir in $withval; do
-            ssldir="$dir"
-            if test -f "$dir/include/openssl/ssl.h"; then
-                found_ssl="yes"
-                AC_DEFINE_UNQUOTED([HAVE_SSL], [], [Define if you have the SSL libraries installed.])
-                CPPFLAGS="$CPPFLAGS -I$ssldir/include"
-                break;
-            fi
-        done
-        if test x_$found_ssl != x_yes; then
-            AC_MSG_ERROR(Cannot find the SSL libraries in $withval)
-        else
-            AC_MSG_RESULT(found in $ssldir)
-            HAVE_SSL=yes
-            LDFLAGS="$LDFLAGS -L$ssldir/lib"
-	    if test "x$enable_rpath" = xyes; then
-	        RUNTIME_PATH="$RUNTIME_PATH -R$ssldir/lib"
-	    fi
-	
-	    AC_MSG_CHECKING([for HMAC_CTX_init in -lcrypto])
-	    LIBS="$LIBS -lcrypto"
-	    AC_TRY_LINK(, [
-		int HMAC_CTX_init(void);
-		(void)HMAC_CTX_init();
-	      ], [
-		AC_MSG_RESULT(yes)
-		AC_DEFINE([HAVE_HMAC_CTX_INIT], 1, 
-			[If you have HMAC_CTX_init])
-	      ], [
-		AC_MSG_RESULT(no)
-	    	# check if -lwsock32 or -lgdi32 are needed.	
-		LIBS="$LIBS -lgdi32"
-		AC_MSG_CHECKING([if -lcrypto needs -lgdi32])
-		AC_TRY_LINK([], [
-		    int HMAC_CTX_init(void);
-		    (void)HMAC_CTX_init();
-		  ],[
-		    AC_DEFINE([HAVE_HMAC_CTX_INIT], 1, 
-			[If you have HMAC_CTX_init])
-		    AC_MSG_RESULT(yes) 
-		  ],[
-		    AC_MSG_RESULT(no)
-                    AC_MSG_ERROR([OpenSSL found in $ssldir, but version 0.9.7 or higher is required])
-		])
-            ])
-        fi
-        AC_SUBST(HAVE_SSL)
-	AC_SUBST(RUNTIME_PATH)
-    fi
-AC_CHECK_HEADERS([openssl/ssl.h],,, [AC_INCLUDES_DEFAULT])
-AC_CHECK_HEADERS([openssl/err.h],,, [AC_INCLUDES_DEFAULT])
-AC_CHECK_HEADERS([openssl/rand.h],,, [AC_INCLUDES_DEFAULT])
+ACX_WITH_SSL
+ACX_LIB_SSL
 AC_CHECK_FUNCS([EVP_sha1 EVP_sha256 EVP_sha512])
-
-# check if libssl needs libdl
-BAKLIBS="$LIBS"
-LIBS="-lssl $LIBS"
-AC_MSG_CHECKING([if libssl needs libdl])
-AC_TRY_LINK_FUNC([SSL_CTX_new], [
-	AC_MSG_RESULT([no])
-	LIBS="$BAKLIBS"
-] , [
-	AC_MSG_RESULT([yes])
-	LIBS="$BAKLIBS"
-	AC_SEARCH_LIBS([dlopen], [dl])
-])
 
 # check for thread library.
 AC_ARG_WITH(pthreads, AC_HELP_STRING([--with-pthreads], 
@@ -477,116 +360,22 @@ AC_FUNC_CHOWN
 AC_FUNC_FORK
 AC_TYPE_SIGNAL
 AC_FUNC_FSEEKO
-AC_SYS_LARGEFILE
-dnl try to see if an additional _LARGEFILE_SOURCE 1 is needed to get fseeko
-ACX_CHECK_COMPILER_FLAG_NEEDED(-D_LARGEFILE_SOURCE=1,
-[
-#include <stdio.h>
-int test() {
-        int a = fseeko(stdin, 0, 0);
-        return a;
-}
-], [CFLAGS="$CFLAGS -D_LARGEFILE_SOURCE=1"])
+ACX_SYS_LARGEFILE
 
-AC_DEFUN([AC_CHECK_GETADDRINFO_WITH_INCLUDES],
-[AC_REQUIRE([AC_PROG_CC])
-AC_MSG_CHECKING(for getaddrinfo)
-ac_cv_func_getaddrinfo=no
-AC_LINK_IFELSE(
-[
-#ifdef __cplusplus
-extern "C"
-{
-#endif
-char* getaddrinfo();
-char* (*f) () = getaddrinfo;
-#ifdef __cplusplus
-}
-#endif
-int main() {
-        ;
-        return 0;
-}
-],
-dnl this case on linux, solaris, bsd
-[ac_cv_func_getaddrinfo="yes"],
-dnl no quick getaddrinfo, try mingw32 and winsock2 library.
-ORIGLIBS="$LIBS"
-LIBS="$LIBS -lws2_32"
-AC_LINK_IFELSE(
-AC_LANG_PROGRAM(
-[
-#ifdef HAVE_WS2TCPIP_H
-#include <ws2tcpip.h>
-#endif
-],
-[
-        (void)getaddrinfo(NULL, NULL, NULL, NULL);
-]
-),
-[
-ac_cv_func_getaddrinfo="yes"
-dnl already: LIBS="$LIBS -lws2_32"
-AC_DEFINE(UB_ON_WINDOWS, 1, [Use win32 resources and API])
-UB_ON_WINDOWS=yes
-AC_SUBST(UB_ON_WINDOWS)
-AC_DEFINE(USE_WINSOCK, 1, [Whether the windows socket API is used])
-],
-[
-ac_cv_func_getaddrinfo="no"
-LIBS="$ORIGLIBS"
-])
-)
-
-AC_MSG_RESULT($ac_cv_func_getaddrinfo)
-if test $ac_cv_func_getaddrinfo = yes; then
-  AC_DEFINE(HAVE_GETADDRINFO, 1, [Whether getaddrinfo is available])
+ACX_CHECK_GETADDRINFO_WITH_INCLUDES
+if test "$USE_WINSOCK" = 1; then
+	AC_DEFINE(UB_ON_WINDOWS, 1, [Use win32 resources and API])
+	UB_ON_WINDOWS=yes
+	AC_SUBST(UB_ON_WINDOWS)
 fi
-])dnl
-
-AC_CHECK_GETADDRINFO_WITH_INCLUDES
 if test $ac_cv_func_getaddrinfo = no; then
-AC_LIBOBJ([fake-rfc2553])
+	AC_LIBOBJ([fake-rfc2553])
 fi
-
-# check if a function is deprecated. defines DEPRECATED_func in config.h.
-# 1: function name
-# 2: C-statement that calls the function.
-# 3: includes for the program.
-# 4: executes if yes
-# 5: executes if no
-AC_DEFUN([CHECK_DEPRECATED],
-[
-AC_REQUIRE([AC_PROG_CC])
-AC_MSG_CHECKING(if $1 is deprecated)
-cache=`echo $1 | sed 'y%.=/+-%___p_%'`
-AC_CACHE_VAL(cv_cc_deprecated_$cache,
-[
-echo '$3' >conftest.c
-echo 'void f(){ $2 }' >>conftest.c
-if test -z "`$CC -c conftest.c 2>&1 | grep deprecated`"; then
-eval "cv_cc_deprecated_$cache=no"
-else
-eval "cv_cc_deprecated_$cache=yes"
-fi
-rm -f conftest conftest.o conftest.c
-])
-if eval "test \"`echo '$cv_cc_deprecated_'$cache`\" = yes"; then
-AC_MSG_RESULT(yes)
-AC_DEFINE_UNQUOTED(AS_TR_CPP([DEPRECATED_$1]), 1, [Whether $1 is deprecated])
-:
-$4
-else
-AC_MSG_RESULT(no)
-:
-$5
-fi
-])
 
 # see if daemon(3) exists, and if it is deprecated.
 AC_CHECK_FUNCS([daemon])
 if test $ac_cv_func_daemon = yes; then
-	CHECK_DEPRECATED([daemon], [(void)daemon(0, 0);], [
+	ACX_FUNC_DEPRECATED([daemon], [(void)daemon(0, 0);], [
 #include <stdlib.h>
 ])
 fi
@@ -598,168 +387,9 @@ AC_CHECK_FUNCS([tzset sigprocmask fcntl getpwnam getrlimit setsid sbrk chroot ki
 if echo $build_os | grep darwin8 > /dev/null; then
 	AC_DEFINE(DARWIN_BROKEN_SETREUID, 1, [Define this if on macOSX10.4-darwin8 and setreuid and setregid do not work])
 fi
-
-# check if select and nonblocking sockets actually work.
-AC_MSG_CHECKING([if nonblocking sockets work])
-AC_RUN_IFELSE(AC_LANG_PROGRAM([
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <fcntl.h>
-#include <errno.h>
-#ifdef HAVE_SYS_TYPES_H
-#include <sys/types.h>
-#endif
-#ifdef HAVE_SYS_SOCKET_H
-#include <sys/socket.h>
-#endif
-#ifdef HAVE_NETINET_IN_H
-#include <netinet/in.h>
-#endif
-#ifdef HAVE_ARPA_INET_H
-#include <arpa/inet.h>
-#endif
-#ifdef HAVE_UNISTD_H
-#include <unistd.h>
-#endif
-#ifdef HAVE_TIME_H
-#include <time.h>
-#endif
-],[[
-	int port;
-	int sfd, cfd;
-	int num = 10;
-	int i, p;
-	struct sockaddr_in a;
-	/* test if select and nonblocking reads work well together */
-	/* open port.
-	   fork child to send 10 messages.
-	   select to read.
-	   then try to nonblocking read the 10 messages
-	   then, nonblocking read must give EAGAIN
-	*/
-
-	port = 12345 + (time(0)%32);
-	sfd = socket(PF_INET, SOCK_DGRAM, 0);
-	if(sfd == -1) {
-		perror("socket");
-		return 1;
-	}
-	memset(&a, 0, sizeof(a));
-	a.sin_family = AF_INET;
-	a.sin_port = htons(port);
-	a.sin_addr.s_addr = inet_addr("127.0.0.1");
-	if(bind(sfd, (struct sockaddr*)&a, sizeof(a)) < 0) {
-		perror("bind");
-		return 1;
-	}
-	if(fcntl(sfd, F_SETFL, O_NONBLOCK) == -1) {
-		perror("fcntl");
-		return 1;
-	}
-
-	cfd = socket(PF_INET, SOCK_DGRAM, 0);
-	if(cfd == -1) {
-		perror("client socket");
-		return 1;
-	}
-	a.sin_port = 0;
-	if(bind(cfd, (struct sockaddr*)&a, sizeof(a)) < 0) {
-		perror("client bind");
-		return 1;
-	}
-	a.sin_port = htons(port);
-
-	/* no handler, causes exit in 10 seconds */
-	alarm(10);
-
-	/* send and receive on the socket */
-	if((p=fork()) == 0) {
-		for(i=0; i<num; i++) {
-			if(sendto(cfd, &i, sizeof(i), 0, 
-				(struct sockaddr*)&a, sizeof(a)) < 0) {
-				perror("sendto");
-				return 1;
-			}
-		}
-	} else {
-		/* parent */
-		fd_set rset;
-		int x;
-		if(p == -1) {
-			perror("fork");
-			return 1;
-		}
-		FD_ZERO(&rset);
-		FD_SET(sfd, &rset);
-		if(select(sfd+1, &rset, NULL, NULL, NULL) < 1) {
-			perror("select");
-			return 1;
-		}
-		i = 0;
-		while(i < num) {
-			if(recv(sfd, &x, sizeof(x), 0) != sizeof(x)) {
-				if(errno == EAGAIN)
-					continue;
-				perror("recv");
-				return 1;
-			}
-			i++;
-		}
-		/* now we want to get EAGAIN: nonblocking goodness */
-		errno = 0;
-		recv(sfd, &x, sizeof(x), 0);
-		if(errno != EAGAIN) {
-			perror("trying to recv again");
-			return 1;
-		}
-		/* EAGAIN encountered */
-	}
-
-	close(sfd);
-	close(cfd);
-]]), [
-	AC_MSG_RESULT([yes])
-], [
-	AC_MSG_RESULT([no])
-	AC_DEFINE([NONBLOCKING_IS_BROKEN], 1, [Define if the network stack does not fully support nonblocking io (causes lower performance).])
-], [
-	AC_MSG_RESULT([crosscompile(yes)])
-])
-
-# check mkdir
-AC_MSG_CHECKING([whether mkdir has one arg])
-AC_TRY_COMPILE([
-#include <stdio.h>
-#include <unistd.h>
-#ifdef HAVE_WINSOCK2_H
-#include <winsock2.h>
-#endif
-#ifdef HAVE_SYS_STAT_H
-#include <sys/stat.h>
-#endif
-], [
-	(void)mkdir("directory");
-],
-AC_MSG_RESULT(yes)
-AC_DEFINE(MKDIR_HAS_ONE_ARG, 1, [Define if mkdir has one argument.])
-,
-AC_MSG_RESULT(no)
-)
-
-# check ioctlsocket
-AC_MSG_CHECKING(for ioctlsocket)
-AC_LINK_IFELSE(AC_LANG_PROGRAM([
-#ifdef HAVE_WINSOCK2_H
-#include <winsock2.h>
-#endif
-], [
-	(void)ioctlsocket(0, 0, NULL);
-]), [
-AC_MSG_RESULT(yes)
-AC_DEFINE(HAVE_IOCTLSOCKET, 1, [if the function 'ioctlsocket' is available])
-],[AC_MSG_RESULT(no)])
-
+ACX_CHECK_NONBLOCKING_BROKEN
+ACX_MKDIR_ONE_ARG
+ACX_FUNC_IOCTLSOCKET
 AC_REPLACE_FUNCS(inet_aton)
 AC_REPLACE_FUNCS(inet_pton)
 AC_REPLACE_FUNCS(inet_ntop)
@@ -881,42 +511,31 @@ AH_BOTTOM([
 #ifdef HAVE_OPENSSL_RAND_H
 #include <openssl/rand.h>
 #endif
+])
+AHX_BOTTOM_FORMAT_ATTRIBUTE
+AHX_BOTTOM_UNUSED_ATTRIBUTE
+AHX_BOTTOM_FSEEKO
+AHX_BOTTOM_RAND_MAX
+AHX_BOTTOM_MAXHOSTNAMELEN
+AHX_BOTTOM_SNPRINTF(unbound)
+AHX_BOTTOM_INET_PTON(unbound)
+AHX_BOTTOM_INET_NTOP(unbound)
+AHX_BOTTOM_INET_ATON(unbound)
+AHX_BOTTOM_MEMMOVE(unbound)
+AHX_BOTTOM_STRLCPY(unbound)
+AHX_BOTTOM_GMTIME_R(unbound)
+AHX_BOTTOM_W32_SLEEP
+AHX_BOTTOM_W32_USLEEP
+AHX_BOTTOM_W32_RANDOM
+AHX_BOTTOM_W32_SRANDOM
+AHX_BOTTOM_W32_FD_SET_T
+AHX_BOTTOM_IPV6_MIN_MTU
 
-#ifdef HAVE_ATTR_FORMAT
-#  define ATTR_FORMAT(archetype, string_index, first_to_check) \
-    __attribute__ ((format (archetype, string_index, first_to_check)))
-#else /* !HAVE_ATTR_FORMAT */
-#  define ATTR_FORMAT(archetype, string_index, first_to_check) /* empty */
-#endif /* !HAVE_ATTR_FORMAT */
-#if defined(DOXYGEN)
-#  define ATTR_UNUSED(x)  x
-#elif defined(__cplusplus)
-#  define ATTR_UNUSED(x)
-#elif defined(HAVE_ATTR_UNUSED)
-#  define ATTR_UNUSED(x)  x __attribute__((unused))
-#else /* !HAVE_ATTR_UNUSED */
-#  define ATTR_UNUSED(x)  x
-#endif /* !HAVE_ATTR_UNUSED */
-#ifndef HAVE_FSEEKO
-#define fseeko fseek
-#define ftello ftell
-#endif /* HAVE_FSEEKO */
+AH_BOTTOM([
 #if defined(HAVE_EVENT_H) && !defined(HAVE_EVENT_BASE_ONCE) && (defined(HAVE_PTHREAD) || defined(HAVE_SOLARIS_THREADS))
    /* using version of libevent that is not threadsafe. */
 #  define LIBEVENT_SIGNAL_PROBLEM 1
 #endif
-
-#ifndef RAND_MAX
-#define RAND_MAX	2147483647
-#endif
-
-#ifndef MAXHOSTNAMELEN
-#define MAXHOSTNAMELEN 256
-#endif
-
-#ifndef IPV6_MIN_MTU
-#define IPV6_MIN_MTU 1280
-#endif /* IPV6_MIN_MTU */
 
 #ifndef CHECKED_INET6
 #  define CHECKED_INET6
@@ -929,60 +548,9 @@ AH_BOTTOM([
 
 /* maximum nesting of included files */
 #define MAXINCLUDES 10
-
-#ifndef HAVE_SNPRINTF
-#define snprintf snprintf_unbound
-#define vsnprintf vsnprintf_unbound
-#include <stdarg.h>
-int snprintf (char *str, size_t count, const char *fmt, ...);
-int vsnprintf (char *str, size_t count, const char *fmt, va_list arg);
-#endif /* HAVE_SNPRINTF */
-#ifndef HAVE_INET_PTON
-#define inet_pton inet_pton_unbound
-int inet_pton(int af, const char* src, void* dst);
-#endif /* HAVE_INET_PTON */
-#ifndef HAVE_INET_NTOP
-#define inet_ntop inet_ntop_unbound
-const char *inet_ntop(int af, const void *src, char *dst, size_t size);
-#endif
-#ifndef HAVE_INET_ATON
-#define inet_aton inet_aton_unbound
-int inet_aton(const char *cp, struct in_addr *addr);
-#endif
-#ifndef HAVE_MEMMOVE
-#define memmove memmove_unbound
-void *memmove(void *dest, const void *src, size_t n);
-#endif
-#ifndef HAVE_STRLCPY
-#define strlcpy strlcpy_unbound
-size_t strlcpy(char *dst, const char *src, size_t siz);
-#endif
-#ifndef HAVE_GMTIME_R
-#define gmtime_r gmtime_r_unbound
-struct tm *gmtime_r(const time_t *timep, struct tm *result);
-#endif
 #ifndef HAVE_GETADDRINFO
 struct sockaddr_storage;
 #include "compat/fake-rfc2553.h"
-#endif
-#ifndef HAVE_SLEEP
-#define sleep(x) Sleep((x)*1000) /* on win32 */
-#endif /* HAVE_SLEEP */
-#ifndef HAVE_USLEEP
-#define usleep(x) Sleep((x)/1000 + 1) /* on win32 */
-#endif /* HAVE_USLEEP */
-#ifndef HAVE_RANDOM
-#define random rand /* on win32, for tests only (bad random) */
-#endif /* HAVE_RANDOM */
-#ifndef HAVE_SRANDOM
-#define srandom(x) srand(x) /* on win32, for tests only (bad random) */
-#endif /* HAVE_SRANDOM */
-
-/* detect if we need to cast to unsigned int for FD_SET to avoid warnings */
-#ifdef HAVE_WINSOCK2_H
-#define FD_SET_T (u_int)
-#else
-#define FD_SET_T 
 #endif
 
 #include "ldns/ldns.h"
