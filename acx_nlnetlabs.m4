@@ -61,21 +61,22 @@ dnl Escape backslashes as \\, for C:\ paths, for the C preprocessor defines.
 dnl for example, ACX_ESCAPE_BACKSLASH($from_var, to_var)
 dnl $1: the text to change. 
 dnl $2: the result.
-AC_DEFUN(ACX_ESCAPE_BACKSLASH, $2="`echo $1 | sed -e 's/\\\\/\\\\\\\\/g'`" )
+AC_DEFUN([ACX_ESCAPE_BACKSLASH], [$2="`echo $1 | sed -e 's/\\\\/\\\\\\\\/g'`"
+])
 
 dnl Calculate comma separated windows-resource numbers from package version.
 dnl Picks the first three(,0) or four numbers out of the name.
 dnl $1: variable for the result
-AC_DEFUN(ACX_RSRC_VERSION,
-$1=[[`echo $PACKAGE_VERSION | sed -e 's/^[^0-9]*\([0-9]\)[^0-9]*\([0-9]\)[^0-9]*\([0-9]\)[^0-9]*\([0-9]\).*$/\1,\2,\3,\4/' -e 's/^[^0-9]*\([0-9]\)[^0-9]*\([0-9]\)[^0-9]*\([0-9]\)[^0-9]*$/\1,\2,\3,0/' `]]
-)
+AC_DEFUN([ACX_RSRC_VERSION], 
+[$1=[`echo $PACKAGE_VERSION | sed -e 's/^[^0-9]*\([0-9]\)[^0-9]*\([0-9]\)[^0-9]*\([0-9]\)[^0-9]*\([0-9]\).*$/\1,\2,\3,\4/' -e 's/^[^0-9]*\([0-9]\)[^0-9]*\([0-9]\)[^0-9]*\([0-9]\)[^0-9]*$/\1,\2,\3,0/' `]
+])
 
 dnl Routine to help check for compiler flags.
 dnl Checks if the compiler will accept the flag.
 dnl $1: the flag without a - in front, so g to check -g.
 dnl $2: executed if yes
 dnl $3: executed if no
-AC_DEFUN(ACX_CHECK_COMPILER_FLAG, 
+AC_DEFUN([ACX_CHECK_COMPILER_FLAG], 
 [
 AC_REQUIRE([AC_PROG_CC])
 AC_MSG_CHECKING(whether $CC supports -$1)
@@ -169,7 +170,7 @@ fi
 
 dnl Check for CC dependency flag
 dnl DEPFLAG: set to flag that generates dependencies.
-AC_DEFUN(ACX_DEPFLAG,
+AC_DEFUN([ACX_DEPFLAG],
 [
 AC_MSG_CHECKING([$CC dependency flag])
 echo 'void f(){}' >conftest.c
@@ -189,7 +190,7 @@ AC_SUBST(DEPFLAG)
 
 dnl Determine flags that gives POSIX and BSD functionality.
 dnl CFLAGS is modified for the result.
-AC_DEFUN(ACX_DETERMINE_EXT_FLAGS_UNBOUND,
+AC_DEFUN([ACX_DETERMINE_EXT_FLAGS_UNBOUND],
 [
 ACX_CHECK_COMPILER_FLAG(std=c99, [C99FLAG="-std=c99"])
 ACX_CHECK_COMPILER_FLAG(xc99, [C99FLAG="-xc99"])
@@ -387,7 +388,7 @@ fi
 
 dnl Setup ATTR_FORMAT config.h parts.
 dnl make sure you call ACX_CHECK_FORMAT_ATTRIBUTE also.
-AC_DEFUN(AHX_CONFIG_FORMAT_ATTRIBUTE,
+AC_DEFUN([AHX_CONFIG_FORMAT_ATTRIBUTE],
 [ 
 #ifdef HAVE_ATTR_FORMAT
 #  define ATTR_FORMAT(archetype, string_index, first_to_check) \
@@ -417,7 +418,7 @@ void f (char *u __attribute__((unused)));
 
 dnl Setup ATTR_UNUSED config.h parts.
 dnl make sure you call ACX_CHECK_UNUSED_ATTRIBUTE also.
-AC_DEFUN(AHX_CONFIG_UNUSED_ATTRIBUTE,
+AC_DEFUN([AHX_CONFIG_UNUSED_ATTRIBUTE],
 [
 #if defined(DOXYGEN)
 #  define ATTR_UNUSED(x)  x
@@ -437,7 +438,7 @@ fi
 ])dnl
 
 dnl Perform libtool check, portably, only for C
-AC_DEFUN(ACX_LIBTOOL_C_ONLY, [
+AC_DEFUN([ACX_LIBTOOL_C_ONLY], [
 # skip these tests, we do not need them.
 AC_DEFUN([AC_PROG_F77], [:])
 AC_DEFUN([AC_PROG_FC], [:])
@@ -465,11 +466,11 @@ AC_PROG_LIBTOOL
 ])
 
 dnl Detect if u_char type is defined, otherwise define it.
-AC_DEFUN(ACX_TYPE_U_CHAR, 
+AC_DEFUN([ACX_TYPE_U_CHAR], 
 	[AC_CHECK_TYPE(u_char, unsigned char)])
 
 dnl Detect if rlim_t type is defined, otherwise define it.
-AC_DEFUN(ACX_TYPE_RLIM_T,
+AC_DEFUN([ACX_TYPE_RLIM_T],
 [AC_CHECK_TYPE(rlim_t, , 
 	[AC_DEFINE([rlim_t], [unsigned long], [Define to 'int' if not defined])], [
 AC_INCLUDES_DEFAULT
@@ -479,7 +480,7 @@ AC_INCLUDES_DEFAULT
 ]) ])
 
 dnl Detect if socklen_t type is defined, otherwise define it.
-AC_DEFUN(ACX_TYPE_SOCKLEN_T,
+AC_DEFUN([ACX_TYPE_SOCKLEN_T],
 [
 AC_CHECK_TYPE(socklen_t, , 
 	[AC_DEFINE([socklen_t], [int], [Define to 'int' if not defined])], [
@@ -490,7 +491,7 @@ AC_INCLUDES_DEFAULT
 ]) ])
 
 dnl Detect if socklen_t type is defined, otherwise define it.
-AC_DEFUN(ACX_TYPE_IN_ADDR_T,
+AC_DEFUN([ACX_TYPE_IN_ADDR_T],
 [ AC_CHECK_TYPE(in_addr_t, [], [AC_DEFINE([in_addr_t], [uint32_t], [in_addr_t])], [
 AC_INCLUDES_DEFAULT
 #if HAVE_SYS_TYPES_H
@@ -502,7 +503,7 @@ AC_INCLUDES_DEFAULT
 ]) ])
 
 dnl Detect if socklen_t type is defined, otherwise define it.
-AC_DEFUN(ACX_TYPE_IN_PORT_T,
+AC_DEFUN([ACX_TYPE_IN_PORT_T],
 [ AC_CHECK_TYPE(in_port_t, [], [AC_DEFINE([in_port_t], [uint16_t], [in_port_t])], [
 AC_INCLUDES_DEFAULT
 #if HAVE_SYS_TYPES_H
@@ -515,7 +516,7 @@ AC_INCLUDES_DEFAULT
 
 dnl Add option to disable the evil rpath. Check whether to use rpath or not.
 dnl Adds the --disable-rpath option. Uses trick to edit the ./libtool.
-AC_DEFUN(ACX_ARG_RPATH,
+AC_DEFUN([ACX_ARG_RPATH],
 [
 AC_ARG_ENABLE(rpath,
         [  --disable-rpath         disable hardcoded rpath (default=enabled)],
@@ -535,7 +536,7 @@ dnl Adds --with-ssl option, searches for openssl and defines HAVE_SSL if found
 dnl Setup of CPPFLAGS, CFLAGS.  Adds -lcrypto to LIBS. 
 dnl Checks main header files of SSL.
 dnl
-AC_DEFUN(ACX_WITH_SSL,
+AC_DEFUN([ACX_WITH_SSL],
 [
 AC_ARG_WITH(ssl, AC_HELP_STRING([--with-ssl=pathname],
                                     [enable SSL (will check /usr/local/ssl
@@ -613,7 +614,7 @@ AC_CHECK_HEADERS([openssl/rand.h],,, [AC_INCLUDES_DEFAULT])
 
 dnl Setup to use -lssl
 dnl To use -lcrypto, use the ACX_WITH_SSL setup (before this one).
-AC_DEFUN(ACX_LIB_SSL,
+AC_DEFUN([ACX_LIB_SSL],
 [
 # check if libssl needs libdl
 BAKLIBS="$LIBS"
@@ -630,7 +631,7 @@ AC_TRY_LINK_FUNC([SSL_CTX_new], [
 
 dnl Setup to use very large files (>2Gb).
 dnl setups fseeko and its own
-AC_DEFUN(ACX_SYS_LARGEFILE,
+AC_DEFUN([ACX_SYS_LARGEFILE],
 [
 AC_SYS_LARGEFILE
 dnl try to see if an additional _LARGEFILE_SOURCE 1 is needed to get fseeko
@@ -739,7 +740,7 @@ dnl check if select and nonblocking sockets actually work.
 dnl Needs fork(2) and select(2).
 dnl defines NONBLOCKING_IS_BROKEN, and if that is true multiple reads from
 dnl a nonblocking socket do not work, a new call to select is necessary.
-AC_DEFUN(ACX_CHECK_NONBLOCKING_BROKEN,
+AC_DEFUN([ACX_CHECK_NONBLOCKING_BROKEN],
 [
 AC_MSG_CHECKING([if nonblocking sockets work])
 AC_RUN_IFELSE(AC_LANG_PROGRAM([
@@ -871,7 +872,7 @@ AC_RUN_IFELSE(AC_LANG_PROGRAM([
 
 dnl Check if mkdir has one or two arguments.
 dnl defines MKDIR_HAS_ONE_ARG
-AC_DEFUN(ACX_MKDIR_ONE_ARG,
+AC_DEFUN([ACX_MKDIR_ONE_ARG],
 [
 AC_MSG_CHECKING([whether mkdir has one arg])
 AC_TRY_COMPILE([
@@ -894,7 +895,7 @@ AC_MSG_RESULT(no)
 ])dnl end of ACX_MKDIR_ONE_ARG
 
 dnl Check for ioctlsocket function. works on mingw32 too.
-AC_DEFUN(ACX_FUNC_IOCTLSOCKET,
+AC_DEFUN([ACX_FUNC_IOCTLSOCKET],
 [
 # check ioctlsocket
 AC_MSG_CHECKING(for ioctlsocket)
@@ -911,7 +912,7 @@ AC_DEFINE(HAVE_IOCTLSOCKET, 1, [if the function 'ioctlsocket' is available])
 ])dnl end of ACX_FUNC_IOCTLSOCKET
 
 dnl Define fallback for fseeko and ftello if needed.
-AC_DEFUN(AHX_CONFIG_FSEEKO,
+AC_DEFUN([AHX_CONFIG_FSEEKO],
 [
 #ifndef HAVE_FSEEKO
 #define fseeko fseek
@@ -920,7 +921,7 @@ AC_DEFUN(AHX_CONFIG_FSEEKO,
 ])
 
 dnl Define RAND_MAX if not defined
-AC_DEFUN(AHX_CONFIG_RAND_MAX,
+AC_DEFUN([AHX_CONFIG_RAND_MAX],
 [
 #ifndef RAND_MAX
 #define RAND_MAX	2147483647
@@ -928,7 +929,7 @@ AC_DEFUN(AHX_CONFIG_RAND_MAX,
 ])
 
 dnl Define MAXHOSTNAMELEN if not defined
-AC_DEFUN(AHX_CONFIG_MAXHOSTNAMELEN,
+AC_DEFUN([AHX_CONFIG_MAXHOSTNAMELEN],
 [
 #ifndef MAXHOSTNAMELEN
 #define MAXHOSTNAMELEN 256
@@ -936,7 +937,7 @@ AC_DEFUN(AHX_CONFIG_MAXHOSTNAMELEN,
 ])
 
 dnl Define IPV6_MIN_MTU if not defined
-AC_DEFUN(AHX_CONFIG_IPV6_MIN_MTU,
+AC_DEFUN([AHX_CONFIG_IPV6_MIN_MTU],
 [
 #ifndef IPV6_MIN_MTU
 #define IPV6_MIN_MTU 1280
@@ -945,7 +946,7 @@ AC_DEFUN(AHX_CONFIG_IPV6_MIN_MTU,
 
 dnl provide snprintf, vsnprintf compat prototype
 dnl $1: unique name for compat code
-AC_DEFUN(AHX_CONFIG_SNPRINTF,
+AC_DEFUN([AHX_CONFIG_SNPRINTF],
 [
 #ifndef HAVE_SNPRINTF
 #define snprintf snprintf_$1
@@ -958,7 +959,7 @@ int vsnprintf (char *str, size_t count, const char *fmt, va_list arg);
 
 dnl provide inet_pton compat prototype.
 dnl $1: unique name for compat code
-AC_DEFUN(AHX_CONFIG_INET_PTON,
+AC_DEFUN([AHX_CONFIG_INET_PTON],
 [
 #ifndef HAVE_INET_PTON
 #define inet_pton inet_pton_$1
@@ -968,7 +969,7 @@ int inet_pton(int af, const char* src, void* dst);
 
 dnl provide inet_ntop compat prototype.
 dnl $1: unique name for compat code
-AC_DEFUN(AHX_CONFIG_INET_NTOP,
+AC_DEFUN([AHX_CONFIG_INET_NTOP],
 [
 #ifndef HAVE_INET_NTOP
 #define inet_ntop inet_ntop_$1
@@ -978,7 +979,7 @@ const char *inet_ntop(int af, const void *src, char *dst, size_t size);
 
 dnl provide inet_aton compat prototype.
 dnl $1: unique name for compat code
-AC_DEFUN(AHX_CONFIG_INET_ATON,
+AC_DEFUN([AHX_CONFIG_INET_ATON],
 [
 #ifndef HAVE_INET_ATON
 #define inet_aton inet_aton_$1
@@ -988,7 +989,7 @@ int inet_aton(const char *cp, struct in_addr *addr);
 
 dnl provide memmove compat prototype.
 dnl $1: unique name for compat code
-AC_DEFUN(AHX_CONFIG_MEMMOVE,
+AC_DEFUN([AHX_CONFIG_MEMMOVE],
 [
 #ifndef HAVE_MEMMOVE
 #define memmove memmove_$1
@@ -998,7 +999,7 @@ void *memmove(void *dest, const void *src, size_t n);
 
 dnl provide strlcpy compat prototype.
 dnl $1: unique name for compat code
-AC_DEFUN(AHX_CONFIG_STRLCPY,
+AC_DEFUN([AHX_CONFIG_STRLCPY],
 [
 #ifndef HAVE_STRLCPY
 #define strlcpy strlcpy_$1
@@ -1008,7 +1009,7 @@ size_t strlcpy(char *dst, const char *src, size_t siz);
 
 dnl provide gmtime_r compat prototype.
 dnl $1: unique name for compat code
-AC_DEFUN(AHX_CONFIG_GMTIME_R,
+AC_DEFUN([AHX_CONFIG_GMTIME_R],
 [
 #ifndef HAVE_GMTIME_R
 #define gmtime_r gmtime_r_$1
@@ -1017,7 +1018,7 @@ struct tm *gmtime_r(const time_t *timep, struct tm *result);
 ])
 
 dnl provide w32 compat definition for sleep
-AC_DEFUN(AHX_CONFIG_W32_SLEEP,
+AC_DEFUN([AHX_CONFIG_W32_SLEEP],
 [
 #ifndef HAVE_SLEEP
 #define sleep(x) Sleep((x)*1000) /* on win32 */
@@ -1025,7 +1026,7 @@ AC_DEFUN(AHX_CONFIG_W32_SLEEP,
 ])
 
 dnl provide w32 compat definition for usleep
-AC_DEFUN(AHX_CONFIG_W32_USLEEP,
+AC_DEFUN([AHX_CONFIG_W32_USLEEP],
 [
 #ifndef HAVE_USLEEP
 #define usleep(x) Sleep((x)/1000 + 1) /* on win32 */
@@ -1033,7 +1034,7 @@ AC_DEFUN(AHX_CONFIG_W32_USLEEP,
 ])
 
 dnl provide w32 compat definition for random
-AC_DEFUN(AHX_CONFIG_W32_RANDOM,
+AC_DEFUN([AHX_CONFIG_W32_RANDOM],
 [
 #ifndef HAVE_RANDOM
 #define random rand /* on win32, for tests only (bad random) */
@@ -1041,7 +1042,7 @@ AC_DEFUN(AHX_CONFIG_W32_RANDOM,
 ])
 
 dnl provide w32 compat definition for srandom
-AC_DEFUN(AHX_CONFIG_W32_SRANDOM,
+AC_DEFUN([AHX_CONFIG_W32_SRANDOM],
 [
 #ifndef HAVE_SRANDOM
 #define srandom(x) srand(x) /* on win32, for tests only (bad random) */
@@ -1049,7 +1050,7 @@ AC_DEFUN(AHX_CONFIG_W32_SRANDOM,
 ])
 
 dnl provide w32 compat definition for FD_SET_T
-AC_DEFUN(AHX_CONFIG_W32_FD_SET_T,
+AC_DEFUN([AHX_CONFIG_W32_FD_SET_T],
 [
 /* detect if we need to cast to unsigned int for FD_SET to avoid warnings */
 #ifdef HAVE_WINSOCK2_H
@@ -1062,7 +1063,7 @@ AC_DEFUN(AHX_CONFIG_W32_FD_SET_T,
 dnl Remove an extension flag from CFLAGS, define replacement to be made.
 dnl Used by ACX_STRIP_EXT_FLAGS.
 dnl $1: the name of the flag, for example -D_GNU_SOURCE.
-AC_DEFUN(ACX_CFLAGS_STRIP,
+AC_DEFUN([ACX_CFLAGS_STRIP],
 [
   if echo $CFLAGS | grep " $1" >/dev/null 2>&1; then
     CFLAGS="`echo $CFLAGS | sed -e 's/ $1//g'`"
@@ -1072,7 +1073,7 @@ AC_DEFUN(ACX_CFLAGS_STRIP,
 
 dnl Remove EXT flags from the CFLAGS and set them to be defined in config.h
 dnl use with ACX_DETERMINE_EXT_FLAGS.
-AC_DEFUN(ACX_STRIP_EXT_FLAGS,
+AC_DEFUN([ACX_STRIP_EXT_FLAGS],
 [
   AC_MSG_NOTICE([Stripping extension flags...])
   ACX_CFLAGS_STRIP(-D_GNU_SOURCE)
@@ -1089,19 +1090,19 @@ dnl define one omitted flag for config.h
 dnl $1: flag name. -D_GNU_SOURCE
 dnl $2: replacement define. _GNU_SOURCE
 dnl $3: define value, 1
-AC_DEFUN(AHX_CONFIG_FLAG_OMITTED,
+AC_DEFUN([AHX_CONFIG_FLAG_OMITTED],
 [#if defined($1) && !defined($2)
 #define $2 $3
 [#]endif ])
 
 dnl Wrapper for AHX_CONFIG_FLAG_OMITTED for -D style flags
 dnl $1: the -DNAME or -DNAME=value string.
-AC_DEFUN(AHX_CONFIG_FLAG_EXT,
+AC_DEFUN([AHX_CONFIG_FLAG_EXT],
 [AHX_CONFIG_FLAG_OMITTED(AS_TR_CPP(OMITTED_$1),m4_bpatsubst(m4_bpatsubst($1,-D,),=.*$,),m4_if(m4_bregexp($1,=),-1,1,m4_bpatsubst($1,^.*=,)))
 ])
 
 dnl config.h part to define omitted cflags, use with ACX_STRIP_EXT_FLAGS.
-AC_DEFUN(AHX_CONFIG_EXT_FLAGS,
+AC_DEFUN([AHX_CONFIG_EXT_FLAGS],
 [AHX_CONFIG_FLAG_EXT(-D_GNU_SOURCE)
 AHX_CONFIG_FLAG_EXT(-D_BSD_SOURCE)
 AHX_CONFIG_FLAG_EXT(-D__EXTENSIONS__)
