@@ -414,21 +414,6 @@
 /* Define for large files, on AIX-style hosts. */
 #undef _LARGE_FILES
 
-/* Define for Solaris 2.5.1 so the uint32_t typedef from <sys/synch.h>,
-   <pthread.h>, or <semaphore.h> is not used. If the typedef was allowed, the
-   #define below would cause a syntax error. */
-#undef _UINT32_T
-
-/* Define for Solaris 2.5.1 so the uint64_t typedef from <sys/synch.h>,
-   <pthread.h>, or <semaphore.h> is not used. If the typedef was allowed, the
-   #define below would cause a syntax error. */
-#undef _UINT64_T
-
-/* Define for Solaris 2.5.1 so the uint8_t typedef from <sys/synch.h>,
-   <pthread.h>, or <semaphore.h> is not used. If the typedef was allowed, the
-   #define below would cause a syntax error. */
-#undef _UINT8_T
-
 /* Define to empty if `const' does not conform to ANSI C. */
 #undef const
 
@@ -447,20 +432,16 @@
 #undef inline
 #endif
 
-/* Define to the type of a signed integer type of width exactly 16 bits if
-   such a type exists and the standard includes do not define it. */
+/* Define to `short' if <sys/types.h> does not define. */
 #undef int16_t
 
-/* Define to the type of a signed integer type of width exactly 32 bits if
-   such a type exists and the standard includes do not define it. */
+/* Define to `int' if <sys/types.h> does not define. */
 #undef int32_t
 
-/* Define to the type of a signed integer type of width exactly 64 bits if
-   such a type exists and the standard includes do not define it. */
+/* Define to `long long' if <sys/types.h> does not define. */
 #undef int64_t
 
-/* Define to the type of a signed integer type of width exactly 8 bits if such
-   a type exists and the standard includes do not define it. */
+/* Define to `signed char' if <sys/types.h> does not define. */
 #undef int8_t
 
 /* Define to rpl_malloc if the replacement function should be used. */
@@ -490,20 +471,16 @@
 /* Define to `int' if <sys/types.h> doesn't define. */
 #undef uid_t
 
-/* Define to the type of an unsigned integer type of width exactly 16 bits if
-   such a type exists and the standard includes do not define it. */
+/* Define to `unsigned short' if <sys/types.h> does not define. */
 #undef uint16_t
 
-/* Define to the type of an unsigned integer type of width exactly 32 bits if
-   such a type exists and the standard includes do not define it. */
+/* Define to `unsigned int' if <sys/types.h> does not define. */
 #undef uint32_t
 
-/* Define to the type of an unsigned integer type of width exactly 64 bits if
-   such a type exists and the standard includes do not define it. */
+/* Define to `unsigned long long' if <sys/types.h> does not define. */
 #undef uint64_t
 
-/* Define to the type of an unsigned integer type of width exactly 8 bits if
-   such a type exists and the standard includes do not define it. */
+/* Define to `unsigned char' if <sys/types.h> does not define. */
 #undef uint8_t
 
 /* Define as `fork' if `vfork' does not work. */
