@@ -273,7 +273,10 @@ if test x_$withval = x_yes -o x_$withval != x_no; then
             thedir="$dir"
             if test -f "$dir/include/event.h"; then
                 found_libevent="yes"
-                CPPFLAGS="$CPPFLAGS -I$thedir/include"
+		dnl assume /usr is in default path.
+		if test "$thedir" != "/usr"; then
+                    CPPFLAGS="$CPPFLAGS -I$thedir/include"
+		fi
                 break;
             fi
         done
@@ -303,9 +306,12 @@ large outgoing port ranges.  ])
 		fi
         else
             AC_MSG_RESULT(found in $thedir)
-            LDFLAGS="$LDFLAGS -L$thedir/lib"
-	    if test "x$enable_rpath" = xyes; then
-	        RUNTIME_PATH="$RUNTIME_PATH -R$thedir/lib"
+	    dnl assume /usr is in default path.
+	    if test "$thedir" != "/usr"; then
+                LDFLAGS="$LDFLAGS -L$thedir/lib"
+	        if test "x$enable_rpath" = xyes; then
+	            RUNTIME_PATH="$RUNTIME_PATH -R$thedir/lib"
+	        fi
 	    fi
         fi
 	AC_SUBST(RUNTIME_PATH)
@@ -405,7 +411,7 @@ AC_ARG_WITH(ldns, AC_HELP_STRING([--with-ldns=PATH],
 	[specify prefix of path of ldns library to use]), 
 	[ specialldnsdir="$withval"
 	CPPFLAGS="-I$withval/include $CPPFLAGS"
-	LDFLAGS="-L$withval -L$withval/lib $LDFLAGS -lldns"
+	LDFLAGS="-L$withval -L$withval/lib $LDFLAGS"
 	ldnsdir="$withval"
 	AC_SUBST(ldnsdir)
 ])
@@ -417,14 +423,14 @@ AC_ARG_WITH(ldns-builtin, AC_HELP_STRING([--with-ldns-builtin],
 
 # check if ldns is good enough
 if test "$use_ldns_builtin" = "no"; then
-	AC_CHECK_LIB(ldns, ldns_buffer_copy, [
-	dnl ldns was found, check compat functions
-	AC_CHECK_LIB(ldns, [ldns_rr_free])
-	AC_CHECK_FUNC([ldns_b32_ntop_extended_hex],, [
+	AC_CHECK_LIB(ldns, ldns_buffer_copy)
+	if test $ac_cv_lib_ldns_ldns_buffer_copy = yes; then
+	    dnl ldns was found, check compat functions
+	    AC_CHECK_FUNC([ldns_b32_ntop_extended_hex],, [
 		AC_MSG_ERROR([ldns version too old, need >=1.4.0])])
-	] , [
-		use_ldns_builtin="yes"
-	])
+	else
+	    use_ldns_builtin="yes"
+	fi
 fi
 
 if test "$use_ldns_builtin" = "yes"; then

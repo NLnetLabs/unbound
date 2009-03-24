@@ -50,7 +50,7 @@ endif
 CPPFLAGS:=$(strip $(CPPFLAGS))
 CFLAGS=@CFLAGS@
 LDFLAGS=@LDFLAGS@
-LIBS=@LIBS@
+LIBS=$(strip @LIBS@)
 LIBOBJS=@LIBOBJS@
 RUNTIME_PATH=@RUNTIME_PATH@
 DEPFLAG=@DEPFLAG@
@@ -154,8 +154,8 @@ $(BUILD)%.o:      $(srcdir)/%.rc $(srcdir)/config.h
 endif
 
 COMPILE=$(LIBTOOL) --tag=CC --mode=compile $(CC) $(CPPFLAGS) $(CFLAGS)
-LINK=$(LIBTOOL) --tag=CC --mode=link $(CC) $(staticexe) $(RUNTIME_PATH) $(CFLAGS) $(LDFLAGS)
-LINK_LIB=$(LIBTOOL) --tag=CC --mode=link $(CC) $(RUNTIME_PATH) $(CFLAGS) $(LDFLAGS) $(staticexe) -version-number @LIBUNBOUND_CURRENT@:@LIBUNBOUND_REVISION@:@LIBUNBOUND_AGE@ -no-undefined
+LINK=$(LIBTOOL) --tag=CC --mode=link $(strip $(CC) $(staticexe) $(RUNTIME_PATH) $(CFLAGS) $(LDFLAGS))
+LINK_LIB=$(LIBTOOL) --tag=CC --mode=link $(strip $(CC) $(RUNTIME_PATH) $(CFLAGS) $(LDFLAGS) $(staticexe) -version-number @LIBUNBOUND_CURRENT@:@LIBUNBOUND_REVISION@:@LIBUNBOUND_AGE@ -no-undefined)
 
 .PHONY:	clean realclean doc lint all install uninstall tests test download_ldns strip lib
 

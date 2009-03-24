@@ -568,9 +568,12 @@ AC_ARG_WITH(ssl, AC_HELP_STRING([--with-ssl=pathname],
         else
             AC_MSG_RESULT(found in $ssldir)
             HAVE_SSL=yes
-            LDFLAGS="$LDFLAGS -L$ssldir/lib"
-	    if test "x$enable_rpath" = xyes; then
-	        RUNTIME_PATH="$RUNTIME_PATH -R$ssldir/lib"
+	    dnl assume /usr is already in the lib and dynlib paths.
+	    if test "$ssldir" != "/usr"; then
+                LDFLAGS="$LDFLAGS -L$ssldir/lib"
+	        if test "x$enable_rpath" = xyes; then
+	            RUNTIME_PATH="$RUNTIME_PATH -R$ssldir/lib"
+	        fi
 	    fi
 	
 	    AC_MSG_CHECKING([for HMAC_CTX_init in -lcrypto])

@@ -4,6 +4,7 @@
 	- iana portlist updated.
 	- fix util/configlexer.c and solaris -std=c99 flag.
 	- fix postcommit aclocal errors.
+	- spaces stripped. Makefile cleaner, /usr omitted from -I, -L, -R.
 
 23 March 2009: Wouter
 	- added launchd plist example file for MacOSX to contrib.

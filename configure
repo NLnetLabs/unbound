@@ -21953,9 +21953,11 @@ echo "$as_me: error: Cannot find the SSL libraries in $withval" >&2;}
             { echo "$as_me:$LINENO: result: found in $ssldir" >&5
 echo "${ECHO_T}found in $ssldir" >&6; }
             HAVE_SSL=yes
-            LDFLAGS="$LDFLAGS -L$ssldir/lib"
-	    if test "x$enable_rpath" = xyes; then
-	        RUNTIME_PATH="$RUNTIME_PATH -R$ssldir/lib"
+	    	    if test "$ssldir" != "/usr"; then
+                LDFLAGS="$LDFLAGS -L$ssldir/lib"
+	        if test "x$enable_rpath" = xyes; then
+	            RUNTIME_PATH="$RUNTIME_PATH -R$ssldir/lib"
+	        fi
 	    fi
 
 	    { echo "$as_me:$LINENO: checking for HMAC_CTX_init in -lcrypto" >&5
@@ -23531,7 +23533,9 @@ echo $ECHO_N "checking for libevent... $ECHO_C" >&6; }
             thedir="$dir"
             if test -f "$dir/include/event.h"; then
                 found_libevent="yes"
-                CPPFLAGS="$CPPFLAGS -I$thedir/include"
+				if test "$thedir" != "/usr"; then
+                    CPPFLAGS="$CPPFLAGS -I$thedir/include"
+		fi
                 break;
             fi
         done
@@ -23568,9 +23572,11 @@ large outgoing port ranges.  " >&2;}
         else
             { echo "$as_me:$LINENO: result: found in $thedir" >&5
 echo "${ECHO_T}found in $thedir" >&6; }
-            LDFLAGS="$LDFLAGS -L$thedir/lib"
-	    if test "x$enable_rpath" = xyes; then
-	        RUNTIME_PATH="$RUNTIME_PATH -R$thedir/lib"
+	    	    if test "$thedir" != "/usr"; then
+                LDFLAGS="$LDFLAGS -L$thedir/lib"
+	        if test "x$enable_rpath" = xyes; then
+	            RUNTIME_PATH="$RUNTIME_PATH -R$thedir/lib"
+	        fi
 	    fi
         fi
 
@@ -27396,7 +27402,7 @@ use_ldns_builtin="no"
 if test "${with_ldns+set}" = set; then
   withval=$with_ldns;  specialldnsdir="$withval"
 	CPPFLAGS="-I$withval/include $CPPFLAGS"
-	LDFLAGS="-L$withval -L$withval/lib $LDFLAGS -lldns"
+	LDFLAGS="-L$withval -L$withval/lib $LDFLAGS"
 	ldnsdir="$withval"
 
 
@@ -27414,7 +27420,8 @@ fi
 
 # check if ldns is good enough
 if test "$use_ldns_builtin" = "no"; then
-	{ echo "$as_me:$LINENO: checking for ldns_buffer_copy in -lldns" >&5
+
+{ echo "$as_me:$LINENO: checking for ldns_buffer_copy in -lldns" >&5
 echo $ECHO_N "checking for ldns_buffer_copy in -lldns... $ECHO_C" >&6; }
 if test "${ac_cv_lib_ldns_ldns_buffer_copy+set}" = set; then
   echo $ECHO_N "(cached) $ECHO_C" >&6
@@ -27476,70 +27483,6 @@ fi
 { echo "$as_me:$LINENO: result: $ac_cv_lib_ldns_ldns_buffer_copy" >&5
 echo "${ECHO_T}$ac_cv_lib_ldns_ldns_buffer_copy" >&6; }
 if test $ac_cv_lib_ldns_ldns_buffer_copy = yes; then
-
-
-{ echo "$as_me:$LINENO: checking for ldns_rr_free in -lldns" >&5
-echo $ECHO_N "checking for ldns_rr_free in -lldns... $ECHO_C" >&6; }
-if test "${ac_cv_lib_ldns_ldns_rr_free+set}" = set; then
-  echo $ECHO_N "(cached) $ECHO_C" >&6
-else
-  ac_check_lib_save_LIBS=$LIBS
-LIBS="-lldns  $LIBS"
-cat >conftest.$ac_ext <<_ACEOF
-/* confdefs.h.  */
-_ACEOF
-cat confdefs.h >>conftest.$ac_ext
-cat >>conftest.$ac_ext <<_ACEOF
-/* end confdefs.h.  */
-
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char ldns_rr_free ();
-int
-main ()
-{
-return ldns_rr_free ();
-  ;
-  return 0;
-}
-_ACEOF
-rm -f conftest.$ac_objext conftest$ac_exeext
-if { (ac_try="$ac_link"
-case "(($ac_try" in
-  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
-  *) ac_try_echo=$ac_try;;
-esac
-eval "echo \"\$as_me:$LINENO: $ac_try_echo\"") >&5
-  (eval "$ac_link") 2>conftest.er1
-  ac_status=$?
-  grep -v '^ *+' conftest.er1 >conftest.err
-  rm -f conftest.er1
-  cat conftest.err >&5
-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); } && {
-	 test -z "$ac_c_werror_flag" ||
-	 test ! -s conftest.err
-       } && test -s conftest$ac_exeext &&
-       $as_test_x conftest$ac_exeext; then
-  ac_cv_lib_ldns_ldns_rr_free=yes
-else
-  echo "$as_me: failed program was:" >&5
-sed 's/^/| /' conftest.$ac_ext >&5
-
-	ac_cv_lib_ldns_ldns_rr_free=no
-fi
-
-rm -f core conftest.err conftest.$ac_objext conftest_ipa8_conftest.oo \
-      conftest$ac_exeext conftest.$ac_ext
-LIBS=$ac_check_lib_save_LIBS
-fi
-{ echo "$as_me:$LINENO: result: $ac_cv_lib_ldns_ldns_rr_free" >&5
-echo "${ECHO_T}$ac_cv_lib_ldns_ldns_rr_free" >&6; }
-if test $ac_cv_lib_ldns_ldns_rr_free = yes; then
   cat >>confdefs.h <<_ACEOF
 #define HAVE_LIBLDNS 1
 _ACEOF
@@ -27548,7 +27491,8 @@ _ACEOF
 
 fi
 
-	{ echo "$as_me:$LINENO: checking for ldns_b32_ntop_extended_hex" >&5
+	if test $ac_cv_lib_ldns_ldns_buffer_copy = yes; then
+	    	    { echo "$as_me:$LINENO: checking for ldns_b32_ntop_extended_hex" >&5
 echo $ECHO_N "checking for ldns_b32_ntop_extended_hex... $ECHO_C" >&6; }
 if test "${ac_cv_func_ldns_b32_ntop_extended_hex+set}" = set; then
   echo $ECHO_N "(cached) $ECHO_C" >&6
@@ -27638,13 +27582,9 @@ echo "$as_me: error: ldns version too old, need >=1.4.0" >&2;}
    { (exit 1); exit 1; }; }
 fi
 
-
-else
-
-		use_ldns_builtin="yes"
-
-fi
-
+	else
+	    use_ldns_builtin="yes"
+	fi
 fi
 
 if test "$use_ldns_builtin" = "yes"; then
