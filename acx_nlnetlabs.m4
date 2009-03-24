@@ -556,7 +556,10 @@ AC_ARG_WITH(ssl, AC_HELP_STRING([--with-ssl=pathname],
             if test -f "$dir/include/openssl/ssl.h"; then
                 found_ssl="yes"
                 AC_DEFINE_UNQUOTED([HAVE_SSL], [], [Define if you have the SSL libraries installed.])
-                CPPFLAGS="$CPPFLAGS -I$ssldir/include"
+		dnl assume /usr/include is already in the include-path.
+		if test "$ssldir" != "/usr"; then
+			CPPFLAGS="$CPPFLAGS -I$ssldir/include"
+		fi
                 break;
             fi
         done

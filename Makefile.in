@@ -43,11 +43,11 @@ UB_ON_WINDOWS=@UB_ON_WINDOWS@
 YACC=@YACC@
 LEX=@LEX@
 CC=@CC@
-ifeq "$(srcdir)" "."
-  CPPFLAGS=-I. @CPPFLAGS@
-else
-  CPPFLAGS=-I$(srcdir) -I. @CPPFLAGS@
+CPPFLAGS=-I. @CPPFLAGS@
+ifneq "$(srcdir)" "."
+  CPPFLAGS=-I$(srcdir) $(CPPFLAGS)
 endif
+CPPFLAGS:=$(strip $(CPPFLAGS))
 CFLAGS=@CFLAGS@
 LDFLAGS=@LDFLAGS@
 LIBS=@LIBS@
