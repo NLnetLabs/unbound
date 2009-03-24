@@ -2,6 +2,7 @@
 	- more neat configure.ac. Removed duplicate config.h includes.
 	- neater config.h.in.
 	- iana portlist updated.
+	- fix util/configlexer.c and solaris -std=c99 flag.
 
 23 March 2009: Wouter
 	- added launchd plist example file for MacOSX to contrib.

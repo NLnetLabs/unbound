@@ -279,7 +279,8 @@ ifeq "$(strip $(LEX))" ":"
 	$Qecho "rebuild lexer, but no lex program, skipped"
 else
 	@-if test ! -d util; then $(INSTALL) -d util; fi
-	$Qecho "#include \"util/configyyrename.h\"" > $@
+	$Qecho "#include \"config.h\"" > $@
+	$Qecho "#include \"util/configyyrename.h\"" >> $@
 	$Q$(LEX) -t $< >> $@
 endif
 
