@@ -437,8 +437,8 @@ if test $ac_cv_c_unused_attribute = yes; then
 fi
 ])dnl
 
-dnl Perform libtool check, portably, only for C
-AC_DEFUN([ACX_LIBTOOL_C_ONLY], [
+dnl Pre-fun for ACX_LIBTOOL_C_ONLY
+AC_DEFUN([ACX_LIBTOOL_C_PRE], [
 # skip these tests, we do not need them.
 AC_DEFUN([AC_PROG_F77], [:])
 AC_DEFUN([AC_PROG_FC], [:])
@@ -453,15 +453,23 @@ if test -z "$libtool"; then
 	libtool="./libtool"
 fi
 AC_SUBST(libtool)
-AC_PATH_TOOL(AR, ar, [false])
-if test $AR = false; then
-	AC_MSG_ERROR([Cannot find 'ar', please extend PATH to include it])
-fi
 # avoid libtool max commandline length test on systems that fork slowly.
 AC_CANONICAL_HOST
 if echo "$host_os" | grep "sunos4" >/dev/null; then
 	lt_cv_sys_max_cmd_len=32750;
 fi
+AC_PATH_TOOL(AR, ar, [false])
+if test $AR = false; then
+	AC_MSG_ERROR([Cannot find 'ar', please extend PATH to include it])
+fi
+])
+
+dnl Perform libtool check, portably, only for C
+AC_DEFUN([ACX_LIBTOOL_C_ONLY], [
+dnl as a requirement so that is gets called before LIBTOOL
+dnl because libtools 'AC_REQUIRE' names are right after this one, before
+dnl this function contents.
+AC_REQUIRE([ACX_LIBTOOL_C_PRE])
 AC_PROG_LIBTOOL
 ])
 
