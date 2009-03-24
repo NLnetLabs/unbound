@@ -1,5 +1,7 @@
 24 March 2009: Wouter
 	- more neat configure.ac. Removed duplicate config.h includes.
+	- neater config.h.in.
+	- iana portlist updated.
 
 23 March 2009: Wouter
 	- added launchd plist example file for MacOSX to contrib.
