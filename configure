@@ -27152,6 +27152,9 @@ if test "${with_ldns+set}" = set; then
   withval=$with_ldns;  specialldnsdir="$withval"
 	CPPFLAGS="-I$withval/include $CPPFLAGS"
 	LDFLAGS="-L$withval -L$withval/lib $LDFLAGS"
+	if test "x$enable_rpath" = xyes; then
+	    RUNTIME_PATH="$RUNTIME_PATH -R$withval/lib"
+	fi
 	ldnsdir="$withval"
 
 

@@ -413,6 +413,9 @@ AC_ARG_WITH(ldns, AC_HELP_STRING([--with-ldns=PATH],
 	[ specialldnsdir="$withval"
 	CPPFLAGS="-I$withval/include $CPPFLAGS"
 	LDFLAGS="-L$withval -L$withval/lib $LDFLAGS"
+	if test "x$enable_rpath" = xyes; then
+	    RUNTIME_PATH="$RUNTIME_PATH -R$withval/lib"
+	fi
 	ldnsdir="$withval"
 	AC_SUBST(ldnsdir)
 ])
