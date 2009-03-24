@@ -96,7 +96,6 @@
 
 #ifndef TESTCODE_REPLAY_H
 #define TESTCODE_REPLAY_H
-#include "config.h"
 #include "util/netevent.h"
 #include "testcode/ldns-testpkts.h"
 struct replay_answer;

@@ -42,7 +42,6 @@
 #ifndef LISTEN_DNSPORT_H
 #define LISTEN_DNSPORT_H
 
-#include "config.h"
 #include "util/netevent.h"
 struct listen_list;
 struct config_file;

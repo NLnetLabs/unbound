@@ -27667,51 +27667,106 @@ CPPFLAGS="-I$ldnsdir/include $CPPFLAGS"
 LDFLAGS="$LDFLAGS $ldnsdir/*.lo"
 
 fi
+
+  { echo "$as_me:$LINENO: Stripping extension flags..." >&5
+echo "$as_me: Stripping extension flags..." >&6;}
+
+  if echo $CFLAGS | grep " -D_GNU_SOURCE" >/dev/null 2>&1; then
+    CFLAGS="`echo $CFLAGS | sed -e 's/ -D_GNU_SOURCE//g'`"
+
+cat >>confdefs.h <<\_ACEOF
+#define OMITTED__D_GNU_SOURCE 1
+_ACEOF
+
+  fi
+
+
+  if echo $CFLAGS | grep " -D_BSD_SOURCE" >/dev/null 2>&1; then
+    CFLAGS="`echo $CFLAGS | sed -e 's/ -D_BSD_SOURCE//g'`"
+
+cat >>confdefs.h <<\_ACEOF
+#define OMITTED__D_BSD_SOURCE 1
+_ACEOF
+
+  fi
+
+
+  if echo $CFLAGS | grep " -D__EXTENSIONS__" >/dev/null 2>&1; then
+    CFLAGS="`echo $CFLAGS | sed -e 's/ -D__EXTENSIONS__//g'`"
+
+cat >>confdefs.h <<\_ACEOF
+#define OMITTED__D__EXTENSIONS__ 1
+_ACEOF
+
+  fi
+
+
+  if echo $CFLAGS | grep " -D_POSIX_C_SOURCE=200112" >/dev/null 2>&1; then
+    CFLAGS="`echo $CFLAGS | sed -e 's/ -D_POSIX_C_SOURCE=200112//g'`"
+
+cat >>confdefs.h <<\_ACEOF
+#define OMITTED__D_POSIX_C_SOURCE_200112 1
+_ACEOF
+
+  fi
+
+
+  if echo $CFLAGS | grep " -D_XOPEN_SOURCE=600" >/dev/null 2>&1; then
+    CFLAGS="`echo $CFLAGS | sed -e 's/ -D_XOPEN_SOURCE=600//g'`"
+
+cat >>confdefs.h <<\_ACEOF
+#define OMITTED__D_XOPEN_SOURCE_600 1
+_ACEOF
+
+  fi
+
+
+  if echo $CFLAGS | grep " -D_XOPEN_SOURCE_EXTENDED=1" >/dev/null 2>&1; then
+    CFLAGS="`echo $CFLAGS | sed -e 's/ -D_XOPEN_SOURCE_EXTENDED=1//g'`"
+
+cat >>confdefs.h <<\_ACEOF
+#define OMITTED__D_XOPEN_SOURCE_EXTENDED_1 1
+_ACEOF
+
+  fi
+
+
+  if echo $CFLAGS | grep " -D_ALL_SOURCE" >/dev/null 2>&1; then
+    CFLAGS="`echo $CFLAGS | sed -e 's/ -D_ALL_SOURCE//g'`"
+
+cat >>confdefs.h <<\_ACEOF
+#define OMITTED__D_ALL_SOURCE 1
+_ACEOF
+
+  fi
+
+
+  if echo $CFLAGS | grep " -std=c99" >/dev/null 2>&1; then
+    CFLAGS="`echo $CFLAGS | sed -e 's/ -std=c99//g'`"
+
+cat >>confdefs.h <<\_ACEOF
+#define OMITTED__STD_C99 1
+_ACEOF
+
+  fi
+
+
+  if echo $CFLAGS | grep " -D_LARGEFILE_SOURCE=1" >/dev/null 2>&1; then
+    CFLAGS="`echo $CFLAGS | sed -e 's/ -D_LARGEFILE_SOURCE=1//g'`"
+
+cat >>confdefs.h <<\_ACEOF
+#define OMITTED__D_LARGEFILE_SOURCE_1 1
+_ACEOF
+
+  fi
+
+
 LDFLAGS="$LATE_LDFLAGS $LDFLAGS"
 
 
 cat >>confdefs.h <<_ACEOF
 #define MAXSYSLOGMSGLEN 5120
 _ACEOF
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

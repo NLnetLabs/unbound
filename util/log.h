@@ -42,11 +42,6 @@
 #ifndef UTIL_LOG_H
 #define UTIL_LOG_H
 
-#include "config.h"
-#ifdef HAVE_STDARG_H
-#include <stdarg.h>
-#endif
-
 /**
  * verbosity value:
  */

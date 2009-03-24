@@ -1,3 +1,6 @@
+24 March 2009: Wouter
+	- more neat configure.ac. Removed duplicate config.h includes.
+
 23 March 2009: Wouter
 	- added launchd plist example file for MacOSX to contrib.
 	- deprecation test for daemon(3).

@@ -315,6 +315,33 @@
    lower performance). */
 #undef NONBLOCKING_IS_BROKEN
 
+/* Put -D_ALL_SOURCE define in config.h */
+#undef OMITTED__D_ALL_SOURCE
+
+/* Put -D_BSD_SOURCE define in config.h */
+#undef OMITTED__D_BSD_SOURCE
+
+/* Put -D_GNU_SOURCE define in config.h */
+#undef OMITTED__D_GNU_SOURCE
+
+/* Put -D_LARGEFILE_SOURCE=1 define in config.h */
+#undef OMITTED__D_LARGEFILE_SOURCE_1
+
+/* Put -D_POSIX_C_SOURCE=200112 define in config.h */
+#undef OMITTED__D_POSIX_C_SOURCE_200112
+
+/* Put -D_XOPEN_SOURCE=600 define in config.h */
+#undef OMITTED__D_XOPEN_SOURCE_600
+
+/* Put -D_XOPEN_SOURCE_EXTENDED=1 define in config.h */
+#undef OMITTED__D_XOPEN_SOURCE_EXTENDED_1
+
+/* Put -D__EXTENSIONS__ define in config.h */
+#undef OMITTED__D__EXTENSIONS__
+
+/* Put -std=c99 define in config.h */
+#undef OMITTED__STD_C99
+
 /* Define to the address where bug reports for this package should be sent. */
 #undef PACKAGE_BUGREPORT
 
@@ -485,6 +512,43 @@
 /* Define as `fork' if `vfork' does not work. */
 #undef vfork
 
+#if defined(OMITTED__D_GNU_SOURCE) && !defined(_GNU_SOURCE)
+#define _GNU_SOURCE 1
+#endif 
+
+#if defined(OMITTED__D_BSD_SOURCE) && !defined(_BSD_SOURCE)
+#define _BSD_SOURCE 1
+#endif 
+
+#if defined(OMITTED__D__EXTENSIONS__) && !defined(__EXTENSIONS__)
+#define __EXTENSIONS__ 1
+#endif 
+
+#if defined(OMITTED__D_POSIX_C_SOURCE_200112) && !defined(_POSIX_C_SOURCE)
+#define _POSIX_C_SOURCE 200112
+#endif 
+
+#if defined(OMITTED__D_XOPEN_SOURCE_600) && !defined(_XOPEN_SOURCE)
+#define _XOPEN_SOURCE 600
+#endif 
+
+#if defined(OMITTED__D_XOPEN_SOURCE_EXTENDED_1) && !defined(_XOPEN_SOURCE_EXTENDED)
+#define _XOPEN_SOURCE_EXTENDED 1
+#endif 
+
+#if defined(OMITTED__D_ALL_SOURCE) && !defined(_ALL_SOURCE)
+#define _ALL_SOURCE 1
+#endif 
+
+#if defined(OMITTED__STD_C99) && !defined(_STDC_C99)
+#define _STDC_C99 1
+#endif 
+#if defined(OMITTED__D_LARGEFILE_SOURCE_1) && !defined(_LARGEFILE_SOURCE)
+#define _LARGEFILE_SOURCE 1
+#endif 
+
+
+
 
 #ifndef UNBOUND_DEBUG
 #  define NDEBUG
@@ -547,12 +611,67 @@
 #endif
 
 
+ 
+#ifdef HAVE_ATTR_FORMAT
+#  define ATTR_FORMAT(archetype, string_index, first_to_check) \
+    __attribute__ ((format (archetype, string_index, first_to_check)))
+#else /* !HAVE_ATTR_FORMAT */
+#  define ATTR_FORMAT(archetype, string_index, first_to_check) /* empty */
+#endif /* !HAVE_ATTR_FORMAT */
+
+
+#if defined(DOXYGEN)
+#  define ATTR_UNUSED(x)  x
+#elif defined(__cplusplus)
+#  define ATTR_UNUSED(x)
+#elif defined(HAVE_ATTR_UNUSED)
+#  define ATTR_UNUSED(x)  x __attribute__((unused))
+#else /* !HAVE_ATTR_UNUSED */
+#  define ATTR_UNUSED(x)  x
+#endif /* !HAVE_ATTR_UNUSED */
+
+
+#ifndef HAVE_FSEEKO
+#define fseeko fseek
+#define ftello ftell
+#endif /* HAVE_FSEEKO */
+
+
+#ifndef RAND_MAX
+#define RAND_MAX	2147483647
+#endif
+
+
+#ifndef MAXHOSTNAMELEN
+#define MAXHOSTNAMELEN 256
+#endif
+
+
+#ifndef HAVE_SNPRINTF
+#define snprintf snprintf_unbound
+#define vsnprintf vsnprintf_unbound
+#include <stdarg.h>
+int snprintf (char *str, size_t count, const char *fmt, ...);
+int vsnprintf (char *str, size_t count, const char *fmt, va_list arg);
+#endif /* HAVE_SNPRINTF */
+
+
+#ifndef HAVE_INET_PTON
+#define inet_pton inet_pton_unbound
+int inet_pton(int af, const char* src, void* dst);
+#endif /* HAVE_INET_PTON */
+
+
+#ifndef HAVE_INET_NTOP
+#define inet_ntop inet_ntop_unbound
+const char *inet_ntop(int af, const void *src, char *dst, size_t size);
+#endif
+
 
 #ifndef HAVE_INET_ATON
 #define inet_aton inet_aton_unbound
 int inet_aton(const char *cp, struct in_addr *addr);
 #endif
-
 
 
 #ifndef HAVE_MEMMOVE
@@ -561,12 +680,10 @@ void *memmove(void *dest, const void *src, size_t n);
 #endif
 
 
-
 #ifndef HAVE_STRLCPY
 #define strlcpy strlcpy_unbound
 size_t strlcpy(char *dst, const char *src, size_t siz);
 #endif
-
 
 
 #ifndef HAVE_GMTIME_R
@@ -575,11 +692,9 @@ struct tm *gmtime_r(const time_t *timep, struct tm *result);
 #endif
 
 
-
 #ifndef HAVE_SLEEP
 #define sleep(x) Sleep((x)*1000) /* on win32 */
 #endif /* HAVE_SLEEP */
-
 
 
 #ifndef HAVE_USLEEP
@@ -587,17 +702,14 @@ struct tm *gmtime_r(const time_t *timep, struct tm *result);
 #endif /* HAVE_USLEEP */
 
 
-
 #ifndef HAVE_RANDOM
 #define random rand /* on win32, for tests only (bad random) */
 #endif /* HAVE_RANDOM */
 
 
-
 #ifndef HAVE_SRANDOM
 #define srandom(x) srand(x) /* on win32, for tests only (bad random) */
 #endif /* HAVE_SRANDOM */
-
 
 
 /* detect if we need to cast to unsigned int for FD_SET to avoid warnings */
@@ -608,19 +720,9 @@ struct tm *gmtime_r(const time_t *timep, struct tm *result);
 #endif
 
 
-
 #ifndef IPV6_MIN_MTU
 #define IPV6_MIN_MTU 1280
 #endif /* IPV6_MIN_MTU */
-
-
-
-#ifdef HAVE_ATTR_FORMAT
-#  define ATTR_FORMAT(archetype, string_index, first_to_check) \
-    __attribute__ ((format (archetype, string_index, first_to_check)))
-#else /* !HAVE_ATTR_FORMAT */
-#  define ATTR_FORMAT(archetype, string_index, first_to_check) /* empty */
-#endif /* !HAVE_ATTR_FORMAT */
 
 
 
@@ -668,59 +770,4 @@ void *unbound_stat_realloc_log(void *ptr, size_t size, const char* file,
 
 /** default port for DNS traffic. */
 #define UNBOUND_DNS_PORT 53
-
-
-
-#if defined(DOXYGEN)
-#  define ATTR_UNUSED(x)  x
-#elif defined(__cplusplus)
-#  define ATTR_UNUSED(x)
-#elif defined(HAVE_ATTR_UNUSED)
-#  define ATTR_UNUSED(x)  x __attribute__((unused))
-#else /* !HAVE_ATTR_UNUSED */
-#  define ATTR_UNUSED(x)  x
-#endif /* !HAVE_ATTR_UNUSED */
-
-
-
-#ifndef HAVE_FSEEKO
-#define fseeko fseek
-#define ftello ftell
-#endif /* HAVE_FSEEKO */
-
-
-
-#ifndef RAND_MAX
-#define RAND_MAX	2147483647
-#endif
-
-
-
-#ifndef MAXHOSTNAMELEN
-#define MAXHOSTNAMELEN 256
-#endif
-
-
-
-#ifndef HAVE_SNPRINTF
-#define snprintf snprintf_unbound
-#define vsnprintf vsnprintf_unbound
-#include <stdarg.h>
-int snprintf (char *str, size_t count, const char *fmt, ...);
-int vsnprintf (char *str, size_t count, const char *fmt, va_list arg);
-#endif /* HAVE_SNPRINTF */
-
-
-
-#ifndef HAVE_INET_PTON
-#define inet_pton inet_pton_unbound
-int inet_pton(int af, const char* src, void* dst);
-#endif /* HAVE_INET_PTON */
-
-
-
-#ifndef HAVE_INET_NTOP
-#define inet_ntop inet_ntop_unbound
-const char *inet_ntop(int af, const void *src, char *dst, size_t size);
-#endif
 

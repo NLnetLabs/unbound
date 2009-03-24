@@ -38,7 +38,7 @@
  *
  * This file has functions to get queries from clients.
  */
-
+#include "config.h"
 #include "services/listen_dnsport.h"
 #include "services/outside_network.h"
 #include "util/netevent.h"

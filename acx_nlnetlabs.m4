@@ -32,28 +32,33 @@
 # ACX_CHECK_NONBLOCKING_BROKEN	- see if nonblocking sockets really work.
 # ACX_MKDIR_ONE_ARG		- determine mkdir(2) number of arguments.
 # ACX_FUNC_IOCTLSOCKET		- find ioctlsocket, portably.
-# AHX_BOTTOM_FORMAT_ATTRIBUTE	- config.h text for format.
-# AHX_BOTTOM_UNUSED_ATTRIBUTE	- config.h text for unused.
-# AHX_BOTTOM_FSEEKO		- define fseeko, ftello fallback.
-# AHX_BOTTOM_RAND_MAX		- define RAND_MAX if needed.
-# AHX_BOTTOM_MAXHOSTNAMELEN	- define MAXHOSTNAMELEN if needed.
-# AHX_BOTTOM_IPV6_MIN_MTU	- define IPV6_MIN_MTU if needed.
-# AHX_BOTTOM_SNPRINTF		- snprintf compat prototype
-# AHX_BOTTOM_INET_PTON		- inet_pton compat prototype
-# AHX_BOTTOM_INET_NTOP		- inet_ntop compat prototype
-# AHX_BOTTOM_INET_ATON		- inet_aton compat prototype
-# AHX_BOTTOM_MEMMOVE		- memmove compat prototype
-# AHX_BOTTOM_STRLCPY		- strlcpy compat prototype
-# AHX_BOTTOM_GMTIME_R		- gmtime_r compat prototype
-# AHX_BOTTOM_W32_SLEEP		- w32 compat for sleep
-# AHX_BOTTOM_W32_USLEEP		- w32 compat for usleep
-# AHX_BOTTOM_W32_RANDOM		- w32 compat for random
-# AHX_BOTTOM_W32_SRANDOM	- w32 compat for srandom
-# AHX_BOTTOM_W32_FD_SET_T	- w32 detection of FD_SET_T.
+# AHX_CONFIG_FORMAT_ATTRIBUTE	- config.h text for format.
+# AHX_CONFIG_UNUSED_ATTRIBUTE	- config.h text for unused.
+# AHX_CONFIG_FSEEKO		- define fseeko, ftello fallback.
+# AHX_CONFIG_RAND_MAX		- define RAND_MAX if needed.
+# AHX_CONFIG_MAXHOSTNAMELEN	- define MAXHOSTNAMELEN if needed.
+# AHX_CONFIG_IPV6_MIN_MTU	- define IPV6_MIN_MTU if needed.
+# AHX_CONFIG_SNPRINTF		- snprintf compat prototype
+# AHX_CONFIG_INET_PTON		- inet_pton compat prototype
+# AHX_CONFIG_INET_NTOP		- inet_ntop compat prototype
+# AHX_CONFIG_INET_ATON		- inet_aton compat prototype
+# AHX_CONFIG_MEMMOVE		- memmove compat prototype
+# AHX_CONFIG_STRLCPY		- strlcpy compat prototype
+# AHX_CONFIG_GMTIME_R		- gmtime_r compat prototype
+# AHX_CONFIG_W32_SLEEP		- w32 compat for sleep
+# AHX_CONFIG_W32_USLEEP		- w32 compat for usleep
+# AHX_CONFIG_W32_RANDOM		- w32 compat for random
+# AHX_CONFIG_W32_SRANDOM	- w32 compat for srandom
+# AHX_CONFIG_W32_FD_SET_T	- w32 detection of FD_SET_T.
+# ACX_CFLAGS_STRIP		- strip one flag from CFLAGS
+# ACX_STRIP_EXT_FLAGS		- strip extension flags from CFLAGS
+# AHX_CONFIG_FLAG_OMITTED	- define omitted flag
+# AHX_CONFIG_FLAG_EXT		- define omitted extension flag
+# AHX_CONFIG_EXT_FLAGS		- define the stripped extension flags
 #
 
 dnl Escape backslashes as \\, for C:\ paths, for the C preprocessor defines.
-dnl for example, NLX_ESCAPE_BACKSLASH($from_var, to_var)
+dnl for example, ACX_ESCAPE_BACKSLASH($from_var, to_var)
 dnl $1: the text to change. 
 dnl $2: the result.
 AC_DEFUN(ACX_ESCAPE_BACKSLASH, $2="`echo $1 | sed -e 's/\\\\/\\\\\\\\/g'`" )
@@ -353,11 +358,11 @@ int test() {
 }
 ], [CFLAGS="$CFLAGS -D__EXTENSIONS__"])
 
-])
+])dnl End of ACX_DETERMINE_EXT_FLAGS_UNBOUND
 
 dnl Check the printf-format attribute (if any)
 dnl result in HAVE_ATTR_FORMAT.  
-dnl Make sure you also include the AHX_BOTTOM_FORMAT_ATTRIBUTE.
+dnl Make sure you also include the AHX_CONFIG_FORMAT_ATTRIBUTE.
 AC_DEFUN([ACX_CHECK_FORMAT_ATTRIBUTE],
 [AC_REQUIRE([AC_PROG_CC])
 AC_MSG_CHECKING(whether the C compiler (${CC-cc}) accepts the "format" attribute)
@@ -382,19 +387,19 @@ fi
 
 dnl Setup ATTR_FORMAT config.h parts.
 dnl make sure you call ACX_CHECK_FORMAT_ATTRIBUTE also.
-AC_DEFUN(AHX_BOTTOM_FORMAT_ATTRIBUTE,
-[ AH_BOTTOM([
+AC_DEFUN(AHX_CONFIG_FORMAT_ATTRIBUTE,
+[ 
 #ifdef HAVE_ATTR_FORMAT
 #  define ATTR_FORMAT(archetype, string_index, first_to_check) \
     __attribute__ ((format (archetype, string_index, first_to_check)))
 #else /* !HAVE_ATTR_FORMAT */
 #  define ATTR_FORMAT(archetype, string_index, first_to_check) /* empty */
 #endif /* !HAVE_ATTR_FORMAT */
-]) ])
+])
 
 dnl Check how to mark function arguments as unused.
 dnl result in HAVE_ATTR_UNUSED.  
-dnl Make sure you include AHX_BOTTOM_UNUSED_ATTRIBUTE also.
+dnl Make sure you include AHX_CONFIG_UNUSED_ATTRIBUTE also.
 AC_DEFUN([ACX_CHECK_UNUSED_ATTRIBUTE],
 [AC_REQUIRE([AC_PROG_CC])
 AC_MSG_CHECKING(whether the C compiler (${CC-cc}) accepts the "unused" attribute)
@@ -412,8 +417,8 @@ void f (char *u __attribute__((unused)));
 
 dnl Setup ATTR_UNUSED config.h parts.
 dnl make sure you call ACX_CHECK_UNUSED_ATTRIBUTE also.
-AC_DEFUN(AHX_BOTTOM_UNUSED_ATTRIBUTE,
-[AH_BOTTOM([
+AC_DEFUN(AHX_CONFIG_UNUSED_ATTRIBUTE,
+[
 #if defined(DOXYGEN)
 #  define ATTR_UNUSED(x)  x
 #elif defined(__cplusplus)
@@ -423,7 +428,7 @@ AC_DEFUN(AHX_BOTTOM_UNUSED_ATTRIBUTE,
 #else /* !HAVE_ATTR_UNUSED */
 #  define ATTR_UNUSED(x)  x
 #endif /* !HAVE_ATTR_UNUSED */
-]) ])
+])
 
 AC_MSG_RESULT($ac_cv_c_unused_attribute)
 if test $ac_cv_c_unused_attribute = yes; then
@@ -900,42 +905,42 @@ AC_DEFINE(HAVE_IOCTLSOCKET, 1, [if the function 'ioctlsocket' is available])
 ])dnl end of ACX_FUNC_IOCTLSOCKET
 
 dnl Define fallback for fseeko and ftello if needed.
-AC_DEFUN(AHX_BOTTOM_FSEEKO,
-[ AH_BOTTOM([
+AC_DEFUN(AHX_CONFIG_FSEEKO,
+[
 #ifndef HAVE_FSEEKO
 #define fseeko fseek
 #define ftello ftell
 #endif /* HAVE_FSEEKO */
-]) ])
+])
 
 dnl Define RAND_MAX if not defined
-AC_DEFUN(AHX_BOTTOM_RAND_MAX,
-[ AH_BOTTOM([
+AC_DEFUN(AHX_CONFIG_RAND_MAX,
+[
 #ifndef RAND_MAX
 #define RAND_MAX	2147483647
 #endif
-]) ])
+])
 
 dnl Define MAXHOSTNAMELEN if not defined
-AC_DEFUN(AHX_BOTTOM_MAXHOSTNAMELEN,
-[ AH_BOTTOM([
+AC_DEFUN(AHX_CONFIG_MAXHOSTNAMELEN,
+[
 #ifndef MAXHOSTNAMELEN
 #define MAXHOSTNAMELEN 256
 #endif
-]) ])
+])
 
 dnl Define IPV6_MIN_MTU if not defined
-AC_DEFUN(AHX_BOTTOM_IPV6_MIN_MTU,
-[ AH_BOTTOM([
+AC_DEFUN(AHX_CONFIG_IPV6_MIN_MTU,
+[
 #ifndef IPV6_MIN_MTU
 #define IPV6_MIN_MTU 1280
 #endif /* IPV6_MIN_MTU */
-]) ])
+])
 
 dnl provide snprintf, vsnprintf compat prototype
 dnl $1: unique name for compat code
-AC_DEFUN(AHX_BOTTOM_SNPRINTF,
-[ AH_BOTTOM([
+AC_DEFUN(AHX_CONFIG_SNPRINTF,
+[
 #ifndef HAVE_SNPRINTF
 #define snprintf snprintf_$1
 #define vsnprintf vsnprintf_$1
@@ -943,109 +948,164 @@ AC_DEFUN(AHX_BOTTOM_SNPRINTF,
 int snprintf (char *str, size_t count, const char *fmt, ...);
 int vsnprintf (char *str, size_t count, const char *fmt, va_list arg);
 #endif /* HAVE_SNPRINTF */
-]) ])
+])
 
 dnl provide inet_pton compat prototype.
 dnl $1: unique name for compat code
-AC_DEFUN(AHX_BOTTOM_INET_PTON,
-[ AH_BOTTOM([
+AC_DEFUN(AHX_CONFIG_INET_PTON,
+[
 #ifndef HAVE_INET_PTON
 #define inet_pton inet_pton_$1
 int inet_pton(int af, const char* src, void* dst);
 #endif /* HAVE_INET_PTON */
-]) ])
+])
 
 dnl provide inet_ntop compat prototype.
 dnl $1: unique name for compat code
-AC_DEFUN(AHX_BOTTOM_INET_NTOP,
-[ AH_BOTTOM([
+AC_DEFUN(AHX_CONFIG_INET_NTOP,
+[
 #ifndef HAVE_INET_NTOP
 #define inet_ntop inet_ntop_$1
 const char *inet_ntop(int af, const void *src, char *dst, size_t size);
 #endif
-]) ])
+])
 
 dnl provide inet_aton compat prototype.
 dnl $1: unique name for compat code
-AC_DEFUN(AHX_BOTTOM_INET_ATON,
-[ AH_BOTTOM([
+AC_DEFUN(AHX_CONFIG_INET_ATON,
+[
 #ifndef HAVE_INET_ATON
 #define inet_aton inet_aton_$1
 int inet_aton(const char *cp, struct in_addr *addr);
 #endif
-]) ])
+])
 
 dnl provide memmove compat prototype.
 dnl $1: unique name for compat code
-AC_DEFUN(AHX_BOTTOM_MEMMOVE,
-[ AH_BOTTOM([
+AC_DEFUN(AHX_CONFIG_MEMMOVE,
+[
 #ifndef HAVE_MEMMOVE
 #define memmove memmove_$1
 void *memmove(void *dest, const void *src, size_t n);
 #endif
-]) ])
+])
 
 dnl provide strlcpy compat prototype.
 dnl $1: unique name for compat code
-AC_DEFUN(AHX_BOTTOM_STRLCPY,
-[ AH_BOTTOM([
+AC_DEFUN(AHX_CONFIG_STRLCPY,
+[
 #ifndef HAVE_STRLCPY
 #define strlcpy strlcpy_$1
 size_t strlcpy(char *dst, const char *src, size_t siz);
 #endif
-]) ])
+])
 
 dnl provide gmtime_r compat prototype.
 dnl $1: unique name for compat code
-AC_DEFUN(AHX_BOTTOM_GMTIME_R,
-[ AH_BOTTOM([
+AC_DEFUN(AHX_CONFIG_GMTIME_R,
+[
 #ifndef HAVE_GMTIME_R
 #define gmtime_r gmtime_r_$1
 struct tm *gmtime_r(const time_t *timep, struct tm *result);
 #endif
-]) ])
+])
 
 dnl provide w32 compat definition for sleep
-AC_DEFUN(AHX_BOTTOM_W32_SLEEP,
-[ AH_BOTTOM([
+AC_DEFUN(AHX_CONFIG_W32_SLEEP,
+[
 #ifndef HAVE_SLEEP
 #define sleep(x) Sleep((x)*1000) /* on win32 */
 #endif /* HAVE_SLEEP */
-]) ])
+])
 
 dnl provide w32 compat definition for usleep
-AC_DEFUN(AHX_BOTTOM_W32_USLEEP,
-[ AH_BOTTOM([
+AC_DEFUN(AHX_CONFIG_W32_USLEEP,
+[
 #ifndef HAVE_USLEEP
 #define usleep(x) Sleep((x)/1000 + 1) /* on win32 */
 #endif /* HAVE_USLEEP */
-]) ])
+])
 
 dnl provide w32 compat definition for random
-AC_DEFUN(AHX_BOTTOM_W32_RANDOM,
-[ AH_BOTTOM([
+AC_DEFUN(AHX_CONFIG_W32_RANDOM,
+[
 #ifndef HAVE_RANDOM
 #define random rand /* on win32, for tests only (bad random) */
 #endif /* HAVE_RANDOM */
-]) ])
+])
 
 dnl provide w32 compat definition for srandom
-AC_DEFUN(AHX_BOTTOM_W32_SRANDOM,
-[ AH_BOTTOM([
+AC_DEFUN(AHX_CONFIG_W32_SRANDOM,
+[
 #ifndef HAVE_SRANDOM
 #define srandom(x) srand(x) /* on win32, for tests only (bad random) */
 #endif /* HAVE_SRANDOM */
-]) ])
+])
 
 dnl provide w32 compat definition for FD_SET_T
-AC_DEFUN(AHX_BOTTOM_W32_FD_SET_T,
-[ AH_BOTTOM([
+AC_DEFUN(AHX_CONFIG_W32_FD_SET_T,
+[
 /* detect if we need to cast to unsigned int for FD_SET to avoid warnings */
 #ifdef HAVE_WINSOCK2_H
 #define FD_SET_T (u_int)
 #else
 #define FD_SET_T 
 #endif
-]) ])
+])
+
+dnl Remove an extension flag from CFLAGS, define replacement to be made.
+dnl Used by ACX_STRIP_EXT_FLAGS.
+dnl $1: the name of the flag, for example -D_GNU_SOURCE.
+AC_DEFUN(ACX_CFLAGS_STRIP,
+[
+  if echo $CFLAGS | grep " $1" >/dev/null 2>&1; then
+    CFLAGS="`echo $CFLAGS | sed -e 's/ $1//g'`"
+    AC_DEFINE(AS_TR_CPP(OMITTED_$1), 1, Put $1 define in config.h)
+  fi
+])
+
+dnl Remove EXT flags from the CFLAGS and set them to be defined in config.h
+dnl use with ACX_DETERMINE_EXT_FLAGS.
+AC_DEFUN(ACX_STRIP_EXT_FLAGS,
+[
+  AC_MSG_NOTICE([Stripping extension flags...])
+  ACX_CFLAGS_STRIP(-D_GNU_SOURCE)
+  ACX_CFLAGS_STRIP(-D_BSD_SOURCE)
+  ACX_CFLAGS_STRIP(-D__EXTENSIONS__)
+  ACX_CFLAGS_STRIP(-D_POSIX_C_SOURCE=200112)
+  ACX_CFLAGS_STRIP(-D_XOPEN_SOURCE=600)
+  ACX_CFLAGS_STRIP(-D_XOPEN_SOURCE_EXTENDED=1)
+  ACX_CFLAGS_STRIP(-D_ALL_SOURCE)
+  ACX_CFLAGS_STRIP(-std=c99)
+  ACX_CFLAGS_STRIP(-D_LARGEFILE_SOURCE=1)
+]) dnl End of ACX_STRIP_EXT_FLAGS
+
+dnl define one omitted flag for config.h
+dnl $1: flag name. -D_GNU_SOURCE
+dnl $2: replacement define. _GNU_SOURCE
+dnl $3: define value, 1
+AC_DEFUN(AHX_CONFIG_FLAG_OMITTED,
+[#if defined($1) && !defined($2)
+#define $2 $3
+[#]endif ])
+
+dnl Wrapper for AHX_CONFIG_FLAG_OMITTED for -D style flags
+dnl $1: the -DNAME or -DNAME=value string.
+AC_DEFUN(AHX_CONFIG_FLAG_EXT,
+[AHX_CONFIG_FLAG_OMITTED(AS_TR_CPP(OMITTED_$1),m4_bpatsubst(m4_bpatsubst($1,-D,),=.*$,),m4_if(m4_bregexp($1,=),-1,1,m4_bpatsubst($1,^.*=,)))
+])
+
+dnl config.h part to define omitted cflags, use with ACX_STRIP_EXT_FLAGS.
+AC_DEFUN(AHX_CONFIG_EXT_FLAGS,
+[AHX_CONFIG_FLAG_EXT(-D_GNU_SOURCE)
+AHX_CONFIG_FLAG_EXT(-D_BSD_SOURCE)
+AHX_CONFIG_FLAG_EXT(-D__EXTENSIONS__)
+AHX_CONFIG_FLAG_EXT(-D_POSIX_C_SOURCE=200112)
+AHX_CONFIG_FLAG_EXT(-D_XOPEN_SOURCE=600)
+AHX_CONFIG_FLAG_EXT(-D_XOPEN_SOURCE_EXTENDED=1)
+AHX_CONFIG_FLAG_EXT(-D_ALL_SOURCE)
+AHX_CONFIG_FLAG_OMITTED(AS_TR_CPP(OMITTED_-std=c99),_STDC_C99,1)
+AHX_CONFIG_FLAG_EXT(-D_LARGEFILE_SOURCE=1)
+])
 
 dnl End of file

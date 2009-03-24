@@ -39,7 +39,7 @@
  * This file has functions to send queries to authoritative servers and
  * wait for the pending answer events.
  */
-
+#include "config.h"
 #include "services/outside_network.h"
 #include "services/listen_dnsport.h"
 #include "services/cache/infra.h"

@@ -60,7 +60,6 @@
 #ifndef NET_EVENT_H
 #define NET_EVENT_H
 
-#include "config.h"
 struct comm_point;
 struct comm_reply;
 struct event_base;

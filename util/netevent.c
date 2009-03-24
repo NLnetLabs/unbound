@@ -38,7 +38,7 @@
  *
  * This file contains event notification functions.
  */
-
+#include "config.h"
 #include "util/netevent.h"
 #include "util/log.h"
 #include "util/net_help.h"

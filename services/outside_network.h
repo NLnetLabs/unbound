@@ -43,7 +43,6 @@
 #ifndef OUTSIDE_NETWORK_H
 #define OUTSIDE_NETWORK_H
 
-#include "config.h"
 #include "util/rbtree.h"
 #include "util/netevent.h"
 struct pending;
