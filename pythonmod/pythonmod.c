@@ -40,12 +40,14 @@
 #include "pythonmod_utils.h"
 #include <Python.h>
 
-// Generated
+/* Generated */
 #include "pythonmod/interface.h"
 
 int pythonmod_init(struct module_env* env, int id)
 {
-   // Initialize module
+   /* Initialize module */
+   FILE* script_py = NULL;
+   PyObject* py_cfg, *res;
    struct pythonmod_env* pe = (struct pythonmod_env*)calloc(1, sizeof(struct pythonmod_env));
    if (!pe) 
    {
@@ -60,14 +62,14 @@ int pythonmod_init(struct module_env* env, int id)
    pe->data = NULL;
    pe->qstate = NULL;
 
-   // Initialize module
+   /* Initialize module */
    if ((pe->fname = env->cfg->python_script) == NULL) 
    {
       log_err("pythonmod: no script given.");
       return 0;
    }
 
-   // Initialize Python libraries
+   /* Initialize Python libraries */
    if (!Py_IsInitialized()) 
    {
       Py_SetProgramName("unbound");
@@ -78,7 +80,7 @@ int pythonmod_init(struct module_env* env, int id)
       SWIG_init();
    }
 
-   // Initialize Python
+   /* Initialize Python */
    PyRun_SimpleString("import sys \n");
    PyRun_SimpleString("sys.path.append('.') \n");
    PyRun_SimpleString("sys.path.append('"RUN_DIR"') \n");
@@ -88,22 +90,21 @@ int pythonmod_init(struct module_env* env, int id)
       return 0;
    }
 
-   // Check Python file load
-   FILE* script_py = NULL;
+   /* Check Python file load */
    if ((script_py = fopen(pe->fname, "r")) == NULL) 
    {
       log_err("pythonmod: can't open file %s for reading", pe->fname);
       return 0;
    }
 
-   // Load file
+   /* Load file */
    pe->module = PyImport_AddModule("__main__");
    pe->dict = PyModule_GetDict(pe->module);
    pe->data = Py_None;
    Py_INCREF(pe->data);
    PyModule_AddObject(pe->module, "mod_env", pe->data);
 
-   //TODO: deallocation of pe->... if an error occurs
+   /* TODO: deallocation of pe->... if an error occurs */
   
    if (PyRun_SimpleFile(script_py, pe->fname) < 0) 
    {
@@ -135,8 +136,8 @@ int pythonmod_init(struct module_env* env, int id)
    }
 
    PyEval_AcquireLock();
-   PyObject* py_cfg = SWIG_NewPointerObj((void*) env->cfg, SWIGTYPE_p_config_file, 0);
-   PyObject* res = PyObject_CallFunction(pe->func_init, "iO", id, py_cfg);
+   py_cfg = SWIG_NewPointerObj((void*) env->cfg, SWIGTYPE_p_config_file, 0);
+   res = PyObject_CallFunction(pe->func_init, "iO", id, py_cfg);
    if (PyErr_Occurred()) 
    {
       log_err("pythonmod: Exception occurred in function init");
@@ -156,25 +157,27 @@ void pythonmod_deinit(struct module_env* env, int id)
    if(pe == NULL)
       return;
 
-   // Free Python resources
+   /* Free Python resources */
    if(pe->module != NULL)
    {
-      // Deinit module
+      PyObject* res;
+
+      /* Deinit module */
       PyEval_AcquireLock();
-      PyObject* res = PyObject_CallFunction(pe->func_deinit, "i", id);
+      res = PyObject_CallFunction(pe->func_deinit, "i", id);
       if (PyErr_Occurred()) {
          log_err("pythonmod: Exception occurred in function deinit");
          PyErr_Print();
       }
-      // Free result if any
+      /* Free result if any */
       Py_XDECREF(res);
-      // Free shared data if any
+      /* Free shared data if any */
       Py_XDECREF(pe->data);
 
       Py_Finalize();
    }
 
-   // Module is deallocated in Python
+   /* Module is deallocated in Python */
    env->modinfo[id] = NULL;
 }
 
@@ -182,15 +185,17 @@ void pythonmod_inform_super(struct module_qstate* qstate, int id, struct module_
 {
    struct pythonmod_env* pe = (struct pythonmod_env*)qstate->env->modinfo[id];
    struct pythonmod_qstate* pq = (struct pythonmod_qstate*)qstate->minfo[id];
+   PyObject* py_qstate, *py_sqstate, *res;
 
    log_query_info(VERB_ALGO, "pythonmod: inform_super, sub is", &qstate->qinfo);
    log_query_info(VERB_ALGO, "super is", &super->qinfo);
 
-   PyObject* py_qstate = SWIG_NewPointerObj((void*) qstate, SWIGTYPE_p_module_qstate, 0);
-   PyObject* py_sqstate = SWIG_NewPointerObj((void*) super, SWIGTYPE_p_module_qstate, 0);
+   py_qstate = SWIG_NewPointerObj((void*) qstate, SWIGTYPE_p_module_qstate, 0);
+   py_sqstate = SWIG_NewPointerObj((void*) super, SWIGTYPE_p_module_qstate, 0);
 
    PyEval_AcquireLock();
-   PyObject* res = PyObject_CallFunction(pe->func_inform, "iOOO", id, py_qstate, py_sqstate, pq->data);
+   res = PyObject_CallFunction(pe->func_inform, "iOOO", id, py_qstate, 
+	py_sqstate, pq->data);
 
    if (PyErr_Occurred()) 
    {
@@ -211,27 +216,30 @@ void pythonmod_inform_super(struct module_qstate* qstate, int id, struct module_
    PyEval_ReleaseLock();
 }
 
-void pythonmod_operate(struct module_qstate* qstate, enum module_ev event, int id, struct outbound_entry* outbound)
+void pythonmod_operate(struct module_qstate* qstate, enum module_ev event, 
+	int id, struct outbound_entry* ATTR_UNUSED(outbound))
 {
    struct pythonmod_env* pe = (struct pythonmod_env*)qstate->env->modinfo[id];
    struct pythonmod_qstate* pq = (struct pythonmod_qstate*)qstate->minfo[id];
+   PyObject* py_qstate, *res;
 
    if ( pq == NULL)
    { 
-      // create qstate
+      /* create qstate */
       pq = qstate->minfo[id] = malloc(sizeof(struct pythonmod_qstate));
       
-      //Initialize per query data
+      /* Initialize per query data */
       pq->data = Py_None;
       Py_INCREF(pq->data);
    }
 
-   // Lock Python
+   /* Lock Python */
    PyEval_AcquireLock();
 
-   // Call operate
-   PyObject* py_qstate = SWIG_NewPointerObj((void*) qstate, SWIGTYPE_p_module_qstate, 0);
-   PyObject* res = PyObject_CallFunction(pe->func_operate, "iiOO", id, (int) event, py_qstate, pq->data);
+   /* Call operate */
+   py_qstate = SWIG_NewPointerObj((void*) qstate, SWIGTYPE_p_module_qstate, 0);
+   res = PyObject_CallFunction(pe->func_operate, "iiOO", id, (int) event, 
+	py_qstate, pq->data);
    if (PyErr_Occurred()) 
    {
       log_err("pythonmod: Exception occurred in function operate, event: %s", strmodulevent(event));
@@ -246,22 +254,22 @@ void pythonmod_operate(struct module_qstate* qstate, enum module_ev event, int i
    Py_XDECREF(res);
    Py_XDECREF(py_qstate);
 
-   // Unlock Python
+   /* Unlock Python */
    PyEval_ReleaseLock();
-
 }
 
 void pythonmod_clear(struct module_qstate* qstate, int id)
 {
+   struct pythonmod_qstate* pq;
    if (qstate == NULL)
       return;
 
-   struct pythonmod_qstate* pq = qstate->minfo[id];
+   pq = (struct pythonmod_qstate*)qstate->minfo[id];
    log_info("pythonmod: clear, id: %d, pq:%lX", id, (unsigned long int)pq);
    if(pq != NULL)
    {
       Py_DECREF(pq->data);
-      // Free qstate
+      /* Free qstate */
       free(pq);
    }
 
@@ -278,8 +286,8 @@ size_t pythonmod_get_mem(struct module_env* env, int id)
 }
 
 /**
-* The module function block 
-*/
+ * The module function block 
+ */
 static struct module_func_block pythonmod_block = {
    "python",
    &pythonmod_init, &pythonmod_deinit, &pythonmod_operate, &pythonmod_inform_super, 

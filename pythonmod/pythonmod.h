@@ -40,6 +40,9 @@
 #include <Python.h>
 
 struct PyObject;
+#if S_SPLINT_S
+typedef struct PyObject PyObject;
+#endif
 
 /**
  * Global state for the module. 

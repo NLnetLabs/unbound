@@ -39,7 +39,9 @@ configfile=@ub_conf_file@
 UNBOUND_RUN_DIR=@UNBOUND_RUN_DIR@
 CHECKLOCK_SRC=@CHECKLOCK_SRC@
 UB_ON_WINDOWS=@UB_ON_WINDOWS@
+WITH_PYTHONMODULE=@WITH_PYTHONMODULE@
 
+SWIG=@SWIG@
 YACC=@YACC@
 LEX=@LEX@
 CC=@CC@
@@ -68,11 +70,14 @@ LINTFLAGS=+quiet -weak -warnposix -unrecog -Din_addr_t=uint32_t -Du_int=unsigned
 LINTFLAGS+="-DBN_ULONG=unsigned long" -Dkrb5_int32=int "-Dkrb5_ui_4=unsigned int" -DPQ_64BIT=uint64_t -DRC4_INT=unsigned
 
 INSTALL=$(srcdir)/install-sh
+ifeq "$(WITH_PYTHONMODULE)" "yes"
+PYTHONMOD_SRC=$(srcdir)/pythonmod/*.c
+endif
 
 COMMON_SRC=$(patsubst $(srcdir)/%,%, $(wildcard $(srcdir)/services/*.c \
 	$(srcdir)/services/cache/*.c $(srcdir)/util/*.c \
 	$(srcdir)/util/data/*.c $(srcdir)/util/storage/*.c \
-	$(srcdir)/iterator/*.c $(srcdir)/validator/*.c)) \
+	$(srcdir)/iterator/*.c $(srcdir)/validator/*.c $(PYTHONMOD_SRC))) \
 	util/configparser.c util/configlexer.c $(CHECKLOCK_SRC)
 COMMON_OBJ=$(addprefix $(BUILD),$(COMMON_SRC:.c=.lo))
 COMPAT_OBJ=$(addprefix $(BUILD)compat/,$(LIBOBJS:.o=.lo))
@@ -271,6 +276,13 @@ unbound-control-setup:	$(srcdir)/smallapp/unbound-control-setup.sh
 #			$(ldnsdir)/examples/ldns-testpkts.h
 #	cp $(ldnsdir)/examples/ldns-testpkts.c testcode/ldns-testpkts.c
 #	cp $(ldnsdir)/examples/ldns-testpkts.h testcode/ldns-testpkts.h
+
+ifeq "$(WITH_PYTHONMODULE)" "yes"
+pythonmod/pythonmod.c:	pythonmod/interface.h
+%.h:	$(srcdir)/%.i $(srcdir)/config.h
+	$(INFO) Swig $<
+	$Q$(SWIG) $(CPPFLAGS) -o $@ -python $<
+endif
 
 util/config_file.c:	util/configparser.h
 util/configlexer.c:  $(srcdir)/util/configlexer.lex util/configparser.h

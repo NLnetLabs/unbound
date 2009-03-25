@@ -22199,11 +22199,13 @@ echo "$as_me: WARNING: cannot determine SWIG version" >&2;}
 
       { echo "$as_me:$LINENO: checking SWIG" >&5
 echo $ECHO_N "checking SWIG... $ECHO_C" >&6; }
-      if test -z SWIG; then
+      if test -z "$SWIG"; then
          { echo "$as_me:$LINENO: result: failed" >&5
 echo "${ECHO_T}failed" >&6; }
          swig=""
 
+         ub_with_pyunbound=no
+         ub_with_pythonmod=no
       else
 
 cat >>confdefs.h <<\_ACEOF
@@ -22212,17 +22214,12 @@ _ACEOF
 
          swig="$SWIG"
 
-         { echo "$as_me:$LINENO: result: done" >&5
-echo "${ECHO_T}done" >&6; }
-      fi
+         { echo "$as_me:$LINENO: result: present" >&5
+echo "${ECHO_T}present" >&6; }
 
-      # If have Python & SWIG
-      if test ! -z "SWIG"; then
-
+         # If have Python & SWIG
          # Declare PythonMod
          if test x_$ub_with_pythonmod != x_no; then
-            { echo "$as_me:$LINENO: result: Will build Python module." >&5
-echo "${ECHO_T}Will build Python module." >&6; }
 
 cat >>confdefs.h <<\_ACEOF
 #define WITH_PYTHONMODULE 1
@@ -22234,8 +22231,6 @@ _ACEOF
 
          # Declare PyUnbound
          if test x_$ub_with_pyunbound != x_no; then
-            { echo "$as_me:$LINENO: result: Will build PyUnbound." >&5
-echo "${ECHO_T}Will build PyUnbound." >&6; }
 
 cat >>confdefs.h <<\_ACEOF
 #define WITH_PYUNBOUND 1
@@ -22244,15 +22239,10 @@ _ACEOF
             WITH_PYUNBOUND=yes
 
          fi
-      else
-         { echo "$as_me:$LINENO: result: SWIG libraries not found" >&5
-echo "${ECHO_T}SWIG libraries not found" >&6; }
-         ub_with_pyunbound=no
-         ub_with_pythonmod=no
       fi
    else
-      { echo "$as_me:$LINENO: result: Python libraries not found" >&5
-echo "${ECHO_T}Python libraries not found" >&6; }
+      { echo "$as_me:$LINENO: result: Python libraries not found, won't build PythonMod or PyUnbound" >&5
+echo "${ECHO_T}Python libraries not found, won't build PythonMod or PyUnbound" >&6; }
       ub_with_pyunbound=no
       ub_with_pythonmod=no
    fi

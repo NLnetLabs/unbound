@@ -1,6 +1,7 @@
 25 March 2009: Wouter
 	- initial import of the python contribution from Zdenek Vasicek and
 	  Marek Vavrusa.
+	- pythonmod in Makefile; changes to remove warnings/errors for 1.3.0.
 
 24 March 2009: Wouter
 	- more neat configure.ac. Removed duplicate config.h includes.

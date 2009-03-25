@@ -33,11 +33,14 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
+#include "config.h"
 #include "util/module.h"
 #include "util/net_help.h"
 #include "services/cache/dns.h"
 #include "util/data/msgparse.h"
 #include "util/data/msgreply.h"
+#include "util/storage/slabhash.h"
+#include "util/regional.h"
 #include <Python.h>
 
 /** Store the reply_info and query_info pair in message cache (qstate->msg_cache) */

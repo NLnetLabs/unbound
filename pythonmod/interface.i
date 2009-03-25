@@ -16,6 +16,7 @@
    #include "util/config_file.h"
    #include "util/data/msgreply.h"
    #include "util/data/packed_rrset.h"
+   #include "util/data/dname.h"
    #include "util/storage/lruhash.h"
    #include "services/cache/dns.h"
 %}
@@ -137,11 +138,11 @@ struct query_info {
    };
 
    PyObject* _get_qname(struct query_info* q) {
-      return PyString_FromStringAndSize(q->qname, q->qname_len);
+      return PyString_FromStringAndSize((char*)q->qname, q->qname_len);
    } 
 
    PyObject* _get_qname_components(struct query_info* q) {
-      return GetNameAsLabelList(q->qname, q->qname_len);
+      return GetNameAsLabelList((const char*)q->qname, q->qname_len);
    }
 %}
 
@@ -149,7 +150,7 @@ struct query_info {
    PyObject* dnameAsStr(const char* dname) {
        char buf[LDNS_MAX_DOMAINLEN+1];
        buf[0] = '\0';
-       dname_str(dname, buf);
+       dname_str((uint8_t*)dname, buf);
        return PyString_FromString(buf);
    }
 %}
@@ -199,10 +200,10 @@ uint16_t ntohs(uint16_t netshort);
 
 %inline %{
    PyObject* _get_dname(struct packed_rrset_key* k) {
-      return PyString_FromStringAndSize(k->dname, k->dname_len);
+      return PyString_FromStringAndSize((char*)k->dname, k->dname_len);
    } 
    PyObject* _get_dname_components(struct packed_rrset_key* k) {
-      return GetNameAsLabelList(k->dname, k->dname_len);
+      return GetNameAsLabelList((char*)k->dname, k->dname_len);
    }
 %}
 
@@ -286,23 +287,28 @@ struct packed_rrset_data {
 
 %inline %{
    PyObject* _get_data_rr_len(struct packed_rrset_data* d, int idx) {
-     if ((d != NULL) && (idx >= 0) && (idx < (d->count+d->rrsig_count))) 
+     if ((d != NULL) && (idx >= 0) && 
+             ((size_t)idx < (d->count+d->rrsig_count))) 
         return PyInt_FromLong(d->rr_len[idx]);
      return Py_None;
    }
    void _set_data_rr_ttl(struct packed_rrset_data* d, int idx, uint32_t ttl)
    {
-     if ((d != NULL) && (idx >= 0) && (idx < (d->count+d->rrsig_count))) 
+     if ((d != NULL) && (idx >= 0) && 
+             ((size_t)idx < (d->count+d->rrsig_count))) 
         d->rr_ttl[idx] = ttl;
    }
    PyObject* _get_data_rr_ttl(struct packed_rrset_data* d, int idx) {
-     if ((d != NULL) && (idx >= 0) && (idx < (d->count+d->rrsig_count))) 
+     if ((d != NULL) && (idx >= 0) && 
+             ((size_t)idx < (d->count+d->rrsig_count))) 
         return PyInt_FromLong(d->rr_ttl[idx]);
      return Py_None;
    }
    PyObject* _get_data_rr_data(struct packed_rrset_data* d, int idx) {
-     if ((d != NULL) && (idx >= 0) && (idx < (d->count+d->rrsig_count))) 
-        return PyString_FromStringAndSize(d->rr_data[idx],d->rr_len[idx]);
+     if ((d != NULL) && (idx >= 0) && 
+             ((size_t)idx < (d->count+d->rrsig_count))) 
+        return PyString_FromStringAndSize((char*)d->rr_data[idx],
+                d->rr_len[idx]);
      return Py_None;
    }
 %}
@@ -346,8 +352,8 @@ struct reply_info {
 };
 
 struct rrset_ref {
-	struct ub_packed_rrset_key* key;
-	rrset_id_t id;
+   struct ub_packed_rrset_key* key;
+   rrset_id_t id;
 };
 
 struct dns_msg {
@@ -369,13 +375,13 @@ struct dns_msg {
 
 %inline %{
    struct ub_packed_rrset_key* _rrset_rrsets_get(struct reply_info* r, int idx) {
-     if ((r != NULL) && (idx >= 0) && (idx < r->rrset_count))
+     if ((r != NULL) && (idx >= 0) && ((size_t)idx < r->rrset_count))
         return r->rrsets[idx];
      return NULL;
    }
 
    struct rrset_ref* _rrset_ref_get(struct reply_info* r, int idx) {
-     if ((r != NULL) && (idx >= 0) && (idx < r->rrset_count)) {
+     if ((r != NULL) && (idx >= 0) && ((size_t)idx < r->rrset_count)) {
 //printf("_rrset_ref_get: %lX key:%lX\n", r->ref + idx, r->ref[idx].key);
              return &(r->ref[idx]);
 //        return &(r->ref[idx]);
@@ -705,9 +711,7 @@ int set_return_msg(struct module_qstate* qstate,
      ldns_pkt* pkt = 0;
      ldns_status status;
      ldns_rr_list* rr_list1 = 0,*rr_list2 = 0,*rr_list3 = 0,*rr_list4 = 0;
-  	 ldns_buffer *qb = 0;
-     struct dns_msg* m = 0;
-  	 struct msg_parse* p = 0;
+     ldns_buffer *qb = 0;
      int res = 1;
      
      if ((!checkList(question)) || (!checkList(answer)) || (!checkList(authority)) || (!checkList(additional)))

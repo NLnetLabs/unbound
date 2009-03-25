@@ -250,21 +250,19 @@ if test x_$ub_test_python != x_no; then
       ub_have_swig=no
       AC_PROG_SWIG
       AC_MSG_CHECKING(SWIG)
-      if test -z SWIG; then
+      if test -z "$SWIG"; then
          AC_MSG_RESULT(failed, won't build Python module and PyUnbound)
          AC_SUBST(swig, "")
+         ub_with_pyunbound=no
+         ub_with_pythonmod=no
       else
          AC_DEFINE(HAVE_SWIG, 1, [Define if you have Swig libraries and header files.])
          AC_SUBST(swig, "$SWIG")
-         AC_MSG_RESULT(done)
-      fi
+         AC_MSG_RESULT(present)
 
-      # If have Python & SWIG
-      if test ! -z "SWIG"; then
-
+         # If have Python & SWIG
          # Declare PythonMod
          if test x_$ub_with_pythonmod != x_no; then
-            AC_MSG_RESULT(Will build Python module.)
             AC_DEFINE(WITH_PYTHONMODULE, 1, [Define if you want Python module.])
             WITH_PYTHONMODULE=yes
             AC_SUBST(WITH_PYTHONMODULE)
@@ -272,18 +270,13 @@ if test x_$ub_test_python != x_no; then
 
          # Declare PyUnbound
          if test x_$ub_with_pyunbound != x_no; then
-            AC_MSG_RESULT(Will build PyUnbound.)
             AC_DEFINE(WITH_PYUNBOUND, 1, [Define if you want PyUnbound.])
             WITH_PYUNBOUND=yes
             AC_SUBST(WITH_PYUNBOUND)
          fi
-      else
-         AC_MSG_RESULT(SWIG libraries not found, won't build PythonMod or PyUnbound)
-         ub_with_pyunbound=no
-         ub_with_pythonmod=no
       fi
    else
-      AC_MSG_RESULT(Python libraries not found, won't build PythonMod or PyUnbound)
+      AC_MSG_RESULT([Python libraries not found, won't build PythonMod or PyUnbound])
       ub_with_pyunbound=no
       ub_with_pythonmod=no
    fi
