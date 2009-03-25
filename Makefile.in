@@ -280,6 +280,7 @@ unbound-control-setup:	$(srcdir)/smallapp/unbound-control-setup.sh
 ifeq "$(WITH_PYTHONMODULE)" "yes"
 pythonmod/pythonmod.c:	pythonmod/interface.h
 %.h:	$(srcdir)/%.i $(srcdir)/config.h
+	@-if test ! -d $(dir $@); then $(INSTALL) -d $(patsubst %/,%,$(dir $@)); fi
 	$(INFO) Swig $<
 	$Q$(SWIG) $(CPPFLAGS) -o $@ -python $<
 endif
