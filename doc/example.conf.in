@@ -386,6 +386,11 @@ server:
 	# you need to do the reverse notation yourself.
 	# local-data-ptr: "192.0.2.3 www.example.com"
 
+# Python config section, list python in the module-config string to enable.
+python:
+	# Script file to load
+	python-script: "@UNBOUND_SHARE_DIR@/ubmodule-tst.py"
+
 # Remote control config section. 
 remote-control:
 	# Enable remote control with unbound-control(8) here.

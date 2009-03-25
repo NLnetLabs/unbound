@@ -292,7 +292,7 @@ util/configparser.c util/configparser.h:  $(srcdir)/util/configparser.y
 clean:
 	rm -f *.o *.d *.lo *~ tags
 	rm -f unbound unbound-checkconf unbound-host unbound-control unbound-control-setup libunbound.la
-	rm -rf autom4te.cache .libs build doc/html
+	rm -rf autom4te.cache .libs build doc/html doc/xml
 
 realclean: clean
 	rm -f config.status config.log config.h.in config.h

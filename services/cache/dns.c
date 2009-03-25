@@ -432,6 +432,7 @@ tomsg(struct module_env* env, struct msgreply_entry* e, struct reply_info* r,
 	msg->rep->ns_numrrsets = r->ns_numrrsets;
 	msg->rep->ar_numrrsets = r->ar_numrrsets;
 	msg->rep->rrset_count = r->rrset_count;
+        msg->rep->authoritative = r->authoritative;
 	if(!rrset_array_lock(r->ref, r->rrset_count, now))
 		return NULL;
 	for(i=0; i<msg->rep->rrset_count; i++) {
@@ -461,6 +462,7 @@ rrset_msg(struct ub_packed_rrset_key* rrset, struct regional* region,
 	if(!msg)
 		return NULL;
 	msg->rep->flags = BIT_QR; /* reply, no AA, no error */
+        msg->rep->authoritative = 0; /* reply stored in cache can't be authoritative */
 	msg->rep->qdcount = 1;
 	msg->rep->ttl = d->ttl - now;
 	msg->rep->security = sec_status_unchecked;
@@ -495,6 +497,7 @@ synth_dname_msg(struct ub_packed_rrset_key* rrset, struct regional* region,
 	if(!msg)
 		return NULL;
 	msg->rep->flags = BIT_QR; /* reply, no AA, no error */
+        msg->rep->authoritative = 0; /* reply stored in cache can't be authoritative */
 	msg->rep->qdcount = 1;
 	msg->rep->ttl = d->ttl - now;
 	msg->rep->security = sec_status_unchecked;

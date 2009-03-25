@@ -97,6 +97,7 @@ construct_reply_info_base(struct regional* region, uint16_t flags, size_t qd,
 	rep->ar_numrrsets = ar;
 	rep->rrset_count = total;
 	rep->security = sec;
+	rep->authoritative = 0;
 	/* array starts after the refs */
 	if(region)
 		rep->rrsets = (struct ub_packed_rrset_key**)&(rep->ref[0]);

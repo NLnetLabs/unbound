@@ -241,6 +241,9 @@ struct config_file {
 	/** certificate file for unbound-control */
 	char* control_cert_file;
 
+	/** Python script file */
+	char* python_script;
+
 	/** daemonize, i.e. fork into the background. */
 	int do_daemonize;
 };
@@ -393,6 +396,14 @@ int cfg_count_numbers(const char* str);
  * is logged).
  */
 int cfg_parse_memsize(const char* str, size_t* res);
+
+/**
+ * Parse local-zone directive into two strings and register it in the config.
+ * @param cfg: to put it in.
+ * @param val: argument strings to local-zone, "example.com nodefault".
+ * @return: false on failure
+ */
+int cfg_parse_local_zone(struct config_file* cfg, const char* val);
 
 /**
  * Mark "number" or "low-high" as available or not in ports array.

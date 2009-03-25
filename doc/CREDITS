@@ -11,6 +11,6 @@ At NLnet Labs, Jelte Jansen, Mark Santcroos and Matthijs Mekking
 reviewed the unbound C sources.
 
 Jakob Schlyter - for advice on secure settings, random numbers and blacklists.
-
 Ondřej Surý - running coverity analysis tool on 0.9 dev version.
 Alexander Gall - multihomed, anycast testing of unbound resolver server.
+Zdenek Vasicek and Marek Vavrusa - python module.

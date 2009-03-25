@@ -294,4 +294,10 @@ int local_zones_add_RR(struct local_zones* zones, const char* rr,
 void local_zones_del_data(struct local_zones* zones, 
 	uint8_t* name, size_t len, int labs, uint16_t dclass);
 
+
+/** 
+ * Form wireformat from text format domain name. 
+ */
+int parse_dname(const char* str, uint8_t** res, size_t* len, int* labs);
+
 #endif /* SERVICES_LOCALZONE_H */

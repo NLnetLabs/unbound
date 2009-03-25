@@ -3,6 +3,8 @@
 AC_PREREQ(2.56)
 sinclude(acx_nlnetlabs.m4)
 sinclude(acx_pthread.m4)
+sinclude(acx_python.m4)
+sinclude(ac_pkg_swig.m4)
 
 AC_INIT(unbound, 1.3.0, unbound-bugs@nlnetlabs.nl, unbound)
 
@@ -101,6 +103,14 @@ AC_SUBST(UNBOUND_CHROOT_DIR)
 ACX_ESCAPE_BACKSLASH($UNBOUND_CHOOT_DIR, hdr_chroot)
 AC_DEFINE_UNQUOTED(CHROOT_DIR, ["$hdr_chroot"], [Directory to chroot to])
 
+AC_ARG_WITH(share-dir,
+    AC_HELP_STRING([--with-share-dir=path],
+    [set default directory with shared data (by default same as share/unbound)]),
+    UNBOUND_SHARE_DIR="$withval",
+    UNBOUND_SHARE_DIR="$UNBOUND_RUN_DIR")
+AC_SUBST(UNBOUND_SHARE_DIR)
+AC_DEFINE_UNQUOTED(SHARE_DIR, ["$UNBOUND_SHARE_DIR"], [Shared data])
+
 AC_ARG_WITH(pidfile, 
     AC_HELP_STRING([--with-pidfile=filename], 
     [set default pathname to unbound pidfile (default run-dir/unbound.pid)]), 
@@ -196,6 +206,88 @@ ACX_TYPE_IN_PORT_T
 
 # add option to disable the evil rpath
 ACX_ARG_RPATH
+
+# Check for PyUnbound
+AC_ARG_WITH(pyunbound,
+   AC_HELP_STRING([--with-pyunbound],
+   [build PyUnbound, or --without-pyunbound to skip it. (default=no)]),
+   [], [ withval="no" ])
+
+ub_test_python=no
+ub_with_pyunbound=no
+if test x_$withval != x_no; then
+   ub_with_pyunbound=yes
+   ub_test_python=yes
+fi
+
+# Check for Python module
+AC_ARG_WITH(pythonmodule,
+   AC_HELP_STRING([--with-pythonmodule],
+   [build Python module, or --without-pythonmodule to disable script engine. (default=no)]),
+   [], [ withval="no" ])
+
+ub_with_pythonmod=no
+if test x_$withval != x_no; then
+   ub_with_pythonmod=yes
+   ub_test_python=yes
+fi
+
+# Check for Python & SWIG only on PyUnbound or PyModule
+if test x_$ub_test_python != x_no; then
+
+   # Check for Python
+   ub_have_python=no
+   AC_PYTHON_DEVEL
+   if test ! -z "PYTHON_VERSION"; then
+
+      # Have Python
+      AC_DEFINE(HAVE_PYTHON,1,[Define if you have Python libraries and header files.])
+      LIBS="$PYTHON_LDFLAGS $LIBS"
+      CFLAGS="$CFLAGS $PYTHON_CPPFLAGS"
+      ub_have_python=yes
+
+      # Check for SWIG
+      ub_have_swig=no
+      AC_PROG_SWIG
+      AC_MSG_CHECKING(SWIG)
+      if test -z SWIG; then
+         AC_MSG_RESULT(failed, won't build Python module and PyUnbound)
+         AC_SUBST(swig, "")
+      else
+         AC_DEFINE(HAVE_SWIG, 1, [Define if you have Swig libraries and header files.])
+         AC_SUBST(swig, "$SWIG")
+         AC_MSG_RESULT(done)
+      fi
+
+      # If have Python & SWIG
+      if test ! -z "SWIG"; then
+
+         # Declare PythonMod
+         if test x_$ub_with_pythonmod != x_no; then
+            AC_MSG_RESULT(Will build Python module.)
+            AC_DEFINE(WITH_PYTHONMODULE, 1, [Define if you want Python module.])
+            WITH_PYTHONMODULE=yes
+            AC_SUBST(WITH_PYTHONMODULE)
+         fi
+
+         # Declare PyUnbound
+         if test x_$ub_with_pyunbound != x_no; then
+            AC_MSG_RESULT(Will build PyUnbound.)
+            AC_DEFINE(WITH_PYUNBOUND, 1, [Define if you want PyUnbound.])
+            WITH_PYUNBOUND=yes
+            AC_SUBST(WITH_PYUNBOUND)
+         fi
+      else
+         AC_MSG_RESULT(SWIG libraries not found, won't build PythonMod or PyUnbound)
+         ub_with_pyunbound=no
+         ub_with_pythonmod=no
+      fi
+   else
+      AC_MSG_RESULT(Python libraries not found, won't build PythonMod or PyUnbound)
+      ub_with_pyunbound=no
+      ub_with_pythonmod=no
+   fi
+fi
 
 # Checks for libraries.
 ACX_WITH_SSL

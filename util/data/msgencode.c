@@ -719,7 +719,7 @@ reply_info_answer_encode(struct query_info* qinf, struct reply_info* rep,
 	uint16_t flags;
 	int attach_edns = 1;
 
-	if(!cached) {
+	if(!cached || rep->authoritative) {
 		/* original flags, copy RD and CD bits from query. */
 		flags = rep->flags | (qflags & (BIT_RD|BIT_CD)); 
 	} else {

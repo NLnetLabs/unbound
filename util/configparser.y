@@ -97,12 +97,13 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_SERVER_CERT_FILE VAR_CONTROL_KEY_FILE VAR_CONTROL_CERT_FILE
 %token VAR_EXTENDED_STATISTICS VAR_LOCAL_DATA_PTR VAR_JOSTLE_TIMEOUT
 %token VAR_STUB_PRIME VAR_UNWANTED_REPLY_THRESHOLD VAR_LOG_TIME_ASCII
-%token VAR_DOMAIN_INSECURE
+%token VAR_DOMAIN_INSECURE VAR_PYTHON VAR_PYTHON_SCRIPT
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
 toplevelvar: serverstart contents_server | stubstart contents_stub |
-	forwardstart contents_forward | rcstart contents_rc
+	forwardstart contents_forward | pythonstart contents_py | 
+	rcstart contents_rc
 	;
 
 /* server: declaration */
@@ -1003,6 +1004,21 @@ rc_control_cert_file: VAR_CONTROL_CERT_FILE STRING
 		cfg_parser->cfg->control_cert_file = $2;
 	}
 	;
+pythonstart: VAR_PYTHON
+	{ 
+		OUTYY(("\nP(python:)\n")); 
+	}
+	;
+contents_py: contents_py content_py
+	| ;
+content_py: py_script
+	;
+py_script: VAR_PYTHON_SCRIPT STRING
+	{
+		OUTYY(("P(python-script:%s)\n", $2));
+		free(cfg_parser->cfg->python_script);
+		cfg_parser->cfg->python_script = $2;
+	}
 %%
 
 /* parse helper routines could be here */

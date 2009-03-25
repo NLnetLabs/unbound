@@ -157,6 +157,8 @@ config_create()
 	cfg->local_zones_nodefault = NULL;
 	cfg->local_data = NULL;
 
+	if(!(cfg->python_script = strdup(SHARE_DIR"/ubmodule.py")))
+		goto error_exit;
 	cfg->remote_control_enable = 0;
 	cfg->control_ifs = NULL;
 	cfg->control_port = 953;
@@ -384,6 +386,8 @@ int config_set_option(struct config_file* cfg, const char* opt,
 		return cfg_parse_memsize(val, &cfg->neg_cache_size);
 	} else if(strcmp(opt, "local-data:") == 0) {
 		return cfg_strlist_insert(&cfg->local_data, strdup(val));
+	} else if(strcmp(opt, "local-zone:") == 0) {
+		return cfg_parse_local_zone(cfg, val);
 	} else if(strcmp(opt, "control-enable:") == 0) {
 		IS_YES_OR_NO;
 		cfg->remote_control_enable = (strcmp(val, "yes") == 0);
@@ -407,6 +411,9 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	} else if(strcmp(opt, "module-config:") == 0) {
 		free(cfg->module_conf);
 		return (cfg->module_conf = strdup(val)) != NULL;
+	} else if(strcmp(opt, "python-script:") == 0) {
+		free(cfg->python_script);
+		return (cfg->python_script = strdup(val)) != NULL;
 	} else {
 		/* unknown or unsupported (from the library interface) */
 		return 0;
@@ -917,7 +924,7 @@ fname_after_chroot(const char* fname, struct config_file* cfg, int use_chdir)
 }
 
 /** return next space character in string */
-static char* next_space_pos(char* str)
+static char* next_space_pos(const char* str)
 {
 	char* sp = strchr(str, ' ');
 	char* tab = strchr(str, '\t');
@@ -929,7 +936,7 @@ static char* next_space_pos(char* str)
 }
 
 /** return last space character in string */
-static char* last_space_pos(char* str)
+static char* last_space_pos(const char* str)
 {
 	char* sp = strrchr(str, ' ');
 	char* tab = strrchr(str, '\t');
@@ -938,6 +945,49 @@ static char* last_space_pos(char* str)
 	if(!sp) return tab;
 	if(!tab) return sp;
 	return (sp>tab)?sp:tab;
+}
+
+int 
+cfg_parse_local_zone(struct config_file* cfg, const char* val)
+{
+	const char *type, *name_end, *name;
+	char buf[256];
+
+	/* parse it as: [zone_name] [between stuff] [zone_type] */
+	name = val;
+	while(*name && isspace(*name))
+		name++;
+	if(!*name) {
+		log_err("syntax error: too short: %s", val);
+		return 0;
+	}
+	name_end = next_space_pos(name);
+	if(!name_end || !*name_end) {
+		log_err("syntax error: expected zone type: %s", val);
+		return 0;
+	}
+	if (name_end - name > 255) {
+		log_err("syntax error: bad zone name: %s", val);
+		return 0;
+	}
+	strncpy(buf, name, (size_t)(name_end-name));
+	buf[name_end-name] = '\0';
+
+	type = last_space_pos(name_end);
+	while(type && *type && isspace(*type))
+		type++;
+	if(!type || !*type) {
+		log_err("syntax error: expected zone type: %s", val);
+		return 0;
+	}
+
+	if(strcmp(type, "nodefault")==0) {
+		return cfg_strlist_insert(&cfg->local_zones_nodefault, 
+			strdup(name));
+	} else {
+		return cfg_str2list_insert(&cfg->local_zones, strdup(buf),
+			strdup(type));
+	}
 }
 
 char* cfg_ptr_reverse(char* str)

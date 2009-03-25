@@ -470,4 +470,10 @@ void ub_resolve_free(struct ub_result* result);
  */
 const char* ub_strerror(int err);
 
+int ub_ctx_print_local_zones(struct ub_ctx* ctx);
+int ub_ctx_zone_add(struct ub_ctx* ctx, char *zone_name, char *zone_type);
+int ub_ctx_zone_remove(struct ub_ctx* ctx, char *zone_name);
+int ub_ctx_data_add(struct ub_ctx* ctx, char *data);
+int ub_ctx_data_remove(struct ub_ctx* ctx, char *data);
+
 #endif /* _UB_UNBOUND_H */

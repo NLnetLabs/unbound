@@ -138,7 +138,9 @@
      VAR_STUB_PRIME = 354,
      VAR_UNWANTED_REPLY_THRESHOLD = 355,
      VAR_LOG_TIME_ASCII = 356,
-     VAR_DOMAIN_INSECURE = 357
+     VAR_DOMAIN_INSECURE = 357,
+     VAR_PYTHON = 358,
+     VAR_PYTHON_SCRIPT = 359
    };
 #endif
 /* Tokens.  */
@@ -242,6 +244,8 @@
 #define VAR_UNWANTED_REPLY_THRESHOLD 355
 #define VAR_LOG_TIME_ASCII 356
 #define VAR_DOMAIN_INSECURE 357
+#define VAR_PYTHON 358
+#define VAR_PYTHON_SCRIPT 359
 
 
 
@@ -253,7 +257,7 @@ typedef union YYSTYPE
 	char*	str;
 }
 /* Line 1489 of yacc.c.  */
-#line 257 "util/configparser.h"
+#line 261 "util/configparser.h"
 	YYSTYPE;
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */
 # define YYSTYPE_IS_DECLARED 1

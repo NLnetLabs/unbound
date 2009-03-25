@@ -99,12 +99,18 @@ struct reply_info {
 	uint16_t flags;
 
 	/**
+	 * This flag informs unbound the answer is authoritative and 
+	 * the AA flag should be preserved. 
+	 */
+	uint8_t authoritative;
+
+	/**
 	 * Number of RRs in the query section.
 	 * If qdcount is not 0, then it is 1, and the data that appears
 	 * in the reply is the same as the query_info.
 	 * Host byte order.
 	 */
-	uint16_t qdcount;
+	uint8_t qdcount;
 
 	/** 
 	 * TTL of the entire reply (for negative caching).
@@ -127,8 +133,7 @@ struct reply_info {
 	size_t an_numrrsets;
 
 	/** Count of authority section RRsets */
-	size_t ns_numrrsets;
-
+	size_t ns_numrrsets; 
 	/** Count of additional section RRsets */
 	size_t ar_numrrsets;
 

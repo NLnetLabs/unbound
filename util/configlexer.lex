@@ -214,6 +214,8 @@ server-key-file{COLON}		{ YDVAR(1, VAR_SERVER_KEY_FILE) }
 server-cert-file{COLON}		{ YDVAR(1, VAR_SERVER_CERT_FILE) }
 control-key-file{COLON}		{ YDVAR(1, VAR_CONTROL_KEY_FILE) }
 control-cert-file{COLON}	{ YDVAR(1, VAR_CONTROL_CERT_FILE) }
+python-script{COLON}		{ YDVAR(1, VAR_PYTHON_SCRIPT) }
+python{COLON}			{ YDVAR(0, VAR_PYTHON) }
 domain-insecure{COLON}		{ YDVAR(1, VAR_DOMAIN_INSECURE) }
 <INITIAL,val>{NEWLINE}		{ LEXOUT(("NL\n")); cfg_parser->line++; }
 

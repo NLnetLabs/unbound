@@ -167,6 +167,9 @@
 /* Define to 1 if you have the <pwd.h> header file. */
 #undef HAVE_PWD_H
 
+/* Define if you have Python libraries and header files. */
+#undef HAVE_PYTHON
+
 /* Define to 1 if you have the `random' function. */
 #undef HAVE_RANDOM
 
@@ -238,6 +241,9 @@
 
 /* Define to 1 if you have the `strlcpy' function. */
 #undef HAVE_STRLCPY
+
+/* Define if you have Swig libraries and header files. */
+#undef HAVE_SWIG
 
 /* Define to 1 if you have the <syslog.h> header file. */
 #undef HAVE_SYSLOG_H
@@ -370,6 +376,9 @@
 /* Directory to chdir to */
 #undef RUN_DIR
 
+/* Shared data */
+#undef SHARE_DIR
+
 /* Define to 1 if you have the ANSI C header files. */
 #undef STDC_HEADERS
 
@@ -393,6 +402,12 @@
 
 /* the version of the windows API enabled */
 #undef WINVER
+
+/* Define if you want Python module. */
+#undef WITH_PYTHONMODULE
+
+/* Define if you want PyUnbound. */
+#undef WITH_PYUNBOUND
 
 /* Define to 1 if `lex' declares `yytext' as a `char *' by default, not a
    `char[]'. */
