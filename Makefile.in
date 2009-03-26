@@ -278,7 +278,7 @@ unbound-control-setup:	$(srcdir)/smallapp/unbound-control-setup.sh
 #	cp $(ldnsdir)/examples/ldns-testpkts.h testcode/ldns-testpkts.h
 
 ifeq "$(WITH_PYTHONMODULE)" "yes"
-pythonmod/pythonmod.c:	pythonmod/interface.h
+$(srcdir)/pythonmod/pythonmod.c:	pythonmod/interface.h
 %.h:	$(srcdir)/%.i $(srcdir)/config.h
 	@-if test ! -d $(dir $@); then $(INSTALL) -d $(patsubst %/,%,$(dir $@)); fi
 	$(INFO) Swig $<

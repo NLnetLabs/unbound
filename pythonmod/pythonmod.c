@@ -33,6 +33,12 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
+
+/* ignore the varargs unused warning from SWIGs internal vararg support */
+#ifdef __GNUC__
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+#endif
+
 #include "config.h"
 #include "pythonmod/pythonmod.h"
 #include "util/module.h"
