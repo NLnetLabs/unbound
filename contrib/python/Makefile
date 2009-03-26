@@ -58,7 +58,7 @@ clean:
 
 testenv: ../../.libs/libunbound.so.0 ../../ldns-src/lib/libldns.so _unbound.so
 	rm -rdf examples/unbound
-	cd examples && mkdir unbound && ln -s ../../unbound.py unbound/__init__.py && ln -s ../../_unbound.so unbound/_unbound.so && ln -s ../../../../.libs/libunbound.so.0 unbound/libunbound.so.0 && ln -s ../../../../ldns-src/lib/libldns.so.1 unbound/libldns.so.1 && ls -la
+	cd examples && mkdir unbound && ln -s ../../unbound.py unbound/__init__.py && ln -s ../../_unbound.so unbound/_unbound.so && ln -s ../../../../.libs/libunbound.so.1 unbound/libunbound.so.1 && ln -s ../../../../ldns-src/lib/libldns.so.1 unbound/libldns.so.1 && ls -la
 	@echo "Run a script by typing ./script_name.py"
 	cd examples && LD_LIBRARY_PATH=unbound bash
 	rm -rdf examples/unbound
@@ -70,5 +70,5 @@ doc: ../../.libs/libunbound.so.0 _unbound.so
 swig: libunbound.i 
 	swig -python -o libunbound_wrap.c -I../.. libunbound.i
 	gcc -c libunbound_wrap.c -O9 -fPIC -I../.. -I/usr/include/python2.5 -I. -o libunbound_wrap.o
-	ld -shared libunbound_wrap.o -L../../.libs -lunbound -o _unbound.so 
+	gcc -shared libunbound_wrap.o -L../../.libs -lunbound -o _unbound.so 
 
