@@ -87,6 +87,7 @@ void* unbound_start_brk = 0;
 /** print usage. */
 static void usage()
 {
+	const char** m;
 	printf("usage:  unbound [options]\n");
 	printf("	start unbound daemon DNS resolver.\n");
 	printf("-h	this help\n");
@@ -103,6 +104,10 @@ static void usage()
 	printf("libevent %s, libldns %s, %s\n", 
 		event_get_version(), ldns_version(), 
 		SSLeay_version(SSLEAY_VERSION));
+	printf("modules:");
+	for(m = module_list_avail(); *m; m++)
+		printf(" %s", *m);
+	printf("\n");
 	printf("BSD licensed, see LICENSE in source package for details.\n");
 	printf("Report bugs to %s\n", PACKAGE_BUGREPORT);
 }

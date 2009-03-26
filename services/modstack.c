@@ -109,24 +109,42 @@ modstack_config(struct module_stack* stack, const char* module_conf)
         return 1;
 }
 
-struct 
-module_func_block* module_factory(const char** str)
+/** The list of module names */
+const char**
+module_list_avail(void)
 {
         /* these are the modules available */
-        const char* names[] = {"iterator", "validator", 
+        static const char* names[] = {"iterator", "validator", 
 #ifdef WITH_PYTHONMODULE
 		"python", 
 #endif
 		NULL};
-        struct module_func_block* (*fb[])(void) = 
+	return names;
+}
+
+/** func block get function type */
+typedef struct module_func_block* (*fbgetfunctype)(void);
+
+/** The list of module func blocks */
+static fbgetfunctype*
+module_funcs_avail(void)
+{
+        static struct module_func_block* (*fb[])(void) = 
                 {&iter_get_funcblock, &val_get_funcblock, 
 #ifdef WITH_PYTHONMODULE
 		&pythonmod_get_funcblock, 
 #endif
 		NULL};
+	return fb;
+}
 
+struct 
+module_func_block* module_factory(const char** str)
+{
         int i = 0;
         const char* s = *str;
+	const char** names = module_list_avail();
+	fbgetfunctype* fb = module_funcs_avail();
         while(*s && isspace((int)*s))
                 s++;
 	while(names[i]) {

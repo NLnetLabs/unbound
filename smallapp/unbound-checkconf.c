@@ -496,7 +496,10 @@ morechecks(struct config_file* cfg, const char* fname)
 	cfg->chrootdir = NULL;
 	
 	if(strcmp(cfg->module_conf, "iterator") != 0 &&
-		strcmp(cfg->module_conf, "validator iterator") != 0) {
+		strcmp(cfg->module_conf, "validator iterator") != 0 &&
+		strcmp(cfg->module_conf, "python iterator") != 0 &&
+		strcmp(cfg->module_conf, "python validator iterator") != 0 &&
+		strcmp(cfg->module_conf, "validator python iterator") != 0) {
 		fatal_exit("module conf '%s' is not known to work",
 			cfg->module_conf);
 	}

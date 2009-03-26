@@ -47,7 +47,9 @@
 #include <Python.h>
 
 /* Generated */
+#ifndef S_SPLINT_S
 #include "pythonmod/interface.h"
+#endif
 
 int pythonmod_init(struct module_env* env, int id)
 {
@@ -62,15 +64,10 @@ int pythonmod_init(struct module_env* env, int id)
    }
 
    env->modinfo[id] = (void*) pe;
-   pe->fname = NULL;
-   pe->module = NULL;
-   pe->dict = NULL;
-   pe->data = NULL;
-   pe->qstate = NULL;
 
    /* Initialize module */
-   if ((pe->fname = env->cfg->python_script) == NULL) 
-   {
+   pe->fname = env->cfg->python_script;
+   if(pe->fname==NULL || pe->fname[0]==0) {
       log_err("pythonmod: no script given.");
       return 0;
    }
@@ -89,7 +86,14 @@ int pythonmod_init(struct module_env* env, int id)
    /* Initialize Python */
    PyRun_SimpleString("import sys \n");
    PyRun_SimpleString("sys.path.append('.') \n");
+   if(env->cfg->directory && env->cfg->directory[0]) {
+   	char wdir[1524];
+   	snprintf(wdir, sizeof(wdir), "sys.path.append('%s') \n",
+		env->cfg->directory);
+   	PyRun_SimpleString(wdir);
+   }
    PyRun_SimpleString("sys.path.append('"RUN_DIR"') \n");
+   PyRun_SimpleString("sys.path.append('"SHARE_DIR"') \n");
    if (PyRun_SimpleString("from Unbound import *\n") < 0)
    {
       log_err("pythonmod: cannot initialize core module: Unbound.py"); 
@@ -271,7 +275,8 @@ void pythonmod_clear(struct module_qstate* qstate, int id)
       return;
 
    pq = (struct pythonmod_qstate*)qstate->minfo[id];
-   log_info("pythonmod: clear, id: %d, pq:%lX", id, (unsigned long int)pq);
+   verbose(VERB_ALGO, "pythonmod: clear, id: %d, pq:%lX", id, 
+   	(unsigned long int)pq);
    if(pq != NULL)
    {
       Py_DECREF(pq->data);
@@ -285,7 +290,8 @@ void pythonmod_clear(struct module_qstate* qstate, int id)
 size_t pythonmod_get_mem(struct module_env* env, int id)
 {
    struct pythonmod_env* pe = (struct pythonmod_env*)env->modinfo[id];
-   log_info("pythonmod: get_mem, id: %d, pe:%lX", id, (unsigned long int)pe);
+   verbose(VERB_ALGO, "pythonmod: get_mem, id: %d, pe:%lX", id, 
+   	(unsigned long int)pe);
    if(!pe)
       return 0;
    return sizeof(*pe);

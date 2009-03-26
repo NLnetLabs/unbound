@@ -823,6 +823,18 @@ Name of server to forward to. Is itself resolved before it is used.
 .B forward\-addr: \fI<IP address>
 IP address of server to forward to. Can be IP 4 or IP 6.
 To use a nondefault port for DNS communication append '@' with the port number.
+.SS "Python Module Options"
+.LP
+The
+.B python:
+clause gives the settings for the \fIpython\fR(1) script module.  This module
+acts like the iterator and validator modules do, on queries and answers.
+To enable the script module it has to be compiled into the daemon,
+and the word "python" has to be put in the \fBmodule\-conf:\fR option
+(usually first, or between the validator and iterator).
+.TP
+.B python\-script: \fI<python file>\fR
+The script file to load. 
 .SH "MEMORY CONTROL EXAMPLE"
 In the example config settings below memory usage is reduced. Some service
 levels are lower, notable very large data and a high TCP load are no longer

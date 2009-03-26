@@ -77,6 +77,12 @@ int modstack_config(struct module_stack* stack, const char* module_conf);
 struct module_func_block* module_factory(const char** str);
 
 /**
+ * Get list of modules available.
+ * @return list of modules available. Static strings, ends with NULL.
+ */
+const char** module_list_avail(void);
+
+/**
  * Setup modules. Assigns ids and calls module_init.
  * @param stack: if not empty beforehand, it will be desetup()ed.
  *	It is then modstack_configged().

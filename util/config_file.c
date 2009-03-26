@@ -156,9 +156,7 @@ config_create()
 	cfg->local_zones = NULL;
 	cfg->local_zones_nodefault = NULL;
 	cfg->local_data = NULL;
-
-	if(!(cfg->python_script = strdup(SHARE_DIR"/ubmodule.py")))
-		goto error_exit;
+	cfg->python_script = NULL;
 	cfg->remote_control_enable = 0;
 	cfg->control_ifs = NULL;
 	cfg->control_port = 953;

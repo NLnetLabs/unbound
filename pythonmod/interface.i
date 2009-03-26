@@ -242,13 +242,13 @@ struct ub_packed_rrset_key {
 };
 
 struct lruhash_entry {
-	lock_rw_t lock;
-	struct lruhash_entry* overflow_next;
-	struct lruhash_entry* lru_next;
-	struct lruhash_entry* lru_prev;
-	hashvalue_t hash;
-	void* key;
-	struct packed_rrset_data* data;
+  lock_rw_t lock;
+  struct lruhash_entry* overflow_next;
+  struct lruhash_entry* lru_next;
+  struct lruhash_entry* lru_prev;
+  hashvalue_t hash;
+  void* key;
+  struct packed_rrset_data* data;
 };
 
 %ignore packed_rrset_data::rr_len;
@@ -256,17 +256,17 @@ struct lruhash_entry {
 %ignore packed_rrset_data::rr_data;
 
 struct packed_rrset_data {
-	uint32_t ttl; //TTL (in seconds like time())
+  uint32_t ttl; //TTL (in seconds like time())
 
-	size_t count; //number of rrs
-	size_t rrsig_count; //number of rrsigs
+  size_t count; //number of rrs
+  size_t rrsig_count; //number of rrsigs
 
-	enum rrset_trust trust; 
-	enum sec_status security;
+  enum rrset_trust trust; 
+  enum sec_status security;
 
-	size_t* rr_len;   //length of every rr's rdata
-	uint32_t *rr_ttl; //ttl of every rr
-	uint8_t** rr_data; //array of pointers to every rr's rdata; The rr_data[i] rdata is stored in uncompressed wireformat. 
+  size_t* rr_len;   //length of every rr's rdata
+  uint32_t *rr_ttl; //ttl of every rr
+  uint8_t** rr_data; //array of pointers to every rr's rdata; The rr_data[i] rdata is stored in uncompressed wireformat. 
 };
 
 %pythoncode %{
@@ -442,17 +442,17 @@ struct module_qstate {
 
 %inline %{
  enum enum_return_rcode {
-	RCODE_NOERROR = 0,
-	RCODE_FORMERR = 1,
-	RCODE_SERVFAIL = 2,
-	RCODE_NXDOMAIN = 3,
-	RCODE_NOTIMPL = 4,
-	RCODE_REFUSED = 5,
-	RCODE_YXDOMAIN = 6,
-	RCODE_YXRRSET = 7,
-	RCODE_NXRRSET = 8,
-	RCODE_NOTAUTH = 9,
-	RCODE_NOTZONE = 10
+   RCODE_NOERROR = 0,
+   RCODE_FORMERR = 1,
+   RCODE_SERVFAIL = 2,
+   RCODE_NXDOMAIN = 3,
+   RCODE_NOTIMPL = 4,
+   RCODE_REFUSED = 5,
+   RCODE_YXDOMAIN = 6,
+   RCODE_YXRRSET = 7,
+   RCODE_NXRRSET = 8,
+   RCODE_NOTAUTH = 9,
+   RCODE_NOTZONE = 10
  };
 %}
 
@@ -805,3 +805,4 @@ void invalidateQueryInCache(struct module_qstate* qstate, struct query_info* qin
 // Module conversion functions
 const char* strextstate(enum module_ext_state s);
 const char* strmodulevent(enum module_ev e);
+

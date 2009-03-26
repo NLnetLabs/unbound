@@ -3,6 +3,7 @@
 	- remove duplicate example.conf text from python example configs.
 	- outofdir compile fix for python.
 	- pyunbound works.
+	- print modules compiled in on -h. manpage.
 
 25 March 2009: Wouter
 	- initial import of the python contribution from Zdenek Vasicek and
