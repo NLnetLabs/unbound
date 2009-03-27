@@ -1,6 +1,7 @@
 27 March 2009: Wouter
 	- nicer -h output. report linked libraries and modules.
 	- prints modules in intuitive order (config file friendly).
+	- python compiles easily on BSD.
 
 26 March 2009: Wouter
 	- ignore swig varargs warnings with gcc.

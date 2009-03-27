@@ -100,7 +100,7 @@ $ac_distutils_result])
                 py_version=`$PYTHON -c "from distutils.sysconfig import *; \
                         from string import join; \
                         print join(get_config_vars('VERSION'))"`
-                if test "$py_version" == "[None]"; then
+                if test "$py_version" = "[None]"; then
                         if test -n "$PYTHON_VERSION"; then
                                 py_version=$PYTHON_VERSION
                         else
@@ -112,6 +112,7 @@ $ac_distutils_result])
                 PYTHON_LDFLAGS=`$PYTHON -c "from distutils.sysconfig import *; \
                         from string import join; \
                         print '-L' + get_python_lib(0,1), \
+                        '-L' + os.path.dirname(get_python_lib(0,1)), \
                         '-lpython';"`$py_version
         fi
         AC_MSG_RESULT([$PYTHON_LDFLAGS])
