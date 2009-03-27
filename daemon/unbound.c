@@ -101,10 +101,17 @@ static void usage()
 	printf("   	service - used to start from services control panel\n");
 #endif
 	printf("Version %s\n", PACKAGE_VERSION);
-	printf("libevent %s, libldns %s, %s\n", 
-		event_get_version(), ldns_version(), 
+	printf("linked libs: event %s, ldns %s, %s\n", 
+#ifdef USE_WINSOCK
+		"winsock",
+#elif defined(USE_MINI_EVENT)
+		"internal",
+#else
+		event_get_version(), 
+#endif
+		ldns_version(), 
 		SSLeay_version(SSLEAY_VERSION));
-	printf("modules:");
+	printf("linked modules:");
 	for(m = module_list_avail(); *m; m++)
 		printf(" %s", *m);
 	printf("\n");

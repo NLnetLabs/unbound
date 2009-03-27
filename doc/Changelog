@@ -1,3 +1,7 @@
+27 March 2009: Wouter
+	- nicer -h output. report linked libraries and modules.
+	- prints modules in intuitive order (config file friendly).
+
 26 March 2009: Wouter
 	- ignore swig varargs warnings with gcc.
 	- remove duplicate example.conf text from python example configs.
