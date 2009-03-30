@@ -23449,9 +23449,13 @@ $as_echo "found in $ssldir" >&6; }
             HAVE_SSL=yes
 	    	    if test "$ssldir" != "/usr"; then
                 LDFLAGS="$LDFLAGS -L$ssldir/lib"
-	        if test "x$enable_rpath" = xyes; then
-	            RUNTIME_PATH="$RUNTIME_PATH -R$ssldir/lib"
-	        fi
+
+	if test "x$enable_rpath" = xyes; then
+		if echo "$ssldir/lib" | grep "^/" >/dev/null; then
+			RUNTIME_PATH="$RUNTIME_PATH -R$ssldir/lib"
+		fi
+	fi
+
 	    fi
 
 	    { $as_echo "$as_me:$LINENO: checking for HMAC_CTX_init in -lcrypto" >&5
@@ -25151,6 +25155,8 @@ if test "$ac_res" != no; then
 fi
 
 
+
+
 # check for libevent
 
 # Check whether --with-libevent was given.
@@ -25182,6 +25188,7 @@ $as_echo_n "checking for libevent... " >&6; }
             		{ $as_echo "$as_me:$LINENO: result: found in $thedir" >&5
 $as_echo "found in $thedir" >&6; }
                 	CPPFLAGS="$CPPFLAGS -I$thedir -I$thedir/include"
+			BAK_LDFLAGS_SET="1"
 			BAK_LDFLAGS="$LDFLAGS"
 			# remove evdns from linking
 			mkdir build >/dev/null 2>&1
@@ -25211,12 +25218,15 @@ large outgoing port ranges.  " >&2;}
 $as_echo "found in $thedir" >&6; }
 	    	    if test "$thedir" != "/usr"; then
                 LDFLAGS="$LDFLAGS -L$thedir/lib"
-	        if test "x$enable_rpath" = xyes; then
-	            RUNTIME_PATH="$RUNTIME_PATH -R$thedir/lib"
-	        fi
+
+	if test "x$enable_rpath" = xyes; then
+		if echo "$thedir/lib" | grep "^/" >/dev/null; then
+			RUNTIME_PATH="$RUNTIME_PATH -R$thedir/lib"
+		fi
+	fi
+
 	    fi
         fi
-
 	# check for library used by libevent after 1.3c
 	{ $as_echo "$as_me:$LINENO: checking for library containing clock_gettime" >&5
 $as_echo_n "checking for library containing clock_gettime... " >&6; }
@@ -25954,7 +25964,7 @@ _ACEOF
 fi
 done
  # only in libev. (tested on 3.51)
-	if test -n "$BAK_LDFLAGS"; then
+	if test -n "$BAK_LDFLAGS_SET"; then
 		LDFLAGS="$BAK_LDFLAGS"
 	fi
 else
@@ -29207,9 +29217,13 @@ if test "${with_ldns+set}" = set; then
   withval=$with_ldns;  specialldnsdir="$withval"
 	CPPFLAGS="-I$withval/include $CPPFLAGS"
 	LDFLAGS="-L$withval -L$withval/lib $LDFLAGS"
+
 	if test "x$enable_rpath" = xyes; then
-	    RUNTIME_PATH="$RUNTIME_PATH -R$withval/lib"
+		if echo "$withval/lib" | grep "^/" >/dev/null; then
+			RUNTIME_PATH="$RUNTIME_PATH -R$withval/lib"
+		fi
 	fi
+
 	ldnsdir="$withval"
 
 

@@ -539,6 +539,17 @@ if test "x$enable_rpath" = xno; then
 fi
 ])
 
+dnl Add a -R to the RUNTIME_PATH.  Only if rpath is enabled and it is
+dnl an absolute path.
+dnl $1: the pathname to add.
+AC_DEFUN([ACX_RUNTIME_PATH_ADD], [
+	if test "x$enable_rpath" = xyes; then
+		if echo "$1" | grep "^/" >/dev/null; then
+			RUNTIME_PATH="$RUNTIME_PATH -R$1"
+		fi
+	fi
+])
+
 dnl Check for SSL. 
 dnl Adds --with-ssl option, searches for openssl and defines HAVE_SSL if found
 dnl Setup of CPPFLAGS, CFLAGS.  Adds -lcrypto to LIBS. 
@@ -580,9 +591,7 @@ AC_ARG_WITH(ssl, AC_HELP_STRING([--with-ssl=pathname],
 	    dnl assume /usr is already in the lib and dynlib paths.
 	    if test "$ssldir" != "/usr"; then
                 LDFLAGS="$LDFLAGS -L$ssldir/lib"
-	        if test "x$enable_rpath" = xyes; then
-	            RUNTIME_PATH="$RUNTIME_PATH -R$ssldir/lib"
-	        fi
+		ACX_RUNTIME_PATH_ADD([$ssldir/lib])
 	    fi
 	
 	    AC_MSG_CHECKING([for HMAC_CTX_init in -lcrypto])

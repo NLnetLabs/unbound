@@ -346,6 +346,8 @@ fi
 AC_SEARCH_LIBS([inet_pton], [nsl])
 AC_SEARCH_LIBS([socket], [socket])
 
+AC_SUBST(RUNTIME_PATH)
+
 # check for libevent
 AC_ARG_WITH(libevent, AC_HELP_STRING([--with-libevent=pathname],
     [use libevent (will check /usr/local /opt/local /usr/lib /usr/pkg /usr/sfw /usr  or you can specify an explicit path). Slower, but allows use of large outgoing port ranges.]),
@@ -371,6 +373,7 @@ if test x_$withval = x_yes -o x_$withval != x_no; then
 			# libevent source directory
             		AC_MSG_RESULT(found in $thedir)
                 	CPPFLAGS="$CPPFLAGS -I$thedir -I$thedir/include"
+			BAK_LDFLAGS_SET="1"
 			BAK_LDFLAGS="$LDFLAGS"
 			# remove evdns from linking
 			mkdir build >/dev/null 2>&1
@@ -395,12 +398,9 @@ large outgoing port ranges.  ])
 	    dnl assume /usr is in default path.
 	    if test "$thedir" != "/usr"; then
                 LDFLAGS="$LDFLAGS -L$thedir/lib"
-	        if test "x$enable_rpath" = xyes; then
-	            RUNTIME_PATH="$RUNTIME_PATH -R$thedir/lib"
-	        fi
+		ACX_RUNTIME_PATH_ADD([$thedir/lib])
 	    fi
         fi
-	AC_SUBST(RUNTIME_PATH)
 	# check for library used by libevent after 1.3c
 	AC_SEARCH_LIBS([clock_gettime], [rt])
 
@@ -411,7 +411,7 @@ large outgoing port ranges.  ])
 	AC_CHECK_FUNCS([event_base_new]) # only in libevent 1.4.1 and later
 	AC_CHECK_FUNCS([event_base_get_method]) # only in libevent 1.4.3 and later
 	AC_CHECK_FUNCS([ev_loop]) # only in libev. (tested on 3.51)
-	if test -n "$BAK_LDFLAGS"; then
+	if test -n "$BAK_LDFLAGS_SET"; then
 		LDFLAGS="$BAK_LDFLAGS"
 	fi
 else
@@ -498,9 +498,7 @@ AC_ARG_WITH(ldns, AC_HELP_STRING([--with-ldns=PATH],
 	[ specialldnsdir="$withval"
 	CPPFLAGS="-I$withval/include $CPPFLAGS"
 	LDFLAGS="-L$withval -L$withval/lib $LDFLAGS"
-	if test "x$enable_rpath" = xyes; then
-	    RUNTIME_PATH="$RUNTIME_PATH -R$withval/lib"
-	fi
+	ACX_RUNTIME_PATH_ADD([$withval/lib])
 	ldnsdir="$withval"
 	AC_SUBST(ldnsdir)
 ])
