@@ -81,6 +81,31 @@ struct ub_randstate {
 /** Number of bytes to reseed after */
 #define REKEY_BYTES	(1 << 24)
 
+/** (re)setup system seed */
+void
+ub_systemseed(unsigned int seed)
+{
+	/* RAND_ is threadsafe, by the way */
+	if(!RAND_status()) {
+		/* try to seed it */
+		unsigned char buf[256];
+		unsigned int v = seed;
+		size_t i;
+		for(i=0; i<256/sizeof(seed); i++) {
+			memmove(buf+i*sizeof(seed), &v, sizeof(seed));
+			v = v*seed + (unsigned int)i;
+		}
+		RAND_seed(buf, 256);
+		if(!RAND_status()) {
+			log_err("Random generator has no entropy "
+				"(error %ld)", ERR_get_error());
+		} else {
+			verbose(VERB_OPS, "openssl has no entropy, "
+				"seeding with time and pid");
+		}
+	}
+}
+
 /** reseed random generator */
 static void
 ub_arc4random_stir(struct ub_randstate* s, struct ub_randstate* from)
@@ -94,9 +119,16 @@ ub_arc4random_stir(struct ub_randstate* s, struct ub_randstate* from)
 		for(i=0; i<SEED_SIZE; i++)
 			rand_buf[i] = (unsigned char)ub_random(from);
 	} else {
-		if (RAND_bytes(rand_buf, (int)sizeof(rand_buf)) <= 0)
-			fatal_exit("Couldn't obtain random bytes (error %ld)",
+		if(!RAND_status())
+			ub_systemseed((unsigned)getpid()^(unsigned)time(NULL));
+		if (RAND_bytes(rand_buf, (int)sizeof(rand_buf)) <= 0) {
+			/* very unlikely that this happens, since we seeded
+			 * above, if it does; complain and keep going */
+			log_err("Couldn't obtain random bytes (error %ld)",
 				    ERR_get_error());
+			s->rc4_ready = 256;
+			return;
+		}
 	}
 	RC4_set_key(&s->rc4, SEED_SIZE, rand_buf);
 
@@ -120,26 +152,7 @@ ub_initstate(unsigned int seed, struct ub_randstate* from)
 		log_err("malloc failure in random init");
 		return NULL;
 	}
-
-	/* RAND_ is threadsafe, by the way */
-	if(!RAND_status()) {
-		/* try to seed it */
-		unsigned char buf[256];
-		unsigned int v = seed;
-		size_t i;
-		for(i=0; i<256/sizeof(seed); i++) {
-			memmove(buf+i*sizeof(seed), &v, sizeof(seed));
-			v = v*seed + (unsigned int)i;
-		}
-		RAND_seed(buf, 256);
-		if(!RAND_status()) {
-			log_err("Random generator has no entropy (error %ld)",
-				ERR_get_error());
-			return NULL;
-		}
-		verbose(VERB_OPS, "openssl has no entropy, seeding with time"
-			" and pid");
-	}
+	ub_systemseed(seed);
 	ub_arc4random_stir(s, from);
 	return s;
 }

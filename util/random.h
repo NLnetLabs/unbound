@@ -48,6 +48,14 @@
 struct ub_randstate;
 
 /**
+ * Initialize the system randomness.  Obtains entropy from the system
+ * before a chroot or privilege makes it unavailable. 
+ * You do not have to call this, otherwise ub_initstate does so.
+ * @param seed: seed value to create state (if no good entropy is found).
+ */
+void ub_systemseed(unsigned int seed);
+
+/**
  * Initialize a random generator state for use 
  * @param seed: seed value to create state contents.
  *	(ignored for arc4random).
