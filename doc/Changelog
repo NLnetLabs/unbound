@@ -4,6 +4,7 @@
 	- Fixup validation of RRSIG queries, they are let through.
 	- read /dev/random before chroot
 	- checkconf fix no python checks when no python module enabled.
+	- fix configure, pthread first, so other libs do not change outcome.
 
 27 March 2009: Wouter
 	- nicer -h output. report linked libraries and modules.

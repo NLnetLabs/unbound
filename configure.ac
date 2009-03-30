@@ -207,6 +207,64 @@ ACX_TYPE_IN_PORT_T
 # add option to disable the evil rpath
 ACX_ARG_RPATH
 
+# check for thread library.
+# check this first, so that the pthread lib does not get linked in via
+# libssl or libpython, and thus distorts the tests, and we end up using
+# the non-threadsafe C libraries.
+AC_ARG_WITH(pthreads, AC_HELP_STRING([--with-pthreads], 
+ [use pthreads library, or --without-pthreads to disable threading support.]), 
+ [ ],[ withval="yes" ])
+ub_have_pthreads=no
+if test x_$withval != x_no; then
+	ACX_PTHREAD([
+		AC_DEFINE(HAVE_PTHREAD,1,[Define if you have POSIX threads libraries and header files.])
+		LIBS="$PTHREAD_LIBS $LIBS"
+		CFLAGS="$CFLAGS $PTHREAD_CFLAGS"
+		CC="$PTHREAD_CC"
+		ub_have_pthreads=yes
+		AC_CHECK_TYPES([pthread_spinlock_t, pthread_rwlock_t],,,[#include <pthread.h>])
+		])
+fi
+
+# check solaris thread library 
+AC_ARG_WITH(solaris-threads, AC_HELP_STRING([--with-solaris-threads], 
+	[use solaris native thread library.]), [ ],[ withval="no" ])
+ub_have_sol_threads=no
+if test x_$withval != x_no; then
+	if test x_$ub_have_pthreads != x_no; then
+	    AC_WARN([Have pthreads already, ignoring --with-solaris-threads])
+	else
+	AC_SEARCH_LIBS(thr_create, [thread],
+	[
+    		AC_DEFINE(HAVE_SOLARIS_THREADS, 1, [Using Solaris threads])
+
+		ACX_CHECK_COMPILER_FLAG(mt, [CFLAGS="$CFLAGS -mt"],
+			[CFLAGS="$CFLAGS -D_REENTRANT"])
+		ub_have_sol_threads=yes
+	] , [ 
+		AC_ERROR([no solaris threads found.]) 
+	])
+	fi
+fi
+
+# check windows threads
+if test x_$ub_have_pthreads = x_no -a x_$ub_have_sol_threads = x_no; then
+	AC_CHECK_HEADERS([windows.h],,, [AC_INCLUDES_DEFAULT])
+	AC_MSG_CHECKING([for CreateThread])
+	AC_TRY_COMPILE([
+#ifdef HAVE_WINDOWS_H
+#include <windows.h>
+#endif
+], [
+	HANDLE t = CreateThread(NULL, 0, NULL, NULL, 0, NULL);
+],
+	AC_MSG_RESULT(yes)
+	AC_DEFINE(HAVE_WINDOWS_THREADS, 1, [Using Windows threads])
+,	
+	AC_MSG_RESULT(no)
+)
+fi
+
 # Check for PyUnbound
 AC_ARG_WITH(pyunbound,
    AC_HELP_STRING([--with-pyunbound],
@@ -286,61 +344,6 @@ fi
 ACX_WITH_SSL
 ACX_LIB_SSL
 AC_CHECK_FUNCS([EVP_sha1 EVP_sha256 EVP_sha512])
-
-# check for thread library.
-AC_ARG_WITH(pthreads, AC_HELP_STRING([--with-pthreads], 
- [use pthreads library, or --without-pthreads to disable threading support.]), 
- [ ],[ withval="yes" ])
-ub_have_pthreads=no
-if test x_$withval != x_no; then
-	ACX_PTHREAD([
-		AC_DEFINE(HAVE_PTHREAD,1,[Define if you have POSIX threads libraries and header files.])
-		LIBS="$PTHREAD_LIBS $LIBS"
-		CFLAGS="$CFLAGS $PTHREAD_CFLAGS"
-		CC="$PTHREAD_CC"
-		ub_have_pthreads=yes
-		AC_CHECK_TYPES([pthread_spinlock_t, pthread_rwlock_t],,,[#include <pthread.h>])
-		])
-fi
-
-# check solaris thread library 
-AC_ARG_WITH(solaris-threads, AC_HELP_STRING([--with-solaris-threads], 
-	[use solaris native thread library.]), [ ],[ withval="no" ])
-ub_have_sol_threads=no
-if test x_$withval != x_no; then
-	if test x_$ub_have_pthreads != x_no; then
-	    AC_WARN([Have pthreads already, ignoring --with-solaris-threads])
-	else
-	AC_SEARCH_LIBS(thr_create, [thread],
-	[
-    		AC_DEFINE(HAVE_SOLARIS_THREADS, 1, [Using Solaris threads])
-
-		ACX_CHECK_COMPILER_FLAG(mt, [CFLAGS="$CFLAGS -mt"],
-			[CFLAGS="$CFLAGS -D_REENTRANT"])
-		ub_have_sol_threads=yes
-	] , [ 
-		AC_ERROR([no solaris threads found.]) 
-	])
-	fi
-fi
-
-# check windows threads
-if test x_$ub_have_pthreads = x_no -a x_$ub_have_sol_threads = x_no; then
-	AC_CHECK_HEADERS([windows.h],,, [AC_INCLUDES_DEFAULT])
-	AC_MSG_CHECKING([for CreateThread])
-	AC_TRY_COMPILE([
-#ifdef HAVE_WINDOWS_H
-#include <windows.h>
-#endif
-], [
-	HANDLE t = CreateThread(NULL, 0, NULL, NULL, 0, NULL);
-],
-	AC_MSG_RESULT(yes)
-	AC_DEFINE(HAVE_WINDOWS_THREADS, 1, [Using Windows threads])
-,	
-	AC_MSG_RESULT(no)
-)
-fi
 
 # check to see if libraries are needed for these functions.
 AC_SEARCH_LIBS([inet_pton], [nsl])
