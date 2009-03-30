@@ -283,6 +283,14 @@ needs_validation(struct module_qstate* qstate, int ret_rc,
 		return 0;
 	}
 
+	/* cannot validate positive RRSIG response. (negatives can) */
+	if(qstate->qinfo.qtype == LDNS_RR_TYPE_RRSIG &&
+		rcode == LDNS_RCODE_NOERROR && ret_msg &&
+		ret_msg->rep->an_numrrsets > 0) {
+		verbose(VERB_ALGO, "cannot validate RRSIG, no sigs on sigs.");
+		return 0;
+	}
+
 	/* validate unchecked, and re-validate bogus messages */
 	if (ret_msg && ret_msg->rep->security > sec_status_bogus)
 	{
@@ -1921,6 +1929,9 @@ val_operate(struct module_qstate* qstate, enum module_ev event, int id,
 		if(!needs_validation(qstate, qstate->return_rcode, 
 			qstate->return_msg)) {
 			/* no need to validate this */
+			if(qstate->return_msg)
+				qstate->return_msg->rep->security =
+					sec_status_indeterminate;
 			qstate->ext_state[id] = module_finished;
 			return;
 		}

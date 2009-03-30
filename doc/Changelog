@@ -1,6 +1,7 @@
 30 March 2009: Wouter
 	- Fixup LDFLAGS from libevent sourcedir compile configure restore.
 	- Fixup so no non-absolute rpaths are added.
+	- Fixup validation of RRSIG queries; they are let through.
 
 27 March 2009: Wouter
 	- nicer -h output. report linked libraries and modules.
