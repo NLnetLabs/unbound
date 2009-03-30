@@ -554,7 +554,8 @@ checkconf(const char* cfgfile, const char* opt)
 	check_mod(cfg, iter_get_funcblock());
 	check_mod(cfg, val_get_funcblock());
 #ifdef WITH_PYTHONMODULE
-	check_mod(cfg, pythonmod_get_funcblock());
+	if(strstr(cfg->module_conf, "python"))
+		check_mod(cfg, pythonmod_get_funcblock());
 #endif
 	check_fwd(cfg);
 	if(opt) print_option(cfg, opt);
