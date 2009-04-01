@@ -63,15 +63,17 @@
 /* result generation */
 %typemap(argout,noblock=1) (struct ub_result** result)
 {
-  PyObject* tuple;
-  tuple = PyTuple_New(2);
-  PyTuple_SetItem(tuple, 0, $result);
-  if (result == 0) {
-     PyTuple_SetItem(tuple, 1, SWIG_NewPointerObj(SWIG_as_voidptr(newubr), SWIGTYPE_p_ub_result, SWIG_POINTER_OWN |  0 ));
-  } else {
-     PyTuple_SetItem(tuple, 1, Py_None);
+  if(1) { /* new code block for variable on stack */
+    PyObject* tuple;
+    tuple = PyTuple_New(2);
+    PyTuple_SetItem(tuple, 0, $result);
+    if (result == 0) {
+       PyTuple_SetItem(tuple, 1, SWIG_NewPointerObj(SWIG_as_voidptr(newubr), SWIGTYPE_p_ub_result, SWIG_POINTER_OWN |  0 ));
+    } else {
+       PyTuple_SetItem(tuple, 1, Py_None);
+    }
+    $result = tuple;
   }
-  $result = tuple;
 }
 
                        
@@ -751,7 +753,8 @@ Result: ['74.125.43.147', '74.125.43.99', '74.125.43.103', '74.125.43.104']
   
   PyObject* _ub_result_data(struct ub_result* result) {
     PyObject  *list;
-     int i,j,cnt;
+     int i,cnt;
+     (void)self;
      if ((result == 0) || (!result->havedata) || (result->data == 0))
         return Py_None;
 
@@ -843,11 +846,13 @@ int ub_ctx_debugout(struct ub_ctx* ctx, FILE* out);
 /* result generation */
 %typemap(argout,noblock=1) (int* async_id)
 {
-  PyObject* tuple;
-  tuple = PyTuple_New(2);
-  PyTuple_SetItem(tuple, 0, $result);
-  PyTuple_SetItem(tuple, 1, SWIG_From_int(asyncid));
-  $result = tuple;
+  if(1) { /* new code block for variable on stack */
+    PyObject* tuple;
+    tuple = PyTuple_New(2);
+    PyTuple_SetItem(tuple, 0, $result);
+    PyTuple_SetItem(tuple, 1, SWIG_From_int(asyncid));
+    $result = tuple;
+  }
 }
 
 // Grab a Python function object as a Python object.
@@ -871,7 +876,7 @@ int _ub_resolve_async(struct ub_ctx* ctx, char* name, int rrtype, int rrclass, v
 
    static void PythonCallBack(void* iddata, int status, struct ub_result* result)
    {
-      PyObject *func, *arglist;
+      PyObject *arglist;
       PyObject *fresult;
       struct cb_data* id;
       id = (struct cb_data*) iddata;
@@ -887,15 +892,16 @@ int _ub_resolve_async(struct ub_ctx* ctx, char* name, int rrtype, int rrclass, v
    }
 
    int _ub_resolve_async(struct ub_ctx* ctx, char* name, int rrtype, int rrclass, PyObject* mydata, PyObject *pyfunc, int* async_id) {
+      int r;
       struct cb_data* id;
       id = (struct cb_data*) malloc(sizeof(struct cb_data));
       id->data = mydata;
       id->func = pyfunc;
    
-      int i = ub_resolve_async(ctx,name,rrtype,rrclass, (void *) id, PythonCallBack, async_id);
+      r = ub_resolve_async(ctx,name,rrtype,rrclass, (void *) id, PythonCallBack, async_id);
       Py_INCREF(mydata);
       Py_INCREF(pyfunc);
-      return i;
+      return r;
    }
 
 %}

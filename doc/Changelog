@@ -4,6 +4,8 @@
 	  Still tries to do so, could work when deployed in intranet.
 	  Higher verbosity shows the error.
 	- new libunbound calls documented.
+	- pyunbound in libunbound/python. Removed compile warnings.
+	  Makefile to make it.
 
 30 March 2009: Wouter
 	- Fixup LDFLAGS from libevent sourcedir compile configure restore.

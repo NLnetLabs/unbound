@@ -471,7 +471,7 @@ void ub_resolve_free(struct ub_result* result);
 const char* ub_strerror(int err);
 
 /**
- * Debug routine.  Print the local zone information to stdout.
+ * Debug routine.  Print the local zone information to debug output.
  * @param ctx: context.  Is finalized by the routine.
  * @return 0 if OK, else error.
  */

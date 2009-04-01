@@ -314,7 +314,7 @@ Convert error value from one of the unbound library functions
 to a human readable string.
 .TP
 .B ub_ctx_print_local_zones
-Debug printout the local authority information to stdout.
+Debug printout the local authority information to debug output.
 .TP
 .B ub_ctx_zone_add
 Add new zone to local authority info, like local\-zone \fIunbound.conf\fR(5) 

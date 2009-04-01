@@ -40,6 +40,7 @@ UNBOUND_RUN_DIR=@UNBOUND_RUN_DIR@
 CHECKLOCK_SRC=@CHECKLOCK_SRC@
 UB_ON_WINDOWS=@UB_ON_WINDOWS@
 WITH_PYTHONMODULE=@WITH_PYTHONMODULE@
+WITH_PYUNBOUND=@WITH_PYUNBOUND@
 
 SWIG=@SWIG@
 YACC=@YACC@
@@ -283,6 +284,17 @@ $(srcdir)/pythonmod/pythonmod.c:	pythonmod/interface.h
 	@-if test ! -d $(dir $@); then $(INSTALL) -d $(patsubst %/,%,$(dir $@)); fi
 	$(INFO) Swig $<
 	$Q$(SWIG) $(CPPFLAGS) -o $@ -python $<
+endif
+
+ifeq "$(WITH_PYUNBOUND)" "yes"
+libunbound/python/libunbound_wrap.c:	$(srcdir)/libunbound/python/libunbound.i $(srcdir)/libunbound/unbound.h
+	@-if test ! -d $(dir $@); then $(INSTALL) -d $(patsubst %/,%,$(dir $@)); fi
+	$(INFO) Swig $<
+	$Q$(SWIG) -python -o $@ $(CPPFLAGS) $<
+
+_unbound.la:	$(BUILD)libunbound/python/libunbound_wrap.lo libunbound.la
+	$(INFO) Link $@
+	$Q$(LIBTOOL) --tag=CC --mode=link $(strip $(CC) $(RUNTIME_PATH) $(CFLAGS) $(LDFLAGS) -module -no-undefined) -o $@ $< -L. -L.libs -lunbound $(LIBS)
 endif
 
 util/config_file.c:	util/configparser.h
