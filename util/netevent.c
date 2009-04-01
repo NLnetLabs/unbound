@@ -254,6 +254,12 @@ comm_point_send_udp_msg(struct comm_point *c, ldns_buffer* packet,
 		if(errno == ENETUNREACH && verbosity < VERB_ALGO)
 			return 0;
 #endif
+		/* squelch errors where people deploy AAAA ::ffff:bla for
+		 * authority servers, which we try for intranets. */
+		if(errno == EINVAL && addr_is_ip4mapped(
+			(struct sockaddr_storage*)addr, addrlen) &&
+			verbosity < VERB_DETAIL)
+			return 0;
 #ifndef USE_WINSOCK
 		verbose(VERB_OPS, "sendto failed: %s", strerror(errno));
 #else

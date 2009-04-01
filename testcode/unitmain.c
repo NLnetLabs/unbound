@@ -238,6 +238,29 @@ net_test()
 				(struct sockaddr_storage*)&b6, i, l6) == i);
 		}
 	}
+	/* test addr_is_ip4mapped */
+	if(1) {
+		struct sockaddr_storage a;
+		socklen_t l = (socklen_t)sizeof(a);
+		unit_assert(ipstrtoaddr("12.13.14.15", 53, &a, &l));
+		unit_assert(!addr_is_ip4mapped(&a, l));
+		unit_assert(ipstrtoaddr("fe80::217:31ff:fe91:df", 53, &a, &l));
+		unit_assert(!addr_is_ip4mapped(&a, l));
+		unit_assert(ipstrtoaddr("ffff::217:31ff:fe91:df", 53, &a, &l));
+		unit_assert(!addr_is_ip4mapped(&a, l));
+		unit_assert(ipstrtoaddr("::ffff:31ff:fe91:df", 53, &a, &l));
+		unit_assert(!addr_is_ip4mapped(&a, l));
+		unit_assert(ipstrtoaddr("::fffe:fe91:df", 53, &a, &l));
+		unit_assert(!addr_is_ip4mapped(&a, l));
+		unit_assert(ipstrtoaddr("::ffff:127.0.0.1", 53, &a, &l));
+		unit_assert(addr_is_ip4mapped(&a, l));
+		unit_assert(ipstrtoaddr("::ffff:127.0.0.2", 53, &a, &l));
+		unit_assert(addr_is_ip4mapped(&a, l));
+		unit_assert(ipstrtoaddr("::ffff:192.168.0.2", 53, &a, &l));
+		unit_assert(addr_is_ip4mapped(&a, l));
+		unit_assert(ipstrtoaddr("2::ffff:192.168.0.2", 53, &a, &l));
+		unit_assert(!addr_is_ip4mapped(&a, l));
+	}
 }
 
 #include "util/config_file.h"

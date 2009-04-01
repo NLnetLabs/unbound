@@ -81,7 +81,7 @@ struct ub_randstate {
 /** Number of bytes to reseed after */
 #define REKEY_BYTES	(1 << 24)
 
-/** (re)setup system seed */
+/* (re)setup system seed */
 void
 ub_systemseed(unsigned int seed)
 {

@@ -269,4 +269,12 @@ int addr_in_common(struct sockaddr_storage* addr1, int net1,
 void addr_to_str(struct sockaddr_storage* addr, socklen_t addrlen,
 	char* buf, size_t len);
 
+/**
+ * See if sockaddr is an ipv6 mapped ipv4 address, ::ffff:0.0.0.0
+ * @param addr: address
+ * @param addrlen: length of address
+ * @return true if so
+ */
+int addr_is_ip4mapped(struct sockaddr_storage* addr, socklen_t addrlen);
+
 #endif /* NET_HELP_H */
