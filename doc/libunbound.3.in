@@ -35,7 +35,12 @@
 .B ub_resolve_async,
 .B ub_cancel,
 .B ub_resolve_free,
-.B ub_strerror
+.B ub_strerror,
+.B ub_ctx_print_local_zones,
+.B ub_ctx_zone_add,
+.B ub_ctx_zone_remove,
+.B ub_ctx_data_add,
+.B ub_ctx_data_remove
 \- Unbound DNS validating resolver @version@ functions.
 .SH "SYNOPSIS"
 .LP
@@ -114,6 +119,21 @@
 .LP
 \fIconst char *\fR
 \fBub_strerror\fR(\fIint\fR err);
+.LP
+\fIint\fR
+\fBub_ctx_print_local_zones\fR(\fIstruct ub_ctx*\fR ctx);
+.LP
+\fIint\fR
+\fBub_ctx_zone_add\fR(\fIstruct ub_ctx*\fR ctx, \fIchar*\fR zone_name, \fIchar*\fR zone_type);
+.LP
+\fIint\fR
+\fBub_ctx_zone_remove\fR(\fIstruct ub_ctx*\fR ctx, \fIchar*\fR zone_name);
+.LP
+\fIint\fR
+\fBub_ctx_data_add\fR(\fIstruct ub_ctx*\fR ctx, \fIchar*\fR data);
+.LP
+\fIint\fR
+\fBub_ctx_data_remove\fR(\fIstruct ub_ctx*\fR ctx, \fIchar*\fR data);
 .SH "DESCRIPTION"
 .LP
 .B Unbound 
@@ -278,7 +298,8 @@ void my_callback_function(void* my_arg, int err,
                   struct ub_result* result);
 .IP
 The async_id is returned so you can (at your option) decide to track it
-and cancel the request if needed.
+and cancel the request if needed.  If you pass a NULL pointer the async_id
+is not returned. 
 .TP
 .B ub_cancel
 Cancel an async query in progress.  This may return an error if the query
@@ -291,6 +312,23 @@ Free struct ub_result contents after use.
 .B ub_strerror
 Convert error value from one of the unbound library functions 
 to a human readable string.
+.TP
+.B ub_ctx_print_local_zones
+Debug printout the local authority information to stdout.
+.TP
+.B ub_ctx_zone_add
+Add new zone to local authority info, like local\-zone \fIunbound.conf\fR(5) 
+statement.
+.TP
+.B ub_ctx_zone_remove
+Delete zone from local authority info.
+.TP
+.B ub_ctx_data_add
+Add resource record data to local authority info, like local\-data
+\fIunbound.conf\fR(5) statement.
+.TP
+.B ub_ctx_data_remove
+Delete local authority data from the name given.
 .SH "RESULT DATA STRUCTURE"
 .LP
 The result of the DNS resolution and validation is returned as 

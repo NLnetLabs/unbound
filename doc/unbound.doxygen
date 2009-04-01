@@ -496,6 +496,9 @@ EXCLUDE                = ./build \
                          util/configlexer.c \
                          util/locks.h \
 			 pythonmod/Unbound.py \
+			 pythonmod/interface.h \
+			 pythonmod/examples/resgen.py \
+			 pythonmod/examples/resmod.py \
 			 ./ldns-src
 
 # The EXCLUDE_SYMLINKS tag can be used select whether or not files or 

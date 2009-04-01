@@ -907,29 +907,30 @@ ub_ctx_hosts(struct ub_ctx* ctx, char* fname)
 	return UB_NOERROR;
 }
 
-static int ub_ctx_check_finalize(struct ub_ctx* ctx)
+/** finalize the context, if not already finalized */
+static int ub_ctx_finalize(struct ub_ctx* ctx)
 {
-    int res = 0;
-    lock_basic_lock(&ctx->cfglock);
-    if (!ctx->finalized) {
-       res = context_finalize(ctx);
-    }
-    lock_basic_unlock(&ctx->cfglock);
-    return res;
+	int res = 0;
+	lock_basic_lock(&ctx->cfglock);
+	if (!ctx->finalized) {
+		res = context_finalize(ctx);
+	}
+	lock_basic_unlock(&ctx->cfglock);
+	return res;
 }
 
-/** Print local zones and RR data */
+/* Print local zones and RR data */
 int ub_ctx_print_local_zones(struct ub_ctx* ctx)
 {   
-    int res = ub_ctx_check_finalize(ctx);
-    if (res) return res;
+	int res = ub_ctx_finalize(ctx);
+	if (res) return res;
 
-    local_zones_print(ctx->local_zones);
+	local_zones_print(ctx->local_zones);
 
-    return UB_NOERROR;
+	return UB_NOERROR;
 }
 
-/** Add a new zone */
+/* Add a new zone */
 int ub_ctx_zone_add(struct ub_ctx* ctx, char *zone_name, char *zone_type)
 {
 	enum localzone_type t;
@@ -938,91 +939,96 @@ int ub_ctx_zone_add(struct ub_ctx* ctx, char *zone_name, char *zone_type)
 	int nmlabs;
 	size_t nmlen;
 
-    int res = ub_ctx_check_finalize(ctx);
-    if (res) return res;
+	int res = ub_ctx_finalize(ctx);
+	if (res) return res;
 
 	if(!local_zone_str2type(zone_type, &t)) {
-        return UB_SYNTAX;
-    }
+		return UB_SYNTAX;
+	}
 
 	if(!parse_dname(zone_name, &nm, &nmlen, &nmlabs)) {
 		return UB_SYNTAX;
-    }
+	}
 
 	lock_quick_lock(&ctx->local_zones->lock);
-	if((z=local_zones_find(ctx->local_zones, nm, nmlen, nmlabs, LDNS_RR_CLASS_IN))) {
+	if((z=local_zones_find(ctx->local_zones, nm, nmlen, nmlabs, 
+		LDNS_RR_CLASS_IN))) {
 		/* already present in tree */
 		lock_rw_wrlock(&z->lock);
 		z->type = t; /* update type anyway */
 		lock_rw_unlock(&z->lock);
-		free(nm);
 		lock_quick_unlock(&ctx->local_zones->lock);
+		free(nm);
 		return UB_NOERROR;
 	}
-	if(!local_zones_add_zone(ctx->local_zones, nm, nmlen, nmlabs, LDNS_RR_CLASS_IN, t)) {
+	if(!local_zones_add_zone(ctx->local_zones, nm, nmlen, nmlabs, 
+		LDNS_RR_CLASS_IN, t)) {
 		lock_quick_unlock(&ctx->local_zones->lock);
 		return UB_NOMEM;
 	}
 	lock_quick_unlock(&ctx->local_zones->lock);
-    return UB_NOERROR;
+	return UB_NOERROR;
 }
 
-/** Remove zone */
+/* Remove zone */
 int ub_ctx_zone_remove(struct ub_ctx* ctx, char *zone_name)
 {   
 	struct local_zone* z;
-    uint8_t* nm;
+	uint8_t* nm;
 	int nmlabs;
 	size_t nmlen;
 
-    int res = ub_ctx_check_finalize(ctx);
-    if (res) return res;
+	int res = ub_ctx_finalize(ctx);
+	if (res) return res;
 
 	if(!parse_dname(zone_name, &nm, &nmlen, &nmlabs)) {
 		return UB_SYNTAX;
-    }
+	}
 
 	lock_quick_lock(&ctx->local_zones->lock);
-	if((z=local_zones_find(ctx->local_zones, nm, nmlen, nmlabs, LDNS_RR_CLASS_IN))) {
+	if((z=local_zones_find(ctx->local_zones, nm, nmlen, nmlabs, 
+		LDNS_RR_CLASS_IN))) {
 		/* present in tree */
 		local_zones_del_zone(ctx->local_zones, z);
 	}
-	free(nm);
 	lock_quick_unlock(&ctx->local_zones->lock);
-    return UB_NOERROR;
+	free(nm);
+	return UB_NOERROR;
 }
 
-/** Add new RR data */
+/* Add new RR data */
 int ub_ctx_data_add(struct ub_ctx* ctx, char *data)
 {
-    ldns_buffer* buf;
-    int res = ub_ctx_check_finalize(ctx);
-    if (res) return res;
+	ldns_buffer* buf;
+	int res = ub_ctx_finalize(ctx);
+	if (res) return res;
 
 	lock_basic_lock(&ctx->cfglock);
-    buf = ldns_buffer_new(ctx->env->cfg->msg_buffer_size);
+	buf = ldns_buffer_new(ctx->env->cfg->msg_buffer_size);
 	lock_basic_unlock(&ctx->cfglock);
+	if(!buf) return UB_NOMEM;
 
-    res = local_zones_add_RR(ctx->local_zones, data, buf);
+	res = local_zones_add_RR(ctx->local_zones, data, buf);
 
-    ldns_buffer_free(buf);
-    return (!res) ? UB_NOMEM : UB_NOERROR;
+	ldns_buffer_free(buf);
+	return (!res) ? UB_NOMEM : UB_NOERROR;
 }
 
 /* Remove RR data */
 int ub_ctx_data_remove(struct ub_ctx* ctx, char *data)
 {
-    uint8_t* nm;
+	uint8_t* nm;
 	int nmlabs;
 	size_t nmlen;
-    int res = ub_ctx_check_finalize(ctx);
-    if (res) return res;
+	int res = ub_ctx_finalize(ctx);
+	if (res) return res;
 
 	if(!parse_dname(data, &nm, &nmlen, &nmlabs)) 
 		return UB_SYNTAX;
 
-	local_zones_del_data(ctx->local_zones, nm, nmlen, nmlabs, LDNS_RR_CLASS_IN);
+	local_zones_del_data(ctx->local_zones, nm, nmlen, nmlabs, 
+		LDNS_RR_CLASS_IN);
 
-    free(nm);
-    return UB_NOERROR;
+	free(nm);
+	return UB_NOERROR;
 }

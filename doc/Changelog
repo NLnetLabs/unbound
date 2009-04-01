@@ -3,6 +3,7 @@
 	  ipv6 AAAA records for their nameservers with ipv4 mapped contents.
 	  Still tries to do so, could work when deployed in intranet.
 	  Higher verbosity shows the error.
+	- new libunbound calls documented.
 
 30 March 2009: Wouter
 	- Fixup LDFLAGS from libevent sourcedir compile configure restore.

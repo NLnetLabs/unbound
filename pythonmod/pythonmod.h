@@ -33,6 +33,10 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
+/**
+ * \file
+ * Python module for unbound.  Calls python script.
+ */
 #ifndef PYTHONMOD_H
 #define PYTHONMOD_H
 #include "util/module.h"
@@ -55,10 +59,13 @@ struct pythonmod_env {
    /** Python module. */
    PyObject* module;
 
-   /** Module functions */
+   /** Module init function */
    PyObject* func_init;
+   /** Module deinit function */
    PyObject* func_deinit;
+   /** Module operate function */
    PyObject* func_operate;
+   /** Module super_inform function */
    PyObject* func_inform;
 
    /** Python dictionary. */

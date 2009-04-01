@@ -297,6 +297,11 @@ void local_zones_del_data(struct local_zones* zones,
 
 /** 
  * Form wireformat from text format domain name. 
+ * @param str: the domain name in text "www.example.com"
+ * @param res: resulting wireformat is stored here with malloc.
+ * @param len: length of resulting wireformat.
+ * @param labs: number of labels in resulting wireformat.
+ * @return false on error, syntax or memory. Also logged.
  */
 int parse_dname(const char* str, uint8_t** res, size_t* len, int* labs);
 

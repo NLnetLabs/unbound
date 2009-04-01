@@ -470,10 +470,49 @@ void ub_resolve_free(struct ub_result* result);
  */
 const char* ub_strerror(int err);
 
+/**
+ * Debug routine.  Print the local zone information to stdout.
+ * @param ctx: context.  Is finalized by the routine.
+ * @return 0 if OK, else error.
+ */
 int ub_ctx_print_local_zones(struct ub_ctx* ctx);
+
+/**
+ * Add a new zone with the zonetype to the local authority info of the 
+ * library.
+ * @param ctx: context.  Is finalized by the routine.
+ * @param zone_name: name of the zone in text, "example.com"
+ *	If it already exists, the type is updated.
+ * @param zone_type: type of the zone (like for unbound.conf) in text.
+ * @return 0 if OK, else error.
+ */
 int ub_ctx_zone_add(struct ub_ctx* ctx, char *zone_name, char *zone_type);
+
+/**
+ * Remove zone from local authority info of the library.
+ * @param ctx: context.  Is finalized by the routine.
+ * @param zone_name: name of the zone in text, "example.com"
+ *	If it does not exist, nothing happens.
+ * @return 0 if OK, else error.
+ */
 int ub_ctx_zone_remove(struct ub_ctx* ctx, char *zone_name);
+
+/**
+ * Add localdata to the library local authority info.
+ * Similar to local-data config statement.
+ * @param ctx: context.  Is finalized by the routine.
+ * @param data: the resource record in text format, for example
+ *	"www.example.com IN A 127.0.0.1"
+ * @return 0 if OK, else error.
+ */
 int ub_ctx_data_add(struct ub_ctx* ctx, char *data);
+
+/**
+ * Remove localdata from the library local authority info.
+ * @param ctx: context.  Is finalized by the routine.
+ * @param data: the name to delete all data from, like "www.example.com".
+ * @return 0 if OK, else error.
+ */
 int ub_ctx_data_remove(struct ub_ctx* ctx, char *data);
 
 #endif /* _UB_UNBOUND_H */
