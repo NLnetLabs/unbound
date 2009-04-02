@@ -511,3 +511,27 @@ lruhash_setmarkdel(struct lruhash* table, lruhash_markdelfunc_t md)
 	table->markdelfunc = md;
 	lock_quick_unlock(&table->lock);
 }
+
+void 
+lruhash_traverse(struct lruhash* h, int wr, 
+	void (*func)(struct lruhash_entry*, void*), void* arg)
+{
+	size_t i;
+	struct lruhash_entry* e;
+
+	lock_quick_lock(&h->lock);
+	for(i=0; i<h->size; i++) {
+		lock_quick_lock(&h->array[i].lock);
+		for(e = h->array[i].overflow_list; e; e = e->overflow_next) {
+			if(wr) {
+				lock_rw_wrlock(&e->lock);
+			} else {
+				lock_rw_rdlock(&e->lock);
+			}
+			(*func)(e, arg);
+			lock_rw_unlock(&e->lock);
+		}
+		lock_quick_unlock(&h->array[i].lock);
+	}
+	lock_quick_unlock(&h->lock);
+}

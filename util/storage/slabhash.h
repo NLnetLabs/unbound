@@ -174,6 +174,16 @@ struct lruhash* slabhash_gettable(struct slabhash* table, hashvalue_t hash);
  */
 void slabhash_setmarkdel(struct slabhash* table, lruhash_markdelfunc_t md);
 
+/**
+ * Traverse a slabhash.
+ * @param table: slabbed hash table.
+ * @param wr: if true, writelock is obtained, otherwise readlock.
+ * @param func: function to call for every element.
+ * @param arg: user argument to function.
+ */
+void slabhash_traverse(struct slabhash* table, int wr,
+        void (*func)(struct lruhash_entry*, void*), void* arg);
+
 /* --- test representation --- */
 /** test structure contains test key */
 struct slabhash_testkey {

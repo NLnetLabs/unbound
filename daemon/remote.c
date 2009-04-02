@@ -1082,6 +1082,8 @@ struct del_info {
 	uint32_t expired;
 	/** number of rrsets removed */
 	size_t num_rrsets;
+	/** number of msgs removed */
+	size_t num_msgs;
 	/** number of key entries removed */
 	size_t num_keys;
 };
@@ -1101,6 +1103,20 @@ zone_del_rrset(struct lruhash_entry* e, void* arg)
 	}
 }
 
+/** callback to delete messages in a zone */
+static void
+zone_del_msg(struct lruhash_entry* e, void* arg)
+{
+	/* entry is locked */
+	struct del_info* inf = (struct del_info*)arg;
+	struct msgreply_entry* k = (struct msgreply_entry*)e->key;
+	if(dname_subdomain_c(k->key.qname, inf->name)) {
+		struct reply_info* d = (struct reply_info*)e->data;
+		d->ttl = inf->expired;
+		inf->num_msgs++;
+	}
+}
+
 /** callback to delete keys in zone */
 static void
 zone_del_kcache(struct lruhash_entry* e, void* arg)
@@ -1113,41 +1129,6 @@ zone_del_kcache(struct lruhash_entry* e, void* arg)
 		d->ttl = inf->expired;
 		inf->num_keys++;
 	}
-}
-
-/** traverse a lruhash */
-static void 
-lruhash_traverse(struct lruhash* h, int wr, 
-	void (*func)(struct lruhash_entry*, void*), void* arg)
-{
-	size_t i;
-	struct lruhash_entry* e;
-
-	lock_quick_lock(&h->lock);
-	for(i=0; i<h->size; i++) {
-		lock_quick_lock(&h->array[i].lock);
-		for(e = h->array[i].overflow_list; e; e = e->overflow_next) {
-			if(wr) {
-				lock_rw_wrlock(&e->lock);
-			} else {
-				lock_rw_rdlock(&e->lock);
-			}
-			(*func)(e, arg);
-			lock_rw_unlock(&e->lock);
-		}
-		lock_quick_unlock(&h->array[i].lock);
-	}
-	lock_quick_unlock(&h->lock);
-}
-
-/** traverse a slabhash */
-static void 
-slabhash_traverse(struct slabhash* sh, int wr, 
-	void (*func)(struct lruhash_entry*, void*), void* arg)
-{
-	size_t i;
-	for(i=0; i<sh->size; i++)
-		lruhash_traverse(sh->array[i], wr, func, arg);
 }
 
 /** remove all rrsets and keys from zone from cache */
@@ -1170,9 +1151,12 @@ do_flush_zone(SSL* ssl, struct worker* worker, char* arg)
 	inf.expired = *worker->env.now;
 	inf.expired -= 3; /* handle 3 seconds skew between threads */
 	inf.num_rrsets = 0;
+	inf.num_msgs = 0;
 	inf.num_keys = 0;
 	slabhash_traverse(&worker->env.rrset_cache->table, 1, 
 		&zone_del_rrset, &inf);
+
+	slabhash_traverse(worker->env.msg_cache, 1, &zone_del_msg, &inf);
 
 	/* and validator cache */
 	idx = modstack_find(&worker->daemon->mods, "validator");
@@ -1183,8 +1167,9 @@ do_flush_zone(SSL* ssl, struct worker* worker, char* arg)
 
 	free(nm);
 
-	(void)ssl_printf(ssl, "ok removed %u rrsets and %u key entries\n",
-		(unsigned)inf.num_rrsets, (unsigned)inf.num_keys);
+	(void)ssl_printf(ssl, "ok removed %u rrsets, %u messages "
+		"and %u key entries\n", (unsigned)inf.num_rrsets, 
+		(unsigned)inf.num_msgs, (unsigned)inf.num_keys);
 }
 
 /** remove name rrset from cache */

@@ -2,6 +2,9 @@
 	- pyunbound (libunbound python plugin) compiles using libtool.
 	- documentation for pythonmod and pyunbound is generated in doc/html.
 	- iana portlist updated.
+	- fixed bug in unbound-control flush_zone where it would not flush
+	  every message in the target domain.  This especially impacted 
+	  NXDOMAIN messages which could remain in the cache regardless.
 
 1 April 2009: Wouter
 	- suppress errors when trying to contact authority servers that gave

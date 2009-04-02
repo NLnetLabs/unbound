@@ -401,4 +401,14 @@ void lruhash_status(struct lruhash* table, const char* id, int extended);
  */
 size_t lruhash_get_mem(struct lruhash* table);
 
+/**
+ * Traverse a lruhash. Call back for every element in the table.
+ * @param h: hash table.  Locked before use.
+ * @param wr: if true writelock is obtained on element, otherwise readlock.
+ * @param func: function for every element. Do not lock or unlock elements.
+ * @param arg: user argument to func.
+ */
+void lruhash_traverse(struct lruhash* h, int wr,
+        void (*func)(struct lruhash_entry*, void*), void* arg);
+
 #endif /* UTIL_STORAGE_LRUHASH_H */
