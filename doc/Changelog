@@ -5,6 +5,7 @@
 	- fixed bug in unbound-control flush_zone where it would not flush
 	  every message in the target domain.  This especially impacted 
 	  NXDOMAIN messages which could remain in the cache regardless.
+	- python module test package.
 
 1 April 2009: Wouter
 	- suppress errors when trying to contact authority servers that gave

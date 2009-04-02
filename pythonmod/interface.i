@@ -165,11 +165,11 @@ struct query_info {
         __swig_getmethods__["qclass_str"] = _get_qclass_str
         if _newclass:qclass_str = _swig_property(_get_qclass_str)
 
-        __swig_getmethods__["qname"] = _Unbound._get_qname
-        if _newclass:qname = _swig_property(_Unbound._get_qname)
+        __swig_getmethods__["qname"] = _unboundmodule._get_qname
+        if _newclass:qname = _swig_property(_unboundmodule._get_qname)
         
-        __swig_getmethods__["qname_list"] = _Unbound._get_qname_components
-        if _newclass:qname_list = _swig_property(_Unbound._get_qname_components)
+        __swig_getmethods__["qname_list"] = _unboundmodule._get_qname_components
+        if _newclass:qname_list = _swig_property(_unboundmodule._get_qname_components)
 
         def _get_qname_str(self): return dnameAsStr(self.qname)
         __swig_getmethods__["qname_str"] = _get_qname_str
@@ -209,19 +209,19 @@ uint16_t ntohs(uint16_t netshort);
 
 %extend packed_rrset_key {
    %pythoncode %{
-        def _get_type_str(self): return ldns_rr_type2str(_Unbound.ntohs(self.type))
+        def _get_type_str(self): return ldns_rr_type2str(_unboundmodule.ntohs(self.type))
         __swig_getmethods__["type_str"] = _get_type_str
         if _newclass:type_str = _swig_property(_get_type_str)
 
-        def _get_class_str(self): return ldns_rr_class2str(_Unbound.ntohs(self.rrset_class))
+        def _get_class_str(self): return ldns_rr_class2str(_unboundmodule.ntohs(self.rrset_class))
         __swig_getmethods__["rrset_class_str"] = _get_class_str
         if _newclass:rrset_class_str = _swig_property(_get_class_str)
 
-        __swig_getmethods__["dname"] = _Unbound._get_dname
-        if _newclass:dname = _swig_property(_Unbound._get_dname)
+        __swig_getmethods__["dname"] = _unboundmodule._get_dname
+        if _newclass:dname = _swig_property(_unboundmodule._get_dname)
 
-        __swig_getmethods__["dname_list"] = _Unbound._get_dname_components
-        if _newclass:dname_list = _swig_property(_Unbound._get_dname_components)
+        __swig_getmethods__["dname_list"] = _unboundmodule._get_dname_components
+        if _newclass:dname_list = _swig_property(_unboundmodule._get_dname_components)
 
         def _get_dname_str(self): return dnameAsStr(self.dname)
         __swig_getmethods__["dname_str"] = _get_dname_str
@@ -272,16 +272,16 @@ struct packed_rrset_data {
 %pythoncode %{
     class RRSetData_RRLen:
         def __init__(self, obj): self.obj = obj
-        def __getitem__(self, index): return _Unbound._get_data_rr_len(self.obj, index)
+        def __getitem__(self, index): return _unboundmodule._get_data_rr_len(self.obj, index)
         def __len__(self): return obj.count + obj.rrsig_count
     class RRSetData_RRTTL:
         def __init__(self, obj): self.obj = obj
-        def __getitem__(self, index): return _Unbound._get_data_rr_ttl(self.obj, index)
-        def __setitem__(self, index, value): _Unbound._set_data_rr_ttl(self.obj, index, value)
+        def __getitem__(self, index): return _unboundmodule._get_data_rr_ttl(self.obj, index)
+        def __setitem__(self, index, value): _unboundmodule._set_data_rr_ttl(self.obj, index, value)
         def __len__(self): return obj.count + obj.rrsig_count
     class RRSetData_RRData:
         def __init__(self, obj): self.obj = obj
-        def __getitem__(self, index): return _Unbound._get_data_rr_data(self.obj, index)
+        def __getitem__(self, index): return _unboundmodule._get_data_rr_data(self.obj, index)
         def __len__(self): return obj.count + obj.rrsig_count
 %}
 
@@ -364,12 +364,12 @@ struct dns_msg {
 %pythoncode %{
     class ReplyInfo_RRSet:
         def __init__(self, obj): self.obj = obj
-        def __getitem__(self, index): return _Unbound._rrset_rrsets_get(self.obj, index)
+        def __getitem__(self, index): return _unboundmodule._rrset_rrsets_get(self.obj, index)
         def __len__(self): return obj.rrset_count
 
     class ReplyInfo_Ref:
         def __init__(self, obj): self.obj = obj
-        def __getitem__(self, index): return _Unbound._rrset_ref_get(self.obj, index)
+        def __getitem__(self, index): return _unboundmodule._rrset_ref_get(self.obj, index)
         def __len__(self): return obj.rrset_count
 %}
 
@@ -460,10 +460,10 @@ struct module_qstate {
     class ExtState:
         def __init__(self, obj): self.obj = obj
         def __str__(self):
-            return ", ".join([_Unbound.strextstate(_Unbound._ext_state_get(self.obj,a)) for a in range(0, _Unbound.MODULE_COUNT)])
-        def __getitem__(self, index): return _Unbound._ext_state_get(self.obj, index)
-        def __setitem__(self, index, value): _Unbound._ext_state_set(self.obj, index, value)
-        def __len__(self): return _Unbound.MODULE_COUNT
+            return ", ".join([_unboundmodule.strextstate(_unboundmodule._ext_state_get(self.obj,a)) for a in range(0, _unboundmodule.MODULE_COUNT)])
+        def __getitem__(self, index): return _unboundmodule._ext_state_get(self.obj, index)
+        def __setitem__(self, index, value): _unboundmodule._ext_state_set(self.obj, index, value)
+        def __len__(self): return _unboundmodule.MODULE_COUNT
 %}
 
 %inline %{
@@ -485,7 +485,7 @@ struct module_qstate {
    %pythoncode %{
         def set_ext_state(self, id, state):
             """Sets the ext state"""
-            _Unbound._ext_state_set(self, id, state)
+            _unboundmodule._ext_state_set(self, id, state)
 
         def __ext_state_get(self): return ExtState(self)
         __swig_getmethods__["ext_state"] = __ext_state_get
@@ -770,7 +770,7 @@ int set_return_msg(struct module_qstate* qstate,
 
         def set_return_msg(self, qstate):
             """Returns 1 if OK"""
-            status = _Unbound.set_return_msg(qstate, self.rr_name, self.rr_type, self.rr_class, 
+            status = _unboundmodule.set_return_msg(qstate, self.rr_name, self.rr_type, self.rr_class, 
                                            self.query_flags, self.default_ttl,
                                            self.question, self.answer, self.authority, self.additional)
 
