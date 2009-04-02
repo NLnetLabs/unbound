@@ -11,7 +11,7 @@ This example shows how to handle queries and generate response packet.
 Complete source code
 --------------------
 
-.. literalinclude:: ../../../examples/resgen.py
+.. literalinclude:: ../../examples/resgen.py
    :language: python
 
 Testing

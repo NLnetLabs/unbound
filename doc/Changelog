@@ -1,5 +1,6 @@
 2 April 2009: Wouter
 	- pyunbound (libunbound python plugin) compiles using libtool.
+	- documentation for pythonmod and pyunbound is generated in doc/html.
 
 1 April 2009: Wouter
 	- suppress errors when trying to contact authority servers that gave

@@ -16,7 +16,7 @@ In other cases, the validator module guarantees updating data which are produced
 Complete source code
 --------------------
 
-.. literalinclude:: ../../../examples/resmod.py
+.. literalinclude:: ../../examples/resmod.py
    :language: python
 
 Testing

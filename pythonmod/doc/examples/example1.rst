@@ -10,7 +10,7 @@ This packet will be send to a client that asked for it.
 Complete source code
 --------------------
 
-.. literalinclude:: ../../../examples/log.py
+.. literalinclude:: ../../examples/log.py
    :language: python
 
 Testing

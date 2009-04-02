@@ -495,10 +495,12 @@ EXCLUDE                = ./build \
                          util/configparser.h \
                          util/configlexer.c \
                          util/locks.h \
-			 pythonmod/Unbound.py \
+			 pythonmod/unboundmodule.py \
 			 pythonmod/interface.h \
 			 pythonmod/examples/resgen.py \
 			 pythonmod/examples/resmod.py \
+			 libunbound/python/unbound.py \
+			 libunbound/python/libunbound_wrap.c \
 			 ./ldns-src
 
 # The EXCLUDE_SYMLINKS tag can be used select whether or not files or 

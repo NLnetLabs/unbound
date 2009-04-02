@@ -160,5 +160,5 @@ Proof that the unbound still works as resolver.
 Complete source code
 --------------------
 
-.. literalinclude:: ../../../examples/dict.py
+.. literalinclude:: ../../examples/dict.py
    :language: python
