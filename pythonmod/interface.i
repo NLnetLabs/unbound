@@ -2,7 +2,7 @@
  * interface.i: unbound python module
  */
 
-%module Unbound
+%module unboundmodule
 %{
    #include <sys/types.h>
    #include <sys/socket.h>

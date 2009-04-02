@@ -98,9 +98,9 @@ int pythonmod_init(struct module_env* env, int id)
    }
    PyRun_SimpleString("sys.path.append('"RUN_DIR"') \n");
    PyRun_SimpleString("sys.path.append('"SHARE_DIR"') \n");
-   if (PyRun_SimpleString("from Unbound import *\n") < 0)
+   if (PyRun_SimpleString("from unboundmodule import *\n") < 0)
    {
-      log_err("pythonmod: cannot initialize core module: Unbound.py"); 
+      log_err("pythonmod: cannot initialize core module: unboundmodule.py"); 
       return 0;
    }
 

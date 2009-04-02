@@ -1,3 +1,6 @@
+2 April 2009: Wouter
+	- pyunbound (libunbound python plugin) compiles using libtool.
+
 1 April 2009: Wouter
 	- suppress errors when trying to contact authority servers that gave
 	  ipv6 AAAA records for their nameservers with ipv4 mapped contents.
