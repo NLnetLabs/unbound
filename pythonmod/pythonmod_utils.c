@@ -33,6 +33,11 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
+/**
+ * \file
+ * Utility functions for the python module that perform stores and loads and
+ * conversions.
+ */
 #include "config.h"
 #include "util/module.h"
 #include "util/net_help.h"
