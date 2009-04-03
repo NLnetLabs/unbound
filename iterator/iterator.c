@@ -858,6 +858,7 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 		if(verbosity >= VERB_ALGO)
 			log_dns_msg("msg from cache lookup", &msg->qinfo, 
 				msg->rep);
+		verbose(VERB_ALGO, "msg ttl is %d", (int)msg->rep->ttl);
 
 		if(type == RESPONSE_TYPE_CNAME) {
 			uint8_t* sname = 0;

@@ -1,3 +1,8 @@
+3 April 2009: Wouter
+	- Fixed a bug that caused messages to be stored in the cache too 
+	  long.  Hard to trigger, but NXDOMAINs for nameservers or CNAME
+	  targets have been more vulnerable to the TTL miscalculation bug. 
+
 2 April 2009: Wouter
 	- pyunbound (libunbound python plugin) compiles using libtool.
 	- documentation for pythonmod and pyunbound is generated in doc/html.

@@ -426,7 +426,7 @@ tomsg(struct module_env* env, struct msgreply_entry* e, struct reply_info* r,
 		return NULL;
 	msg->rep->flags = r->flags;
 	msg->rep->qdcount = r->qdcount;
-	msg->rep->ttl = r->ttl;
+	msg->rep->ttl = r->ttl - now;
 	msg->rep->security = r->security;
 	msg->rep->an_numrrsets = r->an_numrrsets;
 	msg->rep->ns_numrrsets = r->ns_numrrsets;
