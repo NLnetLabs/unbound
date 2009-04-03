@@ -4,6 +4,11 @@
 
 %module unboundmodule
 %{
+/**
+ * \file 
+ * This is the interface between the unbound server and a python module
+ * called to perform operations on queries.
+ */
    #include <sys/types.h>
    #include <sys/socket.h>
    #include <netinet/in.h>
