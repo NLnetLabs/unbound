@@ -429,6 +429,9 @@ AC_ARG_ENABLE(staticexe, AC_HELP_STRING([--enable-static-exe],
 	, )
 if test x_$enable_static_exe = x_yes; then
 	staticexe="-static"
+	if test "$on_mingw" = yes; then
+		staticexe="-all-static"
+	fi
 fi
 
 # set lock checking if requested
