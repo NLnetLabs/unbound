@@ -11,6 +11,7 @@
 	  The example python scripts (pythonmod/examples and
 	  libunbound/python/examples) are not installed.
 	- python invalidate routine respects packed rrset ids and locks.
+	- clock skew checks in unbound, config statements.
 
 3 April 2009: Wouter
 	- Fixed a bug that caused messages to be stored in the cache too 

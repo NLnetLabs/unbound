@@ -140,7 +140,9 @@
      VAR_LOG_TIME_ASCII = 356,
      VAR_DOMAIN_INSECURE = 357,
      VAR_PYTHON = 358,
-     VAR_PYTHON_SCRIPT = 359
+     VAR_PYTHON_SCRIPT = 359,
+     VAR_VAL_SIG_SKEW_MIN = 360,
+     VAR_VAL_SIG_SKEW_MAX = 361
    };
 #endif
 /* Tokens.  */
@@ -246,6 +248,8 @@
 #define VAR_DOMAIN_INSECURE 357
 #define VAR_PYTHON 358
 #define VAR_PYTHON_SCRIPT 359
+#define VAR_VAL_SIG_SKEW_MIN 360
+#define VAR_VAL_SIG_SKEW_MAX 361
 
 
 
@@ -257,7 +261,7 @@ typedef union YYSTYPE
 	char*	str;
 }
 /* Line 1489 of yacc.c.  */
-#line 261 "util/configparser.h"
+#line 265 "util/configparser.h"
 	YYSTYPE;
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */
 # define YYSTYPE_IS_DECLARED 1

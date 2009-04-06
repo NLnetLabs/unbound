@@ -122,6 +122,8 @@ val_apply_cfg(struct module_env* env, struct val_env* val_env,
 		return 0;
 	}
 	val_env->date_override = cfg->val_date_override;
+	val_env->skew_min = cfg->val_sig_skew_min;
+	val_env->skew_max = cfg->val_sig_skew_max;
 	c = cfg_count_numbers(cfg->val_nsec3_key_iterations);
 	if(c < 1 || (c&1)) {
 		log_err("validator: unparseable or odd nsec3 key "

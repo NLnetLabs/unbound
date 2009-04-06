@@ -148,6 +148,8 @@ config_create()
 	cfg->dlv_anchor_list = NULL;
 	cfg->domain_insecure = NULL;
 	cfg->val_date_override = 0;
+	cfg->val_sig_skew_min = 3600; /* at least daylight savings trouble */
+	cfg->val_sig_skew_max = 86400; /* at most timezone settings trouble */
 	cfg->val_clean_additional = 1;
 	cfg->val_permissive_mode = 0;
 	cfg->key_cache_size = 4 * 1024 * 1024;

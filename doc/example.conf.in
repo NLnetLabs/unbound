@@ -319,6 +319,12 @@ server:
 	# some of the revalidation, until the time interval expires. in secs.
 	# val-bogus-ttl: 60
 	
+	# The signature inception and expiration dates are allowed to be off
+	# by 10% of the lifetime of the signature from our local clock.
+	# This leeway is capped with a minimum and a maximum.  In seconds.
+	# val-sig-skew-min: 3600
+	# val-sig-skew-max: 86400
+	
 	# Should additional section of secure message also be kept clean of
 	# unsecure data. Useful to shield the users of this validator from
 	# potential bogus data in the additional section. All unsigned data 

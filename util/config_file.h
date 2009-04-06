@@ -203,6 +203,10 @@ struct config_file {
 	int max_ttl;
 	/** if not 0, this value is the validation date for RRSIGs */
 	int32_t val_date_override;
+	/** the minimum for signature clock skew */
+	int32_t val_sig_skew_min;
+	/** the maximum for signature clock skew */
+	int32_t val_sig_skew_max;
 	/** this value sets the number of seconds before revalidating bogus */
 	int bogus_ttl; 
 	/** should validator clean additional section for secure msgs */

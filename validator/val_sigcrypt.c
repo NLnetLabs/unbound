@@ -1073,13 +1073,29 @@ check_dates(struct val_env* ve, uint32_t unow,
 		return 0;
 	}
 	if(incep - now > 0) {
-		sigdate_error("verify: signature bad, current time is"
-			" before inception date", expi, incep, now);
-		return 0;
+		/* within skew ? (calc here to avoid calculation normally) */
+		int32_t skew = (expi-incep)/10;
+		if(skew < ve->skew_min) skew = ve->skew_min;
+		if(skew > ve->skew_max) skew = ve->skew_max;
+		if(incep - now > skew) {
+			sigdate_error("verify: signature bad, current time is"
+				" before inception date", expi, incep, now);
+			return 0;
+		}
+		sigdate_error("verify warning suspicious signature inception "
+			" or bad local clock", expi, incep, now);
 	}
 	if(now - expi > 0) {
-		sigdate_error("verify: signature expired", expi, incep, now);
-		return 0;
+		int32_t skew = (expi-incep)/10;
+		if(skew < ve->skew_min) skew = ve->skew_min;
+		if(skew > ve->skew_max) skew = ve->skew_max;
+		if(now - expi > skew) {
+			sigdate_error("verify: signature expired", expi, 
+				incep, now);
+			return 0;
+		}
+		sigdate_error("verify warning suspicious signature expiration "
+			" or bad local clock", expi, incep, now);
 	}
 	return 1;
 

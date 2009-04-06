@@ -71,6 +71,12 @@ struct val_env {
 	 * if 0, current time is used for rrsig validation */
 	int32_t date_override;
 
+	/** clock skew min for signatures */
+	int32_t skew_min;
+
+	/** clock skew max for signatures */
+	int32_t skew_max;
+
 	/** TTL for bogus data; used instead of untrusted TTL from data.
 	 * Bogus data will not be verified more often than this interval. 
 	 * seconds. */

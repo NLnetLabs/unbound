@@ -528,6 +528,20 @@ giving a RRSIG style date, that date is used for verifying RRSIG inception
 and expiration dates, instead of the current date. Do not set this unless 
 you are debugging signature inception and expiration.
 .TP
+.B val\-sig\-skew\-min: \fI<seconds>
+Minimum number of seconds of clock skew to apply to validated signatures.
+A value of 10% of the signature lifetime is used, capped by this setting.  
+Default is 3600 (1 hour) which allows for daylight savings differences.  
+Lower this value for more strict checking of short lived signatures.
+.TP
+.B val\-sig\-skew\-max: \fI<seconds>
+Maximum number of seconds of clock skew to apply to validated signatures.
+A value of 10% of the signature lifetime is used, capped by this setting.  
+Default is 86400 (24 hours) which allows for timezone setting problems in 
+stable domains.  Setting both min and max very low disables the clock skew 
+allowances.  Setting both min and max very high makes the validator check
+the signature timestamps less strictly.
+.TP
 .B val\-bogus\-ttl: \fI<number>
 The time to live for bogus data. This is data that has failed validation;
 due to invalid signatures or other checks. The TTL from that data cannot be

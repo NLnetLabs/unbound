@@ -97,7 +97,8 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_SERVER_CERT_FILE VAR_CONTROL_KEY_FILE VAR_CONTROL_CERT_FILE
 %token VAR_EXTENDED_STATISTICS VAR_LOCAL_DATA_PTR VAR_JOSTLE_TIMEOUT
 %token VAR_STUB_PRIME VAR_UNWANTED_REPLY_THRESHOLD VAR_LOG_TIME_ASCII
-%token VAR_DOMAIN_INSECURE VAR_PYTHON VAR_PYTHON_SCRIPT
+%token VAR_DOMAIN_INSECURE VAR_PYTHON VAR_PYTHON_SCRIPT VAR_VAL_SIG_SKEW_MIN
+%token VAR_VAL_SIG_SKEW_MAX
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -146,7 +147,8 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_private_domain | server_extended_statistics | 
 	server_local_data_ptr | server_jostle_timeout | 
 	server_unwanted_reply_threshold | server_log_time_ascii | 
-	server_domain_insecure
+	server_domain_insecure | server_val_sig_skew_min | 
+	server_val_sig_skew_max
 	;
 stubstart: VAR_STUB_ZONE
 	{
@@ -767,6 +769,32 @@ server_val_override_date: VAR_VAL_OVERRIDE_DATE STRING
 			if(atoi($2) == 0)
 				yyerror("number expected");
 			cfg_parser->cfg->val_date_override = atoi($2);
+		}
+		free($2);
+	}
+	;
+server_val_sig_skew_min: VAR_VAL_SIG_SKEW_MIN STRING
+	{
+		OUTYY(("P(server_val_sig_skew_min:%s)\n", $2));
+		if(strlen($2) == 0 || strcmp($2, "0") == 0) {
+			cfg_parser->cfg->val_sig_skew_min = 0;
+		} else {
+			cfg_parser->cfg->val_sig_skew_min = atoi($2);
+			if(!cfg_parser->cfg->val_sig_skew_min)
+				yyerror("number expected");
+		}
+		free($2);
+	}
+	;
+server_val_sig_skew_max: VAR_VAL_SIG_SKEW_MAX STRING
+	{
+		OUTYY(("P(server_val_sig_skew_max:%s)\n", $2));
+		if(strlen($2) == 0 || strcmp($2, "0") == 0) {
+			cfg_parser->cfg->val_sig_skew_max = 0;
+		} else {
+			cfg_parser->cfg->val_sig_skew_max = atoi($2);
+			if(!cfg_parser->cfg->val_sig_skew_max)
+				yyerror("number expected");
 		}
 		free($2);
 	}
