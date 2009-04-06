@@ -169,7 +169,10 @@ create_udp_sock(int family, int socktype, struct sockaddr* addr,
 #ifndef USE_WINSOCK
 #ifdef EADDRINUSE
 		*inuse = (errno == EADDRINUSE);
-		if(errno != EADDRINUSE)
+		/* detect freebsd jail with no ipv6 permission */
+		if(family==AF_INET6 && errno==EINVAL)
+			*noproto = 1;
+		else if(errno != EADDRINUSE)
 			log_err("can't bind socket: %s", strerror(errno));
 #endif
 #else /* USE_WINSOCK */
@@ -249,7 +252,10 @@ create_tcp_accept_sock(struct addrinfo *addr, int v6only, int* noproto)
 #endif /* IPV6_V6ONLY */
 	if(bind(s, addr->ai_addr, addr->ai_addrlen) != 0) {
 #ifndef USE_WINSOCK
-		log_err("can't bind socket: %s", strerror(errno));
+		/* detect freebsd jail with no ipv6 permission */
+		if(addr->ai_family==AF_INET6 && errno==EINVAL)
+			*noproto = 1;
+		else log_err("can't bind socket: %s", strerror(errno));
 #else
 		log_err("can't bind socket: %s", 
 			wsa_strerror(WSAGetLastError()));
