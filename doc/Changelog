@@ -1,6 +1,7 @@
 6 April 2009: Wouter
 	- windows compile fix.
 	- Detect FreeBSD jail without ipv6 addresses assigned.
+	- python libunbound wrapper unit test.
 
 3 April 2009: Wouter
 	- Fixed a bug that caused messages to be stored in the cache too 
