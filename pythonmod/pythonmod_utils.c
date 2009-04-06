@@ -42,6 +42,7 @@
 #include "util/module.h"
 #include "util/net_help.h"
 #include "services/cache/dns.h"
+#include "services/cache/rrset.h"
 #include "util/data/msgparse.h"
 #include "util/data/msgreply.h"
 #include "util/storage/slabhash.h"
@@ -78,16 +79,20 @@ void invalidateQueryInCache(struct module_qstate* qstate, struct query_info* qin
         if (r) 
         {
            r->ttl = 0;
-           for(i=0; i< r->rrset_count; i++) 
-           {
-               struct packed_rrset_data* data = (struct packed_rrset_data*) r->ref[i].key->entry.data;
-               if(i>0 && r->ref[i].key == r->ref[i-1].key)
-                   continue;
-      
-               data->ttl = r->ttl;
-               for(j=0; j<data->count + data->rrsig_count; j++)
-                   data->rr_ttl[j] = r->ttl;
-           }
+	   if(rrset_array_lock(r->ref, r->rrset_count, *qstate->env->now)) {
+		   for(i=0; i< r->rrset_count; i++) 
+		   {
+		       struct packed_rrset_data* data = 
+		       	(struct packed_rrset_data*) r->ref[i].key->entry.data;
+		       if(i>0 && r->ref[i].key == r->ref[i-1].key)
+			   continue;
+	      
+		       data->ttl = r->ttl;
+		       for(j=0; j<data->count + data->rrsig_count; j++)
+			   data->rr_ttl[j] = r->ttl;
+		   }
+		   rrset_array_unlock(r->ref, r->rrset_count);
+	   }
         }
         lock_rw_unlock(&e->lock);
     } else {
