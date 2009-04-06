@@ -243,3 +243,17 @@ o 0x20 backoff.
   They are sent to a random server, but no one address more than 4 times.
   It succeeds if one has 0x20 intact, or else all are equal.
   Otherwise, servfail is returned to the client.
+
+o NXDOMAIN and SOA serial numbers.
+  Unbound keeps TTL values for message formats, and thus rcodes, such
+  as NXDOMAIN.  Also it keeps the latest rrsets in the rrset cache.
+  So it will faithfully negative cache for the exact TTL as originally
+  specified for an NXDOMAIN message, but send a newer SOA record if
+  this has been found in the mean time.  In point, this could lead to a
+  negative cached NXDOMAIN reply with a SOA RR where the serial number
+  indicates a zone version where this domain is not any longer NXDOMAIN.
+  These situations become consistent once the original TTL expires.
+  If the domain is DNSSEC signed, by the way, then NSEC records are
+  updated more carefully.  If one of the NSEC records in an NXDOMAIN is
+  updated from another query, the NXDOMAIN is dropped from the cache,
+  and queried for again, so that its proof can be checked again.
