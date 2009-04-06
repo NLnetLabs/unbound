@@ -58,6 +58,11 @@ This software is under BSD license, see LICENSE for details.
   * --with-username=user
   	Set default user name to change to,
 	the default is the "unbound" user.
+  * --with-pyunbound
+  	Create libunbound wrapper usable from python.
+	Needs python-devel and swig development tools.
+  * --with-pythonmodule
+  	Compile the python module that processes responses in the server.
 
 * 'make test' attempts to run a series of tests, depending on the support
   programs that are installed.

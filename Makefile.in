@@ -367,6 +367,15 @@ install:
 	$(LIBTOOL) --mode=install cp unbound-checkconf $(DESTDIR)$(sbindir)/unbound-checkconf
 	$(LIBTOOL) --mode=install cp unbound-control $(DESTDIR)$(sbindir)/unbound-control
 	$(LIBTOOL) --mode=install cp unbound-host $(DESTDIR)$(sbindir)/unbound-host
+ifeq "$(WITH_PYTHONMODULE)" "yes"
+	$(INSTALL) -m 755 -d $(DESTDIR)$(PYTHON_SITE_PKG)
+	$(INSTALL) -c -m 644 pythonmod/unboundmodule.py $(DESTDIR)$(PYTHON_SITE_PKG)/unboundmodule.py
+endif
+ifeq "$(WITH_PYUNBOUND)" "yes"
+	$(INSTALL) -m 755 -d $(DESTDIR)$(PYTHON_SITE_PKG)
+	$(INSTALL) -c -m 644 libunbound/python/unbound.py $(DESTDIR)$(PYTHON_SITE_PKG)/unbound.py
+	$(LIBTOOL) --mode=install cp _unbound.la $(DESTDIR)$(PYTHON_SITE_PKG)
+endif
 	$(INSTALL) -c -m 644 doc/unbound.8 $(DESTDIR)$(mandir)/man8
 	$(INSTALL) -c -m 644 doc/unbound-checkconf.8 $(DESTDIR)$(mandir)/man8
 	$(INSTALL) -c -m 644 doc/unbound-control.8 $(DESTDIR)$(mandir)/man8
@@ -385,6 +394,13 @@ uninstall:
 	rm -f -- $(DESTDIR)$(mandir)/man1/unbound-host.1 $(DESTDIR)$(mandir)/man3/libunbound.3
 	rm -f -- $(DESTDIR)$(includedir)/unbound.h
 	$(LIBTOOL) --mode=uninstall rm -f $(DESTDIR)$(libdir)/libunbound.la
+ifeq "$(WITH_PYTHONMODULE)" "yes"
+	rm -f -- $(DESTDIR)$(PYTHON_SITE_PKG)/unboundmodule.py
+endif
+ifeq "$(WITH_PYUNBOUND)" "yes"
+	rm -f -- $(DESTDIR)$(PYTHON_SITE_PKG)/unbound.py
+	$(LIBTOOL) --mode=uninstall rm -f $(DESTDIR)$(PYTHON_SITE_PKG)/_unbound.la
+endif
 	@echo
 	@echo "You still need to remove "`dirname $(DESTDIR)$(configfile)`" , $(DESTDIR)$(configfile) by hand"
 

@@ -2,6 +2,14 @@
 	- windows compile fix.
 	- Detect FreeBSD jail without ipv6 addresses assigned.
 	- python libunbound wrapper unit test.
+	- installs the following files. Default is to not build them.
+	  	from configure --with-pythonmodule:
+	  /usr/lib/python2.x/site-packages/unboundmodule.py
+	  	from configure --with-pyunbound:
+	  /usr/lib/python2.x/site-packages/unbound.py
+	  /usr/lib/python2.x/site-packages/_unbound.so*
+	  The example python scripts (pythonmod/examples and
+	  libunbound/python/examples) are not installed.
 
 3 April 2009: Wouter
 	- Fixed a bug that caused messages to be stored in the cache too 

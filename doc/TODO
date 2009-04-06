@@ -38,8 +38,7 @@ o option to ignore all inception and expiration dates for rrsigs.
 o option to use builtin ldns explicitly.  Or stop shipping builtin tarball.
 o cleaner code; return and func statements on newline.
 o memcached module that sits before validator module; checks for memcached
-  data (on local lan), stores recursion lookup.  Provides one cache for
-  multiple resolver machines, coherent reply content in anycast setup.
+  data (on local lan), stores recursion lookup.  Provides one cache for multiple resolver machines, coherent reply content in anycast setup.
 o no openssl_add_all_algorithms, but only the ones necessary, less space.
 
 *** Features features, for later
@@ -51,12 +50,9 @@ o no openssl_add_all_algorithms, but only the ones necessary, less space.
   of responses over a time interval is collected, and each is validated.
   or try in TCP mode. Do not 'try all servers several times', since we must
   not create packet storms with operator errors.
-* Windows port features
 o on windows version, implement that OS ancillary data capabilities for
   interface-automatic. IPPKTINFO, IP6PKTINFO for WSARecvMsg, WSASendMsg.
 o local-zone directive with authority service, full authority server 
   is a non-goal.
-o remote control read ssl information while priviledged.
- 
 o infra and lame cache: easier size config (in Mb), show usage in graphs.
-o see if we can include the python bindings (contrib).
+
