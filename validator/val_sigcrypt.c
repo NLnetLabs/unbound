@@ -1098,7 +1098,6 @@ check_dates(struct val_env* ve, uint32_t unow,
 			" or bad local clock", expi, incep, now);
 	}
 	return 1;
-
 }
 
 /** adjust rrset TTL for verified rrset, compare to original TTL and expi */
