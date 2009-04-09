@@ -46,7 +46,7 @@
      COLON = 262,
      ANY = 263,
      ZONESTR = 264,
-     STRING = 265,
+     STRING_ARG = 265,
      VAR_SERVER = 266,
      VAR_VERBOSITY = 267,
      VAR_NUM_THREADS = 268,
@@ -153,7 +153,7 @@
 #define COLON 262
 #define ANY 263
 #define ZONESTR 264
-#define STRING 265
+#define STRING_ARG 265
 #define VAR_SERVER 266
 #define VAR_VERBOSITY 267
 #define VAR_NUM_THREADS 268

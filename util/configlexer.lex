@@ -239,7 +239,7 @@ domain-insecure{COLON}		{ YDVAR(1, VAR_DOMAIN_INSECURE) }
 	yylval.str = strdup(yytext);
 	if(!yylval.str)
 		yyerror("out of memory");
-        return STRING;
+        return STRING_ARG;
 }
 
 	/* Single Quoted strings. Strip leading and ending quotes */
@@ -260,7 +260,7 @@ domain-insecure{COLON}		{ YDVAR(1, VAR_DOMAIN_INSECURE) }
 	yylval.str = strdup(yytext);
 	if(!yylval.str)
 		yyerror("out of memory");
-        return STRING;
+        return STRING_ARG;
 }
 
 	/* include: directive */
@@ -303,7 +303,7 @@ domain-insecure{COLON}		{ YDVAR(1, VAR_DOMAIN_INSECURE) }
 
 <val>{UNQUOTEDLETTER}*	{ LEXOUT(("unquotedstr(%s) ", yytext)); 
 			if(--num_args == 0) { BEGIN(INITIAL); }
-			yylval.str = strdup(yytext); return STRING; }
+			yylval.str = strdup(yytext); return STRING_ARG; }
 
 {UNQUOTEDLETTER_NOCOLON}*	{
 	ub_c_error_msg("unknown keyword '%s'", yytext);

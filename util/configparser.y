@@ -66,7 +66,7 @@ extern struct config_parser_state* cfg_parser;
 };
 
 %token SPACE LETTER NEWLINE COMMENT COLON ANY ZONESTR
-%token <str> STRING
+%token <str> STRING_ARG
 %token VAR_SERVER VAR_VERBOSITY VAR_NUM_THREADS VAR_PORT
 %token VAR_OUTGOING_RANGE VAR_INTERFACE
 %token VAR_DO_IP4 VAR_DO_IP6 VAR_DO_UDP VAR_DO_TCP 
@@ -182,7 +182,7 @@ contents_forward: contents_forward content_forward
 	| ;
 content_forward: forward_name | forward_host | forward_addr 
 	;
-server_num_threads: VAR_NUM_THREADS STRING 
+server_num_threads: VAR_NUM_THREADS STRING_ARG 
 	{ 
 		OUTYY(("P(server_num_threads:%s)\n", $2)); 
 		if(atoi($2) == 0 && strcmp($2, "0") != 0)
@@ -191,7 +191,7 @@ server_num_threads: VAR_NUM_THREADS STRING
 		free($2);
 	}
 	;
-server_verbosity: VAR_VERBOSITY STRING 
+server_verbosity: VAR_VERBOSITY STRING_ARG 
 	{ 
 		OUTYY(("P(server_verbosity:%s)\n", $2)); 
 		if(atoi($2) == 0 && strcmp($2, "0") != 0)
@@ -200,7 +200,7 @@ server_verbosity: VAR_VERBOSITY STRING
 		free($2);
 	}
 	;
-server_statistics_interval: VAR_STATISTICS_INTERVAL STRING 
+server_statistics_interval: VAR_STATISTICS_INTERVAL STRING_ARG 
 	{ 
 		OUTYY(("P(server_statistics_interval:%s)\n", $2)); 
 		if(strcmp($2, "") == 0 || strcmp($2, "0") == 0)
@@ -211,7 +211,7 @@ server_statistics_interval: VAR_STATISTICS_INTERVAL STRING
 		free($2);
 	}
 	;
-server_statistics_cumulative: VAR_STATISTICS_CUMULATIVE STRING
+server_statistics_cumulative: VAR_STATISTICS_CUMULATIVE STRING_ARG
 	{
 		OUTYY(("P(server_statistics_cumulative:%s)\n", $2));
 		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
@@ -220,7 +220,7 @@ server_statistics_cumulative: VAR_STATISTICS_CUMULATIVE STRING
 		free($2);
 	}
 	;
-server_extended_statistics: VAR_EXTENDED_STATISTICS STRING
+server_extended_statistics: VAR_EXTENDED_STATISTICS STRING_ARG
 	{
 		OUTYY(("P(server_extended_statistics:%s)\n", $2));
 		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
@@ -229,7 +229,7 @@ server_extended_statistics: VAR_EXTENDED_STATISTICS STRING
 		free($2);
 	}
 	;
-server_port: VAR_PORT STRING
+server_port: VAR_PORT STRING_ARG
 	{
 		OUTYY(("P(server_port:%s)\n", $2));
 		if(atoi($2) == 0)
@@ -238,7 +238,7 @@ server_port: VAR_PORT STRING
 		free($2);
 	}
 	;
-server_interface: VAR_INTERFACE STRING
+server_interface: VAR_INTERFACE STRING_ARG
 	{
 		OUTYY(("P(server_interface:%s)\n", $2));
 		if(cfg_parser->cfg->num_ifs == 0)
@@ -251,7 +251,7 @@ server_interface: VAR_INTERFACE STRING
 			cfg_parser->cfg->ifs[cfg_parser->cfg->num_ifs++] = $2;
 	}
 	;
-server_outgoing_interface: VAR_OUTGOING_INTERFACE STRING
+server_outgoing_interface: VAR_OUTGOING_INTERFACE STRING_ARG
 	{
 		OUTYY(("P(server_outgoing_interface:%s)\n", $2));
 		if(cfg_parser->cfg->num_out_ifs == 0)
@@ -266,7 +266,7 @@ server_outgoing_interface: VAR_OUTGOING_INTERFACE STRING
 				cfg_parser->cfg->num_out_ifs++] = $2;
 	}
 	;
-server_outgoing_range: VAR_OUTGOING_RANGE STRING
+server_outgoing_range: VAR_OUTGOING_RANGE STRING_ARG
 	{
 		OUTYY(("P(server_outgoing_range:%s)\n", $2));
 		if(atoi($2) == 0)
@@ -275,7 +275,7 @@ server_outgoing_range: VAR_OUTGOING_RANGE STRING
 		free($2);
 	}
 	;
-server_outgoing_port_permit: VAR_OUTGOING_PORT_PERMIT STRING
+server_outgoing_port_permit: VAR_OUTGOING_PORT_PERMIT STRING_ARG
 	{
 		OUTYY(("P(server_outgoing_port_permit:%s)\n", $2));
 		if(!cfg_mark_ports($2, 1, 
@@ -284,7 +284,7 @@ server_outgoing_port_permit: VAR_OUTGOING_PORT_PERMIT STRING
 		free($2);
 	}
 	;
-server_outgoing_port_avoid: VAR_OUTGOING_PORT_AVOID STRING
+server_outgoing_port_avoid: VAR_OUTGOING_PORT_AVOID STRING_ARG
 	{
 		OUTYY(("P(server_outgoing_port_avoid:%s)\n", $2));
 		if(!cfg_mark_ports($2, 0, 
@@ -293,7 +293,7 @@ server_outgoing_port_avoid: VAR_OUTGOING_PORT_AVOID STRING
 		free($2);
 	}
 	;
-server_outgoing_num_tcp: VAR_OUTGOING_NUM_TCP STRING
+server_outgoing_num_tcp: VAR_OUTGOING_NUM_TCP STRING_ARG
 	{
 		OUTYY(("P(server_outgoing_num_tcp:%s)\n", $2));
 		if(atoi($2) == 0 && strcmp($2, "0") != 0)
@@ -302,7 +302,7 @@ server_outgoing_num_tcp: VAR_OUTGOING_NUM_TCP STRING
 		free($2);
 	}
 	;
-server_incoming_num_tcp: VAR_INCOMING_NUM_TCP STRING
+server_incoming_num_tcp: VAR_INCOMING_NUM_TCP STRING_ARG
 	{
 		OUTYY(("P(server_incoming_num_tcp:%s)\n", $2));
 		if(atoi($2) == 0 && strcmp($2, "0") != 0)
@@ -311,7 +311,7 @@ server_incoming_num_tcp: VAR_INCOMING_NUM_TCP STRING
 		free($2);
 	}
 	;
-server_interface_automatic: VAR_INTERFACE_AUTOMATIC STRING
+server_interface_automatic: VAR_INTERFACE_AUTOMATIC STRING_ARG
 	{
 		OUTYY(("P(server_interface_automatic:%s)\n", $2));
 		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
@@ -320,7 +320,7 @@ server_interface_automatic: VAR_INTERFACE_AUTOMATIC STRING
 		free($2);
 	}
 	;
-server_do_ip4: VAR_DO_IP4 STRING
+server_do_ip4: VAR_DO_IP4 STRING_ARG
 	{
 		OUTYY(("P(server_do_ip4:%s)\n", $2));
 		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
@@ -329,7 +329,7 @@ server_do_ip4: VAR_DO_IP4 STRING
 		free($2);
 	}
 	;
-server_do_ip6: VAR_DO_IP6 STRING
+server_do_ip6: VAR_DO_IP6 STRING_ARG
 	{
 		OUTYY(("P(server_do_ip6:%s)\n", $2));
 		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
@@ -338,7 +338,7 @@ server_do_ip6: VAR_DO_IP6 STRING
 		free($2);
 	}
 	;
-server_do_udp: VAR_DO_UDP STRING
+server_do_udp: VAR_DO_UDP STRING_ARG
 	{
 		OUTYY(("P(server_do_udp:%s)\n", $2));
 		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
@@ -347,7 +347,7 @@ server_do_udp: VAR_DO_UDP STRING
 		free($2);
 	}
 	;
-server_do_tcp: VAR_DO_TCP STRING
+server_do_tcp: VAR_DO_TCP STRING_ARG
 	{
 		OUTYY(("P(server_do_tcp:%s)\n", $2));
 		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
@@ -356,7 +356,7 @@ server_do_tcp: VAR_DO_TCP STRING
 		free($2);
 	}
 	;
-server_do_daemonize: VAR_DO_DAEMONIZE STRING
+server_do_daemonize: VAR_DO_DAEMONIZE STRING_ARG
 	{
 		OUTYY(("P(server_do_daemonize:%s)\n", $2));
 		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
@@ -365,7 +365,7 @@ server_do_daemonize: VAR_DO_DAEMONIZE STRING
 		free($2);
 	}
 	;
-server_use_syslog: VAR_USE_SYSLOG STRING
+server_use_syslog: VAR_USE_SYSLOG STRING_ARG
 	{
 		OUTYY(("P(server_use_syslog:%s)\n", $2));
 		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
@@ -379,7 +379,7 @@ server_use_syslog: VAR_USE_SYSLOG STRING
 		free($2);
 	}
 	;
-server_log_time_ascii: VAR_LOG_TIME_ASCII STRING
+server_log_time_ascii: VAR_LOG_TIME_ASCII STRING_ARG
 	{
 		OUTYY(("P(server_log_time_ascii:%s)\n", $2));
 		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
@@ -388,28 +388,28 @@ server_log_time_ascii: VAR_LOG_TIME_ASCII STRING
 		free($2);
 	}
 	;
-server_chroot: VAR_CHROOT STRING
+server_chroot: VAR_CHROOT STRING_ARG
 	{
 		OUTYY(("P(server_chroot:%s)\n", $2));
 		free(cfg_parser->cfg->chrootdir);
 		cfg_parser->cfg->chrootdir = $2;
 	}
 	;
-server_username: VAR_USERNAME STRING
+server_username: VAR_USERNAME STRING_ARG
 	{
 		OUTYY(("P(server_username:%s)\n", $2));
 		free(cfg_parser->cfg->username);
 		cfg_parser->cfg->username = $2;
 	}
 	;
-server_directory: VAR_DIRECTORY STRING
+server_directory: VAR_DIRECTORY STRING_ARG
 	{
 		OUTYY(("P(server_directory:%s)\n", $2));
 		free(cfg_parser->cfg->directory);
 		cfg_parser->cfg->directory = $2;
 	}
 	;
-server_logfile: VAR_LOGFILE STRING
+server_logfile: VAR_LOGFILE STRING_ARG
 	{
 		OUTYY(("P(server_logfile:%s)\n", $2));
 		free(cfg_parser->cfg->logfile);
@@ -417,35 +417,35 @@ server_logfile: VAR_LOGFILE STRING
 		cfg_parser->cfg->use_syslog = 0;
 	}
 	;
-server_pidfile: VAR_PIDFILE STRING
+server_pidfile: VAR_PIDFILE STRING_ARG
 	{
 		OUTYY(("P(server_pidfile:%s)\n", $2));
 		free(cfg_parser->cfg->pidfile);
 		cfg_parser->cfg->pidfile = $2;
 	}
 	;
-server_root_hints: VAR_ROOT_HINTS STRING
+server_root_hints: VAR_ROOT_HINTS STRING_ARG
 	{
 		OUTYY(("P(server_root_hints:%s)\n", $2));
 		if(!cfg_strlist_insert(&cfg_parser->cfg->root_hints, $2))
 			yyerror("out of memory");
 	}
 	;
-server_dlv_anchor_file: VAR_DLV_ANCHOR_FILE STRING
+server_dlv_anchor_file: VAR_DLV_ANCHOR_FILE STRING_ARG
 	{
 		OUTYY(("P(server_dlv_anchor_file:%s)\n", $2));
 		free(cfg_parser->cfg->dlv_anchor_file);
 		cfg_parser->cfg->dlv_anchor_file = $2;
 	}
 	;
-server_dlv_anchor: VAR_DLV_ANCHOR STRING
+server_dlv_anchor: VAR_DLV_ANCHOR STRING_ARG
 	{
 		OUTYY(("P(server_dlv_anchor:%s)\n", $2));
 		if(!cfg_strlist_insert(&cfg_parser->cfg->dlv_anchor_list, $2))
 			yyerror("out of memory");
 	}
 	;
-server_trust_anchor_file: VAR_TRUST_ANCHOR_FILE STRING
+server_trust_anchor_file: VAR_TRUST_ANCHOR_FILE STRING_ARG
 	{
 		OUTYY(("P(server_trust_anchor_file:%s)\n", $2));
 		if(!cfg_strlist_insert(&cfg_parser->cfg->
@@ -453,7 +453,7 @@ server_trust_anchor_file: VAR_TRUST_ANCHOR_FILE STRING
 			yyerror("out of memory");
 	}
 	;
-server_trusted_keys_file: VAR_TRUSTED_KEYS_FILE STRING
+server_trusted_keys_file: VAR_TRUSTED_KEYS_FILE STRING_ARG
 	{
 		OUTYY(("P(server_trusted_keys_file:%s)\n", $2));
 		if(!cfg_strlist_insert(&cfg_parser->cfg->
@@ -461,21 +461,21 @@ server_trusted_keys_file: VAR_TRUSTED_KEYS_FILE STRING
 			yyerror("out of memory");
 	}
 	;
-server_trust_anchor: VAR_TRUST_ANCHOR STRING
+server_trust_anchor: VAR_TRUST_ANCHOR STRING_ARG
 	{
 		OUTYY(("P(server_trust_anchor:%s)\n", $2));
 		if(!cfg_strlist_insert(&cfg_parser->cfg->trust_anchor_list, $2))
 			yyerror("out of memory");
 	}
 	;
-server_domain_insecure: VAR_DOMAIN_INSECURE STRING
+server_domain_insecure: VAR_DOMAIN_INSECURE STRING_ARG
 	{
 		OUTYY(("P(server_domain_insecure:%s)\n", $2));
 		if(!cfg_strlist_insert(&cfg_parser->cfg->domain_insecure, $2))
 			yyerror("out of memory");
 	}
 	;
-server_hide_identity: VAR_HIDE_IDENTITY STRING
+server_hide_identity: VAR_HIDE_IDENTITY STRING_ARG
 	{
 		OUTYY(("P(server_hide_identity:%s)\n", $2));
 		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
@@ -484,7 +484,7 @@ server_hide_identity: VAR_HIDE_IDENTITY STRING
 		free($2);
 	}
 	;
-server_hide_version: VAR_HIDE_VERSION STRING
+server_hide_version: VAR_HIDE_VERSION STRING_ARG
 	{
 		OUTYY(("P(server_hide_version:%s)\n", $2));
 		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
@@ -493,21 +493,21 @@ server_hide_version: VAR_HIDE_VERSION STRING
 		free($2);
 	}
 	;
-server_identity: VAR_IDENTITY STRING
+server_identity: VAR_IDENTITY STRING_ARG
 	{
 		OUTYY(("P(server_identity:%s)\n", $2));
 		free(cfg_parser->cfg->identity);
 		cfg_parser->cfg->identity = $2;
 	}
 	;
-server_version: VAR_VERSION STRING
+server_version: VAR_VERSION STRING_ARG
 	{
 		OUTYY(("P(server_version:%s)\n", $2));
 		free(cfg_parser->cfg->version);
 		cfg_parser->cfg->version = $2;
 	}
 	;
-server_msg_buffer_size: VAR_MSG_BUFFER_SIZE STRING
+server_msg_buffer_size: VAR_MSG_BUFFER_SIZE STRING_ARG
 	{
 		OUTYY(("P(server_msg_buffer_size:%s)\n", $2));
 		if(atoi($2) == 0)
@@ -518,7 +518,7 @@ server_msg_buffer_size: VAR_MSG_BUFFER_SIZE STRING
 		free($2);
 	}
 	;
-server_msg_cache_size: VAR_MSG_CACHE_SIZE STRING
+server_msg_cache_size: VAR_MSG_CACHE_SIZE STRING_ARG
 	{
 		OUTYY(("P(server_msg_cache_size:%s)\n", $2));
 		if(!cfg_parse_memsize($2, &cfg_parser->cfg->msg_cache_size))
@@ -526,7 +526,7 @@ server_msg_cache_size: VAR_MSG_CACHE_SIZE STRING
 		free($2);
 	}
 	;
-server_msg_cache_slabs: VAR_MSG_CACHE_SLABS STRING
+server_msg_cache_slabs: VAR_MSG_CACHE_SLABS STRING_ARG
 	{
 		OUTYY(("P(server_msg_cache_slabs:%s)\n", $2));
 		if(atoi($2) == 0)
@@ -539,7 +539,7 @@ server_msg_cache_slabs: VAR_MSG_CACHE_SLABS STRING
 		free($2);
 	}
 	;
-server_num_queries_per_thread: VAR_NUM_QUERIES_PER_THREAD STRING
+server_num_queries_per_thread: VAR_NUM_QUERIES_PER_THREAD STRING_ARG
 	{
 		OUTYY(("P(server_num_queries_per_thread:%s)\n", $2));
 		if(atoi($2) == 0)
@@ -548,7 +548,7 @@ server_num_queries_per_thread: VAR_NUM_QUERIES_PER_THREAD STRING
 		free($2);
 	}
 	;
-server_jostle_timeout: VAR_JOSTLE_TIMEOUT STRING
+server_jostle_timeout: VAR_JOSTLE_TIMEOUT STRING_ARG
 	{
 		OUTYY(("P(server_jostle_timeout:%s)\n", $2));
 		if(atoi($2) == 0 && strcmp($2, "0") != 0)
@@ -557,7 +557,7 @@ server_jostle_timeout: VAR_JOSTLE_TIMEOUT STRING
 		free($2);
 	}
 	;
-server_rrset_cache_size: VAR_RRSET_CACHE_SIZE STRING
+server_rrset_cache_size: VAR_RRSET_CACHE_SIZE STRING_ARG
 	{
 		OUTYY(("P(server_rrset_cache_size:%s)\n", $2));
 		if(!cfg_parse_memsize($2, &cfg_parser->cfg->rrset_cache_size))
@@ -565,7 +565,7 @@ server_rrset_cache_size: VAR_RRSET_CACHE_SIZE STRING
 		free($2);
 	}
 	;
-server_rrset_cache_slabs: VAR_RRSET_CACHE_SLABS STRING
+server_rrset_cache_slabs: VAR_RRSET_CACHE_SLABS STRING_ARG
 	{
 		OUTYY(("P(server_rrset_cache_slabs:%s)\n", $2));
 		if(atoi($2) == 0)
@@ -578,7 +578,7 @@ server_rrset_cache_slabs: VAR_RRSET_CACHE_SLABS STRING
 		free($2);
 	}
 	;
-server_infra_host_ttl: VAR_INFRA_HOST_TTL STRING
+server_infra_host_ttl: VAR_INFRA_HOST_TTL STRING_ARG
 	{
 		OUTYY(("P(server_infra_host_ttl:%s)\n", $2));
 		if(atoi($2) == 0 && strcmp($2, "0") != 0)
@@ -587,7 +587,7 @@ server_infra_host_ttl: VAR_INFRA_HOST_TTL STRING
 		free($2);
 	}
 	;
-server_infra_lame_ttl: VAR_INFRA_LAME_TTL STRING
+server_infra_lame_ttl: VAR_INFRA_LAME_TTL STRING_ARG
 	{
 		OUTYY(("P(server_infra_lame_ttl:%s)\n", $2));
 		if(atoi($2) == 0 && strcmp($2, "0") != 0)
@@ -596,7 +596,7 @@ server_infra_lame_ttl: VAR_INFRA_LAME_TTL STRING
 		free($2);
 	}
 	;
-server_infra_cache_numhosts: VAR_INFRA_CACHE_NUMHOSTS STRING
+server_infra_cache_numhosts: VAR_INFRA_CACHE_NUMHOSTS STRING_ARG
 	{
 		OUTYY(("P(server_infra_cache_numhosts:%s)\n", $2));
 		if(atoi($2) == 0)
@@ -605,7 +605,7 @@ server_infra_cache_numhosts: VAR_INFRA_CACHE_NUMHOSTS STRING
 		free($2);
 	}
 	;
-server_infra_cache_lame_size: VAR_INFRA_CACHE_LAME_SIZE STRING
+server_infra_cache_lame_size: VAR_INFRA_CACHE_LAME_SIZE STRING_ARG
 	{
 		OUTYY(("P(server_infra_cache_lame_size:%s)\n", $2));
 		if(!cfg_parse_memsize($2, &cfg_parser->cfg->
@@ -614,7 +614,7 @@ server_infra_cache_lame_size: VAR_INFRA_CACHE_LAME_SIZE STRING
 		free($2);
 	}
 	;
-server_infra_cache_slabs: VAR_INFRA_CACHE_SLABS STRING
+server_infra_cache_slabs: VAR_INFRA_CACHE_SLABS STRING_ARG
 	{
 		OUTYY(("P(server_infra_cache_slabs:%s)\n", $2));
 		if(atoi($2) == 0)
@@ -627,14 +627,14 @@ server_infra_cache_slabs: VAR_INFRA_CACHE_SLABS STRING
 		free($2);
 	}
 	;
-server_target_fetch_policy: VAR_TARGET_FETCH_POLICY STRING
+server_target_fetch_policy: VAR_TARGET_FETCH_POLICY STRING_ARG
 	{
 		OUTYY(("P(server_target_fetch_policy:%s)\n", $2));
 		free(cfg_parser->cfg->target_fetch_policy);
 		cfg_parser->cfg->target_fetch_policy = $2;
 	}
 	;
-server_harden_short_bufsize: VAR_HARDEN_SHORT_BUFSIZE STRING
+server_harden_short_bufsize: VAR_HARDEN_SHORT_BUFSIZE STRING_ARG
 	{
 		OUTYY(("P(server_harden_short_bufsize:%s)\n", $2));
 		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
@@ -644,7 +644,7 @@ server_harden_short_bufsize: VAR_HARDEN_SHORT_BUFSIZE STRING
 		free($2);
 	}
 	;
-server_harden_large_queries: VAR_HARDEN_LARGE_QUERIES STRING
+server_harden_large_queries: VAR_HARDEN_LARGE_QUERIES STRING_ARG
 	{
 		OUTYY(("P(server_harden_large_queries:%s)\n", $2));
 		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
@@ -654,7 +654,7 @@ server_harden_large_queries: VAR_HARDEN_LARGE_QUERIES STRING
 		free($2);
 	}
 	;
-server_harden_glue: VAR_HARDEN_GLUE STRING
+server_harden_glue: VAR_HARDEN_GLUE STRING_ARG
 	{
 		OUTYY(("P(server_harden_glue:%s)\n", $2));
 		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
@@ -664,7 +664,7 @@ server_harden_glue: VAR_HARDEN_GLUE STRING
 		free($2);
 	}
 	;
-server_harden_dnssec_stripped: VAR_HARDEN_DNNSEC_STRIPPED STRING
+server_harden_dnssec_stripped: VAR_HARDEN_DNNSEC_STRIPPED STRING_ARG
 	{
 		OUTYY(("P(server_harden_dnssec_stripped:%s)\n", $2));
 		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
@@ -674,7 +674,7 @@ server_harden_dnssec_stripped: VAR_HARDEN_DNNSEC_STRIPPED STRING
 		free($2);
 	}
 	;
-server_harden_referral_path: VAR_HARDEN_REFERRAL_PATH STRING
+server_harden_referral_path: VAR_HARDEN_REFERRAL_PATH STRING_ARG
 	{
 		OUTYY(("P(server_harden_referral_path:%s)\n", $2));
 		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
@@ -684,7 +684,7 @@ server_harden_referral_path: VAR_HARDEN_REFERRAL_PATH STRING
 		free($2);
 	}
 	;
-server_use_caps_for_id: VAR_USE_CAPS_FOR_ID STRING
+server_use_caps_for_id: VAR_USE_CAPS_FOR_ID STRING_ARG
 	{
 		OUTYY(("P(server_use_caps_for_id:%s)\n", $2));
 		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
@@ -694,21 +694,21 @@ server_use_caps_for_id: VAR_USE_CAPS_FOR_ID STRING
 		free($2);
 	}
 	;
-server_private_address: VAR_PRIVATE_ADDRESS STRING
+server_private_address: VAR_PRIVATE_ADDRESS STRING_ARG
 	{
 		OUTYY(("P(server_private_address:%s)\n", $2));
 		if(!cfg_strlist_insert(&cfg_parser->cfg->private_address, $2))
 			yyerror("out of memory");
 	}
 	;
-server_private_domain: VAR_PRIVATE_DOMAIN STRING
+server_private_domain: VAR_PRIVATE_DOMAIN STRING_ARG
 	{
 		OUTYY(("P(server_private_domain:%s)\n", $2));
 		if(!cfg_strlist_insert(&cfg_parser->cfg->private_domain, $2))
 			yyerror("out of memory");
 	}
 	;
-server_unwanted_reply_threshold: VAR_UNWANTED_REPLY_THRESHOLD STRING
+server_unwanted_reply_threshold: VAR_UNWANTED_REPLY_THRESHOLD STRING_ARG
 	{
 		OUTYY(("P(server_unwanted_reply_threshold:%s)\n", $2));
 		if(atoi($2) == 0 && strcmp($2, "0") != 0)
@@ -717,14 +717,14 @@ server_unwanted_reply_threshold: VAR_UNWANTED_REPLY_THRESHOLD STRING
 		free($2);
 	}
 	;
-server_do_not_query_address: VAR_DO_NOT_QUERY_ADDRESS STRING
+server_do_not_query_address: VAR_DO_NOT_QUERY_ADDRESS STRING_ARG
 	{
 		OUTYY(("P(server_do_not_query_address:%s)\n", $2));
 		if(!cfg_strlist_insert(&cfg_parser->cfg->donotqueryaddrs, $2))
 			yyerror("out of memory");
 	}
 	;
-server_do_not_query_localhost: VAR_DO_NOT_QUERY_LOCALHOST STRING
+server_do_not_query_localhost: VAR_DO_NOT_QUERY_LOCALHOST STRING_ARG
 	{
 		OUTYY(("P(server_do_not_query_localhost:%s)\n", $2));
 		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
@@ -734,7 +734,7 @@ server_do_not_query_localhost: VAR_DO_NOT_QUERY_LOCALHOST STRING
 		free($2);
 	}
 	;
-server_access_control: VAR_ACCESS_CONTROL STRING STRING
+server_access_control: VAR_ACCESS_CONTROL STRING_ARG STRING_ARG
 	{
 		OUTYY(("P(server_access_control:%s %s)\n", $2, $3));
 		if(strcmp($3, "deny")!=0 && strcmp($3, "refuse")!=0 &&
@@ -748,14 +748,14 @@ server_access_control: VAR_ACCESS_CONTROL STRING STRING
 		}
 	}
 	;
-server_module_conf: VAR_MODULE_CONF STRING
+server_module_conf: VAR_MODULE_CONF STRING_ARG
 	{
 		OUTYY(("P(server_module_conf:%s)\n", $2));
 		free(cfg_parser->cfg->module_conf);
 		cfg_parser->cfg->module_conf = $2;
 	}
 	;
-server_val_override_date: VAR_VAL_OVERRIDE_DATE STRING
+server_val_override_date: VAR_VAL_OVERRIDE_DATE STRING_ARG
 	{
 		OUTYY(("P(server_val_override_date:%s)\n", $2));
 		if(strlen($2) == 0 || strcmp($2, "0") == 0) {
@@ -773,7 +773,7 @@ server_val_override_date: VAR_VAL_OVERRIDE_DATE STRING
 		free($2);
 	}
 	;
-server_val_sig_skew_min: VAR_VAL_SIG_SKEW_MIN STRING
+server_val_sig_skew_min: VAR_VAL_SIG_SKEW_MIN STRING_ARG
 	{
 		OUTYY(("P(server_val_sig_skew_min:%s)\n", $2));
 		if(strlen($2) == 0 || strcmp($2, "0") == 0) {
@@ -786,7 +786,7 @@ server_val_sig_skew_min: VAR_VAL_SIG_SKEW_MIN STRING
 		free($2);
 	}
 	;
-server_val_sig_skew_max: VAR_VAL_SIG_SKEW_MAX STRING
+server_val_sig_skew_max: VAR_VAL_SIG_SKEW_MAX STRING_ARG
 	{
 		OUTYY(("P(server_val_sig_skew_max:%s)\n", $2));
 		if(strlen($2) == 0 || strcmp($2, "0") == 0) {
@@ -799,7 +799,7 @@ server_val_sig_skew_max: VAR_VAL_SIG_SKEW_MAX STRING
 		free($2);
 	}
 	;
-server_cache_max_ttl: VAR_CACHE_MAX_TTL STRING
+server_cache_max_ttl: VAR_CACHE_MAX_TTL STRING_ARG
 	{
 		OUTYY(("P(server_cache_max_ttl:%s)\n", $2));
 		if(atoi($2) == 0 && strcmp($2, "0") != 0)
@@ -808,7 +808,7 @@ server_cache_max_ttl: VAR_CACHE_MAX_TTL STRING
 		free($2);
 	}
 	;
-server_bogus_ttl: VAR_BOGUS_TTL STRING
+server_bogus_ttl: VAR_BOGUS_TTL STRING_ARG
 	{
 		OUTYY(("P(server_bogus_ttl:%s)\n", $2));
 		if(atoi($2) == 0 && strcmp($2, "0") != 0)
@@ -817,7 +817,7 @@ server_bogus_ttl: VAR_BOGUS_TTL STRING
 		free($2);
 	}
 	;
-server_val_clean_additional: VAR_VAL_CLEAN_ADDITIONAL STRING
+server_val_clean_additional: VAR_VAL_CLEAN_ADDITIONAL STRING_ARG
 	{
 		OUTYY(("P(server_val_clean_additional:%s)\n", $2));
 		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
@@ -827,7 +827,7 @@ server_val_clean_additional: VAR_VAL_CLEAN_ADDITIONAL STRING
 		free($2);
 	}
 	;
-server_val_permissive_mode: VAR_VAL_PERMISSIVE_MODE STRING
+server_val_permissive_mode: VAR_VAL_PERMISSIVE_MODE STRING_ARG
 	{
 		OUTYY(("P(server_val_permissive_mode:%s)\n", $2));
 		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
@@ -837,14 +837,14 @@ server_val_permissive_mode: VAR_VAL_PERMISSIVE_MODE STRING
 		free($2);
 	}
 	;
-server_val_nsec3_keysize_iterations: VAR_VAL_NSEC3_KEYSIZE_ITERATIONS STRING
+server_val_nsec3_keysize_iterations: VAR_VAL_NSEC3_KEYSIZE_ITERATIONS STRING_ARG
 	{
 		OUTYY(("P(server_val_nsec3_keysize_iterations:%s)\n", $2));
 		free(cfg_parser->cfg->val_nsec3_key_iterations);
 		cfg_parser->cfg->val_nsec3_key_iterations = $2;
 	}
 	;
-server_key_cache_size: VAR_KEY_CACHE_SIZE STRING
+server_key_cache_size: VAR_KEY_CACHE_SIZE STRING_ARG
 	{
 		OUTYY(("P(server_key_cache_size:%s)\n", $2));
 		if(!cfg_parse_memsize($2, &cfg_parser->cfg->key_cache_size))
@@ -852,7 +852,7 @@ server_key_cache_size: VAR_KEY_CACHE_SIZE STRING
 		free($2);
 	}
 	;
-server_key_cache_slabs: VAR_KEY_CACHE_SLABS STRING
+server_key_cache_slabs: VAR_KEY_CACHE_SLABS STRING_ARG
 	{
 		OUTYY(("P(server_key_cache_slabs:%s)\n", $2));
 		if(atoi($2) == 0)
@@ -865,7 +865,7 @@ server_key_cache_slabs: VAR_KEY_CACHE_SLABS STRING
 		free($2);
 	}
 	;
-server_neg_cache_size: VAR_NEG_CACHE_SIZE STRING
+server_neg_cache_size: VAR_NEG_CACHE_SIZE STRING_ARG
 	{
 		OUTYY(("P(server_neg_cache_size:%s)\n", $2));
 		if(!cfg_parse_memsize($2, &cfg_parser->cfg->neg_cache_size))
@@ -873,7 +873,7 @@ server_neg_cache_size: VAR_NEG_CACHE_SIZE STRING
 		free($2);
 	}
 	;
-server_local_zone: VAR_LOCAL_ZONE STRING STRING
+server_local_zone: VAR_LOCAL_ZONE STRING_ARG STRING_ARG
 	{
 		OUTYY(("P(server_local_zone:%s %s)\n", $2, $3));
 		if(strcmp($3, "static")!=0 && strcmp($3, "deny")!=0 &&
@@ -893,14 +893,14 @@ server_local_zone: VAR_LOCAL_ZONE STRING STRING
 		}
 	}
 	;
-server_local_data: VAR_LOCAL_DATA STRING
+server_local_data: VAR_LOCAL_DATA STRING_ARG
 	{
 		OUTYY(("P(server_local_data:%s)\n", $2));
 		if(!cfg_strlist_insert(&cfg_parser->cfg->local_data, $2))
 			fatal_exit("out of memory adding local-data");
 	}
 	;
-server_local_data_ptr: VAR_LOCAL_DATA_PTR STRING
+server_local_data_ptr: VAR_LOCAL_DATA_PTR STRING_ARG
 	{
 		char* ptr;
 		OUTYY(("P(server_local_data_ptr:%s)\n", $2));
@@ -915,28 +915,28 @@ server_local_data_ptr: VAR_LOCAL_DATA_PTR STRING
 		}
 	}
 	;
-stub_name: VAR_NAME STRING
+stub_name: VAR_NAME STRING_ARG
 	{
 		OUTYY(("P(name:%s)\n", $2));
 		free(cfg_parser->cfg->stubs->name);
 		cfg_parser->cfg->stubs->name = $2;
 	}
 	;
-stub_host: VAR_STUB_HOST STRING
+stub_host: VAR_STUB_HOST STRING_ARG
 	{
 		OUTYY(("P(stub-host:%s)\n", $2));
 		if(!cfg_strlist_insert(&cfg_parser->cfg->stubs->hosts, $2))
 			yyerror("out of memory");
 	}
 	;
-stub_addr: VAR_STUB_ADDR STRING
+stub_addr: VAR_STUB_ADDR STRING_ARG
 	{
 		OUTYY(("P(stub-addr:%s)\n", $2));
 		if(!cfg_strlist_insert(&cfg_parser->cfg->stubs->addrs, $2))
 			yyerror("out of memory");
 	}
 	;
-stub_prime: VAR_STUB_PRIME STRING
+stub_prime: VAR_STUB_PRIME STRING_ARG
 	{
 		OUTYY(("P(stub-prime:%s)\n", $2));
 		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
@@ -946,21 +946,21 @@ stub_prime: VAR_STUB_PRIME STRING
 		free($2);
 	}
 	;
-forward_name: VAR_NAME STRING
+forward_name: VAR_NAME STRING_ARG
 	{
 		OUTYY(("P(name:%s)\n", $2));
 		free(cfg_parser->cfg->forwards->name);
 		cfg_parser->cfg->forwards->name = $2;
 	}
 	;
-forward_host: VAR_FORWARD_HOST STRING
+forward_host: VAR_FORWARD_HOST STRING_ARG
 	{
 		OUTYY(("P(forward-host:%s)\n", $2));
 		if(!cfg_strlist_insert(&cfg_parser->cfg->forwards->hosts, $2))
 			yyerror("out of memory");
 	}
 	;
-forward_addr: VAR_FORWARD_ADDR STRING
+forward_addr: VAR_FORWARD_ADDR STRING_ARG
 	{
 		OUTYY(("P(forward-addr:%s)\n", $2));
 		if(!cfg_strlist_insert(&cfg_parser->cfg->forwards->addrs, $2))
@@ -978,7 +978,7 @@ content_rc: rc_control_enable | rc_control_interface | rc_control_port |
 	rc_server_key_file | rc_server_cert_file | rc_control_key_file |
 	rc_control_cert_file
 	;
-rc_control_enable: VAR_CONTROL_ENABLE STRING
+rc_control_enable: VAR_CONTROL_ENABLE STRING_ARG
 	{
 		OUTYY(("P(control_enable:%s)\n", $2));
 		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
@@ -988,7 +988,7 @@ rc_control_enable: VAR_CONTROL_ENABLE STRING
 		free($2);
 	}
 	;
-rc_control_port: VAR_CONTROL_PORT STRING
+rc_control_port: VAR_CONTROL_PORT STRING_ARG
 	{
 		OUTYY(("P(control_port:%s)\n", $2));
 		if(atoi($2) == 0)
@@ -997,35 +997,35 @@ rc_control_port: VAR_CONTROL_PORT STRING
 		free($2);
 	}
 	;
-rc_control_interface: VAR_CONTROL_INTERFACE STRING
+rc_control_interface: VAR_CONTROL_INTERFACE STRING_ARG
 	{
 		OUTYY(("P(control_interface:%s)\n", $2));
 		if(!cfg_strlist_insert(&cfg_parser->cfg->control_ifs, $2))
 			yyerror("out of memory");
 	}
 	;
-rc_server_key_file: VAR_SERVER_KEY_FILE STRING
+rc_server_key_file: VAR_SERVER_KEY_FILE STRING_ARG
 	{
 		OUTYY(("P(rc_server_key_file:%s)\n", $2));
 		free(cfg_parser->cfg->server_key_file);
 		cfg_parser->cfg->server_key_file = $2;
 	}
 	;
-rc_server_cert_file: VAR_SERVER_CERT_FILE STRING
+rc_server_cert_file: VAR_SERVER_CERT_FILE STRING_ARG
 	{
 		OUTYY(("P(rc_server_cert_file:%s)\n", $2));
 		free(cfg_parser->cfg->server_cert_file);
 		cfg_parser->cfg->server_cert_file = $2;
 	}
 	;
-rc_control_key_file: VAR_CONTROL_KEY_FILE STRING
+rc_control_key_file: VAR_CONTROL_KEY_FILE STRING_ARG
 	{
 		OUTYY(("P(rc_control_key_file:%s)\n", $2));
 		free(cfg_parser->cfg->control_key_file);
 		cfg_parser->cfg->control_key_file = $2;
 	}
 	;
-rc_control_cert_file: VAR_CONTROL_CERT_FILE STRING
+rc_control_cert_file: VAR_CONTROL_CERT_FILE STRING_ARG
 	{
 		OUTYY(("P(rc_control_cert_file:%s)\n", $2));
 		free(cfg_parser->cfg->control_cert_file);
@@ -1041,7 +1041,7 @@ contents_py: contents_py content_py
 	| ;
 content_py: py_script
 	;
-py_script: VAR_PYTHON_SCRIPT STRING
+py_script: VAR_PYTHON_SCRIPT STRING_ARG
 	{
 		OUTYY(("P(python-script:%s)\n", $2));
 		free(cfg_parser->cfg->python_script);

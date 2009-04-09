@@ -343,7 +343,7 @@ fi
 # Checks for libraries.
 ACX_WITH_SSL
 ACX_LIB_SSL
-AC_CHECK_FUNCS([EVP_sha1 EVP_sha256 EVP_sha512])
+AC_CHECK_FUNCS([EVP_sha1 EVP_sha256 EVP_sha512 ENGINE_load_gost])
 
 # check to see if libraries are needed for these functions.
 AC_SEARCH_LIBS([inet_pton], [nsl])

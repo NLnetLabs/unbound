@@ -37,6 +37,9 @@
 /* Define to 1 if you have the <dlfcn.h> header file. */
 #undef HAVE_DLFCN_H
 
+/* Define to 1 if you have the `ENGINE_load_gost' function. */
+#undef HAVE_ENGINE_LOAD_GOST
+
 /* Define to 1 if you have the `event_base_free' function. */
 #undef HAVE_EVENT_BASE_FREE
 

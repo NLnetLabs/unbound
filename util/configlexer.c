@@ -2231,7 +2231,7 @@ YY_RULE_SETUP
 	yylval.str = strdup(yytext);
 	if(!yylval.str)
 		yyerror("out of memory");
-        return STRING;
+        return STRING_ARG;
 }
 	YY_BREAK
 /* Single Quoted strings. Strip leading and ending quotes */
@@ -2271,7 +2271,7 @@ YY_RULE_SETUP
 	yylval.str = strdup(yytext);
 	if(!yylval.str)
 		yyerror("out of memory");
-        return STRING;
+        return STRING_ARG;
 }
 	YY_BREAK
 /* include: directive */
@@ -2360,7 +2360,7 @@ YY_RULE_SETUP
 #line 304 "util/configlexer.lex"
 { LEXOUT(("unquotedstr(%s) ", yytext)); 
 			if(--num_args == 0) { BEGIN(INITIAL); }
-			yylval.str = strdup(yytext); return STRING; }
+			yylval.str = strdup(yytext); return STRING_ARG; }
 	YY_BREAK
 case 117:
 YY_RULE_SETUP

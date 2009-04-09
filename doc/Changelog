@@ -2,6 +2,8 @@
 	- Fix for removal of RSASHA256_NSEC3 protonumber from ldns.
 	- ldns tarball updated.
 	- iana portlist update.
+	- detect GOST support in openssl-1.0.0-beta1, and fix compile problem
+	  because that openssl defines the name STRING for itself.
 
 6 April 2009: Wouter
 	- windows compile fix.
