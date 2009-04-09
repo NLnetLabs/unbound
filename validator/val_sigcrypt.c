@@ -372,11 +372,9 @@ dnskey_algo_id_is_supported(int id)
 	case LDNS_RSAMD5:
 #ifdef HAVE_EVP_SHA256
 	case LDNS_RSASHA256:
-	case LDNS_RSASHA256_NSEC3:
 #endif
 #ifdef HAVE_EVP_SHA512
 	case LDNS_RSASHA512:
-	case LDNS_RSASHA512_NSEC3:
 #endif
 		return 1;
 	default:
@@ -1241,11 +1239,9 @@ setup_key_digest(int algo, EVP_PKEY* evp_key, const EVP_MD** digest_type,
 		case LDNS_RSASHA1_NSEC3:
 #ifdef HAVE_EVP_SHA256
 		case LDNS_RSASHA256:
-		case LDNS_RSASHA256_NSEC3:
 #endif
 #ifdef HAVE_EVP_SHA512
 		case LDNS_RSASHA512:
-		case LDNS_RSASHA512_NSEC3:
 #endif
 			rsa = ldns_key_buf2rsa_raw(key, keylen);
 			if(!rsa) {
@@ -1261,14 +1257,12 @@ setup_key_digest(int algo, EVP_PKEY* evp_key, const EVP_MD** digest_type,
 
 			/* select SHA version */
 #ifdef HAVE_EVP_SHA256
-			if(algo == LDNS_RSASHA256 || 
-				algo == LDNS_RSASHA256_NSEC3)
+			if(algo == LDNS_RSASHA256)
 				*digest_type = EVP_sha256();
 			else
 #endif
 #ifdef HAVE_EVP_SHA512
-				if(algo == LDNS_RSASHA512 || 
-					algo == LDNS_RSASHA512_NSEC3)
+				if(algo == LDNS_RSASHA512)
 				*digest_type = EVP_sha512();
 			else
 #endif

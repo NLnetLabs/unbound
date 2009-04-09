@@ -1,3 +1,7 @@
+9 April 2009: Wouter
+	- Fix for removal of RSASHA256_NSEC3 protonumber from ldns.
+	- ldns tarball updated.
+
 6 April 2009: Wouter
 	- windows compile fix.
 	- Detect FreeBSD jail without ipv6 addresses assigned.
