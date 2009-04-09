@@ -1,6 +1,7 @@
 9 April 2009: Wouter
 	- Fix for removal of RSASHA256_NSEC3 protonumber from ldns.
 	- ldns tarball updated.
+	- iana portlist update.
 
 6 April 2009: Wouter
 	- windows compile fix.
