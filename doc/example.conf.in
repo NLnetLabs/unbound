@@ -100,7 +100,11 @@ server:
 	# the number of slabs must be a power of 2.
 	# more slabs reduce lock contention, but fragment memory usage.
 	# rrset-cache-slabs: 4
-	
+
+	# the time to live (TTL) value lower bound, in seconds. Default 0.
+	# If more than an hour could easily give trouble due to stale data.
+	# cache-min-ttl: 0
+
 	# the time to live (TTL) value cap for RRsets and messages in the
 	# cache. Items are not cached for longer. In seconds.
 	# cache-max-ttl: 86400

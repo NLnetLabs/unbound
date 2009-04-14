@@ -46,6 +46,7 @@
 #include "util/config_file.h"
 #include "util/configparser.h"
 #include "util/net_help.h"
+#include "util/data/msgparse.h"
 /** global config during parsing */
 struct config_parser_state* cfg_parser = 0;
 /** lex in file */
@@ -101,6 +102,7 @@ config_create()
 	cfg->host_ttl = 900;
 	cfg->lame_ttl = 900;
 	cfg->bogus_ttl = 60;
+	cfg->min_ttl = 0;
 	cfg->max_ttl = 3600 * 24;
 	cfg->infra_cache_slabs = 4;
 	cfg->infra_cache_numhosts = 10000;
@@ -810,13 +812,11 @@ cfg_parse_memsize(const char* str, size_t* res)
 	return 1;
 }
 
-/** the MAX_TTL global */
-extern uint32_t MAX_TTL;
-
 void 
 config_apply(struct config_file* config)
 {
 	MAX_TTL = (uint32_t)config->max_ttl;
+	MIN_TTL = (uint32_t)config->min_ttl;
 	log_set_time_asc(config->log_time_ascii);
 }
 

@@ -142,7 +142,8 @@
      VAR_PYTHON = 358,
      VAR_PYTHON_SCRIPT = 359,
      VAR_VAL_SIG_SKEW_MIN = 360,
-     VAR_VAL_SIG_SKEW_MAX = 361
+     VAR_VAL_SIG_SKEW_MAX = 361,
+     VAR_CACHE_MIN_TTL = 362
    };
 #endif
 /* Tokens.  */
@@ -250,6 +251,7 @@
 #define VAR_PYTHON_SCRIPT 359
 #define VAR_VAL_SIG_SKEW_MIN 360
 #define VAR_VAL_SIG_SKEW_MAX 361
+#define VAR_CACHE_MIN_TTL 362
 
 
 
@@ -261,7 +263,7 @@ typedef union YYSTYPE
 	char*	str;
 }
 /* Line 1489 of yacc.c.  */
-#line 265 "util/configparser.h"
+#line 267 "util/configparser.h"
 	YYSTYPE;
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */
 # define YYSTYPE_IS_DECLARED 1

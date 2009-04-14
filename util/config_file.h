@@ -201,6 +201,8 @@ struct config_file {
 
 	/** the number of seconds maximal TTL used for RRsets and messages */
 	int max_ttl;
+	/** the number of seconds minimum TTL used for RRsets and messages */
+	int min_ttl;
 	/** if not 0, this value is the validation date for RRSIGs */
 	int32_t val_date_override;
 	/** the minimum for signature clock skew */

@@ -1,6 +1,7 @@
 14 April 2009: Wouter
 	- bug #245: fix munin plugin, perform cleanup of stale lockfiles.
 	- makedist.sh; better help text.
+	- cache-min-ttl option and tests.
 
 9 April 2009: Wouter
 	- Fix for removal of RSASHA256_NSEC3 protonumber from ldns.

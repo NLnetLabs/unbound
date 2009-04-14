@@ -151,6 +151,7 @@ msg-cache-slabs{COLON}		{ YDVAR(1, VAR_MSG_CACHE_SLABS) }
 rrset-cache-size{COLON}		{ YDVAR(1, VAR_RRSET_CACHE_SIZE) }
 rrset-cache-slabs{COLON}	{ YDVAR(1, VAR_RRSET_CACHE_SLABS) }
 cache-max-ttl{COLON}     	{ YDVAR(1, VAR_CACHE_MAX_TTL) }
+cache-min-ttl{COLON}     	{ YDVAR(1, VAR_CACHE_MIN_TTL) }
 infra-host-ttl{COLON}		{ YDVAR(1, VAR_INFRA_HOST_TTL) }
 infra-lame-ttl{COLON}		{ YDVAR(1, VAR_INFRA_LAME_TTL) }
 infra-cache-slabs{COLON}	{ YDVAR(1, VAR_INFRA_CACHE_SLABS) }

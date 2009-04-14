@@ -98,7 +98,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_EXTENDED_STATISTICS VAR_LOCAL_DATA_PTR VAR_JOSTLE_TIMEOUT
 %token VAR_STUB_PRIME VAR_UNWANTED_REPLY_THRESHOLD VAR_LOG_TIME_ASCII
 %token VAR_DOMAIN_INSECURE VAR_PYTHON VAR_PYTHON_SCRIPT VAR_VAL_SIG_SKEW_MIN
-%token VAR_VAL_SIG_SKEW_MAX
+%token VAR_VAL_SIG_SKEW_MAX VAR_CACHE_MIN_TTL
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -148,7 +148,7 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_local_data_ptr | server_jostle_timeout | 
 	server_unwanted_reply_threshold | server_log_time_ascii | 
 	server_domain_insecure | server_val_sig_skew_min | 
-	server_val_sig_skew_max
+	server_val_sig_skew_max | server_cache_min_ttl
 	;
 stubstart: VAR_STUB_ZONE
 	{
@@ -805,6 +805,15 @@ server_cache_max_ttl: VAR_CACHE_MAX_TTL STRING_ARG
 		if(atoi($2) == 0 && strcmp($2, "0") != 0)
 			yyerror("number expected");
 		else cfg_parser->cfg->max_ttl = atoi($2);
+		free($2);
+	}
+	;
+server_cache_min_ttl: VAR_CACHE_MIN_TTL STRING_ARG
+	{
+		OUTYY(("P(server_cache_min_ttl:%s)\n", $2));
+		if(atoi($2) == 0 && strcmp($2, "0") != 0)
+			yyerror("number expected");
+		else cfg_parser->cfg->min_ttl = atoi($2);
 		free($2);
 	}
 	;
