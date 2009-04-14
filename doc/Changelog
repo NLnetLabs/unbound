@@ -2,6 +2,7 @@
 	- bug #245: fix munin plugin, perform cleanup of stale lockfiles.
 	- makedist.sh; better help text.
 	- cache-min-ttl option and tests.
+	- mingw detect error condition on TCP sockets (NOTCONN).
 
 9 April 2009: Wouter
 	- Fix for removal of RSASHA256_NSEC3 protonumber from ldns.

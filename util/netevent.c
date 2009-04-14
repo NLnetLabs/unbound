@@ -876,6 +876,8 @@ comm_point_tcp_handle_write(int fd, struct comm_point* c)
 				return 1;
 			log_err("tcp writev: %s", strerror(errno));
 #else
+			if(WSAGetLastError() == WSAENOTCONN)
+				return 1;
 			if(WSAGetLastError() == WSAEINPROGRESS)
 				return 1;
 			if(WSAGetLastError() == WSAEWOULDBLOCK) {
