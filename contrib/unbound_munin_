@@ -123,6 +123,16 @@ get_value ( ) {
 get_state ( ) {
 	# obtain lock for fetching the state
 	# because there is a race condition in fetching and writing to file
+
+	# see if the lock is stale, if so, take it 
+	if test -f $lock ; then
+		pid="`cat $lock 2>&1`"
+		kill -0 "$pid" >/dev/null 2>&1
+		if test $? -ne 0 -a "$pid" != $$ ; then
+			echo $$ >$lock
+		fi
+	fi
+
 	i=0
 	while test ! -f $lock || test "`cat $lock 2>&1`" != $$; do
 		while test -f $lock; do
