@@ -42,19 +42,19 @@ cwd=`pwd`
 # Utility functions.
 usage () {
     cat >&2 <<EOF
-Usage $0: [-h] [-s] [-d SVN_root] [-l ldns_path] [-w ...configure args...]
-Generate a distribution tar file for NSD.
+Usage $0: [-h] [-s] [-d SVN_root] [-l ldns_path] [-w ...args...]
+Generate a distribution tar file for unbound.
 
     -h           This usage information.
     -s           Build a snapshot distribution file.  The current date is
-                 automatically appended to the current NSD version number.
+                 automatically appended to the current unbound version number.
     -rc <nr>     Build a release candidate, the given string will be added
                  to the version number 
                  (which will then be unbound-<version>rc<number>)
-    -d SVN_root  Retrieve the NSD source from the specified repository.
+    -d SVN_root  Retrieve the unbound source from the specified repository.
                  Detected from svn working copy if not specified.
     -l ldnsdir   Directory where ldns resides. Detected from Makefile.
-    -w ...       Build windows snapshot binary zip. last args put to configure.
+    -w ...       Build windows binary dist. last args passed to configure.
 EOF
     exit 1
 }
