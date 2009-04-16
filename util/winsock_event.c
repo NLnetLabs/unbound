@@ -128,6 +128,7 @@ void *event_init(uint32_t* time_secs, struct timeval* time_tv)
         }
 	base->tcp_stickies = 0;
 	base->tcp_reinvigorated = 0;
+	verbose(VERB_CLIENT, "winsock_event inited");
         return base;
 }
 
@@ -149,6 +150,7 @@ static void handle_timeouts(struct event_base* base, struct timeval* now,
 #ifndef S_SPLINT_S
         wait->tv_sec = (time_t)-1;
 #endif
+	verbose(VERB_CLIENT, "winsock_event handle_timeouts");
 
         while((rbnode_t*)(p = (struct event*)rbtree_first(base->times))
                 !=RBTREE_NULL) {
@@ -166,6 +168,8 @@ static void handle_timeouts(struct event_base* base, struct timeval* now,
                                 wait->tv_usec = p->ev_timeout.tv_usec
                                         - now->tv_usec;
                         }
+			verbose(VERB_CLIENT, "winsock_event wait=%d.%6.6d",
+				(int)wait->tv_sec, (int)wait->tv_usec);
                         return;
                 }
 #endif
@@ -175,6 +179,7 @@ static void handle_timeouts(struct event_base* base, struct timeval* now,
                 fptr_ok(fptr_whitelist_event(p->ev_callback));
                 (*p->ev_callback)(p->ev_fd, EV_TIMEOUT, p->ev_arg);
         }
+	verbose(VERB_CLIENT, "winsock_event wait=(-1)");
 }
 
 /** handle is_signal events and see if signalled */
@@ -216,6 +221,8 @@ static int handle_select(struct event_base* base, struct timeval* wait)
 	int newstickies = 0;
 	struct timeval nultm;
 
+	verbose(VERB_CLIENT, "winsock_event handle_select");
+
 #ifndef S_SPLINT_S
         if(wait->tv_sec==(time_t)-1)
                 wait = NULL;
@@ -237,6 +244,8 @@ static int handle_select(struct event_base* base, struct timeval* wait)
 		waitfor[numwait++] = base->items[i]->hEvent;
 	}
 	log_assert(numwait <= WSA_MAXIMUM_WAIT_EVENTS);
+	verbose(VERB_CLIENT, "winsock_event bmax=%d numwait=%d wait=%x "
+		"timeout=%d", base->max, numwait, (int)wait, (int)timeout);
 
 	/* do the wait */
 	if(numwait == 0) {
@@ -262,6 +271,8 @@ static int handle_select(struct event_base* base, struct timeval* wait)
 		} else
 			startidx = ret - WSA_WAIT_EVENT_0;
 	}
+	verbose(VERB_CLIENT, "winsock_event wake was_timeout=%d startidx=%d", 
+		was_timeout, startidx);
 
 	/* get new time after wait */
         if(settime(base) < 0)
@@ -271,12 +282,22 @@ static int handle_select(struct event_base* base, struct timeval* wait)
 	if(base->tcp_stickies)
 		startidx = 0; /* process all events, some are sticky */
 
+	verbose(VERB_CLIENT, "winsock_event signals");
+	for(i=startidx; i<numwait; i++) {
+		if(eventlist[i]->is_signal) {
+			handle_signal(eventlist[i]);
+		}
+	}
+	/* early exit - do not process network, exit quickly */
+	if(base->need_to_exit)
+		return 0;
+
+	verbose(VERB_CLIENT, "winsock_event net");
 	for(i=startidx; i<numwait; i++) {
 		short bits = 0;
 		/* eventlist[i] fired */
 		if(eventlist[i]->is_signal) {
 			/* not a network event at all */
-			handle_signal(eventlist[i]);
 			continue;
 		}
 		if(WSAEnumNetworkEvents(eventlist[i]->ev_fd, 
@@ -364,11 +385,14 @@ static int handle_select(struct event_base* base, struct timeval* wait)
 				(eventlist[i]->old_events&EV_READ)?"EV_READ":"",
 				(eventlist[i]->old_events&EV_WRITE)?"EV_WRITE":"");
 	}
+	verbose(VERB_CLIENT, "winsock_event net");
 	if(base->tcp_reinvigorated) {
+		verbose(VERB_CLIENT, "winsock_event reinvigorated");
 		base->tcp_reinvigorated = 0;
 		newstickies = 1;
 	}
 	base->tcp_stickies = newstickies;
+	verbose(VERB_CLIENT, "winsock_event handle_select end");
         return 0;
 }
 
@@ -396,12 +420,14 @@ int event_base_dispatch(struct event_base *base)
 int event_base_loopexit(struct event_base *base, 
 	struct timeval * ATTR_UNUSED(tv))
 {
+	verbose(VERB_CLIENT, "winsock_event loopexit");
         base->need_to_exit = 1;
         return 0;
 }
 
 void event_base_free(struct event_base *base)
 {
+	verbose(VERB_CLIENT, "winsock_event event_base_free");
         if(!base)
                 return;
 	if(base->items)

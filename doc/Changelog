@@ -1,3 +1,7 @@
+16 April 2009: Wouter
+	- winsock event handler exit very quickly on signal, even if
+	  under heavy load.
+
 14 April 2009: Wouter
 	- bug #245: fix munin plugin, perform cleanup of stale lockfiles.
 	- makedist.sh; better help text.
