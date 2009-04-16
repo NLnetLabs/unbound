@@ -95,6 +95,18 @@ find_fd(struct event_base* base, int fd)
 	return -1;
 }
 
+/** Find ptr in base array */
+static int
+find_entry(struct event_base* base, struct event* e)
+{
+	int i;
+	for(i=0; i<base->max; i++) {
+		if(base->items[i] == e)
+			return i;
+	}
+	return -1;
+}
+
 void *event_init(uint32_t* time_secs, struct timeval* time_tv)
 {
         struct event_base* base = (struct event_base*)malloc(
@@ -281,10 +293,15 @@ static int handle_select(struct event_base* base, struct timeval* wait)
 	/* callbacks */
 	if(base->tcp_stickies)
 		startidx = 0; /* process all events, some are sticky */
+	for(i=startidx; i<numwait; i++) {
+		eventlist[i]->just_checked = 1;
 
 	verbose(VERB_CLIENT, "winsock_event signals");
 	for(i=startidx; i<numwait; i++) {
+		if(find_entry(base, eventlist[i]) == -1)
+			continue; /* event was deleted */
 		if(eventlist[i]->is_signal) {
+			eventlist[i]->just_checked = 0;
 			handle_signal(eventlist[i]);
 		}
 	}
@@ -296,10 +313,16 @@ static int handle_select(struct event_base* base, struct timeval* wait)
 	for(i=startidx; i<numwait; i++) {
 		short bits = 0;
 		/* eventlist[i] fired */
-		if(eventlist[i]->is_signal) {
-			/* not a network event at all */
-			continue;
-		}
+		/* see if eventlist[i] is still valid and just checked from
+		 * WSAWaitForEvents */
+		if(find_entry(base, eventlist[i]) == -1)
+			continue; /* does not exist anymore */
+		if(!eventlist[i]->just_checked)
+			continue; /* added by other callback */
+		if(eventlist[i]->is_signal)
+			continue; /* not a network event at all */
+		eventlist[i]->just_checked = 0;
+
 		if(WSAEnumNetworkEvents(eventlist[i]->ev_fd, 
 			waitfor[i], /* reset the event handle */
 			/*NULL,*/ /* do not reset the event handle */
@@ -448,6 +471,7 @@ void event_set(struct event *ev, int fd, short bits,
         ev->ev_callback = cb;
         fptr_ok(fptr_whitelist_event(ev->ev_callback));
         ev->ev_arg = arg;
+	ev->just_checked = 0;
         ev->added = 0;
 }
 
@@ -477,6 +501,7 @@ int event_add(struct event *ev, struct timeval *tv)
 	ev->ev_base->items[ev->idx] = ev;
 	ev->is_tcp = 0;
 	ev->is_signal = 0;
+	ev->just_checked = 0;
 
         if((ev->ev_events&(EV_READ|EV_WRITE)) && ev->ev_fd != -1) {
 		BOOL b=0;
@@ -567,6 +592,7 @@ int event_del(struct event *ev)
 			log_err("WSACloseEvent failed: %s",
 				wsa_strerror(WSAGetLastError()));
 	}
+	ev->just_checked = 0;
         ev->added = 0;
         return 0;
 }

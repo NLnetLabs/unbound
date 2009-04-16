@@ -188,6 +188,8 @@ struct event {
 	 * User created and user closed WSAEvent. Only signaled/unsigneled,
 	 * no read/write/distinctions needed. */
 	int is_signal;
+	/** used during callbacks to see which events were just checked */
+	int just_checked;
 };
 
 /** create event base */
