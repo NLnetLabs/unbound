@@ -293,7 +293,7 @@ static int handle_select(struct event_base* base, struct timeval* wait)
 	/* callbacks */
 	if(base->tcp_stickies)
 		startidx = 0; /* process all events, some are sticky */
-	for(i=startidx; i<numwait; i++) {
+	for(i=startidx; i<numwait; i++)
 		eventlist[i]->just_checked = 1;
 
 	verbose(VERB_CLIENT, "winsock_event signals");
@@ -588,7 +588,7 @@ int event_del(struct event *ev)
 		ev->ev_base->max--;
 		if(ev->idx < ev->ev_base->max)
 			ev->ev_base->items[ev->idx]->idx = ev->idx;
-		zero_waitfor(base->waitfor, ev->hEvent);
+		zero_waitfor(ev->ev_base->waitfor, ev->hEvent);
 
 		if(WSAEventSelect(ev->ev_fd, ev->hEvent, 0) != 0)
 			log_err("WSAEventSelect(disable) failed: %s",
