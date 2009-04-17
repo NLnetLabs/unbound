@@ -97,14 +97,13 @@ find_fd(struct event_base* base, int fd)
 
 /** Find ptr in base array */
 static int
-find_entry(struct event_base* base, struct event* e)
+zero_waitfor(WSAEVENT waitfor[], WSAEVENT x)
 {
 	int i;
-	for(i=0; i<base->max; i++) {
-		if(base->items[i] == e)
-			return i;
+	for(i=0; i<WSK_MAX_ITEMS; i++) {
+		if(waitfor[i] == x)
+			waitfor[i] = 0;
 	}
-	return -1;
 }
 
 void *event_init(uint32_t* time_secs, struct timeval* time_tv)
@@ -226,7 +225,6 @@ static int handle_select(struct event_base* base, struct timeval* wait)
 {
 	DWORD timeout = 0; /* in milliseconds */	
 	DWORD ret;
-	WSAEVENT waitfor[WSK_MAX_ITEMS];
 	struct event* eventlist[WSK_MAX_ITEMS];
 	WSANETWORKEVENTS netev;
 	int i, numwait = 0, startidx = 0, was_timeout = 0;
@@ -253,7 +251,9 @@ static int handle_select(struct event_base* base, struct timeval* wait)
 		if(base->items[i]->ev_fd == -1 && !base->items[i]->is_signal)
 			continue; /* skip timer only events */
 		eventlist[numwait] = base->items[i];
-		waitfor[numwait++] = base->items[i]->hEvent;
+		base->waitfor[numwait++] = base->items[i]->hEvent;
+		if(numwait == WSK_MAX_ITEMS)
+			break; /* sanity check */
 	}
 	log_assert(numwait <= WSA_MAXIMUM_WAIT_EVENTS);
 	verbose(VERB_CLIENT, "winsock_event bmax=%d numwait=%d wait=%x "
@@ -267,7 +267,7 @@ static int handle_select(struct event_base* base, struct timeval* wait)
 		}
 		was_timeout = 1;
 	} else {
-		ret = WSAWaitForMultipleEvents(numwait, waitfor,
+		ret = WSAWaitForMultipleEvents(numwait, base->waitfor,
 			0 /* do not wait for all, just one will do */,
 			wait?timeout:WSA_INFINITE,
 			0); /* we are not alertable (IO completion events) */
@@ -298,8 +298,8 @@ static int handle_select(struct event_base* base, struct timeval* wait)
 
 	verbose(VERB_CLIENT, "winsock_event signals");
 	for(i=startidx; i<numwait; i++) {
-		if(find_entry(base, eventlist[i]) == -1)
-			continue; /* event was deleted */
+		if(!base->waitfor[i])
+			continue; /* was deleted */
 		if(eventlist[i]->is_signal) {
 			eventlist[i]->just_checked = 0;
 			handle_signal(eventlist[i]);
@@ -315,8 +315,8 @@ static int handle_select(struct event_base* base, struct timeval* wait)
 		/* eventlist[i] fired */
 		/* see if eventlist[i] is still valid and just checked from
 		 * WSAWaitForEvents */
-		if(find_entry(base, eventlist[i]) == -1)
-			continue; /* does not exist anymore */
+		if(!base->waitfor[i])
+			continue; /* was deleted */
 		if(!eventlist[i]->just_checked)
 			continue; /* added by other callback */
 		if(eventlist[i]->is_signal)
@@ -324,7 +324,7 @@ static int handle_select(struct event_base* base, struct timeval* wait)
 		eventlist[i]->just_checked = 0;
 
 		if(WSAEnumNetworkEvents(eventlist[i]->ev_fd, 
-			waitfor[i], /* reset the event handle */
+			base->waitfor[i], /* reset the event handle */
 			/*NULL,*/ /* do not reset the event handle */
 			&netev) != 0) {
 			log_err("WSAEnumNetworkEvents failed: %s", 
@@ -588,6 +588,7 @@ int event_del(struct event *ev)
 		ev->ev_base->max--;
 		if(ev->idx < ev->ev_base->max)
 			ev->ev_base->items[ev->idx]->idx = ev->idx;
+		zero_waitfor(base->waitfor, ev->hEvent);
 
 		if(WSAEventSelect(ev->ev_fd, ev->hEvent, 0) != 0)
 			log_err("WSAEventSelect(disable) failed: %s",

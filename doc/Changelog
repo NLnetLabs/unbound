@@ -2,6 +2,7 @@
 	- Fix reentrant in minievent handler for unix. Could have resulted
 	  in spurious event callbacks.
 	- timers do not take up a fd slot for winsock handler.
+	- faster fix for winsock reentrant check.
 
 16 April 2009: Wouter
 	- winsock event handler exit very quickly on signal, even if

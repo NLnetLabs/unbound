@@ -145,7 +145,8 @@ struct event_base
 	 * event_add a sudden interest in the event has incepted.
 	 */
 	int tcp_reinvigorated;
-
+	/** The list of events that is currently being processed. */
+	WSAEVENT waitfor[WSK_MAX_ITEMS];
 };
 
 /**
