@@ -88,8 +88,8 @@ struct event_base
 	int maxfd;
 	/** capacity - size of the fds array */
 	int capfd;
-	/** fdset for read write */
-	fd_set reads, writes;
+	/** fdset for read write, for fds ready, and added */
+	fd_set reads, writes, ready, content;
 	/** array of 0 - maxsig of ptr to event for it */
 	struct event** signals;
 	/** if we need to exit */

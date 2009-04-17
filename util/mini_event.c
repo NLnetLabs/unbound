@@ -182,6 +182,7 @@ static int handle_select(struct event_base* base, struct timeval* wait)
 #endif
 	memmove(&r, &base->reads, sizeof(fd_set));
 	memmove(&w, &base->writes, sizeof(fd_set));
+	memmove(&base->ready, &base->content, sizeof(fd_set));
 
 	if((ret = select(base->maxfd+1, &r, &w, NULL, wait)) == -1) {
 		ret = errno;
@@ -197,7 +198,7 @@ static int handle_select(struct event_base* base, struct timeval* wait)
 	
 	for(i=0; i<base->maxfd+1; i++) {
 		short bits = 0;
-		if(!base->fds[i]) {
+		if(!base->fds[i] || !(FD_ISSET(i, &base->ready))) {
 			continue;
 		}
 		if(FD_ISSET(i, &r)) {
@@ -301,6 +302,8 @@ int event_add(struct event* ev, struct timeval* tv)
 		if(ev->ev_events&EV_WRITE) {
 			FD_SET(FD_SET_T ev->ev_fd, &ev->ev_base->writes);
 		}
+		FD_SET(FD_SET_T ev->ev_fd, &ev->ev_base->content);
+		FD_CLR(FD_SET_T ev->ev_fd, &ev->ev_base->ready);
 		if(ev->ev_fd > ev->ev_base->maxfd)
 			ev->ev_base->maxfd = ev->ev_fd;
 	}
@@ -331,6 +334,8 @@ int event_del(struct event* ev)
 		ev->ev_base->fds[ev->ev_fd] = NULL;
 		FD_CLR(FD_SET_T ev->ev_fd, &ev->ev_base->reads);
 		FD_CLR(FD_SET_T ev->ev_fd, &ev->ev_base->writes);
+		FD_CLR(FD_SET_T ev->ev_fd, &ev->ev_base->ready);
+		FD_CLR(FD_SET_T ev->ev_fd, &ev->ev_base->content);
 	}
 	ev->added = 0;
 	return 0;
