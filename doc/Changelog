@@ -4,6 +4,7 @@
 	- timers do not take up a fd slot for winsock handler.
 	- faster fix for winsock reentrant check.
 	- fix rsasha512 unit test for new (interim) algorithm number.
+	- fix test:ldns doesn't like DOS line endings in keyfiles on unix.
 
 16 April 2009: Wouter
 	- winsock event handler exit very quickly on signal, even if
