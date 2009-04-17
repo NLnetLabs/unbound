@@ -25,6 +25,9 @@ void ub_c_error(const char *message);
 #define LEXOUT(s)
 #endif
 
+/** avoid warning in about fwrite return value */
+#define ECHO ub_c_error_msg("syntax error at text: %s", yytext)
+
 /** A parser variable, this is a statement in the config file which is
  * of the form variable: value1 value2 ...  nargs is the number of values. */
 #define YDVAR(nargs, var) \

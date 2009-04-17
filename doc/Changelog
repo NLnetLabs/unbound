@@ -5,6 +5,8 @@
 	- faster fix for winsock reentrant check.
 	- fix rsasha512 unit test for new (interim) algorithm number.
 	- fix test:ldns doesn't like DOS line endings in keyfiles on unix.
+	- fix compile warning on ubuntu (configlexer fwrite return value).
+	- move python include directives into CPPFLAGS instead of CFLAGS.
 
 16 April 2009: Wouter
 	- winsock event handler exit very quickly on signal, even if

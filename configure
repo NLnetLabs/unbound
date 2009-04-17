@@ -22930,7 +22930,7 @@ cat >>confdefs.h <<\_ACEOF
 _ACEOF
 
       LIBS="$PYTHON_LDFLAGS $LIBS"
-      CFLAGS="$CFLAGS $PYTHON_CPPFLAGS"
+      CPPFLAGS="$CPPFLAGS $PYTHON_CPPFLAGS"
       ub_have_python=yes
 
       # Check for SWIG

@@ -301,7 +301,7 @@ if test x_$ub_test_python != x_no; then
       # Have Python
       AC_DEFINE(HAVE_PYTHON,1,[Define if you have Python libraries and header files.])
       LIBS="$PYTHON_LDFLAGS $LIBS"
-      CFLAGS="$CFLAGS $PYTHON_CPPFLAGS"
+      CPPFLAGS="$CPPFLAGS $PYTHON_CPPFLAGS"
       ub_have_python=yes
 
       # Check for SWIG
