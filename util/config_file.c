@@ -87,11 +87,13 @@ config_create()
 	cfg->log_time_ascii = 0;
 #ifndef USE_WINSOCK
 	cfg->outgoing_num_ports = 256;
-#else
-	cfg->outgoing_num_ports = 16; /* windows is limited in num fds */
-#endif
 	cfg->outgoing_num_tcp = 10;
 	cfg->incoming_num_tcp = 10;
+#else
+	cfg->outgoing_num_ports = 48; /* windows is limited in num fds */
+	cfg->outgoing_num_tcp = 2; /* leaves 64-52=12 for: 4if,1stop,thread4 */
+	cfg->incoming_num_tcp = 2; 
+#endif
 	cfg->msg_buffer_size = 65552; /* 64 k + a small margin */
 	cfg->msg_cache_size = 4 * 1024 * 1024;
 	cfg->msg_cache_slabs = 4;

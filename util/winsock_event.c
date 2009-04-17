@@ -495,10 +495,6 @@ int event_add(struct event *ev, struct timeval *tv)
         if(ev->added)
                 event_del(ev);
 	log_assert(ev->ev_fd==-1 || find_fd(ev->ev_base, ev->ev_fd) == -1);
-	if(ev->ev_base->max == ev->ev_base->cap)
-		return -1;
-	ev->idx = ev->ev_base->max++;
-	ev->ev_base->items[ev->idx] = ev;
 	ev->is_tcp = 0;
 	ev->is_signal = 0;
 	ev->just_checked = 0;
@@ -507,6 +503,12 @@ int event_add(struct event *ev, struct timeval *tv)
 		BOOL b=0;
 		int t, l;
 		long events = 0;
+
+		if(ev->ev_base->max == ev->ev_base->cap)
+			return -1;
+		ev->idx = ev->ev_base->max++;
+		ev->ev_base->items[ev->idx] = ev;
+
 		if( (ev->ev_events&EV_READ) )
 			events |= FD_READ;
 		if( (ev->ev_events&EV_WRITE) )
@@ -574,17 +576,19 @@ int event_del(struct event *ev)
 		(ev->ev_events&EV_TIMEOUT)?" EV_TIMEOUT":"");
 	if(!ev->added)
 		return 0;
-	log_assert(ev->added && ev->ev_base->max > 0)
-	/* remove item and compact the list */
-	ev->ev_base->items[ev->idx] = ev->ev_base->items[ev->ev_base->max-1];
-	ev->ev_base->items[ev->ev_base->max-1] = NULL;
-	ev->ev_base->max--;
-	if(ev->idx < ev->ev_base->max)
-		ev->ev_base->items[ev->idx]->idx = ev->idx;
-
+	log_assert(ev->added);
         if((ev->ev_events&EV_TIMEOUT))
                 (void)rbtree_delete(ev->ev_base->times, &ev->node);
         if((ev->ev_events&(EV_READ|EV_WRITE)) && ev->ev_fd != -1) {
+		log_assert(ev->ev_base->max > 0);
+		/* remove item and compact the list */
+		ev->ev_base->items[ev->idx] = 
+			ev->ev_base->items[ev->ev_base->max-1];
+		ev->ev_base->items[ev->ev_base->max-1] = NULL;
+		ev->ev_base->max--;
+		if(ev->idx < ev->ev_base->max)
+			ev->ev_base->items[ev->idx]->idx = ev->idx;
+
 		if(WSAEventSelect(ev->ev_fd, ev->hEvent, 0) != 0)
 			log_err("WSAEventSelect(disable) failed: %s",
 				wsa_strerror(WSAGetLastError()));
