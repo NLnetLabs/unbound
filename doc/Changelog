@@ -1,5 +1,6 @@
 21 April 2009: Wouter
 	- fix for build outside sourcedir.
+	- fix for configure script swig detection.
 
 17 April 2009: Wouter
 	- Fix reentrant in minievent handler for unix. Could have resulted

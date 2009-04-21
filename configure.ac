@@ -308,7 +308,7 @@ if test x_$ub_test_python != x_no; then
       ub_have_swig=no
       AC_PROG_SWIG
       AC_MSG_CHECKING(SWIG)
-      if test -z "$SWIG"; then
+      if test ! -x "$SWIG"; then
          AC_MSG_RESULT(failed, won't build Python module and PyUnbound)
          AC_SUBST(swig, "")
          ub_with_pyunbound=no
