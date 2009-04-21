@@ -49,7 +49,7 @@ LEX=@LEX@
 CC=@CC@
 CPPFLAGS=-I. @CPPFLAGS@
 ifneq "$(srcdir)" "."
-  CPPFLAGS=-I$(srcdir) $(CPPFLAGS)
+  CPPFLAGS:=-I$(srcdir) $(CPPFLAGS)
 endif
 CPPFLAGS:=$(strip $(CPPFLAGS))
 CFLAGS=@CFLAGS@
