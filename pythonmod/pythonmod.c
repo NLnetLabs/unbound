@@ -87,6 +87,8 @@ int pythonmod_init(struct module_env* env, int id)
       SWIG_init();
    }
 
+   PyEval_AcquireLock();
+
    /* Initialize Python */
    PyRun_SimpleString("import sys \n");
    PyRun_SimpleString("sys.path.append('.') \n");
@@ -101,6 +103,7 @@ int pythonmod_init(struct module_env* env, int id)
    if (PyRun_SimpleString("from unboundmodule import *\n") < 0)
    {
       log_err("pythonmod: cannot initialize core module: unboundmodule.py"); 
+      PyEval_ReleaseLock();
       return 0;
    }
 
@@ -108,6 +111,7 @@ int pythonmod_init(struct module_env* env, int id)
    if ((script_py = fopen(pe->fname, "r")) == NULL) 
    {
       log_err("pythonmod: can't open file %s for reading", pe->fname);
+      PyEval_ReleaseLock();
       return 0;
    }
 
@@ -123,6 +127,7 @@ int pythonmod_init(struct module_env* env, int id)
    if (PyRun_SimpleFile(script_py, pe->fname) < 0) 
    {
       log_err("pythonmod: can't parse Python script %s", pe->fname);
+      PyEval_ReleaseLock();
       return 0;
    }
 
@@ -131,25 +136,28 @@ int pythonmod_init(struct module_env* env, int id)
    if ((pe->func_init = PyDict_GetItemString(pe->dict, "init")) == NULL) 
    {
       log_err("pythonmod: function init is missing in %s", pe->fname);
+      PyEval_ReleaseLock();
       return 0;
    }
    if ((pe->func_deinit = PyDict_GetItemString(pe->dict, "deinit")) == NULL) 
    {
       log_err("pythonmod: function deinit is missing in %s", pe->fname);
+      PyEval_ReleaseLock();
       return 0;
    }
    if ((pe->func_operate = PyDict_GetItemString(pe->dict, "operate")) == NULL) 
    {
       log_err("pythonmod: function operate is missing in %s", pe->fname);
+      PyEval_ReleaseLock();
       return 0;
    }
    if ((pe->func_inform = PyDict_GetItemString(pe->dict, "inform_super")) == NULL) 
    {
       log_err("pythonmod: function inform_super is missing in %s", pe->fname);
+      PyEval_ReleaseLock();
       return 0;
    }
 
-   PyEval_AcquireLock();
    py_cfg = SWIG_NewPointerObj((void*) env->cfg, SWIGTYPE_p_config_file, 0);
    res = PyObject_CallFunction(pe->func_init, "iO", id, py_cfg);
    if (PyErr_Occurred()) 
