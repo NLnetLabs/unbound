@@ -22634,6 +22634,11 @@ echo "$as_me: error: Cannot find python$PYTHON_VERSION in your system path" >&2;
            PYTHON_VERSION=""
         fi
 
+        if test -z "$PYTHON_VERSION"; then
+		PYTHON_VERSION=`$PYTHON -c "import sys, string; \
+			print string.split(sys.version)[0]"`
+	fi
+
         #
         # Check for a version of Python >= 2.1.0
         #
@@ -22921,7 +22926,12 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
         # all done!
         #
 
-   if test ! -z "PYTHON_VERSION"; then
+   if test ! -z "$PYTHON_VERSION"; then
+	if test `$PYTHON -c "print '$PYTHON_VERSION' >= '2.4.0'"` = "False"; then
+		{ { echo "$as_me:$LINENO: error: Python version >= 2.4.0 is required" >&5
+echo "$as_me: error: Python version >= 2.4.0 is required" >&2;}
+   { (exit 1); exit 1; }; }
+	fi
 
       # Have Python
 
@@ -23084,8 +23094,8 @@ _ACEOF
          fi
       fi
    else
-      { echo "$as_me:$LINENO: result: Python libraries not found, won't build PythonMod or PyUnbound" >&5
-echo "${ECHO_T}Python libraries not found, won't build PythonMod or PyUnbound" >&6; }
+      { echo "$as_me:$LINENO: result: *** Python libraries not found, won't build PythonMod or PyUnbound ***" >&5
+echo "${ECHO_T}*** Python libraries not found, won't build PythonMod or PyUnbound ***" >&6; }
       ub_with_pyunbound=no
       ub_with_pythonmod=no
    fi
@@ -23205,6 +23215,7 @@ sed 's/^/| /' conftest.$ac_ext >&5
 		{ echo "$as_me:$LINENO: result: no" >&5
 echo "${ECHO_T}no" >&6; }
 	    	# check if -lwsock32 or -lgdi32 are needed.
+		BAKLIBS="$LIBS"
 		LIBS="$LIBS -lgdi32"
 		{ echo "$as_me:$LINENO: checking if -lcrypto needs -lgdi32" >&5
 echo $ECHO_N "checking if -lcrypto needs -lgdi32... $ECHO_C" >&6; }
@@ -23260,9 +23271,70 @@ sed 's/^/| /' conftest.$ac_ext >&5
 
 		    { echo "$as_me:$LINENO: result: no" >&5
 echo "${ECHO_T}no" >&6; }
+		    LIBS="$BAKLIBS"
+		    LIBS="$LIBS -ldl"
+		    { echo "$as_me:$LINENO: checking if -lcrypto needs -ldl" >&5
+echo $ECHO_N "checking if -lcrypto needs -ldl... $ECHO_C" >&6; }
+		    cat >conftest.$ac_ext <<_ACEOF
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+
+int
+main ()
+{
+
+			int HMAC_CTX_init(void);
+			(void)HMAC_CTX_init();
+
+  ;
+  return 0;
+}
+_ACEOF
+rm -f conftest.$ac_objext conftest$ac_exeext
+if { (ac_try="$ac_link"
+case "(($ac_try" in
+  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
+  *) ac_try_echo=$ac_try;;
+esac
+eval "echo \"\$as_me:$LINENO: $ac_try_echo\"") >&5
+  (eval "$ac_link") 2>conftest.er1
+  ac_status=$?
+  grep -v '^ *+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } && {
+	 test -z "$ac_c_werror_flag" ||
+	 test ! -s conftest.err
+       } && test -s conftest$ac_exeext &&
+       $as_test_x conftest$ac_exeext; then
+
+
+cat >>confdefs.h <<\_ACEOF
+#define HAVE_HMAC_CTX_INIT 1
+_ACEOF
+
+			{ echo "$as_me:$LINENO: result: yes" >&5
+echo "${ECHO_T}yes" >&6; }
+
+else
+  echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+
+			{ echo "$as_me:$LINENO: result: no" >&5
+echo "${ECHO_T}no" >&6; }
                     { { echo "$as_me:$LINENO: error: OpenSSL found in $ssldir, but version 0.9.7 or higher is required" >&5
 echo "$as_me: error: OpenSSL found in $ssldir, but version 0.9.7 or higher is required" >&2;}
    { (exit 1); exit 1; }; }
+
+fi
+
+rm -f core conftest.err conftest.$ac_objext conftest_ipa8_conftest.oo \
+      conftest$ac_exeext conftest.$ac_ext
 
 fi
 

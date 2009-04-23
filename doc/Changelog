@@ -3,6 +3,8 @@
 	- iana portlist updated.
 	- fix pylib test for Darwin.
 	- fix pymod test for Darwin and a python threading bug in pymod init.
+	- check python >= 2.4 in configure.
+	- -ldl check for libcrypto 1.0.0beta.
 
 21 April 2009: Wouter
 	- fix for build outside sourcedir.

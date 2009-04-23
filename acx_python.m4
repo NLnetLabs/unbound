@@ -13,6 +13,11 @@ AC_DEFUN([AC_PYTHON_DEVEL],[
            PYTHON_VERSION=""
         fi
 
+        if test -z "$PYTHON_VERSION"; then
+		PYTHON_VERSION=`$PYTHON -c "import sys, string; \
+			print string.split(sys.version)[[0]]"`
+	fi
+
         #
         # Check for a version of Python >= 2.1.0
         #

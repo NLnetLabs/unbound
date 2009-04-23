@@ -296,7 +296,10 @@ if test x_$ub_test_python != x_no; then
    # Check for Python
    ub_have_python=no
    AC_PYTHON_DEVEL
-   if test ! -z "PYTHON_VERSION"; then
+   if test ! -z "$PYTHON_VERSION"; then
+	if test `$PYTHON -c "print '$PYTHON_VERSION' >= '2.4.0'"` = "False"; then
+		AC_ERROR([Python version >= 2.4.0 is required])
+	fi
 
       # Have Python
       AC_DEFINE(HAVE_PYTHON,1,[Define if you have Python libraries and header files.])
@@ -334,7 +337,7 @@ if test x_$ub_test_python != x_no; then
          fi
       fi
    else
-      AC_MSG_RESULT([Python libraries not found, won't build PythonMod or PyUnbound])
+      AC_MSG_RESULT([*** Python libraries not found, won't build PythonMod or PyUnbound ***])
       ub_with_pyunbound=no
       ub_with_pythonmod=no
    fi
