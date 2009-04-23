@@ -1,6 +1,7 @@
 23 April 2009: Wouter
 	- fix for threadsafety in solaris thr_key_create() in tests.
 	- iana portlist updated.
+	- fix pylib test for Darwin.
 
 21 April 2009: Wouter
 	- fix for build outside sourcedir.
