@@ -1,5 +1,6 @@
 27 April 2009: Wouter
 	- optimised cname from cache.
+	- ifdef windows functions in testbound.
 
 23 April 2009: Wouter
 	- fix for threadsafety in solaris thr_key_create() in tests.
