@@ -1,3 +1,6 @@
+27 April 2009: Wouter
+	- optimised cname from cache.
+
 23 April 2009: Wouter
 	- fix for threadsafety in solaris thr_key_create() in tests.
 	- iana portlist updated.

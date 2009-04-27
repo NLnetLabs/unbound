@@ -855,10 +855,11 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 		/* handle positive cache response */
 		enum response_type type = response_type_from_cache(msg, 
 			&iq->qchase);
-		if(verbosity >= VERB_ALGO)
+		if(verbosity >= VERB_ALGO) {
 			log_dns_msg("msg from cache lookup", &msg->qinfo, 
 				msg->rep);
-		verbose(VERB_ALGO, "msg ttl is %d", (int)msg->rep->ttl);
+			verbose(VERB_ALGO, "msg ttl is %d", (int)msg->rep->ttl);
+		}
 
 		if(type == RESPONSE_TYPE_CNAME) {
 			uint8_t* sname = 0;
