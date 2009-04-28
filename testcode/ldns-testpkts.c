@@ -590,10 +590,6 @@ match_list(ldns_rr_list* q, ldns_rr_list *p, bool mttl)
 		if(ldns_rr_compare(ldns_rr_list_rr(q, i), 
 			ldns_rr_list_rr(p, i)) != 0) {
 			verbose(3, "rr %d different", i);
-			verbose(3, "rr %d q", i);
-			ldns_rr_print(stderr, ldns_rr_list_rr(q, i));
-			verbose(3, "rr %d p", i);
-			ldns_rr_print(stderr, ldns_rr_list_rr(p, i));
 			return 0;
 		}
 		if(mttl && ldns_rr_ttl(ldns_rr_list_rr(q, i)) !=
