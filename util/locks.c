@@ -165,41 +165,32 @@ static void log_win_err(const char* str, DWORD err)
 
 void lock_basic_init(lock_basic_t* lock)
 {
-	*lock = CreateMutex(NULL, /* security attrs NULL, not process inherit*/
-		0,  /* false, we do not hold the lock initially */
-		NULL); /* create anonymous mutex */
-	if(*lock == NULL) {
-		log_win_err("CreateMutex failed", GetLastError());
-		fatal_exit("lock init failed");
-	}
+	/* implement own lock, because windows HANDLE as Mutex usage
+	 * uses too many handles and would bog down the whole system. */
+	(void)InterlockedExchange(lock, 0);
 }
 
 void lock_basic_destroy(lock_basic_t* lock)
 {
-	if(!CloseHandle(*lock)) {
-		log_win_err("CloseHandle(Mutex) failed", GetLastError());
-	}
-	*lock = NULL;
+	(void)InterlockedExchange(lock, 0);
 }
 
 void lock_basic_lock(lock_basic_t* lock)
 {
-	DWORD ret = WaitForSingleObject(*lock, INFINITE);
-	if(ret == WAIT_FAILED) {
-		log_win_err("WaitForSingleObject(Mutex):WAIT_FAILED", 
-			GetLastError());
-	} else if(ret == WAIT_TIMEOUT) {
-		log_win_err("WaitForSingleObject(Mutex):WAIT_TIMEOUT", 
-			GetLastError());
+	LONG wait = 1; /* wait 1 msec at first */
+
+	while(InterlockedExchange(lock, 1)) {
+		/* if the old value was 1 then if was already locked */
+		Sleep(wait); /* wait with sleep */
+		wait *= 2;   /* exponential backoff for waiting */
 	}
-	/* both WAIT_ABANDONED and WAIT_OBJECT_0 mean we have the lock */
+	/* the old value was 0, but we inserted 1, we locked it! */
 }
 
 void lock_basic_unlock(lock_basic_t* lock)
 {
-	if(!ReleaseMutex(*lock)) {
-		log_win_err("ReleaseMutex failed", GetLastError());
-	}
+	/* unlock it by inserting the value of 0. xchg for cache coherency. */
+	(void)InterlockedExchange(lock, 0);
 }
 
 void ub_thread_key_create(ub_thread_key_t* key, void* f)

@@ -284,7 +284,11 @@ add_open(const char* ip, int nr, struct listen_port** list, int noproto_is_err)
 	/* alloc */
 	n = (struct listen_port*)calloc(1, sizeof(*n));
 	if(!n) {
+#ifndef USE_WINSOCK
 		close(fd);
+#else
+		closesocket(fd);
+#endif
 		log_err("out of memory");
 		return 0;
 	}
@@ -376,7 +380,12 @@ int remote_accept_callback(struct comm_point* c, void* arg, int err,
 	if(rc->active >= rc->max_active) {
 		log_warn("drop incoming remote control: too many connections");
 		comm_point_stop_listening(c);
+	close_exit:
+#ifndef USE_WINSOCK
 		close(newfd);
+#else
+		closesocket(newfd);
+#endif
 		return 0;
 	}
 
@@ -384,17 +393,15 @@ int remote_accept_callback(struct comm_point* c, void* arg, int err,
 	n = (struct rc_state*)calloc(1, sizeof(*n));
 	if(!n) {
 		log_err("out of memory");
-		close(newfd);
-		return 0;
+		goto close_exit;
 	}
 	/* start in reading state */
 	n->c = comm_point_create_raw(rc->worker->base, newfd, 0, 
 		&remote_control_callback, n);
 	if(!n->c) {
 		log_err("out of memory");
-		close(newfd);
 		free(n);
-		return 0;
+		goto close_exit;
 	}
 	log_addr(VERB_QUERY, "new control connection from", &addr, addrlen);
 	n->c->do_not_close = 0;
@@ -406,18 +413,16 @@ int remote_accept_callback(struct comm_point* c, void* arg, int err,
 	n->ssl = SSL_new(rc->ctx);
 	if(!n->ssl) {
 		log_crypto_err("could not SSL_new");
-		close(newfd);
 		free(n);
-		return 0;
+		goto close_exit;
 	}
 	SSL_set_accept_state(n->ssl);
         (void)SSL_set_mode(n->ssl, SSL_MODE_AUTO_RETRY);
 	if(!SSL_set_fd(n->ssl, newfd)) {
 		log_crypto_err("could not SSL_set_fd");
-		close(newfd);
 		SSL_free(n->ssl);
 		free(n);
-		return 0;
+		goto close_exit;
 	}
 
 	n->rc = rc;

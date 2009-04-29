@@ -302,7 +302,11 @@ go(const char* cfgfile, char* svr, int argc, char* argv[])
 	ret = go_cmd(ssl, argc, argv);
 
 	SSL_free(ssl);
+#ifndef USE_WINSOCK
 	close(fd);
+#else
+	closesocket(fd);
+#endif
 	SSL_CTX_free(ctx);
 	config_delete(cfg);
 	return ret;

@@ -1397,7 +1397,11 @@ comm_point_close(struct comm_point* c)
 	/* close fd after removing from event lists, or epoll.. is messed up */
 	if(c->fd != -1 && !c->do_not_close) {
 		verbose(VERB_ALGO, "close fd %d", c->fd);
+#ifndef USE_WINSOCK
 		close(c->fd);
+#else
+		closesocket(c->fd);
+#endif
 	}
 	c->fd = -1;
 }
@@ -1497,8 +1501,13 @@ comm_point_start_listening(struct comm_point* c, int newfd, int sec)
 		else	c->ev->ev.ev_events |= EV_WRITE;
 	}
 	if(newfd != -1) {
-		if(c->fd != -1)
+		if(c->fd != -1) {
+#ifndef USE_WINSOCK
 			close(c->fd);
+#else
+			closesocket(c->fd);
+#endif
+		}
 		c->fd = newfd;
 		c->ev->ev.ev_fd = c->fd;
 	}

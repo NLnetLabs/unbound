@@ -202,7 +202,7 @@ void* ub_thread_key_get(ub_thread_key_t key);
 #include <windows.h>
 
 /* Use a mutex */
-typedef HANDLE lock_rw_t;
+typedef LONG lock_rw_t;
 #define lock_rw_init(lock) lock_basic_init(lock)
 #define lock_rw_destroy(lock) lock_basic_destroy(lock)
 #define lock_rw_rdlock(lock) lock_basic_lock(lock)
@@ -210,14 +210,14 @@ typedef HANDLE lock_rw_t;
 #define lock_rw_unlock(lock) lock_basic_unlock(lock)
 
 /** the basic lock is a mutex, implemented opaquely, for error handling. */
-typedef HANDLE lock_basic_t;
+typedef LONG lock_basic_t;
 void lock_basic_init(lock_basic_t* lock);
 void lock_basic_destroy(lock_basic_t* lock);
 void lock_basic_lock(lock_basic_t* lock);
 void lock_basic_unlock(lock_basic_t* lock);
 
 /** on windows no spinlock, use mutex too. */
-typedef HANDLE lock_quick_t;
+typedef LONG lock_quick_t;
 #define lock_quick_init(lock) lock_basic_init(lock)
 #define lock_quick_destroy(lock) lock_basic_destroy(lock)
 #define lock_quick_lock(lock) lock_basic_lock(lock)

@@ -253,7 +253,11 @@ perffree(struct perfinfo* info)
 	if(!info) return;
 	if(info->io) {
 		for(i=0; i<info->io_num; i++) {
+#ifndef USE_WINSOCK
 			close(info->io[i].fd);
+#else
+			closesocket(info->io[i].fd);
+#endif
 		}
 		free(info->io);
 	}

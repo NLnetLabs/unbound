@@ -542,9 +542,15 @@ tcp_proxy_delete(struct tcp_proxy* p)
 		free(s);
 		s = sn;
 	}
+#ifndef USE_WINSOCK
 	close(p->client_s);
 	if(p->server_s != -1)
 		close(p->server_s);
+#else
+	closesocket(p->client_s);
+	if(p->server_s != -1)
+		closesocket(p->server_s);
+#endif
 	free(p);
 }
 
@@ -593,14 +599,16 @@ service_tcp_listen(int s, fd_set* rorig, int* max, struct tcp_proxy** proxies,
 #ifndef USE_WINSOCK
 		if(errno != EINPROGRESS) {
 			log_err("tcp connect: %s", strerror(errno));
+			close(p->server_s);
+			close(p->client_s);
 #else
 		if(WSAGetLastError() != WSAEWOULDBLOCK &&
 			WSAGetLastError() != WSAEINPROGRESS) {
 			log_err("tcp connect: %s", 
 				wsa_strerror(WSAGetLastError()));
+			closesocket(p->server_s);
+			closesocket(p->client_s);
 #endif
-			close(p->server_s);
-			close(p->client_s);
 			free(p);
 			return;
 		}
@@ -753,7 +761,11 @@ service_tcp_relay(struct tcp_proxy** tcp_proxies, struct timeval* now,
 			log_addr(1, "read tcp answer", &p->addr, p->addr_len);
 			if(!tcp_relay_read(p->server_s, &p->answerlist, 
 				&p->answerlast, now, delay, pkt)) {
+#ifndef USE_WINSOCK
 				close(p->server_s);
+#else
+				closesocket(p->server_s);
+#endif
 				FD_CLR(FD_SET_T p->server_s, worig);
 				FD_CLR(FD_SET_T p->server_s, rorig);
 				p->server_s = -1;
@@ -881,7 +893,11 @@ proxy_list_clear(struct proxy* p)
 			"%u returned\n", i++, from, port, (int)p->numreuse+1,
 			(unsigned)p->numwait, (unsigned)p->numsent, 
 			(unsigned)p->numreturn);
+#ifndef USE_WINSOCK
 		close(p->s);
+#else
+		closesocket(p->s);
+#endif
 		free(p);
 		p = np;
 	}
@@ -1083,8 +1099,13 @@ service(const char* bind_str, int bindport, const char* serv_str,
 
 	/* cleanup */
 	verbose(1, "cleanup");
+#ifndef USE_WINSOCK
 	close(s);
 	close(listen_s);
+#else
+	closesocket(s);
+	closesocket(listen_s);
+#endif
 	ldns_buffer_free(pkt);
 	ring_delete(ring);
 }

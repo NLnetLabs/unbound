@@ -1,3 +1,10 @@
+29 April 2009: Wouter
+	- Thanks to Brett Carr, caught windows resource leak, use 
+	  closesocket() and not close() on sockets or else the network stack
+	  starts to leak handles.
+	- Removed usage of windows Mutex because windows cannot handle enough
+	  mutexes open.  Provide own mutex implementation using primitives.
+
 28 April 2009: Wouter
 	- created svn tag for 1.3.0.
 

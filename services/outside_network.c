@@ -162,12 +162,13 @@ outnet_tcp_take_into_use(struct waiting_tcp* w, uint8_t* pkt, size_t pkt_len)
 		if(1) {
 #endif
 			log_err("outgoing tcp: connect: %s", strerror(errno));
+			close(s);
 #else /* USE_WINSOCK */
 		if(WSAGetLastError() != WSAEINPROGRESS &&
 			WSAGetLastError() != WSAEWOULDBLOCK) {
+			closesocket(s);
 #endif
 			log_addr(0, "failed address", &w->addr, w->addrlen);
-			close(s);
 			return 0;
 		}
 	}
