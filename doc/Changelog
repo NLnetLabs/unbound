@@ -1,3 +1,7 @@
+26 May 2009: Wouter
+	- Thanks again to Brett Carr, found an assertion that was not true.
+	  Assertion checked if recursion parent query still existed.
+
 29 April 2009: Wouter
 	- Thanks to Brett Carr, caught windows resource leak, use 
 	  closesocket() and not close() on sockets or else the network stack

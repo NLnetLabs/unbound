@@ -422,6 +422,7 @@ void
 worker_win_stop_cb(int ATTR_UNUSED(fd), short ATTR_UNUSED(ev), void* arg)
 {
         struct worker* worker = (struct worker*)arg;
+	verbosity = 5; /* @@@ DEBUG */
         verbose(VERB_QUERY, "caught stop signal (wsaevent)");
         worker->need_to_exit = 1;
         comm_base_exit(worker->base);
