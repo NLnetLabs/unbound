@@ -6,6 +6,8 @@
 	  Most easily triggered on XP (not Vista), maybe because of the
 	  network stack encouraging large messages backlogs.
 	- change in debug statements.
+	- Fixed bug that could cause a crash if root prime failed when there
+	  were message backlogs.
 
 26 May 2009: Wouter
 	- Thanks again to Brett Carr, found an assertion that was not true.
