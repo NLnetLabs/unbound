@@ -1163,6 +1163,7 @@ worker_delete(struct worker* worker)
 		mesh_stats(worker->env.mesh, "mesh has");
 		worker_mem_report(worker, NULL);
 	}
+	outside_network_quit_prepare(worker->back);
 	mesh_delete(worker->env.mesh);
 	ldns_buffer_free(worker->env.scratch_buffer);
 	forwards_delete(worker->env.fwds);

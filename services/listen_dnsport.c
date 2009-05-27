@@ -295,6 +295,12 @@ make_sock(int stype, const char* ifname, const char* port,
 	hints->ai_socktype = stype;
 	*noip6 = 0;
 	if((r=getaddrinfo(ifname, port, hints, &res)) != 0 || !res) {
+#ifdef USE_WINSOCK
+		if(r == EAI_NONAME && hints->ai_family == AF_INET6){
+			*noip6 = 1; /* 'Host not found' for IP6 on winXP */
+			return -1;
+		}
+#endif
 		log_err("node %s:%s getaddrinfo: %s %s", 
 			ifname?ifname:"default", port, gai_strerror(r),
 #ifdef EAI_SYSTEM

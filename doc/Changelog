@@ -1,3 +1,11 @@
+27 May 2009: Wouter
+	- detect lack of IPv6 support on XP (with a different error code).
+	- Fixup a crash-on-exit which was triggered by a very long queue.
+	  Unbound would try to re-use ports that came free, but this is
+	  of course not really possible because everything is deleted.
+	  Most easily triggered on XP (not Vista), maybe because of the
+	  network stack encouraging large messages backlogs.
+
 26 May 2009: Wouter
 	- Thanks again to Brett Carr, found an assertion that was not true.
 	  Assertion checked if recursion parent query still existed.

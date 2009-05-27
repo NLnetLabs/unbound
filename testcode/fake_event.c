@@ -749,6 +749,11 @@ outside_network_delete(struct outside_network* outnet)
 	free(outnet);
 }
 
+void 
+outside_network_quit_prepare(struct outside_network* ATTR_UNUSED(outnet))
+{
+}
+
 struct pending* 
 pending_udp_query(struct outside_network* outnet, ldns_buffer* packet,
 	struct sockaddr_storage* addr, socklen_t addrlen, int timeout,
