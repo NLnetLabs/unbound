@@ -5,6 +5,7 @@
 	  of course not really possible because everything is deleted.
 	  Most easily triggered on XP (not Vista), maybe because of the
 	  network stack encouraging large messages backlogs.
+	- change in debug statements.
 
 26 May 2009: Wouter
 	- Thanks again to Brett Carr, found an assertion that was not true.

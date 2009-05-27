@@ -307,6 +307,11 @@ outnet_udp_cb(struct comm_point* c, void* arg, int error,
 	struct pending key;
 	struct pending* p;
 	verbose(VERB_ALGO, "answer cb");
+	/* @@@ DEBUG simulate bad connection: drop those packets */
+	/*
+	if((ub_random(outnet->rnd)&0xf) <= 1)
+		return 0;
+	*/
 
 	if(error != NETEVENT_NOERROR) {
 		verbose(VERB_QUERY, "outnetudp got udp error %d", error);

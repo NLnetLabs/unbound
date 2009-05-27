@@ -1707,9 +1707,6 @@ processPrimeResponse(struct module_qstate* qstate, int id)
 	struct iter_qstate* iq = (struct iter_qstate*)qstate->minfo[id];
 	enum response_type type = response_type_from_server(0, iq->response, 
 		&iq->qchase, iq->dp);
-	/* @@@ DEBUG - fail to prime roots often */
-	/* if((ub_random(qstate->env->rnd) & 0x7) != 0)
-		type = RESPONSE_TYPE_ANSWER+1; */
 	if(type == RESPONSE_TYPE_ANSWER) {
 		qstate->return_rcode = LDNS_RCODE_NOERROR;
 		qstate->return_msg = iq->response;
