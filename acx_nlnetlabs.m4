@@ -2,6 +2,9 @@
 # Copyright 2009, Wouter Wijngaards, NLnet Labs.   
 # BSD licensed.
 #
+# Version 1
+# 2009-04-23
+#
 # Automates some of the checking constructs.  Aims at portability for POSIX.
 # Documentation for functions is below.
 #
