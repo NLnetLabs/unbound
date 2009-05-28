@@ -1,3 +1,7 @@
+28 May 2009: Wouter
+	- update iana port list
+	- update ldns lib tarball
+
 27 May 2009: Wouter
 	- detect lack of IPv6 support on XP (with a different error code).
 	- Fixup a crash-on-exit which was triggered by a very long queue.
