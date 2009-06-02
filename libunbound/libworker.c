@@ -72,6 +72,7 @@ libworker_delete(struct libworker* w)
 {
 	if(!w) return;
 	if(w->env) {
+		outside_network_quit_prepare(w->back);
 		mesh_delete(w->env->mesh);
 		context_release_alloc(w->ctx, w->env->alloc, 
 			!w->is_bg || w->is_bg_thread);

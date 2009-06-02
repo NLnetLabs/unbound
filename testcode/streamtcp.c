@@ -225,7 +225,11 @@ send_em(const char* svr, int udp, int noanswer, int num, char** qs)
 			recv_one(fd, udp, buf);
 	}
 
+#ifndef USE_WINSOCK
 	close(fd);
+#else
+	closesocket(fd);
+#endif
 	ldns_buffer_free(buf);
 	printf("orderly exit\n");
 }

@@ -227,7 +227,7 @@ main(int argc, char* argv[])
 	while( (c=getopt(argc, argv, "2ho:p:")) != -1) {
 		switch(c) {
 		case '2':
-#ifdef HAVE_EVP_SHA256
+#if defined(HAVE_EVP_SHA256) && defined(USE_SHA2)
 			printf("SHA256 supported\n");
 			exit(0);
 #else

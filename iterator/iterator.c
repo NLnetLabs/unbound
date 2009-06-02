@@ -551,12 +551,6 @@ prime_root(struct module_qstate* qstate, struct iter_qstate* iq,
 		verbose(VERB_ALGO, "Cannot prime due to lack of hints");
 		return 0;
 	}
-	/* copy dp; to avoid messing up available list for other thr/queries */
-	dp = delegpt_copy(dp, qstate->region);
-	if(!dp) {
-		log_err("out of memory priming root, copydp");
-		return 0;
-	}
 	/* Priming requests start at the QUERYTARGETS state, skipping 
 	 * the normal INIT state logic (which would cause an infloop). */
 	if(!generate_sub_request((uint8_t*)"\000", 1, LDNS_RR_TYPE_NS, 
@@ -568,8 +562,17 @@ prime_root(struct module_qstate* qstate, struct iter_qstate* iq,
 	if(subq) {
 		struct iter_qstate* subiq = 
 			(struct iter_qstate*)subq->minfo[id];
-		/* Set the initial delegation point to the hint. */
-		subiq->dp = dp;
+		/* Set the initial delegation point to the hint.
+		 * copy dp, it is now part of the root prime query. 
+		 * dp was part of in the fixed hints structure. */
+		subiq->dp = delegpt_copy(dp, subq->region);
+		if(!subiq->dp) {
+			log_err("out of memory priming root, copydp");
+			fptr_ok(fptr_whitelist_modenv_kill_sub(
+				qstate->env->kill_sub));
+			(*qstate->env->kill_sub)(subq);
+			return 0;
+		}
 		/* there should not be any target queries. */
 		subiq->num_target_queries = 0; 
 		subiq->dnssec_expected = iter_indicates_dnssec(
@@ -611,6 +614,8 @@ prime_stub(struct module_qstate* qstate, struct iter_qstate* iq,
 
 	/* is it a noprime stub (always use) */
 	if(stub->noprime) {
+		/* copy the dp out of the fixed hints structure, so that
+		 * it can be changed when servicing this query */
 		iq->dp = delegpt_copy(stub_dp, qstate->region);
 		if(!iq->dp) {
 			log_err("out of memory priming stub");
@@ -1766,16 +1771,15 @@ processTargetResponse(struct module_qstate* qstate, int id,
 	log_query_info(VERB_ALGO, "processTargetResponse super", &forq->qinfo);
 
 	/* check to see if parent event is still interested (in orig name).  */
+	if(!foriq->dp)
+		return; /* not interested anymore */
 	dpns = delegpt_find_ns(foriq->dp, qstate->qinfo.qname,
 			qstate->qinfo.qname_len);
 	if(!dpns) {
-		/* FIXME: maybe store this nameserver address in the cache
-		 * anyways? */
-		/* If not, just stop processing this event */
+		/* If not interested, just stop processing this event */
 		verbose(VERB_ALGO, "subq: parent not interested anymore");
-		/* this is an error, and will cause parent to be reactivated
-		 * even though nothing has happened */
-		log_assert(0);
+		/* could be because parent was jostled out of the cache,
+		   and a new identical query arrived, that does not want it*/
 		return;
 	}
 

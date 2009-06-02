@@ -14,3 +14,4 @@ Jakob Schlyter - for advice on secure settings, random numbers and blacklists.
 Ondřej Surý - running coverity analysis tool on 0.9 dev version.
 Alexander Gall - multihomed, anycast testing of unbound resolver server.
 Zdenek Vasicek and Marek Vavrusa - python module.
+Brett Carr - windows beta testing.

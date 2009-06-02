@@ -400,6 +400,9 @@
 /* Define if you want to use internal select based events */
 #undef USE_MINI_EVENT
 
+/* Define this to enable SHA256 and SHA512 support. */
+#undef USE_SHA2
+
 /* Whether the windows socket API is used */
 #undef USE_WINSOCK
 

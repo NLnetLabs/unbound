@@ -1,3 +1,39 @@
+2 June 2009: Wouter
+	- --enable-sha2 option. The draft rsasha256 changed its algorithm
+	  numbers too often.  Therefore it is more prudent to disable the
+	  RSASHA256 and RSASHA512 support by default.
+	- ldns trunk included as new tarball.
+	- recreated the 1.3.0 tag in svn. rc1 tarball generated at this point.
+
+29 May 2009: Wouter
+	- fixup doc bug in README reported by Matthew Dempsky.
+
+28 May 2009: Wouter
+	- update iana port list
+	- update ldns lib tarball
+
+27 May 2009: Wouter
+	- detect lack of IPv6 support on XP (with a different error code).
+	- Fixup a crash-on-exit which was triggered by a very long queue.
+	  Unbound would try to re-use ports that came free, but this is
+	  of course not really possible because everything is deleted.
+	  Most easily triggered on XP (not Vista), maybe because of the
+	  network stack encouraging large messages backlogs.
+	- change in debug statements.
+	- Fixed bug that could cause a crash if root prime failed when there
+	  were message backlogs.
+
+26 May 2009: Wouter
+	- Thanks again to Brett Carr, found an assertion that was not true.
+	  Assertion checked if recursion parent query still existed.
+
+29 April 2009: Wouter
+	- Thanks to Brett Carr, caught windows resource leak, use 
+	  closesocket() and not close() on sockets or else the network stack
+	  starts to leak handles.
+	- Removed usage of windows Mutex because windows cannot handle enough
+	  mutexes open.  Provide own mutex implementation using primitives.
+
 28 April 2009: Wouter
 	- created svn tag for 1.3.0.
 

@@ -63,6 +63,8 @@ This software is under BSD license, see LICENSE for details.
 	Needs python-devel and swig development tools.
   * --with-pythonmodule
   	Compile the python module that processes responses in the server.
+  * --enable-sha2
+  	Enable draft support for RSASHA256 and RSASHA512.
 
 * 'make test' attempts to run a series of tests, depending on the support
   programs that are installed.

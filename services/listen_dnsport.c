@@ -126,12 +126,13 @@ create_udp_sock(int family, int socktype, struct sockaddr* addr,
 #ifndef USE_WINSOCK
 				log_err("setsockopt(..., IPV6_V6ONLY"
 					", ...) failed: %s", strerror(errno));
+				close(s);
 #else
 				log_err("setsockopt(..., IPV6_V6ONLY"
 					", ...) failed: %s", 
 					wsa_strerror(WSAGetLastError()));
+				closesocket(s);
 #endif
-				close(s);
 				*noproto = 0;
 				*inuse = 0;
 				return -1;
@@ -152,12 +153,13 @@ create_udp_sock(int family, int socktype, struct sockaddr* addr,
 #ifndef USE_WINSOCK
 			log_err("setsockopt(..., IPV6_USE_MIN_MTU, "
 				"...) failed: %s", strerror(errno));
+			close(s);
 #else
 			log_err("setsockopt(..., IPV6_USE_MIN_MTU, "
 				"...) failed: %s", 
 				wsa_strerror(WSAGetLastError()));
+			closesocket(s);
 #endif
-			close(s);
 			*noproto = 0;
 			*inuse = 0;
 			return -1;
@@ -175,19 +177,24 @@ create_udp_sock(int family, int socktype, struct sockaddr* addr,
 		else if(errno != EADDRINUSE)
 			log_err("can't bind socket: %s", strerror(errno));
 #endif
+		close(s);
 #else /* USE_WINSOCK */
 		if(WSAGetLastError() != WSAEADDRINUSE &&
 			WSAGetLastError() != WSAEADDRNOTAVAIL)
 			log_err("can't bind socket: %s", 
 				wsa_strerror(WSAGetLastError()));
+		closesocket(s);
 #endif
-		close(s);
 		return -1;
 	}
 	if(!fd_set_nonblock(s)) {
 		*noproto = 0;
 		*inuse = 0;
+#ifndef USE_WINSOCK
 		close(s);
+#else
+		closesocket(s);
+#endif
 		return -1;
 	}
 	return s;
@@ -288,6 +295,12 @@ make_sock(int stype, const char* ifname, const char* port,
 	hints->ai_socktype = stype;
 	*noip6 = 0;
 	if((r=getaddrinfo(ifname, port, hints, &res)) != 0 || !res) {
+#ifdef USE_WINSOCK
+		if(r == EAI_NONAME && hints->ai_family == AF_INET6){
+			*noip6 = 1; /* 'Host not found' for IP6 on winXP */
+			return -1;
+		}
+#endif
 		log_err("node %s:%s getaddrinfo: %s %s", 
 			ifname?ifname:"default", port, gai_strerror(r),
 #ifdef EAI_SYSTEM
@@ -426,7 +439,11 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 		if(!set_recvpktinfo(s, hints->ai_family))
 			return 0;
 		if(!port_insert(list, s, listen_type_udpancil)) {
+#ifndef USE_WINSOCK
 			close(s);
+#else
+			closesocket(s);
+#endif
 			return 0;
 		}
 	} else if(do_udp) {
@@ -440,7 +457,11 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 			return 0;
 		}
 		if(!port_insert(list, s, listen_type_udp)) {
+#ifndef USE_WINSOCK
 			close(s);
+#else
+			closesocket(s);
+#endif
 			return 0;
 		}
 	}
@@ -454,7 +475,11 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 			return 0;
 		}
 		if(!port_insert(list, s, listen_type_tcp)) {
+#ifndef USE_WINSOCK
 			close(s);
+#else
+			closesocket(s);
+#endif
 			return 0;
 		}
 	}
@@ -661,8 +686,13 @@ void listening_ports_free(struct listen_port* list)
 	struct listen_port* nx;
 	while(list) {
 		nx = list->next;
-		if(list->fd != -1)
+		if(list->fd != -1) {
+#ifndef USE_WINSOCK
 			close(list->fd);
+#else
+			closesocket(list->fd);
+#endif
+		}
 		free(list);
 		list = nx;
 	}

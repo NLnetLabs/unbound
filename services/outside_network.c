@@ -162,12 +162,13 @@ outnet_tcp_take_into_use(struct waiting_tcp* w, uint8_t* pkt, size_t pkt_len)
 		if(1) {
 #endif
 			log_err("outgoing tcp: connect: %s", strerror(errno));
+			close(s);
 #else /* USE_WINSOCK */
 		if(WSAGetLastError() != WSAEINPROGRESS &&
 			WSAGetLastError() != WSAEWOULDBLOCK) {
+			closesocket(s);
 #endif
 			log_addr(0, "failed address", &w->addr, w->addrlen);
-			close(s);
 			return 0;
 		}
 	}
@@ -193,7 +194,8 @@ static void
 use_free_buffer(struct outside_network* outnet)
 {
 	struct waiting_tcp* w;
-	while(outnet->tcp_free && outnet->tcp_wait_first) {
+	while(outnet->tcp_free && outnet->tcp_wait_first 
+		&& !outnet->want_to_quit) {
 		w = outnet->tcp_wait_first;
 		outnet->tcp_wait_first = w->next_waiting;
 		if(outnet->tcp_wait_last == w)
@@ -275,7 +277,8 @@ outnet_send_wait_udp(struct outside_network* outnet)
 {
 	struct pending* pend;
 	/* process waiting queries */
-	while(outnet->udp_wait_first && outnet->unused_fds) {
+	while(outnet->udp_wait_first && outnet->unused_fds 
+		&& !outnet->want_to_quit) {
 		pend = outnet->udp_wait_first;
 		outnet->udp_wait_first = pend->next_waiting;
 		if(!pend->next_waiting) outnet->udp_wait_last = NULL;
@@ -482,6 +485,7 @@ outside_network_create(struct comm_base *base, size_t bufsize,
 	outnet->infra = infra;
 	outnet->rnd = rnd;
 	outnet->svcd_overhead = 0;
+	outnet->want_to_quit = 0;
 	outnet->unwanted_threshold = unwanted_threshold;
 	outnet->unwanted_action = unwanted_action;
 	outnet->unwanted_param = unwanted_param;
@@ -608,10 +612,20 @@ serviced_node_del(rbnode_t* node, void* ATTR_UNUSED(arg))
 }
 
 void 
+outside_network_quit_prepare(struct outside_network* outnet)
+{
+	if(!outnet)
+		return;
+	/* prevent queued items from being sent */
+	outnet->want_to_quit = 1; 
+}
+
+void 
 outside_network_delete(struct outside_network* outnet)
 {
 	if(!outnet)
 		return;
+	outnet->want_to_quit = 1;
 	/* check every element, since we can be called on malloc error */
 	if(outnet->pending) {
 		/* free pending elements, but do no unlink from tree. */

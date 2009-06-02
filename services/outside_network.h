@@ -75,6 +75,8 @@ struct outside_network {
 	size_t svcd_overhead;
 	/** use x20 bits to encode additional ID random bits */
 	int use_caps_for_id;
+	/** outside network wants to quit. Stop queued msgs from sent. */
+	int want_to_quit;
 
 	/** number of unwanted replies received (for statistics) */
 	size_t unwanted_replies;
@@ -359,6 +361,12 @@ struct outside_network* outside_network_create(struct comm_base* base,
  * @param outnet: object to delete.
  */
 void outside_network_delete(struct outside_network* outnet);
+
+/**
+ * Prepare for quit. Sends no more queries, even if queued up.
+ * @param outnet: object to prepare for removal
+ */
+void outside_network_quit_prepare(struct outside_network* outnet);
 
 /**
  * Send UDP query, create pending answer.
