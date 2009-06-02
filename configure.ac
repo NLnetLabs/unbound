@@ -348,6 +348,15 @@ ACX_WITH_SSL
 ACX_LIB_SSL
 AC_CHECK_FUNCS([EVP_sha1 EVP_sha256 EVP_sha512 ENGINE_load_gost])
 
+AC_ARG_ENABLE(sha2, AC_HELP_STRING([--enable-sha2], [Enable SHA256 and SHA512 RRSIG support]))
+case "$enable_sha2" in
+	yes)
+	AC_DEFINE_UNQUOTED([USE_SHA2], [], [Define this to enable SHA256 and SHA512 support.])
+	;;
+	no|*)
+	;;
+esac
+
 # check to see if libraries are needed for these functions.
 AC_SEARCH_LIBS([inet_pton], [nsl])
 AC_SEARCH_LIBS([socket], [socket])

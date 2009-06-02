@@ -1,3 +1,8 @@
+2 June 2009: Wouter
+	- --enable-sha2 option. The draft rsasha256 changed its algorithm
+	  numbers too often.  Therefore it is more prudent to disable the
+	  RSASHA256 and RSASHA512 support by default.
+
 29 May 2009: Wouter
 	- fixup doc bug in README reported by Matthew Dempsky.
 
