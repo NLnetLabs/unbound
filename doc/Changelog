@@ -3,6 +3,7 @@
 	  numbers too often.  Therefore it is more prudent to disable the
 	  RSASHA256 and RSASHA512 support by default.
 	- ldns trunk included as new tarball.
+	- recreated the 1.3.0 tag in svn. rc1 tarball generated at this point.
 
 29 May 2009: Wouter
 	- fixup doc bug in README reported by Matthew Dempsky.
