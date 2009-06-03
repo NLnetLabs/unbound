@@ -1771,8 +1771,10 @@ processTargetResponse(struct module_qstate* qstate, int id,
 	log_query_info(VERB_ALGO, "processTargetResponse super", &forq->qinfo);
 
 	/* check to see if parent event is still interested (in orig name).  */
-	if(!foriq->dp)
+	if(!foriq->dp) {
+		verbose(VERB_ALGO, "subq: parent not interested, was reset");
 		return; /* not interested anymore */
+	}
 	dpns = delegpt_find_ns(foriq->dp, qstate->qinfo.qname,
 			qstate->qinfo.qname_len);
 	if(!dpns) {

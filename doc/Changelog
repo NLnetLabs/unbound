@@ -1,6 +1,7 @@
 3 June 2009: Wouter
 	- fixup bad free() when wrongly encoded DSA signature is seen.
 	  Reported by Paul Wouters.
+	- review comments from Matthijs.
 
 2 June 2009: Wouter
 	- --enable-sha2 option. The draft rsasha256 changed its algorithm
