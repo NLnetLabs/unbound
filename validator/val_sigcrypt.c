@@ -1193,7 +1193,7 @@ setup_dsa_sig(unsigned char** sig, unsigned int* len)
 	*sig = NULL;
 	newlen = i2d_DSA_SIG(dsasig, sig);
 	if(newlen < 0) {
-		free(sig);
+		free(*sig);
 		return 0;
 	}
 	*len = (unsigned int)newlen;
