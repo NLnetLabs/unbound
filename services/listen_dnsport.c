@@ -176,7 +176,7 @@ create_udp_sock(int family, int socktype, struct sockaddr* addr,
 			*noproto = 1;
 		else if(errno != EADDRINUSE)
 			log_err("can't bind socket: %s", strerror(errno));
-#endif
+#endif /* EADDRINUSE */
 		close(s);
 #else /* USE_WINSOCK */
 		if(WSAGetLastError() != WSAEADDRINUSE &&
