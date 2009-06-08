@@ -1,3 +1,7 @@
+8 June 2009: Wouter
+	- Removed RFC5011 REVOKE flag support. Partial 5011 support may cause
+	  inadvertant behaviour.
+
 3 June 2009: Wouter
 	- fixup bad free() when wrongly encoded DSA signature is seen.
 	  Reported by Paul Wouters.

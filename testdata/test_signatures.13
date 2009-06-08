@@ -15,7 +15,7 @@ ENTRY_END
 ; entry to test
 ENTRY_BEGIN
 SECTION QUESTION
-bogus.example.com.       IN      SOA
+secure.example.com.       IN      SOA
 SECTION ANSWER
 example.com.  43200   IN      SOA     home.kuroiwa.eng.br. hostmaster.cesar.sec3.br. 2008040903 86400 86400 8640000 600
 example.com.	43200	IN	RRSIG	SOA 5 2 43200 20081010000000 20080410122550 31027 example.com. af7nqRak6cEeQLytqLHMIUKPsOECA4Cu/Zpm7vdnKSh2q2+/8ZwIxwHLyCEGdiu/mTYffZEHTZytJyzxnB0oxA== ;{id = 31027}
