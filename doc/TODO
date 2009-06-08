@@ -35,7 +35,6 @@ o overhaul outside-network servicedquery to merge with udpwait and tcpwait,
 o check into rebinding ports for efficiency, configure time test.
 o EVP hardware crypto support.
 o option to ignore all inception and expiration dates for rrsigs.
-o option to use builtin ldns explicitly.  Or stop shipping builtin tarball.
 o cleaner code; return and func statements on newline.
 o memcached module that sits before validator module; checks for memcached
   data (on local lan), stores recursion lookup.  Provides one cache for multiple resolver machines, coherent reply content in anycast setup.
@@ -55,4 +54,36 @@ o on windows version, implement that OS ancillary data capabilities for
 o local-zone directive with authority service, full authority server 
   is a non-goal.
 o infra and lame cache: easier size config (in Mb), show usage in graphs.
+
+1.3.1:
+- spoofed delegpt fixes - if DNSKEY prime fails
+	- set DNSKEY bogus and DNSKEY query msg bogus.
+	- make NS set bogus too - if not validated as secure.
+	- check where queries go - otherwise reduce TTL on NS.
+	- also make DS NSEC bogus. Also DS msg cache entry.
+	- check BIT_DS in DS NSEC and do not take from cache if set.
+- bogus exponential backoff cache. hash(name,t,c), size(1M, 5%).
+	TTL of 24h.  Backoff from 200msec to 24h.
+	x2 on bogus(18 tries), x8 backoff on lameness(6 tries), 
+	  when servfail for DNSKEY.
+	remove entry when validated as secure.
+- winevent - poll if too many fds
+- ssl open apache style
+- fwd above stub, make hole in fwds
+- munin use ps to print total mem
+- no swig, but ask python, configure fails.
+- iter/priv 227 strict aliasing stop compiler complaints
+- fix lint complains on ldns/sha1
+- fix indent #  ifs
+- flush_* remove msg cache entry if one.
+- do not flush/delete callback queries or call error on callback at least.
+
+later
+- selective verbosity; ubcontrol trace example.com
+- option to log only bogus domainname encountered, for demos
+- cache fork-dump, pre-load
+- for fwds, send queries to N servers in fwd-list, use first reply.
+  document high scalable, high available unbound setup onepager.
+- prefetch DNSKEY when DS in delegation seen (nonCD, underTA).
+- use libevent if available on system by default(?), default outgoing 256to1024
 
