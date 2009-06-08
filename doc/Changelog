@@ -7,6 +7,7 @@
 	- fix lint from complaining on ldns/sha.h.
 	- help compiler figure out aliasing in priv_rrset_bad() routine.
 	- fail to configure with python if swig is not found.
+	- unbound_munin_ in contrib uses ps to show rss if sbrk does not work.
 
 3 June 2009: Wouter
 	- fixup bad free() when wrongly encoded DSA signature is seen.

@@ -70,8 +70,6 @@ o infra and lame cache: easier size config (in Mb), show usage in graphs.
 - winevent - poll if too many fds
 - ssl open apache style
 - fwd above stub, make hole in fwds
-- munin use ps to print total mem
-- no swig, but ask python, configure fails.
 - fix indent #  ifs
 - flush_* remove msg cache entry if one.
 - do not flush/delete callback queries or call error on callback at least.

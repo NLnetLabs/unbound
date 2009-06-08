@@ -437,7 +437,21 @@ queue)
 	done
 	;;
 memory)
-	for x in mem.total.sbrk mem.cache.rrset mem.cache.message \
+	mn=`echo mem.total.sbrk | sed $ABBREV | tr . _`
+	get_value 'mem.total.sbrk'
+	if test $value -eq 0; then
+		chk=`echo $ctrl | sed -e 's/-control$/-checkconf/'`
+		pidf=`$chk -o pidfile $conf 2>&1`
+		pid=`cat $pidf 2>&1`
+		value=`ps -p "$pid" -o rss= 2>&1`
+		if test "`expr $value + 1 - 1 2>&1`" = "$value"; then
+			value=`expr $value \* 1024` 
+		else
+			value=0
+		fi
+	fi
+	echo "$mn.value" $value
+	for x in mem.cache.rrset mem.cache.message \
 		mem.mod.iterator mem.mod.validator; do
 		print_value $x
 	done
