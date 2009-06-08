@@ -216,10 +216,10 @@ int priv_rrset_bad(struct iter_priv* priv, ldns_buffer* pkt,
 		return 0;
 	} else {
 		/* so its a public name, check the address */
-		struct sockaddr_storage addr;
 		socklen_t len;
 		struct rr_parse* rr;
 		if(rrset->type == LDNS_RR_TYPE_A) {
+			struct sockaddr_storage addr;
 			struct sockaddr_in* sa = (struct sockaddr_in*)&addr;
 			len = (socklen_t)sizeof(*sa);
 			memset(sa, 0, len);
@@ -235,6 +235,7 @@ int priv_rrset_bad(struct iter_priv* priv, ldns_buffer* pkt,
 					return 1;
 			}
 		} else if(rrset->type == LDNS_RR_TYPE_AAAA) {
+			struct sockaddr_storage addr;
 			struct sockaddr_in6* sa = (struct sockaddr_in6*)&addr;
 			len = (socklen_t)sizeof(*sa);
 			memset(sa, 0, len);

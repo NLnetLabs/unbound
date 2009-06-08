@@ -72,8 +72,6 @@ o infra and lame cache: easier size config (in Mb), show usage in graphs.
 - fwd above stub, make hole in fwds
 - munin use ps to print total mem
 - no swig, but ask python, configure fails.
-- iter/priv 227 strict aliasing stop compiler complaints
-- fix lint complains on ldns/sha1
 - fix indent #  ifs
 - flush_* remove msg cache entry if one.
 - do not flush/delete callback queries or call error on callback at least.
