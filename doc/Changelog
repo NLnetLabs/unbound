@@ -3,6 +3,7 @@
 	  inadvertant behaviour.
 	- 1.3.0 tarball for release created.
 	- 1.3.1 development in svn trunk.
+	- iana portlist updated.
 
 3 June 2009: Wouter
 	- fixup bad free() when wrongly encoded DSA signature is seen.
