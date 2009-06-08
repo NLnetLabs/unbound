@@ -6,6 +6,7 @@
 	- iana portlist updated.
 	- fix lint from complaining on ldns/sha.h.
 	- help compiler figure out aliasing in priv_rrset_bad() routine.
+	- fail to configure with python if swig is not found.
 
 3 June 2009: Wouter
 	- fixup bad free() when wrongly encoded DSA signature is seen.

@@ -23055,12 +23055,9 @@ echo "$as_me: WARNING: cannot determine SWIG version" >&2;}
       { echo "$as_me:$LINENO: checking SWIG" >&5
 echo $ECHO_N "checking SWIG... $ECHO_C" >&6; }
       if test ! -x "$SWIG"; then
-         { echo "$as_me:$LINENO: result: failed" >&5
-echo "${ECHO_T}failed" >&6; }
-         swig=""
-
-         ub_with_pyunbound=no
-         ub_with_pythonmod=no
+         { { echo "$as_me:$LINENO: error: failed to find swig tool, install it, or do not build Python module and PyUnbound" >&5
+echo "$as_me: error: failed to find swig tool, install it, or do not build Python module and PyUnbound" >&2;}
+   { (exit 1); exit 1; }; }
       else
 
 cat >>confdefs.h <<\_ACEOF
