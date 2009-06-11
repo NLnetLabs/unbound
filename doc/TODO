@@ -62,6 +62,33 @@ o infra and lame cache: easier size config (in Mb), show usage in graphs.
 	- check where queries go - otherwise reduce TTL on NS.
 	- also make DS NSEC bogus. Also DS msg cache entry.
 	- check BIT_DS in DS NSEC and do not take from cache if set.
+- mark bogus under stringent conditions
+	- if DS at parent and validly signed. Then DNSKEY must exist.
+	- Also for trust anchor points themselves. DNSKEY must exist.
+	- so if then DNSKEY keyprime fails
+	  - then it is not simply a server that only answers qtype A.
+	  - then parent is agreeing (somewhat) with the DS record
+	  - but it could still be a lame domain, these exist 
+	    The objective is to keep tries for genuinely lame domains to a
+	    minimum, while detecting forgeries quickly. exponential backoff.
+	- for unbound we can check if we got something to verify while
+	  building that chain of trust.  If so - not lame, agressive retry.
+	  - but security-lame zones also exist and should not pose 
+	    too high a burden. Exponential backoff again.
+	    (fe. badly signed or dnskey reply too large fails).
+	- the delegation NS for the domain is bogus.
+	  The referral retried, with exponential backoff.
+	  This exponential backoff should go towards values which are close
+	  to the TTLs that are used now (on lame delegations for example).
+	  so that the extra traffic is manageable.
+	- for unbound, reset the TTL on the NS rrset. Let it timeout.
+	  Set NS rrset bogus - no more queries to the domain are done.
+	  Also set DNSKEY and DS (rrset, NSEC, msg) bogus and ttl like that.
+	  (to the same absolute value, so a clean retry is done).
+	  TTL of NS is (rounddown) timeout in seconds.
+	  Until the NS times out and referral is done again.
+	  Make sure multiple validations for chains of trust do not result
+	  in a flood of queries or backoff too quickly.
 - bogus exponential backoff cache. hash(name,t,c), size(1M, 5%).
 	TTL of 24h.  Backoff from 200msec to 24h.
 	x2 on bogus(18 tries), x8 backoff on lameness(6 tries), 

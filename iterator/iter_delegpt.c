@@ -68,6 +68,7 @@ struct delegpt* delegpt_copy(struct delegpt* dp, struct regional* region)
 		return NULL;
 	if(!delegpt_set_name(copy, region, dp->name))
 		return NULL;
+	copy->bogus = dp->bogus;
 	for(ns = dp->nslist; ns; ns = ns->next) {
 		if(!delegpt_add_ns(copy, region, ns->name))
 			return NULL;
