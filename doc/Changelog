@@ -5,6 +5,8 @@
 	  server.  This makes a stub pointing to a local server that has
 	  a local view of example.com signed with the same keys as are
 	  publicly used work.  Reported by Johan Ihren.
+	- Added build-unbound-localzone-from-hosts.pl to contrib, from
+	  Dennis DeDonatis.  It converts /etc/hosts into config statements.
 
 9 June 2009: Wouter
 	- openssl key files are opened apache-style, when user is root and

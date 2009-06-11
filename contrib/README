@@ -12,3 +12,5 @@ distribution but may be helpful.
 * unbound_cacti.tar.gz : setup files for cacti statistics report
 * selinux: the .fc and .te files for SElinux protection of the unbound daemon
 * unbound.plist: launchd configuration file for MacOSX.
+* build-unbound-localzone-from-hosts.pl: perl script to turn /etc/hosts into
+	a local-zone and local-data include file for unbound.conf.
