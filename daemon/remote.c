@@ -136,18 +136,16 @@ timeval_divide(struct timeval* avg, const struct timeval* sum, size_t d)
 }
 
 struct daemon_remote*
-daemon_remote_create(struct worker* worker)
+daemon_remote_create(struct config_file* cfg)
 {
 	char* s_cert;
 	char* s_key;
-	struct config_file* cfg = worker->daemon->cfg;
 	struct daemon_remote* rc = (struct daemon_remote*)calloc(1, 
 		sizeof(*rc));
 	if(!rc) {
 		log_err("out of memory in daemon_remote_create");
 		return NULL;
 	}
-	rc->worker = worker;
 	rc->max_active = 10;
 
 	if(!cfg->remote_control_enable) {
@@ -166,50 +164,62 @@ daemon_remote_create(struct worker* worker)
 		daemon_remote_delete(rc);
 		return NULL;
 	}
-	s_cert = cfg->server_cert_file;
-	s_key = cfg->server_key_file;
-	if(cfg->chrootdir && cfg->chrootdir[0]) {
-		if(strncmp(s_cert, cfg->chrootdir, strlen(cfg->chrootdir))==0)
-			s_cert += strlen(cfg->chrootdir);
-		if(strncmp(s_key, cfg->chrootdir, strlen(cfg->chrootdir))==0)
-			s_key += strlen(cfg->chrootdir);
+	s_cert = fname_after_chroot(cfg->server_cert_file, cfg, 1);
+	s_key = fname_after_chroot(cfg->server_key_file, cfg, 1);
+	if(!s_cert || !s_key) {
+		log_err("out of memory in remote control fname");
+		free(s_cert);
+		free(s_key);
+		daemon_remote_delete(rc);
+		return NULL;
 	}
 	verbose(VERB_ALGO, "setup SSL certificates");
 	if (!SSL_CTX_use_certificate_file(rc->ctx,s_cert,SSL_FILETYPE_PEM)) {
 		log_err("Error for server-cert-file: %s", s_cert);
 		log_crypto_err("Error in SSL_CTX use_certificate_file");
+		free(s_cert);
+		free(s_key);
 		daemon_remote_delete(rc);
 		return NULL;
 	}
 	if(!SSL_CTX_use_PrivateKey_file(rc->ctx,s_key,SSL_FILETYPE_PEM)) {
 		log_err("Error for server-key-file: %s", s_key);
 		log_crypto_err("Error in SSL_CTX use_PrivateKey_file");
+		free(s_cert);
+		free(s_key);
 		daemon_remote_delete(rc);
 		return NULL;
 	}
 	if(!SSL_CTX_check_private_key(rc->ctx)) {
 		log_err("Error for server-key-file: %s", s_key);
 		log_crypto_err("Error in SSL_CTX check_private_key");
+		free(s_cert);
+		free(s_key);
 		daemon_remote_delete(rc);
 		return NULL;
 	}
 	if(!SSL_CTX_load_verify_locations(rc->ctx, s_cert, NULL)) {
 		log_crypto_err("Error setting up SSL_CTX verify locations");
+		free(s_cert);
+		free(s_key);
 		daemon_remote_delete(rc);
 		return NULL;
 	}
 	SSL_CTX_set_client_CA_list(rc->ctx, SSL_load_client_CA_file(s_cert));
 	SSL_CTX_set_verify(rc->ctx, SSL_VERIFY_PEER, NULL);
+	free(s_cert);
+	free(s_key);
 
 	return rc;
 }
 
-void daemon_remote_delete(struct daemon_remote* rc)
+void daemon_remote_clear(struct daemon_remote* rc)
 {
 	struct rc_state* p, *np;
 	if(!rc) return;
 	/* but do not close the ports */
 	listen_list_delete(rc->accept_list);
+	rc->accept_list = NULL;
 	/* do close these sockets */
 	p = rc->busy_list;
 	while(p) {
@@ -220,6 +230,15 @@ void daemon_remote_delete(struct daemon_remote* rc)
 		free(p);
 		p = np;
 	}
+	rc->busy_list = NULL;
+	rc->active = 0;
+	rc->worker = NULL;
+}
+
+void daemon_remote_delete(struct daemon_remote* rc)
+{
+	if(!rc) return;
+	daemon_remote_clear(rc);
 	if(rc->ctx) {
 		SSL_CTX_free(rc->ctx);
 	}
@@ -348,9 +367,10 @@ accept_open(struct daemon_remote* rc, int fd)
 }
 
 int daemon_remote_open_accept(struct daemon_remote* rc, 
-	struct listen_port* ports)
+	struct listen_port* ports, struct worker* worker)
 {
 	struct listen_port* p;
+	rc->worker = worker;
 	for(p = ports; p; p = p->next) {
 		if(!accept_open(rc, p->fd)) {
 			log_err("could not create accept comm point");
@@ -1034,6 +1054,22 @@ do_lookup(SSL* ssl, struct worker* worker, char* arg)
 	free(nm);
 }
 
+/** flush something from rrset and msg caches */
+static void
+do_cache_remove(struct worker* worker, uint8_t* nm, size_t nmlen,
+	uint16_t t, uint16_t c)
+{
+	hashvalue_t h;
+	struct query_info k;
+	rrset_cache_remove(worker->env.rrset_cache, nm, nmlen, t, c, 0);
+	k.qname = nm;
+	k.qname_len = nmlen;
+	k.qtype = t;
+	k.qclass = c;
+	h = query_info_hash(&k);
+	slabhash_remove(worker->env.msg_cache, h, &k);
+}
+
 /** flush a type */
 static void
 do_flush_type(SSL* ssl, struct worker* worker, char* arg)
@@ -1048,8 +1084,7 @@ do_flush_type(SSL* ssl, struct worker* worker, char* arg)
 	if(!parse_arg_name(ssl, arg, &nm, &nmlen, &nmlabs))
 		return;
 	t = ldns_get_rr_type_by_name(arg2);
-	rrset_cache_remove(worker->env.rrset_cache, nm, nmlen, 
-		t, LDNS_RR_CLASS_IN, 0);
+	do_cache_remove(worker, nm, nmlen, t, LDNS_RR_CLASS_IN);
 	
 	free(nm);
 	send_ok(ssl);
@@ -1179,33 +1214,23 @@ do_flush_zone(SSL* ssl, struct worker* worker, char* arg)
 
 /** remove name rrset from cache */
 static void
-do_flush_name(SSL* ssl, struct worker* worker, char* arg)
+do_flush_name(SSL* ssl, struct worker* w, char* arg)
 {
 	uint8_t* nm;
 	int nmlabs;
 	size_t nmlen;
 	if(!parse_arg_name(ssl, arg, &nm, &nmlen, &nmlabs))
 		return;
-	rrset_cache_remove(worker->env.rrset_cache, nm, nmlen, 
-		LDNS_RR_TYPE_A, LDNS_RR_CLASS_IN, 0);
-	rrset_cache_remove(worker->env.rrset_cache, nm, nmlen, 
-		LDNS_RR_TYPE_AAAA, LDNS_RR_CLASS_IN, 0);
-	rrset_cache_remove(worker->env.rrset_cache, nm, nmlen, 
-		LDNS_RR_TYPE_NS, LDNS_RR_CLASS_IN, 0);
-	rrset_cache_remove(worker->env.rrset_cache, nm, nmlen, 
-		LDNS_RR_TYPE_SOA, LDNS_RR_CLASS_IN, 0);
-	rrset_cache_remove(worker->env.rrset_cache, nm, nmlen, 
-		LDNS_RR_TYPE_CNAME, LDNS_RR_CLASS_IN, 0);
-	rrset_cache_remove(worker->env.rrset_cache, nm, nmlen, 
-		LDNS_RR_TYPE_DNAME, LDNS_RR_CLASS_IN, 0);
-	rrset_cache_remove(worker->env.rrset_cache, nm, nmlen, 
-		LDNS_RR_TYPE_MX, LDNS_RR_CLASS_IN, 0);
-	rrset_cache_remove(worker->env.rrset_cache, nm, nmlen, 
-		LDNS_RR_TYPE_PTR, LDNS_RR_CLASS_IN, 0);
-	rrset_cache_remove(worker->env.rrset_cache, nm, nmlen, 
-		LDNS_RR_TYPE_SRV, LDNS_RR_CLASS_IN, 0);
-	rrset_cache_remove(worker->env.rrset_cache, nm, nmlen, 
-		LDNS_RR_TYPE_NAPTR, LDNS_RR_CLASS_IN, 0);
+	do_cache_remove(w, nm, nmlen, LDNS_RR_TYPE_A, LDNS_RR_CLASS_IN);
+	do_cache_remove(w, nm, nmlen, LDNS_RR_TYPE_AAAA, LDNS_RR_CLASS_IN);
+	do_cache_remove(w, nm, nmlen, LDNS_RR_TYPE_NS, LDNS_RR_CLASS_IN);
+	do_cache_remove(w, nm, nmlen, LDNS_RR_TYPE_SOA, LDNS_RR_CLASS_IN);
+	do_cache_remove(w, nm, nmlen, LDNS_RR_TYPE_CNAME, LDNS_RR_CLASS_IN);
+	do_cache_remove(w, nm, nmlen, LDNS_RR_TYPE_DNAME, LDNS_RR_CLASS_IN);
+	do_cache_remove(w, nm, nmlen, LDNS_RR_TYPE_MX, LDNS_RR_CLASS_IN);
+	do_cache_remove(w, nm, nmlen, LDNS_RR_TYPE_PTR, LDNS_RR_CLASS_IN);
+	do_cache_remove(w, nm, nmlen, LDNS_RR_TYPE_SRV, LDNS_RR_CLASS_IN);
+	do_cache_remove(w, nm, nmlen, LDNS_RR_TYPE_NAPTR, LDNS_RR_CLASS_IN);
 	
 	free(nm);
 	send_ok(ssl);

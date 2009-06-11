@@ -101,8 +101,6 @@ struct worker {
 	struct comm_point* cmd_com;
 	/** timer for statistics */
 	struct comm_timer* stat_timer;
-	/** remote control state (for first thread only) */
-	struct daemon_remote* rc;
 
 	/** number of requests that can be handled by this worker */
 	size_t request_size;

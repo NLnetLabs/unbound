@@ -462,6 +462,7 @@ daemon_cleanup(struct daemon* daemon)
 	local_zones_delete(daemon->local_zones);
 	daemon->local_zones = NULL;
 	/* key cache is cleared by module desetup during next daemon_init() */
+	daemon_remote_clear(daemon->rc);
 	for(i=0; i<daemon->num; i++)
 		worker_delete(daemon->workers[i]);
 	free(daemon->workers);
@@ -476,6 +477,7 @@ daemon_delete(struct daemon* daemon)
 	if(!daemon)
 		return;
 	modstack_desetup(&daemon->mods, daemon->env);
+	daemon_remote_delete(daemon->rc);
 	listening_ports_free(daemon->ports);
 	listening_ports_free(daemon->rc_ports);
 	if(daemon->env) {

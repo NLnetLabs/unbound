@@ -96,16 +96,23 @@ struct daemon_remote {
 
 /**
  * Create new remote control state for the daemon.
- * @param worker: worker with communication base. and links to command channels.
+ * @param cfg: config file with key file settings.
  * @return new state, or NULL on failure.
  */
-struct daemon_remote* daemon_remote_create(struct worker* worker);
+struct daemon_remote* daemon_remote_create(struct config_file* cfg);
 
 /**
  * remote control state to delete.
  * @param rc: state to delete.
  */
 void daemon_remote_delete(struct daemon_remote* rc);
+
+/**
+ * remote control state to clear up. Busy and accept points are closed.
+ * Does not delete the rc itself, or the ssl context (with its keys).
+ * @param rc: state to clear.
+ */
+void daemon_remote_clear(struct daemon_remote* rc);
 
 /**
  * Open and create listening ports for remote control.
@@ -119,10 +126,11 @@ struct listen_port* daemon_remote_open_ports(struct config_file* cfg);
  * Setup comm points for accepting remote control connections.
  * @param rc: state
  * @param ports: already opened ports.
+ * @param worker: worker with communication base. and links to command channels.
  * @return false on error.
  */
 int daemon_remote_open_accept(struct daemon_remote* rc, 
-	struct listen_port* ports);
+	struct listen_port* ports, struct worker* worker);
 
 /**
  * Handle nonthreaded remote cmd execution.

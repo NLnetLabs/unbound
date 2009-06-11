@@ -67,11 +67,13 @@ o infra and lame cache: easier size config (in Mb), show usage in graphs.
 	x2 on bogus(18 tries), x8 backoff on lameness(6 tries), 
 	  when servfail for DNSKEY.
 	remove entry when validated as secure.
+	delegptspoofrecheck on lameness when harden-referral-path NS
+	query has servfail, then build chain of trust down (check DS,
+	then perform DNSKEY query) if that DNSKEY query fails servfail,
+	perform the x8 lameness retry fallback.
 - winevent - poll if too many fds
-- ssl open apache style
-- fwd above stub, make hole in fwds
+- fwd above stub, make hole in fwds. config non-forwarded-domain names.
 - fix indent #  ifs
-- flush_* remove msg cache entry if one.
 - do not flush/delete callback queries or call error on callback at least.
 
 later

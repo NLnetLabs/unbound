@@ -287,7 +287,7 @@ struct listen_port* daemon_remote_open_ports(struct config_file*
 	return NULL;
 }
 
-struct daemon_remote* daemon_remote_create(struct worker* ATTR_UNUSED(worker))
+struct daemon_remote* daemon_remote_create(struct config_file* ATTR_UNUSED(cfg))
 {
 	return (struct daemon_remote*)calloc(1,1);
 }
@@ -297,8 +297,14 @@ void daemon_remote_delete(struct daemon_remote* rc)
 	free(rc);
 }
 
+void daemon_remote_clear(struct daemon_remote* ATTR_UNUSED(rc))
+{
+	/* nothing */
+}
+
 int daemon_remote_open_accept(struct daemon_remote* ATTR_UNUSED(rc),
-        struct listen_port* ATTR_UNUSED(ports))
+        struct listen_port* ATTR_UNUSED(ports), 
+	struct worker* ATTR_UNUSED(worker))
 {
 	return 1;
 }

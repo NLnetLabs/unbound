@@ -1038,12 +1038,8 @@ worker_init(struct worker* worker, struct config_file *cfg,
 			return 0;
 		}
 #endif /* LIBEVENT_SIGNAL_PROBLEM */
-		if(!(worker->rc = daemon_remote_create(worker))) {
-			worker_delete(worker);
-			return 0;
-		}
-		if(!daemon_remote_open_accept(worker->rc, 
-			worker->daemon->rc_ports)) {
+		if(!daemon_remote_open_accept(worker->daemon->rc, 
+			worker->daemon->rc_ports, worker)) {
 			worker_delete(worker);
 			return 0;
 		}
@@ -1052,7 +1048,6 @@ worker_init(struct worker* worker, struct config_file *cfg,
 #endif /* UB_ON_WINDOWS */
 	} else { /* !do_sigs */
 		worker->comsig = NULL;
-		worker->rc = NULL;
 	}
 	seed = (unsigned int)time(NULL) ^ (unsigned int)getpid() ^
 		(((unsigned int)worker->thread_num)<<17);
@@ -1172,7 +1167,6 @@ worker_delete(struct worker* worker)
 	comm_signal_delete(worker->comsig);
 	tube_delete(worker->cmd);
 	comm_timer_delete(worker->stat_timer);
-	daemon_remote_delete(worker->rc);
 	free(worker->ports);
 	if(worker->thread_num == 0) {
 		log_set_time(NULL);

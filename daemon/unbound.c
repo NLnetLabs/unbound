@@ -43,6 +43,7 @@
 #include "config.h"
 #include "util/log.h"
 #include "daemon/daemon.h"
+#include "daemon/remote.h"
 #include "util/config_file.h"
 #include "util/storage/slabhash.h"
 #include "services/listen_dnsport.h"
@@ -365,6 +366,10 @@ perform_setup(struct daemon* daemon, struct config_file* cfg, int debug_mode,
 	 * we cannot chown system logfiles, so we do not open at all.
 	 * So, using a logfile, the user does not see errors unless -d is
 	 * given to unbound on the commandline. */
+
+	/* read ssl keys while superuser and outside chroot */
+	if(!(daemon->rc = daemon_remote_create(cfg)))
+		fatal_exit("could not set up remote-control");
 
 #ifdef HAVE_KILL
 	/* check old pid file before forking */
