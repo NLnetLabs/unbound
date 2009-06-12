@@ -40,6 +40,7 @@
  */
 #include "config.h"
 #include "iterator/iter_delegpt.h"
+#include "validator/val_nsec.h"
 #include "services/cache/dns.h"
 #include "services/cache/rrset.h"
 #include "util/data/msgreply.h"
@@ -286,6 +287,10 @@ find_add_ds(struct module_env* env, struct regional* region,
 		/* Note: the PACKED_RRSET_NSEC_AT_APEX flag is not used.
 		 * since this is a referral, we need the NSEC at the parent
 		 * side of the zone cut, not the NSEC at apex side. */
+		if(rrset && nsec_has_type(rrset, LDNS_RR_TYPE_DS)) {
+			lock_rw_unlock(&rrset->entry.lock);
+			rrset = NULL; /* discard wrong NSEC */
+		}
 	}
 	if(rrset) {
 		/* add it to auth section. This is the second rrset. */

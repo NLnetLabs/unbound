@@ -61,7 +61,6 @@ o infra and lame cache: easier size config (in Mb), show usage in graphs.
 	- make NS set bogus too - if not validated as secure.
 	- check where queries go - otherwise reduce TTL on NS.
 	- also make DS NSEC bogus. Also DS msg cache entry.
-	- check BIT_DS in DS NSEC and do not take from cache if set.
 - mark bogus under stringent conditions
 	- if DS at parent and validly signed. Then DNSKEY must exist.
 	- Also for trust anchor points themselves. DNSKEY must exist.
