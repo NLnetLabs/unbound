@@ -2,6 +2,7 @@
 	- Fixup potential wrong NSEC picked out of the cache.
 	- If unfulfilled callbacks are deleted they are called with an error.
 	- fptr wlist checks for mesh callbacks.
+	- fwd above stub in configuration works.
 
 11 June 2009: Wouter
 	- Fix queries for type DS when forward or stub zones are there.

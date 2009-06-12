@@ -98,7 +98,6 @@ o infra and lame cache: easier size config (in Mb), show usage in graphs.
 	then perform DNSKEY query) if that DNSKEY query fails servfail,
 	perform the x8 lameness retry fallback.
 - winevent - poll if too many fds
-- fwd above stub, make hole in fwds. config non-forwarded-domain names.
 - fix indent #  ifs
 
 later
