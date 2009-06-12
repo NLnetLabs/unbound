@@ -465,8 +465,14 @@ mesh_state_cleanup(struct mesh_state* mstate)
 	/* drop unsent replies */
 	if(!mstate->replies_sent) {
 		struct mesh_reply* rep;
+		struct mesh_cb* cb;
 		for(rep=mstate->reply_list; rep; rep=rep->next) {
 			comm_point_drop_reply(&rep->query_reply);
+		}
+		for(cb=mstate->cb_list; cb; cb=cb->next) {
+			fptr_ok(fptr_whitelist_mesh_cb(cb->cb));
+			(*cb->cb)(cb->cb_arg, LDNS_RCODE_SERVFAIL, NULL,
+				sec_status_unchecked);
 		}
 	}
 
@@ -618,6 +624,7 @@ mesh_do_callback(struct mesh_state* m, int rcode, struct reply_info* rep,
 		rcode = LDNS_RCODE_SERVFAIL;
 	/* send the reply */
 	if(rcode) {
+		fptr_ok(fptr_whitelist_mesh_cb(r->cb));
 		(*r->cb)(r->cb_arg, rcode, r->buf, sec_status_unchecked);
 	} else {
 		size_t udp_size = r->edns.udp_size;
@@ -631,11 +638,14 @@ mesh_do_callback(struct mesh_state* m, int rcode, struct reply_info* rep,
 			m->s.env->scratch, udp_size, &r->edns, 
 			(int)(r->edns.bits & EDNS_DO), secure)) 
 		{
+			fptr_ok(fptr_whitelist_mesh_cb(r->cb));
 			(*r->cb)(r->cb_arg, LDNS_RCODE_SERVFAIL, r->buf,
 				sec_status_unchecked);
-		}
-		else	(*r->cb)(r->cb_arg, LDNS_RCODE_NOERROR, r->buf,
+		} else {
+			fptr_ok(fptr_whitelist_mesh_cb(r->cb));
+			(*r->cb)(r->cb_arg, LDNS_RCODE_NOERROR, r->buf,
 				rep->security);
+		}
 	}
 	m->s.env->mesh->num_reply_addrs--;
 }
@@ -780,6 +790,7 @@ int mesh_state_add_cb(struct mesh_state* s, struct edns_data* edns,
 	if(!r)
 		return 0;
 	r->buf = buf;
+	log_assert(fptr_whitelist_mesh_cb(r->cb)); /* early failure ifmissing*/
 	r->cb = cb;
 	r->cb_arg = cb_arg;
 	r->edns = *edns;

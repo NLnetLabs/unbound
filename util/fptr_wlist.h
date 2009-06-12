@@ -58,6 +58,7 @@
 #include "util/storage/lruhash.h"
 #include "util/module.h"
 #include "util/tube.h"
+#include "services/mesh.h"
 
 /**
  * Macro to perform an assertion check for fptr wlist checks.
@@ -306,6 +307,14 @@ int fptr_whitelist_alloc_cleanup(void (*fptr)(void*));
  * @return false if not in whitelist.
  */
 int fptr_whitelist_tube_listen(tube_callback_t* fptr);
+
+/**
+ * Check function pointer whitelist for mesh state callback values.
+ *
+ * @param fptr: function pointer to check.
+ * @return false if not in whitelist.
+ */
+int fptr_whitelist_mesh_cb(mesh_cb_func_t fptr);
 
 /** Due to module breakage by fptr wlist, these test app declarations
  * are presented here */

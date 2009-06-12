@@ -42,6 +42,7 @@
  */
 #include "config.h"
 #include "util/log.h"
+#include "services/mesh.h"
 struct comm_reply;
 struct comm_point;
 struct module_qstate;
@@ -178,6 +179,18 @@ void libworker_handle_control_cmd(struct tube* ATTR_UNUSED(tube),
         int ATTR_UNUSED(error), void* ATTR_UNUSED(arg))
 {
         log_assert(0);
+}
+
+void libworker_fg_done_cb(void* ATTR_UNUSED(arg), int ATTR_UNUSED(rcode), 
+	ldns_buffer* ATTR_UNUSED(buf), enum sec_status ATTR_UNUSED(s))
+{
+	log_assert(0);
+}
+
+void libworker_bg_done_cb(void* ATTR_UNUSED(arg), int ATTR_UNUSED(rcode), 
+	ldns_buffer* ATTR_UNUSED(buf), enum sec_status ATTR_UNUSED(s))
+{
+	log_assert(0);
 }
 
 int context_query_cmp(const void* ATTR_UNUSED(a), const void* ATTR_UNUSED(b))

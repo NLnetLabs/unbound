@@ -156,6 +156,14 @@ void libworker_handle_control_cmd(struct tube* tube, uint8_t* msg, size_t len,
 void libworker_handle_result_write(struct tube* tube, uint8_t* msg, size_t len,
 	int err, void* arg);
 
+/** mesh callback with fg results */
+void libworker_fg_done_cb(void* arg, int rcode, ldns_buffer* buf, 
+	enum sec_status s);
+
+/** mesh callback with bg results */
+void libworker_bg_done_cb(void* arg, int rcode, ldns_buffer* buf, 
+	enum sec_status s);
+
 /** 
  * fill result from parsed message, on error fills servfail 
  * @param res: is clear at start, filled in at end.

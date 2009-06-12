@@ -458,8 +458,7 @@ libworker_fillup_fg(struct ctx_query* q, int rcode, ldns_buffer* buf,
 	libworker_enter_result(q->res, buf, q->w->env->scratch, s);
 }
 
-/** callback with fg results */
-static void
+void
 libworker_fg_done_cb(void* arg, int rcode, ldns_buffer* buf, enum sec_status s)
 {
 	struct ctx_query* q = (struct ctx_query*)arg;
@@ -574,8 +573,7 @@ add_bg_result(struct libworker* w, struct ctx_query* q, ldns_buffer* pkt,
 	}
 }
 
-/** callback with bg results */
-static void
+void
 libworker_bg_done_cb(void* arg, int rcode, ldns_buffer* buf, enum sec_status s)
 {
 	struct ctx_query* q = (struct ctx_query*)arg;

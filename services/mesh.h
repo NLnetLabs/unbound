@@ -226,7 +226,7 @@ struct mesh_cb {
 	ldns_buffer* buf;
 
 	/** callback routine for results. if rcode != 0 buf has message.
-	 * called as cb(cb_arg, rcode, buf);
+	 * called as cb(cb_arg, rcode, buf, sec_state);
 	 */
 	mesh_cb_func_t cb;
 	/** user arg for callback */

@@ -100,7 +100,6 @@ o infra and lame cache: easier size config (in Mb), show usage in graphs.
 - winevent - poll if too many fds
 - fwd above stub, make hole in fwds. config non-forwarded-domain names.
 - fix indent #  ifs
-- do not flush/delete callback queries or call error on callback at least.
 
 later
 - selective verbosity; ubcontrol trace example.com

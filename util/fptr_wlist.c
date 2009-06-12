@@ -376,3 +376,10 @@ int fptr_whitelist_tube_listen(tube_callback_t* fptr)
 	else if(fptr == &libworker_handle_control_cmd) return 1;
 	return 0;
 }
+
+int fptr_whitelist_mesh_cb(mesh_cb_func_t fptr)
+{
+	if(fptr == &libworker_fg_done_cb) return 1;
+	else if(fptr == &libworker_bg_done_cb) return 1;
+	return 0;
+}
