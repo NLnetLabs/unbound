@@ -790,7 +790,7 @@ int mesh_state_add_cb(struct mesh_state* s, struct edns_data* edns,
 	if(!r)
 		return 0;
 	r->buf = buf;
-	log_assert(fptr_whitelist_mesh_cb(r->cb)); /* early failure ifmissing*/
+	log_assert(fptr_whitelist_mesh_cb(cb)); /* early failure ifmissing*/
 	r->cb = cb;
 	r->cb_arg = cb_arg;
 	r->edns = *edns;
