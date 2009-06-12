@@ -39,6 +39,9 @@ o cleaner code; return and func statements on newline.
 o memcached module that sits before validator module; checks for memcached
   data (on local lan), stores recursion lookup.  Provides one cache for multiple resolver machines, coherent reply content in anycast setup.
 o no openssl_add_all_algorithms, but only the ones necessary, less space.
+o listen to NOTIFY messages for zones and flush the cache for that zone
+  if received.  Useful when also having a stub to that auth server.
+  Needs proper protection, TSIG, in place.
 
 *** Features features, for later
 * dTLS, TLS, look to need special port numbers, cert storage, recent libssl.
