@@ -18,7 +18,7 @@ server:
 	# print statistics to the log (for every thread) every N seconds.
 	# Set to "" or 0 to disable. Default is disabled.
 	# statistics-interval: 0
-	
+
 	# enable cumulative statistics, without clearing them after printing.
 	# statistics-cumulative: no
 
@@ -37,7 +37,7 @@ server:
 	# interface: 192.0.2.153
 	# interface: 192.0.2.154
 	# interface: 2001:DB8::5
-	
+
 	# enable this feature to copy the source address of queries to reply.
 	# Socket options are not supported on all platforms. experimental. 
 	# interface-automatic: no
@@ -55,7 +55,7 @@ server:
 	# number of ports to allocate per thread, determines the size of the
 	# port range that can be open simultaneously. 
 	# outgoing-range: 256
-	
+
 	# permit unbound to use this port number or port range for
 	# making outgoing queries, using an outgoing interface.
 	# outgoing-port-permit: 32768
@@ -72,7 +72,7 @@ server:
 
 	# number of incoming simultaneous tcp buffers to hold per thread.
 	# incoming-num-tcp: 10
-	
+
 	# buffer size for handling DNS data. No messages larger than this
 	# size can be sent or received, by UDP or TCP. In bytes.
 	# msg-buffer-size: 65552
@@ -191,7 +191,7 @@ server:
 	# the log file, "" means log to stderr. 
 	# Use of this option sets use-syslog to "no".
 	# logfile: ""
-	
+
 	# Log to syslog(3) if yes. The log facility LOG_DAEMON is used to 
 	# log to, with identity "unbound". If yes, it overrides the logfile.
 	# use-syslog: yes 
@@ -201,23 +201,23 @@ server:
 
 	# the pid file. Can be an absolute path outside of chroot/work dir.
 	# pidfile: "@UNBOUND_PIDFILE@"
-	
+
 	# file to read root hints from.
 	# get one from ftp://FTP.INTERNIC.NET/domain/named.cache
 	# root-hints: ""
-	
+
 	# enable to not answer id.server and hostname.bind queries.
 	# hide-identity: no
-	
+
 	# enable to not answer version.server and version.bind queries.
 	# hide-version: no
-	
+
 	# the identity to report. Leave "" or default to return hostname.
 	# identity: ""
-	
+
 	# the version to report. Leave "" or default to return package version.
 	# version: ""
-	
+
 	# the target fetch policy.
 	# series of integers describing the policy per dependency depth. 
 	# The number of values in the list determines the maximum dependency 
@@ -227,16 +227,16 @@ server:
 	#	positive value: fetch that many targets opportunistically.
 	# Enclose the list of numbers between quotes ("").
 	# target-fetch-policy: "3 2 1 0 0"
-	
+
 	# Harden against very small EDNS buffer sizes. 
 	# harden-short-bufsize: no
-	
+
 	# Harden against unseemly large queries.
 	# harden-large-queries: no
-	
+
 	# Harden against out of zone rrsets, to avoid spoofing attempts. 
 	# harden-glue: yes
-	
+
 	# Harden against receiving dnssec-stripped data. If you turn it
 	# off, failing to validate dnskey data for a trustanchor will 
 	# trigger insecure mode for that zone (like without a trustanchor).
@@ -252,7 +252,7 @@ server:
 	# Use 0x20-encoded random bits in the query to foil spoof attempts.
 	# This feature is an experimental implementation of draft dns-0x20.
 	# use-caps-for-id: no
-	
+
 	# Enforce privacy of these addresses. Strips them away from answers. 
 	# It may cause DNSSEC validation to additionally mark it as bogus. 
 	# Protects against 'DNS Rebinding' (uses browser as network proxy). 
@@ -268,7 +268,7 @@ server:
 	# Allow the domain (and its subdomains) to contain private addresses.
 	# local-data statements are allowed to contain private addresses too.
 	# private-domain: "example.com"
-	
+
 	# If nonzero, unwanted replies are not only reported in statistics,
 	# but also a running total is kept per thread. If it reaches the
 	# threshold, a warning is printed and a defensive action is taken,
@@ -280,15 +280,15 @@ server:
 	# List one address per entry. List classless netblocks with /size,
 	# do-not-query-address: 127.0.0.1/8
 	# do-not-query-address: ::1
-	
+
 	# if yes, the above default do-not-query-address entries are present.
 	# if no, localhost can be queried (for testing and debugging).
 	# do-not-query-localhost: yes
-	
+
 	# module configuration of the server. A string with identifiers
 	# separated by spaces. "iterator" or "validator iterator"
 	# module-config: "validator iterator"
-	
+
 	# File with DLV trusted keys. Same format as trust-anchor-file.
 	# There can be only one DLV configured, it is trusted from root down.
 	# Download http://ftp.isc.org/www/dlv/dlv.isc.org.key
@@ -298,7 +298,7 @@ server:
 	# with several entries, one file per entry.
 	# Zone file format, with DS and DNSKEY entries.
 	# trust-anchor-file: ""
-	
+
 	# Trusted key for validation. DS or DNSKEY. specify the RR on a
 	# single line, surrounded by "". TTL is ignored. class is IN default.
 	# (These examples are from August 2007 and may not be valid anymore).
@@ -310,7 +310,7 @@ server:
 	# but has a different file format. Format is BIND-9 style format, 
 	# the trusted-keys { name flag proto algo "key"; }; clauses are read.
 	# trusted-keys-file: ""
-	
+
 	# Ignore chain of trust. Domain is treated as insecure.
 	# domain-insecure: "example.com"
 
@@ -318,30 +318,30 @@ server:
 	# Do not set this unless you are debugging signature inception
 	# and expiration. "" or "0" turns the feature off. 
 	# val-override-date: ""
-	
+
 	# The time to live for bogus data, rrsets and messages. This avoids
 	# some of the revalidation, until the time interval expires. in secs.
 	# val-bogus-ttl: 60
-	
+
 	# The signature inception and expiration dates are allowed to be off
 	# by 10% of the lifetime of the signature from our local clock.
 	# This leeway is capped with a minimum and a maximum.  In seconds.
 	# val-sig-skew-min: 3600
 	# val-sig-skew-max: 86400
-	
+
 	# Should additional section of secure message also be kept clean of
 	# unsecure data. Useful to shield the users of this validator from
 	# potential bogus data in the additional section. All unsigned data 
 	# in the additional section is removed from secure messages.
 	# val-clean-additional: yes
-	
+
 	# Turn permissive mode on to permit bogus messages. Thus, messages
 	# for which security checks failed will be returned to clients,
 	# instead of SERVFAIL. It still performs the security checks, which
 	# result in interesting log files and possibly the AD bit in
 	# replies if the message is found secure. The default is off.
 	# val-permissive-mode: no
-	
+
 	# It is possible to configure NSEC3 maximum iteration counts per
 	# keysize. Keep this table very short, as linear search is done.
 	# A message with an NSEC3 with larger count is marked insecure.
@@ -356,7 +356,7 @@ server:
 	# the number of slabs must be a power of 2.
 	# more slabs reduce lock contention, but fragment memory usage.
 	# key-cache-slabs: 4
-	
+
 	# the amount of memory to use for the negative cache (used for DLV).
 	# plain value in bytes or you can append k, m or G. default is "1Mb". 
 	# neg-cache-size: 1m
