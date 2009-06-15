@@ -1,3 +1,8 @@
+14 June 2009: Wouter
+	- Fixed bug where cached responses would lose their security
+	  status on second validation, which especially impacted dlv
+	  lookups.  Reported by Hauke Lampe.
+
 13 June 2009: Wouter
 	- bug #254. removed random whitespace from example.conf.
 

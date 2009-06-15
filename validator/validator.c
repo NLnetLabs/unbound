@@ -251,9 +251,8 @@ val_error(struct module_qstate* qstate, int id)
 /** 
  * Check to see if a given response needs to go through the validation
  * process. Typical reasons for this routine to return false are: CD bit was
- * on in the original request, the response was already validated, or the
- * response is a kind of message that is unvalidatable (i.e., SERVFAIL,
- * REFUSED, etc.)
+ * on in the original request, or the response is a kind of message that 
+ * is unvalidatable (i.e., SERVFAIL, REFUSED, etc.)
  *
  * @param qstate: query state.
  * @param ret_rc: rcode for this message (if noerror - examine ret_msg).
@@ -292,14 +291,25 @@ needs_validation(struct module_qstate* qstate, int ret_rc,
 		verbose(VERB_ALGO, "cannot validate RRSIG, no sigs on sigs.");
 		return 0;
 	}
+	return 1;
+}
 
+/**
+ * Check to see if the response has already been validated.
+ * @param ret_msg: return msg, can be NULL
+ * @return true if the response has already been validated
+ */
+static int
+already_validated(struct dns_msg* ret_msg)
+{
 	/* validate unchecked, and re-validate bogus messages */
 	if (ret_msg && ret_msg->rep->security > sec_status_bogus)
 	{
-		verbose(VERB_ALGO, "response has already been validated");
-		return 0;
+		verbose(VERB_ALGO, "response has already been validated: %s",
+			sec_status_to_string(ret_msg->rep->security));
+		return 1;
 	}
-	return 1;
+	return 0;
 }
 
 /**
@@ -1937,6 +1947,10 @@ val_operate(struct module_qstate* qstate, enum module_ev event, int id,
 			qstate->ext_state[id] = module_finished;
 			return;
 		}
+		if(already_validated(qstate->return_msg)) {
+			qstate->ext_state[id] = module_finished;
+			return;
+		}
 		/* create state to start validation */
 		qstate->ext_state[id] = module_error; /* override this */
 		if(!vq) {
@@ -2397,7 +2411,8 @@ process_dlv_response(struct module_qstate* qstate, struct val_qstate* vq,
 	}
 	if(msg->rep->security != sec_status_secure) {
 		vq->dlv_status = dlv_error;
-		verbose(VERB_ALGO, "response is not secure");
+		verbose(VERB_ALGO, "response is not secure, %s",
+			sec_status_to_string(msg->rep->security));
 		return;
 	}
 	/* was the lookup a success? validated DLV? */
