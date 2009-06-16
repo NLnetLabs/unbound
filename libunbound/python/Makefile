@@ -42,26 +42,27 @@ help:
 
 .PHONY: testenv clean doc swig
 
-_unbound.so:	../../Makefile
-	$(MAKE) -C ../..
+#_unbound.so:	../../Makefile
+	#$(MAKE) -C ../..
 
-../../.libs/libunbound.so.0:	../../Makefile
-	$(MAKE) -C ../..
+#../../.libs/libunbound.so.0:	../../Makefile
+	#$(MAKE) -C ../..
 
-../../ldns-src/lib/libldns.so:	../../ldns-src/Makefile
-	$(MAKE) -C ../../ldns-src
+#../../ldns-src/lib/libldns.so:	../../ldns-src/Makefile
+	#$(MAKE) -C ../../ldns-src
 
 clean:
 	rm -rdf examples/unbound
 	rm -f _unbound.so libunbound_wrap.o
 	$(MAKE) -C ../.. clean
 
-testenv: ../../.libs/libunbound.so.0 ../../ldns-src/lib/libldns.so _unbound.so
+testenv: ../../.libs/libunbound.so.1 ../../ldns-src/lib/libldns.so ../../.libs/_unbound.so
 	rm -rdf examples/unbound
 	cd examples && mkdir unbound && ln -s ../../unbound.py unbound/__init__.py && ln -s ../../_unbound.so unbound/_unbound.so && ln -s ../../../../.libs/libunbound.so.1 unbound/libunbound.so.1 && ln -s ../../../../ldns-src/lib/libldns.so.1 unbound/libldns.so.1 && ls -la
+	cd examples && if test -f ../../../.libs/_unbound.so; then cp ../../../.libs/_unbound.so . ; fi
 	@echo "Run a script by typing ./script_name.py"
 	cd examples && LD_LIBRARY_PATH=unbound bash
-	rm -rdf examples/unbound
+	rm -rdf examples/unbound examples/_unbound.so
 
 doc: ../../.libs/libunbound.so.0 _unbound.so
 	$(MAKE) -C docs html
