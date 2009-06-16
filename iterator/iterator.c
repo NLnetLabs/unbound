@@ -1269,7 +1269,10 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 	}
 
 	tf_policy = 0;
-	if(iq->depth <= ie->max_dependency_depth) {
+	/* < not <=, because although the array is large enough for <=, the
+	 * generated query will immediately be discarded due to depth and
+	 * that servfail is cached, which is not good as opportunism goes. */
+	if(iq->depth < ie->max_dependency_depth) {
 		tf_policy = ie->target_fetch_policy[iq->depth];
 	}
 
