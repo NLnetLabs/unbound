@@ -444,7 +444,7 @@ memory)
 		pidf=`$chk -o pidfile $conf 2>&1`
 		pid=`cat $pidf 2>&1`
 		value=`ps -p "$pid" -o rss= 2>&1`
-		if test "`expr $value + 1 - 1 2>&1`" = "$value"; then
+		if test "`expr $value + 1 - 1 2>&1`" -eq "$value" 2>&1; then
 			value=`expr $value \* 1024` 
 		else
 			value=0
