@@ -101,7 +101,6 @@ o infra and lame cache: easier size config (in Mb), show usage in graphs.
 	then perform DNSKEY query) if that DNSKEY query fails servfail,
 	perform the x8 lameness retry fallback.
 - winevent - poll if too many fds
-- fix indent #  ifs
 
 later
 - selective verbosity; ubcontrol trace example.com
