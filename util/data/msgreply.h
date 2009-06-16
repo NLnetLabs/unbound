@@ -330,6 +330,21 @@ uint8_t* reply_find_final_cname_target(struct query_info* qinfo,
 	struct reply_info* rep);
 
 /**
+ * Check if cname chain in cached reply is still valid.
+ * @param rep: reply to check.
+ * @return: true if valid, false if invalid.
+ */
+int reply_check_cname_chain(struct reply_info* rep);
+
+/**
+ * Check security status of all RRs in the message.
+ * @param rep: reply to check
+ * @return: true if all RRs are secure. False if not.
+ *    True if there are zero RRs.
+ */
+int reply_all_rrsets_secure(struct reply_info* rep);
+
+/**
  * Find answer rrset in reply, the one matching qinfo. Follows CNAMEs, so the
  * result may have a different owner name.
  * @param qinfo: what to look for.

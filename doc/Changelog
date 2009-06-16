@@ -2,6 +2,9 @@
 	- Fixup opportunistic target query generation to it does not
 	  generate queries that are known to fail.
 	- Touchup on munin total memory report.
+	- messages picked out of the cache by the iterator are checked
+	  if their cname chain is still correct and if validation status
+	  has to be reexamined.
 
 15 June 2009: Wouter
 	- iana portlist updated.
