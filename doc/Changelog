@@ -1,3 +1,7 @@
+17 June 2009: Wouter
+	- CREDITS entry for cz.nic, sponsoring a 'summer of code' that was
+	  used for the python code in unbound. (http://www.nic.cz/vip/ in cz).
+
 16 June 2009: Wouter
 	- Fixup opportunistic target query generation to it does not
 	  generate queries that are known to fail.
