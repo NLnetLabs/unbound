@@ -42,6 +42,8 @@ o no openssl_add_all_algorithms, but only the ones necessary, less space.
 o listen to NOTIFY messages for zones and flush the cache for that zone
   if received.  Useful when also having a stub to that auth server.
   Needs proper protection, TSIG, in place.
+o winevent - do not go more than 64 fds (by polling with select one by
+  one), win95/98 have 100fd limit in the kernel, so this ruins w9x portability.
 
 *** Features features, for later
 * dTLS, TLS, look to need special port numbers, cert storage, recent libssl.
@@ -54,7 +56,6 @@ o listen to NOTIFY messages for zones and flush the cache for that zone
   not create packet storms with operator errors.
 o on windows version, implement that OS ancillary data capabilities for
   interface-automatic. IPPKTINFO, IP6PKTINFO for WSARecvMsg, WSASendMsg.
-o winevent - if many fds, poll them with 100ms timeout.
 o local-zone directive with authority service, full authority server 
   is a non-goal.
 o infra and lame cache: easier size config (in Mb), show usage in graphs.
