@@ -109,7 +109,7 @@ event_reg_install(FILE* out, const char* pathname)
 	if(out) fprintf(out, "installed reg entries\n");
 }
 
-/** remove regisytry entries for eventlog */
+/** remove registry entries for eventlog */
 static void
 event_reg_remove(FILE* out)
 {
