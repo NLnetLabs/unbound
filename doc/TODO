@@ -54,6 +54,7 @@ o listen to NOTIFY messages for zones and flush the cache for that zone
   not create packet storms with operator errors.
 o on windows version, implement that OS ancillary data capabilities for
   interface-automatic. IPPKTINFO, IP6PKTINFO for WSARecvMsg, WSASendMsg.
+o winevent - if many fds, poll them with 100ms timeout.
 o local-zone directive with authority service, full authority server 
   is a non-goal.
 o infra and lame cache: easier size config (in Mb), show usage in graphs.
@@ -100,7 +101,6 @@ o infra and lame cache: easier size config (in Mb), show usage in graphs.
 	query has servfail, then build chain of trust down (check DS,
 	then perform DNSKEY query) if that DNSKEY query fails servfail,
 	perform the x8 lameness retry fallback.
-- winevent - poll if too many fds
 
 later
 - selective verbosity; ubcontrol trace example.com
