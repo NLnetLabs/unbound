@@ -5,6 +5,7 @@
 	- Extreme lenience for wrongly truncated replies where a positive
 	  reply has an NS in the authority but no signatures.  They are
 	  turned into minimal responses with only the (secure) answer.
+	- autoconf 2.63 for configure.
 
 17 June 2009: Wouter
 	- CREDITS entry for cz.nic, sponsoring a 'summer of code' that was
