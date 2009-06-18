@@ -44,11 +44,54 @@
 #endif
 
 #include "config.h"
+
+#undef _POSIX_C_SOURCE
+#undef _XOPEN_SOURCE
+#include <Python.h>
+
 #include "pythonmod/pythonmod.h"
 #include "util/module.h"
 #include "util/config_file.h"
 #include "pythonmod_utils.h"
-#include <Python.h>
+
+/**
+ * Global state for the module. 
+ */
+struct pythonmod_env {
+
+	/** Python script filename. */
+	const char* fname;
+
+	/** Python module. */
+	PyObject* module;
+
+	/** Module init function */
+	PyObject* func_init;
+	/** Module deinit function */
+	PyObject* func_deinit;
+	/** Module operate function */
+	PyObject* func_operate;
+	/** Module super_inform function */
+	PyObject* func_inform;
+
+	/** Python dictionary. */
+	PyObject* dict;
+
+	/** Module data. */
+	PyObject* data;
+
+	/** Module qstate. */
+	struct module_qstate* qstate;
+};
+
+/**
+ * Per query state for the iterator module.
+ */
+struct pythonmod_qstate {
+
+	/** Module per query data. */
+	PyObject* data;
+};
 
 /* Generated */
 #ifndef S_SPLINT_S

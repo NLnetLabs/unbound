@@ -41,51 +41,6 @@
 #define PYTHONMOD_H
 #include "util/module.h"
 #include "services/outbound_list.h"
-#include <Python.h>
-
-struct PyObject;
-#if S_SPLINT_S
-typedef struct PyObject PyObject;
-#endif
-
-/**
- * Global state for the module. 
- */
-struct pythonmod_env {
-
-   /** Python script filename. */
-   const char* fname;
-
-   /** Python module. */
-   PyObject* module;
-
-   /** Module init function */
-   PyObject* func_init;
-   /** Module deinit function */
-   PyObject* func_deinit;
-   /** Module operate function */
-   PyObject* func_operate;
-   /** Module super_inform function */
-   PyObject* func_inform;
-
-   /** Python dictionary. */
-   PyObject* dict;
-
-   /** Module data. */
-   PyObject* data;
-
-   /** Module qstate. */
-   struct module_qstate* qstate;
-};
-
-/**
- * Per query state for the iterator module.
- */
-struct pythonmod_qstate {
-
-   /** Module per query data. */
-   PyObject* data;
-};
 
 /**
  * Get the module function block.

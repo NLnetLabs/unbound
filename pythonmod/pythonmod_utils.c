@@ -47,6 +47,9 @@
 #include "util/data/msgreply.h"
 #include "util/storage/slabhash.h"
 #include "util/regional.h"
+
+#undef _POSIX_C_SOURCE
+#undef _XOPEN_SOURCE
 #include <Python.h>
 
 /** Store the reply_info and query_info pair in message cache (qstate->msg_cache) */
