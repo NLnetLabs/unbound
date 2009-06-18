@@ -479,6 +479,36 @@ validate_msg_signatures(struct module_env* env, struct val_env* ve,
 }
 
 /**
+ * Detect wrong truncated response, by a bad recursor out there.
+ * The positive response has a mangled authority section.
+ * Remove that authority section.
+ * @param rep: reply
+ * @return true if a wrongly truncated response.
+ */
+static int
+detect_wrongly_truncated(struct reply_info* rep)
+{
+	size_t i;
+	/* no additional, only NS in authority, and it is bogus */
+	if(rep->ar_numrrsets != 0 || rep->ns_numrrsets != 1 ||
+		rep->an_numrrsets == 0)
+		return 0;
+	if(ntohs(rep->rrsets[ rep->an_numrrsets ]->rk.type) != LDNS_RR_TYPE_NS)
+		return 0;
+	if(((struct packed_rrset_data*)rep->rrsets[ rep->an_numrrsets ]
+		->entry.data)->security != sec_status_bogus)
+		return 0;
+	/* answer section is present and secure */
+	for(i=0; i<rep->an_numrrsets; i++) {
+		if(((struct packed_rrset_data*)rep->rrsets[ i ]
+			->entry.data)->security != sec_status_secure)
+			return 0;
+	}
+	return 1;
+}
+
+
+/**
  * Given a "positive" response -- a response that contains an answer to the
  * question, and no CNAME chain, validate this response. 
  *
@@ -1449,17 +1479,31 @@ processValidate(struct module_qstate* qstate, struct val_qstate* vq,
 		vq->chase_reply->security = sec_status_bogus;
 		return 1;
 	}
+	subtype = val_classify_response(qstate->query_flags, &qstate->qinfo,
+		&vq->qchase, vq->orig_msg->rep, vq->rrset_skip);
 
 	/* check signatures in the message; 
 	 * answer and authority must be valid, additional is only checked. */
 	if(!validate_msg_signatures(qstate->env, ve, &vq->qchase, 
 		vq->chase_reply, vq->key_entry)) {
-		verbose(VERB_DETAIL, "Validate: message contains bad rrsets");
-		return 1;
+		/* workaround bad recursor out there that truncates (even
+		 * with EDNS4k) to 512 by removing RRSIG from auth section
+		 * for positive replies*/
+		if(subtype == VAL_CLASS_POSITIVE &&
+			detect_wrongly_truncated(vq->orig_msg->rep)) {
+			/* truncate the message some more */
+			vq->orig_msg->rep->ns_numrrsets = 0;
+			vq->orig_msg->rep->rrset_count--;
+			vq->chase_reply->ns_numrrsets = 0;
+			vq->chase_reply->rrset_count--;
+		}
+		else {
+			verbose(VERB_DETAIL, "Validate: message contains "
+				"bad rrsets");
+			return 1;
+		}
 	}
 
-	subtype = val_classify_response(qstate->query_flags, &qstate->qinfo,
-		&vq->qchase, vq->orig_msg->rep, vq->rrset_skip);
 	switch(subtype) {
 		case VAL_CLASS_POSITIVE:
 			verbose(VERB_ALGO, "Validating a positive response");
