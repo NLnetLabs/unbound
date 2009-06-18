@@ -54,6 +54,10 @@
 #include "util/config_file.h"
 #include "pythonmod_utils.h"
 
+#ifdef S_SPLINT_S
+typedef struct PyObject PyObject;
+#endif
+
 /**
  * Global state for the module. 
  */
