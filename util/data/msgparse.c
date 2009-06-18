@@ -490,6 +490,8 @@ find_rrset(struct msg_parse* msg, ldns_buffer* pkt, uint8_t* dname,
 			*rrset_prev = msgparse_hashtable_lookup(msg, pkt, 
 				*hash, *rrset_flags, dname, dnamelen, covtype, 
 				dclass);
+			if(!*rrset_prev) /* untwiddle if not found */
+				*rrset_flags ^= PACKED_RRSET_NSEC_AT_APEX;
 		}
 		if(*rrset_prev) {
 			*prev_dname_first = (*rrset_prev)->dname;
@@ -504,9 +506,9 @@ find_rrset(struct msg_parse* msg, ldns_buffer* pkt, uint8_t* dname,
 		int hasother = 0;
 		/* find matching rrsig */
 		*hash = pkt_hash_rrset_rest(dname_h, LDNS_RR_TYPE_RRSIG, 
-			dclass, *rrset_flags);
+			dclass, 0);
 		*rrset_prev = msgparse_hashtable_lookup(msg, pkt, *hash, 
-			*rrset_flags, dname, dnamelen, LDNS_RR_TYPE_RRSIG, 
+			0, dname, dnamelen, LDNS_RR_TYPE_RRSIG, 
 			dclass);
 		if(*rrset_prev && rrset_has_sigover(pkt, *rrset_prev, type,
 			&hasother)) {
@@ -814,17 +816,17 @@ parse_section(ldns_buffer* pkt, struct msg_parse* msg,
 		ldns_buffer_read(pkt, &dclass, sizeof(dclass));
 
 		if(0) { /* debug show what is being parsed. */
-			printf("parse of %s(%d)",
+			fprintf(stderr, "parse of %s(%d)",
 				ldns_rr_descript(type)?
 				ldns_rr_descript(type)->_name: "??",
 				(int)type);
-			printf(" %s(%d) ",
+			fprintf(stderr, " %s(%d) ",
 				ldns_lookup_by_id(ldns_rr_classes, 
 				(int)ntohs(dclass))?ldns_lookup_by_id(
 				ldns_rr_classes, (int)ntohs(dclass))->name: 
 				"??", (int)ntohs(dclass));
-			dname_print(stdout, pkt, dname);
-			printf("\n");
+			dname_print(stderr, pkt, dname);
+			fprintf(stderr, "\n");
 		}
 
 		/* see if it is part of an existing RR set */
@@ -842,9 +844,9 @@ parse_section(ldns_buffer* pkt, struct msg_parse* msg,
 				return LDNS_RCODE_SERVFAIL;
 		}
 		else if(0)	{ 
-			printf("is part of existing: ");
-			dname_print(stdout, pkt, rrset->dname);
-			printf(" type %s(%d)\n",
+			fprintf(stderr, "is part of existing: ");
+			dname_print(stderr, pkt, rrset->dname);
+			fprintf(stderr, " type %s(%d)\n",
 				ldns_rr_descript(rrset->type)?
 				ldns_rr_descript(rrset->type)->_name: "??",
 				(int)rrset->type);

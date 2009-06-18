@@ -1,3 +1,8 @@
+18 June 2009: Wouter
+	- Fix of message parse bug where (specifically) an NSEC and RRSIG
+	  in the wrong order would be parsed, but put wrongly into internal
+	  structures so that later validation would fail.
+
 17 June 2009: Wouter
 	- CREDITS entry for cz.nic, sponsoring a 'summer of code' that was
 	  used for the python code in unbound. (http://www.nic.cz/vip/ in cz).
