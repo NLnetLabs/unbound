@@ -1513,9 +1513,14 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 			   /* we know that all other NS rrsets are scrubbed
 			    * away, thus on referral only one is left.
 			    * see if that equals the query name... */
-			&& reply_find_rrset_section_ns(iq->response->rep,
+			&& ( /* auth section, but sometimes in answer section*/
+			  reply_find_rrset_section_ns(iq->response->rep,
 				qstate->qinfo.qname, qstate->qinfo.qname_len,
 				LDNS_RR_TYPE_NS, qstate->qinfo.qclass)
+			  || reply_find_rrset_section_an(iq->response->rep,
+				qstate->qinfo.qname, qstate->qinfo.qname_len,
+				LDNS_RR_TYPE_NS, qstate->qinfo.qclass)
+			  )
 		    )) {
 			/* Store the referral under the current query */
 			if(!iter_dns_store(qstate->env, &iq->response->qinfo,
