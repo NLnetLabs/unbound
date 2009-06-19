@@ -479,7 +479,7 @@ validate_msg_signatures(struct module_env* env, struct val_env* ve,
 }
 
 /**
- * Detect wrong truncated response, by a bad recursor out there.
+ * Detect wrong truncated response (from BIND 9.6.1 with minimal-responses).
  * The positive response has a mangled authority section.
  * Remove that authority section.
  * @param rep: reply
