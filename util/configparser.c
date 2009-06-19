@@ -1,24 +1,23 @@
-/* A Bison parser, made by GNU Bison 2.3.  */
+
+/* A Bison parser, made by GNU Bison 2.4.1.  */
 
 /* Skeleton implementation for Bison's Yacc-like parsers in C
-
-   Copyright (C) 1984, 1989, 1990, 2000, 2001, 2002, 2003, 2004, 2005, 2006
+   
+      Copyright (C) 1984, 1989, 1990, 2000, 2001, 2002, 2003, 2004, 2005, 2006
    Free Software Foundation, Inc.
-
-   This program is free software; you can redistribute it and/or modify
+   
+   This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 2, or (at your option)
-   any later version.
-
+   the Free Software Foundation, either version 3 of the License, or
+   (at your option) any later version.
+   
    This program is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
    GNU General Public License for more details.
-
+   
    You should have received a copy of the GNU General Public License
-   along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin Street, Fifth Floor,
-   Boston, MA 02110-1301, USA.  */
+   along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
 /* As a special exception, you may create a larger work that contains
    part or all of the Bison parser skeleton and distribute that work
@@ -29,7 +28,7 @@
    special exception, which will cause the skeleton and the resulting
    Bison output files to be licensed under the GNU General Public
    License without this special exception.
-
+   
    This special exception was added by the Free Software Foundation in
    version 2.2 of Bison.  */
 
@@ -47,7 +46,7 @@
 #define YYBISON 1
 
 /* Bison version.  */
-#define YYBISON_VERSION "2.3"
+#define YYBISON_VERSION "2.4.1"
 
 /* Skeleton name.  */
 #define YYSKELETON_NAME "yacc.c"
@@ -55,9 +54,68 @@
 /* Pure parsers.  */
 #define YYPURE 0
 
+/* Push parsers.  */
+#define YYPUSH 0
+
+/* Pull parsers.  */
+#define YYPULL 1
+
 /* Using locations.  */
 #define YYLSP_NEEDED 0
 
+
+
+/* Copy the first part of user declarations.  */
+
+/* Line 189 of yacc.c  */
+#line 38 "util/configparser.y"
+
+#include "config.h"
+
+#include <stdarg.h>
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <assert.h>
+
+#include "util/configyyrename.h"
+#include "util/config_file.h"
+#include "util/net_help.h"
+
+int ub_c_lex(void);
+void ub_c_error(const char *message);
+
+/* these need to be global, otherwise they cannot be used inside yacc */
+extern struct config_parser_state* cfg_parser;
+
+#if 0
+#define OUTYY(s)  printf s /* used ONLY when debugging */
+#else
+#define OUTYY(s)
+#endif
+
+
+
+/* Line 189 of yacc.c  */
+#line 101 "util/configparser.c"
+
+/* Enabling traces.  */
+#ifndef YYDEBUG
+# define YYDEBUG 0
+#endif
+
+/* Enabling verbose error messages.  */
+#ifdef YYERROR_VERBOSE
+# undef YYERROR_VERBOSE
+# define YYERROR_VERBOSE 1
+#else
+# define YYERROR_VERBOSE 0
+#endif
+
+/* Enabling the token table.  */
+#ifndef YYTOKEN_TABLE
+# define YYTOKEN_TABLE 0
+#endif
 
 
 /* Tokens.  */
@@ -283,74 +341,31 @@
 
 
 
-/* Copy the first part of user declarations.  */
-#line 38 "util/configparser.y"
-
-#include "config.h"
-
-#include <stdarg.h>
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <assert.h>
-
-#include "util/configyyrename.h"
-#include "util/config_file.h"
-#include "util/net_help.h"
-
-int ub_c_lex(void);
-void ub_c_error(const char *message);
-
-/* these need to be global, otherwise they cannot be used inside yacc */
-extern struct config_parser_state* cfg_parser;
-
-#if 0
-#define OUTYY(s)  printf s /* used ONLY when debugging */
-#else
-#define OUTYY(s)
-#endif
-
-
-
-/* Enabling traces.  */
-#ifndef YYDEBUG
-# define YYDEBUG 0
-#endif
-
-/* Enabling verbose error messages.  */
-#ifdef YYERROR_VERBOSE
-# undef YYERROR_VERBOSE
-# define YYERROR_VERBOSE 1
-#else
-# define YYERROR_VERBOSE 0
-#endif
-
-/* Enabling the token table.  */
-#ifndef YYTOKEN_TABLE
-# define YYTOKEN_TABLE 0
-#endif
-
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 typedef union YYSTYPE
-#line 64 "util/configparser.y"
 {
+
+/* Line 214 of yacc.c  */
+#line 64 "util/configparser.y"
+
 	char*	str;
-}
-/* Line 187 of yacc.c.  */
-#line 341 "util/configparser.c"
-	YYSTYPE;
+
+
+
+/* Line 214 of yacc.c  */
+#line 357 "util/configparser.c"
+} YYSTYPE;
+# define YYSTYPE_IS_TRIVIAL 1
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */
 # define YYSTYPE_IS_DECLARED 1
-# define YYSTYPE_IS_TRIVIAL 1
 #endif
-
 
 
 /* Copy the second part of user declarations.  */
 
 
-/* Line 216 of yacc.c.  */
-#line 354 "util/configparser.c"
+/* Line 264 of yacc.c  */
+#line 369 "util/configparser.c"
 
 #ifdef short
 # undef short
@@ -425,14 +440,14 @@ typedef short int yytype_int16;
 #if (defined __STDC__ || defined __C99__FUNC__ \
      || defined __cplusplus || defined _MSC_VER)
 static int
-YYID (int i)
+YYID (int yyi)
 #else
 static int
-YYID (i)
-    int i;
+YYID (yyi)
+    int yyi;
 #endif
 {
-  return i;
+  return yyi;
 }
 #endif
 
@@ -513,9 +528,9 @@ void free (void *); /* INFRINGES ON USER NAME SPACE */
 /* A type that is properly aligned for any stack member.  */
 union yyalloc
 {
-  yytype_int16 yyss;
-  YYSTYPE yyvs;
-  };
+  yytype_int16 yyss_alloc;
+  YYSTYPE yyvs_alloc;
+};
 
 /* The size of the maximum gap between one aligned stack and the next.  */
 # define YYSTACK_GAP_MAXIMUM (sizeof (union yyalloc) - 1)
@@ -549,12 +564,12 @@ union yyalloc
    elements in the stack, and YYPTR gives the new location of the
    stack.  Advance YYPTR to a properly aligned location for the next
    stack.  */
-# define YYSTACK_RELOCATE(Stack)					\
+# define YYSTACK_RELOCATE(Stack_alloc, Stack)				\
     do									\
       {									\
 	YYSIZE_T yynewbytes;						\
-	YYCOPY (&yyptr->Stack, Stack, yysize);				\
-	Stack = &yyptr->Stack;						\
+	YYCOPY (&yyptr->Stack_alloc, Stack, yysize);			\
+	Stack = &yyptr->Stack_alloc;					\
 	yynewbytes = yystacksize * sizeof (*Stack) + YYSTACK_GAP_MAXIMUM; \
 	yyptr += yynewbytes / sizeof (*yyptr);				\
       }									\
@@ -1274,17 +1289,20 @@ yy_symbol_print (yyoutput, yytype, yyvaluep)
 #if (defined __STDC__ || defined __C99__FUNC__ \
      || defined __cplusplus || defined _MSC_VER)
 static void
-yy_stack_print (yytype_int16 *bottom, yytype_int16 *top)
+yy_stack_print (yytype_int16 *yybottom, yytype_int16 *yytop)
 #else
 static void
-yy_stack_print (bottom, top)
-    yytype_int16 *bottom;
-    yytype_int16 *top;
+yy_stack_print (yybottom, yytop)
+    yytype_int16 *yybottom;
+    yytype_int16 *yytop;
 #endif
 {
   YYFPRINTF (stderr, "Stack now");
-  for (; bottom <= top; ++bottom)
-    YYFPRINTF (stderr, " %d", *bottom);
+  for (; yybottom <= yytop; yybottom++)
+    {
+      int yybot = *yybottom;
+      YYFPRINTF (stderr, " %d", yybot);
+    }
   YYFPRINTF (stderr, "\n");
 }
 
@@ -1318,11 +1336,11 @@ yy_reduce_print (yyvsp, yyrule)
   /* The symbols being reduced.  */
   for (yyi = 0; yyi < yynrhs; yyi++)
     {
-      fprintf (stderr, "   $%d = ", yyi + 1);
+      YYFPRINTF (stderr, "   $%d = ", yyi + 1);
       yy_symbol_print (stderr, yyrhs[yyprhs[yyrule] + yyi],
 		       &(yyvsp[(yyi + 1) - (yynrhs)])
 		       		       );
-      fprintf (stderr, "\n");
+      YYFPRINTF (stderr, "\n");
     }
 }
 
@@ -1602,10 +1620,8 @@ yydestruct (yymsg, yytype, yyvaluep)
 	break;
     }
 }
-
 
 /* Prevent warnings from -Wmissing-prototypes.  */
-
 #ifdef YYPARSE_PARAM
 #if defined __STDC__ || defined __cplusplus
 int yyparse (void *YYPARSE_PARAM);
@@ -1621,11 +1637,10 @@ int yyparse ();
 #endif /* ! YYPARSE_PARAM */
 
 
-
-/* The look-ahead symbol.  */
+/* The lookahead symbol.  */
 int yychar;
 
-/* The semantic value of the look-ahead symbol.  */
+/* The semantic value of the lookahead symbol.  */
 YYSTYPE yylval;
 
 /* Number of syntax errors so far.  */
@@ -1633,9 +1648,9 @@ int yynerrs;
 
 
 
-/*----------.
-| yyparse.  |
-`----------*/
+/*-------------------------.
+| yyparse or yypush_parse.  |
+`-------------------------*/
 
 #ifdef YYPARSE_PARAM
 #if (defined __STDC__ || defined __C99__FUNC__ \
@@ -1659,14 +1674,39 @@ yyparse ()
 #endif
 #endif
 {
-  
-  int yystate;
+
+
+    int yystate;
+    /* Number of tokens to shift before error messages enabled.  */
+    int yyerrstatus;
+
+    /* The stacks and their tools:
+       `yyss': related to states.
+       `yyvs': related to semantic values.
+
+       Refer to the stacks thru separate pointers, to allow yyoverflow
+       to reallocate them elsewhere.  */
+
+    /* The state stack.  */
+    yytype_int16 yyssa[YYINITDEPTH];
+    yytype_int16 *yyss;
+    yytype_int16 *yyssp;
+
+    /* The semantic value stack.  */
+    YYSTYPE yyvsa[YYINITDEPTH];
+    YYSTYPE *yyvs;
+    YYSTYPE *yyvsp;
+
+    YYSIZE_T yystacksize;
+
   int yyn;
   int yyresult;
-  /* Number of tokens to shift before error messages enabled.  */
-  int yyerrstatus;
-  /* Look-ahead token as an internal (translated) token number.  */
-  int yytoken = 0;
+  /* Lookahead token as an internal (translated) token number.  */
+  int yytoken;
+  /* The variables used to return semantic value and location from the
+     action routines.  */
+  YYSTYPE yyval;
+
 #if YYERROR_VERBOSE
   /* Buffer for error messages, and its allocated size.  */
   char yymsgbuf[128];
@@ -1674,51 +1714,28 @@ yyparse ()
   YYSIZE_T yymsg_alloc = sizeof yymsgbuf;
 #endif
 
-  /* Three stacks and their tools:
-     `yyss': related to states,
-     `yyvs': related to semantic values,
-     `yyls': related to locations.
-
-     Refer to the stacks thru separate pointers, to allow yyoverflow
-     to reallocate them elsewhere.  */
-
-  /* The state stack.  */
-  yytype_int16 yyssa[YYINITDEPTH];
-  yytype_int16 *yyss = yyssa;
-  yytype_int16 *yyssp;
-
-  /* The semantic value stack.  */
-  YYSTYPE yyvsa[YYINITDEPTH];
-  YYSTYPE *yyvs = yyvsa;
-  YYSTYPE *yyvsp;
-
-
-
 #define YYPOPSTACK(N)   (yyvsp -= (N), yyssp -= (N))
-
-  YYSIZE_T yystacksize = YYINITDEPTH;
-
-  /* The variables used to return semantic value and location from the
-     action routines.  */
-  YYSTYPE yyval;
-
 
   /* The number of symbols on the RHS of the reduced rule.
      Keep to zero when no symbol should be popped.  */
   int yylen = 0;
+
+  yytoken = 0;
+  yyss = yyssa;
+  yyvs = yyvsa;
+  yystacksize = YYINITDEPTH;
 
   YYDPRINTF ((stderr, "Starting parse\n"));
 
   yystate = 0;
   yyerrstatus = 0;
   yynerrs = 0;
-  yychar = YYEMPTY;		/* Cause a token to be read.  */
+  yychar = YYEMPTY; /* Cause a token to be read.  */
 
   /* Initialize stack pointers.
      Waste one element of value and location stack
      so that they stay on the same level as the state stack.
      The wasted elements are never initialized.  */
-
   yyssp = yyss;
   yyvsp = yyvs;
 
@@ -1748,7 +1765,6 @@ yyparse ()
 	YYSTYPE *yyvs1 = yyvs;
 	yytype_int16 *yyss1 = yyss;
 
-
 	/* Each stack pointer address is followed by the size of the
 	   data in use in that stack, in bytes.  This used to be a
 	   conditional around just the two extra args, but that might
@@ -1756,7 +1772,6 @@ yyparse ()
 	yyoverflow (YY_("memory exhausted"),
 		    &yyss1, yysize * sizeof (*yyssp),
 		    &yyvs1, yysize * sizeof (*yyvsp),
-
 		    &yystacksize);
 
 	yyss = yyss1;
@@ -1779,9 +1794,8 @@ yyparse ()
 	  (union yyalloc *) YYSTACK_ALLOC (YYSTACK_BYTES (yystacksize));
 	if (! yyptr)
 	  goto yyexhaustedlab;
-	YYSTACK_RELOCATE (yyss);
-	YYSTACK_RELOCATE (yyvs);
-
+	YYSTACK_RELOCATE (yyss_alloc, yyss);
+	YYSTACK_RELOCATE (yyvs_alloc, yyvs);
 #  undef YYSTACK_RELOCATE
 	if (yyss1 != yyssa)
 	  YYSTACK_FREE (yyss1);
@@ -1792,7 +1806,6 @@ yyparse ()
       yyssp = yyss + yysize - 1;
       yyvsp = yyvs + yysize - 1;
 
-
       YYDPRINTF ((stderr, "Stack size increased to %lu\n",
 		  (unsigned long int) yystacksize));
 
@@ -1802,6 +1815,9 @@ yyparse ()
 
   YYDPRINTF ((stderr, "Entering state %d\n", yystate));
 
+  if (yystate == YYFINAL)
+    YYACCEPT;
+
   goto yybackup;
 
 /*-----------.
@@ -1810,16 +1826,16 @@ yyparse ()
 yybackup:
 
   /* Do appropriate processing given the current state.  Read a
-     look-ahead token if we need one and don't already have one.  */
+     lookahead token if we need one and don't already have one.  */
 
-  /* First try to decide what to do without reference to look-ahead token.  */
+  /* First try to decide what to do without reference to lookahead token.  */
   yyn = yypact[yystate];
   if (yyn == YYPACT_NINF)
     goto yydefault;
 
-  /* Not known => get a look-ahead token if don't already have one.  */
+  /* Not known => get a lookahead token if don't already have one.  */
 
-  /* YYCHAR is either YYEMPTY or YYEOF or a valid look-ahead symbol.  */
+  /* YYCHAR is either YYEMPTY or YYEOF or a valid lookahead symbol.  */
   if (yychar == YYEMPTY)
     {
       YYDPRINTF ((stderr, "Reading a token: "));
@@ -1851,20 +1867,16 @@ yybackup:
       goto yyreduce;
     }
 
-  if (yyn == YYFINAL)
-    YYACCEPT;
-
   /* Count tokens shifted since error; after three, turn off error
      status.  */
   if (yyerrstatus)
     yyerrstatus--;
 
-  /* Shift the look-ahead token.  */
+  /* Shift the lookahead token.  */
   YY_SYMBOL_PRINT ("Shifting", yytoken, &yylval, &yylloc);
 
-  /* Discard the shifted token unless it is eof.  */
-  if (yychar != YYEOF)
-    yychar = YYEMPTY;
+  /* Discard the shifted token.  */
+  yychar = YYEMPTY;
 
   yystate = yyn;
   *++yyvsp = yylval;
@@ -1904,6 +1916,8 @@ yyreduce:
   switch (yyn)
     {
         case 9:
+
+/* Line 1455 of yacc.c  */
 #line 112 "util/configparser.y"
     { 
 		OUTYY(("\nP(server:)\n")); 
@@ -1911,6 +1925,8 @@ yyreduce:
     break;
 
   case 90:
+
+/* Line 1455 of yacc.c  */
 #line 154 "util/configparser.y"
     {
 		struct config_stub* s;
@@ -1925,6 +1941,8 @@ yyreduce:
     break;
 
   case 97:
+
+/* Line 1455 of yacc.c  */
 #line 170 "util/configparser.y"
     {
 		struct config_stub* s;
@@ -1939,6 +1957,8 @@ yyreduce:
     break;
 
   case 103:
+
+/* Line 1455 of yacc.c  */
 #line 186 "util/configparser.y"
     { 
 		OUTYY(("P(server_num_threads:%s)\n", (yyvsp[(2) - (2)].str))); 
@@ -1950,6 +1970,8 @@ yyreduce:
     break;
 
   case 104:
+
+/* Line 1455 of yacc.c  */
 #line 195 "util/configparser.y"
     { 
 		OUTYY(("P(server_verbosity:%s)\n", (yyvsp[(2) - (2)].str))); 
@@ -1961,6 +1983,8 @@ yyreduce:
     break;
 
   case 105:
+
+/* Line 1455 of yacc.c  */
 #line 204 "util/configparser.y"
     { 
 		OUTYY(("P(server_statistics_interval:%s)\n", (yyvsp[(2) - (2)].str))); 
@@ -1974,6 +1998,8 @@ yyreduce:
     break;
 
   case 106:
+
+/* Line 1455 of yacc.c  */
 #line 215 "util/configparser.y"
     {
 		OUTYY(("P(server_statistics_cumulative:%s)\n", (yyvsp[(2) - (2)].str)));
@@ -1985,6 +2011,8 @@ yyreduce:
     break;
 
   case 107:
+
+/* Line 1455 of yacc.c  */
 #line 224 "util/configparser.y"
     {
 		OUTYY(("P(server_extended_statistics:%s)\n", (yyvsp[(2) - (2)].str)));
@@ -1996,6 +2024,8 @@ yyreduce:
     break;
 
   case 108:
+
+/* Line 1455 of yacc.c  */
 #line 233 "util/configparser.y"
     {
 		OUTYY(("P(server_port:%s)\n", (yyvsp[(2) - (2)].str)));
@@ -2007,6 +2037,8 @@ yyreduce:
     break;
 
   case 109:
+
+/* Line 1455 of yacc.c  */
 #line 242 "util/configparser.y"
     {
 		OUTYY(("P(server_interface:%s)\n", (yyvsp[(2) - (2)].str)));
@@ -2022,6 +2054,8 @@ yyreduce:
     break;
 
   case 110:
+
+/* Line 1455 of yacc.c  */
 #line 255 "util/configparser.y"
     {
 		OUTYY(("P(server_outgoing_interface:%s)\n", (yyvsp[(2) - (2)].str)));
@@ -2039,6 +2073,8 @@ yyreduce:
     break;
 
   case 111:
+
+/* Line 1455 of yacc.c  */
 #line 270 "util/configparser.y"
     {
 		OUTYY(("P(server_outgoing_range:%s)\n", (yyvsp[(2) - (2)].str)));
@@ -2050,6 +2086,8 @@ yyreduce:
     break;
 
   case 112:
+
+/* Line 1455 of yacc.c  */
 #line 279 "util/configparser.y"
     {
 		OUTYY(("P(server_outgoing_port_permit:%s)\n", (yyvsp[(2) - (2)].str)));
@@ -2061,6 +2099,8 @@ yyreduce:
     break;
 
   case 113:
+
+/* Line 1455 of yacc.c  */
 #line 288 "util/configparser.y"
     {
 		OUTYY(("P(server_outgoing_port_avoid:%s)\n", (yyvsp[(2) - (2)].str)));
@@ -2072,6 +2112,8 @@ yyreduce:
     break;
 
   case 114:
+
+/* Line 1455 of yacc.c  */
 #line 297 "util/configparser.y"
     {
 		OUTYY(("P(server_outgoing_num_tcp:%s)\n", (yyvsp[(2) - (2)].str)));
@@ -2083,6 +2125,8 @@ yyreduce:
     break;
 
   case 115:
+
+/* Line 1455 of yacc.c  */
 #line 306 "util/configparser.y"
     {
 		OUTYY(("P(server_incoming_num_tcp:%s)\n", (yyvsp[(2) - (2)].str)));
@@ -2094,6 +2138,8 @@ yyreduce:
     break;
 
   case 116:
+
+/* Line 1455 of yacc.c  */
 #line 315 "util/configparser.y"
     {
 		OUTYY(("P(server_interface_automatic:%s)\n", (yyvsp[(2) - (2)].str)));
@@ -2105,6 +2151,8 @@ yyreduce:
     break;
 
   case 117:
+
+/* Line 1455 of yacc.c  */
 #line 324 "util/configparser.y"
     {
 		OUTYY(("P(server_do_ip4:%s)\n", (yyvsp[(2) - (2)].str)));
@@ -2116,6 +2164,8 @@ yyreduce:
     break;
 
   case 118:
+
+/* Line 1455 of yacc.c  */
 #line 333 "util/configparser.y"
     {
 		OUTYY(("P(server_do_ip6:%s)\n", (yyvsp[(2) - (2)].str)));
@@ -2127,6 +2177,8 @@ yyreduce:
     break;
 
   case 119:
+
+/* Line 1455 of yacc.c  */
 #line 342 "util/configparser.y"
     {
 		OUTYY(("P(server_do_udp:%s)\n", (yyvsp[(2) - (2)].str)));
@@ -2138,6 +2190,8 @@ yyreduce:
     break;
 
   case 120:
+
+/* Line 1455 of yacc.c  */
 #line 351 "util/configparser.y"
     {
 		OUTYY(("P(server_do_tcp:%s)\n", (yyvsp[(2) - (2)].str)));
@@ -2149,6 +2203,8 @@ yyreduce:
     break;
 
   case 121:
+
+/* Line 1455 of yacc.c  */
 #line 360 "util/configparser.y"
     {
 		OUTYY(("P(server_do_daemonize:%s)\n", (yyvsp[(2) - (2)].str)));
@@ -2160,6 +2216,8 @@ yyreduce:
     break;
 
   case 122:
+
+/* Line 1455 of yacc.c  */
 #line 369 "util/configparser.y"
     {
 		OUTYY(("P(server_use_syslog:%s)\n", (yyvsp[(2) - (2)].str)));
@@ -2176,6 +2234,8 @@ yyreduce:
     break;
 
   case 123:
+
+/* Line 1455 of yacc.c  */
 #line 383 "util/configparser.y"
     {
 		OUTYY(("P(server_log_time_ascii:%s)\n", (yyvsp[(2) - (2)].str)));
@@ -2187,6 +2247,8 @@ yyreduce:
     break;
 
   case 124:
+
+/* Line 1455 of yacc.c  */
 #line 392 "util/configparser.y"
     {
 		OUTYY(("P(server_chroot:%s)\n", (yyvsp[(2) - (2)].str)));
@@ -2196,6 +2258,8 @@ yyreduce:
     break;
 
   case 125:
+
+/* Line 1455 of yacc.c  */
 #line 399 "util/configparser.y"
     {
 		OUTYY(("P(server_username:%s)\n", (yyvsp[(2) - (2)].str)));
@@ -2205,6 +2269,8 @@ yyreduce:
     break;
 
   case 126:
+
+/* Line 1455 of yacc.c  */
 #line 406 "util/configparser.y"
     {
 		OUTYY(("P(server_directory:%s)\n", (yyvsp[(2) - (2)].str)));
@@ -2214,6 +2280,8 @@ yyreduce:
     break;
 
   case 127:
+
+/* Line 1455 of yacc.c  */
 #line 413 "util/configparser.y"
     {
 		OUTYY(("P(server_logfile:%s)\n", (yyvsp[(2) - (2)].str)));
@@ -2224,6 +2292,8 @@ yyreduce:
     break;
 
   case 128:
+
+/* Line 1455 of yacc.c  */
 #line 421 "util/configparser.y"
     {
 		OUTYY(("P(server_pidfile:%s)\n", (yyvsp[(2) - (2)].str)));
@@ -2233,6 +2303,8 @@ yyreduce:
     break;
 
   case 129:
+
+/* Line 1455 of yacc.c  */
 #line 428 "util/configparser.y"
     {
 		OUTYY(("P(server_root_hints:%s)\n", (yyvsp[(2) - (2)].str)));
@@ -2242,6 +2314,8 @@ yyreduce:
     break;
 
   case 130:
+
+/* Line 1455 of yacc.c  */
 #line 435 "util/configparser.y"
     {
 		OUTYY(("P(server_dlv_anchor_file:%s)\n", (yyvsp[(2) - (2)].str)));
@@ -2251,6 +2325,8 @@ yyreduce:
     break;
 
   case 131:
+
+/* Line 1455 of yacc.c  */
 #line 442 "util/configparser.y"
     {
 		OUTYY(("P(server_dlv_anchor:%s)\n", (yyvsp[(2) - (2)].str)));
@@ -2260,6 +2336,8 @@ yyreduce:
     break;
 
   case 132:
+
+/* Line 1455 of yacc.c  */
 #line 449 "util/configparser.y"
     {
 		OUTYY(("P(server_trust_anchor_file:%s)\n", (yyvsp[(2) - (2)].str)));
@@ -2270,6 +2348,8 @@ yyreduce:
     break;
 
   case 133:
+
+/* Line 1455 of yacc.c  */
 #line 457 "util/configparser.y"
     {
 		OUTYY(("P(server_trusted_keys_file:%s)\n", (yyvsp[(2) - (2)].str)));
@@ -2280,6 +2360,8 @@ yyreduce:
     break;
 
   case 134:
+
+/* Line 1455 of yacc.c  */
 #line 465 "util/configparser.y"
     {
 		OUTYY(("P(server_trust_anchor:%s)\n", (yyvsp[(2) - (2)].str)));
@@ -2289,6 +2371,8 @@ yyreduce:
     break;
 
   case 135:
+
+/* Line 1455 of yacc.c  */
 #line 472 "util/configparser.y"
     {
 		OUTYY(("P(server_domain_insecure:%s)\n", (yyvsp[(2) - (2)].str)));
@@ -2298,6 +2382,8 @@ yyreduce:
     break;
 
   case 136:
+
+/* Line 1455 of yacc.c  */
 #line 479 "util/configparser.y"
     {
 		OUTYY(("P(server_hide_identity:%s)\n", (yyvsp[(2) - (2)].str)));
@@ -2309,6 +2395,8 @@ yyreduce:
     break;
 
   case 137:
+
+/* Line 1455 of yacc.c  */
 #line 488 "util/configparser.y"
     {
 		OUTYY(("P(server_hide_version:%s)\n", (yyvsp[(2) - (2)].str)));
@@ -2320,6 +2408,8 @@ yyreduce:
     break;
 
   case 138:
+
+/* Line 1455 of yacc.c  */
 #line 497 "util/configparser.y"
     {
 		OUTYY(("P(server_identity:%s)\n", (yyvsp[(2) - (2)].str)));
@@ -2329,6 +2419,8 @@ yyreduce:
     break;
 
   case 139:
+
+/* Line 1455 of yacc.c  */
 #line 504 "util/configparser.y"
     {
 		OUTYY(("P(server_version:%s)\n", (yyvsp[(2) - (2)].str)));
@@ -2338,6 +2430,8 @@ yyreduce:
     break;
 
   case 140:
+
+/* Line 1455 of yacc.c  */
 #line 511 "util/configparser.y"
     {
 		OUTYY(("P(server_msg_buffer_size:%s)\n", (yyvsp[(2) - (2)].str)));
@@ -2351,6 +2445,8 @@ yyreduce:
     break;
 
   case 141:
+
+/* Line 1455 of yacc.c  */
 #line 522 "util/configparser.y"
     {
 		OUTYY(("P(server_msg_cache_size:%s)\n", (yyvsp[(2) - (2)].str)));
@@ -2361,6 +2457,8 @@ yyreduce:
     break;
 
   case 142:
+
+/* Line 1455 of yacc.c  */
 #line 530 "util/configparser.y"
     {
 		OUTYY(("P(server_msg_cache_slabs:%s)\n", (yyvsp[(2) - (2)].str)));
@@ -2376,6 +2474,8 @@ yyreduce:
     break;
 
   case 143:
+
+/* Line 1455 of yacc.c  */
 #line 543 "util/configparser.y"
     {
 		OUTYY(("P(server_num_queries_per_thread:%s)\n", (yyvsp[(2) - (2)].str)));
@@ -2387,6 +2487,8 @@ yyreduce:
     break;
 
   case 144:
+
+/* Line 1455 of yacc.c  */
 #line 552 "util/configparser.y"
     {
 		OUTYY(("P(server_jostle_timeout:%s)\n", (yyvsp[(2) - (2)].str)));
@@ -2398,6 +2500,8 @@ yyreduce:
     break;
 
   case 145:
+
+/* Line 1455 of yacc.c  */
 #line 561 "util/configparser.y"
     {
 		OUTYY(("P(server_rrset_cache_size:%s)\n", (yyvsp[(2) - (2)].str)));
@@ -2408,6 +2512,8 @@ yyreduce:
     break;
 
   case 146:
+
+/* Line 1455 of yacc.c  */
 #line 569 "util/configparser.y"
     {
 		OUTYY(("P(server_rrset_cache_slabs:%s)\n", (yyvsp[(2) - (2)].str)));
@@ -2423,6 +2529,8 @@ yyreduce:
     break;
 
   case 147:
+
+/* Line 1455 of yacc.c  */
 #line 582 "util/configparser.y"
     {
 		OUTYY(("P(server_infra_host_ttl:%s)\n", (yyvsp[(2) - (2)].str)));
@@ -2434,6 +2542,8 @@ yyreduce:
     break;
 
   case 148:
+
+/* Line 1455 of yacc.c  */
 #line 591 "util/configparser.y"
     {
 		OUTYY(("P(server_infra_lame_ttl:%s)\n", (yyvsp[(2) - (2)].str)));
@@ -2445,6 +2555,8 @@ yyreduce:
     break;
 
   case 149:
+
+/* Line 1455 of yacc.c  */
 #line 600 "util/configparser.y"
     {
 		OUTYY(("P(server_infra_cache_numhosts:%s)\n", (yyvsp[(2) - (2)].str)));
@@ -2456,6 +2568,8 @@ yyreduce:
     break;
 
   case 150:
+
+/* Line 1455 of yacc.c  */
 #line 609 "util/configparser.y"
     {
 		OUTYY(("P(server_infra_cache_lame_size:%s)\n", (yyvsp[(2) - (2)].str)));
@@ -2467,6 +2581,8 @@ yyreduce:
     break;
 
   case 151:
+
+/* Line 1455 of yacc.c  */
 #line 618 "util/configparser.y"
     {
 		OUTYY(("P(server_infra_cache_slabs:%s)\n", (yyvsp[(2) - (2)].str)));
@@ -2482,6 +2598,8 @@ yyreduce:
     break;
 
   case 152:
+
+/* Line 1455 of yacc.c  */
 #line 631 "util/configparser.y"
     {
 		OUTYY(("P(server_target_fetch_policy:%s)\n", (yyvsp[(2) - (2)].str)));
@@ -2491,6 +2609,8 @@ yyreduce:
     break;
 
   case 153:
+
+/* Line 1455 of yacc.c  */
 #line 638 "util/configparser.y"
     {
 		OUTYY(("P(server_harden_short_bufsize:%s)\n", (yyvsp[(2) - (2)].str)));
@@ -2503,6 +2623,8 @@ yyreduce:
     break;
 
   case 154:
+
+/* Line 1455 of yacc.c  */
 #line 648 "util/configparser.y"
     {
 		OUTYY(("P(server_harden_large_queries:%s)\n", (yyvsp[(2) - (2)].str)));
@@ -2515,6 +2637,8 @@ yyreduce:
     break;
 
   case 155:
+
+/* Line 1455 of yacc.c  */
 #line 658 "util/configparser.y"
     {
 		OUTYY(("P(server_harden_glue:%s)\n", (yyvsp[(2) - (2)].str)));
@@ -2527,6 +2651,8 @@ yyreduce:
     break;
 
   case 156:
+
+/* Line 1455 of yacc.c  */
 #line 668 "util/configparser.y"
     {
 		OUTYY(("P(server_harden_dnssec_stripped:%s)\n", (yyvsp[(2) - (2)].str)));
@@ -2539,6 +2665,8 @@ yyreduce:
     break;
 
   case 157:
+
+/* Line 1455 of yacc.c  */
 #line 678 "util/configparser.y"
     {
 		OUTYY(("P(server_harden_referral_path:%s)\n", (yyvsp[(2) - (2)].str)));
@@ -2551,6 +2679,8 @@ yyreduce:
     break;
 
   case 158:
+
+/* Line 1455 of yacc.c  */
 #line 688 "util/configparser.y"
     {
 		OUTYY(("P(server_use_caps_for_id:%s)\n", (yyvsp[(2) - (2)].str)));
@@ -2563,6 +2693,8 @@ yyreduce:
     break;
 
   case 159:
+
+/* Line 1455 of yacc.c  */
 #line 698 "util/configparser.y"
     {
 		OUTYY(("P(server_private_address:%s)\n", (yyvsp[(2) - (2)].str)));
@@ -2572,6 +2704,8 @@ yyreduce:
     break;
 
   case 160:
+
+/* Line 1455 of yacc.c  */
 #line 705 "util/configparser.y"
     {
 		OUTYY(("P(server_private_domain:%s)\n", (yyvsp[(2) - (2)].str)));
@@ -2581,6 +2715,8 @@ yyreduce:
     break;
 
   case 161:
+
+/* Line 1455 of yacc.c  */
 #line 712 "util/configparser.y"
     {
 		OUTYY(("P(server_unwanted_reply_threshold:%s)\n", (yyvsp[(2) - (2)].str)));
@@ -2592,6 +2728,8 @@ yyreduce:
     break;
 
   case 162:
+
+/* Line 1455 of yacc.c  */
 #line 721 "util/configparser.y"
     {
 		OUTYY(("P(server_do_not_query_address:%s)\n", (yyvsp[(2) - (2)].str)));
@@ -2601,6 +2739,8 @@ yyreduce:
     break;
 
   case 163:
+
+/* Line 1455 of yacc.c  */
 #line 728 "util/configparser.y"
     {
 		OUTYY(("P(server_do_not_query_localhost:%s)\n", (yyvsp[(2) - (2)].str)));
@@ -2613,6 +2753,8 @@ yyreduce:
     break;
 
   case 164:
+
+/* Line 1455 of yacc.c  */
 #line 738 "util/configparser.y"
     {
 		OUTYY(("P(server_access_control:%s %s)\n", (yyvsp[(2) - (3)].str), (yyvsp[(3) - (3)].str)));
@@ -2629,6 +2771,8 @@ yyreduce:
     break;
 
   case 165:
+
+/* Line 1455 of yacc.c  */
 #line 752 "util/configparser.y"
     {
 		OUTYY(("P(server_module_conf:%s)\n", (yyvsp[(2) - (2)].str)));
@@ -2638,6 +2782,8 @@ yyreduce:
     break;
 
   case 166:
+
+/* Line 1455 of yacc.c  */
 #line 759 "util/configparser.y"
     {
 		OUTYY(("P(server_val_override_date:%s)\n", (yyvsp[(2) - (2)].str)));
@@ -2658,6 +2804,8 @@ yyreduce:
     break;
 
   case 167:
+
+/* Line 1455 of yacc.c  */
 #line 777 "util/configparser.y"
     {
 		OUTYY(("P(server_val_sig_skew_min:%s)\n", (yyvsp[(2) - (2)].str)));
@@ -2673,6 +2821,8 @@ yyreduce:
     break;
 
   case 168:
+
+/* Line 1455 of yacc.c  */
 #line 790 "util/configparser.y"
     {
 		OUTYY(("P(server_val_sig_skew_max:%s)\n", (yyvsp[(2) - (2)].str)));
@@ -2688,6 +2838,8 @@ yyreduce:
     break;
 
   case 169:
+
+/* Line 1455 of yacc.c  */
 #line 803 "util/configparser.y"
     {
 		OUTYY(("P(server_cache_max_ttl:%s)\n", (yyvsp[(2) - (2)].str)));
@@ -2699,6 +2851,8 @@ yyreduce:
     break;
 
   case 170:
+
+/* Line 1455 of yacc.c  */
 #line 812 "util/configparser.y"
     {
 		OUTYY(("P(server_cache_min_ttl:%s)\n", (yyvsp[(2) - (2)].str)));
@@ -2710,6 +2864,8 @@ yyreduce:
     break;
 
   case 171:
+
+/* Line 1455 of yacc.c  */
 #line 821 "util/configparser.y"
     {
 		OUTYY(("P(server_bogus_ttl:%s)\n", (yyvsp[(2) - (2)].str)));
@@ -2721,6 +2877,8 @@ yyreduce:
     break;
 
   case 172:
+
+/* Line 1455 of yacc.c  */
 #line 830 "util/configparser.y"
     {
 		OUTYY(("P(server_val_clean_additional:%s)\n", (yyvsp[(2) - (2)].str)));
@@ -2733,6 +2891,8 @@ yyreduce:
     break;
 
   case 173:
+
+/* Line 1455 of yacc.c  */
 #line 840 "util/configparser.y"
     {
 		OUTYY(("P(server_val_permissive_mode:%s)\n", (yyvsp[(2) - (2)].str)));
@@ -2745,6 +2905,8 @@ yyreduce:
     break;
 
   case 174:
+
+/* Line 1455 of yacc.c  */
 #line 850 "util/configparser.y"
     {
 		OUTYY(("P(server_val_nsec3_keysize_iterations:%s)\n", (yyvsp[(2) - (2)].str)));
@@ -2754,6 +2916,8 @@ yyreduce:
     break;
 
   case 175:
+
+/* Line 1455 of yacc.c  */
 #line 857 "util/configparser.y"
     {
 		OUTYY(("P(server_key_cache_size:%s)\n", (yyvsp[(2) - (2)].str)));
@@ -2764,6 +2928,8 @@ yyreduce:
     break;
 
   case 176:
+
+/* Line 1455 of yacc.c  */
 #line 865 "util/configparser.y"
     {
 		OUTYY(("P(server_key_cache_slabs:%s)\n", (yyvsp[(2) - (2)].str)));
@@ -2779,6 +2945,8 @@ yyreduce:
     break;
 
   case 177:
+
+/* Line 1455 of yacc.c  */
 #line 878 "util/configparser.y"
     {
 		OUTYY(("P(server_neg_cache_size:%s)\n", (yyvsp[(2) - (2)].str)));
@@ -2789,6 +2957,8 @@ yyreduce:
     break;
 
   case 178:
+
+/* Line 1455 of yacc.c  */
 #line 886 "util/configparser.y"
     {
 		OUTYY(("P(server_local_zone:%s %s)\n", (yyvsp[(2) - (3)].str), (yyvsp[(3) - (3)].str)));
@@ -2811,6 +2981,8 @@ yyreduce:
     break;
 
   case 179:
+
+/* Line 1455 of yacc.c  */
 #line 906 "util/configparser.y"
     {
 		OUTYY(("P(server_local_data:%s)\n", (yyvsp[(2) - (2)].str)));
@@ -2820,6 +2992,8 @@ yyreduce:
     break;
 
   case 180:
+
+/* Line 1455 of yacc.c  */
 #line 913 "util/configparser.y"
     {
 		char* ptr;
@@ -2837,6 +3011,8 @@ yyreduce:
     break;
 
   case 181:
+
+/* Line 1455 of yacc.c  */
 #line 928 "util/configparser.y"
     {
 		OUTYY(("P(name:%s)\n", (yyvsp[(2) - (2)].str)));
@@ -2846,6 +3022,8 @@ yyreduce:
     break;
 
   case 182:
+
+/* Line 1455 of yacc.c  */
 #line 935 "util/configparser.y"
     {
 		OUTYY(("P(stub-host:%s)\n", (yyvsp[(2) - (2)].str)));
@@ -2855,6 +3033,8 @@ yyreduce:
     break;
 
   case 183:
+
+/* Line 1455 of yacc.c  */
 #line 942 "util/configparser.y"
     {
 		OUTYY(("P(stub-addr:%s)\n", (yyvsp[(2) - (2)].str)));
@@ -2864,6 +3044,8 @@ yyreduce:
     break;
 
   case 184:
+
+/* Line 1455 of yacc.c  */
 #line 949 "util/configparser.y"
     {
 		OUTYY(("P(stub-prime:%s)\n", (yyvsp[(2) - (2)].str)));
@@ -2876,6 +3058,8 @@ yyreduce:
     break;
 
   case 185:
+
+/* Line 1455 of yacc.c  */
 #line 959 "util/configparser.y"
     {
 		OUTYY(("P(name:%s)\n", (yyvsp[(2) - (2)].str)));
@@ -2885,6 +3069,8 @@ yyreduce:
     break;
 
   case 186:
+
+/* Line 1455 of yacc.c  */
 #line 966 "util/configparser.y"
     {
 		OUTYY(("P(forward-host:%s)\n", (yyvsp[(2) - (2)].str)));
@@ -2894,6 +3080,8 @@ yyreduce:
     break;
 
   case 187:
+
+/* Line 1455 of yacc.c  */
 #line 973 "util/configparser.y"
     {
 		OUTYY(("P(forward-addr:%s)\n", (yyvsp[(2) - (2)].str)));
@@ -2903,6 +3091,8 @@ yyreduce:
     break;
 
   case 188:
+
+/* Line 1455 of yacc.c  */
 #line 980 "util/configparser.y"
     { 
 		OUTYY(("\nP(remote-control:)\n")); 
@@ -2910,6 +3100,8 @@ yyreduce:
     break;
 
   case 198:
+
+/* Line 1455 of yacc.c  */
 #line 991 "util/configparser.y"
     {
 		OUTYY(("P(control_enable:%s)\n", (yyvsp[(2) - (2)].str)));
@@ -2922,6 +3114,8 @@ yyreduce:
     break;
 
   case 199:
+
+/* Line 1455 of yacc.c  */
 #line 1001 "util/configparser.y"
     {
 		OUTYY(("P(control_port:%s)\n", (yyvsp[(2) - (2)].str)));
@@ -2933,6 +3127,8 @@ yyreduce:
     break;
 
   case 200:
+
+/* Line 1455 of yacc.c  */
 #line 1010 "util/configparser.y"
     {
 		OUTYY(("P(control_interface:%s)\n", (yyvsp[(2) - (2)].str)));
@@ -2942,6 +3138,8 @@ yyreduce:
     break;
 
   case 201:
+
+/* Line 1455 of yacc.c  */
 #line 1017 "util/configparser.y"
     {
 		OUTYY(("P(rc_server_key_file:%s)\n", (yyvsp[(2) - (2)].str)));
@@ -2951,6 +3149,8 @@ yyreduce:
     break;
 
   case 202:
+
+/* Line 1455 of yacc.c  */
 #line 1024 "util/configparser.y"
     {
 		OUTYY(("P(rc_server_cert_file:%s)\n", (yyvsp[(2) - (2)].str)));
@@ -2960,6 +3160,8 @@ yyreduce:
     break;
 
   case 203:
+
+/* Line 1455 of yacc.c  */
 #line 1031 "util/configparser.y"
     {
 		OUTYY(("P(rc_control_key_file:%s)\n", (yyvsp[(2) - (2)].str)));
@@ -2969,6 +3171,8 @@ yyreduce:
     break;
 
   case 204:
+
+/* Line 1455 of yacc.c  */
 #line 1038 "util/configparser.y"
     {
 		OUTYY(("P(rc_control_cert_file:%s)\n", (yyvsp[(2) - (2)].str)));
@@ -2978,6 +3182,8 @@ yyreduce:
     break;
 
   case 205:
+
+/* Line 1455 of yacc.c  */
 #line 1045 "util/configparser.y"
     { 
 		OUTYY(("\nP(python:)\n")); 
@@ -2985,6 +3191,8 @@ yyreduce:
     break;
 
   case 209:
+
+/* Line 1455 of yacc.c  */
 #line 1054 "util/configparser.y"
     {
 		OUTYY(("P(python-script:%s)\n", (yyvsp[(2) - (2)].str)));
@@ -2994,8 +3202,9 @@ yyreduce:
     break;
 
 
-/* Line 1267 of yacc.c.  */
-#line 2999 "util/configparser.c"
+
+/* Line 1455 of yacc.c  */
+#line 3208 "util/configparser.c"
       default: break;
     }
   YY_SYMBOL_PRINT ("-> $$ =", yyr1[yyn], &yyval, &yyloc);
@@ -3005,7 +3214,6 @@ yyreduce:
   YY_STACK_PRINT (yyss, yyssp);
 
   *++yyvsp = yyval;
-
 
   /* Now `shift' the result of the reduction.  Determine what state
      that goes to, based on the state we popped back to and the rule
@@ -3071,7 +3279,7 @@ yyerrlab:
 
   if (yyerrstatus == 3)
     {
-      /* If just tried and failed to reuse look-ahead token after an
+      /* If just tried and failed to reuse lookahead token after an
 	 error, discard it.  */
 
       if (yychar <= YYEOF)
@@ -3088,7 +3296,7 @@ yyerrlab:
 	}
     }
 
-  /* Else will try to reuse look-ahead token after shifting the error
+  /* Else will try to reuse lookahead token after shifting the error
      token.  */
   goto yyerrlab1;
 
@@ -3145,9 +3353,6 @@ yyerrlab1:
       YY_STACK_PRINT (yyss, yyssp);
     }
 
-  if (yyn == YYFINAL)
-    YYACCEPT;
-
   *++yyvsp = yylval;
 
 
@@ -3172,7 +3377,7 @@ yyabortlab:
   yyresult = 1;
   goto yyreturn;
 
-#ifndef yyoverflow
+#if !defined(yyoverflow) || YYERROR_VERBOSE
 /*-------------------------------------------------.
 | yyexhaustedlab -- memory exhaustion comes here.  |
 `-------------------------------------------------*/
@@ -3183,7 +3388,7 @@ yyexhaustedlab:
 #endif
 
 yyreturn:
-  if (yychar != YYEOF && yychar != YYEMPTY)
+  if (yychar != YYEMPTY)
      yydestruct ("Cleanup: discarding lookahead",
 		 yytoken, &yylval);
   /* Do not reclaim the symbols of the rule which action triggered
@@ -3209,6 +3414,8 @@ yyreturn:
 }
 
 
+
+/* Line 1675 of yacc.c  */
 #line 1059 "util/configparser.y"
 
 
