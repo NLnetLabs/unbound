@@ -219,35 +219,35 @@ int priv_rrset_bad(struct iter_priv* priv, ldns_buffer* pkt,
 		socklen_t len;
 		struct rr_parse* rr;
 		if(rrset->type == LDNS_RR_TYPE_A) {
-			struct sockaddr_storage addr;
-			struct sockaddr_in* sa = (struct sockaddr_in*)&addr;
-			len = (socklen_t)sizeof(*sa);
-			memset(sa, 0, len);
-			sa->sin_family = AF_INET;
-			sa->sin_port = (in_port_t)htons(UNBOUND_DNS_PORT);
+			struct sockaddr_in sa;
+			len = (socklen_t)sizeof(sa);
+			memset(&sa, 0, len);
+			sa.sin_family = AF_INET;
+			sa.sin_port = (in_port_t)htons(UNBOUND_DNS_PORT);
 			for(rr = rrset->rr_first; rr; rr = rr->next) {
 				if(ldns_read_uint16(rr->ttl_data+4) 
 					!= INET_SIZE)
 					continue;
-				memmove(&sa->sin_addr, rr->ttl_data+4+2, 
+				memmove(&sa.sin_addr, rr->ttl_data+4+2, 
 					INET_SIZE);
-				if(priv_lookup_addr(priv, &addr, len))
+				if(priv_lookup_addr(priv, 
+					(struct sockaddr_storage*)&sa, len))
 					return 1;
 			}
 		} else if(rrset->type == LDNS_RR_TYPE_AAAA) {
-			struct sockaddr_storage addr;
-			struct sockaddr_in6* sa = (struct sockaddr_in6*)&addr;
-			len = (socklen_t)sizeof(*sa);
-			memset(sa, 0, len);
-			sa->sin6_family = AF_INET6;
-			sa->sin6_port = (in_port_t)htons(UNBOUND_DNS_PORT);
+			struct sockaddr_in6 sa;
+			len = (socklen_t)sizeof(sa);
+			memset(&sa, 0, len);
+			sa.sin6_family = AF_INET6;
+			sa.sin6_port = (in_port_t)htons(UNBOUND_DNS_PORT);
 			for(rr = rrset->rr_first; rr; rr = rr->next) {
 				if(ldns_read_uint16(rr->ttl_data+4) 
 					!= INET6_SIZE)
 					continue;
-				memmove(&sa->sin6_addr, rr->ttl_data+4+2, 
+				memmove(&sa.sin6_addr, rr->ttl_data+4+2, 
 					INET6_SIZE);
-				if(priv_lookup_addr(priv, &addr, len))
+				if(priv_lookup_addr(priv, 
+					(struct sockaddr_storage*)&sa, len))
 					return 1;
 			}
 		} 
