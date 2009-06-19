@@ -1034,7 +1034,7 @@ char* cfg_ptr_reverse(char* str)
 	 * IPv6: (h.){32}.ip6.arpa.  */
 
 	if(addr_is_ip6(&addr, addrlen)) {
-		struct in6_addr* ad = &((struct sockaddr_in6*)&addr)->sin6_addr;
+		void* ad = &((struct sockaddr_in6*)&addr)->sin6_addr;
 		const char* hex = "0123456789abcdef";
 		char *p = buf;
 		int i;

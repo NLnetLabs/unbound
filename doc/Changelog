@@ -1,5 +1,6 @@
 19 June 2009: Wouter
 	- Fixup strict aliasing warning in iter priv code.
+	  and config_file code.
 	- iana portlist updated.
 
 18 June 2009: Wouter
