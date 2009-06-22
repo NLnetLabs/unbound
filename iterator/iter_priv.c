@@ -210,6 +210,9 @@ size_t priv_get_mem(struct iter_priv* priv)
 int priv_rrset_bad(struct iter_priv* priv, ldns_buffer* pkt,
 	struct rrset_parse* rrset)
 {
+	if(priv->a.count == 0) 
+		return 0; /* there are no blocked addresses */
+
 	/* see if it is a private name, that is allowed to have any */
 	if(priv_lookup_name(priv, pkt, rrset->dname, rrset->dname_len,
 		ntohs(rrset->rrset_class))) {
@@ -219,7 +222,9 @@ int priv_rrset_bad(struct iter_priv* priv, ldns_buffer* pkt,
 		socklen_t len;
 		struct rr_parse* rr;
 		if(rrset->type == LDNS_RR_TYPE_A) {
+			struct sockaddr_storage addr;
 			struct sockaddr_in sa;
+
 			len = (socklen_t)sizeof(sa);
 			memset(&sa, 0, len);
 			sa.sin_family = AF_INET;
@@ -230,11 +235,12 @@ int priv_rrset_bad(struct iter_priv* priv, ldns_buffer* pkt,
 					continue;
 				memmove(&sa.sin_addr, rr->ttl_data+4+2, 
 					INET_SIZE);
-				if(priv_lookup_addr(priv, 
-					(struct sockaddr_storage*)&sa, len))
+				memmove(&addr, &sa, len);
+				if(priv_lookup_addr(priv, &addr, len))
 					return 1;
 			}
 		} else if(rrset->type == LDNS_RR_TYPE_AAAA) {
+			struct sockaddr_storage addr;
 			struct sockaddr_in6 sa;
 			len = (socklen_t)sizeof(sa);
 			memset(&sa, 0, len);
@@ -246,8 +252,8 @@ int priv_rrset_bad(struct iter_priv* priv, ldns_buffer* pkt,
 					continue;
 				memmove(&sa.sin6_addr, rr->ttl_data+4+2, 
 					INET6_SIZE);
-				if(priv_lookup_addr(priv, 
-					(struct sockaddr_storage*)&sa, len))
+				memmove(&addr, &sa, len);
+				if(priv_lookup_addr(priv, &addr, len)) 
 					return 1;
 			}
 		} 
