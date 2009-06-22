@@ -2,6 +2,7 @@
 	- fixup iter priv strict aliasing while preserving size of sockaddr.
 	- iana portlist updated.  (one less port allocated, one more fraction
 	  of a bit for security!)
+	- updated fedora specfile in contrib from Paul Wouters.
 	
 19 June 2009: Wouter
 	- Fixup strict aliasing warning in iter priv code.

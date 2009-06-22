@@ -1,25 +1,42 @@
+# not ready yet
+%{?!with_python:      %define with_python      0}
+
+%if %{with_python}
+%{!?python_sitelib: %global python_sitelib %(%{__python} -c "from distutils.sysconfig import get_python_lib; print get_python_lib()")}
+%{!?python_sitearch: %global python_sitearch %(%{__python} -c "from distutils.sysconfig import get_python_lib; print get_python_lib(1)")}
+%endif
+
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
-Version: 1.2.1rc1
-Release: 1%{?dist}
+Version: 1.3.0
+Release: 2%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
 Source: http://www.unbound.net/downloads/%{name}-%{version}.tar.gz
 Source1: unbound.init
 Source2: unbound.conf
 Source3: unbound.munin
+# See the unbound svn repository for further documentation on these
+Patch1: unbound-r1657.patch
+Patch2: unbound-r1670.patch
+Patch3: unbound-r1677.patch
+Patch4: unbound-1.2-glob.patch
+
 Group: System Environment/Daemons
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
-BuildRequires: flex, openssl-devel >= 0.9.8g-12, ldns-devel >= 1.5.0, 
-BuildRequires: libevent-devel >= 1.4.5
+BuildRequires: flex, openssl-devel , ldns-devel >= 1.5.0, 
+BuildRequires: libevent-devel 
+%if %{with_python}
+BuildRequires:  python-devel
+%endif
+
 Requires(post): chkconfig
 Requires(preun): chkconfig
 Requires(preun): initscripts
 Requires(postun): initscripts
-Requires: ldns >= 1.5.0
+Requires: ldns >= 1.5.0, dnssec-conf >= 1.19
 Requires(pre): shadow-utils
-# Is this obsolete?
-#Provides: caching-nameserver
+Requires: dnssec-conf
 
 %description
 Unbound is a validating, recursive, and caching DNS(SEC) resolver.
@@ -59,14 +76,32 @@ Requires: openssl >= 0.9.8g-12
 %description libs
 Contains libraries used by the unbound server and client applications
 
+%if %{with_python}
+%package python
+Summary: Python modules and extensions for unbound
+Group: Applications/System
+Requires: %{name}-libs = %{version}-%{release}
+
+%description python
+Python modules and extensions for unbound
+%endif
+
 %prep
 %setup -q 
+%patch1
+%patch2
+%patch3
+%patch4 -p1
 
 %build
-%configure  --with-ldns= -with-libevent --with-pthreads --with-ssl \
+%configure  --with-ldns= --with-libevent --with-pthreads --with-ssl \
             --disable-rpath --enable-debug --disable-static \
             --with-conf-file=%{_sysconfdir}/%{name}/unbound.conf \
-            --with-pidfile=%{_localstatedir}/run/%{name}/%{name}.pid
+            --with-pidfile=%{_localstatedir}/run/%{name}/%{name}.pid \
+%if %{with_python}
+            --with-pythonmodule --with-pyunbound \
+%endif
+            --enable-sha2 
 %{__make} CFLAGS="$RPM_OPT_FLAGS -D_GNU_SOURCE" QUIET=no %{?_smp_mflags}
 
 %install
@@ -102,6 +137,11 @@ rm -rf ${RPM_BUILD_ROOT}
 %{_sbindir}/*
 %{_mandir}/*/*
 
+%if %{with_python}
+%files python
+%{python_sitelib}/*
+%endif
+
 %files munin
 %defattr(-,root,root,-)
 %config(noreplace) %{_sysconfdir}/munin/plugin-conf.d/unbound
@@ -125,11 +165,19 @@ useradd -r -g unbound -d %{_sysconfdir}/unbound -s /sbin/nologin \
 -c "Unbound DNS resolver" unbound
 exit 0
 
-%post 
+%post
 /sbin/chkconfig --add %{name}
+# Check DNSSEC settings if this is a fresh install
+if [ "$1" -eq 1 ]; then
+  if [ -r /etc/sysconfig/dnssec ]; then
+    . /etc/sysconfig/dnssec
+    [ -x /usr/sbin/dnssec-configure ] && \
+      dnssec-configure -u --norestart --nocheck --dnssec="$DNSSEC" --dlv="$DLV" > \
+        /dev/null 2>&1
+  fi;
+fi
 
 %post libs -p /sbin/ldconfig
-
 
 %preun
 if [ "$1" -eq 0 ]; then
@@ -145,6 +193,42 @@ fi
 %postun libs -p /sbin/ldconfig
 
 %changelog
+* Sat Jun 20 2009 Paul Wouters <paul@xelerance.com> - 1.3.0-2
+- Added missing glob patch to cvs
+- Place python macros within the %%with_python check
+
+* Sat Jun 20 2009 Paul Wouters <paul@xelerance.com> - 1.3.0-1
+- Updated to 1.3.0
+- Added unbound-python sub package. disabled for now
+- Patch from svn to fix DLV lookups
+- Patches from svn to detect wrong truncated response from BIND 9.6.1 with
+  minimal-responses)
+- Added Default-Start and Default-Stop to unbound.init
+- Re-enabled --enable-sha2
+- Re-enabled glob.patch
+
+* Wed May 20 2009 Paul Wouters <paul@xelerance.com> - 1.2.1-7
+- unbound-iterator.patch was not commited
+
+* Wed May 20 2009 Paul Wouters <paul@xelerance.com> - 1.2.1-6
+- Fix for https://bugzilla.redhat.com/show_bug.cgi?id=499793
+
+* Tue Mar 17 2009 Paul Wouters <paul@xelerance.com> - 1.2.1-5
+- Use --nocheck to avoid giving an error on missing unbound-remote certs/keys
+
+* Tue Mar 10 2009 Adam Tkac <atkac redhat com> - 1.2.1-4
+- enable DNSSEC only if it is enabled in sysconfig/dnssec
+
+* Mon Mar 09 2009 Adam Tkac <atkac redhat com> - 1.2.1-3
+- add DNSSEC support to initscript and enabled it per default
+- add requires dnssec-conf
+
+* Wed Feb 25 2009 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 1.2.1-2
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_11_Mass_Rebuild
+
+* Tue Feb 10 2009 Paul Wouters <paul@xelerance.com - 1.2.1-1
+- updated to 1.2.1
+
 * Sun Jan 18 2009 Tomas Mraz <tmraz@redhat.com> - 1.2.0-2
 - rebuild with new openssl
 
