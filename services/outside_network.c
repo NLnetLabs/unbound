@@ -1234,7 +1234,8 @@ serviced_udp_send(struct serviced_query* sq, ldns_buffer* buff)
 		&edns_lame_known, &rtt))
 		return 0;
 	if(sq->status == serviced_initial) {
-		if(edns_lame_known == 0 && rtt > 5000) {
+		if((vs != -1 || edns_lame_known == 0) && 
+			rtt > 5000 && rtt < 10001) {
 			/* perform EDNS lame probe - check if server is
 			 * EDNS lame (EDNS queries to it are dropped) */
 			verbose(VERB_ALGO, "serviced query: send probe to see "

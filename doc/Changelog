@@ -1,3 +1,7 @@
+26 June 2009: Wouter
+	- Fix EDNS fallback when EDNS works for short answers but long answers
+	  are dropped.
+
 22 June 2009: Wouter
 	- fixup iter priv strict aliasing while preserving size of sockaddr.
 	- iana portlist updated.  (one less port allocated, one more fraction

@@ -235,6 +235,9 @@ o EDNS fallback. Is done according to the EDNS RFC (and update draft-00).
   It minimizes the chances of a dropped query making a (DNSSEC) EDNS server
   falsely EDNS-nonsupporting, and thus DNSSEC-bogus, works well with 
   middleboxes, and can detect the occasional authority that drops EDNS.
+  For some boxes it is necessary to probe for every failing query, a
+  reassurance that the DNS server does EDNS does not mean that path can
+  take large DNS answers.
 
 o 0x20 backoff.
   The draft describes to back off to the next server, and go through all
