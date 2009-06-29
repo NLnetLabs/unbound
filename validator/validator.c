@@ -479,7 +479,8 @@ validate_msg_signatures(struct module_env* env, struct val_env* ve,
 }
 
 /**
- * Detect wrong truncated response (from BIND 9.6.1 with minimal-responses).
+ * Detect wrong truncated response (say from BIND 9.6.1 that is forwarding
+ * and saw the NS record without signatures from a referral).
  * The positive response has a mangled authority section.
  * Remove that authority section.
  * @param rep: reply
@@ -489,12 +490,25 @@ static int
 detect_wrongly_truncated(struct reply_info* rep)
 {
 	size_t i;
+	/* DEBUG printout */
+	log_info("detect_wrongly_truncated debug printout");
+	log_info("rep an %d ns %d ar %d c %d", (int)rep->an_numrrsets,
+		(int)rep->ns_numrrsets, (int)rep->ar_numrrsets,
+		(int)rep->rrset_count);
+
 	/* no additional, only NS in authority, and it is bogus */
 	if(rep->ar_numrrsets != 0 || rep->ns_numrrsets != 1 ||
 		rep->an_numrrsets == 0)
 		return 0;
 	if(ntohs(rep->rrsets[ rep->an_numrrsets ]->rk.type) != LDNS_RR_TYPE_NS)
 		return 0;
+	log_nametypeclass(0, "NSRR", rep->rrsets[ rep->an_numrrsets ]->rk.dname,
+		ntohs(rep->rrsets[ rep->an_numrrsets ]->rk.type), 
+		ntohs(rep->rrsets[ rep->an_numrrsets ]->rk.rrset_class));
+	log_info("sec %d %s", ((struct packed_rrset_data*)rep->rrsets[ 
+		rep->an_numrrsets ] ->entry.data)->security,
+		sec_status_to_string(((struct packed_rrset_data*)rep->rrsets[ 
+		rep->an_numrrsets ] ->entry.data)->security));
 	if(((struct packed_rrset_data*)rep->rrsets[ rep->an_numrrsets ]
 		->entry.data)->security != sec_status_bogus)
 		return 0;
