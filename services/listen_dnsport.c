@@ -92,11 +92,15 @@ create_udp_sock(int family, int socktype, struct sockaddr* addr,
         socklen_t addrlen, int v6only, int* inuse, int* noproto)
 {
 	int s;
-# if defined(IPV6_USE_MIN_MTU)
+#if defined(IPV6_USE_MIN_MTU)
 	int on=1;
-# else
+#endif
+#ifdef IPV6_MTU
+	int mtu = IPV6_MIN_MTU;
+#endif
+#ifndef IPV6_V6ONLY
 	(void)v6only;
-# endif
+#endif
 	if((s = socket(family, socktype, 0)) == -1) {
 		*inuse = 0;
 #ifndef USE_WINSOCK
@@ -150,21 +154,42 @@ create_udp_sock(int family, int socktype, struct sockaddr* addr,
 		 */
 		if (setsockopt(s, IPPROTO_IPV6, IPV6_USE_MIN_MTU,
 			(void*)&on, (socklen_t)sizeof(on)) < 0) {
-#ifndef USE_WINSOCK
+#  ifndef USE_WINSOCK
 			log_err("setsockopt(..., IPV6_USE_MIN_MTU, "
 				"...) failed: %s", strerror(errno));
 			close(s);
-#else
+#  else
 			log_err("setsockopt(..., IPV6_USE_MIN_MTU, "
 				"...) failed: %s", 
 				wsa_strerror(WSAGetLastError()));
 			closesocket(s);
-#endif
+#  endif
 			*noproto = 0;
 			*inuse = 0;
 			return -1;
 		}
-# endif
+# elif defined(IPV6_MTU)
+		/*
+		 * On Linux, to send no larger than 1280, the PMTUD is
+		 * disabled by default for datagrams anyway, so we set
+		 * the MTU to use.
+		 */
+		if (setsockopt(s, IPPROTO_IPV6, IPV6_MTU,
+			(void*)&mtu, (socklen_t)sizeof(mtu)) < 0) {
+#  ifndef USE_WINSOCK
+			log_err("setsockopt(..., IPV6_MTU, ...) failed: %s", 
+				strerror(errno));
+			close(s);
+#  else
+			log_err("setsockopt(..., IPV6_MTU, ...) failed: %s", 
+				wsa_strerror(WSAGetLastError()));
+			closesocket(s);
+#  endif
+			*noproto = 0;
+			*inuse = 0;
+			return -1;
+		}
+# endif /* IPv6 MTU */
 	}
 	if(bind(s, (struct sockaddr*)addr, addrlen) != 0) {
 		*noproto = 0;

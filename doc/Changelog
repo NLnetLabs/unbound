@@ -2,6 +2,8 @@
 	- ldns trunk r2959 imported as tarball, because of solaris cc compile
 	  support for c99.  r2960 for better configure.
 	- better wrongly_truncated check.
+	- On Linux, fragment IPv6 datagrams to the IPv6 minimum MTU, to
+	  avoid dropped packets at routers.
 
 26 June 2009: Wouter
 	- Fix EDNS fallback when EDNS works for short answers but long answers
