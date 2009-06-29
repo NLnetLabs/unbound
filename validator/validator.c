@@ -482,7 +482,7 @@ validate_msg_signatures(struct module_env* env, struct val_env* ve,
  * Detect wrong truncated response (say from BIND 9.6.1 that is forwarding
  * and saw the NS record without signatures from a referral).
  * The positive response has a mangled authority section.
- * Remove that authority section.
+ * Remove that authority section and the additional section.
  * @param rep: reply
  * @return true if a wrongly truncated response.
  */
@@ -496,9 +496,8 @@ detect_wrongly_truncated(struct reply_info* rep)
 		(int)rep->ns_numrrsets, (int)rep->ar_numrrsets,
 		(int)rep->rrset_count);
 
-	/* no additional, only NS in authority, and it is bogus */
-	if(rep->ar_numrrsets != 0 || rep->ns_numrrsets != 1 ||
-		rep->an_numrrsets == 0)
+	/* only NS in authority, and it is bogus */
+	if(rep->ns_numrrsets != 1 || rep->an_numrrsets == 0)
 		return 0;
 	if(ntohs(rep->rrsets[ rep->an_numrrsets ]->rk.type) != LDNS_RR_TYPE_NS)
 		return 0;
@@ -510,7 +509,7 @@ detect_wrongly_truncated(struct reply_info* rep)
 		sec_status_to_string(((struct packed_rrset_data*)rep->rrsets[ 
 		rep->an_numrrsets ] ->entry.data)->security));
 	if(((struct packed_rrset_data*)rep->rrsets[ rep->an_numrrsets ]
-		->entry.data)->security != sec_status_bogus)
+		->entry.data)->security == sec_status_secure)
 		return 0;
 	/* answer section is present and secure */
 	for(i=0; i<rep->an_numrrsets; i++) {
@@ -1507,9 +1506,13 @@ processValidate(struct module_qstate* qstate, struct val_qstate* vq,
 			detect_wrongly_truncated(vq->orig_msg->rep)) {
 			/* truncate the message some more */
 			vq->orig_msg->rep->ns_numrrsets = 0;
-			vq->orig_msg->rep->rrset_count--;
+			vq->orig_msg->rep->ar_numrrsets = 0;
+			vq->orig_msg->rep->rrset_count = 
+				vq->orig_msg->rep->an_numrrsets;
 			vq->chase_reply->ns_numrrsets = 0;
-			vq->chase_reply->rrset_count--;
+			vq->chase_reply->ar_numrrsets = 0;
+			vq->chase_reply->rrset_count = 
+				vq->chase_reply->an_numrrsets;
 		}
 		else {
 			verbose(VERB_DETAIL, "Validate: message contains "
