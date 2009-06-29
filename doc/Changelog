@@ -1,6 +1,6 @@
 29 June 2009: Wouter
 	- ldns trunk r2959 imported as tarball, because of solaris cc compile
-	  support for c99.
+	  support for c99.  r2960 for better configure.
 	- better wrongly_truncated check.
 
 26 June 2009: Wouter
