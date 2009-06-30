@@ -663,6 +663,21 @@ val_check_nonsecure(struct val_env* ve, struct reply_info* rep)
 			 * But this rrset did not verify.
 			 * Therefore the message is bogus.
 			 */
+
+			/* check if authority consists of only an NS record
+			 * which is bad, and there is an answer section with
+			 * data.  In that case, delete NS and additional to 
+			 * be lenient and make a minimal response */
+			if(rep->an_numrrsets != 0 && rep->ns_numrrsets == 1 &&
+				ntohs(rep->rrsets[i]->rk.type) 
+				== LDNS_RR_TYPE_NS) {
+				verbose(VERB_ALGO, "truncate to minimal");
+				rep->ns_numrrsets = 0;
+				rep->ar_numrrsets = 0;
+				rep->rrset_count = rep->an_numrrsets;
+				return;
+			}
+
 			log_nametypeclass(VERB_QUERY, "message is bogus, "
 				"non secure rrset",
 				rep->rrsets[i]->rk.dname, 
