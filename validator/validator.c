@@ -490,24 +490,11 @@ static int
 detect_wrongly_truncated(struct reply_info* rep)
 {
 	size_t i;
-	/* DEBUG printout */
-	log_info("detect_wrongly_truncated debug printout");
-	log_info("rep an %d ns %d ar %d c %d", (int)rep->an_numrrsets,
-		(int)rep->ns_numrrsets, (int)rep->ar_numrrsets,
-		(int)rep->rrset_count);
-
 	/* only NS in authority, and it is bogus */
 	if(rep->ns_numrrsets != 1 || rep->an_numrrsets == 0)
 		return 0;
 	if(ntohs(rep->rrsets[ rep->an_numrrsets ]->rk.type) != LDNS_RR_TYPE_NS)
 		return 0;
-	log_nametypeclass(0, "NSRR", rep->rrsets[ rep->an_numrrsets ]->rk.dname,
-		ntohs(rep->rrsets[ rep->an_numrrsets ]->rk.type), 
-		ntohs(rep->rrsets[ rep->an_numrrsets ]->rk.rrset_class));
-	log_info("sec %d %s", ((struct packed_rrset_data*)rep->rrsets[ 
-		rep->an_numrrsets ] ->entry.data)->security,
-		sec_status_to_string(((struct packed_rrset_data*)rep->rrsets[ 
-		rep->an_numrrsets ] ->entry.data)->security));
 	if(((struct packed_rrset_data*)rep->rrsets[ rep->an_numrrsets ]
 		->entry.data)->security == sec_status_secure)
 		return 0;
@@ -517,6 +504,7 @@ detect_wrongly_truncated(struct reply_info* rep)
 			->entry.data)->security != sec_status_secure)
 			return 0;
 	}
+	verbose(VERB_ALGO, "truncating to minimal response");
 	return 1;
 }
 
