@@ -1490,7 +1490,8 @@ processValidate(struct module_qstate* qstate, struct val_qstate* vq,
 		/* workaround bad recursor out there that truncates (even
 		 * with EDNS4k) to 512 by removing RRSIG from auth section
 		 * for positive replies*/
-		if(subtype == VAL_CLASS_POSITIVE &&
+		if((subtype == VAL_CLASS_POSITIVE || subtype == VAL_CLASS_ANY
+			|| subtype == VAL_CLASS_CNAME) &&
 			detect_wrongly_truncated(vq->orig_msg->rep)) {
 			/* truncate the message some more */
 			vq->orig_msg->rep->ns_numrrsets = 0;
