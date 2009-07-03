@@ -2,8 +2,10 @@
 # Copyright 2009, Wouter Wijngaards, NLnet Labs.   
 # BSD licensed.
 #
-# Version 1
-# 2009-04-23
+# Version 2
+# 2009-07-03
+# Changelog
+# - fixup LDFLAGS for empty ssl dir.
 #
 # Automates some of the checking constructs.  Aims at portability for POSIX.
 # Documentation for functions is below.
@@ -592,7 +594,7 @@ AC_ARG_WITH(ssl, AC_HELP_STRING([--with-ssl=pathname],
             AC_MSG_RESULT(found in $ssldir)
             HAVE_SSL=yes
 	    dnl assume /usr is already in the lib and dynlib paths.
-	    if test "$ssldir" != "/usr"; then
+	    if test "$ssldir" != "/usr" -a "$ssldir" != ""; then
                 LDFLAGS="$LDFLAGS -L$ssldir/lib"
 		ACX_RUNTIME_PATH_ADD([$ssldir/lib])
 	    fi

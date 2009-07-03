@@ -408,8 +408,8 @@ large outgoing port ranges.  ])
 		fi
         else
             AC_MSG_RESULT(found in $thedir)
-	    dnl assume /usr is in default path.
-	    if test "$thedir" != "/usr"; then
+	    dnl assume /usr is in default path, do not add "".
+	    if test "$thedir" != "/usr" -a "$thedir" != ""; then
                 LDFLAGS="$LDFLAGS -L$thedir/lib"
 		ACX_RUNTIME_PATH_ADD([$thedir/lib])
 	    fi
@@ -512,9 +512,11 @@ use_ldns_builtin="no"
 AC_ARG_WITH(ldns, AC_HELP_STRING([--with-ldns=PATH], 
 	[specify prefix of path of ldns library to use]), 
 	[ specialldnsdir="$withval"
-	CPPFLAGS="-I$withval/include $CPPFLAGS"
-	LDFLAGS="-L$withval -L$withval/lib $LDFLAGS"
-	ACX_RUNTIME_PATH_ADD([$withval/lib])
+	if test "$withval" != ""; then
+		CPPFLAGS="-I$withval/include $CPPFLAGS"
+		LDFLAGS="-L$withval -L$withval/lib $LDFLAGS"
+		ACX_RUNTIME_PATH_ADD([$withval/lib])
+	fi
 	ldnsdir="$withval"
 	AC_SUBST(ldnsdir)
 ])

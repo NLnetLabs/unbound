@@ -16891,7 +16891,7 @@ $as_echo "$as_me: error: Cannot find the SSL libraries in $withval" >&2;}
             { $as_echo "$as_me:$LINENO: result: found in $ssldir" >&5
 $as_echo "found in $ssldir" >&6; }
             HAVE_SSL=yes
-	    	    if test "$ssldir" != "/usr"; then
+	    	    if test "$ssldir" != "/usr" -a "$ssldir" != ""; then
                 LDFLAGS="$LDFLAGS -L$ssldir/lib"
 
 	if test "x$enable_rpath" = xyes; then
@@ -17805,7 +17805,7 @@ large outgoing port ranges.  " >&2;}
         else
             { $as_echo "$as_me:$LINENO: result: found in $thedir" >&5
 $as_echo "found in $thedir" >&6; }
-	    	    if test "$thedir" != "/usr"; then
+	    	    if test "$thedir" != "/usr" -a "$thedir" != ""; then
                 LDFLAGS="$LDFLAGS -L$thedir/lib"
 
 	if test "x$enable_rpath" = xyes; then
@@ -21826,8 +21826,9 @@ use_ldns_builtin="no"
 # Check whether --with-ldns was given.
 if test "${with_ldns+set}" = set; then
   withval=$with_ldns;  specialldnsdir="$withval"
-	CPPFLAGS="-I$withval/include $CPPFLAGS"
-	LDFLAGS="-L$withval -L$withval/lib $LDFLAGS"
+	if test "$withval" != ""; then
+		CPPFLAGS="-I$withval/include $CPPFLAGS"
+		LDFLAGS="-L$withval -L$withval/lib $LDFLAGS"
 
 	if test "x$enable_rpath" = xyes; then
 		if echo "$withval/lib" | grep "^/" >/dev/null; then
@@ -21835,6 +21836,7 @@ if test "${with_ldns+set}" = set; then
 		fi
 	fi
 
+	fi
 	ldnsdir="$withval"
 
 
