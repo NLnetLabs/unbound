@@ -8,8 +8,8 @@
 
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
-Version: 1.3.0
-Release: 2%{?dist}
+Version: 1.3.1rc2
+Release: 1%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
 Source: http://www.unbound.net/downloads/%{name}-%{version}.tar.gz
@@ -17,10 +17,7 @@ Source1: unbound.init
 Source2: unbound.conf
 Source3: unbound.munin
 # See the unbound svn repository for further documentation on these
-Patch1: unbound-r1657.patch
-Patch2: unbound-r1670.patch
-Patch3: unbound-r1677.patch
-Patch4: unbound-1.2-glob.patch
+Patch0: unbound-1.2-glob.patch
 
 Group: System Environment/Daemons
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
@@ -36,7 +33,6 @@ Requires(preun): initscripts
 Requires(postun): initscripts
 Requires: ldns >= 1.5.0, dnssec-conf >= 1.19
 Requires(pre): shadow-utils
-Requires: dnssec-conf
 
 %description
 Unbound is a validating, recursive, and caching DNS(SEC) resolver.
@@ -88,10 +84,7 @@ Python modules and extensions for unbound
 
 %prep
 %setup -q 
-%patch1
-%patch2
-%patch3
-%patch4 -p1
+%patch0 -p1
 
 %build
 %configure  --with-ldns= --with-libevent --with-pthreads --with-ssl \
