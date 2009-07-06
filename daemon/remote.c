@@ -168,38 +168,27 @@ daemon_remote_create(struct config_file* cfg)
 	s_key = fname_after_chroot(cfg->server_key_file, cfg, 1);
 	if(!s_cert || !s_key) {
 		log_err("out of memory in remote control fname");
-		free(s_cert);
-		free(s_key);
-		daemon_remote_delete(rc);
-		return NULL;
+		goto setup_error;
 	}
 	verbose(VERB_ALGO, "setup SSL certificates");
 	if (!SSL_CTX_use_certificate_file(rc->ctx,s_cert,SSL_FILETYPE_PEM)) {
 		log_err("Error for server-cert-file: %s", s_cert);
 		log_crypto_err("Error in SSL_CTX use_certificate_file");
-		free(s_cert);
-		free(s_key);
-		daemon_remote_delete(rc);
-		return NULL;
+		goto setup_error;
 	}
 	if(!SSL_CTX_use_PrivateKey_file(rc->ctx,s_key,SSL_FILETYPE_PEM)) {
 		log_err("Error for server-key-file: %s", s_key);
 		log_crypto_err("Error in SSL_CTX use_PrivateKey_file");
-		free(s_cert);
-		free(s_key);
-		daemon_remote_delete(rc);
-		return NULL;
+		goto setup_error;
 	}
 	if(!SSL_CTX_check_private_key(rc->ctx)) {
 		log_err("Error for server-key-file: %s", s_key);
 		log_crypto_err("Error in SSL_CTX check_private_key");
-		free(s_cert);
-		free(s_key);
-		daemon_remote_delete(rc);
-		return NULL;
+		goto setup_error;
 	}
 	if(!SSL_CTX_load_verify_locations(rc->ctx, s_cert, NULL)) {
 		log_crypto_err("Error setting up SSL_CTX verify locations");
+	setup_error:
 		free(s_cert);
 		free(s_key);
 		daemon_remote_delete(rc);
