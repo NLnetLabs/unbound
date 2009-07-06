@@ -1,4 +1,4 @@
-# not ready yet
+# initial python set up
 %{?!with_python:      %define with_python      0}
 
 %if %{with_python}
