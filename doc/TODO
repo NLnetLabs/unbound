@@ -103,6 +103,90 @@ o infra and lame cache: easier size config (in Mb), show usage in graphs.
 	then perform DNSKEY query) if that DNSKEY query fails servfail,
 	perform the x8 lameness retry fallback.
 
+Retry harder to get valid DNSSEC data.
+Triggered by a trust anchor or by a signed DS record for a zone.
+* If data is fetched and validation fails for it
+  or DNSKEY is fetched and validated into chain-of-trust fails for it
+  or DS is fetched and validated into chain-of-trust fails for it
+  Then
+  	blame(signer zone, IP origin of the data/DNSKEY/DS, x2)
+* If data was not fetched (SERVFAIL, lame, ...), and the data
+  is under a signed DS then:
+  	blame(thatDSname, IP origin of the data/DNSKEY/DS, x8)
+  x8 because the zone may be lame.
+  This means a chain of trust is built also for unfetched data, to
+  determine if a signed DS is present.  If insecure, nothing is done.
+* If DNSKEY was not fetched for chain of trust (SERVFAIL, lame, ...),
+  Then
+  	blame(DNSKEYname, IP origin of the data/DNSKEY/DS, x8)
+  x8 because the zone may be lame.
+* blame(zonename, guiltyIP, multiplier):
+  * Set the guiltyIP,zonename as DNSSEC-bogus-data=true in lameness cache.
+    Thusly marked servers are avoided if possible, used as last resort.
+    The guilt TTL is 15 minutes or the backoff TTL if that is larger.
+  * If the key cache entry 'being-backed-off' is true then:
+  	set this data element RRset&msg to the current backoff TTL.
+	and done.
+  * if no retry entry exists for the zone key, create one with 24h TTL, 10 ms.
+    else the backoff *= multiplier.
+  * If the backoff is less than a second, remove entries from cache and
+    restart query.  Else set the TTL for the entries to that value.
+  * Entries to set or remove: DNSKEY RRset&msg, DS RRset&msg, NS RRset&msg, 
+  	in-zone glue (A and AAAA) RRset&msg, and key-cache-entry TTL.
+	The the data element RRset&msg to the backoff TTL.
+	If TTL>1sec set key-cache-entry flag 'being-backed-off' to true.
+	when entry times out that flag is reset to zero again.
+* Storage extra is:
+  IP address per RRset and message.  A lot of memory really, since that is
+  132 bytes per RRset and per message.  Store plain IP: 4/16 bytes, len byte.
+  Check if port number is necessary.
+  guilt flag and guilt TTL in lameness cache. Must be very big for forwarders.
+  being-backed-off flag for key cache, also backoff time value and its TTL.
+* Load on authorities:
+  For lame servers: 7 tries per day (one per three hours on average).
+  Others get up to 23 tries per day (one per hour on average).
+  Unless the cache entry falls out of the cache due to memory. In that
+  case it can be tried more often, this is similar to the NS entry falling
+  out of the cache due to memory, in that case it also has to be retried.
+* Performance analysis:
+  * domain is sold.  Unbound sees invalid signature (expired) or the old
+    servers refuse the queries.  Retry within the second, if parent has
+    new DS and NS available instantly works again (no downtime).
+  * domain is bogus signed.  Parent gets 1 query per hour.
+  * domain partly bogus.  Parent gets 1 query per hour.
+  * spoof attempt.  Unbound tries a couple times.  If not spoofed again,
+    it works, if spoofed every time unbound backs off and stops trying.
+  * parent has inconsistently signed DS records.  Together with a subzone that
+    is badly managed.  Unbound backs up to the root once per hour.
+  * domain is sold, but decomission is faster than the setup of new server.
+    Unbound does exponential backoff, if new setup is fast, it'll pickup the
+    new data fast.
+  * key rollover failed.  The zone has bad keys.  Like it was bogus signed.
+  * one nameserver has bad data.  Unbound goes back to the parent but also
+    marks that server as guilty.  Picks data from other server right after,
+    retry without blackout for the user.  If the nameserver stays bad, then
+    once every retry unbound unmarks it as guilty, can then encounter
+    it again if queried, then retries with backoff.
+    If more than 7 servers are bogus, the zone becomes bogus for a while.
+  * domain was sold, but unbound has old entries in the cache.  These somehow
+    need (re)validation (were queried with +cd, now -cd).  The entries are
+    bogus.  Then this algo starts to retry but if there are many entries,
+    then unbound starts to give blackouts before trying again.
+    Due to the backoff.
+    This would be solved if we reset the backoff after successful retry,
+    however, reset of the backoff can lead to a loop.  And how to define
+    that reset condition.
+    Another option is to check if the IP address for the bad data is in
+    the delegation point for the zone.  If it is not - try again instantly.
+    This is a loop if the NS has zero TTL on its address.
+    Another option is to flush the zone from cache, too expensive to implement.
+    How to solve this?
+  * unbound is configured to talk to upstream caches.  These caches have
+    inconsistent bad data.  If one is bad, it is marked bad for that zone.  
+    If all are bad, there may not be any way for unbound to remove the
+    bad entries from the upstream caches.  It simply fails.
+    Recommendation: make the upstream caches validate as well.
+
 later
 - selective verbosity; ubcontrol trace example.com
 - option to log only bogus domainname encountered, for demos
