@@ -1,5 +1,6 @@
 6 July 2009: Wouter
 	- prettier error handling in SSL setup.
+	- makedist.sh uname fix (same as ldns).
 
 3 July 2009: Wouter
 	- fixup linking when ldnsdir is "".

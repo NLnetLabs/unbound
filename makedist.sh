@@ -346,8 +346,21 @@ case $OSTYPE in
                 sha256=`sha256  unbound-$version.tar.gz |  awk '{ print $5 }'`
                 ;;
 	*)
-                sha=`sha1sum unbound-$version.tar.gz |  awk '{ print $1 }'`
-                sha256=`sha256sum unbound-$version.tar.gz |  awk '{ print $1 }'`
+		# in case $OSTYPE is gone.
+		case `uname` in
+		Linux*)
+		  sha=`sha1sum unbound-$version.tar.gz |  awk '{ print $1 }'`
+		  sha256=`sha256sum unbound-$version.tar.gz |  awk '{ print $1 }'`
+		  ;;
+		FreeBSD*)
+		  sha=`sha1  unbound-$version.tar.gz |  awk '{ print $5 }'`
+		  sha256=`sha256  unbound-$version.tar.gz |  awk '{ print $5 }'`
+		  ;;
+		*)
+		  sha=`sha1sum unbound-$version.tar.gz |  awk '{ print $1 }'`
+		  sha256=`sha256sum unbound-$version.tar.gz |  awk '{ print $1 }'`
+		  ;;
+		esac
                 ;;
 esac
 echo $sha > unbound-$version.tar.gz.sha1
