@@ -179,8 +179,12 @@ Triggered by a trust anchor or by a signed DS record for a zone.
     Another option is to check if the IP address for the bad data is in
     the delegation point for the zone.  If it is not - try again instantly.
     This is a loop if the NS has zero TTL on its address.
-    Another option is to flush the zone from cache, too expensive to implement.
-    How to solve this?
+    Flush cache is when the zone is backed off to more than one second.
+    Flush is denoted by an age number, we use the rrset-special-id number,
+    this is a thread-specific number. At validation failure, if the data 
+    RRset is older than this number, it is flushed and the query is restarted.
+    A thread stores its own id number when a backoff larger than a second 
+    occurs and its id number has not been stored yet.
   * unbound is configured to talk to upstream caches.  These caches have
     inconsistent bad data.  If one is bad, it is marked bad for that zone.  
     If all are bad, there may not be any way for unbound to remove the
