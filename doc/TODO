@@ -158,6 +158,13 @@ Triggered by a trust anchor or by a signed DS record for a zone.
     it works, if spoofed every time unbound backs off and stops trying.
   * parent has inconsistently signed DS records.  Together with a subzone that
     is badly managed.  Unbound backs up to the root once per hour.
+  * parent has bad DS records, different sets on different servers, but they
+    are signed ok.  If child is okay with one set, unbound may get lucky
+    at one attempt and it'll work, otherwise, the parent is tried once in a
+    while but the zone goes dark.  Because the server that gave that bad DS
+    with good signature is not marked as problematic.
+    Perhaps mark the IPorigin of the DS as problematic on a failed applicated
+    DS as well.
   * domain is sold, but decomission is faster than the setup of new server.
     Unbound does exponential backoff, if new setup is fast, it'll pickup the
     new data fast.
