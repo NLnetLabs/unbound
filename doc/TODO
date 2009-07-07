@@ -125,7 +125,7 @@ Triggered by a trust anchor or by a signed DS record for a zone.
     Thusly marked servers are avoided if possible, used as last resort.
     The guilt TTL is 15 minutes or the backoff TTL if that is larger.
   * If the key cache entry 'being-backed-off' is true then:
-  	set this data element RRset&msg to the current backoff TTL.
+  	set this data element RRset&msg to the current backoff TTL end-time.
 	and done.
   * if no retry entry exists for the zone key, create one with 24h TTL, 10 ms.
     else the backoff *= multiplier.
@@ -135,11 +135,11 @@ Triggered by a trust anchor or by a signed DS record for a zone.
   	in-zone glue (A and AAAA) RRset&msg, and key-cache-entry TTL.
 	The the data element RRset&msg to the backoff TTL.
 	If TTL>1sec set key-cache-entry flag 'being-backed-off' to true.
-	when entry times out that flag is reset to zero again.
+	when entry times out that flag is reset to false again.
 * Storage extra is:
   IP address per RRset and message.  A lot of memory really, since that is
   132 bytes per RRset and per message.  Store plain IP: 4/16 bytes, len byte.
-  Check if port number is necessary.
+  port number 2bytes. storagetime 4bytes.  +23bytes per RRset, per msg.
   guilt flag and guilt TTL in lameness cache. Must be very big for forwarders.
   being-backed-off flag for key cache, also backoff time value and its TTL.
 * Load on authorities:
@@ -192,11 +192,20 @@ Triggered by a trust anchor or by a signed DS record for a zone.
     RRset is older than this number, it is flushed and the query is restarted.
     A thread stores its own id number when a backoff larger than a second 
     occurs and its id number has not been stored yet.
+    Store time in seconds when fetched from the IPaddr in every rrset,msg
+    and use that time to see if the data has to be flushed, store timetoflush
+    in the key entry.
   * unbound is configured to talk to upstream caches.  These caches have
     inconsistent bad data.  If one is bad, it is marked bad for that zone.  
     If all are bad, there may not be any way for unbound to remove the
     bad entries from the upstream caches.  It simply fails.
     Recommendation: make the upstream caches validate as well.
+  * Old data that was valid with a long TTL remains in the cache.
+    This is both an advantage and a disadvantage.
+    Advantage because if the zone is mildly broken, no time is spent redoing
+    stuff that was fine.  Or after a spoof most other stuff is still there.
+    Disadvantage.  After a sale the old data could linger for TTL time.
+
 
 later
 - selective verbosity; ubcontrol trace example.com
