@@ -210,6 +210,10 @@ Triggered by a trust anchor or by a signed DS record for a zone.
     Advantage because if the zone is mildly broken, no time is spent redoing
     stuff that was fine.  Or after a spoof most other stuff is still there.
     Disadvantage.  After a sale the old data could linger for TTL time.
+  * listing bad servers and trying again may not be good enough, since
+    a combinatorial explosion for DSxDNSKEYxdata is possible for every
+    signature validation (using different nameservers for DS, DNSKEY and
+    data, assuming only the right combination has a chain of trust to data).
 
 
 later
