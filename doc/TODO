@@ -59,6 +59,8 @@ o on windows version, implement that OS ancillary data capabilities for
 o local-zone directive with authority service, full authority server 
   is a non-goal.
 o infra and lame cache: easier size config (in Mb), show usage in graphs.
+- store time of dump in cachedumps, so that on a load the ttls can be
+  compared to the absolute time, and now-expired items can be dealt with.
 
 1.3.x:
 - spoofed delegpt fixes - if DNSKEY prime fails
@@ -195,6 +197,9 @@ Triggered by a trust anchor or by a signed DS record for a zone.
     Store time in seconds when fetched from the IPaddr in every rrset,msg
     and use that time to see if the data has to be flushed, store timetoflush
     in the key entry.
+    Store that time when 1 second backoff is reached, so that you are sure
+    that when the backoff is done, fresh new information will have a newer
+    timestamp.
   * unbound is configured to talk to upstream caches.  These caches have
     inconsistent bad data.  If one is bad, it is marked bad for that zone.  
     If all are bad, there may not be any way for unbound to remove the
