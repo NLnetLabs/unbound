@@ -105,6 +105,16 @@ o infra and lame cache: easier size config (in Mb), show usage in graphs.
 	then perform DNSKEY query) if that DNSKEY query fails servfail,
 	perform the x8 lameness retry fallback.
 
+* keep a list of guilty IP addresses in the qstate, which contains both
+  the child side guilty IPs and the parent guilty IPs.  Valid signed DSes
+  are not made guilty in the global cache.  The child IP is made guilty
+  in the global cache.
+* Retry to higher trust anchors.
+  * option not to retry to higher from this ta.
+  * keep longest must-be-secure name. Do no accept insecure above this point.
+  * if failed ta, blame all lower tas for their DNSKEY (get IP from cached
+    rrset),  if failure is insecure - nothing, if at bogus - blame that too.
+
 Retry harder to get valid DNSSEC data.
 Triggered by a trust anchor or by a signed DS record for a zone.
 * If data is fetched and validation fails for it
@@ -167,7 +177,7 @@ Triggered by a trust anchor or by a signed DS record for a zone.
     with good signature is not marked as problematic.
     Perhaps mark the IPorigin of the DS as problematic on a failed applicated
     DS as well.
-  * domain is sold, but decomission is faster than the setup of new server.
+  * domain is sold, but decommission is faster than the setup of new server.
     Unbound does exponential backoff, if new setup is fast, it'll pickup the
     new data fast.
   * key rollover failed.  The zone has bad keys.  Like it was bogus signed.
