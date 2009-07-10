@@ -114,6 +114,8 @@ o infra and lame cache: easier size config (in Mb), show usage in graphs.
   * keep longest must-be-secure name. Do no accept insecure above this point.
   * if failed ta, blame all lower tas for their DNSKEY (get IP from cached
     rrset),  if failure is insecure - nothing, if at bogus - blame that too.
+    lower tas have isdata=false, so the IP address for the dnskeyrrset in
+    the cache is set to avoid in qstate. Nothing in infracache, no childretry.
 
 Retry harder to get valid DNSSEC data.
 Triggered by a trust anchor or by a signed DS record for a zone.
@@ -121,7 +123,7 @@ Triggered by a trust anchor or by a signed DS record for a zone.
   or DNSKEY is fetched and validated into chain-of-trust fails for it
   or DS is fetched and validated into chain-of-trust fails for it
   Then
-  	blame(signer zone, IP origin of the data/DNSKEY/DS, x2)
+  	blame(signer zone, IP origin of the data/DNSKEY/DS, x2, isdata)
 * If data was not fetched (SERVFAIL, lame, ...), and the data
   is under a signed DS then:
   	blame(thatDSname, IP origin of the data/DNSKEY/DS, x8)
@@ -132,12 +134,15 @@ Triggered by a trust anchor or by a signed DS record for a zone.
   Then
   	blame(DNSKEYname, IP origin of the data/DNSKEY/DS, x8)
   x8 because the zone may be lame.
-* blame(zonename, guiltyIP, multiplier):
-  * Set the guiltyIP,zonename as DNSSEC-bogus-data=true in lameness cache.
+* blame(zonename, guiltyIP, multiplier, isdata):
+  * if isdata:
+    Set the guiltyIP,zonename as DNSSEC-bogus-data=true in lameness cache.
     Thusly marked servers are avoided if possible, used as last resort.
-    The guilt TTL is the infra cache ttl (15 minutes).
-  * If the key cache entry 'being-backed-off' is true then:
-	then perform a child-retry - purge dataonly, childside, mark
+    The guilt TTL is the infra cache ttl (15 minutes).  
+    The dnssec retry scheme works without this cache entry.
+  * If the key cache entry 'being-backed-off' is true and isdata then:
+	The parent is backedoff, it must be the childs fault. Retry to child.
+	Perform a child-retry - purge dataonly, childside, mark
 	data-IPaddress from child as to avoid-forquery. counterperquery,
 	max is 3, if reached, set this data element RRset&msg to the 
 	current backoff TTL end-time or bogus-ttl(60 seconds) whichever is less
@@ -148,21 +153,20 @@ Triggered by a trust anchor or by a signed DS record for a zone.
     restart query.  Else set the TTL for the entries to that value.
   * Entries to set or remove: DNSKEY RRset&msg, DS RRset&msg, NS RRset&msg, 
   	in-zone glue (A and AAAA) RRset&msg, and key-cache-entry TTL.
-	The the data element RRset&msg to the backoff TTL.
+	The the data element RRset&msg to the backoff TTL or bogusttl.
 	If TTL>1sec set key-cache-entry flag 'being-backed-off' to true.
 	when entry times out that flag is reset to false again.
 * Storage extra is:
   IP address per RRset and message.  A lot of memory really, since that is
   132 bytes per RRset and per message.  Store plain IP: 4/16 bytes, len byte.
-  port number 2bytes. storagetime 4bytes.  +23bytes per RRset, per msg.
-  guilt flag and guilt TTL in lameness cache. Must be very big for forwarders.
+  port number 2bytes. +19bytes per RRset, per msg.
+  guilt flag in infra(lameness) cache.
   being-backed-off flag for key cache, also backoff time value and its TTL.
-
-  nomore storagetime.
   child-retry-count and guilty-ip-list in qstate.
 * Load on authorities:
   For lame servers: 7 tries per day (one per three hours on average).
   Others get up to 23 tries per day (one per hour on average).
+  +1 for original try makes 8/24 hours and 24/24 hours.
   Unless the cache entry falls out of the cache due to memory. In that
   case it can be tried more often, this is similar to the NS entry falling
   out of the cache due to memory, in that case it also has to be retried.
@@ -171,65 +175,48 @@ Triggered by a trust anchor or by a signed DS record for a zone.
     servers refuse the queries.  Retry within the second, if parent has
     new DS and NS available instantly works again (no downtime).
   * domain is bogus signed.  Parent gets 1 query per hour.
+	Domain itself gets couple tries per queryname, per minute.
   * domain partly bogus.  Parent gets 1 query per hour.
+	Domain itself gets couple tries per bogus queryname, per minute.
   * spoof attempt.  Unbound tries a couple times.  If not spoofed again,
     it works, if spoofed every time unbound backs off and stops trying.
+	But childretry is attempted more often, once per minute.
   * parent has inconsistently signed DS records.  Together with a subzone that
     is badly managed.  Unbound backs up to the root once per hour.
   * parent has bad DS records, different sets on different servers, but they
-    are signed ok.  If child is okay with one set, unbound may get lucky
-    at one attempt and it'll work, otherwise, the parent is tried once in a
-    while but the zone goes dark.  Because the server that gave that bad DS
-    with good signature is not marked as problematic.
-    Perhaps mark the IPorigin of the DS as problematic on a failed applicated
-    DS as well.
+    are signed ok.  Works as for every query a list of bad nameserver, parent
+    and child side is kept, walks through them.  But as backoff increases
+    and becomes bigger than the TTL on the DS records, unbound will blackout.
+    The parent really has to be fixed...
+    The issue is that it is validly signed, but bad data. Unbound will very
+    conservatively retry it.
   * domain is sold, but decommission is faster than the setup of new server.
     Unbound does exponential backoff, if new setup is fast, it'll pickup the
     new data fast.
   * key rollover failed.  The zone has bad keys.  Like it was bogus signed.
   * one nameserver has bad data.  Unbound goes back to the parent but also
     marks that server as guilty.  Picks data from other server right after,
-    retry without blackout for the user.  If the nameserver stays bad, then
-    once every retry unbound unmarks it as guilty, can then encounter
-    it again if queried, then retries with backoff.
-    If more than 7 servers are bogus, the zone becomes bogus for a while.
+    retry without blackout for the user.  
+    When parent starts to get backed off, if the nameserver is childside,
+    queryretries for childservers are made when queries fail.
   * domain was sold, but unbound has old entries in the cache.  These somehow
     need (re)validation (were queried with +cd, now -cd).  The entries are
-    bogus.  Then this algo starts to retry but if there are many entries,
-    then unbound starts to give blackouts before trying again.
-    Due to the backoff.
-    This would be solved if we reset the backoff after successful retry,
-    however, reset of the backoff can lead to a loop.  And how to define
-    that reset condition.
-    Another option is to check if the IP address for the bad data is in
-    the delegation point for the zone.  If it is not - try again instantly.
-    This is a loop if the NS has zero TTL on its address.
-    Flush cache is when the zone is backed off to more than one second.
-    Flush is denoted by an age number, we use the rrset-special-id number,
-    this is a thread-specific number. At validation failure, if the data 
-    RRset is older than this number, it is flushed and the query is restarted.
-    A thread stores its own id number when a backoff larger than a second 
-    occurs and its id number has not been stored yet.
-    Store time in seconds when fetched from the IPaddr in every rrset,msg
-    and use that time to see if the data has to be flushed, store timetoflush
-    in the key entry.
-    Store that time when 1 second backoff is reached, so that you are sure
-    that when the backoff is done, fresh new information will have a newer
-    timestamp.
+    bogus.  
+    Unbound performs childretry for these entries.  Works once the keys
+    have been successfully reprimed with parentretry.
   * unbound is configured to talk to upstream caches.  These caches have
     inconsistent bad data.  If one is bad, it is marked bad for that zone.  
     If all are bad, there may not be any way for unbound to remove the
     bad entries from the upstream caches.  It simply fails.
     Recommendation: make the upstream caches validate as well.
   * Old data that was valid with a long TTL remains in the cache.
-    This is both an advantage and a disadvantage.
-    Advantage because if the zone is mildly broken, no time is spent redoing
-    stuff that was fine.  Or after a spoof most other stuff is still there.
-    Disadvantage.  After a sale the old data could linger for TTL time.
+    Valid data has a TTL and this is the protocol.
   * listing bad servers and trying again may not be good enough, since
     a combinatorial explosion for DSxDNSKEYxdata is possible for every
     signature validation (using different nameservers for DS, DNSKEY and
     data, assuming only the right combination has a chain of trust to data).
+    The parentretries perform DS and DNSKEY searching.
+    childretries perform data searching.
 
 
 later
