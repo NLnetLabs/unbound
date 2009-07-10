@@ -135,9 +135,12 @@ Triggered by a trust anchor or by a signed DS record for a zone.
 * blame(zonename, guiltyIP, multiplier):
   * Set the guiltyIP,zonename as DNSSEC-bogus-data=true in lameness cache.
     Thusly marked servers are avoided if possible, used as last resort.
-    The guilt TTL is 15 minutes or the backoff TTL if that is larger.
+    The guilt TTL is the infra cache ttl (15 minutes).
   * If the key cache entry 'being-backed-off' is true then:
-  	set this data element RRset&msg to the current backoff TTL end-time.
+	then perform a child-retry - purge dataonly, childside, mark
+	data-IPaddress from child as to avoid-forquery. counterperquery,
+	max is 3, if reached, set this data element RRset&msg to the 
+	current backoff TTL end-time or bogus-ttl(60 seconds) whichever is less
 	and done.
   * if no retry entry exists for the zone key, create one with 24h TTL, 10 ms.
     else the backoff *= multiplier.
@@ -154,6 +157,9 @@ Triggered by a trust anchor or by a signed DS record for a zone.
   port number 2bytes. storagetime 4bytes.  +23bytes per RRset, per msg.
   guilt flag and guilt TTL in lameness cache. Must be very big for forwarders.
   being-backed-off flag for key cache, also backoff time value and its TTL.
+
+  nomore storagetime.
+  child-retry-count and guilty-ip-list in qstate.
 * Load on authorities:
   For lame servers: 7 tries per day (one per three hours on average).
   Others get up to 23 tries per day (one per hour on average).
