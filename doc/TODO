@@ -142,6 +142,7 @@ Triggered by a trust anchor or by a signed DS record for a zone.
     The dnssec retry scheme works without this cache entry.
   * If the key cache entry 'being-backed-off' is true and isdata then:
 	The parent is backedoff, it must be the childs fault. Retry to child.
+	if the child-dnskey is bogus, then retry is useless, stop.
 	Perform a child-retry - purge dataonly, childside, mark
 	data-IPaddress from child as to avoid-forquery. counterperquery,
 	max is 3, if reached, set this data element RRset&msg to the 
