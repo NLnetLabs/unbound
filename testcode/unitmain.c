@@ -407,7 +407,7 @@ rnd_test()
 	for(i=0; i<num; i++) {
 		a[i] = ub_random(r);
 		unit_assert(a[i] >= 0);
-		unit_assert((size_t)a[i] <= (size_t)RAND_MAX);
+		unit_assert((size_t)a[i] <= (size_t)0x7fffffff);
 		if(i > 5)
 			unit_assert(a[i] != a[i-1] || a[i] != a[i-2] ||
 				a[i] != a[i-3] || a[i] != a[i-4] ||
