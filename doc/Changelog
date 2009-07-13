@@ -2,6 +2,8 @@
 	- Fix for crash at start on windows.
 	- tag for release 1.3.2.
 	- trunk has version 1.3.3.
+	- Fix for ID bits on windows to use all 16. RAND_MAX was not
+ 	  defined like you'd expect on mingw.
 
 9 July 2009: Wouter
 	- tag for release 1.3.1.

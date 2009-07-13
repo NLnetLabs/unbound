@@ -78,6 +78,12 @@ struct ub_randstate {
 /** Size of key to use */
 #define SEED_SIZE 20
 
+/** 
+ * Max random value.  Similar to RAND_MAX, but more portable
+ * (mingw uses only 15 bits random).
+ */
+#define MAX_VALUE 0x7fffffff
+
 /** Number of bytes to reseed after */
 #define REKEY_BYTES	(1 << 24)
 
@@ -168,7 +174,7 @@ ub_random(struct ub_randstate* s)
 	RC4(&s->rc4, sizeof(r), 
 		(unsigned char *)&r, (unsigned char *)&r);
 	s->rc4_ready -= sizeof(r);
-	return (long int)((r) % (((unsigned)RAND_MAX + 1)));
+	return (long int)((r) % (((unsigned)MAX_VALUE + 1)));
 }
 
 void 
