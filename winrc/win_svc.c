@@ -48,6 +48,7 @@
 #include "winrc/w_inst.h"
 #include "daemon/daemon.h"
 #include "daemon/worker.h"
+#include "daemon/remote.h"
 #include "util/config_file.h"
 #include "util/netevent.h"
 #include "util/winsock_event.h"
@@ -283,7 +284,15 @@ service_init(int r, struct daemon** d, struct config_file** c)
 	if(!r) report_status(SERVICE_START_PENDING, NO_ERROR, 2400);
 	verbose(VERB_QUERY, "winservice - apply cfg");
 	daemon_apply_cfg(daemon, cfg);
-	
+
+	if(!r) report_status(SERVICE_START_PENDING, NO_ERROR, 2300);
+	if(!(daemon->rc = daemon_remote_create(cfg))) {
+		log_err("could not set up remote-control");
+		daemon_delete(daemon);
+		config_delete(cfg);
+		return 0;
+	}
+
 	/* open ports */
 	/* keep reporting that we are busy starting */
 	if(!r) report_status(SERVICE_START_PENDING, NO_ERROR, 2200);
