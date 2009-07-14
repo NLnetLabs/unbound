@@ -658,11 +658,6 @@
 #endif /* HAVE_FSEEKO */
 
 
-#ifndef RAND_MAX
-#define RAND_MAX	2147483647
-#endif
-
-
 #ifndef MAXHOSTNAMELEN
 #define MAXHOSTNAMELEN 256
 #endif
