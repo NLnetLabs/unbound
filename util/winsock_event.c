@@ -76,6 +76,7 @@ settime(struct event_base* base)
         return 0;
 }
 
+#ifdef UNBOUND_DEBUG
 /**
  * Find a fd in the list of items.
  * Note that not all items have a fd associated (those are -1).
@@ -94,9 +95,10 @@ find_fd(struct event_base* base, int fd)
 	}
 	return -1;
 }
+#endif
 
 /** Find ptr in base array */
-static int
+static void
 zero_waitfor(WSAEVENT waitfor[], WSAEVENT x)
 {
 	int i;

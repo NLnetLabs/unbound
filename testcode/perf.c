@@ -272,7 +272,7 @@ static void
 perfsend(struct perfinfo* info, size_t n, struct timeval* now)
 {
 	ssize_t r;
-	r = sendto(info->io[n].fd, info->qlist_data[info->qlist_idx],
+	r = sendto(info->io[n].fd, (void*)info->qlist_data[info->qlist_idx],
 		info->qlist_len[info->qlist_idx], 0,
 		(struct sockaddr*)&info->dest, info->destlen);
 	/*log_hex("send", info->qlist_data[info->qlist_idx],
@@ -299,7 +299,7 @@ static void
 perfreply(struct perfinfo* info, size_t n, struct timeval* now)
 {
 	ssize_t r;
-	r = recv(info->io[n].fd, ldns_buffer_begin(info->buf),
+	r = recv(info->io[n].fd, (void*)ldns_buffer_begin(info->buf),
 		ldns_buffer_capacity(info->buf), 0);
 	if(r == -1) {
 #ifndef USE_WINSOCK

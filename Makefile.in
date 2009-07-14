@@ -65,7 +65,7 @@ ifeq "$(QUIET)" "yes"
 endif
 BUILD=build/
 
-WINDRES=windres
+WINDRES=@WINDRES@
 LINT=splint
 LINTFLAGS=+quiet -weak -warnposix -unrecog -Din_addr_t=uint32_t -Du_int=unsigned -Du_char=uint8_t -preproc -Drlimit=rlimit64 -D__gnuc_va_list=va_list -Dglob64=glob -Dglobfree64=globfree
 # compat with openssl linux edition.

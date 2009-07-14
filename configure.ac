@@ -59,7 +59,11 @@ esac
 
 # are we on MinGW?
 if uname -s 2>&1 | grep MINGW32 >/dev/null; then on_mingw="yes"
-else on_mingw="no"; fi
+else 
+	if echo $target | grep mingw32 >/dev/null; then on_mingw="yes"
+	else on_mingw="no"; fi
+fi
+echo "on mingw" $on_mingw
 
 #
 # Determine configuration file
@@ -443,6 +447,7 @@ if test x_$enable_static_exe = x_yes; then
 	staticexe="-static"
 	if test "$on_mingw" = yes; then
 		staticexe="-all-static"
+		LIBS="$LIBS -lgdi32 -lz"
 	fi
 fi
 
@@ -463,7 +468,7 @@ AC_ARG_ENABLE(alloc-checks, AC_HELP_STRING([--enable-alloc-checks],
 if test x_$enable_alloc_checks = x_yes; then
 	AC_DEFINE(UNBOUND_ALLOC_STATS, 1, [use statistics for allocs and frees, for debug use])
 else
-	AC_FUNC_MALLOC
+	ACX_FUNC_MALLOC([unbound])
 fi
 
 AC_FUNC_CHOWN
@@ -477,6 +482,7 @@ if test "$USE_WINSOCK" = 1; then
 	AC_DEFINE(UB_ON_WINDOWS, 1, [Use win32 resources and API])
 	UB_ON_WINDOWS=yes
 	AC_SUBST(UB_ON_WINDOWS)
+	AC_CHECK_TOOL(WINDRES, windres)
 fi
 if test $ac_cv_func_getaddrinfo = no; then
 	AC_LIBOBJ([fake-rfc2553])

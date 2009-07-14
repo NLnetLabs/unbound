@@ -2,6 +2,7 @@
 	- updated ldns tarball for solaris x64 compile assistance.
 	- no need to define RAND_MAX from config.h.
 	- iana portlist updated.
+	- configure changes and ldns update for mingw32 crosscompile.
 
 13 July 2009: Wouter
 	- Fix for crash at start on windows.

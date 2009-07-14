@@ -494,7 +494,7 @@
 /* Define to `signed char' if <sys/types.h> does not define. */
 #undef int8_t
 
-/* Define to rpl_malloc if the replacement function should be used. */
+/* Define if replacement function should be used. */
 #undef malloc
 
 /* Define to `long int' if <sys/types.h> does not define. */
@@ -515,7 +515,7 @@
 /* Define to `int' if <sys/types.h> does not define. */
 #undef ssize_t
 
-/* Define to `unsigned char' if <sys/types.h> does not define. */
+/* Define to 'unsigned char if not defined */
 #undef u_char
 
 /* Define to `int' if <sys/types.h> doesn't define. */

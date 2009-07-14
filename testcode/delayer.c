@@ -360,7 +360,7 @@ service_send(struct ringbuf* ring, struct timeval* now, ldns_buffer* pkt,
 			(unsigned)tv.tv_sec, (unsigned)tv.tv_usec);
 		log_addr(1, "from client", &p->addr, p->addr_len);
 		/* send it */
-		sent = sendto(p->s, ldns_buffer_begin(pkt), 
+		sent = sendto(p->s, (void*)ldns_buffer_begin(pkt), 
 			ldns_buffer_limit(pkt), 0, 
 			(struct sockaddr*)srv_addr, srv_len);
 		if(sent == -1) {
@@ -384,7 +384,7 @@ do_proxy(struct proxy* p, int retsock, ldns_buffer* pkt)
 	int i;
 	ssize_t r;
 	for(i=0; i<TRIES_PER_SELECT; i++) {
-		r = recv(p->s, ldns_buffer_begin(pkt), 
+		r = recv(p->s, (void*)ldns_buffer_begin(pkt), 
 			ldns_buffer_capacity(pkt), 0);
 		if(r == -1) {
 #ifndef USE_WINSOCK
@@ -403,8 +403,8 @@ do_proxy(struct proxy* p, int retsock, ldns_buffer* pkt)
 		log_addr(1, "return reply to client", &p->addr, p->addr_len);
 		/* send reply back to the real client */
 		p->numreturn++;
-		r = sendto(retsock, ldns_buffer_begin(pkt), (size_t)r, 0,
-			(struct sockaddr*)&p->addr, p->addr_len);
+		r = sendto(retsock, (void*)ldns_buffer_begin(pkt), (size_t)r, 
+			0, (struct sockaddr*)&p->addr, p->addr_len);
 		if(r == -1) {
 #ifndef USE_WINSOCK
 			log_err("sendto: %s", strerror(errno));
@@ -492,7 +492,7 @@ service_recv(int s, struct ringbuf* ring, ldns_buffer* pkt,
 	struct proxy* p;
 	for(i=0; i<TRIES_PER_SELECT; i++) {
 		from_len = (socklen_t)sizeof(from);
-		len = recvfrom(s, ldns_buffer_begin(pkt),
+		len = recvfrom(s, (void*)ldns_buffer_begin(pkt),
 			ldns_buffer_capacity(pkt), 0,
 			(struct sockaddr*)&from, &from_len);
 		if(len < 0) {
@@ -636,7 +636,7 @@ tcp_relay_read(int s, struct tcp_send_list** first,
 	struct timeval* delay, ldns_buffer* pkt)
 {
 	struct tcp_send_list* item;
-	ssize_t r = recv(s, ldns_buffer_begin(pkt), 
+	ssize_t r = recv(s, (void*)ldns_buffer_begin(pkt), 
 		ldns_buffer_capacity(pkt), 0);
 	if(r == -1) {
 #ifndef USE_WINSOCK

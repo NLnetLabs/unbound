@@ -75,7 +75,7 @@ event_reg_install(FILE* out, const char* pathname)
 	if(RegSetValueEx(hk, (LPCTSTR)"EventMessageFile", 
 		0, /* reserved, mustbezero */
 		REG_EXPAND_SZ, /* value type (string w env subst) */
-		pathname, /* data */
+		(BYTE*)pathname, /* data */
 		(DWORD)strlen(pathname)+1)) /* length of data */
 	{
 		RegCloseKey(hk);
@@ -93,7 +93,7 @@ event_reg_install(FILE* out, const char* pathname)
 
 	/* category message file */
 	if(RegSetValueEx(hk, (LPCTSTR)"CategoryMessageFile", 0, REG_EXPAND_SZ, 
-		pathname, (DWORD)strlen(pathname)+1)) {
+		(BYTE*)pathname, (DWORD)strlen(pathname)+1)) {
 		RegCloseKey(hk);
 		fatal_win(out, "could not registry set CategoryMessageFile");
 	}

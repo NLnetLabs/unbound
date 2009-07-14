@@ -79,6 +79,23 @@ Unbound and its utilities also work from the commandline (like on unix) if
 you prefer.
 
 
++++ Cross compile
+
+You can crosscompile unbound.  This results in .exe files.
+Install the packages: mingw32-binutils mingw32-cpp mingw32-filesystem 
+mingw32-gcc mingw32-openssl mingw32-openssl-static mingw32-runtime
+mingw32-termcap mingw32-w32api mingw32-zlib mingw32-zlib-static
+(package names for fedora 11).
+
+Then run:
+$ mingw32-configure
+$ make
+
+It may be a good idea to pass --enable-static-exe --enable-debug to
+the mingw32-configure line.  This enables statically linked executables
+so you do not need to pilfer dlls together, and debug has assertions.
+
+
 +++ CREDITS
 
 Unbound was written in portable C by Wouter Wijngaards (NLnet Labs).

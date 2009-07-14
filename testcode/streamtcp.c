@@ -137,7 +137,7 @@ write_q(int fd, int udp, ldns_buffer* buf, int id,
 			exit(1);
 		}
 	}
-	if(send(fd, ldns_buffer_begin(buf), ldns_buffer_limit(buf), 0) < 
+	if(send(fd, (void*)ldns_buffer_begin(buf), ldns_buffer_limit(buf), 0) < 
 		(ssize_t)ldns_buffer_limit(buf)) {
 #ifndef USE_WINSOCK
 		perror("send() data failed");
@@ -170,7 +170,8 @@ recv_one(int fd, int udp, ldns_buffer* buf)
 		len = ntohs(len);
 		ldns_buffer_clear(buf);
 		ldns_buffer_set_limit(buf, len);
-		if(recv(fd, ldns_buffer_begin(buf), len, 0) < (ssize_t)len) {
+		if(recv(fd, (void*)ldns_buffer_begin(buf), len, 0) < 
+			(ssize_t)len) {
 #ifndef USE_WINSOCK
 			perror("read() data failed");
 #else
@@ -182,7 +183,7 @@ recv_one(int fd, int udp, ldns_buffer* buf)
 	} else {
 		ssize_t l;
 		ldns_buffer_clear(buf);
-		if((l=recv(fd, ldns_buffer_begin(buf), 
+		if((l=recv(fd, (void*)ldns_buffer_begin(buf), 
 			ldns_buffer_capacity(buf), 0)) < 0) {
 #ifndef USE_WINSOCK
 			perror("read() data failed");

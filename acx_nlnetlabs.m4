@@ -2,10 +2,14 @@
 # Copyright 2009, Wouter Wijngaards, NLnet Labs.   
 # BSD licensed.
 #
-# Version 2
-# 2009-07-03
+# Version 4
 # Changelog
-# - fixup LDFLAGS for empty ssl dir.
+# 2009-07-14 U_CHAR detection improved for windows crosscompile.
+#            added ACX_FUNC_MALLOC
+#            fixup some #if to #ifdef
+#            NONBLOCKING test for mingw crosscompile.
+# 2009-07-13 added ACX_WITH_SSL_OPTIONAL
+# 2009-07-03 fixup LDFLAGS for empty ssl dir.
 #
 # Automates some of the checking constructs.  Aims at portability for POSIX.
 # Documentation for functions is below.
@@ -30,6 +34,8 @@
 # ACX_TYPE_IN_PORT_T		- in_port_t type.
 # ACX_ARG_RPATH			- add --disable-rpath option.
 # ACX_WITH_SSL			- add --with-ssl option, link -lcrypto.
+# ACX_WITH_SSL_OPTIONAL		- add --with-ssl option, link -lcrypto,
+				  where --without-ssl is also accepted
 # ACX_LIB_SSL			- setup to link -lssl.
 # ACX_SYS_LARGEFILE		- improved sys_largefile, fseeko, >2G files.
 # ACX_CHECK_GETADDRINFO_WITH_INCLUDES - find getaddrinfo, portably.
@@ -37,6 +43,7 @@
 # ACX_CHECK_NONBLOCKING_BROKEN	- see if nonblocking sockets really work.
 # ACX_MKDIR_ONE_ARG		- determine mkdir(2) number of arguments.
 # ACX_FUNC_IOCTLSOCKET		- find ioctlsocket, portably.
+# ACX_FUNC_MALLOC		- check malloc, define replacement .
 # AHX_CONFIG_FORMAT_ATTRIBUTE	- config.h text for format.
 # AHX_CONFIG_UNUSED_ATTRIBUTE	- config.h text for unused.
 # AHX_CONFIG_FSEEKO		- define fseeko, ftello fallback.
@@ -480,14 +487,20 @@ AC_PROG_LIBTOOL
 
 dnl Detect if u_char type is defined, otherwise define it.
 AC_DEFUN([ACX_TYPE_U_CHAR], 
-	[AC_CHECK_TYPE(u_char, unsigned char)])
+[AC_CHECK_TYPE([u_char], ,
+	[AC_DEFINE([u_char], [unsigned char], [Define to 'unsigned char if not defined])], [
+AC_INCLUDES_DEFAULT
+#ifdef HAVE_WINSOCK2_H
+#  include <winsock2.h>
+#endif
+]) ])
 
 dnl Detect if rlim_t type is defined, otherwise define it.
 AC_DEFUN([ACX_TYPE_RLIM_T],
 [AC_CHECK_TYPE(rlim_t, , 
 	[AC_DEFINE([rlim_t], [unsigned long], [Define to 'int' if not defined])], [
 AC_INCLUDES_DEFAULT
-#if HAVE_SYS_RESOURCE_H
+#ifdef HAVE_SYS_RESOURCE_H
 #  include <sys/resource.h>
 #endif
 ]) ])
@@ -498,31 +511,34 @@ AC_DEFUN([ACX_TYPE_SOCKLEN_T],
 AC_CHECK_TYPE(socklen_t, , 
 	[AC_DEFINE([socklen_t], [int], [Define to 'int' if not defined])], [
 AC_INCLUDES_DEFAULT
-#if HAVE_SYS_SOCKET_H
+#ifdef HAVE_SYS_SOCKET_H
 #  include <sys/socket.h>
+#endif
+#ifdef HAVE_WS2TCPIP_H
+#  include <ws2tcpip.h>
 #endif
 ]) ])
 
-dnl Detect if socklen_t type is defined, otherwise define it.
+dnl Detect if in_addr_t type is defined, otherwise define it.
 AC_DEFUN([ACX_TYPE_IN_ADDR_T],
 [ AC_CHECK_TYPE(in_addr_t, [], [AC_DEFINE([in_addr_t], [uint32_t], [in_addr_t])], [
 AC_INCLUDES_DEFAULT
-#if HAVE_SYS_TYPES_H
+#ifdef HAVE_SYS_TYPES_H
 # include <sys/types.h>
 #endif
-#if HAVE_NETINET_IN_H
+#ifdef HAVE_NETINET_IN_H
 # include <netinet/in.h>
 #endif
 ]) ])
 
-dnl Detect if socklen_t type is defined, otherwise define it.
+dnl Detect if in_port_t type is defined, otherwise define it.
 AC_DEFUN([ACX_TYPE_IN_PORT_T],
 [ AC_CHECK_TYPE(in_port_t, [], [AC_DEFINE([in_port_t], [uint16_t], [in_port_t])], [
 AC_INCLUDES_DEFAULT
-#if HAVE_SYS_TYPES_H
+#ifdef HAVE_SYS_TYPES_H
 # include <sys/types.h>
 #endif
-#if HAVE_NETINET_IN_H
+#ifdef HAVE_NETINET_IN_H
 # include <netinet/in.h>
 #endif
 ]) ])
@@ -555,7 +571,89 @@ AC_DEFUN([ACX_RUNTIME_PATH_ADD], [
 	fi
 ])
 
-dnl Check for SSL. 
+dnl Common code for both ACX_WITH_SSL and ACX_WITH_SSL_OPTIONAL
+dnl Takes one argument; the withval checked in those 2 functions
+dnl sets up the environment for the given openssl path
+AC_DEFUN([ACX_SSL_CHECKS], [
+    withval=$1
+    if test x_$withval != x_no; then
+        AC_MSG_CHECKING(for SSL)
+        if test x_$withval = x_ -o x_$withval = x_yes; then
+            withval="/usr/local/ssl /usr/lib/ssl /usr/ssl /usr/pkg /usr/local /opt/local /usr/sfw /usr"
+        fi
+        for dir in $withval; do
+            ssldir="$dir"
+            if test -f "$dir/include/openssl/ssl.h"; then
+                found_ssl="yes"
+                AC_DEFINE_UNQUOTED([HAVE_SSL], [], [Define if you have the SSL libraries installed.])
+                dnl assume /usr/include is already in the include-path.
+                if test "$ssldir" != "/usr"; then
+                        CPPFLAGS="$CPPFLAGS -I$ssldir/include"
+                fi
+                break;
+            fi
+        done
+        if test x_$found_ssl != x_yes; then
+            AC_MSG_ERROR(Cannot find the SSL libraries in $withval)
+        else
+            AC_MSG_RESULT(found in $ssldir)
+            HAVE_SSL=yes
+            dnl assume /usr is already in the lib and dynlib paths.
+            if test "$ssldir" != "/usr" -a "$ssldir" != ""; then
+                LDFLAGS="$LDFLAGS -L$ssldir/lib"
+                ACX_RUNTIME_PATH_ADD([$ssldir/lib])
+            fi
+        
+            AC_MSG_CHECKING([for HMAC_CTX_init in -lcrypto])
+            LIBS="$LIBS -lcrypto"
+            AC_TRY_LINK(, [
+                int HMAC_CTX_init(void);
+                (void)HMAC_CTX_init();
+              ], [
+                AC_MSG_RESULT(yes)
+                AC_DEFINE([HAVE_HMAC_CTX_INIT], 1, 
+                          [If you have HMAC_CTX_init])
+              ], [
+                AC_MSG_RESULT(no)
+                # check if -lwsock32 or -lgdi32 are needed.	
+                BAKLIBS="$LIBS"
+                LIBS="$LIBS -lgdi32"
+                AC_MSG_CHECKING([if -lcrypto needs -lgdi32])
+                AC_TRY_LINK([], [
+                    int HMAC_CTX_init(void);
+                    (void)HMAC_CTX_init();
+                  ],[
+                    AC_DEFINE([HAVE_HMAC_CTX_INIT], 1, 
+                        [If you have HMAC_CTX_init])
+                    AC_MSG_RESULT(yes) 
+                  ],[
+                    AC_MSG_RESULT(no)
+                    LIBS="$BAKLIBS"
+                    LIBS="$LIBS -ldl"
+                    AC_MSG_CHECKING([if -lcrypto needs -ldl])
+                    AC_TRY_LINK([], [
+                        int HMAC_CTX_init(void);
+                        (void)HMAC_CTX_init();
+                      ],[
+                        AC_DEFINE([HAVE_HMAC_CTX_INIT], 1, 
+                            [If you have HMAC_CTX_init])
+                        AC_MSG_RESULT(yes) 
+                      ],[
+                        AC_MSG_RESULT(no)
+                    AC_MSG_ERROR([OpenSSL found in $ssldir, but version 0.9.7 or higher is required])
+                    ])
+                ])
+            ])
+        fi
+        AC_SUBST(HAVE_SSL)
+        AC_SUBST(RUNTIME_PATH)
+    fi
+AC_CHECK_HEADERS([openssl/ssl.h],,, [AC_INCLUDES_DEFAULT])
+AC_CHECK_HEADERS([openssl/err.h],,, [AC_INCLUDES_DEFAULT])
+AC_CHECK_HEADERS([openssl/rand.h],,, [AC_INCLUDES_DEFAULT])
+])dnl End of ACX_SSL_CHECKS
+
+dnl Check for SSL, where SSL is mandatory
 dnl Adds --with-ssl option, searches for openssl and defines HAVE_SSL if found
 dnl Setup of CPPFLAGS, CFLAGS.  Adds -lcrypto to LIBS. 
 dnl Checks main header files of SSL.
@@ -571,82 +669,24 @@ AC_ARG_WITH(ssl, AC_HELP_STRING([--with-ssl=pathname],
     if test x_$withval = x_no; then
 	AC_MSG_ERROR([Need SSL library to do digital signature cryptography])
     fi
-    if test x_$withval != x_no; then
-        AC_MSG_CHECKING(for SSL)
-        if test x_$withval = x_ -o x_$withval = x_yes; then
-            withval="/usr/local/ssl /usr/lib/ssl /usr/ssl /usr/pkg /usr/local /opt/local /usr/sfw /usr"
-        fi
-        for dir in $withval; do
-            ssldir="$dir"
-            if test -f "$dir/include/openssl/ssl.h"; then
-                found_ssl="yes"
-                AC_DEFINE_UNQUOTED([HAVE_SSL], [], [Define if you have the SSL libraries installed.])
-		dnl assume /usr/include is already in the include-path.
-		if test "$ssldir" != "/usr"; then
-			CPPFLAGS="$CPPFLAGS -I$ssldir/include"
-		fi
-                break;
-            fi
-        done
-        if test x_$found_ssl != x_yes; then
-            AC_MSG_ERROR(Cannot find the SSL libraries in $withval)
-        else
-            AC_MSG_RESULT(found in $ssldir)
-            HAVE_SSL=yes
-	    dnl assume /usr is already in the lib and dynlib paths.
-	    if test "$ssldir" != "/usr" -a "$ssldir" != ""; then
-                LDFLAGS="$LDFLAGS -L$ssldir/lib"
-		ACX_RUNTIME_PATH_ADD([$ssldir/lib])
-	    fi
-	
-	    AC_MSG_CHECKING([for HMAC_CTX_init in -lcrypto])
-	    LIBS="$LIBS -lcrypto"
-	    AC_TRY_LINK(, [
-		int HMAC_CTX_init(void);
-		(void)HMAC_CTX_init();
-	      ], [
-		AC_MSG_RESULT(yes)
-		AC_DEFINE([HAVE_HMAC_CTX_INIT], 1, 
-			[If you have HMAC_CTX_init])
-	      ], [
-		AC_MSG_RESULT(no)
-	    	# check if -lwsock32 or -lgdi32 are needed.	
-		BAKLIBS="$LIBS"
-		LIBS="$LIBS -lgdi32"
-		AC_MSG_CHECKING([if -lcrypto needs -lgdi32])
-		AC_TRY_LINK([], [
-		    int HMAC_CTX_init(void);
-		    (void)HMAC_CTX_init();
-		  ],[
-		    AC_DEFINE([HAVE_HMAC_CTX_INIT], 1, 
-			[If you have HMAC_CTX_init])
-		    AC_MSG_RESULT(yes) 
-		  ],[
-		    AC_MSG_RESULT(no)
-		    LIBS="$BAKLIBS"
-		    LIBS="$LIBS -ldl"
-		    AC_MSG_CHECKING([if -lcrypto needs -ldl])
-		    AC_TRY_LINK([], [
-			int HMAC_CTX_init(void);
-			(void)HMAC_CTX_init();
-		      ],[
-			AC_DEFINE([HAVE_HMAC_CTX_INIT], 1, 
-			    [If you have HMAC_CTX_init])
-			AC_MSG_RESULT(yes) 
-		      ],[
-			AC_MSG_RESULT(no)
-                    AC_MSG_ERROR([OpenSSL found in $ssldir, but version 0.9.7 or higher is required])
-		    ])
-		])
-            ])
-        fi
-        AC_SUBST(HAVE_SSL)
-	AC_SUBST(RUNTIME_PATH)
-    fi
-AC_CHECK_HEADERS([openssl/ssl.h],,, [AC_INCLUDES_DEFAULT])
-AC_CHECK_HEADERS([openssl/err.h],,, [AC_INCLUDES_DEFAULT])
-AC_CHECK_HEADERS([openssl/rand.h],,, [AC_INCLUDES_DEFAULT])
+    ACX_SSL_CHECKS($withval)
 ])dnl End of ACX_WITH_SSL
+
+dnl Check for SSL, where ssl is optional (--without-ssl is allowed)
+dnl Adds --with-ssl option, searches for openssl and defines HAVE_SSL if found
+dnl Setup of CPPFLAGS, CFLAGS.  Adds -lcrypto to LIBS. 
+dnl Checks main header files of SSL.
+dnl
+AC_DEFUN([ACX_WITH_SSL_OPTIONAL],
+[
+AC_ARG_WITH(ssl, AC_HELP_STRING([--with-ssl=pathname],
+                                [enable SSL (will check /usr/local/ssl
+                                /usr/lib/ssl /usr/ssl /usr/pkg /usr/local /opt/local /usr/sfw /usr)]),[
+        ],[
+            withval="yes"
+        ])
+    ACX_SSL_CHECKS($withval)
+])dnl End of ACX_WITH_SSL_OPTIONAL
 
 dnl Setup to use -lssl
 dnl To use -lcrypto, use the ACX_WITH_SSL setup (before this one).
@@ -779,6 +819,10 @@ dnl a nonblocking socket do not work, a new call to select is necessary.
 AC_DEFUN([ACX_CHECK_NONBLOCKING_BROKEN],
 [
 AC_MSG_CHECKING([if nonblocking sockets work])
+if echo $target | grep mingw32 >/dev/null; then 
+	AC_MSG_RESULT([no (windows)])
+	AC_DEFINE([NONBLOCKING_IS_BROKEN], 1, [Define if the network stack does not fully support nonblocking io (causes lower performance).])
+else
 AC_RUN_IFELSE(AC_LANG_PROGRAM([
 #include <stdio.h>
 #include <string.h>
@@ -904,6 +948,7 @@ AC_RUN_IFELSE(AC_LANG_PROGRAM([
 ], [
 	AC_MSG_RESULT([crosscompile(yes)])
 ])
+fi
 ])dnl End of ACX_CHECK_NONBLOCKING_BROKEN
 
 dnl Check if mkdir has one or two arguments.
@@ -946,6 +991,16 @@ AC_MSG_RESULT(yes)
 AC_DEFINE(HAVE_IOCTLSOCKET, 1, [if the function 'ioctlsocket' is available])
 ],[AC_MSG_RESULT(no)])
 ])dnl end of ACX_FUNC_IOCTLSOCKET
+
+dnl detect malloc and provide malloc compat prototype.
+dnl $1: unique name for compat code
+AC_DEFUN([ACX_FUNC_MALLOC],
+[
+	AC_FUNC_MALLOC
+	if test "$ac_cv_func_malloc_0_nonnull" = no; then
+		AC_DEFINE_UNQUOTED([malloc], [rpl_malloc_$1], [Define if  replacement function should be used.])
+	fi
+])
 
 dnl Define fallback for fseeko and ftello if needed.
 AC_DEFUN([AHX_CONFIG_FSEEKO],
