@@ -1,6 +1,7 @@
 14 July 2009: Wouter
 	- updated ldns tarball for solaris x64 compile assistance.
 	- no need to define RAND_MAX from config.h.
+	- iana portlist updated.
 
 13 July 2009: Wouter
 	- Fix for crash at start on windows.
