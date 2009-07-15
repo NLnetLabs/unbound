@@ -448,7 +448,10 @@ if test x_$enable_static_exe = x_yes; then
 	staticexe="-static"
 	if test "$on_mingw" = yes; then
 		staticexe="-all-static"
-		LIBS="$LIBS -lgdi32 -lz"
+		# for static crosscompile, include gdi32 and zlib here.
+		if test "`uname`" = "Linux"; then
+			LIBS="$LIBS -lgdi32 -lz"
+		fi
 	fi
 fi
 
