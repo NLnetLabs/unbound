@@ -194,10 +194,8 @@ libunbound.la:	$(LIBUNBOUND_OBJ)
 
 ifeq ($(patsubst ldns-src%,ldns-src,$(ldnsdir)),ldns-src)
 ldnslib=$(ldnsdir)/lib/libldns.a
-$(ldnslib):
-	@if test ! -z "$(ldnsdir)"; \
-	then (cd $(ldnsdir) && $(MAKE)); fi
-$(ldnsdir)/%:
+$(ldnslib):	$(ldnsdir)/lib
+$(ldnsdir)/lib:
 	@if test ! -z "$(ldnsdir)"; \
 	then (cd $(ldnsdir) && $(MAKE)); fi
 else

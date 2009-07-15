@@ -95,6 +95,9 @@ o If unbound-control (or munin graphs) do not work, this can often be because
   the unbound-control-setup script creates the keys with restricted 
   permissions, and the files need to be made readable or ownered by both the
   unbound daemon and unbound-control.
+o Crosscompile seems to hang.  You tried to install unbound under wine.
+  wine regedit and remove all the unbound entries from the registry or
+  delete .wine/drive_c.
 
 Acknowledgements
 ----------------
