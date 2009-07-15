@@ -185,6 +185,7 @@ fi
 AC_PROG_LEX
 AC_PROG_YACC
 AC_CHECK_PROG(doxygen, doxygen, doxygen)
+AC_CHECK_TOOL(STRIP, strip)
 ACX_LIBTOOL_C_ONLY
 
 # Checks for header files.

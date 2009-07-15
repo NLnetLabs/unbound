@@ -127,11 +127,12 @@ static void
 reportev(const char* str)
 {
 	char b[256];
+	char e[256];
 	HANDLE* s;
 	LPCTSTR msg = b;
 	/* print quickly to keep GetLastError value */
-	snprintf(b, sizeof(b), "%s: %s (%d)", SERVICE_NAME, 
-		str, (int)GetLastError());
+	wsvc_err2str(e, sizeof(e), str, GetLastError());
+	snprintf(b, sizeof(b), "%s: %s", SERVICE_NAME, e);
 	s = RegisterEventSource(NULL, SERVICE_NAME);
 	if(!s) return;
 	ReportEvent(s, /* event log */

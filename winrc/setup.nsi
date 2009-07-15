@@ -4,7 +4,6 @@ SetCompressor /solid /final lzma
 
 !include LogicLib.nsh
 !include MUI2.nsh
-!include setup_servicelib.nsh
 
 !define VERSION "0.0.0"
 !define QUADVERSION "0.0.0.0"
@@ -33,8 +32,8 @@ Var StartMenuFolder
 #ReserveFile "System.dll"
 #ReserveFile "NsExec.dll"
 
-!define MUI_ICON "${NSISDIR}\contrib\graphics\icons\orange-install-nsis.ico"
-!define MUI_UNICON "${NSISDIR}\contrib\graphics\icons\orange-uninstall-nsis.ico"
+!define MUI_ICON "${NSISDIR}\Contrib\Graphics\Icons\orange-install-nsis.ico"
+!define MUI_UNICON "${NSISDIR}\Contrib\Graphics\Icons\orange-uninstall-nsis.ico"
 
 !define MUI_HEADERIMAGE
 !define MUI_HEADERIMAGE_RIGHT
@@ -144,7 +143,7 @@ section "-hidden.postinstall"
 	# install service entry
 	nsExec::ExecToLog '"$INSTDIR\unbound-service-install.exe"'
 	# start unbound service
-	!insertmacro SERVICE "start" "unbound" ""
+	nsExec::ExecToLog '"$INSTDIR\unbound-service-install.exe" start'
 sectionEnd
 
 # set section descriptions
@@ -157,13 +156,15 @@ LangString DESC_dlv ${LANG_ENGLISH} "Set up to use DLV with dlv.isc.org. Downloa
 !insertmacro MUI_FUNCTION_DESCRIPTION_END
 
 # setup macros for uninstall functions.
+!ifdef UN
 !undef UN
+!endif
 !define UN "un."
 
 # uninstaller section
 section "un.Unbound"
 	# stop unbound service
-	!insertmacro SERVICE "stop" "unbound" ""
+	nsExec::ExecToLog '"$INSTDIR\unbound-service-remove.exe" stop'
 	# uninstall service entry
 	nsExec::ExecToLog '"$INSTDIR\unbound-service-remove.exe"'
 	# deregister uninstall

@@ -47,9 +47,19 @@
 #include "winrc/w_inst.h"
 
 /** Install service main */
-int main(int ATTR_UNUSED(argc), char** ATTR_UNUSED(argv))
+int main(int argc, char** argv)
 {
-	/*FILE* out = fopen("unbound-service-install.log", "w");*/
-	wsvc_install(NULL, "unbound-service-install.exe");
+	FILE* out = stdout;
+	/* out = fopen("unbound-service-install.log", "w");*/
+	if(argc == 2 && strcmp(argv[1], "start")==0) {
+		wsvc_rc_start(out);
+		return 0;
+	}
+	if(argc != 1) {
+		if(out) fprintf(out, "Usage: %s [start]\n", argv[0]);
+		else	printf("Usage: %s [start]\n", argv[0]);
+		return 1;
+	}
+	wsvc_install(out, "unbound-service-install.exe");
 	return 0;
 }

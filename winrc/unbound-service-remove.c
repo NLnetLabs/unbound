@@ -1,5 +1,5 @@
 /*
- * winrc/unbound-service-install.c - windows services installation util
+ * winrc/unbound-service-remove.c - windows services installation util
  *
  * Copyright (c) 2009, NLnet Labs. All rights reserved.
  *
@@ -46,10 +46,20 @@
 #include "config.h"
 #include "winrc/w_inst.h"
 
-/** Install service main */
-int main(int ATTR_UNUSED(argc), char** ATTR_UNUSED(argv))
+/** Remove service main */
+int main(int argc, char** argv)
 {
-	/*FILE* out = fopen("unbound-service-remove.log", "w");*/
+	FILE* out = stdout;
+	/* out = fopen("unbound-service-remove.log", "w");*/
+	if(argc == 2 && strcmp(argv[1], "stop")==0) {
+		wsvc_rc_stop(out);
+		return 0;
+	}
+	if(argc != 1) {
+		if(out) fprintf(out, "Usage: %s [stop]\n", argv[0]);
+		else	printf("Usage: %s [stop]\n", argv[0]);
+		return 1;
+	}
 	wsvc_remove(NULL);
 	return 0;
 }

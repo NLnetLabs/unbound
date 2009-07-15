@@ -43,11 +43,28 @@
 #include "winrc/w_inst.h"
 #include "winrc/win_svc.h"
 
+void wsvc_err2str(char* str, size_t len, const char* fixed, DWORD err)
+{
+	LPTSTR buf;
+	if(FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM | 
+		FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_ALLOCATE_BUFFER, 
+		NULL, err, 0, (LPTSTR)&buf, 0, NULL) == 0) {
+		/* could not format error message */
+		snprintf(str, len, "%s GetLastError=%d", fixed, (int)err);
+		return;
+	}
+	snprintf(str, len, "%s (err=%d): %s", fixed, (int)err, buf);
+	LocalFree(buf);
+}
+
 /** exit with windows error */
 static void
 fatal_win(FILE* out, const char* str)
 {
-        if(out) fprintf(out, "%s (%d)\n", str, (int)GetLastError());
+	char e[256];
+	wsvc_err2str(e, sizeof(e), str, (int)GetLastError());
+        if(out) fprintf(out, "%s\n", e);
+        else fprintf(stderr, "%s\n", e);
         exit(1);
 }
 
@@ -213,6 +230,7 @@ wsvc_install(FILE* out, const char* rename)
         if(out) fprintf(out, "unbound service installed\n");
 }
 
+
 /* Remove installed service from servicecontrolmanager */
 void
 wsvc_remove(FILE* out)
@@ -228,10 +246,63 @@ wsvc_remove(FILE* out)
                 fatal_win(out, "could not OpenService");
         }
         if(!DeleteService(sv)) {
+		CloseServiceHandle(sv);
+		CloseServiceHandle(scm);
                 fatal_win(out, "could not DeleteService");
         }
         CloseServiceHandle(sv);
         CloseServiceHandle(scm);
 	event_reg_remove(out);
         if(out) fprintf(out, "unbound service removed\n");
+}
+
+
+/* Start daemon */
+void
+wsvc_rc_start(FILE* out)
+{
+	SC_HANDLE scm;
+	SC_HANDLE sv;
+        if(out) fprintf(out, "start unbound service\n");
+	scm = OpenSCManager(NULL, NULL, SC_MANAGER_ALL_ACCESS);
+	if(!scm) fatal_win(out, "could not OpenSCManager");
+	sv = OpenService(scm, SERVICE_NAME, SERVICE_START);
+	if(!sv) {
+		CloseServiceHandle(scm);
+		fatal_win(out, "could not OpenService");
+	}
+	if(!StartService(sv, 0, NULL)) {
+		CloseServiceHandle(sv);
+		CloseServiceHandle(scm);
+		fatal_win(out, "could not StartService");
+	}
+	CloseServiceHandle(sv);
+	CloseServiceHandle(scm);
+        if(out) fprintf(out, "unbound service started\n");
+}
+
+
+/* Stop daemon */
+void
+wsvc_rc_stop(FILE* out)
+{
+	SC_HANDLE scm;
+	SC_HANDLE sv;
+	SERVICE_STATUS st;
+        if(out) fprintf(out, "stop unbound service\n");
+	scm = OpenSCManager(NULL, NULL, SC_MANAGER_ALL_ACCESS);
+	if(!scm) fatal_win(out, "could not OpenSCManager");
+	sv = OpenService(scm, SERVICE_NAME, SERVICE_STOP);
+	if(!sv) {
+		CloseServiceHandle(scm);
+		fatal_win(out, "could not OpenService");
+	}
+	if(!ControlService(sv, SERVICE_CONTROL_STOP, &st)) {
+		CloseServiceHandle(sv);
+		CloseServiceHandle(scm);
+		fatal_win(out, "could not ControlService");
+	}
+	CloseServiceHandle(sv);
+	CloseServiceHandle(scm);
+        if(out) fprintf(out, "unbound service stopped\n");
 }

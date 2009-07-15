@@ -165,11 +165,26 @@ if [ "$DOWIN" = "yes" ]; then
     	rm -r autom4te* || echo "ignored"
     fi
 
+    # detect crosscompile, from Fedora11 at this point.
+    if test "`uname`" = "Linux"; then 
+        cross="yes"
+	configure="mingw32-configure"
+	strip="i686-pc-mingw32-strip"
+	makensis="makensis"	# from mingw32-nsis package
+	# on a re-configure the cache may no longer be valid...
+	if test -f mingw32-config.cache; then rm mingw32-config.cache; fi
+    else 
+	cross="no"	# mingw and msys
+	configure="./configure"
+	strip="strip"
+	makensis="c:/Program Files/NSIS/makensis.exe" # http://nsis.sf.net
+    fi
+
     # procedure for making unbound installer on mingw. 
     info "Creating windows dist unbound $version"
     info "Calling configure"
-    echo './configure --enable-debug --enable-static-exe '"$*"
-    ./configure --enable-debug --enable-static-exe $* \
+    echo "$configure"' --enable-debug --enable-static-exe '"$*"
+    $configure --enable-debug --enable-static-exe $* \
 	|| error_cleanup "Could not configure"
     info "Calling make"
     make || error_cleanup "Could not make"
@@ -180,13 +195,13 @@ if [ "$DOWIN" = "yes" ]; then
     rm -f $file
     info "Creating $file"
     mkdir tmp.$$
-    strip unbound.exe
-    strip anchor-update.exe
-    strip unbound-control.exe
-    strip unbound-host.exe
-    strip unbound-checkconf.exe
-    strip unbound-service-install.exe
-    strip unbound-service-remove.exe
+    $strip unbound.exe
+    $strip anchor-update.exe
+    $strip unbound-control.exe
+    $strip unbound-host.exe
+    $strip unbound-checkconf.exe
+    $strip unbound-service-install.exe
+    $strip unbound-service-remove.exe
     cd tmp.$$
     cp ../doc/example.conf example.conf
     cp ../unbound.exe ../unbound-host.exe ../unbound-control.exe ../unbound-checkconf.exe ../unbound-service-install.exe ../unbound-service-remove.exe ../LICENSE ../winrc/unbound-website.url ../winrc/service.conf ../winrc/README.txt .
@@ -198,8 +213,7 @@ if [ "$DOWIN" = "yes" ]; then
     info "Creating installer"
     quadversion=`cat ../config.h | grep RSRC_PACKAGE_VERSION | sed -e 's/#define RSRC_PACKAGE_VERSION //' -e 's/,/\\./g'`
     cat ../winrc/setup.nsi | sed -e 's/define VERSION.*$/define VERSION "'$version'"/' -e 's/define QUADVERSION.*$/define QUADVERSION "'$quadversion'"/' > ../winrc/setup_ed.nsi
-    # get tool from http://nsis.sf.net
-    c:/Program\ Files/NSIS/makensis.exe ../winrc/setup_ed.nsi
+    "$makensis" ../winrc/setup_ed.nsi
     info "Created installer"
     cd ..
     rm -rf tmp.$$

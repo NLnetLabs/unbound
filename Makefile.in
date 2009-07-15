@@ -35,6 +35,7 @@ doxygen=@doxygen@
 libtool=@libtool@
 ldnsdir=@ldnsdir@
 staticexe=@staticexe@
+EXEEXT=@EXEEXT@
 configfile=@ub_conf_file@
 UNBOUND_RUN_DIR=@UNBOUND_RUN_DIR@
 CHECKLOCK_SRC=@CHECKLOCK_SRC@
@@ -46,6 +47,7 @@ PYTHON_SITE_PKG=@PYTHON_SITE_PKG@
 SWIG=@SWIG@
 YACC=@YACC@
 LEX=@LEX@
+STRIP=@STRIP@
 CC=@CC@
 CPPFLAGS=-I. @CPPFLAGS@
 ifneq "$(srcdir)" "."
@@ -82,6 +84,7 @@ COMMON_SRC=$(patsubst $(srcdir)/%,%, $(wildcard $(srcdir)/services/*.c \
 	$(srcdir)/iterator/*.c $(srcdir)/validator/*.c $(PYTHONMOD_SRC))) \
 	util/configparser.c util/configlexer.c $(CHECKLOCK_SRC)
 COMMON_OBJ=$(addprefix $(BUILD),$(COMMON_SRC:.c=.lo))
+COMPAT_SRC=$(addprefix compat/,$(LIBOBJS:.o=.c))
 COMPAT_OBJ=$(addprefix $(BUILD)compat/,$(LIBOBJS:.o=.lo))
 UNITTEST_SRC=$(patsubst $(srcdir)/%,%, \
 	$(wildcard $(srcdir)/testcode/unit*.c)) \
@@ -139,7 +142,8 @@ ifeq "$(UB_ON_WINDOWS)" "yes"
   CONTROL_OBJ+=$(BUILD)winrc/rsrc_unbound_control.o
   CHECKCONF_OBJ+=$(BUILD)winrc/rsrc_unbound_checkconf.o
 
-  WINAPPS=unbound-service-install unbound-service-remove anchor-update
+  WINAPPS=$(addsuffix $(EXEEXT), unbound-service-install \
+  	unbound-service-remove anchor-update)
   SVCINST_SRC=winrc/unbound-service-install.c winrc/w_inst.c
   SVCINST_OBJ=$(addprefix $(BUILD),$(SVCINST_SRC:.c=.lo)) $(COMPAT_OBJ) \
 	$(BUILD)winrc/rsrc_svcinst.o
@@ -173,10 +177,10 @@ $(BUILD)%.lo:    $(srcdir)/%.c
 	@-if test ! -d $(dir $@); then $(INSTALL) -d $(patsubst %/,%,$(dir $@)); fi
 	$Q$(COMPILE) -c $< -o $@
 
-all:	$(COMMON_OBJ) unbound unbound-checkconf lib unbound-host unbound-control unbound-control-setup $(WINAPPS)
+all:	$(COMMON_OBJ) unbound$(EXEEXT) unbound-checkconf$(EXEEXT) lib unbound-host$(EXEEXT) unbound-control$(EXEEXT) unbound-control-setup $(WINAPPS)
 
-TEST_BIN=asynclook delayer harvest lock-verify memstats perf pktview signit \
-	streamtcp testbound unittest
+TEST_BIN=$(addsuffix $(EXEEXT),asynclook delayer harvest lock-verify \
+	memstats perf pktview signit streamtcp testbound unittest)
 tests:	all $(TEST_BIN)
 
 test:	tests
@@ -193,79 +197,82 @@ ldnslib=$(ldnsdir)/lib/libldns.a
 $(ldnslib):
 	@if test ! -z "$(ldnsdir)"; \
 	then (cd $(ldnsdir) && $(MAKE)); fi
+$(ldnsdir)/%:
+	@if test ! -z "$(ldnsdir)"; \
+	then (cd $(ldnsdir) && $(MAKE)); fi
 else
 ldnslib=
 endif
 
-unbound:	$(DAEMON_OBJ) $(ldnslib)
+unbound$(EXEEXT):	$(DAEMON_OBJ) $(ldnslib)
 	$(INFO) Link $@
 	$Q$(LINK) -o $@ $(sort $(DAEMON_OBJ)) -lssl $(LIBS)
 
-unbound-checkconf:	$(CHECKCONF_OBJ) $(ldnslib)
+unbound-checkconf$(EXEEXT):	$(CHECKCONF_OBJ) $(ldnslib)
 	$(INFO) Link $@
 	$Q$(LINK) -o $@ $(sort $(CHECKCONF_OBJ)) $(LIBS)
 
-unbound-control:	$(CONTROL_OBJ) $(ldnslib)
+unbound-control$(EXEEXT):	$(CONTROL_OBJ) $(ldnslib)
 	$(INFO) Link $@
 	$Q$(LINK) -o $@ $(sort $(CONTROL_OBJ)) -lssl $(LIBS)
 
-unbound-host:	$(HOST_OBJ) libunbound.la $(ldnslib)
+unbound-host$(EXEEXT):	$(HOST_OBJ) libunbound.la $(ldnslib)
 	$(INFO) Link $@
 	$Q$(LINK) -o $@ $(sort $(HOST_OBJ)) -L. -L.libs -lunbound $(LIBS)
 
-unbound-service-install:	$(SVCINST_OBJ)
+unbound-service-install$(EXEEXT):	$(SVCINST_OBJ)
 	$(INFO) Link $@
 	$Q$(LINK) -o $@ $(sort $(SVCINST_OBJ)) $(LIBS)
 
-unbound-service-remove:	$(SVCUNINST_OBJ)
+unbound-service-remove$(EXEEXT):	$(SVCUNINST_OBJ)
 	$(INFO) Link $@
 	$Q$(LINK) -o $@ $(sort $(SVCUNINST_OBJ)) $(LIBS)
 
-anchor-update:  $(ANCHORUPD_OBJ) libunbound.la $(ldnslib)
+anchor-update$(EXEEXT):  $(ANCHORUPD_OBJ) libunbound.la $(ldnslib)
 	$(INFO) Link $@
 	$Q$(LINK) -o $@ $(sort $(ANCHORUPD_OBJ)) -L. -L.libs -lunbound $(LIBS)
 
-unittest:	$(UNITTEST_OBJ) $(ldnslib)
+unittest$(EXEEXT):	$(UNITTEST_OBJ) $(ldnslib)
 	$(INFO) Link $@
 	$Q$(LINK) -o $@ $(sort $(UNITTEST_OBJ)) $(LIBS)
 
-testbound:	$(TESTBOUND_OBJ) $(ldnslib)
+testbound$(EXEEXT):	$(TESTBOUND_OBJ) $(ldnslib)
 	$(INFO) Link $@
 	$Q$(LINK) -o $@ $(sort $(TESTBOUND_OBJ)) -lssl $(LIBS)
 
-lock-verify:	$(LOCKVERIFY_OBJ) $(ldnslib)
+lock-verify$(EXEEXT):	$(LOCKVERIFY_OBJ) $(ldnslib)
 	$(INFO) Link $@
 	$Q$(LINK) -o $@ $(sort $(LOCKVERIFY_OBJ)) $(LIBS)
 
-pktview:	$(PKTVIEW_OBJ) $(ldnslib)
+pktview$(EXEEXT):	$(PKTVIEW_OBJ) $(ldnslib)
 	$(INFO) Link $@
 	$Q$(LINK) -o $@ $(sort $(PKTVIEW_OBJ)) $(LIBS)
 
-signit:	$(SIGNIT_OBJ) $(ldnslib)
+signit$(EXEEXT):	$(SIGNIT_OBJ) $(ldnslib)
 	$(INFO) Link $@
 	$Q$(LINK) -o $@ $(sort $(SIGNIT_OBJ)) $(LIBS)
 
-memstats:	$(MEMSTATS_OBJ) $(ldnslib)
+memstats$(EXEEXT):	$(MEMSTATS_OBJ) $(ldnslib)
 	$(INFO) Link $@
 	$Q$(LINK) -o $@ $(sort $(MEMSTATS_OBJ)) $(LIBS)
 
-asynclook:	$(ASYNCLOOK_OBJ) $(ldnslib) libunbound.la
+asynclook$(EXEEXT):	$(ASYNCLOOK_OBJ) $(ldnslib) libunbound.la
 	$(INFO) Link $@
 	$Q$(LINK) -o $@ $(sort $(ASYNCLOOK_OBJ)) $(LIBS) -L. -L.libs -lunbound
 
-streamtcp:	$(STREAMTCP_OBJ) $(ldnslib)
+streamtcp$(EXEEXT):	$(STREAMTCP_OBJ) $(ldnslib)
 	$(INFO) Link $@
 	$Q$(LINK) -o $@ $(sort $(STREAMTCP_OBJ)) $(LIBS)
 
-perf:	$(PERF_OBJ) $(ldnslib)
+perf$(EXEEXT):	$(PERF_OBJ) $(ldnslib)
 	$(INFO) Link $@
 	$Q$(LINK) -o $@ $(sort $(PERF_OBJ)) $(LIBS)
 
-delayer:	$(DELAYER_OBJ) $(ldnslib)
+delayer$(EXEEXT):	$(DELAYER_OBJ) $(ldnslib)
 	$(INFO) Link $@
 	$Q$(LINK) -o $@ $(sort $(DELAYER_OBJ)) $(LIBS)
 
-harvest:	$(HARVEST_OBJ) $(ldnslib) libunbound.la
+harvest$(EXEEXT):	$(HARVEST_OBJ) $(ldnslib) libunbound.la
 	$(INFO) Link $@
 	$Q$(LINK) -o $@ $(sort $(HARVEST_OBJ)) $(LIBS) -L. -L.libs -lunbound
 
@@ -318,7 +325,7 @@ util/configparser.c util/configparser.h:  $(srcdir)/util/configparser.y
 
 clean:
 	rm -f *.o *.d *.lo *~ tags
-	rm -f unbound unbound-checkconf unbound-host unbound-control unbound-control-setup libunbound.la
+	rm -f unbound$(EXEEXT) unbound-checkconf$(EXEEXT) unbound-host$(EXEEXT) unbound-control$(EXEEXT) unbound-control-setup libunbound.la
 	rm -rf autom4te.cache .libs build doc/html doc/xml
 
 realclean: clean
@@ -349,10 +356,10 @@ doc:
 	fi
 
 strip:
-	strip unbound
-	strip unbound-checkconf
-	strip unbound-control
-	strip unbound-host
+	$(STRIP) unbound$(EXEEXT)
+	$(STRIP) unbound-checkconf$(EXEEXT)
+	$(STRIP) unbound-control$(EXEEXT)
+	$(STRIP) unbound-host$(EXEEXT)
 
 install:
 	$(INSTALL) -m 755 -d $(DESTDIR)$(sbindir)
@@ -363,10 +370,10 @@ install:
 	$(INSTALL) -m 755 -d $(DESTDIR)$(mandir)/man1
 	$(INSTALL) -m 755 -d $(DESTDIR)$(libdir)
 	$(INSTALL) -m 755 -d $(DESTDIR)$(includedir)
-	$(LIBTOOL) --mode=install cp unbound $(DESTDIR)$(sbindir)/unbound
-	$(LIBTOOL) --mode=install cp unbound-checkconf $(DESTDIR)$(sbindir)/unbound-checkconf
-	$(LIBTOOL) --mode=install cp unbound-control $(DESTDIR)$(sbindir)/unbound-control
-	$(LIBTOOL) --mode=install cp unbound-host $(DESTDIR)$(sbindir)/unbound-host
+	$(LIBTOOL) --mode=install cp unbound$(EXEEXT) $(DESTDIR)$(sbindir)/unbound$(EXEEXT)
+	$(LIBTOOL) --mode=install cp unbound-checkconf$(EXEEXT) $(DESTDIR)$(sbindir)/unbound-checkconf$(EXEEXT)
+	$(LIBTOOL) --mode=install cp unbound-control$(EXEEXT) $(DESTDIR)$(sbindir)/unbound-control$(EXEEXT)
+	$(LIBTOOL) --mode=install cp unbound-host$(EXEEXT) $(DESTDIR)$(sbindir)/unbound-host$(EXEEXT)
 ifeq "$(WITH_PYTHONMODULE)" "yes"
 	$(INSTALL) -m 755 -d $(DESTDIR)$(PYTHON_SITE_PKG)
 	$(INSTALL) -c -m 644 pythonmod/unboundmodule.py $(DESTDIR)$(PYTHON_SITE_PKG)/unboundmodule.py
@@ -389,7 +396,7 @@ endif
 	$(LIBTOOL) --mode=finish $(DESTDIR)$(libdir)
 
 uninstall:
-	rm -f -- $(DESTDIR)$(sbindir)/unbound $(DESTDIR)$(sbindir)/unbound-checkconf $(DESTDIR)$(sbindir)/unbound-host $(DESTDIR)$(sbindir)/unbound-control $(DESTDIR)$(sbindir)/unbound-control-setup
+	rm -f -- $(DESTDIR)$(sbindir)/unbound$(EXEEXT) $(DESTDIR)$(sbindir)/unbound-checkconf$(EXEEXT) $(DESTDIR)$(sbindir)/unbound-host$(EXEEXT) $(DESTDIR)$(sbindir)/unbound-control$(EXEEXT) $(DESTDIR)$(sbindir)/unbound-control-setup
 	rm -f -- $(DESTDIR)$(mandir)/man8/unbound.8 $(DESTDIR)$(mandir)/man8/unbound-checkconf.8 $(DESTDIR)$(mandir)/man5/unbound.conf.5 $(DESTDIR)$(mandir)/man8/unbound-control.8
 	rm -f -- $(DESTDIR)$(mandir)/man1/unbound-host.1 $(DESTDIR)$(mandir)/man3/libunbound.3
 	rm -f -- $(DESTDIR)$(includedir)/unbound.h
@@ -427,7 +434,7 @@ $(BUILD)%.d: $(srcdir)/%.c
 ifneq ($(MAKECMDGOALS),clean)
 ifneq ($(MAKECMDGOALS),realclean)
 ifeq ($(debug_enabled),yes)
--include $(addprefix $(BUILD),$(ALL_SRC:.c=.d))
+-include $(addprefix $(BUILD),$(ALL_SRC:.c=.d) $(COMPAT_SRC:.c=.d))
 endif
 endif
 endif

@@ -56,4 +56,25 @@ void wsvc_install(FILE* out, const char* rename);
  */
 void wsvc_remove(FILE* out);
 
+/**
+ * Start the service from servicecontrolmanager, tells OS to start daemon.
+ * @param out: debug output printed here (errors). or NULL.
+ */
+void wsvc_rc_start(FILE* out);
+
+/**
+ * Stop the service from servicecontrolmanager, tells OS to stop daemon.
+ * @param out: debug output printed here (errors). or NULL.
+ */
+void wsvc_rc_stop(FILE* out);
+
+/** 
+ * Convert windows GetLastError() value to a neat string.
+ * @param str: destination buffer
+ * @param len: length of dest buffer
+ * @param fixed: fixed text to prepend to string.
+ * @param err: the GetLastError() value.
+ */
+void wsvc_err2str(char* str, size_t len, const char* fixed, DWORD err);
+
 #endif /* WINRC_W_INST_H */
