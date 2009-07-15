@@ -2,6 +2,7 @@
 	- dependencies for compat items, for crosscompile.
 	- mingw32 crosscompile changes, dependencies and zipfile creation.
 	  and with System.dll from the windows NSIS you can make setup.exe.
+	- package libgcc_s_sjlj exception handler for NSISdl.dll.
 
 14 July 2009: Wouter
 	- updated ldns tarball for solaris x64 compile assistance.
