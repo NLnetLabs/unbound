@@ -63,7 +63,6 @@ else
 	if echo $target | grep mingw32 >/dev/null; then on_mingw="yes"
 	else on_mingw="no"; fi
 fi
-echo "on mingw" $on_mingw
 
 #
 # Determine configuration file
