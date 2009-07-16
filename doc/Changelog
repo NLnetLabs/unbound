@@ -1,5 +1,6 @@
 16 July 2009: Wouter
 	- fix replacement malloc code.  Used in crosscompile.
+	- makedist -w creates crosscompiled setup.exe on fedora11.
 
 15 July 2009: Wouter
 	- dependencies for compat items, for crosscompile.

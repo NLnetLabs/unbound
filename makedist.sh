@@ -107,6 +107,27 @@ replace_all () {
     replace_text "$1" "@date@" "`date +'%b %e, %Y'`"
 }
     
+check_svn_root () {
+    # Check if SVNROOT is specified.
+    if [ -z "$SVNROOT" ]; then
+	if test -f .svn/entries; then
+	      eval `svn info | grep 'URL:' | sed -e 's/URL: /url=/' | head -1`
+	      SVNROOT="$url"
+	fi
+	if test -z "$SVNROOT"; then
+	    error "SVNROOT must be specified (using -d)"
+	fi
+    fi
+}
+
+create_temp_dir () {
+    # Creating temp directory
+    info "Creating temporary working directory"
+    temp_dir=`mktemp -d unbound-dist-XXXXXX`
+    info "Directory '$temp_dir' created."
+    cd $temp_dir
+}
+
 
 SNAPSHOT="no"
 RC="no"
@@ -147,6 +168,30 @@ while [ "$1" ]; do
 done
 
 if [ "$DOWIN" = "yes" ]; then
+    # detect crosscompile, from Fedora11 at this point.
+    if test "`uname`" = "Linux"; then 
+	info "Crosscompile windows dist"
+        cross="yes"
+	configure="mingw32-configure"
+	strip="i686-pc-mingw32-strip"
+	makensis="makensis"	# from mingw32-nsis package
+
+	check_svn_root
+	create_temp_dir
+	info "Exporting source from SVN."
+	svn export "$SVNROOT" unbound || error_cleanup "SVN command failed"
+	cd unbound || error_cleanup "Unbound not exported correctly from SVN"
+
+	# on a re-configure the cache may no longer be valid...
+	if test -f mingw32-config.cache; then rm mingw32-config.cache; fi
+    else 
+	cross="no"	# mingw and msys
+	configure="./configure"
+	strip="strip"
+	makensis="c:/Program Files/NSIS/makensis.exe" # http://nsis.sf.net
+    fi
+
+    # version gets compiled into source, edit the configure to set  it
     version=`./configure --version | head -1 | awk '{ print $3 }'` \
 	|| error_cleanup "Cannot determine version number."
     if [ "$RC" != "no" -o "$SNAPSHOT" != "no" ]; then
@@ -163,21 +208,6 @@ if [ "$DOWIN" = "yes" ]; then
     	info "Rebuilding configure script (autoconf) snapshot."
     	autoconf || autoheader || error_cleanup "Autoconf failed."
     	rm -r autom4te* || echo "ignored"
-    fi
-
-    # detect crosscompile, from Fedora11 at this point.
-    if test "`uname`" = "Linux"; then 
-        cross="yes"
-	configure="mingw32-configure"
-	strip="i686-pc-mingw32-strip"
-	makensis="makensis"	# from mingw32-nsis package
-	# on a re-configure the cache may no longer be valid...
-	if test -f mingw32-config.cache; then rm mingw32-config.cache; fi
-    else 
-	cross="no"	# mingw and msys
-	configure="./configure"
-	strip="strip"
-	makensis="c:/Program Files/NSIS/makensis.exe" # http://nsis.sf.net
     fi
 
     # procedure for making unbound installer on mingw. 
@@ -218,22 +248,18 @@ if [ "$DOWIN" = "yes" ]; then
     cd ..
     rm -rf tmp.$$
     mv winrc/unbound_setup_$version.exe .
+    if test "$cross" = "yes"; then
+	    mv unbound_setup_$version.exe $cwd/.
+	    mv unbound-$version.zip $cwd/.
+	    cleanup
+    fi
     ls -lG unbound_setup_$version.exe
     ls -lG unbound-$version.zip
     info "Done"
     exit 0
 fi
 
-# Check if SVNROOT is specified.
-if [ -z "$SVNROOT" ]; then
-    if test -f .svn/entries; then
-	  eval `svn info | grep 'URL:' | sed -e 's/URL: /url=/' | head -1`
-	  SVNROOT="$url"
-    fi
-    if test -z "$SVNROOT"; then
-	error "SVNROOT must be specified (using -d)"
-    fi
-fi
+check_svn_root
 # Check if LDNSDIR is specified.
 if test -z "$LDNSDIR"; then
     # try to autodetect from Makefile (if present)
@@ -251,12 +277,7 @@ info "SNAPSHOT is $SNAPSHOT"
 
 #question "Do you wish to continue with these settings?" || error "User abort."
 
-
-# Creating temp directory
-info "Creating temporary working directory"
-temp_dir=`mktemp -d unbound-dist-XXXXXX`
-info "Directory '$temp_dir' created."
-cd $temp_dir
+create_temp_dir
 
 info "Exporting source from SVN."
 svn export "$SVNROOT" unbound || error_cleanup "SVN command failed"
