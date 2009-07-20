@@ -2102,7 +2102,7 @@ primeResponseToKE(int rcode, struct dns_msg* msg, struct trust_anchor* ta,
 
 	if(sec != sec_status_secure) {
 		log_nametypeclass(VERB_OPS, "failed to prime trust anchor -- "
-			"could not fetch secure DNSKEY rrset", 
+			"DNSKEY rrset is not secure", 
 			ta->name, LDNS_RR_TYPE_DNSKEY, ta->dclass);
 		/* NOTE: in this case, we should probably reject the trust 
 		 * anchor for longer, perhaps forever. */
