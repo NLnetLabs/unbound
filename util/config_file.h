@@ -213,6 +213,8 @@ struct config_file {
 	int bogus_ttl; 
 	/** should validator clean additional section for secure msgs */
 	int val_clean_additional;
+	/** log bogus messages by the validator */
+	int val_log_level;
 	/** should validator allow bogus messages to go through */
 	int val_permissive_mode;
 	/** nsec3 maximum iterations per key size, string */

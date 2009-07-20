@@ -98,7 +98,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_EXTENDED_STATISTICS VAR_LOCAL_DATA_PTR VAR_JOSTLE_TIMEOUT
 %token VAR_STUB_PRIME VAR_UNWANTED_REPLY_THRESHOLD VAR_LOG_TIME_ASCII
 %token VAR_DOMAIN_INSECURE VAR_PYTHON VAR_PYTHON_SCRIPT VAR_VAL_SIG_SKEW_MIN
-%token VAR_VAL_SIG_SKEW_MAX VAR_CACHE_MIN_TTL
+%token VAR_VAL_SIG_SKEW_MAX VAR_CACHE_MIN_TTL VAR_VAL_LOG_LEVEL
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -148,7 +148,7 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_local_data_ptr | server_jostle_timeout | 
 	server_unwanted_reply_threshold | server_log_time_ascii | 
 	server_domain_insecure | server_val_sig_skew_min | 
-	server_val_sig_skew_max | server_cache_min_ttl
+	server_val_sig_skew_max | server_cache_min_ttl | server_val_log_level
 	;
 stubstart: VAR_STUB_ZONE
 	{
@@ -844,6 +844,14 @@ server_val_permissive_mode: VAR_VAL_PERMISSIVE_MODE STRING_ARG
 		else cfg_parser->cfg->val_permissive_mode = 
 			(strcmp($2, "yes")==0);
 		free($2);
+	}
+	;
+server_val_log_level: VAR_VAL_LOG_LEVEL STRING_ARG
+	{
+		OUTYY(("P(server_val_log_level:%s)\n", $2));
+		if(atoi($2) == 0 && strcmp($2, "0") != 0)
+			yyerror("number expected");
+		else cfg_parser->cfg->val_log_level = atoi($2);
 	}
 	;
 server_val_nsec3_keysize_iterations: VAR_VAL_NSEC3_KEYSIZE_ITERATIONS STRING_ARG

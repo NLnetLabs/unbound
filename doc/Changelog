@@ -1,6 +1,8 @@
 20 July 2009: Wouter
 	- Ignore transient sendto errors, no route to host, and host, net down.
 	- contrib/update-anchor.sh has -r option for root-hints.
+	- feature val-log-level: 1 prints validation failures so you can
+	  keep track of them during dnssec deployment.
 
 16 July 2009: Wouter
 	- fix replacement malloc code.  Used in crosscompile.

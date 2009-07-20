@@ -155,6 +155,7 @@ config_create()
 	cfg->val_sig_skew_min = 3600; /* at least daylight savings trouble */
 	cfg->val_sig_skew_max = 86400; /* at most timezone settings trouble */
 	cfg->val_clean_additional = 1;
+	cfg->val_log_level = 0;
 	cfg->val_permissive_mode = 0;
 	cfg->key_cache_size = 4 * 1024 * 1024;
 	cfg->key_cache_slabs = 4;
@@ -375,6 +376,9 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	} else if(strcmp(opt, "val-clean-additional:") == 0) {
 		IS_YES_OR_NO;
 		cfg->val_clean_additional = (strcmp(val, "yes") == 0);
+	} else if(strcmp(opt, "val-log-level:") == 0) {
+		IS_NUMBER_OR_ZERO;
+		cfg->val_log_level = atoi(val);
 	} else if(strcmp(opt, "val-permissive-mode:") == 0) {
 		IS_YES_OR_NO;
 		cfg->val_permissive_mode = (strcmp(val, "yes") == 0);

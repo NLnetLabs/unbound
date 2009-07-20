@@ -563,6 +563,13 @@ indeterminate or unchecked are not affected. Default is yes. Use this setting
 to protect the users that rely on this validator for authentication from 
 protentially bad data in the additional section.
 .TP
+.B val\-log\-level: \fI<number>
+Have the validator print validation failures to the log.  Regardless of the
+verbosity setting.  Default is 0, off. At 1, for every user query that fails
+a line is printed to the logs.  This way you can monitor what happens with
+validation.  Use a diagnosis tool, such as dig or drill, to find out why 
+validation is failing for these queries.
+.TP
 .B val\-permissive\-mode: \fI<yes or no>
 Instruct the validator to mark bogus messages as indeterminate. The security
 checks are performed, but if the result is bogus (failed security), the

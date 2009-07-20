@@ -342,6 +342,10 @@ server:
 	# replies if the message is found secure. The default is off.
 	# val-permissive-mode: no
 
+	# Have the validator log failed validations for your diagnosis.
+	# 0: off. 1: A line per failed user query.
+	# val-log-level: 0
+
 	# It is possible to configure NSEC3 maximum iteration counts per
 	# keysize. Keep this table very short, as linear search is done.
 	# A message with an NSEC3 with larger count is marked insecure.

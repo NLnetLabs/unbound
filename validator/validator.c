@@ -1796,6 +1796,9 @@ processFinished(struct module_qstate* qstate, struct val_qstate* vq,
 	 * endless bogus revalidation */
 	if(vq->orig_msg->rep->security == sec_status_bogus) {
 		vq->orig_msg->rep->ttl = *qstate->env->now + ve->bogus_ttl;
+		if(qstate->env->cfg->val_log_level >= 1) {
+			log_query_info(0, "validation failure", &qstate->qinfo);
+		}
 		/* If we are in permissive mode, bogus gets indeterminate */
 		if(ve->permissive_mode)
 			vq->orig_msg->rep->security = sec_status_indeterminate;
