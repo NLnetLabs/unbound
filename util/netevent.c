@@ -250,9 +250,26 @@ comm_point_send_udp_msg(struct comm_point *c, ldns_buffer* packet,
 		ldns_buffer_remaining(packet), 0,
 		addr, addrlen);
 	if(sent == -1) {
-#ifdef ENETUNREACH
-		if(errno == ENETUNREACH && verbosity < VERB_ALGO)
-			return 0;
+		/* do not log transient errors (unless high verbosity) */
+#if defined(ENETUNREACH) || defined(EHOSTDOWN) || defined(EHOSTUNREACH) || defined(ENETDOWN)
+		switch(errno) {
+#  ifdef ENETUNREACH
+			case ENETUNREACH:
+#  endif
+#  ifdef EHOSTDOWN
+			case EHOSTDOWN:
+#  endif
+#  ifdef EHOSTUNREACH
+			case EHOSTUNREACH:
+#  endif
+#  ifdef ENETDOWN
+			case ENETDOWN:
+#  endif
+				if(verbosity < VERB_ALGO)
+					return 0;
+			default:
+				break;
+		}
 #endif
 		/* squelch errors where people deploy AAAA ::ffff:bla for
 		 * authority servers, which we try for intranets. */

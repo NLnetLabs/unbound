@@ -1,3 +1,6 @@
+20 July 2009: Wouter
+	- Ignore transient sendto errors, no route to host, and host, net down.
+
 16 July 2009: Wouter
 	- fix replacement malloc code.  Used in crosscompile.
 	- makedist -w creates crosscompiled setup.exe on fedora11.
