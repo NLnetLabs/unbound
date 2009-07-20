@@ -8,7 +8,7 @@ ubhost=unbound-host
 
 usage ( )
 {
-	echo "usage: update-anchor [-b] <zone name> <trust anchor file>"
+	echo "usage: update-anchor [-r hs] [-b] <zone name> <trust anchor file>"
 	echo "    performs an update of trust anchor file"
 	echo "    the trust anchor file is overwritten with the latest keys"
 	echo "    the trust anchor file should contain only keys for one zone"
@@ -16,12 +16,14 @@ usage ( )
 	echo "       without -b the file is made in unbound format."
 	echo "    "
 	echo "alternate:"
-	echo "    update-anchor [-b] -d directory"
+	echo "    update-anchor [-r hints] [-b] -d directory"
 	echo "    update all <zone>.anchor files in the directory."
 	echo "    "
 	echo "    name the files br.anchor se.anchor ..., and include them in"
 	echo "    the validating resolver config file."
 	echo "    put keys for the root in a file with the name root.anchor."
+	echo ""
+	echo "-r root.hints	use different root hints. Strict option order."
 	echo ""
 	echo "Exit code 0 means anchors updated, 1 no changes, others are errors."
 	exit 2
@@ -32,6 +34,12 @@ if test $# -eq 0; then
 fi
 bindformat="no"
 filearg='-f'
+roothints=""
+if test X"$1" = "X-r"; then
+	shift
+	roothints="$1"
+	shift
+fi
 if test X"$1" = "X-b"; then
 	shift
 	bindformat="yes"
@@ -46,10 +54,15 @@ do_update ( ) {
 	# arguments: <zonename> <keyfile>
 	zonename="$1"
 	keyfile="$2"
-	tmp2=$tmpfile.2
-
 	tmpfile="/tmp/update-anchor.$$"
-	$ubhost -v $filearg "$keyfile" -t DNSKEY "$zonename" >$tmpfile
+	tmp2=$tmpfile.2
+	tmp3=$tmpfile.3
+	rh=""
+	if test -n "$roothints"; then
+		echo "server: root-hints: '$roothints'" > $tmp3
+		rh="-C $tmp3"
+	fi
+	$ubhost -v $rh $filearg "$keyfile" -t DNSKEY "$zonename" >$tmpfile
 	if test $? -ne 0; then
 		rm -f $tmpfile
 		echo "Error: Could not update zone $zonename anchor file $keyfile"
@@ -65,7 +78,7 @@ do_update ( ) {
 		rm -f $tmpfile
 		echo "Error: Could not update zone $zonename anchor file $keyfile"
 		echo "Cause: result of lookup was not secure" 
-		echo "    (keys too far out of date? domain changed ownership?)"
+		echo "    (keys too far out of date? domain changed ownership? need root hints?)"
 		return 3
 	fi
 
@@ -115,7 +128,7 @@ do_update ( ) {
 		echo "$zonename key file $keyfile unchanged."
 	fi
 
-	rm -f $tmpfile $tmp2
+	rm -f $tmpfile $tmp2 $tmp3
 }
 
 no_updated=1

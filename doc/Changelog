@@ -1,5 +1,6 @@
 20 July 2009: Wouter
 	- Ignore transient sendto errors, no route to host, and host, net down.
+	- contrib/update-anchor.sh has -r option for root-hints.
 
 16 July 2009: Wouter
 	- fix replacement malloc code.  Used in crosscompile.
