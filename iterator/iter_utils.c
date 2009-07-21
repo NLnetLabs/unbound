@@ -233,7 +233,7 @@ iter_fill_rtt(struct iter_env* iter_env, struct module_env* env,
 static int
 iter_filter_order(struct iter_env* iter_env, struct module_env* env,
 	uint8_t* name, size_t namelen, uint16_t qtype, uint32_t now, 
-	struct delegpt* dp, int* selected_rtt)
+	struct delegpt* dp, int* selected_rtt, int open_target)
 {
 	int got_num = 0, low_rtt = 0, swap_to_front;
 	struct delegpt_addr* a, *n, *prev=NULL;
@@ -244,7 +244,7 @@ iter_filter_order(struct iter_env* iter_env, struct module_env* env,
 	if(got_num == 0) 
 		return 0;
 	if(low_rtt >= USEFUL_SERVER_TOP_TIMEOUT &&
-		delegpt_count_missing_targets(dp) > 0)
+		(delegpt_count_missing_targets(dp) > 0 || open_target > 0))
 		return 0; /* we want more choice. The best choice is a bad one.
 			     return 0 to force the caller to fetch more */
 
@@ -286,13 +286,13 @@ struct delegpt_addr*
 iter_server_selection(struct iter_env* iter_env, 
 	struct module_env* env, struct delegpt* dp, 
 	uint8_t* name, size_t namelen, uint16_t qtype, int* dnssec_expected,
-	int* chase_to_rd)
+	int* chase_to_rd, int open_target)
 {
 	int sel;
 	int selrtt;
 	struct delegpt_addr* a, *prev;
 	int num = iter_filter_order(iter_env, env, name, namelen, qtype,
-		*env->now, dp, &selrtt);
+		*env->now, dp, &selrtt, open_target);
 
 	if(num == 0)
 		return NULL;

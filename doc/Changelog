@@ -1,3 +1,7 @@
+21 July 2009: Wouter
+	- Fix server selection, so that it waits for open target queries when
+	  faced with lameness.
+
 20 July 2009: Wouter
 	- Ignore transient sendto errors, no route to host, and host, net down.
 	- contrib/update-anchor.sh has -r option for root-hints.

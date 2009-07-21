@@ -1326,7 +1326,7 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 	/* Select the next usable target, filtering out unsuitable targets. */
 	target = iter_server_selection(ie, qstate->env, iq->dp, 
 		iq->dp->name, iq->dp->namelen, iq->qchase.qtype,
-		&iq->dnssec_expected, &iq->chase_to_rd);
+		&iq->dnssec_expected, &iq->chase_to_rd, iq->num_target_queries);
 
 	/* If no usable target was selected... */
 	if(!target) {

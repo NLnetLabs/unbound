@@ -79,13 +79,15 @@ int iter_apply_cfg(struct iter_env* iter_env, struct config_file* cfg);
  *	these are not preferred, but are used as a last resort.
  * @param chase_to_rd: set to 1 if a known recursion lame server is selected
  * 	these are not preferred, but are used as a last resort.
+ * @param open_target: number of currently outstanding target queries.
+ * 	If we wait for these, perhaps more server addresses become available.
  * @return best target or NULL if no target.
  *	if not null, that target is removed from the result list in the dp.
  */
 struct delegpt_addr* iter_server_selection(struct iter_env* iter_env, 
 	struct module_env* env, struct delegpt* dp, uint8_t* name, 
 	size_t namelen, uint16_t qtype, int* dnssec_expected,
-	int* chase_to_rd);
+	int* chase_to_rd, int open_target);
 
 /**
  * Allocate dns_msg from parsed msg, in regional.
