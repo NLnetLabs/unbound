@@ -951,6 +951,25 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 		/* If the cache has returned nothing, then we have a 
 		 * root priming situation. */
 		if(iq->dp == NULL) {
+			if(forwards_lookup_root(qstate->env->fwds, 
+				iq->qchase.qclass)) {
+				/* forward zone root, no root prime needed */
+				/* fill in some dp - safety belt */
+				iq->dp = hints_lookup_root(ie->hints, 
+					iq->qchase.qclass);
+				if(!iq->dp) {
+					log_err("internal error: no hints dp");
+					return error_response(qstate, id, 
+						LDNS_RCODE_SERVFAIL);
+				}
+				iq->dp = delegpt_copy(iq->dp, qstate->region);
+				if(!iq->dp) {
+					log_err("out of memory in safety belt");
+					return error_response(qstate, id, 
+						LDNS_RCODE_SERVFAIL);
+				}
+				return next_state(iq, INIT_REQUEST_2_STATE);
+			}
 			/* Note that the result of this will set a new
 			 * DelegationPoint based on the result of priming. */
 			if(!prime_root(qstate, iq, ie, id, iq->qchase.qclass))

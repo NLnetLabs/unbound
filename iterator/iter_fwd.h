@@ -120,6 +120,15 @@ struct delegpt* forwards_lookup(struct iter_forwards* fwd,
 	uint8_t* qname, uint16_t qclass);
 
 /**
+ * Same as forwards_lookup, but for the root only
+ * @param fwd: forward storage.
+ * @param qclass: The qclass of the query.
+ * @return: A delegation point if root forward exists, otherwise null.
+ */
+struct delegpt* forwards_lookup_root(struct iter_forwards* fwd, 
+	uint16_t qclass);
+
+/**
  * Get memory in use by forward storage
  * @param fwd: forward storage.
  * @return bytes in use

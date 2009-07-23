@@ -345,6 +345,13 @@ forwards_lookup(struct iter_forwards* fwd, uint8_t* qname, uint16_t qclass)
 	return NULL;
 }
 
+struct delegpt* 
+forwards_lookup_root(struct iter_forwards* fwd, uint16_t qclass)
+{
+	uint8_t root = 0;
+	return forwards_lookup(fwd, &root, qclass);
+}
+
 size_t 
 forwards_get_mem(struct iter_forwards* fwd)
 {
