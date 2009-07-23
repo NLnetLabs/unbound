@@ -2,6 +2,7 @@
 	- Fix bug found by Michael Tokarev where unbound would try to
 	  prime the root servers even though forwarders are configured for
 	  the root.
+	- tagged 1.3.3rc1
 
 21 July 2009: Wouter
 	- Fix server selection, so that it waits for open target queries when
