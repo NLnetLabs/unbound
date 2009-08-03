@@ -915,7 +915,8 @@ anchors_assemble_rrsets(struct val_anchors* anchors)
 			char b[257];
 			dname_str(ta->name, b);
 			log_warn("trust anchor %s has no supported algorithms,"
-				" the anchor is ignored", b);
+				" the anchor is ignored (check if you need to"
+				" upgrade unbound and openssl)", b);
 			(void)rbtree_delete(anchors->tree, &ta->node);
 		}
 		ta = next;

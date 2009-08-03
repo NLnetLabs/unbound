@@ -1,3 +1,6 @@
+3 August 2009: Wouter
+	- nicer warning when algorithm not supported, tells you to upgrade.
+
 27 July 2009: Wouter
 	- Updated unbound-cacti contribution from Dmitriy Demidov, with
 	  the queue statistics displayed in its own graph.
