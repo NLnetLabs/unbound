@@ -1,5 +1,6 @@
 3 August 2009: Wouter
 	- nicer warning when algorithm not supported, tells you to upgrade.
+	- iana portlist updated.
 
 27 July 2009: Wouter
 	- Updated unbound-cacti contribution from Dmitriy Demidov, with
