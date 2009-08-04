@@ -1,3 +1,7 @@
+4 August 2009: Wouter
+	- Added test that the examples from draft rsasha256-14 verify.
+	- iana portlist updated.
+
 3 August 2009: Wouter
 	- nicer warning when algorithm not supported, tells you to upgrade.
 	- iana portlist updated.

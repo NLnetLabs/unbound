@@ -3,24 +3,21 @@
 ; first entry is a DNSKEY answer, with the DNSKEY rrset used for verification. 
 ; later entries are verified with it.
 
-; Test RSASHA512 signatures.
+; Test RSASHA512 signatures from draft-ietf-dnsext-dnssec-rsasha256-14
 
-; RSA key from ldns tool
 ENTRY_BEGIN
 SECTION QUESTION
-sub.example.com.	IN DNSKEY
+example.net.	IN DNSKEY
 SECTION ANSWER
-example.com.    3600    IN      DNSKEY  256 3 9 AwEAAazmeO3BNv+xPYuFbQp8JN4XX+iKNuvJgD2QG5jRXI0IP5by+JGSob20OEmbPLqKcXWMRPICTyPBDaBh0tXA66DVlHV8rCtAT5Yqdrz2qw05SNYCGWJulscR6GM0e4gkO1FrBINr385IiMH3sJegBzm2HUbyb2I+xuFIfl7SgMuZ5fahHnhjDwsdgw+19OQlbYDRmNhMvtJemomIiGzPwrxEtKBlcUevcFPX7cPU7lpbcZwVP16xhLbtSNwMHvoCoRpJrAtdDGiSyAzTQef+jWuaUlFCPle6Qkghi51zmpBrPunqRCoYg7LIyJ9zS/KzPKX2zN2ASu9KJD3tDW9OSZM= ;{id = 48886 (zsk), size = 2048b}
-
+example.net.    3600  IN  DNSKEY  (256 3 10 AwEAAdHoNTOW+et86KuJOWRD p1pndvwb6Y83nSVXXyLA3DLroROUkN6X0O6pnWnjJQujX/AyhqFD xj13tOnD9u/1kTg7cV6rklMrZDtJCQ5PCl/D7QNPsgVsMu1J2Q8g pMpztNFLpPBz1bWXjDtaR7ZQBlZ3PFY12ZTSncorffcGmhOL);{id = 3740 (zsk), size = 1024b}
 ENTRY_END
 
 ; entry to test
 ENTRY_BEGIN
 SECTION QUESTION
-www.example.com.    IN      A 
+www.example.net.    IN      A 
 SECTION ANSWER
-www.example.com.	3600	IN	A	192.0.2.66
-www.example.com.        3600    IN      RRSIG   A 9 3 3600 20070926134150 20070829134150 48886 example.com. Ys6CGNAxJ+0lG/EoDJqZOoZTlX8Aa1k124VjnSE2A9NTecZUX44TiKtJQtUu7cnUcURuNsqX5rulr/70Vx+ANeUot/ewtY6fX6qaGZVgIaNyyDw0Gu7oiAsjOE0bt5RS4VGvDpLSdxDlPV0Kbbc4fYSTsqiSe2idMokfD2bgPcFrIx2TcX/sF8Jyhn2MGiQsWryMWyvhRTZ1+dwQcPhkeslGFLF/SQpGx5BbW/BYQG026xb6ckL/F/Pu4Jf5sQTimTZXHi9iASeRNO34DM9bS0yDgc+nm3bEg8/pEGCdFuCt6dVv7JTFgnR9fPTbEbBHIi4ORw1oef11G2sRV/Ubvw== ;{id = 48886}
-
+www.example.net. 3600  IN  A  192.0.2.91
+www.example.net. 3600  IN  RRSIG  (A 10 3 3600 20300101000000 20000101000000 3740 example.net. tsb4wnjRUDnB1BUi+t 6TMTXThjVnG+eCkWqjvvjhzQL1d0YRoOe0CbxrVDYd0xDtsuJRa eUw1ep94PzEWzr0iGYgZBWm/zpq+9fOuagYJRfDqfReKBzMweOL DiNa8iP5g9vMhpuv6OPlvpXwm9Sa9ZXIbNl1MBGk0fthPgxdDLw =);{id = 3740}
 ENTRY_END
 

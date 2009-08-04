@@ -477,11 +477,10 @@ verify_test()
 #if defined(HAVE_EVP_SHA256) && defined(USE_SHA2)
 	verifytest_file("testdata/test_signatures.9", "20070829144150");
 	verifytest_file("testdata/test_signatures.11", "20070829144150");
+	verifytest_file("testdata/test_signatures.14", "20090101000000");
 #endif
 #if defined(HAVE_EVP_SHA512) && defined(USE_SHA2)
-	/* Skip test. Algorithm number uncertainty
 	verifytest_file("testdata/test_signatures.10", "20070829144150");
-	*/
 #endif
 	verifytest_file("testdata/test_signatures.12", "20090107100022");
 	verifytest_file("testdata/test_signatures.13", "20080414005004");
