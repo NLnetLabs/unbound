@@ -1,3 +1,6 @@
+5 August 2009: Wouter
+	- trunk moved to 1.3.4.
+
 4 August 2009: Wouter
 	- Added test that the examples from draft rsasha256-14 verify.
 	- iana portlist updated.
