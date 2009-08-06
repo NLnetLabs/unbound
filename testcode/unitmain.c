@@ -432,6 +432,9 @@ main(int argc, char* argv[])
 	}
 	printf("Start of %s unit test.\n", PACKAGE_STRING);
 	ERR_load_crypto_strings();
+#if defined(HAVE_ENGINE_LOAD_GOST) && defined(USE_GOST)
+	(void)ldns_key_EVP_load_gost_id();
+#endif
 	checklock_start();
 	neg_test();
 	rnd_test();

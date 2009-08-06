@@ -484,6 +484,9 @@ verify_test()
 #endif
 	verifytest_file("testdata/test_signatures.12", "20090107100022");
 	verifytest_file("testdata/test_signatures.13", "20080414005004");
+#if defined(HAVE_ENGINE_LOAD_GOST) && defined(USE_GOST)
+	verifytest_file("testdata/test_signatures.15", "20090807060504");
+#endif
 	dstest_file("testdata/test_ds_sig.1");
 	nsectest();
 	nsec3_hash_test("testdata/test_nsec3_hash.1");

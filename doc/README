@@ -64,7 +64,9 @@ This software is under BSD license, see LICENSE for details.
   * --with-pythonmodule
   	Compile the python module that processes responses in the server.
   * --enable-sha2
-  	Enable draft support for RSASHA256 and RSASHA512.
+  	Enable draft support for RSASHA256 and RSASHA512 crypto.
+  * --enable-gost
+  	Enable draft support for GOST crypto.
 
 * 'make test' attempts to run a series of tests, depending on the support
   programs that are installed.

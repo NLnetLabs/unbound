@@ -356,7 +356,16 @@ AC_CHECK_FUNCS([EVP_sha1 EVP_sha256 EVP_sha512 ENGINE_load_gost])
 AC_ARG_ENABLE(sha2, AC_HELP_STRING([--enable-sha2], [Enable SHA256 and SHA512 RRSIG support]))
 case "$enable_sha2" in
 	yes)
-	AC_DEFINE_UNQUOTED([USE_SHA2], [], [Define this to enable SHA256 and SHA512 support.])
+	AC_DEFINE([USE_SHA2], [1], [Define this to enable SHA256 and SHA512 support.])
+	;;
+	no|*)
+	;;
+esac
+
+AC_ARG_ENABLE(gost, AC_HELP_STRING([--enable-gost], [Enable GOST support]))
+case "$enable_gost" in
+	yes)
+	AC_DEFINE([USE_GOST], [1], [Define this to enable GOST support.])
 	;;
 	no|*)
 	;;

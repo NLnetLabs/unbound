@@ -165,6 +165,9 @@ daemon_init()
 	checklock_start();
 	ERR_load_crypto_strings();
 	ERR_load_SSL_strings();
+#if defined(HAVE_ENGINE_LOAD_GOST) && defined(USE_GOST)
+	(void)ldns_key_EVP_load_gost_id();
+#endif
 	OpenSSL_add_all_algorithms();
 	(void)SSL_library_init();
 #ifdef HAVE_TZSET
