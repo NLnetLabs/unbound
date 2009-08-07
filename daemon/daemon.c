@@ -165,7 +165,10 @@ daemon_init()
 	checklock_start();
 	ERR_load_crypto_strings();
 	ERR_load_SSL_strings();
-#if defined(HAVE_ENGINE_LOAD_GOST) && defined(USE_GOST)
+#ifdef HAVE_OPENSSL_CONFIG
+	OPENSSL_config("unbound");
+#endif
+#ifdef USE_GOST
 	(void)ldns_key_EVP_load_gost_id();
 #endif
 	OpenSSL_add_all_algorithms();
@@ -496,9 +499,11 @@ daemon_delete(struct daemon* daemon)
 	free(daemon->env);
 	free(daemon);
 	/* libcrypto cleanup */
-	/* CONF_modules_unload(1); */
+#ifdef HAVE_OPENSSL_CONFIG
 	EVP_cleanup();
-	/* ENGINE_cleanup(); */
+	/*ENGINE_cleanup();*/
+	CONF_modules_free();
+#endif
 	CRYPTO_cleanup_all_ex_data(); /* safe, no more threads right now */
 	ERR_remove_state(0);
 	ERR_free_strings();

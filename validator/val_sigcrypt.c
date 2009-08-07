@@ -256,16 +256,18 @@ ds_digest_size_algo(struct ub_packed_rrset_key* k, size_t idx)
 		case LDNS_SHA256:
 			return SHA256_DIGEST_LENGTH;
 #endif
-#if defined(HAVE_ENGINE_LOAD_GOST) && defined(USE_GOST)
+#ifdef USE_GOST
 		case LDNS_HASH_GOST94:
-			return 32;
+			if(EVP_get_digestbyname("md_gost94"))
+				return 32;
+			else	return 0;
 #endif
 		default: break;
 	}
 	return 0;
 }
 
-#if defined(HAVE_ENGINE_LOAD_GOST) && defined(USE_GOST)
+#ifdef USE_GOST
 /** Perform GOST94 hash */
 static int
 do_gost94(unsigned char* data, size_t len, unsigned char* dest)
@@ -322,7 +324,7 @@ ds_create_dnskey_digest(struct module_env* env,
 				ldns_buffer_limit(b), (unsigned char*)digest);
 			return 1;
 #endif
-#if defined(HAVE_ENGINE_LOAD_GOST) && defined(USE_GOST)
+#ifdef USE_GOST
 		case LDNS_HASH_GOST94:
 			if(do_gost94((unsigned char*)ldns_buffer_begin(b), 
 				ldns_buffer_limit(b), (unsigned char*)digest))
@@ -398,10 +400,12 @@ dnskey_algo_id_is_supported(int id)
 #if defined(HAVE_EVP_SHA512) && defined(USE_SHA2)
 	case LDNS_RSASHA512:
 #endif
-#if defined(HAVE_ENGINE_LOAD_GOST) && defined(USE_GOST)
-	case LDNS_GOST:
-#endif
 		return 1;
+#ifdef USE_GOST
+	case LDNS_GOST:
+		/* we support GOST if it can be loaded */
+		return ldns_key_EVP_load_gost_id();
+#endif
 	default:
 		return 0;
 	}
@@ -1321,7 +1325,7 @@ setup_key_digest(int algo, EVP_PKEY** evp_key, const EVP_MD** digest_type,
 			*digest_type = EVP_md5();
 
 			break;
-#if defined(HAVE_ENGINE_LOAD_GOST) && defined(USE_GOST)
+#ifdef USE_GOST
 		case LDNS_GOST:
 			*evp_key = ldns_gost2pkey_raw(key, keylen);
 			if(!*evp_key) {

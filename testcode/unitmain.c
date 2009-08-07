@@ -432,7 +432,10 @@ main(int argc, char* argv[])
 	}
 	printf("Start of %s unit test.\n", PACKAGE_STRING);
 	ERR_load_crypto_strings();
-#if defined(HAVE_ENGINE_LOAD_GOST) && defined(USE_GOST)
+#ifdef HAVE_OPENSSL_CONFIG
+	OPENSSL_config("unbound");
+#endif
+#ifdef USE_GOST
 	(void)ldns_key_EVP_load_gost_id();
 #endif
 	checklock_start();
@@ -451,9 +454,14 @@ main(int argc, char* argv[])
 	msgparse_test();
 	checklock_stop();
 	printf("%d checks ok.\n", testcount);
+#ifdef HAVE_OPENSSL_CONFIG
 	EVP_cleanup();
+	/*ENGINE_cleanup();*/
+	CONF_modules_free();
+#endif
 	CRYPTO_cleanup_all_ex_data();
 	ERR_remove_state(0);
 	ERR_free_strings();
+	RAND_cleanup();
 	return 0;
 }

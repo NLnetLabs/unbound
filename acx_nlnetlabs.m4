@@ -2,8 +2,9 @@
 # Copyright 2009, Wouter Wijngaards, NLnet Labs.   
 # BSD licensed.
 #
-# Version 4
+# Version 5
 # Changelog
+# 2009-08-07 Added openssl/conf.h header detection.
 # 2009-07-14 U_CHAR detection improved for windows crosscompile.
 #            added ACX_FUNC_MALLOC
 #            fixup some #if to #ifdef
@@ -651,6 +652,7 @@ AC_DEFUN([ACX_SSL_CHECKS], [
 AC_CHECK_HEADERS([openssl/ssl.h],,, [AC_INCLUDES_DEFAULT])
 AC_CHECK_HEADERS([openssl/err.h],,, [AC_INCLUDES_DEFAULT])
 AC_CHECK_HEADERS([openssl/rand.h],,, [AC_INCLUDES_DEFAULT])
+AC_CHECK_HEADERS([openssl/conf.h],,, [AC_INCLUDES_DEFAULT])
 ])dnl End of ACX_SSL_CHECKS
 
 dnl Check for SSL, where SSL is mandatory

@@ -37,9 +37,6 @@
 /* Define to 1 if you have the <dlfcn.h> header file. */
 #undef HAVE_DLFCN_H
 
-/* Define to 1 if you have the `ENGINE_load_gost' function. */
-#undef HAVE_ENGINE_LOAD_GOST
-
 /* Define to 1 if you have the `event_base_free' function. */
 #undef HAVE_EVENT_BASE_FREE
 
@@ -148,6 +145,12 @@
 
 /* Define to 1 if you have the <netinet/in.h> header file. */
 #undef HAVE_NETINET_IN_H
+
+/* Define to 1 if you have the `OPENSSL_config' function. */
+#undef HAVE_OPENSSL_CONFIG
+
+/* Define to 1 if you have the <openssl/conf.h> header file. */
+#undef HAVE_OPENSSL_CONF_H
 
 /* Define to 1 if you have the <openssl/err.h> header file. */
 #undef HAVE_OPENSSL_ERR_H
@@ -632,6 +635,10 @@
 
 #ifdef HAVE_OPENSSL_RAND_H
 #include <openssl/rand.h>
+#endif
+
+#ifdef HAVE_OPENSSL_CONF_H
+#include <openssl/conf.h>
 #endif
 
 

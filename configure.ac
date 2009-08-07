@@ -351,7 +351,7 @@ fi
 # Checks for libraries.
 ACX_WITH_SSL
 ACX_LIB_SSL
-AC_CHECK_FUNCS([EVP_sha1 EVP_sha256 EVP_sha512 ENGINE_load_gost])
+AC_CHECK_FUNCS([OPENSSL_config EVP_sha1 EVP_sha256 EVP_sha512])
 
 AC_ARG_ENABLE(sha2, AC_HELP_STRING([--enable-sha2], [Enable SHA256 and SHA512 RRSIG support]))
 case "$enable_sha2" in
@@ -648,6 +648,10 @@ dnl includes
 
 #ifdef HAVE_OPENSSL_RAND_H
 #include <openssl/rand.h>
+#endif
+
+#ifdef HAVE_OPENSSL_CONF_H
+#include <openssl/conf.h>
 #endif
 ]
 

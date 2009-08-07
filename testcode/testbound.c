@@ -237,9 +237,14 @@ main(int argc, char* argv[])
 #endif
 			break;
 		case 'g':
-#if defined(HAVE_ENGINE_LOAD_GOST) && defined(USE_GOST)
-			printf("GOST supported\n");
-			exit(0);
+#ifdef USE_GOST
+			if(ldns_key_EVP_load_gost_id()) {
+				printf("GOST supported\n");
+				exit(0);
+			} else {
+				printf("GOST not supported\n");
+				exit(1);
+			}
 #else
 			printf("GOST not supported\n");
 			exit(1);

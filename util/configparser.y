@@ -852,6 +852,7 @@ server_val_log_level: VAR_VAL_LOG_LEVEL STRING_ARG
 		if(atoi($2) == 0 && strcmp($2, "0") != 0)
 			yyerror("number expected");
 		else cfg_parser->cfg->val_log_level = atoi($2);
+		free($2);
 	}
 	;
 server_val_nsec3_keysize_iterations: VAR_VAL_NSEC3_KEYSIZE_ITERATIONS STRING_ARG

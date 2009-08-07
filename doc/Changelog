@@ -1,3 +1,8 @@
+7 August 2009: Wouter
+	- call OPENSSL_config() in unbound and unit test so that the
+	  operator can use openssl.cnf for configuration options.
+	- removed small memory leak from config file reader.
+
 6 August 2009: Wouter
 	- configure --enable-gost for GOST support, experimental
 	  implementation of draft-dolmatov-dnsext-dnssec-gost-01.

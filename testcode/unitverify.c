@@ -484,8 +484,9 @@ verify_test()
 #endif
 	verifytest_file("testdata/test_signatures.12", "20090107100022");
 	verifytest_file("testdata/test_signatures.13", "20080414005004");
-#if defined(HAVE_ENGINE_LOAD_GOST) && defined(USE_GOST)
-	verifytest_file("testdata/test_signatures.15", "20090807060504");
+#ifdef USE_GOST
+	if(ldns_key_EVP_load_gost_id()) /* and gost can be loaded */
+	  verifytest_file("testdata/test_signatures.15", "20090807060504");
 #endif
 	dstest_file("testdata/test_ds_sig.1");
 	nsectest();
