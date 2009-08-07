@@ -485,8 +485,9 @@ verify_test()
 	verifytest_file("testdata/test_signatures.12", "20090107100022");
 	verifytest_file("testdata/test_signatures.13", "20080414005004");
 #ifdef USE_GOST
-	if(ldns_key_EVP_load_gost_id()) /* and gost can be loaded */
+	if(ldns_key_EVP_load_gost_id())
 	  verifytest_file("testdata/test_signatures.15", "20090807060504");
+	else printf("Warning: skipped GOST, openssl does not provide gost.\n");
 #endif
 	dstest_file("testdata/test_ds_sig.1");
 	nsectest();
