@@ -1580,8 +1580,8 @@ Optional Features:
                           optimize for fast installation [default=yes]
   --disable-libtool-lock  avoid locking (might break parallel builds)
   --disable-rpath         disable hardcoded rpath (default=enabled)
-  --enable-sha2           Enable SHA256 and SHA512 RRSIG support
-  --enable-gost           Enable GOST support
+  --enable-sha2           Enable SHA256 and SHA512 RRSIG support, experimental
+  --enable-gost           Enable GOST support, experimental
   --enable-static-exe     enable to compile executables statically against
                           event, ldns libs, for debug purposes
   --enable-lock-checks    enable to check lock and unlock calls, for debug

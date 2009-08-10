@@ -353,7 +353,7 @@ ACX_WITH_SSL
 ACX_LIB_SSL
 AC_CHECK_FUNCS([OPENSSL_config EVP_sha1 EVP_sha256 EVP_sha512])
 
-AC_ARG_ENABLE(sha2, AC_HELP_STRING([--enable-sha2], [Enable SHA256 and SHA512 RRSIG support]))
+AC_ARG_ENABLE(sha2, AC_HELP_STRING([--enable-sha2], [Enable SHA256 and SHA512 RRSIG support, experimental]))
 case "$enable_sha2" in
 	yes)
 	AC_DEFINE([USE_SHA2], [1], [Define this to enable SHA256 and SHA512 support.])
@@ -362,7 +362,7 @@ case "$enable_sha2" in
 	;;
 esac
 
-AC_ARG_ENABLE(gost, AC_HELP_STRING([--enable-gost], [Enable GOST support]))
+AC_ARG_ENABLE(gost, AC_HELP_STRING([--enable-gost], [Enable GOST support, experimental]))
 case "$enable_gost" in
 	yes)
 	AC_DEFINE([USE_GOST], [1], [Define this to enable GOST support.])
