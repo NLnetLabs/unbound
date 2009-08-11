@@ -275,7 +275,7 @@ do_gost94(unsigned char* data, size_t len, unsigned char* dest)
 	const EVP_MD* md = EVP_get_digestbyname("md_gost94");
 	if(!md) 
 		return 0;
-	return ldns_digest_evp(data, len, dest, md);
+	return ldns_digest_evp(data, (unsigned int)len, dest, md);
 }
 #endif
 
