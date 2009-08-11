@@ -1,5 +1,6 @@
 11 August 2009: Wouter
 	- Check for openssl compatible with gost if enabled.
+	- updated unit test for GOST=211 code.
 
 7 August 2009: Wouter
 	- call OPENSSL_config() in unbound and unit test so that the

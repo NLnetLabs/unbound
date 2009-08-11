@@ -17825,7 +17825,7 @@ fi
 { $as_echo "$as_me:$LINENO: result: $ac_cv_lib_crypto_EVP_PKEY_set_type_str" >&5
 $as_echo "$ac_cv_lib_crypto_EVP_PKEY_set_type_str" >&6; }
 if test "x$ac_cv_lib_crypto_EVP_PKEY_set_type_str" = x""yes; then
-
+  :
 else
   { { $as_echo "$as_me:$LINENO: error: OpenSSL >= 1.0.0 is needed for GOST support" >&5
 $as_echo "$as_me: error: OpenSSL >= 1.0.0 is needed for GOST support" >&2;}

@@ -115,13 +115,12 @@ SECTION AUTHORITY
 sub.example.com. IN	NS ns.sub.example.com.
 
 ; GOST DS for sub.example.com.
-sub.example.com.	3600	IN	DS	60160 11 3 26d29a3666835a7f564afe26d9e6d8152fa5a2f5b34205d3c567b15d1db161e3 ; xenit-dokuf-kunom-fokal-zahyg-pized-kikiv-kekac-hyrop-hymuz-husyg-docut-facyk-lysah-tolur-camov-fexox
-sub.example.com.	3600	IN	RRSIG	DS 3 3 3600 20070926135752 20070829135752 2854 example.com. AAvmZNDDwcdh/v3+uqVqpXdrxC5fGPQDlC6yKqVcYopJgguAZKmQyrM= ;{id = 2854}
+sub.example.com.	3600	IN	DS	41891 211 203 0d9c87a2d277b5fcc75a76b2d2070afd9911e67b88c238a0af744f934427e96c ; xefen-sicop-dagal-lutaz-sicah-potur-dogeb-ledoz-takac-cenel-rodys-dyvap-borol-gofyn-focid-lapik-sixox
+sub.example.com.	3600	IN	RRSIG	DS 3 3 3600 20070926135752 20070829135752 2854 example.com. AEOOWZp0Z4qRX4vgIv8k23AVo1GeZHMqEg4wFC7XPuFxAkPmv4c0Zng= ;{id = 2854}
 
-; SHA1 DS for sub.example.com.
-; sub.example.com.	3600	IN	DS	60160 11 1 3ba1a174acc4b97c2bd61ac51b1d82ca0daacda9 ; xevop-cymel-garys-gavul-sypyt-kakas-hekic-tobus-pefyp-pyfyp-naxex
-; SHA256 DS for sub.example.com.
-;sub.example.com.	3600	IN	DS	60160 11 2 3e11974de336513b95a9fd67b691c00507a781f141b23b4811ff2586913bbe81 ; xezic-ciheg-tomif-kagyf-ryhop-nazyk-letan-cebib-hecep-leboz-caber-duvug-megaz-zenym-kugof-razam-coxix
+; SHA DS for sub.example.com.
+; sub.example.com.	3600	IN	DS	41891 211 1 d1f20922fd228caf9def1167b7c300c05f528cf9 ; xugez-dadud-duzid-dafap-zeluv-zegok-letis-febys-balah-dafyz-nexyx
+; sub.example.com.	3600	IN	DS	41891 211 2 ce53c1c4a137881cf958c2e79b09d70535fb7cfea82c727f72872ba60181bfef ; xufih-fobus-gemof-lodec-suvih-mobev-lekub-nahib-hetuz-ruzyz-vypud-sasyl-zosem-lepyp-kubym-cizev-zuxax
 
 SECTION ADDITIONAL
 ns.sub.example.com. IN A 1.2.3.6
@@ -140,10 +139,10 @@ SECTION QUESTION
 sub.example.com. IN NS
 SECTION ANSWER
 sub.example.com. IN	NS ns.sub.example.com.
-sub.example.com.	3600	IN	RRSIG	NS 11 3 3600 20070926134150 20070829134150 60160 sub.example.com. xAjPDm2GcSb4lmmACnhofVkA6G4qVbk0w8dnG6AhKV1kFERx0GR7TST4S3UsRQQsqANoIrGTF8ste8seVxcAeA== ;{id = 60160}
+sub.example.com.	3600	IN	RRSIG	NS 211 3 3600 20070926134150 20070829134150 41891 sub.example.com. 8Ncd9cZJ2ulXoSzZGaJA2yyqY7QZEsXd152stleznN7MayqlXlUIYGojdGo+X3+iKnMefXWvGamXfPZUzV687A== ;{id = 41891}
 SECTION ADDITIONAL
 ns.sub.example.com. IN A 1.2.3.6
-ns.sub.example.com.	3600	IN	RRSIG	A 11 4 3600 20070926134150 20070829134150 60160 sub.example.com. 1uEeIwZ4ZVOuFsZPbXvG8+e/9E7gdsW1/2BeKdnG/DMkidpwFqgFSk5L34WZFoK1cD8W5fuyfUrQYDwXNL7oug== ;{id = 60160}
+ns.sub.example.com.	3600	IN	RRSIG	A 211 4 3600 20070926134150 20070829134150 41891 sub.example.com. Q0uZV2jvEoSts3co+r1frG+B/LS9C1UKkKdM/ID6BpUW5Cl12S4jzuVZJ261lYPKpWYcxzmIsWVK+JCS7C+1jQ== ;{id = 41891}
 ENTRY_END
 
 ; response to DNSKEY priming query
@@ -154,14 +153,15 @@ REPLY QR NOERROR
 SECTION QUESTION
 sub.example.com. IN DNSKEY
 SECTION ANSWER
-sub.example.com.	3600	IN	DNSKEY	256 3 11 NC1+ia27IipR4E2dfvv0uwLxgnNipJCB5yrV99XI8gA83ZK4hZ2E9MNZefM71sBJ6zdEx1dGgCxi17BLt9ltqQ== ;{id = 60160 (zsk), size = 512b}
-sub.example.com.	3600	IN	RRSIG	DNSKEY 11 3 3600 20070926134150 20070829134150 60160 sub.example.com. VU9iZy2aao5T+VRZrT8A5kMgJkiZw9TG5g3RfmHojFqrjK4bsxhdMnIRb6OkeLG4cKgBWiFs3rFWD/VmbDGtHw== ;{id = 60160}
+sub.example.com.	3600	IN	DNSKEY	256 3 211 e6GeTsfJnBq4QeL4eNS3SUOYvjFW59ClXtWtAlNgJHcG6damdpIUEyWdMDhZBLJoFNsH4IF06VPK6e+OSA1VGw== ;{id = 41891 (zsk), size = 512b}
+sub.example.com.	3600	IN	RRSIG	DNSKEY 211 3 3600 20070926134150 20070829134150 41891 sub.example.com. VICst5/k2pZRAymejY7Y9WIDqbzY8WucufnUsFT+ECHvrObcdZCeiuliQrGoE8ieEnu/qTQ6Ydefk6JsPHj98g== ;{id = 41891}
 SECTION AUTHORITY
 sub.example.com. IN	NS ns.sub.example.com.
-sub.example.com.	3600	IN	RRSIG	NS 11 3 3600 20070926134150 20070829134150 60160 sub.example.com. xAjPDm2GcSb4lmmACnhofVkA6G4qVbk0w8dnG6AhKV1kFERx0GR7TST4S3UsRQQsqANoIrGTF8ste8seVxcAeA== ;{id = 60160}
+sub.example.com.	3600	IN	RRSIG	NS 211 3 3600 20070926134150 20070829134150 41891 sub.example.com. 8Ncd9cZJ2ulXoSzZGaJA2yyqY7QZEsXd152stleznN7MayqlXlUIYGojdGo+X3+iKnMefXWvGamXfPZUzV687A== ;{id = 41891}
+
 SECTION ADDITIONAL
 ns.sub.example.com. IN A 1.2.3.6
-ns.sub.example.com.	3600	IN	RRSIG	A 11 4 3600 20070926134150 20070829134150 60160 sub.example.com. 1uEeIwZ4ZVOuFsZPbXvG8+e/9E7gdsW1/2BeKdnG/DMkidpwFqgFSk5L34WZFoK1cD8W5fuyfUrQYDwXNL7oug== ;{id = 60160}
+ns.sub.example.com.	3600	IN	RRSIG	A 211 4 3600 20070926134150 20070829134150 41891 sub.example.com. Q0uZV2jvEoSts3co+r1frG+B/LS9C1UKkKdM/ID6BpUW5Cl12S4jzuVZJ261lYPKpWYcxzmIsWVK+JCS7C+1jQ== ;{id = 41891}
 ENTRY_END
 
 ; response to query of interest
@@ -173,7 +173,7 @@ SECTION QUESTION
 www.sub.example.com. IN A
 SECTION ANSWER
 www.sub.example.com. IN A	11.11.11.11
-www.sub.example.com.	3600	IN	RRSIG	A 11 4 3600 20070926134150 20070829134150 60160 sub.example.com. H2elTn5gq56ur2WopIUSmlRN0WpI7uNVSE1liEPsQ1Gwa3ioLscf+n8Va6srpnh6vR0sxlXQQ9JJ85nXg+COTw== ;{id = 60160}
+www.sub.example.com.	3600	IN	RRSIG	A 211 4 3600 20070926134150 20070829134150 41891 sub.example.com. UO3plmr0HZ8JxKlfrDVuVoj8VQhYJ7lGNK9lA8h3KzD/PMB0UnZzZ3CHYkp/4VVnts3hI/Iy7bPuJ5sCTozW4Q== ;{id = 41891}
 
 SECTION AUTHORITY
 SECTION ADDITIONAL
@@ -196,7 +196,7 @@ SECTION QUESTION
 www.sub.example.com. IN A
 SECTION ANSWER
 www.sub.example.com. 	3600	IN	A	11.11.11.11
-www.sub.example.com.	3600	IN	RRSIG	A 11 4 3600 20070926134150 20070829134150 60160 sub.example.com. H2elTn5gq56ur2WopIUSmlRN0WpI7uNVSE1liEPsQ1Gwa3ioLscf+n8Va6srpnh6vR0sxlXQQ9JJ85nXg+COTw== ;{id = 60160}
+www.sub.example.com.	3600	IN	RRSIG	A 211 4 3600 20070926134150 20070829134150 41891 sub.example.com. UO3plmr0HZ8JxKlfrDVuVoj8VQhYJ7lGNK9lA8h3KzD/PMB0UnZzZ3CHYkp/4VVnts3hI/Iy7bPuJ5sCTozW4Q== ;{id = 41891}
 SECTION AUTHORITY
 SECTION ADDITIONAL
 ENTRY_END
