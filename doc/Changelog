@@ -1,3 +1,6 @@
+11 August 2009: Wouter
+	- Check for openssl compatible with gost if enabled.
+
 7 August 2009: Wouter
 	- call OPENSSL_config() in unbound and unit test so that the
 	  operator can use openssl.cnf for configuration options.
