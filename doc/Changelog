@@ -1,3 +1,6 @@
+12 August 2009: Wouter
+	- autotrust import work.
+
 11 August 2009: Wouter
 	- Check for openssl compatible with gost if enabled.
 	- updated unit test for GOST=211 code.

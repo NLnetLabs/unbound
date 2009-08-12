@@ -298,6 +298,10 @@ server:
 	# with several entries, one file per entry.
 	# Zone file format, with DS and DNSKEY entries.
 	# trust-anchor-file: ""
+	
+	# File with trusted keys, kept uptodate using RFC5011 probes,
+	# initial file like trust-anchor-file, then it stores metadata.
+	# auto-trust-anchor-file: ""
 
 	# Trusted key for validation. DS or DNSKEY. specify the RR on a
 	# single line, surrounded by "". TTL is ignored. class is IN default.

@@ -99,6 +99,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_STUB_PRIME VAR_UNWANTED_REPLY_THRESHOLD VAR_LOG_TIME_ASCII
 %token VAR_DOMAIN_INSECURE VAR_PYTHON VAR_PYTHON_SCRIPT VAR_VAL_SIG_SKEW_MIN
 %token VAR_VAL_SIG_SKEW_MAX VAR_CACHE_MIN_TTL VAR_VAL_LOG_LEVEL
+%token VAR_AUTO_TRUST_ANCHOR_FILE
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -148,7 +149,8 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_local_data_ptr | server_jostle_timeout | 
 	server_unwanted_reply_threshold | server_log_time_ascii | 
 	server_domain_insecure | server_val_sig_skew_min | 
-	server_val_sig_skew_max | server_cache_min_ttl | server_val_log_level
+	server_val_sig_skew_max | server_cache_min_ttl | server_val_log_level |
+	server_auto_trust_anchor_file
 	;
 stubstart: VAR_STUB_ZONE
 	{
@@ -442,6 +444,14 @@ server_dlv_anchor: VAR_DLV_ANCHOR STRING_ARG
 	{
 		OUTYY(("P(server_dlv_anchor:%s)\n", $2));
 		if(!cfg_strlist_insert(&cfg_parser->cfg->dlv_anchor_list, $2))
+			yyerror("out of memory");
+	}
+	;
+server_auto_trust_anchor_file: VAR_AUTO_TRUST_ANCHOR_FILE STRING_ARG
+	{
+		OUTYY(("P(server_auto_trust_anchor_file:%s)\n", $2));
+		if(!cfg_strlist_insert(&cfg_parser->cfg->
+			auto_trust_anchor_file_list, $2))
 			yyerror("out of memory");
 	}
 	;

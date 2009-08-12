@@ -41,6 +41,7 @@
 #include "config.h"
 #include "validator/val_anchor.h"
 #include "validator/val_sigcrypt.h"
+#include "validator/autotrust.h"
 #include "util/data/packed_rrset.h"
 #include "util/data/dname.h"
 #include "util/log.h"
@@ -83,6 +84,11 @@ anchors_create()
 		anchors_delete(a);
 		return NULL;
 	}
+	a->autr = autr_global_create();
+	if(!a->autr) {
+		anchors_delete(a);
+		return NULL;
+	}
 	return a;
 }
 
@@ -93,6 +99,7 @@ anchors_delete(struct val_anchors* anchors)
 		return;
 	free(anchors->tree);
 	regional_destroy(anchors->region);
+	autr_global_delete(anchors->autr);
 	free(anchors);
 }
 
@@ -993,6 +1000,20 @@ anchors_apply_cfg(struct val_anchors* anchors, struct config_file* cfg)
 		if(!(anchors->dlv_anchor = anchor_store_str(
 			anchors, parsebuf, f->str))) {
 			log_err("error in dlv-anchor: \"%s\"", f->str);
+			ldns_buffer_free(parsebuf);
+			return 0;
+		}
+	}
+	for(f = cfg->auto_trust_anchor_file_list; f; f = f->next) {
+		if(!f->str || f->str[0] == 0) /* empty "" */
+			continue;
+		nm = f->str;
+		if(cfg->chrootdir && cfg->chrootdir[0] && strncmp(nm,
+			cfg->chrootdir, strlen(cfg->chrootdir)) == 0)
+			nm += strlen(cfg->chrootdir);
+		if(!autr_read_file(anchors, parsebuf, nm)) {
+			log_err("error reading auto-trust-anchor-file: %s", 
+				f->str);
 			ldns_buffer_free(parsebuf);
 			return 0;
 		}

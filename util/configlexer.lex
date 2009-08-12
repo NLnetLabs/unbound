@@ -191,6 +191,7 @@ module-config{COLON}     	{ YDVAR(1, VAR_MODULE_CONF) }
 dlv-anchor{COLON}		{ YDVAR(1, VAR_DLV_ANCHOR) }
 dlv-anchor-file{COLON}		{ YDVAR(1, VAR_DLV_ANCHOR_FILE) }
 trust-anchor-file{COLON}	{ YDVAR(1, VAR_TRUST_ANCHOR_FILE) }
+auto-trust-anchor-file{COLON}	{ YDVAR(1, VAR_AUTO_TRUST_ANCHOR_FILE) }
 trusted-keys-file{COLON}	{ YDVAR(1, VAR_TRUSTED_KEYS_FILE) }
 trust-anchor{COLON}		{ YDVAR(1, VAR_TRUST_ANCHOR) }
 val-override-date{COLON}	{ YDVAR(1, VAR_VAL_OVERRIDE_DATE) }

@@ -145,6 +145,7 @@ config_create()
 	cfg->hide_version = 0;
 	cfg->identity = NULL;
 	cfg->version = NULL;
+	cfg->auto_trust_anchor_file_list = NULL;
 	cfg->trust_anchor_file_list = NULL;
 	cfg->trust_anchor_list = NULL;
 	cfg->trusted_keys_file_list = NULL;
@@ -343,6 +344,9 @@ int config_set_option(struct config_file* cfg, const char* opt,
 		cfg->donotquery_localhost = (strcmp(val, "yes") == 0);
 	} else if(strcmp(opt, "do-not-query-address:") == 0) {
 		return cfg_strlist_insert(&cfg->donotqueryaddrs, strdup(val));
+	} else if(strcmp(opt, "auto-trust-anchor-file:") == 0) {
+		return cfg_strlist_insert(&cfg->auto_trust_anchor_file_list, 
+			strdup(val));
 	} else if(strcmp(opt, "trust-anchor-file:") == 0) {
 		return cfg_strlist_insert(&cfg->trust_anchor_file_list, 
 			strdup(val));
@@ -539,6 +543,7 @@ config_delete(struct config_file* cfg)
 	free(cfg->outgoing_avail_ports);
 	config_delstrlist(cfg->private_address);
 	config_delstrlist(cfg->private_domain);
+	config_delstrlist(cfg->auto_trust_anchor_file_list);
 	config_delstrlist(cfg->trust_anchor_file_list);
 	config_delstrlist(cfg->trusted_keys_file_list);
 	config_delstrlist(cfg->trust_anchor_list);

@@ -46,6 +46,9 @@ struct regional;
 struct trust_anchor;
 struct config_file;
 struct ub_packed_rrset_key;
+struct autr_ta_data;
+struct autr_point_data;
+struct autr_global_data;
 
 /**
  * Trust anchor store.
@@ -62,6 +65,8 @@ struct val_anchors {
 	rbtree_t* tree;
 	/** The DLV trust anchor (if one is configured, else NULL) */
 	struct trust_anchor* dlv_anchor;
+	/** Autotrust global data, anchors sorted by next probe time */
+	struct autr_global_data* autr;
 };
 
 /**
@@ -76,6 +81,8 @@ struct ta_key {
 	size_t len;
 	/** DNS type (host format) of the key, DS or DNSKEY */
 	uint16_t type;
+	/** Autotrust ta key state, or NULL */
+	struct autr_ta_data* autr;
 };
 
 /**
@@ -98,6 +105,8 @@ struct trust_anchor {
 	 * It is allocated in the region.
 	 */
 	struct ta_key* keylist;
+	/** Autotrust anchor point data, or NULL */
+	struct autr_point_data* autr;
 	/** number of DSs in the keylist */
 	size_t numDS;
 	/** number of DNSKEYs in the keylist */

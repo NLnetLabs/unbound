@@ -190,6 +190,8 @@ struct config_file {
 	struct config_strlist* trust_anchor_file_list;
 	/** list of trustanchor keys, linked list */
 	struct config_strlist* trust_anchor_list;
+	/** files with 5011 autotrust tracked keys */
+	struct config_strlist* auto_trust_anchor_file_list;
 	/** files with trusted DNSKEYs in named.conf format, list */
 	struct config_strlist* trusted_keys_file_list;
 	/** DLV anchor file */
