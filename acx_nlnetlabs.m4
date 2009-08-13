@@ -36,7 +36,7 @@
 # ACX_ARG_RPATH			- add --disable-rpath option.
 # ACX_WITH_SSL			- add --with-ssl option, link -lcrypto.
 # ACX_WITH_SSL_OPTIONAL		- add --with-ssl option, link -lcrypto,
-				  where --without-ssl is also accepted
+#				  where --without-ssl is also accepted
 # ACX_LIB_SSL			- setup to link -lssl.
 # ACX_SYS_LARGEFILE		- improved sys_largefile, fseeko, >2G files.
 # ACX_CHECK_GETADDRINFO_WITH_INCLUDES - find getaddrinfo, portably.
