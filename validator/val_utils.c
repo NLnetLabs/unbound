@@ -712,6 +712,17 @@ val_check_nonsecure(struct val_env* ve, struct reply_info* rep)
 	}
 }
 
+/** check no anchor and unlock */
+static int
+check_no_anchor(struct val_anchors* anchors, uint8_t* nm, size_t l, uint16_t c)
+{
+	struct trust_anchor* ta;
+	if((ta=anchors_lookup(anchors, nm, l, c))) {
+		lock_basic_unlock(&ta->lock);
+	}
+	return !ta;
+}
+
 void 
 val_mark_indeterminate(struct reply_info* rep, struct val_anchors* anchors, 
 	struct rrset_cache* r, struct module_env* env)
@@ -721,7 +732,7 @@ val_mark_indeterminate(struct reply_info* rep, struct val_anchors* anchors,
 	for(i=0; i<rep->rrset_count; i++) {
 		d = (struct packed_rrset_data*)rep->rrsets[i]->entry.data;
 		if(d->security == sec_status_unchecked &&
-		   !anchors_lookup(anchors, rep->rrsets[i]->rk.dname,
+		   check_no_anchor(anchors, rep->rrsets[i]->rk.dname,
 			rep->rrsets[i]->rk.dname_len, 
 			ntohs(rep->rrsets[i]->rk.rrset_class))) 
 		{ 	

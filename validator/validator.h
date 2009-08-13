@@ -177,8 +177,12 @@ struct val_qstate {
 	 */
 	size_t rrset_skip;
 
-	/** the trust anchor rrset */
-	struct trust_anchor* trust_anchor;
+	/** trust anchor name */
+	uint8_t* trust_anchor_name;
+	/** trust anchor labels */
+	int trust_anchor_labs;
+	/** trust anchor length */
+	size_t trust_anchor_len;
 
 	/** the DS rrset */
 	struct ub_packed_rrset_key* ds_rrset;

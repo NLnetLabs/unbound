@@ -48,6 +48,7 @@
 #include "validator/val_nsec.h"
 #include "validator/val_nsec3.h"
 #include "validator/val_neg.h"
+#include "validator/autotrust.h"
 #include "services/cache/dns.h"
 #include "util/data/dname.h"
 #include "util/module.h"
@@ -372,6 +373,15 @@ prime_trust_anchor(struct module_qstate* qstate, struct val_qstate* vq,
 	 * query, and its a 'normal' for iterator as well */
 	vq->wait_prime_ta = 1; /* to elicit PRIME_RESP_STATE processing 
 		from the validator inform_super() routine */
+	/* store trust anchor name for later lookup when prime returns */
+	vq->trust_anchor_name = regional_alloc_init(qstate->region,
+		toprime->name, toprime->namelen);
+	vq->trust_anchor_len = toprime->namelen;
+	vq->trust_anchor_labs = toprime->namelabs;
+	if(!vq->trust_anchor_name) {
+		log_err("Could not prime trust anchor: out of memory");
+		return 0;
+	}
 	return 1;
 }
 
@@ -1160,6 +1170,7 @@ processInit(struct module_qstate* qstate, struct val_qstate* vq,
 {
 	uint8_t* lookup_name;
 	size_t lookup_len;
+	struct trust_anchor* anchor;
 	enum val_classification subtype = val_classify_response(
 		qstate->query_flags, &qstate->qinfo, &vq->qchase, 
 		vq->orig_msg->rep, vq->rrset_skip);
@@ -1197,7 +1208,7 @@ processInit(struct module_qstate* qstate, struct val_qstate* vq,
 	vq->key_entry = NULL;
 	vq->empty_DS_name = NULL;
 	vq->ds_rrset = 0;
-	vq->trust_anchor = anchors_lookup(qstate->env->anchors, 
+	anchor = anchors_lookup(qstate->env->anchors, 
 		lookup_name, lookup_len, vq->qchase.qclass);
 
 	/* Determine the signer/lookup name */
@@ -1216,13 +1227,11 @@ processInit(struct module_qstate* qstate, struct val_qstate* vq,
 
 	/* for NXDOMAIN it could be signed by a parent of the trust anchor */
 	if(subtype == VAL_CLASS_NAMEERROR && vq->signer_name &&
-		vq->trust_anchor &&
-		dname_strict_subdomain_c(vq->trust_anchor->name, lookup_name)){
-		while(vq->trust_anchor && dname_strict_subdomain_c(
-			vq->trust_anchor->name, lookup_name)) {
-			vq->trust_anchor = vq->trust_anchor->parent;
-		}
-		if(!vq->trust_anchor) { /* unsigned parent denies anchor*/
+		anchor && dname_strict_subdomain_c(anchor->name, lookup_name)){
+		lock_basic_unlock(&anchor->lock);
+		anchor = anchors_lookup(qstate->env->anchors, 
+			lookup_name, lookup_len, vq->qchase.qclass);
+		if(!anchor) { /* unsigned parent denies anchor*/
 			verbose(VERB_QUERY, "unsigned parent zone denies"
 				" trust anchor, indeterminate");
 			vq->chase_reply->security = sec_status_indeterminate;
@@ -1248,7 +1257,7 @@ processInit(struct module_qstate* qstate, struct val_qstate* vq,
 		vq->qchase.qclass, qstate->region, *qstate->env->now);
 
 	/* there is no key(from DLV) and no trust anchor */
-	if(vq->key_entry == NULL && vq->trust_anchor == NULL) {
+	if(vq->key_entry == NULL && anchor == NULL) {
 		/*response isn't under a trust anchor, so we cannot validate.*/
 		vq->chase_reply->security = sec_status_indeterminate;
 		/* go to finished state to cache this result */
@@ -1257,16 +1266,14 @@ processInit(struct module_qstate* qstate, struct val_qstate* vq,
 	}
 	/* if not key, or if keyentry is *above* the trustanchor, i.e.
 	 * the keyentry is based on another (higher) trustanchor */
-	else if(vq->key_entry == NULL || (vq->trust_anchor &&
-		dname_strict_subdomain_c(vq->trust_anchor->name, 
-		vq->key_entry->name))) {
+	else if(vq->key_entry == NULL || (anchor &&
+		dname_strict_subdomain_c(anchor->name, vq->key_entry->name))) {
 		/* trust anchor is an 'unsigned' trust anchor */
-		if(vq->trust_anchor && vq->trust_anchor->numDS == 0 &&
-			vq->trust_anchor->numDNSKEY == 0) {
+		if(anchor && anchor->numDS == 0 && anchor->numDNSKEY == 0) {
 			vq->chase_reply->security = sec_status_insecure;
-			val_mark_insecure(vq->chase_reply, 
-				vq->trust_anchor->name, 
+			val_mark_insecure(vq->chase_reply, anchor->name, 
 				qstate->env->rrset_cache, qstate->env);
+			lock_basic_unlock(&anchor->lock);
 			vq->dlv_checked=1; /* skip DLV check */
 			/* go to finished state to cache this result */
 			vq->state = VAL_FINISHED_STATE;
@@ -1274,13 +1281,21 @@ processInit(struct module_qstate* qstate, struct val_qstate* vq,
 		}
 		/* fire off a trust anchor priming query. */
 		verbose(VERB_DETAIL, "prime trust anchor");
-		if(!prime_trust_anchor(qstate, vq, id, vq->trust_anchor))
+		if(!prime_trust_anchor(qstate, vq, id, anchor)) {
+			lock_basic_unlock(&anchor->lock);
 			return val_error(qstate, id);
+		}
+		lock_basic_unlock(&anchor->lock);
 		/* and otherwise, don't continue processing this event.
 		 * (it will be reactivated when the priming query returns). */
 		vq->state = VAL_FINDKEY_STATE;
 		return 0;
-	} else if(key_entry_isnull(vq->key_entry)) {
+	}
+	if(anchor) {
+		lock_basic_unlock(&anchor->lock);
+	}
+
+	if(key_entry_isnull(vq->key_entry)) {
 		/* response is under a null key, so we cannot validate
 		 * However, we do set the status to INSECURE, since it is 
 		 * essentially proven insecure. */
@@ -2031,8 +2046,8 @@ val_operate(struct module_qstate* qstate, enum module_ev event, int id,
 /**
  * Evaluate the response to a priming request.
  *
- * @param rcode: rcode return value.
- * @param msg: message return value (allocated in a the wrong region).
+ * @param dnskey_rrset: DNSKEY rrset (can be NULL if none) in prime reply.
+ * 	(this rrset is allocated in the wrong region, not the qstate).
  * @param ta: trust anchor.
  * @param qstate: qstate that needs key.
  * @param id: module id.
@@ -2042,19 +2057,13 @@ val_operate(struct module_qstate* qstate, enum module_ev event, int id,
  *	Bad key (validation failed).
  */
 static struct key_entry_key*
-primeResponseToKE(int rcode, struct dns_msg* msg, struct trust_anchor* ta,
-	struct module_qstate* qstate, int id)
+primeResponseToKE(struct ub_packed_rrset_key* dnskey_rrset, 
+	struct trust_anchor* ta, struct module_qstate* qstate, int id)
 {
 	struct val_env* ve = (struct val_env*)qstate->env->modinfo[id];
-	struct ub_packed_rrset_key* dnskey_rrset = NULL;
 	struct key_entry_key* kkey = NULL;
 	enum sec_status sec = sec_status_unchecked;
 
-	if(rcode == LDNS_RCODE_NOERROR) {
-		dnskey_rrset = reply_find_rrset_section_an(msg->rep,
-			ta->name, ta->namelen, LDNS_RR_TYPE_DNSKEY,
-			ta->dclass);
-	}
 	if(!dnskey_rrset) {
 		log_nametypeclass(VERB_OPS, "failed to prime trust anchor -- "
 			"could not fetch DNSKEY rrset", 
@@ -2069,7 +2078,6 @@ primeResponseToKE(int rcode, struct dns_msg* msg, struct trust_anchor* ta,
 			log_err("out of memory: allocate fail prime key");
 			return NULL;
 		}
-		key_cache_insert(ve->kcache, kkey);
 		return kkey;
 	}
 	/* attempt to verify with trust anchor DS and DNSKEY */
@@ -2119,14 +2127,11 @@ primeResponseToKE(int rcode, struct dns_msg* msg, struct trust_anchor* ta,
 			log_err("out of memory: allocate null prime key");
 			return NULL;
 		}
-		key_cache_insert(ve->kcache, kkey);
 		return kkey;
 	}
 
 	log_nametypeclass(VERB_DETAIL, "Successfully primed trust anchor", 
 		ta->name, LDNS_RR_TYPE_DNSKEY, ta->dclass);
-	/* store the freshly primed entry in the cache */
-	key_cache_insert(ve->kcache, kkey);
 	return kkey;
 }
 
@@ -2422,10 +2427,39 @@ static void
 process_prime_response(struct module_qstate* qstate, struct val_qstate* vq,
 	int id, int rcode, struct dns_msg* msg)
 {
+	struct val_env* ve = (struct val_env*)qstate->env->modinfo[id];
+	struct ub_packed_rrset_key* dnskey_rrset = NULL;
+	struct trust_anchor* ta = anchor_find(qstate->env->anchors, 
+		vq->trust_anchor_name, vq->trust_anchor_labs,
+		vq->trust_anchor_len, vq->qchase.qclass);
+	if(!ta) {
+		/* trust anchor revoked, restart with less anchors */
+		vq->state = VAL_INIT_STATE;
+		if(!vq->trust_anchor_name)
+			vq->state = VAL_VALIDATE_STATE; /* break a loop */
+		vq->trust_anchor_name = NULL;
+		return;
+	}
 	/* Fetch and validate the keyEntry that corresponds to the 
 	 * current trust anchor. */
-	vq->key_entry = primeResponseToKE(rcode, msg, vq->trust_anchor, 
-		qstate, id);
+	if(rcode == LDNS_RCODE_NOERROR) {
+		dnskey_rrset = reply_find_rrset_section_an(msg->rep,
+			ta->name, ta->namelen, LDNS_RR_TYPE_DNSKEY,
+			ta->dclass);
+	}
+	if(ta->autr) {
+		if(!autr_process_prime(qstate->env, ve, ta, dnskey_rrset)) {
+			/* trust anchor revoked, restart with less anchors */
+			vq->state = VAL_INIT_STATE;
+			vq->trust_anchor_name = NULL;
+			return;
+		}
+	}
+	vq->key_entry = primeResponseToKE(dnskey_rrset, ta, qstate, id);
+	lock_basic_unlock(&ta->lock);
+	if(vq->key_entry)
+		/* store the freshly primed entry in the cache */
+		key_cache_insert(ve->kcache, vq->key_entry);
 
 	/* If the result of the prime is a null key, skip the FINDKEY state.*/
 	if(!vq->key_entry || key_entry_isnull(vq->key_entry) ||

@@ -43,6 +43,10 @@
 #define VALIDATOR_AUTOTRUST_H
 #include "util/rbtree.h"
 struct val_anchors;
+struct trust_anchor;
+struct ub_packed_rrset_key;
+struct module_env;
+struct val_env;
 
 /** Autotrust anchor states */
 typedef enum {
@@ -57,7 +61,11 @@ typedef enum {
 /** 
  * Autotrust metadata for one trust anchor key.
  */
-struct autr_ta_data {
+struct autr_ta {
+	/** next key */
+	struct autr_ta* next;
+	/** the RR */
+	ldns_rr* rr;
 	/** 5011 state */
 	autr_state_t s;
 	/** last update of key */
@@ -78,7 +86,7 @@ struct autr_point_data {
 	const char* file;
 	/** next probe time */
 	uint32_t next_probe_time;
-	/** rbtree node for probe sort */
+	/** rbtree node for probe sort, key is struct trust_anchor */
 	rbnode_t pnode;
 
 	/** last queried DNSKEY set */
@@ -94,6 +102,8 @@ struct autr_point_data {
 	uint8_t valid;
 	/** number of missing DNSKEYs */
 	uint8_t missing;
+	/** the keys */
+	struct autr_ta* keys;
 };
 
 /** 
@@ -122,11 +132,35 @@ int probetree_cmp(const void* x, const void* y);
 /**
  * Read autotrust file.
  * @param anchors: the anchors structure.
- * @param parsebuf: buffer temporary for parsing data.
  * @param nm: name of the file (copied).
  * @return false on failure.
  */
-int autr_read_file(struct val_anchors* anchors, ldns_buffer* parsebuf,
-	const char* nm);
+int autr_read_file(struct val_anchors* anchors, const char* nm);
+
+/**
+ * Write autotrust file.
+ * @param tp: trust point to write.
+ */
+void autr_write_file(struct trust_anchor* tp);
+
+/**
+ * Delete autr anchor, deletes the autr data but does not do
+ * unlinking from trees, caller does that.
+ * @param tp: trust point to delete.
+ */
+void autr_point_delete(struct trust_anchor* tp);
+
+/**
+ * Perform autotrust processing.
+ * @param env: qstate environment with the anchors structure.
+ * @param ve: validator environment for verification of rrsigs.
+ * @param tp: trust anchor to process.
+ * @param dnskey_rrset: DNSKEY rrset probed (can be NULL if bad prime result).
+ * 	allocated in a region. Has not been validated yet.
+ * @return false if trust anchor was revoked completely.
+ * 	Otherwise logs errors to log, does not change return value.
+ */
+int autr_process_prime(struct module_env* env, struct val_env* ve,
+	struct trust_anchor* tp, struct ub_packed_rrset_key* dnskey_rrset);
 
 #endif /* VALIDATOR_AUTOTRUST_H */

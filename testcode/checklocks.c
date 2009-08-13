@@ -87,6 +87,7 @@ static void lock_error(struct checked_lock* lock,
 		(lock->type==check_lock_rwlock)?"rwlock": "badtype")), err);
 	log_err("complete status display:");
 	total_debug_info();
+	abort();
 	fatal_exit("bailing out");
 }
 

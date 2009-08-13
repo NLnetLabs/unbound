@@ -42,11 +42,11 @@
 #ifndef VALIDATOR_VAL_ANCHOR_H
 #define VALIDATOR_VAL_ANCHOR_H
 #include "util/rbtree.h"
+#include "util/locks.h"
 struct regional;
 struct trust_anchor;
 struct config_file;
 struct ub_packed_rrset_key;
-struct autr_ta_data;
 struct autr_point_data;
 struct autr_global_data;
 
@@ -54,6 +54,8 @@ struct autr_global_data;
  * Trust anchor store.
  */
 struct val_anchors {
+	/** lock on trees */
+	lock_basic_t lock;
 	/** region where trust anchors are allocated */
 	struct regional* region;
 	/**
@@ -81,8 +83,6 @@ struct ta_key {
 	size_t len;
 	/** DNS type (host format) of the key, DS or DNSKEY */
 	uint16_t type;
-	/** Autotrust ta key state, or NULL */
-	struct autr_ta_data* autr;
 };
 
 /**
@@ -92,6 +92,8 @@ struct ta_key {
 struct trust_anchor {
 	/** rbtree node, key is this structure */
 	rbnode_t node;
+	/** lock on the entire anchor and its keys; for autotrust changes */
+	lock_basic_t lock;
 	/** name of this trust anchor */
 	uint8_t* name;
 	/** length of name */
@@ -147,7 +149,7 @@ int anchors_apply_cfg(struct val_anchors* anchors, struct config_file* cfg);
  * @param qname: query name, uncompressed wireformat.
  * @param qname_len: length of qname.
  * @param qclass: class to query for.
- * @return the trust anchor or NULL if none is found.
+ * @return the trust anchor or NULL if none is found. The anchor is locked.
  */
 struct trust_anchor* anchors_lookup(struct val_anchors* anchors,
 	uint8_t* qname, size_t qname_len, uint16_t qclass);
@@ -159,7 +161,7 @@ struct trust_anchor* anchors_lookup(struct val_anchors* anchors,
  * @param namelabs: labels in name
  * @param namelen: length of name
  * @param dclass: class of trust anchor
- * @return NULL if not found.
+ * @return NULL if not found. The anchor is locked.
  */
 struct trust_anchor* anchor_find(struct val_anchors* anchors, 
 	uint8_t* name, int namelabs, size_t namelen, uint16_t dclass);

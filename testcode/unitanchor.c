@@ -64,6 +64,7 @@ test_anchor_empty(struct val_anchors* a)
 static void
 test_anchor_one(ldns_buffer* buff, struct val_anchors* a)
 {
+	struct trust_anchor* ta;
 	uint16_t c = LDNS_RR_CLASS_IN;
 	unit_assert(anchor_store_str(a, buff, 
 		"nl. DS 42860 5 1 14D739EB566D2B1A5E216A0BA4D17FA9B038BE4A"));
@@ -71,11 +72,19 @@ test_anchor_one(ldns_buffer* buff, struct val_anchors* a)
 	unit_assert(anchors_lookup(a, (uint8_t*)"\003com\000", 5, c) == NULL);
 	unit_assert(anchors_lookup(a, 
 		(uint8_t*)"\007example\003com\000", 11, c) == NULL);
-	unit_assert(anchors_lookup(a, (uint8_t*)"\002nl\000", 4, c) != NULL);
-	unit_assert(anchors_lookup(a, 
-		(uint8_t*)"\004labs\002nl\000", 9, c) != NULL);
-	unit_assert(anchors_lookup(a, 
-		(uint8_t*)"\004fabs\002nl\000", 9, c) != NULL);
+
+	unit_assert((ta=anchors_lookup(a,
+		(uint8_t*)"\002nl\000", 4, c)) != NULL);
+	lock_basic_unlock(&ta->lock);
+
+	unit_assert((ta=anchors_lookup(a, 
+		(uint8_t*)"\004labs\002nl\000", 9, c)) != NULL);
+	lock_basic_unlock(&ta->lock);
+
+	unit_assert((ta=anchors_lookup(a, 
+		(uint8_t*)"\004fabs\002nl\000", 9, c)) != NULL);
+	lock_basic_unlock(&ta->lock);
+
 	unit_assert(anchors_lookup(a, (uint8_t*)"\002oo\000", 4, c) == NULL);
 }
 
@@ -91,16 +100,23 @@ test_anchors(ldns_buffer* buff, struct val_anchors* a)
 	unit_assert(anchors_lookup(a, (uint8_t*)"\003com\000", 5, c) == NULL);
 	unit_assert(anchors_lookup(a, 
 		(uint8_t*)"\007example\003com\000", 11, c) == NULL);
+
 	unit_assert(ta = anchors_lookup(a, (uint8_t*)"\002nl\000", 4, c));
 	unit_assert(query_dname_compare(ta->name, (uint8_t*)"\002nl\000")==0);
+	lock_basic_unlock(&ta->lock);
+
 	unit_assert(ta = anchors_lookup(a, 
 		(uint8_t*)"\004labs\002nl\000", 9, c));
 	unit_assert(query_dname_compare(ta->name, 
 		(uint8_t*)"\004labs\002nl\000") == 0);
+	lock_basic_unlock(&ta->lock);
+
 	unit_assert(ta = anchors_lookup(a, 
 		(uint8_t*)"\004fabs\002nl\000", 9, c));
 	unit_assert(query_dname_compare(ta->name, 
 		(uint8_t*)"\002nl\000") == 0);
+	lock_basic_unlock(&ta->lock);
+
 	unit_assert(anchors_lookup(a, (uint8_t*)"\002oo\000", 4, c) == NULL);
 }
 

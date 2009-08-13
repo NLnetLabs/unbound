@@ -476,13 +476,16 @@ int
 iter_indicates_dnssec(struct module_env* env, struct delegpt* dp,
         struct dns_msg* msg, uint16_t dclass)
 {
+	struct trust_anchor* a;
 	/* information not available, !env->anchors can be common */
 	if(!env || !env->anchors || !dp || !dp->name)
 		return 0;
 	/* a trust anchor exists with this name, RRSIGs expected */
-	if(anchor_find(env->anchors, dp->name, dp->namelabs, dp->namelen,
-		dclass))
+	if((a=anchor_find(env->anchors, dp->name, dp->namelabs, dp->namelen,
+		dclass))) {
+		lock_basic_unlock(&a->lock);
 		return 1;
+	}
 	/* see if DS rrset was given, in AUTH section */
 	if(msg && msg->rep &&
 		reply_find_rrset_section_ns(msg->rep, dp->name, dp->namelen,
