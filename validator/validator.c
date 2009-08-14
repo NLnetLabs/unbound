@@ -1697,11 +1697,24 @@ val_dlv_init(struct module_qstate* qstate, struct val_qstate* vq,
 
 	/* If we can find the name in the aggressive negative cache,
 	 * give up; insecure is the answer */
-	if(val_neg_dlvlookup(ve->neg_cache, vq->dlv_lookup_name,
+	while(val_neg_dlvlookup(ve->neg_cache, vq->dlv_lookup_name,
 		vq->dlv_lookup_name_len, vq->qchase.qclass,
 		qstate->env->rrset_cache, *qstate->env->now)) {
+		/* go up */
 		dname_remove_label(&vq->dlv_lookup_name, 
 			&vq->dlv_lookup_name_len);
+		/* too high? */
+		if(!dname_subdomain_c(vq->dlv_lookup_name,
+			qstate->env->anchors->dlv_anchor->name)) {
+			verbose(VERB_ALGO, "ask above dlv repo");
+			return 1; /* Above the repo is insecure */
+		}
+		/* above chain of trust? */
+		if(vq->dlv_insecure_at && !dname_subdomain_c(
+			vq->dlv_lookup_name, vq->dlv_insecure_at)) {
+			verbose(VERB_ALGO, "ask above insecure endpoint");
+			return 1;
+		}
 	}
 
 	/* perform a lookup for the DLV; with validation */
