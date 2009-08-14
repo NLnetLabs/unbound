@@ -1,5 +1,8 @@
 14 August 2009: Wouter
 	- unbound-control lookup prints out infra cache information, like RTT.
+	- Fix bug in DLV lookup reported by Amanda from Secure64.
+	  It could sometimes wrongly classify a domain as unsigned, which
+	  does not give the AD bit on replies.
 
 13 August 2009: Wouter
 	- autotrust read anchor files. locked trust anchors.

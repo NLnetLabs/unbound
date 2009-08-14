@@ -1700,7 +1700,8 @@ val_dlv_init(struct module_qstate* qstate, struct val_qstate* vq,
 	if(val_neg_dlvlookup(ve->neg_cache, vq->dlv_lookup_name,
 		vq->dlv_lookup_name_len, vq->qchase.qclass,
 		qstate->env->rrset_cache, *qstate->env->now)) {
-		return 1;
+		dname_remove_label(&vq->dlv_lookup_name, 
+			&vq->dlv_lookup_name_len);
 	}
 
 	/* perform a lookup for the DLV; with validation */
@@ -1924,10 +1925,11 @@ processDLVLookup(struct module_qstate* qstate, struct val_qstate* vq,
 	if(val_neg_dlvlookup(ve->neg_cache, vq->dlv_lookup_name,
 		vq->dlv_lookup_name_len, vq->qchase.qclass,
 		qstate->env->rrset_cache, *qstate->env->now)) {
-		vq->dlv_status = dlv_there_is_no_dlv;
-		/* continue with the insecure result we got */
-		vq->state = VAL_FINISHED_STATE;
-		return 1;
+		/* does not exist, go up one (go higher). */
+		dname_remove_label(&vq->dlv_lookup_name, 
+			&vq->dlv_lookup_name_len);
+		/* limit number of labels, limited number of recursion */
+		return processDLVLookup(qstate, vq, ve, id);
 	}
 
 	if(!generate_request(qstate, id, vq->dlv_lookup_name,
