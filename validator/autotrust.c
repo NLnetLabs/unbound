@@ -331,7 +331,7 @@ find_add_tp(struct val_anchors* anchors, ldns_rr* rr)
 	return tp;
 }
 
-/** Add trust anchor from RR. */
+/** Add trust anchor from RR */
 static struct autr_ta*
 add_trustanchor_frm_rr(struct val_anchors* anchors, ldns_rr* rr, 
 	struct trust_anchor** tp)

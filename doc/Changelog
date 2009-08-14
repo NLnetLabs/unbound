@@ -1,3 +1,6 @@
+14 August 2009: Wouter
+	- unbound-control lookup prints out infra cache information, like RTT.
+
 13 August 2009: Wouter
 	- autotrust read anchor files. locked trust anchors.
 

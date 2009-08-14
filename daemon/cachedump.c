@@ -45,6 +45,7 @@
 #include "daemon/worker.h"
 #include "services/cache/rrset.h"
 #include "services/cache/dns.h"
+#include "services/cache/infra.h"
 #include "util/data/msgreply.h"
 #include "util/regional.h"
 #include "util/net_help.h"
@@ -779,6 +780,54 @@ load_cache(SSL* ssl, struct worker* worker)
 	return read_fixed(ssl, worker->env.scratch_buffer, "EOF");
 }
 
+/** print details on a delegation point */
+static void
+print_dp_details(SSL* ssl, struct worker* worker, struct delegpt* dp)
+{
+	char buf[257];
+	struct delegpt_addr* a;
+	int lame, dlame, rlame, rtt, edns_vs, to;
+	uint8_t edns_lame_known;
+	for(a = dp->target_list; a; a = a->next_target) {
+		addr_to_str(&a->addr, a->addrlen, buf, sizeof(buf));
+		if(!ssl_printf(ssl, "%-16s\t", buf))
+			return;
+		if(a->bogus) {
+			if(!ssl_printf(ssl, "Address is BOGUS. ")) 
+				return;
+		}
+		/* lookup in infra cache */
+		/* uses type_A because most often looked up, but other
+		 * lameness won't be reported then */
+		if(!infra_get_lame_rtt(worker->env.infra_cache, 
+			&a->addr, a->addrlen, dp->name, dp->namelen,
+			LDNS_RR_TYPE_A, &lame, &dlame, &rlame, &rtt, 
+			*worker->env.now)) {
+			if(!ssl_printf(ssl, "not in infra cache.\n"))
+				return;
+			continue; /* skip stuff not in infra cache */
+		}
+		if(!ssl_printf(ssl, "%s%s%srtt %d msec. ",
+			lame?"LAME ":"", dlame?"NoDNSSEC ":"",
+			rlame?"NoAuthButRecursive ":"", rtt))
+			return;
+		if(infra_host(worker->env.infra_cache, &a->addr, a->addrlen,
+			*worker->env.now, &edns_vs, &edns_lame_known, &to)) {
+			if(edns_vs == -1) {
+				if(!ssl_printf(ssl, "noEDNS%s.",
+					edns_lame_known?" probed":""))
+					return;
+			} else {
+				if(!ssl_printf(ssl, "EDNS %d%s.",
+					edns_vs, edns_lame_known?" probed":""))
+					return;
+			}
+		}
+		if(!ssl_printf(ssl, "\n"))
+			return;
+	}
+}
+
 int print_deleg_lookup(SSL* ssl, struct worker* worker, uint8_t* nm,
 	size_t nmlen, int ATTR_UNUSED(nmlabs))
 {
@@ -824,11 +873,13 @@ int print_deleg_lookup(SSL* ssl, struct worker* worker, uint8_t* nm,
 		delegpt_count_addr(dp, &n_addr, &n_res, &n_avail);
 		/* since dp has not been used by iterator, all are available*/
 		if(!ssl_printf(ssl, "Delegation with %d names, of which %d "
-			"have no addresses in cache.\n"
-			"It provides %d IP addresses. %s\n", 
-			(int)n_ns, (int)n_miss, (int)n_addr, 
-			(dp->bogus?"It is BOGUS":"") ))
+			"can be examined to query further addresses.\n"
+			"%sIt provides %d IP addresses.\n", 
+			(int)n_ns, (int)n_miss, (dp->bogus?"It is BOGUS. ":""),
+			(int)n_addr))
 			return 0;
+		/* print more dp info */
+		print_dp_details(ssl, worker, dp);
 		/* go up? */
 		if(iter_dp_is_useless(&qinfo, BIT_RD, dp)) {
 			if(!ssl_printf(ssl, "cache delegation was "
