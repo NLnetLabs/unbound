@@ -219,6 +219,7 @@ new_host_entry(struct infra_cache* infra, struct sockaddr_storage* addr,
 	data->lameness = NULL;
 	data->edns_version = 0;
 	data->edns_lame_known = 0;
+	data->num_timeouts = 0;
 	rtt_init(&data->rtt);
 	return &key->entry;
 }
@@ -471,9 +472,14 @@ infra_rtt_update(struct infra_cache* infra,
 	/* have an entry, update the rtt, and the ttl */
 	data = (struct infra_host_data*)e->data;
 	data->ttl = timenow + infra->host_ttl;
-	if(roundtrip == -1)
+	if(roundtrip == -1) {
 		rtt_lost(&data->rtt, orig_rtt);
-	else	rtt_update(&data->rtt, roundtrip);
+		if(data->num_timeouts<255)
+			data->num_timeouts++; 
+	} else {
+		rtt_update(&data->rtt, roundtrip);
+		data->num_timeouts = 0;
+	}
 	if(data->rtt.rto > 0)
 		rto = data->rtt.rto;
 
@@ -513,7 +519,8 @@ int
 infra_get_lame_rtt(struct infra_cache* infra,
         struct sockaddr_storage* addr, socklen_t addrlen,
         uint8_t* name, size_t namelen, uint16_t qtype, 
-	int* lame, int* dnsseclame, int* reclame, int* rtt, uint32_t timenow)
+	int* lame, int* dnsseclame, int* reclame, int* rtt, int* lost,
+	uint32_t timenow)
 {
 	struct infra_host_data* host;
 	struct lruhash_entry* e = infra_lookup_host_nottl(infra, addr, 
@@ -523,6 +530,7 @@ infra_get_lame_rtt(struct infra_cache* infra,
 		return 0;
 	host = (struct infra_host_data*)e->data;
 	*rtt = rtt_unclamped(&host->rtt);
+	*lost = (int)host->num_timeouts;
 	/* check lameness first, if so, ttl on host does not matter anymore */
 	if(infra_lookup_lame(host, name, namelen, timenow, 
 		&dlm, &rlm, &alm, &olm)) {

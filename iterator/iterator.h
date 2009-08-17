@@ -65,6 +65,10 @@ struct iter_priv;
  * Equals RTT_MAX_TIMEOUT
  */
 #define USEFUL_SERVER_TOP_TIMEOUT	120000
+/** Number of lost messages in a row that get a host blacklisted.
+ * With 16, a couple different queries have to time out and no working
+ * queries are happening */
+#define USEFUL_SERVER_MAX_LOST	16
 /** number of retries on outgoing queries */
 #define OUTBOUND_MSG_RETRY 5
 /** RTT band, within this amount from the best, servers are chosen randomly.

@@ -1,3 +1,7 @@
+17 August 2009: Wouter
+	- Fix so that servers are only blacklisted if they fail to reply 
+	  to 16 queries in a row and the timeout gets above 2 minutes.
+
 14 August 2009: Wouter
 	- unbound-control lookup prints out infra cache information, like RTT.
 	- Fix bug in DLV lookup reported by Amanda from Secure64.

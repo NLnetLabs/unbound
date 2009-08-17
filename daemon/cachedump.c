@@ -786,7 +786,7 @@ print_dp_details(SSL* ssl, struct worker* worker, struct delegpt* dp)
 {
 	char buf[257];
 	struct delegpt_addr* a;
-	int lame, dlame, rlame, rtt, edns_vs, to;
+	int lame, dlame, rlame, rtt, edns_vs, to, lost;
 	uint8_t edns_lame_known;
 	for(a = dp->target_list; a; a = a->next_target) {
 		addr_to_str(&a->addr, a->addrlen, buf, sizeof(buf));
@@ -801,15 +801,15 @@ print_dp_details(SSL* ssl, struct worker* worker, struct delegpt* dp)
 		 * lameness won't be reported then */
 		if(!infra_get_lame_rtt(worker->env.infra_cache, 
 			&a->addr, a->addrlen, dp->name, dp->namelen,
-			LDNS_RR_TYPE_A, &lame, &dlame, &rlame, &rtt, 
+			LDNS_RR_TYPE_A, &lame, &dlame, &rlame, &rtt, &lost,
 			*worker->env.now)) {
 			if(!ssl_printf(ssl, "not in infra cache.\n"))
 				return;
 			continue; /* skip stuff not in infra cache */
 		}
-		if(!ssl_printf(ssl, "%s%s%srtt %d msec. ",
+		if(!ssl_printf(ssl, "%s%s%srtt %d msec, %d lost. ",
 			lame?"LAME ":"", dlame?"NoDNSSEC ":"",
-			rlame?"NoAuthButRecursive ":"", rtt))
+			rlame?"NoAuthButRecursive ":"", rtt, lost))
 			return;
 		if(infra_host(worker->env.infra_cache, &a->addr, a->addrlen,
 			*worker->env.now, &edns_vs, &edns_lame_known, &to)) {

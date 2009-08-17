@@ -74,6 +74,8 @@ struct infra_host_data {
 	 * EDNS lame is when EDNS queries or replies are dropped, 
 	 * and cause a timeout */
 	uint8_t edns_lame_known;
+	/** Number of consequtive timeouts; reset when reply arrives OK. */
+	uint8_t num_timeouts;
 };
 
 /**
@@ -270,13 +272,16 @@ int infra_edns_update(struct infra_cache* infra,
  * @param reclame: if function returns true, this is if it is recursion lame.
  * @param rtt: if function returns true, this returns avg rtt of the server.
  * 	The rtt value is unclamped and reflects recent timeouts.
+ * @param lost: number of queries lost in a row.  Reset to 0 when an answer
+ * 	gets back.  Gives a connectivity number.
  * @param timenow: what time it is now.
  * @return if found in cache, or false if not (or TTL bad).
  */
 int infra_get_lame_rtt(struct infra_cache* infra,
         struct sockaddr_storage* addr, socklen_t addrlen, 
 	uint8_t* name, size_t namelen, uint16_t qtype, 
-	int* lame, int* dnsseclame, int* reclame, int* rtt, uint32_t timenow);
+	int* lame, int* dnsseclame, int* reclame, int* rtt, int* lost,
+	uint32_t timenow);
 
 /**
  * Get memory used by the infra cache.
