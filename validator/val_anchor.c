@@ -126,6 +126,8 @@ init_parents(struct val_anchors* anchors)
 {
 	struct trust_anchor* node, *prev = NULL, *p;
 	int m; 
+	/* nobody else can grab locks because we hold the main lock.
+	 * Thus the previous items, after unlocked, are not deleted */
 	lock_basic_lock(&anchors->lock);
 	RBTREE_FOR(node, struct trust_anchor*, anchors->tree) {
 		lock_basic_lock(&node->lock);
@@ -1057,6 +1059,8 @@ anchors_apply_cfg(struct val_anchors* anchors, struct config_file* cfg)
 		anchors->dlv_anchor = dlva;
 		lock_basic_unlock(&anchors->lock);
 	}
+	/* do autr last, so that it sees what anchors are filled by other
+	 * means can can print errors about double config for the name */
 	for(f = cfg->auto_trust_anchor_file_list; f; f = f->next) {
 		if(!f->str || f->str[0] == 0) /* empty "" */
 			continue;

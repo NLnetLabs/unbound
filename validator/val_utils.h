@@ -134,6 +134,21 @@ enum sec_status val_verify_rrset_entry(struct module_env* env,
 	struct key_entry_key* kkey);
 
 /**
+ * Verify DNSKEYs with DS rrset. Like val_verify_new_DNSKEYs but
+ * returns a sec_status instead of a key_entry.
+ * @param env: module environment (scratch buffer)
+ * @param ve: validator environment (verification settings)
+ * @param dnskey_rrset: DNSKEY rrset to verify
+ * @param ds_rrset: DS rrset to verify with.
+ * @return: sec_status_secure if a DS matches.
+ *     sec_status_insecure if end of trust (i.e., unknown algorithms).
+ *     sec_status_bogus if it fails.
+ */
+enum sec_status val_verify_DNSKEY_with_DS(struct module_env* env, 
+	struct val_env* ve, struct ub_packed_rrset_key* dnskey_rrset, 
+	struct ub_packed_rrset_key* ds_rrset);
+
+/**
  * Verify new DNSKEYs with DS rrset. The DS contains hash values that should
  * match the DNSKEY keys.
  * match the DS to a DNSKEY and verify the DNSKEY rrset with that key.

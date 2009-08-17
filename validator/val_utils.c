@@ -416,9 +416,9 @@ verify_dnskeys_with_ds_rr(struct module_env* env, struct val_env* ve,
 	return sec_status_bogus;
 }
 
-struct key_entry_key* 
-val_verify_new_DNSKEYs(struct regional* region, struct module_env* env, 
-	struct val_env* ve, struct ub_packed_rrset_key* dnskey_rrset, 
+enum sec_status 
+val_verify_DNSKEY_with_DS(struct module_env* env, struct val_env* ve,
+	struct ub_packed_rrset_key* dnskey_rrset,
 	struct ub_packed_rrset_key* ds_rrset)
 {
 	/* as long as this is false, we can consider this DS rrset to be
@@ -433,13 +433,11 @@ val_verify_new_DNSKEYs(struct regional* region, struct module_env* env,
 		!= 0) {
 		verbose(VERB_QUERY, "DNSKEY RRset did not match DS RRset "
 			"by name");
-		return key_entry_create_bad(region, ds_rrset->rk.dname,
-			ds_rrset->rk.dname_len, 
-			ntohs(ds_rrset->rk.rrset_class));
+		return sec_status_bogus;
 	}
 
 	num = rrset_get_count(ds_rrset);
-	/* find favority algo, for now, highest number supported */
+	/* find favorite algo, for now, highest number supported */
 	for(i=0; i<num; i++) {
 		if(!ds_digest_algo_is_supported(ds_rrset, i) ||
 			!ds_key_algo_is_supported(ds_rrset, i)) {
@@ -467,10 +465,7 @@ val_verify_new_DNSKEYs(struct regional* region, struct module_env* env,
 			ds_rrset, i);
 		if(sec == sec_status_secure) {
 			verbose(VERB_ALGO, "DS matched DNSKEY.");
-			return key_entry_create_rrset(region, 
-				ds_rrset->rk.dname, ds_rrset->rk.dname_len,
-				ntohs(ds_rrset->rk.rrset_class), dnskey_rrset,
-				*env->now);
+			return sec_status_secure;
 		}
 	}
 
@@ -480,13 +475,32 @@ val_verify_new_DNSKEYs(struct regional* region, struct module_env* env,
 	if(!has_useful_ds) {
 		verbose(VERB_ALGO, "No usable DS records were found -- "
 			"treating as insecure.");
+		return sec_status_insecure;
+	}
+	/* If any were understandable, then it is bad. */
+	verbose(VERB_QUERY, "Failed to match any usable DS to a DNSKEY.");
+	return sec_status_bogus;
+}
+
+struct key_entry_key* 
+val_verify_new_DNSKEYs(struct regional* region, struct module_env* env, 
+	struct val_env* ve, struct ub_packed_rrset_key* dnskey_rrset, 
+	struct ub_packed_rrset_key* ds_rrset)
+{
+	enum sec_status sec = val_verify_DNSKEY_with_DS(env, ve, 
+		dnskey_rrset, ds_rrset);
+
+	if(sec == sec_status_secure) {
+		return key_entry_create_rrset(region, 
+			ds_rrset->rk.dname, ds_rrset->rk.dname_len,
+			ntohs(ds_rrset->rk.rrset_class), dnskey_rrset,
+			*env->now);
+	} else if(sec == sec_status_insecure) {
 		return key_entry_create_null(region, ds_rrset->rk.dname,
 			ds_rrset->rk.dname_len, 
 			ntohs(ds_rrset->rk.rrset_class),
 			rrset_get_ttl(ds_rrset), *env->now);
-	}
-	/* If any were understandable, then it is bad. */
-	verbose(VERB_QUERY, "Failed to match any usable DS to a DNSKEY.");
+	} 
 	return key_entry_create_bad(region, ds_rrset->rk.dname,
 		ds_rrset->rk.dname_len, ntohs(ds_rrset->rk.rrset_class));
 }

@@ -41,7 +41,10 @@
 #include "config.h"
 #include "validator/autotrust.h"
 #include "validator/val_anchor.h"
+#include "validator/val_utils.h"
+#include "validator/val_sigcrypt.h"
 #include "util/data/dname.h"
+#include "util/data/packed_rrset.h"
 #include "util/log.h"
 #include "util/module.h"
 #include "util/net_help.h"
@@ -211,6 +214,7 @@ parse_comments(char* str, struct autr_ta* ta)
 			"considered NOW", str, ldns_calc_keytag(ta->rr));
 		free(str);
 		*/
+		/* cannot use event base timeptr, because not inited yet */
 		ta->last_change = (uint32_t)time(NULL);
         }
         else
@@ -297,6 +301,23 @@ autr_tp_create(struct val_anchors* anchors, ldns_rr* rr)
 	return tp;
 }
 
+/** delete assembled rrsets */
+static void
+autr_rrset_delete(struct trust_anchor* tp)
+{
+	if(tp->ds_rrset) {
+		free(tp->ds_rrset->rk.dname);
+		free(tp->ds_rrset->entry.data);
+		free(tp->ds_rrset);
+	}
+	if(tp->dnskey_rrset) {
+		free(tp->dnskey_rrset->rk.dname);
+		free(tp->dnskey_rrset->entry.data);
+		free(tp->dnskey_rrset);
+	}
+}
+
+
 void autr_point_delete(struct trust_anchor* tp)
 {
 	if(!tp)
@@ -304,6 +325,7 @@ void autr_point_delete(struct trust_anchor* tp)
 	lock_unprotect(&tp->lock, tp);
 	lock_unprotect(&tp->lock, tp->autr);
 	lock_basic_destroy(&tp->lock);
+	autr_rrset_delete(tp);
 	free(tp->autr);
 	free(tp->name);
 	free(tp);
@@ -379,9 +401,9 @@ add_trustanchor_frm_str(struct val_anchors* anchors, char* str,
  * @param anchors: all points.
  * @param str: comments line
  * @param fname: filename
- * @return false on failure.
+ * @return false on failure, otherwise the tp read.
  */
-static int
+static struct trust_anchor*
 load_trustanchor(struct val_anchors* anchors, char* str, const char* fname)
 {
         struct autr_ta* ta = NULL;
@@ -389,11 +411,11 @@ load_trustanchor(struct val_anchors* anchors, char* str, const char* fname)
 
         ta = add_trustanchor_frm_str(anchors, str, &tp);
 	if(!ta)
-		return 0;
+		return NULL;
 	lock_basic_lock(&tp->lock);
 	if(!parse_comments(str, ta)) {
 		lock_basic_unlock(&tp->lock);
-		return 0;
+		return NULL;
 	}
 	if (rr_is_dnskey_sep(ta->rr)) {
 		if (ta->s == AUTR_STATE_VALID)
@@ -406,11 +428,63 @@ load_trustanchor(struct val_anchors* anchors, char* str, const char* fname)
 		tp->autr->file = strdup(fname);
 		if(!tp->autr->file) {
 			lock_basic_unlock(&tp->lock);
-			return 0;
+			return NULL;
 		}
 	}
 	lock_basic_unlock(&tp->lock);
-        return 1;
+        return tp;
+}
+
+/**
+ * Assemble the trust anchors into DS and DNSKEY packed rrsets.
+ * Read the ldns_rrs and builds packed rrsets
+ * @param tp: the trust point. Must be locked.
+ * @return false on malloc failure.
+ */
+static int 
+autr_assemble(struct trust_anchor* tp)
+{
+	ldns_rr_list* ds, *dnskey;
+	struct autr_ta* ta;
+
+	ds = ldns_rr_list_new();
+	dnskey = ldns_rr_list_new();
+	if(!ds || !dnskey) {
+		ldns_rr_list_free(ds);
+		ldns_rr_list_free(dnskey);
+		return 0;
+	}
+	for(ta = tp->autr->keys; ta; ta = ta->next) {
+		if(ldns_rr_get_type(ta->rr) == LDNS_RR_TYPE_DS) {
+			if(!ldns_rr_list_push_rr(ds, ta->rr)) {
+				ldns_rr_list_free(ds);
+				ldns_rr_list_free(dnskey);
+				return 0;
+			}
+		} else {
+			if(!ldns_rr_list_push_rr(dnskey, ta->rr)) {
+				ldns_rr_list_free(ds);
+				ldns_rr_list_free(dnskey);
+				return 0;
+			}
+		}
+	}
+
+	/* make packed rrset keys - malloced with no ID number, they
+	 * are not in the cache */
+
+	/* make packed rrset data */
+
+	/* assign the data to replace the old */
+
+	/* free the old data */
+	autr_rrset_delete(tp);
+	tp->ds_rrset = NULL;
+	tp->dnskey_rrset = NULL;
+
+	ldns_rr_list_free(ds);
+	ldns_rr_list_free(dnskey);
+	return 1;
 }
 
 int autr_read_file(struct val_anchors* anchors, const char* nm)
@@ -421,6 +495,8 @@ int autr_read_file(struct val_anchors* anchors, const char* nm)
         int line_nr = 0;
         /* single line */
         char line[10240];
+	/* trust point being read */
+	struct trust_anchor *tp = NULL, *tp2;
 
         if (!(fd = fopen(nm, "r"))) {
                 log_err("unable to open %s for reading: %s", 
@@ -434,14 +510,30 @@ int autr_read_file(struct val_anchors* anchors, const char* nm)
                 line_nr++;
         	if (!str_contains_data(line, ';'))
                 	continue; /* empty lines allowed */
-                if (!load_trustanchor(anchors, line, nm)) {
+                if (!(tp2=load_trustanchor(anchors, line, nm))) {
                         log_err("failed to load trust anchor from %s "
 				"at line %i, skipping", nm, line_nr);
                         /* try to do the rest */
+			continue;
                 }
+		if(tp && tp != tp2) {
+			log_err("file %s has mismatching data inside", nm);
+        		fclose(fd);
+			return 0;
+		}
+		tp = tp2;
         }
-
         fclose(fd);
+	if(!tp) {
+		log_err("failed to read %s", nm);
+		return 0;
+	}
+
+	/* now assemble the data into DNSKEY and DS packed rrsets */
+	lock_basic_lock(&tp->lock);
+	autr_assemble(tp);
+	lock_basic_unlock(&tp->lock);
+
 	return 1;
 }
 
@@ -453,11 +545,83 @@ void autr_write_file(struct trust_anchor* tp)
 	/* write anchors */
 }
 
+/** verify if dnskey works for trust point 
+ * @param env: environment (with time) for verification
+ * @param ve: validator environment (with options) for verification.
+ * @param tp: trust point to verify with
+ * @param rrset: DNSKEY rrset to verify.
+ * @return false on failure, true if verification successful.
+ */
+static int
+verify_dnskey(struct module_env* env, struct val_env* ve,
+        struct trust_anchor* tp, struct ub_packed_rrset_key* rrset)
+{
+	if(tp->ds_rrset) {
+		/* verify with ds, any will do to prime autotrust */
+		enum sec_status sec = val_verify_DNSKEY_with_DS(
+			env, ve, rrset, tp->ds_rrset);
+		verbose(VERB_ALGO, "autotrust: validate DNSKEY with DS: %s",
+			sec_status_to_string(sec));
+		if(sec == sec_status_secure) {
+			return 1;
+		}
+	}
+	if(tp->dnskey_rrset) {
+		/* verify with keys */
+		enum sec_status sec = val_verify_rrset(env, ve, rrset,
+			tp->dnskey_rrset);
+		verbose(VERB_ALGO, "autotrust: DNSKEY is %s",
+			sec_status_to_string(sec));
+		if(sec == sec_status_secure) {
+			return 1;
+		}
+	}
+	return 0;
+}
+
 int autr_process_prime(struct module_env* env, struct val_env* ve,
 	struct trust_anchor* tp, struct ub_packed_rrset_key* dnskey_rrset)
 {
 	struct val_anchors* anchors = env->anchors;
+	log_assert(tp->autr);
 	/* autotrust update trust anchors */
+	/* note: tp is locked */
+
+	/* query_dnskeys(): */
+	tp->autr->last_queried = *env->now;
+
+	log_nametypeclass(VERB_ALGO, "autotrust process for",
+		tp->name, LDNS_RR_TYPE_DNSKEY, tp->dclass);
+	if(!dnskey_rrset) {
+		verbose(VERB_ALGO, "autotrust: no dnskey rrset");
+		tp->autr->query_failed += 1;
+		return 1; /* trust point exists */
+	}
+	/* verify the dnskey rrset and see if it is valid. */
+	if(!verify_dnskey(env, ve, tp, dnskey_rrset)) {
+		verbose(VERB_ALGO, "autotrust: dnskey did not verify.");
+		tp->autr->query_failed += 1;
+		return 1; /* trust point exists */
+	}
+
+	tp->autr->query_failed = 0;
+
+	/* update_events(): 
+	 * - find minimum rrsig expiration interval
+	 * - add new trust anchors to the data structure
+	 * - note which trust anchors are seen this probe.
+	 * - note revoked (selfsigned) anchors.
+	 * Set trustpoint query_interval and retry_time.
+	 */
+	/* update_events(env, ve, tp, dnskey_rrset); */
+
+	/* do_statetable(): 
+	 * - for every SEP key do the 5011 statetable.
+	 * - remove missing trustanchors (if too many).
+	 */
+	/* do_statetable(env, tp); */
+
+	autr_assemble(tp);
 
 	return 1;
 }
