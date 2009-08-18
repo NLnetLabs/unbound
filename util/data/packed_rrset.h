@@ -376,4 +376,30 @@ struct ub_packed_rrset_key* packed_rrset_copy_region(
 	struct ub_packed_rrset_key* key, struct regional* region, 
 	uint32_t now);
 
+/**
+ * Create a ub_packed_rrset_key allocated on the heap.
+ * It therefore does not have the correct ID value, and cannot be used
+ * inside the cache.  It can be used in storage outside of the cache.
+ * Keys for the cache have to be obtained from alloc.h .
+ * @param rrset: the ldns rr set.
+ * @return key allocated or NULL on failure.
+ */
+struct ub_packed_rrset_key* ub_packed_rrset_heap_key(ldns_rr_list* rrset);
+
+/**
+ * Create packed_rrset data on the heap.
+ * @param rrset: the ldns rr set with the data to copy.
+ * @return data allocated or NULL on failure.
+ */
+struct packed_rrset_data* packed_rrset_heap_data(ldns_rr_list* rrset);
+
+/**
+ * Convert packed rrset to ldns rr list.
+ * @param rrset: packed rrset.
+ * @param buf: scratch buffer.
+ * @return rr list or NULL on failure.
+ */
+ldns_rr_list* packed_rrset_to_rr_list(struct ub_packed_rrset_key* rrset,
+	ldns_buffer* buf);
+
 #endif /* UTIL_DATA_PACKED_RRSET_H */

@@ -1,4 +1,7 @@
 17 August 2009: Wouter
+	- autotrust: process events.
+
+17 August 2009: Wouter
 	- Fix so that servers are only blacklisted if they fail to reply 
 	  to 16 queries in a row and the timeout gets above 2 minutes.
 	- autotrust work, split up DS verification of DNSKEYs.

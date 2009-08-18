@@ -46,6 +46,7 @@
 #include "util/log.h"
 #include "util/alloc.h"
 #include "util/regional.h"
+#include "util/net_help.h"
 
 void
 ub_packed_rrset_parsedelete(struct ub_packed_rrset_key* pkey,
@@ -303,3 +304,149 @@ packed_rrset_copy_region(struct ub_packed_rrset_key* key,
 	return ck;
 }
 
+struct ub_packed_rrset_key* 
+ub_packed_rrset_heap_key(ldns_rr_list* rrset)
+{
+	struct ub_packed_rrset_key* k;
+	ldns_rr* rr;
+	if(!rrset)
+		return NULL;
+	rr = ldns_rr_list_rr(rrset, 0);
+	if(!rr)
+		return NULL;
+	k = (struct ub_packed_rrset_key*)calloc(1, sizeof(*k));
+	if(!k)
+		return NULL;
+	k->rk.type = htons(ldns_rr_get_type(rr));
+	k->rk.rrset_class = htons(ldns_rr_get_class(rr));
+	k->rk.dname_len = ldns_rdf_size(ldns_rr_owner(rr));
+	k->rk.dname = memdup(ldns_rdf_data(ldns_rr_owner(rr)),
+		ldns_rdf_size(ldns_rr_owner(rr)));
+	if(!k->rk.dname) {
+		free(k);
+		return NULL;
+	}
+	return k;
+}
+
+struct packed_rrset_data* 
+packed_rrset_heap_data(ldns_rr_list* rrset)
+{
+	struct packed_rrset_data* data;
+	size_t count=0, rrsig_count=0, len=0, i, j, total;
+	uint8_t* nextrdata;
+	if(!rrset || ldns_rr_list_rr_count(rrset)==0)
+		return NULL;
+	/* count sizes */
+	for(i=0; i<ldns_rr_list_rr_count(rrset); i++) {
+		ldns_rr* rr = ldns_rr_list_rr(rrset, i);
+		if(ldns_rr_get_type(rr) == LDNS_RR_TYPE_RRSIG)
+			rrsig_count++;
+		else 	count++;
+		for(j=0; j<ldns_rr_rd_count(rr); j++)
+			len += ldns_rdf_size(ldns_rr_rdf(rr, j));
+		len += 2; /* sizeof the rdlength */
+	}
+
+	/* allocate */
+	total = count + rrsig_count;
+	len += sizeof(*data) + total*(sizeof(size_t) + sizeof(uint32_t) + 
+		sizeof(uint8_t*));
+	data = (struct packed_rrset_data*)calloc(1, len);
+	if(!data)
+		return NULL;
+	
+	/* fill it */
+	data->ttl = ldns_rr_ttl(ldns_rr_list_rr(rrset, 0));
+	data->count = count;
+	data->rrsig_count = rrsig_count;
+	data->rr_len = (size_t*)((uint8_t*)data +
+		sizeof(struct packed_rrset_data));
+	data->rr_data = (uint8_t**)&(data->rr_len[total]);
+	data->rr_ttl = (uint32_t*)&(data->rr_data[total]);
+	nextrdata = (uint8_t*)&(data->rr_ttl[total]);
+
+	/* fill out len, ttl, fields */
+	for(i=0; i<total; i++) {
+		ldns_rr* rr = ldns_rr_list_rr(rrset, i);
+		data->rr_ttl[i] = ldns_rr_ttl(rr);
+		if(data->rr_ttl[i] < data->ttl)
+			data->ttl = data->rr_ttl[i];
+		data->rr_len[i] = 0;
+		for(j=0; j<ldns_rr_rd_count(rr); j++)
+			data->rr_len[i] += ldns_rdf_size(ldns_rr_rdf(rr, j));
+	}
+
+	/* fixup rest of ptrs */
+	for(i=0; i<total; i++) {
+		data->rr_data[i] = nextrdata;
+		nextrdata += data->rr_len[i];
+	}
+
+	/* copy data in there */
+	for(i=0; i<total; i++) {
+		ldns_rr* rr = ldns_rr_list_rr(rrset, i);
+		uint16_t rdlen = htons(data->rr_len[i]);
+		size_t p = sizeof(rdlen);
+		memmove(data->rr_data[i], &rdlen, p);
+		for(j=0; j<ldns_rr_rd_count(rr); j++) {
+			ldns_rdf* rd = ldns_rr_rdf(rr, j);
+			memmove(data->rr_data[i]+p, ldns_rdf_data(rd),
+				ldns_rdf_size(rd));
+			p += ldns_rdf_size(rd);
+		}
+	}
+
+	if(data->rrsig_count && data->count == 0) {
+		data->count = data->rrsig_count; /* rrset type is RRSIG */
+		data->rrsig_count = 0;
+	}
+	return data;
+}
+
+/** convert i'th rr to ldns_rr */
+static ldns_rr*
+torr(struct ub_packed_rrset_key* k, ldns_buffer* buf, size_t i)
+{
+	struct packed_rrset_data* d = (struct packed_rrset_data*)k->entry.data;
+	ldns_rr* rr = NULL;
+	size_t pos = 0;
+	ldns_status s;
+	ldns_buffer_clear(buf);
+	ldns_buffer_write(buf, k->rk.dname, k->rk.dname_len);
+	if(i < d->count)
+		ldns_buffer_write(buf, &k->rk.type, sizeof(uint16_t));
+	else 	ldns_buffer_write_u16(buf, LDNS_RR_TYPE_RRSIG);
+	ldns_buffer_write(buf, &k->rk.rrset_class, sizeof(uint16_t));
+	ldns_buffer_write_u32(buf, d->rr_ttl[i]);
+	ldns_buffer_write(buf, d->rr_data[i], d->rr_len[i]);
+	ldns_buffer_flip(buf);
+	s = ldns_wire2rr(&rr, ldns_buffer_begin(buf), ldns_buffer_limit(buf),
+		&pos, LDNS_SECTION_ANSWER);
+	if(s == LDNS_STATUS_OK)
+		return rr;
+	return NULL;
+}
+
+ldns_rr_list* 
+packed_rrset_to_rr_list(struct ub_packed_rrset_key* k, ldns_buffer* buf)
+{
+	struct packed_rrset_data* d = (struct packed_rrset_data*)k->entry.data;
+	ldns_rr_list* r = ldns_rr_list_new();
+	size_t i;
+	if(!r)
+		return NULL;
+	for(i=0; i<d->count+d->rrsig_count; i++) {
+		ldns_rr* rr = torr(k, buf, i);
+		if(!rr) {
+			ldns_rr_list_deep_free(r);
+			return NULL;
+		}
+		if(!ldns_rr_list_push_rr(r, rr)) {
+			ldns_rr_free(rr);
+			ldns_rr_list_deep_free(r);
+			return NULL;
+		}
+	}
+	return r;
+}

@@ -255,6 +255,13 @@ rr_is_dnskey_sep(ldns_rr* rr)
 	return (dnskey_flags(rr)&DNSKEY_BIT_SEP);
 }
 
+/** Check if REVOKED DNSKEY */
+static int
+rr_is_dnskey_revoked(ldns_rr* rr)
+{
+	return (dnskey_flags(rr)&LDNS_KEY_REVOKE_KEY);
+}
+
 /** create ta */
 static struct autr_ta*
 autr_ta_create(ldns_rr* rr)
@@ -446,6 +453,7 @@ autr_assemble(struct trust_anchor* tp)
 {
 	ldns_rr_list* ds, *dnskey;
 	struct autr_ta* ta;
+	struct ub_packed_rrset_key* ubds=NULL, *ubdnskey=NULL;
 
 	ds = ldns_rr_list_new();
 	dnskey = ldns_rr_list_new();
@@ -472,15 +480,44 @@ autr_assemble(struct trust_anchor* tp)
 
 	/* make packed rrset keys - malloced with no ID number, they
 	 * are not in the cache */
-
-	/* make packed rrset data */
-
-	/* assign the data to replace the old */
+	/* make packed rrset data (if there is a key) */
+	if(ds) {
+		ubds = ub_packed_rrset_heap_key(ds);
+		if(!ubds) 
+			goto error_cleanup;
+		ubds->entry.data = packed_rrset_heap_data(ds);
+		if(!ubds->entry.data)
+			goto error_cleanup;
+	}
+	if(dnskey) {
+		ubdnskey = ub_packed_rrset_heap_key(dnskey);
+		if(!ubdnskey)
+			goto error_cleanup;
+		ubdnskey->entry.data = packed_rrset_heap_data(dnskey);
+		if(!ubdnskey->entry.data) {
+		error_cleanup:
+			if(ubds) {
+				free(ubds->rk.dname);
+				free(ubds->entry.data);
+				free(ubds);
+			}
+			if(ubdnskey) {
+				free(ubdnskey->rk.dname);
+				free(ubdnskey->entry.data);
+				free(ubdnskey);
+			}
+			ldns_rr_list_free(ds);
+			ldns_rr_list_free(dnskey);
+			return 0;
+		}
+	}
 
 	/* free the old data */
 	autr_rrset_delete(tp);
-	tp->ds_rrset = NULL;
-	tp->dnskey_rrset = NULL;
+
+	/* assign the data to replace the old */
+	tp->ds_rrset = ubds;
+	tp->dnskey_rrset = ubdnskey;
 
 	ldns_rr_list_free(ds);
 	ldns_rr_list_free(dnskey);
@@ -579,13 +616,279 @@ verify_dnskey(struct module_env* env, struct val_env* ve,
 	return 0;
 }
 
+/** Find minimum expiration interval from signatures */
+static uint32_t
+rrsig_min_exp_time(struct module_env* env, ldns_rr_list* rrset)
+{
+	size_t i;
+	uint32_t t, r = 15 * 24 * 3600; /* 15 days max */
+	for(i=0; i<ldns_rr_list_rr_count(rrset); i++) {
+		ldns_rr* rr = ldns_rr_list_rr(rrset, i);
+		if(ldns_rr_get_type(rr) != LDNS_RR_TYPE_RRSIG)
+			continue;
+		t = ldns_rdf2native_int32(ldns_rr_rrsig_expiration(rr));
+		if(t > *env->now) {
+			t = t - *env->now;
+			if(t < r)
+				r = t;
+		}
+	}
+	return r;
+}
+
+/** Is rr self-signed revoked key */
+static int
+rr_is_selfsigned_revoked(struct module_env* env, struct val_env* ve,
+	struct ub_packed_rrset_key* dnskey_rrset, size_t i)
+{
+	enum sec_status sec;
+	sec = dnskey_verify_rrset(env, ve, dnskey_rrset, dnskey_rrset, i);
+	return (sec == sec_status_secure);
+}
+
+/** Set fetched value */
+static void
+seen_trustanchor(struct autr_ta* ta, uint8_t seen)
+{
+	ta->fetched = seen;
+	ta->pending_count++;
+}
+
+/** set revoked value */
+static void
+seen_revoked_trustanchor(struct autr_ta* ta, uint8_t revoked)
+{
+	ta->revoked = revoked;
+}
+
+/* Compare two RR buffers, skipping the REVOKED bit */
+static int
+ldns_rr_compare_wire_skip_revbit(ldns_buffer* rr1_buf, ldns_buffer* rr2_buf)
+{
+	size_t rr1_len, rr2_len, min_len, i, offset;
+	rr1_len = ldns_buffer_capacity(rr1_buf);
+	rr2_len = ldns_buffer_capacity(rr2_buf);
+	/* jump past dname (checked in earlier part) and especially past TTL */
+	offset = 0;
+	while (offset < rr1_len && *ldns_buffer_at(rr1_buf, offset) != 0)
+		offset += *ldns_buffer_at(rr1_buf, offset) + 1;
+	/* jump to rdata section (PAST the rdata length field */
+	offset += 11;
+	min_len = (rr1_len < rr2_len) ? rr1_len : rr2_len;
+	/* compare RRs RDATA byte for byte. */
+	for(i = offset; i < min_len; i++)
+	{
+		uint8_t *rdf1, *rdf2;
+		rdf1 = ldns_buffer_at(rr1_buf, i);
+		rdf2 = ldns_buffer_at(rr2_buf, i);
+		if (i==(offset+1))
+		{
+			/* this is the second part of the flags field */
+			*rdf1 = *rdf1 | LDNS_KEY_REVOKE_KEY;
+			*rdf2 = *rdf2 | LDNS_KEY_REVOKE_KEY;
+		}
+		if (*rdf1 < *rdf2)	return -1;
+		else if (*rdf1 > *rdf2)	return 1;
+        }
+	return 0;
+}
+
+/** Compare two RRs skipping the REVOKED bit */
+static int
+ldns_rr_compare_skip_revbit(const ldns_rr* rr1, const ldns_rr* rr2)
+{
+	int result;
+	size_t rr1_len, rr2_len;
+	ldns_buffer* rr1_buf;
+	ldns_buffer* rr2_buf;
+
+	result = ldns_rr_compare_no_rdata(rr1, rr2);
+	if (result == 0)
+	{
+		rr1_len = ldns_rr_uncompressed_size(rr1);
+		rr2_len = ldns_rr_uncompressed_size(rr2);
+		rr1_buf = ldns_buffer_new(rr1_len);
+		rr2_buf = ldns_buffer_new(rr2_len);
+		if(!rr1_buf || !rr2_buf) {
+			ldns_buffer_free(rr1_buf);
+			ldns_buffer_free(rr2_buf);
+			return 0;
+		}
+		if (ldns_rr2buffer_wire_canonical(rr1_buf, rr1,
+			LDNS_SECTION_ANY) != LDNS_STATUS_OK)
+		{
+			ldns_buffer_free(rr1_buf);
+			ldns_buffer_free(rr2_buf);
+			return 0;
+		}
+		if (ldns_rr2buffer_wire_canonical(rr2_buf, rr2,
+			LDNS_SECTION_ANY) != LDNS_STATUS_OK) {
+			ldns_buffer_free(rr1_buf);
+			ldns_buffer_free(rr2_buf);
+			return 0;
+		}
+		result = ldns_rr_compare_wire_skip_revbit(rr1_buf, rr2_buf);
+		ldns_buffer_free(rr1_buf);
+		ldns_buffer_free(rr2_buf);
+	}
+	return result;
+}
+
+
+/** compare two trust anchors */
+static int
+ta_compare(ldns_rr* a, ldns_rr* b)
+{
+	int result;
+	if (!a && !b)	result = 0;
+	else if (!a)	result = -1;
+	else if (!b)	result = 1;
+	else if (ldns_rr_get_type(a) != ldns_rr_get_type(b))
+		result = (int)ldns_rr_get_type(a) - (int)ldns_rr_get_type(b);
+	else if (ldns_rr_get_type(a) == LDNS_RR_TYPE_DNSKEY)
+		result = ldns_rr_compare_skip_revbit(a, b);
+	else if (ldns_rr_get_type(a) == LDNS_RR_TYPE_DS)
+		result = ldns_rr_compare(a, b);
+	else    result = -1;
+	return result;
+}
+
+/** find key */
+static struct autr_ta*
+find_key(struct trust_anchor* tp, ldns_rr* rr)
+{
+	struct autr_ta* ta;
+	if(!tp || !rr)
+		return NULL;
+	for(ta=tp->autr->keys; ta; ta=ta->next) {
+		if(ta_compare(ta->rr, rr) == 0)
+			return ta;
+	}
+	return NULL;
+}
+
+/** add key and clone RR and tp already locked */
+static struct autr_ta*
+add_key(struct trust_anchor* tp, ldns_rr* rr)
+{
+	ldns_rr* c;
+	struct autr_ta* ta;
+	c = ldns_rr_clone(rr);
+	if(!c) return NULL;
+	ta = autr_ta_create(c);
+	if(!ta) {
+		ldns_rr_free(c);
+		return NULL;
+	}
+	/* link in, tp already locked */
+	ta->next = tp->autr->keys;
+	tp->autr->keys = ta;
+	return ta;
+}
+
+/** update the time values for the trustpoint */
+static void
+set_tp_times(struct trust_anchor* tp, uint32_t rrsig_exp_interval, 
+	struct ub_packed_rrset_key* k)
+{
+	struct packed_rrset_data* d = (struct packed_rrset_data*)k->entry.data;
+	uint32_t origttl = d->ttl;
+	uint32_t x;
+	
+	verbose(VERB_ALGO, "orig_ttl is %d", (int)origttl);
+	verbose(VERB_ALGO, "rrsig_exp_interval is %d", (int)rrsig_exp_interval);
+
+	/* x = MIN(15days, ttl/2, expire/2) */
+	x = 15 * 24 * 3600;
+	if(origttl/2 < x)
+		x = origttl/2;
+	if(rrsig_exp_interval/2 < x)
+		x = rrsig_exp_interval/2;
+	/* MAX(1hr, x) */
+	if(x < 3600)
+		tp->autr->query_interval = 3600;
+	else	tp->autr->query_interval = x;
+
+	/* x= MIN(1day, ttl/10, expire/10) */
+	x = 24 * 3600;
+	if(origttl/10 < x)
+		x = origttl/10;
+	if(rrsig_exp_interval/10 < x)
+		x = rrsig_exp_interval/10;
+	/* MAX(1hr, x) */
+	if(x < 3600)
+		tp->autr->retry_time = 3600;
+	else	tp->autr->retry_time = x;
+
+	verbose(VERB_ALGO, "query_interval: %d, retry_time: %d",
+		(int)tp->autr->query_interval, (int)tp->autr->retry_time);
+}
+
+/** init events to zero */
+static void
+init_events(struct trust_anchor* tp)
+{
+	struct autr_ta* ta;
+	for(ta=tp->autr->keys; ta; ta=ta->next) {
+		ta->fetched = 0;
+	}
+}
+
+/** Set update events */
+static int
+update_events(struct module_env* env, struct val_env* ve,
+	struct trust_anchor* tp, struct ub_packed_rrset_key* dnskey_rrset)
+{
+	ldns_rr_list* r = packed_rrset_to_rr_list(dnskey_rrset, 
+		env->scratch_buffer);
+	size_t i;
+	if(!r) 
+		return 0;
+	init_events(tp);
+	for(i=0; i<ldns_rr_list_rr_count(r); i++) {
+		ldns_rr* rr = ldns_rr_list_rr(r, i);
+		struct autr_ta* ta = NULL;
+		if(ldns_rr_get_type(rr) != LDNS_RR_TYPE_DNSKEY)
+			continue;
+		if(!rr_is_dnskey_sep(rr))
+			continue;
+		/* is it new? if revocation bit set, find the unrevoked key */
+		ta = find_key(tp, rr);
+		if(!ta)
+			ta = add_key(tp, rr);
+		if(!ta) {
+			ldns_rr_list_deep_free(r);
+			return 0;
+		}
+		if(rr_is_dnskey_revoked(rr) && 
+			rr_is_selfsigned_revoked(env, ve, dnskey_rrset, i)) {
+			/* checked if there is an rrsig signed by this key. */
+			log_assert(dnskey_calc_keytag(dnskey_rrset, i) ==
+				ldns_calc_keytag(rr));
+			if(verbosity >= VERB_ALGO)
+				verbose(VERB_ALGO, "DNSKEY id=%d is "
+					"self-signed revoked", (int)
+					dnskey_calc_keytag(dnskey_rrset, i));
+			seen_revoked_trustanchor(ta, 1);
+		} else {
+			seen_trustanchor(ta, 1);
+			if(verbosity >= VERB_ALGO)
+				verbose(VERB_ALGO, "DNSKEY id=%d in DNS "
+					"response", (int)ldns_calc_keytag(rr));
+		}
+	}
+	set_tp_times(tp, rrsig_min_exp_time(env, r), dnskey_rrset);
+	ldns_rr_list_deep_free(r);
+	return 1;
+}
+
 int autr_process_prime(struct module_env* env, struct val_env* ve,
 	struct trust_anchor* tp, struct ub_packed_rrset_key* dnskey_rrset)
 {
 	struct val_anchors* anchors = env->anchors;
 	log_assert(tp->autr);
 	/* autotrust update trust anchors */
-	/* note: tp is locked */
+	/* the tp is locked, and stays locked unless it is deleted */
 
 	/* query_dnskeys(): */
 	tp->autr->last_queried = *env->now;
@@ -613,7 +916,8 @@ int autr_process_prime(struct module_env* env, struct val_env* ve,
 	 * - note revoked (selfsigned) anchors.
 	 * Set trustpoint query_interval and retry_time.
 	 */
-	/* update_events(env, ve, tp, dnskey_rrset); */
+	if(!update_events(env, ve, tp, dnskey_rrset))
+		return 1; /* trust point unchanged, so exists */
 
 	/* do_statetable(): 
 	 * - for every SEP key do the 5011 statetable.
