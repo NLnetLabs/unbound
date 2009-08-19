@@ -82,7 +82,7 @@ struct autr_ta {
  * Autotrust metadata for a trust point.
  */
 struct autr_point_data {
-	/** file to store the trust point in */
+	/** file to store the trust point in. chrootdir already applied. */
 	const char* file;
 	/** next probe time */
 	uint32_t next_probe_time;
@@ -91,6 +91,8 @@ struct autr_point_data {
 
 	/** last queried DNSKEY set */
 	time_t last_queried;
+	/** last successful DNSKEY set */
+	time_t last_success;
 	/** how many times did it fail */
 	uint8_t query_failed;
 	/** when to query if !failed */
@@ -98,10 +100,6 @@ struct autr_point_data {
 	/** when to retry if failed */
 	uint32_t retry_time;
 
-	/** number of valid DNSKEYs */
-	uint8_t valid;
-	/** number of missing DNSKEYs */
-	uint8_t missing;
 	/** the keys */
 	struct autr_ta* keys;
 };

@@ -221,6 +221,12 @@ struct config_file {
 	int val_permissive_mode;
 	/** nsec3 maximum iterations per key size, string */
 	char* val_nsec3_key_iterations;
+	/** autotrust add holddown time, in seconds */
+	unsigned int add_holddown;
+	/** autotrust del holddown time, in seconds */
+	unsigned int del_holddown;
+	/** autotrust keep_missing time, in seconds. 0 is forever. */
+	unsigned int keep_missing;
 
 	/** size of the key cache */
 	size_t key_cache_size;

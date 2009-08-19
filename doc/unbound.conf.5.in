@@ -491,6 +491,13 @@ File with trusted keys for validation. Both DS and DNSKEY entries can appear
 in the file. The format of the file is the standard DNS Zone file format.
 Default is "", or no trust anchor file.
 .TP
+.B auto\-trust\-anchor\-file: \fI<filename>
+File with trust anchor for one zone, which is tracked with RFC5011 probes.
+The probes are several times per month, thus the machine must be online
+frequently.  The initial file can be one with contents as described in
+\fBtrust\-anchor\-file\fR.  The file is written to when the anchor is updated,
+so the unbound user must have write permission.
+.TP
 .B trust\-anchor: \fI<"Resource Record">
 A DS or DNSKEY RR for a key to use for validation. Multiple entries can be
 given to specify multiple trusted keys, in addition to the trust\-anchor\-files.

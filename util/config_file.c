@@ -158,6 +158,9 @@ config_create()
 	cfg->val_clean_additional = 1;
 	cfg->val_log_level = 0;
 	cfg->val_permissive_mode = 0;
+	cfg->add_holddown = 30*24*3600;
+	cfg->del_holddown = 30*24*3600;
+	cfg->keep_missing = 366*24*3600; /* one year plus a little leeway */
 	cfg->key_cache_size = 4 * 1024 * 1024;
 	cfg->key_cache_slabs = 4;
 	cfg->neg_cache_size = 1 * 1024 * 1024;

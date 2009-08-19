@@ -36,7 +36,8 @@
 /**
  * \file
  *
- * Contains autotrust implementation.
+ * Contains autotrust implementation. The implementation was taken from 
+ * the autotrust daemon (BSD licensed), written by Matthijs Mekking.
  */
 #include "config.h"
 #include "validator/autotrust.h"
@@ -48,6 +49,10 @@
 #include "util/log.h"
 #include "util/module.h"
 #include "util/net_help.h"
+#include "util/config_file.h"
+
+/** number of times a key must be seen before it can become valid */
+#define MIN_PENDINGCOUNT 2
 
 struct autr_global_data* autr_global_create(void)
 {
@@ -109,6 +114,35 @@ position_in_string(char *str, const char* sub)
         return pos + (int)strlen(sub);
 }
 
+/** Debug routine to print pretty key information */
+static void
+verbose_key(struct autr_ta* ta, enum verbosity_value level, 
+	const char* format, ...) ATTR_FORMAT(printf, 3, 4);
+
+/** 
+ * Implementation of debug pretty key print 
+ * @param ta: trust anchor key with DNSKEY data.
+ * @param level: verbosity level to print at.
+ * @param format: printf style format string.
+ */
+static void
+verbose_key(struct autr_ta* ta, enum verbosity_value level, 
+	const char* format, ...) 
+{
+	va_list args;
+	va_start(args, format);
+	if(verbosity >= level) {
+		char* str = ldns_rdf2str(ldns_rr_owner(ta->rr));
+		int keytag = (int)ldns_calc_keytag(ta->rr);
+		char msg[MAXSYSLOGMSGLEN];
+		vsnprintf(msg, sizeof(msg), format, args);
+		verbose(level, "autotrust %s key %d %s", str?str:"??", 
+			keytag, msg);
+		free(str);
+	}
+	va_end(args);
+}
+
 /** 
  * Parse comments 
  * @param str: to parse
@@ -154,8 +188,6 @@ parse_comments(char* str, struct autr_ta* ta)
         else
         {
                 int s = (int) comments[pos] - '0';
-		char* str = ldns_rdf2str(ldns_rr_owner(ta->rr));
-
                 switch(s)
                 {
                         case AUTR_STATE_START:
@@ -167,14 +199,11 @@ parse_comments(char* str, struct autr_ta* ta)
                                 ta->s = s;
                                 break;
                         default:
-				log_warn("trust anchor [%s, DNSKEY, id=%i] has "
-					"undefined state, considered NewKey",
-					str, ldns_calc_keytag(ta->rr));
+				verbose_key(ta, VERB_OPS, "has undefined "
+					"state, considered NewKey");
                                 ta->s = AUTR_STATE_START;
                                 break;
                 }
-
-                free(str);
         }
         /* read pending count */
         pos = position_in_string(comments, "count=");
@@ -208,11 +237,8 @@ parse_comments(char* str, struct autr_ta* ta)
         if (pos < 0 || !timestamp)
         {
 		/* Should we warn about this? It happens for key priming.
-		ldns_rdf* owner = ldns_rr_owner(ta->rr);
-		char* str = ldns_rdf2str(owner);
-		log_warn("trust anchor [%s, DNSKEY, id=%i] has no timestamp, "
-			"considered NOW", str, ldns_calc_keytag(ta->rr));
-		free(str);
+			verbose_key(ta, VERB_OPS, "has no timestamp, "
+					"considered NOW");
 		*/
 		/* cannot use event base timeptr, because not inited yet */
 		ta->last_change = (uint32_t)time(NULL);
@@ -310,29 +336,33 @@ autr_tp_create(struct val_anchors* anchors, ldns_rr* rr)
 
 /** delete assembled rrsets */
 static void
-autr_rrset_delete(struct trust_anchor* tp)
+autr_rrset_delete(struct ub_packed_rrset_key* r)
 {
-	if(tp->ds_rrset) {
-		free(tp->ds_rrset->rk.dname);
-		free(tp->ds_rrset->entry.data);
-		free(tp->ds_rrset);
-	}
-	if(tp->dnskey_rrset) {
-		free(tp->dnskey_rrset->rk.dname);
-		free(tp->dnskey_rrset->entry.data);
-		free(tp->dnskey_rrset);
+	if(r) {
+		free(r->rk.dname);
+		free(r->entry.data);
+		free(r);
 	}
 }
 
 
 void autr_point_delete(struct trust_anchor* tp)
 {
+	struct autr_ta* p, *np;
 	if(!tp)
 		return;
 	lock_unprotect(&tp->lock, tp);
 	lock_unprotect(&tp->lock, tp->autr);
 	lock_basic_destroy(&tp->lock);
-	autr_rrset_delete(tp);
+	autr_rrset_delete(tp->ds_rrset);
+	autr_rrset_delete(tp->dnskey_rrset);
+	p = tp->autr->keys;
+	while(p) {
+		np = p->next;
+		ldns_rr_free(p->rr);
+		free(p);
+		p = np;
+	}
 	free(tp->autr);
 	free(tp->name);
 	free(tp);
@@ -424,12 +454,6 @@ load_trustanchor(struct val_anchors* anchors, char* str, const char* fname)
 		lock_basic_unlock(&tp->lock);
 		return NULL;
 	}
-	if (rr_is_dnskey_sep(ta->rr)) {
-		if (ta->s == AUTR_STATE_VALID)
-			tp->autr->valid ++;
-		else if (ta->s == AUTR_STATE_MISSING)
-			tp->autr->missing ++;
-	}
 	if(!tp->autr->file) {
 		/* TODO insert tp into probe tree */
 		tp->autr->file = strdup(fname);
@@ -444,6 +468,7 @@ load_trustanchor(struct val_anchors* anchors, char* str, const char* fname)
 
 /**
  * Assemble the trust anchors into DS and DNSKEY packed rrsets.
+ * Uses only VALID and MISSING DNSKEYs.
  * Read the ldns_rrs and builds packed rrsets
  * @param tp: the trust point. Must be locked.
  * @return false on malloc failure.
@@ -469,7 +494,8 @@ autr_assemble(struct trust_anchor* tp)
 				ldns_rr_list_free(dnskey);
 				return 0;
 			}
-		} else {
+		} else if(ta->s == AUTR_STATE_VALID || 
+			ta->s == AUTR_STATE_MISSING) {
 			if(!ldns_rr_list_push_rr(dnskey, ta->rr)) {
 				ldns_rr_list_free(ds);
 				ldns_rr_list_free(dnskey);
@@ -496,16 +522,8 @@ autr_assemble(struct trust_anchor* tp)
 		ubdnskey->entry.data = packed_rrset_heap_data(dnskey);
 		if(!ubdnskey->entry.data) {
 		error_cleanup:
-			if(ubds) {
-				free(ubds->rk.dname);
-				free(ubds->entry.data);
-				free(ubds);
-			}
-			if(ubdnskey) {
-				free(ubdnskey->rk.dname);
-				free(ubdnskey->entry.data);
-				free(ubdnskey);
-			}
+			autr_rrset_delete(ubds);
+			autr_rrset_delete(ubdnskey);
 			ldns_rr_list_free(ds);
 			ldns_rr_list_free(dnskey);
 			return 0;
@@ -513,7 +531,8 @@ autr_assemble(struct trust_anchor* tp)
 	}
 
 	/* free the old data */
-	autr_rrset_delete(tp);
+	autr_rrset_delete(tp->ds_rrset);
+	autr_rrset_delete(tp->dnskey_rrset);
 
 	/* assign the data to replace the old */
 	tp->ds_rrset = ubds;
@@ -540,7 +559,7 @@ int autr_read_file(struct val_anchors* anchors, const char* nm)
 			nm, strerror(errno));
                 return 0;
         }
-        verbose(VERB_ALGO, "reading trust anchor file %s", nm);
+        verbose(VERB_ALGO, "reading autotrust anchor file %s", nm);
 	/* TODO: read line to see if special marker for revoked tp */
 	/* TODO: read next probe time (if in file, otherwise now+0-100s) */
         while (fgets(line, (int)sizeof(line), fd) != NULL) {
@@ -568,18 +587,59 @@ int autr_read_file(struct val_anchors* anchors, const char* nm)
 
 	/* now assemble the data into DNSKEY and DS packed rrsets */
 	lock_basic_lock(&tp->lock);
-	autr_assemble(tp);
+	if(!autr_assemble(tp)) {
+		lock_basic_unlock(&tp->lock);
+		log_err("malloc failure assembling %s", nm);
+		return 0;
+	}
 	lock_basic_unlock(&tp->lock);
-
 	return 1;
 }
 
 void autr_write_file(struct trust_anchor* tp)
 {
+	char tmi[32];
+	FILE* out;
+	struct autr_ta* ta;
+	log_assert(tp->autr);
+	out = fopen(tp->autr->file, "w");
+	if(!out) {
+		log_err("Could not open autotrust file for writing, %s: %s",
+			tp->autr->file, strerror(errno));
+		return;
+	}
 	/* write pretty header */
+	fprintf(out, "; autotrust trust anchor file\n");
+
 	/* write revoked tp special marker */
 	/* write next probe time */
+	/* TODO */
+
 	/* write anchors */
+	for(ta=tp->autr->keys; ta; ta=ta->next) {
+		char* str;
+
+		/* by default do not store START and REMOVED keys */
+		if(ta->s == AUTR_STATE_START)
+			continue;
+		if(ta->s == AUTR_STATE_REMOVED)
+			continue;
+		/* only store SEP keys */
+		if(!rr_is_dnskey_sep(ta->rr))
+			continue;
+		str = ldns_rr2str(ta->rr);
+		if(!str || !str[0]) {
+			log_err("malloc failure writing %s", tp->autr->file);
+			continue;
+		}
+		str[strlen(str)-1] = 0;
+		ctime_r(&(ta->last_change), tmi);
+		fprintf(out, "%s ;;state=%d ;;count=%d ;;lastchange=%u ;;%s",
+			str, (int)ta->s, (int)ta->pending_count, 
+			(unsigned int)ta->last_change, tmi);
+		free(str);
+	}
+	fclose(out);
 }
 
 /** verify if dnskey works for trust point 
@@ -618,7 +678,7 @@ verify_dnskey(struct module_env* env, struct val_env* ve,
 
 /** Find minimum expiration interval from signatures */
 static uint32_t
-rrsig_min_exp_time(struct module_env* env, ldns_rr_list* rrset)
+min_expiry(struct module_env* env, ldns_rr_list* rrset)
 {
 	size_t i;
 	uint32_t t, r = 15 * 24 * 3600; /* 15 days max */
@@ -661,7 +721,26 @@ seen_revoked_trustanchor(struct autr_ta* ta, uint8_t revoked)
 	ta->revoked = revoked;
 }
 
-/* Compare two RR buffers, skipping the REVOKED bit */
+/** revoke a trust anchor */
+static void
+revoke_dnskey(struct autr_ta* ta, int off)
+{
+        ldns_rdf* rdf;
+        uint16_t flags;
+	log_assert(ta && ta->rr);
+	if(!ldns_rr_get_type(ta->rr) != LDNS_RR_TYPE_DNSKEY)
+		return;
+	rdf = ldns_rr_dnskey_flags(ta->rr);
+	flags = ldns_read_uint16(ldns_rdf_data(rdf));
+
+	if (off && (flags&LDNS_KEY_REVOKE_KEY))
+		flags ^= LDNS_KEY_REVOKE_KEY; /* flip */
+	else
+		flags |= LDNS_KEY_REVOKE_KEY;
+	ldns_write_uint16(ldns_rdf_data(rdf), flags);
+}
+
+/** Compare two RR buffers skipping the REVOKED bit */
 static int
 ldns_rr_compare_wire_skip_revbit(ldns_buffer* rr1_buf, ldns_buffer* rr2_buf)
 {
@@ -695,15 +774,14 @@ ldns_rr_compare_wire_skip_revbit(ldns_buffer* rr1_buf, ldns_buffer* rr2_buf)
 
 /** Compare two RRs skipping the REVOKED bit */
 static int
-ldns_rr_compare_skip_revbit(const ldns_rr* rr1, const ldns_rr* rr2)
+ldns_rr_compare_skip_revbit(const ldns_rr* rr1, const ldns_rr* rr2, int* result)
 {
-	int result;
 	size_t rr1_len, rr2_len;
 	ldns_buffer* rr1_buf;
 	ldns_buffer* rr2_buf;
 
-	result = ldns_rr_compare_no_rdata(rr1, rr2);
-	if (result == 0)
+	*result = ldns_rr_compare_no_rdata(rr1, rr2);
+	if (*result == 0)
 	{
 		rr1_len = ldns_rr_uncompressed_size(rr1);
 		rr2_len = ldns_rr_uncompressed_size(rr2);
@@ -727,44 +805,57 @@ ldns_rr_compare_skip_revbit(const ldns_rr* rr1, const ldns_rr* rr2)
 			ldns_buffer_free(rr2_buf);
 			return 0;
 		}
-		result = ldns_rr_compare_wire_skip_revbit(rr1_buf, rr2_buf);
+		*result = ldns_rr_compare_wire_skip_revbit(rr1_buf, rr2_buf);
 		ldns_buffer_free(rr1_buf);
 		ldns_buffer_free(rr2_buf);
 	}
-	return result;
+	return 1;
 }
 
 
 /** compare two trust anchors */
 static int
-ta_compare(ldns_rr* a, ldns_rr* b)
+ta_compare(ldns_rr* a, ldns_rr* b, int* result)
 {
-	int result;
-	if (!a && !b)	result = 0;
-	else if (!a)	result = -1;
-	else if (!b)	result = 1;
+	if (!a && !b)	*result = 0;
+	else if (!a)	*result = -1;
+	else if (!b)	*result = 1;
 	else if (ldns_rr_get_type(a) != ldns_rr_get_type(b))
-		result = (int)ldns_rr_get_type(a) - (int)ldns_rr_get_type(b);
-	else if (ldns_rr_get_type(a) == LDNS_RR_TYPE_DNSKEY)
-		result = ldns_rr_compare_skip_revbit(a, b);
+		*result = (int)ldns_rr_get_type(a) - (int)ldns_rr_get_type(b);
+	else if (ldns_rr_get_type(a) == LDNS_RR_TYPE_DNSKEY) {
+		if(!ldns_rr_compare_skip_revbit(a, b, result))
+			return 0;
+	}
 	else if (ldns_rr_get_type(a) == LDNS_RR_TYPE_DS)
-		result = ldns_rr_compare(a, b);
-	else    result = -1;
-	return result;
+		*result = ldns_rr_compare(a, b);
+	else    *result = -1;
+	return 1;
 }
 
-/** find key */
-static struct autr_ta*
-find_key(struct trust_anchor* tp, ldns_rr* rr)
+/** 
+ * Find key
+ * @param tp: to search in
+ * @param rr: to look for
+ * @param result: returns NULL or the ta key looked for.
+ * @return false on malloc failure during search. if true examine result.
+ */
+static int
+find_key(struct trust_anchor* tp, ldns_rr* rr, struct autr_ta** result)
 {
 	struct autr_ta* ta;
+	int ret;
 	if(!tp || !rr)
-		return NULL;
+		return 0;
 	for(ta=tp->autr->keys; ta; ta=ta->next) {
-		if(ta_compare(ta->rr, rr) == 0)
-			return ta;
+		if(!ta_compare(ta->rr, rr, &ret))
+			return 0;
+		if(ret == 0) {
+			*result = ta;
+			return 1;
+		}
 	}
-	return NULL;
+	*result = NULL;
+	return 1;
 }
 
 /** add key and clone RR and tp already locked */
@@ -786,14 +877,21 @@ add_key(struct trust_anchor* tp, ldns_rr* rr)
 	return ta;
 }
 
+/** get TTL from DNSKEY rrset */
+static uint32_t
+key_ttl(struct ub_packed_rrset_key* k)
+{
+	struct packed_rrset_data* d = (struct packed_rrset_data*)k->entry.data;
+	return d->ttl;
+}
+
 /** update the time values for the trustpoint */
 static void
 set_tp_times(struct trust_anchor* tp, uint32_t rrsig_exp_interval, 
-	struct ub_packed_rrset_key* k)
+	uint32_t origttl, int* changed)
 {
-	struct packed_rrset_data* d = (struct packed_rrset_data*)k->entry.data;
-	uint32_t origttl = d->ttl;
 	uint32_t x;
+	uint32_t qi = tp->autr->query_interval, rt = tp->autr->retry_time;
 	
 	verbose(VERB_ALGO, "orig_ttl is %d", (int)origttl);
 	verbose(VERB_ALGO, "rrsig_exp_interval is %d", (int)rrsig_exp_interval);
@@ -820,6 +918,9 @@ set_tp_times(struct trust_anchor* tp, uint32_t rrsig_exp_interval,
 		tp->autr->retry_time = 3600;
 	else	tp->autr->retry_time = x;
 
+	if(qi != tp->autr->query_interval || rt != tp->autr->retry_time)
+		*changed = 1;
+
 	verbose(VERB_ALGO, "query_interval: %d, retry_time: %d",
 		(int)tp->autr->query_interval, (int)tp->autr->retry_time);
 }
@@ -837,7 +938,8 @@ init_events(struct trust_anchor* tp)
 /** Set update events */
 static int
 update_events(struct module_env* env, struct val_env* ve,
-	struct trust_anchor* tp, struct ub_packed_rrset_key* dnskey_rrset)
+	struct trust_anchor* tp, struct ub_packed_rrset_key* dnskey_rrset,
+	int* changed)
 {
 	ldns_rr_list* r = packed_rrset_to_rr_list(dnskey_rrset, 
 		env->scratch_buffer);
@@ -853,9 +955,14 @@ update_events(struct module_env* env, struct val_env* ve,
 		if(!rr_is_dnskey_sep(rr))
 			continue;
 		/* is it new? if revocation bit set, find the unrevoked key */
-		ta = find_key(tp, rr);
-		if(!ta)
+		if(!find_key(tp, rr, &ta)) {
+			ldns_rr_list_deep_free(r); /* malloc fail in compare*/
+			return 0;
+		}
+		if(!ta) {
 			ta = add_key(tp, rr);
+			*changed = 1;
+		}
 		if(!ta) {
 			ldns_rr_list_deep_free(r);
 			return 0;
@@ -865,30 +972,289 @@ update_events(struct module_env* env, struct val_env* ve,
 			/* checked if there is an rrsig signed by this key. */
 			log_assert(dnskey_calc_keytag(dnskey_rrset, i) ==
 				ldns_calc_keytag(rr));
-			if(verbosity >= VERB_ALGO)
-				verbose(VERB_ALGO, "DNSKEY id=%d is "
-					"self-signed revoked", (int)
-					dnskey_calc_keytag(dnskey_rrset, i));
+			verbose_key(ta, VERB_ALGO, "is self-signed revoked");
+			if(!ta->revoked) 
+				*changed = 1;
 			seen_revoked_trustanchor(ta, 1);
 		} else {
 			seen_trustanchor(ta, 1);
-			if(verbosity >= VERB_ALGO)
-				verbose(VERB_ALGO, "DNSKEY id=%d in DNS "
-					"response", (int)ldns_calc_keytag(rr));
+			verbose_key(ta, VERB_ALGO, "in DNS response");
 		}
 	}
-	set_tp_times(tp, rrsig_min_exp_time(env, r), dnskey_rrset);
+	set_tp_times(tp, min_expiry(env, r), key_ttl(dnskey_rrset), changed);
 	ldns_rr_list_deep_free(r);
 	return 1;
+}
+
+/** string for a trustanchor state */
+static const char*
+trustanchor_state2str(autr_state_t s)
+{
+        switch (s) {
+                case AUTR_STATE_START:       return "  START  ";
+                case AUTR_STATE_ADDPEND:     return " ADDPEND ";
+                case AUTR_STATE_VALID:       return "  VALID  ";
+                case AUTR_STATE_MISSING:     return " MISSING ";
+                case AUTR_STATE_REVOKED:     return " REVOKED ";
+                case AUTR_STATE_REMOVED:     return " REMOVED ";
+        }
+        return " UNKNOWN ";
+}
+
+/**
+ * Check if the holddown time has already exceeded
+ * setting: add-holddown: add holddown timer
+ * setting: del-holddown: del holddown timer
+ * @param env: environment with current time
+ * @param ta: trust anchor to check for.
+ * @param holddown: the timer value
+ * @return number of seconds the holddown has passed.
+ */
+static int
+check_holddown(struct module_env* env, struct autr_ta* ta, 
+	unsigned int holddown)
+{
+        unsigned int elapsed = (unsigned int)( *env->now - ta->last_change );
+        if (elapsed > holddown) {
+                return (int) (elapsed-holddown);
+        }
+	verbose_key(ta, VERB_ALGO, "holddown time %d seconds to go",
+		(int) (holddown-elapsed));
+        return 0;
+}
+
+
+/** Set last_change to now */
+static void
+reset_holddown(struct module_env* env, struct autr_ta* ta, int* changed)
+{
+	ta->last_change = *env->now;
+	*changed = 1;
+}
+
+/** Set the state for this trust anchor */
+static void
+set_trustanchor_state(struct module_env* env, struct autr_ta* ta, int* changed,
+	autr_state_t s)
+{
+	verbose_key(ta, VERB_ALGO, "update: %s to %s",
+		trustanchor_state2str(ta->s), trustanchor_state2str(s));
+	ta->s = s;
+	reset_holddown(env, ta, changed);
+}
+
+
+/** Event: NewKey */
+static void
+do_newkey(struct module_env* env, struct autr_ta* anchor, int* c)
+{
+	if (anchor->s == AUTR_STATE_START)
+		set_trustanchor_state(env, anchor, c, AUTR_STATE_ADDPEND);
+}
+
+/** Event: AddTime */
+static void
+do_addtime(struct module_env* env, struct autr_ta* anchor, int* c)
+{
+	int exceeded = check_holddown(env, anchor, env->cfg->add_holddown);
+	if (exceeded && anchor->s == AUTR_STATE_ADDPEND) {
+		verbose_key(anchor, VERB_ALGO, "add-holddown time exceeded "
+			"%d seconds ago", exceeded);
+		if(anchor->pending_count >= MIN_PENDINGCOUNT) {
+			set_trustanchor_state(env, anchor, c, AUTR_STATE_VALID);
+			anchor->pending_count = 0;
+			return;
+		}
+		verbose_key(anchor, VERB_ALGO, "add-holddown time sanity check "
+			"failed (pending count: %d)", anchor->pending_count);
+	}
+}
+
+/** Event: RemTime */
+static void
+do_remtime(struct module_env* env, struct autr_ta* anchor, int* c)
+{
+	int exceeded = check_holddown(env, anchor, env->cfg->del_holddown);
+	if(exceeded && anchor->s == AUTR_STATE_REVOKED) {
+		verbose_key(anchor, VERB_ALGO, "del-holddown time exceeded "
+			"%d seconds ago", exceeded);
+		set_trustanchor_state(env, anchor, c, AUTR_STATE_REMOVED);
+	}
+}
+
+/** Event: KeyRem */
+static void
+do_keyrem(struct module_env* env, struct autr_ta* anchor, int* c)
+{
+	if(anchor->s == AUTR_STATE_ADDPEND) {
+		set_trustanchor_state(env, anchor, c, AUTR_STATE_START);
+		anchor->pending_count = 0;
+	} else if(anchor->s == AUTR_STATE_VALID)
+		set_trustanchor_state(env, anchor, c, AUTR_STATE_MISSING);
+}
+
+/** Event: KeyPres */
+static void
+do_keypres(struct module_env* env, struct autr_ta* anchor, int* c)
+{
+	if(anchor->s == AUTR_STATE_MISSING)
+		set_trustanchor_state(env, anchor, c, AUTR_STATE_VALID);
+}
+
+/** Event: Revoked */
+static void
+do_revoked(struct module_env* env, struct autr_ta* anchor, int* c)
+{
+	if(anchor->s == AUTR_STATE_VALID || anchor->s == AUTR_STATE_MISSING) {
+                set_trustanchor_state(env, anchor, c, AUTR_STATE_REVOKED);
+		verbose_key(anchor, VERB_ALGO, "old id, prior to revocation");
+                revoke_dnskey(anchor, 0);
+		verbose_key(anchor, VERB_ALGO, "new id, after revocation");
+	}
+}
+
+/** Do statestable transition matrix for anchor */
+static void
+anchor_state_update(struct module_env* env, struct autr_ta* anchor, int* c)
+{
+	log_assert(anchor);
+	switch(anchor->s) {
+	/* START */
+	case AUTR_STATE_START:
+		/* NewKey: ADDPEND */
+		if (anchor->fetched)
+			do_newkey(env, anchor, c);
+		break;
+	/* ADDPEND */
+	case AUTR_STATE_ADDPEND:
+		/* KeyRem: START */
+		if (!anchor->fetched)
+			do_keyrem(env, anchor, c);
+		/* AddTime: VALID */
+		else	do_addtime(env, anchor, c);
+		break;
+	/* VALID */
+	case AUTR_STATE_VALID:
+		/* RevBit: REVOKED */
+		if (anchor->revoked)
+			do_revoked(env, anchor, c);
+		/* KeyRem: MISSING */
+		else if (!anchor->fetched)
+			do_keyrem(env, anchor, c);
+		break;
+	/* MISSING */
+	case AUTR_STATE_MISSING:
+		/* RevBit: REVOKED */
+		if (anchor->revoked)
+			do_revoked(env, anchor, c);
+		/* KeyPres */
+		else if (anchor->fetched)
+			do_keypres(env, anchor, c);
+		break;
+	/* REVOKED */
+	case AUTR_STATE_REVOKED:
+		if (anchor->fetched)
+			reset_holddown(env, anchor, c);
+		/* RemTime: REMOVED */
+		else	do_remtime(env, anchor, c);
+		break;
+	/* REMOVED */
+	case AUTR_STATE_REMOVED:
+	default:
+		break;
+	}
+}
+
+/** Remove missing trustanchors so the list does not grow forever */
+static void
+remove_missing_trustanchors(struct module_env* env, struct trust_anchor* tp,
+	int* changed)
+{
+	struct autr_ta* anchor;
+	int exceeded;
+	int valid = 0;
+	if(env->cfg->keep_missing == 0)
+		return; /* keep forever */
+	/* see if we have anchors that are valid */
+	for(anchor = tp->autr->keys; anchor; anchor = anchor->next) {
+		/* Only do KSKs */
+                if (!rr_is_dnskey_sep(anchor->rr))
+                        continue;
+                if (anchor->s != AUTR_STATE_VALID)
+                        valid++;
+	}
+	if(valid == 0)
+		return;
+	
+	for(anchor = tp->autr->keys; anchor; anchor = anchor->next) {
+		/* Only do KSKs */
+                if (!rr_is_dnskey_sep(anchor->rr))
+                        continue;
+                /* Only do MISSING keys */
+                if (anchor->s != AUTR_STATE_MISSING)
+                        continue;
+
+		exceeded = check_holddown(env, anchor, env->cfg->keep_missing);
+		/* If keep_missing has exceeded and we still have more than 
+		 * one valid KSK: remove missing trust anchor */
+                if (exceeded && valid > 0) {
+			verbose_key(anchor, VERB_ALGO, "keep-missing time "
+				"exceeded %d seconds ago, [%d keys VALID]",
+				exceeded, valid);
+			set_trustanchor_state(env, anchor, changed, 
+				AUTR_STATE_REMOVED);
+		}
+	}
+}
+
+/** Do the statetable from RFC5011 transition matrix */
+static int
+do_statetable(struct module_env* env, struct trust_anchor* tp, int* changed)
+{
+	struct autr_ta* anchor;
+	for(anchor = tp->autr->keys; anchor; anchor = anchor->next) {
+		/* Only do KSKs */
+		if(!rr_is_dnskey_sep(anchor->rr))
+			continue;
+		anchor_state_update(env, anchor, changed);
+	}
+	remove_missing_trustanchors(env, tp, changed);
+	return 1;
+}
+
+/** cleanup key list */
+static void
+autr_cleanup_keys(struct trust_anchor* tp)
+{
+	struct autr_ta* p, **prevp;
+	p = tp->autr->keys;
+	prevp = &tp->autr->keys;
+	while(p) {
+		/* do we want to remove this key? */
+		if(p->s == AUTR_STATE_START || p->s == AUTR_STATE_REMOVED) {
+			struct autr_ta* np = p->next;
+			/* remove */
+			ldns_rr_free(p->rr);
+			free(p);
+			/* snip and go to next item */
+			*prevp = np;
+			p = np;
+			continue;
+		}
+		prevp = &p->next;
+		p = p->next;
+	}
 }
 
 int autr_process_prime(struct module_env* env, struct val_env* ve,
 	struct trust_anchor* tp, struct ub_packed_rrset_key* dnskey_rrset)
 {
-	struct val_anchors* anchors = env->anchors;
+	int changed = 0;
 	log_assert(tp->autr);
 	/* autotrust update trust anchors */
 	/* the tp is locked, and stays locked unless it is deleted */
+
+	/* TODO: check if marked as revoked, if so, unlock and return */
 
 	/* query_dnskeys(): */
 	tp->autr->last_queried = *env->now;
@@ -907,25 +1273,46 @@ int autr_process_prime(struct module_env* env, struct val_env* ve,
 		return 1; /* trust point exists */
 	}
 
+	tp->autr->last_success = *env->now;
 	tp->autr->query_failed = 0;
 
-	/* update_events(): 
-	 * - find minimum rrsig expiration interval
-	 * - add new trust anchors to the data structure
+	/* Add new trust anchors to the data structure
 	 * - note which trust anchors are seen this probe.
 	 * - note revoked (selfsigned) anchors.
 	 * Set trustpoint query_interval and retry_time.
+	 * - find minimum rrsig expiration interval
 	 */
-	if(!update_events(env, ve, tp, dnskey_rrset))
+	if(!update_events(env, ve, tp, dnskey_rrset, &changed)) {
+		log_err("malloc failure in autotrust update_events. "
+			"trust point unchanged.");
 		return 1; /* trust point unchanged, so exists */
+	}
 
-	/* do_statetable(): 
-	 * - for every SEP key do the 5011 statetable.
+	/* - for every SEP key do the 5011 statetable.
 	 * - remove missing trustanchors (if too many).
 	 */
-	/* do_statetable(env, tp); */
+	if(!do_statetable(env, tp, &changed)) {
+		log_err("malloc failure in autotrust do_statetable. "
+			"trust point unchanged.");
+		return 1; /* trust point unchanged, so exists */
+	}
 
-	autr_assemble(tp);
-
-	return 1;
+	if(changed) {
+		verbose(VERB_ALGO, "autotrust: point changed, write to disk");
+		autr_cleanup_keys(tp);
+		autr_write_file(tp);
+		if(!autr_assemble(tp)) {
+			log_err("malloc failure assembling autotrust keys");
+			return 1; /* unchanged */
+		}
+		if(!tp->ds_rrset && !tp->dnskey_rrset) {
+			/* no more keys, all are revoked */
+			/* TODO: delete trust point:
+			 *	mark as revoked trust point.
+			 *	save name, unlock, take from tree, delete. */
+			return 0; /* trust point removed */
+		}
+	}
+	
+	return 1; /* no changes */
 }
