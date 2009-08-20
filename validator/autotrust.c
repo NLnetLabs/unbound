@@ -303,9 +303,8 @@ autr_ta_create(ldns_rr* rr)
 
 /** create tp */
 static struct trust_anchor*
-autr_tp_create(struct val_anchors* anchors, ldns_rr* rr)
+autr_tp_create(struct val_anchors* anchors, ldns_rdf* own, uint16_t dc)
 {
-	ldns_rdf* own = ldns_rr_owner(rr);
 	struct trust_anchor* tp = (struct trust_anchor*)calloc(1, sizeof(*tp));
 	if(!tp) return NULL;
 	tp->name = memdup(ldns_rdf_data(own), ldns_rdf_size(own));
@@ -316,7 +315,7 @@ autr_tp_create(struct val_anchors* anchors, ldns_rr* rr)
 	tp->namelen = ldns_rdf_size(own);
 	tp->namelabs = dname_count_labels(tp->name);
 	tp->node.key = tp;
-	tp->dclass = ldns_rr_get_class(rr);
+	tp->dclass = dc;
 	tp->autr = (struct autr_point_data*)calloc(1, sizeof(*tp->autr));
 	if(!tp->autr) {
 		free(tp->name);
@@ -326,7 +325,14 @@ autr_tp_create(struct val_anchors* anchors, ldns_rr* rr)
 	tp->autr->pnode.key = tp;
 
 	lock_basic_lock(&anchors->lock);
-	(void)rbtree_insert(anchors->tree, &tp->node);
+	if(!rbtree_insert(anchors->tree, &tp->node)) {
+		lock_basic_unlock(&anchors->lock);
+		log_err("trust anchor presented twice");
+		free(tp->name);
+		free(tp->autr);
+		free(tp);
+		return NULL;
+	}
 	lock_basic_unlock(&anchors->lock);
 	lock_basic_init(&tp->lock);
 	lock_protect(&tp->lock, tp, sizeof(*tp));
@@ -385,7 +391,7 @@ find_add_tp(struct val_anchors* anchors, ldns_rr* rr)
 		}
 		return tp;
 	}
-	tp = autr_tp_create(anchors, rr);
+	tp = autr_tp_create(anchors, ldns_rr_owner(rr), ldns_rr_get_class(rr));
 	lock_basic_lock(&tp->lock);
 	return tp;
 }
@@ -543,6 +549,102 @@ autr_assemble(struct trust_anchor* tp)
 	return 1;
 }
 
+/** parse integer */
+static unsigned int
+parse_int(char* line, int* ret)
+{
+	char *e;
+	unsigned int x = (unsigned int)strtol(line, &e, 10);
+	if(line == e) {
+		*ret = -1; /* parse error */
+		return 0; 
+	}
+	*ret = 1; /* matched */
+	return x;
+}
+
+/** parse id sequence for anchor */
+static struct trust_anchor*
+parse_id(struct val_anchors* anchors, char* line)
+{
+	struct trust_anchor *tp;
+	size_t len;
+	int labs, r;
+	ldns_rdf* rdf;
+	uint16_t dclass;
+	/* read the owner name */
+	char* next = strchr(line, ' ');
+	if(!next) return NULL;
+	next[0] = 0;
+	rdf = ldns_dname_new_frm_str(line);
+	if(!rdf) return NULL;
+	labs = dname_count_size_labels(ldns_rdf_data(rdf), &len);
+	log_assert(len == ldns_rdf_size(rdf));
+
+	/* read the class */
+	dclass = parse_int(next+1, &r);
+	if(r == -1) {
+		ldns_rdf_deep_free(rdf);
+		return NULL;
+	}
+
+	/* find the trust point */
+	tp = autr_tp_create(anchors, rdf, dclass);
+	ldns_rdf_deep_free(rdf);
+	return tp;
+}
+
+/** parse variable from trustanchor header 
+ * @param line: to parse
+ * @param anchors: the anchor is added to this, if "id:" is seen.
+ * @param anchor: the anchor as result value or previously returned anchor
+ * 	value to read the variable lines into.
+ * @return: 0 no match, -1 failed syntax error, +1 success line read.
+ */
+static int
+parse_var_line(char* line, struct val_anchors* anchors, 
+	struct trust_anchor** anchor)
+{
+	struct trust_anchor* tp = *anchor;
+	int r = 0;
+	if(strncmp(line, ";;id: ", 5) == 0) {
+		*anchor = parse_id(anchors, line+6);
+		if(!*anchor) return -1;
+		else return 1;
+	} else if(strncmp(line, ";;last_queried: ", 15) == 0) {
+		if(!tp) return -1;
+		lock_basic_lock(&tp->lock);
+		tp->autr->last_queried = (time_t)parse_int(line+16, &r);
+		lock_basic_unlock(&tp->lock);
+	} else if(strncmp(line, ";;last_success: ", 15) == 0) {
+		if(!tp) return -1;
+		lock_basic_lock(&tp->lock);
+		tp->autr->last_success = (time_t)parse_int(line+16, &r);
+		lock_basic_unlock(&tp->lock);
+	} else if(strncmp(line, ";;next_probe_time: ", 18) == 0) {
+		if(!tp) return -1;
+		lock_basic_lock(&tp->lock);
+		tp->autr->next_probe_time = (time_t)parse_int(line+16, &r);
+		lock_basic_unlock(&tp->lock);
+	} else if(strncmp(line, ";;query_failed: ", 15) == 0) {
+		if(!tp) return -1;
+		lock_basic_lock(&tp->lock);
+		tp->autr->query_failed = (uint8_t)parse_int(line+16, &r);
+		lock_basic_unlock(&tp->lock);
+	} else if(strncmp(line, ";;query_interval: ", 17) == 0) {
+		if(!tp) return -1;
+		lock_basic_lock(&tp->lock);
+		tp->autr->query_interval = (uint32_t)parse_int(line+16, &r);
+		lock_basic_unlock(&tp->lock);
+	} else if(strncmp(line, ";;retry_time: ", 13) == 0) {
+		if(!tp) return -1;
+		lock_basic_lock(&tp->lock);
+		tp->autr->retry_time = (uint32_t)parse_int(line+16, &r);
+		lock_basic_unlock(&tp->lock);
+	}
+	return r;
+}
+
 int autr_read_file(struct val_anchors* anchors, const char* nm)
 {
         /* the file descriptor */
@@ -553,6 +655,7 @@ int autr_read_file(struct val_anchors* anchors, const char* nm)
         char line[10240];
 	/* trust point being read */
 	struct trust_anchor *tp = NULL, *tp2;
+	int r;
 
         if (!(fd = fopen(nm, "r"))) {
                 log_err("unable to open %s for reading: %s", 
@@ -564,6 +667,13 @@ int autr_read_file(struct val_anchors* anchors, const char* nm)
 	/* TODO: read next probe time (if in file, otherwise now+0-100s) */
         while (fgets(line, (int)sizeof(line), fd) != NULL) {
                 line_nr++;
+		if((r = parse_var_line(line, anchors, &tp)) == -1) {
+			log_err("could not parse auto-trust-anchor-file "
+				"%s line %d", nm, line_nr);
+			return 0;
+		} else if(r == 1) {
+			continue;
+		}
         	if (!str_contains_data(line, ';'))
                 	continue; /* empty lines allowed */
                 if (!(tp2=load_trustanchor(anchors, line, nm))) {
@@ -596,7 +706,30 @@ int autr_read_file(struct val_anchors* anchors, const char* nm)
 	return 1;
 }
 
-void autr_write_file(struct trust_anchor* tp)
+/** print ID to file */
+static void
+print_id(FILE* out, struct module_env* env, 
+	uint8_t* nm, size_t nmlen, uint16_t dclass)
+{
+	ldns_rdf rdf;
+	ldns_status s;
+
+	memset(&rdf, 0, sizeof(rdf));
+	ldns_rdf_set_data(&rdf, nm);
+	ldns_rdf_set_size(&rdf, nmlen);
+	ldns_rdf_set_type(&rdf, LDNS_RDF_TYPE_DNAME);
+
+	ldns_buffer_clear(env->scratch_buffer);
+	s = ldns_rdf2buffer_str_dname(env->scratch_buffer, &rdf);
+	log_assert(s == LDNS_STATUS_OK);
+	ldns_buffer_write_u8(env->scratch_buffer, 0);
+	ldns_buffer_flip(env->scratch_buffer);
+	fprintf(out, ";;id: %s %d\n", 
+		(char*)ldns_buffer_begin(env->scratch_buffer),
+		(int)dclass);
+}
+
+void autr_write_file(struct module_env* env, struct trust_anchor* tp)
 {
 	char tmi[32];
 	FILE* out;
@@ -610,9 +743,21 @@ void autr_write_file(struct trust_anchor* tp)
 	}
 	/* write pretty header */
 	fprintf(out, "; autotrust trust anchor file\n");
+	print_id(out, env, tp->name, tp->namelen, tp->dclass);
+	ctime_r(&(tp->autr->last_queried), tmi);
+	fprintf(out, ";;last_queried: %u ;;%s\n", 
+		(unsigned int)tp->autr->last_queried, tmi);
+	ctime_r(&(tp->autr->last_success), tmi);
+	fprintf(out, ";;last_success: %u ;;%s\n", 
+		(unsigned int)tp->autr->last_success, tmi);
+	ctime_r(&(tp->autr->next_probe_time), tmi);
+	fprintf(out, ";;next_probe_time: %u ;;%s\n", 
+		(unsigned int)tp->autr->next_probe_time, tmi);
+	fprintf(out, ";;query_failed: %d\n", (int)tp->autr->query_failed);
+	fprintf(out, ";;query_interval: %d\n", (int)tp->autr->query_interval);
+	fprintf(out, ";;retry_time: %d\n", (int)tp->autr->retry_time);
 
 	/* write revoked tp special marker */
-	/* write next probe time */
 	/* TODO */
 
 	/* write anchors */
@@ -1300,7 +1445,7 @@ int autr_process_prime(struct module_env* env, struct val_env* ve,
 	if(changed) {
 		verbose(VERB_ALGO, "autotrust: point changed, write to disk");
 		autr_cleanup_keys(tp);
-		autr_write_file(tp);
+		autr_write_file(env, tp);
 		if(!autr_assemble(tp)) {
 			log_err("malloc failure assembling autotrust keys");
 			return 1; /* unchanged */

@@ -66,10 +66,10 @@ struct autr_ta {
 	struct autr_ta* next;
 	/** the RR */
 	ldns_rr* rr;
-	/** 5011 state */
-	autr_state_t s;
 	/** last update of key */
 	time_t last_change;
+	/** 5011 state */
+	autr_state_t s;
 	/** pending count */
 	uint8_t pending_count;
 	/** fresh TA was seen */
@@ -84,24 +84,26 @@ struct autr_ta {
 struct autr_point_data {
 	/** file to store the trust point in. chrootdir already applied. */
 	const char* file;
-	/** next probe time */
-	uint32_t next_probe_time;
 	/** rbtree node for probe sort, key is struct trust_anchor */
 	rbnode_t pnode;
+
+	/** the keys */
+	struct autr_ta* keys;
 
 	/** last queried DNSKEY set */
 	time_t last_queried;
 	/** last successful DNSKEY set */
 	time_t last_success;
-	/** how many times did it fail */
-	uint8_t query_failed;
+	/** next probe time */
+	time_t next_probe_time;
+
 	/** when to query if !failed */
 	uint32_t query_interval;
 	/** when to retry if failed */
 	uint32_t retry_time;
 
-	/** the keys */
-	struct autr_ta* keys;
+	/** how many times did it fail */
+	uint8_t query_failed;
 };
 
 /** 
@@ -137,9 +139,10 @@ int autr_read_file(struct val_anchors* anchors, const char* nm);
 
 /**
  * Write autotrust file.
+ * @param env: environment with scratch space.
  * @param tp: trust point to write.
  */
-void autr_write_file(struct trust_anchor* tp);
+void autr_write_file(struct module_env* env, struct trust_anchor* tp);
 
 /**
  * Delete autr anchor, deletes the autr data but does not do
