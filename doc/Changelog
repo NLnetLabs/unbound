@@ -1,3 +1,6 @@
+21 August 2009: Wouter
+	- autotrust: debug routines. Read,write and conversions work.
+
 20 August 2009: Wouter
 	- autotrust: save and read trustpoint variables.
 

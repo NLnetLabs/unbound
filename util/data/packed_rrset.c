@@ -372,7 +372,7 @@ packed_rrset_heap_data(ldns_rr_list* rrset)
 		data->rr_ttl[i] = ldns_rr_ttl(rr);
 		if(data->rr_ttl[i] < data->ttl)
 			data->ttl = data->rr_ttl[i];
-		data->rr_len[i] = 0;
+		data->rr_len[i] = 2; /* the rdlength */
 		for(j=0; j<ldns_rr_rd_count(rr); j++)
 			data->rr_len[i] += ldns_rdf_size(ldns_rr_rdf(rr, j));
 	}
@@ -386,7 +386,7 @@ packed_rrset_heap_data(ldns_rr_list* rrset)
 	/* copy data in there */
 	for(i=0; i<total; i++) {
 		ldns_rr* rr = ldns_rr_list_rr(rrset, i);
-		uint16_t rdlen = htons(data->rr_len[i]);
+		uint16_t rdlen = htons(data->rr_len[i]-2);
 		size_t p = sizeof(rdlen);
 		memmove(data->rr_data[i], &rdlen, p);
 		for(j=0; j<ldns_rr_rd_count(rr); j++) {

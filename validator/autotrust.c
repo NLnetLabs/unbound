@@ -513,7 +513,8 @@ autr_assemble(struct trust_anchor* tp)
 	/* make packed rrset keys - malloced with no ID number, they
 	 * are not in the cache */
 	/* make packed rrset data (if there is a key) */
-	if(ds) {
+
+	if(ldns_rr_list_rr_count(ds) > 0) {
 		ubds = ub_packed_rrset_heap_key(ds);
 		if(!ubds) 
 			goto error_cleanup;
@@ -521,7 +522,7 @@ autr_assemble(struct trust_anchor* tp)
 		if(!ubds->entry.data)
 			goto error_cleanup;
 	}
-	if(dnskey) {
+	if(ldns_rr_list_rr_count(dnskey) > 0) {
 		ubdnskey = ub_packed_rrset_heap_key(dnskey);
 		if(!ubdnskey)
 			goto error_cleanup;
@@ -543,6 +544,8 @@ autr_assemble(struct trust_anchor* tp)
 	/* assign the data to replace the old */
 	tp->ds_rrset = ubds;
 	tp->dnskey_rrset = ubdnskey;
+	tp->numDS = ldns_rr_list_rr_count(ds);
+	tp->numDNSKEY = ldns_rr_list_rr_count(dnskey);
 
 	ldns_rr_list_free(ds);
 	ldns_rr_list_free(dnskey);
@@ -607,39 +610,40 @@ parse_var_line(char* line, struct val_anchors* anchors,
 {
 	struct trust_anchor* tp = *anchor;
 	int r = 0;
-	if(strncmp(line, ";;id: ", 5) == 0) {
+	if(strncmp(line, ";;id: ", 6) == 0) {
 		*anchor = parse_id(anchors, line+6);
 		if(!*anchor) return -1;
 		else return 1;
-	} else if(strncmp(line, ";;last_queried: ", 15) == 0) {
+	} else if(strncmp(line, ";;last_queried: ", 16) == 0) {
 		if(!tp) return -1;
 		lock_basic_lock(&tp->lock);
 		tp->autr->last_queried = (time_t)parse_int(line+16, &r);
 		lock_basic_unlock(&tp->lock);
-	} else if(strncmp(line, ";;last_success: ", 15) == 0) {
+	} else if(strncmp(line, ";;last_success: ", 16) == 0) {
 		if(!tp) return -1;
 		lock_basic_lock(&tp->lock);
 		tp->autr->last_success = (time_t)parse_int(line+16, &r);
 		lock_basic_unlock(&tp->lock);
-	} else if(strncmp(line, ";;next_probe_time: ", 18) == 0) {
+	} else if(strncmp(line, ";;next_probe_time: ", 19) == 0) {
 		if(!tp) return -1;
 		lock_basic_lock(&tp->lock);
-		tp->autr->next_probe_time = (time_t)parse_int(line+16, &r);
+		tp->autr->next_probe_time = (time_t)parse_int(line+19, &r);
+		/* TODO manage probetree */
 		lock_basic_unlock(&tp->lock);
-	} else if(strncmp(line, ";;query_failed: ", 15) == 0) {
+	} else if(strncmp(line, ";;query_failed: ", 16) == 0) {
 		if(!tp) return -1;
 		lock_basic_lock(&tp->lock);
 		tp->autr->query_failed = (uint8_t)parse_int(line+16, &r);
 		lock_basic_unlock(&tp->lock);
-	} else if(strncmp(line, ";;query_interval: ", 17) == 0) {
+	} else if(strncmp(line, ";;query_interval: ", 18) == 0) {
 		if(!tp) return -1;
 		lock_basic_lock(&tp->lock);
-		tp->autr->query_interval = (uint32_t)parse_int(line+16, &r);
+		tp->autr->query_interval = (uint32_t)parse_int(line+18, &r);
 		lock_basic_unlock(&tp->lock);
-	} else if(strncmp(line, ";;retry_time: ", 13) == 0) {
+	} else if(strncmp(line, ";;retry_time: ", 14) == 0) {
 		if(!tp) return -1;
 		lock_basic_lock(&tp->lock);
-		tp->autr->retry_time = (uint32_t)parse_int(line+16, &r);
+		tp->autr->retry_time = (uint32_t)parse_int(line+14, &r);
 		lock_basic_unlock(&tp->lock);
 	}
 	return r;
@@ -664,7 +668,6 @@ int autr_read_file(struct val_anchors* anchors, const char* nm)
         }
         verbose(VERB_ALGO, "reading autotrust anchor file %s", nm);
 	/* TODO: read line to see if special marker for revoked tp */
-	/* TODO: read next probe time (if in file, otherwise now+0-100s) */
         while (fgets(line, (int)sizeof(line), fd) != NULL) {
                 line_nr++;
 		if((r = parse_var_line(line, anchors, &tp)) == -1) {
@@ -706,6 +709,21 @@ int autr_read_file(struct val_anchors* anchors, const char* nm)
 	return 1;
 }
 
+/** string for a trustanchor state */
+static const char*
+trustanchor_state2str(autr_state_t s)
+{
+        switch (s) {
+                case AUTR_STATE_START:       return "  START  ";
+                case AUTR_STATE_ADDPEND:     return " ADDPEND ";
+                case AUTR_STATE_VALID:       return "  VALID  ";
+                case AUTR_STATE_MISSING:     return " MISSING ";
+                case AUTR_STATE_REVOKED:     return " REVOKED ";
+                case AUTR_STATE_REMOVED:     return " REMOVED ";
+        }
+        return " UNKNOWN ";
+}
+
 /** print ID to file */
 static void
 print_id(FILE* out, struct module_env* env, 
@@ -744,15 +762,15 @@ void autr_write_file(struct module_env* env, struct trust_anchor* tp)
 	/* write pretty header */
 	fprintf(out, "; autotrust trust anchor file\n");
 	print_id(out, env, tp->name, tp->namelen, tp->dclass);
-	ctime_r(&(tp->autr->last_queried), tmi);
-	fprintf(out, ";;last_queried: %u ;;%s\n", 
-		(unsigned int)tp->autr->last_queried, tmi);
-	ctime_r(&(tp->autr->last_success), tmi);
-	fprintf(out, ";;last_success: %u ;;%s\n", 
-		(unsigned int)tp->autr->last_success, tmi);
-	ctime_r(&(tp->autr->next_probe_time), tmi);
-	fprintf(out, ";;next_probe_time: %u ;;%s\n", 
-		(unsigned int)tp->autr->next_probe_time, tmi);
+	fprintf(out, ";;last_queried: %u ;;%s", 
+		(unsigned int)tp->autr->last_queried, 
+		ctime_r(&(tp->autr->last_queried), tmi));
+	fprintf(out, ";;last_success: %u ;;%s", 
+		(unsigned int)tp->autr->last_success,
+		ctime_r(&(tp->autr->last_success), tmi));
+	fprintf(out, ";;next_probe_time: %u ;;%s", 
+		(unsigned int)tp->autr->next_probe_time,
+		ctime_r(&(tp->autr->next_probe_time), tmi));
 	fprintf(out, ";;query_failed: %d\n", (int)tp->autr->query_failed);
 	fprintf(out, ";;query_interval: %d\n", (int)tp->autr->query_interval);
 	fprintf(out, ";;retry_time: %d\n", (int)tp->autr->retry_time);
@@ -778,10 +796,11 @@ void autr_write_file(struct module_env* env, struct trust_anchor* tp)
 			continue;
 		}
 		str[strlen(str)-1] = 0;
-		ctime_r(&(ta->last_change), tmi);
-		fprintf(out, "%s ;;state=%d ;;count=%d ;;lastchange=%u ;;%s",
-			str, (int)ta->s, (int)ta->pending_count, 
-			(unsigned int)ta->last_change, tmi);
+		fprintf(out, "%s ;;state=%d [%s] ;;count=%d "
+			";;lastchange=%u ;;%s", str, (int)ta->s, 
+			trustanchor_state2str(ta->s), (int)ta->pending_count,
+			(unsigned int)ta->last_change, 
+			ctime_r(&(ta->last_change), tmi));
 		free(str);
 	}
 	fclose(out);
@@ -1035,12 +1054,8 @@ static void
 set_tp_times(struct trust_anchor* tp, uint32_t rrsig_exp_interval, 
 	uint32_t origttl, int* changed)
 {
-	uint32_t x;
-	uint32_t qi = tp->autr->query_interval, rt = tp->autr->retry_time;
+	uint32_t x, qi = tp->autr->query_interval, rt = tp->autr->retry_time;
 	
-	verbose(VERB_ALGO, "orig_ttl is %d", (int)origttl);
-	verbose(VERB_ALGO, "rrsig_exp_interval is %d", (int)rrsig_exp_interval);
-
 	/* x = MIN(15days, ttl/2, expire/2) */
 	x = 15 * 24 * 3600;
 	if(origttl/2 < x)
@@ -1063,11 +1078,15 @@ set_tp_times(struct trust_anchor* tp, uint32_t rrsig_exp_interval,
 		tp->autr->retry_time = 3600;
 	else	tp->autr->retry_time = x;
 
-	if(qi != tp->autr->query_interval || rt != tp->autr->retry_time)
+	if(qi != tp->autr->query_interval || rt != tp->autr->retry_time) {
 		*changed = 1;
-
-	verbose(VERB_ALGO, "query_interval: %d, retry_time: %d",
-		(int)tp->autr->query_interval, (int)tp->autr->retry_time);
+		verbose(VERB_ALGO, "orig_ttl is %d", (int)origttl);
+		verbose(VERB_ALGO, "rrsig_exp_interval is %d", 
+			(int)rrsig_exp_interval);
+		verbose(VERB_ALGO, "query_interval: %d, retry_time: %d",
+			(int)tp->autr->query_interval, 
+			(int)tp->autr->retry_time);
+	}
 }
 
 /** init events to zero */
@@ -1129,21 +1148,6 @@ update_events(struct module_env* env, struct val_env* ve,
 	set_tp_times(tp, min_expiry(env, r), key_ttl(dnskey_rrset), changed);
 	ldns_rr_list_deep_free(r);
 	return 1;
-}
-
-/** string for a trustanchor state */
-static const char*
-trustanchor_state2str(autr_state_t s)
-{
-        switch (s) {
-                case AUTR_STATE_START:       return "  START  ";
-                case AUTR_STATE_ADDPEND:     return " ADDPEND ";
-                case AUTR_STATE_VALID:       return "  VALID  ";
-                case AUTR_STATE_MISSING:     return " MISSING ";
-                case AUTR_STATE_REVOKED:     return " REVOKED ";
-                case AUTR_STATE_REMOVED:     return " REMOVED ";
-        }
-        return " UNKNOWN ";
 }
 
 /**
@@ -1457,7 +1461,86 @@ int autr_process_prime(struct module_env* env, struct val_env* ve,
 			 *	save name, unlock, take from tree, delete. */
 			return 0; /* trust point removed */
 		}
-	}
+	} else verbose(VERB_ALGO, "autotrust: no changes");
 	
 	return 1; /* no changes */
+}
+
+/** debug print a trust anchor key */
+static void 
+autr_debug_print_ta(struct autr_ta* ta)
+{
+	char buf[32];
+	char* str = ldns_rr2str(ta->rr);
+	if(!str) {
+		log_info("out of memory in debug_print_ta");
+		return;
+	}
+	if(str && str[0]) str[strlen(str)-1]=0; /* remove newline */
+	ctime_r(&ta->last_change, buf);
+	if(buf[0]) buf[strlen(buf)-1]=0; /* remove newline */
+	log_info("[%s] %s ;;state:%d ;;pending_count:%d%s%s last:%s",
+		trustanchor_state2str(ta->s), str, ta->s, ta->pending_count,
+		ta->fetched?" fetched":"", ta->revoked?" revoked":"", buf);
+	free(str);
+}
+
+/** debug print a trust point */
+static void 
+autr_debug_print_tp(struct trust_anchor* tp)
+{
+	struct autr_ta* ta;
+	char buf[257];
+	dname_str(tp->name, buf);
+	log_info("trust point %s : %d", buf, (int)tp->dclass);
+	log_info("assembled %d DS and %d DNSKEYs", 
+		(int)tp->numDS, (int)tp->numDNSKEY);
+	if(1) { /* DEBUG */
+		ldns_buffer* buf = ldns_buffer_new(70000);
+		ldns_rr_list* list;
+		if(tp->ds_rrset) {
+			list = packed_rrset_to_rr_list(tp->ds_rrset, buf);
+			ldns_rr_list_print(stderr, list);
+			ldns_rr_list_deep_free(list);
+		}
+		if(tp->dnskey_rrset) {
+			list = packed_rrset_to_rr_list(tp->dnskey_rrset, buf);
+			ldns_rr_list_print(stderr, list);
+			ldns_rr_list_deep_free(list);
+		}
+		ldns_buffer_free(buf);
+	}
+	if(!tp->autr)
+		return;
+	log_info("file %s", tp->autr->file);
+	ctime_r(&tp->autr->last_queried, buf);
+	if(buf[0]) buf[strlen(buf)-1]=0; /* remove newline */
+	log_info("last_queried: %u %s", (unsigned)tp->autr->last_queried, buf);
+	ctime_r(&tp->autr->last_success, buf);
+	if(buf[0]) buf[strlen(buf)-1]=0; /* remove newline */
+	log_info("last_success: %u %s", (unsigned)tp->autr->last_success, buf);
+	ctime_r(&tp->autr->next_probe_time, buf);
+	if(buf[0]) buf[strlen(buf)-1]=0; /* remove newline */
+	log_info("next_probe_time: %u %s", (unsigned)tp->autr->next_probe_time,
+		buf);
+	log_info("query_interval: %u", (unsigned)tp->autr->query_interval);
+	log_info("retry_time: %u", (unsigned)tp->autr->retry_time);
+	log_info("query_failed: %u", (unsigned)tp->autr->query_failed);
+		
+	for(ta=tp->autr->keys; ta; ta=ta->next) {
+		autr_debug_print_ta(ta);
+	}
+}
+
+void 
+autr_debug_print(struct val_anchors* anchors)
+{
+	struct trust_anchor* tp;
+	lock_basic_lock(&anchors->lock);
+	RBTREE_FOR(tp, struct trust_anchor*, anchors->tree) {
+		lock_basic_lock(&tp->lock);
+		autr_debug_print_tp(tp);
+		lock_basic_unlock(&tp->lock);
+	}
+	lock_basic_unlock(&anchors->lock);
 }

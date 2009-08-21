@@ -164,4 +164,10 @@ void autr_point_delete(struct trust_anchor* tp);
 int autr_process_prime(struct module_env* env, struct val_env* ve,
 	struct trust_anchor* tp, struct ub_packed_rrset_key* dnskey_rrset);
 
+/**
+ * Debug printout of rfc5011 tracked anchors
+ * @param anchors: all the anchors.
+ */
+void autr_debug_print(struct val_anchors* anchors);
+
 #endif /* VALIDATOR_AUTOTRUST_H */

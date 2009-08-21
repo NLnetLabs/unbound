@@ -940,9 +940,9 @@ anchors_assemble_rrsets(struct val_anchors* anchors)
 	while((rbnode_t*)ta != RBTREE_NULL) {
 		next = (struct trust_anchor*)rbtree_next(&ta->node);
 		lock_basic_lock(&ta->lock);
-		if(ta->numDS == 0 && ta->numDNSKEY == 0) {
+		if(ta->autr || (ta->numDS == 0 && ta->numDNSKEY == 0)) {
 			lock_basic_unlock(&ta->lock);
-			ta = next; /* skip unsigned entries, nothing to do */
+			ta = next; /* skip */
 			continue;
 		}
 		if(!anchors_assemble(anchors, ta)) {
@@ -1079,6 +1079,7 @@ anchors_apply_cfg(struct val_anchors* anchors, struct config_file* cfg)
 	anchors_assemble_rrsets(anchors);
 	init_parents(anchors);
 	ldns_buffer_free(parsebuf);
+	autr_debug_print(anchors); /* DEBUG */
 	return 1;
 }
 
