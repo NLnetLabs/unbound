@@ -63,6 +63,9 @@ static int sig_record_quit = 0;
 /** How many reload requests happened. */
 static int sig_record_reload = 0;
 
+/** cleaner ssl memory freeup */
+static void* comp_meth = NULL;
+
 /** used when no other sighandling happens, so we don't die
   * when multiple signals in quick succession are sent to us. 
   * @param sig: signal number.
@@ -172,6 +175,8 @@ daemon_init()
 	(void)ldns_key_EVP_load_gost_id();
 #endif
 	OpenSSL_add_all_algorithms();
+	/* grab the COMP method ptr because openssl leaks it */
+	comp_meth = SSL_COMP_get_compression_methods();
 	(void)SSL_library_init();
 #ifdef HAVE_TZSET
 	/* init timezone info while we are not chrooted yet */
@@ -499,6 +504,7 @@ daemon_delete(struct daemon* daemon)
 	free(daemon->env);
 	free(daemon);
 	/* libcrypto cleanup */
+	sk_SSL_COMP_free(comp_meth);
 #ifdef HAVE_OPENSSL_CONFIG
 	EVP_cleanup();
 	ENGINE_cleanup();
