@@ -83,7 +83,7 @@ struct autr_ta {
  */
 struct autr_point_data {
 	/** file to store the trust point in. chrootdir already applied. */
-	const char* file;
+	char* file;
 	/** rbtree node for probe sort, key is struct trust_anchor */
 	rbnode_t pnode;
 

@@ -152,6 +152,9 @@
 /* Define to 1 if you have the <openssl/conf.h> header file. */
 #undef HAVE_OPENSSL_CONF_H
 
+/* Define to 1 if you have the <openssl/engine.h> header file. */
+#undef HAVE_OPENSSL_ENGINE_H
+
 /* Define to 1 if you have the <openssl/err.h> header file. */
 #undef HAVE_OPENSSL_ERR_H
 
@@ -639,6 +642,10 @@
 
 #ifdef HAVE_OPENSSL_CONF_H
 #include <openssl/conf.h>
+#endif
+
+#ifdef HAVE_OPENSSL_ENGINE_H
+#include <openssl/engine.h>
 #endif
 
 

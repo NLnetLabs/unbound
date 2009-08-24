@@ -42,6 +42,7 @@
 #include "config.h"
 #include "util/log.h"
 #include "util/net_help.h"
+#include "util/config_file.h"
 #include "testcode/replay.h"
 #include "testcode/ldns-testpkts.h"
 
@@ -73,6 +74,8 @@ replay_moment_delete(struct replay_moment* mom)
 	if(mom->match) {
 		delete_entry(mom->match);
 	}
+	free(mom->autotrust_id);
+	config_delstrlist(mom->file_content);
 	free(mom);
 }
 
@@ -173,6 +176,31 @@ replay_range_read(char* remain, FILE* in, const char* name, int* lineno,
 	return NULL;
 }
 
+/** Read FILE match content */
+static void
+read_file_content(FILE* in, int* lineno, struct replay_moment* mom)
+{
+	char line[MAX_LINE_LEN];
+	char* remain = line;
+	struct config_strlist** last = &mom->file_content;
+	line[MAX_LINE_LEN-1]=0;
+	if(!fgets(line, MAX_LINE_LEN-1, in))
+		fatal_exit("FILE_BEGIN expected at line %d", *lineno);
+	if(!parse_keyword(&remain, "FILE_BEGIN"))
+		fatal_exit("FILE_BEGIN expected at line %d", *lineno);
+	while(fgets(line, MAX_LINE_LEN-1, in)) {
+		(*lineno)++;
+		if(strncmp(line, "FILE_END", 8) == 0) {
+			return;
+		}
+		if(line[0]) line[strlen(line)-1] = 0; /* remove newline */
+		if(!cfg_strlist_insert(last, strdup(line)))
+			fatal_exit("malloc failure");
+		last = &( (*last)->next );
+	}
+	fatal_exit("no FILE_END in input file");
+}
+
 /** 
  * Read a replay moment 'STEP' from file. 
  * @param remain: Rest of line (after STEP keyword).
@@ -223,6 +251,14 @@ replay_moment_read(char* remain, FILE* in, const char* name, int* lineno,
 		mom->evt_type = repevt_timeout;
 	} else if(parse_keyword(&remain, "TIME_PASSES")) {
 		mom->evt_type = repevt_time_passes;
+	} else if(parse_keyword(&remain, "CHECK_AUTOTRUST")) {
+		mom->evt_type = repevt_autotrust_check;
+		while(isspace((int)*remain))
+			remain++;
+		if(strlen(remain)>0 && remain[strlen(remain)-1]=='\n')
+			remain[strlen(remain)-1] = 0;
+		mom->autotrust_id = strdup(remain);
+		read_file_content(in, lineno, mom);
 	} else if(parse_keyword(&remain, "ERROR")) {
 		mom->evt_type = repevt_error;
 	} else {

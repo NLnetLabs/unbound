@@ -1,3 +1,6 @@
+24 August 2009: Wouter
+	- cleaner memory allocation on exit. autotrust test routines.
+
 21 August 2009: Wouter
 	- autotrust: debug routines. Read,write and conversions work.
 

@@ -63,4 +63,13 @@ void fake_event_init(struct replay_scenario* scen);
  */
 void fake_event_cleanup();
 
+/**
+ * Get filename to store temporary config stuff. The pid is added. in /tmp.
+ * @param adj: adjective, like "_cfg_", "_auto_"
+ * @param id: identifier, like "example.com".
+ * @param buf: where to store.
+ * @param len: length of buf.
+ */
+void fake_temp_file(const char* adj, const char* id, char* buf, size_t len);
+
 #endif /* TESTCODE_FAKE_EVENT_H */

@@ -51,6 +51,7 @@
 #include "util/data/msgparse.h"
 #include "util/data/msgreply.h"
 #include "util/data/msgencode.h"
+#include "util/config_file.h"
 #include "services/listen_dnsport.h"
 #include "services/outside_network.h"
 #include "testcode/replay.h"
@@ -73,6 +74,18 @@ timeval_add(struct timeval* d, const struct timeval* add)
 		d->tv_usec -= 1000000;
 		d->tv_sec++;
 	}
+#endif
+}
+
+void 
+fake_temp_file(const char* adj, const char* id, char* buf, size_t len)
+{
+#ifdef USE_WINSOCK
+	snprintf(buf, len, "testbound_%u%s%s.tmp",
+		(unsigned)getpid(), adj, id);
+#else
+	snprintf(buf, len, "/tmp/testbound_%u%s%s.tmp",
+		(unsigned)getpid(), adj, id);
 #endif
 }
 
@@ -116,6 +129,7 @@ repevt_string(enum replay_event_type t)
 	case repevt_time_passes: return "TIME_PASSES";
 	case repevt_back_reply:  return "REPLY";
 	case repevt_back_query:  return "CHECK_OUT_QUERY";
+	case repevt_autotrust_check: return "CHECK_AUTOTRUST";
 	case repevt_error:	 return "ERROR";
 	default:		 return "UNKNOWN";
 	}
@@ -437,6 +451,51 @@ time_passes(struct replay_runtime* runtime, struct replay_moment* mom)
 #endif
 }
 
+/** check autotrust file contents */
+static void
+autotrust_check(struct replay_moment* mom)
+{
+	char name[1024], line[1024];
+	FILE *in;
+	int lineno = 0, oke=1;
+	struct config_strlist* p;
+	line[sizeof(line)-1] = 0;
+	log_assert(mom->autotrust_id);
+	fake_temp_file("_auto_", mom->autotrust_id, name, sizeof(name));
+	in = fopen(name, "r");
+	if(!in) fatal_exit("could not open %s: %s", name, strerror(errno));
+	for(p=mom->file_content; p; p=p->next) {
+		lineno++;
+		if(!fgets(line, (int)sizeof(line)-1, in)) {
+			log_err("autotrust check failed, could not read line");
+			log_err("file %s, line %d", name, lineno);
+			log_err("should be: %s", p->str);
+			fatal_exit("autotrust_check failed");
+		}
+		if(line[0]) line[strlen(line)-1] = 0; /* remove newline */
+		if(strcmp(p->str, line) != 0) {
+			log_err("mismatch in file %s, line %d", name, lineno);
+			log_err("file has : %s", line);
+			log_err("should be: %s", p->str);
+			oke = 0;
+			continue;
+		}
+		fprintf(stderr, "%s:%2d ok : %s\n", name, lineno, line);
+	}
+	if(fgets(line, (int)sizeof(line)-1, in)) {
+		log_err("autotrust check failed, extra lines in %s after %d",
+			name, lineno);
+		do {
+			fprintf(stderr, "file has: %s", line);
+		} while(fgets(line, (int)sizeof(line)-1, in));
+		oke = 0;
+	}
+	fclose(in);
+	if(!oke)
+		fatal_exit("autotrust_check STEP %d failed", mom->time_step);
+	log_info("autotrust %s is OK", mom->autotrust_id);
+}
+
 /**
  * Advance to the next moment.
  */
@@ -502,6 +561,10 @@ do_moment_and_advance(struct replay_runtime* runtime)
 		break;
 	case repevt_time_passes:
 		time_passes(runtime, runtime->now);
+		advance_moment(runtime);
+		break;
+	case repevt_autotrust_check:
+		autotrust_check(runtime->now);
 		advance_moment(runtime);
 		break;
 	default:

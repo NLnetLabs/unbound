@@ -501,7 +501,7 @@ daemon_delete(struct daemon* daemon)
 	/* libcrypto cleanup */
 #ifdef HAVE_OPENSSL_CONFIG
 	EVP_cleanup();
-	/*ENGINE_cleanup();*/
+	ENGINE_cleanup();
 	CONF_modules_free();
 #endif
 	CRYPTO_cleanup_all_ex_data(); /* safe, no more threads right now */

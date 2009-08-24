@@ -70,6 +70,7 @@ void autr_global_delete(struct autr_global_data* global)
 		return;
 	/* elements deleted by parent, nothing to do */
 	memset(global, 0, sizeof(*global));
+	free(global);
 }
 
 int probetree_cmp(const void* x, const void* y)
@@ -235,14 +236,7 @@ parse_comments(char* str, struct autr_ta* ta)
                 timestamp = atoi(comments);
         }
         if (pos < 0 || !timestamp)
-        {
-		/* Should we warn about this? It happens for key priming.
-			verbose_key(ta, VERB_OPS, "has no timestamp, "
-					"considered NOW");
-		*/
-		/* cannot use event base timeptr, because not inited yet */
-		ta->last_change = (uint32_t)time(NULL);
-        }
+		ta->last_change = 0;
         else
                 ta->last_change = (uint32_t)timestamp;
 
@@ -354,7 +348,6 @@ autr_rrset_delete(struct ub_packed_rrset_key* r)
 
 void autr_point_delete(struct trust_anchor* tp)
 {
-	struct autr_ta* p, *np;
 	if(!tp)
 		return;
 	lock_unprotect(&tp->lock, tp);
@@ -362,14 +355,17 @@ void autr_point_delete(struct trust_anchor* tp)
 	lock_basic_destroy(&tp->lock);
 	autr_rrset_delete(tp->ds_rrset);
 	autr_rrset_delete(tp->dnskey_rrset);
-	p = tp->autr->keys;
-	while(p) {
-		np = p->next;
-		ldns_rr_free(p->rr);
-		free(p);
-		p = np;
+	if(tp->autr) {
+		struct autr_ta* p = tp->autr->keys, *np;
+		while(p) {
+			np = p->next;
+			ldns_rr_free(p->rr);
+			free(p);
+			p = np;
+		}
+		free(tp->autr->file);
+		free(tp->autr);
 	}
-	free(tp->autr);
 	free(tp->name);
 	free(tp);
 }
@@ -1290,6 +1286,10 @@ anchor_state_update(struct module_env* env, struct autr_ta* anchor, int* c)
 		/* KeyRem: MISSING */
 		else if (!anchor->fetched)
 			do_keyrem(env, anchor, c);
+		else if(!anchor->last_change) {
+			verbose_key(anchor, VERB_ALGO, "first prime");
+			reset_holddown(env, anchor, c);
+		}
 		break;
 	/* MISSING */
 	case AUTR_STATE_MISSING:
@@ -1380,7 +1380,8 @@ autr_cleanup_keys(struct trust_anchor* tp)
 	prevp = &tp->autr->keys;
 	while(p) {
 		/* do we want to remove this key? */
-		if(p->s == AUTR_STATE_START || p->s == AUTR_STATE_REMOVED) {
+		if(p->s == AUTR_STATE_START || p->s == AUTR_STATE_REMOVED ||
+			!rr_is_dnskey_sep(p->rr)) {
 			struct autr_ta* np = p->next;
 			/* remove */
 			ldns_rr_free(p->rr);
@@ -1390,6 +1391,9 @@ autr_cleanup_keys(struct trust_anchor* tp)
 			p = np;
 			continue;
 		}
+		/* remove pending counts if no longer pending */
+		if(p->s != AUTR_STATE_ADDPEND)
+			p->pending_count = 0;
 		prevp = &p->next;
 		p = p->next;
 	}

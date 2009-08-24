@@ -4,7 +4,7 @@
 #   2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008
 #   Free Software Foundation, Inc.
 
-timestamp='2008-11-15'
+timestamp='2009-04-27'
 
 # This file is free software; you can redistribute it and/or modify it
 # under the terms of the GNU General Public License as published by
@@ -324,6 +324,9 @@ case "${UNAME_MACHINE}:${UNAME_SYSTEM}:${UNAME_RELEASE}:${UNAME_VERSION}" in
 	case `/usr/bin/uname -p` in
 	    sparc) echo sparc-icl-nx7; exit ;;
 	esac ;;
+    s390x:SunOS:*:*)
+	echo ${UNAME_MACHINE}-ibm-solaris2`echo ${UNAME_RELEASE}|sed -e 's/[^.]*//'`
+	exit ;;
     sun4H:SunOS:5.*:*)
 	echo sparc-hal-solaris2`echo ${UNAME_RELEASE}|sed -e 's/[^.]*//'`
 	exit ;;
@@ -337,7 +340,7 @@ case "${UNAME_MACHINE}:${UNAME_SYSTEM}:${UNAME_RELEASE}:${UNAME_VERSION}" in
 	# Note that the Sun cc does not turn __LP64__ into 1 like gcc does.
 	# This test works for both compilers.
 	if [ "$CC_FOR_BUILD" != 'no_compiler_found' ]; then
-	    if echo '\n#ifdef __amd64\nIS_64BIT_ARCH\n#endif' | \
+	    if (echo '#ifdef __amd64'; echo IS_64BIT_ARCH; echo '#endif') | \
 		(CCOPTS= $CC_FOR_BUILD -E - 2>/dev/null) | \
 		grep IS_64BIT_ARCH >/dev/null
 	    then
@@ -1115,8 +1118,11 @@ EOF
     pc:*:*:*)
 	# Left here for compatibility:
         # uname -m prints for DJGPP always 'pc', but it prints nothing about
-        # the processor, so we play safe by assuming i386.
-	echo i386-pc-msdosdjgpp
+        # the processor, so we play safe by assuming i586.
+	# Note: whatever this is, it MUST be the same as what config.sub
+	# prints for the "djgpp" host, or else GDB configury will decide that
+	# this is a cross-build.
+	echo i586-pc-msdosdjgpp
         exit ;;
     Intel:Mach:3*:*)
 	echo i386-pc-mach3
@@ -1154,6 +1160,16 @@ EOF
     3[34]??:*:4.0:* | 3[34]??,*:*:4.0:*)
         /bin/uname -p 2>/dev/null | grep 86 >/dev/null \
           && { echo i486-ncr-sysv4; exit; } ;;
+    NCR*:*:4.2:* | MPRAS*:*:4.2:*)
+	OS_REL='.3'
+	test -r /etc/.relid \
+	    && OS_REL=.`sed -n 's/[^ ]* [^ ]* \([0-9][0-9]\).*/\1/p' < /etc/.relid`
+	/bin/uname -p 2>/dev/null | grep 86 >/dev/null \
+	    && { echo i486-ncr-sysv4.3${OS_REL}; exit; }
+	/bin/uname -p 2>/dev/null | /bin/grep entium >/dev/null \
+	    && { echo i586-ncr-sysv4.3${OS_REL}; exit; }
+	/bin/uname -p 2>/dev/null | /bin/grep pteron >/dev/null \
+	    && { echo i586-ncr-sysv4.3${OS_REL}; exit; } ;;
     m68*:LynxOS:2.*:* | m68*:LynxOS:3.0*:*)
 	echo m68k-unknown-lynxos${UNAME_RELEASE}
 	exit ;;
@@ -1339,6 +1355,9 @@ EOF
 	exit ;;
     i*86:rdos:*:*)
 	echo ${UNAME_MACHINE}-pc-rdos
+	exit ;;
+    i*86:AROS:*:*)
+	echo ${UNAME_MACHINE}-pc-aros
 	exit ;;
 esac
 

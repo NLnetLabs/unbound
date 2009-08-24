@@ -41,6 +41,15 @@
  * <pre>
  * File format for replay files.
  *
+ * ; unbound.conf options.
+ * ; ...
+ * ; additional commandline options to pass to unbound
+ * COMMANDLINE cmdline_option
+ * ; autotrust key file contents, also adds auto-trust-anchor-file: "x" to cfg
+ * AUTOTRUST_FILE id
+ * ; contents of that file
+ * AUTOTRUST_END
+ * CONFIG_END
  * ; comment line.
  * SCENARIO_BEGIN name_of_scenario
  * RANGE_BEGIN start_time end_time
@@ -60,6 +69,7 @@
  *      o TIMEOUT
  *      o TIME_PASSES ELAPSE [seconds] - increase 'now' time counter, can be 
  *      			a floating point number.
+ *      o CHECK_AUTOTRUST [id] - followed by FILE_BEGIN [to match] FILE_END.
  *      o ERROR
  * ; following entry starts on the next line, ENTRY_BEGIN.
  * ; more STEP items
@@ -156,6 +166,8 @@ struct replay_moment {
 		repevt_back_reply,
 		/** test fails if query to the network does not match */
 		repevt_back_query,
+		/** check autotrust key file */
+		repevt_autotrust_check,
 		/** an error happens to outbound query */
 		repevt_error
 	} 
@@ -178,6 +190,11 @@ struct replay_moment {
 	 * Unused at this time.
 	 */
 	ldns_rr* qname;
+
+	/** the autotrust file id to check */
+	char* autotrust_id;
+	/** file contents to match, one string per line */
+	struct config_strlist* file_content;
 };
 
 /**
