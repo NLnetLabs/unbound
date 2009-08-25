@@ -970,6 +970,10 @@ anchors_assemble_rrsets(struct val_anchors* anchors)
 				" the anchor is ignored (check if you need to"
 				" upgrade unbound and openssl)", b);
 			(void)rbtree_delete(anchors->tree, &ta->node);
+			lock_basic_unlock(&ta->lock);
+			lock_basic_destroy(&ta->lock);
+			ta = next;
+			continue;
 		}
 		lock_basic_unlock(&ta->lock);
 		ta = next;
