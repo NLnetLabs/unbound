@@ -1215,8 +1215,6 @@ processInit(struct module_qstate* qstate, struct val_qstate* vq,
 	val_find_signer(subtype, &vq->qchase, vq->orig_msg->rep, 
 		vq->rrset_skip, &vq->signer_name, &vq->signer_len);
 	if(vq->signer_name == NULL) {
-		lookup_name = vq->qchase.qname;
-		lookup_len = vq->qchase.qname_len;
 		log_nametypeclass(VERB_ALGO, "no signer, using", lookup_name,
 			0, 0);
 	} else {
@@ -1644,6 +1642,8 @@ val_dlv_init(struct module_qstate* qstate, struct val_qstate* vq,
 		/* use qchase */
 		nm = vq->qchase.qname;
 		nm_len = vq->qchase.qname_len;
+		if(vq->qchase.qtype == LDNS_RR_TYPE_DS)
+			dname_remove_label(&nm, &nm_len);
 	}
 	log_nametypeclass(VERB_ALGO, "DLV init look", nm, LDNS_RR_TYPE_DS,
 		vq->qchase.qclass);

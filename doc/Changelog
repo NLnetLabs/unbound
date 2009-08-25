@@ -6,6 +6,8 @@
 	- ctime_r compat definition.
 	- detect yylex_destroy() in configure.
 	- detect SSL_get_compression_methods declaration in configure.
+	- fixup DS lookup at anchor point with unsigned parent.
+	- fixup DLV lookup for DS queries to unsigned domains.
 
 24 August 2009: Wouter
 	- cleaner memory allocation on exit. autotrust test routines.
