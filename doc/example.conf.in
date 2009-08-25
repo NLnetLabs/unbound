@@ -355,6 +355,16 @@ server:
 	# A message with an NSEC3 with larger count is marked insecure.
 	# List in ascending order the keysize and count values.
 	# val-nsec3-keysize-iterations: "1024 150 2048 500 4096 2500"
+	
+	# instruct the auto-trust-anchor-file probing to add anchors after ttl.
+	# add-holddown: 2592000 # 30 days
+
+	# instruct the auto-trust-anchor-file probing to del anchors after ttl.
+	# del-holddown: 2592000 # 30 days
+
+	# auto-trust-anchor-file probing removes missing anchors after ttl.
+	# If the value 0 is given, missing anchors are not removed.
+	# keep-missing: 31622400 # 366 days
 
 	# the amount of memory to use for the key cache.
 	# plain value in bytes or you can append k, m or G. default is "4Mb". 

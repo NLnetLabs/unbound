@@ -145,7 +145,10 @@
      VAR_VAL_SIG_SKEW_MAX = 361,
      VAR_CACHE_MIN_TTL = 362,
      VAR_VAL_LOG_LEVEL = 363,
-     VAR_AUTO_TRUST_ANCHOR_FILE = 364
+     VAR_AUTO_TRUST_ANCHOR_FILE = 364,
+     VAR_KEEP_MISSING = 365,
+     VAR_ADD_HOLDDOWN = 366,
+     VAR_DEL_HOLDDOWN = 367
    };
 #endif
 /* Tokens.  */
@@ -256,6 +259,9 @@
 #define VAR_CACHE_MIN_TTL 362
 #define VAR_VAL_LOG_LEVEL 363
 #define VAR_AUTO_TRUST_ANCHOR_FILE 364
+#define VAR_KEEP_MISSING 365
+#define VAR_ADD_HOLDDOWN 366
+#define VAR_DEL_HOLDDOWN 367
 
 
 
@@ -272,7 +278,7 @@ typedef union YYSTYPE
 
 
 /* Line 1676 of yacc.c  */
-#line 276 "util/configparser.h"
+#line 282 "util/configparser.h"
 } YYSTYPE;
 # define YYSTYPE_IS_TRIVIAL 1
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */

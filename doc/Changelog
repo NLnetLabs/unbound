@@ -1,6 +1,7 @@
 25 August 2009: Wouter
 	- fixup memleak in trust anchor unsupported algorithm check.
 	- iana portlist updated.
+	- autotrust options: add-holddown, del-holddown, keep-missing.
 
 24 August 2009: Wouter
 	- cleaner memory allocation on exit. autotrust test routines.

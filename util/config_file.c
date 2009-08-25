@@ -394,6 +394,15 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	} else if(strcmp(opt, "val-nsec3-keysize-iterations:") == 0) {
 		free(cfg->val_nsec3_key_iterations);
 		return (cfg->val_nsec3_key_iterations = strdup(val)) != NULL;
+	} else if(strcmp(opt, "add-holddown:") == 0) {
+		IS_NUMBER_OR_ZERO;
+		cfg->add_holddown = (unsigned)atoi(val);
+	} else if(strcmp(opt, "del-holddown:") == 0) {
+		IS_NUMBER_OR_ZERO;
+		cfg->del_holddown = (unsigned)atoi(val);
+	} else if(strcmp(opt, "keep-missing:") == 0) {
+		IS_NUMBER_OR_ZERO;
+		cfg->keep_missing = (unsigned)atoi(val);
 	} else if(strcmp(opt, "key-cache-size:") == 0) {
 		return cfg_parse_memsize(val, &cfg->key_cache_size);
 	} else if(strcmp(opt, "key-cache-slabs:") == 0) {

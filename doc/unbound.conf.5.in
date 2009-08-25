@@ -594,6 +594,26 @@ be in ascending order and have at least one entry. If you set it to
 "1024 65535" there is no restriction to NSEC3 iteration values.
 This table must be kept short; a very long list could cause slower operation.
 .TP
+.B add\-holddown: \fI<seconds>
+Instruct the \fBauto\-trust\-anchor\-file\fR probe mechanism for RFC5011
+autotrust updates to add new trust anchors only after they have been
+visible for this time.  Default is 30 days as per the RFC.
+.TP
+.B del\-holddown: \fI<seconds>
+Instruct the \fBauto\-trust\-anchor\-file\fR probe mechanism for RFC5011
+autotrust updates to remove revoked trust anchors after they have been
+kept in the revoked list for this long.  Default is 30 days as per
+the RFC.
+.TP
+.B keep\-missing: \fI<seconds>
+Instruct the \fBauto\-trust\-anchor\-file\fR probe mechanism for RFC5011
+autotrust updates to remove missing trust anchors after they have been
+unseen for this long.  This cleans up the state file if the target zone
+does not perform trust anchor revocation, so this makes the auto probe
+mechanism work with zones that perform regular (non\-5011) rollovers.
+The default is 366 days.  The value 0 does not remove missing anchors,
+as per the RFC.
+.TP
 .B key\-cache\-size: \fI<number>
 Number of bytes size of the key cache. Default is 4 megabytes.
 A plain number is in bytes, append 'k', 'm' or 'g' for kilobytes, megabytes
