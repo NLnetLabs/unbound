@@ -176,7 +176,7 @@ daemon_init()
 #endif
 	OpenSSL_add_all_algorithms();
 	/* grab the COMP method ptr because openssl leaks it */
-	comp_meth = SSL_COMP_get_compression_methods();
+	comp_meth = (void*)SSL_COMP_get_compression_methods();
 	(void)SSL_library_init();
 #ifdef HAVE_TZSET
 	/* init timezone info while we are not chrooted yet */

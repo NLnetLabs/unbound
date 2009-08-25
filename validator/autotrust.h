@@ -80,6 +80,7 @@ struct autr_ta {
 
 /** 
  * Autotrust metadata for a trust point.
+ * This is part of the struct trust_anchor data.
  */
 struct autr_point_data {
 	/** file to store the trust point in. chrootdir already applied. */
@@ -104,6 +105,8 @@ struct autr_point_data {
 
 	/** how many times did it fail */
 	uint8_t query_failed;
+	/** true if the trust point has been revoked */
+	uint8_t revoked;
 };
 
 /** 

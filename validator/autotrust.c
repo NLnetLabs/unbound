@@ -50,6 +50,7 @@
 #include "util/module.h"
 #include "util/net_help.h"
 #include "util/config_file.h"
+#include "util/regional.h"
 
 /** number of times a key must be seen before it can become valid */
 #define MIN_PENDINGCOUNT 2
@@ -599,6 +600,7 @@ parse_id(struct val_anchors* anchors, char* line)
  * @param anchor: the anchor as result value or previously returned anchor
  * 	value to read the variable lines into.
  * @return: 0 no match, -1 failed syntax error, +1 success line read.
+ * 	+2 revoked trust anchor file.
  */
 static int
 parse_var_line(char* line, struct val_anchors* anchors, 
@@ -610,6 +612,12 @@ parse_var_line(char* line, struct val_anchors* anchors,
 		*anchor = parse_id(anchors, line+6);
 		if(!*anchor) return -1;
 		else return 1;
+	} else if(strncmp(line, ";;REVOKED", 9) == 0) {
+		if(tp) {
+			log_err("REVOKED statement must be at start of file");
+			return -1;
+		}
+		return 2;
 	} else if(strncmp(line, ";;last_queried: ", 16) == 0) {
 		if(!tp) return -1;
 		lock_basic_lock(&tp->lock);
@@ -663,7 +671,6 @@ int autr_read_file(struct val_anchors* anchors, const char* nm)
                 return 0;
         }
         verbose(VERB_ALGO, "reading autotrust anchor file %s", nm);
-	/* TODO: read line to see if special marker for revoked tp */
         while (fgets(line, (int)sizeof(line), fd) != NULL) {
                 line_nr++;
 		if((r = parse_var_line(line, anchors, &tp)) == -1) {
@@ -672,6 +679,10 @@ int autr_read_file(struct val_anchors* anchors, const char* nm)
 			return 0;
 		} else if(r == 1) {
 			continue;
+		} else if(r == 2) {
+			log_warn("trust anchor %s has been revoked", nm);
+			fclose(fd);
+			return 1;
 		}
         	if (!str_contains_data(line, ';'))
                 	continue; /* empty lines allowed */
@@ -757,6 +768,14 @@ void autr_write_file(struct module_env* env, struct trust_anchor* tp)
 	}
 	/* write pretty header */
 	fprintf(out, "; autotrust trust anchor file\n");
+	if(tp->autr->revoked) {
+		fprintf(out, ";;REVOKED\n");
+		fprintf(out, "; The zone has all keys revoked, and is\n"
+			"; considered as if it has no trust anchors.\n"
+			"; the remainder of the file is the last probe.\n"
+			"; to restart the trust anchor, overwrite this file.\n"
+			"; with one containing valid DNSKEYs or DSes.\n");
+	}
 	print_id(out, env, tp->name, tp->namelen, tp->dclass);
 	fprintf(out, ";;last_queried: %u ;;%s", 
 		(unsigned int)tp->autr->last_queried, 
@@ -770,9 +789,6 @@ void autr_write_file(struct module_env* env, struct trust_anchor* tp)
 	fprintf(out, ";;query_failed: %d\n", (int)tp->autr->query_failed);
 	fprintf(out, ";;query_interval: %d\n", (int)tp->autr->query_interval);
 	fprintf(out, ";;retry_time: %d\n", (int)tp->autr->retry_time);
-
-	/* write revoked tp special marker */
-	/* TODO */
 
 	/* write anchors */
 	for(ta=tp->autr->keys; ta; ta=ta->next) {
@@ -1399,6 +1415,36 @@ autr_cleanup_keys(struct trust_anchor* tp)
 	}
 }
 
+/** Delete trust point that was revoked */
+static void
+autr_tp_remove(struct module_env* env, struct trust_anchor* tp)
+{
+	struct trust_anchor key;
+	/* save name */
+	memset(&key, 0, sizeof(key));
+	key.node.key = &key;
+	key.name = regional_alloc_init(env->scratch, tp->name, tp->namelen);
+	if(!key.name) {
+		log_err("out of scratch memory in trust point delete");
+		/* the revoked=1 flag on it saves the day, but wastes memory */
+		return;
+	}
+	key.namelen = tp->namelen;
+	key.namelabs = tp->namelabs;
+	key.dclass = tp->dclass;
+
+	/* unlock */
+	lock_basic_unlock(&tp->lock);
+
+	/* take from tree. It could be deleted by someone else. */
+	lock_basic_lock(&env->anchors->lock);
+	(void)rbtree_delete(env->anchors->tree, &key);
+	anchors_init_parents_locked(env->anchors);
+	lock_basic_unlock(&env->anchors->lock);
+	/* delete */
+	autr_point_delete(tp);
+}
+
 int autr_process_prime(struct module_env* env, struct val_env* ve,
 	struct trust_anchor* tp, struct ub_packed_rrset_key* dnskey_rrset)
 {
@@ -1407,7 +1453,15 @@ int autr_process_prime(struct module_env* env, struct val_env* ve,
 	/* autotrust update trust anchors */
 	/* the tp is locked, and stays locked unless it is deleted */
 
-	/* TODO: check if marked as revoked, if so, unlock and return */
+	/* we could just catch the anchor here while another thread
+	 * is busy deleting it. Just unlock and let the other do its job */
+	if(tp->autr->revoked) {
+		log_nametypeclass(VERB_ALGO, "autotrust not processed, "
+			"trust point revoked", tp->name, 
+			LDNS_RR_TYPE_DNSKEY, tp->dclass);
+		lock_basic_unlock(&tp->lock);
+		return 0; /* it is revoked */
+	}
 
 	/* query_dnskeys(): */
 	tp->autr->last_queried = *env->now;
@@ -1460,9 +1514,8 @@ int autr_process_prime(struct module_env* env, struct val_env* ve,
 		}
 		if(!tp->ds_rrset && !tp->dnskey_rrset) {
 			/* no more keys, all are revoked */
-			/* TODO: delete trust point:
-			 *	mark as revoked trust point.
-			 *	save name, unlock, take from tree, delete. */
+			tp->autr->revoked = 1;
+			autr_tp_remove(env, tp);
 			return 0; /* trust point removed */
 		}
 	} else verbose(VERB_ALGO, "autotrust: no changes");

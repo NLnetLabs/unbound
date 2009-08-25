@@ -120,15 +120,13 @@ anchors_delete(struct val_anchors* anchors)
 	free(anchors);
 }
 
-/** initialise parent pointers in the tree */
-static void
-init_parents(struct val_anchors* anchors)
+void
+anchors_init_parents_locked(struct val_anchors* anchors)
 {
 	struct trust_anchor* node, *prev = NULL, *p;
 	int m; 
 	/* nobody else can grab locks because we hold the main lock.
 	 * Thus the previous items, after unlocked, are not deleted */
-	lock_basic_lock(&anchors->lock);
 	RBTREE_FOR(node, struct trust_anchor*, anchors->tree) {
 		lock_basic_lock(&node->lock);
 		node->parent = NULL;
@@ -153,6 +151,14 @@ init_parents(struct val_anchors* anchors)
 		lock_basic_unlock(&node->lock);
 		prev = node;
 	}
+}
+
+/** initialise parent pointers in the tree */
+static void
+init_parents(struct val_anchors* anchors)
+{
+	lock_basic_lock(&anchors->lock);
+	anchors_init_parents_locked(anchors);
 	lock_basic_unlock(&anchors->lock);
 }
 

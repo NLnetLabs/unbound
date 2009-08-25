@@ -142,6 +142,16 @@ void anchors_delete(struct val_anchors* anchors);
 int anchors_apply_cfg(struct val_anchors* anchors, struct config_file* cfg);
 
 /**
+ * Recalculate parent pointers.  The caller must hold the lock on the
+ * anchors structure (say after removing an item from the rbtree).
+ * Caller must not hold any locks on trust anchors.
+ * After the call is complete the parent pointers are updated and an item
+ * just removed is no longer referenced in parent pointers.
+ * @param anchors: the structure to update.
+ */
+void anchors_init_parents_locked(struct val_anchors* anchors);
+
+/**
  * Given a qname/qclass combination, find the trust anchor closest above it.
  * Or return NULL if none exists.
  *
