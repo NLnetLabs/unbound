@@ -1089,7 +1089,7 @@ anchors_apply_cfg(struct val_anchors* anchors, struct config_file* cfg)
 	anchors_assemble_rrsets(anchors);
 	init_parents(anchors);
 	ldns_buffer_free(parsebuf);
-	autr_debug_print(anchors); /* DEBUG */
+	/*autr_debug_print(anchors); */ /* DEBUG */
 	return 1;
 }
 
