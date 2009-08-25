@@ -67,6 +67,10 @@ static int sig_record_reload = 0;
 /** cleaner ssl memory freeup */
 static void* comp_meth = NULL;
 #endif
+#ifdef LEX_HAS_YYLEX_DESTROY
+/** remove buffers for parsing and init */
+void ub_c_lex_destroy(void);
+#endif
 
 /** used when no other sighandling happens, so we don't die
   * when multiple signals in quick succession are sent to us. 
@@ -507,6 +511,10 @@ daemon_delete(struct daemon* daemon)
 	free(daemon->pidfile);
 	free(daemon->env);
 	free(daemon);
+#ifdef LEX_HAS_YYLEX_DESTROY
+	/* lex cleanup */
+	ub_c_lex_destroy();
+#endif
 	/* libcrypto cleanup */
 #if HAVE_DECL_SSL_COMP_GET_COMPRESSION_METHODS
 	sk_SSL_COMP_free(comp_meth);

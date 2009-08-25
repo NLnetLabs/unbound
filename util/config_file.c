@@ -61,10 +61,6 @@ int ub_c_lex(void);
 int ub_c_wrap(void);
 /** print error with file and line number */
 void ub_c_error(const char *message);
-#ifdef LEX_HAS_YYLEX_DESTROY
-/** remove buffers for parsing and init */
-void ub_c_lex_destroy(void);
-#endif
 
 /** init ports possible for use */
 static void init_outgoing_availports(int* array, int num);
@@ -477,9 +473,6 @@ config_read(struct config_file* cfg, const char* filename, const char* chroot)
 	create_cfg_parser(cfg, fname, chroot);
 	ub_c_in = in;
 	ub_c_parse();
-#ifdef LEX_HAS_YYLEX_DESTROY
-	ub_c_lex_destroy();
-#endif
 	fclose(in);
 
 	if(cfg_parser->errors != 0) {
