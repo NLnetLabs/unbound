@@ -529,6 +529,7 @@ AC_REPLACE_FUNCS(snprintf)
 AC_REPLACE_FUNCS(strlcpy)
 AC_REPLACE_FUNCS(memmove)
 AC_REPLACE_FUNCS(gmtime_r)
+AC_REPLACE_FUNCS(ctime_r)
 
 # check this after all other compilation checks, since the linking of the lib
 # may break checks after this.

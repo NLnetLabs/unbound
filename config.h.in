@@ -31,6 +31,9 @@
 /* Define to 1 if you have the `chroot' function. */
 #undef HAVE_CHROOT
 
+/* Define to 1 if you have the `ctime_r' function. */
+#undef HAVE_CTIME_R
+
 /* Define to 1 if you have the `daemon' function. */
 #undef HAVE_DAEMON
 
