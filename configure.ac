@@ -182,7 +182,16 @@ if test "$srcdir" != "."; then
 	CPPFLAGS="$CPPFLAGS -I$srcdir"
 fi
 
+AC_DEFUN([ACX_YYLEX_DESTROY], [
+	AC_MSG_CHECKING([for yylex_destroy])
+	if echo %% | $LEX -t 2>&1 | grep yylex_destroy >/dev/null 2>&1; then
+		AC_DEFINE(LEX_HAS_YYLEX_DESTROY, 1, [if lex has yylex_destroy])
+		AC_MSG_RESULT(yes)
+	else AC_MSG_RESULT(no); fi
+])
+
 AC_PROG_LEX
+ACX_YYLEX_DESTROY
 AC_PROG_YACC
 AC_CHECK_PROG(doxygen, doxygen, doxygen)
 AC_CHECK_TOOL(STRIP, strip)

@@ -323,6 +323,9 @@
 /* Define to 1 if you have the `_beginthreadex' function. */
 #undef HAVE__BEGINTHREADEX
 
+/* if lex has yylex_destroy */
+#undef LEX_HAS_YYLEX_DESTROY
+
 /* Define to the sub-directory in which libtool stores uninstalled libraries.
    */
 #undef LT_OBJDIR
