@@ -37,6 +37,10 @@
 /* Define to 1 if you have the `daemon' function. */
 #undef HAVE_DAEMON
 
+/* Define to 1 if you have the declaration of
+   `SSL_COMP_get_compression_methods', and to 0 if you don't. */
+#undef HAVE_DECL_SSL_COMP_GET_COMPRESSION_METHODS
+
 /* Define to 1 if you have the <dlfcn.h> header file. */
 #undef HAVE_DLFCN_H
 
@@ -764,6 +768,11 @@ struct tm *gmtime_r(const time_t *timep, struct tm *result);
 #endif /* IPV6_MIN_MTU */
 
 
+
+#ifndef HAVE_CTIME_R
+#define ctime_r unbound_ctime_r
+char *ctime_r(const time_t *timep, char *buf);
+#endif
 
 #if defined(HAVE_EVENT_H) && !defined(HAVE_EVENT_BASE_ONCE) && (defined(HAVE_PTHREAD) || defined(HAVE_SOLARIS_THREADS))
    /* using version of libevent that is not threadsafe. */

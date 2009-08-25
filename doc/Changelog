@@ -4,7 +4,8 @@
 	- autotrust options: add-holddown, del-holddown, keep-missing.
 	- autotrust store revoked status of trust points.
 	- ctime_r compat definition.
-	- detect yylex_destroy().
+	- detect yylex_destroy() in configure.
+	- detect SSL_get_compression_methods declaration in configure.
 
 24 August 2009: Wouter
 	- cleaner memory allocation on exit. autotrust test routines.
