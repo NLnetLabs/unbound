@@ -144,14 +144,15 @@ ifeq "$(UB_ON_WINDOWS)" "yes"
 
   WINAPPS=$(addsuffix $(EXEEXT), unbound-service-install \
   	unbound-service-remove anchor-update)
+  COMPAT_WINAPP=$(filter-out ctime_r.lo, $(COMPAT_OBJ))
   SVCINST_SRC=winrc/unbound-service-install.c winrc/w_inst.c
-  SVCINST_OBJ=$(addprefix $(BUILD),$(SVCINST_SRC:.c=.lo)) $(COMPAT_OBJ) \
+  SVCINST_OBJ=$(addprefix $(BUILD),$(SVCINST_SRC:.c=.lo)) $(COMPAT_WINAPP) \
 	$(BUILD)winrc/rsrc_svcinst.o
   SVCUNINST_SRC=winrc/unbound-service-remove.c winrc/w_inst.c
-  SVCUNINST_OBJ=$(addprefix $(BUILD),$(SVCUNINST_SRC:.c=.lo)) $(COMPAT_OBJ) \
+  SVCUNINST_OBJ=$(addprefix $(BUILD),$(SVCUNINST_SRC:.c=.lo)) $(COMPAT_WINAPP) \
 	$(BUILD)winrc/rsrc_svcuninst.o
   ANCHORUPD_SRC=winrc/anchor-update.c
-  ANCHORUPD_OBJ=$(addprefix $(BUILD),$(ANCHORUPD_SRC:.c=.lo)) $(COMPAT_OBJ) \
+  ANCHORUPD_OBJ=$(addprefix $(BUILD),$(ANCHORUPD_SRC:.c=.lo)) $(COMPAT_WINAPP) \
         $(BUILD)winrc/rsrc_anchorupd.o
   ALL_SRC:=$(sort $(ALL_SRC) $(SVCINST_SRC) $(SVCUNINST_SRC) $(ANCHORUPD_SRC))
   ALL_OBJ:=$(sort $(ALL_OBJ) $(SVCINST_OBJ) $(SVCUNINST_OBJ) $(ANCHORUPD_OBJ))
