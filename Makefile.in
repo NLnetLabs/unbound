@@ -144,7 +144,7 @@ ifeq "$(UB_ON_WINDOWS)" "yes"
 
   WINAPPS=$(addsuffix $(EXEEXT), unbound-service-install \
   	unbound-service-remove anchor-update)
-  COMPAT_WINAPP=$(filter-out ctime_r.lo, $(COMPAT_OBJ))
+  COMPAT_WINAPP=$(filter-out $(BUILD)/compat/ctime_r.lo, $(COMPAT_OBJ))
   SVCINST_SRC=winrc/unbound-service-install.c winrc/w_inst.c
   SVCINST_OBJ=$(addprefix $(BUILD),$(SVCINST_SRC:.c=.lo)) $(COMPAT_WINAPP) \
 	$(BUILD)winrc/rsrc_svcinst.o
