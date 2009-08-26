@@ -56,7 +56,10 @@ struct autr_global_data;
 struct val_anchors {
 	/** lock on trees */
 	lock_basic_t lock;
-	/** region where trust anchors are allocated */
+	/** 
+	 * region where trust anchors are allocated.
+	 * Autotrust anchors are malloced so they can be updated. 
+	 */
 	struct regional* region;
 	/**
 	 * Anchors are store in this tree. Sort order is chosen, so that

@@ -51,6 +51,9 @@
 #include "util/net_help.h"
 #include "util/config_file.h"
 #include "util/regional.h"
+#include "util/random.h"
+#include "util/data/msgparse.h"
+#include "services/mesh.h"
 
 /** number of times a key must be seen before it can become valid */
 #define MIN_PENDINGCOUNT 2
@@ -61,7 +64,7 @@ struct autr_global_data* autr_global_create(void)
 	global = (struct autr_global_data*)malloc(sizeof(*global));
 	if(!global) 
 		return NULL;
-	rbtree_init(&global->probetree, &probetree_cmp);
+	rbtree_init(&global->probe, &probetree_cmp);
 	return global;
 }
 
@@ -78,11 +81,24 @@ int probetree_cmp(const void* x, const void* y)
 {
 	struct trust_anchor* a = (struct trust_anchor*)x;
 	struct trust_anchor* b = (struct trust_anchor*)y;
+	log_assert(a->autr && b->autr);
 	if(a->autr->next_probe_time < b->autr->next_probe_time)
 		return -1;
 	if(a->autr->next_probe_time > b->autr->next_probe_time)
 		return 1;
-	return 0;
+	/* time is equal, sort on trust point identity */
+	return anchor_cmp(x, y);
+}
+
+size_t 
+autr_get_num_anchors(struct val_anchors* anchors)
+{
+	size_t res = 0;
+	lock_basic_lock(&anchors->lock);
+	if(anchors->autr)
+		res = anchors->autr->probe.count;
+	lock_basic_unlock(&anchors->lock);
+	return res;
 }
 
 /** Position in string */
@@ -328,6 +344,15 @@ autr_tp_create(struct val_anchors* anchors, ldns_rdf* own, uint16_t dc)
 		free(tp);
 		return NULL;
 	}
+	if(!rbtree_insert(&anchors->autr->probe, &tp->autr->pnode)) {
+		(void)rbtree_delete(anchors->tree, tp);
+		lock_basic_unlock(&anchors->lock);
+		log_err("trust anchor in probetree twice");
+		free(tp->name);
+		free(tp->autr);
+		free(tp);
+		return NULL;
+	}
 	lock_basic_unlock(&anchors->lock);
 	lock_basic_init(&tp->lock);
 	lock_protect(&tp->lock, tp, sizeof(*tp));
@@ -458,7 +483,6 @@ load_trustanchor(struct val_anchors* anchors, char* str, const char* fname)
 		return NULL;
 	}
 	if(!tp->autr->file) {
-		/* TODO insert tp into probe tree */
 		tp->autr->file = strdup(fname);
 		if(!tp->autr->file) {
 			lock_basic_unlock(&tp->lock);
@@ -630,10 +654,13 @@ parse_var_line(char* line, struct val_anchors* anchors,
 		lock_basic_unlock(&tp->lock);
 	} else if(strncmp(line, ";;next_probe_time: ", 19) == 0) {
 		if(!tp) return -1;
+		lock_basic_lock(&anchors->lock);
 		lock_basic_lock(&tp->lock);
+		(void)rbtree_delete(&anchors->autr->probe, tp);
 		tp->autr->next_probe_time = (time_t)parse_int(line+19, &r);
-		/* TODO manage probetree */
+		(void)rbtree_insert(&anchors->autr->probe, &tp->autr->pnode);
 		lock_basic_unlock(&tp->lock);
+		lock_basic_unlock(&anchors->lock);
 	} else if(strncmp(line, ";;query_failed: ", 16) == 0) {
 		if(!tp) return -1;
 		lock_basic_lock(&tp->lock);
@@ -1415,14 +1442,66 @@ autr_cleanup_keys(struct trust_anchor* tp)
 	}
 }
 
+/** calculate next probe time */
+static time_t
+calc_next_probe(struct module_env* env, uint32_t wait)
+{
+	/* TODO (how test?) make it random, 90-100% */
+	if(wait < 3600)
+		wait = 3600;
+	return (time_t)(*env->now + wait);
+}
+
+/** set next probe for trust anchor */
+static int
+set_next_probe(struct module_env* env, struct trust_anchor* tp,
+	struct ub_packed_rrset_key* dnskey_rrset)
+{
+	struct trust_anchor key, *tp2;
+	/* use memory allocated in rrset for temporary name storage */
+	key.node.key = &key;
+	key.name = dnskey_rrset->rk.dname;
+	key.namelen = dnskey_rrset->rk.dname_len;
+	key.namelabs = dname_count_labels(key.name);
+	key.dclass = tp->dclass;
+	lock_basic_unlock(&tp->lock);
+
+	/* fetch tp again and lock anchors */
+	lock_basic_lock(&env->anchors->lock);
+	tp2 = (struct trust_anchor*)rbtree_search(env->anchors->tree, &key);
+	if(!tp2) {
+		verbose(VERB_ALGO, "trustpoint was deleted in set_next_probe");
+		lock_basic_unlock(&env->anchors->lock);
+		return 0;
+	}
+	log_assert(tp == tp2);
+	lock_basic_lock(&tp->lock);
+
+	/* schedule */
+	(void)rbtree_delete(&env->anchors->autr->probe, tp);
+	tp->autr->next_probe_time = calc_next_probe(env, 
+		tp->autr->query_interval);
+	(void)rbtree_insert(&env->anchors->autr->probe, &tp->autr->pnode);
+
+	lock_basic_unlock(&env->anchors->lock);
+	verbose(VERB_ALGO, "next probe set in %d seconds", 
+		(int)tp->autr->next_probe_time - (int)*env->now);
+	return 1;
+}
+
 /** Delete trust point that was revoked */
 static void
 autr_tp_remove(struct module_env* env, struct trust_anchor* tp)
 {
 	struct trust_anchor key;
+	struct autr_point_data pd;
 	/* save name */
 	memset(&key, 0, sizeof(key));
+	memset(&pd, 0, sizeof(pd));
+	key.autr = &pd;
 	key.node.key = &key;
+	pd.pnode.key = &key;
+	pd.next_probe_time = tp->autr->next_probe_time;
 	key.name = regional_alloc_init(env->scratch, tp->name, tp->namelen);
 	if(!key.name) {
 		log_err("out of scratch memory in trust point delete");
@@ -1439,6 +1518,7 @@ autr_tp_remove(struct module_env* env, struct trust_anchor* tp)
 	/* take from tree. It could be deleted by someone else. */
 	lock_basic_lock(&env->anchors->lock);
 	(void)rbtree_delete(env->anchors->tree, &key);
+	(void)rbtree_delete(&env->anchors->autr->probe, &key);
 	anchors_init_parents_locked(env->anchors);
 	lock_basic_unlock(&env->anchors->lock);
 	/* delete */
@@ -1505,8 +1585,10 @@ int autr_process_prime(struct module_env* env, struct val_env* ve,
 	}
 
 	if(changed) {
-		verbose(VERB_ALGO, "autotrust: point changed, write to disk");
 		autr_cleanup_keys(tp);
+		if(!set_next_probe(env, tp, dnskey_rrset))
+			return 0; /* trust point does not exist */
+		verbose(VERB_ALGO, "autotrust: point changed, write to disk");
 		autr_write_file(env, tp);
 		if(!autr_assemble(tp)) {
 			log_err("malloc failure assembling autotrust keys");
@@ -1552,7 +1634,7 @@ autr_debug_print_tp(struct trust_anchor* tp)
 	log_info("trust point %s : %d", buf, (int)tp->dclass);
 	log_info("assembled %d DS and %d DNSKEYs", 
 		(int)tp->numDS, (int)tp->numDNSKEY);
-	if(1) { /* DEBUG */
+	if(0) {
 		ldns_buffer* buf = ldns_buffer_new(70000);
 		ldns_rr_list* list;
 		if(tp->ds_rrset) {
@@ -1600,4 +1682,95 @@ autr_debug_print(struct val_anchors* anchors)
 		lock_basic_unlock(&tp->lock);
 	}
 	lock_basic_unlock(&anchors->lock);
+}
+
+void probe_answer_cb(void* arg, int rcode, ldns_buffer* buf, 
+	enum sec_status sec)
+{
+	struct module_env* env = (struct module_env*)arg;
+	verbose(VERB_ALGO, "autotrust probe answer cb");
+}
+
+/** probe a trust anchor DNSKEY and unlocks tp */
+static void
+probe_anchor(struct module_env* env, struct trust_anchor* tp)
+{
+	struct query_info qinfo;
+	uint16_t qflags = BIT_RD;
+	struct edns_data edns;
+	ldns_buffer* buf = env->scratch_buffer;
+	qinfo.qname = regional_alloc_init(env->scratch, tp->name, tp->namelen);
+	if(!qinfo.qname) {
+		log_err("out of memory making 5011 probe");
+		return;
+	}
+	qinfo.qname_len = tp->namelen;
+	qinfo.qtype = LDNS_RR_TYPE_DNSKEY;
+	qinfo.qclass = tp->dclass;
+	log_query_info(VERB_ALGO, "autotrust probe", &qinfo);
+	verbose(VERB_ALGO, "retry probe set in %d seconds", 
+		(int)tp->autr->next_probe_time - (int)*env->now);
+	edns.edns_present = 1;
+	edns.ext_rcode = 0;
+	edns.edns_version = 0;
+	edns.bits = EDNS_DO;
+	if(ldns_buffer_capacity(buf) < 65535)
+		edns.udp_size = (uint16_t)ldns_buffer_capacity(buf);
+	else	edns.udp_size = 65535;
+
+	/* can't hold the lock while mesh_run is processing */
+	lock_basic_unlock(&tp->lock);
+	if(!mesh_new_callback(env->mesh, &qinfo, qflags, &edns, buf, 0, 
+		&probe_answer_cb, env)) {
+		log_err("out of memory making 5011 probe");
+	}
+}
+
+/** fetch first to-probe trust-anchor and lock it and set retrytime */
+static struct trust_anchor*
+todo_probe(struct module_env* env, uint32_t* next)
+{
+	struct trust_anchor* tp;
+	rbnode_t* el;
+	/* get first one */
+	lock_basic_lock(&env->anchors->lock);
+	if( !(el=rbtree_first(&env->anchors->autr->probe)) ) {
+		/* in case of revoked anchors */
+		lock_basic_unlock(&env->anchors->lock);
+		return NULL;
+	}
+	tp = (struct trust_anchor*)el->key;
+	lock_basic_lock(&tp->lock);
+
+	/* is it eligible? */
+	if((uint32_t)tp->autr->next_probe_time > *env->now) {
+		/* no more to probe */
+		*next = (uint32_t)tp->autr->next_probe_time - *env->now;
+		lock_basic_unlock(&tp->lock);
+		lock_basic_unlock(&env->anchors->lock);
+		return NULL;
+	}
+
+	/* reset its next probe time */
+	(void)rbtree_delete(&env->anchors->autr->probe, tp);
+	tp->autr->next_probe_time = calc_next_probe(env, tp->autr->retry_time);
+	(void)rbtree_insert(&env->anchors->autr->probe, &tp->autr->pnode);
+	lock_basic_unlock(&env->anchors->lock);
+
+	return tp;
+}
+
+uint32_t 
+autr_probe_timer(struct module_env* env)
+{
+	struct trust_anchor* tp;
+	uint32_t next_probe = 3600;
+	verbose(VERB_ALGO, "autotrust probe timer callback");
+	/* while there are still anchors to probe */
+	while( (tp = todo_probe(env, &next_probe)) ) {
+		/* make a probe for this anchor */
+		probe_anchor(env, tp);
+	}
+	verbose(VERB_ALGO, "autotrust probe timer callback done");
+	return next_probe;
 }

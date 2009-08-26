@@ -101,6 +101,8 @@ struct worker {
 	struct comm_point* cmd_com;
 	/** timer for statistics */
 	struct comm_timer* stat_timer;
+	/** timer for autotrust probes */
+	struct comm_timer* probe_timer;
 
 	/** number of requests that can be handled by this worker */
 	size_t request_size;
@@ -235,5 +237,8 @@ void worker_stats_clear(struct worker* worker);
 
 /** statistics timer callback handler */
 void worker_stat_timer_cb(void* arg);
+
+/** probe timer callback handler */
+void worker_probe_timer_cb(void* arg);
 
 #endif /* DAEMON_WORKER_H */

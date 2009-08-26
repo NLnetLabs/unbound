@@ -833,6 +833,11 @@ void worker_stat_timer_cb(void* ATTR_UNUSED(arg))
 	log_assert(0);
 }
 
+void worker_probe_timer_cb(void* ATTR_UNUSED(arg))
+{
+	log_assert(0);
+}
+
 int order_lock_cmp(const void* ATTR_UNUSED(e1), const void* ATTR_UNUSED(e2))
 {
 	log_assert(0);

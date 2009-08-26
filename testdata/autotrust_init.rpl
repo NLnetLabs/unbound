@@ -99,6 +99,21 @@ RANGE_END
 ; set date/time to Aug 24 09:46:40  (2009).
 STEP 5 TIME_PASSES ELAPSE 1251100000
 
+; the auto probing should have been done now.
+STEP 7 CHECK_AUTOTRUST example.com
+FILE_BEGIN
+; autotrust trust anchor file
+;;id: example.com. 1
+;;last_queried: 1251100000 ;;Mon Aug 24 09:46:40 2009
+;;last_success: 1251100000 ;;Mon Aug 24 09:46:40 2009
+;;next_probe_time: 1251105400 ;;Mon Aug 24 11:16:40 2009
+;;query_failed: 0
+;;query_interval: 5400
+;;retry_time: 3600
+example.com.	10800	IN	DNSKEY	257 3 5 AwEAAc3Z5DQDJpH4oPdNtC4BUQHk50XMD+dHr4r8psHmivIa83hxR5CRgCtd9sENCW9Ae8OIO19xw9t/RPaEAqQa+OE= ;{id = 55582 (ksk), size = 512b} ;;state=2 [  VALID  ] ;;count=0 ;;lastchange=1251100000 ;;Mon Aug 24 09:46:40 2009
+FILE_END
+
+
 STEP 10 QUERY
 ENTRY_BEGIN
 REPLY RD DO
@@ -131,7 +146,7 @@ FILE_BEGIN
 ;;id: example.com. 1
 ;;last_queried: 1251100000 ;;Mon Aug 24 09:46:40 2009
 ;;last_success: 1251100000 ;;Mon Aug 24 09:46:40 2009
-;;next_probe_time: 0 ;;Thu Jan  1 01:00:00 1970
+;;next_probe_time: 1251105400 ;;Mon Aug 24 11:16:40 2009
 ;;query_failed: 0
 ;;query_interval: 5400
 ;;retry_time: 3600

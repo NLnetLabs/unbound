@@ -112,6 +112,7 @@ struct replay_answer;
 struct replay_moment;
 struct replay_range;
 struct fake_pending;
+struct fake_timer;
 
 /**
  * A replay scenario.
@@ -244,6 +245,9 @@ struct replay_runtime {
 	/** last element in answer list. */
 	struct replay_answer* answer_last;
 
+	/** list of fake timer callbacks that are pending */
+	struct fake_timer* timer_list;
+
 	/** callback to call for incoming queries */
 	comm_point_callback_t* callback_query;
 	/** user argument for incoming query callback */
@@ -304,6 +308,24 @@ struct replay_answer {
 	struct comm_reply repinfo;
 	/** the answer preparsed as ldns pkt */
 	ldns_pkt* pkt;
+};
+
+/**
+ * Timers with callbacks, fake replay version.
+ */
+struct fake_timer {
+	/** next in list */
+	struct fake_timer* next;
+	/** the runtime structure this is part of */
+	struct replay_runtime* runtime;
+	/** the callback to call */
+	void (*cb)(void*);
+	/** the callback user argument */
+	void* cb_arg;
+	/** if timer is enabled */
+	int enabled;
+	/** when the timer expires */
+	struct timeval tv;
 };
 
 /**

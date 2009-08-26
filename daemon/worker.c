@@ -66,6 +66,7 @@
 #include "util/fptr_wlist.h"
 #include "util/tube.h"
 #include "iterator/iter_fwd.h"
+#include "validator/autotrust.h"
 
 #ifdef HAVE_SYS_TYPES_H
 #  include <sys/types.h>
@@ -940,6 +941,15 @@ void worker_stat_timer_cb(void* arg)
 	worker_restart_timer(worker);
 }
 
+void worker_probe_timer_cb(void* arg)
+{
+	struct worker* worker = (struct worker*)arg;
+	struct timeval tv;
+	tv.tv_sec = autr_probe_timer(&worker->env);
+	tv.tv_usec = 0;
+	comm_timer_set(worker->probe_timer, &tv);
+}
+
 struct worker* 
 worker_create(struct daemon* daemon, int id, int* ports, int n)
 {
@@ -1054,6 +1064,23 @@ worker_init(struct worker* worker, struct config_file *cfg,
 	if(!worker->stat_timer) {
 		log_err("could not create statistics timer");
 	}
+	/* one probe timer per process -- if we have 5011 anchors */
+	if(autr_get_num_anchors(worker->daemon->env->anchors) > 0
+#ifndef THREADS_DISABLED
+		&& worker->thread_num == 0
+#endif
+		) {
+		struct timeval tv;
+		tv.tv_sec = 0;
+		tv.tv_usec = 0;
+		worker->probe_timer = comm_timer_create(worker->base,
+			worker_probe_timer_cb, worker);
+		if(!worker->probe_timer) {
+			log_err("could not create 5011-probe timer");
+		}
+		/* let timer fire, then it can reset itself */
+		comm_timer_set(worker->probe_timer, &tv);
+	}
 
 	/* we use the msg_buffer_size as a good estimate for what the 
 	 * user wants for memory usage sizes */
@@ -1130,6 +1157,7 @@ worker_delete(struct worker* worker)
 	comm_signal_delete(worker->comsig);
 	tube_delete(worker->cmd);
 	comm_timer_delete(worker->stat_timer);
+	comm_timer_delete(worker->probe_timer);
 	free(worker->ports);
 	if(worker->thread_num == 0) {
 		log_set_time(NULL);

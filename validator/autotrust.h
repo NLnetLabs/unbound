@@ -42,6 +42,7 @@
 #ifndef VALIDATOR_AUTOTRUST_H
 #define VALIDATOR_AUTOTRUST_H
 #include "util/rbtree.h"
+#include "util/data/packed_rrset.h"
 struct val_anchors;
 struct trust_anchor;
 struct ub_packed_rrset_key;
@@ -113,8 +114,9 @@ struct autr_point_data {
  * Autotrust global metadata.
  */
 struct autr_global_data {
-	/** rbtree of autotrust anchors sorted by next probe time */
-	rbtree_t probetree;
+	/** rbtree of autotrust anchors sorted by next probe time.
+	 * When time is equal, sorted by anchor class, name. */
+	rbtree_t probe;
 };
 
 /**
@@ -128,6 +130,19 @@ struct autr_global_data* autr_global_create(void);
  * @param global: global autotrust state to delete.
  */
 void autr_global_delete(struct autr_global_data* global);
+
+/**
+ * See if autotrust anchors are configured and how many.
+ * @param anchors: the trust anchors structure.
+ */
+size_t autr_get_num_anchors(struct val_anchors* anchors);
+
+/**
+ * Process probe timer.  Add new probes if needed.
+ * @param env: module environment with time, with anchors and with the mesh.
+ * @return time of next probe (in seconds from now).
+ */
+uint32_t autr_probe_timer(struct module_env* env);
 
 /** probe tree compare function */
 int probetree_cmp(const void* x, const void* y);
@@ -172,5 +187,9 @@ int autr_process_prime(struct module_env* env, struct val_env* ve,
  * @param anchors: all the anchors.
  */
 void autr_debug_print(struct val_anchors* anchors);
+
+/** callback for query answer to 5011 probe */
+void probe_answer_cb(void* arg, int rcode, ldns_buffer* buf, 
+	enum sec_status sec);
 
 #endif /* VALIDATOR_AUTOTRUST_H */

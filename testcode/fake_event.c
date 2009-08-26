@@ -57,6 +57,7 @@
 #include "testcode/replay.h"
 #include "testcode/ldns-testpkts.h"
 #include "util/log.h"
+#include "util/fptr_wlist.h"
 #include <signal.h>
 struct worker;
 
@@ -74,6 +75,22 @@ timeval_add(struct timeval* d, const struct timeval* add)
 		d->tv_usec -= 1000000;
 		d->tv_sec++;
 	}
+#endif
+}
+
+/** compare of time values */
+static int
+timeval_smaller(const struct timeval* x, const struct timeval* y)
+{
+#ifndef S_SPLINT_S
+	if(x->tv_sec < y->tv_sec)
+		return 1;
+	else if(x->tv_sec == y->tv_sec) {
+		if(x->tv_usec <= y->tv_usec)
+			return 1;
+		else	return 0;
+	}
+	else	return 0;
 #endif
 }
 
@@ -438,10 +455,29 @@ fake_pending_callback(struct replay_runtime* runtime,
 	ldns_buffer_free(c.buffer);
 }
 
+/** get oldest enabled fake timer */
+static struct fake_timer*
+get_oldest_timer(struct replay_runtime* runtime)
+{
+	struct fake_timer* p, *res = NULL;
+	for(p=runtime->timer_list; p; p=p->next) {
+		if(!p->enabled)
+			continue;
+		if(timeval_smaller(&p->tv, &runtime->now_tv)) {
+			if(!res)
+				res = p;
+			else if(timeval_smaller(&p->tv, &res->tv))
+				res = p;
+		}
+	}
+	return res;
+}
+
 /** pass time */
 static void
 time_passes(struct replay_runtime* runtime, struct replay_moment* mom)
 {
+	struct fake_timer *t;
 	timeval_add(&runtime->now_tv, &mom->elapse);
 	runtime->now_secs = (uint32_t)runtime->now_tv.tv_sec;
 #ifndef S_SPLINT_S
@@ -449,6 +485,13 @@ time_passes(struct replay_runtime* runtime, struct replay_moment* mom)
 		(int)mom->elapse.tv_sec, (int)mom->elapse.tv_usec,
 		(int)runtime->now_tv.tv_sec, (int)runtime->now_tv.tv_usec);
 #endif
+	/* see if any timers have fired; and run them */
+	while( (t=get_oldest_timer(runtime)) ) {
+		t->enabled = 0;
+		log_info("fake_timer callback");
+		fptr_ok(fptr_whitelist_comm_timer(t->cb));
+		(*t->cb)(t->cb_arg);
+	}
 }
 
 /** check autotrust file contents */
@@ -674,6 +717,7 @@ comm_base_delete(struct comm_base* b)
 	struct replay_runtime* runtime = (struct replay_runtime*)b;
 	struct fake_pending* p, *np;
 	struct replay_answer* a, *na;
+	struct fake_timer* t, *nt;
 	if(!runtime)
 		return;
 	runtime->scenario= NULL;
@@ -688,6 +732,12 @@ comm_base_delete(struct comm_base* b)
 		na = a->next;
 		delete_replay_answer(a);
 		a = na;
+	}
+	t = runtime->timer_list;
+	while(t) {
+		nt = t->next;
+		free(t);
+		t = nt;
 	}
 	free(runtime);
 }
@@ -1201,25 +1251,57 @@ int serviced_cmp(const void* ATTR_UNUSED(a), const void* ATTR_UNUSED(b))
 	return 0;
 }
 
-/* no statistics timers in testbound */
-struct comm_timer* comm_timer_create(struct comm_base* ATTR_UNUSED(base), 
-	void (*cb)(void*), void* ATTR_UNUSED(cb_arg))
+/* timers in testbound for autotrust. statistics tested in tpkg. */
+struct comm_timer* comm_timer_create(struct comm_base* base, 
+	void (*cb)(void*), void* cb_arg)
 {
-	(void)cb;
-	return malloc(1);
+	struct replay_runtime* runtime = (struct replay_runtime*)base;
+	struct fake_timer* t = (struct fake_timer*)calloc(1, sizeof(*t));
+	t->cb = cb;
+	t->cb_arg = cb_arg;
+	fptr_ok(fptr_whitelist_comm_timer(t->cb)); /* check in advance */
+	t->runtime = runtime;
+	t->next = runtime->timer_list;
+	runtime->timer_list = t;
+	return (struct comm_timer*)t;
 }
 
-void comm_timer_disable(struct comm_timer* ATTR_UNUSED(timer))
+void comm_timer_disable(struct comm_timer* timer)
 {
+	struct fake_timer* t = (struct fake_timer*)timer;
+	log_info("fake timer disabled");
+	t->enabled = 0;
 }
 
-void comm_timer_set(struct comm_timer* ATTR_UNUSED(timer), 
-	struct timeval* ATTR_UNUSED(tv))
+void comm_timer_set(struct comm_timer* timer, struct timeval* tv)
 {
+	struct fake_timer* t = (struct fake_timer*)timer;
+	t->enabled = 1;
+	t->tv = *tv;
+	log_info("fake timer set %d.%6.6d", 
+		(int)t->tv.tv_sec, (int)t->tv.tv_usec);
+	timeval_add(&t->tv, &t->runtime->now_tv);
 }
 
 void comm_timer_delete(struct comm_timer* timer)
 {
+	struct fake_timer* t = (struct fake_timer*)timer;
+	struct fake_timer** pp, *p;
+	if(!t) return;
+
+	/* remove from linked list */
+	pp = &t->runtime->timer_list;
+	p = t->runtime->timer_list;
+	while(p) {
+		if(p == t) {
+			/* snip from list */
+			*pp = p->next;
+			break;
+		}
+		pp = &p->next;
+		p = p->next;
+	}
+
 	free(timer);
 }
 

@@ -91,6 +91,7 @@ anchors_create()
 	}
 	lock_basic_init(&a->lock);
 	lock_protect(&a->lock, a, sizeof(*a));
+	lock_protect(&a->lock, a->autr, sizeof(*a->autr));
 	return a;
 }
 
@@ -111,6 +112,7 @@ anchors_delete(struct val_anchors* anchors)
 {
 	if(!anchors)
 		return;
+	lock_unprotect(&anchors->lock, anchors->autr);
 	lock_unprotect(&anchors->lock, anchors);
 	lock_basic_destroy(&anchors->lock);
 	traverse_postorder(anchors->tree, anchors_delfunc, NULL);
@@ -1089,7 +1091,7 @@ anchors_apply_cfg(struct val_anchors* anchors, struct config_file* cfg)
 	anchors_assemble_rrsets(anchors);
 	init_parents(anchors);
 	ldns_buffer_free(parsebuf);
-	/*autr_debug_print(anchors); */ /* DEBUG */
+	if(verbosity >= VERB_ALGO) autr_debug_print(anchors);
 	return 1;
 }
 
