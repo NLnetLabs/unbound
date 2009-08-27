@@ -1,5 +1,6 @@
 26 August 2009: Wouter
 	- autotrust probing.
+	- iana portlist updated.
 
 25 August 2009: Wouter
 	- fixup memleak in trust anchor unsupported algorithm check.
