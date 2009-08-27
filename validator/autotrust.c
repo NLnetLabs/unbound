@@ -1684,10 +1684,13 @@ autr_debug_print(struct val_anchors* anchors)
 	lock_basic_unlock(&anchors->lock);
 }
 
-void probe_answer_cb(void* arg, int rcode, ldns_buffer* buf, 
-	enum sec_status sec)
+void probe_answer_cb(void* ATTR_UNUSED(arg), int ATTR_UNUSED(rcode), 
+	ldns_buffer* ATTR_UNUSED(buf), enum sec_status ATTR_UNUSED(sec))
 {
-	struct module_env* env = (struct module_env*)arg;
+	/* retry was set before the query was done,
+	 * re-querytime is set when query succeeded.
+	 * So, nothing to do now. */
+	/*struct module_env* env = (struct module_env*)arg;*/
 	verbose(VERB_ALGO, "autotrust probe answer cb");
 }
 
