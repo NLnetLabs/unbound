@@ -43,15 +43,20 @@
 #include "daemon/cachedump.h"
 #include "daemon/remote.h"
 #include "daemon/worker.h"
+#include "daemon/daemon.h"
 #include "services/cache/rrset.h"
 #include "services/cache/dns.h"
 #include "services/cache/infra.h"
+#include "services/modstack.h"
 #include "util/data/msgreply.h"
 #include "util/regional.h"
 #include "util/net_help.h"
 #include "util/data/dname.h"
+#include "iterator/iterator.h"
 #include "iterator/iter_delegpt.h"
 #include "iterator/iter_utils.h"
+#include "iterator/iter_fwd.h"
+#include "iterator/iter_hints.h"
 
 /** convert to ldns rr */
 static ldns_rr*
@@ -828,6 +833,36 @@ print_dp_details(SSL* ssl, struct worker* worker, struct delegpt* dp)
 	}
 }
 
+/** print main dp info */
+static void
+print_dp_main(SSL* ssl, struct delegpt* dp, struct dns_msg* msg)
+{
+	size_t i, n_ns, n_miss, n_addr, n_res, n_avail;
+
+	/* print the dp */
+	if(msg)
+	    for(i=0; i<msg->rep->rrset_count; i++) {
+		struct ub_packed_rrset_key* k = msg->rep->rrsets[i];
+		struct packed_rrset_data* d = 
+			(struct packed_rrset_data*)k->entry.data;
+		if(d->security == sec_status_bogus) {
+			if(!ssl_printf(ssl, "Address is BOGUS:\n"))
+				return;
+		}
+		if(!dump_rrset(ssl, k, d, 0))
+			return;
+	    }
+	delegpt_count_ns(dp, &n_ns, &n_miss);
+	delegpt_count_addr(dp, &n_addr, &n_res, &n_avail);
+	/* since dp has not been used by iterator, all are available*/
+	if(!ssl_printf(ssl, "Delegation with %d names, of which %d "
+		"can be examined to query further addresses.\n"
+		"%sIt provides %d IP addresses.\n", 
+		(int)n_ns, (int)n_miss, (dp->bogus?"It is BOGUS. ":""),
+		(int)n_addr))
+		return;
+}
+
 int print_deleg_lookup(SSL* ssl, struct worker* worker, uint8_t* nm,
 	size_t nmlen, int ATTR_UNUSED(nmlabs))
 {
@@ -837,17 +872,33 @@ int print_deleg_lookup(SSL* ssl, struct worker* worker, uint8_t* nm,
 	struct regional* region = worker->scratchpad;
 	char b[260];
 	struct query_info qinfo;
-	size_t i, n_ns, n_miss, n_addr, n_res, n_avail;
+	struct iter_hints_stub* stub;
+	struct iter_env* ie;
 	regional_free_all(region);
 	qinfo.qname = nm;
 	qinfo.qname_len = nmlen;
 	qinfo.qtype = LDNS_RR_TYPE_A;
 	qinfo.qclass = LDNS_RR_CLASS_IN;
 
+	if(modstack_find(&worker->daemon->mods, "iterator") == -1) {
+		return ssl_printf(ssl, "error: no iterator module\n");
+	}
+	ie = (struct iter_env*)worker->env.modinfo[modstack_find(&worker->
+		daemon->mods, "iterator")];
+
 	dname_str(nm, b);
 	if(!ssl_printf(ssl, "The following name servers are used for lookup "
 		"of %s\n", b)) 
 		return 0;
+	
+	dp = forwards_lookup(worker->env.fwds, nm, qinfo.qclass);
+	if(dp) {
+		if(!ssl_printf(ssl, "forwarding request:\n"))
+			return 0;
+		print_dp_main(ssl, dp, NULL);
+		print_dp_details(ssl, worker, dp);
+		return 1;
+	}
 	
 	while(1) {
 		dp = dns_cache_find_delegation(&worker->env, nm, nmlen, 
@@ -857,31 +908,10 @@ int print_deleg_lookup(SSL* ssl, struct worker* worker, uint8_t* nm,
 			return ssl_printf(ssl, "no delegation from "
 				"cache; goes to configured roots\n");
 		}
-		/* print the dp */
-		for(i=0; i<msg->rep->rrset_count; i++) {
-			struct ub_packed_rrset_key* k = msg->rep->rrsets[i];
-			struct packed_rrset_data* d = 
-				(struct packed_rrset_data*)k->entry.data;
-			if(d->security == sec_status_bogus) {
-				if(!ssl_printf(ssl, "Address is BOGUS:\n"))
-					return 0;
-			}
-			if(!dump_rrset(ssl, k, d, 0))
-				return 0;
-		}
-		delegpt_count_ns(dp, &n_ns, &n_miss);
-		delegpt_count_addr(dp, &n_addr, &n_res, &n_avail);
-		/* since dp has not been used by iterator, all are available*/
-		if(!ssl_printf(ssl, "Delegation with %d names, of which %d "
-			"can be examined to query further addresses.\n"
-			"%sIt provides %d IP addresses.\n", 
-			(int)n_ns, (int)n_miss, (dp->bogus?"It is BOGUS. ":""),
-			(int)n_addr))
-			return 0;
-		/* print more dp info */
-		print_dp_details(ssl, worker, dp);
 		/* go up? */
 		if(iter_dp_is_useless(&qinfo, BIT_RD, dp)) {
+			print_dp_main(ssl, dp, msg);
+			print_dp_details(ssl, worker, dp);
 			if(!ssl_printf(ssl, "cache delegation was "
 				"useless (no IP addresses)\n"))
 				return 0;
@@ -899,8 +929,25 @@ int print_deleg_lookup(SSL* ssl, struct worker* worker, uint8_t* nm,
 					return 0;
 				continue;
 			}
-		} else
-			break;
+		} 
+		stub = hints_lookup_stub(ie->hints, nm, qinfo.qclass, dp);
+		if(stub) {
+			if(stub->noprime) {
+				if(!ssl_printf(ssl, "The noprime stub servers "
+					"are used:\n"))
+					return 0;
+			} else {
+				if(!ssl_printf(ssl, "The stub is primed "
+						"with servers:\n"))
+					return 0;
+			}
+			print_dp_main(ssl, stub->dp, NULL);
+			print_dp_details(ssl, worker, stub->dp);
+		} else {
+			print_dp_main(ssl, dp, msg);
+			print_dp_details(ssl, worker, dp);
+		}
+		break;
 	}
 
 	return 1;

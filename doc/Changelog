@@ -1,3 +1,6 @@
+28 August 2009: Wouter
+	- fixup unbound-control lookup to print forward and stub servers.
+
 27 August 2009: Wouter
 	- autotrust: mesh answer callback is empty.
 
