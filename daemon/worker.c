@@ -945,7 +945,7 @@ void worker_probe_timer_cb(void* arg)
 {
 	struct worker* worker = (struct worker*)arg;
 	struct timeval tv;
-	tv.tv_sec = autr_probe_timer(&worker->env);
+	tv.tv_sec = (time_t)autr_probe_timer(&worker->env);
 	tv.tv_usec = 0;
 	comm_timer_set(worker->probe_timer, &tv);
 }
