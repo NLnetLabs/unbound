@@ -120,6 +120,14 @@ static void usage()
 	printf("Report bugs to %s\n", PACKAGE_BUGREPORT);
 }
 
+#ifndef unbound_testbound
+int replay_var_compare(const void* ATTR_UNUSED(a), const void* ATTR_UNUSED(b))
+{
+        log_assert(0);
+        return 0;
+}
+#endif
+
 /** check file descriptor count */
 static void
 checkrlimits(struct config_file* cfg)

@@ -708,6 +708,8 @@ comm_base_create(int ATTR_UNUSED(sigs))
 	struct replay_runtime* runtime = (struct replay_runtime*)
 		calloc(1, sizeof(struct replay_runtime));
 	runtime->scenario = saved_scenario;
+	runtime->vars = macro_store_create();
+	if(!runtime->vars) fatal_exit("out of memory");
 	return (struct comm_base*)runtime;
 }
 
@@ -739,6 +741,7 @@ comm_base_delete(struct comm_base* b)
 		free(t);
 		t = nt;
 	}
+	macro_store_delete(runtime->vars);
 	free(runtime);
 }
 

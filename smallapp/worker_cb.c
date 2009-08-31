@@ -233,3 +233,9 @@ codeline_cmp(const void* a, const void* b)
 {
         return strcmp((const char*)a, (const char*)b);
 }
+
+int replay_var_compare(const void* ATTR_UNUSED(a), const void* ATTR_UNUSED(b))
+{
+        log_assert(0);
+        return 0;
+}

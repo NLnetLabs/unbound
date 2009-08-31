@@ -75,6 +75,17 @@
  * ; more STEP items
  * SCENARIO_END
  *
+ * Calculations, a macro-like system: ${$myvar + 3600}
+ * STEP 10 ASSIGN $myvar = 3600
+ * 	; ASSIGN event. '=' is syntactic sugar here. 3600 is some expression.
+ * ${..} is macro expanded from its expression.  Text substitution.
+ * 	o $var replaced with its value.  var is identifier [azAZ09_]*
+ * 	o number is that number.
+ * 	o +, -, / and *.  Note, evaluated left-to-right. Use ${} for brackets.
+ *	o ${time} is the current time.
+ *	o ${ctime value} is the text ctime(value), i.e. Fri 3 Aug 2009, ...
+ *		must have one space after 'ctime'.
+ *	o ${timeout} is the time until next timeout in the comm_timer list.
  *
  * ; Example file
  * SCENARIO_BEGIN Example scenario
@@ -108,11 +119,13 @@
 #define TESTCODE_REPLAY_H
 #include "util/netevent.h"
 #include "testcode/ldns-testpkts.h"
+#include "util/rbtree.h"
 struct replay_answer;
 struct replay_moment;
 struct replay_range;
 struct fake_pending;
 struct fake_timer;
+struct replay_var;
 
 /**
  * A replay scenario.
@@ -267,6 +280,11 @@ struct replay_runtime {
 
 	/** size of buffers */
 	size_t bufsize;
+
+	/**
+	 * Tree of macro values. Of type replay_var
+	 */
+	rbtree_t* vars;
 };
 
 /**
@@ -329,6 +347,18 @@ struct fake_timer {
 };
 
 /**
+ * Replay macro variable.  And its value.
+ */
+struct replay_var {
+	/** rbtree node. Key is this structure. Sorted by name. */
+	rbnode_t node;
+	/** the variable name */
+	char* name;
+	/** the variable value */
+	char* value;
+};
+
+/**
  * Read a replay scenario from the file.
  * @param in: file to read from.
  * @param name: name to print in errors.
@@ -343,5 +373,51 @@ struct replay_scenario* replay_scenario_read(FILE* in, const char* name,
  * @param scen: to delete.
  */
 void replay_scenario_delete(struct replay_scenario* scen);
+
+/** compare two replay_vars */
+int replay_var_compare(const void* a, const void* b);
+
+/**
+ * Create variable storage
+ * @return new or NULL on failure.
+ */
+rbtree_t* macro_store_create(void);
+
+/**
+ * Delete variable storage
+ * @param store: the macro storage to free up.
+ */
+void macro_store_delete(rbtree_t* store);
+
+/**
+ * Apply macro substitution to string.
+ * @param store: variable store.
+ * @param runtime: the runtime to look up values as needed.
+ * @param text: string to work on.
+ * @return newly malloced string with result.
+ */
+char* macro_process(rbtree_t* store, struct replay_runtime* runtime, 
+	char* text);
+
+/**
+ * Look up a macro value. Like calling ${$name}.
+ * @param store: variable store
+ * @param name: macro name
+ * @return newly malloced string with result or strdup("") if not found.
+ * 	or NULL on malloc failure.
+ */
+char* macro_lookup(rbtree_t* store, char* name);
+
+/**
+ * Set macro value.
+ * @param store: variable store
+ * @param name: macro name
+ * @param value: text to set it to.  Not expanded.
+ * @return false on failure.
+ */
+int macro_assign(rbtree_t* store, char* name, char* value);
+
+/** testbounds self test */
+void testbound_selftest(void);
 
 #endif /* TESTCODE_REPLAY_H */

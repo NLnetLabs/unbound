@@ -334,4 +334,7 @@ int order_lock_cmp(const void* e1, const void* e2);
  */
 int codeline_cmp(const void* a, const void* b);
 
+/** compare two replay_vars */
+int replay_var_compare(const void* a, const void* b);
+
 #endif /* UTIL_FPTR_WLIST_H */

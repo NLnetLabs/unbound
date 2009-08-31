@@ -45,6 +45,8 @@
 #include "daemon/remote.h"
 #include "util/config_file.h"
 
+/** signal that this is a testbound compile */
+#define unbound_testbound 1
 /** 
  * include the main program from the unbound daemon.
  * rename main to daemon_main to call it
@@ -68,6 +70,7 @@ testbound_usage()
 	printf("-p file	playback text file\n");
 	printf("-2 	detect SHA256 support (exit code 0 or 1)\n");
 	printf("-g 	detect GOST support (exit code 0 or 1)\n");
+	printf("-s 	testbound self-test - unit test of testbound parts.\n");
 	printf("-o str  unbound commandline options separated by spaces.\n");
 	printf("Version %s\n", PACKAGE_VERSION);
 	printf("BSD licensed, see LICENSE file in source package.\n");
@@ -265,8 +268,13 @@ main(int argc, char* argv[])
 	pass_argc = 1;
 	pass_argv[0] = "unbound";
 	add_opts("-d", &pass_argc, pass_argv);
-	while( (c=getopt(argc, argv, "2gho:p:")) != -1) {
+	while( (c=getopt(argc, argv, "2gho:p:s")) != -1) {
 		switch(c) {
+		case 's':
+			free(pass_argv[1]);
+			testbound_selftest();
+			printf("selftest successful\n");
+			exit(0);
 		case '2':
 #if defined(HAVE_EVP_SHA256) && defined(USE_SHA2)
 			printf("SHA256 supported\n");

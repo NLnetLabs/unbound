@@ -49,6 +49,17 @@
 /** max length of lines in file */
 #define MAX_LINE_LEN 10240
 
+/**
+ * Expand a macro
+ * @param store: value storage
+ * @param runtime: replay runtime for other stuff.
+ * @param text: the macro text, after the ${, Updated to after the } when 
+ * 	done (successfully).
+ * @return expanded text, malloced. NULL on failure.
+ */
+static char* macro_expand(rbtree_t* store, 
+	struct replay_runtime* runtime, char** text);
+
 /** parse keyword in string. 
  * @param line: if found, the line is advanced to after the keyword.
  * @param keyword: string.
@@ -419,4 +430,329 @@ replay_scenario_delete(struct replay_scenario* scen)
 		rng = rngn;
 	}
 	free(scen);
+}
+
+int
+replay_var_compare(const void* a, const void* b)
+{
+	struct replay_var* x = (struct replay_var*)a;
+	struct replay_var* y = (struct replay_var*)b;
+	return strcmp(x->name, y->name);
+}
+
+rbtree_t*
+macro_store_create(void)
+{
+	return rbtree_create(&replay_var_compare);
+}
+
+/** helper function to delete macro values */
+static void
+del_macro(rbnode_t* x, void* ATTR_UNUSED(arg))
+{
+	struct replay_var* v = (struct replay_var*)x;
+	free(v->name);
+	free(v->value);
+	free(v);
+}
+
+void
+macro_store_delete(rbtree_t* store)
+{
+	if(!store)
+		return;
+	traverse_postorder(store, del_macro, NULL);
+	free(store);
+}
+
+/** return length of macro */
+static size_t
+macro_length(char* text)
+{
+	/* we are after ${, looking for } */
+	int depth = 0;
+	size_t len = 0;
+	while(*text) {
+		len++;
+		if(*text == '}') {
+			if(depth == 0)
+				break;
+			depth--;
+		} else if(text[0] == '$' && text[1] == '{') {
+			depth++;
+		}
+		text++;
+	}
+	return len;
+}
+
+/** insert new stuff at start of buffer */
+static int
+do_buf_insert(char* buf, size_t remain, char* after, char* inserted)
+{
+	char* save = strdup(after);
+	if(!save) return 0;
+	if(strlen(inserted) > remain) {
+		free(save);
+		return 0;
+	}
+	strlcpy(buf, inserted, remain);
+	buf += strlen(inserted);
+	remain -= strlen(inserted);
+	strlcpy(buf, save, remain);
+	free(save);
+	return 1;
+}
+
+/** do macro recursion */
+static char*
+do_macro_recursion(rbtree_t* store, struct replay_runtime* runtime,
+	char* at, size_t remain)
+{
+	char* after = at+2;
+	char* expand = macro_expand(store, runtime, &after);
+	if(!expand) 
+		return NULL; /* expansion failed */
+	if(!do_buf_insert(at, remain, after, expand)) {
+		free(expand);
+		return NULL;
+	}
+	free(expand);
+	return at; /* and parse over the expanded text to see if again */
+}
+
+/** get var from store */
+struct replay_var*
+macro_getvar(rbtree_t* store, char* name)
+{
+	struct replay_var k;
+	k.node.key = &k;
+	k.name = name;
+	return (struct replay_var*)rbtree_search(store, &k);
+}
+
+/** do macro variable */
+static char*
+do_macro_variable(rbtree_t* store, char* buf, size_t remain)
+{
+	struct replay_var* v;
+	char* at = buf+1;
+	char* name = at;
+	char sv;
+	if(at[0]==0)
+		return NULL; /* no variable name after $ */
+	while(*at && (isalnum((int)*at) || *at=='_')) {
+		at++;
+	}
+	/* terminator, we are working in macro_expand() buffer */
+	sv = *at;
+	*at = 0; 
+	v = macro_getvar(store, name);
+	*at = sv;
+
+	if(!v) {
+		log_err("variable is not defined: $%s", name);
+		return NULL; /* variable undefined is error for now */
+	}
+
+	/* insert the variable contents */
+	if(!do_buf_insert(buf, remain, at, v->value))
+		return NULL;
+	return buf; /* and expand the variable contents */
+}
+
+/** do ctime macro on argument */
+static char*
+do_macro_ctime(char* arg)
+{
+	char buf[32];
+	time_t tt = atoi(arg);
+	if(tt == 0 && strcmp(arg, "0") != 0) {
+		log_err("macro ctime: expected number, not: %s", arg);
+		return NULL;
+	}
+	ctime_r(&tt, buf);
+	return strdup(buf);
+}
+
+static char*
+macro_expand(rbtree_t* store, struct replay_runtime* runtime, char** text)
+{
+	char buf[10240];
+	char* at = *text;
+	size_t len = macro_length(at);
+	int dofunc = 0;
+	/*printf("macro: '%s', len=%d\n", at, len);*/
+	if(len >= sizeof(buf))
+		return NULL; /* too long */
+	buf[0] = 0;
+	strlcpy(buf, at, len+1-1); /* do not copy last '}' character */
+	at = buf;
+
+	/* check for functions */
+	if(strcmp(buf, "time") == 0) {
+		snprintf(buf, sizeof(buf), "%u", (unsigned)runtime->now_secs);
+		return strdup(buf);
+	} else if(strcmp(buf, "timeout") == 0) {
+		/* TODO: find timeout value */
+		snprintf(buf, sizeof(buf), "%u", (unsigned)runtime->now_secs);
+		return strdup(buf);
+	} else if(strncmp(buf, "ctime ", 6) == 0 ||
+		strncmp(buf, "ctime\t", 6) == 0) {
+		at += 6;
+		dofunc = 1;
+	}
+
+	/* actual macro text expansion */
+	while(*at) {
+		size_t remain = sizeof(buf)-strlen(buf);
+		if(strncmp(at, "${", 2) == 0) {
+			at = do_macro_recursion(store, runtime, at, remain);
+		} else if(*at == '$') {
+			at = do_macro_variable(store, at, remain);
+		} else if(isdigit((int)*at)) {
+			/* TODO replace arithmatic with result */
+		} else {
+			/* copy until whitespace */
+			at++;
+			while(*at && !isblank((int)*at) && *at != '$')
+				at++;
+		}
+		if(!at) return NULL; /* failure */
+	}
+	*text += len;
+	if(dofunc) {
+		/* post process functions, buf has the argument(s) */
+		if(strncmp(*text, "ctime", 5) == 0) {
+			return do_macro_ctime(buf);	
+		}
+	}
+	/*printf("macro return '%s'\n", buf);*/
+	return strdup(buf);
+}
+
+char*
+macro_process(rbtree_t* store, struct replay_runtime* runtime, char* text)
+{
+	char buf[10240];
+	char* next, *expand;
+	char* at = text;
+	if(!strstr(text, "${"))
+		return strdup(text); /* no macros */
+	buf[0] = 0;
+	buf[sizeof(buf)-1]=0;
+	while( (next=strstr(at, "${")) ) {
+		/* copy text before next macro */
+		if((size_t)(next-at) >= sizeof(buf)-strlen(buf))
+			return NULL; /* string too long */
+		strlcpy(buf+strlen(buf), at, next-at+1);
+		/* process the macro itself */
+		next += 2;
+		expand = macro_expand(store, runtime, &next);
+		if(!expand) return NULL; /* expansion failed */
+		strlcpy(buf+strlen(buf), expand, sizeof(buf)-strlen(buf));
+		free(expand);
+		at = next;
+	}
+	/* copy remainder fixed text */
+	strlcpy(buf+strlen(buf), at, sizeof(buf)-strlen(buf));
+	return strdup(buf);
+}
+
+char* 
+macro_lookup(rbtree_t* store, char* name)
+{
+	struct replay_var* x = macro_getvar(store, name);
+	if(!x) return strdup("");
+	return strdup(x->value);
+}
+
+int 
+macro_assign(rbtree_t* store, char* name, char* value)
+{
+	struct replay_var* x = macro_getvar(store, name);
+	if(x) {
+		free(x->value);
+	} else {
+		x = (struct replay_var*)malloc(sizeof(*x));
+		if(!x) return 0;
+		x->node.key = x;
+		x->name = strdup(name);
+		if(!x->name) {
+			free(x);
+			return 0;
+		}
+		(void)rbtree_insert(store, &x->node);
+	}
+	x->value = strdup(value);
+	return x->value != NULL;
+}
+
+void testbound_selftest(void)
+{
+	/* test the macro store */
+	rbtree_t* store = macro_store_create();
+	char* v;
+	int r;
+	log_assert(store);
+
+	v = macro_lookup(store, "bla");
+	log_assert(strcmp(v, "") == 0);
+	free(v);
+
+	v = macro_lookup(store, "vlerk");
+	log_assert(strcmp(v, "") == 0);
+	free(v);
+
+	r = macro_assign(store, "bla", "waarde1");
+	log_assert(r);
+
+	v = macro_lookup(store, "vlerk");
+	log_assert(strcmp(v, "") == 0);
+	free(v);
+
+	v = macro_lookup(store, "bla");
+	log_assert(strcmp(v, "waarde1") == 0);
+	free(v);
+
+	r = macro_assign(store, "vlerk", "kanteel");
+	log_assert(r);
+
+	v = macro_lookup(store, "bla");
+	log_assert(strcmp(v, "waarde1") == 0);
+	free(v);
+
+	v = macro_lookup(store, "vlerk");
+	log_assert(strcmp(v, "kanteel") == 0);
+	free(v);
+
+	r = macro_assign(store, "bla", "ww");
+	log_assert(r);
+
+	v = macro_lookup(store, "bla");
+	log_assert(strcmp(v, "ww") == 0);
+	free(v);
+
+	log_assert( macro_length("}") == 1);
+	log_assert( macro_length("blabla}") == 7);
+	log_assert( macro_length("bla${zoink}bla}") == 7+8);
+	log_assert( macro_length("bla${zoink}${bla}bla}") == 7+8+6);
+
+	v = macro_process(store, NULL, "");
+	log_assert( v && strcmp(v, "") == 0);
+	free(v);
+
+	v = macro_process(store, NULL, "${}");
+	log_assert( v && strcmp(v, "") == 0);
+	free(v);
+
+	v = macro_process(store, NULL, "blabla ${} dinges");
+	log_assert( v && strcmp(v, "blabla  dinges") == 0);
+	free(v);
+
+	v = macro_process(store, NULL, "1${$bla}2${$bla}3");
+	log_assert( v && strcmp(v, "1ww2ww3") == 0);
+	free(v);
+
+	macro_store_delete(store);
 }

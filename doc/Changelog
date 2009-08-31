@@ -1,3 +1,6 @@
+31 August 2009: Wouter
+	- testbound variable processing.
+
 28 August 2009: Wouter
 	- fixup unbound-control lookup to print forward and stub servers.
 

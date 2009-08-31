@@ -184,6 +184,7 @@ fptr_whitelist_rbtree_cmp(int (*fptr) (const void *, const void *))
 	else if(fptr == &val_neg_data_compare) return 1;
 	else if(fptr == &val_neg_zone_compare) return 1;
 	else if(fptr == &probetree_cmp) return 1;
+	else if(fptr == &replay_var_compare) return 1;
 	return 0;
 }
 
