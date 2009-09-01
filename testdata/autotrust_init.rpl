@@ -156,4 +156,42 @@ FILE_BEGIN
 example.com.	10800	IN	DNSKEY	257 3 5 AwEAAc3Z5DQDJpH4oPdNtC4BUQHk50XMD+dHr4r8psHmivIa83hxR5CRgCtd9sENCW9Ae8OIO19xw9t/RPaEAqQa+OE= ;{id = 55582 (ksk), size = 512b} ;;state=2 [  VALID  ] ;;count=0 ;;lastchange=1251100000 ;;Mon Aug 24 09:46:40 2009
 FILE_END
 
+; wait and see if autotrust probes (the unchanged) domain again.
+STEP 40 TIME_PASSES EVAL ${$probe}
+
+; do something to make time pass so that processing is performed.
+STEP 50 QUERY
+ENTRY_BEGIN
+REPLY RD DO
+SECTION QUESTION
+. IN NS
+ENTRY_END
+
+STEP 60 CHECK_ANSWER
+ENTRY_BEGIN
+MATCH all
+REPLY QR RD RA NOERROR
+SECTION QUESTION
+. IN NS
+SECTION ANSWER
+.       3600    IN      NS      k.root-servers.net.
+SECTION ADDITIONAL
+k.root-servers.net.     3600    IN      A       193.0.14.129
+ENTRY_END
+
+STEP 65 ASSIGN probe2 = ${timeout}
+
+STEP 70 CHECK_AUTOTRUST example.com
+FILE_BEGIN
+; autotrust trust anchor file
+;;id: example.com. 1
+;;last_queried: ${time} ;;${ctime ${time}}
+;;last_success: ${time} ;;${ctime ${time}}
+;;next_probe_time: ${$t0 + $probe + $probe2} ;;${ctime $t0 + $probe + $probe2}
+;;query_failed: 0
+;;query_interval: 5400
+;;retry_time: 3600
+example.com.	10800	IN	DNSKEY	257 3 5 AwEAAc3Z5DQDJpH4oPdNtC4BUQHk50XMD+dHr4r8psHmivIa83hxR5CRgCtd9sENCW9Ae8OIO19xw9t/RPaEAqQa+OE= ;{id = 55582 (ksk), size = 512b} ;;state=2 [  VALID  ] ;;count=0 ;;lastchange=1251100000 ;;Mon Aug 24 09:46:40 2009
+FILE_END
+
 SCENARIO_END

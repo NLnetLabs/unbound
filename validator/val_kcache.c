@@ -152,3 +152,14 @@ key_cache_get_mem(struct key_cache* kcache)
 	return sizeof(*kcache) + slabhash_get_mem(kcache->slab);
 }
 
+void key_cache_remove(struct key_cache* kcache,
+	uint8_t* name, size_t namelen, uint16_t key_class)
+{
+	struct key_entry_key lookfor;
+	lookfor.entry.key = &lookfor;
+	lookfor.name = name;
+	lookfor.namelen = namelen;
+	lookfor.key_class = key_class;
+	key_entry_hash(&lookfor);
+	slabhash_remove(kcache->slab, lookfor.entry.hash, &lookfor);
+}

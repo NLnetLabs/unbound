@@ -118,6 +118,7 @@ val_apply_cfg(struct module_env* env, struct val_env* val_env,
 		log_err("out of memory");
 		return 0;
 	}
+	env->key_cache = val_env->kcache;
 	if(!anchors_apply_cfg(env->anchors, cfg)) {
 		log_err("validator: error in trustanchors config");
 		return 0;

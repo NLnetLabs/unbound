@@ -69,6 +69,7 @@
  *      o TIMEOUT
  *      o TIME_PASSES ELAPSE [seconds] - increase 'now' time counter, can be 
  *      			a floating point number.
+ *        TIME_PASSES EVAL [macro] - expanded for seconds to move time.
  *      o CHECK_AUTOTRUST [id] - followed by FILE_BEGIN [to match] FILE_END.
  *      	The file contents is macro expanded before match.
  *      o ERROR

@@ -79,6 +79,16 @@ void key_cache_delete(struct key_cache* kcache);
 void key_cache_insert(struct key_cache* kcache, struct key_entry_key* kkey);
 
 /**
+ * Remove an entry from the key cache.
+ * @param kcache: the key cache.
+ * @param name: for what name to look; uncompressed wireformat
+ * @param namelen: length of the name.
+ * @param key_class: class of the key.
+ */
+void key_cache_remove(struct key_cache* kcache,
+	uint8_t* name, size_t namelen, uint16_t key_class);
+
+/**
  * Lookup key entry in the cache. Looks up the closest key entry above the
  * given name.
  * @param kcache: the key cache.

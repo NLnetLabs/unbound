@@ -54,6 +54,8 @@
 #include "util/random.h"
 #include "util/data/msgparse.h"
 #include "services/mesh.h"
+#include "services/cache/rrset.h"
+#include "validator/val_kcache.h"
 #include "daemon/worker.h"
 
 /** number of times a key must be seen before it can become valid */
@@ -1630,12 +1632,13 @@ int autr_process_prime(struct module_env* env, struct val_env* ve,
 		return 1; /* trust point unchanged, so exists */
 	}
 
+	autr_cleanup_keys(tp);
+	if(!set_next_probe(env, tp, dnskey_rrset))
+		return 0; /* trust point does not exist */
+	verbose(VERB_ALGO, "autotrust: write to disk");
+	autr_write_file(env, tp);
 	if(changed) {
-		autr_cleanup_keys(tp);
-		if(!set_next_probe(env, tp, dnskey_rrset))
-			return 0; /* trust point does not exist */
-		verbose(VERB_ALGO, "autotrust: point changed, write to disk");
-		autr_write_file(env, tp);
+		verbose(VERB_ALGO, "autotrust: changed, reassemble");
 		if(!autr_assemble(tp)) {
 			log_err("malloc failure assembling autotrust keys");
 			return 1; /* unchanged */
@@ -1777,6 +1780,15 @@ probe_anchor(struct module_env* env, struct trust_anchor* tp)
 
 	/* can't hold the lock while mesh_run is processing */
 	lock_basic_unlock(&tp->lock);
+
+	/* delete the DNSKEY from rrset and key cache so an active probe
+	 * is done. First the rrset so another thread does not use it
+	 * to recreate the key entry in a race condition. */
+	rrset_cache_remove(env->rrset_cache, qinfo.qname, qinfo.qname_len,
+		qinfo.qtype, qinfo.qclass, 0);
+	key_cache_remove(env->key_cache, qinfo.qname, qinfo.qname_len, 
+		qinfo.qclass);
+
 	if(!mesh_new_callback(env->mesh, &qinfo, qflags, &edns, buf, 0, 
 		&probe_answer_cb, env)) {
 		log_err("out of memory making 5011 probe");

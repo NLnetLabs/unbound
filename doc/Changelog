@@ -1,6 +1,7 @@
 1 September 2009: Wouter
 	- testbound variable arithmetic.
 	- autotrust probe time is randomised.
+	- autotrust: the probe is active and does not fetch from cache.
 
 31 August 2009: Wouter
 	- testbound variable processing.

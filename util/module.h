@@ -46,6 +46,7 @@
 #include "util/data/msgparse.h"
 struct alloc_cache;
 struct rrset_cache;
+struct key_cache;
 struct config_file;
 struct slabhash;
 struct query_info;
@@ -77,6 +78,8 @@ struct module_env {
 	struct rrset_cache* rrset_cache;
 	/** shared infrastructure cache (edns, lameness) */
 	struct infra_cache* infra_cache;
+	/** shared key cache */
+	struct key_cache* key_cache;
 
 	/* --- services --- */
 	/** 

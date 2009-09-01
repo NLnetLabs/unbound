@@ -301,6 +301,16 @@ replay_moment_read(char* remain, FILE* in, const char* name, int* lineno,
 		mom->evt_type = repevt_timeout;
 	} else if(parse_keyword(&remain, "TIME_PASSES")) {
 		mom->evt_type = repevt_time_passes;
+		while(isspace((int)*remain))
+			remain++;
+		if(parse_keyword(&remain, "EVAL")) {
+			while(isspace((int)*remain))
+				remain++;
+			mom->string = strdup(remain);
+			if(!mom->string) fatal_exit("out of memory");
+			mom->string[strlen(mom->string)-1]=0;
+			remain += strlen(mom->string);
+		}
 	} else if(parse_keyword(&remain, "CHECK_AUTOTRUST")) {
 		mom->evt_type = repevt_autotrust_check;
 		while(isspace((int)*remain))

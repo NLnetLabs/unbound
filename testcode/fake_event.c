@@ -460,11 +460,21 @@ static void
 time_passes(struct replay_runtime* runtime, struct replay_moment* mom)
 {
 	struct fake_timer *t;
-	timeval_add(&runtime->now_tv, &mom->elapse);
+	struct timeval tv = mom->elapse;
+	if(mom->string) {
+		char* xp = macro_process(runtime->vars, runtime, mom->string);
+		double sec;
+		if(!xp) fatal_exit("could not macro expand %s", mom->string);
+		verbose(VERB_ALGO, "EVAL %s", mom->string);
+		sec = atof(xp);
+		tv.tv_sec = (int)sec;
+		tv.tv_usec = (int)((sec - (double)tv.tv_sec) *1000000. + 0.5);
+	}
+	timeval_add(&runtime->now_tv, &tv);
 	runtime->now_secs = (uint32_t)runtime->now_tv.tv_sec;
 #ifndef S_SPLINT_S
 	log_info("elapsed %d.%6.6d  now %d.%6.6d", 
-		(int)mom->elapse.tv_sec, (int)mom->elapse.tv_usec,
+		(int)tv.tv_sec, (int)tv.tv_usec,
 		(int)runtime->now_tv.tv_sec, (int)runtime->now_tv.tv_usec);
 #endif
 	/* see if any timers have fired; and run them */
