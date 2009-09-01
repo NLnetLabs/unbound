@@ -52,6 +52,10 @@ struct autr_global_data;
 
 /**
  * Trust anchor store.
+ * The tree must be locked, while no other locks (from trustanchors) are held.
+ * And then an anchor searched for.  Which can be locked or deleted.  Then
+ * the tree can be unlocked again.  This means you have to release the lock
+ * on a trust anchor and look it up again to delete it.
  */
 struct val_anchors {
 	/** lock on trees */
