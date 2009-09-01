@@ -78,22 +78,6 @@ timeval_add(struct timeval* d, const struct timeval* add)
 #endif
 }
 
-/** compare of time values */
-static int
-timeval_smaller(const struct timeval* x, const struct timeval* y)
-{
-#ifndef S_SPLINT_S
-	if(x->tv_sec < y->tv_sec)
-		return 1;
-	else if(x->tv_sec == y->tv_sec) {
-		if(x->tv_usec <= y->tv_usec)
-			return 1;
-		else	return 0;
-	}
-	else	return 0;
-#endif
-}
-
 void 
 fake_temp_file(const char* adj, const char* id, char* buf, size_t len)
 {
@@ -455,24 +439,6 @@ fake_pending_callback(struct replay_runtime* runtime,
 	ldns_buffer_free(c.buffer);
 }
 
-/** get oldest enabled fake timer */
-static struct fake_timer*
-get_oldest_timer(struct replay_runtime* runtime)
-{
-	struct fake_timer* p, *res = NULL;
-	for(p=runtime->timer_list; p; p=p->next) {
-		if(!p->enabled)
-			continue;
-		if(timeval_smaller(&p->tv, &runtime->now_tv)) {
-			if(!res)
-				res = p;
-			else if(timeval_smaller(&p->tv, &res->tv))
-				res = p;
-		}
-	}
-	return res;
-}
-
 /** pass time */
 static void
 time_passes(struct replay_runtime* runtime, struct replay_moment* mom)
@@ -486,7 +452,7 @@ time_passes(struct replay_runtime* runtime, struct replay_moment* mom)
 		(int)runtime->now_tv.tv_sec, (int)runtime->now_tv.tv_usec);
 #endif
 	/* see if any timers have fired; and run them */
-	while( (t=get_oldest_timer(runtime)) ) {
+	while( (t=replay_get_oldest_timer(runtime)) ) {
 		t->enabled = 0;
 		log_info("fake_timer callback");
 		fptr_ok(fptr_whitelist_comm_timer(t->cb));

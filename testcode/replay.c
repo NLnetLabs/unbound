@@ -45,6 +45,7 @@
 #include "util/config_file.h"
 #include "testcode/replay.h"
 #include "testcode/ldns-testpkts.h"
+#include "testcode/fake_event.h"
 
 /** max length of lines in file */
 #define MAX_LINE_LEN 10240
@@ -59,6 +60,22 @@
  */
 static char* macro_expand(rbtree_t* store, 
 	struct replay_runtime* runtime, char** text);
+
+/** compare of time values */
+static int
+timeval_smaller(const struct timeval* x, const struct timeval* y)
+{
+#ifndef S_SPLINT_S
+	if(x->tv_sec < y->tv_sec)
+		return 1;
+	else if(x->tv_sec == y->tv_sec) {
+		if(x->tv_usec <= y->tv_usec)
+			return 1;
+		else	return 0;
+	}
+	else	return 0;
+#endif
+}
 
 /** parse keyword in string. 
  * @param line: if found, the line is advanced to after the keyword.
@@ -432,6 +449,23 @@ replay_scenario_delete(struct replay_scenario* scen)
 	free(scen);
 }
 
+struct fake_timer*
+replay_get_oldest_timer(struct replay_runtime* runtime)
+{
+	struct fake_timer* p, *res = NULL;
+	for(p=runtime->timer_list; p; p=p->next) {
+		if(!p->enabled)
+			continue;
+		if(timeval_smaller(&p->tv, &runtime->now_tv)) {
+			if(!res)
+				res = p;
+			else if(timeval_smaller(&p->tv, &res->tv))
+				res = p;
+		}
+	}
+	return res;
+}
+
 int
 replay_var_compare(const void* a, const void* b)
 {
@@ -491,15 +525,16 @@ static int
 do_buf_insert(char* buf, size_t remain, char* after, char* inserted)
 {
 	char* save = strdup(after);
+	size_t len;
 	if(!save) return 0;
 	if(strlen(inserted) > remain) {
 		free(save);
 		return 0;
 	}
-	strlcpy(buf, inserted, remain);
-	buf += strlen(inserted);
-	remain -= strlen(inserted);
-	strlcpy(buf, save, remain);
+	len = strlcpy(buf, inserted, remain);
+	buf += len;
+	remain -= len;
+	(void)strlcpy(buf, save, remain);
 	free(save);
 	return 1;
 }
@@ -566,13 +601,80 @@ static char*
 do_macro_ctime(char* arg)
 {
 	char buf[32];
-	time_t tt = atoi(arg);
+	time_t tt = (time_t)atoi(arg);
 	if(tt == 0 && strcmp(arg, "0") != 0) {
 		log_err("macro ctime: expected number, not: %s", arg);
 		return NULL;
 	}
 	ctime_r(&tt, buf);
+	if(buf[0]) buf[strlen(buf)-1]=0; /* remove trailing newline */
 	return strdup(buf);
+}
+
+/** perform arithmetic operator */
+static double
+perform_arith(double x, char op, double y, double* res)
+{
+	switch(op) {
+	case '+':
+		*res = x+y;
+		break;
+	case '-':
+		*res = x-y;
+		break;
+	case '/':
+		*res = x/y;
+		break;
+	case '*':
+		*res = x*y;
+		break;
+	default:
+		return 0;
+	}
+
+	return 1;
+}
+
+/** do macro arithmetic on two numbers and operand */
+static char*
+do_macro_arith(char* at, size_t remain, char** arithstart)
+{
+	double x, y, result;
+	char operator;
+	int skip;
+	char buf[32];
+	/* not yet done? we want number operand number expanded first. */
+	if(!*arithstart) {
+		/* remember start pos of expr, skip the first number */
+		*arithstart = at;
+		while(*at && (isdigit((int)*at) || *at == '.'))
+			at++;
+		return at;
+	}
+	/* move back to start */
+	remain += (size_t)(at - *arithstart);
+	at = *arithstart;
+
+	/* parse operands */
+	if(sscanf(at, " %lf %c %lf%n", &x, &operator, &y, &skip) != 3) {
+		log_err("cannot parse arithmetic: %s", at);
+		return NULL;
+	}
+
+	/* calculate result */
+	if(!perform_arith(x, operator, y, &result)) {
+		log_err("unknown operator: %s", at);
+		return NULL;
+	}
+
+	/* put result back in buffer */
+	snprintf(buf, sizeof(buf), "%g", result);
+	if(!do_buf_insert(at, remain, at+skip, buf))
+		return NULL;
+
+	/* the result can be part of another expression, restart that */
+	*arithstart = NULL;
+	return at;
 }
 
 static char*
@@ -582,11 +684,11 @@ macro_expand(rbtree_t* store, struct replay_runtime* runtime, char** text)
 	char* at = *text;
 	size_t len = macro_length(at);
 	int dofunc = 0;
-	/*printf("macro: '%s', len=%d\n", at, len);*/
+	char* arithstart = NULL;
 	if(len >= sizeof(buf))
 		return NULL; /* too long */
 	buf[0] = 0;
-	strlcpy(buf, at, len+1-1); /* do not copy last '}' character */
+	(void)strlcpy(buf, at, len+1-1); /* do not copy last '}' character */
 	at = buf;
 
 	/* check for functions */
@@ -594,8 +696,11 @@ macro_expand(rbtree_t* store, struct replay_runtime* runtime, char** text)
 		snprintf(buf, sizeof(buf), "%u", (unsigned)runtime->now_secs);
 		return strdup(buf);
 	} else if(strcmp(buf, "timeout") == 0) {
-		/* TODO: find timeout value */
-		snprintf(buf, sizeof(buf), "%u", (unsigned)runtime->now_secs);
+		uint32_t res = 0;
+		struct fake_timer* t = replay_get_oldest_timer(runtime);
+		if(t && (uint32_t)t->tv.tv_sec <= runtime->now_secs) 
+			res = runtime->now_secs - (uint32_t)t->tv.tv_sec;
+		snprintf(buf, sizeof(buf), "%u", (unsigned)res);
 		return strdup(buf);
 	} else if(strncmp(buf, "ctime ", 6) == 0 ||
 		strncmp(buf, "ctime\t", 6) == 0) {
@@ -611,23 +716,24 @@ macro_expand(rbtree_t* store, struct replay_runtime* runtime, char** text)
 		} else if(*at == '$') {
 			at = do_macro_variable(store, at, remain);
 		} else if(isdigit((int)*at)) {
-			/* TODO replace arithmatic with result */
+			at = do_macro_arith(at, remain, &arithstart);
 		} else {
-			/* copy until whitespace */
-			at++;
-			while(*at && !isblank((int)*at) && *at != '$')
+			/* copy until whitespace or operator */
+			if(*at && (isalnum((int)*at) || *at=='_')) {
 				at++;
+				while(*at && (isalnum((int)*at) || *at=='_'))
+					at++;
+			} else at++;
 		}
 		if(!at) return NULL; /* failure */
 	}
 	*text += len;
 	if(dofunc) {
 		/* post process functions, buf has the argument(s) */
-		if(strncmp(*text, "ctime", 5) == 0) {
-			return do_macro_ctime(buf);	
+		if(strncmp(buf, "ctime", 5) == 0) {
+			return do_macro_ctime(buf+6);	
 		}
 	}
-	/*printf("macro return '%s'\n", buf);*/
 	return strdup(buf);
 }
 
@@ -645,17 +751,17 @@ macro_process(rbtree_t* store, struct replay_runtime* runtime, char* text)
 		/* copy text before next macro */
 		if((size_t)(next-at) >= sizeof(buf)-strlen(buf))
 			return NULL; /* string too long */
-		strlcpy(buf+strlen(buf), at, next-at+1);
+		(void)strlcpy(buf+strlen(buf), at, (size_t)(next-at+1));
 		/* process the macro itself */
 		next += 2;
 		expand = macro_expand(store, runtime, &next);
 		if(!expand) return NULL; /* expansion failed */
-		strlcpy(buf+strlen(buf), expand, sizeof(buf)-strlen(buf));
+		(void)strlcpy(buf+strlen(buf), expand, sizeof(buf)-strlen(buf));
 		free(expand);
 		at = next;
 	}
 	/* copy remainder fixed text */
-	strlcpy(buf+strlen(buf), at, sizeof(buf)-strlen(buf));
+	(void)strlcpy(buf+strlen(buf), at, sizeof(buf)-strlen(buf));
 	return strdup(buf);
 }
 
@@ -752,6 +858,41 @@ void testbound_selftest(void)
 
 	v = macro_process(store, NULL, "1${$bla}2${$bla}3");
 	log_assert( v && strcmp(v, "1ww2ww3") == 0);
+	free(v);
+
+	v = macro_process(store, NULL, "it is ${ctime 123456}");
+	log_assert( v && strcmp(v, "it is Fri Jan  2 11:17:36 1970") == 0);
+	free(v);
+
+	r = macro_assign(store, "t1", "123456");
+	log_assert(r);
+	v = macro_process(store, NULL, "it is ${ctime ${$t1}}");
+	log_assert( v && strcmp(v, "it is Fri Jan  2 11:17:36 1970") == 0);
+	free(v);
+
+	v = macro_process(store, NULL, "it is ${ctime $t1}");
+	log_assert( v && strcmp(v, "it is Fri Jan  2 11:17:36 1970") == 0);
+	free(v);
+
+	r = macro_assign(store, "x", "1");
+	log_assert(r);
+	r = macro_assign(store, "y", "2");
+	log_assert(r);
+	v = macro_process(store, NULL, "${$x + $x}");
+	log_assert( v && strcmp(v, "2") == 0);
+	free(v);
+	v = macro_process(store, NULL, "${$x - $x}");
+	log_assert( v && strcmp(v, "0") == 0);
+	free(v);
+	v = macro_process(store, NULL, "${$y * $y}");
+	log_assert( v && strcmp(v, "4") == 0);
+	free(v);
+	v = macro_process(store, NULL, "${32 / $y + $x + $y}");
+	log_assert( v && strcmp(v, "19") == 0);
+	free(v);
+
+	v = macro_process(store, NULL, "${32 / ${$y+$y} + ${${100*3}/3}}");
+	log_assert( v && strcmp(v, "108") == 0);
 	free(v);
 
 	macro_store_delete(store);

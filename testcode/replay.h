@@ -377,6 +377,9 @@ void replay_scenario_delete(struct replay_scenario* scen);
 /** compare two replay_vars */
 int replay_var_compare(const void* a, const void* b);
 
+/** get oldest enabled fake timer */
+struct fake_timer* replay_get_oldest_timer(struct replay_runtime* runtime);
+
 /**
  * Create variable storage
  * @return new or NULL on failure.
