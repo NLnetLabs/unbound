@@ -1,5 +1,6 @@
 1 September 2009: Wouter
 	- testbound variable arithmetic.
+	- autotrust probe time is randomised.
 
 31 August 2009: Wouter
 	- testbound variable processing.

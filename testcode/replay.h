@@ -70,13 +70,14 @@
  *      o TIME_PASSES ELAPSE [seconds] - increase 'now' time counter, can be 
  *      			a floating point number.
  *      o CHECK_AUTOTRUST [id] - followed by FILE_BEGIN [to match] FILE_END.
+ *      	The file contents is macro expanded before match.
  *      o ERROR
  * ; following entry starts on the next line, ENTRY_BEGIN.
  * ; more STEP items
  * SCENARIO_END
  *
  * Calculations, a macro-like system: ${$myvar + 3600}
- * STEP 10 ASSIGN $myvar = 3600
+ * STEP 10 ASSIGN myvar = 3600
  * 	; ASSIGN event. '=' is syntactic sugar here. 3600 is some expression.
  * ${..} is macro expanded from its expression.  Text substitution.
  * 	o $var replaced with its value.  var is identifier [azAZ09_]*
@@ -183,7 +184,9 @@ struct replay_moment {
 		/** check autotrust key file */
 		repevt_autotrust_check,
 		/** an error happens to outbound query */
-		repevt_error
+		repevt_error,
+		/** assignment to a variable */
+		repevt_assign
 	} 
 		/** variable with what is to happen this moment */
 		evt_type;
@@ -204,6 +207,11 @@ struct replay_moment {
 	 * Unused at this time.
 	 */
 	ldns_rr* qname;
+
+	/** macro name, for assign. */
+	char* variable;
+	/** string argument, for assign. */
+	char* string;
 
 	/** the autotrust file id to check */
 	char* autotrust_id;
@@ -419,6 +427,9 @@ char* macro_lookup(rbtree_t* store, char* name);
  * @return false on failure.
  */
 int macro_assign(rbtree_t* store, char* name, char* value);
+
+/** Print macro variables stored as debug info */
+void macro_print_debug(rbtree_t* store);
 
 /** testbounds self test */
 void testbound_selftest(void);

@@ -132,6 +132,7 @@ repevt_string(enum replay_event_type t)
 	case repevt_back_query:  return "CHECK_OUT_QUERY";
 	case repevt_autotrust_check: return "CHECK_AUTOTRUST";
 	case repevt_error:	 return "ERROR";
+	case repevt_assign:	 return "ASSIGN";
 	default:		 return "UNKNOWN";
 	}
 }
@@ -441,6 +442,21 @@ fake_pending_callback(struct replay_runtime* runtime,
 
 /** pass time */
 static void
+moment_assign(struct replay_runtime* runtime, struct replay_moment* mom)
+{
+	char* value = macro_process(runtime->vars, runtime, mom->string);
+	if(!value)
+		fatal_exit("could not process macro step %d", mom->time_step);
+	log_info("assign %s = %s", mom->variable, value);
+	if(!macro_assign(runtime->vars, mom->variable, value))
+		fatal_exit("out of memory storing macro");
+	free(value);
+	if(verbosity >= VERB_ALGO)
+		macro_print_debug(runtime->vars);
+}
+
+/** pass time */
+static void
 time_passes(struct replay_runtime* runtime, struct replay_moment* mom)
 {
 	struct fake_timer *t;
@@ -462,11 +478,12 @@ time_passes(struct replay_runtime* runtime, struct replay_moment* mom)
 
 /** check autotrust file contents */
 static void
-autotrust_check(struct replay_moment* mom)
+autotrust_check(struct replay_runtime* runtime, struct replay_moment* mom)
 {
 	char name[1024], line[1024];
 	FILE *in;
 	int lineno = 0, oke=1;
+	char* expanded;
 	struct config_strlist* p;
 	line[sizeof(line)-1] = 0;
 	log_assert(mom->autotrust_id);
@@ -482,13 +499,20 @@ autotrust_check(struct replay_moment* mom)
 			fatal_exit("autotrust_check failed");
 		}
 		if(line[0]) line[strlen(line)-1] = 0; /* remove newline */
-		if(strcmp(p->str, line) != 0) {
+		expanded = macro_process(runtime->vars, runtime, p->str);
+		if(!expanded) 
+			fatal_exit("could not expand macro line %d", lineno);
+		if(verbosity >= VERB_ALGO && strcmp(p->str, expanded) != 0)
+			log_info("expanded '%s' to '%s'", p->str, expanded);
+		if(strcmp(expanded, line) != 0) {
 			log_err("mismatch in file %s, line %d", name, lineno);
 			log_err("file has : %s", line);
-			log_err("should be: %s", p->str);
+			log_err("should be: %s", expanded);
+			free(expanded);
 			oke = 0;
 			continue;
 		}
+		free(expanded);
 		fprintf(stderr, "%s:%2d ok : %s\n", name, lineno, line);
 	}
 	if(fgets(line, (int)sizeof(line)-1, in)) {
@@ -573,7 +597,11 @@ do_moment_and_advance(struct replay_runtime* runtime)
 		advance_moment(runtime);
 		break;
 	case repevt_autotrust_check:
-		autotrust_check(runtime->now);
+		autotrust_check(runtime, runtime->now);
+		advance_moment(runtime);
+		break;
+	case repevt_assign:
+		moment_assign(runtime, runtime->now);
 		advance_moment(runtime);
 		break;
 	default:

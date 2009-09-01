@@ -103,6 +103,8 @@ replay_moment_delete(struct replay_moment* mom)
 		delete_entry(mom->match);
 	}
 	free(mom->autotrust_id);
+	free(mom->string);
+	free(mom->variable);
 	config_delstrlist(mom->file_content);
 	free(mom);
 }
@@ -229,6 +231,26 @@ read_file_content(FILE* in, int* lineno, struct replay_moment* mom)
 	fatal_exit("no FILE_END in input file");
 }
 
+/** read assign step info */
+static void
+read_assign_step(char* remain, struct replay_moment* mom)
+{
+	char buf[1024];
+	char eq;
+	int skip;
+	buf[sizeof(buf)-1]=0;
+	if(sscanf(remain, " %1023s %c %n", buf, &eq, &skip) != 2)
+		fatal_exit("cannot parse assign: %s", remain);
+	mom->variable = strdup(buf);
+	if(eq != '=')
+		fatal_exit("no = in assign: %s", remain);
+	remain += skip;
+	if(remain[0]) remain[strlen(remain)-1]=0; /* remove newline */
+	mom->string = strdup(remain);
+	if(!mom->variable || !mom->string)
+		fatal_exit("out of memory");
+}
+
 /** 
  * Read a replay moment 'STEP' from file. 
  * @param remain: Rest of line (after STEP keyword).
@@ -286,9 +308,13 @@ replay_moment_read(char* remain, FILE* in, const char* name, int* lineno,
 		if(strlen(remain)>0 && remain[strlen(remain)-1]=='\n')
 			remain[strlen(remain)-1] = 0;
 		mom->autotrust_id = strdup(remain);
+		if(!mom->autotrust_id) fatal_exit("out of memory");
 		read_file_content(in, lineno, mom);
 	} else if(parse_keyword(&remain, "ERROR")) {
 		mom->evt_type = repevt_error;
+	} else if(parse_keyword(&remain, "ASSIGN")) {
+		mom->evt_type = repevt_assign;
+		read_assign_step(remain, mom);
 	} else {
 		log_err("%d: unknown event type %s", *lineno, remain);
 		free(mom);
@@ -449,21 +475,28 @@ replay_scenario_delete(struct replay_scenario* scen)
 	free(scen);
 }
 
-struct fake_timer*
-replay_get_oldest_timer(struct replay_runtime* runtime)
+static struct fake_timer*
+first_timer(struct replay_runtime* runtime)
 {
 	struct fake_timer* p, *res = NULL;
 	for(p=runtime->timer_list; p; p=p->next) {
 		if(!p->enabled)
 			continue;
-		if(timeval_smaller(&p->tv, &runtime->now_tv)) {
-			if(!res)
-				res = p;
-			else if(timeval_smaller(&p->tv, &res->tv))
-				res = p;
-		}
+		if(!res)
+			res = p;
+		else if(timeval_smaller(&p->tv, &res->tv))
+			res = p;
 	}
 	return res;
+}
+
+struct fake_timer*
+replay_get_oldest_timer(struct replay_runtime* runtime)
+{
+	struct fake_timer* t = first_timer(runtime);
+	if(t && timeval_smaller(&t->tv, &runtime->now_tv))
+		return t;
+	return NULL;
 }
 
 int
@@ -668,7 +701,7 @@ do_macro_arith(char* at, size_t remain, char** arithstart)
 	}
 
 	/* put result back in buffer */
-	snprintf(buf, sizeof(buf), "%g", result);
+	snprintf(buf, sizeof(buf), "%.12g", result);
 	if(!do_buf_insert(at, remain, at+skip, buf))
 		return NULL;
 
@@ -694,13 +727,15 @@ macro_expand(rbtree_t* store, struct replay_runtime* runtime, char** text)
 	/* check for functions */
 	if(strcmp(buf, "time") == 0) {
 		snprintf(buf, sizeof(buf), "%u", (unsigned)runtime->now_secs);
+		*text += len;
 		return strdup(buf);
 	} else if(strcmp(buf, "timeout") == 0) {
 		uint32_t res = 0;
-		struct fake_timer* t = replay_get_oldest_timer(runtime);
-		if(t && (uint32_t)t->tv.tv_sec <= runtime->now_secs) 
-			res = runtime->now_secs - (uint32_t)t->tv.tv_sec;
+		struct fake_timer* t = first_timer(runtime);
+		if(t && (uint32_t)t->tv.tv_sec >= runtime->now_secs) 
+			res = (uint32_t)t->tv.tv_sec - runtime->now_secs;
 		snprintf(buf, sizeof(buf), "%u", (unsigned)res);
+		*text += len;
 		return strdup(buf);
 	} else if(strncmp(buf, "ctime ", 6) == 0 ||
 		strncmp(buf, "ctime\t", 6) == 0) {
@@ -771,6 +806,14 @@ macro_lookup(rbtree_t* store, char* name)
 	struct replay_var* x = macro_getvar(store, name);
 	if(!x) return strdup("");
 	return strdup(x->value);
+}
+
+void macro_print_debug(rbtree_t* store)
+{
+	struct replay_var* x;
+	RBTREE_FOR(x, struct replay_var*, store) {
+		log_info("%s = %s", x->name, x->value);
+	}
 }
 
 int 

@@ -54,6 +54,7 @@
 #include "util/random.h"
 #include "util/data/msgparse.h"
 #include "services/mesh.h"
+#include "daemon/worker.h"
 
 /** number of times a key must be seen before it can become valid */
 #define MIN_PENDINGCOUNT 2
@@ -1446,10 +1447,41 @@ autr_cleanup_keys(struct trust_anchor* tp)
 static time_t
 calc_next_probe(struct module_env* env, uint32_t wait)
 {
-	/* TODO (how test?) make it random, 90-100% */
+	/* make it random, 90-100% */
+	uint32_t rnd, rest;
 	if(wait < 3600)
 		wait = 3600;
-	return (time_t)(*env->now + wait);
+	rnd = wait/10;
+	rest = wait-rnd;
+	rnd = (uint32_t)ub_random(env->rnd) % rnd;
+	return (time_t)(*env->now + rest + rnd);
+}
+
+/** what is first probe time (anchors must be locked) */
+static time_t
+wait_probe_time(struct val_anchors* anchors)
+{
+	rbnode_t* t = rbtree_first(&anchors->autr->probe);
+	if(t) return ((struct trust_anchor*)t->key)->autr->next_probe_time;
+	return 0;
+}
+
+/** reset worker timer */
+static void
+reset_worker_timer(struct module_env* env)
+{
+	struct worker* worker = env->worker;
+	struct timeval tv;
+	uint32_t next = (uint32_t)wait_probe_time(env->anchors);
+	/* in case this is libunbound, no timer */
+	if(!worker || !worker->probe_timer)
+		return;
+	if(next > *env->now)
+		tv.tv_sec = (time_t)(next - *env->now);
+	else	tv.tv_sec = 0;
+	tv.tv_usec = 0;
+	comm_timer_set(worker->probe_timer, &tv);
+	verbose(VERB_ALGO, "scheduled next probe in %d sec", (int)tv.tv_sec);
 }
 
 /** set next probe for trust anchor */
@@ -1458,6 +1490,7 @@ set_next_probe(struct module_env* env, struct trust_anchor* tp,
 	struct ub_packed_rrset_key* dnskey_rrset)
 {
 	struct trust_anchor key, *tp2;
+	time_t mold, mnew;
 	/* use memory allocated in rrset for temporary name storage */
 	key.node.key = &key;
 	key.name = dnskey_rrset->rk.dname;
@@ -1478,14 +1511,19 @@ set_next_probe(struct module_env* env, struct trust_anchor* tp,
 	lock_basic_lock(&tp->lock);
 
 	/* schedule */
+	mold = wait_probe_time(env->anchors);
 	(void)rbtree_delete(&env->anchors->autr->probe, tp);
 	tp->autr->next_probe_time = calc_next_probe(env, 
 		tp->autr->query_interval);
 	(void)rbtree_insert(&env->anchors->autr->probe, &tp->autr->pnode);
+	mnew = wait_probe_time(env->anchors);
 
 	lock_basic_unlock(&env->anchors->lock);
 	verbose(VERB_ALGO, "next probe set in %d seconds", 
 		(int)tp->autr->next_probe_time - (int)*env->now);
+	if(mold != mnew) {
+		reset_worker_timer(env);
+	}
 	return 1;
 }
 
@@ -1495,6 +1533,7 @@ autr_tp_remove(struct module_env* env, struct trust_anchor* tp)
 {
 	struct trust_anchor key;
 	struct autr_point_data pd;
+	time_t mold, mnew;
 	/* save name */
 	memset(&key, 0, sizeof(key));
 	memset(&pd, 0, sizeof(pd));
@@ -1518,11 +1557,16 @@ autr_tp_remove(struct module_env* env, struct trust_anchor* tp)
 	/* take from tree. It could be deleted by someone else. */
 	lock_basic_lock(&env->anchors->lock);
 	(void)rbtree_delete(env->anchors->tree, &key);
+	mold = wait_probe_time(env->anchors);
 	(void)rbtree_delete(&env->anchors->autr->probe, &key);
+	mnew = wait_probe_time(env->anchors);
 	anchors_init_parents_locked(env->anchors);
 	lock_basic_unlock(&env->anchors->lock);
 	/* delete */
 	autr_point_delete(tp);
+	if(mold != mnew) {
+		reset_worker_timer(env);
+	}
 }
 
 int autr_process_prime(struct module_env* env, struct val_env* ve,
@@ -1684,14 +1728,22 @@ autr_debug_print(struct val_anchors* anchors)
 	lock_basic_unlock(&anchors->lock);
 }
 
-void probe_answer_cb(void* ATTR_UNUSED(arg), int ATTR_UNUSED(rcode), 
+void probe_answer_cb(void* arg, int ATTR_UNUSED(rcode), 
 	ldns_buffer* ATTR_UNUSED(buf), enum sec_status ATTR_UNUSED(sec))
 {
 	/* retry was set before the query was done,
-	 * re-querytime is set when query succeeded.
-	 * So, nothing to do now. */
-	/*struct module_env* env = (struct module_env*)arg;*/
+	 * re-querytime is set when query succeeded, but that may not
+	 * have reset this timer because the query could have been
+	 * handled by another thread. In that case, this callback would
+	 * get called after the original timeout is done. 
+	 * By not resetting the timer, it may probe more often, but not
+	 * less often.
+	 * Unless the new lookup resulted in smaller TTLs and thus smaller
+	 * timeout values. In that case one old TTL could be mistakenly done.
+	 */
+	struct module_env* env = (struct module_env*)arg;
 	verbose(VERB_ALGO, "autotrust probe answer cb");
+	reset_worker_timer(env);
 }
 
 /** probe a trust anchor DNSKEY and unlocks tp */

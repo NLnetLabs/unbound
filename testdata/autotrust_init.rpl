@@ -98,15 +98,18 @@ RANGE_END
 
 ; set date/time to Aug 24 09:46:40  (2009).
 STEP 5 TIME_PASSES ELAPSE 1251100000
+STEP 6 ASSIGN t0 = ${time}
+STEP 7 ASSIGN probe = ${timeout}
+
 
 ; the auto probing should have been done now.
-STEP 7 CHECK_AUTOTRUST example.com
+STEP 8 CHECK_AUTOTRUST example.com
 FILE_BEGIN
 ; autotrust trust anchor file
 ;;id: example.com. 1
 ;;last_queried: 1251100000 ;;Mon Aug 24 09:46:40 2009
 ;;last_success: 1251100000 ;;Mon Aug 24 09:46:40 2009
-;;next_probe_time: 1251105400 ;;Mon Aug 24 11:16:40 2009
+;;next_probe_time: ${$t0 + $probe} ;;${ctime $t0 + $probe}
 ;;query_failed: 0
 ;;query_interval: 5400
 ;;retry_time: 3600
@@ -146,7 +149,7 @@ FILE_BEGIN
 ;;id: example.com. 1
 ;;last_queried: 1251100000 ;;Mon Aug 24 09:46:40 2009
 ;;last_success: 1251100000 ;;Mon Aug 24 09:46:40 2009
-;;next_probe_time: 1251105400 ;;Mon Aug 24 11:16:40 2009
+;;next_probe_time: ${$t0 + $probe} ;;${ctime $t0 + $probe}
 ;;query_failed: 0
 ;;query_interval: 5400
 ;;retry_time: 3600
