@@ -475,6 +475,7 @@ replay_scenario_delete(struct replay_scenario* scen)
 	free(scen);
 }
 
+/** fetch oldest timer in list that is enabled */
 static struct fake_timer*
 first_timer(struct replay_runtime* runtime)
 {
