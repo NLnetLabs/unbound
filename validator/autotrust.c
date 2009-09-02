@@ -157,8 +157,7 @@ verbose_key(struct autr_ta* ta, enum verbosity_value level,
 		int keytag = (int)ldns_calc_keytag(ta->rr);
 		char msg[MAXSYSLOGMSGLEN];
 		vsnprintf(msg, sizeof(msg), format, args);
-		verbose(level, "autotrust %s key %d %s", str?str:"??", 
-			keytag, msg);
+		verbose(level, "%s key %d %s", str?str:"??", keytag, msg);
 		free(str);
 	}
 	va_end(args);
@@ -908,6 +907,7 @@ rr_is_selfsigned_revoked(struct module_env* env, struct val_env* ve,
 	struct ub_packed_rrset_key* dnskey_rrset, size_t i)
 {
 	enum sec_status sec;
+	verbose(VERB_ALGO, "seen REVOKE flag, check self-signed, rr %d", i);
 	sec = dnskey_verify_rrset(env, ve, dnskey_rrset, dnskey_rrset, i);
 	return (sec == sec_status_secure);
 }
@@ -934,7 +934,7 @@ revoke_dnskey(struct autr_ta* ta, int off)
         ldns_rdf* rdf;
         uint16_t flags;
 	log_assert(ta && ta->rr);
-	if(!ldns_rr_get_type(ta->rr) != LDNS_RR_TYPE_DNSKEY)
+	if(ldns_rr_get_type(ta->rr) != LDNS_RR_TYPE_DNSKEY)
 		return;
 	rdf = ldns_rr_dnskey_flags(ta->rr);
 	flags = ldns_read_uint16(ldns_rdf_data(rdf));

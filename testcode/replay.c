@@ -322,6 +322,8 @@ replay_moment_read(char* remain, FILE* in, const char* name, int* lineno,
 		read_file_content(in, lineno, mom);
 	} else if(parse_keyword(&remain, "ERROR")) {
 		mom->evt_type = repevt_error;
+	} else if(parse_keyword(&remain, "TRAFFIC")) {
+		mom->evt_type = repevt_traffic;
 	} else if(parse_keyword(&remain, "ASSIGN")) {
 		mom->evt_type = repevt_assign;
 		read_assign_step(remain, mom);
@@ -681,28 +683,34 @@ perform_arith(double x, char op, double y, double* res)
 
 /** do macro arithmetic on two numbers and operand */
 static char*
-do_macro_arith(char* at, size_t remain, char** arithstart)
+do_macro_arith(char* orig, size_t remain, char** arithstart)
 {
 	double x, y, result;
 	char operator;
 	int skip;
 	char buf[32];
+	char* at;
 	/* not yet done? we want number operand number expanded first. */
 	if(!*arithstart) {
 		/* remember start pos of expr, skip the first number */
+		at = orig;
 		*arithstart = at;
 		while(*at && (isdigit((int)*at) || *at == '.'))
 			at++;
 		return at;
 	}
 	/* move back to start */
-	remain += (size_t)(at - *arithstart);
+	remain += (size_t)(orig - *arithstart);
 	at = *arithstart;
 
 	/* parse operands */
 	if(sscanf(at, " %lf %c %lf%n", &x, &operator, &y, &skip) != 3) {
-		log_err("cannot parse arithmetic: %s", at);
-		return NULL;
+		*arithstart = NULL;
+		return do_macro_arith(orig, remain, arithstart);
+	}
+	if(isdigit((int)operator)) {
+		*arithstart = orig;
+		return at+skip; /* do nothing, but setup for later number */
 	}
 
 	/* calculate result */
@@ -719,6 +727,24 @@ do_macro_arith(char* at, size_t remain, char** arithstart)
 	/* the result can be part of another expression, restart that */
 	*arithstart = NULL;
 	return at;
+}
+
+/** Do range macro on expanded buffer */
+static char*
+do_macro_range(char* buf)
+{
+	double x, y, z;
+	if(sscanf(buf, " %lf %lf %lf", &x, &y, &z) != 3) {
+		log_err("range func requires 3 args: %s", buf);
+		return NULL;
+	}
+	if(x <= y && y <= z) {
+		char res[1024];
+		snprintf(res, sizeof(res), "%.24g", y);
+		return strdup(res);
+	}
+	fatal_exit("value %.24g not in range [%.24g, %.24g]", y, x, z);
+	return NULL;
 }
 
 static char*
@@ -752,6 +778,10 @@ macro_expand(rbtree_t* store, struct replay_runtime* runtime, char** text)
 		strncmp(buf, "ctime\t", 6) == 0) {
 		at += 6;
 		dofunc = 1;
+	} else if(strncmp(buf, "range ", 6) == 0 ||
+		strncmp(buf, "range\t", 6) == 0) {
+		at += 6;
+		dofunc = 1;
 	}
 
 	/* actual macro text expansion */
@@ -778,6 +808,8 @@ macro_expand(rbtree_t* store, struct replay_runtime* runtime, char** text)
 		/* post process functions, buf has the argument(s) */
 		if(strncmp(buf, "ctime", 5) == 0) {
 			return do_macro_ctime(buf+6);	
+		} else if(strncmp(buf, "range", 5) == 0) {
+			return do_macro_range(buf+6);	
 		}
 	}
 	return strdup(buf);
@@ -947,6 +979,18 @@ void testbound_selftest(void)
 
 	v = macro_process(store, NULL, "${32 / ${$y+$y} + ${${100*3}/3}}");
 	log_assert( v && strcmp(v, "108") == 0);
+	free(v);
+
+	v = macro_process(store, NULL, "${1 2 33 2 1}");
+	log_assert( v && strcmp(v, "1 2 33 2 1") == 0);
+	free(v);
+
+	v = macro_process(store, NULL, "${123 3 + 5}");
+	log_assert( v && strcmp(v, "123 8") == 0);
+	free(v);
+
+	v = macro_process(store, NULL, "${123 glug 3 + 5}");
+	log_assert( v && strcmp(v, "123 glug 8") == 0);
 	free(v);
 
 	macro_store_delete(store);

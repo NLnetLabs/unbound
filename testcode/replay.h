@@ -70,6 +70,9 @@
  *      o TIME_PASSES ELAPSE [seconds] - increase 'now' time counter, can be 
  *      			a floating point number.
  *        TIME_PASSES EVAL [macro] - expanded for seconds to move time.
+ *      o TRAFFIC - like CHECK_ANSWER, causes traffic to flow.
+ *		actually the traffic flows before this step is taken.
+ *		the step waits for traffic to stop.
  *      o CHECK_AUTOTRUST [id] - followed by FILE_BEGIN [to match] FILE_END.
  *      	The file contents is macro expanded before match.
  *      o ERROR
@@ -83,11 +86,16 @@
  * ${..} is macro expanded from its expression.  Text substitution.
  * 	o $var replaced with its value.  var is identifier [azAZ09_]*
  * 	o number is that number.
+ * 	o ${variables and arithmetic }
  * 	o +, -, / and *.  Note, evaluated left-to-right. Use ${} for brackets.
- *	o ${time} is the current time.
- *	o ${ctime value} is the text ctime(value), i.e. Fri 3 Aug 2009, ...
- *		must have one space after 'ctime'.
- *	o ${timeout} is the time until next timeout in the comm_timer list.
+ * 	  So again, no precedence rules, so 2+3*4 === ${2+3}*4 === 20.
+ * 	  Do 2+${3*4} to get 24.
+ * 	o ${function params}
+ *		o ${time} is the current time for the simulated unbound.
+ *		o ${ctime value} is the text ctime(value), Fri 3 Aug 2009, ...
+ *		o ${timeout} is the time until next timeout in comm_timer list.
+ *		o ${range lower value upper} checks if lower<=value<=upper
+ *			returns value if check succeeds.
  *
  * ; Example file
  * SCENARIO_BEGIN Example scenario
@@ -187,7 +195,9 @@ struct replay_moment {
 		/** an error happens to outbound query */
 		repevt_error,
 		/** assignment to a variable */
-		repevt_assign
+		repevt_assign,
+		/** cause traffic to flow */
+		repevt_traffic
 	} 
 		/** variable with what is to happen this moment */
 		evt_type;

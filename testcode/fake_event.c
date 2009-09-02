@@ -133,6 +133,7 @@ repevt_string(enum replay_event_type t)
 	case repevt_autotrust_check: return "CHECK_AUTOTRUST";
 	case repevt_error:	 return "ERROR";
 	case repevt_assign:	 return "ASSIGN";
+	case repevt_traffic:	 return "TRAFFIC";
 	default:		 return "UNKNOWN";
 	}
 }
@@ -512,7 +513,7 @@ autotrust_check(struct replay_runtime* runtime, struct replay_moment* mom)
 		expanded = macro_process(runtime->vars, runtime, p->str);
 		if(!expanded) 
 			fatal_exit("could not expand macro line %d", lineno);
-		if(verbosity >= VERB_ALGO && strcmp(p->str, expanded) != 0)
+		if(verbosity >= 7 && strcmp(p->str, expanded) != 0)
 			log_info("expanded '%s' to '%s'", p->str, expanded);
 		if(strcmp(expanded, line) != 0) {
 			log_err("mismatch in file %s, line %d", name, lineno);
@@ -614,6 +615,9 @@ do_moment_and_advance(struct replay_runtime* runtime)
 		moment_assign(runtime, runtime->now);
 		advance_moment(runtime);
 		break;
+	case repevt_traffic:
+		advance_moment(runtime);
+		break;
 	default:
 		fatal_exit("testbound: unknown event type %d", 
 			runtime->now->evt_type);
@@ -626,7 +630,7 @@ run_scenario(struct replay_runtime* runtime)
 {
 	struct entry* entry = NULL;
 	struct fake_pending* pending = NULL;
-	int max_rounds = 50;
+	int max_rounds = 5000;
 	int rounds = 0;
 	runtime->now = runtime->scenario->mom_first;
 	log_info("testbound: entering fake runloop");

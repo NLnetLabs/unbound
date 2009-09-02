@@ -99,7 +99,9 @@ RANGE_END
 ; set date/time to Aug 24 09:46:40  (2009).
 STEP 5 TIME_PASSES ELAPSE 1251100000
 STEP 6 ASSIGN t0 = ${time}
-STEP 7 ASSIGN probe = ${timeout}
+; get probe time and check it. 4800 is about 10% less than 5400. And more than
+; the 3600 that a failure timeout would have.
+STEP 7 ASSIGN probe = ${range 4800 ${timeout} 5400}
 
 
 ; the auto probing should have been done now.
@@ -159,27 +161,9 @@ FILE_END
 ; wait and see if autotrust probes (the unchanged) domain again.
 STEP 40 TIME_PASSES EVAL ${$probe}
 
-; do something to make time pass so that processing is performed.
-STEP 50 QUERY
-ENTRY_BEGIN
-REPLY RD DO
-SECTION QUESTION
-. IN NS
-ENTRY_END
+STEP 50 TRAFFIC
 
-STEP 60 CHECK_ANSWER
-ENTRY_BEGIN
-MATCH all
-REPLY QR RD RA NOERROR
-SECTION QUESTION
-. IN NS
-SECTION ANSWER
-.       3600    IN      NS      k.root-servers.net.
-SECTION ADDITIONAL
-k.root-servers.net.     3600    IN      A       193.0.14.129
-ENTRY_END
-
-STEP 65 ASSIGN probe2 = ${timeout}
+STEP 65 ASSIGN probe2 = ${range 4800 ${timeout} 5400}
 
 STEP 70 CHECK_AUTOTRUST example.com
 FILE_BEGIN
