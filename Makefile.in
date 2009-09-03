@@ -189,10 +189,6 @@ test:	tests
 
 lib:	libunbound.la
 
-libunbound.la:	$(LIBUNBOUND_OBJ) $(ldnslib)
-	$(INFO) Link $@
-	$Q$(LINK_LIB) -export-symbols $(srcdir)/libunbound/ubsyms.def -o $@ $(sort $(LIBUNBOUND_OBJ)) -rpath $(libdir) $(LIBS)
-
 ifeq ($(patsubst ldns-src%,ldns-src,$(ldnsdir)),ldns-src)
 ldnslib=$(ldnsdir)/lib/libldns.a
 $(ldnslib):	$(ldnsdir)/lib
@@ -202,6 +198,10 @@ $(ldnsdir)/lib:
 else
 ldnslib=
 endif
+
+libunbound.la:	$(LIBUNBOUND_OBJ) $(ldnslib)
+	$(INFO) Link $@
+	$Q$(LINK_LIB) -export-symbols $(srcdir)/libunbound/ubsyms.def -o $@ $(sort $(LIBUNBOUND_OBJ)) -rpath $(libdir) $(LIBS)
 
 unbound$(EXEEXT):	$(DAEMON_OBJ) $(ldnslib)
 	$(INFO) Link $@
