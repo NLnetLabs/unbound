@@ -67,7 +67,7 @@ struct autr_ta {
 	struct autr_ta* next;
 	/** the RR */
 	ldns_rr* rr;
-	/** last update of key */
+	/** last update of key state (not the pending count) */
 	time_t last_change;
 	/** 5011 state */
 	autr_state_t s;
