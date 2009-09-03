@@ -16,3 +16,4 @@ Alexander Gall - multihomed, anycast testing of unbound resolver server.
 Zdenek Vasicek and Marek Vavrusa - python module.
 cz.nic - sponsoring 'summer of code' development by Zdenek and Marek.
 Brett Carr - windows beta testing.
+Luca Bruno - patch for windows support in libunbound hosts and resolvconf().

@@ -125,6 +125,9 @@
 /* if the function 'ioctlsocket' is available */
 #undef HAVE_IOCTLSOCKET
 
+/* Define to 1 if you have the <iphlpapi.h> header file. */
+#undef HAVE_IPHLPAPI_H
+
 /* Define to 1 if you have the `kill' function. */
 #undef HAVE_KILL
 

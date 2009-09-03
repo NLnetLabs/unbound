@@ -60,6 +60,11 @@
 #include "services/cache/infra.h"
 #include "services/cache/rrset.h"
 
+#if defined(UB_ON_WINDOWS) && defined (HAVE_WINDOWS_H)
+#include <windows.h>
+#include <iphlpapi.h>
+#endif /* UB_ON_WINDOWS */
+
 struct ub_ctx* 
 ub_ctx_create()
 {
@@ -788,8 +793,47 @@ ub_ctx_resolvconf(struct ub_ctx* ctx, char* fname)
 	char buf[1024];
 	char* parse, *addr;
 	int r;
-	if(fname == NULL)
+
+	if(fname == NULL) {
+#if !defined(UB_ON_WINDOWS) || !defined(HAVE_WINDOWS_H)
 		fname = "/etc/resolv.conf";
+#else
+		FIXED_INFO *info;
+		ULONG buflen = sizeof(*info);
+		IP_ADDR_STRING *ptr;
+
+		info = (FIXED_INFO *) malloc(sizeof (FIXED_INFO));
+		if (info == NULL) 
+			return UB_READFILE;
+
+		if (GetNetworkParams(info, &buflen) == ERROR_BUFFER_OVERFLOW) {
+			free(info);
+			info = (FIXED_INFO *) malloc(buflen);
+			if (info == NULL)
+				return UB_READFILE;
+		}
+
+		if (GetNetworkParams(info, &buflen) == NO_ERROR) {
+			int retval=0;
+			ptr = &(info->DnsServerList);
+			while (ptr) {
+				numserv++;
+				if((retval=ub_ctx_set_fwd(ctx, 
+					ptr->IpAddress.String)!=0)) {
+					free(info);
+					return retval;
+				}
+				ptr = ptr->Next;
+			}
+			free(info);
+			if (numserv==0)
+				return UB_READFILE;
+			return UB_NOERROR;
+		}
+		free(info);
+		return UB_READFILE;
+#endif /* WINDOWS */
+	}
 	in = fopen(fname, "r");
 	if(!in) {
 		/* error in errno! perror(fname) */
@@ -840,8 +884,31 @@ ub_ctx_hosts(struct ub_ctx* ctx, char* fname)
 		return UB_AFTERFINAL;
 	}
 	lock_basic_unlock(&ctx->cfglock);
-	if(fname == NULL)
+	if(fname == NULL) {
+#if defined(UB_ON_WINDOWS) && defined(HAVE_WINDOWS_H)
+		/*
+		 * If this is Windows NT/XP/2K it's in
+		 * %WINDIR%\system32\drivers\etc\hosts.
+		 * If this is Windows 95/98/Me it's in %WINDIR%\hosts.
+		 */
+		name = getenv("WINDIR");
+		if (name != NULL) {
+			int retval=0;
+			snprintf(buf, sizeof(buf), "%s%s", name, 
+				"\\system32\\drivers\\etc\\hosts");
+			if((retval=ub_ctx_hosts(ctx, buf)) !=0 ) {
+				snprintf(buf, sizeof(buf), "%s%s", name, 
+					"\\hosts");
+				retval=ub_ctx_hosts(ctx, buf);
+			}
+			free(name);
+			return retval;
+		}
+		return UB_READFILE;
+#else
 		fname = "/etc/hosts";
+#endif /* WIN32 */
+	}
 	in = fopen(fname, "r");
 	if(!in) {
 		/* error in errno! perror(fname) */
