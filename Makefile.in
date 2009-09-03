@@ -189,7 +189,7 @@ test:	tests
 
 lib:	libunbound.la
 
-libunbound.la:	$(LIBUNBOUND_OBJ)
+libunbound.la:	$(LIBUNBOUND_OBJ) $(ldnslib)
 	$(INFO) Link $@
 	$Q$(LINK_LIB) -export-symbols $(srcdir)/libunbound/ubsyms.def -o $@ $(sort $(LIBUNBOUND_OBJ)) -rpath $(libdir) $(LIBS)
 
