@@ -198,7 +198,7 @@ AC_CHECK_TOOL(STRIP, strip)
 ACX_LIBTOOL_C_ONLY
 
 # Checks for header files.
-AC_CHECK_HEADERS([stdarg.h stdbool.h netinet/in.h sys/param.h sys/socket.h sys/uio.h sys/resource.h arpa/inet.h syslog.h netdb.h sys/wait.h pwd.h glob.h grp.h login_cap.h winsock2.h ws2tcpip.h iphlpapi.h ],,, [AC_INCLUDES_DEFAULT])
+AC_CHECK_HEADERS([stdarg.h stdbool.h netinet/in.h sys/param.h sys/socket.h sys/uio.h sys/resource.h arpa/inet.h syslog.h netdb.h sys/wait.h pwd.h glob.h grp.h login_cap.h winsock2.h ws2tcpip.h],,, [AC_INCLUDES_DEFAULT])
 
 # check for types.  
 # Using own tests for int64* because autoconf builtin only give 32bit.
@@ -527,6 +527,9 @@ if test "$USE_WINSOCK" = 1; then
 	AC_DEFINE(UB_ON_WINDOWS, 1, [Use win32 resources and API])
 	UB_ON_WINDOWS=yes
 	AC_SUBST(UB_ON_WINDOWS)
+	AC_CHECK_HEADERS([iphlpapi.h],,, [AC_INCLUDES_DEFAULT
+#include <windows.h>
+	])
 	AC_CHECK_TOOL(WINDRES, windres)
 	LIBS="$LIBS -liphlpapi"
 fi
