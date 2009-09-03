@@ -59,8 +59,6 @@ int ub_c_parse(void);
 int ub_c_lex(void);
 /** wrap function */
 int ub_c_wrap(void);
-/** print error with file and line number */
-void ub_c_error(const char *message);
 
 /** init ports possible for use */
 static void init_outgoing_availports(int* array, int num);

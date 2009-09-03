@@ -17,6 +17,7 @@
    #include "config.h"
    #include "util/log.h"
    #include "util/module.h"
+   #include "util/netevent.h"
    #include "util/regional.h"
    #include "util/config_file.h"
    #include "util/data/msgreply.h"
@@ -24,6 +25,7 @@
    #include "util/data/dname.h"
    #include "util/storage/lruhash.h"
    #include "services/cache/dns.h"
+   #include "services/mesh.h"
 %}
 
 %include "stdint.i" // uint_16_t can be known type now
@@ -408,6 +410,68 @@ struct dns_msg {
    %}
 }
 
+/* ************************************************************************************ * 
+   Structure mesh_state
+ * ************************************************************************************ */
+struct mesh_state {
+   struct mesh_reply* reply_list;
+};
+
+struct mesh_reply {
+   struct mesh_reply* next;
+   struct comm_reply query_reply;
+};
+
+struct comm_reply {
+   
+};
+
+%inline %{
+
+  PyObject* _comm_reply_addr_get(struct comm_reply* reply) {
+     char dest[64];
+     reply_addr2str(reply, dest, 64);
+     if (dest[0] == 0)
+        return Py_None;
+     return PyString_FromString(dest);
+  }
+
+  PyObject* _comm_reply_family_get(struct comm_reply* reply) {
+
+        int af = (int)((struct sockaddr_in*) &(reply->addr))->sin_family;
+
+        switch(af) {
+           case AF_INET: return PyString_FromString("ip4");
+           case AF_INET6: return PyString_FromString("ip6"); 
+           case AF_UNIX: return PyString_FromString("unix");
+        }
+
+        return Py_None;
+  }
+
+  PyObject* _comm_reply_port_get(struct comm_reply* reply) {
+     uint16_t port;
+     port = ntohs(((struct sockaddr_in*)&(reply->addr))->sin_port);
+     return PyInt_FromLong(port);
+  }
+
+%}
+
+%extend comm_reply {
+   %pythoncode %{
+        def _addr_get(self): return _comm_reply_addr_get(self)
+        __swig_getmethods__["addr"] = _addr_get
+        if _newclass:addr = _swig_property(_addr_get)
+
+        def _port_get(self): return _comm_reply_port_get(self)
+        __swig_getmethods__["port"] = _port_get
+        if _newclass:port = _swig_property(_port_get)
+
+        def _family_get(self): return _comm_reply_family_get(self)
+        __swig_getmethods__["family"] = _family_get
+        if _newclass:family = _swig_property(_family_get)
+   %}
+}
 /* ************************************************************************************ * 
    Structure module_qstate
  * ************************************************************************************ */

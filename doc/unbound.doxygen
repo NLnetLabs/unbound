@@ -499,6 +499,7 @@ EXCLUDE                = ./build \
 			 pythonmod/interface.h \
 			 pythonmod/examples/resgen.py \
 			 pythonmod/examples/resmod.py \
+			 pythonmod/examples/resip.py \
 			 libunbound/python/unbound.py \
 			 libunbound/python/libunbound_wrap.c \
 			 ./ldns-src

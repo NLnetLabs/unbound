@@ -481,7 +481,7 @@ is_bind_special(int c)
 /** 
  * Read a keyword skipping bind comments; spaces, specials, restkeywords. 
  * The file is split into the following tokens:
- *	* special characters, on their own, rdlen=1, { } " ;
+ *	* special characters, on their own, rdlen=1, { } doublequote ;
  *	* whitespace becomes a single ' ' or tab. Newlines become spaces.
  *	* other words ('keywords')
  *	* comments are skipped if desired

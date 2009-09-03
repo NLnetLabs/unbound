@@ -88,8 +88,16 @@ struct event_base
 	int maxfd;
 	/** capacity - size of the fds array */
 	int capfd;
-	/** fdset for read write, for fds ready, and added */
-	fd_set reads, writes, ready, content;
+	/* fdset for read write, for fds ready, and added */
+	fd_set 
+		/** fds for reading */
+		reads, 
+		/** fds for writing */
+		writes, 
+		/** fds determined ready for use */
+		ready, 
+		/** ready plus newly added events. */
+		content;
 	/** array of 0 - maxsig of ptr to event for it */
 	struct event** signals;
 	/** if we need to exit */
@@ -146,7 +154,9 @@ int event_add(struct event *, struct timeval *);
 /** remove event. You may change it again */
 int event_del(struct event *);
 
+/** add a timer */
 #define evtimer_add(ev, tv)             event_add(ev, tv)
+/** remove a timer */
 #define evtimer_del(ev)                 event_del(ev)
 
 /* uses different implementation. Cannot mix fd/timeouts and signals inside

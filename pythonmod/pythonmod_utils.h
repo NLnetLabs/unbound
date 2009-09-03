@@ -77,4 +77,12 @@ void invalidateQueryInCache(struct module_qstate* qstate, struct query_info* qin
  */
 int createResponse(struct module_qstate* qstate, ldns_buffer* pkt);
 
+/**
+ *  Convert reply->addr to string
+ *  @param reply: comm reply with address in it.
+ *  @param dest: destination string.
+ *  @param maxlen: length of string buffer.
+ */
+void reply_addr2str(struct comm_reply* reply, char* dest, int maxlen);
+
 #endif /* PYTHONMOD_UTILS_H */

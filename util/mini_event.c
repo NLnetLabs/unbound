@@ -252,7 +252,7 @@ int event_base_loopexit(struct event_base* base,
 	return 0;
 }
 
-/** free event base, free events yourself */
+/* free event base, free events yourself */
 void event_base_free(struct event_base* base)
 {
 	if(!base)
@@ -279,7 +279,7 @@ void event_set(struct event* ev, int fd, short bits,
 	ev->added = 0;
 }
 
-/** add event to a base */
+/* add event to a base */
 int event_base_set(struct event_base* base, struct event* ev)
 {
 	ev->ev_base = base;
@@ -287,7 +287,7 @@ int event_base_set(struct event_base* base, struct event* ev)
 	return 0;
 }
 
-/** add event to make it active, you may not change it with event_set anymore */
+/* add event to make it active, you may not change it with event_set anymore */
 int event_add(struct event* ev, struct timeval* tv)
 {
 	if(ev->added)
@@ -323,7 +323,7 @@ int event_add(struct event* ev, struct timeval* tv)
 	return 0;
 }
 
-/** remove event, you may change it again */
+/* remove event, you may change it again */
 int event_del(struct event* ev)
 {
 	if(ev->ev_fd != -1 && ev->ev_fd >= ev->ev_base->capfd)

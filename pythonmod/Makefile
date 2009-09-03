@@ -34,7 +34,7 @@
 
 SUEXEC  = sudo
 UNBOUND = ../unbound
-SCRIPT  = ./test-dict.conf
+SCRIPT  = ./test-resip.conf
 
 UNBOUND_OPTS = -dv -c $(SCRIPT)
 

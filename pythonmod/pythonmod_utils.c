@@ -40,6 +40,7 @@
  */
 #include "config.h"
 #include "util/module.h"
+#include "util/netevent.h"
 #include "util/net_help.h"
 #include "services/cache/dns.h"
 #include "services/cache/rrset.h"
@@ -52,13 +53,13 @@
 #undef _XOPEN_SOURCE
 #include <Python.h>
 
-/** Store the reply_info and query_info pair in message cache (qstate->msg_cache) */
+/* Store the reply_info and query_info pair in message cache (qstate->msg_cache) */
 int storeQueryInCache(struct module_qstate* qstate, struct query_info* qinfo, struct reply_info* msgrep, int is_referral)
 {
     if (!msgrep) 
        return 0;
 
-    if (msgrep->authoritative)  //authoritative answer can't be stored in cache
+    if (msgrep->authoritative) /*authoritative answer can't be stored in cache*/
     {
        PyErr_SetString(PyExc_ValueError, "Authoritative answer can't be stored");
        return 0;
@@ -67,7 +68,7 @@ int storeQueryInCache(struct module_qstate* qstate, struct query_info* qinfo, st
     return dns_cache_store(qstate->env, qinfo, msgrep, is_referral);
 }
 
-/**  Invalidate the message associated with query_info stored in message cache */
+/*  Invalidate the message associated with query_info stored in message cache */
 void invalidateQueryInCache(struct module_qstate* qstate, struct query_info* qinfo)
 { 
     hashvalue_t h;
@@ -78,10 +79,10 @@ void invalidateQueryInCache(struct module_qstate* qstate, struct query_info* qin
     h = query_info_hash(qinfo);
     if ((e=slabhash_lookup(qstate->env->msg_cache, h, qinfo, 0))) 
     {
-        r = (struct reply_info*)(e->data);
-        if (r) 
-        {
-           r->ttl = 0;
+	r = (struct reply_info*)(e->data);
+	if (r) 
+	{
+	   r->ttl = 0;
 	   if(rrset_array_lock(r->ref, r->rrset_count, *qstate->env->now)) {
 		   for(i=0; i< r->rrset_count; i++) 
 		   {
@@ -96,14 +97,14 @@ void invalidateQueryInCache(struct module_qstate* qstate, struct query_info* qin
 		   }
 		   rrset_array_unlock(r->ref, r->rrset_count);
 	   }
-        }
-        lock_rw_unlock(&e->lock);
+	}
+	lock_rw_unlock(&e->lock);
     } else {
-        log_info("invalidateQueryInCache: qinfo is not in cache");
+	log_info("invalidateQueryInCache: qinfo is not in cache");
     }
 }
 
-/** Create response according to the ldns packet content */
+/* Create response according to the ldns packet content */
 int createResponse(struct module_qstate* qstate, ldns_buffer* pkt)
 {
     struct msg_parse* prs;
@@ -112,8 +113,8 @@ int createResponse(struct module_qstate* qstate, ldns_buffer* pkt)
     /* parse message */
     prs = (struct msg_parse*) regional_alloc(qstate->env->scratch, sizeof(struct msg_parse));
     if (!prs) {
-        log_err("storeResponse: out of memory on incoming message");
-        return 0;
+	log_err("storeResponse: out of memory on incoming message");
+	return 0;
     }
 
     memset(prs, 0, sizeof(*prs));
@@ -121,12 +122,12 @@ int createResponse(struct module_qstate* qstate, ldns_buffer* pkt)
 
     ldns_buffer_set_position(pkt, 0);
     if (parse_packet(pkt, prs, qstate->env->scratch) != LDNS_RCODE_NOERROR) {
-        verbose(VERB_ALGO, "storeResponse: parse error on reply packet");
-        return 0;
+	verbose(VERB_ALGO, "storeResponse: parse error on reply packet");
+	return 0;
     }
     /* edns is not examined, but removed from message to help cache */
     if(parse_extract_edns(prs, &edns) != LDNS_RCODE_NOERROR)
-        return 0;
+	return 0;
 
     /* remove CD-bit, we asked for in case we handle validation ourself */
     prs->flags &= ~BIT_CD;
@@ -138,23 +139,38 @@ int createResponse(struct module_qstate* qstate, ldns_buffer* pkt)
 
     memset(qstate->return_msg, 0, sizeof(*qstate->return_msg));
     if(!parse_create_msg(pkt, prs, NULL, &(qstate->return_msg)->qinfo, &(qstate->return_msg)->rep, qstate->region)) {
-        log_err("storeResponse: malloc failure: allocating incoming dns_msg");
-        return 0;
+	log_err("storeResponse: malloc failure: allocating incoming dns_msg");
+	return 0;
     }
     
     /* Make sure that the RA flag is set (since the presence of 
      * this module means that recursion is available) */
-    //qstate->return_msg->rep->flags |= BIT_RA;
+    /* qstate->return_msg->rep->flags |= BIT_RA; */
 
     /* Clear the AA flag */
     /* FIXME: does this action go here or in some other module? */
-    //qstate->return_msg->rep->flags &= ~BIT_AA;
+    /*qstate->return_msg->rep->flags &= ~BIT_AA; */
 
     /* make sure QR flag is on */
-    //qstate->return_msg->rep->flags |= BIT_QR;
+    /*qstate->return_msg->rep->flags |= BIT_QR; */
 
     if(verbosity >= VERB_ALGO)
-        log_dns_msg("storeResponse: packet:", &qstate->return_msg->qinfo, qstate->return_msg->rep);
+	log_dns_msg("storeResponse: packet:", &qstate->return_msg->qinfo, qstate->return_msg->rep);
 
     return 1;
+}
+
+
+/* Convert reply->addr to string */
+void reply_addr2str(struct comm_reply* reply, char* dest, int maxlen)
+{
+	int af = (int)((struct sockaddr_in*) &(reply->addr))->sin_family;
+	void* sinaddr = &((struct sockaddr_in*) &(reply->addr))->sin_addr;
+
+	if(af == AF_INET6)
+		sinaddr = &((struct sockaddr_in6*)&(reply->addr))->sin6_addr;
+	dest[0] = 0;
+	if (inet_ntop(af, sinaddr, dest, (socklen_t)maxlen) == 0)
+	   return;
+	dest[maxlen-1] = 0;
 }
