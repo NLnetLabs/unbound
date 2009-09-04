@@ -440,9 +440,9 @@ if test x_$withval = x_yes -o x_$withval != x_no; then
 			mkdir build >/dev/null 2>&1
 			mkdir build/libevent >/dev/null 2>&1
 			mkdir build/libevent/.libs >/dev/null 2>&1
-			ev_files_o=`ls $thedir/*.o | grep -v evdns\.o`
-			ev_files_lo=`ls $thedir/*.lo | grep -v evdns\.lo`
-			ev_files_libso=`ls $thedir/.libs/*.o | grep -v evdns\.o`
+			ev_files_o=`ls $thedir/*.o | grep -v evdns\.o | grep -v bufferevent_openssl\.o`
+			ev_files_lo=`ls $thedir/*.lo | grep -v evdns\.lo | grep -v bufferevent_openssl\.lo`
+			ev_files_libso=`ls $thedir/.libs/*.o | grep -v evdns\.o | grep -v bufferevent_openssl\.o`
 			cp $ev_files_o build/libevent
 			cp $ev_files_lo build/libevent
 			cp $ev_files_libso build/libevent/.libs

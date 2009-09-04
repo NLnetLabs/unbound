@@ -1582,7 +1582,7 @@ comm_timer_create(struct comm_base* base, void (*cb)(void*), void* cb_arg)
 	tm->ev_timer->base = base;
 	tm->callback = cb;
 	tm->cb_arg = cb_arg;
-	event_set(&tm->ev_timer->ev, -1, EV_PERSIST|EV_TIMEOUT, 
+	event_set(&tm->ev_timer->ev, -1, EV_TIMEOUT, 
 		comm_timer_callback, tm);
 	if(event_base_set(base->eb->base, &tm->ev_timer->ev) != 0) {
 		log_err("timer_create: event_base_set failed.");
@@ -1608,7 +1608,7 @@ comm_timer_set(struct comm_timer* timer, struct timeval* tv)
 	log_assert(tv);
 	if(timer->ev_timer->enabled)
 		comm_timer_disable(timer);
-	event_set(&timer->ev_timer->ev, -1, EV_PERSIST|EV_TIMEOUT,
+	event_set(&timer->ev_timer->ev, -1, EV_TIMEOUT,
 		comm_timer_callback, timer);
 	if(event_base_set(timer->ev_timer->base->eb->base, 
 		&timer->ev_timer->ev) != 0)

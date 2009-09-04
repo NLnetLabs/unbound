@@ -349,10 +349,12 @@ tags:	$(srcdir)/*.[ch] $(srcdir)/*/*.[ch]
 doc:
 	if test -n "$(doxygen)"; then \
 		$(doxygen) $(srcdir)/doc/unbound.doxygen; fi
+ifeq "$(findstring yes,$(WITH_PYUNBOUND)$(WITH_PYTHONMODULE))" "yes"
 	if test -x "`which sphinx-build 2>&1`"; then \
 		sphinx-build -b html pythonmod/doc doc/html/pythonmod; \
 		sphinx-build -b html libunbound/python/doc doc/html/pyunbound;\
 	fi
+endif
 
 strip:
 	$(STRIP) unbound$(EXEEXT)

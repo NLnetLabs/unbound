@@ -1,3 +1,10 @@
+4 September 2009: Wouter
+	- Changes to make unbound work with libevent-2.0.3 alpha. (in
+	  configure detection due to new ssl dependency in libevent)
+	- do not call sphinx for documentation when python is disabled.
+	- remove EV_PERSIST from libevent timeout code to make the code
+	  compatible with the libevent-2.0.  Works with older libevent too.
+
 3 September 2009: Wouter
 	- Got a patch from Luca Bruno for libunbound support on windows to
 	  pick up the system resolvconf nameservers and hosts there.
