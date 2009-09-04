@@ -779,7 +779,7 @@ int set_return_msg(struct module_qstate* qstate,
 {
      ldns_pkt* pkt = 0;
      ldns_status status;
-     ldns_rr_list* rr_list1 = 0,*rr_list2 = 0,*rr_list3 = 0,*rr_list4 = 0;
+     ldns_rr_list* rr_list = 0;
      ldns_buffer *qb = 0;
      int res = 1;
      
@@ -790,14 +790,18 @@ int set_return_msg(struct module_qstate* qstate,
      if ((status != LDNS_STATUS_OK) || (pkt == 0))
         return 0;
 
-     rr_list1 = createRRList(question, default_ttl);
-     if ((rr_list1) && (res)) res = ldns_pkt_push_rr_list(pkt, LDNS_SECTION_QUESTION, rr_list1);
-     rr_list2 = createRRList(answer, default_ttl);
-     if ((rr_list2) && (res)) res = ldns_pkt_push_rr_list(pkt, LDNS_SECTION_ANSWER, rr_list2);
-     rr_list3 = createRRList(authority, default_ttl);
-     if ((rr_list3) && (res)) res = ldns_pkt_push_rr_list(pkt, LDNS_SECTION_AUTHORITY, rr_list3);
-     rr_list4 = createRRList(additional, default_ttl);
-     if ((rr_list4) && (res)) res = ldns_pkt_push_rr_list(pkt, LDNS_SECTION_ADDITIONAL, rr_list4);
+     rr_list = createRRList(question, default_ttl);
+     if ((rr_list) && (res)) res = ldns_pkt_push_rr_list(pkt, LDNS_SECTION_QUESTION, rr_list);
+     ldns_rr_list_free(rr_list);
+     rr_list = createRRList(answer, default_ttl);
+     if ((rr_list) && (res)) res = ldns_pkt_push_rr_list(pkt, LDNS_SECTION_ANSWER, rr_list);
+     ldns_rr_list_free(rr_list);
+     rr_list = createRRList(authority, default_ttl);
+     if ((rr_list) && (res)) res = ldns_pkt_push_rr_list(pkt, LDNS_SECTION_AUTHORITY, rr_list);
+     ldns_rr_list_free(rr_list);
+     rr_list = createRRList(additional, default_ttl);
+     if ((rr_list) && (res)) res = ldns_pkt_push_rr_list(pkt, LDNS_SECTION_ADDITIONAL, rr_list);
+     ldns_rr_list_free(rr_list);
 
      if ((res) && ((qb = ldns_buffer_new(LDNS_MIN_BUFLEN)) == 0)) res = 0;
      if ((res) && (ldns_pkt2buffer_wire(qb, pkt) != LDNS_STATUS_OK)) res = 0;
@@ -806,7 +810,7 @@ int set_return_msg(struct module_qstate* qstate,
 
      if (qb) ldns_buffer_free(qb);
 
-     ldns_pkt_free(pkt); //this function dealocates pkt as well as rr_lists
+     ldns_pkt_free(pkt); //this function dealocates pkt as well as rrs
      return res;
 }
 %}

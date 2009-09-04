@@ -4,6 +4,7 @@
 	- do not call sphinx for documentation when python is disabled.
 	- remove EV_PERSIST from libevent timeout code to make the code
 	  compatible with the libevent-2.0.  Works with older libevent too.
+	- fix memory leak in python code.
 
 3 September 2009: Wouter
 	- Got a patch from Luca Bruno for libunbound support on windows to
