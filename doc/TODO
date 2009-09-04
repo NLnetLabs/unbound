@@ -228,4 +228,3 @@ later
   document high scalable, high available unbound setup onepager.
 - prefetch DNSKEY when DS in delegation seen (nonCD, underTA).
 - use libevent if available on system by default(?), default outgoing 256to1024
-
