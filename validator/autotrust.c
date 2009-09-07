@@ -789,6 +789,7 @@ void autr_write_file(struct module_env* env, struct trust_anchor* tp)
 	FILE* out;
 	struct autr_ta* ta;
 	log_assert(tp->autr);
+	verbose(VERB_ALGO, "autotrust: write to disk");
 	out = fopen(tp->autr->file, "w");
 	if(!out) {
 		log_err("Could not open autotrust file for writing, %s: %s",
@@ -1251,6 +1252,8 @@ do_addtime(struct module_env* env, struct autr_ta* anchor, int* c)
 	if (exceeded && anchor->s == AUTR_STATE_ADDPEND) {
 		verbose_key(anchor, VERB_ALGO, "add-holddown time exceeded "
 			"%d seconds ago", exceeded);
+		verbose_key(anchor, VERB_ALGO, "its pending count is %d",
+			anchor->pending_count);
 		if(anchor->pending_count >= MIN_PENDINGCOUNT) {
 			set_trustanchor_state(env, anchor, c, AUTR_STATE_VALID);
 			anchor->pending_count = 0;
@@ -1415,6 +1418,18 @@ do_statetable(struct module_env* env, struct trust_anchor* tp, int* changed)
 	}
 	remove_missing_trustanchors(env, tp, changed);
 	return 1;
+}
+
+/** See if time alone makes ADDPEND to VALID transition */
+static void
+autr_holddown_exceed(struct module_env* env, struct trust_anchor* tp, int* c)
+{
+	struct autr_ta* anchor;
+	for(anchor = tp->autr->keys; anchor; anchor = anchor->next) {
+		if(rr_is_dnskey_sep(anchor->rr) && 
+			anchor->s == AUTR_STATE_ADDPEND)
+			do_addtime(env, anchor, c);
+	}
 }
 
 /** cleanup key list */
@@ -1596,15 +1611,25 @@ int autr_process_prime(struct module_env* env, struct val_env* ve,
 
 	log_nametypeclass(VERB_ALGO, "autotrust process for",
 		tp->name, LDNS_RR_TYPE_DNSKEY, tp->dclass);
+	/* see if time alone makes some keys valid */
+	autr_holddown_exceed(env, tp, &changed);
+	if(changed) {
+		if(!autr_assemble(tp)) {
+			log_err("malloc failure assembling autotrust keys");
+			return 1; /* unchanged */
+		}
+	}
 	if(!dnskey_rrset) {
 		verbose(VERB_ALGO, "autotrust: no dnskey rrset");
 		tp->autr->query_failed += 1;
+		autr_write_file(env, tp);
 		return 1; /* trust point exists */
 	}
 	/* verify the dnskey rrset and see if it is valid. */
 	if(!verify_dnskey(env, ve, tp, dnskey_rrset)) {
 		verbose(VERB_ALGO, "autotrust: dnskey did not verify.");
 		tp->autr->query_failed += 1;
+		autr_write_file(env, tp);
 		return 1; /* trust point exists */
 	}
 
@@ -1635,7 +1660,6 @@ int autr_process_prime(struct module_env* env, struct val_env* ve,
 	autr_cleanup_keys(tp);
 	if(!set_next_probe(env, tp, dnskey_rrset))
 		return 0; /* trust point does not exist */
-	verbose(VERB_ALGO, "autotrust: write to disk");
 	autr_write_file(env, tp);
 	if(changed) {
 		verbose(VERB_ALGO, "autotrust: changed, reassemble");

@@ -1,3 +1,9 @@
+7 September 2009: Wouter
+	- autotrust testbound scenarios.
+	- autotrust fix that failure count is written to file.
+	- autotrust fix that keys may become valid after add holddown time
+	  alone, before the probe returns.
+
 4 September 2009: Wouter
 	- Changes to make unbound work with libevent-2.0.3 alpha. (in
 	  configure detection due to new ssl dependency in libevent)
