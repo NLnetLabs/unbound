@@ -489,6 +489,7 @@ move_into_cache(struct ub_packed_rrset_key* k,
 		s += d->rr_len[i];
 	ad = (struct packed_rrset_data*)malloc(s);
 	if(!ad) {
+		log_warn("error out of memory");
 		ub_packed_rrset_parsedelete(ak, &worker->alloc);
 		return 0;
 	}
@@ -592,11 +593,7 @@ load_rrset(SSL* ssl, ldns_buffer* buf, struct worker* worker)
 		return 1;
 	}
 
-	i= move_into_cache(rk, d, worker);
-	if(!i) {
-		log_warn("move into cache failed");
-	}
-	return i;
+	return move_into_cache(rk, d, worker);
 }
 
 /** load rrset cache */
