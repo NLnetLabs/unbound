@@ -400,17 +400,16 @@ load_rr(SSL* ssl, ldns_buffer* buf, struct regional* region,
 		*go_on = 0;
 		return 1;
 	}
-	log_info("rd %s", (char*)ldns_buffer_begin(buf));
 	status = ldns_rr_new_frm_str(&rr, (char*)ldns_buffer_begin(buf),
 		LDNS_DEFAULT_TTL, NULL, NULL);
 	if(status != LDNS_STATUS_OK) {
-		(void)ssl_printf(ssl, "error cannot parse rr :%s: %s\n",
+		log_warn("error cannot parse rr :%s: %s",
 			ldns_get_errorstr_by_id(status),
 			(char*)ldns_buffer_begin(buf));
 		return 0;
 	}
 	if(is_rrsig && ldns_rr_get_type(rr) != LDNS_RR_TYPE_RRSIG) {
-		(void)ssl_printf(ssl, "error expected rrsig but got %s\n",
+		log_warn("error expected rrsig but got %s",
 			(char*)ldns_buffer_begin(buf));
 		return 0;
 	}
@@ -421,7 +420,7 @@ load_rr(SSL* ssl, ldns_buffer* buf, struct regional* region,
 	ldns_buffer_skip(buf, 2);
 	status = ldns_rr_rdata2buffer_wire(buf, rr);
 	if(status != LDNS_STATUS_OK) {
-		(void)ssl_printf(ssl, "error cannot rr2wire :%s\n",
+		log_warn("error cannot rr2wire :%s",
 			ldns_get_errorstr_by_id(status));
 		ldns_rr_free(rr);
 		return 0;
@@ -434,7 +433,7 @@ load_rr(SSL* ssl, ldns_buffer* buf, struct regional* region,
 		ldns_buffer_begin(buf), ldns_buffer_limit(buf));
 	if(!d->rr_data[i]) {
 		ldns_rr_free(rr);
-		(void)ssl_printf(ssl, "error out of memory\n");
+		log_warn("error out of memory");
 		return 0;
 	}
 
@@ -449,7 +448,7 @@ load_rr(SSL* ssl, ldns_buffer* buf, struct regional* region,
 		rk->rk.dname = regional_alloc_init(region, 
 			ldns_buffer_begin(buf), ldns_buffer_limit(buf));
 		if(!rk->rk.dname) {
-			(void)ssl_printf(ssl, "error out of memory\n");
+			log_warn("error out of memory");
 			ldns_rr_free(rr);
 			return 0;
 		}
@@ -461,7 +460,7 @@ load_rr(SSL* ssl, ldns_buffer* buf, struct regional* region,
 
 /** move entry into cache */
 static int
-move_into_cache(SSL* ssl, struct ub_packed_rrset_key* k, 
+move_into_cache(struct ub_packed_rrset_key* k, 
 	struct packed_rrset_data* d, struct worker* worker)
 {
 	struct ub_packed_rrset_key* ak;
@@ -472,7 +471,7 @@ move_into_cache(SSL* ssl, struct ub_packed_rrset_key* k,
 
 	ak = alloc_special_obtain(&worker->alloc);
 	if(!ak) {
-		(void)ssl_printf(ssl, "error out of memory\n");
+		log_warn("error out of memory");
 		return 0;
 	}
 	ak->entry.data = NULL;
@@ -480,7 +479,7 @@ move_into_cache(SSL* ssl, struct ub_packed_rrset_key* k,
 	ak->entry.hash = rrset_key_hash(&k->rk);
 	ak->rk.dname = (uint8_t*)memdup(k->rk.dname, k->rk.dname_len);
 	if(!ak->rk.dname) {
-		(void)ssl_printf(ssl, "error out of memory\n");
+		log_warn("error out of memory");
 		ub_packed_rrset_parsedelete(ak, &worker->alloc);
 		return 0;
 	}
@@ -534,13 +533,12 @@ load_rrset(SSL* ssl, ldns_buffer* buf, struct worker* worker)
 		sizeof(*rk));
 	d = (struct packed_rrset_data*)regional_alloc_zero(region, sizeof(*d));
 	if(!rk || !d) {
-		(void) ssl_printf(ssl, "error out of memory\n");
+		log_warn("error out of memory");
 		return 0;
 	}
 
 	if(strncmp(s, ";rrset", 6) != 0) {
-		(void)ssl_printf(ssl, "error expected ';rrset' but got %s\n",
-			s);
+		log_warn("error expected ';rrset' but got %s", s);
 		return 0;
 	}
 	s += 6;
@@ -550,11 +548,13 @@ load_rrset(SSL* ssl, ldns_buffer* buf, struct worker* worker)
 	}
 	if(sscanf(s, " %u %u %u %u %u", &ttl, &rr_count, &rrsig_count,
 		&trust, &security) != 5) {
-		(void)ssl_printf(ssl, "error bad rrset spec %s\n", s);
+		log_warn("error bad rrset spec %s", s);
 		return 0;
 	}
-	if(rr_count == 0 && rrsig_count == 0)
+	if(rr_count == 0 && rrsig_count == 0) {
+		log_warn("bad rrset without contents");
 		return 0;
+	}
 	d->count = (size_t)rr_count;
 	d->rrsig_count = (size_t)rrsig_count;
 	d->security = (enum sec_status)security;
@@ -568,7 +568,7 @@ load_rrset(SSL* ssl, ldns_buffer* buf, struct worker* worker)
 	d->rr_data = regional_alloc_zero(region, 
 		sizeof(uint8_t*)*(d->count+d->rrsig_count));
 	if(!d->rr_len || !d->rr_ttl || !d->rr_data) {
-		(void) ssl_printf(ssl, "error out of memory\n");
+		log_warn("error out of memory");
 		return 0;
 	}
 	
@@ -576,12 +576,14 @@ load_rrset(SSL* ssl, ldns_buffer* buf, struct worker* worker)
 	for(i=0; i<rr_count; i++) {
 		if(!load_rr(ssl, buf, region, rk, d, i, 0, 
 			&go_on, *worker->env.now)) {
+			log_warn("could not read rr %u", i);
 			return 0;
 		}
 	}
 	for(i=0; i<rrsig_count; i++) {
 		if(!load_rr(ssl, buf, region, rk, d, i+rr_count, 1, 
 			&go_on, *worker->env.now)) {
+			log_warn("could not read rrsig %u", i);
 			return 0;
 		}
 	}
@@ -590,7 +592,11 @@ load_rrset(SSL* ssl, ldns_buffer* buf, struct worker* worker)
 		return 1;
 	}
 
-	return move_into_cache(ssl, rk, d, worker);
+	i= move_into_cache(rk, d, worker);
+	if(!i) {
+		log_warn("move into cache failed");
+	}
+	return i;
 }
 
 /** load rrset cache */
@@ -610,7 +616,7 @@ load_rrset_cache(SSL* ssl, struct worker* worker)
 /** read qinfo from next three words */
 static char*
 load_qinfo(char* str, struct query_info* qinfo, ldns_buffer* buf, 
-	struct regional* region, SSL* ssl)
+	struct regional* region)
 {
 	/* s is part of the buf */
 	char* s = str;
@@ -622,7 +628,7 @@ load_qinfo(char* str, struct query_info* qinfo, ldns_buffer* buf,
 	if(s) s = strchr(s+1, ' ');
 	if(s) s = strchr(s+1, ' ');
 	if(!s) {
-		(void)ssl_printf(ssl, "error line too short, %s\n", str);
+		log_warn("error line too short, %s", str);
 		return NULL;
 	}
 	s[0] = 0;
@@ -631,7 +637,7 @@ load_qinfo(char* str, struct query_info* qinfo, ldns_buffer* buf,
 	/* parse them */
 	status = ldns_rr_new_question_frm_str(&rr, str, NULL, NULL);
 	if(status != LDNS_STATUS_OK) {
-		(void)ssl_printf(ssl, "error cannot parse: %s %s\n",
+		log_warn("error cannot parse: %s %s",
 			ldns_get_errorstr_by_id(status), str);
 		return NULL;
 	}
@@ -641,7 +647,7 @@ load_qinfo(char* str, struct query_info* qinfo, ldns_buffer* buf,
 	status = ldns_dname2buffer_wire(buf, ldns_rr_owner(rr));
 	ldns_rr_free(rr);
 	if(status != LDNS_STATUS_OK) {
-		(void)ssl_printf(ssl, "error cannot dname2wire: %s\n", 
+		log_warn("error cannot dname2wire: %s", 
 			ldns_get_errorstr_by_id(status));
 		return NULL;
 	}
@@ -650,7 +656,7 @@ load_qinfo(char* str, struct query_info* qinfo, ldns_buffer* buf,
 	qinfo->qname = (uint8_t*)regional_alloc_init(region, 
 		ldns_buffer_begin(buf), ldns_buffer_limit(buf));
 	if(!qinfo->qname) {
-		(void)ssl_printf(ssl, "error out of memory\n");
+		log_warn("error out of memory");
 		return NULL;
 	}
 
@@ -676,12 +682,12 @@ load_ref(SSL* ssl, ldns_buffer* buf, struct worker* worker,
 		return 1;
 	}
 
-	s = load_qinfo(s, &qinfo, buf, region, ssl);
+	s = load_qinfo(s, &qinfo, buf, region);
 	if(!s) {
 		return 0;
 	}
 	if(sscanf(s, " %u", &flags) != 1) {
-		(void)ssl_printf(ssl, "error cannot parse flags: %s\n", s);
+		log_warn("error cannot parse flags: %s", s);
 		return 0;
 	}
 
@@ -717,11 +723,11 @@ load_msg(SSL* ssl, ldns_buffer* buf, struct worker* worker)
 	regional_free_all(region);
 
 	if(strncmp(s, "msg ", 4) != 0) {
-		(void)ssl_printf(ssl, "error expected msg but got %s\n", s);
+		log_warn("error expected msg but got %s", s);
 		return 0;
 	}
 	s += 4;
-	s = load_qinfo(s, &qinf, buf, region, ssl);
+	s = load_qinfo(s, &qinf, buf, region);
 	if(!s) {
 		return 0;
 	}
@@ -729,7 +735,7 @@ load_msg(SSL* ssl, ldns_buffer* buf, struct worker* worker)
 	/* read remainder of line */
 	if(sscanf(s, " %u %u %u %u %u %u %u", &flags, &qdcount, &ttl, 
 		&security, &an, &ns, &ar) != 7) {
-		(void)ssl_printf(ssl, "error cannot parse numbers: %s\n", s);
+		log_warn("error cannot parse numbers: %s", s);
 		return 0;
 	}
 	rep.flags = (uint16_t)flags;
@@ -755,7 +761,7 @@ load_msg(SSL* ssl, ldns_buffer* buf, struct worker* worker)
 		return 1; /* skip this one, not all references satisfied */
 
 	if(!dns_cache_store(&worker->env, &qinf, &rep, 0)) {
-		(void)ssl_printf(ssl, "error out of memory\n");
+		log_warn("error out of memory");
 		return 0;
 	}
 	return 1;

@@ -1,3 +1,8 @@
+8 September 2009: Wouter
+	- fixup printing errors when load_cache, they were printed to the
+	  SSL connection which broke, now to the log.
+	- new ldns - with fixed parse of large SOA values.
+
 7 September 2009: Wouter
 	- autotrust testbound scenarios.
 	- autotrust fix that failure count is written to file.
