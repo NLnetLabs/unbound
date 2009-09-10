@@ -908,7 +908,8 @@ rr_is_selfsigned_revoked(struct module_env* env, struct val_env* ve,
 	struct ub_packed_rrset_key* dnskey_rrset, size_t i)
 {
 	enum sec_status sec;
-	verbose(VERB_ALGO, "seen REVOKE flag, check self-signed, rr %d", i);
+	verbose(VERB_ALGO, "seen REVOKE flag, check self-signed, rr %d",
+		(int)i);
 	sec = dnskey_verify_rrset(env, ve, dnskey_rrset, dnskey_rrset, i);
 	return (sec == sec_status_secure);
 }
