@@ -1,10 +1,16 @@
+10 September 2009: Wouter
+	- increased MAXSYSLOGLEN so .bg key can be printed in debug output.
+	- use linebuffering for log-file: output, this can be significantly
+	  faster than the previous fflush method and enable some class of
+	  resolvers to use high verbosity (for short periods).
+	  Not on windows, because line buffering does not work there.
+
 9 September 2009: Wouter
 	- Fix bug where DNSSEC-bogus messages were marked with too high TTL.
 	  The RRsets would still expire at the normal time, but this would
 	  keep messages bogus in the cache for too long.
 	- regression test for that bug.
 	- documented that load_cache is meant for debugging.
-	- increased MAXSYSLOGLEN so .bg key can be printed in debug output.
 
 8 September 2009: Wouter
 	- fixup printing errors when load_cache, they were printed to the
