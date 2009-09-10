@@ -5,8 +5,10 @@ debug_enabled=@debug_enabled@
 ifeq "$(QUIET)" ""
 ifeq ($(debug_enabled),yes)
   QUIET=yes
+  LIBTOOLQUIET=yes
 else
   QUIET=no
+  LIBTOOLQUIET=yes
 endif
 endif
 
@@ -62,7 +64,7 @@ RUNTIME_PATH=@RUNTIME_PATH@
 DEPFLAG=@DEPFLAG@
 DATE=$(shell date +%Y%m%d)
 LIBTOOL=$(libtool)
-ifeq "$(QUIET)" "yes"
+ifeq "$(LIBTOOLQUIET)" "yes"
   LIBTOOL+=--quiet
 endif
 BUILD=build/
@@ -176,7 +178,7 @@ $(BUILD)%.lo:    $(srcdir)/%.c
 	@if test ! -z "$(ldnsdir)" -a ! -e $(ldnsdir)/include/ldns/ldns.h; \
 		then (cd $(ldnsdir); $(MAKE) copy-headers); fi
 	@-if test ! -d $(dir $@); then $(INSTALL) -d $(patsubst %/,%,$(dir $@)); fi
-	$Q$(COMPILE) -c $< -o $@
+	$Q$(COMPILE) -o $@ -c $<
 
 all:	$(COMMON_OBJ) unbound$(EXEEXT) unbound-checkconf$(EXEEXT) lib unbound-host$(EXEEXT) unbound-control$(EXEEXT) unbound-control-setup $(WINAPPS)
 
