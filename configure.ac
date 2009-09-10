@@ -619,7 +619,7 @@ fi  dnl end of use_ldns_builtin == yes
 ACX_STRIP_EXT_FLAGS
 LDFLAGS="$LATE_LDFLAGS $LDFLAGS"
 
-AC_DEFINE_UNQUOTED([MAXSYSLOGMSGLEN], [5120], [Define to the maximum message length to pass to syslog.])
+AC_DEFINE_UNQUOTED([MAXSYSLOGMSGLEN], [10240], [Define to the maximum message length to pass to syslog.])
 
 AH_BOTTOM(
 dnl this must be first AH_CONFIG, to define the flags before any includes.
