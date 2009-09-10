@@ -98,7 +98,8 @@ redirect it to a file to store the cache in a file.
 .B load_cache
 The contents of the cache is loaded from stdin.  Uses the same format as
 dump_cache uses.  Loading the cache with old, or wrong data can result
-in old or wrong data returned to clients.
+in old or wrong data returned to clients.  Loading data into the cache
+in this way is supported in order to aid with debugging.
 .TP
 .B lookup \fIname
 Print to stdout the name servers that would be used to look up the 

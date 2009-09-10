@@ -3,6 +3,7 @@
 	  The RRsets would still expire at the normal time, but this would
 	  keep messages bogus in the cache for too long.
 	- regression test for that bug.
+	- documented that load_cache is meant for debugging.
 
 8 September 2009: Wouter
 	- fixup printing errors when load_cache, they were printed to the
