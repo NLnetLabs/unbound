@@ -131,7 +131,7 @@ log_init(const char* filename, int use_syslog, const char* chrootdir)
 	}
 #ifndef UB_ON_WINDOWS
 	/* line buffering does not work on windows */
-	setvbuf(f, NULL, _IOLBF, 0);
+	setvbuf(f, NULL, (int)_IOLBF, 0);
 #endif
 	logfile = f;
 }
