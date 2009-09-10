@@ -673,6 +673,8 @@ dns_cache_store(struct module_env* env, struct query_info* msgqinf,
 	rep = reply_info_copy(msgrep, env->alloc, NULL);
 	if(!rep)
 		return 0;
+	/* ttl must be relative ;i.e. 0..86400 not  time(0)+86400. 
+	 * the env->now is added to message and RRsets in this routine. */
 
 	if(is_referral) {
 		/* store rrsets */

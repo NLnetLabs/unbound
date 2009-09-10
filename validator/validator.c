@@ -1825,7 +1825,7 @@ processFinished(struct module_qstate* qstate, struct val_qstate* vq,
 	/* if the result is bogus - set message ttl to bogus ttl to avoid
 	 * endless bogus revalidation */
 	if(vq->orig_msg->rep->security == sec_status_bogus) {
-		vq->orig_msg->rep->ttl = *qstate->env->now + ve->bogus_ttl;
+		vq->orig_msg->rep->ttl = ve->bogus_ttl;
 		if(qstate->env->cfg->val_log_level >= 1) {
 			log_query_info(0, "validation failure", &qstate->qinfo);
 		}
