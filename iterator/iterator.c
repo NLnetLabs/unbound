@@ -1403,6 +1403,7 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 	}
 
 	/* We have a valid target. */
+	if(iq->dnssec_expected) verbose(VERB_ALGO, "dnssec is expected");
 	log_query_info(VERB_QUERY, "sending query:", &iq->qchase);
 	log_name_addr(VERB_QUERY, "sending to target:", iq->dp->name, 
 		&target->addr, target->addrlen);

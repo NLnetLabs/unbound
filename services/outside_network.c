@@ -1425,6 +1425,8 @@ static void
 serviced_tcp_initiate(struct outside_network* outnet, 
 	struct serviced_query* sq, ldns_buffer* buff)
 {
+	verbose(VERB_ALGO, "initiate TCP query %s", 
+		sq->status==serviced_query_TCP_EDNS?"EDNS":"");
 	serviced_encode(sq, buff, sq->status == serviced_query_TCP_EDNS);
 	sq->pending = pending_tcp_query(outnet, buff, &sq->addr,
 		sq->addrlen, TCP_AUTH_QUERY_TIMEOUT, serviced_tcp_callback, 
