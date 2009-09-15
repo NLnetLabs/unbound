@@ -1,3 +1,6 @@
+15 September 2009: Wouter
+	- iana portlist updated.
+
 10 September 2009: Wouter
 	- increased MAXSYSLOGLEN so .bg key can be printed in debug output.
 	- use linebuffering for log-file: output, this can be significantly
