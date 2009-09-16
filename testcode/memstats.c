@@ -80,12 +80,16 @@ match(char* line)
 	/* f.e.:
 	 * [1187340064] unbound[24604:0] info: ul/rb.c:81 r_create malloc(12)
 	 * 0123456789 123456789 123456789 123456789
+	 * But now also:
+	 * Sep 16 15:18:20 unbound[17428:0] info: ul/nh.c:143 memdup malloc(11)
 	 */
 	if(strlen(line) < 36) /* up to 'info: ' */
 		return 0;
-	if(strncmp(line+30, "info: ", 6) != 0)
+	if(strncmp(line+30, "info: ", 6) != 0 &&
+		strncmp(line+33, "info: ", 6) != 0)
 		return 0;
-	if(strncmp(line+36, "stat ", 5) == 0)
+	if(strncmp(line+36, "stat ", 5) == 0 || 
+		strncmp(line+39, "stat ", 5) == 0)
 		return 0; /* skip the hex dumps */
 	if(strstr(line+36, "malloc("))
 		return 1;
@@ -123,12 +127,13 @@ read_malloc_stat(char* line, rbtree_t* tree)
 	int skip = 0;
 	long num = 0;
 	struct codeline* cl = 0;
-	if(sscanf(line+36, "%s %s %n", codeline, name, &skip) != 2) {
-		printf("%s\n%s\n", line, line+36);
+	line = strstr(line, "info: ")+6;
+	if(sscanf(line, "%s %s %n", codeline, name, &skip) != 2) {
+		printf("%s\n", line);
 		fatal_exit("unhandled malloc");
 	}
-	if(sscanf(line+36+skip+7, "%ld", &num) != 1) {
-		printf("%s\n%s\n", line, line+36+skip+7);
+	if(sscanf(line+skip+7, "%ld", &num) != 1) {
+		printf("%s\n%s\n", line, line+skip+7);
 		fatal_exit("unhandled malloc");
 	}
 	cl = get_codeline(tree, codeline, name);
@@ -147,12 +152,13 @@ read_calloc_stat(char* line, rbtree_t* tree)
 	int skip = 0;
 	long num = 0, sz = 0;
 	struct codeline* cl = 0;
-	if(sscanf(line+36, "%s %s %n", codeline, name, &skip) != 2) {
-		printf("%s\n%s\n", line, line+36);
+	line = strstr(line, "info: ")+6;
+	if(sscanf(line, "%s %s %n", codeline, name, &skip) != 2) {
+		printf("%s\n", line);
 		fatal_exit("unhandled calloc");
 	}
-	if(sscanf(line+36+skip+7, "%ld, %ld", &num, &sz) != 2) {
-		printf("%s\n%s\n", line, line+36+skip+7);
+	if(sscanf(line+skip+7, "%ld, %ld", &num, &sz) != 2) {
+		printf("%s\n%s\n", line, line+skip+7);
 		fatal_exit("unhandled calloc");
 	}
 
