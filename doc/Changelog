@@ -1,3 +1,6 @@
+16 September 2009: Wouter
+	- Fix memory leak reported by Tao Ma.
+
 15 September 2009: Wouter
 	- iana portlist updated.
 

@@ -806,6 +806,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 	}
 	if(local_zones_answer(worker->daemon->local_zones, &qinfo, &edns, 
 		c->buffer, worker->scratchpad)) {
+		regional_free_all(worker->scratchpad);
 		if(ldns_buffer_limit(c->buffer) == 0) {
 			comm_point_drop_reply(repinfo);
 			return 0;
