@@ -1,5 +1,6 @@
 16 September 2009: Wouter
 	- Fix memory leak reported by Tao Ma.
+	- Fix memstats test tool for log-time-ascii log format.
 
 15 September 2009: Wouter
 	- iana portlist updated.

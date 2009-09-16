@@ -83,17 +83,15 @@ match(char* line)
 	 * But now also:
 	 * Sep 16 15:18:20 unbound[17428:0] info: ul/nh.c:143 memdup malloc(11)
 	 */
-	if(strlen(line) < 36) /* up to 'info: ' */
+	if(strlen(line) < 32) /* up to 'info: ' */
 		return 0;
-	if(strncmp(line+30, "info: ", 6) != 0 &&
-		strncmp(line+33, "info: ", 6) != 0)
+	if(!strstr(line, "] info: "))
 		return 0;
-	if(strncmp(line+36, "stat ", 5) == 0 || 
-		strncmp(line+39, "stat ", 5) == 0)
+	if(strstr(line, "info: stat"))
 		return 0; /* skip the hex dumps */
-	if(strstr(line+36, "malloc("))
+	if(strstr(line+30, "malloc("))
 		return 1;
-	else if(strstr(line+36, "calloc("))
+	else if(strstr(line+30, "calloc("))
 		return 1;
 	/* skip reallocs */
 	return 0;
@@ -203,9 +201,9 @@ readfile(rbtree_t* tree, const char* fname)
 
 		if(!match(buf))
 			continue;
-		else if(strstr(buf+36, "malloc("))
+		else if(strstr(buf+30, "malloc("))
 			read_malloc_stat(buf, tree);
-		else if(strstr(buf+36, "calloc("))
+		else if(strstr(buf+30, "calloc("))
 			read_calloc_stat(buf, tree);
 		else {
 			printf("%s\n", buf);
