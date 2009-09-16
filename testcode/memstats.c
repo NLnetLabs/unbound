@@ -81,13 +81,13 @@ match(char* line)
 	 * [1187340064] unbound[24604:0] info: ul/rb.c:81 r_create malloc(12)
 	 * 0123456789 123456789 123456789 123456789
 	 * But now also:
-	 * Sep 16 15:18:20 unbound[17428:0] info: ul/nh.c:143 memdup malloc(11)
+	 * Sep 16 15:18:20 unbound[1:0] info: ul/nh.c:143 memdup malloc(11)
 	 */
 	if(strlen(line) < 32) /* up to 'info: ' */
 		return 0;
-	if(!strstr(line, "] info: "))
+	if(!strstr(line, " info: "))
 		return 0;
-	if(strstr(line, "info: stat"))
+	if(strstr(line, "info: stat "))
 		return 0; /* skip the hex dumps */
 	if(strstr(line+30, "malloc("))
 		return 1;
