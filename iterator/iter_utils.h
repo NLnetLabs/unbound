@@ -138,6 +138,19 @@ int iter_ns_probability(struct ub_randstate* rnd, int n, int m);
 void iter_mark_cycle_targets(struct module_qstate* qstate, struct delegpt* dp);
 
 /**
+ * See if query is in-zone glue and we suspect that it exists.
+ * Suspicion that it exists, is if there is no A or AAAA in cache (since
+ * one of them is expected for an NS record) or the qtype is in cache but
+ * was recently expired (so we have seen this data recently).
+ * @param qinfo: query info.
+ * @param dp: delegation point we are at.
+ * @param env: environment with rrset cache.
+ * @return true if suspect that this glue exists.
+ */
+int iter_suspect_exists(struct query_info* qinfo, struct delegpt* dp,
+	struct module_env* env);
+
+/**
  * See if delegation is useful or offers immediately no targets for 
  * further recursion.
  * @param qinfo: query name and type

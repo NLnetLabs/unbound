@@ -934,19 +934,22 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 		delname = iq->qchase.qname;
 		delnamelen = iq->qchase.qname_len;
 	}
-	if((iq->qchase.qtype == LDNS_RR_TYPE_DS || iq->refetch_glue)
-		&& !dname_is_root(delname)) {
-		/* do not adjust root label, remove first label from delname */
-		dname_remove_label(&delname, &delnamelen);
+	if(iq->qchase.qtype == LDNS_RR_TYPE_DS || iq->refetch_glue) {
+		/* remove first label from delname, root goes to hints */
+		if(dname_is_root(delname))
+			delname = NULL; /* go to root priming */
+		else 	dname_remove_label(&delname, &delnamelen);
 		iq->refetch_glue = 0; /* if CNAME causes restart, no refetch */
 	}
 	while(1) {
 		
 		/* Lookup the delegation in the cache. If null, then the 
 		 * cache needs to be primed for the qclass. */
-		iq->dp = dns_cache_find_delegation(qstate->env, delname, 
+		if(delname)
+		     iq->dp = dns_cache_find_delegation(qstate->env, delname, 
 			delnamelen, iq->qchase.qtype, iq->qchase.qclass, 
 			qstate->region, &iq->deleg_msg, *qstate->env->now);
+		else iq->dp = NULL;
 
 		/* If the cache has returned nothing, then we have a 
 		 * root priming situation. */
@@ -1376,6 +1379,17 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 			/* Since a target query might have been made, we 
 			 * need to check again. */
 			if(iq->num_target_queries == 0) {
+				/* is it glue and we suspect that it exists?*/
+				if(iter_suspect_exists(&iq->qchase, iq->dp, 
+					qstate->env)) {
+					/* try at parent */
+					iq->deleg_msg = NULL;
+					iq->refetch_glue = 1;
+					iq->query_restart_count++;
+					return next_state(iq, 
+						INIT_REQUEST_STATE);
+				}
+
 				verbose(VERB_QUERY, "out of query targets -- "
 					"returning SERVFAIL");
 				/* fail -- no more targets, no more hope 
