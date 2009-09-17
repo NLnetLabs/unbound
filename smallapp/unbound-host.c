@@ -41,6 +41,13 @@
  */
 
 #include "config.h"
+/* remove alloc checks, not in this part of the code */
+#ifdef UNBOUND_ALLOC_STATS
+#undef malloc
+#undef calloc
+#undef free
+#undef realloc
+#endif
 #include "libunbound/unbound.h"
 #include <ldns/ldns.h>
 

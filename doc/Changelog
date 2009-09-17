@@ -1,3 +1,6 @@
+17 September 2009: Wouter
+	- fix compile of unbound-host when --enable-alloc-checks.
+
 16 September 2009: Wouter
 	- Fix memory leak reported by Tao Ma.
 	- Fix memstats test tool for log-time-ascii log format.
