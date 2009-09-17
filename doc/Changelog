@@ -1,6 +1,7 @@
 17 September 2009: Wouter
 	- fix compile of unbound-host when --enable-alloc-checks.
 	- Fix lookup problem reported by Koh-ichi Ito and Jaap Akkerhuis.
+	- Manual page fixes reported by Tony Finch.
 
 16 September 2009: Wouter
 	- Fix memory leak reported by Tao Ma.

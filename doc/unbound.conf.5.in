@@ -663,14 +663,16 @@ If no local\-zone is given local\-data causes a transparent zone
 to be created by default.
 .TP 10
 \h'5'\fIredirect\fR 
-The query is answered from the local data for the zone name. 
+The query is answered from the local data for the zone name.
 There may be no local data beneath the zone name.
 This answers queries for the zone, and all subdomains of the zone
 with the local data for the zone.
-It can be used to redirect a domain to a different address, with 
+It can be used to redirect a domain to return a different address record
+to the end user, with 
 local\-zone: "example.com." redirect and 
 local\-data: "example.com. A 127.0.0.1"
-queries for www.example.com and www.foo.example.com are redirected.
+queries for www.example.com and www.foo.example.com are redirected, so
+that users with web browsers cannot access sites with suffix example.com.
 .TP 10
 \h'5'\fInodefault\fR 
 Used to turn off default contents for AS112 zones. The other types
@@ -826,6 +828,8 @@ There may be multiple
 .B stub\-zone:
 clauses. Each with a name: and zero or more hostnames or IP addresses.
 For the stub zone this list of nameservers is used. Class IN is assumed.
+The servers should be authority servers, not recursors; unbound performs
+the recursive processing itself for stub zones.
 .P
 The stub zone can be used to configure authoritative data to be used
 by the resolver that cannot be accessed using the public internet servers.
@@ -864,11 +868,16 @@ the resolver picks up a correct list online.
 .LP
 There may be multiple
 .B forward\-zone:
-clauses. Each with a name: and zero or more hostnames or IP addresses.
-For the forward zone this list of nameservers is used to forward the queries
-to. The servers have to handle further recursion for the query. Class IN is 
-assumed. A forward\-zone entry with name "." and a forward\-addr target will 
-forward all queries to that other server (unless it can answer from the cache).
+clauses. Each with a \fBname:\fR and zero or more hostnames or IP
+addresses.  For the forward zone this list of nameservers is used to
+forward the queries to. The servers listed as \fBforward\-host:\fR and
+\fBforward-addr:\fR have to handle further recursion for the query.  Thus,
+those servers are not authority servers, but are (just like unbound is)
+recursive servers too; unbound does not perform recursion itself for the
+forward zone, it lets the remote server do it.  Class IN is assumed.
+A forward\-zone entry with name "." and a forward\-addr target will
+forward all queries to that other server (unless it can answer from
+the cache).
 .TP
 .B name: \fI<domain name>
 Name of the forward zone.
