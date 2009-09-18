@@ -468,6 +468,7 @@ time_passes(struct replay_runtime* runtime, struct replay_moment* mom)
 		if(!xp) fatal_exit("could not macro expand %s", mom->string);
 		verbose(VERB_ALGO, "EVAL %s", mom->string);
 		sec = atof(xp);
+		free(xp);
 		tv.tv_sec = (int)sec;
 		tv.tv_usec = (int)((sec - (double)tv.tv_sec) *1000000. + 0.5);
 	}
