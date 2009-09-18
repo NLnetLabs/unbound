@@ -1379,7 +1379,7 @@ remove_missing_trustanchors(struct module_env* env, struct trust_anchor* tp,
 		/* Only do KSKs */
                 if (!rr_is_dnskey_sep(anchor->rr))
                         continue;
-                if (anchor->s != AUTR_STATE_VALID)
+                if (anchor->s == AUTR_STATE_VALID)
                         valid++;
 	}
 	if(valid == 0)
@@ -1480,7 +1480,8 @@ static time_t
 wait_probe_time(struct val_anchors* anchors)
 {
 	rbnode_t* t = rbtree_first(&anchors->autr->probe);
-	if(t) return ((struct trust_anchor*)t->key)->autr->next_probe_time;
+	if(t != RBTREE_NULL) 
+		return ((struct trust_anchor*)t->key)->autr->next_probe_time;
 	return 0;
 }
 
@@ -1828,7 +1829,7 @@ todo_probe(struct module_env* env, uint32_t* next)
 	rbnode_t* el;
 	/* get first one */
 	lock_basic_lock(&env->anchors->lock);
-	if( !(el=rbtree_first(&env->anchors->autr->probe)) ) {
+	if( (el=rbtree_first(&env->anchors->autr->probe)) == RBTREE_NULL) {
 		/* in case of revoked anchors */
 		lock_basic_unlock(&env->anchors->lock);
 		return NULL;
