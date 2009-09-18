@@ -1,6 +1,7 @@
 18 September 2009: Wouter
 	- autotrust tests, fix trustpoint timer deletion code.
 	  fix count of valid anchors during missing remove.
+	- autotrust: pick up REVOKE even if not signed with known other keys.
 
 17 September 2009: Wouter
 	- fix compile of unbound-host when --enable-alloc-checks.

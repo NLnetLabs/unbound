@@ -92,7 +92,11 @@ struct autr_point_data {
 	/** the keys */
 	struct autr_ta* keys;
 
-	/** last queried DNSKEY set */
+	/** last queried DNSKEY set 
+	 * Not all failures are captured in this entry.
+	 * If the validator did not even start (e.g. timeout or servfail),
+	 * then the last_queried and query_failed values are not updated.
+	 */
 	time_t last_queried;
 	/** last successful DNSKEY set */
 	time_t last_success;

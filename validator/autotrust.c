@@ -61,6 +61,9 @@
 /** number of times a key must be seen before it can become valid */
 #define MIN_PENDINGCOUNT 2
 
+/** Event: Revoked */
+static void do_revoked(struct module_env* env, struct autr_ta* anchor, int* c);
+
 struct autr_global_data* autr_global_create(void)
 {
 	struct autr_global_data* global;
@@ -1143,6 +1146,41 @@ init_events(struct trust_anchor* tp)
 	}
 }
 
+/** check for revoked keys without trusting any other information */
+static void
+check_contains_revoked(struct module_env* env, struct val_env* ve,
+	struct trust_anchor* tp, struct ub_packed_rrset_key* dnskey_rrset,
+	int* changed)
+{
+	ldns_rr_list* r = packed_rrset_to_rr_list(dnskey_rrset, 
+		env->scratch_buffer);
+	size_t i;
+	if(!r) return;
+	for(i=0; i<ldns_rr_list_rr_count(r); i++) {
+		ldns_rr* rr = ldns_rr_list_rr(r, i);
+		struct autr_ta* ta = NULL;
+		if(ldns_rr_get_type(rr) != LDNS_RR_TYPE_DNSKEY)
+			continue;
+		if(!rr_is_dnskey_sep(rr) || !rr_is_dnskey_revoked(rr))
+			continue; /* not a revoked KSK */
+		if(!find_key(tp, rr, &ta))
+			continue; /* malloc fail in compare*/
+		if(!ta)
+			continue; /* key not found */
+		if(rr_is_selfsigned_revoked(env, ve, dnskey_rrset, i)) {
+			/* checked if there is an rrsig signed by this key. */
+			log_assert(dnskey_calc_keytag(dnskey_rrset, i) ==
+				ldns_calc_keytag(rr));
+			verbose_key(ta, VERB_ALGO, "is self-signed revoked");
+			if(!ta->revoked) 
+				*changed = 1;
+			seen_revoked_trustanchor(ta, 1);
+			do_revoked(env, ta, changed);
+		}
+	}
+	ldns_rr_list_deep_free(r);
+}
+
 /** Set update events */
 static int
 update_events(struct module_env* env, struct val_env* ve,
@@ -1296,7 +1334,7 @@ do_keypres(struct module_env* env, struct autr_ta* anchor, int* c)
 		set_trustanchor_state(env, anchor, c, AUTR_STATE_VALID);
 }
 
-/** Event: Revoked */
+/* Event: Revoked */
 static void
 do_revoked(struct module_env* env, struct autr_ta* anchor, int* c)
 {
@@ -1631,7 +1669,21 @@ int autr_process_prime(struct module_env* env, struct val_env* ve,
 	if(!verify_dnskey(env, ve, tp, dnskey_rrset)) {
 		verbose(VERB_ALGO, "autotrust: dnskey did not verify.");
 		tp->autr->query_failed += 1;
+		check_contains_revoked(env, ve, tp, dnskey_rrset, &changed);
 		autr_write_file(env, tp);
+		if(changed) {
+			verbose(VERB_ALGO, "autotrust: changed, reassemble");
+			if(!autr_assemble(tp)) {
+				log_err("malloc failure assemble keys");
+				return 1; /* unchanged */
+			}
+			if(!tp->ds_rrset && !tp->dnskey_rrset) {
+				/* no more keys, all are revoked */
+				tp->autr->revoked = 1;
+				autr_tp_remove(env, tp);
+				return 0; /* trust point removed */
+			}
+		}
 		return 1; /* trust point exists */
 	}
 
