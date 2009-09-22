@@ -1,3 +1,7 @@
+22 September 2009: Wouter
+	- autotrust test with algorithm rollover, new ordering of checks
+	  assists in orderly rollover.
+
 18 September 2009: Wouter
 	- autotrust tests, fix trustpoint timer deletion code.
 	  fix count of valid anchors during missing remove.

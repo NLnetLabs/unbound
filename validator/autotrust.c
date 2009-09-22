@@ -1183,9 +1183,8 @@ check_contains_revoked(struct module_env* env, struct val_env* ve,
 
 /** Set update events */
 static int
-update_events(struct module_env* env, struct val_env* ve,
-	struct trust_anchor* tp, struct ub_packed_rrset_key* dnskey_rrset,
-	int* changed)
+update_events(struct module_env* env, struct trust_anchor* tp, 
+	struct ub_packed_rrset_key* dnskey_rrset, int* changed)
 {
 	ldns_rr_list* r = packed_rrset_to_rr_list(dnskey_rrset, 
 		env->scratch_buffer);
@@ -1200,6 +1199,11 @@ update_events(struct module_env* env, struct val_env* ve,
 			continue;
 		if(!rr_is_dnskey_sep(rr))
 			continue;
+		if(rr_is_dnskey_revoked(rr)) {
+			/* self-signed revoked keys already detected before,
+			 * other revoked keys are not 'added' again */
+			continue;
+		}
 		/* is it new? if revocation bit set, find the unrevoked key */
 		if(!find_key(tp, rr, &ta)) {
 			ldns_rr_list_deep_free(r); /* malloc fail in compare*/
@@ -1213,19 +1217,8 @@ update_events(struct module_env* env, struct val_env* ve,
 			ldns_rr_list_deep_free(r);
 			return 0;
 		}
-		if(rr_is_dnskey_revoked(rr) && 
-			rr_is_selfsigned_revoked(env, ve, dnskey_rrset, i)) {
-			/* checked if there is an rrsig signed by this key. */
-			log_assert(dnskey_calc_keytag(dnskey_rrset, i) ==
-				ldns_calc_keytag(rr));
-			verbose_key(ta, VERB_ALGO, "is self-signed revoked");
-			if(!ta->revoked) 
-				*changed = 1;
-			seen_revoked_trustanchor(ta, 1);
-		} else {
-			seen_trustanchor(ta, 1);
-			verbose_key(ta, VERB_ALGO, "in DNS response");
-		}
+		seen_trustanchor(ta, 1);
+		verbose_key(ta, VERB_ALGO, "in DNS response");
 	}
 	set_tp_times(tp, min_expiry(env, r), key_ttl(dnskey_rrset), changed);
 	ldns_rr_list_deep_free(r);
@@ -1659,29 +1652,40 @@ int autr_process_prime(struct module_env* env, struct val_env* ve,
 			return 1; /* unchanged */
 		}
 	}
+	/* did we get any data? */
 	if(!dnskey_rrset) {
 		verbose(VERB_ALGO, "autotrust: no dnskey rrset");
 		tp->autr->query_failed += 1;
 		autr_write_file(env, tp);
 		return 1; /* trust point exists */
 	}
+	/* check for revoked keys to remove immediately */
+	check_contains_revoked(env, ve, tp, dnskey_rrset, &changed);
+	if(changed) {
+		if(!autr_assemble(tp)) {
+			log_err("malloc failure assembling autotrust keys");
+			return 1; /* unchanged */
+		}
+		if(!tp->ds_rrset && !tp->dnskey_rrset) {
+			/* no more keys, all are revoked */
+			/* this is a success! */
+			tp->autr->last_success = *env->now;
+			tp->autr->revoked = 1;
+			autr_write_file(env, tp);
+			autr_tp_remove(env, tp);
+			return 0; /* trust point removed */
+		}
+	}
 	/* verify the dnskey rrset and see if it is valid. */
 	if(!verify_dnskey(env, ve, tp, dnskey_rrset)) {
 		verbose(VERB_ALGO, "autotrust: dnskey did not verify.");
 		tp->autr->query_failed += 1;
-		check_contains_revoked(env, ve, tp, dnskey_rrset, &changed);
 		autr_write_file(env, tp);
 		if(changed) {
 			verbose(VERB_ALGO, "autotrust: changed, reassemble");
 			if(!autr_assemble(tp)) {
 				log_err("malloc failure assemble keys");
 				return 1; /* unchanged */
-			}
-			if(!tp->ds_rrset && !tp->dnskey_rrset) {
-				/* no more keys, all are revoked */
-				tp->autr->revoked = 1;
-				autr_tp_remove(env, tp);
-				return 0; /* trust point removed */
 			}
 		}
 		return 1; /* trust point exists */
@@ -1696,7 +1700,7 @@ int autr_process_prime(struct module_env* env, struct val_env* ve,
 	 * Set trustpoint query_interval and retry_time.
 	 * - find minimum rrsig expiration interval
 	 */
-	if(!update_events(env, ve, tp, dnskey_rrset, &changed)) {
+	if(!update_events(env, tp, dnskey_rrset, &changed)) {
 		log_err("malloc failure in autotrust update_events. "
 			"trust point unchanged.");
 		return 1; /* trust point unchanged, so exists */
@@ -1724,6 +1728,7 @@ int autr_process_prime(struct module_env* env, struct val_env* ve,
 		if(!tp->ds_rrset && !tp->dnskey_rrset) {
 			/* no more keys, all are revoked */
 			tp->autr->revoked = 1;
+			autr_write_file(env, tp);
 			autr_tp_remove(env, tp);
 			return 0; /* trust point removed */
 		}
