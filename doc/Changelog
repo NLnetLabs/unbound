@@ -1,6 +1,11 @@
 22 September 2009: Wouter
 	- autotrust test with algorithm rollover, new ordering of checks
 	  assists in orderly rollover.
+	- autotrust test with algorithm rollover to unknown algorithm.
+	  checks if new keys are supported before adding them.
+	- autotrust test with trust point revocation, becomes unsigned.
+	- fix DNSSEC-missing-signature detection for minimal responses
+	  for qtype DNSKEY (assumes DNSKEY occurs at zone apex).
 
 18 September 2009: Wouter
 	- autotrust tests, fix trustpoint timer deletion code.

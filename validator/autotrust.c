@@ -1204,6 +1204,16 @@ update_events(struct module_env* env, struct trust_anchor* tp,
 			 * other revoked keys are not 'added' again */
 			continue;
 		}
+		/* is a key of this type supported?. Note rr_list and
+		 * packed_rrset are in the same order. */
+		if(!dnskey_algo_is_supported(dnskey_rrset, i)) {
+			/* skip unknown algorithm key, it is useless to us */
+			log_nametypeclass(VERB_DETAIL, "trust point has "
+				"unsupported algorithm at", 
+				tp->name, LDNS_RR_TYPE_DNSKEY, tp->dclass);
+			continue;
+		}
+
 		/* is it new? if revocation bit set, find the unrevoked key */
 		if(!find_key(tp, rr, &ta)) {
 			ldns_rr_list_deep_free(r); /* malloc fail in compare*/
@@ -1579,13 +1589,20 @@ set_next_probe(struct module_env* env, struct trust_anchor* tp,
 	return 1;
 }
 
-/** Delete trust point that was revoked */
+/** Revoke and Delete a trust point */
 static void
 autr_tp_remove(struct module_env* env, struct trust_anchor* tp)
 {
 	struct trust_anchor key;
 	struct autr_point_data pd;
 	time_t mold, mnew;
+
+	log_nametypeclass(VERB_OPS, "trust point was revoked",
+		tp->name, LDNS_RR_TYPE_DNSKEY, tp->dclass);
+	tp->autr->revoked = 1;
+	tp->autr->next_probe_time = 0; /* no more probing for it */
+	autr_write_file(env, tp);
+
 	/* save name */
 	memset(&key, 0, sizeof(key));
 	memset(&pd, 0, sizeof(pd));
@@ -1670,8 +1687,6 @@ int autr_process_prime(struct module_env* env, struct val_env* ve,
 			/* no more keys, all are revoked */
 			/* this is a success! */
 			tp->autr->last_success = *env->now;
-			tp->autr->revoked = 1;
-			autr_write_file(env, tp);
 			autr_tp_remove(env, tp);
 			return 0; /* trust point removed */
 		}
@@ -1727,8 +1742,6 @@ int autr_process_prime(struct module_env* env, struct val_env* ve,
 		}
 		if(!tp->ds_rrset && !tp->dnskey_rrset) {
 			/* no more keys, all are revoked */
-			tp->autr->revoked = 1;
-			autr_write_file(env, tp);
 			autr_tp_remove(env, tp);
 			return 0; /* trust point removed */
 		}
@@ -1917,12 +1930,16 @@ autr_probe_timer(struct module_env* env)
 {
 	struct trust_anchor* tp;
 	uint32_t next_probe = 3600;
+	int num = 0;
 	verbose(VERB_ALGO, "autotrust probe timer callback");
 	/* while there are still anchors to probe */
 	while( (tp = todo_probe(env, &next_probe)) ) {
 		/* make a probe for this anchor */
 		probe_anchor(env, tp);
+		num++;
 	}
-	verbose(VERB_ALGO, "autotrust probe timer callback done");
+	if(num == 0)
+		return 0; /* no trust points to probe */
+	verbose(VERB_ALGO, "autotrust probe timer %d callbacks done", num);
 	return next_probe;
 }

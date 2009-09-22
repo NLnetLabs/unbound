@@ -950,7 +950,8 @@ void worker_probe_timer_cb(void* arg)
 	tv.tv_sec = (time_t)autr_probe_timer(&worker->env);
 	tv.tv_usec = 0;
 #endif
-	comm_timer_set(worker->probe_timer, &tv);
+	if(tv.tv_sec != 0)
+		comm_timer_set(worker->probe_timer, &tv);
 }
 
 struct worker* 

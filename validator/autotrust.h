@@ -145,6 +145,7 @@ size_t autr_get_num_anchors(struct val_anchors* anchors);
  * Process probe timer.  Add new probes if needed.
  * @param env: module environment with time, with anchors and with the mesh.
  * @return time of next probe (in seconds from now).
+ * 	If 0, then there is no next probe anymore (trust points deleted).
  */
 uint32_t autr_probe_timer(struct module_env* env);
 

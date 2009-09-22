@@ -605,6 +605,11 @@ int iter_msg_from_zone(struct dns_msg* msg, struct delegpt* dp,
 	   reply_find_rrset_section_ns(msg->rep, dp->name, dp->namelen,
 		LDNS_RR_TYPE_NS, dclass))
 		return 1;
+	/* a DNSKEY set is expected at the zone apex as well */
+	/* this is for 'minimal responses' for DNSKEYs */
+	if(reply_find_rrset_section_an(msg->rep, dp->name, dp->namelen,
+		LDNS_RR_TYPE_DNSKEY, dclass))
+		return 1;
 	return 0;
 }
 
