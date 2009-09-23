@@ -38,6 +38,7 @@
  *
  * Contains autotrust implementation. The implementation was taken from 
  * the autotrust daemon (BSD licensed), written by Matthijs Mekking.
+ * It was modified to fit into unbound. The state table process is the same.
  */
 #include "config.h"
 #include "validator/autotrust.h"
@@ -78,7 +79,7 @@ void autr_global_delete(struct autr_global_data* global)
 {
 	if(!global)
 		return;
-	/* elements deleted by parent, nothing to do */
+	/* elements deleted by parent */
 	memset(global, 0, sizeof(*global));
 	free(global);
 }
@@ -111,31 +112,10 @@ autr_get_num_anchors(struct val_anchors* anchors)
 static int
 position_in_string(char *str, const char* sub)
 {
-        int pos = -1, i = 0, j = 0;
-        char* walk;
-        const char* restore = sub;
-        while (*str != '\0')
-        {
-                walk = str;
-                j = 0;
-                while (*sub != '\0' && *walk == *sub)
-                {
-                        sub++;
-                        walk++;
-                        j++;
-                }
-
-                if (*sub == '\0' && j > 0)
-                        pos = i;
-
-                sub = restore;
-                j = 0;
-                i++;
-                str++;
-        }
-        if (pos < 0)
-                return pos;
-        return pos + (int)strlen(sub);
+	char* pos = strstr(str, sub);
+	if(pos)
+		return (int)(pos-str)+(int)strlen(sub);
+	return -1;
 }
 
 /** Debug routine to print pretty key information */
@@ -922,7 +902,8 @@ static void
 seen_trustanchor(struct autr_ta* ta, uint8_t seen)
 {
 	ta->fetched = seen;
-	ta->pending_count++;
+	if(ta->pending_count < 250) /* no numerical overflow, please */
+		ta->pending_count++;
 }
 
 /** set revoked value */

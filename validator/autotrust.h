@@ -67,7 +67,7 @@ struct autr_ta {
 	struct autr_ta* next;
 	/** the RR */
 	ldns_rr* rr;
-	/** last update of key state (not the pending count) */
+	/** last update of key state (new pending count keeps date the same) */
 	time_t last_change;
 	/** 5011 state */
 	autr_state_t s;
@@ -94,7 +94,7 @@ struct autr_point_data {
 
 	/** last queried DNSKEY set 
 	 * Not all failures are captured in this entry.
-	 * If the validator did not even start (e.g. timeout or servfail),
+	 * If the validator did not even start (e.g. timeout or localservfail),
 	 * then the last_queried and query_failed values are not updated.
 	 */
 	time_t last_queried;
@@ -186,6 +186,7 @@ void autr_point_delete(struct trust_anchor* tp);
  * 	allocated in a region. Has not been validated yet.
  * @return false if trust anchor was revoked completely.
  * 	Otherwise logs errors to log, does not change return value.
+ * 	On errors, likely the trust point has been unchanged.
  */
 int autr_process_prime(struct module_env* env, struct val_env* ve,
 	struct trust_anchor* tp, struct ub_packed_rrset_key* dnskey_rrset);
