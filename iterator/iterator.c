@@ -941,6 +941,7 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 		else 	dname_remove_label(&delname, &delnamelen);
 		iq->refetch_glue = 0; /* if CNAME causes restart, no refetch */
 	}
+	/* delname is the name to lookup a delegation for. If NULL rootprime */
 	while(1) {
 		
 		/* Lookup the delegation in the cache. If null, then the 

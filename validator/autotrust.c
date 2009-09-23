@@ -1664,6 +1664,7 @@ int autr_process_prime(struct module_env* env, struct val_env* ve,
 	/* see if time alone makes some keys valid */
 	autr_holddown_exceed(env, tp, &changed);
 	if(changed) {
+		verbose(VERB_ALGO, "autotrust: morekeys, reassemble");
 		if(!autr_assemble(tp)) {
 			log_err("malloc failure assembling autotrust keys");
 			return 1; /* unchanged */
@@ -1672,13 +1673,16 @@ int autr_process_prime(struct module_env* env, struct val_env* ve,
 	/* did we get any data? */
 	if(!dnskey_rrset) {
 		verbose(VERB_ALGO, "autotrust: no dnskey rrset");
-		tp->autr->query_failed += 1;
-		autr_write_file(env, tp);
+		/* no update of query_failed, because then we would have
+		 * to write to disk. But we cannot because we maybe are
+		 * still 'initialising' with DS records, that we cannot write
+		 * in the full format (which only contains KSKs). */
 		return 1; /* trust point exists */
 	}
 	/* check for revoked keys to remove immediately */
 	check_contains_revoked(env, ve, tp, dnskey_rrset, &changed);
 	if(changed) {
+		verbose(VERB_ALGO, "autotrust: revokedkeys, reassemble");
 		if(!autr_assemble(tp)) {
 			log_err("malloc failure assembling autotrust keys");
 			return 1; /* unchanged */
@@ -1694,8 +1698,12 @@ int autr_process_prime(struct module_env* env, struct val_env* ve,
 	/* verify the dnskey rrset and see if it is valid. */
 	if(!verify_dnskey(env, ve, tp, dnskey_rrset)) {
 		verbose(VERB_ALGO, "autotrust: dnskey did not verify.");
-		tp->autr->query_failed += 1;
-		autr_write_file(env, tp);
+		/* only increase failure count if this is not the first prime,
+		 * this means there was a previous succesful probe */
+		if(tp->autr->last_success) {
+			tp->autr->query_failed += 1;
+			autr_write_file(env, tp);
+		}
 		if(changed) {
 			verbose(VERB_ALGO, "autotrust: changed, reassemble");
 			if(!autr_assemble(tp)) {

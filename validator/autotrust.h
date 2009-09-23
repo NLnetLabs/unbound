@@ -108,7 +108,10 @@ struct autr_point_data {
 	/** when to retry if failed */
 	uint32_t retry_time;
 
-	/** how many times did it fail */
+	/** 
+	 * How many times did it fail. diagnostic only (has no effect).
+	 * Only updated if there was a dnskey rrset that failed to verify.
+	 */
 	uint8_t query_failed;
 	/** true if the trust point has been revoked */
 	uint8_t revoked;
