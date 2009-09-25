@@ -180,10 +180,11 @@ size_t listen_get_mem(struct listen_dnsport* listen);
  * @param inuse: on error, this is set true if the port was in use.
  * @param noproto: on error, this is set true if cause is that the
 	IPv6 proto (family) is not available.
+ * @param rcv: set size on rcvbuf with socket option, if 0 it is not set.
  * @return: the socket. -1 on error.
  */
 int create_udp_sock(int family, int socktype, struct sockaddr* addr, 
-	socklen_t addrlen, int v6only, int* inuse, int* noproto);
+	socklen_t addrlen, int v6only, int* inuse, int* noproto, int rcv);
 
 /**
  * Create and bind TCP listening socket

@@ -100,7 +100,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_DOMAIN_INSECURE VAR_PYTHON VAR_PYTHON_SCRIPT VAR_VAL_SIG_SKEW_MIN
 %token VAR_VAL_SIG_SKEW_MAX VAR_CACHE_MIN_TTL VAR_VAL_LOG_LEVEL
 %token VAR_AUTO_TRUST_ANCHOR_FILE VAR_KEEP_MISSING VAR_ADD_HOLDDOWN 
-%token VAR_DEL_HOLDDOWN
+%token VAR_DEL_HOLDDOWN VAR_SO_RCVBUF
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -152,7 +152,7 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_domain_insecure | server_val_sig_skew_min | 
 	server_val_sig_skew_max | server_cache_min_ttl | server_val_log_level |
 	server_auto_trust_anchor_file | server_add_holddown | 
-	server_del_holddown | server_keep_missing
+	server_del_holddown | server_keep_missing | server_so_rcvbuf
 	;
 stubstart: VAR_STUB_ZONE
 	{
@@ -517,6 +517,14 @@ server_version: VAR_VERSION STRING_ARG
 		OUTYY(("P(server_version:%s)\n", $2));
 		free(cfg_parser->cfg->version);
 		cfg_parser->cfg->version = $2;
+	}
+	;
+server_so_rcvbuf: VAR_SO_RCVBUF STRING_ARG
+	{
+		OUTYY(("P(server_so_rcvbuf:%s)\n", $2));
+		if(!cfg_parse_memsize($2, &cfg_parser->cfg->socket_rcvbuf))
+			yyerror("buffer size expected");
+		free($2);
 	}
 	;
 server_msg_buffer_size: VAR_MSG_BUFFER_SIZE STRING_ARG

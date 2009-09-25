@@ -197,6 +197,17 @@ the other 50% are replaced with the new incoming query if they have already
 spent more than their allowed time.  This protects against denial of 
 service by slow queries or high query rates.  Default 200 milliseconds.
 .TP
+.B so\-rcvbuf: \fI<number>
+If not 0, then set the SO_RCVBUF socket option to get more buffer
+space on UDP port 53 incoming queries.  So that short spikes on busy
+servers do not drop packets (see counter in netstat \-su).  Default is
+0 (use system value).  Otherwise, the number of bytes to ask for, try
+"4m" on a busy server.  The OS caps it at a maximum, on linux unbound
+needs root permission to bypass the limit, or the admin can use sysctl
+net.core.rmem_max.  On BSD change kern.ipc.maxsockbuf in /etc/sysctl.conf.
+On OpenBSD change header and recompile kernel. On Solaris ndd \-set
+/dev/udp udp_max_buf 8388608.
+.TP
 .B rrset\-cache\-size: \fI<number>
 Number of bytes size of the RRset cache. Default is 4 megabytes.
 A plain number is in bytes, append 'k', 'm' or 'g' for kilobytes, megabytes

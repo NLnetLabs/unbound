@@ -148,7 +148,8 @@
      VAR_AUTO_TRUST_ANCHOR_FILE = 364,
      VAR_KEEP_MISSING = 365,
      VAR_ADD_HOLDDOWN = 366,
-     VAR_DEL_HOLDDOWN = 367
+     VAR_DEL_HOLDDOWN = 367,
+     VAR_SO_RCVBUF = 368
    };
 #endif
 /* Tokens.  */
@@ -262,6 +263,7 @@
 #define VAR_KEEP_MISSING 365
 #define VAR_ADD_HOLDDOWN 366
 #define VAR_DEL_HOLDDOWN 367
+#define VAR_SO_RCVBUF 368
 
 
 
@@ -278,7 +280,7 @@ typedef union YYSTYPE
 
 
 /* Line 1676 of yacc.c  */
-#line 282 "util/configparser.h"
+#line 284 "util/configparser.h"
 } YYSTYPE;
 # define YYSTYPE_IS_TRIVIAL 1
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */

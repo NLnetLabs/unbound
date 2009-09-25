@@ -73,6 +73,10 @@ server:
 	# number of incoming simultaneous tcp buffers to hold per thread.
 	# incoming-num-tcp: 10
 
+	# buffer size for UDP port 53 incoming (SO_RCVBUF socket option).
+	# 0 is system default.  Use 4m to catch query spikes for busy servers.
+	# so-rcvbuf: 0
+
 	# buffer size for handling DNS data. No messages larger than this
 	# size can be sent or received, by UDP or TCP. In bytes.
 	# msg-buffer-size: 65552

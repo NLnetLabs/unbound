@@ -123,6 +123,7 @@ config_create()
 	cfg->root_hints = NULL;
 	cfg->do_daemonize = 1;
 	cfg->if_automatic = 0;
+	cfg->socket_rcvbuf = 0;
 	cfg->num_ifs = 0;
 	cfg->ifs = NULL;
 	cfg->num_out_ifs = 0;
@@ -284,6 +285,8 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	} else if(strcmp(opt, "jostle-timeout:") == 0) {
 		IS_NUMBER_OR_ZERO;
 		cfg->jostle_time = (size_t)atoi(val);
+	} else if(strcmp(opt, "so-rcvbuf:") == 0) {
+		return cfg_parse_memsize(val, &cfg->socket_rcvbuf);
 	} else if(strcmp(opt, "rrset-cache-size:") == 0) {
 		return cfg_parse_memsize(val, &cfg->rrset_cache_size);
 	} else if(strcmp(opt, "rrset-cache-slabs:") == 0) {

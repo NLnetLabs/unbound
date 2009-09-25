@@ -754,12 +754,12 @@ udp_sockport(struct sockaddr_storage* addr, socklen_t addrlen, int port,
 		struct sockaddr_in6* sa = (struct sockaddr_in6*)addr;
 		sa->sin6_port = (in_port_t)htons((uint16_t)port);
 		fd = create_udp_sock(AF_INET6, SOCK_DGRAM, 
-			(struct sockaddr*)addr, addrlen, 1, inuse, &noproto);
+			(struct sockaddr*)addr, addrlen, 1, inuse, &noproto, 0);
 	} else {
 		struct sockaddr_in* sa = (struct sockaddr_in*)addr;
 		sa->sin_port = (in_port_t)htons((uint16_t)port);
 		fd = create_udp_sock(AF_INET, SOCK_DGRAM, 
-			(struct sockaddr*)addr, addrlen, 1, inuse, &noproto);
+			(struct sockaddr*)addr, addrlen, 1, inuse, &noproto, 0);
 	}
 	return fd;
 }

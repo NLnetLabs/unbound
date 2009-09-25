@@ -114,6 +114,8 @@ struct config_file {
 	/** automatic interface for incoming messages. Uses ipv6 remapping,
 	 * and recvmsg/sendmsg ancillary data to detect interfaces, boolean */
 	int if_automatic;
+	/** SO_RCVBUF size to set on port 53 UDP socket */
+	size_t socket_rcvbuf;
 
 	/** number of interfaces to open. If 0 default all interfaces. */
 	int num_ifs;
