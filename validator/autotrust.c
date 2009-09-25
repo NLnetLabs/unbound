@@ -356,7 +356,6 @@ autr_rrset_delete(struct ub_packed_rrset_key* r)
 	}
 }
 
-
 void autr_point_delete(struct trust_anchor* tp)
 {
 	if(!tp)
@@ -412,6 +411,11 @@ add_trustanchor_frm_rr(struct val_anchors* anchors, ldns_rr* rr,
 	if(!ta) 
 		return NULL;
 	*tp = find_add_tp(anchors, rr);
+	if(!*tp) {
+		ldns_rr_free(ta->rr);
+		free(ta);
+		return NULL;
+	}
 	/* add ta to tp */
 	ta->next = (*tp)->autr->keys;
 	(*tp)->autr->keys = ta;
@@ -431,7 +435,6 @@ add_trustanchor_frm_str(struct val_anchors* anchors, char* str,
 	struct trust_anchor** tp)
 {
         ldns_rr* rr;
-        struct autr_ta* ta = NULL;
 	ldns_status lstatus;
         if (!str_contains_data(str, ';'))
                 return NULL; /* empty line */
@@ -442,8 +445,7 @@ add_trustanchor_frm_str(struct val_anchors* anchors, char* str,
 			ldns_get_errorstr_by_id(lstatus));
                 return NULL;
         }
-        ta = add_trustanchor_frm_rr(anchors, rr, tp);
-        return ta;
+        return add_trustanchor_frm_rr(anchors, rr, tp);
 }
 
 /** 
