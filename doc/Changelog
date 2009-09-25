@@ -1,7 +1,8 @@
-24 September 2009: Wouter
+25 September 2009: Wouter
 	- so-rcvbuf: 4m option added.  Set this on large busy servers to not
 	  drop the occasional packet in spikes due to full socket buffers.
 	  netstat -su keeps a counter of UDP dropped due to full buffers.
+	- review of validator/autotrust.c, small fixes and comments.
 
 23 September 2009: Wouter
 	- 5011 query failed counts verification failures, not lookup failures.

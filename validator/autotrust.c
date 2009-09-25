@@ -473,6 +473,7 @@ load_trustanchor(struct val_anchors* anchors, char* str, const char* fname)
 		tp->autr->file = strdup(fname);
 		if(!tp->autr->file) {
 			lock_basic_unlock(&tp->lock);
+			log_err("malloc failure");
 			return NULL;
 		}
 	}
@@ -544,6 +545,9 @@ autr_assemble(struct trust_anchor* tp)
 			return 0;
 		}
 	}
+	/* we have prepared the new keys so nothing can go wrong any more.
+	 * And we are sure we cannot be left without trustanchor after
+	 * an errors. Put in the new keys and remove old ones. */
 
 	/* free the old data */
 	autr_rrset_delete(tp->ds_rrset);
@@ -605,7 +609,8 @@ parse_id(struct val_anchors* anchors, char* line)
 	return tp;
 }
 
-/** parse variable from trustanchor header 
+/** 
+ * Parse variable from trustanchor header 
  * @param line: to parse
  * @param anchors: the anchor is added to this, if "id:" is seen.
  * @param anchor: the anchor as result value or previously returned anchor
@@ -690,6 +695,7 @@ int autr_read_file(struct val_anchors* anchors, const char* nm)
 		if((r = parse_var_line(line, anchors, &tp)) == -1) {
 			log_err("could not parse auto-trust-anchor-file "
 				"%s line %d", nm, line_nr);
+			fclose(fd);
 			return 0;
 		} else if(r == 1) {
 			continue;
@@ -819,10 +825,11 @@ void autr_write_file(struct module_env* env, struct trust_anchor* tp)
 			continue;
 		str = ldns_rr2str(ta->rr);
 		if(!str || !str[0]) {
+			free(str);
 			log_err("malloc failure writing %s", tp->autr->file);
 			continue;
 		}
-		str[strlen(str)-1] = 0;
+		str[strlen(str)-1] = 0; /* remove newline */
 		fprintf(out, "%s ;;state=%d [%s] ;;count=%d "
 			";;lastchange=%u ;;%s", str, (int)ta->s, 
 			trustanchor_state2str(ta->s), (int)ta->pending_count,
@@ -833,7 +840,8 @@ void autr_write_file(struct module_env* env, struct trust_anchor* tp)
 	fclose(out);
 }
 
-/** verify if dnskey works for trust point 
+/** 
+ * Verify if dnskey works for trust point 
  * @param env: environment (with time) for verification
  * @param ve: validator environment (with options) for verification.
  * @param tp: trust point to verify with
@@ -858,7 +866,7 @@ verify_dnskey(struct module_env* env, struct val_env* ve,
 		/* verify with keys */
 		enum sec_status sec = val_verify_rrset(env, ve, rrset,
 			tp->dnskey_rrset);
-		verbose(VERB_ALGO, "autotrust: DNSKEY is %s",
+		verbose(VERB_ALGO, "autotrust: validate DNSKEY with keys: %s",
 			sec_status_to_string(sec));
 		if(sec == sec_status_secure) {
 			return 1;
@@ -879,7 +887,7 @@ min_expiry(struct module_env* env, ldns_rr_list* rrset)
 			continue;
 		t = ldns_rdf2native_int32(ldns_rr_rrsig_expiration(rr));
 		if(t > *env->now) {
-			t = t - *env->now;
+			t -= *env->now;
 			if(t < r)
 				r = t;
 		}
