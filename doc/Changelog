@@ -1,6 +1,8 @@
 28 September 2009: Wouter
 	- autotrust-anchor-file can read multiline input and $ORIGIN.
 	- prevent integer overflow in holddown calculation. review fixes.
+	- fixed race condition in trust point revocation. review fix.
+	- review fixes to comments, removed unused code.
 
 25 September 2009: Wouter
 	- so-rcvbuf: 4m option added.  Set this on large busy servers to not

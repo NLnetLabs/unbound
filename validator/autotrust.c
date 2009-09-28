@@ -1656,7 +1656,7 @@ set_next_probe(struct module_env* env, struct trust_anchor* tp,
 	key.dclass = tp->dclass;
 	lock_basic_unlock(&tp->lock);
 
-	/* fetch tp again and lock anchors */
+	/* fetch tp again and lock anchors, so that we can modify the trees */
 	lock_basic_lock(&env->anchors->lock);
 	tp2 = (struct trust_anchor*)rbtree_search(env->anchors->tree, &key);
 	if(!tp2) {
@@ -1686,7 +1686,8 @@ set_next_probe(struct module_env* env, struct trust_anchor* tp,
 
 /** Revoke and Delete a trust point */
 static void
-autr_tp_remove(struct module_env* env, struct trust_anchor* tp)
+autr_tp_remove(struct module_env* env, struct trust_anchor* tp,
+	struct ub_packed_rrset_key* dnskey_rrset)
 {
 	struct trust_anchor key;
 	struct autr_point_data pd;
@@ -1695,22 +1696,15 @@ autr_tp_remove(struct module_env* env, struct trust_anchor* tp)
 	log_nametypeclass(VERB_OPS, "trust point was revoked",
 		tp->name, LDNS_RR_TYPE_DNSKEY, tp->dclass);
 	tp->autr->revoked = 1;
-	tp->autr->next_probe_time = 0; /* no more probing for it */
-	autr_write_file(env, tp);
 
-	/* save name */
+	/* use space allocated for dnskey_rrset to save name of anchor */
 	memset(&key, 0, sizeof(key));
 	memset(&pd, 0, sizeof(pd));
 	key.autr = &pd;
 	key.node.key = &key;
 	pd.pnode.key = &key;
 	pd.next_probe_time = tp->autr->next_probe_time;
-	key.name = regional_alloc_init(env->scratch, tp->name, tp->namelen);
-	if(!key.name) {
-		log_err("out of scratch memory in trust point delete");
-		/* the revoked=1 flag on it saves the day, but wastes memory */
-		return;
-	}
+	key.name = dnskey_rrset->rk.dname;
 	key.namelen = tp->namelen;
 	key.namelabs = tp->namelabs;
 	key.dclass = tp->dclass;
@@ -1718,7 +1712,7 @@ autr_tp_remove(struct module_env* env, struct trust_anchor* tp)
 	/* unlock */
 	lock_basic_unlock(&tp->lock);
 
-	/* take from tree. It could be deleted by someone else. */
+	/* take from tree. It could be deleted by someone else,hence (void). */
 	lock_basic_lock(&env->anchors->lock);
 	(void)rbtree_delete(env->anchors->tree, &key);
 	mold = wait_probe_time(env->anchors);
@@ -1726,6 +1720,11 @@ autr_tp_remove(struct module_env* env, struct trust_anchor* tp)
 	mnew = wait_probe_time(env->anchors);
 	anchors_init_parents_locked(env->anchors);
 	lock_basic_unlock(&env->anchors->lock);
+
+	/* save on disk */
+	tp->autr->next_probe_time = 0; /* no more probing for it */
+	autr_write_file(env, tp);
+
 	/* delete */
 	autr_point_delete(tp);
 	if(mold != mnew) {
@@ -1737,7 +1736,7 @@ int autr_process_prime(struct module_env* env, struct val_env* ve,
 	struct trust_anchor* tp, struct ub_packed_rrset_key* dnskey_rrset)
 {
 	int changed = 0;
-	log_assert(tp->autr);
+	log_assert(tp && tp->autr);
 	/* autotrust update trust anchors */
 	/* the tp is locked, and stays locked unless it is deleted */
 
@@ -1784,9 +1783,9 @@ int autr_process_prime(struct module_env* env, struct val_env* ve,
 		}
 		if(!tp->ds_rrset && !tp->dnskey_rrset) {
 			/* no more keys, all are revoked */
-			/* this is a success! */
+			/* this is a success for this probe attempt */
 			tp->autr->last_success = *env->now;
-			autr_tp_remove(env, tp);
+			autr_tp_remove(env, tp, dnskey_rrset);
 			return 0; /* trust point removed */
 		}
 	}
@@ -1799,13 +1798,6 @@ int autr_process_prime(struct module_env* env, struct val_env* ve,
 			tp->autr->query_failed += 1;
 			autr_write_file(env, tp);
 		}
-		if(changed) {
-			verbose(VERB_ALGO, "autotrust: changed, reassemble");
-			if(!autr_assemble(tp)) {
-				log_err("malloc failure assemble keys");
-				return 1; /* unchanged */
-			}
-		}
 		return 1; /* trust point exists */
 	}
 
@@ -1814,7 +1806,6 @@ int autr_process_prime(struct module_env* env, struct val_env* ve,
 
 	/* Add new trust anchors to the data structure
 	 * - note which trust anchors are seen this probe.
-	 * - note revoked (selfsigned) anchors.
 	 * Set trustpoint query_interval and retry_time.
 	 * - find minimum rrsig expiration interval
 	 */
@@ -1825,7 +1816,7 @@ int autr_process_prime(struct module_env* env, struct val_env* ve,
 	}
 
 	/* - for every SEP key do the 5011 statetable.
-	 * - remove missing trustanchors (if too many).
+	 * - remove missing trustanchors (if veryold and we have new anchors).
 	 */
 	if(!do_statetable(env, tp, &changed)) {
 		log_err("malloc failure in autotrust do_statetable. "
@@ -1845,12 +1836,12 @@ int autr_process_prime(struct module_env* env, struct val_env* ve,
 		}
 		if(!tp->ds_rrset && !tp->dnskey_rrset) {
 			/* no more keys, all are revoked */
-			autr_tp_remove(env, tp);
+			autr_tp_remove(env, tp, dnskey_rrset);
 			return 0; /* trust point removed */
 		}
 	} else verbose(VERB_ALGO, "autotrust: no changes");
 	
-	return 1; /* no changes */
+	return 1; /* trust point exists */
 }
 
 /** debug print a trust anchor key */
@@ -1878,11 +1869,13 @@ autr_debug_print_tp(struct trust_anchor* tp)
 {
 	struct autr_ta* ta;
 	char buf[257];
+	if(!tp->autr)
+		return;
 	dname_str(tp->name, buf);
 	log_info("trust point %s : %d", buf, (int)tp->dclass);
 	log_info("assembled %d DS and %d DNSKEYs", 
 		(int)tp->numDS, (int)tp->numDNSKEY);
-	if(0) {
+	if(0) { /* turned off because it prints to stderr */
 		ldns_buffer* buf = ldns_buffer_new(70000);
 		ldns_rr_list* list;
 		if(tp->ds_rrset) {
@@ -1897,8 +1890,6 @@ autr_debug_print_tp(struct trust_anchor* tp)
 		}
 		ldns_buffer_free(buf);
 	}
-	if(!tp->autr)
-		return;
 	log_info("file %s", tp->autr->file);
 	ctime_r(&tp->autr->last_queried, buf);
 	if(buf[0]) buf[strlen(buf)-1]=0; /* remove newline */
@@ -2041,6 +2032,7 @@ autr_probe_timer(struct module_env* env)
 		probe_anchor(env, tp);
 		num++;
 	}
+	regional_free_all(env->scratch);
 	if(num == 0)
 		return 0; /* no trust points to probe */
 	verbose(VERB_ALGO, "autotrust probe timer %d callbacks done", num);
