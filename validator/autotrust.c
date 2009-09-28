@@ -428,18 +428,20 @@ add_trustanchor_frm_rr(struct val_anchors* anchors, ldns_rr* rr,
  * @param anchors: all anchors
  * @param str: string with anchor and comments, if any comments.
  * @param tp: trust point returned.
+ * @param origin: what to use for @
+ * @param prev: previous rr name
  * @return new key in trust point.
  */
 static struct autr_ta*
 add_trustanchor_frm_str(struct val_anchors* anchors, char* str, 
-	struct trust_anchor** tp)
+	struct trust_anchor** tp, ldns_rdf* origin, ldns_rdf** prev)
 {
         ldns_rr* rr;
 	ldns_status lstatus;
         if (!str_contains_data(str, ';'))
                 return NULL; /* empty line */
         if (LDNS_STATUS_OK !=
-                (lstatus = ldns_rr_new_frm_str(&rr, str, 0, NULL, NULL)))
+                (lstatus = ldns_rr_new_frm_str(&rr, str, 0, origin, prev)))
         {
         	log_err("ldns error while converting string to RR: %s",
 			ldns_get_errorstr_by_id(lstatus));
@@ -453,15 +455,18 @@ add_trustanchor_frm_str(struct val_anchors* anchors, char* str,
  * @param anchors: all points.
  * @param str: comments line
  * @param fname: filename
+ * @param origin: $ORIGIN.
+ * @param prev: passed to ldns.
  * @return false on failure, otherwise the tp read.
  */
 static struct trust_anchor*
-load_trustanchor(struct val_anchors* anchors, char* str, const char* fname)
+load_trustanchor(struct val_anchors* anchors, char* str, const char* fname,
+	ldns_rdf* origin, ldns_rdf** prev)
 {
         struct autr_ta* ta = NULL;
         struct trust_anchor* tp = NULL;
 
-        ta = add_trustanchor_frm_str(anchors, str, &tp);
+        ta = add_trustanchor_frm_str(anchors, str, &tp, origin, prev);
 	if(!ta)
 		return NULL;
 	lock_basic_lock(&tp->lock);
@@ -672,6 +677,85 @@ parse_var_line(char* line, struct val_anchors* anchors,
 	return r;
 }
 
+/** handle origin lines */
+static int
+handle_origin(char* line, ldns_rdf** origin)
+{
+	while(isspace((int)*line))
+		line++;
+	if(strncmp(line, "$ORIGIN", 7) != 0)
+		return 0;
+	ldns_rdf_deep_free(*origin);
+	line += 7;
+	while(isspace((int)*line))
+		line++;
+	*origin = ldns_dname_new_frm_str(line);
+	if(!*origin)
+		log_warn("malloc failure or parse error in $ORIGIN");
+	return 1;
+}
+
+/** Read one line and put multiline RRs onto one line string */
+static int
+read_multiline(char* buf, size_t len, FILE* in, int* linenr)
+{
+	char* pos = buf;
+	size_t left = len;
+	int depth = 0;
+	buf[len-1] = 0;
+	while(left > 0 && fgets(pos, (int)left, in) != NULL) {
+		size_t i, poslen = strlen(pos);
+		(*linenr)++;
+
+		/* check what the new depth is after the line */
+		for(i=0; i<poslen; i++) {
+			if(pos[i] == '(') {
+				depth++;
+			} else if(pos[i] == ')') {
+				if(depth == 0) {
+					log_err("mismatch: too many ')'");
+					return -1;
+				}
+				depth--;
+			} else if(pos[i] == ';') {
+				break;
+			}
+		}
+
+		/* normal oneline or last line: keeps newline and comments */
+		if(depth == 0) {
+			return 1;
+		}
+
+		/* more lines expected, snip off comments and newline */
+		if(poslen>0) 
+			pos[poslen-1] = 0; /* strip newline */
+		if(strchr(pos, ';')) 
+			strchr(pos, ';')[0] = 0; /* strip comments */
+
+		/* move to paste other lines behind this one */
+		poslen = strlen(pos);
+		pos += poslen;
+		left -= poslen;
+		/* the newline is changed into a space */
+		if(left <= 2 /* space and eos */) {
+			log_err("line too long");
+			return -1;
+		}
+		pos[0] = ' ';
+		pos[1] = 0;
+		pos += 1;
+		left -= 1;
+	}
+	if(depth != 0) {
+		log_err("mismatch: too many '('");
+		return -1;
+	}
+	if(pos != buf)
+		return 1;
+	return 0;
+}
+
 int autr_read_file(struct val_anchors* anchors, const char* nm)
 {
         /* the file descriptor */
@@ -683,6 +767,8 @@ int autr_read_file(struct val_anchors* anchors, const char* nm)
 	/* trust point being read */
 	struct trust_anchor *tp = NULL, *tp2;
 	int r;
+	/* for $ORIGIN parsing */
+	ldns_rdf *origin=NULL, *prev=NULL;
 
         if (!(fd = fopen(nm, "r"))) {
                 log_err("unable to open %s for reading: %s", 
@@ -690,23 +776,28 @@ int autr_read_file(struct val_anchors* anchors, const char* nm)
                 return 0;
         }
         verbose(VERB_ALGO, "reading autotrust anchor file %s", nm);
-        while (fgets(line, (int)sizeof(line), fd) != NULL) {
-                line_nr++;
-		if((r = parse_var_line(line, anchors, &tp)) == -1) {
+        while ( (r=read_multiline(line, sizeof(line), fd, &line_nr)) != 0) {
+		if(r == -1 || (r = parse_var_line(line, anchors, &tp)) == -1) {
 			log_err("could not parse auto-trust-anchor-file "
 				"%s line %d", nm, line_nr);
 			fclose(fd);
+			ldns_rdf_deep_free(origin);
+			ldns_rdf_deep_free(prev);
 			return 0;
 		} else if(r == 1) {
 			continue;
 		} else if(r == 2) {
 			log_warn("trust anchor %s has been revoked", nm);
 			fclose(fd);
+			ldns_rdf_deep_free(origin);
+			ldns_rdf_deep_free(prev);
 			return 1;
 		}
         	if (!str_contains_data(line, ';'))
                 	continue; /* empty lines allowed */
-                if (!(tp2=load_trustanchor(anchors, line, nm))) {
+ 		if(handle_origin(line, &origin))
+			continue;
+                if(!(tp2=load_trustanchor(anchors, line, nm, origin, &prev))) {
                         log_err("failed to load trust anchor from %s "
 				"at line %i, skipping", nm, line_nr);
                         /* try to do the rest */
@@ -715,11 +806,15 @@ int autr_read_file(struct val_anchors* anchors, const char* nm)
 		if(tp && tp != tp2) {
 			log_err("file %s has mismatching data inside", nm);
         		fclose(fd);
+			ldns_rdf_deep_free(origin);
+			ldns_rdf_deep_free(prev);
 			return 0;
 		}
 		tp = tp2;
         }
         fclose(fd);
+	ldns_rdf_deep_free(origin);
+	ldns_rdf_deep_free(prev);
 	if(!tp) {
 		log_err("failed to read %s", nm);
 		return 0;
@@ -1146,7 +1241,10 @@ check_contains_revoked(struct module_env* env, struct val_env* ve,
 	ldns_rr_list* r = packed_rrset_to_rr_list(dnskey_rrset, 
 		env->scratch_buffer);
 	size_t i;
-	if(!r) return;
+	if(!r) {
+		log_err("malloc failure");
+		return;
+	}
 	for(i=0; i<ldns_rr_list_rr_count(r); i++) {
 		ldns_rr* rr = ldns_rr_list_rr(r, i);
 		struct autr_ta* ta = NULL;
@@ -1154,14 +1252,16 @@ check_contains_revoked(struct module_env* env, struct val_env* ve,
 			continue;
 		if(!rr_is_dnskey_sep(rr) || !rr_is_dnskey_revoked(rr))
 			continue; /* not a revoked KSK */
-		if(!find_key(tp, rr, &ta))
+		if(!find_key(tp, rr, &ta)) {
+			log_err("malloc failure");
 			continue; /* malloc fail in compare*/
+		}
 		if(!ta)
 			continue; /* key not found */
 		if(rr_is_selfsigned_revoked(env, ve, dnskey_rrset, i)) {
 			/* checked if there is an rrsig signed by this key. */
 			log_assert(dnskey_calc_keytag(dnskey_rrset, i) ==
-				ldns_calc_keytag(rr));
+				ldns_calc_keytag(rr)); /* checks conversion*/
 			verbose_key(ta, VERB_ALGO, "is self-signed revoked");
 			if(!ta->revoked) 
 				*changed = 1;
@@ -1239,7 +1339,12 @@ static int
 check_holddown(struct module_env* env, struct autr_ta* ta, 
 	unsigned int holddown)
 {
-        unsigned int elapsed = (unsigned int)( *env->now - ta->last_change );
+        unsigned int elapsed;
+	if((unsigned)*env->now < (unsigned)ta->last_change) {
+		log_warn("time goes backwards. delaying key holddown");
+		return 0;
+	}
+	elapsed = (unsigned)*env->now - (unsigned)ta->last_change;
         if (elapsed > holddown) {
                 return (int) (elapsed-holddown);
         }
@@ -1284,8 +1389,7 @@ do_addtime(struct module_env* env, struct autr_ta* anchor, int* c)
 	int exceeded = check_holddown(env, anchor, env->cfg->add_holddown);
 	if (exceeded && anchor->s == AUTR_STATE_ADDPEND) {
 		verbose_key(anchor, VERB_ALGO, "add-holddown time exceeded "
-			"%d seconds ago", exceeded);
-		verbose_key(anchor, VERB_ALGO, "its pending count is %d",
+			"%d seconds ago, and pending-count %d", exceeded,
 			anchor->pending_count);
 		if(anchor->pending_count >= MIN_PENDINGCOUNT) {
 			set_trustanchor_state(env, anchor, c, AUTR_STATE_VALID);
@@ -1369,7 +1473,7 @@ anchor_state_update(struct module_env* env, struct autr_ta* anchor, int* c)
 		else if (!anchor->fetched)
 			do_keyrem(env, anchor, c);
 		else if(!anchor->last_change) {
-			verbose_key(anchor, VERB_ALGO, "first prime");
+			verbose_key(anchor, VERB_ALGO, "first seen");
 			reset_holddown(env, anchor, c);
 		}
 		break;
@@ -1430,7 +1534,7 @@ remove_missing_trustanchors(struct module_env* env, struct trust_anchor* tp,
 		 * one valid KSK: remove missing trust anchor */
                 if (exceeded && valid > 0) {
 			verbose_key(anchor, VERB_ALGO, "keep-missing time "
-				"exceeded %d seconds ago, [%d keys VALID]",
+				"exceeded %d seconds ago, [%d key(s) VALID]",
 				exceeded, valid);
 			set_trustanchor_state(env, anchor, changed, 
 				AUTR_STATE_REMOVED);
@@ -1470,8 +1574,8 @@ static void
 autr_cleanup_keys(struct trust_anchor* tp)
 {
 	struct autr_ta* p, **prevp;
-	p = tp->autr->keys;
 	prevp = &tp->autr->keys;
+	p = tp->autr->keys;
 	while(p) {
 		/* do we want to remove this key? */
 		if(p->s == AUTR_STATE_START || p->s == AUTR_STATE_REMOVED ||
