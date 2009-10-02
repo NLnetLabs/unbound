@@ -212,6 +212,8 @@ struct module_env {
 	/** negative cache, configured by the validator. if not NULL,
 	 * contains NSEC record lookup trees. */
 	struct val_neg_cache* neg_cache;
+	/** the 5011-probe timer (if any) */
+	struct comm_timer* probe_timer;
 	/** Mapping of forwarding zones to targets.
 	 * iterator forwarder information. per-thread, created by worker */
 	struct iter_forwards* fwds;

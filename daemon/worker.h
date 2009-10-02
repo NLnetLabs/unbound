@@ -101,8 +101,6 @@ struct worker {
 	struct comm_point* cmd_com;
 	/** timer for statistics */
 	struct comm_timer* stat_timer;
-	/** timer for autotrust probes */
-	struct comm_timer* probe_timer;
 
 	/** number of requests that can be handled by this worker */
 	size_t request_size;

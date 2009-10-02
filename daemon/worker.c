@@ -951,7 +951,7 @@ void worker_probe_timer_cb(void* arg)
 	tv.tv_usec = 0;
 #endif
 	if(tv.tv_sec != 0)
-		comm_timer_set(worker->probe_timer, &tv);
+		comm_timer_set(worker->env.probe_timer, &tv);
 }
 
 struct worker* 
@@ -1068,23 +1068,6 @@ worker_init(struct worker* worker, struct config_file *cfg,
 	if(!worker->stat_timer) {
 		log_err("could not create statistics timer");
 	}
-	/* one probe timer per process -- if we have 5011 anchors */
-	if(autr_get_num_anchors(worker->daemon->env->anchors) > 0
-#ifndef THREADS_DISABLED
-		&& worker->thread_num == 0
-#endif
-		) {
-		struct timeval tv;
-		tv.tv_sec = 0;
-		tv.tv_usec = 0;
-		worker->probe_timer = comm_timer_create(worker->base,
-			worker_probe_timer_cb, worker);
-		if(!worker->probe_timer) {
-			log_err("could not create 5011-probe timer");
-		}
-		/* let timer fire, then it can reset itself */
-		comm_timer_set(worker->probe_timer, &tv);
-	}
 
 	/* we use the msg_buffer_size as a good estimate for what the 
 	 * user wants for memory usage sizes */
@@ -1121,6 +1104,23 @@ worker_init(struct worker* worker, struct config_file *cfg,
 		log_err("Could not set forward zones");
 		worker_delete(worker);
 		return 0;
+	}
+	/* one probe timer per process -- if we have 5011 anchors */
+	if(autr_get_num_anchors(worker->env.anchors) > 0
+#ifndef THREADS_DISABLED
+		&& worker->thread_num == 0
+#endif
+		) {
+		struct timeval tv;
+		tv.tv_sec = 0;
+		tv.tv_usec = 0;
+		worker->env.probe_timer = comm_timer_create(worker->base,
+			worker_probe_timer_cb, worker);
+		if(!worker->env.probe_timer) {
+			log_err("could not create 5011-probe timer");
+		}
+		/* let timer fire, then it can reset itself */
+		comm_timer_set(worker->env.probe_timer, &tv);
 	}
 	if(!worker->env.mesh || !worker->env.scratch_buffer) {
 		worker_delete(worker);
@@ -1161,7 +1161,7 @@ worker_delete(struct worker* worker)
 	comm_signal_delete(worker->comsig);
 	tube_delete(worker->cmd);
 	comm_timer_delete(worker->stat_timer);
-	comm_timer_delete(worker->probe_timer);
+	comm_timer_delete(worker->env.probe_timer);
 	free(worker->ports);
 	if(worker->thread_num == 0) {
 		log_set_time(NULL);

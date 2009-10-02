@@ -57,7 +57,6 @@
 #include "services/mesh.h"
 #include "services/cache/rrset.h"
 #include "validator/val_kcache.h"
-#include "daemon/worker.h"
 
 /** number of times a key must be seen before it can become valid */
 #define MIN_PENDINGCOUNT 2
@@ -1625,19 +1624,18 @@ wait_probe_time(struct val_anchors* anchors)
 static void
 reset_worker_timer(struct module_env* env)
 {
-	struct worker* worker = env->worker;
 	struct timeval tv;
 #ifndef S_SPLINT_S
 	uint32_t next = (uint32_t)wait_probe_time(env->anchors);
 	/* in case this is libunbound, no timer */
-	if(!worker || !worker->probe_timer)
+	if(!env->probe_timer)
 		return;
 	if(next > *env->now)
 		tv.tv_sec = (time_t)(next - *env->now);
 	else	tv.tv_sec = 0;
 #endif
 	tv.tv_usec = 0;
-	comm_timer_set(worker->probe_timer, &tv);
+	comm_timer_set(env->probe_timer, &tv);
 	verbose(VERB_ALGO, "scheduled next probe in %d sec", (int)tv.tv_sec);
 }
 

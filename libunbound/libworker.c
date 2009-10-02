@@ -130,6 +130,7 @@ libworker_setup(struct ub_ctx* ctx, int is_bg)
 		return NULL;
 	}
 	w->env->worker = (struct worker*)w;
+	w->env->probe_timer = NULL;
 	seed = (unsigned int)time(NULL) ^ (unsigned int)getpid() ^
 		(((unsigned int)w->thread_num)<<17);
 	seed ^= (unsigned int)w->env->alloc->next_id;
