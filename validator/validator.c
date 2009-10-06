@@ -188,18 +188,10 @@ val_deinit(struct module_env* env, int id)
 	env->modinfo[id] = NULL;
 }
 
-/** allocate new validator query state */
+/** fill in message structure */
 static struct val_qstate*
-val_new(struct module_qstate* qstate, int id)
+val_new_getmsg(struct module_qstate* qstate, struct val_qstate* vq)
 {
-	struct val_qstate* vq = (struct val_qstate*)regional_alloc(
-		qstate->region, sizeof(*vq));
-	log_assert(!qstate->minfo[id]);
-	if(!vq)
-		return NULL;
-	memset(vq, 0, sizeof(*vq));
-	qstate->minfo[id] = vq;
-	vq->state = VAL_INIT_STATE;
 	if(!qstate->return_msg || qstate->return_rcode != LDNS_RCODE_NOERROR) {
 		/* create a message to verify */
 		verbose(VERB_ALGO, "constructing reply for validation");
@@ -233,6 +225,21 @@ val_new(struct module_qstate* qstate, int id)
 		return NULL;
 	vq->rrset_skip = 0;
 	return vq;
+}
+
+/** allocate new validator query state */
+static struct val_qstate*
+val_new(struct module_qstate* qstate, int id)
+{
+	struct val_qstate* vq = (struct val_qstate*)regional_alloc(
+		qstate->region, sizeof(*vq));
+	log_assert(!qstate->minfo[id]);
+	if(!vq)
+		return NULL;
+	memset(vq, 0, sizeof(*vq));
+	qstate->minfo[id] = vq;
+	vq->state = VAL_INIT_STATE;
+	return val_new_getmsg(qstate, vq);
 }
 
 /**
@@ -1175,6 +1182,10 @@ processInit(struct module_qstate* qstate, struct val_qstate* vq,
 	enum val_classification subtype = val_classify_response(
 		qstate->query_flags, &qstate->qinfo, &vq->qchase, 
 		vq->orig_msg->rep, vq->rrset_skip);
+	if(vq->restart_count > VAL_MAX_RESTART_COUNT) {
+		verbose(VERB_ALGO, "restart count exceeded");
+		return val_error(qstate, id);
+	}
 	verbose(VERB_ALGO, "validator classification %s", 
 		val_classification_to_string(subtype));
 	if(subtype == VAL_CLASS_REFERRAL && 
@@ -1825,6 +1836,47 @@ processFinished(struct module_qstate* qstate, struct val_qstate* vq,
 	/* if the result is bogus - set message ttl to bogus ttl to avoid
 	 * endless bogus revalidation */
 	if(vq->orig_msg->rep->security == sec_status_bogus) {
+		/* see if we can try again to fetch data */
+		if(vq->restart_count < VAL_MAX_RESTART_COUNT) {
+			int restart_count = vq->restart_count+1;
+			verbose(VERB_ALGO, "validation failed, "
+				"blacklist and retry to fetch data");
+			/* debug printout */
+			if(verbosity >= VERB_ALGO) {
+				struct sock_list* p;
+				if(!qstate->reply_origin)
+					verbose(VERB_ALGO, "new blacklist: "
+						"cache");
+				for(p=qstate->reply_origin; p; p=p->next)
+					if(p->len)
+						log_addr(VERB_ALGO, 
+						"new blacklist IP",
+						&p->addr, p->len);
+					else verbose(VERB_ALGO, "new "
+						"blacklist: cache");
+				for(p=qstate->blacklist; p; p=p->next)
+					if(p->len)
+						log_addr(VERB_ALGO, 
+						"blacklist IP",
+						&p->addr, p->len);
+					else verbose(VERB_ALGO, "blacklist "
+						"cache");
+			}
+			/* blacklist the IPs or the cache */
+			if(qstate->reply_origin)
+				sock_list_prepend(&qstate->blacklist, 
+					qstate->reply_origin);
+			else	sock_list_insert(&qstate->blacklist, NULL, 0,
+					qstate->region);
+			qstate->reply_origin = NULL;
+			memset(vq, 0, sizeof(*vq));
+			vq->restart_count = restart_count;
+			vq->state = VAL_INIT_STATE;
+			verbose(VERB_ALGO, "pass back to next module");
+			qstate->ext_state[id] = module_restart_next;
+			return 0;
+		}
+
 		vq->orig_msg->rep->ttl = ve->bogus_ttl;
 		if(qstate->env->cfg->val_log_level >= 1) {
 			log_query_info(0, "validation failure", &qstate->qinfo);
@@ -2040,6 +2092,12 @@ val_operate(struct module_qstate* qstate, enum module_ev event, int id,
 		if(!vq) {
 			vq = val_new(qstate, id);
 			if(!vq) {
+				log_err("validator: malloc failure");
+				qstate->ext_state[id] = module_error;
+				return;
+			}
+		} else if(!vq->orig_msg) {
+			if(!val_new_getmsg(qstate, vq)) {
 				log_err("validator: malloc failure");
 				qstate->ext_state[id] = module_error;
 				return;

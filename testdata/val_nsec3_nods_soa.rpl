@@ -121,26 +121,6 @@ s1unhcti19bkdr98fegs0v46mbu3t4m3.example.com.   3600    IN      RRSIG   NSEC3 3 
 
 ENTRY_END
 
-; refer to server one down
-ENTRY_BEGIN
-MATCH opcode qtype qname
-ADJUST copy_id
-REPLY QR NOERROR
-SECTION QUESTION
-www.sub.example.com. IN A
-SECTION AUTHORITY
-sub.example.com. IN NS ns.sub.example.com.
-; proof that there is no DS here.
-;sub.example.com.        3600    IN      DS      2854 DSA 1 be4d46cd7489cce25a31af0dff2968ce0425dd31
-;sub.example.com.        3600    IN      RRSIG   DS 3 3 3600 20070926135752 20070829135752 2854 example.com. MC0CFQC1WMTfb25sTgeUEXCFR4+YiJqecwIUc2R/jrO4amyQxovSnld2reg8eyo= ;{id = 2854}
-; sub.example.com. -> 8r1f0ieoutlnjc03meng9e3bn2n0o9pd.
-8r1f0ieoutlnjc03meng9e3bn2n0o9pd.example.com. IN NSEC3 1 1 123 aabb00123456bbccdd 8r1f0ieoutlnjc03meng9e3bn3n0o9pd NS SOA DNSKEY RRSIG
-8r1f0ieoutlnjc03meng9e3bn2n0o9pd.example.com.   3600    IN      RRSIG   NSEC3 3 3 3600 20070926135752 20070829135752 2854 example.com. MC4CFQCeKcyw76yvOvfa2+qtxv8bKcEyJwIVAJBeIGST4Y8Tk8YkQI0suee3Bxb1 ;{id = 2854}
-
-SECTION ADDITIONAL
-ns.sub.example.com. IN A 1.2.3.10
-ENTRY_END
-
 ENTRY_BEGIN
 MATCH opcode qtype qname
 ADJUST copy_id
@@ -155,11 +135,40 @@ SECTION AUTHORITY
 8r1f0ieoutlnjc03meng9e3bn2n0o9pd.example.com. IN NSEC3 1 1 123 aabb00123456bbccdd 8r1f0ieoutlnjc03meng9e3bn3n0o9pd NS SOA DNSKEY RRSIG
 8r1f0ieoutlnjc03meng9e3bn2n0o9pd.example.com.   3600    IN      RRSIG   NSEC3 3 3 3600 20070926135752 20070829135752 2854 example.com. MC4CFQCeKcyw76yvOvfa2+qtxv8bKcEyJwIVAJBeIGST4Y8Tk8YkQI0suee3Bxb1 ;{id = 2854}
 ENTRY_END
+
+; refer to server one down
+ENTRY_BEGIN
+MATCH opcode subdomain
+ADJUST copy_id copy_query
+REPLY QR NOERROR
+SECTION QUESTION
+sub.example.com. IN A
+SECTION AUTHORITY
+sub.example.com. IN NS ns.sub.example.com.
+; proof that there is no DS here.
+;sub.example.com.        3600    IN      DS      2854 DSA 1 be4d46cd7489cce25a31af0dff2968ce0425dd31
+;sub.example.com.        3600    IN      RRSIG   DS 3 3 3600 20070926135752 20070829135752 2854 example.com. MC0CFQC1WMTfb25sTgeUEXCFR4+YiJqecwIUc2R/jrO4amyQxovSnld2reg8eyo= ;{id = 2854}
+; sub.example.com. -> 8r1f0ieoutlnjc03meng9e3bn2n0o9pd.
+8r1f0ieoutlnjc03meng9e3bn2n0o9pd.example.com. IN NSEC3 1 1 123 aabb00123456bbccdd 8r1f0ieoutlnjc03meng9e3bn3n0o9pd NS SOA DNSKEY RRSIG
+8r1f0ieoutlnjc03meng9e3bn2n0o9pd.example.com.   3600    IN      RRSIG   NSEC3 3 3 3600 20070926135752 20070829135752 2854 example.com. MC4CFQCeKcyw76yvOvfa2+qtxv8bKcEyJwIVAJBeIGST4Y8Tk8YkQI0suee3Bxb1 ;{id = 2854}
+
+SECTION ADDITIONAL
+ns.sub.example.com. IN A 1.2.3.10
+ENTRY_END
 RANGE_END
 
 ; ns.sub.example.com.
 RANGE_BEGIN 0 100
 	ADDRESS 1.2.3.10
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR AA REFUSED
+SECTION QUESTION
+ns.sub.example.com. IN AAAA
+SECTION ANSWER
+ENTRY_END
+
 ENTRY_BEGIN
 MATCH opcode qtype qname
 ADJUST copy_id

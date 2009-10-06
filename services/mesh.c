@@ -851,7 +851,7 @@ mesh_continue(struct mesh_area* mesh, struct mesh_state* mstate,
 			&mstate->s.qinfo);
 		s = module_error;
 	}
-	if(s == module_wait_module) {
+	if(s == module_wait_module || s == module_restart_next) {
 		/* start next module */
 		mstate->s.curmod++;
 		if(mesh->mods.num == mstate->s.curmod) {
@@ -860,6 +860,13 @@ mesh_continue(struct mesh_area* mesh, struct mesh_state* mstate,
 				&mstate->s.qinfo);
 			mstate->s.curmod--;
 			return mesh_continue(mesh, mstate, module_error, ev);
+		}
+		if(s == module_restart_next) {
+			fptr_ok(fptr_whitelist_mod_clear(
+				mesh->mods.mod[mstate->s.curmod]->clear));
+			(*mesh->mods.mod[mstate->s.curmod]->clear)
+				(&mstate->s, mstate->s.curmod);
+			mstate->s.minfo[mstate->s.curmod] = NULL;
 		}
 		*ev = module_event_pass;
 		return 1;

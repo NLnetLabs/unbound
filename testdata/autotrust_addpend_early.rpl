@@ -137,6 +137,14 @@ example.com.	10800	IN	DNSKEY	256 3 5 AQPQ41chR9DEHt/aIzIFAqanbDlRflJoRs5yz1jFsoR
 example.com.	10800	IN	RRSIG	DNSKEY 5 2 10800 20091024111500 20090921111500 30899 example.com. nDlOZCE24pNtuoYkmmy9cVvtCn7ykdmlhJX9hYcI9b3DzqJjOrGz3GD5RQvti3uxD74gFcFho0g76NwOKFx/qQ== ;{id = 30899}
 example.com.	10800	IN	RRSIG	DNSKEY 5 2 10800 20091024111500 20090921111500 60946 example.com. qBHDZu0XQmr6kpt51r1DxT5tuyfwSHcoL8qLpwwhyyNFF13OPlvxgmCVl+1v27A9+h8tcuqaNls5f+tcFBwtRg== ;{id = 60946}
 ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode qname qtype
+ADJUST copy_id
+REPLY QR AA REFUSED
+SECTION QUESTION
+ns.example.com. IN AAAA
+ENTRY_END
 RANGE_END
 
 
@@ -213,7 +221,7 @@ FILE_BEGIN
 ;;last_queried: ${$t4} ;;${ctime $t4}
 ;;last_success: ${$t2} ;;${ctime $t2}
 ;;next_probe_time: ${$t4 + $probe4} ;;${ctime $t4 + $probe4}
-;;query_failed: 1
+;;query_failed: 6
 ;;query_interval: 5400
 ;;retry_time: 3600
 example.com.	10800	IN	DNSKEY	257 3 5 AwEAAeiaUiUIpWMfYz5L0sfJTZWnuN9IyBX4em9VjsoqQTsOD1HDQpNb4buvJo7pN2aBCxNS7e0OL8e2mVB6CLZ+8ek= ;{id = 60946 (ksk), size = 512b} ;;state=1 [ ADDPEND ] ;;count=2 ;;lastchange=${$t1} ;;${ctime $t1}

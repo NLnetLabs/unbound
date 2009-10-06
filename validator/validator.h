@@ -56,6 +56,9 @@ struct val_neg_cache;
  */
 #define NULL_KEY_TTL	900 /* seconds */
 
+/** max number of query restarts, number of IPs to probe */
+#define VAL_MAX_RESTART_COUNT 5
+
 /**
  * Global state for the validator. 
  */
@@ -149,6 +152,11 @@ struct val_qstate {
 	 * The original message we have been given to validate.
 	 */
 	struct dns_msg* orig_msg;
+
+	/**
+	 * The query restart count
+	 */
+	int restart_count;
 
 	/**
 	 * The query name we have chased to; qname after following CNAMEs

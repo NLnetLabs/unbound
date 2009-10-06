@@ -63,6 +63,8 @@
 
 /** time when nameserver glue is said to be 'recent' */
 #define SUSPICION_RECENT_EXPIRY 86400
+/** penalty to validation failed blacklisted IPs */
+#define BLACKLIST_PENALTY (USEFUL_SERVER_TOP_TIMEOUT*3)
 
 /** fillup fetch policy array */
 static void
@@ -163,6 +165,7 @@ iter_apply_cfg(struct iter_env* iter_env, struct config_file* cfg)
  *	UNKNOWN_SERVER_NICENESS 
  *		If no information is known about the server, this is
  *		returned. 376 msec or so.
+ *	+BLACKLIST_PENALTY (of USEFUL_TOP_TIMEOUT*3) for dnssec failed IPs.
  *
  * When a final value is chosen that is dnsseclame ; dnsseclameness checking
  * is turned off (so we do not discard the reply).
@@ -215,7 +218,7 @@ iter_filter_unsuitable(struct iter_env* iter_env, struct module_env* env,
 static int
 iter_fill_rtt(struct iter_env* iter_env, struct module_env* env,
 	uint8_t* name, size_t namelen, uint16_t qtype, uint32_t now, 
-	struct delegpt* dp, int* best_rtt)
+	struct delegpt* dp, int* best_rtt, struct sock_list* blacklist)
 {
 	int got_it = 0;
 	struct delegpt_addr* a;
@@ -225,6 +228,9 @@ iter_fill_rtt(struct iter_env* iter_env, struct module_env* env,
 		a->sel_rtt = iter_filter_unsuitable(iter_env, env, 
 			name, namelen, qtype, now, a);
 		if(a->sel_rtt != -1) {
+			if(sock_list_find(blacklist, &a->addr, a->addrlen))
+				a->sel_rtt += BLACKLIST_PENALTY;
+
 			if(!got_it) {
 				*best_rtt = a->sel_rtt;
 				got_it = 1;
@@ -241,14 +247,15 @@ iter_fill_rtt(struct iter_env* iter_env, struct module_env* env,
 static int
 iter_filter_order(struct iter_env* iter_env, struct module_env* env,
 	uint8_t* name, size_t namelen, uint16_t qtype, uint32_t now, 
-	struct delegpt* dp, int* selected_rtt, int open_target)
+	struct delegpt* dp, int* selected_rtt, int open_target, 
+	struct sock_list* blacklist)
 {
 	int got_num = 0, low_rtt = 0, swap_to_front;
 	struct delegpt_addr* a, *n, *prev=NULL;
 
 	/* fillup sel_rtt and find best rtt in the bunch */
 	got_num = iter_fill_rtt(iter_env, env, name, namelen, qtype, now, dp, 
-		&low_rtt);
+		&low_rtt, blacklist);
 	if(got_num == 0) 
 		return 0;
 	if(low_rtt >= USEFUL_SERVER_TOP_TIMEOUT &&
@@ -294,13 +301,13 @@ struct delegpt_addr*
 iter_server_selection(struct iter_env* iter_env, 
 	struct module_env* env, struct delegpt* dp, 
 	uint8_t* name, size_t namelen, uint16_t qtype, int* dnssec_expected,
-	int* chase_to_rd, int open_target)
+	int* chase_to_rd, int open_target, struct sock_list* blacklist)
 {
 	int sel;
 	int selrtt;
 	struct delegpt_addr* a, *prev;
 	int num = iter_filter_order(iter_env, env, name, namelen, qtype,
-		*env->now, dp, &selrtt, open_target);
+		*env->now, dp, &selrtt, open_target, blacklist);
 
 	if(num == 0)
 		return NULL;

@@ -42,6 +42,8 @@
 #ifndef NET_HELP_H
 #define NET_HELP_H
 #include "util/log.h"
+struct sock_list;
+struct regional;
 
 /** DNS constants for uint16_t style flag manipulation. host byteorder. 
  *                                1  1  1  1  1  1
@@ -276,5 +278,32 @@ void addr_to_str(struct sockaddr_storage* addr, socklen_t addrlen,
  * @return true if so
  */
 int addr_is_ip4mapped(struct sockaddr_storage* addr, socklen_t addrlen);
+
+/**
+ * Insert new socket list item. If fails logs error.
+ * @param list: pointer to pointer to first item.
+ * @param addr: address or NULL if 'cache'.
+ * @param len: length of addr, or 0 if 'cache'.
+ * @param region: where to allocate
+ */
+void sock_list_insert(struct sock_list** list, struct sockaddr_storage* addr,
+	socklen_t len, struct regional* region);
+
+/**
+ * Append one list to another.  Must both be from same qstate(regional).
+ * @param list: pointer to result list that is modified.
+ * @param add: item(s) to add.  They are prepended to list.
+ */
+void sock_list_prepend(struct sock_list** list, struct sock_list* add);
+
+/**
+ * Find addr in list.
+ * @param list: to search in
+ * @param addr: address to look for.
+ * @param len: length. Can be 0, look for 'cache entry'.
+ * @return true if found.
+ */
+int sock_list_find(struct sock_list* list, struct sockaddr_storage* addr,
+        socklen_t len);
 
 #endif /* NET_HELP_H */

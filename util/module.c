@@ -47,6 +47,7 @@ strextstate(enum module_ext_state s)
 	case module_state_initial: return "module_state_initial";
 	case module_wait_reply: return "module_wait_reply";
 	case module_wait_module: return "module_wait_module";
+	case module_restart_next: return "module_restart_next";
 	case module_wait_subquery: return "module_wait_subquery";
 	case module_error: return "module_error";
 	case module_finished: return "module_finished";

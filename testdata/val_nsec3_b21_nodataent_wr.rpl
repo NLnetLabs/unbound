@@ -27,11 +27,11 @@ K.ROOT-SERVERS.NET.	IN	A	193.0.14.129
 ENTRY_END
 
 ENTRY_BEGIN
-MATCH opcode
+MATCH opcode subdomain
 ADJUST copy_id copy_query
 REPLY QR NOERROR
 SECTION QUESTION
-. IN A
+example. IN A
 SECTION AUTHORITY
 example.	IN NS	ns1.example.
 ; leave out to make unbound take ns1
@@ -46,6 +46,15 @@ RANGE_END
 ; ns1.example.
 RANGE_BEGIN 0 100
 	ADDRESS 192.0.2.1
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id copy_query
+REPLY QR REFUSED
+SECTION QUESTION
+ns1.example. IN AAAA
+SECTION ANSWER
+ENTRY_END
+
 ENTRY_BEGIN
 MATCH opcode qtype qname
 ADJUST copy_id copy_query

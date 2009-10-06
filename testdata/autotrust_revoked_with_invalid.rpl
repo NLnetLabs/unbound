@@ -85,6 +85,14 @@ example.com.	10800	IN	RRSIG	DNSKEY 5 2 10800 20091124111500 20091018111500 55710
 example.com.	10800	IN	RRSIG	DNSKEY 5 2 10800 20091124111500 20091018111500 16486 example.com. LDW5an/v6YzgUhpTm8VJnBCko56WDvzzoqCmjXBwpoGjWXThO2hUyO6w00K90swQvKwgIWsC4y00zFlOgLayJw== ;{id = 16486}
 
 ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode qname qtype
+ADJUST copy_id
+REPLY QR AA REFUSED
+SECTION QUESTION
+ns.example.com. IN AAAA
+ENTRY_END
 RANGE_END
 
 ; set date/time to Mon Nov 23 10:46:40 2009
@@ -102,7 +110,7 @@ FILE_BEGIN
 ;;last_queried: ${$t0} ;;${ctime $t0}
 ;;last_success: ${$tp} ;;${ctime $tp}
 ;;next_probe_time: ${$t0 + $probe0} ;;${ctime $t0 + $probe0}
-;;query_failed: 1
+;;query_failed: 6
 ;;query_interval: 5400
 ;;retry_time: 3600
 example.com.	10800	IN	DNSKEY	385 3 5 AwEAAc3Z5DQDJpH4oPdNtC4BUQHk50XMD+dHr4r8psHmivIa83hxR5CRgCtd9sENCW9Ae8OIO19xw9t/RPaEAqQa+OE= ;{id = 55710 (ksk), size = 512b} ;;state=4 [ REVOKED ] ;;count=0 ;;lastchange=${$t0} ;;${ctime $t0}

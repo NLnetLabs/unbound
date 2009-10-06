@@ -188,6 +188,14 @@ example.com.	10800	IN	RRSIG	DNSKEY 5 2 10800 20091224111500 20091118111500 60946
 example.com.	10800	IN	RRSIG	DNSKEY 5 2 10800 20091224111500 20091118111500 55582 example.com. NsC5s2quifzA7yQBnbroWHJ9rHfSrBo0V7+c+kZoii2cViOm8636uqcWlaNTqNtD5UI6vzQ5zXF4P8JGoac6ZQ== ;{id = 55582}
 
 ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode qname qtype
+ADJUST copy_id
+REPLY QR AA REFUSED
+SECTION QUESTION
+ns.example.com. IN AAAA
+ENTRY_END
 RANGE_END
 
 ; ns.example.com.  KSK 55582 used on its own
@@ -210,6 +218,14 @@ example.com.	10800	IN	DNSKEY	256 3 5 AQPQ41chR9DEHt/aIzIFAqanbDlRflJoRs5yz1jFsoR
 ; signatures
 example.com.	10800	IN	RRSIG	DNSKEY 5 2 10800 20091224111500 20091118111500 30899 example.com. jTB+ID5gp3U+cxedEPpRvM3tegrBFuVjGR7y9IL+olrtbs5Yr3qeANJwbfO1WVAWiG+EtG876uHny9epo/tlhQ== ;{id = 30899}
 example.com.	10800	IN	RRSIG	DNSKEY 5 2 10800 20091224111500 20091118111500 55582 example.com. NsC5s2quifzA7yQBnbroWHJ9rHfSrBo0V7+c+kZoii2cViOm8636uqcWlaNTqNtD5UI6vzQ5zXF4P8JGoac6ZQ== ;{id = 55582}
+ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode qname qtype
+ADJUST copy_id
+REPLY QR AA REFUSED
+SECTION QUESTION
+ns.example.com. IN AAAA
 ENTRY_END
 RANGE_END
 
@@ -361,7 +377,7 @@ FILE_BEGIN
 ;;last_queried: ${$t7} ;;${ctime $t7}
 ;;last_success: ${$t6} ;;${ctime $t6}
 ;;next_probe_time: ${$t7 + $probe7} ;;${ctime $t7 + $probe7}
-;;query_failed: 1
+;;query_failed: 6
 ;;query_interval: 5400
 ;;retry_time: 3600
 example.com.	10800	IN	DNSKEY	257 3 5 AwEAAeiaUiUIpWMfYz5L0sfJTZWnuN9IyBX4em9VjsoqQTsOD1HDQpNb4buvJo7pN2aBCxNS7e0OL8e2mVB6CLZ+8ek= ;{id = 60946 (ksk), size = 512b} ;;state=2 [  VALID  ] ;;count=0 ;;lastchange=${$t4} ;;${ctime $t4}

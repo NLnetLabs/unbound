@@ -233,6 +233,8 @@ enum module_ext_state {
 	module_wait_reply,
 	/** module is waiting for another module */
 	module_wait_module,
+	/** module is waiting for another module; that other is restarted */
+	module_restart_next,
 	/** module is waiting for sub-query */
 	module_wait_subquery,
 	/** module could not finish the query */
@@ -261,6 +263,16 @@ enum module_ev {
 	module_event_error
 };
 
+/** Linked list of sockaddrs */
+struct sock_list {
+	/** next in list */
+	struct sock_list* next;
+	/** sockaddr */
+	struct sockaddr_storage addr;
+	/** length of addr */
+	socklen_t len;
+};
+
 /**
  * Module state, per query.
  */
@@ -278,6 +290,10 @@ struct module_qstate {
 	struct dns_msg* return_msg;
 	/** the rcode, in case of error, instead of a reply message */
 	int return_rcode;
+	/** origin of the reply (can be NULL from cache, list for cnames) */
+	struct sock_list* reply_origin;
+	/** IP blacklist for queries */
+	struct sock_list* blacklist;
 	/** region for this query. Cleared when query process finishes. */
 	struct regional* region;
 

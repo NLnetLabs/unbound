@@ -54,6 +54,7 @@ struct ub_randstate;
 struct query_info;
 struct reply_info;
 struct module_qstate;
+struct sock_list;
 
 /**
  * Process config options and set iterator module state.
@@ -81,13 +82,14 @@ int iter_apply_cfg(struct iter_env* iter_env, struct config_file* cfg);
  * 	these are not preferred, but are used as a last resort.
  * @param open_target: number of currently outstanding target queries.
  * 	If we wait for these, perhaps more server addresses become available.
+ * @param blacklist: the IP blacklist to use.
  * @return best target or NULL if no target.
  *	if not null, that target is removed from the result list in the dp.
  */
 struct delegpt_addr* iter_server_selection(struct iter_env* iter_env, 
 	struct module_env* env, struct delegpt* dp, uint8_t* name, 
 	size_t namelen, uint16_t qtype, int* dnssec_expected,
-	int* chase_to_rd, int open_target);
+	int* chase_to_rd, int open_target, struct sock_list* blacklist);
 
 /**
  * Allocate dns_msg from parsed msg, in regional.

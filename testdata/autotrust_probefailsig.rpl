@@ -106,6 +106,13 @@ www.example.com. IN A 10.20.30.40
 ENTRY_END
 RANGE_END
 
+ENTRY_BEGIN
+MATCH opcode qname qtype
+ADJUST copy_id
+REPLY QR AA REFUSED
+SECTION QUESTION
+ns.example.com. IN AAAA
+ENTRY_END
 RANGE_END
 
 ; set date/time to Mon Nov 23 10:46:40 2009
@@ -123,7 +130,7 @@ FILE_BEGIN
 ;;last_queried: ${$t0} ;;${ctime $t0}
 ;;last_success: 1258962400 ;;Mon Nov 23 08:46:40 2009
 ;;next_probe_time: ${$t0+$probe0} ;;${ctime $t0+$probe0}
-;;query_failed: 1
+;;query_failed: 6
 ;;query_interval: 5400
 ;;retry_time: 3600
 example.com.	10800	IN	DNSKEY	257 3 5 AwEAAc3Z5DQDJpH4oPdNtC4BUQHk50XMD+dHr4r8psHmivIa83hxR5CRgCtd9sENCW9Ae8OIO19xw9t/RPaEAqQa+OE= ;{id = 55582 (ksk), size = 512b} ;;state=2 [  VALID  ] ;;count=0 ;;lastchange=1258962400 ;;Mon Nov 23 08:46:40 2009

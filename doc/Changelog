@@ -1,3 +1,12 @@
+6 October 2009: Wouter
+	- Test set updated to provide additional ns lookup result.
+	  The retry would attempt to fetch the data from other nameservers
+	  for bogus data, and this needed to be provisioned in the tests.
+
+5 October 2009: Wouter
+	- first validation failure retry code.  Retries for data failures.
+	  And unit test.
+
 2 October 2009: Wouter
 	- improve 5011 modularization.
 	- fix unbound-host so -d can be given before -C.

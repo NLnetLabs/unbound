@@ -140,6 +140,14 @@ example.com.	10800	IN	RRSIG	DNSKEY 5 2 10800 20091124111500 20091018111500 30899
 ;example.com.	10800	IN	RRSIG	DNSKEY 5 2 10800 20091124111500 20091018111500 55582 example.com. v/HJbdpeVMpbhwYXrT1EDGpAFMvEgdKQII1cAbP6o8KHYNKDh8TIJ25/pXe3daEXfej6/Z5kpqJ79okPKUoi1Q== ;{id = 55582}
 example.com.	10800	IN	RRSIG	DNSKEY 5 2 10800 20091124111500 20091018111500 60946 example.com. HgXol1hdvbomOM1CFRW8qsHd3D0qOnN72EeMHTcpxIBBiuNLKZn4n1M14Voxj3vo0eAMNuG/y7EjQkxKvSsaDA== ;{id = 60946}
 ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode qname qtype
+ADJUST copy_id
+REPLY QR AA REFUSED
+SECTION QUESTION
+ns.example.com. IN AAAA
+ENTRY_END
 RANGE_END
 
 ; ns.example.com.  KSK 55582-REVOKED and 60946
@@ -164,6 +172,14 @@ example.com.	10800	IN	RRSIG	DNSKEY 5 2 10800 20091224111500 20091118111500 55710
 ; wrong keytag:
 ;example.com.	10800	IN	RRSIG	DNSKEY 5 2 10800 20091224111500 20091118111500 55582 example.com. nH/6HauVJI4GGz78UoK/38cOOrEqsYZP0jFzfCC3OyIlclVTjAFvjVPlVMGK7sA5Nw1v20YtFTQkXZgbrRuInQ== ;{id = 55582}
 example.com.	10800	IN	RRSIG	DNSKEY 5 2 10800 20091224111500 20091118111500 60946 example.com. xKSBZr4vOsEUKlVoNb6SOV69DM7xFOJI4gPFKq5Tv4APIMJ/9G3odoDmNcLCVyYGzhoDik5hciJnZio6UHgzAA== ;{id = 60946}
+ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode qname qtype
+ADJUST copy_id
+REPLY QR AA REFUSED
+SECTION QUESTION
+ns.example.com. IN AAAA
 ENTRY_END
 RANGE_END
 
@@ -242,7 +258,7 @@ FILE_BEGIN
 ;;last_queried: ${$t4} ;;${ctime $t4}
 ;;last_success: ${$t1} ;;${ctime $t1}
 ;;next_probe_time: ${$t4 + $probe4} ;;${ctime $t4 + $probe4}
-;;query_failed: 1
+;;query_failed: 6
 ;;query_interval: 5400
 ;;retry_time: 3600
 example.com.	10800	IN	DNSKEY	257 3 5 AwEAAeiaUiUIpWMfYz5L0sfJTZWnuN9IyBX4em9VjsoqQTsOD1HDQpNb4buvJo7pN2aBCxNS7e0OL8e2mVB6CLZ+8ek= ;{id = 60946 (ksk), size = 512b} ;;state=1 [ ADDPEND ] ;;count=1 ;;lastchange=${$t1} ;;${ctime $t1}
