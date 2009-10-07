@@ -495,7 +495,7 @@ void sock_list_insert(struct sock_list** list, struct sockaddr_storage* addr,
 	socklen_t len, struct regional* region)
 {
 	struct sock_list* add = (struct sock_list*)regional_alloc(region,
-		sizeof(*add));
+		sizeof(add->next) + sizeof(add->len) + (size_t)len);
 	if(!add) {
 		log_err("out of memory in socketlist insert");
 		return;
@@ -503,8 +503,8 @@ void sock_list_insert(struct sock_list** list, struct sockaddr_storage* addr,
 	log_assert(list);
 	add->next = *list;
 	add->len = len;
-	memcpy(&add->addr, addr, len);
 	*list = add;
+	if(len) memcpy(&add->addr, addr, len);
 }
 
 void sock_list_prepend(struct sock_list** list, struct sock_list* add)
@@ -530,4 +530,14 @@ int sock_list_find(struct sock_list* list, struct sockaddr_storage* addr,
 		list = list->next;
 	}
 	return 0;
+}
+
+void sock_list_merge(struct sock_list** list, struct regional* region,
+	struct sock_list* add)
+{
+	struct sock_list* p;
+	for(p=add; p; p=p->next) {
+		if(!sock_list_find(*list, &p->addr, p->len))
+			sock_list_insert(list, &p->addr, p->len, region);
+	}
 }

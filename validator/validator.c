@@ -337,6 +337,7 @@ static int
 generate_request(struct module_qstate* qstate, int id, uint8_t* name, 
 	size_t namelen, uint16_t qtype, uint16_t qclass, uint16_t flags)
 {
+	struct val_qstate* vq = (struct val_qstate*)qstate->minfo[id];
 	struct module_qstate* newq;
 	struct query_info ask;
 	ask.qname = name;
@@ -350,8 +351,13 @@ generate_request(struct module_qstate* qstate, int id, uint8_t* name,
 		log_err("Could not generate request: out of memory");
 		return 0;
 	}
-	/* ignore newq; validator does not need state created for that
+	/* newq; validator does not need state created for that
 	 * query, and its a 'normal' for iterator as well */
+	if(newq) {
+		/* add our blacklist to the query blacklist */
+		sock_list_merge(&newq->blacklist, newq->region,
+			vq->chain_blacklist);
+	}
 	qstate->ext_state[id] = module_wait_subquery;
 	return 1;
 }
@@ -1841,33 +1847,8 @@ processFinished(struct module_qstate* qstate, struct val_qstate* vq,
 			int restart_count = vq->restart_count+1;
 			verbose(VERB_ALGO, "validation failed, "
 				"blacklist and retry to fetch data");
-			/* debug printout */
-			if(verbosity >= VERB_ALGO) {
-				struct sock_list* p;
-				if(!qstate->reply_origin)
-					verbose(VERB_ALGO, "new blacklist: "
-						"cache");
-				for(p=qstate->reply_origin; p; p=p->next)
-					if(p->len)
-						log_addr(VERB_ALGO, 
-						"new blacklist IP",
-						&p->addr, p->len);
-					else verbose(VERB_ALGO, "new "
-						"blacklist: cache");
-				for(p=qstate->blacklist; p; p=p->next)
-					if(p->len)
-						log_addr(VERB_ALGO, 
-						"blacklist IP",
-						&p->addr, p->len);
-					else verbose(VERB_ALGO, "blacklist "
-						"cache");
-			}
-			/* blacklist the IPs or the cache */
-			if(qstate->reply_origin)
-				sock_list_prepend(&qstate->blacklist, 
-					qstate->reply_origin);
-			else	sock_list_insert(&qstate->blacklist, NULL, 0,
-					qstate->region);
+			val_blacklist(&qstate->blacklist, qstate->region, 
+				qstate->reply_origin, 0);
 			qstate->reply_origin = NULL;
 			memset(vq, 0, sizeof(*vq));
 			vq->restart_count = restart_count;
@@ -2374,10 +2355,12 @@ return_bogus:
  * @param rcode: rcode result value.
  * @param msg: result message (if rcode is OK).
  * @param qinfo: from the sub query state, query info.
+ * @param origin: the origin of msg.
  */
 static void
 process_ds_response(struct module_qstate* qstate, struct val_qstate* vq,
-	int id, int rcode, struct dns_msg* msg, struct query_info* qinfo)
+	int id, int rcode, struct dns_msg* msg, struct query_info* qinfo,
+	struct sock_list* origin)
 {
 	struct key_entry_key* dske = NULL;
 	vq->empty_DS_name = NULL;
@@ -2407,7 +2390,12 @@ process_ds_response(struct module_qstate* qstate, struct val_qstate* vq,
 			vq->state = VAL_VALIDATE_STATE;
 			return;
 		}
+		vq->chain_blacklist = NULL; /* fresh blacklist for next part*/
 		/* Keep the forState.state on FINDKEY. */
+	} else if(key_entry_isbad(dske) 
+		&& vq->restart_count < VAL_MAX_RESTART_COUNT) {
+		val_blacklist(&vq->chain_blacklist, qstate->region, origin, 1);
+		vq->restart_count++;
 	} else {
 		/* NOTE: the reason for the DS to be not good (that is, 
 		 * either bad or null) should have been logged by 
@@ -2432,10 +2420,12 @@ process_ds_response(struct module_qstate* qstate, struct val_qstate* vq,
  * @param rcode: rcode result value.
  * @param msg: result message (if rcode is OK).
  * @param qinfo: from the sub query state, query info.
+ * @param origin: the origin of msg.
  */
 static void
 process_dnskey_response(struct module_qstate* qstate, struct val_qstate* vq,
-	int id, int rcode, struct dns_msg* msg, struct query_info* qinfo)
+	int id, int rcode, struct dns_msg* msg, struct query_info* qinfo,
+	struct sock_list* origin)
 {
 	struct val_env* ve = (struct val_env*)qstate->env->modinfo[id];
 	struct ub_packed_rrset_key* dnskey = NULL;
@@ -2496,10 +2486,11 @@ process_dnskey_response(struct module_qstate* qstate, struct val_qstate* vq,
  * @param id: module id.
  * @param rcode: rcode result value.
  * @param msg: result message (if rcode is OK).
+ * @param origin: the origin of msg.
  */
 static void
 process_prime_response(struct module_qstate* qstate, struct val_qstate* vq,
-	int id, int rcode, struct dns_msg* msg)
+	int id, int rcode, struct dns_msg* msg, struct sock_list* origin)
 {
 	struct val_env* ve = (struct val_env*)qstate->env->modinfo[id];
 	struct ub_packed_rrset_key* dnskey_rrset = NULL;
@@ -2531,9 +2522,20 @@ process_prime_response(struct module_qstate* qstate, struct val_qstate* vq,
 	}
 	vq->key_entry = primeResponseToKE(dnskey_rrset, ta, qstate, id);
 	lock_basic_unlock(&ta->lock);
-	if(vq->key_entry)
+	if(vq->key_entry) {
+		if(key_entry_isbad(vq->key_entry) 
+			&& vq->restart_count < VAL_MAX_RESTART_COUNT) {
+			val_blacklist(&vq->chain_blacklist, qstate->region, 
+				origin, 1);
+			vq->key_entry = NULL;
+			vq->restart_count++;
+			vq->state = VAL_INIT_STATE;
+			return;
+		} 
+		vq->chain_blacklist = NULL;
 		/* store the freshly primed entry in the cache */
 		key_cache_insert(ve->kcache, vq->key_entry);
+	}
 
 	/* If the result of the prime is a null key, skip the FINDKEY state.*/
 	if(!vq->key_entry || key_entry_isnull(vq->key_entry) ||
@@ -2556,10 +2558,12 @@ process_prime_response(struct module_qstate* qstate, struct val_qstate* vq,
  * @param rcode: rcode result value.
  * @param msg: result message (if rcode is OK).
  * @param qinfo: from the sub query state, query info.
+ * @param origin: the origin of msg.
  */
 static void
 process_dlv_response(struct module_qstate* qstate, struct val_qstate* vq,
-	int id, int rcode, struct dns_msg* msg, struct query_info* qinfo)
+	int id, int rcode, struct dns_msg* msg, struct query_info* qinfo,
+	struct sock_list* origin)
 {
 	struct val_env* ve = (struct val_env*)qstate->env->modinfo[id];
 
@@ -2658,20 +2662,23 @@ val_inform_super(struct module_qstate* qstate, int id,
 	if(vq->wait_prime_ta) {
 		vq->wait_prime_ta = 0;
 		process_prime_response(super, vq, id, qstate->return_rcode,
-			qstate->return_msg);
+			qstate->return_msg, qstate->reply_origin);
 		return;
 	}
 	if(qstate->qinfo.qtype == LDNS_RR_TYPE_DS) {
 		process_ds_response(super, vq, id, qstate->return_rcode,
-			qstate->return_msg, &qstate->qinfo);
+			qstate->return_msg, &qstate->qinfo, 
+			qstate->reply_origin);
 		return;
 	} else if(qstate->qinfo.qtype == LDNS_RR_TYPE_DNSKEY) {
 		process_dnskey_response(super, vq, id, qstate->return_rcode,
-			qstate->return_msg, &qstate->qinfo);
+			qstate->return_msg, &qstate->qinfo,
+			qstate->reply_origin);
 		return;
 	} else if(qstate->qinfo.qtype == LDNS_RR_TYPE_DLV) {
 		process_dlv_response(super, vq, id, qstate->return_rcode,
-			qstate->return_msg, &qstate->qinfo);
+			qstate->return_msg, &qstate->qinfo,
+			qstate->reply_origin);
 		return;
 	}
 	log_err("internal error in validator: no inform_supers possible");

@@ -306,4 +306,15 @@ void sock_list_prepend(struct sock_list** list, struct sock_list* add);
 int sock_list_find(struct sock_list* list, struct sockaddr_storage* addr,
         socklen_t len);
 
+/**
+ * Merge socklist into another socket list.  Allocates the new entries
+ * freshly and copies them over, so also performs a region switchover.
+ * Allocation failures are logged.
+ * @param list: the destination list (checked for duplicates)
+ * @param region: where to allocate
+ * @param add: the list of entries to add.
+ */
+void sock_list_merge(struct sock_list** list, struct regional* region,
+	struct sock_list* add);
+
 #endif /* NET_HELP_H */

@@ -263,14 +263,17 @@ enum module_ev {
 	module_event_error
 };
 
-/** Linked list of sockaddrs */
+/** 
+ * Linked list of sockaddrs 
+ * May be allocated such that only 'len' bytes of addr exist for the structure.
+ */
 struct sock_list {
 	/** next in list */
 	struct sock_list* next;
-	/** sockaddr */
-	struct sockaddr_storage addr;
 	/** length of addr */
 	socklen_t len;
+	/** sockaddr */
+	struct sockaddr_storage addr;
 };
 
 /**

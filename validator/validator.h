@@ -157,6 +157,8 @@ struct val_qstate {
 	 * The query restart count
 	 */
 	int restart_count;
+	/** The blacklist saved for chainoftrust elements */
+	struct sock_list* chain_blacklist;
 
 	/**
 	 * The query name we have chased to; qname after following CNAMEs

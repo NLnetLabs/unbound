@@ -805,3 +805,35 @@ val_classification_to_string(enum val_classification subtype)
 			return "bad_val_classification";
 	}
 }
+
+/** log a sock_list entry */
+static void
+sock_list_logentry(enum verbosity_value v, const char* s, struct sock_list* p)
+{
+	if(p->len)
+		log_addr(v, s, &p->addr, p->len);
+	else	verbose(v, "%s cache", s);
+}
+
+void val_blacklist(struct sock_list** blacklist, struct regional* region,
+	struct sock_list* origin, int cross)
+{
+	/* debug printout */
+	if(verbosity >= VERB_ALGO) {
+		struct sock_list* p;
+		for(p=*blacklist; p; p=p->next)
+			sock_list_logentry(VERB_ALGO, "blacklist", p);
+		if(!origin)
+			verbose(VERB_ALGO, "blacklist add: cache");
+		for(p=origin; p; p=p->next)
+			sock_list_logentry(VERB_ALGO, "blacklist add", p);
+	}
+	/* blacklist the IPs or the cache */
+	if(!origin) {
+		/* only add if nothing there. anything else also stops cache*/
+		if(!*blacklist)
+			sock_list_insert(blacklist, NULL, 0, region);
+	} else if(!cross)
+		sock_list_prepend(blacklist, origin);
+	else	sock_list_merge(blacklist, region, origin);
+}

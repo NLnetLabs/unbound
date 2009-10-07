@@ -51,6 +51,7 @@ struct key_entry_key;
 struct regional;
 struct val_anchors;
 struct rrset_cache;
+struct sock_list;
 
 /**
  * Response classifications for the validator. The different types of proofs.
@@ -286,5 +287,18 @@ void val_find_rrset_signer(struct ub_packed_rrset_key* rrset, uint8_t** sname,
  * @return static string to describe the classification.
  */
 const char* val_classification_to_string(enum val_classification subtype);
+
+/**
+ * Add existing list to blacklist.
+ * @param blacklist: the blacklist with result
+ * @param region: the region where blacklist is allocated.
+ *	Allocation failures are logged.
+ * @param origin: origin list to add, if NULL, a cache-entry is added to
+ *   the blacklist to stop cache from being used.
+ * @param cross: if true this is a cross-qstate copy, and the 'origin'
+ *   list is not allocated in the same region as the blacklist.
+ */
+void val_blacklist(struct sock_list** blacklist, struct regional* region,
+	struct sock_list* origin, int cross);
 
 #endif /* VALIDATOR_VAL_UTILS_H */
