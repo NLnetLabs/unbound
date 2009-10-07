@@ -4,6 +4,9 @@
 	- retry for validation failure in DNSKEY in middle of chain of trust.
 	  unit test.
 	- retry for empty non terminals in chain of trust and unit test.
+	- Fixed security bug where the signatures for NSEC3 records were not
+	  checked when checking for absence of DS records.  This could have
+	  enabled the substitution of an insecure delegation.
 
 6 October 2009: Wouter
 	- Test set updated to provide additional ns lookup result.
