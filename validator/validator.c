@@ -2380,6 +2380,7 @@ process_ds_response(struct module_qstate* qstate, struct val_qstate* vq,
 			return;
 		}
 		vq->empty_DS_len = qinfo->qname_len;
+		vq->chain_blacklist = NULL;
 		/* ds response indicated that we aren't on a delegation point.
 		 * Keep the forState.state on FINDKEY. */
 	} else if(key_entry_isgood(dske)) {
@@ -2428,6 +2429,7 @@ process_dnskey_response(struct module_qstate* qstate, struct val_qstate* vq,
 	struct sock_list* origin)
 {
 	struct val_env* ve = (struct val_env*)qstate->env->modinfo[id];
+	struct key_entry_key* old = vq->key_entry;
 	struct ub_packed_rrset_key* dnskey = NULL;
 
 	if(rcode == LDNS_RCODE_NOERROR)
@@ -2437,6 +2439,12 @@ process_dnskey_response(struct module_qstate* qstate, struct val_qstate* vq,
 		/* bad response */
 		verbose(VERB_DETAIL, "Missing DNSKEY RRset in response to "
 			"DNSKEY query.");
+		if(vq->restart_count < VAL_MAX_RESTART_COUNT) {
+			vq->restart_count++;
+			val_blacklist(&vq->chain_blacklist, qstate->region,
+				origin, 1);
+			return;
+		}
 		vq->key_entry = key_entry_create_bad(qstate->region, 
 			qinfo->qname, qinfo->qname_len, qinfo->qclass);
 		if(!vq->key_entry) {
@@ -2463,12 +2471,22 @@ process_dnskey_response(struct module_qstate* qstate, struct val_qstate* vq,
 	/* If the key entry isBad or isNull, then we can move on to the next
 	 * state. */
 	if(!key_entry_isgood(vq->key_entry)) {
-		if(key_entry_isbad(vq->key_entry))
+		if(key_entry_isbad(vq->key_entry)) {
+			if(vq->restart_count < VAL_MAX_RESTART_COUNT) {
+				val_blacklist(&vq->chain_blacklist, 
+					qstate->region, origin, 1);
+				vq->restart_count++;
+				vq->key_entry = old;
+				return;
+			}
 			verbose(VERB_DETAIL, "Did not match a DS to a DNSKEY, "
 				"thus bogus.");
+		}
+		vq->chain_blacklist = NULL;
 		vq->state = VAL_VALIDATE_STATE;
 		return;
 	}
+	vq->chain_blacklist = NULL;
 
 	/* The DNSKEY validated, so cache it as a trusted key rrset. */
 	key_cache_insert(ve->kcache, vq->key_entry);
