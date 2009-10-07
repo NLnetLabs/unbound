@@ -1245,11 +1245,10 @@ list_is_secure(struct module_env* env, struct val_env* ve,
 {
 	size_t i;
 	enum sec_status sec;
-	char* reason = NULL;
 	for(i=0; i<num; i++) {
 		if(list[i]->rk.type != htons(LDNS_RR_TYPE_NSEC3))
 			continue;
-		sec = val_verify_rrset_entry(env, ve, list[i], kkey, &reason);
+		sec = val_verify_rrset_entry(env, ve, list[i], kkey);
 		if(sec != sec_status_secure) {
 			verbose(VERB_ALGO, "NSEC3 did not verify");
 			return 0;
