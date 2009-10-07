@@ -3,6 +3,7 @@
 	  unit test.  Provisioning in other tests for requeries.
 	- retry for validation failure in DNSKEY in middle of chain of trust.
 	  unit test.
+	- retry for empty non terminals in chain of trust and unit test.
 
 6 October 2009: Wouter
 	- Test set updated to provide additional ns lookup result.

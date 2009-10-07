@@ -2363,6 +2363,7 @@ process_ds_response(struct module_qstate* qstate, struct val_qstate* vq,
 	struct sock_list* origin)
 {
 	struct key_entry_key* dske = NULL;
+	uint8_t* olds = vq->empty_DS_name;
 	vq->empty_DS_name = NULL;
 	if(!ds_response_to_ke(qstate, vq, id, rcode, msg, qinfo, &dske)) {
 			log_err("malloc failure in process_ds_response");
@@ -2395,6 +2396,7 @@ process_ds_response(struct module_qstate* qstate, struct val_qstate* vq,
 		/* Keep the forState.state on FINDKEY. */
 	} else if(key_entry_isbad(dske) 
 		&& vq->restart_count < VAL_MAX_RESTART_COUNT) {
+		vq->empty_DS_name = olds;
 		val_blacklist(&vq->chain_blacklist, qstate->region, origin, 1);
 		vq->restart_count++;
 	} else {
