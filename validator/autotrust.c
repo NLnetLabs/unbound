@@ -946,10 +946,11 @@ static int
 verify_dnskey(struct module_env* env, struct val_env* ve,
         struct trust_anchor* tp, struct ub_packed_rrset_key* rrset)
 {
+	char* reason = NULL;
 	if(tp->ds_rrset) {
 		/* verify with ds, any will do to prime autotrust */
 		enum sec_status sec = val_verify_DNSKEY_with_DS(
-			env, ve, rrset, tp->ds_rrset);
+			env, ve, rrset, tp->ds_rrset, &reason);
 		verbose(VERB_ALGO, "autotrust: validate DNSKEY with DS: %s",
 			sec_status_to_string(sec));
 		if(sec == sec_status_secure) {
@@ -959,7 +960,7 @@ verify_dnskey(struct module_env* env, struct val_env* ve,
 	if(tp->dnskey_rrset) {
 		/* verify with keys */
 		enum sec_status sec = val_verify_rrset(env, ve, rrset,
-			tp->dnskey_rrset);
+			tp->dnskey_rrset, &reason);
 		verbose(VERB_ALGO, "autotrust: validate DNSKEY with keys: %s",
 			sec_status_to_string(sec));
 		if(sec == sec_status_secure) {
@@ -995,9 +996,11 @@ rr_is_selfsigned_revoked(struct module_env* env, struct val_env* ve,
 	struct ub_packed_rrset_key* dnskey_rrset, size_t i)
 {
 	enum sec_status sec;
+	char* reason = NULL;
 	verbose(VERB_ALGO, "seen REVOKE flag, check self-signed, rr %d",
 		(int)i);
-	sec = dnskey_verify_rrset(env, ve, dnskey_rrset, dnskey_rrset, i);
+	sec = dnskey_verify_rrset(env, ve, dnskey_rrset, dnskey_rrset, i, 
+		&reason);
 	return (sec == sec_status_secure);
 }
 

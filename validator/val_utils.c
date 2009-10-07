@@ -51,6 +51,7 @@
 #include "util/net_help.h"
 #include "util/module.h"
 #include "util/regional.h"
+#include "util/config_file.h"
 
 enum val_classification 
 val_classify_response(uint16_t query_flags, struct query_info* origqinf,
@@ -303,7 +304,8 @@ rrset_get_ttl(struct ub_packed_rrset_key* rrset)
 
 enum sec_status 
 val_verify_rrset(struct module_env* env, struct val_env* ve,
-        struct ub_packed_rrset_key* rrset, struct ub_packed_rrset_key* keys)
+        struct ub_packed_rrset_key* rrset, struct ub_packed_rrset_key* keys,
+	char** reason)
 {
 	enum sec_status sec;
 	struct packed_rrset_data* d = (struct packed_rrset_data*)rrset->
@@ -325,7 +327,7 @@ val_verify_rrset(struct module_env* env, struct val_env* ve,
 	}
 	log_nametypeclass(VERB_ALGO, "verify rrset", rrset->rk.dname,
 		ntohs(rrset->rk.type), ntohs(rrset->rk.rrset_class));
-	sec = dnskeyset_verify_rrset(env, ve, rrset, keys);
+	sec = dnskeyset_verify_rrset(env, ve, rrset, keys, reason);
 	verbose(VERB_ALGO, "verify result: %s", sec_status_to_string(sec));
 	regional_free_all(env->scratch);
 
@@ -357,7 +359,8 @@ val_verify_rrset(struct module_env* env, struct val_env* ve,
 
 enum sec_status 
 val_verify_rrset_entry(struct module_env* env, struct val_env* ve,
-        struct ub_packed_rrset_key* rrset, struct key_entry_key* kkey)
+        struct ub_packed_rrset_key* rrset, struct key_entry_key* kkey,
+	char** reason)
 {
 	/* temporary dnskey rrset-key */
 	struct ub_packed_rrset_key dnskey;
@@ -370,7 +373,7 @@ val_verify_rrset_entry(struct module_env* env, struct val_env* ve,
 	dnskey.rk.dname_len = kkey->namelen;
 	dnskey.entry.key = &dnskey;
 	dnskey.entry.data = kd->rrset_data;
-	sec = val_verify_rrset(env, ve, rrset, &dnskey);
+	sec = val_verify_rrset(env, ve, rrset, &dnskey, reason);
 	return sec;
 }
 
@@ -378,10 +381,10 @@ val_verify_rrset_entry(struct module_env* env, struct val_env* ve,
 static enum sec_status
 verify_dnskeys_with_ds_rr(struct module_env* env, struct val_env* ve, 
 	struct ub_packed_rrset_key* dnskey_rrset, 
-        struct ub_packed_rrset_key* ds_rrset, size_t ds_idx)
+        struct ub_packed_rrset_key* ds_rrset, size_t ds_idx, char** reason)
 {
 	enum sec_status sec = sec_status_bogus;
-	size_t i, num;
+	size_t i, num, numchecked = 0, numhashok = 0;
 	num = rrset_get_count(dnskey_rrset);
 	for(i=0; i<num; i++) {
 		/* Skip DNSKEYs that don't match the basic criteria. */
@@ -391,6 +394,7 @@ verify_dnskeys_with_ds_rr(struct module_env* env, struct val_env* ve,
 		   != ds_get_keytag(ds_rrset, ds_idx)) {
 			continue;
 		}
+		numchecked++;
 		verbose(VERB_ALGO, "attempt DS match algo %d keytag %d",
 			ds_get_key_algo(ds_rrset, ds_idx),
 			ds_get_keytag(ds_rrset, ds_idx));
@@ -402,24 +406,31 @@ verify_dnskeys_with_ds_rr(struct module_env* env, struct val_env* ve,
 			verbose(VERB_ALGO, "DS match attempt failed");
 			continue;
 		}
+		numhashok++;
 		verbose(VERB_ALGO, "DS match digest ok, trying signature");
 
 		/* Otherwise, we have a match! Make sure that the DNSKEY 
 		 * verifies *with this key*  */
 		sec = dnskey_verify_rrset(env, ve, dnskey_rrset, 
-			dnskey_rrset, i);
+			dnskey_rrset, i, reason);
 		if(sec == sec_status_secure) {
 			return sec;
 		}
 		/* If it didn't validate with the DNSKEY, try the next one! */
 	}
+	if(numchecked == 0)
+		*reason = "no keys have a DS";
+	else if(numhashok == 0)
+		*reason = "DS hash mismatches key";
+	else if(!*reason)
+		*reason = "keyset not secured by DNSKEY that matches DS";
 	return sec_status_bogus;
 }
 
 enum sec_status 
 val_verify_DNSKEY_with_DS(struct module_env* env, struct val_env* ve,
 	struct ub_packed_rrset_key* dnskey_rrset,
-	struct ub_packed_rrset_key* ds_rrset)
+	struct ub_packed_rrset_key* ds_rrset, char** reason)
 {
 	/* as long as this is false, we can consider this DS rrset to be
 	 * equivalent to no DS rrset. */
@@ -433,6 +444,7 @@ val_verify_DNSKEY_with_DS(struct module_env* env, struct val_env* ve,
 		!= 0) {
 		verbose(VERB_QUERY, "DNSKEY RRset did not match DS RRset "
 			"by name");
+		*reason = "DNSKEY RRset did not match DS RRset by name";
 		return sec_status_bogus;
 	}
 
@@ -462,7 +474,7 @@ val_verify_DNSKEY_with_DS(struct module_env* env, struct val_env* ve,
 		has_useful_ds = true;
 
 		sec = verify_dnskeys_with_ds_rr(env, ve, dnskey_rrset, 
-			ds_rrset, i);
+			ds_rrset, i, reason);
 		if(sec == sec_status_secure) {
 			verbose(VERB_ALGO, "DS matched DNSKEY.");
 			return sec_status_secure;
@@ -485,10 +497,10 @@ val_verify_DNSKEY_with_DS(struct module_env* env, struct val_env* ve,
 struct key_entry_key* 
 val_verify_new_DNSKEYs(struct regional* region, struct module_env* env, 
 	struct val_env* ve, struct ub_packed_rrset_key* dnskey_rrset, 
-	struct ub_packed_rrset_key* ds_rrset)
+	struct ub_packed_rrset_key* ds_rrset, char** reason)
 {
 	enum sec_status sec = val_verify_DNSKEY_with_DS(env, ve, 
-		dnskey_rrset, ds_rrset);
+		dnskey_rrset, ds_rrset, reason);
 
 	if(sec == sec_status_secure) {
 		return key_entry_create_rrset(region, 
@@ -836,4 +848,118 @@ void val_blacklist(struct sock_list** blacklist, struct regional* region,
 	} else if(!cross)
 		sock_list_prepend(blacklist, origin);
 	else	sock_list_merge(blacklist, region, origin);
+}
+
+void val_errinf(struct module_qstate* qstate, struct val_qstate* vq,
+	const char* str)
+{
+	struct config_strlist* p;
+	if(qstate->env->cfg->val_log_level < 2 || !str)
+		return;
+	p = (struct config_strlist*)regional_alloc(qstate->region, sizeof(*p));
+	if(!p) {
+		log_err("malloc failure in validator-error-info string");
+		return;
+	}
+	p->next = NULL;
+	p->str = regional_strdup(qstate->region, str);
+	if(!p->str) {
+		log_err("malloc failure in validator-error-info string");
+		return;
+	}
+	/* add at end */
+	if(vq->errinf) {
+		struct config_strlist* q = vq->errinf;
+		while(q->next) 
+			q = q->next;
+		q->next = p;
+	} else	vq->errinf = p;
+}
+
+void val_errinf_origin(struct module_qstate* qstate, struct val_qstate* vq,
+	struct sock_list *origin)
+{
+	struct sock_list* p;
+	if(qstate->env->cfg->val_log_level < 2)
+		return;
+	for(p=origin; p; p=p->next) {
+		char buf[256];
+		if(p == origin)
+			snprintf(buf, sizeof(buf), "from ");
+		else	snprintf(buf, sizeof(buf), "and from ");
+		if(p->len == 0)
+			snprintf(buf+strlen(buf), sizeof(buf)-strlen(buf), 
+				"cache");
+		else 
+			addr_to_str(&p->addr, p->len, buf+strlen(buf),
+				sizeof(buf)-strlen(buf));
+		val_errinf(qstate, vq, buf);
+	}
+}
+
+char* val_errinf_to_str(struct module_qstate* qstate, struct val_qstate* vq)
+{
+	char buf[20480];
+	char* p = buf;
+	size_t left = sizeof(buf);
+	struct config_strlist* s;
+	char dname[LDNS_MAX_DOMAINLEN+1];
+	char* t = ldns_rr_type2str(qstate->qinfo.qtype);
+	char* c = ldns_rr_class2str(qstate->qinfo.qclass);
+	if(!t || !c) {
+		free(t);
+		free(c);
+		log_err("malloc failure in errinf_to_str");
+		return NULL;
+	}
+	dname_str(qstate->qinfo.qname, dname);
+	snprintf(p, left, "validation failure <%s %s %s>:", dname, t, c);
+	free(t);
+	free(c);
+	left -= strlen(p); p += strlen(p);
+	if(!vq->errinf)
+		snprintf(p, left, " misc failure");
+	else for(s=vq->errinf; s; s=s->next) {
+		snprintf(p, left, " %s", s->str);
+		left -= strlen(p); p += strlen(p);
+	}
+	p = strdup(buf);
+	if(!p)
+		log_err("malloc failure in errinf_to_str");
+	return p;
+}
+
+void val_errinf_rrset(struct module_qstate* qstate, struct val_qstate* vq, 
+	struct ub_packed_rrset_key *rr)
+{
+	char buf[1024];
+	char dname[LDNS_MAX_DOMAINLEN+1];
+	char *t, *c;
+	if(qstate->env->cfg->val_log_level < 2 || !rr)
+		return;
+	t = ldns_rr_type2str(ntohs(rr->rk.type));
+	c = ldns_rr_class2str(ntohs(rr->rk.rrset_class));
+	if(!t || !c) {
+		free(t);
+		free(c);
+		log_err("malloc failure in errinf_rrset");
+		return;
+	}
+	dname_str(qstate->qinfo.qname, dname);
+	snprintf(buf, sizeof(buf), "for <%s %s %s>", dname, t, c);
+	free(t);
+	free(c);
+	val_errinf(qstate, vq, buf);
+}
+
+void val_errinf_dname(struct module_qstate* qstate, struct val_qstate* vq,
+	const char* str, uint8_t* dname)
+{
+	char b[1024];
+	char buf[LDNS_MAX_DOMAINLEN+1];
+	if(qstate->env->cfg->val_log_level < 2 || !str || !dname)
+		return;
+	dname_str(dname, buf);
+	snprintf(b, sizeof(b), "%s %s", str, buf);
+	val_errinf(qstate, vq, b);
 }

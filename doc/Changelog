@@ -7,6 +7,14 @@
 	- Fixed security bug where the signatures for NSEC3 records were not
 	  checked when checking for absence of DS records.  This could have
 	  enabled the substitution of an insecure delegation.
+	- moved version number to 1.4.0 because of 1.3.4 release with only
+	  the NSEC3 patch from the entry above.
+	- val-log-level: 2 shows extended error information for validation
+	  failures, but still one (longish) line per failure.  For example:
+	  validation failure <example.com. DNSKEY IN>: signature expired from
+	  192.0.2.4 for trust anchor example.com. while building chain of trust
+	  validation failure <www.example.com. A IN>: no signatures from
+	  192.0.2.6 for key example.com. while building chain of trust
 
 6 October 2009: Wouter
 	- Test set updated to provide additional ns lookup result.

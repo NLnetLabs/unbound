@@ -155,14 +155,16 @@ verifytest_rrset(struct module_env* env, struct val_env* ve,
 	struct query_info* qinfo)
 {
 	enum sec_status sec;
+	char* reason = NULL;
 	if(vsig) {
 		log_nametypeclass(VERB_QUERY, "verify of rrset",
 			rrset->rk.dname, ntohs(rrset->rk.type),
 			ntohs(rrset->rk.rrset_class));
 	}
-	sec = dnskeyset_verify_rrset(env, ve, rrset, dnskey);
+	sec = dnskeyset_verify_rrset(env, ve, rrset, dnskey, &reason);
 	if(vsig) {
-		printf("verify outcome is: %s\n", sec_status_to_string(sec));
+		printf("verify outcome is: %s %s\n", sec_status_to_string(sec),
+			reason?reason:"");
 	}
 	if(should_be_bogus(rrset, qinfo)) {
 		unit_assert(sec == sec_status_bogus);

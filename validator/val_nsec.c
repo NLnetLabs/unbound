@@ -183,6 +183,7 @@ val_nsec_prove_nodata_dsreply(struct module_env* env, struct val_env* ve,
 	uint8_t* wc = NULL, *ce = NULL;
 	int valid_nsec = 0;
 	struct ub_packed_rrset_key* wc_nsec = NULL;
+	char* reason = NULL;
 
 	/* If we have a NSEC at the same name, it must prove one 
 	 * of two things
@@ -190,7 +191,7 @@ val_nsec_prove_nodata_dsreply(struct module_env* env, struct val_env* ve,
 	 * 1) this is a delegation point and there is no DS
 	 * 2) this is not a delegation point */
 	if(nsec) {
-		sec = val_verify_rrset_entry(env, ve, nsec, kkey);
+		sec = val_verify_rrset_entry(env, ve, nsec, kkey, &reason);
 		if(sec != sec_status_secure) {
 			verbose(VERB_ALGO, "NSEC RRset for the "
 				"referral did not verify.");
@@ -219,7 +220,8 @@ val_nsec_prove_nodata_dsreply(struct module_env* env, struct val_env* ve,
 		i++) {
 		if(rep->rrsets[i]->rk.type != htons(LDNS_RR_TYPE_NSEC))
 			continue;
-		sec = val_verify_rrset_entry(env, ve, rep->rrsets[i], kkey);
+		sec = val_verify_rrset_entry(env, ve, rep->rrsets[i], kkey,
+			&reason);
 		if(sec != sec_status_secure) {
 			verbose(VERB_ALGO, "NSEC for empty non-terminal "
 				"did not verify.");

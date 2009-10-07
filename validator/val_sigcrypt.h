@@ -146,13 +146,14 @@ uint16_t dnskey_get_flags(struct ub_packed_rrset_key* k, size_t idx);
  * @param ve: validator environment, date settings.
  * @param rrset: to be validated.
  * @param dnskey: DNSKEY rrset, keyset to try.
+ * @param reason: if bogus, a string returned, fixed or alloced in scratch.
  * @return SECURE if one key in the set verifies one rrsig.
  *	UNCHECKED on allocation errors, unsupported algorithms, malformed data,
  *	and BOGUS on verification failures (no keys match any signatures).
  */
 enum sec_status dnskeyset_verify_rrset(struct module_env* env, 
 	struct val_env* ve, struct ub_packed_rrset_key* rrset, 
-	struct ub_packed_rrset_key* dnskey);
+	struct ub_packed_rrset_key* dnskey, char** reason);
 
 /** 
  * verify rrset against one specific dnskey (from rrset) 
@@ -161,12 +162,13 @@ enum sec_status dnskeyset_verify_rrset(struct module_env* env,
  * @param rrset: to be validated.
  * @param dnskey: DNSKEY rrset, keyset.
  * @param dnskey_idx: which key from the rrset to try.
+ * @param reason: if bogus, a string returned, fixed or alloced in scratch.
  * @return secure if *this* key signs any of the signatures on rrset.
  *	unchecked on error or and bogus on bad signature.
  */
 enum sec_status dnskey_verify_rrset(struct module_env* env, 
 	struct val_env* ve, struct ub_packed_rrset_key* rrset, 
-	struct ub_packed_rrset_key* dnskey, size_t dnskey_idx);
+	struct ub_packed_rrset_key* dnskey, size_t dnskey_idx, char** reason);
 
 /** 
  * verify rrset, with dnskey rrset, for a specific rrsig in rrset
@@ -178,13 +180,14 @@ enum sec_status dnskey_verify_rrset(struct module_env* env,
  * @param sig_idx: which signature to try to validate.
  * @param sortree: reused sorted order. Stored in region. Pass NULL at start,
  * 	and for a new rrset.
+ * @param reason: if bogus, a string returned, fixed or alloced in scratch.
  * @return secure if any key signs *this* signature. bogus if no key signs it,
  *	or unchecked on error.
  */
 enum sec_status dnskeyset_verify_rrset_sig(struct module_env* env, 
 	struct val_env* ve, uint32_t now, struct ub_packed_rrset_key* rrset, 
 	struct ub_packed_rrset_key* dnskey, size_t sig_idx, 
-	struct rbtree_t** sortree);
+	struct rbtree_t** sortree, char** reason);
 
 /** 
  * verify rrset, with specific dnskey(from set), for a specific rrsig 
@@ -201,6 +204,7 @@ enum sec_status dnskeyset_verify_rrset_sig(struct module_env* env,
  * @param buf_canon: if true, the buffer is already canonical.
  * 	pass false at start. pass old value only for same rrset and same
  * 	signature (but perhaps different key) for reuse.
+ * @param reason: if bogus, a string returned, fixed or alloced in scratch.
  * @return secure if this key signs this signature. unchecked on error or 
  *	bogus if it did not validate.
  */
@@ -208,7 +212,7 @@ enum sec_status dnskey_verify_rrset_sig(struct regional* region,
 	ldns_buffer* buf, struct val_env* ve, uint32_t now,
 	struct ub_packed_rrset_key* rrset, struct ub_packed_rrset_key* dnskey, 
 	size_t dnskey_idx, size_t sig_idx,
-	struct rbtree_t** sortree, int* buf_canon);
+	struct rbtree_t** sortree, int* buf_canon, char** reason);
 
 /**
  * canonical compare for two tree entries

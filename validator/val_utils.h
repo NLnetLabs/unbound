@@ -52,6 +52,8 @@ struct regional;
 struct val_anchors;
 struct rrset_cache;
 struct sock_list;
+struct module_qstate;
+struct val_qstate;
 
 /**
  * Response classifications for the validator. The different types of proofs.
@@ -117,10 +119,12 @@ void val_find_signer(enum val_classification subtype,
  * @param ve: validator environment (verification settings)
  * @param rrset: what to verify
  * @param keys: dnskey rrset to verify with.
+ * @param reason: reason of failure. Fixed string or alloced in scratch.
  * @return security status of verification.
  */
 enum sec_status val_verify_rrset(struct module_env* env, struct val_env* ve,
-	struct ub_packed_rrset_key* rrset, struct ub_packed_rrset_key* keys);
+	struct ub_packed_rrset_key* rrset, struct ub_packed_rrset_key* keys,
+	char** reason);
 
 /**
  * Verify RRset with keys from a keyset.
@@ -128,11 +132,12 @@ enum sec_status val_verify_rrset(struct module_env* env, struct val_env* ve,
  * @param ve: validator environment (verification settings)
  * @param rrset: what to verify
  * @param kkey: key_entry to verify with.
+ * @param reason: reason of failure. Fixed string or alloced in scratch.
  * @return security status of verification.
  */
 enum sec_status val_verify_rrset_entry(struct module_env* env, 
 	struct val_env* ve, struct ub_packed_rrset_key* rrset, 
-	struct key_entry_key* kkey);
+	struct key_entry_key* kkey, char** reason);
 
 /**
  * Verify DNSKEYs with DS rrset. Like val_verify_new_DNSKEYs but
@@ -141,13 +146,14 @@ enum sec_status val_verify_rrset_entry(struct module_env* env,
  * @param ve: validator environment (verification settings)
  * @param dnskey_rrset: DNSKEY rrset to verify
  * @param ds_rrset: DS rrset to verify with.
+ * @param reason: reason of failure. Fixed string or alloced in scratch.
  * @return: sec_status_secure if a DS matches.
  *     sec_status_insecure if end of trust (i.e., unknown algorithms).
  *     sec_status_bogus if it fails.
  */
 enum sec_status val_verify_DNSKEY_with_DS(struct module_env* env, 
 	struct val_env* ve, struct ub_packed_rrset_key* dnskey_rrset, 
-	struct ub_packed_rrset_key* ds_rrset);
+	struct ub_packed_rrset_key* ds_rrset, char** reason);
 
 /**
  * Verify new DNSKEYs with DS rrset. The DS contains hash values that should
@@ -159,6 +165,7 @@ enum sec_status val_verify_DNSKEY_with_DS(struct module_env* env,
  * @param ve: validator environment (verification settings)
  * @param dnskey_rrset: DNSKEY rrset to verify
  * @param ds_rrset: DS rrset to verify with.
+ * @param reason: reason of failure. Fixed string or alloced in scratch.
  * @return a KeyEntry. This will either contain the now trusted
  *         dnskey_rrset, a "null" key entry indicating that this DS
  *         rrset/DNSKEY pair indicate an secure end to the island of trust
@@ -171,7 +178,7 @@ enum sec_status val_verify_DNSKEY_with_DS(struct module_env* env,
 struct key_entry_key* val_verify_new_DNSKEYs(struct regional* region, 
 	struct module_env* env, struct val_env* ve, 
 	struct ub_packed_rrset_key* dnskey_rrset, 
-	struct ub_packed_rrset_key* ds_rrset);
+	struct ub_packed_rrset_key* ds_rrset, char** reason);
 
 /**
  * Determine if DS rrset is usable for validator or not.
@@ -300,5 +307,56 @@ const char* val_classification_to_string(enum val_classification subtype);
  */
 void val_blacklist(struct sock_list** blacklist, struct regional* region,
 	struct sock_list* origin, int cross);
+
+/**
+ * Append text to the error info for validation.
+ * @param qstate: query state.
+ * @param vq: validator state.
+ * @param str: copied into query region and appended.
+ * Failures to allocate are logged.
+ */
+void val_errinf(struct module_qstate* qstate, struct val_qstate* vq,
+	const char* str);
+
+/**
+ * Append text to error info:  from 1.2.3.4
+ * @param qstate: query state.
+ * @param vq: validator state.
+ * @param list: sock list with origin of trouble. 
+ *	Every element added.
+ *	If NULL: nothing is added.
+ *	if 0len element: 'from cache' is added.
+ */
+void val_errinf_origin(struct module_qstate* qstate, struct val_qstate* vq, 
+	struct sock_list *origin);
+
+/**
+ * Append text to error info:  for RRset name type class
+ * @param qstate: query state.
+ * @param vq: validator state.
+ * @param rr: rrset_key.
+ */
+void val_errinf_rrset(struct module_qstate* qstate, struct val_qstate* vq, 
+	struct ub_packed_rrset_key *rr);
+
+/**
+ * Append text to error info:  str dname
+ * @param qstate: query state.
+ * @param vq: validator state.
+ * @param str: explanation string
+ * @param dname: the dname.
+ * @param rr: rrset_key.
+ */
+void val_errinf_dname(struct module_qstate* qstate, struct val_qstate* vq, 
+	const char* str, uint8_t* dname);
+
+/**
+ * Create error info in string
+ * @param qstate: query state. (for query name)
+ * @param vq: validator state.
+ * @return string or NULL on malloc failure (already logged).
+ *    This string is malloced and has to be freed by caller.
+ */
+char* val_errinf_to_str(struct module_qstate* qstate, struct val_qstate* vq);
 
 #endif /* VALIDATOR_VAL_UTILS_H */
