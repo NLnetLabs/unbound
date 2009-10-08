@@ -459,6 +459,21 @@ dnskeyset_needs(struct ub_packed_rrset_key* dnskey, uint8_t needs[])
 	return total;
 }
 
+/** see which algo needed */
+static int any_needed_bogus(uint8_t needs[])
+{
+	int i;
+	/* first check if a needed algo was bogus - report that */
+	for(i=0; i<256; i++)
+		if(needs[i] == 2)
+			return 0;
+	/* now check which algo is missing */
+	for(i=0; i<256; i++)
+		if(needs[i] == 1)
+			return i;
+	return 0;
+}
+
 enum sec_status 
 dnskeyset_verify_rrset(struct module_env* env, struct val_env* ve,
 	struct ub_packed_rrset_key* rrset, struct ub_packed_rrset_key* dnskey,
@@ -469,7 +484,7 @@ dnskeyset_verify_rrset(struct module_env* env, struct val_env* ve,
 	rbtree_t* sortree = NULL;
 	/* make sure that for all DNSKEY algorithms there are valid sigs */
 	uint8_t needs[256]; /* 1 if need sig for that algorithm */
-	int sawbogus = 0;
+	int alg;
 
 	num = rrset_get_sigcount(rrset);
 	if(num == 0) {
@@ -486,20 +501,31 @@ dnskeyset_verify_rrset(struct module_env* env, struct val_env* ve,
 		/* see which algorithm has been fixed up */
 		if(sec == sec_status_secure) {
 			uint8_t a = (uint8_t)rrset_get_sig_algo(rrset, i);
-			if(needs[a] == 1) {
+			if(needs[a]) {
 				needs[a] = 0;
 				numneeds --;
 				if(numneeds == 0) /* done! */
 					return sec;
 			}
+		} else if(sec == sec_status_bogus) {
+			uint8_t a = (uint8_t)rrset_get_sig_algo(rrset, i);
+			if(needs[a]) needs[a] = 2; /* need it, but bogus */
 		}
-		else if(sec == sec_status_bogus)
-			sawbogus = 1;
 	}
 	verbose(VERB_ALGO, "rrset failed to verify: no valid signatures for "
 		"%d algorithms", (int)numneeds);
-	if(!sawbogus)
-		*reason = "no signatures for all algorithms";
+	if((alg=any_needed_bogus(needs)) != 0) {
+		char buf[256];
+		ldns_lookup_table *t = ldns_lookup_by_id(ldns_algorithms, alg);
+		if(t&&t->name)
+			snprintf(buf, sizeof(buf), "no signatures with "
+				"algorithm %s", t->name);
+		else	snprintf(buf, sizeof(buf), "no signatures with "
+				"algorithm ALG%u", (unsigned)alg);
+		*reason = regional_strdup(env->scratch, buf);
+		if(!*reason)
+			*reason = "no signatures for all algorithms";
+	}
 	return sec_status_bogus;
 }
 
@@ -1372,12 +1398,14 @@ setup_key_digest(int algo, EVP_PKEY** evp_key, const EVP_MD** digest_type,
  * @param sigblock_len: length of sigblock data.
  * @param key: public key data from DNSKEY RR.
  * @param keylen: length of keydata.
+ * @param reason: bogus reason in more detail.
  * @return secure if verification succeeded, bogus on crypto failure,
  *	unchecked on format errors and alloc failures.
  */
 static enum sec_status
 verify_canonrrset(ldns_buffer* buf, int algo, unsigned char* sigblock, 
-	unsigned int sigblock_len, unsigned char* key, unsigned int keylen)
+	unsigned int sigblock_len, unsigned char* key, unsigned int keylen,
+	char** reason)
 {
 	const EVP_MD *digest_type;
 	EVP_MD_CTX ctx;
@@ -1386,6 +1414,7 @@ verify_canonrrset(ldns_buffer* buf, int algo, unsigned char* sigblock,
 	
 	if(!setup_key_digest(algo, &evp_key, &digest_type, key, keylen)) {
 		verbose(VERB_QUERY, "verify: failed to setup key");
+		*reason = "use of key for crypto failed";
 		EVP_PKEY_free(evp_key);
 		return sec_status_bogus;
 	}
@@ -1394,6 +1423,7 @@ verify_canonrrset(ldns_buffer* buf, int algo, unsigned char* sigblock,
 		sigblock_len == 1+2*SHA_DIGEST_LENGTH) {
 		if(!setup_dsa_sig(&sigblock, &sigblock_len)) {
 			verbose(VERB_QUERY, "verify: failed to setup DSA sig");
+			*reason = "use of key for DSA crypto failed";
 			EVP_PKEY_free(evp_key);
 			return sec_status_bogus;
 		}
@@ -1432,6 +1462,7 @@ verify_canonrrset(ldns_buffer* buf, int algo, unsigned char* sigblock,
 		return sec_status_secure;
 	} else if(res == 0) {
 		verbose(VERB_QUERY, "verify: signature mismatch");
+		*reason = "signature crypto failed";
 		return sec_status_bogus;
 	}
 
@@ -1564,13 +1595,12 @@ dnskey_verify_rrset_sig(struct regional* region, ldns_buffer* buf,
 
 	/* verify */
 	sec = verify_canonrrset(buf, (int)sig[2+2],
-		sigblock, sigblock_len, key, keylen);
+		sigblock, sigblock_len, key, keylen, reason);
 	
 	/* check if TTL is too high - reduce if so */
 	if(sec == sec_status_secure) {
 		adjust_ttl(ve, now, rrset, sig+2+4, sig+2+8, sig+2+12);
-	} else if(sec == sec_status_bogus)
-		*reason = "signature crypto failed";
+	}
 
 	return sec;
 }
