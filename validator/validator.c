@@ -2520,6 +2520,9 @@ process_dnskey_response(struct module_qstate* qstate, struct val_qstate* vq,
 			log_err("alloc failure in missing dnskey response");
 			/* key_entry is NULL for failure in Validate */
 		}
+		val_errinf(qstate, vq, "No DNSKEY record");
+		val_errinf_origin(qstate, vq, origin);
+		val_errinf_dname(qstate, vq, "for key", qinfo->qname);
 		vq->state = VAL_VALIDATE_STATE;
 		return;
 	}

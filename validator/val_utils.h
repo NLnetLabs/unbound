@@ -322,7 +322,7 @@ void val_errinf(struct module_qstate* qstate, struct val_qstate* vq,
  * Append text to error info:  from 1.2.3.4
  * @param qstate: query state.
  * @param vq: validator state.
- * @param list: sock list with origin of trouble. 
+ * @param origin: sock list with origin of trouble. 
  *	Every element added.
  *	If NULL: nothing is added.
  *	if 0len element: 'from cache' is added.
@@ -345,7 +345,6 @@ void val_errinf_rrset(struct module_qstate* qstate, struct val_qstate* vq,
  * @param vq: validator state.
  * @param str: explanation string
  * @param dname: the dname.
- * @param rr: rrset_key.
  */
 void val_errinf_dname(struct module_qstate* qstate, struct val_qstate* vq, 
 	const char* str, uint8_t* dname);
