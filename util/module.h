@@ -299,6 +299,8 @@ struct module_qstate {
 	struct sock_list* blacklist;
 	/** region for this query. Cleared when query process finishes. */
 	struct regional* region;
+	/** failure reason information if val-log-level is high */
+	struct config_strlist* errinf;
 
 	/** which module is executing */
 	int curmod;

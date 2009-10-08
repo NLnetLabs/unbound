@@ -4,6 +4,10 @@
 	- more detail to errors from insecure delegation checks.
 	- Fix double time subtraction in negative cache reported by 
 	  Amanda Constant and Hugh Mahon.
+	- Made new validator error string available from libunbound for
+	  applications.  It is in result->why_bogus, a zero-terminated string.
+	  unbound-host prints it by default if a result is bogus.
+	  Also the errinf is public in module_qstate (for other modules).
 
 7 October 2009: Wouter
 	- retry for validation failure in DS and prime results. Less mem use.

@@ -351,6 +351,7 @@ The result of the DNS resolution and validation is returned as
 		int nxdomain; /* true if nodata because name does not exist */
 		int secure;  /* true if result is secure */
 		int bogus;   /* true if a security failure happened */
+		char* why_bogus; /* string with error if bogus */
 	};
 .fi
 .P

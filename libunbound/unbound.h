@@ -181,6 +181,14 @@ struct ub_result {
 	 * This means the data is from a domain where data is not signed.
 	 */
 	int bogus;
+	
+	/**
+	 * If the result is bogus this contains a string (zero terminated)
+	 * that describes the failure.  There may be other errors as well
+	 * as the one described, the description may not be perfectly accurate.
+	 * Is NULL if the result is not bogus.
+	 */
+	char* why_bogus;
 };
 
 /**

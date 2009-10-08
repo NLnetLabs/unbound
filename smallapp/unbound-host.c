@@ -304,6 +304,8 @@ pretty_output(char* q, int t, int c, struct ub_result* result, int docname)
 		if(verb > 0)
 			printf(" %s", secstatus);
 		printf("\n");
+		if(result->bogus && result->why_bogus)
+			printf("%s\n", result->why_bogus);
 		return;
 	}
 	if(docname && result->canonname &&
@@ -335,6 +337,8 @@ pretty_output(char* q, int t, int c, struct ub_result* result, int docname)
 			printf(" %s\n", secstatus);
 		}
 		/* else: emptiness to indicate no data */
+		if(result->bogus && result->why_bogus)
+			printf("%s\n", result->why_bogus);
 		return;
 	}
 	i=0;
@@ -346,6 +350,8 @@ pretty_output(char* q, int t, int c, struct ub_result* result, int docname)
 			(size_t)result->len[i]);
 		i++;
 	}
+	if(result->bogus && result->why_bogus)
+		printf("%s\n", result->why_bogus);
 }
 
 /** perform a lookup and printout return if domain existed */

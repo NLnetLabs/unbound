@@ -691,6 +691,7 @@ ub_resolve_free(struct ub_result* result)
 	free(result->data);
 	free(result->len);
 	free(result->answer_packet);
+	free(result->why_bogus);
 	free(result);
 }
 

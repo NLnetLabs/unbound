@@ -199,6 +199,6 @@ void autr_debug_print(struct val_anchors* anchors);
 
 /** callback for query answer to 5011 probe */
 void probe_answer_cb(void* arg, int rcode, ldns_buffer* buf, 
-	enum sec_status sec);
+	enum sec_status sec, char* errinf);
 
 #endif /* VALIDATOR_AUTOTRUST_H */

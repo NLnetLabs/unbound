@@ -158,11 +158,11 @@ void libworker_handle_result_write(struct tube* tube, uint8_t* msg, size_t len,
 
 /** mesh callback with fg results */
 void libworker_fg_done_cb(void* arg, int rcode, ldns_buffer* buf, 
-	enum sec_status s);
+	enum sec_status s, char* why_bogus);
 
 /** mesh callback with bg results */
 void libworker_bg_done_cb(void* arg, int rcode, ldns_buffer* buf, 
-	enum sec_status s);
+	enum sec_status s, char* why_bogus);
 
 /** 
  * fill result from parsed message, on error fills servfail 

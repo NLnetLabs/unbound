@@ -206,9 +206,10 @@ struct mesh_reply {
 
 /** 
  * Mesh result callback func.
- * called as func(cb_arg, rcode, buffer_with_reply, security);
- * */
-typedef void (*mesh_cb_func_t)(void*, int, ldns_buffer*, enum sec_status);
+ * called as func(cb_arg, rcode, buffer_with_reply, security, why_bogus);
+ */
+typedef void (*mesh_cb_func_t)(void*, int, ldns_buffer*, enum sec_status, 
+	char*);
 
 /**
  * Callback to result routine

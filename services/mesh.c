@@ -472,7 +472,7 @@ mesh_state_cleanup(struct mesh_state* mstate)
 		for(cb=mstate->cb_list; cb; cb=cb->next) {
 			fptr_ok(fptr_whitelist_mesh_cb(cb->cb));
 			(*cb->cb)(cb->cb_arg, LDNS_RCODE_SERVFAIL, NULL,
-				sec_status_unchecked);
+				sec_status_unchecked, NULL);
 		}
 	}
 
@@ -615,6 +615,7 @@ mesh_do_callback(struct mesh_state* m, int rcode, struct reply_info* rep,
 	struct mesh_cb* r)
 {
 	int secure;
+	char* reason = NULL;
 	/* bogus messages are not made into servfail, sec_status passed 
 	 * to the callback function */
 	if(rep && rep->security == sec_status_secure)
@@ -622,10 +623,14 @@ mesh_do_callback(struct mesh_state* m, int rcode, struct reply_info* rep,
 	else	secure = 0;
 	if(!rep && rcode == LDNS_RCODE_NOERROR)
 		rcode = LDNS_RCODE_SERVFAIL;
+	if(!rcode && rep->security == sec_status_bogus) {
+		if(!(reason = errinf_to_str(&m->s)))
+			rcode = LDNS_RCODE_SERVFAIL;
+	}
 	/* send the reply */
 	if(rcode) {
 		fptr_ok(fptr_whitelist_mesh_cb(r->cb));
-		(*r->cb)(r->cb_arg, rcode, r->buf, sec_status_unchecked);
+		(*r->cb)(r->cb_arg, rcode, r->buf, sec_status_unchecked, NULL);
 	} else {
 		size_t udp_size = r->edns.udp_size;
 		ldns_buffer_clear(r->buf);
@@ -640,13 +645,14 @@ mesh_do_callback(struct mesh_state* m, int rcode, struct reply_info* rep,
 		{
 			fptr_ok(fptr_whitelist_mesh_cb(r->cb));
 			(*r->cb)(r->cb_arg, LDNS_RCODE_SERVFAIL, r->buf,
-				sec_status_unchecked);
+				sec_status_unchecked, NULL);
 		} else {
 			fptr_ok(fptr_whitelist_mesh_cb(r->cb));
 			(*r->cb)(r->cb_arg, LDNS_RCODE_NOERROR, r->buf,
-				rep->security);
+				rep->security, reason);
 		}
 	}
+	free(reason);
 	m->s.env->mesh->num_reply_addrs--;
 }
 

@@ -47,6 +47,9 @@
 #include "util/configparser.h"
 #include "util/net_help.h"
 #include "util/data/msgparse.h"
+#include "util/module.h"
+#include "util/regional.h"
+#include "util/data/dname.h"
 /** global config during parsing */
 struct config_parser_state* cfg_parser = 0;
 /** lex in file */
@@ -156,6 +159,7 @@ config_create()
 	cfg->val_sig_skew_max = 86400; /* at most timezone settings trouble */
 	cfg->val_clean_additional = 1;
 	cfg->val_log_level = 0;
+	cfg->val_log_squelch = 0;
 	cfg->val_permissive_mode = 0;
 	cfg->add_holddown = 30*24*3600;
 	cfg->del_holddown = 30*24*3600;
@@ -210,6 +214,8 @@ struct config_file* config_create_forlib()
 	cfg->neg_cache_size = 100 * 1024;
 	cfg->donotquery_localhost = 0; /* allow, so that you can ask a
 		forward nameserver running on localhost */
+	cfg->val_log_level = 2; /* to fill why_bogus with */
+	cfg->val_log_squelch = 1;
 	return cfg;
 }
 
@@ -387,6 +393,9 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	} else if(strcmp(opt, "val-log-level:") == 0) {
 		IS_NUMBER_OR_ZERO;
 		cfg->val_log_level = atoi(val);
+	} else if(strcmp(opt, "val-log-squelch:") == 0) {
+		IS_YES_OR_NO;
+		cfg->val_log_squelch = (strcmp(val, "yes") == 0);
 	} else if(strcmp(opt, "val-permissive-mode:") == 0) {
 		IS_YES_OR_NO;
 		cfg->val_permissive_mode = (strcmp(val, "yes") == 0);
@@ -1094,4 +1103,114 @@ char* cfg_ptr_reverse(char* str)
 		return NULL;
 	}
 	return result;
+}
+
+void errinf(struct module_qstate* qstate, const char* str)
+{
+	struct config_strlist* p;
+	if(qstate->env->cfg->val_log_level < 2 || !str)
+		return;
+	p = (struct config_strlist*)regional_alloc(qstate->region, sizeof(*p));
+	if(!p) {
+		log_err("malloc failure in validator-error-info string");
+		return;
+	}
+	p->next = NULL;
+	p->str = regional_strdup(qstate->region, str);
+	if(!p->str) {
+		log_err("malloc failure in validator-error-info string");
+		return;
+	}
+	/* add at end */
+	if(qstate->errinf) {
+		struct config_strlist* q = qstate->errinf;
+		while(q->next) 
+			q = q->next;
+		q->next = p;
+	} else	qstate->errinf = p;
+}
+
+void errinf_origin(struct module_qstate* qstate, struct sock_list *origin)
+{
+	struct sock_list* p;
+	if(qstate->env->cfg->val_log_level < 2)
+		return;
+	for(p=origin; p; p=p->next) {
+		char buf[256];
+		if(p == origin)
+			snprintf(buf, sizeof(buf), "from ");
+		else	snprintf(buf, sizeof(buf), "and from ");
+		if(p->len == 0)
+			snprintf(buf+strlen(buf), sizeof(buf)-strlen(buf), 
+				"cache");
+		else 
+			addr_to_str(&p->addr, p->len, buf+strlen(buf),
+				sizeof(buf)-strlen(buf));
+		errinf(qstate, buf);
+	}
+}
+
+char* errinf_to_str(struct module_qstate* qstate)
+{
+	char buf[20480];
+	char* p = buf;
+	size_t left = sizeof(buf);
+	struct config_strlist* s;
+	char dname[LDNS_MAX_DOMAINLEN+1];
+	char* t = ldns_rr_type2str(qstate->qinfo.qtype);
+	char* c = ldns_rr_class2str(qstate->qinfo.qclass);
+	if(!t || !c) {
+		free(t);
+		free(c);
+		log_err("malloc failure in errinf_to_str");
+		return NULL;
+	}
+	dname_str(qstate->qinfo.qname, dname);
+	snprintf(p, left, "validation failure <%s %s %s>:", dname, t, c);
+	free(t);
+	free(c);
+	left -= strlen(p); p += strlen(p);
+	if(!qstate->errinf)
+		snprintf(p, left, " misc failure");
+	else for(s=qstate->errinf; s; s=s->next) {
+		snprintf(p, left, " %s", s->str);
+		left -= strlen(p); p += strlen(p);
+	}
+	p = strdup(buf);
+	if(!p)
+		log_err("malloc failure in errinf_to_str");
+	return p;
+}
+
+void errinf_rrset(struct module_qstate* qstate, struct ub_packed_rrset_key *rr)
+{
+	char buf[1024];
+	char dname[LDNS_MAX_DOMAINLEN+1];
+	char *t, *c;
+	if(qstate->env->cfg->val_log_level < 2 || !rr)
+		return;
+	t = ldns_rr_type2str(ntohs(rr->rk.type));
+	c = ldns_rr_class2str(ntohs(rr->rk.rrset_class));
+	if(!t || !c) {
+		free(t);
+		free(c);
+		log_err("malloc failure in errinf_rrset");
+		return;
+	}
+	dname_str(qstate->qinfo.qname, dname);
+	snprintf(buf, sizeof(buf), "for <%s %s %s>", dname, t, c);
+	free(t);
+	free(c);
+	errinf(qstate, buf);
+}
+
+void errinf_dname(struct module_qstate* qstate, const char* str, uint8_t* dname)
+{
+	char b[1024];
+	char buf[LDNS_MAX_DOMAINLEN+1];
+	if(qstate->env->cfg->val_log_level < 2 || !str || !dname)
+		return;
+	dname_str(dname, buf);
+	snprintf(b, sizeof(b), "%s %s", str, buf);
+	errinf(qstate, b);
 }

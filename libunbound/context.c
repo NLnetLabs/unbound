@@ -288,20 +288,27 @@ context_serialize_answer(struct ctx_query* q, int err, ldns_buffer* pkt,
 	 * 	o uint32 id
 	 * 	o uint32 error_code
 	 * 	o uint32 msg_security
+	 * 	o uint32 length of why_bogus string (+1 for eos); 0 absent.
+	 * 	o why_bogus_string
 	 * 	o the remainder is the answer msg from resolver lookup.
 	 * 	  remainder can be length 0.
 	 */
 	size_t pkt_len = pkt?ldns_buffer_remaining(pkt):0;
+	size_t wlen = (pkt&&q->res->why_bogus)?strlen(q->res->why_bogus)+1:0;
 	uint8_t* p;
-	*len = sizeof(uint32_t)*4 + pkt_len;
+	*len = sizeof(uint32_t)*5 + pkt_len + wlen;
 	p = (uint8_t*)malloc(*len);
 	if(!p) return NULL;
 	ldns_write_uint32(p, UB_LIBCMD_ANSWER);
 	ldns_write_uint32(p+sizeof(uint32_t), (uint32_t)q->querynum);
 	ldns_write_uint32(p+2*sizeof(uint32_t), (uint32_t)err);
 	ldns_write_uint32(p+3*sizeof(uint32_t), (uint32_t)q->msg_security);
+	ldns_write_uint32(p+4*sizeof(uint32_t), (uint32_t)wlen);
+	if(wlen > 0)
+		memmove(p+5*sizeof(uint32_t), q->res->why_bogus, wlen);
 	if(pkt_len > 0)
-		memmove(p+4*sizeof(uint32_t), ldns_buffer_begin(pkt), pkt_len);
+		memmove(p+5*sizeof(uint32_t)+wlen, 
+			ldns_buffer_begin(pkt), pkt_len);
 	return p;
 }
 
@@ -311,16 +318,31 @@ context_deserialize_answer(struct ub_ctx* ctx,
 {
 	struct ctx_query* q = NULL ;
 	int id;
-	if(len < 4*sizeof(uint32_t)) return NULL;
+	size_t wlen;
+	if(len < 5*sizeof(uint32_t)) return NULL;
 	log_assert( ldns_read_uint32(p) == UB_LIBCMD_ANSWER);
 	id = (int)ldns_read_uint32(p+sizeof(uint32_t));
 	q = (struct ctx_query*)rbtree_search(&ctx->queries, &id);
 	if(!q) return NULL; 
 	*err = (int)ldns_read_uint32(p+2*sizeof(uint32_t));
 	q->msg_security = ldns_read_uint32(p+3*sizeof(uint32_t));
-	if(len > 4*sizeof(uint32_t)) {
-		q->msg_len = len - 4*sizeof(uint32_t);
-		q->msg = (uint8_t*)memdup(p+4*sizeof(uint32_t), q->msg_len);
+	wlen = (size_t)ldns_read_uint32(p+4*sizeof(uint32_t));
+	if(len > 5*sizeof(uint32_t) && wlen > 0) {
+		if(len >= 5*sizeof(uint32_t)+wlen)
+			q->res->why_bogus = (char*)memdup(
+				p+5*sizeof(uint32_t), wlen);
+		if(!q->res->why_bogus) {
+			/* pass malloc failure to the user callback */
+			q->msg_len = 0;
+			*err = UB_NOMEM;
+			return q;
+		}
+		q->res->why_bogus[wlen-1] = 0; /* zero terminated for sure */
+	}
+	if(len > 5*sizeof(uint32_t)+wlen) {
+		q->msg_len = len - 5*sizeof(uint32_t) - wlen;
+		q->msg = (uint8_t*)memdup(p+5*sizeof(uint32_t)+wlen, 
+			q->msg_len);
 		if(!q->msg) {
 			/* pass malloc failure to the user callback */
 			q->msg_len = 0;

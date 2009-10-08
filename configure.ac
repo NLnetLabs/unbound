@@ -23,7 +23,8 @@ LIBUNBOUND_AGE=0
 # 1.3.2 had 1:2:0
 # 1.3.3 had 1:3:0
 # 1.3.4 had 1:4:0
-# 1.4.0 had 1:5:0
+# 1.4.0-snapshots had 1:5:0
+# 1.4.0 had 2:0:0   # ub_result.why_bogus
 
 #   Current  -- the number of the binary API that we're implementing
 #   Revision -- which iteration of the implementation of the binary

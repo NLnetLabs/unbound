@@ -237,9 +237,6 @@ struct val_qstate {
 		dlv_ask_higher, /* ask again */
 		dlv_there_is_no_dlv /* got no DLV, sure of it */
 	} dlv_status;
-
-	/** failure reason information if val-log-level is high */
-	struct config_strlist* errinf;
 };
 
 /**
