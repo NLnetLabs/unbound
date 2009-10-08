@@ -63,6 +63,7 @@ struct key_entry_key;
  * @param rep: reply received.
  * @param kkey: key entry to use for verification of signatures.
  * @param proof_ttl: if secure, the TTL of how long this proof lasts.
+ * @param reason: string explaining why bogus.
  * @return security status.
  *	SECURE: proved absence of DS.
  *	INSECURE: proved that this was not a delegation point.
@@ -72,7 +73,7 @@ struct key_entry_key;
 enum sec_status val_nsec_prove_nodata_dsreply(struct module_env* env,
 	struct val_env* ve, struct query_info* qinfo, 
 	struct reply_info* rep, struct key_entry_key* kkey,
-	uint32_t* proof_ttl);
+	uint32_t* proof_ttl, char** reason);
 
 /** 
  * nsec typemap check, takes an NSEC-type bitmap as argument, checks for type.

@@ -183,6 +183,7 @@ nsec3_prove_wildcard(struct module_env* env, struct val_env* ve,
  * @param num: number of RRsets in the array to examine.
  * @param qinfo: query that is verified for.
  * @param kkey: key entry that signed the NSEC3s.
+ * @param reason: string for bogus result.
  * @return:
  * 	sec_status SECURE of the proposition is proven by the NSEC3 RRs, 
  * 	BOGUS if not, INSECURE if all of the NSEC3s could be validly ignored.
@@ -192,7 +193,7 @@ nsec3_prove_wildcard(struct module_env* env, struct val_env* ve,
 enum sec_status
 nsec3_prove_nods(struct module_env* env, struct val_env* ve,
 	struct ub_packed_rrset_key** list, size_t num, 
-	struct query_info* qinfo, struct key_entry_key* kkey);
+	struct query_info* qinfo, struct key_entry_key* kkey, char** reason);
 
 /**
  * Prove NXDOMAIN or NODATA.

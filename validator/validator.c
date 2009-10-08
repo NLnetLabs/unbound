@@ -2327,7 +2327,7 @@ ds_response_to_ke(struct module_qstate* qstate, struct val_qstate* vq,
 		/* Try to prove absence of the DS with NSEC */
 		sec = val_nsec_prove_nodata_dsreply(
 			qstate->env, ve, qinfo, msg->rep, vq->key_entry, 
-			&proof_ttl);
+			&proof_ttl, &reason);
 		switch(sec) {
 			case sec_status_secure:
 				verbose(VERB_DETAIL, "NSEC RRset for the "
@@ -2345,8 +2345,7 @@ ds_response_to_ke(struct module_qstate* qstate, struct val_qstate* vq,
 			case sec_status_bogus:
 				verbose(VERB_DETAIL, "NSEC RRset for the "
 					"referral did not prove no DS.");
-				val_errinf(qstate, vq, "NSEC DS absent proof "
-					"failed");
+				val_errinf(qstate, vq, reason);
 				goto return_bogus;
 			case sec_status_unchecked:
 			default:
@@ -2356,7 +2355,7 @@ ds_response_to_ke(struct module_qstate* qstate, struct val_qstate* vq,
 
 		sec = nsec3_prove_nods(qstate->env, ve, 
 			msg->rep->rrsets + msg->rep->an_numrrsets,
-			msg->rep->ns_numrrsets, qinfo, vq->key_entry);
+			msg->rep->ns_numrrsets, qinfo, vq->key_entry, &reason);
 		switch(sec) {
 			case sec_status_secure:
 				verbose(VERB_DETAIL, "NSEC3s for the "
@@ -2374,8 +2373,7 @@ ds_response_to_ke(struct module_qstate* qstate, struct val_qstate* vq,
 			case sec_status_bogus:
 				verbose(VERB_DETAIL, "NSEC3s for the "
 					"referral did not prove no DS.");
-				val_errinf(qstate, vq, "NSEC3 DS absent proof "
-					"failed");
+				val_errinf(qstate, vq, reason);
 				goto return_bogus;
 			case sec_status_insecure:
 			case sec_status_unchecked:

@@ -173,7 +173,7 @@ val_nsec_proves_no_ds(struct ub_packed_rrset_key* nsec,
 enum sec_status 
 val_nsec_prove_nodata_dsreply(struct module_env* env, struct val_env* ve, 
 	struct query_info* qinfo, struct reply_info* rep, 
-	struct key_entry_key* kkey, uint32_t* proof_ttl)
+	struct key_entry_key* kkey, uint32_t* proof_ttl, char** reason)
 {
 	struct ub_packed_rrset_key* nsec = reply_find_rrset_section_ns(
 		rep, qinfo->qname, qinfo->qname_len, LDNS_RR_TYPE_NSEC, 
@@ -183,7 +183,6 @@ val_nsec_prove_nodata_dsreply(struct module_env* env, struct val_env* ve,
 	uint8_t* wc = NULL, *ce = NULL;
 	int valid_nsec = 0;
 	struct ub_packed_rrset_key* wc_nsec = NULL;
-	char* reason = NULL;
 
 	/* If we have a NSEC at the same name, it must prove one 
 	 * of two things
@@ -191,7 +190,7 @@ val_nsec_prove_nodata_dsreply(struct module_env* env, struct val_env* ve,
 	 * 1) this is a delegation point and there is no DS
 	 * 2) this is not a delegation point */
 	if(nsec) {
-		sec = val_verify_rrset_entry(env, ve, nsec, kkey, &reason);
+		sec = val_verify_rrset_entry(env, ve, nsec, kkey, reason);
 		if(sec != sec_status_secure) {
 			verbose(VERB_ALGO, "NSEC RRset for the "
 				"referral did not verify.");
@@ -200,6 +199,7 @@ val_nsec_prove_nodata_dsreply(struct module_env* env, struct val_env* ve,
 		sec = val_nsec_proves_no_ds(nsec, qinfo);
 		if(sec == sec_status_bogus) {
 			/* something was wrong. */
+			*reason = "NSEC does not prove absence of DS";
 			return sec;
 		} else if(sec == sec_status_insecure) {
 			/* this wasn't a delegation point. */
@@ -221,7 +221,7 @@ val_nsec_prove_nodata_dsreply(struct module_env* env, struct val_env* ve,
 		if(rep->rrsets[i]->rk.type != htons(LDNS_RR_TYPE_NSEC))
 			continue;
 		sec = val_verify_rrset_entry(env, ve, rep->rrsets[i], kkey,
-			&reason);
+			reason);
 		if(sec != sec_status_secure) {
 			verbose(VERB_ALGO, "NSEC for empty non-terminal "
 				"did not verify.");
@@ -252,6 +252,7 @@ val_nsec_prove_nodata_dsreply(struct module_env* env, struct val_env* ve,
 	if(valid_nsec) {
 		if(wc) {
 			/* check if this is a delegation */
+			*reason = "NSEC for wildcard does not prove absence of DS";
 			return val_nsec_proves_no_ds(wc_nsec, qinfo);
 		}
 		/* valid nsec proves empty nonterminal */
