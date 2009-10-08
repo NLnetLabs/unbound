@@ -358,4 +358,12 @@ void val_errinf_dname(struct module_qstate* qstate, struct val_qstate* vq,
  */
 char* val_errinf_to_str(struct module_qstate* qstate, struct val_qstate* vq);
 
+/**
+ * check if has dnssec info, and if it has signed nsecs. gives error reason.
+ * @param rep: reply to check.
+ * @param reason: returned on fail.
+ * @return false if message has no signed nsecs.  Can not prove negatives.
+ */
+int val_has_signed_nsecs(struct reply_info* rep, char** reason);
+
 #endif /* VALIDATOR_VAL_UTILS_H */

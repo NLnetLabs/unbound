@@ -2310,6 +2310,14 @@ ds_response_to_ke(struct module_qstate* qstate, struct val_qstate* vq,
 		/* NODATA means that the qname exists, but that there was 
 		 * no DS.  This is a pretty normal case. */
 		uint32_t proof_ttl = 0;
+		enum sec_status sec;
+
+		/* make sure there are NSECs or NSEC3s with signatures */
+		if(!val_has_signed_nsecs(msg->rep, &reason)) {
+			verbose(VERB_ALGO, "no NSECs: %s", reason);
+			val_errinf(qstate, vq, reason);
+			goto return_bogus;
+		}
 
 		/* For subtype Name Error.
 		 * attempt ANS 2.8.1.0 compatibility where it sets rcode
@@ -2317,7 +2325,7 @@ ds_response_to_ke(struct module_qstate* qstate, struct val_qstate* vq,
 		 * Find and prove the empty nonterminal in that case */
 
 		/* Try to prove absence of the DS with NSEC */
-		enum sec_status sec = val_nsec_prove_nodata_dsreply(
+		sec = val_nsec_prove_nodata_dsreply(
 			qstate->env, ve, qinfo, msg->rep, vq->key_entry, 
 			&proof_ttl);
 		switch(sec) {

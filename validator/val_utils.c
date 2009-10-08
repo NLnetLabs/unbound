@@ -963,3 +963,26 @@ void val_errinf_dname(struct module_qstate* qstate, struct val_qstate* vq,
 	snprintf(b, sizeof(b), "%s %s", str, buf);
 	val_errinf(qstate, vq, b);
 }
+
+int val_has_signed_nsecs(struct reply_info* rep, char** reason)
+{
+	size_t i, num_nsec = 0, num_nsec3 = 0;
+	struct packed_rrset_data* d;
+	for(i=rep->an_numrrsets; i<rep->an_numrrsets+rep->ns_numrrsets; i++) {
+		if(rep->rrsets[i]->rk.type == htons(LDNS_RR_TYPE_NSEC))
+			num_nsec++;
+		else if(rep->rrsets[i]->rk.type == htons(LDNS_RR_TYPE_NSEC3))
+			num_nsec3++;
+		else continue;
+		d = (struct packed_rrset_data*)rep->rrsets[i]->entry.data;
+		if(d && d->rrsig_count != 0) {
+			return 1;
+		}
+	}
+	if(num_nsec == 0 && num_nsec3 == 0)
+		*reason = "no DNSSEC records";
+	else if(num_nsec != 0)
+		*reason = "no signatures over NSECs";
+	else	*reason = "no signatures over NSEC3s";
+	return 0;
+}
