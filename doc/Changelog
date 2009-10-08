@@ -2,6 +2,8 @@
 	- please doxygen
 	- add val-log-level print to corner case (nameserver.epost.bg).
 	- more detail to errors from insecure delegation checks.
+	- Fix double time subtraction in negative cache reported by 
+	  Amanda Constant and Hugh Mahon.
 
 7 October 2009: Wouter
 	- retry for validation failure in DS and prime results. Less mem use.

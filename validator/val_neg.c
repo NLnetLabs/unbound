@@ -1276,7 +1276,8 @@ neg_nsec3_proof_ds(struct val_neg_zone* zone, uint8_t* qname, size_t qname_len,
 		if(!(msg = dns_msg_create(qname, qname_len, 
 			LDNS_RR_TYPE_DS, zone->dclass, region, 1))) 
 			return NULL;
-		if(!dns_msg_authadd(msg, region, ce_rrset, now)) 
+		/* TTL reduced in grab_nsec */
+		if(!dns_msg_authadd(msg, region, ce_rrset, 0)) 
 			return NULL;
 		return msg;
 	}
@@ -1302,9 +1303,10 @@ neg_nsec3_proof_ds(struct val_neg_zone* zone, uint8_t* qname, size_t qname_len,
 		if(!(msg = dns_msg_create(qname, qname_len, 
 			LDNS_RR_TYPE_DS, zone->dclass, region, 2))) 
 			return NULL;
-		if(!dns_msg_authadd(msg, region, ce_rrset, now)) 
+		/* now=0 because TTL was reduced in grab_nsec */
+		if(!dns_msg_authadd(msg, region, ce_rrset, 0)) 
 			return NULL;
-		if(!dns_msg_authadd(msg, region, nc_rrset, now)) 
+		if(!dns_msg_authadd(msg, region, nc_rrset, 0)) 
 			return NULL;
 		return msg;
 	}
@@ -1340,7 +1342,8 @@ val_neg_getmsg(struct val_neg_cache* neg, struct query_info* qinfo,
 		if(!(msg = dns_msg_create(qinfo->qname, qinfo->qname_len, 
 			qinfo->qtype, qinfo->qclass, region, 1))) 
 			return NULL;
-		if(!dns_msg_authadd(msg, region, rrset, now)) 
+		/* TTL already subtracted in grab_nsec */
+		if(!dns_msg_authadd(msg, region, rrset, 0)) 
 			return NULL;
 		return msg;
 	}
