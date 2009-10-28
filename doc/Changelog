@@ -2,6 +2,7 @@
 	- removed abort on prealloc failure, error still printed but softfail.
 	- iana portlist updated.
 	- RFC 5702: RSASHA256 and RSASHA512 support enabled by default.
+	- ldns tarball updated (which also enables rsasha256 support).
 
 27 October 2009: Wouter
 	- iana portlist updated.
