@@ -1,6 +1,7 @@
-29 October 2009: Wouter
+28 October 2009: Wouter
 	- removed abort on prealloc failure, error still printed but softfail.
 	- iana portlist updated.
+	- RFC 5702: RSASHA256 and RSASHA512 support enabled by default.
 
 27 October 2009: Wouter
 	- iana portlist updated.

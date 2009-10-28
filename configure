@@ -1580,7 +1580,7 @@ Optional Features:
                           optimize for fast installation [default=yes]
   --disable-libtool-lock  avoid locking (might break parallel builds)
   --disable-rpath         disable hardcoded rpath (default=enabled)
-  --enable-sha2           Enable SHA256 and SHA512 RRSIG support, experimental
+  --disable-sha2          Disable SHA256 and SHA512 RRSIG support
   --enable-gost           Enable GOST support, experimental
   --enable-static-exe     enable to compile executables statically against
                           event, ldns libs, for debug purposes
@@ -17910,14 +17910,14 @@ if test "${enable_sha2+set}" = set; then
 fi
 
 case "$enable_sha2" in
-	yes)
+	no)
+	;;
+	yes|*)
 
 cat >>confdefs.h <<\_ACEOF
 #define USE_SHA2 1
 _ACEOF
 
-	;;
-	no|*)
 	;;
 esac
 

@@ -386,12 +386,12 @@ AC_INCLUDES_DEFAULT
 #include <openssl/evp.h>
 ])
 
-AC_ARG_ENABLE(sha2, AC_HELP_STRING([--enable-sha2], [Enable SHA256 and SHA512 RRSIG support, experimental]))
+AC_ARG_ENABLE(sha2, AC_HELP_STRING([--disable-sha2], [Disable SHA256 and SHA512 RRSIG support]))
 case "$enable_sha2" in
-	yes)
-	AC_DEFINE([USE_SHA2], [1], [Define this to enable SHA256 and SHA512 support.])
+	no)
 	;;
-	no|*)
+	yes|*)
+	AC_DEFINE([USE_SHA2], [1], [Define this to enable SHA256 and SHA512 support.])
 	;;
 esac
 
