@@ -69,8 +69,10 @@ prealloc(struct alloc_cache* alloc)
 	alloc_special_t* p;
 	int i;
 	for(i=0; i<ALLOC_SPECIAL_MAX; i++) {
-		if(!(p = (alloc_special_t*)malloc(sizeof(alloc_special_t))))
-			fatal_exit("prealloc: out of memory");
+		if(!(p = (alloc_special_t*)malloc(sizeof(alloc_special_t)))) {
+			log_err("prealloc: out of memory");
+			return;
+		}
 		alloc_setup_special(p);
 		alloc_set_special_next(p, alloc->quar);
 		alloc->quar = p;
@@ -86,7 +88,10 @@ prealloc_blocks(struct alloc_cache* alloc, size_t num)
 	struct regional* r;
 	for(i=0; i<num; i++) {
 		r = regional_create_custom(ALLOC_REG_SIZE);
-		if(!r) fatal_exit("prealloc blocks: out of memory");
+		if(!r) {
+			log_err("prealloc blocks: out of memory");
+			return;
+		}
 		r->next = (char*)alloc->reg_list;
 		alloc->reg_list = r;
 		alloc->num_reg_blocks ++;
