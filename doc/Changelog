@@ -1,3 +1,6 @@
+29 October 2009: Wouter
+	- iana portlist updated.
+
 28 October 2009: Wouter
 	- removed abort on prealloc failure, error still printed but softfail.
 	- iana portlist updated.
