@@ -165,6 +165,17 @@ to 0, or if do_tcp is "no", no TCP queries to authoritative servers are done.
 Number of incoming TCP buffers to allocate per thread. Default is 10. If set
 to 0, or if do_tcp is "no", no TCP queries from clients are accepted.
 .TP
+.B edns\-buffer\-size: \fI<number>
+Number of bytes size to advertise as the EDNS reassembly buffer size.
+This is the value put into datagrams over UDP towards peers.  The actual
+buffer size is determined by msg\-buffer\-size (both for TCP and UDP).  Do
+not set lower than that value.  Default is 4096 which is RFC recommended.
+If you have fragmentation reassembly problems, usually seen as timeouts,
+then a value of 1480 can fix it.  Setting to 512 bypasses even the most
+stringent path MTU problems, but is seen as extreme, since the amount
+of TCP fallback generated is excessive (probably also for this resolver,
+consider tuning the outgoing tcp number).
+.TP
 .B msg\-buffer\-size: \fI<number>
 Number of bytes size of the message buffers. Default is 65552 bytes, enough
 for 64 Kb packets, the maximum DNS message size. No message larger than this

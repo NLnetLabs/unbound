@@ -135,6 +135,7 @@ print_option(struct config_file* cfg, const char* opt)
 	else O_DEC(opt, "outgoing-range", outgoing_num_ports)
 	else O_DEC(opt, "outgoing-num-tcp", outgoing_num_tcp)
 	else O_DEC(opt, "incoming-num-tcp", incoming_num_tcp)
+	else O_DEC(opt, "edns-buffer-size", edns_buffer_size)
 	else O_DEC(opt, "msg-buffer-size", msg_buffer_size)
 	else O_MEM(opt, "msg-cache-size", msg_cache_size)
 	else O_DEC(opt, "msg-cache-slabs", msg_cache_slabs)
@@ -442,6 +443,9 @@ morechecks(struct config_file* cfg, const char* fname)
 		fatal_exit("ip4 and ip6 are both disabled, pointless");
 	if(!cfg->do_udp && !cfg->do_tcp)
 		fatal_exit("udp and tcp are both disabled, pointless");
+	if(cfg->edns_buffer_size > cfg->msg_buffer_size)
+		fatal_exit("edns-buffer-size larger than msg-buffer-size, "
+			"answers will not fit in processing buffer");
 
 	if(cfg->chrootdir && cfg->chrootdir[0] && 
 		cfg->chrootdir[strlen(cfg->chrootdir)-1] == '/')

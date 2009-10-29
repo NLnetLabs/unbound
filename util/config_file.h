@@ -86,6 +86,8 @@ struct config_file {
 	/** allowed udp port numbers, array with 0 if not allowed */
 	int* outgoing_avail_ports;
 
+	/** EDNS buffer size to use */
+	size_t edns_buffer_size;
 	/** number of bytes buffer size for DNS messages */
 	size_t msg_buffer_size;
 	/** size of the message cache */

@@ -95,6 +95,7 @@ config_create()
 	cfg->outgoing_num_tcp = 2; /* leaves 64-52=12 for: 4if,1stop,thread4 */
 	cfg->incoming_num_tcp = 2; 
 #endif
+	cfg->edns_buffer_size = 4096; /* 4k from rfc recommendation */
 	cfg->msg_buffer_size = 65552; /* 64 k + a small margin */
 	cfg->msg_cache_size = 4 * 1024 * 1024;
 	cfg->msg_cache_slabs = 4;
@@ -277,6 +278,9 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	} else if(strcmp(opt, "incoming-num-tcp:") == 0) {
 		IS_NUMBER_OR_ZERO;
 		cfg->incoming_num_tcp = (size_t)atoi(val);
+	} else if(strcmp(opt, "edns-buffer-size:") == 0) {
+		IS_NONZERO_NUMBER;
+		cfg->edns_buffer_size = (size_t)atoi(val);
 	} else if(strcmp(opt, "msg-buffer-size:") == 0) {
 		IS_NONZERO_NUMBER;
 		cfg->msg_buffer_size = (size_t)atoi(val);
@@ -850,6 +854,7 @@ config_apply(struct config_file* config)
 {
 	MAX_TTL = (uint32_t)config->max_ttl;
 	MIN_TTL = (uint32_t)config->min_ttl;
+	EDNS_ADVERTISED_SIZE = (uint16_t)config->edns_buffer_size;
 	log_set_time_asc(config->log_time_ascii);
 }
 

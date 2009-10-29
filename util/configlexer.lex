@@ -149,6 +149,7 @@ directory{COLON}		{ YDVAR(1, VAR_DIRECTORY) }
 logfile{COLON}			{ YDVAR(1, VAR_LOGFILE) }
 pidfile{COLON}			{ YDVAR(1, VAR_PIDFILE) }
 root-hints{COLON}		{ YDVAR(1, VAR_ROOT_HINTS) }
+edns-buffer-size{COLON}		{ YDVAR(1, VAR_EDNS_BUFFER_SIZE) }
 msg-buffer-size{COLON}		{ YDVAR(1, VAR_MSG_BUFFER_SIZE) }
 msg-cache-size{COLON}		{ YDVAR(1, VAR_MSG_CACHE_SIZE) }
 msg-cache-slabs{COLON}		{ YDVAR(1, VAR_MSG_CACHE_SLABS) }

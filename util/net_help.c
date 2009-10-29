@@ -47,6 +47,8 @@
 
 /** max length of an IP address (the address portion) that we allow */
 #define MAX_ADDR_STRLEN 128 /* characters */
+/** default value for EDNS ADVERTISED size */
+uint16_t EDNS_ADVERTISED_SIZE = 4096;
 
 /* returns true is string addr is an ip6 specced address */
 int

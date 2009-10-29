@@ -77,6 +77,10 @@ server:
 	# 0 is system default.  Use 4m to catch query spikes for busy servers.
 	# so-rcvbuf: 0
 
+	# EDNS reassembly buffer to advertise to UDP peers (the actual buffer
+	# is set with msg-buffer-size). 1480 can solve fragmentation (timeouts).
+	# edns-buffer-size: 4096
+
 	# buffer size for handling DNS data. No messages larger than this
 	# size can be sent or received, by UDP or TCP. In bytes.
 	# msg-buffer-size: 65552
