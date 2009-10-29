@@ -92,6 +92,8 @@ struct outside_network {
 	/** linked list of available commpoints, unused file descriptors,
 	 * for use as outgoing UDP ports. cp.fd=-1 in them. */
 	struct port_comm* unused_fds;
+	/** if udp is done */
+	int do_udp;
 
 	/** array of outgoing IP4 interfaces */
 	struct port_if* ip4_ifs;
@@ -347,6 +349,7 @@ struct serviced_query {
  * @param unwanted_threshold: when to take defensive action.
  * @param unwanted_action: the action to take.
  * @param unwanted_param: user parameter to action.
+ * @param do_udp: if udp is done.
  * @return: the new structure (with no pending answers) or NULL on error.
  */
 struct outside_network* outside_network_create(struct comm_base* base,
@@ -354,7 +357,7 @@ struct outside_network* outside_network_create(struct comm_base* base,
 	int do_ip4, int do_ip6, size_t num_tcp, struct infra_cache* infra, 
 	struct ub_randstate* rnd, int use_caps_for_id, int* availports, 
 	int numavailports, size_t unwanted_threshold,
-	void (*unwanted_action)(void*), void* unwanted_param);
+	void (*unwanted_action)(void*), void* unwanted_param, int do_udp);
 
 /**
  * Delete outside_network structure.

@@ -470,7 +470,7 @@ outside_network_create(struct comm_base *base, size_t bufsize,
 	int do_ip6, size_t num_tcp, struct infra_cache* infra,
 	struct ub_randstate* rnd, int use_caps_for_id, int* availports, 
 	int numavailports, size_t unwanted_threshold,
-	void (*unwanted_action)(void*), void* unwanted_param)
+	void (*unwanted_action)(void*), void* unwanted_param, int do_udp)
 {
 	struct outside_network* outnet = (struct outside_network*)
 		calloc(1, sizeof(struct outside_network));
@@ -490,6 +490,7 @@ outside_network_create(struct comm_base *base, size_t bufsize,
 	outnet->unwanted_action = unwanted_action;
 	outnet->unwanted_param = unwanted_param;
 	outnet->use_caps_for_id = use_caps_for_id;
+	outnet->do_udp = do_udp;
 	if(numavailports == 0) {
 		log_err("no outgoing ports available");
 		outside_network_delete(outnet);
@@ -1439,6 +1440,24 @@ serviced_tcp_initiate(struct outside_network* outnet,
 	}
 }
 
+static int
+serviced_tcp_send(struct serviced_query* sq, ldns_buffer* buff)
+{
+	int vs, rtt;
+	uint8_t edns_lame_known;
+	if(!infra_host(sq->outnet->infra, &sq->addr, sq->addrlen, 
+		*sq->outnet->now_secs, &vs, &edns_lame_known, &rtt))
+		return 0;
+	if(vs != -1)
+		sq->status = serviced_query_TCP_EDNS;
+	else 	sq->status = serviced_query_TCP;
+	serviced_encode(sq, buff, sq->status == serviced_query_TCP_EDNS);
+	sq->pending = pending_tcp_query(sq->outnet, buff, &sq->addr,
+		sq->addrlen, TCP_AUTH_QUERY_TIMEOUT, serviced_tcp_callback, 
+		sq);
+	return sq->pending != NULL;
+}
+
 int 
 serviced_udp_callback(struct comm_point* c, void* arg, int error,
         struct comm_reply* rep)
@@ -1582,12 +1601,22 @@ outnet_serviced_query(struct outside_network* outnet,
 			return NULL;
 		}
 		/* perform first network action */
-		if(!serviced_udp_send(sq, buff)) {
-			(void)rbtree_delete(outnet->serviced, sq);
-			free(sq->qbuf);
-			free(sq);
-			free(cb);
-			return NULL;
+		if(outnet->do_udp) {
+			if(!serviced_udp_send(sq, buff)) {
+				(void)rbtree_delete(outnet->serviced, sq);
+				free(sq->qbuf);
+				free(sq);
+				free(cb);
+				return NULL;
+			}
+		} else {
+			if(!serviced_tcp_send(sq, buff)) {
+				(void)rbtree_delete(outnet->serviced, sq);
+				free(sq->qbuf);
+				free(sq);
+				free(cb);
+				return NULL;
+			}
 		}
 	}
 	/* add callback to list of callbacks */

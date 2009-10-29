@@ -851,7 +851,8 @@ outside_network_create(struct comm_base* base, size_t bufsize,
 	struct ub_randstate* ATTR_UNUSED(rnd), 
 	int ATTR_UNUSED(use_caps_for_id), int* ATTR_UNUSED(availports),
 	int ATTR_UNUSED(numavailports), size_t ATTR_UNUSED(unwanted_threshold),
-	void (*unwanted_action)(void*), void* ATTR_UNUSED(unwanted_param))
+	void (*unwanted_action)(void*), void* ATTR_UNUSED(unwanted_param),
+	int ATTR_UNUSED(do_udp))
 {
 	struct outside_network* outnet =  calloc(1, 
 		sizeof(struct outside_network));
