@@ -1440,6 +1440,7 @@ serviced_tcp_initiate(struct outside_network* outnet,
 	}
 }
 
+/** Send serviced query over TCP return false on initial failure */
 static int
 serviced_tcp_send(struct serviced_query* sq, ldns_buffer* buff)
 {
