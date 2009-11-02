@@ -314,4 +314,10 @@ void val_blacklist(struct sock_list** blacklist, struct regional* region,
  */
 int val_has_signed_nsecs(struct reply_info* rep, char** reason);
 
+/**
+ * Return algo number for favorite (best) algorithm that we support in DS.
+ * @return algo number or 0 if none supported. 0 is unused as algo number.
+ */
+int val_favorite_ds_algo(struct ub_packed_rrset_key* ds_rrset);
+
 #endif /* VALIDATOR_VAL_UTILS_H */

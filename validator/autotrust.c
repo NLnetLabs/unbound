@@ -1274,10 +1274,49 @@ check_contains_revoked(struct module_env* env, struct val_env* ve,
 	ldns_rr_list_deep_free(r);
 }
 
+/** See if a DNSKEY is verified by one of the DSes */
+static int
+key_matches_a_ds(struct module_env* env, struct val_env* ve,
+	struct ub_packed_rrset_key* dnskey_rrset, size_t key_idx,
+	struct ub_packed_rrset_key* ds_rrset)
+{
+	struct packed_rrset_data* dd = (struct packed_rrset_data*)
+	                ds_rrset->entry.data;
+	size_t ds_idx, num = dd->count;
+	int d = val_favorite_ds_algo(ds_rrset);
+	char* reason = "";
+	for(ds_idx=0; ds_idx<num; ds_idx++) {
+		if(!ds_digest_algo_is_supported(ds_rrset, ds_idx) ||
+			!ds_key_algo_is_supported(ds_rrset, ds_idx) ||
+			ds_get_digest_algo(ds_rrset, ds_idx) != d)
+			continue;
+		if(ds_get_key_algo(ds_rrset, ds_idx)
+		   != dnskey_get_algo(dnskey_rrset, key_idx)
+		   || dnskey_calc_keytag(dnskey_rrset, key_idx)
+		   != ds_get_keytag(ds_rrset, ds_idx)) {
+			continue;
+		}
+		if(!ds_digest_match_dnskey(env, dnskey_rrset, key_idx,
+			ds_rrset, ds_idx)) {
+			verbose(VERB_ALGO, "DS match attempt failed");
+			continue;
+		}
+		if(dnskey_verify_rrset(env, ve, dnskey_rrset, 
+			dnskey_rrset, key_idx, &reason) == sec_status_secure) {
+			return 1;
+		} else {
+			verbose(VERB_ALGO, "DS match failed because the key "
+				"does not verify the keyset: %s", reason);
+		}
+	}
+	return 0;
+}
+
 /** Set update events */
 static int
-update_events(struct module_env* env, struct trust_anchor* tp, 
-	struct ub_packed_rrset_key* dnskey_rrset, int* changed)
+update_events(struct module_env* env, struct val_env* ve, 
+	struct trust_anchor* tp, struct ub_packed_rrset_key* dnskey_rrset, 
+	int* changed)
 {
 	ldns_rr_list* r = packed_rrset_to_rr_list(dnskey_rrset, 
 		env->scratch_buffer);
@@ -1315,6 +1354,12 @@ update_events(struct module_env* env, struct trust_anchor* tp,
 		if(!ta) {
 			ta = add_key(tp, rr);
 			*changed = 1;
+			/* first time seen, do we have DSes? if match: VALID */
+			if(ta && tp->ds_rrset && key_matches_a_ds(env, ve,
+				dnskey_rrset, i, tp->ds_rrset)) {
+				verbose_key(ta, VERB_ALGO, "verified by DS");
+				ta->s = AUTR_STATE_VALID;
+			}
 		}
 		if(!ta) {
 			ldns_rr_list_deep_free(r);
@@ -1810,7 +1855,7 @@ int autr_process_prime(struct module_env* env, struct val_env* ve,
 	 * Set trustpoint query_interval and retry_time.
 	 * - find minimum rrsig expiration interval
 	 */
-	if(!update_events(env, tp, dnskey_rrset, &changed)) {
+	if(!update_events(env, ve, tp, dnskey_rrset, &changed)) {
 		log_err("malloc failure in autotrust update_events. "
 			"trust point unchanged.");
 		return 1; /* trust point unchanged, so exists */

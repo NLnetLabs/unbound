@@ -427,6 +427,23 @@ verify_dnskeys_with_ds_rr(struct module_env* env, struct val_env* ve,
 	return sec_status_bogus;
 }
 
+int val_favorite_ds_algo(struct ub_packed_rrset_key* ds_rrset)
+{
+	size_t i, num = rrset_get_count(ds_rrset);
+	int d, digest_algo = 0; /* DS digest algo 0 is not used. */
+	/* find favorite algo, for now, highest number supported */
+	for(i=0; i<num; i++) {
+		if(!ds_digest_algo_is_supported(ds_rrset, i) ||
+			!ds_key_algo_is_supported(ds_rrset, i)) {
+			continue;
+		}
+		d = ds_get_digest_algo(ds_rrset, i);
+		if(d > digest_algo)
+			digest_algo = d;
+	}
+	return digest_algo;
+}
+
 enum sec_status 
 val_verify_DNSKEY_with_DS(struct module_env* env, struct val_env* ve,
 	struct ub_packed_rrset_key* dnskey_rrset,
@@ -434,8 +451,7 @@ val_verify_DNSKEY_with_DS(struct module_env* env, struct val_env* ve,
 {
 	/* as long as this is false, we can consider this DS rrset to be
 	 * equivalent to no DS rrset. */
-	int has_useful_ds = 0;
-	int d, digest_algo = 0; /* DS digest algo 0 is not used. */
+	int has_useful_ds = 0, digest_algo;
 	size_t i, num;
 	enum sec_status sec;
 
@@ -448,17 +464,8 @@ val_verify_DNSKEY_with_DS(struct module_env* env, struct val_env* ve,
 		return sec_status_bogus;
 	}
 
+	digest_algo = val_favorite_ds_algo(ds_rrset);
 	num = rrset_get_count(ds_rrset);
-	/* find favorite algo, for now, highest number supported */
-	for(i=0; i<num; i++) {
-		if(!ds_digest_algo_is_supported(ds_rrset, i) ||
-			!ds_key_algo_is_supported(ds_rrset, i)) {
-			continue;
-		}
-		d = ds_get_digest_algo(ds_rrset, i);
-		if(d > digest_algo)
-			digest_algo = d;
-	}
 	for(i=0; i<num; i++) {
 		/* Check to see if we can understand this DS. 
 		 * And check it is the strongest digest */
