@@ -3,13 +3,13 @@
 ; first entry is a DNSKEY answer, with the DNSKEY rrset used for verification. 
 ; later entries are verified with it.
 
-; Test GOST signatures using algo number 211.
+; Test GOST signatures using algo number 249.
 
 ENTRY_BEGIN
 SECTION QUESTION
 nlnetlabs.nl.	IN DNSKEY
 SECTION ANSWER
-nlnetlabs.nl.	3600	IN	DNSKEY	256 3 211 e6GeTsfJnBq4QeL4eNS3SUOYvjFW59ClXtWtAlNgJHcG6damdpIUEyWdMDhZBLJoFNsH4IF06VPK6e+OSA1VGw== ;{id = 41891 (zsk), size = 512b}
+nlnetlabs.nl.    3600    IN      DNSKEY  256 3 249 AAB7oZ5Ox8mcGrhB4vh41LdJQ5i+MVbn0KVe1a0CU2Akdwbp1qZ2khQTJZ0wOFkEsmgU2wfggXTpU8rp745IDVUb ;{id = 41929 (zsk), size = 512b}
 ENTRY_END
 
 ; entry to test
@@ -18,7 +18,7 @@ SECTION QUESTION
 open.nlnetlabs.nl. IN A
 SECTION ANSWER
 open.nlnetlabs.nl.      600     IN      A       213.154.224.1
-open.nlnetlabs.nl.	600	IN	RRSIG	A 211 3 600 20090903100515 20090806100515 41891 nlnetlabs.nl. 15JHavKuerYdN2wCawQWnCNhlIHNsZU/eSP24FA+jQ21zJRKNS7q+0ExLrhS+6X18L1dyH/SvG2s3/Pq7SfCmQ== ;{id = 41891}
+open.nlnetlabs.nl.	600	IN	RRSIG	A 249 3 600 20090903100515 20090806100515 41929 nlnetlabs.nl. jHGE+RPMlJtQBrmSEbw6ERLkuYR5hjiVMuj7HbxpfGi63A/Tm5zRZaEgx9AK+gvEXMo2d9TN44OaBxPNyxgQNA== ;{id = 41929}
 ENTRY_END
 
 ENTRY_BEGIN
@@ -27,7 +27,7 @@ open.nlnetlabs.nl. IN AAAA
 SECTION ANSWER
 open.nlnetlabs.nl.      600     IN      AAAA    2001:7b8:206:1::1
 open.nlnetlabs.nl.      600     IN      AAAA    2001:7b8:206:1::53
-open.nlnetlabs.nl.	600	IN	RRSIG	AAAA 211 3 600 20090903100515 20090806100515 41891 nlnetlabs.nl. RM5viXk9r3LymXNEqZimfKIQ9IKsTvrShTJSAvkRtbzL+GmvuHpr+o8vE3/Lebt5apG+WtDe8W8gp98rwV5Vfg== ;{id = 41891}
+open.nlnetlabs.nl.	600	IN	RRSIG	AAAA 249 3 600 20090903100515 20090806100515 41929 nlnetlabs.nl. Pod5ouQTmulD8rmOOERVhhD3wsu7tD2VRej+Puph61T/vEry0CTnosHkd4fg2xohnx9i6m09LhPeOdaCJJIRAQ== ;{id = 41929}
 ENTRY_END
 
 ENTRY_BEGIN
@@ -35,6 +35,6 @@ SECTION QUESTION
 open.nlnetlabs.nl. IN NSEC
 SECTION ANSWER
 open.nlnetlabs.nl.      3600    IN      NSEC    nlnetlabs.nl. A AAAA RRSIG NSEC 
-open.nlnetlabs.nl.	3600	IN	RRSIG	NSEC 211 3 3600 20090903100515 20090806100515 41891 nlnetlabs.nl. mqQf1oTHy9c2Ow1WmHg59uIfNPFPj+K0QAR/ND0DTn1zC+rlRcd+GRUuaDgvIrW8PzbcjboMyDDHcDjIFv6KcA== ;{id = 41891}
+open.nlnetlabs.nl.	3600	IN	RRSIG	NSEC 249 3 3600 20090903100515 20090806100515 41929 nlnetlabs.nl. qWNarmPDHjv+ctxYCbxWrJc+LPjKW+RkP17bK6idfzcqGxK95fnsduphbmEZlQQiruO1OeZ1VlF9Btg+qS2T3A== ;{id = 41929}
 ENTRY_END
 

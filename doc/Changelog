@@ -1,5 +1,7 @@
 2 November 2009: Wouter
 	- Fix bug where autotrust does not work when started with a DS.
+	- Updated GOST unit tests for unofficial algorithm number 249
+	  and DNSKEY-format changes in draft version -01.
 
 29 October 2009: Wouter
 	- iana portlist updated.
