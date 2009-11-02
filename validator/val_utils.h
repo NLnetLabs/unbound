@@ -316,6 +316,7 @@ int val_has_signed_nsecs(struct reply_info* rep, char** reason);
 
 /**
  * Return algo number for favorite (best) algorithm that we support in DS.
+ * @param ds_rrset: the DSes in this rrset are inspected and best algo chosen.
  * @return algo number or 0 if none supported. 0 is unused as algo number.
  */
 int val_favorite_ds_algo(struct ub_packed_rrset_key* ds_rrset);
