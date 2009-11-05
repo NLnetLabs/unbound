@@ -893,7 +893,7 @@ randomize_and_send_udp(struct outside_network* outnet, struct pending* pend,
 
 	/* system calls to set timeout after sending UDP to make roundtrip
 	   smaller. */
-	tv.tv_sec = timeout/1000;
+	tv.tv_sec = (time_t)(timeout/1000);
 	tv.tv_usec = (timeout%1000)*1000;
 	comm_timer_set(pend->timer, &tv);
 	return 1;
@@ -1010,7 +1010,7 @@ pending_tcp_query(struct outside_network* outnet, ldns_buffer* packet,
 	w->outnet = outnet;
 	w->cb = callback;
 	w->cb_arg = callback_arg;
-	tv.tv_sec = timeout;
+	tv.tv_sec = (time_t)timeout;
 	tv.tv_usec = 0;
 	comm_timer_set(w->timer, &tv);
 	if(pend) {
@@ -1549,7 +1549,7 @@ serviced_udp_callback(struct comm_point* c, void* arg, int error,
 		(now.tv_sec == sq->last_sent_time.tv_sec &&
 		now.tv_usec > sq->last_sent_time.tv_usec)) {
 		/* convert from microseconds to milliseconds */
-		int roundtime = (now.tv_sec - sq->last_sent_time.tv_sec)*1000
+		int roundtime = ((int)now.tv_sec - (int)sq->last_sent_time.tv_sec)*1000
 		  + ((int)now.tv_usec - (int)sq->last_sent_time.tv_usec)/1000;
 		verbose(VERB_ALGO, "measured roundtrip at %d msec", roundtime);
 		log_assert(roundtime >= 0);

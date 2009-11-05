@@ -923,7 +923,7 @@ worker_restart_timer(struct worker* worker)
 {
 	if(worker->env.cfg->stat_interval > 0) {
 		struct timeval tv;
-		tv.tv_sec = worker->env.cfg->stat_interval;
+		tv.tv_sec = (time_t)worker->env.cfg->stat_interval;
 		tv.tv_usec = 0;
 		comm_timer_set(worker->stat_timer, &tv);
 	}

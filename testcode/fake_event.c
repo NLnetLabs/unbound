@@ -469,7 +469,7 @@ time_passes(struct replay_runtime* runtime, struct replay_moment* mom)
 		verbose(VERB_ALGO, "EVAL %s", mom->string);
 		sec = atof(xp);
 		free(xp);
-		tv.tv_sec = (int)sec;
+		tv.tv_sec = (time_t)sec;
 		tv.tv_usec = (int)((sec - (double)tv.tv_sec) *1000000. + 0.5);
 	}
 	timeval_add(&runtime->now_tv, &tv);

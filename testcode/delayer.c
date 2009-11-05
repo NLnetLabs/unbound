@@ -991,7 +991,7 @@ service(const char* bind_str, int bindport, const char* serv_str,
 	struct timeval delay, reuse;
 	ldns_buffer* pkt;
 	int i, s, listen_s;
-	delay.tv_sec = delay_msec / 1000;
+	delay.tv_sec = (time_t)(delay_msec / 1000);
 	delay.tv_usec = (delay_msec % 1000)*1000;
 	reuse = delay; /* reuse is max(4*delay, 1 second) */
 	dl_tv_add(&reuse, &delay);
