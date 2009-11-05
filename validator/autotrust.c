@@ -804,6 +804,7 @@ int autr_read_file(struct val_anchors* anchors, const char* nm)
                 }
 		if(tp && tp != tp2) {
 			log_err("file %s has mismatching data inside: "
+				"the file may only contain keys for one name, "
 				"remove keys for other domain names", nm);
         		fclose(fd);
 			ldns_rdf_deep_free(origin);
