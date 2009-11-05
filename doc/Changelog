@@ -1,3 +1,7 @@
+5 November 2009: Wouter
+	- lint fixes and portability tests.
+	- better error text for multiple domain keys in one autotrust file.
+
 2 November 2009: Wouter
 	- Fix bug where autotrust does not work when started with a DS.
 	- Updated GOST unit tests for unofficial algorithm number 249

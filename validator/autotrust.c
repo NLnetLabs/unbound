@@ -803,7 +803,8 @@ int autr_read_file(struct val_anchors* anchors, const char* nm)
 			continue;
                 }
 		if(tp && tp != tp2) {
-			log_err("file %s has mismatching data inside", nm);
+			log_err("file %s has mismatching data inside: "
+				"remove keys for other domain names", nm);
         		fclose(fd);
 			ldns_rdf_deep_free(origin);
 			ldns_rdf_deep_free(prev);
