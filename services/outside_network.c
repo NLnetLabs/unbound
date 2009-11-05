@@ -893,8 +893,10 @@ randomize_and_send_udp(struct outside_network* outnet, struct pending* pend,
 
 	/* system calls to set timeout after sending UDP to make roundtrip
 	   smaller. */
-	tv.tv_sec = (time_t)(timeout/1000);
+#ifndef S_SPLINT_S
+	tv.tv_sec = timeout/1000;
 	tv.tv_usec = (timeout%1000)*1000;
+#endif
 	comm_timer_set(pend->timer, &tv);
 	return 1;
 }
@@ -1010,8 +1012,10 @@ pending_tcp_query(struct outside_network* outnet, ldns_buffer* packet,
 	w->outnet = outnet;
 	w->cb = callback;
 	w->cb_arg = callback_arg;
-	tv.tv_sec = (time_t)timeout;
+#ifndef S_SPLINT_S
+	tv.tv_sec = timeout;
 	tv.tv_usec = 0;
+#endif
 	comm_timer_set(w->timer, &tv);
 	if(pend) {
 		/* we have a buffer available right now */
