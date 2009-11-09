@@ -1369,8 +1369,31 @@ processFindKey(struct module_qstate* qstate, struct val_qstate* vq, int id)
 	/* We know that state.key_entry is not a null or bad key -- if it were,
 	 * then previous processing should have directed this event to 
 	 * a different state. */
-	log_assert(vq->key_entry && !key_entry_isbad(vq->key_entry) && 
-		!key_entry_isnull(vq->key_entry));
+	if(!vq->key_entry || key_entry_isbad(vq->key_entry) || 
+		key_entry_isnull(vq->key_entry)) {
+		/* DEBUG logging */
+		log_info("DEBUG: FindKeyAssertion");
+		log_query_info(0, "queryname=", &qstate->qinfo);
+		log_info("restartcount=%d", vq->restart_count);
+		if(!vq->key_entry) log_info("key_entry 0");
+		else if(!key_entry_isbad(vq->key_entry)) 
+			log_nametypeclass(0, "key_entry bad", 
+				vq->key_entry->name, LDNS_RR_TYPE_DNSKEY,
+				vq->key_entry->key_class);
+		else	log_nametypeclass(0, "key_entry null", 
+				vq->key_entry->name, LDNS_RR_TYPE_DNSKEY,
+				vq->key_entry->key_class);
+		if(1) {
+			char* err = errinf_to_str(qstate);
+			if(err) log_info("errinf: %s", err);
+			else log_info("errinf: null");
+			free(err);
+		}
+		/* and error */
+		vq->chase_reply->security = sec_status_bogus;
+		vq->state = VAL_FINISHED_STATE;
+		return 1;
+	}
 
 	target_key_name = vq->signer_name;
 	target_key_len = vq->signer_len;
