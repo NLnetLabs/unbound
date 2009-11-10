@@ -1,6 +1,7 @@
 10 November 2009: Wouter
 	- Thanks to Surfnet found bug in new dnssec-retry code that failed
 	  to combine well when combined with DLV and a particular failure. 
+	- Fixed unbound-control -h output about argument optionality.
 
 5 November 2009: Wouter
 	- lint fixes and portability tests.
