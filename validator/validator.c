@@ -1390,9 +1390,7 @@ processFindKey(struct module_qstate* qstate, struct val_qstate* vq, int id)
 			free(err);
 		}
 		/* and error */
-		vq->chase_reply->security = sec_status_bogus;
-		vq->state = VAL_FINISHED_STATE;
-		return 1;
+		return val_error(qstate, id);
 	}
 
 	target_key_name = vq->signer_name;
