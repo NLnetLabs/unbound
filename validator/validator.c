@@ -1366,31 +1366,21 @@ processFindKey(struct module_qstate* qstate, struct val_qstate* vq, int id)
 	int strip_lab;
 
 	log_query_info(VERB_ALGO, "validator: FindKey", &vq->qchase);
-	/* We know that state.key_entry is not a null or bad key -- if it were,
+	/* We know that state.key_entry is not 0 or bad key -- if it were,
 	 * then previous processing should have directed this event to 
-	 * a different state. */
-	if(!vq->key_entry || key_entry_isbad(vq->key_entry) || 
-		key_entry_isnull(vq->key_entry)) {
-		/* DEBUG logging */
-		log_info("DEBUG: FindKeyAssertion");
-		log_query_info(0, "queryname=", &qstate->qinfo);
-		log_info("restartcount=%d", vq->restart_count);
-		if(!vq->key_entry) log_info("key_entry 0");
-		else if(!key_entry_isbad(vq->key_entry)) 
-			log_nametypeclass(0, "key_entry bad", 
-				vq->key_entry->name, LDNS_RR_TYPE_DNSKEY,
-				vq->key_entry->key_class);
-		else	log_nametypeclass(0, "key_entry null", 
-				vq->key_entry->name, LDNS_RR_TYPE_DNSKEY,
-				vq->key_entry->key_class);
-		if(1) {
-			char* err = errinf_to_str(qstate);
-			if(err) log_info("errinf: %s", err);
-			else log_info("errinf: null");
-			free(err);
+	 * a different state. 
+	 * It could be an isnull key, which signals that a DLV was just
+	 * done and the DNSKEY after the DLV failed with dnssec-retry state
+	 * and the DNSKEY has to be performed again. */
+	log_assert(vq->key_entry && !key_entry_isbad(vq->key_entry));
+	if(key_entry_isnull(vq->key_entry)) {
+		if(!generate_request(qstate, id, vq->ds_rrset->rk.dname, 
+			vq->ds_rrset->rk.dname_len, LDNS_RR_TYPE_DNSKEY, 
+			vq->qchase.qclass, BIT_CD)) {
+			log_err("mem error generating DNSKEY request");
+			return val_error(qstate, id);
 		}
-		/* and error */
-		return val_error(qstate, id);
+		return 0;
 	}
 
 	target_key_name = vq->signer_name;
@@ -1988,6 +1978,15 @@ processDLVLookup(struct module_qstate* qstate, struct val_qstate* vq,
 
 		vq->ds_rrset->rk.dname = nm;
 		vq->ds_rrset->rk.dname_len = nmlen;
+
+		/* create a nullentry for the key so the dnskey lookup
+		 * can be retried after a validation failure for it */
+		vq->key_entry = key_entry_create_null(qstate->region,
+			nm, nmlen, vq->qchase.qclass, 0, 0);
+		if(!vq->key_entry) {
+			log_err("Out of memory in DLVLook");
+			return val_error(qstate, id);
+		}
 
 		if(!generate_request(qstate, id, vq->ds_rrset->rk.dname, 
 			vq->ds_rrset->rk.dname_len, LDNS_RR_TYPE_DNSKEY, 
