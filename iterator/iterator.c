@@ -946,8 +946,9 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 		delnamelen = iq->qchase.qname_len;
 	}
 	if(iq->qchase.qtype == LDNS_RR_TYPE_DS || iq->refetch_glue) {
-		/* remove first label from delname, root goes to hints */
-		if(dname_is_root(delname))
+		/* remove first label from delname, root goes to hints,
+		 * but only to fetch glue, not for qtype=DS. */
+		if(dname_is_root(delname) && iq->refetch_glue)
 			delname = NULL; /* go to root priming */
 		else 	dname_remove_label(&delname, &delnamelen);
 		iq->refetch_glue = 0; /* if CNAME causes restart, no refetch */

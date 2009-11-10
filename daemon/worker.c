@@ -1121,9 +1121,10 @@ worker_init(struct worker* worker, struct config_file *cfg,
 			worker_probe_timer_cb, worker);
 		if(!worker->env.probe_timer) {
 			log_err("could not create 5011-probe timer");
+		} else {
+			/* let timer fire, then it can reset itself */
+			comm_timer_set(worker->env.probe_timer, &tv);
 		}
-		/* let timer fire, then it can reset itself */
-		comm_timer_set(worker->env.probe_timer, &tv);
 	}
 	if(!worker->env.mesh || !worker->env.scratch_buffer) {
 		worker_delete(worker);
