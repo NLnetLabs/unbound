@@ -1144,7 +1144,7 @@ void errinf_origin(struct module_qstate* qstate, struct sock_list *origin)
 		char buf[256];
 		if(p == origin)
 			snprintf(buf, sizeof(buf), "from ");
-		else	snprintf(buf, sizeof(buf), "and from ");
+		else	snprintf(buf, sizeof(buf), "and ");
 		if(p->len == 0)
 			snprintf(buf+strlen(buf), sizeof(buf)-strlen(buf), 
 				"cache");

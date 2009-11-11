@@ -506,7 +506,7 @@ void sock_list_insert(struct sock_list** list, struct sockaddr_storage* addr,
 	add->next = *list;
 	add->len = len;
 	*list = add;
-	if(len) memcpy(&add->addr, addr, len);
+	if(len) memmove(&add->addr, addr, len);
 }
 
 void sock_list_prepend(struct sock_list** list, struct sock_list* add)

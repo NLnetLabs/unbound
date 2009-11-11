@@ -243,7 +243,7 @@ read_assign_step(char* remain, struct replay_moment* mom)
 		fatal_exit("cannot parse assign: %s", remain);
 	mom->variable = strdup(buf);
 	if(eq != '=')
-		fatal_exit("no = in assign: %s", remain);
+		fatal_exit("no '=' in assign: %s", remain);
 	remain += skip;
 	if(remain[0]) remain[strlen(remain)-1]=0; /* remove newline */
 	mom->string = strdup(remain);
@@ -308,7 +308,8 @@ replay_moment_read(char* remain, FILE* in, const char* name, int* lineno,
 				remain++;
 			mom->string = strdup(remain);
 			if(!mom->string) fatal_exit("out of memory");
-			mom->string[strlen(mom->string)-1]=0;
+			if(strlen(mom->string)>0)
+				mom->string[strlen(mom->string)-1]=0;
 			remain += strlen(mom->string);
 		}
 	} else if(parse_keyword(&remain, "CHECK_AUTOTRUST")) {

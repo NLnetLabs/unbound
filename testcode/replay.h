@@ -88,7 +88,7 @@
  * 	o number is that number.
  * 	o ${variables and arithmetic }
  * 	o +, -, / and *.  Note, evaluated left-to-right. Use ${} for brackets.
- * 	  So again, no precedence rules, so 2+3*4 === ${2+3}*4 === 20.
+ * 	  So again, no precedence rules, so 2+3*4 == ${2+3}*4 = 20.
  * 	  Do 2+${3*4} to get 24.
  * 	o ${function params}
  *		o ${time} is the current time for the simulated unbound.
