@@ -1,5 +1,8 @@
 12 November 2009: Wouter
 	- iana portlist updated.
+	- fix manpage errors reported by debian lintian.
+	- review comments.
+	- fixup very long vallog2 level error strings.
 	
 11 November 2009: Wouter
 	- ldns tarball updated (to 1.6.2).

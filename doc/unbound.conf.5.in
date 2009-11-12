@@ -52,8 +52,8 @@ server:
 	username: unbound
 	# make sure unbound can access entropy from inside the chroot.
 	# e.g. on linux the use these commands (on BSD, devfs(8) is used):
-	#      mount --bind -n /dev/random /etc/unbound/dev/random
-	# and  mount --bind -n /dev/log /etc/unbound/dev/log
+	#      mount \-\-bind \-n /dev/random /etc/unbound/dev/random
+	# and  mount \-\-bind \-n /dev/log /etc/unbound/dev/log
 	chroot: "/etc/unbound"
 	# logfile: "/etc/unbound/unbound.log"  #uncomment to use logfile.
 	pidfile: "/etc/unbound/unbound.pid"
@@ -115,10 +115,10 @@ Can be given multiple times to work on several interfaces. If none are
 given the default is to listen to localhost.
 The interfaces are not changed on a reload (kill \-HUP) but only on restart.
 .TP
-.B interface-automatic: \fI<yes or no>
+.B interface\-automatic: \fI<yes or no>
 Detect source interface on UDP queries and copy them to replies.  This 
 feature is experimental, and needs support in your OS for IPv6 
-(and its socket options) and IPv4 (and have source-interface socket options). 
+(and its socket options) and IPv4 (and have source\-interface socket options). 
 Default value is no.
 .TP
 .B outgoing\-interface: \fI<ip address>
@@ -142,7 +142,7 @@ Permit unbound to open this port or range of ports for use to send queries.
 A larger number of permitted outgoing ports increases resilience against
 spoofing attempts. Make sure these ports are not needed by other daemons. 
 By default only ports above 1024 that have not been assigned by IANA are used.
-Give a port number or a range of the form "low-high", without spaces.
+Give a port number or a range of the form "low\-high", without spaces.
 .IP
 The \fBoutgoing\-port\-permit\fR and \fBoutgoing\-port\-avoid\fR statements 
 are processed in the line order of the config file, adding the permitted ports 
@@ -155,7 +155,7 @@ Do not permit unbound to open this port or range of ports for use to send
 queries. Use this to make sure unbound does not grab a port that another
 daemon needs. The port is avoided on all outgoing interfaces, both IP4 and IP6.
 By default only ports above 1024 that have not been assigned by IANA are used.
-Give a port number or a range of the form "low-high", without spaces.
+Give a port number or a range of the form "low\-high", without spaces.
 .TP
 .B outgoing\-num\-tcp: \fI<number>
 Number of outgoing TCP buffers to allocate per thread. Default is 10. If set
@@ -454,7 +454,7 @@ not RFC standard, and could lead to performance problems because of the
 extra query load that is generated.  Experimental option.
 .TP
 .B use\-caps\-for\-id: \fI<yes or no>
-Use 0x20-encoded random bits in the query to foil spoof attempts.
+Use 0x20\-encoded random bits in the query to foil spoof attempts.
 This perturbs the lowercase and uppercase of query names sent to 
 authority servers and checks if the reply still has the correct casing. 
 Disabled by default. 
@@ -465,7 +465,7 @@ Give IPv4 of IPv6 addresses or classless subnets. These are addresses
 on your private network, and are not allowed to be returned for public
 internet names.  Any occurence of such addresses are removed from
 DNS answers. Additionally, the DNSSEC validator may mark the answers
-bogus. This protects against so-called DNS Rebinding, where a user browser
+bogus. This protects against so\-called DNS Rebinding, where a user browser
 is turned into a network proxy, allowing remote access through the browser
 to other parts of your private network.  Some names can be allowed to
 contain your private addresses, by default all the \fBlocal\-data\fR
@@ -776,7 +776,7 @@ Reverse data for zones 8.E.F.ip6.arpa to B.E.F.ip6.arpa.
 Reverse data for zone 8.B.D.0.1.0.0.2.ip6.arpa. This zone is used for
 tutorials and examples. You can remove the block on this zone with:
 .nf
-  local-zone: 8.B.D.0.1.0.0.2.ip6.arpa. nodefault
+  local\-zone: 8.B.D.0.1.0.0.2.ip6.arpa. nodefault
 .fi
 This also works with the other default zones.
 .\" End of local-zone listing.
@@ -806,7 +806,7 @@ enabled, the \fIunbound\-control\fR(8) utility can be used to send
 commands to the running unbound server.  The server uses these clauses
 to setup SSLv3 / TLSv1 security for the connection.  The
 \fIunbound\-control\fR(8) utility also reads the \fBremote\-control\fR
-section for options.  To setup the correct self-signed certificates use the
+section for options.  To setup the correct self\-signed certificates use the
 \fIunbound\-control\-setup\fR(8) utility.
 .TP 5
 .B control\-enable:     \fI<yes or no>
@@ -893,7 +893,7 @@ There may be multiple
 clauses. Each with a \fBname:\fR and zero or more hostnames or IP
 addresses.  For the forward zone this list of nameservers is used to
 forward the queries to. The servers listed as \fBforward\-host:\fR and
-\fBforward-addr:\fR have to handle further recursion for the query.  Thus,
+\fBforward\-addr:\fR have to handle further recursion for the query.  Thus,
 those servers are not authority servers, but are (just like unbound is)
 recursive servers too; unbound does not perform recursion itself for the
 forward zone, it lets the remote server do it.  Class IN is assumed.
@@ -929,7 +929,7 @@ supported. Very large data and high TCP loads are exceptional for the DNS.
 DNSSEC validation is enabled, just add trust anchors.
 If you do not have to worry about programs using more than 3 Mb of memory,
 the below example is not for you. Use the defaults to receive full service,
-which on BSD-32bit tops out at 30-40 Mb after heavy usage. 
+which on BSD\-32bit tops out at 30\-40 Mb after heavy usage. 
 .P
 .nf
 # example settings that reduce memory usage

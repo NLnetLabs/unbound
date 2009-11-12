@@ -9,10 +9,11 @@
 .\"
 .SH "NAME"
 .LP
-unbound-control
+.B unbound\-control,
+.B unbound\-control\-setup
 \- Unbound remote server control utility.
 .SH "SYNOPSIS"
-.B unbound-control
+.B unbound\-control
 .RB [ \-h ]
 .RB [ \-c 
 .IR cfgfile ]
@@ -20,7 +21,7 @@ unbound-control
 .IR server ]
 .IR command
 .SH "DESCRIPTION"
-.B Unbound-control
+.B Unbound\-control
 performs remote administration on the \fIunbound\fR(8) DNS server.
 It reads the configuration file, contacts the unbound server over SSL
 sends the command and displays the result.
@@ -142,11 +143,11 @@ nameservers, should go to the internet root nameservers itself, or show
 the current config.  You could pass the nameservers after a DHCP update.
 .IP
 Without arguments the current list of addresses used to forward all queries
-to is printed.  On startup this is from the forward-zone "." configuration.
+to is printed.  On startup this is from the forward\-zone "." configuration.
 Afterwards it shows the status.  It prints off when no forwarding is used.
 .IP
 If \fIoff\fR is passed, forwarding is disabled and the root nameservers
-are used.  This can be used to avoid to avoid buggy or non-DNSSEC supporting
+are used.  This can be used to avoid to avoid buggy or non\-DNSSEC supporting
 nameservers returned from DHCP.  But may not work in hotels or hotspots.
 .IP
 If one or more IPv4 or IPv6 addresses are given, those are then used to forward
@@ -157,7 +158,7 @@ By default the forwarder information from the config file for the root "." is
 used.  The config file is not changed, so after a reload these changes are
 gone.  Other forward zones from the config file are not affected by this command.
 .SH "EXIT CODE"
-The unbound-control program exits with status code 1 on error, 0 on success.
+The unbound\-control program exits with status code 1 on error, 0 on success.
 .SH "SET UP"
 The setup requires a self\-signed certificate and private keys for both 
 the server and client.  The script \fIunbound\-control\-setup\fR generates
@@ -171,7 +172,7 @@ If you have not configured
 a username in unbound.conf, the keys need read permission for the user
 credentials under which the daemon is started.
 The script preserves private keys present in the directory.
-After running the script as root, turn on \fBcontrol-enable\fR in 
+After running the script as root, turn on \fBcontrol\-enable\fR in 
 \fIunbound.conf\fR.
 .SH "STATISTIC COUNTERS"
 The \fIstats\fR command shows a number of statistic counters.
@@ -285,13 +286,13 @@ Printed for the other query types as well, but only for the types for which
 queries were received, thus =0 entries are omitted for brevity.
 .TP
 .I num.query.type.other
-Number of queries with query types 256-65535.
+Number of queries with query types 256\-65535.
 .TP
 .I num.query.class.IN
 The total number of queries over all threads with query class IN (internet).
 Also printed for other classes (such as CH (CHAOS) sometimes used for
 debugging), or NONE, ANY, used by dynamic update.
-num.query.class.other is printed for classes 256-65535.
+num.query.class.other is printed for classes 256\-65535.
 .TP
 .I num.query.opcode.QUERY
 The total number of queries over all threads with query opcode QUERY.
@@ -357,7 +358,7 @@ unbound configuration file.
 .TP
 .I @UNBOUND_RUN_DIR@
 directory with private keys (unbound_server.key and unbound_control.key) and
-self-signed certificates (unbound_server.pem and unbound_control.pem).
+self\-signed certificates (unbound_server.pem and unbound_control.pem).
 .SH "SEE ALSO"
 \fIunbound.conf\fR(5), 
 \fIunbound\fR(8).

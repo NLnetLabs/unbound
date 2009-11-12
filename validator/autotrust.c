@@ -551,7 +551,7 @@ autr_assemble(struct trust_anchor* tp)
 	}
 	/* we have prepared the new keys so nothing can go wrong any more.
 	 * And we are sure we cannot be left without trustanchor after
-	 * an errors. Put in the new keys and remove old ones. */
+	 * any errors. Put in the new keys and remove old ones. */
 
 	/* free the old data */
 	autr_rrset_delete(tp->ds_rrset);
@@ -593,10 +593,12 @@ parse_id(struct val_anchors* anchors, char* line)
 	uint16_t dclass;
 	/* read the owner name */
 	char* next = strchr(line, ' ');
-	if(!next) return NULL;
+	if(!next)
+		return NULL;
 	next[0] = 0;
 	rdf = ldns_dname_new_frm_str(line);
-	if(!rdf) return NULL;
+	if(!rdf)
+		return NULL;
 	labs = dname_count_size_labels(ldns_rdf_data(rdf), &len);
 	log_assert(len == ldns_rdf_size(rdf));
 
@@ -707,6 +709,8 @@ read_multiline(char* buf, size_t len, FILE* in, int* linenr)
 		(*linenr)++;
 
 		/* check what the new depth is after the line */
+		/* this routine cannot handle braces inside quotes,
+		   say for TXT records, but this routine only has to read keys */
 		for(i=0; i<poslen; i++) {
 			if(pos[i] == '(') {
 				depth++;
@@ -983,7 +987,7 @@ min_expiry(struct module_env* env, ldns_rr_list* rrset)
 		if(ldns_rr_get_type(rr) != LDNS_RR_TYPE_RRSIG)
 			continue;
 		t = ldns_rdf2native_int32(ldns_rr_rrsig_expiration(rr));
-		if(t > *env->now) {
+		if(t - *env->now > 0) {
 			t -= *env->now;
 			if(t < r)
 				r = t;
@@ -1052,8 +1056,8 @@ ldns_rr_compare_wire_skip_revbit(ldns_buffer* rr1_buf, ldns_buffer* rr2_buf)
 	offset = 0;
 	while (offset < rr1_len && *ldns_buffer_at(rr1_buf, offset) != 0)
 		offset += *ldns_buffer_at(rr1_buf, offset) + 1;
-	/* jump to rdata section (PAST the rdata length field */
-	offset += 11;
+	/* jump to rdata section (PAST the rdata length field) */
+	offset += 11; /* 0-dname-end + type + class + ttl + rdatalen */
 	min_len = (rr1_len < rr2_len) ? rr1_len : rr2_len;
 	/* compare RRs RDATA byte for byte. */
 	for(i = offset; i < min_len; i++)

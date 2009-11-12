@@ -219,7 +219,7 @@ ub_ctx_add_ta
 Add a trust anchor to the given context.
 At this time it is only possible to add trusted keys before the
 first resolve is done.
-The format is a string, similar to the zone-file format,
+The format is a string, similar to the zone\-file format,
 [domainname] [type] [rdata contents]. Both DS and DNSKEY records are accepted.
 .TP
 .B ub_ctx_add_ta_file
@@ -230,13 +230,13 @@ first resolve is done.
 .TP
 .B ub_ctx_trustedkeys
 Add trust anchors to the given context.
-Pass the name of a bind-style config file with trusted-keys{}.
+Pass the name of a bind\-style config file with trusted\-keys{}.
 At this time it is only possible to add trusted keys before the
 first resolve is done.
 .TP
 .B ub_ctx_debugout
 Set debug and error log output to the given stream. Pass NULL to disable
-output. Default is stderr. File-names or using syslog can be enabled
+output. Default is stderr. File\-names or using syslog can be enabled
 using config options, this routine is for using your own stream.
 .TP
 .B ub_ctx_debuglevel
@@ -369,7 +369,7 @@ returns NULL on an error (a malloc failure).
 .B ub_poll
 returns true if some information may be available, false otherwise.
 .B ub_fd
-returns a file descriptor or -1 on error.
+returns a file descriptor or \-1 on error.
 .SH "SEE ALSO"
 \fIunbound.conf\fR(5), 
 \fIunbound\fR(8).
