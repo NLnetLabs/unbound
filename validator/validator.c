@@ -1884,6 +1884,7 @@ processFinished(struct module_qstate* qstate, struct val_qstate* vq,
 			val_blacklist(&qstate->blacklist, qstate->region, 
 				qstate->reply_origin, 0);
 			qstate->reply_origin = NULL;
+			qstate->errinf = NULL;
 			memset(vq, 0, sizeof(*vq));
 			vq->restart_count = restart_count;
 			vq->state = VAL_INIT_STATE;
