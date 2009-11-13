@@ -395,7 +395,8 @@ change_rrsig_rrset(struct rrset_parse* sigset, struct msg_parse* msg,
 		}
 		if(!moveover_rrsigs(pkt, region, sigset, dataset, 
 			msg->qtype == LDNS_RR_TYPE_RRSIG ||
-			msg->qtype == LDNS_RR_TYPE_ANY ))
+			(msg->qtype == LDNS_RR_TYPE_ANY &&
+			section != LDNS_SECTION_ANSWER) ))
 			return NULL;
 		return dataset;
 	}
@@ -456,7 +457,8 @@ find_rrset(struct msg_parse* msg, ldns_buffer* pkt, uint8_t* dname,
 		if(type == *prev_type && dclass == *prev_dclass &&
 			dnamelen == *prev_dnamelen &&
 			smart_compare(pkt, dname, *prev_dname_first, 
-				*prev_dname_last) == 0) {
+				*prev_dname_last) == 0 &&
+			type != LDNS_RR_TYPE_RRSIG) {
 			/* same as previous */
 			*prev_dname_last = dname;
 			return 1;
@@ -816,7 +818,19 @@ parse_section(ldns_buffer* pkt, struct msg_parse* msg,
 		ldns_buffer_read(pkt, &dclass, sizeof(dclass));
 
 		if(0) { /* debug show what is being parsed. */
-			fprintf(stderr, "parse of %s(%d)",
+			if(type == LDNS_RR_TYPE_RRSIG) {
+				uint16_t t;
+				if(pkt_rrsig_covered(pkt, 
+					ldns_buffer_current(pkt), &t))
+					fprintf(stderr, "parse of %s(%d) [%s(%d)]",
+					ldns_rr_descript(type)?
+					ldns_rr_descript(type)->_name: "??",
+					(int)type,
+					ldns_rr_descript(t)?
+					ldns_rr_descript(t)->_name: "??",
+					(int)t);
+			} else
+			  fprintf(stderr, "parse of %s(%d)",
 				ldns_rr_descript(type)?
 				ldns_rr_descript(type)->_name: "??",
 				(int)type);

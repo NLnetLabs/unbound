@@ -1,5 +1,8 @@
 13 November 2009: Wouter
 	- Fixed validation failure for CNAME to optout NSEC3 nodata answer.
+	- unbound-host does not fail on type ANY.
+	- Fixed wireparse failure to put RRSIGs together with data in some
+	  long ANY mix cases, which fixes validation failures.
 
 12 November 2009: Wouter
 	- iana portlist updated.

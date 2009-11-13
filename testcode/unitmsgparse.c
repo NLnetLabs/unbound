@@ -518,6 +518,7 @@ void msgparse_test()
 
 	matches_nolocation = 1; /* RR order not important for the next test */
 	testfromdrillfile(pkt, &alloc, out, "testdata/test_packets.6");
+	testfromdrillfile(pkt, &alloc, out, "testdata/test_packets.7");
 	matches_nolocation = 0; 
 
 	/* cleanup */
