@@ -330,7 +330,7 @@ pretty_output(char* q, int t, int c, struct ub_result* result, int docname)
 			else if(t == LDNS_RR_TYPE_ANY) {
 				ldns_pkt* p = NULL;
 				if(ldns_wire2pkt(&p, result->answer_packet,
-					result->answer_len) == LDNS_STATUS_OK){
+				  (size_t)result->answer_len)==LDNS_STATUS_OK){
 					if(ldns_rr_list_rr_count(
 						ldns_pkt_answer(p)) == 0)
 						printf(" has no records\n");
