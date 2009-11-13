@@ -1159,20 +1159,24 @@ nsec3_do_prove_nodata(struct module_env* env, struct nsec3_filter* flt,
 	}
 
 	/* Case 5: */
-	if(qinfo->qtype != LDNS_RR_TYPE_DS) {
-		verbose(VERB_ALGO, "proveNodata: could not find matching "
-			"NSEC3, nor matching wildcard, and qtype is not DS "
-			"-- no more options, bogus.");
-		return sec_status_bogus;
-	}
+	/* Due to forwarders, cnames, and other collating effects, we
+	 * can see the ordinary unsigned data from a zone beneath an
+	 * insecure delegation under an optout here */
 
 	/* We need to make sure that the covering NSEC3 is opt-out. */
 	log_assert(ce.nc_rrset);
 	if(!nsec3_has_optout(ce.nc_rrset, ce.nc_rr)) {
-		verbose(VERB_ALGO, "proveNodata: covering NSEC3 was not "
+		if(qinfo->qtype == LDNS_RR_TYPE_DS)
+		  verbose(VERB_ALGO, "proveNodata: covering NSEC3 was not "
 			"opt-out in an opt-out DS NOERROR/NODATA case.");
+		else verbose(VERB_ALGO, "proveNodata: could not find matching "
+			"NSEC3, nor matching wildcard, nor optout NSEC3 "
+			"-- no more options, bogus.");
 		return sec_status_bogus;
 	}
+	/* the optout is a secure denial of DS records */
+	if(qinfo->qtype != LDNS_RR_TYPE_DS)
+		return sec_status_insecure;
 	return sec_status_secure;
 }
 
@@ -1339,6 +1343,7 @@ nsec3_prove_nxornodata(struct module_env* env, struct val_env* ve,
 	struct ub_packed_rrset_key** list, size_t num, 
 	struct query_info* qinfo, struct key_entry_key* kkey, int* nodata)
 {
+	enum sec_status sec;
 	rbtree_t ct;
 	struct nsec3_filter flt;
 	*nodata = 0;
@@ -1357,9 +1362,9 @@ nsec3_prove_nxornodata(struct module_env* env, struct val_env* ve,
 
 	if(nsec3_do_prove_nameerror(env, &flt, &ct, qinfo)==sec_status_secure)
 		return sec_status_secure;
-	if(nsec3_do_prove_nodata(env, &flt, &ct, qinfo)==sec_status_secure) {
+	sec = nsec3_do_prove_nodata(env, &flt, &ct, qinfo);
+	if(sec==sec_status_secure) {
 		*nodata = 1;
-		return sec_status_secure;
 	}
-	return sec_status_bogus;
+	return sec;
 }

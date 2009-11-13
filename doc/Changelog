@@ -1,3 +1,6 @@
+13 November 2009: Wouter
+	- Fixed validation failure for CNAME to optout NSEC3 nodata answer.
+
 12 November 2009: Wouter
 	- iana portlist updated.
 	- fix manpage errors reported by debian lintian.
