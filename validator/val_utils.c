@@ -234,6 +234,8 @@ val_find_signer(enum val_classification subtype, struct query_info* qinf,
 				signer_name, signer_len);
 			if(*signer_name)
 				return;
+			if(ntohs(rep->rrsets[i]->rk.type) != LDNS_RR_TYPE_DNAME)
+				break; /* only check CNAME after a DNAME */
 		}
 		*signer_name = NULL;
 		*signer_len = 0;

@@ -1,3 +1,6 @@
+16 November 2009: Wouter
+	- Fixed signer detection of CNAME responses without signatures.
+
 13 November 2009: Wouter
 	- Fixed validation failure for CNAME to optout NSEC3 nodata answer.
 	- unbound-host does not fail on type ANY.
