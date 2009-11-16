@@ -1,6 +1,7 @@
 16 November 2009: Wouter
 	- Fixed signer detection of CNAME responses without signatures.
 	- Fix#282 libunbound memleak on error condition by Eric Sesterhenn.
+	- Tests for CNAMEs to deeper trust anchors, secure and bogus.
 
 13 November 2009: Wouter
 	- Fixed validation failure for CNAME to optout NSEC3 nodata answer.
