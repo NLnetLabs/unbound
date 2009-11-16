@@ -267,6 +267,7 @@ ub_ctx_add_ta(struct ub_ctx* ctx, char* ta)
 	lock_basic_lock(&ctx->cfglock);
 	if(ctx->finalized) {
 		lock_basic_unlock(&ctx->cfglock);
+		free(dup);
 		return UB_AFTERFINAL;
 	}
 	if(!cfg_strlist_insert(&ctx->env->cfg->trust_anchor_list, dup)) {
@@ -286,6 +287,7 @@ ub_ctx_add_ta_file(struct ub_ctx* ctx, char* fname)
 	lock_basic_lock(&ctx->cfglock);
 	if(ctx->finalized) {
 		lock_basic_unlock(&ctx->cfglock);
+		free(dup);
 		return UB_AFTERFINAL;
 	}
 	if(!cfg_strlist_insert(&ctx->env->cfg->trust_anchor_file_list, dup)) {
@@ -305,6 +307,7 @@ ub_ctx_trustedkeys(struct ub_ctx* ctx, char* fname)
 	lock_basic_lock(&ctx->cfglock);
 	if(ctx->finalized) {
 		lock_basic_unlock(&ctx->cfglock);
+		free(dup);
 		return UB_AFTERFINAL;
 	}
 	if(!cfg_strlist_insert(&ctx->env->cfg->trusted_keys_file_list, dup)) {
