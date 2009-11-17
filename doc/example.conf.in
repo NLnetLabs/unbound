@@ -309,6 +309,7 @@ server:
 	
 	# File with trusted keys, kept uptodate using RFC5011 probes,
 	# initial file like trust-anchor-file, then it stores metadata.
+	# Use several entries, one per domain name, to track multiple zones.
 	# auto-trust-anchor-file: ""
 
 	# Trusted key for validation. DS or DNSKEY. specify the RR on a
