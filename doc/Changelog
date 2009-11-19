@@ -1,3 +1,6 @@
+19 November 2009: Wouter
+	- better argument help for unbound-control.
+
 17 November 2009: Wouter
 	- noted multiple entries for multiple domain names in example.conf.
 	- iana portlist updated.
