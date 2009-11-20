@@ -43,6 +43,8 @@ Var StartMenuFolder
 #!define MUI_FINISHPAGE_NOAUTOCLOSE  # so we can inspect install log.
 
 !insertmacro MUI_PAGE_WELCOME
+# trying to workaround bug in NSIS 2.45 MUI2 where bitmap does not appear.
+!insertmacro MUI_PAGE_FUNCTION_CUSTOM SHOW
 !insertmacro MUI_PAGE_LICENSE "..\LICENSE"
 !insertmacro MUI_PAGE_COMPONENTS
 !insertmacro MUI_PAGE_DIRECTORY
