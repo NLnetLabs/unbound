@@ -1,3 +1,6 @@
+20 November 2009: Wouter
+	- contrib/split-itar.sh contributed by Tom Hendrikx.
+
 19 November 2009: Wouter
 	- better argument help for unbound-control.
 	- iana portlist updated.
