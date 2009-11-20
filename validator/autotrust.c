@@ -1439,6 +1439,9 @@ do_newkey(struct module_env* env, struct autr_ta* anchor, int* c)
 static void
 do_addtime(struct module_env* env, struct autr_ta* anchor, int* c)
 {
+	/* This not according to RFC, this is 30 days, but the RFC demands 
+	 * MAX(30days, TTL expire time of first DNSKEY set with this key),
+	 * The value may be too small if a very large TTL was used. */
 	int exceeded = check_holddown(env, anchor, env->cfg->add_holddown);
 	if (exceeded && anchor->s == AUTR_STATE_ADDPEND) {
 		verbose_key(anchor, VERB_ALGO, "add-holddown time exceeded "
