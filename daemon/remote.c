@@ -106,9 +106,9 @@ timeval_subtract(struct timeval* d, const struct timeval* end,
 	const struct timeval* start)
 {
 #ifndef S_SPLINT_S
-	time_t end_usec = end->tv_usec;;
+	time_t end_usec = end->tv_usec;
 	d->tv_sec = end->tv_sec - start->tv_sec;
-	while(end_usec < start->tv_usec) {
+	if(end_usec < start->tv_usec) {
 		end_usec += 1000000;
 		d->tv_sec--;
 	}

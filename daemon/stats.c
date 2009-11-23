@@ -58,7 +58,7 @@ timeval_add(struct timeval* d, const struct timeval* add)
 #ifndef S_SPLINT_S
 	d->tv_sec += add->tv_sec;
 	d->tv_usec += add->tv_usec;
-	while(d->tv_usec > 1000000 ) {
+	if(d->tv_usec > 1000000) {
 		d->tv_usec -= 1000000;
 		d->tv_sec++;
 	}

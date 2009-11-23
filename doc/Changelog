@@ -1,5 +1,7 @@
 23 November 2009: Wouter
 	- Patch from David Hubbard for libunbound manual page.
+	- Fixup endless spinning in unbound-control stats reported by
+	  Attila Nagy.  Probably caused by clock reversal.
 
 20 November 2009: Wouter
 	- contrib/split-itar.sh contributed by Tom Hendrikx.
