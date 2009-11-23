@@ -100,9 +100,7 @@
 \fIint\fR
 \fBub_resolve\fR(\fIstruct ub_ctx*\fR ctx, \fIchar*\fR name, 
 .br
-           \fIint\fR rrtype, \fIint\fR rrclass, \fIint*\fR secure, 
-.br
-           \fIint*\fR data, \fIstruct ub_result**\fR result);
+           \fIint\fR rrtype, \fIint\fR rrclass, \fIstruct ub_result**\fR result);
 .LP
 \fIint\fR
 \fBub_resolve_async\fR(\fIstruct ub_ctx*\fR ctx, \fIchar*\fR name, 
@@ -283,8 +281,6 @@ Will perform necessary callbacks.
 Perform resolution and validation of the target name.
 The name is a domain name in a zero terminated text string.
 The rrtype and rrclass are DNS type and class codes.
-The value secure returns true if the answer validated securely.
-The value data returns true if there was data.
 The result structure is newly allocated with the resulting data.
 .TP
 .B ub_resolve_async
