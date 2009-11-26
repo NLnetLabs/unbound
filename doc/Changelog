@@ -1,6 +1,9 @@
 26 November 2009: Wouter
 	- updated ldns with release candidate for version 1.6.3.
 	- tag for 1.4.0 release.
+	- 1.4.1 version in trunk.
+	- Fixup major libtool version to 2 because of why_bogus change.
+	  It was 1:5:0 but should have been 2:0:0.
 
 23 November 2009: Wouter
 	- Patch from David Hubbard for libunbound manual page.
