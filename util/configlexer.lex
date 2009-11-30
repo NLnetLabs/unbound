@@ -123,7 +123,8 @@ SQANY     [^\'\n\r\\]|\\.
 %%
 <INITIAL,val>{SPACE}*	{ 
 	LEXOUT(("SP ")); /* ignore */ }
-<INITIAL,val>{SPACE}*{COMMENT}.*$	{ 
+<INITIAL,val>{SPACE}*{COMMENT}.*	{ 
+	/* note that flex makes the longest match and '.' is any but not nl */
 	LEXOUT(("comment(%s) ", yytext)); /* ignore */ }
 server{COLON}			{ YDVAR(0, VAR_SERVER) }
 num-threads{COLON}		{ YDVAR(1, VAR_NUM_THREADS) }

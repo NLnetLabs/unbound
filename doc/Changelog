@@ -1,3 +1,6 @@
+30 November 2009: Wouter
+	- bug#284: fix parse of # without end-of-line at end-of-file.
+
 26 November 2009: Wouter
 	- updated ldns with release candidate for version 1.6.3.
 	- tag for 1.4.0 release.
