@@ -1,3 +1,7 @@
+1 December 2009: Wouter
+	- Fix crash with module-config "iterator".
+	- Added unit test that has "iterator" module-config.
+
 30 November 2009: Wouter
 	- bug#284: fix parse of # without end-of-line at end-of-file.
 
