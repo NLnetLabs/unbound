@@ -1309,14 +1309,16 @@ void local_zones_del_data(struct local_zones* zones,
 
 	/* find the domain */
 	d = lz_find_node(z, name, len, labs);
-	/* no memory recycling for zone deletions ... */
-	d->rrsets = NULL;
-	/* did we delete the soa record ? */
-	if(query_dname_compare(d->name, z->name) == 0)
-		z->soa = NULL;
+	if(d) {
+		/* no memory recycling for zone deletions ... */
+		d->rrsets = NULL;
+		/* did we delete the soa record ? */
+		if(query_dname_compare(d->name, z->name) == 0)
+			z->soa = NULL;
 
-	/* cleanup the empty nonterminals for this name */
-	del_empty_term(z, d, name, len, labs);
+		/* cleanup the empty nonterminals for this name */
+		del_empty_term(z, d, name, len, labs);
+	}
 
 	lock_rw_unlock(&z->lock);
 }
