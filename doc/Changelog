@@ -1,6 +1,6 @@
 7 December 2009: Wouter
 	- Bug#287: Fix segfault when unbound-control remove nonexistent local
-	  data.  Added check to unit tests.
+	  data.  Added check to tests.
 
 1 December 2009: Wouter
 	- Fix crash with module-config "iterator".
