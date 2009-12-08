@@ -1585,6 +1585,12 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 				val_neg_addreferral(qstate->env->neg_cache, 
 					iq->response->rep, iq->dp->name);
 		}
+		/* store parent-side-in-zone-glue, if directly queried for */
+		if((qstate->qinfo.qtype == LDNS_RR_TYPE_A
+			|| qstate->qinfo.qtype == LDNS_RR_TYPE_AAAA)) {
+			iter_store_inzone_glue(qstate->env,
+				&iq->response->qinfo, iq->response->rep);
+		}
 
 		/* Reset the event state, setting the current delegation 
 		 * point to the referral. */
@@ -1865,6 +1871,11 @@ processTargetResponse(struct module_qstate* qstate, int id,
 	/* Tell the originating event that this target query has finished
 	 * (regardless if it succeeded or not). */
 	foriq->num_target_queries--;
+
+	/* perhaps we picked up interested cached addressed, like lame ones */
+	if(!iter_lookup_inzone_glue(forq->env, foriq->dp, forq->region, 
+		&iq->qchase))
+		log_err("out of memory adding lame glue");
 
 	/* This response is relevant to the current query, so we 
 	 * add (attempt to add, anyway) this target(s) and reactivate 

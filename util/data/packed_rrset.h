@@ -51,6 +51,8 @@ typedef uint64_t rrset_id_t;
 
 /** this rrset is NSEC and is at zone apex (at child side of zonecut) */
 #define PACKED_RRSET_NSEC_AT_APEX 0x1
+/** this rrset is A/AAAA and is in-zone-glue (from parent side of zonecut) */
+#define PACKED_RRSET_PARENT_SIDE 0x2
 
 /**
  * The identifying information for an RRset.
@@ -69,6 +71,7 @@ struct packed_rrset_key {
 	/**
 	 * Flags. 32bit to be easy for hashing:
 	 * 	o PACKED_RRSET_NSEC_AT_APEX
+	 * 	o PACKED_RRSET_PARENT_SIDE
 	 */
 	uint32_t flags;
 	/** the rrset type in network format */
@@ -374,6 +377,17 @@ const char* sec_status_to_string(enum sec_status s);
  */
 struct ub_packed_rrset_key* packed_rrset_copy_region(
 	struct ub_packed_rrset_key* key, struct regional* region, 
+	uint32_t now);
+
+/** 
+ * Allocate rrset with malloc (from region or you are holding the lock).
+ * @param key: key with data entry.
+ * @param alloc: alloc_cache to create rrset_keys
+ * @param now: adjust the TTLs to be abolsute (add to all TTLs).
+ * @return new region-alloced rrset key or NULL on alloc failure.
+ */
+struct ub_packed_rrset_key* packed_rrset_copy_alloc(
+	struct ub_packed_rrset_key* key, struct alloc_cache* alloc, 
 	uint32_t now);
 
 /**

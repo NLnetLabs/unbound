@@ -210,4 +210,26 @@ int iter_msg_from_zone(struct dns_msg* msg, struct delegpt* dp,
  */
 int reply_equal(struct reply_info* p, struct reply_info* q);
 
+/**
+ * Store in-zone glue in seperate rrset cache entries for later last-resort
+ * lookups in case the child-side versions of this information fails.
+ * @param env: environment with cache, time, ...
+ * @param qinfo: query info. must match the information stored to avoid
+ * 	Kaminsky-style trouble.
+ * @param rep: reply with possibly A or AAAA content to store.
+ */
+void iter_store_inzone_glue(struct module_env* env, struct query_info* qinfo,
+	struct reply_info* rep);
+
+/**
+ * Find in-zone glue from rrset cache again.
+ * @param env: query env with rrset cache and time.
+ * @param dp: delegation point to store result in.
+ * @param region: region to alloc result in.
+ * @param qinfo: query into that is pertinent.
+ * @return false on malloc failure.
+ */
+int iter_lookup_inzone_glue(struct module_env* env, struct delegpt* dp,
+	struct regional* region, struct query_info* qinfo);
+
 #endif /* ITERATOR_ITER_UTILS_H */

@@ -180,7 +180,7 @@ find_add_addrs(struct module_env* env, uint16_t qclass,
 		akey = rrset_cache_lookup(env->rrset_cache, ns->name, 
 			ns->namelen, LDNS_RR_TYPE_A, qclass, 0, now, 0);
 		if(akey) {
-			if(!delegpt_add_rrset_A(dp, region, akey, 0)) {
+			if(!delegpt_add_rrset_A(dp, region, akey, 0, 0)) {
 				lock_rw_unlock(&akey->entry.lock);
 				return 0;
 			}
@@ -198,7 +198,7 @@ find_add_addrs(struct module_env* env, uint16_t qclass,
 		akey = rrset_cache_lookup(env->rrset_cache, ns->name, 
 			ns->namelen, LDNS_RR_TYPE_AAAA, qclass, 0, now, 0);
 		if(akey) {
-			if(!delegpt_add_rrset_AAAA(dp, region, akey, 0)) {
+			if(!delegpt_add_rrset_AAAA(dp, region, akey, 0, 0)) {
 				lock_rw_unlock(&akey->entry.lock);
 				return 0;
 			}
@@ -212,6 +212,27 @@ find_add_addrs(struct module_env* env, uint16_t qclass,
 				delegpt_add_neg_msg(dp, neg);
 				lock_rw_unlock(&neg->entry.lock);
 			}
+		}
+		/* see if we have parent-side-glue (dispreferred) */
+		akey = rrset_cache_lookup(env->rrset_cache, ns->name, 
+			ns->namelen, LDNS_RR_TYPE_A, qclass, 
+			PACKED_RRSET_PARENT_SIDE, now, 0);
+		if(akey) {
+			if(!delegpt_add_rrset_A(dp, region, akey, 1, 1)) {
+				lock_rw_unlock(&akey->entry.lock);
+				return 0;
+			}
+			lock_rw_unlock(&akey->entry.lock);
+		}
+		akey = rrset_cache_lookup(env->rrset_cache, ns->name, 
+			ns->namelen, LDNS_RR_TYPE_AAAA, qclass, 
+			PACKED_RRSET_PARENT_SIDE, now, 0);
+		if(akey) {
+			if(!delegpt_add_rrset_AAAA(dp, region, akey, 1, 1)) {
+				lock_rw_unlock(&akey->entry.lock);
+				return 0;
+			}
+			lock_rw_unlock(&akey->entry.lock);
 		}
 	}
 	return 1;
@@ -232,7 +253,7 @@ cache_fill_missing(struct module_env* env, uint16_t qclass,
 		akey = rrset_cache_lookup(env->rrset_cache, ns->name, 
 			ns->namelen, LDNS_RR_TYPE_A, qclass, 0, now, 0);
 		if(akey) {
-			if(!delegpt_add_rrset_A(dp, region, akey, 1)) {
+			if(!delegpt_add_rrset_A(dp, region, akey, 0, 1)) {
 				lock_rw_unlock(&akey->entry.lock);
 				return 0;
 			}
@@ -250,7 +271,7 @@ cache_fill_missing(struct module_env* env, uint16_t qclass,
 		akey = rrset_cache_lookup(env->rrset_cache, ns->name, 
 			ns->namelen, LDNS_RR_TYPE_AAAA, qclass, 0, now, 0);
 		if(akey) {
-			if(!delegpt_add_rrset_AAAA(dp, region, akey, 1)) {
+			if(!delegpt_add_rrset_AAAA(dp, region, akey, 0, 1)) {
 				lock_rw_unlock(&akey->entry.lock);
 				return 0;
 			}
@@ -264,6 +285,27 @@ cache_fill_missing(struct module_env* env, uint16_t qclass,
 				delegpt_add_neg_msg(dp, neg);
 				lock_rw_unlock(&neg->entry.lock);
 			}
+		}
+		/* see if we have parent-side-glue (dispreferred) */
+		akey = rrset_cache_lookup(env->rrset_cache, ns->name, 
+			ns->namelen, LDNS_RR_TYPE_A, qclass, 
+			PACKED_RRSET_PARENT_SIDE, now, 0);
+		if(akey) {
+			if(!delegpt_add_rrset_A(dp, region, akey, 1, 1)) {
+				lock_rw_unlock(&akey->entry.lock);
+				return 0;
+			}
+			lock_rw_unlock(&akey->entry.lock);
+		}
+		akey = rrset_cache_lookup(env->rrset_cache, ns->name, 
+			ns->namelen, LDNS_RR_TYPE_AAAA, qclass, 
+			PACKED_RRSET_PARENT_SIDE, now, 0);
+		if(akey) {
+			if(!delegpt_add_rrset_AAAA(dp, region, akey, 1, 1)) {
+				lock_rw_unlock(&akey->entry.lock);
+				return 0;
+			}
+			lock_rw_unlock(&akey->entry.lock);
 		}
 	}
 	return 1;

@@ -305,6 +305,33 @@ packed_rrset_copy_region(struct ub_packed_rrset_key* key,
 }
 
 struct ub_packed_rrset_key* 
+packed_rrset_copy_alloc(struct ub_packed_rrset_key* key, 
+	struct alloc_cache* alloc, uint32_t now)
+{
+	struct packed_rrset_data* fd, *dd;
+	struct ub_packed_rrset_key* dk = alloc_special_obtain(alloc);
+	if(!dk) return NULL;
+	fd = (struct packed_rrset_data*)key->entry.data;
+	dk->entry.hash = key->entry.hash;
+	dk->rk = key->rk;
+	dk->rk.dname = (uint8_t*)memdup(key->rk.dname, key->rk.dname_len);
+	if(!dk->rk.dname) {
+		alloc_special_release(alloc, dk);
+		return NULL;
+	}
+	dd = (struct packed_rrset_data*)memdup(fd, packed_rrset_sizeof(fd));
+	if(!dd) {
+		free(dk->rk.dname);
+		alloc_special_release(alloc, dk);
+		return NULL;
+	}
+	packed_rrset_ptr_fixup(dd);
+	dk->entry.data = (void*)dd;
+	packed_rrset_ttl_add(dd, now);
+	return dk;
+}
+
+struct ub_packed_rrset_key* 
 ub_packed_rrset_heap_key(ldns_rr_list* rrset)
 {
 	struct ub_packed_rrset_key* k;

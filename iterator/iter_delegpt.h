@@ -121,6 +121,8 @@ struct delegpt_addr {
 	/** if true, the A or AAAA RR was bogus, so this address is bad.
 	 * Also check the dp->bogus to see if everything is bogus. */
 	int bogus;
+	/** if true, this address is dispreferred: it is a lame IP address */
+	int lame;
 };
 
 /**
@@ -178,35 +180,38 @@ int delegpt_rrset_add_ns(struct delegpt* dp, struct regional* regional,
  * @param addr: the address.
  * @param addrlen: the length of addr.
  * @param bogus: security status for the address, pass true if bogus.
+ * @param lame: address is lame.
  * @param nodup: if true, no address duplicates are made by this add. 
  *	name duplicates are always filtered.
  * @return false on error.
  */
 int delegpt_add_target(struct delegpt* dp, struct regional* regional, 
 	uint8_t* name, size_t namelen, struct sockaddr_storage* addr, 
-	socklen_t addrlen, int bogus, int nodup);
+	socklen_t addrlen, int bogus, int lame, int nodup);
 
 /**
  * Add A RRset to delegpt.
  * @param dp: delegation point.
  * @param regional: where to allocate the info.
  * @param rrset: RRset A to add.
+ * @param lame: rrset is lame, disprefer it.
  * @param nodup: if true, no duplicates are made by this add. takes time.
  * @return 0 on alloc error.
  */
 int delegpt_add_rrset_A(struct delegpt* dp, struct regional* regional, 
-	struct ub_packed_rrset_key* rrset, int nodup);
+	struct ub_packed_rrset_key* rrset, int lame, int nodup);
 
 /**
  * Add AAAA RRset to delegpt.
  * @param dp: delegation point.
  * @param regional: where to allocate the info.
  * @param rrset: RRset AAAA to add.
+ * @param lame: rrset is lame, disprefer it.
  * @param nodup: if true, no duplicates are made by this add. takes time.
  * @return 0 on alloc error.
  */
 int delegpt_add_rrset_AAAA(struct delegpt* dp, struct regional* regional, 
-	struct ub_packed_rrset_key* rrset, int nodup);
+	struct ub_packed_rrset_key* rrset, int lame, int nodup);
 
 /**
  * Add any RRset to delegpt.
@@ -226,11 +231,13 @@ int delegpt_add_rrset(struct delegpt* dp, struct regional* regional,
  * @param addr: the address.
  * @param addrlen: the length of addr.
  * @param bogus: if address is bogus.
+ * @param lame: if address is lame.
  * @param nodup: if true, no duplicates are made by this add. takes time.
  * @return false on error.
  */
 int delegpt_add_addr(struct delegpt* dp, struct regional* regional, 
-	struct sockaddr_storage* addr, socklen_t addrlen, int bogus, int nodup);
+	struct sockaddr_storage* addr, socklen_t addrlen, int bogus, 
+	int lame, int nodup);
 
 /** 
  * Find NS record in name list of delegation point.

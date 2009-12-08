@@ -160,6 +160,7 @@ iter_apply_cfg(struct iter_env* iter_env, struct config_file* cfg)
  *		For non-blacklisted servers: huge timeout, but has traffic.
  *	USEFUL_SERVER_TOP_TIMEOUT ..
  *		dnsseclame servers get penalty
+ *		also for parent-side lame servers (lame in delegpt).
  *	USEFUL_SERVER_TOP_TIMEOUT*2 ..
  *		recursion lame servers get penalty
  *	UNKNOWN_SERVER_NICENESS 
@@ -202,6 +203,8 @@ iter_filter_unsuitable(struct iter_env* iter_env, struct module_env* env,
 			lost >= USEFUL_SERVER_MAX_LOST)
 				/* server is unresponsive */
 			return USEFUL_SERVER_TOP_TIMEOUT; 
+		else if(a->lame)
+			return rtt+USEFUL_SERVER_TOP_TIMEOUT+1; /* nonpref */
 		else if(rtt >= USEFUL_SERVER_TOP_TIMEOUT) /* not blacklisted*/
 			return USEFUL_SERVER_TOP_TIMEOUT+1; 
 		else if(reclame)
@@ -211,6 +214,8 @@ iter_filter_unsuitable(struct iter_env* iter_env, struct module_env* env,
 		else	return rtt;
 	}
 	/* no server information present */
+	if(a->lame)
+		return USEFUL_SERVER_TOP_TIMEOUT+1; /* nonpref */
 	return UNKNOWN_SERVER_NICENESS;
 }
 
@@ -675,6 +680,57 @@ reply_equal(struct reply_info* p, struct reply_info* q)
 	for(i=0; i<p->rrset_count; i++) {
 		if(!rrset_equal(p->rrsets[i], q->rrsets[i]))
 			return 0;
+	}
+	return 1;
+}
+
+void 
+iter_store_inzone_glue(struct module_env* env, struct query_info* qinfo,
+	struct reply_info* rep)
+{
+	struct rrset_ref ref;
+	struct ub_packed_rrset_key* rrset;
+	if(qinfo->qtype != LDNS_RR_TYPE_A && qinfo->qtype != LDNS_RR_TYPE_AAAA)
+		return;
+	rrset = reply_find_rrset(rep, qinfo->qname, qinfo->qname_len,
+		qinfo->qtype, qinfo->qclass);
+	if(!rrset)
+		return;
+	/* got A or AAAA glue rrset. store it in case its handy */
+	rrset = packed_rrset_copy_alloc(rrset, env->alloc, *env->now);
+	if(!rrset) {
+		log_err("malloc failure in store_inzone_glue");
+		return;
+	}
+	rrset->rk.flags |= PACKED_RRSET_PARENT_SIDE;
+	rrset->entry.hash = rrset_key_hash(&rrset->rk);
+	ref.key = rrset;
+	ref.id = rrset->id;
+	/* ignore ret: it was in the cache, ref updated */
+	(void)rrset_cache_update(env->rrset_cache, &ref, env->alloc, *env->now);
+}
+
+int 
+iter_lookup_inzone_glue(struct module_env* env, struct delegpt* dp,
+	struct regional* region, struct query_info* qinfo)
+{
+	struct ub_packed_rrset_key* akey;
+	akey = rrset_cache_lookup(env->rrset_cache, qinfo->qname, 
+		qinfo->qname_len, qinfo->qtype, qinfo->qclass, 
+		PACKED_RRSET_PARENT_SIDE, *env->now, 0);
+	if(akey) {
+		if(qinfo->qtype == LDNS_RR_TYPE_A) {
+			if(!delegpt_add_rrset_A(dp, region, akey, 1, 1)) {
+				lock_rw_unlock(&akey->entry.lock);
+				return 0;
+			}
+		} else if(qinfo->qtype == LDNS_RR_TYPE_AAAA) {
+			if(!delegpt_add_rrset_AAAA(dp, region, akey, 1, 1)) {
+				lock_rw_unlock(&akey->entry.lock);
+				return 0;
+			}
+		}
+		lock_rw_unlock(&akey->entry.lock);
 	}
 	return 1;
 }

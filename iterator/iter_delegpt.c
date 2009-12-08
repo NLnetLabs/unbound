@@ -78,7 +78,7 @@ struct delegpt* delegpt_copy(struct delegpt* dp, struct regional* region)
 	}
 	for(a = dp->target_list; a; a = a->next_target) {
 		if(!delegpt_add_addr(copy, region, &a->addr, a->addrlen, 
-			a->bogus, 0))
+			a->bogus, a->lame, 0))
 			return NULL;
 	}
 	return copy;
@@ -147,7 +147,7 @@ delegpt_find_addr(struct delegpt* dp, struct sockaddr_storage* addr,
 int 
 delegpt_add_target(struct delegpt* dp, struct regional* region, 
 	uint8_t* name, size_t namelen, struct sockaddr_storage* addr, 
-	socklen_t addrlen, int bogus, int nodup)
+	socklen_t addrlen, int bogus, int lame, int nodup)
 {
 	struct delegpt_ns* ns = delegpt_find_ns(dp, name, namelen);
 	if(!ns) {
@@ -159,12 +159,13 @@ delegpt_add_target(struct delegpt* dp, struct regional* region,
 	else	ns->got4 = 1;
 	if(ns->got4 && ns->got6)
 		ns->resolved = 1;
-	return delegpt_add_addr(dp, region, addr, addrlen, bogus, nodup);
+	return delegpt_add_addr(dp, region, addr, addrlen, bogus, lame, nodup);
 }
 
 int 
 delegpt_add_addr(struct delegpt* dp, struct regional* region, 
-	struct sockaddr_storage* addr, socklen_t addrlen, int bogus, int nodup)
+	struct sockaddr_storage* addr, socklen_t addrlen, int bogus, 
+	int lame, int nodup)
 {
 	struct delegpt_addr* a;
 	if(nodup) {
@@ -188,6 +189,7 @@ delegpt_add_addr(struct delegpt* dp, struct regional* region,
 	a->addrlen = addrlen;
 	a->attempts = 0;
 	a->bogus = bogus;
+	a->lame = lame;
 	return 1;
 }
 
@@ -332,10 +334,10 @@ delegpt_from_message(struct dns_msg* msg, struct regional* region)
 			continue;
 
 		if(ntohs(s->rk.type) == LDNS_RR_TYPE_A) {
-			if(!delegpt_add_rrset_A(dp, region, s, 0))
+			if(!delegpt_add_rrset_A(dp, region, s, 0, 0))
 				return NULL;
 		} else if(ntohs(s->rk.type) == LDNS_RR_TYPE_AAAA) {
-			if(!delegpt_add_rrset_AAAA(dp, region, s, 0))
+			if(!delegpt_add_rrset_AAAA(dp, region, s, 0, 0))
 				return NULL;
 		}
 	}
@@ -365,7 +367,7 @@ delegpt_rrset_add_ns(struct delegpt* dp, struct regional* region,
 
 int 
 delegpt_add_rrset_A(struct delegpt* dp, struct regional* region,
-	struct ub_packed_rrset_key* ak, int nodup)
+	struct ub_packed_rrset_key* ak, int lame, int nodup)
 {
         struct packed_rrset_data* d=(struct packed_rrset_data*)ak->entry.data;
         size_t i;
@@ -380,7 +382,7 @@ delegpt_add_rrset_A(struct delegpt* dp, struct regional* region,
                 memmove(&sa.sin_addr, d->rr_data[i]+2, INET_SIZE);
                 if(!delegpt_add_target(dp, region, ak->rk.dname,
                         ak->rk.dname_len, (struct sockaddr_storage*)&sa,
-                        len, (d->security==sec_status_bogus), nodup))
+                        len, (d->security==sec_status_bogus), lame, nodup))
                         return 0;
         }
         return 1;
@@ -388,7 +390,7 @@ delegpt_add_rrset_A(struct delegpt* dp, struct regional* region,
 
 int 
 delegpt_add_rrset_AAAA(struct delegpt* dp, struct regional* region,
-	struct ub_packed_rrset_key* ak, int nodup)
+	struct ub_packed_rrset_key* ak, int lame, int nodup)
 {
         struct packed_rrset_data* d=(struct packed_rrset_data*)ak->entry.data;
         size_t i;
@@ -403,7 +405,7 @@ delegpt_add_rrset_AAAA(struct delegpt* dp, struct regional* region,
                 memmove(&sa.sin6_addr, d->rr_data[i]+2, INET6_SIZE);
                 if(!delegpt_add_target(dp, region, ak->rk.dname,
                         ak->rk.dname_len, (struct sockaddr_storage*)&sa,
-                        len, (d->security==sec_status_bogus), nodup))
+                        len, (d->security==sec_status_bogus), lame, nodup))
                         return 0;
         }
         return 1;
@@ -418,9 +420,9 @@ delegpt_add_rrset(struct delegpt* dp, struct regional* region,
 	if(ntohs(rrset->rk.type) == LDNS_RR_TYPE_NS)
 		return delegpt_rrset_add_ns(dp, region, rrset);
 	else if(ntohs(rrset->rk.type) == LDNS_RR_TYPE_A)
-		return delegpt_add_rrset_A(dp, region, rrset, 0);
+		return delegpt_add_rrset_A(dp, region, rrset, 0, 0);
 	else if(ntohs(rrset->rk.type) == LDNS_RR_TYPE_AAAA)
-		return delegpt_add_rrset_AAAA(dp, region, rrset, 0);
+		return delegpt_add_rrset_AAAA(dp, region, rrset, 0, 0);
 	log_warn("Unknown rrset type added to delegpt");
 	return 1;
 }
