@@ -108,12 +108,15 @@ The number of threads to create to serve clients. Use 1 for no threading.
 .B port: \fI<port number>
 The port number, default 53, on which the server responds to queries.
 .TP
-.B interface: \fI<ip address>
+.B interface: \fI<ip address[@port]>
 Interface to use to connect to the network. This interface is listened to
 for queries from clients, and answers to clients are given from it.
 Can be given multiple times to work on several interfaces. If none are 
 given the default is to listen to localhost.
 The interfaces are not changed on a reload (kill \-HUP) but only on restart.
+A port number can be specified with @port (without spaces between
+interface and port number), if not specified the default port (from
+\fBport\fR) is used.
 .TP
 .B interface\-automatic: \fI<yes or no>
 Detect source interface on UDP queries and copy them to replies.  This 

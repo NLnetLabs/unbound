@@ -2,6 +2,8 @@
 	- Fix for lookup of parent-child disagreement domains, where the
 	  parent-side glue works but it does not provide proper NS, A or AAAA
 	  for itself, fixing domains such as motorcaravanners.eu.
+	- Feature: you can specify a port number in the interface: line, so
+	  you can bind the same interface multiple times at different ports.
 
 7 December 2009: Wouter
 	- Bug#287: Fix segfault when unbound-control remove nonexistent local

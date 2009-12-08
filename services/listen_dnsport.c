@@ -417,6 +417,35 @@ make_sock(int stype, const char* ifname, const char* port,
 	return s;
 }
 
+/** make socket and first see if ifname contains port override info */
+static int
+make_sock_port(int stype, const char* ifname, const char* port, 
+	struct addrinfo *hints, int v6only, int* noip6, size_t rcv)
+{
+	char* s = strchr(ifname, '@');
+	if(s) {
+		/* override port with ifspec@port */
+		char p[16];
+		char newif[128];
+		if((size_t)(s-ifname) >= sizeof(newif)) {
+			log_err("ifname too long: %s", ifname);
+			*noip6 = 0;
+			return -1;
+		}
+		if(strlen(s+1) >= sizeof(p)) {
+			log_err("portnumber too long: %s", ifname);
+			*noip6 = 0;
+			return -1;
+		}
+		strncpy(newif, ifname, sizeof(newif));
+		newif[s-ifname] = 0;
+		strncpy(p, s+1, sizeof(p));
+		p[strlen(s+1)]=0;
+		return make_sock(stype, newif, p, hints, v6only, noip6, rcv);
+	}
+	return make_sock(stype, ifname, port, hints, v6only, noip6, rcv);
+}
+
 /**
  * Add port to open ports list.
  * @param list: list head. changed.
@@ -515,7 +544,7 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 	if(!do_udp && !do_tcp)
 		return 0;
 	if(do_auto) {
-		if((s = make_sock(SOCK_DGRAM, ifname, port, hints, 1, 
+		if((s = make_sock_port(SOCK_DGRAM, ifname, port, hints, 1, 
 			&noip6, rcv)) == -1) {
 			if(noip6) {
 				log_warn("IPv6 protocol not available");
@@ -536,7 +565,7 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 		}
 	} else if(do_udp) {
 		/* regular udp socket */
-		if((s = make_sock(SOCK_DGRAM, ifname, port, hints, 1, 
+		if((s = make_sock_port(SOCK_DGRAM, ifname, port, hints, 1, 
 			&noip6, rcv)) == -1) {
 			if(noip6) {
 				log_warn("IPv6 protocol not available");
@@ -554,7 +583,7 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 		}
 	}
 	if(do_tcp) {
-		if((s = make_sock(SOCK_STREAM, ifname, port, hints, 1, 
+		if((s = make_sock_port(SOCK_STREAM, ifname, port, hints, 1, 
 			&noip6, 0)) == -1) {
 			if(noip6) {
 				/*log_warn("IPv6 protocol not available");*/
