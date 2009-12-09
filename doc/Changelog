@@ -1,3 +1,7 @@
+9 December 2009: Wouter
+	- Fix Bug#287(reopened): update of ldns tarball with fix for parse
+	  errors generated for domain names like '.example.com'.
+
 8 December 2009: Wouter
 	- Fix for lookup of parent-child disagreement domains, where the
 	  parent-side glue works but it does not provide proper NS, A or AAAA
