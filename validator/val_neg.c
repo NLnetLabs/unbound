@@ -1094,6 +1094,25 @@ void val_neg_addreferral(struct val_neg_cache* neg, struct reply_info* rep,
 }
 
 /**
+ * Check that an NSEC3 rrset does not have a type set.
+ * None of the nsec3s in a hash-collision are allowed to have the type.
+ * (since we do not know which one is the nsec3 looked at, flags, ..., we
+ * ignore the cached item and let it bypass negative caching).
+ * @param k: the nsec3 rrset to check.
+ * @param t: type to check
+ * @return true if no RRs have the type.
+ */
+static int nsec3_no_type(struct ub_packed_rrset_key* k, uint16_t t)
+{
+	int count = (int)((struct packed_rrset_data*)k->entry.data)->count;
+	int i;
+	for(i=0; i<count; i++)
+		if(nsec3_has_type(k, i, t))
+			return 0;
+	return 1;
+}
+
+/**
  * See if rrset exists in rrset cache.
  * If it does, the bit is checked, and if not expired, it is returned
  * allocated in region.
@@ -1132,8 +1151,10 @@ grab_nsec(struct rrset_cache* rrset_cache, uint8_t* qname, size_t qname_len,
 		return NULL;
 	}
 	/* check if checktype is absent */
-	if(checkbit && qtype == LDNS_RR_TYPE_NSEC &&
-		nsec_has_type(k, checktype)) {
+	if(checkbit && (
+		(qtype == LDNS_RR_TYPE_NSEC && nsec_has_type(k, checktype)) ||
+		(qtype == LDNS_RR_TYPE_NSEC3 && !nsec3_no_type(k, checktype))
+		)) {
 		lock_rw_unlock(&k->entry.lock);
 		return NULL;
 	}
@@ -1300,8 +1321,9 @@ neg_nsec3_proof_ds(struct val_neg_zone* zone, uint8_t* qname, size_t qname_len,
 		 * ce_rrset equals a closer encloser.
 		 * nc_rrset is optout.
 		 * No need to check wildcard for type DS */
+		/* capacity=3: ce + nc + soa(if needed) */
 		if(!(msg = dns_msg_create(qname, qname_len, 
-			LDNS_RR_TYPE_DS, zone->dclass, region, 2))) 
+			LDNS_RR_TYPE_DS, zone->dclass, region, 3))) 
 			return NULL;
 		/* now=0 because TTL was reduced in grab_nsec */
 		if(!dns_msg_authadd(msg, region, ce_rrset, 0)) 
@@ -1313,10 +1335,48 @@ neg_nsec3_proof_ds(struct val_neg_zone* zone, uint8_t* qname, size_t qname_len,
 	return NULL;
 }
 
+/**
+ * Add SOA record for external responses.
+ * @param rrset_cache: to look into.
+ * @param now: current time.
+ * @param region: where to perform the allocation
+ * @param msg: current msg with NSEC.
+ * @param zone: val_neg_zone if we have one.
+ * @return false on lookup or alloc failure.
+ */
+static int add_soa(struct rrset_cache* rrset_cache, uint32_t now,
+	struct regional* region, struct dns_msg* msg, struct val_neg_zone* zone)
+{
+	struct ub_packed_rrset_key* soa;
+	uint8_t* nm;
+	size_t nmlen;
+	uint16_t dclass;
+	if(zone) {
+		nm = zone->name;
+		nmlen = zone->len;
+		dclass = zone->dclass;
+	} else {
+		/* Assumes the signer is the zone SOA to add */
+		nm = reply_nsec_signer(msg->rep, &nmlen, &dclass);
+		if(!nm) 
+			return 0;
+	}
+	soa = rrset_cache_lookup(rrset_cache, nm, nmlen, LDNS_RR_TYPE_SOA, 
+		dclass, 0, now, 0);
+	if(!soa)
+		return 0;
+	if(!dns_msg_authadd(msg, region, soa, now)) {
+		lock_rw_unlock(&soa->entry.lock);
+		return 0;
+	}
+	lock_rw_unlock(&soa->entry.lock);
+	return 1;
+}
+
 struct dns_msg* 
 val_neg_getmsg(struct val_neg_cache* neg, struct query_info* qinfo, 
 	struct regional* region, struct rrset_cache* rrset_cache, 
-	ldns_buffer* buf, uint32_t now)
+	ldns_buffer* buf, uint32_t now, int addsoa)
 {
 	struct dns_msg* msg;
 	struct ub_packed_rrset_key* rrset;
@@ -1340,10 +1400,12 @@ val_neg_getmsg(struct val_neg_cache* neg, struct query_info* qinfo,
 	if(rrset) {
 		/* return msg with that rrset */
 		if(!(msg = dns_msg_create(qinfo->qname, qinfo->qname_len, 
-			qinfo->qtype, qinfo->qclass, region, 1))) 
+			qinfo->qtype, qinfo->qclass, region, 2))) 
 			return NULL;
 		/* TTL already subtracted in grab_nsec */
 		if(!dns_msg_authadd(msg, region, rrset, 0)) 
+			return NULL;
+		if(addsoa && !add_soa(rrset_cache, now, region, msg, NULL))
 			return NULL;
 		return msg;
 	}
@@ -1368,6 +1430,10 @@ val_neg_getmsg(struct val_neg_cache* neg, struct query_info* qinfo,
 
 	msg = neg_nsec3_proof_ds(zone, qinfo->qname, qinfo->qname_len, 
 		zname_labs+1, buf, rrset_cache, region, now);
+	if(addsoa && !add_soa(rrset_cache, now, region, msg, zone)) {
+		lock_basic_unlock(&neg->lock);
+		return NULL;
+	}
 	lock_basic_unlock(&neg->lock);
 	return msg;
 }

@@ -321,4 +321,21 @@ int val_has_signed_nsecs(struct reply_info* rep, char** reason);
  */
 int val_favorite_ds_algo(struct ub_packed_rrset_key* ds_rrset);
 
+/**
+ * Find DS denial message in cache.  Saves new qstate allocation and allows
+ * the validator to use partial content which is not enough to construct a
+ * message for network (or user) consumption.  Without SOA for example,
+ * which is a common occurence in the unbound code since the referrals contain
+ * NSEC/NSEC3 rrs without the SOA element, thus do not allow synthesis of a
+ * full negative reply, but do allow synthesis of sufficient proof.
+ * @param env: query env with caches and time.
+ * @param nm: name of DS record sought.
+ * @param nmlen: length of name.
+ * @param c: class of DS RR.
+ * @param region: where to allocate result.
+ * @return a dns_msg on success. NULL on failure.
+ */
+struct dns_msg* val_find_DS(struct module_env* env, uint8_t* nm, size_t nmlen,
+	uint16_t c, struct regional* region);
+
 #endif /* VALIDATOR_VAL_UTILS_H */

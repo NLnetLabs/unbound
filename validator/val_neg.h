@@ -240,13 +240,16 @@ int val_neg_dlvlookup(struct val_neg_cache* neg, uint8_t* qname, size_t len,
  * @param rrset_cache: rrset cache.
  * @param buf: temporary buffer.
  * @param now: to check TTLs against.
+ * @param addsoa: if true, produce result for external consumption.
+ *	if false, do not add SOA - for unbound-internal consumption.
  * @return a reply message if something was found. 
  * 	This reply may still need validation.
  * 	NULL if nothing found (or out of memory).
  */
 struct dns_msg* val_neg_getmsg(struct val_neg_cache* neg, 
 	struct query_info* qinfo, struct regional* region, 
-	struct rrset_cache* rrset_cache, ldns_buffer* buf, uint32_t now);
+	struct rrset_cache* rrset_cache, ldns_buffer* buf, uint32_t now,
+	int addsoa);
 
 
 /**** functions exposed for unit test ****/

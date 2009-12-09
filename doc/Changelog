@@ -1,6 +1,11 @@
 9 December 2009: Wouter
 	- Fix Bug#287(reopened): update of ldns tarball with fix for parse
 	  errors generated for domain names like '.example.com'.
+	- Fix SOA excluded from negative DS responses.  Reported by Hauke
+	  Lampe.  The negative cache did not include proper SOA records for
+	  negative qtype DS responses which makes BIND barf on it, such
+	  responses are now only used internally.
+	- Fix negative cache lookup of closestencloser check of DS type bit.
 
 8 December 2009: Wouter
 	- Fix for lookup of parent-child disagreement domains, where the

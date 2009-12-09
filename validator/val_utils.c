@@ -44,7 +44,10 @@
 #include "validator/val_kentry.h"
 #include "validator/val_sigcrypt.h"
 #include "validator/val_anchor.h"
+#include "validator/val_nsec.h"
+#include "validator/val_neg.h"
 #include "services/cache/rrset.h"
+#include "services/cache/dns.h"
 #include "util/data/msgreply.h"
 #include "util/data/packed_rrset.h"
 #include "util/data/dname.h"
@@ -880,4 +883,39 @@ int val_has_signed_nsecs(struct reply_info* rep, char** reason)
 		*reason = "no signatures over NSECs";
 	else	*reason = "no signatures over NSEC3s";
 	return 0;
+}
+
+struct dns_msg* 
+val_find_DS(struct module_env* env, uint8_t* nm, size_t nmlen, uint16_t c, 
+	struct regional* region)
+{
+	struct dns_msg* msg;
+	struct query_info qinfo;
+	struct ub_packed_rrset_key *rrset = rrset_cache_lookup(
+		env->rrset_cache, nm, nmlen, LDNS_RR_TYPE_DS, c, 0, 
+		*env->now, 0);
+	if(rrset) {
+		/* DS rrset exists. Return it to the validator immediately*/
+		struct ub_packed_rrset_key* copy = packed_rrset_copy_region(
+			rrset, region, *env->now);
+		lock_rw_unlock(&rrset->entry.lock);
+		if(!copy)
+			return NULL;
+		msg = dns_msg_create(nm, nmlen, LDNS_RR_TYPE_DS, c, region, 1);
+		if(!msg)
+			return NULL;
+		msg->rep->rrsets[0] = copy;
+		msg->rep->rrset_count++;
+		msg->rep->an_numrrsets++;
+		return msg;
+	}
+	/* lookup in rrset and negative cache for NSEC/NSEC3 */
+	qinfo.qname = nm;
+	qinfo.qname_len = nmlen;
+	qinfo.qtype = LDNS_RR_TYPE_DS;
+	qinfo.qclass = c;
+	/* do not add SOA to reply message, it is going to be used internal */
+	msg = val_neg_getmsg(env->neg_cache, &qinfo, region, env->rrset_cache,
+		env->scratch_buffer, *env->now, 0);
+	return msg;
 }
