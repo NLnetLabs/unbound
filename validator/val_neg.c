@@ -1430,7 +1430,7 @@ val_neg_getmsg(struct val_neg_cache* neg, struct query_info* qinfo,
 
 	msg = neg_nsec3_proof_ds(zone, qinfo->qname, qinfo->qname_len, 
 		zname_labs+1, buf, rrset_cache, region, now);
-	if(addsoa && !add_soa(rrset_cache, now, region, msg, zone)) {
+	if(msg && addsoa && !add_soa(rrset_cache, now, region, msg, zone)) {
 		lock_basic_unlock(&neg->lock);
 		return NULL;
 	}
