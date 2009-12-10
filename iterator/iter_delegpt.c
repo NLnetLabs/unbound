@@ -172,6 +172,8 @@ delegpt_add_addr(struct delegpt* dp, struct regional* region,
 		if((a = delegpt_find_addr(dp, addr, addrlen))) {
 			if(bogus)
 				a->bogus = bogus;
+			if(!lame)
+				a->lame = 0;
 			return 1;
 		}
 	}
@@ -420,9 +422,9 @@ delegpt_add_rrset(struct delegpt* dp, struct regional* region,
 	if(ntohs(rrset->rk.type) == LDNS_RR_TYPE_NS)
 		return delegpt_rrset_add_ns(dp, region, rrset);
 	else if(ntohs(rrset->rk.type) == LDNS_RR_TYPE_A)
-		return delegpt_add_rrset_A(dp, region, rrset, 0, 0);
+		return delegpt_add_rrset_A(dp, region, rrset, 0, 1);
 	else if(ntohs(rrset->rk.type) == LDNS_RR_TYPE_AAAA)
-		return delegpt_add_rrset_AAAA(dp, region, rrset, 0, 0);
+		return delegpt_add_rrset_AAAA(dp, region, rrset, 0, 1);
 	log_warn("Unknown rrset type added to delegpt");
 	return 1;
 }
