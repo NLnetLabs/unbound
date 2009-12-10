@@ -1570,11 +1570,6 @@ dnskey_verify_rrset_sig(struct regional* region, ldns_buffer* buf,
 
 	/* original ttl, always ok */
 
-	/* verify inception, expiration dates */
-	if(!check_dates(ve, now, sig+2+8, sig+2+12, reason)) {
-		return sec_status_bogus;
-	}
-
 	if(!*buf_canon) {
 		/* create rrset canonical format in buffer, ready for 
 		 * signature */
@@ -1597,9 +1592,16 @@ dnskey_verify_rrset_sig(struct regional* region, ldns_buffer* buf,
 	sec = verify_canonrrset(buf, (int)sig[2+2],
 		sigblock, sigblock_len, key, keylen, reason);
 	
-	/* check if TTL is too high - reduce if so */
 	if(sec == sec_status_secure) {
+		/* check if TTL is too high - reduce if so */
 		adjust_ttl(ve, now, rrset, sig+2+4, sig+2+8, sig+2+12);
+
+		/* verify inception, expiration dates 
+		 * Do this last so that if you ignore expired-sigs the
+		 * rest is sure to be OK. */
+		if(!check_dates(ve, now, sig+2+8, sig+2+12, reason)) {
+			return sec_status_bogus;
+		}
 	}
 
 	return sec;

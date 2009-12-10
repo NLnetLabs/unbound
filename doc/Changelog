@@ -2,6 +2,7 @@
 	- requirements.txt updated with design choice explanations.
 	- Reading fixes: fix to set unlame when child confirms parent glue,
 	  and fix to avoid duplicate addresses in delegation point.
+	- verify_rrsig routine checks expiration last.
 
 9 December 2009: Wouter
 	- Fix Bug#287(reopened): update of ldns tarball with fix for parse
