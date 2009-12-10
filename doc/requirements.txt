@@ -260,3 +260,24 @@ o NXDOMAIN and SOA serial numbers.
   updated more carefully.  If one of the NSEC records in an NXDOMAIN is
   updated from another query, the NXDOMAIN is dropped from the cache,
   and queried for again, so that its proof can be checked again.
+
+o SOA records in negative cached answers for DS queries.
+  The current unbound code uses a negative cache for queries for type DS.
+  This speeds up building chains of trust, and uses NSEC and NSEC3
+  (optout) information to speed up lookups.  When used internally,
+  the bare NSEC(3) information is sufficient, probably picked up from
+  a referral.  When answering to clients, a SOA record is needed for
+  the correct message format, a SOA record is picked from the cache
+  (and may not actually match the serial number of the SOA for which the
+  NSEC and NSEC3 records were obtained) if available otherwise network
+  queries are performed to get the data.
+
+o Parent and child with different nameserver information.
+  A misconfiguration that sometimes happens is where the parent and child
+  have different NS, glue information.  The child is authoritative, and
+  unbound will not trust information from the parent nameservers as the
+  final answer.  To help lookups, unbound will however use the parent-side
+  version of the glue as a last resort lookup.  This resolves lookups for
+  those misconfigured domains where the servers reported by the parent
+  are the only ones working, and servers reported by the child do not.
+

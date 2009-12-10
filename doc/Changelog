@@ -1,3 +1,6 @@
+10 December 2009: Wouter
+	- requirements.txt updated with design choice explanations.
+
 9 December 2009: Wouter
 	- Fix Bug#287(reopened): update of ldns tarball with fix for parse
 	  errors generated for domain names like '.example.com'.
