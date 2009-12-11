@@ -1,3 +1,6 @@
+11 December 2009: Wouter
+	- on IPv4 UDP turn off DF flag.
+
 10 December 2009: Wouter
 	- requirements.txt updated with design choice explanations.
 	- Reading fixes: fix to set unlame when child confirms parent glue,

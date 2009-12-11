@@ -251,6 +251,25 @@ create_udp_sock(int family, int socktype, struct sockaddr* addr,
 			return -1;
 		}
 # endif /* IPv6 MTU */
+	} else if(family == AF_INET) {
+#  if defined(IP_MTU_DISCOVER) && defined(IP_PMTUDISC_DONT)
+		int action = IP_PMTUDISC_DONT;
+		if (setsockopt(s, IPPROTO_IP, IP_MTU_DISCOVER, 
+			&action, (socklen_t)sizeof(action)) < 0) {
+			log_err("setsockopt(..., IP_MTU_DISCOVER, "
+				"IP_PMTUDISC_DONT...) failed: %s",
+				strerror(errno));
+			return -1;
+		}
+#  elif defined(IP_DONTFRAG)
+		int off = 0;
+		if (setsockopt(s, IPPROTO_IP, IP_DONTFRAG, 
+			&off, (socklen_t)sizeof(off)) < 0) {
+			log_err("setsockopt(..., IP_DONTFRAG, ...) failed: %s",
+				strerror(errno));
+			return -1;
+		}
+#  endif /* IPv4 MTU */
 	}
 	if(bind(s, (struct sockaddr*)addr, addrlen) != 0) {
 		*noproto = 0;
