@@ -462,6 +462,11 @@ hints_lookup_stub(struct iter_hints* hints, uint8_t* qname,
 	return NULL;
 }
 
+int hints_next_root(struct iter_hints* hints, uint16_t* qclass)
+{
+	return name_tree_next_root(&hints->tree, qclass);
+}
+
 size_t 
 hints_get_mem(struct iter_hints* hints)
 {

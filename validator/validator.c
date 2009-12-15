@@ -305,6 +305,7 @@ needs_validation(struct module_qstate* qstate, int ret_rc,
 		verbose(VERB_ALGO, "cannot validate RRSIG, no sigs on sigs.");
 		return 0;
 	}
+
 	return 1;
 }
 
@@ -2139,6 +2140,16 @@ val_operate(struct module_qstate* qstate, enum module_ev event, int id,
 			return;
 		}
 		if(already_validated(qstate->return_msg)) {
+			qstate->ext_state[id] = module_finished;
+			return;
+		}
+		/* qclass ANY should have validation result from spawned 
+		 * queries. If we get here, it is bogus or an internal error */
+		if(qstate->qinfo.qclass == LDNS_RR_CLASS_ANY) {
+			verbose(VERB_ALGO, "cannot validate classANY: bogus");
+			if(qstate->return_msg)
+				qstate->return_msg->rep->security =
+					sec_status_bogus;
 			qstate->ext_state[id] = module_finished;
 			return;
 		}

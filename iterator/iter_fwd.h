@@ -55,7 +55,7 @@ struct iter_forwards {
 	struct regional* region;
 	/** 
 	 * Zones are stored in this tree. Sort order is specially chosen.
-	 * first sorted on qtype. Then on dname in nsec-like order, so that
+	 * first sorted on qclass. Then on dname in nsec-like order, so that
 	 * a lookup on class, name will return an exact match or the closest
 	 * match which gives the ancestor needed.
 	 * contents of type iter_forward_zone.
@@ -127,6 +127,14 @@ struct delegpt* forwards_lookup(struct iter_forwards* fwd,
  */
 struct delegpt* forwards_lookup_root(struct iter_forwards* fwd, 
 	uint16_t qclass);
+
+/**
+ * Find next root item in forwards lookup tree.
+ * @param fwd: the forward storage
+ * @param qclass: class to look at next, or higher.
+ * @return false if none found, or if true stored in qclass.
+ */
+int forwards_next_root(struct iter_forwards* fwd, uint16_t* qclass);
 
 /**
  * Get memory in use by forward storage

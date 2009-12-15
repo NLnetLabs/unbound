@@ -230,3 +230,53 @@ struct addr_tree_node* addr_tree_lookup(rbtree_t* tree,
         }
         return result;
 }
+
+int
+name_tree_next_root(rbtree_t* tree, uint16_t* dclass)
+{
+	struct name_tree_node key;
+	rbnode_t* n;
+	struct name_tree_node* p;
+	if(*dclass == 0) {
+		/* first root item is first item in tree */
+		n = rbtree_first(tree);
+		if(n == RBTREE_NULL)
+			return 0;
+		p = (struct name_tree_node*)n;
+		if(dname_is_root(p->name)) {
+			*dclass = p->dclass;
+			return 1;
+		}
+		/* root not first item? search for higher items */
+		*dclass = p->dclass + 1;
+		return name_tree_next_root(tree, dclass);
+	}
+	/* find class n in tree, we may get a direct hit, or if we don't
+	 * this is the last item of the previous class so rbtree_next() takes
+	 * us to the next root (if any) */
+	key.node.key = &key;
+	key.name = (uint8_t*)"\000";
+	key.len = 1;
+	key.labs = 0;
+	key.dclass = *dclass;
+	n = NULL;
+	if(rbtree_find_less_equal(tree, &key, &n)) {
+		/* exact */
+		return 1;
+	} else {
+		/* smaller element */
+		if(!n || n == RBTREE_NULL)
+			return 0; /* nothing found */
+		n = rbtree_next(n);
+		if(n == RBTREE_NULL)
+			return 0; /* no higher */
+		p = (struct name_tree_node*)n;
+		if(dname_is_root(p->name)) {
+			*dclass = p->dclass;
+			return 1;
+		}
+		/* not a root node, return next higher item */
+		*dclass = p->dclass+1;
+		return name_tree_next_root(tree, dclass);
+	}
+}

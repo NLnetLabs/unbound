@@ -150,6 +150,10 @@ enum iter_state {
 	/** Responses to priming queries finish at this state. */
 	PRIME_RESP_STATE,
 
+	/** Collecting query class information, for qclass=ANY, when
+	 * it spawns off queries for every class, it returns here. */
+	COLLECT_CLASS_STATE,
+
 	/** Responses that are to be returned upstream end at this state. 
 	 * As well as responses to target queries. */
 	FINISHED_STATE

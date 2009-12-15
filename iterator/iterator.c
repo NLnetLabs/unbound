@@ -853,6 +853,12 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 		return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
 	}
 
+	/* If the request is qclass=ANY, setup to generate each class */
+	if(qstate->qinfo.qclass == LDNS_RR_CLASS_ANY) {
+		iq->qchase.qclass = 0;
+		return next_state(iq, COLLECT_CLASS_STATE);
+	}
+
 	/* Resolver Algorithm Step 1 -- Look for the answer in local data. */
 
 	/* This either results in a query restart (CNAME cache response), a
@@ -1903,6 +1909,150 @@ processTargetResponse(struct module_qstate* qstate, int id,
 	}
 }
 
+/**
+ * Process response for qclass=ANY queries for a particular class.
+ * Append to result or error-exit.
+ *
+ * @param qstate: query state.
+ * @param id: module id.
+ * @param forq: super query state.
+ */
+static void
+processClassResponse(struct module_qstate* qstate, int id,
+	struct module_qstate* forq)
+{
+	struct iter_qstate* foriq = (struct iter_qstate*)forq->minfo[id];
+	struct dns_msg* from = qstate->return_msg;
+	log_query_info(VERB_ALGO, "processClassResponse", &qstate->qinfo);
+	log_query_info(VERB_ALGO, "processClassResponse super", &forq->qinfo);
+	if(qstate->return_rcode != LDNS_RCODE_NOERROR) {
+		/* cause servfail for qclass ANY query */
+		foriq->response = NULL;
+		foriq->state = FINISHED_STATE;
+		return;
+	}
+	/* append result */
+	if(!foriq->response) {
+		/* allocate the response: copy RCODE, sec_state */
+		foriq->response = dns_copy_msg(from, forq->region);
+		if(!foriq->response) {
+			log_err("malloc failed for qclass ANY response"); 
+			foriq->state = FINISHED_STATE;
+			return;
+		}
+		foriq->response->qinfo.qclass = forq->qinfo.qclass;
+		/* qclass ANY does not receive the AA flag on replies */
+		foriq->response->rep->authoritative = 0; 
+	} else {
+		struct dns_msg* to = foriq->response;
+		/* add _from_ this response _to_ existing collection */
+		/* if there are records, copy RCODE */
+		/* lower sec_state if this message is lower */
+		if(from->rep->rrset_count != 0) {
+			size_t n = from->rep->rrset_count+to->rep->rrset_count;
+			struct ub_packed_rrset_key** dest;
+			/* copy appropriate rcode */
+			to->rep->flags = from->rep->flags;
+			/* copy rrsets */
+			dest = regional_alloc(forq->region, sizeof(dest[0])*n);
+			if(!dest) {
+				log_err("malloc failed in collect ANY"); 
+				foriq->state = FINISHED_STATE;
+				return;
+			}
+			/* copy AN */
+			memcpy(dest, to->rep->rrsets, to->rep->an_numrrsets
+				* sizeof(dest[0]));
+			dest += to->rep->an_numrrsets;
+			memcpy(dest, from->rep->rrsets, from->rep->an_numrrsets
+				* sizeof(dest[0]));
+			dest += from->rep->an_numrrsets;
+			/* copy NS */
+			memcpy(dest, to->rep->rrsets+to->rep->an_numrrsets,
+				to->rep->ns_numrrsets * sizeof(dest[0]));
+			dest += to->rep->ns_numrrsets;
+			memcpy(dest, from->rep->rrsets+from->rep->an_numrrsets,
+				from->rep->ns_numrrsets * sizeof(dest[0]));
+			dest += from->rep->ns_numrrsets;
+			/* copy AR */
+			memcpy(dest, to->rep->rrsets+to->rep->an_numrrsets+
+				to->rep->ns_numrrsets,
+				to->rep->ar_numrrsets * sizeof(dest[0]));
+			dest += to->rep->ar_numrrsets;
+			memcpy(dest, from->rep->rrsets+from->rep->an_numrrsets+
+				from->rep->ns_numrrsets,
+				from->rep->ar_numrrsets * sizeof(dest[0]));
+			/* update counts */
+			to->rep->an_numrrsets += from->rep->an_numrrsets;
+			to->rep->ns_numrrsets += from->rep->ns_numrrsets;
+			to->rep->ar_numrrsets += from->rep->ar_numrrsets;
+			to->rep->rrset_count = n;
+		}
+		if(from->rep->security < to->rep->security) /* lowest sec */
+			to->rep->security = from->rep->security;
+		if(from->rep->qdcount != 0) /* insert qd if appropriate */
+			to->rep->qdcount = from->rep->qdcount;
+		if(from->rep->ttl < to->rep->ttl) /* use smallest TTL */
+			to->rep->ttl = from->rep->ttl;
+	}
+	/* are we done? */
+	foriq->num_current_queries --;
+	if(foriq->num_current_queries == 0)
+		foriq->state = FINISHED_STATE;
+}
+	
+/** 
+ * Collect class ANY responses and make them into one response.  This
+ * state is started and it creates queries for all classes (that have
+ * root hints).  The answers are then collected.
+ *
+ * @param qstate: query state.
+ * @param id: module id.
+ * @return true if the event needs more immediate processing, false if not.
+ */
+static int
+processCollectClass(struct module_qstate* qstate, int id)
+{
+	struct iter_qstate* iq = (struct iter_qstate*)qstate->minfo[id];
+	struct iter_env* ie = (struct iter_env*)qstate->env->modinfo[id];
+	struct module_qstate* subq;
+	/* If qchase.qclass == 0 then send out queries for all classes.
+	 * Otherwise, do nothing (wait for all answers to arrive and the
+	 * processClassResponse to put them together, and that moves us
+	 * towards the Finished state when done. */
+	if(iq->qchase.qclass == 0) {
+		uint16_t c = 0;
+		iq->qchase.qclass = LDNS_RR_CLASS_ANY;
+		while(iter_get_next_root(ie->hints, qstate->env->fwds, &c)) {
+			/* generate query for this class */
+			log_nametypeclass(VERB_ALGO, "spawn collect query",
+				qstate->qinfo.qname, qstate->qinfo.qtype, c);
+			if(!generate_sub_request(qstate->qinfo.qname,
+				qstate->qinfo.qname_len, qstate->qinfo.qtype,
+				c, qstate, id, iq, INIT_REQUEST_STATE,
+				FINISHED_STATE, &subq, 
+				(int)!(qstate->query_flags&BIT_CD))) {
+				return error_response(qstate, id, 
+					LDNS_RCODE_SERVFAIL);
+			}
+			/* ignore subq, no special init required */
+			iq->num_current_queries ++;
+			if(c == 0xffff)
+				break;
+			else c++;
+		}
+		/* if no roots are configured at all, return */
+		if(iq->num_current_queries == 0) {
+			verbose(VERB_ALGO, "No hints or fwds, giving up "
+				"on qclass ANY");
+			return error_response(qstate, id, LDNS_RCODE_REFUSED);
+		}
+		/* return false, wait for queries to return */
+	}
+	/* if woke up here because of an answer, wait for more answers */
+	return 0;
+}
+
 /** 
  * This handles the final state for first-tier responses (i.e., responses to
  * externally generated queries).
@@ -1979,7 +2129,9 @@ void
 iter_inform_super(struct module_qstate* qstate, int id, 
 	struct module_qstate* super)
 {
-	if(qstate->return_rcode != LDNS_RCODE_NOERROR)
+	if(super->qinfo.qclass == LDNS_RR_CLASS_ANY)
+		processClassResponse(qstate, id, super);
+	else if(qstate->return_rcode != LDNS_RCODE_NOERROR)
 		error_supers(qstate, id, super);
 	else if(qstate->is_priming)
 		prime_supers(qstate, id, super);
@@ -2024,6 +2176,9 @@ iter_handle(struct module_qstate* qstate, struct iter_qstate* iq,
 				break;
 			case PRIME_RESP_STATE:
 				cont = processPrimeResponse(qstate, id);
+				break;
+			case COLLECT_CLASS_STATE:
+				cont = processCollectClass(qstate, id);
 				break;
 			case FINISHED_STATE:
 				cont = processFinished(qstate, iq, id);
@@ -2252,6 +2407,8 @@ iter_state_to_string(enum iter_state state)
 		return "QUERY TARGETS STATE";
 	case PRIME_RESP_STATE :
 		return "PRIME RESPONSE STATE";
+	case COLLECT_CLASS_STATE :
+		return "COLLECT CLASS STATE";
 	case QUERY_RESP_STATE :
 		return "QUERY RESPONSE STATE";
 	case FINISHED_STATE :
@@ -2269,6 +2426,7 @@ iter_state_is_responsestate(enum iter_state s)
 		case INIT_REQUEST_2_STATE :
 		case INIT_REQUEST_3_STATE :
 		case QUERYTARGETS_STATE :
+		case COLLECT_CLASS_STATE :
 			return 0;
 		default:
 			break;

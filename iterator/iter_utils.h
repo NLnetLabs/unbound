@@ -44,6 +44,8 @@
 #define ITERATOR_ITER_UTILS_H
 #include "iterator/iter_resptype.h"
 struct iter_env;
+struct iter_hints;
+struct iter_forwards;
 struct config_file;
 struct module_env;
 struct delegpt_addr;
@@ -231,5 +233,15 @@ void iter_store_inzone_glue(struct module_env* env, struct query_info* qinfo,
  */
 int iter_lookup_inzone_glue(struct module_env* env, struct delegpt* dp,
 	struct regional* region, struct query_info* qinfo);
+
+/**
+ * Lookup next root-hint or root-forward entry.
+ * @param hints: the hints.
+ * @param fwd: the forwards.
+ * @param c: the class to start searching at. 0 means find first one.
+ * @return false if no classes found, true if found and returned in c.
+ */
+int iter_get_next_root(struct iter_hints* hints, struct iter_forwards* fwd,
+	uint16_t* c);
 
 #endif /* ITERATOR_ITER_UTILS_H */

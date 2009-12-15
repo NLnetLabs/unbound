@@ -56,7 +56,7 @@ struct iter_hints {
 	struct regional* region;
 	/** 
 	 * Hints are stored in this tree. Sort order is specially chosen.
-	 * first sorted on qtype. Then on dname in nsec-like order, so that
+	 * first sorted on qclass. Then on dname in nsec-like order, so that
 	 * a lookup on class, name will return an exact match or the closest
 	 * match which gives the ancestor needed.
 	 * contents of type iter_hints_stub. The class IN root is in here.
@@ -104,6 +104,18 @@ int hints_apply_cfg(struct iter_hints* hints, struct config_file* cfg);
  * @return: NULL if no hints, or a ptr to stored hints.
  */
 struct delegpt* hints_lookup_root(struct iter_hints* hints, uint16_t qclass);
+
+/**
+ * Find next root hints (to cycle through all root hints).
+ * @param hints: hint storage
+ * @param qclass: class for which root hints are sought.
+ * 	0 means give the first available root hints class.
+ * 	x means, give class x or a higher class if any.
+ * 	returns the found class in this variable.
+ * @return true if a root hint class is found.
+ * 	false if not root hint class is found (qclass may have been changed).
+ */
+int hints_next_root(struct iter_hints* hints, uint16_t* qclass);
 
 /**
  * Given a qname/qclass combination, and the delegation point from the cache

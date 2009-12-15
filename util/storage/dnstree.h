@@ -140,6 +140,14 @@ struct name_tree_node* name_tree_lookup(rbtree_t* tree, uint8_t* name,
 	size_t len, int labs, uint16_t dclass);
 
 /**
+ * Find next root item in name tree.
+ * @param tree: the nametree.
+ * @param dclass: the class to look for next (or higher).
+ * @return false if no classes found, true means class put into c.
+ */
+int name_tree_next_root(rbtree_t* tree, uint16_t* dclass);
+
+/**
  * Init addr tree to be empty.
  * @param tree: to init.
  */
