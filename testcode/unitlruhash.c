@@ -483,7 +483,7 @@ void lruhash_test()
 	/* also small in size so that reclaim has to be done quickly. */
 	struct lruhash* table ;
 	printf("lruhash test\n");
-	table = lruhash_create(2, 4096, 
+	table = lruhash_create(2, 8192, 
 		test_slabhash_sizefunc, test_slabhash_compfunc, 
 		test_slabhash_delkey, test_slabhash_deldata, NULL);
 	test_bin_find_entry(table);
@@ -491,7 +491,7 @@ void lruhash_test()
 	test_short_table(table);
 	test_long_table(table);
 	lruhash_delete(table);
-	table = lruhash_create(2, 4096, 
+	table = lruhash_create(2, 8192, 
 		test_slabhash_sizefunc, test_slabhash_compfunc, 
 		test_slabhash_delkey, test_slabhash_deldata, NULL);
 	test_threaded_table(table);

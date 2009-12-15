@@ -362,13 +362,13 @@ void slabhash_test()
 	/* also small in size so that reclaim has to be done quickly. */
 	struct slabhash* table;
 	printf("slabhash test\n");
-	table = slabhash_create(4, 2, 5200, 
+	table = slabhash_create(4, 2, 10400, 
 		test_slabhash_sizefunc, test_slabhash_compfunc, 
 		test_slabhash_delkey, test_slabhash_deldata, NULL);
 	test_short_table(table);
 	test_long_table(table);
 	slabhash_delete(table);
-	table = slabhash_create(4, 2, 5200, 
+	table = slabhash_create(4, 2, 10400, 
 		test_slabhash_sizefunc, test_slabhash_compfunc, 
 		test_slabhash_delkey, test_slabhash_deldata, NULL);
 	test_threaded_table(table);
