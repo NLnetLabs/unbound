@@ -1,6 +1,7 @@
 15 December 2009: Wouter
 	- Answer to qclass=ANY queries, with class IN contents.
 	  Test that validation also works.
+	- updated ldns snapshot tarball with latest fixes (parsing records).
 
 11 December 2009: Wouter
 	- on IPv4 UDP turn off DF flag.

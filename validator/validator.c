@@ -305,7 +305,6 @@ needs_validation(struct module_qstate* qstate, int ret_rc,
 		verbose(VERB_ALGO, "cannot validate RRSIG, no sigs on sigs.");
 		return 0;
 	}
-
 	return 1;
 }
 

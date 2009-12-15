@@ -1950,7 +1950,7 @@ processClassResponse(struct module_qstate* qstate, int id,
 		/* lower sec_state if this message is lower */
 		if(from->rep->rrset_count != 0) {
 			size_t n = from->rep->rrset_count+to->rep->rrset_count;
-			struct ub_packed_rrset_key** dest;
+			struct ub_packed_rrset_key** dest, **d;
 			/* copy appropriate rcode */
 			to->rep->flags = from->rep->flags;
 			/* copy rrsets */
@@ -1960,6 +1960,7 @@ processClassResponse(struct module_qstate* qstate, int id,
 				foriq->state = FINISHED_STATE;
 				return;
 			}
+			d = dest;
 			/* copy AN */
 			memcpy(dest, to->rep->rrsets, to->rep->an_numrrsets
 				* sizeof(dest[0]));
@@ -1983,6 +1984,7 @@ processClassResponse(struct module_qstate* qstate, int id,
 				from->rep->ns_numrrsets,
 				from->rep->ar_numrrsets * sizeof(dest[0]));
 			/* update counts */
+			to->rep->rrsets = d;
 			to->rep->an_numrrsets += from->rep->an_numrrsets;
 			to->rep->ns_numrrsets += from->rep->ns_numrrsets;
 			to->rep->ar_numrrsets += from->rep->ar_numrrsets;
@@ -2043,7 +2045,7 @@ processCollectClass(struct module_qstate* qstate, int id)
 		}
 		/* if no roots are configured at all, return */
 		if(iq->num_current_queries == 0) {
-			verbose(VERB_ALGO, "No hints or fwds, giving up "
+			verbose(VERB_ALGO, "No root hints or fwds, giving up "
 				"on qclass ANY");
 			return error_response(qstate, id, LDNS_RCODE_REFUSED);
 		}
