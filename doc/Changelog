@@ -1,3 +1,7 @@
+17 December 2009: Wouter
+	- review comments.
+	- tag 1.4.1.
+	
 15 December 2009: Wouter
 	- Answer to qclass=ANY queries, with class IN contents.
 	  Test that validation also works.
