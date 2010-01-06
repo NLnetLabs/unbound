@@ -467,7 +467,7 @@ nsec3_hash_test(const char* fname)
 void 
 verify_test()
 {
-	printf("verify test\n");
+	unit_show_feature("signature verify");
 	verifytest_file("testdata/test_signatures.1", "20070818005004");
 	verifytest_file("testdata/test_signatures.2", "20080414005004");
 	verifytest_file("testdata/test_signatures.3", "20080416005004");

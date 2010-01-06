@@ -78,7 +78,7 @@ dname_valid(uint8_t* dname, size_t maxlen)
 		if(labellen&0xc0)
 			return 0; /* no compression ptrs allowed */
 		len += labellen + 1;
-		if(len > LDNS_MAX_DOMAINLEN)
+		if(len >= LDNS_MAX_DOMAINLEN)
 			return 0; /* too long */
 		if(len > maxlen)
 			return 0; /* does not fit in memory allocation */

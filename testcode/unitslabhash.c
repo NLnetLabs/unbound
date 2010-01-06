@@ -361,7 +361,7 @@ void slabhash_test()
 	/* start very very small array, so it can do lots of table_grow() */
 	/* also small in size so that reclaim has to be done quickly. */
 	struct slabhash* table;
-	printf("slabhash test\n");
+	unit_show_feature("slabhash");
 	table = slabhash_create(4, 2, 10400, 
 		test_slabhash_sizefunc, test_slabhash_compfunc, 
 		test_slabhash_delkey, test_slabhash_deldata, NULL);

@@ -506,7 +506,7 @@ void msgparse_test()
 	alloc_init(&super_a, NULL, 0);
 	alloc_init(&alloc, &super_a, 2);
 
-	printf("testmsgparse\n");
+	unit_show_feature("message parse");
 	simpletest(pkt, &alloc, out);
 	/* plain hex dumps, like pcat */
 	testfromfile(pkt, &alloc, out, "testdata/test_packets.1");

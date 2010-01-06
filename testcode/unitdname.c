@@ -64,6 +64,7 @@ dname_to_buf(ldns_buffer* b, const char* str)
 static void 
 dname_test_qdl(ldns_buffer* buff)
 {
+	unit_show_func("util/data/dname.c", "query_dname_len");
 	unit_assert( query_dname_len(buff) == 0);
 	unit_assert( query_dname_len(dname_to_buf(buff, ".")) == 1 );
 	unit_assert( query_dname_len(dname_to_buf(buff, "bla.foo.")) == 9 );
@@ -75,6 +76,7 @@ dname_test_qdl(ldns_buffer* buff)
 static void
 dname_test_qdtl(ldns_buffer* buff)
 {
+	unit_show_func("util/data/dname.c", "query_dname_tolower");
 	ldns_buffer_write_at(buff, 0, "\012abCDeaBCde\003cOm\000", 16);
 	query_dname_tolower(ldns_buffer_begin(buff));
 	unit_assert( memcmp(ldns_buffer_begin(buff), 
@@ -98,6 +100,7 @@ dname_test_qdtl(ldns_buffer* buff)
 static void
 dname_test_query_dname_compare()
 {
+	unit_show_func("util/data/dname.c", "query_dname_compare");
 	unit_assert(query_dname_compare((uint8_t*)"", (uint8_t*)"") == 0);
 	unit_assert(query_dname_compare((uint8_t*)"\001a", 
 					(uint8_t*)"\001a") == 0);
@@ -127,6 +130,7 @@ dname_test_query_dname_compare()
 static void
 dname_test_count_labels()
 {
+	unit_show_func("util/data/dname.c", "dname_count_labels");
 	unit_assert(dname_count_labels((uint8_t*)"") == 1);
 	unit_assert(dname_count_labels((uint8_t*)"\003com") == 2);
 	unit_assert(dname_count_labels((uint8_t*)"\003org") == 2);
@@ -140,6 +144,7 @@ static void
 dname_test_count_size_labels()
 {
 	size_t sz = 0;
+	unit_show_func("util/data/dname.c", "dname_count_size_labels");
 	unit_assert(dname_count_size_labels((uint8_t*)"", &sz) == 1);
 	unit_assert(sz == 1);
 	unit_assert(dname_count_size_labels((uint8_t*)"\003com", &sz) == 2);
@@ -159,6 +164,7 @@ dname_test_count_size_labels()
 static void
 dname_test_pkt_dname_len(ldns_buffer* buff)
 {
+	unit_show_func("util/data/dname.c", "pkt_dname_len");
 	ldns_buffer_clear(buff);
 	ldns_buffer_write(buff, "\000", 1);
 	ldns_buffer_flip(buff);
@@ -265,6 +271,7 @@ static void
 dname_test_dname_lab_cmp()
 {
 	int ml = 0; /* number of labels that matched exactly */
+	unit_show_func("util/data/dname.c", "dname_lab_cmp");
 
 	/* test for equality succeeds */
 	unit_assert(dname_lab_cmp((uint8_t*)"", 1, (uint8_t*)"", 1, &ml) == 0);
@@ -365,6 +372,7 @@ dname_test_dname_lab_cmp()
 static void
 dname_test_subdomain()
 {
+	unit_show_func("util/data/dname.c", "dname_subdomain");
 	unit_assert(dname_subdomain_c(
 		(uint8_t*)"",
 		(uint8_t*)""));
@@ -401,6 +409,7 @@ dname_test_subdomain()
 static void
 dname_test_strict_subdomain()
 {
+	unit_show_func("util/data/dname.c", "dname_strict_subdomain");
 	unit_assert(!dname_strict_subdomain(
 		(uint8_t*)"", 1,
 		(uint8_t*)"", 1));
@@ -437,6 +446,7 @@ dname_test_strict_subdomain()
 static void
 dname_test_isroot()
 {
+	unit_show_func("util/data/dname.c", "dname_isroot");
 	unit_assert(dname_is_root((uint8_t*)"\000"));
 	unit_assert(!dname_is_root((uint8_t*)"\001a\000"));
 	unit_assert(!dname_is_root((uint8_t*)"\005abvcd\003com\000"));
@@ -452,6 +462,7 @@ dname_test_removelabel()
 	uint8_t* orig = (uint8_t*)"\007example\003com\000";
 	uint8_t* n = orig;
 	size_t l = 13;
+	unit_show_func("util/data/dname.c", "dname_remove_label");
 	dname_remove_label(&n, &l);
 	unit_assert( n == orig+8 );
 	unit_assert( l == 5 );
@@ -467,6 +478,7 @@ dname_test_removelabel()
 static void
 dname_test_sigcount()
 {
+	unit_show_func("util/data/dname.c", "dname_signame_label_count");
 	unit_assert(dname_signame_label_count((uint8_t*)"\000") == 0);
 	unit_assert(dname_signame_label_count((uint8_t*)"\001*\000") == 0);
 	unit_assert(dname_signame_label_count((uint8_t*)"\003xom\000") == 1);
@@ -486,6 +498,7 @@ dname_test_sigcount()
 static void
 dname_test_iswild()
 {
+	unit_show_func("util/data/dname.c", "dname_iswild");
 	unit_assert( !dname_is_wild((uint8_t*)"\000") );
 	unit_assert( dname_is_wild((uint8_t*)"\001*\000") );
 	unit_assert( !dname_is_wild((uint8_t*)"\003net\000") );
@@ -496,6 +509,7 @@ dname_test_iswild()
 static void
 dname_test_canoncmp()
 {
+	unit_show_func("util/data/dname.c", "dname_canonical_compare");
 	/* equality */
 	unit_assert( dname_canonical_compare(
 		(uint8_t*)"\000",
@@ -715,6 +729,7 @@ dname_test_canoncmp()
 static void
 dname_test_topdomain()
 {
+	unit_show_func("util/data/dname.c", "dname_get_shared_topdomain");
 	unit_assert( query_dname_compare(
 		dname_get_shared_topdomain(
 			(uint8_t*)"",
@@ -730,6 +745,52 @@ dname_test_topdomain()
 			(uint8_t*)"\003www\007example\003com",
 			(uint8_t*)"\003bla\007example\003com"), 
 		(uint8_t*)"\007example\003com") == 0);
+}
+
+/** Test dname_valid */
+static void
+dname_test_valid()
+{
+	unit_show_func("util/data/dname.c", "dname_valid");
+	unit_assert( dname_valid( 
+			(uint8_t*)"\003www\007example\003com", 255) == 17);
+	unit_assert( dname_valid((uint8_t*)"", 255) == 1);
+	unit_assert( dname_valid( (uint8_t*)
+		"\020a1cdef5555544444"
+		"\020a2cdef5555544444"
+		"\020a3cdef5555544444"
+		"\020a4cdef5555544444"
+		"\020a5cdef5555544444"
+		"\020a6cdef5555544444"
+		"\020a7cdef5555544444"
+		"\020a8cdef5555544444"
+		"\020a9cdef5555544444"
+		"\020aAcdef5555544444"
+		"\020aBcdef5555544444"
+		"\020aCcdef5555544444"
+		"\020aDcdef5555544444"
+		"\020aEcdef5555544444"	/* 238 up to here */
+		"\007aabbccd"		/* 246 up to here */
+		"\007example\000"	/* 255 to here */
+		, 255) == 255);
+	unit_assert( dname_valid( (uint8_t*)
+		"\020a1cdef5555544444"
+		"\020a2cdef5555544444"
+		"\020a3cdef5555544444"
+		"\020a4cdef5555544444"
+		"\020a5cdef5555544444"
+		"\020a6cdef5555544444"
+		"\020a7cdef5555544444"
+		"\020a8cdef5555544444"
+		"\020a9cdef5555544444"
+		"\020aAcdef5555544444"
+		"\020aBcdef5555544444"
+		"\020aCcdef5555544444"
+		"\020aDcdef5555544444"
+		"\020aEcdef5555544444"	/* 238 up to here */
+		"\007aabbccd"		/* 246 up to here */
+		"\010exampleX\000"	/* 256 to here */
+		, 4096) == 0);
 }
 
 void dname_test()
@@ -751,5 +812,6 @@ void dname_test()
 	dname_test_iswild();
 	dname_test_canoncmp();
 	dname_test_topdomain();
+	dname_test_valid();
 	ldns_buffer_free(buff);
 }

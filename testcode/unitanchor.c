@@ -124,6 +124,7 @@ void anchors_test()
 {
 	ldns_buffer* buff = ldns_buffer_new(65800);
 	struct val_anchors* a;
+	unit_show_feature("trust anchor store");
 	unit_assert(a = anchors_create());
 	ldns_buffer_flip(buff);
 	test_anchor_empty(a);

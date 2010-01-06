@@ -51,6 +51,11 @@ extern int testcount;
 #define unit_assert(x) do {testcount++; if(!(x)) { fprintf(stderr, "assertion failure %s:%d\n", __FILE__, __LINE__); exit(1);}} while(0)
 #endif
 
+/** we are now testing this function */
+void unit_show_func(const char* file, const char* func);
+/** we are testing this functionality */
+void unit_show_feature(const char* feature);
+
 /** unit test lruhashtable implementation */
 void lruhash_test();
 /** unit test slabhashtable implementation */

@@ -1,5 +1,6 @@
 6 January 2010: Wouter
 	- iana portlist updated.
+	- bug#291: DNS wireformat max is 255. dname_valid allowed 256 length.
 
 1 January 2010: Wouter
 	- iana portlist updated.

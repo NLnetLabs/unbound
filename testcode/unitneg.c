@@ -530,6 +530,7 @@ void neg_test()
 {
 	struct val_neg_cache* neg;
 	srandom(48);
+	unit_show_feature("negative cache");
 
 	/* create with defaults */
 	neg = val_neg_create(NULL, 1500);
