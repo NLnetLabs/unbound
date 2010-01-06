@@ -193,10 +193,11 @@ iter_filter_unsuitable(struct iter_env* iter_env, struct module_env* env,
 		name, namelen, qtype, &lame, &dnsseclame, &reclame, 
 		&rtt, &lost, now)) {
 		log_addr(VERB_ALGO, "servselect", &a->addr, a->addrlen);
-		verbose(VERB_ALGO, "   rtt=%d%s%s%s", rtt,
+		verbose(VERB_ALGO, "   rtt=%d lost=%d%s%s%s%s", rtt, lost,
 			lame?" LAME":"",
 			dnsseclame?" DNSSEC_LAME":"",
-			reclame?" REC_LAME":"");
+			reclame?" REC_LAME":"",
+			a->lame?" ADDR_LAME":"");
 		if(lame)
 			return -1; /* server is lame */
 		else if(rtt >= USEFUL_SERVER_TOP_TIMEOUT && 

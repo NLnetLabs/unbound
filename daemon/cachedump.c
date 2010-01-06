@@ -815,8 +815,9 @@ print_dp_details(SSL* ssl, struct worker* worker, struct delegpt* dp)
 				return;
 			continue; /* skip stuff not in infra cache */
 		}
-		if(!ssl_printf(ssl, "%s%s%srtt %d msec, %d lost. ",
+		if(!ssl_printf(ssl, "%s%s%s%srtt %d msec, %d lost. ",
 			lame?"LAME ":"", dlame?"NoDNSSEC ":"",
+			a->lame?"AddrWasParentSide ":"",
 			rlame?"NoAuthButRecursive ":"", rtt, lost))
 			return;
 		if(infra_host(worker->env.infra_cache, &a->addr, a->addrlen,
