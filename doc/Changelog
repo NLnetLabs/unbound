@@ -2,6 +2,8 @@
 	- iana portlist updated.
 	- bug#291: DNS wireformat max is 255. dname_valid allowed 256 length.
 	- verbose output includes parent-side-address notion for lameness.
+	- documented val-log-level: 2 setting in example.conf and man page.
+	- change unbound-control-setup from 1024(sha1) to 1536(sha256).
 
 1 January 2010: Wouter
 	- iana portlist updated.

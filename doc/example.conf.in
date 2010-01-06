@@ -357,7 +357,7 @@ server:
 	# val-permissive-mode: no
 
 	# Have the validator log failed validations for your diagnosis.
-	# 0: off. 1: A line per failed user query.
+	# 0: off. 1: A line per failed user query. 2: With reason and bad IP.
 	# val-log-level: 0
 
 	# It is possible to configure NSEC3 maximum iteration counts per

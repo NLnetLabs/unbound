@@ -46,7 +46,10 @@ CLIENTNAME=unbound-control
 DAYS=7200
 
 # size of keys in bits
-BITS=1024
+BITS=1536
+
+# hash algorithm
+HASH=sha256
 
 # base name for unbound server keys
 SVR_BASE=unbound_server
@@ -84,7 +87,7 @@ done
 
 # go!:
 echo "setup in directory $DESTDIR"
-cd "$DESTDIR" || error "could not cd"
+cd "$DESTDIR" || error "could not cd to $DESTDIR"
 
 # create certificate keys; do not recreate if they already exist.
 if test -f $SVR_BASE.key; then
@@ -104,7 +107,7 @@ fi
 cat >request.cfg <<EOF
 [req]
 default_bits=$BITS
-default_md=sha1
+default_md=$HASH
 prompt=no
 distinguished_name=req_distinguished_name
 
@@ -122,7 +125,7 @@ openssl x509 -in $SVR_BASE.pem -addtrust serverAuth -out $SVR_BASE"_trust.pem"
 cat >request.cfg <<EOF
 [req]
 default_bits=$BITS
-default_md=sha1
+default_md=$HASH
 prompt=no
 distinguished_name=req_distinguished_name
 
@@ -132,7 +135,7 @@ EOF
 test -f request.cfg || error "could not create request.cfg"
 
 echo "create $CTL_BASE.pem (signed client certificate)"
-openssl req -key $CTL_BASE.key -config request.cfg -new | openssl x509 -req -days $DAYS -CA $SVR_BASE"_trust.pem" -CAkey $SVR_BASE.key -CAcreateserial -out $CTL_BASE.pem
+openssl req -key $CTL_BASE.key -config request.cfg -new | openssl x509 -req -days $DAYS -CA $SVR_BASE"_trust.pem" -CAkey $SVR_BASE.key -CAcreateserial -$HASH -out $CTL_BASE.pem
 test -f $CTL_BASE.pem || error "could not create $CTL_BASE.pem"
 # create trusted usage pem
 # openssl x509 -in $CTL_BASE.pem -addtrust clientAuth -out $CTL_BASE"_trust.pem"
