@@ -287,6 +287,17 @@ int mesh_new_callback(struct mesh_area* mesh, struct query_info* qinfo,
 	uint16_t qid, mesh_cb_func_t cb, void* cb_arg);
 
 /**
+ * New prefetch message. Create new query state if needed.
+ * Will run the mesh area queries to process if a new query state is created.
+ *
+ * @param mesh: the mesh.
+ * @param qinfo: query from client.
+ * @param qflags: flags from client query.
+ */
+void mesh_new_prefetch(struct mesh_area* mesh, struct query_info* qinfo,
+	uint16_t qflags);
+
+/**
  * Handle new event from the wire. A serviced query has returned.
  * The query state will be made runnable, and the mesh_area will process
  * query states until processing is complete.

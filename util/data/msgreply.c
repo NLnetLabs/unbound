@@ -78,8 +78,8 @@ parse_create_qinfo(ldns_buffer* pkt, struct msg_parse* msg,
 /** constructor for replyinfo */
 static struct reply_info*
 construct_reply_info_base(struct regional* region, uint16_t flags, size_t qd,
-	uint32_t ttl, size_t an, size_t ns, size_t ar, size_t total,
-	enum sec_status sec)
+	uint32_t ttl, uint32_t prettl, size_t an, size_t ns, size_t ar, 
+	size_t total, enum sec_status sec)
 {
 	struct reply_info* rep;
 	/* rrset_count-1 because the first ref is part of the struct. */
@@ -94,6 +94,7 @@ construct_reply_info_base(struct regional* region, uint16_t flags, size_t qd,
 	rep->flags = flags;
 	rep->qdcount = qd;
 	rep->ttl = ttl;
+	rep->prefetch_ttl = prettl;
 	rep->an_numrrsets = an;
 	rep->ns_numrrsets = ns;
 	rep->ar_numrrsets = ar;
@@ -116,8 +117,8 @@ static int
 parse_create_repinfo(struct msg_parse* msg, struct reply_info** rep,
 	struct regional* region)
 {
-	*rep = construct_reply_info_base(region, msg->flags, msg->qdcount, 0,
-		msg->an_rrsets, msg->ns_rrsets, msg->ar_rrsets, 
+	*rep = construct_reply_info_base(region, msg->flags, msg->qdcount, 0, 
+		0, msg->an_rrsets, msg->ns_rrsets, msg->ar_rrsets, 
 		msg->rrset_count, sec_status_unchecked);
 	if(!*rep)
 		return 0;
@@ -390,6 +391,7 @@ parse_copy_decompress(ldns_buffer* pkt, struct msg_parse* msg,
 
 		pset = pset->rrset_all_next;
 	}
+	rep->prefetch_ttl = PREFETCH_TTL_CALC(rep->ttl);
 	return 1;
 }
 
@@ -466,6 +468,7 @@ reply_info_set_ttls(struct reply_info* rep, uint32_t timenow)
 {
 	size_t i, j;
 	rep->ttl += timenow;
+	rep->prefetch_ttl += timenow;
 	for(i=0; i<rep->rrset_count; i++) {
 		struct packed_rrset_data* data = (struct packed_rrset_data*)
 			rep->ref[i].key->entry.data;
@@ -654,8 +657,9 @@ reply_info_copy(struct reply_info* rep, struct alloc_cache* alloc,
 {
 	struct reply_info* cp;
 	cp = construct_reply_info_base(region, rep->flags, rep->qdcount, 
-		rep->ttl, rep->an_numrrsets, rep->ns_numrrsets, 
-		rep->ar_numrrsets, rep->rrset_count, rep->security);
+		rep->ttl, rep->prefetch_ttl, rep->an_numrrsets, 
+		rep->ns_numrrsets, rep->ar_numrrsets, rep->rrset_count, 
+		rep->security);
 	if(!cp)
 		return NULL;
 	/* allocate ub_key structures special or not */

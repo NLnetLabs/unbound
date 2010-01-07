@@ -738,6 +738,7 @@ load_msg(SSL* ssl, ldns_buffer* buf, struct worker* worker)
 	rep.flags = (uint16_t)flags;
 	rep.qdcount = (uint16_t)qdcount;
 	rep.ttl = (uint32_t)ttl;
+	rep.prefetch_ttl = PREFETCH_TTL_CALC(rep.ttl);
 	rep.security = (enum sec_status)security;
 	rep.an_numrrsets = (size_t)an;
 	rep.ns_numrrsets = (size_t)ns;

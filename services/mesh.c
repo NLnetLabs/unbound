@@ -286,7 +286,7 @@ void mesh_new_client(struct mesh_area* mesh, struct query_info* qinfo,
 	/* see if it already exists, if not, create one */
 	if(!s) {
 		struct rbnode_t* n;
-		s = mesh_state_create(mesh->env,qinfo, qflags, 0);
+		s = mesh_state_create(mesh->env, qinfo, qflags, 0);
 		if(!s) {
 			log_err("mesh_state_create: out of memory; SERVFAIL");
 			error_encode(rep->c->buffer, LDNS_RCODE_SERVFAIL,
@@ -354,7 +354,7 @@ mesh_new_callback(struct mesh_area* mesh, struct query_info* qinfo,
 	/* see if it already exists, if not, create one */
 	if(!s) {
 		struct rbnode_t* n;
-		s = mesh_state_create(mesh->env,qinfo, qflags, 0);
+		s = mesh_state_create(mesh->env, qinfo, qflags, 0);
 		if(!s) {
 			return 0;
 		}
@@ -386,6 +386,52 @@ mesh_new_callback(struct mesh_area* mesh, struct query_info* qinfo,
 	if(added)
 		mesh_run(mesh, s, module_event_new, NULL);
 	return 1;
+}
+
+void mesh_new_prefetch(struct mesh_area* mesh, struct query_info* qinfo,
+        uint16_t qflags)
+{
+	struct mesh_state* s = mesh_area_find(mesh, qinfo, qflags, 0);
+	struct rbnode_t* n;
+	/* already exists, and for a different purpose perhaps.
+	 * if mesh_no_list, keep it that way. */
+	if(s) {
+		/* make it ignore the cache from now on */
+		if(!s->s.blacklist)
+			sock_list_insert(&s->s.blacklist, NULL, 0, s->s.region);
+		return;
+	}
+	if(!mesh_make_new_space(mesh)) {
+		verbose(VERB_ALGO, "Too many queries. dropped prefetch.");
+		mesh->stats_dropped ++;
+		return;
+	}
+	s = mesh_state_create(mesh->env, qinfo, qflags, 0);
+	if(!s) {
+		log_err("prefetch mesh_state_create: out of memory");
+		return;
+	}
+	n = rbtree_insert(&mesh->all, &s->node);
+	log_assert(n != NULL);
+	/* set detached (it is now) */
+	mesh->num_detached_states++;
+	/* make it ignore the cache */
+	sock_list_insert(&s->s.blacklist, NULL, 0, s->s.region);
+
+	if(s->list_select == mesh_no_list) {
+		/* move to either the forever or the jostle_list */
+		if(mesh->num_forever_states < mesh->max_forever_states) {
+			mesh->num_forever_states ++;
+			mesh_list_insert(s, &mesh->forever_first, 
+				&mesh->forever_last);
+			s->list_select = mesh_forever_list;
+		} else {
+			mesh_list_insert(s, &mesh->jostle_first, 
+				&mesh->jostle_last);
+			s->list_select = mesh_jostle_list;
+		}
+	}
+	mesh_run(mesh, s, module_event_new, NULL);
 }
 
 void mesh_report_reply(struct mesh_area* mesh, struct outbound_entry* e,

@@ -247,6 +247,7 @@ error_response_cache(struct module_qstate* qstate, int id, int rcode)
 	FLAGS_SET_RCODE(err.flags, rcode);
 	err.qdcount = 1;
 	err.ttl = NORR_TTL;
+	err.prefetch_ttl = PREFETCH_TTL_CALC(err.ttl);
 	/* do not waste time trying to validate this servfail */
 	err.security = sec_status_indeterminate;
 	verbose(VERB_ALGO, "store error response in message cache");
@@ -889,7 +890,9 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 		if(verbosity >= VERB_ALGO) {
 			log_dns_msg("msg from cache lookup", &msg->qinfo, 
 				msg->rep);
-			verbose(VERB_ALGO, "msg ttl is %d", (int)msg->rep->ttl);
+			verbose(VERB_ALGO, "msg ttl is %d, prefetch ttl %d", 
+				(int)msg->rep->ttl, 
+				(int)msg->rep->prefetch_ttl);
 		}
 
 		if(type == RESPONSE_TYPE_CNAME) {
@@ -1996,6 +1999,8 @@ processClassResponse(struct module_qstate* qstate, int id,
 			to->rep->qdcount = from->rep->qdcount;
 		if(from->rep->ttl < to->rep->ttl) /* use smallest TTL */
 			to->rep->ttl = from->rep->ttl;
+		if(from->rep->prefetch_ttl < to->rep->prefetch_ttl)
+			to->rep->prefetch_ttl = from->rep->prefetch_ttl;
 	}
 	/* are we done? */
 	foriq->num_current_queries --;

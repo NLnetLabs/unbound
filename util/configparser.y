@@ -100,7 +100,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_DOMAIN_INSECURE VAR_PYTHON VAR_PYTHON_SCRIPT VAR_VAL_SIG_SKEW_MIN
 %token VAR_VAL_SIG_SKEW_MAX VAR_CACHE_MIN_TTL VAR_VAL_LOG_LEVEL
 %token VAR_AUTO_TRUST_ANCHOR_FILE VAR_KEEP_MISSING VAR_ADD_HOLDDOWN 
-%token VAR_DEL_HOLDDOWN VAR_SO_RCVBUF VAR_EDNS_BUFFER_SIZE
+%token VAR_DEL_HOLDDOWN VAR_SO_RCVBUF VAR_EDNS_BUFFER_SIZE VAR_PREFETCH
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -153,7 +153,7 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_val_sig_skew_max | server_cache_min_ttl | server_val_log_level |
 	server_auto_trust_anchor_file | server_add_holddown | 
 	server_del_holddown | server_keep_missing | server_so_rcvbuf |
-	server_edns_buffer_size
+	server_edns_buffer_size | server_prefetch
 	;
 stubstart: VAR_STUB_ZONE
 	{
@@ -740,6 +740,15 @@ server_private_domain: VAR_PRIVATE_DOMAIN STRING_ARG
 		OUTYY(("P(server_private_domain:%s)\n", $2));
 		if(!cfg_strlist_insert(&cfg_parser->cfg->private_domain, $2))
 			yyerror("out of memory");
+	}
+	;
+server_prefetch: VAR_PREFETCH STRING_ARG
+	{
+		OUTYY(("P(server_prefetch:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->prefetch = (strcmp($2, "yes")==0);
+		free($2);
 	}
 	;
 server_unwanted_reply_threshold: VAR_UNWANTED_REPLY_THRESHOLD STRING_ARG

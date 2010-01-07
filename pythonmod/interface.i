@@ -345,6 +345,7 @@ struct reply_info {
    uint16_t flags;
    uint16_t qdcount;
    uint32_t ttl;
+   uint32_t prefetch_ttl;
 
    uint16_t authoritative;
    enum sec_status security;

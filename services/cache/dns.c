@@ -474,6 +474,9 @@ tomsg(struct module_env* env, struct msgreply_entry* e, struct reply_info* r,
 	msg->rep->flags = r->flags;
 	msg->rep->qdcount = r->qdcount;
 	msg->rep->ttl = r->ttl - now;
+	if(r->prefetch_ttl - now > 0)
+		msg->rep->prefetch_ttl = r->prefetch_ttl - now;
+	else	msg->rep->prefetch_ttl = PREFETCH_TTL_CALC(r->prefetch_ttl);
 	msg->rep->security = r->security;
 	msg->rep->an_numrrsets = r->an_numrrsets;
 	msg->rep->ns_numrrsets = r->ns_numrrsets;
@@ -524,6 +527,7 @@ rrset_msg(struct ub_packed_rrset_key* rrset, struct regional* region,
         msg->rep->authoritative = 0; /* reply stored in cache can't be authoritative */
 	msg->rep->qdcount = 1;
 	msg->rep->ttl = d->ttl - now;
+	msg->rep->prefetch_ttl = PREFETCH_TTL_CALC(msg->rep->ttl);
 	msg->rep->security = sec_status_unchecked;
 	msg->rep->an_numrrsets = 1;
 	msg->rep->ns_numrrsets = 0;
@@ -559,6 +563,7 @@ synth_dname_msg(struct ub_packed_rrset_key* rrset, struct regional* region,
         msg->rep->authoritative = 0; /* reply stored in cache can't be authoritative */
 	msg->rep->qdcount = 1;
 	msg->rep->ttl = d->ttl - now;
+	msg->rep->prefetch_ttl = PREFETCH_TTL_CALC(msg->rep->ttl);
 	msg->rep->security = sec_status_unchecked;
 	msg->rep->an_numrrsets = 1;
 	msg->rep->ns_numrrsets = 0;
@@ -616,6 +621,7 @@ synth_dname_msg(struct ub_packed_rrset_key* rrset, struct regional* region,
 	packed_rrset_ptr_fixup(newd);
 	newd->rr_ttl[0] = newd->ttl;
 	msg->rep->ttl = newd->ttl;
+	msg->rep->prefetch_ttl = PREFETCH_TTL_CALC(newd->ttl);
 	ldns_write_uint16(newd->rr_data[0], newlen);
 	memmove(newd->rr_data[0] + sizeof(uint16_t), newname, newlen);
 	msg->rep->an_numrrsets ++;

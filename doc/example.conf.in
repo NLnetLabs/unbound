@@ -294,6 +294,9 @@ server:
 	# if no, localhost can be queried (for testing and debugging).
 	# do-not-query-localhost: yes
 
+	# if yes, perform prefetching of almost expired message cache entries.
+	# prefetch: no
+
 	# module configuration of the server. A string with identifiers
 	# separated by spaces. "iterator" or "validator iterator"
 	# module-config: "validator iterator"

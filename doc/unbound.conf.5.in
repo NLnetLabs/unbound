@@ -503,6 +503,12 @@ If yes, localhost is added to the do\-not\-query\-address entries, both
 IP6 ::1 and IP4 127.0.0.1/8. If no, then localhost can be used to send
 queries to. Default is yes.
 .TP
+.B prefetch: \fI<yes or no>
+If yes, message cache elements are prefetched before they expire to
+keep the cache up to date.  Default is no.  Turning it on gives about
+10 percent more traffic and load on the machine, but popular items do
+not expire from the cache.
+.TP
 .B module\-config: \fI<"module names">
 Module configuration, a list of module names separated by spaces, surround
 the string with quotes (""). The modules can be validator, iterator.
@@ -922,7 +928,7 @@ The
 clause gives the settings for the \fIpython\fR(1) script module.  This module
 acts like the iterator and validator modules do, on queries and answers.
 To enable the script module it has to be compiled into the daemon,
-and the word "python" has to be put in the \fBmodule\-conf:\fR option
+and the word "python" has to be put in the \fBmodule\-config:\fR option
 (usually first, or between the validator and iterator).
 .TP
 .B python\-script: \fI<python file>\fR

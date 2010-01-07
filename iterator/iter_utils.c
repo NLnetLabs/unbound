@@ -672,6 +672,7 @@ reply_equal(struct reply_info* p, struct reply_info* q)
 	if(p->flags != q->flags ||
 		p->qdcount != q->qdcount ||
 		p->ttl != q->ttl ||
+		p->prefetch_ttl != q->prefetch_ttl ||
 		p->security != q->security ||
 		p->an_numrrsets != q->an_numrrsets ||
 		p->ns_numrrsets != q->ns_numrrsets ||

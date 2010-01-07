@@ -589,6 +589,24 @@ answer_from_cache(struct worker* worker, struct query_info* qinfo,
 	return 1;
 }
 
+/** Reply to client and perform prefetch to keep cache up to date */
+static void
+reply_and_prefetch(struct worker* worker, struct query_info* qinfo, 
+	uint16_t flags, struct comm_reply* repinfo)
+{
+	/* first send answer to client to keep its latency 
+	 * as small as a cachereply */
+	comm_point_send_reply(repinfo);
+	/* account the prefetch (used to be part of the cache-reply count) */
+	/* TODO */
+	
+	/* create the prefetch in the mesh as a normal lookup without
+	 * client addrs waiting, which has the cache blacklisted (to bypass
+	 * the cache and go to the network for the data). */
+	/* this (potentially) runs the mesh for the new query */
+	mesh_new_prefetch(worker->env.mesh, qinfo, flags);
+}
+
 /**
  * Fill CH class answer into buffer. Keeps query.
  * @param pkt: buffer
@@ -836,6 +854,15 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 			*(uint16_t*)ldns_buffer_begin(c->buffer), 
 			ldns_buffer_read_u16_at(c->buffer, 2), repinfo, 
 			&edns)) {
+			/* prefetch it if the prefetch TTL expired */
+			if(worker->env.cfg->prefetch && *worker->env.now >=
+				((struct reply_info*)e->data)->prefetch_ttl) {
+				lock_rw_unlock(&e->lock);
+				reply_and_prefetch(worker, &qinfo, 
+					ldns_buffer_read_u16_at(c->buffer, 2),
+					repinfo);
+				return 0;
+			}
 			lock_rw_unlock(&e->lock);
 			return 1;
 		}

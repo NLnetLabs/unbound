@@ -108,6 +108,7 @@ config_create()
 	cfg->bogus_ttl = 60;
 	cfg->min_ttl = 0;
 	cfg->max_ttl = 3600 * 24;
+	cfg->prefetch = 0;
 	cfg->infra_cache_slabs = 4;
 	cfg->infra_cache_numhosts = 10000;
 	cfg->infra_cache_lame_size = 10240; /* easily 40 or more entries */
@@ -302,6 +303,9 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	} else if(strcmp(opt, "rrset-cache-slabs:") == 0) {
 		IS_POW2_NUMBER;
 		cfg->rrset_cache_slabs = (size_t)atoi(val);
+	} else if(strcmp(opt, "prefetch:") == 0) {
+		IS_YES_OR_NO;
+		cfg->prefetch = (strcmp(val, "yes") == 0);
 	} else if(strcmp(opt, "cache-max-ttl:") == 0) {
 		IS_NUMBER_OR_ZERO;
 		cfg->max_ttl = atoi(val);

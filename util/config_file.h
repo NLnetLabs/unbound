@@ -164,6 +164,12 @@ struct config_file {
 	struct config_strlist* private_domain;
 	/** what threshold for unwanted action. */
 	size_t unwanted_threshold;
+	/** the number of seconds maximal TTL used for RRsets and messages */
+	int max_ttl;
+	/** the number of seconds minimum TTL used for RRsets and messages */
+	int min_ttl;
+	/** if prefetching of messages should be performed. */
+	int prefetch;
 
 	/** chrootdir, if not "" or chroot will be done */
 	char* chrootdir;
@@ -208,10 +214,6 @@ struct config_file {
 	/** insecure domain list */
 	struct config_strlist* domain_insecure;
 
-	/** the number of seconds maximal TTL used for RRsets and messages */
-	int max_ttl;
-	/** the number of seconds minimum TTL used for RRsets and messages */
-	int min_ttl;
 	/** if not 0, this value is the validation date for RRSIGs */
 	int32_t val_date_override;
 	/** the minimum for signature clock skew */

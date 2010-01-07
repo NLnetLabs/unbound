@@ -51,6 +51,10 @@ struct edns_data;
 struct msg_parse;
 struct rrset_parse;
 
+/** calculate the prefetch TTL as 90% of original. Calculation
+ * without numerical overflow (uin32_t) */
+#define PREFETCH_TTL_CALC(ttl) ((ttl) - (ttl)/10)
+
 /**
  * Structure to store query information that makes answers to queries
  * different.
@@ -118,6 +122,12 @@ struct reply_info {
 	 * if there are RRsets, check those instead.
 	 */
 	uint32_t ttl;
+
+	/**
+	 * TTL for prefetch. After it has expired, a prefetch is suitable.
+	 * Smaller than the TTL, otherwise the prefetch would not happen.
+	 */
+	uint32_t prefetch_ttl;
 
 	/**
 	 * The security status from DNSSEC validation of this message.
