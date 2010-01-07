@@ -79,20 +79,31 @@ void server_stats_querymiss(struct server_stats* stats, struct worker* worker)
 		stats->max_query_list_size = worker->env.mesh->all.count;
 }
 
+void server_stats_prefetch(struct server_stats* stats, struct worker* worker)
+{
+	stats->num_queries_prefetch++;
+	/* changes the query list size so account that, like a querymiss */
+	stats->sum_query_list_size += worker->env.mesh->all.count;
+	if(worker->env.mesh->all.count > stats->max_query_list_size)
+		stats->max_query_list_size = worker->env.mesh->all.count;
+}
+
 void server_stats_log(struct server_stats* stats, struct worker* worker,
 	int threadnum)
 {
 	log_info("server stats for thread %d: %u queries, "
-		"%u answers from cache, %u recursions", 
+		"%u answers from cache, %u recursions, %u prefetch", 
 		threadnum, (unsigned)stats->num_queries, 
 		(unsigned)(stats->num_queries - 
 			stats->num_queries_missed_cache),
-		(unsigned)stats->num_queries_missed_cache);
+		(unsigned)stats->num_queries_missed_cache,
+		(unsigned)stats->num_queries_prefetch);
 	log_info("server stats for thread %d: requestlist max %u avg %g "
 		"exceeded %u", threadnum, (unsigned)stats->max_query_list_size,
-		stats->num_queries_missed_cache?
+		(stats->num_queries_missed_cache+stats->num_queries_prefetch)?
 			(double)stats->sum_query_list_size/
-			stats->num_queries_missed_cache : 0.0,
+			(stats->num_queries_missed_cache+
+			stats->num_queries_prefetch) : 0.0,
 		(unsigned)worker->env.mesh->stats_dropped);
 }
 
@@ -187,6 +198,7 @@ void server_stats_add(struct stats_info* total, struct stats_info* a)
 {
 	total->svr.num_queries += a->svr.num_queries;
 	total->svr.num_queries_missed_cache += a->svr.num_queries_missed_cache;
+	total->svr.num_queries_prefetch += a->svr.num_queries_prefetch;
 	total->svr.sum_query_list_size += a->svr.sum_query_list_size;
 	/* the max size reached is upped to higher of both */
 	if(a->svr.max_query_list_size > total->svr.max_query_list_size)

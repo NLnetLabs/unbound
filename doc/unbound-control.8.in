@@ -186,6 +186,13 @@ number of queries that were successfully answered using a cache lookup
 .I threadX.num.cachemiss
 number of queries that needed recursive processing
 .TP
+.I threadX.num.prefetch
+number of cache prefetches performed.  This number is included in
+cachehits, as the original query had the unprefetched answer from cache,
+and resulted in recursive processing, taking a slot in the requestlist.
+Not part of the recursivereplies (or the histogram thereof) or cachemiss,
+as a cache response was sent.
+.TP
 .I threadX.num.recursivereplies
 The number of replies sent to queries that needed recursive processing. Could be smaller than threadX.num.cachemiss if due to timeouts no replies were sent for some queries.
 .TP
@@ -225,6 +232,9 @@ summed over threads.
 summed over threads.
 .TP
 .I total.num.cachemiss
+summed over threads.
+.TP
+.I total.num.prefetch
 summed over threads.
 .TP
 .I total.num.recursivereplies

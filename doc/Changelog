@@ -1,6 +1,8 @@
 7 January 2010: Wouter
 	- Fixup python documentation (thanks Leo Vandewoestijne).
 	- Work on cache prefetch feature.
+	- Stats for prefetch, in log print stats, unbound-control stats
+	  and in unbound_munin plugin.
 
 6 January 2010: Wouter
 	- iana portlist updated.

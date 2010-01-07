@@ -64,6 +64,8 @@ struct server_stats {
 	size_t num_queries;
 	/** number of queries that had a cache-miss. */
 	size_t num_queries_missed_cache;
+	/** number of prefetch queries - cachehits with prefetch */
+	size_t num_queries_prefetch;
 
 	/**
 	 * Sum of the querylistsize of the worker for 
@@ -165,6 +167,9 @@ void server_stats_init(struct server_stats* stats, struct config_file* cfg);
 
 /** add query if it missed the cache */
 void server_stats_querymiss(struct server_stats* stats, struct worker* worker);
+
+/** add query if was cached and also resulted in a prefetch */
+void server_stats_prefetch(struct server_stats* stats, struct worker* worker);
 
 /** display the stats to the log */
 void server_stats_log(struct server_stats* stats, struct worker* worker,

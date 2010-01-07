@@ -599,12 +599,15 @@ print_stats(SSL* ssl, const char* nm, struct stats_info* s)
 			- s->svr.num_queries_missed_cache))) return 0;
 	if(!ssl_printf(ssl, "%s.num.cachemiss"SQ"%u\n", nm, 
 		(unsigned)s->svr.num_queries_missed_cache)) return 0;
+	if(!ssl_printf(ssl, "%s.num.prefetch"SQ"%u\n", nm, 
+		(unsigned)s->svr.num_queries_prefetch)) return 0;
 	if(!ssl_printf(ssl, "%s.num.recursivereplies"SQ"%u\n", nm, 
 		(unsigned)s->mesh_replies_sent)) return 0;
 	if(!ssl_printf(ssl, "%s.requestlist.avg"SQ"%g\n", nm,
-		s->svr.num_queries_missed_cache?
+		(s->svr.num_queries_missed_cache+s->svr.num_queries_prefetch)?
 			(double)s->svr.sum_query_list_size/
-			s->svr.num_queries_missed_cache : 0.0)) return 0;
+			(s->svr.num_queries_missed_cache+
+			s->svr.num_queries_prefetch) : 0.0)) return 0;
 	if(!ssl_printf(ssl, "%s.requestlist.max"SQ"%u\n", nm,
 		(unsigned)s->svr.max_query_list_size)) return 0;
 	if(!ssl_printf(ssl, "%s.requestlist.overwritten"SQ"%u\n", nm,

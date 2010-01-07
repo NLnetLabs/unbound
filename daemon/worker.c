@@ -597,8 +597,7 @@ reply_and_prefetch(struct worker* worker, struct query_info* qinfo,
 	/* first send answer to client to keep its latency 
 	 * as small as a cachereply */
 	comm_point_send_reply(repinfo);
-	/* account the prefetch (used to be part of the cache-reply count) */
-	/* TODO */
+	server_stats_prefetch(&worker->stats, worker);
 	
 	/* create the prefetch in the mesh as a normal lookup without
 	 * client addrs waiting, which has the cache blacklisted (to bypass
