@@ -1305,6 +1305,8 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 		verbose(VERB_QUERY, "Failed to get a delegation, giving up");
 		return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
 	}
+	if(!ie->supports_ipv6)
+		delegpt_no_ipv6(iq->dp);
 	delegpt_log(VERB_ALGO, iq->dp);
 
 	if(iq->num_current_queries>0) {

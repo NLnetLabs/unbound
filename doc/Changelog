@@ -1,3 +1,11 @@
+8 January 2010: Wouter
+	- Fix for parent-child disagreement code which could have trouble
+	  when (a) ipv6 was disabled and (b) the TTL for parent and child
+	  were different.  There were two bugs, the parent-side information
+	  is fixed to no longer block lookup of child side information and
+	  the iterator is fixed to no longer attempt to get ipv6 when it is
+	  not enabled and then give up in failure.
+
 7 January 2010: Wouter
 	- Fixup python documentation (thanks Leo Vandewoestijne).
 	- Work on cache prefetch feature.

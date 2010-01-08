@@ -154,11 +154,13 @@ delegpt_add_target(struct delegpt* dp, struct regional* region,
 		/* ignore it */
 		return 1;
 	}
-	if(addr_is_ip6(addr, addrlen))
-		ns->got6 = 1;
-	else	ns->got4 = 1;
-	if(ns->got4 && ns->got6)
-		ns->resolved = 1;
+	if(!lame) {
+		if(addr_is_ip6(addr, addrlen))
+			ns->got6 = 1;
+		else	ns->got4 = 1;
+		if(ns->got4 && ns->got6)
+			ns->resolved = 1;
+	}
 	return delegpt_add_addr(dp, region, addr, addrlen, bogus, lame, nodup);
 }
 
@@ -254,10 +256,11 @@ void delegpt_log(enum verbosity_value v, struct delegpt* dp)
 			(dp->bogus?" BOGUS":"") );
 		}
 		for(a = dp->target_list; a; a = a->next_target) {
-			if(a->bogus) 
-				log_addr(VERB_ALGO, "  BOGUS ", 
-					&a->addr, a->addrlen);
-			else log_addr(VERB_ALGO, "  ", &a->addr, a->addrlen);
+			const char* str = "  ";
+			if(a->bogus && a->lame) str = "  BOGUS ADDR_LAME ";
+			else if(a->bogus) str = "  BOGUS ";
+			else if(a->lame) str = "  ADDR_LAME ";
+			log_addr(VERB_ALGO, str, &a->addr, a->addrlen);
 		}
 	}
 }
@@ -446,5 +449,15 @@ void delegpt_add_neg_msg(struct delegpt* dp, struct msgreply_entry* msg)
 			if(ns->got4 && ns->got6)
 				ns->resolved = 1;
 		}
+	}
+}
+
+void delegpt_no_ipv6(struct delegpt* dp)
+{
+	struct delegpt_ns* ns;
+	for(ns = dp->nslist; ns; ns = ns->next) {
+		/* no ipv6, so only ipv4 is enough to resolve a nameserver */
+		if(ns->got4)
+			ns->resolved = 1;
 	}
 }
