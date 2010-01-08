@@ -293,9 +293,10 @@ int mesh_new_callback(struct mesh_area* mesh, struct query_info* qinfo,
  * @param mesh: the mesh.
  * @param qinfo: query from client.
  * @param qflags: flags from client query.
+ * @param leeway: TTL leeway what to expire earlier for this update.
  */
 void mesh_new_prefetch(struct mesh_area* mesh, struct query_info* qinfo,
-	uint16_t qflags);
+	uint16_t qflags, uint32_t leeway);
 
 /**
  * Handle new event from the wire. A serviced query has returned.

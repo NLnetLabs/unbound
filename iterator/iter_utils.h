@@ -118,10 +118,11 @@ struct dns_msg* dns_copy_msg(struct dns_msg* from, struct regional* regional);
  * @param rep: reply in dns_msg from dns_alloc_msg for example.
  * @param is_referral: If true, then the given message to be stored is a
  *	referral. The cache implementation may use this as a hint.
+ * @param leeway: prefetch TTL leeway to expire old rrsets quicker.
  * @return 0 on alloc error (out of memory).
  */
 int iter_dns_store(struct module_env* env, struct query_info* qinf,
-	struct reply_info* rep, int is_referral);
+	struct reply_info* rep, int is_referral, uint32_t leeway);
 
 /**
  * Select randomly with n/m probability.

@@ -72,10 +72,12 @@ struct dns_msg {
  * @param is_referral: If true, then the given message to be stored is a
  *      referral. The cache implementation may use this as a hint.
  *      It will store only the RRsets, not the message.
+ * @param leeway: TTL value, if not 0, other rrsets are considered expired
+ *	that many seconds before actual TTL expiry.
  * @return 0 on alloc error (out of memory).
  */
 int dns_cache_store(struct module_env* env, struct query_info* qinf,
-        struct reply_info* rep, int is_referral); 
+        struct reply_info* rep, int is_referral, uint32_t leeway); 
 
 /**
  * Store message in the cache. Stores in message cache and rrset cache.
@@ -88,9 +90,11 @@ int dns_cache_store(struct module_env* env, struct query_info* qinf,
  * @param hash: hash over qinfo.
  * @param rep: reply info, together with qinfo makes up the message.
  *	Adjusts the reply info TTLs to absolute time.
+ * @param leeway: TTL value, if not 0, other rrsets are considered expired
+ *	that many seconds before actual TTL expiry.
  */
 void dns_cache_store_msg(struct module_env* env, struct query_info* qinfo,
-	hashvalue_t hash, struct reply_info* rep);
+	hashvalue_t hash, struct reply_info* rep, uint32_t leeway);
 
 /**
  * Find a delegation from the cache.

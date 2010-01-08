@@ -71,7 +71,7 @@ store_rrsets(struct module_env* env, struct reply_info* rep, uint32_t now)
 
 void 
 dns_cache_store_msg(struct module_env* env, struct query_info* qinfo,
-	hashvalue_t hash, struct reply_info* rep)
+	hashvalue_t hash, struct reply_info* rep, uint32_t leeway)
 {
 	struct msgreply_entry* e;
 	uint32_t ttl = rep->ttl;
@@ -84,7 +84,7 @@ dns_cache_store_msg(struct module_env* env, struct query_info* qinfo,
 	}
 	reply_info_sortref(rep);
 	reply_info_set_ttls(rep, *env->now);
-	store_rrsets(env, rep, *env->now);
+	store_rrsets(env, rep, *env->now+leeway);
 	if(ttl == 0) {
 		/* we do not store the message, but we did store the RRs,
 		 * which could be useful for delegation information */
@@ -714,7 +714,7 @@ dns_cache_lookup(struct module_env* env,
 
 int 
 dns_cache_store(struct module_env* env, struct query_info* msgqinf,
-        struct reply_info* msgrep, int is_referral)
+        struct reply_info* msgrep, int is_referral, uint32_t leeway)
 {
 	struct reply_info* rep = NULL;
 	/* alloc, malloc properly (not in region, like msg is) */
@@ -723,6 +723,7 @@ dns_cache_store(struct module_env* env, struct query_info* msgqinf,
 		return 0;
 	/* ttl must be relative ;i.e. 0..86400 not  time(0)+86400. 
 	 * the env->now is added to message and RRsets in this routine. */
+	/* the leeway is used to invalidate other rrsets earlier */
 
 	if(is_referral) {
 		/* store rrsets */
@@ -735,7 +736,7 @@ dns_cache_store(struct module_env* env, struct query_info* msgqinf,
 			ref.id = rep->rrsets[i]->id;
 			/*ignore ret: it was in the cache, ref updated */
 			(void)rrset_cache_update(env->rrset_cache, &ref, 
-				env->alloc, *env->now);
+				env->alloc, *env->now + leeway);
 		}
 		free(rep);
 		return 1;
@@ -756,7 +757,7 @@ dns_cache_store(struct module_env* env, struct query_info* msgqinf,
 		rep->flags |= (BIT_RA | BIT_QR);
 		rep->flags &= ~(BIT_AA | BIT_CD);
 		h = query_info_hash(&qinf);
-		dns_cache_store_msg(env, &qinf, h, rep);
+		dns_cache_store_msg(env, &qinf, h, rep, leeway);
 		/* qname is used inside query_info_entrysetup, and set to 
 		 * NULL. If it has not been used, free it. free(0) is safe. */
 		free(qinf.qname);

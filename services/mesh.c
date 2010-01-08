@@ -389,7 +389,7 @@ mesh_new_callback(struct mesh_area* mesh, struct query_info* qinfo,
 }
 
 void mesh_new_prefetch(struct mesh_area* mesh, struct query_info* qinfo,
-        uint16_t qflags)
+        uint16_t qflags, uint32_t leeway)
 {
 	struct mesh_state* s = mesh_area_find(mesh, qinfo, qflags, 0);
 	struct rbnode_t* n;
@@ -399,6 +399,8 @@ void mesh_new_prefetch(struct mesh_area* mesh, struct query_info* qinfo,
 		/* make it ignore the cache from now on */
 		if(!s->s.blacklist)
 			sock_list_insert(&s->s.blacklist, NULL, 0, s->s.region);
+		if(s->s.prefetch_leeway < leeway)
+			s->s.prefetch_leeway = leeway;
 		return;
 	}
 	if(!mesh_make_new_space(mesh)) {
@@ -417,6 +419,7 @@ void mesh_new_prefetch(struct mesh_area* mesh, struct query_info* qinfo,
 	mesh->num_detached_states++;
 	/* make it ignore the cache */
 	sock_list_insert(&s->s.blacklist, NULL, 0, s->s.region);
+	s->s.prefetch_leeway = leeway;
 
 	if(s->list_select == mesh_no_list) {
 		/* move to either the forever or the jostle_list */
@@ -493,6 +496,7 @@ mesh_state_create(struct module_env* env, struct query_info* qinfo,
 	mstate->s.return_rcode = LDNS_RCODE_NOERROR;
 	mstate->s.env = env;
 	mstate->s.mesh_info = mstate;
+	mstate->s.prefetch_leeway = 0;
 	/* init modules */
 	for(i=0; i<env->mesh->mods.num; i++) {
 		mstate->s.minfo[i] = NULL;

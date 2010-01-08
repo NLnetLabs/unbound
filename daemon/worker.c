@@ -82,6 +82,18 @@
 /** Size of an UDP datagram */
 #define NORMAL_UDP_SIZE	512 /* bytes */
 
+/** 
+ * seconds to add to prefetch leeway.  This is a TTL that expires old rrsets
+ * earlier than they should in order to put the new update into the cache.
+ * This additional value is to make sure that if not all TTLs are equal in
+ * the message to be updated(and replaced), that rrsets with up to this much
+ * extra TTL are also replaced.  This means that the resulting new message
+ * will have (most likely) this TTL at least, avoiding very small 'split
+ * second' TTLs due to operators choosing relative primes for TTLs (or so).
+ * Also has to be at least one to break ties (and overwrite cached entry).
+ */
+#define PREFETCH_EXPIRY_ADD 60
+
 #ifdef UNBOUND_ALLOC_STATS
 /** measure memory leakage */
 static void
@@ -592,7 +604,7 @@ answer_from_cache(struct worker* worker, struct query_info* qinfo,
 /** Reply to client and perform prefetch to keep cache up to date */
 static void
 reply_and_prefetch(struct worker* worker, struct query_info* qinfo, 
-	uint16_t flags, struct comm_reply* repinfo)
+	uint16_t flags, struct comm_reply* repinfo, uint32_t leeway)
 {
 	/* first send answer to client to keep its latency 
 	 * as small as a cachereply */
@@ -603,7 +615,8 @@ reply_and_prefetch(struct worker* worker, struct query_info* qinfo,
 	 * client addrs waiting, which has the cache blacklisted (to bypass
 	 * the cache and go to the network for the data). */
 	/* this (potentially) runs the mesh for the new query */
-	mesh_new_prefetch(worker->env.mesh, qinfo, flags);
+	mesh_new_prefetch(worker->env.mesh, qinfo, flags, leeway + 
+		PREFETCH_EXPIRY_ADD);
 }
 
 /**
@@ -856,10 +869,12 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 			/* prefetch it if the prefetch TTL expired */
 			if(worker->env.cfg->prefetch && *worker->env.now >=
 				((struct reply_info*)e->data)->prefetch_ttl) {
+				uint32_t leeway = ((struct reply_info*)e->
+					data)->ttl - *worker->env.now;
 				lock_rw_unlock(&e->lock);
 				reply_and_prefetch(worker, &qinfo, 
 					ldns_buffer_read_u16_at(c->buffer, 2),
-					repinfo);
+					repinfo, leeway);
 				return 0;
 			}
 			lock_rw_unlock(&e->lock);

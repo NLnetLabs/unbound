@@ -5,6 +5,9 @@
 	  is fixed to no longer block lookup of child side information and
 	  the iterator is fixed to no longer attempt to get ipv6 when it is
 	  not enabled and then give up in failure.
+	- test and fixes to make prefetch actually store the answer in the
+	  cache.  Considers some rrsets 'already expired' but does not allow
+	  overwriting of rrsets considered more secure.
 
 7 January 2010: Wouter
 	- Fixup python documentation (thanks Leo Vandewoestijne).
