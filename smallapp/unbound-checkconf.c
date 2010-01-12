@@ -498,6 +498,8 @@ morechecks(struct config_file* cfg, const char* fname)
 		cfg->root_hints, cfg->chrootdir, cfg);
 	check_chroot_filelist("trust-anchor-file", 
 		cfg->trust_anchor_file_list, cfg->chrootdir, cfg);
+	check_chroot_filelist("auto-trust-anchor-file", 
+		cfg->auto_trust_anchor_file_list, cfg->chrootdir, cfg);
 	check_chroot_filelist_wild("trusted-keys-file", 
 		cfg->trusted_keys_file_list, cfg->chrootdir, cfg);
 	check_chroot_string("dlv-anchor-file", &cfg->dlv_anchor_file, 

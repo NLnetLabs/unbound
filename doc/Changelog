@@ -1,3 +1,6 @@
+12 January 2010: Wouter
+	- Fix unbound-checkconf for auto-trust-anchor-file present checks.
+
 8 January 2010: Wouter
 	- Fix for parent-child disagreement code which could have trouble
 	  when (a) ipv6 was disabled and (b) the TTL for parent and child
