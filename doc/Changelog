@@ -1,3 +1,8 @@
+13 January 2010: Wouter
+	- prefetch-key option that performs DNSKEY queries earlier in the
+	  validation process, and that could halve the latency on DNSSEC
+	  queries.  It takes some extra processing (CPU, a cache is needed).
+
 12 January 2010: Wouter
 	- Fix unbound-checkconf for auto-trust-anchor-file present checks.
 

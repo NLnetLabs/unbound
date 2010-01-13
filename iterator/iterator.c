@@ -778,6 +778,59 @@ generate_ns_check(struct module_qstate* qstate, struct iter_qstate* iq, int id)
 }
 
 /**
+ * Generate a DNSKEY prefetch query to get the DNSKEY for the DS record we
+ * just got in a referral (where we have dnssec_expected, thus have trust
+ * anchors above it).  Note that right after calling this routine the
+ * iterator detached subqueries (because of following the referral), and thus
+ * the DNSKEY query becomes detached, its return stored in the cache for
+ * later lookup by the validator.  This cache lookup by the validator avoids
+ * the roundtrip incurred by the DNSKEY query.  The DNSKEY query is now
+ * performed at about the same time the original query is sent to the domain,
+ * thus the two answers are likely to be returned at about the same time,
+ * saving a roundtrip from the validated lookup.
+ *
+ * @param qstate: the qtstate that triggered the need to prime.
+ * @param iq: iterator query state.
+ * @param id: module id.
+ */
+static void
+generate_dnskey_prefetch(struct module_qstate* qstate, 
+	struct iter_qstate* iq, int id)
+{
+	struct module_qstate* subq;
+	log_assert(iq->dp);
+
+	/* is this query the same as the prefetch? */
+	if(qstate->qinfo.qtype == LDNS_RR_TYPE_DNSKEY &&
+		query_dname_compare(iq->dp->name, qstate->qinfo.qname)==0 &&
+		(qstate->query_flags&BIT_RD) && !(qstate->query_flags&BIT_CD)){
+		return;
+	}
+
+	/* if the DNSKEY is in the cache this lookup will stop quickly */
+	log_nametypeclass(VERB_ALGO, "schedule dnskey prefetch", 
+		iq->dp->name, LDNS_RR_TYPE_DNSKEY, iq->qchase.qclass);
+	if(!generate_sub_request(iq->dp->name, iq->dp->namelen, 
+		LDNS_RR_TYPE_DNSKEY, iq->qchase.qclass, qstate, id, iq,
+		INIT_REQUEST_STATE, FINISHED_STATE, &subq, 0)) {
+		/* we'll be slower, but it'll work */
+		verbose(VERB_ALGO, "could not generate dnskey prefetch");
+		return;
+	}
+	if(subq) {
+		struct iter_qstate* subiq = 
+			(struct iter_qstate*)subq->minfo[id];
+		/* this qstate has the right delegation for the dnskey lookup*/
+		/* make copy to avoid use of stub dp by different qs/threads */
+		subiq->dp = delegpt_copy(iq->dp, subq->region);
+		if(!subiq->dp) {
+			/* it'll start from the cache */
+			return;
+		}
+	}
+}
+
+/**
  * See if the query needs forwarding.
  * 
  * @param qstate: query state.
@@ -1104,10 +1157,12 @@ processInitRequest2(struct module_qstate* qstate, struct iter_qstate* iq,
  *
  * @param qstate: query state.
  * @param iq: iterator query state.
+ * @param id: module id.
  * @return true, advancing the event to the QUERYTARGETS_STATE.
  */
 static int
-processInitRequest3(struct module_qstate* qstate, struct iter_qstate* iq)
+processInitRequest3(struct module_qstate* qstate, struct iter_qstate* iq, 
+	int id)
 {
 	log_query_info(VERB_QUERY, "resolving (init part 3): ", 
 		&qstate->qinfo);
@@ -1127,10 +1182,18 @@ processInitRequest3(struct module_qstate* qstate, struct iter_qstate* iq)
 			sock_list_insert(&qstate->reply_origin, NULL, 0, qstate->region);
 		return final_state(iq);
 	}
-
 	/* After this point, unset the RD flag -- this query is going to 
 	 * be sent to an auth. server. */
 	iq->chase_flags &= ~BIT_RD;
+
+	/* if dnssec expected, fetch key for the trust-anchor or cached-DS */
+	if(iq->dnssec_expected && qstate->env->cfg->prefetch_key &&
+		!(qstate->query_flags&BIT_CD)) {
+		generate_dnskey_prefetch(qstate, iq, id);
+		fptr_ok(fptr_whitelist_modenv_detach_subs(
+			qstate->env->detach_subs));
+		(*qstate->env->detach_subs)(qstate);
+	}
 
 	/* Jump to the next state. */
 	return next_state(iq, QUERYTARGETS_STATE);
@@ -1621,6 +1684,10 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		 * along, indicating dnssec is expected for next zone */
 		iq->dnssec_expected = iter_indicates_dnssec(qstate->env, 
 			iq->dp, iq->response, iq->qchase.qclass);
+		/* if dnssec, validating then also fetch the key for the DS */
+		if(iq->dnssec_expected && qstate->env->cfg->prefetch_key &&
+			!(qstate->query_flags&BIT_CD))
+			generate_dnskey_prefetch(qstate, iq, id);
 
 		/* spawn off NS and addr to auth servers for the NS we just
 		 * got in the referral. This gets authoritative answer
@@ -2177,7 +2244,7 @@ iter_handle(struct module_qstate* qstate, struct iter_qstate* iq,
 				cont = processInitRequest2(qstate, iq, ie, id);
 				break;
 			case INIT_REQUEST_3_STATE:
-				cont = processInitRequest3(qstate, iq);
+				cont = processInitRequest3(qstate, iq, id);
 				break;
 			case QUERYTARGETS_STATE:
 				cont = processQueryTargets(qstate, iq, ie, id);

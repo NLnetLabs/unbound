@@ -297,6 +297,9 @@ server:
 	# if yes, perform prefetching of almost expired message cache entries.
 	# prefetch: no
 
+	# if yes, perform key lookups adjacent to normal lookups.
+	# prefetch-key: no
+
 	# module configuration of the server. A string with identifiers
 	# separated by spaces. "iterator" or "validator iterator"
 	# module-config: "validator iterator"

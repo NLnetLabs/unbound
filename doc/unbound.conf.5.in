@@ -509,6 +509,11 @@ keep the cache up to date.  Default is no.  Turning it on gives about
 10 percent more traffic and load on the machine, but popular items do
 not expire from the cache.
 .TP
+.B prefetch-key: \fI<yes or no>
+If yes, fetch the DNSKEYs earlier in the validation process, when a DS
+record is encountered.  This lowers the latency of requests.  It does use
+a little more CPU.  Also if the cache is set to 0, it is no use. Default is no.
+.TP
 .B module\-config: \fI<"module names">
 Module configuration, a list of module names separated by spaces, surround
 the string with quotes (""). The modules can be validator, iterator.

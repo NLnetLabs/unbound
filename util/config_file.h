@@ -170,6 +170,8 @@ struct config_file {
 	int min_ttl;
 	/** if prefetching of messages should be performed. */
 	int prefetch;
+	/** if prefetching of DNSKEYs should be performed. */
+	int prefetch_key;
 
 	/** chrootdir, if not "" or chroot will be done */
 	char* chrootdir;

@@ -101,6 +101,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_VAL_SIG_SKEW_MAX VAR_CACHE_MIN_TTL VAR_VAL_LOG_LEVEL
 %token VAR_AUTO_TRUST_ANCHOR_FILE VAR_KEEP_MISSING VAR_ADD_HOLDDOWN 
 %token VAR_DEL_HOLDDOWN VAR_SO_RCVBUF VAR_EDNS_BUFFER_SIZE VAR_PREFETCH
+%token VAR_PREFETCH_KEY
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -153,7 +154,7 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_val_sig_skew_max | server_cache_min_ttl | server_val_log_level |
 	server_auto_trust_anchor_file | server_add_holddown | 
 	server_del_holddown | server_keep_missing | server_so_rcvbuf |
-	server_edns_buffer_size | server_prefetch
+	server_edns_buffer_size | server_prefetch | server_prefetch_key
 	;
 stubstart: VAR_STUB_ZONE
 	{
@@ -748,6 +749,15 @@ server_prefetch: VAR_PREFETCH STRING_ARG
 		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
 			yyerror("expected yes or no.");
 		else cfg_parser->cfg->prefetch = (strcmp($2, "yes")==0);
+		free($2);
+	}
+	;
+server_prefetch_key: VAR_PREFETCH_KEY STRING_ARG
+	{
+		OUTYY(("P(server_prefetch_key:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->prefetch_key = (strcmp($2, "yes")==0);
 		free($2);
 	}
 	;
