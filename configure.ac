@@ -591,7 +591,9 @@ AC_ARG_WITH(ldns-builtin, AC_HELP_STRING([--with-ldns-builtin],
 # check if ldns is good enough
 if test "$use_ldns_builtin" = "no"; then
 	AC_CHECK_LIB(ldns, ldns_buffer_copy)
-	if test $ac_cv_lib_ldns_ldns_buffer_copy = yes; then
+	AC_CHECK_HEADERS([ldns/ldns.h],,, [AC_INCLUDES_DEFAULT])
+	if test $ac_cv_lib_ldns_ldns_buffer_copy = yes \
+	    -a $ac_cv_header_ldns_ldns_h = yes; then
 	    dnl ldns was found, check compat functions
 	    AC_CHECK_FUNC([ldns_b32_ntop_extended_hex],, [
 		AC_MSG_ERROR([ldns version too old, need >=1.4.0])])
