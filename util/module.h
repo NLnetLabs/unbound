@@ -301,8 +301,6 @@ struct module_qstate {
 	struct regional* region;
 	/** failure reason information if val-log-level is high */
 	struct config_strlist* errinf;
-	/** how many seconds before expiry is this prefetched (0 if not) */
-	uint32_t prefetch_leeway;
 
 	/** which module is executing */
 	int curmod;
@@ -314,6 +312,8 @@ struct module_qstate {
 	struct module_env* env;
 	/** mesh related information for this query */
 	struct mesh_state* mesh_info;
+	/** how many seconds before expiry is this prefetched (0 if not) */
+	uint32_t prefetch_leeway;
 };
 
 /** 

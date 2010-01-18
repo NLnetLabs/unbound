@@ -129,6 +129,9 @@ struct reply_info {
 	 */
 	uint32_t prefetch_ttl;
 
+	/** 32 bit padding to pad struct member alignment to 64 bits. */
+	uint32_t padding;
+
 	/**
 	 * The security status from DNSSEC validation of this message.
 	 */
