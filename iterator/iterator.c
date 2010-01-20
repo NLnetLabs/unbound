@@ -195,6 +195,12 @@ error_supers(struct module_qstate* qstate, int id, struct module_qstate* super)
 				delegpt_log(VERB_ALGO, super_iq->dp);
 			log_assert(0);
 			return;
+		} else {
+			/* see if the failure did get (parent-lame) info */
+			if(!cache_fill_missing(super->env, 
+				super_iq->qchase.qclass, super->region, 
+				super_iq->dp))
+				log_err("out of memory adding missing");
 		}
 		dpns->resolved = 1; /* mark as failed */
 		super_iq->num_target_queries--; 

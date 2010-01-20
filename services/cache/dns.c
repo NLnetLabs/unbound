@@ -248,8 +248,6 @@ cache_fill_missing(struct module_env* env, uint16_t qclass,
 	struct ub_packed_rrset_key* akey;
 	uint32_t now = *env->now;
 	for(ns = dp->nslist; ns; ns = ns->next) {
-		if(ns->resolved)
-			continue;
 		akey = rrset_cache_lookup(env->rrset_cache, ns->name, 
 			ns->namelen, LDNS_RR_TYPE_A, qclass, 0, now, 0);
 		if(akey) {
