@@ -1,3 +1,6 @@
+21 January 2010: Wouter
+	- acx_nlnetlabs.m4 synchronised with nsd's version.
+
 20 January 2010: Wouter
 	- Fixup lookup trouble for parent-child domains on the first query.
 
