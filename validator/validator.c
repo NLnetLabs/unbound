@@ -1925,7 +1925,7 @@ processFinished(struct module_qstate* qstate, struct val_qstate* vq,
 					&qstate->qinfo);
 			else {
 				char* err = errinf_to_str(qstate);
-				if(err) log_info(err);
+				if(err) log_info("%s", err);
 				free(err);
 			}
 		}

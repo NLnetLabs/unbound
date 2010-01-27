@@ -1,3 +1,6 @@
+27 January 2010: Wouter
+	- removed warning on format string in validator error log statement.
+
 22 January 2010: Wouter
 	- libtool finish the install of unbound python dynamic library.
 
