@@ -74,6 +74,7 @@ open_svr(const char* svr, int udp)
 		exit(1);
 	}
 #ifndef PF_INET6
+/** define in case streamtcp is compiled on legacy systems */
 #define PF_INET6 10
 #endif
 	fd = socket(addr_is_ip6(&addr, addrlen)?PF_INET6:PF_INET,
