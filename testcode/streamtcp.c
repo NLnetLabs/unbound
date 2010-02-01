@@ -48,6 +48,11 @@
 #include "util/data/msgreply.h"
 #include "util/data/dname.h"
 
+#ifndef PF_INET6
+/** define in case streamtcp is compiled on legacy systems */
+#define PF_INET6 10
+#endif
+
 /** usage information for streamtcp */
 void usage(char* argv[])
 {
@@ -73,10 +78,6 @@ open_svr(const char* svr, int udp)
 		printf("fatal: bad server specs '%s'\n", svr);
 		exit(1);
 	}
-#ifndef PF_INET6
-/** define in case streamtcp is compiled on legacy systems */
-#define PF_INET6 10
-#endif
 	fd = socket(addr_is_ip6(&addr, addrlen)?PF_INET6:PF_INET,
 		udp?SOCK_DGRAM:SOCK_STREAM, 0);
 	if(fd == -1) {
