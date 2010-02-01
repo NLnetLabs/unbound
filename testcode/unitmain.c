@@ -251,18 +251,18 @@ net_test()
 		socklen_t blen = (socklen_t)sizeof(b);
 		unit_assert(ipstrtoaddr("127.0.0.0", 53, &a, &alen));
 		unit_assert(ipstrtoaddr("127.255.255.255", 53, &b, &blen));
-		unit_assert(sockaddr_cmp_addr(&a, alen, &b, blen) == -1);
-		unit_assert(sockaddr_cmp_addr(&b, blen, &a, alen) == +1);
+		unit_assert(sockaddr_cmp_addr(&a, alen, &b, blen) < 0);
+		unit_assert(sockaddr_cmp_addr(&b, blen, &a, alen) > 0);
 		unit_assert(sockaddr_cmp_addr(&a, alen, &a, alen) == 0);
 		unit_assert(sockaddr_cmp_addr(&b, blen, &b, blen) == 0);
 		unit_assert(ipstrtoaddr("192.168.121.5", 53, &a, &alen));
-		unit_assert(sockaddr_cmp_addr(&a, alen, &b, blen) == +1);
-		unit_assert(sockaddr_cmp_addr(&b, blen, &a, alen) == -1);
+		unit_assert(sockaddr_cmp_addr(&a, alen, &b, blen) > 0);
+		unit_assert(sockaddr_cmp_addr(&b, blen, &a, alen) < 0);
 		unit_assert(sockaddr_cmp_addr(&a, alen, &a, alen) == 0);
 		unit_assert(ipstrtoaddr("2001:3578:ffeb::99", 53, &b, &blen));
 		unit_assert(sockaddr_cmp_addr(&b, blen, &b, blen) == 0);
-		unit_assert(sockaddr_cmp_addr(&a, alen, &b, blen) == -1);
-		unit_assert(sockaddr_cmp_addr(&b, blen, &a, alen) == +1);
+		unit_assert(sockaddr_cmp_addr(&a, alen, &b, blen) < 0);
+		unit_assert(sockaddr_cmp_addr(&b, blen, &a, alen) > 0);
 	}
 	/* test addr_is_ip4mapped */
 	unit_show_func("util/net_help.c", "addr_is_ip4mapped");
