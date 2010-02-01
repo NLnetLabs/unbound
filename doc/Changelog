@@ -1,5 +1,6 @@
 1 February 2010: Wouter
 	- iana portlist updated.
+	- configure test for memcmp portability.
 
 27 January 2010: Wouter
 	- removed warning on format string in validator error log statement.

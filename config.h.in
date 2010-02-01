@@ -343,6 +343,9 @@
 /* Define to the maximum message length to pass to syslog. */
 #undef MAXSYSLOGMSGLEN
 
+/* Define if memcmp() does not compare unsigned bytes */
+#undef MEMCMP_IS_BROKEN
+
 /* Define if mkdir has one argument. */
 #undef MKDIR_HAS_ONE_ARG
 
@@ -772,6 +775,15 @@ struct tm *gmtime_r(const time_t *timep, struct tm *result);
 #ifndef IPV6_MIN_MTU
 #define IPV6_MIN_MTU 1280
 #endif /* IPV6_MIN_MTU */
+
+
+#ifdef MEMCMP_IS_BROKEN
+#  ifdef memcmp
+#  undef memcmp
+#  endif
+#define memcmp memcmp_unbound
+int memcmp(const void *x, const void *y, size_t n);
+#endif
 
 
 

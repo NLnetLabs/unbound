@@ -2,7 +2,8 @@
 # Copyright 2009, Wouter Wijngaards, NLnet Labs.   
 # BSD licensed.
 #
-# Version 5
+# Version 6
+# 2010-02-01 added ACX_CHECK_MEMCMP_SIGNED, AHX_MEMCMP_BROKEN
 # 2010-01-20 added AHX_COONFIG_STRLCAT
 # 2009-07-14 U_CHAR detection improved for windows crosscompile.
 #            added ACX_FUNC_MALLOC
@@ -68,6 +69,8 @@
 # AHX_CONFIG_FLAG_OMITTED	- define omitted flag
 # AHX_CONFIG_FLAG_EXT		- define omitted extension flag
 # AHX_CONFIG_EXT_FLAGS		- define the stripped extension flags
+# ACX_CHECK_MEMCMP_SIGNED	- check if memcmp uses signed characters.
+# AHX_MEMCMP_BROKEN		- replace memcmp func for CHECK_MEMCMP_SIGNED.
 #
 
 dnl Escape backslashes as \\, for C:\ paths, for the C preprocessor defines.
@@ -1213,6 +1216,40 @@ AHX_CONFIG_FLAG_EXT(-D_XOPEN_SOURCE=600)
 AHX_CONFIG_FLAG_EXT(-D_XOPEN_SOURCE_EXTENDED=1)
 AHX_CONFIG_FLAG_EXT(-D_ALL_SOURCE)
 AHX_CONFIG_FLAG_EXT(-D_LARGEFILE_SOURCE=1)
+])
+
+dnl check if memcmp is using signed characters and replace if so.
+AC_DEFUN([ACX_CHECK_MEMCMP_SIGNED],
+[AC_MSG_CHECKING([if memcmp compares unsigned])
+AC_RUN_IFELSE([AC_LANG_SOURCE([[
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+int main(void)
+{
+	char a = 255, b = 0;
+	if(memcmp(&a, &b, 1) < 0)
+		return 1;
+	return 0;
+}
+]])], [AC_MSG_RESULT([yes]) ],
+[ AC_MSG_RESULT([no])
+  AC_DEFINE([MEMCMP_IS_BROKEN], [1], [Define if memcmp() does not compare unsigned bytes])
+  AC_LIBOBJ([memcmp])
+], [ AC_MSG_RESULT([cross-compile no])
+  AC_DEFINE([MEMCMP_IS_BROKEN], [1], [Define if memcmp() does not compare unsigned bytes])
+  AC_LIBOBJ([memcmp]) 
+]) ])
+
+dnl define memcmp to its replacement, pass unique id for program as arg
+AC_DEFUN([AHX_MEMCMP_BROKEN], [
+#ifdef MEMCMP_IS_BROKEN
+#  ifdef memcmp
+#  undef memcmp
+#  endif
+#define memcmp memcmp_$1
+int memcmp(const void *x, const void *y, size_t n);
+#endif
 ])
 
 dnl End of file
