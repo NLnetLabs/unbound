@@ -1,3 +1,6 @@
+2 February 2010: Wouter
+	- Updated url of IANA itar, interim trust anchor repository, in script.
+
 1 February 2010: Wouter
 	- iana portlist updated.
 	- configure test for memcmp portability.
