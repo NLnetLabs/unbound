@@ -40,6 +40,9 @@
  *           gcc -DTEST_SNPRINTF -o snprintf snprintf.c -lm
  *    and run snprintf for results.
  *
+ *  Wouter Wijngaards(wouter@nlnetlabs.nl) 2/09/2010 for unbound.
+ *    Limited support for %g.  Does not do the exponents for the before-dot.
+ *
  **************************************************************/
 
 
@@ -75,7 +78,7 @@ static void fmtstr (char *buffer, size_t *currlen, size_t maxlen,
 static void fmtint (char *buffer, size_t *currlen, size_t maxlen,
 		    long value, int base, int min, int max, int flags);
 static void fmtfp (char *buffer, size_t *currlen, size_t maxlen,
-		   long double fvalue, int min, int max, int flags);
+		   long double fvalue, int min, int max, int flags, int conv);
 static void dopr_outch (char *buffer, size_t *currlen, size_t maxlen, char c );
 
 int vsnprintf (char *str, size_t count, const char *fmt, va_list args)
@@ -313,7 +316,7 @@ static void dopr (char *buffer, size_t maxlen, const char *format, va_list args)
 	else
 	  fvalue = va_arg (args, double);
 	/* um, floating point? */
-	fmtfp (buffer, &currlen, maxlen, fvalue, min, max, flags);
+	fmtfp (buffer, &currlen, maxlen, fvalue, min, max, flags, 'f');
 	break;
       case 'E':
 	flags |= DP_F_UP;
@@ -330,6 +333,7 @@ static void dopr (char *buffer, size_t maxlen, const char *format, va_list args)
 	  fvalue = va_arg (args, long double);
 	else
 	  fvalue = va_arg (args, double);
+	fmtfp (buffer, &currlen, maxlen, fvalue, min, max, flags, 'g');
 	break;
       case 'c':
 	dopr_outch (buffer, &currlen, maxlen, va_arg (args, int));
@@ -554,7 +558,7 @@ static long compat_round (long double value)
 }
 
 static void fmtfp (char *buffer, size_t *currlen, size_t maxlen,
-		   long double fvalue, int min, int max, int flags)
+		   long double fvalue, int min, int max, int flags, int conv)
 {
   int signvalue = 0;
   long double ufvalue;
@@ -628,13 +632,26 @@ static void fmtfp (char *buffer, size_t *currlen, size_t maxlen,
     fconvert[fplace++] =
       (caps? "0123456789ABCDEF":"0123456789abcdef")[fracpart % 10];
     fracpart = (fracpart / 10);
+    if(conv == 'g' && fplace == 1 && fconvert[0] == '0') {
+      fplace = 0; /* skip trailing zeroes for %g */
+      zpadlen ++;
+    }
   } while(fracpart && (fplace < 20));
   if (fplace == 20) fplace--;
   fconvert[fplace] = 0;
 
-  /* -1 for decimal point, another -1 if we are printing a sign */
-  padlen = min - iplace - max - 1 - ((signvalue) ? 1 : 0); 
-  zpadlen = max - fplace;
+  if(conv == 'f') {
+    /* -1 for decimal point, another -1 if we are printing a sign */
+    padlen = min - iplace - max - 1 - ((signvalue) ? 1 : 0); 
+    zpadlen = max - fplace;
+  } else if(conv == 'g') {
+    /* zpadlen contains number of trailing zeroes removed */
+    padlen = min - iplace - (max-zpadlen) - 1 - ((signvalue) ? 1 : 0); 
+    if(fplace == 0) {
+      padlen += 1; /* add the decimal dot suppressed */
+      zpadlen = 0;
+    } else zpadlen = (max-zpadlen) - fplace;
+  }
   if (zpadlen < 0)
     zpadlen = 0;
   if (padlen < 0) 
@@ -667,20 +684,23 @@ static void fmtfp (char *buffer, size_t *currlen, size_t maxlen,
   while (iplace > 0) 
     dopr_outch (buffer, currlen, maxlen, iconvert[--iplace]);
 
-  /*
-   * Decimal point.  This should probably use locale to find the correct
-   * char to print out.
-   */
-  dopr_outch (buffer, currlen, maxlen, '.');
-
-  while (fplace > 0) 
-    dopr_outch (buffer, currlen, maxlen, fconvert[--fplace]);
+  /* for %g do not output decimal point if no fraction is present */
+  if(conv == 'f' || (conv == 'g' && fplace > 0)) {
+    /*
+     * Decimal point.  This should probably use locale to find the correct
+     * char to print out.
+     */
+    dopr_outch (buffer, currlen, maxlen, '.');
+  }
 
   while (zpadlen > 0)
   {
     dopr_outch (buffer, currlen, maxlen, '0');
     --zpadlen;
   }
+
+  while (fplace > 0) 
+    dopr_outch (buffer, currlen, maxlen, fconvert[--fplace]);
 
   while (padlen < 0) 
   {
