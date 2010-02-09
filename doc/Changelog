@@ -1,5 +1,6 @@
 9 February 2010: Wouter
 	- Fixup in compat snprintf routine, %f 1.02 and %g support.
+	- include math.h for testbound test compile portability.
 
 2 February 2010: Wouter
 	- Updated url of IANA itar, interim trust anchor repository, in script.

@@ -40,6 +40,8 @@
  */
 
 #include "config.h"
+/* for strtod prototype */
+#include <math.h>
 #include "util/log.h"
 #include "util/net_help.h"
 #include "util/config_file.h"
