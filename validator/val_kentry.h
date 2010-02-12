@@ -78,6 +78,8 @@ struct key_entry_data {
 	uint32_t ttl;
 	/** the key rrdata. can be NULL to signal keyless name. */
 	struct packed_rrset_data* rrset_data;
+	/** notNULL sometimes to give reason why bogus */
+	char* reason;
 	/** DNS RR type of the rrset data (host order) */
 	uint16_t rrset_type;
 	/** if the key is bad: Bogus or malformed */
@@ -137,6 +139,22 @@ int key_entry_isgood(struct key_entry_key* kkey);
  * @return true if it is bad.
  */
 int key_entry_isbad(struct key_entry_key* kkey);
+
+/**
+ * Set reason why a key is bad.
+ * @param kkey: bad key.
+ * @param reason: string to attach, you must allocate it.
+ *    Not safe to call twice unless you deallocate it yourself.
+ */
+void key_entry_set_reason(struct key_entry_key* kkey, char* reason);
+
+/**
+ * Get reason why a key is bad.
+ * @param kkey: bad key
+ * @return pointer to string.
+ *    String is part of key entry and is deleted with it.
+ */
+char* key_entry_get_reason(struct key_entry_key* kkey);
 
 /**
  * Create a null entry, in the given region.

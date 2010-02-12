@@ -1,3 +1,10 @@
+12 February 2010: Wouter
+	- Re-query pattern changed on validation failure.  To protect troubled
+	  authority servers, unbound caches a failure for the DNSKEY or DS
+	  records for the entire zone, and only retries that 900 seconds later.
+	  This implies that only a handful of packets are sent extra to the
+	  authority if the zone fails.
+
 11 February 2010: Wouter
 	- ldns tarball update for long label length syntax error fix.
 	- iana portlist updated.

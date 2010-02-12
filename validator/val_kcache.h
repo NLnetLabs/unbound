@@ -46,6 +46,7 @@ struct key_entry_key;
 struct key_entry_data;
 struct config_file;
 struct regional;
+struct module_qstate;
 
 /**
  * Key cache
@@ -75,8 +76,10 @@ void key_cache_delete(struct key_cache* kcache);
  * @param kcache: the key cache.
  * @param kkey: key entry key, assumed malloced in a region, is copied
  * 	to perform update or insertion. Its data pointer is also copied.
+ * @param qstate: store errinf reason in case its bad.
  */
-void key_cache_insert(struct key_cache* kcache, struct key_entry_key* kkey);
+void key_cache_insert(struct key_cache* kcache, struct key_entry_key* kkey,
+	struct module_qstate* qstate);
 
 /**
  * Remove an entry from the key cache.

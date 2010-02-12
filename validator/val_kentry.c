@@ -55,6 +55,8 @@ key_entry_sizefunc(void* key, void* data)
 	s += sizeof(*kd) + lock_get_mem(&kk->entry.lock);
 	if(kd->rrset_data)
 		s += packed_rrset_sizeof(kd->rrset_data);
+	if(kd->reason)
+		s += strlen(kd->reason)+1;
 	return s;
 }
 
@@ -86,6 +88,7 @@ void
 key_entry_deldatafunc(void* data, void* ATTR_UNUSED(userarg))
 {
 	struct key_entry_data* kd = (struct key_entry_data*)data;
+	free(kd->reason);
 	free(kd->rrset_data);
 	free(kd);
 }
@@ -126,6 +129,11 @@ key_entry_copy_toregion(struct key_entry_key* kkey, struct regional* region)
 			if(!newd->rrset_data)
 				return NULL;
 			packed_rrset_ptr_fixup(newd->rrset_data);
+		}
+		if(d->reason) {
+			newd->reason = regional_strdup(region, d->reason);
+			if(!newd->reason)
+				return NULL;
 		}
 		newk->entry.data = newd;
 	}
@@ -171,6 +179,16 @@ key_entry_copy(struct key_entry_key* kkey)
 			}
 			packed_rrset_ptr_fixup(newd->rrset_data);
 		}
+		if(d->reason) {
+			newd->reason = strdup(d->reason);
+			if(!newd->reason) {
+				free(newd->rrset_data);
+				free(newd);
+				free(newk->name);
+				free(newk);
+				return NULL;
+			}
+		}
 		newk->entry.data = newd;
 	}
 	return newk;
@@ -195,6 +213,20 @@ key_entry_isbad(struct key_entry_key* kkey)
 {
 	struct key_entry_data* d = (struct key_entry_data*)kkey->entry.data;
 	return (int)(d->isbad);
+}
+
+void
+key_entry_set_reason(struct key_entry_key* kkey, char* reason)
+{
+	struct key_entry_data* d = (struct key_entry_data*)kkey->entry.data;
+	d->reason = reason;
+}
+
+char*
+key_entry_get_reason(struct key_entry_key* kkey)
+{
+	struct key_entry_data* d = (struct key_entry_data*)kkey->entry.data;
+	return d->reason;
 }
 
 /** setup key entry in region */
@@ -231,6 +263,7 @@ key_entry_create_null(struct regional* region,
 		return NULL;
 	d->ttl = now + ttl;
 	d->isbad = 0;
+	d->reason = NULL;
 	d->rrset_type = LDNS_RR_TYPE_DNSKEY;
 	d->rrset_data = NULL;
 	return k;
@@ -249,6 +282,7 @@ key_entry_create_rrset(struct regional* region,
 		return NULL;
 	d->ttl = rd->ttl + now;
 	d->isbad = 0;
+	d->reason = NULL;
 	d->rrset_type = ntohs(rrset->rk.type);
 	d->rrset_data = (struct packed_rrset_data*)regional_alloc_init(region,
 		rd, packed_rrset_sizeof(rd));
@@ -268,6 +302,7 @@ key_entry_create_bad(struct regional* region,
 		return NULL;
 	d->ttl = 0;
 	d->isbad = 1;
+	d->reason = NULL;
 	d->rrset_type = LDNS_RR_TYPE_DNSKEY;
 	d->rrset_data = NULL;
 	return k;

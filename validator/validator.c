@@ -1340,6 +1340,14 @@ processInit(struct module_qstate* qstate, struct val_qstate* vq,
 		return 1;
 	} else if(key_entry_isbad(vq->key_entry)) {
 		/* key is bad, chain is bad, reply is bogus */
+		errinf_dname(qstate, "key for validation", vq->key_entry->name);
+		errinf(qstate, "is marked as invalid");
+		if(key_entry_get_reason(vq->key_entry)) {
+			errinf(qstate, "because of a previous");
+			errinf(qstate, key_entry_get_reason(vq->key_entry));
+		}
+		/* no retries, stop bothering the authority until timeout */
+		vq->restart_count = VAL_MAX_RESTART_COUNT;
 		vq->chase_reply->security = sec_status_bogus;
 		vq->state = VAL_FINISHED_STATE;
 		return 1;
@@ -1535,6 +1543,7 @@ processValidate(struct module_qstate* qstate, struct val_qstate* vq,
 		vq->chase_reply->security = sec_status_insecure;
 		val_mark_insecure(vq->chase_reply, vq->key_entry->name, 
 			qstate->env->rrset_cache, qstate->env);
+		key_cache_insert(ve->kcache, vq->key_entry, qstate);
 		return 1;
 	}
 
@@ -1544,6 +1553,8 @@ processValidate(struct module_qstate* qstate, struct val_qstate* vq,
 			LDNS_RR_TYPE_DNSKEY, vq->key_entry->key_class);
 		vq->chase_reply->security = sec_status_bogus;
 		errinf(qstate, "while building chain of trust");
+		if(vq->restart_count >= VAL_MAX_RESTART_COUNT)
+			key_cache_insert(ve->kcache, vq->key_entry, qstate);
 		return 1;
 	}
 
@@ -2622,7 +2633,7 @@ process_dnskey_response(struct module_qstate* qstate, struct val_qstate* vq,
 	qstate->errinf = NULL;
 
 	/* The DNSKEY validated, so cache it as a trusted key rrset. */
-	key_cache_insert(ve->kcache, vq->key_entry);
+	key_cache_insert(ve->kcache, vq->key_entry, qstate);
 
 	/* If good, we stay in the FINDKEY state. */
 	log_query_info(VERB_DETAIL, "validated DNSKEY", qinfo);
@@ -2688,7 +2699,7 @@ process_prime_response(struct module_qstate* qstate, struct val_qstate* vq,
 		errinf_origin(qstate, origin);
 		errinf_dname(qstate, "for trust anchor", ta->name);
 		/* store the freshly primed entry in the cache */
-		key_cache_insert(ve->kcache, vq->key_entry);
+		key_cache_insert(ve->kcache, vq->key_entry, qstate);
 	}
 
 	/* If the result of the prime is a null key, skip the FINDKEY state.*/

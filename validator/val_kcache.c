@@ -44,6 +44,7 @@
 #include "util/log.h"
 #include "util/config_file.h"
 #include "util/data/dname.h"
+#include "util/module.h"
 
 struct key_cache* 
 key_cache_create(struct config_file* cfg)
@@ -79,11 +80,17 @@ key_cache_delete(struct key_cache* kcache)
 }
 
 void 
-key_cache_insert(struct key_cache* kcache, struct key_entry_key* kkey)
+key_cache_insert(struct key_cache* kcache, struct key_entry_key* kkey,
+	struct module_qstate* qstate)
 {
 	struct key_entry_key* k = key_entry_copy(kkey);
 	if(!k)
 		return;
+	if(key_entry_isbad(k) && qstate->errinf &&
+		qstate->env->cfg->val_log_level >= 2) {
+		/* on malloc failure there is simply no reason string */
+		key_entry_set_reason(k, errinf_to_str(qstate));
+	}
 	key_entry_hash(k);
 	slabhash_insert(kcache->slab, k->entry.hash, &k->entry, 
 		k->entry.data, NULL);
