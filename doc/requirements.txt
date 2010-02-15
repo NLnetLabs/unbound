@@ -281,3 +281,14 @@ o Parent and child with different nameserver information.
   those misconfigured domains where the servers reported by the parent
   are the only ones working, and servers reported by the child do not.
 
+o Failure of validation and probing.
+  Retries on a validation failure are now 5x to a different nameserver IP
+  (if possible), and then it gives up, for one name, type, class entry in
+  the message cache.  If a DNSKEY or DS fails in the chain of trust in the
+  key cache additionally, after the probing, a bad key entry is created that
+  makes the entire zone bogus for 900 seconds.  This is a fixed value at
+  this time and is conservative in sending probes.  It makes the compound
+  effect of many resolvers less and easier to handle, but penalizes
+  individual resolvers by having less probes and a longer time before fixes
+  are picked up.
+
