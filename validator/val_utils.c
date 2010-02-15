@@ -524,9 +524,10 @@ val_verify_new_DNSKEYs(struct regional* region, struct module_env* env,
 			ds_rrset->rk.dname_len, 
 			ntohs(ds_rrset->rk.rrset_class),
 			rrset_get_ttl(ds_rrset), *env->now);
-	} 
+	}
 	return key_entry_create_bad(region, ds_rrset->rk.dname,
-		ds_rrset->rk.dname_len, ntohs(ds_rrset->rk.rrset_class));
+		ds_rrset->rk.dname_len, ntohs(ds_rrset->rk.rrset_class),
+		BOGUS_KEY_TTL, *env->now);
 }
 
 int 

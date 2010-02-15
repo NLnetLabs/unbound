@@ -190,10 +190,13 @@ struct key_entry_key* key_entry_create_rrset(struct regional* region,
  * @param name: the key name
  * @param namelen: length of name
  * @param dclass: class of key entry. (host order);
+ * @param ttl: what ttl should the key have. relative.
+ * @param now: current time (added to ttl).
  * @return new key entry or NULL on alloc failure
  */
 struct key_entry_key* key_entry_create_bad(struct regional* region,
-	uint8_t* name, size_t namelen, uint16_t dclass);
+	uint8_t* name, size_t namelen, uint16_t dclass, uint32_t ttl,
+	uint32_t now);
 
 /**
  * Obtain rrset from a key entry, allocated in region.

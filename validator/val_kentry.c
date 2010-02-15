@@ -294,13 +294,14 @@ key_entry_create_rrset(struct regional* region,
 
 struct key_entry_key* 
 key_entry_create_bad(struct regional* region,
-	uint8_t* name, size_t namelen, uint16_t dclass)
+	uint8_t* name, size_t namelen, uint16_t dclass, uint32_t ttl, 
+	uint32_t now)
 {
 	struct key_entry_key* k;
 	struct key_entry_data* d;
 	if(!key_entry_setup(region, name, namelen, dclass, &k, &d))
 		return NULL;
-	d->ttl = 0;
+	d->ttl = now + ttl;
 	d->isbad = 1;
 	d->reason = NULL;
 	d->rrset_type = LDNS_RR_TYPE_DNSKEY;

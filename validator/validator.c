@@ -2225,7 +2225,8 @@ primeResponseToKE(struct ub_packed_rrset_key* dnskey_rrset,
 		if(qstate->env->cfg->harden_dnssec_stripped) {
 			errinf(qstate, "no DNSKEY rrset");
 			kkey = key_entry_create_bad(qstate->region, ta->name,
-				ta->namelen, ta->dclass);
+				ta->namelen, ta->dclass, BOGUS_KEY_TTL,
+				*qstate->env->now);
 		} else 	kkey = key_entry_create_null(qstate->region, ta->name,
 				ta->namelen, ta->dclass, NULL_KEY_TTL,
 				*qstate->env->now);
@@ -2275,7 +2276,8 @@ primeResponseToKE(struct ub_packed_rrset_key* dnskey_rrset,
 		if(qstate->env->cfg->harden_dnssec_stripped) {
 			errinf(qstate, reason);
 			kkey = key_entry_create_bad(qstate->region, ta->name,
-				ta->namelen, ta->dclass);
+				ta->namelen, ta->dclass, BOGUS_KEY_TTL,
+				*qstate->env->now);
 		} else 	kkey = key_entry_create_null(qstate->region, ta->name,
 				ta->namelen, ta->dclass, NULL_KEY_TTL,
 				*qstate->env->now);
@@ -2465,7 +2467,8 @@ ds_response_to_ke(struct module_qstate* qstate, struct val_qstate* vq,
 	}
 return_bogus:
 	*ke = key_entry_create_bad(qstate->region, qinfo->qname,
-		qinfo->qname_len, qinfo->qclass);
+		qinfo->qname_len, qinfo->qclass, 
+		BOGUS_KEY_TTL, *qstate->env->now);
 	return (*ke) != NULL;
 }
 
@@ -2582,7 +2585,8 @@ process_dnskey_response(struct module_qstate* qstate, struct val_qstate* vq,
 			return;
 		}
 		vq->key_entry = key_entry_create_bad(qstate->region, 
-			qinfo->qname, qinfo->qname_len, qinfo->qclass);
+			qinfo->qname, qinfo->qname_len, qinfo->qclass,
+			BOGUS_KEY_TTL, *qstate->env->now);
 		if(!vq->key_entry) {
 			log_err("alloc failure in missing dnskey response");
 			/* key_entry is NULL for failure in Validate */

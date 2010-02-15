@@ -1,3 +1,9 @@
+15 February 2010: Wouter
+	- Fixed the requery protection, the TTL was 0, it is now 900 seconds,
+	  hardcoded.  We made the choice to send out more conservatively,
+	  protecting against an aggregate effect more than protecting a
+	  single user (from their own folly, perhaps in case of misconfig).
+
 12 February 2010: Wouter
 	- Re-query pattern changed on validation failure.  To protect troubled
 	  authority servers, unbound caches a failure for the DNSKEY or DS
