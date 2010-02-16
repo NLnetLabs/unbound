@@ -855,7 +855,7 @@ trustanchor_state2str(autr_state_t s)
 
 /** print ID to file */
 static void
-print_id(FILE* out, struct module_env* env, 
+print_id(FILE* out, char* fname, struct module_env* env, 
 	uint8_t* nm, size_t nmlen, uint16_t dclass)
 {
 	ldns_rdf rdf;
@@ -871,9 +871,10 @@ print_id(FILE* out, struct module_env* env,
 	log_assert(s == LDNS_STATUS_OK);
 	ldns_buffer_write_u8(env->scratch_buffer, 0);
 	ldns_buffer_flip(env->scratch_buffer);
-	fprintf(out, ";;id: %s %d\n", 
+	if(fprintf(out, ";;id: %s %d\n", 
 		(char*)ldns_buffer_begin(env->scratch_buffer),
-		(int)dclass);
+		(int)dclass) < 0)
+		log_err("could not write to %s: %s", fname, strerror(errno));
 }
 
 void autr_write_file(struct module_env* env, struct trust_anchor* tp)
@@ -881,6 +882,7 @@ void autr_write_file(struct module_env* env, struct trust_anchor* tp)
 	char tmi[32];
 	FILE* out;
 	struct autr_ta* ta;
+	char* fn = tp->autr->file;
 	log_assert(tp->autr);
 	verbose(VERB_ALGO, "autotrust: write to disk");
 	out = fopen(tp->autr->file, "w");
@@ -890,28 +892,32 @@ void autr_write_file(struct module_env* env, struct trust_anchor* tp)
 		return;
 	}
 	/* write pretty header */
-	fprintf(out, "; autotrust trust anchor file\n");
+	if(fprintf(out, "; autotrust trust anchor file\n") < 0)
+		log_err("could not write to %s: %s", fn, strerror(errno));
 	if(tp->autr->revoked) {
-		fprintf(out, ";;REVOKED\n");
-		fprintf(out, "; The zone has all keys revoked, and is\n"
+		if(fprintf(out, ";;REVOKED\n") < 0 ||
+		   fprintf(out, "; The zone has all keys revoked, and is\n"
 			"; considered as if it has no trust anchors.\n"
 			"; the remainder of the file is the last probe.\n"
 			"; to restart the trust anchor, overwrite this file.\n"
-			"; with one containing valid DNSKEYs or DSes.\n");
+			"; with one containing valid DNSKEYs or DSes.\n") < 0)
+		   log_err("could not write to %s: %s", fn, strerror(errno));
 	}
-	print_id(out, env, tp->name, tp->namelen, tp->dclass);
-	fprintf(out, ";;last_queried: %u ;;%s", 
+	print_id(out, tp->autr->file, env, tp->name, tp->namelen, tp->dclass);
+	if(fprintf(out, ";;last_queried: %u ;;%s", 
 		(unsigned int)tp->autr->last_queried, 
-		ctime_r(&(tp->autr->last_queried), tmi));
-	fprintf(out, ";;last_success: %u ;;%s", 
+		ctime_r(&(tp->autr->last_queried), tmi)) < 0 ||
+	   fprintf(out, ";;last_success: %u ;;%s", 
 		(unsigned int)tp->autr->last_success,
-		ctime_r(&(tp->autr->last_success), tmi));
-	fprintf(out, ";;next_probe_time: %u ;;%s", 
+		ctime_r(&(tp->autr->last_success), tmi)) < 0 ||
+	   fprintf(out, ";;next_probe_time: %u ;;%s", 
 		(unsigned int)tp->autr->next_probe_time,
-		ctime_r(&(tp->autr->next_probe_time), tmi));
-	fprintf(out, ";;query_failed: %d\n", (int)tp->autr->query_failed);
-	fprintf(out, ";;query_interval: %d\n", (int)tp->autr->query_interval);
-	fprintf(out, ";;retry_time: %d\n", (int)tp->autr->retry_time);
+		ctime_r(&(tp->autr->next_probe_time), tmi)) < 0 ||
+	   fprintf(out, ";;query_failed: %d\n", (int)tp->autr->query_failed)<0
+	   || fprintf(out, ";;query_interval: %d\n", 
+	   (int)tp->autr->query_interval) < 0 ||
+	   fprintf(out, ";;retry_time: %d\n", (int)tp->autr->retry_time) < 0)
+		log_err("could not write to %s: %s", fn, strerror(errno));
 
 	/* write anchors */
 	for(ta=tp->autr->keys; ta; ta=ta->next) {
@@ -932,11 +938,12 @@ void autr_write_file(struct module_env* env, struct trust_anchor* tp)
 			continue;
 		}
 		str[strlen(str)-1] = 0; /* remove newline */
-		fprintf(out, "%s ;;state=%d [%s] ;;count=%d "
+		if(fprintf(out, "%s ;;state=%d [%s] ;;count=%d "
 			";;lastchange=%u ;;%s", str, (int)ta->s, 
 			trustanchor_state2str(ta->s), (int)ta->pending_count,
 			(unsigned int)ta->last_change, 
-			ctime_r(&(ta->last_change), tmi));
+			ctime_r(&(ta->last_change), tmi)) < 0)
+		   log_err("could not write to %s: %s", fn, strerror(errno));
 		free(str);
 	}
 	fclose(out);

@@ -1,3 +1,7 @@
+16 February 2010: Wouter
+	- Check for 'no space left on device' (or other errors) when 
+	  writing updated autotrust anchors and print errno to log.
+
 15 February 2010: Wouter
 	- Fixed the requery protection, the TTL was 0, it is now 900 seconds,
 	  hardcoded.  We made the choice to send out more conservatively,
