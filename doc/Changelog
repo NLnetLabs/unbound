@@ -1,3 +1,8 @@
+17 February 2010: Wouter
+	- Disregard DNSKEY from authority section for chain of trust.
+	  DS records that are irrelevant to a referral scrubbed.  Anti-poison.
+	- iana portlist updated.
+
 16 February 2010: Wouter
 	- Check for 'no space left on device' (or other errors) when 
 	  writing updated autotrust anchors and print errno to log.

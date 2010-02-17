@@ -698,7 +698,10 @@ dns_cache_lookup(struct module_env* env,
 		struct packed_rrset_data *d = (struct packed_rrset_data*)
 			rrset->entry.data;
 		if(d->trust != rrset_trust_add_noAA && 
-			d->trust != rrset_trust_add_AA) {
+			d->trust != rrset_trust_add_AA && 
+			(qtype == LDNS_RR_TYPE_DS || 
+				(d->trust != rrset_trust_auth_noAA 
+				&& d->trust != rrset_trust_auth_AA) )) {
 			struct dns_msg* msg = rrset_msg(rrset, region, now, &k);
 			if(msg) {
 				lock_rw_unlock(&rrset->entry.lock);

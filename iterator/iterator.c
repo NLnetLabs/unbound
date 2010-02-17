@@ -1612,7 +1612,8 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 			|| !dname_subdomain_c(iq->qchase.qname, ns->rk.dname)){
 			verbose(VERB_ALGO, "bad referral, throwaway");
 			type = RESPONSE_TYPE_THROWAWAY;
-		}
+		} else
+			iter_scrub_ds(ns, iq->response);
 	}
 
 	/* handle each of the type cases */
@@ -1650,11 +1651,11 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 			    * see if that equals the query name... */
 			&& ( /* auth section, but sometimes in answer section*/
 			  reply_find_rrset_section_ns(iq->response->rep,
-				qstate->qinfo.qname, qstate->qinfo.qname_len,
-				LDNS_RR_TYPE_NS, qstate->qinfo.qclass)
+				iq->qchase.qname, iq->qchase.qname_len,
+				LDNS_RR_TYPE_NS, iq->qchase.qclass)
 			  || reply_find_rrset_section_an(iq->response->rep,
-				qstate->qinfo.qname, qstate->qinfo.qname_len,
-				LDNS_RR_TYPE_NS, qstate->qinfo.qclass)
+				iq->qchase.qname, iq->qchase.qname_len,
+				LDNS_RR_TYPE_NS, iq->qchase.qclass)
 			  )
 		    )) {
 			/* Store the referral under the current query */

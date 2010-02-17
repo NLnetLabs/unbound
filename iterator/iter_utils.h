@@ -57,6 +57,7 @@ struct query_info;
 struct reply_info;
 struct module_qstate;
 struct sock_list;
+struct ub_packed_rrset_key;
 
 /**
  * Process config options and set iterator module state.
@@ -244,5 +245,12 @@ int iter_lookup_inzone_glue(struct module_env* env, struct delegpt* dp,
  */
 int iter_get_next_root(struct iter_hints* hints, struct iter_forwards* fwd,
 	uint16_t* c);
+
+/**
+ * Remove DS records that are inappropriate before they are cached.
+ * @param ns: RRSET that is the NS record for the referral.
+ * @param msg: the response to scrub.
+ */
+void iter_scrub_ds(struct ub_packed_rrset_key* ns, struct dns_msg* msg);
 
 #endif /* ITERATOR_ITER_UTILS_H */
