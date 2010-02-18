@@ -757,20 +757,22 @@ iter_get_next_root(struct iter_hints* hints, struct iter_forwards* fwd,
 }
 
 void
-iter_scrub_ds(struct ub_packed_rrset_key* ns, struct dns_msg* msg)
+iter_scrub_ds(struct dns_msg* msg, struct ub_packed_rrset_key* ns, uint8_t* z)
 {
 	/* Only the DS record for the delegation itself is expected.
 	 * We allow DS for everything between the bailiwick and the 
 	 * zonecut, thus DS records must be at or above the zonecut.
+	 * And the DS records must be below the server authority zone.
 	 * The answer section is already scrubbed. */
 	size_t i = msg->rep->an_numrrsets;
 	while(i < (msg->rep->an_numrrsets + msg->rep->ns_numrrsets)) {
 		struct ub_packed_rrset_key* s = msg->rep->rrsets[i];
 		if(ntohs(s->rk.type) == LDNS_RR_TYPE_DS &&
-			!dname_subdomain_c(ns->rk.dname, s->rk.dname)) {
-			log_nametypeclass(VERB_ALGO, "removing irrelevant DS "
-				"from referral", s->rk.dname, 
-				ntohs(s->rk.type), ntohs(s->rk.rrset_class));
+			(!ns || !dname_subdomain_c(ns->rk.dname, s->rk.dname)
+			|| query_dname_compare(z, s->rk.dname) == 0)) {
+			log_nametypeclass(VERB_ALGO, "removing irrelevant DS",
+				s->rk.dname, ntohs(s->rk.type),
+				ntohs(s->rk.rrset_class));
 			memmove(msg->rep->rrsets+i, msg->rep->rrsets+i+1,
 				sizeof(struct ub_packed_rrset_key*) * 
 				(msg->rep->rrset_count-i-1));

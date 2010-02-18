@@ -248,9 +248,12 @@ int iter_get_next_root(struct iter_hints* hints, struct iter_forwards* fwd,
 
 /**
  * Remove DS records that are inappropriate before they are cached.
- * @param ns: RRSET that is the NS record for the referral.
  * @param msg: the response to scrub.
+ * @param ns: RRSET that is the NS record for the referral.
+ * 	if NULL, then all DS records are removed from the authority section.
+ * @param z: zone name that the response is from.
  */
-void iter_scrub_ds(struct ub_packed_rrset_key* ns, struct dns_msg* msg);
+void iter_scrub_ds(struct dns_msg* msg, struct ub_packed_rrset_key* ns,
+	uint8_t* z);
 
 #endif /* ITERATOR_ITER_UTILS_H */

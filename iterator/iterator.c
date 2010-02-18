@@ -1613,8 +1613,8 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 			verbose(VERB_ALGO, "bad referral, throwaway");
 			type = RESPONSE_TYPE_THROWAWAY;
 		} else
-			iter_scrub_ds(ns, iq->response);
-	}
+			iter_scrub_ds(iq->response, ns, iq->dp->name);
+	} else iter_scrub_ds(iq->response, NULL, NULL);
 
 	/* handle each of the type cases */
 	if(type == RESPONSE_TYPE_ANSWER) {

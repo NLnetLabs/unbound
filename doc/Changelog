@@ -1,3 +1,6 @@
+18 February 2010: Wouter
+	- A little more strict DS scrubbing.
+
 17 February 2010: Wouter
 	- Disregard DNSKEY from authority section for chain of trust.
 	  DS records that are irrelevant to a referral scrubbed.  Anti-poison.
