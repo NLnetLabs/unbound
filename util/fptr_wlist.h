@@ -316,6 +316,13 @@ int fptr_whitelist_tube_listen(tube_callback_t* fptr);
  */
 int fptr_whitelist_mesh_cb(mesh_cb_func_t fptr);
 
+/**
+ * Check function pointer whitelist for config_get_option func values.
+ * @param fptr: function pointer to check.
+ * @return false if not in whitelist.
+ */
+int fptr_whitelist_print_func(void (*fptr)(char*,void*));
+
 /** Due to module breakage by fptr wlist, these test app declarations
  * are presented here */
 /** 

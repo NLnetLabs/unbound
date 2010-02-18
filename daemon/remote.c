@@ -1460,6 +1460,15 @@ do_dump_requestlist(SSL* ssl, struct worker* worker)
 	}
 }
 
+/** do the log_reopen command */
+static void
+do_log_reopen(SSL* ssl, struct worker* worker)
+{
+	struct config_file* cfg = worker->env.cfg;
+	send_ok(ssl);
+	log_init(cfg->logfile, cfg->use_syslog, cfg->chrootdir);
+}
+
 /** tell other processes to execute the command */
 void
 distribute_cmd(struct daemon_remote* rc, SSL* ssl, char* cmd)
@@ -1553,6 +1562,8 @@ execute_cmd(struct daemon_remote* rc, SSL* ssl, char* cmd,
 		do_flush_name(ssl, worker, skipwhite(p+5));
 	} else if(strncmp(p, "dump_requestlist", 16) == 0) {
 		do_dump_requestlist(ssl, worker);
+	} else if(strncmp(p, "log_reopen", 10) == 0) {
+		do_log_reopen(ssl, worker);
 	} else {
 		(void)ssl_printf(ssl, "error unknown command '%s'\n", p);
 	}

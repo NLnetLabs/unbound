@@ -361,6 +361,25 @@ void config_apply(struct config_file* config);
 int config_set_option(struct config_file* config, const char* option,
 	const char* value);
 
+/** 
+ * Call print routine for the given option.
+ * @param cfg: config.
+ * @param opt: option name without trailing :. 
+ *	This is different from config_set_option.
+ * @param func: print func, called as (str, arg) for every data element.
+ * @param arg: user argument for print func.
+ * @return false if the option name is not supported (syntax error).
+ */
+int config_get_option(struct config_file* cfg, const char* opt, 
+	void (*func)(char*,void*), void* arg);
+
+/**
+ * function to print to a file, use as func with config_get_option.
+ * @param line: text to print. \n appended.
+ * @param arg: pass a FILE*, like stdout.
+ */
+void config_print_func(char* line, void* arg);
+
 /**
  * Insert string into strlist.
  * @param head: pointer to strlist head variable.

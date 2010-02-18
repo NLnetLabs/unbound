@@ -49,6 +49,7 @@
 #include "util/data/msgparse.h"
 #include "util/module.h"
 #include "util/regional.h"
+#include "util/fptr_wlist.h"
 #include "util/data/dname.h"
 /** global config during parsing */
 struct config_parser_state* cfg_parser = 0;
@@ -464,6 +465,152 @@ int config_set_option(struct config_file* cfg, const char* opt,
 		/* unknown or unsupported (from the library interface) */
 		return 0;
 	}
+	return 1;
+}
+
+/** compare and print decimal option */
+#define O_DEC(opt, str, var) if(strcmp(opt, str)==0) \
+	{snprintf(buf, len, "%d", (int)cfg->var); \
+	func(buf, arg);}
+/** compare and print unsigned option */
+#define O_UNS(opt, str, var) if(strcmp(opt, str)==0) \
+	{snprintf(buf, len, "%u", (unsigned)cfg->var); \
+	func(buf, arg);}
+/** compare and print yesno option */
+#define O_YNO(opt, str, var) if(strcmp(opt, str)==0) \
+	{func(cfg->var?"yes":"no", arg);}
+/** compare and print string option */
+#define O_STR(opt, str, var) if(strcmp(opt, str)==0) \
+	{func(cfg->var?cfg->var:"", arg);}
+/** compare and print array option */
+#define O_IFC(opt, str, num, arr) if(strcmp(opt, str)==0) \
+	{int i; for(i=0; i<cfg->num; i++) func(cfg->arr[i], arg);}
+/** compare and print memorysize option */
+#define O_MEM(opt, str, var) if(strcmp(opt, str)==0) { \
+	if(cfg->var > 1024*1024*1024) {	\
+	  size_t f=cfg->var/(size_t)1000000, b=cfg->var%(size_t)1000000; \
+	  snprintf(buf, len, "%u%6.6u\n", (unsigned)f, (unsigned)b); \
+	} else snprintf(buf, len, "%u\n", (unsigned)cfg->var); \
+	func(buf, arg);}
+/** compare and print list option */
+#define O_LST(opt, name, lst) if(strcmp(opt, name)==0) { \
+	struct config_strlist* p = cfg->lst; \
+	for(p = cfg->lst; p; p = p->next) \
+		func(p->str, arg); \
+	}
+/** compare and print list option */
+#define O_LS2(opt, name, lst) if(strcmp(opt, name)==0) { \
+	struct config_str2list* p = cfg->lst; \
+	for(p = cfg->lst; p; p = p->next) \
+		snprintf(buf, len, "%s %s\n", p->str, p->str2); \
+		func(buf, arg); \
+	}
+
+void config_print_func(char* line, void* arg)
+{
+	FILE* f = (FILE*)arg;
+	(void)fprintf(f, "%s\n", line);
+}
+
+int
+config_get_option(struct config_file* cfg, const char* opt, 
+	void (*func)(char*,void*), void* arg)
+{
+	char buf[1024];
+	size_t len = sizeof(buf);
+	fptr_whitelist_print_func(func);
+	O_DEC(opt, "verbosity", verbosity)
+	else O_DEC(opt, "statistics-interval", stat_interval)
+	else O_YNO(opt, "statistics-cumulative", stat_interval)
+	else O_YNO(opt, "extended-statistics", stat_extended)
+	else O_DEC(opt, "num-threads", num_threads)
+	else O_IFC(opt, "interface", num_ifs, ifs)
+	else O_IFC(opt, "outgoing-interface", num_out_ifs, out_ifs)
+	else O_YNO(opt, "interface-automatic", if_automatic)
+	else O_DEC(opt, "port", port)
+	else O_DEC(opt, "outgoing-range", outgoing_num_ports)
+	else O_DEC(opt, "outgoing-num-tcp", outgoing_num_tcp)
+	else O_DEC(opt, "incoming-num-tcp", incoming_num_tcp)
+	else O_DEC(opt, "edns-buffer-size", edns_buffer_size)
+	else O_DEC(opt, "msg-buffer-size", msg_buffer_size)
+	else O_MEM(opt, "msg-cache-size", msg_cache_size)
+	else O_DEC(opt, "msg-cache-slabs", msg_cache_slabs)
+	else O_DEC(opt, "num-queries-per-thread", num_queries_per_thread)
+	else O_UNS(opt, "jostle-timeout", jostle_time)
+	else O_MEM(opt, "so-rcvbuf", socket_rcvbuf)
+	else O_MEM(opt, "rrset-cache-size", rrset_cache_size)
+	else O_DEC(opt, "rrset-cache-slabs", rrset_cache_slabs)
+	else O_YNO(opt, "prefetch-key", prefetch_key)
+	else O_YNO(opt, "prefetch", prefetch)
+	else O_DEC(opt, "cache-max-ttl", max_ttl)
+	else O_DEC(opt, "infra-host-ttl", host_ttl)
+	else O_DEC(opt, "infra-lame-ttl", lame_ttl)
+	else O_DEC(opt, "infra-cache-slabs", infra_cache_slabs)
+	else O_MEM(opt, "infra-cache-numhosts", infra_cache_numhosts)
+	else O_MEM(opt, "infra-cache-lame-size", infra_cache_lame_size)
+	else O_YNO(opt, "do-ip4", do_ip4)
+	else O_YNO(opt, "do-ip6", do_ip6)
+	else O_YNO(opt, "do-udp", do_udp)
+	else O_YNO(opt, "do-tcp", do_tcp)
+	else O_YNO(opt, "do-daemonize", do_daemonize)
+	else O_STR(opt, "chroot", chrootdir)
+	else O_STR(opt, "username", username)
+	else O_STR(opt, "directory", directory)
+	else O_STR(opt, "logfile", logfile)
+	else O_STR(opt, "pidfile", pidfile)
+	else O_YNO(opt, "hide-identity", hide_identity)
+	else O_YNO(opt, "hide-version", hide_version)
+	else O_STR(opt, "identity", identity)
+	else O_STR(opt, "version", version)
+	else O_STR(opt, "target-fetch-policy", target_fetch_policy)
+	else O_YNO(opt, "harden-short-bufsize", harden_short_bufsize)
+	else O_YNO(opt, "harden-large-queries", harden_large_queries)
+	else O_YNO(opt, "harden-glue", harden_glue)
+	else O_YNO(opt, "harden-dnssec-stripped", harden_dnssec_stripped)
+	else O_YNO(opt, "harden-referral-path", harden_referral_path)
+	else O_YNO(opt, "use-caps-for-id", use_caps_bits_for_id)
+	else O_DEC(opt, "unwanted-reply-threshold", unwanted_threshold)
+	else O_YNO(opt, "do-not-query-localhost", donotquery_localhost)
+	else O_STR(opt, "module-config", module_conf)
+	else O_STR(opt, "dlv-anchor-file", dlv_anchor_file)
+	else O_DEC(opt, "val-bogus-ttl", bogus_ttl)
+	else O_YNO(opt, "val-clean-additional", val_clean_additional)
+	else O_DEC(opt, "val-log-level", val_log_level)
+	else O_YNO(opt, "val-permissive-mode", val_permissive_mode)
+	else O_STR(opt, "val-nsec3-keysize-iterations",val_nsec3_key_iterations)
+	else O_UNS(opt, "add-holddown", add_holddown)
+	else O_UNS(opt, "del-holddown", del_holddown)
+	else O_UNS(opt, "keep-missing", keep_missing)
+	else O_MEM(opt, "key-cache-size", key_cache_size)
+	else O_DEC(opt, "key-cache-slabs", key_cache_slabs)
+	else O_MEM(opt, "neg-cache-size", neg_cache_size)
+	else O_YNO(opt, "control-enable", remote_control_enable)
+	else O_DEC(opt, "control-port", control_port)
+	else O_STR(opt, "server-key-file", server_key_file)
+	else O_STR(opt, "server-cert-file", server_cert_file)
+	else O_STR(opt, "control-key-file", control_key_file)
+	else O_STR(opt, "control-cert-file", control_cert_file)
+	else O_LST(opt, "root-hints", root_hints)
+	else O_LS2(opt, "access-control", acls)
+	else O_LST(opt, "do-not-query-address", donotqueryaddrs)
+	else O_LST(opt, "private-address", private_address)
+	else O_LST(opt, "private-domain", private_domain)
+	else O_LST(opt, "auto-trust-anchor-file", auto_trust_anchor_file_list)
+	else O_LST(opt, "trust-anchor-file", trust_anchor_file_list)
+	else O_LST(opt, "trust-anchor", trust_anchor_list)
+	else O_LST(opt, "trusted-keys-file", trusted_keys_file_list)
+	else O_LST(opt, "dlv-anchor", dlv_anchor_list)
+	else O_LST(opt, "control-interface", control_ifs)
+	else O_UNS(opt, "val-override-date", val_date_override)
+	/* not here:
+	 * outgoing-permit, outgoing-avoid - have list of ports
+	 * local-zone - zones and nodefault variables
+	 * local-data - see below
+	 * local-data-ptr - converted to local-data entries
+	 * stub-zone, name, stub-addr, stub-host, stub-prime
+	 * forward-zone, name, forward-addr, forward-host
+	 */
+	else return 0;
 	return 1;
 }
 

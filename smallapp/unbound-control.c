@@ -66,6 +66,7 @@ usage()
 	printf("  stats_noreset			peek at statistics\n");
 	printf("  status			display status of server\n");
 	printf("  verbosity <number>		change logging detail\n");
+	printf("  log_reopen			close and open the logfile\n");
 	printf("  local_zone <name> <type>	add new local zone\n");
 	printf("  local_zone_remove <name>	remove local zone and its contents\n");
 	printf("  local_data <RR data...>	add local data, for example\n");

@@ -57,6 +57,11 @@ Change verbosity value for logging. Same values as \fBverbosity\fR keyword in
 \fIunbound.conf\fR(5).  This new setting lasts until the server is issued
 a reload (taken from config file again), or the next verbosity control command.
 .TP
+.B log_reopen
+Reopen the logfile, close and open it.  Useful for logrotation to make the
+daemon release the file it is logging to.  If you are using syslog it will
+attempt to close and open the syslog (which may not work if chrooted).
+.TP
 .B stats
 Print statistics. Resets the internal counters to zero, this can be 
 controlled using the \fBstatistics\-cumulative\fR config statement. 
