@@ -3,6 +3,7 @@
 	- No more blacklisting of unresponsive servers, a 2 minute timeout
 	  is backed off to.
 	- RD flag not enabled for dnssec-blacklisted tries, unless necessary.
+	- pickup ldns compile fix, libdl for libcrypto.
 
 17 February 2010: Wouter
 	- Disregard DNSKEY from authority section for chain of trust.

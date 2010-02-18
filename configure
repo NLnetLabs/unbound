@@ -17107,6 +17107,7 @@ _ACEOF
 
                                 if test "$ssldir" != "/usr"; then
                         CPPFLAGS="$CPPFLAGS -I$ssldir/include"
+                        LIBSSL_CPPFLAGS="$LIBSSL_CPPFLAGS -I$ssldir/include"
                 fi
                 break;
             fi
@@ -17121,6 +17122,7 @@ $as_echo "found in $ssldir" >&6; }
             HAVE_SSL=yes
                         if test "$ssldir" != "/usr" -a "$ssldir" != ""; then
                 LDFLAGS="$LDFLAGS -L$ssldir/lib"
+                LIBSSL_LDFLAGS="$LIBSSL_LDFLAGS -L$ssldir/lib"
 
 	if test "x$enable_rpath" = xyes; then
 		if echo "$ssldir/lib" | grep "^/" >/dev/null; then
@@ -17133,6 +17135,7 @@ $as_echo "found in $ssldir" >&6; }
             { $as_echo "$as_me:$LINENO: checking for HMAC_CTX_init in -lcrypto" >&5
 $as_echo_n "checking for HMAC_CTX_init in -lcrypto... " >&6; }
             LIBS="$LIBS -lcrypto"
+            LIBSSL_LIBS="$LIBSSL_LIBS -lcrypto"
             cat >conftest.$ac_ext <<_ACEOF
 /* confdefs.h.  */
 _ACEOF
@@ -17190,7 +17193,9 @@ sed 's/^/| /' conftest.$ac_ext >&5
 $as_echo "no" >&6; }
                 # check if -lwsock32 or -lgdi32 are needed.
                 BAKLIBS="$LIBS"
+                BAKSSLLIBS="$LIBSSL_LIBS"
                 LIBS="$LIBS -lgdi32"
+                LIBSSL_LIBS="$LIBSSL_LIBS -lgdi32"
                 { $as_echo "$as_me:$LINENO: checking if -lcrypto needs -lgdi32" >&5
 $as_echo_n "checking if -lcrypto needs -lgdi32... " >&6; }
                 cat >conftest.$ac_ext <<_ACEOF
@@ -17249,7 +17254,9 @@ sed 's/^/| /' conftest.$ac_ext >&5
                     { $as_echo "$as_me:$LINENO: result: no" >&5
 $as_echo "no" >&6; }
                     LIBS="$BAKLIBS"
+                    LIBSSL_LIBS="$BAKSSLLIBS"
                     LIBS="$LIBS -ldl"
+                    LIBSSL_LIBS="$LIBSSL_LIBS -ldl"
                     { $as_echo "$as_me:$LINENO: checking if -lcrypto needs -ldl" >&5
 $as_echo_n "checking if -lcrypto needs -ldl... " >&6; }
                     cat >conftest.$ac_ext <<_ACEOF
@@ -17331,6 +17338,98 @@ rm -f core conftest.err conftest.$ac_objext conftest_ipa8_conftest.oo \
         fi
 
 
+	# openssl engine functionality needs dlopen().
+	BAKLIBS="$LIBS"
+	{ $as_echo "$as_me:$LINENO: checking for library containing dlopen" >&5
+$as_echo_n "checking for library containing dlopen... " >&6; }
+if test "${ac_cv_search_dlopen+set}" = set; then
+  $as_echo_n "(cached) " >&6
+else
+  ac_func_search_save_LIBS=$LIBS
+cat >conftest.$ac_ext <<_ACEOF
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char dlopen ();
+int
+main ()
+{
+return dlopen ();
+  ;
+  return 0;
+}
+_ACEOF
+for ac_lib in '' dl; do
+  if test -z "$ac_lib"; then
+    ac_res="none required"
+  else
+    ac_res=-l$ac_lib
+    LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
+  fi
+  rm -f conftest.$ac_objext conftest$ac_exeext
+if { (ac_try="$ac_link"
+case "(($ac_try" in
+  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
+  *) ac_try_echo=$ac_try;;
+esac
+eval ac_try_echo="\"\$as_me:$LINENO: $ac_try_echo\""
+$as_echo "$ac_try_echo") >&5
+  (eval "$ac_link") 2>conftest.er1
+  ac_status=$?
+  grep -v '^ *+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
+  $as_echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } && {
+	 test -z "$ac_c_werror_flag" ||
+	 test ! -s conftest.err
+       } && test -s conftest$ac_exeext && {
+	 test "$cross_compiling" = yes ||
+	 $as_test_x conftest$ac_exeext
+       }; then
+  ac_cv_search_dlopen=$ac_res
+else
+  $as_echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+
+fi
+
+rm -rf conftest.dSYM
+rm -f core conftest.err conftest.$ac_objext conftest_ipa8_conftest.oo \
+      conftest$ac_exeext
+  if test "${ac_cv_search_dlopen+set}" = set; then
+  break
+fi
+done
+if test "${ac_cv_search_dlopen+set}" = set; then
+  :
+else
+  ac_cv_search_dlopen=no
+fi
+rm conftest.$ac_ext
+LIBS=$ac_func_search_save_LIBS
+fi
+{ $as_echo "$as_me:$LINENO: result: $ac_cv_search_dlopen" >&5
+$as_echo "$ac_cv_search_dlopen" >&6; }
+ac_res=$ac_cv_search_dlopen
+if test "$ac_res" != no; then
+  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
+
+fi
+
+	if test "$LIBS" != "$BAKLIBS"; then
+		LIBSSL_LIBS="$LIBSSL_LIBS -ldl"
+	fi
     fi
 
 for ac_header in openssl/ssl.h
@@ -18017,19 +18116,33 @@ fi
 
 case "$enable_gost" in
 	yes)
-	{ $as_echo "$as_me:$LINENO: checking for EVP_PKEY_set_type_str in -lcrypto" >&5
-$as_echo_n "checking for EVP_PKEY_set_type_str in -lcrypto... " >&6; }
-if test "${ac_cv_lib_crypto_EVP_PKEY_set_type_str+set}" = set; then
+	{ $as_echo "$as_me:$LINENO: checking for EVP_PKEY_set_type_str" >&5
+$as_echo_n "checking for EVP_PKEY_set_type_str... " >&6; }
+if test "${ac_cv_func_EVP_PKEY_set_type_str+set}" = set; then
   $as_echo_n "(cached) " >&6
 else
-  ac_check_lib_save_LIBS=$LIBS
-LIBS="-lcrypto  $LIBS"
-cat >conftest.$ac_ext <<_ACEOF
+  cat >conftest.$ac_ext <<_ACEOF
 /* confdefs.h.  */
 _ACEOF
 cat confdefs.h >>conftest.$ac_ext
 cat >>conftest.$ac_ext <<_ACEOF
 /* end confdefs.h.  */
+/* Define EVP_PKEY_set_type_str to an innocuous variant, in case <limits.h> declares EVP_PKEY_set_type_str.
+   For example, HP-UX 11i <limits.h> declares gettimeofday.  */
+#define EVP_PKEY_set_type_str innocuous_EVP_PKEY_set_type_str
+
+/* System header to define __stub macros and hopefully few prototypes,
+    which can conflict with char EVP_PKEY_set_type_str (); below.
+    Prefer <limits.h> to <assert.h> if __STDC__ is defined, since
+    <limits.h> exists even on freestanding compilers.  */
+
+#ifdef __STDC__
+# include <limits.h>
+#else
+# include <assert.h>
+#endif
+
+#undef EVP_PKEY_set_type_str
 
 /* Override any GCC internal prototype to avoid an error.
    Use char because int might match the return type of a GCC
@@ -18038,6 +18151,13 @@ cat >>conftest.$ac_ext <<_ACEOF
 extern "C"
 #endif
 char EVP_PKEY_set_type_str ();
+/* The GNU C library defines this for functions which it implements
+    to always fail with ENOSYS.  Some functions are actually named
+    something starting with __ and the normal name is an alias.  */
+#if defined __stub_EVP_PKEY_set_type_str || defined __stub___EVP_PKEY_set_type_str
+choke me
+#endif
+
 int
 main ()
 {
@@ -18067,22 +18187,21 @@ $as_echo "$ac_try_echo") >&5
 	 test "$cross_compiling" = yes ||
 	 $as_test_x conftest$ac_exeext
        }; then
-  ac_cv_lib_crypto_EVP_PKEY_set_type_str=yes
+  ac_cv_func_EVP_PKEY_set_type_str=yes
 else
   $as_echo "$as_me: failed program was:" >&5
 sed 's/^/| /' conftest.$ac_ext >&5
 
-	ac_cv_lib_crypto_EVP_PKEY_set_type_str=no
+	ac_cv_func_EVP_PKEY_set_type_str=no
 fi
 
 rm -rf conftest.dSYM
 rm -f core conftest.err conftest.$ac_objext conftest_ipa8_conftest.oo \
       conftest$ac_exeext conftest.$ac_ext
-LIBS=$ac_check_lib_save_LIBS
 fi
-{ $as_echo "$as_me:$LINENO: result: $ac_cv_lib_crypto_EVP_PKEY_set_type_str" >&5
-$as_echo "$ac_cv_lib_crypto_EVP_PKEY_set_type_str" >&6; }
-if test "x$ac_cv_lib_crypto_EVP_PKEY_set_type_str" = x""yes; then
+{ $as_echo "$as_me:$LINENO: result: $ac_cv_func_EVP_PKEY_set_type_str" >&5
+$as_echo "$ac_cv_func_EVP_PKEY_set_type_str" >&6; }
+if test "x$ac_cv_func_EVP_PKEY_set_type_str" = x""yes; then
   :
 else
   { { $as_echo "$as_me:$LINENO: error: OpenSSL >= 1.0.0 is needed for GOST support" >&5
