@@ -512,13 +512,91 @@ void config_print_func(char* line, void* arg)
 	(void)fprintf(f, "%s\n", line);
 }
 
+/** collate func arg */
+struct config_collate_arg {
+	/** list of result items */
+	struct config_strlist_head list;
+	/** if a malloc error occurred, 0 is OK */
+	int status;
+};
+
+void config_collate_func(char* line, void* arg)
+{
+	struct config_collate_arg* m = (struct config_collate_arg*)arg;
+	if(m->status)
+		return;
+	if(!cfg_strlist_append(&m->list, strdup(line)))
+		m->status = 1;
+}
+
+int config_get_option_list(struct config_file* cfg, const char* opt,
+        struct config_strlist** list)
+{
+	struct config_collate_arg m;
+	memset(&m, 0, sizeof(m));
+	*list = NULL;
+	if(!config_get_option(cfg, opt, config_collate_func, &m))
+		return 1;
+	if(m.status) {
+		config_delstrlist(m.list.first);
+		return 2;
+	}
+	*list = m.list.first;
+	return 0;
+}
+
+int
+config_get_option_collate(struct config_file* cfg, const char* opt, char** str)
+{
+	struct config_strlist* list = NULL;
+	int r;
+	*str = NULL;
+	if((r = config_get_option_list(cfg, opt, &list)) != 0)
+		return r;
+	*str = config_collate_cat(list);
+	config_delstrlist(list);
+	if(!*str) return 2;
+	return 0;
+}
+
+char*
+config_collate_cat(struct config_strlist* list)
+{
+	size_t total = 0, left;
+	struct config_strlist* s;
+	char *r, *w;
+	if(!list) /* no elements */
+		return strdup("");
+	if(list->next == NULL) /* one element , no newline at end. */
+		return strdup(list->str);
+	/* count total length */
+	for(s=list; s; s=s->next)
+		total += strlen(s->str) + 1; /* len + newline */
+	left = total+1; /* one extra for nul at end */
+	r = malloc(left); 
+	if(!r)
+		return NULL;
+	w = r;
+	for(s=list; s; s=s->next) {
+		size_t this = strlen(s->str);
+		if(this+2 > left) { /* sanity check */
+			free(r);
+			return NULL;
+		}
+		snprintf(w, left, "%s\n", s->str);
+		w += this+1;
+		left -= this+1;
+	}
+	return r;
+}
+
 int
 config_get_option(struct config_file* cfg, const char* opt, 
 	void (*func)(char*,void*), void* arg)
 {
 	char buf[1024];
 	size_t len = sizeof(buf);
-	fptr_whitelist_print_func(func);
+	fptr_ok(fptr_whitelist_print_func(func));
 	O_DEC(opt, "verbosity", verbosity)
 	else O_DEC(opt, "statistics-interval", stat_interval)
 	else O_YNO(opt, "statistics-cumulative", stat_interval)
@@ -866,6 +944,24 @@ void ub_c_error(const char *str)
 
 int ub_c_wrap()
 {
+	return 1;
+}
+
+int cfg_strlist_append(struct config_strlist_head* list, char* item)
+{
+	struct config_strlist *s;
+	if(!item || !list)
+		return 0;
+	s = (struct config_strlist*)calloc(1, sizeof(struct config_strlist));
+	if(!s)
+		return 0;
+	s->str = item;
+	s->next = NULL;
+	if(list->last)
+		list->last->next = s;
+	else
+		list->first = s;
+	list->last = s;
 	return 1;
 }
 

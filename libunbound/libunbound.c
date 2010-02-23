@@ -243,6 +243,19 @@ ub_ctx_set_option(struct ub_ctx* ctx, char* opt, char* val)
 	return UB_NOERROR;
 }
 
+int
+ub_ctx_get_option(struct ub_ctx* ctx, char* opt, char** str)
+{
+	int r;
+	lock_basic_lock(&ctx->cfglock);
+	r = config_get_option_collate(ctx->env->cfg, opt, str);
+	lock_basic_unlock(&ctx->cfglock);
+	if(r == 0) r = UB_NOERROR;
+	else if(r == 1) r = UB_SYNTAX;
+	else if(r == 2) r = UB_NOMEM;
+	return r;
+}
+
 int 
 ub_ctx_config(struct ub_ctx* ctx, char* fname)
 {

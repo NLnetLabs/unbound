@@ -1,5 +1,6 @@
 ub_ctx_create
 ub_ctx_delete
+ub_ctx_get_option
 ub_ctx_set_option
 ub_ctx_config
 ub_ctx_set_fwd

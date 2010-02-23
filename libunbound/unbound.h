@@ -227,7 +227,7 @@ void ub_ctx_delete(struct ub_ctx* ctx);
  * @param ctx: context.
  * @param opt: option name from the unbound.conf config file format.
  *	(not all settings applicable). The name includes the trailing ':'
- *	for example ub_ctx_set_option("logfile:", "mylog.txt");
+ *	for example ub_ctx_set_option(ctx, "logfile:", "mylog.txt");
  * 	This is a power-users interface that lets you specify all sorts
  * 	of options.
  * 	For some specific options, such as adding trust anchors, special
@@ -236,6 +236,22 @@ void ub_ctx_delete(struct ub_ctx* ctx);
  * @return: 0 if OK, else error.
  */
 int ub_ctx_set_option(struct ub_ctx* ctx, char* opt, char* val);
+
+/**
+ * Get an option from the context.
+ * @param ctx: context.
+ * @param opt: option name from the unbound.conf config file format.
+ *	(not all settings applicable). The name excludes the trailing ':'
+ *	for example ub_ctx_get_option(ctx, "logfile", &result);
+ * 	This is a power-users interface that lets you specify all sorts
+ * 	of options.
+ * @param str: the string is malloced and returned here. NULL on error.
+ * 	The caller must free() the string.  In cases with multiple 
+ * 	entries (auto-trust-anchor-file), a newline delimited list is 
+ * 	returned in the string.
+ * @return 0 if OK else an error code (malloc failure, syntax error).
+ */
+int ub_ctx_get_option(struct ub_ctx* ctx, char* opt, char** str);
 
 /**
  * setup configuration for the given context.

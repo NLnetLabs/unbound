@@ -393,5 +393,7 @@ int fptr_whitelist_mesh_cb(mesh_cb_func_t fptr)
 int fptr_whitelist_print_func(void (*fptr)(char*,void*))
 {
 	if(fptr == &config_print_func) return 1;
+	else if(fptr == &config_collate_func) return 1;
+	else if(fptr == &remote_get_opt_ssl) return 1;
 	return 0;
 }

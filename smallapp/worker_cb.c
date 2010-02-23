@@ -241,3 +241,8 @@ int replay_var_compare(const void* ATTR_UNUSED(a), const void* ATTR_UNUSED(b))
         log_assert(0);
         return 0;
 }
+
+void remote_get_opt_ssl(char* ATTR_UNUSED(str), void* ATTR_UNUSED(arg))
+{
+        log_assert(0);
+}

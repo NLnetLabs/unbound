@@ -1,3 +1,8 @@
+23 February 2010: Wouter
+	- libunbound ub_ctx_get_option() added.
+	- unbound-control set_option and get_option commands.
+	- iana portlist updated.
+
 18 February 2010: Wouter
 	- A little more strict DS scrubbing.
 	- No more blacklisting of unresponsive servers, a 2 minute timeout

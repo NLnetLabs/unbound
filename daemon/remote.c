@@ -1469,6 +1469,39 @@ do_log_reopen(SSL* ssl, struct worker* worker)
 	log_init(cfg->logfile, cfg->use_syslog, cfg->chrootdir);
 }
 
+/** do the set_option command */
+static void
+do_set_option(SSL* ssl, struct worker* worker, char* arg)
+{
+	char* arg2;
+	if(!find_arg2(ssl, arg, &arg2))
+		return;
+	if(!config_set_option(worker->env.cfg, arg, arg2)) {
+		(void)ssl_printf(ssl, "error setting option\n");
+		return;
+	}
+	send_ok(ssl);
+}
+
+/* routine to printout option values over SSL */
+void remote_get_opt_ssl(char* line, void* arg)
+{
+	SSL* ssl = (SSL*)arg;
+	(void)ssl_printf(ssl, "%s\n", line);
+}
+
+/** do the get_option command */
+static void
+do_get_option(SSL* ssl, struct worker* worker, char* arg)
+{
+	int r;
+	r = config_get_option(worker->env.cfg, arg, remote_get_opt_ssl, ssl);
+	if(!r) {
+		(void)ssl_printf(ssl, "error unknown option\n");
+		return;
+	}
+}
+
 /** tell other processes to execute the command */
 void
 distribute_cmd(struct daemon_remote* rc, SSL* ssl, char* cmd)
@@ -1564,6 +1597,10 @@ execute_cmd(struct daemon_remote* rc, SSL* ssl, char* cmd,
 		do_dump_requestlist(ssl, worker);
 	} else if(strncmp(p, "log_reopen", 10) == 0) {
 		do_log_reopen(ssl, worker);
+	} else if(strncmp(p, "set_option", 10) == 0) {
+		do_set_option(ssl, worker, skipwhite(p+10));
+	} else if(strncmp(p, "get_option", 10) == 0) {
+		do_get_option(ssl, worker, skipwhite(p+10));
 	} else {
 		(void)ssl_printf(ssl, "error unknown command '%s'\n", p);
 	}

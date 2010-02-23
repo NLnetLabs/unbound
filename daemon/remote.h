@@ -171,4 +171,7 @@ int ssl_printf(SSL* ssl, const char* format, ...)
  */
 int ssl_read_line(SSL* ssl, char* buf, size_t max);
 
+/** routine to printout option values over SSL */
+void remote_get_opt_ssl(char* line, void* arg);
+
 #endif /* DAEMON_REMOTE_H */

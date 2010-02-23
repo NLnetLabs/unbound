@@ -142,7 +142,20 @@ Show what is worked on.  Prints all queries that the server is currently
 working on.  Prints the time that users have been waiting.  For internal
 requests, no time is printed.  And then prints out the module status.
 .TP
-.B forward [off | addr ... ]
+.B set_option \fIopt: val
+Set the option to the given value without a reload.  The cache is therefore
+not flushed.  The option must end with a ':' and whitespace must be between the
+option and the value.  Some values may not have an effect if set this way,
+not all options are supported.
+.TP
+.B get_option \fIopt
+Get the value of the option.  Give the option name without a trailing ':'.
+The value is printed.  If the value is "", nothing is printed and the
+connection closes.  On error 'error ...' is printed (it gives a syntax
+error on unknown option).  For some options a list of values, one on
+each line, is printed.  Not all options are supported.
+.TP
+.B forward \fR[\fIoff\fR | \fIaddr ...\fR ]
 Setup forwarding mode.  Configures if the server should ask other upstream
 nameservers, should go to the internet root nameservers itself, or show 
 the current config.  You could pass the nameservers after a DHCP update.

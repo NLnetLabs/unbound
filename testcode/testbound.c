@@ -389,6 +389,11 @@ int remote_control_callback(struct comm_point* ATTR_UNUSED(c),
 	return 0;
 }
 
+void remote_get_opt_ssl(char* ATTR_UNUSED(str), void* ATTR_UNUSED(arg))
+{
+        log_assert(0);
+}
+
 void wsvc_command_option(const char* ATTR_UNUSED(wopt), 
 	const char* ATTR_UNUSED(cfgfile), int ATTR_UNUSED(v), 
 	int ATTR_UNUSED(c))

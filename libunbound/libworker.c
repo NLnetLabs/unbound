@@ -868,6 +868,11 @@ int replay_var_compare(const void* ATTR_UNUSED(a), const void* ATTR_UNUSED(b))
         return 0;
 }
 
+void remote_get_opt_ssl(char* ATTR_UNUSED(str), void* ATTR_UNUSED(arg))
+{
+        log_assert(0);
+}
+
 #ifdef UB_ON_WINDOWS
 void
 worker_win_stop_cb(int ATTR_UNUSED(fd), short ATTR_UNUSED(ev), void* 
