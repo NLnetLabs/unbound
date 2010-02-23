@@ -241,6 +241,15 @@ struct config_file* config_create_forlib()
 /** put integer_nonzero into variable */
 #define S_NUMBER_NONZERO(str, var) if(strcmp(opt, str) == 0) \
 	{ IS_NONZERO_NUMBER; cfg->var = atoi(val); }
+/** put integer_or_zero into unsigned */
+#define S_UNSIGNED_OR_ZERO(str, var) if(strcmp(opt, str) == 0) \
+	{ IS_NUMBER_OR_ZERO; cfg->var = (unsigned)atoi(val); }
+/** put integer_or_zero into size_t */
+#define S_SIZET_OR_ZERO(str, var) if(strcmp(opt, str) == 0) \
+	{ IS_NUMBER_OR_ZERO; cfg->var = (size_t)atoi(val); }
+/** put integer_nonzero into size_t */
+#define S_SIZET_NONZERO(str, var) if(strcmp(opt, str) == 0) \
+	{ IS_NONZERO_NUMBER; cfg->var = (size_t)atoi(val); }
 /** put yesno into variable */
 #define S_YNO(str, var) if(strcmp(opt, str) == 0) \
 	{ IS_YES_OR_NO; cfg->var = (strcmp(val, "yes") == 0); }
@@ -307,14 +316,14 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	else S_YNO("do-daemonize:", do_daemonize)
 	else S_NUMBER_NONZERO("port:", port)
 	else S_NUMBER_NONZERO("outgoing-range:", outgoing_num_ports)
-	else S_NUMBER_OR_ZERO("outgoing-num-tcp:", outgoing_num_tcp)
-	else S_NUMBER_OR_ZERO("incoming-num-tcp:", incoming_num_tcp)
-	else S_NUMBER_NONZERO("edns-buffer-size:", edns_buffer_size)
-	else S_NUMBER_NONZERO("msg-buffer-size:", msg_buffer_size)
+	else S_SIZET_OR_ZERO("outgoing-num-tcp:", outgoing_num_tcp)
+	else S_SIZET_OR_ZERO("incoming-num-tcp:", incoming_num_tcp)
+	else S_SIZET_NONZERO("edns-buffer-size:", edns_buffer_size)
+	else S_SIZET_NONZERO("msg-buffer-size:", msg_buffer_size)
 	else S_MEMSIZE("msg-cache-size:", msg_cache_size)
 	else S_POW2("msg-cache-slabs:", msg_cache_slabs)
-	else S_NUMBER_NONZERO("num-queries-per-thread:",num_queries_per_thread)
-	else S_NUMBER_OR_ZERO("jostle-timeout:", jostle_time)
+	else S_SIZET_NONZERO("num-queries-per-thread:",num_queries_per_thread)
+	else S_SIZET_OR_ZERO("jostle-timeout:", jostle_time)
 	else S_MEMSIZE("so-rcvbuf:", socket_rcvbuf)
 	else S_MEMSIZE("rrset-cache-size:", rrset_cache_size)
 	else S_POW2("rrset-cache-slabs:", rrset_cache_slabs)
@@ -324,7 +333,7 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	else S_NUMBER_OR_ZERO("infra-host-ttl:", host_ttl)
 	else S_NUMBER_OR_ZERO("infra-lame-ttl:", lame_ttl)
 	else S_POW2("infra-cache-slabs:", infra_cache_slabs)
-	else S_NUMBER_NONZERO("infra-cache-numhosts:", infra_cache_numhosts)
+	else S_SIZET_NONZERO("infra-cache-numhosts:", infra_cache_numhosts)
 	else S_MEMSIZE("infra-cache-lame-size:", infra_cache_lame_size)
 	else S_STR("chroot:", chrootdir)
 	else S_STR("username:", username)
@@ -342,7 +351,7 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	else S_YNO("harden-dnssec-stripped:", harden_dnssec_stripped)
 	else S_YNO("harden-referral-path:", harden_referral_path)
 	else S_YNO("use-caps-for-id", use_caps_bits_for_id)
-	else S_NUMBER_OR_ZERO("unwanted-reply-threshold:", unwanted_threshold)
+	else S_SIZET_OR_ZERO("unwanted-reply-threshold:", unwanted_threshold)
 	else S_STRLIST("private-address:", private_address)
 	else S_STRLIST("private-domain:", private_domain)
 	else S_YNO("do-not-query-localhost:", donotquery_localhost)
@@ -360,9 +369,9 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	else S_YNO("val-log-squelch:", val_log_squelch)
 	else S_YNO("val-permissive-mode:", val_permissive_mode)
 	else S_STR("val-nsec3-keysize-iterations:", val_nsec3_key_iterations)
-	else S_NUMBER_OR_ZERO("add-holddown:", add_holddown)
-	else S_NUMBER_OR_ZERO("del-holddown:", del_holddown)
-	else S_NUMBER_OR_ZERO("keep-missing:", keep_missing)
+	else S_UNSIGNED_OR_ZERO("add-holddown:", add_holddown)
+	else S_UNSIGNED_OR_ZERO("del-holddown:", del_holddown)
+	else S_UNSIGNED_OR_ZERO("keep-missing:", keep_missing)
 	else S_MEMSIZE("key-cache-size:", key_cache_size)
 	else S_POW2("key-cache-slabs:", key_cache_slabs)
 	else S_MEMSIZE("neg-cache-size:", neg_cache_size)
