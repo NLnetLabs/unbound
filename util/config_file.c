@@ -235,14 +235,33 @@ struct config_file* config_create_forlib()
 /** check that the value passed is yes or no */
 #define IS_YES_OR_NO \
 	if(strcmp(val, "yes") != 0 && strcmp(val, "no") != 0) return 0
+/** put integer_or_zero into variable */
+#define S_NUMBER_OR_ZERO(str, var) if(strcmp(opt, str) == 0) \
+	{ IS_NUMBER_OR_ZERO; cfg->var = atoi(val); }
+/** put integer_nonzero into variable */
+#define S_NUMBER_NONZERO(str, var) if(strcmp(opt, str) == 0) \
+	{ IS_NONZERO_NUMBER; cfg->var = atoi(val); }
+/** put yesno into variable */
+#define S_YNO(str, var) if(strcmp(opt, str) == 0) \
+	{ IS_YES_OR_NO; cfg->var = (strcmp(val, "yes") == 0); }
+/** put memsize into variable */
+#define S_MEMSIZE(str, var) if(strcmp(opt, str)==0) \
+	{ return cfg_parse_memsize(val, &cfg->var); }
+/** put pow2 number into variable */
+#define S_POW2(str, var) if(strcmp(opt, str)==0) \
+	{ IS_POW2_NUMBER; cfg->var = (size_t)atoi(val); }
+/** put string into variable */
+#define S_STR(str, var) if(strcmp(opt, str)==0) \
+	{ free(cfg->var); return (cfg->var = strdup(val)) != NULL; }
+/** put string into strlist */
+#define S_STRLIST(str, var) if(strcmp(opt, str)==0) \
+	{ return cfg_strlist_insert(&cfg->var, strdup(val)); }
 
 int config_set_option(struct config_file* cfg, const char* opt,
         const char* val)
 {
-	if(strcmp(opt, "verbosity:") == 0) {
-		IS_NUMBER_OR_ZERO;
-		cfg->verbosity = atoi(val);
-	} else if(strcmp(opt, "statistics-interval:") == 0) {
+	S_NUMBER_OR_ZERO("verbosity:", verbosity)
+	else if(strcmp(opt, "statistics-interval:") == 0) {
 		if(strcmp(val, "0") == 0 || strcmp(val, "") == 0)
 			cfg->stat_interval = 0;
 		else if(atoi(val) == 0)
@@ -251,142 +270,14 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	} else if(strcmp(opt, "num_threads:") == 0) {
 		/* not supported, library must have 1 thread in bgworker */
 		return 0;
-	} else if(strcmp(opt, "extended-statistics:") == 0) {
-		IS_YES_OR_NO;
-		cfg->stat_extended = (strcmp(val, "yes") == 0);
-	} else if(strcmp(opt, "do-ip4:") == 0) {
-		IS_YES_OR_NO;
-		cfg->do_ip4 = (strcmp(val, "yes") == 0);
-	} else if(strcmp(opt, "do-ip6:") == 0) {
-		IS_YES_OR_NO;
-		cfg->do_ip6 = (strcmp(val, "yes") == 0);
-	} else if(strcmp(opt, "do-udp:") == 0) {
-		IS_YES_OR_NO;
-		cfg->do_udp = (strcmp(val, "yes") == 0);
-	} else if(strcmp(opt, "do-tcp:") == 0) {
-		IS_YES_OR_NO;
-		cfg->do_tcp = (strcmp(val, "yes") == 0);
-	} else if(strcmp(opt, "outgoing-range:") == 0) {
-		IS_NONZERO_NUMBER;
-		cfg->outgoing_num_ports = atoi(val);
 	} else if(strcmp(opt, "outgoing-port-permit:") == 0) {
 		return cfg_mark_ports(val, 1, 
 			cfg->outgoing_avail_ports, 65536);
 	} else if(strcmp(opt, "outgoing-port-avoid:") == 0) {
 		return cfg_mark_ports(val, 0, 
 			cfg->outgoing_avail_ports, 65536);
-	} else if(strcmp(opt, "outgoing-num-tcp:") == 0) {
-		IS_NUMBER_OR_ZERO;
-		cfg->outgoing_num_tcp = (size_t)atoi(val);
-	} else if(strcmp(opt, "incoming-num-tcp:") == 0) {
-		IS_NUMBER_OR_ZERO;
-		cfg->incoming_num_tcp = (size_t)atoi(val);
-	} else if(strcmp(opt, "edns-buffer-size:") == 0) {
-		IS_NONZERO_NUMBER;
-		cfg->edns_buffer_size = (size_t)atoi(val);
-	} else if(strcmp(opt, "msg-buffer-size:") == 0) {
-		IS_NONZERO_NUMBER;
-		cfg->msg_buffer_size = (size_t)atoi(val);
-	} else if(strcmp(opt, "msg-cache-size:") == 0) {
-		return cfg_parse_memsize(val, &cfg->msg_cache_size);
-	} else if(strcmp(opt, "msg-cache-slabs:") == 0) {
-		IS_POW2_NUMBER;
-		cfg->msg_cache_slabs = (size_t)atoi(val);
-	} else if(strcmp(opt, "num-queries-per-thread:") == 0) {
-		IS_NONZERO_NUMBER;
-		cfg->num_queries_per_thread = (size_t)atoi(val);
-	} else if(strcmp(opt, "jostle-timeout:") == 0) {
-		IS_NUMBER_OR_ZERO;
-		cfg->jostle_time = (size_t)atoi(val);
-	} else if(strcmp(opt, "so-rcvbuf:") == 0) {
-		return cfg_parse_memsize(val, &cfg->socket_rcvbuf);
-	} else if(strcmp(opt, "rrset-cache-size:") == 0) {
-		return cfg_parse_memsize(val, &cfg->rrset_cache_size);
-	} else if(strcmp(opt, "rrset-cache-slabs:") == 0) {
-		IS_POW2_NUMBER;
-		cfg->rrset_cache_slabs = (size_t)atoi(val);
-	} else if(strcmp(opt, "prefetch:") == 0) {
-		IS_YES_OR_NO;
-		cfg->prefetch = (strcmp(val, "yes") == 0);
-	} else if(strcmp(opt, "prefetch-key:") == 0) {
-		IS_YES_OR_NO;
-		cfg->prefetch_key = (strcmp(val, "yes") == 0);
-	} else if(strcmp(opt, "cache-max-ttl:") == 0) {
-		IS_NUMBER_OR_ZERO;
-		cfg->max_ttl = atoi(val);
-	} else if(strcmp(opt, "infra-host-ttl:") == 0) {
-		IS_NUMBER_OR_ZERO;
-		cfg->host_ttl = atoi(val);
-	} else if(strcmp(opt, "infra-lame-ttl:") == 0) {
-		IS_NUMBER_OR_ZERO;
-		cfg->lame_ttl = atoi(val);
-	} else if(strcmp(opt, "infra-cache-slabs:") == 0) {
-		IS_POW2_NUMBER;
-		cfg->infra_cache_slabs = (size_t)atoi(val);
-	} else if(strcmp(opt, "infra-cache-numhosts:") == 0) {
-		IS_NONZERO_NUMBER;
-		cfg->infra_cache_numhosts = (size_t)atoi(val);
-	} else if(strcmp(opt, "infra-cache-lame-size:") == 0) {
-		return cfg_parse_memsize(val, &cfg->infra_cache_lame_size);
-	} else if(strcmp(opt, "logfile:") == 0) {
-		cfg->use_syslog = 0;
-		free(cfg->logfile);
-		return (cfg->logfile = strdup(val)) != NULL;
-	} else if(strcmp(opt, "use-syslog:") == 0) {
-		IS_YES_OR_NO;
-		cfg->use_syslog = (strcmp(val, "yes") == 0);
-	} else if(strcmp(opt, "root-hints:") == 0) {
-		return cfg_strlist_insert(&cfg->root_hints, strdup(val));
-	} else if(strcmp(opt, "target-fetch-policy:") == 0) {
-		free(cfg->target_fetch_policy);
-		return (cfg->target_fetch_policy = strdup(val)) != NULL;
-	} else if(strcmp(opt, "harden-glue:") == 0) {
-		IS_YES_OR_NO;
-		cfg->harden_glue = (strcmp(val, "yes") == 0);
-	} else if(strcmp(opt, "harden-short-bufsize:") == 0) {
-		IS_YES_OR_NO;
-		cfg->harden_short_bufsize = (strcmp(val, "yes") == 0);
-	} else if(strcmp(opt, "harden-large-queries:") == 0) {
-		IS_YES_OR_NO;
-		cfg->harden_large_queries = (strcmp(val, "yes") == 0);
-	} else if(strcmp(opt, "harden-dnssec-stripped:") == 0) {
-		IS_YES_OR_NO;
-		cfg->harden_dnssec_stripped = (strcmp(val, "yes") == 0);
-	} else if(strcmp(opt, "harden-referral-path:") == 0) {
-		IS_YES_OR_NO;
-		cfg->harden_referral_path = (strcmp(val, "yes") == 0);
-	} else if(strcmp(opt, "private-address:") == 0) {
-		return cfg_strlist_insert(&cfg->private_address, strdup(val));
-	} else if(strcmp(opt, "private-domain:") == 0) {
-		return cfg_strlist_insert(&cfg->private_domain, strdup(val));
-	} else if(strcmp(opt, "unwanted-reply-threshold:") == 0) {
-		IS_NUMBER_OR_ZERO;
-		cfg->unwanted_threshold = (size_t)atoi(val);
-	} else if(strcmp(opt, "do-not-query-localhost:") == 0) {
-		IS_YES_OR_NO;
-		cfg->donotquery_localhost = (strcmp(val, "yes") == 0);
-	} else if(strcmp(opt, "do-not-query-address:") == 0) {
-		return cfg_strlist_insert(&cfg->donotqueryaddrs, strdup(val));
-	} else if(strcmp(opt, "auto-trust-anchor-file:") == 0) {
-		return cfg_strlist_insert(&cfg->auto_trust_anchor_file_list, 
-			strdup(val));
-	} else if(strcmp(opt, "trust-anchor-file:") == 0) {
-		return cfg_strlist_insert(&cfg->trust_anchor_file_list, 
-			strdup(val));
-	} else if(strcmp(opt, "trust-anchor:") == 0) {
-		return cfg_strlist_insert(&cfg->trust_anchor_list, 
-			strdup(val));
-	} else if(strcmp(opt, "trusted-keys-file:") == 0) {
-		return cfg_strlist_insert(&cfg->trusted_keys_file_list, 
-			strdup(val));
-	} else if(strcmp(opt, "dlv-anchor-file:") == 0) {
-		free(cfg->dlv_anchor_file);
-		return (cfg->dlv_anchor_file = strdup(val)) != NULL;
-	} else if(strcmp(opt, "dlv-anchor:") == 0) {
-		return cfg_strlist_insert(&cfg->dlv_anchor_list, 
-			strdup(val));
-	} else if(strcmp(opt, "domain-insecure:") == 0) {
-		return cfg_strlist_insert(&cfg->domain_insecure, strdup(val));
+	} else if(strcmp(opt, "local-zone:") == 0) {
+		return cfg_parse_local_zone(cfg, val);
 	} else if(strcmp(opt, "val-override-date:") == 0) {
 		if(strcmp(val, "") == 0 || strcmp(val, "0") == 0) {
 			cfg->val_date_override = 0;
@@ -397,114 +288,103 @@ int config_set_option(struct config_file* cfg, const char* opt,
 			if(atoi(val) == 0) return 0;
 			cfg->val_date_override = (uint32_t)atoi(val);
 		}
-	} else if(strcmp(opt, "val-bogus-ttl:") == 0) {
-		IS_NUMBER_OR_ZERO;
-		cfg->bogus_ttl = atoi(val);
-	} else if(strcmp(opt, "val-clean-additional:") == 0) {
-		IS_YES_OR_NO;
-		cfg->val_clean_additional = (strcmp(val, "yes") == 0);
-	} else if(strcmp(opt, "val-log-level:") == 0) {
-		IS_NUMBER_OR_ZERO;
-		cfg->val_log_level = atoi(val);
-	} else if(strcmp(opt, "val-log-squelch:") == 0) {
-		IS_YES_OR_NO;
-		cfg->val_log_squelch = (strcmp(val, "yes") == 0);
-	} else if(strcmp(opt, "val-permissive-mode:") == 0) {
-		IS_YES_OR_NO;
-		cfg->val_permissive_mode = (strcmp(val, "yes") == 0);
-	} else if(strcmp(opt, "val-nsec3-keysize-iterations:") == 0) {
-		free(cfg->val_nsec3_key_iterations);
-		return (cfg->val_nsec3_key_iterations = strdup(val)) != NULL;
-	} else if(strcmp(opt, "add-holddown:") == 0) {
-		IS_NUMBER_OR_ZERO;
-		cfg->add_holddown = (unsigned)atoi(val);
-	} else if(strcmp(opt, "del-holddown:") == 0) {
-		IS_NUMBER_OR_ZERO;
-		cfg->del_holddown = (unsigned)atoi(val);
-	} else if(strcmp(opt, "keep-missing:") == 0) {
-		IS_NUMBER_OR_ZERO;
-		cfg->keep_missing = (unsigned)atoi(val);
-	} else if(strcmp(opt, "key-cache-size:") == 0) {
-		return cfg_parse_memsize(val, &cfg->key_cache_size);
-	} else if(strcmp(opt, "key-cache-slabs:") == 0) {
-		IS_POW2_NUMBER;
-		cfg->key_cache_slabs = (size_t)atoi(val);
-	} else if(strcmp(opt, "neg-cache-size:") == 0) {
-		return cfg_parse_memsize(val, &cfg->neg_cache_size);
-	} else if(strcmp(opt, "local-data:") == 0) {
-		return cfg_strlist_insert(&cfg->local_data, strdup(val));
-	} else if(strcmp(opt, "local-zone:") == 0) {
-		return cfg_parse_local_zone(cfg, val);
-	} else if(strcmp(opt, "control-enable:") == 0) {
-		IS_YES_OR_NO;
-		cfg->remote_control_enable = (strcmp(val, "yes") == 0);
-	} else if(strcmp(opt, "control-interface:") == 0) {
-		return cfg_strlist_insert(&cfg->control_ifs, strdup(val));
-	} else if(strcmp(opt, "control-port:") == 0) {
-		IS_NONZERO_NUMBER;
-		cfg->control_port = atoi(val);
-	} else if(strcmp(opt, "server-key-file:") == 0) {
-		free(cfg->server_key_file);
-		return (cfg->server_key_file = strdup(val)) != NULL;
-	} else if(strcmp(opt, "server-cert-file:") == 0) {
-		free(cfg->server_cert_file);
-		return (cfg->server_cert_file = strdup(val)) != NULL;
-	} else if(strcmp(opt, "control-key-file:") == 0) {
-		free(cfg->control_key_file);
-		return (cfg->control_key_file = strdup(val)) != NULL;
-	} else if(strcmp(opt, "control-cert-file:") == 0) {
-		free(cfg->control_cert_file);
-		return (cfg->control_cert_file = strdup(val)) != NULL;
-	} else if(strcmp(opt, "module-config:") == 0) {
-		free(cfg->module_conf);
-		return (cfg->module_conf = strdup(val)) != NULL;
-	} else if(strcmp(opt, "python-script:") == 0) {
-		free(cfg->python_script);
-		return (cfg->python_script = strdup(val)) != NULL;
-	} else {
-		/* unknown or unsupported (from the library interface) */
+	} else if(strcmp(opt, "local-data-ptr:") == 0) { 
+		char* ptr = cfg_ptr_reverse((char*)opt);
+		return cfg_strlist_insert(&cfg->local_data, ptr);
+	} else if(strcmp(opt, "logfile:") == 0) {
+		cfg->use_syslog = 0;
+		free(cfg->logfile);
+		return (cfg->logfile = strdup(val)) != NULL;
+	} 
+	else S_YNO("use-syslog:", use_syslog)
+	else S_YNO("extended-statistics:", stat_extended)
+	else S_YNO("statistics-cumulative:", stat_cumulative)
+	else S_YNO("do-ip4:", do_ip4)
+	else S_YNO("do-ip6:", do_ip6)
+	else S_YNO("do-udp:", do_udp)
+	else S_YNO("do-tcp:", do_tcp)
+	else S_YNO("interface-automatic:", if_automatic)
+	else S_YNO("do-daemonize:", do_daemonize)
+	else S_NUMBER_NONZERO("port:", port)
+	else S_NUMBER_NONZERO("outgoing-range:", outgoing_num_ports)
+	else S_NUMBER_OR_ZERO("outgoing-num-tcp:", outgoing_num_tcp)
+	else S_NUMBER_OR_ZERO("incoming-num-tcp:", incoming_num_tcp)
+	else S_NUMBER_NONZERO("edns-buffer-size:", edns_buffer_size)
+	else S_NUMBER_NONZERO("msg-buffer-size:", msg_buffer_size)
+	else S_MEMSIZE("msg-cache-size:", msg_cache_size)
+	else S_POW2("msg-cache-slabs:", msg_cache_slabs)
+	else S_NUMBER_NONZERO("num-queries-per-thread:",num_queries_per_thread)
+	else S_NUMBER_OR_ZERO("jostle-timeout:", jostle_time)
+	else S_MEMSIZE("so-rcvbuf:", socket_rcvbuf)
+	else S_MEMSIZE("rrset-cache-size:", rrset_cache_size)
+	else S_POW2("rrset-cache-slabs:", rrset_cache_slabs)
+	else S_YNO("prefetch:", prefetch)
+	else S_YNO("prefetch-key:", prefetch_key)
+	else S_NUMBER_OR_ZERO("cache-max-ttl:", max_ttl)
+	else S_NUMBER_OR_ZERO("infra-host-ttl:", host_ttl)
+	else S_NUMBER_OR_ZERO("infra-lame-ttl:", lame_ttl)
+	else S_POW2("infra-cache-slabs:", infra_cache_slabs)
+	else S_NUMBER_NONZERO("infra-cache-numhosts:", infra_cache_numhosts)
+	else S_MEMSIZE("infra-cache-lame-size:", infra_cache_lame_size)
+	else S_STR("chroot:", chrootdir)
+	else S_STR("username:", username)
+	else S_STR("directory:", directory)
+	else S_STR("pidfile:", pidfile)
+	else S_YNO("hide-identity:", hide_identity)
+	else S_YNO("hide-version:", hide_version)
+	else S_STR("identity:", identity)
+	else S_STR("version:", version)
+	else S_STRLIST("root-hints:", root_hints)
+	else S_STR("target-fetch-policy:", target_fetch_policy)
+	else S_YNO("harden-glue:", harden_glue)
+	else S_YNO("harden-short-bufsize:", harden_short_bufsize)
+	else S_YNO("harden-large-queries:", harden_large_queries)
+	else S_YNO("harden-dnssec-stripped:", harden_dnssec_stripped)
+	else S_YNO("harden-referral-path:", harden_referral_path)
+	else S_YNO("use-caps-for-id", use_caps_bits_for_id)
+	else S_NUMBER_OR_ZERO("unwanted-reply-threshold:", unwanted_threshold)
+	else S_STRLIST("private-address:", private_address)
+	else S_STRLIST("private-domain:", private_domain)
+	else S_YNO("do-not-query-localhost:", donotquery_localhost)
+	else S_STRLIST("do-not-query-address:", donotqueryaddrs)
+	else S_STRLIST("auto-trust-anchor-file:", auto_trust_anchor_file_list)
+	else S_STRLIST("trust-anchor-file:", trust_anchor_file_list)
+	else S_STRLIST("trust-anchor:", trust_anchor_list)
+	else S_STRLIST("trusted-keys-file:", trusted_keys_file_list)
+	else S_STR("dlv-anchor-file:", dlv_anchor_file)
+	else S_STRLIST("dlv-anchor:", dlv_anchor_list)
+	else S_STRLIST("domain-insecure:", domain_insecure)
+	else S_NUMBER_OR_ZERO("val-bogus-ttl:", bogus_ttl)
+	else S_YNO("val-clean-additional:", val_clean_additional)
+	else S_NUMBER_OR_ZERO("val-log-level:", val_log_level)
+	else S_YNO("val-log-squelch:", val_log_squelch)
+	else S_YNO("val-permissive-mode:", val_permissive_mode)
+	else S_STR("val-nsec3-keysize-iterations:", val_nsec3_key_iterations)
+	else S_NUMBER_OR_ZERO("add-holddown:", add_holddown)
+	else S_NUMBER_OR_ZERO("del-holddown:", del_holddown)
+	else S_NUMBER_OR_ZERO("keep-missing:", keep_missing)
+	else S_MEMSIZE("key-cache-size:", key_cache_size)
+	else S_POW2("key-cache-slabs:", key_cache_slabs)
+	else S_MEMSIZE("neg-cache-size:", neg_cache_size)
+	else S_STRLIST("local-data:", local_data)
+	else S_YNO("control-enable:", remote_control_enable)
+	else S_STRLIST("control-interface:", control_ifs)
+	else S_NUMBER_NONZERO("control-port:", control_port)
+	else S_STR("server-key-file:", server_key_file)
+	else S_STR("server-cert-file:", server_cert_file)
+	else S_STR("control-key-file:", control_key_file)
+	else S_STR("control-cert-file:", control_cert_file)
+	else S_STR("module-config:", module_conf)
+	else S_STR("python-script:", python_script)
+	else {
+		/* unknown or unsupported (from the set_option interface):
+		 * interface, outgoing-interface, access-control, 
+		 * stub-zone, name, stub-addr, stub-host, stub-prime
+		 * forward-zone, name, forward-addr, forward-host */
 		return 0;
 	}
 	return 1;
 }
-
-/** compare and print decimal option */
-#define O_DEC(opt, str, var) if(strcmp(opt, str)==0) \
-	{snprintf(buf, len, "%d", (int)cfg->var); \
-	func(buf, arg);}
-/** compare and print unsigned option */
-#define O_UNS(opt, str, var) if(strcmp(opt, str)==0) \
-	{snprintf(buf, len, "%u", (unsigned)cfg->var); \
-	func(buf, arg);}
-/** compare and print yesno option */
-#define O_YNO(opt, str, var) if(strcmp(opt, str)==0) \
-	{func(cfg->var?"yes":"no", arg);}
-/** compare and print string option */
-#define O_STR(opt, str, var) if(strcmp(opt, str)==0) \
-	{func(cfg->var?cfg->var:"", arg);}
-/** compare and print array option */
-#define O_IFC(opt, str, num, arr) if(strcmp(opt, str)==0) \
-	{int i; for(i=0; i<cfg->num; i++) func(cfg->arr[i], arg);}
-/** compare and print memorysize option */
-#define O_MEM(opt, str, var) if(strcmp(opt, str)==0) { \
-	if(cfg->var > 1024*1024*1024) {	\
-	  size_t f=cfg->var/(size_t)1000000, b=cfg->var%(size_t)1000000; \
-	  snprintf(buf, len, "%u%6.6u\n", (unsigned)f, (unsigned)b); \
-	} else snprintf(buf, len, "%u\n", (unsigned)cfg->var); \
-	func(buf, arg);}
-/** compare and print list option */
-#define O_LST(opt, name, lst) if(strcmp(opt, name)==0) { \
-	struct config_strlist* p = cfg->lst; \
-	for(p = cfg->lst; p; p = p->next) \
-		func(p->str, arg); \
-	}
-/** compare and print list option */
-#define O_LS2(opt, name, lst) if(strcmp(opt, name)==0) { \
-	struct config_str2list* p = cfg->lst; \
-	for(p = cfg->lst; p; p = p->next) \
-		snprintf(buf, len, "%s %s\n", p->str, p->str2); \
-		func(buf, arg); \
-	}
 
 void config_print_func(char* line, void* arg)
 {
@@ -590,6 +470,44 @@ config_collate_cat(struct config_strlist* list)
 	return r;
 }
 
+/** compare and print decimal option */
+#define O_DEC(opt, str, var) if(strcmp(opt, str)==0) \
+	{snprintf(buf, len, "%d", (int)cfg->var); \
+	func(buf, arg);}
+/** compare and print unsigned option */
+#define O_UNS(opt, str, var) if(strcmp(opt, str)==0) \
+	{snprintf(buf, len, "%u", (unsigned)cfg->var); \
+	func(buf, arg);}
+/** compare and print yesno option */
+#define O_YNO(opt, str, var) if(strcmp(opt, str)==0) \
+	{func(cfg->var?"yes":"no", arg);}
+/** compare and print string option */
+#define O_STR(opt, str, var) if(strcmp(opt, str)==0) \
+	{func(cfg->var?cfg->var:"", arg);}
+/** compare and print array option */
+#define O_IFC(opt, str, num, arr) if(strcmp(opt, str)==0) \
+	{int i; for(i=0; i<cfg->num; i++) func(cfg->arr[i], arg);}
+/** compare and print memorysize option */
+#define O_MEM(opt, str, var) if(strcmp(opt, str)==0) { \
+	if(cfg->var > 1024*1024*1024) {	\
+	  size_t f=cfg->var/(size_t)1000000, b=cfg->var%(size_t)1000000; \
+	  snprintf(buf, len, "%u%6.6u\n", (unsigned)f, (unsigned)b); \
+	} else snprintf(buf, len, "%u\n", (unsigned)cfg->var); \
+	func(buf, arg);}
+/** compare and print list option */
+#define O_LST(opt, name, lst) if(strcmp(opt, name)==0) { \
+	struct config_strlist* p = cfg->lst; \
+	for(p = cfg->lst; p; p = p->next) \
+		func(p->str, arg); \
+	}
+/** compare and print list option */
+#define O_LS2(opt, name, lst) if(strcmp(opt, name)==0) { \
+	struct config_str2list* p = cfg->lst; \
+	for(p = cfg->lst; p; p = p->next) \
+		snprintf(buf, len, "%s %s\n", p->str, p->str2); \
+		func(buf, arg); \
+	}
+
 int
 config_get_option(struct config_file* cfg, const char* opt, 
 	void (*func)(char*,void*), void* arg)
@@ -599,7 +517,7 @@ config_get_option(struct config_file* cfg, const char* opt,
 	fptr_ok(fptr_whitelist_print_func(func));
 	O_DEC(opt, "verbosity", verbosity)
 	else O_DEC(opt, "statistics-interval", stat_interval)
-	else O_YNO(opt, "statistics-cumulative", stat_interval)
+	else O_YNO(opt, "statistics-cumulative", stat_cumulative)
 	else O_YNO(opt, "extended-statistics", stat_extended)
 	else O_DEC(opt, "num-threads", num_threads)
 	else O_IFC(opt, "interface", num_ifs, ifs)

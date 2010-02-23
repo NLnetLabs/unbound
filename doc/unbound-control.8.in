@@ -146,7 +146,7 @@ requests, no time is printed.  And then prints out the module status.
 Set the option to the given value without a reload.  The cache is therefore
 not flushed.  The option must end with a ':' and whitespace must be between the
 option and the value.  Some values may not have an effect if set this way,
-not all options are supported.
+the new values are not written to the config file, not all options are supported.
 .TP
 .B get_option \fIopt
 Get the value of the option.  Give the option name without a trailing ':'.
