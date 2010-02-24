@@ -303,6 +303,15 @@ pkt_sub(ldns_buffer* pkt, uint8_t* comprname, uint8_t* zone)
 	return dname_subdomain_c(buf, zone);
 }
 
+/** check subdomain with decompression, compressed is parent */
+static int
+sub_of_pkt(ldns_buffer* pkt, uint8_t* zone, uint8_t* comprname)
+{
+	uint8_t buf[LDNS_MAX_DOMAINLEN+1];
+	dname_pkt_copy(pkt, buf, comprname);
+	return dname_subdomain_c(zone, buf);
+}
+
 /**
  * This routine normalizes a response. This includes removing "irrelevant"
  * records from the answer and additional sections and (re)synthesizing
@@ -518,6 +527,18 @@ store_rrset(ldns_buffer* pkt, struct msg_parse* msg, struct module_env* env,
 		env->alloc, now);
 }
 
+/** Check if there are SOA records in the authority section (negative) */
+static int
+soa_in_auth(struct msg_parse* msg)
+{
+	struct rrset_parse* rrset;
+	for(rrset = msg->rrset_first; rrset; rrset = rrset->rrset_all_next)
+		if(rrset->type == LDNS_RR_TYPE_SOA &&
+			rrset->section == LDNS_SECTION_AUTHORITY) 
+			return 1;
+	return 0;
+}
+ 
 /**
  * Check if right hand name in NSEC is within zone
  * @param rrset: the NSEC rrset
@@ -566,6 +587,8 @@ scrub_sanitize(ldns_buffer* pkt, struct msg_parse* msg,
 	struct query_info* qinfo, uint8_t* zonename, struct module_env* env,
 	struct iter_env* ie)
 {
+	int del_addi = 0; /* if additional-holding rrsets are deleted, we
+		do not trust the normalized additional-A-AAAA any more */
 	struct rrset_parse* rrset, *prev;
 	prev = NULL;
 	rrset = msg->rrset_first;
@@ -590,6 +613,7 @@ scrub_sanitize(ldns_buffer* pkt, struct msg_parse* msg,
 	 * Remainders of CNAME chains are cut off and resolved by iterator. */
 	while(rrset && rrset->section == LDNS_SECTION_ANSWER) {
 		if(dname_pkt_compare(pkt, qinfo->qname, rrset->dname) != 0) {
+			if(has_additional(rrset->type)) del_addi = 1;
 			remove_rrset("sanitize: removing extraneous answer "
 				"RRset:", pkt, msg, prev, &rrset);
 			continue;
@@ -633,10 +657,15 @@ scrub_sanitize(ldns_buffer* pkt, struct msg_parse* msg,
 				rrset->type == LDNS_RR_TYPE_NS && 
 				rrset->section == LDNS_SECTION_AUTHORITY &&
 				FLAGS_GET_RCODE(msg->flags) == 
-				LDNS_RCODE_NOERROR) {
+				LDNS_RCODE_NOERROR && !soa_in_auth(msg) &&
+				sub_of_pkt(pkt, zonename, rrset->dname)) {
 				/* noerror, nodata and this NS rrset is above
 				 * the zone. This is LAME! 
 				 * Leave in the NS for lame classification. */
+				/* remove everything from the additional
+				 * (we dont want its glue that was approved
+				 * during the normalize action) */
+				del_addi = 1;
 			} else if(!env->cfg->harden_glue) {
 				/* store in cache! Since it is relevant
 				 * (from normalize) it will be picked up 
@@ -646,10 +675,16 @@ scrub_sanitize(ldns_buffer* pkt, struct msg_parse* msg,
 				"poison RRset:", pkt, msg, prev, &rrset);
 				continue;
 			} else {
+				if(has_additional(rrset->type)) del_addi = 1;
 				remove_rrset("sanitize: removing potential "
 				"poison RRset:", pkt, msg, prev, &rrset);
 				continue;
 			}
+		}
+		if(del_addi && rrset->section == LDNS_SECTION_ADDITIONAL) {
+			remove_rrset("sanitize: removing potential "
+			"poison reference RRset:", pkt, msg, prev, &rrset);
+			continue;
 		}
 		/* check if right hand side of NSEC is within zone */
 		if(rrset->type == LDNS_RR_TYPE_NSEC &&

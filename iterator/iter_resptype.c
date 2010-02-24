@@ -234,6 +234,8 @@ response_type_from_server(int rdset,
 			/* If we are getting a referral upwards (or to 
 			 * the same zone), then the server is 'lame'. */
 			if(dname_subdomain_c(origzone, s->rk.dname)) {
+				if(rdset) /* forward or reclame not LAME */
+					return RESPONSE_TYPE_THROWAWAY;
 				return RESPONSE_TYPE_LAME;
 			}
 			/* If the NS set is below the delegation point we 
