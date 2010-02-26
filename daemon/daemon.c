@@ -69,7 +69,7 @@ static void* comp_meth = NULL;
 #endif
 #ifdef LEX_HAS_YYLEX_DESTROY
 /** remove buffers for parsing and init */
-void ub_c_lex_destroy(void);
+int ub_c_lex_destroy(void);
 #endif
 
 /** used when no other sighandling happens, so we don't die
