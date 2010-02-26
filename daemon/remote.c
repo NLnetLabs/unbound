@@ -64,6 +64,7 @@
 #include "validator/val_kentry.h"
 #include "iterator/iterator.h"
 #include "iterator/iter_fwd.h"
+#include "iterator/iter_hints.h"
 #include "iterator/iter_delegpt.h"
 #include "services/outbound_list.h"
 #include "services/outside_network.h"
@@ -1226,20 +1227,24 @@ do_flush_name(SSL* ssl, struct worker* w, char* arg)
 	send_ok(ssl);
 }
 
-/** print root forwards */
+/** printout a delegation point info */
 static int
-print_root_fwds(SSL* ssl, struct iter_forwards* fwds, uint8_t* root)
+ssl_print_name_dp(SSL* ssl, char* str, uint8_t* nm, uint16_t dclass,
+	struct delegpt* dp)
 {
 	char buf[257];
-	struct delegpt* dp;
 	struct delegpt_ns* ns;
 	struct delegpt_addr* a;
 	int f = 0;
-	dp = forwards_lookup(fwds, root, LDNS_RR_CLASS_IN);
-	if(!dp) 
-		return ssl_printf(ssl, "off (using root hints)\n");
-	/* if dp is returned it must be the root */
-	log_assert(query_dname_compare(dp->name, root)==0);
+	if(str) { /* print header for forward, stub */
+		char* c = ldns_rr_class2str(dclass);
+		dname_str(nm, buf);
+		if(!ssl_printf(ssl, "%s %s %s: ", buf, c, str)) {
+			free(c);
+			return 0;
+		}
+		free(c);
+	}
 	for(ns = dp->nslist; ns; ns = ns->next) {
 		dname_str(ns->name, buf);
 		if(!ssl_printf(ssl, "%s%s", (f?" ":""), buf))
@@ -1253,6 +1258,20 @@ print_root_fwds(SSL* ssl, struct iter_forwards* fwds, uint8_t* root)
 		f = 1;
 	}
 	return ssl_printf(ssl, "\n");
+}
+
+
+/** print root forwards */
+static int
+print_root_fwds(SSL* ssl, struct iter_forwards* fwds, uint8_t* root)
+{
+	struct delegpt* dp;
+	dp = forwards_lookup(fwds, root, LDNS_RR_CLASS_IN);
+	if(!dp)
+		return ssl_printf(ssl, "off (using root hints)\n");
+	/* if dp is returned it must be the root */
+	log_assert(query_dname_compare(dp->name, root)==0);
+	return ssl_print_name_dp(ssl, NULL, root, LDNS_RR_CLASS_IN, dp);
 }
 
 /** parse args into delegpt */
@@ -1502,6 +1521,43 @@ do_get_option(SSL* ssl, struct worker* worker, char* arg)
 	}
 }
 
+/** do the list_forwards command */
+static void
+do_list_forwards(SSL* ssl, struct worker* worker)
+{
+	/* since its a per-worker structure no locks needed */
+	struct iter_forwards* fwds = worker->env.fwds;
+	struct iter_forward_zone* z;
+	RBTREE_FOR(z, struct iter_forward_zone*, fwds->tree) {
+		if(!z->dp) continue; /* skip empty marker for stub */
+		if(!ssl_print_name_dp(ssl, "forward", z->name, z->dclass,
+			z->dp))
+			return;
+	}
+}
+
+/** do the list_stubs command */
+static void
+do_list_stubs(SSL* ssl, struct worker* worker)
+{
+	/* readonly structure */
+	int m;
+	struct iter_hints_stub* z;
+	struct iter_env* ie;
+	m = modstack_find(&worker->env.mesh->mods, "iterator");
+	if(m == -1) {
+		(void)ssl_printf(ssl, "error no iterator module\n");
+		return;
+	}
+	ie = (struct iter_env*)worker->env.modinfo[m];
+	RBTREE_FOR(z, struct iter_hints_stub*, &ie->hints->tree) {
+		if(!ssl_print_name_dp(ssl, 
+			z->noprime?"stub noprime":"stub prime", z->node.name,
+			z->node.dclass, z->dp))
+			return;
+	}
+}
+
 /** tell other processes to execute the command */
 void
 distribute_cmd(struct daemon_remote* rc, SSL* ssl, char* cmd)
@@ -1548,6 +1604,12 @@ execute_cmd(struct daemon_remote* rc, SSL* ssl, char* cmd,
 		return;
 	} else if(strncmp(p, "load_cache", 10) == 0) {
 		if(load_cache(ssl, worker)) send_ok(ssl);
+		return;
+	} else if(strncmp(p, "list_forwards", 13) == 0) {
+		do_list_forwards(ssl, worker);
+		return;
+	} else if(strncmp(p, "list_stubs", 10) == 0) {
+		do_list_stubs(ssl, worker);
 		return;
 	} else if(strncmp(p, "forward", 7) == 0) {
 		/* must always distribute this cmd */

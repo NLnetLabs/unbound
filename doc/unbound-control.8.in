@@ -155,6 +155,13 @@ connection closes.  On error 'error ...' is printed (it gives a syntax
 error on unknown option).  For some options a list of values, one on
 each line, is printed.  Not all options are supported.
 .TP
+.B list_stubs
+List the stub zones in use.  These are printed one by one to the output.
+This includes the root hints in use.
+.TP
+.B list_forwards
+List the forward zones in use.  These are printed zone by zone to the output.
+.TP
 .B forward \fR[\fIoff\fR | \fIaddr ...\fR ]
 Setup forwarding mode.  Configures if the server should ask other upstream
 nameservers, should go to the internet root nameservers itself, or show 
