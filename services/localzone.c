@@ -1141,6 +1141,19 @@ local_zones_answer(struct local_zones* zones, struct query_info* qinfo,
 	return r;
 }
 
+const char* local_zone_type2str(enum localzone_type t)
+{
+	switch(t) {
+		case local_zone_deny: return "deny";
+		case local_zone_refuse: return "refuse";
+		case local_zone_redirect: return "redirect";
+		case local_zone_transparent: return "transparent";
+		case local_zone_static: return "static";
+		case local_zone_nodefault: return "nodefault";
+	}
+	return "badtyped"; 
+}
+
 int local_zone_str2type(const char* type, enum localzone_type* t)
 {
 	if(strcmp(type, "deny") == 0)

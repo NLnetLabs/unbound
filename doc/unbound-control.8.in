@@ -162,6 +162,12 @@ This includes the root hints in use.
 .B list_forwards
 List the forward zones in use.  These are printed zone by zone to the output.
 .TP
+.B list_local_zones
+List the local zones in use.  These are printed one per line with zone type.
+.TP
+.B list_local_data
+List the local data RRs in use.  The resource records are printed.
+.TP
 .B forward \fR[\fIoff\fR | \fIaddr ...\fR ]
 Setup forwarding mode.  Configures if the server should ask other upstream
 nameservers, should go to the internet root nameservers itself, or show 

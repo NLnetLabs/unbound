@@ -1,6 +1,7 @@
 26 February 2010: Wouter
 	- Fixup prototype for lexer cleanup in daemon code.
-	- unbound-control list_stubs and list_forwards.
+	- unbound-control list_stubs, list_forwards, list_local_zones and
+	  list_local_data.
 
 24 February 2010: Wouter
 	- Fix scrubber bug that potentially let NS records through.  Reported

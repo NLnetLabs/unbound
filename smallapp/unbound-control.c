@@ -86,8 +86,10 @@ usage()
 	printf("  dump_requestlist		show what is worked on\n");
 	printf("  set_option opt: val		set option to value, no reload\n");
 	printf("  get_option opt		get option value\n");
-	printf("  list_stubs			list stub-zones used\n");
-	printf("  list_forwards			list forward-zones used\n");
+	printf("  list_stubs			list stub-zones and root hints in use\n");
+	printf("  list_forwards			list forward-zones in use\n");
+	printf("  list_local_zones		list local-zones in use\n");
+	printf("  list_local_data		list local-data RRs in use\n");
 	printf("  forward [off | addr ...]	without arg show forward setup\n");
 	printf("				or off to turn off root forwarding\n");
 	printf("				or give list of ip addresses\n");

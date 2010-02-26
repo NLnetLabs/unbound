@@ -1558,6 +1558,50 @@ do_list_stubs(SSL* ssl, struct worker* worker)
 	}
 }
 
+/** do the list_local_zones command */
+static void
+do_list_local_zones(SSL* ssl, struct worker* worker)
+{
+	struct local_zones* zones = worker->daemon->local_zones;
+	struct local_zone* z;
+	char buf[257];
+	lock_quick_lock(&zones->lock);
+	RBTREE_FOR(z, struct local_zone*, &zones->ztree) {
+		lock_rw_rdlock(&z->lock);
+		dname_str(z->name, buf);
+		(void)ssl_printf(ssl, "%s %s\n", buf, 
+			local_zone_type2str(z->type));
+		lock_rw_unlock(&z->lock);
+	}
+	lock_quick_unlock(&zones->lock);
+}
+
+/** do the list_local_data command */
+static void
+do_list_local_data(SSL* ssl, struct worker* worker)
+{
+	struct local_zones* zones = worker->daemon->local_zones;
+	struct local_zone* z;
+	struct local_data* d;
+	struct local_rrset* p;
+	lock_quick_lock(&zones->lock);
+	RBTREE_FOR(z, struct local_zone*, &zones->ztree) {
+		lock_rw_rdlock(&z->lock);
+		RBTREE_FOR(d, struct local_data*, &z->data) {
+			for(p = d->rrsets; p; p = p->next) {
+				ldns_rr_list* rr = packed_rrset_to_rr_list(
+					p->rrset, worker->env.scratch_buffer);
+				char* str = ldns_rr_list2str(rr);
+				(void)ssl_printf(ssl, "%s", str);
+				free(str);
+				ldns_rr_list_free(rr);
+			}
+		}
+		lock_rw_unlock(&z->lock);
+	}
+	lock_quick_unlock(&zones->lock);
+}
+
 /** tell other processes to execute the command */
 void
 distribute_cmd(struct daemon_remote* rc, SSL* ssl, char* cmd)
@@ -1610,6 +1654,12 @@ execute_cmd(struct daemon_remote* rc, SSL* ssl, char* cmd,
 		return;
 	} else if(strncmp(p, "list_stubs", 10) == 0) {
 		do_list_stubs(ssl, worker);
+		return;
+	} else if(strncmp(p, "list_local_zones", 16) == 0) {
+		do_list_local_zones(ssl, worker);
+		return;
+	} else if(strncmp(p, "list_local_data", 15) == 0) {
+		do_list_local_data(ssl, worker);
 		return;
 	} else if(strncmp(p, "forward", 7) == 0) {
 		/* must always distribute this cmd */

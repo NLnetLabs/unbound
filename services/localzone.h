@@ -234,6 +234,14 @@ int local_zones_answer(struct local_zones* zones, struct query_info* qinfo,
 int local_zone_str2type(const char* str, enum localzone_type* t);
 
 /**
+ * Print localzone type to a string.  Pointer to a constant string.
+ *
+ * @param t: local zone type.
+ * @return constant string that describes type.
+ */
+const char* local_zone_type2str(enum localzone_type t);
+
+/**
  * Find zone that with exactly given name, class.
  * User must lock the tree or result zone.
  * @param zones: the zones tree
