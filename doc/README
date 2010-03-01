@@ -32,6 +32,10 @@ This software is under BSD license, see LICENSE for details.
 	This disables pthreads. Without this option the pthreads library 
 	is detected automatically. Use this option to disable threading
 	altogether, or, on Solaris, also use --with(out)-solaris-threads.
+  * --enable-checking
+  	This enables assertions in the code that guard against a variety of
+	programming errors, among which buffer overflows.  The program exits
+	with an error if an assertion fails (but the buffer did not overflow).
   * --enable-static-exe
 	This enables a debug option to statically link, against ldns and 
 	libevent libraries.

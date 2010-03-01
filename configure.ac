@@ -162,10 +162,12 @@ ACX_CHECK_COMPILER_FLAG(xO4, [CFLAGS="$CFLAGS -xO4"])
 ACX_CHECK_COMPILER_FLAG(xtarget=generic, [CFLAGS="$CFLAGS -xtarget=generic"])
 
 # debug mode flags warnings
-AC_ARG_ENABLE(debug, AC_HELP_STRING([--enable-debug], [Enable debug warnings, asserts, makefile-dependencies]))
-debug_enabled="$enable_debug"
+AC_ARG_ENABLE(checking, AC_HELP_STRING([--enable-checking], [Enable warnings, asserts, makefile-dependencies]))
+AC_ARG_ENABLE(debug, AC_HELP_STRING([--enable-debug], [same as enable-checking]))
+if test "$enable_debug" = "yes"; then debug_enabled="$enable_debug"; 
+else debug_enabled="$enable_checking"; fi
 AC_SUBST(debug_enabled)
-case "$enable_debug" in
+case "$debug_enabled" in
         yes)
 		ACX_CHECK_COMPILER_FLAG(W, [CFLAGS="$CFLAGS -W"])
 		ACX_CHECK_COMPILER_FLAG(Wall, [CFLAGS="$CFLAGS -Wall"])
