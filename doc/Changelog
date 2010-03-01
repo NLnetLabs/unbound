@@ -6,6 +6,7 @@
 	  nxdomain and nodata distinguished.
 	- ldns tarball updated.
 	- --disable-rpath fixed for libtool not found errors.
+	- new fedora specfile from Fedora13 in contrib from Paul Wouters.
 
 26 February 2010: Wouter
 	- Fixup prototype for lexer cleanup in daemon code.

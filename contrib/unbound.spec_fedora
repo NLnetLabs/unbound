@@ -1,5 +1,5 @@
-# initial python set up
-%{?!with_python:      %define with_python      0}
+# not ready yet
+%{?!with_python:      %global with_python      1}
 
 %if %{with_python}
 %{!?python_sitelib: %global python_sitelib %(%{__python} -c "from distutils.sysconfig import get_python_lib; print get_python_lib()")}
@@ -8,7 +8,7 @@
 
 Summary: Validating, recursive, and caching DNS(SEC) resolver
 Name: unbound
-Version: 1.3.1rc2
+Version: 1.4.2
 Release: 1%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
@@ -16,8 +16,8 @@ Source: http://www.unbound.net/downloads/%{name}-%{version}.tar.gz
 Source1: unbound.init
 Source2: unbound.conf
 Source3: unbound.munin
-# See the unbound svn repository for further documentation on these
-Patch0: unbound-1.2-glob.patch
+Source4: dlv.isc.org.key
+Patch1: unbound-1.2-glob.patch
 
 Group: System Environment/Daemons
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
@@ -31,7 +31,7 @@ Requires(post): chkconfig
 Requires(preun): chkconfig
 Requires(preun): initscripts
 Requires(postun): initscripts
-Requires: ldns >= 1.5.0, dnssec-conf >= 1.19
+Requires: ldns >= 1.5.0
 Requires(pre): shadow-utils
 
 %description
@@ -84,7 +84,7 @@ Python modules and extensions for unbound
 
 %prep
 %setup -q 
-%patch0 -p1
+%patch1 -p1
 
 %build
 %configure  --with-ldns= --with-libevent --with-pthreads --with-ssl \
@@ -95,7 +95,7 @@ Python modules and extensions for unbound
             --with-pythonmodule --with-pyunbound \
 %endif
             --enable-sha2 
-%{__make} CFLAGS="$RPM_OPT_FLAGS -D_GNU_SOURCE" QUIET=no %{?_smp_mflags}
+%{__make} 
 
 %install
 rm -rf %{buildroot}
@@ -112,6 +112,9 @@ for plugin in unbound_munin_hits unbound_munin_queue unbound_munin_memory unboun
     ln -s unbound %{buildroot}%{_datadir}/munin/plugins/$plugin
 done 
 
+# install DLV key
+install -m 0644 %{SOURCE4} %{buildroot}%{_sysconfdir}/unbound/
+
 # remove static library from install (fedora packaging guidelines)
 rm -rf %{buildroot}%{_libdir}/*.la
 
@@ -127,6 +130,7 @@ rm -rf ${RPM_BUILD_ROOT}
 %attr(0755,root,root) %dir %{_sysconfdir}/%{name}
 %attr(0755,unbound,unbound) %dir %{_localstatedir}/run/%{name}
 %attr(0644,root,root) %config(noreplace) %{_sysconfdir}/%{name}/unbound.conf
+%attr(0644,root,root) %config(noreplace) %{_sysconfdir}/%{name}/dlv.isc.org.key
 %{_sbindir}/*
 %{_mandir}/*/*
 
@@ -160,15 +164,11 @@ exit 0
 
 %post
 /sbin/chkconfig --add %{name}
-# Check DNSSEC settings if this is a fresh install
-if [ "$1" -eq 1 ]; then
-  if [ -r /etc/sysconfig/dnssec ]; then
-    . /etc/sysconfig/dnssec
-    [ -x /usr/sbin/dnssec-configure ] && \
-      dnssec-configure -u --norestart --nocheck --dnssec="$DNSSEC" --dlv="$DLV" > \
-        /dev/null 2>&1
-  fi;
-fi
+# dnssec-conf used to contain our DLV key, but now we include it via unbound
+# If unbound had previously been configured with dnssec-configure, we need
+# to migrate the location of the DLV key file (to keep DLV enabled, and because
+# unbound won't start with a bad location for a DLV key file.
+sed -i "s:/etc/pki/dnssec-keys[/]*dlv:/etc/unbound:" %{_sysconfdir}/unbound/unbound.conf
 
 %post libs -p /sbin/ldconfig
 
@@ -186,6 +186,30 @@ fi
 %postun libs -p /sbin/ldconfig
 
 %changelog
+* Thu Feb 18 2010 Paul Wouters <paul@xelerance.com> - 1.4.1-2
+- Removed dependancy for dnssec-conf
+- Added ISC DLV key (formerly in dnssec-conf)
+- Fixup old DLV locations in unbound.conf file via %%post
+
+* Tue Jan 05 2010 Paul Wouters <paul@xelerance.com> - 1.4.1-1
+- Updated to 1.4.1
+- Changed %%define to %%global
+
+* Thu Oct 08 2009 Paul Wouters <paul@xelerance.com> - 1.3.4-2
+- Bump version
+
+* Thu Oct 08 2009 Paul Wouters <paul@xelerance.com> - 1.3.4-1
+- Upgraded to 1.3.4. Security fix with validating NSEC3 records
+
+* Fri Aug 21 2009 Tomas Mraz <tmraz@redhat.com> - 1.3.3-2
+- rebuilt with new openssl
+
+* Mon Aug 17 2009 Paul Wouters <paul@xelerance.com> - 1.3.3-1
+- Updated to 1.3.3
+
+* Sun Jul 26 2009 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 1.3.0-3
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_12_Mass_Rebuild
+
 * Sat Jun 20 2009 Paul Wouters <paul@xelerance.com> - 1.3.0-2
 - Added missing glob patch to cvs
 - Place python macros within the %%with_python check
