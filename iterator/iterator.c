@@ -1620,7 +1620,13 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 	if(type == RESPONSE_TYPE_ANSWER) {
 		/* ANSWER type responses terminate the query algorithm, 
 		 * so they sent on their */
-		verbose(VERB_DETAIL, "query response was ANSWER");
+		if(verbosity >= VERB_DETAIL) {
+			verbose(VERB_DETAIL, "query response was %s",
+				FLAGS_GET_RCODE(iq->response->rep->flags)
+				==LDNS_RCODE_NXDOMAIN?"NXDOMAIN ANSWER":
+				(iq->response->rep->an_numrrsets?"ANSWER":
+				"nodata ANSWER"));
+		}
 		if(!iter_dns_store(qstate->env, &iq->response->qinfo,
 			iq->response->rep, 0, qstate->prefetch_leeway))
 			return error_response(qstate, id, LDNS_RCODE_SERVFAIL);

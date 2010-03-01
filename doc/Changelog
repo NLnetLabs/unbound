@@ -2,6 +2,8 @@
 	- make install depends on make all.
 	- Fix 5011 auto-trust-anchor-file initial read to skip RRSIGs.
 	- --enable-checking: enables assertions but does not look nonproduction.
+	- nicer VERB_DETAIL (verbosity 2, unbound-host -d) output, with
+	  nxdomain and nodata distinguished.
 
 26 February 2010: Wouter
 	- Fixup prototype for lexer cleanup in daemon code.
