@@ -431,16 +431,19 @@ add_trustanchor_frm_rr(struct val_anchors* anchors, ldns_rr* rr,
  * @param tp: trust point returned.
  * @param origin: what to use for @
  * @param prev: previous rr name
+ * @param skip: if true, the result is NULL, but not an error, skip it.
  * @return new key in trust point.
  */
 static struct autr_ta*
 add_trustanchor_frm_str(struct val_anchors* anchors, char* str, 
-	struct trust_anchor** tp, ldns_rdf* origin, ldns_rdf** prev)
+	struct trust_anchor** tp, ldns_rdf* origin, ldns_rdf** prev, int* skip)
 {
         ldns_rr* rr;
 	ldns_status lstatus;
-        if (!str_contains_data(str, ';'))
+        if (!str_contains_data(str, ';')) {
+		*skip = 1;
                 return NULL; /* empty line */
+	}
         if (LDNS_STATUS_OK !=
                 (lstatus = ldns_rr_new_frm_str(&rr, str, 0, origin, prev)))
         {
@@ -448,6 +451,12 @@ add_trustanchor_frm_str(struct val_anchors* anchors, char* str,
 			ldns_get_errorstr_by_id(lstatus));
                 return NULL;
         }
+	if(ldns_rr_get_type(rr) != LDNS_RR_TYPE_DNSKEY &&
+		ldns_rr_get_type(rr) != LDNS_RR_TYPE_DS) {
+		ldns_rr_free(rr);
+		*skip = 1;
+		return NULL; /* only DS and DNSKEY allowed */
+	}
         return add_trustanchor_frm_rr(anchors, rr, tp);
 }
 
@@ -458,16 +467,17 @@ add_trustanchor_frm_str(struct val_anchors* anchors, char* str,
  * @param fname: filename
  * @param origin: $ORIGIN.
  * @param prev: passed to ldns.
+ * @param skip: if true, the result is NULL, but not an error, skip it.
  * @return false on failure, otherwise the tp read.
  */
 static struct trust_anchor*
 load_trustanchor(struct val_anchors* anchors, char* str, const char* fname,
-	ldns_rdf* origin, ldns_rdf** prev)
+	ldns_rdf* origin, ldns_rdf** prev, int* skip)
 {
         struct autr_ta* ta = NULL;
         struct trust_anchor* tp = NULL;
 
-        ta = add_trustanchor_frm_str(anchors, str, &tp, origin, prev);
+        ta = add_trustanchor_frm_str(anchors, str, &tp, origin, prev, skip);
 	if(!ta)
 		return NULL;
 	lock_basic_lock(&tp->lock);
@@ -802,8 +812,10 @@ int autr_read_file(struct val_anchors* anchors, const char* nm)
                 	continue; /* empty lines allowed */
  		if(handle_origin(line, &origin))
 			continue;
-                if(!(tp2=load_trustanchor(anchors, line, nm, origin, &prev))) {
-                        log_err("failed to load trust anchor from %s "
+		r = 0;
+                if(!(tp2=load_trustanchor(anchors, line, nm, origin, &prev, 
+			&r))) {
+			if(!r) log_err("failed to load trust anchor from %s "
 				"at line %i, skipping", nm, line_nr);
                         /* try to do the rest */
 			continue;

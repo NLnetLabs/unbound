@@ -364,7 +364,7 @@ strip:
 	$(STRIP) unbound-control$(EXEEXT)
 	$(STRIP) unbound-host$(EXEEXT)
 
-install:
+install:	all
 	$(INSTALL) -m 755 -d $(DESTDIR)$(sbindir)
 	$(INSTALL) -m 755 -d $(DESTDIR)$(mandir)
 	$(INSTALL) -m 755 -d $(DESTDIR)$(mandir)/man8
