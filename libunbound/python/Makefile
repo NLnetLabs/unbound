@@ -56,9 +56,9 @@ clean:
 	rm -f _unbound.so libunbound_wrap.o
 	$(MAKE) -C ../.. clean
 
-testenv: ../../.libs/libunbound.so.1 ../../ldns-src/lib/libldns.so ../../.libs/_unbound.so
+testenv: ../../.libs/libunbound.so.2 ../../ldns-src/lib/libldns.so ../../.libs/_unbound.so
 	rm -rdf examples/unbound
-	cd examples && mkdir unbound && ln -s ../../unbound.py unbound/__init__.py && ln -s ../../_unbound.so unbound/_unbound.so && ln -s ../../../../.libs/libunbound.so.1 unbound/libunbound.so.1 && ln -s ../../../../ldns-src/lib/libldns.so.1 unbound/libldns.so.1 && ls -la
+	cd examples && mkdir unbound && ln -s ../../unbound.py unbound/__init__.py && ln -s ../../_unbound.so unbound/_unbound.so && ln -s ../../../../.libs/libunbound.so.2 unbound/libunbound.so.2 && ln -s ../../../../ldns-src/lib/libldns.so.1 unbound/libldns.so.1 && ls -la
 	cd examples && if test -f ../../../.libs/_unbound.so; then cp ../../../.libs/_unbound.so . ; fi
 	@echo "Run a script by typing ./script_name.py"
 	cd examples && LD_LIBRARY_PATH=unbound bash
