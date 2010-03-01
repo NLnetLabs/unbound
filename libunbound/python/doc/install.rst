@@ -5,21 +5,17 @@ Installation
 
 Python 2.4 or higher, SWIG 1.3 or higher, GNU make
 
-**Download**
-
-You can download the source codes `here`_.
-The latest release is 1.1.1, Jan 15, 2009.
-
-.. _here: unbound-1.1.1-py.tar.gz
-
 **Compiling**
 
 After downloading, you can compile the pyUnbound library by doing::
 
-	> tar -xzf unbound-1.1.1-py.tar.gz
-	> cd unbound-1.1.1
+	> tar -xzf unbound-x.x.x-py.tar.gz
+	> cd unbound-x.x.x
 	> ./configure --with-pyunbound
 	> make
+
+You may want to --with-pythonmodule as well if you want to use python as
+a module in the resolver.
 
 You need GNU make to compile sources; SWIG and Python devel libraries to compile extension module. 
 
@@ -32,4 +28,4 @@ If the compilation is successfull, you can test the python LDNS extension module
 	> make testenv
 	> ./dns-lookup.py
 
-In contrib/examples you can find simple applications written in Python using the Unbound extension.
+You may want to make install in the main directory since make testenv is for debugging.  In contrib/examples you can find simple applications written in Python using the Unbound extension.
