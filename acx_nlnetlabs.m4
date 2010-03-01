@@ -2,7 +2,8 @@
 # Copyright 2009, Wouter Wijngaards, NLnet Labs.   
 # BSD licensed.
 #
-# Version 7
+# Version 8
+# 2010-03-01 Fix RPATH using CONFIG_COMMANDS to run at the very end.
 # 2010-02-18 WITH_SSL outputs the LIBSSL_LDFLAGS, LIBS, CPPFLAGS seperate, -ldl
 # 2010-02-01 added ACX_CHECK_MEMCMP_SIGNED, AHX_MEMCMP_BROKEN
 # 2010-01-20 added AHX_COONFIG_STRLCAT
@@ -556,12 +557,14 @@ AC_ARG_ENABLE(rpath,
         [  --disable-rpath         disable hardcoded rpath (default=enabled)],
 	enable_rpath=$enableval, enable_rpath=yes)
 if test "x$enable_rpath" = xno; then
-	AC_MSG_RESULT([Fixing libtool for -rpath problems.])
+	dnl AC_MSG_RESULT([Fixing libtool for -rpath problems.])
+	AC_CONFIG_COMMANDS([disable-rpath], [
 	sed < libtool > libtool-2 \
 	's/^hardcode_libdir_flag_spec.*$'/'hardcode_libdir_flag_spec=" -D__LIBTOOL_RPATH_SED__ "/'
 	mv libtool-2 libtool
 	chmod 755 libtool
 	libtool="./libtool"
+	])
 fi
 ])
 

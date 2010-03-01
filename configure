@@ -15559,13 +15559,8 @@ else
 fi
 
 if test "x$enable_rpath" = xno; then
-	{ $as_echo "$as_me:$LINENO: result: Fixing libtool for -rpath problems." >&5
-$as_echo "Fixing libtool for -rpath problems." >&6; }
-	sed < libtool > libtool-2 \
-	's/^hardcode_libdir_flag_spec.*$'/'hardcode_libdir_flag_spec=" -D__LIBTOOL_RPATH_SED__ "/'
-	mv libtool-2 libtool
-	chmod 755 libtool
-	libtool="./libtool"
+		ac_config_commands="$ac_config_commands disable-rpath"
+
 fi
 
 
@@ -24019,6 +24014,7 @@ for ac_config_target in $ac_config_targets
 do
   case $ac_config_target in
     "libtool") CONFIG_COMMANDS="$CONFIG_COMMANDS libtool" ;;
+    "disable-rpath") CONFIG_COMMANDS="$CONFIG_COMMANDS disable-rpath" ;;
     "Makefile") CONFIG_FILES="$CONFIG_FILES Makefile" ;;
     "doc/example.conf") CONFIG_FILES="$CONFIG_FILES doc/example.conf" ;;
     "doc/libunbound.3") CONFIG_FILES="$CONFIG_FILES doc/libunbound.3" ;;
@@ -25271,6 +25267,13 @@ _LT_EOF
   chmod +x "$ofile"
 
  ;;
+    "disable-rpath":C)
+	sed < libtool > libtool-2 \
+	's/^hardcode_libdir_flag_spec.*$'/'hardcode_libdir_flag_spec=" -D__LIBTOOL_RPATH_SED__ "/'
+	mv libtool-2 libtool
+	chmod 755 libtool
+	libtool="./libtool"
+	 ;;
 
   esac
 done # for ac_tag
