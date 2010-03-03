@@ -1,3 +1,7 @@
+3 March 2010: Wouter
+	- better casts in pipe code, brackets placed wrongly.
+	- iana portlist updated.
+
 1 March 2010: Wouter
 	- make install depends on make all.
 	- Fix 5011 auto-trust-anchor-file initial read to skip RRSIGs.

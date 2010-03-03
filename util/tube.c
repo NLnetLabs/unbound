@@ -298,7 +298,7 @@ int tube_write_msg(struct tube* tube, uint8_t* buf, uint32_t len,
 		return 0;
 	/* write remainder */
 	if(r != (ssize_t)sizeof(len)) {
-		if(write(fd, (char*)(&len)+r, sizeof(len)-r) == -1) {
+		if(write(fd, ((char*)&len)+r, sizeof(len)-r) == -1) {
 			log_err("tube msg write failed: %s", strerror(errno));
 			(void)fd_set_nonblock(fd);
 			return 0;
@@ -337,7 +337,7 @@ int tube_read_msg(struct tube* tube, uint8_t** buf, uint32_t* len,
 		return 0;
 	/* read remainder */
 	if(r != (ssize_t)sizeof(*len)) {
-		if((r=read(fd, (char*)(len)+r, sizeof(*len)-r)) == -1) {
+		if((r=read(fd, ((char*)len)+r, sizeof(*len)-r)) == -1) {
 			log_err("tube msg read failed: %s", strerror(errno));
 			(void)fd_set_nonblock(fd);
 			return 0;
