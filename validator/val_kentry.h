@@ -78,7 +78,7 @@ struct key_entry_data {
 	uint32_t ttl;
 	/** the key rrdata. can be NULL to signal keyless name. */
 	struct packed_rrset_data* rrset_data;
-	/** notNULL sometimes to give reason why bogus */
+	/** not NULL sometimes to give reason why bogus */
 	char* reason;
 	/** DNS RR type of the rrset data (host order) */
 	uint16_t rrset_type;

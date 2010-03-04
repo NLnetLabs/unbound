@@ -24,7 +24,7 @@
 	- Fix scrubber bug that potentially let NS records through.  Reported
 	  by Amanda Constant.
 	- Also delete potential poison references from additional.
-	- Fix: no classification of a forwarder as lame, throwaway instead.
+	- Fix: no classification of a forwarder as lame, throw away instead.
 
 23 February 2010: Wouter
 	- libunbound ub_ctx_get_option() added.
