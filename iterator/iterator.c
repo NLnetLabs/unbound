@@ -829,10 +829,7 @@ generate_dnskey_prefetch(struct module_qstate* qstate,
 		/* this qstate has the right delegation for the dnskey lookup*/
 		/* make copy to avoid use of stub dp by different qs/threads */
 		subiq->dp = delegpt_copy(iq->dp, subq->region);
-		if(!subiq->dp) {
-			/* it'll start from the cache */
-			return;
-		}
+		/* if !subiq->dp, it'll start from the cache, no problem */
 	}
 }
 
