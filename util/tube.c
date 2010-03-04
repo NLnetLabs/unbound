@@ -281,7 +281,7 @@ tube_handle_write(struct comm_point* c, void* arg, int error,
 int tube_write_msg(struct tube* tube, uint8_t* buf, uint32_t len, 
         int nonblock)
 {
-	ssize_t r;
+	ssize_t r, d;
 	int fd = tube->sw;
 
 	/* test */
@@ -297,17 +297,23 @@ int tube_write_msg(struct tube* tube, uint8_t* buf, uint32_t len,
 	if(!fd_set_block(fd))
 		return 0;
 	/* write remainder */
-	if(r != (ssize_t)sizeof(len)) {
-		if(write(fd, ((char*)&len)+r, sizeof(len)-r) == -1) {
+	d = r;
+	while(d != (ssize_t)sizeof(len)) {
+		if((r=write(fd, ((char*)&len)+d, sizeof(len)-d)) == -1) {
 			log_err("tube msg write failed: %s", strerror(errno));
 			(void)fd_set_nonblock(fd);
 			return 0;
 		}
+		d += r;
 	}
-	if(write(fd, buf, len) == -1) {
-		log_err("tube msg write failed: %s", strerror(errno));
-		(void)fd_set_nonblock(fd);
-		return 0;
+	d = 0;
+	while(d != (ssize_t)len) {
+		if((r=write(fd, buf+d, len-d)) == -1) {
+			log_err("tube msg write failed: %s", strerror(errno));
+			(void)fd_set_nonblock(fd);
+			return 0;
+		}
+		d += r;
 	}
 	if(!fd_set_nonblock(fd))
 		return 0;
@@ -317,7 +323,7 @@ int tube_write_msg(struct tube* tube, uint8_t* buf, uint32_t len,
 int tube_read_msg(struct tube* tube, uint8_t** buf, uint32_t* len, 
         int nonblock)
 {
-	ssize_t r;
+	ssize_t r, d;
 	int fd = tube->sr;
 
 	/* test */
@@ -336,8 +342,9 @@ int tube_read_msg(struct tube* tube, uint8_t** buf, uint32_t* len,
 	if(!fd_set_block(fd))
 		return 0;
 	/* read remainder */
-	if(r != (ssize_t)sizeof(*len)) {
-		if((r=read(fd, ((char*)len)+r, sizeof(*len)-r)) == -1) {
+	d = r;
+	while(d != (ssize_t)sizeof(*len)) {
+		if((r=read(fd, ((char*)len)+d, sizeof(*len)-d)) == -1) {
 			log_err("tube msg read failed: %s", strerror(errno));
 			(void)fd_set_nonblock(fd);
 			return 0;
@@ -346,6 +353,7 @@ int tube_read_msg(struct tube* tube, uint8_t** buf, uint32_t* len,
 			(void)fd_set_nonblock(fd);
 			return 0;
 		}
+		d += r;
 	}
 	*buf = (uint8_t*)malloc(*len);
 	if(!*buf) {
@@ -353,16 +361,20 @@ int tube_read_msg(struct tube* tube, uint8_t** buf, uint32_t* len,
 		(void)fd_set_nonblock(fd);
 		return 0;
 	}
-	if((r=read(fd, *buf, *len)) == -1) {
-		log_err("tube msg read failed: %s", strerror(errno));
-		(void)fd_set_nonblock(fd);
-		free(*buf);
-		return 0;
-	}
-	if(r == 0) { /* EOF */
-		(void)fd_set_nonblock(fd);
-		free(*buf);
-		return 0;
+	d = 0;
+	while(d != (ssize_t)*len) {
+		if((r=read(fd, (*buf)+d, ((ssize_t)*len)-d)) == -1) {
+			log_err("tube msg read failed: %s", strerror(errno));
+			(void)fd_set_nonblock(fd);
+			free(*buf);
+			return 0;
+		}
+		if(r == 0) { /* EOF */
+			(void)fd_set_nonblock(fd);
+			free(*buf);
+			return 0;
+		}
+		d += r;
 	}
 	if(!fd_set_nonblock(fd)) {
 		free(*buf);
