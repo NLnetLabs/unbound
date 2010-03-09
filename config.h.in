@@ -420,6 +420,9 @@
 /* default username */
 #undef UB_USERNAME
 
+/* use to enable lightweight alloc assertions, for debug use */
+#undef UNBOUND_ALLOC_LITE
+
 /* use statistics for allocs and frees, for debug use */
 #undef UNBOUND_ALLOC_STATS
 
@@ -832,7 +835,9 @@ void unbound_stat_free_log(void *ptr, const char* file, int line,
 	const char* func);
 void *unbound_stat_realloc_log(void *ptr, size_t size, const char* file,
 	int line, const char* func);
-#endif /* UNBOUND_ALLOC_STATS */
+#elif defined(UNBOUND_ALLOC_LITE)
+#  include "util/alloc.h"
+#endif /* UNBOUND_ALLOC_LITE and UNBOUND_ALLOC_STATS */
 
 /** default port for DNS traffic. */
 #define UNBOUND_DNS_PORT 53

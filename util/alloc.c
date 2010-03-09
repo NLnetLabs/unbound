@@ -472,3 +472,121 @@ void *unbound_stat_realloc_log(void *ptr, size_t size, const char* file,
 }
 
 #endif /* UNBOUND_ALLOC_STATS */
+#ifdef UNBOUND_ALLOC_LITE
+#undef malloc
+#undef calloc
+#undef free
+#undef realloc
+/** length of prefix and suffix */
+static size_t lite_pad = 16;
+/** prefix value to check */
+static char* lite_pre = "checkfront123456";
+/** suffix value to check */
+static char* lite_post= "checkafter123456";
+
+void *unbound_stat_malloc_lite(size_t size, const char* file, int line,
+        const char* func)
+{
+	/*  [prefix .. len .. actual data .. suffix] */
+	void* res = malloc(size+lite_pad*2+sizeof(size_t));
+	if(!res) return NULL;
+	memmove(res, lite_pre, lite_pad);
+	memmove(res+lite_pad, &size, sizeof(size_t));
+	memset(res+lite_pad+sizeof(size_t), 0x1a, size); /* init the memory */
+	memmove(res+lite_pad+size+sizeof(size_t), lite_post, lite_pad);
+	return res+lite_pad+sizeof(size_t);
+}
+
+void *unbound_stat_calloc_lite(size_t nmemb, size_t size, const char* file,
+        int line, const char* func)
+{
+	size_t req = nmemb * size;
+	void* res = malloc(req+lite_pad*2+sizeof(size_t));
+	if(!res) return NULL;
+	memmove(res, lite_pre, lite_pad);
+	memmove(res+lite_pad, &req, sizeof(size_t));
+	memset(res+lite_pad+sizeof(size_t), 0, req);
+	memmove(res+lite_pad+req+sizeof(size_t), lite_post, lite_pad);
+	return res+lite_pad+sizeof(size_t);
+}
+
+void unbound_stat_free_lite(void *ptr, const char* file, int line,
+        const char* func)
+{
+	void* real;
+	size_t orig = 0;
+	if(!ptr) return;
+	real = ptr-lite_pad-sizeof(size_t);
+	if(memcmp(real, lite_pre, lite_pad) != 0) {
+		log_err("free(): prefix failed %s:%d %s", file, line, func);
+		log_hex("prefix here", real, lite_pad);
+		log_hex("  should be", lite_pre, lite_pad);
+		fatal_exit("alloc assertion failed");
+	}
+	memmove(&orig, real+lite_pad, sizeof(size_t));
+	if(memcmp(real+lite_pad+orig+sizeof(size_t), lite_post, lite_pad)!=0){
+		log_err("free(): suffix failed %s:%d %s", file, line, func);
+		log_err("alloc size is %d", (int)orig);
+		log_hex("suffix here", real+lite_pad+orig+sizeof(size_t), 
+			lite_pad);
+		log_hex("  should be", lite_post, lite_pad);
+		fatal_exit("alloc assertion failed");
+	}
+	memset(real, 0xdd, orig+lite_pad*2+sizeof(size_t)); /* mark it */
+	free(real);
+}
+
+void *unbound_stat_realloc_lite(void *ptr, size_t size, const char* file,
+        int line, const char* func)
+{
+	/* always free and realloc (no growing) */
+	void* real, *newa;
+	size_t orig = 0;
+	if(!ptr) {
+		/* like malloc() */
+		return unbound_stat_malloc_lite(size, file, line, func);
+	}
+	if(!size) {
+		/* like free() */
+		unbound_stat_free_lite(ptr, file, line, func);
+		return NULL;
+	}
+	/* change allocation size and copy */
+	real = ptr-lite_pad-sizeof(size_t);
+	if(memcmp(real, lite_pre, lite_pad) != 0) {
+		log_err("realloc(): prefix failed %s:%d %s", file, line, func);
+		log_hex("prefix here", real, lite_pad);
+		log_hex("  should be", lite_pre, lite_pad);
+		fatal_exit("alloc assertion failed");
+	}
+	memmove(&orig, real+lite_pad, sizeof(size_t));
+	if(memcmp(real+lite_pad+orig+sizeof(size_t), lite_post, lite_pad)!=0){
+		log_err("realloc(): suffix failed %s:%d %s", file, line, func);
+		log_err("alloc size is %d", (int)orig);
+		log_hex("suffix here", real+lite_pad+orig+sizeof(size_t), 
+			lite_pad);
+		log_hex("  should be", lite_post, lite_pad);
+		fatal_exit("alloc assertion failed");
+	}
+	/* new alloc and copy over */
+	newa = unbound_stat_malloc_lite(size, file, line, func);
+	if(!newa)
+		return NULL;
+	if(orig < size)
+		memmove(newa, ptr, orig);
+	else	memmove(newa, ptr, size);
+	free(real);
+	return newa;
+}
+
+char* unbound_strdup_lite(const char* s, const char* file, int line, 
+        const char* func)
+{
+	/* this routine is made to make sure strdup() uses the malloc_lite */
+	size_t l = strlen(s)+1;
+	char* n = (char*)unbound_stat_malloc_lite(l, file, line, func);
+	if(!n) return NULL;
+	memmove(n, s, l);
+	return n;
+}
+#endif /* UNBOUND_ALLOC_LITE */

@@ -932,6 +932,7 @@ with_libevent
 enable_staticexe
 enable_lock_checks
 enable_alloc_checks
+enable_alloc_lite
 enable_largefile
 with_ldns
 with_ldns_builtin
@@ -1587,7 +1588,9 @@ Optional Features:
                           event, ldns libs, for debug purposes
   --enable-lock-checks    enable to check lock and unlock calls, for debug
                           purposes
-  --enable-alloc-checks   enable to check memory allocation, for debug
+  --enable-alloc-checks   enable to memory allocation statistics, for debug
+                          purposes
+  --enable-alloc-lite     enable for lightweight alloc assertions, for debug
                           purposes
   --disable-largefile     omit support for large files
 
@@ -7290,13 +7293,13 @@ if test "${lt_cv_nm_interface+set}" = set; then
 else
   lt_cv_nm_interface="BSD nm"
   echo "int some_variable = 0;" > conftest.$ac_ext
-  (eval echo "\"\$as_me:7293: $ac_compile\"" >&5)
+  (eval echo "\"\$as_me:7296: $ac_compile\"" >&5)
   (eval "$ac_compile" 2>conftest.err)
   cat conftest.err >&5
-  (eval echo "\"\$as_me:7296: $NM \\\"conftest.$ac_objext\\\"\"" >&5)
+  (eval echo "\"\$as_me:7299: $NM \\\"conftest.$ac_objext\\\"\"" >&5)
   (eval "$NM \"conftest.$ac_objext\"" 2>conftest.err > conftest.out)
   cat conftest.err >&5
-  (eval echo "\"\$as_me:7299: output\"" >&5)
+  (eval echo "\"\$as_me:7302: output\"" >&5)
   cat conftest.out >&5
   if $GREP 'External.*some_variable' conftest.out > /dev/null; then
     lt_cv_nm_interface="MS dumpbin"
@@ -8501,7 +8504,7 @@ ia64-*-hpux*)
   ;;
 *-*-irix6*)
   # Find out which ABI we are using.
-  echo '#line 8504 "configure"' > conftest.$ac_ext
+  echo '#line 8507 "configure"' > conftest.$ac_ext
   if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
   (eval $ac_compile) 2>&5
   ac_status=$?
@@ -9868,11 +9871,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:9871: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:9874: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>conftest.err)
    ac_status=$?
    cat conftest.err >&5
-   echo "$as_me:9875: \$? = $ac_status" >&5
+   echo "$as_me:9878: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s "$ac_outfile"; then
      # The compiler can only warn and ignore the option if not recognized
      # So say no if there are warnings other than the usual output.
@@ -10207,11 +10210,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:10210: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:10213: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>conftest.err)
    ac_status=$?
    cat conftest.err >&5
-   echo "$as_me:10214: \$? = $ac_status" >&5
+   echo "$as_me:10217: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s "$ac_outfile"; then
      # The compiler can only warn and ignore the option if not recognized
      # So say no if there are warnings other than the usual output.
@@ -10312,11 +10315,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:10315: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:10318: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>out/conftest.err)
    ac_status=$?
    cat out/conftest.err >&5
-   echo "$as_me:10319: \$? = $ac_status" >&5
+   echo "$as_me:10322: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s out/conftest2.$ac_objext
    then
      # The compiler can only warn and ignore the option if not recognized
@@ -10367,11 +10370,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:10370: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:10373: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>out/conftest.err)
    ac_status=$?
    cat out/conftest.err >&5
-   echo "$as_me:10374: \$? = $ac_status" >&5
+   echo "$as_me:10377: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s out/conftest2.$ac_objext
    then
      # The compiler can only warn and ignore the option if not recognized
@@ -13170,7 +13173,7 @@ else
   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
   lt_status=$lt_dlunknown
   cat > conftest.$ac_ext <<_LT_EOF
-#line 13173 "configure"
+#line 13176 "configure"
 #include "confdefs.h"
 
 #if HAVE_DLFCN_H
@@ -13266,7 +13269,7 @@ else
   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
   lt_status=$lt_dlunknown
   cat > conftest.$ac_ext <<_LT_EOF
-#line 13269 "configure"
+#line 13272 "configure"
 #include "confdefs.h"
 
 #if HAVE_DLFCN_H
@@ -19265,6 +19268,11 @@ if test "${enable_alloc_checks+set}" = set; then
   enableval=$enable_alloc_checks;
 fi
 
+# Check whether --enable-alloc-lite was given.
+if test "${enable_alloc_lite+set}" = set; then
+  enableval=$enable_alloc_lite;
+fi
+
 if test x_$enable_alloc_checks = x_yes; then
 
 cat >>confdefs.h <<\_ACEOF
@@ -19272,6 +19280,13 @@ cat >>confdefs.h <<\_ACEOF
 _ACEOF
 
 else
+	if test x_$enable_alloc_lite = x_yes; then
+
+cat >>confdefs.h <<\_ACEOF
+#define UNBOUND_ALLOC_LITE 1
+_ACEOF
+
+	else
 
 
 for ac_header in stdlib.h
@@ -19525,6 +19540,7 @@ _ACEOF
 
 	fi
 
+	fi
 fi
 
 

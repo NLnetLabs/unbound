@@ -516,12 +516,19 @@ fi
 
 # set memory allocation checking if requested
 AC_ARG_ENABLE(alloc-checks, AC_HELP_STRING([--enable-alloc-checks],
-	[ enable to check memory allocation, for debug purposes ]), 
+	[ enable to memory allocation statistics, for debug purposes ]), 
+	, )
+AC_ARG_ENABLE(alloc-lite, AC_HELP_STRING([--enable-alloc-lite],
+	[ enable for lightweight alloc assertions, for debug purposes ]), 
 	, )
 if test x_$enable_alloc_checks = x_yes; then
 	AC_DEFINE(UNBOUND_ALLOC_STATS, 1, [use statistics for allocs and frees, for debug use])
 else
-	ACX_FUNC_MALLOC([unbound])
+	if test x_$enable_alloc_lite = x_yes; then
+		AC_DEFINE(UNBOUND_ALLOC_LITE, 1, [use to enable lightweight alloc assertions, for debug use])
+	else
+		ACX_FUNC_MALLOC([unbound])
+	fi
 fi
 
 AC_FUNC_CHOWN
@@ -771,7 +778,9 @@ void unbound_stat_free_log(void *ptr, const char* file, int line,
 	const char* func);
 void *unbound_stat_realloc_log(void *ptr, size_t size, const char* file,
 	int line, const char* func);
-#endif /* UNBOUND_ALLOC_STATS */
+#elif defined(UNBOUND_ALLOC_LITE)
+#  include "util/alloc.h"
+#endif /* UNBOUND_ALLOC_LITE and UNBOUND_ALLOC_STATS */
 
 /** default port for DNS traffic. */
 #define UNBOUND_DNS_PORT 53

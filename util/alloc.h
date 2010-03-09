@@ -176,4 +176,25 @@ void alloc_reg_release(struct alloc_cache* alloc, struct regional* r);
 void alloc_set_id_cleanup(struct alloc_cache* alloc, void (*cleanup)(void*),
 	void* arg);
 
+#ifdef UNBOUND_ALLOC_LITE
+#  define malloc(s) unbound_stat_malloc_lite(s, __FILE__, __LINE__, __func__)
+#  define calloc(n,s) unbound_stat_calloc_lite(n, s, __FILE__, __LINE__, __func__)
+#  define free(p) unbound_stat_free_lite(p, __FILE__, __LINE__, __func__)
+#  define realloc(p,s) unbound_stat_realloc_lite(p, s, __FILE__, __LINE__, __func__)
+void *unbound_stat_malloc_lite(size_t size, const char* file, int line,
+	const char* func);
+void *unbound_stat_calloc_lite(size_t nmemb, size_t size, const char* file,
+	int line, const char* func);
+void unbound_stat_free_lite(void *ptr, const char* file, int line,
+	const char* func);
+void *unbound_stat_realloc_lite(void *ptr, size_t size, const char* file,
+	int line, const char* func);
+#  ifdef strdup
+#    undef strdup
+#  endif
+#  define strdup(s) unbound_strdup_lite(s, __FILE__, __LINE__, __func__)
+char* unbound_strdup_lite(const char* s, const char* file, int line, 
+	const char* func);
+#endif /* UNBOUND_ALLOC_LITE */
+
 #endif /* UTIL_ALLOC_H */
