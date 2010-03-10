@@ -10,6 +10,11 @@ NEED_WHOAMI='07-confroot.tpkg'
 NEED_IPV6='fwd_ancil.tpkg fwd_tcp_tc6.tpkg stub_udp6.tpkg'
 NEED_NOMINGW='tcp_sigpipe.tpkg 07-confroot.tpkg 08-host-lib.tpkg fwd_ancil.tpkg'
 
+# test if dig, wdiff and ldns-testns are available.
+if test ! -x "`which dig 2>&1`"; then echo No 'dig' in path; exit 1; fi
+if test ! -x "`which wdiff 2>&1`"; then echo No 'wdiff' in path; exit 1; fi
+if test ! -x "`which ldns-testns 2>&1`"; then echo No 'ldns-testns' in path; exit 1; fi
+
 # test for ipv6, uses streamptcp peculiarity.
 if ./streamtcp -f ::1 2>&1 | grep "not supported" >/dev/null 2>&1; then
 	HAVE_IPV6=no
