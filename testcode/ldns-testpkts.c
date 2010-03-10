@@ -31,7 +31,10 @@ struct sockaddr_storage;
 /** string to show in warnings and errors */
 static const char* prog_name = "ldns-testpkts";
 
-enum verbosity_value;
+#ifndef UTIL_LOG_H
+/** verbosity definition for compat */
+enum verbosity_value { NO_VERBOSE=0 };
+#endif
 /** logging routine, provided by caller */
 void verbose(enum verbosity_value lvl, const char* msg, ...) ATTR_FORMAT(printf, 2, 3);
 
