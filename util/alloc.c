@@ -575,6 +575,7 @@ void *unbound_stat_realloc_lite(void *ptr, size_t size, const char* file,
 	if(orig < size)
 		memmove(newa, ptr, orig);
 	else	memmove(newa, ptr, size);
+	memset(real, 0xdd, orig+lite_pad*2+sizeof(size_t)); /* mark it */
 	free(real);
 	return newa;
 }
