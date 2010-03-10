@@ -1,5 +1,6 @@
 10 March 2010: Wouter
 	- --enable-alloc-lite works with test set.
+	- portability in the testset: printf format conversions, prototypes.
 
 9 March 2010: Wouter
 	- tag 1.4.2 created.
