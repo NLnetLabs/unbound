@@ -80,7 +80,7 @@
 #undef realloc
 #undef free
 #undef strdup
-char* unbound_lite_wrapstr(char* s) { return s; }
+#define unbound_lite_wrapstr(s) s
 #endif
 struct todo_item;
 struct labdata;

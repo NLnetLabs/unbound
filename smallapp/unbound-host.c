@@ -54,7 +54,7 @@
 #undef free
 #undef realloc
 #undef strdup
-char* unbound_lite_wrapstr(char* s) { return s; }
+#define unbound_lite_wrapstr(s) s
 #endif
 #include "libunbound/unbound.h"
 #include <ldns/ldns.h>
