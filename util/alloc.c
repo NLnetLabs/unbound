@@ -589,4 +589,50 @@ char* unbound_strdup_lite(const char* s, const char* file, int line,
 	memmove(n, s, l);
 	return n;
 }
+
+char* unbound_lite_wrapstr(char* s)
+{
+	char* n = unbound_strdup_lite(s, __FILE__, __LINE__, __func__);
+	free(s);
+	return n;
+}
+
+#undef ldns_pkt2wire
+ldns_status unbound_lite_pkt2wire(uint8_t **dest, const ldns_pkt *p, 
+	size_t *size)
+{
+	uint8_t* md = NULL;
+	size_t ms = 0;
+	ldns_status s = ldns_pkt2wire(&md, p, &ms);
+	if(md) {
+		*dest = unbound_stat_malloc_lite(ms, __FILE__, __LINE__, 
+			__func__);
+		*size = ms;
+		if(!*dest) { free(md); return LDNS_STATUS_MEM_ERR; }
+		memcpy(*dest, md, ms);
+		free(md);
+	} else {
+		*dest = NULL;
+		*size = 0;
+	}
+	return s;
+}
+
+#undef i2d_DSA_SIG
+int unbound_lite_i2d_DSA_SIG(DSA_SIG* dsasig, unsigned char** sig)
+{
+	unsigned char* n = NULL;
+	int r= i2d_DSA_SIG(dsasig, &n);
+	if(n) {
+		*sig = unbound_stat_malloc_lite((size_t)r, __FILE__, __LINE__, 
+			__func__);
+		if(!*sig) return -1;
+		memcpy(*sig, n, (size_t)r);
+		free(n);
+		return r;
+	}
+	*sig = NULL;
+	return r;
+}
+
 #endif /* UNBOUND_ALLOC_LITE */

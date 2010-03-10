@@ -484,8 +484,15 @@ setup_qinfo_edns(struct libworker* w, struct ctx_query* q,
 	if(!rdf) {
 		return 0;
 	}
+#ifdef UNBOUND_ALLOC_LITE
+	qinfo->qname = memdup(ldns_rdf_data(rdf), ldns_rdf_size(rdf));
+	qinfo->qname_len = ldns_rdf_size(rdf);
+	ldns_rdf_deep_free(rdf);
+	rdf = 0;
+#else
 	qinfo->qname = ldns_rdf_data(rdf);
 	qinfo->qname_len = ldns_rdf_size(rdf);
+#endif
 	edns->edns_present = 1;
 	edns->ext_rcode = 0;
 	edns->edns_version = 0;

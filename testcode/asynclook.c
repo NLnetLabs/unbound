@@ -45,6 +45,13 @@
 #include "libunbound/context.h"
 #include "util/locks.h"
 #include "util/log.h"
+#ifdef UNBOUND_ALLOC_LITE
+#undef malloc
+#undef calloc
+#undef realloc
+#undef free
+#undef strdup
+#endif
 
 /** keeping track of the async ids */
 struct track_id {
