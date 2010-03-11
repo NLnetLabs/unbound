@@ -2,6 +2,8 @@
 	- another memory allocation option: --enable-alloc-nonregional.
 	  exposes the regional allocations to other memory purifiers.
 	- fix for memory alignment in struct sock_list allocation.
+	- Fix for MacPorts ldns without ssl default, unbound checks if ldns
+	  has dnssec functionality and uses the builtin if not.
 
 10 March 2010: Wouter
 	- --enable-alloc-lite works with test set.
