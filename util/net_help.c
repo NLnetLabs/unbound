@@ -497,7 +497,7 @@ void sock_list_insert(struct sock_list** list, struct sockaddr_storage* addr,
 	socklen_t len, struct regional* region)
 {
 	struct sock_list* add = (struct sock_list*)regional_alloc(region,
-		sizeof(add->next) + sizeof(add->len) + (size_t)len);
+		sizeof(*add) - sizeof(add->addr) + (size_t)len);
 	if(!add) {
 		log_err("out of memory in socketlist insert");
 		return;
