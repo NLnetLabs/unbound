@@ -2455,7 +2455,7 @@ ds_response_to_ke(struct module_qstate* qstate, struct val_qstate* vq,
 	} else {
 		verbose(VERB_QUERY, "Encountered an unhandled type of "
 			"DS response, thus bogus.");
-		errinf(qstate, "no DS and ");
+		errinf(qstate, "no DS and");
 		if(FLAGS_GET_RCODE(msg->rep->flags) != LDNS_RCODE_NOERROR) {
 			char* rc = ldns_pkt_rcode2str(
 				FLAGS_GET_RCODE(msg->rep->flags));
