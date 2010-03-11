@@ -54,8 +54,13 @@
 
 /** Default reasonable size for chunks */
 #define REGIONAL_CHUNK_SIZE         8192
+#ifdef UNBOUND_ALLOC_NONREGIONAL
+/** All objects allocated outside of chunks, for debug */
+#define REGIONAL_LARGE_OBJECT_SIZE  0
+#else
 /** Default size for large objects - allocated outside of chunks. */
 #define REGIONAL_LARGE_OBJECT_SIZE  2048
+#endif
 
 struct regional* 
 regional_create()

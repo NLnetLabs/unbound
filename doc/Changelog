@@ -1,3 +1,7 @@
+11 March 2010: Wouter
+	- another memory allocation option: --enable-alloc-nonregional.
+	  exposes the regional allocations to other memory purifiers.
+
 10 March 2010: Wouter
 	- --enable-alloc-lite works with test set.
 	- portability in the testset: printf format conversions, prototypes.

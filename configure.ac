@@ -521,6 +521,12 @@ AC_ARG_ENABLE(alloc-checks, AC_HELP_STRING([--enable-alloc-checks],
 AC_ARG_ENABLE(alloc-lite, AC_HELP_STRING([--enable-alloc-lite],
 	[ enable for lightweight alloc assertions, for debug purposes ]), 
 	, )
+AC_ARG_ENABLE(alloc-nonregional, AC_HELP_STRING([--enable-alloc-nonregional],
+	[ enable nonregional allocs, slow but exposes regional allocations to other memory purifiers, for debug purposes ]), 
+	, )
+if test x_$enable_alloc_nonregional = x_yes; then
+	AC_DEFINE(UNBOUND_ALLOC_NONREGIONAL, 1, [use malloc not regions, for debug use])
+fi
 if test x_$enable_alloc_checks = x_yes; then
 	AC_DEFINE(UNBOUND_ALLOC_STATS, 1, [use statistics for allocs and frees, for debug use])
 else

@@ -423,6 +423,9 @@
 /* use to enable lightweight alloc assertions, for debug use */
 #undef UNBOUND_ALLOC_LITE
 
+/* use malloc not regions, for debug use */
+#undef UNBOUND_ALLOC_NONREGIONAL
+
 /* use statistics for allocs and frees, for debug use */
 #undef UNBOUND_ALLOC_STATS
 
