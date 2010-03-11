@@ -313,7 +313,7 @@ detach(void)
 	if(daemon(1, 0) != 0)
 		fatal_exit("daemon failed: %s", strerror(errno));
 #else /* no HAVE_DAEMON */
-#ifdef HAVE_WORKING_FORK
+#ifdef HAVE_FORK
 	int fd;
 	/* Take off... */
 	switch (fork()) {
@@ -337,7 +337,7 @@ detach(void)
 		if (fd > 2)
 			(void)close(fd);
 	}
-#endif /* HAVE_WORKING_FORK */
+#endif /* HAVE_FORK */
 #endif /* HAVE_DAEMON */
 }
 
