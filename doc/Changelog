@@ -5,6 +5,7 @@
 	- Fix for MacPorts ldns without ssl default, unbound checks if ldns
 	  has dnssec functionality and uses the builtin if not.
 	- Fix daemonize on Solaris 10, it did not detach from terminal.
+	- tag 1.4.3 created.
 
 10 March 2010: Wouter
 	- --enable-alloc-lite works with test set.
