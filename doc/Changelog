@@ -1,3 +1,7 @@
+12 March 2010: Wouter
+	- Reordered configure checks so fork and -lnsl -lsocket checks are
+	  earlier, and thus later checks benefit from and do not hinder them.
+
 11 March 2010: Wouter
 	- another memory allocation option: --enable-alloc-nonregional.
 	  exposes the regional allocations to other memory purifiers.

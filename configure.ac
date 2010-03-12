@@ -232,6 +232,21 @@ ACX_CHECK_MEMCMP_SIGNED
 
 # add option to disable the evil rpath
 ACX_ARG_RPATH
+AC_SUBST(RUNTIME_PATH)
+
+# check to see if libraries are needed for these functions.
+AC_SEARCH_LIBS([inet_pton], [nsl])
+AC_SEARCH_LIBS([socket], [socket])
+
+# check some functions of the OS before linking libs (while still runnable).
+AC_FUNC_CHOWN
+AC_FUNC_FORK
+AC_TYPE_SIGNAL
+AC_FUNC_FSEEKO
+ACX_SYS_LARGEFILE
+ACX_CHECK_NONBLOCKING_BROKEN
+ACX_MKDIR_ONE_ARG
+ACX_FUNC_IOCTLSOCKET
 
 # check for thread library.
 # check this first, so that the pthread lib does not get linked in via
@@ -412,12 +427,6 @@ case "$enable_gost" in
 	;;
 esac
 
-# check to see if libraries are needed for these functions.
-AC_SEARCH_LIBS([inet_pton], [nsl])
-AC_SEARCH_LIBS([socket], [socket])
-
-AC_SUBST(RUNTIME_PATH)
-
 # check for libevent
 AC_ARG_WITH(libevent, AC_HELP_STRING([--with-libevent=pathname],
     [use libevent (will check /usr/local /opt/local /usr/lib /usr/pkg /usr/sfw /usr  or you can specify an explicit path). Slower, but allows use of large outgoing port ranges.]),
@@ -538,12 +547,6 @@ else
 	fi
 fi
 
-AC_FUNC_CHOWN
-AC_FUNC_FORK
-AC_TYPE_SIGNAL
-AC_FUNC_FSEEKO
-ACX_SYS_LARGEFILE
-
 ACX_CHECK_GETADDRINFO_WITH_INCLUDES
 if test "$USE_WINSOCK" = 1; then
 	AC_DEFINE(UB_ON_WINDOWS, 1, [Use win32 resources and API])
@@ -568,15 +571,14 @@ if test $ac_cv_func_daemon = yes; then
 fi
 
 AC_SEARCH_LIBS([setusercontext], [util])
-AC_CHECK_FUNCS([tzset sigprocmask fcntl getpwnam getrlimit setsid sbrk chroot kill sleep usleep random srandom recvmsg sendmsg writev setresuid setreuid setresgid setregid glob initgroups strftime localtime_r setusercontext _beginthreadex])
+AC_CHECK_FUNCS([tzset sigprocmask fcntl getpwnam getrlimit setsid sbrk chroot kill sleep usleep random srandom recvmsg sendmsg writev glob initgroups strftime localtime_r setusercontext _beginthreadex])
+AC_CHECK_FUNCS([setresuid],,[AC_CHECK_FUNCS([setreuid])])
+AC_CHECK_FUNCS([setresgid],,[AC_CHECK_FUNCS([setregid])])
 
 # check if setreuid en setregid fail, on MacOSX10.4(darwin8).
 if echo $build_os | grep darwin8 > /dev/null; then
 	AC_DEFINE(DARWIN_BROKEN_SETREUID, 1, [Define this if on macOSX10.4-darwin8 and setreuid and setregid do not work])
 fi
-ACX_CHECK_NONBLOCKING_BROKEN
-ACX_MKDIR_ONE_ARG
-ACX_FUNC_IOCTLSOCKET
 AC_REPLACE_FUNCS(inet_aton)
 AC_REPLACE_FUNCS(inet_pton)
 AC_REPLACE_FUNCS(inet_ntop)
