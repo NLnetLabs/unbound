@@ -66,6 +66,8 @@ struct pythonmod_env {
 	/** Python script filename. */
 	const char* fname;
 
+	/** Python main thread */
+	PyThreadState* mainthr;
 	/** Python module. */
 	PyObject* module;
 
@@ -107,6 +109,7 @@ int pythonmod_init(struct module_env* env, int id)
    /* Initialize module */
    FILE* script_py = NULL;
    PyObject* py_cfg, *res;
+   PyGILState_STATE gil;
    struct pythonmod_env* pe = (struct pythonmod_env*)calloc(1, sizeof(struct pythonmod_env));
    if (!pe) 
    {
@@ -130,11 +133,11 @@ int pythonmod_init(struct module_env* env, int id)
       Py_NoSiteFlag = 1;
       Py_Initialize();
       PyEval_InitThreads();
-      PyEval_ReleaseLock();
       SWIG_init();
+      pe->mainthr = PyEval_SaveThread();
    }
 
-   PyEval_AcquireLock();
+   gil = PyGILState_Ensure();
 
    /* Initialize Python */
    PyRun_SimpleString("import sys \n");
@@ -150,7 +153,7 @@ int pythonmod_init(struct module_env* env, int id)
    if (PyRun_SimpleString("from unboundmodule import *\n") < 0)
    {
       log_err("pythonmod: cannot initialize core module: unboundmodule.py"); 
-      PyEval_ReleaseLock();
+      PyGILState_Release(gil);
       return 0;
    }
 
@@ -158,7 +161,7 @@ int pythonmod_init(struct module_env* env, int id)
    if ((script_py = fopen(pe->fname, "r")) == NULL) 
    {
       log_err("pythonmod: can't open file %s for reading", pe->fname);
-      PyEval_ReleaseLock();
+      PyGILState_Release(gil);
       return 0;
    }
 
@@ -174,7 +177,7 @@ int pythonmod_init(struct module_env* env, int id)
    if (PyRun_SimpleFile(script_py, pe->fname) < 0) 
    {
       log_err("pythonmod: can't parse Python script %s", pe->fname);
-      PyEval_ReleaseLock();
+      PyGILState_Release(gil);
       return 0;
    }
 
@@ -183,25 +186,25 @@ int pythonmod_init(struct module_env* env, int id)
    if ((pe->func_init = PyDict_GetItemString(pe->dict, "init")) == NULL) 
    {
       log_err("pythonmod: function init is missing in %s", pe->fname);
-      PyEval_ReleaseLock();
+      PyGILState_Release(gil);
       return 0;
    }
    if ((pe->func_deinit = PyDict_GetItemString(pe->dict, "deinit")) == NULL) 
    {
       log_err("pythonmod: function deinit is missing in %s", pe->fname);
-      PyEval_ReleaseLock();
+      PyGILState_Release(gil);
       return 0;
    }
    if ((pe->func_operate = PyDict_GetItemString(pe->dict, "operate")) == NULL) 
    {
       log_err("pythonmod: function operate is missing in %s", pe->fname);
-      PyEval_ReleaseLock();
+      PyGILState_Release(gil);
       return 0;
    }
    if ((pe->func_inform = PyDict_GetItemString(pe->dict, "inform_super")) == NULL) 
    {
       log_err("pythonmod: function inform_super is missing in %s", pe->fname);
-      PyEval_ReleaseLock();
+      PyGILState_Release(gil);
       return 0;
    }
 
@@ -215,7 +218,7 @@ int pythonmod_init(struct module_env* env, int id)
 
    Py_XDECREF(res);
    Py_XDECREF(py_cfg);
-   PyEval_ReleaseLock();
+   PyGILState_Release(gil);
 
    return 1;
 }
@@ -230,9 +233,9 @@ void pythonmod_deinit(struct module_env* env, int id)
    if(pe->module != NULL)
    {
       PyObject* res;
+      PyGILState_STATE gil = PyGILState_Ensure();
 
       /* Deinit module */
-      PyEval_AcquireLock();
       res = PyObject_CallFunction(pe->func_deinit, "i", id);
       if (PyErr_Occurred()) {
          log_err("pythonmod: Exception occurred in function deinit");
@@ -242,8 +245,11 @@ void pythonmod_deinit(struct module_env* env, int id)
       Py_XDECREF(res);
       /* Free shared data if any */
       Py_XDECREF(pe->data);
+      PyGILState_Release(gil);
 
+      PyEval_RestoreThread(pe->mainthr);
       Py_Finalize();
+      pe->mainthr = NULL;
    }
    pe->fname = NULL;
    free(pe);
@@ -257,6 +263,7 @@ void pythonmod_inform_super(struct module_qstate* qstate, int id, struct module_
    struct pythonmod_env* pe = (struct pythonmod_env*)qstate->env->modinfo[id];
    struct pythonmod_qstate* pq = (struct pythonmod_qstate*)qstate->minfo[id];
    PyObject* py_qstate, *py_sqstate, *res;
+   PyGILState_STATE gil = PyGILState_Ensure();
 
    log_query_info(VERB_ALGO, "pythonmod: inform_super, sub is", &qstate->qinfo);
    log_query_info(VERB_ALGO, "super is", &super->qinfo);
@@ -264,7 +271,6 @@ void pythonmod_inform_super(struct module_qstate* qstate, int id, struct module_
    py_qstate = SWIG_NewPointerObj((void*) qstate, SWIGTYPE_p_module_qstate, 0);
    py_sqstate = SWIG_NewPointerObj((void*) super, SWIGTYPE_p_module_qstate, 0);
 
-   PyEval_AcquireLock();
    res = PyObject_CallFunction(pe->func_inform, "iOOO", id, py_qstate, 
 	py_sqstate, pq->data);
 
@@ -284,7 +290,7 @@ void pythonmod_inform_super(struct module_qstate* qstate, int id, struct module_
    Py_XDECREF(py_sqstate);
    Py_XDECREF(py_qstate);
 
-   PyEval_ReleaseLock();
+   PyGILState_Release(gil);
 }
 
 void pythonmod_operate(struct module_qstate* qstate, enum module_ev event, 
@@ -293,6 +299,7 @@ void pythonmod_operate(struct module_qstate* qstate, enum module_ev event,
    struct pythonmod_env* pe = (struct pythonmod_env*)qstate->env->modinfo[id];
    struct pythonmod_qstate* pq = (struct pythonmod_qstate*)qstate->minfo[id];
    PyObject* py_qstate, *res;
+   PyGILState_STATE gil = PyGILState_Ensure();
 
    if ( pq == NULL)
    { 
@@ -303,9 +310,6 @@ void pythonmod_operate(struct module_qstate* qstate, enum module_ev event,
       pq->data = Py_None;
       Py_INCREF(pq->data);
    }
-
-   /* Lock Python */
-   PyEval_AcquireLock();
 
    /* Call operate */
    py_qstate = SWIG_NewPointerObj((void*) qstate, SWIGTYPE_p_module_qstate, 0);
@@ -325,8 +329,7 @@ void pythonmod_operate(struct module_qstate* qstate, enum module_ev event,
    Py_XDECREF(res);
    Py_XDECREF(py_qstate);
 
-   /* Unlock Python */
-   PyEval_ReleaseLock();
+   PyGILState_Release(gil);
 }
 
 void pythonmod_clear(struct module_qstate* qstate, int id)
@@ -340,7 +343,9 @@ void pythonmod_clear(struct module_qstate* qstate, int id)
    	(unsigned long int)pq);
    if(pq != NULL)
    {
+      PyGILState_STATE gil = PyGILState_Ensure();
       Py_DECREF(pq->data);
+      PyGILState_Release(gil);
       /* Free qstate */
       free(pq);
    }

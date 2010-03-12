@@ -3,6 +3,7 @@
 	  earlier, and thus later checks benefit from and do not hinder them.
 	- iana portlist updated.
 	- ldns tarball updated.
+	- Fix python use when multithreaded.
 
 11 March 2010: Wouter
 	- another memory allocation option: --enable-alloc-nonregional.
