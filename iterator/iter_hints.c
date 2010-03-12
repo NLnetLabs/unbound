@@ -40,6 +40,8 @@
  * Keep track of stub and root hints, and read those from config.
  */
 #include "config.h"
+#include "ldns/dname.h"
+#include "ldns/rr.h"
 #include "iterator/iter_hints.h"
 #include "iterator/iter_delegpt.h"
 #include "util/regional.h"

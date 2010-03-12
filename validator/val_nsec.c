@@ -41,6 +41,7 @@
  * for denial of existance, and proofs for presence of types.
  */
 #include "config.h"
+#include "ldns/packet.h"
 #include "validator/val_nsec.h"
 #include "validator/val_utils.h"
 #include "util/data/msgreply.h"

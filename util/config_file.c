@@ -40,6 +40,8 @@
  */
 
 #include "config.h"
+#include <ctype.h>
+#include "ldns/ldns.h"
 #include "util/log.h"
 
 #include "util/configyyrename.h"

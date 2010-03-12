@@ -44,6 +44,7 @@
 /* include the public api first, it should be able to stand alone */
 #include "libunbound/unbound.h"
 #include "config.h"
+#include <ctype.h>
 #include "libunbound/context.h"
 #include "libunbound/libworker.h"
 #include "util/locks.h"

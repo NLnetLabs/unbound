@@ -39,6 +39,7 @@
  * This file contains functions to help maintain a stack of modules.
  */
 #include "config.h"
+#include <ctype.h>
 #include "services/modstack.h"
 #include "util/module.h"
 #include "util/fptr_wlist.h"

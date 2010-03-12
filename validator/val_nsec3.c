@@ -41,6 +41,10 @@
  * for denial of existance, and proofs for presence of types.
  */
 #include "config.h"
+#include <ctype.h>
+#ifdef HAVE_OPENSSL_SSL_H
+#include "openssl/ssl.h"
+#endif
 #include "validator/val_nsec3.h"
 #include "validator/validator.h"
 #include "validator/val_kentry.h"

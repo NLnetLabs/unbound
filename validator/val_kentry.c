@@ -39,6 +39,7 @@
  * This file contains functions for dealing with validator key entries.
  */
 #include "config.h"
+#include "ldns/ldns.h"
 #include "validator/val_kentry.h"
 #include "util/data/packed_rrset.h"
 #include "util/data/dname.h"

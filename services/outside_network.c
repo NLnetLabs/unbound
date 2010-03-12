@@ -40,6 +40,8 @@
  * wait for the pending answer events.
  */
 #include "config.h"
+#include <ctype.h>
+#include "ldns/wire2host.h"
 #include "services/outside_network.h"
 #include "services/listen_dnsport.h"
 #include "services/cache/infra.h"

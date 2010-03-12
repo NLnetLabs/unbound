@@ -703,26 +703,6 @@ dnl includes
 #ifdef HAVE_WS2TCPIP_H
 #include <ws2tcpip.h>
 #endif
-
-#ifdef HAVE_GETOPT_H
-#include <getopt.h>
-#endif
-
-#ifdef HAVE_OPENSSL_ERR_H
-#include <openssl/err.h>
-#endif
-
-#ifdef HAVE_OPENSSL_RAND_H
-#include <openssl/rand.h>
-#endif
-
-#ifdef HAVE_OPENSSL_CONF_H
-#include <openssl/conf.h>
-#endif
-
-#ifdef HAVE_OPENSSL_ENGINE_H
-#include <openssl/engine.h>
-#endif
 ]
 
 AHX_CONFIG_FORMAT_ATTRIBUTE
@@ -770,8 +750,6 @@ char *ctime_r(const time_t *timep, char *buf);
 struct sockaddr_storage;
 #include "compat/fake-rfc2553.h"
 #endif
-
-#include "ldns/ldns.h"
 
 #ifdef UNBOUND_ALLOC_STATS
 #  define malloc(s) unbound_stat_malloc_log(s, __FILE__, __LINE__, __func__)

@@ -42,6 +42,7 @@
 
 #ifndef ITERATOR_ITER_SCRUB_H
 #define ITERATOR_ITER_SCRUB_H
+#include "ldns/buffer.h"
 struct msg_parse;
 struct query_info;
 struct regional;

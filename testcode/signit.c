@@ -40,6 +40,7 @@
  * construct input to test the validator with.
  */
 #include "config.h"
+#include "ldns/ldns.h"
 #include "util/log.h"
 #include "util/config_file.h"
 #include "util/net_help.h"

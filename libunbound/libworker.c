@@ -42,6 +42,8 @@
  * returns from the procedure when done.
  */
 #include "config.h"
+#include <ldns/dname.h>
+#include <ldns/wire2host.h>
 #include "libunbound/libworker.h"
 #include "libunbound/context.h"
 #include "libunbound/unbound.h"

@@ -43,6 +43,11 @@
  * Both the server and the client(control tool) have their own keys.
  */
 #include "config.h"
+#ifdef HAVE_OPENSSL_ERR_H
+#include <openssl/err.h>
+#endif
+#include <ctype.h>
+#include "ldns/ldns.h"
 #include "daemon/remote.h"
 #include "daemon/worker.h"
 #include "daemon/daemon.h"

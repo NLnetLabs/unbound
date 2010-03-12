@@ -39,6 +39,7 @@
  */
 
 #include "config.h"
+#include "ldns/ldns.h"
 #include "util/log.h"
 #include "testcode/unitmain.h"
 #include "util/data/msgparse.h"

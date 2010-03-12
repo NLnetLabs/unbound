@@ -42,6 +42,9 @@
  * from cached NSEC records.
  */
 #include "config.h"
+#ifdef HAVE_OPENSSL_SSL_H
+#include "openssl/ssl.h"
+#endif
 #include "validator/val_neg.h"
 #include "validator/val_nsec.h"
 #include "validator/val_nsec3.h"

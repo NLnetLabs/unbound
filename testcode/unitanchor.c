@@ -39,6 +39,7 @@
  */
 
 #include "config.h"
+#include "ldns/rr.h"
 #include "util/log.h"
 #include "util/data/dname.h"
 #include "testcode/unitmain.h"

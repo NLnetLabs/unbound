@@ -41,6 +41,9 @@
  */
 
 #include "config.h"
+#ifdef HAVE_GETOPT_H
+#include <getopt.h>
+#endif
 #include "util/log.h"
 #include "daemon/daemon.h"
 #include "daemon/remote.h"

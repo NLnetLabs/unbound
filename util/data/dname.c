@@ -40,6 +40,7 @@
  */
 
 #include "config.h"
+#include <ctype.h>
 #include "util/data/dname.h"
 #include "util/data/msgparse.h"
 #include "util/log.h"

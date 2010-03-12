@@ -41,6 +41,9 @@
  */
 
 #include "config.h"
+#ifdef HAVE_GETOPT_H
+#include <getopt.h>
+#endif
 /* remove alloc checks, not in this part of the code */
 #ifdef UNBOUND_ALLOC_STATS
 #undef malloc

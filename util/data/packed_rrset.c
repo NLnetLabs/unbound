@@ -40,6 +40,7 @@
  */
 
 #include "config.h"
+#include "ldns/wire2host.h"
 #include "util/data/packed_rrset.h"
 #include "util/data/dname.h"
 #include "util/storage/lookup3.h"

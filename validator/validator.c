@@ -40,6 +40,7 @@
  * According to RFC 4034.
  */
 #include "config.h"
+#include "ldns/ldns.h"
 #include "validator/validator.h"
 #include "validator/val_anchor.h"
 #include "validator/val_kcache.h"

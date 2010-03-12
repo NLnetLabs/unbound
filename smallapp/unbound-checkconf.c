@@ -52,6 +52,9 @@
 #include "iterator/iter_fwd.h"
 #include "validator/validator.h"
 #include "services/localzone.h"
+#ifdef HAVE_GETOPT_H
+#include <getopt.h>
+#endif
 #ifdef HAVE_PWD_H
 #include <pwd.h>
 #endif

@@ -41,6 +41,9 @@
  */
 
 #include "config.h"
+#ifdef HAVE_GETOPT_H
+#include <getopt.h>
+#endif
 #include "libunbound/unbound.h"
 #include "libunbound/context.h"
 #include "util/locks.h"

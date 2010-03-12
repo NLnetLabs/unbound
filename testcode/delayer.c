@@ -41,6 +41,13 @@
  */
 
 #include "config.h"
+#ifdef HAVE_GETOPT_H
+#include <getopt.h>
+#endif
+#ifdef HAVE_TIME_H
+#include <time.h>
+#endif
+#include <sys/time.h>
 #include "util/net_help.h"
 #include "util/config_file.h"
 #include <signal.h>

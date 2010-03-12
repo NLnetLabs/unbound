@@ -5,6 +5,7 @@
 	- ldns tarball updated.
 	- Fix python use when multithreaded.
 	- Fix solaris python compile.
+	- Include less in config.h and include per code file for ldns, ssl.
 
 11 March 2010: Wouter
 	- another memory allocation option: --enable-alloc-nonregional.

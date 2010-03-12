@@ -38,6 +38,7 @@
  * Declarations useful for the unit tests.
  */
 #include "config.h"
+#include <ctype.h>
 #include "testcode/readhex.h"
 #include "util/log.h"
 

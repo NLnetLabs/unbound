@@ -43,6 +43,7 @@
 #ifndef ITERATOR_ITER_PRIV_H
 #define ITERATOR_ITER_PRIV_H
 #include "util/rbtree.h"
+#include "ldns/buffer.h"
 struct iter_env;
 struct config_file;
 struct regional;

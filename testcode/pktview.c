@@ -40,6 +40,7 @@
  */
 
 #include "config.h"
+#include "ldns/ldns.h"
 #include "util/log.h"
 #include "util/data/dname.h"
 #include "util/data/msgparse.h"

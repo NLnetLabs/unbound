@@ -39,6 +39,8 @@
  * This file contains functions to enable local zone authority service.
  */
 #include "config.h"
+#include "ldns/dname.h"
+#include "ldns/host2wire.h"
 #include "services/localzone.h"
 #include "util/regional.h"
 #include "util/config_file.h"

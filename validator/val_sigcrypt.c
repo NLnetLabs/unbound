@@ -41,6 +41,7 @@
  * bridging between RR wireformat data and crypto calls.
  */
 #include "config.h"
+#include "ldns/ldns.h"
 #include "validator/val_sigcrypt.h"
 #include "validator/validator.h"
 #include "util/data/msgreply.h"
@@ -53,6 +54,22 @@
 
 #ifndef HAVE_SSL
 #error "Need SSL library to do digital signature cryptography"
+#endif
+
+#ifdef HAVE_OPENSSL_ERR_H
+#include <openssl/err.h>
+#endif
+
+#ifdef HAVE_OPENSSL_RAND_H
+#include <openssl/rand.h>
+#endif
+
+#ifdef HAVE_OPENSSL_CONF_H
+#include <openssl/conf.h>
+#endif
+
+#ifdef HAVE_OPENSSL_ENGINE_H
+#include <openssl/engine.h>
 #endif
 
 /** return number of rrs in an rrset */

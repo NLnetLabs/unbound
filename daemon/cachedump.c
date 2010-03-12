@@ -40,6 +40,7 @@
  * to text format.
  */
 #include "config.h"
+#include "ldns/ldns.h"
 #include "daemon/cachedump.h"
 #include "daemon/remote.h"
 #include "daemon/worker.h"

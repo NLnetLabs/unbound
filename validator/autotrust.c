@@ -41,6 +41,7 @@
  * It was modified to fit into unbound. The state table process is the same.
  */
 #include "config.h"
+#include "ldns/ldns.h"
 #include "validator/autotrust.h"
 #include "validator/val_anchor.h"
 #include "validator/val_utils.h"

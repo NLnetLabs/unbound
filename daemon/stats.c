@@ -40,6 +40,7 @@
  * numbers. These 'statistics' may be of interest to the operator.
  */
 #include "config.h"
+#include "ldns/wire2host.h"
 #include "daemon/stats.h"
 #include "daemon/worker.h"
 #include "daemon/daemon.h"

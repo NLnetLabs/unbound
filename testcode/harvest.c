@@ -69,6 +69,10 @@
  */
 
 #include "config.h"
+#ifdef HAVE_GETOPT_H
+#include <getopt.h>
+#endif
+#include "ldns/ldns.h"
 #include <signal.h>
 #include "libunbound/unbound.h"
 #ifdef HAVE_SYS_STAT_H

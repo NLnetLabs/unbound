@@ -40,6 +40,22 @@
  */
 
 #include "config.h"
+#ifdef HAVE_OPENSSL_ERR_H
+#include <openssl/err.h>
+#endif
+
+#ifdef HAVE_OPENSSL_RAND_H
+#include <openssl/rand.h>
+#endif
+
+#ifdef HAVE_OPENSSL_CONF_H
+#include <openssl/conf.h>
+#endif
+
+#ifdef HAVE_OPENSSL_ENGINE_H
+#include <openssl/engine.h>
+#endif
+#include "ldns/ldns.h"
 #include "daemon/daemon.h"
 #include "daemon/worker.h"
 #include "daemon/remote.h"
