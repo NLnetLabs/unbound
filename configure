@@ -18427,7 +18427,7 @@ if test x_$ub_test_python != x_no; then
 
    # Check for Python
    ub_have_python=no
-
+   ac_save_LIBS="$LIBS"
         #
         # Allow the use of a (user set) custom python version
         #

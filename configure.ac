@@ -336,6 +336,7 @@ if test x_$ub_test_python != x_no; then
 
    # Check for Python
    ub_have_python=no
+   ac_save_LIBS="$LIBS" dnl otherwise AC_PYTHON_DEVEL thrashes $LIBS
    AC_PYTHON_DEVEL
    if test ! -z "$PYTHON_VERSION"; then
 	if test `$PYTHON -c "print '$PYTHON_VERSION' >= '2.4.0'"` = "False"; then

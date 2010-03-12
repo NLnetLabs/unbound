@@ -4,6 +4,7 @@
 	- iana portlist updated.
 	- ldns tarball updated.
 	- Fix python use when multithreaded.
+	- Fix solaris python compile.
 
 11 March 2010: Wouter
 	- another memory allocation option: --enable-alloc-nonregional.
