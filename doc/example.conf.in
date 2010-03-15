@@ -344,7 +344,7 @@ server:
 	# val-bogus-ttl: 60
 
 	# The signature inception and expiration dates are allowed to be off
-	# by 10% of the lifetime of the signature from our local clock.
+	# by 10% of the signature lifetime (expir-incep) from our local clock.
 	# This leeway is capped with a minimum and a maximum.  In seconds.
 	# val-sig-skew-min: 3600
 	# val-sig-skew-max: 86400
