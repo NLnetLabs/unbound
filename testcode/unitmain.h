@@ -70,5 +70,7 @@ void anchors_test();
 void verify_test();
 /** unit test for negative cache functions */
 void neg_test();
+/** unit test for regional allocator functions */
+void regional_test();
 
 #endif /* TESTCODE_UNITMAIN_H */

@@ -1,3 +1,6 @@
+15 March 2010: Wouter
+	- unit test for util/regional.c.
+
 12 March 2010: Wouter
 	- Reordered configure checks so fork and -lnsl -lsocket checks are
 	  earlier, and thus later checks benefit from and do not hinder them.

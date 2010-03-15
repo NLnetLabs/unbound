@@ -505,6 +505,7 @@ main(int argc, char* argv[])
 	rtt_test();
 	anchors_test();
 	alloc_test();
+	regional_test();
 	lruhash_test();
 	slabhash_test();
 	infra_test();
