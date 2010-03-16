@@ -108,10 +108,10 @@ struct comm_reply {
 #ifdef IPV6_PKTINFO
 		struct in6_pktinfo v6info;
 #endif
-#ifdef IP_RECVDSTADDR
-		struct in_addr v4addr;
-#elif defined(IP_PKTINFO)
+#ifdef IP_PKTINFO
 		struct in_pktinfo v4info;
+#elif defined(IP_RECVDSTADDR)
+		struct in_addr v4addr;
 #endif
 	} 	
 		/** variable with return source data */
