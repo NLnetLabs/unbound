@@ -381,12 +381,16 @@ comm_point_send_udp_msg_if(struct comm_point *c, ldns_buffer* packet,
 	cmsg = CMSG_FIRSTHDR(&msg);
 	if(r->srctype == 4) {
 #ifdef IP_RECVDSTADDR
+		msg.msg_controllen = CMSG_SPACE(sizeof(struct in_addr));
+		log_assert(msg.msg_controllen <= sizeof(control));
 		cmsg->cmsg_level = IPPROTO_IP;
 		cmsg->cmsg_type = IP_RECVDSTADDR;
 		memmove(CMSG_DATA(cmsg), &r->pktinfo.v4addr,
 			sizeof(struct in_addr));
 		cmsg->cmsg_len = CMSG_LEN(sizeof(struct in_addr));
 #elif defined(IP_PKTINFO)
+		msg.msg_controllen = CMSG_SPACE(sizeof(struct in_pktinfo));
+		log_assert(msg.msg_controllen <= sizeof(control));
 		cmsg->cmsg_level = IPPROTO_IP;
 		cmsg->cmsg_type = IP_PKTINFO;
 		memmove(CMSG_DATA(cmsg), &r->pktinfo.v4info,
@@ -394,6 +398,8 @@ comm_point_send_udp_msg_if(struct comm_point *c, ldns_buffer* packet,
 		cmsg->cmsg_len = CMSG_LEN(sizeof(struct in_pktinfo));
 #endif
 	} else if(r->srctype == 6) {
+		msg.msg_controllen = CMSG_SPACE(sizeof(struct in6_pktinfo));
+		log_assert(msg.msg_controllen <= sizeof(control));
 		cmsg->cmsg_level = IPPROTO_IPV6;
 		cmsg->cmsg_type = IPV6_PKTINFO;
 		memmove(CMSG_DATA(cmsg), &r->pktinfo.v6info,
@@ -401,14 +407,14 @@ comm_point_send_udp_msg_if(struct comm_point *c, ldns_buffer* packet,
 		cmsg->cmsg_len = CMSG_LEN(sizeof(struct in6_pktinfo));
 	} else {
 		/* try to pass all 0 to use default route */
+		msg.msg_controllen = CMSG_SPACE(sizeof(struct in6_pktinfo));
+		log_assert(msg.msg_controllen <= sizeof(control));
 		cmsg->cmsg_level = IPPROTO_IPV6;
 		cmsg->cmsg_type = IPV6_PKTINFO;
 		memset(CMSG_DATA(cmsg), 0, sizeof(struct in6_pktinfo));
 		cmsg->cmsg_len = CMSG_LEN(sizeof(struct in6_pktinfo));
 	}
-	msg.msg_controllen = cmsg->cmsg_len;
 #endif /* S_SPLINT_S */
-
 	if(verbosity >= VERB_ALGO)
 		p_ancil("send_udp over interface", r);
 	sent = sendmsg(c->fd, &msg, 0);
