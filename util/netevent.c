@@ -380,15 +380,7 @@ comm_point_send_udp_msg_if(struct comm_point *c, ldns_buffer* packet,
 #ifndef S_SPLINT_S
 	cmsg = CMSG_FIRSTHDR(&msg);
 	if(r->srctype == 4) {
-#ifdef IP_RECVDSTADDR
-		msg.msg_controllen = CMSG_SPACE(sizeof(struct in_addr));
-		log_assert(msg.msg_controllen <= sizeof(control));
-		cmsg->cmsg_level = IPPROTO_IP;
-		cmsg->cmsg_type = IP_RECVDSTADDR;
-		memmove(CMSG_DATA(cmsg), &r->pktinfo.v4addr,
-			sizeof(struct in_addr));
-		cmsg->cmsg_len = CMSG_LEN(sizeof(struct in_addr));
-#elif defined(IP_PKTINFO)
+#ifdef IP_PKTINFO
 		msg.msg_controllen = CMSG_SPACE(sizeof(struct in_pktinfo));
 		log_assert(msg.msg_controllen <= sizeof(control));
 		cmsg->cmsg_level = IPPROTO_IP;
@@ -396,6 +388,17 @@ comm_point_send_udp_msg_if(struct comm_point *c, ldns_buffer* packet,
 		memmove(CMSG_DATA(cmsg), &r->pktinfo.v4info,
 			sizeof(struct in_pktinfo));
 		cmsg->cmsg_len = CMSG_LEN(sizeof(struct in_pktinfo));
+#elif defined(IP_SENDSRCADDR)
+		msg.msg_controllen = CMSG_SPACE(sizeof(struct in_addr));
+		log_assert(msg.msg_controllen <= sizeof(control));
+		cmsg->cmsg_level = IPPROTO_IP;
+		cmsg->cmsg_type = IP_SENDSRCADDR;
+		memmove(CMSG_DATA(cmsg), &r->pktinfo.v4addr,
+			sizeof(struct in_addr));
+		cmsg->cmsg_len = CMSG_LEN(sizeof(struct in_addr));
+#else
+		verbose(VERB_ALGO, "no IP_PKTINFO or IP_SENDSRCADDR");
+		msg.msg_control = NULL;
 #endif
 	} else if(r->srctype == 6) {
 		msg.msg_controllen = CMSG_SPACE(sizeof(struct in6_pktinfo));
@@ -497,19 +500,19 @@ comm_point_udp_ancil_callback(int fd, short event, void* arg)
 				memmove(&rep.pktinfo.v6info, CMSG_DATA(cmsg),
 					sizeof(struct in6_pktinfo));
 				break;
-#ifdef IP_RECVDSTADDR
-			} else if( cmsg->cmsg_level == IPPROTO_IP &&
-				cmsg->cmsg_type == IP_RECVDSTADDR) {
-				rep.srctype = 4;
-				memmove(&rep.pktinfo.v4addr, CMSG_DATA(cmsg),
-					sizeof(struct in_addr));
-				break;
-#elif defined(IP_PKTINFO)
+#ifdef IP_PKTINFO
 			} else if( cmsg->cmsg_level == IPPROTO_IP &&
 				cmsg->cmsg_type == IP_PKTINFO) {
 				rep.srctype = 4;
 				memmove(&rep.pktinfo.v4info, CMSG_DATA(cmsg),
 					sizeof(struct in_pktinfo));
+				break;
+#elif defined(IP_RECVDSTADDR)
+			} else if( cmsg->cmsg_level == IPPROTO_IP &&
+				cmsg->cmsg_type == IP_RECVDSTADDR) {
+				rep.srctype = 4;
+				memmove(&rep.pktinfo.v4addr, CMSG_DATA(cmsg),
+					sizeof(struct in_addr));
 				break;
 #endif
 			}

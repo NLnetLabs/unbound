@@ -490,7 +490,7 @@ port_insert(struct listen_port** list, int s, enum listen_type ftype)
 static int
 set_recvpktinfo(int s, int family) 
 {
-#if defined(IPV6_RECVPKTINFO) || defined(IPV6_PKTINFO) || defined(IP_RECVDSTADDR) || defined(IP_PKTINFO)
+#if defined(IPV6_RECVPKTINFO) || defined(IPV6_PKTINFO) || (defined(IP_RECVDSTADDR) && defined(IP_SENDSRCADDR)) || defined(IP_PKTINFO)
 	int on = 1;
 #else
 	(void)s;
@@ -517,22 +517,22 @@ set_recvpktinfo(int s, int family)
 #           endif /* defined IPV6_RECVPKTINFO */
 
 	} else if(family == AF_INET) {
-#           ifdef IP_RECVDSTADDR
-		if(setsockopt(s, IPPROTO_IP, IP_RECVDSTADDR,
-			(void*)&on, (socklen_t)sizeof(on)) < 0) {
-			log_err("setsockopt(..., IP_RECVDSTADDR, ...) failed: %s",
-				strerror(errno));
-			return 0;
-		}
-#           elif defined(IP_PKTINFO)
+#           ifdef IP_PKTINFO
 		if(setsockopt(s, IPPROTO_IP, IP_PKTINFO,
 			(void*)&on, (socklen_t)sizeof(on)) < 0) {
 			log_err("setsockopt(..., IP_PKTINFO, ...) failed: %s",
 				strerror(errno));
 			return 0;
 		}
+#           elif defined(IP_RECVDSTADDR) && defined(IP_SENDSRCADDR)
+		if(setsockopt(s, IPPROTO_IP, IP_RECVDSTADDR,
+			(void*)&on, (socklen_t)sizeof(on)) < 0) {
+			log_err("setsockopt(..., IP_RECVDSTADDR, ...) failed: %s",
+				strerror(errno));
+			return 0;
+		}
 #           else
-		log_err("no IP_RECVDSTADDR or IP_PKTINFO option, please disable "
+		log_err("no IP_SENDSRCADDR or IP_PKTINFO option, please disable "
 			"interface-automatic in config");
 		return 0;
 #           endif /* IP_PKTINFO */
