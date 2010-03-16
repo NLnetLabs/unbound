@@ -48,6 +48,7 @@
 #include "validator/val_nsec3.h"
 #include "validator/validator.h"
 #include "validator/val_kentry.h"
+#include "services/cache/rrset.h"
 #include "util/regional.h"
 #include "util/rbtree.h"
 #include "util/module.h"
@@ -1254,7 +1255,14 @@ list_is_secure(struct module_env* env, struct val_env* ve,
 	size_t i;
 	enum sec_status sec;
 	for(i=0; i<num; i++) {
+		struct packed_rrset_data* d = (struct packed_rrset_data*)
+			list[i]->entry.data;
 		if(list[i]->rk.type != htons(LDNS_RR_TYPE_NSEC3))
+			continue;
+		if(d->security == sec_status_secure)
+			continue;
+		rrset_check_sec_status(env->rrset_cache, list[i], *env->now);
+		if(d->security == sec_status_secure)
 			continue;
 		sec = val_verify_rrset_entry(env, ve, list[i], kkey, reason);
 		if(sec != sec_status_secure) {

@@ -2,6 +2,7 @@
 	- Fix interface-automatic for OpenBSD: msg.controllen was too small,
 	  also assertions on ancillary data buffer.
 	- check for IP_SENDSRCADDR for interface-automatic or IP_PKTINFO.
+	- for NSEC3 check if signatures are cached.
 
 15 March 2010: Wouter
 	- unit test for util/regional.c.
