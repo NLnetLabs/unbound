@@ -39,6 +39,10 @@
  * This file contains functions to make a histogram of time values.
  */
 #include "config.h"
+#ifdef HAVE_TIME_H
+#include <time.h>
+#endif
+#include <sys/time.h>
 #include "util/timehist.h"
 #include "util/log.h"
 
