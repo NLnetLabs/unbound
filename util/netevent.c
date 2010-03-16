@@ -317,15 +317,7 @@ void p_ancil(const char* str, struct comm_reply* r)
 		buf[sizeof(buf)-1]=0;
 		log_info("%s: %s %d", str, buf, r->pktinfo.v6info.ipi6_ifindex);
 	} else if(r->srctype == 4) {
-#ifdef IP_RECVDSTADDR
-		char buf1[1024];
-		if(inet_ntop(AF_INET, &r->pktinfo.v4addr, 
-			buf1, (socklen_t)sizeof(buf1)) == 0) {
-			strncpy(buf1, "(inet_ntop error)", sizeof(buf1));
-		}
-		buf1[sizeof(buf1)-1]=0;
-		log_info("%s: %s", str, buf1);
-#elif defined(IP_PKTINFO)
+#ifdef IP_PKTINFO
 		char buf1[1024], buf2[1024];
 		if(inet_ntop(AF_INET, &r->pktinfo.v4info.ipi_addr, 
 			buf1, (socklen_t)sizeof(buf1)) == 0) {
@@ -339,6 +331,14 @@ void p_ancil(const char* str, struct comm_reply* r)
 		buf2[sizeof(buf2)-1]=0;
 		log_info("%s: %d %s %s", str, r->pktinfo.v4info.ipi_ifindex,
 			buf1, buf2);
+#elif defined(IP_RECVDSTADDR)
+		char buf1[1024];
+		if(inet_ntop(AF_INET, &r->pktinfo.v4addr, 
+			buf1, (socklen_t)sizeof(buf1)) == 0) {
+			strncpy(buf1, "(inet_ntop error)", sizeof(buf1));
+		}
+		buf1[sizeof(buf1)-1]=0;
+		log_info("%s: %s", str, buf1);
 #endif
 	}
 #else
