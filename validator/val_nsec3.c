@@ -1269,6 +1269,7 @@ list_is_secure(struct module_env* env, struct val_env* ve,
 			verbose(VERB_ALGO, "NSEC3 did not verify");
 			return 0;
 		}
+		rrset_update_sec_status(env->rrset_cache, list[i], *env->now);
 	}
 	return 1;
 }
