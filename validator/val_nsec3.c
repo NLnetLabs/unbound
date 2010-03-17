@@ -1252,11 +1252,10 @@ list_is_secure(struct module_env* env, struct val_env* ve,
 	struct ub_packed_rrset_key** list, size_t num,
 	struct key_entry_key* kkey, char** reason)
 {
+	struct packed_rrset_data* d;
 	size_t i;
-	enum sec_status sec;
 	for(i=0; i<num; i++) {
-		struct packed_rrset_data* d = (struct packed_rrset_data*)
-			list[i]->entry.data;
+		d = (struct packed_rrset_data*)list[i]->entry.data;
 		if(list[i]->rk.type != htons(LDNS_RR_TYPE_NSEC3))
 			continue;
 		if(d->security == sec_status_secure)
@@ -1264,8 +1263,9 @@ list_is_secure(struct module_env* env, struct val_env* ve,
 		rrset_check_sec_status(env->rrset_cache, list[i], *env->now);
 		if(d->security == sec_status_secure)
 			continue;
-		sec = val_verify_rrset_entry(env, ve, list[i], kkey, reason);
-		if(sec != sec_status_secure) {
+		d->security = val_verify_rrset_entry(env, ve, list[i], kkey,
+			reason);
+		if(d->security != sec_status_secure) {
 			verbose(VERB_ALGO, "NSEC3 did not verify");
 			return 0;
 		}

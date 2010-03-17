@@ -171,6 +171,27 @@ val_nsec_proves_no_ds(struct ub_packed_rrset_key* nsec,
 	return sec_status_secure;
 }
 
+/** check security status from cache or verify rrset, returns true if secure */
+static int
+nsec_verify_rrset(struct module_env* env, struct val_env* ve, 
+	struct ub_packed_rrset_key* nsec, struct key_entry_key* kkey, 
+	char** reason)
+{
+	struct packed_rrset_data* d = (struct packed_rrset_data*)
+		nsec->entry.data;
+	if(d->security == sec_status_secure)
+		return 1;
+	rrset_check_sec_status(env->rrset_cache, nsec, *env->now);
+	if(d->security == sec_status_secure)
+		return 1;
+	d->security = val_verify_rrset_entry(env, ve, nsec, kkey, reason);
+	if(d->security == sec_status_secure) {
+		rrset_update_sec_status(env->rrset_cache, nsec, *env->now);
+		return 1;
+	}
+	return 0;
+}
+
 enum sec_status 
 val_nsec_prove_nodata_dsreply(struct module_env* env, struct val_env* ve, 
 	struct query_info* qinfo, struct reply_info* rep, 
@@ -191,8 +212,7 @@ val_nsec_prove_nodata_dsreply(struct module_env* env, struct val_env* ve,
 	 * 1) this is a delegation point and there is no DS
 	 * 2) this is not a delegation point */
 	if(nsec) {
-		sec = val_verify_rrset_entry(env, ve, nsec, kkey, reason);
-		if(sec != sec_status_secure) {
+		if(!nsec_verify_rrset(env, ve, nsec, kkey, reason)) {
 			verbose(VERB_ALGO, "NSEC RRset for the "
 				"referral did not verify.");
 			return sec_status_bogus;
@@ -221,9 +241,7 @@ val_nsec_prove_nodata_dsreply(struct module_env* env, struct val_env* ve,
 		i++) {
 		if(rep->rrsets[i]->rk.type != htons(LDNS_RR_TYPE_NSEC))
 			continue;
-		sec = val_verify_rrset_entry(env, ve, rep->rrsets[i], kkey,
-			reason);
-		if(sec != sec_status_secure) {
+		if(!nsec_verify_rrset(env, ve, rep->rrsets[i], kkey, reason)) {
 			verbose(VERB_ALGO, "NSEC for empty non-terminal "
 				"did not verify.");
 			return sec_status_bogus;
