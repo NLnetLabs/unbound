@@ -47,6 +47,8 @@
 #include "util/data/msgreply.h"
 #include "util/data/dname.h"
 #include "util/net_help.h"
+#include "util/module.h"
+#include "services/cache/rrset.h"
 
 /** get ttl of rrset */
 static uint32_t 
