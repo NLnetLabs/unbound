@@ -1,6 +1,8 @@
 18 March 2010: Wouter
 	- Fixed random numbers for port, interface and server selection.
 	  Removed very small bias.
+	- Refer to the listing in unbound-control man page in the extended
+	  statistics entry in the unbound.conf man page.
 
 16 March 2010: Wouter
 	- Fix interface-automatic for OpenBSD: msg.controllen was too small,

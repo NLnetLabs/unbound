@@ -100,7 +100,8 @@ the statistics counters after logging the statistics. Default is no.
 .TP
 .B extended\-statistics: \fI<yes or no>
 If enabled, extended statistics are printed from \fIunbound\-control\fR(8). 
-Default is off, because keeping track of more statistics takes time.
+Default is off, because keeping track of more statistics takes time.  The
+counters are listed in \fIunbound\-control\fR(8).
 .TP
 .B num\-threads: \fI<number>
 The number of threads to create to serve clients. Use 1 for no threading.
