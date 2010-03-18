@@ -57,6 +57,8 @@
 
 #ifdef S_SPLINT_S
 typedef struct PyObject PyObject;
+typedef struct PyThreadState PyThreadState;
+typedef void* PyGILState_STATE;
 #endif
 
 /**

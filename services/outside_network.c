@@ -809,9 +809,9 @@ select_ifport(struct outside_network* outnet, struct pending* pend,
 	log_assert(outnet->unused_fds);
 	tries = 0;
 	while(1) {
-		my_if = ub_random(outnet->rnd) % num_if;
+		my_if = ub_random_max(outnet->rnd, num_if);
 		pif = &ifs[my_if];
-		my_port = ub_random(outnet->rnd) % pif->avail_total;
+		my_port = ub_random_max(outnet->rnd, pif->avail_total);
 		if(my_port < pif->inuse) {
 			/* port already open */
 			pend->pc = pif->out[my_port];

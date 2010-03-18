@@ -292,7 +292,7 @@ int daemon_get_shufport(struct daemon* daemon, int* shufport)
         /* Knuth shuffle */
 	n = avail;
 	while(--n > 0) {
-		k = ub_random(daemon->rand) % (n+1); /* 0<= k<= n */
+		k = ub_random_max(daemon->rand, n+1); /* 0<= k<= n */
 		temp = shufport[k];
 		shufport[k] = shufport[n];
 		shufport[n] = temp;

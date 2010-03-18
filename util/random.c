@@ -177,6 +177,18 @@ ub_random(struct ub_randstate* s)
 	return (long int)((r) % (((unsigned)MAX_VALUE + 1)));
 }
 
+long int
+ub_random_max(struct ub_randstate* state, long int x)
+{
+	/* make sure we fetch in a range that is divisible by x. ignore
+	 * values from d .. MAX_VALUE, instead draw a new number */
+	long int d = MAX_VALUE - (MAX_VALUE % x); /* d is divisible by x */
+	long int v = ub_random(state);
+	while(d <= v)
+		v = ub_random(state);
+	return (v % x);
+}
+
 void 
 ub_randfree(struct ub_randstate* s)
 {

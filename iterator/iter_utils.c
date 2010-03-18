@@ -350,9 +350,9 @@ iter_server_selection(struct iter_env* iter_env,
 
 	/* randomly select a target from the list */
 	log_assert(num > 1);
-	/* we do not need secure random numbers here, but
-	 * we do need it to be threadsafe, so we use this */
-	sel = ub_random(env->rnd) % num; 
+	/* grab secure random number, to pick unexpected server.
+	 * also we need it to be threadsafe. */
+	sel = ub_random_max(env->rnd, num); 
 	a = dp->result_list;
 	prev = NULL;
 	while(sel > 0 && a) {
@@ -418,7 +418,7 @@ iter_ns_probability(struct ub_randstate* rnd, int n, int m)
 		return 1;
 	/* we do not need secure random numbers here, but
 	 * we do need it to be threadsafe, so we use this */
-	sel = ub_random(rnd) % m; 
+	sel = ub_random_max(rnd, m); 
 	return (sel < n);
 }
 

@@ -76,6 +76,15 @@ struct ub_randstate* ub_initstate(unsigned int seed,
 long int ub_random(struct ub_randstate* state);
 
 /**
+ * Generate random number between 0 and x-1.  No modulo bias.
+ * @param state: must have been initialised with ub_initstate.
+ * @param x: an upper limit. not negative or zero. must be smaller than 2**31.
+ * @return: random value between 0..x-1. Possibly more than one
+ * random number is picked from the random stream to satisfy this.
+ */
+long int ub_random_max(struct ub_randstate* state, long int x);
+
+/**
  * Delete the random state.
  * @param state: to delete.
  */

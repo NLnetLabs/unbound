@@ -1685,7 +1685,7 @@ calc_next_probe(struct module_env* env, uint32_t wait)
 		wait = 3600;
 	rnd = wait/10;
 	rest = wait-rnd;
-	rnd = (uint32_t)ub_random(env->rnd) % rnd;
+	rnd = (uint32_t)ub_random_max(env->rnd, (long int)rnd);
 	return (time_t)(*env->now + rest + rnd);
 }
 
