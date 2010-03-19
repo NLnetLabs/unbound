@@ -74,6 +74,10 @@ LINT=splint
 LINTFLAGS=+quiet -weak -warnposix -unrecog -Din_addr_t=uint32_t -Du_int=unsigned -Du_char=uint8_t -preproc -Drlimit=rlimit64 -D__gnuc_va_list=va_list -Dglob64=glob -Dglobfree64=globfree
 # compat with openssl linux edition.
 LINTFLAGS+="-DBN_ULONG=unsigned long" -Dkrb5_int32=int "-Dkrb5_ui_4=unsigned int" -DPQ_64BIT=uint64_t -DRC4_INT=unsigned -fixedformalarray
+# compat with NetBSD
+LINTFLAGS+="-D__RENAME(x)="
+# compat with OpenBSD
+LINTFLAGS+="-Dsigset_t=long"
 
 INSTALL=$(srcdir)/install-sh
 ifeq "$(WITH_PYTHONMODULE)" "yes"
