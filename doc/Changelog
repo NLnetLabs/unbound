@@ -1,3 +1,6 @@
+19 March 2010: Wouter
+	- fix fwd_ancil test to pass if the socket options are not supported.
+
 18 March 2010: Wouter
 	- Fixed random numbers for port, interface and server selection.
 	  Removed very small bias.
