@@ -80,6 +80,8 @@ LINTFLAGS+="-D__RENAME(x)=" -D_NETINET_IN_H_
 endif
 # compat with OpenBSD
 LINTFLAGS+="-Dsigset_t=long"
+# FreeBSD/sparc64
+LINTFLAGS+="-D__uint16_t=uint16_t"
 
 INSTALL=$(srcdir)/install-sh
 ifeq "$(WITH_PYTHONMODULE)" "yes"
