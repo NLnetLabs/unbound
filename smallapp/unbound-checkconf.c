@@ -157,7 +157,7 @@ interfacechecks(struct config_file* cfg)
 	socklen_t alen;
 	int i, j;
 	for(i=0; i<cfg->num_ifs; i++) {
-		if(!ipstrtoaddr(cfg->ifs[i], UNBOUND_DNS_PORT, &a, &alen)) {
+		if(!extstrtoaddr(cfg->ifs[i], &a, &alen)) {
 			fatal_exit("cannot parse interface specified as '%s'",
 				cfg->ifs[i]);
 		}

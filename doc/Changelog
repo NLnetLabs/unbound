@@ -1,6 +1,8 @@
 22 March 2010: Wouter
 	- unbound-host disables use-syslog from config file so that the
 	  config file for the main server can be used more easily.
+	- fix bug#301: unbound-checkconf could not parse interface
+	  '0.0.0.0@5353', even though unbound itself worked fine.
 
 19 March 2010: Wouter
 	- fix fwd_ancil test to pass if the socket options are not supported.
