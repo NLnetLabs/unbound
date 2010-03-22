@@ -530,6 +530,7 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_DEC(opt, "statistics-interval", stat_interval)
 	else O_YNO(opt, "statistics-cumulative", stat_cumulative)
 	else O_YNO(opt, "extended-statistics", stat_extended)
+	else O_YNO(opt, "use-syslog", use_syslog)
 	else O_DEC(opt, "num-threads", num_threads)
 	else O_IFC(opt, "interface", num_ifs, ifs)
 	else O_IFC(opt, "outgoing-interface", num_out_ifs, out_ifs)
