@@ -424,7 +424,7 @@ filter_init(struct nsec3_filter* filter, struct ub_packed_rrset_key** list,
 		if(!nsec3_rrset_has_known(list[i]))
 			continue;
 
-		/* since NSECs are base32.zonename, we can find the zone
+		/* since NSEC3s are base32.zonename, we can find the zone
 		 * name by stripping off the first label of the record */
 		nm = list[i]->rk.dname;
 		nmlen = list[i]->rk.dname_len;
