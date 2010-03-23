@@ -1,6 +1,6 @@
 Summary: Validating, recursive, and caching DNS resolver
 Name: unbound
-Version: 1.0.1
+Version: 1.4.4
 Release: 1%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
