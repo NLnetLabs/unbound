@@ -1116,6 +1116,8 @@ struct del_info {
 	size_t len;
 	/** labels */
 	int labs;
+	/** now */
+	uint32_t now;
 	/** time to invalidate to */
 	uint32_t expired;
 	/** number of rrsets removed */
@@ -1136,8 +1138,10 @@ zone_del_rrset(struct lruhash_entry* e, void* arg)
 	if(dname_subdomain_c(k->rk.dname, inf->name)) {
 		struct packed_rrset_data* d = 
 			(struct packed_rrset_data*)e->data;
-		d->ttl = inf->expired;
-		inf->num_rrsets++;
+		if(d->ttl >= inf->now) {
+			d->ttl = inf->expired;
+			inf->num_rrsets++;
+		}
 	}
 }
 
@@ -1150,8 +1154,10 @@ zone_del_msg(struct lruhash_entry* e, void* arg)
 	struct msgreply_entry* k = (struct msgreply_entry*)e->key;
 	if(dname_subdomain_c(k->key.qname, inf->name)) {
 		struct reply_info* d = (struct reply_info*)e->data;
-		d->ttl = inf->expired;
-		inf->num_msgs++;
+		if(d->ttl >= inf->now) {
+			d->ttl = inf->expired;
+			inf->num_msgs++;
+		}
 	}
 }
 
@@ -1164,8 +1170,10 @@ zone_del_kcache(struct lruhash_entry* e, void* arg)
 	struct key_entry_key* k = (struct key_entry_key*)e->key;
 	if(dname_subdomain_c(k->name, inf->name)) {
 		struct key_entry_data* d = (struct key_entry_data*)e->data;
-		d->ttl = inf->expired;
-		inf->num_keys++;
+		if(d->ttl >= inf->now) {
+			d->ttl = inf->expired;
+			inf->num_keys++;
+		}
 	}
 }
 
@@ -1185,6 +1193,7 @@ do_flush_zone(SSL* ssl, struct worker* worker, char* arg)
 	inf.name = nm;
 	inf.len = nmlen;
 	inf.labs = nmlabs;
+	inf.now = *worker->env.now;
 	inf.expired = *worker->env.now;
 	inf.expired -= 3; /* handle 3 seconds skew between threads */
 	inf.num_rrsets = 0;
