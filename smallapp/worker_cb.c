@@ -152,7 +152,8 @@ int libworker_send_packet(ldns_buffer* ATTR_UNUSED(pkt),
 struct outbound_entry* libworker_send_query(uint8_t* ATTR_UNUSED(qname), 
 	size_t ATTR_UNUSED(qnamelen), uint16_t ATTR_UNUSED(qtype), 
 	uint16_t ATTR_UNUSED(qclass), uint16_t ATTR_UNUSED(flags), 
-	int ATTR_UNUSED(dnssec), struct sockaddr_storage* ATTR_UNUSED(addr), 
+	int ATTR_UNUSED(dnssec), int ATTR_UNUSED(want_dnssec),
+	struct sockaddr_storage* ATTR_UNUSED(addr), 
 	socklen_t ATTR_UNUSED(addrlen), struct module_qstate* ATTR_UNUSED(q))
 {
 	log_assert(0);

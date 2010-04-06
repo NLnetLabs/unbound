@@ -124,19 +124,18 @@ sub.example.com. IN	NS ns.sub.example.com.
 
 ; downgrade: false GOST, correct SHA
 
-sub.example.com.        3600    IN      DS      41930 249 203 1940ede41068d30064a092a4fbf50b95071497a6c96616d647023c2e31951c58 ; xekeg-beryv-gygek-mugab-benup-bugop-gyvoz-hidin-hicec-gohap-keduk-kyhet-kucob-duzed-vason-halih-noxox
+sub.example.com.        3600    IN      DS      58910 11 3 e77148d88f5f08cca67e695543aaefd4c5c3469262e95dc3870821beaf7d0a65
 
 ; correct GOST DS for sub.example.com.
-; sub.example.com.        3600    IN      DS      41930 249 203 1940ede41068d30064a092a4fbf50b95071497a6c96616d647023c2e31951c59 ; xekeg-beryv-gygek-mugab-benup-bugop-gyvoz-hidin-hicec-gohap-keduk-kyhet-kucob-duzed-vason-halih-noxox
+; sub.example.com.        3600    IN      DS      58910 11 3 e88148d88f5f08cca67e695543aaefd4c5c3469262e95dc3870821beaf7d0a65 ; xupam-cedyt-mifuh-zudes-sanyl-vepah-hybip-piryt-gycys-fecun-demuv-nilis-fecyb-mamar-voril-tydak-huxux
 
 ; SHA1 DS for sub.example.com.
-sub.example.com.	3600	IN	DS	41930 249 1 ea843e16f46363ad869661a7e88fe5d4bfd63796 ; xupim-gyzoc-kutek-femup-tucen-kemyp-lopym-zanit-gizet-kotyn-kuxyx
+sub.example.com.      3600    IN      DS      58910 11 1 5c5afc6c1b9c39568111145bc2e85f5913d6c919 ; xilah-puzok-sykan-suvyh-koboc-cehih-rybov-myluh-nagyt-kidic-nyxex
 ; SHA256 DS for sub.example.com.
-sub.example.com.	3600	IN	DS	41930 249 2 0ae431b6bbb6ded8547428517c0912aab06150e3fe3e0bb64755e6baa4e33bb5 ; xediv-gosor-kiver-kalat-muhyl-gypah-cozub-nygep-pysak-cegiv-fuzyf-voder-kycih-hyner-piniv-fevir-hyxux
-
+sub.example.com.	3600	IN	DS	58910 11 2 abe9f057a63c8e1779099af54c3392ca5e643ce383dfd79a8391df5ff11324e8 ; xopov-nusyh-lunuf-sufec-livyb-nykoz-hefaf-fogos-palek-gozyv-fubat-zehyn-pebun-culoh-zisec-fonav-mexyx
 
 ; signs SHA1, SHA2 and GOST DSes
-sub.example.com.	3600	IN	RRSIG	DS 3 3 3600 20070926135752 20070829135752 2854 example.com. AEEGV20ThZAE523wZe4idjxcv/wHBgA/UUWk+H5V5c1bRGa2VzLLuDM= ;{id = 2854}
+sub.example.com.	3600	IN	RRSIG	DS 3 3 3600 20070926135752 20070829135752 2854 example.com. AIbA2kEfT78Xfag9ndYBLFJw43zcKbuumiekUfb+pTWl7x1IArCFhNA= ;{id = 2854}
 
 SECTION ADDITIONAL
 ns.sub.example.com. IN A 1.2.3.6
@@ -155,10 +154,11 @@ SECTION QUESTION
 sub.example.com. IN NS
 SECTION ANSWER
 sub.example.com. IN	NS ns.sub.example.com.
-sub.example.com.        3600    IN      RRSIG   NS 249 3 3600 20070926134150 20070829134150 41930 sub.example.com. +RqxwrGqIOwgZit1MNe3oEPEvoTRppVylmLFXAT7tg2MxWBdqXwH1Pby3sbAy6T3Syk07LMEjZJ/qd5HYJO0+w== ;{id = 41930}
+sub.example.com.	3600	IN	RRSIG	NS 11 3 3600 20070926134150 20070829134150 58910 sub.example.com. S3ByzAnmpzVhSm+Qay+F7BRKPcoWfc/K0AV5Eg5vwwNqlpYwWNVvTRiE6YDiyJ7yOMsiff1E6FCuEDedLoa0/g== ;{id = 58910}
+
 SECTION ADDITIONAL
 ns.sub.example.com. IN A 1.2.3.6
-ns.sub.example.com.     3600    IN      RRSIG   A 249 4 3600 20070926134150 20070829134150 41930 sub.example.com. T7CSlknnb6GnM8hS9riryi9G06nr/2nJUfep97igb+aPgrLziF0UUVj3DjcISgmrCw0Pdegm2jJkVliFYm4PLQ== ;{id = 41930}
+ns.sub.example.com.	3600	IN	RRSIG	A 11 4 3600 20070926134150 20070829134150 58910 sub.example.com. H8+jqzbxcRWw1DBDB0azOaO6TRx9lE2JqiF4syuKvhApkSNmkNxB6hSLSp3qjL3zFbNSrlwo3nUBgeDh9mZTDA== ;{id = 58910}
 ENTRY_END
 
 ; response to DNSKEY priming query
@@ -169,14 +169,14 @@ REPLY QR NOERROR
 SECTION QUESTION
 sub.example.com. IN DNSKEY
 SECTION ANSWER
-sub.example.com.    3600    IN      DNSKEY  257 3 249 AAB7oZ5Ox8mcGrhB4vh41LdJQ5i+MVbn0KVe1a0CU2Akdwbp1qZ2khQTJZ0wOFkEsmgU2wfggXTpU8rp745IDVUb ;{id = 41930 (zsk), size = 512b}
-sub.example.com.        3600    IN      RRSIG   DNSKEY 249 3 3600 20070926134150 20070829134150 41930 sub.example.com. AEZeCPrvG8ueQYicdYhBUMORPH8VHlbcO0GvsRl5xLFqc8femC2qPRk7SpIOSRxZXdu4liL9O5FFYaymThfFCA== ;{id = 41930}
+sub.example.com.	3600	IN	DNSKEY	256 3 11 UQgaBVNAin7hJySuuU1V9z6+iDMMYGNNtCgNJLMCzBNxFHRdhQff/y1vZExYNfSztK3RUOiy/uTqIa265Fr6PQ== ;{id = 58910 (zsk), size = 512b}
+sub.example.com.	3600	IN	RRSIG	DNSKEY 11 3 3600 20070926134150 20070829134150 58910 sub.example.com. sksp5fNuXuYwSDarL18vtJfKu5zB7tSpGCZ0nkCqe6d8B0hd7ITZOi5hwm3u3raDBzpUmOZoS/HEVwx0MIGgdg== ;{id = 58910}
 SECTION AUTHORITY
 sub.example.com. IN	NS ns.sub.example.com.
-sub.example.com.        3600    IN      RRSIG   NS 249 3 3600 20070926134150 20070829134150 41930 sub.example.com. +RqxwrGqIOwgZit1MNe3oEPEvoTRppVylmLFXAT7tg2MxWBdqXwH1Pby3sbAy6T3Syk07LMEjZJ/qd5HYJO0+w== ;{id = 41930}
+sub.example.com.	3600	IN	RRSIG	NS 11 3 3600 20070926134150 20070829134150 58910 sub.example.com. S3ByzAnmpzVhSm+Qay+F7BRKPcoWfc/K0AV5Eg5vwwNqlpYwWNVvTRiE6YDiyJ7yOMsiff1E6FCuEDedLoa0/g== ;{id = 58910}
 SECTION ADDITIONAL
 ns.sub.example.com. IN A 1.2.3.6
-ns.sub.example.com.     3600    IN      RRSIG   A 249 4 3600 20070926134150 20070829134150 41930 sub.example.com. T7CSlknnb6GnM8hS9riryi9G06nr/2nJUfep97igb+aPgrLziF0UUVj3DjcISgmrCw0Pdegm2jJkVliFYm4PLQ== ;{id = 41930}
+ns.sub.example.com.	3600	IN	RRSIG	A 11 4 3600 20070926134150 20070829134150 58910 sub.example.com. H8+jqzbxcRWw1DBDB0azOaO6TRx9lE2JqiF4syuKvhApkSNmkNxB6hSLSp3qjL3zFbNSrlwo3nUBgeDh9mZTDA== ;{id = 58910}
 ENTRY_END
 
 ; response to query of interest
@@ -188,7 +188,7 @@ SECTION QUESTION
 www.sub.example.com. IN A
 SECTION ANSWER
 www.sub.example.com. IN A	11.11.11.11
-www.sub.example.com.    3600    IN      RRSIG   A 249 4 3600 20070926134150 20070829134150 41930 sub.example.com. UUeLd4U/s4Bp2772GGbjFGc+JiiqL9VCSCRkSIPPIzCm7ECWNhpi+a3eG4oC4Z99ufpcP+v67FuAWlAGXyeW0A== ;{id = 41930}
+www.sub.example.com.	3600	IN	RRSIG	A 11 4 3600 20070926134150 20070829134150 58910 sub.example.com. Aov4/MYSAUGtAA+28i00gLPL+6F18v/rgH+tYRO5XIkMAgyS5sGhUGZ9k2EOCXSNxm6QQCm6+h70zt70gLrbNw== ;{id = 58910}
 
 SECTION AUTHORITY
 SECTION ADDITIONAL
@@ -221,7 +221,7 @@ SECTION QUESTION
 www.sub.example.com. IN A
 SECTION ANSWER
 ;www.sub.example.com. 	3600	IN	A	11.11.11.11
-;www.sub.example.com.    3600    IN      RRSIG   A 249 4 3600 20070926134150 20070829134150 41930 sub.example.com. UUeLd4U/s4Bp2772GGbjFGc+JiiqL9VCSCRkSIPPIzCm7ECWNhpi+a3eG4oC4Z99ufpcP+v67FuAWlAGXyeW0A== ;{id = 41930}
+;www.sub.example.com.	3600	IN	RRSIG	A 11 4 3600 20070926134150 20070829134150 58910 sub.example.com. Aov4/MYSAUGtAA+28i00gLPL+6F18v/rgH+tYRO5XIkMAgyS5sGhUGZ9k2EOCXSNxm6QQCm6+h70zt70gLrbNw== ;{id = 58910}
 SECTION AUTHORITY
 SECTION ADDITIONAL
 ENTRY_END

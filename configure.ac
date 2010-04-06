@@ -418,13 +418,13 @@ case "$enable_sha2" in
 	;;
 esac
 
-AC_ARG_ENABLE(gost, AC_HELP_STRING([--enable-gost], [Enable GOST support, experimental]))
+AC_ARG_ENABLE(gost, AC_HELP_STRING([--disable-gost], [Disable GOST support]))
 case "$enable_gost" in
-	yes)
-	AC_CHECK_FUNC(EVP_PKEY_set_type_str, [:],[AC_MSG_ERROR([OpenSSL >= 1.0.0 is needed for GOST support])])
-	AC_DEFINE([USE_GOST], [1], [Define this to enable GOST support.])
+	no)
 	;;
-	no|*)
+	yes|*)
+	AC_CHECK_FUNC(EVP_PKEY_set_type_str, [:],[AC_MSG_ERROR([OpenSSL >= 1.0.0 is needed for GOST support, upgrade openssl or rerun with --disable-gost])])
+	AC_DEFINE([USE_GOST], [1], [Define this to enable GOST support.])
 	;;
 esac
 

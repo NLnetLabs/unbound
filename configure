@@ -1585,7 +1585,7 @@ Optional Features:
   --disable-rpath         disable hardcoded rpath (default=enabled)
   --disable-largefile     omit support for large files
   --disable-sha2          Disable SHA256 and SHA512 RRSIG support
-  --enable-gost           Enable GOST support, experimental
+  --disable-gost          Disable GOST support
   --enable-static-exe     enable to compile executables statically against
                           event, ldns libs, for debug purposes
   --enable-lock-checks    enable to check lock and unlock calls, for debug
@@ -19995,7 +19995,9 @@ if test "${enable_gost+set}" = set; then
 fi
 
 case "$enable_gost" in
-	yes)
+	no)
+	;;
+	yes|*)
 	{ $as_echo "$as_me:$LINENO: checking for EVP_PKEY_set_type_str" >&5
 $as_echo_n "checking for EVP_PKEY_set_type_str... " >&6; }
 if test "${ac_cv_func_EVP_PKEY_set_type_str+set}" = set; then
@@ -20084,8 +20086,8 @@ $as_echo "$ac_cv_func_EVP_PKEY_set_type_str" >&6; }
 if test "x$ac_cv_func_EVP_PKEY_set_type_str" = x""yes; then
   :
 else
-  { { $as_echo "$as_me:$LINENO: error: OpenSSL >= 1.0.0 is needed for GOST support" >&5
-$as_echo "$as_me: error: OpenSSL >= 1.0.0 is needed for GOST support" >&2;}
+  { { $as_echo "$as_me:$LINENO: error: OpenSSL >= 1.0.0 is needed for GOST support, upgrade openssl or rerun with --disable-gost" >&5
+$as_echo "$as_me: error: OpenSSL >= 1.0.0 is needed for GOST support, upgrade openssl or rerun with --disable-gost" >&2;}
    { (exit 1); exit 1; }; }
 fi
 
@@ -20094,8 +20096,6 @@ cat >>confdefs.h <<\_ACEOF
 #define USE_GOST 1
 _ACEOF
 
-	;;
-	no|*)
 	;;
 esac
 
