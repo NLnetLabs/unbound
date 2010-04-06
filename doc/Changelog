@@ -1,3 +1,9 @@
+6 April 2010: Wouter
+	- Fix EDNS probe for .de DNSSEC testbed failure, where the infra
+	  cache timeout coincided with a server update, the current EDNS 
+	  backoff is less sensitive, and does not cache the backoff unless 
+	  the backoff actually works and the domain is not expecting DNSSEC.
+
 1 April 2010: Wouter
 	- iana portlist updated.
 
