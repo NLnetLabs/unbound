@@ -291,6 +291,8 @@ struct serviced_query {
 	size_t qbuflen;
 	/** If an EDNS section is included, the DO/CD bit will be turned on. */
 	int dnssec;
+	/** We want signatures, or else the answer is likely useless */
+	int want_dnssec;
 	/** where to send it */
 	struct sockaddr_storage addr;
 	/** length of addr field in use. */
@@ -308,7 +310,11 @@ struct serviced_query {
 		/** TCP without EDNS sent */
 		serviced_query_TCP,
 		/** probe to test EDNS lameness (EDNS is dropped) */
-		serviced_query_PROBE_EDNS
+		serviced_query_PROBE_EDNS,
+		/** probe to test noEDNS0 (EDNS gives FORMERRorNOTIMP) */
+		serviced_query_UDP_EDNS_fallback,
+		/** probe to test TCP noEDNS0 (EDNS gives FORMERRorNOTIMP) */
+		serviced_query_TCP_EDNS_fallback
 	} 	
 		/** variable with current status */ 
 		status;
@@ -427,6 +433,8 @@ void pending_delete(struct outside_network* outnet, struct pending* p);
  * @param dnssec: if set, DO bit is set in EDNS queries.
  *	If the value includes BIT_CD, CD bit is set when in EDNS queries.
  *	If the value includes BIT_DO, DO bit is set when in EDNS queries.
+ * @param want_dnssec: signatures are needed, without EDNS the answer is
+ * 	likely to be useless.
  * @param callback: callback function.
  * @param callback_arg: user argument to callback function.
  * @param addr: to which server to send the query.
@@ -439,10 +447,10 @@ void pending_delete(struct outside_network* outnet, struct pending* p);
  */
 struct serviced_query* outnet_serviced_query(struct outside_network* outnet,
 	uint8_t* qname, size_t qnamelen, uint16_t qtype, uint16_t qclass,
-	uint16_t flags, int dnssec, struct sockaddr_storage* addr, 
-	socklen_t addrlen, comm_point_callback_t* callback, 
-	void* callback_arg, ldns_buffer* buff, 
-	int (*arg_compare)(void*,void*));
+	uint16_t flags, int dnssec, int want_dnssec,
+	struct sockaddr_storage* addr, socklen_t addrlen, 
+	comm_point_callback_t* callback, void* callback_arg, 
+	ldns_buffer* buff, int (*arg_compare)(void*,void*));
 
 /**
  * Remove service query callback.

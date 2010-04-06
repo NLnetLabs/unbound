@@ -189,6 +189,7 @@ int worker_send_packet(ldns_buffer* pkt, struct sockaddr_storage* addr,
  * @param qclass: query class. (host order)
  * @param flags: host order flags word, with opcode and CD bit.
  * @param dnssec: if set, EDNS record will have DO bit set.
+ * @param want_dnssec: signatures needed.
  * @param addr: where to.
  * @param addrlen: length of addr.
  * @param q: wich query state to reactivate upon return.
@@ -197,7 +198,7 @@ int worker_send_packet(ldns_buffer* pkt, struct sockaddr_storage* addr,
  */
 struct outbound_entry* worker_send_query(uint8_t* qname, size_t qnamelen, 
 	uint16_t qtype, uint16_t qclass, uint16_t flags, int dnssec, 
-	struct sockaddr_storage* addr, socklen_t addrlen,
+	int want_dnssec, struct sockaddr_storage* addr, socklen_t addrlen,
 	struct module_qstate* q);
 
 /** 

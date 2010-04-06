@@ -201,8 +201,9 @@ int fptr_whitelist_modenv_send_packet(int (*fptr)(ldns_buffer* pkt,
  */
 int fptr_whitelist_modenv_send_query(struct outbound_entry* (*fptr)(
 	uint8_t* qname, size_t qnamelen, uint16_t qtype, uint16_t qclass, 
-	uint16_t flags, int dnssec, struct sockaddr_storage* addr, 
-	socklen_t addrlen, struct module_qstate* q));
+	uint16_t flags, int dnssec, int want_dnssec,
+	struct sockaddr_storage* addr, socklen_t addrlen, 
+	struct module_qstate* q));
 
 /**
  * Check function pointer whitelist for module_env detach_subs callback values.

@@ -114,6 +114,8 @@ struct module_env {
 	 * @param dnssec: if set, EDNS record will have bits set.
 	 *	If EDNS_DO bit is set, DO bit is set in EDNS records.
 	 *	If BIT_CD is set, CD bit is set in queries with EDNS records.
+	 * @param want_dnssec: if set, the validator wants DNSSEC.  Without
+	 * 	EDNS, the answer is likely to be useless for this domain.
 	 * @param addr: where to.
 	 * @param addrlen: length of addr.
 	 * @param q: wich query state to reactivate upon return.
@@ -124,8 +126,8 @@ struct module_env {
 	 */
 	struct outbound_entry* (*send_query)(uint8_t* qname, size_t qnamelen, 
 		uint16_t qtype, uint16_t qclass, uint16_t flags, int dnssec, 
-		struct sockaddr_storage* addr, socklen_t addrlen, 
-		struct module_qstate* q);
+		int want_dnssec, struct sockaddr_storage* addr, 
+		socklen_t addrlen, struct module_qstate* q);
 
 	/**
 	 * Detach-subqueries.

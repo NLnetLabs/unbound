@@ -1248,7 +1248,7 @@ outbound_entry_compare(void* a, void* b)
 
 struct outbound_entry*
 worker_send_query(uint8_t* qname, size_t qnamelen, uint16_t qtype,
-	uint16_t qclass, uint16_t flags, int dnssec,
+	uint16_t qclass, uint16_t flags, int dnssec, int want_dnssec,
 	struct sockaddr_storage* addr, socklen_t addrlen,
 	struct module_qstate* q)
 {
@@ -1259,9 +1259,9 @@ worker_send_query(uint8_t* qname, size_t qnamelen, uint16_t qtype,
 		return NULL;
 	e->qstate = q;
 	e->qsent = outnet_serviced_query(worker->back, qname,
-		qnamelen, qtype, qclass, flags, dnssec, addr, addrlen, 
-		worker_handle_service_reply, e, worker->back->udp_buff,
-		&outbound_entry_compare);
+		qnamelen, qtype, qclass, flags, dnssec, want_dnssec,
+		addr, addrlen, worker_handle_service_reply, e, 
+		worker->back->udp_buff, &outbound_entry_compare);
 	if(!e->qsent) {
 		return NULL;
 	}
