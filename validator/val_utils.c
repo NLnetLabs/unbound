@@ -558,7 +558,8 @@ val_rrset_wildcard(struct ub_packed_rrset_key* rrset, uint8_t** wc)
 		entry.data;
 	uint8_t labcount;
 	int labdiff;
-	size_t i;
+	uint8_t* wn;
+	size_t i, wl;
 	if(d->rrsig_count == 0) {
 		return 1;
 	}
@@ -573,10 +574,16 @@ val_rrset_wildcard(struct ub_packed_rrset_key* rrset, uint8_t** wc)
 	/* if the RRSIG label count is shorter than the number of actual 
 	 * labels, then this rrset was synthesized from a wildcard.
 	 * Note that the RRSIG label count doesn't count the root label. */
-	labdiff = (dname_count_labels(rrset->rk.dname) - 1) - (int)labcount;
+	wn = rrset->rk.dname;
+	wl = rrset->rk.dname_len;
+	/* skip a leading wildcard label in the dname (RFC4035 2.2) */
+	if(dname_is_wild(wn)) {
+		wn += 2;
+		wl -= 2;
+	}
+	labdiff = (dname_count_labels(wn) - 1) - (int)labcount;
 	if(labdiff > 0) {
-		size_t wl = rrset->rk.dname_len;
-		*wc = rrset->rk.dname;
+		*wc = wn;
 		dname_remove_labels(wc, &wl, labdiff);
 		return 1;
 	}
