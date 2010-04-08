@@ -1,3 +1,6 @@
+8 April 2010: Wouter
+	- Fix validation of queries with wildcard names (*.example).
+
 6 April 2010: Wouter
 	- Fix EDNS probe for .de DNSSEC testbed failure, where the infra
 	  cache timeout coincided with a server update, the current EDNS 
