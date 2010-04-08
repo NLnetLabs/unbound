@@ -177,6 +177,8 @@ void alloc_set_id_cleanup(struct alloc_cache* alloc, void (*cleanup)(void*),
 	void* arg);
 
 #ifdef UNBOUND_ALLOC_LITE
+#  include "ldns/packet.h"
+#  include "openssl/ssl.h"
 #  define malloc(s) unbound_stat_malloc_lite(s, __FILE__, __LINE__, __func__)
 #  define calloc(n,s) unbound_stat_calloc_lite(n, s, __FILE__, __LINE__, __func__)
 #  define free(p) unbound_stat_free_lite(p, __FILE__, __LINE__, __func__)
@@ -204,9 +206,7 @@ char* unbound_lite_wrapstr(char* s);
 #  define ldns_pkt2str(p) unbound_lite_wrapstr(ldns_pkt2str(p))
 #  define ldns_pkt_rcode2str(r) unbound_lite_wrapstr(ldns_pkt_rcode2str(r))
 #  define ldns_pkt2wire(a, r, s) unbound_lite_pkt2wire(a, r, s)
-#include "ldns/packet.h"
 ldns_status unbound_lite_pkt2wire(uint8_t **dest, const ldns_pkt *p, size_t *size);
-#include "openssl/ssl.h"
 #  define i2d_DSA_SIG(d, s) unbound_lite_i2d_DSA_SIG(d, s)
 int unbound_lite_i2d_DSA_SIG(DSA_SIG* dsasig, unsigned char** sig);
 #endif /* UNBOUND_ALLOC_LITE */
