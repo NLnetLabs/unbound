@@ -1,3 +1,8 @@
+9 April 2010: Wouter
+	- Fix bug#305: pkt_dname_tolower could read beyond end of buffer or
+	  get into an endless loop, if 0x20 was enabled, and buffers are small
+	  or particular broken packets are received.
+
 8 April 2010: Wouter
 	- Fix validation of queries with wildcard names (*.example).
 
