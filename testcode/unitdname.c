@@ -825,7 +825,7 @@ dname_setup_bufs(ldns_buffer* loopbuf, ldns_buffer* boundbuf)
 	ldns_buffer_write_u16(boundbuf, 0);       /* nscount */
 	ldns_buffer_write_u16(boundbuf, 0);       /* arcount */
 	ldns_buffer_write_u8(boundbuf, 0x01); /* len=1 */
-	ldns_buffer_write_u8(boundbuf, 'A'); /* A. label */
+	ldns_buffer_write_u8(boundbuf, (uint8_t)'A'); /* A. label */
 	ldns_buffer_write_u8(boundbuf, 0xc0); /* PTR out of bounds */
 	ldns_buffer_write_u8(boundbuf, 0xcc);
 	ldns_buffer_flip(boundbuf);
