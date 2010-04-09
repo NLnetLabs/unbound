@@ -1421,6 +1421,8 @@ processFindKey(struct module_qstate* qstate, struct val_qstate* vq, int id)
 			vq->empty_DS_name) == 0) {
 			/* do not query for empty_DS_name again */
 			verbose(VERB_ALGO, "Cannot retrieve DS for signature");
+			errinf(qstate, "no signatures");
+			errinf_origin(qstate, qstate->reply_origin);
 			vq->chase_reply->security = sec_status_bogus;
 			vq->state = VAL_FINISHED_STATE;
 			return 1;
@@ -2452,6 +2454,42 @@ ds_response_to_ke(struct module_qstate* qstate, struct val_qstate* vq,
 		verbose(VERB_DETAIL, "DS %s ran out of options, so return "
 			"bogus", val_classification_to_string(subtype));
 		errinf(qstate, "no DS but also no proof of that");
+		goto return_bogus;
+	} else if(subtype == VAL_CLASS_CNAME || 
+		subtype == VAL_CLASS_CNAMENOANSWER) {
+		/* if the CNAME matches the exact name we want and is signed
+		 * properly, then also, we are sure that no DS exists there,
+		 * much like a NODATA proof */
+		enum sec_status sec;
+		struct ub_packed_rrset_key* cname;
+		cname = reply_find_rrset_section_an(msg->rep, qinfo->qname,
+			qinfo->qname_len, LDNS_RR_TYPE_CNAME, qinfo->qclass);
+		if(!cname) {
+			errinf(qstate, "validator classified CNAME but no "
+				"CNAME of the queried name for DS");
+			goto return_bogus;
+		}
+		if(((struct packed_rrset_data*)cname->entry.data)->rrsig_count
+			== 0) {
+		        if(msg->rep->an_numrrsets != 0 && ntohs(msg->rep->
+				rrsets[0]->rk.type)==LDNS_RR_TYPE_DNAME) {
+				errinf(qstate, "DS got DNAME answer");
+			} else {
+				errinf(qstate, "DS got unsigned CNAME answer");
+			}
+			goto return_bogus;
+		}
+		sec = val_verify_rrset_entry(qstate->env, ve, cname, 
+			vq->key_entry, &reason);
+		if(sec == sec_status_secure) {
+			verbose(VERB_ALGO, "CNAME validated, "
+				"proof that DS does not exist");
+			/* and that it is not a referral point */
+			*ke = NULL;
+			return 1;
+		}
+		errinf(qstate, "CNAME in DS response was not secure.");
+		errinf(qstate, reason);
 		goto return_bogus;
 	} else {
 		verbose(VERB_QUERY, "Encountered an unhandled type of "
