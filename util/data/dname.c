@@ -148,17 +148,28 @@ void
 pkt_dname_tolower(ldns_buffer* pkt, uint8_t* dname)
 {
 	uint8_t lablen;
+	int count = 0;
+	if(dname >= ldns_buffer_end(pkt))
+		return;
 	lablen = *dname++;
 	while(lablen) {
 		if(LABEL_IS_PTR(lablen)) {
+			if(PTR_OFFSET(lablen, *dname) >= ldns_buffer_limit(pkt))
+				return;
 			dname = ldns_buffer_at(pkt, PTR_OFFSET(lablen, *dname));
 			lablen = *dname++;
+			if(count++ > MAX_COMPRESS_PTRS)
+				return;
 			continue;
 		}
+		if(dname+lablen >= ldns_buffer_end(pkt))
+			return;
 		while(lablen--) {
 			*dname = (uint8_t)tolower((int)*dname);
 			dname++;
 		}
+		if(dname >= ldns_buffer_end(pkt))
+			return;
 		lablen = *dname++;
 	}
 }

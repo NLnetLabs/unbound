@@ -795,12 +795,53 @@ dname_test_valid()
 		, 4096) == 0);
 }
 
+/** test pkt_dname_tolower */
+static void
+dname_test_pdtl(ldns_buffer* loopbuf, ldns_buffer* boundbuf)
+{
+	unit_show_func("util/data/dname.c", "pkt_dname_tolower");
+	pkt_dname_tolower(loopbuf, ldns_buffer_at(loopbuf, 12));
+	pkt_dname_tolower(boundbuf, ldns_buffer_at(boundbuf, 12));
+}
+
+/** setup looped dname and out-of-bounds dname ptr */
+static void
+dname_setup_bufs(ldns_buffer* loopbuf, ldns_buffer* boundbuf)
+{
+	ldns_buffer_write_u16(loopbuf, 0xd54d);  /* id */
+	ldns_buffer_write_u16(loopbuf, 0x12);    /* flags  */
+	ldns_buffer_write_u16(loopbuf, 1);       /* qdcount */
+	ldns_buffer_write_u16(loopbuf, 0);       /* ancount */
+	ldns_buffer_write_u16(loopbuf, 0);       /* nscount */
+	ldns_buffer_write_u16(loopbuf, 0);       /* arcount */
+	ldns_buffer_write_u8(loopbuf, 0xc0); /* PTR back at itself */
+	ldns_buffer_write_u8(loopbuf, 0x0c);
+	ldns_buffer_flip(loopbuf);
+
+	ldns_buffer_write_u16(boundbuf, 0xd54d);  /* id */
+	ldns_buffer_write_u16(boundbuf, 0x12);    /* flags  */
+	ldns_buffer_write_u16(boundbuf, 1);       /* qdcount */
+	ldns_buffer_write_u16(boundbuf, 0);       /* ancount */
+	ldns_buffer_write_u16(boundbuf, 0);       /* nscount */
+	ldns_buffer_write_u16(boundbuf, 0);       /* arcount */
+	ldns_buffer_write_u8(boundbuf, 0x01); /* len=1 */
+	ldns_buffer_write_u8(boundbuf, 'A'); /* A. label */
+	ldns_buffer_write_u8(boundbuf, 0xc0); /* PTR out of bounds */
+	ldns_buffer_write_u8(boundbuf, 0xcc);
+	ldns_buffer_flip(boundbuf);
+}
+
 void dname_test()
 {
+	ldns_buffer* loopbuf = ldns_buffer_new(14);
+	ldns_buffer* boundbuf = ldns_buffer_new(16);
 	ldns_buffer* buff = ldns_buffer_new(65800);
+	unit_assert(loopbuf && boundbuf && buff);
 	ldns_buffer_flip(buff);
+	dname_setup_bufs(loopbuf, boundbuf);
 	dname_test_qdl(buff);
 	dname_test_qdtl(buff);
+	dname_test_pdtl(loopbuf, boundbuf);
 	dname_test_query_dname_compare();
 	dname_test_count_labels();
 	dname_test_count_size_labels();
@@ -816,4 +857,6 @@ void dname_test()
 	dname_test_topdomain();
 	dname_test_valid();
 	ldns_buffer_free(buff);
+	ldns_buffer_free(loopbuf);
+	ldns_buffer_free(boundbuf);
 }
