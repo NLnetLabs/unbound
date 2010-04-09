@@ -255,6 +255,7 @@ fptr_whitelist_modenv_send_packet(int (*fptr)(ldns_buffer* pkt,
 	return 0;
 }
 
+/** whitelist env->send_query callbacks */
 int 
 fptr_whitelist_modenv_send_query(struct outbound_entry* (*fptr)(
         uint8_t* qname, size_t qnamelen, uint16_t qtype, uint16_t qclass,
