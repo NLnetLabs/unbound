@@ -154,7 +154,8 @@ pkt_dname_tolower(ldns_buffer* pkt, uint8_t* dname)
 	lablen = *dname++;
 	while(lablen) {
 		if(LABEL_IS_PTR(lablen)) {
-			if(PTR_OFFSET(lablen, *dname) >= ldns_buffer_limit(pkt))
+			if((size_t)PTR_OFFSET(lablen, *dname) 
+				>= ldns_buffer_limit(pkt))
 				return;
 			dname = ldns_buffer_at(pkt, PTR_OFFSET(lablen, *dname));
 			lablen = *dname++;
