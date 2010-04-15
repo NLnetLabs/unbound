@@ -1,3 +1,8 @@
+15 April 2010: Wouter
+	- ECC-GOST algorithm number 12 that is assigned by IANA.  New test
+	  example key and signatures for GOST.  GOST requires openssl-1.0.0.
+	  GOST is still disabled by default.
+
 9 April 2010: Wouter
 	- Fix bug#305: pkt_dname_tolower could read beyond end of buffer or
 	  get into an endless loop, if 0x20 was enabled, and buffers are small
