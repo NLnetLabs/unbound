@@ -69,3 +69,8 @@ later
   document high scalable, high available unbound setup onepager.
 - prefetch DNSKEY when DS in delegation seen (nonCD, underTA).
 - use libevent if available on system by default(?), default outgoing 256to1024
+
+[1] BIND-like query logging to see who's looking up what and when
+[2] more logging about stuff like SERVFAIL and REFUSED responses
+[3] a Makefile that works without gnumake
+
