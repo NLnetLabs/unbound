@@ -39,6 +39,10 @@
  * This file has functions to get queries from clients.
  */
 #include "config.h"
+#ifdef HAVE_SYS_TYPES_H
+#  include <sys/types.h>
+#endif
+#include <sys/time.h>
 #include "services/listen_dnsport.h"
 #include "services/outside_network.h"
 #include "util/netevent.h"
@@ -46,9 +50,6 @@
 #include "util/config_file.h"
 #include "util/net_help.h"
 
-#ifdef HAVE_SYS_TYPES_H
-#  include <sys/types.h>
-#endif
 #ifdef HAVE_NETDB_H
 #include <netdb.h>
 #endif

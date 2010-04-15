@@ -40,6 +40,7 @@
  * queries it has outstanding to authoritative servers.
  */
 #include "config.h"
+#include <sys/time.h>
 #include "services/outbound_list.h"
 #include "services/outside_network.h"
 
