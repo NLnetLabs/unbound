@@ -40,6 +40,7 @@
  * windows (no shell). 
  */
 #include "config.h"
+#include "ldns/ldns.h"
 #include "libunbound/unbound.h"
 
 /** usage */
