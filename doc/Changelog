@@ -1,5 +1,6 @@
 16 April 2010: Wouter
 	- more portability defines for CMSG_SPACE, CMSG_ALIGN, CMSG_LEN.
+	- tag 1.4.4rc1.
 
 15 April 2010: Wouter
 	- ECC-GOST algorithm number 12 that is assigned by IANA.  New test
