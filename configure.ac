@@ -246,7 +246,6 @@ AC_FUNC_FSEEKO
 ACX_SYS_LARGEFILE
 ACX_CHECK_NONBLOCKING_BROKEN
 ACX_MKDIR_ONE_ARG
-ACX_FUNC_IOCTLSOCKET
 
 # check for thread library.
 # check this first, so that the pthread lib does not get linked in via
@@ -562,6 +561,8 @@ fi
 if test $ac_cv_func_getaddrinfo = no; then
 	AC_LIBOBJ([fake-rfc2553])
 fi
+# check after getaddrinfo for its libraries
+ACX_FUNC_IOCTLSOCKET
 
 # see if daemon(3) exists, and if it is deprecated.
 AC_CHECK_FUNCS([daemon])
