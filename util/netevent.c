@@ -46,6 +46,29 @@
 #include "util/fptr_wlist.h"
 
 /* -------- Start of local definitions -------- */
+/** if CMSG_ALIGN is not defined on this platform, a workaround */
+#ifndef CMSG_ALIGN
+#  ifdef _CMSG_DATA_ALIGN
+#    define CMSG_ALIGN _CMSG_DATA_ALIGN
+#  else
+#    define CMSG_ALIGN(len) (((len)+sizeof(long)-1) & ~(sizeof(long)-1))
+#  endif
+#endif
+
+/** if CMSG_LEN is not defined on this platform, a workaround */
+#ifndef CMSG_LEN
+#  define CMSG_LEN(len) (CMSG_ALIGN(sizeof(struct cmsghdr))+(len))
+#endif
+
+/** if CMSG_SPACE is not defined on this platform, a workaround */
+#ifndef CMSG_SPACE
+#  ifdef _CMSG_HDR_ALIGN
+#    define CMSG_SPACE(l) (CMSG_ALIGN(l)+_CMSG_HDR_ALIGN(sizeof(struct cmsghdr)))
+#  else
+#    define CMSG_SPACE(l) (CMSG_ALIGN(l)+CMSG_ALIGN(sizeof(struct cmsghdr)))
+#  endif
+#endif
+
 /** The TCP reading or writing query timeout in seconds */
 #define TCP_QUERY_TIMEOUT 120 
 
@@ -294,11 +317,6 @@ comm_point_send_udp_msg(struct comm_point *c, ldns_buffer* packet,
 	}
 	return 1;
 }
-
-/** if no CMSG_LEN (Solaris 9) define something reasonable for one element */
-#ifndef CMSG_LEN
-#define CMSG_LEN(x) (sizeof(struct cmsghdr)+(x))
-#endif
 
 /** print debug ancillary info */
 void p_ancil(const char* str, struct comm_reply* r)
