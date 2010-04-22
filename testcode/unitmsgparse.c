@@ -45,6 +45,7 @@
 #include "util/data/msgparse.h"
 #include "util/data/msgreply.h"
 #include "util/data/msgencode.h"
+#include "util/data/dname.h"
 #include "util/alloc.h"
 #include "util/regional.h"
 #include "util/net_help.h"
@@ -54,6 +55,8 @@
 static int vbmp = 0;
 /** if matching within a section should disregard the order of RRs. */
 static int matches_nolocation = 0;
+/** see if RRSIGs are properly matched to RRsets. */
+static int check_rrsigs = 0;
 
 /** match two rr lists */
 static int
@@ -318,6 +321,76 @@ perftestpkt(ldns_buffer* pkt, struct alloc_cache* alloc, ldns_buffer* out,
 	regional_destroy(region);
 }
 
+/** debug print a packet that failed */
+static void
+print_packet_rrsets(struct query_info* qinfo, struct reply_info* rep)
+{
+	size_t i;
+	ldns_rr_list* l;
+	ldns_buffer* buf = ldns_buffer_new(65536);
+	log_query_info(0, "failed query", qinfo);
+	printf(";; ANSWER SECTION (%d rrsets)\n", (int)rep->an_numrrsets);
+	for(i=0; i<rep->an_numrrsets; i++) {
+		l = packed_rrset_to_rr_list(rep->rrsets[i], buf);
+		printf("; rrset %d\n", (int)i);
+		ldns_rr_list_print(stdout, l);
+		ldns_rr_list_deep_free(l);
+	}
+	printf(";; AUTHORITY SECTION (%d rrsets)\n", (int)rep->ns_numrrsets);
+	for(i=rep->an_numrrsets; i<rep->an_numrrsets+rep->ns_numrrsets; i++) {
+		l = packed_rrset_to_rr_list(rep->rrsets[i], buf);
+		printf("; rrset %d\n", (int)i);
+		ldns_rr_list_print(stdout, l);
+		ldns_rr_list_deep_free(l);
+	}
+	printf(";; ADDITIONAL SECTION (%d rrsets)\n", (int)rep->ar_numrrsets);
+	for(i=rep->an_numrrsets+rep->ns_numrrsets; i<rep->rrset_count; i++) {
+		l = packed_rrset_to_rr_list(rep->rrsets[i], buf);
+		printf("; rrset %d\n", (int)i);
+		ldns_rr_list_print(stdout, l);
+		ldns_rr_list_deep_free(l);
+	}
+	printf(";; packet end\n");
+	ldns_buffer_free(buf);
+}
+
+/** check that there is no data element that matches the RRSIG */
+static int
+no_data_for_rrsig(struct reply_info* rep, struct ub_packed_rrset_key* rrsig)
+{
+	size_t i;
+	for(i=0; i<rep->rrset_count; i++) {
+		if(ntohs(rep->rrsets[i]->rk.type) == LDNS_RR_TYPE_RRSIG)
+			continue;
+		if(query_dname_compare(rep->rrsets[i]->rk.dname, 
+			rrsig->rk.dname) == 0)
+			/* only name is compared right now */
+			return 0;
+	}
+	return 1;
+}
+
+/** check RRSIGs in packet */
+static void
+check_the_rrsigs(struct query_info* qinfo, struct reply_info* rep)
+{
+	/* every RRSIG must be matched to an RRset */
+	size_t i;
+	for(i=0; i<rep->rrset_count; i++) {
+		struct ub_packed_rrset_key* s = rep->rrsets[i];
+		if(ntohs(s->rk.type) == LDNS_RR_TYPE_RRSIG) {
+			/* see if really a problem, i.e. is there a data
+			 * element. */
+			if(no_data_for_rrsig(rep, rep->rrsets[i]))
+				continue;
+			log_dns_msg("rrsig failed for packet", qinfo, rep);
+			print_packet_rrsets(qinfo, rep);
+			printf("failed rrset is nr %d\n", (int)i);
+			unit_assert(0);
+		}
+	}
+}
+
 /** test a packet */
 static void
 testpkt(ldns_buffer* pkt, struct alloc_cache* alloc, ldns_buffer* out, 
@@ -355,6 +428,8 @@ testpkt(ldns_buffer* pkt, struct alloc_cache* alloc, ldns_buffer* out,
 			(unsigned)ldns_buffer_limit(pkt),
 			(unsigned)ldns_buffer_limit(out));
 		test_buffers(pkt, out);
+		if(check_rrsigs)
+			check_the_rrsigs(&qi, rep);
 
 		if(ldns_buffer_limit(out) > lim) {
 			ret = reply_info_encode(&qi, rep, id, flags, out, 
@@ -519,7 +594,9 @@ void msgparse_test()
 
 	matches_nolocation = 1; /* RR order not important for the next test */
 	testfromdrillfile(pkt, &alloc, out, "testdata/test_packets.6");
+	check_rrsigs = 1;
 	testfromdrillfile(pkt, &alloc, out, "testdata/test_packets.7");
+	check_rrsigs = 0;
 	matches_nolocation = 0; 
 
 	/* cleanup */

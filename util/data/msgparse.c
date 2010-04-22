@@ -335,16 +335,20 @@ moveover_rrsigs(ldns_buffer* pkt, struct regional* region,
 	struct rr_parse* sig = sigset->rr_first;
 	struct rr_parse* prev = NULL;
 	struct rr_parse* insert;
+	struct rr_parse* nextsig;
 	while(sig) {
+		nextsig = sig->next;
 		if(pkt_rrsig_covered_equals(pkt, sig->ttl_data, 
 			dataset->type)) {
 			if(duplicate) {
 				/* new */
 				insert = (struct rr_parse*)regional_alloc(
 					region, sizeof(struct rr_parse));
+				if(!insert) return 0;
 				insert->outside_packet = 0;
 				insert->ttl_data = sig->ttl_data;
 				insert->size = sig->size;
+				/* prev not used */
 			} else {
 				/* remove from sigset */
 				if(prev) prev->next = sig->next;
@@ -354,6 +358,7 @@ moveover_rrsigs(ldns_buffer* pkt, struct regional* region,
 				sigset->rr_count--;
 				sigset->size -= sig->size;
 				insert = sig;
+				/* prev not changed */
 			}
 			/* add to dataset */
 			dataset->rrsig_count++;
@@ -363,9 +368,9 @@ moveover_rrsigs(ldns_buffer* pkt, struct regional* region,
 			else	dataset->rrsig_first = insert;
 			dataset->rrsig_last = insert;
 			dataset->size += insert->size;
-		}
-		prev = sig;
-		sig = sig->next;
+		} else 
+			prev = sig;
+		sig = nextsig;
 	}
 	return 1;
 }
