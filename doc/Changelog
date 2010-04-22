@@ -1,5 +1,6 @@
 22 April 2010: Wouter
 	- tag 1.4.4.
+	- trunk contains 1.4.5 in development.
 
 16 April 2010: Wouter
 	- more portability defines for CMSG_SPACE, CMSG_ALIGN, CMSG_LEN.
