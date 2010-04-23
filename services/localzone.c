@@ -1040,10 +1040,10 @@ local_data_answer(struct local_zone* z, struct query_info* qinfo,
 	if(!lr)
 		return 0;
 	if(z->type == local_zone_redirect) {
-		/* convert rrset name to zone name; like a wildcard */
+		/* convert rrset name to query name; like a wildcard */
 		struct ub_packed_rrset_key r = *lr->rrset;
-		r.rk.dname = z->name;
-		r.rk.dname_len = z->namelen;
+		r.rk.dname = qinfo->qname;
+		r.rk.dname_len = qinfo->qname_len;
 		return local_encode(qinfo, edns, buf, temp, &r, 1, 
 			LDNS_RCODE_NOERROR);
 	}

@@ -6,6 +6,8 @@
 	  when they really are not there, the server selection is reinitiated.
 	- Fix fetch from blacklisted dnssec lame servers as last resort.  The
 	  server's IP address is then given in validator errors as well.
+	- Fix local-zone type redirect that did not use the query name for
+	  the answer rrset.
 
 22 April 2010: Wouter
 	- tag 1.4.4.

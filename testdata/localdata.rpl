@@ -30,6 +30,10 @@ server:
 	; refuse zone (error)
 	local-zone: "refuse.top." refuse
 
+	; redirect zone
+	local-zone: "redirect.top." redirect
+	local-data: "redirect.top. A 20.30.40.54"
+
 	; create implicit data in the IN domain as well
 	local-data: "a.a.implicit. A 20.30.41.50"
 	local-data: "b.a.implicit. A 20.30.42.50"
@@ -317,5 +321,37 @@ SECTION QUESTION
 www.deny.top. IN A
 ENTRY_END
 ; no answer is checked at exit of testbound.
+
+; redirect zone apex
+STEP 50 QUERY
+ENTRY_BEGIN
+SECTION QUESTION
+redirect.top. IN A
+ENTRY_END
+STEP 51 CHECK_ANSWER
+ENTRY_BEGIN
+MATCH all
+REPLY QR RA AA NOERROR
+SECTION QUESTION
+redirect.top. IN A
+SECTION ANSWER
+redirect.top. IN A 20.30.40.54
+ENTRY_END
+
+; redirect zone
+STEP 52 QUERY
+ENTRY_BEGIN
+SECTION QUESTION
+www.redirect.top. IN A
+ENTRY_END
+STEP 53 CHECK_ANSWER
+ENTRY_BEGIN
+MATCH all
+REPLY QR RA AA NOERROR
+SECTION QUESTION
+www.redirect.top. IN A
+SECTION ANSWER
+www.redirect.top. IN A 20.30.40.54
+ENTRY_END
 
 SCENARIO_END
