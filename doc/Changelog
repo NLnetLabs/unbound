@@ -5,7 +5,7 @@
 	  targets cause the server selection to believe there are more options
 	  when they really are not there, the server selection is reinitiated.
 	- Fix fetch from blacklisted dnssec lame servers as last resort.  The
-	  servers IP address is then given in validator errors as well.
+	  server's IP address is then given in validator errors as well.
 
 22 April 2010: Wouter
 	- tag 1.4.4.
