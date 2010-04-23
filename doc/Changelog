@@ -1,6 +1,11 @@
 23 April 2010: Wouter
 	- Squelch log message: sendto failed permission denied for
 	  255.255.255.255, it is visible in VERB_DETAIL (verbosity 2).
+	- Fix to fetch data as last resort more tenaciously.  When cycle
+	  targets cause the server selection to believe there are more options
+	  when they really are not there, the server selection is reinitiated.
+	- Fix fetch from blacklisted dnssec lame servers as last resort.  The
+	  servers IP address is then given in validator errors as well.
 
 22 April 2010: Wouter
 	- tag 1.4.4.

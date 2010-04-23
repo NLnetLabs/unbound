@@ -322,8 +322,14 @@ iter_server_selection(struct iter_env* iter_env,
 	verbose(VERB_ALGO, "selrtt %d", selrtt);
 	if(selrtt > BLACKLIST_PENALTY) {
 		if(selrtt-BLACKLIST_PENALTY > USEFUL_SERVER_TOP_TIMEOUT*2) {
-			verbose(VERB_ALGO, "chase to recursion lame server");
+			verbose(VERB_ALGO, "chase to "
+				"blacklisted recursion lame server");
 			*chase_to_rd = 1;
+		}
+		if(selrtt-BLACKLIST_PENALTY > USEFUL_SERVER_TOP_TIMEOUT) {
+			verbose(VERB_ALGO, "chase to "
+				"blacklisted dnssec lame server");
+			*dnssec_expected = 0;
 		}
 	} else {
 		if(selrtt > USEFUL_SERVER_TOP_TIMEOUT*2) {

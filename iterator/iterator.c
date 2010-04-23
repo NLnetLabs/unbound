@@ -1469,6 +1469,15 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 					return error_response(qstate, id,
 						LDNS_RCODE_SERVFAIL);
 				}
+				if(qs == 0 && 
+				   delegpt_count_missing_targets(iq->dp) == 0){
+					/* it looked like there were missing
+					 * targets, but they did not turn up.
+					 * Try the bad choices again (if any),
+					 * when we get back here missing==0,
+					 * so this is not a loop. */
+					return 1;
+				}
 				iq->num_target_queries += qs;
 			}
 			/* Since a target query might have been made, we 
