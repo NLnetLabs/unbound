@@ -494,6 +494,14 @@ addr_is_ip4mapped(struct sockaddr_storage* addr, socklen_t addrlen)
 	return (memcmp(s, map_prefix, 12) == 0);
 }
 
+int addr_is_broadcast(struct sockaddr_storage* addr, socklen_t addrlen)
+{
+	int af = (int)((struct sockaddr_in*)addr)->sin_family;
+	void* sinaddr = &((struct sockaddr_in*)addr)->sin_addr;
+	return af == AF_INET && addrlen>=(socklen_t)sizeof(struct sockaddr_in)
+		&& memcmp(sinaddr, "\377\377\377\377", 4) == 0;
+}
+
 void sock_list_insert(struct sock_list** list, struct sockaddr_storage* addr,
 	socklen_t len, struct regional* region)
 {

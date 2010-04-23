@@ -301,6 +301,12 @@ comm_point_send_udp_msg(struct comm_point *c, ldns_buffer* packet,
 			(struct sockaddr_storage*)addr, addrlen) &&
 			verbosity < VERB_DETAIL)
 			return 0;
+		/* SO_BROADCAST sockopt can give access to 255.255.255.255,
+		 * but a dns cache does not need it. */
+		if(errno == EACCES && addr_is_broadcast(
+			(struct sockaddr_storage*)addr, addrlen) &&
+			verbosity < VERB_DETAIL)
+			return 0;
 #ifndef USE_WINSOCK
 		verbose(VERB_OPS, "sendto failed: %s", strerror(errno));
 #else

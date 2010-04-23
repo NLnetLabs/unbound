@@ -1,3 +1,7 @@
+23 April 2010: Wouter
+	- Squelch log message: sendto failed permission denied for
+	  255.255.255.255, it is visible in VERB_DETAIL (verbosity 2).
+
 22 April 2010: Wouter
 	- tag 1.4.4.
 	- trunk contains 1.4.5 in development.

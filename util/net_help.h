@@ -280,6 +280,14 @@ void addr_to_str(struct sockaddr_storage* addr, socklen_t addrlen,
 int addr_is_ip4mapped(struct sockaddr_storage* addr, socklen_t addrlen);
 
 /**
+ * See if sockaddr is 255.255.255.255.
+ * @param addr: address
+ * @param addrlen: length of address
+ * @return true if so
+ */
+int addr_is_broadcast(struct sockaddr_storage* addr, socklen_t addrlen);
+
+/**
  * Insert new socket list item. If fails logs error.
  * @param list: pointer to pointer to first item.
  * @param addr: address or NULL if 'cache'.
