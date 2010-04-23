@@ -85,6 +85,19 @@ ns.example.com.         IN      A       1.2.3.4
 ns.example.com. 3600    IN      RRSIG   A 3 3 3600 20070926135752 20070829135752 2854 example.com. MC0CFQCMSWxVehgOQLoYclB9PIAbNP229AIUeH0vNNGJhjnZiqgIOKvs1EhzqAo= ;{id = 2854}
 ENTRY_END
 
+; barely valid nodata for AAAA
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR NOERROR
+SECTION QUESTION
+ns.example.com. IN AAAA
+SECTION ANSWER
+SECTION AUTHORITY
+example.com.    IN NS   ns.example.com.
+example.com.    3600    IN      RRSIG   NS 3 2 3600 20070926134150 20070829134150 2854 example.com. MC0CFQCN+qHdJxoI/2tNKwsb08pra/G7aAIUAWA5sDdJTbrXA1/3OaesGBAO3sI= ;{id = 2854}
+ENTRY_END
+
 ; response to DNSKEY priming query
 ENTRY_BEGIN
 MATCH opcode qtype qname
@@ -137,6 +150,22 @@ SECTION ADDITIONAL
 ns.sub.example.com. IN A 1.2.3.6
 ;ns.sub.example.com.     3600    IN      RRSIG   A 5 4 3600 20070926134150 20070829134150 30899 sub.example.com. UF7shD/gt1FOp2UHgLTNbPzVykklSXFMEtJ1xD+Hholwf/PIzd7zoaIttIYibNa4fUXCqMg22H9P7MRhfmFe6g== ;{id = 30899}
 ENTRY_END
+
+; barely valid nodata for AAAA
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR NOERROR
+SECTION QUESTION
+ns.sub.example.com. IN AAAA
+SECTION AUTHORITY
+sub.example.com. IN	NS ns.sub.example.com.
+;sub.example.com.        3600    IN      RRSIG   NS 5 3 3600 20070926134150 20070829134150 30899 sub.example.com. wcpHeBILHfo8C9uxMhcW03gcURZeUffiKdSTb50ZjzTHgMNhRyMfpcvSpXEd9548A9UTmWKeLZChfr5Z/glONw== ;{id = 30899}
+SECTION ADDITIONAL
+ns.sub.example.com. IN A 1.2.3.6
+;ns.sub.example.com.     3600    IN      RRSIG   A 5 4 3600 20070926134150 20070829134150 30899 sub.example.com. UF7shD/gt1FOp2UHgLTNbPzVykklSXFMEtJ1xD+Hholwf/PIzd7zoaIttIYibNa4fUXCqMg22H9P7MRhfmFe6g== ;{id = 30899}
+ENTRY_END
+
 
 ; response to DNSKEY priming query
 ; sub.example.com.        3600    IN      DS      30899 RSASHA1 1 f7ed618f24d5e5202927e1d27bc2e84a141cb4b3
