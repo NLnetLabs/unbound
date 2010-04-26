@@ -446,6 +446,12 @@ scrub_normalize(ldns_buffer* pkt, struct msg_parse* msg,
 		}
 		/* only one NS set allowed in authority section */
 		if(rrset->type==LDNS_RR_TYPE_NS) {
+			/* NS set must be pertinent to the query */
+			if(!sub_of_pkt(pkt, qinfo->qname, rrset->dname)) {
+				remove_rrset("normalize: removing irrelevant "
+					"RRset:", pkt, msg, prev, &rrset);
+				continue;
+			}
 			if(nsset == NULL) {
 				nsset = rrset;
 			} else {
