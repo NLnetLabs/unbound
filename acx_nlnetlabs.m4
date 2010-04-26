@@ -2,7 +2,8 @@
 # Copyright 2009, Wouter Wijngaards, NLnet Labs.   
 # BSD licensed.
 #
-# Version 8
+# Version 9
+# 2010-04-26 Fix to use CPPFLAGS for CHECK_COMPILER_FLAGS.
 # 2010-03-01 Fix RPATH using CONFIG_COMMANDS to run at the very end.
 # 2010-02-18 WITH_SSL outputs the LIBSSL_LDFLAGS, LIBS, CPPFLAGS seperate, -ldl
 # 2010-02-01 added ACX_CHECK_MEMCMP_SIGNED, AHX_MEMCMP_BROKEN
@@ -102,7 +103,7 @@ cache=`echo $1 | sed 'y%.=/+-%___p_%'`
 AC_CACHE_VAL(cv_prog_cc_flag_$cache,
 [
 echo 'void f(){}' >conftest.c
-if test -z "`$CC -$1 -c conftest.c 2>&1`"; then
+if test -z "`$CC $CPPFLAGS $CFLAGS -$1 -c conftest.c 2>&1`"; then
 eval "cv_prog_cc_flag_$cache=yes"
 else
 eval "cv_prog_cc_flag_$cache=no"
@@ -146,18 +147,18 @@ AC_CACHE_VAL(cv_prog_cc_flag_needed_$cache,
 [
 echo '$2' > conftest.c
 echo 'void f(){}' >>conftest.c
-if test -z "`$CC $CFLAGS $ERRFLAG -c conftest.c 2>&1`"; then
+if test -z "`$CC $CPPFLAGS $CFLAGS $ERRFLAG -c conftest.c 2>&1`"; then
 eval "cv_prog_cc_flag_needed_$cache=no"
 else
 [
-if test -z "`$CC $CFLAGS $1 $ERRFLAG -c conftest.c 2>&1`"; then
+if test -z "`$CC $CPPFLAGS $CFLAGS $1 $ERRFLAG -c conftest.c 2>&1`"; then
 eval "cv_prog_cc_flag_needed_$cache=yes"
 else
 eval "cv_prog_cc_flag_needed_$cache=fail"
 #echo 'Test with flag fails too!'
 #cat conftest.c
-#echo "$CC $CFLAGS $1 $ERRFLAG -c conftest.c 2>&1"
-#echo `$CC $CFLAGS $1 $ERRFLAG -c conftest.c 2>&1`
+#echo "$CC $CPPFLAGS $CFLAGS $1 $ERRFLAG -c conftest.c 2>&1"
+#echo `$CC $CPPFLAGS $CFLAGS $1 $ERRFLAG -c conftest.c 2>&1`
 #exit 1
 fi
 ]
@@ -173,8 +174,8 @@ if eval "test \"`echo '$cv_prog_cc_flag_needed_'$cache`\" = no"; then
 AC_MSG_RESULT(no)
 #echo 'Test with flag is no!'
 #cat conftest.c
-#echo "$CC $CFLAGS $1 $ERRFLAG -c conftest.c 2>&1"
-#echo `$CC $CFLAGS $1 $ERRFLAG -c conftest.c 2>&1`
+#echo "$CC $CPPFLAGS $CFLAGS $1 $ERRFLAG -c conftest.c 2>&1"
+#echo `$CC $CPPFLAGS $CFLAGS $1 $ERRFLAG -c conftest.c 2>&1`
 #exit 1
 :
 $4

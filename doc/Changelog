@@ -1,3 +1,7 @@
+26 April 2010: Wouter
+	- Compile fix using Sun Studio 12 compiler on Solaris 5.9, use
+	  CPPFLAGS during configure process.
+
 23 April 2010: Wouter
 	- Squelch log message: sendto failed permission denied for
 	  255.255.255.255, it is visible in VERB_DETAIL (verbosity 2).
