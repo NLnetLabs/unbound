@@ -7,6 +7,11 @@
 	  no more double include.
 	- More strict scrubber (Thanks to George Barwood for the idea):
 	  NS set must be pertinent to the query (qname subdomain nsname).
+	- Fix bug#307: In 0x20 backoff fix fallback so the number of 
+	  outstanding queries does not become -1 and block the request.
+	  Fixed handling of recursion-lame in combination with 0x20 fallback.
+	  Fix so RRsets are compared canonicalized and sorted if the immediate
+	  comparison fails, this makes it work around round-robin sites.
 
 23 April 2010: Wouter
 	- Squelch log message: sendto failed permission denied for

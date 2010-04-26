@@ -674,7 +674,7 @@ rrset_equal(struct ub_packed_rrset_key* k1, struct ub_packed_rrset_key* k2)
 }
 
 int 
-reply_equal(struct reply_info* p, struct reply_info* q)
+reply_equal(struct reply_info* p, struct reply_info* q, ldns_buffer* scratch)
 {
 	size_t i;
 	if(p->flags != q->flags ||
@@ -688,8 +688,29 @@ reply_equal(struct reply_info* p, struct reply_info* q)
 		p->rrset_count != q->rrset_count)
 		return 0;
 	for(i=0; i<p->rrset_count; i++) {
-		if(!rrset_equal(p->rrsets[i], q->rrsets[i]))
-			return 0;
+		if(!rrset_equal(p->rrsets[i], q->rrsets[i])) {
+			/* fallback procedure: try to sort and canonicalize */
+			ldns_rr_list* pl, *ql;
+			pl = packed_rrset_to_rr_list(p->rrsets[i], scratch);
+			ql = packed_rrset_to_rr_list(q->rrsets[i], scratch);
+			if(!pl || !ql) {
+				ldns_rr_list_deep_free(pl);
+				ldns_rr_list_deep_free(ql);
+				return 0;
+			}
+			ldns_rr_list2canonical(pl);
+			ldns_rr_list2canonical(ql);
+			ldns_rr_list_sort(pl);
+			ldns_rr_list_sort(ql);
+			if(ldns_rr_list_compare(pl, ql) != 0) {
+				ldns_rr_list_deep_free(pl);
+				ldns_rr_list_deep_free(ql);
+				return 0;
+			}
+			ldns_rr_list_deep_free(pl);
+			ldns_rr_list_deep_free(ql);
+			continue;
+		}
 	}
 	return 1;
 }
@@ -790,5 +811,20 @@ iter_scrub_ds(struct dns_msg* msg, struct ub_packed_rrset_key* ns, uint8_t* z)
 			continue;
 		}
 		i++;
+	}
+}
+
+void iter_dec_attempts(struct delegpt* dp, int d)
+{
+	struct delegpt_addr* a;
+	for(a=dp->target_list; a; a = a->next_target) {
+		if(a->attempts >= OUTBOUND_MSG_RETRY) {
+			/* add back to result list */
+			a->next_result = dp->result_list;
+			dp->result_list = a;
+		}
+		if(a->attempts > d)
+			a->attempts -= d;
+		else a->attempts = 0;
 	}
 }

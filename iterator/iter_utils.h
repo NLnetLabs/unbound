@@ -211,9 +211,10 @@ int iter_msg_from_zone(struct dns_msg* msg, struct delegpt* dp,
  * @param p: reply one. The reply has rrset data pointers in region.
  * 	Does not check rrset-IDs
  * @param q: reply two
+ * @param buf: scratch buffer.
  * @return if one and two are equal.
  */
-int reply_equal(struct reply_info* p, struct reply_info* q);
+int reply_equal(struct reply_info* p, struct reply_info* q, ldns_buffer* buf);
 
 /**
  * Store in-zone glue in seperate rrset cache entries for later last-resort
@@ -256,5 +257,12 @@ int iter_get_next_root(struct iter_hints* hints, struct iter_forwards* fwd,
  */
 void iter_scrub_ds(struct dns_msg* msg, struct ub_packed_rrset_key* ns,
 	uint8_t* z);
+
+/**
+ * Remove query attempts from all available ips. For 0x20.
+ * @param dp: delegpt.
+ * @param d: decrease.
+ */
+void iter_dec_attempts(struct delegpt* dp, int d);
 
 #endif /* ITERATOR_ITER_UTILS_H */

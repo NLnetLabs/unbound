@@ -1416,6 +1416,9 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 				"match for %d wanted, done.", 
 				(int)iq->caps_server+1, (int)naddr*3);
 			iq->caps_fallback = 0;
+			iter_dec_attempts(iq->dp, 3); /* space for fallback */
+			iq->num_current_queries++; /* RespState decrements it*/
+			iq->referral_count++; /* make sure we don't loop */
 			iq->state = QUERY_RESP_STATE;
 			return 1;
 		}
@@ -2384,7 +2387,8 @@ process_response(struct module_qstate* qstate, struct iter_qstate* iq,
 			goto handle_it;
 		} else {
 			/* check if reply is the same, otherwise, fail */
-			if(!reply_equal(iq->response->rep, iq->caps_reply)) {
+			if(!reply_equal(iq->response->rep, iq->caps_reply,
+				qstate->env->scratch_buffer)) {
 				verbose(VERB_DETAIL, "Capsforid fallback: "
 					"getting different replies, failed");
 				outbound_list_remove(&iq->outlist, outbound);
