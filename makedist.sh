@@ -293,9 +293,11 @@ autoreconf || error_cleanup "Autoconf failed."
 rm -r autom4te* || error_cleanup "Failed to remove autoconf cache directory."
 
 info "Building lexer and parser."
-echo "#include \"util/configyyrename.h\"" > util/configlexer.c || error_cleanup "Failed to create configlexer"
+echo "#include \"config.h\"" > util/configlexer.c || error_cleanup "Failed to create configlexer"
+echo "#include \"util/configyyrename.h\"" >> util/configlexer.c || error_cleanup "Failed to create configlexer"
 flex -i -t util/configlexer.lex >> util/configlexer.c  || error_cleanup "Failed to create configlexer"
-bison -y -d -o util/configparser.c util/configparser.y || error_cleanup "Failed to create configparser"
+if test -x `which bison` 2>&1; then YACC=bison; else YACC=yacc; fi
+$YACC -y -d -o util/configparser.c util/configparser.y || error_cleanup "Failed to create configparser"
 
 # check shared code, ldns-testpkts from ldns examples, if possible.
 cd ../..

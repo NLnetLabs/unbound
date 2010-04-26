@@ -8,13 +8,10 @@
  *
  */
 
-#include "config.h"
-
 #include <ctype.h>
 #include <string.h>
 #include <strings.h>
 
-#include "util/configyyrename.h"
 #include "util/config_file.h"
 #include "util/configparser.h"
 void ub_c_error(const char *message);

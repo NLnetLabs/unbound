@@ -3,6 +3,8 @@
 	  CPPFLAGS during configure process.
 	- if libev is installed on the base system (not libevent), detect
 	  it from the event.h header file and link with -lev.
+	- configlexer.lex gets config.h, and configyyrename.h added by make,
+	  no more double include.
 
 23 April 2010: Wouter
 	- Squelch log message: sendto failed permission denied for
