@@ -484,8 +484,15 @@ large outgoing port ranges.  ])
 	# check for library used by libevent after 1.3c
 	AC_SEARCH_LIBS([clock_gettime], [rt])
 
-	AC_SEARCH_LIBS(event_set, [event])
+	# is the event.h header libev or libevent?
 	AC_CHECK_HEADERS([event.h],,, [AC_INCLUDES_DEFAULT])
+	AC_CHECK_DECL(EV_VERSION_MAJOR, [
+		AC_SEARCH_LIBS(event_set, [ev])
+	],[
+		AC_SEARCH_LIBS(event_set, [event])
+	],[AC_INCLUDES_DEFAULT
+#include <event.h>
+	])
 	AC_CHECK_FUNCS([event_base_free]) # only in libevent 1.2 and later
 	AC_CHECK_FUNCS([event_base_once]) # only in libevent 1.4.1 and later
 	AC_CHECK_FUNCS([event_base_new]) # only in libevent 1.4.1 and later

@@ -4209,7 +4209,7 @@ if { as_var=cv_prog_cc_flag_$cache; eval "test \"\${$as_var+set}\" = set"; }; th
 else
 
 echo 'void f(){}' >conftest.c
-if test -z "`$CC -g -c conftest.c 2>&1`"; then
+if test -z "`$CC $CPPFLAGS $CFLAGS -g -c conftest.c 2>&1`"; then
 eval "cv_prog_cc_flag_$cache=yes"
 else
 eval "cv_prog_cc_flag_$cache=no"
@@ -4240,7 +4240,7 @@ if { as_var=cv_prog_cc_flag_$cache; eval "test \"\${$as_var+set}\" = set"; }; th
 else
 
 echo 'void f(){}' >conftest.c
-if test -z "`$CC -O2 -c conftest.c 2>&1`"; then
+if test -z "`$CC $CPPFLAGS $CFLAGS -O2 -c conftest.c 2>&1`"; then
 eval "cv_prog_cc_flag_$cache=yes"
 else
 eval "cv_prog_cc_flag_$cache=no"
@@ -4973,7 +4973,7 @@ if { as_var=cv_prog_cc_flag_$cache; eval "test \"\${$as_var+set}\" = set"; }; th
 else
 
 echo 'void f(){}' >conftest.c
-if test -z "`$CC -Werror -c conftest.c 2>&1`"; then
+if test -z "`$CC $CPPFLAGS $CFLAGS -Werror -c conftest.c 2>&1`"; then
 eval "cv_prog_cc_flag_$cache=yes"
 else
 eval "cv_prog_cc_flag_$cache=no"
@@ -5004,7 +5004,7 @@ if { as_var=cv_prog_cc_flag_$cache; eval "test \"\${$as_var+set}\" = set"; }; th
 else
 
 echo 'void f(){}' >conftest.c
-if test -z "`$CC -Wall -c conftest.c 2>&1`"; then
+if test -z "`$CC $CPPFLAGS $CFLAGS -Wall -c conftest.c 2>&1`"; then
 eval "cv_prog_cc_flag_$cache=yes"
 else
 eval "cv_prog_cc_flag_$cache=no"
@@ -5037,7 +5037,7 @@ if { as_var=cv_prog_cc_flag_$cache; eval "test \"\${$as_var+set}\" = set"; }; th
 else
 
 echo 'void f(){}' >conftest.c
-if test -z "`$CC -std=c99 -c conftest.c 2>&1`"; then
+if test -z "`$CC $CPPFLAGS $CFLAGS -std=c99 -c conftest.c 2>&1`"; then
 eval "cv_prog_cc_flag_$cache=yes"
 else
 eval "cv_prog_cc_flag_$cache=no"
@@ -5068,7 +5068,7 @@ if { as_var=cv_prog_cc_flag_$cache; eval "test \"\${$as_var+set}\" = set"; }; th
 else
 
 echo 'void f(){}' >conftest.c
-if test -z "`$CC -xc99 -c conftest.c 2>&1`"; then
+if test -z "`$CC $CPPFLAGS $CFLAGS -xc99 -c conftest.c 2>&1`"; then
 eval "cv_prog_cc_flag_$cache=yes"
 else
 eval "cv_prog_cc_flag_$cache=no"
@@ -5198,18 +5198,18 @@ int test() {
 }
 ' > conftest.c
 echo 'void f(){}' >>conftest.c
-if test -z "`$CC $CFLAGS $ERRFLAG -c conftest.c 2>&1`"; then
+if test -z "`$CC $CPPFLAGS $CFLAGS $ERRFLAG -c conftest.c 2>&1`"; then
 eval "cv_prog_cc_flag_needed_$cache=no"
 else
 
-if test -z "`$CC $CFLAGS $C99FLAG -D__EXTENSIONS__ -D_BSD_SOURCE -D_POSIX_C_SOURCE=200112 -D_XOPEN_SOURCE=600 -D_XOPEN_SOURCE_EXTENDED=1 -D_ALL_SOURCE $ERRFLAG -c conftest.c 2>&1`"; then
+if test -z "`$CC $CPPFLAGS $CFLAGS $C99FLAG -D__EXTENSIONS__ -D_BSD_SOURCE -D_POSIX_C_SOURCE=200112 -D_XOPEN_SOURCE=600 -D_XOPEN_SOURCE_EXTENDED=1 -D_ALL_SOURCE $ERRFLAG -c conftest.c 2>&1`"; then
 eval "cv_prog_cc_flag_needed_$cache=yes"
 else
 eval "cv_prog_cc_flag_needed_$cache=fail"
 #echo 'Test with flag fails too!'
 #cat conftest.c
-#echo "$CC $CFLAGS $C99FLAG -D__EXTENSIONS__ -D_BSD_SOURCE -D_POSIX_C_SOURCE=200112 -D_XOPEN_SOURCE=600 -D_XOPEN_SOURCE_EXTENDED=1 -D_ALL_SOURCE $ERRFLAG -c conftest.c 2>&1"
-#echo `$CC $CFLAGS $C99FLAG -D__EXTENSIONS__ -D_BSD_SOURCE -D_POSIX_C_SOURCE=200112 -D_XOPEN_SOURCE=600 -D_XOPEN_SOURCE_EXTENDED=1 -D_ALL_SOURCE $ERRFLAG -c conftest.c 2>&1`
+#echo "$CC $CPPFLAGS $CFLAGS $C99FLAG -D__EXTENSIONS__ -D_BSD_SOURCE -D_POSIX_C_SOURCE=200112 -D_XOPEN_SOURCE=600 -D_XOPEN_SOURCE_EXTENDED=1 -D_ALL_SOURCE $ERRFLAG -c conftest.c 2>&1"
+#echo `$CC $CPPFLAGS $CFLAGS $C99FLAG -D__EXTENSIONS__ -D_BSD_SOURCE -D_POSIX_C_SOURCE=200112 -D_XOPEN_SOURCE=600 -D_XOPEN_SOURCE_EXTENDED=1 -D_ALL_SOURCE $ERRFLAG -c conftest.c 2>&1`
 #exit 1
 fi
 
@@ -5229,8 +5229,8 @@ if eval "test \"`echo '$cv_prog_cc_flag_needed_'$cache`\" = no"; then
 $as_echo "no" >&6; }
 #echo 'Test with flag is no!'
 #cat conftest.c
-#echo "$CC $CFLAGS $C99FLAG -D__EXTENSIONS__ -D_BSD_SOURCE -D_POSIX_C_SOURCE=200112 -D_XOPEN_SOURCE=600 -D_XOPEN_SOURCE_EXTENDED=1 -D_ALL_SOURCE $ERRFLAG -c conftest.c 2>&1"
-#echo `$CC $CFLAGS $C99FLAG -D__EXTENSIONS__ -D_BSD_SOURCE -D_POSIX_C_SOURCE=200112 -D_XOPEN_SOURCE=600 -D_XOPEN_SOURCE_EXTENDED=1 -D_ALL_SOURCE $ERRFLAG -c conftest.c 2>&1`
+#echo "$CC $CPPFLAGS $CFLAGS $C99FLAG -D__EXTENSIONS__ -D_BSD_SOURCE -D_POSIX_C_SOURCE=200112 -D_XOPEN_SOURCE=600 -D_XOPEN_SOURCE_EXTENDED=1 -D_ALL_SOURCE $ERRFLAG -c conftest.c 2>&1"
+#echo `$CC $CPPFLAGS $CFLAGS $C99FLAG -D__EXTENSIONS__ -D_BSD_SOURCE -D_POSIX_C_SOURCE=200112 -D_XOPEN_SOURCE=600 -D_XOPEN_SOURCE_EXTENDED=1 -D_ALL_SOURCE $ERRFLAG -c conftest.c 2>&1`
 #exit 1
 :
 
@@ -5287,18 +5287,18 @@ int test() {
 }
 ' > conftest.c
 echo 'void f(){}' >>conftest.c
-if test -z "`$CC $CFLAGS $ERRFLAG -c conftest.c 2>&1`"; then
+if test -z "`$CC $CPPFLAGS $CFLAGS $ERRFLAG -c conftest.c 2>&1`"; then
 eval "cv_prog_cc_flag_needed_$cache=no"
 else
 
-if test -z "`$CC $CFLAGS $C99FLAG -D__EXTENSIONS__ -D_BSD_SOURCE -D_POSIX_C_SOURCE=200112 -D_XOPEN_SOURCE=600 -D_ALL_SOURCE $ERRFLAG -c conftest.c 2>&1`"; then
+if test -z "`$CC $CPPFLAGS $CFLAGS $C99FLAG -D__EXTENSIONS__ -D_BSD_SOURCE -D_POSIX_C_SOURCE=200112 -D_XOPEN_SOURCE=600 -D_ALL_SOURCE $ERRFLAG -c conftest.c 2>&1`"; then
 eval "cv_prog_cc_flag_needed_$cache=yes"
 else
 eval "cv_prog_cc_flag_needed_$cache=fail"
 #echo 'Test with flag fails too!'
 #cat conftest.c
-#echo "$CC $CFLAGS $C99FLAG -D__EXTENSIONS__ -D_BSD_SOURCE -D_POSIX_C_SOURCE=200112 -D_XOPEN_SOURCE=600 -D_ALL_SOURCE $ERRFLAG -c conftest.c 2>&1"
-#echo `$CC $CFLAGS $C99FLAG -D__EXTENSIONS__ -D_BSD_SOURCE -D_POSIX_C_SOURCE=200112 -D_XOPEN_SOURCE=600 -D_ALL_SOURCE $ERRFLAG -c conftest.c 2>&1`
+#echo "$CC $CPPFLAGS $CFLAGS $C99FLAG -D__EXTENSIONS__ -D_BSD_SOURCE -D_POSIX_C_SOURCE=200112 -D_XOPEN_SOURCE=600 -D_ALL_SOURCE $ERRFLAG -c conftest.c 2>&1"
+#echo `$CC $CPPFLAGS $CFLAGS $C99FLAG -D__EXTENSIONS__ -D_BSD_SOURCE -D_POSIX_C_SOURCE=200112 -D_XOPEN_SOURCE=600 -D_ALL_SOURCE $ERRFLAG -c conftest.c 2>&1`
 #exit 1
 fi
 
@@ -5318,8 +5318,8 @@ if eval "test \"`echo '$cv_prog_cc_flag_needed_'$cache`\" = no"; then
 $as_echo "no" >&6; }
 #echo 'Test with flag is no!'
 #cat conftest.c
-#echo "$CC $CFLAGS $C99FLAG -D__EXTENSIONS__ -D_BSD_SOURCE -D_POSIX_C_SOURCE=200112 -D_XOPEN_SOURCE=600 -D_ALL_SOURCE $ERRFLAG -c conftest.c 2>&1"
-#echo `$CC $CFLAGS $C99FLAG -D__EXTENSIONS__ -D_BSD_SOURCE -D_POSIX_C_SOURCE=200112 -D_XOPEN_SOURCE=600 -D_ALL_SOURCE $ERRFLAG -c conftest.c 2>&1`
+#echo "$CC $CPPFLAGS $CFLAGS $C99FLAG -D__EXTENSIONS__ -D_BSD_SOURCE -D_POSIX_C_SOURCE=200112 -D_XOPEN_SOURCE=600 -D_ALL_SOURCE $ERRFLAG -c conftest.c 2>&1"
+#echo `$CC $CPPFLAGS $CFLAGS $C99FLAG -D__EXTENSIONS__ -D_BSD_SOURCE -D_POSIX_C_SOURCE=200112 -D_XOPEN_SOURCE=600 -D_ALL_SOURCE $ERRFLAG -c conftest.c 2>&1`
 #exit 1
 :
 
@@ -5351,18 +5351,18 @@ int test() {
 }
 ' > conftest.c
 echo 'void f(){}' >>conftest.c
-if test -z "`$CC $CFLAGS $ERRFLAG -c conftest.c 2>&1`"; then
+if test -z "`$CC $CPPFLAGS $CFLAGS $ERRFLAG -c conftest.c 2>&1`"; then
 eval "cv_prog_cc_flag_needed_$cache=no"
 else
 
-if test -z "`$CC $CFLAGS $C99FLAG $ERRFLAG -c conftest.c 2>&1`"; then
+if test -z "`$CC $CPPFLAGS $CFLAGS $C99FLAG $ERRFLAG -c conftest.c 2>&1`"; then
 eval "cv_prog_cc_flag_needed_$cache=yes"
 else
 eval "cv_prog_cc_flag_needed_$cache=fail"
 #echo 'Test with flag fails too!'
 #cat conftest.c
-#echo "$CC $CFLAGS $C99FLAG $ERRFLAG -c conftest.c 2>&1"
-#echo `$CC $CFLAGS $C99FLAG $ERRFLAG -c conftest.c 2>&1`
+#echo "$CC $CPPFLAGS $CFLAGS $C99FLAG $ERRFLAG -c conftest.c 2>&1"
+#echo `$CC $CPPFLAGS $CFLAGS $C99FLAG $ERRFLAG -c conftest.c 2>&1`
 #exit 1
 fi
 
@@ -5382,8 +5382,8 @@ if eval "test \"`echo '$cv_prog_cc_flag_needed_'$cache`\" = no"; then
 $as_echo "no" >&6; }
 #echo 'Test with flag is no!'
 #cat conftest.c
-#echo "$CC $CFLAGS $C99FLAG $ERRFLAG -c conftest.c 2>&1"
-#echo `$CC $CFLAGS $C99FLAG $ERRFLAG -c conftest.c 2>&1`
+#echo "$CC $CPPFLAGS $CFLAGS $C99FLAG $ERRFLAG -c conftest.c 2>&1"
+#echo `$CC $CPPFLAGS $CFLAGS $C99FLAG $ERRFLAG -c conftest.c 2>&1`
 #exit 1
 :
 
@@ -5416,18 +5416,18 @@ int test() {
 }
 ' > conftest.c
 echo 'void f(){}' >>conftest.c
-if test -z "`$CC $CFLAGS $ERRFLAG -c conftest.c 2>&1`"; then
+if test -z "`$CC $CPPFLAGS $CFLAGS $ERRFLAG -c conftest.c 2>&1`"; then
 eval "cv_prog_cc_flag_needed_$cache=no"
 else
 
-if test -z "`$CC $CFLAGS -D_BSD_SOURCE $ERRFLAG -c conftest.c 2>&1`"; then
+if test -z "`$CC $CPPFLAGS $CFLAGS -D_BSD_SOURCE $ERRFLAG -c conftest.c 2>&1`"; then
 eval "cv_prog_cc_flag_needed_$cache=yes"
 else
 eval "cv_prog_cc_flag_needed_$cache=fail"
 #echo 'Test with flag fails too!'
 #cat conftest.c
-#echo "$CC $CFLAGS -D_BSD_SOURCE $ERRFLAG -c conftest.c 2>&1"
-#echo `$CC $CFLAGS -D_BSD_SOURCE $ERRFLAG -c conftest.c 2>&1`
+#echo "$CC $CPPFLAGS $CFLAGS -D_BSD_SOURCE $ERRFLAG -c conftest.c 2>&1"
+#echo `$CC $CPPFLAGS $CFLAGS -D_BSD_SOURCE $ERRFLAG -c conftest.c 2>&1`
 #exit 1
 fi
 
@@ -5447,8 +5447,8 @@ if eval "test \"`echo '$cv_prog_cc_flag_needed_'$cache`\" = no"; then
 $as_echo "no" >&6; }
 #echo 'Test with flag is no!'
 #cat conftest.c
-#echo "$CC $CFLAGS -D_BSD_SOURCE $ERRFLAG -c conftest.c 2>&1"
-#echo `$CC $CFLAGS -D_BSD_SOURCE $ERRFLAG -c conftest.c 2>&1`
+#echo "$CC $CPPFLAGS $CFLAGS -D_BSD_SOURCE $ERRFLAG -c conftest.c 2>&1"
+#echo `$CC $CPPFLAGS $CFLAGS -D_BSD_SOURCE $ERRFLAG -c conftest.c 2>&1`
 #exit 1
 :
 
@@ -5481,18 +5481,18 @@ int test() {
 }
 ' > conftest.c
 echo 'void f(){}' >>conftest.c
-if test -z "`$CC $CFLAGS $ERRFLAG -c conftest.c 2>&1`"; then
+if test -z "`$CC $CPPFLAGS $CFLAGS $ERRFLAG -c conftest.c 2>&1`"; then
 eval "cv_prog_cc_flag_needed_$cache=no"
 else
 
-if test -z "`$CC $CFLAGS -D_GNU_SOURCE $ERRFLAG -c conftest.c 2>&1`"; then
+if test -z "`$CC $CPPFLAGS $CFLAGS -D_GNU_SOURCE $ERRFLAG -c conftest.c 2>&1`"; then
 eval "cv_prog_cc_flag_needed_$cache=yes"
 else
 eval "cv_prog_cc_flag_needed_$cache=fail"
 #echo 'Test with flag fails too!'
 #cat conftest.c
-#echo "$CC $CFLAGS -D_GNU_SOURCE $ERRFLAG -c conftest.c 2>&1"
-#echo `$CC $CFLAGS -D_GNU_SOURCE $ERRFLAG -c conftest.c 2>&1`
+#echo "$CC $CPPFLAGS $CFLAGS -D_GNU_SOURCE $ERRFLAG -c conftest.c 2>&1"
+#echo `$CC $CPPFLAGS $CFLAGS -D_GNU_SOURCE $ERRFLAG -c conftest.c 2>&1`
 #exit 1
 fi
 
@@ -5512,8 +5512,8 @@ if eval "test \"`echo '$cv_prog_cc_flag_needed_'$cache`\" = no"; then
 $as_echo "no" >&6; }
 #echo 'Test with flag is no!'
 #cat conftest.c
-#echo "$CC $CFLAGS -D_GNU_SOURCE $ERRFLAG -c conftest.c 2>&1"
-#echo `$CC $CFLAGS -D_GNU_SOURCE $ERRFLAG -c conftest.c 2>&1`
+#echo "$CC $CPPFLAGS $CFLAGS -D_GNU_SOURCE $ERRFLAG -c conftest.c 2>&1"
+#echo `$CC $CPPFLAGS $CFLAGS -D_GNU_SOURCE $ERRFLAG -c conftest.c 2>&1`
 #exit 1
 :
 
@@ -5549,18 +5549,18 @@ int test() {
 }
 ' > conftest.c
 echo 'void f(){}' >>conftest.c
-if test -z "`$CC $CFLAGS $ERRFLAG -c conftest.c 2>&1`"; then
+if test -z "`$CC $CPPFLAGS $CFLAGS $ERRFLAG -c conftest.c 2>&1`"; then
 eval "cv_prog_cc_flag_needed_$cache=no"
 else
 
-if test -z "`$CC $CFLAGS -D_GNU_SOURCE -D_FRSRESGID $ERRFLAG -c conftest.c 2>&1`"; then
+if test -z "`$CC $CPPFLAGS $CFLAGS -D_GNU_SOURCE -D_FRSRESGID $ERRFLAG -c conftest.c 2>&1`"; then
 eval "cv_prog_cc_flag_needed_$cache=yes"
 else
 eval "cv_prog_cc_flag_needed_$cache=fail"
 #echo 'Test with flag fails too!'
 #cat conftest.c
-#echo "$CC $CFLAGS -D_GNU_SOURCE -D_FRSRESGID $ERRFLAG -c conftest.c 2>&1"
-#echo `$CC $CFLAGS -D_GNU_SOURCE -D_FRSRESGID $ERRFLAG -c conftest.c 2>&1`
+#echo "$CC $CPPFLAGS $CFLAGS -D_GNU_SOURCE -D_FRSRESGID $ERRFLAG -c conftest.c 2>&1"
+#echo `$CC $CPPFLAGS $CFLAGS -D_GNU_SOURCE -D_FRSRESGID $ERRFLAG -c conftest.c 2>&1`
 #exit 1
 fi
 
@@ -5580,8 +5580,8 @@ if eval "test \"`echo '$cv_prog_cc_flag_needed_'$cache`\" = no"; then
 $as_echo "no" >&6; }
 #echo 'Test with flag is no!'
 #cat conftest.c
-#echo "$CC $CFLAGS -D_GNU_SOURCE -D_FRSRESGID $ERRFLAG -c conftest.c 2>&1"
-#echo `$CC $CFLAGS -D_GNU_SOURCE -D_FRSRESGID $ERRFLAG -c conftest.c 2>&1`
+#echo "$CC $CPPFLAGS $CFLAGS -D_GNU_SOURCE -D_FRSRESGID $ERRFLAG -c conftest.c 2>&1"
+#echo `$CC $CPPFLAGS $CFLAGS -D_GNU_SOURCE -D_FRSRESGID $ERRFLAG -c conftest.c 2>&1`
 #exit 1
 :
 
@@ -5623,18 +5623,18 @@ int test() {
 }
 ' > conftest.c
 echo 'void f(){}' >>conftest.c
-if test -z "`$CC $CFLAGS $ERRFLAG -c conftest.c 2>&1`"; then
+if test -z "`$CC $CPPFLAGS $CFLAGS $ERRFLAG -c conftest.c 2>&1`"; then
 eval "cv_prog_cc_flag_needed_$cache=no"
 else
 
-if test -z "`$CC $CFLAGS -D_POSIX_C_SOURCE=200112 $ERRFLAG -c conftest.c 2>&1`"; then
+if test -z "`$CC $CPPFLAGS $CFLAGS -D_POSIX_C_SOURCE=200112 $ERRFLAG -c conftest.c 2>&1`"; then
 eval "cv_prog_cc_flag_needed_$cache=yes"
 else
 eval "cv_prog_cc_flag_needed_$cache=fail"
 #echo 'Test with flag fails too!'
 #cat conftest.c
-#echo "$CC $CFLAGS -D_POSIX_C_SOURCE=200112 $ERRFLAG -c conftest.c 2>&1"
-#echo `$CC $CFLAGS -D_POSIX_C_SOURCE=200112 $ERRFLAG -c conftest.c 2>&1`
+#echo "$CC $CPPFLAGS $CFLAGS -D_POSIX_C_SOURCE=200112 $ERRFLAG -c conftest.c 2>&1"
+#echo `$CC $CPPFLAGS $CFLAGS -D_POSIX_C_SOURCE=200112 $ERRFLAG -c conftest.c 2>&1`
 #exit 1
 fi
 
@@ -5654,8 +5654,8 @@ if eval "test \"`echo '$cv_prog_cc_flag_needed_'$cache`\" = no"; then
 $as_echo "no" >&6; }
 #echo 'Test with flag is no!'
 #cat conftest.c
-#echo "$CC $CFLAGS -D_POSIX_C_SOURCE=200112 $ERRFLAG -c conftest.c 2>&1"
-#echo `$CC $CFLAGS -D_POSIX_C_SOURCE=200112 $ERRFLAG -c conftest.c 2>&1`
+#echo "$CC $CPPFLAGS $CFLAGS -D_POSIX_C_SOURCE=200112 $ERRFLAG -c conftest.c 2>&1"
+#echo `$CC $CPPFLAGS $CFLAGS -D_POSIX_C_SOURCE=200112 $ERRFLAG -c conftest.c 2>&1`
 #exit 1
 :
 
@@ -5703,18 +5703,18 @@ int test() {
 }
 ' > conftest.c
 echo 'void f(){}' >>conftest.c
-if test -z "`$CC $CFLAGS $ERRFLAG -c conftest.c 2>&1`"; then
+if test -z "`$CC $CPPFLAGS $CFLAGS $ERRFLAG -c conftest.c 2>&1`"; then
 eval "cv_prog_cc_flag_needed_$cache=no"
 else
 
-if test -z "`$CC $CFLAGS -D__EXTENSIONS__ $ERRFLAG -c conftest.c 2>&1`"; then
+if test -z "`$CC $CPPFLAGS $CFLAGS -D__EXTENSIONS__ $ERRFLAG -c conftest.c 2>&1`"; then
 eval "cv_prog_cc_flag_needed_$cache=yes"
 else
 eval "cv_prog_cc_flag_needed_$cache=fail"
 #echo 'Test with flag fails too!'
 #cat conftest.c
-#echo "$CC $CFLAGS -D__EXTENSIONS__ $ERRFLAG -c conftest.c 2>&1"
-#echo `$CC $CFLAGS -D__EXTENSIONS__ $ERRFLAG -c conftest.c 2>&1`
+#echo "$CC $CPPFLAGS $CFLAGS -D__EXTENSIONS__ $ERRFLAG -c conftest.c 2>&1"
+#echo `$CC $CPPFLAGS $CFLAGS -D__EXTENSIONS__ $ERRFLAG -c conftest.c 2>&1`
 #exit 1
 fi
 
@@ -5734,8 +5734,8 @@ if eval "test \"`echo '$cv_prog_cc_flag_needed_'$cache`\" = no"; then
 $as_echo "no" >&6; }
 #echo 'Test with flag is no!'
 #cat conftest.c
-#echo "$CC $CFLAGS -D__EXTENSIONS__ $ERRFLAG -c conftest.c 2>&1"
-#echo `$CC $CFLAGS -D__EXTENSIONS__ $ERRFLAG -c conftest.c 2>&1`
+#echo "$CC $CPPFLAGS $CFLAGS -D__EXTENSIONS__ $ERRFLAG -c conftest.c 2>&1"
+#echo `$CC $CPPFLAGS $CFLAGS -D__EXTENSIONS__ $ERRFLAG -c conftest.c 2>&1`
 #exit 1
 :
 
@@ -5761,7 +5761,7 @@ if { as_var=cv_prog_cc_flag_$cache; eval "test \"\${$as_var+set}\" = set"; }; th
 else
 
 echo 'void f(){}' >conftest.c
-if test -z "`$CC -xO4 -c conftest.c 2>&1`"; then
+if test -z "`$CC $CPPFLAGS $CFLAGS -xO4 -c conftest.c 2>&1`"; then
 eval "cv_prog_cc_flag_$cache=yes"
 else
 eval "cv_prog_cc_flag_$cache=no"
@@ -5792,7 +5792,7 @@ if { as_var=cv_prog_cc_flag_$cache; eval "test \"\${$as_var+set}\" = set"; }; th
 else
 
 echo 'void f(){}' >conftest.c
-if test -z "`$CC -xtarget=generic -c conftest.c 2>&1`"; then
+if test -z "`$CC $CPPFLAGS $CFLAGS -xtarget=generic -c conftest.c 2>&1`"; then
 eval "cv_prog_cc_flag_$cache=yes"
 else
 eval "cv_prog_cc_flag_$cache=no"
@@ -5840,7 +5840,7 @@ if { as_var=cv_prog_cc_flag_$cache; eval "test \"\${$as_var+set}\" = set"; }; th
 else
 
 echo 'void f(){}' >conftest.c
-if test -z "`$CC -W -c conftest.c 2>&1`"; then
+if test -z "`$CC $CPPFLAGS $CFLAGS -W -c conftest.c 2>&1`"; then
 eval "cv_prog_cc_flag_$cache=yes"
 else
 eval "cv_prog_cc_flag_$cache=no"
@@ -5871,7 +5871,7 @@ if { as_var=cv_prog_cc_flag_$cache; eval "test \"\${$as_var+set}\" = set"; }; th
 else
 
 echo 'void f(){}' >conftest.c
-if test -z "`$CC -Wall -c conftest.c 2>&1`"; then
+if test -z "`$CC $CPPFLAGS $CFLAGS -Wall -c conftest.c 2>&1`"; then
 eval "cv_prog_cc_flag_$cache=yes"
 else
 eval "cv_prog_cc_flag_$cache=no"
@@ -5902,7 +5902,7 @@ if { as_var=cv_prog_cc_flag_$cache; eval "test \"\${$as_var+set}\" = set"; }; th
 else
 
 echo 'void f(){}' >conftest.c
-if test -z "`$CC -Wextra -c conftest.c 2>&1`"; then
+if test -z "`$CC $CPPFLAGS $CFLAGS -Wextra -c conftest.c 2>&1`"; then
 eval "cv_prog_cc_flag_$cache=yes"
 else
 eval "cv_prog_cc_flag_$cache=no"
@@ -5933,7 +5933,7 @@ if { as_var=cv_prog_cc_flag_$cache; eval "test \"\${$as_var+set}\" = set"; }; th
 else
 
 echo 'void f(){}' >conftest.c
-if test -z "`$CC -Wdeclaration-after-statement -c conftest.c 2>&1`"; then
+if test -z "`$CC $CPPFLAGS $CFLAGS -Wdeclaration-after-statement -c conftest.c 2>&1`"; then
 eval "cv_prog_cc_flag_$cache=yes"
 else
 eval "cv_prog_cc_flag_$cache=no"
@@ -17065,18 +17065,18 @@ int test() {
 }
 ' > conftest.c
 echo 'void f(){}' >>conftest.c
-if test -z "`$CC $CFLAGS $ERRFLAG -c conftest.c 2>&1`"; then
+if test -z "`$CC $CPPFLAGS $CFLAGS $ERRFLAG -c conftest.c 2>&1`"; then
 eval "cv_prog_cc_flag_needed_$cache=no"
 else
 
-if test -z "`$CC $CFLAGS -D_LARGEFILE_SOURCE=1 $ERRFLAG -c conftest.c 2>&1`"; then
+if test -z "`$CC $CPPFLAGS $CFLAGS -D_LARGEFILE_SOURCE=1 $ERRFLAG -c conftest.c 2>&1`"; then
 eval "cv_prog_cc_flag_needed_$cache=yes"
 else
 eval "cv_prog_cc_flag_needed_$cache=fail"
 #echo 'Test with flag fails too!'
 #cat conftest.c
-#echo "$CC $CFLAGS -D_LARGEFILE_SOURCE=1 $ERRFLAG -c conftest.c 2>&1"
-#echo `$CC $CFLAGS -D_LARGEFILE_SOURCE=1 $ERRFLAG -c conftest.c 2>&1`
+#echo "$CC $CPPFLAGS $CFLAGS -D_LARGEFILE_SOURCE=1 $ERRFLAG -c conftest.c 2>&1"
+#echo `$CC $CPPFLAGS $CFLAGS -D_LARGEFILE_SOURCE=1 $ERRFLAG -c conftest.c 2>&1`
 #exit 1
 fi
 
@@ -17096,8 +17096,8 @@ if eval "test \"`echo '$cv_prog_cc_flag_needed_'$cache`\" = no"; then
 $as_echo "no" >&6; }
 #echo 'Test with flag is no!'
 #cat conftest.c
-#echo "$CC $CFLAGS -D_LARGEFILE_SOURCE=1 $ERRFLAG -c conftest.c 2>&1"
-#echo `$CC $CFLAGS -D_LARGEFILE_SOURCE=1 $ERRFLAG -c conftest.c 2>&1`
+#echo "$CC $CPPFLAGS $CFLAGS -D_LARGEFILE_SOURCE=1 $ERRFLAG -c conftest.c 2>&1"
+#echo `$CC $CPPFLAGS $CFLAGS -D_LARGEFILE_SOURCE=1 $ERRFLAG -c conftest.c 2>&1`
 #exit 1
 :
 
@@ -18164,7 +18164,7 @@ if { as_var=cv_prog_cc_flag_$cache; eval "test \"\${$as_var+set}\" = set"; }; th
 else
 
 echo 'void f(){}' >conftest.c
-if test -z "`$CC -mt -c conftest.c 2>&1`"; then
+if test -z "`$CC $CPPFLAGS $CFLAGS -mt -c conftest.c 2>&1`"; then
 eval "cv_prog_cc_flag_$cache=yes"
 else
 eval "cv_prog_cc_flag_$cache=no"
@@ -20192,7 +20192,218 @@ if test "$ac_res" != no; then
 fi
 
 
-	{ $as_echo "$as_me:$LINENO: checking for library containing event_set" >&5
+	# is the event.h header libev or libevent?
+
+for ac_header in event.h
+do
+as_ac_Header=`$as_echo "ac_cv_header_$ac_header" | $as_tr_sh`
+{ $as_echo "$as_me:$LINENO: checking for $ac_header" >&5
+$as_echo_n "checking for $ac_header... " >&6; }
+if { as_var=$as_ac_Header; eval "test \"\${$as_var+set}\" = set"; }; then
+  $as_echo_n "(cached) " >&6
+else
+  cat >conftest.$ac_ext <<_ACEOF
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+$ac_includes_default
+
+#include <$ac_header>
+_ACEOF
+rm -f conftest.$ac_objext
+if { (ac_try="$ac_compile"
+case "(($ac_try" in
+  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
+  *) ac_try_echo=$ac_try;;
+esac
+eval ac_try_echo="\"\$as_me:$LINENO: $ac_try_echo\""
+$as_echo "$ac_try_echo") >&5
+  (eval "$ac_compile") 2>conftest.er1
+  ac_status=$?
+  grep -v '^ *+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
+  $as_echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } && {
+	 test -z "$ac_c_werror_flag" ||
+	 test ! -s conftest.err
+       } && test -s conftest.$ac_objext; then
+  eval "$as_ac_Header=yes"
+else
+  $as_echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+	eval "$as_ac_Header=no"
+fi
+
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+fi
+ac_res=`eval 'as_val=${'$as_ac_Header'}
+		 $as_echo "$as_val"'`
+	       { $as_echo "$as_me:$LINENO: result: $ac_res" >&5
+$as_echo "$ac_res" >&6; }
+as_val=`eval 'as_val=${'$as_ac_Header'}
+		 $as_echo "$as_val"'`
+   if test "x$as_val" = x""yes; then
+  cat >>confdefs.h <<_ACEOF
+#define `$as_echo "HAVE_$ac_header" | $as_tr_cpp` 1
+_ACEOF
+
+fi
+
+done
+
+	{ $as_echo "$as_me:$LINENO: checking whether EV_VERSION_MAJOR is declared" >&5
+$as_echo_n "checking whether EV_VERSION_MAJOR is declared... " >&6; }
+if test "${ac_cv_have_decl_EV_VERSION_MAJOR+set}" = set; then
+  $as_echo_n "(cached) " >&6
+else
+  cat >conftest.$ac_ext <<_ACEOF
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+$ac_includes_default
+#include <event.h>
+
+
+int
+main ()
+{
+#ifndef EV_VERSION_MAJOR
+  (void) EV_VERSION_MAJOR;
+#endif
+
+  ;
+  return 0;
+}
+_ACEOF
+rm -f conftest.$ac_objext
+if { (ac_try="$ac_compile"
+case "(($ac_try" in
+  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
+  *) ac_try_echo=$ac_try;;
+esac
+eval ac_try_echo="\"\$as_me:$LINENO: $ac_try_echo\""
+$as_echo "$ac_try_echo") >&5
+  (eval "$ac_compile") 2>conftest.er1
+  ac_status=$?
+  grep -v '^ *+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
+  $as_echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } && {
+	 test -z "$ac_c_werror_flag" ||
+	 test ! -s conftest.err
+       } && test -s conftest.$ac_objext; then
+  ac_cv_have_decl_EV_VERSION_MAJOR=yes
+else
+  $as_echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+	ac_cv_have_decl_EV_VERSION_MAJOR=no
+fi
+
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+fi
+{ $as_echo "$as_me:$LINENO: result: $ac_cv_have_decl_EV_VERSION_MAJOR" >&5
+$as_echo "$ac_cv_have_decl_EV_VERSION_MAJOR" >&6; }
+if test "x$ac_cv_have_decl_EV_VERSION_MAJOR" = x""yes; then
+
+		{ $as_echo "$as_me:$LINENO: checking for library containing event_set" >&5
+$as_echo_n "checking for library containing event_set... " >&6; }
+if test "${ac_cv_search_event_set+set}" = set; then
+  $as_echo_n "(cached) " >&6
+else
+  ac_func_search_save_LIBS=$LIBS
+cat >conftest.$ac_ext <<_ACEOF
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char event_set ();
+int
+main ()
+{
+return event_set ();
+  ;
+  return 0;
+}
+_ACEOF
+for ac_lib in '' ev; do
+  if test -z "$ac_lib"; then
+    ac_res="none required"
+  else
+    ac_res=-l$ac_lib
+    LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
+  fi
+  rm -f conftest.$ac_objext conftest$ac_exeext
+if { (ac_try="$ac_link"
+case "(($ac_try" in
+  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
+  *) ac_try_echo=$ac_try;;
+esac
+eval ac_try_echo="\"\$as_me:$LINENO: $ac_try_echo\""
+$as_echo "$ac_try_echo") >&5
+  (eval "$ac_link") 2>conftest.er1
+  ac_status=$?
+  grep -v '^ *+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
+  $as_echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } && {
+	 test -z "$ac_c_werror_flag" ||
+	 test ! -s conftest.err
+       } && test -s conftest$ac_exeext && {
+	 test "$cross_compiling" = yes ||
+	 $as_test_x conftest$ac_exeext
+       }; then
+  ac_cv_search_event_set=$ac_res
+else
+  $as_echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+
+fi
+
+rm -rf conftest.dSYM
+rm -f core conftest.err conftest.$ac_objext conftest_ipa8_conftest.oo \
+      conftest$ac_exeext
+  if test "${ac_cv_search_event_set+set}" = set; then
+  break
+fi
+done
+if test "${ac_cv_search_event_set+set}" = set; then
+  :
+else
+  ac_cv_search_event_set=no
+fi
+rm conftest.$ac_ext
+LIBS=$ac_func_search_save_LIBS
+fi
+{ $as_echo "$as_me:$LINENO: result: $ac_cv_search_event_set" >&5
+$as_echo "$ac_cv_search_event_set" >&6; }
+ac_res=$ac_cv_search_event_set
+if test "$ac_res" != no; then
+  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
+
+fi
+
+
+else
+
+		{ $as_echo "$as_me:$LINENO: checking for library containing event_set" >&5
 $as_echo_n "checking for library containing event_set... " >&6; }
 if test "${ac_cv_search_event_set+set}" = set; then
   $as_echo_n "(cached) " >&6
@@ -20280,66 +20491,7 @@ if test "$ac_res" != no; then
 fi
 
 
-for ac_header in event.h
-do
-as_ac_Header=`$as_echo "ac_cv_header_$ac_header" | $as_tr_sh`
-{ $as_echo "$as_me:$LINENO: checking for $ac_header" >&5
-$as_echo_n "checking for $ac_header... " >&6; }
-if { as_var=$as_ac_Header; eval "test \"\${$as_var+set}\" = set"; }; then
-  $as_echo_n "(cached) " >&6
-else
-  cat >conftest.$ac_ext <<_ACEOF
-/* confdefs.h.  */
-_ACEOF
-cat confdefs.h >>conftest.$ac_ext
-cat >>conftest.$ac_ext <<_ACEOF
-/* end confdefs.h.  */
-$ac_includes_default
-
-#include <$ac_header>
-_ACEOF
-rm -f conftest.$ac_objext
-if { (ac_try="$ac_compile"
-case "(($ac_try" in
-  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
-  *) ac_try_echo=$ac_try;;
-esac
-eval ac_try_echo="\"\$as_me:$LINENO: $ac_try_echo\""
-$as_echo "$ac_try_echo") >&5
-  (eval "$ac_compile") 2>conftest.er1
-  ac_status=$?
-  grep -v '^ *+' conftest.er1 >conftest.err
-  rm -f conftest.er1
-  cat conftest.err >&5
-  $as_echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); } && {
-	 test -z "$ac_c_werror_flag" ||
-	 test ! -s conftest.err
-       } && test -s conftest.$ac_objext; then
-  eval "$as_ac_Header=yes"
-else
-  $as_echo "$as_me: failed program was:" >&5
-sed 's/^/| /' conftest.$ac_ext >&5
-
-	eval "$as_ac_Header=no"
 fi
-
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-fi
-ac_res=`eval 'as_val=${'$as_ac_Header'}
-		 $as_echo "$as_val"'`
-	       { $as_echo "$as_me:$LINENO: result: $ac_res" >&5
-$as_echo "$ac_res" >&6; }
-as_val=`eval 'as_val=${'$as_ac_Header'}
-		 $as_echo "$as_val"'`
-   if test "x$as_val" = x""yes; then
-  cat >>confdefs.h <<_ACEOF
-#define `$as_echo "HAVE_$ac_header" | $as_tr_cpp` 1
-_ACEOF
-
-fi
-
-done
 
 
 for ac_func in event_base_free
