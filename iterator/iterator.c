@@ -1897,8 +1897,11 @@ static int
 processPrimeResponse(struct module_qstate* qstate, int id)
 {
 	struct iter_qstate* iq = (struct iter_qstate*)qstate->minfo[id];
-	enum response_type type = response_type_from_server(0, iq->response, 
-		&iq->qchase, iq->dp);
+	enum response_type type;
+	iq->response->rep->flags &= ~(BIT_RD|BIT_RA); /* ignore rec-lame */
+	type = response_type_from_server(
+		(int)((iq->chase_flags&BIT_RD) || iq->chase_to_rd), 
+		iq->response, &iq->qchase, iq->dp);
 	if(type == RESPONSE_TYPE_ANSWER) {
 		qstate->return_rcode = LDNS_RCODE_NOERROR;
 		qstate->return_msg = iq->response;
@@ -2230,7 +2233,7 @@ void
 iter_inform_super(struct module_qstate* qstate, int id, 
 	struct module_qstate* super)
 {
-	if(super->qinfo.qclass == LDNS_RR_CLASS_ANY)
+	if(!qstate->is_priming && super->qinfo.qclass == LDNS_RR_CLASS_ANY)
 		processClassResponse(qstate, id, super);
 	else if(qstate->return_rcode != LDNS_RCODE_NOERROR)
 		error_supers(qstate, id, super);
