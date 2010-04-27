@@ -941,8 +941,8 @@ void autr_write_file(struct module_env* env, struct trust_anchor* tp)
 			continue;
 		if(ta->s == AUTR_STATE_REMOVED)
 			continue;
-		/* only store SEP keys */
-		if(!rr_is_dnskey_sep(ta->rr))
+		/* only store keys */
+		if(ldns_rr_get_type(ta->rr) != LDNS_RR_TYPE_DNSKEY)
 			continue;
 		str = ldns_rr2str(ta->rr);
 		if(!str || !str[0]) {
@@ -1578,6 +1578,37 @@ anchor_state_update(struct module_env* env, struct autr_ta* anchor, int* c)
 	}
 }
 
+/** if ZSK init then trust KSKs */
+static int
+init_zsk_to_ksk(struct module_env* env, struct trust_anchor* tp, int* changed)
+{
+	/* search for VALID ZSKs */
+	struct autr_ta* anchor;
+	int validzsk = 0;
+	int validksk = 0;
+	for(anchor = tp->autr->keys; anchor; anchor = anchor->next) {
+		/* last_change test makes sure it was manually configured */
+                if (ldns_rr_get_type(anchor->rr) == LDNS_RR_TYPE_DNSKEY &&
+			anchor->last_change == 0 && 
+			!rr_is_dnskey_sep(anchor->rr) &&
+			anchor->s == AUTR_STATE_VALID)
+                        validzsk++;
+	}
+	if(validzsk == 0)
+		return 0;
+	for(anchor = tp->autr->keys; anchor; anchor = anchor->next) {
+                if (rr_is_dnskey_sep(anchor->rr) && 
+			anchor->s == AUTR_STATE_ADDPEND) {
+			verbose_key(anchor, VERB_ALGO, "trust KSK from "
+				"ZSK(config)");
+			set_trustanchor_state(env, anchor, changed, 
+				AUTR_STATE_VALID);
+			validksk++;
+		}
+	}
+	return validksk;
+}
+
 /** Remove missing trustanchors so the list does not grow forever */
 static void
 remove_missing_trustanchors(struct module_env* env, struct trust_anchor* tp,
@@ -1586,8 +1617,6 @@ remove_missing_trustanchors(struct module_env* env, struct trust_anchor* tp,
 	struct autr_ta* anchor;
 	int exceeded;
 	int valid = 0;
-	if(env->cfg->keep_missing == 0)
-		return; /* keep forever */
 	/* see if we have anchors that are valid */
 	for(anchor = tp->autr->keys; anchor; anchor = anchor->next) {
 		/* Only do KSKs */
@@ -1596,16 +1625,38 @@ remove_missing_trustanchors(struct module_env* env, struct trust_anchor* tp,
                 if (anchor->s == AUTR_STATE_VALID)
                         valid++;
 	}
-	if(valid == 0)
-		return;
+	/* if there are no SEP Valid anchors, see if we started out with
+	 * a ZSK (last-change=0) anchor, which is VALID and there are KSKs
+	 * now that can be made valid.  Do this immediately because there
+	 * is no guarantee that the ZSKs get announced long enough.  Usually
+	 * this is immediately after init with a ZSK trusted, unless the domain
+	 * was not advertising any KSKs at all.  In which case we perfectly
+	 * track the zero number of KSKs. */
+	if(valid == 0) {
+		valid = init_zsk_to_ksk(env, tp, changed);
+		if(valid == 0)
+			return;
+	}
 	
 	for(anchor = tp->autr->keys; anchor; anchor = anchor->next) {
-		/* Only do KSKs */
-                if (!rr_is_dnskey_sep(anchor->rr))
+		/* ignore ZSKs if newly added */
+		if(anchor->s == AUTR_STATE_START)
+			continue;
+		/* remove ZSKs if a KSK is present */
+                if (!rr_is_dnskey_sep(anchor->rr)) {
+			if(valid > 0) {
+				verbose_key(anchor, VERB_ALGO, "remove ZSK "
+					"[%d key(s) VALID]", valid);
+				set_trustanchor_state(env, anchor, changed, 
+					AUTR_STATE_REMOVED);
+			}
                         continue;
+		}
                 /* Only do MISSING keys */
                 if (anchor->s != AUTR_STATE_MISSING)
                         continue;
+		if(env->cfg->keep_missing == 0)
+			continue; /* keep forever */
 
 		exceeded = check_holddown(env, anchor, env->cfg->keep_missing);
 		/* If keep_missing has exceeded and we still have more than 
@@ -1657,7 +1708,7 @@ autr_cleanup_keys(struct trust_anchor* tp)
 	while(p) {
 		/* do we want to remove this key? */
 		if(p->s == AUTR_STATE_START || p->s == AUTR_STATE_REMOVED ||
-			!rr_is_dnskey_sep(p->rr)) {
+			ldns_rr_get_type(p->rr) != LDNS_RR_TYPE_DNSKEY) {
 			struct autr_ta* np = p->next;
 			/* remove */
 			ldns_rr_free(p->rr);
