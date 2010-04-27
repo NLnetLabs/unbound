@@ -695,12 +695,15 @@ static void
 generate_a_aaaa_check(struct module_qstate* qstate, struct iter_qstate* iq, 
 	int id)
 {
+	struct iter_env* ie = (struct iter_env*)qstate->env->modinfo[id];
 	struct module_qstate* subq;
 	size_t i;
 	struct reply_info* rep = iq->response->rep;
 	struct ub_packed_rrset_key* s;
 	log_assert(iq->dp);
 
+	if(iq->depth == ie->max_dependency_depth)
+		return;
 	/* walk through additional, and check if in-zone,
 	 * only relevant A, AAAA are left after scrub anyway */
 	for(i=rep->an_numrrsets+rep->ns_numrrsets; i<rep->rrset_count; i++) {
@@ -746,9 +749,12 @@ generate_a_aaaa_check(struct module_qstate* qstate, struct iter_qstate* iq,
 static void
 generate_ns_check(struct module_qstate* qstate, struct iter_qstate* iq, int id)
 {
+	struct iter_env* ie = (struct iter_env*)qstate->env->modinfo[id];
 	struct module_qstate* subq;
 	log_assert(iq->dp);
 
+	if(iq->depth == ie->max_dependency_depth)
+		return;
 	/* is this query the same as the nscheck? */
 	if(qstate->qinfo.qtype == LDNS_RR_TYPE_NS &&
 		query_dname_compare(iq->dp->name, qstate->qinfo.qname)==0 &&

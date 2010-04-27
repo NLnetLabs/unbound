@@ -2,6 +2,9 @@
 	- unbound-control get_option domain-insecure shows config file items.
 	- fix retry sequence if prime hints are recursion-lame.
 	- autotrust anchor file can be initialized with a ZSK key as well.
+	- harden-referral-path does not result in failures due to max-depth.
+	  You can increase the max-depth by adding numbers (' 0') after the
+	  target-fetch-policy, this increases the depth to which is checked.
 
 26 April 2010: Wouter
 	- Compile fix using Sun Studio 12 compiler on Solaris 5.9, use

@@ -456,6 +456,8 @@ path to the answer.
 Default off, because it burdens the authority servers, and it is
 not RFC standard, and could lead to performance problems because of the
 extra query load that is generated.  Experimental option.
+If you enable it consider adding more numbers after the target\-fetch\-policy
+to increase the max depth that is checked to.
 .TP
 .B use\-caps\-for\-id: \fI<yes or no>
 Use 0x20\-encoded random bits in the query to foil spoof attempts.
