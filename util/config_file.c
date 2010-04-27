@@ -609,6 +609,7 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_LST(opt, "trusted-keys-file", trusted_keys_file_list)
 	else O_LST(opt, "dlv-anchor", dlv_anchor_list)
 	else O_LST(opt, "control-interface", control_ifs)
+	else O_LST(opt, "domain-insecure", domain_insecure)
 	else O_UNS(opt, "val-override-date", val_date_override)
 	/* not here:
 	 * outgoing-permit, outgoing-avoid - have list of ports
