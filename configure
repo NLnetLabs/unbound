@@ -19928,6 +19928,7 @@ if test "${enable_gost+set}" = set; then
   enableval=$enable_gost;
 fi
 
+use_gost="no"
 case "$enable_gost" in
 	yes)
 	{ $as_echo "$as_me:$LINENO: checking for EVP_PKEY_set_type_str" >&5
@@ -20023,6 +20024,7 @@ $as_echo "$as_me: error: OpenSSL 1.0.0 is needed for GOST support" >&2;}
    { (exit 1); exit 1; }; }
 fi
 
+	use_gost="yes"
 
 cat >>confdefs.h <<\_ACEOF
 #define USE_GOST 1
@@ -20118,6 +20120,7 @@ fi
 $as_echo "$ac_cv_func_EVP_PKEY_set_type_str" >&6; }
 if test "x$ac_cv_func_EVP_PKEY_set_type_str" = x""yes; then
 
+	  use_gost="yes"
 
 cat >>confdefs.h <<\_ACEOF
 #define USE_GOST 1
@@ -23729,7 +23732,8 @@ fi
 { $as_echo "$as_me:$LINENO: result: $ac_cv_func_ldns_b32_ntop_extended_hex" >&5
 $as_echo "$ac_cv_func_ldns_b32_ntop_extended_hex" >&6; }
 
-	{ $as_echo "$as_me:$LINENO: checking for ldns_key_EVP_load_gost_id" >&5
+	if test x$use_gost = xyes; then
+	    { $as_echo "$as_me:$LINENO: checking for ldns_key_EVP_load_gost_id" >&5
 $as_echo_n "checking for ldns_key_EVP_load_gost_id... " >&6; }
 if test "${ac_cv_func_ldns_key_EVP_load_gost_id+set}" = set; then
   $as_echo_n "(cached) " >&6
@@ -23815,6 +23819,9 @@ fi
 { $as_echo "$as_me:$LINENO: result: $ac_cv_func_ldns_key_EVP_load_gost_id" >&5
 $as_echo "$ac_cv_func_ldns_key_EVP_load_gost_id" >&6; }
 
+	else
+	    ac_cv_func_ldns_key_EVP_load_gost_id="yes"
+	fi
 
 for ac_header in ldns/ldns.h
 do
