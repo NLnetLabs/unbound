@@ -421,10 +421,14 @@ esac
 AC_ARG_ENABLE(gost, AC_HELP_STRING([--enable-gost], [Enable GOST support, experimental]))
 case "$enable_gost" in
 	yes)
-	AC_CHECK_FUNC(EVP_PKEY_set_type_str, [:],[AC_MSG_ERROR([OpenSSL >= 1.0.0 is needed for GOST support, upgrade openssl or rerun with --disable-gost])])
+	AC_CHECK_FUNC(EVP_PKEY_set_type_str, [:],[AC_MSG_ERROR([OpenSSL 1.0.0 is needed for GOST support])])
 	AC_DEFINE([USE_GOST], [1], [Define this to enable GOST support.])
 	;;
-	no|*)
+	no)
+	;;
+	*) dnl default
+	AC_CHECK_FUNC(EVP_PKEY_set_type_str, [
+	  AC_DEFINE([USE_GOST], [1], [Define this to enable GOST support.])])
 	;;
 esac
 
@@ -622,13 +626,16 @@ AC_ARG_WITH(ldns-builtin, AC_HELP_STRING([--with-ldns-builtin],
 if test "$use_ldns_builtin" = "no"; then
 	AC_CHECK_LIB(ldns, ldns_buffer_copy)
 	AC_CHECK_FUNC(ldns_key_buf2rsa_raw)
+	AC_CHECK_FUNC(ldns_b32_ntop_extended_hex)
+	AC_CHECK_FUNC(ldns_key_EVP_load_gost_id)
 	AC_CHECK_HEADERS([ldns/ldns.h],,, [AC_INCLUDES_DEFAULT])
 	if test $ac_cv_lib_ldns_ldns_buffer_copy = yes \
 	    -a $ac_cv_func_ldns_key_buf2rsa_raw = yes \
-	    -a $ac_cv_header_ldns_ldns_h = yes; then
-	    dnl ldns was found, check compat functions
-	    AC_CHECK_FUNC([ldns_b32_ntop_extended_hex],, [
-		AC_MSG_ERROR([ldns version too old, need >=1.4.0])])
+	    -a $ac_cv_header_ldns_ldns_h = yes \
+	    -a $ac_cv_func_ldns_b32_ntop_extended_hex = yes \
+	    -a $ac_cv_func_ldns_key_EVP_load_gost_id = yes; then
+	    dnl ldns was found
+	    :
 	else
 	    use_ldns_builtin="yes"
 	fi

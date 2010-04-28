@@ -1,3 +1,7 @@
+28 April 2010: Wouter
+	- ldns tarball updated and GOST support is detected and then enabled. 
+	- iana portlist updated.
+
 27 April 2010: Wouter
 	- unbound-control get_option domain-insecure shows config file items.
 	- fix retry sequence if prime hints are recursion-lame.
