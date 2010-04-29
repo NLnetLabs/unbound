@@ -187,6 +187,19 @@ infra_lookup_host(struct infra_cache* infra,
 	return data;
 }
 
+/** init the host elements (not lame elems) */
+static void
+host_entry_init(struct infra_cache* infra, struct lruhash_entry* e, 
+	uint32_t timenow)
+{
+	struct infra_host_data* data = (struct infra_host_data*)e->data;
+	data->ttl = timenow + infra->host_ttl;
+	rtt_init(&data->rtt);
+	data->edns_version = 0;
+	data->edns_lame_known = 0;
+	data->num_timeouts = 0;
+}
+
 /** 
  * Create and init a new entry for a host 
  * @param infra: infra structure with config parameters.
@@ -216,12 +229,8 @@ new_host_entry(struct infra_cache* infra, struct sockaddr_storage* addr,
 	key->entry.data = (void*)data;
 	key->addrlen = addrlen;
 	memcpy(&key->addr, addr, addrlen);
-	data->ttl = tm + infra->host_ttl;
 	data->lameness = NULL;
-	data->edns_version = 0;
-	data->edns_lame_known = 0;
-	data->num_timeouts = 0;
-	rtt_init(&data->rtt);
+	host_entry_init(infra, &key->entry, tm);
 	return &key->entry;
 }
 
@@ -240,12 +249,8 @@ infra_host(struct infra_cache* infra, struct sockaddr_storage* addr,
 		if(e) {
 			/* if its still there we have a writelock, init */
 			/* re-initialise */
-			data = (struct infra_host_data*)e->data;
-			data->ttl = timenow + infra->host_ttl;
-			rtt_init(&data->rtt);
 			/* do not touch lameness, it may be valid still */
-			data->edns_version = 0;
-			data->edns_lame_known = 0;
+			host_entry_init(infra, e, timenow);
 		}
 	}
 	if(!e) {
@@ -469,10 +474,11 @@ infra_rtt_update(struct infra_cache* infra,
 		if(!(e = new_host_entry(infra, addr, addrlen, timenow)))
 			return 0;
 		needtoinsert = 1;
-	}
-	/* have an entry, update the rtt, and the ttl */
+	} else if(((struct infra_host_data*)e->data)->ttl < timenow) {
+		host_entry_init(infra, e, timenow);
+	} 
+	/* have an entry, update the rtt */
 	data = (struct infra_host_data*)e->data;
-	data->ttl = timenow + infra->host_ttl;
 	if(roundtrip == -1) {
 		rtt_lost(&data->rtt, orig_rtt);
 		if(data->num_timeouts<255)
@@ -503,10 +509,11 @@ infra_edns_update(struct infra_cache* infra,
 		if(!(e = new_host_entry(infra, addr, addrlen, timenow)))
 			return 0;
 		needtoinsert = 1;
-	}
+	} else if(((struct infra_host_data*)e->data)->ttl < timenow) {
+		host_entry_init(infra, e, timenow);
+	} 
 	/* have an entry, update the rtt, and the ttl */
 	data = (struct infra_host_data*)e->data;
-	data->ttl = timenow + infra->host_ttl;
 	data->edns_version = edns_version;
 	data->edns_lame_known = 1;
 
