@@ -1,3 +1,6 @@
+29 April 2010: Wouter
+	- Fix for dnssec lameness detection to use the key cache.
+
 28 April 2010: Wouter
 	- ldns tarball updated and GOST support is detected and then enabled. 
 	- iana portlist updated.
