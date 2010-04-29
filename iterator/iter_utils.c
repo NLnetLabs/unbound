@@ -577,9 +577,14 @@ iter_indicates_dnssec(struct module_env* env, struct delegpt* dp,
 		struct key_entry_key* kk = key_cache_obtain(env->key_cache,
 			dp->name, dp->namelen, dclass, env->scratch, *env->now);
 		if(kk) {
-			if(key_entry_isgood(kk) || key_entry_isbad(kk)) {
+			if(query_dname_compare(kk->name, dp->name) == 0) {
+			  if(key_entry_isgood(kk) || key_entry_isbad(kk)) {
 				regional_free_all(env->scratch);
 				return 1;
+			  } else if(key_entry_isnull(kk)) {
+				regional_free_all(env->scratch);
+				return 0;
+			  }
 			}
 			regional_free_all(env->scratch);
 		}
