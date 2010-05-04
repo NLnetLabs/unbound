@@ -1,5 +1,8 @@
 4 May 2010: Wouter
 	- Fix dnssec-missing detection that was turned off by server selection.
+	- Conforms to draft-ietf-dnsop-default-local-zones-13.  Added default
+	  reverse lookup blocks for IPv4 test nets 100.51.198.in-addr.arpa,
+	  113.0.203.in-addr.arpa and Orchid prefix 0.1.1.0.0.2.ip6.arpa.
 
 29 April 2010: Wouter
 	- Fix for dnssec lameness detection to use the key cache.
