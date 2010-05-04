@@ -384,7 +384,7 @@ struct ub_packed_rrset_key* packed_rrset_copy_region(
  * Allocate rrset with malloc (from region or you are holding the lock).
  * @param key: key with data entry.
  * @param alloc: alloc_cache to create rrset_keys
- * @param now: adjust the TTLs to be abolsute (add to all TTLs).
+ * @param now: adjust the TTLs to be absolute (add to all TTLs).
  * @return new region-alloced rrset key or NULL on alloc failure.
  */
 struct ub_packed_rrset_key* packed_rrset_copy_alloc(
