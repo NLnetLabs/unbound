@@ -120,6 +120,7 @@ iter_new(struct module_qstate* qstate, int id)
 	iq->wait_priming_stub = 0;
 	iq->refetch_glue = 0;
 	iq->dnssec_expected = 0;
+	iq->dnssec_lame_query = 0;
 	iq->chase_flags = qstate->query_flags;
 	/* Start with the (current) qname. */
 	iq->qchase = qstate->qinfo;
@@ -1451,8 +1452,8 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 	/* Select the next usable target, filtering out unsuitable targets. */
 	target = iter_server_selection(ie, qstate->env, iq->dp, 
 		iq->dp->name, iq->dp->namelen, iq->qchase.qtype,
-		&iq->dnssec_expected, &iq->chase_to_rd, iq->num_target_queries,
-		qstate->blacklist);
+		&iq->dnssec_lame_query, &iq->chase_to_rd, 
+		iq->num_target_queries, qstate->blacklist);
 
 	/* If no usable target was selected... */
 	if(!target) {
@@ -1530,10 +1531,14 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 	}
 
 	/* We have a valid target. */
-	if(iq->dnssec_expected) verbose(VERB_ALGO, "dnssec is expected");
-	log_query_info(VERB_QUERY, "sending query:", &iq->qchase);
-	log_name_addr(VERB_QUERY, "sending to target:", iq->dp->name, 
-		&target->addr, target->addrlen);
+	if(verbosity >= VERB_QUERY) {
+		log_query_info(VERB_QUERY, "sending query:", &iq->qchase);
+		log_name_addr(VERB_QUERY, "sending to target:", iq->dp->name, 
+			&target->addr, target->addrlen);
+		verbose(VERB_ALGO, "dnssec status: %s%s",
+			iq->dnssec_expected?"expected": "not expected",
+			iq->dnssec_lame_query?" but lame_query anyway": "");
+	}
 	fptr_ok(fptr_whitelist_modenv_send_query(qstate->env->send_query));
 	outq = (*qstate->env->send_query)(
 		iq->qchase.qname, iq->qchase.qname_len, 
@@ -1587,6 +1592,7 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 	iq->num_current_queries--;
 	if(iq->response == NULL) {
 		iq->chase_to_rd = 0;
+		iq->dnssec_lame_query = 0;
 		verbose(VERB_ALGO, "query response was timeout");
 		return next_state(iq, QUERYTARGETS_STATE);
 	}
@@ -1599,7 +1605,8 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		 * differently. No queries should be sent elsewhere */
 		type = RESPONSE_TYPE_ANSWER;
 	}
-	if(iq->dnssec_expected && !(iq->chase_flags&BIT_RD) 
+	if(iq->dnssec_expected && !iq->dnssec_lame_query &&
+		!(iq->chase_flags&BIT_RD) 
 		&& type != RESPONSE_TYPE_LAME 
 		&& type != RESPONSE_TYPE_REC_LAME 
 		&& type != RESPONSE_TYPE_THROWAWAY 
@@ -1615,7 +1622,7 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 			type = RESPONSE_TYPE_LAME;
 			dnsseclame = 1;
 		}
-	}
+	} else iq->dnssec_lame_query = 0;
 	/* see if referral brings us close to the target */
 	if(type == RESPONSE_TYPE_REFERRAL) {
 		struct ub_packed_rrset_key* ns = find_NS(
@@ -1764,7 +1771,6 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		/* Clear the query state, since this is a query restart. */
 		iq->deleg_msg = NULL;
 		iq->dp = NULL;
-		iq->dnssec_expected = 0;
 		/* Note the query restart. */
 		iq->query_restart_count++;
 

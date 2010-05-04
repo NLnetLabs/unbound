@@ -310,7 +310,7 @@ iter_filter_order(struct iter_env* iter_env, struct module_env* env,
 struct delegpt_addr* 
 iter_server_selection(struct iter_env* iter_env, 
 	struct module_env* env, struct delegpt* dp, 
-	uint8_t* name, size_t namelen, uint16_t qtype, int* dnssec_expected,
+	uint8_t* name, size_t namelen, uint16_t qtype, int* dnssec_lame,
 	int* chase_to_rd, int open_target, struct sock_list* blacklist)
 {
 	int sel;
@@ -331,7 +331,7 @@ iter_server_selection(struct iter_env* iter_env,
 		if(selrtt-BLACKLIST_PENALTY > USEFUL_SERVER_TOP_TIMEOUT) {
 			verbose(VERB_ALGO, "chase to "
 				"blacklisted dnssec lame server");
-			*dnssec_expected = 0;
+			*dnssec_lame = 1;
 		}
 	} else {
 		if(selrtt > USEFUL_SERVER_TOP_TIMEOUT*2) {
@@ -340,7 +340,7 @@ iter_server_selection(struct iter_env* iter_env,
 		}
 		if(selrtt > USEFUL_SERVER_TOP_TIMEOUT) {
 			verbose(VERB_ALGO, "chase to dnssec lame server");
-			*dnssec_expected = 0;
+			*dnssec_lame = 1;
 		}
 		if(selrtt == USEFUL_SERVER_TOP_TIMEOUT) {
 			verbose(VERB_ALGO, "chase to blacklisted lame server");

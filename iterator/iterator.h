@@ -255,6 +255,12 @@ struct iter_qstate {
 	int dnssec_expected;
 
 	/**
+	 * We are expecting dnssec information, but we also know the server
+	 * is DNSSEC lame.  The response need not be marked dnssec-lame again.
+	 */
+	int dnssec_lame_query;
+
+	/**
 	 * This is flag that, if true, means that this event is 
 	 * waiting for a stub priming query. 
 	 */
