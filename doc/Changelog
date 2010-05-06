@@ -1,3 +1,6 @@
+6 May 2010: Wouter
+	- Fix bug#308: spelling error in variable name in parser and lexer.
+
 4 May 2010: Wouter
 	- Fix dnssec-missing detection that was turned off by server selection.
 	- Conforms to draft-ietf-dnsop-default-local-zones-13.  Added default
