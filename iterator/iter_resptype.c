@@ -106,7 +106,6 @@ response_type_from_server(int rdset,
 {
 	uint8_t* origzone = (uint8_t*)"\000"; /* the default */
 	struct ub_packed_rrset_key* s;
-	size_t origzonelen = 1;
 	size_t i;
 
 	if(!msg || !request)
@@ -130,7 +129,6 @@ response_type_from_server(int rdset,
 
 	if(dp) {
 		origzone = dp->name;
-		origzonelen = dp->namelen;
 	}
 
 	/* First we look at the answer section. This can tell us if this is a

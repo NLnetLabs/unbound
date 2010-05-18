@@ -1376,7 +1376,7 @@ static int
 processFindKey(struct module_qstate* qstate, struct val_qstate* vq, int id)
 {
 	uint8_t* target_key_name, *current_key_name;
-	size_t target_key_len, current_key_len;
+	size_t target_key_len;
 	int strip_lab;
 
 	log_query_info(VERB_ALGO, "validator: FindKey", &vq->qchase);
@@ -1405,7 +1405,6 @@ processFindKey(struct module_qstate* qstate, struct val_qstate* vq, int id)
 	}
 
 	current_key_name = vq->key_entry->name;
-	current_key_len = vq->key_entry->namelen;
 
 	/* If our current key entry matches our target, then we are done. */
 	if(query_dname_compare(target_key_name, current_key_name) == 0) {
@@ -1428,7 +1427,6 @@ processFindKey(struct module_qstate* qstate, struct val_qstate* vq, int id)
 			return 1;
 		}
 		current_key_name = vq->empty_DS_name;
-		current_key_len = vq->empty_DS_len;
 	}
 
 	log_nametypeclass(VERB_ALGO, "current keyname", current_key_name,
@@ -1735,7 +1733,7 @@ val_dlv_init(struct module_qstate* qstate, struct val_qstate* vq,
 	}
 	log_nametypeclass(VERB_ALGO, "DLV init look", nm, LDNS_RR_TYPE_DS,
 		vq->qchase.qclass);
-	log_assert(nm && nm_len)
+	log_assert(nm && nm_len);
 	/* sanity check: no DLV lookups below the DLV anchor itself.
 	 * Like, an securely insecure delegation there makes no sense. */
 	if(dname_subdomain_c(nm, qstate->env->anchors->dlv_anchor->name)) {

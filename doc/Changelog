@@ -1,3 +1,6 @@
+18 May 2010: Wouter
+	- Fix various compiler warnings from the clang llvm compiler.
+
 6 May 2010: Wouter
 	- Fix bug#308: spelling error in variable name in parser and lexer.
 

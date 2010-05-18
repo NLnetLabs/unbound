@@ -600,8 +600,7 @@ static struct trust_anchor*
 parse_id(struct val_anchors* anchors, char* line)
 {
 	struct trust_anchor *tp;
-	size_t len;
-	int labs, r;
+	int r;
 	ldns_rdf* rdf;
 	uint16_t dclass;
 	/* read the owner name */
@@ -612,8 +611,6 @@ parse_id(struct val_anchors* anchors, char* line)
 	rdf = ldns_dname_new_frm_str(line);
 	if(!rdf)
 		return NULL;
-	labs = dname_count_size_labels(ldns_rdf_data(rdf), &len);
-	log_assert(len == ldns_rdf_size(rdf));
 
 	/* read the class */
 	dclass = parse_int(next+1, &r);

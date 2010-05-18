@@ -561,7 +561,7 @@ static int sanitize_nsec_is_overreach(struct rrset_parse* rrset,
 	for(rr = rrset->rr_first; rr; rr = rr->next) {
 		rhs = rr->ttl_data+4+2;
 		len = ldns_read_uint16(rr->ttl_data+4);
-		if(!(len=dname_valid(rhs, len))) {
+		if(!dname_valid(rhs, len)) {
 			/* malformed domain name in rdata */
 			return 1;
 		}

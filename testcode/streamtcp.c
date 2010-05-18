@@ -110,7 +110,6 @@ write_q(int fd, int udp, ldns_buffer* buf, int id,
 {
 	struct query_info qinfo;
 	ldns_rdf* rdf;
-	int labs;
 	uint16_t len;
 	/* qname */
 	rdf = ldns_dname_new_frm_str(strname);
@@ -119,7 +118,7 @@ write_q(int fd, int udp, ldns_buffer* buf, int id,
 		exit(1);
 	}
 	qinfo.qname = memdup(ldns_rdf_data(rdf), ldns_rdf_size(rdf));
-	labs = dname_count_size_labels(qinfo.qname, &qinfo.qname_len);
+	(void)dname_count_size_labels(qinfo.qname, &qinfo.qname_len);
 	ldns_rdf_deep_free(rdf);
 	if(!qinfo.qname) fatal_exit("out of memory");
 

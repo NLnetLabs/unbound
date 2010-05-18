@@ -1253,15 +1253,12 @@ setup_dsa_sig(unsigned char** sig, unsigned int* len)
 	unsigned char* orig = *sig;
 	unsigned int origlen = *len;
 	int newlen;
-
-	uint8_t t;
 	BIGNUM *R, *S;
 	DSA_SIG *dsasig;
 
 	/* extract the R and S field from the sig buffer */
 	if(origlen < 1 + 2*SHA_DIGEST_LENGTH)
 		return 0;
-	t = orig[0];
 	R = BN_new();
 	if(!R) return 0;
 	(void) BN_bin2bn(orig + 1, SHA_DIGEST_LENGTH, R);

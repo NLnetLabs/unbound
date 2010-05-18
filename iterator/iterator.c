@@ -1266,7 +1266,7 @@ query_for_targets(struct module_qstate* qstate, struct iter_qstate* iq,
         struct iter_env* ie, int id, int maxtargets, int* num)
 {
 	int query_count = 0;
-	struct delegpt_ns* ns = iq->dp->nslist;
+	struct delegpt_ns* ns;
 	int missing;
 	int toget = 0;
 

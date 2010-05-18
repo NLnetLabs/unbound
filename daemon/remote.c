@@ -317,7 +317,7 @@ struct listen_port* daemon_remote_open_ports(struct config_file* cfg)
 	struct listen_port* l = NULL;
 	log_assert(cfg->remote_control_enable && cfg->control_port);
 	if(cfg->control_ifs) {
-		struct config_strlist* p = cfg->control_ifs;
+		struct config_strlist* p;
 		for(p = cfg->control_ifs; p; p = p->next) {
 			if(!add_open(p->str, cfg->control_port, &l, 1)) {
 				listening_ports_free(l);
@@ -877,6 +877,7 @@ do_stats(SSL* ssl, struct daemon_remote* rc, int reset)
 	struct stats_info total;
 	struct stats_info s;
 	int i;
+	log_assert(daemon->num > 0);
 	/* gather all thread statistics in one place */
 	for(i=0; i<daemon->num; i++) {
 		server_stats_obtain(rc->worker, daemon->workers[i], &s, reset);

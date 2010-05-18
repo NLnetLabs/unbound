@@ -610,7 +610,9 @@ main(int argc, char* argv[])
 	const char* winopt = NULL;
 	int cmdline_verbose = 0;
 	int debug_mode = 0;
+#ifdef UB_ON_WINDOWS
 	int cmdline_cfg = 0;
+#endif
 
 #ifdef HAVE_SBRK
 	/* take debug snapshot of heap */
@@ -623,7 +625,9 @@ main(int argc, char* argv[])
 		switch(c) {
 		case 'c':
 			cfgfile = optarg;
+#ifdef UB_ON_WINDOWS
 			cmdline_cfg = 1;
+#endif
 			break;
 		case 'v':
 			cmdline_verbose ++;

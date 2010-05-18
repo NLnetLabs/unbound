@@ -444,6 +444,12 @@ load_rr(SSL* ssl, ldns_buffer* buf, struct regional* region,
 		rk->rk.rrset_class = htons(ldns_rr_get_class(rr));
 		ldns_buffer_clear(buf);
 		status = ldns_dname2buffer_wire(buf, ldns_rr_owner(rr));
+		if(status != LDNS_STATUS_OK) {
+			log_warn("error cannot dname2buffer :%s",
+				ldns_get_errorstr_by_id(status));
+			ldns_rr_free(rr);
+			return 0;
+		}
 		ldns_buffer_flip(buf);
 		rk->rk.dname_len = ldns_buffer_limit(buf);
 		rk->rk.dname = regional_alloc_init(region, 

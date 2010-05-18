@@ -347,7 +347,6 @@ answer_check_it(struct replay_runtime* runtime)
 			&runtime->now->addr, runtime->now->addrlen,
 			&ans->repinfo.addr, ans->repinfo.addrlen) == 0) &&
 			find_match(runtime->now->match, ans->pkt, tr)) {
-			struct replay_answer *n = ans->next;
 			log_info("testbound matched event entry from line %d",
 				runtime->now->match->lineno);
 			log_info("testbound: do STEP %d %s", 
@@ -359,7 +358,6 @@ answer_check_it(struct replay_runtime* runtime)
 			if(!ans->next)
 				runtime->answer_last = prev;
 			delete_replay_answer(ans);
-			ans = n;
 			return;
 		} else {
 			prev = ans;

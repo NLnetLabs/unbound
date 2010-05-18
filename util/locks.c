@@ -63,7 +63,7 @@ ub_thread_blocksigs()
 		fatal_exit("thr_sigsetmask: %s", strerror(err));
 #  else 
 	/* have nothing, do single process signal mask */
-	if((err=sigprocmask(SIG_SETMASK, &sigset, NULL)))
+	if(sigprocmask(SIG_SETMASK, &sigset, NULL))
 		fatal_exit("sigprocmask: %s", strerror(errno));
 #  endif /* HAVE_SOLARIS_THREADS */
 #endif /* HAVE_PTHREAD */
@@ -87,7 +87,7 @@ void ub_thread_sig_unblock(int sig)
 		fatal_exit("thr_sigsetmask: %s", strerror(err));
 #  else 
 	/* have nothing, do single thread case */
-	if((err=sigprocmask(SIG_UNBLOCK, &sigset, NULL)))
+	if(sigprocmask(SIG_UNBLOCK, &sigset, NULL))
 		fatal_exit("sigprocmask: %s", strerror(errno));
 #  endif /* HAVE_SOLARIS_THREADS */
 #endif /* HAVE_PTHREAD */
