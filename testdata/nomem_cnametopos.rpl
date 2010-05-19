@@ -6,6 +6,7 @@ server:
 	val-override-date: "20070916134226"
 	msg-cache-size: 8
 	rrset-cache-size: 8
+	target-fetch-policy: "0 0 0 0 0"
 
 stub-zone:
 	name: "."

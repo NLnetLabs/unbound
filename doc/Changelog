@@ -1,3 +1,11 @@
+19 May 2010: Wouter
+	- Fix resolution for domains like safesvc.com.cn.  If the iterator
+	  can not recurse further and it finds the delegation in a state
+	  where it would otherwise have rejected it outhand if so received
+	  from a cache lookup, then it can try to ask higherup (with loop
+	  protection).
+	- Fix comments in iter_utils:dp_is_useless.
+
 18 May 2010: Wouter
 	- Fix various compiler warnings from the clang llvm compiler.
 	- iana portlist updated.

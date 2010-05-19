@@ -522,11 +522,11 @@ iter_dp_is_useless(struct query_info* qinfo, uint16_t qflags,
 {
 	struct delegpt_ns* ns;
 	/* check:
-	 *      o RD qflag is off.
+	 *      o RD qflag is on.
 	 *      o no addresses are provided.
 	 *      o all NS items are required glue.
 	 * OR
-	 *      o RD qflag is off.
+	 *      o RD qflag is on.
 	 *      o no addresses are provided.
 	 *      o the query is for one of the nameservers in dp,
 	 *        and that nameserver is a glue-name for this dp.
