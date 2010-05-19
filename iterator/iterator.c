@@ -1503,6 +1503,22 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 					return next_state(iq, 
 						INIT_REQUEST_STATE);
 				}
+				/* is the current dp useless, like it would
+				 * be classified useless if picked from the
+				 * cache like this? If so, go back up */
+				if(iter_dp_is_useless(&qstate->qinfo, 
+					qstate->query_flags, iq->dp) && 
+					!iq->dp->target_list) {
+					/* extra target list check because
+					 * those become available again when
+					 * lookup up from the cache */
+					verbose(VERB_QUERY, "delegation is "
+						"useless, try higher up");
+					iq->deleg_msg = NULL;
+					iq->query_restart_count++;
+					return next_state(iq, 
+						INIT_REQUEST_STATE);
+				}
 
 				verbose(VERB_QUERY, "out of query targets -- "
 					"returning SERVFAIL");
