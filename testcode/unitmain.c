@@ -407,7 +407,7 @@ infra_test()
 	unit_assert( infra_edns_update(slab, &one, onelen, -1, now) );
 	unit_assert( infra_host(slab, &one, onelen, 
 			now, &vs, &edns_lame, &to) );
-	unit_assert( vs == -1 && to == init*2  && edns_lame == 1);
+	unit_assert( vs == 0 && to == init*2  && edns_lame == 0);
 
 	now += cfg->host_ttl + 10;
 	unit_assert( infra_host(slab, &one, onelen, 

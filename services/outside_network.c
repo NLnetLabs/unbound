@@ -1244,8 +1244,7 @@ serviced_udp_send(struct serviced_query* sq, ldns_buffer* buff)
 		&edns_lame_known, &rtt))
 		return 0;
 	if(sq->status == serviced_initial) {
-		if((vs != -1 || edns_lame_known == 0) && 
-			rtt > 5000 && rtt < 10001) {
+		if(edns_lame_known == 0 && rtt > 5000 && rtt < 10001) {
 			/* perform EDNS lame probe - check if server is
 			 * EDNS lame (EDNS queries to it are dropped) */
 			verbose(VERB_ALGO, "serviced query: send probe to see "
@@ -1494,11 +1493,9 @@ serviced_udp_callback(struct comm_point* c, void* arg, int error,
 	if(error == NETEVENT_TIMEOUT) {
 		int rto = 0;
 		if(sq->status == serviced_query_PROBE_EDNS) {
-			/* non-EDNS probe failed; not an EDNS lame server */
-			if(!infra_edns_update(outnet->infra, &sq->addr, 
-				sq->addrlen, 0, (uint32_t)now.tv_sec)) {
-				log_err("Out of memory caching edns works");
-			}
+			/* non-EDNS probe failed; we do not know its status,
+			 * keep trying with EDNS, timeout may not be caused
+			 * by EDNS. */
 			sq->status = serviced_query_UDP_EDNS;
 		}
 		sq->retry++;

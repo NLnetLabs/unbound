@@ -514,8 +514,11 @@ infra_edns_update(struct infra_cache* infra,
 	} 
 	/* have an entry, update the rtt, and the ttl */
 	data = (struct infra_host_data*)e->data;
-	data->edns_version = edns_version;
-	data->edns_lame_known = 1;
+	/* do not update if noEDNS and stored is yesEDNS */
+	if(!(edns_version == -1 && data->edns_version != -1)) {
+		data->edns_version = edns_version;
+		data->edns_lame_known = 1;
+	}
 
 	if(needtoinsert)
 		slabhash_insert(infra->hosts, e->hash, e, e->data, NULL);

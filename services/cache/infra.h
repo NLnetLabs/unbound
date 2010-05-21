@@ -251,6 +251,7 @@ void infra_update_tcp_works(struct infra_cache* infra,
  * @param addr: host address.
  * @param addrlen: length of addr.
  * @param edns_version: the version that it publishes.
+ * 	If it is known to support EDNS then no-EDNS is not stored over it.
  * @param timenow: what time it is now.
  * @return: 0 on error.
  */
