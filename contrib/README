@@ -16,3 +16,5 @@ distribution but may be helpful.
 * unbound.plist: launchd configuration file for MacOSX.
 * build-unbound-localzone-from-hosts.pl: perl script to turn /etc/hosts into
 	a local-zone and local-data include file for unbound.conf.
+* unbound-host.nagios.patch: makes unbound-host return status that fits right
+	in with the nagios monitoring framework.  Contributed by Migiel de Vos.

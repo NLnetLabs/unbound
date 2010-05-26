@@ -1,3 +1,8 @@
+26 May 2010: Wouter
+	- Contribution from Migiel de Vos (Surfnet): nagios patch for
+	  unbound-host, in contrib/ (in the source tarball).  Makes
+	  unbound-host suitable for monitoring dnssec(-chain) status.
+
 21 May 2010: Wouter
 	- EDNS timeout code will not fire if EDNS status already known.
 	- EDNS failure not stored if EDNS status known to work.
