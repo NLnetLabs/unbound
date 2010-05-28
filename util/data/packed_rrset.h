@@ -368,6 +368,15 @@ const char* rrset_trust_to_string(enum rrset_trust s);
  */
 const char* sec_status_to_string(enum sec_status s);
 
+/**
+ * Print string with neat domain name, type, class from rrset.
+ * @param v: at what verbosity level to print this.
+ * @param str: string of message.
+ * @param rrset: structure with name, type and class.
+ */
+void log_rrset_key(enum verbosity_value v, const char* str, 
+	struct ub_packed_rrset_key* rrset);
+
 /** 
  * Allocate rrset in region - no more locks needed 
  * @param key: a (just from rrset cache looked up) rrset key + valid,

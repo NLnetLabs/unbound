@@ -430,54 +430,6 @@ iter_ns_probability(struct ub_randstate* rnd, int n, int m)
 	return (sel < n);
 }
 
-int iter_suspect_exists(struct query_info* qinfo, struct delegpt* dp,
-        struct module_env* env)
-{
-	struct ub_packed_rrset_key* r;
-	if(qinfo->qtype != LDNS_RR_TYPE_A && qinfo->qtype != LDNS_RR_TYPE_AAAA)
-		return 0; /* not glue type */
-	if(!dname_subdomain_c(qinfo->qname, dp->name))
-		return 0; /* not in-zone */
-	if(!delegpt_find_ns(dp, qinfo->qname, qinfo->qname_len))
-		return 0; /* not glue */
-
-	/* do we suspect that it exists? lookup with time=0 */
-	r = rrset_cache_lookup(env->rrset_cache, qinfo->qname, 
-		qinfo->qname_len, qinfo->qtype, qinfo->qclass, 0, 0, 0);
-	if(r) {
-		struct packed_rrset_data* d = (struct packed_rrset_data*)
-			r->entry.data;
-		/* if it is valid, no need for queries to parent zone */
-		if(*env->now <= d->ttl) {
-			lock_rw_unlock(&r->entry.lock);
-			return 0;
-		}
-		/* was it recently expired? */
-		if( (*env->now - d->ttl) <= SUSPICION_RECENT_EXPIRY) {
-			verbose(VERB_ALGO, "suspect glue at parent: "
-				"rrset recently expired");
-			lock_rw_unlock(&r->entry.lock);
-			return 1;
-		}
-		lock_rw_unlock(&r->entry.lock);
-	}
-
-	/* so, qinfo not there, does the other A/AAAA type exist in cache? */
-	r=rrset_cache_lookup(env->rrset_cache, qinfo->qname, qinfo->qname_len,
-	  (qinfo->qtype==LDNS_RR_TYPE_A)?LDNS_RR_TYPE_AAAA:LDNS_RR_TYPE_A,
-	  qinfo->qclass, 0, *env->now, 0);
-	if(r) {
-		/* it exists and explains why the glue is there */
-		lock_rw_unlock(&r->entry.lock);
-		return 0;
-	}
-
-	/* neither exist, so logically, one should exist for a nameserver */
-	verbose(VERB_ALGO, "suspect glue at parent: "
-		"neither A nor AAAA exist in cache");
-	return 1;
-}
-
 /** detect dependency cycle for query and target */
 static int
 causes_cycle(struct module_qstate* qstate, uint8_t* name, size_t namelen,
@@ -512,6 +464,27 @@ iter_mark_cycle_targets(struct module_qstate* qstate, struct delegpt* dp)
 				ns->name, LDNS_RR_TYPE_A, 
 				qstate->qinfo.qclass);
 			ns->resolved = 1;
+		}
+	}
+}
+
+void 
+iter_mark_pside_cycle_targets(struct module_qstate* qstate, struct delegpt* dp)
+{
+	struct delegpt_ns* ns;
+	for(ns = dp->nslist; ns; ns = ns->next) {
+		if(ns->done_pside4 && ns->done_pside6)
+			continue;
+		/* see if this ns as target causes dependency cycle */
+		if(causes_cycle(qstate, ns->name, ns->namelen, 
+			LDNS_RR_TYPE_AAAA, qstate->qinfo.qclass) ||
+		   causes_cycle(qstate, ns->name, ns->namelen, 
+			LDNS_RR_TYPE_A, qstate->qinfo.qclass)) {
+			log_nametypeclass(VERB_QUERY, "skipping target due "
+			 	"to dependency cycle", ns->name,
+				LDNS_RR_TYPE_A, qstate->qinfo.qclass);
+			ns->done_pside4 = 1;
+			ns->done_pside6 = 1;
 		}
 	}
 }
@@ -735,54 +708,160 @@ reply_equal(struct reply_info* p, struct reply_info* q, ldns_buffer* scratch)
 }
 
 void 
-iter_store_inzone_glue(struct module_env* env, struct query_info* qinfo,
-	struct reply_info* rep)
+iter_store_parentside_rrset(struct module_env* env, 
+	struct ub_packed_rrset_key* rrset)
 {
 	struct rrset_ref ref;
-	struct ub_packed_rrset_key* rrset;
-	if(qinfo->qtype != LDNS_RR_TYPE_A && qinfo->qtype != LDNS_RR_TYPE_AAAA)
-		return;
-	rrset = reply_find_rrset(rep, qinfo->qname, qinfo->qname_len,
-		qinfo->qtype, qinfo->qclass);
-	if(!rrset)
-		return;
-	/* got A or AAAA glue rrset. store it in case its handy */
 	rrset = packed_rrset_copy_alloc(rrset, env->alloc, *env->now);
 	if(!rrset) {
-		log_err("malloc failure in store_inzone_glue");
+		log_err("malloc failure in store_parentside_rrset");
 		return;
 	}
 	rrset->rk.flags |= PACKED_RRSET_PARENT_SIDE;
 	rrset->entry.hash = rrset_key_hash(&rrset->rk);
 	ref.key = rrset;
 	ref.id = rrset->id;
-	/* ignore ret: it was in the cache, ref updated */
+	/* ignore ret: if it was in the cache, ref updated */
 	(void)rrset_cache_update(env->rrset_cache, &ref, env->alloc, *env->now);
 }
 
+/** fetch NS record from reply, if any */
+static struct ub_packed_rrset_key*
+reply_get_NS_rrset(struct reply_info* rep)
+{
+	size_t i;
+	for(i=0; i<rep->rrset_count; i++) {
+		if(rep->rrsets[i]->rk.type == htons(LDNS_RR_TYPE_NS)) {
+			return rep->rrsets[i];
+		}
+	}
+	return NULL;
+}
+
+void
+iter_store_parentside_NS(struct module_env* env, struct reply_info* rep)
+{
+	struct ub_packed_rrset_key* rrset = reply_get_NS_rrset(rep);
+	if(rrset) {
+		log_rrset_key(VERB_ALGO, "store parent-side NS", rrset);
+		iter_store_parentside_rrset(env, rrset);
+	}
+}
+
+void iter_store_parentside_neg(struct module_env* env, 
+        struct query_info* qinfo, struct reply_info* rep)
+{
+	/* TTL: NS from referral in iq->deleg_msg,
+	 *      or first RR from iq->response,
+	 *      or servfail5secs if !iq->response */ 
+	uint32_t ttl = NORR_TTL;
+	struct ub_packed_rrset_key* neg;
+	struct packed_rrset_data* newd;
+	if(rep) {
+		struct ub_packed_rrset_key* rrset = reply_get_NS_rrset(rep);
+		if(!rrset && rep->rrset_count != 0) rrset = rep->rrsets[0];
+		if(rrset) ttl = ub_packed_rrset_ttl(rrset);
+	}
+	/* create empty rrset to store */
+	neg = (struct ub_packed_rrset_key*)regional_alloc(env->scratch,
+	                sizeof(struct ub_packed_rrset_key));
+	if(!neg) {
+		log_err("out of memory in store_parentside_neg");
+		return;
+	}
+	memset(&neg->entry, 0, sizeof(neg->entry));
+	neg->entry.key = neg;
+	neg->rk.type = htons(qinfo->qtype);
+	neg->rk.rrset_class = htons(qinfo->qclass);
+	neg->rk.flags = 0;
+	neg->rk.dname = regional_alloc_init(env->scratch, qinfo->qname, 
+		qinfo->qname_len);
+	if(!neg->rk.dname) {
+		log_err("out of memory in store_parentside_neg");
+		return;
+	}
+	neg->rk.dname_len = qinfo->qname_len;
+	neg->entry.hash = rrset_key_hash(&neg->rk);
+	newd = (struct packed_rrset_data*)regional_alloc_zero(env->scratch, 
+		sizeof(struct packed_rrset_data) + sizeof(size_t) +
+		sizeof(uint8_t*) + sizeof(uint32_t) + sizeof(uint16_t));
+	if(!newd) {
+		log_err("out of memory in store_parentside_neg");
+		return;
+	}
+	neg->entry.data = newd;
+	newd->ttl = ttl;
+	/* entry must have one RR, otherwise not valid in cache.
+	 * put in one RR with empty rdata: those are ignored as nameserver */
+	newd->count = 1;
+	newd->rrsig_count = 0;
+	newd->trust = rrset_trust_ans_noAA;
+	newd->rr_len = (size_t*)((uint8_t*)newd +
+		sizeof(struct packed_rrset_data));
+	newd->rr_len[0] = 0 /* zero len rdata */ + sizeof(uint16_t);
+	packed_rrset_ptr_fixup(newd);
+	newd->rr_ttl[0] = newd->ttl;
+	ldns_write_uint16(newd->rr_data[0], 0 /* zero len rdata */);
+	/* store it */
+	log_rrset_key(VERB_ALGO, "store parent-side negative", neg);
+	iter_store_parentside_rrset(env, neg);
+}
+
 int 
-iter_lookup_inzone_glue(struct module_env* env, struct delegpt* dp,
+iter_lookup_parent_NS_from_cache(struct module_env* env, struct delegpt* dp,
 	struct regional* region, struct query_info* qinfo)
 {
 	struct ub_packed_rrset_key* akey;
-	akey = rrset_cache_lookup(env->rrset_cache, qinfo->qname, 
-		qinfo->qname_len, qinfo->qtype, qinfo->qclass, 
+	akey = rrset_cache_lookup(env->rrset_cache, dp->name, 
+		dp->namelen, LDNS_RR_TYPE_NS, qinfo->qclass, 
 		PACKED_RRSET_PARENT_SIDE, *env->now, 0);
 	if(akey) {
-		if(qinfo->qtype == LDNS_RR_TYPE_A) {
-			if(!delegpt_add_rrset_A(dp, region, akey, 1, 1)) {
-				lock_rw_unlock(&akey->entry.lock);
-				return 0;
-			}
-		} else if(qinfo->qtype == LDNS_RR_TYPE_AAAA) {
-			if(!delegpt_add_rrset_AAAA(dp, region, akey, 1, 1)) {
-				lock_rw_unlock(&akey->entry.lock);
-				return 0;
-			}
+		log_rrset_key(VERB_ALGO, "found parent-side NS in cache", akey);
+		dp->has_parent_side_NS = 1;
+		/* and mark the new names as lame */
+		if(!delegpt_rrset_add_ns(dp, region, akey, 1)) {
+			lock_rw_unlock(&akey->entry.lock);
+			return 0;
 		}
 		lock_rw_unlock(&akey->entry.lock);
 	}
 	return 1;
+}
+
+int iter_lookup_parent_glue_from_cache(struct module_env* env,
+        struct delegpt* dp, struct regional* region, struct query_info* qinfo)
+{
+	struct ub_packed_rrset_key* akey;
+	struct delegpt_ns* ns;
+	size_t num = delegpt_count_targets(dp);
+	for(ns = dp->nslist; ns; ns = ns->next) {
+		/* get cached parentside A */
+		akey = rrset_cache_lookup(env->rrset_cache, ns->name, 
+			ns->namelen, LDNS_RR_TYPE_A, qinfo->qclass, 
+			PACKED_RRSET_PARENT_SIDE, *env->now, 0);
+		if(akey) {
+			log_rrset_key(VERB_ALGO, "found parent-side", akey);
+			ns->done_pside4 = 1;
+			/* a negative-cache-element has no addresses it adds */
+			if(!delegpt_add_rrset_A(dp, region, akey, 1, 1))
+				log_err("malloc failure in lookup_parent_glue");
+			lock_rw_unlock(&akey->entry.lock);
+		}
+		/* get cached parentside AAAA */
+		akey = rrset_cache_lookup(env->rrset_cache, ns->name, 
+			ns->namelen, LDNS_RR_TYPE_AAAA, qinfo->qclass, 
+			PACKED_RRSET_PARENT_SIDE, *env->now, 0);
+		if(akey) {
+			log_rrset_key(VERB_ALGO, "found parent-side", akey);
+			ns->done_pside6 = 1;
+			/* a negative-cache-element has no addresses it adds */
+			if(!delegpt_add_rrset_AAAA(dp, region, akey, 1, 1))
+				log_err("malloc failure in lookup_parent_glue");
+			lock_rw_unlock(&akey->entry.lock);
+		}
+	}
+	/* see if new (but lame) addresses have become available */
+	return delegpt_count_targets(dp) != num;
 }
 
 int 

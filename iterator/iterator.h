@@ -247,6 +247,24 @@ struct iter_qstate {
 	/** the number of times this query as followed a referral. */
 	int referral_count;
 
+	/**
+	 * The query must store NS records from referrals as parentside RRs
+	 * Enabled once it hits resolution problems, to throttle retries.
+	 */
+	int store_parent_NS;
+
+	/**
+	 * The query is for parent-side glue(A or AAAA) for a nameserver.
+	 * If the item is seen as glue in a referral, and pside_glue is NULL,
+	 * then it is stored in pside_glue for later.
+	 * If it was never seen, at the end, then a negative caching element 
+	 * must be created.  
+	 * The (data or negative) RR cache element then throttles retries.
+	 */
+	int query_for_pside_glue;
+	/** the parent-side-glue element (NULL if none, its first match) */
+	struct ub_packed_rrset_key* pside_glue;
+
 	/** 
 	 * expected dnssec information for this iteration step. 
 	 * If dnssec rrsigs are expected and not given, the server is marked

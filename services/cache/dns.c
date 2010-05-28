@@ -213,27 +213,6 @@ find_add_addrs(struct module_env* env, uint16_t qclass,
 				lock_rw_unlock(&neg->entry.lock);
 			}
 		}
-		/* see if we have parent-side-glue (dispreferred) */
-		akey = rrset_cache_lookup(env->rrset_cache, ns->name, 
-			ns->namelen, LDNS_RR_TYPE_A, qclass, 
-			PACKED_RRSET_PARENT_SIDE, now, 0);
-		if(akey) {
-			if(!delegpt_add_rrset_A(dp, region, akey, 1, 1)) {
-				lock_rw_unlock(&akey->entry.lock);
-				return 0;
-			}
-			lock_rw_unlock(&akey->entry.lock);
-		}
-		akey = rrset_cache_lookup(env->rrset_cache, ns->name, 
-			ns->namelen, LDNS_RR_TYPE_AAAA, qclass, 
-			PACKED_RRSET_PARENT_SIDE, now, 0);
-		if(akey) {
-			if(!delegpt_add_rrset_AAAA(dp, region, akey, 1, 1)) {
-				lock_rw_unlock(&akey->entry.lock);
-				return 0;
-			}
-			lock_rw_unlock(&akey->entry.lock);
-		}
 	}
 	return 1;
 }
@@ -283,27 +262,6 @@ cache_fill_missing(struct module_env* env, uint16_t qclass,
 				delegpt_add_neg_msg(dp, neg);
 				lock_rw_unlock(&neg->entry.lock);
 			}
-		}
-		/* see if we have parent-side-glue (dispreferred) */
-		akey = rrset_cache_lookup(env->rrset_cache, ns->name, 
-			ns->namelen, LDNS_RR_TYPE_A, qclass, 
-			PACKED_RRSET_PARENT_SIDE, now, 0);
-		if(akey) {
-			if(!delegpt_add_rrset_A(dp, region, akey, 1, 1)) {
-				lock_rw_unlock(&akey->entry.lock);
-				return 0;
-			}
-			lock_rw_unlock(&akey->entry.lock);
-		}
-		akey = rrset_cache_lookup(env->rrset_cache, ns->name, 
-			ns->namelen, LDNS_RR_TYPE_AAAA, qclass, 
-			PACKED_RRSET_PARENT_SIDE, now, 0);
-		if(akey) {
-			if(!delegpt_add_rrset_AAAA(dp, region, akey, 1, 1)) {
-				lock_rw_unlock(&akey->entry.lock);
-				return 0;
-			}
-			lock_rw_unlock(&akey->entry.lock);
 		}
 	}
 	return 1;
@@ -420,7 +378,7 @@ dns_cache_find_delegation(struct module_env* env, uint8_t* qname,
 			return NULL;
 		}
 	}
-	if(!delegpt_rrset_add_ns(dp, region, nskey))
+	if(!delegpt_rrset_add_ns(dp, region, nskey, 0))
 		log_err("find_delegation: addns out of memory");
 	lock_rw_unlock(&nskey->entry.lock); /* first unlock before next lookup*/
 	/* find and add DS/NSEC (if any) */

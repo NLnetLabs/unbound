@@ -74,6 +74,11 @@ struct delegpt {
 
 	/** if true, the NS RRset was bogus. All info is bad. */
 	int bogus;
+	/** if true, the parent-side NS record has been applied:
+	 * its names have been added and their addresses can follow later.
+	 * Also true if the delegationpoint was created from a delegation
+	 * message and thus contains the parent-side-info already. */
+	uint8_t has_parent_side_NS;
 };
 
 /**
@@ -90,13 +95,26 @@ struct delegpt_ns {
 	 * If the name has been resolved. false if not queried for yet.
 	 * true if the A, AAAA queries have been generated.
 	 * marked true if those queries fail.
-	 * and marked true is got4 and got6 are both true.
+	 * and marked true if got4 and got6 are both true.
 	 */
 	int resolved;
 	/** if the ipv4 address is in the delegpt */
 	uint8_t got4;
 	/** if the ipv6 address is in the delegpt */
 	uint8_t got6;
+	/**
+	 * If the name is parent-side only and thus dispreferred.
+	 * Its addresses become dispreferred as well
+	 */
+	uint8_t lame;
+	/** if the parent-side ipv4 address has been looked up (last resort).
+	 * Also enabled if a parent-side cache entry exists, or a parent-side
+	 * negative-cache entry exists. */
+	uint8_t done_pside4;
+	/** if the parent-side ipv6 address has been looked up (last resort).
+	 * Also enabled if a parent-side cache entry exists, or a parent-side
+	 * negative-cache entry exists. */
+	uint8_t done_pside6;
 };
 
 /**
@@ -155,20 +173,22 @@ int delegpt_set_name(struct delegpt* dp, struct regional* regional,
  * @param dp: delegation point.
  * @param regional: where to allocate the info.
  * @param name: domain name in wire format.
+ * @param lame: name is lame, disprefer it.
  * @return false on error.
  */
 int delegpt_add_ns(struct delegpt* dp, struct regional* regional, 
-	uint8_t* name);
+	uint8_t* name, int lame);
 
 /**
  * Add NS rrset; calls add_ns repeatedly.
  * @param dp: delegation point.
  * @param regional: where to allocate the info.
  * @param ns_rrset: NS rrset.
+ * @param lame: rrset is lame, disprefer it.
  * return 0 on alloc error.
  */
 int delegpt_rrset_add_ns(struct delegpt* dp, struct regional* regional,
-	struct ub_packed_rrset_key* ns_rrset);
+	struct ub_packed_rrset_key* ns_rrset, int lame);
 
 /**
  * Add target address to the delegation point.
@@ -219,10 +239,11 @@ int delegpt_add_rrset_AAAA(struct delegpt* dp, struct regional* regional,
  * @param dp: delegation point.
  * @param regional: where to allocate the info.
  * @param rrset: RRset to add, NS, A, AAAA.
+ * @param lame: rrset is lame, disprefer it.
  * @return 0 on alloc error.
  */
 int delegpt_add_rrset(struct delegpt* dp, struct regional* regional, 
-	struct ub_packed_rrset_key* rrset);
+	struct ub_packed_rrset_key* rrset, int lame);
 
 /**
  * Add address to the delegation point. No servername is associated or checked.
@@ -285,6 +306,9 @@ void delegpt_add_unused_targets(struct delegpt* dp);
  * @return number of missing targets (or 0).
  */
 size_t delegpt_count_missing_targets(struct delegpt* dp);
+
+/** count total number of targets in dp */
+size_t delegpt_count_targets(struct delegpt* dp);
 
 /**
  * Create new delegation point from a dns message

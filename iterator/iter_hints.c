@@ -85,7 +85,7 @@ ah(struct delegpt* dp, struct regional* r, const char* sv, const char* ip)
 		log_err("could not parse %s", sv);
 		return 0;
 	}
-	if(!delegpt_add_ns(dp, r, ldns_rdf_data(rdf)) ||
+	if(!delegpt_add_ns(dp, r, ldns_rdf_data(rdf), 0) ||
 	   !extstrtoaddr(ip, &addr, &addrlen) ||
 	   !delegpt_add_target(dp, r, ldns_rdf_data(rdf), ldns_rdf_size(rdf),
 		&addr, addrlen, 0, 0, 1)) {
@@ -112,6 +112,7 @@ compile_time_root_prime(struct regional* r, int do_ip4, int do_ip6)
 	struct delegpt* dp = delegpt_create(r);
 	if(!dp)
 		return NULL;
+	dp->has_parent_side_NS = 1;
 	if(!delegpt_set_name(dp, r, (uint8_t*)"\000"))
 		return NULL;
       if(do_ip4) {
@@ -202,7 +203,7 @@ read_stubs_host(struct iter_hints* hints, struct config_stub* s,
 				s->name, p->str);
 			return 0;
 		}
-		if(!delegpt_add_ns(dp, hints->region, ldns_rdf_data(rdf))) {
+		if(!delegpt_add_ns(dp, hints->region, ldns_rdf_data(rdf), 0)) {
 			ldns_rdf_deep_free(rdf);
 			log_err("out of memory");
 			return 0;
@@ -247,6 +248,7 @@ read_stubs(struct iter_hints* hints, struct config_file* cfg)
 			log_err("out of memory");
 			return 0;
 		}
+		dp->has_parent_side_NS = 1;
 		if(!read_stubs_name(hints, s, dp) ||
 			!read_stubs_host(hints, s, dp) ||
 			!read_stubs_addr(hints, s, dp))
@@ -283,6 +285,7 @@ read_root_hints(struct iter_hints* hints, char* fname)
 		return 0;
 	}
 	verbose(VERB_QUERY, "Reading root hints from %s", fname);
+	dp->has_parent_side_NS = 1;
 	while(!feof(f)) {
 		status = ldns_rr_new_frm_fp_l(&rr, f, 
 			&default_ttl, &origin, &prev_rr, &lineno);
@@ -297,7 +300,7 @@ read_root_hints(struct iter_hints* hints, char* fname)
 		}
 		if(ldns_rr_get_type(rr) == LDNS_RR_TYPE_NS) {
 			if(!delegpt_add_ns(dp, hints->region,
-				ldns_rdf_data(ldns_rr_rdf(rr, 0)))) {
+				ldns_rdf_data(ldns_rr_rdf(rr, 0)), 0)) {
 				log_err("out of memory reading root hints");
 				goto stop_read;
 			}

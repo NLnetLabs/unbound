@@ -69,12 +69,15 @@ struct delegpt* delegpt_copy(struct delegpt* dp, struct regional* region)
 	if(!delegpt_set_name(copy, region, dp->name))
 		return NULL;
 	copy->bogus = dp->bogus;
+	copy->has_parent_side_NS = dp->has_parent_side_NS;
 	for(ns = dp->nslist; ns; ns = ns->next) {
-		if(!delegpt_add_ns(copy, region, ns->name))
+		if(!delegpt_add_ns(copy, region, ns->name, (int)ns->lame))
 			return NULL;
 		copy->nslist->resolved = ns->resolved;
 		copy->nslist->got4 = ns->got4;
 		copy->nslist->got6 = ns->got6;
+		copy->nslist->done_pside4 = ns->done_pside4;
+		copy->nslist->done_pside6 = ns->done_pside6;
 	}
 	for(a = dp->target_list; a; a = a->next_target) {
 		if(!delegpt_add_addr(copy, region, &a->addr, a->addrlen, 
@@ -93,7 +96,8 @@ delegpt_set_name(struct delegpt* dp, struct regional* region, uint8_t* name)
 }
 
 int 
-delegpt_add_ns(struct delegpt* dp, struct regional* region, uint8_t* name)
+delegpt_add_ns(struct delegpt* dp, struct regional* region, uint8_t* name,
+	int lame)
 {
 	struct delegpt_ns* ns;
 	size_t len;
@@ -113,6 +117,9 @@ delegpt_add_ns(struct delegpt* dp, struct regional* region, uint8_t* name)
 	ns->resolved = 0;
 	ns->got4 = 0;
 	ns->got6 = 0;
+	ns->lame = (uint8_t)lame;
+	ns->done_pside4 = 0;
+	ns->done_pside6 = 0;
 	return 1;
 }
 
@@ -245,15 +252,19 @@ void delegpt_log(enum verbosity_value v, struct delegpt* dp)
 	delegpt_count_ns(dp, &numns, &missing);
 	delegpt_count_addr(dp, &numaddr, &numres, &numavail);
 	log_info("DelegationPoint<%s>: %u names (%u missing), "
-		"%u addrs (%u result, %u avail)", 
+		"%u addrs (%u result, %u avail)%s", 
 		buf, (unsigned)numns, (unsigned)missing, 
-		(unsigned)numaddr, (unsigned)numres, (unsigned)numavail);
+		(unsigned)numaddr, (unsigned)numres, (unsigned)numavail,
+		(dp->has_parent_side_NS?" parentNS":" cacheNS"));
 	if(verbosity >= VERB_ALGO) {
 		for(ns = dp->nslist; ns; ns = ns->next) {
 			dname_str(ns->name, buf);
-			log_info("  %s %s%s%s%s", buf, (ns->resolved?"*":""),
+			log_info("  %s %s%s%s%s%s%s%s", buf, 
+			(ns->resolved?"*":""),
 			(ns->got4?" A":""), (ns->got6?" AAAA":""),
-			(dp->bogus?" BOGUS":"") );
+			(dp->bogus?" BOGUS":""), (ns->lame?" PARENTSIDE":""),
+			(ns->done_pside4?" PSIDE_A":""),
+			(ns->done_pside6?" PSIDE_AAAA":""));
 		}
 		for(a = dp->target_list; a; a = a->next_target) {
 			const char* str = "  ";
@@ -275,6 +286,16 @@ delegpt_add_unused_targets(struct delegpt* dp)
 		dp->result_list = usa;
 		usa = usa->next_usable;
 	}
+}
+
+size_t
+delegpt_count_targets(struct delegpt* dp)
+{
+	struct delegpt_addr* a;
+	size_t n = 0;
+	for(a = dp->target_list; a; a = a->next_target)
+		n++;
+	return n;
 }
 
 size_t 
@@ -325,9 +346,10 @@ delegpt_from_message(struct dns_msg* msg, struct regional* region)
 	dp = delegpt_create(region);
 	if(!dp)
 		return NULL;
+	dp->has_parent_side_NS = 1; /* created from message */
 	if(!delegpt_set_name(dp, region, ns_rrset->rk.dname))
 		return NULL;
-	if(!delegpt_rrset_add_ns(dp, region, ns_rrset))
+	if(!delegpt_rrset_add_ns(dp, region, ns_rrset, 0))
 		return NULL;
 
 	/* add glue, A and AAAA in answer and additional section */
@@ -351,7 +373,7 @@ delegpt_from_message(struct dns_msg* msg, struct regional* region)
 
 int 
 delegpt_rrset_add_ns(struct delegpt* dp, struct regional* region,
-        struct ub_packed_rrset_key* ns_rrset)
+        struct ub_packed_rrset_key* ns_rrset, int lame)
 {
 	struct packed_rrset_data* nsdata = (struct packed_rrset_data*)
 		ns_rrset->entry.data;
@@ -364,7 +386,7 @@ delegpt_rrset_add_ns(struct delegpt* dp, struct regional* region,
 			(size_t)ldns_read_uint16(nsdata->rr_data[i]))
 			continue; /* bad format */
 		/* add rdata of NS (= wirefmt dname), skip rdatalen bytes */
-		if(!delegpt_add_ns(dp, region, nsdata->rr_data[i]+2))
+		if(!delegpt_add_ns(dp, region, nsdata->rr_data[i]+2, lame))
 			return 0;
 	}
 	return 1;
@@ -418,16 +440,16 @@ delegpt_add_rrset_AAAA(struct delegpt* dp, struct regional* region,
 
 int 
 delegpt_add_rrset(struct delegpt* dp, struct regional* region,
-        struct ub_packed_rrset_key* rrset)
+        struct ub_packed_rrset_key* rrset, int lame)
 {
 	if(!rrset)
 		return 1;
 	if(ntohs(rrset->rk.type) == LDNS_RR_TYPE_NS)
-		return delegpt_rrset_add_ns(dp, region, rrset);
+		return delegpt_rrset_add_ns(dp, region, rrset, lame);
 	else if(ntohs(rrset->rk.type) == LDNS_RR_TYPE_A)
-		return delegpt_add_rrset_A(dp, region, rrset, 0, 1);
+		return delegpt_add_rrset_A(dp, region, rrset, lame, 1);
 	else if(ntohs(rrset->rk.type) == LDNS_RR_TYPE_AAAA)
-		return delegpt_add_rrset_AAAA(dp, region, rrset, 0, 1);
+		return delegpt_add_rrset_AAAA(dp, region, rrset, lame, 1);
 	log_warn("Unknown rrset type added to delegpt");
 	return 1;
 }

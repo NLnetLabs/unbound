@@ -145,17 +145,13 @@ int iter_ns_probability(struct ub_randstate* rnd, int n, int m);
 void iter_mark_cycle_targets(struct module_qstate* qstate, struct delegpt* dp);
 
 /**
- * See if query is in-zone glue and we suspect that it exists.
- * Suspicion that it exists, is if there is no A or AAAA in cache (since
- * one of them is expected for an NS record) or the qtype is in cache but
- * was recently expired (so we have seen this data recently).
- * @param qinfo: query info.
- * @param dp: delegation point we are at.
- * @param env: environment with rrset cache.
- * @return true if suspect that this glue exists.
+ * Mark targets that result in a dependency cycle as done, so they
+ * will not get selected as targets.  For the parent-side lookups.
+ * @param qstate: query state.
+ * @param dp: delegpt to mark ns in.
  */
-int iter_suspect_exists(struct query_info* qinfo, struct delegpt* dp,
-	struct module_env* env);
+void iter_mark_pside_cycle_targets(struct module_qstate* qstate,
+	struct delegpt* dp);
 
 /**
  * See if delegation is useful or offers immediately no targets for 
@@ -217,26 +213,63 @@ int iter_msg_from_zone(struct dns_msg* msg, struct delegpt* dp,
 int reply_equal(struct reply_info* p, struct reply_info* q, ldns_buffer* buf);
 
 /**
- * Store in-zone glue in seperate rrset cache entries for later last-resort
- * lookups in case the child-side versions of this information fails.
+ * Store parent-side rrset in seperate rrset cache entries for later 
+ * last-resort * lookups in case the child-side versions of this information 
+ * fails.
  * @param env: environment with cache, time, ...
- * @param qinfo: query info. must match the information stored to avoid
- * 	Kaminsky-style trouble.
- * @param rep: reply with possibly A or AAAA content to store.
+ * @param rrset: the rrset to store (copied).
+ * Failure to store is logged, but otherwise ignored.
  */
-void iter_store_inzone_glue(struct module_env* env, struct query_info* qinfo,
-	struct reply_info* rep);
+void iter_store_parentside_rrset(struct module_env* env, 
+	struct ub_packed_rrset_key* rrset);
 
 /**
- * Find in-zone glue from rrset cache again.
- * @param env: query env with rrset cache and time.
- * @param dp: delegation point to store result in.
- * @param region: region to alloc result in.
- * @param qinfo: query into that is pertinent.
- * @return false on malloc failure.
+ * Store parent-side NS records from a referral message
+ * @param env: environment with cache, time, ...
+ * @param rep: response with NS rrset.
+ * Failure to store is logged, but otherwise ignored.
  */
-int iter_lookup_inzone_glue(struct module_env* env, struct delegpt* dp,
-	struct regional* region, struct query_info* qinfo);
+void iter_store_parentside_NS(struct module_env* env, struct reply_info* rep);
+
+/**
+ * Store parent-side negative element, the parentside rrset does not exist,
+ * creates an rrset with empty rdata in the rrset cache with PARENTSIDE flag.
+ * @param env: environment with cache, time, ...
+ * @param qinfo: the identity of the rrset that is missing.
+ * @param rep: delegation response or answer response, to glean TTL from.
+ * (malloc) failure is logged but otherwise ignored.
+ */
+void iter_store_parentside_neg(struct module_env* env, 
+	struct query_info* qinfo, struct reply_info* rep);
+
+/**
+ * Add parent NS record if that exists in the cache.  This is both new
+ * information and acts like a timeout throttle on retries.
+ * @param env: query env with rrset cache and time.
+ * @param dp: delegation point to store result in.  Also this dp is used to
+ *	see which NS name is needed.
+ * @param region: region to alloc result in.
+ * @param qinfo: pertinent information, the qclass.
+ * @return false on malloc failure.
+ *	if true, the routine worked and if such cached information 
+ *	existed dp->has_parent_side_NS is set true.
+ */
+int iter_lookup_parent_NS_from_cache(struct module_env* env,
+	struct delegpt* dp, struct regional* region, struct query_info* qinfo);
+
+/**
+ * Add parent-side glue if that exists in the cache.  This is both new
+ * information and acts like a timeout throttle on retries to fetch them.
+ * @param env: query env with rrset cache and time.
+ * @param dp: delegation point to store result in.  Also this dp is used to
+ *	see which NS name is needed.
+ * @param region: region to alloc result in.
+ * @param qinfo: pertinent information, the qclass.
+ * @return: true, it worked, no malloc failures, and new addresses (lame)
+ *	have been added, giving extra options as query targets.
+ */
+int iter_lookup_parent_glue_from_cache(struct module_env* env,
+	struct delegpt* dp, struct regional* region, struct query_info* qinfo);
 
 /**
  * Lookup next root-hint or root-forward entry.

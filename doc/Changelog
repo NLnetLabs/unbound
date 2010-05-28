@@ -1,5 +1,16 @@
 28 May 2010: Wouter
 	- iana portlist updated.
+	- parent-child disagreement approach altered.  Older fixes are
+	  removed in place of a more exhaustive search for misconfigured data
+	  available via the parent of a delegation.
+	  This is designed to be throttled by cache entries, with TTL from the
+	  parent if possible.  Additionally the loop-counter is used.
+	  It also tests for NS RRset differences between parent and child.
+	  The fetch of misconfigured data should be more reliable and thorough.
+	  It should work reliably even with no or only partial data in cache.
+	  Data received from the child (as always) is deemed more
+	  authoritative than information received from the delegation parent.
+	  The search for misconfigured data is not performed normally.
 
 26 May 2010: Wouter
 	- Contribution from Migiel de Vos (Surfnet): nagios patch for

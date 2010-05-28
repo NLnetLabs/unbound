@@ -41,6 +41,16 @@ SECTION QUESTION
 a.gtld-servers.net. IN AAAA
 SECTION ANSWER
 ENTRY_END
+ENTRY_BEGIN
+
+MATCH opcode qtype qname
+ADJUST copy_id 
+REPLY QR NOERROR
+SECTION QUESTION
+a.gtld-servers.net. IN A
+SECTION ANSWER
+a.gtld-servers.net.	IN 	A	192.5.6.30
+ENTRY_END
 RANGE_END
 
 ; a.gtld-servers.net.

@@ -190,7 +190,7 @@ read_fwds_host(struct iter_forwards* fwd, struct config_stub* s,
 				s->name, p->str);
 			return 0;
 		}
-		if(!delegpt_add_ns(dp, fwd->region, ldns_rdf_data(rdf))) {
+		if(!delegpt_add_ns(dp, fwd->region, ldns_rdf_data(rdf), 0)) {
 			ldns_rdf_deep_free(rdf);
 			log_err("out of memory");
 			return 0;
@@ -235,6 +235,9 @@ read_forwards(struct iter_forwards* fwd, struct config_file* cfg)
 			log_err("out of memory");
 			return 0;
 		}
+		/* set flag that parent side NS information is included.
+		 * Asking an (higher up) server on the internet is not useful*/
+		dp->has_parent_side_NS = 1;
 		if(!read_fwds_name(fwd, s, dp) ||
 			!read_fwds_host(fwd, s, dp) ||
 			!read_fwds_addr(fwd, s, dp))

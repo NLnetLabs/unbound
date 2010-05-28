@@ -106,6 +106,18 @@ MATCH opcode qtype qname
 ADJUST copy_id
 REPLY QR NOERROR
 SECTION QUESTION
+ns.example.com. IN A
+SECTION ANSWER
+ns.example.com.		IN 	A	1.2.3.4
+SECTION AUTHORITY
+example.com.	IN NS	ns.example.com.
+ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR NOERROR
+SECTION QUESTION
 ns.example.com. IN AAAA
 SECTION ANSWER
 ENTRY_END

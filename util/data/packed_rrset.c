@@ -258,6 +258,14 @@ sec_status_to_string(enum sec_status s)
 	return "unknown_sec_status_value";
 }
 
+void log_rrset_key(enum verbosity_value v, const char* str, 
+	struct ub_packed_rrset_key* rrset)
+{
+	if(verbosity >= v)
+		log_nametypeclass(v, str, rrset->rk.dname,
+			ntohs(rrset->rk.type), ntohs(rrset->rk.rrset_class));
+}
+
 uint32_t 
 ub_packed_rrset_ttl(struct ub_packed_rrset_key* key)
 {
