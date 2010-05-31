@@ -66,7 +66,7 @@
 /** time when nameserver glue is said to be 'recent' */
 #define SUSPICION_RECENT_EXPIRY 86400
 /** penalty to validation failed blacklisted IPs */
-#define BLACKLIST_PENALTY (USEFUL_SERVER_TOP_TIMEOUT*3)
+#define BLACKLIST_PENALTY (USEFUL_SERVER_TOP_TIMEOUT*4)
 
 /** fillup fetch policy array */
 static void
@@ -160,15 +160,17 @@ iter_apply_cfg(struct iter_env* iter_env, struct config_file* cfg)
  *		This value exactly is given for unresponsive blacklisted.
  *	USEFUL_SERVER_TOP_TIMEOUT+1
  *		For non-blacklisted servers: huge timeout, but has traffic.
- *	USEFUL_SERVER_TOP_TIMEOUT ..
- *		dnsseclame servers get penalty
- *		also for parent-side lame servers (lame in delegpt).
+ *	USEFUL_SERVER_TOP_TIMEOUT*1 ..
+ *		parent-side lame servers get this penalty. A dispreferential
+ *		server. (lame in delegpt).
  *	USEFUL_SERVER_TOP_TIMEOUT*2 ..
+ *		dnsseclame servers get penalty
+ *	USEFUL_SERVER_TOP_TIMEOUT*3 ..
  *		recursion lame servers get penalty
  *	UNKNOWN_SERVER_NICENESS 
  *		If no information is known about the server, this is
  *		returned. 376 msec or so.
- *	+BLACKLIST_PENALTY (of USEFUL_TOP_TIMEOUT*3) for dnssec failed IPs.
+ *	+BLACKLIST_PENALTY (of USEFUL_TOP_TIMEOUT*4) for dnssec failed IPs.
  *
  * When a final value is chosen that is dnsseclame ; dnsseclameness checking
  * is turned off (so we do not discard the reply).
@@ -206,19 +208,20 @@ iter_filter_unsuitable(struct iter_env* iter_env, struct module_env* env,
 			lost >= USEFUL_SERVER_MAX_LOST)
 			/* server is unresponsive, but keep trying slowly */
 			return USEFUL_SERVER_TOP_TIMEOUT+1;
+		/* select remainder from worst to best */
+		else if(reclame)
+			return rtt+USEFUL_SERVER_TOP_TIMEOUT*3; /* nonpref */
+		else if(dnsseclame )
+			return rtt+USEFUL_SERVER_TOP_TIMEOUT*2; /* nonpref */
 		else if(a->lame)
 			return rtt+USEFUL_SERVER_TOP_TIMEOUT+1; /* nonpref */
 		else if(rtt >= USEFUL_SERVER_TOP_TIMEOUT) /* not blacklisted*/
-			return USEFUL_SERVER_TOP_TIMEOUT+1; 
-		else if(reclame)
-			return rtt+USEFUL_SERVER_TOP_TIMEOUT*2; /* nonpref */
-		else if(dnsseclame )
-			return rtt+USEFUL_SERVER_TOP_TIMEOUT; /* nonpref */
+			return USEFUL_SERVER_TOP_TIMEOUT+1;
 		else	return rtt;
 	}
 	/* no server information present */
 	if(a->lame)
-		return USEFUL_SERVER_TOP_TIMEOUT+1; /* nonpref */
+		return USEFUL_SERVER_TOP_TIMEOUT+1+UNKNOWN_SERVER_NICENESS; /* nonpref */
 	return UNKNOWN_SERVER_NICENESS;
 }
 
@@ -323,22 +326,22 @@ iter_server_selection(struct iter_env* iter_env,
 		return NULL;
 	verbose(VERB_ALGO, "selrtt %d", selrtt);
 	if(selrtt > BLACKLIST_PENALTY) {
-		if(selrtt-BLACKLIST_PENALTY > USEFUL_SERVER_TOP_TIMEOUT*2) {
+		if(selrtt-BLACKLIST_PENALTY > USEFUL_SERVER_TOP_TIMEOUT*3) {
 			verbose(VERB_ALGO, "chase to "
 				"blacklisted recursion lame server");
 			*chase_to_rd = 1;
 		}
-		if(selrtt-BLACKLIST_PENALTY > USEFUL_SERVER_TOP_TIMEOUT) {
+		if(selrtt-BLACKLIST_PENALTY > USEFUL_SERVER_TOP_TIMEOUT*2) {
 			verbose(VERB_ALGO, "chase to "
 				"blacklisted dnssec lame server");
 			*dnssec_lame = 1;
 		}
 	} else {
-		if(selrtt > USEFUL_SERVER_TOP_TIMEOUT*2) {
+		if(selrtt > USEFUL_SERVER_TOP_TIMEOUT*3) {
 			verbose(VERB_ALGO, "chase to recursion lame server");
 			*chase_to_rd = 1;
 		}
-		if(selrtt > USEFUL_SERVER_TOP_TIMEOUT) {
+		if(selrtt > USEFUL_SERVER_TOP_TIMEOUT*2) {
 			verbose(VERB_ALGO, "chase to dnssec lame server");
 			*dnssec_lame = 1;
 		}

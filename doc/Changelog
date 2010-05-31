@@ -3,6 +3,8 @@
 	  flag from upstream servers.
 	- alloc_special_obtain out of memory is not a fatal error any more,
 	  enabling unbound to continue longer in out of memory conditions.
+	- parentside names are dispreferred but not said to be dnssec-lame.
+	- parentside check for cached newname glue.
 
 28 May 2010: Wouter
 	- iana portlist updated.

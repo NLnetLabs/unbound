@@ -1406,6 +1406,14 @@ processLastResort(struct module_qstate* qstate, struct iter_qstate* iq,
 			return next_state(iq, INIT_REQUEST_STATE);
 		}
 	}
+	/* see if that makes new names available */
+	if(!cache_fill_missing(qstate->env, iq->qchase.qclass, 
+		qstate->region, iq->dp))
+		log_err("out of memory in cache_fill_missing");
+	if(iq->dp->usable_list) {
+		verbose(VERB_ALGO, "try parent-side-name, w. glue from cache");
+		return next_state(iq, QUERYTARGETS_STATE);
+	}
 	/* try to fill out parent glue from cache */
 	if(iter_lookup_parent_glue_from_cache(qstate->env, iq->dp,
 		qstate->region, &qstate->qinfo)) {
