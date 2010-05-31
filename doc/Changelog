@@ -1,3 +1,7 @@
+31 May 2010: Wouter
+	- Fix AD flag handling, it could in some cases mistakenly copy the AD 
+	  flag from upstream servers.
+
 28 May 2010: Wouter
 	- iana portlist updated.
 	- parent-child disagreement approach altered.  Older fixes are
