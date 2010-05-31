@@ -5,6 +5,7 @@
 	  enabling unbound to continue longer in out of memory conditions.
 	- parentside names are dispreferred but not said to be dnssec-lame.
 	- parentside check for cached newname glue.
+	- fix parentside and querytargets modulestate, for dump_requestlist.
 
 28 May 2010: Wouter
 	- iana portlist updated.

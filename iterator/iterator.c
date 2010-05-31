@@ -1429,8 +1429,10 @@ processLastResort(struct module_qstate* qstate, struct iter_qstate* iq,
 			return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
 		}
 		iq->num_target_queries += qs;
-		if(qs != 0)
+		if(qs != 0) {
+			qstate->ext_state[id] = module_wait_subquery;
 			return 0; /* and wait for them */
+		}
 	}
 	/* mark cycle targets for parent-side lookups */
 	iter_mark_pside_cycle_targets(qstate, iq->dp);
@@ -1504,7 +1506,6 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 	verbose(VERB_ALGO, "processQueryTargets: targetqueries %d, "
 		"currentqueries %d", iq->num_target_queries, 
 		iq->num_current_queries);
-	qstate->ext_state[id] = module_wait_reply;
 
 	/* Make sure that we haven't run away */
 	/* FIXME: is this check even necessary? */
@@ -1529,6 +1530,7 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 		 * more delegpt addrs became available, wait for existing
 		 * query. */
 		verbose(VERB_ALGO, "woke up, but wait for outstanding query");
+		qstate->ext_state[id] = module_wait_reply;
 		return 0;
 	}
 
@@ -1551,6 +1553,7 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 		if(iq->num_target_queries > 0) {
 			/* wait to get all targets, we want to try em */
 			verbose(VERB_ALGO, "wait for all targets for fallback");
+			qstate->ext_state[id] = module_wait_reply;
 			return 0;
 		}
 		/* did we do enough fallback queries already? */
@@ -1640,18 +1643,23 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 
 		/* otherwise, we have no current targets, so submerge 
 		 * until one of the target or direct queries return. */
-		if(iq->num_target_queries>0 && iq->num_current_queries>0)
+		if(iq->num_target_queries>0 && iq->num_current_queries>0) {
 			verbose(VERB_ALGO, "no current targets -- waiting "
 				"for %d targets to resolve or %d outstanding"
 				" queries to respond", iq->num_target_queries, 
 				iq->num_current_queries);
-		else if(iq->num_target_queries>0)
+			qstate->ext_state[id] = module_wait_reply;
+		} else if(iq->num_target_queries>0) {
 			verbose(VERB_ALGO, "no current targets -- waiting "
 				"for %d targets to resolve.",
 				iq->num_target_queries);
-		else 	verbose(VERB_ALGO, "no current targets -- waiting "
+			qstate->ext_state[id] = module_wait_subquery;
+		} else {
+			verbose(VERB_ALGO, "no current targets -- waiting "
 				"for %d outstanding queries to respond.",
 				iq->num_current_queries);
+			qstate->ext_state[id] = module_wait_reply;
+		}
 		return 0;
 	}
 
