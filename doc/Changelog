@@ -1,6 +1,8 @@
 31 May 2010: Wouter
 	- Fix AD flag handling, it could in some cases mistakenly copy the AD 
 	  flag from upstream servers.
+	- alloc_special_obtain out of memory is not a fatal error any more,
+	  enabling unbound to continue longer in out of memory conditions.
 
 28 May 2010: Wouter
 	- iana portlist updated.
