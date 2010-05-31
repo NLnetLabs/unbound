@@ -7,6 +7,7 @@
 	- parentside check for cached newname glue.
 	- fix parentside and querytargets modulestate, for dump_requestlist.
 	- unbound-control-setup makes keys -rw-r--- so not all users permitted.
+	- fix parentside from cache to be marked dispreferred for bad names.
 
 28 May 2010: Wouter
 	- iana portlist updated.
