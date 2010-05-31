@@ -6,6 +6,7 @@
 	- parentside names are dispreferred but not said to be dnssec-lame.
 	- parentside check for cached newname glue.
 	- fix parentside and querytargets modulestate, for dump_requestlist.
+	- unbound-control-setup makes keys -rw-r--- so not all users permitted.
 
 28 May 2010: Wouter
 	- iana portlist updated.

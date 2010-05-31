@@ -194,8 +194,10 @@ The unbound\-control program exits with status code 1 on error, 0 on success.
 The setup requires a self\-signed certificate and private keys for both 
 the server and client.  The script \fIunbound\-control\-setup\fR generates
 these in the default run directory, or with \-d in another directory.
+If you change the access control permissions on the key files you can decide
+who can use unbound\-control, by default owner and group but not all users.
 Run the script under the same username as you have configured in unbound.conf
-so that the daemon is permitted to read the files, for example with:
+or as root, so that the daemon is permitted to read the files, for example with:
 .nf
     sudo \-u unbound unbound\-control\-setup
 .fi
