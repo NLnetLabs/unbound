@@ -717,7 +717,7 @@ scrub_message(ldns_buffer* pkt, struct msg_parse* msg,
 		return 0;
 	if( !(msg->flags&BIT_QR) )
 		return 0;
-	msg->flags &= ~(BIT_AD); /* force AD bit to be turned off */
+	msg->flags &= ~(BIT_AD|BIT_Z); /* force off bit AD and Z */
 	
 	/* make sure that a query is echoed back when NOERROR or NXDOMAIN */
 	/* this is not required for basic operation but is a forgery 
