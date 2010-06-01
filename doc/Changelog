@@ -1,6 +1,8 @@
 1 June 2010: Wouter
 	- Ignore Z flag in incoming messages too.
 	- Fix storage of negative parent glue if that last resort fails.
+	- libtoolize 2.2.6b, autoconf 2.65 applied to configure.
+	- new splint flags for newer splint install.
 
 31 May 2010: Wouter
 	- Fix AD flag handling, it could in some cases mistakenly copy the AD 

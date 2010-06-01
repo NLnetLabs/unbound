@@ -73,7 +73,7 @@ WINDRES=@WINDRES@
 LINT=splint
 LINTFLAGS=+quiet -weak -warnposix -unrecog -Din_addr_t=uint32_t -Du_int=unsigned -Du_char=uint8_t -preproc -Drlimit=rlimit64 -D__gnuc_va_list=va_list -Dglob64=glob -Dglobfree64=globfree
 # compat with openssl linux edition.
-LINTFLAGS+="-DBN_ULONG=unsigned long" -Dkrb5_int32=int "-Dkrb5_ui_4=unsigned int" -DPQ_64BIT=uint64_t -DRC4_INT=unsigned -fixedformalarray
+LINTFLAGS+="-DBN_ULONG=unsigned long" -Dkrb5_int32=int "-Dkrb5_ui_4=unsigned int" -DPQ_64BIT=uint64_t -DRC4_INT=unsigned -fixedformalarray -D"ENGINE=void*" -D"RSA=void*" -D"DSA=void*" -D"EVP_PKEY=void*" -D"EVP_MD=void*" -D"SSL=void*" -D"SSL_CTX=void*" -D"X509=void*" -D"RC4_KEY=void*" -D"EVP_MD_CTX=void*"
 # compat with NetBSD
 ifeq "$(shell uname)" "NetBSD"
 LINTFLAGS+="-D__RENAME(x)=" -D_NETINET_IN_H_
