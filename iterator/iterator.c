@@ -1468,6 +1468,13 @@ processLastResort(struct module_qstate* qstate, struct iter_qstate* iq,
 		}
 	}
 
+	/* if this was a parent-side glue query itself, then store that
+	 * failure in cache. */
+	if(iq->query_for_pside_glue && !iq->pside_glue)
+		iter_store_parentside_neg(qstate->env, &qstate->qinfo,
+			iq->deleg_msg?iq->deleg_msg->rep:
+			(iq->response?iq->response->rep:NULL));
+
 	verbose(VERB_QUERY, "out of query targets -- returning SERVFAIL");
 	/* fail -- no more targets, no more hope of targets, no hope 
 	 * of a response. */

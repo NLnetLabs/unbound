@@ -1,5 +1,6 @@
 1 June 2010: Wouter
 	- Ignore Z flag in incoming messages too.
+	- Fix storage of negative parent glue if that last resort fails.
 
 31 May 2010: Wouter
 	- Fix AD flag handling, it could in some cases mistakenly copy the AD 
