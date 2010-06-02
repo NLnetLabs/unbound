@@ -51,7 +51,9 @@ void
 ub_thread_blocksigs()
 {
 #if defined(HAVE_PTHREAD) || defined(HAVE_SOLARIS_THREADS) || defined(HAVE_SIGPROCMASK)
+#  if defined(HAVE_PTHREAD) || defined(HAVE_SOLARIS_THREADS)
 	int err;
+#  endif
 	sigset_t sigset;
 	sigfillset(&sigset);
 #ifdef HAVE_PTHREAD
@@ -74,7 +76,9 @@ ub_thread_blocksigs()
 void ub_thread_sig_unblock(int sig)
 {
 #if defined(HAVE_PTHREAD) || defined(HAVE_SOLARIS_THREADS) || defined(HAVE_SIGPROCMASK)
+#  if defined(HAVE_PTHREAD) || defined(HAVE_SOLARIS_THREADS)
 	int err;
+#  endif
 	sigset_t sigset;
 	sigemptyset(&sigset);
 	sigaddset(&sigset, sig);
