@@ -13710,6 +13710,58 @@ fi
 rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
 
 
+# check windows threads (we use them, not pthreads, on windows).
+if test "$on_mingw" = "yes"; then
+# check windows threads
+	for ac_header in windows.h
+do :
+  ac_fn_c_check_header_compile "$LINENO" "windows.h" "ac_cv_header_windows_h" "$ac_includes_default
+"
+if test "x$ac_cv_header_windows_h" = x""yes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_WINDOWS_H 1
+_ACEOF
+
+fi
+
+done
+
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for CreateThread" >&5
+$as_echo_n "checking for CreateThread... " >&6; }
+	cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+#ifdef HAVE_WINDOWS_H
+#include <windows.h>
+#endif
+
+int
+main ()
+{
+
+	HANDLE t = CreateThread(NULL, 0, NULL, NULL, 0, NULL);
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+
+$as_echo "#define HAVE_WINDOWS_THREADS 1" >>confdefs.h
+
+
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+
+else
+# not on mingw, check thread libraries.
+
 # check for thread library.
 # check this first, so that the pthread lib does not get linked in via
 # libssl or libpython, and thus distorts the tests, and we end up using
@@ -14214,54 +14266,7 @@ fi
 	fi
 fi
 
-# check windows threads
-if test x_$ub_have_pthreads = x_no -a x_$ub_have_sol_threads = x_no; then
-	for ac_header in windows.h
-do :
-  ac_fn_c_check_header_compile "$LINENO" "windows.h" "ac_cv_header_windows_h" "$ac_includes_default
-"
-if test "x$ac_cv_header_windows_h" = x""yes; then :
-  cat >>confdefs.h <<_ACEOF
-#define HAVE_WINDOWS_H 1
-_ACEOF
-
-fi
-
-done
-
-	{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for CreateThread" >&5
-$as_echo_n "checking for CreateThread... " >&6; }
-	cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-#ifdef HAVE_WINDOWS_H
-#include <windows.h>
-#endif
-
-int
-main ()
-{
-
-	HANDLE t = CreateThread(NULL, 0, NULL, NULL, 0, NULL);
-
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_compile "$LINENO"; then :
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }
-
-$as_echo "#define HAVE_WINDOWS_THREADS 1" >>confdefs.h
-
-
-else
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-fi
+fi # end of non-mingw check of thread libraries
 
 # Check for PyUnbound
 

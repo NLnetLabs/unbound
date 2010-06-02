@@ -248,6 +248,27 @@ ACX_SYS_LARGEFILE
 ACX_CHECK_NONBLOCKING_BROKEN
 ACX_MKDIR_ONE_ARG
 
+# check windows threads (we use them, not pthreads, on windows).
+if test "$on_mingw" = "yes"; then
+# check windows threads
+	AC_CHECK_HEADERS([windows.h],,, [AC_INCLUDES_DEFAULT])
+	AC_MSG_CHECKING([for CreateThread])
+	AC_TRY_COMPILE([
+#ifdef HAVE_WINDOWS_H
+#include <windows.h>
+#endif
+], [
+	HANDLE t = CreateThread(NULL, 0, NULL, NULL, 0, NULL);
+],
+	AC_MSG_RESULT(yes)
+	AC_DEFINE(HAVE_WINDOWS_THREADS, 1, [Using Windows threads])
+,	
+	AC_MSG_RESULT(no)
+)
+
+else
+# not on mingw, check thread libraries.
+
 # check for thread library.
 # check this first, so that the pthread lib does not get linked in via
 # libssl or libpython, and thus distorts the tests, and we end up using
@@ -288,23 +309,7 @@ if test x_$withval != x_no; then
 	fi
 fi
 
-# check windows threads
-if test x_$ub_have_pthreads = x_no -a x_$ub_have_sol_threads = x_no; then
-	AC_CHECK_HEADERS([windows.h],,, [AC_INCLUDES_DEFAULT])
-	AC_MSG_CHECKING([for CreateThread])
-	AC_TRY_COMPILE([
-#ifdef HAVE_WINDOWS_H
-#include <windows.h>
-#endif
-], [
-	HANDLE t = CreateThread(NULL, 0, NULL, NULL, 0, NULL);
-],
-	AC_MSG_RESULT(yes)
-	AC_DEFINE(HAVE_WINDOWS_THREADS, 1, [Using Windows threads])
-,	
-	AC_MSG_RESULT(no)
-)
-fi
+fi # end of non-mingw check of thread libraries
 
 # Check for PyUnbound
 AC_ARG_WITH(pyunbound,
