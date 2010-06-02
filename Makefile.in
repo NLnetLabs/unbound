@@ -109,7 +109,7 @@ CHECKCONF_OBJ=$(addprefix $(BUILD),$(CHECKCONF_SRC:.c=.lo)) $(COMPAT_OBJ)
 CONTROL_SRC=smallapp/unbound-control.c smallapp/worker_cb.c $(COMMON_SRC)
 CONTROL_OBJ=$(addprefix $(BUILD),$(CONTROL_SRC:.c=.lo)) $(COMPAT_OBJ)
 HOST_SRC=smallapp/unbound-host.c
-HOST_OBJ=$(addprefix $(BUILD),$(HOST_SRC:.c=.lo)) $(filter-out compat/ctime_r.c, $(COMPAT_OBJ))
+HOST_OBJ=$(addprefix $(BUILD),$(HOST_SRC:.c=.lo)) $(filter-out $(BUILD)compat/ctime_r.lo, $(COMPAT_OBJ))
 TESTBOUND_SRC=testcode/testbound.c testcode/ldns-testpkts.c \
 	daemon/worker.c daemon/acl_list.c daemon/daemon.c daemon/stats.c \
 	testcode/replay.c testcode/fake_event.c $(filter-out util/netevent.c \
