@@ -429,9 +429,10 @@ case "$enable_gost" in
 	no)
 	;;
 	*) dnl default
-	AC_CHECK_FUNC(EVP_PKEY_set_type_str, [
-	  use_gost="yes"
-	  AC_DEFINE([USE_GOST], [1], [Define this to enable GOST support.])])
+dnl   Disabled-by-default, RFC not ready.
+dnl	AC_CHECK_FUNC(EVP_PKEY_set_type_str, [
+dnl	  use_gost="yes"
+dnl	  AC_DEFINE([USE_GOST], [1], [Define this to enable GOST support.])])
 	;;
 esac
 

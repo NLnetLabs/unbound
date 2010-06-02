@@ -1,6 +1,8 @@
 2 June 2010: Wouter
 	- Fix compile warning if compiled without threads.
 	- updated ldns-tarball with current ldns svn (pre 1.6.5).
+	- GOST disabled-by-default, the algorithm number is allocated but the
+	  RFC is still has to pass AUTH48 at the IETF.
 
 1 June 2010: Wouter
 	- Ignore Z flag in incoming messages too.
