@@ -404,7 +404,7 @@ load_rr(SSL* ssl, ldns_buffer* buf, struct regional* region,
 	status = ldns_rr_new_frm_str(&rr, (char*)ldns_buffer_begin(buf),
 		LDNS_DEFAULT_TTL, NULL, NULL);
 	if(status != LDNS_STATUS_OK) {
-		log_warn("error cannot parse rr :%s: %s",
+		log_warn("error cannot parse rr: %s: %s",
 			ldns_get_errorstr_by_id(status),
 			(char*)ldns_buffer_begin(buf));
 		return 0;
@@ -421,7 +421,7 @@ load_rr(SSL* ssl, ldns_buffer* buf, struct regional* region,
 	ldns_buffer_skip(buf, 2);
 	status = ldns_rr_rdata2buffer_wire(buf, rr);
 	if(status != LDNS_STATUS_OK) {
-		log_warn("error cannot rr2wire :%s",
+		log_warn("error cannot rr2wire: %s",
 			ldns_get_errorstr_by_id(status));
 		ldns_rr_free(rr);
 		return 0;
@@ -445,7 +445,7 @@ load_rr(SSL* ssl, ldns_buffer* buf, struct regional* region,
 		ldns_buffer_clear(buf);
 		status = ldns_dname2buffer_wire(buf, ldns_rr_owner(rr));
 		if(status != LDNS_STATUS_OK) {
-			log_warn("error cannot dname2buffer :%s",
+			log_warn("error cannot dname2buffer: %s",
 				ldns_get_errorstr_by_id(status));
 			ldns_rr_free(rr);
 			return 0;

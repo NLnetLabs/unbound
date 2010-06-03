@@ -236,7 +236,7 @@ read_forwards(struct iter_forwards* fwd, struct config_file* cfg)
 			return 0;
 		}
 		/* set flag that parent side NS information is included.
-		 * Asking an (higher up) server on the internet is not useful*/
+		 * Asking a (higher up) server on the internet is not useful */
 		dp->has_parent_side_NS = 1;
 		if(!read_fwds_name(fwd, s, dp) ||
 			!read_fwds_host(fwd, s, dp) ||
