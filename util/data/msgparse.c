@@ -368,8 +368,9 @@ moveover_rrsigs(ldns_buffer* pkt, struct regional* region,
 			else	dataset->rrsig_first = insert;
 			dataset->rrsig_last = insert;
 			dataset->size += insert->size;
-		} else 
+		} else  {
 			prev = sig;
+		}
 		sig = nextsig;
 	}
 	return 1;
