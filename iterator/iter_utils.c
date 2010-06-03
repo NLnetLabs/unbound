@@ -480,13 +480,17 @@ iter_mark_pside_cycle_targets(struct module_qstate* qstate, struct delegpt* dp)
 			continue;
 		/* see if this ns as target causes dependency cycle */
 		if(causes_cycle(qstate, ns->name, ns->namelen, 
-			LDNS_RR_TYPE_AAAA, qstate->qinfo.qclass) ||
-		   causes_cycle(qstate, ns->name, ns->namelen, 
 			LDNS_RR_TYPE_A, qstate->qinfo.qclass)) {
 			log_nametypeclass(VERB_QUERY, "skipping target due "
 			 	"to dependency cycle", ns->name,
 				LDNS_RR_TYPE_A, qstate->qinfo.qclass);
 			ns->done_pside4 = 1;
+		}
+		if(causes_cycle(qstate, ns->name, ns->namelen, 
+			LDNS_RR_TYPE_AAAA, qstate->qinfo.qclass)) {
+			log_nametypeclass(VERB_QUERY, "skipping target due "
+			 	"to dependency cycle", ns->name,
+				LDNS_RR_TYPE_AAAA, qstate->qinfo.qclass);
 			ns->done_pside6 = 1;
 		}
 	}

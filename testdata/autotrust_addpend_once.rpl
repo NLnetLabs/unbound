@@ -146,6 +146,14 @@ MATCH opcode qname qtype
 ADJUST copy_id
 REPLY QR AA REFUSED
 SECTION QUESTION
+ns.example.com. IN A
+ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode qname qtype
+ADJUST copy_id
+REPLY QR AA REFUSED
+SECTION QUESTION
 ns.example.com. IN AAAA
 ENTRY_END
 RANGE_END

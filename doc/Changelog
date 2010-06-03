@@ -1,5 +1,7 @@
 3 June 2010: Wouter
 	- ldns tarball updated, 1.6.5.
+	- review comments, split dependency cycle tracking for parentside
+	  last resort lookups for A and AAAA so there are more lookup options.
 
 2 June 2010: Wouter
 	- Fix compile warning if compiled without threads.

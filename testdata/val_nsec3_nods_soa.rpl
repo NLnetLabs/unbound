@@ -77,6 +77,15 @@ MATCH opcode qtype qname
 ADJUST copy_id
 REPLY QR AA SERVFAIL
 SECTION QUESTION
+ns.example.com. IN A
+SECTION ANSWER
+ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR AA SERVFAIL
+SECTION QUESTION
 ns.example.com. IN AAAA
 SECTION ANSWER
 ENTRY_END
@@ -169,6 +178,14 @@ RANGE_END
 ; ns.sub.example.com.
 RANGE_BEGIN 0 100
 	ADDRESS 1.2.3.10
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR AA REFUSED
+SECTION QUESTION
+ns.sub.example.com. IN A
+ENTRY_END
+
 ENTRY_BEGIN
 MATCH opcode qtype qname
 ADJUST copy_id

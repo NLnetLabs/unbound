@@ -51,6 +51,15 @@ MATCH opcode qtype qname
 ADJUST copy_id copy_query
 REPLY QR REFUSED
 SECTION QUESTION
+ns1.example. IN A
+SECTION ANSWER
+ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id copy_query
+REPLY QR REFUSED
+SECTION QUESTION
 ns1.example. IN AAAA
 SECTION ANSWER
 ENTRY_END
