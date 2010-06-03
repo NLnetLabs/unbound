@@ -1,3 +1,6 @@
+3 June 2010: Wouter
+	- ldns tarball updated, 1.6.5.
+
 2 June 2010: Wouter
 	- Fix compile warning if compiled without threads.
 	- updated ldns-tarball with current ldns svn (pre 1.6.5).
