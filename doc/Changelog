@@ -1,3 +1,7 @@
+10 June 2010: Wouter
+	- Fix bug where a long loop could be entered, now cycle detection
+	  has a loop-counter and maximum search amount.
+
 4 June 2010: Wouter
 	- iana portlist updated.
 	- 1.4.5rc1 tag created.

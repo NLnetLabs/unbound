@@ -497,13 +497,6 @@ generate_sub_request(uint8_t* qname, size_t qnamelen, uint16_t qtype,
 	if(!v)
 		qflags |= BIT_CD;
 	
-	fptr_ok(fptr_whitelist_modenv_detect_cycle(
-		qstate->env->detect_cycle));
-	if((*qstate->env->detect_cycle)(qstate, &qinf, qflags, prime)){
-		log_query_info(VERB_DETAIL, "cycle detected", &qinf);
-		return 0;
-	}
-
 	/* attach subquery, lookup existing or make a new one */
 	fptr_ok(fptr_whitelist_modenv_attach_sub(qstate->env->attach_sub));
 	if(!(*qstate->env->attach_sub)(qstate, &qinf, qflags, prime, &subq)) {
@@ -1344,16 +1337,24 @@ query_for_targets(struct module_qstate* qstate, struct iter_qstate* iq,
 			/* Send the AAAA request. */
 			if(!generate_target_query(qstate, iq, id, 
 				ns->name, ns->namelen,
-				LDNS_RR_TYPE_AAAA, iq->qchase.qclass))
+				LDNS_RR_TYPE_AAAA, iq->qchase.qclass)) {
+				*num = query_count;
+				if(query_count > 0)
+					qstate->ext_state[id] = module_wait_subquery;
 				return 0;
+			}
 			query_count++;
 		}
 		/* Send the A request. */
 		if(!ns->got4) {
 			if(!generate_target_query(qstate, iq, id, 
 				ns->name, ns->namelen, 
-				LDNS_RR_TYPE_A, iq->qchase.qclass))
+				LDNS_RR_TYPE_A, iq->qchase.qclass)) {
+				*num = query_count;
+				if(query_count > 0)
+					qstate->ext_state[id] = module_wait_subquery;
 				return 0;
+			}
 			query_count++;
 		}
 

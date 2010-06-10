@@ -576,6 +576,36 @@ mesh_state_delete(struct module_qstate* qstate)
 	mesh_state_cleanup(mstate);
 }
 
+/** helper recursive rbtree find routine */
+static int
+find_in_subsub(struct mesh_state* m, struct mesh_state* tofind, size_t *c)
+{
+	struct mesh_state_ref* r;
+	if((*c)++ > MESH_MAX_SUBSUB)
+		return 1;
+	RBTREE_FOR(r, struct mesh_state_ref*, &m->sub_set) {
+		if(r->s == tofind || find_in_subsub(r->s, tofind, c))
+			return 1;
+	}
+	return 0;
+}
+
+/** find cycle for already looked up mesh_state */
+static int 
+mesh_detect_cycle_found(struct module_qstate* qstate, struct mesh_state* dep_m)
+{
+	struct mesh_state* cyc_m = qstate->mesh_info;
+	size_t counter = 0;
+	if(!dep_m)
+		return 0;
+	if(dep_m == cyc_m || find_in_subsub(dep_m, cyc_m, &counter)) {
+		if(counter > MESH_MAX_SUBSUB)
+			return 2;
+		return 1;
+	}
+	return 0;
+}
+
 void mesh_detach_subs(struct module_qstate* qstate)
 {
 	struct mesh_area* mesh = qstate->env->mesh;
@@ -602,6 +632,10 @@ int mesh_attach_sub(struct module_qstate* qstate, struct query_info* qinfo,
 	/* find it, if not, create it */
 	struct mesh_area* mesh = qstate->env->mesh;
 	struct mesh_state* sub = mesh_area_find(mesh, qinfo, qflags, prime);
+	if(mesh_detect_cycle_found(qstate, sub)) {
+		verbose(VERB_ALGO, "attach failed, cycle detected");
+		return 0;
+	}
 	if(!sub) {
 		struct rbnode_t* n;
 		/* create a new one */
@@ -1057,30 +1091,13 @@ mesh_get_mem(struct mesh_area* mesh)
 	return s;
 }
 
-/** helper recursive rbtree find routine */
-static int
-find_in_subsub(struct mesh_state* m, struct mesh_state* tofind)
-{
-	struct mesh_state_ref* r;
-	RBTREE_FOR(r, struct mesh_state_ref*, &m->sub_set) {
-		if(r->s == tofind || find_in_subsub(r->s, tofind))
-			return 1;
-	}
-	return 0;
-}
-
 int 
 mesh_detect_cycle(struct module_qstate* qstate, struct query_info* qinfo,
 	uint16_t flags, int prime)
 {
 	struct mesh_area* mesh = qstate->env->mesh;
-	struct mesh_state* cyc_m = qstate->mesh_info;
 	struct mesh_state* dep_m = mesh_area_find(mesh, qinfo, flags, prime);
-	if(!dep_m)
-		return 0;
-	if(dep_m == cyc_m || find_in_subsub(dep_m, cyc_m))
-		return 1;
-	return 0;
+	return mesh_detect_cycle_found(qstate, dep_m);
 }
 
 void mesh_list_insert(struct mesh_state* m, struct mesh_state** fp,

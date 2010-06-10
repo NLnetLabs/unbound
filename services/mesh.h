@@ -65,6 +65,13 @@ struct timehist;
  */
 #define MESH_MAX_ACTIVATION 1000
 
+/**
+ * Max number of references-to-references-to-references.. search size.
+ * Any more is treated like 'too large', and the creation of a new
+ * dependency is failed (so that no loops can be created).
+ */
+#define MESH_MAX_SUBSUB 1024
+
 /** 
  * Mesh of query states
  */
@@ -326,6 +333,8 @@ void mesh_detach_subs(struct module_qstate* qstate);
  * Attach subquery.
  * Creates it if it does not exist already.
  * Keeps sub and super references correct.
+ * Performs a cycle detection - for double check - and fails if there is one.
+ * Also fails if the sub-sub-references become too large.
  * Updates stat items in mesh_area structure.
  * Pass if it is priming query or not.
  * return:
@@ -503,13 +512,15 @@ size_t mesh_get_mem(struct mesh_area* mesh);
 /**
  * Find cycle; see if the given mesh is in the targets sub, or sub-sub, ...
  * trees.
+ * If the sub-sub structure is too large, it returns 'a cycle'=2.
  * @param qstate: given mesh querystate.
  * @param qinfo: query info for dependency.
  * @param flags: query flags of dependency.
  * @param prime: if dependency is a priming query or not.
  * @return true if the name,type,class exists and the given qstate mesh exists
  * 	as a dependency of that name. Thus if qstate becomes dependent on
- * 	name,type,class then a cycle is created.
+ * 	name,type,class then a cycle is created, this is return value 1.
+ * 	Too large to search is value 2 (also true).
  */
 int mesh_detect_cycle(struct module_qstate* qstate, struct query_info* qinfo,
 	uint16_t flags, int prime);
