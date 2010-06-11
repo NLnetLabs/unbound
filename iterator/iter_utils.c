@@ -946,18 +946,20 @@ void iter_merge_retry_counts(struct delegpt* dp, struct delegpt* old)
 		}
 	}
 	prev = NULL;
-	a = dp->result_list;
+	a = dp->usable_list;
 	while(a) {
 		if(a->attempts >= OUTBOUND_MSG_RETRY) {
+			log_addr(VERB_ALGO, "remove from usable list dp",
+				&a->addr, a->addrlen);
 			/* remove from result list */
 			if(prev)
-				prev->next_result = a->next_result;
-			else	dp->result_list = a->next_result;
+				prev->next_usable = a->next_usable;
+			else	dp->usable_list = a->next_usable;
 			/* prev stays the same */
-			a = a->next_result;
+			a = a->next_usable;
 			continue;
 		}
 		prev = a;
-		a = a->next_result;
+		a = a->next_usable;
 	}
 }

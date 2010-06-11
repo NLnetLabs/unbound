@@ -252,6 +252,8 @@ struct iter_qstate {
 	 * Enabled once it hits resolution problems, to throttle retries.
 	 */
 	int store_parent_NS;
+	/** the old delegation point with retry counts */
+	struct delegpt* parent_NS_old_dp;
 
 	/**
 	 * The query is for parent-side glue(A or AAAA) for a nameserver.
