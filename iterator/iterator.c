@@ -1807,6 +1807,7 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 				qstate->region);
 		return final_state(iq);
 	} else if(type == RESPONSE_TYPE_REFERRAL) {
+		struct delegpt* old_dp = iq->dp;
 		/* REFERRAL type responses get a reset of the 
 		 * delegation point, and back to the QUERYTARGETS_STATE. */
 		verbose(VERB_DETAIL, "query response was REFERRAL");
@@ -1863,6 +1864,9 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		if(!cache_fill_missing(qstate->env, iq->qchase.qclass, 
 			qstate->region, iq->dp))
 			return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
+		if(iq->store_parent_NS && query_dname_compare(iq->dp->name,
+			old_dp->name) == 0)
+			iter_merge_retry_counts(iq->dp, old_dp);
 		delegpt_log(VERB_ALGO, iq->dp);
 		/* Count this as a referral. */
 		iq->referral_count++;

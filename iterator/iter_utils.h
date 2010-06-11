@@ -298,4 +298,12 @@ void iter_scrub_ds(struct dns_msg* msg, struct ub_packed_rrset_key* ns,
  */
 void iter_dec_attempts(struct delegpt* dp, int d);
 
+/**
+ * Add retry counts from older delegpt to newer delegpt.
+ * Does not waste time on timeout'd (or other failing) addresses.
+ * @param dp: new delegationpoint.
+ * @param old: old delegationpoint.
+ */
+void iter_merge_retry_counts(struct delegpt* dp, struct delegpt* old);
+
 #endif /* ITERATOR_ITER_UTILS_H */

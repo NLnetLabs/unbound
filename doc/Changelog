@@ -1,3 +1,8 @@
+11 June 2010: Wouter
+	- When retry to parent the retrycount is not wiped, so failed 
+	  nameservers are not tried again.
+	- iana portlist updated.
+
 10 June 2010: Wouter
 	- Fix bug where a long loop could be entered, now cycle detection
 	  has a loop-counter and maximum search amount.

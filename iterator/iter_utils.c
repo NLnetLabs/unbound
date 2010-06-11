@@ -933,3 +933,31 @@ void iter_dec_attempts(struct delegpt* dp, int d)
 		else a->attempts = 0;
 	}
 }
+
+void iter_merge_retry_counts(struct delegpt* dp, struct delegpt* old)
+{
+	struct delegpt_addr* a, *o, *prev;
+	for(a=dp->target_list; a; a = a->next_target) {
+		o = delegpt_find_addr(old, &a->addr, a->addrlen);
+		if(o) {
+			log_addr(VERB_ALGO, "copy attempt count previous dp",
+				&a->addr, a->addrlen);
+			a->attempts = o->attempts;
+		}
+	}
+	prev = NULL;
+	a = dp->result_list;
+	while(a) {
+		if(a->attempts >= OUTBOUND_MSG_RETRY) {
+			/* remove from result list */
+			if(prev)
+				prev->next_result = a->next_result;
+			else	dp->result_list = a->next_result;
+			/* prev stays the same */
+			a = a->next_result;
+			continue;
+		}
+		prev = a;
+		a = a->next_result;
+	}
+}
