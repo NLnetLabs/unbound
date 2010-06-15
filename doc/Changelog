@@ -1,3 +1,6 @@
+15 June 2010: Wouter
+	- tag 1.4.5 created.
+
 11 June 2010: Wouter
 	- When retry to parent the retrycount is not wiped, so failed 
 	  nameservers are not tried again.
