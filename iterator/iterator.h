@@ -250,10 +250,10 @@ struct iter_qstate {
 	/**
 	 * The query must store NS records from referrals as parentside RRs
 	 * Enabled once it hits resolution problems, to throttle retries.
+	 * If enabled it is the pointer to the old delegation point with
+	 * the old retry counts for bad-nameserver-addresses.
 	 */
-	int store_parent_NS;
-	/** the old delegation point with retry counts */
-	struct delegpt* parent_NS_old_dp;
+	struct delegpt* store_parent_NS;
 
 	/**
 	 * The query is for parent-side glue(A or AAAA) for a nameserver.

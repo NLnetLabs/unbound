@@ -2,6 +2,7 @@
 	- tag 1.4.5 created.
 	- trunk contains 1.4.6 in development.
 	- Fix TCPreply on systems with no writev, if just 1 byte could be sent.
+	- Fix to use one pointer less for iterator query state store_parent_NS.
 
 11 June 2010: Wouter
 	- When retry to parent the retrycount is not wiped, so failed 

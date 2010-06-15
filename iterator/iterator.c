@@ -1400,8 +1400,7 @@ processLastResort(struct module_qstate* qstate, struct iter_qstate* iq,
 			/* if: malloc failure in lookup go up to try */
 			/* if: no parent NS in cache - go up one level */
 			verbose(VERB_ALGO, "try to grab parent NS");
-			iq->store_parent_NS = 1;
-			iq->parent_NS_old_dp = iq->dp;
+			iq->store_parent_NS = iq->dp;
 			iq->deleg_msg = NULL;
 			iq->refetch_glue = 1;
 			iq->query_restart_count++;
@@ -1865,8 +1864,8 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 			qstate->region, iq->dp))
 			return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
 		if(iq->store_parent_NS && query_dname_compare(iq->dp->name,
-			iq->parent_NS_old_dp->name) == 0)
-			iter_merge_retry_counts(iq->dp, iq->parent_NS_old_dp);
+			iq->store_parent_NS->name) == 0)
+			iter_merge_retry_counts(iq->dp, iq->store_parent_NS);
 		delegpt_log(VERB_ALGO, iq->dp);
 		/* Count this as a referral. */
 		iq->referral_count++;
