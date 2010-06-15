@@ -92,7 +92,10 @@ The verbosity can also be increased from the commandline, see \fIunbound\fR(8).
 .TP
 .B statistics\-interval: \fI<seconds>
 The number of seconds between printing statistics to the log for every thread.
-Disable with value 0 or "". Default is disabled. 
+Disable with value 0 or "". Default is disabled.  The histogram statistics
+are only printed if replies were sent during the statistics interval, 
+requestlist statistics are printed for every interval (but can be 0).
+This is because the median calculation requires data to be present.
 .TP
 .B statistics\-cumulative: \fI<yes or no>
 If enabled, statistics are cumulative since starting unbound, without clearing

@@ -6,6 +6,7 @@
 	- makedist crosscompile to windows uses builtin ldns not host ldns.
 	- Max referral count from 30 to 130, because 128 one character domains
 	  is valid DNS.
+	- added documentation for the histogram printout to syslog.
 
 11 June 2010: Wouter
 	- When retry to parent the retrycount is not wiped, so failed 
