@@ -923,7 +923,8 @@ comm_point_tcp_handle_write(int fd, struct comm_point* c)
 		log_assert(iov[1].iov_len > 0);
 		r = writev(fd, iov, 2);
 #else /* HAVE_WRITEV */
-		r = send(fd, (void*)&len, sizeof(uint16_t), 0);
+		r = send(fd, (void*)(((uint8_t*)&len)+c->tcp_byte_count),
+			sizeof(uint16_t)-c->tcp_byte_count, 0);
 #endif /* HAVE_WRITEV */
 		if(r == -1) {
 #ifndef USE_WINSOCK
