@@ -4,6 +4,8 @@
 	- Fix TCPreply on systems with no writev, if just 1 byte could be sent.
 	- Fix to use one pointer less for iterator query state store_parent_NS.
 	- makedist crosscompile to windows uses builtin ldns not host ldns.
+	- Max referral count from 30 to 130, because 128 one character domains
+	  is valid DNS.
 
 11 June 2010: Wouter
 	- When retry to parent the retrycount is not wiped, so failed 

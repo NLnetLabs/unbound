@@ -55,7 +55,7 @@ struct iter_priv;
 /** max number of query restarts. Determines max number of CNAME chain. */
 #define MAX_RESTART_COUNT       8
 /** max number of referrals. Makes sure resolver does not run away */
-#define MAX_REFERRAL_COUNT	30
+#define MAX_REFERRAL_COUNT	130
 /** how nice is a server without further information, in msec 
  * Equals rtt initial timeout value.
  */
