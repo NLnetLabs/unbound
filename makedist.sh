@@ -168,13 +168,15 @@ while [ "$1" ]; do
 done
 
 if [ "$DOWIN" = "yes" ]; then
-    # detect crosscompile, from Fedora11 at this point.
+    # detect crosscompile, from Fedora13 at this point.
     if test "`uname`" = "Linux"; then 
 	info "Crosscompile windows dist"
         cross="yes"
 	configure="mingw32-configure"
 	strip="i686-pc-mingw32-strip"
 	makensis="makensis"	# from mingw32-nsis package
+	# in crosscompile no installed ldns, use builtin (not linux-ldns)
+	cross_flag="--with-ldns-builtin"
 
 	check_svn_root
 	create_temp_dir
@@ -186,6 +188,7 @@ if [ "$DOWIN" = "yes" ]; then
 	if test -f mingw32-config.cache; then rm mingw32-config.cache; fi
     else 
 	cross="no"	# mingw and msys
+	cross_flag=""
 	configure="./configure"
 	strip="strip"
 	makensis="c:/Program Files/NSIS/makensis.exe" # http://nsis.sf.net
@@ -213,8 +216,8 @@ if [ "$DOWIN" = "yes" ]; then
     # procedure for making unbound installer on mingw. 
     info "Creating windows dist unbound $version"
     info "Calling configure"
-    echo "$configure"' --enable-debug --enable-static-exe '"$*"
-    $configure --enable-debug --enable-static-exe $* \
+    echo "$configure"' --enable-debug --enable-static-exe '"$* $cross_flag"
+    $configure --enable-debug --enable-static-exe $* $cross_flag \
 	|| error_cleanup "Could not configure"
     info "Calling make"
     make || error_cleanup "Could not make"
