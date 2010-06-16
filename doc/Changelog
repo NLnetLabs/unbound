@@ -1,3 +1,7 @@
+16 June 2010: Wouter
+	- Fix assertion failure reported by Kai Storbeck from XS4ALL, the
+	  assertion was wrong.
+
 15 June 2010: Wouter
 	- tag 1.4.5 created.
 	- trunk contains 1.4.6 in development.

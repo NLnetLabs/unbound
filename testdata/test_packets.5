@@ -54,3 +54,17 @@ c004 0001 0001  00000101 0004 0a203040
 4242 0000 0001 0001 0000 0000
 07 6578616d706c65 03 636f6d 00 0001 0001
 c0bb 0001 0001  00000101 0004 0a203040
+
+;-- next packet --
+; 6. double OPT record.
+; id flags qd  an   ns  ar   -- header
+4242 0000 0001 0001 0000 0002
+; query: qname example.com. qtype A(1) qclass IN(1)
+07 6578616d706c65 03 636f6d 00 0001 0001
+; answer: example.com          type class ttl rdatalen 10.x address.
+07 6578616d706c65 03 636f6d 00 0001 0001  00000101 0004 0a203040
+; additional:  .               OPT  4096     
+00                             0029 1000  00000000 0000
+; additional:  .               OPT  4096     
+00                             0029 1000  00000001 0000
+
