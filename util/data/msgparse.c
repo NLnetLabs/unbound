@@ -949,7 +949,7 @@ parse_extract_edns(struct msg_parse* msg, struct edns_data* edns)
 			|| found->dname[0] != 0) return LDNS_RCODE_FORMERR; 
 		if(found->rr_count != 1) return LDNS_RCODE_FORMERR; 
 	}
-	log_assert(found->rr_first == found->rr_last && found->rr_first);
+	log_assert(found->rr_first && found->rr_last);
 
 	/* remove from packet */
 	if(found_prev)	found_prev->rrset_all_next = found->rrset_all_next;
