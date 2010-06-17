@@ -1,3 +1,6 @@
+17 June 2010: Wouter
+	- Add AAAA to root hints for I.ROOT-SERVERS.NET.
+
 16 June 2010: Wouter
 	- Fix assertion failure reported by Kai Storbeck from XS4ALL, the
 	  assertion was wrong.
