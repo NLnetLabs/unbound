@@ -107,8 +107,7 @@ compile_time_root_prime(struct regional* r, int do_ip4, int do_ip6)
 	 ;           on server           FTP.INTERNIC.NET
 	 ;       -OR-                    RS.INTERNIC.NET
 	 ;
-	 ;       related version of root zone:   2008051300
-	 ; I.root-servers.net AAAA from root zone serial 2010061701
+	 ;       related version of root zone:   2010061700
 	 */
 	struct delegpt* dp = delegpt_create(r);
 	if(!dp)
