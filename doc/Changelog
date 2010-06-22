@@ -1,5 +1,6 @@
 22 June 2010: Wouter
 	- Unbound reports libev or libevent correctly in logs in verbose mode.
+	- Fix to unload gost dynamic library module for leak testing.
 
 18 June 2010: Wouter
 	- iana portlist updated.

@@ -131,6 +131,9 @@
 /* Define to 1 if you have the `kill' function. */
 #undef HAVE_KILL
 
+/* Define to 1 if you have the `ldns_key_EVP_unload_gost' function. */
+#undef HAVE_LDNS_KEY_EVP_UNLOAD_GOST
+
 /* Define to 1 if you have the <ldns/ldns.h> header file. */
 #undef HAVE_LDNS_LDNS_H
 

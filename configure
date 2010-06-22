@@ -16360,6 +16360,17 @@ if test "x$ac_cv_func_ldns_key_EVP_load_gost_id" = x""yes; then :
 
 fi
 
+	    for ac_func in ldns_key_EVP_unload_gost
+do :
+  ac_fn_c_check_func "$LINENO" "ldns_key_EVP_unload_gost" "ac_cv_func_ldns_key_EVP_unload_gost"
+if test "x$ac_cv_func_ldns_key_EVP_unload_gost" = x""yes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_LDNS_KEY_EVP_UNLOAD_GOST 1
+_ACEOF
+
+fi
+done
+
 	else
 	    ac_cv_func_ldns_key_EVP_load_gost_id="yes"
 	fi

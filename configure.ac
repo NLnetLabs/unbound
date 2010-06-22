@@ -639,6 +639,7 @@ if test "$use_ldns_builtin" = "no"; then
 	AC_CHECK_FUNC(ldns_b32_ntop_extended_hex)
 	if test x$use_gost = xyes; then
 	    AC_CHECK_FUNC(ldns_key_EVP_load_gost_id)
+	    AC_CHECK_FUNCS([ldns_key_EVP_unload_gost])
 	else
 	    ac_cv_func_ldns_key_EVP_load_gost_id="yes"
 	fi

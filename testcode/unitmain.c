@@ -522,6 +522,9 @@ main(int argc, char* argv[])
 	msgparse_test();
 	checklock_stop();
 	printf("%d checks ok.\n", testcount);
+#if defined(USE_GOST) && defined(HAVE_LDNS_KEY_EVP_UNLOAD_GOST)
+	ldns_key_EVP_unload_gost();
+#endif
 #ifdef HAVE_OPENSSL_CONFIG
 	EVP_cleanup();
 	ENGINE_cleanup();
@@ -531,5 +534,9 @@ main(int argc, char* argv[])
 	ERR_remove_state(0);
 	ERR_free_strings();
 	RAND_cleanup();
+#ifdef HAVE_PTHREAD
+	/* dlopen frees its thread specific state */
+	pthread_exit(NULL);
+#endif
 	return 0;
 }

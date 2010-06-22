@@ -339,8 +339,13 @@ main(int argc, char* argv[])
 	fake_event_cleanup();
 	for(c=1; c<pass_argc; c++)
 		free(pass_argv[c]);
-	if(res == 0)
+	if(res == 0) {
 		log_info("Testbound Exit Success");
+#ifdef HAVE_PTHREAD
+		/* dlopen frees its thread state (dlopen of gost engine) */
+		pthread_exit(NULL);
+#endif
+	}
 	return res;
 }
 
