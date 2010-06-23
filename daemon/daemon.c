@@ -535,8 +535,10 @@ daemon_delete(struct daemon* daemon)
 #if defined(USE_GOST) && defined(HAVE_LDNS_KEY_EVP_UNLOAD_GOST)
 	ldns_key_EVP_unload_gost();
 #endif
-#if HAVE_DECL_SSL_COMP_GET_COMPRESSION_METHODS
-	sk_SSL_COMP_free(comp_meth);
+#if HAVE_DECL_SSL_COMP_GET_COMPRESSION_METHODS && HAVE_DECL_SK_SSL_COMP_POP_FREE
+#ifndef S_SPLINT_S
+	sk_SSL_COMP_pop_free(comp_meth, (void*)CRYPTO_free);
+#endif
 #endif
 #ifdef HAVE_OPENSSL_CONFIG
 	EVP_cleanup();

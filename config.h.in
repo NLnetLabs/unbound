@@ -37,6 +37,10 @@
 /* Define to 1 if you have the `daemon' function. */
 #undef HAVE_DAEMON
 
+/* Define to 1 if you have the declaration of `sk_SSL_COMP_pop_free', and to 0
+   if you don't. */
+#undef HAVE_DECL_SK_SSL_COMP_POP_FREE
+
 /* Define to 1 if you have the declaration of
    `SSL_COMP_get_compression_methods', and to 0 if you don't. */
 #undef HAVE_DECL_SSL_COMP_GET_COMPRESSION_METHODS
