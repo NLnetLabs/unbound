@@ -54,6 +54,7 @@ Generate a distribution tar file for unbound.
     -d SVN_root  Retrieve the unbound source from the specified repository.
                  Detected from svn working copy if not specified.
     -l ldnsdir   Directory where ldns resides. Detected from Makefile.
+    -wssl openssl.xx.tar.gz Also build openssl from tarball for windows dist.
     -w ...       Build windows binary dist. last args passed to configure.
 EOF
     exit 1
@@ -133,6 +134,7 @@ SNAPSHOT="no"
 RC="no"
 LDNSDIR=""
 DOWIN="no"
+WINSSL=""
 
 # Parse the command line arguments.
 while [ "$1" ]; do
@@ -147,6 +149,10 @@ while [ "$1" ]; do
         "-s")
             SNAPSHOT="yes"
             ;;
+        "-wssl")
+	    WINSSL="$2"
+	    shift
+	    ;;
         "-w")
             DOWIN="yes"
 	    shift
@@ -180,6 +186,28 @@ if [ "$DOWIN" = "yes" ]; then
 
 	check_svn_root
 	create_temp_dir
+
+	# crosscompile openssl for windows.
+	if test -n "$WINSSL"; then
+		info "Cross compile $WINSSL"
+		info "winssl tar unpack"
+		(cd ..; gzip -cd $WINSSL) | tar xf - || error_cleanup "tar unpack of $WINSSL failed"
+		sslinstall="`pwd`/sslinstall"
+		cd openssl-* || error_cleanup "no openssl-X dir in tarball"
+		# configure for crosscompile, without CAPI because it fails
+		# cross-compilation and it is not used anyway
+		sslflags="no-asm --cross-compile-prefix=i686-pc-mingw32- -DOPENSSL_NO_CAPIENG mingw"
+		info "winssl: Configure $sslflags"
+		./Configure --prefix="$sslinstall" $sslflags || error_cleanup "OpenSSL Configure failed"
+		info "winssl: make"
+		make || error_cleanup "OpenSSL crosscompile failed"
+		# only install sw not docs, which take a long time.
+		info "winssl: make install_sw"
+		make install_sw || error_cleanup "OpenSSL install failed"
+		cross_flag="$cross_flag --with-ssl=$sslinstall"
+		cd ..
+	fi
+
 	info "Exporting source from SVN."
 	svn export "$SVNROOT" unbound || error_cleanup "SVN command failed"
 	cd unbound || error_cleanup "Unbound not exported correctly from SVN"

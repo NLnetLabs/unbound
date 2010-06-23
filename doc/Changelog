@@ -1,5 +1,7 @@
 23 June 2010: Wouter
 	- iana portlist updated.
+	- makedist upgraded cross compile openssl option, like this: 
+	  ./makedist.sh -s -wssl openssl-1.0.0a.tar.gz -w --enable-gost
 
 22 June 2010: Wouter
 	- Unbound reports libev or libevent correctly in logs in verbose mode.
