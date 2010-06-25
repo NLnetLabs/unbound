@@ -2,6 +2,7 @@
 	- Fix handling of corner case reply from lame server, follows rfc2308.
 	  It could lead to a nodata reply getting into the cache if the search
 	  for a non-lame server turned up other misconfigured servers.
+	- unbound.h has extern "C" statement for easier include in c++.
 
 23 June 2010: Wouter
 	- iana portlist updated.

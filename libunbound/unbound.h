@@ -93,6 +93,10 @@
 #ifndef _UB_UNBOUND_H
 #define _UB_UNBOUND_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * The validation context is created to hold the resolver status,
  * validation keys and a small cache (containing messages, rrsets,
@@ -538,5 +542,9 @@ int ub_ctx_data_add(struct ub_ctx* ctx, char *data);
  * @return 0 if OK, else error.
  */
 int ub_ctx_data_remove(struct ub_ctx* ctx, char *data);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* _UB_UNBOUND_H */
