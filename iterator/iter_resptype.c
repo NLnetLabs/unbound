@@ -225,9 +225,14 @@ response_type_from_server(int rdset,
 				/* Or if a lame server is deployed,
 				 * which gives ns==zone delegation from cache 
 				 * without AA bit as well, with nodata nosoa*/
+				/* real answer must be +AA and SOA RFC(2308),
+				 * so this is wrong, and we SERVFAIL it if
+				 * this is the only possible reply, if it
+				 * is misdeployed the THROWAWAY makes us pick
+				 * the next server from the selection */
 				if(msg->rep->an_numrrsets==0 &&
 					!(msg->rep->flags&BIT_AA) && !rdset)
-					return RESPONSE_TYPE_REC_LAME;
+					return RESPONSE_TYPE_THROWAWAY;
 				return RESPONSE_TYPE_ANSWER;
 			}
 			/* If we are getting a referral upwards (or to 

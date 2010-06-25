@@ -75,6 +75,7 @@
  *		the step waits for traffic to stop.
  *      o CHECK_AUTOTRUST [id] - followed by FILE_BEGIN [to match] FILE_END.
  *      	The file contents is macro expanded before match.
+ *      o INFRA_RTT [ip] [rtt] - update infra cache entry with rtt.
  *      o ERROR
  * ; following entry starts on the next line, ENTRY_BEGIN.
  * ; more STEP items
@@ -136,6 +137,7 @@ struct replay_range;
 struct fake_pending;
 struct fake_timer;
 struct replay_var;
+struct infra_cache;
 
 /**
  * A replay scenario.
@@ -196,9 +198,11 @@ struct replay_moment {
 		repevt_error,
 		/** assignment to a variable */
 		repevt_assign,
+		/** store infra rtt cache entry: addr and string (int) */
+		repevt_infra_rtt,
 		/** cause traffic to flow */
 		repevt_traffic
-	} 
+	}
 		/** variable with what is to happen this moment */
 		evt_type;
 
@@ -284,6 +288,9 @@ struct replay_runtime {
 	comm_point_callback_t* callback_query;
 	/** user argument for incoming query callback */
 	void *cb_arg;
+
+	/** ref the infra cache (was passed to outside_network_create) */
+	struct infra_cache* infra;
 
 	/** the current time in seconds */
 	uint32_t now_secs;

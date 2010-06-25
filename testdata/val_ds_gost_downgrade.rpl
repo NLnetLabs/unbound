@@ -162,6 +162,20 @@ ns.sub.example.com. IN A 1.2.3.6
 ns.sub.example.com.	3600	IN	RRSIG	A 12 4 3600 20070926134150 20070829134150 60385 sub.example.com. kJEyinL7BkpiPW2HxmFHRLAi68EdrLXToJiK83a5cedDe5ABL7c/k+nFHd3WjATUtVoueY3pSnCDVCJaFmd+/A== ;{id = 60385}
 ENTRY_END
 
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR AA NOERROR
+SECTION QUESTION
+ns.sub.example.com. IN A
+SECTION ANSWER
+ns.sub.example.com. IN A 1.2.3.6
+ns.sub.example.com.	3600	IN	RRSIG	A 12 4 3600 20070926134150 20070829134150 60385 sub.example.com. kJEyinL7BkpiPW2HxmFHRLAi68EdrLXToJiK83a5cedDe5ABL7c/k+nFHd3WjATUtVoueY3pSnCDVCJaFmd+/A== ;{id = 60385}
+SECTION AUTHORITY
+sub.example.com. IN	NS ns.sub.example.com.
+sub.example.com.	3600	IN	RRSIG	NS 12 3 3600 20070926134150 20070829134150 60385 sub.example.com. 6mNrX32/DC2RU1A+yWCccn5H6wnsbNYTlf8e/LyF1fsuNfw6tH12sKGBCtk1mp4HpDIgH02HDHplJskSFOvzTw== ;{id = 60385}
+ENTRY_END
+
 ; response to DNSKEY priming query
 ENTRY_BEGIN
 MATCH opcode qtype qname

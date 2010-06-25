@@ -330,6 +330,24 @@ replay_moment_read(char* remain, FILE* in, const char* name, int* lineno,
 	} else if(parse_keyword(&remain, "ASSIGN")) {
 		mom->evt_type = repevt_assign;
 		read_assign_step(remain, mom);
+	} else if(parse_keyword(&remain, "INFRA_RTT")) {
+		char *s;
+		mom->evt_type = repevt_infra_rtt;
+		while(isspace((int)*remain))
+			remain++;
+		s = remain;
+		remain = strchr(s, ' ');
+		if(!remain) fatal_exit("expected two args for INFRA_RTT");
+		remain[0] = 0;
+		remain++;
+		while(isspace((int)*remain))
+			remain++;
+		if(!extstrtoaddr(s, &mom->addr, &mom->addrlen))
+			fatal_exit("bad infra_rtt address %s", s);
+		if(strlen(remain)>0 && remain[strlen(remain)-1]=='\n')
+			remain[strlen(remain)-1] = 0;
+		mom->string = strdup(remain);
+		if(!mom->string) fatal_exit("out of memory");
 	} else {
 		log_err("%d: unknown event type %s", *lineno, remain);
 		free(mom);

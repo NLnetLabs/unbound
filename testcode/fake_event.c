@@ -54,6 +54,7 @@
 #include "util/config_file.h"
 #include "services/listen_dnsport.h"
 #include "services/outside_network.h"
+#include "services/cache/infra.h"
 #include "testcode/replay.h"
 #include "testcode/ldns-testpkts.h"
 #include "util/log.h"
@@ -134,6 +135,7 @@ repevt_string(enum replay_event_type t)
 	case repevt_error:	 return "ERROR";
 	case repevt_assign:	 return "ASSIGN";
 	case repevt_traffic:	 return "TRAFFIC";
+	case repevt_infra_rtt:	 return "INFRA_RTT";
 	default:		 return "UNKNOWN";
 	}
 }
@@ -541,6 +543,18 @@ autotrust_check(struct replay_runtime* runtime, struct replay_moment* mom)
 	log_info("autotrust %s is OK", mom->autotrust_id);
 }
 
+/** Store RTT in infra cache */
+static void
+do_infra_rtt(struct replay_runtime* runtime)
+{
+	struct replay_moment* now = runtime->now;
+	int rto = infra_rtt_update(runtime->infra, &now->addr,
+		now->addrlen, atoi(now->string), -1, runtime->now_secs);
+	log_addr(0, "INFRA_RTT for", &now->addr, now->addrlen);
+	log_info("INFRA_RTT(roundtrip %d): rto of %d", atoi(now->string), rto);
+	if(rto == 0) fatal_exit("infra_rtt_update failed");
+}
+
 /**
  * Advance to the next moment.
  */
@@ -617,6 +631,10 @@ do_moment_and_advance(struct replay_runtime* runtime)
 		advance_moment(runtime);
 		break;
 	case repevt_traffic:
+		advance_moment(runtime);
+		break;
+	case repevt_infra_rtt:
+		do_infra_rtt(runtime);
 		advance_moment(runtime);
 		break;
 	default:
@@ -847,18 +865,20 @@ outside_network_create(struct comm_base* base, size_t bufsize,
 	size_t ATTR_UNUSED(num_ports), char** ATTR_UNUSED(ifs), 
 	int ATTR_UNUSED(num_ifs), int ATTR_UNUSED(do_ip4), 
 	int ATTR_UNUSED(do_ip6), size_t ATTR_UNUSED(num_tcp), 
-	struct infra_cache* ATTR_UNUSED(infra),
+	struct infra_cache* infra,
 	struct ub_randstate* ATTR_UNUSED(rnd), 
 	int ATTR_UNUSED(use_caps_for_id), int* ATTR_UNUSED(availports),
 	int ATTR_UNUSED(numavailports), size_t ATTR_UNUSED(unwanted_threshold),
 	void (*unwanted_action)(void*), void* ATTR_UNUSED(unwanted_param),
 	int ATTR_UNUSED(do_udp))
 {
+	struct replay_runtime* runtime = (struct replay_runtime*)base;
 	struct outside_network* outnet =  calloc(1, 
 		sizeof(struct outside_network));
 	(void)unwanted_action;
 	if(!outnet)
 		return NULL;
+	runtime->infra = infra;
 	outnet->base = base;
 	outnet->udp_buff = ldns_buffer_new(bufsize);
 	if(!outnet->udp_buff)
