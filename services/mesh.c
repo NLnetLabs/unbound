@@ -283,6 +283,17 @@ void mesh_new_client(struct mesh_area* mesh, struct query_info* qinfo,
 			mesh->stats_dropped ++;
 			return;
 		}
+		/* for this new reply state, the reply address is free,
+		 * so the limit of reply addresses does not stop reply states*/
+	} else {
+		/* protect our memory usage from storing reply addresses */
+		if(mesh->num_reply_addrs > mesh->max_reply_states*16) {
+			verbose(VERB_ALGO, "Too many requests queued. "
+				"dropping incoming query.");
+			mesh->stats_dropped++;
+			comm_point_drop_reply(rep);
+			return;
+		}
 	}
 	/* see if it already exists, if not, create one */
 	if(!s) {

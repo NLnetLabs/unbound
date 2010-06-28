@@ -6,6 +6,9 @@
 	  / (average time for such long queries) qps for long queries.
 	  And about (numqueriesperthread / 2)/(jostletimeout in whole seconds)
 	  qps for short queries, per thread.
+	- Fix the max number of reply-address count to be applied for duplicate
+	  queries, and not for new query list entries.  This raises the memory
+	  usage to a max of (16+1)*numqueriesperthread reply addresses.
 
 25 June 2010: Wouter
 	- Fix handling of corner case reply from lame server, follows rfc2308.

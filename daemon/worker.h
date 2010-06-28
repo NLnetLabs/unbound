@@ -102,9 +102,6 @@ struct worker {
 	/** timer for statistics */
 	struct comm_timer* stat_timer;
 
-	/** number of requests that can be handled by this worker */
-	size_t request_size;
-
 	/** random() table for this worker. */
 	struct ub_randstate* rndstate;
 	/** do we need to restart or quit (on signal) */

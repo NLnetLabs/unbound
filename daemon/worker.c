@@ -906,14 +906,6 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 	}
 
 	/* grab a work request structure for this new request */
-	if(worker->env.mesh->num_reply_addrs>worker->request_size*16) {
-		/* protect our memory usage from storing reply addresses */
-		verbose(VERB_ALGO, "Too many requests queued. "
-			"dropping incoming query.");
-		worker->env.mesh->stats_dropped++;
-		comm_point_drop_reply(repinfo);
-		return 0;
-	}
 	mesh_new_client(worker->env.mesh, &qinfo, 
 		ldns_buffer_read_u16_at(c->buffer, 2),
 		&edns, repinfo, *(uint16_t*)ldns_buffer_begin(c->buffer));
@@ -1122,7 +1114,6 @@ worker_init(struct worker* worker, struct config_file *cfg,
 		worker_delete(worker);
 		return 0;
 	}
-	worker->request_size = cfg->num_queries_per_thread;
 
 	server_stats_init(&worker->stats, cfg);
 	alloc_init(&worker->alloc, &worker->daemon->superalloc, 
