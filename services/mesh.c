@@ -234,7 +234,7 @@ mesh_delete_all(struct mesh_area* mesh)
 
 int mesh_make_new_space(struct mesh_area* mesh)
 {
-	struct mesh_state* m = mesh->jostle_last;
+	struct mesh_state* m = mesh->jostle_first;
 	/* free space is available */
 	if(mesh->num_reply_states < mesh->max_reply_states)
 		return 1;

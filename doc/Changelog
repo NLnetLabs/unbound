@@ -1,3 +1,12 @@
+28 June 2010: Wouter
+	- Fix jostle list bug found by Vince (luoce@cnnic), it caused the qps
+	  in overload situations to be about 5 qps for the class of shortly
+	  serviced queries.
+	  The capacity of the resolver is then about (numqueriesperthread / 2)
+	  / (average time for such long queries) qps for long queries.
+	  And about (numqueriesperthread / 2)/(jostletimeout in whole seconds)
+	  qps for short queries, per thread.
+
 25 June 2010: Wouter
 	- Fix handling of corner case reply from lame server, follows rfc2308.
 	  It could lead to a nodata reply getting into the cache if the search

@@ -214,6 +214,11 @@ arrive, then 50% of the queries are allowed to run to completion, and
 the other 50% are replaced with the new incoming query if they have already 
 spent more than their allowed time.  This protects against denial of 
 service by slow queries or high query rates.  Default 200 milliseconds.
+The effect is that the qps for long-lasting queries is about 
+(numqueriesperthread / 2) / (average time for such long queries) qps.
+The qps for short queries can be about (numqueriesperthread / 2)
+/ (jostletimeout in whole seconds) qps per thread, about (1024/2)*5 = 2560
+qps by default.
 .TP
 .B so\-rcvbuf: \fI<number>
 If not 0, then set the SO_RCVBUF socket option to get more buffer
