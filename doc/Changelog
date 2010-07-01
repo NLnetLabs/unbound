@@ -1,3 +1,8 @@
+1 July 2010: Wouter
+	- Fix RFC4035 compliance with 2.2 statement that the DNSKEY at apex
+	  must be signed with all algorithms from the DS rrset at the parent.
+	  This is now checked and becomes bogus if not.
+
 28 June 2010: Wouter
 	- Fix jostle list bug found by Vince (luoce@cnnic), it caused the qps
 	  in overload situations to be about 5 qps for the class of shortly

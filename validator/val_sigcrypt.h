@@ -50,6 +50,81 @@ struct ub_packed_rrset_key;
 struct rbtree_t;
 struct regional;
 
+/** number of entries in algorithm needs array */
+#define ALGO_NEEDS_MAX 256
+/**
+ * Storage for algorithm needs.  DNSKEY algorithms.
+ */
+struct algo_needs {
+	/** the algorithms (8-bit) with each a number.
+	 * 0: not marked.
+	 * 1: marked 'necessary but not yet fulfilled'
+	 * 2: marked bogus.
+	 * Indexed by algorithm number.
+	 */
+	uint8_t needs[ALGO_NEEDS_MAX];
+	/** the number of entries in the array that are unfulfilled */
+	size_t num;
+};
+
+/**
+ * Initialize algo needs structure, set algos from rrset as needed.
+ * @param n: struct with storage.
+ * @param dnskey: algos from this struct set as necessary. DNSKEY set.
+ */
+void algo_needs_init_dnskey(struct algo_needs* n,
+	struct ub_packed_rrset_key* dnskey);
+
+/**
+ * Initialize algo needs structure, set algos from rrset as needed.
+ * @param n: struct with storage.
+ * @param ds: algos from this struct set as necessary. DS set.
+ * @param fav_ds_algo: filter to use only this DS algo.
+ */
+void algo_needs_init_ds(struct algo_needs* n, struct ub_packed_rrset_key* ds,
+	int fav_ds_algo);
+
+/**
+ * Mark this algorithm as a success, sec_secure, and see if we are done.
+ * @param n: storage structure processed.
+ * @param algo: the algorithm processed to be secure.
+ * @return if true, processing has finished successfully, we are satisfied.
+ */
+int algo_needs_set_secure(struct algo_needs* n, uint8_t algo);
+
+/**
+ * Mark this algorithm a failure, sec_bogus.  It can later be overridden
+ * by a success for this algorithm (with a different signature).
+ * @param n: storage structure processed.
+ * @param algo: the algorithm processed to be bogus.
+ */
+void algo_needs_set_bogus(struct algo_needs* n, uint8_t algo);
+
+/**
+ * See how many algorithms are missing (not bogus or secure, but not processed)
+ * @param n: storage structure processed.
+ * @return number of algorithms missing after processing.
+ */
+size_t algo_needs_num_missing(struct algo_needs* n);
+
+/**
+ * See which algo is missing.
+ * @param n: struct after processing.
+ * @return if 0 an algorithm was bogus, if a number, this algorithm was
+ *   missing.  So on 0, report why that was bogus, on number report a missing
+ *   algorithm.  There could be multiple missing, this reports the first one.
+ */
+int algo_needs_missing(struct algo_needs* n);
+
+/**
+ * Format error reason for algorithm missing.
+ * @param env: module env with scratch for temp storage of string.
+ * @param alg: DNSKEY-algorithm missing.
+ * @param reason: destination.
+ * @param s: string, appended with 'with algorithm ..'.
+ */
+void algo_needs_reason(struct module_env* env, int alg, char** reason, char* s);
+
 /** 
  * Check if dnskey matches a DS digest 
  * Does not check dnskey-keyid footprint, just the digest.

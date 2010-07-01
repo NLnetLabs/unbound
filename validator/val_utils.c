@@ -424,7 +424,8 @@ verify_dnskeys_with_ds_rr(struct module_env* env, struct val_env* ve,
 		/* If it didn't validate with the DNSKEY, try the next one! */
 	}
 	if(numchecked == 0)
-		*reason = "no keys have a DS";
+		algo_needs_reason(env, ds_get_key_algo(ds_rrset, ds_idx),
+			reason, "no keys have a DS");
 	else if(numhashok == 0)
 		*reason = "DS hash mismatches key";
 	else if(!*reason)
@@ -456,7 +457,8 @@ val_verify_DNSKEY_with_DS(struct module_env* env, struct val_env* ve,
 {
 	/* as long as this is false, we can consider this DS rrset to be
 	 * equivalent to no DS rrset. */
-	int has_useful_ds = 0, digest_algo;
+	int has_useful_ds = 0, digest_algo, alg;
+	struct algo_needs needs;
 	size_t i, num;
 	enum sec_status sec;
 
@@ -470,6 +472,7 @@ val_verify_DNSKEY_with_DS(struct module_env* env, struct val_env* ve,
 	}
 
 	digest_algo = val_favorite_ds_algo(ds_rrset);
+	algo_needs_init_ds(&needs, ds_rrset, digest_algo);
 	num = rrset_get_count(ds_rrset);
 	for(i=0; i<num; i++) {
 		/* Check to see if we can understand this DS. 
@@ -488,8 +491,14 @@ val_verify_DNSKEY_with_DS(struct module_env* env, struct val_env* ve,
 		sec = verify_dnskeys_with_ds_rr(env, ve, dnskey_rrset, 
 			ds_rrset, i, reason);
 		if(sec == sec_status_secure) {
-			verbose(VERB_ALGO, "DS matched DNSKEY.");
-			return sec_status_secure;
+			if(algo_needs_set_secure(&needs,
+				(uint8_t)ds_get_key_algo(ds_rrset, i))) {
+				verbose(VERB_ALGO, "DS matched DNSKEY.");
+				return sec_status_secure;
+			}
+		} else if(sec == sec_status_bogus) {
+			algo_needs_set_bogus(&needs,
+				(uint8_t)ds_get_key_algo(ds_rrset, i));
 		}
 	}
 
@@ -503,6 +512,10 @@ val_verify_DNSKEY_with_DS(struct module_env* env, struct val_env* ve,
 	}
 	/* If any were understandable, then it is bad. */
 	verbose(VERB_QUERY, "Failed to match any usable DS to a DNSKEY.");
+	if((alg=algo_needs_missing(&needs)) != 0) {
+		algo_needs_reason(env, alg, reason, "missing verification of "
+			"DNSKEY signature");
+	}
 	return sec_status_bogus;
 }
 

@@ -452,41 +452,75 @@ int dnskey_algo_is_supported(struct ub_packed_rrset_key* dnskey_rrset,
 		dnskey_idx));
 }
 
-/**
- * Fillup needed algorithm array for DNSKEY set
- * @param dnskey: the key
- * @param needs: array per algorithm.
- * @return the number of algorithms that need valid signatures
- */
-static size_t
-dnskeyset_needs(struct ub_packed_rrset_key* dnskey, uint8_t needs[])
+void algo_needs_init_dnskey(struct algo_needs* n,
+        struct ub_packed_rrset_key* dnskey)
 {
 	uint8_t algo;
 	size_t i, total = 0;
 	size_t num = rrset_get_count(dnskey);
 
-	memset(needs, 0, sizeof(uint8_t)*256);
+	memset(n->needs, 0, sizeof(uint8_t)*ALGO_NEEDS_MAX);
 	for(i=0; i<num; i++) {
 		algo = (uint8_t)dnskey_get_algo(dnskey, i);
-		if(needs[algo] == 0) {
-			needs[algo] = 1;
+		if(n->needs[algo] == 0) {
+			n->needs[algo] = 1;
 			total++;
 		}
 	}
-	return total;
+	n->num = total;
 }
 
-/** see which algo needed */
-static int any_needed_bogus(uint8_t needs[])
+void algo_needs_init_ds(struct algo_needs* n, struct ub_packed_rrset_key* ds,
+	int fav_ds_algo)
+{
+	uint8_t algo;
+	size_t i, total = 0;
+	size_t num = rrset_get_count(ds);
+
+	memset(n->needs, 0, sizeof(uint8_t)*ALGO_NEEDS_MAX);
+	for(i=0; i<num; i++) {
+		if(ds_get_digest_algo(ds, i) != fav_ds_algo)
+			continue;
+		algo = (uint8_t)ds_get_key_algo(ds, i);
+		if(n->needs[algo] == 0) {
+			n->needs[algo] = 1;
+			total++;
+		}
+	}
+	n->num = total;
+}
+
+int algo_needs_set_secure(struct algo_needs* n, uint8_t algo)
+{
+	if(n->needs[algo]) {
+		n->needs[algo] = 0;
+		n->num --;
+		if(n->num == 0) /* done! */
+			return 1;
+	}
+	return 0;
+}
+
+void algo_needs_set_bogus(struct algo_needs* n, uint8_t algo)
+{
+	if(n->needs[algo]) n->needs[algo] = 2; /* need it, but bogus */
+}
+
+size_t algo_needs_num_missing(struct algo_needs* n)
+{
+	return n->num;
+}
+
+int algo_needs_missing(struct algo_needs* n)
 {
 	int i;
 	/* first check if a needed algo was bogus - report that */
-	for(i=0; i<256; i++)
-		if(needs[i] == 2)
+	for(i=0; i<ALGO_NEEDS_MAX; i++)
+		if(n->needs[i] == 2)
 			return 0;
 	/* now check which algo is missing */
-	for(i=0; i<256; i++)
-		if(needs[i] == 1)
+	for(i=0; i<ALGO_NEEDS_MAX; i++)
+		if(n->needs[i] == 1)
 			return i;
 	return 0;
 }
@@ -497,10 +531,10 @@ dnskeyset_verify_rrset(struct module_env* env, struct val_env* ve,
 	char** reason)
 {
 	enum sec_status sec;
-	size_t i, num, numneeds;
+	size_t i, num;
 	rbtree_t* sortree = NULL;
 	/* make sure that for all DNSKEY algorithms there are valid sigs */
-	uint8_t needs[256]; /* 1 if need sig for that algorithm */
+	struct algo_needs needs;
 	int alg;
 
 	num = rrset_get_sigcount(rrset);
@@ -511,39 +545,39 @@ dnskeyset_verify_rrset(struct module_env* env, struct val_env* ve,
 		return sec_status_bogus;
 	}
 
-	numneeds = dnskeyset_needs(dnskey, needs);
+	algo_needs_init_dnskey(&needs, dnskey);
 	for(i=0; i<num; i++) {
 		sec = dnskeyset_verify_rrset_sig(env, ve, *env->now, rrset, 
 			dnskey, i, &sortree, reason);
 		/* see which algorithm has been fixed up */
 		if(sec == sec_status_secure) {
-			uint8_t a = (uint8_t)rrset_get_sig_algo(rrset, i);
-			if(needs[a]) {
-				needs[a] = 0;
-				numneeds --;
-				if(numneeds == 0) /* done! */
-					return sec;
-			}
+			if(algo_needs_set_secure(&needs,
+				(uint8_t)rrset_get_sig_algo(rrset, i)))
+				return sec; /* done! */
 		} else if(sec == sec_status_bogus) {
-			uint8_t a = (uint8_t)rrset_get_sig_algo(rrset, i);
-			if(needs[a]) needs[a] = 2; /* need it, but bogus */
+			algo_needs_set_bogus(&needs,
+				(uint8_t)rrset_get_sig_algo(rrset, i));
 		}
 	}
 	verbose(VERB_ALGO, "rrset failed to verify: no valid signatures for "
-		"%d algorithms", (int)numneeds);
-	if((alg=any_needed_bogus(needs)) != 0) {
-		char buf[256];
-		ldns_lookup_table *t = ldns_lookup_by_id(ldns_algorithms, alg);
-		if(t&&t->name)
-			snprintf(buf, sizeof(buf), "no signatures with "
-				"algorithm %s", t->name);
-		else	snprintf(buf, sizeof(buf), "no signatures with "
-				"algorithm ALG%u", (unsigned)alg);
-		*reason = regional_strdup(env->scratch, buf);
-		if(!*reason)
-			*reason = "no signatures for all algorithms";
+		"%d algorithms", (int)algo_needs_num_missing(&needs));
+	if((alg=algo_needs_missing(&needs)) != 0) {
+		algo_needs_reason(env, alg, reason, "no signatures");
 	}
 	return sec_status_bogus;
+}
+
+void algo_needs_reason(struct module_env* env, int alg, char** reason, char* s)
+{
+	char buf[256];
+	ldns_lookup_table *t = ldns_lookup_by_id(ldns_algorithms, alg);
+	if(t&&t->name)
+		snprintf(buf, sizeof(buf), "%s with algorithm %s", s, t->name);
+	else	snprintf(buf, sizeof(buf), "%s with algorithm ALG%u", s,
+			(unsigned)alg);
+	*reason = regional_strdup(env->scratch, buf);
+	if(!*reason)
+		*reason = "%s with all algorithms";
 }
 
 enum sec_status 
