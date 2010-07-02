@@ -2,7 +2,8 @@
 # Copyright 2009, Wouter Wijngaards, NLnet Labs.   
 # BSD licensed.
 #
-# Version 9
+# Version 10
+# 2010-07-02 Add check for ss_family (for minix).
 # 2010-04-26 Fix to use CPPFLAGS for CHECK_COMPILER_FLAGS.
 # 2010-03-01 Fix RPATH using CONFIG_COMMANDS to run at the very end.
 # 2010-02-18 WITH_SSL outputs the LIBSSL_LDFLAGS, LIBS, CPPFLAGS seperate, -ldl
@@ -74,6 +75,7 @@
 # AHX_CONFIG_EXT_FLAGS		- define the stripped extension flags
 # ACX_CHECK_MEMCMP_SIGNED	- check if memcmp uses signed characters.
 # AHX_MEMCMP_BROKEN		- replace memcmp func for CHECK_MEMCMP_SIGNED.
+# ACX_CHECK_SS_FAMILY           - check for sockaddr_storage.ss_family
 #
 
 dnl Escape backslashes as \\, for C:\ paths, for the C preprocessor defines.
@@ -1269,5 +1271,39 @@ AC_DEFUN([AHX_MEMCMP_BROKEN], [
 int memcmp(const void *x, const void *y, size_t n);
 #endif
 ])
+
+dnl ACX_CHECK_SS_FAMILY           - check for sockaddr_storage.ss_family
+AC_DEFUN([ACX_CHECK_SS_FAMILY],
+[AC_CHECK_MEMBER([struct sockaddr_storage.ss_family], [], [
+        AC_CHECK_MEMBER([struct sockaddr_storage.__ss_family], [
+                AC_DEFINE([ss_family], [__ss_family], [Fallback member name for socket family in struct sockaddr_storage])
+        ],, [AC_INCLUDES_DEFAULT
+#ifdef HAVE_NETINET_IN_H
+#include <netinet/in.h>
+#endif
+#ifdef HAVE_SYS_SOCKET_H
+#include <sys/socket.h>
+#endif
+#ifdef HAVE_NETDB_H
+#include <netdb.h>
+#endif
+#ifdef HAVE_ARPA_INET_H
+#include <arpa/inet.h>
+#endif
+    ])
+], [AC_INCLUDES_DEFAULT
+#ifdef HAVE_NETINET_IN_H
+#include <netinet/in.h>
+#endif
+#ifdef HAVE_SYS_SOCKET_H
+#include <sys/socket.h>
+#endif
+#ifdef HAVE_NETDB_H
+#include <netdb.h>
+#endif
+#ifdef HAVE_ARPA_INET_H
+#include <arpa/inet.h>
+#endif
+]) ])
 
 dnl End of file
