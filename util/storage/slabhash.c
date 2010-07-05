@@ -135,7 +135,7 @@ void slabhash_status(struct slabhash* sl, const char* id, int extended)
 	size_t i;
 	char num[17];
 	log_info("Slabhash %s: %u tables mask=%x shift=%d", 
-		id, (unsigned)sl->size, sl->mask, sl->shift);
+		id, (unsigned)sl->size, (unsigned)sl->mask, sl->shift);
 	for(i=0; i<sl->size; i++) {
 		snprintf(num, sizeof(num), "table %u", (unsigned)i);
 		lruhash_status(sl->array[i], num, extended);

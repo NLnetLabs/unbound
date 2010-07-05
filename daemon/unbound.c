@@ -44,6 +44,7 @@
 #ifdef HAVE_GETOPT_H
 #include <getopt.h>
 #endif
+#include <sys/time.h>
 #include "util/log.h"
 #include "daemon/daemon.h"
 #include "daemon/remote.h"
@@ -213,8 +214,12 @@ checkrlimits(struct config_file* cfg)
 		avail = (size_t)rlim.rlim_cur;
 		rlim.rlim_cur = (rlim_t)(total + 10);
 		rlim.rlim_max = (rlim_t)(total + 10);
+#ifdef HAVE_SETRLIMIT
 		if(setrlimit(RLIMIT_NOFILE, &rlim) < 0) {
 			log_warn("setrlimit: %s", strerror(errno));
+#else
+		if(0) {
+#endif
 			log_warn("cannot increase max open fds from %u to %u",
 				(unsigned)avail, (unsigned)total+10);
 			/* check that calculation below does not underflow,
