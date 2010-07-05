@@ -48,6 +48,70 @@
 #ifndef USE_WINSOCK
 /* on unix */
 
+#ifndef HAVE_SOCKETPAIR
+/** define socketpair to another name in case it sneakily exists somehow */
+#define socketpair socketpair_compat
+static int socketpair(int ATTR_UNUSED(f), int ATTR_UNUSED(t),
+	int ATTR_UNUSED(p), int sv[2])
+{
+	/* no socketpair() available, like on Minix 3.1.7,
+	 * create two TCP sockets connected to each other on 127.0.0.1 */
+	struct sockaddr_storage addr;
+	socklen_t len;
+	int s, t;
+	/* hope this port is not in use ... */
+	static int the_port = 1025 + (getpid() % 16384);
+	s = socket(AF_INET, SOCK_STREAM, 0);
+	if(s == -1) {
+		log_err("socket: %s", strerror(errno));
+		return -1;
+	}
+	if(extstrtoaddr("127.0.0.1@0", &addr, &len) == 0) {
+		log_err("internal error, cannot parse in socketpair_compat");
+		close(s);
+		errno=EINVAL;
+		return -1;
+	}
+	((struct sockaddr_in*)&addr)->sin_port = htons(the_port++);
+	if(bind(s, &addr, len) == -1) {
+		log_err("bind: %s", strerror(errno));
+		close(s);
+		return -1;
+	}
+	if(listen(s, 5) == -1) {
+		log_err("listen: %s", strerror(errno));
+		close(s);
+		return -1;
+	}
+
+	/* create send sock */
+	t = socket(AF_INET, SOCK_STREAM, 0);
+	if(t == -1) {
+		log_err("socket: %s", strerror(errno));
+		close(s);
+		return -1;
+	}
+	if(connect(t, &addr, len) == -1) {
+		log_err("connect: %s", strerror(errno));
+		close(s);
+		close(t);
+		return -1;
+	}
+
+	len = (socklen_t)sizeof(addr);
+	sv[0] = accept(s, &addr, &len, 0);
+	if(sv[0] == -1) {
+		log_err("accept: %s", strerror(errno));
+		close(s);
+		close(t);
+		return -1;
+	}
+	sv[1] = t;
+	close(s)
+	return 0;
+}
+#endif /* HAVE_SOCKETPAIR */
+
 struct tube* tube_create(void)
 {
 	struct tube* tube = (struct tube*)calloc(1, sizeof(*tube));
