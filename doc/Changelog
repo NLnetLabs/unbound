@@ -3,6 +3,7 @@
 	  at verbosity 4, to enable diagnosis why no queries to 127.0.0.1.
 	- added feature to print configure date, target and options with -h.
 	- added feature to print event backend system details with -h.
+	- wdiff is not actually required by make test, updated requirements.
 
 1 July 2010: Wouter
 	- Fix RFC4035 compliance with 2.2 statement that the DNSKEY at apex

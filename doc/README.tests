@@ -6,10 +6,9 @@ To make and run the tests. The results are summarized at the end.
 
 You need to have the following programs installed and in your PATH.
 * dig - from the bind-tools package. Used to send DNS queries.
-* wdiff - used for word-by-word comparisons.
 * splint (optional) - for lint test
 * doxygen (optional) - for doc completeness test
-* ldns-testns (optional) - from ldns examples. Used as DNS auth server.
+* ldns-testns - from ldns examples. Used as DNS auth server.
 * xxd and nc (optional) - for (malformed) packet transmission.
 The optional programs are detected and can be omitted.
 
