@@ -250,6 +250,9 @@
 /* Define to 1 if you have the `snprintf' function. */
 #undef HAVE_SNPRINTF
 
+/* Define to 1 if you have the `socketpair' function. */
+#undef HAVE_SOCKETPAIR
+
 /* Using Solaris threads */
 #undef HAVE_SOLARIS_THREADS
 
