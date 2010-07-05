@@ -88,10 +88,58 @@
 /** global debug value to keep track of heap memory allocation */
 void* unbound_start_brk = 0;
 
+#if !defined(HAVE_EVENT_BASE_GET_METHOD) && defined(HAVE_EV_LOOP)
+static const char* ev_backend2str(int b)
+{
+	switch(b) {
+	case EVBACKEND_SELECT:	return "select";
+	case EVBACKEND_POLL:	return "poll";
+	case EVBACKEND_EPOLL:	return "epoll";
+	case EVBACKEND_KQUEUE:	return "kqueue";
+	case EVBACKEND_DEVPOLL: return "devpoll";
+	case EVBACKEND_PORT:	return "evport";
+	}
+	return "unknown";
+}
+#endif
+
+/** get the event system in use */
+static void get_event_sys(const char** n, const char** s, const char** m)
+{
+#ifdef USE_WINSOCK
+	*n = "event";
+	*s = "winsock";
+	*m = "WSAWaitForMultipleEvents";
+#elif defined(USE_MINI_EVENT)
+	*n = "mini-event";
+	*s = "internal";
+	*m = "select";
+#else
+	struct event_base* b;
+	*s = event_get_version();
+#  ifdef HAVE_EVENT_BASE_GET_METHOD
+	*n = "libevent";
+	b = event_base_new();
+	*m = event_base_get_method(b);
+#  elif defined(HAVE_EV_LOOP)
+	*n = "libev";
+	b = (struct event_base*)ev_default_loop(EVFLAG_AUTO);
+	*m = ev_backend2str(ev_backend((struct ev_loop*)b));
+#  else
+	*m = "not obtainable";
+	b = NULL;
+#  endif
+#  ifdef HAVE_EVENT_BASE_FREE
+	event_base_free(b);
+#  endif
+#endif
+}
+
 /** print usage. */
 static void usage()
 {
 	const char** m;
+	const char *evnm="event", *evsys="", *evmethod="";
 	printf("usage:  unbound [options]\n");
 	printf("	start unbound daemon DNS resolver.\n");
 	printf("-h	this help\n");
@@ -105,20 +153,16 @@ static void usage()
 	printf("   	service - used to start from services control panel\n");
 #endif
 	printf("Version %s\n", PACKAGE_VERSION);
-	printf("linked libs: event %s, ldns %s, %s\n", 
-#ifdef USE_WINSOCK
-		"winsock",
-#elif defined(USE_MINI_EVENT)
-		"internal",
-#else
-		event_get_version(), 
-#endif
-		ldns_version(), 
+	get_event_sys(&evnm, &evsys, &evmethod);
+	printf("linked libs: %s %s (it uses %s), ldns %s, %s\n", 
+		evnm, evsys, evmethod, ldns_version(), 
 		SSLeay_version(SSLEAY_VERSION));
 	printf("linked modules:");
 	for(m = module_list_avail(); *m; m++)
 		printf(" %s", *m);
 	printf("\n");
+	printf("configured for %s on %s with options:%s\n",
+		CONFIGURE_TARGET, CONFIGURE_DATE, CONFIGURE_BUILD_WITH);
 	printf("BSD licensed, see LICENSE in source package for details.\n");
 	printf("Report bugs to %s\n", PACKAGE_BUGREPORT);
 }
