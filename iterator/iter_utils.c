@@ -187,6 +187,8 @@ iter_filter_unsuitable(struct iter_env* iter_env, struct module_env* env,
 	if(a->bogus)
 		return -1; /* address of server is bogus */
 	if(donotq_lookup(iter_env->donotq, &a->addr, a->addrlen)) {
+		log_addr(VERB_ALGO, "skip addr on the donotquery list",
+			&a->addr, a->addrlen);
 		return -1; /* server is on the donotquery list */
 	}
 	if(!iter_env->supports_ipv6 && addr_is_ip6(&a->addr, a->addrlen)) {

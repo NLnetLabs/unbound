@@ -1,3 +1,7 @@
+5 July 2010: Wouter
+	- log if a server is skipped because it is on the donotquery list,
+	  at verbosity 4, to enable diagnosis why no queries to 127.0.0.1.
+
 1 July 2010: Wouter
 	- Fix RFC4035 compliance with 2.2 statement that the DNSKEY at apex
 	  must be signed with all algorithms from the DS rrset at the parent.
