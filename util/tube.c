@@ -51,7 +51,7 @@
 #ifndef HAVE_SOCKETPAIR
 /** define socketpair to another name in case it sneakily exists somehow */
 #define socketpair socketpair_compat
-static int socketpair(int ATTR_UNUSED(f), int ATTR_UNUSED(t),
+static int socketpair(int ATTR_UNUSED(f), int ATTR_UNUSED(tp),
 	int ATTR_UNUSED(p), int sv[2])
 {
 	/* no socketpair() available, like on Minix 3.1.7,
@@ -60,7 +60,8 @@ static int socketpair(int ATTR_UNUSED(f), int ATTR_UNUSED(t),
 	socklen_t len;
 	int s, t;
 	/* hope this port is not in use ... */
-	static int the_port = 1025 + (getpid() % 16384);
+	static int the_port = 0;
+	if(the_port == 0) the_port = 1025 + (getpid() % 16384);
 	s = socket(AF_INET, SOCK_STREAM, 0);
 	if(s == -1) {
 		log_err("socket: %s", strerror(errno));
@@ -73,7 +74,7 @@ static int socketpair(int ATTR_UNUSED(f), int ATTR_UNUSED(t),
 		return -1;
 	}
 	((struct sockaddr_in*)&addr)->sin_port = htons(the_port++);
-	if(bind(s, &addr, len) == -1) {
+	if(bind(s, (struct sockaddr*)&addr, len) == -1) {
 		log_err("bind: %s", strerror(errno));
 		close(s);
 		return -1;
@@ -91,7 +92,7 @@ static int socketpair(int ATTR_UNUSED(f), int ATTR_UNUSED(t),
 		close(s);
 		return -1;
 	}
-	if(connect(t, &addr, len) == -1) {
+	if(connect(t, (struct sockaddr*)&addr, len) == -1) {
 		log_err("connect: %s", strerror(errno));
 		close(s);
 		close(t);
@@ -99,7 +100,7 @@ static int socketpair(int ATTR_UNUSED(f), int ATTR_UNUSED(t),
 	}
 
 	len = (socklen_t)sizeof(addr);
-	sv[0] = accept(s, &addr, &len, 0);
+	sv[0] = accept(s, (struct sockaddr*)&addr, &len);
 	if(sv[0] == -1) {
 		log_err("accept: %s", strerror(errno));
 		close(s);
@@ -107,7 +108,7 @@ static int socketpair(int ATTR_UNUSED(f), int ATTR_UNUSED(t),
 		return -1;
 	}
 	sv[1] = t;
-	close(s)
+	close(s);
 	return 0;
 }
 #endif /* HAVE_SOCKETPAIR */
