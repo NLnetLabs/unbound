@@ -968,17 +968,17 @@ void testbound_selftest(void)
 	free(v);
 
 	v = macro_process(store, NULL, "it is ${ctime 123456}");
-	log_assert( v && strcmp(v, "it is Fri Jan  2 11:17:36 1970") == 0);
+	log_assert( v && strcmp(v, "it is Fri Jan  2 10:17:36 1970") == 0);
 	free(v);
 
 	r = macro_assign(store, "t1", "123456");
 	log_assert(r);
 	v = macro_process(store, NULL, "it is ${ctime ${$t1}}");
-	log_assert( v && strcmp(v, "it is Fri Jan  2 11:17:36 1970") == 0);
+	log_assert( v && strcmp(v, "it is Fri Jan  2 10:17:36 1970") == 0);
 	free(v);
 
 	v = macro_process(store, NULL, "it is ${ctime $t1}");
-	log_assert( v && strcmp(v, "it is Fri Jan  2 11:17:36 1970") == 0);
+	log_assert( v && strcmp(v, "it is Fri Jan  2 10:17:36 1970") == 0);
 	free(v);
 
 	r = macro_assign(store, "x", "1");
