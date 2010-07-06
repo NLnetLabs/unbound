@@ -1,3 +1,6 @@
+6 July 2010: Wouter
+	- failure to chown the pidfile is not fatal any more.
+
 5 July 2010: Wouter
 	- log if a server is skipped because it is on the donotquery list,
 	  at verbosity 4, to enable diagnosis why no queries to 127.0.0.1.

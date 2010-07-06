@@ -467,7 +467,7 @@ perform_setup(struct daemon* daemon, struct config_file* cfg, int debug_mode,
 			 * chown to get permissions */
 			if(cfg->username && cfg->username[0]) {
 			  if(chown(daemon->pidfile, uid, gid) == -1) {
-				fatal_exit("cannot chown %u.%u %s: %s",
+				log_err("cannot chown %u.%u %s: %s",
 					(unsigned)uid, (unsigned)gid,
 					daemon->pidfile, strerror(errno));
 			  }
