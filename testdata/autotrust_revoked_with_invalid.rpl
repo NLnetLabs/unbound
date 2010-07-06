@@ -8,14 +8,14 @@ stub-zone:
 AUTOTRUST_FILE example.com
 ; autotrust trust anchor file
 ;;id: example.com. 1
-;;last_queried: 1258962400 ;;Mon Nov 23 08:46:40 2009
-;;last_success: 1258962400 ;;Mon Nov 23 08:46:40 2009
-;;next_probe_time: 1258967360 ;;Mon Nov 23 10:09:20 2009
+;;last_queried: 1258962400 ;;Mon Nov 23 07:46:40 2009
+;;last_success: 1258962400 ;;Mon Nov 23 07:46:40 2009
+;;next_probe_time: 1258967360 ;;Mon Nov 23 09:09:20 2009
 ;;query_failed: 0
 ;;query_interval: 5400
 ;;retry_time: 3600
 example.com.	10800	IN	DNSKEY	257 3 5 AwEAAeiaUiUIpWMfYz5L0sfJTZWnuN9IyBX4em9VjsoqQTsOD1HDQpNb4buvJo7pN2aBCxNS7e0OL8e2mVB6CLZ+8ek= ;{id = 60946 (ksk), size = 512b} ;;state=2 [  VALID  ] ;;count=0 ;;lastchange=1256370400 ;;Sat Oct 24 09:46:40 2009
-example.com.	10800	IN	DNSKEY	257 3 5 AwEAAc3Z5DQDJpH4oPdNtC4BUQHk50XMD+dHr4r8psHmivIa83hxR5CRgCtd9sENCW9Ae8OIO19xw9t/RPaEAqQa+OE= ;{id = 55582 (ksk), size = 512b} ;;state=2 [  VALID  ] ;;count=0 ;;lastchange=1258962400 ;;Mon Nov 23 08:46:40 2009
+example.com.	10800	IN	DNSKEY	257 3 5 AwEAAc3Z5DQDJpH4oPdNtC4BUQHk50XMD+dHr4r8psHmivIa83hxR5CRgCtd9sENCW9Ae8OIO19xw9t/RPaEAqQa+OE= ;{id = 55582 (ksk), size = 512b} ;;state=2 [  VALID  ] ;;count=0 ;;lastchange=1258962400 ;;Mon Nov 23 07:46:40 2009
 AUTOTRUST_END
 CONFIG_END
 
@@ -103,7 +103,7 @@ ns.example.com. IN AAAA
 ENTRY_END
 RANGE_END
 
-; set date/time to Mon Nov 23 10:46:40 2009
+; set date/time to Mon Nov 23 09:46:40 2009
 STEP 5 TIME_PASSES EVAL ${1258962400 + 7200}
 STEP 6 TRAFFIC   ; do the probe
 STEP 7 ASSIGN t0 = ${time}
@@ -122,7 +122,7 @@ FILE_BEGIN
 ;;query_interval: 5400
 ;;retry_time: 3600
 example.com.	10800	IN	DNSKEY	385 3 5 AwEAAc3Z5DQDJpH4oPdNtC4BUQHk50XMD+dHr4r8psHmivIa83hxR5CRgCtd9sENCW9Ae8OIO19xw9t/RPaEAqQa+OE= ;{id = 55710 (ksk), size = 512b} ;;state=4 [ REVOKED ] ;;count=0 ;;lastchange=${$t0} ;;${ctime $t0}
-example.com.	10800	IN	DNSKEY	257 3 5 AwEAAeiaUiUIpWMfYz5L0sfJTZWnuN9IyBX4em9VjsoqQTsOD1HDQpNb4buvJo7pN2aBCxNS7e0OL8e2mVB6CLZ+8ek= ;{id = 60946 (ksk), size = 512b} ;;state=2 [  VALID  ] ;;count=0 ;;lastchange=1256370400 ;;Sat Oct 24 09:46:40 2009
+example.com.	10800	IN	DNSKEY	257 3 5 AwEAAeiaUiUIpWMfYz5L0sfJTZWnuN9IyBX4em9VjsoqQTsOD1HDQpNb4buvJo7pN2aBCxNS7e0OL8e2mVB6CLZ+8ek= ;{id = 60946 (ksk), size = 512b} ;;state=2 [  VALID  ] ;;count=0 ;;lastchange=1256370400 ;;Sat Oct 24 07:46:40 2009
 FILE_END
 
 SCENARIO_END

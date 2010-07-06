@@ -122,7 +122,7 @@ RANGE_END
 
 RANGE_END
 
-; set date/time to Mon Nov 23 10:46:40 2009
+; set date/time to Mon Nov 23 09:46:40 2009
 STEP 5 TIME_PASSES EVAL ${1258962400 + 7200}
 STEP 6 TRAFFIC   ; do the probe
 STEP 7 ASSIGN t0 = ${time}

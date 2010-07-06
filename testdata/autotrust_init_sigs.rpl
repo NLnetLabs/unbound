@@ -98,7 +98,7 @@ example.com.	10800	IN	RRSIG	DNSKEY 5 2 10800 20090924111500 20090821111500 55582
 ENTRY_END
 RANGE_END
 
-; set date/time to Aug 24 09:46:40  (2009).
+; set date/time to Aug 24 07:46:40  (2009).
 STEP 5 TIME_PASSES ELAPSE 1251100000
 STEP 6 ASSIGN t0 = ${time}
 ; get probe time and check it. 4800 is about 10% less than 5400. And more than
@@ -111,13 +111,13 @@ STEP 8 CHECK_AUTOTRUST example.com
 FILE_BEGIN
 ; autotrust trust anchor file
 ;;id: example.com. 1
-;;last_queried: 1251100000 ;;Mon Aug 24 09:46:40 2009
-;;last_success: 1251100000 ;;Mon Aug 24 09:46:40 2009
+;;last_queried: 1251100000 ;;Mon Aug 24 07:46:40 2009
+;;last_success: 1251100000 ;;Mon Aug 24 07:46:40 2009
 ;;next_probe_time: ${$t0 + $probe} ;;${ctime $t0 + $probe}
 ;;query_failed: 0
 ;;query_interval: 5400
 ;;retry_time: 3600
-example.com.	10800	IN	DNSKEY	257 3 5 AwEAAc3Z5DQDJpH4oPdNtC4BUQHk50XMD+dHr4r8psHmivIa83hxR5CRgCtd9sENCW9Ae8OIO19xw9t/RPaEAqQa+OE= ;{id = 55582 (ksk), size = 512b} ;;state=2 [  VALID  ] ;;count=0 ;;lastchange=1251100000 ;;Mon Aug 24 09:46:40 2009
+example.com.	10800	IN	DNSKEY	257 3 5 AwEAAc3Z5DQDJpH4oPdNtC4BUQHk50XMD+dHr4r8psHmivIa83hxR5CRgCtd9sENCW9Ae8OIO19xw9t/RPaEAqQa+OE= ;{id = 55582 (ksk), size = 512b} ;;state=2 [  VALID  ] ;;count=0 ;;lastchange=1251100000 ;;Mon Aug 24 07:46:40 2009
 FILE_END
 
 
@@ -151,13 +151,13 @@ STEP 30 CHECK_AUTOTRUST example.com
 FILE_BEGIN
 ; autotrust trust anchor file
 ;;id: example.com. 1
-;;last_queried: 1251100000 ;;Mon Aug 24 09:46:40 2009
-;;last_success: 1251100000 ;;Mon Aug 24 09:46:40 2009
+;;last_queried: 1251100000 ;;Mon Aug 24 07:46:40 2009
+;;last_success: 1251100000 ;;Mon Aug 24 07:46:40 2009
 ;;next_probe_time: ${$t0 + $probe} ;;${ctime $t0 + $probe}
 ;;query_failed: 0
 ;;query_interval: 5400
 ;;retry_time: 3600
-example.com.	10800	IN	DNSKEY	257 3 5 AwEAAc3Z5DQDJpH4oPdNtC4BUQHk50XMD+dHr4r8psHmivIa83hxR5CRgCtd9sENCW9Ae8OIO19xw9t/RPaEAqQa+OE= ;{id = 55582 (ksk), size = 512b} ;;state=2 [  VALID  ] ;;count=0 ;;lastchange=1251100000 ;;Mon Aug 24 09:46:40 2009
+example.com.	10800	IN	DNSKEY	257 3 5 AwEAAc3Z5DQDJpH4oPdNtC4BUQHk50XMD+dHr4r8psHmivIa83hxR5CRgCtd9sENCW9Ae8OIO19xw9t/RPaEAqQa+OE= ;{id = 55582 (ksk), size = 512b} ;;state=2 [  VALID  ] ;;count=0 ;;lastchange=1251100000 ;;Mon Aug 24 07:46:40 2009
 FILE_END
 
 ; wait and see if autotrust probes (the unchanged) domain again.
@@ -177,7 +177,7 @@ FILE_BEGIN
 ;;query_failed: 0
 ;;query_interval: 5400
 ;;retry_time: 3600
-example.com.	10800	IN	DNSKEY	257 3 5 AwEAAc3Z5DQDJpH4oPdNtC4BUQHk50XMD+dHr4r8psHmivIa83hxR5CRgCtd9sENCW9Ae8OIO19xw9t/RPaEAqQa+OE= ;{id = 55582 (ksk), size = 512b} ;;state=2 [  VALID  ] ;;count=0 ;;lastchange=1251100000 ;;Mon Aug 24 09:46:40 2009
+example.com.	10800	IN	DNSKEY	257 3 5 AwEAAc3Z5DQDJpH4oPdNtC4BUQHk50XMD+dHr4r8psHmivIa83hxR5CRgCtd9sENCW9Ae8OIO19xw9t/RPaEAqQa+OE= ;{id = 55582 (ksk), size = 512b} ;;state=2 [  VALID  ] ;;count=0 ;;lastchange=1251100000 ;;Mon Aug 24 07:46:40 2009
 FILE_END
 
 SCENARIO_END

@@ -8,14 +8,14 @@ stub-zone:
 AUTOTRUST_FILE example.com
 ; autotrust trust anchor file
 ;;id: example.com. 1
-;;last_queried: 1258962400 ;;Mon Nov 23 08:46:40 2009
-;;last_success: 1258962400 ;;Mon Nov 23 08:46:40 2009
-;;next_probe_time: 1258967360 ;;Mon Nov 23 10:09:20 2009
+;;last_queried: 1258962400 ;;Mon Nov 23 07:46:40 2009
+;;last_success: 1258962400 ;;Mon Nov 23 07:46:40 2009
+;;next_probe_time: 1258967360 ;;Mon Nov 23 09:09:20 2009
 ;;query_failed: 0
 ;;query_interval: 5400
 ;;retry_time: 3600
-example.com.    10800   IN      DNSKEY  257 3 5 AwEAAas/cAhCFXvBUgTSNZCvQp0pLx1dY+7rXR0hH4/3EUgWmsmbYUpI1qD0xhwKD/oYGEwAm291fyWJ9c0oVxXDEK8= ;{id = 16486 (ksk), size = 512b} ;;state=2 [  VALID  ] ;;count=0 ;;lastchange=1258962400 ;;Mon Nov 23 08:46:40 2009
-example.com.	10800	IN	DNSKEY	257 3 5 AwEAAc3Z5DQDJpH4oPdNtC4BUQHk50XMD+dHr4r8psHmivIa83hxR5CRgCtd9sENCW9Ae8OIO19xw9t/RPaEAqQa+OE= ;{id = 55582 (ksk), size = 512b} ;;state=2 [  VALID  ] ;;count=0 ;;lastchange=1258962400 ;;Mon Nov 23 08:46:40 2009
+example.com.    10800   IN      DNSKEY  257 3 5 AwEAAas/cAhCFXvBUgTSNZCvQp0pLx1dY+7rXR0hH4/3EUgWmsmbYUpI1qD0xhwKD/oYGEwAm291fyWJ9c0oVxXDEK8= ;{id = 16486 (ksk), size = 512b} ;;state=2 [  VALID  ] ;;count=0 ;;lastchange=1258962400 ;;Mon Nov 23 07:46:40 2009
+example.com.	10800	IN	DNSKEY	257 3 5 AwEAAc3Z5DQDJpH4oPdNtC4BUQHk50XMD+dHr4r8psHmivIa83hxR5CRgCtd9sENCW9Ae8OIO19xw9t/RPaEAqQa+OE= ;{id = 55582 (ksk), size = 512b} ;;state=2 [  VALID  ] ;;count=0 ;;lastchange=1258962400 ;;Mon Nov 23 07:46:40 2009
 AUTOTRUST_END
 CONFIG_END
 
@@ -77,8 +77,8 @@ SECTION QUESTION
 example.com. IN DNSKEY
 SECTION ANSWER
 
-example.com.    10800   IN      DNSKEY  257 3 5 AwEAAas/cAhCFXvBUgTSNZCvQp0pLx1dY+7rXR0hH4/3EUgWmsmbYUpI1qD0xhwKD/oYGEwAm291fyWJ9c0oVxXDEK8= ;{id = 16486 (ksk), size = 512b} ;;state=2 [  VALID  ] ;;count=0 ;;lastchange=1258962400 ;;Mon Nov 23 08:46:40 2009
-example.com.	10800	IN	DNSKEY	257 3 5 AwEAAc3Z5DQDJpH4oPdNtC4BUQHk50XMD+dHr4r8psHmivIa83hxR5CRgCtd9sENCW9Ae8OIO19xw9t/RPaEAqQa+OE= ;{id = 55582 (ksk), size = 512b} ;;state=2 [  VALID  ] ;;count=0 ;;lastchange=1258962400 ;;Mon Nov 23 08:46:40 2009
+example.com.    10800   IN      DNSKEY  257 3 5 AwEAAas/cAhCFXvBUgTSNZCvQp0pLx1dY+7rXR0hH4/3EUgWmsmbYUpI1qD0xhwKD/oYGEwAm291fyWJ9c0oVxXDEK8= ;{id = 16486 (ksk), size = 512b} ;;state=2 [  VALID  ] ;;count=0 ;;lastchange=1258962400 ;;Mon Nov 23 07:46:40 2009
+example.com.	10800	IN	DNSKEY	257 3 5 AwEAAc3Z5DQDJpH4oPdNtC4BUQHk50XMD+dHr4r8psHmivIa83hxR5CRgCtd9sENCW9Ae8OIO19xw9t/RPaEAqQa+OE= ;{id = 55582 (ksk), size = 512b} ;;state=2 [  VALID  ] ;;count=0 ;;lastchange=1258962400 ;;Mon Nov 23 07:46:40 2009
 example.com.	3600	IN	DNSKEY	257 3 5 AwEAAaxpsO70/oPdKhulQXVbkLX5V6lyzF7G0gtz0nReLlBmfEk6zQ3WSW8VZ8kdZUCOLQwJl+5nWNfRvFxnqUGwjT8= ;{id = 11146 (ksk), size = 512b}
 example.com.	3600	IN	DNSKEY	257 3 5 AwEAAbXPzz66rviAvNKgPV5JNdkOZv9olQwNDFWnxy7p/RtObOL35ahwpamQGL5A5uPOvn1OghQyqiytTFFP8ZM/5Rc= ;{id = 11446 (ksk), size = 512b}
 example.com.	3600	IN	DNSKEY	257 3 5 AwEAAdSj6e3XGnFwRNgw6Aifi4Q7SyRIdQ25XVsiWP/N9m7evkN+y6rlnaMP1ELRkhpiwK0bbNTP3DsGXtSMbR/4uzU= ;{id = 20314 (ksk), size = 512b}
@@ -108,7 +108,7 @@ RANGE_END
 
 RANGE_END
 
-; set date/time to Mon Nov 23 10:46:40 2009
+; set date/time to Mon Nov 23 09:46:40 2009
 STEP 5 TIME_PASSES EVAL ${1258962400 + 7200}
 STEP 6 TRAFFIC   ; do the probe
 STEP 7 ASSIGN t0 = ${time}
@@ -137,8 +137,8 @@ example.com.	3600	IN	DNSKEY	257 3 5 AwEAAa8er29rQIzO6+o3D4S8HsTTICTHHzDTeVbY/2kL
 example.com.	3600	IN	DNSKEY	257 3 5 AwEAAdSj6e3XGnFwRNgw6Aifi4Q7SyRIdQ25XVsiWP/N9m7evkN+y6rlnaMP1ELRkhpiwK0bbNTP3DsGXtSMbR/4uzU= ;{id = 20314 (ksk), size = 512b} ;;state=1 [ ADDPEND ] ;;count=1 ;;lastchange=${$t0} ;;${ctime $t0}
 example.com.	3600	IN	DNSKEY	257 3 5 AwEAAbXPzz66rviAvNKgPV5JNdkOZv9olQwNDFWnxy7p/RtObOL35ahwpamQGL5A5uPOvn1OghQyqiytTFFP8ZM/5Rc= ;{id = 11446 (ksk), size = 512b} ;;state=1 [ ADDPEND ] ;;count=1 ;;lastchange=${$t0} ;;${ctime $t0}
 example.com.	3600	IN	DNSKEY	257 3 5 AwEAAaxpsO70/oPdKhulQXVbkLX5V6lyzF7G0gtz0nReLlBmfEk6zQ3WSW8VZ8kdZUCOLQwJl+5nWNfRvFxnqUGwjT8= ;{id = 11146 (ksk), size = 512b} ;;state=1 [ ADDPEND ] ;;count=1 ;;lastchange=${$t0} ;;${ctime $t0}
-example.com.	10800	IN	DNSKEY	257 3 5 AwEAAc3Z5DQDJpH4oPdNtC4BUQHk50XMD+dHr4r8psHmivIa83hxR5CRgCtd9sENCW9Ae8OIO19xw9t/RPaEAqQa+OE= ;{id = 55582 (ksk), size = 512b} ;;state=2 [  VALID  ] ;;count=0 ;;lastchange=1258962400 ;;Mon Nov 23 08:46:40 2009
-example.com.	10800	IN	DNSKEY	257 3 5 AwEAAas/cAhCFXvBUgTSNZCvQp0pLx1dY+7rXR0hH4/3EUgWmsmbYUpI1qD0xhwKD/oYGEwAm291fyWJ9c0oVxXDEK8= ;{id = 16486 (ksk), size = 512b} ;;state=2 [  VALID  ] ;;count=0 ;;lastchange=1258962400 ;;Mon Nov 23 08:46:40 2009
+example.com.	10800	IN	DNSKEY	257 3 5 AwEAAc3Z5DQDJpH4oPdNtC4BUQHk50XMD+dHr4r8psHmivIa83hxR5CRgCtd9sENCW9Ae8OIO19xw9t/RPaEAqQa+OE= ;{id = 55582 (ksk), size = 512b} ;;state=2 [  VALID  ] ;;count=0 ;;lastchange=1258962400 ;;Mon Nov 23 07:46:40 2009
+example.com.	10800	IN	DNSKEY	257 3 5 AwEAAas/cAhCFXvBUgTSNZCvQp0pLx1dY+7rXR0hH4/3EUgWmsmbYUpI1qD0xhwKD/oYGEwAm291fyWJ9c0oVxXDEK8= ;{id = 16486 (ksk), size = 512b} ;;state=2 [  VALID  ] ;;count=0 ;;lastchange=1258962400 ;;Mon Nov 23 07:46:40 2009
 FILE_END
 
 SCENARIO_END

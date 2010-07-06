@@ -1,5 +1,6 @@
 6 July 2010: Wouter
 	- failure to chown the pidfile is not fatal any more.
+	- testbound uses UTC timezone.
 
 5 July 2010: Wouter
 	- log if a server is skipped because it is on the donotquery list,

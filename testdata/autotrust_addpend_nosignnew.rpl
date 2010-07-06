@@ -160,7 +160,7 @@ ns.example.com. IN AAAA
 ENTRY_END
 RANGE_END
 
-; set date/time to Aug 24 09:46:40  (2009).
+; set date/time to Aug 24 07:46:40  (2009).
 STEP 5 TIME_PASSES ELAPSE 1251100000
 STEP 6 TRAFFIC   ; the initial probe
 STEP 7 ASSIGN t0 = ${time}
