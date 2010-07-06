@@ -1,6 +1,8 @@
 6 July 2010: Wouter
 	- failure to chown the pidfile is not fatal any more.
 	- testbound uses UTC timezone.
+	- ldns tarball updated (ports and works on Minix 3.1.7).  On Minix, add
+	  /usr/gnu/bin to PATH, use ./configure AR=/usr/gnu/bin/gar and gmake.
 
 5 July 2010: Wouter
 	- log if a server is skipped because it is on the donotquery list,
