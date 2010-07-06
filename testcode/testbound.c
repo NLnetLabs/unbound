@@ -263,6 +263,9 @@ main(int argc, char* argv[])
 	char* init_optarg = optarg;
 	struct replay_scenario* scen = NULL;
 
+	/* we do not want the test to depend on the timezone */
+	setenv("TZ", "GMT-1", 1);
+
 	log_init(NULL, 0, NULL);
 	log_info("Start of %s testbound program.", PACKAGE_STRING);
 	/* determine commandline options for the daemon */
