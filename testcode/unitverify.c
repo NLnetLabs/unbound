@@ -343,7 +343,7 @@ unitest_nsec_has_type_rdata(char* bitmap, size_t len, uint16_t type)
 
 /** Test NSEC type bitmap routine */
 static void
-nsectest()
+nsectest(void)
 {
 	/* bitmap starts at type bitmap rdata field */
 	/* from rfc 4034 example */
@@ -465,7 +465,7 @@ nsec3_hash_test(const char* fname)
 }
 
 void 
-verify_test()
+verify_test(void)
 {
 	unit_show_feature("signature verify");
 	verifytest_file("testdata/test_signatures.1", "20070818005004");

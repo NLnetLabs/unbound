@@ -1618,7 +1618,7 @@ do_list_local_data(SSL* ssl, struct worker* worker)
 }
 
 /** tell other processes to execute the command */
-void
+static void
 distribute_cmd(struct daemon_remote* rc, SSL* ssl, char* cmd)
 {
 	int i;

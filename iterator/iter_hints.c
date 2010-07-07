@@ -51,7 +51,7 @@
 #include "util/data/dname.h"
 
 struct iter_hints* 
-hints_create()
+hints_create(void)
 {
 	struct iter_hints* hints = (struct iter_hints*)calloc(1,
 		sizeof(struct iter_hints));

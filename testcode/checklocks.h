@@ -206,12 +206,12 @@ size_t lock_get_mem(void* lock);
 /**
  * Initialise checklock. Sets up internal debug structures.
  */
-void checklock_start();
+void checklock_start(void);
 
 /**
  * Cleanup internal debug state.
  */
-void checklock_stop();
+void checklock_stop(void);
 
 /**
  * Init locks.

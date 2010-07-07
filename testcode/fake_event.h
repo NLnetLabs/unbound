@@ -61,7 +61,7 @@ void fake_event_init(struct replay_scenario* scen);
 /**
  * Deinit fake event services.
  */
-void fake_event_cleanup();
+void fake_event_cleanup(void);
 
 /**
  * Get filename to store temporary config stuff. The pid is added. in /tmp.

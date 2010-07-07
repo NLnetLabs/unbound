@@ -131,7 +131,7 @@ static RETSIGTYPE record_sigh(int sig)
  * Stores signals to replay later.
  */
 static void
-signal_handling_record()
+signal_handling_record(void)
 {
 	if( signal(SIGTERM, record_sigh) == SIG_ERR ||
 #ifdef SIGQUIT
@@ -169,7 +169,7 @@ signal_handling_playback(struct worker* wrk)
 }
 
 struct daemon* 
-daemon_init()
+daemon_init(void)
 {
 	struct daemon* daemon = (struct daemon*)calloc(1, 
 		sizeof(struct daemon));
@@ -276,7 +276,7 @@ static void daemon_setup_modules(struct daemon* daemon)
  * @param shufport: the portlist output.
  * @return number of ports available.
  */
-int daemon_get_shufport(struct daemon* daemon, int* shufport)
+static int daemon_get_shufport(struct daemon* daemon, int* shufport)
 {
 	int i, n, k, temp;
 	int avail = 0;
@@ -339,12 +339,13 @@ daemon_create_workers(struct daemon* daemon)
 	free(shufport);
 }
 
+#ifdef THREADS_DISABLED
 /**
  * Close all pipes except for the numbered thread.
  * @param daemon: daemon to close pipes in.
  * @param thr: thread number 0..num-1 of thread to skip.
  */
-void close_other_pipes(struct daemon* daemon, int thr)
+static void close_other_pipes(struct daemon* daemon, int thr)
 {
 	int i;
 	for(i=0; i<daemon->num; i++)
@@ -359,6 +360,7 @@ void close_other_pipes(struct daemon* daemon, int thr)
 			}
 		}
 }
+#endif /* THREADS_DISABLED */
 
 /**
  * Function to start one thread. 

@@ -47,7 +47,7 @@
 #include "util/net_help.h"
 
 struct acl_list* 
-acl_list_create()
+acl_list_create(void)
 {
 	struct acl_list* acl = (struct acl_list*)calloc(1,
 		sizeof(struct acl_list));

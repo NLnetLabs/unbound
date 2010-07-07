@@ -624,7 +624,7 @@ do_macro_recursion(rbtree_t* store, struct replay_runtime* runtime,
 }
 
 /** get var from store */
-struct replay_var*
+static struct replay_var*
 macro_getvar(rbtree_t* store, char* name)
 {
 	struct replay_var k;

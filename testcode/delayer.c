@@ -139,7 +139,7 @@ struct tcp_proxy {
 };
 
 /** usage information for delayer */
-void usage(char* argv[])
+static void usage(char* argv[])
 {
 	printf("usage: %s [options]\n", argv[0]);
 	printf("	-f addr : use addr, forward to that server, @port.\n");

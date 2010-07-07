@@ -100,7 +100,7 @@ dname_test_qdtl(ldns_buffer* buff)
 
 /** test query_dname_compare */
 static void
-dname_test_query_dname_compare()
+dname_test_query_dname_compare(void)
 {
 	unit_show_func("util/data/dname.c", "query_dname_compare");
 	unit_assert(query_dname_compare((uint8_t*)"", (uint8_t*)"") == 0);
@@ -130,7 +130,7 @@ dname_test_query_dname_compare()
 
 /** test dname_count_labels */
 static void
-dname_test_count_labels()
+dname_test_count_labels(void)
 {
 	unit_show_func("util/data/dname.c", "dname_count_labels");
 	unit_assert(dname_count_labels((uint8_t*)"") == 1);
@@ -143,7 +143,7 @@ dname_test_count_labels()
 
 /** test dname_count_size_labels */
 static void
-dname_test_count_size_labels()
+dname_test_count_size_labels(void)
 {
 	size_t sz = 0;
 	unit_show_func("util/data/dname.c", "dname_count_size_labels");
@@ -270,7 +270,7 @@ dname_test_pkt_dname_len(ldns_buffer* buff)
 
 /** test dname_lab_cmp */
 static void
-dname_test_dname_lab_cmp()
+dname_test_dname_lab_cmp(void)
 {
 	int ml = 0; /* number of labels that matched exactly */
 	unit_show_func("util/data/dname.c", "dname_lab_cmp");
@@ -372,7 +372,7 @@ dname_test_dname_lab_cmp()
 
 /** test dname_subdomain_c */
 static void
-dname_test_subdomain()
+dname_test_subdomain(void)
 {
 	unit_show_func("util/data/dname.c", "dname_subdomain");
 	unit_assert(dname_subdomain_c(
@@ -409,7 +409,7 @@ dname_test_subdomain()
 
 /** test dname_strict_subdomain */
 static void
-dname_test_strict_subdomain()
+dname_test_strict_subdomain(void)
 {
 	unit_show_func("util/data/dname.c", "dname_strict_subdomain");
 	unit_assert(!dname_strict_subdomain(
@@ -446,7 +446,7 @@ dname_test_strict_subdomain()
 
 /** test dname_is_root */
 static void
-dname_test_isroot()
+dname_test_isroot(void)
 {
 	unit_show_func("util/data/dname.c", "dname_isroot");
 	unit_assert(dname_is_root((uint8_t*)"\000"));
@@ -459,7 +459,7 @@ dname_test_isroot()
 
 /** test dname_remove_label */
 static void
-dname_test_removelabel()
+dname_test_removelabel(void)
 {
 	uint8_t* orig = (uint8_t*)"\007example\003com\000";
 	uint8_t* n = orig;
@@ -478,7 +478,7 @@ dname_test_removelabel()
 
 /** test dname_signame_label_count */
 static void
-dname_test_sigcount()
+dname_test_sigcount(void)
 {
 	unit_show_func("util/data/dname.c", "dname_signame_label_count");
 	unit_assert(dname_signame_label_count((uint8_t*)"\000") == 0);
@@ -498,7 +498,7 @@ dname_test_sigcount()
 
 /** test dname_is_wild routine */
 static void
-dname_test_iswild()
+dname_test_iswild(void)
 {
 	unit_show_func("util/data/dname.c", "dname_iswild");
 	unit_assert( !dname_is_wild((uint8_t*)"\000") );
@@ -509,7 +509,7 @@ dname_test_iswild()
 
 /** test dname_canonical_compare */
 static void
-dname_test_canoncmp()
+dname_test_canoncmp(void)
 {
 	unit_show_func("util/data/dname.c", "dname_canonical_compare");
 	/* equality */
@@ -729,7 +729,7 @@ dname_test_canoncmp()
 
 /** Test dname_get_shared_topdomain */
 static void
-dname_test_topdomain()
+dname_test_topdomain(void)
 {
 	unit_show_func("util/data/dname.c", "dname_get_shared_topdomain");
 	unit_assert( query_dname_compare(
@@ -751,7 +751,7 @@ dname_test_topdomain()
 
 /** Test dname_valid */
 static void
-dname_test_valid()
+dname_test_valid(void)
 {
 	unit_show_func("util/data/dname.c", "dname_valid");
 	unit_assert( dname_valid( 
@@ -831,7 +831,7 @@ dname_setup_bufs(ldns_buffer* loopbuf, ldns_buffer* boundbuf)
 	ldns_buffer_flip(boundbuf);
 }
 
-void dname_test()
+void dname_test(void)
 {
 	ldns_buffer* loopbuf = ldns_buffer_new(14);
 	ldns_buffer* boundbuf = ldns_buffer_new(16);

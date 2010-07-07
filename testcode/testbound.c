@@ -82,14 +82,14 @@ testbound_usage()
 
 /** 
  * Add options from string to passed argc. splits on whitespace.
- * @param optarg: the option argument, "-v -p 12345" or so.
+ * @param args: the option argument, "-v -p 12345" or so.
  * @param pass_argc: ptr to the argc for unbound. Modified.
  * @param pass_argv: the argv to pass to unbound. Modified.
  */
 static void
-add_opts(const char* optarg, int* pass_argc, char* pass_argv[])
+add_opts(const char* args, int* pass_argc, char* pass_argv[])
 {
-	const char *p = optarg, *np;
+	const char *p = args, *np;
 	size_t len;
 	while(p && isspace((int)*p)) 
 		p++;

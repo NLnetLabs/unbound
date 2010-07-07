@@ -67,7 +67,7 @@ fwd_cmp(const void* k1, const void* k2)
 }
 
 struct iter_forwards* 
-forwards_create()
+forwards_create(void)
 {
 	struct iter_forwards* fwd = (struct iter_forwards*)calloc(1,
 		sizeof(struct iter_forwards));

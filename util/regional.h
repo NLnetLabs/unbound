@@ -80,7 +80,7 @@ struct regional
  * Create a new regional.
  * @return: newly allocated regional.
  */
-struct regional* regional_create();
+struct regional* regional_create(void);
 
 /**
  * Create a new region, with custom settings.

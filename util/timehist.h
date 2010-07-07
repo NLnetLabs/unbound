@@ -71,7 +71,7 @@ struct timehist {
  * Setup a histogram, default
  * @return histogram or NULL on malloc failure.
  */
-struct timehist* timehist_setup();
+struct timehist* timehist_setup(void);
 
 /**
  * Delete histogram

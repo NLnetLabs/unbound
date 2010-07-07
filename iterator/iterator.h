@@ -314,7 +314,7 @@ struct iter_prep_list {
  * Get the iterator function block.
  * @return: function block with function pointers to iterator methods.
  */
-struct module_func_block* iter_get_funcblock();
+struct module_func_block* iter_get_funcblock(void);
 
 /**
  * Get iterator state as a string

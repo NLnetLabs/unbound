@@ -2001,19 +2001,19 @@ autr_debug_print_tp(struct trust_anchor* tp)
 	log_info("assembled %d DS and %d DNSKEYs", 
 		(int)tp->numDS, (int)tp->numDNSKEY);
 	if(0) { /* turned off because it prints to stderr */
-		ldns_buffer* buf = ldns_buffer_new(70000);
+		ldns_buffer* bf = ldns_buffer_new(70000);
 		ldns_rr_list* list;
 		if(tp->ds_rrset) {
-			list = packed_rrset_to_rr_list(tp->ds_rrset, buf);
+			list = packed_rrset_to_rr_list(tp->ds_rrset, bf);
 			ldns_rr_list_print(stderr, list);
 			ldns_rr_list_deep_free(list);
 		}
 		if(tp->dnskey_rrset) {
-			list = packed_rrset_to_rr_list(tp->dnskey_rrset, buf);
+			list = packed_rrset_to_rr_list(tp->dnskey_rrset, bf);
 			ldns_rr_list_print(stderr, list);
 			ldns_rr_list_deep_free(list);
 		}
-		ldns_buffer_free(buf);
+		ldns_buffer_free(bf);
 	}
 	log_info("file %s", tp->autr->file);
 	ctime_r(&tp->autr->last_queried, buf);

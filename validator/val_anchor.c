@@ -72,7 +72,7 @@ anchor_cmp(const void* k1, const void* k2)
 }
 
 struct val_anchors* 
-anchors_create()
+anchors_create(void)
 {
 	struct val_anchors* a = (struct val_anchors*)calloc(1, sizeof(*a));
 	if(!a)

@@ -48,7 +48,7 @@
 
 /** block all signals, masks them away. */
 void 
-ub_thread_blocksigs()
+ub_thread_blocksigs(void)
 {
 #if defined(HAVE_PTHREAD) || defined(HAVE_SOLARIS_THREADS) || defined(HAVE_SIGPROCMASK)
 #  if defined(HAVE_PTHREAD) || defined(HAVE_SOLARIS_THREADS)

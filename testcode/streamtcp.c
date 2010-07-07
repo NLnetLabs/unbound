@@ -58,7 +58,7 @@
 #endif
 
 /** usage information for streamtcp */
-void usage(char* argv[])
+static void usage(char* argv[])
 {
 	printf("usage: %s [options] name type class ...\n", argv[0]);
 	printf("	sends the name-type-class queries over TCP.\n");

@@ -89,7 +89,7 @@ struct acl_addr {
  * Create acl structure 
  * @return new structure or NULL on error.
  */
-struct acl_list* acl_list_create();
+struct acl_list* acl_list_create(void);
 
 /**
  * Delete acl structure.

@@ -49,7 +49,7 @@
 #include "util/net_help.h"
 
 struct iter_donotq* 
-donotq_create()
+donotq_create(void)
 {
 	struct iter_donotq* dq = (struct iter_donotq*)calloc(1,
 		sizeof(struct iter_donotq));

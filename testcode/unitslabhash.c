@@ -356,7 +356,7 @@ test_threaded_table(struct slabhash* table)
 	if(0) slabhash_status(table, "hashtest", 1);
 }
 
-void slabhash_test()
+void slabhash_test(void)
 {
 	/* start very very small array, so it can do lots of table_grow() */
 	/* also small in size so that reclaim has to be done quickly. */

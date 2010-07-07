@@ -63,10 +63,10 @@
  * The errno is logged to the logfile with a descriptive comment.
  */
 #define LOCKRET(func) do {\
-	int err;		\
-	if( (err=(func)) != 0)		\
+	int lockret_err;		\
+	if( (lockret_err=(func)) != 0)		\
 		log_err("%s at %d could not " #func ": %s", \
-		__FILE__, __LINE__, strerror(err));	\
+		__FILE__, __LINE__, strerror(lockret_err));	\
  	} while(0)
 
 /** DEBUG: use thread debug whenever possible */
@@ -283,7 +283,7 @@ typedef void* ub_thread_key_t;
  * Block all signals for this thread.
  * fatal exit on error.
  */
-void ub_thread_blocksigs();
+void ub_thread_blocksigs(void);
 
 /**
  * unblock one signal for this thread.

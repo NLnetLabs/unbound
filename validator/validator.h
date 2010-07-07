@@ -250,7 +250,7 @@ struct val_qstate {
  * Get the validator function block.
  * @return: function block with function pointers to validator methods.
  */
-struct module_func_block* val_get_funcblock();
+struct module_func_block* val_get_funcblock(void);
 
 /**
  * Get validator state as a string

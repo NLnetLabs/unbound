@@ -48,7 +48,7 @@
 #include "testcode/readhex.h"
 
 /** usage information for pktview */
-void usage(char* argv[])
+static void usage(char* argv[])
 {
 	printf("usage: %s\n", argv[0]);
 	printf("present hex packet on stdin.\n");
@@ -56,7 +56,7 @@ void usage(char* argv[])
 }
 
 /** read hex input */
-void read_input(ldns_buffer* pkt, FILE* in)
+static void read_input(ldns_buffer* pkt, FILE* in)
 {
 	char buf[102400];
 	char* np = buf;
@@ -69,7 +69,7 @@ void read_input(ldns_buffer* pkt, FILE* in)
 }
 
 /** analyze domain name in packet, possibly compressed */
-void analyze_dname(ldns_buffer* pkt)
+static void analyze_dname(ldns_buffer* pkt)
 {
 	size_t oldpos = ldns_buffer_position(pkt);
 	size_t len;
@@ -84,7 +84,7 @@ void analyze_dname(ldns_buffer* pkt)
 }
 
 /** analyze rdata in packet */
-void analyze_rdata(ldns_buffer*pkt, const ldns_rr_descriptor* desc, 
+static void analyze_rdata(ldns_buffer*pkt, const ldns_rr_descriptor* desc, 
 	uint16_t rdlen)
 {
 	int rdf = 0;
@@ -124,7 +124,7 @@ void analyze_rdata(ldns_buffer*pkt, const ldns_rr_descriptor* desc,
 }
 
 /** analyze rr in packet */
-void analyze_rr(ldns_buffer* pkt, int q)
+static void analyze_rr(ldns_buffer* pkt, int q)
 {
 	uint16_t type, dclass, len;
 	uint32_t ttl;
@@ -150,7 +150,7 @@ void analyze_rr(ldns_buffer* pkt, int q)
 }
 
 /** analyse pkt */
-void analyze(ldns_buffer* pkt)
+static void analyze(ldns_buffer* pkt)
 {
 	uint16_t i, f, qd, an, ns, ar;
 	int rrnum = 0;

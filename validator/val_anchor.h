@@ -132,7 +132,7 @@ struct trust_anchor {
  * Create trust anchor storage
  * @return new storage or NULL on error.
  */
-struct val_anchors* anchors_create();
+struct val_anchors* anchors_create(void);
 
 /**
  * Delete trust anchor storage.

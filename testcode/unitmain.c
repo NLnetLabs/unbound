@@ -65,7 +65,7 @@ int testcount = 0;
 #include "util/alloc.h"
 /** test alloc code */
 static void
-alloc_test() {
+alloc_test(void) {
 	alloc_special_t *t1, *t2;
 	struct alloc_cache major, minor1, minor2;
 	int i;
@@ -104,7 +104,7 @@ alloc_test() {
 #include "util/net_help.h"
 /** test net code */
 static void 
-net_test()
+net_test(void)
 {
 	const char* t4[] = {"\000\000\000\000",
 		"\200\000\000\000",
@@ -309,7 +309,7 @@ net_test()
 #include "util/config_file.h"
 /** test config_file: cfg_parse_memsize */
 static void
-config_memsize_test() 
+config_memsize_test(void) 
 {
 	size_t v = 0;
 	unit_show_func("util/config_file.c", "cfg_parse_memsize");
@@ -348,7 +348,7 @@ config_memsize_test()
 #include "util/rtt.h"
 /** test RTT code */
 static void
-rtt_test()
+rtt_test(void)
 {
 	int init = 376;
 	int i;
@@ -375,7 +375,7 @@ rtt_test()
 #include "util/config_file.h"
 /** test host cache */
 static void
-infra_test()
+infra_test(void)
 {
 	struct sockaddr_storage one;
 	socklen_t onelen;
@@ -444,7 +444,7 @@ infra_test()
 #include "util/random.h"
 /** test randomness */
 static void
-rnd_test()
+rnd_test(void)
 {
 	struct ub_randstate* r;
 	int num = 1000, i;

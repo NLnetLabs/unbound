@@ -327,13 +327,13 @@ struct config_strlist_head {
  * Create config file structure. Filled with default values.
  * @return: the new structure or NULL on memory error.
  */
-struct config_file* config_create();
+struct config_file* config_create(void);
 
 /**
  * Create config file structure for library use. Filled with default values.
  * @return: the new structure or NULL on memory error.
  */
-struct config_file* config_create_forlib();
+struct config_file* config_create_forlib(void);
 
 /**
  * Read the config file from the specified filename.

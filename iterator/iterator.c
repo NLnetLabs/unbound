@@ -463,8 +463,7 @@ handle_cname_response(struct module_qstate* qstate, struct iter_qstate* iq,
  * @param initial_state The initial response state (normally this
  *          is QUERY_RESP_STATE, unless it is known that the request won't
  *          need iterative processing
- * @param final_state The final state for the response to this
- *          request.
+ * @param finalstate The final state for the response to this request.
  * @param subq_ret: if newly allocated, the subquerystate, or NULL if it does
  * 	not need initialisation.
  * @param v: if true, validation is done on the subquery.
@@ -474,13 +473,13 @@ static int
 generate_sub_request(uint8_t* qname, size_t qnamelen, uint16_t qtype, 
 	uint16_t qclass, struct module_qstate* qstate, int id,
 	struct iter_qstate* iq, enum iter_state initial_state, 
-	enum iter_state final_state, struct module_qstate** subq_ret, int v)
+	enum iter_state finalstate, struct module_qstate** subq_ret, int v)
 {
 	struct module_qstate* subq = NULL;
 	struct iter_qstate* subiq = NULL;
 	uint16_t qflags = 0; /* OPCODE QUERY, no flags */
 	struct query_info qinf;
-	int prime = (final_state == PRIME_RESP_STATE)?1:0;
+	int prime = (finalstate == PRIME_RESP_STATE)?1:0;
 	qinf.qname = qname;
 	qinf.qname_len = qnamelen;
 	qinf.qtype = qtype;
@@ -523,7 +522,7 @@ generate_sub_request(uint8_t* qname, size_t qnamelen, uint16_t qtype,
 		subiq->depth = iq->depth+1;
 		outbound_list_init(&subiq->outlist);
 		subiq->state = initial_state;
-		subiq->final_state = final_state;
+		subiq->final_state = finalstate;
 		subiq->qchase = subq->qinfo;
 		subiq->chase_flags = subq->query_flags;
 		subiq->refetch_glue = 0;
@@ -2672,7 +2671,7 @@ static struct module_func_block iter_block = {
 };
 
 struct module_func_block* 
-iter_get_funcblock()
+iter_get_funcblock(void)
 {
 	return &iter_block;
 }

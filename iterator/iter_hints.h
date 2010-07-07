@@ -81,7 +81,7 @@ struct iter_hints_stub {
  * Create hints 
  * @return new hints or NULL on error.
  */
-struct iter_hints* hints_create();
+struct iter_hints* hints_create(void);
 
 /**
  * Delete hints.

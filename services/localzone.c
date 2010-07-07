@@ -52,7 +52,7 @@
 #include "util/data/msgparse.h"
 
 struct local_zones* 
-local_zones_create()
+local_zones_create(void)
 {
 	struct local_zones* zones = (struct local_zones*)calloc(1, 
 		sizeof(*zones));
@@ -290,7 +290,7 @@ get_rr_nameclass(const char* str, uint8_t** nm, uint16_t* dclass)
  * @param type: type to look for (host order).
  * @return rrset pointer or NULL if not found.
  */
-struct local_rrset*
+static struct local_rrset*
 local_data_find_type(struct local_data* data, uint16_t type)
 {
 	struct local_rrset* p;

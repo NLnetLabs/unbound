@@ -333,7 +333,7 @@ comm_point_send_udp_msg(struct comm_point *c, ldns_buffer* packet,
 }
 
 /** print debug ancillary info */
-void p_ancil(const char* str, struct comm_reply* r)
+static void p_ancil(const char* str, struct comm_reply* r)
 {
 #if defined(AF_INET6) && defined(IPV6_PKTINFO) && (defined(HAVE_RECVMSG) || defined(HAVE_SENDMSG))
 	if(r->srctype != 4 && r->srctype != 6) {
@@ -380,7 +380,7 @@ void p_ancil(const char* str, struct comm_reply* r)
 }
 
 /** send a UDP reply over specified interface*/
-int
+static int
 comm_point_send_udp_msg_if(struct comm_point *c, ldns_buffer* packet,
 	struct sockaddr* addr, socklen_t addrlen, struct comm_reply* r) 
 {
@@ -482,7 +482,7 @@ comm_point_udp_ancil_callback(int fd, short event, void* arg)
 	struct comm_reply rep;
 	struct msghdr msg;
 	struct iovec iov[1];
-	ssize_t recv;
+	ssize_t rcv;
 	char ancil[256];
 	int i;
 #ifndef S_SPLINT_S
@@ -512,15 +512,15 @@ comm_point_udp_ancil_callback(int fd, short event, void* arg)
 		msg.msg_controllen = sizeof(ancil);
 #endif /* S_SPLINT_S */
 		msg.msg_flags = 0;
-		recv = recvmsg(fd, &msg, 0);
-		if(recv == -1) {
+		rcv = recvmsg(fd, &msg, 0);
+		if(rcv == -1) {
 			if(errno != EAGAIN && errno != EINTR) {
 				log_err("recvmsg failed: %s", strerror(errno));
 			}
 			return;
 		}
 		rep.addrlen = msg.msg_namelen;
-		ldns_buffer_skip(rep.c->buffer, recv);
+		ldns_buffer_skip(rep.c->buffer, rcv);
 		ldns_buffer_flip(rep.c->buffer);
 		rep.srctype = 0;
 #ifndef S_SPLINT_S
@@ -574,7 +574,7 @@ void
 comm_point_udp_callback(int fd, short event, void* arg)
 {
 	struct comm_reply rep;
-	ssize_t recv;
+	ssize_t rcv;
 	int i;
 
 	rep.c = (struct comm_point*)arg;
@@ -589,10 +589,10 @@ comm_point_udp_callback(int fd, short event, void* arg)
 		rep.addrlen = (socklen_t)sizeof(rep.addr);
 		log_assert(fd != -1);
 		log_assert(ldns_buffer_remaining(rep.c->buffer) > 0);
-		recv = recvfrom(fd, (void*)ldns_buffer_begin(rep.c->buffer), 
+		rcv = recvfrom(fd, (void*)ldns_buffer_begin(rep.c->buffer), 
 			ldns_buffer_remaining(rep.c->buffer), 0, 
 			(struct sockaddr*)&rep.addr, &rep.addrlen);
-		if(recv == -1) {
+		if(rcv == -1) {
 #ifndef USE_WINSOCK
 			if(errno != EAGAIN && errno != EINTR)
 				log_err("recvfrom %d failed: %s", 
@@ -606,7 +606,7 @@ comm_point_udp_callback(int fd, short event, void* arg)
 #endif
 			return;
 		}
-		ldns_buffer_skip(rep.c->buffer, recv);
+		ldns_buffer_skip(rep.c->buffer, rcv);
 		ldns_buffer_flip(rep.c->buffer);
 		rep.srctype = 0;
 		fptr_ok(fptr_whitelist_comm_point(rep.c->callback));

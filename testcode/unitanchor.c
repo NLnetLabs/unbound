@@ -121,7 +121,7 @@ test_anchors(ldns_buffer* buff, struct val_anchors* a)
 	unit_assert(anchors_lookup(a, (uint8_t*)"\002oo\000", 4, c) == NULL);
 }
 
-void anchors_test()
+void anchors_test(void)
 {
 	ldns_buffer* buff = ldns_buffer_new(65800);
 	struct val_anchors* a;

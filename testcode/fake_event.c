@@ -98,7 +98,7 @@ fake_event_init(struct replay_scenario* scen)
 }
 
 void 
-fake_event_cleanup()
+fake_event_cleanup(void)
 {
 	replay_scenario_delete(saved_scenario);
 	saved_scenario = NULL;

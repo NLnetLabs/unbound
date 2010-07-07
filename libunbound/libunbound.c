@@ -67,7 +67,7 @@
 #endif /* UB_ON_WINDOWS */
 
 struct ub_ctx* 
-ub_ctx_create()
+ub_ctx_create(void)
 {
 	struct ub_ctx* ctx;
 	unsigned int seed;

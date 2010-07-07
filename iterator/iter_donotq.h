@@ -65,7 +65,7 @@ struct iter_donotq {
  * Create donotqueryaddresses structure 
  * @return new structure or NULL on error.
  */
-struct iter_donotq* donotq_create();
+struct iter_donotq* donotq_create(void);
 
 /**
  * Delete donotqueryaddresses structure.

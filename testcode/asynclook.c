@@ -84,7 +84,7 @@ struct lookinfo {
 static int num_wait = 0;
 
 /** usage information for asynclook */
-void usage(char* argv[])
+static void usage(char* argv[])
 {
 	printf("usage: %s [options] name ...\n", argv[0]);
 	printf("names are looked up at the same time, asynchronously.\n");

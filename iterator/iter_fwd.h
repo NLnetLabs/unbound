@@ -89,7 +89,7 @@ struct iter_forward_zone {
  * Create forwards 
  * @return new forwards or NULL on error.
  */
-struct iter_forwards* forwards_create();
+struct iter_forwards* forwards_create(void);
 
 /**
  * Delete forwards.

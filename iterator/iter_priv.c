@@ -51,7 +51,7 @@
 #include "util/net_help.h"
 #include "util/storage/dnstree.h"
 
-struct iter_priv* priv_create()
+struct iter_priv* priv_create(void)
 {
 	struct iter_priv* priv = (struct iter_priv*)calloc(1, sizeof(*priv));
 	if(!priv)

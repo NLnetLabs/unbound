@@ -477,7 +477,7 @@ test_threaded_table(struct lruhash* table)
 	if(0) lruhash_status(table, "hashtest", 1);
 }
 
-void lruhash_test()
+void lruhash_test(void)
 {
 	/* start very very small array, so it can do lots of table_grow() */
 	/* also small in size so that reclaim has to be done quickly. */

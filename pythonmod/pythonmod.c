@@ -375,7 +375,7 @@ static struct module_func_block pythonmod_block = {
    &pythonmod_clear, &pythonmod_get_mem
 };
 
-struct module_func_block* pythonmod_get_funcblock()
+struct module_func_block* pythonmod_get_funcblock(void)
 {
    return &pythonmod_block;
 }

@@ -195,7 +195,7 @@ corner_cases(struct regional* r)
 
 /** test specific cases */
 static void
-specific_cases()
+specific_cases(void)
 {
 	struct regional* r = regional_create();
 	corner_cases(r);
@@ -228,7 +228,7 @@ burden_test(size_t max)
 
 /** randomly allocate stuff */
 static void
-random_burden()
+random_burden(void)
 {
 	size_t max_alloc = 2048 + 128; /* small chance of LARGE */
 	int i;
@@ -236,7 +236,7 @@ random_burden()
 		burden_test(max_alloc);
 }
 
-void regional_test()
+void regional_test(void)
 {
 	unit_show_feature("regional");
 	specific_cases();

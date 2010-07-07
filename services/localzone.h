@@ -149,7 +149,7 @@ struct local_rrset {
  * Create local zones storage
  * @return new struct or NULL on error.
  */
-struct local_zones* local_zones_create();
+struct local_zones* local_zones_create(void);
 
 /**
  * Delete local zones storage

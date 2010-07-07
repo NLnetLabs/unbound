@@ -70,7 +70,7 @@ int ub_c_wrap(void);
 static void init_outgoing_availports(int* array, int num);
 
 struct config_file* 
-config_create()
+config_create(void)
 {
 	struct config_file* cfg;
 	cfg = (struct config_file*)calloc(1, sizeof(struct config_file));
@@ -198,7 +198,7 @@ error_exit:
 	return NULL;
 }
 
-struct config_file* config_create_forlib()
+struct config_file* config_create_forlib(void)
 {
 	struct config_file* cfg = config_create();
 	if(!cfg) return NULL;
@@ -848,7 +848,7 @@ int cfg_condense_ports(struct config_file* cfg, int** avail)
 }
 
 /** print error with file and line number */
-void ub_c_error_va_list(const char *fmt, va_list args)
+static void ub_c_error_va_list(const char *fmt, va_list args)
 {
 	cfg_parser->errors++;
 	fprintf(stderr, "%s:%d: error: ", cfg_parser->filename,
@@ -873,7 +873,7 @@ void ub_c_error(const char *str)
 		cfg_parser->line, str);
 }
 
-int ub_c_wrap()
+int ub_c_wrap(void)
 {
 	return 1;
 }

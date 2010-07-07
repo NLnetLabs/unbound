@@ -68,7 +68,7 @@ int check_locking_order = 1;
 static pid_t check_lock_pid;
 
 /** print all possible debug info on the state of the system */
-static void total_debug_info();
+static void total_debug_info(void);
 
 /** print pretty lock error and exit */
 static void lock_error(struct checked_lock* lock, 
@@ -674,7 +674,7 @@ static void* checklock_main(void* arg)
 }
 
 /** init the main thread */
-void checklock_start()
+void checklock_start(void)
 {
 	if(!key_created) {
 		struct thr_check* thisthr = (struct thr_check*)calloc(1, 
@@ -692,7 +692,7 @@ void checklock_start()
 }
 
 /** stop checklocks */
-void checklock_stop()
+void checklock_stop(void)
 {
 	if(key_created) {
 		int i;
@@ -726,7 +726,7 @@ checklock_thrcreate(pthread_t* id, void* (*func)(void*), void* arg)
 
 /** count number of thread infos */
 static int
-count_thread_infos()
+count_thread_infos(void)
 {
 	int cnt = 0;
 	int i;
@@ -795,7 +795,7 @@ thread_debug_info(struct thr_check* thr)
 }
 
 static void
-total_debug_info()
+total_debug_info(void)
 {
 	int i;
 	log_info("checklocks: supervising %d threads.",

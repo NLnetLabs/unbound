@@ -108,7 +108,7 @@ struct daemon {
  * Initialize daemon structure.
  * @return: The daemon structure, or NULL on error.
  */
-struct daemon* daemon_init();
+struct daemon* daemon_init(void);
 
 /**
  * Open shared listening ports (if needed).

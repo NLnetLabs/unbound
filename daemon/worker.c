@@ -141,7 +141,7 @@ debug_total_mem(size_t calctotal)
 #endif /* UNBOUND_ALLOC_STATS */
 
 /** Report on memory usage by this thread and global */
-void
+static void
 worker_mem_report(struct worker* ATTR_UNUSED(worker), 
 	struct serviced_query* ATTR_UNUSED(cur_serv))
 {

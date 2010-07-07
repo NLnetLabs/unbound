@@ -573,7 +573,7 @@ testfromdrillfile(ldns_buffer* pkt, struct alloc_cache* alloc,
 	fclose(in);
 }
 
-void msgparse_test()
+void msgparse_test(void)
 {
 	ldns_buffer* pkt = ldns_buffer_new(65553);
 	ldns_buffer* out = ldns_buffer_new(65553);

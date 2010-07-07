@@ -141,7 +141,7 @@ response_type_from_server(int rdset,
 		 * answer is there directly, our answer is there after 
 		 * a cname, or there is just a cname. */
 		for(i=0; i<msg->rep->an_numrrsets; i++) {
-			struct ub_packed_rrset_key* s = msg->rep->rrsets[i];
+			s = msg->rep->rrsets[i];
 			
 			/* if the answer section has NS rrset, and qtype ANY 
 		 	 * and the delegation is lower, and no CNAMEs followed,

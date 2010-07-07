@@ -2918,7 +2918,7 @@ static struct module_func_block val_block = {
 };
 
 struct module_func_block* 
-val_get_funcblock()
+val_get_funcblock(void)
 {
 	return &val_block;
 }

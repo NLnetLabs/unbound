@@ -46,7 +46,7 @@
  * Get the module function block.
  * @return: function block with function pointers to module methods.
  */
-struct module_func_block* pythonmod_get_funcblock();
+struct module_func_block* pythonmod_get_funcblock(void);
 
 /** python module init */
 int pythonmod_init(struct module_env* env, int id);

@@ -80,7 +80,7 @@ dosetup(struct timehist* hist)
 	}
 }
 
-struct timehist* timehist_setup()
+struct timehist* timehist_setup(void)
 {
 	struct timehist* hist = (struct timehist*)calloc(1, 
 		sizeof(struct timehist));
@@ -184,7 +184,7 @@ void timehist_log(struct timehist* hist, const char* name)
 }
 
 /** total number in histogram */
-size_t
+static size_t
 timehist_count(struct timehist* hist)
 {
 	size_t i, res = 0;

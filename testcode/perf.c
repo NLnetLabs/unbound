@@ -492,13 +492,13 @@ qlist_parse_line(ldns_buffer* buf, char* p)
 	ldns_buffer_write_u16_at(buf, 0, 0); /* zero ID */
 	if(rec) LDNS_RD_SET(ldns_buffer_begin(buf));
 	if(edns) {
-		struct edns_data edns;
-		memset(&edns, 0, sizeof(edns));
-		edns.edns_present = 1;
-		edns.udp_size = EDNS_ADVERTISED_SIZE;
+		struct edns_data ed;
+		memset(&ed, 0, sizeof(ed));
+		ed.edns_present = 1;
+		ed.udp_size = EDNS_ADVERTISED_SIZE;
 		/* Set DO bit in all EDNS datagrams ... */
-		edns.bits = EDNS_DO;
-		attach_edns_record(buf, &edns);
+		ed.bits = EDNS_DO;
+		attach_edns_record(buf, &ed);
 	}
 	ldns_rdf_deep_free(rdf);
 	return 1;

@@ -1,3 +1,6 @@
+7 July 2010: Wouter
+	- Neat function prototypes, unshadowed local declarations.
+
 6 July 2010: Wouter
 	- failure to chown the pidfile is not fatal any more.
 	- testbound uses UTC timezone.

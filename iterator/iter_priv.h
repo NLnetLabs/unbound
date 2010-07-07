@@ -74,7 +74,7 @@ struct iter_priv {
  * Create priv structure 
  * @return new structure or NULL on error.
  */
-struct iter_priv* priv_create();
+struct iter_priv* priv_create(void);
 
 /**
  * Delete priv structure.

@@ -57,20 +57,20 @@ void unit_show_func(const char* file, const char* func);
 void unit_show_feature(const char* feature);
 
 /** unit test lruhashtable implementation */
-void lruhash_test();
+void lruhash_test(void);
 /** unit test slabhashtable implementation */
-void slabhash_test();
+void slabhash_test(void);
 /** unit test for msgreply and msgparse */
-void msgparse_test();
+void msgparse_test(void);
 /** unit test dname handling functions */
-void dname_test();
+void dname_test(void);
 /** unit test trust anchor storage functions */
-void anchors_test();
+void anchors_test(void);
 /** unit test for verification functions */
-void verify_test();
+void verify_test(void);
 /** unit test for negative cache functions */
-void neg_test();
+void neg_test(void);
 /** unit test for regional allocator functions */
-void regional_test();
+void regional_test(void);
 
 #endif /* TESTCODE_UNITMAIN_H */
