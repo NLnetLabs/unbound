@@ -1,3 +1,9 @@
+9 July 2010: Wouter
+	- iana portlist updated.
+	- Fix validation of qtype DNSKEY when a key-cache entry exists but
+	  no rr-cache entry is used (it expired or prefetch), it then goes
+	  back up to the DS or trust-anchor to validate the DNSKEY.
+
 7 July 2010: Wouter
 	- Neat function prototypes, unshadowed local declarations.
 

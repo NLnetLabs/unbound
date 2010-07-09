@@ -1273,6 +1273,12 @@ processInit(struct module_qstate* qstate, struct val_qstate* vq,
 			return 1;
 		}
 		verbose(VERB_ALGO, "trust anchor NXDOMAIN by signed parent");
+	} else if(subtype == VAL_CLASS_POSITIVE &&
+		qstate->qinfo.qtype == LDNS_RR_TYPE_DNSKEY &&
+		query_dname_compare(lookup_name, qstate->qinfo.qname) == 0) {
+		/* is a DNSKEY so lookup a bit higher since we want to
+		 * get it from a parent or from trustanchor */
+		dname_remove_label(&lookup_name, &lookup_len);
 	}
 
 	if(vq->rrset_skip > 0 || subtype == VAL_CLASS_CNAME ||
