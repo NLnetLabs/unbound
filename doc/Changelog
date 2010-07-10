@@ -1,3 +1,7 @@
+10 July 2010: Wouter
+	- GOST enabled if SSL is recent and ldns has GOST enabled too.
+	- ldns tarball updated.
+
 9 July 2010: Wouter
 	- iana portlist updated.
 	- Fix validation of qtype DNSKEY when a key-cache entry exists but

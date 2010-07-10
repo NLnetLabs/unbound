@@ -69,8 +69,8 @@ This software is under BSD license, see LICENSE for details.
   	Compile the python module that processes responses in the server.
   * --disable-sha2
   	Disable support for RSASHA256 and RSASHA512 crypto.
-  * --enable-gost
-  	Enable draft support for GOST crypto.
+  * --disable-gost
+  	Disable support for GOST crypto, RFC 5933.
 
 * 'make test' attempts to run a series of tests, depending on the support
   programs that are installed.

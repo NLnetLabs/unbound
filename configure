@@ -15327,7 +15327,16 @@ $as_echo "#define USE_GOST 1" >>confdefs.h
 	;;
 	no)
 	;;
-	*) 	;;
+	*) 	ac_fn_c_check_func "$LINENO" "EVP_PKEY_set_type_str" "ac_cv_func_EVP_PKEY_set_type_str"
+if test "x$ac_cv_func_EVP_PKEY_set_type_str" = x""yes; then :
+
+	  use_gost="yes"
+
+$as_echo "#define USE_GOST 1" >>confdefs.h
+
+fi
+
+	;;
 esac
 
 # check for libevent
