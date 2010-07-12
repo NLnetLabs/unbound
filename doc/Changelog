@@ -1,3 +1,10 @@
+12 July 2010: Wouter
+	- Changed the defaults for num-queries-per-thread/outgoing-range.
+	  For builtin-select: 512/960, for libevent 1024/4096 and for
+	  windows 24/48 (because of win api).  This makes the ratio this way
+	  to improve resilience under heavy load.  For high performance, use
+	  libevent and possibly higher numbers.
+
 10 July 2010: Wouter
 	- GOST enabled if SSL is recent and ldns has GOST enabled too.
 	- ldns tarball updated.

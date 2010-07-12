@@ -141,8 +141,9 @@ sent via a random outgoing interface to counter spoofing.
 .TP
 .B outgoing\-range: \fI<number>
 Number of ports to open. This number of file descriptors can be opened per 
-thread. Must be at least 1. Default is 256. Larger numbers need extra 
-resources from the operating system.
+thread. Must be at least 1. Default depends on compile options. Larger 
+numbers need extra resources from the operating system.  For performance a
+a very large value is best, use libevent to make this possible.
 .TP
 .B outgoing\-port\-permit: \fI<port number or range>
 Permit unbound to open this port or range of ports for use to send queries.
@@ -205,7 +206,7 @@ The number of queries that every thread will service simultaneously.
 If more queries arrive that need servicing, and no queries can be jostled out
 (see \fIjostle\-timeout\fR), then the queries are dropped. This forces
 the client to resend after a timeout; allowing the server time to work on
-the existing queries. Default 1024.
+the existing queries. Default depends on compile options, 512 or 1024.
 .TP
 .B jostle\-timeout: \fI<msec>
 Timeout used when the server is very busy.  Set to a value that usually
@@ -972,7 +973,7 @@ server:
 	num\-threads: 1
 	outgoing\-num\-tcp: 1	# this limits TCP service, uses less buffers.
 	incoming\-num\-tcp: 1
-	outgoing\-range: 16	# uses less memory, but less performance.
+	outgoing\-range: 60	# uses less memory, but less performance.
 	msg\-buffer\-size: 8192   # note this limits service, 'no huge stuff'.
 	msg\-cache\-size: 100k
 	msg\-cache\-slabs: 1

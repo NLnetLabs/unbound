@@ -54,8 +54,9 @@ server:
 	# outgoing-interface: 2001:DB8::6
 
 	# number of ports to allocate per thread, determines the size of the
-	# port range that can be open simultaneously. 
-	# outgoing-range: 256
+	# port range that can be open simultaneously.  About double the
+	# num-queries-per-thread, or, use as many as the OS will allow you.
+	# outgoing-range: 4096
 
 	# permit unbound to use this port number or port range for
 	# making outgoing queries, using an outgoing interface.
