@@ -2529,7 +2529,7 @@ LIBUNBOUND_AGE=0
 
 
 
-function pretty_cmdline {
+pretty_cmdline() {
 	cmdline=""
 	while test -n "$1"; do
 		cmdline="$cmdline '"`echo $1 | sed -e 's/\\\\/\\\\\\\\/g' | sed -e 's/"/\\\\"/g' `"'"

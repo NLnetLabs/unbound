@@ -54,7 +54,7 @@ AC_SUBST(LIBUNBOUND_CURRENT)
 AC_SUBST(LIBUNBOUND_REVISION)
 AC_SUBST(LIBUNBOUND_AGE)
 
-function pretty_cmdline {
+pretty_cmdline() {
 	cmdline=""
 	while test -n "$1"; do
 		cmdline="$cmdline '"`echo $1 | sed -e 's/\\\\/\\\\\\\\/g' | sed -e 's/"/\\\\"/g' `"'"
