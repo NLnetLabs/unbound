@@ -401,7 +401,7 @@ pollit(int fd, struct timeval* t)
 		return 0;
 	}
 	errno = 0;
-	return FD_ISSET(fd, &r);
+	return (int)(FD_ISSET(fd, &r));
 }
 
 int tube_poll(struct tube* tube)
