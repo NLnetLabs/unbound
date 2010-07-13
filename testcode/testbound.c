@@ -264,7 +264,7 @@ main(int argc, char* argv[])
 	struct replay_scenario* scen = NULL;
 
 	/* we do not want the test to depend on the timezone */
-	(void)setenv("TZ", "UTC", 1);
+	(void)putenv("TZ=UTC");
 
 	log_init(NULL, 0, NULL);
 	log_info("Start of %s testbound program.", PACKAGE_STRING);
