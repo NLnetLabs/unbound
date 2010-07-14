@@ -1,5 +1,7 @@
 14 July 2010: Wouter
 	- Donation text added to README.
+	- Fix integer underflow in prefetch ttl creation from cache.  This
+	  fixes a potential negative prefetch ttl.
 
 12 July 2010: Wouter
 	- Changed the defaults for num-queries-per-thread/outgoing-range.

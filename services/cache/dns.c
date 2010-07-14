@@ -430,9 +430,9 @@ tomsg(struct module_env* env, struct msgreply_entry* e, struct reply_info* r,
 	msg->rep->flags = r->flags;
 	msg->rep->qdcount = r->qdcount;
 	msg->rep->ttl = r->ttl - now;
-	if(r->prefetch_ttl - now > 0)
+	if(r->prefetch_ttl > now)
 		msg->rep->prefetch_ttl = r->prefetch_ttl - now;
-	else	msg->rep->prefetch_ttl = PREFETCH_TTL_CALC(r->prefetch_ttl);
+	else	msg->rep->prefetch_ttl = PREFETCH_TTL_CALC(msg->rep->ttl);
 	msg->rep->security = r->security;
 	msg->rep->an_numrrsets = r->an_numrrsets;
 	msg->rep->ns_numrrsets = r->ns_numrrsets;
