@@ -115,4 +115,10 @@ o Other code origins are from the NSD (NLnet Labs) and LDNS (NLnet Labs)
   projects. Such as buffer, region-allocator and red-black tree code.
 o See Credits file for contributors.
 
+Donations
+---------
+This software is supported by NLnet Labs, a not-for-profit foundation that
+makes open source and open standards, donations are accepted:
+http://www.nlnetlabs.nl/labs/contributors/
+
 * mailto:unbound-bugs@nlnetlabs.nl
