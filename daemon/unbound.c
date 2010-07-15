@@ -204,6 +204,35 @@ checkrlimits(struct config_file* cfg)
 	size_t avail;
 	struct rlimit rlim;
 
+	if(total > 1024 && 
+		strncmp(event_get_version(), "mini-event", 10) == 0) {
+		log_warn("too many file descriptors requested. The builtin"
+			"mini-event cannot handle more than 1024. Config "
+			"for less fds or compile with libevent");
+		if(numthread*perthread_noudp+15 > 1024)
+			fatal_exit("too much tcp. not enough fds.");
+		cfg->outgoing_num_ports = (int)((1024 
+			- numthread*perthread_noudp 
+			- 10 /* safety margin */) /numthread);
+		log_warn("continuing with less udp ports: %u",
+			cfg->outgoing_num_ports);
+		total = 1024;
+	}
+	if(perthread > 64 && 
+		strncmp(event_get_version(), "winsock-event", 13) == 0) {
+		log_err("too many file descriptors requested. The winsock"
+			" event handler cannot handle more than 64 per "
+			" thread. Config for less fds");
+		if(perthread_noudp+2 > 64)
+			fatal_exit("too much tcp. not enough fds.");
+		cfg->outgoing_num_ports = (int)((64 
+			- perthread_noudp 
+			- 2/* safety margin */));
+		log_warn("continuing with less udp ports: %u",
+			cfg->outgoing_num_ports);
+		total = numthread*(perthread_noudp+
+			(size_t)cfg->outgoing_num_ports)+misc;
+	}
 	if(getrlimit(RLIMIT_NOFILE, &rlim) < 0) {
 		log_warn("getrlimit: %s", strerror(errno));
 		return;
@@ -218,7 +247,7 @@ checkrlimits(struct config_file* cfg)
 		if(setrlimit(RLIMIT_NOFILE, &rlim) < 0) {
 			log_warn("setrlimit: %s", strerror(errno));
 #else
-		if(0) {
+		if(1) {
 #endif
 			log_warn("cannot increase max open fds from %u to %u",
 				(unsigned)avail, (unsigned)total+10);
@@ -231,38 +260,12 @@ checkrlimits(struct config_file* cfg)
 				- 10 /* safety margin */) /numthread);
 			log_warn("continuing with less udp ports: %u",
 				cfg->outgoing_num_ports);
-			log_warn("increase ulimit or decrease threads, ports in config to remove this warning");
+			log_warn("increase ulimit or decrease threads, "
+				"ports in config to remove this warning");
 			return;
 		}
 		log_warn("increased limit(open files) from %u to %u",
 			(unsigned)avail, (unsigned)total+10);
-	}
-	if(total > 1024 && 
-		strncmp(event_get_version(), "mini-event", 10) == 0) {
-		log_warn("too many file descriptors requested. The builtin"
-			"mini-event cannot handle more than 1024. Config "
-			"for less fds or compile with libevent");
-		if(numthread*perthread_noudp+15 > 1024)
-			fatal_exit("too much tcp. not enough fds.");
-		cfg->outgoing_num_ports = (int)((1024 
-			- numthread*perthread_noudp 
-			- 10 /* safety margin */) /numthread);
-		log_warn("continuing with less udp ports: %u",
-			cfg->outgoing_num_ports);
-	}
-	if(perthread > 64 && 
-		strncmp(event_get_version(), "winsock-event", 13) == 0) {
-		log_err("too many file descriptors requested. The winsock"
-			" event handler cannot handle more than 64 per "
-			" thread. Config for less fds or compile with "
-			" libevent");
-		if(numthread*perthread_noudp+5 > 64)
-			fatal_exit("too much tcp. not enough fds.");
-		cfg->outgoing_num_ports = (int)((64 
-			- numthread*perthread_noudp 
-			- 5 /* safety margin */) /numthread);
-		log_warn("continuing with less udp ports: %u",
-			cfg->outgoing_num_ports);
 	}
 #else	
 	(void)cfg;
