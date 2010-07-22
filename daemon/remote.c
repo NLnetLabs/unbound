@@ -1802,8 +1802,8 @@ int remote_control_callback(struct comm_point* c, void* arg, int err,
 	ERR_clear_error();
 	r = SSL_do_handshake(s->ssl);
 	if(r != 1) {
-		r = SSL_get_error(s->ssl, r);
-		if(r == SSL_ERROR_WANT_READ) {
+		int r2 = SSL_get_error(s->ssl, r);
+		if(r2 == SSL_ERROR_WANT_READ) {
 			if(s->shake_state == rc_hs_read) {
 				/* try again later */
 				return 0;
@@ -1811,7 +1811,7 @@ int remote_control_callback(struct comm_point* c, void* arg, int err,
 			s->shake_state = rc_hs_read;
 			comm_point_listen_for_rw(c, 1, 0);
 			return 0;
-		} else if(r == SSL_ERROR_WANT_WRITE) {
+		} else if(r2 == SSL_ERROR_WANT_WRITE) {
 			if(s->shake_state == rc_hs_write) {
 				/* try again later */
 				return 0;
@@ -1820,6 +1820,10 @@ int remote_control_callback(struct comm_point* c, void* arg, int err,
 			comm_point_listen_for_rw(c, 0, 1);
 			return 0;
 		} else {
+			if(r == 0)
+				log_err("remote control connection closed prematurely");
+			log_addr(1, "failed connection from",
+				&s->c->repinfo.addr, s->c->repinfo.addrlen);
 			log_crypto_err("remote control failed ssl");
 			clean_point(rc, s);
 			return 0;

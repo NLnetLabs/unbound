@@ -1,3 +1,6 @@
+22 July 2010: Wouter
+	- more error details on failed remote control connection.
+
 15 July 2010: Wouter
 	- rlimit adjustments for select and ulimit can happen at the same time.
 
