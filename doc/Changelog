@@ -1,5 +1,8 @@
 3 August 2010: Wouter
 	- updated ldns tarball with bugfixes.
+	- release tag 1.4.6.
+	- trunk becomes 1.4.7 develop.
+	- iana portlist updated.
 
 22 July 2010: Wouter
 	- more error details on failed remote control connection.
