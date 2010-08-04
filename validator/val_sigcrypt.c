@@ -462,7 +462,7 @@ void algo_needs_init_dnskey(struct algo_needs* n,
 	memset(n->needs, 0, sizeof(uint8_t)*ALGO_NEEDS_MAX);
 	for(i=0; i<num; i++) {
 		algo = (uint8_t)dnskey_get_algo(dnskey, i);
-		if(!dnskey_algo_id_is_supported(algo))
+		if(!dnskey_algo_id_is_supported((int)algo))
 			continue;
 		if(n->needs[algo] == 0) {
 			n->needs[algo] = 1;
@@ -484,7 +484,7 @@ void algo_needs_init_ds(struct algo_needs* n, struct ub_packed_rrset_key* ds,
 		if(ds_get_digest_algo(ds, i) != fav_ds_algo)
 			continue;
 		algo = (uint8_t)ds_get_key_algo(ds, i);
-		if(!dnskey_algo_id_is_supported(algo))
+		if(!dnskey_algo_id_is_supported((int)algo))
 			continue;
 		if(n->needs[algo] == 0) {
 			n->needs[algo] = 1;
