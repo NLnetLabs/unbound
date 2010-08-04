@@ -1,3 +1,7 @@
+4 August 2010: Wouter
+	- Fix validation in case a trust anchor enters into a zone with
+	  unsupported algorithms.
+
 3 August 2010: Wouter
 	- updated ldns tarball with bugfixes.
 	- release tag 1.4.6.
