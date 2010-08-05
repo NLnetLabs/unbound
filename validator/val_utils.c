@@ -95,15 +95,14 @@ val_classify_response(uint16_t query_flags, struct query_info* origqinf,
 		return VAL_CLASS_REFERRAL;
 
 	/* dump bad messages */
-	if(rcode != LDNS_RCODE_NOERROR)
+	if(rcode != LDNS_RCODE_NOERROR && rcode != LDNS_RCODE_NXDOMAIN)
 		return VAL_CLASS_UNKNOWN;
-	log_assert(rcode == LDNS_RCODE_NOERROR);
 	/* next check if the skip into the answer section shows no answer */
 	if(skip>0 && rep->an_numrrsets <= skip)
 		return VAL_CLASS_CNAMENOANSWER;
 
 	/* Next is NODATA */
-	if(rep->an_numrrsets == 0)
+	if(rcode == LDNS_RCODE_NOERROR && rep->an_numrrsets == 0)
 		return VAL_CLASS_NODATA;
 	
 	/* We distinguish between CNAME response and other positive/negative
@@ -111,13 +110,14 @@ val_classify_response(uint16_t query_flags, struct query_info* origqinf,
 
 	/* We distinguish between ANY and CNAME or POSITIVE because 
 	 * ANY responses are validated differently. */
-	if(qinf->qtype == LDNS_RR_TYPE_ANY)
+	if(rcode == LDNS_RCODE_NOERROR && qinf->qtype == LDNS_RR_TYPE_ANY)
 		return VAL_CLASS_ANY;
 	
 	/* Note that DNAMEs will be ignored here, unless qtype=DNAME. Unless
 	 * qtype=CNAME, this will yield a CNAME response. */
 	for(i=skip; i<rep->an_numrrsets; i++) {
-		if(ntohs(rep->rrsets[i]->rk.type) == qinf->qtype)
+		if(rcode == LDNS_RCODE_NOERROR &&
+			ntohs(rep->rrsets[i]->rk.type) == qinf->qtype)
 			return VAL_CLASS_POSITIVE;
 		if(ntohs(rep->rrsets[i]->rk.type) == LDNS_RR_TYPE_CNAME)
 			return VAL_CLASS_CNAME;

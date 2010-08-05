@@ -323,11 +323,8 @@ iter_prepend(struct iter_qstate* iq, struct dns_msg* msg,
 		(msg->rep->ns_numrrsets + msg->rep->ar_numrrsets) *
 		sizeof(struct ub_packed_rrset_key*));
 
-	/* if the rcode was NXDOMAIN, and we prepended DNAME/CNAMEs, then
-	 * it should now be NOERROR. */
-	if(FLAGS_GET_RCODE(msg->rep->flags) == LDNS_RCODE_NXDOMAIN) {
-		FLAGS_SET_RCODE(msg->rep->flags, LDNS_RCODE_NOERROR);
-	}
+	/* NXDOMAIN rcode can stay if we prepended DNAME/CNAMEs, because
+	 * this is what recursors should give. */
 	msg->rep->rrset_count += num_an + num_ns;
 	msg->rep->an_numrrsets += num_an;
 	msg->rep->ns_numrrsets += num_ns;
