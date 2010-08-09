@@ -1392,7 +1392,7 @@ void errinf_rrset(struct module_qstate* qstate, struct ub_packed_rrset_key *rr)
 		log_err("malloc failure in errinf_rrset");
 		return;
 	}
-	dname_str(qstate->qinfo.qname, dname);
+	dname_str(rr->rk.dname, dname);
 	snprintf(buf, sizeof(buf), "for <%s %s %s>", dname, t, c);
 	free(t);
 	free(c);
