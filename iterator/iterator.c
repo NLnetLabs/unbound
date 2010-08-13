@@ -534,6 +534,7 @@ generate_sub_request(uint8_t* qname, size_t qnamelen, uint16_t qtype,
  * @param ie: iterator global state.
  * @param id: module id.
  * @param qclass: the class to prime.
+ * @return 0 on failure
  */
 static int
 prime_root(struct module_qstate* qstate, struct iter_qstate* iq, 

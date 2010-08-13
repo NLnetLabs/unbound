@@ -251,6 +251,7 @@ void remove_configfile(void)
  * Main fake event test program. Setup, teardown and report errors.
  * @param argc: arg count.
  * @param argv: array of commandline arguments.
+ * @return program failure if test fails.
  */
 int 
 main(int argc, char* argv[])

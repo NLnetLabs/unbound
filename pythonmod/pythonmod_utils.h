@@ -74,6 +74,7 @@ void invalidateQueryInCache(struct module_qstate* qstate, struct query_info* qin
  * 
  * @param qstate: module environment
  * @param pkt: a ldns_buffer which contains ldns_packet data
+ * @return 0 on failure, out of memory or parse error.
  */
 int createResponse(struct module_qstate* qstate, ldns_buffer* pkt);
 

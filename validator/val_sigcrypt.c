@@ -155,6 +155,7 @@ dnskey_get_flags(struct ub_packed_rrset_key* k, size_t idx)
  * Get DNSKEY protocol value from rdata
  * @param k: DNSKEY rrset.
  * @param idx: which key.
+ * @return protocol octet value
  */
 static int
 dnskey_get_protocol(struct ub_packed_rrset_key* k, size_t idx)

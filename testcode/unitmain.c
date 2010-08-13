@@ -487,6 +487,7 @@ void unit_show_feature(const char* feature)
  * Main unit test program. Setup, teardown and report errors.
  * @param argc: arg count.
  * @param argv: array of commandline arguments.
+ * @return program failure if test fails.
  */
 int 
 main(int argc, char* argv[])

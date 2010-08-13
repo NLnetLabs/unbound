@@ -257,6 +257,7 @@ void dname_remove_labels(uint8_t** dname, size_t* len, int n);
  * Count labels for the RRSIG signature label field.
  * Like a normal labelcount, but "*" wildcard and "." root are not counted.
  * @param dname: valid uncompressed wireformat.
+ * @return number of labels like in RRSIG; '*' and '.' are not counted.
  */
 int dname_signame_label_count(uint8_t* dname);
 

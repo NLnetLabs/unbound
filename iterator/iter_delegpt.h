@@ -185,7 +185,7 @@ int delegpt_add_ns(struct delegpt* dp, struct regional* regional,
  * @param regional: where to allocate the info.
  * @param ns_rrset: NS rrset.
  * @param lame: rrset is lame, disprefer it.
- * return 0 on alloc error.
+ * @return 0 on alloc error.
  */
 int delegpt_rrset_add_ns(struct delegpt* dp, struct regional* regional,
 	struct ub_packed_rrset_key* ns_rrset, int lame);

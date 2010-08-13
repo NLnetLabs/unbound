@@ -283,9 +283,10 @@ worker_handle_service_reply(struct comm_point* c, void* arg, int error,
 	return 0;
 }
 
-/** check request sanity. Returns error code, 0 OK, or -1 discard. 
+/** check request sanity.
  * @param pkt: the wire packet to examine for sanity.
  * @param worker: parameters for checking.
+ * @return error code, 0 OK, or -1 discard.
 */
 static int 
 worker_check_request(ldns_buffer* pkt, struct worker* worker)

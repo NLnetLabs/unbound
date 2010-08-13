@@ -141,6 +141,7 @@ void autr_global_delete(struct autr_global_data* global);
 /**
  * See if autotrust anchors are configured and how many.
  * @param anchors: the trust anchors structure.
+ * @return number of autotrust trust anchors
  */
 size_t autr_get_num_anchors(struct val_anchors* anchors);
 

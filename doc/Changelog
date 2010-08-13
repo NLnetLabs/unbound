@@ -1,5 +1,6 @@
 13 August 2010: Wouter
 	- More pleasant remote control command parsing.
+	- documentation added for return values reported by doxygen 1.7.1.
 
 9 August 2010: Wouter
 	- Fix name of rrset printed that failed validation.

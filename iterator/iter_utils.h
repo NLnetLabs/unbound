@@ -159,6 +159,7 @@ void iter_mark_pside_cycle_targets(struct module_qstate* qstate,
  * @param qinfo: query name and type
  * @param qflags: query flags with RD flag
  * @param dp: delegpt to check.
+ * @return true if dp is useless.
  */
 int iter_dp_is_useless(struct query_info* qinfo, uint16_t qflags, 
 	struct delegpt* dp);

@@ -228,7 +228,7 @@ pending_find_match(struct replay_runtime* runtime, struct entry** entry,
  * @param runtime: runtime.
  * @param entry: if true, the entry that matches is returned.
  * @param pend: if true, the outgoing message that matches is returned.
- * return: true if pending query matches the now event.
+ * @return: true if pending query matches the now event.
  */
 static int 
 pending_matches_range(struct replay_runtime* runtime, 

@@ -258,8 +258,7 @@ static struct entry* new_entry()
  * @param buf: is the buffer to store the result in
  * @param offset: is the starting position in the result buffer
  * @param buf_len: is the length of buf.
- *
- * This function returns the length of the result
+ * @return This function returns the length of the result
  */
 static size_t
 hexstr2bin(char *hexstr, int len, uint8_t *buf, size_t offset, size_t buf_len)

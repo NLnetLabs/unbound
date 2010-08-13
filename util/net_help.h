@@ -233,7 +233,7 @@ int sockaddr_cmp_addr(struct sockaddr_storage* addr1, socklen_t len1,
  * Checkout address family.
  * @param addr: the sockaddr to examine.
  * @param len: the length of addr.
- * return: true if sockaddr is ip6.
+ * @return: true if sockaddr is ip6.
  */
 int addr_is_ip6(struct sockaddr_storage* addr, socklen_t len);
 
@@ -272,7 +272,7 @@ void addr_to_str(struct sockaddr_storage* addr, socklen_t addrlen,
 	char* buf, size_t len);
 
 /**
- * See if sockaddr is an ipv6 mapped ipv4 address, ::ffff:0.0.0.0
+ * See if sockaddr is an ipv6 mapped ipv4 address, "::ffff:0.0.0.0"
  * @param addr: address
  * @param addrlen: length of address
  * @return true if so
