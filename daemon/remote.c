@@ -1636,62 +1636,69 @@ distribute_cmd(struct daemon_remote* rc, SSL* ssl, char* cmd)
 	}
 }
 
+/** check for name with end-of-string, space or tab after it */
+static int
+cmdcmp(char* p, const char* cmd, size_t len)
+{
+	return strncmp(p,cmd,len)==0 && (p[len]==0||p[len]==' '||p[len]=='\t');
+}
+
 /** execute a remote control command */
 static void
 execute_cmd(struct daemon_remote* rc, SSL* ssl, char* cmd, 
 	struct worker* worker)
 {
 	char* p = skipwhite(cmd);
-	/* compare command - check longer strings first in case of substrings*/
-	if(strncmp(p, "stop", 4) == 0) {
+	/* compare command */
+	if(cmdcmp(p, "stop", 4)) {
 		do_stop(ssl, rc);
 		return;
-	} else if(strncmp(p, "reload", 6) == 0) {
+	} else if(cmdcmp(p, "reload", 6)) {
 		do_reload(ssl, rc);
 		return;
-	} else if(strncmp(p, "stats_noreset", 13) == 0) {
+	} else if(cmdcmp(p, "stats_noreset", 13)) {
 		do_stats(ssl, rc, 0);
 		return;
-	} else if(strncmp(p, "stats", 5) == 0) {
+	} else if(cmdcmp(p, "stats", 5)) {
 		do_stats(ssl, rc, 1);
 		return;
-	} else if(strncmp(p, "status", 6) == 0) {
+	} else if(cmdcmp(p, "status", 6)) {
 		do_status(ssl, worker);
 		return;
-	} else if(strncmp(p, "dump_cache", 10) == 0) {
+	} else if(cmdcmp(p, "dump_cache", 10)) {
 		(void)dump_cache(ssl, worker);
 		return;
-	} else if(strncmp(p, "load_cache", 10) == 0) {
+	} else if(cmdcmp(p, "load_cache", 10)) {
 		if(load_cache(ssl, worker)) send_ok(ssl);
 		return;
-	} else if(strncmp(p, "list_forwards", 13) == 0) {
+	} else if(cmdcmp(p, "list_forwards", 13)) {
 		do_list_forwards(ssl, worker);
 		return;
-	} else if(strncmp(p, "list_stubs", 10) == 0) {
+	} else if(cmdcmp(p, "list_stubs", 10)) {
 		do_list_stubs(ssl, worker);
 		return;
-	} else if(strncmp(p, "list_local_zones", 16) == 0) {
+	} else if(cmdcmp(p, "list_local_zones", 16)) {
 		do_list_local_zones(ssl, worker);
 		return;
-	} else if(strncmp(p, "list_local_data", 15) == 0) {
+	} else if(cmdcmp(p, "list_local_data", 15)) {
 		do_list_local_data(ssl, worker);
 		return;
-	} else if(strncmp(p, "forward", 7) == 0) {
+	} else if(cmdcmp(p, "forward", 7)) {
 		/* must always distribute this cmd */
 		if(rc) distribute_cmd(rc, ssl, cmd);
 		do_forward(ssl, worker, skipwhite(p+7));
 		return;
-	} else if(strncmp(p, "flush_stats", 11) == 0) {
+	} else if(cmdcmp(p, "flush_stats", 11)) {
 		/* must always distribute this cmd */
 		if(rc) distribute_cmd(rc, ssl, cmd);
 		do_flush_stats(ssl, worker);
 		return;
-	} else if(strncmp(p, "flush_requestlist", 17) == 0) {
+	} else if(cmdcmp(p, "flush_requestlist", 17)) {
 		/* must always distribute this cmd */
 		if(rc) distribute_cmd(rc, ssl, cmd);
 		do_flush_requestlist(ssl, worker);
 		return;
-	} else if(strncmp(p, "lookup", 6) == 0) {
+	} else if(cmdcmp(p, "lookup", 6)) {
 		do_lookup(ssl, worker, skipwhite(p+6));
 		return;
 	}
@@ -1704,29 +1711,29 @@ execute_cmd(struct daemon_remote* rc, SSL* ssl, char* cmd,
 		distribute_cmd(rc, ssl, cmd);
 	}
 #endif
-	if(strncmp(p, "verbosity", 9) == 0) {
+	if(cmdcmp(p, "verbosity", 9)) {
 		do_verbosity(ssl, skipwhite(p+9));
-	} else if(strncmp(p, "local_zone_remove", 17) == 0) {
+	} else if(cmdcmp(p, "local_zone_remove", 17)) {
 		do_zone_remove(ssl, worker, skipwhite(p+17));
-	} else if(strncmp(p, "local_zone", 10) == 0) {
+	} else if(cmdcmp(p, "local_zone", 10)) {
 		do_zone_add(ssl, worker, skipwhite(p+10));
-	} else if(strncmp(p, "local_data_remove", 17) == 0) {
+	} else if(cmdcmp(p, "local_data_remove", 17)) {
 		do_data_remove(ssl, worker, skipwhite(p+17));
-	} else if(strncmp(p, "local_data", 10) == 0) {
+	} else if(cmdcmp(p, "local_data", 10)) {
 		do_data_add(ssl, worker, skipwhite(p+10));
-	} else if(strncmp(p, "flush_zone", 10) == 0) {
+	} else if(cmdcmp(p, "flush_zone", 10)) {
 		do_flush_zone(ssl, worker, skipwhite(p+10));
-	} else if(strncmp(p, "flush_type", 10) == 0) {
+	} else if(cmdcmp(p, "flush_type", 10)) {
 		do_flush_type(ssl, worker, skipwhite(p+10));
-	} else if(strncmp(p, "flush", 5) == 0) {
+	} else if(cmdcmp(p, "flush", 5)) {
 		do_flush_name(ssl, worker, skipwhite(p+5));
-	} else if(strncmp(p, "dump_requestlist", 16) == 0) {
+	} else if(cmdcmp(p, "dump_requestlist", 16)) {
 		do_dump_requestlist(ssl, worker);
-	} else if(strncmp(p, "log_reopen", 10) == 0) {
+	} else if(cmdcmp(p, "log_reopen", 10)) {
 		do_log_reopen(ssl, worker);
-	} else if(strncmp(p, "set_option", 10) == 0) {
+	} else if(cmdcmp(p, "set_option", 10)) {
 		do_set_option(ssl, worker, skipwhite(p+10));
-	} else if(strncmp(p, "get_option", 10) == 0) {
+	} else if(cmdcmp(p, "get_option", 10)) {
 		do_get_option(ssl, worker, skipwhite(p+10));
 	} else {
 		(void)ssl_printf(ssl, "error unknown command '%s'\n", p);

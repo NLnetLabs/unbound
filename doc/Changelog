@@ -1,3 +1,6 @@
+13 August 2010: Wouter
+	- More pleasant remote control command parsing.
+
 9 August 2010: Wouter
 	- Fix name of rrset printed that failed validation.
 
