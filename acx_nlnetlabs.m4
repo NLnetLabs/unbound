@@ -2,7 +2,8 @@
 # Copyright 2009, Wouter Wijngaards, NLnet Labs.   
 # BSD licensed.
 #
-# Version 10
+# Version 11
+# 2010-08-16 Fix FLAG_OMITTED for AS_TR_CPP changes in autoconf-2.66.
 # 2010-07-02 Add check for ss_family (for minix).
 # 2010-04-26 Fix to use CPPFLAGS for CHECK_COMPILER_FLAGS.
 # 2010-03-01 Fix RPATH using CONFIG_COMMANDS to run at the very end.
@@ -1192,7 +1193,7 @@ AC_DEFUN([ACX_CFLAGS_STRIP],
 [
   if echo $CFLAGS | grep " $1" >/dev/null 2>&1; then
     CFLAGS="`echo $CFLAGS | sed -e 's/ $1//g'`"
-    AC_DEFINE(AS_TR_CPP(OMITTED_$1), 1, Put $1 define in config.h)
+    AC_DEFINE(m4_bpatsubst(OMITTED_$1,[[-=]],_), 1, Put $1 define in config.h)
   fi
 ])
 
@@ -1223,7 +1224,7 @@ AC_DEFUN([AHX_CONFIG_FLAG_OMITTED],
 dnl Wrapper for AHX_CONFIG_FLAG_OMITTED for -D style flags
 dnl $1: the -DNAME or -DNAME=value string.
 AC_DEFUN([AHX_CONFIG_FLAG_EXT],
-[AHX_CONFIG_FLAG_OMITTED(AS_TR_CPP(OMITTED_$1),m4_bpatsubst(m4_bpatsubst($1,-D,),=.*$,),m4_if(m4_bregexp($1,=),-1,1,m4_bpatsubst($1,^.*=,)))
+[AHX_CONFIG_FLAG_OMITTED(m4_bpatsubst(OMITTED_$1,[[-=]],_),m4_bpatsubst(m4_bpatsubst($1,-D,),=.*$,),m4_if(m4_bregexp($1,=),-1,1,m4_bpatsubst($1,^.*=,)))
 ])
 
 dnl config.h part to define omitted cflags, use with ACX_STRIP_EXT_FLAGS.
