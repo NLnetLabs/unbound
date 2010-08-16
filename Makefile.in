@@ -179,7 +179,7 @@ COMPILE=$(LIBTOOL) --tag=CC --mode=compile $(CC) $(CPPFLAGS) $(CFLAGS)
 LINK=$(LIBTOOL) --tag=CC --mode=link $(strip $(CC) $(staticexe) $(RUNTIME_PATH) $(CFLAGS) $(LDFLAGS))
 LINK_LIB=$(LIBTOOL) --tag=CC --mode=link $(strip $(CC) $(RUNTIME_PATH) $(CFLAGS) $(LDFLAGS) $(staticexe) -version-number @LIBUNBOUND_CURRENT@:@LIBUNBOUND_REVISION@:@LIBUNBOUND_AGE@ -no-undefined)
 
-.PHONY:	clean realclean doc lint all install uninstall tests test download_ldns strip lib
+.PHONY:	clean realclean doc lint all install uninstall tests test download_ldns strip lib longtest longcheck check
 
 $(BUILD)%.lo:    $(srcdir)/%.c 
 	$(INFO) Build $<
@@ -194,7 +194,15 @@ TEST_BIN=$(addsuffix $(EXEEXT),asynclook delayer harvest lock-verify \
 	memstats perf pktview signit streamtcp testbound unittest)
 tests:	all $(TEST_BIN)
 
-test:	tests
+check: test
+longcheck: longtest
+
+test:	unittest$(EXEEXT) testbound$(EXEEXT)
+	./unittest$(EXEEXT)
+	for x in testdata/*.rpl; do if ./testbound$(EXEEXT) -p $$x >/dev/null 2>&1; then echo $$x OK; else echo $$x failed; exit 1; fi done
+	@echo test OK
+
+longtest:	tests
 	if test -x "`which bash`"; then bash testcode/do-tests.sh; else sh testcode/do-tests.sh; fi
 
 lib:	libunbound.la

@@ -1,6 +1,8 @@
 16 August 2010: Wouter
 	- Fix acx_nlnetlabs.m4 configure output for autoconf-2.66 AS_TR_CPP
 	  changes, uses m4_bpatsubst now.
+	- make test (or make check) should be more portable and run the unit 
+	  test and testbound scripts. (make longtest has special requirements).
 
 13 August 2010: Wouter
 	- More pleasant remote control command parsing.
