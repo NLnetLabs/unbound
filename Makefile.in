@@ -199,6 +199,7 @@ longcheck: longtest
 
 test:	unittest$(EXEEXT) testbound$(EXEEXT)
 	./unittest$(EXEEXT)
+	./testbound$(EXEEXT) -s
 	for x in testdata/*.rpl; do if ./testbound$(EXEEXT) -p $$x >/dev/null 2>&1; then echo $$x OK; else echo $$x failed; exit 1; fi done
 	@echo test OK
 

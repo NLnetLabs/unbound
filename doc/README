@@ -72,8 +72,7 @@ This software is under BSD license, see LICENSE for details.
   * --disable-gost
   	Disable support for GOST crypto, RFC 5933.
 
-* 'make test' attempts to run a series of tests, depending on the support
-  programs that are installed.
+* 'make test' runs a series of self checks.
 
 Known issues
 ------------

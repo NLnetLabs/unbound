@@ -1,8 +1,11 @@
 README unbound tests
 
-There is a test setup for unbound. Use
+For a quick test that runs unit tests and state machine tests, use
 	make test
-To make and run the tests. The results are summarized at the end.
+
+There is a long test setup for unbound that needs tools installed. Use
+	make longtest
+To make and run the long tests. The results are summarized at the end.
 
 You need to have the following programs installed and in your PATH.
 * dig - from the bind-tools package. Used to send DNS queries.
@@ -11,10 +14,6 @@ You need to have the following programs installed and in your PATH.
 * ldns-testns - from ldns examples. Used as DNS auth server.
 * xxd and nc (optional) - for (malformed) packet transmission.
 The optional programs are detected and can be omitted.
-
-Without any support programs, unittest and testbound can still be used.
-	(cd testdata; ../testcode/mini_tpkg.sh exe 02-unittest.tpkg)
-	(cd testdata; ../testcode/mini_tpkg.sh exe 03-testbound.tpkg)
 
 testdata/ contains the data for tests. 
 testcode/ contains scripts and c code for the tests.
