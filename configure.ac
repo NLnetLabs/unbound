@@ -175,10 +175,6 @@ AC_PROG_CC
 ACX_DEPFLAG
 ACX_DETERMINE_EXT_FLAGS_UNBOUND
 
-# for Sun studio 11.
-ACX_CHECK_COMPILER_FLAG(xO4, [CFLAGS="$CFLAGS -xO4"])
-ACX_CHECK_COMPILER_FLAG(xtarget=generic, [CFLAGS="$CFLAGS -xtarget=generic"])
-
 # debug mode flags warnings
 AC_ARG_ENABLE(checking, AC_HELP_STRING([--enable-checking], [Enable warnings, asserts, makefile-dependencies]))
 AC_ARG_ENABLE(debug, AC_HELP_STRING([--enable-debug], [same as enable-checking]))
