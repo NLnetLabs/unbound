@@ -3,6 +3,7 @@
 	  Delegpt structures checked for duplicates always.
 	  No more nameserver lookups generated when depth is full anyway.
 	- example.conf notes how to do DNSSEC validation and track the root.
+	- iana portlist updated.
 
 18 August 2010: Wouter
 	- Fix bug#322: configure does not respect CFLAGS on Solaris.
