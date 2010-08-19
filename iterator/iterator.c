@@ -1300,6 +1300,9 @@ query_for_targets(struct module_qstate* qstate, struct iter_qstate* iq,
 	int missing;
 	int toget = 0;
 
+	if(iq->depth == ie->max_dependency_depth)
+		return 0;
+
 	iter_mark_cycle_targets(qstate, iq->dp);
 	missing = (int)delegpt_count_missing_targets(iq->dp);
 	log_assert(maxtargets != 0); /* that would not be useful */
@@ -1431,6 +1434,10 @@ processLastResort(struct module_qstate* qstate, struct iter_qstate* iq,
 			qstate->ext_state[id] = module_wait_subquery;
 			return 0; /* and wait for them */
 		}
+	}
+	if(iq->depth == ie->max_dependency_depth) {
+		verbose(VERB_QUERY, "maxdepth and need more nameservers, fail");
+		return error_response_cache(qstate, id, LDNS_RCODE_SERVFAIL);
 	}
 	/* mark cycle targets for parent-side lookups */
 	iter_mark_pside_cycle_targets(qstate, iq->dp);

@@ -361,10 +361,10 @@ delegpt_from_message(struct dns_msg* msg, struct regional* region)
 			continue;
 
 		if(ntohs(s->rk.type) == LDNS_RR_TYPE_A) {
-			if(!delegpt_add_rrset_A(dp, region, s, 0, 0))
+			if(!delegpt_add_rrset_A(dp, region, s, 0, 1))
 				return NULL;
 		} else if(ntohs(s->rk.type) == LDNS_RR_TYPE_AAAA) {
-			if(!delegpt_add_rrset_AAAA(dp, region, s, 0, 0))
+			if(!delegpt_add_rrset_AAAA(dp, region, s, 0, 1))
 				return NULL;
 		}
 	}
