@@ -305,6 +305,18 @@ server:
 	# separated by spaces. "iterator" or "validator iterator"
 	# module-config: "validator iterator"
 
+	# File with trusted keys, kept uptodate using RFC5011 probes,
+	# initial file like trust-anchor-file, then it stores metadata.
+	# Use several entries, one per domain name, to track multiple zones.
+	#
+	# To do DNSSEC validation and track the root, initialize the 
+	# file @UNBOUND_RUN_DIR@/root.key
+	# (the echo statement goes on one line)
+	# echo . IN DS 19036 8 2 49AAC11D7B6F6446702E54A1607371607A1A41855200FD2CE1CDDE32F24E8FB5 > @UNBOUND_RUN_DIR@/root.key
+	# or: dig . DNSKEY > @UNBOUND_RUN_DIR@/root.key
+	# You can verify it via https://www.iana.org/dnssec or TCR attestation.
+	# auto-trust-anchor-file: "@UNBOUND_RUN_DIR@/root.key"
+
 	# File with DLV trusted keys. Same format as trust-anchor-file.
 	# There can be only one DLV configured, it is trusted from root down.
 	# Download http://ftp.isc.org/www/dlv/dlv.isc.org.key
@@ -313,15 +325,12 @@ server:
 	# File with trusted keys for validation. Specify more than one file
 	# with several entries, one file per entry.
 	# Zone file format, with DS and DNSKEY entries.
+	# Note this gets out of date, use auto-trust-anchor-file please.
 	# trust-anchor-file: ""
 	
-	# File with trusted keys, kept uptodate using RFC5011 probes,
-	# initial file like trust-anchor-file, then it stores metadata.
-	# Use several entries, one per domain name, to track multiple zones.
-	# auto-trust-anchor-file: ""
-
 	# Trusted key for validation. DS or DNSKEY. specify the RR on a
 	# single line, surrounded by "". TTL is ignored. class is IN default.
+	# Note this gets out of date, use auto-trust-anchor-file please.
 	# (These examples are from August 2007 and may not be valid anymore).
 	# trust-anchor: "nlnetlabs.nl. DNSKEY 257 3 5 AQPzzTWMz8qSWIQlfRnPckx2BiVmkVN6LPupO3mbz7FhLSnm26n6iG9N Lby97Ji453aWZY3M5/xJBSOS2vWtco2t8C0+xeO1bc/d6ZTy32DHchpW 6rDH1vp86Ll+ha0tmwyy9QP7y2bVw5zSbFCrefk8qCUBgfHm9bHzMG1U BYtEIQ=="
 	# trust-anchor: "jelte.nlnetlabs.nl. DS 42860 5 1 14D739EB566D2B1A5E216A0BA4D17FA9B038BE4A"
@@ -330,6 +339,7 @@ server:
 	# with several entries, one file per entry. Like trust-anchor-file
 	# but has a different file format. Format is BIND-9 style format, 
 	# the trusted-keys { name flag proto algo "key"; }; clauses are read.
+	# you need external update procedures to track changes in keys.
 	# trusted-keys-file: ""
 
 	# Ignore chain of trust. Domain is treated as insecure.

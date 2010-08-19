@@ -2,6 +2,7 @@
 	- Fix bug#321: resolution of rs.ripe.net artifacts with 0x20.
 	  Delegpt structures checked for duplicates always.
 	  No more nameserver lookups generated when depth is full anyway.
+	- example.conf notes how to do DNSSEC validation and track the root.
 
 18 August 2010: Wouter
 	- Fix bug#322: configure does not respect CFLAGS on Solaris.
