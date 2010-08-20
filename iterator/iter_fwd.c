@@ -215,8 +215,7 @@ read_fwds_addr(struct iter_forwards* fwd, struct config_stub* s,
 				s->name, p->str);
 			return 0;
 		}
-		if(!delegpt_add_addr(dp, fwd->region, &addr, addrlen, 
-			0, 0, 1)) {
+		if(!delegpt_add_addr(dp, fwd->region, &addr, addrlen, 0, 0)) {
 			log_err("out of memory");
 			return 0;
 		}

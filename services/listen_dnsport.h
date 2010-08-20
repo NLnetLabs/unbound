@@ -131,25 +131,6 @@ struct listen_dnsport* listen_create(struct comm_base* base,
 	comm_point_callback_t* cb, void* cb_arg);
 
 /**
- * Stop listening to the dnsports. Ports are still open but not checked
- * for readability - performs pushback of the load.
- * @param listen: the listening structs to stop listening on. Note that
- *    udp and tcp-accept handlers stop, but ongoing tcp-handlers are kept
- *    going, since its rude to 'reset connection by peer' them, instead,
- *    we keep them and the callback will be called when its ready. It can
- *    be dropped at that time. New tcp and udp queries can be served by 
- *    other threads.
- */
-void listen_pushback(struct listen_dnsport* listen);
-
-/**
- * Start listening again to the dnsports.
- * Call after the listen_pushback has been called.
- * @param listen: the listening structs to stop listening on.
- */
-void listen_resume(struct listen_dnsport* listen);
-
-/**
  * delete the listening structure
  * @param listen: listening structure.
  */

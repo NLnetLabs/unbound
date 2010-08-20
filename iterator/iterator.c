@@ -2663,7 +2663,8 @@ iter_get_mem(struct module_env* env, int id)
 	if(!ie)
 		return 0;
 	return sizeof(*ie) + sizeof(int)*((size_t)ie->max_dependency_depth+1)
-		+ hints_get_mem(ie->hints) + donotq_get_mem(ie->donotq);
+		+ hints_get_mem(ie->hints) + donotq_get_mem(ie->donotq)
+		+ priv_get_mem(ie->priv);
 }
 
 /**

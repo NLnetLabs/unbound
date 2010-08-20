@@ -1490,13 +1490,6 @@ comm_point_delete(struct comm_point* c)
 }
 
 void 
-comm_point_set_cb_arg(struct comm_point* c, void *arg)
-{
-	log_assert(c);
-	c->cb_arg = arg;
-}
-
-void 
 comm_point_send_reply(struct comm_reply *repinfo)
 {
 	log_assert(repinfo && repinfo->c);

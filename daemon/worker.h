@@ -165,20 +165,6 @@ void worker_send_cmd(struct worker* worker, enum worker_commands cmd);
 void worker_sighandler(int sig, void* arg);
 
 /**
- * Worker service routine to send udp messages for modules.
- * @param pkt: packet to send.
- * @param addr: where to.
- * @param addrlen: length of addr.
- * @param timeout: seconds to wait until timeout.
- * @param q: wich query state to reactivate upon return.
- * @param use_tcp: true to use TCP, false for UDP.
- * @return: false on failure (memory or socket related). no query was
- *      sent.
- */
-int worker_send_packet(ldns_buffer* pkt, struct sockaddr_storage* addr,
-	socklen_t addrlen, int timeout, struct module_qstate* q, int use_tcp);
-
-/**
  * Worker service routine to send serviced queries to authoritative servers.
  * @param qname: query name. (host order)
  * @param qnamelen: length in bytes of qname, including trailing 0.

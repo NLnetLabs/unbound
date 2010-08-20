@@ -184,16 +184,6 @@ int fptr_whitelist_hash_deldatafunc(lruhash_deldatafunc_t fptr);
 int fptr_whitelist_hash_markdelfunc(lruhash_markdelfunc_t fptr);
 
 /**
- * Check function pointer whitelist for module_env send_packet callback values.
- *
- * @param fptr: function pointer to check.
- * @return false if not in whitelist.
- */
-int fptr_whitelist_modenv_send_packet(int (*fptr)(ldns_buffer* pkt, 
-	struct sockaddr_storage* addr, socklen_t addrlen, int timeout, 
-	struct module_qstate* q, int use_tcp));
-
-/**
  * Check function pointer whitelist for module_env send_query callback values.
  *
  * @param fptr: function pointer to check.

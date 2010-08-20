@@ -101,16 +101,6 @@ extern uint16_t EDNS_ADVERTISED_SIZE;
 int str_is_ip6(const char* str);
 
 /**
- * Write (blocking) to a nonblocking socket.
- * @param s: fd. Is set to be nonblocking at exit.
- * @param buf: data buffer.
- * @param size: length of data to send.
- * @return: 0 on error. errno is set.
- */
-int
-write_socket(int s, const void *buf, size_t size);
-
-/**
  * Set fd nonblocking.
  * @param s: file descriptor.
  * @return: 0 on error (error is printed to log).

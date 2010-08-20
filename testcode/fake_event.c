@@ -1119,14 +1119,6 @@ void listening_ports_free(struct listen_port* list)
 	free(list);
 }
 
-void listen_pushback(struct listen_dnsport* ATTR_UNUSED(listen))
-{
-}
-
-void listen_resume(struct listen_dnsport* ATTR_UNUSED(listen))
-{
-}
-
 struct comm_point* comm_point_create_local(struct comm_base* ATTR_UNUSED(base),
         int ATTR_UNUSED(fd), size_t ATTR_UNUSED(bufsize),
         comm_point_callback_t* ATTR_UNUSED(callback), 

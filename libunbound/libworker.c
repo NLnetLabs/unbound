@@ -185,7 +185,6 @@ libworker_setup(struct ub_ctx* ctx, int is_bg)
 		libworker_delete(w);
 		return NULL;
 	}
-	w->env->send_packet = &libworker_send_packet;
 	w->env->send_query = &libworker_send_query;
 	w->env->detach_subs = &mesh_detach_subs;
 	w->env->attach_sub = &mesh_attach_sub;
@@ -669,18 +668,6 @@ void libworker_alloc_cleanup(void* arg)
 	struct libworker* w = (struct libworker*)arg;
 	slabhash_clear(&w->env->rrset_cache->table);
         slabhash_clear(w->env->msg_cache);
-}
-
-int libworker_send_packet(ldns_buffer* pkt, struct sockaddr_storage* addr,
-        socklen_t addrlen, int timeout, struct module_qstate* q, int use_tcp)
-{
-	struct libworker* w = (struct libworker*)q->env->worker;
-	if(use_tcp) {
-		return pending_tcp_query(w->back, pkt, addr, addrlen,
-			timeout, libworker_handle_reply, q) != 0;
-	}
-	return pending_udp_query(w->back, pkt, addr, addrlen,
-		timeout*1000, libworker_handle_reply, q) != 0;
 }
 
 /** compare outbound entry qstates */

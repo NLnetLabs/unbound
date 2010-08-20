@@ -245,16 +245,6 @@ fptr_whitelist_hash_markdelfunc(lruhash_markdelfunc_t fptr)
 	return 0;
 }
 
-int 
-fptr_whitelist_modenv_send_packet(int (*fptr)(ldns_buffer* pkt,
-        struct sockaddr_storage* addr, socklen_t addrlen, int timeout,
-        struct module_qstate* q, int use_tcp))
-{
-	if(fptr == &worker_send_packet) return 1;
-	else if(fptr == &libworker_send_packet) return 1;
-	return 0;
-}
-
 /** whitelist env->send_query callbacks */
 int 
 fptr_whitelist_modenv_send_query(struct outbound_entry* (*fptr)(

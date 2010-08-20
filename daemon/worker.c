@@ -178,6 +178,8 @@ worker_mem_report(struct worker* ATTR_UNUSED(worker),
 		+ sizeof(*worker->env.scratch_buffer) 
 		+ ldns_buffer_capacity(worker->env.scratch_buffer)
 		+ forwards_get_mem(worker->env.fwds);
+	if(worker->thread_num == 0)
+		me += acl_list_get_mem(worker->daemon->acl_list);
 	if(cur_serv) {
 		me += serviced_get_mem(cur_serv);
 	}
@@ -1125,7 +1127,6 @@ worker_init(struct worker* worker, struct config_file *cfg,
 	if(worker->thread_num == 0)
 		log_set_time(worker->env.now);
 	worker->env.worker = worker;
-	worker->env.send_packet = &worker_send_packet;
 	worker->env.send_query = &worker_send_query;
 	worker->env.alloc = &worker->alloc;
 	worker->env.rnd = worker->rndstate;
@@ -1212,19 +1213,6 @@ worker_delete(struct worker* worker)
 	alloc_clear(&worker->alloc);
 	regional_destroy(worker->scratchpad);
 	free(worker);
-}
-
-int 
-worker_send_packet(ldns_buffer* pkt, struct sockaddr_storage* addr,
-        socklen_t addrlen, int timeout, struct module_qstate* q, int use_tcp)
-{
-	struct worker* worker = q->env->worker;
-	if(use_tcp) {
-		return pending_tcp_query(worker->back, pkt, addr, addrlen, 
-			timeout, worker_handle_reply, q) != 0;
-	}
-	return pending_udp_query(worker->back, pkt, addr, addrlen, 
-		timeout*1000, worker_handle_reply, q) != 0;
 }
 
 /** compare outbound entry qstates */

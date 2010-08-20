@@ -83,24 +83,6 @@ struct module_env {
 
 	/* --- services --- */
 	/** 
-	 * Direct access to the network, this packet gets sent to destination.
-	 * Send DNS query to server. operate() should return with wait_reply.
-	 * Later on a callback will cause operate() to be called with event
-	 * timeout or reply. Replied packet is then in the query buffer.
-	 * @param pkt: packet to send.
-	 * @param addr: where to.
-	 * @param addrlen: length of addr.
-	 * @param timeout: seconds to wait until timeout.
-	 * @param q: wich query state to reactivate upon return.
-	 * @param use_tcp: set to true to send over TCP. 0 for UDP.
-	 * @return: false on failure (memory or socket related). no query was
-	 *	sent.
-	 */
-	int (*send_packet)(ldns_buffer* pkt, struct sockaddr_storage* addr,
-		socklen_t addrlen, int timeout, struct module_qstate* q,
-		int use_tcp);
-
-	/** 
 	 * Send serviced DNS query to server. UDP/TCP and EDNS is handled.
 	 * operate() should return with wait_reply. Later on a callback 
 	 * will cause operate() to be called with event timeout or reply.

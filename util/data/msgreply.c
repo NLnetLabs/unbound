@@ -516,18 +516,6 @@ query_info_parse(struct query_info* m, ldns_buffer* query)
 	return 1;
 }
 
-int 
-query_info_allocqname(struct query_info* m)
-{
-	uint8_t* q = m->qname;
-	if(!(m->qname = (uint8_t*)malloc(m->qname_len))) {
-		log_err("query_info_allocqname: out of memory");
-		return 0; /* out of memory */
-	}
-	memcpy(m->qname, q, m->qname_len);
-	return 1;
-}
-
 /** tiny subroutine for msgreply_compare */
 #define COMPARE_IT(x, y) \
 	if( (x) < (y) ) return -1; \

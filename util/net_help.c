@@ -61,30 +61,6 @@ str_is_ip6(const char* str)
 }
 
 int 
-write_socket(int s, const void *buf, size_t size)
-{
-	const char* data = (const char*)buf;
-	size_t total_count = 0;
-
-	fd_set_block(s);
-	while (total_count < size) {
-		ssize_t count
-			= write(s, data + total_count, size - total_count);
-		if (count == -1) {
-			if (errno != EAGAIN && errno != EINTR) {
-				fd_set_nonblock(s);
-				return 0;
-			} else {
-				continue;
-			}
-		}
-		total_count += count;
-	}
-	fd_set_nonblock(s);
-	return 1;
-}
-
-int 
 fd_set_nonblock(int s) 
 {
 #ifdef HAVE_FCNTL

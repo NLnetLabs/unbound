@@ -1317,7 +1317,7 @@ parse_delegpt(SSL* ssl, struct regional* region, char* args, uint8_t* root)
 			return NULL;
 		}
 		/* add address */
-		if(!delegpt_add_addr(dp, region, &addr, addrlen, 0, 0, 1)) {
+		if(!delegpt_add_addr(dp, region, &addr, addrlen, 0, 0)) {
 			(void)ssl_printf(ssl, "error out of memory\n");
 			return NULL;
 		}

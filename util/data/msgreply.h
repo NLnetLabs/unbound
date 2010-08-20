@@ -264,13 +264,6 @@ void reply_info_set_ttls(struct reply_info* rep, uint32_t timenow);
 void reply_info_parsedelete(struct reply_info* rep, struct alloc_cache* alloc);
 
 /**
- * Allocate and copy the qname (obtained from query_info_parse()).
- * @param m: the queryinfo structure.
- * @return: 0 on alloc failure.
- */
-int query_info_allocqname(struct query_info* m);
-
-/**
  * Compare two queryinfo structures, on query and type, class. 
  * It is _not_ sorted in canonical ordering.
  * @param m1: struct query_info* , void* here to ease use as function pointer.
