@@ -100,15 +100,6 @@ void worker_sighandler(int ATTR_UNUSED(sig), void* ATTR_UNUSED(arg))
 	log_assert(0);
 }
 
-int worker_send_packet(ldns_buffer* ATTR_UNUSED(pkt), 
-	struct sockaddr_storage* ATTR_UNUSED(addr), 
-	socklen_t ATTR_UNUSED(addrlen), int ATTR_UNUSED(timeout), 
-	struct module_qstate* ATTR_UNUSED(q), int ATTR_UNUSED(use_tcp))
-{
-	log_assert(0);
-	return 0;
-}
-
 struct outbound_entry* worker_send_query(uint8_t* ATTR_UNUSED(qname), 
 	size_t ATTR_UNUSED(qnamelen), uint16_t ATTR_UNUSED(qtype), 
 	uint16_t ATTR_UNUSED(qclass), uint16_t ATTR_UNUSED(flags), 
