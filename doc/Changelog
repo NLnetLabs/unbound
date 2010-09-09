@@ -1,3 +1,8 @@
+9 September 2010: Wouter
+	- unresponsive servers are not completely blacklisted (because of
+	  firewalls), but also not probed all the time (because of the request
+	  list size it generates).  The probe rate is 1%.
+
 20 August 2010: Wouter
 	- openbsd-lint fixes: acl_list_get_mem used if debug-alloc enabled.
 	  iterator get_mem includes priv_get_mem.  delegpt nodup removed.
