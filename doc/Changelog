@@ -2,6 +2,7 @@
 	- unresponsive servers are not completely blacklisted (because of
 	  firewalls), but also not probed all the time (because of the request
 	  list size it generates).  The probe rate is 1%.
+	- iana portlist updated.
 
 20 August 2010: Wouter
 	- openbsd-lint fixes: acl_list_get_mem used if debug-alloc enabled.
