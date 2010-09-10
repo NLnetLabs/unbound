@@ -214,7 +214,7 @@ iter_filter_unsuitable(struct iter_env* iter_env, struct module_env* env,
 			if(ub_random(env->rnd) % 100 == 0)
 				return USEFUL_SERVER_TOP_TIMEOUT+1;
 			/* server is unresponsive */
-			return -1;
+			return USEFUL_SERVER_TOP_TIMEOUT;
 		}
 		/* select remainder from worst to best */
 		else if(reclame)
