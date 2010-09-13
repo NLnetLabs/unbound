@@ -1,3 +1,6 @@
+13 September 2010: Wouter
+	- bug#327: Fix for cannot access stub zones until the root is primed.
+
 9 September 2010: Wouter
 	- unresponsive servers are not completely blacklisted (because of
 	  firewalls), but also not probed all the time (because of the request

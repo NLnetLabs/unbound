@@ -451,6 +451,13 @@ hints_lookup_stub(struct iter_hints* hints, uint8_t* qname,
 		len, labs, qclass);
 	if(!r) return NULL;
 
+	/* If there is no cache (root prime situation) */
+	if(cache_dp == NULL) {
+		if(r->dp->namelabs != 1)
+			return r; /* no cache dp, use any non-root stub */
+		return NULL;
+	}
+
 	/*
 	 * If the stub is same as the delegation we got
 	 * And has noprime set, we need to 'prime' to use this stub instead.

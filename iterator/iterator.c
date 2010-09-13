@@ -594,6 +594,8 @@ prime_root(struct module_qstate* qstate, struct iter_qstate* iq,
  * @param q: request name.
  * @return true if a priming subrequest was made, false if not. The will only
  *         issue a priming request if it detects an unprimed stub.
+ *         Uses value of 2 to signal during stub-prime in root-prime situation
+ *         that a noprime-stub is available and resolution can continue.
  */
 static int
 prime_stub(struct module_qstate* qstate, struct iter_qstate* iq, 
@@ -619,6 +621,8 @@ prime_stub(struct module_qstate* qstate, struct iter_qstate* iq,
 
 	/* is it a noprime stub (always use) */
 	if(stub->noprime) {
+		int r = 0;
+		if(iq->dp == NULL) r = 2;
 		/* copy the dp out of the fixed hints structure, so that
 		 * it can be changed when servicing this query */
 		iq->dp = delegpt_copy(stub_dp, qstate->region);
@@ -629,7 +633,7 @@ prime_stub(struct module_qstate* qstate, struct iter_qstate* iq,
 		}
 		log_nametypeclass(VERB_DETAIL, "use stub", stub_dp->name, 
 			LDNS_RR_TYPE_NS, q->qclass);
-		return 0;
+		return r;
 	}
 
 	/* Otherwise, we need to (re)prime the stub. */
@@ -1031,6 +1035,12 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 		/* If the cache has returned nothing, then we have a 
 		 * root priming situation. */
 		if(iq->dp == NULL) {
+			/* if there is a stub, then no root prime needed */
+			int r = prime_stub(qstate, iq, ie, id, &iq->qchase);
+			if(r == 2)
+				break; /* got noprime-stub-zone, continue */
+			else if(r)
+				return 0; /* stub prime request made */
 			if(forwards_lookup_root(qstate->env->fwds, 
 				iq->qchase.qclass)) {
 				/* forward zone root, no root prime needed */
