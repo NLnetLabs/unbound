@@ -63,7 +63,7 @@ struct timehist;
  * Maximum number of mesh state activations. Any more is likely an
  * infinite loop in the module. It is then terminated.
  */
-#define MESH_MAX_ACTIVATION 1000
+#define MESH_MAX_ACTIVATION 3000
 
 /**
  * Max number of references-to-references-to-references.. search size.
