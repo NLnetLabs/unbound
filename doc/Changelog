@@ -1,6 +1,7 @@
 14 September 2010: Wouter
 	- increased mesh-max-activation from 1000 to 3000 for crazy domains
 	  like _tcp.slb.com with 262 servers.
+	- iana portlist updated.
 
 13 September 2010: Wouter
 	- bug#327: Fix for cannot access stub zones until the root is primed.
