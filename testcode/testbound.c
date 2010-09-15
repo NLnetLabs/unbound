@@ -268,7 +268,6 @@ main(int argc, char* argv[])
 	(void)putenv("TZ=UTC");
 
 	log_init(NULL, 0, NULL);
-	log_info("Start of %s testbound program.", PACKAGE_STRING);
 	/* determine commandline options for the daemon */
 	pass_argc = 1;
 	pass_argv[0] = "unbound";
@@ -322,6 +321,7 @@ main(int argc, char* argv[])
 		testbound_usage();
 		return 1;
 	}
+	log_info("Start of %s testbound program.", PACKAGE_STRING);
 	if(atexit(&remove_configfile) != 0)
 		fatal_exit("atexit() failed: %s", strerror(errno));
 
