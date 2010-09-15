@@ -2428,6 +2428,10 @@ ds_response_to_ke(struct module_qstate* qstate, struct val_qstate* vq,
 			msg->rep->rrsets + msg->rep->an_numrrsets,
 			msg->rep->ns_numrrsets, qinfo, vq->key_entry, &reason);
 		switch(sec) {
+			case sec_status_insecure:
+				/* case insecure also continues to unsigned
+				 * space.  If nsec3-iter-count too high or
+				 * optout, then treat below as unsigned */
 			case sec_status_secure:
 				verbose(VERB_DETAIL, "NSEC3s for the "
 					"referral proved no DS.");
@@ -2446,7 +2450,6 @@ ds_response_to_ke(struct module_qstate* qstate, struct val_qstate* vq,
 					"referral did not prove no DS.");
 				errinf(qstate, reason);
 				goto return_bogus;
-			case sec_status_insecure:
 			case sec_status_unchecked:
 			default:
 				/* NSEC3 proof did not work */

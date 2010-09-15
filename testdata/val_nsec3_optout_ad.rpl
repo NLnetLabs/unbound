@@ -185,11 +185,12 @@ sub.example.com. IN DS
 ENTRY_END
 
 ; recursion happens here.
-; the same answer gives AD flag for DS, because the optout says no DS exists.
+; no AD flag here because of RFC5155 9.2 section.
+; even though we are sure there is no DS, this is what the RFC says.
 STEP 30 CHECK_ANSWER
 ENTRY_BEGIN
 MATCH all
-REPLY QR RD RA AD NOERROR
+REPLY QR RD RA NOERROR
 SECTION QUESTION
 sub.example.com. IN DS
 SECTION ANSWER

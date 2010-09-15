@@ -1,3 +1,6 @@
+15 September 2010: Wouter
+	- Abide RFC5155 section 9.2: no AD flag for replies with NSEC3 optout.
+
 14 September 2010: Wouter
 	- increased mesh-max-activation from 1000 to 3000 for crazy domains
 	  like _tcp.slb.com with 262 servers.

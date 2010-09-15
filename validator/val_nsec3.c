@@ -1179,10 +1179,8 @@ nsec3_do_prove_nodata(struct module_env* env, struct nsec3_filter* flt,
 			"-- no more options, bogus.");
 		return sec_status_bogus;
 	}
-	/* the optout is a secure denial of DS records */
-	if(qinfo->qtype != LDNS_RR_TYPE_DS)
-		return sec_status_insecure;
-	return sec_status_secure;
+	/* RFC5155 section 9.2: if nc has optout then no AD flag set */
+	return sec_status_insecure;
 }
 
 enum sec_status
@@ -1348,7 +1346,8 @@ nsec3_prove_nods(struct module_env* env, struct val_env* ve,
 			"DS NOERROR/NODATA case";
 		return sec_status_bogus;
 	}
-	return sec_status_secure;
+	/* RFC5155 section 9.2: if nc has optout then no AD flag set */
+	return sec_status_insecure;
 }
 
 enum sec_status
