@@ -589,7 +589,7 @@ void algo_needs_reason(struct module_env* env, int alg, char** reason, char* s)
 			(unsigned)alg);
 	*reason = regional_strdup(env->scratch, buf);
 	if(!*reason)
-		*reason = "%s with all algorithms";
+		*reason = s;
 }
 
 enum sec_status 
