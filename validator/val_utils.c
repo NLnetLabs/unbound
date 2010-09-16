@@ -310,7 +310,7 @@ rrset_get_ttl(struct ub_packed_rrset_key* rrset)
 enum sec_status 
 val_verify_rrset(struct module_env* env, struct val_env* ve,
         struct ub_packed_rrset_key* rrset, struct ub_packed_rrset_key* keys,
-	char** reason)
+	int downprot, char** reason)
 {
 	enum sec_status sec;
 	struct packed_rrset_data* d = (struct packed_rrset_data*)rrset->
@@ -332,7 +332,7 @@ val_verify_rrset(struct module_env* env, struct val_env* ve,
 	}
 	log_nametypeclass(VERB_ALGO, "verify rrset", rrset->rk.dname,
 		ntohs(rrset->rk.type), ntohs(rrset->rk.rrset_class));
-	sec = dnskeyset_verify_rrset(env, ve, rrset, keys, reason);
+	sec = dnskeyset_verify_rrset(env, ve, rrset, keys, downprot, reason);
 	verbose(VERB_ALGO, "verify result: %s", sec_status_to_string(sec));
 	regional_free_all(env->scratch);
 
@@ -378,7 +378,7 @@ val_verify_rrset_entry(struct module_env* env, struct val_env* ve,
 	dnskey.rk.dname_len = kkey->namelen;
 	dnskey.entry.key = &dnskey;
 	dnskey.entry.data = kd->rrset_data;
-	sec = val_verify_rrset(env, ve, rrset, &dnskey, reason);
+	sec = val_verify_rrset(env, ve, rrset, &dnskey, 1, reason);
 	return sec;
 }
 
@@ -453,7 +453,7 @@ int val_favorite_ds_algo(struct ub_packed_rrset_key* ds_rrset)
 enum sec_status 
 val_verify_DNSKEY_with_DS(struct module_env* env, struct val_env* ve,
 	struct ub_packed_rrset_key* dnskey_rrset,
-	struct ub_packed_rrset_key* ds_rrset, char** reason)
+	struct ub_packed_rrset_key* ds_rrset, int downprot, char** reason)
 {
 	/* as long as this is false, we can consider this DS rrset to be
 	 * equivalent to no DS rrset. */
@@ -472,7 +472,8 @@ val_verify_DNSKEY_with_DS(struct module_env* env, struct val_env* ve,
 	}
 
 	digest_algo = val_favorite_ds_algo(ds_rrset);
-	algo_needs_init_ds(&needs, ds_rrset, digest_algo);
+	if(downprot)
+		algo_needs_init_ds(&needs, ds_rrset, digest_algo);
 	num = rrset_get_count(ds_rrset);
 	for(i=0; i<num; i++) {
 		/* Check to see if we can understand this DS. 
@@ -491,12 +492,12 @@ val_verify_DNSKEY_with_DS(struct module_env* env, struct val_env* ve,
 		sec = verify_dnskeys_with_ds_rr(env, ve, dnskey_rrset, 
 			ds_rrset, i, reason);
 		if(sec == sec_status_secure) {
-			if(algo_needs_set_secure(&needs,
+			if(!downprot || algo_needs_set_secure(&needs,
 				(uint8_t)ds_get_key_algo(ds_rrset, i))) {
 				verbose(VERB_ALGO, "DS matched DNSKEY.");
 				return sec_status_secure;
 			}
-		} else if(sec == sec_status_bogus) {
+		} else if(downprot && sec == sec_status_bogus) {
 			algo_needs_set_bogus(&needs,
 				(uint8_t)ds_get_key_algo(ds_rrset, i));
 		}
@@ -512,7 +513,7 @@ val_verify_DNSKEY_with_DS(struct module_env* env, struct val_env* ve,
 	}
 	/* If any were understandable, then it is bad. */
 	verbose(VERB_QUERY, "Failed to match any usable DS to a DNSKEY.");
-	if((alg=algo_needs_missing(&needs)) != 0) {
+	if(downprot && (alg=algo_needs_missing(&needs)) != 0) {
 		algo_needs_reason(env, alg, reason, "missing verification of "
 			"DNSKEY signature");
 	}
@@ -522,10 +523,10 @@ val_verify_DNSKEY_with_DS(struct module_env* env, struct val_env* ve,
 struct key_entry_key* 
 val_verify_new_DNSKEYs(struct regional* region, struct module_env* env, 
 	struct val_env* ve, struct ub_packed_rrset_key* dnskey_rrset, 
-	struct ub_packed_rrset_key* ds_rrset, char** reason)
+	struct ub_packed_rrset_key* ds_rrset, int downprot, char** reason)
 {
 	enum sec_status sec = val_verify_DNSKEY_with_DS(env, ve, 
-		dnskey_rrset, ds_rrset, reason);
+		dnskey_rrset, ds_rrset, downprot, reason);
 
 	if(sec == sec_status_secure) {
 		return key_entry_create_rrset(region, 

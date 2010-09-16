@@ -117,12 +117,14 @@ void val_find_signer(enum val_classification subtype,
  * @param ve: validator environment (verification settings)
  * @param rrset: what to verify
  * @param keys: dnskey rrset to verify with.
+ * @param downprot: if true provide downgrade protection otherwise one
+ *   algorithm is enough.
  * @param reason: reason of failure. Fixed string or alloced in scratch.
  * @return security status of verification.
  */
 enum sec_status val_verify_rrset(struct module_env* env, struct val_env* ve,
 	struct ub_packed_rrset_key* rrset, struct ub_packed_rrset_key* keys,
-	char** reason);
+	int downprot, char** reason);
 
 /**
  * Verify RRset with keys from a keyset.
@@ -144,6 +146,8 @@ enum sec_status val_verify_rrset_entry(struct module_env* env,
  * @param ve: validator environment (verification settings)
  * @param dnskey_rrset: DNSKEY rrset to verify
  * @param ds_rrset: DS rrset to verify with.
+ * @param downprot: if true provide downgrade protection otherwise one
+ *   algorithm is enough.
  * @param reason: reason of failure. Fixed string or alloced in scratch.
  * @return: sec_status_secure if a DS matches.
  *     sec_status_insecure if end of trust (i.e., unknown algorithms).
@@ -151,7 +155,7 @@ enum sec_status val_verify_rrset_entry(struct module_env* env,
  */
 enum sec_status val_verify_DNSKEY_with_DS(struct module_env* env, 
 	struct val_env* ve, struct ub_packed_rrset_key* dnskey_rrset, 
-	struct ub_packed_rrset_key* ds_rrset, char** reason);
+	struct ub_packed_rrset_key* ds_rrset, int downprot, char** reason);
 
 /**
  * Verify new DNSKEYs with DS rrset. The DS contains hash values that should
@@ -163,6 +167,8 @@ enum sec_status val_verify_DNSKEY_with_DS(struct module_env* env,
  * @param ve: validator environment (verification settings)
  * @param dnskey_rrset: DNSKEY rrset to verify
  * @param ds_rrset: DS rrset to verify with.
+ * @param downprot: if true provide downgrade protection otherwise one
+ *   algorithm is enough.
  * @param reason: reason of failure. Fixed string or alloced in scratch.
  * @return a KeyEntry. This will either contain the now trusted
  *         dnskey_rrset, a "null" key entry indicating that this DS
@@ -176,7 +182,7 @@ enum sec_status val_verify_DNSKEY_with_DS(struct module_env* env,
 struct key_entry_key* val_verify_new_DNSKEYs(struct regional* region, 
 	struct module_env* env, struct val_env* ve, 
 	struct ub_packed_rrset_key* dnskey_rrset, 
-	struct ub_packed_rrset_key* ds_rrset, char** reason);
+	struct ub_packed_rrset_key* ds_rrset, int downprot, char** reason);
 
 /**
  * Determine if DS rrset is usable for validator or not.

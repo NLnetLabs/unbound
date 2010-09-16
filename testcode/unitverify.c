@@ -161,7 +161,7 @@ verifytest_rrset(struct module_env* env, struct val_env* ve,
 			rrset->rk.dname, ntohs(rrset->rk.type),
 			ntohs(rrset->rk.rrset_class));
 	}
-	sec = dnskeyset_verify_rrset(env, ve, rrset, dnskey, &reason);
+	sec = dnskeyset_verify_rrset(env, ve, rrset, dnskey, 1, &reason);
 	if(vsig) {
 		printf("verify outcome is: %s %s\n", sec_status_to_string(sec),
 			reason?reason:"");

@@ -221,6 +221,8 @@ uint16_t dnskey_get_flags(struct ub_packed_rrset_key* k, size_t idx);
  * @param ve: validator environment, date settings.
  * @param rrset: to be validated.
  * @param dnskey: DNSKEY rrset, keyset to try.
+ * @param downprot: if true provide downgrade protection otherwise one
+ *   algorithm is enough.
  * @param reason: if bogus, a string returned, fixed or alloced in scratch.
  * @return SECURE if one key in the set verifies one rrsig.
  *	UNCHECKED on allocation errors, unsupported algorithms, malformed data,
@@ -228,7 +230,7 @@ uint16_t dnskey_get_flags(struct ub_packed_rrset_key* k, size_t idx);
  */
 enum sec_status dnskeyset_verify_rrset(struct module_env* env, 
 	struct val_env* ve, struct ub_packed_rrset_key* rrset, 
-	struct ub_packed_rrset_key* dnskey, char** reason);
+	struct ub_packed_rrset_key* dnskey, int downprot, char** reason);
 
 /** 
  * verify rrset against one specific dnskey (from rrset) 

@@ -975,7 +975,7 @@ verify_dnskey(struct module_env* env, struct val_env* ve,
 	if(tp->ds_rrset) {
 		/* verify with ds, any will do to prime autotrust */
 		enum sec_status sec = val_verify_DNSKEY_with_DS(
-			env, ve, rrset, tp->ds_rrset, &reason);
+			env, ve, rrset, tp->ds_rrset, 0, &reason);
 		verbose(VERB_ALGO, "autotrust: validate DNSKEY with DS: %s",
 			sec_status_to_string(sec));
 		if(sec == sec_status_secure) {
@@ -985,7 +985,7 @@ verify_dnskey(struct module_env* env, struct val_env* ve,
 	if(tp->dnskey_rrset) {
 		/* verify with keys */
 		enum sec_status sec = val_verify_rrset(env, ve, rrset,
-			tp->dnskey_rrset, &reason);
+			tp->dnskey_rrset, 0, &reason);
 		verbose(VERB_ALGO, "autotrust: validate DNSKEY with keys: %s",
 			sec_status_to_string(sec));
 		if(sec == sec_status_secure) {

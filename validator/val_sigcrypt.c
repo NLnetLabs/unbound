@@ -533,7 +533,7 @@ int algo_needs_missing(struct algo_needs* n)
 enum sec_status 
 dnskeyset_verify_rrset(struct module_env* env, struct val_env* ve,
 	struct ub_packed_rrset_key* rrset, struct ub_packed_rrset_key* dnskey,
-	char** reason)
+	int downprot, char** reason)
 {
 	enum sec_status sec;
 	size_t i, num;
@@ -561,17 +561,19 @@ dnskeyset_verify_rrset(struct module_env* env, struct val_env* ve,
 			dnskey, i, &sortree, reason);
 		/* see which algorithm has been fixed up */
 		if(sec == sec_status_secure) {
-			if(algo_needs_set_secure(&needs,
+			if(!downprot)
+				return sec; /* done! */
+			else if(algo_needs_set_secure(&needs,
 				(uint8_t)rrset_get_sig_algo(rrset, i)))
 				return sec; /* done! */
-		} else if(sec == sec_status_bogus) {
+		} else if(downprot && sec == sec_status_bogus) {
 			algo_needs_set_bogus(&needs,
 				(uint8_t)rrset_get_sig_algo(rrset, i));
 		}
 	}
 	verbose(VERB_ALGO, "rrset failed to verify: no valid signatures for "
 		"%d algorithms", (int)algo_needs_num_missing(&needs));
-	if((alg=algo_needs_missing(&needs)) != 0) {
+	if(downprot && (alg=algo_needs_missing(&needs)) != 0) {
 		algo_needs_reason(env, alg, reason, "no signatures");
 	}
 	return sec_status_bogus;

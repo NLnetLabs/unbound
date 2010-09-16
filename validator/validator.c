@@ -2246,7 +2246,7 @@ primeResponseToKE(struct ub_packed_rrset_key* dnskey_rrset,
 	/* attempt to verify with trust anchor DS and DNSKEY */
 	if(ta->ds_rrset) {
 		kkey = val_verify_new_DNSKEYs(qstate->region, qstate->env, ve, 
-			dnskey_rrset, ta->ds_rrset, &reason);
+			dnskey_rrset, ta->ds_rrset, 0, &reason);
 		if(!kkey) {
 			log_err("out of memory: verifying prime DS");
 			return NULL;
@@ -2260,7 +2260,7 @@ primeResponseToKE(struct ub_packed_rrset_key* dnskey_rrset,
 	}
 	if(sec != sec_status_secure && ta->dnskey_rrset) {
 		sec = val_verify_rrset(qstate->env, ve, dnskey_rrset,
-			ta->dnskey_rrset, &reason);
+			ta->dnskey_rrset, 0, &reason);
 		verbose(VERB_DETAIL, "validate keys with anchor(DNSKEY): %s", 
 			sec_status_to_string(sec));
 		if(sec == sec_status_secure) {
@@ -2614,6 +2614,7 @@ process_dnskey_response(struct module_qstate* qstate, struct val_qstate* vq,
 	struct val_env* ve = (struct val_env*)qstate->env->modinfo[id];
 	struct key_entry_key* old = vq->key_entry;
 	struct ub_packed_rrset_key* dnskey = NULL;
+	int downprot;
 	char* reason = NULL;
 
 	if(rcode == LDNS_RCODE_NOERROR)
@@ -2649,8 +2650,10 @@ process_dnskey_response(struct module_qstate* qstate, struct val_qstate* vq,
 		vq->state = VAL_VALIDATE_STATE;
 		return;
 	}
+	/* protect DS against downgrade, but DLV does not(for key scrapers) */
+	downprot = (ntohs(vq->ds_rrset->rk.type) == LDNS_RR_TYPE_DS);
 	vq->key_entry = val_verify_new_DNSKEYs(qstate->region, qstate->env,
-		ve, dnskey, vq->ds_rrset, &reason);
+		ve, dnskey, vq->ds_rrset, downprot, &reason);
 
 	if(!vq->key_entry) {
 		log_err("out of memory in verify new DNSKEYs");
