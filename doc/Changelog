@@ -1,6 +1,7 @@
 16 September 2010: Wouter
 	- Algorithm rollover operational reality intrudes, for trust-anchor,
 	  5011-store, and DLV-anchor if one key matches it's good enough.
+	- iana portlist updated.
 
 15 September 2010: Wouter
 	- Abide RFC5155 section 9.2: no AD flag for replies with NSEC3 optout.
