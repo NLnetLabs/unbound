@@ -1,3 +1,6 @@
+17 September 2010: Wouter
+	- DLV has downgrade protection again, because the RFC says so.
+
 16 September 2010: Wouter
 	- Algorithm rollover operational reality intrudes, for trust-anchor,
 	  5011-store, and DLV-anchor if one key matches it's good enough.

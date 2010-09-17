@@ -2650,8 +2650,7 @@ process_dnskey_response(struct module_qstate* qstate, struct val_qstate* vq,
 		vq->state = VAL_VALIDATE_STATE;
 		return;
 	}
-	/* protect DS against downgrade, but DLV does not(for key scrapers) */
-	downprot = (ntohs(vq->ds_rrset->rk.type) == LDNS_RR_TYPE_DS);
+	downprot = 1;
 	vq->key_entry = val_verify_new_DNSKEYs(qstate->region, qstate->env,
 		ve, dnskey, vq->ds_rrset, downprot, &reason);
 
