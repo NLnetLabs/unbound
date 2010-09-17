@@ -1,5 +1,6 @@
 17 September 2010: Wouter
 	- DLV has downgrade protection again, because the RFC says so.
+	- iana portlist updated.
 
 16 September 2010: Wouter
 	- Algorithm rollover operational reality intrudes, for trust-anchor,
