@@ -1,3 +1,7 @@
+22 September 2010: Wouter
+	- compliance with draft-ietf-dnsop-default-local-zones-14, removed
+	  reverse ipv6 orchid prefix from builtin list.
+
 17 September 2010: Wouter
 	- DLV has downgrade protection again, because the RFC says so.
 	- iana portlist updated.

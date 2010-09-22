@@ -698,7 +698,6 @@ lz_enter_defaults(struct local_zones* zones, struct config_file* cfg,
 		!add_as112_default(zones, cfg, buf, "9.e.f.ip6.arpa.") ||
 		!add_as112_default(zones, cfg, buf, "a.e.f.ip6.arpa.") ||
 		!add_as112_default(zones, cfg, buf, "b.e.f.ip6.arpa.") ||
-		!add_as112_default(zones, cfg, buf, "0.1.1.0.0.2.ip6.arpa.") ||
 		!add_as112_default(zones, cfg, buf, "8.b.d.0.1.0.0.2.ip6.arpa.")) {
 		log_err("out of memory adding default zone");
 		return 0;
