@@ -12421,7 +12421,7 @@ CC="$lt_save_CC"
 
 
 # Checks for header files.
-for ac_header in stdarg.h stdbool.h netinet/in.h sys/param.h sys/socket.h sys/uio.h sys/resource.h arpa/inet.h syslog.h netdb.h sys/wait.h pwd.h glob.h grp.h login_cap.h winsock2.h ws2tcpip.h
+for ac_header in stdarg.h stdbool.h netinet/in.h sys/param.h sys/socket.h sys/uio.h sys/resource.h arpa/inet.h syslog.h netdb.h sys/wait.h pwd.h glob.h grp.h login_cap.h winsock2.h ws2tcpip.h expat.h
 do :
   as_ac_Header=`$as_echo "ac_cv_header_$ac_header" | $as_tr_sh`
 ac_fn_c_check_header_compile "$LINENO" "$ac_header" "$as_ac_Header" "$ac_includes_default
@@ -16542,7 +16542,7 @@ _ACEOF
 
 
 
-ac_config_files="$ac_config_files Makefile doc/example.conf doc/libunbound.3 doc/unbound.8 doc/unbound-checkconf.8 doc/unbound.conf.5 doc/unbound-control.8"
+ac_config_files="$ac_config_files Makefile doc/example.conf doc/libunbound.3 doc/unbound.8 doc/unbound-anchor.8 doc/unbound-checkconf.8 doc/unbound.conf.5 doc/unbound-control.8"
 
 ac_config_headers="$ac_config_headers config.h"
 
@@ -17497,6 +17497,7 @@ do
     "doc/example.conf") CONFIG_FILES="$CONFIG_FILES doc/example.conf" ;;
     "doc/libunbound.3") CONFIG_FILES="$CONFIG_FILES doc/libunbound.3" ;;
     "doc/unbound.8") CONFIG_FILES="$CONFIG_FILES doc/unbound.8" ;;
+    "doc/unbound-anchor.8") CONFIG_FILES="$CONFIG_FILES doc/unbound-anchor.8" ;;
     "doc/unbound-checkconf.8") CONFIG_FILES="$CONFIG_FILES doc/unbound-checkconf.8" ;;
     "doc/unbound.conf.5") CONFIG_FILES="$CONFIG_FILES doc/unbound.conf.5" ;;
     "doc/unbound-control.8") CONFIG_FILES="$CONFIG_FILES doc/unbound-control.8" ;;

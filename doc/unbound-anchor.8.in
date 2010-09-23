@@ -1,0 +1,64 @@
+.TH "unbound-anchor" "8" "@date@" "NLnet Labs" "unbound @version@"
+.\"
+.\" unbound-control.8 -- unbound remote control manual
+.\"
+.\" Copyright (c) 2008, NLnet Labs. All rights reserved.
+.\"
+.\" See LICENSE for the license.
+.\"
+.\"
+.SH "NAME"
+.LP
+.B unbound\-anchor
+\- Unbound anchor utility.
+.SH "SYNOPSIS"
+.B unbound\-anchor
+.RB [ opts ]
+.SH "DESCRIPTION"
+.B Unbound\-anchor
+performs setup or update of the root trust anchor for DNSSEC validation.
+It can be run (as root) from the commandline, or run as part of startup
+scripts.  Before you start the \fIunbound\fR(8) DNS server.
+.P
+It provides builtin default contents for the root anchor and root update
+certificate files.
+.P
+It tests if the root anchor file works, and if not, and an update is possible,
+attempts to update the root anchor using the root update certificate.
+It performs a https fetch of root-anchors.xml and checks the results, if
+all checks are successful, it updates the root anchor file.  Otherwise
+the root anchor file is unchanged.  It performs RFC5011 tracking if the
+DNSSEC information available via the DNS makes that possible.
+.P
+If does not perform an update if the certificate is expired, if the network
+is down or other errors occur.
+.P
+The available options are:
+.TP
+.B \-a \fIfile
+The root anchor key file, that is read in and written out.
+Default is /usr/local/etc/unbound/root.key.
+.TP
+.B \-c \fIfile
+The root update certificate file, that is read in. It can be updated too.
+Default is /usr/local/etc/unbound/icannbundle.pem.
+.TP
+.B \-h
+Show the version and commandline option help.
+.TP
+.B \-v
+More verbose.  Prints output detailing what happens.
+.TP
+.B \-C \fIcfgfile
+Config file to read with debug settings.
+.SH "FILES"
+.TP
+.I /usr/local/etc/unbound/root.key
+The root anchor file, updated with 5011 tracking, and read and written to.
+.TP
+.I /usr/local/etc/unbound/icannbundle.pem
+The trusted self\-signed certificate that is used to verify the downloaded
+DNSSEC root trust anchor.
+.SH "SEE ALSO"
+\fIunbound.conf\fR(5), 
+\fIunbound\fR(8).

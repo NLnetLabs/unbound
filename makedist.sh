@@ -260,14 +260,15 @@ if [ "$DOWIN" = "yes" ]; then
     $strip anchor-update.exe
     $strip unbound-control.exe
     $strip unbound-host.exe
+    $strip unbound-anchor.exe
     $strip unbound-checkconf.exe
     $strip unbound-service-install.exe
     $strip unbound-service-remove.exe
     cd tmp.$$
     cp ../doc/example.conf example.conf
-    cp ../unbound.exe ../unbound-host.exe ../unbound-control.exe ../unbound-checkconf.exe ../unbound-service-install.exe ../unbound-service-remove.exe ../LICENSE ../winrc/unbound-website.url ../winrc/service.conf ../winrc/README.txt .
+    cp ../unbound.exe ../unbound-anchor.exe ../unbound-host.exe ../unbound-control.exe ../unbound-checkconf.exe ../unbound-service-install.exe ../unbound-service-remove.exe ../LICENSE ../winrc/unbound-website.url ../winrc/service.conf ../winrc/README.txt .
     # zipfile
-    zip ../$file LICENSE README.txt unbound.exe unbound-host.exe unbound-control.exe unbound-checkconf.exe unbound-service-install.exe unbound-service-remove.exe example.conf service.conf unbound-website.url
+    zip ../$file LICENSE README.txt unbound.exe unbound-anchor.exe unbound-host.exe unbound-control.exe unbound-checkconf.exe unbound-service-install.exe unbound-service-remove.exe example.conf service.conf unbound-website.url
     info "Testing $file"
     (cd .. ; zip -T $file )
     # installer
@@ -385,6 +386,7 @@ replace_all doc/unbound.8.in
 replace_all doc/unbound.conf.5.in
 replace_all doc/unbound-checkconf.8.in
 replace_all doc/unbound-control.8.in
+replace_all doc/unbound-anchor.8.in
 replace_all doc/unbound-host.1
 replace_all doc/libunbound.3.in
 

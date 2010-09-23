@@ -110,6 +110,8 @@ CONTROL_SRC=smallapp/unbound-control.c smallapp/worker_cb.c $(COMMON_SRC)
 CONTROL_OBJ=$(addprefix $(BUILD),$(CONTROL_SRC:.c=.lo)) $(COMPAT_OBJ)
 HOST_SRC=smallapp/unbound-host.c
 HOST_OBJ=$(addprefix $(BUILD),$(HOST_SRC:.c=.lo)) $(filter-out $(BUILD)compat/ctime_r.lo, $(COMPAT_OBJ))
+UBANCHOR_SRC=smallapp/unbound-anchor.c
+UBANCHOR_OBJ=$(addprefix $(BUILD),$(UBANCHOR_SRC:.c=.lo)) $(filter-out $(BUILD)compat/ctime_r.lo, $(COMPAT_OBJ))
 TESTBOUND_SRC=testcode/testbound.c testcode/ldns-testpkts.c \
 	daemon/worker.c daemon/acl_list.c daemon/daemon.c daemon/stats.c \
 	testcode/replay.c testcode/fake_event.c $(filter-out util/netevent.c \
@@ -141,7 +143,7 @@ ALL_SRC=$(sort $(COMMON_SRC) $(UNITTEST_SRC) $(DAEMON_SRC) \
 	$(TESTBOUND_SRC) $(LOCKVERIFY_SRC) $(PKTVIEW_SRC) $(SIGNIT_SRC) \
 	$(MEMSTATS_SRC) $(CHECKCONF_SRC) $(LIBUNBOUND_SRC) $(HOST_SRC) \
 	$(ASYNCLOOK_SRC) $(STREAMTCP_SRC) $(PERF_SRC) $(DELAYER_SRC) \
-	$(HARVEST_SRC) $(CONTROL_SRC))
+	$(HARVEST_SRC) $(CONTROL_SRC) $(UBANCHOR_SRC))
 ALL_OBJ=$(addprefix $(BUILD),$(ALL_SRC:.c=.lo) \
 	$(addprefix compat/,$(LIBOBJS:.o=.lo))) $(COMPAT_OBJ)
 
@@ -149,6 +151,7 @@ ifeq "$(UB_ON_WINDOWS)" "yes"
   DAEMON_SRC+=winrc/win_svc.c winrc/w_inst.c
   DAEMON_OBJ+=$(BUILD)winrc/rsrc_unbound.o $(BUILD)winrc/win_svc.lo
   HOST_OBJ+=$(BUILD)winrc/rsrc_unbound_host.o
+  UBANCHOR_OBJ+=$(BUILD)winrc/rsrc_unbound_anchor.o
   CONTROL_OBJ+=$(BUILD)winrc/rsrc_unbound_control.o
   CHECKCONF_OBJ+=$(BUILD)winrc/rsrc_unbound_checkconf.o
 
@@ -188,7 +191,7 @@ $(BUILD)%.lo:    $(srcdir)/%.c
 	@-if test ! -d $(dir $@); then $(INSTALL) -d $(patsubst %/,%,$(dir $@)); fi
 	$Q$(COMPILE) -o $@ -c $<
 
-all:	$(COMMON_OBJ) unbound$(EXEEXT) unbound-checkconf$(EXEEXT) lib unbound-host$(EXEEXT) unbound-control$(EXEEXT) unbound-control-setup $(WINAPPS)
+all:	$(COMMON_OBJ) unbound$(EXEEXT) unbound-checkconf$(EXEEXT) lib unbound-host$(EXEEXT) unbound-control$(EXEEXT) unbound-anchor$(EXEEXT) unbound-control-setup $(WINAPPS)
 
 TEST_BIN=$(addsuffix $(EXEEXT),asynclook delayer harvest lock-verify \
 	memstats perf pktview signit streamtcp testbound unittest)
@@ -237,6 +240,10 @@ unbound-control$(EXEEXT):	$(CONTROL_OBJ) $(ldnslib)
 unbound-host$(EXEEXT):	$(HOST_OBJ) libunbound.la $(ldnslib)
 	$(INFO) Link $@
 	$Q$(LINK) -o $@ $(sort $(HOST_OBJ)) -L. -L.libs -lunbound $(LIBS)
+
+unbound-anchor$(EXEEXT):	$(UBANCHOR_OBJ) libunbound.la $(ldnslib)
+	$(INFO) Link $@
+	$Q$(LINK) -o $@ $(sort $(UBANCHOR_OBJ)) -L. -L.libs -lunbound -lexpat -lssl $(LIBS)
 
 unbound-service-install$(EXEEXT):	$(SVCINST_OBJ)
 	$(INFO) Link $@
@@ -343,7 +350,7 @@ util/configparser.c util/configparser.h:  $(srcdir)/util/configparser.y
 
 clean:
 	rm -f *.o *.d *.lo *~ tags
-	rm -f unbound$(EXEEXT) unbound-checkconf$(EXEEXT) unbound-host$(EXEEXT) unbound-control$(EXEEXT) unbound-control-setup libunbound.la
+	rm -f unbound$(EXEEXT) unbound-checkconf$(EXEEXT) unbound-host$(EXEEXT) unbound-control$(EXEEXT) unbound-anchor$(EXEEXT) unbound-control-setup libunbound.la
 	rm -rf autom4te.cache .libs build doc/html doc/xml
 
 realclean: clean
@@ -380,6 +387,7 @@ strip:
 	$(STRIP) unbound-checkconf$(EXEEXT)
 	$(STRIP) unbound-control$(EXEEXT)
 	$(STRIP) unbound-host$(EXEEXT)
+	$(STRIP) unbound-anchor$(EXEEXT)
 
 install:	all
 	$(INSTALL) -m 755 -d $(DESTDIR)$(sbindir)
@@ -394,6 +402,7 @@ install:	all
 	$(LIBTOOL) --mode=install cp unbound-checkconf$(EXEEXT) $(DESTDIR)$(sbindir)/unbound-checkconf$(EXEEXT)
 	$(LIBTOOL) --mode=install cp unbound-control$(EXEEXT) $(DESTDIR)$(sbindir)/unbound-control$(EXEEXT)
 	$(LIBTOOL) --mode=install cp unbound-host$(EXEEXT) $(DESTDIR)$(sbindir)/unbound-host$(EXEEXT)
+	$(LIBTOOL) --mode=install cp unbound-anchor$(EXEEXT) $(DESTDIR)$(sbindir)/unbound-anchor$(EXEEXT)
 ifeq "$(WITH_PYTHONMODULE)" "yes"
 	$(INSTALL) -m 755 -d $(DESTDIR)$(PYTHON_SITE_PKG)
 	$(INSTALL) -c -m 644 pythonmod/unboundmodule.py $(DESTDIR)$(PYTHON_SITE_PKG)/unboundmodule.py
@@ -407,6 +416,7 @@ endif
 	$(INSTALL) -c -m 644 doc/unbound.8 $(DESTDIR)$(mandir)/man8
 	$(INSTALL) -c -m 644 doc/unbound-checkconf.8 $(DESTDIR)$(mandir)/man8
 	$(INSTALL) -c -m 644 doc/unbound-control.8 $(DESTDIR)$(mandir)/man8
+	$(INSTALL) -c -m 644 doc/unbound-anchor.8 $(DESTDIR)$(mandir)/man8
 	$(INSTALL) -c -m 644 doc/unbound.conf.5 $(DESTDIR)$(mandir)/man5
 	$(INSTALL) -c -m 644 $(srcdir)/doc/unbound-host.1 $(DESTDIR)$(mandir)/man1
 	$(INSTALL) -c -m 644 doc/libunbound.3 $(DESTDIR)$(mandir)/man3
@@ -417,8 +427,8 @@ endif
 	$(LIBTOOL) --mode=finish $(DESTDIR)$(libdir)
 
 uninstall:
-	rm -f -- $(DESTDIR)$(sbindir)/unbound$(EXEEXT) $(DESTDIR)$(sbindir)/unbound-checkconf$(EXEEXT) $(DESTDIR)$(sbindir)/unbound-host$(EXEEXT) $(DESTDIR)$(sbindir)/unbound-control$(EXEEXT) $(DESTDIR)$(sbindir)/unbound-control-setup
-	rm -f -- $(DESTDIR)$(mandir)/man8/unbound.8 $(DESTDIR)$(mandir)/man8/unbound-checkconf.8 $(DESTDIR)$(mandir)/man5/unbound.conf.5 $(DESTDIR)$(mandir)/man8/unbound-control.8
+	rm -f -- $(DESTDIR)$(sbindir)/unbound$(EXEEXT) $(DESTDIR)$(sbindir)/unbound-checkconf$(EXEEXT) $(DESTDIR)$(sbindir)/unbound-host$(EXEEXT) $(DESTDIR)$(sbindir)/unbound-control$(EXEEXT) $(DESTDIR)$(sbindir)/unbound-anchor$(EXEEXT) $(DESTDIR)$(sbindir)/unbound-control-setup
+	rm -f -- $(DESTDIR)$(mandir)/man8/unbound.8 $(DESTDIR)$(mandir)/man8/unbound-checkconf.8 $(DESTDIR)$(mandir)/man5/unbound.conf.5 $(DESTDIR)$(mandir)/man8/unbound-control.8 $(DESTDIR)$(mandir)/man8/unbound-anchor.8
 	rm -f -- $(DESTDIR)$(mandir)/man1/unbound-host.1 $(DESTDIR)$(mandir)/man3/libunbound.3
 	rm -f -- $(DESTDIR)$(includedir)/unbound.h
 	$(LIBTOOL) --mode=uninstall rm -f $(DESTDIR)$(libdir)/libunbound.la

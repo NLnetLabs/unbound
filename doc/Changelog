@@ -1,3 +1,6 @@
+23 September 2010: Wouter
+	- unbound-anchor app, unbound requires libexpat (xml parser library).
+
 22 September 2010: Wouter
 	- compliance with draft-ietf-dnsop-default-local-zones-14, removed
 	  reverse ipv6 orchid prefix from builtin list.
