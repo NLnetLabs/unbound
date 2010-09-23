@@ -218,7 +218,7 @@ AC_CHECK_TOOL(STRIP, strip)
 ACX_LIBTOOL_C_ONLY
 
 # Checks for header files.
-AC_CHECK_HEADERS([stdarg.h stdbool.h netinet/in.h sys/param.h sys/socket.h sys/uio.h sys/resource.h arpa/inet.h syslog.h netdb.h sys/wait.h pwd.h glob.h grp.h login_cap.h winsock2.h ws2tcpip.h expat.h],,, [AC_INCLUDES_DEFAULT])
+AC_CHECK_HEADERS([stdarg.h stdbool.h netinet/in.h sys/param.h sys/socket.h sys/uio.h sys/resource.h arpa/inet.h syslog.h netdb.h sys/wait.h pwd.h glob.h grp.h login_cap.h winsock2.h ws2tcpip.h],,, [AC_INCLUDES_DEFAULT])
 
 # check for types.  
 # Using own tests for int64* because autoconf builtin only give 32bit.
@@ -527,6 +527,26 @@ large outgoing port ranges.  ])
 else
 	AC_DEFINE(USE_MINI_EVENT, 1, [Define if you want to use internal select based events])
 fi
+
+# check for libexpat
+AC_MSG_CHECKING(for libexpat)
+found_libexpat="no"
+for dir in /usr/local /opt/local /usr/lib /usr/pkg /usr/sfw /usr; do
+            if test -f "$dir/include/expat.h"; then
+		found_libexpat="yes"
+		dnl assume /usr is in default path.
+		if test "$dir" != "/usr"; then
+                    CPPFLAGS="$CPPFLAGS -I$dir/include"
+		    LDFLAGS="$LDFLAGS -L$dir/lib"
+		fi
+            	AC_MSG_RESULT(found in $dir)
+                break;
+            fi
+done
+if test x_$found_libexpat != x_yes; then
+	AC_ERROR([Could not find libexpat, expat.h])
+fi
+AC_CHECK_HEADERS([expat.h],,, [AC_INCLUDES_DEFAULT])
 
 # set static linking if requested
 AC_SUBST(staticexe)

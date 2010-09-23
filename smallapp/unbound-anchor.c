@@ -50,6 +50,8 @@
 #ifdef HAVE_GETOPT_H
 #include <getopt.h>
 #endif
+#include <openssl/x509.h>
+#include <openssl/pem.h>
 
 /* TODO configure defines with prefix */
 /** root key file, 5011 tracked */
@@ -67,6 +69,16 @@
 
 /** verbosity for this application */
 static int verb = 0;
+
+/** list of IP addresses */
+struct ip_list {
+	/** next in list */
+	struct ip_list* next;
+	/** length of addr */
+	socklen_t len;
+	/** address ready to connect to */
+	struct sockaddr_storage addr;
+};
 
 /** Give unbound-anchor usage, and exit (1). */
 static void
@@ -105,6 +117,222 @@ usage()
 	exit(1);
 }
 
+/** print ub context creation error and exit */
+static void
+ub_ctx_error_exit(struct ub_ctx* ctx, const char* str, const char* str2)
+{
+	ub_ctx_delete(ctx);
+	if(str && str2 && verb) printf("%s: %s\n", str, str2);
+	if(verb) printf("error: could not create unbound resolver context\n");
+	exit(0);
+}
+
+/**
+ * Create a new unbound context with the commandline settings applied
+ */
+static struct ub_ctx* 
+create_unbound_context(char* res_conf, char* root_hints, char* debugconf,
+        int ip4only, int ip6only)
+{
+	int r;
+	struct ub_ctx* ctx = ub_ctx_create();
+	if(!ctx) {
+		if(verb) printf("out of memory\n");
+		exit(0);
+	}
+	/* do not waste time and network traffic to fetch extra nameservers */
+	r = ub_ctx_set_option(ctx, "target-fetch-policy:", "0 0 0 0 0");
+	if(r && verb) printf("ctx targetfetchpolicy: %s\n", ub_strerror(r));
+	/* read config file first, so its settings can be overridden */
+	if(debugconf) {
+		r = ub_ctx_config(ctx, debugconf);
+		if(r) ub_ctx_error_exit(ctx, debugconf, ub_strerror(r));
+	}
+	if(res_conf) {
+		r = ub_ctx_resolvconf(ctx, res_conf);
+		if(r) ub_ctx_error_exit(ctx, res_conf, ub_strerror(r));
+	}
+	if(root_hints) {
+		r = ub_ctx_set_option(ctx, "root-hints:", root_hints);
+		if(r) ub_ctx_error_exit(ctx, root_hints, ub_strerror(r));
+	}
+	if(ip4only) {
+		r = ub_ctx_set_option(ctx, "do-ip6:", "no");
+		if(r) ub_ctx_error_exit(ctx, "ip4only", ub_strerror(r));
+	}
+	if(ip6only) {
+		r = ub_ctx_set_option(ctx, "do-ip4:", "no");
+		if(r) ub_ctx_error_exit(ctx, "ip6only", ub_strerror(r));
+	}
+	return ctx;
+}
+
+/** read certificates from a PEM bio */
+static STACK_OF(X509)*
+read_cert_bio(BIO* bio)
+{
+	STACK_OF(X509) *sk = sk_X509_new_null();
+	if(!sk) {
+		if(verb) printf("out of memory\n");
+		exit(0);
+	}
+	while(!BIO_eof(bio)) {
+		X509* x = PEM_read_bio_X509(bio, NULL, 0, NULL);
+		if(x == NULL) {
+			if(verb) printf("failed to read X509\n");
+			continue;
+		}
+		if(!sk_X509_push(sk, x)) {
+			if(verb) printf("out of memory\n");
+			exit(0);
+		}
+	}
+	return sk;
+}
+
+/* read the certificate file */
+static STACK_OF(X509)*
+read_cert_file(char* file)
+{
+	STACK_OF(X509)* sk = sk_X509_new_null();
+	FILE* in;
+	int content = 0;
+	if(!sk) {
+		if(verb) printf("out of memory\n");
+		exit(0);
+	}
+	in = fopen(file, "r");
+	if(!in) {
+		if(verb) printf("%s: %s\n", file, strerror(errno));
+		sk_X509_free(sk);
+		return NULL;
+	}
+	while(!feof(in)) {
+		X509* x = PEM_read_X509(in, NULL, 0, NULL);
+		if(x == NULL) {
+			if(verb) printf("failed to read X509\n");
+			continue;
+		}
+		if(!sk_X509_push(sk, x)) {
+			if(verb) printf("out of memory\n");
+			fclose(in);
+			exit(0);
+		}
+		content = 1;
+	}
+	fclose(in);
+	if(!content) {
+		if(verb) printf("%s is empty\n", file);
+		sk_X509_free(sk);
+		return NULL;
+	}
+	return sk;
+}
+
+/** read certificates from the builtin certificate */
+static STACK_OF(X509)*
+read_builtin_cert(void)
+{
+	const char* builtin_cert =
+"-----BEGIN CERTIFICATE-----\n"
+"MIIDdzCCAl+gAwIBAgIBATANBgkqhkiG9w0BAQsFADBdMQ4wDAYDVQQKEwVJQ0FO\n"
+"TjEmMCQGA1UECxMdSUNBTk4gQ2VydGlmaWNhdGlvbiBBdXRob3JpdHkxFjAUBgNV\n"
+"BAMTDUlDQU5OIFJvb3QgQ0ExCzAJBgNVBAYTAlVTMB4XDTA5MTIyMzA0MTkxMloX\n"
+"DTI5MTIxODA0MTkxMlowXTEOMAwGA1UEChMFSUNBTk4xJjAkBgNVBAsTHUlDQU5O\n"
+"IENlcnRpZmljYXRpb24gQXV0aG9yaXR5MRYwFAYDVQQDEw1JQ0FOTiBSb290IENB\n"
+"MQswCQYDVQQGEwJVUzCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAKDb\n"
+"cLhPNNqc1NB+u+oVvOnJESofYS9qub0/PXagmgr37pNublVThIzyLPGCJ8gPms9S\n"
+"G1TaKNIsMI7d+5IgMy3WyPEOECGIcfqEIktdR1YWfJufXcMReZwU4v/AdKzdOdfg\n"
+"ONiwc6r70duEr1IiqPbVm5T05l1e6D+HkAvHGnf1LtOPGs4CHQdpIUcy2kauAEy2\n"
+"paKcOcHASvbTHK7TbbvHGPB+7faAztABLoneErruEcumetcNfPMIjXKdv1V1E3C7\n"
+"MSJKy+jAqqQJqjZoQGB0necZgUMiUv7JK1IPQRM2CXJllcyJrm9WFxY0c1KjBO29\n"
+"iIKK69fcglKcBuFShUECAwEAAaNCMEAwDwYDVR0TAQH/BAUwAwEB/zAOBgNVHQ8B\n"
+"Af8EBAMCAf4wHQYDVR0OBBYEFLpS6UmDJIZSL8eZzfyNa2kITcBQMA0GCSqGSIb3\n"
+"DQEBCwUAA4IBAQAP8emCogqHny2UYFqywEuhLys7R9UKmYY4suzGO4nkbgfPFMfH\n"
+"6M+Zj6owwxlwueZt1j/IaCayoKU3QsrYYoDRolpILh+FPwx7wseUEV8ZKpWsoDoD\n"
+"2JFbLg2cfB8u/OlE4RYmcxxFSmXBg0yQ8/IoQt/bxOcEEhhiQ168H2yE5rxJMt9h\n"
+"15nu5JBSewrCkYqYYmaxyOC3WrVGfHZxVI7MpIFcGdvSb2a1uyuua8l0BKgk3ujF\n"
+"0/wsHNeP22qNyVO+XVBzrM8fk8BSUFuiT/6tZTYXRtEt5aKQZgXbKU5dUF3jT9qg\n"
+"j/Br5BZw3X/zd325TvnswzMC1+ljLzHnQGGk\n"
+"-----END CERTIFICATE-----\n"
+		;
+	STACK_OF(X509)* sk;
+	BIO *bio = BIO_new_mem_buf((void*)builtin_cert, strlen(builtin_cert));
+	if(!bio) {
+		if(verb) printf("out of memory\n");
+		exit(0);
+	}
+	sk = read_cert_bio(bio);
+	if(!sk) {
+		if(verb) printf("internal error, out of memory\n");
+		exit(0);
+	}
+	BIO_free(bio);
+	return sk;
+}
+
+/** read update cert file or use builtin */
+static STACK_OF(X509)*
+read_cert_or_builtin(char* file, int* write_cert)
+{
+	STACK_OF(X509) *sk = read_cert_file(file);
+	if(!sk) {
+		*write_cert = 1;
+		if(verb) printf("using builtin certificate\n");
+		sk = read_builtin_cert();
+	}
+	if(verb) printf("have %d trusted certificates\n", sk_X509_num(sk));
+	return sk;
+}
+
+/** Resolve name, type, class and add addresses to iplist */
+static void
+add_ip(struct ub_ctx* ctx, char* host, int tp, int cl, struct ip_list** head)
+{
+}
+
+/**
+ * Resolve a domain name (even though the resolver is down and there is
+ * no trust anchor).  Without DNSSEC validation.
+ */
+static struct ip_list*
+resolve_name(char* host, char* res_conf, char* root_hints, char* debugconf,
+	int ip4only, int ip6only)
+{
+	struct ub_ctx* ctx;
+	struct ip_list* list = NULL;
+	/* first see if name is an IP address itself */
+	/* TODO */
+	
+	/* create resolver context */
+	ctx = create_unbound_context(res_conf, root_hints, debugconf,
+        	ip4only, ip6only);
+
+	/* try resolution of A */
+	if(!ip6only) {
+		add_ip(ctx, host, LDNS_RR_TYPE_A, LDNS_RR_CLASS_IN, &list);
+	}
+
+	/* try resolution of AAAA */
+	if(!ip4only) {
+		add_ip(ctx, host, LDNS_RR_TYPE_AAAA, LDNS_RR_CLASS_IN, &list);
+	}
+
+	ub_ctx_delete(ctx);
+	return list;
+}
+
+/**
+ * Do a HTTPS, HTTP1.1 over TLS, to fetch a file
+ * @param ip_list: list of IP addresses to use to fetch from.
+ * @param pathname: pathname of file on server to GET.
+ * @return a memory BIO with the file in it.
+ */
+static BIO*
+https(struct ip_list* ip_list, char* pathname)
+{
+}
+
 /** perform actual certupdate work */
 static int
 do_certupdate(char* root_anchor_file, char* root_cert_file,
@@ -112,11 +340,21 @@ do_certupdate(char* root_anchor_file, char* root_cert_file,
 	char* res_conf, char* root_hints, char* debugconf,
 	int ip4only, int ip6only, struct ub_result* dnskey)
 {
+	int write_cert = 0;
+	STACK_OF(X509)* cert;
+	BIO *pem, *xml, *p7s;
+	struct ip_list* ip_list;
 	/* read pem file or provide builtin */
+	cert = read_cert_or_builtin(root_cert_file, &write_cert);
 
 	/* lookup A, AAAA for the urlname (or parse urlname if IP address) */
+	ip_list = resolve_name(urlname, res_conf, root_hints, debugconf,
+		ip4only, ip6only);
 
 	/* fetch the necessary files over HTTPS */
+	xml = https(ip_list, xmlname);
+	p7s = https(ip_list, p7sname);
+	pem = https(ip_list, pemname);
 
 	/* update the pem file (optional) */
 
@@ -126,6 +364,10 @@ do_certupdate(char* root_anchor_file, char* root_cert_file,
 		/* reinstate 5011 tracking */
 	if(verb) printf("success: the anchor has been updated "
 			"using the cert\n");
+	BIO_free(xml);
+	BIO_free(p7s);
+	BIO_free(pem);
+	sk_X509_free(cert);
 	ub_resolve_free(dnskey);
 	return 0;
 }
@@ -221,56 +463,6 @@ provide_builtin(char* root_anchor_file)
 			break;
 	}
 	return 1;
-}
-
-/** print ub context creation error and exit */
-static void
-ub_ctx_error_exit(struct ub_ctx* ctx, const char* str, const char* str2)
-{
-	ub_ctx_delete(ctx);
-	if(str && str2 && verb) printf("%s: %s\n", str, str2);
-	if(verb) printf("error: could not create unbound resolver context\n");
-	exit(0);
-}
-
-/**
- * Create a new unbound context with the commandline settings applied
- */
-static struct ub_ctx* 
-create_unbound_context(char* res_conf, char* root_hints, char* debugconf,
-        int ip4only, int ip6only)
-{
-	int r;
-	struct ub_ctx* ctx = ub_ctx_create();
-	if(!ctx) {
-		if(verb) printf("out of memory\n");
-		exit(0);
-	}
-	/* do not waste time and network traffic to fetch extra nameservers */
-	r = ub_ctx_set_option(ctx, "target-fetch-policy:", "0 0 0 0 0");
-	if(r && verb) printf("ctx targetfetchpolicy: %s\n", ub_strerror(r));
-	/* read config file first, so its settings can be overridden */
-	if(debugconf) {
-		r = ub_ctx_config(ctx, debugconf);
-		if(r) ub_ctx_error_exit(ctx, debugconf, ub_strerror(r));
-	}
-	if(res_conf) {
-		r = ub_ctx_resolvconf(ctx, res_conf);
-		if(r) ub_ctx_error_exit(ctx, res_conf, ub_strerror(r));
-	}
-	if(root_hints) {
-		r = ub_ctx_set_option(ctx, "root-hints:", root_hints);
-		if(r) ub_ctx_error_exit(ctx, root_hints, ub_strerror(r));
-	}
-	if(ip4only) {
-		r = ub_ctx_set_option(ctx, "do-ip6:", "no");
-		if(r) ub_ctx_error_exit(ctx, "ip4only", ub_strerror(r));
-	}
-	if(ip6only) {
-		r = ub_ctx_set_option(ctx, "do-ip4:", "no");
-		if(r) ub_ctx_error_exit(ctx, "ip6only", ub_strerror(r));
-	}
-	return ctx;
 }
 
 /**
