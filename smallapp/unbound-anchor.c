@@ -130,6 +130,18 @@ usage()
 	exit(1);
 }
 
+/** print hex data */
+static void
+print_data(char* msg, char* data, int len)
+{
+	int i;
+	printf("%s: ", msg);
+	for(i=0; i<len; i++) {
+		printf(" %2.2x", (unsigned char)data[i]);
+	}
+	printf("\n");
+}
+
 /** print ub context creation error and exit */
 static void
 ub_ctx_error_exit(struct ub_ctx* ctx, const char* str, const char* str2)
@@ -180,6 +192,32 @@ create_unbound_context(char* res_conf, char* root_hints, char* debugconf,
 	return ctx;
 }
 
+/**
+ * Get current time.
+ * @param debugconf: with override time for tests
+ */
+static time_t
+get_time_now(char* debugconf)
+{
+	if(debugconf) {
+		FILE* in = fopen(debugconf, "r");
+		char line[1024];
+		if(!in) {
+			if(verb) printf("%s: %s\n", debugconf, strerror(errno));
+			return (time_t)time(NULL);
+		}
+		/* must be ^val-override-date: 1234567$ formatted */
+		while(fgets(line, (int)sizeof(line), in)) {
+			if(strncmp(line, "val-override-date: ", 19) == 0) {
+				fclose(in);
+				return (time_t)atoi(line+19);
+			}
+		}
+		fclose(in);
+	}
+	return (time_t)time(NULL);
+}
+
 /** printout certificate in detail */
 static void
 verb_cert(char* msg, X509* x)
@@ -187,7 +225,8 @@ verb_cert(char* msg, X509* x)
 	if(verb == 0) return;
 	if(verb == 1) {
 		if(msg) printf("%s\n", msg);
-		X509_print_ex_fp(stdout, x, 0, -1^(X509_FLAG_NO_SUBJECT
+		X509_print_ex_fp(stdout, x, 0, (unsigned long)-1
+			^(X509_FLAG_NO_SUBJECT
 			|X509_FLAG_NO_ISSUER|X509_FLAG_NO_VALIDITY));
 		return;
 	}
@@ -205,6 +244,28 @@ verb_certs(char* msg, STACK_OF(X509)* sk)
 		printf("%s (%d/%d)\n", msg, i, num);
 		verb_cert(NULL, sk_X509_value(sk, i));
 	}
+}
+
+/* write the certificate file */
+static int
+write_cert_file(char* file, STACK_OF(X509)* sk)
+{
+	FILE* out;
+	int i, num = sk_X509_num(sk);
+	out = fopen(file, "w");
+	if(!out) {
+		if(verb) printf("write %s: %s\n", file, strerror(errno));
+		return 0;
+	}
+	for(i=0; i<num; i++) {
+		if(!PEM_write_X509(out, sk_X509_value(sk, i))) {
+			if(verb) printf("could not write %s\n", file);
+			fclose(out);
+			return 0;
+		}
+	}
+	fclose(out);
+	return 1;
 }
 
 /** read certificates from a PEM bio */
@@ -244,7 +305,9 @@ read_cert_file(char* file)
 	in = fopen(file, "r");
 	if(!in) {
 		if(verb) printf("%s: %s\n", file, strerror(errno));
-		sk_X509_free(sk);
+#ifndef S_SPLINT_S
+		sk_X509_pop_free(sk, X509_free);
+#endif
 		return NULL;
 	}
 	while(!feof(in)) {
@@ -263,7 +326,9 @@ read_cert_file(char* file)
 	fclose(in);
 	if(!content) {
 		if(verb) printf("%s is empty\n", file);
-		sk_X509_free(sk);
+#ifndef S_SPLINT_S
+		sk_X509_pop_free(sk, X509_free);
+#endif
 		return NULL;
 	}
 	return sk;
@@ -342,6 +407,18 @@ verb_addr(char* msg, struct ip_list* ip)
 			a, out, (socklen_t)sizeof(out))==0)
 			printf("%s (inet_ntop error)\n", msg);
 		else printf("%s %s\n", msg, out);
+	}
+}
+
+/** free ip_list */
+static void
+ip_list_free(struct ip_list* p)
+{
+	struct ip_list* np;
+	while(p) {
+		np = p->next;
+		free(p);
+		p = np;
 	}
 }
 
@@ -561,20 +638,25 @@ connect_to_ip(struct ip_list* ip)
 	return fd;
 }
 
-/** initiate TLS on a connection */
-static SSL*
-TLS_initiate(int fd)
+/** create SSL context */
+static SSL_CTX*
+setup_sslctx(void)
 {
-	SSL_CTX* sslctx;
-	SSL* ssl;
-	X509* x;
-	int r;
-	sslctx = SSL_CTX_new(SSLv23_client_method());
+	SSL_CTX* sslctx = SSL_CTX_new(SSLv23_client_method());
 	if(!sslctx) {
 		if(verb) printf("SSL_CTX_new error\n");
 		return NULL;
 	}
-	ssl = SSL_new(sslctx);
+	return sslctx;
+}
+
+/** initiate TLS on a connection */
+static SSL*
+TLS_initiate(SSL_CTX* sslctx, int fd)
+{
+	X509* x;
+	int r;
+	SSL* ssl = SSL_new(sslctx);
 	if(!ssl) {
 		if(verb) printf("SSL_new error\n");
 		return NULL;
@@ -611,13 +693,14 @@ TLS_initiate(int fd)
 
 /** perform neat TLS shutdown */
 static void
-TLS_shutdown(int fd, SSL* ssl)
+TLS_shutdown(int fd, SSL* ssl, SSL_CTX* sslctx)
 {
 	/* shutdown the SSL connection nicely */
 	if(SSL_shutdown(ssl) == 0) {
 		SSL_shutdown(ssl);
 	}
 	SSL_free(ssl);
+	SSL_CTX_free(sslctx);
 	fd_close(fd);
 }
 
@@ -731,22 +814,27 @@ read_http_headers(SSL* ssl, size_t* clen)
 static char*
 read_data_chunk(SSL* ssl, size_t len)
 {
+	size_t got = 0;
 	int r;
 	char* data = malloc(len+1);
 	if(!data) {
 		if(verb) printf("out of memory\n");
 		return NULL;
 	}
-	if((r = SSL_read(ssl, data, len)) <= 0) {
-		if(SSL_get_error(ssl, r) == SSL_ERROR_ZERO_RETURN) {
-			/* EOF */
-			if(verb) printf("could not SSL_read: unexpected EOF\n");
+	while(got < len) {
+		if((r = SSL_read(ssl, data+got, (int)(len-got))) <= 0) {
+			if(SSL_get_error(ssl, r) == SSL_ERROR_ZERO_RETURN) {
+				/* EOF */
+				if(verb) printf("could not SSL_read: unexpected EOF\n");
+				free(data);
+				return NULL;
+			}
+			if(verb) printf("could not SSL_read\n");
 			free(data);
 			return NULL;
 		}
-		if(verb) printf("could not SSL_read\n");
-		free(data);
-		return NULL;
+		if(verb >= 2) printf("at %d/%d\n", (int)got, (int)len);
+		got += r;
 	}
 	if(verb>=2) printf("read %d data\n", (int)len);
 	data[len] = 0;
@@ -809,11 +897,13 @@ do_chunked_read(SSL* ssl)
 			BIO_free(mem);
 			return NULL;
 		}
-		if(BIO_write(mem, body, len) <= 0) {
+		if(BIO_write(mem, body, (int)len) <= 0) {
 			if(verb) printf("out of memory\n");
+			free(body);
 			BIO_free(mem);
 			return NULL;
 		}
+		free(body);
 		/* skip empty line after data chunk */
 		if(!read_ssl_line(ssl, buf, sizeof(buf))) {
 			BIO_free(mem);
@@ -832,7 +922,9 @@ write_http_get(SSL* ssl, char* pathname, char* urlname)
 	   write_ssl_line(ssl, "Host: %s", urlname) &&
 	   write_ssl_line(ssl, "User-Agent: unbound-anchor/%s",
 	   	PACKAGE_VERSION) &&
-	   /*write_ssl_line(ssl, "Connection: close", NULL) &&*/
+	   /* We do not really do multiple queries per connection,
+	    * but this header setting is also not needed.
+	    * write_ssl_line(ssl, "Connection: close", NULL) &&*/
 	   write_ssl_line(ssl, "", NULL)) {
 		return 1;
 	}
@@ -855,11 +947,14 @@ read_http_result(SSL* ssl)
 		char* d = NULL;
 		long l;
 		l = BIO_get_mem_data(tmp, &d);
-		if(verb) printf("chunked data is %d\n", (int)l);
+		if(verb>=2) printf("chunked data is %d\n", (int)l);
 		if(l == 0 || d == NULL) {
 			if(verb) printf("out of memory\n");
 			return NULL;
 		}
+		/* the result is zero terminated for robustness, but we 
+		 * do not include that in the BIO len (for binary data) */
+		len = (size_t)l-1;
 		data = strdup(d);
 		if(data == NULL) {
 			if(verb) printf("out of memory\n");
@@ -869,7 +964,8 @@ read_http_result(SSL* ssl)
 	} else {
 		data = read_data_chunk(ssl, len);
 	}
-	m = BIO_new_mem_buf(data, -1);
+	if(verb >= 4) print_data("read data", data, (int)len);
+	m = BIO_new_mem_buf(data, (int)len);
 	if(!m) {
 		if(verb) printf("out of memory\n");
 		exit(0);
@@ -884,22 +980,30 @@ https_to_ip(struct ip_list* ip, char* pathname, char* urlname)
 	int fd;
 	SSL* ssl;
 	BIO* bio;
-	fd = connect_to_ip(ip);
-	if(fd == -1)
+	SSL_CTX* sslctx = setup_sslctx();
+	if(!sslctx) {
 		return NULL;
-	ssl = TLS_initiate(fd);
+	}
+	fd = connect_to_ip(ip);
+	if(fd == -1) {
+		SSL_CTX_free(sslctx);
+		return NULL;
+	}
+	ssl = TLS_initiate(sslctx, fd);
 	if(!ssl) {
+		SSL_CTX_free(sslctx);
 		fd_close(fd);
 		return NULL;
 	}
 	if(!write_http_get(ssl, pathname, urlname)) {
 		if(verb) printf("could not write to server\n");
 		SSL_free(ssl);
+		SSL_CTX_free(sslctx);
 		fd_close(fd);
 		return NULL;
 	}
 	bio = read_http_result(ssl);
-	TLS_shutdown(fd, ssl);
+	TLS_shutdown(fd, ssl, sslctx);
 	return bio;
 }
 
@@ -925,9 +1029,105 @@ https(struct ip_list* ip_list, char* pathname, char* urlname)
 		if(verb) printf("could not fetch %s\n", pathname);
 		exit(0);
 	} else {
-		if(verb) printf("fetched %s\n", pathname);
+		if(verb) printf("fetched %s (%d bytes)\n",
+			pathname, (int)BIO_ctrl_pending(bio));
 	}
 	return bio;
+}
+
+/** free up a downloaded file BIO */
+static void
+free_file_bio(BIO* bio)
+{
+	char* pp = NULL;
+	BIO_reset(bio);
+	(void)BIO_get_mem_data(bio, &pp);
+	free(pp);
+	BIO_free(bio);
+}
+
+/** verify a PKCS7 signature, false on failure */
+static int
+verify_p7sig(BIO* data, BIO* p7s, BIO* pem, STACK_OF(X509)* trust, time_t now)
+{
+	X509_VERIFY_PARAM* param = X509_VERIFY_PARAM_new();
+	PKCS7* p7;
+	X509_STORE *store = X509_STORE_new();
+	STACK_OF(X509) *certs;
+	int secure = 0;
+	int i;
+
+	BIO_reset(p7s);
+	BIO_reset(data);
+
+	if(!param || !store) {
+		if(verb) printf("out of memory\n");
+		X509_VERIFY_PARAM_free(param);
+		X509_STORE_free(store);
+		return 0;
+	}
+
+	/* convert p7s to p7 (the signature) */
+	p7 = d2i_PKCS7_bio(p7s, NULL);
+	if(!p7) {
+		if(verb) printf("could not parse p7s signature file\n");
+		X509_VERIFY_PARAM_free(param);
+		X509_STORE_free(store);
+		return 0;
+	}
+	if(verb >= 2) printf("parsed the PKCS7 signature\n");
+
+	/* convert trust to trusted certificate store */
+	/* set current time */
+	X509_VERIFY_PARAM_set_time(param, now);
+	/* do the selfcheck on the root certificate */
+	X509_VERIFY_PARAM_set_flags(param, X509_V_FLAG_CHECK_SS_SIGNATURE);
+	X509_STORE_set1_param(store, param);
+	for(i=0; i<sk_X509_num(trust); i++) {
+		if(!X509_STORE_add_cert(store, sk_X509_value(trust, i))) {
+			if(verb) printf("failed X509_STORE_add_cert\n");
+			X509_STORE_free(store);
+			PKCS7_free(p7);
+			return 0;
+		}
+	}
+	if(verb >= 2) printf("setup the X509_STORE\n");
+
+	/* convert pem to (intermediate) certs */
+	certs = read_cert_bio(pem);
+	if(verb >= 2) printf("read the intermediate certificates\n");
+
+	if(PKCS7_verify(p7, certs, store, data, NULL, 0) == 1) {
+		secure = 1;
+		if(verb >= 2) printf("the PKCS7 signature verified\n");
+	}
+
+#ifndef S_SPLINT_S
+	sk_X509_pop_free(certs, X509_free);
+#endif
+	X509_STORE_free(store);
+	PKCS7_free(p7);
+	return secure;
+}
+
+/** Perform the verification and update of the trustanchor file */
+static void
+verify_and_update_anchor(char* root_anchor_file, char* debugconf,
+	struct ub_result* dnskey, BIO* xml, BIO* p7s, BIO* pem,
+	STACK_OF(X509)* cert)
+{
+	time_t now = get_time_now(debugconf);
+
+	/* verify xml file */
+	if(!verify_p7sig(xml, p7s, pem, cert, now)) {
+		printf("the PKCS7 signature failed\n");
+		exit(0);
+	}
+
+	/* see if xml file verifies the dnskey that was probed */
+
+	/* reinstate 5011 tracking */
+
 }
 
 /** perform actual certupdate work */
@@ -956,22 +1156,24 @@ do_certupdate(char* root_anchor_file, char* root_cert_file,
 	/* update the pem file (optional) */
 	/*do_pem_update(cert, pem, &write_cert);*/
 	if(write_cert) {
-		/*write_cert_file(root_cert_file, cert);*/
+		(void)write_cert_file(root_cert_file, cert);
+		if(verb) printf("wrote cert to %s\n", root_cert_file);
 	}
 
 	/* verify and update the root anchor */
-		/* verify xml file */
-		/* see if xml file verifies the dnskey that was probed */
-		/* reinstate 5011 tracking */
+	verify_and_update_anchor(root_anchor_file, debugconf, dnskey,
+		xml, p7s, pem, cert);
 	if(verb) printf("success: the anchor has been updated "
 			"using the cert\n");
 
-	/* TODO free the data buffers inside them */
-	BIO_free(xml);
-	BIO_free(p7s);
-	BIO_free(pem);
-	sk_X509_free(cert);
+	free_file_bio(xml);
+	free_file_bio(p7s);
+	free_file_bio(pem);
+#ifndef S_SPLINT_S
+	sk_X509_pop_free(cert, X509_free);
+#endif
 	ub_resolve_free(dnskey);
+	ip_list_free(ip_list);
 	return 0;
 }
 
@@ -1135,32 +1337,6 @@ read_last_success_time(char* file)
 }
 
 /**
- * Get current time.
- * @param debugconf: with override time for tests
- */
-static int32_t
-get_time_now(char* debugconf)
-{
-	if(debugconf) {
-		FILE* in = fopen(debugconf, "r");
-		char line[1024];
-		if(!in) {
-			if(verb) printf("%s: %s\n", debugconf, strerror(errno));
-			return (int32_t)time(NULL);
-		}
-		/* must be ^val-override-date: 1234567$ formatted */
-		while(fgets(line, (int)sizeof(line), in)) {
-			if(strncmp(line, "val-override-date: ", 19) == 0) {
-				fclose(in);
-				return (int32_t)atoi(line+19);
-			}
-		}
-		fclose(in);
-	}
-	return (int32_t)time(NULL);
-}
-
-/**
  * Read autotrust 5011 probe file and see if the date
  * compared to the current date allows a certupdate.
  * If the last successful probe was recent then 5011 cannot be behind,
@@ -1172,7 +1348,7 @@ static int
 probe_date_allows_certupdate(char* root_anchor_file, char* debugconf)
 {
 	int32_t last_success = read_last_success_time(root_anchor_file);
-	int32_t now = get_time_now(debugconf);
+	int32_t now = (int32_t)get_time_now(debugconf);
 	int32_t leeway = 30 * 24 * 3600; /* 30 days leeway */
 	/* if the date is before 2010-07-15:00.00.00 then the root has not
 	 * been signed yet, and thus we refuse to take action. */
