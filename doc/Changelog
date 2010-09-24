@@ -1,3 +1,6 @@
+24 September 2010: Wouter
+	- bug#329: in example.conf show correct ipv4 link-local 169.254/16.
+
 23 September 2010: Wouter
 	- unbound-anchor app, unbound requires libexpat (xml parser library).
 

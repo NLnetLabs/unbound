@@ -488,7 +488,7 @@ that you configured is allowed to, and you can specify additional
 names using \fBprivate\-domain\fR.  No private addresses are enabled
 by default.  We consider to enable this for the RFC1918 private IP
 address space by default in later releases. That would enable private 
-addresses for 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16 192.254.0.0/16 
+addresses for 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16 169.254.0.0/16 
 fd00::/8 and fe80::/10, since the RFC standards say these addresses 
 should not be visible on the public internet.  Turning on 127.0.0.0/8 
 would hinder many spamblocklists as they use that.
