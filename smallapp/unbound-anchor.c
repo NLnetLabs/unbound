@@ -50,6 +50,15 @@
 #ifdef HAVE_GETOPT_H
 #include <getopt.h>
 #endif
+#ifdef HAVE_OPENSSL_SSL_H
+#include <openssl/ssl.h>
+#endif
+#ifdef HAVE_OPENSSL_ERR_H
+#include <openssl/err.h>
+#endif
+#ifdef HAVE_OPENSSL_RAND_H
+#include <openssl/rand.h>
+#endif
 #include <openssl/x509.h>
 #include <openssl/pem.h>
 
@@ -66,6 +75,8 @@
 #define P7SNAME "/root-anchors/root-anchors.p7s"
 /** path on HTTPS server to pem file */
 #define PEMNAME "/root-anchors/icannbundle.pem"
+/** port number for https access */
+#define HTTPS_PORT 443
 
 /** verbosity for this application */
 static int verb = 0;
@@ -78,6 +89,8 @@ struct ip_list {
 	socklen_t len;
 	/** address ready to connect to */
 	struct sockaddr_storage addr;
+	/** has the address been used */
+	int used;
 };
 
 /** Give unbound-anchor usage, and exit (1). */
@@ -167,6 +180,33 @@ create_unbound_context(char* res_conf, char* root_hints, char* debugconf,
 	return ctx;
 }
 
+/** printout certificate in detail */
+static void
+verb_cert(char* msg, X509* x)
+{
+	if(verb == 0) return;
+	if(verb == 1) {
+		if(msg) printf("%s\n", msg);
+		X509_print_ex_fp(stdout, x, 0, -1^(X509_FLAG_NO_SUBJECT
+			|X509_FLAG_NO_ISSUER|X509_FLAG_NO_VALIDITY));
+		return;
+	}
+	if(msg) printf("%s\n", msg);
+	X509_print_fp(stdout, x);
+}
+
+/** printout certificates in detail */
+static void
+verb_certs(char* msg, STACK_OF(X509)* sk)
+{
+	int i, num = sk_X509_num(sk);
+	if(verb == 0) return;
+	for(i=0; i<num; i++) {
+		printf("%s (%d/%d)\n", msg, i, num);
+		verb_cert(NULL, sk_X509_value(sk, i));
+	}
+}
+
 /** read certificates from a PEM bio */
 static STACK_OF(X509)*
 read_cert_bio(BIO* bio)
@@ -233,6 +273,7 @@ read_cert_file(char* file)
 static STACK_OF(X509)*
 read_builtin_cert(void)
 {
+/* The ICANN CA fetched at 24 Sep 2010.  Valid to 2028 */
 	const char* builtin_cert =
 "-----BEGIN CERTIFICATE-----\n"
 "MIIDdzCCAl+gAwIBAgIBATANBgkqhkiG9w0BAQsFADBdMQ4wDAYDVQQKEwVJQ0FO\n"
@@ -257,7 +298,8 @@ read_builtin_cert(void)
 "-----END CERTIFICATE-----\n"
 		;
 	STACK_OF(X509)* sk;
-	BIO *bio = BIO_new_mem_buf((void*)builtin_cert, strlen(builtin_cert));
+	BIO *bio = BIO_new_mem_buf((void*)builtin_cert,
+		(int)strlen(builtin_cert));
 	if(!bio) {
 		if(verb) printf("out of memory\n");
 		exit(0);
@@ -282,13 +324,129 @@ read_cert_or_builtin(char* file, int* write_cert)
 		sk = read_builtin_cert();
 	}
 	if(verb) printf("have %d trusted certificates\n", sk_X509_num(sk));
+	verb_certs("trusted certificates", sk);
 	return sk;
+}
+
+/** printout IP address with message */
+static void
+verb_addr(char* msg, struct ip_list* ip)
+{
+	if(verb) {
+		char out[100];
+		void* a = &((struct sockaddr_in*)&ip->addr)->sin_addr;
+		if(ip->len != (socklen_t)sizeof(struct sockaddr_in))
+			a = &((struct sockaddr_in6*)&ip->addr)->sin6_addr;
+
+		if(inet_ntop((int)((struct sockaddr_in*)&ip->addr)->sin_family,
+			a, out, (socklen_t)sizeof(out))==0)
+			printf("%s (inet_ntop error)\n", msg);
+		else printf("%s %s\n", msg, out);
+	}
+}
+
+/** create ip_list entry for a RR record */
+static struct ip_list*
+RR_to_ip(int tp, char* data, int len)
+{
+	struct ip_list* ip = (struct ip_list*)calloc(1, sizeof(*ip));
+	uint16_t p = HTTPS_PORT;
+	if(tp == LDNS_RR_TYPE_A) {
+		struct sockaddr_in* sa = (struct sockaddr_in*)&ip->addr;
+		ip->len = (socklen_t)sizeof(*sa);
+		sa->sin_family = AF_INET;
+		sa->sin_port = (in_port_t)htons(p);
+		if(len != (int)sizeof(sa->sin_addr)) {
+			if(verb) printf("skipped badly formatted A\n");
+			free(ip);
+			return NULL;
+		}
+		memmove(&sa->sin_addr, data, sizeof(sa->sin_addr));
+
+	} else if(tp == LDNS_RR_TYPE_AAAA) {
+		struct sockaddr_in6* sa = (struct sockaddr_in6*)&ip->addr;
+		ip->len = (socklen_t)sizeof(*sa);
+		sa->sin6_family = AF_INET6;
+		sa->sin6_port = (in_port_t)htons(p);
+		if(len != (int)sizeof(sa->sin6_addr)) {
+			if(verb) printf("skipped badly formatted AAAA\n");
+			free(ip);
+			return NULL;
+		}
+		memmove(&sa->sin6_addr, data, sizeof(sa->sin6_addr));
+	} else {
+		if(verb) printf("internal error: bad type in RRtoip\n");
+		free(ip);
+		return NULL;
+	}
+	verb_addr("resolved server address", ip);
+	return ip;
 }
 
 /** Resolve name, type, class and add addresses to iplist */
 static void
-add_ip(struct ub_ctx* ctx, char* host, int tp, int cl, struct ip_list** head)
+resolve_host_ip(struct ub_ctx* ctx, char* host, int tp, int cl, struct ip_list** head)
 {
+	struct ub_result* res = NULL;
+	int r;
+	int i;
+
+	r = ub_resolve(ctx, host, tp, cl, &res);
+	if(r) {
+		if(verb) printf("error: resolve %s %s: %s\n", host,
+			(tp==LDNS_RR_TYPE_A)?"A":"AAAA", ub_strerror(r));
+		return;
+	}
+	if(!res) {
+		if(verb) printf("out of memory\n");
+		exit(0);
+	}
+	for(i = 0; res->data[i]; i++) {
+		struct ip_list* ip = RR_to_ip(tp, res->data[i], res->len[i]);
+		if(!ip) continue;
+		ip->next = *head;
+		*head = ip;
+	}
+	ub_resolve_free(res);
+}
+
+/** parse a text IP address into a sockaddr */
+static struct ip_list*
+parse_ip_addr(char* str)
+{
+	socklen_t len = 0;
+	struct sockaddr_storage* addr = NULL;
+	struct sockaddr_in6 a6;
+	struct sockaddr_in a;
+	struct ip_list* ip;
+	uint16_t p = HTTPS_PORT;
+	memset(&a6, 0, sizeof(a6));
+	memset(&a, 0, sizeof(a));
+
+	if(inet_pton(AF_INET6, str, &a6.sin6_addr) > 0) {
+		/* it is an IPv6 */
+		a6.sin6_family = AF_INET6;
+		a6.sin6_port = (in_port_t)htons(p);
+		addr = (struct sockaddr_storage*)&a6;
+		len = (socklen_t)sizeof(struct sockaddr_in6);
+	}
+	if(inet_pton(AF_INET, str, &a.sin_addr) > 0) {
+		/* it is an IPv4 */
+		a.sin_family = AF_INET;
+		a.sin_port = (in_port_t)htons(p);
+		addr = (struct sockaddr_storage*)&a;
+		len = (socklen_t)sizeof(struct sockaddr_in);
+	}
+	if(!len) return NULL;
+	ip = (struct ip_list*)calloc(1, sizeof(*ip));
+	if(!ip) {
+		if(verb) printf("out of memory\n");
+		exit(0);
+	}
+	ip->len = len;
+	memmove(&ip->addr, addr, len);
+	if(verb) printf("server address is %s\n", str);
+	return ip;
 }
 
 /**
@@ -302,7 +460,9 @@ resolve_name(char* host, char* res_conf, char* root_hints, char* debugconf,
 	struct ub_ctx* ctx;
 	struct ip_list* list = NULL;
 	/* first see if name is an IP address itself */
-	/* TODO */
+	if( (list=parse_ip_addr(host)) ) {
+		return list;
+	}
 	
 	/* create resolver context */
 	ctx = create_unbound_context(res_conf, root_hints, debugconf,
@@ -310,16 +470,437 @@ resolve_name(char* host, char* res_conf, char* root_hints, char* debugconf,
 
 	/* try resolution of A */
 	if(!ip6only) {
-		add_ip(ctx, host, LDNS_RR_TYPE_A, LDNS_RR_CLASS_IN, &list);
+		resolve_host_ip(ctx, host, LDNS_RR_TYPE_A,
+			LDNS_RR_CLASS_IN, &list);
 	}
 
 	/* try resolution of AAAA */
 	if(!ip4only) {
-		add_ip(ctx, host, LDNS_RR_TYPE_AAAA, LDNS_RR_CLASS_IN, &list);
+		resolve_host_ip(ctx, host, LDNS_RR_TYPE_AAAA,
+			LDNS_RR_CLASS_IN, &list);
 	}
 
 	ub_ctx_delete(ctx);
+	if(!list) {
+		if(verb) printf("%s has no IP addresses I can use\n", host);
+		exit(0);
+	}
 	return list;
+}
+
+/** clear used flags */
+static void
+wipe_ip_usage(struct ip_list* p)
+{
+	while(p) {
+		p->used = 0;
+		p = p->next;
+	}
+}
+
+/** cound unused IPs */
+static int
+count_unused(struct ip_list* p)
+{
+	int num = 0;
+	while(p) {
+		if(!p->used) num++;
+		p = p->next;
+	}
+	return num;
+}
+
+/** pick random unused element from IP list */
+static struct ip_list*
+pick_random_ip(struct ip_list* list)
+{
+	struct ip_list* p = list;
+	int num = count_unused(list);
+	int sel;
+	if(num == 0) return NULL;
+	/* not perfect, but random enough */
+	sel = (int)ldns_get_random() % num;
+	while(sel > 0 && p) {
+		if(!p->used) sel--;
+		p = p->next;
+	}
+	while(p && p->used)
+		p = p->next;
+	if(!p) return NULL; /* robustness */
+	return p;
+}
+
+/** close the fd */
+static void
+fd_close(int fd)
+{
+#ifndef USE_WINSOCK
+	close(fd);
+#else
+	closesocket(fd);
+#endif
+}
+
+/** connect to IP address */
+static int
+connect_to_ip(struct ip_list* ip)
+{
+	int fd;
+	verb_addr("connect to", ip);
+	fd = socket(ip->len==(socklen_t)sizeof(struct sockaddr_in)?
+		AF_INET:AF_INET6, SOCK_STREAM, 0);
+	if(fd == -1) {
+		if(verb) printf("socket: %s\n", strerror(errno));
+		return -1;
+	}
+	if(connect(fd, (struct sockaddr*)&ip->addr, ip->len) < 0) {
+		if(verb) printf("connect: %s\n", strerror(errno));
+		fd_close(fd);
+		return -1;
+	}
+	return fd;
+}
+
+/** initiate TLS on a connection */
+static SSL*
+TLS_initiate(int fd)
+{
+	SSL_CTX* sslctx;
+	SSL* ssl;
+	X509* x;
+	int r;
+	sslctx = SSL_CTX_new(SSLv23_client_method());
+	if(!sslctx) {
+		if(verb) printf("SSL_CTX_new error\n");
+		return NULL;
+	}
+	ssl = SSL_new(sslctx);
+	if(!ssl) {
+		if(verb) printf("SSL_new error\n");
+		return NULL;
+	}
+	SSL_set_connect_state(ssl);
+	(void)SSL_set_mode(ssl, SSL_MODE_AUTO_RETRY);
+	if(!SSL_set_fd(ssl, fd)) {
+		if(verb) printf("SSL_set_fd error\n");
+		SSL_free(ssl);
+		return NULL;
+	}
+	while(1) {
+		ERR_clear_error();
+		if( (r=SSL_do_handshake(ssl)) == 1)
+			break;
+		r = SSL_get_error(ssl, r);
+		if(r != SSL_ERROR_WANT_READ && r != SSL_ERROR_WANT_WRITE) {
+			if(verb) printf("SSL handshake failed\n");
+			SSL_free(ssl);
+			return NULL;
+		}
+		/* wants to be called again */
+	}
+	x = SSL_get_peer_certificate(ssl);
+	if(!x) {
+		if(verb) printf("Server presented no peer certificate\n");
+		SSL_free(ssl);
+		return NULL;
+	}
+	verb_cert("server SSL certificate", x);
+	X509_free(x);
+	return ssl;
+}
+
+/** perform neat TLS shutdown */
+static void
+TLS_shutdown(int fd, SSL* ssl)
+{
+	/* shutdown the SSL connection nicely */
+	if(SSL_shutdown(ssl) == 0) {
+		SSL_shutdown(ssl);
+	}
+	SSL_free(ssl);
+	fd_close(fd);
+}
+
+/** write a line over SSL */
+static int
+write_ssl_line(SSL* ssl, char* str, char* sec)
+{
+	char buf[1024];
+	size_t l;
+	if(sec) {
+		snprintf(buf, sizeof(buf), str, sec);
+	} else {
+		snprintf(buf, sizeof(buf), "%s", str);
+	}
+	l = strlen(buf);
+	if(l+2 >= sizeof(buf)) {
+		if(verb) printf("line too long\n");
+		return 0;
+	}
+	if(verb >= 2) printf("SSL_write: %s\n", buf);
+	buf[l] = '\r';
+	buf[l+1] = '\n';
+	buf[l+2] = 0;
+	/* add \r\n */
+	if(SSL_write(ssl, buf, (int)strlen(buf)) <= 0) {
+		if(verb) printf("could not SSL_write %s", str);
+		return 0;
+	}
+	return 1;
+}
+
+static int
+process_one_header(char* buf, size_t* clen, int* chunked)
+{
+	if(verb>=2) printf("header: '%s'\n", buf);
+	if(strncasecmp(buf, "HTTP/1.1 ", 9) == 0) {
+		/* check returncode */
+		if(buf[9] != '2') {
+			if(verb) printf("bad status %s\n", buf+9);
+			return 0;
+		}
+	} else if(strncasecmp(buf, "Content-Length: ", 16) == 0) {
+		if(!*chunked)
+			*clen = (size_t)atoi(buf+16);
+	} else if(strncasecmp(buf, "Transfer-Encoding: chunked", 19+7) == 0) {
+		*clen = 0;
+		*chunked = 1;
+	}
+	return 1;
+}
+
+/** read one file from SSL
+ * zero terminates.
+ * skips \r\n (but not copied to buf).
+ */
+static int
+read_ssl_line(SSL* ssl, char* buf, size_t len)
+{
+	size_t n = 0;
+	int r;
+	int endnl = 0;
+	while(1) {
+		if(n >= len) {
+			if(verb) printf("line too long\n");
+			return 0;
+		}
+		if((r = SSL_read(ssl, buf+n, 1)) <= 0) {
+			if(SSL_get_error(ssl, r) == SSL_ERROR_ZERO_RETURN) {
+				/* EOF */
+				break;
+			}
+			if(verb) printf("could not SSL_read\n");
+			return 0;
+		}
+		if(endnl && buf[n] == '\n') {
+			break;
+		} else if(endnl) {
+			/* bad data */
+			if(verb) printf("error: stray linefeeds\n");
+			return 0;
+		} else if(buf[n] == '\r') {
+			/* skip \r, and also \n on the wire */
+			endnl = 1;
+			continue;
+		} else if(buf[n] == '\n') {
+			/* skip the \n, we are done */
+			break;
+		} else n++;
+	}
+	buf[n] = 0;
+	return 1;
+}
+
+/** read http headers and process them */
+static size_t
+read_http_headers(SSL* ssl, size_t* clen)
+{
+	char buf[1024];
+	int chunked = 0;
+	*clen = 0;
+	while(read_ssl_line(ssl, buf, sizeof(buf))) {
+		if(buf[0] == 0)
+			return 1;
+		if(!process_one_header(buf, clen, &chunked))
+			return 0;
+	}
+	return 0;
+}
+
+/** read a data chunk */
+static char*
+read_data_chunk(SSL* ssl, size_t len)
+{
+	int r;
+	char* data = malloc(len+1);
+	if(!data) {
+		if(verb) printf("out of memory\n");
+		return NULL;
+	}
+	if((r = SSL_read(ssl, data, len)) <= 0) {
+		if(SSL_get_error(ssl, r) == SSL_ERROR_ZERO_RETURN) {
+			/* EOF */
+			if(verb) printf("could not SSL_read: unexpected EOF\n");
+			free(data);
+			return NULL;
+		}
+		if(verb) printf("could not SSL_read\n");
+		free(data);
+		return NULL;
+	}
+	if(verb>=2) printf("read %d data\n", (int)len);
+	data[len] = 0;
+	return data;
+}
+
+/** parse chunk header */
+static int
+parse_chunk_header(char* buf, size_t* result)
+{
+	char* e = NULL;
+	size_t v = (size_t)strtol(buf, &e, 16);
+	if(e == buf)
+		return 0;
+	*result = v;
+	return 1;
+}
+
+/** read chunked data from connection */
+static BIO*
+do_chunked_read(SSL* ssl)
+{
+	char buf[1024];
+	size_t len;
+	char* body;
+	BIO* mem = BIO_new(BIO_s_mem());
+	if(!mem) {
+		if(verb) printf("out of memory\n");
+		return NULL;
+	}
+	while(read_ssl_line(ssl, buf, sizeof(buf))) {
+		/* read the chunked start line */
+		if(verb>=2) printf("chunk header: %s\n", buf);
+		if(!parse_chunk_header(buf, &len)) {
+			BIO_free(mem);
+			return NULL;
+		}
+		if(verb>=2) printf("chunk len: %d\n", (int)len);
+		if(len == 0) {
+			char z = 0;
+			/* skip end-of-chunk-trailer lines,
+			 * until the empty line after that */
+			do {
+				if(!read_ssl_line(ssl, buf, sizeof(buf))) {
+					BIO_free(mem);
+					return NULL;
+				}
+			} while (strlen(buf) > 0);
+			/* end of chunks, zero terminate it */
+			if(BIO_write(mem, &z, 1) <= 0) {
+				if(verb) printf("out of memory\n");
+				BIO_free(mem);
+				return NULL;
+			}
+			return mem;
+		}
+		/* read the chunked body */
+		body = read_data_chunk(ssl, len);
+		if(!body) {
+			BIO_free(mem);
+			return NULL;
+		}
+		if(BIO_write(mem, body, len) <= 0) {
+			if(verb) printf("out of memory\n");
+			BIO_free(mem);
+			return NULL;
+		}
+		/* skip empty line after data chunk */
+		if(!read_ssl_line(ssl, buf, sizeof(buf))) {
+			BIO_free(mem);
+			return NULL;
+		}
+	}
+	BIO_free(mem);
+	return NULL;
+}
+
+/** start HTTP1.1 transaction on SSL */
+static int
+write_http_get(SSL* ssl, char* pathname, char* urlname)
+{
+	if(write_ssl_line(ssl, "GET %s HTTP/1.1", pathname) &&
+	   write_ssl_line(ssl, "Host: %s", urlname) &&
+	   write_ssl_line(ssl, "User-Agent: unbound-anchor/%s",
+	   	PACKAGE_VERSION) &&
+	   /*write_ssl_line(ssl, "Connection: close", NULL) &&*/
+	   write_ssl_line(ssl, "", NULL)) {
+		return 1;
+	}
+	return 0;
+}
+
+/** read HTTP result from SSL */
+static BIO*
+read_http_result(SSL* ssl)
+{
+	size_t len = 0;
+	char* data;
+	BIO* m;
+	if(!read_http_headers(ssl, &len)) {
+		return NULL;
+	}
+	if(len == 0) {
+		/* do the chunked version */
+		BIO* tmp = do_chunked_read(ssl);
+		char* d = NULL;
+		long l;
+		l = BIO_get_mem_data(tmp, &d);
+		if(verb) printf("chunked data is %d\n", (int)l);
+		if(l == 0 || d == NULL) {
+			if(verb) printf("out of memory\n");
+			return NULL;
+		}
+		data = strdup(d);
+		if(data == NULL) {
+			if(verb) printf("out of memory\n");
+			return NULL;
+		}
+		BIO_free(tmp);
+	} else {
+		data = read_data_chunk(ssl, len);
+	}
+	m = BIO_new_mem_buf(data, -1);
+	if(!m) {
+		if(verb) printf("out of memory\n");
+		exit(0);
+	}
+	return m;
+}
+
+/** https to an IP addr, return BIO with pathname or NULL */
+static BIO*
+https_to_ip(struct ip_list* ip, char* pathname, char* urlname)
+{
+	int fd;
+	SSL* ssl;
+	BIO* bio;
+	fd = connect_to_ip(ip);
+	if(fd == -1)
+		return NULL;
+	ssl = TLS_initiate(fd);
+	if(!ssl) {
+		fd_close(fd);
+		return NULL;
+	}
+	if(!write_http_get(ssl, pathname, urlname)) {
+		if(verb) printf("could not write to server\n");
+		SSL_free(ssl);
+		fd_close(fd);
+		return NULL;
+	}
+	bio = read_http_result(ssl);
+	TLS_shutdown(fd, ssl);
+	return bio;
 }
 
 /**
@@ -329,8 +910,24 @@ resolve_name(char* host, char* res_conf, char* root_hints, char* debugconf,
  * @return a memory BIO with the file in it.
  */
 static BIO*
-https(struct ip_list* ip_list, char* pathname)
+https(struct ip_list* ip_list, char* pathname, char* urlname)
 {
+	struct ip_list* ip;
+	BIO* bio = NULL;
+	/* try random address first, and work through the list */
+	wipe_ip_usage(ip_list);
+	while( (ip = pick_random_ip(ip_list)) ) {
+		ip->used = 1;
+		bio = https_to_ip(ip, pathname, urlname);
+		if(bio) break;
+	}
+	if(!bio) {
+		if(verb) printf("could not fetch %s\n", pathname);
+		exit(0);
+	} else {
+		if(verb) printf("fetched %s\n", pathname);
+	}
+	return bio;
 }
 
 /** perform actual certupdate work */
@@ -343,7 +940,7 @@ do_certupdate(char* root_anchor_file, char* root_cert_file,
 	int write_cert = 0;
 	STACK_OF(X509)* cert;
 	BIO *pem, *xml, *p7s;
-	struct ip_list* ip_list;
+	struct ip_list* ip_list = NULL;
 	/* read pem file or provide builtin */
 	cert = read_cert_or_builtin(root_cert_file, &write_cert);
 
@@ -352,11 +949,15 @@ do_certupdate(char* root_anchor_file, char* root_cert_file,
 		ip4only, ip6only);
 
 	/* fetch the necessary files over HTTPS */
-	xml = https(ip_list, xmlname);
-	p7s = https(ip_list, p7sname);
-	pem = https(ip_list, pemname);
+	xml = https(ip_list, xmlname, urlname);
+	p7s = https(ip_list, p7sname, urlname);
+	pem = https(ip_list, pemname, urlname);
 
 	/* update the pem file (optional) */
+	/*do_pem_update(cert, pem, &write_cert);*/
+	if(write_cert) {
+		/*write_cert_file(root_cert_file, cert);*/
+	}
 
 	/* verify and update the root anchor */
 		/* verify xml file */
@@ -364,6 +965,8 @@ do_certupdate(char* root_anchor_file, char* root_cert_file,
 		/* reinstate 5011 tracking */
 	if(verb) printf("success: the anchor has been updated "
 			"using the cert\n");
+
+	/* TODO free the data buffers inside them */
 	BIO_free(xml);
 	BIO_free(p7s);
 	BIO_free(pem);
@@ -706,6 +1309,10 @@ int main(int argc, char* argv[])
 	argv += optind;
 	if(argc != 0)
 		usage();
+	ERR_load_crypto_strings();
+	ERR_load_SSL_strings();
+	OpenSSL_add_all_algorithms();
+	(void)SSL_library_init();
 	return do_root_update_work(root_anchor_file, root_cert_file,
 		urlname, xmlname, p7sname, pemname,
 		res_conf, root_hints, debugconf, ip4only, ip6only, force);
