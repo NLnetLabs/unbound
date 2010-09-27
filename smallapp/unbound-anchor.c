@@ -1222,7 +1222,7 @@ handle_keydigest(struct xml_data* data, const XML_Char **atts)
 			return;
 	}
 	if(find_att(atts, "validUntil")) {
-		time_t until = xml_convertdate(find_att(atts, "validFrom"));
+		time_t until = xml_convertdate(find_att(atts, "validUntil"));
 		if(until == 0) return;
 		if(data->date > until)
 			return;
