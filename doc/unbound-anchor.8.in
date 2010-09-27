@@ -20,6 +20,18 @@ performs setup or update of the root trust anchor for DNSSEC validation.
 It can be run (as root) from the commandline, or run as part of startup
 scripts.  Before you start the \fIunbound\fR(8) DNS server.
 .P
+Suggested usage:
+.P
+.nf
+	# in the init scripts.
+	# provide or update the root anchor (if necessary)
+	unbound-anchor -a "/usr/local/etc/unbound/root.key"
+	# start validating resolver
+	# the unbound.conf contains:
+	#   auto-trust-anchor-file: "/usr/local/etc/unbound/root.key"
+	unbound -c unbound.conf
+.fi
+.P
 It provides builtin default contents for the root anchor and root update
 certificate files.
 .P
@@ -38,19 +50,89 @@ The available options are:
 .B \-a \fIfile
 The root anchor key file, that is read in and written out.
 Default is /usr/local/etc/unbound/root.key.
+If the file does not exist, or is empty, a builtin root key is written to it.
 .TP
 .B \-c \fIfile
-The root update certificate file, that is read in. It can be updated too.
+The root update certificate file, that is read in.
 Default is /usr/local/etc/unbound/icannbundle.pem.
+If the file does not exist, or is empty, a builtin certificate is used.
+.TP
+.B \-u \fIname
+The server name, it connects to https://name.  Specify without https:// prefix.
+The default is "data.iana.org".  It connects to port 443.
+.TP
+.B \-x \fIpath
+The pathname to the root\-anchors.xml file on the server. (forms URL with \-u).
+The default is /root\-anchors/root\-anchors.xml.
+.TP
+.B \-s \fIpath
+The pathname to the root\-anchors.p7s file on the server. (forms URL with \-u).
+The default is /root\-anchors/root\-anchors.p7s.  This file has to be a PKCS7
+signature over the xml file, using the pem file (\-c) as trust anchor, and
+with possibly intermediate certificates from the \-p file.
+.TP
+.B \-p \fIpath
+The pathname to the certificate file on the server. (forms URL with \-u).
+The default is /root\-anchors/icannbundle.pem.  This file has to be a PEM
+certificate store.  It can contain intermediate certificates for verifying the
+signature.
+.TP
+.B \-4
+Use IPv4 for domain resolution and contacting the server on https.  Default is
+to use IPv4 and IPv6 where appropriate.
+.TP
+.B \-6
+Use IPv6 for domain resolution and contacting the server on https.  Default is
+to use IPv4 and IPv6 where appropriate.
+.TP
+.B \-f \fIresolv.conf
+Use the given resolv.conf file.  Not enabled by default, but you could try to
+pass /etc/resolv.conf on some systems.  It contains the IP addresses of the
+recursive nameservers to use.  However, since this tool could be used to
+bootstrap that very recursive nameserver, it would not be useful (since
+that server is not up yet, since we are bootstrapping it).  It could be
+useful in a situation where you know an upstream cache is deployed (and
+running) and in captive portal situations.
+.TP
+.B \-r \fIroot.hints
+Use the given root.hints file (same syntax as the BIND and Unbound root hints
+file) to bootstrap domain resolution.  By default a list of builtin root
+hints is used.  Unbound\-anchor goes to the network itself for these roots,
+to resolve the server (\-u option) and to check the root DNSKEY records.
+It does so, because the tool when used for bootstrapping the recursive
+resolver, cannot use that recursive resolver itself because it is bootstrapping
+that server.
+.TP
+.B \-v
+More verbose. Once prints informational messages, multiple times may enable
+large debug amounts (such as full certificates or byte\-dumps of downloaded
+files).  By default it prints almost nothing.  It also prints nothing on
+errors by default; in that case the original root anchor file is simply
+left undisturbed, so that a recursive server can start right after it.
+.TP
+.B \-C \fIunbound.conf
+Debug option to read unbound.conf into the resolution process used.  For tests.
+The validator date override option makes it possible to run a test on a
+different date.
+.TP
+.B \-F
+Debug option to force update of the root anchor through downloading the xml
+file and verifying it with the certificate.  By default it first tries to
+update by contacting the DNS, which uses much less bandwidth, is much
+faster (200 msec not 2 sec), and is nicer to the deployed infrastructure.
+With this option, it still attempts to do so (and may verbosely tell you),
+but then ignores the result and goes on to use the xml fallback method.
 .TP
 .B \-h
 Show the version and commandline option help.
 .TP
 .B \-v
 More verbose.  Prints output detailing what happens.
-.TP
-.B \-C \fIcfgfile
-Config file to read with debug settings.
+.SH "TRUST"
+We provide builtin root keys and update certificates to be trustworthy,
+in our opinion.  But that does not mean the results from running this
+tool may be trustworthy for you, or that this tool works perfectly.
+If you want to make sure, you have to check the output manually.
 .SH "FILES"
 .TP
 .I /usr/local/etc/unbound/root.key
@@ -59,6 +141,15 @@ The root anchor file, updated with 5011 tracking, and read and written to.
 .I /usr/local/etc/unbound/icannbundle.pem
 The trusted self\-signed certificate that is used to verify the downloaded
 DNSSEC root trust anchor.
+.TP
+.I https://data.iana.org/root\-anchors/root\-anchors.xml
+Source for the root key information.
+.TP
+.I https://data.iana.org/root\-anchors/root\-anchors.p7s
+Signature on the root key information.
+.TP
+.I https://data.iana.org/root\-anchors/icannbundle.pem
+Source for the certificate used.
 .SH "SEE ALSO"
 \fIunbound.conf\fR(5), 
 \fIunbound\fR(8).
