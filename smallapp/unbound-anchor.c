@@ -246,7 +246,7 @@ verb_certs(char* msg, STACK_OF(X509)* sk)
 	}
 }
 
-/* write the certificate file */
+/** write the certificate file */
 static int
 write_cert_file(char* file, STACK_OF(X509)* sk)
 {
@@ -535,6 +535,15 @@ parse_ip_addr(char* str)
 /**
  * Resolve a domain name (even though the resolver is down and there is
  * no trust anchor).  Without DNSSEC validation.
+ * @param host: the name to resolve.
+ * 	If this name is an IP4 or IP6 address this address is returned.
+ * @param res_conf: resolv.conf (if any).
+ * @param root_hints: root hints (if any).
+ * @param debugconf: unbound.conf for debugging options.
+ * @param ip4only: use only ip4 for resolve and only lookup A
+ * @param ip6only: use only ip6 for resolve and only lookup AAAA
+ * 	default is to lookup A and AAAA using ip4 and ip6.
+ * @return list of IP addresses to port 443.
  */
 static struct ip_list*
 resolve_name(char* host, char* res_conf, char* root_hints, char* debugconf,
@@ -738,6 +747,7 @@ write_ssl_line(SSL* ssl, char* str, char* sec)
 	return 1;
 }
 
+/** process header line, check rcode and keeping track of size */
 static int
 process_one_header(char* buf, size_t* clen, int* chunked)
 {
@@ -758,9 +768,14 @@ process_one_header(char* buf, size_t* clen, int* chunked)
 	return 1;
 }
 
-/** read one file from SSL
+/** 
+ * Read one file from SSL
  * zero terminates.
- * skips \r\n (but not copied to buf).
+ * skips "\r\n" (but not copied to buf).
+ * @param ssl: the SSL connection to read from (blocking).
+ * @param buf: buffer to return line in.
+ * @param len: size of the buffer.
+ * @return 0 on error, 1 on success.
  */
 static int
 read_ssl_line(SSL* ssl, char* buf, size_t len)
@@ -1017,6 +1032,7 @@ https_to_ip(struct ip_list* ip, char* pathname, char* urlname)
  * Do a HTTPS, HTTP1.1 over TLS, to fetch a file
  * @param ip_list: list of IP addresses to use to fetch from.
  * @param pathname: pathname of file on server to GET.
+ * @param urlname: name to pass as the virtual host for this request.
  * @return a memory BIO with the file in it.
  */
 static BIO*
@@ -1257,6 +1273,9 @@ write_builtin_anchor(char* file)
  * If does not exist, provide builtin and write file.
  * If empty, provide builtin and write file.
  * If trust-point-revoked-5011 file: make the program exit.
+ * @param root_anchor_file: filename of the root anchor.
+ * @param used_builtin: set to 1 if the builtin is written.
+ * @return 0 if trustpoint is insecure, 1 on success.  Exit on failure.
  */
 static int
 provide_builtin(char* root_anchor_file, int* used_builtin)
@@ -1294,6 +1313,8 @@ add_5011_probe_root(struct ub_ctx* ctx, char* root_anchor_file)
 
 /**
  * Prime the root key and return the result.  Exit on error.
+ * @param ctx: the unbound context to perform the priming with.
+ * @return: the result of the prime, on error it exit()s.
  */
 static struct ub_result*
 prime_root_key(struct ub_ctx* ctx)
@@ -1349,6 +1370,8 @@ read_last_success_time(char* file)
  * If the last successful probe was recent then 5011 cannot be behind,
  * and the failure cannot be solved with a certupdate.
  * The debugconf is to validation-override the date for testing.
+ * @param root_anchor_file: filename of root key
+ * @param debugconf: debug unbound.conf (with override date) or NULL.
  * @return true if certupdate is ok.
  */
 static int
