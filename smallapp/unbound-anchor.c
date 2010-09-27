@@ -252,6 +252,8 @@ write_cert_file(char* file, STACK_OF(X509)* sk)
 {
 	FILE* out;
 	int i, num = sk_X509_num(sk);
+	if(file == NULL || strcmp(file, "") == 0)
+		return 1;
 	out = fopen(file, "w");
 	if(!out) {
 		if(verb) printf("write %s: %s\n", file, strerror(errno));
@@ -295,9 +297,13 @@ read_cert_bio(BIO* bio)
 static STACK_OF(X509)*
 read_cert_file(char* file)
 {
-	STACK_OF(X509)* sk = sk_X509_new_null();
+	STACK_OF(X509)* sk;
 	FILE* in;
 	int content = 0;
+	if(file == NULL || strcmp(file, "") == 0) {
+		return NULL;
+	}
+	sk = sk_X509_new_null();
 	if(!sk) {
 		if(verb) printf("out of memory\n");
 		exit(0);
@@ -1174,7 +1180,7 @@ do_certupdate(char* root_anchor_file, char* root_cert_file,
 #endif
 	ub_resolve_free(dnskey);
 	ip_list_free(ip_list);
-	return 0;
+	return 1;
 }
 
 /**
@@ -1253,13 +1259,14 @@ write_builtin_anchor(char* file)
  * If trust-point-revoked-5011 file: make the program exit.
  */
 static int
-provide_builtin(char* root_anchor_file)
+provide_builtin(char* root_anchor_file, int* used_builtin)
 {
 	/* try to read it */
 	switch(try_read_anchor(root_anchor_file))
 	{
 		case 0: /* no exist or empty */
 			write_builtin_anchor(root_anchor_file);
+			*used_builtin = 1;
 			break;
 		case 1: /* revoked tp */
 			return 0;	
@@ -1380,10 +1387,11 @@ do_root_update_work(char* root_anchor_file, char* root_cert_file,
 {
 	struct ub_ctx* ctx;
 	struct ub_result* dnskey;
+	int used_builtin = 0;
 
 	/* see if builtin rootanchor needs to be provided, or if
 	 * rootanchor is 'revoked-trust-point' */
-	if(!provide_builtin(root_anchor_file))
+	if(!provide_builtin(root_anchor_file, &used_builtin))
 		return 0;
 
 	/* make unbound context with 5011-probe for root anchor,
@@ -1398,20 +1406,23 @@ do_root_update_work(char* root_anchor_file, char* root_cert_file,
 	if(dnskey->secure && !force) {
 		if(verb) printf("success: the anchor is ok\n");
 		ub_resolve_free(dnskey);
-		return 0;
+		return used_builtin;
 	}
 	if(force && verb) printf("debug cert update forced\n");
 
 	/* if not (and NOERROR): check date and do certupdate */
 	if((dnskey->rcode == 0 && probe_date_allows_certupdate(root_anchor_file,
-		debugconf)) || force)
-		return do_certupdate(root_anchor_file, root_cert_file,
+		debugconf)) || force) {
+		if(do_certupdate(root_anchor_file, root_cert_file,
 			urlname, xmlname, p7sname, pemname,
 			res_conf, root_hints, debugconf, ip4only, ip6only,
-			dnskey);
+			dnskey))
+			return 1;
+		return used_builtin;
+	}
 	if(verb) printf("fail: the anchor is NOT ok and could not be fixed\n");
 	ub_resolve_free(dnskey);
-	return 0;
+	return used_builtin;
 }
 
 /** getopt global, in case header files fail to declare it. */

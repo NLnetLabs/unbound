@@ -32,8 +32,8 @@ Suggested usage:
 	unbound -c unbound.conf
 .fi
 .P
-It provides builtin default contents for the root anchor and root update
-certificate files.
+This tool provides builtin default contents for the root anchor and root
+update certificate files.
 .P
 It tests if the root anchor file works, and if not, and an update is possible,
 attempts to update the root anchor using the root update certificate.
@@ -128,11 +128,22 @@ Show the version and commandline option help.
 .TP
 .B \-v
 More verbose.  Prints output detailing what happens.
+.SH "EXIT CODE"
+This tool exits with value 1 if the root anchor was updated using the
+certificate or if the builtin root-anchor was used.  It exits with code
+0 if no update was necessary, if the update was possible with RFC5011
+tracking, or if an error occurred.
 .SH "TRUST"
 We provide builtin root keys and update certificates to be trustworthy,
 in our opinion.  But that does not mean the results from running this
 tool may be trustworthy for you, or that this tool works perfectly.
 If you want to make sure, you have to check the output manually.
+.P
+You can do this by checking the exit value.  In this manner:
+.nf
+	unbound-anchor -a "root.key" || logger "Please check root.key"
+.fi
+Or something more suitable for your operational environment.
 .SH "FILES"
 .TP
 .I /usr/local/etc/unbound/root.key
