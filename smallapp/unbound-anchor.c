@@ -1139,6 +1139,75 @@ find_att(const XML_Char **atts, XML_Char* name)
 }
 
 /**
+ * XML convert DateTime element to time_t.
+ * [-]CCYY-MM-DDThh:mm:ss[Z|(+|-)hh:mm]
+ * (with optional .ssssss fractional seconds)
+ * @param str: the string
+ * @return a time_t representation or 0 on failure.
+ */
+static time_t
+xml_convertdate(const char* str)
+{
+	time_t t = 0;
+	struct tm tm;
+	const char* s;
+	/* for this application, ignore minus in front;
+	 * only positive dates are expected */
+	s = str;
+	if(s[0] == '-') s++;
+	memset(&tm, 0, sizeof(tm));
+	/* parse initial content of the string (lots of whitespace allowed) */
+	s = strptime(s, "%t%Y%t-%t%m%t-%t%d%tT%t%H%t:%t%M%t:%t%S%t", &tm);
+	if(!s) {
+		if(verb) printf("xml_convertdate parse failure %s\n", str);
+		return 0;
+	}
+	/* parse remainder of date string */
+	if(*s == '.') {
+		/* optional '.' and fractional seconds */
+		int frac = 0, n = 0;
+		if(sscanf(s+1, "%d%n", &frac, &n) < 1) {
+			if(verb) printf("xml_convertdate f failure %s\n", str);
+			return 0;
+		}
+		/* fraction is not used, time_t has second accuracy */
+		s++;
+		s+=n;
+	}
+	if(*s == 'Z' || *s == 'z') {
+		/* nothing to do for this */
+		s++;
+	} else if(*s == '+' || *s == '-') {
+		/* optional timezone spec: Z or +hh:mm or -hh:mm */
+		int hr = 0, mn = 0, n = 0;
+		if(sscanf(s+1, "%d:%d%n", &hr, &mn, &n) < 2) {
+			if(verb) printf("xml_convertdate tz failure %s\n", str);
+			return 0;
+		}
+		if(*s == '+') {
+			tm.tm_hour += hr;
+			tm.tm_min += mn;
+		} else {
+			tm.tm_hour -= hr;
+			tm.tm_min -= mn;
+		}
+		s++;
+		s += n;
+	}
+	if(*s != 0) {
+		/* not ended properly */
+		/* but ignore, (lenient) */
+	}
+
+	t = mktime(&tm);
+	if(t == (time_t)-1) {
+		if(verb) printf("xml_convertdate mktime failure\n");
+		return 0;
+	}
+	return t;
+}
+
+/**
  * XML handle the KeyDigest start tag, check validity periods.
  */
 static void
@@ -1147,10 +1216,16 @@ handle_keydigest(struct xml_data* data, const XML_Char **atts)
 	const char* s = ". IN DS";
 	data->use_key = 0;
 	if(find_att(atts, "validFrom")) {
-		/* TODO */
+		time_t from = xml_convertdate(find_att(atts, "validFrom"));
+		if(from == 0) return;
+		if(data->date < from)
+			return;
 	}
 	if(find_att(atts, "validUntil")) {
-		/* TODO */
+		time_t until = xml_convertdate(find_att(atts, "validFrom"));
+		if(until == 0) return;
+		if(data->date > until)
+			return;
 	}
 	/* yes we want to use this key */
 	data->use_key = 1;
