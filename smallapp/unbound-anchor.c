@@ -1068,6 +1068,258 @@ free_file_bio(BIO* bio)
 	BIO_free(bio);
 }
 
+/** XML parse private data during the parse */
+struct xml_data {
+	/** the parser, reference */
+	XML_Parser parser;
+	/** the current tag; malloced; or NULL outside of tags */
+	char* tag;
+	/** current date to use during the parse */
+	time_t date;
+	/** do we want to use this anchor? */
+	int use_key;
+	/** number of keys usefully read in */
+	int num_keys;
+	/** the compiled anchors as DS records */
+	BIO* ds;
+};
+
+/**
+ * XML handle character data, the data inside an element.
+ * @param userData: xml_data structure
+ * @param s: the character data.  May not all be in one callback.
+ * 	NOT zero terminated.
+ * @param len: length of this part of the data.
+ */
+void
+xml_charhandle(void *userData, const XML_Char *s, int len)
+{
+	struct xml_data* data = (struct xml_data*)userData;
+	/* skip characters outside of elements */
+	if(!data->tag)
+		return;
+	if(verb>=4) {
+		int i;
+		printf("%s%s charhandle: '",
+			data->use_key?"use ":"",
+			data->tag?data->tag:"none");
+		for(i=0; i<len; i++)
+			printf("%c", s[i]);
+		printf("'\n");
+	}
+	/* only store if key is used */
+	if(!data->use_key)
+		return;
+	if(strcasecmp(data->tag, "KeyTag") == 0 ||
+	   strcasecmp(data->tag, "Algorithm") == 0 ||
+	   strcasecmp(data->tag, "DigestType") == 0 ||
+	   strcasecmp(data->tag, "Digest") == 0) {
+		if(BIO_write(data->ds, s, len) <= 0) {
+			if(verb) printf("out of memory in BIO_write\n");
+			exit(0);
+		}
+	}
+}
+
+/**
+ * XML fetch value of particular attribute(by name) or NULL if not present.
+ * @param atts: attribute array (from xml_startelem).
+ * @param name: name of attribute to look for.
+ * @return the value or NULL. (ptr into atts).
+ */
+static const XML_Char*
+find_att(const XML_Char **atts, XML_Char* name)
+{
+	int i;
+	for(i=0; atts[i]; i+=2) {
+		if(strcasecmp(atts[i], name) == 0)
+			return atts[i+1];
+	}
+	return NULL;
+}
+
+/**
+ * XML handle the KeyDigest start tag, check validity periods.
+ */
+static void
+handle_keydigest(struct xml_data* data, const XML_Char **atts)
+{
+	const char* s = ". IN DS";
+	data->use_key = 0;
+	if(find_att(atts, "validFrom")) {
+		/* TODO */
+	}
+	if(find_att(atts, "validUntil")) {
+		/* TODO */
+	}
+	/* yes we want to use this key */
+	data->use_key = 1;
+	data->num_keys++;
+	if(BIO_write(data->ds, s, (int)strlen(s)) <= 0) {
+		if(verb) printf("out of memory in BIO_write\n");
+		exit(0);
+	}
+}
+
+/** 
+ * XML start of element. This callback is called whenever an XML tag starts.
+ * XML_Char is UTF8.
+ * @param userData: the xml_data structure.
+ * @param name: the tag that starts.
+ * @param atts: array of strings, pairs of attr = value, ends with NULL.
+ * 	i.e. att[0]="att[1]" att[2]="att[3]" att[4]isNull
+ */
+static void
+xml_startelem(void *userData, const XML_Char *name, const XML_Char **atts)
+{
+	struct xml_data* data = (struct xml_data*)userData;
+	if(verb>=4) printf("xml tag start '%s'\n", name);
+	free(data->tag);
+	data->tag = strdup(name);
+	if(!data->tag) {
+		if(verb) printf("out of memory\n");
+		exit(0);
+	}
+	if(verb>=4) {
+		int i;
+		for(i=0; atts[i]; i+=2) {
+			printf("  %s='%s'\n", atts[i], atts[i+1]);
+		}
+	}
+	/* handle attributes to particular types */
+	if(strcasecmp(name, "KeyDigest") == 0) {
+		handle_keydigest(data, atts);
+	}
+
+	/* write whitespace separators to outputBIO here */
+	if(!data->use_key)
+		return;
+	if(strcasecmp(data->tag, "KeyTag") == 0 ||
+	   strcasecmp(data->tag, "Algorithm") == 0 ||
+	   strcasecmp(data->tag, "DigestType") == 0 ||
+	   strcasecmp(data->tag, "Digest") == 0) {
+		if(BIO_write(data->ds, " ", 1) <= 0) {
+			if(verb) printf("out of memory in BIO_write\n");
+			exit(0);
+		}
+	}
+}
+
+/**
+ * XML end of element. This callback is called whenever an XML tag ends.
+ * XML_Char is UTF8.
+ * @param userData: the xml_data structure
+ * @param name: the tag that ends.
+ */
+static void
+xml_endelem(void *userData, const XML_Char *name)
+{
+	struct xml_data* data = (struct xml_data*)userData;
+	if(verb>=4) printf("xml tag end   '%s'\n", name);
+	free(data->tag);
+	data->tag = NULL;
+	if(strcasecmp(name, "KeyDigest") == 0) {
+		data->use_key = 0;
+		if(BIO_write(data->ds, "\n", 1) <= 0) {
+			if(verb) printf("out of memory in BIO_write\n");
+			exit(0);
+		}
+	}
+}
+
+/**
+ * XML parser setup of the callbacks for the tags
+ */
+static void
+xml_parse_setup(XML_Parser parser, struct xml_data* data, time_t now)
+{
+	char buf[1024];
+	memset(data, 0, sizeof(*data));
+	XML_SetUserData(parser, data);
+	data->parser = parser;
+	data->date = now;
+	data->ds = BIO_new(BIO_s_mem());
+	if(!data->ds) {
+		if(verb) printf("out of memory\n");
+		exit(0);
+	}
+	snprintf(buf, sizeof(buf), "; created by unbound-anchor on %s",
+		ctime(&now));
+	if(BIO_write(data->ds, buf, (int)strlen(buf)) <= 0) {
+		if(verb) printf("out of memory\n");
+		exit(0);
+	}
+	XML_SetElementHandler(parser, xml_startelem, xml_endelem);
+	XML_SetCharacterDataHandler(parser, xml_charhandle);
+}
+
+/**
+ * Perform XML parsing of the root-anchors file
+ * Its format description can be read here
+ * https://data.iana.org/root-anchors/draft-icann-dnssec-trust-anchor.txt
+ * It uses libexpat.
+ * @param xml: BIO with xml data.
+ * @param now: the current time for checking DS validity periods.
+ * @return memoryBIO with the DS data in zone format.
+ * 	or NULL if the zone is insecure.
+ * 	(It exit()s on error)
+ */
+static BIO*
+xml_parse(BIO* xml, time_t now)
+{
+	char* pp;
+	int len;
+	XML_Parser parser;
+	struct xml_data data;
+
+	parser = XML_ParserCreate(NULL);
+	if(!parser) {
+		if(verb) printf("could not XML_ParserCreate\n");
+		exit(0);
+	}
+
+	/* setup callbacks */
+	xml_parse_setup(parser, &data, now);
+
+	/* parse it */
+	BIO_reset(xml);
+	len = (int)BIO_get_mem_data(xml, &pp);
+	if(!len || !pp) {
+		if(verb) printf("out of memory\n");
+		exit(0);
+	}
+	if(!XML_Parse(parser, pp, len, 1 /*isfinal*/ )) {
+		const char *e = XML_ErrorString(XML_GetErrorCode(parser));
+		if(verb) printf("XML_Parse failure %s\n",
+			e?e:"");
+		exit(0);
+	}
+
+	/* parsed */
+	if(verb) printf("XML was parsed successfully, %d keys\n",
+			data.num_keys);
+	free(data.tag);
+	XML_ParserFree(parser);
+
+	if(verb >= 4) {
+		char* pp = NULL;
+		int len;
+		BIO_seek(data.ds, 0);
+		len = BIO_get_mem_data(data.ds, &pp);
+		printf("got DS bio %d: '", len);
+		(void)fwrite(pp, (size_t)len, 1, stdout);
+		printf("'\n");
+	}
+
+	if(data.num_keys == 0) {
+		/* the root zone seems to have gone insecure */
+		BIO_free(data.ds);
+		return NULL;
+	} else {
+		return data.ds;
+	}
+}
+
 /** verify a PKCS7 signature, false on failure */
 static int
 verify_p7sig(BIO* data, BIO* p7s, BIO* pem, STACK_OF(X509)* trust, time_t now)
@@ -1132,6 +1384,58 @@ verify_p7sig(BIO* data, BIO* p7s, BIO* pem, STACK_OF(X509)* trust, time_t now)
 	return secure;
 }
 
+/** write unsigned root anchor file, a 5011 revoked tp */
+static void
+write_unsigned_root(char* root_anchor_file)
+{
+	FILE* out;
+	time_t now = time(NULL);
+	out = fopen(root_anchor_file, "w");
+	if(!out) {
+		if(verb) printf("%s: %s\n", root_anchor_file, strerror(errno));
+		return;
+	}
+	if(fprintf(out, "; autotrust trust anchor file\n"
+		";;REVOKED\n"
+		";;id: . 1\n"
+		"; This file was written by unbound-anchor on %s"
+		"; It indicates that the root does not use DNSSEC\n"
+		"; to restart DNSSEC overwrite this file with a\n"
+		"; valid trustanchor or (empty-it and run unbound-anchor)\n"
+		, ctime(&now)) < 0) {
+		if(verb) printf("failed to write 'unsigned' to %s\n",
+			root_anchor_file);
+		if(verb && errno != 0) printf("%s\n", strerror(errno));
+	}
+	fclose(out);
+}
+
+/** write root anchor file */
+static void
+write_root_anchor(char* root_anchor_file, BIO* ds)
+{
+	char* pp = NULL;
+	int len;
+	FILE* out;
+	BIO_seek(ds, 0);
+	len = BIO_get_mem_data(ds, &pp);
+	if(!len || !pp) {
+		if(verb) printf("out of memory\n");
+		return;
+	}
+	out = fopen(root_anchor_file, "w");
+	if(!out) {
+		if(verb) printf("%s: %s\n", root_anchor_file, strerror(errno));
+		return;
+	}
+	if(fwrite(pp, (size_t)len, 1, out) != 1) {
+		if(verb) printf("failed to write all data to %s\n",
+			root_anchor_file);
+		if(verb && errno != 0) printf("%s\n", strerror(errno));
+	}
+	fclose(out);
+}
+
 /** Perform the verification and update of the trustanchor file */
 static void
 verify_and_update_anchor(char* root_anchor_file, char* debugconf,
@@ -1139,6 +1443,7 @@ verify_and_update_anchor(char* root_anchor_file, char* debugconf,
 	STACK_OF(X509)* cert)
 {
 	time_t now = get_time_now(debugconf);
+	BIO* ds;
 
 	/* verify xml file */
 	if(!verify_p7sig(xml, p7s, pem, cert, now)) {
@@ -1146,10 +1451,19 @@ verify_and_update_anchor(char* root_anchor_file, char* debugconf,
 		exit(0);
 	}
 
-	/* see if xml file verifies the dnskey that was probed */
+	/* parse the xml file into DS records */
+	ds = xml_parse(xml, now);
+	if(!ds) {
+		/* the root zone is unsigned now */
+		write_unsigned_root(root_anchor_file);
+	} else {
+		/* see if xml file verifies the dnskey that was probed */
+		/* TODO */
 
-	/* reinstate 5011 tracking */
-
+		/* reinstate 5011 tracking */
+		write_root_anchor(root_anchor_file, ds);
+	}
+	BIO_free(ds);
 }
 
 /** perform actual certupdate work */
@@ -1176,7 +1490,7 @@ do_certupdate(char* root_anchor_file, char* root_cert_file,
 	pem = https(ip_list, pemname, urlname);
 
 	/* update the pem file (optional) */
-	/*do_pem_update(cert, pem, &write_cert);*/
+	/*do_pem_update(cert, pem, &write_cert); TODO */
 	if(write_cert) {
 		(void)write_cert_file(root_cert_file, cert);
 		if(verb) printf("wrote cert to %s\n", root_cert_file);
@@ -1519,10 +1833,12 @@ int main(int argc, char* argv[])
 	argv += optind;
 	if(argc != 0)
 		usage();
+
 	ERR_load_crypto_strings();
 	ERR_load_SSL_strings();
 	OpenSSL_add_all_algorithms();
 	(void)SSL_library_init();
+
 	return do_root_update_work(root_anchor_file, root_cert_file,
 		urlname, xmlname, p7sname, pemname,
 		res_conf, root_hints, debugconf, ip4only, ip6only, force);

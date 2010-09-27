@@ -1,3 +1,6 @@
+27 September 2010: Wouter
+	- iana portlist updated.
+
 24 September 2010: Wouter
 	- bug#329: in example.conf show correct ipv4 link-local 169.254/16.
 
