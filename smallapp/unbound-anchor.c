@@ -1461,8 +1461,11 @@ verify_p7sig(BIO* data, BIO* p7s, STACK_OF(X509)* trust, time_t now)
 	/* convert trust to trusted certificate store */
 	/* set current time */
 	X509_VERIFY_PARAM_set_time(param, now);
-	/* do the selfcheck on the root certificate */
+	/* do the selfcheck on the root certificate; it checks that the
+	 * input is valid */
+#ifdef X509_V_FLAG_CHECK_SS_SIGNATURE
 	X509_VERIFY_PARAM_set_flags(param, X509_V_FLAG_CHECK_SS_SIGNATURE);
+#endif
 	X509_STORE_set1_param(store, param);
 	for(i=0; i<sk_X509_num(trust); i++) {
 		if(!X509_STORE_add_cert(store, sk_X509_value(trust, i))) {
