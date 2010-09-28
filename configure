@@ -16131,6 +16131,18 @@ fi
 
 fi
 
+ac_fn_c_check_func "$LINENO" "strptime" "ac_cv_func_strptime"
+if test "x$ac_cv_func_strptime" = x""yes; then :
+
+else
+  case " $LIBOBJS " in
+  *" strptime.$ac_objext "* ) ;;
+  *) LIBOBJS="$LIBOBJS strptime.$ac_objext"
+ ;;
+esac
+
+fi
+
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing setusercontext" >&5
 $as_echo_n "checking for library containing setusercontext... " >&6; }
 if test "${ac_cv_search_setusercontext+set}" = set; then :
