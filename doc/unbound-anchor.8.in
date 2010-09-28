@@ -71,12 +71,6 @@ The default is /root\-anchors/root\-anchors.p7s.  This file has to be a PKCS7
 signature over the xml file, using the pem file (\-c) as trust anchor, and
 with possibly intermediate certificates from the \-p file.
 .TP
-.B \-p \fIpath
-The pathname to the certificate file on the server. (forms URL with \-u).
-The default is /root\-anchors/icannbundle.pem.  This file has to be a PEM
-certificate store.  It can contain intermediate certificates for verifying the
-signature.
-.TP
 .B \-4
 Use IPv4 for domain resolution and contacting the server on https.  Default is
 to use IPv4 and IPv6 where appropriate.

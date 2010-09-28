@@ -73,8 +73,6 @@
 #define XMLNAME "/root-anchors/root-anchors.xml"
 /** path on HTTPS server to p7s file */
 #define P7SNAME "/root-anchors/root-anchors.p7s"
-/** path on HTTPS server to pem file */
-#define PEMNAME "/root-anchors/icannbundle.pem"
 /** port number for https access */
 #define HTTPS_PORT 443
 
@@ -114,7 +112,6 @@ usage()
 	printf("-u name		server in https url, default %s\n", URLNAME);
 	printf("-x path		pathname to xml, default %s\n", XMLNAME);
 	printf("-s path		pathname to p7s, default %s\n", P7SNAME);
-	printf("-p path		pathname to pem, default %s\n", PEMNAME);
 	printf("-4		work using IPv4 only\n");
 	printf("-6		work using IPv6 only\n");
 	printf("-f resolv.conf	use given resolv.conf to resolve -u name\n");
@@ -246,30 +243,6 @@ verb_certs(char* msg, STACK_OF(X509)* sk)
 	}
 }
 
-/** write the certificate file */
-static int
-write_cert_file(char* file, STACK_OF(X509)* sk)
-{
-	FILE* out;
-	int i, num = sk_X509_num(sk);
-	if(file == NULL || strcmp(file, "") == 0)
-		return 1;
-	out = fopen(file, "w");
-	if(!out) {
-		if(verb) printf("write %s: %s\n", file, strerror(errno));
-		return 0;
-	}
-	for(i=0; i<num; i++) {
-		if(!PEM_write_X509(out, sk_X509_value(sk, i))) {
-			if(verb) printf("could not write %s\n", file);
-			fclose(out);
-			return 0;
-		}
-	}
-	fclose(out);
-	return 1;
-}
-
 /** read certificates from a PEM bio */
 static STACK_OF(X509)*
 read_cert_bio(BIO* bio)
@@ -386,11 +359,10 @@ read_builtin_cert(void)
 
 /** read update cert file or use builtin */
 static STACK_OF(X509)*
-read_cert_or_builtin(char* file, int* write_cert)
+read_cert_or_builtin(char* file)
 {
 	STACK_OF(X509) *sk = read_cert_file(file);
 	if(!sk) {
-		*write_cert = 1;
 		if(verb) printf("using builtin certificate\n");
 		sk = read_builtin_cert();
 	}
@@ -1397,12 +1369,11 @@ xml_parse(BIO* xml, time_t now)
 
 /** verify a PKCS7 signature, false on failure */
 static int
-verify_p7sig(BIO* data, BIO* p7s, BIO* pem, STACK_OF(X509)* trust, time_t now)
+verify_p7sig(BIO* data, BIO* p7s, STACK_OF(X509)* trust, time_t now)
 {
 	X509_VERIFY_PARAM* param = X509_VERIFY_PARAM_new();
 	PKCS7* p7;
 	X509_STORE *store = X509_STORE_new();
-	STACK_OF(X509) *certs;
 	int secure = 0;
 	int i;
 
@@ -1442,18 +1413,11 @@ verify_p7sig(BIO* data, BIO* p7s, BIO* pem, STACK_OF(X509)* trust, time_t now)
 	}
 	if(verb >= 2) printf("setup the X509_STORE\n");
 
-	/* convert pem to (intermediate) certs */
-	certs = read_cert_bio(pem);
-	if(verb >= 2) printf("read the intermediate certificates\n");
-
-	if(PKCS7_verify(p7, certs, store, data, NULL, 0) == 1) {
+	if(PKCS7_verify(p7, NULL, store, data, NULL, 0) == 1) {
 		secure = 1;
 		if(verb >= 2) printf("the PKCS7 signature verified\n");
 	}
 
-#ifndef S_SPLINT_S
-	sk_X509_pop_free(certs, X509_free);
-#endif
 	X509_STORE_free(store);
 	PKCS7_free(p7);
 	return secure;
@@ -1514,14 +1478,13 @@ write_root_anchor(char* root_anchor_file, BIO* ds)
 /** Perform the verification and update of the trustanchor file */
 static void
 verify_and_update_anchor(char* root_anchor_file, char* debugconf,
-	struct ub_result* dnskey, BIO* xml, BIO* p7s, BIO* pem,
-	STACK_OF(X509)* cert)
+	BIO* xml, BIO* p7s, STACK_OF(X509)* cert)
 {
 	time_t now = get_time_now(debugconf);
 	BIO* ds;
 
 	/* verify xml file */
-	if(!verify_p7sig(xml, p7s, pem, cert, now)) {
+	if(!verify_p7sig(xml, p7s, cert, now)) {
 		printf("the PKCS7 signature failed\n");
 		exit(0);
 	}
@@ -1532,9 +1495,6 @@ verify_and_update_anchor(char* root_anchor_file, char* debugconf,
 		/* the root zone is unsigned now */
 		write_unsigned_root(root_anchor_file);
 	} else {
-		/* see if xml file verifies the dnskey that was probed */
-		/* TODO */
-
 		/* reinstate 5011 tracking */
 		write_root_anchor(root_anchor_file, ds);
 	}
@@ -1544,16 +1504,16 @@ verify_and_update_anchor(char* root_anchor_file, char* debugconf,
 /** perform actual certupdate work */
 static int
 do_certupdate(char* root_anchor_file, char* root_cert_file,
-	char* urlname, char* xmlname, char* p7sname, char* pemname,
+	char* urlname, char* xmlname, char* p7sname,
 	char* res_conf, char* root_hints, char* debugconf,
 	int ip4only, int ip6only, struct ub_result* dnskey)
 {
-	int write_cert = 0;
 	STACK_OF(X509)* cert;
-	BIO *pem, *xml, *p7s;
+	BIO *xml, *p7s;
 	struct ip_list* ip_list = NULL;
+
 	/* read pem file or provide builtin */
-	cert = read_cert_or_builtin(root_cert_file, &write_cert);
+	cert = read_cert_or_builtin(root_cert_file);
 
 	/* lookup A, AAAA for the urlname (or parse urlname if IP address) */
 	ip_list = resolve_name(urlname, res_conf, root_hints, debugconf,
@@ -1562,24 +1522,14 @@ do_certupdate(char* root_anchor_file, char* root_cert_file,
 	/* fetch the necessary files over HTTPS */
 	xml = https(ip_list, xmlname, urlname);
 	p7s = https(ip_list, p7sname, urlname);
-	pem = https(ip_list, pemname, urlname);
-
-	/* update the pem file (optional) */
-	/*do_pem_update(cert, pem, &write_cert); TODO */
-	if(write_cert) {
-		(void)write_cert_file(root_cert_file, cert);
-		if(verb) printf("wrote cert to %s\n", root_cert_file);
-	}
 
 	/* verify and update the root anchor */
-	verify_and_update_anchor(root_anchor_file, debugconf, dnskey,
-		xml, p7s, pem, cert);
+	verify_and_update_anchor(root_anchor_file, debugconf, xml, p7s, cert);
 	if(verb) printf("success: the anchor has been updated "
 			"using the cert\n");
 
 	free_file_bio(xml);
 	free_file_bio(p7s);
-	free_file_bio(pem);
 #ifndef S_SPLINT_S
 	sk_X509_pop_free(cert, X509_free);
 #endif
@@ -1771,7 +1721,7 @@ probe_date_allows_certupdate(char* root_anchor_file, char* debugconf)
 	int32_t leeway = 30 * 24 * 3600; /* 30 days leeway */
 	/* if the date is before 2010-07-15:00.00.00 then the root has not
 	 * been signed yet, and thus we refuse to take action. */
-	if(now - 1279144800 < 0) {
+	if(get_time_now(debugconf) < xml_convertdate("2010-07-15T00:00:00")) {
 		if(verb) printf("the date is before the root was first signed,"
 			" please correct the clock\n");
 		return 0;
@@ -1793,7 +1743,7 @@ probe_date_allows_certupdate(char* root_anchor_file, char* debugconf)
 /** perform the unbound-anchor work */
 static int
 do_root_update_work(char* root_anchor_file, char* root_cert_file,
-	char* urlname, char* xmlname, char* p7sname, char* pemname,
+	char* urlname, char* xmlname, char* p7sname,
 	char* res_conf, char* root_hints, char* debugconf,
 	int ip4only, int ip6only, int force)
 {
@@ -1825,10 +1775,9 @@ do_root_update_work(char* root_anchor_file, char* root_cert_file,
 	/* if not (and NOERROR): check date and do certupdate */
 	if((dnskey->rcode == 0 && probe_date_allows_certupdate(root_anchor_file,
 		debugconf)) || force) {
-		if(do_certupdate(root_anchor_file, root_cert_file,
-			urlname, xmlname, p7sname, pemname,
-			res_conf, root_hints, debugconf, ip4only, ip6only,
-			dnskey))
+		if(do_certupdate(root_anchor_file, root_cert_file, urlname,
+			xmlname, p7sname, res_conf, root_hints, debugconf,
+			ip4only, ip6only, dnskey))
 			return 1;
 		return used_builtin;
 	}
@@ -1851,13 +1800,12 @@ int main(int argc, char* argv[])
 	char* urlname = URLNAME;
 	char* xmlname = XMLNAME;
 	char* p7sname = P7SNAME;
-	char* pemname = PEMNAME;
 	char* res_conf = NULL;
 	char* root_hints = NULL;
 	char* debugconf = NULL;
 	int ip4only=0, ip6only=0, force=0;
 	/* parse the options */
-	while( (c=getopt(argc, argv, "46C:Fa:c:f:hp:r:s:u:vx:")) != -1) {
+	while( (c=getopt(argc, argv, "46C:Fa:c:f:hr:s:u:vx:")) != -1) {
 		switch(c) {
 		case '4':
 			ip4only = 1;
@@ -1879,9 +1827,6 @@ int main(int argc, char* argv[])
 			break;
 		case 's':
 			p7sname = optarg;
-			break;
-		case 'p':
-			pemname = optarg;
 			break;
 		case 'f':
 			res_conf = optarg;
@@ -1914,7 +1859,7 @@ int main(int argc, char* argv[])
 	OpenSSL_add_all_algorithms();
 	(void)SSL_library_init();
 
-	return do_root_update_work(root_anchor_file, root_cert_file,
-		urlname, xmlname, p7sname, pemname,
-		res_conf, root_hints, debugconf, ip4only, ip6only, force);
+	return do_root_update_work(root_anchor_file, root_cert_file, urlname,
+		xmlname, p7sname, res_conf, root_hints, debugconf, ip4only,
+		ip6only, force);
 }
