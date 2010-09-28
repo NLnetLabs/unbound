@@ -104,7 +104,7 @@ str2int(const char **buf, int max)
   * using the format specified by format
  **/
 char *
-nsd_strptime(const char *s, const char *format, struct tm *tm)
+unbound_strptime(const char *s, const char *format, struct tm *tm)
 {
 	int c, alt_format, ret;
 	int split_year = 0;
@@ -152,7 +152,7 @@ nsd_strptime(const char *s, const char *format, struct tm *tm)
 					tm->tm_mon = ret;
 					break;
 				case 'c': /* date and time representation */
-					if (!(s = nsd_strptime(s, "%x %X", tm))) {
+					if (!(s = unbound_strptime(s, "%x %X", tm))) {
 						return NULL;
 					}
 					break;
@@ -179,7 +179,7 @@ nsd_strptime(const char *s, const char *format, struct tm *tm)
 					tm->tm_mday = ret;
 					break;
 				case 'D': /* equivalent to %m/%d/%y */
-					if (!(s = nsd_strptime(s, "%m/%d/%y", tm))) {
+					if (!(s = unbound_strptime(s, "%m/%d/%y", tm))) {
 						return NULL;
 					}
 					break;
@@ -239,12 +239,12 @@ nsd_strptime(const char *s, const char *format, struct tm *tm)
 						tm->tm_hour += 12;
 					break;
 				case 'r': /* equivalent of %I:%M:%S %p */
-					if (!(s = nsd_strptime(s, "%I:%M:%S %p", tm))) {
+					if (!(s = unbound_strptime(s, "%I:%M:%S %p", tm))) {
 						return NULL;
 					}
 					break;
 				case 'R': /* equivalent of %H:%M */
-					if (!(s = nsd_strptime(s, "%H:%M", tm))) {
+					if (!(s = unbound_strptime(s, "%H:%M", tm))) {
 						return NULL;
 					}
 					break;
@@ -258,7 +258,7 @@ nsd_strptime(const char *s, const char *format, struct tm *tm)
 					tm->tm_sec = ret;
 					break;
 				case 'T': /* equivalent of %H:%M:%S */
-					if (!(s = nsd_strptime(s, "%H:%M:%S", tm))) {
+					if (!(s = unbound_strptime(s, "%H:%M:%S", tm))) {
 						return NULL;
 					}
 					break;
@@ -288,12 +288,12 @@ nsd_strptime(const char *s, const char *format, struct tm *tm)
 					 **/
 					break;
 				case 'x': /* date format */
-					if (!(s = nsd_strptime(s, "%m/%d/%y", tm))) {
+					if (!(s = unbound_strptime(s, "%m/%d/%y", tm))) {
 						return NULL;
 					}
 					break;
 				case 'X': /* time format */
-					if (!(s = nsd_strptime(s, "%H:%M:%S", tm))) {
+					if (!(s = unbound_strptime(s, "%H:%M:%S", tm))) {
 						return NULL;
 					}
 					break;

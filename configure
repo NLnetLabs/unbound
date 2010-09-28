@@ -16131,8 +16131,13 @@ fi
 
 fi
 
-ac_fn_c_check_func "$LINENO" "strptime" "ac_cv_func_strptime"
+for ac_func in strptime
+do :
+  ac_fn_c_check_func "$LINENO" "strptime" "ac_cv_func_strptime"
 if test "x$ac_cv_func_strptime" = x""yes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_STRPTIME 1
+_ACEOF
 
 else
   case " $LIBOBJS " in
@@ -16142,6 +16147,7 @@ else
 esac
 
 fi
+done
 
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing setusercontext" >&5
 $as_echo_n "checking for library containing setusercontext... " >&6; }

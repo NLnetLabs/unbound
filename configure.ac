@@ -654,7 +654,7 @@ if test $ac_cv_func_daemon = yes; then
 ])
 fi
 
-AC_CHECK_FUNC([strptime],,[AC_LIBOBJ([strptime])])
+AC_CHECK_FUNCS([strptime],,[AC_LIBOBJ([strptime])])
 AC_SEARCH_LIBS([setusercontext], [util])
 AC_CHECK_FUNCS([tzset sigprocmask fcntl getpwnam getrlimit setrlimit setsid sbrk chroot kill sleep usleep random srandom recvmsg sendmsg writev socketpair glob initgroups strftime localtime_r setusercontext _beginthreadex])
 AC_CHECK_FUNCS([setresuid],,[AC_CHECK_FUNCS([setreuid])])
@@ -820,6 +820,12 @@ AHX_MEMCMP_BROKEN(unbound)
 #ifndef HAVE_CTIME_R
 #define ctime_r unbound_ctime_r
 char *ctime_r(const time_t *timep, char *buf);
+#endif
+
+#ifndef HAVE_STRPTIME
+#define strptime unbound_strptime
+struct tm;
+char *strptime(const char *s, const char *format, struct tm *tm);
 #endif
 
 #if defined(HAVE_EVENT_H) && !defined(HAVE_EVENT_BASE_ONCE) && (defined(HAVE_PTHREAD) || defined(HAVE_SOLARIS_THREADS))

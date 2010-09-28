@@ -289,6 +289,9 @@
 /* Define to 1 if you have the `strlcpy' function. */
 #undef HAVE_STRLCPY
 
+/* Define to 1 if you have the `strptime' function. */
+#undef HAVE_STRPTIME
+
 /* Define if you have Swig libraries and header files. */
 #undef HAVE_SWIG
 
@@ -810,6 +813,12 @@ int memcmp(const void *x, const void *y, size_t n);
 #ifndef HAVE_CTIME_R
 #define ctime_r unbound_ctime_r
 char *ctime_r(const time_t *timep, char *buf);
+#endif
+
+#ifndef HAVE_STRPTIME
+#define strptime unbound_strptime
+struct tm;
+char *strptime(const char *s, const char *format, struct tm *tm);
 #endif
 
 #if defined(HAVE_EVENT_H) && !defined(HAVE_EVENT_BASE_ONCE) && (defined(HAVE_PTHREAD) || defined(HAVE_SOLARIS_THREADS))
