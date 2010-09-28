@@ -38,6 +38,75 @@
  *
  * This file checks to see that the current 5011 keys work to prime the
  * current root anchor.  If not a certificate is used to update the anchor.
+ *
+ * This is a concept solution for distribution of the DNSSEC root
+ * trust anchor.  It is a small tool, called "unbound-anchor", that
+ * runs before the main validator starts.  I.e. in the init script:
+ * unbound-anchor; unbound.  Thus it is meant to run at system boot time.
+ *
+ * Management-Abstract:
+ *    * first run: fill root.key file with hardcoded DS record.
+ *    * mostly: use RFC5011 tracking, quick . DNSKEY UDP query.
+ *    * failover: use builtin certificate, do https and update.
+ * Special considerations:
+ *    * 30-days RFC5011 timer saves a lot of https traffic.
+ *    * DNSKEY probe must be NOERROR, saves a lot of https traffic.
+ *    * fail if clock before sign date of the root, if cert expired.
+ *    * if the root goes back to unsigned, deals with it.
+ *
+ * It has hardcoded the root DS anchors and the ICANN CA root certificate.
+ * It allows with options to override those.  It also takes root-hints (it
+ * has to do a DNS resolve), and also has hardcoded defaults for those.
+ *
+ * Once it starts, just before the validator starts, it quickly checks if
+ * the root anchor file needs to be updated.  First it tries to use
+ * RFC5011-tracking of the root key.  If that fails (and for 30-days since
+ * last successful probe), then it attempts to update using the
+ * certificate.  So most of the time, the RFC5011 tracking will work fine,
+ * and within a couple milliseconds, the main daemon can start.  It will
+ * have only probed the . DNSKEY, not done expensive https transfers on the
+ * root infrastructure.
+ *
+ * If there is no root key in the root.key file, it bootstraps the
+ * RFC5011-tracking with its builtin DS anchors; if that fails it
+ * bootstraps the RFC5011-tracking using the certificate.  (again to avoid
+ * https, and it is also faster).
+ *
+ * The certificate update is done by fetching root-anchors.xml and
+ * root-anchors.p7s via SSL.  The HTTPS certificate can be logged but is
+ * not validated (https for channel security; the security comes from the
+ * certificate).  The 'data.iana.org' domain name A and AAAA are resolved
+ * without DNSSEC.  It tries a random IP until the transfer succeeds.  It
+ * then checks the p7s signature.
+ *
+ * On any failure, it leaves the root key file untouched.  The main
+ * validator has to cope with it, it cannot fix things (So a failure does
+ * not go 'without DNSSEC', no downgrade).  If it used its builtin stuff or
+ * did the https, it exits with an exit code, so that this can trigger the
+ * init script to log the event and potentially alert the operator that can
+ * do a manual check.
+ *
+ * The date is also checked.  Before 2010-07-15 is a failure (root not
+ * signed yet; avoids attacks on system clock).  The
+ * last-successful-RFC5011-probe (if available) has to be more than 30 days
+ * in the past (otherwise, RFC5011 should have worked).  This keeps
+ * unneccesary https traffic down.  If the main certificate is expired, it
+ * fails.
+ *
+ * The dates on the keys in the xml are checked (uses the libexpat xml
+ * parser), only the valid ones are used to re-enstate RFC5011 tracking.
+ * If 0 keys are valid, the zone has gone to insecure (a special marker is
+ * written in the keyfile that tells the main validator daemon the zone is
+ * insecure).
+ *
+ * Only the root ICANN CA is shipped, not the intermediate ones.  The
+ * intermediate CAs are included in the p7s file that was downloaded.  (the
+ * root cert is valid to 2028 and the intermediate to 2014, today).
+ *
+ * Obviously, the tool also has options so the operator can provide a new
+ * keyfile, a new certificate and new URLs, and fresh root hints.  By
+ * default it logs nothing on failure and success; it 'just works'.
+ *
  */
 
 #include "config.h"

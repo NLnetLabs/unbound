@@ -1,3 +1,7 @@
+28 September 2010: Wouter
+	- unbound-anchor working, it creates or updates a root.key file.
+	  Use it before you start the validator (e.g. at system boot time).
+
 27 September 2010: Wouter
 	- iana portlist updated.
 
