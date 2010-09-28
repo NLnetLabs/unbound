@@ -180,6 +180,7 @@ usage()
 		"		builtin root hints are used by default\n");
 	printf("-v		more verbose\n");
 	printf("-C conf		debug, read config\n");
+	printf("-P port		use port for https connect, default 443\n");
 	printf("-F 		debug, force update with cert\n");
 	printf("-h		show this usage help\n");
 	printf("Version %s\n", PACKAGE_VERSION);
@@ -280,8 +281,8 @@ get_time_now(char* debugconf)
 static void
 verb_cert(char* msg, X509* x)
 {
-	if(verb == 0) return;
-	if(verb == 1) {
+	if(verb == 0 || verb == 1) return;
+	if(verb == 2) {
 		if(msg) printf("%s\n", msg);
 		X509_print_ex_fp(stdout, x, 0, (unsigned long)-1
 			^(X509_FLAG_NO_SUBJECT
@@ -297,7 +298,7 @@ static void
 verb_certs(char* msg, STACK_OF(X509)* sk)
 {
 	int i, num = sk_X509_num(sk);
-	if(verb == 0) return;
+	if(verb == 0 || verb == 1) return;
 	for(i=0; i<num; i++) {
 		printf("%s (%d/%d)\n", msg, i, num);
 		verb_cert(NULL, sk_X509_value(sk, i));
@@ -463,10 +464,10 @@ ip_list_free(struct ip_list* p)
 
 /** create ip_list entry for a RR record */
 static struct ip_list*
-RR_to_ip(int tp, char* data, int len)
+RR_to_ip(int tp, char* data, int len, int port)
 {
 	struct ip_list* ip = (struct ip_list*)calloc(1, sizeof(*ip));
-	uint16_t p = HTTPS_PORT;
+	uint16_t p = (uint16_t)port;
 	if(tp == LDNS_RR_TYPE_A) {
 		struct sockaddr_in* sa = (struct sockaddr_in*)&ip->addr;
 		ip->len = (socklen_t)sizeof(*sa);
@@ -501,7 +502,8 @@ RR_to_ip(int tp, char* data, int len)
 
 /** Resolve name, type, class and add addresses to iplist */
 static void
-resolve_host_ip(struct ub_ctx* ctx, char* host, int tp, int cl, struct ip_list** head)
+resolve_host_ip(struct ub_ctx* ctx, char* host, int port, int tp, int cl,
+	struct ip_list** head)
 {
 	struct ub_result* res = NULL;
 	int r;
@@ -518,7 +520,8 @@ resolve_host_ip(struct ub_ctx* ctx, char* host, int tp, int cl, struct ip_list**
 		exit(0);
 	}
 	for(i = 0; res->data[i]; i++) {
-		struct ip_list* ip = RR_to_ip(tp, res->data[i], res->len[i]);
+		struct ip_list* ip = RR_to_ip(tp, res->data[i], res->len[i],
+			port);
 		if(!ip) continue;
 		ip->next = *head;
 		*head = ip;
@@ -528,14 +531,14 @@ resolve_host_ip(struct ub_ctx* ctx, char* host, int tp, int cl, struct ip_list**
 
 /** parse a text IP address into a sockaddr */
 static struct ip_list*
-parse_ip_addr(char* str)
+parse_ip_addr(char* str, int port)
 {
 	socklen_t len = 0;
 	struct sockaddr_storage* addr = NULL;
 	struct sockaddr_in6 a6;
 	struct sockaddr_in a;
 	struct ip_list* ip;
-	uint16_t p = HTTPS_PORT;
+	uint16_t p = (uint16_t)port;
 	memset(&a6, 0, sizeof(a6));
 	memset(&a, 0, sizeof(a));
 
@@ -570,22 +573,23 @@ parse_ip_addr(char* str)
  * no trust anchor).  Without DNSSEC validation.
  * @param host: the name to resolve.
  * 	If this name is an IP4 or IP6 address this address is returned.
+ * @param port: the port number used for the returned IP structs.
  * @param res_conf: resolv.conf (if any).
  * @param root_hints: root hints (if any).
  * @param debugconf: unbound.conf for debugging options.
  * @param ip4only: use only ip4 for resolve and only lookup A
  * @param ip6only: use only ip6 for resolve and only lookup AAAA
  * 	default is to lookup A and AAAA using ip4 and ip6.
- * @return list of IP addresses to port 443.
+ * @return list of IP addresses.
  */
 static struct ip_list*
-resolve_name(char* host, char* res_conf, char* root_hints, char* debugconf,
-	int ip4only, int ip6only)
+resolve_name(char* host, int port, char* res_conf, char* root_hints,
+	char* debugconf, int ip4only, int ip6only)
 {
 	struct ub_ctx* ctx;
 	struct ip_list* list = NULL;
 	/* first see if name is an IP address itself */
-	if( (list=parse_ip_addr(host)) ) {
+	if( (list=parse_ip_addr(host, port)) ) {
 		return list;
 	}
 	
@@ -595,13 +599,13 @@ resolve_name(char* host, char* res_conf, char* root_hints, char* debugconf,
 
 	/* try resolution of A */
 	if(!ip6only) {
-		resolve_host_ip(ctx, host, LDNS_RR_TYPE_A,
+		resolve_host_ip(ctx, host, port, LDNS_RR_TYPE_A,
 			LDNS_RR_CLASS_IN, &list);
 	}
 
 	/* try resolution of AAAA */
 	if(!ip4only) {
-		resolve_host_ip(ctx, host, LDNS_RR_TYPE_AAAA,
+		resolve_host_ip(ctx, host, port, LDNS_RR_TYPE_AAAA,
 			LDNS_RR_CLASS_IN, &list);
 	}
 
@@ -1479,7 +1483,7 @@ verify_p7sig(BIO* data, BIO* p7s, STACK_OF(X509)* trust, time_t now)
 
 	if(PKCS7_verify(p7, NULL, store, data, NULL, 0) == 1) {
 		secure = 1;
-		if(verb >= 2) printf("the PKCS7 signature verified\n");
+		if(verb) printf("the PKCS7 signature verified\n");
 	}
 
 	X509_STORE_free(store);
@@ -1570,7 +1574,7 @@ static int
 do_certupdate(char* root_anchor_file, char* root_cert_file,
 	char* urlname, char* xmlname, char* p7sname,
 	char* res_conf, char* root_hints, char* debugconf,
-	int ip4only, int ip6only, struct ub_result* dnskey)
+	int ip4only, int ip6only, int port, struct ub_result* dnskey)
 {
 	STACK_OF(X509)* cert;
 	BIO *xml, *p7s;
@@ -1580,7 +1584,7 @@ do_certupdate(char* root_anchor_file, char* root_cert_file,
 	cert = read_cert_or_builtin(root_cert_file);
 
 	/* lookup A, AAAA for the urlname (or parse urlname if IP address) */
-	ip_list = resolve_name(urlname, res_conf, root_hints, debugconf,
+	ip_list = resolve_name(urlname, port, res_conf, root_hints, debugconf,
 		ip4only, ip6only);
 
 	/* fetch the necessary files over HTTPS */
@@ -1809,7 +1813,7 @@ static int
 do_root_update_work(char* root_anchor_file, char* root_cert_file,
 	char* urlname, char* xmlname, char* p7sname,
 	char* res_conf, char* root_hints, char* debugconf,
-	int ip4only, int ip6only, int force)
+	int ip4only, int ip6only, int force, int port)
 {
 	struct ub_ctx* ctx;
 	struct ub_result* dnskey;
@@ -1841,7 +1845,7 @@ do_root_update_work(char* root_anchor_file, char* root_cert_file,
 		debugconf)) || force) {
 		if(do_certupdate(root_anchor_file, root_cert_file, urlname,
 			xmlname, p7sname, res_conf, root_hints, debugconf,
-			ip4only, ip6only, dnskey))
+			ip4only, ip6only, port, dnskey))
 			return 1;
 		return used_builtin;
 	}
@@ -1867,9 +1871,9 @@ int main(int argc, char* argv[])
 	char* res_conf = NULL;
 	char* root_hints = NULL;
 	char* debugconf = NULL;
-	int ip4only=0, ip6only=0, force=0;
+	int ip4only=0, ip6only=0, force=0, port = HTTPS_PORT;
 	/* parse the options */
-	while( (c=getopt(argc, argv, "46C:Fa:c:f:hr:s:u:vx:")) != -1) {
+	while( (c=getopt(argc, argv, "46C:FP:a:c:f:hr:s:u:vx:")) != -1) {
 		switch(c) {
 		case '4':
 			ip4only = 1;
@@ -1904,6 +1908,9 @@ int main(int argc, char* argv[])
 		case 'F':
 			force = 1;
 			break;
+		case 'P':
+			port = atoi(optarg);
+			break;
 		case 'v':
 			verb++;
 			break;
@@ -1925,5 +1932,5 @@ int main(int argc, char* argv[])
 
 	return do_root_update_work(root_anchor_file, root_cert_file, urlname,
 		xmlname, p7sname, res_conf, root_hints, debugconf, ip4only,
-		ip6only, force);
+		ip6only, force, port);
 }

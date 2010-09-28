@@ -59,7 +59,8 @@ If the file does not exist, or is empty, a builtin certificate is used.
 .TP
 .B \-u \fIname
 The server name, it connects to https://name.  Specify without https:// prefix.
-The default is "data.iana.org".  It connects to port 443.
+The default is "data.iana.org".  It connects to the port specified with \-P.
+You can pass an IPv4 addres or IPv6 address (no brackets) if you want.
 .TP
 .B \-x \fIpath
 The pathname to the root\-anchors.xml file on the server. (forms URL with \-u).
@@ -107,6 +108,9 @@ left undisturbed, so that a recursive server can start right after it.
 Debug option to read unbound.conf into the resolution process used.  For tests.
 The validator date override option makes it possible to run a test on a
 different date.
+.TP
+.B \-P \fIport
+Set the port number to use for the https connection.  The default is 443.
 .TP
 .B \-F
 Debug option to force update of the root anchor through downloading the xml

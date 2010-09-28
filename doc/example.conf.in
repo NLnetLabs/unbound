@@ -309,13 +309,9 @@ server:
 	# initial file like trust-anchor-file, then it stores metadata.
 	# Use several entries, one per domain name, to track multiple zones.
 	#
-	# To do DNSSEC validation and track the root, initialize the 
-	# file @UNBOUND_RUN_DIR@/root.key
-	# (the echo statement goes on one line)
-	# echo . IN DS 19036 8 2 49AAC11D7B6F6446702E54A1607371607A1A41855200FD2CE1CDDE32F24E8FB5 > @UNBOUND_RUN_DIR@/root.key
-	# or: dig . DNSKEY > @UNBOUND_RUN_DIR@/root.key
-	# You can verify it via https://www.iana.org/dnssec or TCR attestation.
-	# auto-trust-anchor-file: "@UNBOUND_RUN_DIR@/root.key"
+	# If you want to perform DNSSEC validation, run unbound-anchor before
+	# you start unbound (i.e. in the system boot scripts).  And enable:
+	# auto-trust-anchor-file: "@UNBOUND_ROOTKEY_FILE@"
 
 	# File with DLV trusted keys. Same format as trust-anchor-file.
 	# There can be only one DLV configured, it is trusted from root down.
