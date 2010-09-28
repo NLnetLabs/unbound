@@ -28,6 +28,8 @@ This software is under BSD license, see LICENSE for details.
 	of outgoing ports. This improves randomization and spoof 
 	resistance. For the default of 16 ports the builtin alternative 
 	works well and is a little faster.
+  * --with-libexpat=/path/to/libexpat
+  	Can be set to the install directory of libexpat.
   * --without-pthreads 
 	This disables pthreads. Without this option the pthreads library 
 	is detected automatically. Use this option to disable threading
@@ -59,6 +61,13 @@ This software is under BSD license, see LICENSE for details.
   * --with-chroot-dir=path
   	Set default chroot directory,
 	the default is /usr/local/etc/unbound.
+  * --with-rootkey-file=path
+  	Set the default root.key path.  This file is read and written.
+	the default is /usr/local/etc/unbound/root.key
+  * --with-rootcert-file=path
+  	Set the default root update certificate path.  A builtin certificate
+	is used if this file is empty or does not exist.
+	the default is /usr/local/etc/unbound/icannbundle.pem
   * --with-username=user
   	Set default user name to change to,
 	the default is the "unbound" user.

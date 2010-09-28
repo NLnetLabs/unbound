@@ -25,10 +25,10 @@ Suggested usage:
 .nf
 	# in the init scripts.
 	# provide or update the root anchor (if necessary)
-	unbound-anchor -a "/usr/local/etc/unbound/root.key"
+	unbound-anchor -a "@UNBOUND_ROOTKEY_FILE@"
 	# start validating resolver
 	# the unbound.conf contains:
-	#   auto-trust-anchor-file: "/usr/local/etc/unbound/root.key"
+	#   auto-trust-anchor-file: "@UNBOUND_ROOTKEY_FILE@"
 	unbound -c unbound.conf
 .fi
 .P
@@ -49,12 +49,12 @@ The available options are:
 .TP
 .B \-a \fIfile
 The root anchor key file, that is read in and written out.
-Default is /usr/local/etc/unbound/root.key.
+Default is @UNBOUND_ROOTKEY_FILE@.
 If the file does not exist, or is empty, a builtin root key is written to it.
 .TP
 .B \-c \fIfile
 The root update certificate file, that is read in.
-Default is /usr/local/etc/unbound/icannbundle.pem.
+Default is @UNBOUND_ROOTCERT_FILE@.
 If the file does not exist, or is empty, a builtin certificate is used.
 .TP
 .B \-u \fIname
@@ -139,21 +139,21 @@ You can do this by checking the exit value.  In this manner:
 Or something more suitable for your operational environment.
 .SH "FILES"
 .TP
-.I /usr/local/etc/unbound/root.key
+.I @UNBOUND_ROOTKEY_FILE@
 The root anchor file, updated with 5011 tracking, and read and written to.
+The file is created if it does not exist.
 .TP
-.I /usr/local/etc/unbound/icannbundle.pem
+.I @UNBOUND_ROOTCERT_FILE@
 The trusted self\-signed certificate that is used to verify the downloaded
-DNSSEC root trust anchor.
+DNSSEC root trust anchor.  You can update it by fetching it from
+https://data.iana.org/root\-anchors/icannbundle.pem (and validate it).
+If the file does not exist or is empty, a builtin version is used.
 .TP
 .I https://data.iana.org/root\-anchors/root\-anchors.xml
 Source for the root key information.
 .TP
 .I https://data.iana.org/root\-anchors/root\-anchors.p7s
 Signature on the root key information.
-.TP
-.I https://data.iana.org/root\-anchors/icannbundle.pem
-Source for the certificate used.
 .SH "SEE ALSO"
 \fIunbound.conf\fR(5), 
 \fIunbound\fR(8).

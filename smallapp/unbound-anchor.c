@@ -131,11 +131,6 @@
 #include <openssl/x509.h>
 #include <openssl/pem.h>
 
-/* TODO configure defines with prefix */
-/** root key file, 5011 tracked */
-#define ROOT_ANCHOR_FILE "/usr/local/etc/unbound/root.key"
-/** root update cert file */
-#define ROOT_CERT_FILE "/usr/local/etc/unbound/icannbundle.pem"
 /** name of server in URL to fetch HTTPS from */
 #define URLNAME "data.iana.org"
 /** path on HTTPS server to xml file */

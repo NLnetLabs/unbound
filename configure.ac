@@ -154,6 +154,34 @@ AC_SUBST(UNBOUND_PIDFILE)
 ACX_ESCAPE_BACKSLASH($UNBOUND_PIDFILE, hdr_pid)
 AC_DEFINE_UNQUOTED(PIDFILE, ["$hdr_pid"], [default pidfile location])
 
+AC_ARG_WITH(rootkey-file, 
+    AC_HELP_STRING([--with-rootkey-file=filename], 
+    [set default pathname to root key file (default run-dir/root.key). This file is read and written.]), 
+    UNBOUND_ROOTKEY_FILE="$withval", 
+if test $on_mingw = no; then
+    UNBOUND_ROOTKEY_FILE="$UNBOUND_RUN_DIR/root.key"
+else
+    UNBOUND_ROOTKEY_FILE=""
+fi
+)
+AC_SUBST(UNBOUND_ROOTKEY_FILE)
+ACX_ESCAPE_BACKSLASH($UNBOUND_ROOTKEY_FILE, hdr_rkey)
+AC_DEFINE_UNQUOTED(ROOT_ANCHOR_FILE, ["$hdr_rkey"], [default rootkey location])
+
+AC_ARG_WITH(rootcert-file, 
+    AC_HELP_STRING([--with-rootcert-file=filename], 
+    [set default pathname to root update certificate file (default run-dir/icannbundle.pem).  This file need not exist if you are content with the builtin.]), 
+    UNBOUND_ROOTCERT_FILE="$withval", 
+if test $on_mingw = no; then
+    UNBOUND_ROOTCERT_FILE="$UNBOUND_RUN_DIR/icannbundle.pem"
+else
+    UNBOUND_ROOTCERT_FILE=""
+fi
+)
+AC_SUBST(UNBOUND_ROOTCERT_FILE)
+ACX_ESCAPE_BACKSLASH($UNBOUND_ROOTCERT_FILE, hdr_rpem)
+AC_DEFINE_UNQUOTED(ROOT_CERT_FILE, ["$hdr_rpem"], [default rootcert location])
+
 AC_ARG_WITH(username, 
     AC_HELP_STRING([--with-username=user], 
     [set default user that unbound changes to (default user is unbound)]), 
@@ -529,9 +557,12 @@ else
 fi
 
 # check for libexpat
+AC_ARG_WITH(libexpat, AC_HELP_STRING([--with-libexpat=path],
+    [specify explicit path for libexpat.]),
+    [ ],[ withval="/usr/local /opt/local /usr/lib /usr/pkg /usr/sfw /usr" ])
 AC_MSG_CHECKING(for libexpat)
 found_libexpat="no"
-for dir in /usr/local /opt/local /usr/lib /usr/pkg /usr/sfw /usr; do
+for dir in $withval ; do
             if test -f "$dir/include/expat.h"; then
 		found_libexpat="yes"
 		dnl assume /usr is in default path.
