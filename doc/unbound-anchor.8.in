@@ -68,8 +68,7 @@ The default is /root\-anchors/root\-anchors.xml.
 .B \-s \fIpath
 The pathname to the root\-anchors.p7s file on the server. (forms URL with \-u).
 The default is /root\-anchors/root\-anchors.p7s.  This file has to be a PKCS7
-signature over the xml file, using the pem file (\-c) as trust anchor, and
-with possibly intermediate certificates from the \-p file.
+signature over the xml file, using the pem file (\-c) as trust anchor.
 .TP
 .B \-4
 Use IPv4 for domain resolution and contacting the server on https.  Default is

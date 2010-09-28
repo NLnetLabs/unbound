@@ -100,15 +100,12 @@ usage()
 		"Most options have defaults.\n");
 	printf("	Run this program before you start the validator.\n");
 	printf("\n");
-	printf("	The anchor and cert are filled with default builtin\n");
-	printf("	values if the file does not exist or is empty.\n");
+	printf("	The anchor and cert have default builtin content\n");
+	printf("	if the file does not exist or is empty.\n");
 	printf("\n");
 	printf("-a file		root key file, default %s\n", ROOT_ANCHOR_FILE);
+	printf("		The key is input and output for this tool.\n");
 	printf("-c file		cert file, default %s\n", ROOT_CERT_FILE);
-	/* TODO
-	printf("-o file		output key file, if enabled new key written"
-		"		there and exit code 4 for manual change\n");
-	*/
 	printf("-u name		server in https url, default %s\n", URLNAME);
 	printf("-x path		pathname to xml, default %s\n", XMLNAME);
 	printf("-s path		pathname to p7s, default %s\n", P7SNAME);
