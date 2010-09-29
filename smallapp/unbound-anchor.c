@@ -1259,13 +1259,19 @@ handle_keydigest(struct xml_data* data, const XML_Char **atts)
 	data->use_key = 0;
 	if(find_att(atts, "validFrom")) {
 		time_t from = xml_convertdate(find_att(atts, "validFrom"));
-		if(from == 0) return;
+		if(from == 0) {
+			if(verb) printf("error: xml cannot be parsed\n");
+			exit(0);
+		}
 		if(data->date < from)
 			return;
 	}
 	if(find_att(atts, "validUntil")) {
 		time_t until = xml_convertdate(find_att(atts, "validUntil"));
-		if(until == 0) return;
+		if(until == 0) {
+			if(verb) printf("error: xml cannot be parsed\n");
+			exit(0);
+		}
 		if(data->date > until)
 			return;
 	}
