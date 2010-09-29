@@ -654,7 +654,29 @@ if test $ac_cv_func_daemon = yes; then
 ])
 fi
 
-AC_CHECK_FUNCS([strptime],,[AC_LIBOBJ([strptime])])
+# check wether strptime also works
+AC_DEFUN([AC_CHECK_STRPTIME_WORKS],
+[AC_REQUIRE([AC_PROG_CC])
+AC_MSG_CHECKING(whether strptime works)
+if test c${cross_compiling} = cno; then
+AC_TRY_RUN([
+#define _XOPEN_SOURCE
+#include <time.h>
+int main(void) { struct tm tm; char *res;
+res = strptime("20070207111842", "%Y%m%d%H%M%S", &tm);
+if (!res) return 1; return 0; }
+] , [eval "ac_cv_c_strptime_works=yes"], [eval "ac_cv_c_strptime_works=no"])
+else
+eval "ac_cv_c_strptime_works=maybe"
+fi
+AC_MSG_RESULT($ac_cv_c_strptime_works)
+if test $ac_cv_c_strptime_works = no; then
+AC_LIBOBJ(strptime)
+else
+AC_DEFINE_UNQUOTED([STRPTIME_WORKS], 1, [use default strptime.])
+fi
+])dnl
+AC_CHECK_FUNCS([strptime],[AC_CHECK_STRPTIME_WORKS],[AC_LIBOBJ([strptime])])
 AC_SEARCH_LIBS([setusercontext], [util])
 AC_CHECK_FUNCS([tzset sigprocmask fcntl getpwnam getrlimit setrlimit setsid sbrk chroot kill sleep usleep random srandom recvmsg sendmsg writev socketpair glob initgroups strftime localtime_r setusercontext _beginthreadex])
 AC_CHECK_FUNCS([setresuid],,[AC_CHECK_FUNCS([setreuid])])
@@ -822,7 +844,7 @@ AHX_MEMCMP_BROKEN(unbound)
 char *ctime_r(const time_t *timep, char *buf);
 #endif
 
-#ifndef HAVE_STRPTIME
+#if !defined(HAVE_STRPTIME) || !defined(STRPTIME_WORKS)
 #define strptime unbound_strptime
 struct tm;
 char *strptime(const char *s, const char *format, struct tm *tm);

@@ -451,6 +451,9 @@
 /* Define to 1 if you have the ANSI C header files. */
 #undef STDC_HEADERS
 
+/* use default strptime. */
+#undef STRPTIME_WORKS
+
 /* Use win32 resources and API */
 #undef UB_ON_WINDOWS
 
@@ -815,7 +818,7 @@ int memcmp(const void *x, const void *y, size_t n);
 char *ctime_r(const time_t *timep, char *buf);
 #endif
 
-#ifndef HAVE_STRPTIME
+#if !defined(HAVE_STRPTIME) || !defined(STRPTIME_WORKS)
 #define strptime unbound_strptime
 struct tm;
 char *strptime(const char *s, const char *format, struct tm *tm);
