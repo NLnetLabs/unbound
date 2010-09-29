@@ -71,6 +71,11 @@
  * RFC5011-tracking with its builtin DS anchors; if that fails it
  * bootstraps the RFC5011-tracking using the certificate.  (again to avoid
  * https, and it is also faster).
+ * 
+ * It uses the XML file by converting it to DS records and writing that to the
+ * key file.  Unbound can detect that the 'special comments' are gone, and
+ * the file contains a list of normal DNSKEY/DS records, and uses that to
+ * bootstrap 5011 (the KSK is made VALID).
  *
  * The certificate update is done by fetching root-anchors.xml and
  * root-anchors.p7s via SSL.  The HTTPS certificate can be logged but is
