@@ -811,7 +811,7 @@ process_one_header(char* buf, size_t* clen, int* chunked)
 }
 
 /** 
- * Read one file from SSL
+ * Read one line from SSL
  * zero terminates.
  * skips "\r\n" (but not copied to buf).
  * @param ssl: the SSL connection to read from (blocking).
@@ -1018,11 +1018,12 @@ read_http_result(SSL* ssl)
 		/* the result is zero terminated for robustness, but we 
 		 * do not include that in the BIO len (for binary data) */
 		len = (size_t)l-1;
-		data = strdup(d);
+		data = (char*)malloc(l);
 		if(data == NULL) {
 			if(verb) printf("out of memory\n");
 			return NULL;
 		}
+		memcpy(data, d, l);
 		BIO_free(tmp);
 	} else {
 		data = read_data_chunk(ssl, len);
@@ -1870,7 +1871,7 @@ extern int optind;
 /** getopt global, in case header files fail to declare it. */
 extern char* optarg;
 
-/** Main routine for checkconf */
+/** Main routine for unbound-anchor */
 int main(int argc, char* argv[])
 {
 	int c;
