@@ -1476,6 +1476,7 @@ verify_p7sig(BIO* data, BIO* p7s, STACK_OF(X509)* trust, time_t now)
 
 	/* convert trust to trusted certificate store */
 	/* set current time */
+	if(verb >= 2) printf("time set to %u %s", (unsigned)now, ctime(&now));
 	X509_VERIFY_PARAM_set_time(param, now);
 	/* do the selfcheck on the root certificate; it checks that the
 	 * input is valid */
@@ -1496,6 +1497,10 @@ verify_p7sig(BIO* data, BIO* p7s, STACK_OF(X509)* trust, time_t now)
 	if(PKCS7_verify(p7, NULL, store, data, NULL, 0) == 1) {
 		secure = 1;
 		if(verb) printf("the PKCS7 signature verified\n");
+	} else {
+		if(verb) {
+			ERR_print_errors_fp(stdout);
+		}
 	}
 
 	X509_STORE_free(store);
