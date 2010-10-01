@@ -322,6 +322,7 @@ alloc_reg_release(struct alloc_cache* alloc, struct regional* r)
 		regional_destroy(r);
 		return;
 	}
+	if(!r) return;
 	regional_free_all(r);
 	log_assert(r->next == NULL);
 	r->next = (char*)alloc->reg_list;
