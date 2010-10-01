@@ -1816,6 +1816,8 @@ probe_date_allows_certupdate(char* root_anchor_file)
 			" please correct the clock\n");
 		return 0;
 	}
+	if(last_success == 0)
+		return 1; /* no probe time */
 	if(now - last_success < 0) {
 		if(verb) printf("the last successful probe is in the future,"
 			" clock was modified\n");
