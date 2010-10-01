@@ -296,32 +296,6 @@ create_unbound_context(char* res_conf, char* root_hints, char* debugconf,
 	return ctx;
 }
 
-/**
- * Get current time.
- * @param debugconf: with override time for tests
- */
-static time_t
-get_time_now(char* debugconf)
-{
-	if(debugconf) {
-		FILE* in = fopen(debugconf, "r");
-		char line[1024];
-		if(!in) {
-			if(verb) printf("%s: %s\n", debugconf, strerror(errno));
-			return (time_t)time(NULL);
-		}
-		/* must be ^val-override-date: 1234567$ formatted */
-		while(fgets(line, (int)sizeof(line), in)) {
-			if(strncmp(line, "val-override-date: ", 19) == 0) {
-				fclose(in);
-				return (time_t)atoi(line+19);
-			}
-		}
-		fclose(in);
-	}
-	return (time_t)time(NULL);
-}
-
 /** printout certificate in detail */
 static void
 verb_cert(char* msg, X509* x)
@@ -1482,7 +1456,7 @@ xml_parse(BIO* xml, time_t now)
 
 /** verify a PKCS7 signature, false on failure */
 static int
-verify_p7sig(BIO* data, BIO* p7s, STACK_OF(X509)* trust, time_t now)
+verify_p7sig(BIO* data, BIO* p7s, STACK_OF(X509)* trust)
 {
 	X509_VERIFY_PARAM* param = X509_VERIFY_PARAM_new();
 	PKCS7* p7;
@@ -1511,9 +1485,6 @@ verify_p7sig(BIO* data, BIO* p7s, STACK_OF(X509)* trust, time_t now)
 	if(verb >= 2) printf("parsed the PKCS7 signature\n");
 
 	/* convert trust to trusted certificate store */
-	/* set current time */
-	if(verb >= 2) printf("time set to %u %s", (unsigned)now, ctime(&now));
-	X509_VERIFY_PARAM_set_time(param, now);
 	/* do the selfcheck on the root certificate; it checks that the
 	 * input is valid */
 #ifdef X509_V_FLAG_CHECK_SS_SIGNATURE
@@ -1598,20 +1569,19 @@ write_root_anchor(char* root_anchor_file, BIO* ds)
 
 /** Perform the verification and update of the trustanchor file */
 static void
-verify_and_update_anchor(char* root_anchor_file, char* debugconf,
-	BIO* xml, BIO* p7s, STACK_OF(X509)* cert)
+verify_and_update_anchor(char* root_anchor_file, BIO* xml, BIO* p7s,
+	STACK_OF(X509)* cert)
 {
-	time_t now = get_time_now(debugconf);
 	BIO* ds;
 
 	/* verify xml file */
-	if(!verify_p7sig(xml, p7s, cert, now)) {
+	if(!verify_p7sig(xml, p7s, cert)) {
 		printf("the PKCS7 signature failed\n");
 		exit(0);
 	}
 
 	/* parse the xml file into DS records */
-	ds = xml_parse(xml, now);
+	ds = xml_parse(xml, time(NULL));
 	if(!ds) {
 		/* the root zone is unsigned now */
 		write_unsigned_root(root_anchor_file);
@@ -1645,7 +1615,7 @@ do_certupdate(char* root_anchor_file, char* root_cert_file,
 	p7s = https(ip_list, p7sname, urlname);
 
 	/* verify and update the root anchor */
-	verify_and_update_anchor(root_anchor_file, debugconf, xml, p7s, cert);
+	verify_and_update_anchor(root_anchor_file, xml, p7s, cert);
 	if(verb) printf("success: the anchor has been updated "
 			"using the cert\n");
 
@@ -1831,18 +1801,17 @@ read_last_success_time(char* file)
  * and the failure cannot be solved with a certupdate.
  * The debugconf is to validation-override the date for testing.
  * @param root_anchor_file: filename of root key
- * @param debugconf: debug unbound.conf (with override date) or NULL.
  * @return true if certupdate is ok.
  */
 static int
-probe_date_allows_certupdate(char* root_anchor_file, char* debugconf)
+probe_date_allows_certupdate(char* root_anchor_file)
 {
 	int32_t last_success = read_last_success_time(root_anchor_file);
-	int32_t now = (int32_t)get_time_now(debugconf);
+	int32_t now = (int32_t)time(NULL);
 	int32_t leeway = 30 * 24 * 3600; /* 30 days leeway */
 	/* if the date is before 2010-07-15:00.00.00 then the root has not
 	 * been signed yet, and thus we refuse to take action. */
-	if(get_time_now(debugconf) < xml_convertdate("2010-07-15T00:00:00")) {
+	if(time(NULL) < xml_convertdate("2010-07-15T00:00:00")) {
 		if(verb) printf("the date is before the root was first signed,"
 			" please correct the clock\n");
 		return 0;
@@ -1894,8 +1863,8 @@ do_root_update_work(char* root_anchor_file, char* root_cert_file,
 	if(force && verb) printf("debug cert update forced\n");
 
 	/* if not (and NOERROR): check date and do certupdate */
-	if((dnskey->rcode == 0 && probe_date_allows_certupdate(root_anchor_file,
-		debugconf)) || force) {
+	if((dnskey->rcode == 0 &&
+		probe_date_allows_certupdate(root_anchor_file)) || force) {
 		if(do_certupdate(root_anchor_file, root_cert_file, urlname,
 			xmlname, p7sname, res_conf, root_hints, debugconf,
 			ip4only, ip6only, port, dnskey))

@@ -108,9 +108,7 @@ errors by default; in that case the original root anchor file is simply
 left undisturbed, so that a recursive server can start right after it.
 .TP
 .B \-C \fIunbound.conf
-Debug option to read unbound.conf into the resolution process used.  For tests.
-The validator date override option makes it possible to run a test on a
-different date.
+Debug option to read unbound.conf into the resolver process used.
 .TP
 .B \-P \fIport
 Set the port number to use for the https connection.  The default is 443.
