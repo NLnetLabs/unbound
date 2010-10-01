@@ -175,6 +175,7 @@ usage()
 	printf("-a file		root key file, default %s\n", ROOT_ANCHOR_FILE);
 	printf("		The key is input and output for this tool.\n");
 	printf("-c file		cert file, default %s\n", ROOT_CERT_FILE);
+	printf("-l		list builtin key and cert on stdout\n");
 	printf("-u name		server in https url, default %s\n", URLNAME);
 	printf("-x path		pathname to xml, default %s\n", XMLNAME);
 	printf("-s path		pathname to p7s, default %s\n", P7SNAME);
@@ -192,6 +193,45 @@ usage()
 	printf("BSD licensed, see LICENSE in source package for details.\n");
 	printf("Report bugs to %s\n", PACKAGE_BUGREPORT);
 	exit(1);
+}
+
+/** return the built in root update certificate */
+static const char*
+get_builtin_cert(void)
+{
+	return
+/* The ICANN CA fetched at 24 Sep 2010.  Valid to 2028 */
+"-----BEGIN CERTIFICATE-----\n"
+"MIIDdzCCAl+gAwIBAgIBATANBgkqhkiG9w0BAQsFADBdMQ4wDAYDVQQKEwVJQ0FO\n"
+"TjEmMCQGA1UECxMdSUNBTk4gQ2VydGlmaWNhdGlvbiBBdXRob3JpdHkxFjAUBgNV\n"
+"BAMTDUlDQU5OIFJvb3QgQ0ExCzAJBgNVBAYTAlVTMB4XDTA5MTIyMzA0MTkxMloX\n"
+"DTI5MTIxODA0MTkxMlowXTEOMAwGA1UEChMFSUNBTk4xJjAkBgNVBAsTHUlDQU5O\n"
+"IENlcnRpZmljYXRpb24gQXV0aG9yaXR5MRYwFAYDVQQDEw1JQ0FOTiBSb290IENB\n"
+"MQswCQYDVQQGEwJVUzCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAKDb\n"
+"cLhPNNqc1NB+u+oVvOnJESofYS9qub0/PXagmgr37pNublVThIzyLPGCJ8gPms9S\n"
+"G1TaKNIsMI7d+5IgMy3WyPEOECGIcfqEIktdR1YWfJufXcMReZwU4v/AdKzdOdfg\n"
+"ONiwc6r70duEr1IiqPbVm5T05l1e6D+HkAvHGnf1LtOPGs4CHQdpIUcy2kauAEy2\n"
+"paKcOcHASvbTHK7TbbvHGPB+7faAztABLoneErruEcumetcNfPMIjXKdv1V1E3C7\n"
+"MSJKy+jAqqQJqjZoQGB0necZgUMiUv7JK1IPQRM2CXJllcyJrm9WFxY0c1KjBO29\n"
+"iIKK69fcglKcBuFShUECAwEAAaNCMEAwDwYDVR0TAQH/BAUwAwEB/zAOBgNVHQ8B\n"
+"Af8EBAMCAf4wHQYDVR0OBBYEFLpS6UmDJIZSL8eZzfyNa2kITcBQMA0GCSqGSIb3\n"
+"DQEBCwUAA4IBAQAP8emCogqHny2UYFqywEuhLys7R9UKmYY4suzGO4nkbgfPFMfH\n"
+"6M+Zj6owwxlwueZt1j/IaCayoKU3QsrYYoDRolpILh+FPwx7wseUEV8ZKpWsoDoD\n"
+"2JFbLg2cfB8u/OlE4RYmcxxFSmXBg0yQ8/IoQt/bxOcEEhhiQ168H2yE5rxJMt9h\n"
+"15nu5JBSewrCkYqYYmaxyOC3WrVGfHZxVI7MpIFcGdvSb2a1uyuua8l0BKgk3ujF\n"
+"0/wsHNeP22qNyVO+XVBzrM8fk8BSUFuiT/6tZTYXRtEt5aKQZgXbKU5dUF3jT9qg\n"
+"j/Br5BZw3X/zd325TvnswzMC1+ljLzHnQGGk\n"
+"-----END CERTIFICATE-----\n"
+		;
+}
+
+/** return the built in root DS trust anchor */
+static const char*
+get_builtin_ds(void)
+{
+	return
+". IN DS 19036 8 2 49AAC11D7B6F6446702E54A1607371607A1A41855200FD2CE1CDDE32F24E8FB5\n";
+		;
 }
 
 /** print hex data */
@@ -393,30 +433,7 @@ read_cert_file(char* file)
 static STACK_OF(X509)*
 read_builtin_cert(void)
 {
-/* The ICANN CA fetched at 24 Sep 2010.  Valid to 2028 */
-	const char* builtin_cert =
-"-----BEGIN CERTIFICATE-----\n"
-"MIIDdzCCAl+gAwIBAgIBATANBgkqhkiG9w0BAQsFADBdMQ4wDAYDVQQKEwVJQ0FO\n"
-"TjEmMCQGA1UECxMdSUNBTk4gQ2VydGlmaWNhdGlvbiBBdXRob3JpdHkxFjAUBgNV\n"
-"BAMTDUlDQU5OIFJvb3QgQ0ExCzAJBgNVBAYTAlVTMB4XDTA5MTIyMzA0MTkxMloX\n"
-"DTI5MTIxODA0MTkxMlowXTEOMAwGA1UEChMFSUNBTk4xJjAkBgNVBAsTHUlDQU5O\n"
-"IENlcnRpZmljYXRpb24gQXV0aG9yaXR5MRYwFAYDVQQDEw1JQ0FOTiBSb290IENB\n"
-"MQswCQYDVQQGEwJVUzCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAKDb\n"
-"cLhPNNqc1NB+u+oVvOnJESofYS9qub0/PXagmgr37pNublVThIzyLPGCJ8gPms9S\n"
-"G1TaKNIsMI7d+5IgMy3WyPEOECGIcfqEIktdR1YWfJufXcMReZwU4v/AdKzdOdfg\n"
-"ONiwc6r70duEr1IiqPbVm5T05l1e6D+HkAvHGnf1LtOPGs4CHQdpIUcy2kauAEy2\n"
-"paKcOcHASvbTHK7TbbvHGPB+7faAztABLoneErruEcumetcNfPMIjXKdv1V1E3C7\n"
-"MSJKy+jAqqQJqjZoQGB0necZgUMiUv7JK1IPQRM2CXJllcyJrm9WFxY0c1KjBO29\n"
-"iIKK69fcglKcBuFShUECAwEAAaNCMEAwDwYDVR0TAQH/BAUwAwEB/zAOBgNVHQ8B\n"
-"Af8EBAMCAf4wHQYDVR0OBBYEFLpS6UmDJIZSL8eZzfyNa2kITcBQMA0GCSqGSIb3\n"
-"DQEBCwUAA4IBAQAP8emCogqHny2UYFqywEuhLys7R9UKmYY4suzGO4nkbgfPFMfH\n"
-"6M+Zj6owwxlwueZt1j/IaCayoKU3QsrYYoDRolpILh+FPwx7wseUEV8ZKpWsoDoD\n"
-"2JFbLg2cfB8u/OlE4RYmcxxFSmXBg0yQ8/IoQt/bxOcEEhhiQ168H2yE5rxJMt9h\n"
-"15nu5JBSewrCkYqYYmaxyOC3WrVGfHZxVI7MpIFcGdvSb2a1uyuua8l0BKgk3ujF\n"
-"0/wsHNeP22qNyVO+XVBzrM8fk8BSUFuiT/6tZTYXRtEt5aKQZgXbKU5dUF3jT9qg\n"
-"j/Br5BZw3X/zd325TvnswzMC1+ljLzHnQGGk\n"
-"-----END CERTIFICATE-----\n"
-		;
+	const char* builtin_cert = get_builtin_cert();
 	STACK_OF(X509)* sk;
 	BIO *bio = BIO_new_mem_buf((void*)builtin_cert,
 		(int)strlen(builtin_cert));
@@ -445,6 +462,16 @@ read_cert_or_builtin(char* file)
 	if(verb) printf("have %d trusted certificates\n", sk_X509_num(sk));
 	verb_certs("trusted certificates", sk);
 	return sk;
+}
+
+static void
+do_list_builtin(void)
+{
+	const char* builtin_cert = get_builtin_cert();
+	const char* builtin_ds = get_builtin_ds();
+	printf("%s\n", builtin_ds);
+	printf("%s\n", builtin_cert);
+	exit(0);
 }
 
 /** printout IP address with message */
@@ -1687,7 +1714,7 @@ try_read_anchor(char* file)
 static void
 write_builtin_anchor(char* file)
 {
-	const char* builtin_root_anchor = ". IN DS 19036 8 2 49AAC11D7B6F6446702E54A1607371607A1A41855200FD2CE1CDDE32F24E8FB5\n";
+	const char* builtin_root_anchor = get_builtin_ds();
 	FILE* out = fopen(file, "w");
 	if(!out) {
 		if(verb) printf("%s: %s\n", file, strerror(errno));
@@ -1897,10 +1924,13 @@ int main(int argc, char* argv[])
 	char* res_conf = NULL;
 	char* root_hints = NULL;
 	char* debugconf = NULL;
-	int ip4only=0, ip6only=0, force=0, port = HTTPS_PORT;
+	int dolist=0, ip4only=0, ip6only=0, force=0, port = HTTPS_PORT;
 	/* parse the options */
-	while( (c=getopt(argc, argv, "46C:FP:a:c:f:hr:s:u:vx:")) != -1) {
+	while( (c=getopt(argc, argv, "46C:FP:a:c:f:hlr:s:u:vx:")) != -1) {
 		switch(c) {
+		case 'l':
+			dolist = 1;
+			break;
 		case '4':
 			ip4only = 1;
 			break;
@@ -1955,6 +1985,8 @@ int main(int argc, char* argv[])
 	ERR_load_SSL_strings();
 	OpenSSL_add_all_algorithms();
 	(void)SSL_library_init();
+
+	if(dolist) do_list_builtin();
 
 	return do_root_update_work(root_anchor_file, root_cert_file, urlname,
 		xmlname, p7sname, res_conf, root_hints, debugconf, ip4only,

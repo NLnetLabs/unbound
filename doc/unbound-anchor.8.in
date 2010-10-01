@@ -57,6 +57,9 @@ The root update certificate file, that is read in.
 Default is @UNBOUND_ROOTCERT_FILE@.
 If the file does not exist, or is empty, a builtin certificate is used.
 .TP
+.B \-l
+List the builtin root key and builtin root update certificate on stdout.
+.TP
 .B \-u \fIname
 The server name, it connects to https://name.  Specify without https:// prefix.
 The default is "data.iana.org".  It connects to the port specified with \-P.
@@ -130,17 +133,24 @@ This tool exits with value 1 if the root anchor was updated using the
 certificate or if the builtin root-anchor was used.  It exits with code
 0 if no update was necessary, if the update was possible with RFC5011
 tracking, or if an error occurred.
-.SH "TRUST"
-We provide builtin root keys and update certificates to be trustworthy,
-in our opinion.  But that does not mean the results from running this
-tool may be trustworthy for you, or that this tool works perfectly.
-If you want to make sure, you have to check the output manually.
 .P
-You can do this by checking the exit value.  In this manner:
+You can check the exit value in this manner:
 .nf
 	unbound-anchor -a "root.key" || logger "Please check root.key"
 .fi
 Or something more suitable for your operational environment.
+.SH "TRUST"
+The root keys and update certificate included in this tool
+are provided for convenience and under the terms of our
+license (see the LICENSE file in the source distribution or
+http://unbound.nlnetlabs.nl/svn/trunk/LICENSE) and might be stale or
+not suitable to your purpose.
+.P
+By running "unbound\-anchor \-l" the  keys and certificate that are
+configured in the code are printed for your convenience.
+.P
+The build\-in configuration can be overridden by providing a root\-cert
+file and a rootkey file.
 .SH "FILES"
 .TP
 .I @UNBOUND_ROOTKEY_FILE@
