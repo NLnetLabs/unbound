@@ -119,6 +119,8 @@ TESTBOUND_SRC=testcode/testbound.c testcode/ldns-testpkts.c \
 TESTBOUND_OBJ=$(addprefix $(BUILD),$(TESTBOUND_SRC:.c=.lo)) $(COMPAT_OBJ)
 LOCKVERIFY_SRC=testcode/lock_verify.c smallapp/worker_cb.c $(COMMON_SRC)
 LOCKVERIFY_OBJ=$(addprefix $(BUILD),$(LOCKVERIFY_SRC:.c=.lo)) $(COMPAT_OBJ)
+PETAL_SRC=testcode/petal.c
+PETAL_OBJ=$(addprefix $(BUILD),$(PETAL_SRC:.c=.lo)) $(COMPAT_OBJ)
 PKTVIEW_SRC=testcode/pktview.c testcode/readhex.c smallapp/worker_cb.c \
 	$(COMMON_SRC)
 PKTVIEW_OBJ=$(addprefix $(BUILD),$(PKTVIEW_SRC:.c=.lo)) $(COMPAT_OBJ)
@@ -143,7 +145,7 @@ ALL_SRC=$(sort $(COMMON_SRC) $(UNITTEST_SRC) $(DAEMON_SRC) \
 	$(TESTBOUND_SRC) $(LOCKVERIFY_SRC) $(PKTVIEW_SRC) $(SIGNIT_SRC) \
 	$(MEMSTATS_SRC) $(CHECKCONF_SRC) $(LIBUNBOUND_SRC) $(HOST_SRC) \
 	$(ASYNCLOOK_SRC) $(STREAMTCP_SRC) $(PERF_SRC) $(DELAYER_SRC) \
-	$(HARVEST_SRC) $(CONTROL_SRC) $(UBANCHOR_SRC))
+	$(HARVEST_SRC) $(CONTROL_SRC) $(UBANCHOR_SRC) $(PETAL_SRC))
 ALL_OBJ=$(addprefix $(BUILD),$(ALL_SRC:.c=.lo) \
 	$(addprefix compat/,$(LIBOBJS:.o=.lo))) $(COMPAT_OBJ)
 
@@ -194,7 +196,7 @@ $(BUILD)%.lo:    $(srcdir)/%.c
 all:	$(COMMON_OBJ) unbound$(EXEEXT) unbound-checkconf$(EXEEXT) lib unbound-host$(EXEEXT) unbound-control$(EXEEXT) unbound-anchor$(EXEEXT) unbound-control-setup $(WINAPPS)
 
 TEST_BIN=$(addsuffix $(EXEEXT),asynclook delayer harvest lock-verify \
-	memstats perf pktview signit streamtcp testbound unittest)
+	memstats perf petal pktview signit streamtcp testbound unittest)
 tests:	all $(TEST_BIN)
 
 check: test
@@ -268,6 +270,10 @@ testbound$(EXEEXT):	$(TESTBOUND_OBJ) $(ldnslib)
 lock-verify$(EXEEXT):	$(LOCKVERIFY_OBJ) $(ldnslib)
 	$(INFO) Link $@
 	$Q$(LINK) -o $@ $(sort $(LOCKVERIFY_OBJ)) $(LIBS)
+
+petal$(EXEEXT):	$(PETAL_OBJ)
+	$(INFO) Link $@
+	$Q$(LINK) -o $@ $(sort $(PETAL_OBJ)) -lssl $(LIBS)
 
 pktview$(EXEEXT):	$(PKTVIEW_OBJ) $(ldnslib)
 	$(INFO) Link $@

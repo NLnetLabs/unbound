@@ -1,3 +1,6 @@
+1 October 2010: Wouter
+	- test for unbound-anchor. fix for reading certs.
+
 28 September 2010: Wouter
 	- unbound-anchor working, it creates or updates a root.key file.
 	  Use it before you start the validator (e.g. at system boot time).

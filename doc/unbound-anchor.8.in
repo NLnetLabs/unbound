@@ -1,6 +1,6 @@
 .TH "unbound-anchor" "8" "@date@" "NLnet Labs" "unbound @version@"
 .\"
-.\" unbound-control.8 -- unbound remote control manual
+.\" unbound-anchor.8 -- unbound anchor maintenance utility manual
 .\"
 .\" Copyright (c) 2008, NLnet Labs. All rights reserved.
 .\"

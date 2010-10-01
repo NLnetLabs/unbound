@@ -322,7 +322,10 @@ read_cert_bio(BIO* bio)
 	while(!BIO_eof(bio)) {
 		X509* x = PEM_read_bio_X509(bio, NULL, 0, NULL);
 		if(x == NULL) {
-			if(verb) printf("failed to read X509\n");
+			if(verb) {
+				printf("failed to read X509\n");
+			 	ERR_print_errors_fp(stdout);
+			}
 			continue;
 		}
 		if(!sk_X509_push(sk, x)) {
@@ -340,6 +343,7 @@ read_cert_file(char* file)
 	STACK_OF(X509)* sk;
 	FILE* in;
 	int content = 0;
+	char buf[128];
 	if(file == NULL || strcmp(file, "") == 0) {
 		return NULL;
 	}
@@ -359,7 +363,10 @@ read_cert_file(char* file)
 	while(!feof(in)) {
 		X509* x = PEM_read_X509(in, NULL, 0, NULL);
 		if(x == NULL) {
-			if(verb) printf("failed to read X509\n");
+			if(verb) {
+				printf("failed to read X509 file\n");
+			 	ERR_print_errors_fp(stdout);
+			}
 			continue;
 		}
 		if(!sk_X509_push(sk, x)) {
@@ -367,6 +374,8 @@ read_cert_file(char* file)
 			fclose(in);
 			exit(0);
 		}
+		/* read away newline after --END CERT-- */
+		(void)fgets(buf, (int)sizeof(buf), in);
 		content = 1;
 	}
 	fclose(in);
@@ -1008,8 +1017,8 @@ read_http_result(SSL* ssl)
 		/* do the chunked version */
 		BIO* tmp = do_chunked_read(ssl);
 		char* d = NULL;
-		long l;
-		l = BIO_get_mem_data(tmp, &d);
+		size_t l;
+		l = (size_t)BIO_get_mem_data(tmp, &d);
 		if(verb>=2) printf("chunked data is %d\n", (int)l);
 		if(l == 0 || d == NULL) {
 			if(verb) printf("out of memory\n");
@@ -1017,7 +1026,7 @@ read_http_result(SSL* ssl)
 		}
 		/* the result is zero terminated for robustness, but we 
 		 * do not include that in the BIO len (for binary data) */
-		len = (size_t)l-1;
+		len = l-1;
 		data = (char*)malloc(l);
 		if(data == NULL) {
 			if(verb) printf("out of memory\n");
