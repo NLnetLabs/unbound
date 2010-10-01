@@ -1129,13 +1129,40 @@ struct xml_data {
 	char* tag;
 	/** current date to use during the parse */
 	time_t date;
-	/** do we want to use this anchor? */
-	int use_key;
 	/** number of keys usefully read in */
 	int num_keys;
 	/** the compiled anchors as DS records */
 	BIO* ds;
+
+	/** do we want to use this anchor? */
+	int use_key;
+	/** the current anchor: Zone */
+	BIO* czone;
+	/** the current anchor: KeyTag */
+	BIO* ctag;
+	/** the current anchor: Algorithm */
+	BIO* calgo;
+	/** the current anchor: DigestType */
+	BIO* cdigtype;
+	/** the current anchor: Digest*/
+	BIO* cdigest;
 };
+
+/** The BIO for the tag */
+static BIO*
+xml_selectbio(struct xml_data* data, const char* tag)
+{
+	BIO* b = NULL;
+	if(strcasecmp(tag, "KeyTag") == 0)
+		b = data->ctag;
+	else if(strcasecmp(tag, "Algorithm") == 0)
+		b = data->calgo;
+	else if(strcasecmp(tag, "DigestType") == 0)
+		b = data->cdigtype;
+	else if(strcasecmp(tag, "Digest") == 0)
+		b = data->cdigest;
+	return b;
+}
 
 /**
  * XML handle character data, the data inside an element.
@@ -1148,6 +1175,7 @@ void
 xml_charhandle(void *userData, const XML_Char *s, int len)
 {
 	struct xml_data* data = (struct xml_data*)userData;
+	BIO* b = NULL;
 	/* skip characters outside of elements */
 	if(!data->tag)
 		return;
@@ -1160,14 +1188,19 @@ xml_charhandle(void *userData, const XML_Char *s, int len)
 			printf("%c", s[i]);
 		printf("'\n");
 	}
+	if(strcasecmp(data->tag, "Zone") == 0) {
+		if(BIO_write(data->czone, s, len) <= 0) {
+			if(verb) printf("out of memory in BIO_write\n");
+			exit(0);
+		}
+		return;
+	}
 	/* only store if key is used */
 	if(!data->use_key)
 		return;
-	if(strcasecmp(data->tag, "KeyTag") == 0 ||
-	   strcasecmp(data->tag, "Algorithm") == 0 ||
-	   strcasecmp(data->tag, "DigestType") == 0 ||
-	   strcasecmp(data->tag, "Digest") == 0) {
-		if(BIO_write(data->ds, s, len) <= 0) {
+	b = xml_selectbio(data, data->tag);
+	if(b) {
+		if(BIO_write(b, s, len) <= 0) {
 			if(verb) printf("out of memory in BIO_write\n");
 			exit(0);
 		}
@@ -1266,7 +1299,6 @@ xml_convertdate(const char* str)
 static void
 handle_keydigest(struct xml_data* data, const XML_Char **atts)
 {
-	const char* s = ". IN DS";
 	data->use_key = 0;
 	if(find_att(atts, "validFrom")) {
 		time_t from = xml_convertdate(find_att(atts, "validFrom"));
@@ -1288,11 +1320,26 @@ handle_keydigest(struct xml_data* data, const XML_Char **atts)
 	}
 	/* yes we want to use this key */
 	data->use_key = 1;
-	data->num_keys++;
-	if(BIO_write(data->ds, s, (int)strlen(s)) <= 0) {
-		if(verb) printf("out of memory in BIO_write\n");
-		exit(0);
-	}
+	BIO_reset(data->ctag);
+	BIO_reset(data->calgo);
+	BIO_reset(data->cdigtype);
+	BIO_reset(data->cdigest);
+}
+
+/** See if XML element equals the zone name */
+static int
+xml_is_zone_name(BIO* zone, char* name)
+{
+	char buf[1024];
+	char* z = NULL;
+	long zlen;
+	BIO_seek(zone, 0);
+	zlen = BIO_get_mem_data(zone, &z);
+	if(!zlen || !z) return 0;
+	if(zlen >= (long)sizeof(buf)) return 0;
+	memmove(buf, z, (size_t)zlen);
+	buf[zlen] = 0;
+	return (strncasecmp(buf, name, strlen(name)) == 0);
 }
 
 /** 
@@ -1307,6 +1354,7 @@ static void
 xml_startelem(void *userData, const XML_Char *name, const XML_Char **atts)
 {
 	struct xml_data* data = (struct xml_data*)userData;
+	BIO* b;
 	if(verb>=4) printf("xml tag start '%s'\n", name);
 	free(data->tag);
 	data->tag = strdup(name);
@@ -1323,20 +1371,71 @@ xml_startelem(void *userData, const XML_Char *name, const XML_Char **atts)
 	/* handle attributes to particular types */
 	if(strcasecmp(name, "KeyDigest") == 0) {
 		handle_keydigest(data, atts);
+		return;
+	} else if(strcasecmp(name, "Zone") == 0) {
+		BIO_reset(data->czone);
+		return;
 	}
 
 	/* write whitespace separators to outputBIO here */
 	if(!data->use_key)
 		return;
-	if(strcasecmp(data->tag, "KeyTag") == 0 ||
-	   strcasecmp(data->tag, "Algorithm") == 0 ||
-	   strcasecmp(data->tag, "DigestType") == 0 ||
-	   strcasecmp(data->tag, "Digest") == 0) {
-		if(BIO_write(data->ds, " ", 1) <= 0) {
-			if(verb) printf("out of memory in BIO_write\n");
-			exit(0);
-		}
+	b = xml_selectbio(data, data->tag);
+	if(b) {
+		/* empty it */
+		BIO_reset(b);
 	}
+}
+
+/** Append str to bio */
+static void
+xml_append_str(BIO* b, const char* s)
+{
+	if(BIO_write(b, s, (int)strlen(s)) <= 0) {
+		if(verb) printf("out of memory in BIO_write\n");
+		exit(0);
+	}
+}
+
+/** Append bio to bio */
+static void
+xml_append_bio(BIO* b, BIO* a)
+{
+	char* z = NULL;
+	long i, len;
+	BIO_seek(a, 0);
+	len = BIO_get_mem_data(a, &z);
+	if(!len || !z) {
+		if(verb) printf("out of memory in BIO_write\n");
+		exit(0);
+	}
+	/* remove newlines in the data here */
+	for(i=0; i<len; i++) {
+		if(z[i] == '\r' || z[i] == '\n')
+			z[i] = ' ';
+	}
+	/* write to BIO */
+	if(BIO_write(b, z, len) <= 0) {
+		if(verb) printf("out of memory in BIO_write\n");
+		exit(0);
+	}
+}
+
+/** write the parsed xml-DS to the DS list */
+static void
+xml_append_ds(struct xml_data* data)
+{
+	/* write DS to accumulated DS */
+	xml_append_str(data->ds, ". IN DS ");
+	xml_append_bio(data->ds, data->ctag);
+	xml_append_str(data->ds, " ");
+	xml_append_bio(data->ds, data->calgo);
+	xml_append_str(data->ds, " ");
+	xml_append_bio(data->ds, data->cdigtype);
+	xml_append_str(data->ds, " ");
+	xml_append_bio(data->ds, data->cdigest);
+	xml_append_str(data->ds, "\n");
+	data->num_keys++;
 }
 
 /**
@@ -1353,9 +1452,12 @@ xml_endelem(void *userData, const XML_Char *name)
 	free(data->tag);
 	data->tag = NULL;
 	if(strcasecmp(name, "KeyDigest") == 0) {
+		if(data->use_key)
+			xml_append_ds(data);
 		data->use_key = 0;
-		if(BIO_write(data->ds, "\n", 1) <= 0) {
-			if(verb) printf("out of memory in BIO_write\n");
+	} else if(strcasecmp(name, "Zone") == 0) {
+		if(!xml_is_zone_name(data->czone, ".")) {
+			if(verb) printf("xml not for the right zone\n");
 			exit(0);
 		}
 	}
@@ -1373,7 +1475,13 @@ xml_parse_setup(XML_Parser parser, struct xml_data* data, time_t now)
 	data->parser = parser;
 	data->date = now;
 	data->ds = BIO_new(BIO_s_mem());
-	if(!data->ds) {
+	data->ctag = BIO_new(BIO_s_mem());
+	data->czone = BIO_new(BIO_s_mem());
+	data->calgo = BIO_new(BIO_s_mem());
+	data->cdigtype = BIO_new(BIO_s_mem());
+	data->cdigest = BIO_new(BIO_s_mem());
+	if(!data->ds || !data->ctag || !data->calgo || !data->czone ||
+		!data->cdigtype || !data->cdigest) {
 		if(verb) printf("out of memory\n");
 		exit(0);
 	}
@@ -1444,6 +1552,11 @@ xml_parse(BIO* xml, time_t now)
 		(void)fwrite(pp, (size_t)len, 1, stdout);
 		printf("'\n");
 	}
+	BIO_free(data.czone);
+	BIO_free(data.ctag);
+	BIO_free(data.calgo);
+	BIO_free(data.cdigtype);
+	BIO_free(data.cdigest);
 
 	if(data.num_keys == 0) {
 		/* the root zone seems to have gone insecure */
