@@ -3,6 +3,7 @@
 	  the zone has a secure delegation hosted on the same server did not
 	  verify as secure (it was insecure by mistake).
 	- iana portlist updated.
+	- ldns tarball updated (for reading cachedumps with bad RR data).
 
 1 October 2010: Wouter
 	- test for unbound-anchor. fix for reading certs.
