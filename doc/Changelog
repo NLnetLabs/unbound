@@ -2,6 +2,7 @@
 	- Fix bug when DLV below a trust-anchor that uses NSEC3 optout where
 	  the zone has a secure delegation hosted on the same server did not
 	  verify as secure (it was insecure by mistake).
+	- iana portlist updated.
 
 1 October 2010: Wouter
 	- test for unbound-anchor. fix for reading certs.
