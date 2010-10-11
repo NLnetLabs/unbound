@@ -242,6 +242,13 @@ int val_neg_dlvlookup(struct val_neg_cache* neg, uint8_t* qname, size_t len,
  * @param now: to check TTLs against.
  * @param addsoa: if true, produce result for external consumption.
  *	if false, do not add SOA - for unbound-internal consumption.
+ * @param topname: do not look higher than this name, 
+ * 	so that the result cannot be taken from a zone above the current
+ * 	trust anchor.  Which could happen with multiple islands of trust.
+ * 	if NULL, then no trust anchor is used, but also the algorithm becomes
+ * 	more conservative, especially for opt-out zones, since the receiver
+ * 	may have a trust-anchor below the optout and thus the optout cannot
+ * 	be used to create a proof from the negative cache.
  * @return a reply message if something was found. 
  * 	This reply may still need validation.
  * 	NULL if nothing found (or out of memory).
@@ -249,7 +256,7 @@ int val_neg_dlvlookup(struct val_neg_cache* neg, uint8_t* qname, size_t len,
 struct dns_msg* val_neg_getmsg(struct val_neg_cache* neg, 
 	struct query_info* qinfo, struct regional* region, 
 	struct rrset_cache* rrset_cache, ldns_buffer* buf, uint32_t now,
-	int addsoa);
+	int addsoa, uint8_t* topname);
 
 
 /**** functions exposed for unit test ****/

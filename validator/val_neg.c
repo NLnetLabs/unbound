@@ -1255,7 +1255,7 @@ neg_nsec3_getnc(struct val_neg_zone* zone, uint8_t* hashnc, size_t nclen,
 static struct dns_msg*
 neg_nsec3_proof_ds(struct val_neg_zone* zone, uint8_t* qname, size_t qname_len,
 		int qlabs, ldns_buffer* buf, struct rrset_cache* rrset_cache,
-		struct regional* region, uint32_t now)
+		struct regional* region, uint32_t now, uint8_t* topname)
 {
 	struct dns_msg* msg;
 	struct val_neg_data* data;
@@ -1305,6 +1305,12 @@ neg_nsec3_proof_ds(struct val_neg_zone* zone, uint8_t* qname, size_t qname_len,
 			return NULL;
 		return msg;
 	}
+
+	/* optout is not allowed without knowing the trust-anchor in use,
+	 * otherwise the optout could spoof away that anchor */
+	if(!topname)
+		return NULL;
+
 	/* if there is no exact match, it must be in an optout span
 	 * (an existing DS implies an NSEC3 must exist) */
 	nc_rrset = neg_nsec3_getnc(zone, hashnc, nclen, rrset_cache, 
@@ -1379,7 +1385,7 @@ static int add_soa(struct rrset_cache* rrset_cache, uint32_t now,
 struct dns_msg* 
 val_neg_getmsg(struct val_neg_cache* neg, struct query_info* qinfo, 
 	struct regional* region, struct rrset_cache* rrset_cache, 
-	ldns_buffer* buf, uint32_t now, int addsoa)
+	ldns_buffer* buf, uint32_t now, int addsoa, uint8_t* topname)
 {
 	struct dns_msg* msg;
 	struct ub_packed_rrset_key* rrset;
@@ -1391,6 +1397,7 @@ val_neg_getmsg(struct val_neg_cache* neg, struct query_info* qinfo,
 	/* only for DS queries */
 	if(qinfo->qtype != LDNS_RR_TYPE_DS)
 		return NULL;
+	log_assert(!topname || dname_subdomain_c(qinfo->qname, topname));
 
 	/* see if info from neg cache is available 
 	 * For NSECs, because there is no optout; a DS next to a delegation
@@ -1426,13 +1433,19 @@ val_neg_getmsg(struct val_neg_cache* neg, struct query_info* qinfo,
 		qinfo->qclass);
 	while(zone && !zone->in_use)
 		zone = zone->parent;
+	/* check that the zone is not too high up so that we do not pick data
+	 * out of a zone that is above the last-seen key (or trust-anchor). */
+	if(zone && topname) {
+		if(!dname_subdomain_c(zone->name, topname))
+			zone = NULL;
+	}
 	if(!zone) {
 		lock_basic_unlock(&neg->lock);
 		return NULL;
 	}
 
 	msg = neg_nsec3_proof_ds(zone, qinfo->qname, qinfo->qname_len, 
-		zname_labs+1, buf, rrset_cache, region, now);
+		zname_labs+1, buf, rrset_cache, region, now, topname);
 	if(msg && addsoa && !add_soa(rrset_cache, now, region, msg, zone)) {
 		lock_basic_unlock(&neg->lock);
 		return NULL;

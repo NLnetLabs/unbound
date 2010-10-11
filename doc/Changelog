@@ -1,3 +1,8 @@
+11 October 2010: Wouter
+	- Fix bug when DLV below a trust-anchor that uses NSEC3 optout where
+	  the zone has a secure delegation hosted on the same server did not
+	  verify as secure (it was insecure by mistake).
+
 1 October 2010: Wouter
 	- test for unbound-anchor. fix for reading certs.
 	- Fix alloc_reg_release for longer uptime in out of memory conditions.

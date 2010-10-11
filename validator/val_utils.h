@@ -339,9 +339,12 @@ int val_favorite_ds_algo(struct ub_packed_rrset_key* ds_rrset);
  * @param nmlen: length of name.
  * @param c: class of DS RR.
  * @param region: where to allocate result.
+ * @param topname: name of the key that is currently in use, that will get
+ *	used to validate the result, and thus no higher entries from the
+ *	negative cache need to be examined.
  * @return a dns_msg on success. NULL on failure.
  */
 struct dns_msg* val_find_DS(struct module_env* env, uint8_t* nm, size_t nmlen,
-	uint16_t c, struct regional* region);
+	uint16_t c, struct regional* region, uint8_t* topname);
 
 #endif /* VALIDATOR_VAL_UTILS_H */

@@ -909,7 +909,7 @@ int val_has_signed_nsecs(struct reply_info* rep, char** reason)
 
 struct dns_msg* 
 val_find_DS(struct module_env* env, uint8_t* nm, size_t nmlen, uint16_t c, 
-	struct regional* region)
+	struct regional* region, uint8_t* topname)
 {
 	struct dns_msg* msg;
 	struct query_info qinfo;
@@ -938,6 +938,6 @@ val_find_DS(struct module_env* env, uint8_t* nm, size_t nmlen, uint16_t c,
 	qinfo.qclass = c;
 	/* do not add SOA to reply message, it is going to be used internal */
 	msg = val_neg_getmsg(env->neg_cache, &qinfo, region, env->rrset_cache,
-		env->scratch_buffer, *env->now, 0);
+		env->scratch_buffer, *env->now, 0, topname);
 	return msg;
 }

@@ -1488,7 +1488,8 @@ processFindKey(struct module_qstate* qstate, struct val_qstate* vq, int id)
 		struct dns_msg* msg;
 		if(!qstate->blacklist && !vq->chain_blacklist &&
 			(msg=val_find_DS(qstate->env, target_key_name, 
-			target_key_len, vq->qchase.qclass, qstate->region)) ) {
+			target_key_len, vq->qchase.qclass, qstate->region,
+			vq->key_entry->name)) ) {
 			verbose(VERB_ALGO, "Process cached DS response");
 			process_ds_response(qstate, vq, id, LDNS_RCODE_NOERROR,
 				msg, &msg->qinfo, NULL);

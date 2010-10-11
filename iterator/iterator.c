@@ -938,7 +938,7 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 			msg = val_neg_getmsg(qstate->env->neg_cache, &iq->qchase,
 				qstate->region, qstate->env->rrset_cache,
 				qstate->env->scratch_buffer, 
-				*qstate->env->now, 1/*add SOA*/);
+				*qstate->env->now, 1/*add SOA*/, NULL);
 		}
 	}
 	if(msg) {
