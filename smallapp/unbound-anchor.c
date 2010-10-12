@@ -177,8 +177,8 @@ usage()
 	printf("-c file		cert file, default %s\n", ROOT_CERT_FILE);
 	printf("-l		list builtin key and cert on stdout\n");
 	printf("-u name		server in https url, default %s\n", URLNAME);
-	printf("-x path		pathname to xml, default %s\n", XMLNAME);
-	printf("-s path		pathname to p7s, default %s\n", P7SNAME);
+	printf("-x path		pathname to xml in url, default %s\n", XMLNAME);
+	printf("-s path		pathname to p7s in url, default %s\n", P7SNAME);
 	printf("-4		work using IPv4 only\n");
 	printf("-6		work using IPv6 only\n");
 	printf("-f resolv.conf	use given resolv.conf to resolve -u name\n");
