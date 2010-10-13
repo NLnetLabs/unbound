@@ -726,7 +726,27 @@ if test "$use_ldns_builtin" = "no"; then
 	else
 	    ac_cv_func_ldns_key_EVP_load_gost_id="yes"
 	fi
-	AC_CHECK_HEADERS([ldns/ldns.h],,, [AC_INCLUDES_DEFAULT])
+	AC_CHECK_HEADERS([ldns/ldns.h],,, [AC_INCLUDES_DEFAULT
+#ifdef HAVE_SYS_SOCKET_H
+#include <sys/socket.h>
+#endif
+
+#ifdef HAVE_NETINET_IN_H
+#include <netinet/in.h>
+#endif
+
+#ifdef HAVE_ARPA_INET_H
+#include <arpa/inet.h>
+#endif
+
+#ifdef HAVE_WINSOCK2_H
+#include <winsock2.h>
+#endif
+
+#ifdef HAVE_WS2TCPIP_H
+#include <ws2tcpip.h>
+#endif
+])
 	if test $ac_cv_lib_ldns_ldns_buffer_copy = yes \
 	    -a $ac_cv_func_ldns_key_buf2rsa_raw = yes \
 	    -a $ac_cv_header_ldns_ldns_h = yes \
