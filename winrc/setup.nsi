@@ -70,6 +70,11 @@ section "Unbound" SectionUnbound
 	# real work in postinstall
 sectionEnd
 
+section "Root anchor - DNSSEC" SectionRootKey
+	# add estimated size for key (Kb)
+	AddSize 2
+sectionEnd
+
 section "DLV - dlv.isc.org" SectionDLV
 	# add estimated size for key (Kb)
 	AddSize 2
@@ -105,6 +110,22 @@ section "-hidden.postinstall"
 	File "service.conf"
 	File "..\doc\example.conf"
 
+	# Store Root Key choice
+	SectionGetFlags ${SectionRootKey} $R0
+	IntOp $R0 $R0 & ${SF_SELECTED}
+	${If} $R0 == ${SF_SELECTED}
+		ClearErrors
+		FileOpen $R1 "$INSTDIR\service.conf" a
+		IfErrors done
+		FileSeek $R1 0 END
+		FileWrite $R1 "$\nserver: auto-trust-anchor-file: $\"$INSTDIR\root.key$\"$\n"
+		FileClose $R1
+	  done:
+		WriteRegStr HKLM "Software\Unbound" "RootAnchor" "yes"
+	${Else}
+		WriteRegStr HKLM "Software\Unbound" "RootAnchor" "no"
+	${EndIf}
+
 	# Store DLV choice
 	SectionGetFlags ${SectionDLV} $R0
 	IntOp $R0 $R0 & ${SF_SELECTED}
@@ -118,7 +139,7 @@ section "-hidden.postinstall"
 	  done:
 		WriteRegStr HKLM "Software\Unbound" "CronAction" "$\"$INSTDIR\anchor-update.exe$\" dlv.isc.org $\"$INSTDIR\dlv.isc.org.key$\""
 	${Else}
-		WriteRegStr HKLM "Software\Unbound" "CronAction" "$\"$INSTDIR\anchor-update.exe$\" "
+		WriteRegStr HKLM "Software\Unbound" "CronAction" ""
 	${EndIf}
 
 	# store installation folder
@@ -153,10 +174,12 @@ sectionEnd
 
 # set section descriptions
 LangString DESC_unbound ${LANG_ENGLISH} "The base unbound DNS(SEC) validating caching resolver. $\r$\n$\r$\nIt can be found in the Services control panel, and a config file is in the Program Files folder."
-LangString DESC_dlv ${LANG_ENGLISH} "Set up to use DLV with dlv.isc.org. Downloads the key with a leap of faith. $\r$\n$\r$\nThis provides public keys that are used for security verification."
+LangString DESC_rootkey ${LANG_ENGLISH} "Set up to use the DNSSEC root trust anchor. It is automatically updated. $\r$\n$\r$\nThis provides the main key that is used for security verification."
+LangString DESC_dlv ${LANG_ENGLISH} "Set up to use DLV with dlv.isc.org. Downloads the key with a leap of faith. $\r$\n$\r$\nThis provides additional public keys that are used for security verification, but your queries (websites) are sent to a remote server to fetch them."
 
 !insertmacro MUI_FUNCTION_DESCRIPTION_BEGIN
   !insertmacro MUI_DESCRIPTION_TEXT ${SectionUnbound} $(DESC_unbound)
+  !insertmacro MUI_DESCRIPTION_TEXT ${SectionRootKey} $(DESC_rootkey)
   !insertmacro MUI_DESCRIPTION_TEXT ${SectionDLV} $(DESC_dlv)
 !insertmacro MUI_FUNCTION_DESCRIPTION_END
 
@@ -197,5 +220,5 @@ section "un.Unbound"
 	Delete "$SMPROGRAMS\$StartMenuFolder\unbound.net website.lnk"
 	RMDir "$SMPROGRAMS\$StartMenuFolder"
 
-	DeleteRegKey /ifempty HKLM "Software\Unbound"
+	DeleteRegKey HKLM "Software\Unbound"
 sectionEnd

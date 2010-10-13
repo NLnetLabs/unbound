@@ -468,7 +468,7 @@ win_do_cron(void* ATTR_UNUSED(arg))
 	char* cronaction;
 	log_thread_set(&mynum);
  	cronaction = lookup_reg_str("Software\\Unbound", "CronAction");
-	if(cronaction) {
+	if(cronaction && strlen(cronaction)>0) {
 		STARTUPINFO sinfo;
 		PROCESS_INFORMATION pinfo;
 		memset(&pinfo, 0, sizeof(pinfo));
@@ -484,7 +484,7 @@ win_do_cron(void* ATTR_UNUSED(arg))
 			CloseHandle(pinfo.hThread);
 		}
 		free(cronaction);
-	}
+	} else if(cronaction) free(cronaction);
 	/* stop self */
 	CloseHandle(cron_thread);
 	cron_thread = NULL;
