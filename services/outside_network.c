@@ -130,6 +130,65 @@ waiting_tcp_delete(struct waiting_tcp* w)
 	free(w);
 }
 
+/** 
+ * Pick random outgoing-interface of that family, and bind it.
+ * port set to 0 so OS picks a port number for us.
+ * if it is the ANY address, do not bind.
+ * @param w: tcp structure with destination address.
+ * @param s: socket fd.
+ * @return false on error, socket closed.
+ */
+static int
+pick_outgoing_tcp(struct waiting_tcp* w, int s)
+{
+	struct port_if* pi = NULL;
+	int num;
+#ifdef INET6
+	if(addr_is_ip6(&w->addr, w->addrlen))
+		num = w->outnet->num_ip6;
+	else
+#endif
+		num = w->outnet->num_ip4;
+	if(num == 0) {
+		log_err("no TCP outgoing interfaces of family");
+		log_addr(VERB_OPS, "for addr", &w->addr, w->addrlen);
+#ifndef USE_WINSOCK
+		close(s);
+#else
+		closesocket(s);
+#endif
+		return 0;
+	}
+#ifdef INET6
+	if(addr_is_ip6(&w->addr, w->addrlen))
+		pi = &w->outnet->ip6_ifs[ub_random_max(w->outnet->rnd, num)];
+	else
+#endif
+		pi = &w->outnet->ip4_ifs[ub_random_max(w->outnet->rnd, num)];
+	log_assert(pi);
+	if(addr_is_any(&pi->addr, pi->addrlen)) {
+		/* binding to the ANY interface is for listening sockets */
+		return 1;
+	}
+	/* set port to 0 */
+	if(addr_is_ip6(&pi->addr, pi->addrlen))
+		((struct sockaddr_in6*)&pi->addr)->sin6_port = 0;
+	else	((struct sockaddr_in*)&pi->addr)->sin_port = 0;
+	if(bind(s, (struct sockaddr*)&pi->addr, pi->addrlen) != 0) {
+#ifndef USE_WINSOCK
+		log_err("outgoing tcp: bind: %s", strerror(errno));
+		close(s);
+#else
+		log_err("outgoing tcp: bind: %s", 
+			wsa_strerror(WSAGetLastError()));
+		closesocket(s);
+#endif
+		return 0;
+	}
+	log_addr(VERB_ALGO, "tcp bound to src", &pi->addr, pi->addrlen);
+	return 1;
+}
+
 /** use next free buffer to service a tcp query */
 static int
 outnet_tcp_take_into_use(struct waiting_tcp* w, uint8_t* pkt, size_t pkt_len)
@@ -156,9 +215,8 @@ outnet_tcp_take_into_use(struct waiting_tcp* w, uint8_t* pkt, size_t pkt_len)
 		log_addr(0, "failed address", &w->addr, w->addrlen);
 		return 0;
 	}
-	/* pick random outgoing-interface of that family, and bind it.
-	 * port set to 0 so OS picks a port number for us.
-	 * if it is the ANY address, do not bind. */
+	if(!pick_outgoing_tcp(w, s))
+		return 0;
 
 	fd_set_nonblock(s);
 	if(connect(s, (struct sockaddr*)&w->addr, w->addrlen) == -1) {
