@@ -304,6 +304,34 @@ net_test(void)
 		unit_assert(ipstrtoaddr("2::ffff:192.168.0.2", 53, &a, &l));
 		unit_assert(!addr_is_ip4mapped(&a, l));
 	}
+	/* test addr_is_any */
+	unit_show_func("util/net_help.c", "addr_is_any");
+	if(1) {
+		struct sockaddr_storage a;
+		socklen_t l = (socklen_t)sizeof(a);
+		unit_assert(ipstrtoaddr("0.0.0.0", 53, &a, &l));
+		unit_assert(addr_is_any(&a, l));
+		unit_assert(ipstrtoaddr("0.0.0.0", 10053, &a, &l));
+		unit_assert(addr_is_any(&a, l));
+		unit_assert(ipstrtoaddr("0.0.0.0", 0, &a, &l));
+		unit_assert(addr_is_any(&a, l));
+		unit_assert(ipstrtoaddr("::0", 0, &a, &l));
+		unit_assert(addr_is_any(&a, l));
+		unit_assert(ipstrtoaddr("::0", 53, &a, &l));
+		unit_assert(addr_is_any(&a, l));
+		unit_assert(ipstrtoaddr("::1", 53, &a, &l));
+		unit_assert(!addr_is_any(&a, l));
+		unit_assert(ipstrtoaddr("2001:1667::1", 0, &a, &l));
+		unit_assert(!addr_is_any(&a, l));
+		unit_assert(ipstrtoaddr("2001::0", 0, &a, &l));
+		unit_assert(!addr_is_any(&a, l));
+		unit_assert(ipstrtoaddr("10.0.0.0", 0, &a, &l));
+		unit_assert(!addr_is_any(&a, l));
+		unit_assert(ipstrtoaddr("0.0.0.10", 0, &a, &l));
+		unit_assert(!addr_is_any(&a, l));
+		unit_assert(ipstrtoaddr("192.0.2.1", 0, &a, &l));
+		unit_assert(!addr_is_any(&a, l));
+	}
 }
 
 #include "util/config_file.h"

@@ -478,6 +478,21 @@ int addr_is_broadcast(struct sockaddr_storage* addr, socklen_t addrlen)
 		&& memcmp(sinaddr, "\377\377\377\377", 4) == 0;
 }
 
+int addr_is_any(struct sockaddr_storage* addr, socklen_t addrlen)
+{
+	int af = (int)((struct sockaddr_in*)addr)->sin_family;
+	void* sinaddr = &((struct sockaddr_in*)addr)->sin_addr;
+	void* sin6addr = &((struct sockaddr_in6*)addr)->sin6_addr;
+	if(af == AF_INET && addrlen>=(socklen_t)sizeof(struct sockaddr_in)
+		&& memcmp(sinaddr, "\000\000\000\000", 4) == 0)
+		return 1;
+	else if(af==AF_INET6 && addrlen>=(socklen_t)sizeof(struct sockaddr_in6)
+		&& memcmp(sin6addr, "\000\000\000\000\000\000\000\000"
+		"\000\000\000\000\000\000\000\000", 16) == 0)
+		return 1;
+	return 0;
+}
+
 void sock_list_insert(struct sock_list** list, struct sockaddr_storage* addr,
 	socklen_t len, struct regional* region)
 {

@@ -156,6 +156,10 @@ outnet_tcp_take_into_use(struct waiting_tcp* w, uint8_t* pkt, size_t pkt_len)
 		log_addr(0, "failed address", &w->addr, w->addrlen);
 		return 0;
 	}
+	/* pick random outgoing-interface of that family, and bind it.
+	 * port set to 0 so OS picks a port number for us.
+	 * if it is the ANY address, do not bind. */
+
 	fd_set_nonblock(s);
 	if(connect(s, (struct sockaddr*)&w->addr, w->addrlen) == -1) {
 #ifndef USE_WINSOCK
