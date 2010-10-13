@@ -55,6 +55,7 @@ Generate a distribution tar file for unbound.
                  Detected from svn working copy if not specified.
     -l ldnsdir   Directory where ldns resides. Detected from Makefile.
     -wssl openssl.xx.tar.gz Also build openssl from tarball for windows dist.
+    -wxp expat.xx.tar.gz Also build expat from tarball for windows dist.
     -w ...       Build windows binary dist. last args passed to configure.
 EOF
     exit 1
@@ -135,6 +136,7 @@ RC="no"
 LDNSDIR=""
 DOWIN="no"
 WINSSL=""
+WINEXPAT=""
 
 # Parse the command line arguments.
 while [ "$1" ]; do
@@ -151,6 +153,10 @@ while [ "$1" ]; do
             ;;
         "-wssl")
 	    WINSSL="$2"
+	    shift
+	    ;;
+        "-wxp")
+	    WINEXPAT="$2"
 	    shift
 	    ;;
         "-w")
@@ -205,6 +211,22 @@ if [ "$DOWIN" = "yes" ]; then
 		info "winssl: make install_sw"
 		make install_sw || error_cleanup "OpenSSL install failed"
 		cross_flag="$cross_flag --with-ssl=$sslinstall"
+		cd ..
+	fi
+
+	if test -n "$WINEXPAT"; then
+		info "Cross compile $WINEXPAT"
+		info "wxp: tar unpack"
+		(cd ..; gzip -cd $WINEXPAT) | tar xf - || error_cleanup "tar unpack of $WINEXPAT failed"
+		wxpinstall="`pwd`/wxpinstall"
+		cd expat-* || error_cleanup "no expat-X dir in tarball"
+		info "wxp: configure"
+		mingw32-configure --prefix="$wxpinstall" --exec-prefix="$wxpinstall" --bindir="$wxpinstall/bin" --includedir="$wxpinstall/include" --mandir="$wxpinstall/man" --libdir="$wxpinstall/lib"  || error_cleanup "libexpat configure failed"
+		info "wxp: make"
+		make || error_cleanup "libexpat crosscompile failed"
+		info "wxp: make install"
+		make install || error_cleanup "libexpat install failed"
+		cross_flag="$cross_flag --with-libexpat=$wxpinstall"
 		cd ..
 	fi
 
