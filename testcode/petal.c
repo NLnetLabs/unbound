@@ -566,7 +566,9 @@ int main(int argc, char* argv[])
 	if(argc != 0)
 		usage();
 
+#ifdef SIGPIPE
 	(void)signal(SIGPIPE, SIG_IGN);
+#endif
 	ERR_load_crypto_strings();
 	ERR_load_SSL_strings();
 	OpenSSL_add_all_algorithms();

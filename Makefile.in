@@ -120,7 +120,7 @@ TESTBOUND_OBJ=$(addprefix $(BUILD),$(TESTBOUND_SRC:.c=.lo)) $(COMPAT_OBJ)
 LOCKVERIFY_SRC=testcode/lock_verify.c smallapp/worker_cb.c $(COMMON_SRC)
 LOCKVERIFY_OBJ=$(addprefix $(BUILD),$(LOCKVERIFY_SRC:.c=.lo)) $(COMPAT_OBJ)
 PETAL_SRC=testcode/petal.c
-PETAL_OBJ=$(addprefix $(BUILD),$(PETAL_SRC:.c=.lo)) $(COMPAT_OBJ)
+PETAL_OBJ=$(addprefix $(BUILD),$(PETAL_SRC:.c=.lo)) $(filter-out $(BUILD)compat/ctime_r.lo, $(COMPAT_OBJ))
 PKTVIEW_SRC=testcode/pktview.c testcode/readhex.c smallapp/worker_cb.c \
 	$(COMMON_SRC)
 PKTVIEW_OBJ=$(addprefix $(BUILD),$(PKTVIEW_SRC:.c=.lo)) $(COMPAT_OBJ)
