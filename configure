@@ -4080,7 +4080,7 @@ else
   if test $on_mingw = no; then
     UNBOUND_ROOTKEY_FILE="$UNBOUND_RUN_DIR/root.key"
 else
-    UNBOUND_ROOTKEY_FILE=""
+    UNBOUND_ROOTKEY_FILE="C:\\Program Files\\Unbound\\root.key"
 fi
 
 fi
@@ -4102,7 +4102,7 @@ else
   if test $on_mingw = no; then
     UNBOUND_ROOTCERT_FILE="$UNBOUND_RUN_DIR/icannbundle.pem"
 else
-    UNBOUND_ROOTCERT_FILE=""
+    UNBOUND_ROOTCERT_FILE="C:\\Program Files\\Unbound\\icannbundle.pem"
 fi
 
 fi

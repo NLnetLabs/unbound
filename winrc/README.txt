@@ -66,6 +66,7 @@ $ tar xzvf unbound-xxx.tar.gz
 $ cd unbound-xxx
 $ ./configure --enable-static-exe --with-ldns=../ldns-xxx
 If you compiled openssl yourself, pass --with-ssl=../openssl-xxx too.
+If you compiled libexpat yourself, pass --with-libexpat=../expat-install too.
 The configure options for libevent or threads are not applicable for 
 windows, because builtin alternatives for the windows platform are used.
 $ make

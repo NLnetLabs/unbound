@@ -222,10 +222,10 @@ if [ "$DOWIN" = "yes" ]; then
 		cd expat-* || error_cleanup "no expat-X dir in tarball"
 		info "wxp: configure"
 		mingw32-configure --prefix="$wxpinstall" --exec-prefix="$wxpinstall" --bindir="$wxpinstall/bin" --includedir="$wxpinstall/include" --mandir="$wxpinstall/man" --libdir="$wxpinstall/lib"  || error_cleanup "libexpat configure failed"
-		info "wxp: make"
-		make || error_cleanup "libexpat crosscompile failed"
-		info "wxp: make install"
-		make install || error_cleanup "libexpat install failed"
+		#info "wxp: make"
+		#make || error_cleanup "libexpat crosscompile failed"
+		info "wxp: make installlib"
+		make installlib || error_cleanup "libexpat install failed"
 		cross_flag="$cross_flag --with-libexpat=$wxpinstall"
 		cd ..
 	fi
