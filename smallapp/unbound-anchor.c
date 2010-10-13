@@ -1878,6 +1878,28 @@ prime_root_key(struct ub_ctx* ctx)
 	return res;
 }
 
+/** see if ADDPEND keys exist in autotrust file (if possible) */
+static int
+read_if_pending_keys(char* file)
+{
+	FILE* in = fopen(file, "r");
+	char line[8192];
+	if(!in) {
+		if(verb>=2) printf("%s: %s\n", file, strerror(errno));
+		return 0;
+	}
+	while(fgets(line, (int)sizeof(line), in)) {
+		if(line[0]==';') continue;
+		if(strstr(line, "[ ADDPEND ]")) {
+			fclose(in);
+			if(verb) printf("RFC5011-state has ADDPEND keys\n");
+			return 1;
+		}
+	}
+	fclose(in);
+	return 0;
+}
+
 /** read last successful probe time from autotrust file (if possible) */
 static int32_t
 read_last_success_time(char* file)
@@ -1919,6 +1941,7 @@ read_last_success_time(char* file)
 static int
 probe_date_allows_certupdate(char* root_anchor_file)
 {
+	int has_pending_keys = read_if_pending_keys(root_anchor_file);
 	int32_t last_success = read_last_success_time(root_anchor_file);
 	int32_t now = (int32_t)time(NULL);
 	int32_t leeway = 30 * 24 * 3600; /* 30 days leeway */
@@ -1931,6 +1954,13 @@ probe_date_allows_certupdate(char* root_anchor_file)
 	}
 	if(last_success == 0)
 		return 1; /* no probe time */
+	if(has_pending_keys)
+		return 1; /* key in ADDPEND state, a previous probe has
+		inserted that, and it was present in all recent probes,
+		but it has not become active.  The 30 day timer may not have
+		expired, but we know(for sure) there is a rollover going on.
+		If we only managed to pickup the new key on its last day
+		of announcement (for example) this can happen. */
 	if(now - last_success < 0) {
 		if(verb) printf("the last successful probe is in the future,"
 			" clock was modified\n");

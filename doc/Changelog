@@ -1,5 +1,6 @@
 13 October 2010: Wouter
 	- Fix TCP so it uses a random outgoing-interface.
+	- unbound-anchor handles ADDPEND keystate.
 
 11 October 2010: Wouter
 	- Fix bug when DLV below a trust-anchor that uses NSEC3 optout where
