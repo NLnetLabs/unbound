@@ -389,7 +389,8 @@ read_cert_file(char* file)
 			exit(0);
 		}
 		/* read away newline after --END CERT-- */
-		(void)fgets(buf, (int)sizeof(buf), in);
+		if(!fgets(buf, (int)sizeof(buf), in))
+			break;
 		content = 1;
 	}
 	fclose(in);
