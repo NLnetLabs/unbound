@@ -32,8 +32,11 @@ char *ctime_r(const time_t *timep, char *buf)
 	}
 	lock_basic_lock(&ctime_lock);
 	result = ctime(timep);
-	if(buf && result)
+	if(buf && result) {
+		if(strlen(result) > 10 && result[7]==' ' && result[8]=='0')
+			result[8]=' '; /* fix error in windows ctime */
 		strcpy(buf, result);
+	}
 	lock_basic_unlock(&ctime_lock);
 	return result;
 }
