@@ -388,10 +388,10 @@ read_cert_file(char* file)
 			fclose(in);
 			exit(0);
 		}
+		content = 1;
 		/* read away newline after --END CERT-- */
 		if(!fgets(buf, (int)sizeof(buf), in))
 			break;
-		content = 1;
 	}
 	fclose(in);
 	if(!content) {
