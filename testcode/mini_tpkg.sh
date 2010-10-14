@@ -80,7 +80,6 @@ cd $dir
 mv $name.dir/* .
 
 # EXE
-echo "minitpkg exe $name"
 echo "minitpkg exe $name" > $result
 if test -f $name.pre; then
 	echo "minitpkg exe $name.pre"
