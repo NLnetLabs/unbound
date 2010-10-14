@@ -16586,6 +16586,26 @@ done
 	for ac_header in ldns/ldns.h
 do :
   ac_fn_c_check_header_compile "$LINENO" "ldns/ldns.h" "ac_cv_header_ldns_ldns_h" "$ac_includes_default
+#ifdef HAVE_SYS_SOCKET_H
+#include <sys/socket.h>
+#endif
+
+#ifdef HAVE_NETINET_IN_H
+#include <netinet/in.h>
+#endif
+
+#ifdef HAVE_ARPA_INET_H
+#include <arpa/inet.h>
+#endif
+
+#ifdef HAVE_WINSOCK2_H
+#include <winsock2.h>
+#endif
+
+#ifdef HAVE_WS2TCPIP_H
+#include <ws2tcpip.h>
+#endif
+
 "
 if test "x$ac_cv_header_ldns_ldns_h" = x""yes; then :
   cat >>confdefs.h <<_ACEOF
