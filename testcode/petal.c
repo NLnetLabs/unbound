@@ -334,7 +334,13 @@ provide_file_10(SSL* ssl, char* fname)
 {
 	char* buf, *at;
 	size_t len, avail, header_reserve=1024;
-	FILE* in = fopen(fname, "r");
+	FILE* in = fopen(fname, 
+#ifndef USE_WINSOCK
+		"r"
+#else
+		"rb"
+#endif
+		);
 	int r;
 	const char* rcode = "200 OK";
 	if(!in) {
@@ -396,7 +402,13 @@ provide_file_chunked(SSL* ssl, char* fname)
 	char* at = buf;
 	size_t avail = sizeof(buf);
 	int r;
-	FILE* in = fopen(fname, "r");
+	FILE* in = fopen(fname, 
+#ifndef USE_WINSOCK
+		"r"
+#else
+		"rb"
+#endif
+		);
 	const char* rcode = "200 OK";
 	if(!in) {
 		rcode = "404 File not found";
@@ -429,6 +441,8 @@ provide_file_chunked(SSL* ssl, char* fname)
 		size_t red = in?fread(tmpbuf, 1, avail-16, in):0;
 		/* prepare chunk */
 		r = snprintf(at, avail, "%x\r\n", (unsigned)red);
+		if(verb >= 3)
+		{printf("chunk len %x\n", (unsigned)red); fflush(stdout);}
 		at += r;
 		avail -= r;
 		if(red != 0) {
@@ -491,6 +505,7 @@ service_ssl(SSL* ssl, struct sockaddr_storage* from, socklen_t falen)
 		(void)inet_ntop((int)((struct sockaddr_in*)from)->sin_family,
 			a, out, (socklen_t)sizeof(out));
 		printf("%s requests %s\n", out, combined);
+		fflush(stdout);
 	}
 	if(vs == 10)
 		provide_file_10(ssl, combined);
@@ -510,15 +525,19 @@ do_service(char* addr, int port, char* key, char* cert)
 		struct sockaddr_storage from;
 		socklen_t flen = (socklen_t)sizeof(from);
 		int s = accept(fd, (struct sockaddr*)&from, &flen);
+		if(verb) fflush(stdout);
 		if(s != -1) {
 			SSL* ssl = setup_ssl(s, sslctx);
+			if(verb) fflush(stdout);
 			if(ssl) {
 				service_ssl(ssl, &from, flen);
+				if(verb) fflush(stdout);
 				SSL_shutdown(ssl);
 				SSL_free(ssl);
 			}
 			fd_close(s);
 		} else if (verb >=2) log_errno("accept");
+		if(verb) fflush(stdout);
 	}
 	/* if we get a kill signal, the process dies and the OS reaps us */
 	if(verb) printf("petal end\n");
@@ -537,6 +556,13 @@ int main(int argc, char* argv[])
 	int c;
 	int port = 443;
 	char* addr = "127.0.0.1", *key = "petal.key", *cert = "petal.pem";
+#ifdef USE_WINSOCK
+	WSADATA wsa_data;
+	if((c=WSAStartup(MAKEWORD(2,2), &wsa_data)) != 0)
+	{	printf("WSAStartup failed\n"); exit(1); }
+	atexit((void (*)(void))WSACleanup);
+#endif
+
 	/* parse the options */
 	while( (c=getopt(argc, argv, "a:c:k:hp:v")) != -1) {
 		switch(c) {

@@ -139,11 +139,16 @@
 /** name of server in URL to fetch HTTPS from */
 #define URLNAME "data.iana.org"
 /** path on HTTPS server to xml file */
-#define XMLNAME "/root-anchors/root-anchors.xml"
+#define XMLNAME "root-anchors/root-anchors.xml"
 /** path on HTTPS server to p7s file */
-#define P7SNAME "/root-anchors/root-anchors.p7s"
+#define P7SNAME "root-anchors/root-anchors.p7s"
 /** port number for https access */
 #define HTTPS_PORT 443
+
+#ifdef USE_WINSOCK
+/* sneakily reuse the the wsa_strerror function, on windows */
+char* wsa_strerror(int err);
+#endif
 
 /** verbosity for this application */
 static int verb = 0;
@@ -533,6 +538,7 @@ resolve_host_ip(struct ub_ctx* ctx, char* host, int port, int tp, int cl,
 	}
 	if(!res) {
 		if(verb) printf("out of memory\n");
+		ub_ctx_delete(ctx);
 		exit(0);
 	}
 	for(i = 0; res->data[i]; i++) {
@@ -695,11 +701,21 @@ connect_to_ip(struct ip_list* ip)
 	fd = socket(ip->len==(socklen_t)sizeof(struct sockaddr_in)?
 		AF_INET:AF_INET6, SOCK_STREAM, 0);
 	if(fd == -1) {
+#ifndef USE_WINSOCK
 		if(verb) printf("socket: %s\n", strerror(errno));
+#else
+		if(verb) printf("socket: %s\n",
+			wsa_strerror(WSAGetLastError()));
+#endif
 		return -1;
 	}
 	if(connect(fd, (struct sockaddr*)&ip->addr, ip->len) < 0) {
+#ifndef USE_WINSOCK
 		if(verb) printf("connect: %s\n", strerror(errno));
+#else
+		if(verb) printf("connect: %s\n",
+			wsa_strerror(WSAGetLastError()));
+#endif
 		fd_close(fd);
 		return -1;
 	}
@@ -935,6 +951,7 @@ do_chunked_read(SSL* ssl)
 	size_t len;
 	char* body;
 	BIO* mem = BIO_new(BIO_s_mem());
+	if(verb>=3) printf("do_chunked_read\n");
 	if(!mem) {
 		if(verb) printf("out of memory\n");
 		return NULL;
@@ -944,6 +961,7 @@ do_chunked_read(SSL* ssl)
 		if(verb>=2) printf("chunk header: %s\n", buf);
 		if(!parse_chunk_header(buf, &len)) {
 			BIO_free(mem);
+			if(verb>=3) printf("could not parse chunk header\n");
 			return NULL;
 		}
 		if(verb>=2) printf("chunk len: %d\n", (int)len);
@@ -992,7 +1010,7 @@ do_chunked_read(SSL* ssl)
 static int
 write_http_get(SSL* ssl, char* pathname, char* urlname)
 {
-	if(write_ssl_line(ssl, "GET %s HTTP/1.1", pathname) &&
+	if(write_ssl_line(ssl, "GET /%s HTTP/1.1", pathname) &&
 	   write_ssl_line(ssl, "Host: %s", urlname) &&
 	   write_ssl_line(ssl, "User-Agent: unbound-anchor/%s",
 	   	PACKAGE_VERSION) &&
@@ -1020,6 +1038,10 @@ read_http_result(SSL* ssl)
 		BIO* tmp = do_chunked_read(ssl);
 		char* d = NULL;
 		size_t l;
+		if(!tmp) {
+			if(verb) printf("could not read from https\n");
+			return NULL;
+		}
 		l = (size_t)BIO_get_mem_data(tmp, &d);
 		if(verb>=2) printf("chunked data is %d\n", (int)l);
 		if(l == 0 || d == NULL) {
@@ -1706,6 +1728,10 @@ verify_and_update_anchor(char* root_anchor_file, BIO* xml, BIO* p7s,
 	BIO_free(ds);
 }
 
+#ifdef USE_WINSOCK
+static void do_wsa_cleanup(void) { WSACleanup(); }
+#endif
+
 /** perform actual certupdate work */
 static int
 do_certupdate(char* root_anchor_file, char* root_cert_file,
@@ -1723,6 +1749,19 @@ do_certupdate(char* root_anchor_file, char* root_cert_file,
 	/* lookup A, AAAA for the urlname (or parse urlname if IP address) */
 	ip_list = resolve_name(urlname, port, res_conf, root_hints, debugconf,
 		ip4only, ip6only);
+
+#ifdef USE_WINSOCK
+	if(1) { /* libunbound finished, startup WSA for the https connection */
+		WSADATA wsa_data;
+		int r;
+		if((r = WSAStartup(MAKEWORD(2,2), &wsa_data)) != 0) {
+			if(verb) printf("WSAStartup failed: %s\n",
+				wsa_strerror(r));
+			exit(0);
+		}
+		atexit(&do_wsa_cleanup);
+	}
+#endif
 
 	/* fetch the necessary files over HTTPS */
 	xml = https(ip_list, xmlname, urlname);
