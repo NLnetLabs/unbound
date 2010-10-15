@@ -332,10 +332,10 @@ comm_point_send_udp_msg(struct comm_point *c, ldns_buffer* packet,
 	return 1;
 }
 
+#if defined(AF_INET6) && defined(IPV6_PKTINFO) && (defined(HAVE_RECVMSG) || defined(HAVE_SENDMSG))
 /** print debug ancillary info */
 static void p_ancil(const char* str, struct comm_reply* r)
 {
-#if defined(AF_INET6) && defined(IPV6_PKTINFO) && (defined(HAVE_RECVMSG) || defined(HAVE_SENDMSG))
 	if(r->srctype != 4 && r->srctype != 6) {
 		log_info("%s: unknown srctype %d", str, r->srctype);
 		return;
@@ -373,11 +373,8 @@ static void p_ancil(const char* str, struct comm_reply* r)
 		log_info("%s: %s", str, buf1);
 #endif
 	}
-#else
-	(void)str;
-	(void)r;
-#endif
 }
+#endif
 
 /** send a UDP reply over specified interface*/
 static int
