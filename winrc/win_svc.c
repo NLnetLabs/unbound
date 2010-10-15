@@ -231,6 +231,66 @@ lookup_reg_int(const char* key, const char* name)
 	return result;
 }
 
+/** wait for unbound-anchor process to finish */
+static void
+waitforubanchor(PROCESS_INFORMATION* pinfo)
+{
+	/* we have 5 seconds scheduled for it, usually it will be very fast,
+	 * with only a UDP message or two (100 msec or so), but the https
+	 * connections could take some time */
+	DWORD count = 7900;
+	DWORD ret = WAIT_TIMEOUT;
+	/* decrease timer every 1/10 second, we are still starting up */
+	while(ret == WAIT_TIMEOUT) {
+		ret = WaitForSingleObject(pinfo->hProcess, 100);
+		if(count > 4000) count -= 100;
+		else count--; /* go slow, it is taking long */
+		if(count > 3000)
+			report_status(SERVICE_START_PENDING, NO_ERROR, count);
+	}
+	verbose(VERB_ALGO, "unbound-anchor done");
+	if(ret != WAIT_OBJECT_0) {
+		return; /* did not end successfully */
+	}
+	if(!GetExitCodeProcess(pinfo->hProcess, &ret)) {
+		log_err("GetExitCodeProcess failed");
+		return;
+	}
+	verbose(VERB_ALGO, "unbound-anchor exit code is %d", (int)ret);
+	if(ret != 0) {
+		log_info("The root trust anchor has been updated.");
+	}
+}
+
+
+/**
+ * Perform root anchor update if so configured, by calling that process
+ */
+static void
+call_root_update(void)
+{
+	char* rootanchor;
+ 	rootanchor = lookup_reg_str("Software\\Unbound", "RootAnchor");
+	if(rootanchor && strlen(rootanchor)>0) {
+		STARTUPINFO sinfo;
+		PROCESS_INFORMATION pinfo;
+		memset(&pinfo, 0, sizeof(pinfo));
+		memset(&sinfo, 0, sizeof(sinfo));
+		sinfo.cb = sizeof(sinfo);
+		verbose(VERB_ALGO, "rootanchor: %s", rootanchor);
+		report_status(SERVICE_START_PENDING, NO_ERROR, 8000);
+		if(!CreateProcess(NULL, rootanchor, NULL, NULL, 0, 
+			CREATE_NO_WINDOW, NULL, NULL, &sinfo, &pinfo))
+			log_err("CreateProcess error for unbound-anchor.exe");
+		else {
+			waitforubanchor(&pinfo);
+			CloseHandle(pinfo.hProcess);
+			CloseHandle(pinfo.hThread);
+		}
+	}
+	free(rootanchor);
+}
+
 /**
  * Init service. Keeps calling status pending to tell service control
  * manager that this process is not hanging.
@@ -342,6 +402,9 @@ service_main(DWORD ATTR_UNUSED(argc), LPTSTR* ATTR_UNUSED(argv))
 	
 	service_status.dwServiceType = SERVICE_WIN32_OWN_PROCESS;
 	service_status.dwServiceSpecificExitCode = 0;
+
+	/* see if we have root anchor update enabled */
+	call_root_update();
 
 	/* we are now starting up */
 	report_status(SERVICE_START_PENDING, NO_ERROR, 3000);
@@ -483,8 +546,8 @@ win_do_cron(void* ATTR_UNUSED(arg))
 			CloseHandle(pinfo.hProcess);
 			CloseHandle(pinfo.hThread);
 		}
-		free(cronaction);
-	} else if(cronaction) free(cronaction);
+	}
+	free(cronaction);
 	/* stop self */
 	CloseHandle(cron_thread);
 	cron_thread = NULL;

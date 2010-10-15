@@ -122,9 +122,9 @@ section "-hidden.postinstall"
 		FileWrite $R1 "$\nserver: auto-trust-anchor-file: $\"$INSTDIR\root.key$\"$\n"
 		FileClose $R1
 	  done_rk:
-		WriteRegStr HKLM "Software\Unbound" "RootAnchor" "yes"
+		WriteRegStr HKLM "Software\Unbound" "RootAnchor" "$\"$INSTDIR\unbound-anchor.exe$\""
 	${Else}
-		WriteRegStr HKLM "Software\Unbound" "RootAnchor" "no"
+		WriteRegStr HKLM "Software\Unbound" "RootAnchor" ""
 	${EndIf}
 
 	# Store DLV choice
@@ -213,6 +213,7 @@ section "un.Unbound"
 	Delete "$INSTDIR\service.conf"
 	Delete "$INSTDIR\example.conf"
 	Delete "$INSTDIR\dlv.isc.org.key"
+	Delete "$INSTDIR\root.key"
 	RMDir "$INSTDIR"
 
 	# start menu items
