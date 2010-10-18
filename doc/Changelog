@@ -1,3 +1,6 @@
+18 October 2010: Wouter
+	- iana portlist updated.
+
 13 October 2010: Wouter
 	- Fix TCP so it uses a random outgoing-interface.
 	- unbound-anchor handles ADDPEND keystate.
