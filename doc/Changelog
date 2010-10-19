@@ -1,3 +1,11 @@
+19 October 2010: Wouter
+	- Fix for request list growth, if a server has long timeout but the
+	  lost counter is low, then its effective rtt is the one without
+	  exponential backoff applied.  Because the backoff is not working.
+	  The lost counter can then increase and the server is blacklisted,
+	  or the lost counter does not increase and the server is working
+	  for some queries.
+
 18 October 2010: Wouter
 	- iana portlist updated.
 

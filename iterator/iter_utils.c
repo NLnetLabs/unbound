@@ -208,11 +208,6 @@ iter_filter_unsuitable(struct iter_env* iter_env, struct module_env* env,
 			return -1; /* server is lame */
 		else if(rtt >= USEFUL_SERVER_TOP_TIMEOUT && 
 			lost >= USEFUL_SERVER_MAX_LOST) {
-			/* keep trying slowly, 1% of the time, because
-			 * this can be due to weird firewalls.  This number
-			 * does not have to be securely random. */
-			if(ub_random(env->rnd) % 100 == 0)
-				return USEFUL_SERVER_TOP_TIMEOUT+1;
 			/* server is unresponsive */
 			return USEFUL_SERVER_TOP_TIMEOUT;
 		}

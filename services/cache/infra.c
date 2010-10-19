@@ -47,6 +47,7 @@
 #include "util/log.h"
 #include "util/net_help.h"
 #include "util/config_file.h"
+#include "iterator/iterator.h"
 
 size_t 
 infra_host_sizefunc(void* k, void* ATTR_UNUSED(d))
@@ -267,6 +268,14 @@ infra_host(struct infra_cache* infra, struct sockaddr_storage* addr,
 	/* use existing entry */
 	data = (struct infra_host_data*)e->data;
 	*to = rtt_timeout(&data->rtt);
+	if(*to >= USEFUL_SERVER_TOP_TIMEOUT &&
+		data->num_timeouts < USEFUL_SERVER_MAX_LOST)
+		/* use smaller timeout, backoff does not work
+		 * The server seems to still reply but sporadically.
+		 * Perhaps it has rate-limited the traffic, or it
+		 * drops particular queries (AAAA).  ignore timeouts,
+		 * but we use an expanded variance of 6x. */
+		*to = data->rtt.srtt + 6*data->rtt.rttvar;
 	*edns_vs = data->edns_version;
 	*edns_lame_known = data->edns_lame_known;
 	lock_rw_unlock(&e->lock);
