@@ -120,6 +120,8 @@ struct infra_cache {
 	int lame_ttl;
 	/** infra lame cache max memory per host, in bytes */
 	size_t max_lame_size;
+	/** jostle timeout in msec */
+	size_t jostle;
 };
 
 /** infra host cache default hash lookup size */

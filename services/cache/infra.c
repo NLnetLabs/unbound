@@ -102,6 +102,7 @@ infra_create(struct config_file* cfg)
 	infra->host_ttl = cfg->host_ttl;
 	infra->lame_ttl = cfg->lame_ttl;
 	infra->max_lame_size = cfg->infra_cache_lame_size;
+	infra->jostle = cfg->jostle_time;
 	return infra;
 }
 
@@ -123,6 +124,7 @@ infra_adjust(struct infra_cache* infra, struct config_file* cfg)
 	infra->host_ttl = cfg->host_ttl;
 	infra->lame_ttl = cfg->lame_ttl;
 	infra->max_lame_size = cfg->infra_cache_lame_size;
+	infra->jostle = cfg->jostle_time;
 	maxmem = cfg->infra_cache_numhosts * 
 		(sizeof(struct infra_host_key)+sizeof(struct infra_host_data));
 	if(maxmem != slabhash_get_size(infra->hosts) ||
@@ -274,8 +276,8 @@ infra_host(struct infra_cache* infra, struct sockaddr_storage* addr,
 		 * The server seems to still reply but sporadically.
 		 * Perhaps it has rate-limited the traffic, or it
 		 * drops particular queries (AAAA).  ignore timeouts,
-		 * but we use an expanded variance of 6x. */
-		*to = data->rtt.srtt + 6*data->rtt.rttvar;
+		 * and use the jostle timeout for rtt estimate. */
+		*to = infra->jostle;
 	*edns_vs = data->edns_version;
 	*edns_lame_known = data->edns_lame_known;
 	lock_rw_unlock(&e->lock);
