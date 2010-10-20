@@ -277,7 +277,7 @@ infra_host(struct infra_cache* infra, struct sockaddr_storage* addr,
 		 * Perhaps it has rate-limited the traffic, or it
 		 * drops particular queries (AAAA).  ignore timeouts,
 		 * and use the jostle timeout for rtt estimate. */
-		*to = infra->jostle;
+		*to = (int)infra->jostle;
 	*edns_vs = data->edns_version;
 	*edns_lame_known = data->edns_lame_known;
 	lock_rw_unlock(&e->lock);
