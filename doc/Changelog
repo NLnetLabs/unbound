@@ -1,3 +1,7 @@
+20 October 2010: Wouter
+	- interface automatic works for some people with ip6 disabled.
+	  Therefore the error check is removed, so they can use the option.
+
 19 October 2010: Wouter
 	- Fix for request list growth, if a server has long timeout but the
 	  lost counter is low, then its effective rtt is the one without

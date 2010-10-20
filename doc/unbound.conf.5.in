@@ -124,9 +124,8 @@ interface and port number), if not specified the default port (from
 .TP
 .B interface\-automatic: \fI<yes or no>
 Detect source interface on UDP queries and copy them to replies.  This 
-feature is experimental, and needs support in your OS for IPv6 
-(and its socket options) and IPv4 (and have source\-interface socket options). 
-Default value is no.
+feature is experimental, and needs support in your OS for particular socket
+options.  Default value is no.
 .TP
 .B outgoing\-interface: \fI<ip address>
 Interface to use to connect to the network. This interface is used to send

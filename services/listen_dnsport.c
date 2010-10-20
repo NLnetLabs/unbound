@@ -744,10 +744,6 @@ listening_ports_open(struct config_file* cfg)
 	if(!do_ip4 && !do_ip6) {
 		return NULL;
 	}
-	if(do_auto && (!do_ip4 || !do_ip6)) {
-		log_warn("interface_automatic option does not work when either do-ip4 or do-ip6 is not enabled. Disabling option.");
-		do_auto = 0;
-	}
 	/* create ip4 and ip6 ports so that return addresses are nice. */
 	if(do_auto || cfg->num_ifs == 0) {
 		if(do_ip6) {
