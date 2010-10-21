@@ -206,11 +206,9 @@ iter_filter_unsuitable(struct iter_env* iter_env, struct module_env* env,
 			a->lame?" ADDR_LAME":"");
 		if(lame)
 			return -1; /* server is lame */
-		else if(rtt >= USEFUL_SERVER_TOP_TIMEOUT && 
-			lost >= USEFUL_SERVER_MAX_LOST) {
+		else if(rtt >= USEFUL_SERVER_TOP_TIMEOUT)
 			/* server is unresponsive */
 			return USEFUL_SERVER_TOP_TIMEOUT;
-		}
 		/* select remainder from worst to best */
 		else if(reclame)
 			return rtt+USEFUL_SERVER_TOP_TIMEOUT*3; /* nonpref */
@@ -218,8 +216,6 @@ iter_filter_unsuitable(struct iter_env* iter_env, struct module_env* env,
 			return rtt+USEFUL_SERVER_TOP_TIMEOUT*2; /* nonpref */
 		else if(a->lame)
 			return rtt+USEFUL_SERVER_TOP_TIMEOUT+1; /* nonpref */
-		else if(rtt >= USEFUL_SERVER_TOP_TIMEOUT) /* not blacklisted*/
-			return USEFUL_SERVER_TOP_TIMEOUT+1;
 		else	return rtt;
 	}
 	/* no server information present */

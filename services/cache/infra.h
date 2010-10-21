@@ -64,6 +64,8 @@ struct infra_host_key {
 struct infra_host_data {
 	/** TTL value for this entry. absolute time. */
 	uint32_t ttl;
+	/** backoff time if blacklisted unresponsive. in seconds. */
+	uint32_t backoff;
 	/** round trip times for timeout calculation */
 	struct rtt_info rtt;
 	/** Names of the zones that are lame. NULL=no lame zones. */
@@ -285,6 +287,22 @@ int infra_get_lame_rtt(struct infra_cache* infra,
 	uint8_t* name, size_t namelen, uint16_t qtype, 
 	int* lame, int* dnsseclame, int* reclame, int* rtt, int* lost,
 	uint32_t timenow);
+
+/**
+ * Get additional (debug) info on timing.
+ * @param infra: infra cache.
+ * @param addr: host address.
+ * @param addrlen: length of addr.
+ * @param rtt: the clean rtt time (of working replies).
+ * @param rto: the rtt with timeouts applied. (rtt as returned by other funcs).
+ * @param backoff: the backoff time for blacked entries.
+ * @param timenow: what time it is now.
+ * @return TTL the infra host element is valid for. If -1: not found in cache.
+ * 	If -2: found in cache, but TTL was not valid, only backoff is filled.
+ */
+int infra_get_host_rto(struct infra_cache* infra,
+        struct sockaddr_storage* addr, socklen_t addrlen, 
+	int* rtt, int* rto, int* backoff, uint32_t timenow);
 
 /**
  * Get memory used by the infra cache.

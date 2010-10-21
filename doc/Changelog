@@ -1,3 +1,10 @@
+21 October 2010: Wouter
+	- Fix bug where fallback_tcp causes wrong roundtrip and edns
+	  observation to be noted in cache.  Fix bug where EDNSprobe halted
+	  exponential backoff if EDNS status unknown.
+	- new unresponsive host method, exponentially increasing block backoff.
+	- iana portlist updated.
+
 20 October 2010: Wouter
 	- interface automatic works for some people with ip6 disabled.
 	  Therefore the error check is removed, so they can use the option.

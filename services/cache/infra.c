@@ -190,7 +190,7 @@ infra_lookup_host(struct infra_cache* infra,
 	return data;
 }
 
-/** init the host elements (not lame elems) */
+/** init the host elements (not lame elems, not backoff) */
 static void
 host_entry_init(struct infra_cache* infra, struct lruhash_entry* e, 
 	uint32_t timenow)
@@ -233,6 +233,7 @@ new_host_entry(struct infra_cache* infra, struct sockaddr_storage* addr,
 	key->addrlen = addrlen;
 	memcpy(&key->addr, addr, addrlen);
 	data->lameness = NULL;
+	data->backoff = INFRA_BACKOFF_INITIAL;
 	host_entry_init(infra, &key->entry, tm);
 	return &key->entry;
 }
@@ -270,14 +271,6 @@ infra_host(struct infra_cache* infra, struct sockaddr_storage* addr,
 	/* use existing entry */
 	data = (struct infra_host_data*)e->data;
 	*to = rtt_timeout(&data->rtt);
-	if(*to >= USEFUL_SERVER_TOP_TIMEOUT &&
-		data->num_timeouts < USEFUL_SERVER_MAX_LOST)
-		/* use smaller timeout, backoff does not work
-		 * The server seems to still reply but sporadically.
-		 * Perhaps it has rate-limited the traffic, or it
-		 * drops particular queries (AAAA).  ignore timeouts,
-		 * and use the jostle timeout for rtt estimate. */
-		*to = (int)infra->jostle;
 	*edns_vs = data->edns_version;
 	*edns_lame_known = data->edns_lame_known;
 	lock_rw_unlock(&e->lock);
@@ -491,11 +484,29 @@ infra_rtt_update(struct infra_cache* infra,
 	/* have an entry, update the rtt */
 	data = (struct infra_host_data*)e->data;
 	if(roundtrip == -1) {
+		int o = rtt_timeout(&data->rtt);
 		rtt_lost(&data->rtt, orig_rtt);
+		if(rtt_timeout(&data->rtt) >= USEFUL_SERVER_TOP_TIMEOUT
+			&& o < USEFUL_SERVER_TOP_TIMEOUT) {
+			/* backoff the blacklisted timeout */
+			log_addr(VERB_ALGO, "backoff for", addr, addrlen);
+			data->backoff *= 2;
+			if(data->backoff >= 24*3600)
+				data->backoff = 24*3600;
+			verbose(VERB_ALGO, "backoff to %d", data->backoff);
+			/* increase the infra item TTL */
+			data->ttl = timenow + data->backoff;
+		}
+
 		if(data->num_timeouts<255)
 			data->num_timeouts++; 
 	} else {
 		rtt_update(&data->rtt, roundtrip);
+		/* un-backoff the element */
+		if(data->backoff > (uint32_t)infra->host_ttl*2)
+			data->backoff = (uint32_t)infra->host_ttl*2;
+		else	data->backoff = INFRA_BACKOFF_INITIAL;
+
 		data->num_timeouts = 0;
 	}
 	if(data->rtt.rto > 0)
@@ -505,6 +516,26 @@ infra_rtt_update(struct infra_cache* infra,
 		slabhash_insert(infra->hosts, e->hash, e, e->data, NULL);
 	else 	{ lock_rw_unlock(&e->lock); }
 	return rto;
+}
+
+int infra_get_host_rto(struct infra_cache* infra,
+        struct sockaddr_storage* addr, socklen_t addrlen,
+	int* rtt, int* rto, int* backoff, uint32_t timenow)
+{
+	struct lruhash_entry* e = infra_lookup_host_nottl(infra, addr, 
+		addrlen, 0);
+	struct infra_host_data* data;
+	int ttl = -2;
+	if(!e) return -1;
+	data = (struct infra_host_data*)e->data;
+	*backoff = (int)data->backoff;
+	if(data->ttl >= timenow) {
+		ttl = (int)(data->ttl - timenow);
+		*rtt = rtt_notimeout(&data->rtt);
+		*rto = rtt_unclamped(&data->rtt);
+	}
+	lock_rw_unlock(&e->lock);
+	return ttl;
 }
 
 int 

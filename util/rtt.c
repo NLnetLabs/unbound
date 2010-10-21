@@ -109,3 +109,8 @@ rtt_lost(struct rtt_info* rtt, int orig)
 			rtt->rto = RTT_MAX_TIMEOUT;
 	}
 }
+
+int rtt_notimeout(const struct rtt_info* rtt)
+{
+	return calc_rto(rtt);
+}

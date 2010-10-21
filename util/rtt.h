@@ -82,6 +82,13 @@ int rtt_timeout(const struct rtt_info* rtt);
 int rtt_unclamped(const struct rtt_info* rtt);
 
 /**
+ * RTT for valid responses. Without timeouts.
+ * @param rtt: round trip statistics structure.
+ * @return: value in msec.
+ */
+int rtt_notimeout(const struct rtt_info* rtt);
+
+/**
  * Update the statistics with a new roundtrip estimate observation.
  * @param rtt: round trip statistics structure.
  * @param ms: estimate of roundtrip time in milliseconds.

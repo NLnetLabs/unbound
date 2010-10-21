@@ -75,6 +75,8 @@ struct iter_priv;
  * Chosen so that the UNKNOWN_SERVER_NICENESS falls within the band of a 
  * fast server, this causes server exploration as a side benefit. msec. */
 #define RTT_BAND 400
+/** Start value for blacklisting a host, 2*USEFUL_SERVER_TOP_TIMEOUT in sec */
+#define INFRA_BACKOFF_INITIAL 240
 
 /**
  * Global state for the iterator. 
