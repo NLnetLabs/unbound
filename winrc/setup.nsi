@@ -122,7 +122,7 @@ section "-hidden.postinstall"
 		FileWrite $R1 "$\nserver: auto-trust-anchor-file: $\"$INSTDIR\root.key$\"$\n"
 		FileClose $R1
 	  done_rk:
-		WriteRegStr HKLM "Software\Unbound" "RootAnchor" "$\"$INSTDIR\unbound-anchor.exe$\""
+		WriteRegStr HKLM "Software\Unbound" "RootAnchor" "$\"$INSTDIR\unbound-anchor.exe$\" -a $\"$INSTDIR\root.key$\" -c $\"$INSTDIR\icannbundle.pem$\""
 	${Else}
 		WriteRegStr HKLM "Software\Unbound" "RootAnchor" ""
 	${EndIf}

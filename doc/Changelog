@@ -1,3 +1,6 @@
+22 October 2010: Wouter
+	- Windows 7 fix for the installer.
+
 21 October 2010: Wouter
 	- Fix bug where fallback_tcp causes wrong roundtrip and edns
 	  observation to be noted in cache.  Fix bug where EDNSprobe halted
