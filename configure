@@ -16480,9 +16480,10 @@ use_ldns_builtin="no"
 # Check whether --with-ldns was given.
 if test "${with_ldns+set}" = set; then :
   withval=$with_ldns;  specialldnsdir="$withval"
-	if test "$withval" != ""; then
-		CPPFLAGS="-I$withval/include $CPPFLAGS"
-		LDFLAGS="-L$withval -L$withval/lib $LDFLAGS"
+	if test "$withval" != "yes"; then
+		if test "$withval" != ""; then
+			CPPFLAGS="-I$withval/include $CPPFLAGS"
+			LDFLAGS="-L$withval -L$withval/lib $LDFLAGS"
 
 	if test "x$enable_rpath" = xyes; then
 		if echo "$withval/lib" | grep "^/" >/dev/null; then
@@ -16490,9 +16491,10 @@ if test "${with_ldns+set}" = set; then :
 		fi
 	fi
 
-	fi
-	ldnsdir="$withval"
+		fi
+		ldnsdir="$withval"
 
+	fi
 
 fi
 
@@ -16623,7 +16625,7 @@ done
 	    -a $ac_cv_func_ldns_key_EVP_load_gost_id = yes; then
 	    	    :
 	else
-	    use_ldns_builtin="yes"
+	    as_fn_error "No ldns library found (or not recent); install or update ldns library, use --with-ldns=path or --with-ldns-builtin" "$LINENO" 5
 	fi
 fi
 

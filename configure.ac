@@ -701,13 +701,15 @@ use_ldns_builtin="no"
 AC_ARG_WITH(ldns, AC_HELP_STRING([--with-ldns=PATH], 
 	[specify prefix of path of ldns library to use]), 
 	[ specialldnsdir="$withval"
-	if test "$withval" != ""; then
-		CPPFLAGS="-I$withval/include $CPPFLAGS"
-		LDFLAGS="-L$withval -L$withval/lib $LDFLAGS"
-		ACX_RUNTIME_PATH_ADD([$withval/lib])
+	if test "$withval" != "yes"; then
+		if test "$withval" != ""; then
+			CPPFLAGS="-I$withval/include $CPPFLAGS"
+			LDFLAGS="-L$withval -L$withval/lib $LDFLAGS"
+			ACX_RUNTIME_PATH_ADD([$withval/lib])
+		fi
+		ldnsdir="$withval"
+		AC_SUBST(ldnsdir)
 	fi
-	ldnsdir="$withval"
-	AC_SUBST(ldnsdir)
 ])
 
 AC_ARG_WITH(ldns-builtin, AC_HELP_STRING([--with-ldns-builtin], 
@@ -755,7 +757,7 @@ if test "$use_ldns_builtin" = "no"; then
 	    dnl ldns was found
 	    :
 	else
-	    use_ldns_builtin="yes"
+	    AC_MSG_ERROR([No ldns library found (or not recent); install or update ldns library, use --with-ldns=path or --with-ldns-builtin])
 	fi
 fi
 
