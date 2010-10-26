@@ -510,18 +510,17 @@ infra_rtt_update(struct infra_cache* infra,
 
 int infra_get_host_rto(struct infra_cache* infra,
         struct sockaddr_storage* addr, socklen_t addrlen,
-	int* rtt, int* rto, uint32_t timenow)
+	struct rtt_info* rtt, uint32_t timenow)
 {
 	struct lruhash_entry* e = infra_lookup_host_nottl(infra, addr, 
 		addrlen, 0);
 	struct infra_host_data* data;
-	int ttl = -2;
+	int ttl = -1;
 	if(!e) return -1;
 	data = (struct infra_host_data*)e->data;
 	if(data->ttl >= timenow) {
 		ttl = (int)(data->ttl - timenow);
-		*rtt = rtt_notimeout(&data->rtt);
-		*rto = rtt_unclamped(&data->rtt);
+		memmove(rtt, &data->rtt, sizeof(*rtt));
 	}
 	lock_rw_unlock(&e->lock);
 	return ttl;

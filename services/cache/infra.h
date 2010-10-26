@@ -290,15 +290,13 @@ int infra_get_lame_rtt(struct infra_cache* infra,
  * @param infra: infra cache.
  * @param addr: host address.
  * @param addrlen: length of addr.
- * @param rtt: the clean rtt time (of working replies).
- * @param rto: the rtt with timeouts applied. (rtt as returned by other funcs).
+ * @param rtt: the rtt_info is copied into here (caller alloced return struct).
  * @param timenow: what time it is now.
  * @return TTL the infra host element is valid for. If -1: not found in cache.
- * 	If -2: found in cache, but TTL was not valid.
  */
 int infra_get_host_rto(struct infra_cache* infra,
         struct sockaddr_storage* addr, socklen_t addrlen, 
-	int* rtt, int* rto, uint32_t timenow);
+	struct rtt_info* rtt, uint32_t timenow);
 
 /**
  * Get memory used by the infra cache.
