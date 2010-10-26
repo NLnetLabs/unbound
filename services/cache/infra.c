@@ -264,6 +264,7 @@ infra_host(struct infra_cache* infra, struct sockaddr_storage* addr,
 	int wr = 0;
 	if(e && ((struct infra_host_data*)e->data)->ttl < timenow) {
 		/* it expired, try to reuse existing entry */
+		int old = ((struct infra_host_data*)e->data)->rtt.rto;
 		lock_rw_unlock(&e->lock);
 		e = infra_lookup_host_nottl(infra, addr, addrlen, 1);
 		if(e) {
@@ -272,6 +273,9 @@ infra_host(struct infra_cache* infra, struct sockaddr_storage* addr,
 			/* do not touch lameness, it may be valid still */
 			host_entry_init(infra, e, timenow);
 			wr = 1;
+			/* TOP_TIMEOUT remains on reuse */
+			if(old >= USEFUL_SERVER_TOP_TIMEOUT)
+				((struct infra_host_data*)e->data)->rtt.rto=old;
 		}
 	}
 	if(!e) {
