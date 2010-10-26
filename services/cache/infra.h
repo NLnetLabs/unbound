@@ -64,6 +64,8 @@ struct infra_host_key {
 struct infra_host_data {
 	/** TTL value for this entry. absolute time. */
 	uint32_t ttl;
+	/** time in seconds (absolute) when probing re-commences, 0 disabled */
+	uint32_t probedelay;
 	/** round trip times for timeout calculation */
 	struct rtt_info rtt;
 	/** Names of the zones that are lame. NULL=no lame zones. */
@@ -173,6 +175,8 @@ struct infra_host_data* infra_lookup_host(struct infra_cache* infra,
  * Find host information to send a packet. Creates new entry if not found.
  * Lameness is empty. EDNS is 0 (try with first), and rtt is returned for 
  * the first message to it.
+ * Use this to send a packet only, because it also locks out others when
+ * probing is restricted.
  * @param infra: infrastructure cache.
  * @param addr: host address.
  * @param addrlen: length of addr.
@@ -265,6 +269,7 @@ int infra_edns_update(struct infra_cache* infra,
 
 /**
  * Get Lameness information and average RTT if host is in the cache.
+ * This information is to be used for server selection.
  * @param infra: infrastructure cache.
  * @param addr: host address.
  * @param addrlen: length of addr.
@@ -291,12 +296,13 @@ int infra_get_lame_rtt(struct infra_cache* infra,
  * @param addr: host address.
  * @param addrlen: length of addr.
  * @param rtt: the rtt_info is copied into here (caller alloced return struct).
+ * @param delay: probe delay (if any).
  * @param timenow: what time it is now.
  * @return TTL the infra host element is valid for. If -1: not found in cache.
  */
 int infra_get_host_rto(struct infra_cache* infra,
         struct sockaddr_storage* addr, socklen_t addrlen, 
-	struct rtt_info* rtt, uint32_t timenow);
+	struct rtt_info* rtt, int* delay, uint32_t timenow);
 
 /**
  * Get memory used by the infra cache.

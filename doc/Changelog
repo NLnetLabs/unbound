@@ -1,6 +1,10 @@
 26 October 2010: Wouter
 	- dump_infra and flush_infra commands for unbound-control.
 	- no timeout backoff if meanwhile a query succeeded.
+	- Change of timeout code.  No more lost and backoff in blockage.
+	  At 12sec timeout (and at least 2x lost before) one probe per IP
+	  is allowed only.  At 120sec, the IP is blocked.  After 15min, a
+	  120sec entry has a single retry packet.
 
 25 October 2010: Wouter
 	- Configure errors if ldns is not found.

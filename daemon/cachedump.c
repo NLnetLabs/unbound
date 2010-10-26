@@ -802,8 +802,7 @@ print_dp_details(SSL* ssl, struct worker* worker, struct delegpt* dp)
 {
 	char buf[257];
 	struct delegpt_addr* a;
-	int lame, dlame, rlame, rto, edns_vs, to;
-	int entry_ttl;
+	int lame, dlame, rlame, rto, edns_vs, to, delay, entry_ttl;
 	struct rtt_info ri;
 	uint8_t edns_lame_known;
 	for(a = dp->target_list; a; a = a->next_target) {
@@ -816,7 +815,7 @@ print_dp_details(SSL* ssl, struct worker* worker, struct delegpt* dp)
 		}
 		/* lookup in infra cache */
 		entry_ttl = infra_get_host_rto(worker->env.infra_cache,
-			&a->addr, a->addrlen, &ri, *worker->env.now);
+			&a->addr, a->addrlen, &ri, &delay, *worker->env.now);
 		if(entry_ttl == -1) {
 			if(!ssl_printf(ssl, "not in infra cache.\n"))
 				return;
@@ -840,6 +839,9 @@ print_dp_details(SSL* ssl, struct worker* worker, struct delegpt* dp)
 			rlame?"NoAuthButRecursive ":"", rto, entry_ttl,
 			ri.srtt, ri.rttvar, rtt_notimeout(&ri)))
 			return;
+		if(delay)
+			if(!ssl_printf(ssl, ", probedelay %d", delay))
+				return;
 		if(infra_host(worker->env.infra_cache, &a->addr, a->addrlen,
 			*worker->env.now, &edns_vs, &edns_lame_known, &to)) {
 			if(edns_vs == -1) {

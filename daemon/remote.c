@@ -1572,10 +1572,11 @@ dump_infra_host(struct lruhash_entry* e, void* arg)
 		return;
 	}
 	if(!ssl_printf(a->ssl, "%s ttl %d ping %d var %d rtt %d rto %d "
-		"ednsknown %d edns %d\n",
+		"ednsknown %d edns %d delay %d\n",
 		ip_str, (int)(d->ttl - a->now),
 		d->rtt.srtt, d->rtt.rttvar, rtt_notimeout(&d->rtt), d->rtt.rto,
-		(int)d->edns_lame_known, (int)d->edns_version))
+		(int)d->edns_lame_known, (int)d->edns_version,
+		(int)(a->now<d->probedelay?d->probedelay-a->now:0)))
 		return;
 	if(d->lameness)
 		lruhash_traverse(d->lameness, 0, &dump_infra_lame, arg);
