@@ -497,7 +497,7 @@ infra_update_tcp_works(struct infra_cache* infra,
 	if(data->rtt.rto >= RTT_MAX_TIMEOUT)
 		/* do not disqualify this server altogether, it is better
 		 * than nothing */
-		data->rtt.rto = RTT_MAX_TIMEOUT-1;
+		data->rtt.rto = RTT_MAX_TIMEOUT-1000;
 	lock_rw_unlock(&e->lock);
 }
 
@@ -641,7 +641,7 @@ infra_get_lame_rtt(struct infra_cache* infra,
 		/* expired entry */
 		/* see if this can be a re-probe of an unresponsive server */
 		if(host->rtt.rto >= USEFUL_SERVER_TOP_TIMEOUT) {
-			*rtt = USEFUL_SERVER_TOP_TIMEOUT-1;
+			*rtt = USEFUL_SERVER_TOP_TIMEOUT-1000;
 			lock_rw_unlock(&e->lock);
 			return 1;
 		}
