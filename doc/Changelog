@@ -1,3 +1,6 @@
+26 October 2010: Wouter
+	- dump_infra and flush_infra commands for unbound-control.
+
 25 October 2010: Wouter
 	- Configure errors if ldns is not found.
 

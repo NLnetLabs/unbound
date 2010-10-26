@@ -142,6 +142,14 @@ Show what is worked on.  Prints all queries that the server is currently
 working on.  Prints the time that users have been waiting.  For internal
 requests, no time is printed.  And then prints out the module status.
 .TP
+.B flush_infra \fIall|IP
+If all then entire infra cache is emptied.  If a specific IP address, the
+entry for that address is removed from the cache.  It contains EDNS, ping
+and lameness data.
+.TP
+.B dump_infra
+Show the contents of the infra cache.
+.TP
 .B set_option \fIopt: val
 Set the option to the given value without a reload.  The cache is therefore
 not flushed.  The option must end with a ':' and whitespace must be between the

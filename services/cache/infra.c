@@ -155,6 +155,19 @@ hash_addr(struct sockaddr_storage* addr, socklen_t addrlen)
 	return h;
 }
 
+void 
+infra_remove_host(struct infra_cache* infra,
+        struct sockaddr_storage* addr, socklen_t addrlen)
+{
+	struct infra_host_key k;
+	k.addrlen = addrlen;
+	memcpy(&k.addr, addr, addrlen);
+	k.entry.hash = hash_addr(addr, addrlen);
+	k.entry.key = (void*)&k;
+	k.entry.data = NULL;
+	slabhash_remove(infra->hosts, k.entry.hash, &k);
+}
+
 /** lookup version that does not check host ttl (you check it) */
 static struct lruhash_entry* 
 infra_lookup_host_nottl(struct infra_cache* infra,

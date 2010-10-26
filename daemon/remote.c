@@ -59,6 +59,7 @@
 #include "util/module.h"
 #include "services/listen_dnsport.h"
 #include "services/cache/rrset.h"
+#include "services/cache/infra.h"
 #include "services/mesh.h"
 #include "services/localzone.h"
 #include "util/storage/slabhash.h"
@@ -1097,6 +1098,25 @@ do_flush_stats(SSL* ssl, struct worker* worker)
 	send_ok(ssl);
 }
 
+/** flush infra cache */
+static void
+do_flush_infra(SSL* ssl, struct worker* worker, char* arg)
+{
+	struct sockaddr_storage addr;
+	socklen_t len;
+	if(strcmp(arg, "all") == 0) {
+		slabhash_clear(worker->env.infra_cache->hosts);
+		send_ok(ssl);
+		return;
+	}
+	if(!ipstrtoaddr(arg, UNBOUND_DNS_PORT, &addr, &len)) {
+		(void)ssl_printf(ssl, "error parsing ip addr: '%s'\n", arg);
+		return;
+	}
+	infra_remove_host(worker->env.infra_cache, &addr, len);
+	send_ok(ssl);
+}
+
 /** flush requestlist */
 static void
 do_flush_requestlist(SSL* ssl, struct worker* worker)
@@ -1494,6 +1514,90 @@ do_dump_requestlist(SSL* ssl, struct worker* worker)
 	}
 }
 
+/** structure for argument data for dump infra host */
+struct infra_arg {
+	/** the infra cache */
+	struct infra_cache* infra;
+	/** the SSL connection */
+	SSL* ssl;
+	/** the time now */
+	uint32_t now;
+	/** ipstr */
+	char* ipstr;
+};
+
+/** callback for every lame element in the infra cache */
+static void
+dump_infra_lame(struct lruhash_entry* e, void* arg)
+{
+	struct infra_arg* a = (struct infra_arg*)arg;
+	struct infra_lame_key* k = (struct infra_lame_key*)e->key;
+	struct infra_lame_data* d = (struct infra_lame_data*)e->data;
+	ldns_rdf* rdf;
+	size_t pos;
+	char* nm;
+	/* skip expired */
+	if(d->ttl < a->now) {
+		return;
+	}
+	/* use ldns print for domain name */
+	if(ldns_wire2dname(&rdf, k->zonename, k->namelen, &pos)
+		!= LDNS_STATUS_OK)
+		return;
+	nm = ldns_rdf2str(rdf);
+	ldns_rdf_deep_free(rdf);
+	if(!ssl_printf(a->ssl, "%s lame %s ttl %d dnssec %d rec %d "
+		"A %d other %d\n", a->ipstr, nm, (int)(d->ttl - a->now),
+		d->isdnsseclame, d->rec_lame, d->lame_type_A, d->lame_other)) {
+		free(nm);
+		return;
+	}
+	free(nm);
+}
+
+/** callback for every host element in the infra cache */
+static void
+dump_infra_host(struct lruhash_entry* e, void* arg)
+{
+	struct infra_arg* a = (struct infra_arg*)arg;
+	struct infra_host_key* k = (struct infra_host_key*)e->key;
+	struct infra_host_data* d = (struct infra_host_data*)e->data;
+	char ip_str[1024];
+	addr_to_str(&k->addr, k->addrlen, ip_str, sizeof(ip_str));
+	a->ipstr = ip_str;
+	/* skip expired stuff (only backed off) */
+	if(d->ttl < a->now) {
+		if(d->backoff != INFRA_BACKOFF_INITIAL) {
+			if(!ssl_printf(a->ssl, "%s expired, backoff is %d\n",
+				ip_str, (int)d->backoff))
+				return;
+		}
+		if(d->lameness)
+			lruhash_traverse(d->lameness, 0, &dump_infra_lame, arg);
+		return;
+	}
+	if(!ssl_printf(a->ssl, "%s ttl %d ping %d var %d rtt %d rto %d "
+		"backoff %d ednsknown %d edns %d\n",
+		ip_str, (int)(d->ttl - a->now),
+		d->rtt.srtt, d->rtt.rttvar, rtt_notimeout(&d->rtt), d->rtt.rto,
+		(int)d->backoff, (int)d->edns_lame_known, (int)d->edns_version
+		))
+		return;
+	if(d->lameness)
+		lruhash_traverse(d->lameness, 0, &dump_infra_lame, arg);
+}
+
+/** do the dump_infra command */
+static void
+do_dump_infra(SSL* ssl, struct worker* worker)
+{
+	struct infra_arg arg;
+	arg.infra = worker->env.infra_cache;
+	arg.ssl = ssl;
+	arg.now = *worker->env.now;
+	slabhash_traverse(arg.infra->hosts, 0, &dump_infra_host, (void*)&arg);
+}
+
 /** do the log_reopen command */
 static void
 do_log_reopen(SSL* ssl, struct worker* worker)
@@ -1725,10 +1829,14 @@ execute_cmd(struct daemon_remote* rc, SSL* ssl, char* cmd,
 		do_flush_zone(ssl, worker, skipwhite(p+10));
 	} else if(cmdcmp(p, "flush_type", 10)) {
 		do_flush_type(ssl, worker, skipwhite(p+10));
+	} else if(cmdcmp(p, "flush_infra", 11)) {
+		do_flush_infra(ssl, worker, skipwhite(p+11));
 	} else if(cmdcmp(p, "flush", 5)) {
 		do_flush_name(ssl, worker, skipwhite(p+5));
 	} else if(cmdcmp(p, "dump_requestlist", 16)) {
 		do_dump_requestlist(ssl, worker);
+	} else if(cmdcmp(p, "dump_infra", 10)) {
+		do_dump_infra(ssl, worker);
 	} else if(cmdcmp(p, "log_reopen", 10)) {
 		do_log_reopen(ssl, worker);
 	} else if(cmdcmp(p, "set_option", 10)) {

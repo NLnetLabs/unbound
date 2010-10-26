@@ -144,6 +144,10 @@ struct infra_cache* infra_create(struct config_file* cfg);
  */
 void infra_delete(struct infra_cache* infra);
 
+/** explicitly delete an infra host element */
+void infra_remove_host(struct infra_cache* infra,
+        struct sockaddr_storage* addr, socklen_t addrlen);
+
 /**
  * Adjust infra cache to use updated configuration settings.
  * This may clean the cache. Operates a bit like realloc.
