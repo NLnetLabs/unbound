@@ -802,8 +802,8 @@ print_dp_details(SSL* ssl, struct worker* worker, struct delegpt* dp)
 {
 	char buf[257];
 	struct delegpt_addr* a;
-	int lame, dlame, rlame, rtt, edns_vs, to, lost;
-	int entry_ttl, clean_rtt, backoff;
+	int lame, dlame, rlame, rtt, edns_vs, to;
+	int entry_ttl, clean_rtt;
 	uint8_t edns_lame_known;
 	for(a = dp->target_list; a; a = a->next_target) {
 		addr_to_str(&a->addr, a->addrlen, buf, sizeof(buf));
@@ -815,15 +815,14 @@ print_dp_details(SSL* ssl, struct worker* worker, struct delegpt* dp)
 		}
 		/* lookup in infra cache */
 		entry_ttl = infra_get_host_rto(worker->env.infra_cache,
-			&a->addr, a->addrlen, &clean_rtt, &rtt, &backoff,
+			&a->addr, a->addrlen, &clean_rtt, &rtt,
 			*worker->env.now);
 		if(entry_ttl == -1) {
 			if(!ssl_printf(ssl, "not in infra cache.\n"))
 				return;
 			continue; /* skip stuff not in infra cache */
 		} else if(entry_ttl == -2) {
-			if(!ssl_printf(ssl, "not in infra cache "
-				"(backoff %d).\n", backoff))
+			if(!ssl_printf(ssl, "not in infra cache.\n"))
 				return;
 			continue; /* skip stuff not in infra cache */
 		}
@@ -832,23 +831,19 @@ print_dp_details(SSL* ssl, struct worker* worker, struct delegpt* dp)
 		 * lameness won't be reported then */
 		if(!infra_get_lame_rtt(worker->env.infra_cache, 
 			&a->addr, a->addrlen, dp->name, dp->namelen,
-			LDNS_RR_TYPE_A, &lame, &dlame, &rlame, &rtt, &lost,
+			LDNS_RR_TYPE_A, &lame, &dlame, &rlame, &rtt,
 			*worker->env.now)) {
 			if(!ssl_printf(ssl, "not in infra cache.\n"))
 				return;
 			continue; /* skip stuff not in infra cache */
 		}
-		if(!ssl_printf(ssl, "%s%s%s%srtt %d msec, %d lost, ttl %d",
+		if(!ssl_printf(ssl, "%s%s%s%srtt %d msec, ttl %d",
 			lame?"LAME ":"", dlame?"NoDNSSEC ":"",
 			a->lame?"AddrWasParentSide ":"",
-			rlame?"NoAuthButRecursive ":"", rtt, lost, entry_ttl))
+			rlame?"NoAuthButRecursive ":"", rtt, entry_ttl))
 			return;
 		if(rtt != clean_rtt && clean_rtt != 376 /* unknown */) {
 			if(!ssl_printf(ssl, ", ping %d", clean_rtt))
-				return;
-		}
-		if(backoff != INFRA_BACKOFF_INITIAL) {
-			if(!ssl_printf(ssl, ", backoff %d", backoff))
 				return;
 		}
 		if(infra_host(worker->env.infra_cache, &a->addr, a->addrlen,

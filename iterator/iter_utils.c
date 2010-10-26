@@ -183,7 +183,7 @@ iter_filter_unsuitable(struct iter_env* iter_env, struct module_env* env,
 	uint8_t* name, size_t namelen, uint16_t qtype, uint32_t now, 
 	struct delegpt_addr* a)
 {
-	int rtt, lame, reclame, dnsseclame, lost;
+	int rtt, lame, reclame, dnsseclame;
 	if(a->bogus)
 		return -1; /* address of server is bogus */
 	if(donotq_lookup(iter_env->donotq, &a->addr, a->addrlen)) {
@@ -197,9 +197,9 @@ iter_filter_unsuitable(struct iter_env* iter_env, struct module_env* env,
 	/* check lameness - need zone , class info */
 	if(infra_get_lame_rtt(env->infra_cache, &a->addr, a->addrlen, 
 		name, namelen, qtype, &lame, &dnsseclame, &reclame, 
-		&rtt, &lost, now)) {
+		&rtt, now)) {
 		log_addr(VERB_ALGO, "servselect", &a->addr, a->addrlen);
-		verbose(VERB_ALGO, "   rtt=%d lost=%d%s%s%s%s", rtt, lost,
+		verbose(VERB_ALGO, "   rtt=%d%s%s%s%s", rtt,
 			lame?" LAME":"",
 			dnsseclame?" DNSSEC_LAME":"",
 			reclame?" REC_LAME":"",

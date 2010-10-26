@@ -1567,21 +1567,15 @@ dump_infra_host(struct lruhash_entry* e, void* arg)
 	a->ipstr = ip_str;
 	/* skip expired stuff (only backed off) */
 	if(d->ttl < a->now) {
-		if(d->backoff != INFRA_BACKOFF_INITIAL) {
-			if(!ssl_printf(a->ssl, "%s expired, backoff is %d\n",
-				ip_str, (int)d->backoff))
-				return;
-		}
 		if(d->lameness)
 			lruhash_traverse(d->lameness, 0, &dump_infra_lame, arg);
 		return;
 	}
 	if(!ssl_printf(a->ssl, "%s ttl %d ping %d var %d rtt %d rto %d "
-		"backoff %d ednsknown %d edns %d\n",
+		"ednsknown %d edns %d\n",
 		ip_str, (int)(d->ttl - a->now),
 		d->rtt.srtt, d->rtt.rttvar, rtt_notimeout(&d->rtt), d->rtt.rto,
-		(int)d->backoff, (int)d->edns_lame_known, (int)d->edns_version
-		))
+		(int)d->edns_lame_known, (int)d->edns_version))
 		return;
 	if(d->lameness)
 		lruhash_traverse(d->lameness, 0, &dump_infra_lame, arg);

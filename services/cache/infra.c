@@ -203,7 +203,7 @@ infra_lookup_host(struct infra_cache* infra,
 	return data;
 }
 
-/** init the host elements (not lame elems, not backoff) */
+/** init the host elements (not lame elems) */
 static void
 host_entry_init(struct infra_cache* infra, struct lruhash_entry* e, 
 	uint32_t timenow)
@@ -213,7 +213,6 @@ host_entry_init(struct infra_cache* infra, struct lruhash_entry* e,
 	rtt_init(&data->rtt);
 	data->edns_version = 0;
 	data->edns_lame_known = 0;
-	data->num_timeouts = 0;
 }
 
 /** 
@@ -246,7 +245,6 @@ new_host_entry(struct infra_cache* infra, struct sockaddr_storage* addr,
 	key->addrlen = addrlen;
 	memcpy(&key->addr, addr, addrlen);
 	data->lameness = NULL;
-	data->backoff = INFRA_BACKOFF_INITIAL;
 	host_entry_init(infra, &key->entry, tm);
 	return &key->entry;
 }
@@ -497,30 +495,9 @@ infra_rtt_update(struct infra_cache* infra,
 	/* have an entry, update the rtt */
 	data = (struct infra_host_data*)e->data;
 	if(roundtrip == -1) {
-		int o = rtt_timeout(&data->rtt);
 		rtt_lost(&data->rtt, orig_rtt);
-		if(rtt_timeout(&data->rtt) >= USEFUL_SERVER_TOP_TIMEOUT
-			&& o < USEFUL_SERVER_TOP_TIMEOUT) {
-			/* backoff the blacklisted timeout */
-			log_addr(VERB_ALGO, "backoff for", addr, addrlen);
-			data->backoff *= 2;
-			if(data->backoff >= 24*3600)
-				data->backoff = 24*3600;
-			verbose(VERB_ALGO, "backoff to %d", data->backoff);
-			/* increase the infra item TTL */
-			data->ttl = timenow + data->backoff;
-		}
-
-		if(data->num_timeouts<255)
-			data->num_timeouts++; 
 	} else {
 		rtt_update(&data->rtt, roundtrip);
-		/* un-backoff the element */
-		if(data->backoff > (uint32_t)infra->host_ttl*2)
-			data->backoff = (uint32_t)infra->host_ttl*2;
-		else	data->backoff = INFRA_BACKOFF_INITIAL;
-
-		data->num_timeouts = 0;
 	}
 	if(data->rtt.rto > 0)
 		rto = data->rtt.rto;
@@ -533,7 +510,7 @@ infra_rtt_update(struct infra_cache* infra,
 
 int infra_get_host_rto(struct infra_cache* infra,
         struct sockaddr_storage* addr, socklen_t addrlen,
-	int* rtt, int* rto, int* backoff, uint32_t timenow)
+	int* rtt, int* rto, uint32_t timenow)
 {
 	struct lruhash_entry* e = infra_lookup_host_nottl(infra, addr, 
 		addrlen, 0);
@@ -541,7 +518,6 @@ int infra_get_host_rto(struct infra_cache* infra,
 	int ttl = -2;
 	if(!e) return -1;
 	data = (struct infra_host_data*)e->data;
-	*backoff = (int)data->backoff;
 	if(data->ttl >= timenow) {
 		ttl = (int)(data->ttl - timenow);
 		*rtt = rtt_notimeout(&data->rtt);
@@ -585,8 +561,7 @@ int
 infra_get_lame_rtt(struct infra_cache* infra,
         struct sockaddr_storage* addr, socklen_t addrlen,
         uint8_t* name, size_t namelen, uint16_t qtype, 
-	int* lame, int* dnsseclame, int* reclame, int* rtt, int* lost,
-	uint32_t timenow)
+	int* lame, int* dnsseclame, int* reclame, int* rtt, uint32_t timenow)
 {
 	struct infra_host_data* host;
 	struct lruhash_entry* e = infra_lookup_host_nottl(infra, addr, 
@@ -596,7 +571,6 @@ infra_get_lame_rtt(struct infra_cache* infra,
 		return 0;
 	host = (struct infra_host_data*)e->data;
 	*rtt = rtt_unclamped(&host->rtt);
-	*lost = (int)host->num_timeouts;
 	/* check lameness first, if so, ttl on host does not matter anymore */
 	if(infra_lookup_lame(host, name, namelen, timenow, 
 		&dlm, &rlm, &alm, &olm)) {
