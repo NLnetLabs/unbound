@@ -1,5 +1,6 @@
 26 October 2010: Wouter
 	- dump_infra and flush_infra commands for unbound-control.
+	- no timeout backoff if meanwhile a query succeeded.
 
 25 October 2010: Wouter
 	- Configure errors if ldns is not found.
