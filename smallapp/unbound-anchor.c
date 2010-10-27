@@ -1138,7 +1138,7 @@ static void
 free_file_bio(BIO* bio)
 {
 	char* pp = NULL;
-	BIO_reset(bio);
+	(void)BIO_reset(bio);
 	(void)BIO_get_mem_data(bio, &pp);
 	free(pp);
 	BIO_free(bio);
@@ -1343,10 +1343,10 @@ handle_keydigest(struct xml_data* data, const XML_Char **atts)
 	}
 	/* yes we want to use this key */
 	data->use_key = 1;
-	BIO_reset(data->ctag);
-	BIO_reset(data->calgo);
-	BIO_reset(data->cdigtype);
-	BIO_reset(data->cdigest);
+	(void)BIO_reset(data->ctag);
+	(void)BIO_reset(data->calgo);
+	(void)BIO_reset(data->cdigtype);
+	(void)BIO_reset(data->cdigest);
 }
 
 /** See if XML element equals the zone name */
@@ -1356,7 +1356,7 @@ xml_is_zone_name(BIO* zone, char* name)
 	char buf[1024];
 	char* z = NULL;
 	long zlen;
-	BIO_seek(zone, 0);
+	(void)BIO_seek(zone, 0);
 	zlen = BIO_get_mem_data(zone, &z);
 	if(!zlen || !z) return 0;
 	if(zlen >= (long)sizeof(buf)) return 0;
@@ -1396,7 +1396,7 @@ xml_startelem(void *userData, const XML_Char *name, const XML_Char **atts)
 		handle_keydigest(data, atts);
 		return;
 	} else if(strcasecmp(name, "Zone") == 0) {
-		BIO_reset(data->czone);
+		(void)BIO_reset(data->czone);
 		return;
 	}
 
@@ -1406,7 +1406,7 @@ xml_startelem(void *userData, const XML_Char *name, const XML_Char **atts)
 	b = xml_selectbio(data, data->tag);
 	if(b) {
 		/* empty it */
-		BIO_reset(b);
+		(void)BIO_reset(b);
 	}
 }
 
@@ -1547,7 +1547,7 @@ xml_parse(BIO* xml, time_t now)
 	xml_parse_setup(parser, &data, now);
 
 	/* parse it */
-	BIO_reset(xml);
+	(void)BIO_reset(xml);
 	len = (int)BIO_get_mem_data(xml, &pp);
 	if(!len || !pp) {
 		if(verb) printf("out of memory\n");
@@ -1569,7 +1569,7 @@ xml_parse(BIO* xml, time_t now)
 	if(verb >= 4) {
 		char* pp = NULL;
 		int len;
-		BIO_seek(data.ds, 0);
+		(void)BIO_seek(data.ds, 0);
 		len = BIO_get_mem_data(data.ds, &pp);
 		printf("got DS bio %d: '", len);
 		(void)fwrite(pp, (size_t)len, 1, stdout);
@@ -1600,8 +1600,8 @@ verify_p7sig(BIO* data, BIO* p7s, STACK_OF(X509)* trust)
 	int secure = 0;
 	int i;
 
-	BIO_reset(p7s);
-	BIO_reset(data);
+	(void)BIO_reset(p7s);
+	(void)BIO_reset(data);
 
 	if(!param || !store) {
 		if(verb) printf("out of memory\n");
@@ -1684,7 +1684,7 @@ write_root_anchor(char* root_anchor_file, BIO* ds)
 	char* pp = NULL;
 	int len;
 	FILE* out;
-	BIO_seek(ds, 0);
+	(void)BIO_seek(ds, 0);
 	len = BIO_get_mem_data(ds, &pp);
 	if(!len || !pp) {
 		if(verb) printf("out of memory\n");
