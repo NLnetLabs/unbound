@@ -1567,6 +1567,10 @@ dump_infra_host(struct lruhash_entry* e, void* arg)
 	a->ipstr = ip_str;
 	/* skip expired stuff (only backed off) */
 	if(d->ttl < a->now) {
+		if(d->rtt.rto >= USEFUL_SERVER_TOP_TIMEOUT) {
+			if(!ssl_printf(a->ssl, "%s expired rto %d\n", ip_str,
+				d->rtt.rto)) return;
+		}
 		if(d->lameness)
 			lruhash_traverse(d->lameness, 0, &dump_infra_lame, arg);
 		return;

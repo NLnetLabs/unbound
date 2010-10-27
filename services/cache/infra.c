@@ -542,7 +542,7 @@ int infra_get_host_rto(struct infra_cache* infra,
 	struct lruhash_entry* e = infra_lookup_host_nottl(infra, addr, 
 		addrlen, 0);
 	struct infra_host_data* data;
-	int ttl = -1;
+	int ttl = -2;
 	if(!e) return -1;
 	data = (struct infra_host_data*)e->data;
 	if(data->ttl >= timenow) {
@@ -640,6 +640,8 @@ infra_get_lame_rtt(struct infra_cache* infra,
 	if(timenow > host->ttl) {
 		/* expired entry */
 		/* see if this can be a re-probe of an unresponsive server */
+		/* minus 1000 because that is outside of the RTTBAND, so
+		 * blacklisted servers stay blacklisted if this is chosen */
 		if(host->rtt.rto >= USEFUL_SERVER_TOP_TIMEOUT) {
 			*rtt = USEFUL_SERVER_TOP_TIMEOUT-1000;
 			lock_rw_unlock(&e->lock);

@@ -299,6 +299,7 @@ int infra_get_lame_rtt(struct infra_cache* infra,
  * @param delay: probe delay (if any).
  * @param timenow: what time it is now.
  * @return TTL the infra host element is valid for. If -1: not found in cache.
+ *	TTL -2: found but expired.
  */
 int infra_get_host_rto(struct infra_cache* infra,
         struct sockaddr_storage* addr, socklen_t addrlen, 

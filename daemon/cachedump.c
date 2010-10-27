@@ -816,7 +816,12 @@ print_dp_details(SSL* ssl, struct worker* worker, struct delegpt* dp)
 		/* lookup in infra cache */
 		entry_ttl = infra_get_host_rto(worker->env.infra_cache,
 			&a->addr, a->addrlen, &ri, &delay, *worker->env.now);
-		if(entry_ttl == -1) {
+		if(entry_ttl == -2 && ri.rto >= USEFUL_SERVER_TOP_TIMEOUT) {
+			if(!ssl_printf(ssl, "expired, rto %d msec.\n", ri.rto))
+				return;
+			continue;
+		}
+		if(entry_ttl == -1 || entry_ttl == -2) {
 			if(!ssl_printf(ssl, "not in infra cache.\n"))
 				return;
 			continue; /* skip stuff not in infra cache */
