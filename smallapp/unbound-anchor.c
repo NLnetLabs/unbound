@@ -1426,7 +1426,7 @@ xml_append_bio(BIO* b, BIO* a)
 {
 	char* z = NULL;
 	long i, len;
-	BIO_seek(a, 0);
+	(void)BIO_seek(a, 0);
 	len = BIO_get_mem_data(a, &z);
 	if(!len || !z) {
 		if(verb) printf("out of memory in BIO_write\n");
