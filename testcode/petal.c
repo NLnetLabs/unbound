@@ -56,6 +56,12 @@
 #include <openssl/pem.h>
 #include <ctype.h>
 #include <signal.h>
+#ifdef malloc
+#undef malloc
+#endif
+#ifdef free
+#undef free
+#endif
 
 /** verbosity for this application */
 static int verb = 0;
