@@ -935,10 +935,12 @@ next_closer(uint8_t* qname, size_t qnamelen, uint8_t* ce,
  * 	If set true, and the return value is true, then you can be 
  * 	certain that the ce.nc_rrset and ce.nc_rr are set properly.
  * @param ce: closest encloser information is returned in here.
- * @return false if no closest encloser could be proven.
- * 	true if a closest encloser could be proven, ce is set.
+ * @return bogus if no closest encloser could be proven.
+ * 	secure if a closest encloser could be proven, ce is set.
+ * 	insecure if the closest-encloser candidate turns out to prove
+ * 		that an insecure delegation exists above the qname.
  */
-static int
+static enum sec_status
 nsec3_prove_closest_encloser(struct module_env* env, struct nsec3_filter* flt, 
 	rbtree_t* ct, struct query_info* qinfo, int prove_does_not_exist,
 	struct ce_response* ce)
@@ -951,7 +953,7 @@ nsec3_prove_closest_encloser(struct module_env* env, struct nsec3_filter* flt,
 	if(!nsec3_find_closest_encloser(env, flt, ct, qinfo, ce)) {
 		verbose(VERB_ALGO, "nsec3 proveClosestEncloser: could "
 			"not find a candidate for the closest encloser.");
-		return 0;
+		return sec_status_bogus;
 	}
 	log_nametypeclass(VERB_ALGO, "ce candidate", ce->ce, 0, 0);
 
@@ -959,11 +961,11 @@ nsec3_prove_closest_encloser(struct module_env* env, struct nsec3_filter* flt,
 		if(prove_does_not_exist) {
 			verbose(VERB_ALGO, "nsec3 proveClosestEncloser: "
 				"proved that qname existed, bad");
-			return 0;
+			return sec_status_bogus;
 		}
 		/* otherwise, we need to nothing else to prove that qname 
 		 * is its own closest encloser. */
-		return 1;
+		return sec_status_secure;
 	}
 
 	/* If the closest encloser is actually a delegation, then the 
@@ -971,14 +973,19 @@ nsec3_prove_closest_encloser(struct module_env* env, struct nsec3_filter* flt,
 	 * it should have been a DNAME response. */
 	if(nsec3_has_type(ce->ce_rrset, ce->ce_rr, LDNS_RR_TYPE_NS) &&
 		!nsec3_has_type(ce->ce_rrset, ce->ce_rr, LDNS_RR_TYPE_SOA)) {
+		if(!nsec3_has_type(ce->ce_rrset, ce->ce_rr, LDNS_RR_TYPE_DS)) {
+			verbose(VERB_ALGO, "nsec3 proveClosestEncloser: "
+				"closest encloser is insecure delegation");
+			return sec_status_insecure;
+		}
 		verbose(VERB_ALGO, "nsec3 proveClosestEncloser: closest "
 			"encloser was a delegation, bad");
-		return 0;
+		return sec_status_bogus;
 	}
 	if(nsec3_has_type(ce->ce_rrset, ce->ce_rr, LDNS_RR_TYPE_DNAME)) {
 		verbose(VERB_ALGO, "nsec3 proveClosestEncloser: closest "
 			"encloser was a DNAME, bad");
-		return 0;
+		return sec_status_bogus;
 	}
 	
 	/* Otherwise, we need to show that the next closer name is covered. */
@@ -987,9 +994,9 @@ nsec3_prove_closest_encloser(struct module_env* env, struct nsec3_filter* flt,
 		&ce->nc_rrset, &ce->nc_rr)) {
 		verbose(VERB_ALGO, "nsec3: Could not find proof that the "
 		          "candidate encloser was the closest encloser");
-		return 0;
+		return sec_status_bogus;
 	}
-	return 1;
+	return sec_status_secure;
 }
 
 /** allocate a wildcard for the closest encloser */
@@ -1022,14 +1029,19 @@ nsec3_do_prove_nameerror(struct module_env* env, struct nsec3_filter* flt,
 	size_t wclen;
 	struct ub_packed_rrset_key* wc_rrset;
 	int wc_rr;
+	enum sec_status sec;
 
 	/* First locate and prove the closest encloser to qname. We will 
 	 * use the variant that fails if the closest encloser turns out 
 	 * to be qname. */
-	if(!nsec3_prove_closest_encloser(env, flt, ct, qinfo, 1, &ce)) {
-		verbose(VERB_ALGO, "nsec3 nameerror proof: failed to prove "
-			"a closest encloser");
-		return sec_status_bogus;
+	sec = nsec3_prove_closest_encloser(env, flt, ct, qinfo, 1, &ce);
+	if(sec != sec_status_secure) {
+		if(sec == sec_status_bogus)
+			verbose(VERB_ALGO, "nsec3 nameerror proof: failed "
+				"to prove a closest encloser");
+		else 	verbose(VERB_ALGO, "nsec3 nameerror proof: closest "
+				"nsec3 is an insecure delegation");
+		return sec;
 	}
 	log_nametypeclass(VERB_ALGO, "nsec3 namerror: proven ce=", ce.ce,0,0);
 
@@ -1082,6 +1094,7 @@ nsec3_do_prove_nodata(struct module_env* env, struct nsec3_filter* flt,
 	size_t wclen;
 	struct ub_packed_rrset_key* rrset;
 	int rr;
+	enum sec_status sec;
 
 	if(find_matching_nsec3(env, flt, ct, qinfo->qname, qinfo->qname_len, 
 		&rrset, &rr)) {
@@ -1126,10 +1139,15 @@ nsec3_do_prove_nodata(struct module_env* env, struct nsec3_filter* flt,
 	/* For cases 3 - 5, we need the proven closest encloser, and it 
 	 * can't match qname. Although, at this point, we know that it 
 	 * won't since we just checked that. */
-	if(!nsec3_prove_closest_encloser(env, flt, ct, qinfo, 1, &ce)) {
+	sec = nsec3_prove_closest_encloser(env, flt, ct, qinfo, 1, &ce);
+	if(sec == sec_status_bogus) {
 		verbose(VERB_ALGO, "proveNodata: did not match qname, "
 		          "nor found a proven closest encloser.");
 		return sec_status_bogus;
+	} else if(sec==sec_status_insecure && qinfo->qtype!=LDNS_RR_TYPE_DS){
+		verbose(VERB_ALGO, "proveNodata: closest nsec3 is insecure "
+		          "delegation.");
+		return sec_status_insecure;
 	}
 
 	/* Case 3: removed */
@@ -1327,7 +1345,10 @@ nsec3_prove_nods(struct module_env* env, struct val_env* ve,
 	}
 
 	/* Otherwise, we are probably in the opt-out case. */
-	if(!nsec3_prove_closest_encloser(env, &flt, &ct, qinfo, 1, &ce)) {
+	if(nsec3_prove_closest_encloser(env, &flt, &ct, qinfo, 1, &ce)
+		!= sec_status_secure) {
+		/* an insecure delegation *above* the qname does not prove
+		 * anything about this qname exactly, and bogus is bogus */
 		verbose(VERB_ALGO, "nsec3 provenods: did not match qname, "
 		          "nor found a proven closest encloser.");
 		*reason = "no NSEC3 closest encloser";
@@ -1372,7 +1393,8 @@ nsec3_prove_nxornodata(struct module_env* env, struct val_env* ve,
 	/* try nxdomain and nodata after another, while keeping the
 	 * hash cache intact */
 
-	if(nsec3_do_prove_nameerror(env, &flt, &ct, qinfo)==sec_status_secure)
+	sec = nsec3_do_prove_nameerror(env, &flt, &ct, qinfo);
+	if(sec==sec_status_secure)
 		return sec_status_secure;
 	sec = nsec3_do_prove_nodata(env, &flt, &ct, qinfo);
 	if(sec==sec_status_secure) {

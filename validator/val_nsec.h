@@ -169,4 +169,14 @@ int val_nsec_proves_no_wc(struct ub_packed_rrset_key* nsec, uint8_t* qname,
 int val_nsec_check_dlv(struct query_info* qinfo,
 	struct reply_info* rep, uint8_t** nm, size_t* nm_len);
 
+/**
+ * Determine if an nsec proves an insecure delegation towards the qname.
+ * @param nsec: nsec rrset.
+ * @param qinfo: what was queries for.
+ * @return 0 if not, 1 if an NSEC that signals an insecure delegation to
+ * 	the qname.
+ */
+int val_nsec_proves_insecuredelegation(struct ub_packed_rrset_key* nsec,
+        struct query_info* qinfo);
+
 #endif /* VALIDATOR_VAL_NSEC_H */

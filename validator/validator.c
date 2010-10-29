@@ -695,6 +695,11 @@ validate_nodata_response(struct module_env* env, struct val_env* ve,
 			if(val_nsec_proves_name_error(s, qchase->qname)) {
 				ce = nsec_closest_encloser(qchase->qname, s);
 			}
+			if(val_nsec_proves_insecuredelegation(s, qchase)) {
+				verbose(VERB_ALGO, "delegation is insecure");
+				chase_reply->security = sec_status_insecure;
+				return;
+			}
 		} else if(ntohs(s->rk.type) == LDNS_RR_TYPE_NSEC3) {
 			nsec3s_seen = 1;
 		}
@@ -773,6 +778,11 @@ validate_nameerror_response(struct module_env* env, struct val_env* ve,
 			if(val_nsec_proves_no_wc(s, qchase->qname, 
 				qchase->qname_len))
 				has_valid_wnsec = 1;
+			if(val_nsec_proves_insecuredelegation(s, qchase)) {
+				verbose(VERB_ALGO, "delegation is insecure");
+				chase_reply->security = sec_status_insecure;
+				return;
+			}
 		} else if(ntohs(s->rk.type) == LDNS_RR_TYPE_NSEC3)
 			nsec3s_seen = 1;
 	}
@@ -1116,6 +1126,11 @@ validate_cname_noanswer_response(struct module_env* env, struct val_env* ve,
 			if(val_nsec_proves_no_wc(s, qchase->qname, 
 				qchase->qname_len))
 				nxdomain_valid_wnsec = 1;
+			if(val_nsec_proves_insecuredelegation(s, qchase)) {
+				verbose(VERB_ALGO, "delegation is insecure");
+				chase_reply->security = sec_status_insecure;
+				return;
+			}
 		} else if(ntohs(s->rk.type) == LDNS_RR_TYPE_NSEC3) {
 			nsec3s_seen = 1;
 		}

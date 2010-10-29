@@ -425,6 +425,27 @@ val_nsec_proves_name_error(struct ub_packed_rrset_key* nsec, uint8_t* qname)
 	return 0;
 }
 
+int val_nsec_proves_insecuredelegation(struct ub_packed_rrset_key* nsec, 
+	struct query_info* qinfo)
+{
+	if(nsec_has_type(nsec, LDNS_RR_TYPE_NS) &&
+		!nsec_has_type(nsec, LDNS_RR_TYPE_DS) &&
+		!nsec_has_type(nsec, LDNS_RR_TYPE_SOA)) {
+		/* see if nsec signals an insecure delegation */
+		if(qinfo->qtype == LDNS_RR_TYPE_DS) {
+			/* if type is DS and qname is equal to nsec, then it
+			 * is an exact match nsec, result not insecure */
+			if(dname_strict_subdomain_c(qinfo->qname,
+				nsec->rk.dname))
+				return 1;
+		} else {
+			if(dname_subdomain_c(qinfo->qname, nsec->rk.dname))
+				return 1;
+		}
+	}
+	return 0;
+}
+
 uint8_t* 
 nsec_closest_encloser(uint8_t* qname, struct ub_packed_rrset_key* nsec)
 {

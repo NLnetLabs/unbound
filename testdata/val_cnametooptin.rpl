@@ -10,7 +10,7 @@ stub-zone:
 	stub-addr: 193.0.14.129 	# K.ROOT-SERVERS.NET.
 CONFIG_END
 
-SCENARIO_BEGIN Test validator with nodata response from wrong side of zonecut 
+SCENARIO_BEGIN Test validator with CNAME to insecure optin NSEC3
 
 ; K.ROOT-SERVERS.NET.
 RANGE_BEGIN 0 100
@@ -56,11 +56,11 @@ a.gtld-servers.net.     IN      A       192.5.6.30
 ENTRY_END
 
 ENTRY_BEGIN
-MATCH opcode subdomain
-ADJUST copy_id copy_query
+MATCH opcode qtype qname
+ADJUST copy_id
 REPLY QR NOERROR
 SECTION QUESTION
-example.com. IN A
+www.example.com. IN A
 SECTION AUTHORITY
 example.com.	IN NS	ns.example.com.
 SECTION ADDITIONAL
@@ -71,22 +71,6 @@ RANGE_END
 ; ns.example.com.
 RANGE_BEGIN 0 100
 	ADDRESS 1.2.3.4
-ENTRY_BEGIN
-MATCH opcode qtype qname
-ADJUST copy_id
-REPLY QR AA REFUSED
-SECTION QUESTION
-ns.example.com. IN A
-ENTRY_END
-
-ENTRY_BEGIN
-MATCH opcode qtype qname
-ADJUST copy_id
-REPLY QR AA REFUSED
-SECTION QUESTION
-ns.example.com. IN AAAA
-ENTRY_END
-
 ENTRY_BEGIN
 MATCH opcode qtype qname
 ADJUST copy_id
@@ -127,19 +111,34 @@ REPLY QR NOERROR
 SECTION QUESTION
 www.example.com. IN A
 SECTION ANSWER
+www.example.com. IN CNAME www.sub.example.com.
+www.example.com.	3600	IN	RRSIG	CNAME 3 3 3600 20070926134802 20070829134802 2854 example.com. AKvv+5rFiCFiNRbdpna4rQtyARsLltUL9lXRWgpBVB5voJNJ9g/n/f4= ;{id = 2854}
 SECTION AUTHORITY
-; SOA record is missing in reply.
-; Denies A, note this is the end of the NSEC chain.
-; from wrong side of zone-cut
-www.example.com.	3600	IN	NSEC	example.com. NS DS RRSIG NSEC 
-www.example.com.	3600	IN	RRSIG	NSEC 3 3 3600 20070926135752 20070829135752 2854 example.com. AA+3mzAYPyQ8G9EKxeyNM+UZY+RtCiS5BOkS8h4wSxMT3lfVdadGpn8= ;{id = 2854}
+; NSEC3PARAM 1 0 1 -
+; example.com. -> 9vq38lj9qs6s1aruer131mbtsfnvek2p.
+; sub.example.com. -> 7t1ect6t5vp0s7se8si9d07roqupr3gc.
+; www.example.com. -> 0lverorlcjoa2lji5rik0otij3lgoj3l.
+7t1ect6t5vp0s7se8si9d07roqupr3gc.example.com. IN NSEC3 1 0 1 - 7t1ect6t5vp0s7se8si9d07roqupr3gd NS
+7t1ect6t5vp0s7se8si9d07roqupr3gc.example.com.	3600	IN	RRSIG	NSEC3 3 3 3600 20070926134802 20070829134802 2854 example.com. AIiTSxI4hTDiDzo+bMaOKSvjIyoChgjY19y2NQG/Mtt80sNbDBY126I= ;{id = 2854}
 SECTION ADDITIONAL
 ENTRY_END
+
+; this server also serves the zone sub.example.com.
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR NOERROR
+SECTION QUESTION
+www.sub.example.com. IN A
+SECTION AUTHORITY
+sub.example.com. IN SOA a. b. 1 2 3 4 5
+ENTRY_END
+
 RANGE_END
 
 STEP 1 QUERY
 ENTRY_BEGIN
-REPLY RD
+REPLY RD DO
 SECTION QUESTION
 www.example.com. IN A
 ENTRY_END
@@ -148,12 +147,16 @@ ENTRY_END
 STEP 10 CHECK_ANSWER
 ENTRY_BEGIN
 MATCH all
-REPLY QR RD RA SERVFAIL
+REPLY QR RD RA NOERROR
 SECTION QUESTION
 www.example.com. IN A
 SECTION ANSWER
+www.example.com. IN CNAME www.sub.example.com.
+www.example.com.	3600	IN	RRSIG	CNAME 3 3 3600 20070926134802 20070829134802 2854 example.com. AKvv+5rFiCFiNRbdpna4rQtyARsLltUL9lXRWgpBVB5voJNJ9g/n/f4= ;{id = 2854}
 SECTION AUTHORITY
-SECTION ADDITIONAL
+7t1ect6t5vp0s7se8si9d07roqupr3gc.example.com. IN NSEC3 1 0 1 - 7t1ect6t5vp0s7se8si9d07roqupr3gd NS
+7t1ect6t5vp0s7se8si9d07roqupr3gc.example.com.	3600	IN	RRSIG	NSEC3 3 3 3600 20070926134802 20070829134802 2854 example.com. AIiTSxI4hTDiDzo+bMaOKSvjIyoChgjY19y2NQG/Mtt80sNbDBY126I= ;{id = 2854}
+sub.example.com. IN SOA a. b. 1 2 3 4 5
 ENTRY_END
 
 SCENARIO_END
