@@ -1534,7 +1534,7 @@ dump_infra_lame(struct lruhash_entry* e, void* arg)
 	struct infra_lame_key* k = (struct infra_lame_key*)e->key;
 	struct infra_lame_data* d = (struct infra_lame_data*)e->data;
 	ldns_rdf* rdf;
-	size_t pos;
+	size_t pos = 0;
 	char* nm;
 	/* skip expired */
 	if(d->ttl < a->now) {

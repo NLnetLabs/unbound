@@ -1,3 +1,6 @@
+27 October 2010: Wouter
+	- Fix uninit value in dump_infra print.
+
 26 October 2010: Wouter
 	- dump_infra and flush_infra commands for unbound-control.
 	- no timeout backoff if meanwhile a query succeeded.
