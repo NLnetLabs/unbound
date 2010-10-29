@@ -449,7 +449,7 @@ daemon_fork(struct daemon* daemon)
 	 */
 	daemon_create_workers(daemon);
 
-#ifdef HAVE_EV_LOOP
+#if defined(HAVE_EV_LOOP) || defined(HAVE_EV_DEFAULT_LOOP)
 	/* in libev the first inited base gets signals */
 	if(!worker_init(daemon->workers[0], daemon->cfg, daemon->ports, 1))
 		fatal_exit("Could not initialize main thread");
@@ -463,7 +463,7 @@ daemon_fork(struct daemon* daemon)
 	/* Special handling for the main thread. This is the thread
 	 * that handles signals and remote control.
 	 */
-#ifndef HAVE_EV_LOOP
+#if !(defined(HAVE_EV_LOOP) || defined(HAVE_EV_DEFAULT_LOOP))
 	/* libevent has the last inited base get signals (or any base) */
 	if(!worker_init(daemon->workers[0], daemon->cfg, daemon->ports, 1))
 		fatal_exit("Could not initialize main thread");

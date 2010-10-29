@@ -549,6 +549,7 @@ large outgoing port ranges.  ])
 	AC_CHECK_FUNCS([event_base_new]) # only in libevent 1.4.1 and later
 	AC_CHECK_FUNCS([event_base_get_method]) # only in libevent 1.4.3 and later
 	AC_CHECK_FUNCS([ev_loop]) # only in libev. (tested on 3.51)
+	AC_CHECK_FUNCS([ev_default_loop]) # only in libev. (tested on 4.00)
 	if test -n "$BAK_LDFLAGS_SET"; then
 		LDFLAGS="$BAK_LDFLAGS"
 	fi
@@ -872,7 +873,7 @@ struct tm;
 char *strptime(const char *s, const char *format, struct tm *tm);
 #endif
 
-#if defined(HAVE_EVENT_H) && !defined(HAVE_EVENT_BASE_ONCE) && (defined(HAVE_PTHREAD) || defined(HAVE_SOLARIS_THREADS))
+#if defined(HAVE_EVENT_H) && !defined(HAVE_EVENT_BASE_ONCE) && !(defined(HAVE_EV_LOOP) || defined(HAVE_EV_DEFAULT_LOOP)) && (defined(HAVE_PTHREAD) || defined(HAVE_SOLARIS_THREADS))
    /* using version of libevent that is not threadsafe. */
 #  define LIBEVENT_SIGNAL_PROBLEM 1
 #endif

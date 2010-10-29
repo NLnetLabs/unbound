@@ -81,6 +81,9 @@
 /* Define to 1 if you have the `EVP_sha512' function. */
 #undef HAVE_EVP_SHA512
 
+/* Define to 1 if you have the `ev_default_loop' function. */
+#undef HAVE_EV_DEFAULT_LOOP
+
 /* Define to 1 if you have the `ev_loop' function. */
 #undef HAVE_EV_LOOP
 
@@ -824,7 +827,7 @@ struct tm;
 char *strptime(const char *s, const char *format, struct tm *tm);
 #endif
 
-#if defined(HAVE_EVENT_H) && !defined(HAVE_EVENT_BASE_ONCE) && (defined(HAVE_PTHREAD) || defined(HAVE_SOLARIS_THREADS))
+#if defined(HAVE_EVENT_H) && !defined(HAVE_EVENT_BASE_ONCE) && !(defined(HAVE_EV_LOOP) || defined(HAVE_EV_DEFAULT_LOOP)) && (defined(HAVE_PTHREAD) || defined(HAVE_SOLARIS_THREADS))
    /* using version of libevent that is not threadsafe. */
 #  define LIBEVENT_SIGNAL_PROBLEM 1
 #endif

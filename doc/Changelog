@@ -2,6 +2,7 @@
 	- Fix uninit value in dump_infra print.
 	- Fix validation failure for parent and child on same server with an
 	  insecure childzone and a CNAME from parent to child.
+	- Configure detects libev-4.00.
 
 26 October 2010: Wouter
 	- dump_infra and flush_infra commands for unbound-control.

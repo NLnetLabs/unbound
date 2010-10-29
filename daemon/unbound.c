@@ -89,7 +89,7 @@
 /** global debug value to keep track of heap memory allocation */
 void* unbound_start_brk = 0;
 
-#if !defined(HAVE_EVENT_BASE_GET_METHOD) && defined(HAVE_EV_LOOP)
+#if !defined(HAVE_EVENT_BASE_GET_METHOD) && (defined(HAVE_EV_LOOP) || defined(HAVE_EV_DEFAULT_LOOP))
 static const char* ev_backend2str(int b)
 {
 	switch(b) {
@@ -122,11 +122,12 @@ static void get_event_sys(const char** n, const char** s, const char** m)
 	*n = "libevent";
 	b = event_base_new();
 	*m = event_base_get_method(b);
-#  elif defined(HAVE_EV_LOOP)
+#  elif defined(HAVE_EV_LOOP) || defined(HAVE_EV_DEFAULT_LOOP)
 	*n = "libev";
 	b = (struct event_base*)ev_default_loop(EVFLAG_AUTO);
 	*m = ev_backend2str(ev_backend((struct ev_loop*)b));
 #  else
+	*n = "unknown";
 	*m = "not obtainable";
 	b = NULL;
 #  endif

@@ -176,7 +176,7 @@ comm_base_create(int sigs)
 	/* use mini event time-sharing feature */
 	b->eb->base = event_init(&b->eb->secs, &b->eb->now);
 #else
-#  ifdef HAVE_EV_LOOP
+#  if defined(HAVE_EV_LOOP) || defined(HAVE_EV_DEFAULT_LOOP)
 	/* libev */
 	if(sigs)
 		b->eb->base=(struct event_base *)ev_default_loop(EVFLAG_AUTO);
@@ -200,7 +200,7 @@ comm_base_create(int sigs)
 	/* avoid event_get_method call which causes crashes even when
 	 * not printing, because its result is passed */
 	verbose(VERB_ALGO, 
-#ifdef HAVE_EV_LOOP
+#if defined(HAVE_EV_LOOP) || defined(HAVE_EV_DEFAULT_LOOP)
 		"libev"
 #elif defined(USE_MINI_EVENT)
 		"event "

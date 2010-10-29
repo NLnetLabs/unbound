@@ -56,12 +56,14 @@
 #include <openssl/pem.h>
 #include <ctype.h>
 #include <signal.h>
+#if defined(UNBOUND_ALLOC_LITE) || defined(UNBOUND_ALLOC_STATS)
 #ifdef malloc
 #undef malloc
 #endif
 #ifdef free
 #undef free
 #endif
+#endif /* alloc lite or alloc stats */
 
 /** verbosity for this application */
 static int verb = 0;
