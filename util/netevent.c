@@ -371,10 +371,10 @@ static void p_ancil(const char* str, struct comm_reply* r)
 		}
 		buf1[sizeof(buf1)-1]=0;
 		log_info("%s: %s", str, buf1);
-#endif
+#endif /* IP_PKTINFO or PI_RECVDSTDADDR */
 	}
 }
-#endif
+#endif /* AF_INET6 && IPV6_PKTINFO && HAVE_RECVMSG||HAVE_SENDMSG */
 
 /** send a UDP reply over specified interface*/
 static int
@@ -428,7 +428,7 @@ comm_point_send_udp_msg_if(struct comm_point *c, ldns_buffer* packet,
 #else
 		verbose(VERB_ALGO, "no IP_PKTINFO or IP_SENDSRCADDR");
 		msg.msg_control = NULL;
-#endif
+#endif /* IP_PKTINFO or IP_SENDSRCADDR */
 	} else if(r->srctype == 6) {
 		msg.msg_controllen = CMSG_SPACE(sizeof(struct in6_pktinfo));
 		log_assert(msg.msg_controllen <= sizeof(control));
@@ -469,7 +469,7 @@ comm_point_send_udp_msg_if(struct comm_point *c, ldns_buffer* packet,
 	(void)r;
 	log_err("sendmsg: IPV6_PKTINFO not supported");
 	return 0;
-#endif
+#endif /* AF_INET6 && IPV6_PKTINFO && HAVE_SENDMSG */
 }
 
 void 
@@ -543,7 +543,7 @@ comm_point_udp_ancil_callback(int fd, short event, void* arg)
 				memmove(&rep.pktinfo.v4addr, CMSG_DATA(cmsg),
 					sizeof(struct in_addr));
 				break;
-#endif
+#endif /* IP_PKTINFO or IP_RECVDSTADDR */
 			}
 		}
 		if(verbosity >= VERB_ALGO)
@@ -564,7 +564,7 @@ comm_point_udp_ancil_callback(int fd, short event, void* arg)
 	(void)arg;
 	fatal_exit("recvmsg: No support for IPV6_PKTINFO. "
 		"Please disable interface-automatic");
-#endif
+#endif /* AF_INET6 && IPV6_PKTINFO && HAVE_RECVMSG */
 }
 
 void 
