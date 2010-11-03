@@ -1312,7 +1312,8 @@ serviced_udp_send(struct serviced_query* sq, ldns_buffer* buff)
 			 * EDNS lame (EDNS queries to it are dropped) */
 			verbose(VERB_ALGO, "serviced query: send probe to see "
 				" if use of EDNS causes timeouts");
-			rtt /= 10;
+			/* even 700 msec may be too small */
+			rtt = 1000;
 			sq->status = serviced_query_PROBE_EDNS;
 		} else if(vs != -1) {
 			sq->status = serviced_query_UDP_EDNS;

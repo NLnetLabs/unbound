@@ -1,3 +1,6 @@
+3 November 2010: Wouter
+	- Change the rtt used to probe EDNS-timeout hosts to 1000 msec.
+
 2 November 2010: Wouter
 	- tag 1.4.7rc1.
 	- code review.
