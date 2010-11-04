@@ -996,6 +996,7 @@ void worker_probe_timer_cb(void* arg)
 struct worker* 
 worker_create(struct daemon* daemon, int id, int* ports, int n)
 {
+	unsigned int seed;
 	struct worker* worker = (struct worker*)calloc(1, 
 		sizeof(struct worker));
 	if(!worker) 
@@ -1013,6 +1014,17 @@ worker_create(struct daemon* daemon, int id, int* ports, int n)
 		free(worker);
 		return NULL;
 	}
+	/* create random state here to avoid locking trouble in RAND_bytes */
+	seed = (unsigned int)time(NULL) ^ (unsigned int)getpid() ^
+		(((unsigned int)worker->thread_num)<<17);
+		/* shift thread_num so it does not match out pid bits */
+	if(!(worker->rndstate = ub_initstate(seed, daemon->rand))) {
+		seed = 0;
+		log_err("could not init random numbers.");
+		worker_delete(worker);
+		return 0;
+	}
+	seed = 0;
 	return worker;
 }
 
@@ -1020,7 +1032,6 @@ int
 worker_init(struct worker* worker, struct config_file *cfg, 
 	struct listen_port* ports, int do_sigs)
 {
-	unsigned int seed;
 	worker->need_to_exit = 0;
 	worker->base = comm_base_create(do_sigs);
 	if(!worker->base) {
@@ -1065,16 +1076,6 @@ worker_init(struct worker* worker, struct config_file *cfg,
 	} else { /* !do_sigs */
 		worker->comsig = NULL;
 	}
-	seed = (unsigned int)time(NULL) ^ (unsigned int)getpid() ^
-		(((unsigned int)worker->thread_num)<<17);
-		/* shift thread_num so it does not match out pid bits */
-	if(!(worker->rndstate = ub_initstate(seed, worker->daemon->rand))) {
-		seed = 0;
-		log_err("could not init random numbers.");
-		worker_delete(worker);
-		return 0;
-	}
-	seed = 0;
 	worker->front = listen_create(worker->base, ports,
 		cfg->msg_buffer_size, (int)cfg->incoming_num_tcp, 
 		worker_handle_request, worker);
