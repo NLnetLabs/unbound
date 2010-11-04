@@ -1021,8 +1021,10 @@ worker_create(struct daemon* daemon, int id, int* ports, int n)
 	if(!(worker->rndstate = ub_initstate(seed, daemon->rand))) {
 		seed = 0;
 		log_err("could not init random numbers.");
-		worker_delete(worker);
-		return 0;
+		tube_delete(worker->cmd);
+		free(worker->ports);
+		free(worker);
+		return NULL;
 	}
 	seed = 0;
 	return worker;
