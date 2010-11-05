@@ -1,3 +1,6 @@
+5 November 2010: Wouter
+	- do not synthesize a CNAME message from cache for qtype DS.
+
 4 November 2010: Wouter
 	- Use central entropy to seed threads.
 

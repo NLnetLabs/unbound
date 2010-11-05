@@ -630,8 +630,10 @@ dns_cache_lookup(struct module_env* env,
 		lock_rw_unlock(&rrset->entry.lock);
 	}
 
-	/* see if we have CNAME for this domain */
-	if( (rrset=rrset_cache_lookup(env->rrset_cache, qname, qnamelen, 
+	/* see if we have CNAME for this domain,
+	 * but not for DS records (which are part of the parent) */
+	if( qtype != LDNS_RR_TYPE_DS &&
+	   (rrset=rrset_cache_lookup(env->rrset_cache, qname, qnamelen, 
 		LDNS_RR_TYPE_CNAME, qclass, 0, now, 0))) {
 		struct dns_msg* msg = rrset_msg(rrset, region, now, &k);
 		if(msg) {
