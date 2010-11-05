@@ -256,6 +256,16 @@ a.b.sub.example.com. IN A
 SECTION ANSWER
 a.b.sub.example.com. IN CNAME c.c.example.com.
 ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR AA NOERROR
+SECTION QUESTION
+a.b.sub.example.com. IN DS
+SECTION AUTHORITY
+b.sub.example.com. IN SOA B-EXAMPLE. b-example. 1 2 3 7 7
+ENTRY_END
 RANGE_END
 
 ; server ns.c.example.com.
@@ -294,6 +304,16 @@ c.c.example.com. IN A
 SECTION ANSWER
 c.c.example.com. IN A	11.11.11.11
 ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR AA NOERROR
+SECTION QUESTION
+c.c.example.com. IN DS
+SECTION AUTHORITY
+c.example.com. IN SOA C-EXAMPLE. c-example. 1 2 3 4 5
+ENTRY_END
 RANGE_END
 
 STEP 1 QUERY
@@ -315,6 +335,25 @@ a.b.sub.example.com. IN CNAME c.c.example.com.
 c.c.example.com. 	3600	IN	A	11.11.11.11
 SECTION AUTHORITY
 SECTION ADDITIONAL
+ENTRY_END
+
+; test that a DS query does not get CNAME redirected, but instead
+; asked to the right server that has to respond to it.
+STEP 20 QUERY
+ENTRY_BEGIN
+REPLY RD DO
+SECTION QUESTION
+a.b.sub.example.com. IN DS
+ENTRY_END
+
+STEP 30 CHECK_ANSWER
+ENTRY_BEGIN
+MATCH all
+REPLY QR RD RA NOERROR
+SECTION QUESTION
+a.b.sub.example.com. IN DS
+SECTION AUTHORITY
+b.sub.example.com. IN SOA B-EXAMPLE. b-example. 1 2 3 7 7
 ENTRY_END
 
 SCENARIO_END
