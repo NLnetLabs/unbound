@@ -903,8 +903,11 @@ parse_packet(ldns_buffer* pkt, struct msg_parse* msg, struct regional* region)
 	if((ret = parse_section(pkt, msg, region, LDNS_SECTION_AUTHORITY,
 		msg->nscount, &msg->ns_rrsets)) != 0)
 		return ret;
-	if((ret = parse_section(pkt, msg, region, LDNS_SECTION_ADDITIONAL, 
-		msg->arcount, &msg->ar_rrsets)) != 0)
+	if(ldns_buffer_remaining(pkt) == 0 && msg->arcount == 1) {
+		/* BIND accepts leniently that an EDNS record is missing.
+		 * so, we do too. */
+	} else if((ret = parse_section(pkt, msg, region,
+		LDNS_SECTION_ADDITIONAL, msg->arcount, &msg->ar_rrsets)) != 0)
 		return ret;
 	/* if(ldns_buffer_remaining(pkt) > 0) { */
 		/* there is spurious data at end of packet. ignore */

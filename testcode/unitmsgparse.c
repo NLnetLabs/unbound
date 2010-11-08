@@ -53,6 +53,8 @@
 
 /** verbose message parse unit test */
 static int vbmp = 0;
+/** do not accept formerr */
+static int check_formerr_gone = 0;
 /** if matching within a section should disregard the order of RRs. */
 static int matches_nolocation = 0;
 /** see if RRSIGs are properly matched to RRsets. */
@@ -415,10 +417,12 @@ testpkt(ldns_buffer* pkt, struct alloc_cache* alloc, ldns_buffer* out,
 	if(ret != 0) {
 		if(vbmp) printf("parse code %d: %s\n", ret, 
 			ldns_lookup_by_id(ldns_rcodes, ret)->name);
-		if(ret == LDNS_RCODE_FORMERR)
+		if(ret == LDNS_RCODE_FORMERR) {
+			unit_assert(!check_formerr_gone);
 			checkformerr(pkt);
+		}
 		unit_assert(ret != LDNS_RCODE_SERVFAIL);
-	} else {
+	} else if(!check_formerr_gone) {
 		const size_t lim = 512;
 		ret = reply_info_encode(&qi, rep, id, flags, out, timenow,
 			region, 65535, (int)(edns.bits & EDNS_DO) );
@@ -598,6 +602,10 @@ void msgparse_test(void)
 	testfromdrillfile(pkt, &alloc, out, "testdata/test_packets.7");
 	check_rrsigs = 0;
 	matches_nolocation = 0; 
+
+	check_formerr_gone = 1;
+	testfromdrillfile(pkt, &alloc, out, "testdata/test_packets.8");
+	check_formerr_gone = 0;
 
 	/* cleanup */
 	alloc_clear(&alloc);
