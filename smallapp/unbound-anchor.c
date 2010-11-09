@@ -1594,18 +1594,27 @@ xml_parse(BIO* xml, time_t now)
 static int
 verify_p7sig(BIO* data, BIO* p7s, STACK_OF(X509)* trust)
 {
-	X509_VERIFY_PARAM* param = X509_VERIFY_PARAM_new();
 	PKCS7* p7;
 	X509_STORE *store = X509_STORE_new();
 	int secure = 0;
 	int i;
+#ifdef X509_V_FLAG_CHECK_SS_SIGNATURE
+	X509_VERIFY_PARAM* param = X509_VERIFY_PARAM_new();
+	if(!param) {
+		if(verb) printf("out of memory\n");
+		X509_STORE_free(store);
+		return 0;
+	}
+#endif
 
 	(void)BIO_reset(p7s);
 	(void)BIO_reset(data);
 
-	if(!param || !store) {
+	if(!store) {
 		if(verb) printf("out of memory\n");
+#ifdef X509_V_FLAG_CHECK_SS_SIGNATURE
 		X509_VERIFY_PARAM_free(param);
+#endif
 		X509_STORE_free(store);
 		return 0;
 	}
@@ -1614,7 +1623,9 @@ verify_p7sig(BIO* data, BIO* p7s, STACK_OF(X509)* trust)
 	p7 = d2i_PKCS7_bio(p7s, NULL);
 	if(!p7) {
 		if(verb) printf("could not parse p7s signature file\n");
+#ifdef X509_V_FLAG_CHECK_SS_SIGNATURE
 		X509_VERIFY_PARAM_free(param);
+#endif
 		X509_STORE_free(store);
 		return 0;
 	}
@@ -1625,8 +1636,8 @@ verify_p7sig(BIO* data, BIO* p7s, STACK_OF(X509)* trust)
 	 * input is valid */
 #ifdef X509_V_FLAG_CHECK_SS_SIGNATURE
 	X509_VERIFY_PARAM_set_flags(param, X509_V_FLAG_CHECK_SS_SIGNATURE);
-#endif
 	X509_STORE_set1_param(store, param);
+#endif
 	for(i=0; i<sk_X509_num(trust); i++) {
 		if(!X509_STORE_add_cert(store, sk_X509_value(trust, i))) {
 			if(verb) printf("failed X509_STORE_add_cert\n");
