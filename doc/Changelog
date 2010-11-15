@@ -1,6 +1,7 @@
 15 November 2010: Wouter
 	- silence 'tcp connect: broken pipe' and 'net down' at low verbosity.
 	- iana portlist updated.
+	- so-sndbuf option for very busy servers, a bit like so-rcvbuf.
 
 9 November 2010: Wouter
 	- unbound-anchor compiles with openssl 0.9.7.

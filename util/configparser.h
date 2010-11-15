@@ -152,7 +152,8 @@
      VAR_SO_RCVBUF = 368,
      VAR_EDNS_BUFFER_SIZE = 369,
      VAR_PREFETCH = 370,
-     VAR_PREFETCH_KEY = 371
+     VAR_PREFETCH_KEY = 371,
+     VAR_SO_SNDBUF = 372
    };
 #endif
 /* Tokens.  */
@@ -270,6 +271,7 @@
 #define VAR_EDNS_BUFFER_SIZE 369
 #define VAR_PREFETCH 370
 #define VAR_PREFETCH_KEY 371
+#define VAR_SO_SNDBUF 372
 
 
 
@@ -286,7 +288,7 @@ typedef union YYSTYPE
 
 
 /* Line 1676 of yacc.c  */
-#line 290 "util/configparser.h"
+#line 292 "util/configparser.h"
 } YYSTYPE;
 # define YYSTYPE_IS_TRIVIAL 1
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */

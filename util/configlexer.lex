@@ -141,6 +141,7 @@ interface{COLON}		{ YDVAR(1, VAR_INTERFACE) }
 outgoing-interface{COLON}	{ YDVAR(1, VAR_OUTGOING_INTERFACE) }
 interface-automatic{COLON}	{ YDVAR(1, VAR_INTERFACE_AUTOMATIC) }
 so-rcvbuf{COLON}		{ YDVAR(1, VAR_SO_RCVBUF) }
+so-sndbuf{COLON}		{ YDVAR(1, VAR_SO_SNDBUF) }
 chroot{COLON}			{ YDVAR(1, VAR_CHROOT) }
 username{COLON}			{ YDVAR(1, VAR_USERNAME) }
 directory{COLON}		{ YDVAR(1, VAR_DIRECTORY) }

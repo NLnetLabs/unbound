@@ -231,6 +231,17 @@ net.core.rmem_max.  On BSD change kern.ipc.maxsockbuf in /etc/sysctl.conf.
 On OpenBSD change header and recompile kernel. On Solaris ndd \-set
 /dev/udp udp_max_buf 8388608.
 .TP
+.B so\-sndbuf: \fI<number>
+If not 0, then set the SO_SNDBUF socket option to get more buffer space on
+UDP port 53 outgoing queries.  This for very busy servers handles spikes
+in answer traffic, otherwise 'send: resource temporarily unavailable'
+can get logged, the buffer overrun is also visible by netstat \-su.
+Default is 0 (use system value).  Specify the number of bytes to ask
+for, try "4m" on a very busy server.  The OS caps it at a maximum, on
+linux unbound needs root permission to bypass the limit, or the admin
+can use sysctl net.core.wmem_max.  On BSD, Solaris changes are similar
+to so\-rcvbuf.
+.TP
 .B rrset\-cache\-size: \fI<number>
 Number of bytes size of the RRset cache. Default is 4 megabytes.
 A plain number is in bytes, append 'k', 'm' or 'g' for kilobytes, megabytes

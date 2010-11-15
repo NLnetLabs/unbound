@@ -140,7 +140,8 @@ config_create(void)
 	cfg->root_hints = NULL;
 	cfg->do_daemonize = 1;
 	cfg->if_automatic = 0;
-	cfg->socket_rcvbuf = 0;
+	cfg->so_rcvbuf = 0;
+	cfg->so_sndbuf = 0;
 	cfg->num_ifs = 0;
 	cfg->ifs = NULL;
 	cfg->num_out_ifs = 0;
@@ -334,7 +335,8 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	else S_POW2("msg-cache-slabs:", msg_cache_slabs)
 	else S_SIZET_NONZERO("num-queries-per-thread:",num_queries_per_thread)
 	else S_SIZET_OR_ZERO("jostle-timeout:", jostle_time)
-	else S_MEMSIZE("so-rcvbuf:", socket_rcvbuf)
+	else S_MEMSIZE("so-rcvbuf:", so_rcvbuf)
+	else S_MEMSIZE("so-sndbuf:", so_sndbuf)
 	else S_MEMSIZE("rrset-cache-size:", rrset_cache_size)
 	else S_POW2("rrset-cache-slabs:", rrset_cache_slabs)
 	else S_YNO("prefetch:", prefetch)
@@ -553,7 +555,8 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_DEC(opt, "msg-cache-slabs", msg_cache_slabs)
 	else O_DEC(opt, "num-queries-per-thread", num_queries_per_thread)
 	else O_UNS(opt, "jostle-timeout", jostle_time)
-	else O_MEM(opt, "so-rcvbuf", socket_rcvbuf)
+	else O_MEM(opt, "so-rcvbuf", so_rcvbuf)
+	else O_MEM(opt, "so-sndbuf", so_sndbuf)
 	else O_MEM(opt, "rrset-cache-size", rrset_cache_size)
 	else O_DEC(opt, "rrset-cache-slabs", rrset_cache_slabs)
 	else O_YNO(opt, "prefetch-key", prefetch_key)
