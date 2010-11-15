@@ -266,6 +266,46 @@ struct event_base* comm_base_internal(struct comm_base* b)
 	return b->eb->base;
 }
 
+/** see if errno for udp has to be logged or not uses globals */
+static int
+udp_send_errno_needs_log(struct sockaddr* addr, socklen_t addrlen)
+{
+	/* do not log transient errors (unless high verbosity) */
+#if defined(ENETUNREACH) || defined(EHOSTDOWN) || defined(EHOSTUNREACH) || defined(ENETDOWN)
+	switch(errno) {
+#  ifdef ENETUNREACH
+		case ENETUNREACH:
+#  endif
+#  ifdef EHOSTDOWN
+		case EHOSTDOWN:
+#  endif
+#  ifdef EHOSTUNREACH
+		case EHOSTUNREACH:
+#  endif
+#  ifdef ENETDOWN
+		case ENETDOWN:
+#  endif
+			if(verbosity < VERB_ALGO)
+				return 0;
+		default:
+			break;
+	}
+#endif
+	/* squelch errors where people deploy AAAA ::ffff:bla for
+	 * authority servers, which we try for intranets. */
+	if(errno == EINVAL && addr_is_ip4mapped(
+		(struct sockaddr_storage*)addr, addrlen) &&
+		verbosity < VERB_DETAIL)
+		return 0;
+	/* SO_BROADCAST sockopt can give access to 255.255.255.255,
+	 * but a dns cache does not need it. */
+	if(errno == EACCES && addr_is_broadcast(
+		(struct sockaddr_storage*)addr, addrlen) &&
+		verbosity < VERB_DETAIL)
+		return 0;
+	return 1;
+}
+
 /* send a UDP reply */
 int
 comm_point_send_udp_msg(struct comm_point *c, ldns_buffer* packet,
@@ -282,38 +322,7 @@ comm_point_send_udp_msg(struct comm_point *c, ldns_buffer* packet,
 		ldns_buffer_remaining(packet), 0,
 		addr, addrlen);
 	if(sent == -1) {
-		/* do not log transient errors (unless high verbosity) */
-#if defined(ENETUNREACH) || defined(EHOSTDOWN) || defined(EHOSTUNREACH) || defined(ENETDOWN)
-		switch(errno) {
-#  ifdef ENETUNREACH
-			case ENETUNREACH:
-#  endif
-#  ifdef EHOSTDOWN
-			case EHOSTDOWN:
-#  endif
-#  ifdef EHOSTUNREACH
-			case EHOSTUNREACH:
-#  endif
-#  ifdef ENETDOWN
-			case ENETDOWN:
-#  endif
-				if(verbosity < VERB_ALGO)
-					return 0;
-			default:
-				break;
-		}
-#endif
-		/* squelch errors where people deploy AAAA ::ffff:bla for
-		 * authority servers, which we try for intranets. */
-		if(errno == EINVAL && addr_is_ip4mapped(
-			(struct sockaddr_storage*)addr, addrlen) &&
-			verbosity < VERB_DETAIL)
-			return 0;
-		/* SO_BROADCAST sockopt can give access to 255.255.255.255,
-		 * but a dns cache does not need it. */
-		if(errno == EACCES && addr_is_broadcast(
-			(struct sockaddr_storage*)addr, addrlen) &&
-			verbosity < VERB_DETAIL)
+		if(!udp_send_errno_needs_log(addr, addrlen))
 			return 0;
 #ifndef USE_WINSOCK
 		verbose(VERB_OPS, "sendto failed: %s", strerror(errno));
@@ -451,6 +460,8 @@ comm_point_send_udp_msg_if(struct comm_point *c, ldns_buffer* packet,
 		p_ancil("send_udp over interface", r);
 	sent = sendmsg(c->fd, &msg, 0);
 	if(sent == -1) {
+		if(!udp_send_errno_needs_log(addr, addrlen))
+			return 0;
 		verbose(VERB_OPS, "sendmsg failed: %s", strerror(errno));
 		log_addr(VERB_OPS, "remote address is", 
 			(struct sockaddr_storage*)addr, addrlen);
@@ -883,6 +894,14 @@ comm_point_tcp_handle_write(int fd, struct comm_point* c)
 #ifdef ECONNREFUSED
                 else if(error == ECONNREFUSED && verbosity < 2)
                         return 0; /* silence 'connection refused' */
+#endif
+#ifdef ENETUNREACH
+                else if(error == ENETUNREACH && verbosity < 2)
+                        return 0; /* silence 'network unreachable' */
+#endif
+#ifdef ENETDOWN
+                else if(error == ENETDOWN && verbosity < 2)
+                        return 0; /* silence 'network is down' */
 #endif
 #ifdef EHOSTUNREACH
                 else if(error == EHOSTUNREACH && verbosity < 2)
