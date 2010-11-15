@@ -896,6 +896,10 @@ comm_point_tcp_handle_write(int fd, struct comm_point* c)
                 else if(error == ETIMEDOUT && verbosity < 2)
                         return 0; /* silence 'connection timed out' */
 #endif
+#ifdef EPIPE
+                else if(error == EPIPE && verbosity < 2)
+                        return 0; /* silence 'broken pipe' */
+#endif
                 else if(error != 0) {
 			log_err("tcp connect: %s", strerror(error));
 #else /* USE_WINSOCK */
@@ -933,6 +937,10 @@ comm_point_tcp_handle_write(int fd, struct comm_point* c)
 #endif /* HAVE_WRITEV */
 		if(r == -1) {
 #ifndef USE_WINSOCK
+#ifdef EPIPE
+                	if(errno == EPIPE && verbosity < 2)
+                        	return 0; /* silence 'broken pipe' */
+#endif
 			if(errno == EINTR || errno == EAGAIN)
 				return 1;
 			log_err("tcp writev: %s", strerror(errno));
