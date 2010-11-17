@@ -417,14 +417,14 @@ gen_dns_msg(struct regional* region, struct query_info* q, size_t num)
 
 /** generate dns_msg from cached message */
 static struct dns_msg*
-tomsg(struct module_env* env, struct msgreply_entry* e, struct reply_info* r, 
+tomsg(struct module_env* env, struct query_info* q, struct reply_info* r, 
 	struct regional* region, uint32_t now, struct regional* scratch)
 {
 	struct dns_msg* msg;
 	size_t i;
 	if(now > r->ttl)
 		return NULL;
-	msg = gen_dns_msg(region, &e->key, r->rrset_count);
+	msg = gen_dns_msg(region, q, r->rrset_count);
 	if(!msg)
 		return NULL;
 	msg->rep->flags = r->flags;
@@ -606,7 +606,7 @@ dns_cache_lookup(struct module_env* env,
 	if(e) {
 		struct msgreply_entry* key = (struct msgreply_entry*)e->key;
 		struct reply_info* data = (struct reply_info*)e->data;
-		struct dns_msg* msg = tomsg(env, key, data, region, now, 
+		struct dns_msg* msg = tomsg(env, &key->key, data, region, now, 
 			scratch);
 		if(msg) {
 			lock_rw_unlock(&e->lock);
@@ -670,6 +670,32 @@ dns_cache_lookup(struct module_env* env,
 		}
 		lock_rw_unlock(&rrset->entry.lock);
 	}
+
+	/* stop downwards cache search on NXDOMAIN.
+	 * Empty nonterminals are NOERROR, so an NXDOMAIN for foo
+	 * means bla.foo also does not exist.  The DNSSEC proofs are
+	 * the same.  We search upwards for NXDOMAINs. */
+	while(!dname_is_root(k.qname)) {
+		dname_remove_label(&k.qname, &k.qname_len);
+		h = query_info_hash(&k);
+		e = slabhash_lookup(env->msg_cache, h, &k, 0);
+		if(e) {
+			struct reply_info* data = (struct reply_info*)e->data;
+			struct dns_msg* msg;
+			if(FLAGS_GET_RCODE(data->flags) == LDNS_RCODE_NXDOMAIN
+			  && data->security != sec_status_bogus
+			  && (msg=tomsg(env, &k, data, region, now, scratch))){
+				lock_rw_unlock(&e->lock);
+				msg->qinfo.qname=qname;
+				msg->qinfo.qname_len=qnamelen;
+				/* check that DNSSEC really works out */
+				msg->rep->security = sec_status_unchecked;
+				return msg;
+			}
+			lock_rw_unlock(&e->lock);
+		}
+	}
+
 	return NULL;
 }
 
