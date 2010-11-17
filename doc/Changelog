@@ -1,5 +1,6 @@
 17 November 2010: Wouter
 	- implement draft-vixie-dnsext-resimprove-00, we stop on NXDOMAIN.
+	- make test output nicer.
 
 15 November 2010: Wouter
 	- silence 'tcp connect: broken pipe' and 'net down' at low verbosity.
