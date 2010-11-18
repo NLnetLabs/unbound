@@ -1,3 +1,8 @@
+18 November 2010: Wouter
+	- harden-below-nxdomain option, default off (because very old
+	  software may be incompatible).  We could enable it by default in
+	  the future.
+
 17 November 2010: Wouter
 	- implement draft-vixie-dnsext-resimprove-00, we stop on NXDOMAIN.
 	- make test output nicer.

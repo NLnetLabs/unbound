@@ -49,6 +49,7 @@
 #include "util/module.h"
 #include "util/net_help.h"
 #include "util/regional.h"
+#include "util/config_file.h"
 
 /** store rrsets in the rrset cache. 
  * @param env: module environment with caches.
@@ -675,7 +676,8 @@ dns_cache_lookup(struct module_env* env,
 	 * Empty nonterminals are NOERROR, so an NXDOMAIN for foo
 	 * means bla.foo also does not exist.  The DNSSEC proofs are
 	 * the same.  We search upwards for NXDOMAINs. */
-	while(!dname_is_root(k.qname)) {
+	if(env->cfg->harden_below_nxdomain)
+	    while(!dname_is_root(k.qname)) {
 		dname_remove_label(&k.qname, &k.qname_len);
 		h = query_info_hash(&k);
 		e = slabhash_lookup(env->msg_cache, h, &k, 0);

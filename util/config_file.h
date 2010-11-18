@@ -156,6 +156,8 @@ struct config_file {
 	int harden_glue;
 	/** harden against receiving no DNSSEC data for trust anchor */
 	int harden_dnssec_stripped;
+	/** harden against queries that fall under known nxdomain names */
+	int harden_below_nxdomain;
 	/** harden the referral path, query for NS,A,AAAA and validate */
 	int harden_referral_path;
 	/** use 0x20 bits in query as random ID bits */

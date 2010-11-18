@@ -153,6 +153,7 @@ config_create(void)
 	cfg->harden_large_queries = 0;
 	cfg->harden_glue = 1;
 	cfg->harden_dnssec_stripped = 1;
+	cfg->harden_below_nxdomain = 0;
 	cfg->harden_referral_path = 0;
 	cfg->use_caps_bits_for_id = 0;
 	cfg->private_address = NULL;
