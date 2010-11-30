@@ -7,7 +7,7 @@ NEED_XXD='fwd_compress_c00c.tpkg fwd_zero.tpkg'
 NEED_NC='fwd_compress_c00c.tpkg fwd_zero.tpkg'
 NEED_CURL='06-ianaports.tpkg root_anchor.tpkg'
 NEED_WHOAMI='07-confroot.tpkg'
-NEED_IPV6='fwd_ancil.tpkg fwd_tcp_tc6.tpkg stub_udp6.tpkg'
+NEED_IPV6='fwd_ancil.tpkg fwd_tcp_tc6.tpkg stub_udp6.tpkg edns_cache.tpkg'
 NEED_NOMINGW='tcp_sigpipe.tpkg 07-confroot.tpkg 08-host-lib.tpkg fwd_ancil.tpkg'
 
 # test if dig and ldns-testns are available.

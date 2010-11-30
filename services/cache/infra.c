@@ -575,7 +575,8 @@ infra_edns_update(struct infra_cache* infra,
 	/* have an entry, update the rtt, and the ttl */
 	data = (struct infra_host_data*)e->data;
 	/* do not update if noEDNS and stored is yesEDNS */
-	if(!(edns_version == -1 && data->edns_version != -1)) {
+	if(!(edns_version == -1 && (data->edns_version != -1 &&
+		data->edns_lame_known))) {
 		data->edns_version = edns_version;
 		data->edns_lame_known = 1;
 	}

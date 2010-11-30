@@ -1308,6 +1308,7 @@ serviced_udp_send(struct serviced_query* sq, ldns_buffer* buff)
 		&edns_lame_known, &rtt))
 		return 0;
 	sq->last_rtt = rtt;
+	verbose(VERB_ALGO, "EDNS lookup known=%d vs=%d", edns_lame_known, vs);
 	if(sq->status == serviced_initial) {
 		if(edns_lame_known == 0 && rtt > 5000 && rtt < 10001) {
 			/* perform EDNS lame probe - check if server is
@@ -1593,6 +1594,7 @@ serviced_udp_callback(struct comm_point* c, void* arg, int error,
 			== LDNS_RCODE_FORMERR || LDNS_RCODE_WIRE(
 			ldns_buffer_begin(c->buffer)) == LDNS_RCODE_NOTIMPL)) {
 		/* try to get an answer by falling back without EDNS */
+		verbose(VERB_ALGO, "serviced query: attempt without EDNS");
 		sq->status = serviced_query_UDP_EDNS_fallback;
 		sq->retry = 0;
 		if(!serviced_udp_send(sq, c->buffer)) {
@@ -1614,6 +1616,8 @@ serviced_udp_callback(struct comm_point* c, void* arg, int error,
 	    } else if(sq->status == serviced_query_UDP_EDNS && 
 		!sq->edns_lame_known) {
 		/* now we know that edns queries received answers store that */
+		log_addr(VERB_ALGO, "serviced query: EDNS works for",
+			&sq->addr, sq->addrlen);
 		if(!infra_edns_update(outnet->infra, &sq->addr, sq->addrlen, 
 			0, (uint32_t)now.tv_sec)) {
 			log_err("Out of memory caching edns works");
@@ -1628,11 +1632,18 @@ serviced_udp_callback(struct comm_point* c, void* arg, int error,
 		/* the fallback produced a result that looks promising, note
 		 * that this server should be approached without EDNS */
 		/* only store noEDNS in cache if domain is noDNSSEC */
-		if(!sq->want_dnssec)
+		if(!sq->want_dnssec) {
+		  log_addr(VERB_ALGO, "serviced query: EDNS fails for",
+			&sq->addr, sq->addrlen);
 		  if(!infra_edns_update(outnet->infra, &sq->addr, sq->addrlen,
 			-1, (uint32_t)now.tv_sec)) {
 			log_err("Out of memory caching no edns for host");
 		  }
+		} else {
+		  log_addr(VERB_ALGO, "serviced query: EDNS fails, but "
+		  	"not stored because need DNSSEC for", &sq->addr,
+			sq->addrlen);
+		}
 		sq->status = serviced_query_UDP;
 	    }
 	    if(now.tv_sec > sq->last_sent_time.tv_sec ||
