@@ -1,3 +1,6 @@
+1 December 2010: Wouter
+	- Fix bug#338: print address when socket creation fails.
+
 30 November 2010: Wouter
 	- Fix storage of EDNS failures in the infra cache.
 	- iana portlist updated.

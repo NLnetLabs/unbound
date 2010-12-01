@@ -343,15 +343,21 @@ create_udp_sock(int family, int socktype, struct sockaddr* addr,
 		/* detect freebsd jail with no ipv6 permission */
 		if(family==AF_INET6 && errno==EINVAL)
 			*noproto = 1;
-		else if(errno != EADDRINUSE)
+		else if(errno != EADDRINUSE) {
 			log_err("can't bind socket: %s", strerror(errno));
+			log_addr(0, "failed address",
+				(struct sockaddr_storage*)addr, addrlen);
+		}
 #endif /* EADDRINUSE */
 		close(s);
 #else /* USE_WINSOCK */
 		if(WSAGetLastError() != WSAEADDRINUSE &&
-			WSAGetLastError() != WSAEADDRNOTAVAIL)
+			WSAGetLastError() != WSAEADDRNOTAVAIL) {
 			log_err("can't bind socket: %s", 
 				wsa_strerror(WSAGetLastError()));
+			log_addr(0, "failed address",
+				(struct sockaddr_storage*)addr, addrlen);
+		}
 		closesocket(s);
 #endif
 		return -1;
@@ -431,10 +437,16 @@ create_tcp_accept_sock(struct addrinfo *addr, int v6only, int* noproto)
 		/* detect freebsd jail with no ipv6 permission */
 		if(addr->ai_family==AF_INET6 && errno==EINVAL)
 			*noproto = 1;
-		else log_err("can't bind socket: %s", strerror(errno));
+		else { log_err("can't bind socket: %s", strerror(errno));
+		       log_addr(0, "failed address",
+				(struct sockaddr_storage*)addr->ai_addr,
+				addr->ai_addrlen); }
 #else
 		log_err("can't bind socket: %s", 
 			wsa_strerror(WSAGetLastError()));
+		log_addr(0, "failed address",
+			(struct sockaddr_storage*)addr->ai_addr,
+			addr->ai_addrlen); }
 #endif
 		return -1;
 	}
