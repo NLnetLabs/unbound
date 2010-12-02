@@ -995,9 +995,11 @@ server_local_zone: VAR_LOCAL_ZONE STRING_ARG STRING_ARG
 		OUTYY(("P(server_local_zone:%s %s)\n", $2, $3));
 		if(strcmp($3, "static")!=0 && strcmp($3, "deny")!=0 &&
 		   strcmp($3, "refuse")!=0 && strcmp($3, "redirect")!=0 &&
-		   strcmp($3, "transparent")!=0 && strcmp($3, "nodefault")!=0)
+		   strcmp($3, "transparent")!=0 && strcmp($3, "nodefault")!=0
+		   && strcmp($3, "typetransparent")!=0)
 			yyerror("local-zone type: expected static, deny, "
-				"refuse, redirect, transparent or nodefault");
+				"refuse, redirect, transparent, "
+				"typetransparent or nodefault");
 		else if(strcmp($3, "nodefault")==0) {
 			if(!cfg_strlist_insert(&cfg_parser->cfg->
 				local_zones_nodefault, $2))

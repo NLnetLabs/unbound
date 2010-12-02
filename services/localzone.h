@@ -63,6 +63,8 @@ enum localzone_type {
 	local_zone_static,
 	/** resolve normally */
 	local_zone_transparent,
+	/** do not block types at localdata names */
+	local_zone_typetransparent,
 	/** answer with data at zone apex */
 	local_zone_redirect,
 	/** remove default AS112 blocking contents for zone

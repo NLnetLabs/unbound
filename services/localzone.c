@@ -967,6 +967,10 @@ void local_zones_print(struct local_zones* zones)
 			log_nametypeclass(0, "transparent zone", 
 				z->name, 0, z->dclass);
 			break;
+		case local_zone_typetransparent:
+			log_nametypeclass(0, "typetransparent zone", 
+				z->name, 0, z->dclass);
+			break;
 		case local_zone_static:
 			log_nametypeclass(0, "static zone", 
 				z->name, 0, z->dclass);
@@ -1095,7 +1099,10 @@ lz_zone_answer(struct local_zone* z, struct query_info* qinfo,
 			*(uint16_t*)ldns_buffer_begin(buf), 
 			ldns_buffer_read_u16_at(buf, 2), edns);
 		return 1;
-	} 
+	} else if(z->type == local_zone_typetransparent) {
+		/* no NODATA or NXDOMAINS for this zone type */
+		return 0;
+	}
 	/* else z->type == local_zone_transparent */
 
 	/* if the zone is transparent and the name exists, but the type
@@ -1152,6 +1159,7 @@ const char* local_zone_type2str(enum localzone_type t)
 		case local_zone_refuse: return "refuse";
 		case local_zone_redirect: return "redirect";
 		case local_zone_transparent: return "transparent";
+		case local_zone_typetransparent: return "typetransparent";
 		case local_zone_static: return "static";
 		case local_zone_nodefault: return "nodefault";
 	}
@@ -1168,6 +1176,8 @@ int local_zone_str2type(const char* type, enum localzone_type* t)
 		*t = local_zone_static;
 	else if(strcmp(type, "transparent") == 0)
 		*t = local_zone_transparent;
+	else if(strcmp(type, "typetransparent") == 0)
+		*t = local_zone_typetransparent;
 	else if(strcmp(type, "redirect") == 0)
 		*t = local_zone_redirect;
 	else return 0;

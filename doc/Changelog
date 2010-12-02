@@ -1,3 +1,6 @@
+2 December 2010: Wouter
+	- feature typetransparent localzone, does not block other RR types.
+
 1 December 2010: Wouter
 	- Fix bug#338: print address when socket creation fails.
 

@@ -699,11 +699,12 @@ A plain number is in bytes, append 'k', 'm' or 'g' for kilobytes, megabytes
 or gigabytes (1024*1024 bytes in a megabyte).
 .TP
 .B local\-zone: \fI<zone> <type>
-Configure a local zone. The type determines the answer to give if there is
-no match from local\-data. The types are deny, refuse, static, transparent, 
-redirect, nodefault, and are explained below. After that the default settings
-are listed. Use local\-data: to enter data into the local zone. Answers for
-local zones are authoritative DNS answers. By default the zones are class IN.
+Configure a local zone. The type determines the answer to give if
+there is no match from local\-data. The types are deny, refuse, static,
+transparent, redirect, nodefault, typetransparent, and are explained
+below. After that the default settings are listed. Use local\-data: to
+enter data into the local zone. Answers for local zones are authoritative
+DNS answers. By default the zones are class IN.
 .IP
 If you need more complicated authoritative data, with referrals, wildcards,
 CNAME/DNAME support, or DNSSEC authoritative service, setup a stub\-zone for
@@ -730,6 +731,13 @@ If the query is for a name given in localdata but no such type of data is
 given in localdata, then a noerror nodata answer is returned.
 If no local\-zone is given local\-data causes a transparent zone
 to be created by default.
+.TP 10
+\h'5'\fItypetransparent\fR 
+If there is a match from local data, the query is answered.  If the query
+is for a different name, or for the same name but for a different type,
+the query is resolved normally.  So, similar to transparent but types
+that are not listed in local data are resolved normally, so if an A record
+is in the local data that does not cause a nodata reply for AAAA queries.
 .TP 10
 \h'5'\fIredirect\fR 
 The query is answered from the local data for the zone name.
