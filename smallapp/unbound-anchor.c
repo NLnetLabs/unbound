@@ -236,7 +236,6 @@ get_builtin_ds(void)
 {
 	return
 ". IN DS 19036 8 2 49AAC11D7B6F6446702E54A1607371607A1A41855200FD2CE1CDDE32F24E8FB5\n";
-		;
 }
 
 /** print hex data */
@@ -671,10 +670,12 @@ pick_random_ip(struct ip_list* list)
 	if(num == 0) return NULL;
 	/* not perfect, but random enough */
 	sel = (int)ldns_get_random() % num;
+	/* skip over unused elements that we did not select */
 	while(sel > 0 && p) {
 		if(!p->used) sel--;
 		p = p->next;
 	}
+	/* find the next unused element */
 	while(p && p->used)
 		p = p->next;
 	if(!p) return NULL; /* robustness */
@@ -692,6 +693,17 @@ fd_close(int fd)
 #endif
 }
 
+/** printout socket errno */
+static void
+print_sock_err(const char* msg)
+{
+#ifndef USE_WINSOCK
+	if(verb) printf("%s: %s\n", msg, strerror(errno));
+#else
+	if(verb) printf("%s: %s\n", msg, wsa_strerror(WSAGetLastError()));
+#endif
+}
+
 /** connect to IP address */
 static int
 connect_to_ip(struct ip_list* ip)
@@ -701,21 +713,11 @@ connect_to_ip(struct ip_list* ip)
 	fd = socket(ip->len==(socklen_t)sizeof(struct sockaddr_in)?
 		AF_INET:AF_INET6, SOCK_STREAM, 0);
 	if(fd == -1) {
-#ifndef USE_WINSOCK
-		if(verb) printf("socket: %s\n", strerror(errno));
-#else
-		if(verb) printf("socket: %s\n",
-			wsa_strerror(WSAGetLastError()));
-#endif
+		print_sock_err("socket");
 		return -1;
 	}
 	if(connect(fd, (struct sockaddr*)&ip->addr, ip->len) < 0) {
-#ifndef USE_WINSOCK
-		if(verb) printf("connect: %s\n", strerror(errno));
-#else
-		if(verb) printf("connect: %s\n",
-			wsa_strerror(WSAGetLastError()));
-#endif
+		print_sock_err("connect");
 		fd_close(fd);
 		return -1;
 	}
@@ -965,6 +967,7 @@ do_chunked_read(SSL* ssl)
 			return NULL;
 		}
 		if(verb>=2) printf("chunk len: %d\n", (int)len);
+		/* are we done? */
 		if(len == 0) {
 			char z = 0;
 			/* skip end-of-chunk-trailer lines,
@@ -1023,6 +1026,35 @@ write_http_get(SSL* ssl, char* pathname, char* urlname)
 	return 0;
 }
 
+/** read chunked data and zero terminate; len is without zero */
+static char*
+read_chunked_zero_terminate(SSL* ssl, size_t* len)
+{
+	/* do the chunked version */
+	BIO* tmp = do_chunked_read(ssl);
+	char* data, *d = NULL;
+	size_t l;
+	if(!tmp) {
+		if(verb) printf("could not read from https\n");
+		return NULL;
+	}
+	l = (size_t)BIO_get_mem_data(tmp, &d);
+	if(verb>=2) printf("chunked data is %d\n", (int)l);
+	if(l == 0 || d == NULL) {
+		if(verb) printf("out of memory\n");
+		return NULL;
+	}
+	*len = l-1;
+	data = (char*)malloc(l);
+	if(data == NULL) {
+		if(verb) printf("out of memory\n");
+		return NULL;
+	}
+	memcpy(data, d, l);
+	BIO_free(tmp);
+	return data;
+}
+
 /** read HTTP result from SSL */
 static BIO*
 read_http_result(SSL* ssl)
@@ -1034,33 +1066,11 @@ read_http_result(SSL* ssl)
 		return NULL;
 	}
 	if(len == 0) {
-		/* do the chunked version */
-		BIO* tmp = do_chunked_read(ssl);
-		char* d = NULL;
-		size_t l;
-		if(!tmp) {
-			if(verb) printf("could not read from https\n");
-			return NULL;
-		}
-		l = (size_t)BIO_get_mem_data(tmp, &d);
-		if(verb>=2) printf("chunked data is %d\n", (int)l);
-		if(l == 0 || d == NULL) {
-			if(verb) printf("out of memory\n");
-			return NULL;
-		}
-		/* the result is zero terminated for robustness, but we 
-		 * do not include that in the BIO len (for binary data) */
-		len = l-1;
-		data = (char*)malloc(l);
-		if(data == NULL) {
-			if(verb) printf("out of memory\n");
-			return NULL;
-		}
-		memcpy(data, d, l);
-		BIO_free(tmp);
+		data = read_chunked_zero_terminate(ssl, &len);
 	} else {
 		data = read_data_chunk(ssl, len);
 	}
+	if(!data) return NULL;
 	if(verb >= 4) print_data("read data", data, (int)len);
 	m = BIO_new_mem_buf(data, (int)len);
 	if(!m) {
@@ -1359,9 +1369,11 @@ xml_is_zone_name(BIO* zone, char* name)
 	(void)BIO_seek(zone, 0);
 	zlen = BIO_get_mem_data(zone, &z);
 	if(!zlen || !z) return 0;
+	/* zero terminate */
 	if(zlen >= (long)sizeof(buf)) return 0;
 	memmove(buf, z, (size_t)zlen);
 	buf[zlen] = 0;
+	/* compare */
 	return (strncasecmp(buf, name, strlen(name)) == 0);
 }
 
@@ -1400,7 +1412,7 @@ xml_startelem(void *userData, const XML_Char *name, const XML_Char **atts)
 		return;
 	}
 
-	/* write whitespace separators to outputBIO here */
+	/* for other types we prepare to pick up the data */
 	if(!data->use_key)
 		return;
 	b = xml_selectbio(data, data->tag);
@@ -1555,8 +1567,7 @@ xml_parse(BIO* xml, time_t now)
 	}
 	if(!XML_Parse(parser, pp, len, 1 /*isfinal*/ )) {
 		const char *e = XML_ErrorString(XML_GetErrorCode(parser));
-		if(verb) printf("XML_Parse failure %s\n",
-			e?e:"");
+		if(verb) printf("XML_Parse failure %s\n", e?e:"");
 		exit(0);
 	}
 
@@ -1605,39 +1616,32 @@ verify_p7sig(BIO* data, BIO* p7s, STACK_OF(X509)* trust)
 		X509_STORE_free(store);
 		return 0;
 	}
+	/* do the selfcheck on the root certificate; it checks that the
+	 * input is valid */
+	X509_VERIFY_PARAM_set_flags(param, X509_V_FLAG_CHECK_SS_SIGNATURE);
+	if(store) X509_STORE_set1_param(store, param);
 #endif
-
-	(void)BIO_reset(p7s);
-	(void)BIO_reset(data);
-
 	if(!store) {
 		if(verb) printf("out of memory\n");
 #ifdef X509_V_FLAG_CHECK_SS_SIGNATURE
 		X509_VERIFY_PARAM_free(param);
 #endif
-		X509_STORE_free(store);
 		return 0;
 	}
+
+	(void)BIO_reset(p7s);
+	(void)BIO_reset(data);
 
 	/* convert p7s to p7 (the signature) */
 	p7 = d2i_PKCS7_bio(p7s, NULL);
 	if(!p7) {
 		if(verb) printf("could not parse p7s signature file\n");
-#ifdef X509_V_FLAG_CHECK_SS_SIGNATURE
-		X509_VERIFY_PARAM_free(param);
-#endif
 		X509_STORE_free(store);
 		return 0;
 	}
 	if(verb >= 2) printf("parsed the PKCS7 signature\n");
 
 	/* convert trust to trusted certificate store */
-	/* do the selfcheck on the root certificate; it checks that the
-	 * input is valid */
-#ifdef X509_V_FLAG_CHECK_SS_SIGNATURE
-	X509_VERIFY_PARAM_set_flags(param, X509_V_FLAG_CHECK_SS_SIGNATURE);
-	X509_STORE_set1_param(store, param);
-#endif
 	for(i=0; i<sk_X509_num(trust); i++) {
 		if(!X509_STORE_add_cert(store, sk_X509_value(trust, i))) {
 			if(verb) printf("failed X509_STORE_add_cert\n");
