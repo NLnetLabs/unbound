@@ -446,7 +446,7 @@ create_tcp_accept_sock(struct addrinfo *addr, int v6only, int* noproto)
 			wsa_strerror(WSAGetLastError()));
 		log_addr(0, "failed address",
 			(struct sockaddr_storage*)addr->ai_addr,
-			addr->ai_addrlen); }
+			addr->ai_addrlen);
 #endif
 		return -1;
 	}
