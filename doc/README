@@ -128,7 +128,7 @@ o See Credits file for contributors.
 Your Support
 ------------
 NLnet Labs offers all of its software products as open source, most are
-published under a BDS license. You can download them, not only from the
+published under a BSD license. You can download them, not only from the
 NLnet Labs website but also through the various OS distributions for
 which NSD, ldns, and Unbound are packaged. We therefore have little idea
 who uses our software in production environments and have no direct ties
