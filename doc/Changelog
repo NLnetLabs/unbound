@@ -1,3 +1,6 @@
+17 December 2010: Wouter
+	- squelch 'tcp connect: bla' in logfile, (set verbosity 2 to see them).
+
 16 December 2010: Wouter
 	- Fix our 'BDS' license (typo reported by Xavier Belanger).
 

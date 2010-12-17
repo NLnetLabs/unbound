@@ -891,34 +891,8 @@ comm_point_tcp_handle_write(int fd, struct comm_point* c)
 		if(error == EINPROGRESS || error == EWOULDBLOCK)
 			return 1; /* try again later */
 #endif
-#ifdef ECONNREFUSED
-                else if(error == ECONNREFUSED && verbosity < 2)
-                        return 0; /* silence 'connection refused' */
-#endif
-#ifdef ENETUNREACH
-                else if(error == ENETUNREACH && verbosity < 2)
-                        return 0; /* silence 'network unreachable' */
-#endif
-#ifdef ENETDOWN
-                else if(error == ENETDOWN && verbosity < 2)
-                        return 0; /* silence 'network is down' */
-#endif
-#ifdef EHOSTUNREACH
-                else if(error == EHOSTUNREACH && verbosity < 2)
-                        return 0; /* silence 'no route to host' */
-#endif
-#ifdef EHOSTDOWN
-                else if(error == EHOSTDOWN && verbosity < 2)
-                        return 0; /* silence 'host is down' */
-#endif
-#ifdef ETIMEDOUT
-                else if(error == ETIMEDOUT && verbosity < 2)
-                        return 0; /* silence 'connection timed out' */
-#endif
-#ifdef EPIPE
-                else if(error == EPIPE && verbosity < 2)
-                        return 0; /* silence 'broken pipe' */
-#endif
+		else if(error != 0 && verbosity < 2)
+			return 0; /* silence lots of chatter in the logs */
                 else if(error != 0) {
 			log_err("tcp connect: %s", strerror(error));
 #else /* USE_WINSOCK */
@@ -928,7 +902,7 @@ comm_point_tcp_handle_write(int fd, struct comm_point* c)
 		else if(error == WSAEWOULDBLOCK) {
 			winsock_tcp_wouldblock(&c->ev->ev, EV_WRITE);
 			return 1;
-		} else if(error == WSAECONNREFUSED || error == WSAEHOSTUNREACH)
+		} else if(error != 0 && verbosity < 2)
 			return 0;
 		else if(error != 0) {
 			log_err("tcp connect: %s", wsa_strerror(error));
