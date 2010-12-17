@@ -1129,6 +1129,11 @@ nsec3_do_prove_nodata(struct module_env* env, struct nsec3_filter* flt,
 		} else if(qinfo->qtype != LDNS_RR_TYPE_DS && 
 			nsec3_has_type(rrset, rr, LDNS_RR_TYPE_NS) &&
 			!nsec3_has_type(rrset, rr, LDNS_RR_TYPE_SOA)) {
+			if(!nsec3_has_type(rrset, rr, LDNS_RR_TYPE_DS)) {
+				verbose(VERB_ALGO, "proveNodata: matching "
+					"NSEC3 is insecure delegation");
+				return sec_status_insecure;
+			}
 			verbose(VERB_ALGO, "proveNodata: matching "
 				"NSEC3 is a delegation, bogus");
 			return sec_status_bogus;

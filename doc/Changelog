@@ -1,5 +1,7 @@
 17 December 2010: Wouter
 	- squelch 'tcp connect: bla' in logfile, (set verbosity 2 to see them).
+	- fix validation in this case: CNAME to nodata for co-hosted opt-in
+	  NSEC3 insecure delegation, was bogus, fixed to be insecure.
 
 16 December 2010: Wouter
 	- Fix our 'BDS' license (typo reported by Xavier Belanger).
