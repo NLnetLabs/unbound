@@ -166,7 +166,7 @@ setup_sigalg(struct ub_packed_rrset_key* dnskey, uint8_t* sigalg)
 	size_t i, n = 0;
 	memset(a, 0, sizeof(a));
 	for(i=0; i<rrset_get_count(dnskey); i++) {
-		uint8_t algo = dnskey_get_algo(dnskey, i);
+		uint8_t algo = (uint8_t)dnskey_get_algo(dnskey, i);
 		if(a[algo] == 0) {
 			a[algo] = 1;
 			sigalg[n++] = algo;
