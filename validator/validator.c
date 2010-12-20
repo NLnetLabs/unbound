@@ -49,6 +49,7 @@
 #include "validator/val_nsec.h"
 #include "validator/val_nsec3.h"
 #include "validator/val_neg.h"
+#include "validator/val_sigcrypt.h"
 #include "validator/autotrust.h"
 #include "services/cache/dns.h"
 #include "util/data/dname.h"
@@ -2260,35 +2261,18 @@ primeResponseToKE(struct ub_packed_rrset_key* dnskey_rrset,
 		return kkey;
 	}
 	/* attempt to verify with trust anchor DS and DNSKEY */
-	if(ta->ds_rrset) {
-		kkey = val_verify_new_DNSKEYs(qstate->region, qstate->env, ve, 
-			dnskey_rrset, ta->ds_rrset, 0, &reason);
-		if(!kkey) {
-			log_err("out of memory: verifying prime DS");
-			return NULL;
-		}
-		if(key_entry_isgood(kkey))
-			sec = sec_status_secure;
-		else
-			sec = sec_status_bogus;
-		verbose(VERB_DETAIL, "validate keys with anchor(DS): %s", 
-			sec_status_to_string(sec));
+	kkey = val_verify_new_DNSKEYs_with_ta(qstate->region, qstate->env, ve, 
+		dnskey_rrset, ta->ds_rrset, ta->dnskey_rrset, 0, &reason);
+	if(!kkey) {
+		log_err("out of memory: verifying prime TA");
+		return NULL;
 	}
-	if(sec != sec_status_secure && ta->dnskey_rrset) {
-		sec = val_verify_rrset(qstate->env, ve, dnskey_rrset,
-			ta->dnskey_rrset, 0, &reason);
-		verbose(VERB_DETAIL, "validate keys with anchor(DNSKEY): %s", 
-			sec_status_to_string(sec));
-		if(sec == sec_status_secure) {
-			kkey = key_entry_create_rrset(qstate->region, 
-				ta->name, ta->namelen, ta->dclass, 
-				dnskey_rrset, *qstate->env->now);
-			if(!kkey) {
-				log_err("out of memory: allocate primed key");
-				return NULL;
-			}
-		}
-	}
+	if(key_entry_isgood(kkey))
+		sec = sec_status_secure;
+	else
+		sec = sec_status_bogus;
+	verbose(VERB_DETAIL, "validate keys with anchor(DS): %s", 
+		sec_status_to_string(sec));
 
 	if(sec != sec_status_secure) {
 		log_nametypeclass(VERB_OPS, "failed to prime trust anchor -- "
@@ -2390,7 +2374,7 @@ ds_response_to_ke(struct module_qstate* qstate, struct val_qstate* vq,
 		log_query_info(VERB_DETAIL, "validated DS", qinfo);
 		*ke = key_entry_create_rrset(qstate->region,
 			qinfo->qname, qinfo->qname_len, qinfo->qclass, ds,
-			*qstate->env->now);
+			NULL, *qstate->env->now);
 		return (*ke) != NULL;
 	} else if(subtype == VAL_CLASS_NODATA || 
 		subtype == VAL_CLASS_NAMEERROR) {

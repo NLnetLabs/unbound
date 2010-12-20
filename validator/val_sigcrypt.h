@@ -52,6 +52,7 @@ struct regional;
 
 /** number of entries in algorithm needs array */
 #define ALGO_NEEDS_MAX 256
+
 /**
  * Storage for algorithm needs.  DNSKEY algorithms.
  */
@@ -77,12 +78,31 @@ void algo_needs_init_dnskey(struct algo_needs* n,
 
 /**
  * Initialize algo needs structure, set algos from rrset as needed.
+ * Results are added to an existing need structure.
+ * @param n: struct with storage.
+ * @param dnskey: algos from this struct set as necessary. DNSKEY set.
+ * @param sigalg: adds to signalled algorithm list too.
+ */
+void algo_needs_init_dnskey_add(struct algo_needs* n,
+	struct ub_packed_rrset_key* dnskey, uint8_t* sigalg);
+
+/**
+ * Initialize algo needs structure from a signalled algo list.
+ * @param n: struct with storage.
+ * @param sigalg: signalled algorithm list, numbers ends with 0.
+ */
+void algo_needs_init_list(struct algo_needs* n, uint8_t* sigalg);
+
+/**
+ * Initialize algo needs structure, set algos from rrset as needed.
  * @param n: struct with storage.
  * @param ds: algos from this struct set as necessary. DS set.
  * @param fav_ds_algo: filter to use only this DS algo.
+ * @param sigalg: list of signalled algos, constructed as output,
+ *	provide size ALGO_NEEDS_MAX+1. list of algonumbers, ends with a zero.
  */
 void algo_needs_init_ds(struct algo_needs* n, struct ub_packed_rrset_key* ds,
-	int fav_ds_algo);
+	int fav_ds_algo, uint8_t* sigalg);
 
 /**
  * Mark this algorithm as a success, sec_secure, and see if we are done.
@@ -221,7 +241,7 @@ uint16_t dnskey_get_flags(struct ub_packed_rrset_key* k, size_t idx);
  * @param ve: validator environment, date settings.
  * @param rrset: to be validated.
  * @param dnskey: DNSKEY rrset, keyset to try.
- * @param downprot: if true provide downgrade protection otherwise one
+ * @param sigalg: if nonNULL provide downgrade protection otherwise one
  *   algorithm is enough.
  * @param reason: if bogus, a string returned, fixed or alloced in scratch.
  * @return SECURE if one key in the set verifies one rrsig.
@@ -230,7 +250,7 @@ uint16_t dnskey_get_flags(struct ub_packed_rrset_key* k, size_t idx);
  */
 enum sec_status dnskeyset_verify_rrset(struct module_env* env, 
 	struct val_env* ve, struct ub_packed_rrset_key* rrset, 
-	struct ub_packed_rrset_key* dnskey, int downprot, char** reason);
+	struct ub_packed_rrset_key* dnskey, uint8_t* sigalg, char** reason);
 
 /** 
  * verify rrset against one specific dnskey (from rrset) 

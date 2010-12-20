@@ -80,6 +80,8 @@ struct key_entry_data {
 	struct packed_rrset_data* rrset_data;
 	/** not NULL sometimes to give reason why bogus */
 	char* reason;
+	/** list of algorithms signalled, ends with 0, or NULL */
+	uint8_t* algo;
 	/** DNS RR type of the rrset data (host order) */
 	uint16_t rrset_type;
 	/** if the key is bad: Bogus or malformed */
@@ -177,12 +179,13 @@ struct key_entry_key* key_entry_create_null(struct regional* region,
  * @param namelen: length of name
  * @param dclass: class of key entry. (host order);
  * @param rrset: data for key entry. This is copied to the region.
+ * @param sigalg: signalled algorithm list (or NULL).
  * @param now: current time (added to ttl of rrset)
  * @return new key entry or NULL on alloc failure
  */
 struct key_entry_key* key_entry_create_rrset(struct regional* region,
         uint8_t* name, size_t namelen, uint16_t dclass, 
-	struct ub_packed_rrset_key* rrset, uint32_t now);
+	struct ub_packed_rrset_key* rrset, uint8_t* sigalg, uint32_t now);
 
 /**
  * Create a bad entry, in the given region.

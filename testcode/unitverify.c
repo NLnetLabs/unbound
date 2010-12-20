@@ -148,6 +148,33 @@ should_be_bogus(struct ub_packed_rrset_key* rrset, struct query_info* qinfo)
 	return 0;
 }
 
+/** return number of rrs in an rrset */
+static size_t
+rrset_get_count(struct ub_packed_rrset_key* rrset)
+{
+	struct packed_rrset_data* d = (struct packed_rrset_data*)
+	rrset->entry.data;
+	if(!d) return 0;
+	return d->count;
+}
+
+/** setup sig alg list from dnskey */
+static void
+setup_sigalg(struct ub_packed_rrset_key* dnskey, uint8_t* sigalg)
+{
+	uint8_t a[ALGO_NEEDS_MAX];
+	size_t i, n = 0;
+	memset(a, 0, sizeof(a));
+	for(i=0; i<rrset_get_count(dnskey); i++) {
+		uint8_t algo = dnskey_get_algo(dnskey, i);
+		if(a[algo] == 0) {
+			a[algo] = 1;
+			sigalg[n++] = algo;
+		}
+	}
+	sigalg[n] = 0;
+}
+
 /** verify and test one rrset against the key rrset */
 static void
 verifytest_rrset(struct module_env* env, struct val_env* ve, 
@@ -156,12 +183,14 @@ verifytest_rrset(struct module_env* env, struct val_env* ve,
 {
 	enum sec_status sec;
 	char* reason = NULL;
+	uint8_t sigalg[ALGO_NEEDS_MAX+1];
 	if(vsig) {
 		log_nametypeclass(VERB_QUERY, "verify of rrset",
 			rrset->rk.dname, ntohs(rrset->rk.type),
 			ntohs(rrset->rk.rrset_class));
 	}
-	sec = dnskeyset_verify_rrset(env, ve, rrset, dnskey, 1, &reason);
+	setup_sigalg(dnskey, sigalg); /* check all algorithms in the dnskey */
+	sec = dnskeyset_verify_rrset(env, ve, rrset, dnskey, sigalg, &reason);
 	if(vsig) {
 		printf("verify outcome is: %s %s\n", sec_status_to_string(sec),
 			reason?reason:"");

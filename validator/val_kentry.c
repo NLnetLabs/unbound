@@ -58,6 +58,8 @@ key_entry_sizefunc(void* key, void* data)
 		s += packed_rrset_sizeof(kd->rrset_data);
 	if(kd->reason)
 		s += strlen(kd->reason)+1;
+	if(kd->algo)
+		s += strlen((char*)kd->algo)+1;
 	return s;
 }
 
@@ -91,6 +93,7 @@ key_entry_deldatafunc(void* data, void* ATTR_UNUSED(userarg))
 	struct key_entry_data* kd = (struct key_entry_data*)data;
 	free(kd->reason);
 	free(kd->rrset_data);
+	free(kd->algo);
 	free(kd);
 }
 
@@ -134,6 +137,12 @@ key_entry_copy_toregion(struct key_entry_key* kkey, struct regional* region)
 		if(d->reason) {
 			newd->reason = regional_strdup(region, d->reason);
 			if(!newd->reason)
+				return NULL;
+		}
+		if(d->algo) {
+			newd->algo = (uint8_t*)regional_strdup(region,
+				(char*)d->algo);
+			if(!newd->algo)
 				return NULL;
 		}
 		newk->entry.data = newd;
@@ -184,6 +193,17 @@ key_entry_copy(struct key_entry_key* kkey)
 			newd->reason = strdup(d->reason);
 			if(!newd->reason) {
 				free(newd->rrset_data);
+				free(newd);
+				free(newk->name);
+				free(newk);
+				return NULL;
+			}
+		}
+		if(d->algo) {
+			newd->algo = (uint8_t*)strdup((char*)d->algo);
+			if(!newd->algo) {
+				free(newd->rrset_data);
+				free(newd->reason);
 				free(newd);
 				free(newk->name);
 				free(newk);
@@ -267,13 +287,14 @@ key_entry_create_null(struct regional* region,
 	d->reason = NULL;
 	d->rrset_type = LDNS_RR_TYPE_DNSKEY;
 	d->rrset_data = NULL;
+	d->algo = NULL;
 	return k;
 }
 
 struct key_entry_key* 
 key_entry_create_rrset(struct regional* region,
 	uint8_t* name, size_t namelen, uint16_t dclass,
-	struct ub_packed_rrset_key* rrset, uint32_t now)
+	struct ub_packed_rrset_key* rrset, uint8_t* sigalg, uint32_t now)
 {
 	struct key_entry_key* k;
 	struct key_entry_data* d;
@@ -289,6 +310,11 @@ key_entry_create_rrset(struct regional* region,
 		rd, packed_rrset_sizeof(rd));
 	if(!d->rrset_data)
 		return NULL;
+	if(sigalg) {
+		d->algo = (uint8_t*)regional_strdup(region, (char*)sigalg);
+		if(!d->algo)
+			return NULL;
+	} else d->algo = NULL;
 	packed_rrset_ptr_fixup(d->rrset_data);
 	return k;
 }
@@ -307,6 +333,7 @@ key_entry_create_bad(struct regional* region,
 	d->reason = NULL;
 	d->rrset_type = LDNS_RR_TYPE_DNSKEY;
 	d->rrset_data = NULL;
+	d->algo = NULL;
 	return k;
 }
 
