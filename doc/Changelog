@@ -6,6 +6,7 @@
 	  for algorithms needs to be double-signature until the old algorithm
 	  is revoked.
 	  It is not an option, because I see no use to turn the security off.
+	- iana portlist updated.
 
 17 December 2010: Wouter
 	- squelch 'tcp connect: bla' in logfile, (set verbosity 2 to see them).
