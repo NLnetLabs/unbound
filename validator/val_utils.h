@@ -159,6 +159,27 @@ enum sec_status val_verify_DNSKEY_with_DS(struct module_env* env,
 	struct ub_packed_rrset_key* ds_rrset, uint8_t* sigalg, char** reason);
 
 /**
+ * Verify DNSKEYs with DS and DNSKEY rrset.  Like val_verify_DNSKEY_with_DS
+ * but for a trust anchor.
+ * @param env: module environment (scratch buffer)
+ * @param ve: validator environment (verification settings)
+ * @param dnskey_rrset: DNSKEY rrset to verify
+ * @param ta_ds: DS rrset to verify with.
+ * @param ta_dnskey: DNSKEY rrset to verify with.
+ * @param sigalg: if nonNULL provide downgrade protection otherwise one
+ *   algorithm is enough.  The list of signalled algorithms is returned,
+ *   must have enough space for ALGO_NEEDS_MAX+1.
+ * @param reason: reason of failure. Fixed string or alloced in scratch.
+ * @return: sec_status_secure if a DS matches.
+ *     sec_status_insecure if end of trust (i.e., unknown algorithms).
+ *     sec_status_bogus if it fails.
+ */
+enum sec_status val_verify_DNSKEY_with_TA(struct module_env* env, 
+	struct val_env* ve, struct ub_packed_rrset_key* dnskey_rrset, 
+	struct ub_packed_rrset_key* ta_ds,
+	struct ub_packed_rrset_key* ta_dnskey, uint8_t* sigalg, char** reason);
+
+/**
  * Verify new DNSKEYs with DS rrset. The DS contains hash values that should
  * match the DNSKEY keys.
  * match the DS to a DNSKEY and verify the DNSKEY rrset with that key.

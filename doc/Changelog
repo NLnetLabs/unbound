@@ -1,3 +1,12 @@
+21 December 2010: Wouter
+	- algorithm compromise protection using the algorithms signalled in
+	  the DS record.  Also, trust anchors, DLV, and RFC5011 receive this,
+	  and thus, if you have multiple algorithms in your trust-anchor-file
+	  then it will now behave different than before.  Also, 5011 rollover
+	  for algorithms needs to be double-signature until the old algorithm
+	  is revoked.
+	  It is not an option, because I see no use to turn the security off.
+
 17 December 2010: Wouter
 	- squelch 'tcp connect: bla' in logfile, (set verbosity 2 to see them).
 	- fix validation in this case: CNAME to nodata for co-hosted opt-in

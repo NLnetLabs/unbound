@@ -972,27 +972,17 @@ verify_dnskey(struct module_env* env, struct val_env* ve,
         struct trust_anchor* tp, struct ub_packed_rrset_key* rrset)
 {
 	char* reason = NULL;
-	if(tp->ds_rrset) {
-		/* verify with ds, any will do to prime autotrust */
-		enum sec_status sec = val_verify_DNSKEY_with_DS(
-			env, ve, rrset, tp->ds_rrset, 0, &reason);
-		verbose(VERB_ALGO, "autotrust: validate DNSKEY with DS: %s",
-			sec_status_to_string(sec));
-		if(sec == sec_status_secure) {
-			return 1;
-		}
-	}
-	if(tp->dnskey_rrset) {
-		/* verify with keys */
-		enum sec_status sec = val_verify_rrset(env, ve, rrset,
-			tp->dnskey_rrset, 0, &reason);
-		verbose(VERB_ALGO, "autotrust: validate DNSKEY with keys: %s",
-			sec_status_to_string(sec));
-		if(sec == sec_status_secure) {
-			return 1;
-		}
-	}
-	return 0;
+	uint8_t sigalg[ALGO_NEEDS_MAX+1];
+	int downprot = 1;
+	enum sec_status sec = val_verify_DNSKEY_with_TA(env, ve, rrset,
+		tp->ds_rrset, tp->dnskey_rrset, downprot?sigalg:NULL, &reason);
+	/* sigalg is ignored, it returns algorithms signalled to exist, but
+	 * in 5011 there are no other rrsets to check.  if downprot is
+	 * enabled, then it checks that the DNSKEY is signed with all
+	 * algorithms available in the trust store. */
+	verbose(VERB_ALGO, "autotrust: validate DNSKEY with anchor: %s",
+		sec_status_to_string(sec));
+	return sec == sec_status_secure;
 }
 
 /** Find minimum expiration interval from signatures */
@@ -1024,6 +1014,8 @@ rr_is_selfsigned_revoked(struct module_env* env, struct val_env* ve,
 	char* reason = NULL;
 	verbose(VERB_ALGO, "seen REVOKE flag, check self-signed, rr %d",
 		(int)i);
+	/* no algorithm downgrade protection necessary, if it is selfsigned
+	 * revoked it can be removed. */
 	sec = dnskey_verify_rrset(env, ve, dnskey_rrset, dnskey_rrset, i, 
 		&reason);
 	return (sec == sec_status_secure);

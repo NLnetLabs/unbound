@@ -551,8 +551,8 @@ val_verify_DNSKEY_with_TA(struct module_env* env, struct val_env* ve,
 	struct ub_packed_rrset_key* ta_ds,
 	struct ub_packed_rrset_key* ta_dnskey, uint8_t* sigalg, char** reason)
 {
-	/* as long as this is false, we can consider this DS rrset to be
-	 * equivalent to no DS rrset. */
+	/* as long as this is false, we can consider this anchor to be
+	 * equivalent to no anchor. */
 	int has_useful_ta = 0, digest_algo = 0, alg;
 	struct algo_needs needs;
 	size_t i, num;
@@ -591,9 +591,8 @@ val_verify_DNSKEY_with_TA(struct module_env* env, struct val_env* ve,
 		 * And check it is the strongest digest */
 		if(!ds_digest_algo_is_supported(ta_ds, i) ||
 			!ds_key_algo_is_supported(ta_ds, i) ||
-			ds_get_digest_algo(ta_ds, i) != digest_algo) {
+			ds_get_digest_algo(ta_ds, i) != digest_algo)
 			continue;
-		}
 
 		/* Once we see a single DS with a known digestID and 
 		 * algorithm, we cannot return INSECURE (with a 
@@ -620,9 +619,8 @@ val_verify_DNSKEY_with_TA(struct module_env* env, struct val_env* ve,
 	    num = rrset_get_count(ta_dnskey);
 	    for(i=0; i<num; i++) {
 		/* Check to see if we can understand this DNSKEY */
-		if(!dnskey_algo_is_supported(ta_dnskey, i)) {
+		if(!dnskey_algo_is_supported(ta_dnskey, i))
 			continue;
-		}
 
 		/* we saw a useful TA */
 		has_useful_ta = true;
@@ -632,7 +630,7 @@ val_verify_DNSKEY_with_TA(struct module_env* env, struct val_env* ve,
 		if(sec == sec_status_secure) {
 			if(!sigalg || algo_needs_set_secure(&needs,
 				(uint8_t)dnskey_get_algo(ta_dnskey, i))) {
-				verbose(VERB_ALGO, "DS matched DNSKEY.");
+				verbose(VERB_ALGO, "anchor matched DNSKEY.");
 				return sec_status_secure;
 			}
 		} else if(sigalg && sec == sec_status_bogus) {
@@ -641,7 +639,6 @@ val_verify_DNSKEY_with_TA(struct module_env* env, struct val_env* ve,
 		}
 	    }
 	}
-
 
 	/* If no DSs were understandable, then this is OK. */
 	if(!has_useful_ta) {
@@ -659,7 +656,7 @@ val_verify_DNSKEY_with_TA(struct module_env* env, struct val_env* ve,
 }
 
 struct key_entry_key* 
-val_verify_new_DNSKEYs_with_ta(struct regional* region, struct module_env* env, 
+val_verify_new_DNSKEYs_with_ta(struct regional* region, struct module_env* env,
 	struct val_env* ve, struct ub_packed_rrset_key* dnskey_rrset, 
 	struct ub_packed_rrset_key* ta_ds_rrset,
 	struct ub_packed_rrset_key* ta_dnskey_rrset, int downprot,

@@ -2241,6 +2241,7 @@ primeResponseToKE(struct ub_packed_rrset_key* dnskey_rrset,
 	struct key_entry_key* kkey = NULL;
 	enum sec_status sec = sec_status_unchecked;
 	char* reason = NULL;
+	int downprot = 1;
 
 	if(!dnskey_rrset) {
 		log_nametypeclass(VERB_OPS, "failed to prime trust anchor -- "
@@ -2262,7 +2263,8 @@ primeResponseToKE(struct ub_packed_rrset_key* dnskey_rrset,
 	}
 	/* attempt to verify with trust anchor DS and DNSKEY */
 	kkey = val_verify_new_DNSKEYs_with_ta(qstate->region, qstate->env, ve, 
-		dnskey_rrset, ta->ds_rrset, ta->dnskey_rrset, 0, &reason);
+		dnskey_rrset, ta->ds_rrset, ta->dnskey_rrset, downprot,
+		&reason);
 	if(!kkey) {
 		log_err("out of memory: verifying prime TA");
 		return NULL;
