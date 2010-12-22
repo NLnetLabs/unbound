@@ -453,26 +453,6 @@ int dnskey_algo_is_supported(struct ub_packed_rrset_key* dnskey_rrset,
 		dnskey_idx));
 }
 
-void algo_needs_init_dnskey(struct algo_needs* n,
-        struct ub_packed_rrset_key* dnskey)
-{
-	uint8_t algo;
-	size_t i, total = 0;
-	size_t num = rrset_get_count(dnskey);
-
-	memset(n->needs, 0, sizeof(uint8_t)*ALGO_NEEDS_MAX);
-	for(i=0; i<num; i++) {
-		algo = (uint8_t)dnskey_get_algo(dnskey, i);
-		if(!dnskey_algo_id_is_supported((int)algo))
-			continue;
-		if(n->needs[algo] == 0) {
-			n->needs[algo] = 1;
-			total++;
-		}
-	}
-	n->num = total;
-}
-
 void algo_needs_init_dnskey_add(struct algo_needs* n,
         struct ub_packed_rrset_key* dnskey, uint8_t* sigalg)
 {
@@ -500,12 +480,11 @@ void algo_needs_init_list(struct algo_needs* n, uint8_t* sigalg)
 	size_t total = 0;
 
 	memset(n->needs, 0, sizeof(uint8_t)*ALGO_NEEDS_MAX);
-	while( (algo=*sigalg) != 0) {
+	while( (algo=*sigalg++) != 0) {
 		log_assert(dnskey_algo_id_is_supported((int)algo));
 		log_assert(n->needs[algo] == 0);
 		n->needs[algo] = 1;
 		total++;
-		sigalg++;
 	}
 	n->num = total;
 }
@@ -667,7 +646,7 @@ dnskey_verify_rrset(struct module_env* env, struct val_env* ve,
 		numchecked ++;
 	}
 	verbose(VERB_ALGO, "rrset failed to verify: all signatures are bogus");
-	if(!numchecked) *reason = "signatures from unknown keys";
+	if(!numchecked) *reason = "signature missing";
 	return sec_status_bogus;
 }
 

@@ -70,14 +70,6 @@ struct algo_needs {
 
 /**
  * Initialize algo needs structure, set algos from rrset as needed.
- * @param n: struct with storage.
- * @param dnskey: algos from this struct set as necessary. DNSKEY set.
- */
-void algo_needs_init_dnskey(struct algo_needs* n,
-	struct ub_packed_rrset_key* dnskey);
-
-/**
- * Initialize algo needs structure, set algos from rrset as needed.
  * Results are added to an existing need structure.
  * @param n: struct with storage.
  * @param dnskey: algos from this struct set as necessary. DNSKEY set.
