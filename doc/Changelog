@@ -1,3 +1,6 @@
+23 December 2010: Wouter
+	- Fix in infra cache that could cause rto larger than TOP_TIMEOUT kept.
+
 21 December 2010: Wouter
 	- algorithm compromise protection using the algorithms signalled in
 	  the DS record.  Also, trust anchors, DLV, and RFC5011 receive this,

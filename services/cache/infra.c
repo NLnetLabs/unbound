@@ -275,7 +275,8 @@ infra_host(struct infra_cache* infra, struct sockaddr_storage* addr,
 			wr = 1;
 			/* TOP_TIMEOUT remains on reuse */
 			if(old >= USEFUL_SERVER_TOP_TIMEOUT)
-				((struct infra_host_data*)e->data)->rtt.rto=old;
+				((struct infra_host_data*)e->data)->rtt.rto
+					= USEFUL_SERVER_TOP_TIMEOUT;
 		}
 	}
 	if(!e) {
