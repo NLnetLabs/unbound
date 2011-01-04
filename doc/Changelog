@@ -1,3 +1,6 @@
+4 January 2011: Wouter
+	- bug#346: remove ITAR scripts from contrib, the service is discontinued, use the root.
+
 23 December 2010: Wouter
 	- Fix in infra cache that could cause rto larger than TOP_TIMEOUT kept.
 

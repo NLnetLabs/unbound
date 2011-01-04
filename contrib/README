@@ -7,9 +7,6 @@ distribution but may be helpful.
 * unbound.spec and unbound.init: RPM specfile and Linux rc.d initfile.
 * update-anchor.sh: shell script that uses unbound-host to update a set
 	of trust anchor files. Run from cron twice a month.
-* update-itar.sh: shell script that updates from itar.iana.org. Run from cron.
-* split-itar.sh: shell script to split anchors.mf from itar.iana.org into
-	multiple key files so it can be used with auto-trust-anchor-file.
 * unbound_munin_ : plugin for munin statistics report
 * unbound_cacti.tar.gz : setup files for cacti statistics report
 * selinux: the .fc and .te files for SElinux protection of the unbound daemon
