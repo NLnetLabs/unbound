@@ -539,7 +539,7 @@ daemon_delete(struct daemon* daemon)
 #endif
 #if HAVE_DECL_SSL_COMP_GET_COMPRESSION_METHODS && HAVE_DECL_SK_SSL_COMP_POP_FREE
 #ifndef S_SPLINT_S
-	sk_SSL_COMP_pop_free(comp_meth, (void*)CRYPTO_free);
+	sk_SSL_COMP_pop_free(comp_meth, (void(*)())CRYPTO_free);
 #endif
 #endif
 #ifdef HAVE_OPENSSL_CONFIG
