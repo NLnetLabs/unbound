@@ -225,7 +225,22 @@ endif
 
 libunbound.la:	$(LIBUNBOUND_OBJ) $(ldnslib)
 	$(INFO) Link $@
+ifeq ($(CHECKLOCK_SRC),)
 	$Q$(LINK_LIB) -export-symbols $(srcdir)/libunbound/ubsyms.def -o $@ $(sort $(LIBUNBOUND_OBJ)) -rpath $(libdir) $(LIBS)
+else
+	cp $(srcdir)/libunbound/ubsyms.def $(BUILD)clubsyms.def
+	echo lock_protect >> $(BUILD)clubsyms.def
+	echo lock_unprotect >> $(BUILD)clubsyms.def
+	echo lock_get_mem >> $(BUILD)clubsyms.def
+	echo checklock_start >> $(BUILD)clubsyms.def
+	echo checklock_stop >> $(BUILD)clubsyms.def
+	echo checklock_lock >> $(BUILD)clubsyms.def
+	echo checklock_unlock >> $(BUILD)clubsyms.def
+	echo checklock_init >> $(BUILD)clubsyms.def
+	echo checklock_thrcreate >> $(BUILD)clubsyms.def
+	echo checklock_thrjoin >> $(BUILD)clubsyms.def
+	$Q$(LINK_LIB) -export-symbols $(BUILD)clubsyms.def -o $@ $(sort $(LIBUNBOUND_OBJ)) -rpath $(libdir) $(LIBS)
+endif
 
 unbound$(EXEEXT):	$(DAEMON_OBJ) $(ldnslib)
 	$(INFO) Link $@
