@@ -1,3 +1,6 @@
+10 January 2011: Wouter
+	- faster lruhash get_mem routine.
+
 4 January 2011: Wouter
 	- bug#346: remove ITAR scripts from contrib, the service is discontinued, use the root.
 	- iana portlist updated.

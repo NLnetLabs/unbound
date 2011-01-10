@@ -492,13 +492,20 @@ size_t
 lruhash_get_mem(struct lruhash* table)
 {
 	size_t s;
-	size_t i;
 	lock_quick_lock(&table->lock);
 	s = sizeof(struct lruhash) + table->space_used;
-	for(i=0; i<table->size; i++) {
-		s +=  sizeof(struct lruhash_bin) + 
-			lock_get_mem(&table->array[i].lock);
+#ifdef USE_THREAD_DEBUG
+	if(table->size != 0) {
+		size_t i;
+		for(i=0; i<table->size; i++)
+			s += sizeof(struct lruhash_bin) + 
+				lock_get_mem(&table->array[i].lock);
 	}
+#else /* no THREAD_DEBUG */
+	if(table->size != 0)
+		s += (table->size)*(sizeof(struct lruhash_bin) + 
+			lock_get_mem(&table->array[0].lock));
+#endif
 	lock_quick_unlock(&table->lock);
 	s += lock_get_mem(&table->lock);
 	return s;
