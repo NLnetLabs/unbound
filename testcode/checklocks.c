@@ -52,7 +52,7 @@
 #ifdef USE_THREAD_DEBUG
 
 /** How long to wait before lock attempt is a failure. */
-#define CHECK_LOCK_TIMEOUT 30 /* seconds */
+#define CHECK_LOCK_TIMEOUT 120 /* seconds */
 /** How long to wait before join attempt is a failure. */
 #define CHECK_JOIN_TIMEOUT 120 /* seconds */
 
