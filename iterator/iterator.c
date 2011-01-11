@@ -940,6 +940,11 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 				qstate->env->scratch_buffer, 
 				*qstate->env->now, 1/*add SOA*/, NULL);
 		}
+		/* item taken from cache does not match our query name, thus
+		 * security needs to be re-examined later */
+		if(msg && query_dname_compare(qstate->qinfo.qname,
+			iq->qchase.qname) != 0)
+			msg->rep->security = sec_status_unchecked;
 	}
 	if(msg) {
 		/* handle positive cache response */
@@ -2398,6 +2403,8 @@ processFinished(struct module_qstate* qstate, struct iter_qstate* iq,
 		}
 		/* reset the query name back */
 		iq->response->qinfo = qstate->qinfo;
+		/* the security state depends on the combination */
+		iq->response->rep->security = sec_status_unchecked;
 		/* store message with the finished prepended items,
 		 * but only if we did recursion. The nonrecursion referral
 		 * from cache does not need to be stored in the msg cache. */

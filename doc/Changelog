@@ -1,3 +1,7 @@
+11 January 2011: Wouter
+	- Fix insecure CNAME sequence marked as secure, reported by Bert
+	  Hubert.
+
 10 January 2011: Wouter
 	- faster lruhash get_mem routine.
 
