@@ -1,3 +1,6 @@
+12 January 2011: Wouter
+	- iana portlist updated.
+
 11 January 2011: Wouter
 	- Fix insecure CNAME sequence marked as secure, reported by Bert
 	  Hubert.
