@@ -1,3 +1,6 @@
+13 January 2011: Wouter
+	- Fix prefetch so it does not get stuck on old server for moved names.
+
 12 January 2011: Wouter
 	- iana portlist updated.
 
