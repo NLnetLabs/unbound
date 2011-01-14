@@ -352,7 +352,8 @@ rrset_update_sec_status(struct rrset_cache* r,
 		cachedata->security = updata->security;
 		/* for NS records only shorter TTLs, other types: update it */
 		if(ntohs(rrset->rk.type) != LDNS_RR_TYPE_NS ||
-			updata->ttl+now < cachedata->ttl) {
+			updata->ttl+now < cachedata->ttl ||
+			cachedata->ttl < now) {
 			cachedata->ttl = updata->ttl + now;
 			for(i=0; i<cachedata->count+cachedata->rrsig_count; i++)
 				cachedata->rr_ttl[i] = updata->rr_ttl[i]+now;
