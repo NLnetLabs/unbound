@@ -120,7 +120,7 @@ rrset_cache_touch(struct rrset_cache* r, struct ub_packed_rrset_key* key,
 
 /** see if rrset needs to be updated in the cache */
 static int
-need_to_update_rrset(void* nd, void* cd, uint32_t timenow, int equal)
+need_to_update_rrset(void* nd, void* cd, uint32_t timenow, int equal, int ns)
 {
 	struct packed_rrset_data* newd = (struct packed_rrset_data*)nd;
 	struct packed_rrset_data* cached = (struct packed_rrset_data*)cd;
@@ -146,8 +146,20 @@ need_to_update_rrset(void* nd, void* cd, uint32_t timenow, int equal)
 	if( cached->ttl < timenow )
 		return 1;
         /*      o same trust, but different in data - insert it */
-        if( newd->trust == cached->trust && !equal )
+        if( newd->trust == cached->trust && !equal ) {
+		/* if this is type NS, do not 'stick' to owner that changes
+		 * the NS RRset, but use the old TTL for the new data, and
+		 * update to fetch the latest data. ttl is not expired, because
+		 * that check was before this one. */
+		if(ns) {
+			size_t i;
+			newd->ttl = cached->ttl;
+			for(i=0; i<(newd->count+newd->rrsig_count); i++)
+				if(newd->rr_ttl[i] > newd->ttl)
+					newd->rr_ttl[i] = newd->ttl;
+		}
                 return 1;
+	}
         return 0;
 }
 
@@ -191,7 +203,7 @@ rrset_cache_update(struct rrset_cache* r, struct rrset_ref* ref,
 		equal = rrsetdata_equal((struct packed_rrset_data*)k->entry.
 			data, (struct packed_rrset_data*)e->data);
 		if(!need_to_update_rrset(k->entry.data, e->data, timenow,
-			equal)) {
+			equal, (rrset_type==LDNS_RR_TYPE_NS))) {
 			/* cache is superior, return that value */
 			lock_rw_unlock(&e->lock);
 			ub_packed_rrset_parsedelete(k, alloc);
@@ -338,9 +350,13 @@ rrset_update_sec_status(struct rrset_cache* r,
 		if(updata->trust > cachedata->trust)
 			cachedata->trust = updata->trust;
 		cachedata->security = updata->security;
-		cachedata->ttl = updata->ttl + now;
-		for(i=0; i<cachedata->count+cachedata->rrsig_count; i++)
-			cachedata->rr_ttl[i] = updata->rr_ttl[i]+now;
+		/* for NS records only shorter TTLs, other types: update it */
+		if(ntohs(rrset->rk.type) != LDNS_RR_TYPE_NS ||
+			updata->ttl+now < cachedata->ttl) {
+			cachedata->ttl = updata->ttl + now;
+			for(i=0; i<cachedata->count+cachedata->rrsig_count; i++)
+				cachedata->rr_ttl[i] = updata->rr_ttl[i]+now;
+		}
 	}
 	lock_rw_unlock(&e->lock);
 }

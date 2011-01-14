@@ -1,3 +1,7 @@
+14 January 2011: Wouter
+	- Fix so a changed NS RRset does not get moved name stuck on old
+	  server, for type NS the TTL is not increased.
+
 13 January 2011: Wouter
 	- Fix prefetch so it does not get stuck on old server for moved names.
 
