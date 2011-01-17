@@ -1,3 +1,6 @@
+17 January 2011: Wouter
+	- add get and set option for harden-below-nxdomain feature.
+
 14 January 2011: Wouter
 	- Fix so a changed NS RRset does not get moved name stuck on old
 	  server, for type NS the TTL is not increased.
