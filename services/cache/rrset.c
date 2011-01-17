@@ -145,8 +145,8 @@ need_to_update_rrset(void* nd, void* cd, uint32_t timenow, int equal, int ns)
 	/*	o item in cache has expired */
 	if( cached->ttl < timenow )
 		return 1;
-        /*      o same trust, but different in data - insert it */
-        if( newd->trust == cached->trust && !equal ) {
+	/*  o same trust, but different in data - insert it */
+	if( newd->trust == cached->trust && !equal ) {
 		/* if this is type NS, do not 'stick' to owner that changes
 		 * the NS RRset, but use the old TTL for the new data, and
 		 * update to fetch the latest data. ttl is not expired, because
@@ -158,9 +158,9 @@ need_to_update_rrset(void* nd, void* cd, uint32_t timenow, int equal, int ns)
 				if(newd->rr_ttl[i] > newd->ttl)
 					newd->rr_ttl[i] = newd->ttl;
 		}
-                return 1;
+		return 1;
 	}
-        return 0;
+	return 0;
 }
 
 /** Update RRSet special key ID */
