@@ -700,9 +700,9 @@ AC_ARG_WITH(ldns, AC_HELP_STRING([--with-ldns=PATH],
 	[specify prefix of path of ldns library to use]), 
 	[ specialldnsdir="$withval"
 	if test "$withval" != "yes"; then
-		if test "$withval" != ""; then
+		if test "$withval" != "/usr" -a "$withval" != ""; then
 			CPPFLAGS="-I$withval/include $CPPFLAGS"
-			LDFLAGS="-L$withval -L$withval/lib $LDFLAGS"
+			LDFLAGS="-L$withval/lib $LDFLAGS"
 			ACX_RUNTIME_PATH_ADD([$withval/lib])
 		fi
 		ldnsdir="$withval"

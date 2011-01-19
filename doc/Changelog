@@ -1,3 +1,6 @@
+19 January 2011: Wouter
+	- fix bug#349: no -L/usr for ldns.
+
 18 January 2011: Wouter
 	- ldns 1.6.8 tarball included.
 

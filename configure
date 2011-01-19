@@ -16490,9 +16490,9 @@ use_ldns_builtin="no"
 if test "${with_ldns+set}" = set; then :
   withval=$with_ldns;  specialldnsdir="$withval"
 	if test "$withval" != "yes"; then
-		if test "$withval" != ""; then
+		if test "$withval" != "/usr" -a "$withval" != ""; then
 			CPPFLAGS="-I$withval/include $CPPFLAGS"
-			LDFLAGS="-L$withval -L$withval/lib $LDFLAGS"
+			LDFLAGS="-L$withval/lib $LDFLAGS"
 
 	if test "x$enable_rpath" = xyes; then
 		if echo "$withval/lib" | grep "^/" >/dev/null; then
