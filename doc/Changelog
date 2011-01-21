@@ -3,6 +3,7 @@
 
 18 January 2011: Wouter
 	- ldns 1.6.8 tarball included.
+	- release 1.4.8rc1.
 
 17 January 2011: Wouter
 	- add get and set option for harden-below-nxdomain feature.
