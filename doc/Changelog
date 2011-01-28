@@ -1,3 +1,9 @@
+28 January 2011: Wouter
+	- Fix remove private address does not throw away entire response.
+
+24 January 2011: Wouter
+	- release 1.4.8
+
 19 January 2011: Wouter
 	- fix bug#349: no -L/usr for ldns.
 

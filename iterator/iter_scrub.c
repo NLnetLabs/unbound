@@ -643,9 +643,9 @@ scrub_sanitize(ldns_buffer* pkt, struct msg_parse* msg,
 		if( (rrset->type == LDNS_RR_TYPE_A || 
 			rrset->type == LDNS_RR_TYPE_AAAA) &&
 			priv_rrset_bad(ie->priv, pkt, rrset)) {
-			/* set servfail, so the classification becomes
-			 * THROWAWAY, instead of LAME or other unwanted */
-			FLAGS_SET_RCODE(msg->flags, LDNS_RCODE_SERVFAIL);
+
+			/* do not set servfail since this leads to too
+			 * many drops of other people using rfc1918 space */
 			remove_rrset("sanitize: removing public name with "
 				"private address", pkt, msg, prev, &rrset);
 			continue;
