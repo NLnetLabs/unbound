@@ -1,6 +1,7 @@
 7 February 2011: Wouter
 	- Added regression test for addition of a .net DS to the root, and
 	  cache effects with different TTL for glue and DNSKEY.
+	- iana portlist updated.
 
 28 January 2011: Wouter
 	- Fix remove private address does not throw away entire response.
