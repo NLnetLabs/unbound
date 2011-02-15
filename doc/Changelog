@@ -1,3 +1,8 @@
+15 February 2011: Wouter
+	- Added explicit note on unbound-anchor usage:
+	  Please note usage of unbound-anchor root anchor is at your own risk
+	  and under the terms of our LICENSE (see that file in the source).
+
 11 February 2011: Wouter
 	- iana portlist updated.
 	- tpkg updated with common.sh for common functionality.

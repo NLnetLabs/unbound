@@ -26,6 +26,9 @@ Suggested usage:
 	# in the init scripts.
 	# provide or update the root anchor (if necessary)
 	unbound-anchor -a "@UNBOUND_ROOTKEY_FILE@"
+	# Please note usage of this root anchor is at your own risk
+	# and under the terms of our LICENSE (see source).
+	#
 	# start validating resolver
 	# the unbound.conf contains:
 	#   auto-trust-anchor-file: "@UNBOUND_ROOTKEY_FILE@"
