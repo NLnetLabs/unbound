@@ -1,7 +1,8 @@
 # common.sh - an include file for commonly used functions for test code.
 # BSD licensed (see LICENSE file).
 #
-# Version 1
+# Version 2
+# 2011-02-18: ports check on BSD,Solaris. wait_nsd_up.
 # 2011-02-11: first version.
 #
 # include this file from a tpkg script with
@@ -21,6 +22,7 @@
 # wait_ldns_testns_up   : wait for ldns-testns to come up.
 # wait_unbound_up	: wait for unbound to come up.
 # wait_petal_up		: wait for petal to come up.
+# wait_nsd_up		: wait for nsd to come up.
 # wait_server_up_or_fail: wait for server to come up or print a failure string
 # kill_pid		: kill a server, make sure and wait for it to go down.
 
@@ -37,7 +39,7 @@ error () {
 # $0: name of program
 # $1: to printout.
 info () {
-	    echo "$0: info: $1"
+	echo "$0: info: $1"
 }
 
 # test if 'tool' is available in path and complain otherwise.
@@ -105,7 +107,13 @@ get_random_port () {
 		# depending on uname try to check for collisions in port numbers
 		case "`uname`" in
 		linux|Linux)
-			plist=`netstat -n -A ip -A ip6 -a | sed -e "s/^.*:\([0-9]*\) .*$/\1/"`
+			plist=`netstat -n -A ip -A ip6 -a | sed -e 's/^.*:\([0-9]*\) .*$/\1/'`
+		;;
+		FreeBSD|freebsd|NetBSD|netbsd|OpenBSD|openbsd)
+			plist=`netstat -n -a | grep "^[ut][dc]p[46] " | sed -e 's/^.*\.\([0-9]*\) .*$/\1/'`
+		;;
+		Solaris|SunOS)
+			plist=`netstat -n -a | sed -e 's/^.*\.\([0-9]*\) .*$/\1/' | grep '^[0-9]*$'`
 		;;
 		*)
 			plist=""
@@ -166,6 +174,13 @@ wait_unbound_up () {
 # $1 : logfilename that is watched.
 wait_petal_up () {
 	wait_server_up "$1" "petal start"
+}
+
+# wait for nsd to come up
+# string nsd start in log.
+# $1 : logfilename that is watched.
+wait_nsd_up () {
+	wait_server_up "$1" " started (NSD "
 }
 
 # wait for server to go up, pass <logfilename> <string to watch> <badstr>

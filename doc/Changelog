@@ -1,3 +1,6 @@
+18 February 2011: Wouter
+	- common.sh in testdata updated to version 2.
+
 15 February 2011: Wouter
 	- Added explicit note on unbound-anchor usage:
 	  Please note usage of unbound-anchor root anchor is at your own risk
