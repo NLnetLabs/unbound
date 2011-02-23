@@ -1,7 +1,8 @@
 # common.sh - an include file for commonly used functions for test code.
 # BSD licensed (see LICENSE file).
 #
-# Version 2
+# Version 3
+# 2011-02-23: get_pcat for PCAT, PCAT_DIFF and PCAT_PRINT defines.
 # 2011-02-18: ports check on BSD,Solaris. wait_nsd_up.
 # 2011-02-11: first version.
 #
@@ -14,7 +15,8 @@
 # test_tool_avail x	: see if program in path and complain, exit if not.
 # get_ldns_testns	: set LDNS_TESTNS to executable ldns-testns
 # get_make		: set MAKE to gmake or make tool.
-# get_gcc		: get cc or gcc in CC
+# get_gcc		: set cc or gcc in CC
+# get_pcat		: set PCAT, PCAT_DIFF and PCAT_PRINT executables.
 # set_doxygen_path	: set doxygen path
 # skip_if_in_list	: set SKIP=1 if name in list and tool not available.
 # get_random_port x	: get RND_PORT a sequence of free random port numbers.
@@ -76,6 +78,13 @@ get_gcc () {
 	else
 		CC=cc
 	fi
+}
+
+# get pcat, pcat-print and pcat-diff
+get_pcat () {
+	PCAT=`which pcat`
+	PCAT_PRINT=`which pcat-print`
+	PCAT_DIFF=`which pcat-diff`
 }
 
 # set SKIP=1 if the name is in list and tool is not available.
