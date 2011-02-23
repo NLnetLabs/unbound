@@ -81,6 +81,7 @@ mv $name.dir/* .
 
 # EXE
 echo "minitpkg exe $name" > $result
+echo "DateRunStart: "`date "+%s" 2>/dev/null` >> $result
 if test -f $name.pre; then
 	echo "minitpkg exe $name.pre"
 	echo "minitpkg exe $name.pre" >> $result
@@ -112,6 +113,7 @@ if test -f $name.post; then
 		echo "Warning: $name.post did not exit successfully"
 	fi
 fi
+echo "DateRunEnd: "`date "+%s" 2>/dev/null` >> $result
 
 mv $result ..
 cd ..
