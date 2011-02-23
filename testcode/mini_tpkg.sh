@@ -81,6 +81,7 @@ mv $name.dir/* .
 
 # EXE
 echo "minitpkg exe $name" > $result
+grep "Description:" $name.dsc >> $result 2>&1
 echo "DateRunStart: "`date "+%s" 2>/dev/null` >> $result
 if test -f $name.pre; then
 	echo "minitpkg exe $name.pre"
