@@ -702,13 +702,14 @@ print_mem(SSL* ssl, struct worker* worker, struct daemon* daemon)
 
 /** print uptime stats */
 static int
-print_uptime(SSL* ssl, struct worker* worker)
+print_uptime(SSL* ssl, struct worker* worker, int reset)
 {
 	struct timeval now = *worker->env.now_tv;
 	struct timeval up, dt;
 	timeval_subtract(&up, &now, &worker->daemon->time_boot);
 	timeval_subtract(&dt, &now, &worker->daemon->time_last_stat);
-	worker->daemon->time_last_stat = now;
+	if(reset)
+		worker->daemon->time_last_stat = now;
 	if(!ssl_printf(ssl, "time.now"SQ"%d.%6.6d\n", 
 		(unsigned)now.tv_sec, (unsigned)now.tv_usec)) return 0;
 	if(!ssl_printf(ssl, "time.up"SQ"%d.%6.6d\n", 
@@ -892,7 +893,7 @@ do_stats(SSL* ssl, struct daemon_remote* rc, int reset)
 	total.mesh_time_median /= (double)daemon->num;
 	if(!print_stats(ssl, "total", &total)) 
 		return;
-	if(!print_uptime(ssl, rc->worker))
+	if(!print_uptime(ssl, rc->worker, reset))
 		return;
 	if(daemon->cfg->stat_extended) {
 		if(!print_mem(ssl, rc->worker, daemon)) 
