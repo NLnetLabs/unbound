@@ -1055,6 +1055,11 @@ nsec3_do_prove_nameerror(struct module_env* env, struct nsec3_filter* flt,
 			"that the applicable wildcard did not exist.");
 		return sec_status_bogus;
 	}
+
+	if(ce.nc_rrset && nsec3_has_optout(ce.nc_rrset, ce.nc_rr)) {
+		verbose(VERB_ALGO, "nsec3 nameerror proof: nc has optout");
+		return sec_status_insecure;
+	}
 	return sec_status_secure;
 }
 
@@ -1264,6 +1269,10 @@ nsec3_prove_wildcard(struct module_env* env, struct val_env* ve,
 			"NSEC3 that covered the next closer name.");
 		return sec_status_bogus;
 	}
+	if(ce.nc_rrset && nsec3_has_optout(ce.nc_rrset, ce.nc_rr)) {
+		verbose(VERB_ALGO, "proveWildcard: NSEC3 optout");
+		return sec_status_insecure;
+	}
 	return sec_status_secure;
 }
 
@@ -1381,7 +1390,7 @@ nsec3_prove_nxornodata(struct module_env* env, struct val_env* ve,
 	struct ub_packed_rrset_key** list, size_t num, 
 	struct query_info* qinfo, struct key_entry_key* kkey, int* nodata)
 {
-	enum sec_status sec;
+	enum sec_status sec, secnx;
 	rbtree_t ct;
 	struct nsec3_filter flt;
 	*nodata = 0;
@@ -1398,12 +1407,16 @@ nsec3_prove_nxornodata(struct module_env* env, struct val_env* ve,
 	/* try nxdomain and nodata after another, while keeping the
 	 * hash cache intact */
 
-	sec = nsec3_do_prove_nameerror(env, &flt, &ct, qinfo);
-	if(sec==sec_status_secure)
+	secnx = nsec3_do_prove_nameerror(env, &flt, &ct, qinfo);
+	if(secnx==sec_status_secure)
 		return sec_status_secure;
 	sec = nsec3_do_prove_nodata(env, &flt, &ct, qinfo);
 	if(sec==sec_status_secure) {
 		*nodata = 1;
+	} else if(sec == sec_status_insecure) {
+		*nodata = 1;
+	} else if(secnx == sec_status_insecure) {
+		sec = sec_status_insecure;
 	}
 	return sec;
 }

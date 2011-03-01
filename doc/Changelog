@@ -1,3 +1,6 @@
+1 March 2011: Wouter
+	- Fix no ADflag for NXDOMAIN in NSEC3 optout. And wildcard in optout.
+
 24 February 2011: Wouter
 	- bug #361: Fix, time.elapsed variable not reset with stats_noreset.
 
