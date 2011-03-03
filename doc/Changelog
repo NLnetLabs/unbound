@@ -1,3 +1,6 @@
+3 March 2011: Wouter
+	- updated ldns to today.
+
 1 March 2011: Wouter
 	- Fix no ADflag for NXDOMAIN in NSEC3 optout. And wildcard in optout.
 	- give config parse error for multiple names on a stub or forward zone.
