@@ -1,6 +1,6 @@
 Summary: Validating, recursive, and caching DNS resolver
 Name: unbound
-Version: 1.4.4
+Version: 1.4.8
 Release: 1%{?dist}
 License: BSD
 Url: http://www.nlnetlabs.nl/unbound/
@@ -8,7 +8,7 @@ Source: http://www.unbound.net/downloads/%{name}-%{version}.tar.gz
 #Source1: unbound.init
 Group: System Environment/Daemons
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
-BuildRequires: flex, openssl-devel
+BuildRequires: flex, openssl-devel, expat-devel
 
 %description
 Unbound is a validating, recursive, and caching DNS resolver.
@@ -32,7 +32,7 @@ The source code is under a BSD License.
 # This is a build using libldns builtin version, the resulting binaries
 # do not require libldns and this package does not have version dependencies.
 # Could be smaller using a dependency on libldns (use --with-ldns=).
-%configure --with-conf-file=%{_localstatedir}/%{name}/unbound.conf --disable-rpath
+%configure --with-conf-file=%{_localstatedir}/%{name}/unbound.conf --disable-rpath --with-ldns-builtin
 
 %build
 #%{__make} %{?_smp_mflags}
@@ -92,6 +92,15 @@ if [ "$1" -ge "1" ]; then
 fi
 
 %changelog
+* Thu Mar 17 2011 Wouter Wijngaards <wouter@nlnetlabs.nl> - 1.4.8
+- removed --disable-gost, assume recent openssl on the destination platform.
+
+* Wed Mar 16 2011 Harold Jones <hajones@verisign.com> - 1.4.8
+- Bump version number to latest
+- Add expat-devel to BuildRequires
+- Added --disable-gost for building on CentOS 5.x
+- Added --with-ldns-builtin for CentOS 5.x
+
 * Thu May 22 2008 Wouter Wijngaards <wouter@nlnetlabs.nl> - 1.0.0
 - contrib changes from Patrick Vande Walle.
 
