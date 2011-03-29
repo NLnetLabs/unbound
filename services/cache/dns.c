@@ -685,7 +685,7 @@ dns_cache_lookup(struct module_env* env,
 			struct reply_info* data = (struct reply_info*)e->data;
 			struct dns_msg* msg;
 			if(FLAGS_GET_RCODE(data->flags) == LDNS_RCODE_NXDOMAIN
-			  && data->security != sec_status_bogus
+			  && data->security == sec_status_secure
 			  && (msg=tomsg(env, &k, data, region, now, scratch))){
 				lock_rw_unlock(&e->lock);
 				msg->qinfo.qname=qname;

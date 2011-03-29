@@ -1,3 +1,8 @@
+29 March 2011: Wouter
+	- harden-below-nxdomain: changed so that it activates when the
+	  cached nxdomain is dnssec secure.  This avoids backwards
+	  incompatibility because those old servers do not have dnssec.
+
 24 March 2011: Wouter
 	- iana portlist updated.
 	- release 1.4.9.
