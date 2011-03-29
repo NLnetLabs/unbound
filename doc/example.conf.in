@@ -257,8 +257,7 @@ server:
 	# Default on, which insists on dnssec data for trust-anchored zones.
 	# harden-dnssec-stripped: yes
 
-	# Harden against queries that fall under known nxdomain names.
-	# Default off because very old software can be incompatible.
+	# Harden against queries that fall under dnssec-signed nxdomain names.
 	# harden-below-nxdomain: no
 
         # Harden the referral path by performing additional queries for
