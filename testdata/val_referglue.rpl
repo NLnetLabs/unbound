@@ -244,7 +244,6 @@ ENTRY_END
 
 RANGE_END
 
-
 ; first ask for +CD and get the data in the cache.
 STEP 1 QUERY
 ENTRY_BEGIN
@@ -266,7 +265,8 @@ example.com.	IN NS	ns.example.com.
 example.com.	IN NS	ns2.sub.example.com.
 SECTION ADDITIONAL
 ns.example.com.		IN 	A	1.2.3.4
-ns2.sub.example.com.	IN 	A 	100.200.30.40
+; already validated and thus stripped from the answer.
+;ns2.sub.example.com.	IN 	A 	100.200.30.40
 ENTRY_END
 
 ; now the data is in the cache, validate a referral from cache

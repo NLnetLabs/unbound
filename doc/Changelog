@@ -1,3 +1,10 @@
+8 April 2011: Wouter
+	- iana portlist updated.
+	- queries with CD flag set cause DNSSEC validation, but the answer is
+	  not withheld if it is bogus.  Thus, unbound will retry if it is bad
+	  and curb the TTL if it is bad, thus protecting the cache for use by
+	  downstream validators.
+
 29 March 2011: Wouter
 	- harden-below-nxdomain: changed so that it activates when the
 	  cached nxdomain is dnssec secure.  This avoids backwards

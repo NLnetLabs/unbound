@@ -270,7 +270,11 @@ void mesh_new_client(struct mesh_area* mesh, struct query_info* qinfo,
         uint16_t qflags, struct edns_data* edns, struct comm_reply* rep,
         uint16_t qid)
 {
-	struct mesh_state* s = mesh_area_find(mesh, qinfo, qflags, 0);
+	/* do not use CD flag from user for mesh state, we want the CD-query
+	 * to receive validation anyway, to protect out cache contents and
+	 * avoid bad-data in this cache that a downstream validator cannot
+	 * remove from this cache */
+	struct mesh_state* s = mesh_area_find(mesh, qinfo, qflags&BIT_RD, 0);
 	int was_detached = 0;
 	int was_noreply = 0;
 	int added = 0;
@@ -298,7 +302,7 @@ void mesh_new_client(struct mesh_area* mesh, struct query_info* qinfo,
 	/* see if it already exists, if not, create one */
 	if(!s) {
 		struct rbnode_t* n;
-		s = mesh_state_create(mesh->env, qinfo, qflags, 0);
+		s = mesh_state_create(mesh->env, qinfo, qflags&BIT_RD, 0);
 		if(!s) {
 			log_err("mesh_state_create: out of memory; SERVFAIL");
 			error_encode(rep->c->buffer, LDNS_RCODE_SERVFAIL,
@@ -357,7 +361,7 @@ mesh_new_callback(struct mesh_area* mesh, struct query_info* qinfo,
 	uint16_t qflags, struct edns_data* edns, ldns_buffer* buf, 
 	uint16_t qid, mesh_cb_func_t cb, void* cb_arg)
 {
-	struct mesh_state* s = mesh_area_find(mesh, qinfo, qflags, 0);
+	struct mesh_state* s = mesh_area_find(mesh, qinfo, qflags&BIT_RD, 0);
 	int was_detached = 0;
 	int was_noreply = 0;
 	int added = 0;
@@ -366,7 +370,7 @@ mesh_new_callback(struct mesh_area* mesh, struct query_info* qinfo,
 	/* see if it already exists, if not, create one */
 	if(!s) {
 		struct rbnode_t* n;
-		s = mesh_state_create(mesh->env, qinfo, qflags, 0);
+		s = mesh_state_create(mesh->env, qinfo, qflags&BIT_RD, 0);
 		if(!s) {
 			return 0;
 		}
@@ -403,7 +407,7 @@ mesh_new_callback(struct mesh_area* mesh, struct query_info* qinfo,
 void mesh_new_prefetch(struct mesh_area* mesh, struct query_info* qinfo,
         uint16_t qflags, uint32_t leeway)
 {
-	struct mesh_state* s = mesh_area_find(mesh, qinfo, qflags, 0);
+	struct mesh_state* s = mesh_area_find(mesh, qinfo, qflags&BIT_RD, 0);
 	struct rbnode_t* n;
 	/* already exists, and for a different purpose perhaps.
 	 * if mesh_no_list, keep it that way. */
@@ -420,7 +424,7 @@ void mesh_new_prefetch(struct mesh_area* mesh, struct query_info* qinfo,
 		mesh->stats_dropped ++;
 		return;
 	}
-	s = mesh_state_create(mesh->env, qinfo, qflags, 0);
+	s = mesh_state_create(mesh->env, qinfo, qflags&BIT_RD, 0);
 	if(!s) {
 		log_err("prefetch mesh_state_create: out of memory");
 		return;
