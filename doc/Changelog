@@ -4,6 +4,7 @@
 	  not withheld if it is bogus.  Thus, unbound will retry if it is bad
 	  and curb the TTL if it is bad, thus protecting the cache for use by
 	  downstream validators.
+	- val-override-date: -1 ignores dates entirely, for NTP usage.
 
 29 March 2011: Wouter
 	- harden-below-nxdomain: changed so that it activates when the

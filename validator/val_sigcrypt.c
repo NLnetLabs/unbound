@@ -1211,6 +1211,10 @@ check_dates(struct val_env* ve, uint32_t unow,
 
 	/* get current date */
 	if(ve->date_override) {
+		if(ve->date_override == -1) {
+			verbose(VERB_ALGO, "date override: ignore date"); 
+			return 1;
+		}
 		now = ve->date_override;
 		verbose(VERB_ALGO, "date override option %d", (int)now); 
 	} else	now = (int32_t)unow;

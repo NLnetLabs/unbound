@@ -608,7 +608,8 @@ externally can create validation failures for that internal domain.
 Default is "" or "0", which disables this debugging feature. If enabled by
 giving a RRSIG style date, that date is used for verifying RRSIG inception
 and expiration dates, instead of the current date. Do not set this unless 
-you are debugging signature inception and expiration.
+you are debugging signature inception and expiration. The value \-1 ignores
+the date altogether, useful for some special applications.
 .TP
 .B val\-sig\-skew\-min: \fI<seconds>
 Minimum number of seconds of clock skew to apply to validated signatures.

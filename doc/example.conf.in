@@ -352,7 +352,7 @@ server:
 
 	# Override the date for validation with a specific fixed date.
 	# Do not set this unless you are debugging signature inception
-	# and expiration. "" or "0" turns the feature off. 
+	# and expiration. "" or "0" turns the feature off. -1 ignores date.
 	# val-override-date: ""
 
 	# The time to live for bogus data, rrsets and messages. This avoids
