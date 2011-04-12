@@ -721,6 +721,7 @@ AC_ARG_WITH(ldns-builtin, AC_HELP_STRING([--with-ldns-builtin],
 if test "$use_ldns_builtin" = "no"; then
 	AC_CHECK_LIB(ldns, ldns_buffer_copy)
 	AC_CHECK_FUNC(ldns_key_buf2rsa_raw)
+	AC_CHECK_FUNC(ldns_get_random)
 	AC_CHECK_FUNC(ldns_b32_ntop_extended_hex)
 	if test x$use_gost = xyes; then
 	    AC_CHECK_FUNC(ldns_key_EVP_load_gost_id)
@@ -751,6 +752,7 @@ if test "$use_ldns_builtin" = "no"; then
 ])
 	if test $ac_cv_lib_ldns_ldns_buffer_copy = yes \
 	    -a $ac_cv_func_ldns_key_buf2rsa_raw = yes \
+	    -a $ac_cv_func_ldns_get_random = yes \
 	    -a $ac_cv_header_ldns_ldns_h = yes \
 	    -a $ac_cv_func_ldns_b32_ntop_extended_hex = yes \
 	    -a $ac_cv_func_ldns_key_EVP_load_gost_id = yes; then

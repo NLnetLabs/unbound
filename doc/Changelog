@@ -1,3 +1,6 @@
+12 April 2011: Wouter
+	- bug#378: Fix that configure checks for ldns_get_random presence.
+
 8 April 2011: Wouter
 	- iana portlist updated.
 	- queries with CD flag set cause DNSSEC validation, but the answer is
