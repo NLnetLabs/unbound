@@ -1,3 +1,6 @@
+14 April 2011: Wouter
+	- configure created with newer autoconf 2.66.
+
 12 April 2011: Wouter
 	- bug#378: Fix that configure checks for ldns_get_random presence.
 
