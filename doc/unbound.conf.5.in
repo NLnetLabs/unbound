@@ -657,6 +657,14 @@ receives the bogus data. For messages that are found to be secure the AD bit
 is set in replies. Also logging is performed as for full validation.
 The default value is "no". 
 .TP
+.B ignore\-cd\-flag: \fI<yes or no>
+Instruct unbound to ignore the CD flag from clients and refuse to
+return bogus answers to them.  Thus, the CD (Checking Disabled) flag
+does not disable checking any more.  This is useful if legacy (w2008)
+servers that set the CD flag but cannot validate DNSSEC themselves are
+the clients, and then unbound provides them with DNSSEC protection.
+The default value is "no".
+.TP
 .B val\-nsec3\-keysize\-iterations: \fI<"list of values">
 List of keysize and iteration count values, separated by spaces, surrounded
 by quotes. Default is "1024 150 2048 500 4096 2500". This determines the

@@ -446,7 +446,8 @@ answer_norec_from_cache(struct worker* worker, struct query_info* qinfo,
 	uint16_t udpsize = edns->udp_size;
 	int secure = 0;
 	uint32_t timenow = *worker->env.now;
-	int must_validate = !(flags&BIT_CD) && worker->env.need_to_validate;
+	int must_validate = (!(flags&BIT_CD) || worker->env.cfg->ignore_cd)
+		&& worker->env.need_to_validate;
 	struct dns_msg *msg = NULL;
 	struct delegpt *dp;
 
@@ -522,7 +523,8 @@ answer_from_cache(struct worker* worker, struct query_info* qinfo,
 	uint32_t timenow = *worker->env.now;
 	uint16_t udpsize = edns->udp_size;
 	int secure;
-	int must_validate = !(flags&BIT_CD) && worker->env.need_to_validate;
+	int must_validate = (!(flags&BIT_CD) || worker->env.cfg->ignore_cd)
+		&& worker->env.need_to_validate;
 	/* see if it is possible */
 	if(rep->ttl < timenow) {
 		/* the rrsets may have been updated in the meantime.

@@ -378,6 +378,11 @@ server:
 	# replies if the message is found secure. The default is off.
 	# val-permissive-mode: no
 
+	# Ignore the CD flag in incoming queries and refuse them bogus data.
+	# Enable it if the only clients of unbound are legacy servers (w2008)
+	# that set CD but cannot validate themselves.
+	# ignore-cd-flag: no
+
 	# Have the validator log failed validations for your diagnosis.
 	# 0: off. 1: A line per failed user query. 2: With reason and bad IP.
 	# val-log-level: 0

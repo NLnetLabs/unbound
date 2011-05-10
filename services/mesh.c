@@ -772,7 +772,8 @@ mesh_send_reply(struct mesh_state* m, int rcode, struct reply_info* rep,
 	struct timeval duration;
 	int secure;
 	/* examine security status */
-	if(m->s.env->need_to_validate && !(r->qflags&BIT_CD) && rep && 
+	if(m->s.env->need_to_validate && (!(r->qflags&BIT_CD) ||
+		m->s.env->cfg->ignore_cd) && rep && 
 		rep->security <= sec_status_bogus) {
 		rcode = LDNS_RCODE_SERVFAIL;
 		if(m->s.env->cfg->stat_extended) 

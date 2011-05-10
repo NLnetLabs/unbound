@@ -236,6 +236,8 @@ struct config_file {
 	int val_log_squelch;
 	/** should validator allow bogus messages to go through */
 	int val_permissive_mode;
+	/** ignore the CD flag in incoming queries and refuse them bogus data */
+	int ignore_cd;
 	/** nsec3 maximum iterations per key size, string */
 	char* val_nsec3_key_iterations;
 	/** autotrust add holddown time, in seconds */
