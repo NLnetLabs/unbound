@@ -1063,6 +1063,9 @@ do_cache_remove(struct worker* worker, uint8_t* nm, size_t nmlen,
 	hashvalue_t h;
 	struct query_info k;
 	rrset_cache_remove(worker->env.rrset_cache, nm, nmlen, t, c, 0);
+	if(t == LDNS_RR_TYPE_SOA)
+		rrset_cache_remove(worker->env.rrset_cache, nm, nmlen, t, c,
+			PACKED_RRSET_SOA_NEG);
 	k.qname = nm;
 	k.qname_len = nmlen;
 	k.qtype = t;

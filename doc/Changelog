@@ -3,6 +3,7 @@
 	  and reduces install size significantly.
 	- feature, ignore-cd-flag: yesno to provide dnssec to legacy servers.
 	- iana portlist updated.
+	- Fix TTL of SOA so negative TTL is separately cached from normal TTL.
 
 14 April 2011: Wouter
 	- configure created with newer autoconf 2.66.

@@ -145,11 +145,13 @@ nsec_at_apex(ldns_buffer* pkt)
 
 /** Calculate rrset flags */
 static uint32_t
-pkt_rrset_flags(ldns_buffer* pkt, uint16_t type)
+pkt_rrset_flags(ldns_buffer* pkt, uint16_t type, ldns_pkt_section sec)
 {
 	uint32_t f = 0;
 	if(type == LDNS_RR_TYPE_NSEC && nsec_at_apex(pkt)) {
 		f |= PACKED_RRSET_NSEC_AT_APEX;
+	} else if(type == LDNS_RR_TYPE_SOA && sec == LDNS_SECTION_AUTHORITY) {
+		f |= PACKED_RRSET_SOA_NEG;
 	}
 	return f;
 }
@@ -482,7 +484,7 @@ find_rrset(struct msg_parse* msg, ldns_buffer* pkt, uint8_t* dname,
 		}
 	}
 	/* find by hashing and lookup in hashtable */
-	*rrset_flags = pkt_rrset_flags(pkt, type);
+	*rrset_flags = pkt_rrset_flags(pkt, type, section);
 	
 	/* if rrsig - try to lookup matching data set first */
 	if(type == LDNS_RR_TYPE_RRSIG && pkt_rrsig_covered(pkt, 

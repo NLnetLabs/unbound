@@ -1371,7 +1371,7 @@ static int add_soa(struct rrset_cache* rrset_cache, uint32_t now,
 			return 0;
 	}
 	soa = rrset_cache_lookup(rrset_cache, nm, nmlen, LDNS_RR_TYPE_SOA, 
-		dclass, 0, now, 0);
+		dclass, PACKED_RRSET_SOA_NEG, now, 0);
 	if(!soa)
 		return 0;
 	if(!dns_msg_authadd(msg, region, soa, now)) {

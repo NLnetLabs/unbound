@@ -54,6 +54,10 @@ typedef uint64_t rrset_id_t;
 #define PACKED_RRSET_NSEC_AT_APEX 0x1
 /** this rrset is A/AAAA and is in-zone-glue (from parent side of zonecut) */
 #define PACKED_RRSET_PARENT_SIDE 0x2
+/** this rrset is SOA and has the negative ttl (from nxdomain or nodata),
+ * this is set on SOA rrsets in the authority section, to keep its TTL separate
+ * from the SOA in the answer section from a direct SOA query or ANY query. */
+#define PACKED_RRSET_SOA_NEG 0x4
 
 /**
  * The identifying information for an RRset.
@@ -73,6 +77,7 @@ struct packed_rrset_key {
 	 * Flags. 32bit to be easy for hashing:
 	 * 	o PACKED_RRSET_NSEC_AT_APEX
 	 * 	o PACKED_RRSET_PARENT_SIDE
+	 * 	o PACKED_RRSET_SOA_NEG
 	 */
 	uint32_t flags;
 	/** the rrset type in network format */
