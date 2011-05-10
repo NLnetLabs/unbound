@@ -607,6 +607,7 @@ enable_option_checking=no
 ac_subst_vars='LTLIBOBJS
 subdirs
 ldnsdir
+EXPORT_ALL_SYMBOLS
 WINDRES
 UB_ON_WINDOWS
 CHECKLOCK_SRC
@@ -763,6 +764,7 @@ enable_lock_checks
 enable_alloc_checks
 enable_alloc_lite
 enable_alloc_nonregional
+enable_allsymbols
 with_ldns
 with_ldns_builtin
 '
@@ -1416,6 +1418,9 @@ Optional Features:
                           enable nonregional allocs, slow but exposes regional
                           allocations to other memory purifiers, for debug
                           purposes
+  --enable-allsymbols     export all symbols from libunbound and link binaries
+                          to it, smaller install size but libunbound export
+                          table is polluted by internal symbols
 
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
@@ -16624,6 +16629,21 @@ esac
 
 fi
 
+
+
+# Check whether --enable-allsymbols was given.
+if test "${enable_allsymbols+set}" = set; then :
+  enableval=$enable_allsymbols;
+fi
+
+case "$enable_allsymbols" in
+	no)
+	EXPORT_ALL_SYMBOLS=no
+	;;
+	yes)
+	EXPORT_ALL_SYMBOLS=yes
+	;;
+esac
 
 
 # check this after all other compilation checks, since the linking of the lib

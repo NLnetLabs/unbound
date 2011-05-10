@@ -695,6 +695,17 @@ AC_REPLACE_FUNCS(memmove)
 AC_REPLACE_FUNCS(gmtime_r)
 AC_REPLACE_FUNCS(ctime_r)
 
+AC_ARG_ENABLE(allsymbols, AC_HELP_STRING([--enable-allsymbols], [export all symbols from libunbound and link binaries to it, smaller install size but libunbound export table is polluted by internal symbols]))
+case "$enable_allsymbols" in
+	no)
+	EXPORT_ALL_SYMBOLS=no
+	;;
+	yes)
+	EXPORT_ALL_SYMBOLS=yes
+	;;
+esac
+AC_SUBST(EXPORT_ALL_SYMBOLS)
+
 # check this after all other compilation checks, since the linking of the lib
 # may break checks after this.
 use_ldns_builtin="no"

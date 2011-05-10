@@ -1,3 +1,7 @@
+10 May 2011: Wouter
+	- bug#386: --enable-allsymbols option links all binaries to libunbound
+	  and reduces install size significantly.
+
 14 April 2011: Wouter
 	- configure created with newer autoconf 2.66.
 

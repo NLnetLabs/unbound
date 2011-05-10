@@ -45,6 +45,7 @@ UB_ON_WINDOWS=@UB_ON_WINDOWS@
 WITH_PYTHONMODULE=@WITH_PYTHONMODULE@
 WITH_PYUNBOUND=@WITH_PYUNBOUND@
 PYTHON_SITE_PKG=@PYTHON_SITE_PKG@
+EXPORT_ALL_SYMBOLS=@EXPORT_ALL_SYMBOLS@
 
 SWIG=@SWIG@
 YACC=@YACC@
@@ -102,13 +103,25 @@ UNITTEST_SRC=$(patsubst $(srcdir)/%,%, \
 	testcode/readhex.c testcode/ldns-testpkts.c smallapp/worker_cb.c \
 	$(COMMON_SRC)
 UNITTEST_OBJ=$(addprefix $(BUILD),$(UNITTEST_SRC:.c=.lo)) $(COMPAT_OBJ)
-DAEMON_SRC=$(patsubst $(srcdir)/%,%, $(wildcard $(srcdir)/daemon/*.c)) \
-	$(COMMON_SRC)
+
+DAEMON_SRC=$(patsubst $(srcdir)/%,%, $(wildcard $(srcdir)/daemon/*.c))
+ifneq "$(EXPORT_ALL_SYMBOLS)" "yes"
+DAEMON_SRC+=$(COMMON_SRC)
+endif
 DAEMON_OBJ=$(addprefix $(BUILD),$(DAEMON_SRC:.c=.lo)) $(COMPAT_OBJ)
-CHECKCONF_SRC=smallapp/unbound-checkconf.c smallapp/worker_cb.c $(COMMON_SRC)
+
+CHECKCONF_SRC=smallapp/unbound-checkconf.c smallapp/worker_cb.c
+ifneq "$(EXPORT_ALL_SYMBOLS)" "yes"
+CHECKCONF_SRC+=$(COMMON_SRC)
+endif
 CHECKCONF_OBJ=$(addprefix $(BUILD),$(CHECKCONF_SRC:.c=.lo)) $(COMPAT_OBJ)
-CONTROL_SRC=smallapp/unbound-control.c smallapp/worker_cb.c $(COMMON_SRC)
+
+CONTROL_SRC=smallapp/unbound-control.c smallapp/worker_cb.c
+ifneq "$(EXPORT_ALL_SYMBOLS)" "yes"
+CONTROL_SRC+=$(COMMON_SRC)
+endif
 CONTROL_OBJ=$(addprefix $(BUILD),$(CONTROL_SRC:.c=.lo)) $(COMPAT_OBJ)
+
 HOST_SRC=smallapp/unbound-host.c
 HOST_OBJ=$(addprefix $(BUILD),$(HOST_SRC:.c=.lo)) $(filter-out $(BUILD)compat/ctime_r.lo, $(COMPAT_OBJ))
 UBANCHOR_SRC=smallapp/unbound-anchor.c
@@ -224,10 +237,19 @@ else
 ldnslib=
 endif
 
+UBSYMS+=-export-symbols $(srcdir)/libunbound/ubsyms.def
+CLUBSYMS=-export-symbols $(BUILD)clubsyms.def
+EXTRALINK=
+ifeq "$(EXPORT_ALL_SYMBOLS)" "yes"
+UBSYMS=
+CLUBSYMS=
+EXTRALINK=-L. -L.libs -lunbound
+endif
+
 libunbound.la:	$(LIBUNBOUND_OBJ) $(ldnslib)
 	$(INFO) Link $@
 ifeq ($(CHECKLOCK_SRC),)
-	$Q$(LINK_LIB) -export-symbols $(srcdir)/libunbound/ubsyms.def -o $@ $(sort $(LIBUNBOUND_OBJ)) -rpath $(libdir) $(LIBS)
+	$Q$(LINK_LIB) $(UBSYMS) -o $@ $(sort $(LIBUNBOUND_OBJ)) -rpath $(libdir) $(LIBS)
 else
 	cp $(srcdir)/libunbound/ubsyms.def $(BUILD)clubsyms.def
 	echo lock_protect >> $(BUILD)clubsyms.def
@@ -240,20 +262,20 @@ else
 	echo checklock_init >> $(BUILD)clubsyms.def
 	echo checklock_thrcreate >> $(BUILD)clubsyms.def
 	echo checklock_thrjoin >> $(BUILD)clubsyms.def
-	$Q$(LINK_LIB) -export-symbols $(BUILD)clubsyms.def -o $@ $(sort $(LIBUNBOUND_OBJ)) -rpath $(libdir) $(LIBS)
+	$Q$(LINK_LIB) $(CLUBSYMS) -o $@ $(sort $(LIBUNBOUND_OBJ)) -rpath $(libdir) $(LIBS)
 endif
 
-unbound$(EXEEXT):	$(DAEMON_OBJ) $(ldnslib)
+unbound$(EXEEXT):	$(DAEMON_OBJ) libunbound.la $(ldnslib)
 	$(INFO) Link $@
-	$Q$(LINK) -o $@ $(sort $(DAEMON_OBJ)) -lssl $(LIBS)
+	$Q$(LINK) -o $@ $(sort $(DAEMON_OBJ)) $(EXTRALINK) -lssl $(LIBS)
 
-unbound-checkconf$(EXEEXT):	$(CHECKCONF_OBJ) $(ldnslib)
+unbound-checkconf$(EXEEXT):	$(CHECKCONF_OBJ) libunbound.la $(ldnslib)
 	$(INFO) Link $@
-	$Q$(LINK) -o $@ $(sort $(CHECKCONF_OBJ)) $(LIBS)
+	$Q$(LINK) -o $@ $(sort $(CHECKCONF_OBJ)) $(EXTRALINK) -lssl $(LIBS)
 
-unbound-control$(EXEEXT):	$(CONTROL_OBJ) $(ldnslib)
+unbound-control$(EXEEXT):	$(CONTROL_OBJ) libunbound.la $(ldnslib)
 	$(INFO) Link $@
-	$Q$(LINK) -o $@ $(sort $(CONTROL_OBJ)) -lssl $(LIBS)
+	$Q$(LINK) -o $@ $(sort $(CONTROL_OBJ)) $(EXTRALINK) -lssl $(LIBS)
 
 unbound-host$(EXEEXT):	$(HOST_OBJ) libunbound.la $(ldnslib)
 	$(INFO) Link $@
