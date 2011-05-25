@@ -2,6 +2,8 @@
 	- Fix assertion failure when unbound generates an empty error reply
 	  in response to a query, CVE-2011-1922 VU#531342.
 	- This fix is in tag 1.4.10.
+	- defense in depth against the above bug, an error is printed to log
+	  instead of an assertion failure.
 
 10 May 2011: Wouter
 	- bug#386: --enable-allsymbols option links all binaries to libunbound

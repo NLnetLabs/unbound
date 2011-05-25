@@ -400,7 +400,10 @@ comm_point_send_udp_msg_if(struct comm_point *c, ldns_buffer* packet,
 #endif /* S_SPLINT_S */
 
 	log_assert(c->fd != -1);
-	log_assert(ldns_buffer_remaining(packet) > 0);
+#ifdef UNBOUND_DEBUG
+	if(ldns_buffer_remaining(packet) == 0)
+		log_err("error: send empty UDP packet");
+#endif
 	log_assert(addr && addrlen > 0);
 
 	msg.msg_name = addr;
