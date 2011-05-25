@@ -777,6 +777,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 		qinfo.qtype == LDNS_RR_TYPE_IXFR) {
 		verbose(VERB_ALGO, "worker request: refused zone transfer.");
 		log_addr(VERB_CLIENT,"from",&repinfo->addr, repinfo->addrlen);
+		ldns_buffer_rewind(c->buffer);
 		LDNS_QR_SET(ldns_buffer_begin(c->buffer));
 		LDNS_RCODE_SET(ldns_buffer_begin(c->buffer), 
 			LDNS_RCODE_REFUSED);

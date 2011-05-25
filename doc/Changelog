@@ -1,3 +1,8 @@
+25 March 2011: Wouter
+	- Fix assertion failure when unbound generates an empty error reply
+	  in response to a query, CVE-2011-1922 VU#531342.
+	- release 1.4.10.
+
 24 March 2011: Wouter
 	- iana portlist updated.
 	- release 1.4.9.
