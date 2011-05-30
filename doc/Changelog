@@ -2,6 +2,7 @@
 	- Fix Makefile for U in environment, since wrong U is more common than
 	  deansification necessity.
 	- iana portlist updated.
+	- updated ldns tarball to 1.6.10rc2 snapshot of today.
 
 25 May 2011: Wouter
 	- Fix assertion failure when unbound generates an empty error reply
