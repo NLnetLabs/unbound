@@ -47,6 +47,10 @@ WITH_PYUNBOUND=@WITH_PYUNBOUND@
 PYTHON_SITE_PKG=@PYTHON_SITE_PKG@
 EXPORT_ALL_SYMBOLS=@EXPORT_ALL_SYMBOLS@
 
+# override $U variable which is used by autotools for deansification (for
+# K&R C compilers), but causes problems if $U is defined in the env).
+U=
+
 SWIG=@SWIG@
 YACC=@YACC@
 LEX=@LEX@
