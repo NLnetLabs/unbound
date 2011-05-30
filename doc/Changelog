@@ -1,6 +1,7 @@
 30 May 2011: Wouter
 	- Fix Makefile for U in environment, since wrong U is more common than
 	  deansification necessity.
+	- iana portlist updated.
 
 25 May 2011: Wouter
 	- Fix assertion failure when unbound generates an empty error reply
