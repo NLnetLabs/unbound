@@ -1,3 +1,10 @@
+10 June 2011: Wouter
+	- unbound-control has version number in the header,
+	  UBCT[version]_space_ is the header sent by the client now.
+	- Unbound control port number is registered with IANA:
+	  ub-dns-control  8953/tcp    unbound dns nameserver control
+	  This is the new default for the control-port config setting.
+
 30 May 2011: Wouter
 	- Fix Makefile for U in environment, since wrong U is more common than
 	  deansification necessity.

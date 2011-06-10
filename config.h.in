@@ -871,4 +871,10 @@ void *unbound_stat_realloc_log(void *ptr, size_t size, const char* file,
 
 /** default port for DNS traffic. */
 #define UNBOUND_DNS_PORT 53
+/** default port for unbound control traffic, registered port with IANA,
+    ub-dns-control  8953/tcp    unbound dns nameserver control */
+#define UNBOUND_CONTROL_PORT 8953
+/** the version of unbound-control that this software implements */
+#define UNBOUND_CONTROL_VERSION 1
+
 

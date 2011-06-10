@@ -1871,7 +1871,8 @@ static void
 handle_req(struct daemon_remote* rc, struct rc_state* s, SSL* ssl)
 {
 	int r;
-	char magic[5];
+	char pre[10];
+	char magic[7];
 	char buf[1024];
 #ifdef USE_WINSOCK
 	/* makes it possible to set the socket blocking again. */
@@ -1880,7 +1881,7 @@ handle_req(struct daemon_remote* rc, struct rc_state* s, SSL* ssl)
 #endif
 	fd_set_block(s->c->fd);
 
-	/* try to read magic UBCT string */
+	/* try to read magic UBCT[version]_space_ string */
 	ERR_clear_error();
 	if((r=SSL_read(ssl, magic, (int)sizeof(magic)-1)) <= 0) {
 		if(SSL_get_error(ssl, r) == SSL_ERROR_ZERO_RETURN)
@@ -1888,14 +1889,22 @@ handle_req(struct daemon_remote* rc, struct rc_state* s, SSL* ssl)
 		log_crypto_err("could not SSL_read");
 		return;
 	}
-	magic[4] = 0;
-	if( r != 4 || strcmp(magic, "UBCT") != 0) {
+	magic[6] = 0;
+	if( r != 6 || strncmp(magic, "UBCT", 4) != 0) {
 		verbose(VERB_QUERY, "control connection has bad magic string");
+		/* probably wrong tool connected, ignore it completely */
 		return;
 	}
 
 	/* read the command line */
 	if(!ssl_read_line(ssl, buf, sizeof(buf))) {
+		return;
+	}
+	snprintf(pre, sizeof(pre), "UBCT%d ", UNBOUND_CONTROL_VERSION);
+	if(strcmp(magic, pre) != 0) {
+		verbose(VERB_QUERY, "control connection had bad "
+			"version %s, cmd: %s", magic, buf);
+		ssl_printf(ssl, "error version mismatch\n");
 		return;
 	}
 	verbose(VERB_DETAIL, "control cmd: %s", buf);

@@ -472,7 +472,7 @@ remote-control:
 	# control-interface: ::1
 
 	# port number for remote control operations.
-	# control-port: 953
+	# control-port: 8953
 
 	# unbound server key file.
 	# server-key-file: "@UNBOUND_RUN_DIR@/unbound_server.key"

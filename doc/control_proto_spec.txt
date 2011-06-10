@@ -1,16 +1,21 @@
 
 Specification for the unbound-control protocol.
 
-Server listens on 953 TCP (localhost by default). Client connects,
+Server listens on 8953 TCP (localhost by default). Client connects,
 SSLv3 or TLSv1 connection setup (server selfsigned certificate, 
 client has cert signed by server certificate).
+
+Port 8953 is registered with IANA as:
+ub-dns-control  8953/tcp    unbound dns nameserver control
+# Wouter Wijngaards <wouter&nlnetlabs.nl> 10 May 2011
+On may 11 2011, ticket [IANA #442315].
 
 Query and Response
 ------------------
 Client sends 
-	UBCT [commandline] \n
-	fixed string UBCT, then an ascii text line, with a command, 
-	some whitespace allowed. Line ends with '\n'.
+	UBCT[version] [commandline] \n
+	fixed string UBCT1 (for version 1), then an ascii text line,
+	with a command, some whitespace allowed. Line ends with '\n'.
 
 Server executes command. And sends reply in ascii text over channel, 
 closes the channel when done.

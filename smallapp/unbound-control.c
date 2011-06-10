@@ -258,12 +258,13 @@ send_file(SSL* ssl, FILE* in, char* buf, size_t sz)
 static int
 go_cmd(SSL* ssl, int argc, char* argv[])
 {
-	const char* pre="UBCT";
+	char pre[10];
 	const char* space=" ";
 	const char* newline="\n";
 	int was_error = 0, first_line = 1;
 	int r, i;
 	char buf[1024];
+	snprintf(pre, sizeof(pre), "UBCT%d ", UNBOUND_CONTROL_VERSION);
 	if(SSL_write(ssl, pre, (int)strlen(pre)) <= 0)
 		ssl_err("could not SSL_write");
 	for(i=0; i<argc; i++) {
