@@ -100,12 +100,14 @@ void server_stats_log(struct server_stats* stats, struct worker* worker,
 		(unsigned)stats->num_queries_missed_cache,
 		(unsigned)stats->num_queries_prefetch);
 	log_info("server stats for thread %d: requestlist max %u avg %g "
-		"exceeded %u", threadnum, (unsigned)stats->max_query_list_size,
+		"exceeded %u jostled %u", threadnum,
+		(unsigned)stats->max_query_list_size,
 		(stats->num_queries_missed_cache+stats->num_queries_prefetch)?
 			(double)stats->sum_query_list_size/
 			(stats->num_queries_missed_cache+
 			stats->num_queries_prefetch) : 0.0,
-		(unsigned)worker->env.mesh->stats_dropped);
+		(unsigned)worker->env.mesh->stats_dropped,
+		(unsigned)worker->env.mesh->stats_jostled);
 }
 
 /** get rrsets bogus number from validator */
