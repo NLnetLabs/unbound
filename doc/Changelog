@@ -1,3 +1,6 @@
+12 June 2011: Wouter
+	- IPv6 service address for d.root-servers.net (2001:500:2D::D).
+
 10 June 2011: Wouter
 	- unbound-control has version number in the header,
 	  UBCT[version]_space_ is the header sent by the client now.

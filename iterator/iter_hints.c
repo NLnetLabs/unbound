@@ -132,6 +132,7 @@ compile_time_root_prime(struct regional* r, int do_ip4, int do_ip6)
       }
       if(do_ip6) {
 	if(!ah(dp, r, "A.ROOT-SERVERS.NET.", "2001:503:ba3e::2:30")) return 0;
+	if(!ah(dp, r, "D.ROOT-SERVERS.NET.", "2001:500:2d::d")) return 0;
 	if(!ah(dp, r, "F.ROOT-SERVERS.NET.", "2001:500:2f::f")) return 0;
 	if(!ah(dp, r, "H.ROOT-SERVERS.NET.", "2001:500:1::803f:235")) return 0;
 	if(!ah(dp, r, "I.ROOT-SERVERS.NET.", "2001:7fe::53")) return 0;
