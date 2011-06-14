@@ -1,3 +1,6 @@
+14 June 2011: Wouter
+	- Use -flto compiler flag for link time optimization, if supported.
+
 12 June 2011: Wouter
 	- IPv6 service address for d.root-servers.net (2001:500:2D::D).
 

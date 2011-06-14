@@ -5617,6 +5617,37 @@ $as_echo "#define UNBOUND_DEBUG /**/" >>confdefs.h
 		;;
 esac
 
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking whether $CC supports -flto" >&5
+$as_echo_n "checking whether $CC supports -flto... " >&6; }
+cache=`echo flto | sed 'y%.=/+-%___p_%'`
+if eval "test \"\${cv_prog_cc_flag_$cache+set}\"" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+
+echo 'void f(){}' >conftest.c
+if test -z "`$CC $CPPFLAGS $CFLAGS -flto -c conftest.c 2>&1`"; then
+eval "cv_prog_cc_flag_$cache=yes"
+else
+eval "cv_prog_cc_flag_$cache=no"
+fi
+rm -f conftest conftest.o conftest.c
+
+fi
+
+if eval "test \"`echo '$cv_prog_cc_flag_'$cache`\" = yes"; then
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+:
+CFLAGS="$CFLAGS -flto"
+else
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+:
+
+fi
+
+
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for inline" >&5
 $as_echo_n "checking for inline... " >&6; }
 if test "${ac_cv_c_inline+set}" = set; then :
