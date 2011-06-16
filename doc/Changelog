@@ -1,5 +1,6 @@
 16 June 2011: Wouter
 	- log-queries: yesno option, default is no, prints querylog.
+	- version is 1.4.11.
 
 14 June 2011: Wouter
 	- Use -flto compiler flag for link time optimization, if supported.
