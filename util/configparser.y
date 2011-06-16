@@ -102,7 +102,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_AUTO_TRUST_ANCHOR_FILE VAR_KEEP_MISSING VAR_ADD_HOLDDOWN 
 %token VAR_DEL_HOLDDOWN VAR_SO_RCVBUF VAR_EDNS_BUFFER_SIZE VAR_PREFETCH
 %token VAR_PREFETCH_KEY VAR_SO_SNDBUF VAR_HARDEN_BELOW_NXDOMAIN
-%token VAR_IGNORE_CD_FLAG
+%token VAR_IGNORE_CD_FLAG VAR_LOG_QUERIES
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -156,7 +156,8 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_auto_trust_anchor_file | server_add_holddown | 
 	server_del_holddown | server_keep_missing | server_so_rcvbuf |
 	server_edns_buffer_size | server_prefetch | server_prefetch_key |
-	server_so_sndbuf | server_harden_below_nxdomain | server_ignore_cd_flag
+	server_so_sndbuf | server_harden_below_nxdomain | server_ignore_cd_flag |
+	server_log_queries
 	;
 stubstart: VAR_STUB_ZONE
 	{
@@ -393,6 +394,15 @@ server_log_time_ascii: VAR_LOG_TIME_ASCII STRING_ARG
 		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
 			yyerror("expected yes or no.");
 		else cfg_parser->cfg->log_time_ascii = (strcmp($2, "yes")==0);
+		free($2);
+	}
+	;
+server_log_queries: VAR_LOG_QUERIES STRING_ARG
+	{
+		OUTYY(("P(server_log_queries:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->log_queries = (strcmp($2, "yes")==0);
 		free($2);
 	}
 	;

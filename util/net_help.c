@@ -271,7 +271,7 @@ log_nametypeclass(enum verbosity_value v, const char* str, uint8_t* name,
 		snprintf(c, sizeof(c), "CLASS%d", (int)dclass);
 		cs = c;
 	}
-	log_info("%s <%s %s %s>", str, buf, ts, cs);
+	log_info("%s %s %s %s", str, buf, ts, cs);
 }
 
 void log_name_addr(enum verbosity_value v, const char* str, uint8_t* zone, 

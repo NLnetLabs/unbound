@@ -395,6 +395,12 @@ Sets logfile lines to use a timestamp in UTC ascii. Default is no, which
 prints the seconds since 1970 in brackets. No effect if using syslog, in
 that case syslog formats the timestamp printed into the log files.
 .TP
+.B log\-queries: \fI<yes or no>
+Prints one line per query to the log, with the log timestamp and IP address,
+name, type and class.  Default is no.  Note that it takes time to print these
+lines which makes the server (significantly) slower.  Odd (nonprintable)
+characters in names are printed as '?'.
+.TP
 .B pidfile: \fI<filename>
 The process id is written to the file. Default is "@UNBOUND_PIDFILE@". 
 So,

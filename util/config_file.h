@@ -192,6 +192,8 @@ struct config_file {
 	int use_syslog;
 	/** log timestamp in ascii UTC */
 	int log_time_ascii;
+	/** log queries with one line per query */
+	int log_queries;
 
 	/** do not report identity (id.server, hostname.bind) */
 	int hide_identity;
