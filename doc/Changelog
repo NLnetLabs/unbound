@@ -1,5 +1,8 @@
 17 June 2011: Wouter
 	- tag 1.4.11rc1 created.
+	- remove warning about signed/unsigned from flex (other flex version).
+	- updated aclocal.m4 and libtool to match.
+	- tag 1.4.11rc2 created.
 
 16 June 2011: Wouter
 	- log-queries: yesno option, default is no, prints querylog.
