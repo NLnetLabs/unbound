@@ -1,3 +1,6 @@
+17 June 2011: Wouter
+	- tag 1.4.11rc1 created.
+
 16 June 2011: Wouter
 	- log-queries: yesno option, default is no, prints querylog.
 	- version is 1.4.11.
