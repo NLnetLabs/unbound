@@ -1,5 +1,6 @@
 23 June 2011: Wouter
 	- Changed -flto check to support clang compiler.
+	- tag 1.4.11rc3 created.
 
 17 June 2011: Wouter
 	- tag 1.4.11rc1 created.
