@@ -2,7 +2,8 @@
 # Copyright 2009, Wouter Wijngaards, NLnet Labs.   
 # BSD licensed.
 #
-# Version 11
+# Version 12
+# 2011-06-23 Add ACX_CHECK_FLTO to check -flto.
 # 2010-08-16 Fix FLAG_OMITTED for AS_TR_CPP changes in autoconf-2.66.
 # 2010-07-02 Add check for ss_family (for minix).
 # 2010-04-26 Fix to use CPPFLAGS for CHECK_COMPILER_FLAGS.
@@ -32,6 +33,7 @@
 # ACX_DETERMINE_EXT_FLAGS_UNBOUND - find out which flags enable BSD and POSIX.
 # ACX_CHECK_FORMAT_ATTRIBUTE	- find cc printf format syntax.
 # ACX_CHECK_UNUSED_ATTRIBUTE	- find cc variable unused syntax.
+# ACX_CHECK_FLTO		- see if cc supports -flto and use it if so.
 # ACX_LIBTOOL_C_ONLY		- create libtool for C only, improved.
 # ACX_TYPE_U_CHAR		- u_char type.
 # ACX_TYPE_RLIM_T		- rlim_t type.
@@ -382,6 +384,16 @@ int test() {
 ], [CFLAGS="$CFLAGS -D__EXTENSIONS__"])
 
 ])dnl End of ACX_DETERMINE_EXT_FLAGS_UNBOUND
+
+dnl Check if CC supports -flto.
+dnl in a way that supports clang and suncc (that flag does something else,
+dnl but fails to link).  It sets it in CFLAGS if it works.
+AC_DEFUN([ACX_CHECK_FLTO],
+[AC_MSG_CHECKING([if $CC supports -flto])
+BAKCFLAGS="$CFLAGS"
+CFLAGS="$CFLAGS -flto"
+AC_LINK_IFELSE([AC_LANG_PROGRAM([], [])], [AC_MSG_RESULT(yes)], [CFLAGS="$BAKCFLAGS" ; AC_MSG_RESULT(no)])
+])
 
 dnl Check the printf-format attribute (if any)
 dnl result in HAVE_ATTR_FORMAT.  

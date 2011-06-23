@@ -225,7 +225,7 @@ case "$debug_enabled" in
 		# nothing to do.
 		;;
 esac
-ACX_CHECK_COMPILER_FLAG(flto, [CFLAGS="$CFLAGS -flto"])
+ACX_CHECK_FLTO
 
 AC_C_INLINE
 ACX_CHECK_FORMAT_ATTRIBUTE

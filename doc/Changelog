@@ -1,3 +1,6 @@
+23 June 2011: Wouter
+	- Changed -flto check to support clang compiler.
+
 17 June 2011: Wouter
 	- tag 1.4.11rc1 created.
 	- remove warning about signed/unsigned from flex (other flex version).
