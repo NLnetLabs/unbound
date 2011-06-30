@@ -7,6 +7,7 @@
 	- fix comment about rndc port, that referred to the old port number.
 	- fix that the listening socket is not closed when too many remote
 	  control connections are made at the same time.
+	- removed ldns-src tarball inside the unbound tarball.
 
 23 June 2011: Wouter
 	- Changed -flto check to support clang compiler.

@@ -711,7 +711,6 @@ AC_SUBST(EXPORT_ALL_SYMBOLS)
 
 # check this after all other compilation checks, since the linking of the lib
 # may break checks after this.
-use_ldns_builtin="no"
 AC_ARG_WITH(ldns, AC_HELP_STRING([--with-ldns=PATH], 
 	[specify prefix of path of ldns library to use]), 
 	[ specialldnsdir="$withval"
@@ -726,24 +725,18 @@ AC_ARG_WITH(ldns, AC_HELP_STRING([--with-ldns=PATH],
 	fi
 ])
 
-AC_ARG_WITH(ldns-builtin, AC_HELP_STRING([--with-ldns-builtin], 
-	[forces use of package included with this one]), [ 
-	use_ldns_builtin="yes"
-])
-
 # check if ldns is good enough
-if test "$use_ldns_builtin" = "no"; then
-	AC_CHECK_LIB(ldns, ldns_buffer_copy)
-	AC_CHECK_FUNC(ldns_key_buf2rsa_raw)
-	AC_CHECK_FUNC(ldns_get_random)
-	AC_CHECK_FUNC(ldns_b32_ntop_extended_hex)
-	if test x$use_gost = xyes; then
-	    AC_CHECK_FUNC(ldns_key_EVP_load_gost_id)
-	    AC_CHECK_FUNCS([ldns_key_EVP_unload_gost])
-	else
-	    ac_cv_func_ldns_key_EVP_load_gost_id="yes"
-	fi
-	AC_CHECK_HEADERS([ldns/ldns.h],,, [AC_INCLUDES_DEFAULT
+AC_CHECK_LIB(ldns, ldns_buffer_copy)
+AC_CHECK_FUNC(ldns_key_buf2rsa_raw)
+AC_CHECK_FUNC(ldns_get_random)
+AC_CHECK_FUNC(ldns_b32_ntop_extended_hex)
+if test x$use_gost = xyes; then
+    AC_CHECK_FUNC(ldns_key_EVP_load_gost_id)
+    AC_CHECK_FUNCS([ldns_key_EVP_unload_gost])
+else
+    ac_cv_func_ldns_key_EVP_load_gost_id="yes"
+fi
+AC_CHECK_HEADERS([ldns/ldns.h],,, [AC_INCLUDES_DEFAULT
 #ifdef HAVE_SYS_SOCKET_H
 #include <sys/socket.h>
 #endif
@@ -764,38 +757,17 @@ if test "$use_ldns_builtin" = "no"; then
 #include <ws2tcpip.h>
 #endif
 ])
-	if test $ac_cv_lib_ldns_ldns_buffer_copy = yes \
-	    -a $ac_cv_func_ldns_key_buf2rsa_raw = yes \
-	    -a $ac_cv_func_ldns_get_random = yes \
-	    -a $ac_cv_header_ldns_ldns_h = yes \
-	    -a $ac_cv_func_ldns_b32_ntop_extended_hex = yes \
-	    -a $ac_cv_func_ldns_key_EVP_load_gost_id = yes; then
-	    dnl ldns was found
-	    :
-	else
-	    AC_MSG_ERROR([No ldns library found (or not recent); install or update ldns library, use --with-ldns=path or --with-ldns-builtin])
-	fi
+if test $ac_cv_lib_ldns_ldns_buffer_copy = yes \
+    -a $ac_cv_func_ldns_key_buf2rsa_raw = yes \
+    -a $ac_cv_func_ldns_get_random = yes \
+    -a $ac_cv_header_ldns_ldns_h = yes \
+    -a $ac_cv_func_ldns_b32_ntop_extended_hex = yes \
+    -a $ac_cv_func_ldns_key_EVP_load_gost_id = yes; then
+    dnl ldns was found
+    :
+else
+    AC_MSG_ERROR([No ldns library found (or not recent); install or update ldns library, let me detect the location or use --with-ldns=path to systemdir or the make-dir of ldns.  Package libldns or download source http://www.nlnetlabs.nl/projects/ldns])
 fi
-
-if test "$use_ldns_builtin" = "yes"; then
-dnl use the builtin ldns-src.tar.gz file to build ldns.
-if test ! -f $srcdir/ldns-src.tar.gz; then
-	AC_MSG_ERROR([No ldns library found and no ldns-src.tar.gz, use --with-ldns=path.])
-fi
-echo "****************************************************************"
-echo "***                                                          ***"
-echo "*** Building ldns library from package included in this one. ***"
-echo "***                                                          ***"
-echo "****************************************************************"
-if test -d $srcdir/ldns-src; then rm -rf $srcdir/ldns-src; fi
-mkdir $srcdir/ldns-src; cp $srcdir/ldns-src.tar.gz $srcdir/ldns-src/ldns-src.tar.gz; (cd $srcdir/ldns-src; gzip -cd ldns-src.tar.gz | tar xf -); rm -f $srcdir/ldns-src/ldns-src.tar.gz; mv $srcdir/ldns-src $srcdir/ldns-srcb; mv $srcdir/ldns-srcb/ldns* $srcdir/ldns-src; rmdir $srcdir/ldns-srcb
-ldnsdir="ldns-src"
-AC_MSG_NOTICE([Configure $ldnsdir scheduled after config.status])
-AC_CONFIG_SUBDIRS([ldns-src])
-CPPFLAGS="-I$ldnsdir/include $CPPFLAGS"
-LDFLAGS="$LDFLAGS $ldnsdir/*.lo"
-AC_SUBST(ldnsdir)
-fi  dnl end of use_ldns_builtin == yes
 
 ACX_STRIP_EXT_FLAGS
 LDFLAGS="$LATE_LDFLAGS $LDFLAGS"

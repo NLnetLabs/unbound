@@ -192,8 +192,6 @@ ifeq "$(UB_ON_WINDOWS)" "yes"
 
 $(BUILD)%.o:      $(srcdir)/%.rc $(srcdir)/config.h
 	$(INFO) Resource $<
-	@if test ! -z "$(ldnsdir)" -a ! -e $(ldnsdir)/include/ldns/ldns.h; \
-		then (cd $(ldnsdir); $(MAKE) copy-headers); fi
 	@-if test ! -d $(dir $@); then $(INSTALL) -d $(patsubst %/,%,$(dir $@)); fi
 	$Q$(WINDRES) $(CPPFLAGS) $< $@
 endif
@@ -202,12 +200,10 @@ COMPILE=$(LIBTOOL) --tag=CC --mode=compile $(CC) $(CPPFLAGS) $(CFLAGS)
 LINK=$(LIBTOOL) --tag=CC --mode=link $(strip $(CC) $(staticexe) $(RUNTIME_PATH) $(CFLAGS) $(LDFLAGS))
 LINK_LIB=$(LIBTOOL) --tag=CC --mode=link $(strip $(CC) $(RUNTIME_PATH) $(CFLAGS) $(LDFLAGS) $(staticexe) -version-number @LIBUNBOUND_CURRENT@:@LIBUNBOUND_REVISION@:@LIBUNBOUND_AGE@ -no-undefined)
 
-.PHONY:	clean realclean doc lint all install uninstall tests test download_ldns strip lib longtest longcheck check
+.PHONY:	clean realclean doc lint all install uninstall tests test strip lib longtest longcheck check
 
 $(BUILD)%.lo:    $(srcdir)/%.c 
 	$(INFO) Build $<
-	@if test ! -z "$(ldnsdir)" -a ! -e $(ldnsdir)/include/ldns/ldns.h; \
-		then (cd $(ldnsdir); $(MAKE) copy-headers); fi
 	@-if test ! -d $(dir $@); then $(INSTALL) -d $(patsubst %/,%,$(dir $@)); fi
 	$Q$(COMPILE) -o $@ -c $<
 
@@ -231,16 +227,6 @@ longtest:	tests
 
 lib:	libunbound.la
 
-ifeq ($(patsubst ldns-src%,ldns-src,$(ldnsdir)),ldns-src)
-ldnslib=$(ldnsdir)/lib/libldns.a
-$(ldnslib):	$(ldnsdir)/lib
-$(ldnsdir)/lib:
-	@if test ! -z "$(ldnsdir)"; \
-	then (cd $(ldnsdir) && $(MAKE)); fi
-else
-ldnslib=
-endif
-
 UBSYMS+=-export-symbols $(srcdir)/libunbound/ubsyms.def
 CLUBSYMS=-export-symbols $(BUILD)clubsyms.def
 EXTRALINK=
@@ -250,7 +236,7 @@ CLUBSYMS=
 EXTRALINK=-L. -L.libs -lunbound
 endif
 
-libunbound.la:	$(LIBUNBOUND_OBJ) $(ldnslib)
+libunbound.la:	$(LIBUNBOUND_OBJ)
 	$(INFO) Link $@
 ifeq ($(CHECKLOCK_SRC),)
 	$Q$(LINK_LIB) $(UBSYMS) -o $@ $(sort $(LIBUNBOUND_OBJ)) -rpath $(libdir) $(LIBS)
@@ -269,23 +255,23 @@ else
 	$Q$(LINK_LIB) $(CLUBSYMS) -o $@ $(sort $(LIBUNBOUND_OBJ)) -rpath $(libdir) $(LIBS)
 endif
 
-unbound$(EXEEXT):	$(DAEMON_OBJ) libunbound.la $(ldnslib)
+unbound$(EXEEXT):	$(DAEMON_OBJ) libunbound.la
 	$(INFO) Link $@
 	$Q$(LINK) -o $@ $(sort $(DAEMON_OBJ)) $(EXTRALINK) -lssl $(LIBS)
 
-unbound-checkconf$(EXEEXT):	$(CHECKCONF_OBJ) libunbound.la $(ldnslib)
+unbound-checkconf$(EXEEXT):	$(CHECKCONF_OBJ) libunbound.la
 	$(INFO) Link $@
 	$Q$(LINK) -o $@ $(sort $(CHECKCONF_OBJ)) $(EXTRALINK) -lssl $(LIBS)
 
-unbound-control$(EXEEXT):	$(CONTROL_OBJ) libunbound.la $(ldnslib)
+unbound-control$(EXEEXT):	$(CONTROL_OBJ) libunbound.la
 	$(INFO) Link $@
 	$Q$(LINK) -o $@ $(sort $(CONTROL_OBJ)) $(EXTRALINK) -lssl $(LIBS)
 
-unbound-host$(EXEEXT):	$(HOST_OBJ) libunbound.la $(ldnslib)
+unbound-host$(EXEEXT):	$(HOST_OBJ) libunbound.la
 	$(INFO) Link $@
 	$Q$(LINK) -o $@ $(sort $(HOST_OBJ)) -L. -L.libs -lunbound $(LIBS)
 
-unbound-anchor$(EXEEXT):	$(UBANCHOR_OBJ) libunbound.la $(ldnslib)
+unbound-anchor$(EXEEXT):	$(UBANCHOR_OBJ) libunbound.la
 	$(INFO) Link $@
 	$Q$(LINK) -o $@ $(sort $(UBANCHOR_OBJ)) -L. -L.libs -lunbound -lexpat -lssl $(LIBS)
 
@@ -297,19 +283,19 @@ unbound-service-remove$(EXEEXT):	$(SVCUNINST_OBJ)
 	$(INFO) Link $@
 	$Q$(LINK) -o $@ $(sort $(SVCUNINST_OBJ)) $(LIBS)
 
-anchor-update$(EXEEXT):  $(ANCHORUPD_OBJ) libunbound.la $(ldnslib)
+anchor-update$(EXEEXT):  $(ANCHORUPD_OBJ) libunbound.la
 	$(INFO) Link $@
 	$Q$(LINK) -o $@ $(sort $(ANCHORUPD_OBJ)) -L. -L.libs -lunbound $(LIBS)
 
-unittest$(EXEEXT):	$(UNITTEST_OBJ) $(ldnslib)
+unittest$(EXEEXT):	$(UNITTEST_OBJ)
 	$(INFO) Link $@
 	$Q$(LINK) -o $@ $(sort $(UNITTEST_OBJ)) $(LIBS)
 
-testbound$(EXEEXT):	$(TESTBOUND_OBJ) $(ldnslib)
+testbound$(EXEEXT):	$(TESTBOUND_OBJ)
 	$(INFO) Link $@
 	$Q$(LINK) -o $@ $(sort $(TESTBOUND_OBJ)) -lssl $(LIBS)
 
-lock-verify$(EXEEXT):	$(LOCKVERIFY_OBJ) $(ldnslib)
+lock-verify$(EXEEXT):	$(LOCKVERIFY_OBJ)
 	$(INFO) Link $@
 	$Q$(LINK) -o $@ $(sort $(LOCKVERIFY_OBJ)) $(LIBS)
 
@@ -317,35 +303,35 @@ petal$(EXEEXT):	$(PETAL_OBJ)
 	$(INFO) Link $@
 	$Q$(LINK) -o $@ $(sort $(PETAL_OBJ)) -lssl $(LIBS)
 
-pktview$(EXEEXT):	$(PKTVIEW_OBJ) $(ldnslib)
+pktview$(EXEEXT):	$(PKTVIEW_OBJ)
 	$(INFO) Link $@
 	$Q$(LINK) -o $@ $(sort $(PKTVIEW_OBJ)) $(LIBS)
 
-signit$(EXEEXT):	$(SIGNIT_OBJ) $(ldnslib)
+signit$(EXEEXT):	$(SIGNIT_OBJ)
 	$(INFO) Link $@
 	$Q$(LINK) -o $@ $(sort $(SIGNIT_OBJ)) $(LIBS)
 
-memstats$(EXEEXT):	$(MEMSTATS_OBJ) $(ldnslib)
+memstats$(EXEEXT):	$(MEMSTATS_OBJ)
 	$(INFO) Link $@
 	$Q$(LINK) -o $@ $(sort $(MEMSTATS_OBJ)) $(LIBS)
 
-asynclook$(EXEEXT):	$(ASYNCLOOK_OBJ) $(ldnslib) libunbound.la
+asynclook$(EXEEXT):	$(ASYNCLOOK_OBJ) libunbound.la
 	$(INFO) Link $@
 	$Q$(LINK) -o $@ $(sort $(ASYNCLOOK_OBJ)) $(LIBS) -L. -L.libs -lunbound
 
-streamtcp$(EXEEXT):	$(STREAMTCP_OBJ) $(ldnslib)
+streamtcp$(EXEEXT):	$(STREAMTCP_OBJ)
 	$(INFO) Link $@
 	$Q$(LINK) -o $@ $(sort $(STREAMTCP_OBJ)) $(LIBS)
 
-perf$(EXEEXT):	$(PERF_OBJ) $(ldnslib)
+perf$(EXEEXT):	$(PERF_OBJ)
 	$(INFO) Link $@
 	$Q$(LINK) -o $@ $(sort $(PERF_OBJ)) $(LIBS)
 
-delayer$(EXEEXT):	$(DELAYER_OBJ) $(ldnslib)
+delayer$(EXEEXT):	$(DELAYER_OBJ)
 	$(INFO) Link $@
 	$Q$(LINK) -o $@ $(sort $(DELAYER_OBJ)) $(LIBS)
 
-harvest$(EXEEXT):	$(HARVEST_OBJ) $(ldnslib) libunbound.la
+harvest$(EXEEXT):	$(HARVEST_OBJ) libunbound.la
 	$(INFO) Link $@
 	$Q$(LINK) -o $@ $(sort $(HARVEST_OBJ)) $(LIBS) -L. -L.libs -lunbound
 
@@ -490,12 +476,6 @@ endif
 	@echo
 	@echo "You still need to remove "`dirname $(DESTDIR)$(configfile)`" , $(DESTDIR)$(configfile) by hand"
 
-download_ldns:
-	svn export https://www.nlnetlabs.nl/svn/ldns/trunk/makedist.sh ldns_makedist.sh
-	./ldns_makedist.sh -s -d https://www.nlnetlabs.nl/svn/ldns/trunk
-	mv ldns-[0-9]*.tar.gz ldns-src.tar.gz
-	rm ldns-*.tar.gz.sha1 ldns_makedist.sh
-
 iana_update:
 	curl -o port-numbers.tmp http://www.iana.org/assignments/port-numbers
 	awk '/Unassigned|Reserved/ {next;} { match($$0, "[0-9]+/udp"); if (RLENGTH > 0) print substr($$0, RSTART, RLENGTH - 4) ","}' port-numbers.tmp | sort -nu > portslist.tmp
@@ -505,8 +485,6 @@ iana_update:
 # Automatic dependencies.
 $(BUILD)%.d: $(srcdir)/%.c
 	$(INFO) Depend $<
-	@if test ! -z "$(ldnsdir)" -a ! -e $(ldnsdir)/include/ldns/ldns.h; \
-		then (cd $(ldnsdir); $(MAKE) copy-headers); fi
 	@-if test ! -d $(dir $@); then $(INSTALL) -d $(patsubst %/,%,$(dir $@)); fi
 	$Q$(SHELL) -ec '$(CC) $(DEPFLAG) $(CPPFLAGS) $(CFLAGS) $< | sed '\''s!\(.*\)\.o[ :]*!$(dir $@)\1.lo $@ : !g'\'' > $@; [ -s $@ ] || rm -f $@'
 
