@@ -4,6 +4,9 @@
 	- fix bug#395: id bits of other query may leak out under conditions
 	- fix replyaddr count wrong after jostled queries, which leads to
 	  eventual starvation where the daemon has no replyaddrs left to use.
+	- fix comment about rndc port, that referred to the old port number.
+	- fix that the listening socket is not closed when too many remote
+	  control connections are made at the same time.
 
 23 June 2011: Wouter
 	- Changed -flto check to support clang compiler.

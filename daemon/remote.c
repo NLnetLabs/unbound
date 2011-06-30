@@ -395,7 +395,6 @@ int remote_accept_callback(struct comm_point* c, void* arg, int err,
 	/* create new commpoint unless we are servicing already */
 	if(rc->active >= rc->max_active) {
 		log_warn("drop incoming remote control: too many connections");
-		comm_point_stop_listening(c);
 	close_exit:
 #ifndef USE_WINSOCK
 		close(newfd);
