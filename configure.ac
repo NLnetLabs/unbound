@@ -713,7 +713,7 @@ AC_SUBST(EXPORT_ALL_SYMBOLS)
 # may break checks after this.
 AC_ARG_WITH(ldns, AC_HELP_STRING([--with-ldns=PATH], 
 	[specify prefix of path of ldns library to use]), 
-	[ specialldnsdir="$withval"
+	[
 	if test "$withval" != "yes"; then
 		if test "$withval" != "/usr" -a "$withval" != ""; then
 			CPPFLAGS="-I$withval/include $CPPFLAGS"

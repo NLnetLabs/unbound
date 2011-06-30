@@ -16674,7 +16674,7 @@ esac
 
 # Check whether --with-ldns was given.
 if test "${with_ldns+set}" = set; then :
-  withval=$with_ldns;  specialldnsdir="$withval"
+  withval=$with_ldns;
 	if test "$withval" != "yes"; then
 		if test "$withval" != "/usr" -a "$withval" != ""; then
 			CPPFLAGS="-I$withval/include $CPPFLAGS"
