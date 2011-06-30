@@ -528,22 +528,24 @@ mesh_state_cleanup(struct mesh_state* mstate)
 	int i;
 	if(!mstate)
 		return;
+	mesh = mstate->s.env->mesh;
 	/* drop unsent replies */
 	if(!mstate->replies_sent) {
 		struct mesh_reply* rep;
 		struct mesh_cb* cb;
 		for(rep=mstate->reply_list; rep; rep=rep->next) {
 			comm_point_drop_reply(&rep->query_reply);
+			mesh->num_reply_addrs--;
 		}
 		for(cb=mstate->cb_list; cb; cb=cb->next) {
 			fptr_ok(fptr_whitelist_mesh_cb(cb->cb));
 			(*cb->cb)(cb->cb_arg, LDNS_RCODE_SERVFAIL, NULL,
 				sec_status_unchecked, NULL);
+			mesh->num_reply_addrs--;
 		}
 	}
 
 	/* de-init modules */
-	mesh = mstate->s.env->mesh;
 	for(i=0; i<mesh->mods.num; i++) {
 		fptr_ok(fptr_whitelist_mod_clear(mesh->mods.mod[i]->clear));
 		(*mesh->mods.mod[i]->clear)(&mstate->s, i);
