@@ -726,7 +726,10 @@ AC_ARG_WITH(ldns, AC_HELP_STRING([--with-ldns=PATH],
 ])
 
 # check if ldns is good enough
-AC_CHECK_LIB(ldns, ldns_buffer_copy)
+AC_CHECK_LIB(ldns, ldns_rr_new,,[
+	AC_MSG_ERROR([No ldns library found, install the ldns library, let me detect the location or use --with-ldns=path to systemdir or the make-dir of ldns.  Install the package ldns or download source http://www.nlnetlabs.nl/projects/ldns])
+])
+AC_CHECK_FUNC(ldns_buffer_copy)
 AC_CHECK_FUNC(ldns_key_buf2rsa_raw)
 AC_CHECK_FUNC(ldns_get_random)
 AC_CHECK_FUNC(ldns_b32_ntop_extended_hex)
@@ -736,7 +739,9 @@ if test x$use_gost = xyes; then
 else
     ac_cv_func_ldns_key_EVP_load_gost_id="yes"
 fi
-AC_CHECK_HEADERS([ldns/ldns.h],,, [AC_INCLUDES_DEFAULT
+AC_CHECK_HEADERS([ldns/ldns.h],,[
+	AC_MSG_ERROR([No ldns include file found, install the ldns library development files.  Install package ldns-dev or ldns-devel or download source code http://www.nlnetlabs.nl/projects/ldns])
+	], [AC_INCLUDES_DEFAULT
 #ifdef HAVE_SYS_SOCKET_H
 #include <sys/socket.h>
 #endif
@@ -766,7 +771,7 @@ if test $ac_cv_lib_ldns_ldns_buffer_copy = yes \
     dnl ldns was found
     :
 else
-    AC_MSG_ERROR([No ldns library found (or not recent); install or update ldns library, let me detect the location or use --with-ldns=path to systemdir or the make-dir of ldns.  Package libldns or download source http://www.nlnetlabs.nl/projects/ldns])
+    AC_MSG_ERROR([ldns library is not recent; update the ldns library, let me detect the location or use --with-ldns=path to systemdir or the make-dir of ldns.  Package libldns or download source http://www.nlnetlabs.nl/projects/ldns])
 fi
 
 ACX_STRIP_EXT_FLAGS

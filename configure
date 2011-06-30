@@ -16695,9 +16695,9 @@ fi
 
 
 # check if ldns is good enough
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for ldns_buffer_copy in -lldns" >&5
-$as_echo_n "checking for ldns_buffer_copy in -lldns... " >&6; }
-if test "${ac_cv_lib_ldns_ldns_buffer_copy+set}" = set; then :
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for ldns_rr_new in -lldns" >&5
+$as_echo_n "checking for ldns_rr_new in -lldns... " >&6; }
+if test "${ac_cv_lib_ldns_ldns_rr_new+set}" = set; then :
   $as_echo_n "(cached) " >&6
 else
   ac_check_lib_save_LIBS=$LIBS
@@ -16711,32 +16711,41 @@ cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 #ifdef __cplusplus
 extern "C"
 #endif
-char ldns_buffer_copy ();
+char ldns_rr_new ();
 int
 main ()
 {
-return ldns_buffer_copy ();
+return ldns_rr_new ();
   ;
   return 0;
 }
 _ACEOF
 if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_lib_ldns_ldns_buffer_copy=yes
+  ac_cv_lib_ldns_ldns_rr_new=yes
 else
-  ac_cv_lib_ldns_ldns_buffer_copy=no
+  ac_cv_lib_ldns_ldns_rr_new=no
 fi
 rm -f core conftest.err conftest.$ac_objext \
     conftest$ac_exeext conftest.$ac_ext
 LIBS=$ac_check_lib_save_LIBS
 fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_ldns_ldns_buffer_copy" >&5
-$as_echo "$ac_cv_lib_ldns_ldns_buffer_copy" >&6; }
-if test "x$ac_cv_lib_ldns_ldns_buffer_copy" = x""yes; then :
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_ldns_ldns_rr_new" >&5
+$as_echo "$ac_cv_lib_ldns_ldns_rr_new" >&6; }
+if test "x$ac_cv_lib_ldns_ldns_rr_new" = x""yes; then :
   cat >>confdefs.h <<_ACEOF
 #define HAVE_LIBLDNS 1
 _ACEOF
 
   LIBS="-lldns $LIBS"
+
+else
+
+	as_fn_error $? "No ldns library found, install the ldns library, let me detect the location or use --with-ldns=path to systemdir or the make-dir of ldns.  Install the package ldns or download source http://www.nlnetlabs.nl/projects/ldns" "$LINENO" 5
+
+fi
+
+ac_fn_c_check_func "$LINENO" "ldns_buffer_copy" "ac_cv_func_ldns_buffer_copy"
+if test "x$ac_cv_func_ldns_buffer_copy" = x""yes; then :
 
 fi
 
@@ -16804,6 +16813,10 @@ if test "x$ac_cv_header_ldns_ldns_h" = x""yes; then :
 #define HAVE_LDNS_LDNS_H 1
 _ACEOF
 
+else
+
+	as_fn_error $? "No ldns include file found, install the ldns library development files.  Install package ldns-dev or ldns-devel or download source code http://www.nlnetlabs.nl/projects/ldns" "$LINENO" 5
+
 fi
 
 done
@@ -16816,7 +16829,7 @@ if test $ac_cv_lib_ldns_ldns_buffer_copy = yes \
     -a $ac_cv_func_ldns_key_EVP_load_gost_id = yes; then
         :
 else
-    as_fn_error $? "No ldns library found (or not recent); install or update ldns library, let me detect the location or use --with-ldns=path to systemdir or the make-dir of ldns.  Package libldns or download source http://www.nlnetlabs.nl/projects/ldns" "$LINENO" 5
+    as_fn_error $? "ldns library is not recent; update the ldns library, let me detect the location or use --with-ldns=path to systemdir or the make-dir of ldns.  Package libldns or download source http://www.nlnetlabs.nl/projects/ldns" "$LINENO" 5
 fi
 
 
