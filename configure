@@ -16740,7 +16740,7 @@ _ACEOF
 
 else
 
-	as_fn_error $? "No ldns library found, install the ldns library, install it into system lib dir or use --with-ldns=path to other location.  The --with-ldns can point to the make-dir of ldns.  Install the package ldns or download source http://www.nlnetlabs.nl/projects/ldns" "$LINENO" 5
+	as_fn_error $? "No ldns library found, install the ldns library into system lib dir or use --with-ldns=path to other location.  The --with-ldns can point to the make-dir of ldns.  Install the package ldns or download source http://www.nlnetlabs.nl/projects/ldns" "$LINENO" 5
 
 fi
 
@@ -16829,7 +16829,7 @@ if test $ac_cv_func_ldns_buffer_copy = yes \
     -a $ac_cv_func_ldns_key_EVP_load_gost_id = yes; then
         :
 else
-    as_fn_error $? "ldns library is not recent; update the ldns library, install it into system lib dir or use --with-ldns=path to it, you can use the make-dir of ldns for that.  Package libldns or download source http://www.nlnetlabs.nl/projects/ldns" "$LINENO" 5
+    as_fn_error $? "ldns library is not recent, update the ldns library, install it into system lib dir or use --with-ldns=path to other location.  The --with-ldns can point to the make-dir of ldns.  Package libldns or download source http://www.nlnetlabs.nl/projects/ldns" "$LINENO" 5
 fi
 
 
