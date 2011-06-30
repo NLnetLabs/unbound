@@ -16821,7 +16821,7 @@ fi
 
 done
 
-if test $ac_cv_func_ldns_ldns_buffer_copy = yes \
+if test $ac_cv_func_ldns_buffer_copy = yes \
     -a $ac_cv_func_ldns_key_buf2rsa_raw = yes \
     -a $ac_cv_func_ldns_get_random = yes \
     -a $ac_cv_header_ldns_ldns_h = yes \
