@@ -740,7 +740,7 @@ else
     ac_cv_func_ldns_key_EVP_load_gost_id="yes"
 fi
 AC_CHECK_HEADERS([ldns/ldns.h],,[
-	AC_MSG_ERROR([No ldns include file found, install the ldns library development files.  Install package ldns-dev or ldns-devel or download source code http://www.nlnetlabs.nl/projects/ldns])
+	AC_MSG_ERROR([No ldns include file found, install the ldns library development files.  Install package ldns-dev or ldns-devel or download source http://www.nlnetlabs.nl/projects/ldns])
 	], [AC_INCLUDES_DEFAULT
 #ifdef HAVE_SYS_SOCKET_H
 #include <sys/socket.h>
@@ -771,7 +771,7 @@ if test $ac_cv_func_ldns_buffer_copy = yes \
     dnl ldns was found
     :
 else
-    AC_MSG_ERROR([ldns library is not recent; update the ldns library, let me detect the location or use --with-ldns=path to systemdir or the make-dir of ldns.  Package libldns or download source http://www.nlnetlabs.nl/projects/ldns])
+    AC_MSG_ERROR([ldns library is not recent; update the ldns library, install it into system lib dir or use --with-ldns=path to it, you can use the make-dir of ldns for that.  Package libldns or download source http://www.nlnetlabs.nl/projects/ldns])
 fi
 
 ACX_STRIP_EXT_FLAGS
