@@ -739,17 +739,21 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 			worker->stats.unwanted_queries++;
 		return 0;
 	} else if(acl == acl_refuse) {
+		log_addr(VERB_ALGO, "refused query from",
+			&repinfo->addr, repinfo->addrlen);
+		log_buf(VERB_ALGO, "refuse", c->buffer);
+		if(worker->stats.extended)
+			worker->stats.unwanted_queries++;
+		if(worker_check_request(c->buffer, worker) == -1) {
+			comm_point_drop_reply(repinfo);
+			return 0; /* discard this */
+		}
 		ldns_buffer_set_limit(c->buffer, LDNS_HEADER_SIZE);
 		ldns_buffer_write_at(c->buffer, 4, 
 			(uint8_t*)"\0\0\0\0\0\0\0\0", 8);
 		LDNS_QR_SET(ldns_buffer_begin(c->buffer));
 		LDNS_RCODE_SET(ldns_buffer_begin(c->buffer), 
 			LDNS_RCODE_REFUSED);
-		log_addr(VERB_ALGO, "refused query from",
-			&repinfo->addr, repinfo->addrlen);
-		log_buf(VERB_ALGO, "refuse", c->buffer);
-		if(worker->stats.extended)
-			worker->stats.unwanted_queries++;
 		return 1;
 	}
 	if((ret=worker_check_request(c->buffer, worker)) != 0) {

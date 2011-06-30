@@ -1,6 +1,7 @@
 30 June 2011: Wouter
 	- tag relase 1.4.11, trunk is 1.4.12 development.
 	- iana portlist updated.
+	- fix bug#395: id bits of other query may leak out under conditions
 
 23 June 2011: Wouter
 	- Changed -flto check to support clang compiler.
