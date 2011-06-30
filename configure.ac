@@ -727,7 +727,7 @@ AC_ARG_WITH(ldns, AC_HELP_STRING([--with-ldns=PATH],
 
 # check if ldns is good enough
 AC_CHECK_LIB(ldns, ldns_rr_new,,[
-	AC_MSG_ERROR([No ldns library found, install the ldns library, install it into system lib dir or use --with-ldns=path to other location.  The --with-ldns can point to the make-dir of ldns.  Install the package ldns or download source http://www.nlnetlabs.nl/projects/ldns])
+	AC_MSG_ERROR([No ldns library found, install the ldns library into system lib dir or use --with-ldns=path to other location.  The --with-ldns can point to the make-dir of ldns.  Install the package ldns or download source http://www.nlnetlabs.nl/projects/ldns])
 ])
 AC_CHECK_FUNC(ldns_buffer_copy)
 AC_CHECK_FUNC(ldns_key_buf2rsa_raw)
@@ -771,7 +771,7 @@ if test $ac_cv_func_ldns_buffer_copy = yes \
     dnl ldns was found
     :
 else
-    AC_MSG_ERROR([ldns library is not recent; update the ldns library, install it into system lib dir or use --with-ldns=path to it, you can use the make-dir of ldns for that.  Package libldns or download source http://www.nlnetlabs.nl/projects/ldns])
+    AC_MSG_ERROR([ldns library is not recent, update the ldns library, install it into system lib dir or use --with-ldns=path to other location.  The --with-ldns can point to the make-dir of ldns.  Package libldns or download source http://www.nlnetlabs.nl/projects/ldns])
 fi
 
 ACX_STRIP_EXT_FLAGS
