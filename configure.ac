@@ -727,7 +727,7 @@ AC_ARG_WITH(ldns, AC_HELP_STRING([--with-ldns=PATH],
 
 # check if ldns is good enough
 AC_CHECK_LIB(ldns, ldns_rr_new,,[
-	AC_MSG_ERROR([No ldns library found, install the ldns library, let me detect the location or use --with-ldns=path to systemdir or the make-dir of ldns.  Install the package ldns or download source http://www.nlnetlabs.nl/projects/ldns])
+	AC_MSG_ERROR([No ldns library found, install the ldns library, install it into system lib dir or use --with-ldns=path to other location.  The --with-ldns can point to the make-dir of ldns.  Install the package ldns or download source http://www.nlnetlabs.nl/projects/ldns])
 ])
 AC_CHECK_FUNC(ldns_buffer_copy)
 AC_CHECK_FUNC(ldns_key_buf2rsa_raw)

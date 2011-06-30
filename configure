@@ -16740,7 +16740,7 @@ _ACEOF
 
 else
 
-	as_fn_error $? "No ldns library found, install the ldns library, let me detect the location or use --with-ldns=path to systemdir or the make-dir of ldns.  Install the package ldns or download source http://www.nlnetlabs.nl/projects/ldns" "$LINENO" 5
+	as_fn_error $? "No ldns library found, install the ldns library, install it into system lib dir or use --with-ldns=path to other location.  The --with-ldns can point to the make-dir of ldns.  Install the package ldns or download source http://www.nlnetlabs.nl/projects/ldns" "$LINENO" 5
 
 fi
 
