@@ -56,6 +56,7 @@ Generate a distribution tar file for unbound.
     -l ldnsdir   Directory where ldns resides. Detected from Makefile.
     -wssl openssl.xx.tar.gz Also build openssl from tarball for windows dist.
     -wxp expat.xx.tar.gz Also build expat from tarball for windows dist.
+    -wldns ldns.xx.tar.gz Also build libldns from tarball for windows dist.
     -w ...       Build windows binary dist. last args passed to configure.
 EOF
     exit 1
@@ -137,6 +138,7 @@ LDNSDIR=""
 DOWIN="no"
 WINSSL=""
 WINEXPAT=""
+WINLDNS=""
 
 # Parse the command line arguments.
 while [ "$1" ]; do
@@ -151,6 +153,10 @@ while [ "$1" ]; do
         "-s")
             SNAPSHOT="yes"
             ;;
+        "-wldns")
+	    WINLDNS="$2"
+	    shift
+	    ;;
         "-wssl")
 	    WINSSL="$2"
 	    shift
@@ -187,8 +193,8 @@ if [ "$DOWIN" = "yes" ]; then
 	configure="mingw32-configure"
 	strip="i686-pc-mingw32-strip"
 	makensis="makensis"	# from mingw32-nsis package
-	# in crosscompile no installed ldns, use builtin (not linux-ldns)
-	cross_flag="--with-ldns-builtin"
+	# flags for crosscompiled dependency libraries
+	cross_flag=""
 
 	check_svn_root
 	create_temp_dir
@@ -211,6 +217,21 @@ if [ "$DOWIN" = "yes" ]; then
 		info "winssl: make install_sw"
 		make install_sw || error_cleanup "OpenSSL install failed"
 		cross_flag="$cross_flag --with-ssl=$sslinstall"
+		cd ..
+	fi
+
+	if test -n "$WINLDNS"; then
+		info "Cross compile $WINLDNS"
+		info "ldns tar unpack"
+		(cd ..; gzip -cd $WINLDNS) | tar xf - || error_cleanup "tar unpack of $WINLDNS failed"
+		cd ldns-* || error_cleanup "no ldns-X dir in tarball"
+		# we can use the cross_flag with openssl in it
+		info "ldns: Configure $cross_flag"
+		mingw32-configure  $cross_flag || error_cleanup "ldns configure failed"
+		info "ldns: make"
+		make || error_cleanup "ldns crosscompile failed"
+		# use from the build directory.
+		cross_flag="$cross_flag --with-ldns=`pwd`"
 		cd ..
 	fi
 
