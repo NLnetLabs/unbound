@@ -757,7 +757,7 @@ enable_sha2
 enable_gost
 with_libevent
 with_libexpat
-enable_staticexe
+enable_static_exe
 enable_lock_checks
 enable_alloc_checks
 enable_alloc_lite
@@ -15924,9 +15924,9 @@ done
 # set static linking if requested
 
 staticexe=""
-# Check whether --enable-staticexe was given.
-if test "${enable_staticexe+set}" = set; then :
-  enableval=$enable_staticexe;
+# Check whether --enable-static-exe was given.
+if test "${enable_static_exe+set}" = set; then :
+  enableval=$enable_static_exe;
 fi
 
 if test x_$enable_static_exe = x_yes; then

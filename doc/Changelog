@@ -1,5 +1,6 @@
 1 July 2011: Wouter
 	- version number in example config file.
+	- fix that --enable-static-exe does not complain about it unknown.
 
 30 June 2011: Wouter
 	- tag relase 1.4.11, trunk is 1.4.12 development.

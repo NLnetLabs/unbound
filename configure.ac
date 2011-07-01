@@ -585,7 +585,7 @@ AC_CHECK_HEADERS([expat.h],,, [AC_INCLUDES_DEFAULT])
 # set static linking if requested
 AC_SUBST(staticexe)
 staticexe=""
-AC_ARG_ENABLE(staticexe, AC_HELP_STRING([--enable-static-exe],
+AC_ARG_ENABLE(static-exe, AC_HELP_STRING([--enable-static-exe],
 	[ enable to compile executables statically against event, ldns libs, for debug purposes ]), 
 	, )
 if test x_$enable_static_exe = x_yes; then
