@@ -431,6 +431,7 @@ replace_all doc/unbound-checkconf.8.in
 replace_all doc/unbound-control.8.in
 replace_all doc/unbound-anchor.8.in
 replace_all doc/unbound-host.1
+replace_all doc/example.conf.in
 replace_all doc/libunbound.3.in
 
 info "Renaming Unbound directory to unbound-$version."

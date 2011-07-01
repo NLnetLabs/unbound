@@ -1,7 +1,7 @@
 #
 # Example configuration file.
 #
-# See unbound.conf(5) man page.
+# See unbound.conf(5) man page, version @version@.
 #
 # this is a comment.
 
