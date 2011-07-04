@@ -1,3 +1,6 @@
+4 July 2011: Wouter
+	- 1.4.12rc1 tag created.
+
 1 July 2011: Wouter
 	- version number in example config file.
 	- fix that --enable-static-exe does not complain about it unknown.
