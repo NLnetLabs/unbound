@@ -1188,6 +1188,13 @@ nsec3_do_prove_nodata(struct module_env* env, struct nsec3_filter* flt,
 				"wilcard is a delegation, bogus");
 			return sec_status_bogus;
 		}
+		/* everything is peachy keen, except for optout spans */
+		log_assert(ce.nc_rrset);
+		if(nsec3_has_optout(ce.nc_rrset, ce.nc_rr)) {
+			verbose(VERB_ALGO, "nsec3 nodata proof: matching "
+				"wildcard is in optout range, insecure");
+			return sec_status_insecure;
+		}
 		return sec_status_secure;
 	}
 

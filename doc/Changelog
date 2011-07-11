@@ -1,3 +1,7 @@
+11 July 2011: Wouter
+	- Fix wildcard expansion no-data reply under an optout NSEC3 zone is
+	  validated as insecure, reported by Jia Li (lijia@cnnic.cn).
+
 4 July 2011: Wouter
 	- 1.4.12rc1 tag created.
 
