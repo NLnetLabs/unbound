@@ -1,3 +1,6 @@
+13 July 2011: Wouter
+	- Quick fix for contrib/unbound.spec example, no ldns-builtin any more.
+
 11 July 2011: Wouter
 	- Fix wildcard expansion no-data reply under an optout NSEC3 zone is
 	  validated as insecure, reported by Jia Li (lijia@cnnic.cn).

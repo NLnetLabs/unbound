@@ -7,8 +7,9 @@ Url: http://www.nlnetlabs.nl/unbound/
 Source: http://www.unbound.net/downloads/%{name}-%{version}.tar.gz
 #Source1: unbound.init
 Group: System Environment/Daemons
+Requires: ldns
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
-BuildRequires: flex, openssl-devel, expat-devel
+BuildRequires: flex, openssl-devel, expat-devel, ldns-devel
 
 %description
 Unbound is a validating, recursive, and caching DNS resolver.
@@ -28,11 +29,7 @@ The source code is under a BSD License.
 
 # configure with /var/unbound/unbound.conf so that all default chroot, 
 # pidfile and config file are in /var/unbound, ready for chroot jail set up.
-#
-# This is a build using libldns builtin version, the resulting binaries
-# do not require libldns and this package does not have version dependencies.
-# Could be smaller using a dependency on libldns (use --with-ldns=).
-%configure --with-conf-file=%{_localstatedir}/%{name}/unbound.conf --disable-rpath --with-ldns-builtin
+%configure --with-conf-file=%{_localstatedir}/%{name}/unbound.conf --disable-rpath
 
 %build
 #%{__make} %{?_smp_mflags}
@@ -92,6 +89,9 @@ if [ "$1" -ge "1" ]; then
 fi
 
 %changelog
+* Thu Jul 13 2011 Wouter Wijngaards <wouter@nlnetlabs.nl> - 1.4.8
+- ldns required and ldns-devel required for build, no more ldns-builtin.
+
 * Thu Mar 17 2011 Wouter Wijngaards <wouter@nlnetlabs.nl> - 1.4.8
 - removed --disable-gost, assume recent openssl on the destination platform.
 
