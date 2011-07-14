@@ -612,6 +612,8 @@ lz_enter_defaults(struct local_zones* zones, struct config_file* cfg,
 {
 	struct local_zone* z;
 
+	/* this list of zones is from RFC 6303 */
+
 	/* localhost. zone */
 	if(!lz_exists(zones, "localhost.") &&
 		!lz_nodefault(cfg, "localhost.")) {
