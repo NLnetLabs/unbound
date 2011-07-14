@@ -1,5 +1,7 @@
 14 July 2011: Wouter
 	- Unbound implements RFC6303 (since version 1.4.7).
+	- tag 1.4.12rc1 is released as 1.4.12 (without the other fixes in the
+	  meantime, those are for 1.4.13).
 
 13 July 2011: Wouter
 	- Quick fix for contrib/unbound.spec example, no ldns-builtin any more.
