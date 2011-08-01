@@ -2,7 +2,8 @@
 # Copyright 2009, Wouter Wijngaards, NLnet Labs.   
 # BSD licensed.
 #
-# Version 13
+# Version 14
+# 2011-08-01 Fix nonblock test (broken at v13).
 # 2011-08-01 Fix autoconf 2.68 warnings
 # 2011-06-23 Add ACX_CHECK_FLTO to check -flto.
 # 2010-08-16 Fix FLAG_OMITTED for AS_TR_CPP changes in autoconf-2.66.
@@ -981,6 +982,7 @@ int main(void)
 
 	close(sfd);
 	close(cfd);
+	return 0;
 }
 ]])], [
 	AC_MSG_RESULT([yes])
