@@ -2,7 +2,8 @@
 # Copyright 2009, Wouter Wijngaards, NLnet Labs.   
 # BSD licensed.
 #
-# Version 12
+# Version 13
+# 2011-08-01 Fix autoconf 2.68 warnings
 # 2011-06-23 Add ACX_CHECK_FLTO to check -flto.
 # 2010-08-16 Fix FLAG_OMITTED for AS_TR_CPP changes in autoconf-2.66.
 # 2010-07-02 Add check for ss_family (for minix).
@@ -766,7 +767,7 @@ AC_DEFUN([ACX_CHECK_GETADDRINFO_WITH_INCLUDES],
 AC_MSG_CHECKING(for getaddrinfo)
 ac_cv_func_getaddrinfo=no
 AC_LINK_IFELSE(
-[
+[AC_LANG_SOURCE([[
 #ifdef __cplusplus
 extern "C"
 {
@@ -780,14 +781,14 @@ int main() {
         ;
         return 0;
 }
-],
+]])],
 dnl this case on linux, solaris, bsd
 [ac_cv_func_getaddrinfo="yes"],
 dnl no quick getaddrinfo, try mingw32 and winsock2 library.
 ORIGLIBS="$LIBS"
 LIBS="$LIBS -lws2_32"
 AC_LINK_IFELSE(
-AC_LANG_PROGRAM(
+[AC_LANG_PROGRAM(
 [
 #ifdef HAVE_WS2TCPIP_H
 #include <ws2tcpip.h>
@@ -796,7 +797,7 @@ AC_LANG_PROGRAM(
 [
         (void)getaddrinfo(NULL, NULL, NULL, NULL);
 ]
-),
+)],
 [
 ac_cv_func_getaddrinfo="yes"
 dnl already: LIBS="$LIBS -lws2_32"
@@ -860,7 +861,8 @@ if echo $target | grep mingw32 >/dev/null; then
 	AC_MSG_RESULT([no (windows)])
 	AC_DEFINE([NONBLOCKING_IS_BROKEN], 1, [Define if the network stack does not fully support nonblocking io (causes lower performance).])
 else
-AC_RUN_IFELSE(AC_LANG_PROGRAM([
+AC_RUN_IFELSE([
+AC_LANG_SOURCE([[
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -884,7 +886,9 @@ AC_RUN_IFELSE(AC_LANG_PROGRAM([
 #ifdef HAVE_TIME_H
 #include <time.h>
 #endif
-],[[
+
+int main(void)
+{
 	int port;
 	int sfd, cfd;
 	int num = 10;
@@ -977,7 +981,8 @@ AC_RUN_IFELSE(AC_LANG_PROGRAM([
 
 	close(sfd);
 	close(cfd);
-]]), [
+}
+]])], [
 	AC_MSG_RESULT([yes])
 ], [
 	AC_MSG_RESULT([no])
@@ -1017,13 +1022,13 @@ AC_DEFUN([ACX_FUNC_IOCTLSOCKET],
 [
 # check ioctlsocket
 AC_MSG_CHECKING(for ioctlsocket)
-AC_LINK_IFELSE(AC_LANG_PROGRAM([
+AC_LINK_IFELSE([AC_LANG_PROGRAM([
 #ifdef HAVE_WINSOCK2_H
 #include <winsock2.h>
 #endif
 ], [
 	(void)ioctlsocket(0, 0, NULL);
-]), [
+])], [
 AC_MSG_RESULT(yes)
 AC_DEFINE(HAVE_IOCTLSOCKET, 1, [if the function 'ioctlsocket' is available])
 ],[AC_MSG_RESULT(no)])
