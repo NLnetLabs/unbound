@@ -392,7 +392,6 @@ realclean: clean
 	rm -f configure config.sub config.guess ltmain.sh aclocal.m4 libtool
 	rm -f util/configlexer.c util/configparser.c util/configparser.h
 	rm -f $(TEST_BIN)
-	if test -d ldns-src; then rm -rf ldns-src; fi
 	rm -f Makefile 
 
 $(BUILD)%.lint:    $(srcdir)/%.c 

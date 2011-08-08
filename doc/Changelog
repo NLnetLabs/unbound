@@ -1,3 +1,6 @@
+8 August 2011: Wouter
+	- make clean had ldns-src reference, removed.
+
 1 August 2011: Wouter
 	- Fix autoconf 2.68 warnings
 
