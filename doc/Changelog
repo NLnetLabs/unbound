@@ -1,3 +1,6 @@
+9 August 2011: Wouter
+	- patch from Tom Hendrikx fixes load of python modules.
+
 8 August 2011: Wouter
 	- make clean had ldns-src reference, removed.
 

@@ -153,6 +153,8 @@ int pythonmod_init(struct module_env* env, int id)
    }
    PyRun_SimpleString("sys.path.append('"RUN_DIR"') \n");
    PyRun_SimpleString("sys.path.append('"SHARE_DIR"') \n");
+   PyRun_SimpleString("import sysconfig \n");
+   PyRun_SimpleString("sys.path.append(sysconfig.get_path('purelib')) \n");
    if (PyRun_SimpleString("from unboundmodule import *\n") < 0)
    {
       log_err("pythonmod: cannot initialize core module: unboundmodule.py"); 
