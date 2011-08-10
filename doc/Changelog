@@ -1,5 +1,6 @@
 10 August 2011: Wouter
 	- Fix python site-packages path to /usr/lib64.
+	- updated patch from Tom.
 
 9 August 2011: Wouter
 	- patch from Tom Hendrikx fixes load of python modules.
