@@ -14761,7 +14761,7 @@ $as_echo "$PYTHON_LDFLAGS" >&6; }
 $as_echo_n "checking for Python site-packages path... " >&6; }
         if test -z "$PYTHON_SITE_PKG"; then
                 PYTHON_SITE_PKG=`$PYTHON -c "import distutils.sysconfig; \
-                        print distutils.sysconfig.get_python_lib(0,0);"`
+                        print distutils.sysconfig.get_python_lib(1,0);"`
         fi
         { $as_echo "$as_me:${as_lineno-$LINENO}: result: $PYTHON_SITE_PKG" >&5
 $as_echo "$PYTHON_SITE_PKG" >&6; }
