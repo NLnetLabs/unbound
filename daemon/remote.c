@@ -428,6 +428,7 @@ int remote_accept_callback(struct comm_point* c, void* arg, int err,
 	n->ssl = SSL_new(rc->ctx);
 	if(!n->ssl) {
 		log_crypto_err("could not SSL_new");
+		comm_point_delete(n->c);
 		free(n);
 		goto close_exit;
 	}
@@ -436,6 +437,7 @@ int remote_accept_callback(struct comm_point* c, void* arg, int err,
 	if(!SSL_set_fd(n->ssl, newfd)) {
 		log_crypto_err("could not SSL_set_fd");
 		SSL_free(n->ssl);
+		comm_point_delete(n->c);
 		free(n);
 		goto close_exit;
 	}
