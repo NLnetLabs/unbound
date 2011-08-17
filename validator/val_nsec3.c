@@ -435,7 +435,8 @@ filter_init(struct nsec3_filter* filter, struct ub_packed_rrset_key** list,
 			dname_subdomain_c(nm, filter->zone))) {
 			/* for a type DS do not accept a zone equal to qname*/
 			if(qinfo->qtype == LDNS_RR_TYPE_DS && 
-				query_dname_compare(qinfo->qname, nm) == 0)
+				query_dname_compare(qinfo->qname, nm) == 0 &&
+				!dname_is_root(qinfo->qname))
 				continue;
 			filter->zone = nm;
 			filter->zone_len = nmlen;
@@ -1127,7 +1128,8 @@ nsec3_do_prove_nodata(struct module_env* env, struct nsec3_filter* flt,
 		 * If not type DS: matching nsec3 must not be a delegation.
 		 */
 		if(qinfo->qtype == LDNS_RR_TYPE_DS && qinfo->qname_len != 1 
-			&& nsec3_has_type(rrset, rr, LDNS_RR_TYPE_SOA)) {
+			&& nsec3_has_type(rrset, rr, LDNS_RR_TYPE_SOA &&
+			!dname_is_root(qinfo->qname))) {
 			verbose(VERB_ALGO, "proveNodata: apex NSEC3 "
 				"abused for no DS proof, bogus");
 			return sec_status_bogus;

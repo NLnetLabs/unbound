@@ -1,3 +1,6 @@
+17 August 2011: Wouter
+	- Fix validation of . DS query.
+
 10 August 2011: Wouter
 	- Fix python site-packages path to /usr/lib64.
 	- updated patch from Tom.
