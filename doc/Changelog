@@ -1,5 +1,7 @@
 17 August 2011: Wouter
 	- Fix validation of . DS query.
+	- new xml format at IANA, new awk for iana_update.
+	- iana portlist updated.
 
 10 August 2011: Wouter
 	- Fix python site-packages path to /usr/lib64.

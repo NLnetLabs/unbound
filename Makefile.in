@@ -476,9 +476,8 @@ endif
 	@echo "You still need to remove "`dirname $(DESTDIR)$(configfile)`" , $(DESTDIR)$(configfile) by hand"
 
 iana_update:
-	curl -o port-numbers.tmp http://www.iana.org/assignments/port-numbers
-	awk '/Unassigned|Reserved/ {next;} { match($$0, "[0-9]+/udp"); if (RLENGTH > 0) print substr($$0, RSTART, RLENGTH - 4) ","}' port-numbers.tmp | sort -nu > portslist.tmp
-	cat portslist.tmp > util/iana_ports.inc
+	curl -o port-numbers.tmp http://www.iana.org/assignments/service-names-port-numbers/service-names-port-numbers.xml
+	awk '/<record>/ {p=0;} /<protocol>udp/ {p=1;} /<protocol>[^u]/ {p=0;} /Decomissioned|Decommissioned|Removed|De-registered|unassigned|Unassigned|Reserved/ {u=1;} /<number>/ { if(u==1) {u=0;} else { if(p==1) { match($$0,/[0-9]+/); print substr($$0, RSTART, RLENGTH) ","}}}' port-numbers.tmp | sort -nu > util/iana_ports.inc  
 	rm -f port-numbers.tmp portslist.tmp
 
 # Automatic dependencies.
