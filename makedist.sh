@@ -280,7 +280,8 @@ if [ "$DOWIN" = "yes" ]; then
     	replace_text "configure.ac" "AC_INIT(unbound, $version" "AC_INIT(unbound, $version2"
     	version="$version2"
     	info "Rebuilding configure script (autoconf) snapshot."
-    	autoconf || autoheader || error_cleanup "Autoconf failed."
+    	autoconf || error_cleanup "Autoconf failed."
+    	autoheader || error_cleanup "Autoheader failed."
     	rm -r autom4te* || echo "ignored"
     fi
 

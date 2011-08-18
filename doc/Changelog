@@ -1,3 +1,6 @@
+18 August 2011: Wouter
+	- fix autoconf call in makedist crosscompile to RC or snapshot.
+
 17 August 2011: Wouter
 	- Fix validation of . DS query.
 	- new xml format at IANA, new awk for iana_update.
