@@ -5,6 +5,7 @@
 	  It does not test for completeness (i.e. with NSEC or NSEC3 query),
 	  and it does not follow the CNAME or DNAME to another name (with
 	  even more data for the already large response).
+	- Fix that internally, CNAMEs with NXDOMAIN have that as rcode.
 
 18 August 2011: Wouter
 	- fix autoconf call in makedist crosscompile to RC or snapshot.

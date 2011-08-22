@@ -363,10 +363,6 @@ scrub_normalize(ldns_buffer* pkt, struct msg_parse* msg,
 					"too long");
 				return 0;
 			}
-			/* internally we have CNAME'd/DNAME'd chains ending
-			 * in nxdomain with NOERROR rcode, change rcode
-			 * to reflect this (if needed) */
-			FLAGS_SET_RCODE(msg->flags, LDNS_RCODE_NOERROR);
 			if(nx && nx->type == LDNS_RR_TYPE_CNAME && 
 			   dname_pkt_compare(pkt, sname, nx->dname) == 0) {
 				/* check next cname */
@@ -420,10 +416,6 @@ scrub_normalize(ldns_buffer* pkt, struct msg_parse* msg,
 					rrset = rrset->rrset_all_next;
 				}
 			}
-			/* internally we have CNAME'd/DNAME'd chains ending
-			 * in nxdomain with NOERROR rcode, change rcode
-			 * to reflect this (if needed) */
-			FLAGS_SET_RCODE(msg->flags, LDNS_RCODE_NOERROR);
 			continue;
 		}
 

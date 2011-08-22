@@ -119,6 +119,15 @@ response_type_from_server(int rdset,
 		if( (msg->rep->flags&BIT_RA) &&
 			!(msg->rep->flags&BIT_AA) && !rdset)
 				return RESPONSE_TYPE_REC_LAME;
+		/* it could be a CNAME with NXDOMAIN rcode */
+		for(i=0; i<msg->rep->an_numrrsets; i++) {
+			s = msg->rep->rrsets[i];
+			if(ntohs(s->rk.type) == LDNS_RR_TYPE_CNAME &&
+				query_dname_compare(request->qname,
+				s->rk.dname) == 0) {
+				return RESPONSE_TYPE_CNAME;
+			}
+		}
 		return RESPONSE_TYPE_ANSWER;
 	}
 	
