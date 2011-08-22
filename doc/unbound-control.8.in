@@ -151,17 +151,31 @@ and lameness data.
 Show the contents of the infra cache.
 .TP
 .B set_option \fIopt: val
-Set the option to the given value without a reload.  The cache is therefore
-not flushed.  The option must end with a ':' and whitespace must be between the
-option and the value.  Some values may not have an effect if set this way,
-the new values are not written to the config file, not all options are supported.
+Set the option to the given value without a reload.  The cache is
+therefore not flushed.  The option must end with a ':' and whitespace
+must be between the option and the value.  Some values may not have an
+effect if set this way, the new values are not written to the config file,
+not all options are supported.  This is different from the set_option call
+in libunbound, where all values work because unbound has not been inited.
+.IP
+The values that work are: statistics\-interval, statistics\-cumulative,
+do\-not\-query\-localhost, harden\-short\-bufsize, harden\-large\-queries,
+harden\-glue, harden\-dnssec\-stripped, harden\-below\-nxdomain,
+harden\-referral\-path, prefetch, prefetch\-key, log\-queries,
+hide\-identity, hide\-version, identity, version, val\-log\-level,
+val\-log\-squelch, ignore\-cd\-flag, add\-holddown, del\-holddown,
+keep\-missing.
 .TP
 .B get_option \fIopt
 Get the value of the option.  Give the option name without a trailing ':'.
-The value is printed.  If the value is "", nothing is printed and the
-connection closes.  On error 'error ...' is printed (it gives a syntax
-error on unknown option).  For some options a list of values, one on
-each line, is printed.  Not all options are supported.
+The value is printed.  If the value is "", nothing is printed
+and the connection closes.  On error 'error ...' is printed (it gives
+a syntax error on unknown option).  For some options a list of values,
+one on each line, is printed.  The options are shown from the config file
+as modified with set_option.  For some options an override may have been
+taken that does not show up with this command, not results from e.g. the
+verbosity and forward control commands.  Not all options work, see list_stubs,
+list_forwards, list_local_zones and list_local_data for those.
 .TP
 .B list_stubs
 List the stub zones in use.  These are printed one by one to the output.
