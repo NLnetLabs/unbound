@@ -76,6 +76,8 @@ struct config_file {
 	int do_udp;
 	/** do tcp query support. */
 	int do_tcp;
+	/** tcp upstream queries (no UDP upstream queries) */
+	int tcp_upstream;
 
 	/** outgoing port range number of ports (per thread) */
 	int outgoing_num_ports;

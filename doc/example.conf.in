@@ -153,6 +153,10 @@ server:
 	# Enable TCP, "yes" or "no".
 	# do-tcp: yes
 
+	# upstream connections use TCP only (and no UDP), "yes" or "no"
+	# useful for tunneling scenarios, default no.
+	# tcp-upstream: no
+
 	# Detach from the terminal, run in background, "yes" or "no".
 	# do-daemonize: yes
 

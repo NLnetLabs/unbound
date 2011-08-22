@@ -435,6 +435,7 @@ void pending_delete(struct outside_network* outnet, struct pending* p);
  *	If the value includes BIT_DO, DO bit is set when in EDNS queries.
  * @param want_dnssec: signatures are needed, without EDNS the answer is
  * 	likely to be useless.
+ * @param tcp_upstream: use TCP for upstream queries.
  * @param callback: callback function.
  * @param callback_arg: user argument to callback function.
  * @param addr: to which server to send the query.
@@ -447,7 +448,7 @@ void pending_delete(struct outside_network* outnet, struct pending* p);
  */
 struct serviced_query* outnet_serviced_query(struct outside_network* outnet,
 	uint8_t* qname, size_t qnamelen, uint16_t qtype, uint16_t qclass,
-	uint16_t flags, int dnssec, int want_dnssec,
+	uint16_t flags, int dnssec, int want_dnssec, int tcp_upstream,
 	struct sockaddr_storage* addr, socklen_t addrlen, 
 	comm_point_callback_t* callback, void* callback_arg, 
 	ldns_buffer* buff, int (*arg_compare)(void*,void*));

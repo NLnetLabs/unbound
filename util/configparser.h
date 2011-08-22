@@ -155,7 +155,8 @@
      VAR_SO_SNDBUF = 372,
      VAR_HARDEN_BELOW_NXDOMAIN = 373,
      VAR_IGNORE_CD_FLAG = 374,
-     VAR_LOG_QUERIES = 375
+     VAR_LOG_QUERIES = 375,
+     VAR_TCP_UPSTREAM = 376
    };
 #endif
 /* Tokens.  */
@@ -277,6 +278,7 @@
 #define VAR_HARDEN_BELOW_NXDOMAIN 373
 #define VAR_IGNORE_CD_FLAG 374
 #define VAR_LOG_QUERIES 375
+#define VAR_TCP_UPSTREAM 376
 
 
 
@@ -293,7 +295,7 @@ typedef union YYSTYPE
 
 
 /* Line 1685 of yacc.c  */
-#line 297 "util/configparser.h"
+#line 299 "util/configparser.h"
 } YYSTYPE;
 # define YYSTYPE_IS_TRIVIAL 1
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */

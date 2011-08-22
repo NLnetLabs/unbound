@@ -102,7 +102,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_AUTO_TRUST_ANCHOR_FILE VAR_KEEP_MISSING VAR_ADD_HOLDDOWN 
 %token VAR_DEL_HOLDDOWN VAR_SO_RCVBUF VAR_EDNS_BUFFER_SIZE VAR_PREFETCH
 %token VAR_PREFETCH_KEY VAR_SO_SNDBUF VAR_HARDEN_BELOW_NXDOMAIN
-%token VAR_IGNORE_CD_FLAG VAR_LOG_QUERIES
+%token VAR_IGNORE_CD_FLAG VAR_LOG_QUERIES VAR_TCP_UPSTREAM
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -157,7 +157,7 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_del_holddown | server_keep_missing | server_so_rcvbuf |
 	server_edns_buffer_size | server_prefetch | server_prefetch_key |
 	server_so_sndbuf | server_harden_below_nxdomain | server_ignore_cd_flag |
-	server_log_queries
+	server_log_queries | server_tcp_upstream
 	;
 stubstart: VAR_STUB_ZONE
 	{
@@ -362,6 +362,15 @@ server_do_tcp: VAR_DO_TCP STRING_ARG
 		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
 			yyerror("expected yes or no.");
 		else cfg_parser->cfg->do_tcp = (strcmp($2, "yes")==0);
+		free($2);
+	}
+	;
+server_tcp_upstream: VAR_TCP_UPSTREAM STRING_ARG
+	{
+		OUTYY(("P(server_tcp_upstream:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->tcp_upstream = (strcmp($2, "yes")==0);
 		free($2);
 	}
 	;

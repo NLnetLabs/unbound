@@ -1693,7 +1693,7 @@ callback_list_find(struct serviced_query* sq, void* cb_arg,
 struct serviced_query* 
 outnet_serviced_query(struct outside_network* outnet,
 	uint8_t* qname, size_t qnamelen, uint16_t qtype, uint16_t qclass,
-	uint16_t flags, int dnssec, int want_dnssec,
+	uint16_t flags, int dnssec, int want_dnssec, int tcp_upstream,
 	struct sockaddr_storage* addr, socklen_t addrlen, 
 	comm_point_callback_t* callback, void* callback_arg, 
 	ldns_buffer* buff, int (*arg_compare)(void*,void*))
@@ -1719,7 +1719,7 @@ outnet_serviced_query(struct outside_network* outnet,
 			return NULL;
 		}
 		/* perform first network action */
-		if(outnet->do_udp) {
+		if(outnet->do_udp && !tcp_upstream) {
 			if(!serviced_udp_send(sq, buff)) {
 				(void)rbtree_delete(outnet->serviced, sq);
 				free(sq->qbuf);

@@ -87,6 +87,7 @@ config_create(void)
 	cfg->do_ip6 = 1;
 	cfg->do_udp = 1;
 	cfg->do_tcp = 1;
+	cfg->tcp_upstream = 0;
 	cfg->use_syslog = 1;
 	cfg->log_time_ascii = 0;
 	cfg->log_queries = 0;
@@ -326,6 +327,7 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	else S_YNO("do-ip6:", do_ip6)
 	else S_YNO("do-udp:", do_udp)
 	else S_YNO("do-tcp:", do_tcp)
+	else S_YNO("tcp-upstream:", tcp_upstream)
 	else S_YNO("interface-automatic:", if_automatic)
 	else S_YNO("do-daemonize:", do_daemonize)
 	else S_NUMBER_NONZERO("port:", port)
@@ -577,6 +579,7 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_YNO(opt, "do-ip6", do_ip6)
 	else O_YNO(opt, "do-udp", do_udp)
 	else O_YNO(opt, "do-tcp", do_tcp)
+	else O_YNO(opt, "tcp-upstream", tcp_upstream)
 	else O_YNO(opt, "do-daemonize", do_daemonize)
 	else O_STR(opt, "chroot", chrootdir)
 	else O_STR(opt, "username", username)
