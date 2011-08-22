@@ -405,10 +405,21 @@ scrub_normalize(ldns_buffer* pkt, struct msg_parse* msg,
 
 		/* Follow the CNAME chain. */
 		if(rrset->type == LDNS_RR_TYPE_CNAME) {
+			uint8_t* oldsname = sname;
 			if(!parse_get_cname_target(rrset, &sname, &snamelen))
 				return 0;
 			prev = rrset;
 			rrset = rrset->rrset_all_next;
+			/* in CNAME ANY response, can have data after CNAME */
+			if(qinfo->qtype == LDNS_RR_TYPE_ANY) {
+				while(rrset && rrset->section ==
+					LDNS_SECTION_ANSWER &&
+					dname_pkt_compare(pkt, oldsname,
+					rrset->dname) == 0) {
+					prev = rrset;
+					rrset = rrset->rrset_all_next;
+				}
+			}
 			/* internally we have CNAME'd/DNAME'd chains ending
 			 * in nxdomain with NOERROR rcode, change rcode
 			 * to reflect this (if needed) */

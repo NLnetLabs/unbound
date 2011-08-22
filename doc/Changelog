@@ -1,3 +1,11 @@
+22 August 2011: Wouter
+	- Fix validation of qtype ANY responses with CNAMEs (thanks Cathy
+	  Zhang and Luo Ce).  Unbound responds with the RR types that are
+	  available at the name for qtype ANY and validates those RR types.
+	  It does not test for completeness (i.e. with NSEC or NSEC3 query),
+	  and it does not follow the CNAME or DNAME to another name (with
+	  even more data for the already large response).
+
 18 August 2011: Wouter
 	- fix autoconf call in makedist crosscompile to RC or snapshot.
 

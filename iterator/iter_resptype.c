@@ -54,6 +54,8 @@ response_type_from_cache(struct dns_msg* msg,
 	/* If the message is NXDOMAIN, then it is an ANSWER. */
 	if(FLAGS_GET_RCODE(msg->rep->flags) == LDNS_RCODE_NXDOMAIN)
 		return RESPONSE_TYPE_ANSWER;
+	if(request->qtype == LDNS_RR_TYPE_ANY)
+		return RESPONSE_TYPE_ANSWER;
 	
 	/* First we look at the answer section. This can tell us if this is
 	 * CNAME or positive ANSWER. */
@@ -179,6 +181,9 @@ response_type_from_server(int rdset,
 				get_cname_target(s, &mname, &mname_len);
 			}
 		}
+		/* not a referral, and qtype any, thus an answer */
+		if(request->qtype == LDNS_RR_TYPE_ANY)
+			return RESPONSE_TYPE_ANSWER;
 		/* if we encountered a CNAME (or a bunch of CNAMEs), and 
 		 * still got to here, then it is a CNAME response. 
 		 * (This is regardless of the AA bit at this point) */
