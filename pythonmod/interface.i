@@ -868,6 +868,15 @@ void log_dns_msg(const char* str, struct query_info* qinfo, struct reply_info* r
 void log_query_info(enum verbosity_value v, const char* str, struct query_info* qinf);
 void regional_log_stats(struct regional *r);
 
+// Free allocated memory from marked sources returning corresponding types
+%typemap(newfree, noblock = 1) char * {
+  free($1);
+}
+
+// Mark as source returning newly allocated memory
+%newobject ldns_rr_type2str;
+%newobject ldns_rr_class2str;
+
 // LDNS functions
 char *ldns_rr_type2str(const uint16_t atype);
 char *ldns_rr_class2str(const uint16_t aclass);

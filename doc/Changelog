@@ -1,3 +1,7 @@
+24 August 2011: Wouter
+	- Applied patch from Karel Slany that fixes a memory leak in the
+	  unbound python module, in string conversions.
+
 22 August 2011: Wouter
 	- Fix validation of qtype ANY responses with CNAMEs (thanks Cathy
 	  Zhang and Luo Ce).  Unbound responds with the RR types that are
