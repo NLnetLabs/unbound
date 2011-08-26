@@ -172,10 +172,12 @@ int iter_dp_is_useless(struct query_info* qinfo, uint16_t qflags,
  * @param dp: delegation point.
  * @param msg: delegation message, with DS if a secure referral.
  * @param dclass: class of query.
+ * @param qstate: module query state for the query in question, for validation
+ * 	retry state.
  * @return 1 if dnssec is expected, 0 if not.
  */
 int iter_indicates_dnssec(struct module_env* env, struct delegpt* dp,
-	struct dns_msg* msg, uint16_t dclass);
+	struct dns_msg* msg, uint16_t dclass, struct module_qstate* qstate);
 
 /**
  * See if a message contains DNSSEC.

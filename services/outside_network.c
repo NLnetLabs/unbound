@@ -1318,7 +1318,7 @@ serviced_udp_send(struct serviced_query* sq, ldns_buffer* buff)
 			/* even 700 msec may be too small */
 			rtt = 1000;
 			sq->status = serviced_query_PROBE_EDNS;
-		} else if(vs != -1) {
+		} else if(vs != -1 || sq->want_dnssec) {
 			sq->status = serviced_query_UDP_EDNS;
 		} else { 	
 			sq->status = serviced_query_UDP; 
@@ -1536,7 +1536,7 @@ serviced_tcp_send(struct serviced_query* sq, ldns_buffer* buff)
 	if(!infra_host(sq->outnet->infra, &sq->addr, sq->addrlen, 
 		*sq->outnet->now_secs, &vs, &edns_lame_known, &rtt))
 		return 0;
-	if(vs != -1)
+	if(vs != -1 || sq->want_dnssec)
 		sq->status = serviced_query_TCP_EDNS;
 	else 	sq->status = serviced_query_TCP;
 	serviced_encode(sq, buff, sq->status == serviced_query_TCP_EDNS);

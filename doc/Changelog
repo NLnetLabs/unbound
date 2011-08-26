@@ -1,5 +1,11 @@
 26 August 2011: Wouter
 	- Fix num-threads 0 does not segfault, reported by Simon Deziel.
+	- Fix validation failures due to EDNS backoff retries, the retry
+	  for fetch of data has want_dnssec because the iter_indicate_dnssec
+	  function returns true when validation failure retry happens, and
+	  then the serviced query code does not fallback to noEDNS, even if
+	  the cache says it has this.  This helps for DLV deployment when
+	  the DNSSEC status is not known for sure before the lookup concludes.
 
 24 August 2011: Wouter
 	- Applied patch from Karel Slany that fixes a memory leak in the
