@@ -318,7 +318,7 @@ morechecks(struct config_file* cfg, const char* fname)
 
 	if(cfg->verbosity < 0)
 		fatal_exit("verbosity value < 0");
-	if(cfg->num_threads < 0 || cfg->num_threads > 10000)
+	if(cfg->num_threads <= 0 || cfg->num_threads > 10000)
 		fatal_exit("num_threads value weird");
 	if(!cfg->do_ip4 && !cfg->do_ip6)
 		fatal_exit("ip4 and ip6 are both disabled, pointless");

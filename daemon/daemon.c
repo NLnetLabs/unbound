@@ -326,7 +326,7 @@ daemon_create_workers(struct daemon* daemon)
 	numport = daemon_get_shufport(daemon, shufport);
 	verbose(VERB_ALGO, "total of %d outgoing ports available", numport);
 	
-	daemon->num = daemon->cfg->num_threads;
+	daemon->num = (daemon->cfg->num_threads?daemon->cfg->num_threads:1);
 	daemon->workers = (struct worker**)calloc((size_t)daemon->num, 
 		sizeof(struct worker*));
 	for(i=0; i<daemon->num; i++) {

@@ -199,7 +199,7 @@ checkrlimits(struct config_file* cfg)
 #if !defined(HAVE_PTHREAD) && !defined(HAVE_SOLARIS_THREADS)
 	int numthread = 1; /* it forks */
 #else
-	int numthread = cfg->num_threads;
+	int numthread = (cfg->num_threads?cfg->num_threads:1);
 #endif
 	size_t total = numthread * perthread + misc;
 	size_t avail;

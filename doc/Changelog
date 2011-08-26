@@ -1,3 +1,6 @@
+26 August 2011: Wouter
+	- Fix num-threads 0 does not segfault, reported by Simon Deziel.
+
 24 August 2011: Wouter
 	- Applied patch from Karel Slany that fixes a memory leak in the
 	  unbound python module, in string conversions.
