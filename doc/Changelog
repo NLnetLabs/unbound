@@ -1,3 +1,6 @@
+2 September 2011: Wouter
+	- iana portlist updated.
+
 26 August 2011: Wouter
 	- Fix num-threads 0 does not segfault, reported by Simon Deziel.
 	- Fix validation failures due to EDNS backoff retries, the retry
