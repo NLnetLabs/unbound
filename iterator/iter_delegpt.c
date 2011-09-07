@@ -482,3 +482,13 @@ void delegpt_no_ipv6(struct delegpt* dp)
 			ns->resolved = 1;
 	}
 }
+
+void delegpt_no_ipv4(struct delegpt* dp)
+{
+	struct delegpt_ns* ns;
+	for(ns = dp->nslist; ns; ns = ns->next) {
+		/* no ipv4, so only ipv6 is enough to resolve a nameserver */
+		if(ns->got6)
+			ns->resolved = 1;
+	}
+}

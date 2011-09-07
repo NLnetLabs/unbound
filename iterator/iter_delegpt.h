@@ -339,4 +339,11 @@ void delegpt_add_neg_msg(struct delegpt* dp, struct msgreply_entry* msg);
  */
 void delegpt_no_ipv6(struct delegpt* dp);
 
+/**
+ * Register the fact that there is no ipv4 and thus As are not going 
+ * to be queried for or be useful.
+ * @param dp: the delegation point. Updated to reflect no ipv4.
+ */
+void delegpt_no_ipv4(struct delegpt* dp);
+
 #endif /* ITERATOR_ITER_DELEGPT_H */

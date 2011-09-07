@@ -93,6 +93,9 @@ struct iter_env {
 	/** A flag to indicate whether or not we have an IPv6 route */
 	int supports_ipv6;
 
+	/** A flag to indicate whether or not we have an IPv4 route */
+	int supports_ipv4;
+
 	/** A set of inetaddrs that should never be queried. */
 	struct iter_donotq* donotq;
 

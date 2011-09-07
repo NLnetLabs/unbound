@@ -132,6 +132,7 @@ iter_apply_cfg(struct iter_env* iter_env, struct config_file* cfg)
 		return 0;
 	}
 	iter_env->supports_ipv6 = cfg->do_ip6;
+	iter_env->supports_ipv4 = cfg->do_ip4;
 	return 1;
 }
 
@@ -150,6 +151,7 @@ iter_apply_cfg(struct iter_env* iter_env, struct config_file* cfg)
  *		o The address is bogus (DNSSEC validation failure).
  *		o Listed as donotquery
  *		o is ipv6 but no ipv6 support (in operating system).
+ *		o is ipv4 but no ipv4 support (in operating system).
  *		o is lame
  *	Otherwise, an rtt in milliseconds.
  *	0 .. USEFUL_SERVER_TOP_TIMEOUT-1
@@ -193,6 +195,9 @@ iter_filter_unsuitable(struct iter_env* iter_env, struct module_env* env,
 	}
 	if(!iter_env->supports_ipv6 && addr_is_ip6(&a->addr, a->addrlen)) {
 		return -1; /* there is no ip6 available */
+	}
+	if(!iter_env->supports_ipv4 && !addr_is_ip6(&a->addr, a->addrlen)) {
+		return -1; /* there is no ip4 available */
 	}
 	/* check lameness - need zone , class info */
 	if(infra_get_lame_rtt(env->infra_cache, &a->addr, a->addrlen, 

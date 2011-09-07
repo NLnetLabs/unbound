@@ -1367,7 +1367,7 @@ query_for_targets(struct module_qstate* qstate, struct iter_qstate* iq,
 			query_count++;
 		}
 		/* Send the A request. */
-		if(!ns->got4) {
+		if(ie->supports_ipv4 && !ns->got4) {
 			if(!generate_target_query(qstate, iq, id, 
 				ns->name, ns->namelen, 
 				LDNS_RR_TYPE_A, iq->qchase.qclass)) {
@@ -1476,7 +1476,7 @@ processLastResort(struct module_qstate* qstate, struct iter_qstate* iq,
 			ns->done_pside6 = 1;
 			query_count++;
 		}
-		if(!ns->done_pside4) {
+		if(ie->supports_ipv4 && !ns->done_pside4) {
 			/* Send the A request. */
 			if(!generate_parentside_target_query(qstate, iq, id, 
 				ns->name, ns->namelen, 
@@ -1556,6 +1556,8 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 	}
 	if(!ie->supports_ipv6)
 		delegpt_no_ipv6(iq->dp);
+	if(!ie->supports_ipv4)
+		delegpt_no_ipv4(iq->dp);
 	delegpt_log(VERB_ALGO, iq->dp);
 
 	if(iq->num_current_queries>0) {
