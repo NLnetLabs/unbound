@@ -539,7 +539,7 @@ iter_dp_is_useless(struct query_info* qinfo, uint16_t qflags,
 
 int 
 iter_indicates_dnssec(struct module_env* env, struct delegpt* dp,
-        struct dns_msg* msg, uint16_t dclass, struct module_qstate* qstate)
+        struct dns_msg* msg, uint16_t dclass)
 {
 	struct trust_anchor* a;
 	/* information not available, !env->anchors can be common */
@@ -572,15 +572,6 @@ iter_indicates_dnssec(struct module_env* env, struct delegpt* dp,
 			}
 			regional_free_all(env->scratch);
 		}
-	}
-	/* on retries, we have to expect DNSSEC.
-	 * just a blacklist of the cache is done for parentside lookups too,
-	 * but blacklist of IPs is done for validation failures. */
-	if(qstate && qstate->blacklist) {
-		struct sock_list* p;
-		for(p=qstate->blacklist; p; p=p->next)
-			if(p->len != 0)
-				return 1;
 	}
 	return 0;
 }

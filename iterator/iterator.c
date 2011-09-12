@@ -574,8 +574,8 @@ prime_root(struct module_qstate* qstate, struct iter_qstate* iq,
 		}
 		/* there should not be any target queries. */
 		subiq->num_target_queries = 0; 
-		subiq->dnssec_expected = iter_indicates_dnssec(qstate->env,
-			subiq->dp, NULL, subq->qinfo.qclass, subq);
+		subiq->dnssec_expected = iter_indicates_dnssec(
+			qstate->env, subiq->dp, NULL, subq->qinfo.qclass);
 	}
 	
 	/* this module stops, our submodule starts, and does the query. */
@@ -669,8 +669,8 @@ prime_stub(struct module_qstate* qstate, struct iter_qstate* iq,
 		 * missing targets. */
 		subiq->num_target_queries = 0; 
 		subiq->wait_priming_stub = 1;
-		subiq->dnssec_expected = iter_indicates_dnssec(qstate->env,
-			subiq->dp, NULL, subq->qinfo.qclass, subq);
+		subiq->dnssec_expected = iter_indicates_dnssec(
+			qstate->env, subiq->dp, NULL, subq->qinfo.qclass);
 	}
 	
 	/* this module stops, our submodule starts, and does the query. */
@@ -1191,7 +1191,7 @@ processInitRequest3(struct module_qstate* qstate, struct iter_qstate* iq,
 	/* if the cache reply dp equals a validation anchor or msg has DS,
 	 * then DNSSEC RRSIGs are expected in the reply */
 	iq->dnssec_expected = iter_indicates_dnssec(qstate->env, iq->dp, 
-		iq->deleg_msg, iq->qchase.qclass, qstate);
+		iq->deleg_msg, iq->qchase.qclass);
 
 	/* If the RD flag wasn't set, then we just finish with the 
 	 * cached referral as the response. */
@@ -1254,7 +1254,7 @@ generate_parentside_target_query(struct module_qstate* qstate,
 			subiq->dp = delegpt_copy(iq->dp, subq->region);
 			subiq->dnssec_expected = iter_indicates_dnssec(
 				qstate->env, subiq->dp, NULL, 
-				subq->qinfo.qclass, subq);
+				subq->qinfo.qclass);
 			subiq->refetch_glue = 1;
 		} else {
 			subiq->dp = dns_cache_find_delegation(qstate->env, 
@@ -1264,7 +1264,7 @@ generate_parentside_target_query(struct module_qstate* qstate,
 			if(subiq->dp) { 
 				subiq->dnssec_expected = iter_indicates_dnssec(
 					qstate->env, subiq->dp, NULL, 
-					subq->qinfo.qclass, subq);
+					subq->qinfo.qclass);
 				subiq->refetch_glue = 1;
 			}
 		}
@@ -1899,7 +1899,7 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		/* see if the next dp is a trust anchor, or a DS was sent
 		 * along, indicating dnssec is expected for next zone */
 		iq->dnssec_expected = iter_indicates_dnssec(qstate->env, 
-			iq->dp, iq->response, iq->qchase.qclass, qstate);
+			iq->dp, iq->response, iq->qchase.qclass);
 		/* if dnssec, validating then also fetch the key for the DS */
 		if(iq->dnssec_expected && qstate->env->cfg->prefetch_key &&
 			!(qstate->query_flags&BIT_CD))
