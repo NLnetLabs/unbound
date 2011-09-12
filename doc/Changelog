@@ -1,6 +1,7 @@
 12 September 2011: Wouter
 	- Reverted dns EDNS backoff fix, it did not help and needs
 	  fragmentation fixes instead.
+	- tag 1.4.13rc2
 
 7 September 2011: Wouter
 	- Fix operation in ipv6 only (do-ip4: no) mode.
