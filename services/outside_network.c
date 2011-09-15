@@ -1199,6 +1199,7 @@ serviced_delete(struct serviced_query* sq)
 		if(sq->status == serviced_query_UDP_EDNS ||
 			sq->status == serviced_query_UDP ||
 			sq->status == serviced_query_PROBE_EDNS ||
+			sq->status == serviced_query_UDP_EDNS_FRAG ||
 			sq->status == serviced_query_UDP_EDNS_fallback) {
 			struct pending* p = (struct pending*)sq->pending;
 			if(p->pc)
@@ -1336,7 +1337,8 @@ serviced_udp_send(struct serviced_query* sq, ldns_buffer* buff)
 			sq->status = serviced_query_UDP; 
 		}
 	}
-	serviced_encode(sq, buff, sq->status == serviced_query_UDP_EDNS);
+	serviced_encode(sq, buff, (sq->status == serviced_query_UDP_EDNS) ||
+		(sq->status == serviced_query_UDP_EDNS_FRAG));
 	sq->last_sent_time = *sq->outnet->now_tv;
 	sq->edns_lame_known = (int)edns_lame_known;
 	verbose(VERB_ALGO, "serviced query UDP timeout=%d msec", rtt);
@@ -1893,6 +1895,7 @@ serviced_get_mem(struct serviced_query* sq)
 	if(sq->status == serviced_query_UDP_EDNS ||
 		sq->status == serviced_query_UDP ||
 		sq->status == serviced_query_PROBE_EDNS ||
+		sq->status == serviced_query_UDP_EDNS_FRAG ||
 		sq->status == serviced_query_UDP_EDNS_fallback) {
 		s += sizeof(struct pending);
 		s += comm_timer_get_mem(NULL);
