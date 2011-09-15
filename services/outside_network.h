@@ -274,6 +274,11 @@ struct service_callback {
 	void* cb_arg;
 };
 
+/** fallback size for fragmentation for EDNS in IPv4 */
+#define EDNS_FRAG_SIZE_IP4 1480
+/** fallback size for EDNS in IPv6, fits one fragment with ip6-tunnel-ids */
+#define EDNS_FRAG_SIZE_IP6 1260
+
 /**
  * Query service record.
  * Contains query and destination. UDP, TCP, EDNS are all tried.
@@ -314,7 +319,9 @@ struct serviced_query {
 		/** probe to test noEDNS0 (EDNS gives FORMERRorNOTIMP) */
 		serviced_query_UDP_EDNS_fallback,
 		/** probe to test TCP noEDNS0 (EDNS gives FORMERRorNOTIMP) */
-		serviced_query_TCP_EDNS_fallback
+		serviced_query_TCP_EDNS_fallback,
+		/** send UDP query with EDNS1480 (or 1280) */
+		serviced_query_UDP_EDNS_FRAG
 	} 	
 		/** variable with current status */ 
 		status;

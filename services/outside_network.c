@@ -1280,7 +1280,19 @@ serviced_encode(struct serviced_query* sq, ldns_buffer* buff, int with_edns)
 		edns.edns_present = 1;
 		edns.ext_rcode = 0;
 		edns.edns_version = EDNS_ADVERTISED_VERSION;
-		edns.udp_size = EDNS_ADVERTISED_SIZE;
+		if(sq->status == serviced_query_UDP_EDNS_FRAG) {
+			if(addr_is_ip6(&sq->addr, sq->addrlen)) {
+				if(EDNS_FRAG_SIZE_IP6 < EDNS_ADVERTISED_SIZE)
+					edns.udp_size = EDNS_FRAG_SIZE_IP6;
+				else	edns.udp_size = EDNS_ADVERTISED_SIZE;
+			} else {
+				if(EDNS_FRAG_SIZE_IP4 < EDNS_ADVERTISED_SIZE)
+					edns.udp_size = EDNS_FRAG_SIZE_IP4;
+				else	edns.udp_size = EDNS_ADVERTISED_SIZE;
+			}
+		} else {
+			edns.udp_size = EDNS_ADVERTISED_SIZE;
+		}
 		edns.bits = 0;
 		if(sq->dnssec & EDNS_DO)
 			edns.bits = EDNS_DO;
@@ -1564,6 +1576,20 @@ serviced_udp_callback(struct comm_point* c, void* arg, int error,
 			 * by EDNS. */
 			sq->status = serviced_query_UDP_EDNS;
 		}
+		if(sq->status == serviced_query_UDP_EDNS) {
+			/* fallback to 1480/1280 */
+			sq->status = serviced_query_UDP_EDNS_FRAG;
+			log_name_addr(VERB_ALGO, "try edns1xx0", sq->qbuf+10,
+				&sq->addr, sq->addrlen);
+			if(!serviced_udp_send(sq, c->buffer)) {
+				serviced_callbacks(sq, NETEVENT_CLOSED, c, rep);
+			}
+			return 0;
+		}
+		if(sq->status == serviced_query_UDP_EDNS_FRAG) {
+			/* fragmentation size did not fix it */
+			sq->status = serviced_query_UDP_EDNS;
+		}
 		sq->retry++;
 		if(!(rto=infra_rtt_update(outnet->infra, &sq->addr, sq->addrlen,
 			-1, sq->last_rtt, (uint32_t)now.tv_sec)))
@@ -1589,7 +1615,8 @@ serviced_udp_callback(struct comm_point* c, void* arg, int error,
 		return 0;
 	}
 	if(!fallback_tcp) {
-	    if(sq->status == serviced_query_UDP_EDNS 
+	    if( (sq->status == serviced_query_UDP_EDNS 
+	        ||sq->status == serviced_query_UDP_EDNS_FRAG)
 		&& (LDNS_RCODE_WIRE(ldns_buffer_begin(c->buffer)) 
 			== LDNS_RCODE_FORMERR || LDNS_RCODE_WIRE(
 			ldns_buffer_begin(c->buffer)) == LDNS_RCODE_NOTIMPL)) {
