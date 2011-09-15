@@ -1,3 +1,7 @@
+15 September 2011: Wouter
+	- release 1.4.13.
+	- trunk contains 1.4.14 in development.
+
 12 September 2011: Wouter
 	- Reverted dns EDNS backoff fix, it did not help and needs
 	  fragmentation fixes instead.
