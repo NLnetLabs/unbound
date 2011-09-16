@@ -975,6 +975,7 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 			iq->dp = NULL;
 			iq->refetch_glue = 0;
 			iq->query_restart_count++;
+			iq->sent_count = 0;
 			sock_list_insert(&qstate->reply_origin, NULL, 0, qstate->region);
 			return next_state(iq, INIT_REQUEST_STATE);
 		}
@@ -1426,6 +1427,7 @@ processLastResort(struct module_qstate* qstate, struct iter_qstate* iq,
 			iq->deleg_msg = NULL;
 			iq->refetch_glue = 1;
 			iq->query_restart_count++;
+			iq->sent_count = 0;
 			return next_state(iq, INIT_REQUEST_STATE);
 		}
 	}
@@ -1613,6 +1615,7 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 			iter_dec_attempts(iq->dp, 3); /* space for fallback */
 			iq->num_current_queries++; /* RespState decrements it*/
 			iq->referral_count++; /* make sure we don't loop */
+			iq->sent_count = 0;
 			iq->state = QUERY_RESP_STATE;
 			return 1;
 		}
