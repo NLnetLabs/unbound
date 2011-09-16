@@ -215,6 +215,8 @@ uint32_t        initval)         /* the previous hash, or an arbitrary value */
 }
 
 
+#ifdef SELF_TEST
+
 /*
 --------------------------------------------------------------------
 hashword2() -- same as hashword(), but take two seeds and return two
@@ -260,6 +262,7 @@ uint32_t       *pb)               /* IN: more seed OUT: secondary hash value */
   *pc=c; *pb=b;
 }
 
+#endif /* SELF_TEST */
 
 /*
 -------------------------------------------------------------------------------
@@ -459,6 +462,7 @@ uint32_t hashlittle( const void *key, size_t length, uint32_t initval)
   return c;
 }
 
+#ifdef SELF_TEST
 
 /*
  * hashlittle2: return 2 32-bit hash values
@@ -646,7 +650,9 @@ void hashlittle2(
   *pc=c; *pb=b;
 }
 
+#endif /* SELF_TEST */
 
+#if 0	/* currently not used */
 
 /*
  * hashbig():
@@ -778,6 +784,7 @@ uint32_t hashbig( const void *key, size_t length, uint32_t initval)
   return c;
 }
 
+#endif /* 0 == currently not used */
 
 #ifdef SELF_TEST
 
