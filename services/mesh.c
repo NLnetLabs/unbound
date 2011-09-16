@@ -691,7 +691,10 @@ int mesh_attach_sub(struct module_qstate* qstate, struct query_info* qinfo,
 		/* set detached (it is now) */
 		mesh->num_detached_states++;
 		/* set new query state to run */
-		n = rbtree_insert(&mesh->run, &sub->run_node);
+#ifdef UNBOUND_DEBUG
+		n =
+#endif
+		rbtree_insert(&mesh->run, &sub->run_node);
 		log_assert(n != NULL);
 		*newq = &sub->s;
 	} else
