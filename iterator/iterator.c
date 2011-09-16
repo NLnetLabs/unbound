@@ -117,6 +117,7 @@ iter_new(struct module_qstate* qstate, int id)
 	iq->num_current_queries = 0;
 	iq->query_restart_count = 0;
 	iq->referral_count = 0;
+	iq->sent_count = 0;
 	iq->wait_priming_stub = 0;
 	iq->refetch_glue = 0;
 	iq->dnssec_expected = 0;
@@ -1537,14 +1538,19 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 
 	log_query_info(VERB_QUERY, "processQueryTargets:", &qstate->qinfo);
 	verbose(VERB_ALGO, "processQueryTargets: targetqueries %d, "
-		"currentqueries %d", iq->num_target_queries, 
-		iq->num_current_queries);
+		"currentqueries %d sentcount %d", iq->num_target_queries, 
+		iq->num_current_queries, iq->sent_count);
 
 	/* Make sure that we haven't run away */
 	/* FIXME: is this check even necessary? */
 	if(iq->referral_count > MAX_REFERRAL_COUNT) {
 		verbose(VERB_QUERY, "request has exceeded the maximum "
 			"number of referrrals with %d", iq->referral_count);
+		return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
+	}
+	if(iq->sent_count > MAX_SENT_COUNT) {
+		verbose(VERB_QUERY, "request has exceeded the maximum "
+			"number of sends with %d", iq->sent_count);
 		return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
 	}
 	
@@ -1573,7 +1579,8 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 	/* < not <=, because although the array is large enough for <=, the
 	 * generated query will immediately be discarded due to depth and
 	 * that servfail is cached, which is not good as opportunism goes. */
-	if(iq->depth < ie->max_dependency_depth) {
+	if(iq->depth < ie->max_dependency_depth
+		&& iq->sent_count < TARGET_FETCH_STOP) {
 		tf_policy = ie->target_fetch_policy[iq->depth];
 	}
 
@@ -1596,7 +1603,8 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 		/* the current caps_server is the number of fallbacks sent.
 		 * the original query is one that matched too, so we have
 		 * caps_server+1 number of matching queries now */
-		if(iq->caps_server+1 >= naddr*3) {
+		if(iq->caps_server+1 >= naddr*3 ||
+			iq->caps_server+1 >= MAX_SENT_COUNT) {
 			/* we're done, process the response */
 			verbose(VERB_ALGO, "0x20 fallback had %d responses "
 				"match for %d wanted, done.", 
@@ -1720,6 +1728,7 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 	}
 	outbound_list_insert(&iq->outlist, outq);
 	iq->num_current_queries++;
+	iq->sent_count++;
 	qstate->ext_state[id] = module_wait_reply;
 
 	return 0;
@@ -1896,6 +1905,7 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		delegpt_log(VERB_ALGO, iq->dp);
 		/* Count this as a referral. */
 		iq->referral_count++;
+		iq->sent_count = 0;
 		/* see if the next dp is a trust anchor, or a DS was sent
 		 * along, indicating dnssec is expected for next zone */
 		iq->dnssec_expected = iter_indicates_dnssec(qstate->env, 
@@ -1953,6 +1963,7 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		iq->dp = NULL;
 		/* Note the query restart. */
 		iq->query_restart_count++;
+		iq->sent_count = 0;
 
 		/* stop current outstanding queries. 
 		 * FIXME: should the outstanding queries be waited for and

@@ -56,6 +56,10 @@ struct iter_priv;
 #define MAX_RESTART_COUNT       8
 /** max number of referrals. Makes sure resolver does not run away */
 #define MAX_REFERRAL_COUNT	130
+/** max number of queries-sent-out.  Make sure large NS set does not loop */
+#define MAX_SENT_COUNT		16
+/** at what query-sent-count to stop target fetch policy */
+#define TARGET_FETCH_STOP	3
 /** how nice is a server without further information, in msec 
  * Equals rtt initial timeout value.
  */
@@ -251,6 +255,9 @@ struct iter_qstate {
 
 	/** the number of times this query as followed a referral. */
 	int referral_count;
+
+	/** number of queries fired off */
+	int sent_count;
 
 	/**
 	 * The query must store NS records from referrals as parentside RRs

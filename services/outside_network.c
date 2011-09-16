@@ -1585,7 +1585,7 @@ serviced_udp_callback(struct comm_point* c, void* arg, int error,
 			 * by EDNS. */
 			sq->status = serviced_query_UDP_EDNS;
 		}
-		if(sq->status == serviced_query_UDP_EDNS) {
+		if(sq->status == serviced_query_UDP_EDNS && sq->last_rtt < 5000) {
 			/* fallback to 1480/1280 */
 			sq->status = serviced_query_UDP_EDNS_FRAG;
 			log_name_addr(VERB_ALGO, "try edns1xx0", sq->qbuf+10,

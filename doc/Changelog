@@ -4,6 +4,11 @@
 	- iana portlist updated.
 	- fix EDNS1480 change memleak and TCP fallback.
 	- fix various compiler warnings (reported by Paul Wouters).
+	- max sent count.  EDNS1480 only for rtt < 5000.  No promiscuous
+	  fetch if sentcount > 3, stop query if sentcount > 16.  Count is
+	  reset when referral or CNAME happens.  This makes unbound better
+	  at managing large NS sets, they are explored when there is continued
+	  interest (in the form of queries).
 
 15 September 2011: Wouter
 	- release 1.4.13.
