@@ -1694,6 +1694,7 @@ serviced_udp_callback(struct comm_point* c, void* arg, int error,
 		/* fallback to TCP */
 		/* this discards partial UDP contents */
 		if(sq->status == serviced_query_UDP_EDNS ||
+			sq->status == serviced_query_UDP_EDNS_FRAG ||
 			sq->status == serviced_query_UDP_EDNS_fallback)
 			/* if we have unfinished EDNS_fallback, start again */
 			sq->status = serviced_query_TCP_EDNS;

@@ -2,6 +2,7 @@
 	- fix bug #408: accept patch from Steve Snyder that comments out
 	  unused functions in lookup3.c.
 	- iana portlist updated.
+	- fix EDNS1480 change memleak and TCP fallback.
 
 15 September 2011: Wouter
 	- release 1.4.13.
