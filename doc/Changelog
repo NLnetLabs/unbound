@@ -1,6 +1,7 @@
 16 September 2011: Wouter
 	- fix bug #408: accept patch from Steve Snyder that comments out
 	  unused functions in lookup3.c.
+	- iana portlist updated.
 
 15 September 2011: Wouter
 	- release 1.4.13.
