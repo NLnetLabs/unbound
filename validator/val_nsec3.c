@@ -643,7 +643,9 @@ nsec3_hash_name(rbtree_t* table, struct regional* region, ldns_buffer* buf,
 {
 	struct nsec3_cached_hash* c;
 	struct nsec3_cached_hash looki;
+#ifdef UNBOUND_DEBUG
 	rbnode_t* n;
+#endif
 	int r;
 	looki.node.key = &looki;
 	looki.nsec3 = nsec3;
@@ -670,7 +672,10 @@ nsec3_hash_name(rbtree_t* table, struct regional* region, ldns_buffer* buf,
 	r = nsec3_calc_b32(region, buf, c);
 	if(r != 1)
 		return r;
-	n = rbtree_insert(table, &c->node);
+#ifdef UNBOUND_DEBUG
+	n =
+#endif
+	rbtree_insert(table, &c->node);
 	log_assert(n); /* cannot be duplicate, just did lookup */
 	*hash = c;
 	return 1;

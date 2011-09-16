@@ -1145,7 +1145,9 @@ serviced_create(struct outside_network* outnet, ldns_buffer* buff, int dnssec,
 	int want_dnssec, struct sockaddr_storage* addr, socklen_t addrlen)
 {
 	struct serviced_query* sq = (struct serviced_query*)malloc(sizeof(*sq));
+#ifdef UNBOUND_DEBUG
 	rbnode_t* ins;
+#endif
 	if(!sq) 
 		return NULL;
 	sq->node.key = sq;
@@ -1165,7 +1167,10 @@ serviced_create(struct outside_network* outnet, ldns_buffer* buff, int dnssec,
 	sq->status = serviced_initial;
 	sq->retry = 0;
 	sq->to_be_deleted = 0;
-	ins = rbtree_insert(outnet->serviced, &sq->node);
+#ifdef UNBOUND_DEBUG
+	ins = 
+#endif
+	rbtree_insert(outnet->serviced, &sq->node);
 	log_assert(ins != NULL); /* must not be already present */
 	return sq;
 }
@@ -1401,11 +1406,13 @@ serviced_callbacks(struct serviced_query* sq, int error, struct comm_point* c,
 	int dobackup = (sq->cblist && sq->cblist->next); /* >1 cb*/
 	uint8_t *backup_p = NULL;
 	size_t backlen = 0;
-	rbnode_t* rem;
+#ifdef UNBOUND_DEBUG
+	rbnode_t* rem =
+#endif
 	/* remove from tree, and schedule for deletion, so that callbacks
 	 * can safely deregister themselves and even create new serviced
 	 * queries that are identical to this one. */
-	rem = rbtree_delete(sq->outnet->serviced, sq);
+	rbtree_delete(sq->outnet->serviced, sq);
 	log_assert(rem); /* should have been present */
 	sq->to_be_deleted = 1; 
 	verbose(VERB_ALGO, "svcd callbacks start");
@@ -1798,8 +1805,10 @@ void outnet_serviced_query_stop(struct serviced_query* sq, void* cb_arg)
 	callback_list_remove(sq, cb_arg);
 	/* if callbacks() routine scheduled deletion, let it do that */
 	if(!sq->cblist && !sq->to_be_deleted) {
-		rbnode_t* rem;
-		rem = rbtree_delete(sq->outnet->serviced, sq);
+#ifdef UNBOUND_DEBUG
+		rbnode_t* rem =
+#endif
+		rbtree_delete(sq->outnet->serviced, sq);
 		log_assert(rem); /* should be present */
 		serviced_delete(sq); 
 	}

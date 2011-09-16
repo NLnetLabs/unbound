@@ -3,6 +3,7 @@
 	  unused functions in lookup3.c.
 	- iana portlist updated.
 	- fix EDNS1480 change memleak and TCP fallback.
+	- fix various compiler warnings (reported by Paul Wouters).
 
 15 September 2011: Wouter
 	- release 1.4.13.

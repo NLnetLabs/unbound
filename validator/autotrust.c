@@ -869,7 +869,9 @@ print_id(FILE* out, char* fname, struct module_env* env,
 	uint8_t* nm, size_t nmlen, uint16_t dclass)
 {
 	ldns_rdf rdf;
+#ifdef UNBOUND_DEBUG
 	ldns_status s;
+#endif
 
 	memset(&rdf, 0, sizeof(rdf));
 	ldns_rdf_set_data(&rdf, nm);
@@ -877,7 +879,10 @@ print_id(FILE* out, char* fname, struct module_env* env,
 	ldns_rdf_set_type(&rdf, LDNS_RDF_TYPE_DNAME);
 
 	ldns_buffer_clear(env->scratch_buffer);
-	s = ldns_rdf2buffer_str_dname(env->scratch_buffer, &rdf);
+#ifdef UNBOUND_DEBUG
+	s =
+#endif
+	ldns_rdf2buffer_str_dname(env->scratch_buffer, &rdf);
 	log_assert(s == LDNS_STATUS_OK);
 	ldns_buffer_write_u8(env->scratch_buffer, 0);
 	ldns_buffer_flip(env->scratch_buffer);

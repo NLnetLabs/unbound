@@ -195,7 +195,9 @@ static struct trust_anchor*
 anchor_new_ta(struct val_anchors* anchors, uint8_t* name, int namelabs,
 	size_t namelen, uint16_t dclass)
 {
+#ifdef UNBOUND_DEBUG
 	rbnode_t* r;
+#endif
 	struct trust_anchor* ta = (struct trust_anchor*)regional_alloc(
 		anchors->region, sizeof(struct trust_anchor));
 	if(!ta)
@@ -210,7 +212,10 @@ anchor_new_ta(struct val_anchors* anchors, uint8_t* name, int namelabs,
 	ta->dclass = dclass;
 	lock_basic_init(&ta->lock);
 	lock_basic_lock(&anchors->lock);
-	r = rbtree_insert(anchors->tree, &ta->node);
+#ifdef UNBOUND_DEBUG
+	r =
+#endif
+	rbtree_insert(anchors->tree, &ta->node);
 	lock_basic_unlock(&anchors->lock);
 	log_assert(r != NULL);
 	return ta;
