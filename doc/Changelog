@@ -1,3 +1,8 @@
+20 September 2011: Wouter
+	- Fix classification of NS set in answer section, where there is a
+	  parent-child server, and the answer has the AA flag for dir.slb.com.
+	  Thanks to Amanda Constant from Secure64.
+
 16 September 2011: Wouter
 	- fix bug #408: accept patch from Steve Snyder that comments out
 	  unused functions in lookup3.c.

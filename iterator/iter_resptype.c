@@ -163,6 +163,8 @@ response_type_from_server(int rdset,
 				ntohs(s->rk.rrset_class) == request->qclass &&
 				dname_strict_subdomain_c(s->rk.dname, 
 				origzone)) {
+				if((msg->rep->flags&BIT_AA))
+					return RESPONSE_TYPE_ANSWER;
 				return RESPONSE_TYPE_REFERRAL;
 			}
 
