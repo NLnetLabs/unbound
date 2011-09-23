@@ -298,6 +298,8 @@ struct serviced_query {
 	int dnssec;
 	/** We want signatures, or else the answer is likely useless */
 	int want_dnssec;
+	/** tcp upstream used, use tcp */
+	int tcp_upstream;
 	/** where to send it */
 	struct sockaddr_storage addr;
 	/** length of addr field in use. */

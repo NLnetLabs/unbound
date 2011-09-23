@@ -1142,7 +1142,8 @@ lookup_serviced(struct outside_network* outnet, ldns_buffer* buff, int dnssec,
 /** Create new serviced entry */
 static struct serviced_query*
 serviced_create(struct outside_network* outnet, ldns_buffer* buff, int dnssec,
-	int want_dnssec, struct sockaddr_storage* addr, socklen_t addrlen)
+	int want_dnssec, int tcp_upstream, struct sockaddr_storage* addr,
+	socklen_t addrlen)
 {
 	struct serviced_query* sq = (struct serviced_query*)malloc(sizeof(*sq));
 #ifdef UNBOUND_DEBUG
@@ -1159,6 +1160,7 @@ serviced_create(struct outside_network* outnet, ldns_buffer* buff, int dnssec,
 	sq->qbuflen = ldns_buffer_limit(buff);
 	sq->dnssec = dnssec;
 	sq->want_dnssec = want_dnssec;
+	sq->tcp_upstream = tcp_upstream;
 	memcpy(&sq->addr, addr, addrlen);
 	sq->addrlen = addrlen;
 	sq->outnet = outnet;
@@ -1518,6 +1520,21 @@ serviced_tcp_callback(struct comm_point* c, void* arg, int error,
 			log_err("Out of memory caching no edns for host");
 		sq->status = serviced_query_TCP;
 	}
+	if(sq->tcp_upstream) {
+	    struct timeval now = *sq->outnet->now_tv;
+	    if(now.tv_sec > sq->last_sent_time.tv_sec ||
+		(now.tv_sec == sq->last_sent_time.tv_sec &&
+		now.tv_usec > sq->last_sent_time.tv_usec)) {
+		/* convert from microseconds to milliseconds */
+		int roundtime = ((int)now.tv_sec - (int)sq->last_sent_time.tv_sec)*1000
+		  + ((int)now.tv_usec - (int)sq->last_sent_time.tv_usec)/1000;
+		verbose(VERB_ALGO, "measured TCP-time at %d msec", roundtime);
+		log_assert(roundtime >= 0);
+		if(!infra_rtt_update(sq->outnet->infra, &sq->addr, sq->addrlen, 
+			roundtime, sq->last_rtt, (uint32_t)now.tv_sec))
+			log_err("out of memory noting rtt.");
+	    }
+	}
 	/* insert address into reply info */
 	if(!rep) {
 		/* create one if there isn't (on errors) */
@@ -1537,6 +1554,7 @@ serviced_tcp_initiate(struct outside_network* outnet,
 	verbose(VERB_ALGO, "initiate TCP query %s", 
 		sq->status==serviced_query_TCP_EDNS?"EDNS":"");
 	serviced_encode(sq, buff, sq->status == serviced_query_TCP_EDNS);
+	sq->last_sent_time = *sq->outnet->now_tv;
 	sq->pending = pending_tcp_query(outnet, buff, &sq->addr,
 		sq->addrlen, TCP_AUTH_QUERY_TIMEOUT, serviced_tcp_callback, 
 		sq);
@@ -1561,6 +1579,7 @@ serviced_tcp_send(struct serviced_query* sq, ldns_buffer* buff)
 		sq->status = serviced_query_TCP_EDNS;
 	else 	sq->status = serviced_query_TCP;
 	serviced_encode(sq, buff, sq->status == serviced_query_TCP_EDNS);
+	sq->last_sent_time = *sq->outnet->now_tv;
 	sq->pending = pending_tcp_query(sq->outnet, buff, &sq->addr,
 		sq->addrlen, TCP_AUTH_QUERY_TIMEOUT, serviced_tcp_callback, 
 		sq);
@@ -1750,7 +1769,7 @@ outnet_serviced_query(struct outside_network* outnet,
 	if(!sq) {
 		/* make new serviced query entry */
 		sq = serviced_create(outnet, buff, dnssec, want_dnssec,
-			addr, addrlen);
+			tcp_upstream, addr, addrlen);
 		if(!sq) {
 			free(cb);
 			return NULL;

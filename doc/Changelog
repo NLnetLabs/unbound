@@ -1,3 +1,7 @@
+23 September 2011: Wouter
+	- TCP-upstream calculates tcp-ping so server selection works if there
+	  are alternatives.
+
 20 September 2011: Wouter
 	- Fix classification of NS set in answer section, where there is a
 	  parent-child server, and the answer has the AA flag for dir.slb.com.
