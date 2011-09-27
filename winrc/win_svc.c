@@ -489,6 +489,10 @@ wsvc_command_option(const char* wopt, const char* cfgfile, int v, int c)
 		wsvc_remove(stdout);
 	else if(strcmp(wopt, "service") == 0)
 		service_start(cfgfile, v, c);
+	else if(strcmp(wopt, "start") == 0)
+		wsvc_rc_start(stdout);
+	else if(strcmp(wopt, "stop") == 0)
+		wsvc_rc_stop(stdout);
 	else fatal_exit("unknown option: %s", wopt);
 	exit(0);
 }

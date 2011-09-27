@@ -1,3 +1,6 @@
+27 September 2011: Wouter
+	- unbound.exe -w windows option for start and stop service.
+
 23 September 2011: Wouter
 	- TCP-upstream calculates tcp-ping so server selection works if there
 	  are alternatives.
