@@ -257,7 +257,7 @@ endif
 
 unbound$(EXEEXT):	$(DAEMON_OBJ) libunbound.la
 	$(INFO) Link $@
-	$Q$(LINK) -o $@ $(sort $(DAEMON_OBJ)) $(EXTRALINK) -lssl $(LIBS)
+	$Q$(LINK) -o $@ $(sort $(DAEMON_OBJ)) $(EXTRALINK) -L. -L.libs -lunbound -lssl $(LIBS)
 
 unbound-checkconf$(EXEEXT):	$(CHECKCONF_OBJ) libunbound.la
 	$(INFO) Link $@
