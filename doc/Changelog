@@ -1,7 +1,3 @@
-6 October 2011: Matthijs
-	- link unbound against unbound library
-	* Probably needs to be reverted: because of performances optimizations
-
 27 September 2011: Wouter
 	- unbound.exe -w windows option for start and stop service.
 
