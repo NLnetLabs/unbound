@@ -1,6 +1,8 @@
 #!/bin/sh
 #
 # plugin for munin to monitor usage of unbound servers.
+# To install copy this to /usr/local/share/munin/plugins/unbound_
+# and use munin-node-configure (--suggest, --shell).
 #
 # (C) 2008 W.C.A. Wijngaards.  BSD Licensed.
 #
@@ -45,9 +47,9 @@
 #	unbound_munin_histogram	- histogram of query resolving times
 #
 # Magic markers - optional - used by installation scripts and
-# munin-config:
+# munin-config:  (originally contrib family but munin-node-configure ignores it)
 #
-#%# family=contrib
+#%# family=auto
 #%# capabilities=autoconf suggest
 
 # POD documentation
