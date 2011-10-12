@@ -1,7 +1,7 @@
 12 October 2011: Wouter
 	- updated contrib/unbound_munin_ to family=auto so that it works with
 	  munin-node-configure automatically (if installed as
-	  /usr/local/share/munin/plugins/unbound_ ).
+	  /usr/local/share/munin/plugins/unbound_munin_ ).
 
 27 September 2011: Wouter
 	- unbound.exe -w windows option for start and stop service.
