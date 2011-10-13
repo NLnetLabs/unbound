@@ -335,4 +335,8 @@ int codeline_cmp(const void* a, const void* b);
 /** compare two replay_vars */
 int replay_var_compare(const void* a, const void* b);
 
+/** if export_all_symbols then you can register more symbols in an array,
+ * these are symbols from another module that is not loaded during compile */
+void fptr_add_symbols(void** list);
+
 #endif /* UTIL_FPTR_WLIST_H */

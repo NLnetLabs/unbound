@@ -707,6 +707,7 @@ case "$enable_allsymbols" in
 	;;
 	yes)
 	EXPORT_ALL_SYMBOLS=yes
+	AC_DEFINE(EXPORT_ALL_SYMBOLS, 1, [Define this if you enabled-allsymbols from libunbound to link binaries to it for smaller install size, but the libunbound export table is polluted by internal symbols])
 	;;
 esac
 AC_SUBST(EXPORT_ALL_SYMBOLS)

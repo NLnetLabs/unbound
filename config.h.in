@@ -25,6 +25,11 @@
 /* Define if you want to use debug lock checking (slow). */
 #undef ENABLE_LOCK_CHECKS
 
+/* Define this if you enabled-allsymbols from libunbound to link binaries to
+   it for smaller install size, but the libunbound export table is polluted by
+   internal symbols */
+#undef EXPORT_ALL_SYMBOLS
+
 /* Define to 1 if you have the <arpa/inet.h> header file. */
 #undef HAVE_ARPA_INET_H
 

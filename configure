@@ -16665,6 +16665,9 @@ case "$enable_allsymbols" in
 	;;
 	yes)
 	EXPORT_ALL_SYMBOLS=yes
+
+$as_echo "#define EXPORT_ALL_SYMBOLS 1" >>confdefs.h
+
 	;;
 esac
 
