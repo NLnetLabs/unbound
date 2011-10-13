@@ -1,3 +1,7 @@
+13 October 2011: Wouter
+	- Fix --enable-allsymbols, it depended on link specifics of the
+	  target platform, or fptr_wlist assertion failures could occur.
+
 12 October 2011: Wouter
 	- updated contrib/unbound_munin_ to family=auto so that it works with
 	  munin-node-configure automatically (if installed as
