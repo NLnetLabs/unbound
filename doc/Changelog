@@ -1,3 +1,7 @@
+14 October 2011: Wouter
+	- Fix for out-of-memory condition in libunbound (thanks
+	  Robert Fleischman).
+
 13 October 2011: Wouter
 	- Fix --enable-allsymbols, it depended on link specifics of the
 	  target platform, or fptr_wlist assertion failures could occur.

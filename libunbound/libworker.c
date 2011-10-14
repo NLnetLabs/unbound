@@ -261,7 +261,12 @@ libworker_dobg(void* arg)
 	/* setup */
 	uint32_t m;
 	struct libworker* w = (struct libworker*)arg;
-	struct ub_ctx* ctx = w->ctx;
+	struct ub_ctx* ctx;
+	if(!w) {
+		log_err("libunbound bg worker init failed, nomem");
+		return NULL;
+	}
+	ctx = w->ctx;
 	log_thread_set(&w->thread_num);
 #ifdef THREADS_DISABLED
 	/* we are forked */
@@ -270,10 +275,6 @@ libworker_dobg(void* arg)
 	tube_close_write(ctx->qq_pipe);
 	tube_close_read(ctx->rr_pipe);
 #endif
-	if(!w) {
-		log_err("libunbound bg worker init failed, nomem");
-		return NULL;
-	}
 	if(!tube_setup_bg_listen(ctx->qq_pipe, w->base, 
 		libworker_handle_control_cmd, w)) {
 		log_err("libunbound bg worker init failed, no bglisten");
@@ -310,11 +311,11 @@ int libworker_bg(struct ub_ctx* ctx)
 	if(ctx->dothread) {
 		lock_basic_unlock(&ctx->cfglock);
 		w = libworker_setup(ctx, 1);
+		if(!w) return UB_NOMEM;
 		w->is_bg_thread = 1;
 #ifdef ENABLE_LOCK_CHECKS
 		w->thread_num = 1; /* for nicer DEBUG checklocks */
 #endif
-		if(!w) return UB_NOMEM;
 		ub_thread_create(&ctx->bg_tid, libworker_dobg, w);
 	} else {
 		lock_basic_unlock(&ctx->cfglock);
