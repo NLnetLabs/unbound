@@ -377,7 +377,8 @@ void mesh_query_done(struct mesh_state* mstate);
  * results from this query state. These can then be changed for error 
  * or results.
  * Called when a module is module_finished or returns module_error.
- * The super query states become runnable with event module_event_pass.
+ * The super query states become runnable with event module_event_pass,
+ * it calls the current module for the super with the inform_super event.
  *
  * @param mesh: mesh area to add newly runnable modules to.
  * @param mstate: the state that has results, used to find mesh state.

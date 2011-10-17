@@ -348,7 +348,8 @@ struct module_func_block {
 
 	/**
 	 * inform super querystate about the results from this subquerystate.
-	 * Is called when the querystate is finished.
+	 * Is called when the querystate is finished.  The method invoked is
+	 * the one from the current module active in the super querystate.
 	 * @param qstate: the query state that is finished.
 	 *	Examine return_rcode and return_reply in the qstate.
 	 * @param id: module id for this module.

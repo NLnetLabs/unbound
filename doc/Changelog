@@ -1,3 +1,6 @@
+17 October 2011: Wouter
+	- better documentation for inform_super (Thanks Yang Zhe).
+
 14 October 2011: Wouter
 	- Fix for out-of-memory condition in libunbound (thanks
 	  Robert Fleischman).
