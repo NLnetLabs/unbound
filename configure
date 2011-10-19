@@ -15583,6 +15583,8 @@ $as_echo "#define USE_SHA2 1" >>confdefs.h
 	;;
 esac
 
+# check wether gost also works
+
 # Check whether --enable-gost was given.
 if test "${enable_gost+set}" = set; then :
   enableval=$enable_gost;
@@ -15607,10 +15609,127 @@ else
   as_fn_error $? "OpenSSL does not support ECC, needed for GOST support" "$LINENO" 5
 fi
 
-	use_gost="yes"
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking if GOST works" >&5
+$as_echo_n "checking if GOST works... " >&6; }
+if test c${cross_compiling} = cno; then
+BAKCFLAGS="$CFLAGS"
+if test -n "$ssldir"; then
+	CFLAGS="$CFLAGS -Wl,-rpath=$ssldir/lib"
+fi
+if test "$cross_compiling" = yes; then :
+  { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
+$as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
+as_fn_error $? "cannot run test program while cross compiling
+See \`config.log' for more details" "$LINENO" 5; }
+else
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+#include <string.h>
+#include <openssl/ssl.h>
+#include <openssl/evp.h>
+#include <openssl/engine.h>
+#include <openssl/conf.h>
+/* routine to load gost from ldns */
+int load_gost_id(void)
+{
+	static int gost_id = 0;
+	const EVP_PKEY_ASN1_METHOD* meth;
+	ENGINE* e;
+
+	if(gost_id) return gost_id;
+
+	/* see if configuration loaded gost implementation from other engine*/
+	meth = EVP_PKEY_asn1_find_str(NULL, "gost2001", -1);
+	if(meth) {
+		EVP_PKEY_asn1_get0_info(&gost_id, NULL, NULL, NULL, NULL, meth);
+		return gost_id;
+	}
+
+	/* see if engine can be loaded already */
+	e = ENGINE_by_id("gost");
+	if(!e) {
+		/* load it ourself, in case statically linked */
+		ENGINE_load_builtin_engines();
+		ENGINE_load_dynamic();
+		e = ENGINE_by_id("gost");
+	}
+	if(!e) {
+		/* no gost engine in openssl */
+		return 0;
+	}
+	if(!ENGINE_set_default(e, ENGINE_METHOD_ALL)) {
+		ENGINE_finish(e);
+		ENGINE_free(e);
+		return 0;
+	}
+
+	meth = EVP_PKEY_asn1_find_str(&e, "gost2001", -1);
+	if(!meth) {
+		/* algo not found */
+		ENGINE_finish(e);
+		ENGINE_free(e);
+		return 0;
+	}
+	EVP_PKEY_asn1_get0_info(&gost_id, NULL, NULL, NULL, NULL, meth);
+	return gost_id;
+}
+int main(void) {
+	EVP_MD_CTX* ctx;
+	const EVP_MD* md;
+	unsigned char digest[64]; /* its a 256-bit digest, so uses 32 bytes */
+	const char* str = "Hello world";
+	const unsigned char check[] = {
+		0x40 , 0xed , 0xf8 , 0x56 , 0x5a , 0xc5 , 0x36 , 0xe1 ,
+		0x33 , 0x7c , 0x7e , 0x87 , 0x62 , 0x1c , 0x42 , 0xe0 ,
+		0x17 , 0x1b , 0x5e , 0xce , 0xa8 , 0x46 , 0x65 , 0x4d ,
+		0x8d , 0x3e , 0x22 , 0x9b , 0xe1 , 0x30 , 0x19 , 0x9d
+	};
+	OPENSSL_config(NULL);
+	(void)load_gost_id();
+	md = EVP_get_digestbyname("md_gost94");
+	if(!md) return 1;
+	memset(digest, 0, sizeof(digest));
+	ctx = EVP_MD_CTX_create();
+	if(!ctx) return 2;
+	if(!EVP_DigestInit_ex(ctx, md, NULL)) return 3;
+	if(!EVP_DigestUpdate(ctx, str, 10)) return 4;
+	if(!EVP_DigestFinal_ex(ctx, digest, NULL)) return 5;
+	if(1) {
+		int i;
+		for(i=0; i<32; i++)
+			printf(" %2.2x", (int)digest[i]);
+		printf("\n");
+	}
+	if(memcmp(digest, check, sizeof(check)) != 0)
+		return 6;
+	return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_run "$LINENO"; then :
+  eval "ac_cv_c_gost_works=yes"
+else
+  eval "ac_cv_c_gost_works=no"
+fi
+rm -f core *.core core.conftest.* gmon.out bb.out conftest$ac_exeext \
+  conftest.$ac_objext conftest.beam conftest.$ac_ext
+fi
+
+CFLAGS="$BAKCFLAGS"
+else
+eval "ac_cv_c_gost_works=maybe"
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_c_gost_works" >&5
+$as_echo "$ac_cv_c_gost_works" >&6; }
+
+	if test $ac_cv_c_gost_works != no; then
+		use_gost="yes"
 
 $as_echo "#define USE_GOST 1" >>confdefs.h
 
+	fi
 	;;
 esac
 

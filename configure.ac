@@ -499,13 +499,95 @@ esac
 # check wether gost also works
 AC_DEFUN([AC_CHECK_GOST_WORKS],
 [AC_REQUIRE([AC_PROG_CC])
-AC_MSG_CHECKING(whether gost works)
+AC_MSG_CHECKING([if GOST works])
 if test c${cross_compiling} = cno; then
+BAKCFLAGS="$CFLAGS"
+if test -n "$ssldir"; then
+	CFLAGS="$CFLAGS -Wl,-rpath=$ssldir/lib"
+fi
 AC_RUN_IFELSE([AC_LANG_SOURCE([[
+#include <string.h>
+#include <openssl/ssl.h>
+#include <openssl/evp.h>
 #include <openssl/engine.h>
+#include <openssl/conf.h>
+/* routine to load gost from ldns */
+int load_gost_id(void)
+{
+	static int gost_id = 0;
+	const EVP_PKEY_ASN1_METHOD* meth;
+	ENGINE* e;
+
+	if(gost_id) return gost_id;
+
+	/* see if configuration loaded gost implementation from other engine*/
+	meth = EVP_PKEY_asn1_find_str(NULL, "gost2001", -1);
+	if(meth) {
+		EVP_PKEY_asn1_get0_info(&gost_id, NULL, NULL, NULL, NULL, meth);
+		return gost_id;
+	}
+
+	/* see if engine can be loaded already */
+	e = ENGINE_by_id("gost");
+	if(!e) {
+		/* load it ourself, in case statically linked */
+		ENGINE_load_builtin_engines();
+		ENGINE_load_dynamic();
+		e = ENGINE_by_id("gost");
+	}
+	if(!e) {
+		/* no gost engine in openssl */
+		return 0;
+	}
+	if(!ENGINE_set_default(e, ENGINE_METHOD_ALL)) {
+		ENGINE_finish(e);
+		ENGINE_free(e);
+		return 0;
+	}
+
+	meth = EVP_PKEY_asn1_find_str(&e, "gost2001", -1);
+	if(!meth) {
+		/* algo not found */
+		ENGINE_finish(e);
+		ENGINE_free(e);
+		return 0;
+	}
+	EVP_PKEY_asn1_get0_info(&gost_id, NULL, NULL, NULL, NULL, meth);
+	return gost_id;
+}
 int main(void) { 
-return 0; }
+	EVP_MD_CTX* ctx;
+	const EVP_MD* md;
+	unsigned char digest[64]; /* its a 256-bit digest, so uses 32 bytes */
+	const char* str = "Hello world";
+	const unsigned char check[] = {
+		0x40 , 0xed , 0xf8 , 0x56 , 0x5a , 0xc5 , 0x36 , 0xe1 ,
+		0x33 , 0x7c , 0x7e , 0x87 , 0x62 , 0x1c , 0x42 , 0xe0 ,
+		0x17 , 0x1b , 0x5e , 0xce , 0xa8 , 0x46 , 0x65 , 0x4d ,
+		0x8d , 0x3e , 0x22 , 0x9b , 0xe1 , 0x30 , 0x19 , 0x9d
+	};
+	OPENSSL_config(NULL);
+	(void)load_gost_id();
+	md = EVP_get_digestbyname("md_gost94");
+	if(!md) return 1;
+	memset(digest, 0, sizeof(digest));
+	ctx = EVP_MD_CTX_create();
+	if(!ctx) return 2;
+	if(!EVP_DigestInit_ex(ctx, md, NULL)) return 3;
+	if(!EVP_DigestUpdate(ctx, str, 10)) return 4;
+	if(!EVP_DigestFinal_ex(ctx, digest, NULL)) return 5;
+	if(1) {
+		int i;
+		for(i=0; i<32; i++)
+			printf(" %2.2x", (int)digest[i]);
+		printf("\n");
+	}
+	if(memcmp(digest, check, sizeof(check)) != 0)
+		return 6;
+	return 0;
+}
 ]])] , [eval "ac_cv_c_gost_works=yes"], [eval "ac_cv_c_gost_works=no"])
+CFLAGS="$BAKCFLAGS"
 else
 eval "ac_cv_c_gost_works=maybe"
 fi
