@@ -503,7 +503,7 @@ AC_MSG_CHECKING([if GOST works])
 if test c${cross_compiling} = cno; then
 BAKCFLAGS="$CFLAGS"
 if test -n "$ssldir"; then
-	CFLAGS="$CFLAGS -Wl,-rpath=$ssldir/lib"
+	CFLAGS="$CFLAGS -Wl,-rpath,$ssldir/lib"
 fi
 AC_RUN_IFELSE([AC_LANG_SOURCE([[
 #include <string.h>
@@ -576,12 +576,12 @@ int main(void) {
 	if(!EVP_DigestInit_ex(ctx, md, NULL)) return 3;
 	if(!EVP_DigestUpdate(ctx, str, 10)) return 4;
 	if(!EVP_DigestFinal_ex(ctx, digest, NULL)) return 5;
-	if(1) {
-		int i;
+	/* uncomment to see the hash calculated.
+		{int i;
 		for(i=0; i<32; i++)
 			printf(" %2.2x", (int)digest[i]);
-		printf("\n");
-	}
+		printf("\n");}
+	*/
 	if(memcmp(digest, check, sizeof(check)) != 0)
 		return 6;
 	return 0;
