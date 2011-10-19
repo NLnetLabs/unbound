@@ -286,6 +286,31 @@ AC_SUBST(RUNTIME_PATH)
 AC_SEARCH_LIBS([inet_pton], [nsl])
 AC_SEARCH_LIBS([socket], [socket])
 
+# check wether strptime also works
+AC_DEFUN([AC_CHECK_STRPTIME_WORKS],
+[AC_REQUIRE([AC_PROG_CC])
+AC_MSG_CHECKING(whether strptime works)
+if test c${cross_compiling} = cno; then
+AC_RUN_IFELSE([AC_LANG_SOURCE([[
+#define _XOPEN_SOURCE
+#include <time.h>
+int main(void) { struct tm tm; char *res;
+res = strptime("2010-07-15T00:00:00+00:00", "%t%Y%t-%t%m%t-%t%d%tT%t%H%t:%t%M%t:%t%S%t", &tm);
+if (!res) return 2;
+res = strptime("20070207111842", "%Y%m%d%H%M%S", &tm);
+if (!res) return 1; return 0; }
+]])] , [eval "ac_cv_c_strptime_works=yes"], [eval "ac_cv_c_strptime_works=no"])
+else
+eval "ac_cv_c_strptime_works=maybe"
+fi
+AC_MSG_RESULT($ac_cv_c_strptime_works)
+if test $ac_cv_c_strptime_works = no; then
+AC_LIBOBJ(strptime)
+else
+AC_DEFINE_UNQUOTED([STRPTIME_WORKS], 1, [use default strptime.])
+fi
+])dnl
+
 # check some functions of the OS before linking libs (while still runnable).
 AC_FUNC_CHOWN
 AC_FUNC_FORK
@@ -294,6 +319,7 @@ AC_FUNC_FSEEKO
 ACX_SYS_LARGEFILE
 ACX_CHECK_NONBLOCKING_BROKEN
 ACX_MKDIR_ONE_ARG
+AC_CHECK_FUNCS([strptime],[AC_CHECK_STRPTIME_WORKS],[AC_LIBOBJ([strptime])])
 
 # check windows threads (we use them, not pthreads, on windows).
 if test "$on_mingw" = "yes"; then
@@ -659,31 +685,6 @@ if test $ac_cv_func_daemon = yes; then
 ])
 fi
 
-# check wether strptime also works
-AC_DEFUN([AC_CHECK_STRPTIME_WORKS],
-[AC_REQUIRE([AC_PROG_CC])
-AC_MSG_CHECKING(whether strptime works)
-if test c${cross_compiling} = cno; then
-AC_RUN_IFELSE([AC_LANG_SOURCE([[
-#define _XOPEN_SOURCE
-#include <time.h>
-int main(void) { struct tm tm; char *res;
-res = strptime("2010-07-15T00:00:00+00:00", "%t%Y%t-%t%m%t-%t%d%tT%t%H%t:%t%M%t:%t%S%t", &tm);
-if (!res) return 2;
-res = strptime("20070207111842", "%Y%m%d%H%M%S", &tm);
-if (!res) return 1; return 0; }
-]])] , [eval "ac_cv_c_strptime_works=yes"], [eval "ac_cv_c_strptime_works=no"])
-else
-eval "ac_cv_c_strptime_works=maybe"
-fi
-AC_MSG_RESULT($ac_cv_c_strptime_works)
-if test $ac_cv_c_strptime_works = no; then
-AC_LIBOBJ(strptime)
-else
-AC_DEFINE_UNQUOTED([STRPTIME_WORKS], 1, [use default strptime.])
-fi
-])dnl
-AC_CHECK_FUNCS([strptime],[AC_CHECK_STRPTIME_WORKS],[AC_LIBOBJ([strptime])])
 AC_SEARCH_LIBS([setusercontext], [util])
 AC_CHECK_FUNCS([tzset sigprocmask fcntl getpwnam getrlimit setrlimit setsid sbrk chroot kill sleep usleep random srandom recvmsg sendmsg writev socketpair glob initgroups strftime localtime_r setusercontext _beginthreadex])
 AC_CHECK_FUNCS([setresuid],,[AC_CHECK_FUNCS([setreuid])])
