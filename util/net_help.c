@@ -188,11 +188,21 @@ ipstrtoaddr(const char* ip, int port, struct sockaddr_storage* addr,
 	if(!ip) return 0;
 	p = (uint16_t) port;
 	if(str_is_ip6(ip)) {
+		char buf[MAX_ADDR_STRLEN];
+		char* s;
 		struct sockaddr_in6* sa = (struct sockaddr_in6*)addr;
 		*addrlen = (socklen_t)sizeof(struct sockaddr_in6);
 		memset(sa, 0, *addrlen);
 		sa->sin6_family = AF_INET6;
 		sa->sin6_port = (in_port_t)htons(p);
+		if((s=strchr(ip, '%'))) { /* ip6%interface, rfc 4007 */
+			if(s-ip >= MAX_ADDR_STRLEN)
+				return 0;
+			strncpy(buf, ip, MAX_ADDR_STRLEN);
+			buf[s-ip]=0;
+			sa->sin6_scope_id = atoi(s+1);
+			ip = buf;
+		}
 		if(inet_pton((int)sa->sin6_family, ip, &sa->sin6_addr) <= 0) {
 			return 0;
 		}

@@ -2,6 +2,7 @@
 	- fix unbound-anchor for broken strptime on OSX lion, detected
 	  in configure.
 	- Detect if GOST really works, openssl1.0 on OSX fails.
+	- Implement ipv6%interface notation for scope_id usage.
 
 17 October 2011: Wouter
 	- better documentation for inform_super (Thanks Yang Zhe).
