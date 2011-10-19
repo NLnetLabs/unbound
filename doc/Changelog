@@ -1,3 +1,7 @@
+19 October 2011: Wouter
+	- fix unbound-anchor for broken strptime on OSX lion, detected
+	  in configure.
+
 17 October 2011: Wouter
 	- better documentation for inform_super (Thanks Yang Zhe).
 

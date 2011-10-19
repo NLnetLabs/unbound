@@ -668,6 +668,8 @@ AC_RUN_IFELSE([AC_LANG_SOURCE([[
 #define _XOPEN_SOURCE
 #include <time.h>
 int main(void) { struct tm tm; char *res;
+res = strptime("2010-07-15T00:00:00+00:00", "%t%Y%t-%t%m%t-%t%d%tT%t%H%t:%t%M%t:%t%S%t", &tm);
+if (!res) return 2;
 res = strptime("20070207111842", "%Y%m%d%H%M%S", &tm);
 if (!res) return 1; return 0; }
 ]])] , [eval "ac_cv_c_strptime_works=yes"], [eval "ac_cv_c_strptime_works=no"])
