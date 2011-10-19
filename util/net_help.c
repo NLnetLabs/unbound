@@ -200,7 +200,7 @@ ipstrtoaddr(const char* ip, int port, struct sockaddr_storage* addr,
 				return 0;
 			strncpy(buf, ip, MAX_ADDR_STRLEN);
 			buf[s-ip]=0;
-			sa->sin6_scope_id = atoi(s+1);
+			sa->sin6_scope_id = (uint32_t)atoi(s+1);
 			ip = buf;
 		}
 		if(inet_pton((int)sa->sin6_family, ip, &sa->sin6_addr) <= 0) {
