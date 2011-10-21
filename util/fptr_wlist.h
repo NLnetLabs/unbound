@@ -64,11 +64,15 @@
  * Macro to perform an assertion check for fptr wlist checks.
  * Does not get disabled in optimize mode. Check adds security by layers.
  */
+#if defined(UB_ON_WINDOWS) && defined(EXPORT_ALL_SYMBOLS)
+#define fptr_ok(x) /* nothing, dll-exe memory layout on win disables it */
+#else
 #define fptr_ok(x) \
 	do { if(!(x)) \
 		fatal_exit("%s:%d: %s: pointer whitelist %s failed", \
 		__FILE__, __LINE__, __func__, #x); \
 	} while(0);
+#endif
 
 /**
  * Check function pointer whitelist for comm_point callback values.
@@ -334,9 +338,5 @@ int codeline_cmp(const void* a, const void* b);
 
 /** compare two replay_vars */
 int replay_var_compare(const void* a, const void* b);
-
-/** if export_all_symbols then you can register more symbols in an array,
- * these are symbols from another module that is not loaded during compile */
-void fptr_add_symbols(void** list);
 
 #endif /* UTIL_FPTR_WLIST_H */

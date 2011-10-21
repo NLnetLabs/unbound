@@ -79,24 +79,6 @@
 #include "pythonmod/pythonmod.h"
 #endif
 
-#ifdef EXPORT_ALL_SYMBOLS
-static void** extra_symlist = NULL;
-void fptr_add_symbols(void** list)
-{
-	extra_symlist = list;
-}
-int fptr_in_extralist(void* sym)
-{
-	void** p = extra_symlist;
-	if(!p) return 0;
-	while(*p) {
-		if(*p++ == sym)
-			return 1;
-	}
-	return 0;
-}
-#endif /* EXPORT_ALL_SYMBOLS */
-
 int 
 fptr_whitelist_comm_point(comm_point_callback_t *fptr)
 {
@@ -104,9 +86,6 @@ fptr_whitelist_comm_point(comm_point_callback_t *fptr)
 	else if(fptr == &outnet_udp_cb) return 1;
 	else if(fptr == &outnet_tcp_cb) return 1;
 	else if(fptr == &tube_handle_listen) return 1;
-#ifdef EXPORT_ALL_SYMBOLS
-	else if(fptr_in_extralist(fptr)) return 1;
-#endif
 	return 0;
 }
 
@@ -117,9 +96,6 @@ fptr_whitelist_comm_point_raw(comm_point_callback_t *fptr)
 	else if(fptr == &tube_handle_write) return 1;
 	else if(fptr == &remote_accept_callback) return 1;
 	else if(fptr == &remote_control_callback) return 1;
-#ifdef EXPORT_ALL_SYMBOLS
-	else if(fptr_in_extralist(fptr)) return 1;
-#endif
 	return 0;
 }
 
@@ -133,9 +109,6 @@ fptr_whitelist_comm_timer(void (*fptr)(void*))
 #ifdef UB_ON_WINDOWS
 	else if(fptr == &wsvc_cron_cb) return 1;
 #endif
-#ifdef EXPORT_ALL_SYMBOLS
-	else if(fptr_in_extralist(fptr)) return 1;
-#endif
 	return 0;
 }
 
@@ -143,9 +116,6 @@ int
 fptr_whitelist_comm_signal(void (*fptr)(int, void*))
 {
 	if(fptr == &worker_sighandler) return 1;
-#ifdef EXPORT_ALL_SYMBOLS
-	else if(fptr_in_extralist(fptr)) return 1;
-#endif
 	return 0;
 }
 
@@ -164,9 +134,6 @@ fptr_whitelist_event(void (*fptr)(int, short, void *))
 #ifdef UB_ON_WINDOWS
 	else if(fptr == &worker_win_stop_cb) return 1;
 #endif
-#ifdef EXPORT_ALL_SYMBOLS
-	else if(fptr_in_extralist(fptr)) return 1;
-#endif
 	return 0;
 }
 
@@ -176,9 +143,6 @@ fptr_whitelist_pending_udp(comm_point_callback_t *fptr)
 	if(fptr == &serviced_udp_callback) return 1;
 	else if(fptr == &worker_handle_reply) return 1;
 	else if(fptr == &libworker_handle_reply) return 1;
-#ifdef EXPORT_ALL_SYMBOLS
-	else if(fptr_in_extralist(fptr)) return 1;
-#endif
 	return 0;
 }
 
@@ -188,9 +152,6 @@ fptr_whitelist_pending_tcp(comm_point_callback_t *fptr)
 	if(fptr == &serviced_tcp_callback) return 1;
 	else if(fptr == &worker_handle_reply) return 1;
 	else if(fptr == &libworker_handle_reply) return 1;
-#ifdef EXPORT_ALL_SYMBOLS
-	else if(fptr_in_extralist(fptr)) return 1;
-#endif
 	return 0;
 }
 
@@ -199,9 +160,6 @@ fptr_whitelist_serviced_query(comm_point_callback_t *fptr)
 {
 	if(fptr == &worker_handle_service_reply) return 1;
 	else if(fptr == &libworker_handle_service_reply) return 1;
-#ifdef EXPORT_ALL_SYMBOLS
-	else if(fptr_in_extralist(fptr)) return 1;
-#endif
 	return 0;
 }
 
@@ -228,9 +186,6 @@ fptr_whitelist_rbtree_cmp(int (*fptr) (const void *, const void *))
 	else if(fptr == &val_neg_zone_compare) return 1;
 	else if(fptr == &probetree_cmp) return 1;
 	else if(fptr == &replay_var_compare) return 1;
-#ifdef EXPORT_ALL_SYMBOLS
-	else if(fptr_in_extralist(fptr)) return 1;
-#endif
 	return 0;
 }
 
@@ -300,9 +255,6 @@ fptr_whitelist_modenv_send_query(struct outbound_entry* (*fptr)(
 {
 	if(fptr == &worker_send_query) return 1;
 	else if(fptr == &libworker_send_query) return 1;
-#ifdef EXPORT_ALL_SYMBOLS
-	else if(fptr_in_extralist(fptr)) return 1;
-#endif
 	return 0;
 }
 
@@ -412,9 +364,6 @@ int
 fptr_whitelist_alloc_cleanup(void (*fptr)(void*))
 {
 	if(fptr == &worker_alloc_cleanup) return 1;
-#ifdef EXPORT_ALL_SYMBOLS
-	else if(fptr_in_extralist(fptr)) return 1;
-#endif
 	return 0;
 }
 
@@ -422,9 +371,6 @@ int fptr_whitelist_tube_listen(tube_callback_t* fptr)
 {
 	if(fptr == &worker_handle_control_cmd) return 1;
 	else if(fptr == &libworker_handle_control_cmd) return 1;
-#ifdef EXPORT_ALL_SYMBOLS
-	else if(fptr_in_extralist(fptr)) return 1;
-#endif
 	return 0;
 }
 
@@ -433,9 +379,6 @@ int fptr_whitelist_mesh_cb(mesh_cb_func_t fptr)
 	if(fptr == &libworker_fg_done_cb) return 1;
 	else if(fptr == &libworker_bg_done_cb) return 1;
 	else if(fptr == &probe_answer_cb) return 1;
-#ifdef EXPORT_ALL_SYMBOLS
-	else if(fptr_in_extralist(fptr)) return 1;
-#endif
 	return 0;
 }
 
@@ -444,8 +387,5 @@ int fptr_whitelist_print_func(void (*fptr)(char*,void*))
 	if(fptr == &config_print_func) return 1;
 	else if(fptr == &config_collate_func) return 1;
 	else if(fptr == &remote_get_opt_ssl) return 1;
-#ifdef EXPORT_ALL_SYMBOLS
-	else if(fptr_in_extralist(fptr)) return 1;
-#endif
 	return 0;
 }

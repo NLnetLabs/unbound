@@ -1,3 +1,7 @@
+21 October 2011: Wouter
+	- fix --enable-allsymbols, fptr wlist is disabled on windows with this 
+	  option enabled because of memory layout exe vs dll.
+
 19 October 2011: Wouter
 	- fix unbound-anchor for broken strptime on OSX lion, detected
 	  in configure.

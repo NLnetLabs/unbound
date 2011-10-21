@@ -1011,17 +1011,6 @@ worker_create(struct daemon* daemon, int id, int* ports, int n)
 	unsigned int seed;
 	struct worker* worker = (struct worker*)calloc(1, 
 		sizeof(struct worker));
-#ifdef EXPORT_ALL_SYMBOLS
-	static void* symlist[] = {
-		&worker_handle_reply, &worker_alloc_cleanup,
-		&worker_probe_timer_cb, &worker_stat_timer_cb,
-		&remote_get_opt_ssl, &remote_control_callback,
-		&worker_handle_control_cmd, &remote_accept_callback,
-		&worker_handle_service_reply, &worker_send_query,
-		&worker_sighandler, &worker_handle_request, NULL
-	};
-	fptr_add_symbols(symlist);
-#endif
 	if(!worker) 
 		return NULL;
 	worker->numports = n;
