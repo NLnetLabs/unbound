@@ -1,3 +1,8 @@
+24 October 2011: Wouter
+	- Fix resolve of partners.extranet.microsoft.com with a fix for the
+	  server selection for choosing out of a (particular) list of bad
+	  choices.
+
 21 October 2011: Wouter
 	- fix --enable-allsymbols, fptr wlist is disabled on windows with this 
 	  option enabled because of memory layout exe vs dll.

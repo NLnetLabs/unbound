@@ -212,8 +212,13 @@ iter_filter_unsuitable(struct iter_env* iter_env, struct module_env* env,
 		if(lame)
 			return -1; /* server is lame */
 		else if(rtt >= USEFUL_SERVER_TOP_TIMEOUT)
-			/* server is unresponsive */
-			return USEFUL_SERVER_TOP_TIMEOUT;
+			/* server is unresponsive,
+			 * we used to return TOP_TIMOUT, but fairly useless,
+			 * because if == TOP_TIMEOUT is dropped because
+			 * blacklisted later, instead, remove it here, so
+			 * other choices (that are not blacklisted) can be
+			 * tried */
+			return -1;
 		/* select remainder from worst to best */
 		else if(reclame)
 			return rtt+USEFUL_SERVER_TOP_TIMEOUT*3; /* nonpref */
