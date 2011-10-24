@@ -2,6 +2,10 @@
 	- Fix resolve of partners.extranet.microsoft.com with a fix for the
 	  server selection for choosing out of a (particular) list of bad
 	  choices.
+	- Fix make_new_space function so that the incoming query is not
+	  overwritten if a jostled out query causes a waiting query to be
+	  resumed that then fails and sends an error message.  (Thanks to
+	  Matthew Lee).
 
 21 October 2011: Wouter
 	- fix --enable-allsymbols, fptr wlist is disabled on windows with this 
