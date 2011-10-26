@@ -1,3 +1,6 @@
+26 October 2011: Wouter
+	- iana portlist updated.
+
 24 October 2011: Wouter
 	- Fix resolve of partners.extranet.microsoft.com with a fix for the
 	  server selection for choosing out of a (particular) list of bad
