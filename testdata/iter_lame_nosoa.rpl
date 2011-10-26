@@ -238,7 +238,7 @@ RANGE_END
 ; store bad timing for one server to influence server selection
 ; 1.2.3.44 (ns.example.net) gets 900 msec.
 ; so the 376 ns.example.com is preferred.
-STEP 1 INFRA_RTT 1.2.3.44 900
+STEP 1 INFRA_RTT 1.2.3.44 example.net. 900
 
 STEP 10 QUERY
 ENTRY_BEGIN

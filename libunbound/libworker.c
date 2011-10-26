@@ -685,7 +685,7 @@ outbound_entry_compare(void* a, void* b)
 struct outbound_entry* libworker_send_query(uint8_t* qname, size_t qnamelen,
         uint16_t qtype, uint16_t qclass, uint16_t flags, int dnssec,
 	int want_dnssec, struct sockaddr_storage* addr, socklen_t addrlen,
-        struct module_qstate* q)
+	uint8_t* zone, size_t zonelen, struct module_qstate* q)
 {
 	struct libworker* w = (struct libworker*)q->env->worker;
 	struct outbound_entry* e = (struct outbound_entry*)regional_alloc(
@@ -695,7 +695,7 @@ struct outbound_entry* libworker_send_query(uint8_t* qname, size_t qnamelen,
 	e->qstate = q;
 	e->qsent = outnet_serviced_query(w->back, qname,
 		qnamelen, qtype, qclass, flags, dnssec, want_dnssec,
-		q->env->cfg->tcp_upstream, addr, addrlen,
+		q->env->cfg->tcp_upstream, addr, addrlen, zone, zonelen,
 		libworker_handle_service_reply, e, w->back->udp_buff,
 		&outbound_entry_compare);
 	if(!e->qsent) {

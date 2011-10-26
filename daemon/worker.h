@@ -175,6 +175,8 @@ void worker_sighandler(int sig, void* arg);
  * @param want_dnssec: signatures needed.
  * @param addr: where to.
  * @param addrlen: length of addr.
+ * @param zone: wireformat dname of the zone.
+ * @param zonelen: length of zone name.
  * @param q: wich query state to reactivate upon return.
  * @return: false on failure (memory or socket related). no query was
  *      sent.
@@ -182,7 +184,7 @@ void worker_sighandler(int sig, void* arg);
 struct outbound_entry* worker_send_query(uint8_t* qname, size_t qnamelen, 
 	uint16_t qtype, uint16_t qclass, uint16_t flags, int dnssec, 
 	int want_dnssec, struct sockaddr_storage* addr, socklen_t addrlen,
-	struct module_qstate* q);
+	uint8_t* zone, size_t zonelen, struct module_qstate* q);
 
 /** 
  * process control messages from the main thread. Frees the control 

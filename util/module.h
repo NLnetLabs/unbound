@@ -100,6 +100,8 @@ struct module_env {
 	 * 	EDNS, the answer is likely to be useless for this domain.
 	 * @param addr: where to.
 	 * @param addrlen: length of addr.
+	 * @param zone: delegation point name.
+	 * @param zonelen: length of zone name.
 	 * @param q: wich query state to reactivate upon return.
 	 * @return: false on failure (memory or socket related). no query was
 	 *	sent. Or returns an outbound entry with qsent and qstate set.
@@ -109,7 +111,8 @@ struct module_env {
 	struct outbound_entry* (*send_query)(uint8_t* qname, size_t qnamelen, 
 		uint16_t qtype, uint16_t qclass, uint16_t flags, int dnssec, 
 		int want_dnssec, struct sockaddr_storage* addr, 
-		socklen_t addrlen, struct module_qstate* q);
+		socklen_t addrlen, uint8_t* zone, size_t zonelen,
+		struct module_qstate* q);
 
 	/**
 	 * Detach-subqueries.

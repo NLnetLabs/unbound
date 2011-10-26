@@ -118,6 +118,8 @@ void libworker_alloc_cleanup(void* arg);
  * @param want_dnssec: signatures needed.
  * @param addr: where to.
  * @param addrlen: length of addr.
+ * @param zone: delegation point name.
+ * @param zonelen: length of zone name wireformat dname.
  * @param q: wich query state to reactivate upon return.
  * @return: false on failure (memory or socket related). no query was
  *      sent.
@@ -125,7 +127,7 @@ void libworker_alloc_cleanup(void* arg);
 struct outbound_entry* libworker_send_query(uint8_t* qname, size_t qnamelen,
         uint16_t qtype, uint16_t qclass, uint16_t flags, int dnssec,
 	int want_dnssec, struct sockaddr_storage* addr, socklen_t addrlen,
-        struct module_qstate* q);
+	uint8_t* zone, size_t zonelen, struct module_qstate* q);
 
 /** process incoming replies from the network */
 int libworker_handle_reply(struct comm_point* c, void* arg, int error,

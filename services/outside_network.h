@@ -304,6 +304,10 @@ struct serviced_query {
 	struct sockaddr_storage addr;
 	/** length of addr field in use. */
 	socklen_t addrlen;
+	/** zone name, uncompressed domain name in wireformat */
+	uint8_t* zone;
+	/** length of zone name */
+	size_t zonelen;
 	/** current status */
 	enum serviced_query_status {
 		/** initial status */
@@ -449,6 +453,10 @@ void pending_delete(struct outside_network* outnet, struct pending* p);
  * @param callback_arg: user argument to callback function.
  * @param addr: to which server to send the query.
  * @param addrlen: length of addr.
+ * @param zone: name of the zone of the delegation point. wireformat dname.
+	This is the delegation point name for which the server is deemed
+	authoritative.
+ * @param zonelen: length of zone.
  * @param buff: scratch buffer to create query contents in. Empty on exit.
  * @param arg_compare: function to compare callback args, return true if 
  * 	identical. It is given the callback_arg and args that are listed.
@@ -458,8 +466,8 @@ void pending_delete(struct outside_network* outnet, struct pending* p);
 struct serviced_query* outnet_serviced_query(struct outside_network* outnet,
 	uint8_t* qname, size_t qnamelen, uint16_t qtype, uint16_t qclass,
 	uint16_t flags, int dnssec, int want_dnssec, int tcp_upstream,
-	struct sockaddr_storage* addr, socklen_t addrlen, 
-	comm_point_callback_t* callback, void* callback_arg, 
+	struct sockaddr_storage* addr, socklen_t addrlen, uint8_t* zone,
+	size_t zonelen, comm_point_callback_t* callback, void* callback_arg, 
 	ldns_buffer* buff, int (*arg_compare)(void*,void*));
 
 /**

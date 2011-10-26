@@ -401,6 +401,25 @@ rtt_test(void)
 
 #include "services/cache/infra.h"
 #include "util/config_file.h"
+
+/* lookup and get key and data structs easily */
+static struct infra_data* infra_lookup_host(struct infra_cache* infra,
+	struct sockaddr_storage* addr, socklen_t addrlen, uint8_t* zone,
+	size_t zonelen, int wr, uint32_t now, struct infra_key** k)
+{
+	struct infra_data* d;
+	struct lruhash_entry* e = infra_lookup_nottl(infra, addr, addrlen,
+		zone, zonelen, wr);
+	if(!e) return NULL;
+	d = (struct infra_data*)e->data;
+	if(d->ttl < now) {
+		lock_rw_unlock(&e->lock);
+		return NULL;
+	}
+	*k = (struct infra_key*)e->key;
+	return d;
+}
+
 /** test host cache */
 static void
 infra_test(void)
@@ -414,70 +433,63 @@ infra_test(void)
 	uint32_t now = 0;
 	uint8_t edns_lame;
 	int vs, to;
-	struct infra_host_key* k;
-	struct infra_host_data* d;
+	struct infra_key* k;
+	struct infra_data* d;
 	int init = 376;
-	int dlame, rlame, alame, olame;
 
 	unit_show_feature("infra cache");
 	unit_assert(ipstrtoaddr("127.0.0.1", 53, &one, &onelen));
 
 	slab = infra_create(cfg);
-	unit_assert( infra_host(slab, (struct sockaddr_storage*)&one, 
-		(socklen_t)sizeof(int), now, &vs, &edns_lame, &to) );
+	unit_assert( infra_host(slab, &one, onelen, zone, zonelen, now,
+		&vs, &edns_lame, &to) );
 	unit_assert( vs == 0 && to == init && edns_lame == 0 );
 
-	unit_assert( infra_rtt_update(slab, &one, onelen, -1, init, now) );
-	unit_assert( infra_host(slab, &one, onelen, 
+	unit_assert( infra_rtt_update(slab, &one, onelen, zone, zonelen, -1, init, now) );
+	unit_assert( infra_host(slab, &one, onelen, zone, zonelen, 
 			now, &vs, &edns_lame, &to) );
 	unit_assert( vs == 0 && to == init*2 && edns_lame == 0 );
 
-	unit_assert( infra_edns_update(slab, &one, onelen, -1, now) );
-	unit_assert( infra_host(slab, &one, onelen, 
+	unit_assert( infra_edns_update(slab, &one, onelen, zone, zonelen, -1, now) );
+	unit_assert( infra_host(slab, &one, onelen, zone, zonelen, 
 			now, &vs, &edns_lame, &to) );
 	unit_assert( vs == -1 && to == init*2  && edns_lame == 1);
 
 	now += cfg->host_ttl + 10;
-	unit_assert( infra_host(slab, &one, onelen, 
+	unit_assert( infra_host(slab, &one, onelen, zone, zonelen, 
 			now, &vs, &edns_lame, &to) );
 	unit_assert( vs == 0 && to == init && edns_lame == 0 );
 	
-	unit_assert( infra_set_lame(slab, &one, onelen, 
+	unit_assert( infra_set_lame(slab, &one, onelen,
 		zone, zonelen,  now, 0, 0, LDNS_RR_TYPE_A) );
-	unit_assert( (d=infra_lookup_host(slab, &one, onelen, 0, now, &k)) );
+	unit_assert( (d=infra_lookup_host(slab, &one, onelen, zone, zonelen, 0, now, &k)) );
 	unit_assert( d->ttl == now+cfg->host_ttl );
 	unit_assert( d->edns_version == 0 );
-	unit_assert( infra_lookup_lame(d, zone, zonelen, now, 
-		&dlame, &rlame, &alame, &olame) );
-	unit_assert(!dlame && !rlame && alame && !olame);
-	unit_assert( !infra_lookup_lame(d, zone, zonelen, 
-		now+cfg->lame_ttl+10, &dlame, &rlame, &alame, &olame) );
-	unit_assert( !infra_lookup_lame(d, (uint8_t*)"\000", 1, now, 
-		&dlame, &rlame, &alame, &olame) );
+	unit_assert(!d->isdnsseclame && !d->rec_lame && d->lame_type_A &&
+		!d->lame_other);
 	lock_rw_unlock(&k->entry.lock);
 
 	/* test merge of data */
-	unit_assert( infra_set_lame(slab, &one, onelen, 
+	unit_assert( infra_set_lame(slab, &one, onelen,
 		zone, zonelen,  now, 0, 0, LDNS_RR_TYPE_AAAA) );
-	unit_assert( (d=infra_lookup_host(slab, &one, onelen, 0, now, &k)) );
-	unit_assert( infra_lookup_lame(d, zone, zonelen, now, 
-		&dlame, &rlame, &alame, &olame) );
-	unit_assert(!dlame && !rlame && alame && olame);
+	unit_assert( (d=infra_lookup_host(slab, &one, onelen, zone, zonelen, 0, now, &k)) );
+	unit_assert(!d->isdnsseclame && !d->rec_lame && d->lame_type_A &&
+		d->lame_other);
 	lock_rw_unlock(&k->entry.lock);
 
 	/* test that noEDNS cannot overwrite known-yesEDNS */
 	now += cfg->host_ttl + 10;
-	unit_assert( infra_host(slab, &one, onelen, 
+	unit_assert( infra_host(slab, &one, onelen, zone, zonelen, 
 			now, &vs, &edns_lame, &to) );
 	unit_assert( vs == 0 && to == init && edns_lame == 0 );
 
-	unit_assert( infra_edns_update(slab, &one, onelen, 0, now) );
-	unit_assert( infra_host(slab, &one, onelen, 
+	unit_assert( infra_edns_update(slab, &one, onelen, zone, zonelen, 0, now) );
+	unit_assert( infra_host(slab, &one, onelen, zone, zonelen, 
 			now, &vs, &edns_lame, &to) );
 	unit_assert( vs == 0 && to == init && edns_lame == 1 );
 
-	unit_assert( infra_edns_update(slab, &one, onelen, -1, now) );
-	unit_assert( infra_host(slab, &one, onelen, 
+	unit_assert( infra_edns_update(slab, &one, onelen, zone, zonelen, -1, now) );
+	unit_assert( infra_host(slab, &one, onelen, zone, zonelen, 
 			now, &vs, &edns_lame, &to) );
 	unit_assert( vs == 0 && to == init && edns_lame == 1 );
 

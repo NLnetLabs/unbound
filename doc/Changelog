@@ -1,5 +1,6 @@
 26 October 2011: Wouter
 	- iana portlist updated.
+	- Infra cache stores information about ping and lameness per IP, zone.
 
 24 October 2011: Wouter
 	- Fix resolve of partners.extranet.microsoft.com with a fix for the
