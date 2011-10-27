@@ -2,6 +2,7 @@
 	- lame-ttl and lame-size options no longer exist, it is integrated
 	  with the host info.  They are ignored (with verbose warning) if
 	  encountered to keep the config file backwards compatible.
+	- fix iana-update for changing gzip compression of results.
 
 26 October 2011: Wouter
 	- iana portlist updated.
