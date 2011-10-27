@@ -782,14 +782,14 @@ static const yytype_uint16 yyrline[] =
      323,   332,   341,   350,   359,   368,   377,   386,   400,   409,
      418,   425,   432,   439,   447,   454,   461,   468,   475,   483,
      491,   499,   506,   513,   522,   531,   538,   545,   553,   561,
-     574,   585,   593,   606,   615,   624,   632,   645,   654,   663,
-     672,   681,   694,   701,   711,   721,   731,   741,   751,   761,
-     771,   778,   785,   794,   803,   812,   819,   829,   843,   850,
-     868,   881,   894,   903,   912,   921,   931,   941,   950,   959,
-     966,   975,   984,   993,  1001,  1014,  1022,  1044,  1051,  1066,
-    1076,  1083,  1090,  1100,  1110,  1117,  1124,  1129,  1130,  1131,
-    1131,  1131,  1132,  1132,  1132,  1133,  1135,  1145,  1154,  1161,
-    1168,  1175,  1182,  1189,  1194,  1195,  1196,  1198
+     574,   585,   593,   606,   615,   624,   632,   645,   654,   662,
+     671,   679,   692,   699,   709,   719,   729,   739,   749,   759,
+     769,   776,   783,   792,   801,   810,   817,   827,   841,   848,
+     866,   879,   892,   901,   910,   919,   929,   939,   948,   957,
+     964,   973,   982,   991,   999,  1012,  1020,  1042,  1049,  1064,
+    1074,  1081,  1088,  1098,  1108,  1115,  1122,  1127,  1128,  1129,
+    1129,  1129,  1130,  1130,  1130,  1131,  1133,  1143,  1152,  1159,
+    1166,  1173,  1180,  1187,  1192,  1193,  1194,  1196
 };
 #endif
 
@@ -2714,9 +2714,8 @@ yyreduce:
 #line 655 "util/configparser.y"
     {
 		OUTYY(("P(server_infra_lame_ttl:%s)\n", (yyvsp[(2) - (2)].str)));
-		if(atoi((yyvsp[(2) - (2)].str)) == 0 && strcmp((yyvsp[(2) - (2)].str), "0") != 0)
-			yyerror("number expected");
-		else cfg_parser->cfg->lame_ttl = atoi((yyvsp[(2) - (2)].str));
+		verbose(VERB_DETAIL, "ignored infra-lame-ttl: %s (option "
+			"removed, use infra-host-ttl)", (yyvsp[(2) - (2)].str));
 		free((yyvsp[(2) - (2)].str));
 	}
     break;
@@ -2724,7 +2723,7 @@ yyreduce:
   case 169:
 
 /* Line 1464 of yacc.c  */
-#line 664 "util/configparser.y"
+#line 663 "util/configparser.y"
     {
 		OUTYY(("P(server_infra_cache_numhosts:%s)\n", (yyvsp[(2) - (2)].str)));
 		if(atoi((yyvsp[(2) - (2)].str)) == 0)
@@ -2737,12 +2736,11 @@ yyreduce:
   case 170:
 
 /* Line 1464 of yacc.c  */
-#line 673 "util/configparser.y"
+#line 672 "util/configparser.y"
     {
 		OUTYY(("P(server_infra_cache_lame_size:%s)\n", (yyvsp[(2) - (2)].str)));
-		if(!cfg_parse_memsize((yyvsp[(2) - (2)].str), &cfg_parser->cfg->
-			infra_cache_lame_size))
-			yyerror("number expected");
+		verbose(VERB_DETAIL, "ignored infra-cache-lame-size: %s "
+			"(option removed, use infra-cache-numhosts)", (yyvsp[(2) - (2)].str));
 		free((yyvsp[(2) - (2)].str));
 	}
     break;
@@ -2750,7 +2748,7 @@ yyreduce:
   case 171:
 
 /* Line 1464 of yacc.c  */
-#line 682 "util/configparser.y"
+#line 680 "util/configparser.y"
     {
 		OUTYY(("P(server_infra_cache_slabs:%s)\n", (yyvsp[(2) - (2)].str)));
 		if(atoi((yyvsp[(2) - (2)].str)) == 0)
@@ -2767,7 +2765,7 @@ yyreduce:
   case 172:
 
 /* Line 1464 of yacc.c  */
-#line 695 "util/configparser.y"
+#line 693 "util/configparser.y"
     {
 		OUTYY(("P(server_target_fetch_policy:%s)\n", (yyvsp[(2) - (2)].str)));
 		free(cfg_parser->cfg->target_fetch_policy);
@@ -2778,7 +2776,7 @@ yyreduce:
   case 173:
 
 /* Line 1464 of yacc.c  */
-#line 702 "util/configparser.y"
+#line 700 "util/configparser.y"
     {
 		OUTYY(("P(server_harden_short_bufsize:%s)\n", (yyvsp[(2) - (2)].str)));
 		if(strcmp((yyvsp[(2) - (2)].str), "yes") != 0 && strcmp((yyvsp[(2) - (2)].str), "no") != 0)
@@ -2792,7 +2790,7 @@ yyreduce:
   case 174:
 
 /* Line 1464 of yacc.c  */
-#line 712 "util/configparser.y"
+#line 710 "util/configparser.y"
     {
 		OUTYY(("P(server_harden_large_queries:%s)\n", (yyvsp[(2) - (2)].str)));
 		if(strcmp((yyvsp[(2) - (2)].str), "yes") != 0 && strcmp((yyvsp[(2) - (2)].str), "no") != 0)
@@ -2806,7 +2804,7 @@ yyreduce:
   case 175:
 
 /* Line 1464 of yacc.c  */
-#line 722 "util/configparser.y"
+#line 720 "util/configparser.y"
     {
 		OUTYY(("P(server_harden_glue:%s)\n", (yyvsp[(2) - (2)].str)));
 		if(strcmp((yyvsp[(2) - (2)].str), "yes") != 0 && strcmp((yyvsp[(2) - (2)].str), "no") != 0)
@@ -2820,7 +2818,7 @@ yyreduce:
   case 176:
 
 /* Line 1464 of yacc.c  */
-#line 732 "util/configparser.y"
+#line 730 "util/configparser.y"
     {
 		OUTYY(("P(server_harden_dnssec_stripped:%s)\n", (yyvsp[(2) - (2)].str)));
 		if(strcmp((yyvsp[(2) - (2)].str), "yes") != 0 && strcmp((yyvsp[(2) - (2)].str), "no") != 0)
@@ -2834,7 +2832,7 @@ yyreduce:
   case 177:
 
 /* Line 1464 of yacc.c  */
-#line 742 "util/configparser.y"
+#line 740 "util/configparser.y"
     {
 		OUTYY(("P(server_harden_below_nxdomain:%s)\n", (yyvsp[(2) - (2)].str)));
 		if(strcmp((yyvsp[(2) - (2)].str), "yes") != 0 && strcmp((yyvsp[(2) - (2)].str), "no") != 0)
@@ -2848,7 +2846,7 @@ yyreduce:
   case 178:
 
 /* Line 1464 of yacc.c  */
-#line 752 "util/configparser.y"
+#line 750 "util/configparser.y"
     {
 		OUTYY(("P(server_harden_referral_path:%s)\n", (yyvsp[(2) - (2)].str)));
 		if(strcmp((yyvsp[(2) - (2)].str), "yes") != 0 && strcmp((yyvsp[(2) - (2)].str), "no") != 0)
@@ -2862,7 +2860,7 @@ yyreduce:
   case 179:
 
 /* Line 1464 of yacc.c  */
-#line 762 "util/configparser.y"
+#line 760 "util/configparser.y"
     {
 		OUTYY(("P(server_use_caps_for_id:%s)\n", (yyvsp[(2) - (2)].str)));
 		if(strcmp((yyvsp[(2) - (2)].str), "yes") != 0 && strcmp((yyvsp[(2) - (2)].str), "no") != 0)
@@ -2876,7 +2874,7 @@ yyreduce:
   case 180:
 
 /* Line 1464 of yacc.c  */
-#line 772 "util/configparser.y"
+#line 770 "util/configparser.y"
     {
 		OUTYY(("P(server_private_address:%s)\n", (yyvsp[(2) - (2)].str)));
 		if(!cfg_strlist_insert(&cfg_parser->cfg->private_address, (yyvsp[(2) - (2)].str)))
@@ -2887,7 +2885,7 @@ yyreduce:
   case 181:
 
 /* Line 1464 of yacc.c  */
-#line 779 "util/configparser.y"
+#line 777 "util/configparser.y"
     {
 		OUTYY(("P(server_private_domain:%s)\n", (yyvsp[(2) - (2)].str)));
 		if(!cfg_strlist_insert(&cfg_parser->cfg->private_domain, (yyvsp[(2) - (2)].str)))
@@ -2898,7 +2896,7 @@ yyreduce:
   case 182:
 
 /* Line 1464 of yacc.c  */
-#line 786 "util/configparser.y"
+#line 784 "util/configparser.y"
     {
 		OUTYY(("P(server_prefetch:%s)\n", (yyvsp[(2) - (2)].str)));
 		if(strcmp((yyvsp[(2) - (2)].str), "yes") != 0 && strcmp((yyvsp[(2) - (2)].str), "no") != 0)
@@ -2911,7 +2909,7 @@ yyreduce:
   case 183:
 
 /* Line 1464 of yacc.c  */
-#line 795 "util/configparser.y"
+#line 793 "util/configparser.y"
     {
 		OUTYY(("P(server_prefetch_key:%s)\n", (yyvsp[(2) - (2)].str)));
 		if(strcmp((yyvsp[(2) - (2)].str), "yes") != 0 && strcmp((yyvsp[(2) - (2)].str), "no") != 0)
@@ -2924,7 +2922,7 @@ yyreduce:
   case 184:
 
 /* Line 1464 of yacc.c  */
-#line 804 "util/configparser.y"
+#line 802 "util/configparser.y"
     {
 		OUTYY(("P(server_unwanted_reply_threshold:%s)\n", (yyvsp[(2) - (2)].str)));
 		if(atoi((yyvsp[(2) - (2)].str)) == 0 && strcmp((yyvsp[(2) - (2)].str), "0") != 0)
@@ -2937,7 +2935,7 @@ yyreduce:
   case 185:
 
 /* Line 1464 of yacc.c  */
-#line 813 "util/configparser.y"
+#line 811 "util/configparser.y"
     {
 		OUTYY(("P(server_do_not_query_address:%s)\n", (yyvsp[(2) - (2)].str)));
 		if(!cfg_strlist_insert(&cfg_parser->cfg->donotqueryaddrs, (yyvsp[(2) - (2)].str)))
@@ -2948,7 +2946,7 @@ yyreduce:
   case 186:
 
 /* Line 1464 of yacc.c  */
-#line 820 "util/configparser.y"
+#line 818 "util/configparser.y"
     {
 		OUTYY(("P(server_do_not_query_localhost:%s)\n", (yyvsp[(2) - (2)].str)));
 		if(strcmp((yyvsp[(2) - (2)].str), "yes") != 0 && strcmp((yyvsp[(2) - (2)].str), "no") != 0)
@@ -2962,7 +2960,7 @@ yyreduce:
   case 187:
 
 /* Line 1464 of yacc.c  */
-#line 830 "util/configparser.y"
+#line 828 "util/configparser.y"
     {
 		OUTYY(("P(server_access_control:%s %s)\n", (yyvsp[(2) - (3)].str), (yyvsp[(3) - (3)].str)));
 		if(strcmp((yyvsp[(3) - (3)].str), "deny")!=0 && strcmp((yyvsp[(3) - (3)].str), "refuse")!=0 &&
@@ -2980,7 +2978,7 @@ yyreduce:
   case 188:
 
 /* Line 1464 of yacc.c  */
-#line 844 "util/configparser.y"
+#line 842 "util/configparser.y"
     {
 		OUTYY(("P(server_module_conf:%s)\n", (yyvsp[(2) - (2)].str)));
 		free(cfg_parser->cfg->module_conf);
@@ -2991,7 +2989,7 @@ yyreduce:
   case 189:
 
 /* Line 1464 of yacc.c  */
-#line 851 "util/configparser.y"
+#line 849 "util/configparser.y"
     {
 		OUTYY(("P(server_val_override_date:%s)\n", (yyvsp[(2) - (2)].str)));
 		if(strlen((yyvsp[(2) - (2)].str)) == 0 || strcmp((yyvsp[(2) - (2)].str), "0") == 0) {
@@ -3013,7 +3011,7 @@ yyreduce:
   case 190:
 
 /* Line 1464 of yacc.c  */
-#line 869 "util/configparser.y"
+#line 867 "util/configparser.y"
     {
 		OUTYY(("P(server_val_sig_skew_min:%s)\n", (yyvsp[(2) - (2)].str)));
 		if(strlen((yyvsp[(2) - (2)].str)) == 0 || strcmp((yyvsp[(2) - (2)].str), "0") == 0) {
@@ -3030,7 +3028,7 @@ yyreduce:
   case 191:
 
 /* Line 1464 of yacc.c  */
-#line 882 "util/configparser.y"
+#line 880 "util/configparser.y"
     {
 		OUTYY(("P(server_val_sig_skew_max:%s)\n", (yyvsp[(2) - (2)].str)));
 		if(strlen((yyvsp[(2) - (2)].str)) == 0 || strcmp((yyvsp[(2) - (2)].str), "0") == 0) {
@@ -3047,7 +3045,7 @@ yyreduce:
   case 192:
 
 /* Line 1464 of yacc.c  */
-#line 895 "util/configparser.y"
+#line 893 "util/configparser.y"
     {
 		OUTYY(("P(server_cache_max_ttl:%s)\n", (yyvsp[(2) - (2)].str)));
 		if(atoi((yyvsp[(2) - (2)].str)) == 0 && strcmp((yyvsp[(2) - (2)].str), "0") != 0)
@@ -3060,7 +3058,7 @@ yyreduce:
   case 193:
 
 /* Line 1464 of yacc.c  */
-#line 904 "util/configparser.y"
+#line 902 "util/configparser.y"
     {
 		OUTYY(("P(server_cache_min_ttl:%s)\n", (yyvsp[(2) - (2)].str)));
 		if(atoi((yyvsp[(2) - (2)].str)) == 0 && strcmp((yyvsp[(2) - (2)].str), "0") != 0)
@@ -3073,7 +3071,7 @@ yyreduce:
   case 194:
 
 /* Line 1464 of yacc.c  */
-#line 913 "util/configparser.y"
+#line 911 "util/configparser.y"
     {
 		OUTYY(("P(server_bogus_ttl:%s)\n", (yyvsp[(2) - (2)].str)));
 		if(atoi((yyvsp[(2) - (2)].str)) == 0 && strcmp((yyvsp[(2) - (2)].str), "0") != 0)
@@ -3086,7 +3084,7 @@ yyreduce:
   case 195:
 
 /* Line 1464 of yacc.c  */
-#line 922 "util/configparser.y"
+#line 920 "util/configparser.y"
     {
 		OUTYY(("P(server_val_clean_additional:%s)\n", (yyvsp[(2) - (2)].str)));
 		if(strcmp((yyvsp[(2) - (2)].str), "yes") != 0 && strcmp((yyvsp[(2) - (2)].str), "no") != 0)
@@ -3100,7 +3098,7 @@ yyreduce:
   case 196:
 
 /* Line 1464 of yacc.c  */
-#line 932 "util/configparser.y"
+#line 930 "util/configparser.y"
     {
 		OUTYY(("P(server_val_permissive_mode:%s)\n", (yyvsp[(2) - (2)].str)));
 		if(strcmp((yyvsp[(2) - (2)].str), "yes") != 0 && strcmp((yyvsp[(2) - (2)].str), "no") != 0)
@@ -3114,7 +3112,7 @@ yyreduce:
   case 197:
 
 /* Line 1464 of yacc.c  */
-#line 942 "util/configparser.y"
+#line 940 "util/configparser.y"
     {
 		OUTYY(("P(server_ignore_cd_flag:%s)\n", (yyvsp[(2) - (2)].str)));
 		if(strcmp((yyvsp[(2) - (2)].str), "yes") != 0 && strcmp((yyvsp[(2) - (2)].str), "no") != 0)
@@ -3127,7 +3125,7 @@ yyreduce:
   case 198:
 
 /* Line 1464 of yacc.c  */
-#line 951 "util/configparser.y"
+#line 949 "util/configparser.y"
     {
 		OUTYY(("P(server_val_log_level:%s)\n", (yyvsp[(2) - (2)].str)));
 		if(atoi((yyvsp[(2) - (2)].str)) == 0 && strcmp((yyvsp[(2) - (2)].str), "0") != 0)
@@ -3140,7 +3138,7 @@ yyreduce:
   case 199:
 
 /* Line 1464 of yacc.c  */
-#line 960 "util/configparser.y"
+#line 958 "util/configparser.y"
     {
 		OUTYY(("P(server_val_nsec3_keysize_iterations:%s)\n", (yyvsp[(2) - (2)].str)));
 		free(cfg_parser->cfg->val_nsec3_key_iterations);
@@ -3151,7 +3149,7 @@ yyreduce:
   case 200:
 
 /* Line 1464 of yacc.c  */
-#line 967 "util/configparser.y"
+#line 965 "util/configparser.y"
     {
 		OUTYY(("P(server_add_holddown:%s)\n", (yyvsp[(2) - (2)].str)));
 		if(atoi((yyvsp[(2) - (2)].str)) == 0 && strcmp((yyvsp[(2) - (2)].str), "0") != 0)
@@ -3164,7 +3162,7 @@ yyreduce:
   case 201:
 
 /* Line 1464 of yacc.c  */
-#line 976 "util/configparser.y"
+#line 974 "util/configparser.y"
     {
 		OUTYY(("P(server_del_holddown:%s)\n", (yyvsp[(2) - (2)].str)));
 		if(atoi((yyvsp[(2) - (2)].str)) == 0 && strcmp((yyvsp[(2) - (2)].str), "0") != 0)
@@ -3177,7 +3175,7 @@ yyreduce:
   case 202:
 
 /* Line 1464 of yacc.c  */
-#line 985 "util/configparser.y"
+#line 983 "util/configparser.y"
     {
 		OUTYY(("P(server_keep_missing:%s)\n", (yyvsp[(2) - (2)].str)));
 		if(atoi((yyvsp[(2) - (2)].str)) == 0 && strcmp((yyvsp[(2) - (2)].str), "0") != 0)
@@ -3190,7 +3188,7 @@ yyreduce:
   case 203:
 
 /* Line 1464 of yacc.c  */
-#line 994 "util/configparser.y"
+#line 992 "util/configparser.y"
     {
 		OUTYY(("P(server_key_cache_size:%s)\n", (yyvsp[(2) - (2)].str)));
 		if(!cfg_parse_memsize((yyvsp[(2) - (2)].str), &cfg_parser->cfg->key_cache_size))
@@ -3202,7 +3200,7 @@ yyreduce:
   case 204:
 
 /* Line 1464 of yacc.c  */
-#line 1002 "util/configparser.y"
+#line 1000 "util/configparser.y"
     {
 		OUTYY(("P(server_key_cache_slabs:%s)\n", (yyvsp[(2) - (2)].str)));
 		if(atoi((yyvsp[(2) - (2)].str)) == 0)
@@ -3219,7 +3217,7 @@ yyreduce:
   case 205:
 
 /* Line 1464 of yacc.c  */
-#line 1015 "util/configparser.y"
+#line 1013 "util/configparser.y"
     {
 		OUTYY(("P(server_neg_cache_size:%s)\n", (yyvsp[(2) - (2)].str)));
 		if(!cfg_parse_memsize((yyvsp[(2) - (2)].str), &cfg_parser->cfg->neg_cache_size))
@@ -3231,7 +3229,7 @@ yyreduce:
   case 206:
 
 /* Line 1464 of yacc.c  */
-#line 1023 "util/configparser.y"
+#line 1021 "util/configparser.y"
     {
 		OUTYY(("P(server_local_zone:%s %s)\n", (yyvsp[(2) - (3)].str), (yyvsp[(3) - (3)].str)));
 		if(strcmp((yyvsp[(3) - (3)].str), "static")!=0 && strcmp((yyvsp[(3) - (3)].str), "deny")!=0 &&
@@ -3257,7 +3255,7 @@ yyreduce:
   case 207:
 
 /* Line 1464 of yacc.c  */
-#line 1045 "util/configparser.y"
+#line 1043 "util/configparser.y"
     {
 		OUTYY(("P(server_local_data:%s)\n", (yyvsp[(2) - (2)].str)));
 		if(!cfg_strlist_insert(&cfg_parser->cfg->local_data, (yyvsp[(2) - (2)].str)))
@@ -3268,7 +3266,7 @@ yyreduce:
   case 208:
 
 /* Line 1464 of yacc.c  */
-#line 1052 "util/configparser.y"
+#line 1050 "util/configparser.y"
     {
 		char* ptr;
 		OUTYY(("P(server_local_data_ptr:%s)\n", (yyvsp[(2) - (2)].str)));
@@ -3287,7 +3285,7 @@ yyreduce:
   case 209:
 
 /* Line 1464 of yacc.c  */
-#line 1067 "util/configparser.y"
+#line 1065 "util/configparser.y"
     {
 		OUTYY(("P(name:%s)\n", (yyvsp[(2) - (2)].str)));
 		if(cfg_parser->cfg->stubs->name)
@@ -3301,7 +3299,7 @@ yyreduce:
   case 210:
 
 /* Line 1464 of yacc.c  */
-#line 1077 "util/configparser.y"
+#line 1075 "util/configparser.y"
     {
 		OUTYY(("P(stub-host:%s)\n", (yyvsp[(2) - (2)].str)));
 		if(!cfg_strlist_insert(&cfg_parser->cfg->stubs->hosts, (yyvsp[(2) - (2)].str)))
@@ -3312,7 +3310,7 @@ yyreduce:
   case 211:
 
 /* Line 1464 of yacc.c  */
-#line 1084 "util/configparser.y"
+#line 1082 "util/configparser.y"
     {
 		OUTYY(("P(stub-addr:%s)\n", (yyvsp[(2) - (2)].str)));
 		if(!cfg_strlist_insert(&cfg_parser->cfg->stubs->addrs, (yyvsp[(2) - (2)].str)))
@@ -3323,7 +3321,7 @@ yyreduce:
   case 212:
 
 /* Line 1464 of yacc.c  */
-#line 1091 "util/configparser.y"
+#line 1089 "util/configparser.y"
     {
 		OUTYY(("P(stub-prime:%s)\n", (yyvsp[(2) - (2)].str)));
 		if(strcmp((yyvsp[(2) - (2)].str), "yes") != 0 && strcmp((yyvsp[(2) - (2)].str), "no") != 0)
@@ -3337,7 +3335,7 @@ yyreduce:
   case 213:
 
 /* Line 1464 of yacc.c  */
-#line 1101 "util/configparser.y"
+#line 1099 "util/configparser.y"
     {
 		OUTYY(("P(name:%s)\n", (yyvsp[(2) - (2)].str)));
 		if(cfg_parser->cfg->forwards->name)
@@ -3351,7 +3349,7 @@ yyreduce:
   case 214:
 
 /* Line 1464 of yacc.c  */
-#line 1111 "util/configparser.y"
+#line 1109 "util/configparser.y"
     {
 		OUTYY(("P(forward-host:%s)\n", (yyvsp[(2) - (2)].str)));
 		if(!cfg_strlist_insert(&cfg_parser->cfg->forwards->hosts, (yyvsp[(2) - (2)].str)))
@@ -3362,7 +3360,7 @@ yyreduce:
   case 215:
 
 /* Line 1464 of yacc.c  */
-#line 1118 "util/configparser.y"
+#line 1116 "util/configparser.y"
     {
 		OUTYY(("P(forward-addr:%s)\n", (yyvsp[(2) - (2)].str)));
 		if(!cfg_strlist_insert(&cfg_parser->cfg->forwards->addrs, (yyvsp[(2) - (2)].str)))
@@ -3373,7 +3371,7 @@ yyreduce:
   case 216:
 
 /* Line 1464 of yacc.c  */
-#line 1125 "util/configparser.y"
+#line 1123 "util/configparser.y"
     { 
 		OUTYY(("\nP(remote-control:)\n")); 
 	}
@@ -3382,7 +3380,7 @@ yyreduce:
   case 226:
 
 /* Line 1464 of yacc.c  */
-#line 1136 "util/configparser.y"
+#line 1134 "util/configparser.y"
     {
 		OUTYY(("P(control_enable:%s)\n", (yyvsp[(2) - (2)].str)));
 		if(strcmp((yyvsp[(2) - (2)].str), "yes") != 0 && strcmp((yyvsp[(2) - (2)].str), "no") != 0)
@@ -3396,7 +3394,7 @@ yyreduce:
   case 227:
 
 /* Line 1464 of yacc.c  */
-#line 1146 "util/configparser.y"
+#line 1144 "util/configparser.y"
     {
 		OUTYY(("P(control_port:%s)\n", (yyvsp[(2) - (2)].str)));
 		if(atoi((yyvsp[(2) - (2)].str)) == 0)
@@ -3409,7 +3407,7 @@ yyreduce:
   case 228:
 
 /* Line 1464 of yacc.c  */
-#line 1155 "util/configparser.y"
+#line 1153 "util/configparser.y"
     {
 		OUTYY(("P(control_interface:%s)\n", (yyvsp[(2) - (2)].str)));
 		if(!cfg_strlist_insert(&cfg_parser->cfg->control_ifs, (yyvsp[(2) - (2)].str)))
@@ -3420,7 +3418,7 @@ yyreduce:
   case 229:
 
 /* Line 1464 of yacc.c  */
-#line 1162 "util/configparser.y"
+#line 1160 "util/configparser.y"
     {
 		OUTYY(("P(rc_server_key_file:%s)\n", (yyvsp[(2) - (2)].str)));
 		free(cfg_parser->cfg->server_key_file);
@@ -3431,7 +3429,7 @@ yyreduce:
   case 230:
 
 /* Line 1464 of yacc.c  */
-#line 1169 "util/configparser.y"
+#line 1167 "util/configparser.y"
     {
 		OUTYY(("P(rc_server_cert_file:%s)\n", (yyvsp[(2) - (2)].str)));
 		free(cfg_parser->cfg->server_cert_file);
@@ -3442,7 +3440,7 @@ yyreduce:
   case 231:
 
 /* Line 1464 of yacc.c  */
-#line 1176 "util/configparser.y"
+#line 1174 "util/configparser.y"
     {
 		OUTYY(("P(rc_control_key_file:%s)\n", (yyvsp[(2) - (2)].str)));
 		free(cfg_parser->cfg->control_key_file);
@@ -3453,7 +3451,7 @@ yyreduce:
   case 232:
 
 /* Line 1464 of yacc.c  */
-#line 1183 "util/configparser.y"
+#line 1181 "util/configparser.y"
     {
 		OUTYY(("P(rc_control_cert_file:%s)\n", (yyvsp[(2) - (2)].str)));
 		free(cfg_parser->cfg->control_cert_file);
@@ -3464,7 +3462,7 @@ yyreduce:
   case 233:
 
 /* Line 1464 of yacc.c  */
-#line 1190 "util/configparser.y"
+#line 1188 "util/configparser.y"
     { 
 		OUTYY(("\nP(python:)\n")); 
 	}
@@ -3473,7 +3471,7 @@ yyreduce:
   case 237:
 
 /* Line 1464 of yacc.c  */
-#line 1199 "util/configparser.y"
+#line 1197 "util/configparser.y"
     {
 		OUTYY(("P(python-script:%s)\n", (yyvsp[(2) - (2)].str)));
 		free(cfg_parser->cfg->python_script);
@@ -3484,7 +3482,7 @@ yyreduce:
 
 
 /* Line 1464 of yacc.c  */
-#line 3488 "util/configparser.c"
+#line 3486 "util/configparser.c"
       default: break;
     }
   YY_SYMBOL_PRINT ("-> $$ =", yyr1[yyn], &yyval, &yyloc);
@@ -3696,7 +3694,7 @@ yyreturn:
 
 
 /* Line 1684 of yacc.c  */
-#line 1204 "util/configparser.y"
+#line 1202 "util/configparser.y"
 
 
 /* parse helper routines could be here */

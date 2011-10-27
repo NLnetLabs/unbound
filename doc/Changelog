@@ -1,12 +1,18 @@
+27 October 2011: Wouter
+	- lame-ttl and lame-size options no longer exist, it is integrated
+	  with the host info.  They are ignored (with verbose warning) if
+	  encountered to keep the config file backwards compatible.
+
 26 October 2011: Wouter
 	- iana portlist updated.
 	- Infra cache stores information about ping and lameness per IP, zone.
+	  This fixes bug #416.
 	- fix iana_update target for gzipped file on iana site.
 
 24 October 2011: Wouter
 	- Fix resolve of partners.extranet.microsoft.com with a fix for the
 	  server selection for choosing out of a (particular) list of bad
-	  choices.
+	  choices. (bug#415)
 	- Fix make_new_space function so that the incoming query is not
 	  overwritten if a jostled out query causes a waiting query to be
 	  resumed that then fails and sends an error message.  (Thanks to

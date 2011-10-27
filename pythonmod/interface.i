@@ -606,10 +606,8 @@ struct config_file {
    size_t rrset_cache_size;
    size_t rrset_cache_slabs;
    int host_ttl;
-   int lame_ttl;
    size_t infra_cache_slabs;
    size_t infra_cache_numhosts;
-   size_t infra_cache_lame_size;
    char* target_fetch_policy;
    int if_automatic;
    int num_ifs;

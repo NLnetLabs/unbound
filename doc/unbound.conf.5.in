@@ -269,10 +269,7 @@ the data in the cache does not match up with the actual data any more.
 .TP
 .B infra\-host\-ttl: \fI<seconds>
 Time to live for entries in the host cache. The host cache contains 
-roundtrip timing and EDNS support information. Default is 900.
-.TP
-.B infra\-lame\-ttl: \fI<seconds>
-The time to live when a delegation is discovered to be lame. Default is 900.
+roundtrip timing, lameness and EDNS support information. Default is 900.
 .TP
 .B infra\-cache\-slabs: \fI<number>
 Number of slabs in the infrastructure cache. Slabs reduce lock contention 
@@ -280,11 +277,6 @@ by threads. Must be set to a power of 2.
 .TP
 .B infra\-cache\-numhosts: \fI<number>
 Number of hosts for which information is cached. Default is 10000.
-.TP
-.B infra\-cache\-lame\-size: \fI<number>
-Number of bytes that the lameness cache per host is allowed to use. Default
-is 10 kb, which gives maximum storage for a couple score zones, depending on 
-the lame zone name lengths.
 .TP
 .B do\-ip4: \fI<yes or no>
 Enable or disable whether ip4 queries are answered or issued. Default is yes.
@@ -1023,7 +1015,6 @@ server:
 	rrset\-cache\-slabs: 1
 	infra\-cache\-numhosts: 200
 	infra\-cache\-slabs: 1
-	infra\-cache\-lame\-size: 1k
 	key\-cache\-size: 100k
 	key\-cache\-slabs: 1
 	neg\-cache\-size: 10k

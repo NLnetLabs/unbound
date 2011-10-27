@@ -117,7 +117,6 @@ config_create(void)
 	cfg->rrset_cache_size = 4 * 1024 * 1024;
 	cfg->rrset_cache_slabs = 4;
 	cfg->host_ttl = 900;
-	cfg->lame_ttl = 900;
 	cfg->bogus_ttl = 60;
 	cfg->min_ttl = 0;
 	cfg->max_ttl = 3600 * 24;
@@ -125,7 +124,6 @@ config_create(void)
 	cfg->prefetch_key = 0;
 	cfg->infra_cache_slabs = 4;
 	cfg->infra_cache_numhosts = 10000;
-	cfg->infra_cache_lame_size = 10240; /* easily 40 or more entries */
 	if(!(cfg->outgoing_avail_ports = (int*)calloc(65536, sizeof(int))))
 		goto error_exit;
 	init_outgoing_availports(cfg->outgoing_avail_ports, 65536);
@@ -348,10 +346,8 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	else S_YNO("prefetch-key:", prefetch_key)
 	else S_NUMBER_OR_ZERO("cache-max-ttl:", max_ttl)
 	else S_NUMBER_OR_ZERO("infra-host-ttl:", host_ttl)
-	else S_NUMBER_OR_ZERO("infra-lame-ttl:", lame_ttl)
 	else S_POW2("infra-cache-slabs:", infra_cache_slabs)
 	else S_SIZET_NONZERO("infra-cache-numhosts:", infra_cache_numhosts)
-	else S_MEMSIZE("infra-cache-lame-size:", infra_cache_lame_size)
 	else S_STR("chroot:", chrootdir)
 	else S_STR("username:", username)
 	else S_STR("directory:", directory)
@@ -571,10 +567,8 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_YNO(opt, "prefetch", prefetch)
 	else O_DEC(opt, "cache-max-ttl", max_ttl)
 	else O_DEC(opt, "infra-host-ttl", host_ttl)
-	else O_DEC(opt, "infra-lame-ttl", lame_ttl)
 	else O_DEC(opt, "infra-cache-slabs", infra_cache_slabs)
 	else O_MEM(opt, "infra-cache-numhosts", infra_cache_numhosts)
-	else O_MEM(opt, "infra-cache-lame-size", infra_cache_lame_size)
 	else O_YNO(opt, "do-ip4", do_ip4)
 	else O_YNO(opt, "do-ip6", do_ip6)
 	else O_YNO(opt, "do-udp", do_udp)

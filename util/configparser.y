@@ -654,9 +654,8 @@ server_infra_host_ttl: VAR_INFRA_HOST_TTL STRING_ARG
 server_infra_lame_ttl: VAR_INFRA_LAME_TTL STRING_ARG
 	{
 		OUTYY(("P(server_infra_lame_ttl:%s)\n", $2));
-		if(atoi($2) == 0 && strcmp($2, "0") != 0)
-			yyerror("number expected");
-		else cfg_parser->cfg->lame_ttl = atoi($2);
+		verbose(VERB_DETAIL, "ignored infra-lame-ttl: %s (option "
+			"removed, use infra-host-ttl)", $2);
 		free($2);
 	}
 	;
@@ -672,9 +671,8 @@ server_infra_cache_numhosts: VAR_INFRA_CACHE_NUMHOSTS STRING_ARG
 server_infra_cache_lame_size: VAR_INFRA_CACHE_LAME_SIZE STRING_ARG
 	{
 		OUTYY(("P(server_infra_cache_lame_size:%s)\n", $2));
-		if(!cfg_parse_memsize($2, &cfg_parser->cfg->
-			infra_cache_lame_size))
-			yyerror("number expected");
+		verbose(VERB_DETAIL, "ignored infra-cache-lame-size: %s "
+			"(option removed, use infra-cache-numhosts)", $2);
 		free($2);
 	}
 	;
