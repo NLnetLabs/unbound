@@ -3,6 +3,7 @@
 	  with the host info.  They are ignored (with verbose warning) if
 	  encountered to keep the config file backwards compatible.
 	- fix iana-update for changing gzip compression of results.
+	- fix export-all-symbols on OSX.
 
 26 October 2011: Wouter
 	- iana portlist updated.

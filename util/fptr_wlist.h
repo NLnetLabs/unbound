@@ -64,7 +64,7 @@
  * Macro to perform an assertion check for fptr wlist checks.
  * Does not get disabled in optimize mode. Check adds security by layers.
  */
-#if defined(UB_ON_WINDOWS) && defined(EXPORT_ALL_SYMBOLS)
+#if defined(EXPORT_ALL_SYMBOLS)
 #define fptr_ok(x) /* nothing, dll-exe memory layout on win disables it */
 #else
 #define fptr_ok(x) \
