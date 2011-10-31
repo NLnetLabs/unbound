@@ -52,6 +52,7 @@
 #include "util/data/msgparse.h"
 #include "util/data/msgreply.h"
 #include "util/data/dname.h"
+#include <openssl/err.h>
 
 #ifndef PF_INET6
 /** define in case streamtcp is compiled on legacy systems */
@@ -281,6 +282,26 @@ send_em(const char* svr, int udp, int usessl, int noanswer, int num, char** qs)
 		if(!ctx) fatal_exit("cannot create ssl ctx");
 		ssl = outgoing_ssl_fd(ctx, fd);
 		if(!ssl) fatal_exit("cannot create ssl");
+		while(1) {
+			int r;
+			ERR_clear_error();
+			if( (r=SSL_do_handshake(ssl)) == 1)
+				break;
+			r = SSL_get_error(ssl, r);
+			if(r != SSL_ERROR_WANT_READ &&
+				r != SSL_ERROR_WANT_WRITE) {
+				log_crypto_err("could not ssl_handshake");
+				exit(1);
+			}
+		}
+		if(1) {
+			X509* x = SSL_get_peer_certificate(ssl);
+			if(!x) printf("SSL: no peer certificate\n");
+			else {
+				X509_print_fp(stdout, x);
+				X509_free(x);
+			}
+		}
 	}
 	for(i=0; i<num; i+=3) {
 		printf("\nNext query is %s %s %s\n", qs[i], qs[i+1], qs[i+2]);
