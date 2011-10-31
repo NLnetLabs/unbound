@@ -44,6 +44,7 @@
 #include "config.h"
 #include <ldns/dname.h>
 #include <ldns/wire2host.h>
+#include <openssl/ssl.h>
 #include "libunbound/libworker.h"
 #include "libunbound/context.h"
 #include "libunbound/unbound.h"
@@ -84,6 +85,7 @@ libworker_delete(struct libworker* w)
 		ub_randfree(w->env->rnd);
 		free(w->env);
 	}
+	SSL_CTX_free(w->sslctx);
 	outside_network_delete(w->back);
 	comm_base_delete(w->base);
 	free(w);
@@ -123,6 +125,13 @@ libworker_setup(struct ub_ctx* ctx, int is_bg)
 	if(w->env->fwds && !forwards_apply_cfg(w->env->fwds, cfg)) { 
 		forwards_delete(w->env->fwds);
 		w->env->fwds = NULL;
+	}
+	if(cfg->ssl_upstream) {
+		w->sslctx = connect_sslctx_create(NULL, NULL, NULL);
+		if(!w->sslctx) {
+			libworker_delete(w);
+			return NULL;
+		}
 	}
 	if(!w->is_bg || w->is_bg_thread) {
 		lock_basic_unlock(&ctx->cfglock);
@@ -171,7 +180,7 @@ libworker_setup(struct ub_ctx* ctx, int is_bg)
 		cfg->do_tcp?cfg->outgoing_num_tcp:0,
 		w->env->infra_cache, w->env->rnd, cfg->use_caps_bits_for_id,
 		ports, numports, cfg->unwanted_threshold,
-		&libworker_alloc_cleanup, w, cfg->do_udp);
+		&libworker_alloc_cleanup, w, cfg->do_udp, w->sslctx);
 	if(!w->is_bg || w->is_bg_thread) {
 		lock_basic_unlock(&ctx->cfglock);
 	}
@@ -695,9 +704,9 @@ struct outbound_entry* libworker_send_query(uint8_t* qname, size_t qnamelen,
 	e->qstate = q;
 	e->qsent = outnet_serviced_query(w->back, qname,
 		qnamelen, qtype, qclass, flags, dnssec, want_dnssec,
-		q->env->cfg->tcp_upstream, addr, addrlen, zone, zonelen,
-		libworker_handle_service_reply, e, w->back->udp_buff,
-		&outbound_entry_compare);
+		q->env->cfg->tcp_upstream || q->env->cfg->ssl_upstream, addr,
+		addrlen, zone, zonelen, libworker_handle_service_reply, e,
+		w->back->udp_buff, &outbound_entry_compare);
 	if(!e->qsent) {
 		return NULL;
 	}

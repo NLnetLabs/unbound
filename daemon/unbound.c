@@ -55,6 +55,7 @@
 #include "services/cache/infra.h"
 #include "util/data/msgreply.h"
 #include "util/module.h"
+#include "util/net_help.h"
 #include <signal.h>
 #include <fcntl.h>
 #include <openssl/crypto.h>
@@ -446,6 +447,13 @@ perform_setup(struct daemon* daemon, struct config_file* cfg, int debug_mode,
 	/* read ssl keys while superuser and outside chroot */
 	if(!(daemon->rc = daemon_remote_create(cfg)))
 		fatal_exit("could not set up remote-control");
+	if(cfg->ssl_service_key && cfg->ssl_service_key[0]) {
+		if(!(daemon->listen_sslctx = listen_sslctx_create(
+			cfg->ssl_service_key, cfg->ssl_service_pem, NULL)))
+			fatal_exit("could not set up listen SSL_CTX");
+	}
+	if(!(daemon->connect_sslctx = connect_sslctx_create(NULL, NULL, NULL)))
+		fatal_exit("could not set up connect SSL_CTX");
 
 #ifdef HAVE_KILL
 	/* check old pid file before forking */

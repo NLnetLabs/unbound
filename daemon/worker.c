@@ -1092,7 +1092,7 @@ worker_init(struct worker* worker, struct config_file *cfg,
 	}
 	worker->front = listen_create(worker->base, ports,
 		cfg->msg_buffer_size, (int)cfg->incoming_num_tcp, 
-		worker_handle_request, worker);
+		worker->daemon->listen_sslctx, worker_handle_request, worker);
 	if(!worker->front) {
 		log_err("could not create listening sockets");
 		worker_delete(worker);
@@ -1105,7 +1105,7 @@ worker_init(struct worker* worker, struct config_file *cfg,
 		worker->daemon->env->infra_cache, worker->rndstate,
 		cfg->use_caps_bits_for_id, worker->ports, worker->numports,
 		cfg->unwanted_threshold, &worker_alloc_cleanup, worker,
-		cfg->do_udp);
+		cfg->do_udp, worker->daemon->connect_sslctx);
 	if(!worker->back) {
 		log_err("could not create outgoing sockets");
 		worker_delete(worker);
@@ -1255,9 +1255,9 @@ worker_send_query(uint8_t* qname, size_t qnamelen, uint16_t qtype,
 	e->qstate = q;
 	e->qsent = outnet_serviced_query(worker->back, qname,
 		qnamelen, qtype, qclass, flags, dnssec, want_dnssec,
-		q->env->cfg->tcp_upstream, addr, addrlen, zone, zonelen,
-		worker_handle_service_reply, e, worker->back->udp_buff,
-		&outbound_entry_compare);
+		q->env->cfg->tcp_upstream || q->env->cfg->ssl_upstream, addr,
+		addrlen, zone, zonelen, worker_handle_service_reply, e,
+		worker->back->udp_buff, &outbound_entry_compare);
 	if(!e->qsent) {
 		return NULL;
 	}

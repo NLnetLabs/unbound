@@ -535,7 +535,8 @@ outside_network_create(struct comm_base *base, size_t bufsize,
 	int do_ip6, size_t num_tcp, struct infra_cache* infra,
 	struct ub_randstate* rnd, int use_caps_for_id, int* availports, 
 	int numavailports, size_t unwanted_threshold,
-	void (*unwanted_action)(void*), void* unwanted_param, int do_udp)
+	void (*unwanted_action)(void*), void* unwanted_param, int do_udp,
+	void* sslctx)
 {
 	struct outside_network* outnet = (struct outside_network*)
 		calloc(1, sizeof(struct outside_network));
@@ -549,6 +550,7 @@ outside_network_create(struct comm_base *base, size_t bufsize,
 	outnet->num_tcp = num_tcp;
 	outnet->infra = infra;
 	outnet->rnd = rnd;
+	outnet->sslctx = sslctx;
 	outnet->svcd_overhead = 0;
 	outnet->want_to_quit = 0;
 	outnet->unwanted_threshold = unwanted_threshold;

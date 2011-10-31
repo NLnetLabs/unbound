@@ -137,6 +137,9 @@ do-ip6{COLON}			{ YDVAR(1, VAR_DO_IP6) }
 do-udp{COLON}			{ YDVAR(1, VAR_DO_UDP) }
 do-tcp{COLON}			{ YDVAR(1, VAR_DO_TCP) }
 tcp-upstream{COLON}		{ YDVAR(1, VAR_TCP_UPSTREAM) }
+ssl-upstream{COLON}		{ YDVAR(1, VAR_SSL_UPSTREAM) }
+ssl-service-key{COLON}		{ YDVAR(1, VAR_SSL_SERVICE_KEY) }
+ssl-service-pem{COLON}		{ YDVAR(1, VAR_SSL_SERVICE_PEM) }
 do-daemonize{COLON}		{ YDVAR(1, VAR_DO_DAEMONIZE) }
 interface{COLON}		{ YDVAR(1, VAR_INTERFACE) }
 outgoing-interface{COLON}	{ YDVAR(1, VAR_OUTGOING_INTERFACE) }

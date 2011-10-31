@@ -49,6 +49,7 @@
 #include "util/log.h"
 #include "util/net_help.h"
 #include "util/data/msgencode.h"
+#include "util/data/msgparse.h"
 #include "util/data/msgreply.h"
 #include "util/data/dname.h"
 
@@ -65,6 +66,7 @@ static void usage(char* argv[])
 	printf("-f server	what ipaddr@portnr to send the queries to\n");
 	printf("-u 		use UDP. No retries are attempted.\n");
 	printf("-n 		do not wait for an answer.\n");
+	printf("-s		use ssl\n");
 	printf("-h 		this help text\n");
 	exit(1);
 }
@@ -105,7 +107,7 @@ open_svr(const char* svr, int udp)
 
 /** write a query over the TCP fd */
 static void
-write_q(int fd, int udp, ldns_buffer* buf, int id, 
+write_q(int fd, int udp, SSL* ssl, ldns_buffer* buf, uint16_t id, 
 	const char* strname, const char* strtype, const char* strclass)
 {
 	struct query_info qinfo;
@@ -128,31 +130,58 @@ write_q(int fd, int udp, ldns_buffer* buf, int id,
 
 	/* make query */
 	qinfo_query_encode(buf, &qinfo);
-	ldns_buffer_write_u16_at(buf, 0, (uint16_t)id);
+	ldns_buffer_write_u16_at(buf, 0, id);
 	ldns_buffer_write_u16_at(buf, 2, BIT_RD);
+
+	if(1) {
+		/* add EDNS DO */
+		struct edns_data edns;
+		memset(&edns, 0, sizeof(edns));
+		edns.edns_present = 1;
+		edns.bits = EDNS_DO;
+		edns.udp_size = 4096;
+		attach_edns_record(buf, &edns);
+	}
 
 	/* send it */
 	if(!udp) {
 		len = (uint16_t)ldns_buffer_limit(buf);
 		len = htons(len);
-		if(send(fd, (void*)&len, sizeof(len), 0)<(ssize_t)sizeof(len)){
+		if(ssl) {
+			if(SSL_write(ssl, (void*)&len, (int)sizeof(len)) <= 0) {
+				log_crypto_err("cannot SSL_write");
+				exit(1);
+			}
+		} else {
+			if(send(fd, (void*)&len, sizeof(len), 0) <
+				(ssize_t)sizeof(len)){
 #ifndef USE_WINSOCK
-			perror("send() len failed");
+				perror("send() len failed");
 #else
-			printf("send len: %s\n", 
-				wsa_strerror(WSAGetLastError()));
+				printf("send len: %s\n", 
+					wsa_strerror(WSAGetLastError()));
+#endif
+				exit(1);
+			}
+		}
+	}
+	if(ssl) {
+		if(SSL_write(ssl, (void*)ldns_buffer_begin(buf),
+			(int)ldns_buffer_limit(buf)) <= 0) {
+			log_crypto_err("cannot SSL_write");
+			exit(1);
+		}
+	} else {
+		if(send(fd, (void*)ldns_buffer_begin(buf),
+			ldns_buffer_limit(buf), 0) < 
+			(ssize_t)ldns_buffer_limit(buf)) {
+#ifndef USE_WINSOCK
+			perror("send() data failed");
+#else
+			printf("send data: %s\n", wsa_strerror(WSAGetLastError()));
 #endif
 			exit(1);
 		}
-	}
-	if(send(fd, (void*)ldns_buffer_begin(buf), ldns_buffer_limit(buf), 0) < 
-		(ssize_t)ldns_buffer_limit(buf)) {
-#ifndef USE_WINSOCK
-		perror("send() data failed");
-#else
-		printf("send data: %s\n", wsa_strerror(WSAGetLastError()));
-#endif
-		exit(1);
 	}
 
 	free(qinfo.qname);
@@ -160,33 +189,52 @@ write_q(int fd, int udp, ldns_buffer* buf, int id,
 
 /** receive DNS datagram over TCP and print it */
 static void
-recv_one(int fd, int udp, ldns_buffer* buf)
+recv_one(int fd, int udp, SSL* ssl, ldns_buffer* buf)
 {
 	uint16_t len;
 	ldns_pkt* pkt;
 	ldns_status status;
 	if(!udp) {
-		if(recv(fd, (void*)&len, sizeof(len), 0)<(ssize_t)sizeof(len)){
+		if(ssl) {
+			if(SSL_read(ssl, (void*)&len, (int)sizeof(len)) <= 0) {
+				log_crypto_err("could not SSL_read");
+				exit(1);
+			}
+		} else {
+			if(recv(fd, (void*)&len, sizeof(len), 0) <
+				(ssize_t)sizeof(len)) {
 #ifndef USE_WINSOCK
-			perror("read() len failed");
+				perror("read() len failed");
 #else
-			printf("read len: %s\n", 
-				wsa_strerror(WSAGetLastError()));
+				printf("read len: %s\n", 
+					wsa_strerror(WSAGetLastError()));
 #endif
-			exit(1);
+				exit(1);
+			}
 		}
 		len = ntohs(len);
 		ldns_buffer_clear(buf);
 		ldns_buffer_set_limit(buf, len);
-		if(recv(fd, (void*)ldns_buffer_begin(buf), len, 0) < 
-			(ssize_t)len) {
+		if(ssl) {
+			int r = SSL_read(ssl, (void*)ldns_buffer_begin(buf),
+				(int)len);
+			if(r <= 0) {
+				log_crypto_err("could not SSL_read");
+				exit(1);
+			}
+			if(r != (int)len)
+				fatal_exit("ssl_read %d of %d", r, len);
+		} else {
+			if(recv(fd, (void*)ldns_buffer_begin(buf), len, 0) < 
+				(ssize_t)len) {
 #ifndef USE_WINSOCK
-			perror("read() data failed");
+				perror("read() data failed");
 #else
-			printf("read data: %s\n", 
-				wsa_strerror(WSAGetLastError()));
+				printf("read data: %s\n", 
+					wsa_strerror(WSAGetLastError()));
 #endif
-			exit(1);
+				exit(1);
+			}
 		}
 	} else {
 		ssize_t l;
@@ -220,20 +268,34 @@ recv_one(int fd, int udp, ldns_buffer* buf)
 
 /** send the TCP queries and print answers */
 static void
-send_em(const char* svr, int udp, int noanswer, int num, char** qs)
+send_em(const char* svr, int udp, int usessl, int noanswer, int num, char** qs)
 {
 	ldns_buffer* buf = ldns_buffer_new(65553);
 	int fd = open_svr(svr, udp);
 	int i;
+	SSL_CTX* ctx;
+	SSL* ssl;
 	if(!buf) fatal_exit("out of memory");
+	if(usessl) {
+		ctx = connect_sslctx_create(NULL, NULL, NULL);
+		if(!ctx) fatal_exit("cannot create ssl ctx");
+		ssl = outgoing_ssl_fd(ctx, fd);
+		if(!ssl) fatal_exit("cannot create ssl");
+	}
 	for(i=0; i<num; i+=3) {
 		printf("\nNext query is %s %s %s\n", qs[i], qs[i+1], qs[i+2]);
-		write_q(fd, udp, buf, i, qs[i], qs[i+1], qs[i+2]);
+		write_q(fd, udp, ssl, buf, ldns_get_random(), qs[i],
+			qs[i+1], qs[i+2]);
 		/* print at least one result */
 		if(!noanswer)
-			recv_one(fd, udp, buf);
+			recv_one(fd, udp, ssl, buf);
 	}
 
+	if(usessl) {
+		SSL_shutdown(ssl);
+		SSL_free(ssl);
+		SSL_CTX_free(ctx);
+	}
 #ifndef USE_WINSOCK
 	close(fd);
 #else
@@ -268,6 +330,7 @@ int main(int argc, char** argv)
 	const char* svr = "127.0.0.1";
 	int udp = 0;
 	int noanswer = 0;
+	int usessl = 0;
 
 #ifdef USE_WINSOCK
 	WSADATA wsa_data;
@@ -292,7 +355,7 @@ int main(int argc, char** argv)
 	if(argc == 1) {
 		usage(argv);
 	}
-	while( (c=getopt(argc, argv, "f:hnu")) != -1) {
+	while( (c=getopt(argc, argv, "f:hnsu")) != -1) {
 		switch(c) {
 			case 'f':
 				svr = optarg;
@@ -302,6 +365,9 @@ int main(int argc, char** argv)
 				break;
 			case 'u':
 				udp = 1;
+				break;
+			case 's':
+				usessl = 1;
 				break;
 			case 'h':
 			case '?':
@@ -316,7 +382,12 @@ int main(int argc, char** argv)
 		printf("queries must be multiples of name,type,class\n");
 		return 1;
 	}
-	send_em(svr, udp, noanswer, argc, argv);
+	if(usessl) {
+		ERR_load_SSL_strings();
+		OpenSSL_add_all_algorithms();
+		SSL_library_init();
+	}
+	send_em(svr, udp, usessl, noanswer, argc, argv);
 	checklock_stop();
 #ifdef USE_WINSOCK
 	WSACleanup();

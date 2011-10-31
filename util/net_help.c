@@ -45,6 +45,8 @@
 #include "util/module.h"
 #include "util/regional.h"
 #include <fcntl.h>
+#include <openssl/ssl.h>
+#include <openssl/err.h>
 
 /** max length of an IP address (the address portion) that we allow */
 #define MAX_ADDR_STRLEN 128 /* characters */
@@ -552,4 +554,140 @@ void sock_list_merge(struct sock_list** list, struct regional* region,
 		if(!sock_list_find(*list, &p->addr, p->len))
 			sock_list_insert(list, &p->addr, p->len, region);
 	}
+}
+
+void
+log_crypto_err(const char* str)
+{
+	/* error:[error code]:[library name]:[function name]:[reason string] */
+	char buf[128];
+	unsigned long e;
+	ERR_error_string_n(ERR_get_error(), buf, sizeof(buf));
+	log_err("%s crypto %s", str, buf);
+	while( (e=ERR_get_error()) ) {
+		ERR_error_string_n(e, buf, sizeof(buf));
+		log_err("and additionally crypto %s", buf);
+	}
+}
+
+void* listen_sslctx_create(char* key, char* pem, char* verifypem)
+{
+	SSL_CTX* ctx = SSL_CTX_new(SSLv23_server_method());
+	if(!ctx) {
+		log_crypto_err("could not SSL_CTX_new");
+		return NULL;
+	}
+	/* no SSLv2 because has defects */
+	if(!(SSL_CTX_set_options(ctx, SSL_OP_NO_SSLv2) & SSL_OP_NO_SSLv2)){
+		log_crypto_err("could not set SSL_OP_NO_SSLv2");
+		SSL_CTX_free(ctx);
+		return NULL;
+	}
+	if(!SSL_CTX_use_certificate_file(ctx, pem, SSL_FILETYPE_PEM)) {
+		log_err("error for cert file: %s", pem);
+		log_crypto_err("error in SSL_CTX use_certificate_file");
+		SSL_CTX_free(ctx);
+		return NULL;
+	}
+	if(!SSL_CTX_use_PrivateKey_file(ctx, key, SSL_FILETYPE_PEM)) {
+		log_err("error for private key file: %s", key);
+		log_crypto_err("Error in SSL_CTX use_PrivateKey_file");
+		SSL_CTX_free(ctx);
+		return NULL;
+	}
+	if(!SSL_CTX_check_private_key(ctx)) {
+		log_err("error for key file: %s", key);
+		log_crypto_err("Error in SSL_CTX check_private_key");
+		SSL_CTX_free(ctx);
+		return NULL;
+	}
+
+	if(verifypem && verifypem[0]) {
+		if(!SSL_CTX_load_verify_locations(ctx, verifypem, NULL)) {
+			log_crypto_err("Error in SSL_CTX verify locations");
+			SSL_CTX_free(ctx);
+			return NULL;
+		}
+		SSL_CTX_set_client_CA_list(ctx, SSL_load_client_CA_file(
+			verifypem));
+		SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER, NULL);
+	}
+	return ctx;
+}
+
+void* connect_sslctx_create(char* key, char* pem, char* verifypem)
+{
+	SSL_CTX* ctx = SSL_CTX_new(SSLv23_client_method());
+	if(!ctx) {
+		log_crypto_err("could not allocate SSL_CTX pointer");
+		return NULL;
+	}
+	if(!(SSL_CTX_set_options(ctx, SSL_OP_NO_SSLv2) & SSL_OP_NO_SSLv2)) {
+		log_crypto_err("could not set SSL_OP_NO_SSLv2");
+		SSL_CTX_free(ctx);
+		return NULL;
+	}
+	if(key && key[0]) {
+		if(!SSL_CTX_use_certificate_file(ctx, pem, SSL_FILETYPE_PEM)) {
+			log_err("error in client certificate %s", pem);
+			log_crypto_err("error in certificate file");
+			SSL_CTX_free(ctx);
+			return NULL;
+		}
+		if(!SSL_CTX_use_PrivateKey_file(ctx, key, SSL_FILETYPE_PEM)) {
+			log_err("error in client private key %s", key);
+			log_crypto_err("error in key file");
+			SSL_CTX_free(ctx);
+			return NULL;
+		}
+		if(!SSL_CTX_check_private_key(ctx)) {
+			log_err("error in client key %s", key);
+			log_crypto_err("error in SSL_CTX_check_private_key");
+			SSL_CTX_free(ctx);
+			return NULL;
+		}
+	}
+	if(verifypem && verifypem[0]) {
+		if(!SSL_CTX_load_verify_locations(ctx, verifypem, NULL) != 1) {
+			log_crypto_err("error in SSL_CTX verify");
+			SSL_CTX_free(ctx);
+			return NULL;
+		}
+		SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER, NULL);
+	}
+	return ctx;
+}
+
+void* incoming_ssl_fd(void* sslctx, int fd)
+{
+	SSL* ssl = SSL_new((SSL_CTX*)sslctx);
+	if(!ssl) {
+		log_crypto_err("could not SSL_new");
+		return NULL;
+	}
+	SSL_set_accept_state(ssl);
+	(void)SSL_set_mode(ssl, SSL_MODE_AUTO_RETRY);
+	if(!SSL_set_fd(ssl, fd)) {
+		log_crypto_err("could not SSL_set_fd");
+		SSL_free(ssl);
+		return NULL;
+	}
+	return ssl;
+}
+
+void* outgoing_ssl_fd(void* sslctx, int fd)
+{
+	SSL* ssl = SSL_new((SSL_CTX*)sslctx);
+	if(!ssl) {
+		log_crypto_err("could not SSL_new");
+		return NULL;
+	}
+	SSL_set_connect_state(ssl);
+	(void)SSL_set_mode(ssl, SSL_MODE_AUTO_RETRY);
+	if(!SSL_set_fd(ssl, fd)) {
+		log_crypto_err("could not SSL_set_fd");
+		SSL_free(ssl);
+		return NULL;
+	}
+	return ssl;
 }

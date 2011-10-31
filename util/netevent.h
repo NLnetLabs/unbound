@@ -160,6 +160,23 @@ struct comm_point {
 	    For tcp_accept the first entry, for tcp_handlers the next one. */
 	struct comm_point* tcp_free;
 
+	/* -------- SSL TCP DNS ------- */
+	/** the SSL object with rw bio (owned) or for commaccept ctx ref */
+	void* ssl;
+	/** handshake state for init and renegotiate */
+	enum {
+		/** no handshake, it has been done */
+		comm_ssl_shake_none = 0,
+		/** ssl initial handshake wants to read */
+		comm_ssl_shake_read,
+		/** ssl initial handshake wants to write */
+		comm_ssl_shake_write,
+		/** ssl_write wants to read */
+		comm_ssl_shake_hs_read,
+		/** ssl_read wants to write */
+		comm_ssl_shake_hs_write
+	} ssl_shake_state;
+
 	/** is this a UDP, TCP-accept or TCP socket. */
 	enum comm_point_type {
 		/** UDP socket - handle datagrams. */

@@ -239,7 +239,7 @@ endif
 libunbound.la:	$(LIBUNBOUND_OBJ)
 	$(INFO) Link $@
 ifeq ($(CHECKLOCK_SRC),)
-	$Q$(LINK_LIB) $(UBSYMS) -o $@ $(sort $(LIBUNBOUND_OBJ)) -rpath $(libdir) $(LIBS)
+	$Q$(LINK_LIB) $(UBSYMS) -o $@ $(sort $(LIBUNBOUND_OBJ)) -rpath $(libdir) -lssl $(LIBS)
 else
 	cp $(srcdir)/libunbound/ubsyms.def $(BUILD)clubsyms.def
 	echo lock_protect >> $(BUILD)clubsyms.def
@@ -252,7 +252,7 @@ else
 	echo checklock_init >> $(BUILD)clubsyms.def
 	echo checklock_thrcreate >> $(BUILD)clubsyms.def
 	echo checklock_thrjoin >> $(BUILD)clubsyms.def
-	$Q$(LINK_LIB) $(CLUBSYMS) -o $@ $(sort $(LIBUNBOUND_OBJ)) -rpath $(libdir) $(LIBS)
+	$Q$(LINK_LIB) $(CLUBSYMS) -o $@ $(sort $(LIBUNBOUND_OBJ)) -rpath $(libdir) -lssl $(LIBS)
 endif
 
 unbound$(EXEEXT):	$(DAEMON_OBJ) libunbound.la
@@ -289,7 +289,7 @@ anchor-update$(EXEEXT):  $(ANCHORUPD_OBJ) libunbound.la
 
 unittest$(EXEEXT):	$(UNITTEST_OBJ)
 	$(INFO) Link $@
-	$Q$(LINK) -o $@ $(sort $(UNITTEST_OBJ)) $(LIBS)
+	$Q$(LINK) -o $@ $(sort $(UNITTEST_OBJ)) -lssl $(LIBS)
 
 testbound$(EXEEXT):	$(TESTBOUND_OBJ)
 	$(INFO) Link $@
@@ -297,7 +297,7 @@ testbound$(EXEEXT):	$(TESTBOUND_OBJ)
 
 lock-verify$(EXEEXT):	$(LOCKVERIFY_OBJ)
 	$(INFO) Link $@
-	$Q$(LINK) -o $@ $(sort $(LOCKVERIFY_OBJ)) $(LIBS)
+	$Q$(LINK) -o $@ $(sort $(LOCKVERIFY_OBJ)) -lssl $(LIBS)
 
 petal$(EXEEXT):	$(PETAL_OBJ)
 	$(INFO) Link $@
@@ -305,15 +305,15 @@ petal$(EXEEXT):	$(PETAL_OBJ)
 
 pktview$(EXEEXT):	$(PKTVIEW_OBJ)
 	$(INFO) Link $@
-	$Q$(LINK) -o $@ $(sort $(PKTVIEW_OBJ)) $(LIBS)
+	$Q$(LINK) -o $@ $(sort $(PKTVIEW_OBJ)) -lssl $(LIBS)
 
 signit$(EXEEXT):	$(SIGNIT_OBJ)
 	$(INFO) Link $@
-	$Q$(LINK) -o $@ $(sort $(SIGNIT_OBJ)) $(LIBS)
+	$Q$(LINK) -o $@ $(sort $(SIGNIT_OBJ)) -lssl $(LIBS)
 
 memstats$(EXEEXT):	$(MEMSTATS_OBJ)
 	$(INFO) Link $@
-	$Q$(LINK) -o $@ $(sort $(MEMSTATS_OBJ)) $(LIBS)
+	$Q$(LINK) -o $@ $(sort $(MEMSTATS_OBJ)) -lssl $(LIBS)
 
 asynclook$(EXEEXT):	$(ASYNCLOOK_OBJ) libunbound.la
 	$(INFO) Link $@
@@ -321,15 +321,15 @@ asynclook$(EXEEXT):	$(ASYNCLOOK_OBJ) libunbound.la
 
 streamtcp$(EXEEXT):	$(STREAMTCP_OBJ)
 	$(INFO) Link $@
-	$Q$(LINK) -o $@ $(sort $(STREAMTCP_OBJ)) $(LIBS)
+	$Q$(LINK) -o $@ $(sort $(STREAMTCP_OBJ)) -lssl $(LIBS)
 
 perf$(EXEEXT):	$(PERF_OBJ)
 	$(INFO) Link $@
-	$Q$(LINK) -o $@ $(sort $(PERF_OBJ)) $(LIBS)
+	$Q$(LINK) -o $@ $(sort $(PERF_OBJ)) -lssl $(LIBS)
 
 delayer$(EXEEXT):	$(DELAYER_OBJ)
 	$(INFO) Link $@
-	$Q$(LINK) -o $@ $(sort $(DELAYER_OBJ)) $(LIBS)
+	$Q$(LINK) -o $@ $(sort $(DELAYER_OBJ)) -lssl $(LIBS)
 
 harvest$(EXEEXT):	$(HARVEST_OBJ) libunbound.la
 	$(INFO) Link $@

@@ -528,6 +528,8 @@ daemon_delete(struct daemon* daemon)
 	free(daemon->chroot);
 	free(daemon->pidfile);
 	free(daemon->env);
+	SSL_CTX_free((SSL_CTX*)daemon->listen_sslctx);
+	SSL_CTX_free((SSL_CTX*)daemon->connect_sslctx);
 	free(daemon);
 #ifdef LEX_HAS_YYLEX_DESTROY
 	/* lex cleanup */

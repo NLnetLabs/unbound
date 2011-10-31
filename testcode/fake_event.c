@@ -708,7 +708,7 @@ run_scenario(struct replay_runtime* runtime)
 struct listen_dnsport* 
 listen_create(struct comm_base* base, struct listen_port* ATTR_UNUSED(ports),
 	size_t bufsize, int ATTR_UNUSED(tcp_accept_count),
-	comm_point_callback_t* cb, void* cb_arg)
+	void* ATTR_UNUSED(sslctx), comm_point_callback_t* cb, void* cb_arg)
 {
 	struct replay_runtime* runtime = (struct replay_runtime*)base;
 	struct listen_dnsport* l= calloc(1, sizeof(struct listen_dnsport));
@@ -877,7 +877,7 @@ outside_network_create(struct comm_base* base, size_t bufsize,
 	int ATTR_UNUSED(use_caps_for_id), int* ATTR_UNUSED(availports),
 	int ATTR_UNUSED(numavailports), size_t ATTR_UNUSED(unwanted_threshold),
 	void (*unwanted_action)(void*), void* ATTR_UNUSED(unwanted_param),
-	int ATTR_UNUSED(do_udp))
+	int ATTR_UNUSED(do_udp), void* ATTR_UNUSED(sslctx))
 {
 	struct replay_runtime* runtime = (struct replay_runtime*)base;
 	struct outside_network* outnet =  calloc(1, 

@@ -79,6 +79,13 @@ struct config_file {
 	/** tcp upstream queries (no UDP upstream queries) */
 	int tcp_upstream;
 
+	/** private key file for dnstcp-ssl service (enabled if not NULL) */
+	char* ssl_service_key;
+	/** public key file for dnstcp-ssl service */
+	char* ssl_service_pem;
+	/** if outgoing tcp connections use SSL */
+	int ssl_upstream;
+
 	/** outgoing port range number of ports (per thread) */
 	int outgoing_num_ports;
 	/** number of outgoing tcp buffers per (per thread) */

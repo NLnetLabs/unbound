@@ -323,4 +323,44 @@ int sock_list_find(struct sock_list* list, struct sockaddr_storage* addr,
 void sock_list_merge(struct sock_list** list, struct regional* region,
 	struct sock_list* add);
 
+/**
+ * Log libcrypto error with descriptive string. Calls log_err().
+ * @param str: what failed.
+ */
+void log_crypto_err(const char* str);
+
+/** 
+ * create SSL listen context
+ * @param key: private key file.
+ * @param pem: public key cert.
+ * @param verifypem: if nonNULL, verifylocation file.
+ * return SSL_CTX* or NULL on failure (logged).
+ */
+void* listen_sslctx_create(char* key, char* pem, char* verifypem);
+
+/**
+ * create SSL connect context
+ * @param key: if nonNULL (also pem nonNULL), the client private key.
+ * @param pem: client public key (or NULL if key is NULL).
+ * @param verifypem: if nonNULL used for verifylocation file.
+ * @return SSL_CTX* or NULL on failure (logged).
+ */
+void* connect_sslctx_create(char* key, char* pem, char* verifypem);
+
+/**
+ * accept a new fd and wrap it in a BIO in SSL
+ * @param sslctx: the SSL_CTX to use (from listen_sslctx_create()).
+ * @param fd: from accept, nonblocking.
+ * @return SSL or NULL on alloc failure.
+ */
+void* incoming_ssl_fd(void* sslctx, int fd);
+
+/**
+ * connect a new fd and wrap it in a BIO in SSL
+ * @param sslctx: the SSL_CTX to use (from connect_sslctx_create())
+ * @param fd: from connect.
+ * @return SSL or NULL on alloc failure
+ */
+void* outgoing_ssl_fd(void* sslctx, int fd);
+
 #endif /* NET_HELP_H */

@@ -723,7 +723,7 @@ listen_cp_insert(struct comm_point* c, struct listen_dnsport* front)
 
 struct listen_dnsport* 
 listen_create(struct comm_base* base, struct listen_port* ports,
-	size_t bufsize, int tcp_accept_count,
+	size_t bufsize, int tcp_accept_count, void* sslctx,
 	comm_point_callback_t* cb, void *cb_arg)
 {
 	struct listen_dnsport* front = (struct listen_dnsport*)
@@ -736,17 +736,21 @@ listen_create(struct comm_base* base, struct listen_port* ports,
 		free(front);
 		return NULL;
 	}
-	
+	if(sslctx) {
+		verbose(VERB_ALGO, "setup for SSL-wrapped TCP service");
+	}
+
 	/* create comm points as needed */
 	while(ports) {
 		struct comm_point* cp = NULL;
 		if(ports->ftype == listen_type_udp) 
 			cp = comm_point_create_udp(base, ports->fd, 
 				front->udp_buff, cb, cb_arg);
-		else if(ports->ftype == listen_type_tcp)
+		else if(ports->ftype == listen_type_tcp) {
 			cp = comm_point_create_tcp(base, ports->fd, 
 				tcp_accept_count, bufsize, cb, cb_arg);
-		else if(ports->ftype == listen_type_udpancil) 
+			cp->ssl = sslctx;
+		} else if(ports->ftype == listen_type_udpancil) 
 			cp = comm_point_create_udp_ancil(base, ports->fd, 
 				front->udp_buff, cb, cb_arg);
 		if(!cp) {

@@ -118,6 +118,8 @@ struct outside_network {
 	struct infra_cache* infra;
 	/** where to get random numbers */
 	struct ub_randstate* rnd;
+	/** ssl context to create ssl wrapped TCP with DNS connections */
+	void* sslctx;
 
 	/**
 	 * Array of tcp pending used for outgoing TCP connections.
@@ -369,6 +371,7 @@ struct serviced_query {
  * @param unwanted_action: the action to take.
  * @param unwanted_param: user parameter to action.
  * @param do_udp: if udp is done.
+ * @param sslctx: context to create outgoing connections with (if enabled).
  * @return: the new structure (with no pending answers) or NULL on error.
  */
 struct outside_network* outside_network_create(struct comm_base* base,
@@ -376,7 +379,8 @@ struct outside_network* outside_network_create(struct comm_base* base,
 	int do_ip4, int do_ip6, size_t num_tcp, struct infra_cache* infra, 
 	struct ub_randstate* rnd, int use_caps_for_id, int* availports, 
 	int numavailports, size_t unwanted_threshold,
-	void (*unwanted_action)(void*), void* unwanted_param, int do_udp);
+	void (*unwanted_action)(void*), void* unwanted_param, int do_udp,
+	void* sslctx);
 
 /**
  * Delete outside_network structure.

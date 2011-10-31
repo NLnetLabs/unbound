@@ -80,6 +80,8 @@ struct daemon {
 	struct listen_port* rc_ports;
 	/** remote control connections management (for first worker) */
 	struct daemon_remote* rc;
+	/** ssl context for listening to dnstcp over ssl, and connecting ssl */
+	void* listen_sslctx, *connect_sslctx;
 	/** num threads allocated */
 	int num;
 	/** the worker entries */

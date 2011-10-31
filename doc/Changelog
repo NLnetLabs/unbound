@@ -1,3 +1,7 @@
+31 October 2011: Wouter
+	- dns over ssl support, ssl-service-pem and ssl-service-key files
+	  can be given and then TCP queries are serviced wrapped in SSL.
+
 27 October 2011: Wouter
 	- lame-ttl and lame-size options no longer exist, it is integrated
 	  with the host info.  They are ignored (with verbose warning) if

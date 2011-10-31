@@ -81,6 +81,8 @@ struct libworker {
 	struct outside_network* back;
 	/** random() table for this worker. */
 	struct ub_randstate* rndstate;
+	/** sslcontext for SSL wrapped DNS over TCP queries */
+	void* sslctx;
 };
 
 /**

@@ -92,21 +92,6 @@
 /** if true, inhibits a lot of =0 lines from the stats output */
 static const int inhibit_zero = 1;
 
-/** log ssl crypto err */
-static void
-log_crypto_err(const char* str)
-{
-	/* error:[error code]:[library name]:[function name]:[reason string] */
-	char buf[128];
-	unsigned long e;
-	ERR_error_string_n(ERR_get_error(), buf, sizeof(buf));
-	log_err("%s crypto %s", str, buf);
-	while( (e=ERR_get_error()) ) {
-		ERR_error_string_n(e, buf, sizeof(buf));
-		log_err("and additionally crypto %s", buf);
-	}
-}
-
 /** subtract timers and the values do not overflow or become negative */
 static void
 timeval_subtract(struct timeval* d, const struct timeval* end, 
