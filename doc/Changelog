@@ -4,6 +4,7 @@
 	- documentation for new options: ssl-upstream, ssl-service-key and
 	  ssl-service.pem.
 	- iana portlist updated.
+	- fix -flto detection on Lion for llvm-gcc.
 
 31 October 2011: Wouter
 	- dns over ssl support, ssl-service-pem and ssl-service-key files
