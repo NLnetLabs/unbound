@@ -709,6 +709,18 @@ static long win_bio_cb(BIO *b, int oper, const char* ATTR_UNUSED(argp),
 	/* return original return value */
 	return retvalue;
 }
+
+/** set win bio callbacks for nonblocking operations */
+void
+comm_point_tcp_win_bio_cb(struct comm_point* c, void* thessl)
+{
+	SSL* ssl = (SSL*)thessl;
+	/* set them both just in case, but usually they are the same BIO */
+	BIO_set_callback(SSL_get_rbio(ssl), &win_bio_cb);
+	BIO_set_callback_arg(SSL_get_rbio(ssl), (char*)comm_point_internal(c));
+	BIO_set_callback(SSL_get_wbio(ssl), &win_bio_cb);
+	BIO_set_callback_arg(SSL_get_wbio(ssl), (char*)comm_point_internal(c));
+}
 #endif
 
 void 
@@ -736,17 +748,14 @@ comm_point_tcp_accept_callback(int fd, short event, void* arg)
 		return;
 	if(c->ssl) {
 		c_hdl->ssl = incoming_ssl_fd(c->ssl, new_fd);
-		if(!c_hdl->ssl)
+		if(!c_hdl->ssl) {
+			c_hdl->fd = new_fd;
+			comm_point_close(c_hdl);
 			return;
+		}
 		c_hdl->ssl_shake_state = comm_ssl_shake_read;
 #ifdef USE_WINSOCK
-		/* set them both just in case, but usually they are the same BIO */
-		BIO_set_callback(SSL_get_rbio(c_hdl->ssl), &win_bio_cb);
-		BIO_set_callback_arg(SSL_get_rbio(c_hdl->ssl),
-			(char*)comm_point_internal(c_hdl));
-		BIO_set_callback(SSL_get_wbio(c_hdl->ssl), &win_bio_cb);
-		BIO_set_callback_arg(SSL_get_wbio(c_hdl->ssl),
-			(char*)comm_point_internal(c_hdl));
+		comm_point_tcp_win_bio_cb(c_hdl, c_hdl->ssl);
 #endif
 	}
 
@@ -862,7 +871,7 @@ ssl_handshake(struct comm_point* c)
 		}
 	}
 	/* this is where peer verification could take place */
-	log_addr(VERB_ALGO, "SSL connection from", &c->repinfo.addr,
+	log_addr(VERB_ALGO, "SSL DNS connection", &c->repinfo.addr,
 		c->repinfo.addrlen);
 
 	/* setup listen rw correctly */
@@ -1037,6 +1046,15 @@ ssl_handle_write(struct comm_point* c)
 	return 1;
 }
 
+/** handle ssl tcp connection with dns contents */
+static int
+ssl_handle_it(struct comm_point* c)
+{
+	if(c->tcp_is_reading)
+		return ssl_handle_read(c);
+	return ssl_handle_write(c);
+}
+
 /** Handle tcp reading callback. 
  * @param fd: file descriptor of socket.
  * @param c: comm point to read from into buffer.
@@ -1048,10 +1066,10 @@ comm_point_tcp_handle_read(int fd, struct comm_point* c, int short_ok)
 {
 	ssize_t r;
 	log_assert(c->type == comm_tcp || c->type == comm_local);
+	if(c->ssl)
+		return ssl_handle_it(c);
 	if(!c->tcp_is_reading)
 		return 0;
-	if(c->ssl)
-		return ssl_handle_read(c);
 
 	log_assert(fd != -1);
 	if(c->tcp_byte_count < sizeof(uint16_t)) {
@@ -1148,7 +1166,7 @@ comm_point_tcp_handle_write(int fd, struct comm_point* c)
 {
 	ssize_t r;
 	log_assert(c->type == comm_tcp);
-	if(c->tcp_is_reading)
+	if(c->tcp_is_reading && !c->ssl)
 		return 0;
 	log_assert(fd != -1);
 	if(c->tcp_byte_count == 0 && c->tcp_check_nb_connect) {
@@ -1191,7 +1209,7 @@ comm_point_tcp_handle_write(int fd, struct comm_point* c)
 		}
 	}
 	if(c->ssl)
-		return ssl_handle_write(c);
+		return ssl_handle_it(c);
 
 	if(c->tcp_byte_count < sizeof(uint16_t)) {
 		uint16_t len = htons(ldns_buffer_limit(c->buffer));

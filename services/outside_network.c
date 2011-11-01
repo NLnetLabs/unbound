@@ -58,6 +58,7 @@
 #include "util/net_help.h"
 #include "util/random.h"
 #include "util/fptr_wlist.h"
+#include <openssl/ssl.h>
 
 #ifdef HAVE_NETDB_H
 #include <netdb.h>
@@ -237,6 +238,18 @@ outnet_tcp_take_into_use(struct waiting_tcp* w, uint8_t* pkt, size_t pkt_len)
 			return 0;
 		}
 	}
+	if(w->outnet->sslctx) {
+		pend->c->ssl = outgoing_ssl_fd(w->outnet->sslctx, s);
+		if(!pend->c->ssl) {
+			pend->c->fd = s;
+			comm_point_close(pend->c);
+			return 0;
+		}
+#ifdef USE_WINSOCK
+		comm_point_tcp_win_bio_cb(pend->c, pend->c->ssl);
+#endif
+		pend->c->ssl_shake_state = comm_ssl_shake_write;
+	}
 	w->pkt = NULL;
 	w->next_waiting = (void*)pend;
 	pend->id = LDNS_ID_WIRE(pkt);
@@ -280,6 +293,11 @@ static void
 decomission_pending_tcp(struct outside_network* outnet, 
 	struct pending_tcp* pend)
 {
+	if(pend->c->ssl) {
+		SSL_shutdown(pend->c->ssl);
+		SSL_free(pend->c->ssl);
+		pend->c->ssl = NULL;
+	}
 	comm_point_close(pend->c);
 	pend->next_free = outnet->tcp_free;
 	outnet->tcp_free = pend;

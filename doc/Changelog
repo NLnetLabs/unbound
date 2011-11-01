@@ -1,3 +1,7 @@
+1 November 2011: Wouter
+	- dns over ssl support as a client, ssl-upstream yes turns it on.
+	  It performs an SSL transaction for every DNS query (250 msec).
+
 31 October 2011: Wouter
 	- dns over ssl support, ssl-service-pem and ssl-service-key files
 	  can be given and then TCP queries are serviced wrapped in SSL.

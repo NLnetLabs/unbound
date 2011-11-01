@@ -636,4 +636,14 @@ void comm_point_local_handle_callback(int fd, short event, void* arg);
  */
 void comm_point_raw_handle_callback(int fd, short event, void* arg);
 
+#ifdef USE_WINSOCK
+/**
+ * Callback for openssl BIO to on windows detect WSAEWOULDBLOCK and notify
+ * the winsock_event of this for proper TCP nonblocking implementation.
+ * @param c: comm_point, fd must be set its struct event is registered.
+ * @param ssl: openssl SSL, fd must be set so it has a bio.
+ */
+void comm_point_tcp_win_bio_cb(struct comm_point* c, void* ssl);
+#endif
+
 #endif /* NET_EVENT_H */
