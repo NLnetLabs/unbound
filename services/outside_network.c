@@ -238,7 +238,7 @@ outnet_tcp_take_into_use(struct waiting_tcp* w, uint8_t* pkt, size_t pkt_len)
 			return 0;
 		}
 	}
-	if(w->outnet->sslctx) {
+	if(w->outnet->sslctx && w->ssl_upstream) {
 		pend->c->ssl = outgoing_ssl_fd(w->outnet->sslctx, s);
 		if(!pend->c->ssl) {
 			pend->c->fd = s;
@@ -1075,7 +1075,7 @@ outnet_tcptimer(void* arg)
 struct waiting_tcp* 
 pending_tcp_query(struct outside_network* outnet, ldns_buffer* packet, 
 	struct sockaddr_storage* addr, socklen_t addrlen, int timeout,
-	comm_point_callback_t* callback, void* callback_arg)
+	comm_point_callback_t* callback, void* callback_arg, int ssl_upstream)
 {
 	struct pending_tcp* pend = outnet->tcp_free;
 	struct waiting_tcp* w;
@@ -1100,6 +1100,7 @@ pending_tcp_query(struct outside_network* outnet, ldns_buffer* packet,
 	w->outnet = outnet;
 	w->cb = callback;
 	w->cb_arg = callback_arg;
+	w->ssl_upstream = ssl_upstream;
 #ifndef S_SPLINT_S
 	tv.tv_sec = timeout;
 	tv.tv_usec = 0;
@@ -1163,8 +1164,9 @@ lookup_serviced(struct outside_network* outnet, ldns_buffer* buff, int dnssec,
 /** Create new serviced entry */
 static struct serviced_query*
 serviced_create(struct outside_network* outnet, ldns_buffer* buff, int dnssec,
-	int want_dnssec, int tcp_upstream, struct sockaddr_storage* addr,
-	socklen_t addrlen, uint8_t* zone, size_t zonelen)
+	int want_dnssec, int tcp_upstream, int ssl_upstream,
+	struct sockaddr_storage* addr, socklen_t addrlen, uint8_t* zone,
+	size_t zonelen)
 {
 	struct serviced_query* sq = (struct serviced_query*)malloc(sizeof(*sq));
 #ifdef UNBOUND_DEBUG
@@ -1189,6 +1191,7 @@ serviced_create(struct outside_network* outnet, ldns_buffer* buff, int dnssec,
 	sq->dnssec = dnssec;
 	sq->want_dnssec = want_dnssec;
 	sq->tcp_upstream = tcp_upstream;
+	sq->ssl_upstream = ssl_upstream;
 	memcpy(&sq->addr, addr, addrlen);
 	sq->addrlen = addrlen;
 	sq->outnet = outnet;
@@ -1549,7 +1552,7 @@ serviced_tcp_callback(struct comm_point* c, void* arg, int error,
 			log_err("Out of memory caching no edns for host");
 		sq->status = serviced_query_TCP;
 	}
-	if(sq->tcp_upstream) {
+	if(sq->tcp_upstream || sq->ssl_upstream) {
 	    struct timeval now = *sq->outnet->now_tv;
 	    if(now.tv_sec > sq->last_sent_time.tv_sec ||
 		(now.tv_sec == sq->last_sent_time.tv_sec &&
@@ -1587,7 +1590,7 @@ serviced_tcp_initiate(struct outside_network* outnet,
 	sq->last_sent_time = *sq->outnet->now_tv;
 	sq->pending = pending_tcp_query(outnet, buff, &sq->addr,
 		sq->addrlen, TCP_AUTH_QUERY_TIMEOUT, serviced_tcp_callback, 
-		sq);
+		sq, sq->ssl_upstream);
 	if(!sq->pending) {
 		/* delete from tree so that a retry by above layer does not
 		 * clash with this entry */
@@ -1613,7 +1616,7 @@ serviced_tcp_send(struct serviced_query* sq, ldns_buffer* buff)
 	sq->last_sent_time = *sq->outnet->now_tv;
 	sq->pending = pending_tcp_query(sq->outnet, buff, &sq->addr,
 		sq->addrlen, TCP_AUTH_QUERY_TIMEOUT, serviced_tcp_callback, 
-		sq);
+		sq, sq->ssl_upstream);
 	return sq->pending != NULL;
 }
 
@@ -1783,9 +1786,9 @@ struct serviced_query*
 outnet_serviced_query(struct outside_network* outnet,
 	uint8_t* qname, size_t qnamelen, uint16_t qtype, uint16_t qclass,
 	uint16_t flags, int dnssec, int want_dnssec, int tcp_upstream,
-	struct sockaddr_storage* addr, socklen_t addrlen, uint8_t* zone,
-	size_t zonelen, comm_point_callback_t* callback, void* callback_arg, 
-	ldns_buffer* buff, int (*arg_compare)(void*,void*))
+	int ssl_upstream, struct sockaddr_storage* addr, socklen_t addrlen,
+	uint8_t* zone, size_t zonelen, comm_point_callback_t* callback,
+	void* callback_arg, ldns_buffer* buff, int (*arg_compare)(void*,void*))
 {
 	struct serviced_query* sq;
 	struct service_callback* cb;
@@ -1802,13 +1805,14 @@ outnet_serviced_query(struct outside_network* outnet,
 	if(!sq) {
 		/* make new serviced query entry */
 		sq = serviced_create(outnet, buff, dnssec, want_dnssec,
-			tcp_upstream, addr, addrlen, zone, zonelen);
+			tcp_upstream, ssl_upstream, addr, addrlen, zone,
+			zonelen);
 		if(!sq) {
 			free(cb);
 			return NULL;
 		}
 		/* perform first network action */
-		if(outnet->do_udp && !tcp_upstream) {
+		if(outnet->do_udp && !(tcp_upstream || ssl_upstream)) {
 			if(!serviced_udp_send(sq, buff)) {
 				(void)rbtree_delete(outnet->serviced, sq);
 				free(sq->qbuf);

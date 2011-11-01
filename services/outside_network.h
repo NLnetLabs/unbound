@@ -262,6 +262,8 @@ struct waiting_tcp {
 	comm_point_callback_t* cb;
 	/** callback user argument */
 	void* cb_arg;
+	/** if it uses ssl upstream */
+	int ssl_upstream;
 };
 
 /**
@@ -300,8 +302,8 @@ struct serviced_query {
 	int dnssec;
 	/** We want signatures, or else the answer is likely useless */
 	int want_dnssec;
-	/** tcp upstream used, use tcp */
-	int tcp_upstream;
+	/** tcp upstream used, use tcp, or ssl_upstream for SSL */
+	int tcp_upstream, ssl_upstream;
 	/** where to send it */
 	struct sockaddr_storage addr;
 	/** length of addr field in use. */
@@ -423,12 +425,13 @@ struct pending* pending_udp_query(struct outside_network* outnet,
  *    without any query been sent to the server yet.
  * @param callback: function to call on error, timeout or reply.
  * @param callback_arg: user argument for callback function.
+ * @param ssl_upstream: if the tcp connection must use SSL.
  * @return: false on error for malloc or socket. Else the pending TCP object.
  */
 struct waiting_tcp* pending_tcp_query(struct outside_network* outnet, 
 	ldns_buffer* packet, struct sockaddr_storage* addr, 
 	socklen_t addrlen, int timeout, comm_point_callback_t* callback, 
-	void* callback_arg);
+	void* callback_arg, int ssl_upstream);
 
 /**
  * Delete pending answer.
@@ -453,6 +456,7 @@ void pending_delete(struct outside_network* outnet, struct pending* p);
  * @param want_dnssec: signatures are needed, without EDNS the answer is
  * 	likely to be useless.
  * @param tcp_upstream: use TCP for upstream queries.
+ * @param ssl_upstream: use SSL for upstream queries.
  * @param callback: callback function.
  * @param callback_arg: user argument to callback function.
  * @param addr: to which server to send the query.
@@ -470,9 +474,10 @@ void pending_delete(struct outside_network* outnet, struct pending* p);
 struct serviced_query* outnet_serviced_query(struct outside_network* outnet,
 	uint8_t* qname, size_t qnamelen, uint16_t qtype, uint16_t qclass,
 	uint16_t flags, int dnssec, int want_dnssec, int tcp_upstream,
-	struct sockaddr_storage* addr, socklen_t addrlen, uint8_t* zone,
-	size_t zonelen, comm_point_callback_t* callback, void* callback_arg, 
-	ldns_buffer* buff, int (*arg_compare)(void*,void*));
+	int ssl_upstream, struct sockaddr_storage* addr, socklen_t addrlen,
+	uint8_t* zone, size_t zonelen, comm_point_callback_t* callback,
+	void* callback_arg, ldns_buffer* buff,
+	int (*arg_compare)(void*,void*));
 
 /**
  * Remove service query callback.

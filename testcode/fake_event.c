@@ -962,7 +962,8 @@ pending_udp_query(struct outside_network* outnet, ldns_buffer* packet,
 struct waiting_tcp* 
 pending_tcp_query(struct outside_network* outnet, ldns_buffer* packet,
 	struct sockaddr_storage* addr, socklen_t addrlen, int timeout,
-	comm_point_callback_t* callback, void* callback_arg)
+	comm_point_callback_t* callback, void* callback_arg,
+	int ATTR_UNUSED(ssl_upstream))
 {
 	struct replay_runtime* runtime = (struct replay_runtime*)outnet->base;
 	struct fake_pending* pend = (struct fake_pending*)calloc(1,
@@ -1014,10 +1015,11 @@ pending_tcp_query(struct outside_network* outnet, ldns_buffer* packet,
 struct serviced_query* outnet_serviced_query(struct outside_network* outnet,
         uint8_t* qname, size_t qnamelen, uint16_t qtype, uint16_t qclass,
 	uint16_t flags, int dnssec, int ATTR_UNUSED(want_dnssec),
-	int ATTR_UNUSED(tcp_upstream), struct sockaddr_storage* addr,
-	socklen_t addrlen, uint8_t* zone, size_t ATTR_UNUSED(zonelen),
-	comm_point_callback_t* callback, void* callback_arg, 
-	ldns_buffer* ATTR_UNUSED(buff), int (*arg_compare)(void*,void*))
+	int ATTR_UNUSED(tcp_upstream), int ATTR_UNUSED(ssl_upstream),
+	struct sockaddr_storage* addr, socklen_t addrlen, uint8_t* zone,
+	size_t ATTR_UNUSED(zonelen), comm_point_callback_t* callback,
+	void* callback_arg, ldns_buffer* ATTR_UNUSED(buff),
+	int (*arg_compare)(void*,void*))
 {
 	struct replay_runtime* runtime = (struct replay_runtime*)outnet->base;
 	struct fake_pending* pend = (struct fake_pending*)calloc(1,
