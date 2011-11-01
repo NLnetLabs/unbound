@@ -274,8 +274,8 @@ send_em(const char* svr, int udp, int usessl, int noanswer, int num, char** qs)
 	ldns_buffer* buf = ldns_buffer_new(65553);
 	int fd = open_svr(svr, udp);
 	int i;
-	SSL_CTX* ctx;
-	SSL* ssl;
+	SSL_CTX* ctx = NULL;
+	SSL* ssl = NULL;
 	if(!buf) fatal_exit("out of memory");
 	if(usessl) {
 		ctx = connect_sslctx_create(NULL, NULL, NULL);
