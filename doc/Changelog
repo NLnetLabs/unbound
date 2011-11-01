@@ -3,6 +3,7 @@
 	  It performs an SSL transaction for every DNS query (250 msec).
 	- documentation for new options: ssl-upstream, ssl-service-key and
 	  ssl-service.pem.
+	- iana portlist updated.
 
 31 October 2011: Wouter
 	- dns over ssl support, ssl-service-pem and ssl-service-key files
