@@ -453,6 +453,16 @@ server:
 	# you need to do the reverse notation yourself.
 	# local-data-ptr: "192.0.2.3 www.example.com"
 
+	# service clients over SSL (on the TCP sockets), with plain DNS inside
+	# the SSL stream.  Give the certificate to use and private key.
+	# default is "" (disabled).  requires restart to take effect.
+	# ssl-service-key: "path/to/privatekeyfile.key"
+	# ssl-service-pem: "path/to/publiccertfile.pem"
+
+	# request upstream over SSL (with plain DNS inside the SSL stream).
+	# Default is no.  Can be turned on and off with unbound-control.
+	# ssl-upstream: no
+
 # Python config section. To enable:
 # o use --with-pythonmodule to configure before compiling.
 # o list python in the module-config string (above) to enable.

@@ -296,6 +296,25 @@ Enable or disable whether TCP queries are answered or issued. Default is yes.
 Enable or disable whether the upstream queries use TCP only for transport.
 Default is no.  Useful in tunneling scenarios.
 .TP
+.B ssl\-upstream: \fI<yes or no>
+Enabled or disable whether the upstream queries use SSL only for transport.
+Default is no.  Useful in tunneling scenarios.  The SSL contains plain DNS in
+TCP wireformat.  The other server must support this (see \fBssl\-service\-key\fR).
+.TP
+.B ssl\-service-key: \fI<file>
+If enabled, the server provider SSL service on its TCP sockets.  The clients
+have to use ssl\-upstream: yes.  The file is the private key for the TLS
+session.  The public certificate is in the ssl\-service\-pem file.  Default
+is "", turned off.  Requires a restart (a reload is not enough) if changed,
+because the private key is read while root permissions are held and before
+chroot (if any).  Normal DNS TCP service is not provided and gives errors,
+this service is best run with a different \fBport:\fR config or \fI@port\fR
+suffixes in the \fBinterface\fR config.
+.TP
+.B ssl\-service\-pem: \fI<file>
+The public key certificate pem file for the ssl service.  Default is "",
+turned off.
+.TP
 .B do\-daemonize: \fI<yes or no>
 Enable or disable whether the unbound server forks into the background as
 a daemon. Default is yes.

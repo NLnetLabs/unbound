@@ -164,7 +164,7 @@ harden\-glue, harden\-dnssec\-stripped, harden\-below\-nxdomain,
 harden\-referral\-path, prefetch, prefetch\-key, log\-queries,
 hide\-identity, hide\-version, identity, version, val\-log\-level,
 val\-log\-squelch, ignore\-cd\-flag, add\-holddown, del\-holddown,
-keep\-missing, tcp\-upstream.
+keep\-missing, tcp\-upstream, ssl\-upstream.
 .TP
 .B get_option \fIopt
 Get the value of the option.  Give the option name without a trailing ':'.
