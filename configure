@@ -5631,8 +5631,16 @@ main ()
 }
 _ACEOF
 if ac_fn_c_try_link "$LINENO"; then :
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+
+    if $CC $CFLAGS conftest.c 2>&1 | grep "warning: no debug symbols in executable" >/dev/null; then
+	CFLAGS="$BAKCFLAGS"
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+    else
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 $as_echo "yes" >&6; }
+    fi
+
 else
   CFLAGS="$BAKCFLAGS" ; { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
 $as_echo "no" >&6; }
