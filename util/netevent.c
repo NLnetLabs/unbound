@@ -717,9 +717,9 @@ comm_point_tcp_win_bio_cb(struct comm_point* c, void* thessl)
 	SSL* ssl = (SSL*)thessl;
 	/* set them both just in case, but usually they are the same BIO */
 	BIO_set_callback(SSL_get_rbio(ssl), &win_bio_cb);
-	BIO_set_callback_arg(SSL_get_rbio(ssl), (char*)comm_point_internal(c));
+	BIO_set_callback_arg(SSL_get_rbio(ssl), (char*)&c->ev->ev);
 	BIO_set_callback(SSL_get_wbio(ssl), &win_bio_cb);
-	BIO_set_callback_arg(SSL_get_wbio(ssl), (char*)comm_point_internal(c));
+	BIO_set_callback_arg(SSL_get_wbio(ssl), (char*)&c->ev->ev);
 }
 #endif
 
