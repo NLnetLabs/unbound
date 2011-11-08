@@ -255,9 +255,10 @@ print_rd(int t, char* data, size_t len)
 	ldns_rr_set_owner(rr, NULL);
 	status = ldns_wire2rdf(rr, rd, len+2, &pos);
 	if(status != LDNS_STATUS_OK) {
-	
 		free(rd);
+		ldns_rr_free(rr);
 		printf("error_printing_data");
+		return;
 	}
 	for(i=0; i<ldns_rr_rd_count(rr); i++) {
 		printf(" ");
