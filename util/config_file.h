@@ -83,6 +83,8 @@ struct config_file {
 	char* ssl_service_key;
 	/** public key file for dnstcp-ssl service */
 	char* ssl_service_pem;
+	/** port on which to provide ssl service */
+	int ssl_port;
 	/** if outgoing tcp connections use SSL */
 	int ssl_upstream;
 

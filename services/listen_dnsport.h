@@ -82,7 +82,9 @@ enum listen_type {
 	/** tcp type */
 	listen_type_tcp,
 	/** udp ipv6 (v4mapped) for use with ancillary data */
-	listen_type_udpancil
+	listen_type_udpancil,
+	/** ssl over tcp type */
+	listen_type_ssl
 };
 
 /**

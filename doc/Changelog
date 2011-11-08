@@ -1,3 +1,6 @@
+8 November 2011: Wouter
+	- can configure ssl service to one port number, and not on others.
+
 1 November 2011: Wouter
 	- dns over ssl support as a client, ssl-upstream yes turns it on.
 	  It performs an SSL transaction for every DNS query (250 msec).

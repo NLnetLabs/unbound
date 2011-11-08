@@ -632,12 +632,13 @@ set_recvpktinfo(int s, int family)
  * @param list: list of open ports, appended to, changed to point to list head.
  * @param rcv: receive buffer size for UDP
  * @param snd: send buffer size for UDP
+ * @param ssl_port: ssl service port number
  * @return: returns false on error.
  */
 static int
 ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp, 
 	struct addrinfo *hints, const char* port, struct listen_port** list,
-	size_t rcv, size_t snd)
+	size_t rcv, size_t snd, int ssl_port)
 {
 	int s, noip6=0;
 	if(!do_udp && !do_tcp)
@@ -682,6 +683,9 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 		}
 	}
 	if(do_tcp) {
+		int is_ssl = ((strchr(ifname, '@') && 
+			atoi(strchr(ifname, '@')+1) == ssl_port) ||
+			(!strchr(ifname, '@') && atoi(port) == ssl_port));
 		if((s = make_sock_port(SOCK_STREAM, ifname, port, hints, 1, 
 			&noip6, 0, 0)) == -1) {
 			if(noip6) {
@@ -690,7 +694,10 @@ ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp,
 			}
 			return 0;
 		}
-		if(!port_insert(list, s, listen_type_tcp)) {
+		if(is_ssl)
+			verbose(VERB_ALGO, "setup TCP for SSL service");
+		if(!port_insert(list, s, is_ssl?listen_type_ssl:
+			listen_type_tcp)) {
 #ifndef USE_WINSOCK
 			close(s);
 #else
@@ -736,9 +743,6 @@ listen_create(struct comm_base* base, struct listen_port* ports,
 		free(front);
 		return NULL;
 	}
-	if(sslctx) {
-		verbose(VERB_ALGO, "setup for SSL-wrapped TCP service");
-	}
 
 	/* create comm points as needed */
 	while(ports) {
@@ -746,7 +750,10 @@ listen_create(struct comm_base* base, struct listen_port* ports,
 		if(ports->ftype == listen_type_udp) 
 			cp = comm_point_create_udp(base, ports->fd, 
 				front->udp_buff, cb, cb_arg);
-		else if(ports->ftype == listen_type_tcp) {
+		else if(ports->ftype == listen_type_tcp)
+			cp = comm_point_create_tcp(base, ports->fd, 
+				tcp_accept_count, bufsize, cb, cb_arg);
+		else if(ports->ftype == listen_type_ssl) {
 			cp = comm_point_create_tcp(base, ports->fd, 
 				tcp_accept_count, bufsize, cb, cb_arg);
 			cp->ssl = sslctx;
@@ -834,7 +841,8 @@ listening_ports_open(struct config_file* cfg)
 			if(!ports_create_if(do_auto?"::0":"::1", 
 				do_auto, cfg->do_udp, do_tcp, 
 				&hints, portbuf, &list,
-				cfg->so_rcvbuf, cfg->so_sndbuf)) {
+				cfg->so_rcvbuf, cfg->so_sndbuf,
+				cfg->ssl_port)) {
 				listening_ports_free(list);
 				return NULL;
 			}
@@ -844,7 +852,8 @@ listening_ports_open(struct config_file* cfg)
 			if(!ports_create_if(do_auto?"0.0.0.0":"127.0.0.1", 
 				do_auto, cfg->do_udp, do_tcp, 
 				&hints, portbuf, &list,
-				cfg->so_rcvbuf, cfg->so_sndbuf)) {
+				cfg->so_rcvbuf, cfg->so_sndbuf,
+				cfg->ssl_port)) {
 				listening_ports_free(list);
 				return NULL;
 			}
@@ -856,7 +865,8 @@ listening_ports_open(struct config_file* cfg)
 			hints.ai_family = AF_INET6;
 			if(!ports_create_if(cfg->ifs[i], 0, cfg->do_udp, 
 				do_tcp, &hints, portbuf, &list, 
-				cfg->so_rcvbuf, cfg->so_sndbuf)) {
+				cfg->so_rcvbuf, cfg->so_sndbuf,
+				cfg->ssl_port)) {
 				listening_ports_free(list);
 				return NULL;
 			}
@@ -866,7 +876,8 @@ listening_ports_open(struct config_file* cfg)
 			hints.ai_family = AF_INET;
 			if(!ports_create_if(cfg->ifs[i], 0, cfg->do_udp, 
 				do_tcp, &hints, portbuf, &list, 
-				cfg->so_rcvbuf, cfg->so_sndbuf)) {
+				cfg->so_rcvbuf, cfg->so_sndbuf,
+				cfg->ssl_port)) {
 				listening_ports_free(list);
 				return NULL;
 			}

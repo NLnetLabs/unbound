@@ -90,6 +90,7 @@ config_create(void)
 	cfg->tcp_upstream = 0;
 	cfg->ssl_service_key = NULL;
 	cfg->ssl_service_pem = NULL;
+	cfg->ssl_port = 443;
 	cfg->ssl_upstream = 0;
 	cfg->use_syslog = 1;
 	cfg->log_time_ascii = 0;
@@ -332,6 +333,7 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	else S_YNO("ssl-upstream:", ssl_upstream)
 	else S_STR("ssl-service-key:", ssl_service_key)
 	else S_STR("ssl-service-pem:", ssl_service_pem)
+	else S_NUMBER_NONZERO("ssl-port:", ssl_port)
 	else S_YNO("interface-automatic:", if_automatic)
 	else S_YNO("do-daemonize:", do_daemonize)
 	else S_NUMBER_NONZERO("port:", port)
@@ -583,6 +585,7 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_YNO(opt, "ssl-upstream", ssl_upstream)
 	else O_STR(opt, "ssl-service-key", ssl_service_key)
 	else O_STR(opt, "ssl-service-pem", ssl_service_pem)
+	else O_DEC(opt, "ssl-port", ssl_port)
 	else O_YNO(opt, "do-daemonize", do_daemonize)
 	else O_STR(opt, "chroot", chrootdir)
 	else O_STR(opt, "username", username)

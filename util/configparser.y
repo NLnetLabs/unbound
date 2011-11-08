@@ -103,7 +103,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_DEL_HOLDDOWN VAR_SO_RCVBUF VAR_EDNS_BUFFER_SIZE VAR_PREFETCH
 %token VAR_PREFETCH_KEY VAR_SO_SNDBUF VAR_HARDEN_BELOW_NXDOMAIN
 %token VAR_IGNORE_CD_FLAG VAR_LOG_QUERIES VAR_TCP_UPSTREAM VAR_SSL_UPSTREAM
-%token VAR_SSL_SERVICE_KEY VAR_SSL_SERVICE_PEM
+%token VAR_SSL_SERVICE_KEY VAR_SSL_SERVICE_PEM VAR_SSL_PORT
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -159,7 +159,7 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_edns_buffer_size | server_prefetch | server_prefetch_key |
 	server_so_sndbuf | server_harden_below_nxdomain | server_ignore_cd_flag |
 	server_log_queries | server_tcp_upstream | server_ssl_upstream |
-	server_ssl_service_key | server_ssl_service_pem
+	server_ssl_service_key | server_ssl_service_pem | server_ssl_port
 	;
 stubstart: VAR_STUB_ZONE
 	{
@@ -397,6 +397,15 @@ server_ssl_service_pem: VAR_SSL_SERVICE_PEM STRING_ARG
 		OUTYY(("P(server_ssl_service_pem:%s)\n", $2));
 		free(cfg_parser->cfg->ssl_service_pem);
 		cfg_parser->cfg->ssl_service_pem = $2;
+	}
+	;
+server_ssl_port: VAR_SSL_PORT STRING_ARG
+	{
+		OUTYY(("P(server_ssl_port:%s)\n", $2));
+		if(atoi($2) == 0)
+			yyerror("port number expected");
+		else cfg_parser->cfg->ssl_port = atoi($2);
+		free($2);
 	}
 	;
 server_do_daemonize: VAR_DO_DAEMONIZE STRING_ARG

@@ -140,6 +140,7 @@ tcp-upstream{COLON}		{ YDVAR(1, VAR_TCP_UPSTREAM) }
 ssl-upstream{COLON}		{ YDVAR(1, VAR_SSL_UPSTREAM) }
 ssl-service-key{COLON}		{ YDVAR(1, VAR_SSL_SERVICE_KEY) }
 ssl-service-pem{COLON}		{ YDVAR(1, VAR_SSL_SERVICE_PEM) }
+ssl-port{COLON}			{ YDVAR(1, VAR_SSL_PORT) }
 do-daemonize{COLON}		{ YDVAR(1, VAR_DO_DAEMONIZE) }
 interface{COLON}		{ YDVAR(1, VAR_INTERFACE) }
 outgoing-interface{COLON}	{ YDVAR(1, VAR_OUTGOING_INTERFACE) }
