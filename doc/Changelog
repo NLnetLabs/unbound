@@ -2,6 +2,7 @@
 	- can configure ssl service to one port number, and not on others.
 	- fixup windows compile with ssl support.
 	- Fix double free in unbound-host, reported by Steve Grubb.
+	- iana portlist updated.
 
 1 November 2011: Wouter
 	- dns over ssl support as a client, ssl-upstream yes turns it on.
