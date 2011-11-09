@@ -1,3 +1,6 @@
+9 November 2011: Wouter
+	- added unit test for SSL service and SSL-upstream.
+
 8 November 2011: Wouter
 	- can configure ssl service to one port number, and not on others.
 	- fixup windows compile with ssl support.
