@@ -42,7 +42,7 @@
 #ifndef UTIL_DATA_PACKED_RRSET_H
 #define UTIL_DATA_PACKED_RRSET_H
 #include "util/storage/lruhash.h"
-#include "ldns/rr.h"
+#include <ldns/rr.h>
 struct alloc_cache;
 struct regional;
 

@@ -63,7 +63,7 @@
 #ifndef UTIL_DATA_MSGPARSE_H
 #define UTIL_DATA_MSGPARSE_H
 #include "util/storage/lruhash.h"
-#include "ldns/packet.h"
+#include <ldns/packet.h>
 struct rrset_parse;
 struct rr_parse;
 struct regional;

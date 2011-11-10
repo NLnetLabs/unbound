@@ -43,7 +43,7 @@
 #ifndef ITERATOR_ITER_UTILS_H
 #define ITERATOR_ITER_UTILS_H
 #include "iterator/iter_resptype.h"
-#include "ldns/buffer.h"
+#include <ldns/buffer.h>
 struct iter_env;
 struct iter_hints;
 struct iter_forwards;

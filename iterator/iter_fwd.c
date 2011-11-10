@@ -40,9 +40,9 @@
  * Keep track of forward zones and config settings.
  */
 #include "config.h"
-#include "ldns/rdata.h"
-#include "ldns/dname.h"
-#include "ldns/rr.h"
+#include <ldns/rdata.h>
+#include <ldns/dname.h>
+#include <ldns/rr.h>
 #include "iterator/iter_fwd.h"
 #include "iterator/iter_delegpt.h"
 #include "util/regional.h"

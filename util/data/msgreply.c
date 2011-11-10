@@ -40,7 +40,7 @@
  */
 
 #include "config.h"
-#include "ldns/ldns.h"
+#include <ldns/ldns.h>
 #include "util/data/msgreply.h"
 #include "util/storage/lookup3.h"
 #include "util/log.h"

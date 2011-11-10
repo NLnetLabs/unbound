@@ -1,3 +1,6 @@
+10 November 2011: Wouter
+	- Makefile changed for BSD make compatibility.
+
 9 November 2011: Wouter
 	- added unit test for SSL service and SSL-upstream.
 

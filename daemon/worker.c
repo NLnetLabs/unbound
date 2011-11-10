@@ -40,7 +40,7 @@
  * pending requests.
  */
 #include "config.h"
-#include "ldns/wire2host.h"
+#include <ldns/wire2host.h>
 #include "util/log.h"
 #include "util/net_help.h"
 #include "util/random.h"

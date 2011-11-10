@@ -40,7 +40,7 @@
  * one of the response types.
  */
 #include "config.h"
-#include "ldns/packet.h"
+#include <ldns/packet.h>
 #include "iterator/iter_resptype.h"
 #include "iterator/iter_delegpt.h"
 #include "services/cache/dns.h"

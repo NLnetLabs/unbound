@@ -60,7 +60,7 @@
 #ifndef NET_EVENT_H
 #define NET_EVENT_H
 
-#include "ldns/buffer.h"
+#include <ldns/buffer.h>
 struct comm_point;
 struct comm_reply;
 struct event_base;

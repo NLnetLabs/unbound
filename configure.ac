@@ -444,6 +444,12 @@ if test x_$ub_test_python != x_no; then
             AC_DEFINE(WITH_PYTHONMODULE, 1, [Define if you want Python module.])
             WITH_PYTHONMODULE=yes
             AC_SUBST(WITH_PYTHONMODULE)
+	    PYTHONMOD_OBJ="pythonmod.lo pythonmod_utils.lo"
+	    AC_SUBST(PYTHONMOD_OBJ)
+	    PYTHONMOD_INSTALL=pythonmod-install
+	    AC_SUBST(PYTHONMOD_INSTALL)
+	    PYTHONMOD_UNINSTALL=pythonmod-uninstall
+	    AC_SUBST(PYTHONMOD_UNINSTALL)
          fi
 
          # Declare PyUnbound
@@ -451,6 +457,14 @@ if test x_$ub_test_python != x_no; then
             AC_DEFINE(WITH_PYUNBOUND, 1, [Define if you want PyUnbound.])
             WITH_PYUNBOUND=yes
             AC_SUBST(WITH_PYUNBOUND)
+	    PYUNBOUND_OBJ="libunbound_wrap.lo"
+	    AC_SUBST(PYUNBOUND_OBJ)
+	    PYUNBOUND_TARGET="_unbound.la"
+	    AC_SUBST(PYUNBOUND_TARGET)
+	    PYUNBOUND_INSTALL=pyunbound-install
+	    AC_SUBST(PYUNBOUND_INSTALL)
+	    PYUNBOUND_UNINSTALL=pyunbound-uninstall
+	    AC_SUBST(PYUNBOUND_UNINSTALL)
          fi
       fi
    else
@@ -459,6 +473,13 @@ if test x_$ub_test_python != x_no; then
       ub_with_pythonmod=no
    fi
 fi
+
+if test "`uname`" = "NetBSD"; then
+	NETBSD_LINTFLAGS='"-D__RENAME(x)=" -D_NETINET_IN_H_'
+	AC_SUBST(NETBSD_LINTFLAGS)
+fi
+CONFIG_DATE=`date +%Y%m%d`
+AC_SUBST(CONFIG_DATE)
 
 # Checks for libraries.
 ACX_WITH_SSL
@@ -771,6 +792,22 @@ if test "$USE_WINSOCK" = 1; then
 	])
 	AC_CHECK_TOOL(WINDRES, windres)
 	LIBS="$LIBS -liphlpapi"
+	WINAPPS="unbound-service-install.exe unbound-service-remove.exe anchor-update.exe"
+	AC_SUBST(WINAPPS)
+	WIN_DAEMON_SRC="winrc/win_svc.c winrc/w_inst.c"
+	AC_SUBST(WIN_DAEMON_SRC)
+	WIN_DAEMON_OBJ="win_svc.lo w_inst.lo"
+	AC_SUBST(WIN_DAEMON_OBJ)
+	WIN_DAEMON_OBJ_LINK="rsrc_unbound.o"
+	AC_SUBST(WIN_DAEMON_OBJ_LINK)
+	WIN_HOST_OBJ_LINK="rsrc_unbound_host.o"
+	AC_SUBST(WIN_HOST_OBJ_LINK)
+	WIN_UBANCHOR_OBJ_LINK="rsrc_unbound_anchor.o log.lo locks.lo"
+	AC_SUBST(WIN_UBANCHOR_OBJ_LINK)
+	WIN_CONTROL_OBJ_LINK="rsrc_unbound_control.o"
+	AC_SUBST(WIN_CONTROL_OBJ_LINK)
+	WIN_CHECKCONF_OBJ_LINK="rsrc_unbound_checkconf.o"
+	AC_SUBST(WIN_CHECKCONF_OBJ_LINK)
 fi
 if test $ac_cv_func_getaddrinfo = no; then
 	AC_LIBOBJ([fake-rfc2553])
@@ -802,19 +839,44 @@ AC_REPLACE_FUNCS(snprintf)
 AC_REPLACE_FUNCS(strlcpy)
 AC_REPLACE_FUNCS(memmove)
 AC_REPLACE_FUNCS(gmtime_r)
+LIBOBJ_WITHOUT_CTIME="$LIBOBJS"
+AC_SUBST(LIBOBJ_WITHOUT_CTIME)
 AC_REPLACE_FUNCS(ctime_r)
 
 AC_ARG_ENABLE(allsymbols, AC_HELP_STRING([--enable-allsymbols], [export all symbols from libunbound and link binaries to it, smaller install size but libunbound export table is polluted by internal symbols]))
 case "$enable_allsymbols" in
-	no)
-	EXPORT_ALL_SYMBOLS=no
-	;;
 	yes)
 	EXPORT_ALL_SYMBOLS=yes
+	COMMON_OBJ_ALL_SYMBOLS=""
+	UBSYMS=""
+	EXTRALINK="-L. -L.libs -lunbound"
 	AC_DEFINE(EXPORT_ALL_SYMBOLS, 1, [Define this if you enabled-allsymbols from libunbound to link binaries to it for smaller install size, but the libunbound export table is polluted by internal symbols])
+	;;
+	no|*)
+	EXPORT_ALL_SYMBOLS=no
+	COMMON_OBJ_ALL_SYMBOLS='$(COMMON_OBJ)'
+	UBSYMS='-export-symbols $(srcdir)/libunbound/ubsyms.def'
+	EXTRALINK=""
 	;;
 esac
 AC_SUBST(EXPORT_ALL_SYMBOLS)
+AC_SUBST(COMMON_OBJ_ALL_SYMBOLS)
+AC_SUBST(EXTRALINK)
+AC_SUBST(UBSYMS)
+if test x_$enable_lock_checks = x_yes; then
+	UBSYMS="-export-symbols clubsyms.def"
+	cp ${srcdir}/libunbound/ubsyms.def clubsyms.def
+	echo lock_protect >> clubsyms.def
+	echo lock_unprotect >> clubsyms.def
+	echo lock_get_mem >> clubsyms.def
+	echo checklock_start >> clubsyms.def
+	echo checklock_stop >> clubsyms.def
+	echo checklock_lock >> clubsyms.def
+	echo checklock_unlock >> clubsyms.def
+	echo checklock_init >> clubsyms.def
+	echo checklock_thrcreate >> clubsyms.def
+	echo checklock_thrjoin >> clubsyms.def
+fi
 
 # check this after all other compilation checks, since the linking of the lib
 # may break checks after this.

@@ -41,7 +41,7 @@
  * bridging between RR wireformat data and crypto calls.
  */
 #include "config.h"
-#include "ldns/ldns.h"
+#include <ldns/ldns.h>
 #include "validator/val_sigcrypt.h"
 #include "validator/validator.h"
 #include "util/data/msgreply.h"

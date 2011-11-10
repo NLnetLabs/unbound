@@ -41,7 +41,7 @@
 
 #ifndef UTIL_LOG_H
 #define UTIL_LOG_H
-#include "ldns/buffer.h"
+#include <ldns/buffer.h>
 
 /**
  * verbosity value:

@@ -37,7 +37,7 @@
  * Routines for message parsing a packet buffer to a descriptive structure.
  */
 #include "config.h"
-#include "ldns/ldns.h"
+#include <ldns/ldns.h>
 #include "util/data/msgparse.h"
 #include "util/net_help.h"
 #include "util/data/dname.h"

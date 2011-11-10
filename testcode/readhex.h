@@ -40,7 +40,7 @@
 
 #ifndef TESTCODE_READHEX_H
 #define TESTCODE_READHEX_H
-#include "ldns/buffer.h"
+#include <ldns/buffer.h>
 
 /** 
  * Helper to convert hex string to packet buffer.

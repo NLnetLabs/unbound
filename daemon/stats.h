@@ -43,7 +43,7 @@
 #ifndef DAEMON_STATS_H
 #define DAEMON_STATS_H
 #include "util/timehist.h"
-#include "ldns/buffer.h"
+#include <ldns/buffer.h>
 struct worker;
 struct config_file;
 struct comm_point;

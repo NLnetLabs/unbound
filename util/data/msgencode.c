@@ -40,7 +40,7 @@
  */
 
 #include "config.h"
-#include "ldns/wire2host.h"
+#include <ldns/wire2host.h>
 #include "util/data/msgencode.h"
 #include "util/data/msgreply.h"
 #include "util/data/msgparse.h"

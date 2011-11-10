@@ -43,7 +43,7 @@
 #ifdef HAVE_GETOPT_H
 #include <getopt.h>
 #endif
-#include "ldns/ldns.h"
+#include <ldns/ldns.h>
 #include <signal.h>
 #include "util/locks.h"
 #include "util/log.h"

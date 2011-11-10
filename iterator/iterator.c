@@ -41,7 +41,7 @@
  */
 
 #include "config.h"
-#include "ldns/ldns.h"
+#include <ldns/ldns.h>
 #include "iterator/iterator.h"
 #include "iterator/iter_utils.h"
 #include "iterator/iter_hints.h"

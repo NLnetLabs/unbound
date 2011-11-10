@@ -39,8 +39,8 @@
  */
 
 #include "config.h"
-#include "ldns/dname.h"
-#include "ldns/host2wire.h"
+#include <ldns/dname.h>
+#include <ldns/host2wire.h>
 #include "util/log.h"
 #include "testcode/unitmain.h"
 #include "util/data/dname.h"

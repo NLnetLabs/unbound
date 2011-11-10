@@ -2,7 +2,8 @@
 # Copyright 2009, Wouter Wijngaards, NLnet Labs.   
 # BSD licensed.
 #
-# Version 15
+# Version 16
+# 2011-11-10 Fix FLTO test to not drop a.out in current directory.
 # 2011-11-01 Fix FLTO test for llvm on Lion.
 # 2011-08-01 Fix nonblock test (broken at v13).
 # 2011-08-01 Fix autoconf 2.68 warnings
@@ -396,12 +397,13 @@ AC_DEFUN([ACX_CHECK_FLTO],
 BAKCFLAGS="$CFLAGS"
 CFLAGS="$CFLAGS -flto"
 AC_LINK_IFELSE([AC_LANG_PROGRAM([], [])], [
-    if $CC $CFLAGS conftest.c 2>&1 | grep "warning: no debug symbols in executable" >/dev/null; then
+    if $CC $CFLAGS -o conftest conftest.c 2>&1 | grep "warning: no debug symbols in executable" >/dev/null; then
 	CFLAGS="$BAKCFLAGS"
 	AC_MSG_RESULT(no)
     else
 	AC_MSG_RESULT(yes)
     fi
+    rm -f conftest conftest.c conftest.o
 ], [CFLAGS="$BAKCFLAGS" ; AC_MSG_RESULT(no)])
 ])
 

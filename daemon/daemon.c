@@ -55,7 +55,7 @@
 #ifdef HAVE_OPENSSL_ENGINE_H
 #include <openssl/engine.h>
 #endif
-#include "ldns/ldns.h"
+#include <ldns/ldns.h>
 #include "daemon/daemon.h"
 #include "daemon/worker.h"
 #include "daemon/remote.h"

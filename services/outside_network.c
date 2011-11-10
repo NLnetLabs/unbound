@@ -45,7 +45,7 @@
 #  include <sys/types.h>
 #endif
 #include <sys/time.h>
-#include "ldns/wire2host.h"
+#include <ldns/wire2host.h>
 #include "services/outside_network.h"
 #include "services/listen_dnsport.h"
 #include "services/cache/infra.h"

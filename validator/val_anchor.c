@@ -40,8 +40,8 @@
  */
 #include "config.h"
 #include <ctype.h>
-#include "ldns/dname.h"
-#include "ldns/host2wire.h"
+#include <ldns/dname.h>
+#include <ldns/host2wire.h>
 #include "validator/val_anchor.h"
 #include "validator/val_sigcrypt.h"
 #include "validator/autotrust.h"
