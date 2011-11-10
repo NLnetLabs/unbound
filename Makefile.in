@@ -405,6 +405,10 @@ util/configparser.lint util/configlexer.lint pythonmod/pythonmod.lint libunbound
 	# skip lint for generated code
 	touch $@
 
+winrc/win_svc.lint winrc/w_inst.lint winrc/unbound-service-install.lint winrc/unbound-service-remove.lint:
+	# skip lint for windows types
+	touch $@
+
 lint:	$(ALL_SRC:.c=.lint)
 
 tags:	$(srcdir)/*.[ch] $(srcdir)/*/*.[ch]
