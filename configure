@@ -620,6 +620,7 @@ WIN_DAEMON_OBJ
 WIN_DAEMON_SRC
 WINAPPS
 WINDRES
+CHECKLOCK_OBJ
 CHECKLOCK_SRC
 staticexe
 HAVE_SSL
@@ -16185,6 +16186,8 @@ if test x_$enable_lock_checks = x_yes; then
 $as_echo "#define ENABLE_LOCK_CHECKS 1" >>confdefs.h
 
 	CHECKLOCK_SRC="testcode/checklocks.c"
+
+	CHECKLOCK_OBJ="checklocks.lo"
 
 fi
 
