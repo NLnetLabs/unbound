@@ -897,7 +897,7 @@ EOF
 mkdir conftest.dir
 touch conftest.dir/conftest.c
 rm -f conftest.lo conftest.c
-${MAKE:-make} -f conftest.make
+${MAKE:-make} -f conftest.make >/dev/null
 rm -f conftest.make conftest.c conftest.dir/conftest.c
 rm -rf conftest.dir
 if test ! -f conftest.lo; then
