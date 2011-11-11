@@ -605,6 +605,8 @@ ac_includes_default="\
 
 ac_subst_vars='LTLIBOBJS
 ldnsdir
+SOURCEFILE
+SOURCEDETERMINE
 UBSYMS
 EXTRALINK
 COMMON_OBJ_ALL_SYMBOLS
@@ -16496,7 +16498,7 @@ fi
 
 	WIN_HOST_OBJ_LINK="rsrc_unbound_host.o"
 
-	WIN_UBANCHOR_OBJ_LINK="rsrc_unbound_anchor.o"
+	WIN_UBANCHOR_OBJ_LINK="rsrc_unbound_anchor.o log.lo locks.lo"
 
 	WIN_CONTROL_OBJ_LINK="rsrc_unbound_control.o"
 
@@ -16920,6 +16922,22 @@ if test x_$enable_lock_checks = x_yes; then
 	echo checklock_thrcreate >> clubsyms.def
 	echo checklock_thrjoin >> clubsyms.def
 fi
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking if make supports $<" >&5
+$as_echo_n "checking if make supports $<... " >&6; }
+if test "`uname`" = "SunOS"; then
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+	SOURCEDETERMINE='echo "$?" | awk "-F " "{print $$$$1;}" > .source'
+	SOURCEFILE='`cat .source`'
+else
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+	SOURCEDETERMINE=':'
+	SOURCEFILE='$<'
+fi
+
+
 
 # check this after all other compilation checks, since the linking of the lib
 # may break checks after this.

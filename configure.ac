@@ -878,6 +878,19 @@ if test x_$enable_lock_checks = x_yes; then
 	echo checklock_thrjoin >> clubsyms.def
 fi
 
+AC_MSG_CHECKING([if make supports $<])
+if test "`uname`" = "SunOS"; then
+	AC_MSG_RESULT(no)
+	SOURCEDETERMINE='echo "$?" | awk "-F " "{print $$$$1;}" > .source'
+	SOURCEFILE='`cat .source`'
+else
+	AC_MSG_RESULT(yes)
+	SOURCEDETERMINE=':'
+	SOURCEFILE='$<'
+fi
+AC_SUBST(SOURCEDETERMINE)
+AC_SUBST(SOURCEFILE)
+
 # check this after all other compilation checks, since the linking of the lib
 # may break checks after this.
 AC_ARG_WITH(ldns, AC_HELP_STRING([--with-ldns=PATH], 

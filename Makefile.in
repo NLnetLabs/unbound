@@ -237,10 +237,12 @@ all:	$(COMMON_OBJ) unbound$(EXEEXT) unbound-checkconf$(EXEEXT) lib unbound-host$
 	$(COMPILE) -o $@ -c $<
 
 $(ALL_OBJ):
-	$(COMPILE) -o $@ -c $<
+	@@SOURCEDETERMINE@
+	$(COMPILE) -o $@ -c @SOURCEFILE@
 
 $(RSRC_OBJ):
-	$(WINDRES) $(CPPFLAGS) $< $@
+	@@SOURCEDETERMINE@
+	$(WINDRES) $(CPPFLAGS) @SOURCEFILE@ $@
 
 rsrc_svcinst.o:	$(srcdir)/winrc/rsrc_svcinst.rc config.h
 rsrc_svcuninst.o:	$(srcdir)/winrc/rsrc_svcuninst.rc config.h
