@@ -337,7 +337,7 @@ harvest$(EXEEXT):	$(HARVEST_OBJ_LINK) libunbound.la
 	$(LINK) -o $@ $(HARVEST_OBJ_LINK) $(LIBS) -L. -L.libs -lunbound
 
 unbound-control-setup:	$(srcdir)/smallapp/unbound-control-setup.sh
-	sed -e 's:^DESTDIR=.*$$:DESTDIR=$(UNBOUND_RUN_DIR):' < $< > $@
+	sed -e 's:^DESTDIR=.*$$:DESTDIR=$(UNBOUND_RUN_DIR):' < $(srcdir)/smallapp/unbound-control-setup.sh > $@
 	-chmod +x $@
 
 #testcode/ldns-testpkts.c:	$(ldnsdir)/examples/ldns-testpkts.c \
@@ -360,17 +360,17 @@ pythonmod.lo pythonmod.o: $(srcdir)/pythonmod/pythonmod.c config.h \
 
 pythonmod/interface.h:	$(srcdir)/pythonmod/interface.i $(srcdir)/config.h
 	@-if test ! -d pythonmod; then $(INSTALL) -d pythonmod; fi
-	$(SWIG) $(CPPFLAGS) -o $@ -python $<
+	$(SWIG) $(CPPFLAGS) -o $@ -python $(srcdir)/pythonmod/interface.i
 
 libunbound_wrap.lo libunbound_wrap.o: libunbound/python/libunbound_wrap.c \
 	$(srcdir)/libunbound/unbound.h
 libunbound/python/libunbound_wrap.c:	$(srcdir)/libunbound/python/libunbound.i $(srcdir)/libunbound/unbound.h
 	@-if test ! -d libunbound/python; then $(INSTALL) -d libunbound/python; fi
-	$(SWIG) -python -o $@ $(CPPFLAGS) $<
+	$(SWIG) -python -o $@ $(CPPFLAGS) $(srcdir)/libunbound/python/libunbound.i
 
 # Pyunbound python unbound wrapper
 _unbound.la:	libunbound_wrap.lo libunbound.la
-	$(LIBTOOL) --tag=CC --mode=link $(CC) $(RUNTIME_PATH) $(CPPFLAGS) $(CFLAGS) $(LDFLAGS) -module -version-number @LIBUNBOUND_CURRENT@:@LIBUNBOUND_REVISION@:@LIBUNBOUND_AGE@ -no-undefined -o $@ $< -rpath $(PYTHON_SITE_PKG) L. -L.libs -lunbound $(LIBS)
+	$(LIBTOOL) --tag=CC --mode=link $(CC) $(RUNTIME_PATH) $(CPPFLAGS) $(CFLAGS) $(LDFLAGS) -module -version-number @LIBUNBOUND_CURRENT@:@LIBUNBOUND_REVISION@:@LIBUNBOUND_AGE@ -no-undefined -o $@ libunbound_wrap.lo -rpath $(PYTHON_SITE_PKG) L. -L.libs -lunbound $(LIBS)
 
 util/config_file.c:	util/configparser.h
 util/configlexer.c:  $(srcdir)/util/configlexer.lex util/configparser.h

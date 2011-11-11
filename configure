@@ -16923,9 +16923,30 @@ if test x_$enable_lock_checks = x_yes; then
 	echo checklock_thrjoin >> clubsyms.def
 fi
 
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking if make supports $<" >&5
-$as_echo_n "checking if make supports $<... " >&6; }
-if test "`uname`" = "SunOS"; then
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking if ${MAKE:-make} supports $< with implicit rule in scope" >&5
+$as_echo_n "checking if ${MAKE:-make} supports $< with implicit rule in scope... " >&6; }
+# on openBSD, the implicit rule make $< work.
+# on Solaris, it does not work (but $? does).
+# gmake works.
+cat >conftest.make <<EOF
+all:	conftest.lo
+
+conftest.lo foo.lo bla.lo:
+	if test -f "\$<"; then touch \$@; fi
+
+.SUFFIXES: .lo
+.c.lo:
+	if test -f "\$<"; then touch \$@; fi
+
+conftest.lo:        conftest.dir/conftest.c
+EOF
+mkdir conftest.dir
+touch conftest.dir/conftest.c
+rm -f conftest.lo conftest.c
+${MAKE:-make} -f conftest.make
+rm -f conftest.make conftest.c conftest.dir/conftest.c
+rm -rf conftest.dir
+if test ! -f conftest.lo; then
 	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
 $as_echo "no" >&6; }
 	SOURCEDETERMINE='echo "$?" | awk "-F " "{print \$$1;}" > .source'
@@ -16936,6 +16957,7 @@ $as_echo "yes" >&6; }
 	SOURCEDETERMINE=':'
 	SOURCEFILE='$<'
 fi
+rm -f conftest.lo
 
 
 

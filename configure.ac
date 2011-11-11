@@ -878,8 +878,29 @@ if test x_$enable_lock_checks = x_yes; then
 	echo checklock_thrjoin >> clubsyms.def
 fi
 
-AC_MSG_CHECKING([if make supports $<])
-if test "`uname`" = "SunOS"; then
+AC_MSG_CHECKING([if ${MAKE:-make} supports $< with implicit rule in scope])
+# on openBSD, the implicit rule make $< work.
+# on Solaris, it does not work (but $? does).
+# gmake works.
+cat >conftest.make <<EOF
+all:	conftest.lo
+
+conftest.lo foo.lo bla.lo:
+	if test -f "\$<"; then touch \$@; fi
+
+.SUFFIXES: .lo
+.c.lo:
+	if test -f "\$<"; then touch \$@; fi
+
+conftest.lo:        conftest.dir/conftest.c
+EOF
+mkdir conftest.dir
+touch conftest.dir/conftest.c
+rm -f conftest.lo conftest.c
+${MAKE:-make} -f conftest.make
+rm -f conftest.make conftest.c conftest.dir/conftest.c
+rm -rf conftest.dir
+if test ! -f conftest.lo; then
 	AC_MSG_RESULT(no)
 	SOURCEDETERMINE='echo "$?" | awk "-F " "{print \$$1;}" > .source'
 	SOURCEFILE='`cat .source`'
@@ -888,6 +909,7 @@ else
 	SOURCEDETERMINE=':'
 	SOURCEFILE='$<'
 fi
+rm -f conftest.lo
 AC_SUBST(SOURCEDETERMINE)
 AC_SUBST(SOURCEFILE)
 
