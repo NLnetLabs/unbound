@@ -1,3 +1,7 @@
+11 November 2011: Wouter
+	- Makefile compat with SunOS make, BSD make and GNU make.
+	- iana ports updated.
+
 10 November 2011: Wouter
 	- Makefile changed for BSD make compatibility.
 

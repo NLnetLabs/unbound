@@ -785,8 +785,6 @@ fi
 ACX_CHECK_GETADDRINFO_WITH_INCLUDES
 if test "$USE_WINSOCK" = 1; then
 	AC_DEFINE(UB_ON_WINDOWS, 1, [Use win32 resources and API])
-	UB_ON_WINDOWS=yes
-	AC_SUBST(UB_ON_WINDOWS)
 	AC_CHECK_HEADERS([iphlpapi.h],,, [AC_INCLUDES_DEFAULT
 #include <windows.h>
 	])
@@ -846,20 +844,17 @@ AC_REPLACE_FUNCS(ctime_r)
 AC_ARG_ENABLE(allsymbols, AC_HELP_STRING([--enable-allsymbols], [export all symbols from libunbound and link binaries to it, smaller install size but libunbound export table is polluted by internal symbols]))
 case "$enable_allsymbols" in
 	yes)
-	EXPORT_ALL_SYMBOLS=yes
 	COMMON_OBJ_ALL_SYMBOLS=""
 	UBSYMS=""
 	EXTRALINK="-L. -L.libs -lunbound"
 	AC_DEFINE(EXPORT_ALL_SYMBOLS, 1, [Define this if you enabled-allsymbols from libunbound to link binaries to it for smaller install size, but the libunbound export table is polluted by internal symbols])
 	;;
 	no|*)
-	EXPORT_ALL_SYMBOLS=no
 	COMMON_OBJ_ALL_SYMBOLS='$(COMMON_OBJ)'
 	UBSYMS='-export-symbols $(srcdir)/libunbound/ubsyms.def'
 	EXTRALINK=""
 	;;
 esac
-AC_SUBST(EXPORT_ALL_SYMBOLS)
 AC_SUBST(COMMON_OBJ_ALL_SYMBOLS)
 AC_SUBST(EXTRALINK)
 AC_SUBST(UBSYMS)
@@ -880,7 +875,7 @@ fi
 
 AC_MSG_CHECKING([if ${MAKE:-make} supports $< with implicit rule in scope])
 # on openBSD, the implicit rule make $< work.
-# on Solaris, it does not work (but $? does).
+# on Solaris, it does not work ($? is changed sources, $^ lists dependencies).
 # gmake works.
 cat >conftest.make <<EOF
 all:	conftest.lo
@@ -902,7 +897,7 @@ rm -f conftest.make conftest.c conftest.dir/conftest.c
 rm -rf conftest.dir
 if test ! -f conftest.lo; then
 	AC_MSG_RESULT(no)
-	SOURCEDETERMINE='echo "$?" | awk "-F " "{print \$$1;}" > .source'
+	SOURCEDETERMINE='echo "$^" | awk "-F " "{print \$$1;}" > .source'
 	SOURCEFILE='`cat .source`'
 else
 	AC_MSG_RESULT(yes)

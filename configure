@@ -610,7 +610,6 @@ SOURCEDETERMINE
 UBSYMS
 EXTRALINK
 COMMON_OBJ_ALL_SYMBOLS
-EXPORT_ALL_SYMBOLS
 LIBOBJ_WITHOUT_CTIME
 WIN_CHECKCONF_OBJ_LINK
 WIN_CONTROL_OBJ_LINK
@@ -621,7 +620,6 @@ WIN_DAEMON_OBJ
 WIN_DAEMON_SRC
 WINAPPS
 WINDRES
-UB_ON_WINDOWS
 CHECKLOCK_SRC
 staticexe
 HAVE_SSL
@@ -16378,8 +16376,6 @@ if test "$USE_WINSOCK" = 1; then
 
 $as_echo "#define UB_ON_WINDOWS 1" >>confdefs.h
 
-	UB_ON_WINDOWS=yes
-
 	for ac_header in iphlpapi.h
 do :
   ac_fn_c_check_header_compile "$LINENO" "iphlpapi.h" "ac_cv_header_iphlpapi_h" "$ac_includes_default
@@ -16889,7 +16885,6 @@ fi
 
 case "$enable_allsymbols" in
 	yes)
-	EXPORT_ALL_SYMBOLS=yes
 	COMMON_OBJ_ALL_SYMBOLS=""
 	UBSYMS=""
 	EXTRALINK="-L. -L.libs -lunbound"
@@ -16898,13 +16893,11 @@ $as_echo "#define EXPORT_ALL_SYMBOLS 1" >>confdefs.h
 
 	;;
 	no|*)
-	EXPORT_ALL_SYMBOLS=no
 	COMMON_OBJ_ALL_SYMBOLS='$(COMMON_OBJ)'
 	UBSYMS='-export-symbols $(srcdir)/libunbound/ubsyms.def'
 	EXTRALINK=""
 	;;
 esac
-
 
 
 
@@ -16926,7 +16919,7 @@ fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking if ${MAKE:-make} supports $< with implicit rule in scope" >&5
 $as_echo_n "checking if ${MAKE:-make} supports $< with implicit rule in scope... " >&6; }
 # on openBSD, the implicit rule make $< work.
-# on Solaris, it does not work (but $? does).
+# on Solaris, it does not work ($? is changed sources, $^ lists dependencies).
 # gmake works.
 cat >conftest.make <<EOF
 all:	conftest.lo
@@ -16949,7 +16942,7 @@ rm -rf conftest.dir
 if test ! -f conftest.lo; then
 	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
 $as_echo "no" >&6; }
-	SOURCEDETERMINE='echo "$?" | awk "-F " "{print \$$1;}" > .source'
+	SOURCEDETERMINE='echo "$^" | awk "-F " "{print \$$1;}" > .source'
 	SOURCEFILE='`cat .source`'
 else
 	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
