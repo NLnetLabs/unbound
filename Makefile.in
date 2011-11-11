@@ -21,7 +21,7 @@ staticexe=@staticexe@
 EXEEXT=@EXEEXT@
 configfile=@ub_conf_file@
 UNBOUND_RUN_DIR=@UNBOUND_RUN_DIR@
-CHECKLOCK_SRC=@CHECKLOCK_SRC@
+CHECKLOCK_SRC="testcode/checklocks.c"
 CHECKLOCK_OBJ=@CHECKLOCK_OBJ@
 WITH_PYTHONMODULE=@WITH_PYTHONMODULE@
 WITH_PYUNBOUND=@WITH_PYUNBOUND@
@@ -832,6 +832,8 @@ val_utils.lo val_utils.o: $(srcdir)/validator/val_utils.c config.h $(srcdir)/val
  $(srcdir)/util/rbtree.h $(srcdir)/validator/val_nsec.h $(srcdir)/validator/val_neg.h \
  $(srcdir)/services/cache/rrset.h $(srcdir)/util/storage/slabhash.h $(srcdir)/services/cache/dns.h \
  $(srcdir)/util/data/dname.h $(srcdir)/util/net_help.h $(srcdir)/util/regional.h $(srcdir)/util/config_file.h
+checklocks.lo checklocks.o: $(srcdir)/testcode/checklocks.c config.h $(srcdir)/util/locks.h $(srcdir)/util/log.h \
+ $(srcdir)/testcode/checklocks.h
 unitanchor.lo unitanchor.o: $(srcdir)/testcode/unitanchor.c config.h \
  $(srcdir)/util/log.h \
  $(srcdir)/util/data/dname.h $(srcdir)/util/storage/lruhash.h $(srcdir)/util/locks.h \
