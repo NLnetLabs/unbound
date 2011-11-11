@@ -881,7 +881,7 @@ fi
 AC_MSG_CHECKING([if make supports $<])
 if test "`uname`" = "SunOS"; then
 	AC_MSG_RESULT(no)
-	SOURCEDETERMINE='echo "$?" | awk "-F " "{print $$$$1;}" > .source'
+	SOURCEDETERMINE='echo "$?" | awk "-F " "{print \$$1;}" > .source'
 	SOURCEFILE='`cat .source`'
 else
 	AC_MSG_RESULT(yes)
