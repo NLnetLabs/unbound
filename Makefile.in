@@ -376,12 +376,12 @@ util/configlexer.c:  $(srcdir)/util/configlexer.lex util/configparser.h
 	if test "$(LEX)" != ":"; then \
 		echo "#include \"config.h\"" > $@ ;\
 		echo "#include \"util/configyyrename.h\"" >> $@ ;\
-		$(LEX) -t $< >> $@ ;\
+		$(LEX) -t $(srcdir)/util/configlexer.lex >> $@ ;\
 	fi
 
 util/configparser.c util/configparser.h:  $(srcdir)/util/configparser.y
 	@-if test ! -d util; then $(INSTALL) -d util; fi
-	$(YACC) -d -o util/configparser.c $<
+	$(YACC) -d -o util/configparser.c $(srcdir)/util/configparser.y
 
 clean:
 	rm -f *.o *.d *.lo *~ tags
