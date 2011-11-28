@@ -1,5 +1,6 @@
 28 November 2011: Wouter
 	- Fix quartile time estimate, it was too low, (thanks Jan Komissar).
+	- iana ports updated.
 
 11 November 2011: Wouter
 	- Makefile compat with SunOS make, BSD make and GNU make.
