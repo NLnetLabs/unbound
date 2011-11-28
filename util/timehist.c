@@ -220,7 +220,7 @@ timehist_quartile(struct timehist* hist, double q)
 		(double)hist->buckets[i].upper.tv_usec/1000000.;
 #endif
 	res = (lookfor - passed)*(up-low)/((double)hist->buckets[i].count);
-	return res;
+	return low+res;
 }
 
 void 
