@@ -1562,10 +1562,14 @@ serviced_tcp_callback(struct comm_point* c, void* arg, int error,
 		  + ((int)now.tv_usec - (int)sq->last_sent_time.tv_usec)/1000;
 		verbose(VERB_ALGO, "measured TCP-time at %d msec", roundtime);
 		log_assert(roundtime >= 0);
-		if(!infra_rtt_update(sq->outnet->infra, &sq->addr, sq->addrlen, 
-			sq->zone, sq->zonelen, roundtime, sq->last_rtt,
-			(uint32_t)now.tv_sec))
+		/* only store if less then AUTH_TIMEOUT seconds, it could be
+		 * huge due to system-hibernated and we woke up */
+		if(roundtime < TCP_AUTH_QUERY_TIMEOUT*1000) {
+		    if(!infra_rtt_update(sq->outnet->infra, &sq->addr,
+			sq->addrlen, sq->zone, sq->zonelen, roundtime,
+			sq->last_rtt, (uint32_t)now.tv_sec))
 			log_err("out of memory noting rtt.");
+		}
 	    }
 	}
 	/* insert address into reply info */
@@ -1744,10 +1748,14 @@ serviced_udp_callback(struct comm_point* c, void* arg, int error,
 		  + ((int)now.tv_usec - (int)sq->last_sent_time.tv_usec)/1000;
 		verbose(VERB_ALGO, "measured roundtrip at %d msec", roundtime);
 		log_assert(roundtime >= 0);
-		if(!infra_rtt_update(outnet->infra, &sq->addr, sq->addrlen, 
+		/* in case the system hibernated, do not enter a huge value,
+		 * above this value gives trouble with server selection */
+		if(roundtime < 60000) {
+		    if(!infra_rtt_update(outnet->infra, &sq->addr, sq->addrlen, 
 			sq->zone, sq->zonelen, roundtime, sq->last_rtt,
 			(uint32_t)now.tv_sec))
 			log_err("out of memory noting rtt.");
+		}
 	    }
 	} /* end of if_!fallback_tcp */
 	/* perform TC flag check and TCP fallback after updating our

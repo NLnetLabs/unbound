@@ -1,3 +1,7 @@
+30 November 2011: Wouter
+	- Fix for tcp-upstream and ssl-upstream for if a laptop sleeps, causes
+	  SERVFAILs.  Also fixed for UDP (but less likely).
+
 28 November 2011: Wouter
 	- Fix quartile time estimate, it was too low, (thanks Jan Komissar).
 	- iana ports updated.
