@@ -1,3 +1,6 @@
+2 December 2011: Wouter
+	- configure generated with autoconf 2.68.
+
 30 November 2011: Wouter
 	- Fix for tcp-upstream and ssl-upstream for if a laptop sleeps, causes
 	  SERVFAILs.  Also fixed for UDP (but less likely).
