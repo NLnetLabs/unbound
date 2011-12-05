@@ -170,6 +170,9 @@
 /* Define to 1 if you have the <login_cap.h> header file. */
 #undef HAVE_LOGIN_CAP_H
 
+/* If have GNU libc compatible malloc */
+#undef HAVE_MALLOC
+
 /* Define to 1 if you have the `memmove' function. */
 #undef HAVE_MEMMOVE
 

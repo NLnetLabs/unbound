@@ -14787,6 +14787,12 @@ $as_echo_n "checking for GNU libc compatible malloc... " >&6; }
 	if test "$cross_compiling" = yes; then :
   { $as_echo "$as_me:${as_lineno-$LINENO}: result: no (crosscompile)" >&5
 $as_echo "no (crosscompile)" >&6; }
+	case " $LIBOBJS " in
+  *" malloc.$ac_objext "* ) ;;
+  *) LIBOBJS="$LIBOBJS malloc.$ac_objext"
+ ;;
+esac
+
 
 cat >>confdefs.h <<_ACEOF
 #define malloc rpl_malloc_unbound
@@ -14813,6 +14819,12 @@ _ACEOF
 if ac_fn_c_try_run "$LINENO"; then :
   { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
 $as_echo "no" >&6; }
+	case " $LIBOBJS " in
+  *" malloc.$ac_objext "* ) ;;
+  *) LIBOBJS="$LIBOBJS malloc.$ac_objext"
+ ;;
+esac
+
 
 cat >>confdefs.h <<_ACEOF
 #define malloc rpl_malloc_unbound
@@ -14821,6 +14833,9 @@ _ACEOF
 else
   { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 $as_echo "yes" >&6; }
+
+$as_echo "#define HAVE_MALLOC 1" >>confdefs.h
+
 fi
 rm -f core *.core core.conftest.* gmon.out bb.out conftest$ac_exeext \
   conftest.$ac_objext conftest.beam conftest.$ac_ext

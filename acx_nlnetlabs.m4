@@ -1070,9 +1070,12 @@ char *malloc ();
 ]], [ if(malloc(0) != 0) return 1;])
 ],
 	[AC_MSG_RESULT([no])
+	AC_LIBOBJ(malloc)
 	AC_DEFINE_UNQUOTED([malloc], [rpl_malloc_$1], [Define if  replacement function should be used.])] ,
-	[AC_MSG_RESULT([yes])],
+	[AC_MSG_RESULT([yes])
+	AC_DEFINE([HAVE_MALLOC], 1, [If have GNU libc compatible malloc])],
 	[AC_MSG_RESULT([no (crosscompile)])
+	AC_LIBOBJ(malloc)
 	AC_DEFINE_UNQUOTED([malloc], [rpl_malloc_$1], [Define if  replacement function should be used.])] )
 ])
 
