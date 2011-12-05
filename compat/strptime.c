@@ -106,12 +106,10 @@ str2int(const char **buf, int max)
 char *
 unbound_strptime(const char *s, const char *format, struct tm *tm)
 {
-	int c, alt_format, ret;
+	int c, ret;
 	int split_year = 0;
 
 	while ((c = *format) != '\0') {
-		alt_format = 0;
-
 		/* whitespace, literal or format */
 		if (isspace(c)) { /* whitespace */
 			/** whitespace matches zero or more whitespace characters in the
