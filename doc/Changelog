@@ -1,5 +1,6 @@
 5 December 2011: Wouter
 	- Fix getaddrinfowithincludes on windows with fedora16 mingw32-gcc.
+	- Fix warnings with gcc 4.6 in compat/inet_ntop.c.
 
 2 December 2011: Wouter
 	- configure generated with autoconf 2.68.
