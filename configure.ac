@@ -321,6 +321,29 @@ ACX_CHECK_NONBLOCKING_BROKEN
 ACX_MKDIR_ONE_ARG
 AC_CHECK_FUNCS([strptime],[AC_CHECK_STRPTIME_WORKS],[AC_LIBOBJ([strptime])])
 
+# set memory allocation checking if requested
+AC_ARG_ENABLE(alloc-checks, AC_HELP_STRING([--enable-alloc-checks],
+	[ enable to memory allocation statistics, for debug purposes ]), 
+	, )
+AC_ARG_ENABLE(alloc-lite, AC_HELP_STRING([--enable-alloc-lite],
+	[ enable for lightweight alloc assertions, for debug purposes ]), 
+	, )
+AC_ARG_ENABLE(alloc-nonregional, AC_HELP_STRING([--enable-alloc-nonregional],
+	[ enable nonregional allocs, slow but exposes regional allocations to other memory purifiers, for debug purposes ]), 
+	, )
+if test x_$enable_alloc_nonregional = x_yes; then
+	AC_DEFINE(UNBOUND_ALLOC_NONREGIONAL, 1, [use malloc not regions, for debug use])
+fi
+if test x_$enable_alloc_checks = x_yes; then
+	AC_DEFINE(UNBOUND_ALLOC_STATS, 1, [use statistics for allocs and frees, for debug use])
+else
+	if test x_$enable_alloc_lite = x_yes; then
+		AC_DEFINE(UNBOUND_ALLOC_LITE, 1, [use to enable lightweight alloc assertions, for debug use])
+	else
+		ACX_FUNC_MALLOC([unbound])
+	fi
+fi
+
 # check windows threads (we use them, not pthreads, on windows).
 if test "$on_mingw" = "yes"; then
 # check windows threads
@@ -757,29 +780,6 @@ if test x_$enable_lock_checks = x_yes; then
 	AC_DEFINE(ENABLE_LOCK_CHECKS, 1, [Define if you want to use debug lock checking (slow).])
 	CHECKLOCK_OBJ="checklocks.lo"
 	AC_SUBST(CHECKLOCK_OBJ)
-fi
-
-# set memory allocation checking if requested
-AC_ARG_ENABLE(alloc-checks, AC_HELP_STRING([--enable-alloc-checks],
-	[ enable to memory allocation statistics, for debug purposes ]), 
-	, )
-AC_ARG_ENABLE(alloc-lite, AC_HELP_STRING([--enable-alloc-lite],
-	[ enable for lightweight alloc assertions, for debug purposes ]), 
-	, )
-AC_ARG_ENABLE(alloc-nonregional, AC_HELP_STRING([--enable-alloc-nonregional],
-	[ enable nonregional allocs, slow but exposes regional allocations to other memory purifiers, for debug purposes ]), 
-	, )
-if test x_$enable_alloc_nonregional = x_yes; then
-	AC_DEFINE(UNBOUND_ALLOC_NONREGIONAL, 1, [use malloc not regions, for debug use])
-fi
-if test x_$enable_alloc_checks = x_yes; then
-	AC_DEFINE(UNBOUND_ALLOC_STATS, 1, [use statistics for allocs and frees, for debug use])
-else
-	if test x_$enable_alloc_lite = x_yes; then
-		AC_DEFINE(UNBOUND_ALLOC_LITE, 1, [use to enable lightweight alloc assertions, for debug use])
-	else
-		ACX_FUNC_MALLOC([unbound])
-	fi
 fi
 
 ACX_CHECK_GETADDRINFO_WITH_INCLUDES

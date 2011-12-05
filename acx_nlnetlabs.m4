@@ -2,8 +2,9 @@
 # Copyright 2009, Wouter Wijngaards, NLnet Labs.   
 # BSD licensed.
 #
-# Version 17
+# Version 18
 # 2011-12-05 Fix getaddrinfowithincludes on windows with fedora16 mingw32-gcc.
+# 	     Fix ACX_MALLOC for redefined malloc error.
 # 2011-11-10 Fix FLTO test to not drop a.out in current directory.
 # 2011-11-01 Fix FLTO test for llvm on Lion.
 # 2011-08-01 Fix nonblock test (broken at v13).
@@ -1057,10 +1058,20 @@ dnl detect malloc and provide malloc compat prototype.
 dnl $1: unique name for compat code
 AC_DEFUN([ACX_FUNC_MALLOC],
 [
-	AC_FUNC_MALLOC
-	if test "$ac_cv_func_malloc_0_nonnull" = no; then
-		AC_DEFINE_UNQUOTED([malloc], [rpl_malloc_$1], [Define if  replacement function should be used.])
-	fi
+	AC_MSG_CHECKING([for GNU libc compatible malloc])
+	AC_RUN_IFELSE([AC_LANG_PROGRAM(
+[[#if defined STDC_HEADERS || defined HAVE_STDLIB_H
+#include <stdlib.h>
+#else
+char *malloc ();
+#endif
+]], [ if(malloc(0) != 0) return 1;])
+],
+	[AC_MSG_RESULT([no])
+	AC_DEFINE_UNQUOTED([malloc], [rpl_malloc_$1], [Define if  replacement function should be used.])] ,
+	[AC_MSG_RESULT([yes])],
+	[AC_MSG_RESULT([no (crosscompile)])
+	AC_DEFINE_UNQUOTED([malloc], [rpl_malloc_$1], [Define if  replacement function should be used.])] )
 ])
 
 dnl Define fallback for fseeko and ftello if needed.

@@ -781,6 +781,9 @@ with_sysroot
 enable_libtool_lock
 enable_rpath
 enable_largefile
+enable_alloc_checks
+enable_alloc_lite
+enable_alloc_nonregional
 with_pthreads
 with_solaris_threads
 with_pyunbound
@@ -792,9 +795,6 @@ with_libevent
 with_libexpat
 enable_static_exe
 enable_lock_checks
-enable_alloc_checks
-enable_alloc_lite
-enable_alloc_nonregional
 enable_allsymbols
 with_ldns
 '
@@ -1435,12 +1435,6 @@ Optional Features:
   --disable-libtool-lock  avoid locking (might break parallel builds)
   --disable-rpath         disable hardcoded rpath (default=enabled)
   --disable-largefile     omit support for large files
-  --disable-sha2          Disable SHA256 and SHA512 RRSIG support
-  --disable-gost          Disable GOST support
-  --enable-static-exe     enable to compile executables statically against
-                          event, ldns libs, for debug purposes
-  --enable-lock-checks    enable to check lock and unlock calls, for debug
-                          purposes
   --enable-alloc-checks   enable to memory allocation statistics, for debug
                           purposes
   --enable-alloc-lite     enable for lightweight alloc assertions, for debug
@@ -1448,6 +1442,12 @@ Optional Features:
   --enable-alloc-nonregional
                           enable nonregional allocs, slow but exposes regional
                           allocations to other memory purifiers, for debug
+                          purposes
+  --disable-sha2          Disable SHA256 and SHA512 RRSIG support
+  --disable-gost          Disable GOST support
+  --enable-static-exe     enable to compile executables statically against
+                          event, ldns libs, for debug purposes
+  --enable-lock-checks    enable to check lock and unlock calls, for debug
                           purposes
   --enable-allsymbols     export all symbols from libunbound and link binaries
                           to it, smaller install size but libunbound export
@@ -14750,6 +14750,86 @@ fi
 done
 
 
+# set memory allocation checking if requested
+# Check whether --enable-alloc-checks was given.
+if test "${enable_alloc_checks+set}" = set; then :
+  enableval=$enable_alloc_checks;
+fi
+
+# Check whether --enable-alloc-lite was given.
+if test "${enable_alloc_lite+set}" = set; then :
+  enableval=$enable_alloc_lite;
+fi
+
+# Check whether --enable-alloc-nonregional was given.
+if test "${enable_alloc_nonregional+set}" = set; then :
+  enableval=$enable_alloc_nonregional;
+fi
+
+if test x_$enable_alloc_nonregional = x_yes; then
+
+$as_echo "#define UNBOUND_ALLOC_NONREGIONAL 1" >>confdefs.h
+
+fi
+if test x_$enable_alloc_checks = x_yes; then
+
+$as_echo "#define UNBOUND_ALLOC_STATS 1" >>confdefs.h
+
+else
+	if test x_$enable_alloc_lite = x_yes; then
+
+$as_echo "#define UNBOUND_ALLOC_LITE 1" >>confdefs.h
+
+	else
+
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for GNU libc compatible malloc" >&5
+$as_echo_n "checking for GNU libc compatible malloc... " >&6; }
+	if test "$cross_compiling" = yes; then :
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no (crosscompile)" >&5
+$as_echo "no (crosscompile)" >&6; }
+
+cat >>confdefs.h <<_ACEOF
+#define malloc rpl_malloc_unbound
+_ACEOF
+
+else
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#if defined STDC_HEADERS || defined HAVE_STDLIB_H
+#include <stdlib.h>
+#else
+char *malloc ();
+#endif
+
+int
+main ()
+{
+ if(malloc(0) != 0) return 1;
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_run "$LINENO"; then :
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+
+cat >>confdefs.h <<_ACEOF
+#define malloc rpl_malloc_unbound
+_ACEOF
+
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+fi
+rm -f core *.core core.conftest.* gmon.out bb.out conftest$ac_exeext \
+  conftest.$ac_objext conftest.beam conftest.$ac_ext
+fi
+
+
+	fi
+fi
+
 # check windows threads (we use them, not pthreads, on windows).
 if test "$on_mingw" = "yes"; then
 # check windows threads
@@ -16854,116 +16934,6 @@ $as_echo "#define ENABLE_LOCK_CHECKS 1" >>confdefs.h
 
 	CHECKLOCK_OBJ="checklocks.lo"
 
-fi
-
-# set memory allocation checking if requested
-# Check whether --enable-alloc-checks was given.
-if test "${enable_alloc_checks+set}" = set; then :
-  enableval=$enable_alloc_checks;
-fi
-
-# Check whether --enable-alloc-lite was given.
-if test "${enable_alloc_lite+set}" = set; then :
-  enableval=$enable_alloc_lite;
-fi
-
-# Check whether --enable-alloc-nonregional was given.
-if test "${enable_alloc_nonregional+set}" = set; then :
-  enableval=$enable_alloc_nonregional;
-fi
-
-if test x_$enable_alloc_nonregional = x_yes; then
-
-$as_echo "#define UNBOUND_ALLOC_NONREGIONAL 1" >>confdefs.h
-
-fi
-if test x_$enable_alloc_checks = x_yes; then
-
-$as_echo "#define UNBOUND_ALLOC_STATS 1" >>confdefs.h
-
-else
-	if test x_$enable_alloc_lite = x_yes; then
-
-$as_echo "#define UNBOUND_ALLOC_LITE 1" >>confdefs.h
-
-	else
-
-	for ac_header in stdlib.h
-do :
-  ac_fn_c_check_header_mongrel "$LINENO" "stdlib.h" "ac_cv_header_stdlib_h" "$ac_includes_default"
-if test "x$ac_cv_header_stdlib_h" = xyes; then :
-  cat >>confdefs.h <<_ACEOF
-#define HAVE_STDLIB_H 1
-_ACEOF
-
-fi
-
-done
-
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for GNU libc compatible malloc" >&5
-$as_echo_n "checking for GNU libc compatible malloc... " >&6; }
-if ${ac_cv_func_malloc_0_nonnull+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  if test "$cross_compiling" = yes; then :
-  ac_cv_func_malloc_0_nonnull=no
-else
-  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-#if defined STDC_HEADERS || defined HAVE_STDLIB_H
-# include <stdlib.h>
-#else
-char *malloc ();
-#endif
-
-int
-main ()
-{
-return ! malloc (0);
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_run "$LINENO"; then :
-  ac_cv_func_malloc_0_nonnull=yes
-else
-  ac_cv_func_malloc_0_nonnull=no
-fi
-rm -f core *.core core.conftest.* gmon.out bb.out conftest$ac_exeext \
-  conftest.$ac_objext conftest.beam conftest.$ac_ext
-fi
-
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_malloc_0_nonnull" >&5
-$as_echo "$ac_cv_func_malloc_0_nonnull" >&6; }
-if test $ac_cv_func_malloc_0_nonnull = yes; then :
-
-$as_echo "#define HAVE_MALLOC 1" >>confdefs.h
-
-else
-  $as_echo "#define HAVE_MALLOC 0" >>confdefs.h
-
-   case " $LIBOBJS " in
-  *" malloc.$ac_objext "* ) ;;
-  *) LIBOBJS="$LIBOBJS malloc.$ac_objext"
- ;;
-esac
-
-
-$as_echo "#define malloc rpl_malloc" >>confdefs.h
-
-fi
-
-
-	if test "$ac_cv_func_malloc_0_nonnull" = no; then
-
-cat >>confdefs.h <<_ACEOF
-#define malloc rpl_malloc_unbound
-_ACEOF
-
-	fi
-
-	fi
 fi
 
 
