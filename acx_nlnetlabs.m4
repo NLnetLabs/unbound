@@ -2,7 +2,8 @@
 # Copyright 2009, Wouter Wijngaards, NLnet Labs.   
 # BSD licensed.
 #
-# Version 16
+# Version 17
+# 2011-12-05 Fix getaddrinfowithincludes on windows with fedora16 mingw32-gcc.
 # 2011-11-10 Fix FLTO test to not drop a.out in current directory.
 # 2011-11-01 Fix FLTO test for llvm on Lion.
 # 2011-08-01 Fix nonblock test (broken at v13).
@@ -794,7 +795,13 @@ int main() {
 }
 ]])],
 dnl this case on linux, solaris, bsd
-[ac_cv_func_getaddrinfo="yes"],
+[ac_cv_func_getaddrinfo="yes"
+dnl see if on windows
+if test "$ac_cv_header_windows_h" = "yes"; then
+	AC_DEFINE(USE_WINSOCK, 1, [Whether the windows socket API is used])
+	USE_WINSOCK="1"
+fi
+],
 dnl no quick getaddrinfo, try mingw32 and winsock2 library.
 ORIGLIBS="$LIBS"
 LIBS="$LIBS -lws2_32"
