@@ -2,6 +2,7 @@
 	- iana portlist updated.
 	- svn tag 1.4.14rc1
 	- fix infra cache comparison.
+	- Fix to constrain signer_name to be a parent of the lookupname.
 
 5 December 2011: Wouter
 	- Fix getaddrinfowithincludes on windows with fedora16 mingw32-gcc.

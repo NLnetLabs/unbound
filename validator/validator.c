@@ -1266,6 +1266,12 @@ processInit(struct module_qstate* qstate, struct val_qstate* vq,
 	/* Determine the signer/lookup name */
 	val_find_signer(subtype, &vq->qchase, vq->orig_msg->rep, 
 		vq->rrset_skip, &vq->signer_name, &vq->signer_len);
+	if(vq->signer_name != NULL &&
+		!dname_subdomain_c(lookup_name, vq->signer_name)) {
+		log_nametypeclass(VERB_ALGO, "this signer name is not a parent "
+			"of lookupname, omitted", vq->signer_name, 0, 0);
+		vq->signer_name = NULL;
+	}
 	if(vq->signer_name == NULL) {
 		log_nametypeclass(VERB_ALGO, "no signer, using", lookup_name,
 			0, 0);
