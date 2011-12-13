@@ -67,7 +67,7 @@ infra_compfunc(void* key1, void* key2)
 	struct infra_key* k2 = (struct infra_key*)key2;
 	int r = sockaddr_cmp(&k1->addr, k1->addrlen, &k2->addr, k2->addrlen);
 	if(r != 0)
-		return 0;
+		return r;
 	if(k1->namelen != k2->namelen) {
 		if(k1->namelen < k2->namelen)
 			return -1;
