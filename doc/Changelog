@@ -1,5 +1,6 @@
 15 December 2011: Wouter
 	- remove uninit warning from cachedump code.
+	- Fix parse error on negative SOA RRSIGs if badly ordered in the packet.
 
 13 December 2011: Wouter
 	- iana portlist updated.
