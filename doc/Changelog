@@ -1,3 +1,6 @@
+15 December 2011: Wouter
+	- remove uninit warning from cachedump code.
+
 13 December 2011: Wouter
 	- iana portlist updated.
 	- svn tag 1.4.14rc1

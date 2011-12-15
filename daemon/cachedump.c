@@ -814,6 +814,7 @@ print_dp_details(SSL* ssl, struct worker* worker, struct delegpt* dp)
 				return;
 		}
 		/* lookup in infra cache */
+		delay=0;
 		entry_ttl = infra_get_host_rto(worker->env.infra_cache,
 			&a->addr, a->addrlen, dp->name, dp->namelen,
 			&ri, &delay, *worker->env.now);
