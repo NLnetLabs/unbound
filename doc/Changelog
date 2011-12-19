@@ -4,6 +4,7 @@
 	  http://www.unbound.net/downloads/CVE-2011-4528.txt
 	- robust checks for next-closer NSEC3s.
 	- tag 1.4.14 created.
+	- trunk has 1.4.15 in development.
 
 15 December 2011: Wouter
 	- remove uninit warning from cachedump code.
