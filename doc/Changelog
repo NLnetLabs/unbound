@@ -1,3 +1,10 @@
+19 December 2011: Wouter
+	- Fix for VU#209659 CVE-2011-4528: Unbound denial of service
+	  vulnerabilities from nonstandard redirection and denial of existence
+	  http://www.unbound.net/downloads/CVE-2011-4528.txt
+	- robust checks for next-closer NSEC3s.
+	- tag 1.4.14 created.
+
 15 December 2011: Wouter
 	- remove uninit warning from cachedump code.
 	- Fix parse error on negative SOA RRSIGs if badly ordered in the packet.

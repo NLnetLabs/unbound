@@ -1196,8 +1196,7 @@ nsec3_do_prove_nodata(struct module_env* env, struct nsec3_filter* flt,
 			return sec_status_bogus;
 		}
 		/* everything is peachy keen, except for optout spans */
-		log_assert(ce.nc_rrset);
-		if(nsec3_has_optout(ce.nc_rrset, ce.nc_rr)) {
+		if(ce.nc_rrset && nsec3_has_optout(ce.nc_rrset, ce.nc_rr)) {
 			verbose(VERB_ALGO, "nsec3 nodata proof: matching "
 				"wildcard is in optout range, insecure");
 			return sec_status_insecure;
@@ -1209,6 +1208,10 @@ nsec3_do_prove_nodata(struct module_env* env, struct nsec3_filter* flt,
 	/* Due to forwarders, cnames, and other collating effects, we
 	 * can see the ordinary unsigned data from a zone beneath an
 	 * insecure delegation under an optout here */
+	if(!ce.nc_rrset) {
+		verbose(VERB_ALGO, "nsec3 nodata proof: no next closer nsec3");
+		return sec_status_bogus;
+	}
 
 	/* We need to make sure that the covering NSEC3 is opt-out. */
 	log_assert(ce.nc_rrset);
@@ -1380,6 +1383,13 @@ nsec3_prove_nods(struct module_env* env, struct val_env* ve,
 		verbose(VERB_ALGO, "nsec3 provenods: did not match qname, "
 		          "nor found a proven closest encloser.");
 		*reason = "no NSEC3 closest encloser";
+		return sec_status_bogus;
+	}
+
+	/* robust extra check */
+	if(!ce.nc_rrset) {
+		verbose(VERB_ALGO, "nsec3 nods proof: no next closer nsec3");
+		*reason = "no NSEC3 next closer";
 		return sec_status_bogus;
 	}
 
