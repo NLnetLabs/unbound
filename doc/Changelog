@@ -1,3 +1,9 @@
+24 December 2011: Wouter
+	- Fix for memory leak (about 20 bytes when a tcp or udp send operation
+	  towards authority servers failed, takes about 50.000 such failures to
+	  leak one Mb, such failures are also usually logged), reported by
+	  Robert Fleischmann.
+
 19 December 2011: Wouter
 	- Fix for VU#209659 CVE-2011-4528: Unbound denial of service
 	  vulnerabilities from nonstandard redirection and denial of existence
