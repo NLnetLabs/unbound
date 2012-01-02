@@ -63,6 +63,7 @@
 #include "util/log.h"
 #include "util/config_file.h"
 #include "util/data/msgreply.h"
+#include "util/storage/lookup3.h"
 #include "util/storage/slabhash.h"
 #include "services/listen_dnsport.h"
 #include "services/cache/rrset.h"
@@ -320,6 +321,7 @@ daemon_create_workers(struct daemon* daemon)
 		if(!daemon->rand)
 			fatal_exit("could not init random generator");
 	}
+	hash_set_raninit(ub_random(daemon->rand));
 	shufport = (int*)calloc(65536, sizeof(int));
 	if(!shufport)
 		fatal_exit("out of memory during daemon init");

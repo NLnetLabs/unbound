@@ -58,6 +58,7 @@
 #include "util/random.h"
 #include "util/config_file.h"
 #include "util/netevent.h"
+#include "util/storage/lookup3.h"
 #include "util/storage/slabhash.h"
 #include "util/net_help.h"
 #include "util/data/dname.h"
@@ -158,6 +159,19 @@ libworker_setup(struct ub_ctx* ctx, int is_bg)
 	}
 	if(!w->is_bg || w->is_bg_thread) {
 		lock_basic_unlock(&ctx->cfglock);
+	}
+	if(1) {
+		/* primitive lockout for threading: if it overwrites another
+		 * thread it is like wiping the cache (which is likely empty
+		 * at the start) */
+		/* note we are holding the ctx lock in normal threaded
+		 * cases so that is solved properly, it is only for many ctx
+		 * in different threads that this may clash */
+		static int done_raninit = 0;
+		if(!done_raninit) {
+			done_raninit = 1;
+			hash_set_raninit(ub_random(w->env->rnd));
+		}
 	}
 	seed = 0;
 

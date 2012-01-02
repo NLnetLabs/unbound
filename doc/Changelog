@@ -1,3 +1,7 @@
+2 January 2012: Wouter
+	- Fix to randomize hash function, based on 28c3 congress, reported
+	  by Peter van Dijk.
+
 24 December 2011: Wouter
 	- Fix for memory leak (about 20 bytes when a tcp or udp send operation
 	  towards authority servers failed, takes about 50.000 such failures to
