@@ -466,6 +466,9 @@ infra_get_lame_rtt(struct infra_cache* infra,
 		 * blacklisted servers stay blacklisted if this is chosen */
 		if(host->rtt.rto >= USEFUL_SERVER_TOP_TIMEOUT) {
 			*rtt = USEFUL_SERVER_TOP_TIMEOUT-1000;
+			*lame = 0;
+			*dnsseclame = 0;
+			*reclame = 0;
 			lock_rw_unlock(&e->lock);
 			return 1;
 		}

@@ -170,7 +170,7 @@ libworker_setup(struct ub_ctx* ctx, int is_bg)
 		static int done_raninit = 0;
 		if(!done_raninit) {
 			done_raninit = 1;
-			hash_set_raninit(ub_random(w->env->rnd));
+			hash_set_raninit((uint32_t)ub_random(w->env->rnd));
 		}
 	}
 	seed = 0;

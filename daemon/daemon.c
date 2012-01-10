@@ -321,7 +321,7 @@ daemon_create_workers(struct daemon* daemon)
 		if(!daemon->rand)
 			fatal_exit("could not init random generator");
 	}
-	hash_set_raninit(ub_random(daemon->rand));
+	hash_set_raninit((uint32_t)ub_random(daemon->rand));
 	shufport = (int*)calloc(65536, sizeof(int));
 	if(!shufport)
 		fatal_exit("out of memory during daemon init");
