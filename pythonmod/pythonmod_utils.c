@@ -66,7 +66,7 @@ int storeQueryInCache(struct module_qstate* qstate, struct query_info* qinfo, st
     }
 
     return dns_cache_store(qstate->env, qinfo, msgrep, is_referral, 
-	qstate->prefetch_leeway);
+	qstate->prefetch_leeway, NULL);
 }
 
 /*  Invalidate the message associated with query_info stored in message cache */

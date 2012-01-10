@@ -535,8 +535,7 @@ store_rrset(ldns_buffer* pkt, struct msg_parse* msg, struct module_env* env,
 	ref.key = k;
 	ref.id = k->id;
 	/*ignore ret: it was in the cache, ref updated */
-	(void)rrset_cache_update(env->rrset_cache, &ref,
-		env->alloc, now);
+	(void)rrset_cache_update(env->rrset_cache, &ref, env->alloc, now);
 }
 
 /** Check if there are SOA records in the authority section (negative) */

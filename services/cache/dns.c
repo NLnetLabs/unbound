@@ -55,24 +55,49 @@
  * @param env: module environment with caches.
  * @param rep: contains list of rrsets to store.
  * @param now: current time.
+ * @param qrep: update rrsets here if cache is better
+ * @param region: for qrep allocs.
  */
 static void
-store_rrsets(struct module_env* env, struct reply_info* rep, uint32_t now)
+store_rrsets(struct module_env* env, struct reply_info* rep, uint32_t now,
+	struct reply_info* qrep, struct regional* region)
 {
         size_t i;
         /* see if rrset already exists in cache, if not insert it. */
         for(i=0; i<rep->rrset_count; i++) {
                 rep->ref[i].key = rep->rrsets[i];
                 rep->ref[i].id = rep->rrsets[i]->id;
-                if(rrset_cache_update(env->rrset_cache, &rep->ref[i],
-                        env->alloc, now)) /* it was in the cache */
+		/* update ref if it was in the cache */ 
+		switch(rrset_cache_update(env->rrset_cache, &rep->ref[i],
+                        env->alloc, now)) {
+		case 0: /* ref unchanged, item inserted */
+			break;
+		case 2: /* ref updated, cache is superior */
+			if(region) {
+				struct ub_packed_rrset_key* ck;
+				lock_rw_rdlock(&rep->ref[i].key->entry.lock);
+				/* if deleted rrset, do not copy it */
+				if(rep->ref[i].key->id == 0)
+					ck = NULL;
+				else 	ck = packed_rrset_copy_region(
+					rep->ref[i].key, region, now);
+				lock_rw_unlock(&rep->ref[i].key->entry.lock);
+				if(ck) {
+					/* use cached copy if memory allows */
+					qrep->rrsets[i] = ck;
+				}
+			}
+			/* no break: also copy key item */
+		case 1: /* ref updated, item inserted */
                         rep->rrsets[i] = rep->ref[i].key;
+		}
         }
 }
 
 void 
 dns_cache_store_msg(struct module_env* env, struct query_info* qinfo,
-	hashvalue_t hash, struct reply_info* rep, uint32_t leeway)
+	hashvalue_t hash, struct reply_info* rep, uint32_t leeway,
+	struct reply_info* qrep, struct regional* region)
 {
 	struct msgreply_entry* e;
 	uint32_t ttl = rep->ttl;
@@ -83,9 +108,11 @@ dns_cache_store_msg(struct module_env* env, struct query_info* qinfo,
 		rep->ref[i].key = rep->rrsets[i];
 		rep->ref[i].id = rep->rrsets[i]->id;
 	}
-	reply_info_sortref(rep);
+
+	/* there was a reply_info_sortref(rep) here but it seems to be
+	 * unnecessary, because the cache gets locked per rrset. */
 	reply_info_set_ttls(rep, *env->now);
-	store_rrsets(env, rep, *env->now+leeway);
+	store_rrsets(env, rep, *env->now+leeway, qrep, region);
 	if(ttl == 0) {
 		/* we do not store the message, but we did store the RRs,
 		 * which could be useful for delegation information */
@@ -703,7 +730,8 @@ dns_cache_lookup(struct module_env* env,
 
 int 
 dns_cache_store(struct module_env* env, struct query_info* msgqinf,
-        struct reply_info* msgrep, int is_referral, uint32_t leeway)
+        struct reply_info* msgrep, int is_referral, uint32_t leeway,
+	struct regional* region)
 {
 	struct reply_info* rep = NULL;
 	/* alloc, malloc properly (not in region, like msg is) */
@@ -746,7 +774,7 @@ dns_cache_store(struct module_env* env, struct query_info* msgqinf,
 		rep->flags |= (BIT_RA | BIT_QR);
 		rep->flags &= ~(BIT_AA | BIT_CD);
 		h = query_info_hash(&qinf);
-		dns_cache_store_msg(env, &qinf, h, rep, leeway);
+		dns_cache_store_msg(env, &qinf, h, rep, leeway, msgrep, region);
 		/* qname is used inside query_info_entrysetup, and set to 
 		 * NULL. If it has not been used, free it. free(0) is safe. */
 		free(qinf.qname);

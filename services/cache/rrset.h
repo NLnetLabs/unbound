@@ -125,6 +125,9 @@ void rrset_cache_touch(struct rrset_cache* r, struct ub_packed_rrset_key* key,
  * @param alloc: how to allocate (and deallocate) the special rrset key.
  * @param timenow: current time (to see if ttl in cache is expired).
  * @return: true if the passed reference is updated, false if it is unchanged.
+ * 	0: reference unchanged, inserted in cache.
+ * 	1: reference updated, item is inserted in cache.
+ * 	2: reference updated, item in cache is considered superior.
  */
 int rrset_cache_update(struct rrset_cache* r, struct rrset_ref* ref, 
 	struct alloc_cache* alloc, uint32_t timenow);

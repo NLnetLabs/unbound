@@ -85,7 +85,7 @@ ENTRY_BEGIN
 	SECTION ANSWER
 	bla.example.com. IN A 10.20.30.140
 	SECTION AUTHORITY
-	example.com. 200 IN NS ns.example.com.
+	example.com. 100 IN NS ns.example.com.
 	SECTION ADDITIONAL
 	ns.example.com. IN A 10.20.30.50
 ENTRY_END

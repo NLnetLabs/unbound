@@ -285,9 +285,9 @@ www.example.com. IN A
 SECTION ANSWER
 www.example.com. 3600 IN A	88.88.88.88
 SECTION AUTHORITY
-example.com.	3600 IN NS	ns.example.com.
+example.com.	1240 IN NS	ns.example.com.
 SECTION ADDITIONAL
-ns.example.com.	3600 	IN 	A	8.8.8.8
+ns.example.com.	820 	IN 	A	8.8.8.8
 ENTRY_END
 
 SCENARIO_END

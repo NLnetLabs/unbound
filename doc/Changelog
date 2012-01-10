@@ -1,3 +1,8 @@
+10 January 2012: Wouter
+	- Fix bug #425: unbound reports wrong TTL in reply, it reports a TTL
+	  that would be permissible by the RFCs but it is not the TTL in the
+	  cache.
+
 2 January 2012: Wouter
 	- Fix to randomize hash function, based on 28c3 congress, reported
 	  by Peter van Dijk.
