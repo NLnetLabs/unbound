@@ -1117,3 +1117,8 @@ int ub_ctx_data_remove(struct ub_ctx* ctx, char *data)
 	free(nm);
 	return UB_NOERROR;
 }
+
+const char* ub_version(void)
+{
+	return PACKAGE_VERSION;
+}

@@ -543,6 +543,12 @@ int ub_ctx_data_add(struct ub_ctx* ctx, char *data);
  */
 int ub_ctx_data_remove(struct ub_ctx* ctx, char *data);
 
+/**
+ * Get a version string from the libunbound implementation.
+ * @return a static constant string with the version number.
+ */
+const char* ub_version(void);
+
 #ifdef __cplusplus
 }
 #endif
