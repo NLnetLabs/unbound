@@ -1,6 +1,6 @@
 12 January 2012: Wouter
-	- Added ub_version().  API version increase, with (binary) backwards
-	  compatibility for the previous version.
+	- bug#428: add ub_version() call to libunbound.  API version increase,
+	  with (binary) backwards compatibility for the previous version.
 
 10 January 2012: Wouter
 	- Fix bug #425: unbound reports wrong TTL in reply, it reports a TTL
