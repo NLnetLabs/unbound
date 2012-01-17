@@ -1,3 +1,8 @@
+17 January 2012: Wouter
+	- Fix bug where canonical_compare of RRSIG did not downcase the
+	  signer-name.  This is mostly harmless because RRSIGs do not have
+	  to be sorted in canonical order, usually.
+
 12 January 2012: Wouter
 	- bug#428: add ub_version() call to libunbound.  API version increase,
 	  with (binary) backwards compatibility for the previous version.

@@ -899,6 +899,8 @@ canonical_compare(struct ub_packed_rrset_key* rrset, size_t i, size_t j)
 		case LDNS_RR_TYPE_KX:
 		case LDNS_RR_TYPE_MX:
 		case LDNS_RR_TYPE_SIG:
+		/* RRSIG signer name has to be downcased */
+		case LDNS_RR_TYPE_RRSIG:
 		case LDNS_RR_TYPE_PX:
 		case LDNS_RR_TYPE_NAPTR:
 		case LDNS_RR_TYPE_SRV:
@@ -910,7 +912,6 @@ canonical_compare(struct ub_packed_rrset_key* rrset, size_t i, size_t j)
 
 		case LDNS_RR_TYPE_HINFO: /* no longer downcased */
 		case LDNS_RR_TYPE_NSEC: 
-		case LDNS_RR_TYPE_RRSIG:
 	default:
 		/* For unknown RR types, or types not listed above,
 		 * no canonicalization is needed, do binary compare */
@@ -1050,6 +1051,7 @@ canonicalize_rdata(ldns_buffer* buf, struct ub_packed_rrset_key* rrset,
 			query_dname_tolower(datstart);
 			return;
 		case LDNS_RR_TYPE_SIG:
+		/* downcase the RRSIG, compat with BIND (kept it from SIG) */
 		case LDNS_RR_TYPE_RRSIG:
 			/* skip fixed part */
 			if(len < 2+18+1)
@@ -1095,7 +1097,7 @@ canonicalize_rdata(ldns_buffer* buf, struct ub_packed_rrset_key* rrset,
 			query_dname_tolower(datstart);
 			return;
 
-		/* do not canonicalize NSEC rdata name, compat with bug
+		/* do not canonicalize NSEC rdata name, compat with 
 		 * from bind 9.4 signer, where it does not do so */
 		case LDNS_RR_TYPE_NSEC: /* type starts with the name */
 		case LDNS_RR_TYPE_HINFO: /* not downcased */
