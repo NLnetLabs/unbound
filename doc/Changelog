@@ -1,5 +1,6 @@
 18 January 2012: Wouter
 	- tag 1.4.15rc1 created
+	- updated libunbound/ubsyms.def and remade tag 1.4.15rc1.
 
 17 January 2012: Wouter
 	- Fix bug where canonical_compare of RRSIG did not downcase the
