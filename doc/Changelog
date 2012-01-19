@@ -1,3 +1,7 @@
+19 January 2012: Wouter
+	- Fix to write key files completely to a temporary file, and if that
+	  succeeds, replace the real key file.  So failures leave a useful file.
+
 18 January 2012: Wouter
 	- tag 1.4.15rc1 created
 	- updated libunbound/ubsyms.def and remade tag 1.4.15rc1.

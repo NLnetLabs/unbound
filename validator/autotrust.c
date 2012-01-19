@@ -864,7 +864,7 @@ trustanchor_state2str(autr_state_t s)
 }
 
 /** print ID to file */
-static void
+static int
 print_id(FILE* out, char* fname, struct module_env* env, 
 	uint8_t* nm, size_t nmlen, uint16_t dclass)
 {
@@ -888,37 +888,40 @@ print_id(FILE* out, char* fname, struct module_env* env,
 	ldns_buffer_flip(env->scratch_buffer);
 	if(fprintf(out, ";;id: %s %d\n", 
 		(char*)ldns_buffer_begin(env->scratch_buffer),
-		(int)dclass) < 0)
+		(int)dclass) < 0) {
 		log_err("could not write to %s: %s", fname, strerror(errno));
+		return 0;
+	}
+	return 1;
 }
 
-void autr_write_file(struct module_env* env, struct trust_anchor* tp)
+static int
+autr_write_contents(FILE* out, char* fn, struct module_env* env,
+	struct trust_anchor* tp)
 {
 	char tmi[32];
-	FILE* out;
 	struct autr_ta* ta;
-	char* fn = tp->autr->file;
-	log_assert(tp->autr);
-	verbose(VERB_ALGO, "autotrust: write to disk");
-	out = fopen(tp->autr->file, "w");
-	if(!out) {
-		log_err("Could not open autotrust file for writing, %s: %s",
-			tp->autr->file, strerror(errno));
-		return;
-	}
+	char* str;
+
 	/* write pretty header */
-	if(fprintf(out, "; autotrust trust anchor file\n") < 0)
+	if(fprintf(out, "; autotrust trust anchor file\n") < 0) {
 		log_err("could not write to %s: %s", fn, strerror(errno));
+		return 0;
+	}
 	if(tp->autr->revoked) {
 		if(fprintf(out, ";;REVOKED\n") < 0 ||
 		   fprintf(out, "; The zone has all keys revoked, and is\n"
 			"; considered as if it has no trust anchors.\n"
 			"; the remainder of the file is the last probe.\n"
 			"; to restart the trust anchor, overwrite this file.\n"
-			"; with one containing valid DNSKEYs or DSes.\n") < 0)
+			"; with one containing valid DNSKEYs or DSes.\n") < 0) {
 		   log_err("could not write to %s: %s", fn, strerror(errno));
+		   return 0;
+		}
 	}
-	print_id(out, tp->autr->file, env, tp->name, tp->namelen, tp->dclass);
+	if(!print_id(out, fn, env, tp->name, tp->namelen, tp->dclass)) {
+		return 0;
+	}
 	if(fprintf(out, ";;last_queried: %u ;;%s", 
 		(unsigned int)tp->autr->last_queried, 
 		ctime_r(&(tp->autr->last_queried), tmi)) < 0 ||
@@ -931,13 +934,13 @@ void autr_write_file(struct module_env* env, struct trust_anchor* tp)
 	   fprintf(out, ";;query_failed: %d\n", (int)tp->autr->query_failed)<0
 	   || fprintf(out, ";;query_interval: %d\n", 
 	   (int)tp->autr->query_interval) < 0 ||
-	   fprintf(out, ";;retry_time: %d\n", (int)tp->autr->retry_time) < 0)
+	   fprintf(out, ";;retry_time: %d\n", (int)tp->autr->retry_time) < 0) {
 		log_err("could not write to %s: %s", fn, strerror(errno));
+		return 0;
+	}
 
 	/* write anchors */
 	for(ta=tp->autr->keys; ta; ta=ta->next) {
-		char* str;
-
 		/* by default do not store START and REMOVED keys */
 		if(ta->s == AUTR_STATE_START)
 			continue;
@@ -949,19 +952,53 @@ void autr_write_file(struct module_env* env, struct trust_anchor* tp)
 		str = ldns_rr2str(ta->rr);
 		if(!str || !str[0]) {
 			free(str);
-			log_err("malloc failure writing %s", tp->autr->file);
-			continue;
+			log_err("malloc failure writing %s", fn);
+			return 0;
 		}
 		str[strlen(str)-1] = 0; /* remove newline */
 		if(fprintf(out, "%s ;;state=%d [%s] ;;count=%d "
 			";;lastchange=%u ;;%s", str, (int)ta->s, 
 			trustanchor_state2str(ta->s), (int)ta->pending_count,
 			(unsigned int)ta->last_change, 
-			ctime_r(&(ta->last_change), tmi)) < 0)
+			ctime_r(&(ta->last_change), tmi)) < 0) {
 		   log_err("could not write to %s: %s", fn, strerror(errno));
+		   free(str);
+		   return 0;
+		}
 		free(str);
 	}
+	return 1;
+}
+
+void autr_write_file(struct module_env* env, struct trust_anchor* tp)
+{
+	FILE* out;
+	char* fname = tp->autr->file;
+	char tempf[2048];
+	log_assert(tp->autr);
+	/* unique name with pid number and thread number */
+	snprintf(tempf, sizeof(tempf), "%s.%d-%d", fname, (int)getpid(),
+		env&&env->worker?*(int*)env->worker:0);
+	verbose(VERB_ALGO, "autotrust: write to disk: %s", tempf);
+	out = fopen(tempf, "w");
+	if(!out) {
+		log_err("could not open autotrust file for writing, %s: %s",
+			tempf, strerror(errno));
+		return;
+	}
+	if(!autr_write_contents(out, tempf, env, tp)) {
+		/* failed to write contents (completely) */
+		fclose(out);
+		unlink(tempf);
+		log_err("could not completely write: %s", fname);
+		return;
+	}
+	/* success; overwrite actual file */
 	fclose(out);
+	verbose(VERB_ALGO, "autotrust: replaced %s", fname);
+	if(rename(tempf, fname) < 0) {
+		log_err("rename(%s to %s): %s", tempf, fname, strerror(errno));
+	}
 }
 
 /** 
