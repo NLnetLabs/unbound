@@ -1,3 +1,6 @@
+20 January 2012: Wouter
+	- Fix bug #424: compile on OpenIndiana OS with gcc 4.6.2.
+
 19 January 2012: Wouter
 	- Fix to write key files completely to a temporary file, and if that
 	  succeeds, replace the real key file.  So failures leave a useful file.
