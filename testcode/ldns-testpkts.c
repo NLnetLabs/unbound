@@ -231,7 +231,7 @@ static void adjustline(char* line, struct entry* e,
 static struct entry* new_entry()
 {
 	struct entry* e = LDNS_MALLOC(struct entry);
-	memset(e, 0, sizeof(e));
+	memset(e, 0, sizeof(*e));
 	e->match_opcode = false;
 	e->match_qtype = false;
 	e->match_qname = false;
