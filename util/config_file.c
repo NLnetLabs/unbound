@@ -417,8 +417,7 @@ int config_set_option(struct config_file* cfg, const char* opt,
 			memmove(oi, cfg->out_ifs, cfg->num_out_ifs*sizeof(char*));
 			free(cfg->out_ifs);
 		}
-		oi[cfg->num_out_ifs] = d;
-		cfg->num_out_ifs++;
+		oi[cfg->num_out_ifs++] = d;
 		cfg->out_ifs = oi;
 	} else {
 		/* unknown or unsupported (from the set_option interface):
