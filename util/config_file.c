@@ -409,7 +409,18 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	else S_STR("control-cert-file:", control_cert_file)
 	else S_STR("module-config:", module_conf)
 	else S_STR("python-script:", python_script)
-	else {
+	else if (strcmp(opt, "outgoing-interface:") == 0) {
+		char* d = strdup(val);
+		char** oi = (char**)malloc((cfg->num_out_ifs+1)*sizeof(char*));
+		if(!d || !oi) { free(d); free(oi); return -1; }
+		if(cfg->out_ifs && cfg->num_out_ifs) {
+			memmove(oi, cfg->out_ifs, cfg->num_out_ifs*sizeof(char*));
+			free(cfg->out_ifs);
+		}
+		oi[cfg->num_out_ifs] = d;
+		cfg->num_out_ifs++;
+		cfg->out_ifs = oi;
+	} else {
 		/* unknown or unsupported (from the set_option interface):
 		 * interface, outgoing-interface, access-control, 
 		 * stub-zone, name, stub-addr, stub-host, stub-prime
