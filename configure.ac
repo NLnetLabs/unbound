@@ -6,10 +6,10 @@ sinclude(acx_pthread.m4)
 sinclude(acx_python.m4)
 sinclude(ac_pkg_swig.m4)
 
-AC_INIT(unbound, 1.4.15, unbound-bugs@nlnetlabs.nl, unbound)
+AC_INIT(unbound, 1.4.16, unbound-bugs@nlnetlabs.nl, unbound)
 
 LIBUNBOUND_CURRENT=3
-LIBUNBOUND_REVISION=0
+LIBUNBOUND_REVISION=1
 LIBUNBOUND_AGE=1
 # 1.0.0 had 0:12:0
 # 1.0.1 had 0:13:0
@@ -41,6 +41,7 @@ LIBUNBOUND_AGE=1
 # and 1.4.13p1 and 1.4.13.p2
 # 1.4.14 had 2:14:0
 # 1.4.15 had 3:0:1 # adds ub_version()
+# 1.4.16 had 3:1:1
 
 #   Current  -- the number of the binary API that we're implementing
 #   Revision -- which iteration of the implementation of the binary
