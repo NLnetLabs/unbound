@@ -1,3 +1,7 @@
+30 January 2012: Wouter
+	- Fix version-number in libtool to be version-info so it produces
+	  libunbound.so.2 like it should.
+
 26 January 2012: Wouter
 	- Tag 1.4.15 (same as 1.4.15rc1), for 1.4.15 release.
 	- trunk 1.4.16; includes changes memset testcode, #424 openindiana,
