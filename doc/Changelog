@@ -1,3 +1,9 @@
+1 February 2012: Wouter
+	- Fix validation failures (like: validation failure xx: no NSEC3
+	  closest encloser from yy for DS zz. while building chain of trust,
+	  because of a bug in the TTL-fix in 1.4.15, it picked the wrong rdata
+	  for an NSEC3.  Now it does not change rdata, and fixes TTL.
+
 30 January 2012: Wouter
 	- Fix version-number in libtool to be version-info so it produces
 	  libunbound.so.2 like it should.

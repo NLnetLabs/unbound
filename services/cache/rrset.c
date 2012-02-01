@@ -207,7 +207,8 @@ rrset_cache_update(struct rrset_cache* r, struct rrset_ref* ref,
 			/* cache is superior, return that value */
 			lock_rw_unlock(&e->lock);
 			ub_packed_rrset_parsedelete(k, alloc);
-			return 2;
+			if(equal) return 2;
+			return 1;
 		}
 		lock_rw_unlock(&e->lock);
 		/* Go on and insert the passed item.
