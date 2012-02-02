@@ -1,3 +1,6 @@
+2 February 2012: Wouter
+	- 1.4.16 release tag.
+
 1 February 2012: Wouter
 	- Fix validation failures (like: validation failure xx: no NSEC3
 	  closest encloser from yy for DS zz. while building chain of trust,
