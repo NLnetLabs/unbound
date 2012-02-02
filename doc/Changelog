@@ -1,5 +1,6 @@
 2 February 2012: Wouter
 	- 1.4.16 release tag.
+	- svn trunk is 1.4.17 in development.
 
 1 February 2012: Wouter
 	- Fix validation failures (like: validation failure xx: no NSEC3
