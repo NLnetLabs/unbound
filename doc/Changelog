@@ -1,3 +1,6 @@
+3 February 2012: Wouter
+	- fix for windows, rename() is not posix compliant on windows.
+
 2 February 2012: Wouter
 	- 1.4.16 release tag.
 	- svn trunk is 1.4.17 in development.

@@ -996,6 +996,9 @@ void autr_write_file(struct module_env* env, struct trust_anchor* tp)
 	/* success; overwrite actual file */
 	fclose(out);
 	verbose(VERB_ALGO, "autotrust: replaced %s", fname);
+#ifdef UB_ON_WINDOWS
+	(void)unlink(fname); /* windows does not replace file with rename() */
+#endif
 	if(rename(tempf, fname) < 0) {
 		log_err("rename(%s to %s): %s", tempf, fname, strerror(errno));
 	}
