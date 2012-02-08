@@ -658,6 +658,30 @@ case "$enable_gost" in
 	;;
 esac
 
+AC_ARG_ENABLE(ecdsa, AC_HELP_STRING([--enable-ecdsa], [Enable ECDSA support, experimental]))
+use_ecdsa="no"
+case "$enable_ecdsa" in
+    yes)
+      AC_CHECK_FUNC(ECDSA_sign, [], [AC_MSG_ERROR([OpenSSL does not support ECDSA])])
+      AC_CHECK_FUNC(SHA384_Init, [], [AC_MSG_ERROR([OpenSSL does not support SHA384])])
+      AC_CHECK_DECLS([NID_X9_62_prime256v1, NID_secp384r1], [], [AC_MSG_ERROR([OpenSSL does not support the ECDSA curves])], [AC_INCLUDES_DEFAULT
+#include <openssl/evp.h>
+      ])
+      # we now know we have ECDSA and the required curves.
+      AC_DEFINE_UNQUOTED([USE_ECDSA], [1], [Define this to enable ECDSA support.])
+      use_ecdsa="yes"
+      AC_WARN([
+      *****************************************************************
+      *** YOU HAVE ENABLED ECDSA WHICH IS EXPERIMENTAL AT THIS TIME ***
+      *** PLEASE DO NOT USE THIS ON THE PUBLIC INTERNET             ***
+      *****************************************************************])
+      ;;
+    no)
+      ;;
+    *)
+      ;;
+esac
+
 # check for libevent
 AC_ARG_WITH(libevent, AC_HELP_STRING([--with-libevent=pathname],
     [use libevent (will check /usr/local /opt/local /usr/lib /usr/pkg /usr/sfw /usr  or you can specify an explicit path). Slower, but allows use of large outgoing port ranges.]),
@@ -942,6 +966,14 @@ if test x$use_gost = xyes; then
 else
     ac_cv_func_ldns_key_EVP_load_gost_id="yes"
 fi
+if test x$use_ecdsa = xyes; then
+    AC_CHECK_DECL([LDNS_ECDSAP384SHA384], [], [], [
+AC_INCLUDES_DEFAULT
+#include <ldns/ldns.h>
+    ])
+else
+    ac_cv_have_decl_LDNS_ECDSAP384SHA384="yes"
+fi
 AC_CHECK_HEADERS([ldns/ldns.h],,[
 	AC_MSG_ERROR([No ldns include file found, install the ldns library development files.  Install package ldns-dev or ldns-devel or download source http://www.nlnetlabs.nl/projects/ldns])
 	], [AC_INCLUDES_DEFAULT
@@ -970,7 +1002,8 @@ if test $ac_cv_func_ldns_buffer_copy = yes \
     -a $ac_cv_func_ldns_get_random = yes \
     -a $ac_cv_header_ldns_ldns_h = yes \
     -a $ac_cv_func_ldns_b32_ntop_extended_hex = yes \
-    -a $ac_cv_func_ldns_key_EVP_load_gost_id = yes; then
+    -a $ac_cv_func_ldns_key_EVP_load_gost_id = yes \
+    -a $ac_cv_have_decl_LDNS_ECDSAP384SHA384 = yes; then
     dnl ldns was found
     :
 else

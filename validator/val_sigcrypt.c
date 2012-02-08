@@ -280,6 +280,10 @@ ds_digest_size_algo(struct ub_packed_rrset_key* k, size_t idx)
 				return 32;
 			else	return 0;
 #endif
+#ifdef USE_ECDSA
+		case LDNS_SHA384:
+			return SHA384_DIGEST_LENGTH;
+#endif
 		default: break;
 	}
 	return 0;
@@ -347,6 +351,12 @@ ds_create_dnskey_digest(struct module_env* env,
 			if(do_gost94((unsigned char*)ldns_buffer_begin(b), 
 				ldns_buffer_limit(b), (unsigned char*)digest))
 				return 1;
+#endif
+#ifdef USE_ECDSA
+		case LDNS_SHA384:
+			(void)SHA384((unsigned char*)ldns_buffer_begin(b),
+				ldns_buffer_limit(b), (unsigned char*)digest);
+			return 1;
 #endif
 		default: 
 			verbose(VERB_QUERY, "unknown DS digest algorithm %d", 
@@ -417,6 +427,10 @@ dnskey_algo_id_is_supported(int id)
 #endif
 #if defined(HAVE_EVP_SHA512) && defined(USE_SHA2)
 	case LDNS_RSASHA512:
+#endif
+#ifdef USE_ECDSA
+	case LDNS_ECDSAP256SHA256:
+	case LDNS_ECDSAP384SHA384:
 #endif
 		return 1;
 #ifdef USE_GOST
@@ -1321,7 +1335,7 @@ log_crypto_error(const char* str, unsigned long e)
  * Setup DSA key digest in DER encoding ... 
  * @param sig: input is signature output alloced ptr (unless failure).
  * 	caller must free alloced ptr if this routine returns true.
- * @param len: intput is initial siglen, output is output len.
+ * @param len: input is initial siglen, output is output len.
  * @return false on failure.
  */
 static int
@@ -1350,6 +1364,7 @@ setup_dsa_sig(unsigned char** sig, unsigned int* len)
 	*sig = NULL;
 	newlen = i2d_DSA_SIG(dsasig, sig);
 	if(newlen < 0) {
+		DSA_SIG_free(dsasig);
 		free(*sig);
 		return 0;
 	}
@@ -1357,6 +1372,48 @@ setup_dsa_sig(unsigned char** sig, unsigned int* len)
 	DSA_SIG_free(dsasig);
 	return 1;
 }
+
+#ifdef USE_ECDSA
+/**
+ * Setup the ECDSA signature in its encoding that the library wants.
+ * Converts from plain numbers to ASN formatted.
+ * @param sig: input is signature, output alloced ptr (unless failure).
+ * 	caller must free alloced ptr if this routine returns true.
+ * @param len: input is initial siglen, output is output len.
+ * @return false on failure.
+ */
+static int
+setup_ecdsa_sig(unsigned char** sig, unsigned int* len)
+{
+	ECDSA_SIG* ecdsa_sig;
+	int newlen;
+	unsigned int bnsize = (*len)/2;
+	/* if too short or not even length, fails */
+	if(*len < 16 || bnsize*2 != *len)
+		return 0;
+	/* use the raw data to parse two evenly long BIGNUMs, "r | s". */
+	ecdsa_sig = ECDSA_SIG_new();
+	if(!ecdsa_sig) return 0;
+	ecdsa_sig->r = BN_bin2bn(*sig, bnsize, ecdsa_sig->r);
+	ecdsa_sig->s = BN_bin2bn(*sig+bnsize, bnsize, ecdsa_sig->s);
+	if(!ecdsa_sig->r || !ecdsa_sig->s) {
+		ECDSA_SIG_free(ecdsa_sig);
+		return 0;
+	}
+
+	/* spool it into ASN format */
+	*sig = NULL;
+	newlen = i2d_ECDSA_SIG(ecdsa_sig, sig);
+	if(newlen <= 0) {
+		ECDSA_SIG_free(ecdsa_sig);
+		free(*sig);
+		return 0;
+	}
+	*len = (unsigned int)newlen;
+	ECDSA_SIG_free(ecdsa_sig);
+	return 1;
+}
+#endif /* USE_ECDSA */
 
 /**
  * Setup key and digest for verification. Adjust sig if necessary.
@@ -1472,6 +1529,28 @@ setup_key_digest(int algo, EVP_PKEY** evp_key, const EVP_MD** digest_type,
 			}
 			break;
 #endif
+#ifdef USE_ECDSA
+		case LDNS_ECDSAP256SHA256:
+			*evp_key = ldns_ecdsa2pkey_raw(key, keylen,
+				LDNS_ECDSAP256SHA256);
+			if(!*evp_key) {
+				verbose(VERB_QUERY, "verify: "
+					"ldns_ecdsa2pkey_raw failed");
+				return 0;
+			}
+			*digest_type = EVP_sha256();
+			break;
+		case LDNS_ECDSAP384SHA384:
+			*evp_key = ldns_ecdsa2pkey_raw(key, keylen,
+				LDNS_ECDSAP384SHA384);
+			if(!*evp_key) {
+				verbose(VERB_QUERY, "verify: "
+					"ldns_ecdsa2pkey_raw failed");
+				return 0;
+			}
+			*digest_type = EVP_sha384();
+			break;
+#endif
 		default:
 			verbose(VERB_QUERY, "verify: unknown algorithm %d", 
 				algo);
@@ -1519,7 +1598,19 @@ verify_canonrrset(ldns_buffer* buf, int algo, unsigned char* sigblock,
 			return sec_status_bogus;
 		}
 		dofree = 1;
-	} 
+	}
+#ifdef USE_ECDSA
+	else if(algo == LDNS_ECDSAP256SHA256 || algo == LDNS_ECDSAP384SHA384) {
+		/* EVP uses ASN prefix on sig, which is not in the wire data */
+		if(!setup_ecdsa_sig(&sigblock, &sigblock_len)) {
+			verbose(VERB_QUERY, "verify: failed to setup ECDSA sig");
+			*reason = "use of signature for ECDSA crypto failed";
+			EVP_PKEY_free(evp_key);
+			return sec_status_bogus;
+		}
+		dofree = 1;
+	}
+#endif /* USE_ECDSA */
 
 	/* do the signature cryptography work */
 	EVP_MD_CTX_init(&ctx);
@@ -1536,7 +1627,7 @@ verify_canonrrset(ldns_buffer* buf, int algo, unsigned char* sigblock,
 		if(dofree) free(sigblock);
 		return sec_status_unchecked;
 	}
-		
+
 	res = EVP_VerifyFinal(&ctx, sigblock, sigblock_len, evp_key);
 	if(EVP_MD_CTX_cleanup(&ctx) == 0) {
 		verbose(VERB_QUERY, "verify: EVP_MD_CTX_cleanup failed");

@@ -1,3 +1,10 @@
+8 February 2012: Wouter
+	- implement draft-ietf-dnsext-ecdsa-04; which is in IETF LC; This
+	  implementation is experimental at this time and not recommended
+	  for use on the public internet (the protocol numbers have not
+	  been assigned).  Needs recent ldns with --enable-ecdsa.
+	- fix memory leak in errorcase for DSA signatures.
+
 3 February 2012: Wouter
 	- fix for windows, rename() is not posix compliant on windows.
 

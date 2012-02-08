@@ -70,6 +70,7 @@ testbound_usage()
 	printf("-p file	playback text file\n");
 	printf("-2 	detect SHA256 support (exit code 0 or 1)\n");
 	printf("-g 	detect GOST support (exit code 0 or 1)\n");
+	printf("-e 	detect ECDSA support (exit code 0 or 1)\n");
 	printf("-s 	testbound self-test - unit test of testbound parts.\n");
 	printf("-o str  unbound commandline options separated by spaces.\n");
 	printf("Version %s\n", PACKAGE_VERSION);
@@ -272,7 +273,7 @@ main(int argc, char* argv[])
 	pass_argc = 1;
 	pass_argv[0] = "unbound";
 	add_opts("-d", &pass_argc, pass_argv);
-	while( (c=getopt(argc, argv, "2gho:p:s")) != -1) {
+	while( (c=getopt(argc, argv, "2egho:p:s")) != -1) {
 		switch(c) {
 		case 's':
 			free(pass_argv[1]);
@@ -285,6 +286,15 @@ main(int argc, char* argv[])
 			exit(0);
 #else
 			printf("SHA256 not supported\n");
+			exit(1);
+#endif
+			break;
+		case 'e':
+#if defined(USE_ECDSA)
+			printf("ECDSA supported\n");
+			exit(0);
+#else
+			printf("ECDSA not supported\n");
 			exit(1);
 #endif
 			break;

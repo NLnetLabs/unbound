@@ -791,6 +791,7 @@ with_pythonmodule
 with_ssl
 enable_sha2
 enable_gost
+enable_ecdsa
 with_libevent
 with_libexpat
 enable_static_exe
@@ -1445,6 +1446,7 @@ Optional Features:
                           purposes
   --disable-sha2          Disable SHA256 and SHA512 RRSIG support
   --disable-gost          Disable GOST support
+  --enable-ecdsa          Enable ECDSA support, experimental
   --enable-static-exe     enable to compile executables statically against
                           event, ldns libs, for debug purposes
   --enable-lock-checks    enable to check lock and unlock calls, for debug
@@ -16553,6 +16555,89 @@ $as_echo "#define USE_GOST 1" >>confdefs.h
 	;;
 esac
 
+# Check whether --enable-ecdsa was given.
+if test "${enable_ecdsa+set}" = set; then :
+  enableval=$enable_ecdsa;
+fi
+
+use_ecdsa="no"
+case "$enable_ecdsa" in
+    yes)
+      ac_fn_c_check_func "$LINENO" "ECDSA_sign" "ac_cv_func_ECDSA_sign"
+if test "x$ac_cv_func_ECDSA_sign" = xyes; then :
+
+else
+  as_fn_error $? "OpenSSL does not support ECDSA" "$LINENO" 5
+fi
+
+      ac_fn_c_check_func "$LINENO" "SHA384_Init" "ac_cv_func_SHA384_Init"
+if test "x$ac_cv_func_SHA384_Init" = xyes; then :
+
+else
+  as_fn_error $? "OpenSSL does not support SHA384" "$LINENO" 5
+fi
+
+      ac_fn_c_check_decl "$LINENO" "NID_X9_62_prime256v1" "ac_cv_have_decl_NID_X9_62_prime256v1" "$ac_includes_default
+#include <openssl/evp.h>
+
+"
+if test "x$ac_cv_have_decl_NID_X9_62_prime256v1" = xyes; then :
+  ac_have_decl=1
+else
+  ac_have_decl=0
+fi
+
+cat >>confdefs.h <<_ACEOF
+#define HAVE_DECL_NID_X9_62_PRIME256V1 $ac_have_decl
+_ACEOF
+if test $ac_have_decl = 1; then :
+
+else
+  as_fn_error $? "OpenSSL does not support the ECDSA curves" "$LINENO" 5
+fi
+ac_fn_c_check_decl "$LINENO" "NID_secp384r1" "ac_cv_have_decl_NID_secp384r1" "$ac_includes_default
+#include <openssl/evp.h>
+
+"
+if test "x$ac_cv_have_decl_NID_secp384r1" = xyes; then :
+  ac_have_decl=1
+else
+  ac_have_decl=0
+fi
+
+cat >>confdefs.h <<_ACEOF
+#define HAVE_DECL_NID_SECP384R1 $ac_have_decl
+_ACEOF
+if test $ac_have_decl = 1; then :
+
+else
+  as_fn_error $? "OpenSSL does not support the ECDSA curves" "$LINENO" 5
+fi
+
+      # we now know we have ECDSA and the required curves.
+
+cat >>confdefs.h <<_ACEOF
+#define USE_ECDSA 1
+_ACEOF
+
+      use_ecdsa="yes"
+      { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING:
+      *****************************************************************
+      *** YOU HAVE ENABLED ECDSA WHICH IS EXPERIMENTAL AT THIS TIME ***
+      *** PLEASE DO NOT USE THIS ON THE PUBLIC INTERNET             ***
+      *****************************************************************" >&5
+$as_echo "$as_me: WARNING:
+      *****************************************************************
+      *** YOU HAVE ENABLED ECDSA WHICH IS EXPERIMENTAL AT THIS TIME ***
+      *** PLEASE DO NOT USE THIS ON THE PUBLIC INTERNET             ***
+      *****************************************************************" >&2;}
+      ;;
+    no)
+      ;;
+    *)
+      ;;
+esac
+
 # check for libevent
 
 # Check whether --with-libevent was given.
@@ -17701,6 +17786,19 @@ done
 else
     ac_cv_func_ldns_key_EVP_load_gost_id="yes"
 fi
+if test x$use_ecdsa = xyes; then
+    ac_fn_c_check_decl "$LINENO" "LDNS_ECDSAP384SHA384" "ac_cv_have_decl_LDNS_ECDSAP384SHA384" "
+$ac_includes_default
+#include <ldns/ldns.h>
+
+"
+if test "x$ac_cv_have_decl_LDNS_ECDSAP384SHA384" = xyes; then :
+
+fi
+
+else
+    ac_cv_have_decl_LDNS_ECDSAP384SHA384="yes"
+fi
 for ac_header in ldns/ldns.h
 do :
   ac_fn_c_check_header_compile "$LINENO" "ldns/ldns.h" "ac_cv_header_ldns_ldns_h" "$ac_includes_default
@@ -17743,7 +17841,8 @@ if test $ac_cv_func_ldns_buffer_copy = yes \
     -a $ac_cv_func_ldns_get_random = yes \
     -a $ac_cv_header_ldns_ldns_h = yes \
     -a $ac_cv_func_ldns_b32_ntop_extended_hex = yes \
-    -a $ac_cv_func_ldns_key_EVP_load_gost_id = yes; then
+    -a $ac_cv_func_ldns_key_EVP_load_gost_id = yes \
+    -a $ac_cv_have_decl_LDNS_ECDSAP384SHA384 = yes; then
         :
 else
     as_fn_error $? "ldns library is not recent, update the ldns library, install it into system lib dir or use --with-ldns=path to other location.  The --with-ldns can point to the make-dir of ldns.  Package libldns or download source http://www.nlnetlabs.nl/projects/ldns" "$LINENO" 5

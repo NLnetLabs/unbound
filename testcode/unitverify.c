@@ -520,6 +520,11 @@ verify_test(void)
 	  verifytest_file("testdata/test_sigs.gost", "20090807060504");
 	else printf("Warning: skipped GOST, openssl does not provide gost.\n");
 #endif
+#ifdef USE_ECDSA
+	verifytest_file("testdata/test_sigs.ecdsa_p256", "20100908100439");
+	verifytest_file("testdata/test_sigs.ecdsa_p384", "20100908100439");
+	dstest_file("testdata/test_ds.sha384");
+#endif
 	dstest_file("testdata/test_ds.sha1");
 	nsectest();
 	nsec3_hash_test("testdata/test_nsec3_hash.1");

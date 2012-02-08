@@ -51,6 +51,14 @@
 /* Define to 1 if you have the `daemon' function. */
 #undef HAVE_DAEMON
 
+/* Define to 1 if you have the declaration of `NID_secp384r1', and to 0 if you
+   don't. */
+#undef HAVE_DECL_NID_SECP384R1
+
+/* Define to 1 if you have the declaration of `NID_X9_62_prime256v1', and to 0
+   if you don't. */
+#undef HAVE_DECL_NID_X9_62_PRIME256V1
+
 /* Define to 1 if you have the declaration of `sk_SSL_COMP_pop_free', and to 0
    if you don't. */
 #undef HAVE_DECL_SK_SSL_COMP_POP_FREE
@@ -478,6 +486,9 @@
 
 /* define this to enable debug checks. */
 #undef UNBOUND_DEBUG
+
+/* Define this to enable ECDSA support. */
+#undef USE_ECDSA
 
 /* Define this to enable GOST support. */
 #undef USE_GOST
