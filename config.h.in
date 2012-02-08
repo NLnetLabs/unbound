@@ -490,6 +490,9 @@
 /* Define this to enable ECDSA support. */
 #undef USE_ECDSA
 
+/* Define this to enable an EVP workaround for older openssl */
+#undef USE_ECDSA_EVP_WORKAROUND
+
 /* Define this to enable GOST support. */
 #undef USE_GOST
 

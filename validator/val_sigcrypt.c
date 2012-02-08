@@ -1538,7 +1538,24 @@ setup_key_digest(int algo, EVP_PKEY** evp_key, const EVP_MD** digest_type,
 					"ldns_ecdsa2pkey_raw failed");
 				return 0;
 			}
+#ifdef USE_ECDSA_EVP_WORKAROUND
+			/* openssl before 1.0.0 fixes RSA with the SHA256
+			 * hash in EVP.  We create one for ecdsa_sha256 */
+			{
+				static int md_ecdsa_256_done = 0;
+				static EVP_MD md;
+				if(!md_ecdsa_256_done) {
+					EVP_MD m = *EVP_sha256();
+					md_ecdsa_256_done = 1;
+					m.required_pkey_type[0] = (*evp_key)->type;
+					m.verify = (void*)ECDSA_verify;
+					md = m;
+				}
+				*digest_type = &md;
+			}
+#else
 			*digest_type = EVP_sha256();
+#endif
 			break;
 		case LDNS_ECDSAP384SHA384:
 			*evp_key = ldns_ecdsa2pkey_raw(key, keylen,
@@ -1548,9 +1565,26 @@ setup_key_digest(int algo, EVP_PKEY** evp_key, const EVP_MD** digest_type,
 					"ldns_ecdsa2pkey_raw failed");
 				return 0;
 			}
+#ifdef USE_ECDSA_EVP_WORKAROUND
+			/* openssl before 1.0.0 fixes RSA with the SHA384
+			 * hash in EVP.  We create one for ecdsa_sha384 */
+			{
+				static int md_ecdsa_384_done = 0;
+				static EVP_MD md;
+				if(!md_ecdsa_384_done) {
+					EVP_MD m = *EVP_sha384();
+					md_ecdsa_384_done = 1;
+					m.required_pkey_type[0] = (*evp_key)->type;
+					m.verify = (void*)ECDSA_verify;
+					md = m;
+				}
+				*digest_type = &md;
+			}
+#else
 			*digest_type = EVP_sha384();
-			break;
 #endif
+			break;
+#endif /* USE_ECDSA */
 		default:
 			verbose(VERB_QUERY, "verify: unknown algorithm %d", 
 				algo);

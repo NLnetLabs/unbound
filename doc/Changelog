@@ -5,6 +5,7 @@
 	  been assigned).  Needs recent ldns with --enable-ecdsa.
 	- fix memory leak in errorcase for DSA signatures.
 	- iana portlist updated.
+	- workaround for openssl 0.9.8 ecdsa sha2 and evp problem.
 
 3 February 2012: Wouter
 	- fix for windows, rename() is not posix compliant on windows.

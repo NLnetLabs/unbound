@@ -667,6 +667,14 @@ case "$enable_ecdsa" in
       AC_CHECK_DECLS([NID_X9_62_prime256v1, NID_secp384r1], [], [AC_MSG_ERROR([OpenSSL does not support the ECDSA curves])], [AC_INCLUDES_DEFAULT
 #include <openssl/evp.h>
       ])
+      # see if OPENSSL 1.0.0 or later (has EVP MD and Verify independency)
+      AC_MSG_CHECKING([if openssl supports SHA2 and ECDSA with EVP])
+      if grep OPENSSL_VERSION_NUMBER $ssldir/include/openssl/opensslv.h | grep 0x0 >/dev/null; then
+	AC_MSG_RESULT([no])
+	AC_DEFINE_UNQUOTED([USE_ECDSA_EVP_WORKAROUND], [1], [Define this to enable an EVP workaround for older openssl])
+      else
+	AC_MSG_RESULT([yes])
+      fi
       # we now know we have ECDSA and the required curves.
       AC_DEFINE_UNQUOTED([USE_ECDSA], [1], [Define this to enable ECDSA support.])
       use_ecdsa="yes"
