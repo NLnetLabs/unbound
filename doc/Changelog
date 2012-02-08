@@ -4,6 +4,7 @@
 	  for use on the public internet (the protocol numbers have not
 	  been assigned).  Needs recent ldns with --enable-ecdsa.
 	- fix memory leak in errorcase for DSA signatures.
+	- iana portlist updated.
 
 3 February 2012: Wouter
 	- fix for windows, rename() is not posix compliant on windows.
