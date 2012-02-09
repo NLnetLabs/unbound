@@ -825,9 +825,7 @@ struct tm *gmtime_r(const time_t *timep, struct tm *result);
 
 
 #ifdef MEMCMP_IS_BROKEN
-#  ifdef memcmp
-#  undef memcmp
-#  endif
+#include "compat/memcmp.h"
 #define memcmp memcmp_unbound
 int memcmp(const void *x, const void *y, size_t n);
 #endif

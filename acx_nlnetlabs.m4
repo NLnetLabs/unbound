@@ -2,7 +2,8 @@
 # Copyright 2009, Wouter Wijngaards, NLnet Labs.   
 # BSD licensed.
 #
-# Version 20
+# Version 21
+# 2012-02-09 Fix AHX_MEMCMP_BROKEN with undef in compat/memcmp.h.
 # 2012-01-20 Fix COMPILER_FLAGS_UNBOUND for gcc 4.6.2 assigned-not-used-warns.
 # 2011-12-05 Fix getaddrinfowithincludes on windows with fedora16 mingw32-gcc.
 # 	     Fix ACX_MALLOC for redefined malloc error.
@@ -1326,9 +1327,7 @@ int main(void)
 dnl define memcmp to its replacement, pass unique id for program as arg
 AC_DEFUN([AHX_MEMCMP_BROKEN], [
 #ifdef MEMCMP_IS_BROKEN
-#  ifdef memcmp
-#  undef memcmp
-#  endif
+#include "compat/memcmp.h"
 #define memcmp memcmp_$1
 int memcmp(const void *x, const void *y, size_t n);
 #endif

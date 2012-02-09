@@ -1,3 +1,6 @@
+9 February 2012: Wouter
+	- Fix AHX_BROKEN_MEMCMP for autoheader mess up of #undef in config.h.
+
 8 February 2012: Wouter
 	- implement draft-ietf-dnsext-ecdsa-04; which is in IETF LC; This
 	  implementation is experimental at this time and not recommended
