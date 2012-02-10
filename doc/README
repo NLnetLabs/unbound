@@ -16,7 +16,6 @@ This software is under BSD license, see LICENSE for details.
     (optional) can use builtin alternative instead.
 
 * Make and install: ./configure; make; make install
-  * Use GNU make; default on linux, often called 'gmake' on BSD and Solaris.
   * --with-ldns=/path/to/ldns
 	It will dynamically link against it.
   * --with-libevent=/path/to/libevent

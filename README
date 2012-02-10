@@ -1,6 +1,5 @@
 Unbound README
 * ./configure && make && make install
-* on BSDs and Solaris use gmake (GNU make).
 * You can use libevent if you want. libevent is useful when using 
   many (10000) outgoing ports. By default max 256 ports are opened at
   the same time and the builtin alternative is equally capable and a 
