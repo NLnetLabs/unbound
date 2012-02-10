@@ -323,6 +323,12 @@ struct fake_pending {
 	struct sockaddr_storage addr;
 	/** len of addr */
 	socklen_t addrlen;
+	/** zone name, uncompressed wire format (as used when sent) */
+	uint8_t* zone;
+	/** length of zone name */
+	size_t zonelen;
+	/** qtype */
+	int qtype;
 	/** The callback function to call when answer arrives (or timeout) */
 	comm_point_callback_t* callback;
 	/** callback user argument */

@@ -52,6 +52,11 @@
 /** Timeout when only a single probe query per IP is allowed. */
 #define PROBE_MAXRTO 12000 /* in msec */
 
+/** number of timeouts for a type when the domain can be blocked ;
+ * even if another type has completely rtt maxed it, the different type
+ * can do this number of packets (until those all timeout too) */
+#define TIMEOUT_COUNT_MAX 3
+
 size_t 
 infra_sizefunc(void* k, void* ATTR_UNUSED(d))
 {
@@ -196,6 +201,9 @@ data_entry_init(struct infra_cache* infra, struct lruhash_entry* e,
 	data->rec_lame = 0;
 	data->lame_type_A = 0;
 	data->lame_other = 0;
+	data->timeout_A = 0;
+	data->timeout_AAAA = 0;
+	data->timeout_other = 0;
 }
 
 /** 
@@ -250,6 +258,9 @@ infra_host(struct infra_cache* infra, struct sockaddr_storage* addr,
 	if(e && ((struct infra_data*)e->data)->ttl < timenow) {
 		/* it expired, try to reuse existing entry */
 		int old = ((struct infra_data*)e->data)->rtt.rto;
+		uint8_t tA = ((struct infra_data*)e->data)->timeout_A;
+		uint8_t tAAAA = ((struct infra_data*)e->data)->timeout_AAAA;
+		uint8_t tother = ((struct infra_data*)e->data)->timeout_other;
 		lock_rw_unlock(&e->lock);
 		e = infra_lookup_nottl(infra, addr, addrlen, nm, nmlen, 1);
 		if(e) {
@@ -259,9 +270,13 @@ infra_host(struct infra_cache* infra, struct sockaddr_storage* addr,
 			data_entry_init(infra, e, timenow);
 			wr = 1;
 			/* TOP_TIMEOUT remains on reuse */
-			if(old >= USEFUL_SERVER_TOP_TIMEOUT)
+			if(old >= USEFUL_SERVER_TOP_TIMEOUT) {
 				((struct infra_data*)e->data)->rtt.rto
 					= USEFUL_SERVER_TOP_TIMEOUT;
+				((struct infra_data*)e->data)->timeout_A = tA;
+				((struct infra_data*)e->data)->timeout_AAAA = tAAAA;
+				((struct infra_data*)e->data)->timeout_other = tother;
+			}
 		}
 	}
 	if(!e) {
@@ -358,8 +373,8 @@ infra_update_tcp_works(struct infra_cache* infra,
 
 int 
 infra_rtt_update(struct infra_cache* infra, struct sockaddr_storage* addr,
-	socklen_t addrlen, uint8_t* nm, size_t nmlen, int roundtrip,
-	int orig_rtt, uint32_t timenow)
+	socklen_t addrlen, uint8_t* nm, size_t nmlen, int qtype,
+	int roundtrip, int orig_rtt, uint32_t timenow)
 {
 	struct lruhash_entry* e = infra_lookup_nottl(infra, addr, addrlen,
 		nm, nmlen, 1);
@@ -377,9 +392,24 @@ infra_rtt_update(struct infra_cache* infra, struct sockaddr_storage* addr,
 	data = (struct infra_data*)e->data;
 	if(roundtrip == -1) {
 		rtt_lost(&data->rtt, orig_rtt);
+		if(qtype == LDNS_RR_TYPE_A) {
+			if(data->timeout_A < TIMEOUT_COUNT_MAX)
+				data->timeout_A++;
+		} else if(qtype == LDNS_RR_TYPE_AAAA) {
+			if(data->timeout_AAAA < TIMEOUT_COUNT_MAX)
+				data->timeout_AAAA++;
+		} else {
+			if(data->timeout_other < TIMEOUT_COUNT_MAX)
+				data->timeout_other++;
+		}
 	} else {
 		rtt_update(&data->rtt, roundtrip);
 		data->probedelay = 0;
+		if(qtype == LDNS_RR_TYPE_A)
+			data->timeout_A = 0;
+		else if(qtype == LDNS_RR_TYPE_AAAA)
+			data->timeout_AAAA = 0;
+		else	data->timeout_other = 0;
 	}
 	if(data->rtt.rto > 0)
 		rto = data->rtt.rto;
@@ -456,9 +486,23 @@ infra_get_lame_rtt(struct infra_cache* infra,
 	host = (struct infra_data*)e->data;
 	*rtt = rtt_unclamped(&host->rtt);
 	if(host->rtt.rto >= PROBE_MAXRTO && timenow < host->probedelay
-		&& rtt_notimeout(&host->rtt)*4 <= host->rtt.rto)
+		&& rtt_notimeout(&host->rtt)*4 <= host->rtt.rto) {
 		/* single probe for this domain, and we are not probing */
-		*rtt = USEFUL_SERVER_TOP_TIMEOUT;
+		/* unless the query type allows a probe to happen */
+		if(qtype == LDNS_RR_TYPE_A) {
+			if(host->timeout_A >= TIMEOUT_COUNT_MAX)
+				*rtt = USEFUL_SERVER_TOP_TIMEOUT;
+			else	*rtt = USEFUL_SERVER_TOP_TIMEOUT-1000;
+		} else if(qtype == LDNS_RR_TYPE_AAAA) {
+			if(host->timeout_AAAA >= TIMEOUT_COUNT_MAX)
+				*rtt = USEFUL_SERVER_TOP_TIMEOUT;
+			else	*rtt = USEFUL_SERVER_TOP_TIMEOUT-1000;
+		} else {
+			if(host->timeout_other >= TIMEOUT_COUNT_MAX)
+				*rtt = USEFUL_SERVER_TOP_TIMEOUT;
+			else	*rtt = USEFUL_SERVER_TOP_TIMEOUT-1000;
+		}
+	}
 	if(timenow > host->ttl) {
 		/* expired entry */
 		/* see if this can be a re-probe of an unresponsive server */

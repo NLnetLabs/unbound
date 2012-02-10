@@ -445,7 +445,7 @@ infra_test(void)
 		&vs, &edns_lame, &to) );
 	unit_assert( vs == 0 && to == init && edns_lame == 0 );
 
-	unit_assert( infra_rtt_update(slab, &one, onelen, zone, zonelen, -1, init, now) );
+	unit_assert( infra_rtt_update(slab, &one, onelen, zone, zonelen, LDNS_RR_TYPE_A, -1, init, now) );
 	unit_assert( infra_host(slab, &one, onelen, zone, zonelen, 
 			now, &vs, &edns_lame, &to) );
 	unit_assert( vs == 0 && to == init*2 && edns_lame == 0 );

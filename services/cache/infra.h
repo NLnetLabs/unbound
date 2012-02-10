@@ -91,6 +91,13 @@ struct infra_data {
 	uint8_t lame_type_A;
 	/** the host is lame (not authoritative) for other query types */
 	uint8_t lame_other;
+
+	/** timeouts counter for type A */
+	uint8_t timeout_A;
+	/** timeouts counter for type AAAA */
+	uint8_t timeout_AAAA;
+	/** timeouts counter for others */
+	uint8_t timeout_other;
 };
 
 /**
@@ -195,6 +202,7 @@ int infra_set_lame(struct infra_cache* infra,
  * @param addrlen: length of addr.
  * @param name: zone name
  * @param namelen: zone name length
+ * @param qtype: query type.
  * @param roundtrip: estimate of roundtrip time in milliseconds or -1 for 
  * 	timeout.
  * @param orig_rtt: original rtt for the query that timed out (roundtrip==-1).
@@ -203,7 +211,7 @@ int infra_set_lame(struct infra_cache* infra,
  * @return: 0 on error. new rto otherwise.
  */
 int infra_rtt_update(struct infra_cache* infra, struct sockaddr_storage* addr,
-	socklen_t addrlen, uint8_t* name, size_t namelen,
+	socklen_t addrlen, uint8_t* name, size_t namelen, int qtype,
 	int roundtrip, int orig_rtt, uint32_t timenow);
 
 /**

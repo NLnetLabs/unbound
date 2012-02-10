@@ -147,6 +147,7 @@ delete_fake_pending(struct fake_pending* pend)
 {
 	if(!pend)
 		return;
+	free(pend->zone);
 	ldns_buffer_free(pend->buffer);
 	ldns_pkt_free(pend->pkt);
 	free(pend);
@@ -554,12 +555,30 @@ do_infra_rtt(struct replay_runtime* runtime)
 	if(!dp) fatal_exit("cannot parse %s", now->variable);
 	rto = infra_rtt_update(runtime->infra, &now->addr,
 		now->addrlen, ldns_rdf_data(dp), ldns_rdf_size(dp),
-		atoi(now->string), -1, runtime->now_secs);
+		LDNS_RR_TYPE_A, atoi(now->string), -1, runtime->now_secs);
 	log_addr(0, "INFRA_RTT for", &now->addr, now->addrlen);
 	log_info("INFRA_RTT(%s roundtrip %d): rto of %d", now->variable,
 		atoi(now->string), rto);
 	if(rto == 0) fatal_exit("infra_rtt_update failed");
 	ldns_rdf_deep_free(dp);
+}
+
+/** perform exponential backoff on the timout */
+static void
+expon_timeout_backoff(struct replay_runtime* runtime)
+{
+	struct fake_pending* p = runtime->pending_list;
+	int rtt, vs;
+	uint8_t edns_lame_known;
+	int last_rtt, rto;
+	if(!p) return; /* no pending packet to backoff */
+	if(!infra_host(runtime->infra, &p->addr, p->addrlen, p->zone,
+		p->zonelen, runtime->now_secs, &vs, &edns_lame_known, &rtt))
+		return;
+	last_rtt = rtt;
+	rto = infra_rtt_update(runtime->infra, &p->addr, p->addrlen, p->zone,
+		p->zonelen, p->qtype, -1, last_rtt, runtime->now_secs);
+	log_info("infra_rtt_update returned rto %d", rto);
 }
 
 /**
@@ -608,6 +627,7 @@ do_moment_and_advance(struct replay_runtime* runtime)
 	case repevt_timeout:
 		mom = runtime->now;
 		advance_moment(runtime);
+		expon_timeout_backoff(runtime);
 		fake_pending_callback(runtime, mom, NETEVENT_TIMEOUT);
 		break;
 	case repevt_back_reply:
@@ -929,6 +949,7 @@ pending_udp_query(struct outside_network* outnet, ldns_buffer* packet,
 	pend->timeout = timeout/1000;
 	pend->transport = transport_udp;
 	pend->pkt = NULL;
+	pend->zone = NULL;
 	pend->serviced = 0;
 	pend->runtime = runtime;
 	status = ldns_buffer2pkt_wire(&pend->pkt, packet);
@@ -982,6 +1003,7 @@ pending_tcp_query(struct outside_network* outnet, ldns_buffer* packet,
 	pend->timeout = timeout;
 	pend->transport = transport_tcp;
 	pend->pkt = NULL;
+	pend->zone = NULL;
 	pend->runtime = runtime;
 	pend->serviced = 0;
 	status = ldns_buffer2pkt_wire(&pend->pkt, packet);
@@ -1017,9 +1039,8 @@ struct serviced_query* outnet_serviced_query(struct outside_network* outnet,
 	uint16_t flags, int dnssec, int ATTR_UNUSED(want_dnssec),
 	int ATTR_UNUSED(tcp_upstream), int ATTR_UNUSED(ssl_upstream),
 	struct sockaddr_storage* addr, socklen_t addrlen, uint8_t* zone,
-	size_t ATTR_UNUSED(zonelen), comm_point_callback_t* callback,
-	void* callback_arg, ldns_buffer* ATTR_UNUSED(buff),
-	int (*arg_compare)(void*,void*))
+	size_t zonelen, comm_point_callback_t* callback, void* callback_arg,
+	ldns_buffer* ATTR_UNUSED(buff), int (*arg_compare)(void*,void*))
 {
 	struct replay_runtime* runtime = (struct replay_runtime*)outnet->base;
 	struct fake_pending* pend = (struct fake_pending*)calloc(1,
@@ -1062,6 +1083,10 @@ struct serviced_query* outnet_serviced_query(struct outside_network* outnet,
 	}
 	memcpy(&pend->addr, addr, addrlen);
 	pend->addrlen = addrlen;
+	pend->zone = memdup(zone, zonelen);
+	pend->zonelen = zonelen;
+	pend->qtype = qtype;
+	log_assert(pend->zone);
 	pend->callback = callback;
 	pend->cb_arg = callback_arg;
 	pend->timeout = UDP_AUTH_QUERY_TIMEOUT;

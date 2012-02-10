@@ -312,6 +312,8 @@ struct serviced_query {
 	uint8_t* zone;
 	/** length of zone name */
 	size_t zonelen;
+	/** qtype */
+	int qtype;
 	/** current status */
 	enum serviced_query_status {
 		/** initial status */
