@@ -275,6 +275,8 @@ SECTION QUESTION
 www.example.com. IN A
 ENTRY_END
 
+STEP 5 TRAFFIC
+
 ; recursion happens here.
 STEP 10 CHECK_ANSWER
 ENTRY_BEGIN

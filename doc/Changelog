@@ -2,6 +2,7 @@
 	- Slightly smaller critical region in one case in infra cache.
 	- Fix timeouts to keep track of query type, A, AAAA and other, if
 	  another has caused timeout blacklist, different type can still probe.
+	- unit test fix for nomem_cnametopos.rpl race condition.
 
 9 February 2012: Wouter
 	- Fix AHX_BROKEN_MEMCMP for autoheader mess up of #undef in config.h.
