@@ -275,12 +275,16 @@ int infra_get_lame_rtt(struct infra_cache* infra,
  * @param rtt: the rtt_info is copied into here (caller alloced return struct).
  * @param delay: probe delay (if any).
  * @param timenow: what time it is now.
+ * @param tA: timeout counter on type A.
+ * @param tAAAA: timeout counter on type AAAA.
+ * @param tother: timeout counter on type other.
  * @return TTL the infra host element is valid for. If -1: not found in cache.
  *	TTL -2: found but expired.
  */
 int infra_get_host_rto(struct infra_cache* infra,
         struct sockaddr_storage* addr, socklen_t addrlen, uint8_t* name,
-	size_t namelen, struct rtt_info* rtt, int* delay, uint32_t timenow);
+	size_t namelen, struct rtt_info* rtt, int* delay, uint32_t timenow,
+	int* tA, int* tAAAA, int* tother);
 
 /**
  * Get memory used by the infra cache.

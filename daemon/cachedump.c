@@ -802,7 +802,8 @@ print_dp_details(SSL* ssl, struct worker* worker, struct delegpt* dp)
 {
 	char buf[257];
 	struct delegpt_addr* a;
-	int lame, dlame, rlame, rto, edns_vs, to, delay, entry_ttl;
+	int lame, dlame, rlame, rto, edns_vs, to, delay, entry_ttl,
+		tA, tAAAA, tother;
 	struct rtt_info ri;
 	uint8_t edns_lame_known;
 	for(a = dp->target_list; a; a = a->next_target) {
@@ -817,9 +818,11 @@ print_dp_details(SSL* ssl, struct worker* worker, struct delegpt* dp)
 		delay=0;
 		entry_ttl = infra_get_host_rto(worker->env.infra_cache,
 			&a->addr, a->addrlen, dp->name, dp->namelen,
-			&ri, &delay, *worker->env.now);
+			&ri, &delay, *worker->env.now, &tA, &tAAAA, &tother);
 		if(entry_ttl == -2 && ri.rto >= USEFUL_SERVER_TOP_TIMEOUT) {
-			if(!ssl_printf(ssl, "expired, rto %d msec.\n", ri.rto))
+			if(!ssl_printf(ssl, "expired, rto %d msec, tA %d "
+				"tAAAA %d tother %d.\n", ri.rto, tA, tAAAA,
+				tother))
 				return;
 			continue;
 		}
@@ -840,11 +843,12 @@ print_dp_details(SSL* ssl, struct worker* worker, struct delegpt* dp)
 			continue; /* skip stuff not in infra cache */
 		}
 		if(!ssl_printf(ssl, "%s%s%s%srto %d msec, ttl %d, ping %d "
-			"var %d rtt %d",
+			"var %d rtt %d, tA %d, tAAAA %d, tother %d",
 			lame?"LAME ":"", dlame?"NoDNSSEC ":"",
 			a->lame?"AddrWasParentSide ":"",
 			rlame?"NoAuthButRecursive ":"", rto, entry_ttl,
-			ri.srtt, ri.rttvar, rtt_notimeout(&ri)))
+			ri.srtt, ri.rttvar, rtt_notimeout(&ri),
+			tA, tAAAA, tother))
 			return;
 		if(delay)
 			if(!ssl_printf(ssl, ", probedelay %d", delay))

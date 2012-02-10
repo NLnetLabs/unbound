@@ -1570,9 +1570,11 @@ dump_infra_host(struct lruhash_entry* e, void* arg)
 		return;
 	}
 	if(!ssl_printf(a->ssl, "%s %s ttl %d ping %d var %d rtt %d rto %d "
+		"tA %d tAAAA %d tother %d "
 		"ednsknown %d edns %d delay %d lame dnssec %d rec %d A %d "
 		"other %d\n", ip_str, name, (int)(d->ttl - a->now),
 		d->rtt.srtt, d->rtt.rttvar, rtt_notimeout(&d->rtt), d->rtt.rto,
+		d->timeout_A, d->timeout_AAAA, d->timeout_other,
 		(int)d->edns_lame_known, (int)d->edns_version,
 		(int)(a->now<d->probedelay?d->probedelay-a->now:0),
 		(int)d->isdnsseclame, (int)d->rec_lame, (int)d->lame_type_A,

@@ -422,7 +422,8 @@ infra_rtt_update(struct infra_cache* infra, struct sockaddr_storage* addr,
 
 int infra_get_host_rto(struct infra_cache* infra,
         struct sockaddr_storage* addr, socklen_t addrlen, uint8_t* nm,
-	size_t nmlen, struct rtt_info* rtt, int* delay, uint32_t timenow)
+	size_t nmlen, struct rtt_info* rtt, int* delay, uint32_t timenow,
+	int* tA, int* tAAAA, int* tother)
 {
 	struct lruhash_entry* e = infra_lookup_nottl(infra, addr, addrlen,
 		nm, nmlen, 0);
@@ -437,6 +438,9 @@ int infra_get_host_rto(struct infra_cache* infra,
 			*delay = (int)(data->probedelay - timenow);
 		else	*delay = 0;
 	}
+	*tA = data->timeout_A;
+	*tAAAA = data->timeout_AAAA;
+	*tother = data->timeout_other;
 	lock_rw_unlock(&e->lock);
 	return ttl;
 }
