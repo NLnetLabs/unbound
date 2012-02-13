@@ -367,11 +367,15 @@ static void p_ancil(const char* str, struct comm_reply* r)
 			strncpy(buf1, "(inet_ntop error)", sizeof(buf1));
 		}
 		buf1[sizeof(buf1)-1]=0;
+#ifdef HAVE_STRUCT_IN_PKTINFO_IPI_SPEC_DST
 		if(inet_ntop(AF_INET, &r->pktinfo.v4info.ipi_spec_dst, 
 			buf2, (socklen_t)sizeof(buf2)) == 0) {
 			strncpy(buf2, "(inet_ntop error)", sizeof(buf2));
 		}
 		buf2[sizeof(buf2)-1]=0;
+#else
+		buf2[0]=0;
+#endif
 		log_info("%s: %d %s %s", str, r->pktinfo.v4info.ipi_ifindex,
 			buf1, buf2);
 #elif defined(IP_RECVDSTADDR)
