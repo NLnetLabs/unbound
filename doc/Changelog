@@ -1,5 +1,6 @@
 13 February 2012: Wouter
 	- RT#2955. Fix for cygwin compilation. 
+	- iana portlist updated.
 
 10 February 2012: Wouter
 	- Slightly smaller critical region in one case in infra cache.
