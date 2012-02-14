@@ -217,7 +217,8 @@ www.example.com. IN A
 SECTION ANSWER
 www.example.com. 3600 IN A	10.20.30.40
 SECTION AUTHORITY
-example.com.	3600 IN NS	ns.example.com.
+; NS rrset TTL not updated to avoid sticky-NS (ghost domain) problem.
+example.com.	360 IN NS	ns.example.com.
 SECTION ADDITIONAL
 ns.example.com.	3600 	IN 	A	1.2.3.4
 ENTRY_END

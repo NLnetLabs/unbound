@@ -1,3 +1,6 @@
+14 February 2012: Wouter
+	- Fix sticky NS (ghost domain problem) if prefetch is yes.
+
 13 February 2012: Wouter
 	- RT#2955. Fix for cygwin compilation. 
 	- iana portlist updated.

@@ -55,12 +55,17 @@
  * @param env: module environment with caches.
  * @param rep: contains list of rrsets to store.
  * @param now: current time.
+ * @param leeway: during prefetch how much leeway to update TTLs.
+ * 	This makes rrsets (other than type NS) timeout sooner so they get
+ * 	updated with a new full TTL.
+ * 	Type NS does not get this, because it must not be refreshed from the
+ * 	child domain, but keep counting down properly.
  * @param qrep: update rrsets here if cache is better
  * @param region: for qrep allocs.
  */
 static void
 store_rrsets(struct module_env* env, struct reply_info* rep, uint32_t now,
-	struct reply_info* qrep, struct regional* region)
+	uint32_t leeway, struct reply_info* qrep, struct regional* region)
 {
         size_t i;
         /* see if rrset already exists in cache, if not insert it. */
@@ -69,7 +74,8 @@ store_rrsets(struct module_env* env, struct reply_info* rep, uint32_t now,
                 rep->ref[i].id = rep->rrsets[i]->id;
 		/* update ref if it was in the cache */ 
 		switch(rrset_cache_update(env->rrset_cache, &rep->ref[i],
-                        env->alloc, now)) {
+                        env->alloc, now + ((ntohs(rep->ref[i].key->rk.type)==
+			LDNS_RR_TYPE_NS)?0:leeway))) {
 		case 0: /* ref unchanged, item inserted */
 			break;
 		case 2: /* ref updated, cache is superior */
@@ -112,7 +118,7 @@ dns_cache_store_msg(struct module_env* env, struct query_info* qinfo,
 	/* there was a reply_info_sortref(rep) here but it seems to be
 	 * unnecessary, because the cache gets locked per rrset. */
 	reply_info_set_ttls(rep, *env->now);
-	store_rrsets(env, rep, *env->now+leeway, qrep, region);
+	store_rrsets(env, rep, *env->now, leeway, qrep, region);
 	if(ttl == 0) {
 		/* we do not store the message, but we did store the RRs,
 		 * which could be useful for delegation information */
@@ -752,8 +758,11 @@ dns_cache_store(struct module_env* env, struct query_info* msgqinf,
 			ref.key = rep->rrsets[i];
 			ref.id = rep->rrsets[i]->id;
 			/*ignore ret: it was in the cache, ref updated */
+			/* no leeway for typeNS */
 			(void)rrset_cache_update(env->rrset_cache, &ref, 
-				env->alloc, *env->now + leeway);
+				env->alloc, *env->now + 
+				((ntohs(ref.key->rk.type)==LDNS_RR_TYPE_NS)?
+				0:leeway));
 		}
 		free(rep);
 		return 1;
