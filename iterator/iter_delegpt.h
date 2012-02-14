@@ -79,6 +79,8 @@ struct delegpt {
 	 * Also true if the delegationpoint was created from a delegation
 	 * message and thus contains the parent-side-info already. */
 	uint8_t has_parent_side_NS;
+	/** for assertions on type of delegpt */
+	uint8_t dp_type_mlc;
 };
 
 /**
@@ -345,5 +347,57 @@ void delegpt_no_ipv6(struct delegpt* dp);
  * @param dp: the delegation point. Updated to reflect no ipv4.
  */
 void delegpt_no_ipv4(struct delegpt* dp);
+
+/** 
+ * create malloced delegation point, with the given name 
+ * @param name: uncompressed wireformat of degegpt name.
+ * @return NULL on alloc failure
+ */
+struct delegpt* delegpt_create_mlc(uint8_t* name);
+
+/** 
+ * free malloced delegation point.
+ * @param dp: must have been created with delegpt_create_mlc, free'd. 
+ */
+void delegpt_free_mlc(struct delegpt* dp);
+
+/**
+ * add a name to malloced delegation point.
+ * @param dp: must have been created with delegpt_create_mlc. 
+ * @param name: the name to add.
+ * @param lame: the name is lame, disprefer.
+ * @return false on error.
+ */
+int delegpt_add_ns_mlc(struct delegpt* dp, uint8_t* name, int lame);
+
+/**
+ * add an address to a malloced delegation point.
+ * @param dp: must have been created with delegpt_create_mlc. 
+ * @param addr: the address.
+ * @param addrlen: the length of addr.
+ * @param bogus: if address is bogus.
+ * @param lame: if address is lame.
+ * @return false on error.
+ */
+int delegpt_add_addr_mlc(struct delegpt* dp, struct sockaddr_storage* addr,
+	socklen_t addrlen, int bogus, int lame);
+
+/**
+ * Add target address to the delegation point.
+ * @param dp: must have been created with delegpt_create_mlc. 
+ * @param name: name for which target was found (must be in nslist).
+ *	This name is marked resolved.
+ * @param namelen: length of name.
+ * @param addr: the address.
+ * @param addrlen: the length of addr.
+ * @param bogus: security status for the address, pass true if bogus.
+ * @param lame: address is lame.
+ * @return false on error.
+ */
+int delegpt_add_target_mlc(struct delegpt* dp, uint8_t* name, size_t namelen,
+	struct sockaddr_storage* addr, socklen_t addrlen, int bogus, int lame);
+
+/** get memory in use by dp */
+size_t delegpt_get_mem(struct delegpt* dp);
 
 #endif /* ITERATOR_ITER_DELEGPT_H */

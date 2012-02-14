@@ -51,8 +51,6 @@ struct regional;
  * Iterator forward zones structure
  */
 struct iter_forwards {
-	/** regional where forward zone server addresses are allocated */
-	struct regional* region;
 	/** 
 	 * Zones are stored in this tree. Sort order is specially chosen.
 	 * first sorted on qclass. Then on dname in nsec-like order, so that
@@ -77,7 +75,9 @@ struct iter_forward_zone {
 	int namelabs;
 	/** delegation point with forward server information for this zone. 
 	 * If NULL then this forward entry is used to indicate that a
-	 * stub-zone with the same name exists, and should be used. */
+	 * stub-zone with the same name exists, and should be used. 
+	 * This delegation point is malloced.
+	 */
 	struct delegpt* dp;
 	/** pointer to parent in tree (or NULL if none) */
 	struct iter_forward_zone* parent;

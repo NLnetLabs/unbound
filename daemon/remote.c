@@ -1337,15 +1337,15 @@ print_root_fwds(SSL* ssl, struct iter_forwards* fwds, uint8_t* root)
 
 /** parse args into delegpt */
 static struct delegpt*
-parse_delegpt(SSL* ssl, struct regional* region, char* args, uint8_t* root)
+parse_delegpt(SSL* ssl, char* args, uint8_t* root)
 {
 	/* parse args and add in */
 	char* p = args;
 	char* todo;
-	struct delegpt* dp = delegpt_create(region);
+	struct delegpt* dp = delegpt_create_mlc(root);
 	struct sockaddr_storage addr;
 	socklen_t addrlen;
-	if(!dp || !delegpt_set_name(dp, region, root)) {
+	if(!dp) {
 		(void)ssl_printf(ssl, "error out of memory\n");
 		return NULL;
 	}
@@ -1363,7 +1363,7 @@ parse_delegpt(SSL* ssl, struct regional* region, char* args, uint8_t* root)
 			return NULL;
 		}
 		/* add address */
-		if(!delegpt_add_addr(dp, region, &addr, addrlen, 0, 0)) {
+		if(!delegpt_add_addr_mlc(dp, &addr, addrlen, 0, 0)) {
 			(void)ssl_printf(ssl, "error out of memory\n");
 			return NULL;
 		}
@@ -1396,7 +1396,7 @@ do_forward(SSL* ssl, struct worker* worker, char* args)
 		forwards_delete_zone(fwd, LDNS_RR_CLASS_IN, root);
 	} else {
 		struct delegpt* dp;
-		if(!(dp = parse_delegpt(ssl, fwd->region, args, root)))
+		if(!(dp = parse_delegpt(ssl, args, root)))
 			return;
 		if(!forwards_add_zone(fwd, LDNS_RR_CLASS_IN, dp)) {
 			(void)ssl_printf(ssl, "error out of memory\n");

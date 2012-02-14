@@ -803,7 +803,7 @@ print_dp_details(SSL* ssl, struct worker* worker, struct delegpt* dp)
 	char buf[257];
 	struct delegpt_addr* a;
 	int lame, dlame, rlame, rto, edns_vs, to, delay, entry_ttl,
-		tA, tAAAA, tother;
+		tA = 0, tAAAA = 0, tother = 0;
 	struct rtt_info ri;
 	uint8_t edns_lame_known;
 	for(a = dp->target_list; a; a = a->next_target) {

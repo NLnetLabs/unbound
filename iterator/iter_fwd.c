@@ -45,7 +45,6 @@
 #include <ldns/rr.h>
 #include "iterator/iter_fwd.h"
 #include "iterator/iter_delegpt.h"
-#include "util/regional.h"
 #include "util/log.h"
 #include "util/config_file.h"
 #include "util/net_help.h"
@@ -73,12 +72,28 @@ forwards_create(void)
 		sizeof(struct iter_forwards));
 	if(!fwd)
 		return NULL;
-	fwd->region = regional_create();
-	if(!fwd->region) {
-		forwards_delete(fwd);
-		return NULL;
-	}
 	return fwd;
+}
+
+static void fwd_zone_free(struct iter_forward_zone* n)
+{
+	if(!n) return;
+	delegpt_free_mlc(n->dp);
+	free(n->name);
+	free(n);
+}
+
+static void delfwdnode(rbnode_t* n, void* ATTR_UNUSED(arg))
+{
+	struct iter_forward_zone* node = (struct iter_forward_zone*)n;
+	fwd_zone_free(node);
+}
+
+static void fwd_del_tree(struct iter_forwards* fwd)
+{
+	if(fwd->tree)
+		traverse_postorder(fwd->tree, &delfwdnode, NULL);
+	free(fwd->tree);
 }
 
 void 
@@ -86,8 +101,7 @@ forwards_delete(struct iter_forwards* fwd)
 {
 	if(!fwd) 
 		return;
-	regional_destroy(fwd->region);
-	free(fwd->tree);
+	fwd_del_tree(fwd);
 	free(fwd);
 }
 
@@ -96,20 +110,23 @@ static int
 forwards_insert_data(struct iter_forwards* fwd, uint16_t c, uint8_t* nm, 
 	size_t nmlen, int nmlabs, struct delegpt* dp)
 {
-	struct iter_forward_zone* node = regional_alloc(fwd->region,
-		sizeof(struct iter_forward_zone));
+	struct iter_forward_zone* node = malloc(sizeof(*node));
 	if(!node)
 		return 0;
 	node->node.key = node;
 	node->dclass = c;
-	node->name = regional_alloc_init(fwd->region, nm, nmlen);
-	if(!node->name)
+	node->name = memdup(nm, nmlen);
+	if(!node->name) {
+		free(node);
 		return 0;
+	}
 	node->namelen = nmlen;
 	node->namelabs = nmlabs;
 	node->dp = dp;
 	if(!rbtree_insert(fwd->tree, &node->node)) {
 		log_err("duplicate forward zone ignored.");
+		free(node->name);
+		free(node);
 	}
 	return 1;
 }
@@ -152,33 +169,32 @@ fwd_init_parents(struct iter_forwards* fwd)
 }
 
 /** set zone name */
-static int 
-read_fwds_name(struct iter_forwards* fwd, struct config_stub* s, 
-	struct delegpt* dp)
+static struct delegpt* 
+read_fwds_name(struct config_stub* s)
 {
+	struct delegpt* dp;
 	ldns_rdf* rdf;
 	if(!s->name) {
 		log_err("forward zone without a name (use name \".\" to forward everything)");
-		return 0;
+		return NULL;
 	}
 	rdf = ldns_dname_new_frm_str(s->name);
 	if(!rdf) {
 		log_err("cannot parse forward zone name %s", s->name);
-		return 0;
+		return NULL;
 	}
-	if(!delegpt_set_name(dp, fwd->region, ldns_rdf_data(rdf))) {
+	if(!(dp=delegpt_create_mlc(ldns_rdf_data(rdf)))) {
 		ldns_rdf_deep_free(rdf);
 		log_err("out of memory");
-		return 0;
+		return NULL;
 	}
 	ldns_rdf_deep_free(rdf);
-	return 1;
+	return dp;
 }
 
 /** set fwd host names */
 static int 
-read_fwds_host(struct iter_forwards* fwd, struct config_stub* s, 
-	struct delegpt* dp)
+read_fwds_host(struct config_stub* s, struct delegpt* dp)
 {
 	struct config_strlist* p;
 	ldns_rdf* rdf;
@@ -190,7 +206,7 @@ read_fwds_host(struct iter_forwards* fwd, struct config_stub* s,
 				s->name, p->str);
 			return 0;
 		}
-		if(!delegpt_add_ns(dp, fwd->region, ldns_rdf_data(rdf), 0)) {
+		if(!delegpt_add_ns_mlc(dp, ldns_rdf_data(rdf), 0)) {
 			ldns_rdf_deep_free(rdf);
 			log_err("out of memory");
 			return 0;
@@ -202,8 +218,7 @@ read_fwds_host(struct iter_forwards* fwd, struct config_stub* s,
 
 /** set fwd server addresses */
 static int 
-read_fwds_addr(struct iter_forwards* fwd, struct config_stub* s, 
-	struct delegpt* dp)
+read_fwds_addr(struct config_stub* s, struct delegpt* dp)
 {
 	struct config_strlist* p;
 	struct sockaddr_storage addr;
@@ -215,7 +230,7 @@ read_fwds_addr(struct iter_forwards* fwd, struct config_stub* s,
 				s->name, p->str);
 			return 0;
 		}
-		if(!delegpt_add_addr(dp, fwd->region, &addr, addrlen, 0, 0)) {
+		if(!delegpt_add_addr_mlc(dp, &addr, addrlen, 0, 0)) {
 			log_err("out of memory");
 			return 0;
 		}
@@ -229,18 +244,14 @@ read_forwards(struct iter_forwards* fwd, struct config_file* cfg)
 {
 	struct config_stub* s;
 	for(s = cfg->forwards; s; s = s->next) {
-		struct delegpt* dp = delegpt_create(fwd->region);
-		if(!dp) {
-			log_err("out of memory");
+		struct delegpt* dp;
+		if(!(dp=read_fwds_name(s)) ||
+			!read_fwds_host(s, dp) ||
+			!read_fwds_addr(s, dp))
 			return 0;
-		}
 		/* set flag that parent side NS information is included.
 		 * Asking a (higher up) server on the internet is not useful */
 		dp->has_parent_side_NS = 1;
-		if(!read_fwds_name(fwd, s, dp) ||
-			!read_fwds_host(fwd, s, dp) ||
-			!read_fwds_addr(fwd, s, dp))
-			return 0;
 		if(!forwards_insert(fwd, LDNS_RR_CLASS_IN, dp))
 			return 0;
 		verbose(VERB_QUERY, "Forward zone server list:");
@@ -302,8 +313,7 @@ make_stub_holes(struct iter_forwards* fwd, struct config_file* cfg)
 int 
 forwards_apply_cfg(struct iter_forwards* fwd, struct config_file* cfg)
 {
-	free(fwd->tree);
-	regional_free_all(fwd->region);
+	fwd_del_tree(fwd);
 	fwd->tree = rbtree_create(fwd_cmp);
 	if(!fwd->tree)
 		return 0;
@@ -411,10 +421,15 @@ forwards_next_root(struct iter_forwards* fwd, uint16_t* dclass)
 size_t 
 forwards_get_mem(struct iter_forwards* fwd)
 {
+	struct iter_forward_zone* p;
+	size_t s;
 	if(!fwd)
 		return 0;
-	return sizeof(*fwd) + sizeof(*fwd->tree) + 
-		regional_get_mem(fwd->region);
+	s = sizeof(*fwd) + sizeof(*fwd->tree);
+	RBTREE_FOR(p, struct iter_forward_zone*, fwd->tree) {
+		s += sizeof(*p) + p->namelen + delegpt_get_mem(p->dp);
+	}
+	return s;
 }
 
 int 
@@ -429,13 +444,15 @@ forwards_add_zone(struct iter_forwards* fwd, uint16_t c, struct delegpt* dp)
 void 
 forwards_delete_zone(struct iter_forwards* fwd, uint16_t c, uint8_t* nm)
 {
+	rbnode_t* n;
 	struct iter_forward_zone key;
 	key.node.key = &key;
 	key.dclass = c;
 	key.name = nm;
 	key.namelabs = dname_count_size_labels(nm, &key.namelen);
-	if(!rbtree_search(fwd->tree, &key))
+	if(!(n=rbtree_search(fwd->tree, &key)))
 		return; /* nothing to do */
+	fwd_zone_free((struct iter_forward_zone*)n);
 	(void)rbtree_delete(fwd->tree, &key);
 	fwd_init_parents(fwd);
 }

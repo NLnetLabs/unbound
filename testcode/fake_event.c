@@ -1137,6 +1137,7 @@ void outnet_serviced_query_stop(struct serviced_query* sq, void* cb_arg)
 			else 	runtime->pending_list = p->next;
 			ldns_buffer_free(p->buffer);
 			ldns_pkt_free(p->pkt);
+			free(p->zone);
 			free(p);
 			return;
 		}
