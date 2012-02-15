@@ -1590,7 +1590,6 @@ do_stub_remove(SSL* ssl, struct worker* worker, char* args)
 	send_ok(ssl);
 }
 
-
 /** do the status command */
 static void
 do_status(SSL* ssl, struct worker* worker)
