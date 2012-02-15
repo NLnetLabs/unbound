@@ -1032,7 +1032,7 @@ anchors_assemble_rrsets(struct val_anchors* anchors)
 				" upgrade unbound and openssl)", b);
 			(void)rbtree_delete(anchors->tree, &ta->node);
 			lock_basic_unlock(&ta->lock);
-			lock_basic_destroy(&ta->lock);
+			anchors_delfunc(&ta->node, NULL);
 			ta = next;
 			continue;
 		}
