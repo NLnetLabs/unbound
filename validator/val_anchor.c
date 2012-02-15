@@ -1249,7 +1249,6 @@ anchors_delete_insecure(struct val_anchors* anchors, uint16_t c,
 		/* its not an insecure point, do not remove it */
 		return;
 	}
-	lock_basic_unlock(&ta->lock);
 
 	/* remove from tree */
 	rbtree_delete(anchors->tree, &ta->node);
@@ -1257,6 +1256,7 @@ anchors_delete_insecure(struct val_anchors* anchors, uint16_t c,
 	lock_basic_unlock(&anchors->lock);
 
 	/* actual free of data */
+	lock_basic_unlock(&ta->lock);
 	anchors_delfunc(&ta->node, NULL);
 }
 
