@@ -284,28 +284,35 @@ need_hole_insert(rbtree_t* tree, struct iter_forward_zone* zone)
 	return 0; /* no forwards above, no holes needed */
 }
 
+/** insert a stub hole (if necessary) for stub name */
+static int
+fwd_add_stub_hole(struct iter_forwards* fwd, uint16_t c, uint8_t* nm)
+{
+	struct iter_forward_zone key;
+	key.node.key = &key;
+	key.dclass = c;
+	key.name = nm;
+	key.namelabs = dname_count_size_labels(key.name, &key.namelen);
+	if(need_hole_insert(fwd->tree, &key)) {
+		return forwards_insert_data(fwd, key.dclass, key.name,
+			key.namelen, key.namelabs, NULL);
+	}
+	return 1;
+}
+
 /** make NULL entries for stubs */
 static int
 make_stub_holes(struct iter_forwards* fwd, struct config_file* cfg)
 {
 	struct config_stub* s;
-	struct iter_forward_zone key;
-	key.node.key = &key;
-	key.dclass = LDNS_RR_CLASS_IN;
 	for(s = cfg->stubs; s; s = s->next) {
 		ldns_rdf* rdf = ldns_dname_new_frm_str(s->name);
 		if(!rdf) {
 			log_err("cannot parse stub name '%s'", s->name);
 			return 0;
 		}
-		key.name = ldns_rdf_data(rdf);
-		key.namelabs = dname_count_size_labels(key.name, &key.namelen);
-		if(!need_hole_insert(fwd->tree, &key)) {
-			ldns_rdf_deep_free(rdf);
-			continue;
-		}
-		if(!forwards_insert_data(fwd, key.dclass, key.name, 
-			key.namelen, key.namelabs, NULL)) {
+		if(!fwd_add_stub_hole(fwd, LDNS_RR_CLASS_IN,
+				ldns_rdf_data(rdf))) {
 			ldns_rdf_deep_free(rdf);
 			log_err("out of memory");
 			return 0;
@@ -453,8 +460,8 @@ forwards_add_zone(struct iter_forwards* fwd, uint16_t c, struct delegpt* dp)
 {
 	struct iter_forward_zone *z;
 	if((z=fwd_zone_find(fwd, c, dp->name)) != NULL) {
-		fwd_zone_free(z);
 		(void)rbtree_delete(fwd->tree, &z->node);
+		fwd_zone_free(z);
 	}
 	if(!forwards_insert(fwd, c, dp))
 		return 0;
@@ -468,8 +475,31 @@ forwards_delete_zone(struct iter_forwards* fwd, uint16_t c, uint8_t* nm)
 	struct iter_forward_zone *z;
 	if(!(z=fwd_zone_find(fwd, c, nm)))
 		return; /* nothing to do */
-	fwd_zone_free(z);
 	(void)rbtree_delete(fwd->tree, &z->node);
+	fwd_zone_free(z);
+	fwd_init_parents(fwd);
+}
+
+int
+forwards_add_stub_hole(struct iter_forwards* fwd, uint16_t c, uint8_t* nm)
+{
+	if(!fwd_add_stub_hole(fwd, c, nm)) {
+		return 0;
+	}
+	fwd_init_parents(fwd);
+	return 1;
+}
+
+void
+forwards_delete_stub_hole(struct iter_forwards* fwd, uint16_t c, uint8_t* nm)
+{
+	struct iter_forward_zone *z;
+	if(!(z=fwd_zone_find(fwd, c, nm)))
+		return; /* nothing to do */
+	if(z->dp != NULL)
+		return; /* not a stub hole */
+	(void)rbtree_delete(fwd->tree, &z->node);
+	fwd_zone_free(z);
 	fwd_init_parents(fwd);
 }
 

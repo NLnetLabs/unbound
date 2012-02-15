@@ -2923,7 +2923,6 @@ val_get_mem(struct module_env* env, int id)
 		return 0;
 	return sizeof(*ve) + key_cache_get_mem(ve->kcache) + 
 		val_neg_get_mem(ve->neg_cache) +
-		anchors_get_mem(env->anchors) + 
 		sizeof(size_t)*2*ve->nsec3_keyiter_count;
 }
 

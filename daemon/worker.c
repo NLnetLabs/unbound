@@ -148,7 +148,7 @@ worker_mem_report(struct worker* ATTR_UNUSED(worker),
 #ifdef UNBOUND_ALLOC_STATS
 	/* debug func in validator module */
 	size_t total, front, back, mesh, msg, rrset, infra, ac, superac;
-	size_t me, iter, val;
+	size_t me, iter, val, anch;
 	int i;
 	if(verbosity < VERB_ALGO) 
 		return;
@@ -160,6 +160,7 @@ worker_mem_report(struct worker* ATTR_UNUSED(worker),
 	mesh = mesh_get_mem(worker->env.mesh);
 	ac = alloc_get_mem(&worker->alloc);
 	superac = alloc_get_mem(&worker->daemon->superalloc);
+	anch = anchors_get_mem(worker->env.anchors);
 	iter = 0;
 	val = 0;
 	for(i=0; i<worker->env.mesh->mods.num; i++) {
@@ -185,12 +186,12 @@ worker_mem_report(struct worker* ATTR_UNUSED(worker),
 	}
 	total = front+back+mesh+msg+rrset+infra+iter+val+ac+superac+me;
 	log_info("Memory conditions: %u front=%u back=%u mesh=%u msg=%u "
-		"rrset=%u infra=%u iter=%u val=%u "
+		"rrset=%u infra=%u iter=%u val=%u anchors=%u "
 		"alloccache=%u globalalloccache=%u me=%u",
 		(unsigned)total, (unsigned)front, (unsigned)back, 
 		(unsigned)mesh, (unsigned)msg, (unsigned)rrset, 
-		(unsigned)infra, (unsigned)iter, (unsigned)val, (unsigned)ac, 
-		(unsigned)superac, (unsigned)me);
+		(unsigned)infra, (unsigned)iter, (unsigned)val, (unsigned)anch,
+		(unsigned)ac, (unsigned)superac, (unsigned)me);
 	debug_total_mem(total);
 #else /* no UNBOUND_ALLOC_STATS */
 	size_t val = 0;

@@ -1,6 +1,9 @@
 15 February 2012: Wouter
 	- Fix forward-zone memory, uses malloc and frees original root dp.
 	- iter hints (stubs) uses malloc inside for more dynamicity.
+	- unbound-control forward_add, forward_remove, stub_add, stub_remove
+	  can modify stubs and forwards for running unbound (on mobile computer)
+	  they can also add and remove domain-insecure for the zone.
 
 14 February 2012: Wouter
 	- Fix sticky NS (ghost domain problem) if prefetch is yes.

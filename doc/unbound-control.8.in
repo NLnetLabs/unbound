@@ -190,6 +190,27 @@ List the local zones in use.  These are printed one per line with zone type.
 .B list_local_data
 List the local data RRs in use.  The resource records are printed.
 .TP
+.B forward_add \fR[\fI+i\fR] \fIzone addr ...
+Add a new forward zone to running unbound.  With +i option also adds a
+\fIdomain\-insecure\fR for the zone (so it can resolve insecurely if you have
+a DNSSEC root trust anchor configured for other names).
+The addr can be IP4, IP6 or nameserver names, like \fIforward-zone\fR config
+in unbound.conf.
+.TP
+.B forward_remove \fR[\fI+i\fR] \fIzone
+Remove a forward zone from running unbound.  The +i also removes a
+\fIdomain\-insecure\fR for the zone.
+.TP
+.B stub_add \fR[\fI+ip\fR] \fIzone addr ...
+Add a new stub zone to running unbound.  With +i option also adds a
+\fIdomain\-insecure\fR for the zone.  With +p the stub zone is set to prime,
+without it it is set to notprime.  The addr can be IP4, IP6 or nameserver
+names, like the \fIstub-zone\fR config in unbound.conf.
+.TP
+.B stub_remove \fR[\fI+i\fR] \fIzone
+Remove a stub zone from running unbound.  The +i also removes a
+\fIdomain\-insecure\fR for the zone.
+.TP
 .B forward \fR[\fIoff\fR | \fIaddr ...\fR ]
 Setup forwarding mode.  Configures if the server should ask other upstream
 nameservers, should go to the internet root nameservers itself, or show 

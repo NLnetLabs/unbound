@@ -45,7 +45,6 @@
 #include "util/rbtree.h"
 struct config_file;
 struct delegpt;
-struct regional;
 
 /**
  * Iterator forward zones structure
@@ -152,9 +151,7 @@ int fwd_cmp(const void* k1, const void* k2);
  * @param fwd: the forward data structure
  * @param c: class of zone
  * @param dp: delegation point with name and target nameservers for new
- *	forward zone. This delegation point and all its data must be
- *	malloced in the fwd->region. (then it is freed when the fwd is
- *	deleted).
+ *	forward zone. malloced.
  * @return false on failure (out of memory);
  */
 int forwards_add_zone(struct iter_forwards* fwd, uint16_t c, 
@@ -162,12 +159,31 @@ int forwards_add_zone(struct iter_forwards* fwd, uint16_t c,
 
 /**
  * Remove zone from forward structure. For external use since it 
- * recalcs the tree parents. Does not actually release any memory, the region 
- * is unchanged.
+ * recalcs the tree parents.
  * @param fwd: the forward data structure
  * @param c: class of zone
  * @param nm: name of zone (in uncompressed wireformat).
  */
 void forwards_delete_zone(struct iter_forwards* fwd, uint16_t c, uint8_t* nm);
+
+/**
+ * Add stub hole (empty entry in forward table, that makes resolution skip
+ * a forward-zone because the stub zone should override the forward zone).
+ * Does not add one if not necessary.
+ * @param fwd: the forward data structure
+ * @param c: class of zone
+ * @param nm: name of zone (in uncompressed wireformat).
+ * @return false on failure (out of memory);
+ */
+int forwards_add_stub_hole(struct iter_forwards* fwd, uint16_t c, uint8_t* nm);
+
+/**
+ * Remove stub hole, if one exists.
+ * @param fwd: the forward data structure
+ * @param c: class of zone
+ * @param nm: name of zone (in uncompressed wireformat).
+ */
+void forwards_delete_stub_hole(struct iter_forwards* fwd, uint16_t c,
+	uint8_t* nm);
 
 #endif /* ITERATOR_ITER_FWD_H */

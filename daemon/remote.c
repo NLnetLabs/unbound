@@ -68,6 +68,7 @@
 #include "validator/validator.h"
 #include "validator/val_kcache.h"
 #include "validator/val_kentry.h"
+#include "validator/val_anchor.h"
 #include "iterator/iterator.h"
 #include "iterator/iter_fwd.h"
 #include "iterator/iter_hints.h"
@@ -1337,12 +1338,12 @@ print_root_fwds(SSL* ssl, struct iter_forwards* fwds, uint8_t* root)
 
 /** parse args into delegpt */
 static struct delegpt*
-parse_delegpt(SSL* ssl, char* args, uint8_t* root)
+parse_delegpt(SSL* ssl, char* args, uint8_t* nm, int allow_names)
 {
 	/* parse args and add in */
 	char* p = args;
 	char* todo;
-	struct delegpt* dp = delegpt_create_mlc(root);
+	struct delegpt* dp = delegpt_create_mlc(nm);
 	struct sockaddr_storage addr;
 	socklen_t addrlen;
 	if(!dp) {
@@ -1358,14 +1359,37 @@ parse_delegpt(SSL* ssl, char* args, uint8_t* root)
 		}
 		/* parse address */
 		if(!extstrtoaddr(todo, &addr, &addrlen)) {
-			(void)ssl_printf(ssl, "error cannot parse"
-				" IP address '%s'\n", todo);
-			return NULL;
-		}
-		/* add address */
-		if(!delegpt_add_addr_mlc(dp, &addr, addrlen, 0, 0)) {
-			(void)ssl_printf(ssl, "error out of memory\n");
-			return NULL;
+			if(allow_names) {
+				uint8_t* n = NULL;
+				size_t ln;
+				int lb;
+				if(!parse_arg_name(ssl, todo, &n, &ln, &lb)) {
+					(void)ssl_printf(ssl, "error cannot "
+						"parse IP address or name "
+						"'%s'\n", todo);
+					delegpt_free_mlc(dp);
+					return NULL;
+				}
+				if(!delegpt_add_ns_mlc(dp, n, 0)) {
+					(void)ssl_printf(ssl, "error out of memory\n");
+					delegpt_free_mlc(dp);
+					return NULL;
+				}
+				free(n);
+
+			} else {
+				(void)ssl_printf(ssl, "error cannot parse"
+					" IP address '%s'\n", todo);
+				delegpt_free_mlc(dp);
+				return NULL;
+			}
+		} else {
+			/* add address */
+			if(!delegpt_add_addr_mlc(dp, &addr, addrlen, 0, 0)) {
+				(void)ssl_printf(ssl, "error out of memory\n");
+				delegpt_free_mlc(dp);
+				return NULL;
+			}
 		}
 	}
 	return dp;
@@ -1393,15 +1417,185 @@ do_forward(SSL* ssl, struct worker* worker, char* args)
 		forwards_delete_zone(fwd, LDNS_RR_CLASS_IN, root);
 	} else {
 		struct delegpt* dp;
-		if(!(dp = parse_delegpt(ssl, args, root)))
+		if(!(dp = parse_delegpt(ssl, args, root, 0)))
 			return;
 		if(!forwards_add_zone(fwd, LDNS_RR_CLASS_IN, dp)) {
 			(void)ssl_printf(ssl, "error out of memory\n");
+			delegpt_free_mlc(dp);
 			return;
 		}
 	}
 	send_ok(ssl);
 }
+
+static int
+parse_fs_args(SSL* ssl, char* args, uint8_t** nm, struct delegpt** dp,
+	int* insecure, int* prime)
+{
+	char* zonename;
+	char* rest;
+	size_t nmlen;
+	int nmlabs;
+	/* parse all -x args */
+	while(args[0] == '+') {
+		if(!find_arg2(ssl, args, &rest))
+			return 0;
+		while(*(++args) != 0) {
+			if(*args == 'i' && insecure)
+				*insecure = 1;
+			else if(*args == 'p' && prime)
+				*prime = 1;
+			else {
+				(void)ssl_printf(ssl, "error: unknown option %s\n", args);
+				return 0;
+			}
+		}
+		args = rest;
+	}
+	/* parse name */
+	if(dp) {
+		if(!find_arg2(ssl, args, &rest))
+			return 0;
+		zonename = args;
+		args = rest;
+	} else	zonename = args;
+	if(!parse_arg_name(ssl, zonename, nm, &nmlen, &nmlabs))
+		return 0;
+
+	/* parse dp */
+	if(dp) {
+		if(!(*dp = parse_delegpt(ssl, args, *nm, 1))) {
+			free(*nm);
+			return 0;
+		}
+	}
+	return 1;
+}
+
+/** do the forward_add command */
+static void
+do_forward_add(SSL* ssl, struct worker* worker, char* args)
+{
+	struct iter_forwards* fwd = worker->env.fwds;
+	int insecure = 0;
+	uint8_t* nm = NULL;
+	struct delegpt* dp = NULL;
+	if(!parse_fs_args(ssl, args, &nm, &dp, &insecure, NULL)) {
+		return;
+	}
+	if(insecure) {
+		if(!anchors_add_insecure(worker->env.anchors, LDNS_RR_CLASS_IN,
+			nm)) {
+			(void)ssl_printf(ssl, "error out of memory\n");
+			delegpt_free_mlc(dp);
+			free(nm);
+			return;
+		}
+	}
+	if(!forwards_add_zone(fwd, LDNS_RR_CLASS_IN, dp)) {
+		(void)ssl_printf(ssl, "error out of memory\n");
+		delegpt_free_mlc(dp);
+		free(nm);
+		return;
+	}
+	free(nm);
+	send_ok(ssl);
+}
+
+/** do the forward_remove command */
+static void
+do_forward_remove(SSL* ssl, struct worker* worker, char* args)
+{
+	struct iter_forwards* fwd = worker->env.fwds;
+	int insecure = 0;
+	uint8_t* nm = NULL;
+	if(!parse_fs_args(ssl, args, &nm, NULL, &insecure, NULL)) {
+		free(nm);
+		return;
+	}
+	if(insecure)
+		anchors_delete_insecure(worker->env.anchors, LDNS_RR_CLASS_IN,
+			nm);
+	forwards_delete_zone(fwd, LDNS_RR_CLASS_IN, nm);
+	free(nm);
+	send_ok(ssl);
+}
+
+static struct iter_hints*
+get_iter_hints(struct worker* worker)
+{
+	int m;
+	struct iter_env* ie;
+	m = modstack_find(&worker->env.mesh->mods, "iterator");
+	if(m == -1)
+		return NULL;
+	ie = (struct iter_env*)worker->env.modinfo[m];
+	return ie->hints;
+}
+
+/** do the stub_add command */
+static void
+do_stub_add(SSL* ssl, struct worker* worker, char* args)
+{
+	struct iter_forwards* fwd = worker->env.fwds;
+	struct iter_hints* hints = get_iter_hints(worker);
+	int insecure = 0, prime = 0;
+	uint8_t* nm = NULL;
+	struct delegpt* dp = NULL;
+	if(!parse_fs_args(ssl, args, &nm, &dp, &insecure, &prime)) {
+		return;
+	}
+	if(insecure) {
+		if(!anchors_add_insecure(worker->env.anchors, LDNS_RR_CLASS_IN,
+			nm)) {
+			(void)ssl_printf(ssl, "error out of memory\n");
+			delegpt_free_mlc(dp);
+			free(nm);
+			return;
+		}
+	}
+	if(!forwards_add_stub_hole(fwd, LDNS_RR_CLASS_IN, nm)) {
+		if(insecure) anchors_delete_insecure(worker->env.anchors,
+			LDNS_RR_CLASS_IN, nm);
+		(void)ssl_printf(ssl, "error out of memory\n");
+		delegpt_free_mlc(dp);
+		free(nm);
+		return;
+	}
+	if(!hints_add_stub(hints, LDNS_RR_CLASS_IN, dp, !prime)) {
+		(void)ssl_printf(ssl, "error out of memory\n");
+		forwards_delete_stub_hole(fwd, LDNS_RR_CLASS_IN, nm);
+		if(insecure) anchors_delete_insecure(worker->env.anchors,
+			LDNS_RR_CLASS_IN, nm);
+		delegpt_free_mlc(dp);
+		free(nm);
+		return;
+	}
+	free(nm);
+	send_ok(ssl);
+}
+
+/** do the stub_remove command */
+static void
+do_stub_remove(SSL* ssl, struct worker* worker, char* args)
+{
+	struct iter_forwards* fwd = worker->env.fwds;
+	struct iter_hints* hints = get_iter_hints(worker);
+	int insecure = 0;
+	uint8_t* nm = NULL;
+	if(!parse_fs_args(ssl, args, &nm, NULL, &insecure, NULL)) {
+		free(nm);
+		return;
+	}
+	if(insecure)
+		anchors_delete_insecure(worker->env.anchors, LDNS_RR_CLASS_IN,
+			nm);
+	forwards_delete_stub_hole(fwd, LDNS_RR_CLASS_IN, nm);
+	hints_delete_stub(hints, LDNS_RR_CLASS_IN, nm);
+	free(nm);
+	send_ok(ssl);
+}
+
 
 /** do the status command */
 static void
@@ -1778,6 +1972,26 @@ execute_cmd(struct daemon_remote* rc, SSL* ssl, char* cmd,
 		return;
 	} else if(cmdcmp(p, "list_local_data", 15)) {
 		do_list_local_data(ssl, worker);
+		return;
+	} else if(cmdcmp(p, "stub_add", 8)) {
+		/* must always distribute this cmd */
+		if(rc) distribute_cmd(rc, ssl, cmd);
+		do_stub_add(ssl, worker, skipwhite(p+8));
+		return;
+	} else if(cmdcmp(p, "stub_remove", 11)) {
+		/* must always distribute this cmd */
+		if(rc) distribute_cmd(rc, ssl, cmd);
+		do_stub_remove(ssl, worker, skipwhite(p+11));
+		return;
+	} else if(cmdcmp(p, "forward_add", 11)) {
+		/* must always distribute this cmd */
+		if(rc) distribute_cmd(rc, ssl, cmd);
+		do_forward_add(ssl, worker, skipwhite(p+11));
+		return;
+	} else if(cmdcmp(p, "forward_remove", 14)) {
+		/* must always distribute this cmd */
+		if(rc) distribute_cmd(rc, ssl, cmd);
+		do_forward_remove(ssl, worker, skipwhite(p+14));
 		return;
 	} else if(cmdcmp(p, "forward", 7)) {
 		/* must always distribute this cmd */

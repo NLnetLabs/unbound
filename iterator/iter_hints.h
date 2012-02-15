@@ -46,7 +46,6 @@
 struct iter_env;
 struct config_file;
 struct delegpt;
-struct regional;
 
 /**
  * Iterator hints structure
@@ -136,5 +135,27 @@ struct iter_hints_stub* hints_lookup_stub(struct iter_hints* hints,
  * @return bytes in use
  */
 size_t hints_get_mem(struct iter_hints* hints);
+
+/**
+ * Add stub to hints structure. For external use since it recalcs 
+ * the tree parents.
+ * @param hints: the hints data structure
+ * @param c: class of zone
+ * @param dp: delegation point with name and target nameservers for new
+ *	hints stub. malloced.
+ * @param noprime: set noprime option to true or false on new hint stub.
+ * @return false on failure (out of memory);
+ */
+int hints_add_stub(struct iter_hints* hints, uint16_t c, struct delegpt* dp,
+	int noprime);
+
+/**
+ * Remove stub from hints structure. For external use since it 
+ * recalcs the tree parents.
+ * @param hints: the hints data structure
+ * @param c: class of stub zone
+ * @param nm: name of stub zone (in uncompressed wireformat).
+ */
+void hints_delete_stub(struct iter_hints* hints, uint16_t c, uint8_t* nm);
 
 #endif /* ITERATOR_ITER_HINTS_H */

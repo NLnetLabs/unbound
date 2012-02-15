@@ -49,7 +49,6 @@
 #include "util/data/dname.h"
 #include "util/log.h"
 #include "util/net_help.h"
-#include "util/regional.h"
 #include "util/config_file.h"
 #ifdef HAVE_GLOB_H
 #include <glob.h>
@@ -77,11 +76,6 @@ anchors_create(void)
 	struct val_anchors* a = (struct val_anchors*)calloc(1, sizeof(*a));
 	if(!a)
 		return NULL;
-	a->region = regional_create();
-	if(!a->region) {
-		free(a);
-		return NULL;
-	}
 	a->tree = rbtree_create(anchor_cmp);
 	if(!a->tree) {
 		anchors_delete(a);
@@ -98,15 +92,45 @@ anchors_create(void)
 	return a;
 }
 
+/** delete assembled rrset */
+static void
+assembled_rrset_delete(struct ub_packed_rrset_key* pkey)
+{
+	if(!pkey) return;
+	if(pkey->entry.data) {
+		struct packed_rrset_data* pd = (struct packed_rrset_data*)
+			pkey->entry.data;
+		free(pd->rr_data);
+		free(pd->rr_ttl);
+		free(pd->rr_len);
+		free(pd);
+	}
+	free(pkey->rk.dname);
+	free(pkey);
+}
+
 /** destroy locks in tree and delete autotrust anchors */
 static void
 anchors_delfunc(rbnode_t* elem, void* ATTR_UNUSED(arg))
 {
 	struct trust_anchor* ta = (struct trust_anchor*)elem;
+	if(!ta) return;
 	if(ta->autr) {
 		autr_point_delete(ta);
 	} else {
+		struct ta_key* p, *np;
 		lock_basic_destroy(&ta->lock);
+		free(ta->name);
+		p = ta->keylist;
+		while(p) {
+			np = p->next;
+			free(p->data);
+			free(p);
+			p = np;
+		}
+		assembled_rrset_delete(ta->ds_rrset);
+		assembled_rrset_delete(ta->dnskey_rrset);
+		free(ta);
 	}
 }
 
@@ -118,9 +142,9 @@ anchors_delete(struct val_anchors* anchors)
 	lock_unprotect(&anchors->lock, anchors->autr);
 	lock_unprotect(&anchors->lock, anchors);
 	lock_basic_destroy(&anchors->lock);
-	traverse_postorder(anchors->tree, anchors_delfunc, NULL);
+	if(anchors->tree)
+		traverse_postorder(anchors->tree, anchors_delfunc, NULL);
 	free(anchors->tree);
-	regional_destroy(anchors->region);
 	autr_global_delete(anchors->autr);
 	free(anchors);
 }
@@ -193,30 +217,34 @@ anchor_find(struct val_anchors* anchors, uint8_t* name, int namelabs,
 /** create new trust anchor object */
 static struct trust_anchor*
 anchor_new_ta(struct val_anchors* anchors, uint8_t* name, int namelabs,
-	size_t namelen, uint16_t dclass)
+	size_t namelen, uint16_t dclass, int lockit)
 {
 #ifdef UNBOUND_DEBUG
 	rbnode_t* r;
 #endif
-	struct trust_anchor* ta = (struct trust_anchor*)regional_alloc(
-		anchors->region, sizeof(struct trust_anchor));
+	struct trust_anchor* ta = (struct trust_anchor*)malloc(
+		sizeof(struct trust_anchor));
 	if(!ta)
 		return NULL;
 	memset(ta, 0, sizeof(*ta));
 	ta->node.key = ta;
-	ta->name = regional_alloc_init(anchors->region, name, namelen);
-	if(!ta->name)
+	ta->name = memdup(name, namelen);
+	if(!ta->name) {
+		free(ta);
 		return NULL;
+	}
 	ta->namelabs = namelabs;
 	ta->namelen = namelen;
 	ta->dclass = dclass;
 	lock_basic_init(&ta->lock);
-	lock_basic_lock(&anchors->lock);
+	if(lockit)
+		lock_basic_lock(&anchors->lock);
 #ifdef UNBOUND_DEBUG
 	r =
 #endif
 	rbtree_insert(anchors->tree, &ta->node);
-	lock_basic_unlock(&anchors->lock);
+	if(lockit)
+		lock_basic_unlock(&anchors->lock);
 	log_assert(r != NULL);
 	return ta;
 }
@@ -237,17 +265,17 @@ anchor_find_key(struct trust_anchor* ta, uint8_t* rdata, size_t rdata_len,
 	
 /** create new trustanchor key */
 static struct ta_key*
-anchor_new_ta_key(struct val_anchors* anchors, uint8_t* rdata, size_t rdata_len,
-	uint16_t type)
+anchor_new_ta_key(uint8_t* rdata, size_t rdata_len, uint16_t type)
 {
-	struct ta_key* k = (struct ta_key*)regional_alloc(anchors->region,
-		sizeof(*k));
+	struct ta_key* k = (struct ta_key*)malloc(sizeof(*k));
 	if(!k)
 		return NULL;
 	memset(k, 0, sizeof(*k));
-	k->data = regional_alloc_init(anchors->region, rdata, rdata_len);
-	if(!k->data)
+	k->data = memdup(rdata, rdata_len);
+	if(!k->data) {
+		free(k);
 		return NULL;
+	}
 	k->len = rdata_len;
 	k->type = type;
 	return k;
@@ -282,7 +310,7 @@ anchor_store_new_key(struct val_anchors* anchors, uint8_t* name, uint16_t type,
 	/* lookup or create trustanchor */
 	ta = anchor_find(anchors, name, namelabs, namelen, dclass);
 	if(!ta) {
-		ta = anchor_new_ta(anchors, name, namelabs, namelen, dclass);
+		ta = anchor_new_ta(anchors, name, namelabs, namelen, dclass, 1);
 		if(!ta)
 			return NULL;
 		lock_basic_lock(&ta->lock);
@@ -296,7 +324,7 @@ anchor_store_new_key(struct val_anchors* anchors, uint8_t* name, uint16_t type,
 		lock_basic_unlock(&ta->lock);
 		return ta;
 	}
-	k = anchor_new_ta_key(anchors, rdata, rdata_len, type);
+	k = anchor_new_ta_key(rdata, rdata_len, type);
 	if(!k) {
 		lock_basic_unlock(&ta->lock);
 		return NULL;
@@ -826,55 +854,73 @@ anchor_read_bind_file_wild(struct val_anchors* anchors, ldns_buffer* buffer,
 
 /** 
  * Assemble an rrset structure for the type 
- * @param region: allocated in this region.
  * @param ta: trust anchor.
  * @param num: number of items to fetch from list.
  * @param type: fetch only items of this type.
  * @return rrset or NULL on error.
  */
 static struct ub_packed_rrset_key*
-assemble_it(struct regional* region, struct trust_anchor* ta, size_t num, 
-	uint16_t type)
+assemble_it(struct trust_anchor* ta, size_t num, uint16_t type)
 {
 	struct ub_packed_rrset_key* pkey = (struct ub_packed_rrset_key*)
-		regional_alloc(region, sizeof(*pkey));
+		malloc(sizeof(*pkey));
 	struct packed_rrset_data* pd;
 	struct ta_key* tk;
 	size_t i;
 	if(!pkey)
 		return NULL;
 	memset(pkey, 0, sizeof(*pkey));
-	pkey->rk.dname = regional_alloc_init(region, ta->name, ta->namelen);
-	if(!pkey->rk.dname)
+	pkey->rk.dname = memdup(ta->name, ta->namelen);
+	if(!pkey->rk.dname) {
+		free(pkey);
 		return NULL;
-	
+	}
+
 	pkey->rk.dname_len = ta->namelen;
 	pkey->rk.type = htons(type);
 	pkey->rk.rrset_class = htons(ta->dclass);
 	/* The rrset is build in an uncompressed way. This means it
 	 * cannot be copied in the normal way. */
-	pd = (struct packed_rrset_data*)regional_alloc(region, sizeof(*pd));
-	if(!pd)
+	pd = (struct packed_rrset_data*)malloc(sizeof(*pd));
+	if(!pd) {
+		free(pkey->rk.dname);
+		free(pkey);
 		return NULL;
+	}
 	memset(pd, 0, sizeof(*pd));
 	pd->count = num;
 	pd->trust = rrset_trust_ultimate;
-	pd->rr_len = (size_t*)regional_alloc(region, num*sizeof(size_t));
-	if(!pd->rr_len)
+	pd->rr_len = (size_t*)malloc(num*sizeof(size_t));
+	if(!pd->rr_len) {
+		free(pd);
+		free(pkey->rk.dname);
+		free(pkey);
 		return NULL;
-	pd->rr_ttl = (uint32_t*)regional_alloc(region, num*sizeof(uint32_t));
-	if(!pd->rr_ttl)
+	}
+	pd->rr_ttl = (uint32_t*)malloc(num*sizeof(uint32_t));
+	if(!pd->rr_ttl) {
+		free(pd->rr_len);
+		free(pd);
+		free(pkey->rk.dname);
+		free(pkey);
 		return NULL;
-	pd->rr_data = (uint8_t**)regional_alloc(region, num*sizeof(uint8_t*));
-	if(!pd->rr_data)
+	}
+	pd->rr_data = (uint8_t**)malloc(num*sizeof(uint8_t*));
+	if(!pd->rr_data) {
+		free(pd->rr_ttl);
+		free(pd->rr_len);
+		free(pd);
+		free(pkey->rk.dname);
+		free(pkey);
 		return NULL;
+	}
 	/* fill in rrs */
 	i=0;
 	for(tk = ta->keylist; tk; tk = tk->next) {
 		if(tk->type != type)
 			continue;
 		pd->rr_len[i] = tk->len;
-		/* reuse data ptr to allocation in region */
+		/* reuse data ptr to allocation in talist */
 		pd->rr_data[i] = tk->data;
 		pd->rr_ttl[i] = 0;
 		i++;
@@ -890,17 +936,16 @@ assemble_it(struct regional* region, struct trust_anchor* ta, size_t num,
  * @return: false on error.
  */
 static int
-anchors_assemble(struct val_anchors* anchors, struct trust_anchor* ta)
+anchors_assemble(struct trust_anchor* ta)
 {
 	if(ta->numDS > 0) {
-		ta->ds_rrset = assemble_it(anchors->region, ta,
-			ta->numDS, LDNS_RR_TYPE_DS);
+		ta->ds_rrset = assemble_it(ta, ta->numDS, LDNS_RR_TYPE_DS);
 		if(!ta->ds_rrset)
 			return 0;
 	}
 	if(ta->numDNSKEY > 0) {
-		ta->dnskey_rrset = assemble_it(anchors->region, ta,
-			ta->numDNSKEY, LDNS_RR_TYPE_DNSKEY);
+		ta->dnskey_rrset = assemble_it(ta, ta->numDNSKEY,
+			LDNS_RR_TYPE_DNSKEY);
 		if(!ta->dnskey_rrset)
 			return 0;
 	}
@@ -961,7 +1006,7 @@ anchors_assemble_rrsets(struct val_anchors* anchors)
 			ta = next; /* skip */
 			continue;
 		}
-		if(!anchors_assemble(anchors, ta)) {
+		if(!anchors_assemble(ta)) {
 			log_err("out of memory");
 			lock_basic_unlock(&ta->lock);
 			lock_basic_unlock(&anchors->lock);
@@ -1146,5 +1191,72 @@ anchors_lookup(struct val_anchors* anchors,
 size_t 
 anchors_get_mem(struct val_anchors* anchors)
 {
-	return sizeof(*anchors) + regional_get_mem(anchors->region);
+	struct trust_anchor *ta;
+	size_t s = sizeof(*anchors);
+	RBTREE_FOR(ta, struct trust_anchor*, anchors->tree) {
+		s += sizeof(*ta) + ta->namelen;
+		/* keys and so on */
+	}
+	return s;
 }
+
+int
+anchors_add_insecure(struct val_anchors* anchors, uint16_t c, uint8_t* nm)
+{
+	struct trust_anchor key;
+	key.node.key = &key;
+	key.name = nm;
+	key.namelabs = dname_count_size_labels(nm, &key.namelen);
+	key.dclass = c;
+	lock_basic_lock(&anchors->lock);
+	if(rbtree_search(anchors->tree, &key)) {
+		lock_basic_unlock(&anchors->lock);
+		/* nothing to do, already an anchor or insecure point */
+		return 1;
+	}
+	if(!anchor_new_ta(anchors, nm, key.namelabs, key.namelen, c, 0)) {
+		log_err("out of memory");
+		lock_basic_unlock(&anchors->lock);
+		return 0;
+	}
+	/* no other contents in new ta, because it is insecure point */
+	anchors_init_parents_locked(anchors);
+	lock_basic_unlock(&anchors->lock);
+	return 1;
+}
+
+void
+anchors_delete_insecure(struct val_anchors* anchors, uint16_t c,
+        uint8_t* nm)
+{
+	struct trust_anchor key;
+	struct trust_anchor* ta;
+	key.node.key = &key;
+	key.name = nm;
+	key.namelabs = dname_count_size_labels(nm, &key.namelen);
+	key.dclass = c;
+	lock_basic_lock(&anchors->lock);
+	if(!(ta=(struct trust_anchor*)rbtree_search(anchors->tree, &key))) {
+		lock_basic_unlock(&anchors->lock);
+		/* nothing there */
+		return;
+	}
+	/* lock it to drive away other threads that use it */
+	lock_basic_lock(&ta->lock);
+	/* see if its really an insecure point */
+	if(ta->keylist || ta->autr || ta->numDS || ta->numDNSKEY) {
+		lock_basic_unlock(&ta->lock);
+		/* its not an insecure point, do not remove it */
+		return;
+	}
+	lock_basic_unlock(&ta->lock);
+
+	/* remove from tree */
+	rbtree_delete(anchors->tree, &ta->node);
+	anchors_init_parents_locked(anchors);
+	lock_basic_unlock(&anchors->lock);
+
+	/* actual free of data */
+	anchors_delfunc(&ta->node, NULL);
+}
+

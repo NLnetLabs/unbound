@@ -44,7 +44,6 @@
 #include <ldns/rr.h>
 #include "iterator/iter_hints.h"
 #include "iterator/iter_delegpt.h"
-#include "util/regional.h"
 #include "util/log.h"
 #include "util/config_file.h"
 #include "util/net_help.h"
@@ -499,3 +498,34 @@ hints_get_mem(struct iter_hints* hints)
 	}
 	return s;
 }
+
+int 
+hints_add_stub(struct iter_hints* hints, uint16_t c, struct delegpt* dp,
+	int noprime)
+{
+	struct iter_hints_stub *z;
+	if((z=(struct iter_hints_stub*)name_tree_find(&hints->tree,
+		dp->name, dp->namelen, dp->namelabs, c)) != NULL) {
+		(void)rbtree_delete(&hints->tree, &z->node);
+		hints_stub_free(z);
+	}
+	if(!hints_insert(hints, c, dp, noprime))
+		return 0;
+	name_tree_init_parents(&hints->tree);
+	return 1;
+}
+
+void 
+hints_delete_stub(struct iter_hints* hints, uint16_t c, uint8_t* nm)
+{
+	struct iter_hints_stub *z;
+	size_t len;
+	int labs = dname_count_size_labels(nm, &len);
+	if(!(z=(struct iter_hints_stub*)name_tree_find(&hints->tree,
+		nm, len, labs, c)))
+		return; /* nothing to do */
+	(void)rbtree_delete(&hints->tree, &z->node);
+	hints_stub_free(z);
+	name_tree_init_parents(&hints->tree);
+}
+
