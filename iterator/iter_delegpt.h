@@ -362,6 +362,14 @@ struct delegpt* delegpt_create_mlc(uint8_t* name);
 void delegpt_free_mlc(struct delegpt* dp);
 
 /**
+ * Set name of delegation point.
+ * @param dp: delegation point. malloced.
+ * @param name: name to use.
+ * @return false on error.
+ */
+int delegpt_set_name_mlc(struct delegpt* dp, uint8_t* name);
+
+/**
  * add a name to malloced delegation point.
  * @param dp: must have been created with delegpt_create_mlc. 
  * @param name: the name to add.

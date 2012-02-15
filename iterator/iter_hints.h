@@ -52,8 +52,6 @@ struct regional;
  * Iterator hints structure
  */
 struct iter_hints {
-	/** regional where hints are allocated */
-	struct regional* region;
 	/** 
 	 * Hints are stored in this tree. Sort order is specially chosen.
 	 * first sorted on qclass. Then on dname in nsec-like order, so that
@@ -71,7 +69,7 @@ struct iter_hints {
 struct iter_hints_stub {
 	/** tree sorted by name, class */
 	struct name_tree_node node;
-	/** delegation point with hint information for this stub. */
+	/** delegation point with hint information for this stub. malloced. */
 	struct delegpt* dp;
 	/** does the stub need to forego priming (like on other ports) */
 	uint8_t noprime;

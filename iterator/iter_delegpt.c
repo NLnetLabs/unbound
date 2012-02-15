@@ -507,11 +507,13 @@ struct delegpt* delegpt_create_mlc(uint8_t* name)
 		return NULL;
 	memset(dp, 0, sizeof(*dp));
 	dp->dp_type_mlc = 1;
-	dp->namelabs = dname_count_size_labels(name, &dp->namelen);
-	dp->name = memdup(name, dp->namelen);
-	if(!dp->name) {
-		free(dp);
-		return NULL;
+	if(name) {
+		dp->namelabs = dname_count_size_labels(name, &dp->namelen);
+		dp->name = memdup(name, dp->namelen);
+		if(!dp->name) {
+			free(dp);
+			return NULL;
+		}
 	}
 	return dp;
 }
@@ -537,6 +539,14 @@ void delegpt_free_mlc(struct delegpt* dp)
 	}
 	free(dp->name);
 	free(dp);
+}
+
+int delegpt_set_name_mlc(struct delegpt* dp, uint8_t* name)
+{
+	log_assert(dp->dp_type_mlc);
+	dp->namelabs = dname_count_size_labels(name, &dp->namelen);
+	dp->name = memdup(name, dp->namelen);
+	return (dp->name != NULL);
 }
 
 int delegpt_add_ns_mlc(struct delegpt* dp, uint8_t* name, int lame)

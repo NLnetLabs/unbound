@@ -1,5 +1,6 @@
 15 February 2012: Wouter
 	- Fix forward-zone memory, uses malloc and frees original root dp.
+	- iter hints (stubs) uses malloc inside for more dynamicity.
 
 14 February 2012: Wouter
 	- Fix sticky NS (ghost domain problem) if prefetch is yes.

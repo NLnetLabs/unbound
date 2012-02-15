@@ -57,12 +57,25 @@ hints_create(void)
 		sizeof(struct iter_hints));
 	if(!hints)
 		return NULL;
-	hints->region = regional_create();
-	if(!hints->region) {
-		hints_delete(hints);
-		return NULL;
-	}
 	return hints;
+}
+
+static void hints_stub_free(struct iter_hints_stub* s)
+{
+	if(!s) return;
+	delegpt_free_mlc(s->dp);
+	free(s);
+}
+
+static void delhintnode(rbnode_t* n, void* ATTR_UNUSED(arg))
+{
+	struct iter_hints_stub* node = (struct iter_hints_stub*)n;
+	hints_stub_free(node);
+}
+
+static void hints_del_tree(struct iter_hints* hints)
+{
+	traverse_postorder(&hints->tree, &delhintnode, NULL);
 }
 
 void 
@@ -70,13 +83,13 @@ hints_delete(struct iter_hints* hints)
 {
 	if(!hints) 
 		return;
-	regional_destroy(hints->region);
+	hints_del_tree(hints);
 	free(hints);
 }
 
 /** add hint to delegation hints */
 static int
-ah(struct delegpt* dp, struct regional* r, const char* sv, const char* ip)
+ah(struct delegpt* dp, const char* sv, const char* ip)
 {
 	struct sockaddr_storage addr;
 	socklen_t addrlen;
@@ -85,9 +98,9 @@ ah(struct delegpt* dp, struct regional* r, const char* sv, const char* ip)
 		log_err("could not parse %s", sv);
 		return 0;
 	}
-	if(!delegpt_add_ns(dp, r, ldns_rdf_data(rdf), 0) ||
+	if(!delegpt_add_ns_mlc(dp, ldns_rdf_data(rdf), 0) ||
 	   !extstrtoaddr(ip, &addr, &addrlen) ||
-	   !delegpt_add_target(dp, r, ldns_rdf_data(rdf), ldns_rdf_size(rdf),
+	   !delegpt_add_target_mlc(dp, ldns_rdf_data(rdf), ldns_rdf_size(rdf),
 		&addr, addrlen, 0, 0)) {
 		ldns_rdf_deep_free(rdf);
 		return 0;
@@ -98,7 +111,7 @@ ah(struct delegpt* dp, struct regional* r, const char* sv, const char* ip)
 
 /** obtain compiletime provided root hints */
 static struct delegpt* 
-compile_time_root_prime(struct regional* r, int do_ip4, int do_ip6)
+compile_time_root_prime(int do_ip4, int do_ip6)
 {
 	/* from:
 	 ;       This file is made available by InterNIC
@@ -109,37 +122,35 @@ compile_time_root_prime(struct regional* r, int do_ip4, int do_ip6)
 	 ;
 	 ;       related version of root zone:   2010061700
 	 */
-	struct delegpt* dp = delegpt_create(r);
+	struct delegpt* dp = delegpt_create_mlc((uint8_t*)"\000");
 	if(!dp)
 		return NULL;
 	dp->has_parent_side_NS = 1;
-	if(!delegpt_set_name(dp, r, (uint8_t*)"\000"))
-		return NULL;
       if(do_ip4) {
-	if(!ah(dp, r, "A.ROOT-SERVERS.NET.", "198.41.0.4"))	return 0;
-	if(!ah(dp, r, "B.ROOT-SERVERS.NET.", "192.228.79.201")) return 0;
-	if(!ah(dp, r, "C.ROOT-SERVERS.NET.", "192.33.4.12"))	return 0;
-	if(!ah(dp, r, "D.ROOT-SERVERS.NET.", "128.8.10.90"))	return 0;
-	if(!ah(dp, r, "E.ROOT-SERVERS.NET.", "192.203.230.10")) return 0;
-	if(!ah(dp, r, "F.ROOT-SERVERS.NET.", "192.5.5.241"))	return 0;
-	if(!ah(dp, r, "G.ROOT-SERVERS.NET.", "192.112.36.4"))	return 0;
-	if(!ah(dp, r, "H.ROOT-SERVERS.NET.", "128.63.2.53"))	return 0;
-	if(!ah(dp, r, "I.ROOT-SERVERS.NET.", "192.36.148.17"))	return 0;
-	if(!ah(dp, r, "J.ROOT-SERVERS.NET.", "192.58.128.30"))	return 0;
-	if(!ah(dp, r, "K.ROOT-SERVERS.NET.", "193.0.14.129"))	return 0;
-	if(!ah(dp, r, "L.ROOT-SERVERS.NET.", "199.7.83.42"))	return 0;
-	if(!ah(dp, r, "M.ROOT-SERVERS.NET.", "202.12.27.33"))	return 0;
+	if(!ah(dp, "A.ROOT-SERVERS.NET.", "198.41.0.4"))	return 0;
+	if(!ah(dp, "B.ROOT-SERVERS.NET.", "192.228.79.201")) return 0;
+	if(!ah(dp, "C.ROOT-SERVERS.NET.", "192.33.4.12"))	return 0;
+	if(!ah(dp, "D.ROOT-SERVERS.NET.", "128.8.10.90"))	return 0;
+	if(!ah(dp, "E.ROOT-SERVERS.NET.", "192.203.230.10")) return 0;
+	if(!ah(dp, "F.ROOT-SERVERS.NET.", "192.5.5.241"))	return 0;
+	if(!ah(dp, "G.ROOT-SERVERS.NET.", "192.112.36.4"))	return 0;
+	if(!ah(dp, "H.ROOT-SERVERS.NET.", "128.63.2.53"))	return 0;
+	if(!ah(dp, "I.ROOT-SERVERS.NET.", "192.36.148.17"))	return 0;
+	if(!ah(dp, "J.ROOT-SERVERS.NET.", "192.58.128.30"))	return 0;
+	if(!ah(dp, "K.ROOT-SERVERS.NET.", "193.0.14.129"))	return 0;
+	if(!ah(dp, "L.ROOT-SERVERS.NET.", "199.7.83.42"))	return 0;
+	if(!ah(dp, "M.ROOT-SERVERS.NET.", "202.12.27.33"))	return 0;
       }
       if(do_ip6) {
-	if(!ah(dp, r, "A.ROOT-SERVERS.NET.", "2001:503:ba3e::2:30")) return 0;
-	if(!ah(dp, r, "D.ROOT-SERVERS.NET.", "2001:500:2d::d")) return 0;
-	if(!ah(dp, r, "F.ROOT-SERVERS.NET.", "2001:500:2f::f")) return 0;
-	if(!ah(dp, r, "H.ROOT-SERVERS.NET.", "2001:500:1::803f:235")) return 0;
-	if(!ah(dp, r, "I.ROOT-SERVERS.NET.", "2001:7fe::53")) return 0;
-	if(!ah(dp, r, "J.ROOT-SERVERS.NET.", "2001:503:c27::2:30")) return 0;
-	if(!ah(dp, r, "K.ROOT-SERVERS.NET.", "2001:7fd::1")) return 0;
-	if(!ah(dp, r, "L.ROOT-SERVERS.NET.", "2001:500:3::42")) return 0;
-	if(!ah(dp, r, "M.ROOT-SERVERS.NET.", "2001:dc3::35")) return 0;
+	if(!ah(dp, "A.ROOT-SERVERS.NET.", "2001:503:ba3e::2:30")) return 0;
+	if(!ah(dp, "D.ROOT-SERVERS.NET.", "2001:500:2d::d")) return 0;
+	if(!ah(dp, "F.ROOT-SERVERS.NET.", "2001:500:2f::f")) return 0;
+	if(!ah(dp, "H.ROOT-SERVERS.NET.", "2001:500:1::803f:235")) return 0;
+	if(!ah(dp, "I.ROOT-SERVERS.NET.", "2001:7fe::53")) return 0;
+	if(!ah(dp, "J.ROOT-SERVERS.NET.", "2001:503:c27::2:30")) return 0;
+	if(!ah(dp, "K.ROOT-SERVERS.NET.", "2001:7fd::1")) return 0;
+	if(!ah(dp, "L.ROOT-SERVERS.NET.", "2001:500:3::42")) return 0;
+	if(!ah(dp, "M.ROOT-SERVERS.NET.", "2001:dc3::35")) return 0;
       }
 	return dp;
 }
@@ -149,51 +160,50 @@ static int
 hints_insert(struct iter_hints* hints, uint16_t c, struct delegpt* dp,
 	int noprime)
 {
-	struct iter_hints_stub* node = regional_alloc(hints->region,
+	struct iter_hints_stub* node = (struct iter_hints_stub*)malloc(
 		sizeof(struct iter_hints_stub));
-	uint8_t* nm;
-	if(!node)
+	if(!node) {
+		delegpt_free_mlc(dp);
 		return 0;
-	nm = regional_alloc_init(hints->region, dp->name, dp->namelen);
-	if(!nm)
-		return 0;
+	}
 	node->dp = dp;
 	node->noprime = (uint8_t)noprime;
-	if(!name_tree_insert(&hints->tree, &node->node, nm, dp->namelen,
+	if(!name_tree_insert(&hints->tree, &node->node, dp->name, dp->namelen,
 		dp->namelabs, c)) {
 		log_err("second hints ignored.");
+		delegpt_free_mlc(dp);
+		free(node);
 	}
 	return 1;
 }
 
 /** set stub name */
-static int 
-read_stubs_name(struct iter_hints* hints, struct config_stub* s, 
-	struct delegpt* dp)
+static struct delegpt* 
+read_stubs_name(struct config_stub* s)
 {
+	struct delegpt* dp;
 	ldns_rdf* rdf;
 	if(!s->name) {
 		log_err("stub zone without a name");
-		return 0;
+		return NULL;
 	}
 	rdf = ldns_dname_new_frm_str(s->name);
 	if(!rdf) {
 		log_err("cannot parse stub zone name %s", s->name);
-		return 0;
+		return NULL;
 	}
-	if(!delegpt_set_name(dp, hints->region, ldns_rdf_data(rdf))) {
+	if(!(dp=delegpt_create_mlc(ldns_rdf_data(rdf)))) {
 		ldns_rdf_deep_free(rdf);
 		log_err("out of memory");
-		return 0;
+		return NULL;
 	}
 	ldns_rdf_deep_free(rdf);
-	return 1;
+	return dp;
 }
 
 /** set stub host names */
 static int 
-read_stubs_host(struct iter_hints* hints, struct config_stub* s, 
-	struct delegpt* dp)
+read_stubs_host(struct config_stub* s, struct delegpt* dp)
 {
 	struct config_strlist* p;
 	ldns_rdf* rdf;
@@ -205,7 +215,7 @@ read_stubs_host(struct iter_hints* hints, struct config_stub* s,
 				s->name, p->str);
 			return 0;
 		}
-		if(!delegpt_add_ns(dp, hints->region, ldns_rdf_data(rdf), 0)) {
+		if(!delegpt_add_ns_mlc(dp, ldns_rdf_data(rdf), 0)) {
 			ldns_rdf_deep_free(rdf);
 			log_err("out of memory");
 			return 0;
@@ -217,8 +227,7 @@ read_stubs_host(struct iter_hints* hints, struct config_stub* s,
 
 /** set stub server addresses */
 static int 
-read_stubs_addr(struct iter_hints* hints, struct config_stub* s, 
-	struct delegpt* dp)
+read_stubs_addr(struct config_stub* s, struct delegpt* dp)
 {
 	struct config_strlist* p;
 	struct sockaddr_storage addr;
@@ -230,7 +239,7 @@ read_stubs_addr(struct iter_hints* hints, struct config_stub* s,
 				s->name, p->str);
 			return 0;
 		}
-		if(!delegpt_add_addr(dp, hints->region, &addr, addrlen, 0, 0)) {
+		if(!delegpt_add_addr_mlc(dp, &addr, addrlen, 0, 0)) {
 			log_err("out of memory");
 			return 0;
 		}
@@ -243,17 +252,13 @@ static int
 read_stubs(struct iter_hints* hints, struct config_file* cfg)
 {
 	struct config_stub* s;
+	struct delegpt* dp;
 	for(s = cfg->stubs; s; s = s->next) {
-		struct delegpt* dp = delegpt_create(hints->region);
-		if(!dp) {
-			log_err("out of memory");
+		if(!(dp=read_stubs_name(s)) ||
+			!read_stubs_host(s, dp) ||
+			!read_stubs_addr(s, dp))
 			return 0;
-		}
 		dp->has_parent_side_NS = 1;
-		if(!read_stubs_name(hints, s, dp) ||
-			!read_stubs_host(hints, s, dp) ||
-			!read_stubs_addr(hints, s, dp))
-			return 0;
 		if(!hints_insert(hints, LDNS_RR_CLASS_IN, dp, !s->isprime))
 			return 0;
 		delegpt_log(VERB_QUERY, dp);
@@ -279,7 +284,7 @@ read_root_hints(struct iter_hints* hints, char* fname)
 			fname, strerror(errno));
 		return 0;
 	}
-	dp = delegpt_create(hints->region);
+	dp = delegpt_create_mlc(NULL);
 	if(!dp) {
 		log_err("out of memory reading root hints");
 		fclose(f);
@@ -300,14 +305,14 @@ read_root_hints(struct iter_hints* hints, char* fname)
 			goto stop_read;
 		}
 		if(ldns_rr_get_type(rr) == LDNS_RR_TYPE_NS) {
-			if(!delegpt_add_ns(dp, hints->region,
+			if(!delegpt_add_ns_mlc(dp,
 				ldns_rdf_data(ldns_rr_rdf(rr, 0)), 0)) {
 				log_err("out of memory reading root hints");
 				goto stop_read;
 			}
 			c = ldns_rr_get_class(rr);
 			if(!dp->name) {
-				if(!delegpt_set_name(dp, hints->region, 
+				if(!delegpt_set_name_mlc(dp,
 					ldns_rdf_data(ldns_rr_owner(rr)))){
 					log_err("out of memory.");
 					goto stop_read;
@@ -321,7 +326,7 @@ read_root_hints(struct iter_hints* hints, char* fname)
 			sa.sin_port = (in_port_t)htons(UNBOUND_DNS_PORT);
 			memmove(&sa.sin_addr, 
 				ldns_rdf_data(ldns_rr_rdf(rr, 0)), INET_SIZE);
-			if(!delegpt_add_target(dp, hints->region,
+			if(!delegpt_add_target_mlc(dp,
 					ldns_rdf_data(ldns_rr_owner(rr)),
 					ldns_rdf_size(ldns_rr_owner(rr)),
 					(struct sockaddr_storage*)&sa, len, 
@@ -337,7 +342,7 @@ read_root_hints(struct iter_hints* hints, char* fname)
 			sa.sin6_port = (in_port_t)htons(UNBOUND_DNS_PORT);
 			memmove(&sa.sin6_addr, 
 				ldns_rdf_data(ldns_rr_rdf(rr, 0)), INET6_SIZE);
-			if(!delegpt_add_target(dp, hints->region,
+			if(!delegpt_add_target_mlc(dp,
 					ldns_rdf_data(ldns_rr_owner(rr)),
 					ldns_rdf_size(ldns_rr_owner(rr)),
 					(struct sockaddr_storage*)&sa, len,
@@ -360,6 +365,7 @@ read_root_hints(struct iter_hints* hints, char* fname)
 	fclose(f);
 	if(!dp->name) {
 		log_warn("root hints %s: no NS content", fname);
+		delegpt_free_mlc(dp);
 		return 1;
 	}
 	if(!hints_insert(hints, c, dp, 0)) {
@@ -373,6 +379,7 @@ stop_read:
 		ldns_rdf_deep_free(origin);
 	if (prev_rr)
 		ldns_rdf_deep_free(prev_rr);
+	delegpt_free_mlc(dp);
 	fclose(f);
 	return 0;
 }
@@ -400,7 +407,7 @@ read_root_hints_list(struct iter_hints* hints, struct config_file* cfg)
 int 
 hints_apply_cfg(struct iter_hints* hints, struct config_file* cfg)
 {
-	regional_free_all(hints->region);
+	hints_del_tree(hints);
 	name_tree_init(&hints->tree);
 	
 	/* read root hints */
@@ -413,8 +420,8 @@ hints_apply_cfg(struct iter_hints* hints, struct config_file* cfg)
 
 	/* use fallback compiletime root hints */
 	if(!hints_lookup_root(hints, LDNS_RR_CLASS_IN)) {
-		struct delegpt* dp = compile_time_root_prime(hints->region,
-			cfg->do_ip4, cfg->do_ip6);
+		struct delegpt* dp = compile_time_root_prime(cfg->do_ip4,
+			cfg->do_ip6);
 		verbose(VERB_ALGO, "no config, using builtin root hints.");
 		if(!dp) 
 			return 0;
@@ -483,6 +490,12 @@ int hints_next_root(struct iter_hints* hints, uint16_t* qclass)
 size_t 
 hints_get_mem(struct iter_hints* hints)
 {
+	size_t s;
+	struct iter_hints_stub* p;
 	if(!hints) return 0;
-	return sizeof(*hints) + regional_get_mem(hints->region);
+	s = sizeof(*hints);
+	RBTREE_FOR(p, struct iter_hints_stub*, &hints->tree) {
+		s += sizeof(*p) + delegpt_get_mem(p->dp);
+	}
+	return s;
 }

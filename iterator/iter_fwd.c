@@ -110,13 +110,17 @@ static int
 forwards_insert_data(struct iter_forwards* fwd, uint16_t c, uint8_t* nm, 
 	size_t nmlen, int nmlabs, struct delegpt* dp)
 {
-	struct iter_forward_zone* node = malloc(sizeof(*node));
-	if(!node)
+	struct iter_forward_zone* node = (struct iter_forward_zone*)malloc(
+		sizeof(struct iter_forward_zone));
+	if(!node) {
+		delegpt_free_mlc(dp);
 		return 0;
+	}
 	node->node.key = node;
 	node->dclass = c;
 	node->name = memdup(nm, nmlen);
 	if(!node->name) {
+		delegpt_free_mlc(dp);
 		free(node);
 		return 0;
 	}
@@ -125,6 +129,7 @@ forwards_insert_data(struct iter_forwards* fwd, uint16_t c, uint8_t* nm,
 	node->dp = dp;
 	if(!rbtree_insert(fwd->tree, &node->node)) {
 		log_err("duplicate forward zone ignored.");
+		delegpt_free_mlc(dp);
 		free(node->name);
 		free(node);
 	}
