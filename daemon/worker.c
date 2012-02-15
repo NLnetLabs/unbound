@@ -68,6 +68,7 @@
 #include "util/tube.h"
 #include "iterator/iter_fwd.h"
 #include "validator/autotrust.h"
+#include "validator/val_anchor.h"
 
 #ifdef HAVE_SYS_TYPES_H
 #  include <sys/types.h>

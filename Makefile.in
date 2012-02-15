@@ -777,7 +777,7 @@ autotrust.lo autotrust.o: $(srcdir)/validator/autotrust.c config.h \
 val_anchor.lo val_anchor.o: $(srcdir)/validator/val_anchor.c config.h \
  $(srcdir)/validator/val_anchor.h $(srcdir)/util/rbtree.h $(srcdir)/util/locks.h $(srcdir)/util/log.h \
  $(srcdir)/validator/val_sigcrypt.h $(srcdir)/util/data/packed_rrset.h $(srcdir)/util/storage/lruhash.h \
- $(srcdir)/validator/autotrust.h $(srcdir)/util/data/dname.h $(srcdir)/util/net_help.h $(srcdir)/util/regional.h \
+ $(srcdir)/validator/autotrust.h $(srcdir)/util/data/dname.h $(srcdir)/util/net_help.h \
  $(srcdir)/util/config_file.h
 validator.lo validator.o: $(srcdir)/validator/validator.c config.h \
  $(srcdir)/validator/validator.h $(srcdir)/util/module.h $(srcdir)/util/storage/lruhash.h $(srcdir)/util/locks.h \
@@ -949,7 +949,7 @@ worker.lo worker.o: $(srcdir)/daemon/worker.c config.h \
  $(srcdir)/services/outbound_list.h $(srcdir)/services/cache/rrset.h $(srcdir)/services/cache/infra.h \
  $(srcdir)/util/rtt.h $(srcdir)/services/cache/dns.h $(srcdir)/services/mesh.h $(srcdir)/services/localzone.h \
  $(srcdir)/util/data/msgencode.h $(srcdir)/util/data/dname.h $(srcdir)/util/fptr_wlist.h $(srcdir)/util/tube.h \
- $(srcdir)/iterator/iter_fwd.h $(srcdir)/validator/autotrust.h
+ $(srcdir)/iterator/iter_fwd.h $(srcdir)/validator/autotrust.h $(srcdir)/validator/val_anchor.h
 testbound.lo testbound.o: $(srcdir)/testcode/testbound.c config.h $(srcdir)/testcode/ldns-testpkts.h \
  $(srcdir)/testcode/replay.h \
  $(srcdir)/util/netevent.h $(srcdir)/util/rbtree.h $(srcdir)/testcode/fake_event.h $(srcdir)/daemon/remote.h \
@@ -973,7 +973,7 @@ worker.lo worker.o: $(srcdir)/daemon/worker.c config.h \
  $(srcdir)/services/outbound_list.h $(srcdir)/services/cache/rrset.h $(srcdir)/services/cache/infra.h \
  $(srcdir)/util/rtt.h $(srcdir)/services/cache/dns.h $(srcdir)/services/mesh.h $(srcdir)/services/localzone.h \
  $(srcdir)/util/data/msgencode.h $(srcdir)/util/data/dname.h $(srcdir)/util/fptr_wlist.h $(srcdir)/util/tube.h \
- $(srcdir)/iterator/iter_fwd.h $(srcdir)/validator/autotrust.h
+ $(srcdir)/iterator/iter_fwd.h $(srcdir)/validator/autotrust.h $(srcdir)/validator/val_anchor.h
 acl_list.lo acl_list.o: $(srcdir)/daemon/acl_list.c config.h $(srcdir)/daemon/acl_list.h \
  $(srcdir)/util/storage/dnstree.h $(srcdir)/util/rbtree.h $(srcdir)/util/regional.h $(srcdir)/util/log.h \
  $(srcdir)/util/config_file.h $(srcdir)/util/net_help.h
