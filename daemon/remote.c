@@ -1389,9 +1389,6 @@ do_forward(SSL* ssl, struct worker* worker, char* args)
 	 * the actual mesh is not running, so we can freely edit it. */
 	/* delete all the existing queries first */
 	mesh_delete_all(worker->env.mesh);
-	/* reset the fwd structure ; the cfg is unchanged (shared by threads)*/
-	/* this reset frees up memory */
-	forwards_apply_cfg(fwd, worker->env.cfg);
 	if(strcmp(args, "off") == 0) {
 		forwards_delete_zone(fwd, LDNS_RR_CLASS_IN, root);
 	} else {

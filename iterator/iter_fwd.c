@@ -432,9 +432,25 @@ forwards_get_mem(struct iter_forwards* fwd)
 	return s;
 }
 
+static struct iter_forward_zone*
+fwd_zone_find(struct iter_forwards* fwd, uint16_t c, uint8_t* nm)
+{
+	struct iter_forward_zone key;
+	key.node.key = &key;
+	key.dclass = c;
+	key.name = nm;
+	key.namelabs = dname_count_size_labels(nm, &key.namelen);
+	return (struct iter_forward_zone*)rbtree_search(fwd->tree, &key);
+}
+
 int 
 forwards_add_zone(struct iter_forwards* fwd, uint16_t c, struct delegpt* dp)
 {
+	struct iter_forward_zone *z;
+	if((z=fwd_zone_find(fwd, c, dp->name)) != NULL) {
+		fwd_zone_free(z);
+		(void)rbtree_delete(fwd->tree, &z->node);
+	}
 	if(!forwards_insert(fwd, c, dp))
 		return 0;
 	fwd_init_parents(fwd);
@@ -444,16 +460,11 @@ forwards_add_zone(struct iter_forwards* fwd, uint16_t c, struct delegpt* dp)
 void 
 forwards_delete_zone(struct iter_forwards* fwd, uint16_t c, uint8_t* nm)
 {
-	rbnode_t* n;
-	struct iter_forward_zone key;
-	key.node.key = &key;
-	key.dclass = c;
-	key.name = nm;
-	key.namelabs = dname_count_size_labels(nm, &key.namelen);
-	if(!(n=rbtree_search(fwd->tree, &key)))
+	struct iter_forward_zone *z;
+	if(!(z=fwd_zone_find(fwd, c, nm)))
 		return; /* nothing to do */
-	fwd_zone_free((struct iter_forward_zone*)n);
-	(void)rbtree_delete(fwd->tree, &key);
+	fwd_zone_free(z);
+	(void)rbtree_delete(fwd->tree, &z->node);
 	fwd_init_parents(fwd);
 }
 
