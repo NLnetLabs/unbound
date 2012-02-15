@@ -1480,9 +1480,8 @@ do_forward_add(SSL* ssl, struct worker* worker, char* args)
 	int insecure = 0;
 	uint8_t* nm = NULL;
 	struct delegpt* dp = NULL;
-	if(!parse_fs_args(ssl, args, &nm, &dp, &insecure, NULL)) {
+	if(!parse_fs_args(ssl, args, &nm, &dp, &insecure, NULL))
 		return;
-	}
 	if(insecure) {
 		if(!anchors_add_insecure(worker->env.anchors, LDNS_RR_CLASS_IN,
 			nm)) {
@@ -1509,10 +1508,8 @@ do_forward_remove(SSL* ssl, struct worker* worker, char* args)
 	struct iter_forwards* fwd = worker->env.fwds;
 	int insecure = 0;
 	uint8_t* nm = NULL;
-	if(!parse_fs_args(ssl, args, &nm, NULL, &insecure, NULL)) {
-		free(nm);
+	if(!parse_fs_args(ssl, args, &nm, NULL, &insecure, NULL))
 		return;
-	}
 	if(insecure)
 		anchors_delete_insecure(worker->env.anchors, LDNS_RR_CLASS_IN,
 			nm);
@@ -1542,9 +1539,8 @@ do_stub_add(SSL* ssl, struct worker* worker, char* args)
 	int insecure = 0, prime = 0;
 	uint8_t* nm = NULL;
 	struct delegpt* dp = NULL;
-	if(!parse_fs_args(ssl, args, &nm, &dp, &insecure, &prime)) {
+	if(!parse_fs_args(ssl, args, &nm, &dp, &insecure, &prime))
 		return;
-	}
 	if(insecure) {
 		if(!anchors_add_insecure(worker->env.anchors, LDNS_RR_CLASS_IN,
 			nm)) {
@@ -1583,10 +1579,8 @@ do_stub_remove(SSL* ssl, struct worker* worker, char* args)
 	struct iter_hints* hints = get_iter_hints(worker);
 	int insecure = 0;
 	uint8_t* nm = NULL;
-	if(!parse_fs_args(ssl, args, &nm, NULL, &insecure, NULL)) {
-		free(nm);
+	if(!parse_fs_args(ssl, args, &nm, NULL, &insecure, NULL))
 		return;
-	}
 	if(insecure)
 		anchors_delete_insecure(worker->env.anchors, LDNS_RR_CLASS_IN,
 			nm);
