@@ -441,7 +441,7 @@ check_hints(struct config_file* cfg)
 {
 	struct iter_hints* hints = hints_create();
 	if(!hints || !hints_apply_cfg(hints, cfg)) {
-		fatal_exit("Could not set hints zones");
+		fatal_exit("Could not set root or stub hints");
 	}
 	hints_delete(hints);
 }
