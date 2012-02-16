@@ -113,12 +113,6 @@ iter_apply_cfg(struct iter_env* iter_env, struct config_file* cfg)
 		verbose(VERB_QUERY, "target fetch policy for level %d is %d",
 			i, iter_env->target_fetch_policy[i]);
 	
-	if(!iter_env->hints)
-		iter_env->hints = hints_create();
-	if(!iter_env->hints || !hints_apply_cfg(iter_env->hints, cfg)) {
-		log_err("Could not set root or stub hints");
-		return 0;
-	}
 	if(!iter_env->donotq)
 		iter_env->donotq = donotq_create();
 	if(!iter_env->donotq || !donotq_apply_cfg(iter_env->donotq, cfg)) {

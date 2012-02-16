@@ -1,3 +1,6 @@
+16 February 2012: Wouter
+	- iter_hints is now thread-owned in module env, and thus threadsafe.
+
 15 February 2012: Wouter
 	- Fix forward-zone memory, uses malloc and frees original root dp.
 	- iter hints (stubs) uses malloc inside for more dynamicity.

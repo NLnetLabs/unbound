@@ -89,7 +89,6 @@ iter_deinit(struct module_env* env, int id)
 	iter_env = (struct iter_env*)env->modinfo[id];
 	free(iter_env->target_fetch_policy);
 	priv_delete(iter_env->priv);
-	hints_delete(iter_env->hints);
 	donotq_delete(iter_env->donotq);
 	free(iter_env);
 	env->modinfo[id] = NULL;
@@ -532,21 +531,20 @@ generate_sub_request(uint8_t* qname, size_t qnamelen, uint16_t qtype,
  * Generate and send a root priming request.
  * @param qstate: the qtstate that triggered the need to prime.
  * @param iq: iterator query state.
- * @param ie: iterator global state.
  * @param id: module id.
  * @param qclass: the class to prime.
  * @return 0 on failure
  */
 static int
-prime_root(struct module_qstate* qstate, struct iter_qstate* iq, 
-	struct iter_env* ie, int id, uint16_t qclass)
+prime_root(struct module_qstate* qstate, struct iter_qstate* iq, int id,
+	uint16_t qclass)
 {
 	struct delegpt* dp;
 	struct module_qstate* subq;
 	verbose(VERB_DETAIL, "priming . %s NS", 
 		ldns_lookup_by_id(ldns_rr_classes, (int)qclass)?
 		ldns_lookup_by_id(ldns_rr_classes, (int)qclass)->name:"??");
-	dp = hints_lookup_root(ie->hints, qclass);
+	dp = hints_lookup_root(qstate->env->hints, qclass);
 	if(!dp) {
 		verbose(VERB_ALGO, "Cannot prime due to lack of hints");
 		return 0;
@@ -590,7 +588,6 @@ prime_root(struct module_qstate* qstate, struct iter_qstate* iq,
  *
  * @param qstate: the qtstate that triggered the need to prime.
  * @param iq: iterator query state.
- * @param ie: iterator global state.
  * @param id: module id.
  * @param q: request name.
  * @return true if a priming subrequest was made, false if not. The will only
@@ -599,8 +596,8 @@ prime_root(struct module_qstate* qstate, struct iter_qstate* iq,
  *         that a noprime-stub is available and resolution can continue.
  */
 static int
-prime_stub(struct module_qstate* qstate, struct iter_qstate* iq, 
-	struct iter_env* ie, int id, struct query_info* q)
+prime_stub(struct module_qstate* qstate, struct iter_qstate* iq, int id,
+	struct query_info* q)
 {
 	/* Lookup the stub hint. This will return null if the stub doesn't 
 	 * need to be re-primed. */
@@ -614,7 +611,8 @@ prime_stub(struct module_qstate* qstate, struct iter_qstate* iq,
 		/* remove first label, but not for root */
 		dname_remove_label(&delname, &delnamelen);
 
-	stub = hints_lookup_stub(ie->hints, delname, q->qclass, iq->dp);
+	stub = hints_lookup_stub(qstate->env->hints, delname, q->qclass,
+		iq->dp);
 	/* The stub (if there is one) does not need priming. */
 	if(!stub)
 		return 0;
@@ -1049,7 +1047,7 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 		 * root priming situation. */
 		if(iq->dp == NULL) {
 			/* if there is a stub, then no root prime needed */
-			int r = prime_stub(qstate, iq, ie, id, &iq->qchase);
+			int r = prime_stub(qstate, iq, id, &iq->qchase);
 			if(r == 2)
 				break; /* got noprime-stub-zone, continue */
 			else if(r)
@@ -1058,7 +1056,7 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 				iq->qchase.qclass)) {
 				/* forward zone root, no root prime needed */
 				/* fill in some dp - safety belt */
-				iq->dp = hints_lookup_root(ie->hints, 
+				iq->dp = hints_lookup_root(qstate->env->hints, 
 					iq->qchase.qclass);
 				if(!iq->dp) {
 					log_err("internal error: no hints dp");
@@ -1075,7 +1073,7 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 			}
 			/* Note that the result of this will set a new
 			 * DelegationPoint based on the result of priming. */
-			if(!prime_root(qstate, iq, ie, id, iq->qchase.qclass))
+			if(!prime_root(qstate, iq, id, iq->qchase.qclass))
 				return error_response(qstate, id, 
 					LDNS_RCODE_REFUSED);
 
@@ -1104,7 +1102,7 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 				/* use safety belt */
 				verbose(VERB_QUERY, "Cache has root NS but "
 				"no addresses. Fallback to the safety belt.");
-				iq->dp = hints_lookup_root(ie->hints, 
+				iq->dp = hints_lookup_root(qstate->env->hints, 
 					iq->qchase.qclass);
 				/* note deleg_msg is from previous lookup,
 				 * but RD is on, so it is not used */
@@ -1151,20 +1149,19 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
  *
  * @param qstate: query state.
  * @param iq: iterator query state.
- * @param ie: iterator shared global environment.
  * @param id: module id.
  * @return true if the event needs more request processing immediately,
  *         false if not.
  */
 static int
 processInitRequest2(struct module_qstate* qstate, struct iter_qstate* iq,
-	struct iter_env* ie, int id)
+	int id)
 {
 	log_query_info(VERB_QUERY, "resolving (init part 2): ", 
 		&qstate->qinfo);
 
 	/* Check to see if we need to prime a stub zone. */
-	if(prime_stub(qstate, iq, ie, id, &iq->qchase)) {
+	if(prime_stub(qstate, iq, id, &iq->qchase)) {
 		/* A priming sub request was made */
 		return 0;
 	}
@@ -2336,7 +2333,6 @@ static int
 processCollectClass(struct module_qstate* qstate, int id)
 {
 	struct iter_qstate* iq = (struct iter_qstate*)qstate->minfo[id];
-	struct iter_env* ie = (struct iter_env*)qstate->env->modinfo[id];
 	struct module_qstate* subq;
 	/* If qchase.qclass == 0 then send out queries for all classes.
 	 * Otherwise, do nothing (wait for all answers to arrive and the
@@ -2345,7 +2341,8 @@ processCollectClass(struct module_qstate* qstate, int id)
 	if(iq->qchase.qclass == 0) {
 		uint16_t c = 0;
 		iq->qchase.qclass = LDNS_RR_CLASS_ANY;
-		while(iter_get_next_root(ie->hints, qstate->env->fwds, &c)) {
+		while(iter_get_next_root(qstate->env->hints,
+			qstate->env->fwds, &c)) {
 			/* generate query for this class */
 			log_nametypeclass(VERB_ALGO, "spawn collect query",
 				qstate->qinfo.qname, qstate->qinfo.qtype, c);
@@ -2493,7 +2490,7 @@ iter_handle(struct module_qstate* qstate, struct iter_qstate* iq,
 				cont = processInitRequest(qstate, iq, ie, id);
 				break;
 			case INIT_REQUEST_2_STATE:
-				cont = processInitRequest2(qstate, iq, ie, id);
+				cont = processInitRequest2(qstate, iq, id);
 				break;
 			case INIT_REQUEST_3_STATE:
 				cont = processInitRequest3(qstate, iq, id);
@@ -2705,8 +2702,7 @@ iter_get_mem(struct module_env* env, int id)
 	if(!ie)
 		return 0;
 	return sizeof(*ie) + sizeof(int)*((size_t)ie->max_dependency_depth+1)
-		+ hints_get_mem(ie->hints) + donotq_get_mem(ie->donotq)
-		+ priv_get_mem(ie->priv);
+		+ donotq_get_mem(ie->donotq) + priv_get_mem(ie->priv);
 }
 
 /**

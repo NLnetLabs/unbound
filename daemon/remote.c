@@ -1518,24 +1518,11 @@ do_forward_remove(SSL* ssl, struct worker* worker, char* args)
 	send_ok(ssl);
 }
 
-static struct iter_hints*
-get_iter_hints(struct worker* worker)
-{
-	int m;
-	struct iter_env* ie;
-	m = modstack_find(&worker->env.mesh->mods, "iterator");
-	if(m == -1)
-		return NULL;
-	ie = (struct iter_env*)worker->env.modinfo[m];
-	return ie->hints;
-}
-
 /** do the stub_add command */
 static void
 do_stub_add(SSL* ssl, struct worker* worker, char* args)
 {
 	struct iter_forwards* fwd = worker->env.fwds;
-	struct iter_hints* hints = get_iter_hints(worker);
 	int insecure = 0, prime = 0;
 	uint8_t* nm = NULL;
 	struct delegpt* dp = NULL;
@@ -1558,7 +1545,7 @@ do_stub_add(SSL* ssl, struct worker* worker, char* args)
 		free(nm);
 		return;
 	}
-	if(!hints_add_stub(hints, LDNS_RR_CLASS_IN, dp, !prime)) {
+	if(!hints_add_stub(worker->env.hints, LDNS_RR_CLASS_IN, dp, !prime)) {
 		(void)ssl_printf(ssl, "error out of memory\n");
 		forwards_delete_stub_hole(fwd, LDNS_RR_CLASS_IN, nm);
 		if(insecure) anchors_delete_insecure(worker->env.anchors,
@@ -1576,7 +1563,6 @@ static void
 do_stub_remove(SSL* ssl, struct worker* worker, char* args)
 {
 	struct iter_forwards* fwd = worker->env.fwds;
-	struct iter_hints* hints = get_iter_hints(worker);
 	int insecure = 0;
 	uint8_t* nm = NULL;
 	if(!parse_fs_args(ssl, args, &nm, NULL, &insecure, NULL))
@@ -1585,7 +1571,7 @@ do_stub_remove(SSL* ssl, struct worker* worker, char* args)
 		anchors_delete_insecure(worker->env.anchors, LDNS_RR_CLASS_IN,
 			nm);
 	forwards_delete_stub_hole(fwd, LDNS_RR_CLASS_IN, nm);
-	hints_delete_stub(hints, LDNS_RR_CLASS_IN, nm);
+	hints_delete_stub(worker->env.hints, LDNS_RR_CLASS_IN, nm);
 	free(nm);
 	send_ok(ssl);
 }
@@ -1838,17 +1824,8 @@ do_list_forwards(SSL* ssl, struct worker* worker)
 static void
 do_list_stubs(SSL* ssl, struct worker* worker)
 {
-	/* readonly structure */
-	int m;
 	struct iter_hints_stub* z;
-	struct iter_env* ie;
-	m = modstack_find(&worker->env.mesh->mods, "iterator");
-	if(m == -1) {
-		(void)ssl_printf(ssl, "error no iterator module\n");
-		return;
-	}
-	ie = (struct iter_env*)worker->env.modinfo[m];
-	RBTREE_FOR(z, struct iter_hints_stub*, &ie->hints->tree) {
+	RBTREE_FOR(z, struct iter_hints_stub*, &worker->env.hints->tree) {
 		if(!ssl_print_name_dp(ssl, 
 			z->noprime?"stub noprime":"stub prime", z->node.name,
 			z->node.dclass, z->dp))

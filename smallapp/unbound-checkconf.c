@@ -50,6 +50,7 @@
 #include "util/regional.h"
 #include "iterator/iterator.h"
 #include "iterator/iter_fwd.h"
+#include "iterator/iter_hints.h"
 #include "validator/validator.h"
 #include "services/localzone.h"
 #ifdef HAVE_GETOPT_H
@@ -434,6 +435,17 @@ check_fwd(struct config_file* cfg)
 	forwards_delete(fwd);
 }
 
+/** check hints */
+static void
+check_hints(struct config_file* cfg)
+{
+	struct iter_hints* hints = hints_create();
+	if(!hints || !hints_apply_cfg(hints, cfg)) {
+		fatal_exit("Could not set hints zones");
+	}
+	hints_delete(hints);
+}
+
 /** check config file */
 static void
 checkconf(const char* cfgfile, const char* opt)
@@ -454,6 +466,7 @@ checkconf(const char* cfgfile, const char* opt)
 		check_mod(cfg, pythonmod_get_funcblock());
 #endif
 	check_fwd(cfg);
+	check_hints(cfg);
 	if(opt) print_option(cfg, opt);
 	else	printf("unbound-checkconf: no errors in %s\n", cfgfile);
 	config_delete(cfg);

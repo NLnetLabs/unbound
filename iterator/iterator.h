@@ -86,14 +86,6 @@ struct iter_priv;
  * Global state for the iterator. 
  */
 struct iter_env {
-	/** 
-	 * The hints -- these aren't stored in the cache because they don't 
-	 * expire. The hints are always used to "prime" the cache. Note 
-	 * that both root hints and stub zone "hints" are stored in this 
-	 * data structure.
-	 */
-	struct iter_hints* hints;
-
 	/** A flag to indicate whether or not we have an IPv6 route */
 	int supports_ipv6;
 

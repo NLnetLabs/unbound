@@ -911,18 +911,11 @@ int print_deleg_lookup(SSL* ssl, struct worker* worker, uint8_t* nm,
 	char b[260];
 	struct query_info qinfo;
 	struct iter_hints_stub* stub;
-	struct iter_env* ie;
 	regional_free_all(region);
 	qinfo.qname = nm;
 	qinfo.qname_len = nmlen;
 	qinfo.qtype = LDNS_RR_TYPE_A;
 	qinfo.qclass = LDNS_RR_CLASS_IN;
-
-	if(modstack_find(&worker->daemon->mods, "iterator") == -1) {
-		return ssl_printf(ssl, "error: no iterator module\n");
-	}
-	ie = (struct iter_env*)worker->env.modinfo[modstack_find(&worker->
-		daemon->mods, "iterator")];
 
 	dname_str(nm, b);
 	if(!ssl_printf(ssl, "The following name servers are used for lookup "
@@ -968,7 +961,8 @@ int print_deleg_lookup(SSL* ssl, struct worker* worker, uint8_t* nm,
 				continue;
 			}
 		} 
-		stub = hints_lookup_stub(ie->hints, nm, qinfo.qclass, dp);
+		stub = hints_lookup_stub(worker->env.hints, nm, qinfo.qclass,
+			dp);
 		if(stub) {
 			if(stub->noprime) {
 				if(!ssl_printf(ssl, "The noprime stub servers "

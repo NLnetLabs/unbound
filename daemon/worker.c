@@ -67,6 +67,7 @@
 #include "util/fptr_wlist.h"
 #include "util/tube.h"
 #include "iterator/iter_fwd.h"
+#include "iterator/iter_hints.h"
 #include "validator/autotrust.h"
 #include "validator/val_anchor.h"
 
@@ -179,7 +180,8 @@ worker_mem_report(struct worker* ATTR_UNUSED(worker),
 		+ regional_get_mem(worker->scratchpad) 
 		+ sizeof(*worker->env.scratch_buffer) 
 		+ ldns_buffer_capacity(worker->env.scratch_buffer)
-		+ forwards_get_mem(worker->env.fwds);
+		+ forwards_get_mem(worker->env.fwds)
+		+ hints_get_mem(worker->env.hints;
 	if(worker->thread_num == 0)
 		me += acl_list_get_mem(worker->daemon->acl);
 	if(cur_serv) {
@@ -1160,6 +1162,12 @@ worker_init(struct worker* worker, struct config_file *cfg,
 		worker_delete(worker);
 		return 0;
 	}
+	if(!(worker->env.hints = hints_create()) ||
+		!hints_apply_cfg(worker->env.hints, cfg)) {
+		log_err("Could not set root or stub hints");
+		worker_delete(worker);
+		return 0;
+	}
 	/* one probe timer per process -- if we have 5011 anchors */
 	if(autr_get_num_anchors(worker->env.anchors) > 0
 #ifndef THREADS_DISABLED
@@ -1212,6 +1220,7 @@ worker_delete(struct worker* worker)
 	mesh_delete(worker->env.mesh);
 	ldns_buffer_free(worker->env.scratch_buffer);
 	forwards_delete(worker->env.fwds);
+	hints_delete(worker->env.hints);
 	listen_delete(worker->front);
 	outside_network_delete(worker->back);
 	comm_signal_delete(worker->comsig);
