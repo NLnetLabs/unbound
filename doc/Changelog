@@ -1,5 +1,10 @@
 16 February 2012: Wouter
 	- iter_hints is now thread-owned in module env, and thus threadsafe.
+	- Fix prefetch and sticky NS, now the prefetch works.  It picks
+	  nameservers that 'would be valid in the future', and if this makes
+	  the NS timeout, it updates that NS by asking delegation from the
+	  parent again.  If child NS has longer TTL, that TTL does not get
+	  refreshed from the lookup to the child nameserver.
 
 15 February 2012: Wouter
 	- Fix forward-zone memory, uses malloc and frees original root dp.

@@ -419,11 +419,11 @@ dns_copy_msg(struct dns_msg* from, struct regional* region)
 
 int 
 iter_dns_store(struct module_env* env, struct query_info* msgqinf,
-	struct reply_info* msgrep, int is_referral, uint32_t leeway,
+	struct reply_info* msgrep, int is_referral, uint32_t leeway, int pside,
 	struct regional* region)
 {
 	return dns_cache_store(env, msgqinf, msgrep, is_referral, leeway,
-		region);
+		pside, region);
 }
 
 int 

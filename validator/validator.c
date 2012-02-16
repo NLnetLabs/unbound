@@ -1977,15 +1977,17 @@ processFinished(struct module_qstate* qstate, struct val_qstate* vq,
 
 	/* store results in cache */
 	if(qstate->query_flags&BIT_RD) {
+		/* if secure, this will override cache anyway, no need
+		 * to check if from parentNS */
 		if(!dns_cache_store(qstate->env, &vq->orig_msg->qinfo, 
-			vq->orig_msg->rep, 0, qstate->prefetch_leeway, NULL)) {
+			vq->orig_msg->rep, 0, qstate->prefetch_leeway, 0, NULL)) {
 			log_err("out of memory caching validator results");
 		}
 	} else {
 		/* for a referral, store the verified RRsets */
 		/* and this does not get prefetched, so no leeway */
 		if(!dns_cache_store(qstate->env, &vq->orig_msg->qinfo, 
-			vq->orig_msg->rep, 1, 0, NULL)) {
+			vq->orig_msg->rep, 1, 0, 0, NULL)) {
 			log_err("out of memory caching validator results");
 		}
 	}

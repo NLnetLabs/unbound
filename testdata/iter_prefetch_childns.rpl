@@ -8,10 +8,11 @@ stub-zone:
 	stub-addr: 193.0.14.129 	# K.ROOT-SERVERS.NET.
 CONFIG_END
 
-SCENARIO_BEGIN Test resolver prefetch of NS record for moved domain
+SCENARIO_BEGIN Test resolver prefetch from child nameserver
+; child NS record has longer TTL than A record and is thus valid for prefetch.
 
 ; K.ROOT-SERVERS.NET.
-RANGE_BEGIN 0 200
+RANGE_BEGIN 0 100
 	ADDRESS 193.0.14.129 
 ENTRY_BEGIN
 MATCH opcode qtype qname
@@ -26,11 +27,11 @@ K.ROOT-SERVERS.NET.	IN	A	193.0.14.129
 ENTRY_END
 
 ENTRY_BEGIN
-MATCH opcode subdomain
-ADJUST copy_id copy_query
+MATCH opcode qtype qname
+ADJUST copy_id
 REPLY QR NOERROR
 SECTION QUESTION
-example.com. IN A
+www.example.com. IN A
 SECTION AUTHORITY
 com.	IN NS	a.gtld-servers.net.
 SECTION ADDITIONAL
@@ -38,8 +39,8 @@ a.gtld-servers.net.	IN 	A	192.5.6.30
 ENTRY_END
 RANGE_END
 
-; a.gtld-servers.net. (before sale of domain)
-RANGE_BEGIN 0 20
+; a.gtld-servers.net.
+RANGE_BEGIN 0 100
 	ADDRESS 192.5.6.30
 ENTRY_BEGIN
 MATCH opcode qtype qname
@@ -54,11 +55,11 @@ a.gtld-servers.net.	IN 	A	192.5.6.30
 ENTRY_END
 
 ENTRY_BEGIN
-MATCH opcode subdomain
-ADJUST copy_id copy_query
+MATCH opcode qtype qname
+ADJUST copy_id
 REPLY QR NOERROR
 SECTION QUESTION
-example.com. IN A
+www.example.com. IN A
 SECTION AUTHORITY
 example.com.	IN NS	ns.example.com.
 SECTION ADDITIONAL
@@ -66,36 +67,8 @@ ns.example.com.		IN 	A	1.2.3.4
 ENTRY_END
 RANGE_END
 
-; a.gtld-servers.net. (after sale of domain)
-RANGE_BEGIN 30 200
-	ADDRESS 192.5.6.30
-ENTRY_BEGIN
-MATCH opcode qtype qname
-ADJUST copy_id
-REPLY QR NOERROR
-SECTION QUESTION
-com. IN NS
-SECTION ANSWER
-com.	IN NS	a.gtld-servers.net.
-SECTION ADDITIONAL
-a.gtld-servers.net.	IN 	A	192.5.6.30
-ENTRY_END
-
-ENTRY_BEGIN
-MATCH opcode subdomain
-ADJUST copy_id copy_query
-REPLY QR NOERROR
-SECTION QUESTION
-example.com. IN A
-SECTION AUTHORITY
-example.com.	IN NS	ns.example.com.
-SECTION ADDITIONAL
-ns.example.com.		IN 	A	8.8.8.8
-ENTRY_END
-RANGE_END
-
-; ns.example.com. first owner
-RANGE_BEGIN 0 200
+; ns.example.com.
+RANGE_BEGIN 0 40
 	ADDRESS 1.2.3.4
 ENTRY_BEGIN
 MATCH opcode qtype qname
@@ -116,7 +89,7 @@ REPLY QR NOERROR
 SECTION QUESTION
 www.example.com. IN A
 SECTION ANSWER
-www.example.com. 3600 IN A	10.20.30.40
+www.example.com. 1800 IN A	10.20.30.40
 SECTION AUTHORITY
 example.com.	3600 IN NS	ns.example.com.
 SECTION ADDITIONAL
@@ -124,9 +97,9 @@ ns.example.com.	3600 	IN 	A	1.2.3.4
 ENTRY_END
 RANGE_END
 
-; ns.example.com. new owner
-RANGE_BEGIN 0 200
-	ADDRESS 8.8.8.8
+; ns.example.com.
+RANGE_BEGIN 50 100
+	ADDRESS 1.2.3.4
 ENTRY_BEGIN
 MATCH opcode qtype qname
 ADJUST copy_id
@@ -136,7 +109,7 @@ example.com. IN NS
 SECTION ANSWER
 example.com.	IN NS	ns.example.com.
 SECTION ADDITIONAL
-ns.example.com.		IN 	A	8.8.8.8
+ns.example.com.		IN 	A	1.2.3.4
 ENTRY_END
 
 ENTRY_BEGIN
@@ -146,11 +119,11 @@ REPLY QR NOERROR
 SECTION QUESTION
 www.example.com. IN A
 SECTION ANSWER
-www.example.com. 3600 IN A	88.88.88.88
+www.example.com. 1800 IN A	10.20.30.40
 SECTION AUTHORITY
 example.com.	3600 IN NS	ns.example.com.
 SECTION ADDITIONAL
-ns.example.com.	3600 	IN 	A	8.8.8.8
+ns.example.com.	3600 	IN 	A	1.2.3.4
 ENTRY_END
 RANGE_END
 
@@ -160,43 +133,24 @@ REPLY RD
 SECTION QUESTION
 www.example.com. IN A
 ENTRY_END
+
 ; recursion happens here.
-STEP 5 CHECK_ANSWER
+STEP 10 CHECK_ANSWER
 ENTRY_BEGIN
 MATCH all ttl
 REPLY QR RD RA NOERROR
 SECTION QUESTION
 www.example.com. IN A
 SECTION ANSWER
-www.example.com. 3600 IN A	10.20.30.40
+www.example.com. 1800 IN A	10.20.30.40
 SECTION AUTHORITY
 example.com.	3600 IN NS	ns.example.com.
 SECTION ADDITIONAL
 ns.example.com.	3600 	IN 	A	1.2.3.4
 ENTRY_END
 
-STEP 10 QUERY
-ENTRY_BEGIN
-REPLY RD
-SECTION QUESTION
-example.com. IN NS
-ENTRY_END
-; recursion happens here.
-STEP 15 CHECK_ANSWER
-ENTRY_BEGIN
-MATCH all ttl
-REPLY QR RD RA NOERROR
-SECTION QUESTION
-example.com. IN NS
-SECTION ANSWER
-example.com.	3600 IN NS	ns.example.com.
-SECTION AUTHORITY
-SECTION ADDITIONAL
-ns.example.com.	3600 	IN 	A	1.2.3.4
-ENTRY_END
-
-; after 1800 secs still the cached answer
-STEP 20 TIME_PASSES ELAPSE 1800
+; after 900 secs still the cached answer
+STEP 20 TIME_PASSES ELAPSE 900
 
 STEP 30 QUERY
 ENTRY_BEGIN
@@ -212,41 +166,22 @@ REPLY QR RD RA NOERROR
 SECTION QUESTION
 www.example.com. IN A
 SECTION ANSWER
-www.example.com. 1800 IN A	10.20.30.40
+www.example.com. 900 IN A	10.20.30.40
 SECTION AUTHORITY
-example.com.	1800 IN NS	ns.example.com.
+example.com.	2700 IN NS	ns.example.com.
 SECTION ADDITIONAL
-ns.example.com.	1800 	IN 	A	1.2.3.4
+ns.example.com.	2700 	IN 	A	1.2.3.4
 ENTRY_END
 
-STEP 44 QUERY
-ENTRY_BEGIN
-REPLY RD
-SECTION QUESTION
-example.com. IN NS
-ENTRY_END
-; recursion happens here.
-STEP 45 CHECK_ANSWER
-ENTRY_BEGIN
-MATCH all ttl
-REPLY QR RD RA NOERROR
-SECTION QUESTION
-example.com. IN NS
-SECTION ANSWER
-example.com.	1800 IN NS	ns.example.com.
-SECTION AUTHORITY
-SECTION ADDITIONAL
-ns.example.com.	1800 	IN 	A	1.2.3.4
-ENTRY_END
-
-; after 1440 we are 360 seconds before the expiry
-STEP 50 TIME_PASSES ELAPSE 1440
+; after 720 we are 180 seconds before the expiry
+; (the authority changes behind the scenes to detect new lookup)
+STEP 50 TIME_PASSES ELAPSE 720
 
 STEP 60 QUERY
 ENTRY_BEGIN
 REPLY RD
 SECTION QUESTION
-example.com. IN NS
+www.example.com. IN A
 ENTRY_END
 ; recursion happens here.
 STEP 70 CHECK_ANSWER
@@ -254,42 +189,19 @@ ENTRY_BEGIN
 MATCH all ttl
 REPLY QR RD RA NOERROR
 SECTION QUESTION
-example.com. IN NS
+www.example.com. IN A
 SECTION ANSWER
-example.com.	360 IN NS	ns.example.com.
+www.example.com. 180 IN A	10.20.30.40
 SECTION AUTHORITY
+example.com.	1980 IN NS	ns.example.com.
 SECTION ADDITIONAL
-ns.example.com.	360 	IN 	A	1.2.3.4
+ns.example.com.	1980 	IN 	A	1.2.3.4
 ENTRY_END
-
 STEP 80 TRAFFIC
 ; let traffic flow for prefetch to happen
 
-; check result of that prefetch
-STEP 90 QUERY
-ENTRY_BEGIN
-REPLY RD
-SECTION QUESTION
-example.com. IN NS
-ENTRY_END
-; recursion happens here.
-
-; because the prefetch+current makes old-NS expired, new delegation is picked up
-STEP 91 CHECK_ANSWER
-ENTRY_BEGIN
-MATCH all ttl
-REPLY QR RD RA NOERROR
-SECTION QUESTION
-example.com. IN NS
-SECTION ANSWER
-example.com.	3600 IN NS	ns.example.com.
-SECTION AUTHORITY
-SECTION ADDITIONAL
-ns.example.com.	3600 	IN 	A	8.8.8.8
-ENTRY_END
-
-STEP 100 TIME_PASSES ELAPSE 2360
-
+; above a cache reply with 10% of the original TTL
+; but the actual cache is changed, try to get that
 STEP 120 QUERY
 ENTRY_BEGIN
 REPLY RD
@@ -304,11 +216,12 @@ REPLY QR RD RA NOERROR
 SECTION QUESTION
 www.example.com. IN A
 SECTION ANSWER
-www.example.com. 3600 IN A	88.88.88.88
+www.example.com. 1800 IN A	10.20.30.40
 SECTION AUTHORITY
-example.com.	1240 IN NS	ns.example.com.
+; The NS rrset (from the child-side NS) is not updated but keeps counting down
+example.com.	1980 IN NS	ns.example.com.
 SECTION ADDITIONAL
-ns.example.com.	1240 	IN 	A	8.8.8.8
+ns.example.com.	1980 	IN 	A	1.2.3.4
 ENTRY_END
 
 SCENARIO_END

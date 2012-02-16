@@ -74,12 +74,15 @@ struct dns_msg {
  *      It will store only the RRsets, not the message.
  * @param leeway: TTL value, if not 0, other rrsets are considered expired
  *	that many seconds before actual TTL expiry.
+ * @param pside: if true, information came from a server which was fetched
+ * 	from the parentside of the zonecut.  This means that the type NS
+ * 	can be updated to full TTL even in prefetch situations.
  * @param region: region to allocate better entries from cache into.
  *   (used when is_referral is false).
  * @return 0 on alloc error (out of memory).
  */
 int dns_cache_store(struct module_env* env, struct query_info* qinf,
-        struct reply_info* rep, int is_referral, uint32_t leeway,
+        struct reply_info* rep, int is_referral, uint32_t leeway, int pside,
 	struct regional* region); 
 
 /**
@@ -95,11 +98,14 @@ int dns_cache_store(struct module_env* env, struct query_info* qinf,
  *	Adjusts the reply info TTLs to absolute time.
  * @param leeway: TTL value, if not 0, other rrsets are considered expired
  *	that many seconds before actual TTL expiry.
+ * @param pside: if true, information came from a server which was fetched
+ * 	from the parentside of the zonecut.  This means that the type NS
+ * 	can be updated to full TTL even in prefetch situations.
  * @param qrep: message that can be altered with better rrs from cache.
  * @param region: to allocate into for qmsg.
  */
 void dns_cache_store_msg(struct module_env* env, struct query_info* qinfo,
-	hashvalue_t hash, struct reply_info* rep, uint32_t leeway,
+	hashvalue_t hash, struct reply_info* rep, uint32_t leeway, int pside,
 	struct reply_info* qrep, struct regional* region);
 
 /**

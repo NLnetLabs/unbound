@@ -765,7 +765,7 @@ load_msg(SSL* ssl, ldns_buffer* buf, struct worker* worker)
 	if(!go_on) 
 		return 1; /* skip this one, not all references satisfied */
 
-	if(!dns_cache_store(&worker->env, &qinf, &rep, 0, 0, NULL)) {
+	if(!dns_cache_store(&worker->env, &qinf, &rep, 0, 0, 0, NULL)) {
 		log_warn("error out of memory");
 		return 0;
 	}

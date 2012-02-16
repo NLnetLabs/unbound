@@ -60,12 +60,15 @@
  * 	updated with a new full TTL.
  * 	Type NS does not get this, because it must not be refreshed from the
  * 	child domain, but keep counting down properly.
+ * @param pside: if from parentside discovered NS, so that its NS is okay
+ * 	in a prefetch situation to be updated (without becoming sticky).
  * @param qrep: update rrsets here if cache is better
  * @param region: for qrep allocs.
  */
 static void
 store_rrsets(struct module_env* env, struct reply_info* rep, uint32_t now,
-	uint32_t leeway, struct reply_info* qrep, struct regional* region)
+	uint32_t leeway, int pside, struct reply_info* qrep,
+	struct regional* region)
 {
         size_t i;
         /* see if rrset already exists in cache, if not insert it. */
@@ -75,7 +78,7 @@ store_rrsets(struct module_env* env, struct reply_info* rep, uint32_t now,
 		/* update ref if it was in the cache */ 
 		switch(rrset_cache_update(env->rrset_cache, &rep->ref[i],
                         env->alloc, now + ((ntohs(rep->ref[i].key->rk.type)==
-			LDNS_RR_TYPE_NS)?0:leeway))) {
+			LDNS_RR_TYPE_NS && !pside)?0:leeway))) {
 		case 0: /* ref unchanged, item inserted */
 			break;
 		case 2: /* ref updated, cache is superior */
@@ -102,7 +105,7 @@ store_rrsets(struct module_env* env, struct reply_info* rep, uint32_t now,
 
 void 
 dns_cache_store_msg(struct module_env* env, struct query_info* qinfo,
-	hashvalue_t hash, struct reply_info* rep, uint32_t leeway,
+	hashvalue_t hash, struct reply_info* rep, uint32_t leeway, int pside,
 	struct reply_info* qrep, struct regional* region)
 {
 	struct msgreply_entry* e;
@@ -118,7 +121,7 @@ dns_cache_store_msg(struct module_env* env, struct query_info* qinfo,
 	/* there was a reply_info_sortref(rep) here but it seems to be
 	 * unnecessary, because the cache gets locked per rrset. */
 	reply_info_set_ttls(rep, *env->now);
-	store_rrsets(env, rep, *env->now, leeway, qrep, region);
+	store_rrsets(env, rep, *env->now, leeway, pside, qrep, region);
 	if(ttl == 0) {
 		/* we do not store the message, but we did store the RRs,
 		 * which could be useful for delegation information */
@@ -736,7 +739,7 @@ dns_cache_lookup(struct module_env* env,
 
 int 
 dns_cache_store(struct module_env* env, struct query_info* msgqinf,
-        struct reply_info* msgrep, int is_referral, uint32_t leeway,
+        struct reply_info* msgrep, int is_referral, uint32_t leeway, int pside,
 	struct regional* region)
 {
 	struct reply_info* rep = NULL;
@@ -761,8 +764,8 @@ dns_cache_store(struct module_env* env, struct query_info* msgqinf,
 			/* no leeway for typeNS */
 			(void)rrset_cache_update(env->rrset_cache, &ref, 
 				env->alloc, *env->now + 
-				((ntohs(ref.key->rk.type)==LDNS_RR_TYPE_NS)?
-				0:leeway));
+				((ntohs(ref.key->rk.type)==LDNS_RR_TYPE_NS
+				 && !pside) ? 0:leeway));
 		}
 		free(rep);
 		return 1;
@@ -783,7 +786,8 @@ dns_cache_store(struct module_env* env, struct query_info* msgqinf,
 		rep->flags |= (BIT_RA | BIT_QR);
 		rep->flags &= ~(BIT_AA | BIT_CD);
 		h = query_info_hash(&qinf);
-		dns_cache_store_msg(env, &qinf, h, rep, leeway, msgrep, region);
+		dns_cache_store_msg(env, &qinf, h, rep, leeway, pside, msgrep,
+			region);
 		/* qname is used inside query_info_entrysetup, and set to 
 		 * NULL. If it has not been used, free it. free(0) is safe. */
 		free(qinf.qname);

@@ -256,11 +256,11 @@ REPLY QR RD RA NOERROR
 SECTION QUESTION
 www.example.com. IN A
 SECTION ANSWER
-www.example.com.	300 IN A	10.1.1.1
+www.example.com.	86400 IN A	10.2.2.2
 SECTION AUTHORITY
-example.com.		30 IN NS	old-ns.example.com.
+example.com.		86400 IN NS	new-ns.example.com.
 SECTION ADDITIONAL
-old-ns.example.com.	300 IN A	192.168.0.1
+new-ns.example.com.	86400 IN A	172.16.0.1
 ENTRY_END
 
 ; the NS record times out after 31 seconds.
@@ -281,11 +281,11 @@ REPLY QR RD RA NOERROR
 SECTION QUESTION
 www.example.com. IN A
 SECTION ANSWER
-www.example.com.	86400 IN A	10.2.2.2
+www.example.com.	86369 IN A	10.2.2.2
 SECTION AUTHORITY
-example.com.		86400 IN NS	new-ns.example.com.
+example.com.		86369 IN NS	new-ns.example.com.
 SECTION ADDITIONAL
-new-ns.example.com.	86400 IN A	172.16.0.1
+new-ns.example.com.	86369 IN A	172.16.0.1
 ENTRY_END
 
 ; a reply from cache 
@@ -303,11 +303,11 @@ REPLY QR RD RA NOERROR
 SECTION QUESTION
 www.example.com. IN A
 SECTION ANSWER
-www.example.com.	86400 IN A	10.2.2.2
+www.example.com.	86369 IN A	10.2.2.2
 SECTION AUTHORITY
-example.com.		86400 IN NS	new-ns.example.com.
+example.com.		86369 IN NS	new-ns.example.com.
 SECTION ADDITIONAL
-new-ns.example.com.	86400 IN A	172.16.0.1
+new-ns.example.com.	86369 IN A	172.16.0.1
 ENTRY_END
 
 SCENARIO_END

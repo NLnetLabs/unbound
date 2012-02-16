@@ -259,7 +259,7 @@ error_response_cache(struct module_qstate* qstate, int id, int rcode)
 	/* do not waste time trying to validate this servfail */
 	err.security = sec_status_indeterminate;
 	verbose(VERB_ALGO, "store error response in message cache");
-	if(!iter_dns_store(qstate->env, &qstate->qinfo, &err, 0, 0, NULL)) {
+	if(!iter_dns_store(qstate->env, &qstate->qinfo, &err, 0, 0, 0, NULL)) {
 		log_err("error_response_cache: could not store error (nomem)");
 	}
 	return error_response(qstate, id, rcode);
@@ -1040,7 +1040,8 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 		if(delname)
 		     iq->dp = dns_cache_find_delegation(qstate->env, delname, 
 			delnamelen, iq->qchase.qtype, iq->qchase.qclass, 
-			qstate->region, &iq->deleg_msg, *qstate->env->now);
+			qstate->region, &iq->deleg_msg,
+			*qstate->env->now+qstate->prefetch_leeway);
 		else iq->dp = NULL;
 
 		/* If the cache has returned nothing, then we have a 
@@ -1258,7 +1259,8 @@ generate_parentside_target_query(struct module_qstate* qstate,
 		} else {
 			subiq->dp = dns_cache_find_delegation(qstate->env, 
 				name, namelen, qtype, qclass, subq->region,
-				&subiq->deleg_msg, *qstate->env->now); 
+				&subiq->deleg_msg,
+				*qstate->env->now+subq->prefetch_leeway); 
 			/* if no dp, then it's from root, refetch unneeded */
 			if(subiq->dp) { 
 				subiq->dnssec_expected = iter_indicates_dnssec(
@@ -1830,6 +1832,7 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		}
 		if(!iter_dns_store(qstate->env, &iq->response->qinfo,
 			iq->response->rep, 0, qstate->prefetch_leeway,
+			iq->dp&&iq->dp->has_parent_side_NS,
 			qstate->region))
 			return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
 		/* close down outstanding requests to be discarded */
@@ -1869,7 +1872,7 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 			/* Store the referral under the current query */
 			/* no prefetch-leeway, since its not the answer */
 			if(!iter_dns_store(qstate->env, &iq->response->qinfo,
-				iq->response->rep, 1, 0, NULL))
+				iq->response->rep, 1, 0, 0, NULL))
 				return error_response(qstate, id, 
 					LDNS_RCODE_SERVFAIL);
 			if(iq->store_parent_NS)
@@ -1955,7 +1958,9 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		 * the partial query answer (CNAME only). */
 		/* prefetchleeway applied because this updates answer parts */
 		if(!iter_dns_store(qstate->env, &iq->response->qinfo,
-			iq->response->rep, 1, qstate->prefetch_leeway, NULL))
+			iq->response->rep, 1, qstate->prefetch_leeway,
+			iq->dp&&iq->dp->has_parent_side_NS,
+			NULL))
 			return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
 		/* set the current request's qname to the new value. */
 		iq->qchase.qname = sname;
@@ -2432,6 +2437,7 @@ processFinished(struct module_qstate* qstate, struct iter_qstate* iq,
 		if(qstate->query_flags&BIT_RD) {
 			if(!iter_dns_store(qstate->env, &qstate->qinfo, 
 				iq->response->rep, 0, qstate->prefetch_leeway,
+				iq->dp&&iq->dp->has_parent_side_NS,
 				qstate->region))
 				return error_response(qstate, id, 
 					LDNS_RCODE_SERVFAIL);
