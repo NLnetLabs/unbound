@@ -931,7 +931,6 @@ assemble_it(struct trust_anchor* ta, size_t num, uint16_t type)
 
 /**
  * Assemble structures for the trust DS and DNSKEY rrsets.
- * @param anchors: trust anchor storage.
  * @param ta: trust anchor
  * @return: false on error.
  */
@@ -1251,7 +1250,7 @@ anchors_delete_insecure(struct val_anchors* anchors, uint16_t c,
 	}
 
 	/* remove from tree */
-	rbtree_delete(anchors->tree, &ta->node);
+	(void)rbtree_delete(anchors->tree, &ta->node);
 	anchors_init_parents_locked(anchors);
 	lock_basic_unlock(&anchors->lock);
 

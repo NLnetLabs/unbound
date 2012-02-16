@@ -1815,7 +1815,7 @@ outnet_serviced_query(struct outside_network* outnet,
 		/* make new serviced query entry */
 		sq = serviced_create(outnet, buff, dnssec, want_dnssec,
 			tcp_upstream, ssl_upstream, addr, addrlen, zone,
-			zonelen, qtype);
+			zonelen, (int)qtype);
 		if(!sq) {
 			free(cb);
 			return NULL;

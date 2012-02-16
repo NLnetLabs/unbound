@@ -438,9 +438,9 @@ int infra_get_host_rto(struct infra_cache* infra,
 			*delay = (int)(data->probedelay - timenow);
 		else	*delay = 0;
 	}
-	*tA = data->timeout_A;
-	*tAAAA = data->timeout_AAAA;
-	*tother = data->timeout_other;
+	*tA = (int)data->timeout_A;
+	*tAAAA = (int)data->timeout_AAAA;
+	*tother = (int)data->timeout_other;
 	lock_rw_unlock(&e->lock);
 	return ttl;
 }

@@ -1387,9 +1387,9 @@ setup_ecdsa_sig(unsigned char** sig, unsigned int* len)
 {
 	ECDSA_SIG* ecdsa_sig;
 	int newlen;
-	unsigned int bnsize = (*len)/2;
+	int bnsize = (int)((*len)/2);
 	/* if too short or not even length, fails */
-	if(*len < 16 || bnsize*2 != *len)
+	if(*len < 16 || bnsize*2 != (int)*len)
 		return 0;
 	/* use the raw data to parse two evenly long BIGNUMs, "r | s". */
 	ecdsa_sig = ECDSA_SIG_new();

@@ -1085,7 +1085,7 @@ struct serviced_query* outnet_serviced_query(struct outside_network* outnet,
 	pend->addrlen = addrlen;
 	pend->zone = memdup(zone, zonelen);
 	pend->zonelen = zonelen;
-	pend->qtype = qtype;
+	pend->qtype = (int)qtype;
 	log_assert(pend->zone);
 	pend->callback = callback;
 	pend->cb_arg = callback_arg;
