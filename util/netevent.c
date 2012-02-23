@@ -308,6 +308,11 @@ udp_send_errno_needs_log(struct sockaddr* addr, socklen_t addrlen)
 	return 1;
 }
 
+int tcp_connect_errno_needs_log(struct sockaddr* addr, socklen_t addrlen)
+{
+	return udp_send_errno_needs_log(addr, addrlen);
+}
+
 /* send a UDP reply */
 int
 comm_point_send_udp_msg(struct comm_point *c, ldns_buffer* packet,

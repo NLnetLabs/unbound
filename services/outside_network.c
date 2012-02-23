@@ -227,7 +227,10 @@ outnet_tcp_take_into_use(struct waiting_tcp* w, uint8_t* pkt, size_t pkt_len)
 #else
 		if(1) {
 #endif
-			log_err("outgoing tcp: connect: %s", strerror(errno));
+			if(tcp_connect_errno_needs_log(
+				(struct sockaddr*)&w->addr, w->addrlen))
+				log_err("outgoing tcp: connect: %s",
+					strerror(errno));
 			close(s);
 #else /* USE_WINSOCK */
 		if(WSAGetLastError() != WSAEINPROGRESS &&

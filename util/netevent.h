@@ -646,4 +646,7 @@ void comm_point_raw_handle_callback(int fd, short event, void* arg);
 void comm_point_tcp_win_bio_cb(struct comm_point* c, void* ssl);
 #endif
 
+/** see if errno for tcp connect has to be logged or not. This uses errno */
+int tcp_connect_errno_needs_log(struct sockaddr* addr, socklen_t addrlen);
+
 #endif /* NET_EVENT_H */
