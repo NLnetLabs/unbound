@@ -1333,6 +1333,42 @@ char* cfg_ptr_reverse(char* str)
 	return result;
 }
 
+#ifdef UB_ON_WINDOWS
+char*
+w_lookup_reg_str(const char* key, const char* name)
+{
+	HKEY hk = NULL;
+	DWORD type = 0;
+	BYTE buf[1024];
+	DWORD len = (DWORD)sizeof(buf);
+	LONG ret;
+	char* result = NULL;
+	ret = RegOpenKeyEx(HKEY_LOCAL_MACHINE, key, 0, KEY_READ, &hk);
+	if(ret == ERROR_FILE_NOT_FOUND)
+		return NULL; /* key does not exist */
+	else if(ret != ERROR_SUCCESS) {
+		log_err("RegOpenKeyEx failed");
+		return NULL;
+	}
+	ret = RegQueryValueEx(hk, (LPCTSTR)name, 0, &type, buf, &len);
+	if(RegCloseKey(hk))
+		log_err("RegCloseKey");
+	if(ret == ERROR_FILE_NOT_FOUND)
+		return NULL; /* name does not exist */
+	else if(ret != ERROR_SUCCESS) {
+		log_err("RegQueryValueEx failed");
+		return NULL;
+	}
+	if(type == REG_SZ || type == REG_MULTI_SZ || type == REG_EXPAND_SZ) {
+		buf[sizeof(buf)-1] = 0;
+		buf[sizeof(buf)-2] = 0; /* for multi_sz */
+		result = strdup((char*)buf);
+		if(!result) log_err("out of memory");
+	}
+	return result;
+}
+#endif /* UB_ON_WINDOWS */
+
 void errinf(struct module_qstate* qstate, const char* str)
 {
 	struct config_strlist* p;

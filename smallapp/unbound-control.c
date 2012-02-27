@@ -366,6 +366,9 @@ int main(int argc, char* argv[])
 #ifdef USE_WINSOCK
 	if((r = WSAStartup(MAKEWORD(2,2), &wsa_data)) != 0)
 		fatal_exit("WSAStartup failed: %s", wsa_strerror(r));
+	/* use registry config file in preference to compiletime location */
+	if(!(cfgfile=w_lookup_reg_str("Software\\Unbound", "ConfigFile")))
+		cfgfile = CONFIGFILE;
 #endif
 
 	ERR_load_crypto_strings();

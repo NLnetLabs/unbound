@@ -483,9 +483,15 @@ int main(int argc, char* argv[])
 	int c;
 	const char* f;
 	const char* opt = NULL;
+	const char* cfgfile = CONFIGFILE;
 	log_ident_set("unbound-checkconf");
 	log_init(NULL, 0, NULL);
 	checklock_start();
+#ifdef USE_WINSOCK
+	/* use registry config file in preference to compiletime location */
+	if(!(cfgfile=w_lookup_reg_str("Software\\Unbound", "ConfigFile")))
+		cfgfile = CONFIGFILE;
+#endif /* USE_WINSOCK */
 	/* parse the options */
 	while( (c=getopt(argc, argv, "ho:")) != -1) {
 		switch(c) {
@@ -504,7 +510,7 @@ int main(int argc, char* argv[])
 		usage();
 	if(argc == 1)
 		f = argv[0];
-	else	f = CONFIGFILE;
+	else	f = cfgfile;
 	checkconf(f, opt);
 	checklock_stop();
 	return 0;

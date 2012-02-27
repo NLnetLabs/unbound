@@ -629,4 +629,15 @@ void ub_c_error(const char* msg);
 /** parsing helpers: print error with file and line numbers */
 void ub_c_error_msg(const char* fmt, ...) ATTR_FORMAT(printf, 1, 2);
 
+#ifdef UB_ON_WINDOWS
+/**
+ * Obtain registry string (if it exists).
+ * @param key: key string
+ * @param name: name of value to fetch.
+ * @return malloced string with the result or NULL if it did not
+ * 	exist on an error (logged with log_err) was encountered.
+ */
+char* w_lookup_reg_str(const char* key, const char* name);
+#endif /* UB_ON_WINDOWS */
+
 #endif /* UTIL_CONFIG_FILE_H */

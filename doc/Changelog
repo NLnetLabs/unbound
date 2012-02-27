@@ -1,3 +1,7 @@
+27 February 2012: Wouter
+	- Fix bug#434: on windows check registry for config file location
+	  for unbound-control.exe, and unbound-checkconf.exe.
+
 23 February 2012: Wouter
 	- Fix to squelch 'network unreachable' errors from tcp connect in
 	  logs, high verbosity will show them.
