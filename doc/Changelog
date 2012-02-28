@@ -1,3 +1,7 @@
+28 February 2012: Wouter
+	- Fix from code review, if EINPROGRESS not defined chain if statement
+	  differently.
+
 27 February 2012: Wouter
 	- Fix bug#434: on windows check registry for config file location
 	  for unbound-control.exe, and unbound-checkconf.exe.

@@ -1195,8 +1195,9 @@ comm_point_tcp_handle_write(int fd, struct comm_point* c)
 #if defined(EINPROGRESS) && defined(EWOULDBLOCK)
 		if(error == EINPROGRESS || error == EWOULDBLOCK)
 			return 1; /* try again later */
+		else
 #endif
-		else if(error != 0 && verbosity < 2)
+		if(error != 0 && verbosity < 2)
 			return 0; /* silence lots of chatter in the logs */
                 else if(error != 0) {
 			log_err("tcp connect: %s", strerror(error));
