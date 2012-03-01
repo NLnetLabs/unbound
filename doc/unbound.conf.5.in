@@ -979,6 +979,10 @@ This option is by default off.  If enabled it performs NS set priming,
 which is similar to root hints, where it starts using the list of nameservers 
 currently published by the zone.  Thus, if the hint list is slightly outdated,
 the resolver picks up a correct list online.
+.TP
+.B stub\-first: \fI<yes or no>
+If enabled, a query is attempted without the stub clause if it fails.
+The default is no.
 .SS "Forward Zone Options"
 .LP
 There may be multiple
@@ -1003,6 +1007,10 @@ Name of server to forward to. Is itself resolved before it is used.
 .B forward\-addr: \fI<IP address>
 IP address of server to forward to. Can be IP 4 or IP 6.
 To use a nondefault port for DNS communication append '@' with the port number.
+.TP
+.B forward\-first: \fI<yes or no>
+If enabled, a query is attempted without the forward clause if it fails.
+The default is no.
 .SS "Python Module Options"
 .LP
 The

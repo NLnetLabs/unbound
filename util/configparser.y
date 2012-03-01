@@ -103,7 +103,8 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_DEL_HOLDDOWN VAR_SO_RCVBUF VAR_EDNS_BUFFER_SIZE VAR_PREFETCH
 %token VAR_PREFETCH_KEY VAR_SO_SNDBUF VAR_HARDEN_BELOW_NXDOMAIN
 %token VAR_IGNORE_CD_FLAG VAR_LOG_QUERIES VAR_TCP_UPSTREAM VAR_SSL_UPSTREAM
-%token VAR_SSL_SERVICE_KEY VAR_SSL_SERVICE_PEM VAR_SSL_PORT
+%token VAR_SSL_SERVICE_KEY VAR_SSL_SERVICE_PEM VAR_SSL_PORT VAR_FORWARD_FIRST
+%token VAR_STUB_FIRST
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -175,7 +176,7 @@ stubstart: VAR_STUB_ZONE
 	;
 contents_stub: contents_stub content_stub 
 	| ;
-content_stub: stub_name | stub_host | stub_addr | stub_prime
+content_stub: stub_name | stub_host | stub_addr | stub_prime | stub_first
 	;
 forwardstart: VAR_FORWARD_ZONE
 	{
@@ -191,7 +192,7 @@ forwardstart: VAR_FORWARD_ZONE
 	;
 contents_forward: contents_forward content_forward 
 	| ;
-content_forward: forward_name | forward_host | forward_addr 
+content_forward: forward_name | forward_host | forward_addr | forward_first
 	;
 server_num_threads: VAR_NUM_THREADS STRING_ARG 
 	{ 
@@ -1119,6 +1120,15 @@ stub_addr: VAR_STUB_ADDR STRING_ARG
 			yyerror("out of memory");
 	}
 	;
+stub_first: VAR_STUB_FIRST STRING_ARG
+	{
+		OUTYY(("P(stub-first:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->stubs->isfirst=(strcmp($2, "yes")==0);
+		free($2);
+	}
+	;
 stub_prime: VAR_STUB_PRIME STRING_ARG
 	{
 		OUTYY(("P(stub-prime:%s)\n", $2));
@@ -1151,6 +1161,15 @@ forward_addr: VAR_FORWARD_ADDR STRING_ARG
 		OUTYY(("P(forward-addr:%s)\n", $2));
 		if(!cfg_strlist_insert(&cfg_parser->cfg->forwards->addrs, $2))
 			yyerror("out of memory");
+	}
+	;
+forward_first: VAR_FORWARD_FIRST STRING_ARG
+	{
+		OUTYY(("P(forward-first:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->forwards->isfirst=(strcmp($2, "yes")==0);
+		free($2);
 	}
 	;
 rcstart: VAR_REMOTE_CONTROL

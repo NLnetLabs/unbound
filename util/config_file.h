@@ -306,6 +306,8 @@ struct config_stub {
 	struct config_strlist* addrs;
 	/** if stub-prime is set */
 	int isprime;
+	/** if forward-first is set (failover to without if fails) */
+	int isfirst;
 };
 
 /**

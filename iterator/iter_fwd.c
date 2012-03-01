@@ -256,7 +256,10 @@ read_forwards(struct iter_forwards* fwd, struct config_file* cfg)
 			return 0;
 		/* set flag that parent side NS information is included.
 		 * Asking a (higher up) server on the internet is not useful */
-		dp->has_parent_side_NS = 1;
+		/* the flag is turned off for 'forward-first' so that the
+		 * last resort will ask for parent-side NS record and thus
+		 * fallback to the internet name servers on a failure */
+		dp->has_parent_side_NS = !s->isfirst;
 		if(!forwards_insert(fwd, LDNS_RR_CLASS_IN, dp))
 			return 0;
 		verbose(VERB_QUERY, "Forward zone server list:");

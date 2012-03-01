@@ -589,7 +589,8 @@ prime_root(struct module_qstate* qstate, struct iter_qstate* iq, int id,
  * @param qstate: the qtstate that triggered the need to prime.
  * @param iq: iterator query state.
  * @param id: module id.
- * @param q: request name.
+ * @param qname: request name.
+ * @param qclass: request class.
  * @return true if a priming subrequest was made, false if not. The will only
  *         issue a priming request if it detects an unprimed stub.
  *         Uses value of 2 to signal during stub-prime in root-prime situation
@@ -597,22 +598,16 @@ prime_root(struct module_qstate* qstate, struct iter_qstate* iq, int id,
  */
 static int
 prime_stub(struct module_qstate* qstate, struct iter_qstate* iq, int id,
-	struct query_info* q)
+	uint8_t* qname, uint16_t qclass)
 {
 	/* Lookup the stub hint. This will return null if the stub doesn't 
 	 * need to be re-primed. */
 	struct iter_hints_stub* stub;
 	struct delegpt* stub_dp;
 	struct module_qstate* subq;
-	uint8_t* delname = q->qname;
-	size_t delnamelen = q->qname_len;
 
-	if(q->qtype == LDNS_RR_TYPE_DS && !dname_is_root(q->qname))
-		/* remove first label, but not for root */
-		dname_remove_label(&delname, &delnamelen);
-
-	stub = hints_lookup_stub(qstate->env->hints, delname, q->qclass,
-		iq->dp);
+	if(!qname) return 0;
+	stub = hints_lookup_stub(qstate->env->hints, qname, qclass, iq->dp);
 	/* The stub (if there is one) does not need priming. */
 	if(!stub)
 		return 0;
@@ -631,18 +626,18 @@ prime_stub(struct module_qstate* qstate, struct iter_qstate* iq, int id,
 			return 1; /* return 1 to make module stop, with error */
 		}
 		log_nametypeclass(VERB_DETAIL, "use stub", stub_dp->name, 
-			LDNS_RR_TYPE_NS, q->qclass);
+			LDNS_RR_TYPE_NS, qclass);
 		return r;
 	}
 
 	/* Otherwise, we need to (re)prime the stub. */
 	log_nametypeclass(VERB_DETAIL, "priming stub", stub_dp->name, 
-		LDNS_RR_TYPE_NS, q->qclass);
+		LDNS_RR_TYPE_NS, qclass);
 
 	/* Stub priming events start at the QUERYTARGETS state to avoid the
 	 * redundant INIT state processing. */
 	if(!generate_sub_request(stub_dp->name, stub_dp->namelen, 
-		LDNS_RR_TYPE_NS, q->qclass, qstate, id, iq,
+		LDNS_RR_TYPE_NS, qclass, qstate, id, iq,
 		QUERYTARGETS_STATE, PRIME_RESP_STATE, &subq, 0)) {
 		verbose(VERB_ALGO, "could not prime stub");
 		(void)error_response(qstate, id, LDNS_RCODE_SERVFAIL);
@@ -848,8 +843,12 @@ forward_request(struct module_qstate* qstate, struct iter_qstate* iq)
 	struct delegpt* dp;
 	uint8_t* delname = iq->qchase.qname;
 	size_t delnamelen = iq->qchase.qname_len;
+	if(iq->refetch_glue) {
+		delname = iq->dp->name;
+		delnamelen = iq->dp->namelen;
+	}
 	/* strip one label off of DS query to lookup higher for it */
-	if(iq->qchase.qtype == LDNS_RR_TYPE_DS 
+	if( (iq->qchase.qtype == LDNS_RR_TYPE_DS || iq->refetch_glue)
 		&& !dname_is_root(iq->qchase.qname))
 		dname_remove_label(&delname, &delnamelen);
 	dp = forwards_lookup(qstate->env->fwds, delname, iq->qchase.qclass);
@@ -1030,7 +1029,6 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 			qstate->prefetch_leeway)))
 			delname = NULL; /* go to root priming */
 		else 	dname_remove_label(&delname, &delnamelen);
-		iq->refetch_glue = 0; /* if CNAME causes restart, no refetch */
 	}
 	/* delname is the name to lookup a delegation for. If NULL rootprime */
 	while(1) {
@@ -1048,7 +1046,8 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 		 * root priming situation. */
 		if(iq->dp == NULL) {
 			/* if there is a stub, then no root prime needed */
-			int r = prime_stub(qstate, iq, id, &iq->qchase);
+			int r = prime_stub(qstate, iq, id, delname,
+				iq->qchase.qclass);
 			if(r == 2)
 				break; /* got noprime-stub-zone, continue */
 			else if(r)
@@ -1158,11 +1157,29 @@ static int
 processInitRequest2(struct module_qstate* qstate, struct iter_qstate* iq,
 	int id)
 {
+	uint8_t* delname;
+	size_t delnamelen;
 	log_query_info(VERB_QUERY, "resolving (init part 2): ", 
 		&qstate->qinfo);
 
+	if(iq->refetch_glue) {
+		if(!iq->dp) {
+			log_err("internal or malloc fail: no dp for refetch");
+			return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
+		}
+		delname = iq->dp->name;
+		delnamelen = iq->dp->namelen;
+	} else {
+		delname = iq->qchase.qname;
+		delnamelen = iq->qchase.qname_len;
+	}
+	if(iq->qchase.qtype == LDNS_RR_TYPE_DS || iq->refetch_glue) {
+		if(!dname_is_root(delname))
+			dname_remove_label(&delname, &delnamelen);
+		iq->refetch_glue = 0; /* if CNAME causes restart, no refetch */
+	}
 	/* Check to see if we need to prime a stub zone. */
-	if(prime_stub(qstate, iq, id, &iq->qchase)) {
+	if(prime_stub(qstate, iq, id, delname, iq->qchase.qclass)) {
 		/* A priming sub request was made */
 		return 0;
 	}

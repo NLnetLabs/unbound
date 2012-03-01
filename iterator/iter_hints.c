@@ -257,7 +257,7 @@ read_stubs(struct iter_hints* hints, struct config_file* cfg)
 			!read_stubs_host(s, dp) ||
 			!read_stubs_addr(s, dp))
 			return 0;
-		dp->has_parent_side_NS = 1;
+		dp->has_parent_side_NS = !s->isfirst;
 		if(!hints_insert(hints, LDNS_RR_CLASS_IN, dp, !s->isprime))
 			return 0;
 		delegpt_log(VERB_QUERY, dp);

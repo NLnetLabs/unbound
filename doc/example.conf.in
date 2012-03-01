@@ -503,10 +503,12 @@ remote-control:
 # 'example.org' go to the given list of nameservers. list zero or more 
 # nameservers by hostname or by ipaddress. If you set stub-prime to yes, 
 # the list is treated as priming hints (default is no).
+# With stub-first yes, it attempts without the stub if it fails.
 # stub-zone:
 #	name: "example.com"
 #	stub-addr: 192.0.2.68
 #	stub-prime: no
+#	stub-first: no
 # stub-zone:
 #	name: "example.org"
 #	stub-host: ns.example.com.
@@ -516,10 +518,12 @@ remote-control:
 # 'example.org' go to the given list of servers. These servers have to handle
 # recursion to other nameservers. List zero or more nameservers by hostname
 # or by ipaddress. Use an entry with name "." to forward all queries.
+# If you enable forward-first, it attempts without the forward if it fails.
 # forward-zone:
 # 	name: "example.com"
 # 	forward-addr: 192.0.2.68
 # 	forward-addr: 192.0.2.73@5355  # forward to port 5355.
+# 	forward-first: no
 # forward-zone:
 # 	name: "example.org"
 # 	forward-host: fwd.example.com

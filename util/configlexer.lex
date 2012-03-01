@@ -186,9 +186,11 @@ name{COLON}			{ YDVAR(1, VAR_NAME) }
 stub-addr{COLON}		{ YDVAR(1, VAR_STUB_ADDR) }
 stub-host{COLON}		{ YDVAR(1, VAR_STUB_HOST) }
 stub-prime{COLON}		{ YDVAR(1, VAR_STUB_PRIME) }
+stub-first{COLON}		{ YDVAR(1, VAR_STUB_FIRST) }
 forward-zone{COLON}		{ YDVAR(0, VAR_FORWARD_ZONE) }
 forward-addr{COLON}		{ YDVAR(1, VAR_FORWARD_ADDR) }
 forward-host{COLON}		{ YDVAR(1, VAR_FORWARD_HOST) }
+forward-first{COLON}		{ YDVAR(1, VAR_FORWARD_FIRST) }
 do-not-query-address{COLON}	{ YDVAR(1, VAR_DO_NOT_QUERY_ADDRESS) }
 do-not-query-localhost{COLON}	{ YDVAR(1, VAR_DO_NOT_QUERY_LOCALHOST) }
 access-control{COLON}		{ YDVAR(2, VAR_ACCESS_CONTROL) }

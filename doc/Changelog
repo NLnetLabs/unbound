@@ -1,3 +1,7 @@
+1 March 2012: Wouter
+	- forward-first option.  Tries without forward if a query fails.
+	  Also stub-first option that is similar.
+
 28 February 2012: Wouter
 	- Fix from code review, if EINPROGRESS not defined chain if statement
 	  differently.
