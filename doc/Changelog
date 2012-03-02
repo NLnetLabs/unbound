@@ -1,3 +1,6 @@
+2 March 2012: Wouter
+	- flush_infra cleans timeouted servers from the cache too.
+
 1 March 2012: Wouter
 	- forward-first option.  Tries without forward if a query fails.
 	  Also stub-first option that is similar.
