@@ -16693,16 +16693,6 @@ cat >>confdefs.h <<_ACEOF
 _ACEOF
 
       use_ecdsa="yes"
-      { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING:
-      *****************************************************************
-      *** YOU HAVE ENABLED ECDSA WHICH IS EXPERIMENTAL AT THIS TIME ***
-      *** PLEASE DO NOT USE THIS ON THE PUBLIC INTERNET             ***
-      *****************************************************************" >&5
-$as_echo "$as_me: WARNING:
-      *****************************************************************
-      *** YOU HAVE ENABLED ECDSA WHICH IS EXPERIMENTAL AT THIS TIME ***
-      *** PLEASE DO NOT USE THIS ON THE PUBLIC INTERNET             ***
-      *****************************************************************" >&2;}
       ;;
     no)
       ;;

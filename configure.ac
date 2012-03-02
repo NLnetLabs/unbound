@@ -678,11 +678,6 @@ case "$enable_ecdsa" in
       # we now know we have ECDSA and the required curves.
       AC_DEFINE_UNQUOTED([USE_ECDSA], [1], [Define this to enable ECDSA support.])
       use_ecdsa="yes"
-      AC_WARN([
-      *****************************************************************
-      *** YOU HAVE ENABLED ECDSA WHICH IS EXPERIMENTAL AT THIS TIME ***
-      *** PLEASE DO NOT USE THIS ON THE PUBLIC INTERNET             ***
-      *****************************************************************])
       ;;
     no)
       ;;
