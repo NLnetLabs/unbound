@@ -1,3 +1,6 @@
+9 March 2012: Wouter
+	- Applied line-buffer patch from Augie Schwer to validation.reporter.sh.
+
 2 March 2012: Wouter
 	- flush_infra cleans timeouted servers from the cache too.
 	- removed warning from --enable-ecdsa.
