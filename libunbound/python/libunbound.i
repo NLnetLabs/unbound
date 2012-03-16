@@ -768,6 +768,10 @@ Result: ['74.125.43.147', '74.125.43.99', '74.125.43.103', '74.125.43.104']
      
      return list;
   }
+
+  PyObject* _packet() {
+      return PyString_FromStringAndSize($self->answer_packet, $self->answer_len);
+  }
   
  %pythoncode %{
    def __init__(self):
@@ -805,6 +809,7 @@ Result: ['74.125.43.147', '74.125.43.99', '74.125.43.103', '74.125.43.104']
        return ub_data(self._ub_result_data(self))
   
    __swig_getmethods__["data"] = _get_data
+   __swig_getmethods__["packet"] = _packet
    data = property(_get_data, doc="Returns :class:`ub_data` instance containing various decoding functions or None")
 
 %}

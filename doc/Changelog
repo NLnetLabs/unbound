@@ -1,3 +1,7 @@
+16 March 2012: Wouter
+	- Patch for access to full DNS packet data in unbound python module
+	  from Ondrej Mikle.
+
 9 March 2012: Wouter
 	- Applied line-buffer patch from Augie Schwer to validation.reporter.sh.
 
