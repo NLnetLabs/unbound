@@ -311,4 +311,21 @@ void iter_dec_attempts(struct delegpt* dp, int d);
  */
 void iter_merge_retry_counts(struct delegpt* dp, struct delegpt* old);
 
+/**
+ * See if a DS response (type ANSWER) is too low: a nodata answer with 
+ * a SOA record in the authority section at-or-below the qchase.qname.
+ * @param msg: the response.
+ * @return true if too low.
+ */
+int iter_ds_toolow(struct dns_msg* msg);
+
+/**
+ * See if delegpt can go down a step to the qname or not
+ * @param qinfo: the query name looked up.
+ * @param dp: checked if the name can go lower to the qname
+ * @return true if can go down, false if that would not be possible.
+ * the current response seems to be the one and only, best possible, response.
+ */
+int iter_dp_cangodown(struct query_info* qinfo, struct delegpt* dp);
+
 #endif /* ITERATOR_ITER_UTILS_H */

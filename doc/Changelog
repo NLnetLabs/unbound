@@ -1,5 +1,6 @@
 19 March 2012: Wouter
 	- iana portlist updated.
+	- fix to locate nameservers for DS lookup with NS fetches.
 
 16 March 2012: Wouter
 	- Patch for access to full DNS packet data in unbound python module

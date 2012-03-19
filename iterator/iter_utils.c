@@ -968,3 +968,35 @@ void iter_merge_retry_counts(struct delegpt* dp, struct delegpt* old)
 		a = a->next_usable;
 	}
 }
+
+int
+iter_ds_toolow(struct dns_msg* msg)
+{
+	/* if for query example.com, there is example.com SOA or a subdomain
+	 * of example.com, then we are too low and need to fetch NS. */
+	size_t i = msg->rep->an_numrrsets;
+	for(; i < msg->rep->an_numrrsets + msg->rep->ns_numrrsets; i++) {
+		struct ub_packed_rrset_key* s = msg->rep->rrsets[i];
+		if(ntohs(s->rk.type) == LDNS_RR_TYPE_SOA &&
+			dname_subdomain_c(s->rk.dname, msg->qinfo.qname)) {
+			/* point is too low */
+			return 1;
+		}
+	}
+	return 0;
+}
+
+int iter_dp_cangodown(struct query_info* qinfo, struct delegpt* dp)
+{
+	/* no delegation point, do not see how we can go down,
+	 * robust check, it should really exist */
+	if(!dp) return 0;
+
+	/* see if dp equals the qname, then we cannot go down further */
+	if(query_dname_compare(qinfo->qname, dp->name) == 0)
+		return 0;
+	/* if dp is one label above the name we also cannot go down further */
+	if(dname_count_labels(qinfo->qname) == dp->namelabs+1)
+		return 0;
+	return 1;
+}

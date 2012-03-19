@@ -155,6 +155,10 @@ enum iter_state {
 	 * it spawns off queries for every class, it returns here. */
 	COLLECT_CLASS_STATE,
 
+	/** Find NS record to resolve DS record from, walking to the right
+	 * NS spot until we find it */
+	DSNS_FIND_STATE,
+
 	/** Responses that are to be returned upstream end at this state. 
 	 * As well as responses to target queries. */
 	FINISHED_STATE
