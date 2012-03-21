@@ -62,6 +62,7 @@
 #include "validator/val_anchor.h"
 #include "validator/val_kcache.h"
 #include "validator/val_kentry.h"
+#include "validator/val_utils.h"
 
 /** time when nameserver glue is said to be 'recent' */
 #define SUSPICION_RECENT_EXPIRY 86400
