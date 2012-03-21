@@ -260,7 +260,7 @@ read_stubs(struct iter_hints* hints, struct config_file* cfg)
 		/* the flag is turned off for 'stub-first' so that the
 		 * last resort will ask for parent-side NS record and thus
 		 * fallback to the internet name servers on a failure */
-		dp->has_parent_side_NS = !s->isfirst;
+		dp->has_parent_side_NS = (uint8_t)!s->isfirst;
 		if(!hints_insert(hints, LDNS_RR_CLASS_IN, dp, !s->isprime))
 			return 0;
 		delegpt_log(VERB_QUERY, dp);

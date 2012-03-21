@@ -259,7 +259,7 @@ read_forwards(struct iter_forwards* fwd, struct config_file* cfg)
 		/* the flag is turned off for 'forward-first' so that the
 		 * last resort will ask for parent-side NS record and thus
 		 * fallback to the internet name servers on a failure */
-		dp->has_parent_side_NS = !s->isfirst;
+		dp->has_parent_side_NS = (uint8_t)!s->isfirst;
 		if(!forwards_insert(fwd, LDNS_RR_CLASS_IN, dp))
 			return 0;
 		verbose(VERB_QUERY, "Forward zone server list:");
