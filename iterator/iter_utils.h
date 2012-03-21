@@ -314,10 +314,13 @@ void iter_merge_retry_counts(struct delegpt* dp, struct delegpt* old);
 /**
  * See if a DS response (type ANSWER) is too low: a nodata answer with 
  * a SOA record in the authority section at-or-below the qchase.qname.
+ * Also returns true if we are not sure (i.e. empty message, CNAME nosig).
  * @param msg: the response.
+ * @param dp: the dp name is used to check if the RRSIG gives a clue that
+ * 	it was originated from the correct nameserver.
  * @return true if too low.
  */
-int iter_ds_toolow(struct dns_msg* msg);
+int iter_ds_toolow(struct dns_msg* msg, struct delegpt* dp);
 
 /**
  * See if delegpt can go down a step to the qname or not

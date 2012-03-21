@@ -1530,10 +1530,8 @@ processLastResort(struct module_qstate* qstate, struct iter_qstate* iq,
  * Try to find the NS record set that will resolve a qtype DS query. Due
  * to grandparent/grandchild reasons we did not get a proper lookup right
  * away.  We need to create type NS queries until we get the right parent
- * for this lookup.  We add labels to the delegation point - whose name is
- * storage for where we are (with empty other content).  Until we find an
- * NS record, then we try the query again (which can result in doing this
- * again).  Or we go too low, it is not possible to resolve, servfail.
+ * for this lookup.  We remove labels from the query to find the right point.
+ * If we end up at the old dp name, then there is no solution.
  * 
  * @param qstate: query state.
  * @param iq: iterator query state.
@@ -1546,32 +1544,34 @@ static int
 processDSNSFind(struct module_qstate* qstate, struct iter_qstate* iq,
 	int id)
 {
-	int qlab = dname_count_labels(iq->qchase.qname);
 	struct module_qstate* subq = NULL;
 	verbose(VERB_ALGO, "processDSNSFind");
-	if(dname_subdomain_c(iq->dp->name, iq->qchase.qname) ||
-		qlab == iq->dp->namelabs+1)
-		/* we are too low - fail (robust check) */
+
+	if(!iq->dsns_point) {
+		/* initialize */
+		iq->dsns_point = iq->qchase.qname;
+		iq->dsns_point_len = iq->qchase.qname_len;
+	}
+	/* robustcheck for internal error: we are not underneath the dp */
+	if(!dname_subdomain_c(iq->dsns_point, iq->dp->name)) {
 		return error_response_cache(qstate, id, LDNS_RCODE_SERVFAIL);
-	/* dp is used for storage, this is our state */
-	log_assert(!iq->dp->dp_type_mlc); /* if malloced this would leak */
-	iq->dp->nslist = NULL;
-	iq->dp->target_list = NULL;
-	iq->dp->usable_list = NULL;
-	iq->dp->result_list = NULL;
+	}
+
+	/* go up one (more) step, until we hit the dp, if so, end */
+	dname_remove_label(&iq->dsns_point, &iq->dsns_point_len);
+	if(query_dname_compare(iq->dsns_point, iq->dp->name) == 0) {
+		/* there was no inbetween nameserver, use the old delegation
+		 * point again.  And this time, because dsns_point is nonNULL
+		 * we are going to accept the (bad) result */
+		iq->state = QUERYTARGETS_STATE;
+		return 1;
+	}
 	iq->state = DSNS_FIND_STATE;
 
-	/* add one label to the dp */
-	iq->dp->name = iq->qchase.qname;
-	iq->dp->namelen = iq->qchase.qname_len;
-	/* we have qlab labels we want namelabs+1 labels */
-	dname_remove_labels(&iq->dp->name, &iq->dp->namelen, 
-		qlab - (iq->dp->namelabs+1));
-	iq->dp->namelabs++;
 	/* spawn NS lookup (validation not needed, this is for DS lookup) */
 	log_nametypeclass(VERB_ALGO, "fetch nameservers", 
-		iq->dp->name, LDNS_RR_TYPE_NS, iq->qchase.qclass);
-	if(!generate_sub_request(iq->dp->name, iq->dp->namelen, 
+		iq->dsns_point, LDNS_RR_TYPE_NS, iq->qchase.qclass);
+	if(!generate_sub_request(iq->dsns_point, iq->dsns_point_len, 
 		LDNS_RR_TYPE_NS, iq->qchase.qclass, qstate, id, iq,
 		INIT_REQUEST_STATE, FINISHED_STATE, &subq, 0)) {
 		return error_response_cache(qstate, id, LDNS_RCODE_SERVFAIL);
@@ -1903,8 +1903,9 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		}
 		/* if qtype is DS, check we have the right level of answer,
 		 * like grandchild answer but we need the middle, reject it */
-		if(iq->qchase.qtype == LDNS_RR_TYPE_DS
-			&& iter_ds_toolow(iq->response)
+		if(iq->qchase.qtype == LDNS_RR_TYPE_DS && !iq->dsns_point
+			&& !(iq->chase_flags&BIT_RD)
+			&& iter_ds_toolow(iq->response, iq->dp)
 			&& iter_dp_cangodown(&iq->qchase, iq->dp))
 			return processDSNSFind(qstate, iq, id);
 		if(!iter_dns_store(qstate->env, &iq->response->qinfo,
@@ -2026,6 +2027,13 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		if(verbosity >= VERB_ALGO)
 			log_dns_msg("cname msg", &iq->response->qinfo, 
 				iq->response->rep);
+		/* if qtype is DS, check we have the right level of answer,
+		 * like grandchild answer but we need the middle, reject it */
+		if(iq->qchase.qtype == LDNS_RR_TYPE_DS && !iq->dsns_point
+			&& !(iq->chase_flags&BIT_RD)
+			&& iter_ds_toolow(iq->response, iq->dp)
+			&& iter_dp_cangodown(&iq->qchase, iq->dp))
+			return processDSNSFind(qstate, iq, id);
 		/* Process the CNAME response. */
 		if(!handle_cname_response(qstate, iq, iq->response, 
 			&sname, &snamelen))
@@ -2036,8 +2044,7 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		/* prefetchleeway applied because this updates answer parts */
 		if(!iter_dns_store(qstate->env, &iq->response->qinfo,
 			iq->response->rep, 1, qstate->prefetch_leeway,
-			iq->dp&&iq->dp->has_parent_side_NS,
-			NULL))
+			iq->dp&&iq->dp->has_parent_side_NS, NULL))
 			return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
 		/* set the current request's qname to the new value. */
 		iq->qchase.qname = sname;
@@ -2045,6 +2052,7 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		/* Clear the query state, since this is a query restart. */
 		iq->deleg_msg = NULL;
 		iq->dp = NULL;
+		iq->dsns_point = NULL;
 		/* Note the query restart. */
 		iq->query_restart_count++;
 		iq->sent_count = 0;
@@ -2321,7 +2329,7 @@ processDSNSResponse(struct module_qstate* qstate, int id,
 	struct iter_qstate* foriq = (struct iter_qstate*)forq->minfo[id];
 
 	/* if the finished (iq->response) query has no NS set: continue
-	 * down to look for the right dp; nothing to change, do DPNSstate */
+	 * up to look for the right dp; nothing to change, do DPNSstate */
 	if(qstate->return_rcode != LDNS_RCODE_NOERROR)
 		return; /* seek further */
 	/* find the NS RRset (without allowing CNAMEs) */
@@ -2340,7 +2348,7 @@ processDSNSResponse(struct module_qstate* qstate, int id,
 	}
 	/* success, go query the querytargets in the new dp (and go down) */
 }
-	
+
 /**
  * Process response for qclass=ANY queries for a particular class.
  * Append to result or error-exit.

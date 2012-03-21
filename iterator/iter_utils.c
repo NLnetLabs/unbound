@@ -970,20 +970,51 @@ void iter_merge_retry_counts(struct delegpt* dp, struct delegpt* old)
 }
 
 int
-iter_ds_toolow(struct dns_msg* msg)
+iter_ds_toolow(struct dns_msg* msg, struct delegpt* dp)
 {
 	/* if for query example.com, there is example.com SOA or a subdomain
 	 * of example.com, then we are too low and need to fetch NS. */
-	size_t i = msg->rep->an_numrrsets;
-	for(; i < msg->rep->an_numrrsets + msg->rep->ns_numrrsets; i++) {
+	size_t i;
+	/* if we have a DNAME or CNAME we are probably wrong */
+	/* if we have a qtype DS in the answer section, its fine */
+	for(i=0; i < msg->rep->an_numrrsets; i++) {
 		struct ub_packed_rrset_key* s = msg->rep->rrsets[i];
-		if(ntohs(s->rk.type) == LDNS_RR_TYPE_SOA &&
-			dname_subdomain_c(s->rk.dname, msg->qinfo.qname)) {
-			/* point is too low */
+		if(ntohs(s->rk.type) == LDNS_RR_TYPE_DNAME ||
+			ntohs(s->rk.type) == LDNS_RR_TYPE_CNAME) {
+			/* not the right answer, maybe too low, check the
+			 * RRSIG signer name (if there is any) for a hint
+			 * that it is from the dp zone anyway */
+			uint8_t* sname;
+			size_t slen;
+			val_find_rrset_signer(s, &sname, &slen);
+			if(sname && query_dname_compare(dp->name, sname)==0)
+				return 0; /* it is fine, from the right dp */
+			return 1;
+		}
+		if(ntohs(s->rk.type) == LDNS_RR_TYPE_DS)
+			return 0; /* fine, we have a DS record */
+	}
+	for(i=msg->rep->an_numrrsets;
+		i < msg->rep->an_numrrsets + msg->rep->ns_numrrsets; i++) {
+		struct ub_packed_rrset_key* s = msg->rep->rrsets[i];
+		if(ntohs(s->rk.type) == LDNS_RR_TYPE_SOA) {
+			if(dname_subdomain_c(s->rk.dname, msg->qinfo.qname))
+				return 1; /* point is too low */
+			if(query_dname_compare(s->rk.dname, dp->name)==0)
+				return 0; /* right dp */
+		}
+		if(ntohs(s->rk.type) == LDNS_RR_TYPE_NSEC ||
+			ntohs(s->rk.type) == LDNS_RR_TYPE_NSEC3) {
+			uint8_t* sname;
+			size_t slen;
+			val_find_rrset_signer(s, &sname, &slen);
+			if(sname && query_dname_compare(dp->name, sname)==0)
+				return 0; /* it is fine, from the right dp */
 			return 1;
 		}
 	}
-	return 0;
+	/* we do not know */
+	return 1;
 }
 
 int iter_dp_cangodown(struct query_info* qinfo, struct delegpt* dp)

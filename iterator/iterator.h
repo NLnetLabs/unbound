@@ -275,6 +275,11 @@ struct iter_qstate {
 	/** the parent-side-glue element (NULL if none, its first match) */
 	struct ub_packed_rrset_key* pside_glue;
 
+	/** If nonNULL we are walking upwards from DS query to find NS */
+	uint8_t* dsns_point;
+	/** length of the dname in dsns_point */
+	size_t dsns_point_len;
+
 	/** 
 	 * expected dnssec information for this iteration step. 
 	 * If dnssec rrsigs are expected and not given, the server is marked
