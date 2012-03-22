@@ -27,7 +27,7 @@ notify_cmd="nc localhost 1234"
 # first the daemon itself, then the controller for the daemon.
 reporter_daemon() {
 	trap "rm -f \"$pidfile\"" EXIT
-	tail -f $logfile | grep --line-buffered "unbound.*info: validation failure" | \
+	tail -F $logfile | grep --line-buffered "unbound.*info: validation failure" | \
 	while read x; do
 		echo "$x" | $notify_cmd
 	done

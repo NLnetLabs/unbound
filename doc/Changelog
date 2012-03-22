@@ -1,3 +1,7 @@
+22 March 2012: Wouter
+	- contrib/validation-reporter follows rotated log file (patch from
+	  Augie Schwer).
+
 21 March 2012: Wouter
 	- new approach to NS fetches for DS lookup that works with
 	  cornercases, and is more robust and considers forwarders.
