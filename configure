@@ -640,6 +640,7 @@ PYUNBOUND_OBJ
 WITH_PYUNBOUND
 PYTHONMOD_UNINSTALL
 PYTHONMOD_INSTALL
+PYTHONMOD_HEADER
 PYTHONMOD_OBJ
 WITH_PYTHONMODULE
 swig
@@ -15941,6 +15942,8 @@ $as_echo "#define WITH_PYTHONMODULE 1" >>confdefs.h
             WITH_PYTHONMODULE=yes
 
 	    PYTHONMOD_OBJ="pythonmod.lo pythonmod_utils.lo"
+
+	    PYTHONMOD_HEADER='$(srcdir)/pythonmod/pythonmod.h'
 
 	    PYTHONMOD_INSTALL=pythonmod-install
 
