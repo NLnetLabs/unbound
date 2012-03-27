@@ -514,7 +514,6 @@ depend:
 			-e 's?$$(srcdir)/util/configlexer.c?util/configlexer.c?g' \
 			-e 's?$$(srcdir)/util/configparser.c?util/configparser.c?g' \
 			-e 's?$$(srcdir)/util/configparser.h?util/configparser.h?g' \
-			-e 's?$$(srcdir)/util/configparser.h?util/configparser.h?g' \
 			-e 's?$$(srcdir)/pythonmod/pythonmod.h?$$(PYTHONMOD_HEADER)?g' \
 			-e 's!\(.*\)\.o[ :]*!\1.lo \1.o: !g' \
 			> $(DEPEND_TMP)
