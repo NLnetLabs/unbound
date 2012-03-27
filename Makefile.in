@@ -78,6 +78,7 @@ INSTALL=$(srcdir)/install-sh
 PYTHONMOD_SRC=pythonmod/pythonmod_utils.c
 # pythonmod.lo pythonmod_utils.lo if python mod enabled.
 PYTHONMOD_OBJ=@PYTHONMOD_OBJ@
+PYTHONMOD_HEADER=@PYTHONMOD_HEADER@
 # libunbound/python/libunbound_wrap.c is dealt with by its own rules.
 PYUNBOUND_SRC=
 # libunbound_wrap.lo if python libunbound wrapper enabled.
@@ -513,6 +514,8 @@ depend:
 			-e 's?$$(srcdir)/util/configlexer.c?util/configlexer.c?g' \
 			-e 's?$$(srcdir)/util/configparser.c?util/configparser.c?g' \
 			-e 's?$$(srcdir)/util/configparser.h?util/configparser.h?g' \
+			-e 's?$$(srcdir)/util/configparser.h?util/configparser.h?g' \
+			-e 's?$$(srcdir)/pythonmod/pythonmod.h?$$(PYTHONMOD_HEADER)?g' \
 			-e 's!\(.*\)\.o[ :]*!\1.lo \1.o: !g' \
 			> $(DEPEND_TMP)
 	cp $(DEPEND_TARGET) $(DEPEND_TMP2)
