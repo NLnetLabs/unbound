@@ -473,6 +473,8 @@ if test x_$ub_test_python != x_no; then
             AC_SUBST(WITH_PYTHONMODULE)
 	    PYTHONMOD_OBJ="pythonmod.lo pythonmod_utils.lo"
 	    AC_SUBST(PYTHONMOD_OBJ)
+	    PYTHONMOD_HEADER='$(srcdir)/pythonmod/pythonmod.h'
+	    AC_SUBST(PYTHONMOD_HEADER)
 	    PYTHONMOD_INSTALL=pythonmod-install
 	    AC_SUBST(PYTHONMOD_INSTALL)
 	    PYTHONMOD_UNINSTALL=pythonmod-uninstall
