@@ -502,6 +502,21 @@ perform_setup(struct daemon* daemon, struct config_file* cfg, int debug_mode,
 	(void)daemon;
 #endif
 
+	/* Set user context */
+#ifdef HAVE_GETPWNAM
+	if(cfg->username && cfg->username[0]) {
+#ifdef HAVE_SETUSERCONTEXT
+		/* setusercontext does initgroups, setuid, setgid, and
+		 * also resource limits from login config, but we
+		 * still call setresuid, setresgid to be sure to set all uid*/
+		if(setusercontext(NULL, pwd, uid,
+			LOGIN_SETALL & ~LOGIN_SETUSER & ~LOGIN_SETGROUP) != 0)
+			log_warn("unable to setusercontext %s: %s",
+				cfg->username, strerror(errno));
+#endif /* HAVE_SETUSERCONTEXT */
+	}
+#endif /* HAVE_GETPWNAM */
+
 	/* box into the chroot */
 #ifdef HAVE_CHROOT
 	if(cfg->chrootdir && cfg->chrootdir[0]) {
@@ -554,20 +569,11 @@ perform_setup(struct daemon* daemon, struct config_file* cfg, int debug_mode,
 	/* drop permissions after chroot, getpwnam, pidfile, syslog done*/
 #ifdef HAVE_GETPWNAM
 	if(cfg->username && cfg->username[0]) {
-#ifdef HAVE_SETUSERCONTEXT
-		/* setusercontext does initgroups, setuid, setgid, and
-		 * also resource limits from login config, but we
-		 * still call setresuid, setresgid to be sure to set all uid*/
-		if(setusercontext(NULL, pwd, uid, LOGIN_SETALL) != 0)
-			log_warn("unable to setusercontext %s: %s",
-				cfg->username, strerror(errno));
-#else /* !HAVE_SETUSERCONTEXT */
 #  ifdef HAVE_INITGROUPS
 		if(initgroups(cfg->username, gid) != 0)
 			log_warn("unable to initgroups %s: %s",
 				cfg->username, strerror(errno));
 #  endif /* HAVE_INITGROUPS */
-#endif /* HAVE_SETUSERCONTEXT */
 		endpwent();
 
 #ifdef HAVE_SETRESGID
