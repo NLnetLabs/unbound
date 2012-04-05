@@ -140,7 +140,7 @@ else
 fi
 )
 AC_SUBST(UNBOUND_CHROOT_DIR)
-ACX_ESCAPE_BACKSLASH($UNBOUND_CHOOT_DIR, hdr_chroot)
+ACX_ESCAPE_BACKSLASH($UNBOUND_CHROOT_DIR, hdr_chroot)
 AC_DEFINE_UNQUOTED(CHROOT_DIR, ["$hdr_chroot"], [Directory to chroot to])
 
 AC_ARG_WITH(share-dir,

@@ -4007,7 +4007,7 @@ fi
 fi
 
 
-hdr_chroot="`echo $UNBOUND_CHOOT_DIR | sed -e 's/\\\\/\\\\\\\\/g'`"
+hdr_chroot="`echo $UNBOUND_CHROOT_DIR | sed -e 's/\\\\/\\\\\\\\/g'`"
 
 
 cat >>confdefs.h <<_ACEOF
