@@ -309,6 +309,13 @@ server:
 	# if yes, perform key lookups adjacent to normal lookups.
 	# prefetch-key: no
 
+	# if yes, Unbound rotates RRSet order in response.
+	# rrset-roundrobin: no
+
+	# if yes, Unbound doesn't insert authority/additional sections
+	# into response messages when those sections are not required.
+	# minimal-responses: no
+
 	# module configuration of the server. A string with identifiers
 	# separated by spaces. "iterator" or "validator iterator"
 	# module-config: "validator iterator"

@@ -195,6 +195,8 @@ config_create(void)
 	cfg->remote_control_enable = 0;
 	cfg->control_ifs = NULL;
 	cfg->control_port = UNBOUND_CONTROL_PORT;
+	cfg->minimal_responses = 0;
+	cfg->rrset_roundrobin = 0;
 	if(!(cfg->server_key_file = strdup(RUN_DIR"/unbound_server.key"))) 
 		goto error_exit;
 	if(!(cfg->server_cert_file = strdup(RUN_DIR"/unbound_server.pem"))) 
@@ -399,6 +401,8 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	else S_MEMSIZE("key-cache-size:", key_cache_size)
 	else S_POW2("key-cache-slabs:", key_cache_slabs)
 	else S_MEMSIZE("neg-cache-size:", neg_cache_size)
+	else S_YNO("minimal-responses:", minimal_responses)
+	else S_YNO("rrset-roundrobin:", rrset_roundrobin)
 	else S_STRLIST("local-data:", local_data)
 	else S_YNO("control-enable:", remote_control_enable)
 	else S_STRLIST("control-interface:", control_ifs)
@@ -651,6 +655,8 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_LST(opt, "control-interface", control_ifs)
 	else O_LST(opt, "domain-insecure", domain_insecure)
 	else O_UNS(opt, "val-override-date", val_date_override)
+	else O_YNO(opt, "minimal-responses", minimal_responses)
+	else O_YNO(opt, "rrset-roundrobin", rrset_roundrobin)
 	/* not here:
 	 * outgoing-permit, outgoing-avoid - have list of ports
 	 * local-zone - zones and nodefault variables
@@ -1079,6 +1085,8 @@ config_apply(struct config_file* config)
 	MAX_TTL = (uint32_t)config->max_ttl;
 	MIN_TTL = (uint32_t)config->min_ttl;
 	EDNS_ADVERTISED_SIZE = (uint16_t)config->edns_buffer_size;
+	MINIMAL_RESPONSES = config->minimal_responses;
+	RRSET_ROUNDROBIN = config->rrset_roundrobin;
 	log_set_time_asc(config->log_time_ascii);
 }
 

@@ -241,6 +241,8 @@ control-cert-file{COLON}	{ YDVAR(1, VAR_CONTROL_CERT_FILE) }
 python-script{COLON}		{ YDVAR(1, VAR_PYTHON_SCRIPT) }
 python{COLON}			{ YDVAR(0, VAR_PYTHON) }
 domain-insecure{COLON}		{ YDVAR(1, VAR_DOMAIN_INSECURE) }
+minimal-responses{COLON}	{ YDVAR(1, VAR_MINIMAL_RESPONSES) }
+rrset-roundrobin{COLON}		{ YDVAR(1, VAR_RRSET_ROUNDROBIN) }
 <INITIAL,val>{NEWLINE}		{ LEXOUT(("NL\n")); cfg_parser->line++; }
 
 	/* Quoted strings. Strip leading and ending quotes */

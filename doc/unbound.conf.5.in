@@ -570,6 +570,18 @@ If yes, fetch the DNSKEYs earlier in the validation process, when a DS
 record is encountered.  This lowers the latency of requests.  It does use
 a little more CPU.  Also if the cache is set to 0, it is no use. Default is no.
 .TP
+.B rrset-roundrobin: \fI<yes or no>
+If yes, Unbound rotates RRSet order in response (the random number is taken
+from the query ID, for speed and thread safety).  Default is no.
+.TP
+.B minimal-responses: \fI<yes or no>
+If yes, Unbound doesn't insert authority/additional sections into response
+messages when those sections are not required.  This reduces response
+size significantly, and may avoid TCP fallback for some responses.
+This may cause a slight speedup.  The default is no, because the DNS
+protocol RFCs mandate these sections, and the additional content could
+be of use and save roundtrips for clients.
+.TP
 .B module\-config: \fI<"module names">
 Module configuration, a list of module names separated by spaces, surround
 the string with quotes (""). The modules can be validator, iterator.

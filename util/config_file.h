@@ -290,6 +290,12 @@ struct config_file {
 
 	/** daemonize, i.e. fork into the background. */
 	int do_daemonize;
+
+	/* minimal response when positive answer */
+	int minimal_responses;
+
+	/* RRSet roundrobin */
+	int rrset_roundrobin;
 };
 
 /**

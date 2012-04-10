@@ -53,6 +53,12 @@
 /** default value for EDNS ADVERTISED size */
 uint16_t EDNS_ADVERTISED_SIZE = 4096;
 
+/** minimal responses when positive answer: default is no */
+int MINIMAL_RESPONSES = 0;
+
+/** rrset order roundrobin: default is no */
+int RRSET_ROUNDROBIN = 0;
+
 /* returns true is string addr is an ip6 specced address */
 int
 str_is_ip6(const char* str)

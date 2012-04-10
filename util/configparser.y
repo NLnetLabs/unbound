@@ -104,7 +104,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_PREFETCH_KEY VAR_SO_SNDBUF VAR_HARDEN_BELOW_NXDOMAIN
 %token VAR_IGNORE_CD_FLAG VAR_LOG_QUERIES VAR_TCP_UPSTREAM VAR_SSL_UPSTREAM
 %token VAR_SSL_SERVICE_KEY VAR_SSL_SERVICE_PEM VAR_SSL_PORT VAR_FORWARD_FIRST
-%token VAR_STUB_FIRST
+%token VAR_STUB_FIRST VAR_MINIMAL_RESPONSES VAR_RRSET_ROUNDROBIN
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -160,7 +160,8 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_edns_buffer_size | server_prefetch | server_prefetch_key |
 	server_so_sndbuf | server_harden_below_nxdomain | server_ignore_cd_flag |
 	server_log_queries | server_tcp_upstream | server_ssl_upstream |
-	server_ssl_service_key | server_ssl_service_pem | server_ssl_port
+	server_ssl_service_key | server_ssl_service_pem | server_ssl_port |
+	server_minimal_responses | server_rrset_roundrobin
 	;
 stubstart: VAR_STUB_ZONE
 	{
@@ -1094,6 +1095,26 @@ server_local_data_ptr: VAR_LOCAL_DATA_PTR STRING_ARG
 		} else {
 			yyerror("local-data-ptr could not be reversed");
 		}
+	}
+	;
+server_minimal_responses: VAR_MINIMAL_RESPONSES STRING_ARG
+	{
+		OUTYY(("P(server_minimal_responses:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->minimal_responses =
+			(strcmp($2, "yes")==0);
+		free($2);
+	}
+	;
+server_rrset_roundrobin: VAR_RRSET_ROUNDROBIN STRING_ARG
+	{
+		OUTYY(("P(server_rrset_roundrobin:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->rrset_roundrobin =
+			(strcmp($2, "yes")==0);
+		free($2);
 	}
 	;
 stub_name: VAR_NAME STRING_ARG

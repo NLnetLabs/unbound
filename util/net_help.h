@@ -93,6 +93,12 @@ extern uint16_t EDNS_ADVERTISED_SIZE;
 /** DNSKEY secure entry point, KSK flag */
 #define DNSKEY_BIT_SEP 0x0001
 
+/** minimal responses when positive answer */
+extern int MINIMAL_RESPONSES;
+
+/** rrset order roundrobin */
+extern int RRSET_ROUNDROBIN;
+
 /**
  * See if string is ip4 or ip6.
  * @param str: IP specification.
