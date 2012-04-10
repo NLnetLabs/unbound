@@ -1,6 +1,7 @@
 10 April 2012: Wouter
 	- Applied patch from Daisuke HIGASHI for rrset-roundrobin and
 	  minimal-responses features.
+	- iana portlist updated.
 
 5 April 2012: Wouter
 	- fix bug #443: --with-chroot-dir not honoured by configure.
