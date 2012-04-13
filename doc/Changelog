@@ -1,3 +1,7 @@
+13 April 2012: Wouter
+	- ECDSA support (RFC 6605) by default. Use --disable-ecdsa for older
+	  openssl.
+
 10 April 2012: Wouter
 	- Applied patch from Daisuke HIGASHI for rrset-roundrobin and
 	  minimal-responses features.

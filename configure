@@ -1447,7 +1447,7 @@ Optional Features:
                           purposes
   --disable-sha2          Disable SHA256 and SHA512 RRSIG support
   --disable-gost          Disable GOST support
-  --enable-ecdsa          Enable ECDSA support, experimental
+  --disable-ecdsa         Disable ECDSA support
   --enable-static-exe     enable to compile executables statically against
                           event, ldns libs, for debug purposes
   --enable-lock-checks    enable to check lock and unlock calls, for debug
@@ -16622,19 +16622,21 @@ fi
 
 use_ecdsa="no"
 case "$enable_ecdsa" in
-    yes)
+    no)
+      ;;
+    *)
       ac_fn_c_check_func "$LINENO" "ECDSA_sign" "ac_cv_func_ECDSA_sign"
 if test "x$ac_cv_func_ECDSA_sign" = xyes; then :
 
 else
-  as_fn_error $? "OpenSSL does not support ECDSA" "$LINENO" 5
+  as_fn_error $? "OpenSSL does not support ECDSA: please upgrade or rerun with --disable-ecdsa" "$LINENO" 5
 fi
 
       ac_fn_c_check_func "$LINENO" "SHA384_Init" "ac_cv_func_SHA384_Init"
 if test "x$ac_cv_func_SHA384_Init" = xyes; then :
 
 else
-  as_fn_error $? "OpenSSL does not support SHA384" "$LINENO" 5
+  as_fn_error $? "OpenSSL does not support SHA384: please upgrade or rerun with --disable-ecdsa" "$LINENO" 5
 fi
 
       ac_fn_c_check_decl "$LINENO" "NID_X9_62_prime256v1" "ac_cv_have_decl_NID_X9_62_prime256v1" "$ac_includes_default
@@ -16653,7 +16655,7 @@ _ACEOF
 if test $ac_have_decl = 1; then :
 
 else
-  as_fn_error $? "OpenSSL does not support the ECDSA curves" "$LINENO" 5
+  as_fn_error $? "OpenSSL does not support the ECDSA curves: please upgrade or rerun with --disable-ecdsa" "$LINENO" 5
 fi
 ac_fn_c_check_decl "$LINENO" "NID_secp384r1" "ac_cv_have_decl_NID_secp384r1" "$ac_includes_default
 #include <openssl/evp.h>
@@ -16671,7 +16673,7 @@ _ACEOF
 if test $ac_have_decl = 1; then :
 
 else
-  as_fn_error $? "OpenSSL does not support the ECDSA curves" "$LINENO" 5
+  as_fn_error $? "OpenSSL does not support the ECDSA curves: please upgrade or rerun with --disable-ecdsa" "$LINENO" 5
 fi
 
       # see if OPENSSL 1.0.0 or later (has EVP MD and Verify independency)
@@ -16696,10 +16698,6 @@ cat >>confdefs.h <<_ACEOF
 _ACEOF
 
       use_ecdsa="yes"
-      ;;
-    no)
-      ;;
-    *)
       ;;
 esac
 
