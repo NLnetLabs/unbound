@@ -368,8 +368,8 @@ int nsec_proves_nodata(struct ub_packed_rrset_key* nsec,
 		!nsec_has_type(nsec, LDNS_RR_TYPE_SOA)) {
 		return 0;
 	} else if(qinfo->qtype == LDNS_RR_TYPE_DS &&
-		nsec_has_type(nsec, LDNS_RR_TYPE_SOA &&
-		!dname_is_root(qinfo->qname))) {
+		nsec_has_type(nsec, LDNS_RR_TYPE_SOA) &&
+		!dname_is_root(qinfo->qname)) {
 		return 0;
 	}
 

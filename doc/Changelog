@@ -1,3 +1,7 @@
+2 May 2012: Wouter
+	- Fix validation of nodata for DS query in NSEC zones, reported by
+	  Ondrej Mikle.
+
 13 April 2012: Wouter
 	- ECDSA support (RFC 6605) by default. Use --disable-ecdsa for older
 	  openssl.
