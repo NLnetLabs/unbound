@@ -154,6 +154,18 @@ void listen_list_delete(struct listen_list* list);
 size_t listen_get_mem(struct listen_dnsport* listen);
 
 /**
+ * stop accept handlers for TCP (until enabled again)
+ * @param listen: listening structure.
+ */
+void listen_stop_accept(struct listen_dnsport* listen);
+
+/**
+ * start accept handlers for TCP (was stopped before)
+ * @param listen: listening structure.
+ */
+void listen_start_accept(struct listen_dnsport* listen);
+
+/**
  * Create and bind nonblocking UDP socket
  * @param family: for socket call.
  * @param socktype: for socket call.

@@ -119,6 +119,18 @@ fptr_whitelist_comm_signal(void (*fptr)(int, void*))
 	return 0;
 }
 
+int fptr_whitelist_start_accept(void (*fptr)(void*))
+{
+	if(fptr == &worker_start_accept) return 1;
+	return 0;
+}
+
+int fptr_whitelist_stop_accept(void (*fptr)(void*))
+{
+	if(fptr == &worker_stop_accept) return 1;
+	return 0;
+}
+
 int 
 fptr_whitelist_event(void (*fptr)(int, short, void *))
 {
@@ -131,6 +143,7 @@ fptr_whitelist_event(void (*fptr)(int, short, void *))
 	else if(fptr == &comm_point_local_handle_callback) return 1;
 	else if(fptr == &comm_point_raw_handle_callback) return 1;
 	else if(fptr == &tube_handle_signal) return 1;
+	else if(fptr == &comm_base_handle_slow_accept) return 1;
 #ifdef UB_ON_WINDOWS
 	else if(fptr == &worker_win_stop_cb) return 1;
 #endif

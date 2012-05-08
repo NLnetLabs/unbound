@@ -136,6 +136,18 @@ int daemon_remote_open_accept(struct daemon_remote* rc,
 	struct listen_port* ports, struct worker* worker);
 
 /**
+ * Stop accept handlers for TCP (until enabled again)
+ * @param rc: state
+ */
+void daemon_remote_stop_accept(struct daemon_remote* rc);
+
+/**
+ * Stop accept handlers for TCP (until enabled again)
+ * @param rc: state
+ */
+void daemon_remote_start_accept(struct daemon_remote* rc);
+
+/**
  * Handle nonthreaded remote cmd execution.
  * @param worker: this worker (the remote worker).
  */

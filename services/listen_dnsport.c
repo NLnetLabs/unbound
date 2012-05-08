@@ -915,3 +915,30 @@ size_t listen_get_mem(struct listen_dnsport* listen)
 	}
 	return s;
 }
+
+void listen_stop_accept(struct listen_dnsport* listen)
+{
+	/* do not stop the ones that have no tcp_free list
+	 * (they have already stopped listening) */
+	struct listen_list* p;
+	for(p=listen->cps; p; p=p->next) {
+		if(p->com->type == comm_tcp_accept &&
+			p->com->tcp_free != NULL) {
+			comm_point_stop_listening(p->com);
+		}
+	}
+}
+
+void listen_start_accept(struct listen_dnsport* listen)
+{
+	/* do not start the ones that have no tcp_free list, it is no
+	 * use to listen to them because they have no free tcp handlers */
+	struct listen_list* p;
+	for(p=listen->cps; p; p=p->next) {
+		if(p->com->type == comm_tcp_accept &&
+			p->com->tcp_free != NULL) {
+			comm_point_start_listening(p->com, -1, -1);
+		}
+	}
+}
+

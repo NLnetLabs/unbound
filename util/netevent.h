@@ -83,12 +83,23 @@ typedef int comm_point_callback_t(struct comm_point*, void*, int,
 /** to pass fallback from capsforID to callback function; 0x20 failed */
 #define NETEVENT_CAPSFAIL -3
 
+/** timeout to slow accept calls when not possible, in msec. */
+#define NETEVENT_SLOW_ACCEPT_TIME 2000
+
 /**
  * A communication point dispatcher. Thread specific.
  */
 struct comm_base {
 	/** behind the scenes structure. with say libevent info. alloced */
 	struct internal_base* eb;
+	/** callback to stop listening on accept sockets,
+	 * performed when accept() will not function properly */
+	void (*stop_accept)(void*);
+	/** callback to start listening on accept sockets, performed
+	 * after stop_accept() then a timeout has passed. */
+	void (*start_accept)(void*);
+	/** user argument for stop_accept and start_accept functions */
+	void* cb_arg;
 };
 
 /**
@@ -310,6 +321,17 @@ void comm_base_dispatch(struct comm_base* b);
  * @param b: the communication base that is in dispatch().
  */
 void comm_base_exit(struct comm_base* b);
+
+/**
+ * Set the slow_accept mode handlers.  You can not provide these if you do
+ * not perform accept() calls.
+ * @param b: comm base
+ * @param stop_accept: function that stops listening to accept fds.
+ * @param start_accept: function that resumes listening to accept fds.
+ * @param arg: callback arg to pass to the functions.
+ */
+void comm_base_set_slow_accept_handlers(struct comm_base* b,
+	void (*stop_accept)(void*), void (*start_accept)(void*), void* arg);
 
 /**
  * Access internal data structure (for util/tube.c on windows)
@@ -635,6 +657,16 @@ void comm_point_local_handle_callback(int fd, short event, void* arg);
  * @param arg: the comm_point structure.
  */
 void comm_point_raw_handle_callback(int fd, short event, void* arg);
+
+/**
+ * This routine is published for checks and tests, and is only used internally.
+ * libevent callback for timeout on slow accept.
+ * @param fd: file descriptor.
+ * @param event: event bits from libevent: 
+ *	EV_READ, EV_WRITE, EV_SIGNAL, EV_TIMEOUT.
+ * @param arg: the comm_point structure.
+ */
+void comm_base_handle_slow_accept(int fd, short event, void* arg);
 
 #ifdef USE_WINSOCK
 /**

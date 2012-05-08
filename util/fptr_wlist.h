@@ -107,6 +107,22 @@ int fptr_whitelist_comm_timer(void (*fptr)(void*));
 int fptr_whitelist_comm_signal(void (*fptr)(int, void*));
 
 /**
+ * Check function pointer whitelist for start_accept callback values.
+ *
+ * @param fptr: function pointer to check.
+ * @return false if not in whitelist.
+ */
+int fptr_whitelist_start_accept(void (*fptr)(void*));
+
+/**
+ * Check function pointer whitelist for stop_accept callback values.
+ *
+ * @param fptr: function pointer to check.
+ * @return false if not in whitelist.
+ */
+int fptr_whitelist_stop_accept(void (*fptr)(void*));
+
+/**
  * Check function pointer whitelist for event structure callback values.
  * This is not called by libevent itself, but checked by netevent.
  *

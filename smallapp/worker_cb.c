@@ -195,6 +195,16 @@ void worker_probe_timer_cb(void* ATTR_UNUSED(arg))
 	log_assert(0);
 }
 
+void worker_start_accept(void* ATTR_UNUSED(arg))
+{
+	log_assert(0);
+}
+
+void worker_stop_accept(void* ATTR_UNUSED(arg))
+{
+	log_assert(0);
+}
+
 /** keep track of lock id in lock-verify application */
 struct order_id {
         /** the thread id that created it */

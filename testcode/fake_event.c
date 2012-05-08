@@ -62,6 +62,7 @@
 #include "util/fptr_wlist.h"
 #include <signal.h>
 struct worker;
+struct daemon_remote;
 
 /** Global variable: the scenario. Saved here for when event_init is done. */
 static struct replay_scenario* saved_scenario = NULL;
@@ -1286,6 +1287,12 @@ void comm_point_raw_handle_callback(int ATTR_UNUSED(fd),
 	log_assert(0);
 }
 
+void comm_base_handle_slow_accept(int ATTR_UNUSED(fd), 
+	short ATTR_UNUSED(event), void* ATTR_UNUSED(arg))
+{
+	log_assert(0);
+}
+
 int serviced_udp_callback(struct comm_point* ATTR_UNUSED(c), 
 	void* ATTR_UNUSED(arg), int ATTR_UNUSED(error),
         struct comm_reply* ATTR_UNUSED(reply_info))
@@ -1368,6 +1375,15 @@ void comm_timer_delete(struct comm_timer* timer)
 	free(timer);
 }
 
+void comm_base_set_slow_accept_handlers(struct comm_base* ATTR_UNUSED(b),
+	void (*stop_acc)(void*), void (*start_acc)(void*),
+	void* ATTR_UNUSED(arg))
+{
+	/* ignore this */
+	(void)stop_acc;
+	(void)start_acc;
+}
+
 struct event_base* comm_base_internal(struct comm_base* ATTR_UNUSED(b))
 {
 	/* no pipe comm possible in testbound */
@@ -1375,6 +1391,22 @@ struct event_base* comm_base_internal(struct comm_base* ATTR_UNUSED(b))
 }
 
 void daemon_remote_exec(struct worker* ATTR_UNUSED(worker))
+{
+}
+
+void listen_start_accept(struct listen_dnsport* ATTR_UNUSED(listen))
+{
+}
+
+void listen_stop_accept(struct listen_dnsport* ATTR_UNUSED(listen))
+{
+}
+
+void daemon_remote_start_accept(struct daemon_remote* ATTR_UNUSED(rc))
+{
+}
+
+void daemon_remote_stop_accept(struct daemon_remote* ATTR_UNUSED(rc))
 {
 }
 

@@ -1057,6 +1057,8 @@ worker_init(struct worker* worker, struct config_file *cfg,
 		worker_delete(worker);
 		return 0;
 	}
+	comm_base_set_slow_accept_handlers(worker->base, &worker_stop_accept,
+		&worker_start_accept, worker);
 	if(do_sigs) {
 #ifdef SIGHUP
 		ub_thread_sig_unblock(SIGHUP);
@@ -1288,6 +1290,22 @@ void worker_stats_clear(struct worker* worker)
 	server_stats_init(&worker->stats, worker->env.cfg);
 	mesh_stats_clear(worker->env.mesh);
 	worker->back->unwanted_replies = 0;
+}
+
+void worker_start_accept(void* arg)
+{
+	struct worker* worker = (struct worker*)arg;
+	listen_start_accept(worker->front);
+	if(worker->thread_num == 0)
+		daemon_remote_start_accept(worker->daemon->rc);
+}
+
+void worker_stop_accept(void* arg)
+{
+	struct worker* worker = (struct worker*)arg;
+	listen_stop_accept(worker->front);
+	if(worker->thread_num == 0)
+		daemon_remote_stop_accept(worker->daemon->rc);
 }
 
 /* --- fake callbacks for fptr_wlist to work --- */

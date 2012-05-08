@@ -362,6 +362,22 @@ int daemon_remote_open_accept(struct daemon_remote* rc,
 	return 1;
 }
 
+void daemon_remote_stop_accept(struct daemon_remote* rc)
+{
+	struct listen_list* p;
+	for(p=rc->accept_list; p; p=p->next) {
+		comm_point_stop_listening(p->com);	
+	}
+}
+
+void daemon_remote_start_accept(struct daemon_remote* rc)
+{
+	struct listen_list* p;
+	for(p=rc->accept_list; p; p=p->next) {
+		comm_point_start_listening(p->com, -1, -1);	
+	}
+}
+
 int remote_accept_callback(struct comm_point* c, void* arg, int err, 
 	struct comm_reply* ATTR_UNUSED(rep))
 {

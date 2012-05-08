@@ -225,4 +225,10 @@ void worker_stat_timer_cb(void* arg);
 /** probe timer callback handler */
 void worker_probe_timer_cb(void* arg);
 
+/** start accept callback handler */
+void worker_start_accept(void* arg);
+
+/** stop accept callback handler */
+void worker_stop_accept(void* arg);
+
 #endif /* DAEMON_WORKER_H */
