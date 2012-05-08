@@ -1,5 +1,6 @@
 8 May 2012: Wouter
 	- Fix for accept spinning reported by OpenBSD.
+	- iana portlist updated.
 
 2 May 2012: Wouter
 	- Fix validation of nodata for DS query in NSEC zones, reported by
