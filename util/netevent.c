@@ -672,7 +672,8 @@ setup_tcp_handler(struct comm_point* c, int fd)
 	comm_point_start_listening(c, fd, TCP_QUERY_TIMEOUT);
 }
 
-void comm_base_handle_slow_accept(int fd, short event, void* arg)
+void comm_base_handle_slow_accept(int ATTR_UNUSED(fd),
+	short ATTR_UNUSED(event), void* arg)
 {
 	struct comm_base* b = (struct comm_base*)arg;
 	/* timeout for the slow accept, re-enable accepts again */
