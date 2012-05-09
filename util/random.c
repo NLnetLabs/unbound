@@ -75,8 +75,8 @@ struct ub_randstate {
 	int rc4_ready;
 };
 
-/** Size of key to use */
-#define SEED_SIZE 20
+/** Size of key to use (must be multiple of 8) */
+#define SEED_SIZE 24
 
 /** 
  * Max random value.  Similar to RAND_MAX, but more portable
@@ -116,18 +116,22 @@ ub_systemseed(unsigned int seed)
 static void
 ub_arc4random_stir(struct ub_randstate* s, struct ub_randstate* from)
 {
-	unsigned char rand_buf[SEED_SIZE];
+	/* not as unsigned char, but longerint so that it is
+	   aligned properly on alignment sensitive platforms */
+	uint64_t rand_buf[SEED_SIZE/sizeof(uint64_t)];
 	int i;
 
 	memset(&s->rc4, 0, sizeof(s->rc4));
 	memset(rand_buf, 0xc, sizeof(rand_buf));
 	if (from) {
+		uint8_t* rbuf = (uint8_t*)rand_buf;
 		for(i=0; i<SEED_SIZE; i++)
-			rand_buf[i] = (unsigned char)ub_random(from);
+			rbuf[i] = (uint8_t)ub_random(from);
 	} else {
 		if(!RAND_status())
 			ub_systemseed((unsigned)getpid()^(unsigned)time(NULL));
-		if (RAND_bytes(rand_buf, (int)sizeof(rand_buf)) <= 0) {
+		if (RAND_bytes((unsigned char*)rand_buf,
+			(int)sizeof(rand_buf)) <= 0) {
 			/* very unlikely that this happens, since we seeded
 			 * above, if it does; complain and keep going */
 			log_err("Couldn't obtain random bytes (error %ld)",
@@ -136,14 +140,15 @@ ub_arc4random_stir(struct ub_randstate* s, struct ub_randstate* from)
 			return;
 		}
 	}
-	RC4_set_key(&s->rc4, SEED_SIZE, rand_buf);
+	RC4_set_key(&s->rc4, SEED_SIZE, (unsigned char*)rand_buf);
 
 	/*
 	 * Discard early keystream, as per recommendations in:
 	 * http://www.wisdom.weizmann.ac.il/~itsik/RC4/Papers/Rc4_ksa.ps
 	 */
 	for(i = 0; i <= 256; i += sizeof(rand_buf))
-		RC4(&s->rc4, sizeof(rand_buf), rand_buf, rand_buf);
+		RC4(&s->rc4, sizeof(rand_buf), (unsigned char*)rand_buf,
+			(unsigned char*)rand_buf);
 
 	memset(rand_buf, 0, sizeof(rand_buf));
 

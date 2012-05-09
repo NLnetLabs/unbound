@@ -1,3 +1,6 @@
+9 May 2012: Wouter
+	- Fix alignment problem in util/random on sparc64/freebsd.
+
 8 May 2012: Wouter
 	- Fix for accept spinning reported by OpenBSD.
 	- iana portlist updated.
