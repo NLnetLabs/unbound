@@ -17892,6 +17892,12 @@ fi
 if test x$use_ecdsa = xyes; then
     ac_fn_c_check_decl "$LINENO" "LDNS_ECDSAP384SHA384" "ac_cv_have_decl_LDNS_ECDSAP384SHA384" "
 $ac_includes_default
+#ifdef HAVE_SYS_SOCKET_H
+#  include <sys/socket.h>
+#endif
+#ifdef HAVE_WS2TCPIP_H
+#  include <ws2tcpip.h>
+#endif
 #include <ldns/ldns.h>
 
 "

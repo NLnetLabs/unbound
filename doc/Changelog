@@ -1,3 +1,7 @@
+15 May 2012: Wouter
+	- fix configure ECDSA support in ldns detection for windows compile.
+	- fix possible uninitialised variable in windows pipe implementation.
+
 9 May 2012: Wouter
 	- Fix alignment problem in util/random on sparc64/freebsd.
 

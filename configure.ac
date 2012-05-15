@@ -1002,6 +1002,12 @@ fi
 if test x$use_ecdsa = xyes; then
     AC_CHECK_DECL([LDNS_ECDSAP384SHA384], [], [], [
 AC_INCLUDES_DEFAULT
+#ifdef HAVE_SYS_SOCKET_H
+#  include <sys/socket.h>
+#endif
+#ifdef HAVE_WS2TCPIP_H
+#  include <ws2tcpip.h>
+#endif
 #include <ldns/ldns.h>
     ])
 else
