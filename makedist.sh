@@ -93,7 +93,7 @@ cleanup () {
 
 error_cleanup () {
     echo "$0: error: $1" >&2
-    ##cleanup
+    cleanup
     exit 1
 }
 
