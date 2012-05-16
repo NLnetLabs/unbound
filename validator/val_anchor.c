@@ -237,14 +237,16 @@ anchor_new_ta(struct val_anchors* anchors, uint8_t* name, int namelabs,
 	ta->namelen = namelen;
 	ta->dclass = dclass;
 	lock_basic_init(&ta->lock);
-	if(lockit)
+	if(lockit) {
 		lock_basic_lock(&anchors->lock);
+	}
 #ifdef UNBOUND_DEBUG
 	r =
 #endif
 	rbtree_insert(anchors->tree, &ta->node);
-	if(lockit)
+	if(lockit) {
 		lock_basic_unlock(&anchors->lock);
+	}
 	log_assert(r != NULL);
 	return ta;
 }
