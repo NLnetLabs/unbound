@@ -631,7 +631,9 @@ int delegpt_add_target_mlc(struct delegpt* dp, uint8_t* name, size_t namelen,
 size_t delegpt_get_mem(struct delegpt* dp)
 {
 	struct delegpt_ns* ns;
-	size_t s = sizeof(*dp) + dp->namelen +
+	size_t s;
+	if(!dp) return 0;
+	s = sizeof(*dp) + dp->namelen +
 		delegpt_count_targets(dp)*sizeof(struct delegpt_addr);
 	for(ns=dp->nslist; ns; ns=ns->next)
 		s += sizeof(*ns)+ns->namelen;
