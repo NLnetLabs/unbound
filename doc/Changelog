@@ -1,6 +1,6 @@
 16 May 2012: Wouter
 	- Updated doc/FEATURES with RFCs that are implemented but not listed.
-	- Protect if statements in val_anchor for compilate without locks.
+	- Protect if statements in val_anchor for compile without locks.
 
 15 May 2012: Wouter
 	- fix configure ECDSA support in ldns detection for windows compile.
