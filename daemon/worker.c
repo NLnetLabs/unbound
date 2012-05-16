@@ -181,7 +181,7 @@ worker_mem_report(struct worker* ATTR_UNUSED(worker),
 		+ sizeof(*worker->env.scratch_buffer) 
 		+ ldns_buffer_capacity(worker->env.scratch_buffer)
 		+ forwards_get_mem(worker->env.fwds)
-		+ hints_get_mem(worker->env.hints;
+		+ hints_get_mem(worker->env.hints);
 	if(worker->thread_num == 0)
 		me += acl_list_get_mem(worker->daemon->acl);
 	if(cur_serv) {
