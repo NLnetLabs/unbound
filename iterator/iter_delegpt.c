@@ -505,7 +505,6 @@ struct delegpt* delegpt_create_mlc(uint8_t* name)
 	struct delegpt* dp=(struct delegpt*)calloc(1, sizeof(*dp));
 	if(!dp)
 		return NULL;
-	memset(dp, 0, sizeof(*dp));
 	dp->dp_type_mlc = 1;
 	if(name) {
 		dp->namelabs = dname_count_size_labels(name, &dp->namelen);
