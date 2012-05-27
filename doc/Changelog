@@ -1,3 +1,6 @@
+27 May 2012: Wouter
+	- Fix debian-bugs-658021: Please enable hardened build flags.
+
 25 May 2012: Wouter
 	- updated iana ports list.
 
