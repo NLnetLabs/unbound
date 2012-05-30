@@ -1,3 +1,7 @@
+30 May 2012: Wouter
+	- silence warning from swig-generated code (md set but not used in
+	  swig initmodule, due to ifdefs in swig generated code).
+
 27 May 2012: Wouter
 	- Fix debian-bugs-658021: Please enable hardened build flags.
 
