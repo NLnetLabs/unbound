@@ -735,16 +735,20 @@ int mesh_state_attachment(struct mesh_state* super, struct mesh_state* sub)
 	superref->s = super;
 	subref->node.key = subref;
 	subref->s = sub;
-#ifdef UNBOUND_DEBUG
-	n =
-#endif
-	rbtree_insert(&sub->super_set, &superref->node);
-	log_assert(n != NULL);
+	if(!rbtree_insert(&sub->super_set, &superref->node)) {
+		/* this should not happen, iterator and validator do not
+		 * attach subqueries that are identical. */
+		/* already attached, we are done, nothing todo.
+		 * since superref and subref already allocated in region,
+		 * we cannot free them */
+		return 1;
+	}
 #ifdef UNBOUND_DEBUG
 	n =
 #endif
 	rbtree_insert(&super->sub_set, &subref->node);
-	log_assert(n != NULL);
+	log_assert(n != NULL); /* we checked above if statement, the reverse
+	  administration should not fail now, unless they are out of sync */
 	return 1;
 }
 
