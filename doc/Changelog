@@ -1,6 +1,7 @@
 15 June 2012: Wouter
 	- implement log-time-ascii on windows.
 	- The key-cache bad key ttl is now 60 seconds.
+	- updated iana ports list.
 
 11 June 2012: Wouter
 	- bug #452: fix crash on assert in mesh_state_attachment.
