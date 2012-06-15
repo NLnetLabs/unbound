@@ -1,5 +1,6 @@
 11 June 2012: Wouter
 	- bug #452: fix crash on assert in mesh_state_attachment.
+	- implement log-time-ascii on windows.
 
 30 May 2012: Wouter
 	- silence warning from swig-generated code (md set but not used in
