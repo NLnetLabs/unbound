@@ -379,7 +379,8 @@ int main(int argc, char* argv[])
 	if(!RAND_status()) {
                 /* try to seed it */
                 unsigned char buf[256];
-                unsigned int v, seed=(unsigned)time(NULL) ^ (unsigned)getpid();
+                unsigned int seed=(unsigned)time(NULL) ^ (unsigned)getpid();
+		unsigned int v = seed;
                 size_t i;
                 for(i=0; i<256/sizeof(v); i++) {
                         memmove(buf+i*sizeof(v), &v, sizeof(v));

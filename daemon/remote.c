@@ -1393,6 +1393,7 @@ parse_delegpt(SSL* ssl, char* args, uint8_t* nm, int allow_names)
 				}
 				if(!delegpt_add_ns_mlc(dp, n, 0)) {
 					(void)ssl_printf(ssl, "error out of memory\n");
+					free(n);
 					delegpt_free_mlc(dp);
 					return NULL;
 				}
@@ -1442,7 +1443,6 @@ do_forward(SSL* ssl, struct worker* worker, char* args)
 			return;
 		if(!forwards_add_zone(fwd, LDNS_RR_CLASS_IN, dp)) {
 			(void)ssl_printf(ssl, "error out of memory\n");
-			delegpt_free_mlc(dp);
 			return;
 		}
 	}
@@ -1514,7 +1514,6 @@ do_forward_add(SSL* ssl, struct worker* worker, char* args)
 	}
 	if(!forwards_add_zone(fwd, LDNS_RR_CLASS_IN, dp)) {
 		(void)ssl_printf(ssl, "error out of memory\n");
-		delegpt_free_mlc(dp);
 		free(nm);
 		return;
 	}
@@ -1571,7 +1570,6 @@ do_stub_add(SSL* ssl, struct worker* worker, char* args)
 		forwards_delete_stub_hole(fwd, LDNS_RR_CLASS_IN, nm);
 		if(insecure) anchors_delete_insecure(worker->env.anchors,
 			LDNS_RR_CLASS_IN, nm);
-		delegpt_free_mlc(dp);
 		free(nm);
 		return;
 	}

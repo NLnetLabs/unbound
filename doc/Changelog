@@ -1,3 +1,6 @@
+18 June 2012: Wouter
+	- code review.
+
 15 June 2012: Wouter
 	- implement log-time-ascii on windows.
 	- The key-cache bad key ttl is now 60 seconds.

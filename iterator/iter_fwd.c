@@ -250,10 +250,12 @@ read_forwards(struct iter_forwards* fwd, struct config_file* cfg)
 	struct config_stub* s;
 	for(s = cfg->forwards; s; s = s->next) {
 		struct delegpt* dp;
-		if(!(dp=read_fwds_name(s)) ||
-			!read_fwds_host(s, dp) ||
-			!read_fwds_addr(s, dp))
+		if(!(dp=read_fwds_name(s)))
 			return 0;
+		if(!read_fwds_host(s, dp) || !read_fwds_addr(s, dp)) {
+			delegpt_free_mlc(dp);
+			return 0;
+		}
 		/* set flag that parent side NS information is included.
 		 * Asking a (higher up) server on the internet is not useful */
 		/* the flag is turned off for 'forward-first' so that the

@@ -655,8 +655,10 @@ calc_size(ldns_buffer* pkt, uint16_t type, struct rr_parse* rr)
 				len = 0;
 				break;
 			case LDNS_RDF_TYPE_STR:
-				if(pkt_len < 1)
+				if(pkt_len < 1) {
+					/* NOTREACHED, due to 'while(>0)' */
 					return 0; /* len byte exceeds rdata */
+				}
 				len = ldns_buffer_current(pkt)[0] + 1;
 				break;
 			default:

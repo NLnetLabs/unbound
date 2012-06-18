@@ -606,10 +606,14 @@ dnskeyset_verify_rrset(struct module_env* env, struct val_env* ve,
 				(uint8_t)rrset_get_sig_algo(rrset, i));
 		}
 	}
-	verbose(VERB_ALGO, "rrset failed to verify: no valid signatures for "
-		"%d algorithms", (int)algo_needs_num_missing(&needs));
 	if(sigalg && (alg=algo_needs_missing(&needs)) != 0) {
+		verbose(VERB_ALGO, "rrset failed to verify: "
+			"no valid signatures for %d algorithms",
+			(int)algo_needs_num_missing(&needs));
 		algo_needs_reason(env, alg, reason, "no signatures");
+	} else {
+		verbose(VERB_ALGO, "rrset failed to verify: "
+			"no valid signatures");
 	}
 	return sec_status_bogus;
 }
