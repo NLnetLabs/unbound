@@ -613,6 +613,7 @@ ac_includes_default="\
 
 ac_subst_vars='LTLIBOBJS
 ldnsdir
+ALLTARGET
 SOURCEFILE
 SOURCEDETERMINE
 UBSYMS
@@ -798,6 +799,7 @@ with_libexpat
 enable_static_exe
 enable_lock_checks
 enable_allsymbols
+with_libunbound_only
 with_ldns
 '
       ac_precious_vars='build_alias
@@ -1498,6 +1500,7 @@ Optional Packages:
                           an explicit path). Slower, but allows use of large
                           outgoing port ranges.
   --with-libexpat=path    specify explicit path for libexpat.
+  --with-libunbound-only  do not build daemon and tool programs
   --with-ldns=PATH        specify prefix of path of ldns library to use
 
 Some influential environment variables:
@@ -17775,6 +17778,20 @@ $as_echo "yes" >&6; }
 	SOURCEFILE='$<'
 fi
 rm -f conftest.lo
+
+
+
+# see if we want to build the library or everything
+ALLTARGET="alltargets"
+
+# Check whether --with-libunbound-only was given.
+if test "${with_libunbound_only+set}" = set; then :
+  withval=$with_libunbound_only;
+	if test "$withval" = "yes"; then
+		ALLTARGET="lib"
+	fi
+
+fi
 
 
 

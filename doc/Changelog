@@ -1,3 +1,7 @@
+19 June 2012: Wouter
+	- --with-libunbound-only build option, only builds the library and
+	  not the daemon and other tools.
+
 18 June 2012: Wouter
 	- code review.
 

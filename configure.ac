@@ -970,6 +970,17 @@ rm -f conftest.lo
 AC_SUBST(SOURCEDETERMINE)
 AC_SUBST(SOURCEFILE)
 
+# see if we want to build the library or everything
+ALLTARGET="alltargets"
+AC_ARG_WITH(libunbound-only, AC_HELP_STRING([--with-libunbound-only],
+	[do not build daemon and tool programs]),
+	[
+	if test "$withval" = "yes"; then
+		ALLTARGET="lib"
+	fi
+])
+AC_SUBST(ALLTARGET)
+
 # check this after all other compilation checks, since the linking of the lib
 # may break checks after this.
 AC_ARG_WITH(ldns, AC_HELP_STRING([--with-ldns=PATH], 

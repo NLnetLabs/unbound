@@ -30,6 +30,7 @@ PYTHONMOD_INSTALL=@PYTHONMOD_INSTALL@
 PYTHONMOD_UNINSTALL=@PYTHONMOD_UNINSTALL@
 PYUNBOUND_INSTALL=@PYUNBOUND_INSTALL@
 PYUNBOUND_UNINSTALL=@PYUNBOUND_UNINSTALL@
+ALLTARGET=@ALLTARGET@
 
 # _unbound.la if pyunbound enabled.
 PYUNBOUND_TARGET=@PYUNBOUND_TARGET@
@@ -227,9 +228,11 @@ COMPILE=$(LIBTOOL) --tag=CC --mode=compile $(CC) $(CPPFLAGS) $(CFLAGS)
 LINK=$(LIBTOOL) --tag=CC --mode=link $(CC) $(staticexe) $(RUNTIME_PATH) $(CPPFLAGS) $(CFLAGS) $(LDFLAGS)
 LINK_LIB=$(LIBTOOL) --tag=CC --mode=link $(CC) $(RUNTIME_PATH) $(CPPFLAGS) $(CFLAGS) $(LDFLAGS) $(staticexe) -version-info @LIBUNBOUND_CURRENT@:@LIBUNBOUND_REVISION@:@LIBUNBOUND_AGE@ -no-undefined
 
-.PHONY:	clean realclean doc lint all install uninstall tests test strip lib longtest longcheck check
+.PHONY:	clean realclean doc lint all install uninstall tests test strip lib longtest longcheck check alltargets
 
-all:	$(COMMON_OBJ) unbound$(EXEEXT) unbound-checkconf$(EXEEXT) lib unbound-host$(EXEEXT) unbound-control$(EXEEXT) unbound-anchor$(EXEEXT) unbound-control-setup $(WINAPPS) $(PYUNBOUND_TARGET)
+all:	$(COMMON_OBJ) $(ALLTARGET)
+
+alltargets:	unbound$(EXEEXT) unbound-checkconf$(EXEEXT) lib unbound-host$(EXEEXT) unbound-control$(EXEEXT) unbound-anchor$(EXEEXT) unbound-control-setup $(WINAPPS) $(PYUNBOUND_TARGET)
 
 # compat with BSD make, register suffix, and an implicit rule to actualise it.
 .SUFFIXES: .lo
