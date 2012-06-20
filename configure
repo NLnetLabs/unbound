@@ -16018,6 +16018,7 @@ $as_echo "#define HAVE_NSS 1" >>confdefs.h
 	else
 		CPPFLAGS="-I/usr/include/nspr4 $CPPFLAGS"
 	fi
+        LIBS="$LIBS -lnss3 -lnspr4"
 
 
 fi
