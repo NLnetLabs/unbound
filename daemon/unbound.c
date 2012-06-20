@@ -87,6 +87,10 @@
 #  include "winrc/win_svc.h"
 #endif
 
+#ifdef HAVE_NSS
+#  include <nss3/nss.h>
+#endif
+
 /** global debug value to keep track of heap memory allocation */
 void* unbound_start_brk = 0;
 
@@ -159,7 +163,12 @@ static void usage()
 	get_event_sys(&evnm, &evsys, &evmethod);
 	printf("linked libs: %s %s (it uses %s), ldns %s, %s\n", 
 		evnm, evsys, evmethod, ldns_version(), 
-		SSLeay_version(SSLEAY_VERSION));
+#ifdef HAVE_SSL
+		SSLeay_version(SSLEAY_VERSION)
+#elif defined(HAVE_NSS)
+		NSS_GetVersion()
+#endif
+		);
 	printf("linked modules:");
 	for(m = module_list_avail(); *m; m++)
 		printf(" %s", *m);
