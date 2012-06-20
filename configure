@@ -790,6 +790,7 @@ with_pthreads
 with_solaris_threads
 with_pyunbound
 with_pythonmodule
+with_nss
 with_ssl
 enable_sha2
 enable_gost
@@ -1491,6 +1492,7 @@ Optional Packages:
                           (default=no)
   --with-pythonmodule     build Python module, or --without-pythonmodule to
                           disable script engine. (default=no)
+  --with-nss=path         use libnss instead of openssl, installed at path.
   --with-ssl=pathname     enable SSL (will check /usr/local/ssl /usr/lib/ssl
                           /usr/ssl /usr/pkg /usr/local /opt/local /usr/sfw
                           /usr)
@@ -15992,6 +15994,38 @@ CONFIG_DATE=`date +%Y%m%d`
 
 # Checks for libraries.
 
+# libnss
+USE_NSS="no"
+
+# Check whether --with-nss was given.
+if test "${with_nss+set}" = set; then :
+  withval=$with_nss;
+	USE_NSS="yes"
+
+$as_echo "#define HAVE_NSS 1" >>confdefs.h
+
+	if test "$withval" != "/usr" -a "$withval" != "" -a "$withval" != "yes"; then
+		CPPFLAGS="$CPPFLAGS -I$withval/include"
+		LDFLAGS="$LDFLAGS -L$withval/lib"
+
+	if test "x$enable_rpath" = xyes; then
+		if echo "$withval/lib" | grep "^/" >/dev/null; then
+			RUNTIME_PATH="$RUNTIME_PATH -R$withval/lib"
+		fi
+	fi
+
+		CPPFLAGS="-I$withval/include/nspr4 $CPPFLAGS"
+	else
+		CPPFLAGS="-I/usr/include/nspr4 $CPPFLAGS"
+	fi
+
+
+fi
+
+
+# openssl
+if test $USE_NSS = "no"; then
+
 
 # Check whether --with-ssl was given.
 if test "${with_ssl+set}" = set; then :
@@ -16456,6 +16490,8 @@ cat >>confdefs.h <<_ACEOF
 #define HAVE_DECL_SK_SSL_COMP_POP_FREE $ac_have_decl
 _ACEOF
 
+fi
+
 
 # Check whether --enable-sha2 was given.
 if test "${enable_sha2+set}" = set; then :
@@ -16480,6 +16516,7 @@ if test "${enable_gost+set}" = set; then :
 fi
 
 use_gost="no"
+if test $USE_NSS = "no"; then
 case "$enable_gost" in
 	no)
 	;;
@@ -16491,7 +16528,7 @@ else
   as_fn_error $? "OpenSSL 1.0.0 is needed for GOST support" "$LINENO" 5
 fi
 
-        ac_fn_c_check_func "$LINENO" "EC_KEY_new" "ac_cv_func_EC_KEY_new"
+	ac_fn_c_check_func "$LINENO" "EC_KEY_new" "ac_cv_func_EC_KEY_new"
 if test "x$ac_cv_func_EC_KEY_new" = xyes; then :
 
 else
@@ -16613,7 +16650,7 @@ fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_c_gost_works" >&5
 $as_echo "$ac_cv_c_gost_works" >&6; }
 
-	if test $ac_cv_c_gost_works != no; then
+	if test "$ac_cv_c_gost_works" != no; then
 		use_gost="yes"
 
 $as_echo "#define USE_GOST 1" >>confdefs.h
@@ -16621,7 +16658,7 @@ $as_echo "#define USE_GOST 1" >>confdefs.h
 	fi
 	;;
 esac
-
+fi
 # Check whether --enable-ecdsa was given.
 if test "${enable_ecdsa+set}" = set; then :
   enableval=$enable_ecdsa;
@@ -16632,21 +16669,22 @@ case "$enable_ecdsa" in
     no)
       ;;
     *)
-      ac_fn_c_check_func "$LINENO" "ECDSA_sign" "ac_cv_func_ECDSA_sign"
+      if test $USE_NSS = "no"; then
+	      ac_fn_c_check_func "$LINENO" "ECDSA_sign" "ac_cv_func_ECDSA_sign"
 if test "x$ac_cv_func_ECDSA_sign" = xyes; then :
 
 else
   as_fn_error $? "OpenSSL does not support ECDSA: please upgrade or rerun with --disable-ecdsa" "$LINENO" 5
 fi
 
-      ac_fn_c_check_func "$LINENO" "SHA384_Init" "ac_cv_func_SHA384_Init"
+	      ac_fn_c_check_func "$LINENO" "SHA384_Init" "ac_cv_func_SHA384_Init"
 if test "x$ac_cv_func_SHA384_Init" = xyes; then :
 
 else
   as_fn_error $? "OpenSSL does not support SHA384: please upgrade or rerun with --disable-ecdsa" "$LINENO" 5
 fi
 
-      ac_fn_c_check_decl "$LINENO" "NID_X9_62_prime256v1" "ac_cv_have_decl_NID_X9_62_prime256v1" "$ac_includes_default
+	      ac_fn_c_check_decl "$LINENO" "NID_X9_62_prime256v1" "ac_cv_have_decl_NID_X9_62_prime256v1" "$ac_includes_default
 #include <openssl/evp.h>
 
 "
@@ -16683,20 +16721,21 @@ else
   as_fn_error $? "OpenSSL does not support the ECDSA curves: please upgrade or rerun with --disable-ecdsa" "$LINENO" 5
 fi
 
-      # see if OPENSSL 1.0.0 or later (has EVP MD and Verify independency)
-      { $as_echo "$as_me:${as_lineno-$LINENO}: checking if openssl supports SHA2 and ECDSA with EVP" >&5
+	      # see if OPENSSL 1.0.0 or later (has EVP MD and Verify independency)
+	      { $as_echo "$as_me:${as_lineno-$LINENO}: checking if openssl supports SHA2 and ECDSA with EVP" >&5
 $as_echo_n "checking if openssl supports SHA2 and ECDSA with EVP... " >&6; }
-      if grep OPENSSL_VERSION_NUMBER $ssldir/include/openssl/opensslv.h | grep 0x0 >/dev/null; then
-	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+	      if grep OPENSSL_VERSION_NUMBER $ssldir/include/openssl/opensslv.h | grep 0x0 >/dev/null; then
+		{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
 $as_echo "no" >&6; }
 
 cat >>confdefs.h <<_ACEOF
 #define USE_ECDSA_EVP_WORKAROUND 1
 _ACEOF
 
-      else
-	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+	      else
+		{ $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 $as_echo "yes" >&6; }
+	      fi
       fi
       # we now know we have ECDSA and the required curves.
 
@@ -17875,11 +17914,15 @@ if test "x$ac_cv_func_ldns_buffer_copy" = xyes; then :
 
 fi
 
-ac_fn_c_check_func "$LINENO" "ldns_key_buf2rsa_raw" "ac_cv_func_ldns_key_buf2rsa_raw"
+if test $USE_NSS = "no"; then
+    ac_fn_c_check_func "$LINENO" "ldns_key_buf2rsa_raw" "ac_cv_func_ldns_key_buf2rsa_raw"
 if test "x$ac_cv_func_ldns_key_buf2rsa_raw" = xyes; then :
 
 fi
 
+else
+        ac_cv_func_ldns_key_buf2rsa_raw="yes"
+fi
 ac_fn_c_check_func "$LINENO" "ldns_get_random" "ac_cv_func_ldns_get_random"
 if test "x$ac_cv_func_ldns_get_random" = xyes; then :
 
@@ -17890,7 +17933,7 @@ if test "x$ac_cv_func_ldns_b32_ntop_extended_hex" = xyes; then :
 
 fi
 
-if test x$use_gost = xyes; then
+if test x$use_gost = xyes -a x$USE_NSS = xno; then
     ac_fn_c_check_func "$LINENO" "ldns_key_EVP_load_gost_id" "ac_cv_func_ldns_key_EVP_load_gost_id"
 if test "x$ac_cv_func_ldns_key_EVP_load_gost_id" = xyes; then :
 
@@ -17908,7 +17951,7 @@ fi
 done
 
 else
-    ac_cv_func_ldns_key_EVP_load_gost_id="yes"
+        ac_cv_func_ldns_key_EVP_load_gost_id="yes"
 fi
 if test x$use_ecdsa = xyes; then
     ac_fn_c_check_decl "$LINENO" "LDNS_ECDSAP384SHA384" "ac_cv_have_decl_LDNS_ECDSAP384SHA384" "

@@ -44,8 +44,12 @@
 #include "util/log.h"
 #include "util/net_help.h"
 #include "util/fptr_wlist.h"
+#ifdef HAVE_OPENSSL_SSL_H
 #include <openssl/ssl.h>
+#endif
+#ifdef HAVE_OPENSSL_ERR_H
 #include <openssl/err.h>
+#endif
 
 /* -------- Start of local definitions -------- */
 /** if CMSG_ALIGN is not defined on this platform, a workaround */
@@ -896,6 +900,7 @@ tcp_callback_reader(struct comm_point* c)
 static int
 ssl_handshake(struct comm_point* c)
 {
+#ifdef HAVE_SSL
 	int r;
 	if(c->ssl_shake_state == comm_ssl_shake_hs_read) {
 		/* read condition satisfied back to writing */
@@ -954,12 +959,14 @@ ssl_handshake(struct comm_point* c)
 	}
 	c->ssl_shake_state = comm_ssl_shake_none;
 	return 1;
+#endif /* HAVE_SSL */
 }
 
 /** ssl read callback on TCP */
 static int
 ssl_handle_read(struct comm_point* c)
 {
+#ifdef HAVE_SSL
 	int r;
 	if(c->ssl_shake_state != comm_ssl_shake_none) {
 		if(!ssl_handshake(c))
@@ -1036,12 +1043,14 @@ ssl_handle_read(struct comm_point* c)
 		tcp_callback_reader(c);
 	}
 	return 1;
+#endif /* HAVE_SSL */
 }
 
 /** ssl write callback on TCP */
 static int
 ssl_handle_write(struct comm_point* c)
 {
+#ifdef HAVE_SSL
 	int r;
 	if(c->ssl_shake_state != comm_ssl_shake_none) {
 		if(!ssl_handshake(c))
@@ -1115,6 +1124,7 @@ ssl_handle_write(struct comm_point* c)
 		tcp_callback_writer(c);
 	}
 	return 1;
+#endif /* HAVE_SSL */
 }
 
 /** handle ssl tcp connection with dns contents */

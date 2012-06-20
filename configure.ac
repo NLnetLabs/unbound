@@ -512,6 +512,28 @@ CONFIG_DATE=`date +%Y%m%d`
 AC_SUBST(CONFIG_DATE)
 
 # Checks for libraries.
+
+# libnss
+USE_NSS="no"
+AC_ARG_WITH([nss], AC_HELP_STRING([--with-nss=path],
+	[use libnss instead of openssl, installed at path.]),
+	[
+	USE_NSS="yes"
+	AC_DEFINE(HAVE_NSS, 1, [Use libnss for crypto])
+	if test "$withval" != "/usr" -a "$withval" != "" -a "$withval" != "yes"; then
+		CPPFLAGS="$CPPFLAGS -I$withval/include"
+		LDFLAGS="$LDFLAGS -L$withval/lib"
+		ACX_RUNTIME_PATH_ADD([$withval/lib])
+		CPPFLAGS="-I$withval/include/nspr4 $CPPFLAGS"
+	else
+		CPPFLAGS="-I/usr/include/nspr4 $CPPFLAGS"
+	fi
+        LIBS="$LIBS -lnss3 -lnspr4"
+	]
+)
+
+# openssl
+if test $USE_NSS = "no"; then
 ACX_WITH_SSL
 ACX_LIB_SSL
 AC_CHECK_HEADERS([openssl/conf.h],,, [AC_INCLUDES_DEFAULT])
@@ -537,6 +559,8 @@ AC_INCLUDES_DEFAULT
 #include <openssl/ssl.h>
 #include <openssl/evp.h>
 ])
+fi
+
 
 AC_ARG_ENABLE(sha2, AC_HELP_STRING([--disable-sha2], [Disable SHA256 and SHA512 RRSIG support]))
 case "$enable_sha2" in
@@ -647,19 +671,21 @@ AC_MSG_RESULT($ac_cv_c_gost_works)
 
 AC_ARG_ENABLE(gost, AC_HELP_STRING([--disable-gost], [Disable GOST support]))
 use_gost="no"
+if test $USE_NSS = "no"; then
 case "$enable_gost" in
 	no)
 	;;
 	*)
 	AC_CHECK_FUNC(EVP_PKEY_set_type_str, [:],[AC_MSG_ERROR([OpenSSL 1.0.0 is needed for GOST support])])
-        AC_CHECK_FUNC(EC_KEY_new, [], [AC_MSG_ERROR([OpenSSL does not support ECC, needed for GOST support])])
+	AC_CHECK_FUNC(EC_KEY_new, [], [AC_MSG_ERROR([OpenSSL does not support ECC, needed for GOST support])])
 	AC_CHECK_GOST_WORKS
-	if test $ac_cv_c_gost_works != no; then
+	if test "$ac_cv_c_gost_works" != no; then
 		use_gost="yes"
 		AC_DEFINE([USE_GOST], [1], [Define this to enable GOST support.])
 	fi
 	;;
 esac
+fi dnl !USE_NSS
 
 AC_ARG_ENABLE(ecdsa, AC_HELP_STRING([--disable-ecdsa], [Disable ECDSA support]))
 use_ecdsa="no"
@@ -667,18 +693,20 @@ case "$enable_ecdsa" in
     no)
       ;;
     *)
-      AC_CHECK_FUNC(ECDSA_sign, [], [AC_MSG_ERROR([OpenSSL does not support ECDSA: please upgrade or rerun with --disable-ecdsa])])
-      AC_CHECK_FUNC(SHA384_Init, [], [AC_MSG_ERROR([OpenSSL does not support SHA384: please upgrade or rerun with --disable-ecdsa])])
-      AC_CHECK_DECLS([NID_X9_62_prime256v1, NID_secp384r1], [], [AC_MSG_ERROR([OpenSSL does not support the ECDSA curves: please upgrade or rerun with --disable-ecdsa])], [AC_INCLUDES_DEFAULT
+      if test $USE_NSS = "no"; then
+	      AC_CHECK_FUNC(ECDSA_sign, [], [AC_MSG_ERROR([OpenSSL does not support ECDSA: please upgrade or rerun with --disable-ecdsa])])
+	      AC_CHECK_FUNC(SHA384_Init, [], [AC_MSG_ERROR([OpenSSL does not support SHA384: please upgrade or rerun with --disable-ecdsa])])
+	      AC_CHECK_DECLS([NID_X9_62_prime256v1, NID_secp384r1], [], [AC_MSG_ERROR([OpenSSL does not support the ECDSA curves: please upgrade or rerun with --disable-ecdsa])], [AC_INCLUDES_DEFAULT
 #include <openssl/evp.h>
-      ])
-      # see if OPENSSL 1.0.0 or later (has EVP MD and Verify independency)
-      AC_MSG_CHECKING([if openssl supports SHA2 and ECDSA with EVP])
-      if grep OPENSSL_VERSION_NUMBER $ssldir/include/openssl/opensslv.h | grep 0x0 >/dev/null; then
-	AC_MSG_RESULT([no])
-	AC_DEFINE_UNQUOTED([USE_ECDSA_EVP_WORKAROUND], [1], [Define this to enable an EVP workaround for older openssl])
-      else
-	AC_MSG_RESULT([yes])
+	      ])
+	      # see if OPENSSL 1.0.0 or later (has EVP MD and Verify independency)
+	      AC_MSG_CHECKING([if openssl supports SHA2 and ECDSA with EVP])
+	      if grep OPENSSL_VERSION_NUMBER $ssldir/include/openssl/opensslv.h | grep 0x0 >/dev/null; then
+		AC_MSG_RESULT([no])
+		AC_DEFINE_UNQUOTED([USE_ECDSA_EVP_WORKAROUND], [1], [Define this to enable an EVP workaround for older openssl])
+	      else
+		AC_MSG_RESULT([yes])
+	      fi
       fi
       # we now know we have ECDSA and the required curves.
       AC_DEFINE_UNQUOTED([USE_ECDSA], [1], [Define this to enable ECDSA support.])
@@ -1002,13 +1030,19 @@ AC_CHECK_LIB(ldns, ldns_rr_new,,[
 	AC_MSG_ERROR([No ldns library found, install the ldns library into system lib dir or use --with-ldns=path to other location.  The --with-ldns can point to the make-dir of ldns.  Install the package ldns or download source http://www.nlnetlabs.nl/projects/ldns])
 ])
 AC_CHECK_FUNC(ldns_buffer_copy)
-AC_CHECK_FUNC(ldns_key_buf2rsa_raw)
+if test $USE_NSS = "no"; then
+    AC_CHECK_FUNC(ldns_key_buf2rsa_raw)
+else
+    dnl ignore test
+    ac_cv_func_ldns_key_buf2rsa_raw="yes"
+fi
 AC_CHECK_FUNC(ldns_get_random)
 AC_CHECK_FUNC(ldns_b32_ntop_extended_hex)
-if test x$use_gost = xyes; then
+if test x$use_gost = xyes -a x$USE_NSS = xno; then
     AC_CHECK_FUNC(ldns_key_EVP_load_gost_id)
     AC_CHECK_FUNCS([ldns_key_EVP_unload_gost])
 else
+    dnl ignore test
     ac_cv_func_ldns_key_EVP_load_gost_id="yes"
 fi
 if test x$use_ecdsa = xyes; then

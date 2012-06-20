@@ -60,10 +60,22 @@
 #include "config.h"
 #include "util/random.h"
 #include "util/log.h"
+#ifdef HAVE_SSL
 #include <openssl/rand.h>
 #include <openssl/rc4.h>
 #include <openssl/err.h>
+#elif defined(HAVE_NSS)
+#include <nss3/nssbase.h>
+#include <nss3/pk11pub.h>
+#endif
 
+/** 
+ * Max random value.  Similar to RAND_MAX, but more portable
+ * (mingw uses only 15 bits random).
+ */
+#define MAX_VALUE 0x7fffffff
+
+#ifdef HAVE_SSL
 /**
  * Struct with per-thread random state.
  * Keeps SSL types away from the header file.
@@ -77,12 +89,6 @@ struct ub_randstate {
 
 /** Size of key to use (must be multiple of 8) */
 #define SEED_SIZE 24
-
-/** 
- * Max random value.  Similar to RAND_MAX, but more portable
- * (mingw uses only 15 bits random).
- */
-#define MAX_VALUE 0x7fffffff
 
 /** Number of bytes to reseed after */
 #define REKEY_BYTES	(1 << 24)
@@ -181,6 +187,42 @@ ub_random(struct ub_randstate* s)
 	s->rc4_ready -= sizeof(r);
 	return (long int)((r) % (((unsigned)MAX_VALUE + 1)));
 }
+
+#elif defined(HAVE_NSS)
+
+/* not much to remember for NSS since we use its pk11_random, placeholder */
+struct ub_randstate {
+	int ready;
+};
+
+void ub_systemseed(unsigned int ATTR_UNUSED(seed))
+{
+}
+
+struct ub_randstate* ub_initstate(unsigned int ATTR_UNUSED(seed), 
+	struct ub_randstate* ATTR_UNUSED(from))
+{
+	struct ub_randstate* s = (struct ub_randstate*)calloc(1, sizeof(*s));
+	if(!s) {
+		log_err("malloc failure in random init");
+		return NULL;
+	}
+	return s;
+}
+
+long int ub_random(struct ub_randstate* ATTR_UNUSED(state))
+{
+	long int x;
+	/* random 31 bit value. */
+	SECStatus s = PK11_GenerateRandom((unsigned char*)&x, (int)sizeof(x));
+	if(s != SECSuccess) {
+		log_err("PK11_GenerateRandom error: %s",
+			PORT_ErrorToString(PORT_GetError()));
+	}
+	return x & MAX_VALUE;
+}
+
+#endif /* HAVE_SSL or HAVE_NSS */
 
 long int
 ub_random_max(struct ub_randstate* state, long int x)

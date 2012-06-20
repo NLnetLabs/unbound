@@ -178,7 +178,9 @@ void alloc_set_id_cleanup(struct alloc_cache* alloc, void (*cleanup)(void*),
 
 #ifdef UNBOUND_ALLOC_LITE
 #  include <ldns/packet.h>
-#  include <openssl/ssl.h>
+#  ifdef HAVE_OPENSSL_SSL_H
+#    include <openssl/ssl.h>
+#  endif
 #  define malloc(s) unbound_stat_malloc_lite(s, __FILE__, __LINE__, __func__)
 #  define calloc(n,s) unbound_stat_calloc_lite(n, s, __FILE__, __LINE__, __func__)
 #  define free(p) unbound_stat_free_lite(p, __FILE__, __LINE__, __func__)

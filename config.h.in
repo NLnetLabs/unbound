@@ -193,6 +193,9 @@
 /* Define to 1 if you have the <netinet/in.h> header file. */
 #undef HAVE_NETINET_IN_H
 
+/* Use libnss for crypto */
+#undef HAVE_NSS
+
 /* Define to 1 if you have the `OPENSSL_config' function. */
 #undef HAVE_OPENSSL_CONFIG
 
