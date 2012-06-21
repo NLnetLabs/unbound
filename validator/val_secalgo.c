@@ -553,6 +553,7 @@ verify_canonrrset(ldns_buffer* buf, int algo, unsigned char* sigblock,
 #include <nss3/sechash.h>
 #include <nss3/pk11pub.h>
 #include <nss3/keyhi.h>
+#include <nss3/secerr.h>
 #include <nspr4/prerror.h>
 
 size_t
@@ -841,6 +842,7 @@ verify_canonrrset(ldns_buffer* buf, int algo, unsigned char* sigblock,
 	SECItem secsig = {siBuffer, sigblock, sigblock_len};
 	SECItem sechash = {siBuffer, hash, 0};
 	SECStatus res;
+	int err;
 
 	// extern SECKEYPublicKey *SECKEY_DecodeDERPublicKey(SECItem *pubkder);
 	// SECKEYPublicKey* SECKEY_ImportDERPublicKey(SECItem *derKey, CK_KEY_TYPE type);
@@ -874,8 +876,16 @@ verify_canonrrset(ldns_buffer* buf, int algo, unsigned char* sigblock,
 	if(res == SECSuccess) {
 		return sec_status_secure;
 	}
-	verbose(VERB_QUERY, "verify: signature mismatch %s",
-		PORT_ErrorToString(PORT_GetError()));
+	err = PORT_GetError();
+	if(err != SEC_ERROR_BAD_SIGNATURE) {
+		/* failed to verify */
+		verbose(VERB_QUERY, "verify: PK11_Verify failed: %s",
+			PORT_ErrorToString(err));
+		SECKEY_DestroyPublicKey(pubkey);
+		return sec_status_unchecked;
+	}
+	verbose(VERB_QUERY, "verify: signature mismatch: %s",
+		PORT_ErrorToString(err));
 	*reason = "signature crypto failed";
 	return sec_status_bogus;
 }
