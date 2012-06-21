@@ -554,6 +554,7 @@ verify_canonrrset(ldns_buffer* buf, int algo, unsigned char* sigblock,
 #include <nss3/pk11pub.h>
 #include <nss3/keyhi.h>
 #include <nss3/secerr.h>
+#include <nss3/cryptohi.h>
 #include <nspr4/prerror.h>
 
 size_t
@@ -659,6 +660,90 @@ static SECKEYPublicKey* nss_key_create(KeyType ktype)
 	return key;
 }
 
+static SECKEYPublicKey* nss_buf2ecdsa(unsigned char* key, size_t len, int algo)
+{
+	return NULL;
+#if 0
+	/* TODO */
+	SECKEYPublicKey* pk;
+	unsigned char buf[256+2]; /* sufficient for 2*384/8+1 */
+	const unsigned char* pp = buf;
+	ECGroup* ecg;
+	
+
+	/* check length, which uncompressed must be 2 bignums */
+	if(algo == LDNS_ECDSAP256SHA256) {
+		if(keylen != 2*256/8) return NULL;
+		ecg = ECGroup_fromName(ECCurve_X9_62_PRIME_256V1);
+	} else if(algo == LDNS_ECDSAP384SHA384) {
+		if(keylen != 2*384/8) return NULL;
+		ecg = ECGroup_fromName(ECCurve_X9_62_PRIME_384R1);
+	} else    ecg= NULL;
+	if(!ecg) return NULL;
+#endif
+}
+
+static SECKEYPublicKey* nss_buf2dsa(unsigned char* key, size_t len)
+{
+	SECKEYPublicKey* pk;
+	uint8_t T;
+	uint16_t length;
+	uint16_t offset;
+	SECItem Q = {siBuffer, NULL, 0};
+	SECItem P = {siBuffer, NULL, 0};
+	SECItem G = {siBuffer, NULL, 0};
+	SECItem Y = {siBuffer, NULL, 0};
+
+	if(len == 0)
+		return NULL;
+	T = (uint8_t)key[0];
+	length = (64 + T * 8);
+	offset = 1;
+
+	if (T > 8) {
+		return NULL;
+	}
+	if(len < (size_t)1 + SHA1_LENGTH + 3*length)
+		return NULL;
+
+	Q.data = key+offset;
+	Q.len = SHA1_LENGTH;
+	offset += SHA1_LENGTH;
+
+	P.data = key+offset;
+	P.len = length;
+	offset += length;
+
+	G.data = key+offset;
+	G.len = length;
+	offset += length;
+
+	Y.data = key+offset;
+	Y.len = length;
+	offset += length;
+
+	pk = nss_key_create(dsaKey);
+	if(!pk)
+		return NULL;
+	if(SECITEM_CopyItem(pk->arena, &pk->u.dsa.params.prime, &P)) {
+		SECKEY_DestroyPublicKey(pk);
+		return NULL;
+	}
+	if(SECITEM_CopyItem(pk->arena, &pk->u.dsa.params.subPrime, &Q)) {
+		SECKEY_DestroyPublicKey(pk);
+		return NULL;
+	}
+	if(SECITEM_CopyItem(pk->arena, &pk->u.dsa.params.base, &G)) {
+		SECKEY_DestroyPublicKey(pk);
+		return NULL;
+	}
+	if(SECITEM_CopyItem(pk->arena, &pk->u.dsa.publicValue, &Y)) {
+		SECKEY_DestroyPublicKey(pk);
+		return NULL;
+	}
+	return pk;
+}
+
 static SECKEYPublicKey* nss_buf2rsa(unsigned char* key, size_t len)
 {
 	SECKEYPublicKey* pk;
@@ -692,6 +777,8 @@ static SECKEYPublicKey* nss_buf2rsa(unsigned char* key, size_t len)
 	modulus.len = (len - offset);
 
 	pk = nss_key_create(rsaKey);
+	if(!pk)
+		return NULL;
 	if(SECITEM_CopyItem(pk->arena, &pk->u.rsa.modulus, &modulus)) {
 		SECKEY_DestroyPublicKey(pk);
 		return NULL;
@@ -711,39 +798,42 @@ static SECKEYPublicKey* nss_buf2rsa(unsigned char* key, size_t len)
  * @param digest_type: digest type to use
  * @param key: key to setup for.
  * @param keylen: length of key.
+ * @param prefix: if returned, the ASN prefix for the hashblob.
+ * @param prefixlen: length of the prefix.
  * @return false on failure.
  */
 static int
 nss_setup_key_digest(int algo, SECKEYPublicKey** pubkey, HASH_HashType* htype,
-	unsigned char* key, size_t keylen)
+	unsigned char* key, size_t keylen, unsigned char** prefix,
+	size_t* prefixlen)
 {
-	/* TODO uses libNSS */
+	/* uses libNSS */
+
+	/* hash prefix for md5, RFC2537 */
+	unsigned char p_md5[] = {0x30, 0x20, 0x30, 0x0c, 0x06, 0x08, 0x2a,
+	0x86, 0x48, 0x86, 0xf7, 0x0d, 0x02, 0x05, 0x05, 0x00, 0x04, 0x10};
+	/* hash prefix to prepend to hash output, from RFC3110 */
+	unsigned char p_sha1[] = {0x30, 0x21, 0x30, 0x09, 0x06, 0x05, 0x2B,
+		0x0E, 0x03, 0x02, 0x1A, 0x05, 0x00, 0x04, 0x14};
+	/* from RFC5702 */
+	unsigned char p_sha256[] = {0x30, 0x31, 0x30, 0x0d, 0x06, 0x09, 0x60,
+	0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x01, 0x05, 0x00, 0x04, 0x20};
+	unsigned char p_sha512[] = {0x30, 0x51, 0x30, 0x0d, 0x06, 0x09, 0x60,
+	0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x03, 0x05, 0x00, 0x04, 0x40};
+	/* from RFC6234 */
+	unsigned char p_sha384[] = {0x30, 0x51, 0x30, 0x0d, 0x06, 0x09, 0x60,
+	0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x02, 0x05, 0x00, 0x04, 0x30};
 
 	switch(algo) {
 		case LDNS_DSA:
 		case LDNS_DSA_NSEC3:
-			/* TODO */
-			/*
-			*evp_key = EVP_PKEY_new();
-			if(!*evp_key) {
+			*pubkey = nss_buf2dsa(key, keylen);
+			if(!*pubkey) {
 				log_err("verify: malloc failure in crypto");
 				return 0;
 			}
-			dsa = ldns_key_buf2dsa_raw(key, keylen);
-			if(!dsa) {
-				verbose(VERB_QUERY, "verify: "
-					"ldns_key_buf2dsa_raw failed");
-				return 0;
-			}
-			if(EVP_PKEY_assign_DSA(*evp_key, dsa) == 0) {
-				verbose(VERB_QUERY, "verify: "
-					"EVP_PKEY_assign_DSA failed");
-				return 0;
-			}
-			*digest_type = EVP_dss1();
-			*/
 			*htype = HASH_AlgSHA1;
-
+			/* no prefix for DSA verification */
 			break;
 		case LDNS_RSASHA1:
 		case LDNS_RSASHA1_NSEC3:
@@ -760,16 +850,24 @@ nss_setup_key_digest(int algo, SECKEYPublicKey** pubkey, HASH_HashType* htype,
 			}
 			/* select SHA version */
 #if defined(HAVE_EVP_SHA256) && defined(USE_SHA2)
-			if(algo == LDNS_RSASHA256)
+			if(algo == LDNS_RSASHA256) {
 				*htype = HASH_AlgSHA256;
-			else
+				*prefix = p_sha256;
+				*prefixlen = sizeof(p_sha256);
+			} else
 #endif
 #if defined(HAVE_EVP_SHA512) && defined(USE_SHA2)
-				if(algo == LDNS_RSASHA512)
+				if(algo == LDNS_RSASHA512) {
 				*htype = HASH_AlgSHA512;
-			else
+				*prefix = p_sha512;
+				*prefixlen = sizeof(p_sha512);
+			} else
 #endif
+			{
 				*htype = HASH_AlgSHA1;
+				*prefix = p_sha1;
+				*prefixlen = sizeof(p_sha1);
+			}
 
 			break;
 		case LDNS_RSAMD5:
@@ -779,32 +877,32 @@ nss_setup_key_digest(int algo, SECKEYPublicKey** pubkey, HASH_HashType* htype,
 				return 0;
 			}
 			*htype = HASH_AlgMD5;
+			*prefix = p_md5;
+			*prefixlen = sizeof(p_md5);
 
 			break;
 #ifdef USE_ECDSA
 		case LDNS_ECDSAP256SHA256:
-			/* TODO
-			*evp_key = ldns_ecdsa2pkey_raw(key, keylen,
+			*pubkey = nss_buf2ecdsa(key, keylen,
 				LDNS_ECDSAP256SHA256);
-			if(!*evp_key) {
-				verbose(VERB_QUERY, "verify: "
-					"ldns_ecdsa2pkey_raw failed");
+			if(!*pubkey) {
+				log_err("verify: malloc failure in crypto");
 				return 0;
 			}
-			*/
 			*htype = HASH_AlgSHA256;
+			*prefix = p_sha256;
+			*prefixlen = sizeof(p_sha256);
 			break;
 		case LDNS_ECDSAP384SHA384:
-			/* TODO
-			*evp_key = ldns_ecdsa2pkey_raw(key, keylen,
+			*pubkey = nss_buf2ecdsa(key, keylen,
 				LDNS_ECDSAP384SHA384);
-			if(!*evp_key) {
-				verbose(VERB_QUERY, "verify: "
-					"ldns_ecdsa2pkey_raw failed");
+			if(!*pubkey) {
+				log_err("verify: malloc failure in crypto");
 				return 0;
 			}
-			*/
 			*htype = HASH_AlgSHA384;
+			*prefix = p_sha384;
+			*prefixlen = sizeof(p_sha384);
 			break;
 #endif /* USE_ECDSA */
 		case LDNS_ECC_GOST:
@@ -834,7 +932,7 @@ verify_canonrrset(ldns_buffer* buf, int algo, unsigned char* sigblock,
 	unsigned int sigblock_len, unsigned char* key, unsigned int keylen,
 	char** reason)
 {
-	/* TODO uses libNSS */
+	/* uses libNSS */
 	/* large enough for the different hashes */
 	unsigned char hash[HASH_LENGTH_MAX];
 	HASH_HashType htype = 0;
@@ -842,18 +940,40 @@ verify_canonrrset(ldns_buffer* buf, int algo, unsigned char* sigblock,
 	SECItem secsig = {siBuffer, sigblock, sigblock_len};
 	SECItem sechash = {siBuffer, hash, 0};
 	SECStatus res;
+	unsigned char* prefix = NULL; /* prefix for hash, RFC3110, RFC5702 */
+	size_t prefixlen = 0;
 	int err;
 
-	// extern SECKEYPublicKey *SECKEY_DecodeDERPublicKey(SECItem *pubkder);
-	// SECKEYPublicKey* SECKEY_ImportDERPublicKey(SECItem *derKey, CK_KEY_TYPE type);
-	if(!nss_setup_key_digest(algo, &pubkey, &htype, key, keylen)) {
+	if(!nss_setup_key_digest(algo, &pubkey, &htype, key, keylen,
+		&prefix, &prefixlen)) {
 		verbose(VERB_QUERY, "verify: failed to setup key");
 		*reason = "use of key for crypto failed";
 		SECKEY_DestroyPublicKey(pubkey);
 		return sec_status_bogus;
 	}
 
-	/* TODO: need to convert DSA, ECDSA signatures? */
+	/* need to convert DSA, ECDSA signatures? */
+	if((algo == LDNS_DSA || algo == LDNS_DSA_NSEC3)) {
+		if(sigblock_len == 1+2*SHA1_LENGTH) {
+			secsig.data ++;
+			secsig.len --;
+		} else {
+			SECItem* p = DSAU_DecodeDerSig(&secsig);
+			if(!p) {
+				verbose(VERB_QUERY, "verify: failed DER decode");
+				*reason = "signature DER decode failed";
+				SECKEY_DestroyPublicKey(pubkey);
+				return sec_status_bogus;
+			}
+			if(SECITEM_CopyItem(pubkey->arena, &secsig, p)) {
+				log_err("alloc failure in DER decode");
+				SECKEY_DestroyPublicKey(pubkey);
+				SECITEM_FreeItem(p, PR_TRUE);
+				return sec_status_unchecked;
+			}
+			SECITEM_FreeItem(p, PR_TRUE);
+		}
+	}
 
 	/* do the signature cryptography work */
 	/* hash the data */
@@ -869,6 +989,14 @@ verify_canonrrset(ldns_buffer* buf, int algo, unsigned char* sigblock,
 		SECKEY_DestroyPublicKey(pubkey);
 		return sec_status_unchecked;
 	}
+	if(prefix) {
+		int hashlen = sechash.len;
+		sechash.data = PORT_ArenaAlloc(pubkey->arena, prefixlen+hashlen);
+		sechash.len = prefixlen+hashlen;
+		memcpy(sechash.data, prefix, prefixlen);
+		memmove(sechash.data+prefixlen, hash, hashlen);
+	}
+
 	/* verify the signature */
 	res = PK11_Verify(pubkey, &secsig, &sechash, NULL /*wincx*/);
 	SECKEY_DestroyPublicKey(pubkey);
