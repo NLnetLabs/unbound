@@ -881,7 +881,6 @@ verify_canonrrset(ldns_buffer* buf, int algo, unsigned char* sigblock,
 		/* failed to verify */
 		verbose(VERB_QUERY, "verify: PK11_Verify failed: %s",
 			PORT_ErrorToString(err));
-		SECKEY_DestroyPublicKey(pubkey);
 		return sec_status_unchecked;
 	}
 	verbose(VERB_QUERY, "verify: signature mismatch: %s",
