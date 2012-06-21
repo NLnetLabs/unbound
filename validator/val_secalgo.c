@@ -299,7 +299,7 @@ setup_key_digest(int algo, EVP_PKEY** evp_key, const EVP_MD** digest_type,
 			*evp_key = EVP_PKEY_new();
 			if(!*evp_key) {
 				log_err("verify: malloc failure in crypto");
-				return sec_status_unchecked;
+				return 0;
 			}
 			dsa = ldns_key_buf2dsa_raw(key, keylen);
 			if(!dsa) {
@@ -326,7 +326,7 @@ setup_key_digest(int algo, EVP_PKEY** evp_key, const EVP_MD** digest_type,
 			*evp_key = EVP_PKEY_new();
 			if(!*evp_key) {
 				log_err("verify: malloc failure in crypto");
-				return sec_status_unchecked;
+				return 0;
 			}
 			rsa = ldns_key_buf2rsa_raw(key, keylen);
 			if(!rsa) {
@@ -358,7 +358,7 @@ setup_key_digest(int algo, EVP_PKEY** evp_key, const EVP_MD** digest_type,
 			*evp_key = EVP_PKEY_new();
 			if(!*evp_key) {
 				log_err("verify: malloc failure in crypto");
-				return sec_status_unchecked;
+				return 0;
 			}
 			rsa = ldns_key_buf2rsa_raw(key, keylen);
 			if(!rsa) {
@@ -726,7 +726,7 @@ nss_setup_key_digest(int algo, SECKEYPublicKey** pubkey, HASH_HashType* htype,
 			*evp_key = EVP_PKEY_new();
 			if(!*evp_key) {
 				log_err("verify: malloc failure in crypto");
-				return sec_status_unchecked;
+				return 0;
 			}
 			dsa = ldns_key_buf2dsa_raw(key, keylen);
 			if(!dsa) {
@@ -755,7 +755,7 @@ nss_setup_key_digest(int algo, SECKEYPublicKey** pubkey, HASH_HashType* htype,
 			*pubkey = nss_buf2rsa(key, keylen);
 			if(!*pubkey) {
 				log_err("verify: malloc failure in crypto");
-				return sec_status_unchecked;
+				return 0;
 			}
 			/* select SHA version */
 #if defined(HAVE_EVP_SHA256) && defined(USE_SHA2)
@@ -775,7 +775,7 @@ nss_setup_key_digest(int algo, SECKEYPublicKey** pubkey, HASH_HashType* htype,
 			*pubkey = nss_buf2rsa(key, keylen);
 			if(!*pubkey) {
 				log_err("verify: malloc failure in crypto");
-				return sec_status_unchecked;
+				return 0;
 			}
 			*htype = HASH_AlgMD5;
 

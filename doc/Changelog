@@ -1,3 +1,6 @@
+21 June 2012: Wouter
+	- fix error handling of alloc failure during rrsig verification.
+
 20 June 2012: Wouter
 	- work on --with-nss build option (for now, --with-libunbound-only).
 
