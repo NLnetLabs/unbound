@@ -45,6 +45,9 @@
 #ifdef HAVE_OPENSSL_SSL_H
 #include "openssl/ssl.h"
 #endif
+#ifdef HAVE_NSS
+#include <nss3/sechash.h>
+#endif
 #include "validator/val_nsec3.h"
 #include "validator/validator.h"
 #include "validator/val_kentry.h"
@@ -541,26 +544,43 @@ nsec3_get_hashed(ldns_buffer* buf, uint8_t* nm, size_t nmlen, int algo,
 	ldns_buffer_write(buf, salt, saltlen);
 	ldns_buffer_flip(buf);
 	switch(algo) {
-#ifdef HAVE_EVP_SHA1
+#if defined(HAVE_EVP_SHA1) || defined(HAVE_NSS)
 		case NSEC3_HASH_SHA1:
+#ifdef HAVE_SSL
 			hash_len = SHA_DIGEST_LENGTH;
+#else
+			hash_len = SHA1_LENGTH;
+#endif
 			if(hash_len > max)
 				return 0;
+#  ifdef HAVE_SSL
 			(void)SHA1((unsigned char*)ldns_buffer_begin(buf),
 				(unsigned long)ldns_buffer_limit(buf),
 				(unsigned char*)res);
+#  else
+			(void)HASH_HashBuf(HASH_AlgSHA1, (unsigned char*)res,
+				(unsigned char*)ldns_buffer_begin(buf),
+				(unsigned long)ldns_buffer_limit(buf));
+#  endif
 			for(i=0; i<iter; i++) {
 				ldns_buffer_clear(buf);
 				ldns_buffer_write(buf, res, hash_len);
 				ldns_buffer_write(buf, salt, saltlen);
 				ldns_buffer_flip(buf);
+#  ifdef HAVE_SSL
 				(void)SHA1(
 					(unsigned char*)ldns_buffer_begin(buf),
 					(unsigned long)ldns_buffer_limit(buf),
 					(unsigned char*)res);
+#  else
+				(void)HASH_HashBuf(HASH_AlgSHA1,
+					(unsigned char*)res,
+					(unsigned char*)ldns_buffer_begin(buf),
+					(unsigned long)ldns_buffer_limit(buf));
+#  endif
 			}
 			break;
-#endif /* HAVE_EVP_SHA1 */
+#endif /* HAVE_EVP_SHA1 or NSS */
 		default:
 			log_err("nsec3 hash of unknown algo %d", algo);
 			return 0;
@@ -586,28 +606,46 @@ nsec3_calc_hash(struct regional* region, ldns_buffer* buf,
 	ldns_buffer_write(buf, salt, saltlen);
 	ldns_buffer_flip(buf);
 	switch(algo) {
-#ifdef HAVE_EVP_SHA1
+#if defined(HAVE_EVP_SHA1) || defined(HAVE_NSS)
 		case NSEC3_HASH_SHA1:
+#ifdef HAVE_SSL
 			c->hash_len = SHA_DIGEST_LENGTH;
+#else
+			c->hash_len = SHA1_LENGTH;
+#endif
 			c->hash = (uint8_t*)regional_alloc(region, 
 				c->hash_len);
 			if(!c->hash)
 				return 0;
+#  ifdef HAVE_SSL
 			(void)SHA1((unsigned char*)ldns_buffer_begin(buf),
 				(unsigned long)ldns_buffer_limit(buf),
 				(unsigned char*)c->hash);
+#  else
+			(void)HASH_HashBuf(HASH_AlgSHA1,
+				(unsigned char*)c->hash,
+				(unsigned char*)ldns_buffer_begin(buf),
+				(unsigned long)ldns_buffer_limit(buf));
+#  endif
 			for(i=0; i<iter; i++) {
 				ldns_buffer_clear(buf);
 				ldns_buffer_write(buf, c->hash, c->hash_len);
 				ldns_buffer_write(buf, salt, saltlen);
 				ldns_buffer_flip(buf);
+#  ifdef HAVE_SSL
 				(void)SHA1(
 					(unsigned char*)ldns_buffer_begin(buf),
 					(unsigned long)ldns_buffer_limit(buf),
 					(unsigned char*)c->hash);
+#  else
+				(void)HASH_HashBuf(HASH_AlgSHA1,
+					(unsigned char*)c->hash,
+					(unsigned char*)ldns_buffer_begin(buf),
+					(unsigned long)ldns_buffer_limit(buf));
+#  endif
 			}
 			break;
-#endif /* HAVE_EVP_SHA1 */
+#endif /* HAVE_EVP_SHA1 or NSS */
 		default:
 			log_err("nsec3 hash of unknown algo %d", algo);
 			return -1;

@@ -562,11 +562,9 @@ ds_digest_size_supported(int algo)
 {
 	/* uses libNSS */
 	switch(algo) {
-#ifdef HAVE_EVP_SHA1
 		case LDNS_SHA1:
 			return SHA1_LENGTH;
-#endif
-#ifdef HAVE_EVP_SHA256
+#ifdef USE_SHA2
 		case LDNS_SHA256:
 			return SHA256_LENGTH;
 #endif
@@ -587,12 +585,10 @@ secalgo_ds_digest(int algo, unsigned char* buf, size_t len,
 {
 	/* uses libNSS */
 	switch(algo) {
-#ifdef HAVE_EVP_SHA1
 		case LDNS_SHA1:
 			return HASH_HashBuf(HASH_AlgSHA1, res, buf, len)
 				== SECSuccess;
-#endif
-#ifdef HAVE_EVP_SHA256
+#if defined(USE_SHA2)
 		case LDNS_SHA256:
 			return HASH_HashBuf(HASH_AlgSHA256, res, buf, len)
 				== SECSuccess;
@@ -621,10 +617,10 @@ dnskey_algo_id_is_supported(int id)
 	case LDNS_RSASHA1:
 	case LDNS_RSASHA1_NSEC3:
 	case LDNS_RSAMD5:
-#if defined(HAVE_EVP_SHA256) && defined(USE_SHA2)
+#ifdef USE_SHA2
 	case LDNS_RSASHA256:
 #endif
-#if defined(HAVE_EVP_SHA512) && defined(USE_SHA2)
+#ifdef USE_SHA2
 	case LDNS_RSASHA512:
 #endif
 #ifdef USE_ECDSA
@@ -662,25 +658,56 @@ static SECKEYPublicKey* nss_key_create(KeyType ktype)
 
 static SECKEYPublicKey* nss_buf2ecdsa(unsigned char* key, size_t len, int algo)
 {
-	return NULL;
-#if 0
-	/* TODO */
 	SECKEYPublicKey* pk;
+	SECItem pub = {siBuffer, NULL, 0};
+	SECItem params = {siBuffer, NULL, 0};
+	unsigned char param256[] = {
+		/* OBJECTIDENTIFIER 1.2.840.10045.3.1.7 (P-256)
+		 * {iso(1) member-body(2) us(840) ansi-x962(10045) curves(3) prime(1) prime256v1(7)} */
+		0x06, 0x08, 0x2a, 0x86, 0x48, 0xce, 0x3d, 0x03, 0x01, 0x07
+	};
+	unsigned char param384[] = {
+		/* OBJECTIDENTIFIER 1.3.132.0.34 (P-384)
+		 * {iso(1) identified-organization(3) certicom(132) curve(0) ansip384r1(34)} */
+		0x06, 0x05, 0x2b, 0x81, 0x04, 0x00, 0x22
+	};
 	unsigned char buf[256+2]; /* sufficient for 2*384/8+1 */
-	const unsigned char* pp = buf;
-	ECGroup* ecg;
-	
 
 	/* check length, which uncompressed must be 2 bignums */
 	if(algo == LDNS_ECDSAP256SHA256) {
-		if(keylen != 2*256/8) return NULL;
-		ecg = ECGroup_fromName(ECCurve_X9_62_PRIME_256V1);
+		if(len != 2*256/8) return NULL;
+		/* ECCurve_X9_62_PRIME_256V1 */
 	} else if(algo == LDNS_ECDSAP384SHA384) {
-		if(keylen != 2*384/8) return NULL;
-		ecg = ECGroup_fromName(ECCurve_X9_62_PRIME_384R1);
-	} else    ecg= NULL;
-	if(!ecg) return NULL;
-#endif
+		if(len != 2*384/8) return NULL;
+		/* ECCurve_X9_62_PRIME_384R1 */
+	} else    return NULL;
+
+	buf[0] = 0x04; /* POINT_FORM_UNCOMPRESSED */
+	memmove(buf+1, key, len);
+	pub.data = buf;
+	pub.len = len+1;
+	if(algo == LDNS_ECDSAP256SHA256) {
+		params.data = param256;
+		params.len = sizeof(param256);
+	} else {
+		params.data = param384;
+		params.len = sizeof(param384);
+	}
+
+	pk = nss_key_create(ecKey);
+	if(!pk)
+		return NULL;
+	pk->u.ec.size = (len/2)*8;
+	if(SECITEM_CopyItem(pk->arena, &pk->u.ec.publicValue, &pub)) {
+		SECKEY_DestroyPublicKey(pk);
+		return NULL;
+	}
+	if(SECITEM_CopyItem(pk->arena, &pk->u.ec.DEREncodedParams, &params)) {
+		SECKEY_DestroyPublicKey(pk);
+		return NULL;
+	}
+
+	return pk;
 }
 
 static SECKEYPublicKey* nss_buf2dsa(unsigned char* key, size_t len)
@@ -837,10 +864,10 @@ nss_setup_key_digest(int algo, SECKEYPublicKey** pubkey, HASH_HashType* htype,
 			break;
 		case LDNS_RSASHA1:
 		case LDNS_RSASHA1_NSEC3:
-#if defined(HAVE_EVP_SHA256) && defined(USE_SHA2)
+#ifdef USE_SHA2
 		case LDNS_RSASHA256:
 #endif
-#if defined(HAVE_EVP_SHA512) && defined(USE_SHA2)
+#ifdef USE_SHA2
 		case LDNS_RSASHA512:
 #endif
 			*pubkey = nss_buf2rsa(key, keylen);
@@ -849,14 +876,14 @@ nss_setup_key_digest(int algo, SECKEYPublicKey** pubkey, HASH_HashType* htype,
 				return 0;
 			}
 			/* select SHA version */
-#if defined(HAVE_EVP_SHA256) && defined(USE_SHA2)
+#ifdef USE_SHA2
 			if(algo == LDNS_RSASHA256) {
 				*htype = HASH_AlgSHA256;
 				*prefix = p_sha256;
 				*prefixlen = sizeof(p_sha256);
 			} else
 #endif
-#if defined(HAVE_EVP_SHA512) && defined(USE_SHA2)
+#ifdef USE_SHA2
 				if(algo == LDNS_RSASHA512) {
 				*htype = HASH_AlgSHA512;
 				*prefix = p_sha512;
@@ -890,8 +917,7 @@ nss_setup_key_digest(int algo, SECKEYPublicKey** pubkey, HASH_HashType* htype,
 				return 0;
 			}
 			*htype = HASH_AlgSHA256;
-			*prefix = p_sha256;
-			*prefixlen = sizeof(p_sha256);
+			/* no prefix for DSA verification */
 			break;
 		case LDNS_ECDSAP384SHA384:
 			*pubkey = nss_buf2ecdsa(key, keylen,
@@ -901,8 +927,7 @@ nss_setup_key_digest(int algo, SECKEYPublicKey** pubkey, HASH_HashType* htype,
 				return 0;
 			}
 			*htype = HASH_AlgSHA384;
-			*prefix = p_sha384;
-			*prefixlen = sizeof(p_sha384);
+			/* no prefix for DSA verification */
 			break;
 #endif /* USE_ECDSA */
 		case LDNS_ECC_GOST:
@@ -1006,10 +1031,13 @@ verify_canonrrset(ldns_buffer* buf, int algo, unsigned char* sigblock,
 	}
 	err = PORT_GetError();
 	if(err != SEC_ERROR_BAD_SIGNATURE) {
-		/* failed to verify */
+		/* failed to verify, but other errors are commonly returned
+		 * for a bad signature from NSS.  Thus we return bogus,
+		 * not unchecked*/
 		verbose(VERB_QUERY, "verify: PK11_Verify failed: %s",
 			PORT_ErrorToString(err));
-		return sec_status_unchecked;
+		*reason = "signature crypto failed";
+		return sec_status_bogus;
 	}
 	verbose(VERB_QUERY, "verify: signature mismatch: %s",
 		PORT_ErrorToString(err));

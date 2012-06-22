@@ -1,3 +1,6 @@
+22 June 2012: Wouter
+	- implement DS records, NSEC3 and ECDSA for compile with libnss.
+
 21 June 2012: Wouter
 	- fix error handling of alloc failure during rrsig verification.
 	- nss check for verification failure.
