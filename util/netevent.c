@@ -850,9 +850,11 @@ reclaim_tcp_handler(struct comm_point* c)
 {
 	log_assert(c->type == comm_tcp);
 	if(c->ssl) {
+#ifdef HAVE_SSL
 		SSL_shutdown(c->ssl);
 		SSL_free(c->ssl);
 		c->ssl = NULL;
+#endif
 	}
 	comm_point_close(c);
 	if(c->tcp_parent) {
@@ -1854,8 +1856,10 @@ comm_point_delete(struct comm_point* c)
 	if(!c) 
 		return;
 	if(c->type == comm_tcp && c->ssl) {
+#ifdef HAVE_SSL
 		SSL_shutdown(c->ssl);
 		SSL_free(c->ssl);
+#endif
 	}
 	comm_point_close(c);
 	if(c->tcp_handlers) {

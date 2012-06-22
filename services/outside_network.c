@@ -297,9 +297,11 @@ decomission_pending_tcp(struct outside_network* outnet,
 	struct pending_tcp* pend)
 {
 	if(pend->c->ssl) {
+#ifdef HAVE_SSL
 		SSL_shutdown(pend->c->ssl);
 		SSL_free(pend->c->ssl);
 		pend->c->ssl = NULL;
+#endif
 	}
 	comm_point_close(pend->c);
 	pend->next_free = outnet->tcp_free;
