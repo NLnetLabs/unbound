@@ -623,11 +623,12 @@ dnskey_algo_id_is_supported(int id)
 #ifdef USE_SHA2
 	case LDNS_RSASHA512:
 #endif
+		return 1;
 #ifdef USE_ECDSA
 	case LDNS_ECDSAP256SHA256:
 	case LDNS_ECDSAP384SHA384:
+		return PK11_TokenExists(CKM_ECDSA);
 #endif
-		return 1;
 	case LDNS_ECC_GOST:
 	default:
 		return 0;
@@ -848,8 +849,10 @@ nss_setup_key_digest(int algo, SECKEYPublicKey** pubkey, HASH_HashType* htype,
 	unsigned char p_sha512[] = {0x30, 0x51, 0x30, 0x0d, 0x06, 0x09, 0x60,
 	0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x03, 0x05, 0x00, 0x04, 0x40};
 	/* from RFC6234 */
+	/* for future RSASHA384 .. 
 	unsigned char p_sha384[] = {0x30, 0x51, 0x30, 0x0d, 0x06, 0x09, 0x60,
 	0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x02, 0x05, 0x00, 0x04, 0x30};
+	*/
 
 	switch(algo) {
 		case LDNS_DSA:
@@ -1031,11 +1034,16 @@ verify_canonrrset(ldns_buffer* buf, int algo, unsigned char* sigblock,
 	}
 	err = PORT_GetError();
 	if(err != SEC_ERROR_BAD_SIGNATURE) {
-		/* failed to verify, but other errors are commonly returned
-		 * for a bad signature from NSS.  Thus we return bogus,
-		 * not unchecked*/
+		/* failed to verify */
 		verbose(VERB_QUERY, "verify: PK11_Verify failed: %s",
 			PORT_ErrorToString(err));
+		/* if it is not supported, like ECC is removed, we get,
+		 * SEC_ERROR_NO_MODULE */
+		if(err == SEC_ERROR_NO_MODULE)
+			return sec_status_unchecked;
+		/* but other errors are commonly returned
+		 * for a bad signature from NSS.  Thus we return bogus,
+		 * not unchecked */
 		*reason = "signature crypto failed";
 		return sec_status_bogus;
 	}

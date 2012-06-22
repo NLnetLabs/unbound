@@ -521,8 +521,11 @@ verify_test(void)
 	else printf("Warning: skipped GOST, openssl does not provide gost.\n");
 #endif
 #ifdef USE_ECDSA
-	verifytest_file("testdata/test_sigs.ecdsa_p256", "20100908100439");
-	verifytest_file("testdata/test_sigs.ecdsa_p384", "20100908100439");
+	/* test for support in case we use libNSS and ECC is removed */
+	if(dnskey_algo_id_is_supported(LDNS_ECDSAP256SHA256)) {
+		verifytest_file("testdata/test_sigs.ecdsa_p256", "20100908100439");
+		verifytest_file("testdata/test_sigs.ecdsa_p384", "20100908100439");
+	}
 	dstest_file("testdata/test_ds.sha384");
 #endif
 	dstest_file("testdata/test_ds.sha1");
