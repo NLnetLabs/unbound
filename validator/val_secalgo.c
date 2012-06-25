@@ -150,11 +150,14 @@ int
 dnskey_algo_id_is_supported(int id)
 {
 	switch(id) {
+	case LDNS_RSAMD5:
+		/* openssl can return if the system is in FIPS mode, 
+		 * which does not allow MD5 hashes for network traffic */
+		return !FIPS_mode();
 	case LDNS_DSA:
 	case LDNS_DSA_NSEC3:
 	case LDNS_RSASHA1:
 	case LDNS_RSASHA1_NSEC3:
-	case LDNS_RSAMD5:
 #if defined(HAVE_EVP_SHA256) && defined(USE_SHA2)
 	case LDNS_RSASHA256:
 #endif

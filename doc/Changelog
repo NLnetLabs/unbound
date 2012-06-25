@@ -1,3 +1,6 @@
+25 June 2012: Wouter
+	- disable RSAMD5 if in FIPS mode (when compiled with openssl).
+
 22 June 2012: Wouter
 	- implement DS records, NSEC3 and ECDSA for compile with libnss.
 
