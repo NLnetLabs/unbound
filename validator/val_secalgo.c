@@ -615,11 +615,13 @@ dnskey_algo_id_is_supported(int id)
 {
 	/* uses libNSS */
 	switch(id) {
+	case LDNS_RSAMD5:
+		/* disable MD5 support if FIPS mode is enabled in libnss */
+		return !PK11_IsFIPS();
 	case LDNS_DSA:
 	case LDNS_DSA_NSEC3:
 	case LDNS_RSASHA1:
 	case LDNS_RSASHA1_NSEC3:
-	case LDNS_RSAMD5:
 #ifdef USE_SHA2
 	case LDNS_RSASHA256:
 #endif
