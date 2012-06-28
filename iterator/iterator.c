@@ -259,9 +259,7 @@ error_response_cache(struct module_qstate* qstate, int id, int rcode)
 	/* do not waste time trying to validate this servfail */
 	err.security = sec_status_indeterminate;
 	verbose(VERB_ALGO, "store error response in message cache");
-	if(!iter_dns_store(qstate->env, &qstate->qinfo, &err, 0, 0, 0, NULL)) {
-		log_err("error_response_cache: could not store error (nomem)");
-	}
+	iter_dns_store(qstate->env, &qstate->qinfo, &err, 0, 0, 0, NULL);
 	return error_response(qstate, id, rcode);
 }
 
@@ -1908,11 +1906,10 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 			&& iter_ds_toolow(iq->response, iq->dp)
 			&& iter_dp_cangodown(&iq->qchase, iq->dp))
 			return processDSNSFind(qstate, iq, id);
-		if(!iter_dns_store(qstate->env, &iq->response->qinfo,
+		iter_dns_store(qstate->env, &iq->response->qinfo,
 			iq->response->rep, 0, qstate->prefetch_leeway,
 			iq->dp&&iq->dp->has_parent_side_NS,
-			qstate->region))
-			return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
+			qstate->region);
 		/* close down outstanding requests to be discarded */
 		outbound_list_clear(&iq->outlist);
 		iq->num_current_queries = 0;
@@ -1949,10 +1946,8 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		    )) {
 			/* Store the referral under the current query */
 			/* no prefetch-leeway, since its not the answer */
-			if(!iter_dns_store(qstate->env, &iq->response->qinfo,
-				iq->response->rep, 1, 0, 0, NULL))
-				return error_response(qstate, id, 
-					LDNS_RCODE_SERVFAIL);
+			iter_dns_store(qstate->env, &iq->response->qinfo,
+				iq->response->rep, 1, 0, 0, NULL);
 			if(iq->store_parent_NS)
 				iter_store_parentside_NS(qstate->env, 
 					iq->response->rep);
@@ -2042,10 +2037,9 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		/* NOTE : set referral=1, so that rrsets get stored but not 
 		 * the partial query answer (CNAME only). */
 		/* prefetchleeway applied because this updates answer parts */
-		if(!iter_dns_store(qstate->env, &iq->response->qinfo,
+		iter_dns_store(qstate->env, &iq->response->qinfo,
 			iq->response->rep, 1, qstate->prefetch_leeway,
-			iq->dp&&iq->dp->has_parent_side_NS, NULL))
-			return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
+			iq->dp&&iq->dp->has_parent_side_NS, NULL);
 		/* set the current request's qname to the new value. */
 		iq->qchase.qname = sname;
 		iq->qchase.qname_len = snamelen;
@@ -2555,12 +2549,10 @@ processFinished(struct module_qstate* qstate, struct iter_qstate* iq,
 		 * but only if we did recursion. The nonrecursion referral
 		 * from cache does not need to be stored in the msg cache. */
 		if(qstate->query_flags&BIT_RD) {
-			if(!iter_dns_store(qstate->env, &qstate->qinfo, 
+			iter_dns_store(qstate->env, &qstate->qinfo, 
 				iq->response->rep, 0, qstate->prefetch_leeway,
 				iq->dp&&iq->dp->has_parent_side_NS,
-				qstate->region))
-				return error_response(qstate, id, 
-					LDNS_RCODE_SERVFAIL);
+				qstate->region);
 		}
 	}
 	qstate->return_rcode = LDNS_RCODE_NOERROR;
