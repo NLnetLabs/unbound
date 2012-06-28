@@ -3,6 +3,7 @@
 	- code review: return value of cache_store can be ignored for better
 	  performance in out of memory conditions.
 	- fix edns-buffer-size and msg-buffer-size manpage documentation.
+	- updated iana ports list.
 
 25 June 2012: Wouter
 	- disable RSAMD5 if in FIPS mode (for openssl and for libnss).
