@@ -1,3 +1,6 @@
+28 June 2012: Wouter
+	- detect if openssl has FIPS_mode.
+
 25 June 2012: Wouter
 	- disable RSAMD5 if in FIPS mode (for openssl and for libnss).
 
