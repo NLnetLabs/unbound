@@ -1,3 +1,7 @@
+29 June 2012: Wouter
+	- patch for unbound_munin_ script to handle arbitrary thread count by
+	  Sven Ulland.
+
 28 June 2012: Wouter
 	- detect if openssl has FIPS_mode.
 	- code review: return value of cache_store can be ignored for better
