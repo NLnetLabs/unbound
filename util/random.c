@@ -147,6 +147,16 @@ ub_arc4random_stir(struct ub_randstate* s, struct ub_randstate* from)
 			return;
 		}
 	}
+#ifdef HAVE_FIPS_MODE
+	if(FIPS_mode()) {
+		/* RC4 is not allowed, get some trustworthy randomness */
+		/* double certainty here, this routine should not be
+		 * called in FIPS_mode */
+		memset(rand_buf, 0, sizeof(rand_buf));
+		s->rc4_ready = REKEY_BYTES;
+		return;
+	}
+#endif /* FIPS_MODE */
 	RC4_set_key(&s->rc4, SEED_SIZE, (unsigned char*)rand_buf);
 
 	/*
@@ -171,6 +181,9 @@ ub_initstate(unsigned int seed, struct ub_randstate* from)
 		return NULL;
 	}
 	ub_systemseed(seed);
+#ifdef HAVE_FIPS_MODE
+	if(!FIPS_mode())
+#endif
 	ub_arc4random_stir(s, from);
 	return s;
 }
@@ -179,6 +192,20 @@ long int
 ub_random(struct ub_randstate* s)
 {
 	unsigned int r = 0;
+#ifdef HAVE_FIPS_MODE
+	if(FIPS_mode()) {
+		/* RC4 is not allowed, get some trustworthy randomness */
+		/* we use pseudo bytes: it tries to return secure randomness
+		 * but returns 'something' if that fails.  We need something
+		 * else if it fails, because we cannot block here */
+		if(RAND_pseudo_bytes((unsigned char*)&r, (int)sizeof(r))
+			== -1) {
+			log_err("FIPSmode, no arc4random but RAND failed "
+				"(error %ld)", ERR_get_error());
+		}
+		return (long int)((r) % (((unsigned)MAX_VALUE + 1)));
+	}
+#endif /* FIPS_MODE */
 	if (s->rc4_ready <= 0) {
 		ub_arc4random_stir(s, NULL);
 	}
