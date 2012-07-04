@@ -579,6 +579,8 @@ log_crypto_err(const char* str)
 		ERR_error_string_n(e, buf, sizeof(buf));
 		log_err("and additionally crypto %s", buf);
 	}
+#else
+	(void)str;
 #endif /* HAVE_SSL */
 }
 
@@ -626,6 +628,9 @@ void* listen_sslctx_create(char* key, char* pem, char* verifypem)
 		SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER, NULL);
 	}
 	return ctx;
+#else
+	(void)key; (void)pem; (void)verifypem;
+	return NULL;
 #endif
 }
 
@@ -671,6 +676,9 @@ void* connect_sslctx_create(char* key, char* pem, char* verifypem)
 		SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER, NULL);
 	}
 	return ctx;
+#else
+	(void)key; (void)pem; (void)verifypem;
+	return NULL;
 #endif
 }
 
@@ -690,6 +698,9 @@ void* incoming_ssl_fd(void* sslctx, int fd)
 		return NULL;
 	}
 	return ssl;
+#else
+	(void)sslctx; (void)fd;
+	return NULL;
 #endif
 }
 
@@ -709,5 +720,8 @@ void* outgoing_ssl_fd(void* sslctx, int fd)
 		return NULL;
 	}
 	return ssl;
+#else
+	(void)sslctx; (void)fd;
+	return NULL;
 #endif
 }

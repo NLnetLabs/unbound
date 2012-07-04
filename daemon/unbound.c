@@ -454,6 +454,7 @@ perform_setup(struct daemon* daemon, struct config_file* cfg, int debug_mode,
 	 * given to unbound on the commandline. */
 
 	/* read ssl keys while superuser and outside chroot */
+#ifdef HAVE_SSL
 	if(!(daemon->rc = daemon_remote_create(cfg)))
 		fatal_exit("could not set up remote-control");
 	if(cfg->ssl_service_key && cfg->ssl_service_key[0]) {
@@ -463,6 +464,7 @@ perform_setup(struct daemon* daemon, struct config_file* cfg, int debug_mode,
 	}
 	if(!(daemon->connect_sslctx = connect_sslctx_create(NULL, NULL, NULL)))
 		fatal_exit("could not set up connect SSL_CTX");
+#endif
 
 #ifdef HAVE_KILL
 	/* check old pid file before forking */
