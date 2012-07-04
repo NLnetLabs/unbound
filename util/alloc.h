@@ -177,6 +177,7 @@ void alloc_set_id_cleanup(struct alloc_cache* alloc, void (*cleanup)(void*),
 	void* arg);
 
 #ifdef UNBOUND_ALLOC_LITE
+#  include <ldns/ldns.h>
 #  include <ldns/packet.h>
 #  ifdef HAVE_OPENSSL_SSL_H
 #    include <openssl/ssl.h>
