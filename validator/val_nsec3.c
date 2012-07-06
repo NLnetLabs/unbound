@@ -1171,8 +1171,8 @@ nsec3_do_prove_nodata(struct module_env* env, struct nsec3_filter* flt,
 		 * If not type DS: matching nsec3 must not be a delegation.
 		 */
 		if(qinfo->qtype == LDNS_RR_TYPE_DS && qinfo->qname_len != 1 
-			&& nsec3_has_type(rrset, rr, LDNS_RR_TYPE_SOA &&
-			!dname_is_root(qinfo->qname))) {
+			&& nsec3_has_type(rrset, rr, LDNS_RR_TYPE_SOA) &&
+			!dname_is_root(qinfo->qname)) {
 			verbose(VERB_ALGO, "proveNodata: apex NSEC3 "
 				"abused for no DS proof, bogus");
 			return sec_status_bogus;
