@@ -1,3 +1,6 @@
+9 July 2012: Willem
+	- Add flush_bogus option for unbound-control
+
 6 July 2012: Wouter
 	- Fix validation of qtype DS queries that result in no data for
 	  non-optout NSEC3 zones.
