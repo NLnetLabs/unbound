@@ -152,6 +152,12 @@ config_create(void)
 	cfg->out_ifs = NULL;
 	cfg->stubs = NULL;
 	cfg->forwards = NULL;
+	cfg->client_subnet = NULL;
+	/* OPC Not assigned yet! taken from http://wilmer.gaa.st/
+	 * edns-client-subnet/bind-9.7.1-dig-edns-client-subnet.diff */
+	cfg->client_subnet_opc = 0x50fa;
+	cfg->max_client_subnet_ipv4 = 24;
+	cfg->max_client_subnet_ipv6 = 32;
 	cfg->acls = NULL;
 	cfg->harden_short_bufsize = 0;
 	cfg->harden_large_queries = 0;

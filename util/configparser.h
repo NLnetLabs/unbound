@@ -163,7 +163,11 @@
      VAR_FORWARD_FIRST = 381,
      VAR_STUB_FIRST = 382,
      VAR_MINIMAL_RESPONSES = 383,
-     VAR_RRSET_ROUNDROBIN = 384
+     VAR_RRSET_ROUNDROBIN = 384,
+     VAR_SEND_CLIENT_SUBNET = 385,
+     VAR_CLIENT_SUBNET_OPCODE = 386,
+     VAR_MAX_CLIENT_SUBNET_IPV4 = 387,
+     VAR_MAX_CLIENT_SUBNET_IPV6 = 388
    };
 #endif
 /* Tokens.  */
@@ -294,6 +298,10 @@
 #define VAR_STUB_FIRST 382
 #define VAR_MINIMAL_RESPONSES 383
 #define VAR_RRSET_ROUNDROBIN 384
+#define VAR_SEND_CLIENT_SUBNET 385
+#define VAR_CLIENT_SUBNET_OPCODE 386
+#define VAR_MAX_CLIENT_SUBNET_IPV4 387
+#define VAR_MAX_CLIENT_SUBNET_IPV6 388
 
 
 
@@ -310,7 +318,7 @@ typedef union YYSTYPE
 
 
 /* Line 2068 of yacc.c  */
-#line 314 "util/configparser.h"
+#line 322 "util/configparser.h"
 } YYSTYPE;
 # define YYSTYPE_IS_TRIVIAL 1
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */

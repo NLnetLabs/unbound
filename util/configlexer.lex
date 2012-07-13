@@ -194,6 +194,10 @@ forward-first{COLON}		{ YDVAR(1, VAR_FORWARD_FIRST) }
 do-not-query-address{COLON}	{ YDVAR(1, VAR_DO_NOT_QUERY_ADDRESS) }
 do-not-query-localhost{COLON}	{ YDVAR(1, VAR_DO_NOT_QUERY_LOCALHOST) }
 access-control{COLON}		{ YDVAR(2, VAR_ACCESS_CONTROL) }
+send-client-subnet{COLON}	{ YDVAR(1, VAR_SEND_CLIENT_SUBNET) }
+client-subnet-opc{COLON}	{ YDVAR(1, VAR_CLIENT_SUBNET_OPCODE) }
+max-client-subnet-ipv4{COLON}	{ YDVAR(1, VAR_MAX_CLIENT_SUBNET_IPV4) }
+max-client-subnet-ipv6{COLON}	{ YDVAR(1, VAR_MAX_CLIENT_SUBNET_IPV6) }
 hide-identity{COLON}		{ YDVAR(1, VAR_HIDE_IDENTITY) }
 hide-version{COLON}		{ YDVAR(1, VAR_HIDE_VERSION) }
 identity{COLON}			{ YDVAR(1, VAR_IDENTITY) }

@@ -105,6 +105,8 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_IGNORE_CD_FLAG VAR_LOG_QUERIES VAR_TCP_UPSTREAM VAR_SSL_UPSTREAM
 %token VAR_SSL_SERVICE_KEY VAR_SSL_SERVICE_PEM VAR_SSL_PORT VAR_FORWARD_FIRST
 %token VAR_STUB_FIRST VAR_MINIMAL_RESPONSES VAR_RRSET_ROUNDROBIN
+%token VAR_SEND_CLIENT_SUBNET VAR_CLIENT_SUBNET_OPCODE
+%token VAR_MAX_CLIENT_SUBNET_IPV4 VAR_MAX_CLIENT_SUBNET_IPV6
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -161,7 +163,9 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_so_sndbuf | server_harden_below_nxdomain | server_ignore_cd_flag |
 	server_log_queries | server_tcp_upstream | server_ssl_upstream |
 	server_ssl_service_key | server_ssl_service_pem | server_ssl_port |
-	server_minimal_responses | server_rrset_roundrobin
+	server_minimal_responses | server_rrset_roundrobin | 
+	server_send_client_subnet | server_client_subnet_opc |
+	server_max_client_subnet_ipv4 | server_max_client_subnet_ipv6
 	;
 stubstart: VAR_STUB_ZONE
 	{
@@ -248,6 +252,33 @@ server_port: VAR_PORT STRING_ARG
 		if(atoi($2) == 0)
 			yyerror("port number expected");
 		else cfg_parser->cfg->port = atoi($2);
+		free($2);
+	}
+	;
+server_client_subnet_opc: VAR_CLIENT_SUBNET_OPCODE STRING_ARG
+	{
+		OUTYY(("P(client_subnet_opc:%s)\n", $2));
+		if(atoi($2) == 0)
+			yyerror("option code expected");
+		else cfg_parser->cfg->client_subnet_opc = atoi($2);
+		free($2);
+	}
+	;
+server_max_client_subnet_ipv4: VAR_MAX_CLIENT_SUBNET_IPV4 STRING_ARG
+	{
+		OUTYY(("P(max_client_subnet_ipv4:%s)\n", $2));
+		if(atoi($2) == 0)
+			yyerror("IPv4 subnet length expected");
+		else cfg_parser->cfg->client_subnet_opc = atoi($2);
+		free($2);
+	}
+	;
+server_max_client_subnet_ipv6: VAR_MAX_CLIENT_SUBNET_IPV6 STRING_ARG
+	{
+		OUTYY(("P(max_client_subnet_ipv6:%s)\n", $2));
+		if(atoi($2) == 0)
+			yyerror("Ipv6 subnet length expected");
+		else cfg_parser->cfg->client_subnet_opc = atoi($2);
 		free($2);
 	}
 	;
@@ -872,6 +903,13 @@ server_access_control: VAR_ACCESS_CONTROL STRING_ARG STRING_ARG
 			if(!cfg_str2list_insert(&cfg_parser->cfg->acls, $2, $3))
 				fatal_exit("out of memory adding acl");
 		}
+	}
+	;
+server_send_client_subnet: VAR_SEND_CLIENT_SUBNET STRING_ARG
+	{
+		OUTYY(("P(server_send_client_subnet:%s)\n", $2));
+		if(!cfg_strlist_insert(&cfg_parser->cfg->client_subnet, $2))
+			fatal_exit("out of memory adding client-subnet");
 	}
 	;
 server_module_conf: VAR_MODULE_CONF STRING_ARG

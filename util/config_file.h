@@ -150,6 +150,14 @@ struct config_file {
 	struct config_stub* forwards;
 	/** list of donotquery addresses, linked list */
 	struct config_strlist* donotqueryaddrs;
+	/** list of servers we send edns-client-subnet option to and 
+	 * accept option from, linked list */
+	struct config_strlist* client_subnet;
+	/** opcode assigned by IANA for edns0-client-subnet option */
+	int client_subnet_opc;
+	/** Subnet length we are willing to give up privacy for */
+	int max_client_subnet_ipv4;
+	int max_client_subnet_ipv6;
 	/** list of access control entries, linked list */
 	struct config_str2list* acls;
 	/** use default localhost donotqueryaddr entries */
