@@ -643,6 +643,8 @@ libworker_bg_done_cb(void* arg, int rcode, ldns_buffer* buf, enum sec_status s,
 		return;
 	}
 	q->msg_security = s;
+	if(!buf)
+		buf = q->w->env->scratch_buffer;
 	if(rcode != 0) {
 		error_encode(buf, rcode, NULL, 0, BIT_RD, NULL);
 	}
