@@ -4215,6 +4215,8 @@ ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
 ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
 ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
+# allow user to override the -g -O2 flags.
+if test "x$CFLAGS" = "x" ; then
 
 
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether $CC supports -g" >&5
@@ -4277,6 +4279,7 @@ $as_echo "no" >&6; }
 
 fi
 
+fi
 ac_ext=c
 ac_cpp='$CPP $CPPFLAGS'
 ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'

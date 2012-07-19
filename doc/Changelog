@@ -1,3 +1,8 @@
+19 July 2012: Willem
+	- Fix bug#454: Remove ACX_CHECK_COMPILER_FLAG from configure.ac,
+	  if CFLAGS is specified at configure time then '-g -O2' is not
+	  appended to CFLAGS, so that the user can override them.
+
 18 July 2012: Willem
 	- Fix libunbound report of errors when in background mode.
 

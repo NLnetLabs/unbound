@@ -209,8 +209,11 @@ AC_DEFINE_UNQUOTED(RSRC_PACKAGE_VERSION, [$wnvs], [version number for resource f
 # Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST
 AC_LANG_C
+# allow user to override the -g -O2 flags.
+if test "x$CFLAGS" = "x" ; then
 ACX_CHECK_COMPILER_FLAG(g, [CFLAGS="$CFLAGS -g"])
 ACX_CHECK_COMPILER_FLAG(O2, [CFLAGS="$CFLAGS -O2"])
+fi
 AC_PROG_CC
 ACX_DEPFLAG
 ACX_DETERMINE_EXT_FLAGS_UNBOUND
