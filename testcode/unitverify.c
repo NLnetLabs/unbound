@@ -42,6 +42,7 @@
 #include "util/log.h"
 #include "testcode/unitmain.h"
 #include "validator/val_sigcrypt.h"
+#include "validator/val_secalgo.h"
 #include "validator/val_nsec.h"
 #include "validator/val_nsec3.h"
 #include "validator/validator.h"
