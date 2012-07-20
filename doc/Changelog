@@ -1,3 +1,8 @@
+20 July 2012: Willem
+	- Fix bug#452 and another assertion failure in mesh.c, makes
+	  assertions in mesh.c resist duplicates.  Fixes DS NS search to
+	  not generate duplicate sub queries.
+
 19 July 2012: Willem
 	- Fix bug#454: Remove ACX_CHECK_COMPILER_FLAG from configure.ac,
 	  if CFLAGS is specified at configure time then '-g -O2' is not

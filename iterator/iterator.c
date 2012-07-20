@@ -1539,8 +1539,7 @@ processLastResort(struct module_qstate* qstate, struct iter_qstate* iq,
  *         the final state (i.e., on answer).
  */
 static int
-processDSNSFind(struct module_qstate* qstate, struct iter_qstate* iq,
-	int id)
+processDSNSFind(struct module_qstate* qstate, struct iter_qstate* iq, int id)
 {
 	struct module_qstate* subq = NULL;
 	verbose(VERB_ALGO, "processDSNSFind");
@@ -1904,8 +1903,16 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		if(iq->qchase.qtype == LDNS_RR_TYPE_DS && !iq->dsns_point
 			&& !(iq->chase_flags&BIT_RD)
 			&& iter_ds_toolow(iq->response, iq->dp)
-			&& iter_dp_cangodown(&iq->qchase, iq->dp))
+			&& iter_dp_cangodown(&iq->qchase, iq->dp)) {
+			/* close down outstanding requests to be discarded */
+			outbound_list_clear(&iq->outlist);
+			iq->num_current_queries = 0;
+			fptr_ok(fptr_whitelist_modenv_detach_subs(
+				qstate->env->detach_subs));
+			(*qstate->env->detach_subs)(qstate);
+			iq->num_target_queries = 0;
 			return processDSNSFind(qstate, iq, id);
+		}
 		iter_dns_store(qstate->env, &iq->response->qinfo,
 			iq->response->rep, 0, qstate->prefetch_leeway,
 			iq->dp&&iq->dp->has_parent_side_NS,
@@ -2027,8 +2034,15 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		if(iq->qchase.qtype == LDNS_RR_TYPE_DS && !iq->dsns_point
 			&& !(iq->chase_flags&BIT_RD)
 			&& iter_ds_toolow(iq->response, iq->dp)
-			&& iter_dp_cangodown(&iq->qchase, iq->dp))
+			&& iter_dp_cangodown(&iq->qchase, iq->dp)) {
+			outbound_list_clear(&iq->outlist);
+			iq->num_current_queries = 0;
+			fptr_ok(fptr_whitelist_modenv_detach_subs(
+				qstate->env->detach_subs));
+			(*qstate->env->detach_subs)(qstate);
+			iq->num_target_queries = 0;
 			return processDSNSFind(qstate, iq, id);
+		}
 		/* Process the CNAME response. */
 		if(!handle_cname_response(qstate, iq, iq->response, 
 			&sname, &snamelen))
