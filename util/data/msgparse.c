@@ -39,7 +39,6 @@
 #include "config.h"
 #include <ldns/ldns.h>
 #include "util/data/msgparse.h"
-#include "util/net_help.h"
 #include "util/data/dname.h"
 #include "util/data/packed_rrset.h"
 #include "util/storage/lookup3.h"

@@ -1,4 +1,7 @@
-20 July 2012: Willem
+23 July 2012: Wouter
+	- fix missing break for GOST DS hash function.
+
+20 July 2012: Wouter
 	- Fix bug#452 and another assertion failure in mesh.c, makes
 	  assertions in mesh.c resist duplicates.  Fixes DS NS search to
 	  not generate duplicate sub queries.

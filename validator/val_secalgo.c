@@ -131,6 +131,7 @@ secalgo_ds_digest(int algo, unsigned char* buf, size_t len,
 		case LDNS_HASH_GOST:
 			if(do_gost94(buf, len, res))
 				return 1;
+			break;
 #endif
 #ifdef USE_ECDSA
 		case LDNS_SHA384:
