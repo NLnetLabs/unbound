@@ -1430,7 +1430,24 @@ processLastResort(struct module_qstate* qstate, struct iter_qstate* iq,
 	verbose(VERB_ALGO, "No more query targets, attempting last resort");
 	log_assert(iq->dp);
 
-	if(!iq->dp->has_parent_side_NS) {
+	if(!iq->dp->has_parent_side_NS && dname_is_root(iq->dp->name)) {
+		struct delegpt* p = hints_lookup_root(qstate->env->hints,
+			iq->qchase.qclass);
+		if(p) {
+			struct delegpt_ns* ns;
+			struct delegpt_addr* a;
+			for(ns = p->nslist; ns; ns=ns->next) {
+				(void)delegpt_add_ns(iq->dp, qstate->region,
+					ns->name, (int)ns->lame);
+			}
+			for(a = p->target_list; a; a=a->next_target) {
+				(void)delegpt_add_addr(iq->dp, qstate->region,
+					&a->addr, a->addrlen, a->bogus,
+					a->lame);
+			}
+		}
+		iq->dp->has_parent_side_NS = 1;
+	} else if(!iq->dp->has_parent_side_NS) {
 		if(!iter_lookup_parent_NS_from_cache(qstate->env, iq->dp,
 			qstate->region, &qstate->qinfo) 
 			|| !iq->dp->has_parent_side_NS) {

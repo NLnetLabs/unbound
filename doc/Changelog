@@ -1,5 +1,6 @@
 23 July 2012: Wouter
 	- fix missing break for GOST DS hash function.
+	- implemented forward_first for the root.
 
 20 July 2012: Wouter
 	- Fix bug#452 and another assertion failure in mesh.c, makes
