@@ -973,6 +973,7 @@ verify_canonrrset(ldns_buffer* buf, int algo, unsigned char* sigblock,
 	/* uses libNSS */
 	/* large enough for the different hashes */
 	unsigned char hash[HASH_LENGTH_MAX];
+	unsigned char hash2[HASH_LENGTH_MAX*2];
 	HASH_HashType htype = 0;
 	SECKEYPublicKey* pubkey = NULL;
 	SECItem secsig = {siBuffer, sigblock, sigblock_len};
@@ -1029,7 +1030,12 @@ verify_canonrrset(ldns_buffer* buf, int algo, unsigned char* sigblock,
 	}
 	if(prefix) {
 		int hashlen = sechash.len;
-		sechash.data = PORT_ArenaAlloc(pubkey->arena, prefixlen+hashlen);
+		if(prefixlen+hashlen > sizeof(hash2)) {
+			verbose(VERB_QUERY, "verify: hashprefix too large");
+			SECKEY_DestroyPublicKey(pubkey);
+			return sec_status_unchecked;
+		}
+		sechash.data = hash2;
 		sechash.len = prefixlen+hashlen;
 		memcpy(sechash.data, prefix, prefixlen);
 		memmove(sechash.data+prefixlen, hash, hashlen);

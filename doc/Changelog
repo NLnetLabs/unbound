@@ -1,3 +1,6 @@
+25 July 2012: Wouter
+	- review fix for libnss, check hash prefix allocation size.
+
 23 July 2012: Wouter
 	- fix missing break for GOST DS hash function.
 	- implemented forward_first for the root.
