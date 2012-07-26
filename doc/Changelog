@@ -1,5 +1,6 @@
 26 July 2012: Wouter
 	- iana portlist updated.
+	- tag 1.4.18rc1.
 
 25 July 2012: Wouter
 	- review fix for libnss, check hash prefix allocation size.
