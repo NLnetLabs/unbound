@@ -1,3 +1,6 @@
+30 July 2012: Wouter
+	- tag 1.4.18rc2.
+
 27 July 2012: Wouter
 	- unbound-host works with libNSS
 	- fix bogus nodata cname chain not reported as bogus by validator,
