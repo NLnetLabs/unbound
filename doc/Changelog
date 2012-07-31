@@ -4,6 +4,7 @@
 	  serviced_query, without race conditions or administration issues.
 	  This should not happen with the current codebase, but it is robust.
 	- Fix forward-first option where it sets the RD flag wrongly.
+	- added manpage links for libunbound calls (Thanks Paul Wouters).
 
 30 July 2012: Wouter
 	- tag 1.4.18rc2.
