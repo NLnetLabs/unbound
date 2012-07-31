@@ -1436,6 +1436,7 @@ processLastResort(struct module_qstate* qstate, struct iter_qstate* iq,
 		if(p) {
 			struct delegpt_ns* ns;
 			struct delegpt_addr* a;
+			iq->chase_flags &= ~BIT_RD; /* go to authorities */
 			for(ns = p->nslist; ns; ns=ns->next) {
 				(void)delegpt_add_ns(iq->dp, qstate->region,
 					ns->name, (int)ns->lame);
@@ -1455,6 +1456,7 @@ processLastResort(struct module_qstate* qstate, struct iter_qstate* iq,
 			/* if: no parent NS in cache - go up one level */
 			verbose(VERB_ALGO, "try to grab parent NS");
 			iq->store_parent_NS = iq->dp;
+			iq->chase_flags &= ~BIT_RD; /* go to authorities */
 			iq->deleg_msg = NULL;
 			iq->refetch_glue = 1;
 			iq->query_restart_count++;
