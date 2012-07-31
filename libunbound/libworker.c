@@ -705,17 +705,6 @@ void libworker_alloc_cleanup(void* arg)
         slabhash_clear(w->env->msg_cache);
 }
 
-/** compare outbound entry qstates */
-static int
-outbound_entry_compare(void* a, void* b)
-{
-        struct outbound_entry* e1 = (struct outbound_entry*)a;
-        struct outbound_entry* e2 = (struct outbound_entry*)b;
-        if(e1->qstate == e2->qstate)
-                return 1;
-        return 0;
-}
-
 struct outbound_entry* libworker_send_query(uint8_t* qname, size_t qnamelen,
         uint16_t qtype, uint16_t qclass, uint16_t flags, int dnssec,
 	int want_dnssec, struct sockaddr_storage* addr, socklen_t addrlen,
@@ -731,7 +720,7 @@ struct outbound_entry* libworker_send_query(uint8_t* qname, size_t qnamelen,
 		qnamelen, qtype, qclass, flags, dnssec, want_dnssec,
 		q->env->cfg->tcp_upstream, q->env->cfg->ssl_upstream, addr,
 		addrlen, zone, zonelen, libworker_handle_service_reply, e,
-		w->back->udp_buff, &outbound_entry_compare);
+		w->back->udp_buff);
 	if(!e->qsent) {
 		return NULL;
 	}

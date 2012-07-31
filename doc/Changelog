@@ -1,5 +1,8 @@
 31 July 2012: Wouter
 	- Improved forward-first and stub-first documentation.
+	- Fix that enables modules to register twice for the same
+	  serviced_query, without race conditions or administration issues.
+	  This should not happen with the current codebase, but it is robust.
 
 30 July 2012: Wouter
 	- tag 1.4.18rc2.
