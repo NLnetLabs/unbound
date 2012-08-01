@@ -726,6 +726,7 @@ void* outgoing_ssl_fd(void* sslctx, int fd)
 #endif
 }
 
+#ifdef OPENSSL_THREADS
 /** global lock list for openssl locks */
 static lock_basic_t *ub_openssl_locks = NULL;
 
@@ -746,6 +747,7 @@ ub_crypto_lock_cb(int mode, int type, const char *ATTR_UNUSED(file),
 		lock_basic_unlock(&ub_openssl_locks[type]);
 	}
 }
+#endif /* OPENSSL_THREADS */
 
 int ub_openssl_lock_init(void)
 {
