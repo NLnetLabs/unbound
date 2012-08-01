@@ -958,7 +958,7 @@ daemon.lo daemon.o: $(srcdir)/daemon/daemon.c config.h \
  $(srcdir)/util/storage/dnstree.h $(srcdir)/util/rbtree.h $(srcdir)/util/config_file.h \
  $(srcdir)/util/storage/lookup3.h $(srcdir)/util/storage/slabhash.h $(srcdir)/services/listen_dnsport.h \
  $(srcdir)/services/cache/rrset.h $(srcdir)/services/cache/infra.h $(srcdir)/util/rtt.h \
- $(srcdir)/services/localzone.h $(srcdir)/util/random.h $(srcdir)/util/tube.h
+ $(srcdir)/services/localzone.h $(srcdir)/util/random.h $(srcdir)/util/tube.h $(srcdir)/util/net_help.h
 remote.lo remote.o: $(srcdir)/daemon/remote.c config.h \
  $(srcdir)/daemon/remote.h \
  $(srcdir)/daemon/worker.h $(srcdir)/util/netevent.h $(srcdir)/util/locks.h $(srcdir)/util/log.h $(srcdir)/util/alloc.h \
@@ -1043,7 +1043,7 @@ daemon.lo daemon.o: $(srcdir)/daemon/daemon.c config.h \
  $(srcdir)/util/storage/dnstree.h $(srcdir)/util/rbtree.h $(srcdir)/util/config_file.h \
  $(srcdir)/util/storage/lookup3.h $(srcdir)/util/storage/slabhash.h $(srcdir)/services/listen_dnsport.h \
  $(srcdir)/services/cache/rrset.h $(srcdir)/services/cache/infra.h $(srcdir)/util/rtt.h \
- $(srcdir)/services/localzone.h $(srcdir)/util/random.h $(srcdir)/util/tube.h
+ $(srcdir)/services/localzone.h $(srcdir)/util/random.h $(srcdir)/util/tube.h $(srcdir)/util/net_help.h
 stats.lo stats.o: $(srcdir)/daemon/stats.c config.h \
  $(srcdir)/daemon/stats.h \
  $(srcdir)/util/timehist.h $(srcdir)/daemon/worker.h $(srcdir)/util/netevent.h $(srcdir)/util/locks.h $(srcdir)/util/log.h \
