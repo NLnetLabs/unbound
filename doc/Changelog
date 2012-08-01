@@ -1,3 +1,7 @@
+1 August 2012: Wouter
+	- Fix openssl race condition, initializes openssl locks, reported
+	  by Einar Lonn and Patrik Wallstrom.
+
 31 July 2012: Wouter
 	- Improved forward-first and stub-first documentation.
 	- Fix that enables modules to register twice for the same

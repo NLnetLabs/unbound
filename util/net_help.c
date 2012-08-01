@@ -725,3 +725,54 @@ void* outgoing_ssl_fd(void* sslctx, int fd)
 	return NULL;
 #endif
 }
+
+/** global lock list for openssl locks */
+static lock_basic_t *ub_openssl_locks = NULL;
+
+/** callback that gets thread id for openssl */
+static unsigned long
+ub_crypto_id_cb(void)
+{
+	return (unsigned long)ub_thread_self();
+}
+
+static void
+ub_crypto_lock_cb(int mode, int type, const char *ATTR_UNUSED(file),
+	int ATTR_UNUSED(line))
+{
+	if((mode&CRYPTO_LOCK)) {
+		lock_basic_lock(&ub_openssl_locks[type]);
+	} else {
+		lock_basic_unlock(&ub_openssl_locks[type]);
+	}
+}
+
+int ub_openssl_lock_init(void)
+{
+#ifdef OPENSSL_THREADS
+	size_t i;
+	ub_openssl_locks = (lock_basic_t*)malloc(
+		sizeof(lock_basic_t)*CRYPTO_num_locks());
+	if(!ub_openssl_locks)
+		return 0;
+	for(i=0; i<CRYPTO_num_locks(); i++) {
+		lock_basic_init(&ub_openssl_locks[i]);
+	}
+	CRYPTO_set_id_callback(&ub_crypto_id_cb);
+	CRYPTO_set_locking_callback(&ub_crypto_lock_cb);
+#endif /* OPENSSL_THREADS */
+	return 1;
+}
+
+void ub_openssl_lock_delete(void)
+{
+#ifdef OPENSSL_THREADS
+	size_t i;
+	if(!ub_openssl_locks)
+		return;
+	for(i=0; i<CRYPTO_num_locks(); i++) {
+		lock_basic_destroy(&ub_openssl_locks[i]);
+	}
+#endif /* OPENSSL_THREADS */
+}
+
