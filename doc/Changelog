@@ -11,7 +11,7 @@
 	- added manpage links for libunbound calls (Thanks Paul Wouters).
 
 30 July 2012: Wouter
-	- tag 1.4.18rc2.
+	- tag 1.4.18rc2 (became 1.4.18 release at 2 august 2012).
 
 27 July 2012: Wouter
 	- unbound-host works with libNSS
