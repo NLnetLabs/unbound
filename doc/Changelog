@@ -1,6 +1,7 @@
 2 August 2012: Wouter
 	- trunk has 1.4.19 under development (fixes from 1 aug and 31 july
 	are for 1.4.19).
+	- iana portlist updated.
 
 1 August 2012: Wouter
 	- Fix openssl race condition, initializes openssl locks, reported
