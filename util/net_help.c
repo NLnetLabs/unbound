@@ -52,6 +52,8 @@
 #define MAX_ADDR_STRLEN 128 /* characters */
 /** default value for EDNS ADVERTISED size */
 uint16_t EDNS_ADVERTISED_SIZE = 4096;
+/** YBS: opcode for edns subnet option, is TBD. */
+uint16_t EDNS_SUBNET_OPC = 0x50fa;
 
 /** minimal responses when positive answer: default is no */
 int MINIMAL_RESPONSES = 0;

@@ -728,7 +728,8 @@ calc_edns_field_size(struct edns_data* edns)
 void
 attach_edns_record(ldns_buffer* pkt, struct edns_data* edns)
 {
-	size_t len;
+	size_t len, sn_octs, sn_octs_remainder;
+	int i;
 	if(!edns || !edns->edns_present)
 		return;
 	/* inc additional count */
@@ -744,7 +745,29 @@ attach_edns_record(ldns_buffer* pkt, struct edns_data* edns)
 	ldns_buffer_write_u8(pkt, edns->ext_rcode); /* ttl */
 	ldns_buffer_write_u8(pkt, edns->edns_version);
 	ldns_buffer_write_u16(pkt, edns->bits);
-	ldns_buffer_write_u16(pkt, 0); /* rdatalen */
+	/* YBS: do vandergaast hier! */
+	if(edns->subnet_option_add) {
+		assert(edns.addr_fam == 0x01 || edns.addr_fam == 0x02);
+		assert(edns.addr_fam != 0x01 || edns->subnet_source_mask <=  32);
+		assert(edns.addr_fam != 0x02 || edns->subnet_source_mask <= 128); //ipv6 addr fam?
+
+		sn_octs = edns->subnet_source_mask / 8;
+		sn_octs_remainder = !!(edns->subnet_source_mask % 8);
+		
+		ldns_buffer_write_u16(pkt, sn_octs + sn_octs_remainder + 4 + 4); /* rdatalen */
+		ldns_buffer_write_u16(pkt, EDNS_SUBNET_OPC); /* opc */
+		ldns_buffer_write_u16(pkt, sn_octs + sn_octs_remainder + 4); /* datalen */
+		ldns_buffer_write_u16(pkt, edns->subnet_addr_fam); /* addr fam */
+		ldns_buffer_write_u8(pkt,  edns->subnet_source_mask); /* source mask */
+		ldns_buffer_write_u8(pkt,  edns->subnet_scope_mask); /* scope mask */
+
+		for(i = 0; i<sn_octs; i++)
+			ldns_buffer_write_u8(pkt, edns->subnet_addr[i]);
+		if(sn_octs_remainder)
+				ldns_buffer_write_u8(pkt, edns->subnet_addr[sn_octs] & 
+						~(1<<(8-(edns->subnet_source_mask % 8))-1));
+	} else ldns_buffer_write_u16(pkt, 0); /* rdatalen */
+	/* //YBS: do vandergaast hier! */
 	ldns_buffer_flip(pkt);
 }
 

@@ -81,6 +81,8 @@ struct regional;
 #define EDNS_ADVERTISED_VERSION         0
 /** Advertised size of EDNS capabilities */
 extern uint16_t EDNS_ADVERTISED_SIZE;
+/** YBS: opcode for edns subnet option, is TBD. */
+extern uint16_t EDNS_SUBNET_OPC;
 /** bits for EDNS bitfield */
 #define EDNS_DO 0x8000 /* Dnssec Ok */
 /** byte size of ip4 address */

@@ -1323,6 +1323,7 @@ serviced_encode(struct serviced_query* sq, ldns_buffer* buff, int with_edns)
 		edns.edns_present = 1;
 		edns.ext_rcode = 0;
 		edns.edns_version = EDNS_ADVERTISED_VERSION;
+		edns.subnet_option_add = 0;
 		if(sq->status == serviced_query_UDP_EDNS_FRAG) {
 			if(addr_is_ip6(&sq->addr, sq->addrlen)) {
 				if(EDNS_FRAG_SIZE_IP6 < EDNS_ADVERTISED_SIZE)

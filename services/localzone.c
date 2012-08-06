@@ -1010,6 +1010,7 @@ local_encode(struct query_info* qinfo, struct edns_data* edns,
 	edns->udp_size = EDNS_ADVERTISED_SIZE;
 	edns->ext_rcode = 0;
 	edns->bits &= EDNS_DO;
+	edns->subnet_option_add = 0;
 	if(!reply_info_answer_encode(qinfo, &rep, 
 		*(uint16_t*)ldns_buffer_begin(buf),
 		ldns_buffer_read_u16_at(buf, 2),
