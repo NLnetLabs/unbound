@@ -1078,6 +1078,7 @@ struct serviced_query* outnet_serviced_query(struct outside_network* outnet,
 		edns.edns_version = EDNS_ADVERTISED_VERSION;
 		edns.udp_size = EDNS_ADVERTISED_SIZE;
 		edns.bits = 0;
+		edns.subnet_option_add = 0; 
 		if(dnssec)
 			edns.bits = EDNS_DO;
 		attach_edns_record(pend->buffer, &edns);

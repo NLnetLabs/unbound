@@ -982,6 +982,7 @@ parse_extract_edns(struct msg_parse* msg, struct edns_data* edns)
 	edns->edns_version = found->rr_last->ttl_data[1];
 	edns->bits = ldns_read_uint16(&found->rr_last->ttl_data[2]);
 	edns->udp_size = ntohs(found->rrset_class);
+	edns->subnet_option_add = 0; //YBS do some actual parsing here
 	/* ignore rdata and rrsigs */
 	return 0;
 }

@@ -1191,6 +1191,9 @@ void *unbound_stat_realloc_log(void *ptr, size_t size, const char* file,
 /** the version of unbound-control that this software implements */
 #define UNBOUND_CONTROL_VERSION 1
 
+/** YBS: in use by the edns subnet option code*/
+#define IANA_ADDRFAM_IP4 1
+#define IANA_ADDRFAM_IP6 2
 ])
 
 AC_CONFIG_FILES([Makefile doc/example.conf doc/libunbound.3 doc/unbound.8 doc/unbound-anchor.8 doc/unbound-checkconf.8 doc/unbound.conf.5 doc/unbound-control.8])

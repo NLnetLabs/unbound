@@ -1323,7 +1323,13 @@ serviced_encode(struct serviced_query* sq, ldns_buffer* buff, int with_edns)
 		edns.edns_present = 1;
 		edns.ext_rcode = 0;
 		edns.edns_version = EDNS_ADVERTISED_VERSION;
-		edns.subnet_option_add = 0;
+		//YBS make conditional on whitelist
+		edns.subnet_option_add = 0; 
+		//~ uint16_t 	subnet_addr_fam;
+		//~ uint8_t 	subnet_source_mask;
+		//~ uint8_t 	subnet_scope_mask;
+		//~ uint8_t 	subnet_addr[16];
+		//YBS
 		if(sq->status == serviced_query_UDP_EDNS_FRAG) {
 			if(addr_is_ip6(&sq->addr, sq->addrlen)) {
 				if(EDNS_FRAG_SIZE_IP6 < EDNS_ADVERTISED_SIZE)

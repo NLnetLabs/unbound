@@ -141,6 +141,7 @@ write_q(int fd, int udp, SSL* ssl, ldns_buffer* buf, uint16_t id,
 		edns.edns_present = 1;
 		edns.bits = EDNS_DO;
 		edns.udp_size = 4096;
+		edns.subnet_option_add = 0; 
 		attach_edns_record(buf, &edns);
 	}
 
