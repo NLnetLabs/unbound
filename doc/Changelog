@@ -1,3 +1,6 @@
+17 August 2012: Wouter
+	- Add documentation to libunbound for default nonuse of resolv.conf.
+
 2 August 2012: Wouter
 	- trunk has 1.4.19 under development (fixes from 1 aug and 31 july
 	are for 1.4.19).

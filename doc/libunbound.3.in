@@ -203,7 +203,9 @@ At this time it is only possible to set configuration before the
 first resolve is done.
 .TP
 .B ub_ctx_resolvconf
-Read list of nameservers to use from the filename given.
+By default the root servers are queried and full resolver mode is used, but
+you can use this call to read the list of nameservers to use from the
+filename given.
 Usually "/etc/resolv.conf". Uses those nameservers as caching proxies.
 If they do not support DNSSEC, validation may fail.
 Only nameservers are picked up, the searchdomain, ndots and other
