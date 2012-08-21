@@ -1,3 +1,8 @@
+21 August 2012: Wouter
+	- Fix timeouts so that when a server has been offline for a while
+	  and is probed to see it works, it becomes fully available for
+	  server selection again.
+
 17 August 2012: Wouter
 	- Add documentation to libunbound for default nonuse of resolv.conf.
 
