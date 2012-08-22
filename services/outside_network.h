@@ -279,9 +279,9 @@ struct service_callback {
 };
 
 /** fallback size for fragmentation for EDNS in IPv4 */
-#define EDNS_FRAG_SIZE_IP4 1480
+#define EDNS_FRAG_SIZE_IP4 1472
 /** fallback size for EDNS in IPv6, fits one fragment with ip6-tunnel-ids */
-#define EDNS_FRAG_SIZE_IP6 1260
+#define EDNS_FRAG_SIZE_IP6 1232
 
 /**
  * Query service record.

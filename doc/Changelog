@@ -1,3 +1,6 @@
+22 August 2012: Wouter
+	- Fallback to 1472 and 1232, one fragment size without headers.
+
 21 August 2012: Wouter
 	- Fix timeouts so that when a server has been offline for a while
 	  and is probed to see it works, it becomes fully available for
