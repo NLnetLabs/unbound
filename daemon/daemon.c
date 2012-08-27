@@ -73,6 +73,7 @@
 #include "util/module.h"
 #include "util/random.h"
 #include "util/tube.h"
+#include "edns-subnet/edns-subnet.h"
 #include <signal.h>
 
 /** How many quit requests happened. */
@@ -219,6 +220,13 @@ daemon_init(void)
 	alloc_init(&daemon->superalloc, NULL, 0);
 	daemon->acl = acl_list_create();
 	if(!daemon->acl) {
+		free(daemon->env);
+		free(daemon);
+		return NULL;
+	}
+	/* whitelist for edns subnet capable servers */
+	daemon->edns_subnet_upstreams = upstream_create();
+	if(!daemon->edns_subnet_upstreams) {
 		free(daemon->env);
 		free(daemon);
 		return NULL;
@@ -438,6 +446,8 @@ daemon_fork(struct daemon* daemon)
 	log_assert(daemon);
 	if(!acl_list_apply_cfg(daemon->acl, daemon->cfg))
 		fatal_exit("Could not setup access control list");
+	if(!upstream_apply_cfg(daemon->edns_subnet_upstreams, daemon->cfg))
+		fatal_exit("Could not setup edns-subnet upstream list");
 	if(!(daemon->local_zones = local_zones_create()))
 		fatal_exit("Could not create local zones: out of memory");
 	if(!local_zones_apply_cfg(daemon->local_zones, daemon->cfg))
@@ -527,6 +537,7 @@ daemon_delete(struct daemon* daemon)
 	ub_randfree(daemon->rand);
 	alloc_clear(&daemon->superalloc);
 	acl_list_delete(daemon->acl);
+	upstream_delete(daemon->edns_subnet_upstreams);
 	free(daemon->chroot);
 	free(daemon->pidfile);
 	free(daemon->env);

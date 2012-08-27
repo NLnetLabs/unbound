@@ -47,6 +47,7 @@
 #include <sys/time.h>
 #include <ldns/wire2host.h>
 #include "services/outside_network.h"
+#include "services/outbound_list.h"
 #include "services/listen_dnsport.h"
 #include "services/cache/infra.h"
 #include "util/data/msgparse.h"
@@ -58,6 +59,7 @@
 #include "util/net_help.h"
 #include "util/random.h"
 #include "util/fptr_wlist.h"
+#include "edns-subnet/edns-subnet.h"
 #include <openssl/ssl.h>
 
 #ifdef HAVE_NETDB_H
@@ -557,7 +559,7 @@ outside_network_create(struct comm_base *base, size_t bufsize,
 	struct ub_randstate* rnd, int use_caps_for_id, int* availports, 
 	int numavailports, size_t unwanted_threshold,
 	void (*unwanted_action)(void*), void* unwanted_param, int do_udp,
-	void* sslctx)
+	void* sslctx, struct ednssubnet_upstream* edns_subnet_upstreams)
 {
 	struct outside_network* outnet = (struct outside_network*)
 		calloc(1, sizeof(struct outside_network));
@@ -579,6 +581,7 @@ outside_network_create(struct comm_base *base, size_t bufsize,
 	outnet->unwanted_param = unwanted_param;
 	outnet->use_caps_for_id = use_caps_for_id;
 	outnet->do_udp = do_udp;
+	outnet->edns_subnet_upstreams = edns_subnet_upstreams;
 	if(numavailports == 0) {
 		log_err("no outgoing ports available");
 		outside_network_delete(outnet);
@@ -1204,6 +1207,7 @@ serviced_create(struct outside_network* outnet, ldns_buffer* buff, int dnssec,
 	sq->status = serviced_initial;
 	sq->retry = 0;
 	sq->to_be_deleted = 0;
+	sq->client = NULL;
 #ifdef UNBOUND_DEBUG
 	ins = 
 #endif
@@ -1308,6 +1312,8 @@ serviced_perturb_qname(struct ub_randstate* rnd, uint8_t* qbuf, size_t len)
 static void
 serviced_encode(struct serviced_query* sq, ldns_buffer* buff, int with_edns)
 {
+	struct sockaddr_storage *ss;
+	void* sinaddr;
 	/* if we are using 0x20 bits for ID randomness, perturb them */
 	if(sq->outnet->use_caps_for_id) {
 		serviced_perturb_qname(sq->outnet->rnd, sq->qbuf, sq->qbuflen);
@@ -1323,13 +1329,31 @@ serviced_encode(struct serviced_query* sq, ldns_buffer* buff, int with_edns)
 		edns.edns_present = 1;
 		edns.ext_rcode = 0;
 		edns.edns_version = EDNS_ADVERTISED_VERSION;
-		//YBS make conditional on whitelist
-		edns.subnet_option_add = 0; 
-		//~ uint16_t 	subnet_addr_fam;
-		//~ uint8_t 	subnet_source_mask;
-		//~ uint8_t 	subnet_scope_mask;
-		//~ uint8_t 	subnet_addr[16];
-		//YBS
+		/* If this query has an interested client and the upstream
+		 * target is in the whitelist, add the edns subnet option. */
+		edns.subnet_option_add = sq->client && upstream_lookup(
+			sq->outnet->edns_subnet_upstreams, &sq->addr, sq->addrlen);
+		if(edns.subnet_option_add) {
+			ss = &sq->client->addr;
+			if(((struct sockaddr_in*)ss)->sin_family == AF_INET) {
+				edns.subnet_addr_fam = IANA_ADDRFAM_IP4;
+				sinaddr = &((struct sockaddr_in*)ss)->sin_addr;
+				memcpy(edns.subnet_addr, (uint8_t *)sinaddr, INET_SIZE);
+				/* YBS TODO: source mask must come from original query if
+				 * any. Some default otherwise. But not more than 
+				 * configured maximum */
+				edns.subnet_source_mask = 26;
+			} 
+#ifdef INET6
+			else {
+				edns.subnet_addr_fam = IANA_ADDRFAM_IP6;
+				sinaddr = &((struct sockaddr_in6*)ss)->sin6_addr;
+				memcpy(edns.subnet_addr, (uint8_t *)sinaddr, INET6_SIZE);
+				edns.subnet_source_mask = 100;
+			}
+#endif
+			edns.subnet_scope_mask = 0;
+		}
 		if(sq->status == serviced_query_UDP_EDNS_FRAG) {
 			if(addr_is_ip6(&sq->addr, sq->addrlen)) {
 				if(EDNS_FRAG_SIZE_IP6 < EDNS_ADVERTISED_SIZE)
@@ -1811,6 +1835,7 @@ outnet_serviced_query(struct outside_network* outnet,
 {
 	struct serviced_query* sq;
 	struct service_callback* cb;
+	struct mesh_reply* reply_list;
 	serviced_gen_query(buff, qname, qnamelen, qtype, qclass, flags);
 	sq = lookup_serviced(outnet, buff, dnssec, addr, addrlen);
 	if(sq) {
@@ -1830,6 +1855,13 @@ outnet_serviced_query(struct outside_network* outnet,
 			free(cb);
 			return NULL;
 		}
+		/* Is this a client initiated query? Make clients available
+		 * to serviced query. */
+		reply_list = ((struct outbound_entry*)callback_arg)
+						->qstate->mesh_info->reply_list;
+		if(reply_list)
+			sq->client = &reply_list->query_reply;
+		
 		/* perform first network action */
 		if(outnet->do_udp && !(tcp_upstream || ssl_upstream)) {
 			if(!serviced_udp_send(sq, buff)) {

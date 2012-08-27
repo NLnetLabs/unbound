@@ -729,7 +729,6 @@ void
 attach_edns_record(ldns_buffer* pkt, struct edns_data* edns)
 {
 	size_t len, sn_octs, sn_octs_remainder;
-	int i;
 	if(!edns || !edns->edns_present)
 		return;
 	/* inc additional count */
@@ -745,14 +744,14 @@ attach_edns_record(ldns_buffer* pkt, struct edns_data* edns)
 	ldns_buffer_write_u8(pkt, edns->ext_rcode); /* ttl */
 	ldns_buffer_write_u8(pkt, edns->edns_version);
 	ldns_buffer_write_u16(pkt, edns->bits);
-	/* YBS: do vandergaast hier! */
+	/* Add edns-subnet option to record */
 	if(edns->subnet_option_add) {
 		assert(edns.addr_fam == IANA_ADDRFAM_IP4 || 
 			edns.addr_fam == IANA_ADDRFAM_IP6);
 		assert(edns.addr_fam != IANA_ADDRFAM_IP4 || 
-			edns->subnet_source_mask <=  32);
+			edns->subnet_source_mask <=  INET_SIZE*8);
 		assert(edns.addr_fam != IANA_ADDRFAM_IP6 || 
-			edns->subnet_source_mask <= 128); //ipv6 addr fam?
+			edns->subnet_source_mask <= INET6_SIZE*8);
 
 		sn_octs = edns->subnet_source_mask / 8;
 		sn_octs_remainder = (edns->subnet_source_mask % 8)>0?1:0;
@@ -773,7 +772,6 @@ attach_edns_record(ldns_buffer* pkt, struct edns_data* edns)
 				ldns_buffer_write_u8(pkt, edns->subnet_addr[sn_octs] & 
 						~(0xFF >> (edns->subnet_source_mask % 8)));
 	} else ldns_buffer_write_u16(pkt, 0); /* rdatalen */
-	/* //YBS: do vandergaast hier! */
 	ldns_buffer_flip(pkt);
 }
 

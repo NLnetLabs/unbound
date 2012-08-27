@@ -120,6 +120,8 @@ struct outside_network {
 	struct ub_randstate* rnd;
 	/** ssl context to create ssl wrapped TCP with DNS connections */
 	void* sslctx;
+	/** hosts we send client prefix, not owned by outnet. */
+	struct ednssubnet_upstream* edns_subnet_upstreams;
 
 	/**
 	 * Array of tcp pending used for outgoing TCP connections.
@@ -353,6 +355,8 @@ struct serviced_query {
 	struct service_callback* cblist;
 	/** the UDP or TCP query that is pending, see status which */
 	void* pending;
+	/** Clients initiating lookup. Not owned by serviced_query */
+	struct comm_reply *client;
 };
 
 /**
@@ -376,6 +380,7 @@ struct serviced_query {
  * @param unwanted_param: user parameter to action.
  * @param do_udp: if udp is done.
  * @param sslctx: context to create outgoing connections with (if enabled).
+ * @param edns_subnet_upstreams: Servers whitelisted for edns-subnet.
  * @return: the new structure (with no pending answers) or NULL on error.
  */
 struct outside_network* outside_network_create(struct comm_base* base,
@@ -384,7 +389,7 @@ struct outside_network* outside_network_create(struct comm_base* base,
 	struct ub_randstate* rnd, int use_caps_for_id, int* availports, 
 	int numavailports, size_t unwanted_threshold,
 	void (*unwanted_action)(void*), void* unwanted_param, int do_udp,
-	void* sslctx);
+	void* sslctx, struct ednssubnet_upstream* edns_subnet_upstreams);
 
 /**
  * Delete outside_network structure.

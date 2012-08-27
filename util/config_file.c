@@ -157,7 +157,7 @@ config_create(void)
 	 * edns-client-subnet/bind-9.7.1-dig-edns-client-subnet.diff */
 	cfg->client_subnet_opc = 0x50fa;
 	cfg->max_client_subnet_ipv4 = 24;
-	cfg->max_client_subnet_ipv6 = 32;
+	cfg->max_client_subnet_ipv6 = 64;
 	cfg->acls = NULL;
 	cfg->harden_short_bufsize = 0;
 	cfg->harden_large_queries = 0;
@@ -419,6 +419,10 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	else S_STR("control-cert-file:", control_cert_file)
 	else S_STR("module-config:", module_conf)
 	else S_STR("python-script:", python_script)
+	else S_STRLIST("send-client-subnet", client_subnet)
+	else S_NUMBER_OR_ZERO("max-client-subnet-ipv4:", max_client_subnet_ipv4)
+	else S_NUMBER_OR_ZERO("max-client-subnet-ipv6:", max_client_subnet_ipv6)
+	else S_NUMBER_OR_ZERO("client-subnet-opc:", client_subnet_opc)
 	else if (strcmp(opt, "outgoing-interface:") == 0) {
 		char* d = strdup(val);
 		char** oi = (char**)malloc((cfg->num_out_ifs+1)*sizeof(char*));
@@ -663,6 +667,10 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_UNS(opt, "val-override-date", val_date_override)
 	else O_YNO(opt, "minimal-responses", minimal_responses)
 	else O_YNO(opt, "rrset-roundrobin", rrset_roundrobin)
+	else O_LST(opt, "send-client-subnet", client_subnet)
+	else O_DEC(opt, "max-client-subnet-ipv4", max_client_subnet_ipv4)
+	else O_DEC(opt, "max-client-subnet-ipv6", max_client_subnet_ipv6)
+	else O_DEC(opt, "client-subnet-opc", client_subnet_opc)
 	/* not here:
 	 * outgoing-permit, outgoing-avoid - have list of ports
 	 * local-zone - zones and nodefault variables
@@ -781,6 +789,7 @@ config_delete(struct config_file* cfg)
 	config_delstubs(cfg->forwards);
 	config_delstrlist(cfg->donotqueryaddrs);
 	config_delstrlist(cfg->root_hints);
+	config_delstrlist(cfg->client_subnet);
 	free(cfg->identity);
 	free(cfg->version);
 	free(cfg->module_conf);

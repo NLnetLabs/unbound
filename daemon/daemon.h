@@ -98,6 +98,8 @@ struct daemon {
 	struct module_stack mods;
 	/** access control, which client IPs are allowed to connect */
 	struct acl_list* acl;
+	/** access control, which upstream servers we send client address */
+	struct ednssubnet_upstream* edns_subnet_upstreams;
 	/** local authority zones */
 	struct local_zones* local_zones;
 	/** last time of statistics printout */

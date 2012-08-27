@@ -211,13 +211,11 @@ struct edns_data {
 	uint16_t bits;
 	/** UDP reassembly size. */
 	uint16_t udp_size;
-	// YBS add vandergaast here
 	int 		subnet_option_add;
 	uint16_t 	subnet_addr_fam;
 	uint8_t 	subnet_source_mask;
 	uint8_t 	subnet_scope_mask;
 	uint8_t 	subnet_addr[16];
-	// YBS add vandergaast here
 };
 
 /**

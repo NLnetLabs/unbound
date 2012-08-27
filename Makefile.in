@@ -99,7 +99,8 @@ util/storage/lruhash.c util/storage/slabhash.c util/timehist.c util/tube.c \
 util/winsock_event.c validator/autotrust.c validator/val_anchor.c \
 validator/validator.c validator/val_kcache.c validator/val_kentry.c \
 validator/val_neg.c validator/val_nsec3.c validator/val_nsec.c \
-validator/val_sigcrypt.c validator/val_utils.c $(CHECKLOCK_SRC)
+validator/val_sigcrypt.c validator/val_utils.c edns-subnet/edns-subnet.c \
+$(CHECKLOCK_SRC)
 COMMON_OBJ_WITHOUT_NETCALL=dns.lo infra.lo rrset.lo dname.lo msgencode.lo \
 msgparse.lo msgreply.lo packed_rrset.lo iterator.lo iter_delegpt.lo \
 iter_donotq.lo iter_fwd.lo iter_hints.lo iter_priv.lo iter_resptype.lo \
@@ -109,7 +110,7 @@ fptr_wlist.lo locks.lo log.lo mini_event.lo module.lo net_help.lo \
 random.lo rbtree.lo regional.lo rtt.lo dnstree.lo lookup3.lo lruhash.lo \
 slabhash.lo timehist.lo tube.lo winsock_event.lo autotrust.lo val_anchor.lo \
 validator.lo val_kcache.lo val_kentry.lo val_neg.lo val_nsec3.lo val_nsec.lo \
-val_sigcrypt.lo val_utils.lo $(PYTHONMOD_OBJ) $(CHECKLOCK_OBJ)
+val_sigcrypt.lo val_utils.lo edns-subnet.lo $(PYTHONMOD_OBJ) $(CHECKLOCK_OBJ)
 COMMON_OBJ=$(COMMON_OBJ_WITHOUT_NETCALL) netevent.lo listen_dnsport.lo \
 outside_network.lo
 # set to $COMMON_OBJ or to "" if --enableallsymbols
@@ -643,6 +644,10 @@ iter_utils.lo iter_utils.o: $(srcdir)/iterator/iter_utils.c config.h $(srcdir)/i
  $(srcdir)/util/random.h $(srcdir)/util/fptr_wlist.h $(srcdir)/util/netevent.h $(srcdir)/util/tube.h \
  $(srcdir)/services/mesh.h $(srcdir)/services/modstack.h $(srcdir)/validator/val_anchor.h \
  $(srcdir)/validator/val_kcache.h $(srcdir)/validator/val_kentry.h $(srcdir)/validator/val_utils.h
+edns-subnet.lo edns-subnet.o: $(srcdir)/edns-subnet/edns-subnet.c config.h $(srcdir)/edns-subnet/edns-subnet.h \
+ $(srcdir)/util/storage/dnstree.h $(srcdir)/util/rbtree.h $(srcdir)/util/regional.h $(srcdir)/util/log.h \
+ $(srcdir)/util/config_file.h \
+ $(srcdir)/util/net_help.h
 listen_dnsport.lo listen_dnsport.o: $(srcdir)/services/listen_dnsport.c config.h \
  $(srcdir)/services/listen_dnsport.h $(srcdir)/util/netevent.h \
  $(srcdir)/services/outside_network.h $(srcdir)/util/rbtree.h $(srcdir)/util/log.h $(srcdir)/util/config_file.h \
@@ -681,6 +686,7 @@ outside_network.lo outside_network.o: $(srcdir)/services/outside_network.c confi
  $(srcdir)/util/data/msgreply.h $(srcdir)/util/data/packed_rrset.h $(srcdir)/util/data/msgencode.h \
  $(srcdir)/util/data/dname.h $(srcdir)/util/net_help.h $(srcdir)/util/random.h $(srcdir)/util/fptr_wlist.h \
  $(srcdir)/util/module.h $(srcdir)/util/tube.h $(srcdir)/services/mesh.h $(srcdir)/services/modstack.h \
+ $(srcdir)/edns-subnet/edns-subnet.h
  
 alloc.lo alloc.o: $(srcdir)/util/alloc.c config.h $(srcdir)/util/alloc.h $(srcdir)/util/locks.h $(srcdir)/util/log.h \
  $(srcdir)/util/regional.h \
@@ -940,7 +946,7 @@ daemon.lo daemon.o: $(srcdir)/daemon/daemon.c config.h \
  $(srcdir)/util/storage/dnstree.h $(srcdir)/util/rbtree.h $(srcdir)/util/config_file.h \
  $(srcdir)/util/storage/lookup3.h $(srcdir)/util/storage/slabhash.h $(srcdir)/services/listen_dnsport.h \
  $(srcdir)/services/cache/rrset.h $(srcdir)/services/cache/infra.h $(srcdir)/util/rtt.h \
- $(srcdir)/services/localzone.h $(srcdir)/util/random.h $(srcdir)/util/tube.h
+ $(srcdir)/services/localzone.h $(srcdir)/util/random.h $(srcdir)/util/tube.h $(srcdir)/edns-subnet/edns-subnet.h
 remote.lo remote.o: $(srcdir)/daemon/remote.c config.h \
  $(srcdir)/daemon/remote.h \
  $(srcdir)/daemon/worker.h $(srcdir)/util/netevent.h $(srcdir)/util/locks.h $(srcdir)/util/log.h $(srcdir)/util/alloc.h \

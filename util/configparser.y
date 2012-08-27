@@ -255,6 +255,13 @@ server_port: VAR_PORT STRING_ARG
 		free($2);
 	}
 	;
+server_send_client_subnet: VAR_SEND_CLIENT_SUBNET STRING_ARG
+	{
+		OUTYY(("P(server_send_client_subnet:%s)\n", $2));
+		if(!cfg_strlist_insert(&cfg_parser->cfg->client_subnet, $2))
+			fatal_exit("out of memory adding client-subnet");
+	}
+	;
 server_client_subnet_opc: VAR_CLIENT_SUBNET_OPCODE STRING_ARG
 	{
 		OUTYY(("P(client_subnet_opc:%s)\n", $2));
@@ -269,7 +276,7 @@ server_max_client_subnet_ipv4: VAR_MAX_CLIENT_SUBNET_IPV4 STRING_ARG
 		OUTYY(("P(max_client_subnet_ipv4:%s)\n", $2));
 		if(atoi($2) == 0)
 			yyerror("IPv4 subnet length expected");
-		else cfg_parser->cfg->client_subnet_opc = atoi($2);
+		else cfg_parser->cfg->max_client_subnet_ipv4 = atoi($2);
 		free($2);
 	}
 	;
@@ -278,7 +285,7 @@ server_max_client_subnet_ipv6: VAR_MAX_CLIENT_SUBNET_IPV6 STRING_ARG
 		OUTYY(("P(max_client_subnet_ipv6:%s)\n", $2));
 		if(atoi($2) == 0)
 			yyerror("Ipv6 subnet length expected");
-		else cfg_parser->cfg->client_subnet_opc = atoi($2);
+		else cfg_parser->cfg->max_client_subnet_ipv6 = atoi($2);
 		free($2);
 	}
 	;
@@ -903,13 +910,6 @@ server_access_control: VAR_ACCESS_CONTROL STRING_ARG STRING_ARG
 			if(!cfg_str2list_insert(&cfg_parser->cfg->acls, $2, $3))
 				fatal_exit("out of memory adding acl");
 		}
-	}
-	;
-server_send_client_subnet: VAR_SEND_CLIENT_SUBNET STRING_ARG
-	{
-		OUTYY(("P(server_send_client_subnet:%s)\n", $2));
-		if(!cfg_strlist_insert(&cfg_parser->cfg->client_subnet, $2))
-			fatal_exit("out of memory adding client-subnet");
 	}
 	;
 server_module_conf: VAR_MODULE_CONF STRING_ARG
