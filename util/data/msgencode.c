@@ -746,17 +746,17 @@ attach_edns_record(ldns_buffer* pkt, struct edns_data* edns)
 	ldns_buffer_write_u16(pkt, edns->bits);
 	/* Add edns-subnet option to record */
 	if(edns->subnet_option_add) {
-		assert(edns.addr_fam == IANA_ADDRFAM_IP4 || 
-			edns.addr_fam == IANA_ADDRFAM_IP6);
-		assert(edns.addr_fam != IANA_ADDRFAM_IP4 || 
+		assert(edns->addr_fam == IANA_ADDRFAM_IP4 || 
+			edns->addr_fam == IANA_ADDRFAM_IP6);
+		assert(edns->addr_fam != IANA_ADDRFAM_IP4 || 
 			edns->subnet_source_mask <=  INET_SIZE*8);
-		assert(edns.addr_fam != IANA_ADDRFAM_IP6 || 
+		assert(edns->addr_fam != IANA_ADDRFAM_IP6 || 
 			edns->subnet_source_mask <= INET6_SIZE*8);
 
 		sn_octs = edns->subnet_source_mask / 8;
-		sn_octs_remainder = (edns->subnet_source_mask % 8)>0?1:0;
+		sn_octs_remainder = (size_t)((edns->subnet_source_mask % 8)>0?1:0);
 		
-		assert(ldns_buffer_available(sn_octs + sn_octs_remainder + 4 + 6));
+		assert(ldns_buffer_available(pkt, sn_octs + sn_octs_remainder + 4 + 6));
 		
 		ldns_buffer_write_u16(pkt, sn_octs + sn_octs_remainder + 4 + 4); /* rdatalen */
 		ldns_buffer_write_u16(pkt, EDNS_SUBNET_OPC); /* opc */
