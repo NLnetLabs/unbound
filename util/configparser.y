@@ -265,8 +265,10 @@ server_send_client_subnet: VAR_SEND_CLIENT_SUBNET STRING_ARG
 server_client_subnet_opc: VAR_CLIENT_SUBNET_OPCODE STRING_ARG
 	{
 		OUTYY(("P(client_subnet_opc:%s)\n", $2));
-		if(atoi($2) == 0)
+		if(atoi($2) == 0 && strcmp($2, "0") != 0)
 			yyerror("option code expected");
+		else if(atoi($2) > 65535 || atoi($2) < 0)
+			yyerror("option code must be between 0x0000 and 0xFFFF");
 		else cfg_parser->cfg->client_subnet_opc = atoi($2);
 		free($2);
 	}
@@ -274,8 +276,12 @@ server_client_subnet_opc: VAR_CLIENT_SUBNET_OPCODE STRING_ARG
 server_max_client_subnet_ipv4: VAR_MAX_CLIENT_SUBNET_IPV4 STRING_ARG
 	{
 		OUTYY(("P(max_client_subnet_ipv4:%s)\n", $2));
-		if(atoi($2) == 0)
+		if(atoi($2) == 0 && strcmp($2, "0") != 0)
 			yyerror("IPv4 subnet length expected");
+		else if (atoi($2) > 32)
+			cfg_parser->cfg->max_client_subnet_ipv4 = 32;
+		else if (atoi($2) < 0)
+			cfg_parser->cfg->max_client_subnet_ipv4 = 0;
 		else cfg_parser->cfg->max_client_subnet_ipv4 = atoi($2);
 		free($2);
 	}
@@ -283,8 +289,12 @@ server_max_client_subnet_ipv4: VAR_MAX_CLIENT_SUBNET_IPV4 STRING_ARG
 server_max_client_subnet_ipv6: VAR_MAX_CLIENT_SUBNET_IPV6 STRING_ARG
 	{
 		OUTYY(("P(max_client_subnet_ipv6:%s)\n", $2));
-		if(atoi($2) == 0)
+		if(atoi($2) == 0 && strcmp($2, "0") != 0)
 			yyerror("Ipv6 subnet length expected");
+		else if (atoi($2) > 128)
+			cfg_parser->cfg->max_client_subnet_ipv6 = 128;
+		else if (atoi($2) < 0)
+			cfg_parser->cfg->max_client_subnet_ipv6 = 0;
 		else cfg_parser->cfg->max_client_subnet_ipv6 = atoi($2);
 		free($2);
 	}

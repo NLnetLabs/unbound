@@ -48,6 +48,7 @@
 #include "util/log.h"
 #include "util/regional.h"
 #include "util/net_help.h"
+#include "edns-subnet/edns-subnet.h"
 
 /** return code that means the function ran out of memory. negative so it does
  * not conflict with DNS rcodes. */
@@ -746,11 +747,11 @@ attach_edns_record(ldns_buffer* pkt, struct edns_data* edns)
 	ldns_buffer_write_u16(pkt, edns->bits);
 	/* Add edns-subnet option to record */
 	if(edns->subnet_option_add) {
-		assert(edns->addr_fam == IANA_ADDRFAM_IP4 || 
-			edns->addr_fam == IANA_ADDRFAM_IP6);
-		assert(edns->addr_fam != IANA_ADDRFAM_IP4 || 
+		assert(edns->subnet_addr_fam == IANA_ADDRFAM_IP4 || 
+			edns->subnet_addr_fam == IANA_ADDRFAM_IP6);
+		assert(edns->subnet_addr_fam != IANA_ADDRFAM_IP4 || 
 			edns->subnet_source_mask <=  INET_SIZE*8);
-		assert(edns->addr_fam != IANA_ADDRFAM_IP6 || 
+		assert(edns->subnet_addr_fam != IANA_ADDRFAM_IP6 || 
 			edns->subnet_source_mask <= INET6_SIZE*8);
 
 		sn_octs = edns->subnet_source_mask / 8;
