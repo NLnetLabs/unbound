@@ -15,3 +15,5 @@ distribution but may be helpful.
 	a local-zone and local-data include file for unbound.conf.
 * unbound-host.nagios.patch: makes unbound-host return status that fits right
 	in with the nagios monitoring framework.  Contributed by Migiel de Vos.
+* unbound_unixsock.diff: Add Unix socket support for unbound-control. 
+	Contributed by Ilya Bakulin, 2012-08-28.
