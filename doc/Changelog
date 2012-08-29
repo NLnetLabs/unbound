@@ -1,3 +1,6 @@
+29 August 2012: Wouter
+	- Nicer comments outgoing-port-avoid, thanks Stu (bug #465).
+
 22 August 2012: Wouter
 	- Fallback to 1472 and 1232, one fragment size without headers.
 
