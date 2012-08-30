@@ -1,3 +1,6 @@
+30 August 2012: Wouter
+	- RFC6725 deprecates RSAMD5: this DNSKEY algorithm is disabled.
+
 29 August 2012: Wouter
 	- Nicer comments outgoing-port-avoid, thanks Stu (bug #465).
 
