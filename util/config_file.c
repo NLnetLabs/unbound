@@ -1101,6 +1101,8 @@ config_apply(struct config_file* config)
 	MIN_TTL = (uint32_t)config->min_ttl;
 	EDNS_ADVERTISED_SIZE = (uint16_t)config->edns_buffer_size;
 	EDNS_SUBNET_OPC = (uint16_t)config->client_subnet_opc;
+	MAX_CLIENT_SUBNET_IP4 = (uint8_t)config->max_client_subnet_ipv4;
+	MAX_CLIENT_SUBNET_IP6 = (uint8_t)config->max_client_subnet_ipv6;
 	MINIMAL_RESPONSES = config->minimal_responses;
 	RRSET_ROUNDROBIN = config->rrset_roundrobin;
 	log_set_time_asc(config->log_time_ascii);

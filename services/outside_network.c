@@ -1342,14 +1342,14 @@ serviced_encode(struct serviced_query* sq, ldns_buffer* buff, int with_edns)
 				/* YBS TODO: source mask must come from original query if
 				 * any. Some default otherwise. But not more than 
 				 * configured maximum */
-				edns.subnet_source_mask = 26;
+				edns.subnet_source_mask = MAX_CLIENT_SUBNET_IP4;
 			} 
 #ifdef INET6
 			else {
 				edns.subnet_addr_fam = IANA_ADDRFAM_IP6;
 				sinaddr = &((struct sockaddr_in6*)ss)->sin6_addr;
 				memcpy(edns.subnet_addr, (uint8_t *)sinaddr, INET6_SIZE);
-				edns.subnet_source_mask = 100;
+				edns.subnet_source_mask = MAX_CLIENT_SUBNET_IP6;
 			}
 #endif
 			edns.subnet_scope_mask = 0;
