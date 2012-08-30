@@ -93,6 +93,7 @@ usage()
 	printf("  flush_type <name> <type>	flush name, type from cache\n");
 	printf("  flush_zone <name>		flush everything at or under name\n");
 	printf("  				from rr and dnssec caches\n");
+	printf("  flush_bogus			flush all bogus data\n");
 	printf("  flush_stats 			flush statistics, make zero\n");
 	printf("  flush_requestlist 		drop queries that are worked on\n");
 	printf("  dump_requestlist		show what is worked on\n");
@@ -379,7 +380,8 @@ int main(int argc, char* argv[])
 	if(!RAND_status()) {
                 /* try to seed it */
                 unsigned char buf[256];
-                unsigned int v, seed=(unsigned)time(NULL) ^ (unsigned)getpid();
+                unsigned int seed=(unsigned)time(NULL) ^ (unsigned)getpid();
+		unsigned int v = seed;
                 size_t i;
                 for(i=0; i<256/sizeof(v); i++) {
                         memmove(buf+i*sizeof(v), &v, sizeof(v));

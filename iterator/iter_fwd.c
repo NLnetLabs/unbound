@@ -250,20 +250,22 @@ read_forwards(struct iter_forwards* fwd, struct config_file* cfg)
 	struct config_stub* s;
 	for(s = cfg->forwards; s; s = s->next) {
 		struct delegpt* dp;
-		if(!(dp=read_fwds_name(s)) ||
-			!read_fwds_host(s, dp) ||
-			!read_fwds_addr(s, dp))
+		if(!(dp=read_fwds_name(s)))
 			return 0;
+		if(!read_fwds_host(s, dp) || !read_fwds_addr(s, dp)) {
+			delegpt_free_mlc(dp);
+			return 0;
+		}
 		/* set flag that parent side NS information is included.
 		 * Asking a (higher up) server on the internet is not useful */
 		/* the flag is turned off for 'forward-first' so that the
 		 * last resort will ask for parent-side NS record and thus
 		 * fallback to the internet name servers on a failure */
 		dp->has_parent_side_NS = (uint8_t)!s->isfirst;
-		if(!forwards_insert(fwd, LDNS_RR_CLASS_IN, dp))
-			return 0;
 		verbose(VERB_QUERY, "Forward zone server list:");
 		delegpt_log(VERB_QUERY, dp);
+		if(!forwards_insert(fwd, LDNS_RR_CLASS_IN, dp))
+			return 0;
 	}
 	return 1;
 }

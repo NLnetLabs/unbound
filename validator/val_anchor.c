@@ -1246,6 +1246,7 @@ anchors_delete_insecure(struct val_anchors* anchors, uint16_t c,
 	lock_basic_lock(&ta->lock);
 	/* see if its really an insecure point */
 	if(ta->keylist || ta->autr || ta->numDS || ta->numDNSKEY) {
+		lock_basic_unlock(&anchors->lock);
 		lock_basic_unlock(&ta->lock);
 		/* its not an insecure point, do not remove it */
 		return;

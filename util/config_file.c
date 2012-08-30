@@ -1053,9 +1053,9 @@ static int isalldigit(const char* str, size_t l)
 int 
 cfg_parse_memsize(const char* str, size_t* res)
 {
-	size_t len = (size_t)strlen(str);
+	size_t len;
 	size_t mult = 1;
-	if(!str || len == 0) {
+	if(!str || (len=(size_t)strlen(str)) == 0) {
 		log_err("not a size: '%s'", str);
 		return 0;
 	}

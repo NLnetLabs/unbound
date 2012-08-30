@@ -127,6 +127,9 @@ Remove all information at or below the name from the cache.
 The rrsets and key entries are removed so that new lookups will be performed.
 This needs to walk and inspect the entire cache, and is a slow operation.
 .TP
+.B flush_bogus
+Remove all bogus data from the cache.
+.TP
 .B flush_stats
 Reset statistics to zero.
 .TP
