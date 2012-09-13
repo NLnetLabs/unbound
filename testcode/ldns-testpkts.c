@@ -118,6 +118,8 @@ static void matchline(char* line, struct entry* e)
 			e->match_do = true;
 		} else if(str_keyword(&parse, "noedns")) {
 			e->match_noedns = true;
+		} else if(str_keyword(&parse, "ednsdata")) {
+			e->match_ednsdata_raw = true;
 		} else if(str_keyword(&parse, "UDP")) {
 			e->match_transport = transport_udp;
 		} else if(str_keyword(&parse, "TCP")) {
@@ -423,7 +425,9 @@ read_entry(FILE* in, const char* name, int *lineno, uint32_t* default_ttl,
 	ldns_pkt_section add_section = LDNS_SECTION_QUESTION;
 	struct reply_packet *cur_reply = NULL;
 	bool reading_hex = false;
+	bool reading_hex_ednsdata = false;
 	ldns_buffer* hex_data_buffer = NULL;
+	ldns_buffer* hex_ednsdata_buffer = NULL;
 
 	while(fgets(line, (int)sizeof(line), in) != NULL) {
 		line[MAX_LINE-1] = 0;
@@ -485,10 +489,23 @@ read_entry(FILE* in, const char* name, int *lineno, uint32_t* default_ttl,
 			reading_hex = false;
 			cur_reply->reply_from_hex = data_buffer2wire(hex_data_buffer);
 			ldns_buffer_free(hex_data_buffer);
-		} else if(str_keyword(&parse, "ENTRY_END")) {
-			return current;
 		} else if(reading_hex) {
 			ldns_buffer_printf(hex_data_buffer, line);
+		} else if(str_keyword(&parse, "HEX_EDNSDATA_BEGIN")) {
+			hex_ednsdata_buffer = ldns_buffer_new(LDNS_MAX_PACKETLEN);
+			reading_hex_ednsdata = true;
+		} else if(str_keyword(&parse, "HEX_EDNSDATA_END")) {
+			if (!reading_hex_ednsdata) {
+				error("%s line %d: HEX_EDNSDATA_END read but no"
+					"HEX_EDNSDATA_BEGIN keyword seen", name, *lineno);
+			}
+			reading_hex_ednsdata = false;
+			cur_reply->raw_ednsdata = data_buffer2wire(hex_ednsdata_buffer);
+			ldns_buffer_free(hex_ednsdata_buffer);
+		} else if(reading_hex_ednsdata) {
+			ldns_buffer_printf(hex_ednsdata_buffer, line);
+		} else if(str_keyword(&parse, "ENTRY_END")) {
+			return current;
 		} else {
 			/* it must be a RR, parse and add to packet. */
 			ldns_rr* n = NULL;
@@ -657,6 +674,28 @@ match_all(ldns_pkt* q, ldns_pkt* p, bool mttl)
 	return 1;
 }
 
+/** Match q edns data to p raw edns data */
+static int
+match_ednsdata(ldns_pkt* q, struct reply_packet* p)
+{
+	size_t qdlen;
+	ldns_rdf *edns_data;
+	if(!ldns_pkt_edns(q) || !ldns_pkt_edns_data(q)) {
+		verbose(3, "No EDNS data\n");
+		return 0;
+	}
+	edns_data = ldns_pkt_edns_data(q);
+	qdlen = ldns_rdf_size(edns_data);
+	if( qdlen != ldns_buffer_limit(p->raw_ednsdata) ||
+			0 != memcmp(ldns_rdf_data(edns_data), 
+				ldns_buffer_begin(p->raw_ednsdata), 
+				qdlen) ) {
+		verbose(3, "EDNS data does not match.\n");
+		return 0;
+	}
+	return 1;
+}
+
 /* finds entry in list, or returns NULL */
 struct entry* 
 find_match(struct entry* entries, ldns_pkt* query_pkt,
@@ -705,6 +744,11 @@ find_match(struct entry* entries, ldns_pkt* query_pkt,
 		}
 		if(p->match_noedns && ldns_pkt_edns(query_pkt)) {
 			verbose(3, "bad; EDNS OPT present\n");
+			continue;
+		}
+		if(p->match_ednsdata_raw && 
+				!match_ednsdata(query_pkt, p->reply_list)) {
+			verbose(3, "bad EDNS data match.\n");
 			continue;
 		}
 		if(p->match_transport != transport_any && p->match_transport != transport) {

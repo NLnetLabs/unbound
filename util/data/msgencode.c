@@ -863,6 +863,7 @@ error_encode(ldns_buffer* buf, int r, struct query_info* qinfo,
 		es.udp_size = EDNS_ADVERTISED_SIZE;
 		es.ext_rcode = 0;
 		es.bits &= EDNS_DO;
+		es.subnet_option_add = 0;
 		if(ldns_buffer_limit(buf) + calc_edns_field_size(&es) >
 			edns->udp_size)
 			return;

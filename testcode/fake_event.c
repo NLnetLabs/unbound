@@ -56,10 +56,12 @@
 #include "services/listen_dnsport.h"
 #include "services/outside_network.h"
 #include "services/cache/infra.h"
+#include "services/outbound_list.h"
 #include "testcode/replay.h"
 #include "testcode/ldns-testpkts.h"
 #include "util/log.h"
 #include "util/fptr_wlist.h"
+#include "edns-subnet/edns-subnet.h"
 #include <signal.h>
 struct worker;
 struct daemon_remote;
@@ -909,6 +911,7 @@ outside_network_create(struct comm_base* base, size_t bufsize,
 		return NULL;
 	runtime->infra = infra;
 	outnet->base = base;
+	outnet->edns_subnet_upstreams = edns_subnet_upstreams;
 	outnet->udp_buff = ldns_buffer_new(bufsize);
 	if(!outnet->udp_buff)
 		return NULL;
@@ -1044,6 +1047,10 @@ struct serviced_query* outnet_serviced_query(struct outside_network* outnet,
 	size_t zonelen, comm_point_callback_t* callback, void* callback_arg,
 	ldns_buffer* ATTR_UNUSED(buff))
 {
+	struct sockaddr_in target_addr;
+	struct mesh_reply* reply_list;
+	struct sockaddr_storage *ss;
+	void* sinaddr;
 	struct replay_runtime* runtime = (struct replay_runtime*)outnet->base;
 	struct fake_pending* pend = (struct fake_pending*)calloc(1,
 		sizeof(struct fake_pending));
@@ -1078,7 +1085,45 @@ struct serviced_query* outnet_serviced_query(struct outside_network* outnet,
 		edns.edns_version = EDNS_ADVERTISED_VERSION;
 		edns.udp_size = EDNS_ADVERTISED_SIZE;
 		edns.bits = 0;
-		edns.subnet_option_add = 0; 
+		/* begin EDNS subnet option
+		 * Is this a client initiated query? Make clients available
+		 * to serviced query. */
+		reply_list = ((struct outbound_entry*)callback_arg)
+						->qstate->mesh_info->reply_list;
+		if(reply_list)
+			pend->client = &reply_list->query_reply;
+		
+		/* The testcode does not do networking and thus has no target.
+		 * But the subnet code depends on it. Lets pretend 5.0.15.10 is 
+		 * our target. */
+		inet_pton(AF_INET, "5.0.15.10", &(target_addr.sin_addr)); 
+		memcpy(&pend->addr, (struct sockaddr_storage*)&target_addr, 
+			sizeof(struct sockaddr_storage));
+		pend->addrlen = 16;
+		edns.subnet_option_add = pend->client && upstream_lookup(
+			outnet->edns_subnet_upstreams, &pend->addr, pend->addrlen);
+		if(edns.subnet_option_add) {
+			ss = &pend->client->addr;
+			if(((struct sockaddr_in*)ss)->sin_family == AF_INET) {
+				edns.subnet_addr_fam = IANA_ADDRFAM_IP4;
+				sinaddr = &((struct sockaddr_in*)ss)->sin_addr;
+				memcpy(edns.subnet_addr, (uint8_t *)sinaddr, INET_SIZE);
+				/* YBS TODO: source mask must come from original query if
+				 * any. Some default otherwise. But not more than 
+				 * configured maximum */
+				edns.subnet_source_mask = MAX_CLIENT_SUBNET_IP4;
+			} 
+#ifdef INET6
+			else {
+				edns.subnet_addr_fam = IANA_ADDRFAM_IP6;
+				sinaddr = &((struct sockaddr_in6*)ss)->sin6_addr;
+				memcpy(edns.subnet_addr, (uint8_t *)sinaddr, INET6_SIZE);
+				edns.subnet_source_mask = MAX_CLIENT_SUBNET_IP6;
+			}
+#endif
+			edns.subnet_scope_mask = 0;
+		}
+		/* end EDNS subnet option */
 		if(dnssec)
 			edns.bits = EDNS_DO;
 		attach_edns_record(pend->buffer, &edns);

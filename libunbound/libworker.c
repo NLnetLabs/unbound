@@ -725,6 +725,8 @@ struct outbound_entry* libworker_send_query(uint8_t* qname, size_t qnamelen,
 	if(!e->qsent) {
 		return NULL;
 	}
+	if(e->qstate->mesh_info->reply_list)
+		e->qsent->client = &e->qstate->mesh_info->reply_list->query_reply;
 	return e;
 }
 
