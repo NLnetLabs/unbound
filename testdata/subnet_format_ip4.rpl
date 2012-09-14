@@ -2,6 +2,7 @@ server:
 	send-client-subnet: 5.0.15.10
 	client-subnet-opc: 20730
 	max-client-subnet-ipv4: 21
+	verbosity: 3
 
 stub-zone:
 	name: "."
