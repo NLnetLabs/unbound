@@ -43,6 +43,7 @@
 #include "util/data/packed_rrset.h"
 #include "util/storage/lookup3.h"
 #include "util/regional.h"
+#include "util/net_help.h"
 
 /** smart comparison of (compressed, valid) dnames from packet */
 static int
@@ -930,6 +931,40 @@ parse_packet(ldns_buffer* pkt, struct msg_parse* msg, struct regional* region)
 	return 0;
 }
 
+void
+parse_ednsdata(uint8_t* data, struct edns_data* edns)
+{
+	int edns_datalen, opt_opc, opt_len, opt_start;
+	edns->subnet_option = 0;
+	/* Parse EDNS data field */
+	edns_datalen = ldns_read_uint16(data);
+	if(edns_datalen < 4) return;
+	/* iterate trough all options */
+	opt_start = 0;
+	while(opt_start + 4 <= edns_datalen) { /* opcode + len must fit */
+		opt_opc = ldns_read_uint16(&data[2 + opt_start]);
+		opt_len = ldns_read_uint16(&data[4 + opt_start]);
+		/* Option does not fit in remaining data */
+		if(opt_start + 4 + opt_len > edns_datalen) return;
+		opt_start += 4;
+		if(opt_opc == EDNS_SUBNET_OPC) {
+			if(opt_len < 4) break;
+			edns->subnet_addr_fam = ldns_read_uint16(data + 2 + opt_start);
+			edns->subnet_source_mask = data[4 + opt_start];
+			edns->subnet_scope_mask = data[5 + opt_start];
+			/* remaing bytes indicate address */
+			if(opt_len - 4 > INET6_SIZE || opt_len == 0) break;
+			memset(edns->subnet_addr, 0, INET6_SIZE);
+			memcpy(edns->subnet_addr, data + 6 + opt_start, opt_len - 4);
+			edns->subnet_option = 1;
+			break;
+		} else { /* Unknown opcode */
+			verbose(VERB_QUERY, "Unknow EDNS option %x", opt_opc);
+		}
+		opt_start += opt_len;
+	}
+}
+
 int 
 parse_extract_edns(struct msg_parse* msg, struct edns_data* edns)
 {
@@ -979,12 +1014,11 @@ parse_extract_edns(struct msg_parse* msg, struct edns_data* edns)
 	
 	/* take the data ! */
 	edns->edns_present = 1;
+	edns->udp_size = ntohs(found->rrset_class);
 	edns->ext_rcode = found->rr_last->ttl_data[0];
 	edns->edns_version = found->rr_last->ttl_data[1];
 	edns->bits = ldns_read_uint16(&found->rr_last->ttl_data[2]);
-	edns->udp_size = ntohs(found->rrset_class);
-	edns->subnet_option_add = 0; //YBS do some actual parsing here
-	/* ignore rdata and rrsigs */
+	parse_ednsdata(found->rr_last->ttl_data + 4, edns);
 	return 0;
 }
 
@@ -1015,6 +1049,6 @@ parse_edns_from_pkt(ldns_buffer* pkt, struct edns_data* edns)
 	edns->ext_rcode = ldns_buffer_read_u8(pkt); /* ttl used for bits */
 	edns->edns_version = ldns_buffer_read_u8(pkt);
 	edns->bits = ldns_buffer_read_u16(pkt);
-	/* ignore rdata and rrsigs */
+	parse_ednsdata(ldns_buffer_current(pkt), edns);
 	return 0;
 }

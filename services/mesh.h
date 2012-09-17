@@ -182,6 +182,12 @@ struct mesh_state {
 
 	/** true if replies have been sent out (at end for alignment) */
 	uint8_t replies_sent;
+	
+	/* YBS */
+	int 		subnet_option_expect;
+	uint16_t 	subnet_addr_fam;
+	uint8_t 	subnet_source_mask;
+	uint8_t 	subnet_addr[16];
 };
 
 /**

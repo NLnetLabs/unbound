@@ -531,7 +531,7 @@ setup_qinfo_edns(struct libworker* w, struct ctx_query* q,
 	edns->ext_rcode = 0;
 	edns->edns_version = 0;
 	edns->bits = EDNS_DO;
-	edns->subnet_option_add = 0; 
+	edns->subnet_option = 0; 
 	if(ldns_buffer_capacity(w->back->udp_buff) < 65535)
 		edns->udp_size = (uint16_t)ldns_buffer_capacity(
 			w->back->udp_buff);
@@ -725,8 +725,7 @@ struct outbound_entry* libworker_send_query(uint8_t* qname, size_t qnamelen,
 	if(!e->qsent) {
 		return NULL;
 	}
-	if(e->qstate->mesh_info->reply_list)
-		e->qsent->client = &e->qstate->mesh_info->reply_list->query_reply;
+	e->qsent->mesh_info = e->qstate->mesh_info;
 	return e;
 }
 

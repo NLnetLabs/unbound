@@ -1209,7 +1209,7 @@ serviced_create(struct outside_network* outnet, ldns_buffer* buff, int dnssec,
 	sq->status = serviced_initial;
 	sq->retry = 0;
 	sq->to_be_deleted = 0;
-	sq->client = NULL;
+	sq->mesh_info = NULL;
 #ifdef UNBOUND_DEBUG
 	ins = 
 #endif
@@ -1333,10 +1333,11 @@ serviced_encode(struct serviced_query* sq, ldns_buffer* buff, int with_edns)
 		edns.edns_version = EDNS_ADVERTISED_VERSION;
 		/* If this query has an interested client and the upstream
 		 * target is in the whitelist, add the edns subnet option. */
-		edns.subnet_option_add = sq->client && upstream_lookup(
-			sq->outnet->edns_subnet_upstreams, &sq->addr, sq->addrlen);
-		if(edns.subnet_option_add) {
-			ss = &sq->client->addr;
+		edns.subnet_option = sq->mesh_info->reply_list && 
+			upstream_lookup(sq->outnet->edns_subnet_upstreams, 
+			&sq->addr, sq->addrlen);
+		if(edns.subnet_option) {
+			ss = &sq->mesh_info->reply_list->query_reply.addr;
 			if(((struct sockaddr_in*)ss)->sin_family == AF_INET) {
 				edns.subnet_addr_fam = IANA_ADDRFAM_IP4;
 				sinaddr = &((struct sockaddr_in*)ss)->sin_addr;
@@ -1355,6 +1356,11 @@ serviced_encode(struct serviced_query* sq, ldns_buffer* buff, int with_edns)
 			}
 #endif
 			edns.subnet_scope_mask = 0;
+			//YBS add addr,fam,mask to mesh.
+			sq->mesh_info->subnet_option_expect = 1;
+			sq->mesh_info->subnet_addr_fam = edns.subnet_addr_fam;
+			sq->mesh_info->subnet_source_mask = edns.subnet_source_mask;
+			memcpy(sq->mesh_info->subnet_addr, (uint8_t *)sinaddr, INET6_SIZE);
 		}
 		if(sq->status == serviced_query_UDP_EDNS_FRAG) {
 			if(addr_is_ip6(&sq->addr, sq->addrlen)) {
@@ -1825,7 +1831,6 @@ outnet_serviced_query(struct outside_network* outnet,
 {
 	struct serviced_query* sq;
 	struct service_callback* cb;
-	struct mesh_reply* reply_list;
 	serviced_gen_query(buff, qname, qnamelen, qtype, qclass, flags);
 	sq = lookup_serviced(outnet, buff, dnssec, addr, addrlen);
 	/* duplicate entries are inclded in the callback list, because
@@ -1844,10 +1849,8 @@ outnet_serviced_query(struct outside_network* outnet,
 		}
 		/* Is this a client initiated query? Make clients available
 		 * to serviced query. */
-		reply_list = ((struct outbound_entry*)callback_arg)
-						->qstate->mesh_info->reply_list;
-		if(reply_list)
-			sq->client = &reply_list->query_reply;
+		sq->mesh_info = ((struct outbound_entry*)callback_arg)
+						->qstate->mesh_info;
 		
 		/* perform first network action */
 		if(outnet->do_udp && !(tcp_upstream || ssl_upstream)) {

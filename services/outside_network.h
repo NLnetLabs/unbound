@@ -356,7 +356,7 @@ struct serviced_query {
 	/** the UDP or TCP query that is pending, see status which */
 	void* pending;
 	/** Clients initiating lookup. Not owned by serviced_query */
-	struct comm_reply *client;
+	struct mesh_state *mesh_info;
 };
 
 /**

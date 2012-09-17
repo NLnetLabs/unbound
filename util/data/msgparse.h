@@ -211,7 +211,7 @@ struct edns_data {
 	uint16_t bits;
 	/** UDP reassembly size. */
 	uint16_t udp_size;
-	int 		subnet_option_add;
+	int 		subnet_option; /*YBS*/
 	uint16_t 	subnet_addr_fam;
 	uint8_t 	subnet_source_mask;
 	uint8_t 	subnet_scope_mask;

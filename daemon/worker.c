@@ -475,7 +475,7 @@ answer_norec_from_cache(struct worker* worker, struct query_info* qinfo,
 			edns->udp_size = EDNS_ADVERTISED_SIZE;
 			edns->ext_rcode = 0;
 			edns->bits &= EDNS_DO;
-			edns->subnet_option_add = 0;
+			edns->subnet_option = 0;
 			error_encode(repinfo->c->buffer, LDNS_RCODE_SERVFAIL, 
 				&msg->qinfo, id, flags, edns);
 			regional_free_all(worker->scratchpad);
@@ -504,7 +504,7 @@ answer_norec_from_cache(struct worker* worker, struct query_info* qinfo,
 	edns->udp_size = EDNS_ADVERTISED_SIZE;
 	edns->ext_rcode = 0;
 	edns->bits &= EDNS_DO;
-	edns->subnet_option_add = 0;
+	edns->subnet_option = 0;
 	msg->rep->flags |= BIT_QR|BIT_RA;
 	if(!reply_info_answer_encode(&msg->qinfo, msg->rep, id, flags, 
 		repinfo->c->buffer, 0, 1, worker->scratchpad,
@@ -563,7 +563,7 @@ answer_from_cache(struct worker* worker, struct query_info* qinfo,
 		edns->udp_size = EDNS_ADVERTISED_SIZE;
 		edns->ext_rcode = 0;
 		edns->bits &= EDNS_DO;
-		edns->subnet_option_add = 0;
+		edns->subnet_option = 0;
 		error_encode(repinfo->c->buffer, LDNS_RCODE_SERVFAIL, 
 			qinfo, id, flags, edns);
 		rrset_array_unlock_touch(worker->env.rrset_cache, 
@@ -595,7 +595,7 @@ answer_from_cache(struct worker* worker, struct query_info* qinfo,
 	edns->udp_size = EDNS_ADVERTISED_SIZE;
 	edns->ext_rcode = 0;
 	edns->bits &= EDNS_DO;
-	edns->subnet_option_add = 0;
+	edns->subnet_option = 0;
 	if(!reply_info_answer_encode(qinfo, rep, id, flags, 
 		repinfo->c->buffer, timenow, 1, worker->scratchpad,
 		udpsize, edns, (int)(edns->bits & EDNS_DO), secure)) {
@@ -669,7 +669,7 @@ chaos_replystr(ldns_buffer* pkt, const char* str, struct edns_data* edns)
 	edns->edns_version = EDNS_ADVERTISED_VERSION;
 	edns->udp_size = EDNS_ADVERTISED_SIZE;
 	edns->bits &= EDNS_DO;
-	edns->subnet_option_add = 0;
+	edns->subnet_option = 0;
 	attach_edns_record(pkt, edns);
 }
 
@@ -821,7 +821,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 		edns.edns_version = EDNS_ADVERTISED_VERSION;
 		edns.udp_size = EDNS_ADVERTISED_SIZE;
 		edns.bits &= EDNS_DO;
-		edns.subnet_option_add = 0;
+		edns.subnet_option = 0;
 		verbose(VERB_ALGO, "query with bad edns version.");
 		log_addr(VERB_CLIENT,"from",&repinfo->addr, repinfo->addrlen);
 		error_encode(c->buffer, EDNS_RCODE_BADVERS&0xf, &qinfo,

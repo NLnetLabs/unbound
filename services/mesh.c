@@ -791,7 +791,7 @@ mesh_do_callback(struct mesh_state* m, int rcode, struct reply_info* rep,
 		r->edns.udp_size = EDNS_ADVERTISED_SIZE;
 		r->edns.ext_rcode = 0;
 		r->edns.bits &= EDNS_DO;
-		r->edns.subnet_option_add = 0;
+		r->edns.subnet_option = 0;
 		if(!reply_info_answer_encode(&m->s.qinfo, rep, r->qid, 
 			r->qflags, r->buf, 0, 1, 
 			m->s.env->scratch, udp_size, &r->edns, 
@@ -863,7 +863,7 @@ mesh_send_reply(struct mesh_state* m, int rcode, struct reply_info* rep,
 		r->edns.udp_size = EDNS_ADVERTISED_SIZE;
 		r->edns.ext_rcode = 0;
 		r->edns.bits &= EDNS_DO;
-		r->edns.subnet_option_add = 0;
+		r->edns.subnet_option = 0;
 		m->s.qinfo.qname = r->qname;
 		if(!reply_info_answer_encode(&m->s.qinfo, rep, r->qid, 
 			r->qflags, r->query_reply.c->buffer, 0, 1, 

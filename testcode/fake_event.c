@@ -1100,9 +1100,9 @@ struct serviced_query* outnet_serviced_query(struct outside_network* outnet,
 		memcpy(&pend->addr, (struct sockaddr_storage*)&target_addr, 
 			sizeof(struct sockaddr_storage));
 		pend->addrlen = 16;
-		edns.subnet_option_add = pend->client && upstream_lookup(
+		edns.subnet_option = pend->client && upstream_lookup(
 			outnet->edns_subnet_upstreams, &pend->addr, pend->addrlen);
-		if(edns.subnet_option_add) {
+		if(edns.subnet_option) {
 			ss = &pend->client->addr;
 			if(((struct sockaddr_in*)ss)->sin_family == AF_INET) {
 				edns.subnet_addr_fam = IANA_ADDRFAM_IP4;

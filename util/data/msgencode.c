@@ -746,7 +746,7 @@ attach_edns_record(ldns_buffer* pkt, struct edns_data* edns)
 	ldns_buffer_write_u8(pkt, edns->edns_version);
 	ldns_buffer_write_u16(pkt, edns->bits);
 	/* Add edns-subnet option to record */
-	if(edns->subnet_option_add) {
+	if(edns->subnet_option) {
 		assert(edns->subnet_addr_fam == IANA_ADDRFAM_IP4 || 
 			edns->subnet_addr_fam == IANA_ADDRFAM_IP6);
 		assert(edns->subnet_addr_fam != IANA_ADDRFAM_IP4 || 
@@ -863,7 +863,7 @@ error_encode(ldns_buffer* buf, int r, struct query_info* qinfo,
 		es.udp_size = EDNS_ADVERTISED_SIZE;
 		es.ext_rcode = 0;
 		es.bits &= EDNS_DO;
-		es.subnet_option_add = 0;
+		es.subnet_option = 0;
 		if(ldns_buffer_limit(buf) + calc_edns_field_size(&es) >
 			edns->udp_size)
 			return;
