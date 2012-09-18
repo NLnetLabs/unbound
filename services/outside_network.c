@@ -1357,10 +1357,12 @@ serviced_encode(struct serviced_query* sq, ldns_buffer* buff, int with_edns)
 #endif
 			edns.subnet_scope_mask = 0;
 			//YBS add addr,fam,mask to mesh.
-			sq->mesh_info->subnet_option_expect = 1;
-			sq->mesh_info->subnet_addr_fam = edns.subnet_addr_fam;
-			sq->mesh_info->subnet_source_mask = edns.subnet_source_mask;
-			memcpy(sq->mesh_info->subnet_addr, (uint8_t *)sinaddr, INET6_SIZE);
+			sq->mesh_info->s.qinfo.subnet_option = 1;
+			sq->mesh_info->s.qinfo.subnet_addr_fam = edns.subnet_addr_fam;
+			sq->mesh_info->s.qinfo.subnet_source_mask = edns.subnet_source_mask;
+			memcpy(sq->mesh_info->s.qinfo.subnet_addr, (uint8_t *)sinaddr, INET6_SIZE);
+		} else {
+			sq->mesh_info->s.qinfo.subnet_option = 0;
 		}
 		if(sq->status == serviced_query_UDP_EDNS_FRAG) {
 			if(addr_is_ip6(&sq->addr, sq->addrlen)) {

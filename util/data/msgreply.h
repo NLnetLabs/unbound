@@ -43,6 +43,7 @@
 #define UTIL_DATA_MSGREPLY_H
 #include "util/storage/lruhash.h"
 #include "util/data/packed_rrset.h"
+#include "util/net_help.h"
 struct comm_reply;
 struct alloc_cache;
 struct iovec;
@@ -72,6 +73,11 @@ struct query_info {
 	uint16_t qtype;
 	/** qclass, host byte order */
 	uint16_t qclass;
+	/* YBS */
+	int 		subnet_option;
+	uint16_t 	subnet_addr_fam;
+	uint8_t 	subnet_source_mask;
+	uint8_t 	subnet_addr[INET6_SIZE];
 };
 
 /**
