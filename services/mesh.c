@@ -127,6 +127,8 @@ mesh_state_compare(const void* ap, const void* bp)
 	struct mesh_state* a = (struct mesh_state*)ap;
 	struct mesh_state* b = (struct mesh_state*)bp;
 
+	if(ap == bp)
+		return 0;
 	if(a->s.is_priming && !b->s.is_priming)
 		return -1;
 	if(!a->s.is_priming && b->s.is_priming)
