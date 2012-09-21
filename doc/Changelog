@@ -1,3 +1,6 @@
+21 September 2012: Wouter
+	- chdir to / after chroot call (suggested by Camiel Dobbelaar).
+
 17 September 2012: Wouter
 	- patch_rsamd5_enable.diff: this patch enables RSAMD5 validation
 	  otherwise it is treated as insecure.  The RSAMD5 algorithm is
