@@ -2,6 +2,7 @@
 	- include: directive in config file accepts wildcards.  Patch from
 	  Paul Wouters.  Suggested use: include: "/etc/unbound.d/conf.d/*"
 	- unbound-control -q option is quiet, patch from Mariano Absatz.
+	- iana portlist updated.
 
 21 September 2012: Wouter
 	- chdir to / after chroot call (suggested by Camiel Dobbelaar).
