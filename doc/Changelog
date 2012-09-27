@@ -1,3 +1,7 @@
+27 September 2012: Wouter
+	- include: directive in config file accepts wildcards.  Patch from
+	  Paul Wouters.  Suggested use: include: "/etc/unbound.d/conf.d/*"
+
 21 September 2012: Wouter
 	- chdir to / after chroot call (suggested by Camiel Dobbelaar).
 
