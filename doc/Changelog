@@ -1,3 +1,23 @@
+1 October 2012: Wouter
+	- ignore trusted-keys globs that have no files (from Paul Wouters).
+
+27 September 2012: Wouter
+	- include: directive in config file accepts wildcards.  Patch from
+	  Paul Wouters.  Suggested use: include: "/etc/unbound.d/conf.d/*"
+	- unbound-control -q option is quiet, patch from Mariano Absatz.
+	- iana portlist updated.
+	- updated contrib/unbound.spec, patch from Valentin Bud.
+
+21 September 2012: Wouter
+	- chdir to / after chroot call (suggested by Camiel Dobbelaar).
+
+17 September 2012: Wouter
+	- patch_rsamd5_enable.diff: this patch enables RSAMD5 validation
+	  otherwise it is treated as insecure.  The RSAMD5 algorithm is
+	  deprecated (RFC6725).  The MD5 hash is considered weak for some
+	  purposes, if you want to sign your zone, then RSASHA256 is an
+	  uncontested hash.
+
 30 August 2012: Wouter
 	- RFC6725 deprecates RSAMD5: this DNSKEY algorithm is disabled.
 	- iana portlist updated.

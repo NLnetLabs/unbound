@@ -539,6 +539,9 @@ perform_setup(struct daemon* daemon, struct config_file* cfg, int debug_mode,
 		if(chroot(cfg->chrootdir))
 			fatal_exit("unable to chroot to %s: %s", 
 				cfg->chrootdir, strerror(errno));
+		if(chdir("/"))
+			fatal_exit("unable to chdir to / in chroot %s: %s",
+				cfg->chrootdir, strerror(errno));
 		verbose(VERB_QUERY, "chroot to %s", cfg->chrootdir);
 		if(strncmp(*cfgfile, cfg->chrootdir, 
 			strlen(cfg->chrootdir)) == 0) 
