@@ -45,7 +45,7 @@ all checks are successful, it updates the root anchor file.  Otherwise
 the root anchor file is unchanged.  It performs RFC5011 tracking if the
 DNSSEC information available via the DNS makes that possible.
 .P
-If does not perform an update if the certificate is expired, if the network
+It does not perform an update if the certificate is expired, if the network
 is down or other errors occur.
 .P
 The available options are:
@@ -126,9 +126,6 @@ but then ignores the result and goes on to use the xml fallback method.
 .TP
 .B \-h
 Show the version and commandline option help.
-.TP
-.B \-v
-More verbose.  Prints output detailing what happens.
 .SH "EXIT CODE"
 This tool exits with value 1 if the root anchor was updated using the
 certificate or if the builtin root-anchor was used.  It exits with code
