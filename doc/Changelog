@@ -1,3 +1,6 @@
+5 October 2012: Wouter
+	- fix build of pythonmod in objdir (thanks Jakob Schlyter).
+
 3 October 2012: Wouter
 	- fix text in unbound-anchor man page.
 

@@ -362,7 +362,7 @@ pythonmod.lo pythonmod.o: $(srcdir)/pythonmod/pythonmod.c config.h \
 	$(srcdir)/services/cache/dns.h $(srcdir)/services/mesh.h \
 	$(srcdir)/util/rbtree.h $(srcdir)/services/modstack.h
 
-pythonmod/interface.h:	$(srcdir)/pythonmod/interface.i $(srcdir)/config.h
+pythonmod/interface.h:	$(srcdir)/pythonmod/interface.i config.h
 	@-if test ! -d pythonmod; then $(INSTALL) -d pythonmod; fi
 	$(SWIG) $(CPPFLAGS) -o $@ -python $(srcdir)/pythonmod/interface.i
 
