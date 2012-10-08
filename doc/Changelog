@@ -1,6 +1,7 @@
 8 October 2012: Wouter
 	- update ldns-testpkts.c to ldns 1.6.14 version.
 	- fix build of pythonmod in objdir, for unbound.py.
+	- make clean and makerealclean remove generated python and docs.
 
 5 October 2012: Wouter
 	- fix build of pythonmod in objdir (thanks Jakob Schlyter).

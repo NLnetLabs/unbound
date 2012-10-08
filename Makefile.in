@@ -393,12 +393,14 @@ clean:
 	rm -f *.o *.d *.lo *~ tags
 	rm -f unbound$(EXEEXT) unbound-checkconf$(EXEEXT) unbound-host$(EXEEXT) unbound-control$(EXEEXT) unbound-anchor$(EXEEXT) unbound-control-setup libunbound.la
 	rm -f $(ALL_SRC:.c=.lint)
+	rm -f _unbound.la libunbound/python/libunbound_wrap.c libunbound/python/unbound.py pythonmod/interface.h pythonmod/unboundmodule.py
 	rm -rf autom4te.cache .libs build doc/html doc/xml
 
 realclean: clean
 	rm -f config.status config.log config.h.in config.h
 	rm -f configure config.sub config.guess ltmain.sh aclocal.m4 libtool
 	rm -f util/configlexer.c util/configparser.c util/configparser.h
+	rm -f doc/example.conf doc/libunbound.3 doc/unbound-anchor.8 doc/unbound-checkconf.8 doc/unbound-control.8 doc/unbound.8 doc/unbound.conf.5
 	rm -f $(TEST_BIN)
 	rm -f Makefile 
 
