@@ -1023,6 +1023,13 @@ validate_cname_response(struct module_env* env, struct val_env* ve,
 			chase_reply->security = sec_status_bogus;
 			return;
 		}
+
+		/* If we have found a CNAME, stop looking for one.
+		 * The iterator has placed the CNAME chain in correct
+		 * order. */
+		if (ntohs(s->rk.type) == LDNS_RR_TYPE_CNAME) {
+			break;
+		}
 	}
 
 	/* AUTHORITY section */

@@ -1,3 +1,7 @@
+29 October 2012: Matthijs
+	- Fix validation for responses with both CNAME and wildcard
+	  expanded CNAME records in answer section.
+
 8 October 2012: Wouter
 	- update ldns-testpkts.c to ldns 1.6.14 version.
 	- fix build of pythonmod in objdir, for unbound.py.
