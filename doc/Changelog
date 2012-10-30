@@ -1,3 +1,6 @@
+30 October 2012: Wouter
+	- Fix bug #477: unbound-anchor segfaults if EDNS is blocked.
+
 29 October 2012: Matthijs
 	- Fix validation for responses with both CNAME and wildcard
 	  expanded CNAME records in answer section.

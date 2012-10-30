@@ -540,6 +540,11 @@ resolve_host_ip(struct ub_ctx* ctx, char* host, int port, int tp, int cl,
 		ub_ctx_delete(ctx);
 		exit(0);
 	}
+	if(!res->havedata || res->rcode || !res->data) {
+		if(verb) printf("resolve %s %s: no result\n", host,
+			(tp==LDNS_RR_TYPE_A)?"A":"AAAA");
+		return;
+	}
 	for(i = 0; res->data[i]; i++) {
 		struct ip_list* ip = RR_to_ip(tp, res->data[i], res->len[i],
 			port);
