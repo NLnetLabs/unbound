@@ -1,3 +1,6 @@
+7 November 2012: Wouter
+	- Fixup ldns-testpkts, identical to ldns/examples.
+
 30 October 2012: Wouter
 	- Fix bug #477: unbound-anchor segfaults if EDNS is blocked.
 

@@ -426,7 +426,7 @@ get_origin(const char* name, int lineno, ldns_rdf** origin, char* parse)
 /* Reads one entry from file. Returns entry or NULL on error. */
 struct entry*
 read_entry(FILE* in, const char* name, int *lineno, uint32_t* default_ttl, 
-	ldns_rdf** origin, ldns_rdf** prev_rr)
+	ldns_rdf** origin, ldns_rdf** prev_rr, int skip_whitespace)
 {
 	struct entry* current = NULL;
 	char line[MAX_LINE];
@@ -507,14 +507,17 @@ read_entry(FILE* in, const char* name, int *lineno, uint32_t* default_ttl,
 			/* it must be a RR, parse and add to packet. */
 			ldns_rr* n = NULL;
 			ldns_status status;
+			char* rrstr = line;
+			if (skip_whitespace)
+				rrstr = parse;
 			if(add_section == LDNS_SECTION_QUESTION)
 				status = ldns_rr_new_question_frm_str(
-					&n, parse, *origin, prev_rr);
-			else status = ldns_rr_new_frm_str(&n, parse, 
+					&n, rrstr, *origin, prev_rr);
+			else status = ldns_rr_new_frm_str(&n, rrstr,
 				*default_ttl, *origin, prev_rr);
 			if(status != LDNS_STATUS_OK)
 				error("%s line %d:\n\t%s: %s", name, *lineno,
-					ldns_get_errorstr_by_id(status), parse);
+					ldns_get_errorstr_by_id(status), rrstr);
 			ldns_pkt_push_rr(cur_reply->reply, add_section, n);
 		}
 
@@ -532,7 +535,7 @@ read_entry(FILE* in, const char* name, int *lineno, uint32_t* default_ttl,
 
 /* reads the canned reply file and returns a list of structs */
 struct entry* 
-read_datafile(const char* name)
+read_datafile(const char* name, int skip_whitespace)
 {
 	struct entry* list = NULL;
 	struct entry* last = NULL;
@@ -549,7 +552,7 @@ read_datafile(const char* name)
 	}
 
 	while((current = read_entry(in, name, &lineno, &default_ttl, 
-		&origin, &prev_rr)))
+		&origin, &prev_rr, skip_whitespace)))
 	{
 		if(last)
 			last->next = current;
