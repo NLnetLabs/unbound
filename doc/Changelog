@@ -1,3 +1,6 @@
+9 November 2012: Wouter
+	- Fix unbound-control forward disables configured stubs below it.
+
 7 November 2012: Wouter
 	- Fixup ldns-testpkts, identical to ldns/examples.
 	- iana portlist updated.

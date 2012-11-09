@@ -270,25 +270,6 @@ read_forwards(struct iter_forwards* fwd, struct config_file* cfg)
 	return 1;
 }
 
-/** see if zone needs to have a hole inserted */
-static int
-need_hole_insert(rbtree_t* tree, struct iter_forward_zone* zone)
-{
-	struct iter_forward_zone k;
-	if(rbtree_search(tree, zone))
-		return 0; /* exact match exists */
-	k = *zone;
-	k.node.key = &k;
-	/* search up the tree */
-	do {
-		dname_remove_label(&k.name, &k.namelen);
-		k.namelabs --;
-		if(rbtree_search(tree, &k))
-			return 1; /* found an upper forward zone, need hole */
-	} while(k.namelabs > 1);
-	return 0; /* no forwards above, no holes needed */
-}
-
 /** insert a stub hole (if necessary) for stub name */
 static int
 fwd_add_stub_hole(struct iter_forwards* fwd, uint16_t c, uint8_t* nm)
@@ -298,11 +279,8 @@ fwd_add_stub_hole(struct iter_forwards* fwd, uint16_t c, uint8_t* nm)
 	key.dclass = c;
 	key.name = nm;
 	key.namelabs = dname_count_size_labels(key.name, &key.namelen);
-	if(need_hole_insert(fwd->tree, &key)) {
-		return forwards_insert_data(fwd, key.dclass, key.name,
-			key.namelen, key.namelabs, NULL);
-	}
-	return 1;
+	return forwards_insert_data(fwd, key.dclass, key.name,
+		key.namelen, key.namelabs, NULL);
 }
 
 /** make NULL entries for stubs */
