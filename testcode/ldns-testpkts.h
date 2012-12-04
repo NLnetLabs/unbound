@@ -197,7 +197,7 @@ struct entry {
 /**
  * reads the canned reply file and returns a list of structs 
  * does an exit on error.
- * @param skip_withespace: skip leftside whitespace.
+ * @param skip_whitespace: skip leftside whitespace.
  */
 struct entry* read_datafile(const char* name, int skip_whitespace);
 
