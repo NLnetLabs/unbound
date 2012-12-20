@@ -1,3 +1,6 @@
+20 December 2012: Wouter
+	- Fix unbound-anchor xml parse of entity declarations for safety.
+
 19 December 2012: Wouter
 	- iana portlist updated.
 

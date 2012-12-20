@@ -1503,6 +1503,20 @@ xml_endelem(void *userData, const XML_Char *name)
 	}
 }
 
+/* Stop the parser when an entity declaration is encountered. For safety. */
+static void
+xml_entitydeclhandler(void *userData,
+	const XML_Char *ATTR_UNUSED(entityName),
+	int ATTR_UNUSED(is_parameter_entity),
+	const XML_Char *ATTR_UNUSED(value), int ATTR_UNUSED(value_length),
+	const XML_Char *ATTR_UNUSED(base),
+	const XML_Char *ATTR_UNUSED(systemId),
+	const XML_Char *ATTR_UNUSED(publicId),
+	const XML_Char *ATTR_UNUSED(notationName))
+{
+	XML_StopParser((XML_Parser)userData, XML_FALSE);
+}
+
 /**
  * XML parser setup of the callbacks for the tags
  */
@@ -1531,6 +1545,7 @@ xml_parse_setup(XML_Parser parser, struct xml_data* data, time_t now)
 		if(verb) printf("out of memory\n");
 		exit(0);
 	}
+	XML_SetEntityDeclHandler(parser, xml_entitydeclhandler);
 	XML_SetElementHandler(parser, xml_startelem, xml_endelem);
 	XML_SetCharacterDataHandler(parser, xml_charhandle);
 }
