@@ -1,5 +1,6 @@
 2 January 2013: Wouter
 	- Fix openssl lock free on exit (reported by Robert Fleischman).
+	- iana portlist updated.
 
 20 December 2012: Wouter
 	- Fix unbound-anchor xml parse of entity declarations for safety.
