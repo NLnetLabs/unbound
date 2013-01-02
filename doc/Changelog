@@ -1,6 +1,9 @@
 2 January 2013: Wouter
 	- Fix openssl lock free on exit (reported by Robert Fleischman).
 	- iana portlist updated.
+	- Tested that unbound implements the RFC5155 Technical Errata id 3441.
+	  Unbound already implements insecure classification of an empty
+	  nonterminal in NSEC3 optout zone.
 
 20 December 2012: Wouter
 	- Fix unbound-anchor xml parse of entity declarations for safety.
