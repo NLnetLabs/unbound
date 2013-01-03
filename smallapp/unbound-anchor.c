@@ -1654,10 +1654,8 @@ get_valid_signers(PKCS7* p7, char* p7signer)
 			sk_X509_value(signers, i));
 		char buf[1024];
 		if(!nm) {
-			if(verb) printf("signers cert has no subject name\n");
-			sk_X509_free(signers);
-			sk_X509_free(validsigners);
-			return 0;
+			if(verb) printf("signer %d: cert has no subject name\n", i);
+			continue;
 		}
 		if(verb) {
 			char* nmline = X509_NAME_oneline(nm, buf,
