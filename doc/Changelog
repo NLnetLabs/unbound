@@ -1,3 +1,6 @@
+3 January 2013: Wouter
+	- Test that unbound-control checks client credentials.
+
 2 January 2013: Wouter
 	- Fix openssl lock free on exit (reported by Robert Fleischman).
 	- iana portlist updated.
