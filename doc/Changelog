@@ -2,6 +2,8 @@
 	- Test that unbound-control checks client credentials.
 	- Test that unbound can handle a CNAME at an intermediate node in
 	  the chain of trust (where it seeks a DS record).
+	- Check the commonName of the signer of the root.xml file in
+	  unbound-anchor, default is dnssec@iana.org.
 
 2 January 2013: Wouter
 	- Fix openssl lock free on exit (reported by Robert Fleischman).
