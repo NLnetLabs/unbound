@@ -56,6 +56,9 @@
 #include "util/fptr_wlist.h"
 #include "util/alloc.h"
 #include "util/config_file.h"
+#ifdef CLIENT_SUBNET
+#include "edns-subnet/edns-subnet.h"
+#endif
 
 /** subtract timers and the values do not overflow or become negative */
 static void
@@ -308,6 +311,21 @@ void mesh_new_client(struct mesh_area* mesh, struct query_info* qinfo,
 			return;
 		}
 	}
+#ifdef CLIENT_SUBNET
+	/* See if both the found mesh and the query have the same subnet
+	 * option set. If not forget about mesh_state and create a new one */
+	if(s) {
+		struct edns_data* medns = s->s.edns_from_client;
+		if ( !(edns->edns_present && edns->subnet_validdata) ||
+			!(medns && medns->edns_present && medns->subnet_validdata) ||
+			edns->subnet_addr_fam != medns->subnet_addr_fam ||
+			edns->subnet_source_mask != medns->subnet_source_mask ||
+			memcmp(edns->subnet_addr, medns->subnet_addr, INET6_SIZE) != 0)
+		{
+			s = NULL;
+		}
+	}
+#endif
 	/* see if it already exists, if not, create one */
 	if(!s) {
 #ifdef UNBOUND_DEBUG
@@ -344,6 +362,37 @@ void mesh_new_client(struct mesh_area* mesh, struct query_info* qinfo,
 				mesh_state_delete(&s->s);
 			return;
 	}
+#ifdef CLIENT_SUBNET
+	if(edns->subnet_validdata) {
+		edns->subnet_downstream = 1;
+	} else {
+		struct sockaddr_storage *ss;
+		void* sinaddr;
+		/* Construct subnet option from original query */
+		ss = &s->reply_list->query_reply.addr;
+		if(((struct sockaddr_in*)ss)->sin_family == AF_INET) {
+			edns->subnet_source_mask = MAX_CLIENT_SUBNET_IP4;
+			edns->subnet_addr_fam = IANA_ADDRFAM_IP4;
+			sinaddr = &((struct sockaddr_in*)ss)->sin_addr;
+			memcpy(edns->subnet_addr, (uint8_t *)sinaddr, INET_SIZE);
+			edns->subnet_validdata = 1;
+		} 
+#ifdef INET6
+		else {
+			edns->subnet_source_mask = MAX_CLIENT_SUBNET_IP6;
+			edns->subnet_addr_fam = IANA_ADDRFAM_IP6;
+			sinaddr = &((struct sockaddr_in6*)ss)->sin6_addr;
+			memcpy(edns->subnet_addr, (uint8_t *)sinaddr, INET6_SIZE);
+			edns->subnet_validdata = 1;
+		}
+#else
+		else {
+			/* We don't know how to handle ip6 , just pass*/
+		}
+#endif /* INET6 */
+	}
+	s->s.edns_from_client = edns;
+#endif /* CLIENT_SUBNET */
 	/* update statistics */
 	if(was_detached) {
 		log_assert(mesh->num_detached_states > 0);
@@ -537,6 +586,9 @@ mesh_state_create(struct module_env* env, struct query_info* qinfo,
 	mstate->s.env = env;
 	mstate->s.mesh_info = mstate;
 	mstate->s.prefetch_leeway = 0;
+#ifdef CLIENT_SUBNET
+	mstate->s.edns_from_client = NULL;
+#endif
 	/* init modules */
 	for(i=0; i<env->mesh->mods.num; i++) {
 		mstate->s.minfo[i] = NULL;
@@ -793,7 +845,6 @@ mesh_do_callback(struct mesh_state* m, int rcode, struct reply_info* rep,
 		r->edns.udp_size = EDNS_ADVERTISED_SIZE;
 		r->edns.ext_rcode = 0;
 		r->edns.bits &= EDNS_DO;
-		r->edns.subnet_option = 0;
 		if(!reply_info_answer_encode(&m->s.qinfo, rep, r->qid, 
 			r->qflags, r->buf, 0, 1, 
 			m->s.env->scratch, udp_size, &r->edns, 
@@ -865,7 +916,15 @@ mesh_send_reply(struct mesh_state* m, int rcode, struct reply_info* rep,
 		r->edns.udp_size = EDNS_ADVERTISED_SIZE;
 		r->edns.ext_rcode = 0;
 		r->edns.bits &= EDNS_DO;
-		r->edns.subnet_option = 0;
+#ifdef CLIENT_SUBNET
+		if(m->s.edns_to_client && m->s.edns_to_client->subnet_validdata) {
+			r->edns.subnet_validdata = 1;
+			r->edns.subnet_addr_fam    = m->s.edns_to_client->subnet_addr_fam;
+			r->edns.subnet_source_mask = m->s.edns_to_client->subnet_source_mask;
+			r->edns.subnet_scope_mask  = m->s.edns_to_client->subnet_scope_mask;
+			memcpy(r->edns.subnet_addr, m->s.edns_to_client->subnet_addr, INET6_SIZE);
+		} else r->edns.subnet_validdata = 0;
+#endif
 		m->s.qinfo.qname = r->qname;
 		if(!reply_info_answer_encode(&m->s.qinfo, rep, r->qid, 
 			r->qflags, r->query_reply.c->buffer, 0, 1, 

@@ -729,7 +729,10 @@ calc_edns_field_size(struct edns_data* edns)
 void
 attach_edns_record(ldns_buffer* pkt, struct edns_data* edns)
 {
-	size_t len, sn_octs, sn_octs_remainder;
+	size_t len;
+#ifdef CLIENT_SUBNET
+	size_t sn_octs, sn_octs_remainder;
+#endif
 	if(!edns || !edns->edns_present)
 		return;
 	/* inc additional count */
@@ -745,8 +748,9 @@ attach_edns_record(ldns_buffer* pkt, struct edns_data* edns)
 	ldns_buffer_write_u8(pkt, edns->ext_rcode); /* ttl */
 	ldns_buffer_write_u8(pkt, edns->edns_version);
 	ldns_buffer_write_u16(pkt, edns->bits);
+#ifdef CLIENT_SUBNET
 	/* Add edns-subnet option to record */
-	if(edns->subnet_option) {
+	if(edns->subnet_validdata) {
 		assert(edns->subnet_addr_fam == IANA_ADDRFAM_IP4 || 
 			edns->subnet_addr_fam == IANA_ADDRFAM_IP6);
 		assert(edns->subnet_addr_fam != IANA_ADDRFAM_IP4 || 
@@ -772,7 +776,9 @@ attach_edns_record(ldns_buffer* pkt, struct edns_data* edns)
 		if(sn_octs_remainder)
 				ldns_buffer_write_u8(pkt, edns->subnet_addr[sn_octs] & 
 						~(0xFF >> (edns->subnet_source_mask % 8)));
-	} else ldns_buffer_write_u16(pkt, 0); /* rdatalen */
+	} else 
+#endif	
+	ldns_buffer_write_u16(pkt, 0); /* rdatalen */
 	ldns_buffer_flip(pkt);
 }
 
@@ -863,7 +869,6 @@ error_encode(ldns_buffer* buf, int r, struct query_info* qinfo,
 		es.udp_size = EDNS_ADVERTISED_SIZE;
 		es.ext_rcode = 0;
 		es.bits &= EDNS_DO;
-		es.subnet_option = 0;
 		if(ldns_buffer_limit(buf) + calc_edns_field_size(&es) >
 			edns->udp_size)
 			return;

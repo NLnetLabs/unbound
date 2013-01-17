@@ -47,7 +47,6 @@
 #include <sys/time.h>
 #include <ldns/wire2host.h>
 #include "services/outside_network.h"
-#include "services/outbound_list.h"
 #include "services/listen_dnsport.h"
 #include "services/cache/infra.h"
 #include "util/data/msgparse.h"
@@ -59,7 +58,11 @@
 #include "util/net_help.h"
 #include "util/random.h"
 #include "util/fptr_wlist.h"
+
+#ifdef CLIENT_SUBNET
 #include "edns-subnet/edns-subnet.h"
+#endif
+
 #include <openssl/ssl.h>
 
 #ifdef HAVE_NETDB_H
@@ -554,6 +557,7 @@ static int setup_if(struct port_if* pif, const char* addrstr,
 	return 1;
 }
 
+#ifdef CLIENT_SUBNET
 struct outside_network* 
 outside_network_create(struct comm_base *base, size_t bufsize, 
 	size_t num_ports, char** ifs, int num_ifs, int do_ip4, 
@@ -562,6 +566,16 @@ outside_network_create(struct comm_base *base, size_t bufsize,
 	int numavailports, size_t unwanted_threshold,
 	void (*unwanted_action)(void*), void* unwanted_param, int do_udp,
 	void* sslctx, struct ednssubnet_upstream* edns_subnet_upstreams)
+#else
+struct outside_network* 
+outside_network_create(struct comm_base *base, size_t bufsize, 
+	size_t num_ports, char** ifs, int num_ifs, int do_ip4, 
+	int do_ip6, size_t num_tcp, struct infra_cache* infra,
+	struct ub_randstate* rnd, int use_caps_for_id, int* availports, 
+	int numavailports, size_t unwanted_threshold,
+	void (*unwanted_action)(void*), void* unwanted_param, int do_udp,
+	void* sslctx)
+#endif
 {
 	struct outside_network* outnet = (struct outside_network*)
 		calloc(1, sizeof(struct outside_network));
@@ -583,7 +597,9 @@ outside_network_create(struct comm_base *base, size_t bufsize,
 	outnet->unwanted_param = unwanted_param;
 	outnet->use_caps_for_id = use_caps_for_id;
 	outnet->do_udp = do_udp;
+#ifdef CLIENT_SUBNET
 	outnet->edns_subnet_upstreams = edns_subnet_upstreams;
+#endif
 	if(numavailports == 0) {
 		log_err("no outgoing ports available");
 		outside_network_delete(outnet);
@@ -1209,7 +1225,9 @@ serviced_create(struct outside_network* outnet, ldns_buffer* buff, int dnssec,
 	sq->status = serviced_initial;
 	sq->retry = 0;
 	sq->to_be_deleted = 0;
-	sq->mesh_info = NULL;
+#ifdef CLIENT_SUBNET
+	sq->edns = NULL;
+#endif
 #ifdef UNBOUND_DEBUG
 	ins = 
 #endif
@@ -1314,8 +1332,6 @@ serviced_perturb_qname(struct ub_randstate* rnd, uint8_t* qbuf, size_t len)
 static void
 serviced_encode(struct serviced_query* sq, ldns_buffer* buff, int with_edns)
 {
-	struct sockaddr_storage *ss;
-	void* sinaddr;
 	/* if we are using 0x20 bits for ID randomness, perturb them */
 	if(sq->outnet->use_caps_for_id) {
 		serviced_perturb_qname(sq->outnet->rnd, sq->qbuf, sq->qbuflen);
@@ -1328,42 +1344,15 @@ serviced_encode(struct serviced_query* sq, ldns_buffer* buff, int with_edns)
 	if(with_edns) {
 		/* add edns section */
 		struct edns_data edns;
+#ifdef CLIENT_SUBNET
+		if(sq->edns)
+			memcpy(&edns, sq->edns, sizeof(edns));
+		else
+			edns.subnet_validdata = 0;
+#endif
 		edns.edns_present = 1;
 		edns.ext_rcode = 0;
 		edns.edns_version = EDNS_ADVERTISED_VERSION;
-		/* If this query has an interested client and the upstream
-		 * target is in the whitelist, add the edns subnet option. */
-		edns.subnet_option = sq->mesh_info->reply_list && 
-			upstream_lookup(sq->outnet->edns_subnet_upstreams, 
-			&sq->addr, sq->addrlen);
-		if(edns.subnet_option) {
-			ss = &sq->mesh_info->reply_list->query_reply.addr;
-			if(((struct sockaddr_in*)ss)->sin_family == AF_INET) {
-				edns.subnet_addr_fam = IANA_ADDRFAM_IP4;
-				sinaddr = &((struct sockaddr_in*)ss)->sin_addr;
-				memcpy(edns.subnet_addr, (uint8_t *)sinaddr, INET_SIZE);
-				/* YBS TODO: source mask must come from original query if
-				 * any. Some default otherwise. But not more than 
-				 * configured maximum */
-				edns.subnet_source_mask = MAX_CLIENT_SUBNET_IP4;
-			} 
-#ifdef INET6
-			else {
-				edns.subnet_addr_fam = IANA_ADDRFAM_IP6;
-				sinaddr = &((struct sockaddr_in6*)ss)->sin6_addr;
-				memcpy(edns.subnet_addr, (uint8_t *)sinaddr, INET6_SIZE);
-				edns.subnet_source_mask = MAX_CLIENT_SUBNET_IP6;
-			}
-#endif
-			edns.subnet_scope_mask = 0;
-			//YBS add addr,fam,mask to mesh.
-			sq->mesh_info->s.qinfo.subnet_option = 1;
-			sq->mesh_info->s.qinfo.subnet_addr_fam = edns.subnet_addr_fam;
-			sq->mesh_info->s.qinfo.subnet_source_mask = edns.subnet_source_mask;
-			memcpy(sq->mesh_info->s.qinfo.subnet_addr, (uint8_t *)sinaddr, INET6_SIZE);
-		} else {
-			sq->mesh_info->s.qinfo.subnet_option = 0;
-		}
 		if(sq->status == serviced_query_UDP_EDNS_FRAG) {
 			if(addr_is_ip6(&sq->addr, sq->addrlen)) {
 				if(EDNS_FRAG_SIZE_IP6 < EDNS_ADVERTISED_SIZE)
@@ -1823,6 +1812,16 @@ serviced_udp_callback(struct comm_point* c, void* arg, int error,
 	return 0;
 }
 
+#ifdef CLIENT_SUBNET
+struct serviced_query* 
+outnet_serviced_query(struct outside_network* outnet,
+	uint8_t* qname, size_t qnamelen, uint16_t qtype, uint16_t qclass,
+	uint16_t flags, int dnssec, int want_dnssec, int tcp_upstream,
+	int ssl_upstream, struct sockaddr_storage* addr, socklen_t addrlen,
+	uint8_t* zone, size_t zonelen, comm_point_callback_t* callback,
+	void* callback_arg, ldns_buffer* buff,
+	struct edns_data* edns)
+#else
 struct serviced_query* 
 outnet_serviced_query(struct outside_network* outnet,
 	uint8_t* qname, size_t qnamelen, uint16_t qtype, uint16_t qclass,
@@ -1830,6 +1829,7 @@ outnet_serviced_query(struct outside_network* outnet,
 	int ssl_upstream, struct sockaddr_storage* addr, socklen_t addrlen,
 	uint8_t* zone, size_t zonelen, comm_point_callback_t* callback,
 	void* callback_arg, ldns_buffer* buff)
+#endif
 {
 	struct serviced_query* sq;
 	struct service_callback* cb;
@@ -1849,11 +1849,15 @@ outnet_serviced_query(struct outside_network* outnet,
 			free(cb);
 			return NULL;
 		}
-		/* Is this a client initiated query? Make clients available
-		 * to serviced query. */
-		sq->mesh_info = ((struct outbound_entry*)callback_arg)
-						->qstate->mesh_info;
-		
+#ifdef CLIENT_SUBNET
+		if(edns && edns->subnet_validdata && (edns->subnet_downstream ||
+			upstream_lookup(outnet->edns_subnet_upstreams, 
+			addr, addrlen))) {
+			sq->edns = edns;
+			/* This tells our module we've appened the option*/
+			edns->subnet_sent = 1;
+		}
+#endif		
 		/* perform first network action */
 		if(outnet->do_udp && !(tcp_upstream || ssl_upstream)) {
 			if(!serviced_udp_send(sq, buff)) {

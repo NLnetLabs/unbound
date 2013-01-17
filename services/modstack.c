@@ -49,6 +49,9 @@
 #ifdef WITH_PYTHONMODULE
 #include "pythonmod/pythonmod.h"
 #endif
+#ifdef CLIENT_SUBNET
+#include "edns-subnet/subnetmod.h"
+#endif
 
 /** count number of modules (words) in the string */
 static int
@@ -119,6 +122,9 @@ module_list_avail(void)
 #ifdef WITH_PYTHONMODULE
 		"python", 
 #endif
+#ifdef CLIENT_SUBNET
+		"subnetcache", 
+#endif
 		"validator", 
 		"iterator", 
 		NULL};
@@ -135,6 +141,9 @@ module_funcs_avail(void)
         static struct module_func_block* (*fb[])(void) = {
 #ifdef WITH_PYTHONMODULE
 		&pythonmod_get_funcblock, 
+#endif
+#ifdef CLIENT_SUBNET
+		&subnetmod_get_funcblock, 
 #endif
 		&val_get_funcblock, 
 		&iter_get_funcblock, 

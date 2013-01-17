@@ -1976,6 +1976,11 @@ processFinished(struct module_qstate* qstate, struct val_qstate* vq,
 			vq->orig_msg->rep->security = sec_status_indeterminate;
 	}
 
+#ifdef CLIENT_SUBNET
+	/* Do not cache, we asked for and got subnet option */
+	if(!qstate->edns_in.subnet_validdata || 
+		!qstate->edns_out.subnet_sent) {
+#endif
 	/* store results in cache */
 	if(qstate->query_flags&BIT_RD) {
 		/* if secure, this will override cache anyway, no need
@@ -1992,6 +1997,9 @@ processFinished(struct module_qstate* qstate, struct val_qstate* vq,
 			log_err("out of memory caching validator results");
 		}
 	}
+#ifdef CLIENT_SUBNET
+	}
+#endif
 	qstate->return_rcode = LDNS_RCODE_NOERROR;
 	qstate->return_msg = vq->orig_msg;
 	qstate->ext_state[id] = module_finished;

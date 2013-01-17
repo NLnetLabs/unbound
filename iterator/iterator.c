@@ -1932,10 +1932,18 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 			iq->num_target_queries = 0;
 			return processDSNSFind(qstate, iq, id);
 		}
+#ifdef CLIENT_SUBNET
+		/* Do not cache, we asked for and got subnet option */
+		if(!qstate->edns_in.subnet_validdata || 
+			!qstate->edns_out.subnet_sent) {
+#endif
 		iter_dns_store(qstate->env, &iq->response->qinfo,
 			iq->response->rep, 0, qstate->prefetch_leeway,
 			iq->dp&&iq->dp->has_parent_side_NS,
 			qstate->region);
+#ifdef CLIENT_SUBNET
+		}
+#endif
 		/* close down outstanding requests to be discarded */
 		outbound_list_clear(&iq->outlist);
 		iq->num_current_queries = 0;
@@ -2703,7 +2711,9 @@ process_response(struct module_qstate* qstate, struct iter_qstate* iq,
 	enum module_ev event)
 {
 	struct msg_parse* prs;
+#ifndef CLIENT_SUBNET
 	struct edns_data edns;
+#endif
 	ldns_buffer* pkt;
 
 	verbose(VERB_ALGO, "process_response: new external response event");
@@ -2729,15 +2739,23 @@ process_response(struct module_qstate* qstate, struct iter_qstate* iq,
 		goto handle_it;
 	}
 	memset(prs, 0, sizeof(*prs));
+#ifdef CLIENT_SUBNET
+	memset(&qstate->edns_in, 0, sizeof(qstate->edns_in));
+#else
 	memset(&edns, 0, sizeof(edns));
+#endif
 	pkt = qstate->reply->c->buffer;
 	ldns_buffer_set_position(pkt, 0);
 	if(parse_packet(pkt, prs, qstate->env->scratch) != LDNS_RCODE_NOERROR) {
 		verbose(VERB_ALGO, "parse error on reply packet");
 		goto handle_it;
 	}
+#ifdef CLIENT_SUBNET
+	if(parse_extract_edns(prs, &qstate->edns_in) != LDNS_RCODE_NOERROR)
+#else
 	/* edns is not examined, but removed from message to help cache */
 	if(parse_extract_edns(prs, &edns) != LDNS_RCODE_NOERROR)
+#endif
 		goto handle_it;
 	/* remove CD-bit, we asked for in case we handle validation ourself */
 	prs->flags &= ~BIT_CD;

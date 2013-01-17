@@ -120,9 +120,10 @@ struct outside_network {
 	struct ub_randstate* rnd;
 	/** ssl context to create ssl wrapped TCP with DNS connections */
 	void* sslctx;
+#ifdef CLIENT_SUBNET
 	/** hosts we send client prefix, not owned by outnet. */
 	struct ednssubnet_upstream* edns_subnet_upstreams;
-
+#endif
 	/**
 	 * Array of tcp pending used for outgoing TCP connections.
 	 * Each can be used to establish a TCP connection with a server.
@@ -355,8 +356,10 @@ struct serviced_query {
 	struct service_callback* cblist;
 	/** the UDP or TCP query that is pending, see status which */
 	void* pending;
-	/** Clients initiating lookup. Not owned by serviced_query */
-	struct mesh_state *mesh_info;
+#ifdef CLIENT_SUBNET
+	/** Contains vandergaast data */
+	struct edns_data* edns;
+#endif
 };
 
 /**
@@ -383,6 +386,7 @@ struct serviced_query {
  * @param edns_subnet_upstreams: Servers whitelisted for edns-subnet.
  * @return: the new structure (with no pending answers) or NULL on error.
  */
+#ifdef CLIENT_SUBNET
 struct outside_network* outside_network_create(struct comm_base* base,
 	size_t bufsize, size_t num_ports, char** ifs, int num_ifs,
 	int do_ip4, int do_ip6, size_t num_tcp, struct infra_cache* infra, 
@@ -390,7 +394,15 @@ struct outside_network* outside_network_create(struct comm_base* base,
 	int numavailports, size_t unwanted_threshold,
 	void (*unwanted_action)(void*), void* unwanted_param, int do_udp,
 	void* sslctx, struct ednssubnet_upstream* edns_subnet_upstreams);
-
+#else
+struct outside_network* outside_network_create(struct comm_base* base,
+	size_t bufsize, size_t num_ports, char** ifs, int num_ifs,
+	int do_ip4, int do_ip6, size_t num_tcp, struct infra_cache* infra, 
+	struct ub_randstate* rnd, int use_caps_for_id, int* availports, 
+	int numavailports, size_t unwanted_threshold,
+	void (*unwanted_action)(void*), void* unwanted_param, int do_udp,
+	void* sslctx);
+#endif
 /**
  * Delete outside_network structure.
  * @param outnet: object to delete.
@@ -476,12 +488,21 @@ void pending_delete(struct outside_network* outnet, struct pending* p);
  * @return 0 on error, or pointer to serviced query that is used to answer
  *	this serviced query may be shared with other callbacks as well.
  */
+ #ifdef CLIENT_SUBNET
+struct serviced_query* outnet_serviced_query(struct outside_network* outnet,
+	uint8_t* qname, size_t qnamelen, uint16_t qtype, uint16_t qclass,
+	uint16_t flags, int dnssec, int want_dnssec, int tcp_upstream,
+	int ssl_upstream, struct sockaddr_storage* addr, socklen_t addrlen,
+	uint8_t* zone, size_t zonelen, comm_point_callback_t* callback,
+	void* callback_arg, ldns_buffer* buff, struct edns_data* edns);
+#else
 struct serviced_query* outnet_serviced_query(struct outside_network* outnet,
 	uint8_t* qname, size_t qnamelen, uint16_t qtype, uint16_t qclass,
 	uint16_t flags, int dnssec, int want_dnssec, int tcp_upstream,
 	int ssl_upstream, struct sockaddr_storage* addr, socklen_t addrlen,
 	uint8_t* zone, size_t zonelen, comm_point_callback_t* callback,
 	void* callback_arg, ldns_buffer* buff);
+#endif
 
 /**
  * Remove service query callback.

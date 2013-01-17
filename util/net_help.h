@@ -81,11 +81,13 @@ struct regional;
 #define EDNS_ADVERTISED_VERSION         0
 /** Advertised size of EDNS capabilities */
 extern uint16_t EDNS_ADVERTISED_SIZE;
+#ifdef CLIENT_SUBNET
 /** Opcode for edns subnet option, is TBD. */
 extern uint16_t EDNS_SUBNET_OPC;
 /** Maximum number of bits we are willing to expose */
 extern uint8_t MAX_CLIENT_SUBNET_IP4;
 extern uint8_t MAX_CLIENT_SUBNET_IP6;
+#endif
 /** bits for EDNS bitfield */
 #define EDNS_DO 0x8000 /* Dnssec Ok */
 /** byte size of ip4 address */

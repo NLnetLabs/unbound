@@ -2133,7 +2133,9 @@ probe_anchor(struct module_env* env, struct trust_anchor* tp)
 	edns.ext_rcode = 0;
 	edns.edns_version = 0;
 	edns.bits = EDNS_DO;
-	edns.subnet_option = 0; 
+#ifdef CLIENT_SUBNET
+	edns.subnet_validdata = 0; 
+#endif
 	if(ldns_buffer_capacity(buf) < 65535)
 		edns.udp_size = (uint16_t)ldns_buffer_capacity(buf);
 	else	edns.udp_size = 65535;

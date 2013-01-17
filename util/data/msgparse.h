@@ -211,11 +211,19 @@ struct edns_data {
 	uint16_t bits;
 	/** UDP reassembly size. */
 	uint16_t udp_size;
-	int 		subnet_option; /*YBS*/
+#ifdef CLIENT_SUBNET
+	/** Client specifically asked for option */
+	int			subnet_downstream;
+	/** Did we send the option? */
+	int			subnet_sent;
+	/** below fields contain actual data */
+	int 		subnet_validdata;
+	/** These will end up in packet */
 	uint16_t 	subnet_addr_fam;
 	uint8_t 	subnet_source_mask;
 	uint8_t 	subnet_scope_mask;
 	uint8_t 	subnet_addr[16];
+#endif
 };
 
 /**

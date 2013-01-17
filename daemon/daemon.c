@@ -78,7 +78,11 @@
 #include "util/module.h"
 #include "util/random.h"
 #include "util/tube.h"
+
+#ifdef CLIENT_SUBNET
 #include "edns-subnet/edns-subnet.h"
+#endif
+
 #include "util/net_help.h"
 #include <signal.h>
 
@@ -239,6 +243,7 @@ daemon_init(void)
 		free(daemon);
 		return NULL;
 	}
+#ifdef CLIENT_SUBNET
 	/* whitelist for edns subnet capable servers */
 	daemon->edns_subnet_upstreams = upstream_create();
 	if(!daemon->edns_subnet_upstreams) {
@@ -246,6 +251,7 @@ daemon_init(void)
 		free(daemon);
 		return NULL;
 	}
+#endif
 	if(gettimeofday(&daemon->time_boot, NULL) < 0)
 		log_err("gettimeofday: %s", strerror(errno));
 	daemon->time_last_stat = daemon->time_boot;
@@ -461,8 +467,10 @@ daemon_fork(struct daemon* daemon)
 	log_assert(daemon);
 	if(!acl_list_apply_cfg(daemon->acl, daemon->cfg))
 		fatal_exit("Could not setup access control list");
+#ifdef CLIENT_SUBNET
 	if(!upstream_apply_cfg(daemon->edns_subnet_upstreams, daemon->cfg))
 		fatal_exit("Could not setup edns-subnet upstream list");
+#endif
 	if(!(daemon->local_zones = local_zones_create()))
 		fatal_exit("Could not create local zones: out of memory");
 	if(!local_zones_apply_cfg(daemon->local_zones, daemon->cfg))
@@ -552,7 +560,9 @@ daemon_delete(struct daemon* daemon)
 	ub_randfree(daemon->rand);
 	alloc_clear(&daemon->superalloc);
 	acl_list_delete(daemon->acl);
+#ifdef CLIENT_SUBNET
 	upstream_delete(daemon->edns_subnet_upstreams);
+#endif
 	free(daemon->chroot);
 	free(daemon->pidfile);
 	free(daemon->env);

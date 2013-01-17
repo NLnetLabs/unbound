@@ -71,6 +71,10 @@
 #include "validator/autotrust.h"
 #include "validator/val_anchor.h"
 
+#ifdef CLIENT_SUBNET
+#include "edns-subnet/subnetmod.h"
+#endif
+
 #ifdef HAVE_SYS_TYPES_H
 #  include <sys/types.h>
 #endif
@@ -475,7 +479,6 @@ answer_norec_from_cache(struct worker* worker, struct query_info* qinfo,
 			edns->udp_size = EDNS_ADVERTISED_SIZE;
 			edns->ext_rcode = 0;
 			edns->bits &= EDNS_DO;
-			edns->subnet_option = 0;
 			error_encode(repinfo->c->buffer, LDNS_RCODE_SERVFAIL, 
 				&msg->qinfo, id, flags, edns);
 			regional_free_all(worker->scratchpad);
@@ -504,7 +507,9 @@ answer_norec_from_cache(struct worker* worker, struct query_info* qinfo,
 	edns->udp_size = EDNS_ADVERTISED_SIZE;
 	edns->ext_rcode = 0;
 	edns->bits &= EDNS_DO;
-	edns->subnet_option = 0;
+#ifdef CLIENT_SUBNET
+	edns->subnet_validdata = 0;
+#endif
 	msg->rep->flags |= BIT_QR|BIT_RA;
 	if(!reply_info_answer_encode(&msg->qinfo, msg->rep, id, flags, 
 		repinfo->c->buffer, 0, 1, worker->scratchpad,
@@ -563,7 +568,6 @@ answer_from_cache(struct worker* worker, struct query_info* qinfo,
 		edns->udp_size = EDNS_ADVERTISED_SIZE;
 		edns->ext_rcode = 0;
 		edns->bits &= EDNS_DO;
-		edns->subnet_option = 0;
 		error_encode(repinfo->c->buffer, LDNS_RCODE_SERVFAIL, 
 			qinfo, id, flags, edns);
 		rrset_array_unlock_touch(worker->env.rrset_cache, 
@@ -595,7 +599,6 @@ answer_from_cache(struct worker* worker, struct query_info* qinfo,
 	edns->udp_size = EDNS_ADVERTISED_SIZE;
 	edns->ext_rcode = 0;
 	edns->bits &= EDNS_DO;
-	edns->subnet_option = 0;
 	if(!reply_info_answer_encode(qinfo, rep, id, flags, 
 		repinfo->c->buffer, timenow, 1, worker->scratchpad,
 		udpsize, edns, (int)(edns->bits & EDNS_DO), secure)) {
@@ -669,7 +672,6 @@ chaos_replystr(ldns_buffer* pkt, const char* str, struct edns_data* edns)
 	edns->edns_version = EDNS_ADVERTISED_VERSION;
 	edns->udp_size = EDNS_ADVERTISED_SIZE;
 	edns->bits &= EDNS_DO;
-	edns->subnet_option = 0;
 	attach_edns_record(pkt, edns);
 }
 
@@ -821,7 +823,6 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 		edns.edns_version = EDNS_ADVERTISED_VERSION;
 		edns.udp_size = EDNS_ADVERTISED_SIZE;
 		edns.bits &= EDNS_DO;
-		edns.subnet_option = 0;
 		verbose(VERB_ALGO, "query with bad edns version.");
 		log_addr(VERB_CLIENT,"from",&repinfo->addr, repinfo->addrlen);
 		error_encode(c->buffer, EDNS_RCODE_BADVERS&0xf, &qinfo,
@@ -884,6 +885,13 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 			&repinfo->addr, repinfo->addrlen);
 		return 1;
 	}
+#ifdef CLIENT_SUBNET
+	if(!edns.edns_present || !edns.subnet_validdata || 
+		edns.subnet_source_mask == 0) {
+		/* Do not probe cache if subnet option is set. We always start
+		 * a full resolve. Unless client specifically asked not to 
+		 * reveal any bits */
+#endif
 	h = query_info_hash(&qinfo);
 	if((e=slabhash_lookup(worker->env.msg_cache, h, &qinfo, 0))) {
 		/* answer from cache - we have acquired a readlock on it */
@@ -909,6 +917,9 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 		verbose(VERB_ALGO, "answer from the cache failed");
 		lock_rw_unlock(&e->lock);
 	}
+#ifdef CLIENT_SUBNET
+	}
+#endif
 	if(!LDNS_RD_WIRE(ldns_buffer_begin(c->buffer))) {
 		if(answer_norec_from_cache(worker, &qinfo,
 			*(uint16_t*)ldns_buffer_begin(c->buffer), 
@@ -1110,6 +1121,7 @@ worker_init(struct worker* worker, struct config_file *cfg,
 		worker_delete(worker);
 		return 0;
 	}
+#ifdef CLIENT_SUBNET
 	worker->back = outside_network_create(worker->base,
 		cfg->msg_buffer_size, (size_t)cfg->outgoing_num_ports, 
 		cfg->out_ifs, cfg->num_out_ifs, cfg->do_ip4, cfg->do_ip6, 
@@ -1119,6 +1131,16 @@ worker_init(struct worker* worker, struct config_file *cfg,
 		cfg->unwanted_threshold, &worker_alloc_cleanup, worker,
 		cfg->do_udp, worker->daemon->connect_sslctx, 
 		worker->daemon->edns_subnet_upstreams);
+#else
+	worker->back = outside_network_create(worker->base,
+		cfg->msg_buffer_size, (size_t)cfg->outgoing_num_ports, 
+		cfg->out_ifs, cfg->num_out_ifs, cfg->do_ip4, cfg->do_ip6, 
+		cfg->do_tcp?cfg->outgoing_num_tcp:0, 
+		worker->daemon->env->infra_cache, worker->rndstate,
+		cfg->use_caps_bits_for_id, worker->ports, worker->numports,
+		cfg->unwanted_threshold, &worker_alloc_cleanup, worker,
+		cfg->do_udp, worker->daemon->connect_sslctx);
+#endif
 	if(!worker->back) {
 		log_err("could not create outgoing sockets");
 		worker_delete(worker);
@@ -1262,11 +1284,19 @@ worker_send_query(uint8_t* qname, size_t qnamelen, uint16_t qtype,
 	if(!e) 
 		return NULL;
 	e->qstate = q;
+#ifdef CLIENT_SUBNET
+	e->qsent = outnet_serviced_query(worker->back, qname,
+		qnamelen, qtype, qclass, flags, dnssec, want_dnssec,
+		q->env->cfg->tcp_upstream, q->env->cfg->ssl_upstream, addr,
+		addrlen, zone, zonelen, worker_handle_service_reply, e,
+		worker->back->udp_buff, &q->edns_out);
+#else
 	e->qsent = outnet_serviced_query(worker->back, qname,
 		qnamelen, qtype, qclass, flags, dnssec, want_dnssec,
 		q->env->cfg->tcp_upstream, q->env->cfg->ssl_upstream, addr,
 		addrlen, zone, zonelen, worker_handle_service_reply, e,
 		worker->back->udp_buff);
+#endif
 	if(!e->qsent) {
 		return NULL;
 	}

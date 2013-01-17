@@ -197,6 +197,7 @@ libworker_setup(struct ub_ctx* ctx, int is_bg)
 		libworker_delete(w);
 		return NULL;
 	}
+#ifdef CLIENT_SUBNET
 	w->back = outside_network_create(w->base, cfg->msg_buffer_size,
 		(size_t)cfg->outgoing_num_ports, cfg->out_ifs,
 		cfg->num_out_ifs, cfg->do_ip4, cfg->do_ip6, 
@@ -204,6 +205,15 @@ libworker_setup(struct ub_ctx* ctx, int is_bg)
 		w->env->infra_cache, w->env->rnd, cfg->use_caps_bits_for_id,
 		ports, numports, cfg->unwanted_threshold,
 		&libworker_alloc_cleanup, w, cfg->do_udp, w->sslctx, NULL);
+#else
+	w->back = outside_network_create(w->base, cfg->msg_buffer_size,
+		(size_t)cfg->outgoing_num_ports, cfg->out_ifs,
+		cfg->num_out_ifs, cfg->do_ip4, cfg->do_ip6, 
+		cfg->do_tcp?cfg->outgoing_num_tcp:0,
+		w->env->infra_cache, w->env->rnd, cfg->use_caps_bits_for_id,
+		ports, numports, cfg->unwanted_threshold,
+		&libworker_alloc_cleanup, w, cfg->do_udp, w->sslctx);
+#endif
 	if(!w->is_bg || w->is_bg_thread) {
 		lock_basic_unlock(&ctx->cfglock);
 	}
@@ -531,7 +541,9 @@ setup_qinfo_edns(struct libworker* w, struct ctx_query* q,
 	edns->ext_rcode = 0;
 	edns->edns_version = 0;
 	edns->bits = EDNS_DO;
-	edns->subnet_option = 0; 
+#ifdef CLIENT_SUBNET
+	edns->subnet_validdata = 0;
+#endif
 	if(ldns_buffer_capacity(w->back->udp_buff) < 65535)
 		edns->udp_size = (uint16_t)ldns_buffer_capacity(
 			w->back->udp_buff);
@@ -717,15 +729,22 @@ struct outbound_entry* libworker_send_query(uint8_t* qname, size_t qnamelen,
 	if(!e)
 		return NULL;
 	e->qstate = q;
+ #ifdef CLIENT_SUBNET
+	e->qsent = outnet_serviced_query(w->back, qname,
+		qnamelen, qtype, qclass, flags, dnssec, want_dnssec,
+		q->env->cfg->tcp_upstream, q->env->cfg->ssl_upstream, addr,
+		addrlen, zone, zonelen, libworker_handle_service_reply, e,
+		w->back->udp_buff, &q->edns_out);
+#else
 	e->qsent = outnet_serviced_query(w->back, qname,
 		qnamelen, qtype, qclass, flags, dnssec, want_dnssec,
 		q->env->cfg->tcp_upstream, q->env->cfg->ssl_upstream, addr,
 		addrlen, zone, zonelen, libworker_handle_service_reply, e,
 		w->back->udp_buff);
+#endif
 	if(!e->qsent) {
 		return NULL;
 	}
-	e->qsent->mesh_info = e->qstate->mesh_info;
 	return e;
 }
 

@@ -575,6 +575,15 @@ case "$enable_sha2" in
 	;;
 esac
 
+AC_ARG_ENABLE(subnet, AC_HELP_STRING([--enable-subnet], [Enable client subnet]))
+case "$enable_subnet" in
+	yes)
+	AC_DEFINE([CLIENT_SUBNET], [1], [Define this to enable client subnet option.])
+	;;
+	no|*)
+	;;
+esac
+
 # check wether gost also works
 AC_DEFUN([AC_CHECK_GOST_WORKS],
 [AC_REQUIRE([AC_PROG_CC])

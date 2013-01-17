@@ -346,8 +346,6 @@ struct fake_pending {
 	int serviced;
 	/** the runtime structure this is part of */
 	struct replay_runtime* runtime;
-	/** Clients initiating lookup. Not owned by serviced_query */
-	struct comm_reply *client;
 };
 
 /**

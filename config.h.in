@@ -3,6 +3,9 @@
 /* Directory to chroot to */
 #undef CHROOT_DIR
 
+/* Define this to enable client subnet option. */
+#undef CLIENT_SUBNET
+
 /* Pathname to the Unbound configuration file */
 #undef CONFIGFILE
 
@@ -549,6 +552,11 @@
    `char[]'. */
 #undef YYTEXT_POINTER
 
+/* Enable large inode numbers on Mac OS X 10.5.  */
+#ifndef _DARWIN_USE_64_BIT_INODE
+# define _DARWIN_USE_64_BIT_INODE 1
+#endif
+
 /* Number of bits in a file offset, on hosts where this is settable. */
 #undef _FILE_OFFSET_BITS
 
@@ -901,5 +909,4 @@ void *unbound_stat_realloc_log(void *ptr, size_t size, const char* file,
 #define UNBOUND_CONTROL_PORT 8953
 /** the version of unbound-control that this software implements */
 #define UNBOUND_CONTROL_VERSION 1
-
 

@@ -534,15 +534,6 @@ query_info_compare(void* m1, void* m2)
 		return mc;
 	log_assert(msg1->qname_len == msg2->qname_len);
 	COMPARE_IT(msg1->qclass, msg2->qclass);
-	/* If the reply has subnet and we expect subnet, whole option must 
-	 * match. Otherwise be lenient. */
-	if(msg1->subnet_option && msg2->subnet_option) {
-		COMPARE_IT(msg1->subnet_addr_fam, msg2->subnet_addr_fam);
-		COMPARE_IT(msg1->subnet_source_mask, msg2->subnet_source_mask);
-		if((mc = memcmp(msg1->subnet_addr, 
-				msg2->subnet_addr, INET6_SIZE)) != 0)
-			return mc;
-	}
 	return 0;
 #undef COMPARE_IT
 }

@@ -304,6 +304,13 @@ struct module_qstate {
 	enum module_ext_state ext_state[MAX_MODULE];
 	/** module specific data for query. indexed by module id. */
 	void* minfo[MAX_MODULE];
+#ifdef CLIENT_SUBNET
+	/** received from server */
+	struct edns_data* edns_from_client;
+	struct edns_data* edns_to_client;
+	struct edns_data edns_in;
+	struct edns_data edns_out;
+#endif
 	/** environment for this query */
 	struct module_env* env;
 	/** mesh related information for this query */
