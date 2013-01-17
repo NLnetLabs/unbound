@@ -134,6 +134,7 @@
 #include <openssl/rand.h>
 #endif
 #include <openssl/x509.h>
+#include <openssl/x509v3.h>
 #include <openssl/pem.h>
 
 /** name of server in URL to fetch HTTPS from */
@@ -186,7 +187,7 @@ usage()
 	printf("-u name		server in https url, default %s\n", URLNAME);
 	printf("-x path		pathname to xml in url, default %s\n", XMLNAME);
 	printf("-s path		pathname to p7s in url, default %s\n", P7SNAME);
-	printf("-n name		signer's subject commonName, default %s\n", P7SIGNER);
+	printf("-n name		signer's subject emailAddress, default %s\n", P7SIGNER);
 	printf("-4		work using IPv4 only\n");
 	printf("-6		work using IPv6 only\n");
 	printf("-f resolv.conf	use given resolv.conf to resolve -u name\n");
@@ -1626,6 +1627,23 @@ xml_parse(BIO* xml, time_t now)
 	}
 }
 
+/* get key usage out of its extension, returns 0 if no key_usage extension */
+static unsigned long
+get_usage_of_ex(X509* cert)
+{
+	unsigned long val = 0;
+	ASN1_BIT_STRING* s;
+	if((s=X509_get_ext_d2i(cert, NID_key_usage, NULL, NULL))) {
+		if(s->length > 0) {
+			val = s->data[0];
+			if(s->length > 1)
+				val |= s->data[1] << 8;
+		}
+		ASN1_BIT_STRING_free(s);
+	}
+	return val;
+}
+
 /** get valid signers from the list of signers in the signature */
 static STACK_OF(X509)*
 get_valid_signers(PKCS7* p7, char* p7signer)
@@ -1633,6 +1651,7 @@ get_valid_signers(PKCS7* p7, char* p7signer)
 	int i;
 	STACK_OF(X509)* validsigners = sk_X509_new_null();
 	STACK_OF(X509)* signers = PKCS7_get0_signers(p7, NULL, 0);
+	unsigned long usage = 0;
 	if(!validsigners) {
 		if(verb) printf("out of memory\n");
 		sk_X509_free(signers);
@@ -1643,12 +1662,6 @@ get_valid_signers(PKCS7* p7, char* p7signer)
 		sk_X509_free(validsigners);
 		return NULL;
 	}
-	if(!p7signer || strcmp(p7signer, "")==0) {
-		/* there is no name to check, return all records */
-		if(verb) printf("did not check commonName of signer\n");
-		sk_X509_free(validsigners);
-		return signers;
-	}
 	for(i=0; i<sk_X509_num(signers); i++) {
 		X509_NAME* nm = X509_get_subject_name(
 			sk_X509_value(signers, i));
@@ -1657,7 +1670,7 @@ get_valid_signers(PKCS7* p7, char* p7signer)
 			if(verb) printf("signer %d: cert has no subject name\n", i);
 			continue;
 		}
-		if(verb) {
+		if(verb && nm) {
 			char* nmline = X509_NAME_oneline(nm, buf,
 				(int)sizeof(buf));
 			printf("signer %d: Subject: %s\n", i,
@@ -1669,14 +1682,41 @@ get_valid_signers(PKCS7* p7, char* p7signer)
 				NID_pkcs9_emailAddress, buf, (int)sizeof(buf)))
 				printf("emailAddress: %s\n", buf);
 		}
-		if(!X509_NAME_get_text_by_NID(nm, NID_commonName,
-			buf, (int)sizeof(buf))) {
-			if(verb) printf("removed cert with no name\n");
-			continue; /* no name, no use */
+		if(verb) {
+			int ku_loc = X509_get_ext_by_NID(
+				sk_X509_value(signers, i), NID_key_usage, -1);
+			if(verb >= 3 && ku_loc >= 0) {
+				X509_EXTENSION *ex = X509_get_ext(
+					sk_X509_value(signers, i), ku_loc);
+				if(ex) {
+					printf("keyUsage: ");
+					X509V3_EXT_print_fp(stdout, ex, 0, 0);
+					printf("\n");
+				}
+			}
 		}
-		if(strcmp(buf, p7signer) != 0) {
-			if(verb) printf("removed cert with wrong name\n");
-			continue; /* wrong name, skip it */
+		if(!p7signer || strcmp(p7signer, "")==0) {
+			/* there is no name to check, return all records */
+			if(verb) printf("did not check commonName of signer\n");
+		} else {
+			if(!X509_NAME_get_text_by_NID(nm,
+				NID_pkcs9_emailAddress,
+				buf, (int)sizeof(buf))) {
+				if(verb) printf("removed cert with no name\n");
+				continue; /* no name, no use */
+			}
+			if(strcmp(buf, p7signer) != 0) {
+				if(verb) printf("removed cert with wrong name\n");
+				continue; /* wrong name, skip it */
+			}
+		}
+
+		/* check that the key usage allows digital signatures
+		 * (the p7s) */
+		usage = get_usage_of_ex(sk_X509_value(signers, i));
+		if(!(usage & KU_DIGITAL_SIGNATURE)) {
+			if(verb) printf("removed cert with no key usage Digital Signature allowed\n");
+			continue;
 		}
 
 		/* we like this cert, add it to our list of valid

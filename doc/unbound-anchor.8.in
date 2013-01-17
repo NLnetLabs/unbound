@@ -78,9 +78,9 @@ The default is /root\-anchors/root\-anchors.p7s.  This file has to be a PKCS7
 signature over the xml file, using the pem file (\-c) as trust anchor.
 .TP
 .B \-n \fIname
-The commonName for the Subject of the signer's certificate from the p7s
+The emailAddress for the Subject of the signer's certificate from the p7s
 signature file.  Only signatures from this name are allowed.  default is
-dnssec@iana.org.  If you pass "" then the commonName is not checked.
+dnssec@iana.org.  If you pass "" then the emailAddress is not checked.
 .TP
 .B \-4
 Use IPv4 for domain resolution and contacting the server on https.  Default is
