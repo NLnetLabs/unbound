@@ -2,6 +2,7 @@
 	- unbound-anchors checks the emailAddress of the signer of the
 	  root.xml file, default is dnssec@iana.org.  It also checks that
 	  the signer has the correct key usage for a digital signature.
+	- update iana port list.
 
 3 January 2013: Wouter
 	- Test that unbound-control checks client credentials.
