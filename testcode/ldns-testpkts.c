@@ -700,7 +700,7 @@ verbose_hex(int lvl, uint8_t *data, size_t datalen, char *header)
 	char errmsg[strlen(header) + datalen*3];
 	strcpy(errmsg, header);
 	for(i = 0; i < datalen; i++)
-		sprintf(errmsg + strlen(header) + i*3, "%02x ", data[i]);
+		snprintf(errmsg + strlen(header) + i*3, 4, "%02x ", (unsigned int)data[i]);
 	errmsg[strlen(header) + datalen*3 - 1] = 0;
 	verbose(lvl, errmsg);
 }
