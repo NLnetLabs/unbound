@@ -40,6 +40,8 @@
  * fast.
  */
 
+#ifdef CLIENT_SUBNET
+
 #ifndef EDNSSUBNET_EDNSSUBNET_H
 #define EDNSSUBNET_EDNSSUBNET_H
 #include "util/storage/dnstree.h"
@@ -103,3 +105,4 @@ int upstream_lookup(struct ednssubnet_upstream* upstream, struct sockaddr_storag
 size_t upstream_get_mem(struct ednssubnet_upstream* upstream);
 
 #endif /* EDNSSUBNET_EDNSSUBNET_H */
+#endif /* CLIENT_SUBNET */

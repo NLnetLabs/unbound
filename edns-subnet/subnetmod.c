@@ -1,7 +1,9 @@
 /**
  * \file
- * subnet module for unbound.  Calls python script.
+ * subnet module for unbound.
  */
+
+#ifdef CLIENT_SUBNET
 
 #include "config.h"
 #include <ldns/ldns.h>
@@ -219,3 +221,5 @@ struct module_func_block* subnetmod_get_funcblock(void)
 {
 	return &subnetmod_block;
 }
+
+#endif /* CLIENT_SUBNET */

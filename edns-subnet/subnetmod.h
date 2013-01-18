@@ -2,6 +2,9 @@
  * \file
  * subnet module for unbound.
  */
+
+#ifdef CLIENT_SUBNET
+
 #ifndef SUBNETMOD_H
 #define SUBNETMOD_H
 #include "util/module.h"
@@ -49,3 +52,4 @@ void subnetmod_clear(struct module_qstate* qstate, int id);
 /** subnet module alloc size routine */
 size_t subnetmod_get_mem(struct module_env* env, int id);
 #endif /* SUBNETMOD_H */
+#endif /* CLIENT_SUBNET */

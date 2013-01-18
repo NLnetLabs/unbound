@@ -150,7 +150,7 @@ struct config_file {
 	struct config_stub* forwards;
 	/** list of donotquery addresses, linked list */
 	struct config_strlist* donotqueryaddrs;
-#ifdef CLIENT_SUBNET
+/* #ifdef CLIENT_SUBNET //upsets Bison, how to fix? */
 	/** list of servers we send edns-client-subnet option to and 
 	 * accept option from, linked list */
 	struct config_strlist* client_subnet;
@@ -159,7 +159,7 @@ struct config_file {
 	/** Subnet length we are willing to give up privacy for */
 	int max_client_subnet_ipv4;
 	int max_client_subnet_ipv6;
-#endif
+/* #endif */
 	/** list of access control entries, linked list */
 	struct config_str2list* acls;
 	/** use default localhost donotqueryaddr entries */
