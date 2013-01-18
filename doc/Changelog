@@ -1,3 +1,77 @@
+17 January 2013: Wouter
+	- unbound-anchors checks the emailAddress of the signer of the
+	  root.xml file, default is dnssec@iana.org.  It also checks that
+	  the signer has the correct key usage for a digital signature.
+	- update iana port list.
+
+3 January 2013: Wouter
+	- Test that unbound-control checks client credentials.
+	- Test that unbound can handle a CNAME at an intermediate node in
+	  the chain of trust (where it seeks a DS record).
+	- Check the commonName of the signer of the root.xml file in
+	  unbound-anchor, default is dnssec@iana.org.
+
+2 January 2013: Wouter
+	- Fix openssl lock free on exit (reported by Robert Fleischman).
+	- iana portlist updated.
+	- Tested that unbound implements the RFC5155 Technical Errata id 3441.
+	  Unbound already implements insecure classification of an empty
+	  nonterminal in NSEC3 optout zone.
+
+20 December 2012: Wouter
+	- Fix unbound-anchor xml parse of entity declarations for safety.
+
+19 December 2012: Wouter
+	- iana portlist updated.
+
+18 December 2012: Wouter
+	- iana portlist updated.
+
+14 December 2012: Wouter
+	- Change of D.ROOT-SERVERS.NET A address in default root hints.
+
+12 December 2012: Wouter
+	- 1.4.19 release.
+	- trunk has 1.4.20 under development.
+
+5 December 2012: Wouter
+	- note support for AAAA RR type RFC.
+
+4 December 2012: Wouter
+	- 1.4.19rc1 tag.
+
+30 November 2012: Wouter
+	- bug 481: fix python example0.
+	- iana portlist updated.
+
+27 November 2012: Wouter
+	- iana portlist updated.
+
+9 November 2012: Wouter
+	- Fix unbound-control forward disables configured stubs below it.
+
+7 November 2012: Wouter
+	- Fixup ldns-testpkts, identical to ldns/examples.
+	- iana portlist updated.
+
+30 October 2012: Wouter
+	- Fix bug #477: unbound-anchor segfaults if EDNS is blocked.
+
+29 October 2012: Matthijs
+	- Fix validation for responses with both CNAME and wildcard
+	  expanded CNAME records in answer section.
+
+8 October 2012: Wouter
+	- update ldns-testpkts.c to ldns 1.6.14 version.
+	- fix build of pythonmod in objdir, for unbound.py.
+	- make clean and makerealclean remove generated python and docs.
+
+5 October 2012: Wouter
+	- fix build of pythonmod in objdir (thanks Jakob Schlyter).
+
+3 October 2012: Wouter
+	- fix text in unbound-anchor man page.
+
 1 October 2012: Wouter
 	- ignore trusted-keys globs that have no files (from Paul Wouters).
 

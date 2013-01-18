@@ -1835,7 +1835,7 @@ outnet_serviced_query(struct outside_network* outnet,
 	struct service_callback* cb;
 	serviced_gen_query(buff, qname, qnamelen, qtype, qclass, flags);
 	sq = lookup_serviced(outnet, buff, dnssec, addr, addrlen);
-	/* duplicate entries are inclded in the callback list, because
+	/* duplicate entries are included in the callback list, because
 	 * there is a counterpart registration by our caller that needs to
 	 * be doubly-removed (with callbacks perhaps). */
 	if(!(cb = (struct service_callback*)malloc(sizeof(*cb))))

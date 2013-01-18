@@ -298,7 +298,7 @@ verifytest_file(const char* fname, const char* at_date)
 	struct alloc_cache alloc;
 	ldns_buffer* buf = ldns_buffer_new(65535);
 	struct entry* e;
-	struct entry* list = read_datafile(fname);
+	struct entry* list = read_datafile(fname, 1);
 	struct module_env env;
 	struct val_env ve;
 	uint32_t now = time(NULL);
@@ -342,7 +342,7 @@ dstest_file(const char* fname)
 	struct alloc_cache alloc;
 	ldns_buffer* buf = ldns_buffer_new(65535);
 	struct entry* e;
-	struct entry* list = read_datafile(fname);
+	struct entry* list = read_datafile(fname, 1);
 	struct module_env env;
 
 	if(!list)
@@ -475,7 +475,7 @@ nsec3_hash_test(const char* fname)
 	struct alloc_cache alloc;
 	ldns_buffer* buf = ldns_buffer_new(65535);
 	struct entry* e;
-	struct entry* list = read_datafile(fname);
+	struct entry* list = read_datafile(fname, 1);
 
 	if(!list)
 		fatal_exit("could not read %s: %s", fname, strerror(errno));

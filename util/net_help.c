@@ -778,9 +778,12 @@ void ub_openssl_lock_delete(void)
 	int i;
 	if(!ub_openssl_locks)
 		return;
+	CRYPTO_set_id_callback(NULL);
+	CRYPTO_set_locking_callback(NULL);
 	for(i=0; i<CRYPTO_num_locks(); i++) {
 		lock_basic_destroy(&ub_openssl_locks[i]);
 	}
+	free(ub_openssl_locks);
 #endif /* OPENSSL_THREADS */
 }
 

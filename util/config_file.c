@@ -1091,9 +1091,9 @@ cfg_convert_timeval(const char* str)
 int 
 cfg_count_numbers(const char* s)
 {
-	/* format ::= (sp num)+ sp      */
-	/* num ::= [-](0-9)+	    */
-	/* sp ::= (space|tab)*	  */
+	/* format ::= (sp num)+ sp  */
+	/* num ::= [-](0-9)+        */
+	/* sp ::= (space|tab)*      */
 	int num = 0;
 	while(*s) {
 		while(*s && isspace((int)*s))
