@@ -580,6 +580,10 @@ AC_ARG_ENABLE(subnet, AC_HELP_STRING([--enable-subnet], [Enable client subnet]))
 case "$enable_subnet" in
 	yes)
 	AC_DEFINE([CLIENT_SUBNET], [1], [Define this to enable client subnet option.])
+	SUBNET_OBJ="edns-subnet.lo subnetmod.lo"
+	AC_SUBST(SUBNET_OBJ)
+	SUBNET_HEADER='$(srcdir)/edns-subnet/subnetmod.h $(srcdir)/edns-subnet/edns-subnet.h'
+	AC_SUBST(SUBNET_HEADER)
 	;;
 	no|*)
 	;;

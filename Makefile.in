@@ -84,6 +84,9 @@ PYTHONMOD_HEADER=@PYTHONMOD_HEADER@
 PYUNBOUND_SRC=
 # libunbound_wrap.lo if python libunbound wrapper enabled.
 PYUNBOUND_OBJ=@PYUNBOUND_OBJ@
+SUBNET_SRC=edns-subnet/edns-subnet.c edns-subnet/subnetmod.c
+SUBNET_OBJ=@SUBNET_OBJ@
+SUBNET_HEADER=@SUBNET_HEADER@
 COMMON_SRC=services/cache/dns.c services/cache/infra.c services/cache/rrset.c \
 util/data/dname.c util/data/msgencode.c util/data/msgparse.c \
 util/data/msgreply.c util/data/packed_rrset.c iterator/iterator.c \
@@ -111,7 +114,7 @@ fptr_wlist.lo locks.lo log.lo mini_event.lo module.lo net_help.lo \
 random.lo rbtree.lo regional.lo rtt.lo dnstree.lo lookup3.lo lruhash.lo \
 slabhash.lo timehist.lo tube.lo winsock_event.lo autotrust.lo val_anchor.lo \
 validator.lo val_kcache.lo val_kentry.lo val_neg.lo val_nsec3.lo val_nsec.lo \
-val_secalgo.lo val_sigcrypt.lo val_utils.lo edns-subnet.lo subnetmod.lo $(PYTHONMOD_OBJ) \
+val_secalgo.lo val_sigcrypt.lo val_utils.lo $(SUBNET_OBJ) $(PYTHONMOD_OBJ) \
 $(CHECKLOCK_OBJ)
 COMMON_OBJ=$(COMMON_OBJ_WITHOUT_NETCALL) netevent.lo listen_dnsport.lo \
 outside_network.lo
@@ -542,6 +545,7 @@ depend:
 			-e 's?$$(srcdir)/util/configparser.c?util/configparser.c?g' \
 			-e 's?$$(srcdir)/util/configparser.h?util/configparser.h?g' \
 			-e 's?$$(srcdir)/pythonmod/pythonmod.h?$$(PYTHONMOD_HEADER)?g' \
+			-e 's?$$(srcdir)/edns-subnet/subnetmod.h $$(srcdir)/edns-subnet/edns-subnet.h?$$(SUBNET_HEADER)?g' \
 			-e 's!\(.*\)\.o[ :]*!\1.lo \1.o: !g' \
 			> $(DEPEND_TMP)
 	cp $(DEPEND_TARGET) $(DEPEND_TMP2)

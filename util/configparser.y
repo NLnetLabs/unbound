@@ -257,13 +257,18 @@ server_port: VAR_PORT STRING_ARG
 	;
 server_send_client_subnet: VAR_SEND_CLIENT_SUBNET STRING_ARG
 	{
+	#ifdef CLIENT_SUBNET
 		OUTYY(("P(server_send_client_subnet:%s)\n", $2));
 		if(!cfg_strlist_insert(&cfg_parser->cfg->client_subnet, $2))
 			fatal_exit("out of memory adding client-subnet");
+	#else
+		OUTYY(("P(Compiled without edns subnet option, ignoring)\n"));
+	#endif
 	}
 	;
 server_client_subnet_opc: VAR_CLIENT_SUBNET_OPCODE STRING_ARG
 	{
+	#ifdef CLIENT_SUBNET
 		OUTYY(("P(client_subnet_opc:%s)\n", $2));
 		if(atoi($2) == 0 && strcmp($2, "0") != 0)
 			yyerror("option code expected");
@@ -271,10 +276,14 @@ server_client_subnet_opc: VAR_CLIENT_SUBNET_OPCODE STRING_ARG
 			yyerror("option code must be between 0x0000 and 0xFFFF");
 		else cfg_parser->cfg->client_subnet_opc = atoi($2);
 		free($2);
+	#else
+		OUTYY(("P(Compiled without edns subnet option, ignoring)\n"));
+	#endif
 	}
 	;
 server_max_client_subnet_ipv4: VAR_MAX_CLIENT_SUBNET_IPV4 STRING_ARG
 	{
+	#ifdef CLIENT_SUBNET
 		OUTYY(("P(max_client_subnet_ipv4:%s)\n", $2));
 		if(atoi($2) == 0 && strcmp($2, "0") != 0)
 			yyerror("IPv4 subnet length expected");
@@ -284,10 +293,14 @@ server_max_client_subnet_ipv4: VAR_MAX_CLIENT_SUBNET_IPV4 STRING_ARG
 			cfg_parser->cfg->max_client_subnet_ipv4 = 0;
 		else cfg_parser->cfg->max_client_subnet_ipv4 = atoi($2);
 		free($2);
+	#else
+		OUTYY(("P(Compiled without edns subnet option, ignoring)\n"));
+	#endif
 	}
 	;
 server_max_client_subnet_ipv6: VAR_MAX_CLIENT_SUBNET_IPV6 STRING_ARG
 	{
+	#ifdef CLIENT_SUBNET
 		OUTYY(("P(max_client_subnet_ipv6:%s)\n", $2));
 		if(atoi($2) == 0 && strcmp($2, "0") != 0)
 			yyerror("Ipv6 subnet length expected");
@@ -297,10 +310,14 @@ server_max_client_subnet_ipv6: VAR_MAX_CLIENT_SUBNET_IPV6 STRING_ARG
 			cfg_parser->cfg->max_client_subnet_ipv6 = 0;
 		else cfg_parser->cfg->max_client_subnet_ipv6 = atoi($2);
 		free($2);
+	#else
+		OUTYY(("P(Compiled without edns subnet option, ignoring)\n"));
+	#endif
 	}
 	;
 server_interface: VAR_INTERFACE STRING_ARG
 	{
+	#ifdef CLIENT_SUBNET
 		OUTYY(("P(server_interface:%s)\n", $2));
 		if(cfg_parser->cfg->num_ifs == 0)
 			cfg_parser->cfg->ifs = calloc(1, sizeof(char*));
@@ -310,6 +327,9 @@ server_interface: VAR_INTERFACE STRING_ARG
 			yyerror("out of memory");
 		else
 			cfg_parser->cfg->ifs[cfg_parser->cfg->num_ifs++] = $2;
+	#else
+		OUTYY(("P(Compiled without edns subnet option, ignoring)\n"));
+	#endif
 	}
 	;
 server_outgoing_interface: VAR_OUTGOING_INTERFACE STRING_ARG
