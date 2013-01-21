@@ -42,6 +42,9 @@
  */
 
 #include "config.h"
+
+#ifdef CLIENT_SUBNET /* keeps splint happy */
+
 #include "edns-subnet/edns-subnet.h"
 #include "util/regional.h"
 #include "util/log.h"
@@ -144,3 +147,5 @@ upstream_get_mem(struct ednssubnet_upstream* upstream)
 	if(!upstream) return 0;
 	return sizeof(*upstream) + regional_get_mem(upstream->region);
 }
+
+#endif /* CLIENT_SUBNET */

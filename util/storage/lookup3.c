@@ -54,7 +54,7 @@ on 1 byte), but shoehorning those bytes into integers efficiently is messy.
 #endif
 
 /* random initial value */
-static uint32_t raninit = 0xdeadbeef;
+static uint32_t raninit = (uint32_t)0xdeadbeef;
 
 void
 hash_set_raninit(uint32_t v)

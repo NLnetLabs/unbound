@@ -4,6 +4,9 @@
  */
 
 #include "config.h"
+
+#ifdef CLIENT_SUBNET /* keeps splint happy */
+
 #include <ldns/ldns.h>
 
 #include "edns-subnet/subnetmod.h"
@@ -219,3 +222,5 @@ struct module_func_block* subnetmod_get_funcblock(void)
 {
 	return &subnetmod_block;
 }
+
+#endif  /* CLIENT_SUBNET */
