@@ -376,13 +376,7 @@ void mesh_new_client(struct mesh_area* mesh, struct query_info* qinfo,
 			edns->subnet_source_mask = MAX_CLIENT_SUBNET_IP4;
 			edns->subnet_addr_fam = IANA_ADDRFAM_IP4;
 			sinaddr = &((struct sockaddr_in*)ss)->sin_addr;
-#ifndef unbound_testbound
 			memcpy(edns->subnet_addr, (uint8_t *)sinaddr, INET_SIZE);
-#else
-			/* sinaddr does not contain any valid data when running
-			 * testbound. Provide a constant so we can do our tests */
-			memcpy(edns->subnet_addr, (uint8_t *)[5,0,15,10], INET_SIZE);
-#endif /* unbound_testbound */ 
 			edns->subnet_validdata = 1;
 		}
 #ifdef INET6
@@ -390,14 +384,7 @@ void mesh_new_client(struct mesh_area* mesh, struct query_info* qinfo,
 			edns->subnet_source_mask = MAX_CLIENT_SUBNET_IP6;
 			edns->subnet_addr_fam = IANA_ADDRFAM_IP6;
 			sinaddr = &((struct sockaddr_in6*)ss)->sin6_addr;
-#ifndef unbound_testbound
 			memcpy(edns->subnet_addr, (uint8_t *)sinaddr, INET6_SIZE);
-#else
-			/* sinaddr does not contain any valid data when running
-			 * testbound. Provide a constant so we can do our tests */
-			memcpy(edns->subnet_addr, (uint8_t *)[5,0,15,10, 5,0,15,10, 
-				5,0,15,10, 5,0,15,10], INET6_SIZE);
-#endif /* unbound_testbound */ 
 			edns->subnet_validdata = 1;
 		}
 #else

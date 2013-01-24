@@ -396,6 +396,10 @@ morechecks(struct config_file* cfg, const char* fname)
 		&& strcmp(cfg->module_conf, "python validator iterator") != 0 
 		&& strcmp(cfg->module_conf, "validator python iterator") != 0
 #endif
+#ifdef CLIENT_SUBNET
+		&& strcmp(cfg->module_conf, "subnetcache iterator") != 0 
+		&& strcmp(cfg->module_conf, "subnetcache validator iterator") != 0 
+#endif
 		) {
 		fatal_exit("module conf '%s' is not known to work",
 			cfg->module_conf);
