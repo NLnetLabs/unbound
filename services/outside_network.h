@@ -362,6 +362,7 @@ struct serviced_query {
 #endif
 };
 
+#ifdef CLIENT_SUBNET
 /**
  * Create outside_network structure with N udp ports.
  * @param base: the communication base to use for event handling.
@@ -386,7 +387,6 @@ struct serviced_query {
  * @param edns_subnet_upstreams: Servers whitelisted for edns-subnet.
  * @return: the new structure (with no pending answers) or NULL on error.
  */
-#ifdef CLIENT_SUBNET
 struct outside_network* outside_network_create(struct comm_base* base,
 	size_t bufsize, size_t num_ports, char** ifs, int num_ifs,
 	int do_ip4, int do_ip6, size_t num_tcp, struct infra_cache* infra, 
@@ -395,6 +395,30 @@ struct outside_network* outside_network_create(struct comm_base* base,
 	void (*unwanted_action)(void*), void* unwanted_param, int do_udp,
 	void* sslctx, struct ednssubnet_upstream* edns_subnet_upstreams);
 #else
+/**
+ * Create outside_network structure with N udp ports.
+ * @param base: the communication base to use for event handling.
+ * @param bufsize: size for network buffers.
+ * @param num_ports: number of udp ports to open per interface.
+ * @param ifs: interface names (or NULL for default interface).
+ *    These interfaces must be able to access all authoritative servers.
+ * @param num_ifs: number of names in array ifs.
+ * @param do_ip4: service IP4.
+ * @param do_ip6: service IP6.
+ * @param num_tcp: number of outgoing tcp buffers to preallocate.
+ * @param infra: pointer to infra cached used for serviced queries.
+ * @param rnd: stored to create random numbers for serviced queries.
+ * @param use_caps_for_id: enable to use 0x20 bits to encode id randomness.
+ * @param availports: array of available ports. 
+ * @param numavailports: number of available ports in array.
+ * @param unwanted_threshold: when to take defensive action.
+ * @param unwanted_action: the action to take.
+ * @param unwanted_param: user parameter to action.
+ * @param do_udp: if udp is done.
+ * @param sslctx: context to create outgoing connections with (if enabled).
+ * @return: the new structure (with no pending answers) or NULL on error.
+ */
+
 struct outside_network* outside_network_create(struct comm_base* base,
 	size_t bufsize, size_t num_ports, char** ifs, int num_ifs,
 	int do_ip4, int do_ip6, size_t num_tcp, struct infra_cache* infra, 

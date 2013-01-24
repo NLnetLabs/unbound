@@ -466,7 +466,7 @@ add_trustanchor_frm_str(struct val_anchors* anchors, char* str,
  * @param anchors: all points.
  * @param str: comments line
  * @param fname: filename
- * @param origin: $ORIGIN.
+ * @param origin: \$ORIGIN.
  * @param prev: passed to ldns.
  * @param skip: if true, the result is NULL, but not an error, skip it.
  * @return false on failure, otherwise the tp read.
