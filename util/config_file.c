@@ -218,7 +218,11 @@ config_create(void)
 	if(!(cfg->control_cert_file = strdup(RUN_DIR"/unbound_control.pem"))) 
 		goto error_exit;
 
+#if CLIENT_SUBNET
+	if(!(cfg->module_conf = strdup("subnetcache validator iterator"))) goto error_exit;
+#else
 	if(!(cfg->module_conf = strdup("validator iterator"))) goto error_exit;
+#endif
 	if(!(cfg->val_nsec3_key_iterations = 
 		strdup("1024 150 2048 500 4096 2500"))) goto error_exit;
 	return cfg;

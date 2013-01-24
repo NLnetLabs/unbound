@@ -71,6 +71,7 @@ testbound_usage()
 	printf("-2 	detect SHA256 support (exit code 0 or 1)\n");
 	printf("-g 	detect GOST support (exit code 0 or 1)\n");
 	printf("-e 	detect ECDSA support (exit code 0 or 1)\n");
+	printf("-c 	detect CLIENT_SUBNET support (exit code 0 or 1)\n");
 	printf("-s 	testbound self-test - unit test of testbound parts.\n");
 	printf("-o str  unbound commandline options separated by spaces.\n");
 	printf("Version %s\n", PACKAGE_VERSION);
@@ -273,7 +274,7 @@ main(int argc, char* argv[])
 	pass_argc = 1;
 	pass_argv[0] = "unbound";
 	add_opts("-d", &pass_argc, pass_argv);
-	while( (c=getopt(argc, argv, "2egho:p:s")) != -1) {
+	while( (c=getopt(argc, argv, "2cegho:p:s")) != -1) {
 		switch(c) {
 		case 's':
 			free(pass_argv[1]);
@@ -309,6 +310,15 @@ main(int argc, char* argv[])
 			}
 #else
 			printf("GOST not supported\n");
+			exit(1);
+#endif
+			break;
+		case 'c':
+#ifdef CLIENT_SUBNET
+			printf("CLIENT_SUBNET supported\n");
+			exit(0);
+#else
+			printf("CLIENT_SUBNET not supported\n");
 			exit(1);
 #endif
 			break;

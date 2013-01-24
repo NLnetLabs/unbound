@@ -60,7 +60,9 @@
 #include "testcode/ldns-testpkts.h"
 #include "util/log.h"
 #include "util/fptr_wlist.h"
+#ifdef CLIENT_SUBNET
 #include "edns-subnet/edns-subnet.h"
+#endif
 #include <signal.h>
 struct worker;
 struct daemon_remote;
@@ -1106,6 +1108,8 @@ struct serviced_query* outnet_serviced_query(struct outside_network* outnet,
 			memcpy(&edns, edns_out, sizeof(edns));
 			/* This tells our module we've appened the option*/
 			edns.subnet_sent = 1;
+		} else {
+			edns.subnet_validdata = 0;
 		}
 #endif
 		edns.edns_present = 1;
