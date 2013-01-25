@@ -370,6 +370,7 @@ void mesh_new_client(struct mesh_area* mesh, struct query_info* qinfo,
 	} else {
 		struct sockaddr_storage *ss;
 		void* sinaddr;
+		edns->subnet_downstream = 0;
 		/* Construct subnet option from original query */
 		ss = &s->reply_list->query_reply.addr;
 		if(((struct sockaddr_in*)ss)->sin_family == AF_INET) {
@@ -594,6 +595,7 @@ mesh_state_create(struct module_env* env, struct query_info* qinfo,
 	mstate->s.prefetch_leeway = 0;
 #ifdef CLIENT_SUBNET
 	mstate->s.edns_from_client = NULL;
+	mstate->s.edns_to_client = NULL;
 #endif
 	/* init modules */
 	for(i=0; i<env->mesh->mods.num; i++) {

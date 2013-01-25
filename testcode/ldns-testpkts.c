@@ -711,19 +711,29 @@ match_ednsdata(ldns_pkt* q, struct reply_packet* p)
 {
 	size_t qdlen, pdlen;
 	uint8_t *qd, *pd;
-	if(!ldns_pkt_edns(q) || !ldns_pkt_edns_data(q)) {
-		verbose(3, "No EDNS data\n");
-		return 0;
+	int q_set = ldns_pkt_edns(q) && ldns_pkt_edns_data(q);
+	int p_set = p->raw_ednsdata != NULL;
+	
+	if (p_set) {
+		pdlen = ldns_buffer_limit(p->raw_ednsdata);
+		pd = ldns_buffer_begin(p->raw_ednsdata);
+		verbose_hex(3, pd, pdlen, "edns expect: ");
+	} else {
+		verbose(3, "edns expect: <NULL>");
 	}
-	qdlen = ldns_rdf_size(ldns_pkt_edns_data(q));
-	pdlen = ldns_buffer_limit(p->raw_ednsdata);
-	qd = ldns_rdf_data(ldns_pkt_edns_data(q));
-	pd = ldns_buffer_begin(p->raw_ednsdata);
-	if( qdlen == pdlen && 0 == memcmp(qd, pd, qdlen) ) return 1;
-	verbose(3, "EDNS data does not match.\n");
-	verbose_hex(3, qd, qdlen, "q: ");
-	verbose_hex(3, pd, pdlen, "p: ");
-	return 0;
+	if (q_set) {
+		qdlen = ldns_rdf_size(ldns_pkt_edns_data(q));
+		qd = ldns_rdf_data(ldns_pkt_edns_data(q));
+		verbose_hex(3, qd, qdlen, "edns got   : ");
+	} else {
+		verbose(3, "edns got   : <NULL>");
+	}
+	if ((!p_set || pdlen == 0) && !q_set)
+		return 1;
+	else if (!p_set || !q_set)
+		return 0;
+	else 
+		return qdlen == pdlen && 0 == memcmp(qd, pd, qdlen);
 }
 
 /* finds entry in list, or returns NULL */

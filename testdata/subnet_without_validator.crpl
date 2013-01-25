@@ -3,14 +3,14 @@ server:
 	client-subnet-opc: 20730
 	max-client-subnet-ipv4: 21
 	verbosity: 3
-	module-config: "subnetcache validator iterator"
+	module-config: "subnetcache iterator"
 
 stub-zone:
 	name: "."
 	stub-addr: 193.0.14.129 	# K.ROOT-SERVERS.NET.
 CONFIG_END
 
-SCENARIO_BEGIN Subnet option ONLY in final query
+SCENARIO_BEGIN Works without validator module
 
 RANGE_BEGIN 0 100
 

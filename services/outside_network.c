@@ -1860,8 +1860,8 @@ outnet_serviced_query(struct outside_network* outnet,
 			sq->edns = edns;
 			/* This tells our module we've appened the option*/
 			edns->subnet_sent = 1;
-		}
-#endif		
+		} 
+#endif
 		/* perform first network action */
 		if(outnet->do_udp && !(tcp_upstream || ssl_upstream)) {
 			if(!serviced_udp_send(sq, buff)) {
