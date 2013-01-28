@@ -1105,9 +1105,9 @@ struct serviced_query* outnet_serviced_query(struct outside_network* outnet,
 		if(edns_out && edns_out->subnet_validdata && (edns_out->subnet_downstream ||
 			upstream_lookup(outnet->edns_subnet_upstreams, 
 			addr, addrlen))) {
-			memcpy(&edns, edns_out, sizeof(edns));
 			/* This tells our module we've appened the option*/
-			edns.subnet_sent = 1;
+			edns_out->subnet_sent = 1;
+			memcpy(&edns, edns_out, sizeof(edns));
 		} else {
 			edns.subnet_validdata = 0;
 		}
