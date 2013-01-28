@@ -1518,7 +1518,7 @@ xml_entitydeclhandler(void *userData,
 	const XML_Char *ATTR_UNUSED(publicId),
 	const XML_Char *ATTR_UNUSED(notationName))
 {
-	XML_StopParser((XML_Parser)userData, XML_FALSE);
+	(void)XML_StopParser((XML_Parser)userData, XML_FALSE);
 }
 
 /**
