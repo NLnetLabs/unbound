@@ -46,7 +46,8 @@
 #include "openssl/ssl.h"
 #endif
 #ifdef HAVE_NSS
-#include <nss3/sechash.h>
+/* nss3 */
+#include "sechash.h"
 #endif
 #include "validator/val_nsec3.h"
 #include "validator/validator.h"

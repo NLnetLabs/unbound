@@ -16009,8 +16009,8 @@ if test "${with_nss+set}" = set; then :
 
 $as_echo "#define HAVE_NSS 1" >>confdefs.h
 
-	if test "$withval" != "/usr" -a "$withval" != "" -a "$withval" != "yes"; then
-		CPPFLAGS="$CPPFLAGS -I$withval/include"
+	if test "$withval" != "" -a "$withval" != "yes"; then
+		CPPFLAGS="$CPPFLAGS -I$withval/include/nss3"
 		LDFLAGS="$LDFLAGS -L$withval/lib"
 
 	if test "x$enable_rpath" = xyes; then
@@ -16021,6 +16021,7 @@ $as_echo "#define HAVE_NSS 1" >>confdefs.h
 
 		CPPFLAGS="-I$withval/include/nspr4 $CPPFLAGS"
 	else
+		CPPFLAGS="$CPPFLAGS -I/usr/include/nss3"
 		CPPFLAGS="-I/usr/include/nspr4 $CPPFLAGS"
 	fi
         LIBS="$LIBS -lnss3 -lnspr4"

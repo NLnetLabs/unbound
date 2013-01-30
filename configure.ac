@@ -525,12 +525,13 @@ AC_ARG_WITH([nss], AC_HELP_STRING([--with-nss=path],
 	[
 	USE_NSS="yes"
 	AC_DEFINE(HAVE_NSS, 1, [Use libnss for crypto])
-	if test "$withval" != "/usr" -a "$withval" != "" -a "$withval" != "yes"; then
-		CPPFLAGS="$CPPFLAGS -I$withval/include"
+	if test "$withval" != "" -a "$withval" != "yes"; then
+		CPPFLAGS="$CPPFLAGS -I$withval/include/nss3"
 		LDFLAGS="$LDFLAGS -L$withval/lib"
 		ACX_RUNTIME_PATH_ADD([$withval/lib])
 		CPPFLAGS="-I$withval/include/nspr4 $CPPFLAGS"
 	else
+		CPPFLAGS="$CPPFLAGS -I/usr/include/nss3"
 		CPPFLAGS="-I/usr/include/nspr4 $CPPFLAGS"
 	fi
         LIBS="$LIBS -lnss3 -lnspr4"

@@ -44,7 +44,9 @@
 #include "config.h"
 #include <ldns/dname.h>
 #include <ldns/wire2host.h>
+#ifdef HAVE_SSL
 #include <openssl/ssl.h>
+#endif
 #include "libunbound/libworker.h"
 #include "libunbound/context.h"
 #include "libunbound/unbound.h"
@@ -88,7 +90,9 @@ libworker_delete(struct libworker* w)
 		ub_randfree(w->env->rnd);
 		free(w->env);
 	}
+#ifdef HAVE_SSL
 	SSL_CTX_free(w->sslctx);
+#endif
 	outside_network_delete(w->back);
 	comm_base_delete(w->base);
 	free(w);

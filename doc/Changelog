@@ -1,3 +1,6 @@
+30 January 2013: Wouter
+	- includes and have_ssl fixes for nss.
+
 29 January 2013: Wouter
 	- printout name of zone with duplicate fwd and hint errors.
 

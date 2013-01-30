@@ -65,9 +65,11 @@
 #include <openssl/rc4.h>
 #include <openssl/err.h>
 #elif defined(HAVE_NSS)
-#include <nspr4/prerror.h>
-#include <nss3/secport.h>
-#include <nss3/pk11pub.h>
+/* nspr4 */
+#include "prerror.h"
+/* nss3 */
+#include "secport.h"
+#include "pk11pub.h"
 #endif
 
 /** 
