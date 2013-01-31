@@ -145,18 +145,6 @@ STEP 1 QUERY
 		www.example.com. IN A
 	ENTRY_END
 
-STEP 5 CHECK_OUT_QUERY
-
-	ENTRY_BEGIN
-		MATCH qname qtype opcode ednsdata
-		SECTION QUESTION
-			www.example.com. IN A
-		SECTION ADDITIONAL
-			HEX_EDNSDATA_BEGIN
-				;; we must send empty back to unbound
-			HEX_EDNSDATA_END
-	ENTRY_END
-
 STEP 10 CHECK_ANSWER
 
 	ENTRY_BEGIN

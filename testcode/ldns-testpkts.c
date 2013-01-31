@@ -696,13 +696,19 @@ match_all(ldns_pkt* q, ldns_pkt* p, bool mttl)
 void
 verbose_hex(int lvl, uint8_t *data, size_t datalen, char *header)
 {
-	size_t i;
-	char errmsg[strlen(header) + datalen*3];
-	strcpy(errmsg, header);
-	for(i = 0; i < datalen; i++)
-		snprintf(errmsg + strlen(header) + i*3, 4, "%02x ", (unsigned int)data[i]);
-	errmsg[strlen(header) + datalen*3 - 1] = 0;
+	size_t i, hlen, dlen;
+	char *errmsg, *ptr;
+	int wr;
+	hlen = strnlen(header, 32);
+	dlen = datalen * 3 + 1;
+	errmsg = (char*) malloc(sizeof(char) * (hlen + dlen));
+	strncpy(errmsg, header, hlen+1); 
+	for(i = 0, ptr = errmsg + hlen; i < datalen; i++, ptr += 3, dlen -= 3) {
+		wr = snprintf(ptr, dlen, "%02x ", (unsigned int)data[i]);
+		if (wr < 0 || wr >= (int)dlen) break;
+	}
 	verbose(lvl, errmsg);
+	free(errmsg);
 }
 
 /** Match q edns data to p raw edns data */
