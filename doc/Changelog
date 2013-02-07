@@ -1,3 +1,6 @@
+7 February 2013: Wouter
+	- detect endianness in lookup3 on BSD.
+
 30 January 2013: Wouter
 	- includes and have_ssl fixes for nss.
 
