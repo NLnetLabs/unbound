@@ -422,7 +422,7 @@ fill_res(struct ub_result* res, struct ub_packed_rrset_key* answer,
 				return 0; /* out of memory */
 		}
 		if(rep->rrset_count != 0)
-			res->ttl = rep->ttl;
+			res->ttl = (int)rep->ttl;
 		res->data = (char**)calloc(1, sizeof(char*));
 		res->len = (int*)calloc(1, sizeof(int));
 		return (res->data && res->len);
@@ -446,18 +446,18 @@ fill_res(struct ub_result* res, struct ub_packed_rrset_key* answer,
 	/* ttl for positive answers, from CNAME and answer RRs */
 	if(data->count != 0) {
 		size_t j;
-		res->ttl = data->ttl;
+		res->ttl = (int)data->ttl;
 		for(j=0; j<rep->an_numrrsets; j++) {
 			struct packed_rrset_data* d =
 				(struct packed_rrset_data*)rep->rrsets[j]->
 				entry.data;
 			if((int)d->ttl < res->ttl)
-				res->ttl = d->ttl;
+				res->ttl = (int)d->ttl;
 		}
 	}
 	/* ttl for negative answers */
 	if(data->count == 0 && rep->rrset_count != 0)
-		res->ttl = rep->ttl;
+		res->ttl = (int)rep->ttl;
 	res->data[data->count] = NULL;
 	res->len[data->count] = 0;
 	return 1;
