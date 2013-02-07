@@ -411,15 +411,18 @@ fill_canon(struct ub_result* res, uint8_t* s)
 /** fill data into result */
 static int
 fill_res(struct ub_result* res, struct ub_packed_rrset_key* answer,
-	uint8_t* finalcname, struct query_info* rq)
+	uint8_t* finalcname, struct query_info* rq, struct reply_info* rep)
 {
 	size_t i;
 	struct packed_rrset_data* data;
+	res->ttl = 0;
 	if(!answer) {
 		if(finalcname) {
 			if(!fill_canon(res, finalcname))
 				return 0; /* out of memory */
 		}
+		if(rep->rrset_count != 0)
+			res->ttl = rep->ttl;
 		res->data = (char**)calloc(1, sizeof(char*));
 		res->len = (int*)calloc(1, sizeof(int));
 		return (res->data && res->len);
@@ -440,6 +443,21 @@ fill_res(struct ub_result* res, struct ub_packed_rrset_key* answer,
 		if(!res->data[i])
 			return 0; /* out of memory */
 	}
+	/* ttl for positive answers, from CNAME and answer RRs */
+	if(data->count != 0) {
+		size_t j;
+		res->ttl = data->ttl;
+		for(j=0; j<rep->an_numrrsets; j++) {
+			struct packed_rrset_data* d =
+				(struct packed_rrset_data*)rep->rrsets[j]->
+				entry.data;
+			if((int)d->ttl < res->ttl)
+				res->ttl = d->ttl;
+		}
+	}
+	/* ttl for negative answers */
+	if(data->count == 0 && rep->rrset_count != 0)
+		res->ttl = rep->ttl;
 	res->data[data->count] = NULL;
 	res->len[data->count] = 0;
 	return 1;
@@ -459,7 +477,7 @@ libworker_enter_result(struct ub_result* res, ldns_buffer* buf,
 		return; /* error parsing buf, or out of memory */
 	}
 	if(!fill_res(res, reply_find_answer_rrset(&rq, rep), 
-		reply_find_final_cname_target(&rq, rep), &rq))
+		reply_find_final_cname_target(&rq, rep), &rq, rep))
 		return; /* out of memory */
 	/* rcode, havedata, nxdomain, secure, bogus */
 	res->rcode = (int)FLAGS_GET_RCODE(rep->flags);

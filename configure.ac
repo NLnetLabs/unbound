@@ -45,7 +45,7 @@ LIBUNBOUND_AGE=1
 # 1.4.17 had 3:2:1
 # 1.4.18 had 3:3:1
 # 1.4.19 had 3:4:1
-# 1.4.20 had 3:5:1
+# 1.4.20 had 4:0:2 # adds libunbound.ttl
 
 #   Current  -- the number of the binary API that we're implementing
 #   Revision -- which iteration of the implementation of the binary

@@ -359,6 +359,7 @@ The result of the DNS resolution and validation is returned as
 		int secure;  /* true if result is secure */
 		int bogus;   /* true if a security failure happened */
 		char* why_bogus; /* string with error if bogus */
+		int ttl;     /* number of seconds the result is valid */
 	};
 .fi
 .P

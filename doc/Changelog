@@ -1,5 +1,8 @@
 7 February 2013: Wouter
 	- detect endianness in lookup3 on BSD.
+	- add libunbound.ttl at end of result structure, version bump for
+	  libunbound and binary backwards compatible, but 1.4.19 is not
+	  forward compatible with 1.4.20.
 
 30 January 2013: Wouter
 	- includes and have_ssl fixes for nss.
