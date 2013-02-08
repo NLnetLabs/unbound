@@ -305,9 +305,10 @@ struct module_qstate {
 	/** module specific data for query. indexed by module id. */
 	void* minfo[MAX_MODULE];
 #ifdef CLIENT_SUBNET
-	/** received from server */
+	/** edns_data for client communication */
 	struct edns_data* edns_from_client;
 	struct edns_data* edns_to_client;
+	/** edns data for server communication */
 	struct edns_data edns_in;
 	struct edns_data edns_out;
 #endif

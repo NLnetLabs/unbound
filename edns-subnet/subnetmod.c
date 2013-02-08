@@ -1,4 +1,37 @@
-/**
+/*
+ * edns-subnet/subnetmod.c - process EDNS subnet option.
+ *
+ * Copyright (c) 2013, NLnet Labs. All rights reserved.
+ *
+ * This software is open source.
+ * 
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 
+ * Redistributions of source code must retain the above copyright notice,
+ * this list of conditions and the following disclaimer.
+ * 
+ * Redistributions in binary form must reproduce the above copyright notice,
+ * this list of conditions and the following disclaimer in the documentation
+ * and/or other materials provided with the distribution.
+ * 
+ * Neither the name of the NLNET LABS nor the names of its contributors may
+ * be used to endorse or promote products derived from this software without
+ * specific prior written permission.
+ * 
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+ * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ *//**
  * \file
  * subnet module for unbound.
  */
@@ -18,8 +51,6 @@
 static struct subnet_qstate*
 sub_new_getmsg(struct module_qstate* qstate, struct subnet_qstate* snq)
 {
-	//~ snq->edns.subnet_downstream = 0;
-	//~ snq->edns.subnet_validdata = 0;
 	return snq;
 }
 
@@ -39,7 +70,6 @@ sub_new(struct module_qstate* qstate, int id)
 
 int subnetmod_init(struct module_env* env, int id)
 {
-	//~ env->subnet_module_id = id;
 	return 1;
 }
 
@@ -76,7 +106,6 @@ void subnetmod_operate(struct module_qstate* qstate, enum module_ev event,
 		strmodulevent(event));
 	log_query_info(VERB_QUERY, "subnet operate: query",
 		&qstate->qinfo);
-	(void)outbound;
 	/* This query is new for us */
 	if(event == module_event_new || 
 		(event == module_event_pass && snq == NULL)) {
@@ -128,7 +157,7 @@ void subnetmod_operate(struct module_qstate* qstate, enum module_ev event,
 					return;
 				}
 				/* Now see if we allow some stretch */
-				max_mask = min(cachehit.scopemask, MAX_CLIENT_SUBNET_IP4);
+				max_mask = min(cachehit.scopemask, EDNSSUBNET_MAX_SUBNET_IP4);
 				if(max_mask <= snq->subnet_source_mask) {
 					/* We refuse giving more detail so we use the cache anyway */
 					//TBD: do stuff and asnwer
@@ -155,17 +184,21 @@ void subnetmod_operate(struct module_qstate* qstate, enum module_ev event,
 		verbose(VERB_QUERY, "subnet: done");
 		qstate->edns_to_client = NULL;
 		if (!qstate->edns_out.subnet_sent) {
+			verbose(VERB_QUERY, "subnet: did not sent");
 			if (qstate->edns_in.subnet_validdata) {
 				verbose(VERB_QUERY, "subnet: received spurious data");
 			}
 			if (qstate->edns_out.subnet_downstream) {
+				verbose(VERB_QUERY, "subnet: client shows interest");
 				qstate->edns_to_client = &qstate->edns_in;
 				cp_edns_bad_response(qstate->edns_to_client, 
 									qstate->edns_from_client);
 			}
 		} else {
+			verbose(VERB_QUERY, "subnet: did sent");
 			/* subnet sent but nothing came back */
 			if (!qstate->edns_in.subnet_validdata) {
+				verbose(VERB_QUERY, "subnet: missing data");
 				// TODO PUT IT IN OUR SPECIAL CACHE
 				if (qstate->edns_out.subnet_downstream) {
 					qstate->edns_to_client = &qstate->edns_in;
@@ -177,6 +210,8 @@ void subnetmod_operate(struct module_qstate* qstate, enum module_ev event,
 				/* can we accept response? */
 				size_t sn_octs, remainder;
 				sn_octs = qstate->edns_out.subnet_source_mask / 8;
+				/* should be enforced by msgparse */
+				assert(sn_octs <= INET6_SIZE);
 				remainder = 8 - (size_t)(qstate->edns_out.subnet_source_mask % 8);
 				if(qstate->edns_out.subnet_addr_fam != qstate->edns_in.subnet_addr_fam ||
 					qstate->edns_out.subnet_source_mask != qstate->edns_in.subnet_source_mask ||
@@ -185,11 +220,12 @@ void subnetmod_operate(struct module_qstate* qstate, enum module_ev event,
 					/* we can not, restart query without option */
 					verbose(VERB_QUERY, "subnet: forged data");
 					qstate->edns_out.subnet_validdata = 0;
+					qstate->edns_out.subnet_sent = 0;
 					qstate->ext_state[id] = module_wait_module;
 					return;
 				}
 				verbose(VERB_QUERY, "subnet: now cache it");
-				// TODO PUT IT IN OUR SPECIAL CACHE
+				/* TODO PUT IT IN OUR SPECIAL CACHE */
 				if (qstate->edns_out.subnet_downstream) {
 					qstate->edns_to_client = qstate->edns_from_client;
 					verbose(VERB_QUERY, "subnet: attach");

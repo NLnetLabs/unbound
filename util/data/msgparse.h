@@ -63,6 +63,9 @@
 #ifndef UTIL_DATA_MSGPARSE_H
 #define UTIL_DATA_MSGPARSE_H
 #include "util/storage/lruhash.h"
+#ifdef CLIENT_SUBNET
+#include "util/net_help.h"
+#endif
 #include <ldns/packet.h>
 struct rrset_parse;
 struct rr_parse;
@@ -222,7 +225,7 @@ struct edns_data {
 	uint16_t 	subnet_addr_fam;
 	uint8_t 	subnet_source_mask;
 	uint8_t 	subnet_scope_mask;
-	uint8_t 	subnet_addr[16];
+	uint8_t 	subnet_addr[INET6_SIZE];
 #endif
 };
 

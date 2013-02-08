@@ -1,8 +1,7 @@
-
 /*
  * edns-subnet/edns-subnet.c - Storage for white listed servers
  *
- * Copyright (c) 2012, NLnet Labs. All rights reserved.
+ * Copyright (c) 2013, NLnet Labs. All rights reserved.
  *
  * This software is open source.
  * 
@@ -50,6 +49,11 @@
 #include "util/log.h"
 #include "util/config_file.h"
 #include "util/net_help.h"
+
+/** Opcode for edns subnet option, is TBD. */
+uint16_t EDNSSUBNET_OPCODE = 0x50fa;
+uint8_t EDNSSUBNET_MAX_SUBNET_IP4 = 24;
+uint8_t EDNSSUBNET_MAX_SUBNET_IP6 = 64;
 
 struct ednssubnet_upstream* 
 upstream_create(void)
@@ -135,7 +139,7 @@ upstream_apply_cfg(struct ednssubnet_upstream* upstream, struct config_file* cfg
 }
 
 int 
-upstream_lookup(struct ednssubnet_upstream* upstream, struct sockaddr_storage* addr,
+upstream_is_whitelisted(struct ednssubnet_upstream* upstream, struct sockaddr_storage* addr,
         socklen_t addrlen)
 {
 	return addr_tree_lookup(&upstream->tree, addr, addrlen) != NULL;

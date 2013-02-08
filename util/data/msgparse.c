@@ -43,8 +43,8 @@
 #include "util/data/packed_rrset.h"
 #include "util/storage/lookup3.h"
 #include "util/regional.h"
-#ifdef CLIENT_SUBNET
-#include "util/net_help.h"
+#if CLIENT_SUBNET
+#include "edns-subnet/edns-subnet.h"
 #endif
 
 /** smart comparison of (compressed, valid) dnames from packet */
@@ -950,7 +950,7 @@ parse_ednsdata(uint8_t* data, struct edns_data* edns)
 		/* Option does not fit in remaining data */
 		if(opt_start + 4 + opt_len > edns_datalen) return;
 		opt_start += 4;
-		if(opt_opc == EDNS_SUBNET_OPC) {
+		if(opt_opc == EDNSSUBNET_OPCODE) {
 			if(opt_len < 4) break;
 			edns->subnet_addr_fam = ldns_read_uint16(data + 2 + opt_start);
 			edns->subnet_source_mask = data[4 + opt_start];

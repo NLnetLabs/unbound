@@ -1816,24 +1816,17 @@ serviced_udp_callback(struct comm_point* c, void* arg, int error,
 	return 0;
 }
 
+struct serviced_query* 
+outnet_serviced_query(struct outside_network* outnet,
+	uint8_t* qname, size_t qnamelen, uint16_t qtype, uint16_t qclass,
+	uint16_t flags, int dnssec, int want_dnssec, int tcp_upstream,
+	int ssl_upstream, struct sockaddr_storage* addr, socklen_t addrlen,
+	uint8_t* zone, size_t zonelen, comm_point_callback_t* callback,
+	void* callback_arg, ldns_buffer* buff
 #ifdef CLIENT_SUBNET
-struct serviced_query* 
-outnet_serviced_query(struct outside_network* outnet,
-	uint8_t* qname, size_t qnamelen, uint16_t qtype, uint16_t qclass,
-	uint16_t flags, int dnssec, int want_dnssec, int tcp_upstream,
-	int ssl_upstream, struct sockaddr_storage* addr, socklen_t addrlen,
-	uint8_t* zone, size_t zonelen, comm_point_callback_t* callback,
-	void* callback_arg, ldns_buffer* buff,
-	struct edns_data* edns)
-#else
-struct serviced_query* 
-outnet_serviced_query(struct outside_network* outnet,
-	uint8_t* qname, size_t qnamelen, uint16_t qtype, uint16_t qclass,
-	uint16_t flags, int dnssec, int want_dnssec, int tcp_upstream,
-	int ssl_upstream, struct sockaddr_storage* addr, socklen_t addrlen,
-	uint8_t* zone, size_t zonelen, comm_point_callback_t* callback,
-	void* callback_arg, ldns_buffer* buff)
+	, struct edns_data* edns
 #endif
+	)
 {
 	struct serviced_query* sq;
 	struct service_callback* cb;
@@ -1855,7 +1848,7 @@ outnet_serviced_query(struct outside_network* outnet,
 		}
 #ifdef CLIENT_SUBNET
 		if(edns && edns->subnet_validdata && (edns->subnet_downstream ||
-			upstream_lookup(outnet->edns_subnet_upstreams, 
+			upstream_is_whitelisted(outnet->edns_subnet_upstreams, 
 			addr, addrlen))) {
 			sq->edns = edns;
 			/* This tells our module we've appened the option*/

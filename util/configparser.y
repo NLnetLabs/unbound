@@ -164,7 +164,7 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_log_queries | server_tcp_upstream | server_ssl_upstream |
 	server_ssl_service_key | server_ssl_service_pem | server_ssl_port |
 	server_minimal_responses | server_rrset_roundrobin | 
-	server_send_client_subnet | server_client_subnet_opc |
+	server_send_client_subnet | server_client_subnet_opcode |
 	server_max_client_subnet_ipv4 | server_max_client_subnet_ipv6
 	;
 stubstart: VAR_STUB_ZONE
@@ -266,15 +266,15 @@ server_send_client_subnet: VAR_SEND_CLIENT_SUBNET STRING_ARG
 	#endif
 	}
 	;
-server_client_subnet_opc: VAR_CLIENT_SUBNET_OPCODE STRING_ARG
+server_client_subnet_opcode: VAR_CLIENT_SUBNET_OPCODE STRING_ARG
 	{
 	#ifdef CLIENT_SUBNET
-		OUTYY(("P(client_subnet_opc:%s)\n", $2));
+		OUTYY(("P(client_subnet_opcode:%s)\n", $2));
 		if(atoi($2) == 0 && strcmp($2, "0") != 0)
 			yyerror("option code expected");
 		else if(atoi($2) > 65535 || atoi($2) < 0)
-			yyerror("option code must be between 0x0000 and 0xFFFF");
-		else cfg_parser->cfg->client_subnet_opc = atoi($2);
+			yyerror("option code must be in interval [0, 65535]");
+		else cfg_parser->cfg->client_subnet_opcode = atoi($2);
 		free($2);
 	#else
 		OUTYY(("P(Compiled without edns subnet option, ignoring)\n"));
@@ -317,7 +317,6 @@ server_max_client_subnet_ipv6: VAR_MAX_CLIENT_SUBNET_IPV6 STRING_ARG
 	;
 server_interface: VAR_INTERFACE STRING_ARG
 	{
-	#ifdef CLIENT_SUBNET
 		OUTYY(("P(server_interface:%s)\n", $2));
 		if(cfg_parser->cfg->num_ifs == 0)
 			cfg_parser->cfg->ifs = calloc(1, sizeof(char*));
@@ -327,9 +326,6 @@ server_interface: VAR_INTERFACE STRING_ARG
 			yyerror("out of memory");
 		else
 			cfg_parser->cfg->ifs[cfg_parser->cfg->num_ifs++] = $2;
-	#else
-		OUTYY(("P(Compiled without edns subnet option, ignoring)\n"));
-	#endif
 	}
 	;
 server_outgoing_interface: VAR_OUTGOING_INTERFACE STRING_ARG

@@ -1103,7 +1103,7 @@ struct serviced_query* outnet_serviced_query(struct outside_network* outnet,
 		struct edns_data edns;
 #ifdef CLIENT_SUBNET
 		if(edns_out && edns_out->subnet_validdata && (edns_out->subnet_downstream ||
-			upstream_lookup(outnet->edns_subnet_upstreams, 
+			upstream_is_whitelisted(outnet->edns_subnet_upstreams, 
 			addr, addrlen))) {
 			/* This tells our module we've appened the option*/
 			edns_out->subnet_sent = 1;

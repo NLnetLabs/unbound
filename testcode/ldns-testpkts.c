@@ -699,10 +699,10 @@ verbose_hex(int lvl, uint8_t *data, size_t datalen, char *header)
 	size_t i, hlen, dlen;
 	char *errmsg, *ptr;
 	int wr;
-	hlen = strnlen(header, 32);
+	hlen = strlen(header);
 	dlen = datalen * 3 + 1;
 	errmsg = (char*) malloc(sizeof(char) * (hlen + dlen));
-	strncpy(errmsg, header, hlen+1); 
+	strlcpy(errmsg, header, hlen+1); 
 	for(i = 0, ptr = errmsg + hlen; i < datalen; i++, ptr += 3, dlen -= 3) {
 		wr = snprintf(ptr, dlen, "%02x ", (unsigned int)data[i]);
 		if (wr < 0 || wr >= (int)dlen) break;

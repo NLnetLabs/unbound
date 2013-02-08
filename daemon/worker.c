@@ -886,11 +886,10 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 		return 1;
 	}
 #ifdef CLIENT_SUBNET
+	/* Do not skip cache lookup if no valid subnet data or the client
+	 * asks to remain anonymous. */
 	if(!edns.edns_present || !edns.subnet_validdata || 
 		edns.subnet_source_mask == 0) {
-		/* Do not probe cache if subnet option is set. We always start
-		 * a full resolve. Unless client specifically asked not to 
-		 * reveal any bits */
 #endif
 	h = query_info_hash(&qinfo);
 	if((e=slabhash_lookup(worker->env.msg_cache, h, &qinfo, 0))) {
@@ -1121,26 +1120,19 @@ worker_init(struct worker* worker, struct config_file *cfg,
 		worker_delete(worker);
 		return 0;
 	}
+
+	worker->back = outside_network_create(worker->base,
+		cfg->msg_buffer_size, (size_t)cfg->outgoing_num_ports, 
+		cfg->out_ifs, cfg->num_out_ifs, cfg->do_ip4, cfg->do_ip6, 
+		cfg->do_tcp?cfg->outgoing_num_tcp:0, 
+		worker->daemon->env->infra_cache, worker->rndstate,
+		cfg->use_caps_bits_for_id, worker->ports, worker->numports,
+		cfg->unwanted_threshold, &worker_alloc_cleanup, worker,
+		cfg->do_udp, worker->daemon->connect_sslctx
 #ifdef CLIENT_SUBNET
-	worker->back = outside_network_create(worker->base,
-		cfg->msg_buffer_size, (size_t)cfg->outgoing_num_ports, 
-		cfg->out_ifs, cfg->num_out_ifs, cfg->do_ip4, cfg->do_ip6, 
-		cfg->do_tcp?cfg->outgoing_num_tcp:0, 
-		worker->daemon->env->infra_cache, worker->rndstate,
-		cfg->use_caps_bits_for_id, worker->ports, worker->numports,
-		cfg->unwanted_threshold, &worker_alloc_cleanup, worker,
-		cfg->do_udp, worker->daemon->connect_sslctx, 
-		worker->daemon->edns_subnet_upstreams);
-#else
-	worker->back = outside_network_create(worker->base,
-		cfg->msg_buffer_size, (size_t)cfg->outgoing_num_ports, 
-		cfg->out_ifs, cfg->num_out_ifs, cfg->do_ip4, cfg->do_ip6, 
-		cfg->do_tcp?cfg->outgoing_num_tcp:0, 
-		worker->daemon->env->infra_cache, worker->rndstate,
-		cfg->use_caps_bits_for_id, worker->ports, worker->numports,
-		cfg->unwanted_threshold, &worker_alloc_cleanup, worker,
-		cfg->do_udp, worker->daemon->connect_sslctx);
+		,worker->daemon->edns_subnet_upstreams
 #endif
+		);
 	if(!worker->back) {
 		log_err("could not create outgoing sockets");
 		worker_delete(worker);
@@ -1284,19 +1276,15 @@ worker_send_query(uint8_t* qname, size_t qnamelen, uint16_t qtype,
 	if(!e) 
 		return NULL;
 	e->qstate = q;
+	e->qsent = outnet_serviced_query(worker->back, qname,
+		qnamelen, qtype, qclass, flags, dnssec, want_dnssec,
+		q->env->cfg->tcp_upstream, q->env->cfg->ssl_upstream, addr,
+		addrlen, zone, zonelen, worker_handle_service_reply, e,
+		worker->back->udp_buff
 #ifdef CLIENT_SUBNET
-	e->qsent = outnet_serviced_query(worker->back, qname,
-		qnamelen, qtype, qclass, flags, dnssec, want_dnssec,
-		q->env->cfg->tcp_upstream, q->env->cfg->ssl_upstream, addr,
-		addrlen, zone, zonelen, worker_handle_service_reply, e,
-		worker->back->udp_buff, &q->edns_out);
-#else
-	e->qsent = outnet_serviced_query(worker->back, qname,
-		qnamelen, qtype, qclass, flags, dnssec, want_dnssec,
-		q->env->cfg->tcp_upstream, q->env->cfg->ssl_upstream, addr,
-		addrlen, zone, zonelen, worker_handle_service_reply, e,
-		worker->back->udp_buff);
+		, &q->edns_out
 #endif
+		);
 	if(!e->qsent) {
 		return NULL;
 	}

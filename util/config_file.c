@@ -56,6 +56,9 @@
 #ifdef HAVE_GLOB_H
 # include <glob.h>
 #endif
+#if CLIENT_SUBNET
+#include "edns-subnet/edns-subnet.h"
+#endif
 
 /** global config during parsing */
 struct config_parser_state* cfg_parser = 0;
@@ -160,7 +163,7 @@ config_create(void)
 	cfg->client_subnet = NULL;
 	/* OPC Not assigned yet! taken from http://wilmer.gaa.st/
 	 * edns-client-subnet/bind-9.7.1-dig-edns-client-subnet.diff */
-	cfg->client_subnet_opc = 0x50fa;
+	cfg->client_subnet_opcode = 0x50fa;
 	cfg->max_client_subnet_ipv4 = 24;
 	cfg->max_client_subnet_ipv6 = 64;
 #endif
@@ -433,7 +436,7 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	else S_STRLIST("send-client-subnet", client_subnet)
 	else S_NUMBER_OR_ZERO("max-client-subnet-ipv4:", max_client_subnet_ipv4)
 	else S_NUMBER_OR_ZERO("max-client-subnet-ipv6:", max_client_subnet_ipv6)
-	else S_NUMBER_OR_ZERO("client-subnet-opc:", client_subnet_opc)
+	else S_NUMBER_OR_ZERO("client-subnet-opc:", client_subnet_opcode)
 #endif
 	else if (strcmp(opt, "outgoing-interface:") == 0) {
 		char* d = strdup(val);
@@ -683,7 +686,7 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_LST(opt, "send-client-subnet", client_subnet)
 	else O_DEC(opt, "max-client-subnet-ipv4", max_client_subnet_ipv4)
 	else O_DEC(opt, "max-client-subnet-ipv6", max_client_subnet_ipv6)
-	else O_DEC(opt, "client-subnet-opc", client_subnet_opc)
+	else O_DEC(opt, "client-subnet-opc", client_subnet_opcode)
 #endif
 	/* not here:
 	 * outgoing-permit, outgoing-avoid - have list of ports
@@ -1178,9 +1181,9 @@ config_apply(struct config_file* config)
 	MIN_TTL = (uint32_t)config->min_ttl;
 	EDNS_ADVERTISED_SIZE = (uint16_t)config->edns_buffer_size;
 #ifdef CLIENT_SUBNET
-	EDNS_SUBNET_OPC = (uint16_t)config->client_subnet_opc;
-	MAX_CLIENT_SUBNET_IP4 = (uint8_t)config->max_client_subnet_ipv4;
-	MAX_CLIENT_SUBNET_IP6 = (uint8_t)config->max_client_subnet_ipv6;
+	EDNSSUBNET_OPCODE = (uint16_t)config->client_subnet_opcode;
+	EDNSSUBNET_MAX_SUBNET_IP4 = (uint8_t)config->max_client_subnet_ipv4;
+	EDNSSUBNET_MAX_SUBNET_IP6 = (uint8_t)config->max_client_subnet_ipv6;
 #endif
 	MINIMAL_RESPONSES = config->minimal_responses;
 	RRSET_ROUNDROBIN = config->rrset_roundrobin;

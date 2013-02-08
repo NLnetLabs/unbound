@@ -1,7 +1,7 @@
 /*
  * edns-subnet/edns-subnet.h - Storage for white listed servers
  *
- * Copyright (c) 2012, NLnet Labs. All rights reserved.
+ * Copyright (c) 2013, NLnet Labs. All rights reserved.
  *
  * This software is open source.
  * 
@@ -47,9 +47,15 @@ struct iter_env;
 struct config_file;
 struct regional;
 
-/** In use by the edns subnet option code*/
-#define IANA_ADDRFAM_IP4 1
-#define IANA_ADDRFAM_IP6 2
+/** In use by the edns subnet option code, as assigned by IANA */
+#define EDNSSUBNET_ADDRFAM_IP4 1
+#define EDNSSUBNET_ADDRFAM_IP6 2
+
+/** Opcode for edns subnet option, is TBD. */
+extern uint16_t EDNSSUBNET_OPCODE;
+/** Maximum number of bits we are willing to expose */
+extern uint8_t EDNSSUBNET_MAX_SUBNET_IP4;
+extern uint8_t EDNSSUBNET_MAX_SUBNET_IP6;
 
 /**
  * ednssubnet_upstream structure
@@ -86,13 +92,13 @@ void upstream_delete(struct ednssubnet_upstream* upstream);
 int upstream_apply_cfg(struct ednssubnet_upstream* upstream, struct config_file* cfg);
 
 /**
- * See if an address is blocked.
+ * See if an address is whitelisted.
  * @param upstream: structure for address storage.
  * @param addr: address to check
  * @param addrlen: length of addr.
  * @return: true if the address is whitelisted for subnet option. 
  */
-int upstream_lookup(struct ednssubnet_upstream* upstream, struct sockaddr_storage* addr,
+int upstream_is_whitelisted(struct ednssubnet_upstream* upstream, struct sockaddr_storage* addr,
 	socklen_t addrlen);
 
 /**

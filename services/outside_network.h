@@ -512,22 +512,17 @@ void pending_delete(struct outside_network* outnet, struct pending* p);
  * @return 0 on error, or pointer to serviced query that is used to answer
  *	this serviced query may be shared with other callbacks as well.
  */
- #ifdef CLIENT_SUBNET
-struct serviced_query* outnet_serviced_query(struct outside_network* outnet,
-	uint8_t* qname, size_t qnamelen, uint16_t qtype, uint16_t qclass,
-	uint16_t flags, int dnssec, int want_dnssec, int tcp_upstream,
-	int ssl_upstream, struct sockaddr_storage* addr, socklen_t addrlen,
-	uint8_t* zone, size_t zonelen, comm_point_callback_t* callback,
-	void* callback_arg, ldns_buffer* buff, struct edns_data* edns);
-#else
-struct serviced_query* outnet_serviced_query(struct outside_network* outnet,
-	uint8_t* qname, size_t qnamelen, uint16_t qtype, uint16_t qclass,
-	uint16_t flags, int dnssec, int want_dnssec, int tcp_upstream,
-	int ssl_upstream, struct sockaddr_storage* addr, socklen_t addrlen,
-	uint8_t* zone, size_t zonelen, comm_point_callback_t* callback,
-	void* callback_arg, ldns_buffer* buff);
-#endif
 
+struct serviced_query* outnet_serviced_query(struct outside_network* outnet,
+	uint8_t* qname, size_t qnamelen, uint16_t qtype, uint16_t qclass,
+	uint16_t flags, int dnssec, int want_dnssec, int tcp_upstream,
+	int ssl_upstream, struct sockaddr_storage* addr, socklen_t addrlen,
+	uint8_t* zone, size_t zonelen, comm_point_callback_t* callback,
+	void* callback_arg, ldns_buffer* buff
+#ifdef CLIENT_SUBNET
+	, struct edns_data* edns
+#endif
+);
 /**
  * Remove service query callback.
  * If that leads to zero callbacks, the query is completely cancelled.

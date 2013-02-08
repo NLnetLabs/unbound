@@ -374,16 +374,16 @@ void mesh_new_client(struct mesh_area* mesh, struct query_info* qinfo,
 		/* Construct subnet option from original query */
 		ss = &s->reply_list->query_reply.addr;
 		if(((struct sockaddr_in*)ss)->sin_family == AF_INET) {
-			edns->subnet_source_mask = MAX_CLIENT_SUBNET_IP4;
-			edns->subnet_addr_fam = IANA_ADDRFAM_IP4;
+			edns->subnet_source_mask = EDNSSUBNET_MAX_SUBNET_IP4;
+			edns->subnet_addr_fam = EDNSSUBNET_ADDRFAM_IP4;
 			sinaddr = &((struct sockaddr_in*)ss)->sin_addr;
 			memcpy(edns->subnet_addr, (uint8_t *)sinaddr, INET_SIZE);
 			edns->subnet_validdata = 1;
 		}
 #ifdef INET6
 		else {
-			edns->subnet_source_mask = MAX_CLIENT_SUBNET_IP6;
-			edns->subnet_addr_fam = IANA_ADDRFAM_IP6;
+			edns->subnet_source_mask = EDNSSUBNET_MAX_SUBNET_IP6;
+			edns->subnet_addr_fam = EDNSSUBNET_ADDRFAM_IP6;
 			sinaddr = &((struct sockaddr_in6*)ss)->sin6_addr;
 			memcpy(edns->subnet_addr, (uint8_t *)sinaddr, INET6_SIZE);
 			edns->subnet_validdata = 1;
