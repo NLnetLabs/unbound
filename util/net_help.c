@@ -726,7 +726,7 @@ void* outgoing_ssl_fd(void* sslctx, int fd)
 #endif
 }
 
-#if defined(OPENSSL_THREADS) && !defined(THREADS_DISABLED)
+#if defined(HAVE_SSL) && defined(OPENSSL_THREADS) && !defined(THREADS_DISABLED)
 /** global lock list for openssl locks */
 static lock_basic_t *ub_openssl_locks = NULL;
 
@@ -751,7 +751,7 @@ ub_crypto_lock_cb(int mode, int type, const char *ATTR_UNUSED(file),
 
 int ub_openssl_lock_init(void)
 {
-#if defined(OPENSSL_THREADS) && !defined(THREADS_DISABLED)
+#if defined(HAVE_SSL) && defined(OPENSSL_THREADS) && !defined(THREADS_DISABLED)
 	int i;
 	ub_openssl_locks = (lock_basic_t*)malloc(
 		sizeof(lock_basic_t)*CRYPTO_num_locks());
@@ -768,7 +768,7 @@ int ub_openssl_lock_init(void)
 
 void ub_openssl_lock_delete(void)
 {
-#if defined(OPENSSL_THREADS) && !defined(THREADS_DISABLED)
+#if defined(HAVE_SSL) && defined(OPENSSL_THREADS) && !defined(THREADS_DISABLED)
 	int i;
 	if(!ub_openssl_locks)
 		return;
