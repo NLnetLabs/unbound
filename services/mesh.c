@@ -124,11 +124,46 @@ timeval_smaller(const struct timeval* x, const struct timeval* y)
 #endif
 }
 
+#ifdef CLIENT_SUBNET
+/** Returns a==b: 0, a<b: positive, a>b: negative */
+int subnet_compare(struct edns_data *a, struct edns_data *b)
+{
+	if (!a) {
+		if (b) return 1;
+		return 0;
+	} else {
+		if (!b) return -1;
+		/* crude way:
+		 * return  memcmp(b, a, sizeof(struct edns_data)); */
+		
+		if ( a->edns_present && !b->edns_present) return -1;
+		if (!a->edns_present && !b->edns_present) return  0;
+		if (!a->edns_present &&  b->edns_present) return  1;
+
+		if ( a->subnet_validdata && !b->subnet_validdata) return -1;
+		if (!a->subnet_validdata && !b->subnet_validdata) return  0;
+		if (!a->subnet_validdata &&  b->subnet_validdata) return  1;
+		
+		if (a->subnet_addr_fam != b->subnet_addr_fam) {
+			return b->subnet_addr_fam - a->subnet_addr_fam;
+		}
+		if (a->subnet_source_mask != b->subnet_source_mask) {
+			return b->subnet_source_mask - a->subnet_source_mask;
+		}
+		return memcmp(b->subnet_addr, a->subnet_addr, INET6_SIZE);
+		
+	}
+}
+#endif
+
 int
 mesh_state_compare(const void* ap, const void* bp)
 {
 	struct mesh_state* a = (struct mesh_state*)ap;
 	struct mesh_state* b = (struct mesh_state*)bp;
+#ifdef CLIENT_SUBNET
+	int r;
+#endif
 
 	if(ap == bp)
 		return 0;
@@ -147,6 +182,10 @@ mesh_state_compare(const void* ap, const void* bp)
 	if(!(a->s.query_flags&BIT_CD) && (b->s.query_flags&BIT_CD))
 		return 1;
 
+#ifdef CLIENT_SUBNET
+	r = subnet_compare(a->s.edns_from_client, b->s.edns_from_client);
+	if (r != 0) return r;
+#endif
 	return query_info_compare(&a->s.qinfo, &b->s.qinfo);
 }
 
@@ -311,21 +350,6 @@ void mesh_new_client(struct mesh_area* mesh, struct query_info* qinfo,
 			return;
 		}
 	}
-#ifdef CLIENT_SUBNET
-	/* See if both the found mesh and the query have the same subnet
-	 * option set. If not forget about mesh_state and create a new one */
-	if(s) {
-		struct edns_data* medns = s->s.edns_from_client;
-		if ( !(edns->edns_present && edns->subnet_validdata) ||
-			!(medns && medns->edns_present && medns->subnet_validdata) ||
-			edns->subnet_addr_fam != medns->subnet_addr_fam ||
-			edns->subnet_source_mask != medns->subnet_source_mask ||
-			memcmp(edns->subnet_addr, medns->subnet_addr, INET6_SIZE) != 0)
-		{
-			s = NULL;
-		}
-	}
-#endif
 	/* see if it already exists, if not, create one */
 	if(!s) {
 #ifdef UNBOUND_DEBUG
@@ -1015,7 +1039,10 @@ struct mesh_state* mesh_area_find(struct mesh_area* mesh,
 	key.s.is_priming = prime;
 	key.s.qinfo = *qinfo;
 	key.s.query_flags = qflags;
-	
+#ifdef CLIENT_SUBNET
+	key.s.edns_from_client = NULL;
+#endif
+
 	result = (struct mesh_state*)rbtree_search(&mesh->all, &key);
 	return result;
 }

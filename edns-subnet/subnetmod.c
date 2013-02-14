@@ -46,6 +46,7 @@
 #include "edns-subnet/edns-subnet.h"
 #include "services/mesh.h"
 #include "util/module.h"
+#include "util/regional.h"
 
 /** fill in message structure */
 static struct subnet_qstate*
