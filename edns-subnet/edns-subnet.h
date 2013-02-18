@@ -57,6 +57,11 @@ extern uint16_t EDNSSUBNET_OPCODE;
 extern uint8_t EDNSSUBNET_MAX_SUBNET_IP4;
 extern uint8_t EDNSSUBNET_MAX_SUBNET_IP6;
 
+/** copy the first n BITS from src to dst iff both src and dst 
+ * are large enough, return 0 on succes */
+int
+copy_clear(uint8_t* dst, int dstlen, uint8_t* src, int srclen, int n);
+
 /**
  * ednssubnet_upstream structure
  */

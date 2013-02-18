@@ -52,16 +52,6 @@ struct subnet_env {
 };
 
 /**
- * Per query state for the subnet module.
- */
-struct subnet_qstate {
-	/** 
-	 * State of the subnet module.
-	 */
-	struct edns_data edns;
-};
-
-/**
  * Get the module function block.
  * @return: function block with function pointers to module methods.
  */

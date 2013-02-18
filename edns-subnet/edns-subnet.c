@@ -55,6 +55,25 @@ uint16_t EDNSSUBNET_OPCODE = 0x50fa;
 uint8_t EDNSSUBNET_MAX_SUBNET_IP4 = 24;
 uint8_t EDNSSUBNET_MAX_SUBNET_IP6 = 64;
 
+int
+copy_clear(uint8_t* dst, int dstlen, uint8_t* src, int srclen, int n)
+{
+	int intpart = n / 8;  /* bytes */
+	int fracpart = n % 8; /* bits */
+	int written = intpart;
+	if (intpart > dstlen || intpart > srclen)
+		return 1;
+	if (fracpart && (intpart+1 > dstlen || intpart+1 > srclen))
+		return 1;
+	memcpy(dst, src, intpart);
+	if (fracpart) {
+		dst[intpart] = src[intpart] & ~(0xFF >> fracpart);
+		written++;
+	}
+	memset(dst + written, 0, dstlen - written);
+	return 0;
+}
+
 struct ednssubnet_upstream* 
 upstream_create(void)
 {

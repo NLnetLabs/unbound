@@ -48,27 +48,6 @@
 #include "util/module.h"
 #include "util/regional.h"
 
-/** fill in message structure */
-static struct subnet_qstate*
-sub_new_getmsg(struct module_qstate* qstate, struct subnet_qstate* snq)
-{
-	return snq;
-}
-
-/** allocate new subnet query state */
-static struct subnet_qstate*
-sub_new(struct module_qstate* qstate, int id)
-{
-	struct subnet_qstate* snq = (struct subnet_qstate*)regional_alloc(
-		qstate->region, sizeof(*snq));
-	log_assert(!qstate->minfo[id]);
-	if(!snq)
-		return NULL;
-	memset(snq, 0, sizeof(*snq));
-	qstate->minfo[id] = snq;
-	return sub_new_getmsg(qstate, snq);
-}
-
 int subnetmod_init(struct module_env* env, int id)
 {
 	return 1;
@@ -78,7 +57,8 @@ void subnetmod_deinit(struct module_env* env, int id)
 {
 }
 
-void subnetmod_inform_super(struct module_qstate* qstate, int id, struct module_qstate* super)
+void subnetmod_inform_super(struct module_qstate* qstate, int id, 
+	struct module_qstate* super)
 {
 }
 
@@ -91,6 +71,69 @@ void cp_edns_bad_response(struct edns_data* target, struct edns_data* source)
 	target->subnet_validdata = 1;
 }
 
+enum module_ext_state eval_response(struct module_qstate* qstate)
+{
+	if (!qstate->edns_out.subnet_sent) {
+		if (qstate->edns_in.subnet_validdata)
+			verbose(VERB_QUERY, "subnet: received spurious data");
+		if (qstate->edns_out.subnet_downstream) {
+			/* Copy question back to client */
+			qstate->edns_to_client = &qstate->edns_in;
+			cp_edns_bad_response(qstate->edns_to_client, 
+								qstate->edns_from_client);
+		}
+		return module_finished;
+	}
+	
+	/* subnet sent but nothing came back */
+	if (!qstate->edns_in.subnet_validdata) {
+		/** The authority indicated no support for vandergaast. As a
+		 * consequence the answer ended up in the regular cache. It
+		 * is still usefull to put it in the vandergaast cache for 
+		 * when a client explicitly asks for subnet specific answer. */
+		verbose(VERB_QUERY, "subnet: Authority indicates no support");
+		// TODO PUT IT IN OUR SPECIAL CACHE
+		if (qstate->edns_out.subnet_downstream) {
+			qstate->edns_to_client = &qstate->edns_in;
+			cp_edns_bad_response(qstate->edns_to_client, 
+								qstate->edns_from_client);
+		}
+		return module_finished;
+	}
+	
+	/** Being here means We asked for and got a subnet specific answer.
+	 * Also the answer from the authority is not yet cached anywhere. */
+	
+	/* can we accept response? */
+	size_t sn_octs, remainder;
+	sn_octs = qstate->edns_out.subnet_source_mask / 8;
+	assert(sn_octs <= INET6_SIZE); /* Enforced by msgparse */
+	remainder = 8 - (size_t)(qstate->edns_out.subnet_source_mask % 8);
+	if(qstate->edns_out.subnet_addr_fam != qstate->edns_in.subnet_addr_fam ||
+		qstate->edns_out.subnet_source_mask != qstate->edns_in.subnet_source_mask ||
+		memcmp(qstate->edns_out.subnet_addr, qstate->edns_in.subnet_addr, sn_octs) != 0 ||
+		(qstate->edns_out.subnet_addr[sn_octs]^qstate->edns_in.subnet_addr[sn_octs])>>remainder) {
+		/* we can not, restart query without option */
+		verbose(VERB_QUERY, "subnet: forged data");
+		qstate->edns_out.subnet_validdata = 0;
+		qstate->edns_out.subnet_sent = 0;
+		return module_wait_module;
+	}
+	
+	/* TODO PUT IT IN OUR SPECIAL CACHE */
+	
+	if (qstate->edns_out.subnet_downstream) {
+		/* Client wants to see the answer, echo option back
+		 * and adjust the scope. */
+		qstate->edns_to_client = qstate->edns_from_client;
+		verbose(VERB_QUERY, "subnet: attach");
+		qstate->edns_to_client->subnet_scope_mask = 
+			qstate->edns_in.subnet_scope_mask;
+	}
+	verbose(VERB_QUERY, "subnet: done");
+	return module_finished;
+}
+
 void subnetmod_operate(struct module_qstate* qstate, enum module_ev event, 
 	int id, struct outbound_entry* ATTR_UNUSED(outbound))
 {
@@ -98,19 +141,16 @@ void subnetmod_operate(struct module_qstate* qstate, enum module_ev event,
 	void* cachehit;
 	int max_mask;
 #endif
-	struct edns_data* edns_from_client; //from client
+	struct edns_data* edns_from_client;
 	struct subnet_env* sne = (struct subnet_env*)qstate->env->modinfo[id];
 	struct subnet_qstate* snq = (struct subnet_qstate*)qstate->minfo[id];
 	
 	verbose(VERB_QUERY, "subnet[module %d] operate: extstate:%s "
 		"event:%s", id, strextstate(qstate->ext_state[id]), 
 		strmodulevent(event));
-	log_query_info(VERB_QUERY, "subnet operate: query",
-		&qstate->qinfo);
-	/* This query is new for us */
-	if(event == module_event_new || 
-		(event == module_event_pass && snq == NULL)) {
-		snq = sub_new(qstate, id);
+	log_query_info(VERB_QUERY, "subnet operate: query", &qstate->qinfo);
+
+	if(event == module_event_new) {
 		edns_from_client = qstate->edns_from_client;
 		
 		if(!edns_from_client || !edns_from_client->subnet_validdata) {
@@ -184,58 +224,7 @@ void subnetmod_operate(struct module_qstate* qstate, enum module_ev event,
 	if(event == module_event_moddone) {
 		verbose(VERB_QUERY, "subnet: done");
 		qstate->edns_to_client = NULL;
-		if (!qstate->edns_out.subnet_sent) {
-			verbose(VERB_QUERY, "subnet: did not sent");
-			if (qstate->edns_in.subnet_validdata) {
-				verbose(VERB_QUERY, "subnet: received spurious data");
-			}
-			if (qstate->edns_out.subnet_downstream) {
-				verbose(VERB_QUERY, "subnet: client shows interest");
-				qstate->edns_to_client = &qstate->edns_in;
-				cp_edns_bad_response(qstate->edns_to_client, 
-									qstate->edns_from_client);
-			}
-		} else {
-			verbose(VERB_QUERY, "subnet: did sent");
-			/* subnet sent but nothing came back */
-			if (!qstate->edns_in.subnet_validdata) {
-				verbose(VERB_QUERY, "subnet: missing data");
-				// TODO PUT IT IN OUR SPECIAL CACHE
-				if (qstate->edns_out.subnet_downstream) {
-					qstate->edns_to_client = &qstate->edns_in;
-					cp_edns_bad_response(qstate->edns_to_client, 
-										qstate->edns_from_client);
-				}
-			} else {
-				verbose(VERB_QUERY, "subnet: is not cached");
-				/* can we accept response? */
-				size_t sn_octs, remainder;
-				sn_octs = qstate->edns_out.subnet_source_mask / 8;
-				/* should be enforced by msgparse */
-				assert(sn_octs <= INET6_SIZE);
-				remainder = 8 - (size_t)(qstate->edns_out.subnet_source_mask % 8);
-				if(qstate->edns_out.subnet_addr_fam != qstate->edns_in.subnet_addr_fam ||
-					qstate->edns_out.subnet_source_mask != qstate->edns_in.subnet_source_mask ||
-					memcmp(qstate->edns_out.subnet_addr, qstate->edns_in.subnet_addr, sn_octs) != 0 ||
-					(qstate->edns_out.subnet_addr[sn_octs]^qstate->edns_in.subnet_addr[sn_octs])>>remainder) {
-					/* we can not, restart query without option */
-					verbose(VERB_QUERY, "subnet: forged data");
-					qstate->edns_out.subnet_validdata = 0;
-					qstate->edns_out.subnet_sent = 0;
-					qstate->ext_state[id] = module_wait_module;
-					return;
-				}
-				verbose(VERB_QUERY, "subnet: now cache it");
-				/* TODO PUT IT IN OUR SPECIAL CACHE */
-				if (qstate->edns_out.subnet_downstream) {
-					qstate->edns_to_client = qstate->edns_from_client;
-					verbose(VERB_QUERY, "subnet: attach");
-					qstate->edns_to_client->subnet_scope_mask = 
-						qstate->edns_in.subnet_scope_mask;
-				}
-			}
-		}
-		qstate->ext_state[id] = module_finished;
+		qstate->ext_state[id] = eval_response(qstate);
 		return;
 	}
 	/* We are being revisited */

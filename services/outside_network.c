@@ -557,25 +557,18 @@ static int setup_if(struct port_if* pif, const char* addrstr,
 	return 1;
 }
 
+struct outside_network* 
+outside_network_create(struct comm_base *base, size_t bufsize, 
+	size_t num_ports, char** ifs, int num_ifs, int do_ip4, 
+	int do_ip6, size_t num_tcp, struct infra_cache* infra,
+	struct ub_randstate* rnd, int use_caps_for_id, int* availports, 
+	int numavailports, size_t unwanted_threshold,
+	void (*unwanted_action)(void*), void* unwanted_param, int do_udp,
+	void* sslctx
 #ifdef CLIENT_SUBNET
-struct outside_network* 
-outside_network_create(struct comm_base *base, size_t bufsize, 
-	size_t num_ports, char** ifs, int num_ifs, int do_ip4, 
-	int do_ip6, size_t num_tcp, struct infra_cache* infra,
-	struct ub_randstate* rnd, int use_caps_for_id, int* availports, 
-	int numavailports, size_t unwanted_threshold,
-	void (*unwanted_action)(void*), void* unwanted_param, int do_udp,
-	void* sslctx, struct ednssubnet_upstream* edns_subnet_upstreams)
-#else
-struct outside_network* 
-outside_network_create(struct comm_base *base, size_t bufsize, 
-	size_t num_ports, char** ifs, int num_ifs, int do_ip4, 
-	int do_ip6, size_t num_tcp, struct infra_cache* infra,
-	struct ub_randstate* rnd, int use_caps_for_id, int* availports, 
-	int numavailports, size_t unwanted_threshold,
-	void (*unwanted_action)(void*), void* unwanted_param, int do_udp,
-	void* sslctx)
+	, struct ednssubnet_upstream* edns_subnet_upstreams
 #endif
+	)
 {
 	struct outside_network* outnet = (struct outside_network*)
 		calloc(1, sizeof(struct outside_network));

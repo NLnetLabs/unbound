@@ -763,6 +763,7 @@ attach_edns_record(ldns_buffer* pkt, struct edns_data* edns)
 		sn_octs = edns->subnet_source_mask / 8;
 		sn_octs_remainder = (size_t)((edns->subnet_source_mask % 8)>0?1:0);
 		
+		assert(sn_octs + sn_octs_remainder <= INET6_SIZE);
 		assert(ldns_buffer_available(pkt, sn_octs + sn_octs_remainder + 4 + 6));
 		
 		ldns_buffer_write_u16(pkt, sn_octs + sn_octs_remainder + 4 + 4); /* rdatalen */

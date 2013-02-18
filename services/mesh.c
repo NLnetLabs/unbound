@@ -394,6 +394,7 @@ void mesh_new_client(struct mesh_area* mesh, struct query_info* qinfo,
 	} else {
 		struct sockaddr_storage *ss;
 		void* sinaddr;
+		edns->subnet_validdata = 0;
 		edns->subnet_downstream = 0;
 		/* Construct subnet option from original query */
 		ss = &s->reply_list->query_reply.addr;
@@ -401,16 +402,22 @@ void mesh_new_client(struct mesh_area* mesh, struct query_info* qinfo,
 			edns->subnet_source_mask = EDNSSUBNET_MAX_SUBNET_IP4;
 			edns->subnet_addr_fam = EDNSSUBNET_ADDRFAM_IP4;
 			sinaddr = &((struct sockaddr_in*)ss)->sin_addr;
-			memcpy(edns->subnet_addr, (uint8_t *)sinaddr, INET_SIZE);
-			edns->subnet_validdata = 1;
+			if (!copy_clear(
+					edns->subnet_addr, INET6_SIZE, (uint8_t *)sinaddr, 
+					INET_SIZE, EDNSSUBNET_MAX_SUBNET_IP4)) {
+				edns->subnet_validdata = 1;
+			}
 		}
 #ifdef INET6
 		else {
 			edns->subnet_source_mask = EDNSSUBNET_MAX_SUBNET_IP6;
 			edns->subnet_addr_fam = EDNSSUBNET_ADDRFAM_IP6;
 			sinaddr = &((struct sockaddr_in6*)ss)->sin6_addr;
-			memcpy(edns->subnet_addr, (uint8_t *)sinaddr, INET6_SIZE);
-			edns->subnet_validdata = 1;
+			if (!copy_clear(
+					edns->subnet_addr, INET6_SIZE, (uint8_t *)sinaddr, 
+					INET6_SIZE, EDNSSUBNET_MAX_SUBNET_IP4)) {
+				edns->subnet_validdata = 1;
+			}
 		}
 #else
 		else {

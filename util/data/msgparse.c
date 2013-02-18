@@ -934,6 +934,34 @@ parse_packet(ldns_buffer* pkt, struct msg_parse* msg, struct regional* region)
 }
 
 #ifdef CLIENT_SUBNET
+
+void parse_subnet_option(uint8_t* data, struct edns_data* edns, int opt_len)
+{
+	if(opt_len < 4) return; /* try next */
+
+	edns->subnet_addr_fam = ldns_read_uint16(data);
+	edns->subnet_source_mask = data[2];
+	edns->subnet_scope_mask = data[3];
+	/* remaing bytes indicate address */
+	
+	/* validate input*/
+	if(opt_len - 4 > INET6_SIZE || opt_len == 0) return;
+	if (edns->subnet_addr_fam == EDNSSUBNET_ADDRFAM_IP4) {
+		if (edns->subnet_source_mask > 32 || edns->subnet_scope_mask > 32)
+			return;
+	} else if (edns->subnet_addr_fam != EDNSSUBNET_ADDRFAM_IP6) {
+		if (edns->subnet_source_mask > 128 || edns->subnet_scope_mask > 128)
+			return;
+	} else return;
+	
+	
+	if (copy_clear(edns->subnet_addr, INET6_SIZE, data + 6, 
+			opt_len - 4, edns->subnet_source_mask))
+		return;
+
+	edns->subnet_validdata = 1;
+}
+
 void
 parse_ednsdata(uint8_t* data, struct edns_data* edns)
 {
@@ -943,29 +971,20 @@ parse_ednsdata(uint8_t* data, struct edns_data* edns)
 	edns_datalen = ldns_read_uint16(data);
 	data += 2;
 	if(edns_datalen < 4) return;
-	/* iterate trough all options */
 	opt_start = 0;
 	while(opt_start + 4 <= edns_datalen) { /* opcode + len must fit */
 		opt_opc = ldns_read_uint16(&data[opt_start]);
 		opt_len = ldns_read_uint16(&data[2 + opt_start]);
 		/* Option does not fit in remaining data */
-		if(opt_start + 4 + opt_len > edns_datalen) return;
-		opt_start += 4;
+		if(opt_start + 4 + opt_len > edns_datalen) break;
+		
 		if(opt_opc == EDNSSUBNET_OPCODE) {
-			if(opt_len < 4) break;
-			edns->subnet_addr_fam = ldns_read_uint16(data + opt_start);
-			edns->subnet_source_mask = data[2 + opt_start];
-			edns->subnet_scope_mask = data[3 + opt_start];
-			/* remaing bytes indicate address */
-			if(opt_len - 4 > INET6_SIZE || opt_len == 0) break;
-			memset(edns->subnet_addr, 0, INET6_SIZE);
-			memcpy(edns->subnet_addr, data + 6 + opt_start, opt_len - 4);
-			edns->subnet_validdata = 1;
-			break;
+			parse_subnet_option(data + opt_start + 4, edns, opt_len);
 		} else { /* Unknown opcode */
 			verbose(VERB_QUERY, "Unknow EDNS option %x", opt_opc);
 		}
-		opt_start += opt_len;
+		
+		opt_start += opt_len + 4;
 	}
 }
 #endif
