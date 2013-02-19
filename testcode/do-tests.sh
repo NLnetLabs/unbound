@@ -51,7 +51,7 @@ for test in `ls *.tpkg`; do
 		fi
 	fi
 	if test $SKIP -eq 0; then
-		echo $test
+		#echo -n "$test "
 		sh ../testcode/mini_tpkg.sh -a ../.. exe $test
 	else
 		echo "skip $test"

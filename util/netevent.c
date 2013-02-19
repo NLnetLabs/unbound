@@ -95,7 +95,11 @@
 #  endif /* USE_WINSOCK */
 #else /* USE_MINI_EVENT */
    /* we use libevent */
-#  include <event.h>
+#  ifdef HAVE_EVENT_H
+#    include <event.h>
+#  else
+#    include "event.h"
+#  endif
 #endif /* USE_MINI_EVENT */
 
 /**

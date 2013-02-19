@@ -62,7 +62,8 @@
 #include "libunbound/unbound.h"
 #include <ldns/ldns.h>
 #ifdef HAVE_NSS
-#include <nss3/nss.h>
+/* nss3 */
+#include "nss.h"
 #endif
 
 /** verbosity for unbound-host app */

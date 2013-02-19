@@ -128,7 +128,9 @@ forwards_insert_data(struct iter_forwards* fwd, uint16_t c, uint8_t* nm,
 	node->namelabs = nmlabs;
 	node->dp = dp;
 	if(!rbtree_insert(fwd->tree, &node->node)) {
-		log_err("duplicate forward zone ignored.");
+		char buf[257];
+		dname_str(nm, buf);
+		log_err("duplicate forward zone %s ignored.", buf);
 		delegpt_free_mlc(dp);
 		free(node->name);
 		free(node);

@@ -57,7 +57,8 @@
 #endif
 
 #ifdef HAVE_NSS
-#include "nss3/nss.h"
+/* nss3 */
+#include "nss.h"
 #endif
 
 #include <ldns/ldns.h>

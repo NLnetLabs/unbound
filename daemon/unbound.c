@@ -88,7 +88,8 @@
 #endif
 
 #ifdef HAVE_NSS
-#  include <nss3/nss.h>
+/* nss3 */
+#  include "nss.h"
 #endif
 
 /** global debug value to keep track of heap memory allocation */

@@ -57,7 +57,8 @@
 #endif
 
 #ifdef HAVE_NSS
-#include <nss3/nss.h>
+/* nss3 */
+#include "nss.h"
 #endif
 
 #include <ldns/ldns.h>
@@ -215,7 +216,7 @@ daemon_init(void)
 	comp_meth = (void*)SSL_COMP_get_compression_methods();
 #  endif
 	(void)SSL_library_init();
-#  if defined(OPENSSL_THREADS) && !defined(THREADS_DISABLED)
+#  if defined(HAVE_SSL) && defined(OPENSSL_THREADS) && !defined(THREADS_DISABLED)
 	if(!ub_openssl_lock_init())
 		fatal_exit("could not init openssl locks");
 #  endif
@@ -594,7 +595,7 @@ daemon_delete(struct daemon* daemon)
 	ERR_remove_state(0);
 	ERR_free_strings();
 	RAND_cleanup();
-#  if defined(OPENSSL_THREADS) && !defined(THREADS_DISABLED)
+#  if defined(HAVE_SSL) && defined(OPENSSL_THREADS) && !defined(THREADS_DISABLED)
 	ub_openssl_lock_delete();
 #  endif
 #elif defined(HAVE_NSS)

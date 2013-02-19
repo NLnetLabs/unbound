@@ -553,12 +553,14 @@ verify_canonrrset(ldns_buffer* buf, int algo, unsigned char* sigblock,
 /**************************************************/
 #elif defined(HAVE_NSS)
 /* libnss implementation */
-#include <nss3/sechash.h>
-#include <nss3/pk11pub.h>
-#include <nss3/keyhi.h>
-#include <nss3/secerr.h>
-#include <nss3/cryptohi.h>
-#include <nspr4/prerror.h>
+/* nss3 */
+#include "sechash.h"
+#include "pk11pub.h"
+#include "keyhi.h"
+#include "secerr.h"
+#include "cryptohi.h"
+/* nspr4 */
+#include "prerror.h"
 
 size_t
 ds_digest_size_supported(int algo)

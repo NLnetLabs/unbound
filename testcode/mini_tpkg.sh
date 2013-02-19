@@ -26,7 +26,7 @@ if test "$1" = "report" || test "$2" = "report"; then
 			fi
 		else
 			if test -f "result.$name"; then
-				echo "!! FAILED !! : $name"
+				echo "\033[01;31m!! FAILED !!\033[00m : $name"
 			else
 				echo ">> SKIPPED<< : $name"
 			fi
@@ -66,6 +66,8 @@ else
 	shell="sh"
 fi
 
+echo -n "$name: \t"
+
 # check already done
 if test -f .done-$name; then
 	echo "minitpkg .done-$name exists. skip test."
@@ -73,7 +75,7 @@ if test -f .done-$name; then
 fi
 
 # Extract
-echo "minitpkg extract $1 to $dir"
+#echo "minitpkg extract $1 to $dir"
 mkdir $dir
 gzip -cd $name.tpkg | (cd $dir; tar xf -)
 cd $dir
@@ -84,7 +86,7 @@ echo "minitpkg exe $name" > $result
 grep "Description:" $name.dsc >> $result 2>&1
 echo "DateRunStart: "`date "+%s" 2>/dev/null` >> $result
 if test -f $name.pre; then
-	echo "minitpkg exe $name.pre"
+	#echo "minitpkg exe $name.pre"
 	echo "minitpkg exe $name.pre" >> $result
 	$shell $name.pre $args >> $result
 	if test $? -ne 0; then
@@ -92,22 +94,22 @@ if test -f $name.pre; then
 	fi
 fi
 if test -f $name.test; then
-	echo "minitpkg exe $name.test"
+	#echo "minitpkg exe $name.test"
 	echo "minitpkg exe $name.test" >> $result
 	$shell $name.test $args >>$result 2>&1
 	if test $? -ne 0; then
 		echo "$name: FAILED" >> $result
-		echo "$name: FAILED"
+		echo "\033[01;31mFAILED\033[00m"
 		success="no"
 	else
 		echo "$name: PASSED" >> $result
 		echo "$name: PASSED" > ../.done-$name
-		echo "$name: PASSED"
+		echo "\033[01;32mPASSED\033[00m"
 		success="yes"
 	fi
 fi
 if test -f $name.post; then
-	echo "minitpkg exe $name.post"
+	#echo "minitpkg exe $name.post"
 	echo "minitpkg exe $name.post" >> $result
 	$shell $name.post $args >> $result
 	if test $? -ne 0; then
