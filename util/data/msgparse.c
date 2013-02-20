@@ -981,7 +981,7 @@ parse_ednsdata(uint8_t* data, struct edns_data* edns)
 		if(opt_opc == EDNSSUBNET_OPCODE) {
 			parse_subnet_option(data + opt_start + 4, edns, opt_len);
 		} else { /* Unknown opcode */
-			verbose(VERB_QUERY, "Unknow EDNS option %x", opt_opc);
+			verbose(VERB_QUERY, "unknown EDNS option %x", opt_opc);
 		}
 		
 		opt_start += opt_len + 4;
