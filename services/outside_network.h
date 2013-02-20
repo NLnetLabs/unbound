@@ -357,7 +357,7 @@ struct serviced_query {
 	/** the UDP or TCP query that is pending, see status which */
 	void* pending;
 #ifdef CLIENT_SUBNET
-	/** Contains vandergaast data */
+	/** Contains client subnet data */
 	struct edns_data* edns;
 #endif
 };
@@ -484,7 +484,6 @@ void pending_delete(struct outside_network* outnet, struct pending* p);
  * @return 0 on error, or pointer to serviced query that is used to answer
  *	this serviced query may be shared with other callbacks as well.
  */
-
 struct serviced_query* outnet_serviced_query(struct outside_network* outnet,
 	uint8_t* qname, size_t qnamelen, uint16_t qtype, uint16_t qclass,
 	uint16_t flags, int dnssec, int want_dnssec, int tcp_upstream,

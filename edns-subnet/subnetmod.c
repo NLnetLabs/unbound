@@ -101,7 +101,7 @@ enum module_ext_state eval_response(struct module_qstate* qstate)
 		return module_finished;
 	}
 	
-	/** Being here means We asked for and got a subnet specific answer.
+	/** Being here means we have asked for and got a subnet specific answer.
 	 * Also the answer from the authority is not yet cached anywhere. */
 	
 	/* can we accept response? */
@@ -155,7 +155,7 @@ void subnetmod_operate(struct module_qstate* qstate, enum module_ev event,
 		
 		if(!edns_from_client || !edns_from_client->subnet_validdata) {
 			/* No clients are interested in result or we could not
-			 * parse it, we don't do vandergaast */
+			 * parse it, we don't do client subnet */
 			qstate->edns_out.subnet_validdata = 0;
 			verbose(VERB_ALGO, "subnet: pass to next module");
 			qstate->ext_state[id] = module_wait_module;
