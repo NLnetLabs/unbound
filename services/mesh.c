@@ -415,7 +415,7 @@ void mesh_new_client(struct mesh_area* mesh, struct query_info* qinfo,
 			sinaddr = &((struct sockaddr_in6*)ss)->sin6_addr;
 			if (!copy_clear(
 					edns->subnet_addr, INET6_SIZE, (uint8_t *)sinaddr, 
-					INET6_SIZE, EDNSSUBNET_MAX_SUBNET_IP4)) {
+					INET6_SIZE, EDNSSUBNET_MAX_SUBNET_IP6)) {
 				edns->subnet_validdata = 1;
 			}
 		}
@@ -1047,7 +1047,7 @@ struct mesh_state* mesh_area_find(struct mesh_area* mesh,
 	key.s.qinfo = *qinfo;
 	key.s.query_flags = qflags;
 #ifdef CLIENT_SUBNET
-	key.s.edns_from_client = NULL;
+	key.s.edns_from_client = NULL; /* is used in subnet cmp function */
 #endif
 
 	result = (struct mesh_state*)rbtree_search(&mesh->all, &key);
