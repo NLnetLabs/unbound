@@ -98,7 +98,9 @@
 #  ifdef HAVE_EVENT_H
 #    include <event.h>
 #  else
-#    include "event.h"
+#    include "event2/event.h"
+#    include "event2/event_struct.h"
+#    include "event2/event_compat.h"
 #  endif
 #endif /* USE_MINI_EVENT */
 
