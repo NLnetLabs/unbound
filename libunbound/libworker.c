@@ -201,23 +201,17 @@ libworker_setup(struct ub_ctx* ctx, int is_bg)
 		libworker_delete(w);
 		return NULL;
 	}
+	w->back = outside_network_create(w->base, cfg->msg_buffer_size,
+		(size_t)cfg->outgoing_num_ports, cfg->out_ifs,
+		cfg->num_out_ifs, cfg->do_ip4, cfg->do_ip6, 
+		cfg->do_tcp?cfg->outgoing_num_tcp:0,
+		w->env->infra_cache, w->env->rnd, cfg->use_caps_bits_for_id,
+		ports, numports, cfg->unwanted_threshold,
+		&libworker_alloc_cleanup, w, cfg->do_udp, w->sslctx
 #ifdef CLIENT_SUBNET
-	w->back = outside_network_create(w->base, cfg->msg_buffer_size,
-		(size_t)cfg->outgoing_num_ports, cfg->out_ifs,
-		cfg->num_out_ifs, cfg->do_ip4, cfg->do_ip6, 
-		cfg->do_tcp?cfg->outgoing_num_tcp:0,
-		w->env->infra_cache, w->env->rnd, cfg->use_caps_bits_for_id,
-		ports, numports, cfg->unwanted_threshold,
-		&libworker_alloc_cleanup, w, cfg->do_udp, w->sslctx, NULL);
-#else
-	w->back = outside_network_create(w->base, cfg->msg_buffer_size,
-		(size_t)cfg->outgoing_num_ports, cfg->out_ifs,
-		cfg->num_out_ifs, cfg->do_ip4, cfg->do_ip6, 
-		cfg->do_tcp?cfg->outgoing_num_tcp:0,
-		w->env->infra_cache, w->env->rnd, cfg->use_caps_bits_for_id,
-		ports, numports, cfg->unwanted_threshold,
-		&libworker_alloc_cleanup, w, cfg->do_udp, w->sslctx);
+		, NULL
 #endif
+		);
 	if(!w->is_bg || w->is_bg_thread) {
 		lock_basic_unlock(&ctx->cfglock);
 	}
@@ -751,19 +745,17 @@ struct outbound_entry* libworker_send_query(uint8_t* qname, size_t qnamelen,
 	if(!e)
 		return NULL;
 	e->qstate = q;
- #ifdef CLIENT_SUBNET
+
 	e->qsent = outnet_serviced_query(w->back, qname,
 		qnamelen, qtype, qclass, flags, dnssec, want_dnssec,
 		q->env->cfg->tcp_upstream, q->env->cfg->ssl_upstream, addr,
 		addrlen, zone, zonelen, libworker_handle_service_reply, e,
-		w->back->udp_buff, &q->edns_out);
-#else
-	e->qsent = outnet_serviced_query(w->back, qname,
-		qnamelen, qtype, qclass, flags, dnssec, want_dnssec,
-		q->env->cfg->tcp_upstream, q->env->cfg->ssl_upstream, addr,
-		addrlen, zone, zonelen, libworker_handle_service_reply, e,
-		w->back->udp_buff);
+		w->back->udp_buff
+#ifdef CLIENT_SUBNET
+		, &q->edns_out
 #endif
+		);
+
 	if(!e->qsent) {
 		return NULL;
 	}

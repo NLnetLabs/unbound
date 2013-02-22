@@ -904,6 +904,23 @@ it as detailed in the stub zone section below.
 Configure local data shorthand for a PTR record with the reversed IPv4 or
 IPv6 address and the host name.  For example "192.0.2.4 www.example.com".
 TTL can be inserted like this: "2001:DB8::4 7200 www.example.com"
+.TP 5
+.B send\-client\-subnet: \fI<IP address>
+Send client source address to this authority. Can be IP4 or IP6. Append 
+/num to indicate a classless delegation netblock, for example like
+10.2.3.4/24 or 2001::11/64.
+.TP 5
+.B client\-subnet\-opcode: \fI<number>
+Client subnet option code is not assigned by IANA. Specify positive
+integer smaller than 65536. Defaults to 20730.
+.TP 5
+.B max\-client\-subnet\-ipv6: \fI<number>
+Specifies the maximum prefix length of the client source address we
+are willing to expose to third parties for IPv6. Defaults to 64.
+.TP 5
+.B max\-client\-subnet\-ipv4: \fI<number>
+Specifies the maximum prefix length of the client source address we
+are willing to expose to third parties for IPv4. Defaults to 24.
 .SS "Remote Control Options"
 In the
 .B remote\-control:

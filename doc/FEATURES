@@ -75,6 +75,8 @@ draft-ietf-dnsop-resolver-priming(-00): can prime and can fallback to
 draft-ietf-dnsop-dnssec-trust-anchor(-01): DS records can be configured 
   as trust anchors. Also DNSKEYs are allowed, by the way.
 draft-ietf-dnsext-dnssec-bis-updates: supported.
+draft-vandergaast-edns-client-subnet-01: Basic support with limited
+  caching for specific answers.
 
 Record type syntax support, extensive, from lib ldns.
 For these types only syntax and parsing support is needed.

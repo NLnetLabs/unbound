@@ -77,6 +77,9 @@ This software is under BSD license, see LICENSE for details.
   	Disable support for RSASHA256 and RSASHA512 crypto.
   * --disable-gost
   	Disable support for GOST crypto, RFC 5933.
+  * --enable-subnet
+    Enables support for client subnet. Client address prefix is send to 
+    authorities to get a more specific answer.
 
 * 'make test' runs a series of self checks.
 

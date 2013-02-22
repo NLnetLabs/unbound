@@ -436,7 +436,7 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	else S_STRLIST("send-client-subnet", client_subnet)
 	else S_NUMBER_OR_ZERO("max-client-subnet-ipv4:", max_client_subnet_ipv4)
 	else S_NUMBER_OR_ZERO("max-client-subnet-ipv6:", max_client_subnet_ipv6)
-	else S_NUMBER_OR_ZERO("client-subnet-opc:", client_subnet_opcode)
+	else S_NUMBER_OR_ZERO("client-subnet-opcode:", client_subnet_opcode)
 #endif
 	else if (strcmp(opt, "outgoing-interface:") == 0) {
 		char* d = strdup(val);
@@ -686,7 +686,7 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_LST(opt, "send-client-subnet", client_subnet)
 	else O_DEC(opt, "max-client-subnet-ipv4", max_client_subnet_ipv4)
 	else O_DEC(opt, "max-client-subnet-ipv6", max_client_subnet_ipv6)
-	else O_DEC(opt, "client-subnet-opc", client_subnet_opcode)
+	else O_DEC(opt, "client-subnet-opcode", client_subnet_opcode)
 #endif
 	/* not here:
 	 * outgoing-permit, outgoing-avoid - have list of ports
