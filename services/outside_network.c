@@ -58,7 +58,9 @@
 #include "util/net_help.h"
 #include "util/random.h"
 #include "util/fptr_wlist.h"
+#ifdef HAVE_OPENSSL_SSL_H
 #include <openssl/ssl.h>
+#endif
 
 #ifdef HAVE_NETDB_H
 #include <netdb.h>
