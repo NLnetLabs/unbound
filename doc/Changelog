@@ -1,5 +1,6 @@
 11 March 2013: Wouter
 	- iana portlist update.
+	- testcode/ldns-testpkts.c check for makedist is informational.
 
 15 February 2013: Wouter
 	- fix defines in lookup3 for bigendian bsd alpha

@@ -382,7 +382,7 @@ if test ! -z "$LDNSDIR"; then
 	   diff -q $LDNSDIR/examples/ldns-testpkts.h testcode/ldns-testpkts.h; then
 	   	info "ldns-testpkts.c and ldns-testpkts.h are OK"
 	else
-		error_cleanup "ldns-testpkts is different in ldns and unbound"
+		info "ldns-testpkts is different in ldns and unbound"
 	fi
 fi
 cd $temp_dir/unbound
