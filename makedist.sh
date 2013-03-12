@@ -191,7 +191,7 @@ if [ "$DOWIN" = "yes" ]; then
 	info "Crosscompile windows dist"
         cross="yes"
 	configure="mingw32-configure"
-	strip="i686-pc-mingw32-strip"
+	strip="i686-w64-mingw32-strip"
 	makensis="makensis"	# from mingw32-nsis package
 	# flags for crosscompiled dependency libraries
 	cross_flag=""
@@ -208,7 +208,7 @@ if [ "$DOWIN" = "yes" ]; then
 		cd openssl-* || error_cleanup "no openssl-X dir in tarball"
 		# configure for crosscompile, without CAPI because it fails
 		# cross-compilation and it is not used anyway
-		sslflags="no-asm --cross-compile-prefix=i686-pc-mingw32- -DOPENSSL_NO_CAPIENG mingw"
+		sslflags="no-asm --cross-compile-prefix=i686-w64-mingw32- -DOPENSSL_NO_CAPIENG mingw"
 		info "winssl: Configure $sslflags"
 		./Configure --prefix="$sslinstall" $sslflags || error_cleanup "OpenSSL Configure failed"
 		info "winssl: make"
