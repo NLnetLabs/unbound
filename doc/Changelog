@@ -1,5 +1,6 @@
 14 March 2013: Wouter
 	- iana portlist update.
+	- tag 1.4.20rc1
 
 12 March 2013: Wouter
 	- Fixup makedist.sh for windows compile.
