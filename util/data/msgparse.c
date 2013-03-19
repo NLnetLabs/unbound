@@ -938,7 +938,7 @@ parse_packet(ldns_buffer* pkt, struct msg_parse* msg, struct regional* region)
 static void
 parse_subnet_option(uint8_t* data, struct edns_data* edns, int opt_len)
 {
-	if(opt_len < 4) return; /* try next */
+	if (opt_len < 4) return; /* try next */
 
 	edns->subnet_addr_fam = ldns_read_uint16(data);
 	edns->subnet_source_mask = data[2];
@@ -946,7 +946,7 @@ parse_subnet_option(uint8_t* data, struct edns_data* edns, int opt_len)
 	/* remaing bytes indicate address */
 	
 	/* validate input*/
-	if(opt_len - 4 > INET6_SIZE || opt_len == 0) return;
+	if (opt_len - 4 > INET6_SIZE || opt_len == 0) return;
 	if (edns->subnet_addr_fam == EDNSSUBNET_ADDRFAM_IP4) {
 		if (edns->subnet_source_mask > 32 || edns->subnet_scope_mask > 32)
 			return;
@@ -956,7 +956,7 @@ parse_subnet_option(uint8_t* data, struct edns_data* edns, int opt_len)
 	} else return;
 	
 	
-	if (copy_clear(edns->subnet_addr, INET6_SIZE, data + 6, 
+	if (copy_clear(edns->subnet_addr, INET6_SIZE, data + 4, 
 			opt_len - 4, edns->subnet_source_mask))
 		return;
 
