@@ -466,6 +466,7 @@ install:	all $(PYTHONMOD_INSTALL) $(PYUNBOUND_INSTALL)
 	$(INSTALL) -c -m 644 doc/unbound.8 $(DESTDIR)$(mandir)/man8
 	$(INSTALL) -c -m 644 doc/unbound-checkconf.8 $(DESTDIR)$(mandir)/man8
 	$(INSTALL) -c -m 644 doc/unbound-control.8 $(DESTDIR)$(mandir)/man8
+	$(INSTALL) -c -m 644 doc/unbound-control.8 $(DESTDIR)$(mandir)/man8/unbound-control-setup.8
 	$(INSTALL) -c -m 644 doc/unbound-anchor.8 $(DESTDIR)$(mandir)/man8
 	$(INSTALL) -c -m 644 doc/unbound.conf.5 $(DESTDIR)$(mandir)/man5
 	$(INSTALL) -c -m 644 $(srcdir)/doc/unbound-host.1 $(DESTDIR)$(mandir)/man1
@@ -495,7 +496,7 @@ pyunbound-uninstall:
 
 uninstall:	$(PYTHONMOD_UNINSTALL) $(PYUNBOUND_UNINSTALL)
 	rm -f -- $(DESTDIR)$(sbindir)/unbound$(EXEEXT) $(DESTDIR)$(sbindir)/unbound-checkconf$(EXEEXT) $(DESTDIR)$(sbindir)/unbound-host$(EXEEXT) $(DESTDIR)$(sbindir)/unbound-control$(EXEEXT) $(DESTDIR)$(sbindir)/unbound-anchor$(EXEEXT) $(DESTDIR)$(sbindir)/unbound-control-setup
-	rm -f -- $(DESTDIR)$(mandir)/man8/unbound.8 $(DESTDIR)$(mandir)/man8/unbound-checkconf.8 $(DESTDIR)$(mandir)/man5/unbound.conf.5 $(DESTDIR)$(mandir)/man8/unbound-control.8 $(DESTDIR)$(mandir)/man8/unbound-anchor.8
+	rm -f -- $(DESTDIR)$(mandir)/man8/unbound.8 $(DESTDIR)$(mandir)/man8/unbound-checkconf.8 $(DESTDIR)$(mandir)/man5/unbound.conf.5 $(DESTDIR)$(mandir)/man8/unbound-control.8 $(DESTDIR)$(mandir)/man8/unbound-anchor.8 $(DESTDIR)$(mandir)/man8/unbound-control-setup.8
 	rm -f -- $(DESTDIR)$(mandir)/man1/unbound-host.1 $(DESTDIR)$(mandir)/man3/libunbound.3
 	for mpage in ub_ctx ub_result ub_ctx_create ub_ctx_delete \
 		ub_ctx_set_option ub_ctx_get_option ub_ctx_config ub_ctx_set_fwd \

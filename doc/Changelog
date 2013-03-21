@@ -2,6 +2,7 @@
 	- release 1.4.20
 	- trunk has 1.4.21
 	- committed libunbound version 4:1:2 for binary API updated in 1.4.20
+	- install copy of unbound-control.8 man page for unbound-control-setup
 
 14 March 2013: Wouter
 	- iana portlist update.
