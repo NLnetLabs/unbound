@@ -752,7 +752,7 @@ struct outbound_entry* libworker_send_query(uint8_t* qname, size_t qnamelen,
 		addrlen, zone, zonelen, libworker_handle_service_reply, e,
 		w->back->udp_buff
 #ifdef CLIENT_SUBNET
-		, &q->edns_out
+		, &q->edns_server_out
 #endif
 		);
 

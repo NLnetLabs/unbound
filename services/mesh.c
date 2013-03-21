@@ -128,31 +128,21 @@ timeval_smaller(const struct timeval* x, const struct timeval* y)
 /** Returns a==b: 0, a<b: positive, a>b: negative */
 int subnet_compare(struct edns_data *a, struct edns_data *b)
 {
-	if (!a) {
-		if (b) return 1;
-		return 0;
-	} else {
-		if (!b) return -1;
-		/* crude way:
-		 * return  memcmp(b, a, sizeof(struct edns_data)); */
-		
-		if ( a->edns_present && !b->edns_present) return -1;
-		if (!a->edns_present && !b->edns_present) return  0;
-		if (!a->edns_present &&  b->edns_present) return  1;
+	if ( a->edns_present && !b->edns_present) return -1;
+	if (!a->edns_present && !b->edns_present) return  0;
+	if (!a->edns_present &&  b->edns_present) return  1;
 
-		if ( a->subnet_validdata && !b->subnet_validdata) return -1;
-		if (!a->subnet_validdata && !b->subnet_validdata) return  0;
-		if (!a->subnet_validdata &&  b->subnet_validdata) return  1;
-		
-		if (a->subnet_addr_fam != b->subnet_addr_fam) {
-			return b->subnet_addr_fam - a->subnet_addr_fam;
-		}
-		if (a->subnet_source_mask != b->subnet_source_mask) {
-			return b->subnet_source_mask - a->subnet_source_mask;
-		}
-		return memcmp(b->subnet_addr, a->subnet_addr, INET6_SIZE);
-		
+	if ( a->subnet_validdata && !b->subnet_validdata) return -1;
+	if (!a->subnet_validdata && !b->subnet_validdata) return  0;
+	if (!a->subnet_validdata &&  b->subnet_validdata) return  1;
+	
+	if (a->subnet_addr_fam != b->subnet_addr_fam) {
+		return b->subnet_addr_fam - a->subnet_addr_fam;
 	}
+	if (a->subnet_source_mask != b->subnet_source_mask) {
+		return b->subnet_source_mask - a->subnet_source_mask;
+	}
+	return memcmp(b->subnet_addr, a->subnet_addr, INET6_SIZE);
 }
 #endif
 
@@ -183,7 +173,7 @@ mesh_state_compare(const void* ap, const void* bp)
 		return 1;
 
 #ifdef CLIENT_SUBNET
-	r = subnet_compare(a->s.edns_from_client, b->s.edns_from_client);
+	r = subnet_compare(&a->s.edns_client_in, &b->s.edns_client_in);
 	if (r != 0) return r;
 #endif
 	return query_info_compare(&a->s.qinfo, &b->s.qinfo);
@@ -425,7 +415,7 @@ void mesh_new_client(struct mesh_area* mesh, struct query_info* qinfo,
 		}
 #endif /* INET6 */
 	}
-	s->s.edns_from_client = edns;
+	memcpy(&s->s.edns_client_in, edns, sizeof(struct edns_data));
 #endif /* CLIENT_SUBNET */
 	/* update statistics */
 	if(was_detached) {
@@ -624,10 +614,6 @@ mesh_state_create(struct module_env* env, struct query_info* qinfo,
 	mstate->s.env = env;
 	mstate->s.mesh_info = mstate;
 	mstate->s.prefetch_leeway = 0;
-#ifdef CLIENT_SUBNET
-	mstate->s.edns_from_client = NULL;
-	mstate->s.edns_to_client = NULL;
-#endif
 	/* init modules */
 	for(i=0; i<env->mesh->mods.num; i++) {
 		mstate->s.minfo[i] = NULL;
@@ -964,12 +950,12 @@ mesh_send_reply(struct mesh_state* m, int rcode, struct reply_info* rep,
 		r->edns.ext_rcode = 0;
 		r->edns.bits &= EDNS_DO;
 #ifdef CLIENT_SUBNET
-		if(m->s.edns_to_client && m->s.edns_to_client->subnet_validdata) {
+		if(m->s.edns_client_out.subnet_validdata) {
 			r->edns.subnet_validdata = 1;
-			r->edns.subnet_addr_fam    = m->s.edns_to_client->subnet_addr_fam;
-			r->edns.subnet_source_mask = m->s.edns_to_client->subnet_source_mask;
-			r->edns.subnet_scope_mask  = m->s.edns_to_client->subnet_scope_mask;
-			memcpy(r->edns.subnet_addr, m->s.edns_to_client->subnet_addr, INET6_SIZE);
+			r->edns.subnet_addr_fam    = m->s.edns_client_out.subnet_addr_fam;
+			r->edns.subnet_source_mask = m->s.edns_client_out.subnet_source_mask;
+			r->edns.subnet_scope_mask  = m->s.edns_client_out.subnet_scope_mask;
+			memcpy(r->edns.subnet_addr, m->s.edns_client_out.subnet_addr, INET6_SIZE);
 		} else r->edns.subnet_validdata = 0;
 #endif
 		m->s.qinfo.qname = r->qname;
@@ -1047,7 +1033,8 @@ struct mesh_state* mesh_area_find(struct mesh_area* mesh,
 	key.s.qinfo = *qinfo;
 	key.s.query_flags = qflags;
 #ifdef CLIENT_SUBNET
-	key.s.edns_from_client = NULL; /* is used in subnet cmp function */
+	key.s.edns_client_in.edns_present = 0;
+	key.s.edns_client_in.subnet_validdata = 0;
 #endif
 
 	result = (struct mesh_state*)rbtree_search(&mesh->all, &key);

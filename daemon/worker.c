@@ -1282,7 +1282,7 @@ worker_send_query(uint8_t* qname, size_t qnamelen, uint16_t qtype,
 		addrlen, zone, zonelen, worker_handle_service_reply, e,
 		worker->back->udp_buff
 #ifdef CLIENT_SUBNET
-		, &q->edns_out
+		, &q->edns_server_out
 #endif
 		);
 	if(!e->qsent) {

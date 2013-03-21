@@ -1985,8 +1985,8 @@ processFinished(struct module_qstate* qstate, struct val_qstate* vq,
 
 #ifdef CLIENT_SUBNET
 	/* Do not cache, we asked for and got subnet option */
-	if(!qstate->edns_in.subnet_validdata || 
-		!qstate->edns_out.subnet_sent) {
+	if(!qstate->edns_server_in.subnet_validdata || 
+		!qstate->edns_server_out.subnet_sent) {
 #endif
 	/* store results in cache */
 	if(qstate->query_flags&BIT_RD) {
