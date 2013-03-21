@@ -1,5 +1,7 @@
 21 March 2013: Wouter
 	- release 1.4.20
+	- trunk has 1.4.21
+	- committed libunbound version 4:1:2 for binary API updated in 1.4.20
 
 14 March 2013: Wouter
 	- iana portlist update.
