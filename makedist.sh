@@ -109,16 +109,24 @@ replace_all () {
     info "Updating '$1' with today's date."
     replace_text "$1" "@date@" "`date +'%b %e, %Y'`"
 }
+
+replace_version () {
+    local v1=`echo $2 | sed -e 's/^.*\..*\.//'`
+    local v2=`echo $3 | sed -e 's/^.*\..*\.//'`
+    replace_text "$1" "VERSION_MICRO\],\[$v1" "VERSION_MICRO\],\[$v2"
+    head -20 "$1"
+}
     
 check_svn_root () {
     # Check if SVNROOT is specified.
     if [ -z "$SVNROOT" ]; then
-	if test -f .svn/entries; then
-	      eval `svn info | grep 'URL:' | sed -e 's/URL: /url=/' | head -1`
-	      SVNROOT="$url"
-	fi
-	if test -z "$SVNROOT"; then
-	    error "SVNROOT must be specified (using -d)"
+	if svn info 2>&1 | grep "not a working copy" >/dev/null; then
+		if test -z "$SVNROOT"; then
+		    error "SVNROOT must be specified (using -d)"
+		fi
+	else
+	     eval `svn info | grep 'URL:' | sed -e 's/URL: /url=/' | head -1`
+	     SVNROOT="$url"
 	fi
     fi
 }
@@ -277,7 +285,7 @@ if [ "$DOWIN" = "yes" ]; then
     		version2=`echo $version | sed -e 's/rc.*$//' -e 's/_20.*$//'`
     		version2="${version2}_`date +%Y%m%d`"
 	fi
-    	replace_text "configure.ac" "AC_INIT(unbound, $version" "AC_INIT(unbound, $version2"
+	replace_version "configure.ac" "$version" "$version2"
     	version="$version2"
     	info "Rebuilding configure script (autoconf) snapshot."
     	autoconf || error_cleanup "Autoconf failed."
@@ -404,7 +412,7 @@ if [ "$RC" != "no" ]; then
     version2="${version}rc$RC"
     info "Version number: $version2"
 
-    replace_text "configure.ac" "AC_INIT(unbound, $version" "AC_INIT(unbound, $version2"
+    replace_version "configure.ac" "$version" "$version2"
     version="$version2"
     RECONFIGURE="yes"
 fi
@@ -414,7 +422,7 @@ if [ "$SNAPSHOT" = "yes" ]; then
     version2="${version}_`date +%Y%m%d`"
     info "Snapshot version number: $version2"
 
-    replace_text "configure.ac" "AC_INIT(unbound, $version" "AC_INIT(unbound, $version2"
+    replace_version "configure.ac" "$version" "$version2"
     version="$version2"
     RECONFIGURE="yes"
 fi

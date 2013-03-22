@@ -97,6 +97,11 @@
 extern "C" {
 #endif
 
+/** the version of this header file */
+#define UNBOUND_VERSION_MAJOR @UNBOUND_VERSION_MAJOR@
+#define UNBOUND_VERSION_MINOR @UNBOUND_VERSION_MINOR@
+#define UNBOUND_VERSION_MICRO @UNBOUND_VERSION_MICRO@
+
 /**
  * The validation context is created to hold the resolver status,
  * validation keys and a small cache (containing messages, rrsets,

@@ -6,7 +6,14 @@ sinclude(acx_pthread.m4)
 sinclude(acx_python.m4)
 sinclude(ac_pkg_swig.m4)
 
-AC_INIT(unbound, 1.4.21, unbound-bugs@nlnetlabs.nl, unbound)
+# must be numbers. ac_defun because of later processing
+m4_define([VERSION_MAJOR],[1])
+m4_define([VERSION_MINOR],[4])
+m4_define([VERSION_MICRO],[21])
+AC_INIT(unbound, m4_defn([VERSION_MAJOR]).m4_defn([VERSION_MINOR]).m4_defn([VERSION_MICRO]), unbound-bugs@nlnetlabs.nl, unbound)
+AC_SUBST(UNBOUND_VERSION_MAJOR, [VERSION_MAJOR])
+AC_SUBST(UNBOUND_VERSION_MINOR, [VERSION_MINOR])
+AC_SUBST(UNBOUND_VERSION_MICRO, [VERSION_MICRO])
 
 LIBUNBOUND_CURRENT=4
 LIBUNBOUND_REVISION=1

@@ -1,6 +1,9 @@
 22 March 2013: Wouter
 	- Fix resolve of names that use a mix of public and private addresses.
 	- iana portlist update.
+	- Fix makedist for new svn for -d option.
+	- unbound.h header file has UNBOUND_VERSION_MAJOR define.
+	- Fix windows RSRC version for long version numbers.
 
 21 March 2013: Wouter
 	- release 1.4.20
