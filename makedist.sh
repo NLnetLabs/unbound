@@ -114,7 +114,6 @@ replace_version () {
     local v1=`echo $2 | sed -e 's/^.*\..*\.//'`
     local v2=`echo $3 | sed -e 's/^.*\..*\.//'`
     replace_text "$1" "VERSION_MICRO\],\[$v1" "VERSION_MICRO\],\[$v2"
-    head -20 "$1"
 }
     
 check_svn_root () {
