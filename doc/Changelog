@@ -1,5 +1,6 @@
 22 March 2013: Wouter
 	- Fix resolve of names that use a mix of public and private addresses.
+	- iana portlist update.
 
 21 March 2013: Wouter
 	- release 1.4.20
