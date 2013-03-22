@@ -163,6 +163,21 @@ example.com.	IN NS	ns.example.com.
 SECTION ADDITIONAL
 ns.example.com.		IN 	A	1.2.3.4
 ENTRY_END
+
+ENTRY_BEGIN
+MATCH opcode qtype qname
+ADJUST copy_id
+REPLY QR NOERROR
+SECTION QUESTION
+toss.example.com. IN A
+SECTION ANSWER
+toss.example.com. IN A	10.20.30.40
+toss.example.com. IN A	1.2.3.4
+SECTION AUTHORITY
+example.com.	IN NS	ns.example.com.
+SECTION ADDITIONAL
+ns.example.com.		IN 	A	1.2.3.4
+ENTRY_END
 RANGE_END
 
 ; public address is not scrubbed
@@ -241,6 +256,29 @@ SECTION QUESTION
 mail.example.net. IN A
 SECTION ANSWER
 mail.example.net. IN A 10.20.30.40
+ENTRY_END
+
+; rest of RRset intact, only 10/8 tossed away.
+STEP 60 QUERY
+ENTRY_BEGIN
+REPLY RD
+SECTION QUESTION
+toss.example.com. IN A
+ENTRY_END
+
+STEP 70 CHECK_ANSWER
+ENTRY_BEGIN
+MATCH all
+REPLY QR RD RA NOERROR
+SECTION QUESTION
+toss.example.com. IN A
+SECTION ANSWER
+; toss.example.com. IN A	10.20.30.40
+toss.example.com. IN A	1.2.3.4
+SECTION AUTHORITY
+example.com.	IN NS	ns.example.com.
+SECTION ADDITIONAL
+ns.example.com.		IN 	A	1.2.3.4
 ENTRY_END
 
 SCENARIO_END
