@@ -84,13 +84,13 @@ hash_set_raninit(uint32_t v)
       (defined(sparc) || defined(__sparc) || defined(__sparc__) || defined(POWERPC) || defined(mc68000) || defined(sel))
 # define HASH_LITTLE_ENDIAN 0
 # define HASH_BIG_ENDIAN 1
-/* test later because it fails when they are defined to empty strings */
-#elif (defined(_BYTE_ORDER) && defined(_BIG_ENDIAN) && \
-       _BYTE_ORDER == _BIG_ENDIAN)
+/* test for machine_endian_h protects failure if some are empty strings */
+#elif (defined(_MACHINE_ENDIAN_H_) && defined(_BYTE_ORDER) && \
+	defined(_BIG_ENDIAN) && _BYTE_ORDER == _BIG_ENDIAN)
 # define HASH_LITTLE_ENDIAN 0
 # define HASH_BIG_ENDIAN 1
-#elif (defined(_BYTE_ORDER) && defined(_LITTLE_ENDIAN) && \
-     _BYTE_ORDER == _LITTLE_ENDIAN)
+#elif (defined(_MACHINE_ENDIAN_H_) && defined(_BYTE_ORDER) && \
+	defined(_LITTLE_ENDIAN) && _BYTE_ORDER == _LITTLE_ENDIAN)
 # define HASH_LITTLE_ENDIAN 1
 # define HASH_BIG_ENDIAN 0
 #else

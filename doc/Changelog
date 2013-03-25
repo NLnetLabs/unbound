@@ -2,6 +2,7 @@
 	- #492: Fix endianness detection, revert to older lookup3.c detection
 	  and put new detect lines after previous tests, to avoid regressions
 	  but allow new detections to succeed.
+	  And add detection for machine/endian.h to it.
 
 22 March 2013: Wouter
 	- Fix resolve of names that use a mix of public and private addresses.
