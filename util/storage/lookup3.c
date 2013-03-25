@@ -81,7 +81,7 @@ hash_set_raninit(uint32_t v)
 # define HASH_BIG_ENDIAN 0
 #elif (defined(__BYTE_ORDER) && defined(__BIG_ENDIAN) && \
        __BYTE_ORDER == __BIG_ENDIAN) || \
-      (defined(sparc) || defined(POWERPC) || defined(mc68000) || defined(sel))
+      (defined(sparc) || defined(__sparc) || defined(__sparc__) || defined(POWERPC) || defined(mc68000) || defined(sel))
 # define HASH_LITTLE_ENDIAN 0
 # define HASH_BIG_ENDIAN 1
 /* test later because it fails when they are defined to empty strings */
