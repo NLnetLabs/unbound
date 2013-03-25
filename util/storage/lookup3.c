@@ -75,22 +75,24 @@ hash_set_raninit(uint32_t v)
  */
 #if (defined(__BYTE_ORDER) && defined(__LITTLE_ENDIAN) && \
      __BYTE_ORDER == __LITTLE_ENDIAN) || \
-    (defined(_BYTE_ORDER) && defined(_LITTLE_ENDIAN) && \
-     _BYTE_ORDER == _LITTLE_ENDIAN) || \
     (defined(i386) || defined(__i386__) || defined(__i486__) || \
      defined(__i586__) || defined(__i686__) || defined(vax) || defined(MIPSEL))
 # define HASH_LITTLE_ENDIAN 1
 # define HASH_BIG_ENDIAN 0
-#elif (!defined(_BYTE_ORDER) && !defined(__BYTE_ORDER) && defined(_BIG_ENDIAN))
-# define HASH_LITTLE_ENDIAN 0
-# define HASH_BIG_ENDIAN 1
 #elif (defined(__BYTE_ORDER) && defined(__BIG_ENDIAN) && \
        __BYTE_ORDER == __BIG_ENDIAN) || \
-      (defined(_BYTE_ORDER) && defined(_BIG_ENDIAN) && \
-       _BYTE_ORDER == _BIG_ENDIAN) || \
       (defined(sparc) || defined(POWERPC) || defined(mc68000) || defined(sel))
 # define HASH_LITTLE_ENDIAN 0
 # define HASH_BIG_ENDIAN 1
+/* test later because it fails when they are defined to empty strings */
+#elif (defined(_BYTE_ORDER) && defined(_BIG_ENDIAN) && \
+       _BYTE_ORDER == _BIG_ENDIAN) || \
+# define HASH_LITTLE_ENDIAN 0
+# define HASH_BIG_ENDIAN 1
+#elif (defined(_BYTE_ORDER) && defined(_LITTLE_ENDIAN) && \
+     _BYTE_ORDER == _LITTLE_ENDIAN) || \
+# define HASH_LITTLE_ENDIAN 1
+# define HASH_BIG_ENDIAN 0
 #else
 # define HASH_LITTLE_ENDIAN 0
 # define HASH_BIG_ENDIAN 0
