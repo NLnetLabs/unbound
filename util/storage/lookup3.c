@@ -86,11 +86,11 @@ hash_set_raninit(uint32_t v)
 # define HASH_BIG_ENDIAN 1
 /* test later because it fails when they are defined to empty strings */
 #elif (defined(_BYTE_ORDER) && defined(_BIG_ENDIAN) && \
-       _BYTE_ORDER == _BIG_ENDIAN) || \
+       _BYTE_ORDER == _BIG_ENDIAN)
 # define HASH_LITTLE_ENDIAN 0
 # define HASH_BIG_ENDIAN 1
 #elif (defined(_BYTE_ORDER) && defined(_LITTLE_ENDIAN) && \
-     _BYTE_ORDER == _LITTLE_ENDIAN) || \
+     _BYTE_ORDER == _LITTLE_ENDIAN)
 # define HASH_LITTLE_ENDIAN 1
 # define HASH_BIG_ENDIAN 0
 #else
