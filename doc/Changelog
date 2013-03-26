@@ -1,3 +1,6 @@
+26 March 2013: Wouter
+	- more fixes to lookup3.c endianness detection.
+
 25 March 2013: Wouter
 	- #492: Fix endianness detection, revert to older lookup3.c detection
 	  and put new detect lines after previous tests, to avoid regressions

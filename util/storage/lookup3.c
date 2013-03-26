@@ -50,6 +50,9 @@ on 1 byte), but shoehorning those bytes into integers efficiently is messy.
 #include <time.h>       /* defines time_t for timings in the test */
 /*#include <stdint.h>     defines uint32_t etc  (from config.h) */
 #include <sys/param.h>  /* attempt to define endianness */
+#ifdef HAVE_SYS_TYPES_H
+# include <sys/types.h> /* attempt to define endianness (solaris) */
+#endif
 #ifdef linux
 # include <endian.h>    /* attempt to define endianness */
 #endif
@@ -84,15 +87,16 @@ hash_set_raninit(uint32_t v)
       (defined(sparc) || defined(__sparc) || defined(__sparc__) || defined(POWERPC) || defined(mc68000) || defined(sel))
 # define HASH_LITTLE_ENDIAN 0
 # define HASH_BIG_ENDIAN 1
+#elif defined(_MACHINE_ENDIAN_H_)
 /* test for machine_endian_h protects failure if some are empty strings */
-#elif (defined(_MACHINE_ENDIAN_H_) && defined(_BYTE_ORDER) && \
-	defined(_BIG_ENDIAN) && _BYTE_ORDER == _BIG_ENDIAN)
-# define HASH_LITTLE_ENDIAN 0
-# define HASH_BIG_ENDIAN 1
-#elif (defined(_MACHINE_ENDIAN_H_) && defined(_BYTE_ORDER) && \
-	defined(_LITTLE_ENDIAN) && _BYTE_ORDER == _LITTLE_ENDIAN)
-# define HASH_LITTLE_ENDIAN 1
-# define HASH_BIG_ENDIAN 0
+# if defined(_BYTE_ORDER) && defined(_BIG_ENDIAN) && _BYTE_ORDER == _BIG_ENDIAN
+#  define HASH_LITTLE_ENDIAN 0
+#  define HASH_BIG_ENDIAN 1
+# endif
+# if defined(_BYTE_ORDER) && defined(_LITTLE_ENDIAN) && _BYTE_ORDER == _LITTLE_ENDIAN
+#  define HASH_LITTLE_ENDIAN 1
+#  define HASH_BIG_ENDIAN 0
+# endif /* _MACHINE_ENDIAN_H_ */
 #else
 # define HASH_LITTLE_ENDIAN 0
 # define HASH_BIG_ENDIAN 0
