@@ -426,6 +426,47 @@ server:
 	# plain value in bytes or you can append k, m or G. default is "1Mb". 
 	# neg-cache-size: 1m
 
+	# By default, for a number of zones a small default 'nothing here'
+	# reply is built-in.  Query traffic is thus blocked.  If you
+	# wish to serve such zone you can unblock them by uncommenting one
+	# of the nodefault statements below.
+	# You may also have to use domain-insecure: zone to make DNSSEC work,
+	# unless you have your own trust anchors for this zone.
+	# local-zone: "localhost." nodefault
+	# local-zone: "127.in-addr.arpa." nodefault
+	# local-zone: "1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.ip6.arpa." nodefault
+	# local-zone: "10.in-addr.arpa." nodefault
+	# local-zone: "16.172.in-addr.arpa." nodefault
+	# local-zone: "17.172.in-addr.arpa." nodefault
+	# local-zone: "18.172.in-addr.arpa." nodefault
+	# local-zone: "19.172.in-addr.arpa." nodefault
+	# local-zone: "20.172.in-addr.arpa." nodefault
+	# local-zone: "21.172.in-addr.arpa." nodefault
+	# local-zone: "22.172.in-addr.arpa." nodefault
+	# local-zone: "23.172.in-addr.arpa." nodefault
+	# local-zone: "24.172.in-addr.arpa." nodefault
+	# local-zone: "25.172.in-addr.arpa." nodefault
+	# local-zone: "26.172.in-addr.arpa." nodefault
+	# local-zone: "27.172.in-addr.arpa." nodefault
+	# local-zone: "28.172.in-addr.arpa." nodefault
+	# local-zone: "29.172.in-addr.arpa." nodefault
+	# local-zone: "30.172.in-addr.arpa." nodefault
+	# local-zone: "31.172.in-addr.arpa." nodefault
+	# local-zone: "168.192.in-addr.arpa." nodefault
+	# local-zone: "0.in-addr.arpa." nodefault
+	# local-zone: "254.169.in-addr.arpa." nodefault
+	# local-zone: "2.0.192.in-addr.arpa." nodefault
+	# local-zone: "100.51.198.in-addr.arpa." nodefault
+	# local-zone: "113.0.203.in-addr.arpa." nodefault
+	# local-zone: "255.255.255.255.in-addr.arpa." nodefault
+	# local-zone: "0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.ip6.arpa." nodefault
+	# local-zone: "d.f.ip6.arpa." nodefault
+	# local-zone: "8.e.f.ip6.arpa." nodefault
+	# local-zone: "9.e.f.ip6.arpa." nodefault
+	# local-zone: "a.e.f.ip6.arpa." nodefault
+	# local-zone: "b.e.f.ip6.arpa." nodefault
+	# local-zone: "8.b.d.0.1.0.0.2.ip6.arpa." nodefault
+
 	# a number of locally served zones can be configured.
 	# 	local-zone: <zone> <type>
 	# 	local-data: "<resource record string>"
