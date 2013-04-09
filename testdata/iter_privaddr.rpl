@@ -173,6 +173,7 @@ toss.example.com. IN A
 SECTION ANSWER
 toss.example.com. IN A	10.20.30.40
 toss.example.com. IN A	1.2.3.4
+toss.example.com. IN A	10.20.30.41
 SECTION AUTHORITY
 example.com.	IN NS	ns.example.com.
 SECTION ADDITIONAL

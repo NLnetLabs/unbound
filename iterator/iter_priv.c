@@ -225,7 +225,8 @@ remove_rr(const char* str, ldns_buffer* pkt, struct rrset_parse* rrset,
 		rrset->rr_last = prev;
 	rrset->rr_count --;
 	rrset->size -= (*rr)->size;
-	(*rr) = (*rr)->next;
+	/* rr struct still exists, but is unlinked, so that in the for loop
+	 * the rr->next works fine to continue. */
 	return rrset->rr_count == 0;
 }
 
