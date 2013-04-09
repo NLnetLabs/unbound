@@ -1,3 +1,6 @@
+9 April 2013: Wouter
+	- updated iana portlist.
+
 28 March 2013: Wouter
 	- Make reverse zones easier by documenting the nodefault statements
 	  commented-out in the example config file.
