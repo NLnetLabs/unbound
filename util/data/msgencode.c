@@ -708,9 +708,6 @@ reply_info_encode(struct query_info* qinfo, struct reply_info* rep,
 			return 0;
 		}
 		ldns_buffer_write_u16_at(buffer, 10, arcount);
-	} else {
-		ldns_buffer_write_u16_at(buffer, 8, nscount);
-		ldns_buffer_write_u16_at(buffer, 10, arcount);
 	}
 	ldns_buffer_flip(buffer);
 	return 1;

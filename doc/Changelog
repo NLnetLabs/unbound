@@ -1,3 +1,6 @@
+10 April 2013: Wouter
+	- code improve for minimal responses, small speed increase.
+
 9 April 2013: Wouter
 	- updated iana portlist.
 	- Fix crash in previous private address fixup of 22 March.
