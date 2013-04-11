@@ -1409,6 +1409,34 @@ query_for_targets(struct module_qstate* qstate, struct iter_qstate* iq,
 	return 1;
 }
 
+/** see if last resort is possible - does config allow queries to parent */
+static int
+can_have_last_resort(struct module_env* env, struct delegpt* dp,
+	struct iter_qstate* iq)
+{
+	struct delegpt* fwddp;
+	struct iter_hints_stub* stub;
+	/* do not process a last resort (the parent side) if a stub
+	 * or forward is configured, because we do not want to go 'above'
+	 * the configured servers */
+	if((stub = (struct iter_hints_stub*)name_tree_find(&env->hints->tree,
+		dp->name, dp->namelen, dp->namelabs, iq->qchase.qclass)) &&
+		/* has_parent side is turned off for stub_first, where we
+		 * are allowed to go to the parent */
+		stub->dp->has_parent_side_NS) {
+		verbose(VERB_QUERY, "configured stub servers failed -- returning SERVFAIL");
+		return 0;
+	}
+	if((fwddp = forwards_find(env->fwds, dp->name, iq->qchase.qclass)) &&
+		/* has_parent_side is turned off for forward_first, where
+		 * we are allowed to go to the parent */
+		fwddp->has_parent_side_NS) {
+		verbose(VERB_QUERY, "configured forward servers failed -- returning SERVFAIL");
+		return 0;
+	}
+	return 1;
+}
+
 /**
  * Called by processQueryTargets when it would like extra targets to query
  * but it seems to be out of options.  At last resort some less appealing
@@ -1430,6 +1458,11 @@ processLastResort(struct module_qstate* qstate, struct iter_qstate* iq,
 	verbose(VERB_ALGO, "No more query targets, attempting last resort");
 	log_assert(iq->dp);
 
+	if(!can_have_last_resort(qstate->env, iq->dp, iq)) {
+		/* fail -- no more targets, no more hope of targets, no hope 
+		 * of a response. */
+		return error_response_cache(qstate, id, LDNS_RCODE_SERVFAIL);
+	}
 	if(!iq->dp->has_parent_side_NS && dname_is_root(iq->dp->name)) {
 		struct delegpt* p = hints_lookup_root(qstate->env->hints,
 			iq->qchase.qclass);
