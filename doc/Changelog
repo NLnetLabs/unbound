@@ -1,6 +1,8 @@
 15 April 2013: Wouter
 	- Fix so that for a configuration line of include: "*.conf" it is not
 	  an error if there are no files matching the glob pattern.
+	- unbound-anchor review: BIO_write can return 0 successfully if it
+	  has successfully appended a zero length string.
 
 11 April 2013: Wouter
 	- Fix queries leaking up for stubs and forwards, if the configured
