@@ -107,6 +107,8 @@ static void config_start_include_glob(const char* filename)
 		if(r) {
 			/* some error */
 			globfree(&g);
+			if(r == GLOB_NOMATCH)
+				return; /* no matches for pattern */
 			config_start_include(filename); /* let original deal with it */
 			return;
 		}
