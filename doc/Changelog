@@ -1,5 +1,6 @@
 18 April 2013: Wouter
 	- fix bug #491: pick program name (0th argument) as syslog identity.
+	- own implementation of compat/snprintf.c.
 
 15 April 2013: Wouter
 	- Fix so that for a configuration line of include: "*.conf" it is not
