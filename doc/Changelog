@@ -1,3 +1,6 @@
+19 April 2013: Wouter
+	- Fixup snprintf return value usage, fixed libunbound_get_option.
+
 18 April 2013: Wouter
 	- fix bug #491: pick program name (0th argument) as syslog identity.
 	- own implementation of compat/snprintf.c.

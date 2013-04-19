@@ -516,8 +516,9 @@ config_collate_cat(struct config_strlist* list)
 			return NULL;
 		}
 		snprintf(w, left, "%s\n", s->str);
-		w += this+1;
-		left -= this+1;
+		this = strlen(w);
+		w += this;
+		left -= this;
 	}
 	return r;
 }
