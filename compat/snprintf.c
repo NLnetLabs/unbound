@@ -91,10 +91,11 @@ int snprintf(char* str, size_t size, const char* format, ...)
  * 	notsupported: hh (char), h (short), L (long double), q, j, z, t
  * Does not support %m$ and *m$ argument designation as array indices.
  * Does not support %#x
+ * arg is passed as a pointer because some systems' va_arg modifies it.
  *
  */
 static int
-get_designation(const char** fmt, va_list arg, int* minw, int* precision,
+get_designation(const char** fmt, va_list* arg, int* minw, int* precision,
 	int* prgiven, int* zeropad, int* minus, int* plus, int* space,
 	int* length)
 {
@@ -124,7 +125,7 @@ get_designation(const char** fmt, va_list arg, int* minw, int* precision,
 	/* field width */
 	if(**fmt == '*') {
 		(*fmt)++; /* skip char */
-		*minw = va_arg(arg, int);
+		*minw = va_arg((*arg), int);
 		if(*minw < 0) {
 			*minus = 1;
 			*minw = -(*minw);
@@ -140,7 +141,7 @@ get_designation(const char** fmt, va_list arg, int* minw, int* precision,
 		*precision = 0;
 		if(**fmt == '*') {
 			(*fmt)++; /* skip char */
-			*precision = va_arg(arg, int);
+			*precision = va_arg((*arg), int);
 			if(*precision < 0)
 				*precision = 0;
 		} else while(**fmt >= '0' && **fmt <= '9') {
@@ -693,7 +694,7 @@ print_char(char** at, size_t* left, int* ret, int c,
 
 /** print the designation */
 static void
-print_designation(char** at, size_t* left, int* ret, va_list arg,
+print_designation(char** at, size_t* left, int* ret, va_list* arg,
 	int conv, int minw, int precision, int prgiven, int zeropad, int minus,
 	int plus, int space, int length)
 {
@@ -701,54 +702,54 @@ print_designation(char** at, size_t* left, int* ret, va_list arg,
 	case 'i':
 	case 'd':
 		if(length == 0)
-		    print_num_d(at, left, ret, va_arg(arg, int),
+		    print_num_d(at, left, ret, va_arg((*arg), int),
 			minw, precision, prgiven, zeropad, minus, plus, space);
 		else if(length == 1)
-		    print_num_ld(at, left, ret, va_arg(arg, long),
+		    print_num_ld(at, left, ret, va_arg((*arg), long),
 			minw, precision, prgiven, zeropad, minus, plus, space);
 		else if(length == 2)
 		    print_num_lld(at, left, ret,
-			va_arg(arg, long long),
+			va_arg((*arg), long long),
 			minw, precision, prgiven, zeropad, minus, plus, space);
 		return;
 	case 'u':
 		if(length == 0)
 		    print_num_u(at, left, ret,
-			va_arg(arg, unsigned int),
+			va_arg((*arg), unsigned int),
 			minw, precision, prgiven, zeropad, minus, plus, space);
 		else if(length == 1)
 		    print_num_lu(at, left, ret,
-			va_arg(arg, unsigned long),
+			va_arg((*arg), unsigned long),
 			minw, precision, prgiven, zeropad, minus, plus, space);
 		else if(length == 2)
 		    print_num_llu(at, left, ret,
-			va_arg(arg, unsigned long long),
+			va_arg((*arg), unsigned long long),
 			minw, precision, prgiven, zeropad, minus, plus, space);
 		return;
 	case 'x':
 		if(length == 0)
 		    print_num_x(at, left, ret,
-			va_arg(arg, unsigned int),
+			va_arg((*arg), unsigned int),
 			minw, precision, prgiven, zeropad, minus, plus, space);
 		else if(length == 1)
 		    print_num_lx(at, left, ret,
-			va_arg(arg, unsigned long),
+			va_arg((*arg), unsigned long),
 			minw, precision, prgiven, zeropad, minus, plus, space);
 		else if(length == 2)
 		    print_num_llx(at, left, ret,
-			va_arg(arg, unsigned long long),
+			va_arg((*arg), unsigned long long),
 			minw, precision, prgiven, zeropad, minus, plus, space);
 		return;
 	case 's':
-		print_str(at, left, ret, va_arg(arg, char*),
+		print_str(at, left, ret, va_arg((*arg), char*),
 			minw, precision, prgiven, minus);
 		return;
 	case 'c':
-		print_char(at, left, ret, va_arg(arg, int),
+		print_char(at, left, ret, va_arg((*arg), int),
 			minw, minus);
 		return;
 	case 'n':
-		*va_arg(arg, int*) = *ret;
+		*va_arg((*arg), int*) = *ret;
 		return;
 	case 'm':
 		print_str(at, left, ret, strerror(errno),
@@ -756,18 +757,18 @@ print_designation(char** at, size_t* left, int* ret, va_list arg,
 		return;
 	case 'p':
 		print_num_llp(at, left, ret,
-			(unsigned long long)va_arg(arg, void*),
+			(unsigned long long)va_arg((*arg), void*),
 			minw, precision, prgiven, zeropad, minus, plus, space);
 		return;
 	case '%':
 		print_pad(at, left, ret, '%', 1);
 		return;
 	case 'f':
-		print_num_f(at, left, ret, va_arg(arg, double),
+		print_num_f(at, left, ret, va_arg((*arg), double),
 			minw, precision, prgiven, zeropad, minus, plus, space);
 		return;
 	case 'g':
-		print_num_g(at, left, ret, va_arg(arg, double),
+		print_num_g(at, left, ret, va_arg((*arg), double),
 			minw, precision, prgiven, zeropad, minus, plus, space);
 		return;
 	/* unknown */
@@ -816,11 +817,11 @@ int vsnprintf(char* str, size_t size, const char* format, va_list arg)
 
 		/* fetch next argument % designation from format string */
 		fmt++; /* skip the '%' */
-		conv = get_designation(&fmt, arg, &minw, &precision, &prgiven,
+		conv = get_designation(&fmt, &arg, &minw, &precision, &prgiven,
 			&zeropad, &minus, &plus, &space, &length);
 		
 		/* print that argument designation */
-		print_designation(&at, &left, &ret, arg, conv,
+		print_designation(&at, &left, &ret, &arg, conv,
 			minw, precision, prgiven, zeropad, minus, plus, space,
 			length);
 	}
@@ -989,6 +990,7 @@ int main(void)
 	DOTEST(1024, "012", 3, "%3.3d", 12);
 	DOTEST(1024, "-012", 4, "%3.3d", -12);
 	DOTEST(1024, "he", 2, "%.2s", "hello");
+	DOTEST(1024, "helloworld", 10, "%s%s", "hello", "world");
 	DOTEST(1024, "he", 2, "%.*s", 2, "hello");
 	DOTEST(1024, "  hello", 7, "%*s", 7, "hello");
 	DOTEST(1024, "hello  ", 7, "%*s", -7, "hello");
@@ -1028,6 +1030,7 @@ int main(void)
 		"foo %s size %d %s%s", "1.0", 512, "", "edns");
 	DOTEST(1024, "packet 1203ceff id", 18,
 		"packet %2.2x%2.2x%2.2x%2.2x id", 0x12, 0x03, 0xce, 0xff);
+	DOTEST(1024, "/tmp/testbound_123abcd.tmp", 26, "/tmp/testbound_%u%s%s.tmp", 123, "ab", "cd");
  
 	return 0;
 }
