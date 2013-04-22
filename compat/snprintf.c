@@ -70,100 +70,6 @@ int snprintf(char* str, size_t size, const char* format, ...)
 	return r;
 }
 
-/* get printout designation:
- * conversion specifier: x, d, u, s, c, n, m, p
- * flags: # not supported
- *        0 zeropad (on the left)
- *	  - left adjust (right by default)
- *	  ' ' printspace for positive number (in - position).
- *	  + alwayssign
- * fieldwidth: [1-9][0-9]* minimum field width.
- * 	if this is * then type int next argument specifies the minwidth.
- * 	if this is negative, the - flag is set (with positive width).
- * precision: period[digits]*, %.2x.
- * 	if this is * then type int next argument specifies the precision.
- *	just '.' or negative value means precision=0.
- *		this is mindigits to print for d, i, u, x
- *		this is aftercomma digits for f
- *		this is max number significant digits for g
- *		maxnumber characters to be printed for s
- * length: 0-none (int), 1-l (long), 2-ll (long long)
- * 	notsupported: hh (char), h (short), L (long double), q, j, z, t
- * Does not support %m$ and *m$ argument designation as array indices.
- * Does not support %#x
- * arg is passed as a pointer because some systems' va_arg modifies it.
- *
- */
-static int
-get_designation(const char** fmt, va_list* arg, int* minw, int* precision,
-	int* prgiven, int* zeropad, int* minus, int* plus, int* space,
-	int* length)
-{
-	*minw = 0;
-	*precision = 1;
-	*prgiven = 0;
-	*zeropad = 0;
-	*minus = 0;
-	*plus = 0;
-	*space = 0;
-	*length = 0;
-
-	/* get flags in any order */
-	for(;;) {
-		if(**fmt == '0')
-			*zeropad = 1;
-		else if(**fmt == '-')
-			*minus = 1;
-		else if(**fmt == '+')
-			*plus = 1;
-		else if(**fmt == ' ')
-			*space = 1;
-		else break;
-		(*fmt)++;
-	}
-
-	/* field width */
-	if(**fmt == '*') {
-		(*fmt)++; /* skip char */
-		*minw = va_arg((*arg), int);
-		if(*minw < 0) {
-			*minus = 1;
-			*minw = -(*minw);
-		}
-	} else while(**fmt >= '0' && **fmt <= '9') {
-		*minw = (*minw)*10 + (*(*fmt)++)-'0';
-	}
-
-	/* precision */
-	if(**fmt == '.') {
-		(*fmt)++; /* skip period */
-		*prgiven = 1;
-		*precision = 0;
-		if(**fmt == '*') {
-			(*fmt)++; /* skip char */
-			*precision = va_arg((*arg), int);
-			if(*precision < 0)
-				*precision = 0;
-		} else while(**fmt >= '0' && **fmt <= '9') {
-			*precision = (*precision)*10 + (*(*fmt)++)-'0';
-		}
-	}
-
-	/* length */
-	if(**fmt == 'l') {
-		(*fmt)++; /* skip char */
-		*length = 1;
-		if(**fmt == 'l') {
-			(*fmt)++; /* skip char */
-			*length = 2;
-		}
-	}
-
-	/* return the conversion */
-	if(!*fmt) return 0;
-	return *(*fmt)++;
-}
-
 /** add padding to string */
 static void
 print_pad(char** at, size_t* left, int* ret, char p, int num)
@@ -512,14 +418,19 @@ print_num_llx(char** at, size_t* left, int* ret, unsigned long long value,
 
 /** print %llp */
 static void
-print_num_llp(char** at, size_t* left, int* ret, unsigned long long value,
+print_num_llp(char** at, size_t* left, int* ret, void* value,
 	int minw, int precision, int prgiven, int zeropad, int minus,
 	int plus, int space)
 {
 	char buf[PRINT_DEC_BUFSZ];
 	int negative = 0;
 	int zero = (value == 0);
-	int len = print_hex_ll(buf, (int)sizeof(buf), value);
+	/* no portable macros to determine sizeof(void*); 64bit is upcast,
+	 * to remove warning here on 32bit systems it would need configure
+	 * assistance to detect include <stdint.h> and something like 
+	 * if defined(UINTPTR_MAX) && defined(UINT32_MAX) && (UINTPTR_MAX == UINT32MAX) */
+	unsigned long long llvalue = (unsigned long long)value;
+	int len = print_hex_ll(buf, (int)sizeof(buf), llvalue);
 	if(zero) {
 		buf[0]=')';
 		buf[1]='l';
@@ -692,90 +603,6 @@ print_char(char** at, size_t* left, int* ret, int c,
 		print_pad(at, left, ret, ' ', minw - 1);
 }
 
-/** print the designation */
-static void
-print_designation(char** at, size_t* left, int* ret, va_list* arg,
-	int conv, int minw, int precision, int prgiven, int zeropad, int minus,
-	int plus, int space, int length)
-{
-	switch(conv) {
-	case 'i':
-	case 'd':
-		if(length == 0)
-		    print_num_d(at, left, ret, va_arg((*arg), int),
-			minw, precision, prgiven, zeropad, minus, plus, space);
-		else if(length == 1)
-		    print_num_ld(at, left, ret, va_arg((*arg), long),
-			minw, precision, prgiven, zeropad, minus, plus, space);
-		else if(length == 2)
-		    print_num_lld(at, left, ret,
-			va_arg((*arg), long long),
-			minw, precision, prgiven, zeropad, minus, plus, space);
-		return;
-	case 'u':
-		if(length == 0)
-		    print_num_u(at, left, ret,
-			va_arg((*arg), unsigned int),
-			minw, precision, prgiven, zeropad, minus, plus, space);
-		else if(length == 1)
-		    print_num_lu(at, left, ret,
-			va_arg((*arg), unsigned long),
-			minw, precision, prgiven, zeropad, minus, plus, space);
-		else if(length == 2)
-		    print_num_llu(at, left, ret,
-			va_arg((*arg), unsigned long long),
-			minw, precision, prgiven, zeropad, minus, plus, space);
-		return;
-	case 'x':
-		if(length == 0)
-		    print_num_x(at, left, ret,
-			va_arg((*arg), unsigned int),
-			minw, precision, prgiven, zeropad, minus, plus, space);
-		else if(length == 1)
-		    print_num_lx(at, left, ret,
-			va_arg((*arg), unsigned long),
-			minw, precision, prgiven, zeropad, minus, plus, space);
-		else if(length == 2)
-		    print_num_llx(at, left, ret,
-			va_arg((*arg), unsigned long long),
-			minw, precision, prgiven, zeropad, minus, plus, space);
-		return;
-	case 's':
-		print_str(at, left, ret, va_arg((*arg), char*),
-			minw, precision, prgiven, minus);
-		return;
-	case 'c':
-		print_char(at, left, ret, va_arg((*arg), int),
-			minw, minus);
-		return;
-	case 'n':
-		*va_arg((*arg), int*) = *ret;
-		return;
-	case 'm':
-		print_str(at, left, ret, strerror(errno),
-			minw, precision, prgiven, minus);
-		return;
-	case 'p':
-		print_num_llp(at, left, ret,
-			(unsigned long long)va_arg((*arg), void*),
-			minw, precision, prgiven, zeropad, minus, plus, space);
-		return;
-	case '%':
-		print_pad(at, left, ret, '%', 1);
-		return;
-	case 'f':
-		print_num_f(at, left, ret, va_arg((*arg), double),
-			minw, precision, prgiven, zeropad, minus, plus, space);
-		return;
-	case 'g':
-		print_num_g(at, left, ret, va_arg((*arg), double),
-			minw, precision, prgiven, zeropad, minus, plus, space);
-		return;
-	/* unknown */
-	default:
-	case 0: return;
-	}
-}
 
 /** 
  * Print to string.
@@ -817,14 +644,182 @@ int vsnprintf(char* str, size_t size, const char* format, va_list arg)
 
 		/* fetch next argument % designation from format string */
 		fmt++; /* skip the '%' */
-		conv = get_designation(&fmt, &arg, &minw, &precision, &prgiven,
-			&zeropad, &minus, &plus, &space, &length);
-		
+
+		/********************************/
+		/* get the argument designation */
+		/********************************/
+		/* we must do this vararg stuff inside this function for
+		 * portability.  Hence, get_designation, and print_designation
+		 * are not their own functions. */
+
+		/* printout designation:
+		 * conversion specifier: x, d, u, s, c, n, m, p
+		 * flags: # not supported
+		 *        0 zeropad (on the left)
+		 *	  - left adjust (right by default)
+		 *	  ' ' printspace for positive number (in - position).
+		 *	  + alwayssign
+		 * fieldwidth: [1-9][0-9]* minimum field width.
+		 * 	if this is * then type int next argument specifies the minwidth.
+		 * 	if this is negative, the - flag is set (with positive width).
+		 * precision: period[digits]*, %.2x.
+		 * 	if this is * then type int next argument specifies the precision.
+		 *	just '.' or negative value means precision=0.
+		 *		this is mindigits to print for d, i, u, x
+		 *		this is aftercomma digits for f
+		 *		this is max number significant digits for g
+		 *		maxnumber characters to be printed for s
+		 * length: 0-none (int), 1-l (long), 2-ll (long long)
+		 * 	notsupported: hh (char), h (short), L (long double), q, j, z, t
+		 * Does not support %m$ and *m$ argument designation as array indices.
+		 * Does not support %#x
+		 *
+		 */
+		minw = 0;
+		precision = 1;
+		prgiven = 0;
+		zeropad = 0;
+		minus = 0;
+		plus = 0;
+		space = 0;
+		length = 0;
+
+		/* get flags in any order */
+		for(;;) {
+			if(*fmt == '0')
+				zeropad = 1;
+			else if(*fmt == '-')
+				minus = 1;
+			else if(*fmt == '+')
+				plus = 1;
+			else if(*fmt == ' ')
+				space = 1;
+			else break;
+			fmt++;
+		}
+
+		/* field width */
+		if(*fmt == '*') {
+			fmt++; /* skip char */
+			minw = va_arg(arg, int);
+			if(minw < 0) {
+				minus = 1;
+				minw = -minw;
+			}
+		} else while(*fmt >= '0' && *fmt <= '9') {
+			minw = minw*10 + (*fmt++)-'0';
+		}
+
+		/* precision */
+		if(*fmt == '.') {
+			fmt++; /* skip period */
+			prgiven = 1;
+			precision = 0;
+			if(*fmt == '*') {
+				fmt++; /* skip char */
+				precision = va_arg(arg, int);
+				if(precision < 0)
+					precision = 0;
+			} else while(*fmt >= '0' && *fmt <= '9') {
+				precision = precision*10 + (*fmt++)-'0';
+			}
+		}
+
+		/* length */
+		if(*fmt == 'l') {
+			fmt++; /* skip char */
+			length = 1;
+			if(*fmt == 'l') {
+				fmt++; /* skip char */
+				length = 2;
+			}
+		}
+
+		/* get the conversion */
+		if(!*fmt) conv = 0;
+		else	conv = *fmt++;
+
+		/***********************************/
 		/* print that argument designation */
-		print_designation(&at, &left, &ret, &arg, conv,
-			minw, precision, prgiven, zeropad, minus, plus, space,
-			length);
+		/***********************************/
+		switch(conv) {
+		case 'i':
+		case 'd':
+			if(length == 0)
+			    print_num_d(&at, &left, &ret, va_arg(arg, int),
+				minw, precision, prgiven, zeropad, minus, plus, space);
+			else if(length == 1)
+			    print_num_ld(&at, &left, &ret, va_arg(arg, long),
+				minw, precision, prgiven, zeropad, minus, plus, space);
+			else if(length == 2)
+			    print_num_lld(&at, &left, &ret,
+				va_arg(arg, long long),
+				minw, precision, prgiven, zeropad, minus, plus, space);
+			break;
+		case 'u':
+			if(length == 0)
+			    print_num_u(&at, &left, &ret,
+				va_arg(arg, unsigned int),
+				minw, precision, prgiven, zeropad, minus, plus, space);
+			else if(length == 1)
+			    print_num_lu(&at, &left, &ret,
+				va_arg(arg, unsigned long),
+				minw, precision, prgiven, zeropad, minus, plus, space);
+			else if(length == 2)
+			    print_num_llu(&at, &left, &ret,
+				va_arg(arg, unsigned long long),
+				minw, precision, prgiven, zeropad, minus, plus, space);
+			break;
+		case 'x':
+			if(length == 0)
+			    print_num_x(&at, &left, &ret,
+				va_arg(arg, unsigned int),
+				minw, precision, prgiven, zeropad, minus, plus, space);
+			else if(length == 1)
+			    print_num_lx(&at, &left, &ret,
+				va_arg(arg, unsigned long),
+				minw, precision, prgiven, zeropad, minus, plus, space);
+			else if(length == 2)
+			    print_num_llx(&at, &left, &ret,
+				va_arg(arg, unsigned long long),
+				minw, precision, prgiven, zeropad, minus, plus, space);
+			break;
+		case 's':
+			print_str(&at, &left, &ret, va_arg(arg, char*),
+				minw, precision, prgiven, minus);
+			break;
+		case 'c':
+			print_char(&at, &left, &ret, va_arg(arg, int),
+				minw, minus);
+			break;
+		case 'n':
+			*va_arg(arg, int*) = ret;
+			break;
+		case 'm':
+			print_str(&at, &left, &ret, strerror(errno),
+				minw, precision, prgiven, minus);
+			break;
+		case 'p':
+			print_num_llp(&at, &left, &ret, va_arg(arg, void*),
+				minw, precision, prgiven, zeropad, minus, plus, space);
+			break;
+		case '%':
+			print_pad(&at, &left, &ret, '%', 1);
+			break;
+		case 'f':
+			print_num_f(&at, &left, &ret, va_arg(arg, double),
+				minw, precision, prgiven, zeropad, minus, plus, space);
+			break;
+		case 'g':
+			print_num_g(&at, &left, &ret, va_arg(arg, double),
+				minw, precision, prgiven, zeropad, minus, plus, space);
+			break;
+		/* unknown */
+		default:
+		case 0: break;
+		}
 	}
+
 	/* zero terminate */
 	if(left > 0)
 		*at = 0;
