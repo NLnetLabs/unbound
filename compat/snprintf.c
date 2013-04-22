@@ -39,6 +39,9 @@
 #include <stdarg.h>
 #include <stdlib.h>
 #include <errno.h>
+#ifdef HAVE_STDINT_H
+#include <stdint.h>
+#endif
 
 /* for test */
 /* #define SNPRINTF_TEST 1 */
@@ -425,11 +428,12 @@ print_num_llp(char** at, size_t* left, int* ret, void* value,
 	char buf[PRINT_DEC_BUFSZ];
 	int negative = 0;
 	int zero = (value == 0);
-	/* no portable macros to determine sizeof(void*); 64bit is upcast,
-	 * to remove warning here on 32bit systems it would need configure
-	 * assistance to detect include <stdint.h> and something like 
-	 * if defined(UINTPTR_MAX) && defined(UINT32_MAX) && (UINTPTR_MAX == UINT32MAX) */
+#if defined(UINTPTR_MAX) && defined(UINT32_MAX) && (UINTPTR_MAX == UINT32_MAX)
+	/* avoid warning about upcast on 32bit systems */
+	unsigned long long llvalue = (unsigned long)value;
+#else
 	unsigned long long llvalue = (unsigned long long)value;
+#endif
 	int len = print_hex_ll(buf, (int)sizeof(buf), llvalue);
 	if(zero) {
 		buf[0]=')';
