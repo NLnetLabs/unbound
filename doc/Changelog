@@ -2,6 +2,7 @@
 	- Implement max-udp-size config option, default 4096 (thanks
 	  Daisuke Higashi).
 	- Robust checks on dname validity from rdata for dname compare.
+	- updated iana portlist.
 
 19 April 2013: Wouter
 	- Fixup snprintf return value usage, fixed libunbound_get_option.
