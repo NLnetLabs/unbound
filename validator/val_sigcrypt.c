@@ -808,7 +808,12 @@ canonical_compare(struct ub_packed_rrset_key* rrset, size_t i, size_t j)
 		case LDNS_RR_TYPE_MR:
 		case LDNS_RR_TYPE_PTR:
 		case LDNS_RR_TYPE_DNAME:
-			return query_dname_compare(d->rr_data[i]+2, 
+			/* the wireread function has already checked these
+			 * dname's for correctness, and this double checks */
+			if(!dname_valid(d->rr_data[i]+2, d->rr_len[i]-2) ||
+				!dname_valid(d->rr_data[j]+2, d->rr_len[j]-2))
+				return 0;
+			return query_dname_compare(d->rr_data[i]+2,
 				d->rr_data[j]+2);
 
 		/* These RR types have STR and fixed size rdata fields

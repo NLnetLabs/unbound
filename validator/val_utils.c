@@ -773,6 +773,8 @@ rrset_has_signer(struct ub_packed_rrset_key* rrset, uint8_t* name, size_t len)
 	for(i = d->count; i< d->count+d->rrsig_count; i++) {
 		if(d->rr_len[i] > 2+18+len) {
 			/* at least rdatalen + signature + signame (+1 sig)*/
+			if(!dname_valid(d->rr_data[i]+2+18, d->rr_len[i]-2-18))
+				continue;
 			if(query_dname_compare(name, d->rr_data[i]+2+18) == 0)
 			{
 				return 1;
