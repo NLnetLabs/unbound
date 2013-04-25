@@ -89,6 +89,10 @@ server:
 	# is set with msg-buffer-size). 1480 can solve fragmentation (timeouts).
 	# edns-buffer-size: 4096
 
+	# Maximum UDP response size (not applied to TCP response).
+	# Suggested values are 512 to 4096. Default is 4096. 65536 disables it.
+	# max-udp-size: 4096
+
 	# buffer size for handling DNS data. No messages larger than this
 	# size can be sent or received, by UDP or TCP. In bytes.
 	# msg-buffer-size: 65552

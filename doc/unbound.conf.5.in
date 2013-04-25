@@ -183,6 +183,11 @@ stringent path MTU problems, but is seen as extreme, since the amount
 of TCP fallback generated is excessive (probably also for this resolver,
 consider tuning the outgoing tcp number).
 .TP
+.B max\-udp\-size: \fI<number>
+Maximum UDP response size (not applied to TCP response).  65536 disables the
+udp response size maximum, and uses the choice from the client, always.
+Suggested values are 512 to 4096. Default is 4096. 
+.TP
 .B msg\-buffer\-size: \fI<number>
 Number of bytes size of the message buffers. Default is 65552 bytes, enough
 for 64 Kb packets, the maximum DNS message size. No message larger than this

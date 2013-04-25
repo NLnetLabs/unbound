@@ -1,4 +1,6 @@
 25 April 2013: Wouter
+	- Implement max-udp-size config option, default 4096 (thanks
+	  Daisuke Higashi).
 	- Robust checks on dname validity from rdata for dname compare.
 
 19 April 2013: Wouter

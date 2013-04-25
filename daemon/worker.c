@@ -830,6 +830,13 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 			(int)edns.udp_size);
 		log_addr(VERB_CLIENT,"from",&repinfo->addr, repinfo->addrlen);
 		edns.udp_size = NORMAL_UDP_SIZE;
+	} else if(edns.edns_present &&
+		edns.udp_size > worker->daemon->cfg->max_udp_size &&
+		c->type == comm_udp) {
+		verbose(VERB_QUERY, "worker request: EDNS bufsize %d exceeds "
+			"max-udp-size, fixed", (int)edns.udp_size);
+		log_addr(VERB_CLIENT,"from",&repinfo->addr, repinfo->addrlen);
+		edns.udp_size = worker->daemon->cfg->max_udp_size;
 	}
 	if(edns.edns_present && edns.udp_size < LDNS_HEADER_SIZE) {
 		verbose(VERB_ALGO, "worker request: edns is too small.");

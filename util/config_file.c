@@ -201,6 +201,7 @@ config_create(void)
 	cfg->control_port = UNBOUND_CONTROL_PORT;
 	cfg->minimal_responses = 0;
 	cfg->rrset_roundrobin = 0;
+	cfg->max_udp_size = 4096;
 	if(!(cfg->server_key_file = strdup(RUN_DIR"/unbound_server.key"))) 
 		goto error_exit;
 	if(!(cfg->server_cert_file = strdup(RUN_DIR"/unbound_server.pem"))) 
@@ -327,7 +328,8 @@ int config_set_option(struct config_file* cfg, const char* opt,
 		cfg->use_syslog = 0;
 		free(cfg->logfile);
 		return (cfg->logfile = strdup(val)) != NULL;
-	} 
+	}
+	else S_NUMBER_NONZERO("max-udp-size:", max_udp_size)
 	else S_YNO("use-syslog:", use_syslog)
 	else S_YNO("extended-statistics:", stat_extended)
 	else S_YNO("statistics-cumulative:", stat_cumulative)
@@ -662,6 +664,7 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_UNS(opt, "val-override-date", val_date_override)
 	else O_YNO(opt, "minimal-responses", minimal_responses)
 	else O_YNO(opt, "rrset-roundrobin", rrset_roundrobin)
+	else O_DEC(opt, "max-udp-size", max_udp_size)
 	/* not here:
 	 * outgoing-permit, outgoing-avoid - have list of ports
 	 * local-zone - zones and nodefault variables
