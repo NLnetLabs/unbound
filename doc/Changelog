@@ -1,3 +1,7 @@
+26 April 2013: Wouter
+	- add unbound-control insecure_add and insecure_remove for the
+	  administration of negative trust anchors.
+
 25 April 2013: Wouter
 	- Implement max-udp-size config option, default 4096 (thanks
 	  Daisuke Higashi).

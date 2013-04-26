@@ -196,6 +196,14 @@ List the local zones in use.  These are printed one per line with zone type.
 .B list_local_data
 List the local data RRs in use.  The resource records are printed.
 .TP
+.B insecure_add \fIzone
+Add a \fBdomain\-insecure\fR for the given zone, like the statement in unbound.conf.
+Adds to the running unbound without affecting the cache contents (which may
+still be bogus, use \fBflush_zone\fR to remove it), does not affect the config file.
+.TP
+.B insecure_remove \fIzone
+Removes domain\-insecure for the given zone.
+.TP
 .B forward_add \fR[\fI+i\fR] \fIzone addr ...
 Add a new forward zone to running unbound.  With +i option also adds a
 \fIdomain\-insecure\fR for the zone (so it can resolve insecurely if you have
