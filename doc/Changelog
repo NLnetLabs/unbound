@@ -1,3 +1,6 @@
+3 May 2013: Wouter
+	- update acx_nlnetlabs.m4 to v23, sleep w32 fix.
+
 26 April 2013: Wouter
 	- add unbound-control insecure_add and insecure_remove for the
 	  administration of negative trust anchors.
