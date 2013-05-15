@@ -1,3 +1,7 @@
+15 May 2013: Wouter
+	- Fix round-robin doesn't work with some Windows clients (from Ilya
+	  Bakulin).
+
 3 May 2013: Wouter
 	- update acx_nlnetlabs.m4 to v23, sleep w32 fix.
 
