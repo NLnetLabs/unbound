@@ -1,3 +1,7 @@
+16 May 2013: Wouter
+	- Fix use-after-free in out-of-memory handling code (thanks Jake
+	  Montgomery).
+
 15 May 2013: Wouter
 	- Fix round-robin doesn't work with some Windows clients (from Ilya
 	  Bakulin).
