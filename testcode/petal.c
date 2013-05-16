@@ -349,14 +349,14 @@ provide_file_10(SSL* ssl, char* fname)
 		"rb"
 #endif
 		);
-	int r;
+	size_t r;
 	const char* rcode = "200 OK";
 	if(!in) {
 		char hdr[1024];
 		rcode = "404 File not found";
 		snprintf(hdr, sizeof(hdr), "HTTP/1.1 %s\r\n\r\n", rcode);
 		r = strlen(hdr);
-		if(SSL_write(ssl, hdr, r) <= 0) {
+		if(SSL_write(ssl, hdr, (int)r) <= 0) {
 			/* write failure */
 		}
 		return;
@@ -414,7 +414,7 @@ provide_file_chunked(SSL* ssl, char* fname)
 	char buf[16384];
 	char* at = buf;
 	size_t avail = sizeof(buf);
-	int r;
+	size_t r;
 	FILE* in = fopen(fname, 
 #ifndef USE_WINSOCK
 		"r"

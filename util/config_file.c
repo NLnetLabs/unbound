@@ -329,7 +329,7 @@ int config_set_option(struct config_file* cfg, const char* opt,
 		free(cfg->logfile);
 		return (cfg->logfile = strdup(val)) != NULL;
 	}
-	else S_NUMBER_NONZERO("max-udp-size:", max_udp_size)
+	else S_SIZET_NONZERO("max-udp-size:", max_udp_size)
 	else S_YNO("use-syslog:", use_syslog)
 	else S_YNO("extended-statistics:", stat_extended)
 	else S_YNO("statistics-cumulative:", stat_cumulative)
