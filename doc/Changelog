@@ -1,6 +1,7 @@
 16 May 2013: Wouter
-	- Fix use-after-free in out-of-memory handling code (thanks Jake
+	- Fix#499 use-after-free in out-of-memory handling code (thanks Jake
 	  Montgomery).
+	- Fix#500 use on non-initialised values on socket bind failures.
 
 15 May 2013: Wouter
 	- Fix round-robin doesn't work with some Windows clients (from Ilya
