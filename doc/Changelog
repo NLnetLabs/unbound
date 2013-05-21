@@ -1,3 +1,6 @@
+21 May 2013: Wouter
+	- Explain bogus and secure flags in libunbound more.
+
 16 May 2013: Wouter
 	- Fix#499 use-after-free in out-of-memory handling code (thanks Jake
 	  Montgomery).
