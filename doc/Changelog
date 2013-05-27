@@ -1,3 +1,8 @@
+27 May 2013: Wouter
+	- Update acx_pthreads.m4 to ax_pthreads.4 (2013-03-29), and apply
+	  patch to it to not fail when -Werror is also specified, from the
+	  autoconf-archives.
+
 21 May 2013: Wouter
 	- Explain bogus and secure flags in libunbound more.
 

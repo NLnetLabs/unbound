@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 AC_PREREQ(2.56)
 sinclude(acx_nlnetlabs.m4)
-sinclude(acx_pthread.m4)
+sinclude(ax_pthread.m4)
 sinclude(acx_python.m4)
 sinclude(ac_pkg_swig.m4)
 
@@ -392,7 +392,7 @@ AC_ARG_WITH(pthreads, AC_HELP_STRING([--with-pthreads],
  [ ],[ withval="yes" ])
 ub_have_pthreads=no
 if test x_$withval != x_no; then
-	ACX_PTHREAD([
+	AX_PTHREAD([
 		AC_DEFINE(HAVE_PTHREAD,1,[Define if you have POSIX threads libraries and header files.])
 		LIBS="$PTHREAD_LIBS $LIBS"
 		CFLAGS="$CFLAGS $PTHREAD_CFLAGS"
