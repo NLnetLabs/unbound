@@ -110,8 +110,7 @@ enum module_ext_state eval_response(struct module_qstate* qstate)
 	if(qstate->edns_server_out.subnet_addr_fam != qstate->edns_server_in.subnet_addr_fam ||
 		qstate->edns_server_out.subnet_source_mask != qstate->edns_server_in.subnet_source_mask ||
 		memcmp(qstate->edns_server_out.subnet_addr, qstate->edns_server_in.subnet_addr, sn_octs) != 0 ||
-		//YBS should this just be equal?
-		(qstate->edns_server_out.subnet_addr[sn_octs]^qstate->edns_server_in.subnet_addr[sn_octs])>>remainder) {
+		qstate->edns_server_out.subnet_addr[sn_octs] != qstate->edns_server_in.subnet_addr[sn_octs]) {
 		/* we can not, restart query without option */
 		verbose(VERB_QUERY, "subnet: forged data");
 		qstate->edns_server_out.subnet_validdata = 0;
@@ -120,6 +119,8 @@ enum module_ext_state eval_response(struct module_qstate* qstate)
 	}
 	
 	/* TODO PUT IT IN OUR SPECIAL CACHE */
+	/* NOTE: do not cache responses with sourcemask larger than 
+	 * EDNSSUBNET_MAX_SUBNET_IP4/6, unless  */
 	
 	if (qstate->edns_client_in.subnet_downstream) {
 		/* Client wants to see the answer, echo option back

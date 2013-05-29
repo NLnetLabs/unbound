@@ -306,11 +306,11 @@ struct module_qstate {
 	void* minfo[MAX_MODULE];
 #ifdef CLIENT_SUBNET
 	/** edns_data for client communication */
-	struct edns_data* edns_from_client;
-	struct edns_data* edns_to_client;
+	struct edns_data edns_client_in;
+	struct edns_data edns_client_out;
 	/** edns data for server communication */
-	struct edns_data edns_in;
-	struct edns_data edns_out;
+	struct edns_data edns_server_in;
+	struct edns_data edns_server_out;
 #endif
 	/** environment for this query */
 	struct module_env* env;
