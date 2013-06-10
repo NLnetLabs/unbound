@@ -1214,8 +1214,6 @@ char *strptime(const char *s, const char *format, struct tm *tm);
 #  endif
 #endif /* CHECKED_INET6 */
 
-/* maximum nesting of included files */
-#define MAXINCLUDES 10
 #ifndef HAVE_GETADDRINFO
 struct sockaddr_storage;
 #include "compat/fake-rfc2553.h"

@@ -1,6 +1,7 @@
 10 Jun 2013: Wouter
 	- Fix#501: forward-first does not recurse, when forward name is ".".
 	- iana portlist update.
+	- Max include depth is unlimited.
 
 27 May 2013: Wouter
 	- Update acx_pthreads.m4 to ax_pthreads.4 (2013-03-29), and apply
