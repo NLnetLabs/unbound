@@ -1419,8 +1419,9 @@ can_have_last_resort(struct module_env* env, struct delegpt* dp,
 	/* do not process a last resort (the parent side) if a stub
 	 * or forward is configured, because we do not want to go 'above'
 	 * the configured servers */
-	if((stub = (struct iter_hints_stub*)name_tree_find(&env->hints->tree,
-		dp->name, dp->namelen, dp->namelabs, iq->qchase.qclass)) &&
+	if(!dname_is_root(dp->name) && (stub = (struct iter_hints_stub*)
+		name_tree_find(&env->hints->tree, dp->name, dp->namelen,
+		dp->namelabs, iq->qchase.qclass)) &&
 		/* has_parent side is turned off for stub_first, where we
 		 * are allowed to go to the parent */
 		stub->dp->has_parent_side_NS) {
