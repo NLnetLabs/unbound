@@ -360,7 +360,10 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	else S_POW2("rrset-cache-slabs:", rrset_cache_slabs)
 	else S_YNO("prefetch:", prefetch)
 	else S_YNO("prefetch-key:", prefetch_key)
-	else S_NUMBER_OR_ZERO("cache-max-ttl:", max_ttl)
+	else if(strcmp(opt, "cache-max-ttl:") == 0)
+	{ IS_NUMBER_OR_ZERO; cfg->max_ttl = atoi(val); MAX_TTL=cfg->max_ttl;}
+	else if(strcmp(opt, "cache-min-ttl:") == 0)
+	{ IS_NUMBER_OR_ZERO; cfg->min_ttl = atoi(val); MIN_TTL=cfg->min_ttl;}
 	else S_NUMBER_OR_ZERO("infra-host-ttl:", host_ttl)
 	else S_POW2("infra-cache-slabs:", infra_cache_slabs)
 	else S_SIZET_NONZERO("infra-cache-numhosts:", infra_cache_numhosts)
@@ -596,6 +599,7 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_YNO(opt, "prefetch-key", prefetch_key)
 	else O_YNO(opt, "prefetch", prefetch)
 	else O_DEC(opt, "cache-max-ttl", max_ttl)
+	else O_DEC(opt, "cache-min-ttl", min_ttl)
 	else O_DEC(opt, "infra-host-ttl", host_ttl)
 	else O_DEC(opt, "infra-cache-slabs", infra_cache_slabs)
 	else O_MEM(opt, "infra-cache-numhosts", infra_cache_numhosts)

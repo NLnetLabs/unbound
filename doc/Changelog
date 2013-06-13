@@ -1,3 +1,7 @@
+13 Jun 2013: Wouter
+	- get_option, set_option, unbound-checkconf -o and libunbound
+	  getoption and setoption support cache-min-ttl and cache-max-ttl.
+
 10 Jun 2013: Wouter
 	- Fix#501: forward-first does not recurse, when forward name is ".".
 	- iana portlist update.
