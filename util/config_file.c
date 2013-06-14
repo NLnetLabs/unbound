@@ -329,6 +329,9 @@ int config_set_option(struct config_file* cfg, const char* opt,
 		free(cfg->logfile);
 		return (cfg->logfile = strdup(val)) != NULL;
 	}
+	else if(strcmp(opt, "log-time-ascii:") == 0)
+	{ IS_YES_OR_NO; cfg->log_time_ascii = (strcmp(val, "yes") == 0);
+	  log_set_time_asc(cfg->log_time_ascii); }
 	else S_SIZET_NONZERO("max-udp-size:", max_udp_size)
 	else S_YNO("use-syslog:", use_syslog)
 	else S_YNO("extended-statistics:", stat_extended)
@@ -422,6 +425,10 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	else S_STR("control-cert-file:", control_cert_file)
 	else S_STR("module-config:", module_conf)
 	else S_STR("python-script:", python_script)
+	/* val_sig_skew_min and max are copied into val_env during init,
+	 * so this does not update val_env with set_option */
+	else S_NUMBER_OR_ZERO("val-sig-skew-min:", val_sig_skew_min)
+	else S_NUMBER_OR_ZERO("val-sig-skew-max:", val_sig_skew_max)
 	else if (strcmp(opt, "outgoing-interface:") == 0) {
 		char* d = strdup(val);
 		char** oi = (char**)malloc((cfg->num_out_ifs+1)*sizeof(char*));
@@ -578,6 +585,7 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_YNO(opt, "statistics-cumulative", stat_cumulative)
 	else O_YNO(opt, "extended-statistics", stat_extended)
 	else O_YNO(opt, "use-syslog", use_syslog)
+	else O_YNO(opt, "log-time-ascii", log_time_ascii)
 	else O_DEC(opt, "num-threads", num_threads)
 	else O_IFC(opt, "interface", num_ifs, ifs)
 	else O_IFC(opt, "outgoing-interface", num_out_ifs, out_ifs)
@@ -669,6 +677,9 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_YNO(opt, "minimal-responses", minimal_responses)
 	else O_YNO(opt, "rrset-roundrobin", rrset_roundrobin)
 	else O_DEC(opt, "max-udp-size", max_udp_size)
+	else O_STR(opt, "python-script", python_script)
+	else O_DEC(opt, "val-sig-skew-min", val_sig_skew_min)
+	else O_DEC(opt, "val-sig-skew-max", val_sig_skew_max)
 	/* not here:
 	 * outgoing-permit, outgoing-avoid - have list of ports
 	 * local-zone - zones and nodefault variables

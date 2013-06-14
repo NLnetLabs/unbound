@@ -1,3 +1,8 @@
+14 Jun 2013: Wouter
+	- get_option and set_option support for log-time-ascii, python-script
+	  val-sig-skew-min and val-sig-skew-max.  log-time-ascii takes effect
+	  immediately.  The others are mostly useful for libunbound users.
+
 13 Jun 2013: Wouter
 	- get_option, set_option, unbound-checkconf -o and libunbound
 	  getoption and setoption support cache-min-ttl and cache-max-ttl.
