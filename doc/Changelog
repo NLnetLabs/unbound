@@ -1,3 +1,6 @@
+17 Jun 2013: Wouter
+	- Fixup manpage syntax.
+
 14 Jun 2013: Wouter
 	- get_option and set_option support for log-time-ascii, python-script
 	  val-sig-skew-min and val-sig-skew-max.  log-time-ascii takes effect
