@@ -250,7 +250,7 @@ void ub_ctx_delete(struct ub_ctx* ctx);
  * @param val: value of the option.
  * @return: 0 if OK, else error.
  */
-int ub_ctx_set_option(struct ub_ctx* ctx, char* opt, char* val);
+int ub_ctx_set_option(struct ub_ctx* ctx, const char* opt, const char* val);
 
 /**
  * Get an option from the context.
@@ -266,7 +266,7 @@ int ub_ctx_set_option(struct ub_ctx* ctx, char* opt, char* val);
  * 	returned in the string.
  * @return 0 if OK else an error code (malloc failure, syntax error).
  */
-int ub_ctx_get_option(struct ub_ctx* ctx, char* opt, char** str);
+int ub_ctx_get_option(struct ub_ctx* ctx, const char* opt, char** str);
 
 /**
  * setup configuration for the given context.
@@ -278,7 +278,7 @@ int ub_ctx_get_option(struct ub_ctx* ctx, char* opt, char** str);
  * 	routines exist.
  * @return: 0 if OK, else error.
  */
-int ub_ctx_config(struct ub_ctx* ctx, char* fname);
+int ub_ctx_config(struct ub_ctx* ctx, const char* fname);
 
 /**
  * Set machine to forward DNS queries to, the caching resolver to use. 
@@ -297,7 +297,7 @@ int ub_ctx_config(struct ub_ctx* ctx, char* fname);
  * 	If the addr is NULL, forwarding is disabled.
  * @return 0 if OK, else error.
  */
-int ub_ctx_set_fwd(struct ub_ctx* ctx, char* addr);
+int ub_ctx_set_fwd(struct ub_ctx* ctx, const char* addr);
 
 /**
  * Read list of nameservers to use from the filename given.
@@ -313,7 +313,7 @@ int ub_ctx_set_fwd(struct ub_ctx* ctx, char* addr);
  * @param fname: file name string. If NULL "/etc/resolv.conf" is used.
  * @return 0 if OK, else error.
  */
-int ub_ctx_resolvconf(struct ub_ctx* ctx, char* fname);
+int ub_ctx_resolvconf(struct ub_ctx* ctx, const char* fname);
 
 /**
  * Read list of hosts from the filename given.
@@ -326,7 +326,7 @@ int ub_ctx_resolvconf(struct ub_ctx* ctx, char* fname);
  * @param fname: file name string. If NULL "/etc/hosts" is used.
  * @return 0 if OK, else error.
  */
-int ub_ctx_hosts(struct ub_ctx* ctx, char* fname);
+int ub_ctx_hosts(struct ub_ctx* ctx, const char* fname);
 
 /**
  * Add a trust anchor to the given context.
@@ -339,7 +339,7 @@ int ub_ctx_hosts(struct ub_ctx* ctx, char* fname);
  * 	[domainname] [TTL optional] [type] [class optional] [rdata contents]
  * @return 0 if OK, else error.
  */
-int ub_ctx_add_ta(struct ub_ctx* ctx, char* ta);
+int ub_ctx_add_ta(struct ub_ctx* ctx, const char* ta);
 
 /**
  * Add trust anchors to the given context.
@@ -350,7 +350,7 @@ int ub_ctx_add_ta(struct ub_ctx* ctx, char* ta);
  * @param fname: filename of file with keyfile with trust anchors.
  * @return 0 if OK, else error.
  */
-int ub_ctx_add_ta_file(struct ub_ctx* ctx, char* fname);
+int ub_ctx_add_ta_file(struct ub_ctx* ctx, const char* fname);
 
 /**
  * Add trust anchors to the given context.
@@ -362,7 +362,7 @@ int ub_ctx_add_ta_file(struct ub_ctx* ctx, char* fname);
  * 	anchors.
  * @return 0 if OK, else error.
  */
-int ub_ctx_trustedkeys(struct ub_ctx* ctx, char* fname);
+int ub_ctx_trustedkeys(struct ub_ctx* ctx, const char* fname);
 
 /**
  * Set debug output (and error output) to the specified stream.
@@ -447,7 +447,7 @@ int ub_process(struct ub_ctx* ctx);
  * 	in that case (out of memory).
  * @return 0 if OK, else error.
  */
-int ub_resolve(struct ub_ctx* ctx, char* name, int rrtype, 
+int ub_resolve(struct ub_ctx* ctx, const char* name, int rrtype, 
 	int rrclass, struct ub_result** result);
 
 /**
@@ -478,7 +478,7 @@ int ub_resolve(struct ub_ctx* ctx, char* name, int rrtype,
  *	cancel the query.
  * @return 0 if OK, else error.
  */
-int ub_resolve_async(struct ub_ctx* ctx, char* name, int rrtype, 
+int ub_resolve_async(struct ub_ctx* ctx, const char* name, int rrtype, 
 	int rrclass, void* mydata, ub_callback_t callback, int* async_id);
 
 /**
@@ -525,7 +525,8 @@ int ub_ctx_print_local_zones(struct ub_ctx* ctx);
  * @param zone_type: type of the zone (like for unbound.conf) in text.
  * @return 0 if OK, else error.
  */
-int ub_ctx_zone_add(struct ub_ctx* ctx, char *zone_name, char *zone_type);
+int ub_ctx_zone_add(struct ub_ctx* ctx, const char *zone_name, 
+	const char *zone_type);
 
 /**
  * Remove zone from local authority info of the library.
@@ -534,7 +535,7 @@ int ub_ctx_zone_add(struct ub_ctx* ctx, char *zone_name, char *zone_type);
  *	If it does not exist, nothing happens.
  * @return 0 if OK, else error.
  */
-int ub_ctx_zone_remove(struct ub_ctx* ctx, char *zone_name);
+int ub_ctx_zone_remove(struct ub_ctx* ctx, const char *zone_name);
 
 /**
  * Add localdata to the library local authority info.
@@ -544,7 +545,7 @@ int ub_ctx_zone_remove(struct ub_ctx* ctx, char *zone_name);
  *	"www.example.com IN A 127.0.0.1"
  * @return 0 if OK, else error.
  */
-int ub_ctx_data_add(struct ub_ctx* ctx, char *data);
+int ub_ctx_data_add(struct ub_ctx* ctx, const char *data);
 
 /**
  * Remove localdata from the library local authority info.
@@ -552,7 +553,7 @@ int ub_ctx_data_add(struct ub_ctx* ctx, char *data);
  * @param data: the name to delete all data from, like "www.example.com".
  * @return 0 if OK, else error.
  */
-int ub_ctx_data_remove(struct ub_ctx* ctx, char *data);
+int ub_ctx_data_remove(struct ub_ctx* ctx, const char *data);
 
 /**
  * Get a version string from the libunbound implementation.

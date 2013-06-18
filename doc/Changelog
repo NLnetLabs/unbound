@@ -1,3 +1,7 @@
+18 Jun 2013: Wouter
+	- Fix for const string literals in C++ for libunbound, from Karel
+	  Slany.
+
 17 Jun 2013: Wouter
 	- Fixup manpage syntax.
 
