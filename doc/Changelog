@@ -1,6 +1,7 @@
 25 Jun 2013: Wouter
 	- Squelch sendto-permission denied errors when the network is
 	  not connected, to avoid spamming syslog.
+	- configure --disable-flto option (from Robert Edmonds).
 
 18 Jun 2013: Wouter
 	- Fix for const string literals in C++ for libunbound, from Karel

@@ -2,7 +2,8 @@
 # Copyright 2009, Wouter Wijngaards, NLnet Labs.   
 # BSD licensed.
 #
-# Version 23
+# Version 24
+# 2013-06-25 FLTO has --disable-flto option.
 # 2013-05-03 Update W32_SLEEP for newer mingw that links but not defines it.
 # 2013-03-22 Fix ACX_RSRC_VERSION for long version numbers.
 # 2012-02-09 Fix AHX_MEMCMP_BROKEN with undef in compat/memcmp.h.
@@ -407,19 +408,22 @@ int test() {
 dnl Check if CC supports -flto.
 dnl in a way that supports clang and suncc (that flag does something else,
 dnl but fails to link).  It sets it in CFLAGS if it works.
-AC_DEFUN([ACX_CHECK_FLTO],
-[AC_MSG_CHECKING([if $CC supports -flto])
-BAKCFLAGS="$CFLAGS"
-CFLAGS="$CFLAGS -flto"
-AC_LINK_IFELSE([AC_LANG_PROGRAM([], [])], [
-    if $CC $CFLAGS -o conftest conftest.c 2>&1 | grep "warning: no debug symbols in executable" >/dev/null; then
-	CFLAGS="$BAKCFLAGS"
-	AC_MSG_RESULT(no)
-    else
-	AC_MSG_RESULT(yes)
-    fi
-    rm -f conftest conftest.c conftest.o
-], [CFLAGS="$BAKCFLAGS" ; AC_MSG_RESULT(no)])
+AC_DEFUN([ACX_CHECK_FLTO], [
+    AC_ARG_ENABLE([flto], AS_HELP_STRING([--disable-flto], [Disable link-time optimization]))
+    AS_IF([test "x$enable_flto" != "xno"], [
+        AC_MSG_CHECKING([if $CC supports -flto])
+        BAKCFLAGS="$CFLAGS"
+        CFLAGS="$CFLAGS -flto"
+        AC_LINK_IFELSE([AC_LANG_PROGRAM([], [])], [
+            if $CC $CFLAGS -o conftest conftest.c 2>&1 | grep "warning: no debug symbols in executable" >/dev/null; then
+                CFLAGS="$BAKCFLAGS"
+                AC_MSG_RESULT(no)
+            else
+                AC_MSG_RESULT(yes)
+            fi
+            rm -f conftest conftest.c conftest.o
+        ], [CFLAGS="$BAKCFLAGS" ; AC_MSG_RESULT(no)])
+    ])
 ])
 
 dnl Check the printf-format attribute (if any)

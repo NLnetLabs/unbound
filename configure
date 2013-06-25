@@ -797,6 +797,7 @@ with_rootcert_file
 with_username
 enable_checking
 enable_debug
+enable_flto
 enable_shared
 enable_static
 with_pic
@@ -1454,6 +1455,7 @@ Optional Features:
   --enable-FEATURE[=ARG]  include FEATURE [ARG=yes]
   --enable-checking       Enable warnings, asserts, makefile-dependencies
   --enable-debug          same as enable-checking
+  --disable-flto          Disable link-time optimization
   --enable-shared[=PKGS]  build shared libraries [default=yes]
   --enable-static[=PKGS]  build static libraries [default=yes]
   --enable-fast-install[=PKGS]
@@ -5762,11 +5764,19 @@ $as_echo "#define UNBOUND_DEBUG /**/" >>confdefs.h
 		# nothing to do.
 		;;
 esac
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking if $CC supports -flto" >&5
+
+    # Check whether --enable-flto was given.
+if test "${enable_flto+set}" = set; then :
+  enableval=$enable_flto;
+fi
+
+    if test "x$enable_flto" != "xno"; then :
+
+        { $as_echo "$as_me:${as_lineno-$LINENO}: checking if $CC supports -flto" >&5
 $as_echo_n "checking if $CC supports -flto... " >&6; }
-BAKCFLAGS="$CFLAGS"
-CFLAGS="$CFLAGS -flto"
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+        BAKCFLAGS="$CFLAGS"
+        CFLAGS="$CFLAGS -flto"
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 
 int
@@ -5779,15 +5789,15 @@ main ()
 _ACEOF
 if ac_fn_c_try_link "$LINENO"; then :
 
-    if $CC $CFLAGS -o conftest conftest.c 2>&1 | grep "warning: no debug symbols in executable" >/dev/null; then
-	CFLAGS="$BAKCFLAGS"
-	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+            if $CC $CFLAGS -o conftest conftest.c 2>&1 | grep "warning: no debug symbols in executable" >/dev/null; then
+                CFLAGS="$BAKCFLAGS"
+                { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
 $as_echo "no" >&6; }
-    else
-	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+            else
+                { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 $as_echo "yes" >&6; }
-    fi
-    rm -f conftest conftest.c conftest.o
+            fi
+            rm -f conftest conftest.c conftest.o
 
 else
   CFLAGS="$BAKCFLAGS" ; { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
@@ -5795,6 +5805,8 @@ $as_echo "no" >&6; }
 fi
 rm -f core conftest.err conftest.$ac_objext \
     conftest$ac_exeext conftest.$ac_ext
+
+fi
 
 
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for inline" >&5
