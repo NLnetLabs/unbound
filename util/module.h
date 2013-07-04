@@ -44,6 +44,7 @@
 #include "util/storage/lruhash.h"
 #include "util/data/msgreply.h"
 #include "util/data/msgparse.h"
+#include <sys/socket.h>
 struct alloc_cache;
 struct rrset_cache;
 struct key_cache;

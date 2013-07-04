@@ -137,10 +137,10 @@ int subnet_compare(struct edns_data *a, struct edns_data *b)
 	if (!a->subnet_validdata &&  b->subnet_validdata) return  1;
 	
 	if (a->subnet_addr_fam != b->subnet_addr_fam) {
-		return b->subnet_addr_fam - a->subnet_addr_fam;
+		return (int)(b->subnet_addr_fam - a->subnet_addr_fam);
 	}
 	if (a->subnet_source_mask != b->subnet_source_mask) {
-		return b->subnet_source_mask - a->subnet_source_mask;
+		return (int)(b->subnet_source_mask - a->subnet_source_mask);
 	}
 	return memcmp(b->subnet_addr, a->subnet_addr, INET6_SIZE);
 }

@@ -81,7 +81,7 @@
 #include "util/tube.h"
 
 #ifdef CLIENT_SUBNET
-#include "edns-subnet/edns-subnet.h"
+#include "edns-subnet/subnet-whitelist.h"
 #endif
 
 #include "util/net_help.h"

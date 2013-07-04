@@ -84,7 +84,7 @@ PYTHONMOD_HEADER=@PYTHONMOD_HEADER@
 PYUNBOUND_SRC=
 # libunbound_wrap.lo if python libunbound wrapper enabled.
 PYUNBOUND_OBJ=@PYUNBOUND_OBJ@
-SUBNET_SRC=edns-subnet/edns-subnet.c edns-subnet/subnetmod.c
+SUBNET_SRC=edns-subnet/edns-subnet.c edns-subnet/subnetmod.c edns-subnet/addrtree.c edns-subnet/subnet-whitelist.c
 SUBNET_OBJ=@SUBNET_OBJ@
 SUBNET_HEADER=@SUBNET_HEADER@
 COMMON_SRC=services/cache/dns.c services/cache/infra.c services/cache/rrset.c \
@@ -104,7 +104,8 @@ util/winsock_event.c validator/autotrust.c validator/val_anchor.c \
 validator/validator.c validator/val_kcache.c validator/val_kentry.c \
 validator/val_neg.c validator/val_nsec3.c validator/val_nsec.c \
 validator/val_secalgo.c validator/val_sigcrypt.c \
-validator/val_utils.c edns-subnet/edns-subnet.c edns-subnet/subnetmod.c $(CHECKLOCK_SRC)
+validator/val_utils.c edns-subnet/edns-subnet.c edns-subnet/subnetmod.c \
+edns-subnet/addrtree.c edns-subnet/subnet-whitelist.c $(CHECKLOCK_SRC)
 COMMON_OBJ_WITHOUT_NETCALL=dns.lo infra.lo rrset.lo dname.lo msgencode.lo \
 msgparse.lo msgreply.lo packed_rrset.lo iterator.lo iter_delegpt.lo \
 iter_donotq.lo iter_fwd.lo iter_hints.lo iter_priv.lo iter_resptype.lo \
@@ -545,7 +546,7 @@ depend:
 			-e 's?$$(srcdir)/util/configparser.c?util/configparser.c?g' \
 			-e 's?$$(srcdir)/util/configparser.h?util/configparser.h?g' \
 			-e 's?$$(srcdir)/pythonmod/pythonmod.h?$$(PYTHONMOD_HEADER)?g' \
-			-e 's?$$(srcdir)/edns-subnet/subnetmod.h $$(srcdir)/edns-subnet/edns-subnet.h?$$(SUBNET_HEADER)?g' \
+			-e 's?$$(srcdir)/edns-subnet/subnetmod.h $$(srcdir)/edns-subnet/subnet-whitelist.h $$(srcdir)/edns-subnet/edns-subnet.h $$(srcdir)/edns-subnet/addrtree.h?$$(SUBNET_HEADER)?g' \
 			-e 's!\(.*\)\.o[ :]*!\1.lo \1.o: !g' \
 			> $(DEPEND_TMP)
 	cp $(DEPEND_TARGET) $(DEPEND_TMP2)
@@ -677,7 +678,13 @@ edns-subnet.lo edns-subnet.o: $(srcdir)/edns-subnet/edns-subnet.c config.h $(src
  $(srcdir)/util/storage/dnstree.h $(srcdir)/util/rbtree.h $(srcdir)/util/regional.h $(srcdir)/util/log.h \
  $(srcdir)/util/config_file.h \
  $(srcdir)/util/net_help.h
+subnet-whitelist.lo subnet-whitelist.o: $(srcdir)/edns-subnet/subnet-whitelist.c config.h $(srcdir)/edns-subnet/subnet-whitelist.h \
+ $(srcdir)/util/storage/dnstree.h $(srcdir)/util/rbtree.h $(srcdir)/util/regional.h $(srcdir)/util/log.h \
+ $(srcdir)/util/config_file.h \
+ $(srcdir)/util/net_help.h
 subnetmod.lo subnetmod.o: $(srcdir)/edns-subnet/subnetmod.c config.h $(srcdir)/edns-subnet/subnetmod.h \
+ $(srcdir)/util/config_file.h $(srcdir)/edns-subnet/addrtree.h $(srcdir)/edns-subnet/edns-subnet.h
+addrtree.lo addrtree.o: $(srcdir)/edns-subnet/addrtree.c config.h $(srcdir)/edns-subnet/addrtree.h \
  $(srcdir)/util/config_file.h
 listen_dnsport.lo listen_dnsport.o: $(srcdir)/services/listen_dnsport.c config.h \
  $(srcdir)/services/listen_dnsport.h $(srcdir)/util/netevent.h \
@@ -709,7 +716,7 @@ modstack.lo modstack.o: $(srcdir)/services/modstack.c config.h $(srcdir)/service
 outbound_list.lo outbound_list.o: $(srcdir)/services/outbound_list.c config.h \
  $(srcdir)/services/outbound_list.h $(srcdir)/services/outside_network.h $(srcdir)/util/rbtree.h \
  $(srcdir)/util/netevent.h \
- $(srcdir)/edns-subnet/subnetmod.h \
+ $(srcdir)/edns-subnet/subnetmod.h
  
 outside_network.lo outside_network.o: $(srcdir)/services/outside_network.c config.h \
  $(srcdir)/services/outside_network.h $(srcdir)/util/rbtree.h $(srcdir)/util/netevent.h \

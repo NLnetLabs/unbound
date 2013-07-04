@@ -45,7 +45,7 @@ LIBUNBOUND_AGE=1
 # 1.4.17 had 3:2:1
 # 1.4.18 had 3:3:1
 # 1.4.19 had 3:4:1
-# 1.4.20 had 3:5:1
+# 1.4.20 had 4:0:2 # adds libunbound.ttl
 
 #   Current  -- the number of the binary API that we're implementing
 #   Revision -- which iteration of the implementation of the binary
@@ -525,12 +525,13 @@ AC_ARG_WITH([nss], AC_HELP_STRING([--with-nss=path],
 	[
 	USE_NSS="yes"
 	AC_DEFINE(HAVE_NSS, 1, [Use libnss for crypto])
-	if test "$withval" != "/usr" -a "$withval" != "" -a "$withval" != "yes"; then
-		CPPFLAGS="$CPPFLAGS -I$withval/include"
+	if test "$withval" != "" -a "$withval" != "yes"; then
+		CPPFLAGS="$CPPFLAGS -I$withval/include/nss3"
 		LDFLAGS="$LDFLAGS -L$withval/lib"
 		ACX_RUNTIME_PATH_ADD([$withval/lib])
 		CPPFLAGS="-I$withval/include/nspr4 $CPPFLAGS"
 	else
+		CPPFLAGS="$CPPFLAGS -I/usr/include/nss3"
 		CPPFLAGS="-I/usr/include/nspr4 $CPPFLAGS"
 	fi
         LIBS="$LIBS -lnss3 -lnspr4"
@@ -580,9 +581,9 @@ AC_ARG_ENABLE(subnet, AC_HELP_STRING([--enable-subnet], [Enable client subnet]))
 case "$enable_subnet" in
 	yes)
 	AC_DEFINE([CLIENT_SUBNET], [1], [Define this to enable client subnet option.])
-	SUBNET_OBJ="edns-subnet.lo subnetmod.lo"
+	SUBNET_OBJ="edns-subnet.lo subnetmod.lo addrtree.lo subnet-whitelist.lo"
 	AC_SUBST(SUBNET_OBJ)
-	SUBNET_HEADER='$(srcdir)/edns-subnet/subnetmod.h $(srcdir)/edns-subnet/edns-subnet.h'
+	SUBNET_HEADER='$(srcdir)/edns-subnet/subnetmod.h $(srcdir)/edns-subnet/edns-subnet.h $(srcdir)/edns-subnet/subnet-whitelist.h $(srcdir)/edns-subnet/addrtree.h'
 	AC_SUBST(SUBNET_HEADER)
 	;;
 	no|*)

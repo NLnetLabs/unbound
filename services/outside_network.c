@@ -60,7 +60,7 @@
 #include "util/fptr_wlist.h"
 
 #ifdef CLIENT_SUBNET
-#include "edns-subnet/edns-subnet.h"
+#include "edns-subnet/subnet-whitelist.h"
 #endif
 
 #include <openssl/ssl.h>

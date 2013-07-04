@@ -246,6 +246,9 @@ fptr_whitelist_hash_deldatafunc(lruhash_deldatafunc_t fptr)
 	else if(fptr == &infra_deldatafunc) return 1;
 	else if(fptr == &key_entry_deldatafunc) return 1;
 	else if(fptr == &test_slabhash_deldata) return 1;
+#ifdef CLIENT_SUBNET
+	else if(fptr == &subnet_data_delete) return 1;
+#endif
 	return 0;
 }
 

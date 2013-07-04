@@ -2525,7 +2525,7 @@ LIBUNBOUND_AGE=1
 # 1.4.17 had 3:2:1
 # 1.4.18 had 3:3:1
 # 1.4.19 had 3:4:1
-# 1.4.20 had 3:5:1
+# 1.4.20 had 4:0:2 # adds libunbound.ttl
 
 #   Current  -- the number of the binary API that we're implementing
 #   Revision -- which iteration of the implementation of the binary
@@ -16083,8 +16083,8 @@ if test "${with_nss+set}" = set; then :
 
 $as_echo "#define HAVE_NSS 1" >>confdefs.h
 
-	if test "$withval" != "/usr" -a "$withval" != "" -a "$withval" != "yes"; then
-		CPPFLAGS="$CPPFLAGS -I$withval/include"
+	if test "$withval" != "" -a "$withval" != "yes"; then
+		CPPFLAGS="$CPPFLAGS -I$withval/include/nss3"
 		LDFLAGS="$LDFLAGS -L$withval/lib"
 
 	if test "x$enable_rpath" = xyes; then
@@ -16095,6 +16095,7 @@ $as_echo "#define HAVE_NSS 1" >>confdefs.h
 
 		CPPFLAGS="-I$withval/include/nspr4 $CPPFLAGS"
 	else
+		CPPFLAGS="$CPPFLAGS -I/usr/include/nss3"
 		CPPFLAGS="-I/usr/include/nspr4 $CPPFLAGS"
 	fi
         LIBS="$LIBS -lnss3 -lnspr4"
@@ -16598,9 +16599,9 @@ case "$enable_subnet" in
 
 $as_echo "#define CLIENT_SUBNET 1" >>confdefs.h
 
-	SUBNET_OBJ="edns-subnet.lo subnetmod.lo"
+	SUBNET_OBJ="edns-subnet.lo subnetmod.lo addrtree.lo subnet-whitelist.lo"
 
-	SUBNET_HEADER='$(srcdir)/edns-subnet/subnetmod.h $(srcdir)/edns-subnet/edns-subnet.h'
+	SUBNET_HEADER='$(srcdir)/edns-subnet/subnetmod.h $(srcdir)/edns-subnet/edns-subnet.h $(srcdir)/edns-subnet/subnet-whitelist.h $(srcdir)/edns-subnet/addrtree.h'
 
 	;;
 	no|*)

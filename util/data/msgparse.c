@@ -936,7 +936,7 @@ parse_packet(ldns_buffer* pkt, struct msg_parse* msg, struct regional* region)
 #ifdef CLIENT_SUBNET
 
 static void
-parse_subnet_option(uint8_t* data, struct edns_data* edns, int opt_len)
+parse_subnet_option(uint8_t* data, struct edns_data* edns, uint16_t opt_len)
 {
 	if (opt_len < 4) return; /* try next */
 
@@ -966,7 +966,7 @@ parse_subnet_option(uint8_t* data, struct edns_data* edns, int opt_len)
 static void
 parse_ednsdata(uint8_t* data, struct edns_data* edns)
 {
-	int edns_datalen, opt_opc, opt_len, opt_start;
+	uint16_t edns_datalen, opt_opc, opt_len, opt_start;
 	edns->subnet_validdata = 0;
 	/* Parse EDNS data field */
 	edns_datalen = ldns_read_uint16(data);
