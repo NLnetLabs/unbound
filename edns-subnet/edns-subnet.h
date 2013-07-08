@@ -6,8 +6,7 @@
 
 /**
  * \file
- *
- * 
+ * Subnet option related constants. 
  */
 
 #ifndef EDNSSUBNET_EDNSSUBNET_H

@@ -3,7 +3,12 @@
  *
  * Copyright (c) 2013, NLnet Labs.  See LICENSE for license.
  */
- 
+
+/**
+ * \file
+ * Subnet option related constants. 
+ */
+
 #include "config.h"
 
 #ifdef CLIENT_SUBNET /* keeps splint happy */

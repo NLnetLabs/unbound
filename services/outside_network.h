@@ -384,7 +384,9 @@ struct serviced_query {
  * @param unwanted_param: user parameter to action.
  * @param do_udp: if udp is done.
  * @param sslctx: context to create outgoing connections with (if enabled).
+ * \if CLIENT_SUBNET
  * @param edns_subnet_upstreams: Servers whitelisted for edns-subnet.
+ * \endif
  * @return: the new structure (with no pending answers) or NULL on error.
  */
 struct outside_network* outside_network_create(struct comm_base* base,
