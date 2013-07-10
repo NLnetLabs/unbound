@@ -911,8 +911,7 @@ Send client source address to this authority. Can be IP4 or IP6. Append
 10.2.3.4/24 or 2001::11/64.
 .TP 5
 .B client\-subnet\-opcode: \fI<number>
-Client subnet option code is not assigned by IANA. Specify positive
-integer smaller than 65536. Defaults to 20730.
+Specify positive integer smaller than 65536. Defaults to 8.
 .TP 5
 .B max\-client\-subnet\-ipv6: \fI<number>
 Specifies the maximum prefix length of the client source address we

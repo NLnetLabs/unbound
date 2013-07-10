@@ -161,9 +161,7 @@ config_create(void)
 	cfg->forwards = NULL;
 #ifdef CLIENT_SUBNET
 	cfg->client_subnet = NULL;
-	/* OPC Not assigned yet! taken from http://wilmer.gaa.st/
-	 * edns-client-subnet/bind-9.7.1-dig-edns-client-subnet.diff */
-	cfg->client_subnet_opcode = 0x50fa;
+	cfg->client_subnet_opcode = 8;
 	cfg->max_client_subnet_ipv4 = 24;
 	cfg->max_client_subnet_ipv6 = 64;
 #endif

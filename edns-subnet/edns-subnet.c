@@ -15,8 +15,8 @@
 #include "edns-subnet/edns-subnet.h"
 #include <string.h>
 
-/** Opcode for edns subnet option, is TBD. */
-uint16_t EDNSSUBNET_OPCODE = 0x50fa;
+/** Opcode for edns subnet option, as assigned by IANA. */
+uint16_t EDNSSUBNET_OPCODE = 8;
 uint8_t EDNSSUBNET_MAX_SUBNET_IP4 = 24;
 uint8_t EDNSSUBNET_MAX_SUBNET_IP6 = 64;
 
