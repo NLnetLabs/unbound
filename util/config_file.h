@@ -306,6 +306,9 @@ struct config_file {
 
 	/* RRSet roundrobin */
 	int rrset_roundrobin;
+
+	/* maximum UDP response size */
+	size_t max_udp_size;
 };
 
 /**

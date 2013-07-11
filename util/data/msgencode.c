@@ -661,8 +661,9 @@ reply_info_encode(struct query_info* qinfo, struct reply_info* rep,
 			return 0;
 		}
 	}
-	/* roundrobin offset. using query id for random number */
-	rr_offset = RRSET_ROUNDROBIN?id:0;
+	/* roundrobin offset. using query id for random number.  With ntohs
+	 * for different roundrobins for sequential id client senders. */
+	rr_offset = RRSET_ROUNDROBIN?ntohs(id):0;
 
 	/* insert answer section */
 	if((r=insert_section(rep, rep->an_numrrsets, &ancount, buffer, 
@@ -710,9 +711,6 @@ reply_info_encode(struct query_info* qinfo, struct reply_info* rep,
 			}
 			return 0;
 		}
-		ldns_buffer_write_u16_at(buffer, 10, arcount);
-	} else {
-		ldns_buffer_write_u16_at(buffer, 8, nscount);
 		ldns_buffer_write_u16_at(buffer, 10, arcount);
 	}
 	ldns_buffer_flip(buffer);

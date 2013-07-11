@@ -210,6 +210,7 @@ config_create(void)
 	cfg->control_port = UNBOUND_CONTROL_PORT;
 	cfg->minimal_responses = 0;
 	cfg->rrset_roundrobin = 0;
+	cfg->max_udp_size = 4096;
 	if(!(cfg->server_key_file = strdup(RUN_DIR"/unbound_server.key"))) 
 		goto error_exit;
 	if(!(cfg->server_cert_file = strdup(RUN_DIR"/unbound_server.pem"))) 
@@ -340,7 +341,11 @@ int config_set_option(struct config_file* cfg, const char* opt,
 		cfg->use_syslog = 0;
 		free(cfg->logfile);
 		return (cfg->logfile = strdup(val)) != NULL;
-	} 
+	}
+	else if(strcmp(opt, "log-time-ascii:") == 0)
+	{ IS_YES_OR_NO; cfg->log_time_ascii = (strcmp(val, "yes") == 0);
+	  log_set_time_asc(cfg->log_time_ascii); }
+	else S_SIZET_NONZERO("max-udp-size:", max_udp_size)
 	else S_YNO("use-syslog:", use_syslog)
 	else S_YNO("extended-statistics:", stat_extended)
 	else S_YNO("statistics-cumulative:", stat_cumulative)
@@ -371,7 +376,10 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	else S_POW2("rrset-cache-slabs:", rrset_cache_slabs)
 	else S_YNO("prefetch:", prefetch)
 	else S_YNO("prefetch-key:", prefetch_key)
-	else S_NUMBER_OR_ZERO("cache-max-ttl:", max_ttl)
+	else if(strcmp(opt, "cache-max-ttl:") == 0)
+	{ IS_NUMBER_OR_ZERO; cfg->max_ttl = atoi(val); MAX_TTL=cfg->max_ttl;}
+	else if(strcmp(opt, "cache-min-ttl:") == 0)
+	{ IS_NUMBER_OR_ZERO; cfg->min_ttl = atoi(val); MIN_TTL=cfg->min_ttl;}
 	else S_NUMBER_OR_ZERO("infra-host-ttl:", host_ttl)
 	else S_POW2("infra-cache-slabs:", infra_cache_slabs)
 	else S_SIZET_NONZERO("infra-cache-numhosts:", infra_cache_numhosts)
@@ -436,6 +444,10 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	else S_NUMBER_OR_ZERO("max-client-subnet-ipv6:", max_client_subnet_ipv6)
 	else S_NUMBER_OR_ZERO("client-subnet-opcode:", client_subnet_opcode)
 #endif
+	/* val_sig_skew_min and max are copied into val_env during init,
+	 * so this does not update val_env with set_option */
+	else S_NUMBER_OR_ZERO("val-sig-skew-min:", val_sig_skew_min)
+	else S_NUMBER_OR_ZERO("val-sig-skew-max:", val_sig_skew_max)
 	else if (strcmp(opt, "outgoing-interface:") == 0) {
 		char* d = strdup(val);
 		char** oi = (char**)malloc((cfg->num_out_ifs+1)*sizeof(char*));
@@ -535,8 +547,9 @@ config_collate_cat(struct config_strlist* list)
 			return NULL;
 		}
 		snprintf(w, left, "%s\n", s->str);
-		w += this+1;
-		left -= this+1;
+		this = strlen(w);
+		w += this;
+		left -= this;
 	}
 	return r;
 }
@@ -591,6 +604,7 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_YNO(opt, "statistics-cumulative", stat_cumulative)
 	else O_YNO(opt, "extended-statistics", stat_extended)
 	else O_YNO(opt, "use-syslog", use_syslog)
+	else O_YNO(opt, "log-time-ascii", log_time_ascii)
 	else O_DEC(opt, "num-threads", num_threads)
 	else O_IFC(opt, "interface", num_ifs, ifs)
 	else O_IFC(opt, "outgoing-interface", num_out_ifs, out_ifs)
@@ -612,6 +626,7 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_YNO(opt, "prefetch-key", prefetch_key)
 	else O_YNO(opt, "prefetch", prefetch)
 	else O_DEC(opt, "cache-max-ttl", max_ttl)
+	else O_DEC(opt, "cache-min-ttl", min_ttl)
 	else O_DEC(opt, "infra-host-ttl", host_ttl)
 	else O_DEC(opt, "infra-cache-slabs", infra_cache_slabs)
 	else O_MEM(opt, "infra-cache-numhosts", infra_cache_numhosts)
@@ -686,6 +701,10 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_DEC(opt, "max-client-subnet-ipv6", max_client_subnet_ipv6)
 	else O_DEC(opt, "client-subnet-opcode", client_subnet_opcode)
 #endif
+	else O_DEC(opt, "max-udp-size", max_udp_size)
+	else O_STR(opt, "python-script", python_script)
+	else O_DEC(opt, "val-sig-skew-min", val_sig_skew_min)
+	else O_DEC(opt, "val-sig-skew-max", val_sig_skew_max)
 	/* not here:
 	 * outgoing-permit, outgoing-avoid - have list of ports
 	 * local-zone - zones and nodefault variables

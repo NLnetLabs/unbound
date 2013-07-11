@@ -494,8 +494,8 @@ static struct val_neg_zone* neg_zone_chain(
 			struct val_neg_zone* p=first, *np;
 			while(p) {
 				np = p->parent;
-				free(p);
 				free(p->name);
+				free(p);
 				p = np;
 			}
 			return NULL;
@@ -640,8 +640,8 @@ static struct val_neg_data* neg_data_chain(
 			struct val_neg_data* p = first, *np;
 			while(p) {
 				np = p->parent;
-				free(p);
 				free(p->name);
+				free(p);
 				p = np;
 			}
 			return NULL;

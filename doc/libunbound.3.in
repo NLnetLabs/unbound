@@ -364,7 +364,7 @@ The result of the DNS resolution and validation is returned as
 .fi
 .P
 If both secure and bogus are false, security was not enabled for the 
-domain of the query.
+domain of the query.  Else, they are not both true, one of them is true.
 .SH "RETURN VALUES"
 Many routines return an error code. The value 0 (zero) denotes no error
 happened. Other values can be passed to

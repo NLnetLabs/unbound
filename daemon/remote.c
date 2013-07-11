@@ -1663,6 +1663,38 @@ do_stub_remove(SSL* ssl, struct worker* worker, char* args)
 	send_ok(ssl);
 }
 
+/** do the insecure_add command */
+static void
+do_insecure_add(SSL* ssl, struct worker* worker, char* arg)
+{
+	size_t nmlen;
+	int nmlabs;
+	uint8_t* nm = NULL;
+	if(!parse_arg_name(ssl, arg, &nm, &nmlen, &nmlabs))
+		return;
+	if(!anchors_add_insecure(worker->env.anchors, LDNS_RR_CLASS_IN, nm)) {
+		(void)ssl_printf(ssl, "error out of memory\n");
+		free(nm);
+		return;
+	}
+	free(nm);
+	send_ok(ssl);
+}
+
+/** do the insecure_remove command */
+static void
+do_insecure_remove(SSL* ssl, struct worker* worker, char* arg)
+{
+	size_t nmlen;
+	int nmlabs;
+	uint8_t* nm = NULL;
+	if(!parse_arg_name(ssl, arg, &nm, &nmlen, &nmlabs))
+		return;
+	anchors_delete_insecure(worker->env.anchors, LDNS_RR_CLASS_IN, nm);
+	free(nm);
+	send_ok(ssl);
+}
+
 /** do the status command */
 static void
 do_status(SSL* ssl, struct worker* worker)
@@ -2049,6 +2081,16 @@ execute_cmd(struct daemon_remote* rc, SSL* ssl, char* cmd,
 		/* must always distribute this cmd */
 		if(rc) distribute_cmd(rc, ssl, cmd);
 		do_forward_remove(ssl, worker, skipwhite(p+14));
+		return;
+	} else if(cmdcmp(p, "insecure_add", 12)) {
+		/* must always distribute this cmd */
+		if(rc) distribute_cmd(rc, ssl, cmd);
+		do_insecure_add(ssl, worker, skipwhite(p+12));
+		return;
+	} else if(cmdcmp(p, "insecure_remove", 15)) {
+		/* must always distribute this cmd */
+		if(rc) distribute_cmd(rc, ssl, cmd);
+		do_insecure_remove(ssl, worker, skipwhite(p+15));
 		return;
 	} else if(cmdcmp(p, "forward", 7)) {
 		/* must always distribute this cmd */

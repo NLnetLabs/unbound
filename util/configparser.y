@@ -107,6 +107,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_STUB_FIRST VAR_MINIMAL_RESPONSES VAR_RRSET_ROUNDROBIN
 %token VAR_SEND_CLIENT_SUBNET VAR_CLIENT_SUBNET_OPCODE
 %token VAR_MAX_CLIENT_SUBNET_IPV4 VAR_MAX_CLIENT_SUBNET_IPV6
+%token VAR_MAX_UDP_SIZE
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -166,6 +167,7 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_minimal_responses | server_rrset_roundrobin | 
 	server_send_client_subnet | server_client_subnet_opcode |
 	server_max_client_subnet_ipv4 | server_max_client_subnet_ipv6
+	server_minimal_responses | server_rrset_roundrobin | server_max_udp_size
 	;
 stubstart: VAR_STUB_ZONE
 	{
@@ -1179,6 +1181,12 @@ server_rrset_roundrobin: VAR_RRSET_ROUNDROBIN STRING_ARG
 		else cfg_parser->cfg->rrset_roundrobin =
 			(strcmp($2, "yes")==0);
 		free($2);
+	}
+	;
+server_max_udp_size: VAR_MAX_UDP_SIZE STRING_ARG
+	{
+		OUTYY(("P(server_max_udp_size:%s)\n", $2));
+		cfg_parser->cfg->max_udp_size = atoi($2);
 	}
 	;
 stub_name: VAR_NAME STRING_ARG

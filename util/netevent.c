@@ -98,7 +98,9 @@
 #  ifdef HAVE_EVENT_H
 #    include <event.h>
 #  else
-#    include "event.h"
+#    include "event2/event.h"
+#    include "event2/event_struct.h"
+#    include "event2/event_compat.h"
 #  endif
 #endif /* USE_MINI_EVENT */
 
@@ -318,6 +320,10 @@ udp_send_errno_needs_log(struct sockaddr* addr, socklen_t addrlen)
 			break;
 	}
 #endif
+	/* permission denied is gotten for every send if the
+	 * network is disconnected (on some OS), squelch it */
+	if(errno == EPERM && verbosity < VERB_DETAIL)
+		return 0;
 	/* squelch errors where people deploy AAAA ::ffff:bla for
 	 * authority servers, which we try for intranets. */
 	if(errno == EINVAL && addr_is_ip4mapped(

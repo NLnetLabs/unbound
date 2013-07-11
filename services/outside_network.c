@@ -63,7 +63,9 @@
 #include "edns-subnet/subnet-whitelist.h"
 #endif
 
+#ifdef HAVE_OPENSSL_SSL_H
 #include <openssl/ssl.h>
+#endif
 
 #ifdef HAVE_NETDB_H
 #include <netdb.h>

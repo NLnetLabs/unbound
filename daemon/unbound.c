@@ -714,6 +714,7 @@ main(int argc, char* argv[])
 #endif
 
 	log_init(NULL, 0, NULL);
+	log_ident_set(strrchr(argv[0],'/')?strrchr(argv[0],'/')+1:argv[0]);
 	/* parse the options */
 	while( (c=getopt(argc, argv, "c:dhvw:")) != -1) {
 		switch(c) {
