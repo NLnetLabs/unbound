@@ -1,3 +1,6 @@
+19 Jun 2013: Wouter
+	- streamtcp man page, contributed by Tomas Hozza.
+
 25 Jun 2013: Wouter
 	- Squelch sendto-permission denied errors when the network is
 	  not connected, to avoid spamming syslog.
