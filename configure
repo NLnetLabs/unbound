@@ -4258,7 +4258,7 @@ if eval \${cv_prog_cc_flag_$cache+:} false; then :
   $as_echo_n "(cached) " >&6
 else
 
-echo 'void f(){}' >conftest.c
+echo 'void f(void){}' >conftest.c
 if test -z "`$CC $CPPFLAGS $CFLAGS -g -c conftest.c 2>&1`"; then
 eval "cv_prog_cc_flag_$cache=yes"
 else
@@ -4289,7 +4289,7 @@ if eval \${cv_prog_cc_flag_$cache+:} false; then :
   $as_echo_n "(cached) " >&6
 else
 
-echo 'void f(){}' >conftest.c
+echo 'void f(void){}' >conftest.c
 if test -z "`$CC $CPPFLAGS $CFLAGS -O2 -c conftest.c 2>&1`"; then
 eval "cv_prog_cc_flag_$cache=yes"
 else
@@ -4879,7 +4879,7 @@ if eval \${cv_prog_cc_flag_$cache+:} false; then :
   $as_echo_n "(cached) " >&6
 else
 
-echo 'void f(){}' >conftest.c
+echo 'void f(void){}' >conftest.c
 if test -z "`$CC $CPPFLAGS $CFLAGS -Werror -c conftest.c 2>&1`"; then
 eval "cv_prog_cc_flag_$cache=yes"
 else
@@ -4910,7 +4910,7 @@ if eval \${cv_prog_cc_flag_$cache+:} false; then :
   $as_echo_n "(cached) " >&6
 else
 
-echo 'void f(){}' >conftest.c
+echo 'void f(void){}' >conftest.c
 if test -z "`$CC $CPPFLAGS $CFLAGS -Wall -c conftest.c 2>&1`"; then
 eval "cv_prog_cc_flag_$cache=yes"
 else
@@ -4943,7 +4943,7 @@ if eval \${cv_prog_cc_flag_$cache+:} false; then :
   $as_echo_n "(cached) " >&6
 else
 
-echo 'void f(){}' >conftest.c
+echo 'void f(void){}' >conftest.c
 if test -z "`$CC $CPPFLAGS $CFLAGS -std=c99 -c conftest.c 2>&1`"; then
 eval "cv_prog_cc_flag_$cache=yes"
 else
@@ -4974,7 +4974,7 @@ if eval \${cv_prog_cc_flag_$cache+:} false; then :
   $as_echo_n "(cached) " >&6
 else
 
-echo 'void f(){}' >conftest.c
+echo 'void f(void){}' >conftest.c
 if test -z "`$CC $CPPFLAGS $CFLAGS -xc99 -c conftest.c 2>&1`"; then
 eval "cv_prog_cc_flag_$cache=yes"
 else
@@ -5641,7 +5641,7 @@ if eval \${cv_prog_cc_flag_$cache+:} false; then :
   $as_echo_n "(cached) " >&6
 else
 
-echo 'void f(){}' >conftest.c
+echo 'void f(void){}' >conftest.c
 if test -z "`$CC $CPPFLAGS $CFLAGS -W -c conftest.c 2>&1`"; then
 eval "cv_prog_cc_flag_$cache=yes"
 else
@@ -5672,7 +5672,7 @@ if eval \${cv_prog_cc_flag_$cache+:} false; then :
   $as_echo_n "(cached) " >&6
 else
 
-echo 'void f(){}' >conftest.c
+echo 'void f(void){}' >conftest.c
 if test -z "`$CC $CPPFLAGS $CFLAGS -Wall -c conftest.c 2>&1`"; then
 eval "cv_prog_cc_flag_$cache=yes"
 else
@@ -5703,7 +5703,7 @@ if eval \${cv_prog_cc_flag_$cache+:} false; then :
   $as_echo_n "(cached) " >&6
 else
 
-echo 'void f(){}' >conftest.c
+echo 'void f(void){}' >conftest.c
 if test -z "`$CC $CPPFLAGS $CFLAGS -Wextra -c conftest.c 2>&1`"; then
 eval "cv_prog_cc_flag_$cache=yes"
 else
@@ -5734,7 +5734,7 @@ if eval \${cv_prog_cc_flag_$cache+:} false; then :
   $as_echo_n "(cached) " >&6
 else
 
-echo 'void f(){}' >conftest.c
+echo 'void f(void){}' >conftest.c
 if test -z "`$CC $CPPFLAGS $CFLAGS -Wdeclaration-after-statement -c conftest.c 2>&1`"; then
 eval "cv_prog_cc_flag_$cache=yes"
 else
@@ -15612,7 +15612,7 @@ if eval \${cv_prog_cc_flag_$cache+:} false; then :
   $as_echo_n "(cached) " >&6
 else
 
-echo 'void f(){}' >conftest.c
+echo 'void f(void){}' >conftest.c
 if test -z "`$CC $CPPFLAGS $CFLAGS -mt -c conftest.c 2>&1`"; then
 eval "cv_prog_cc_flag_$cache=yes"
 else
