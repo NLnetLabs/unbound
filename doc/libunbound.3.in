@@ -171,6 +171,9 @@ by default. Use
 and
 .B ub_ctx_hosts
 to read them.
+Before you call this, use the openssl functions CRYPTO_set_id_callback and
+CRYPTO_set_locking_callback to set up asyncronous operation if you use
+lib openssl (the application calls these functions once for initialisation).
 .TP
 .B ub_ctx_delete
 Delete validation context and free associated resources.

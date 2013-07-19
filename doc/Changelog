@@ -1,6 +1,7 @@
 19 Jun 2013: Wouter
 	- streamtcp man page, contributed by Tomas Hozza.
 	- iana portlist updated.
+	- libunbound documentation on how to avoid openssl race conditions.
 
 25 Jun 2013: Wouter
 	- Squelch sendto-permission denied errors when the network is
