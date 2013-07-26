@@ -1122,6 +1122,7 @@ server_max_udp_size: VAR_MAX_UDP_SIZE STRING_ARG
 	{
 		OUTYY(("P(server_max_udp_size:%s)\n", $2));
 		cfg_parser->cfg->max_udp_size = atoi($2);
+		free($2);
 	}
 	;
 stub_name: VAR_NAME STRING_ARG
