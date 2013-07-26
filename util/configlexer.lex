@@ -43,14 +43,27 @@ struct inc_state {
 	struct inc_state* next;
 };
 static struct inc_state* config_include_stack = NULL;
+static int inc_depth = 0;
 static int inc_prev = 0;
 static int num_args = 0;
+
+void init_cfg_parse(void)
+{
+	config_include_stack = NULL;
+	inc_depth = 0;
+	inc_prev = 0;
+	num_args = 0;
+}
 
 static void config_start_include(const char* filename)
 {
 	FILE *input;
 	struct inc_state* s;
 	char* nm;
+	if(inc_depth++ > 100000) {
+		ub_c_error_msg("too many include files");
+		return;
+	}
 	if(strlen(filename) == 0) {
 		ub_c_error_msg("empty include file name");
 		return;
@@ -138,6 +151,7 @@ static void config_start_include_glob(const char* filename)
 static void config_end_include(void)
 {
 	struct inc_state* s = config_include_stack;
+	--inc_depth;
 	if(!s) return;
 	free(cfg_parser->filename);
 	cfg_parser->filename = s->filename;

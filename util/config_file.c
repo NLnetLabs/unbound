@@ -69,6 +69,8 @@ int ub_c_parse(void);
 int ub_c_lex(void);
 /** wrap function */
 int ub_c_wrap(void);
+/** init lex state */
+void init_cfg_parse(void);
 
 /** init ports possible for use */
 static void init_outgoing_availports(int* array, int num);
@@ -703,6 +705,7 @@ create_cfg_parser(struct config_file* cfg, char* filename, const char* chroot)
 	cfg_parser->errors = 0;
 	cfg_parser->cfg = cfg;
 	cfg_parser->chroot = chroot;
+	init_cfg_parse();
 }
 
 int 
