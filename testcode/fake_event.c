@@ -909,8 +909,10 @@ outside_network_create(struct comm_base* base, size_t bufsize,
 	runtime->infra = infra;
 	outnet->base = base;
 	outnet->udp_buff = ldns_buffer_new(bufsize);
-	if(!outnet->udp_buff)
+	if(!outnet->udp_buff) {
+		free(outnet);
 		return NULL;
+	}
 	return outnet;
 }
 

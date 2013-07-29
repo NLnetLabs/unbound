@@ -1,3 +1,7 @@
+29 Jun 2013: Wouter
+	- Fix memleak in testcode for testbound (if it fails).
+	- Fix NSS returned arrays out of setup function to be statics.
+
 26 Jun 2013: Wouter
 	- max include of 100.000 files (depth and globbed at one time).
 	  This is to preserve system memory in bug cases, or endless cases.
