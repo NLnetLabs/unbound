@@ -1,3 +1,6 @@
+30 Jun 2013: Wouter
+	- tag 1.4.21rc1
+
 29 Jun 2013: Wouter
 	- Fix#512 memleak in testcode for testbound (if it fails).
 	- Fix#512 NSS returned arrays out of setup function to be statics.
