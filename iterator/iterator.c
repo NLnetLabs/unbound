@@ -1473,7 +1473,7 @@ processLastResort(struct module_qstate* qstate, struct iter_qstate* iq,
 			iq->chase_flags &= ~BIT_RD; /* go to authorities */
 			for(ns = p->nslist; ns; ns=ns->next) {
 				(void)delegpt_add_ns(iq->dp, qstate->region,
-					ns->name, (int)ns->lame);
+					ns->name, ns->lame);
 			}
 			for(a = p->target_list; a; a=a->next_target) {
 				(void)delegpt_add_addr(iq->dp, qstate->region,
@@ -1914,12 +1914,23 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		&& type != RESPONSE_TYPE_UNTYPED) {
 		/* a possible answer, see if it is missing DNSSEC */
 		/* but not when forwarding, so we dont mark fwder lame */
-		/* also make sure the answer is from the zone we expected,
-		 * otherwise, (due to parent,child on same server), we
-		 * might mark the server,zone lame inappropriately */
-		if(!iter_msg_has_dnssec(iq->response) &&
-			iter_msg_from_zone(iq->response, iq->dp, type,
-				iq->qchase.qclass)) {
+		if(!iter_msg_has_dnssec(iq->response)) {
+			/* Mark this address as dnsseclame in this dp,
+			 * because that will make serverselection disprefer
+			 * it, but also, once it is the only final option,
+			 * use dnssec-lame-bypass if it needs to query there.*/
+			if(qstate->reply) {
+				struct delegpt_addr* a = delegpt_find_addr(
+					iq->dp, &qstate->reply->addr,
+					qstate->reply->addrlen);
+				if(a) a->dnsseclame = 1;
+			}
+			/* test the answer is from the zone we expected,
+		 	 * otherwise, (due to parent,child on same server), we
+		 	 * might mark the server,zone lame inappropriately */
+			if(!iter_msg_from_zone(iq->response, iq->dp, type,
+				iq->qchase.qclass))
+				qstate->reply = NULL;
 			type = RESPONSE_TYPE_LAME;
 			dnsseclame = 1;
 		}
@@ -2151,8 +2162,7 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 				*qstate->env->now, dnsseclame, 0,
 				iq->qchase.qtype))
 				log_err("mark host lame: out of memory");
-		} else log_err("%slame response from cache",
-			dnsseclame?"DNSSEC ":"");
+		}
 	} else if(type == RESPONSE_TYPE_REC_LAME) {
 		/* Cache the LAMEness. */
 		verbose(VERB_DETAIL, "query response REC_LAME: "
@@ -2360,12 +2370,12 @@ processTargetResponse(struct module_qstate* qstate, int id,
 			rrset->rk.dname_len)) {
 			/* if dpns->lame then set newcname ns lame too */
 			if(!delegpt_add_ns(foriq->dp, forq->region, 
-				rrset->rk.dname, (int)dpns->lame))
+				rrset->rk.dname, dpns->lame))
 				log_err("out of memory adding cnamed-ns");
 		}
 		/* if dpns->lame then set the address(es) lame too */
 		if(!delegpt_add_rrset(foriq->dp, forq->region, rrset, 
-			(int)dpns->lame))
+			dpns->lame))
 			log_err("out of memory adding targets");
 		verbose(VERB_ALGO, "added target response");
 		delegpt_log(VERB_ALGO, foriq->dp);

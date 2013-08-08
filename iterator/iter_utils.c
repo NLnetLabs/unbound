@@ -217,14 +217,16 @@ iter_filter_unsuitable(struct iter_env* iter_env, struct module_env* env,
 		/* select remainder from worst to best */
 		else if(reclame)
 			return rtt+USEFUL_SERVER_TOP_TIMEOUT*3; /* nonpref */
-		else if(dnsseclame )
+		else if(dnsseclame || a->dnsseclame)
 			return rtt+USEFUL_SERVER_TOP_TIMEOUT*2; /* nonpref */
 		else if(a->lame)
 			return rtt+USEFUL_SERVER_TOP_TIMEOUT+1; /* nonpref */
 		else	return rtt;
 	}
 	/* no server information present */
-	if(a->lame)
+	if(a->dnsseclame)
+		return rtt+USEFUL_SERVER_TOP_TIMEOUT*2; /* nonpref */
+	else if(a->lame)
 		return USEFUL_SERVER_TOP_TIMEOUT+1+UNKNOWN_SERVER_NICENESS; /* nonpref */
 	return UNKNOWN_SERVER_NICENESS;
 }

@@ -1,3 +1,6 @@
+8 Aug 2013: Wouter
+	- Fix#516 dnssec lameness detection for answers that are improper.
+
 30 Jun 2013: Wouter
 	- tag 1.4.21rc1
 
