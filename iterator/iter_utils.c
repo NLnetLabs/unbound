@@ -225,7 +225,7 @@ iter_filter_unsuitable(struct iter_env* iter_env, struct module_env* env,
 	}
 	/* no server information present */
 	if(a->dnsseclame)
-		return rtt+USEFUL_SERVER_TOP_TIMEOUT*2; /* nonpref */
+		return UNKNOWN_SERVER_NICENESS+USEFUL_SERVER_TOP_TIMEOUT*2; /* nonpref */
 	else if(a->lame)
 		return USEFUL_SERVER_TOP_TIMEOUT+1+UNKNOWN_SERVER_NICENESS; /* nonpref */
 	return UNKNOWN_SERVER_NICENESS;

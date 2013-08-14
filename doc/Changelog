@@ -1,3 +1,6 @@
+14 Aug 2013: Wouter
+	- Fix uninit variable in fix#516.
+
 8 Aug 2013: Wouter
 	- Fix#516 dnssec lameness detection for answers that are improper.
 
