@@ -422,7 +422,7 @@ nsec3_hash_test_entry(struct entry* e, rbtree_t* ct,
 	struct query_info qinfo;
 	struct reply_info* rep = NULL;
 	struct ub_packed_rrset_key* answer, *nsec3;
-	struct nsec3_cached_hash* hash;
+	struct nsec3_cached_hash* hash = NULL;
 	int ret;
 	uint8_t* qname;
 
