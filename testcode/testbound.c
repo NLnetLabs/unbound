@@ -332,6 +332,8 @@ main(int argc, char* argv[])
 		case 'h':
 		default:
 			testbound_usage();
+			for(c=1; c<pass_argc; c++)
+				free(pass_argv[c]);
 			return 1;
 		}
 	}
@@ -339,6 +341,8 @@ main(int argc, char* argv[])
 	argv += optind;
 	if(argc != 0) {
 		testbound_usage();
+		for(c=1; c<pass_argc; c++)
+			free(pass_argv[c]);
 		return 1;
 	}
 	log_info("Start of %s testbound program.", PACKAGE_STRING);

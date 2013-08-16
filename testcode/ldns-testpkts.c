@@ -88,6 +88,7 @@ entry_add_reply(struct entry* entry)
 	pkt->packet_sleep = 0;
 	pkt->reply = ldns_pkt_new();
 	pkt->reply_from_hex = NULL;
+	pkt->raw_ednsdata = NULL;
 	/* link at end */
 	while(*p)
 		p = &((*p)->next);
@@ -389,8 +390,9 @@ data_buffer2wire(ldns_buffer *data_buffer)
 	}
 
 	if (state < 2) {
+		if (!(wire_buffer = LDNS_MALLOC(ldns_buffer)))
+			error("Could not allocate buffer for hex data\n");
 		wirelen = hexstr2bin((char *) hexbuf, hexbufpos, wire, 0, LDNS_MAX_PACKETLEN);
-		wire_buffer = ldns_buffer_new(wirelen);
 		ldns_buffer_new_frm_data(wire_buffer, wire, wirelen);
 	} else {
 		error("Incomplete hex data, not at byte boundary\n");
@@ -954,6 +956,7 @@ void delete_replylist(struct reply_packet* replist)
 		np = p->next;
 		ldns_pkt_free(p->reply);
 		ldns_buffer_free(p->reply_from_hex);
+		ldns_buffer_free(p->raw_ednsdata);
 		free(p);
 		p=np;
 	}
