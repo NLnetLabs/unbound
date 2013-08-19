@@ -372,6 +372,11 @@ int libworker_bg(struct ub_ctx* ctx)
 			case -1:
 				return UB_FORKFAIL;
 			default:
+				/* close non-used parts, so that the worker
+				 * bgprocess gets 'pipe closed' when the
+				 * main process exits */
+				tube_close_read(ctx->qq_pipe);
+				tube_close_write(ctx->rr_pipe);
 				break;
 		}
 #endif /* HAVE_FORK */ 

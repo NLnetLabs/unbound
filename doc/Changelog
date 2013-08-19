@@ -1,3 +1,6 @@
+19 Aug 2013: Wouter
+	- Fix#519 ub_ctx_delete may hang in some scenarios (libunbound).
+
 14 Aug 2013: Wouter
 	- Fix uninit variable in fix#516.
 
