@@ -242,7 +242,7 @@ parse_comments(char* str, struct autr_ta* ta)
         if (pos < 0 || !timestamp)
 		ta->last_change = 0;
         else
-                ta->last_change = (uint32_t)timestamp;
+                ta->last_change = (time_t)timestamp;
 
         free(comment);
         return 1;
@@ -677,12 +677,12 @@ parse_var_line(char* line, struct val_anchors* anchors,
 	} else if(strncmp(line, ";;query_interval: ", 18) == 0) {
 		if(!tp) return -1;
 		lock_basic_lock(&tp->lock);
-		tp->autr->query_interval = (uint32_t)parse_int(line+18, &r);
+		tp->autr->query_interval = (time_t)parse_int(line+18, &r);
 		lock_basic_unlock(&tp->lock);
 	} else if(strncmp(line, ";;retry_time: ", 14) == 0) {
 		if(!tp) return -1;
 		lock_basic_lock(&tp->lock);
-		tp->autr->retry_time = (uint32_t)parse_int(line+14, &r);
+		tp->autr->retry_time = (time_t)parse_int(line+14, &r);
 		lock_basic_unlock(&tp->lock);
 	}
 	return r;
@@ -1031,23 +1031,23 @@ verify_dnskey(struct module_env* env, struct val_env* ve,
 }
 
 /** Find minimum expiration interval from signatures */
-static uint32_t
+static time_t
 min_expiry(struct module_env* env, ldns_rr_list* rrset)
 {
 	size_t i;
-	uint32_t t, r = 15 * 24 * 3600; /* 15 days max */
+	int32_t t, r = 15 * 24 * 3600; /* 15 days max */
 	for(i=0; i<ldns_rr_list_rr_count(rrset); i++) {
 		ldns_rr* rr = ldns_rr_list_rr(rrset, i);
 		if(ldns_rr_get_type(rr) != LDNS_RR_TYPE_RRSIG)
 			continue;
 		t = ldns_rdf2native_int32(ldns_rr_rrsig_expiration(rr));
-		if(t - *env->now > 0) {
+		if((int32_t)t - (int32_t)*env->now > 0) {
 			t -= *env->now;
 			if(t < r)
 				r = t;
 		}
 	}
-	return r;
+	return (time_t)r;
 }
 
 /** Is rr self-signed revoked key */
@@ -1239,7 +1239,7 @@ add_key(struct trust_anchor* tp, ldns_rr* rr)
 }
 
 /** get TTL from DNSKEY rrset */
-static uint32_t
+static time_t
 key_ttl(struct ub_packed_rrset_key* k)
 {
 	struct packed_rrset_data* d = (struct packed_rrset_data*)k->entry.data;
@@ -1248,10 +1248,10 @@ key_ttl(struct ub_packed_rrset_key* k)
 
 /** update the time values for the trustpoint */
 static void
-set_tp_times(struct trust_anchor* tp, uint32_t rrsig_exp_interval, 
-	uint32_t origttl, int* changed)
+set_tp_times(struct trust_anchor* tp, time_t rrsig_exp_interval, 
+	time_t origttl, int* changed)
 {
-	uint32_t x, qi = tp->autr->query_interval, rt = tp->autr->retry_time;
+	time_t x, qi = tp->autr->query_interval, rt = tp->autr->retry_time;
 	
 	/* x = MIN(15days, ttl/2, expire/2) */
 	x = 15 * 24 * 3600;
@@ -1762,15 +1762,15 @@ autr_cleanup_keys(struct trust_anchor* tp)
 
 /** calculate next probe time */
 static time_t
-calc_next_probe(struct module_env* env, uint32_t wait)
+calc_next_probe(struct module_env* env, time_t wait)
 {
 	/* make it random, 90-100% */
-	uint32_t rnd, rest;
+	time_t rnd, rest;
 	if(wait < 3600)
 		wait = 3600;
 	rnd = wait/10;
 	rest = wait-rnd;
-	rnd = (uint32_t)ub_random_max(env->rnd, (long int)rnd);
+	rnd = (time_t)ub_random_max(env->rnd, (long int)rnd);
 	return (time_t)(*env->now + rest + rnd);
 }
 
@@ -1790,7 +1790,7 @@ reset_worker_timer(struct module_env* env)
 {
 	struct timeval tv;
 #ifndef S_SPLINT_S
-	uint32_t next = (uint32_t)wait_probe_time(env->anchors);
+	time_t next = (time_t)wait_probe_time(env->anchors);
 	/* in case this is libunbound, no timer */
 	if(!env->probe_timer)
 		return;
@@ -2156,7 +2156,7 @@ probe_anchor(struct module_env* env, struct trust_anchor* tp)
 
 /** fetch first to-probe trust-anchor and lock it and set retrytime */
 static struct trust_anchor*
-todo_probe(struct module_env* env, uint32_t* next)
+todo_probe(struct module_env* env, time_t* next)
 {
 	struct trust_anchor* tp;
 	rbnode_t* el;
@@ -2171,9 +2171,9 @@ todo_probe(struct module_env* env, uint32_t* next)
 	lock_basic_lock(&tp->lock);
 
 	/* is it eligible? */
-	if((uint32_t)tp->autr->next_probe_time > *env->now) {
+	if((time_t)tp->autr->next_probe_time > *env->now) {
 		/* no more to probe */
-		*next = (uint32_t)tp->autr->next_probe_time - *env->now;
+		*next = (time_t)tp->autr->next_probe_time - *env->now;
 		lock_basic_unlock(&tp->lock);
 		lock_basic_unlock(&env->anchors->lock);
 		return NULL;
@@ -2188,11 +2188,11 @@ todo_probe(struct module_env* env, uint32_t* next)
 	return tp;
 }
 
-uint32_t 
+time_t 
 autr_probe_timer(struct module_env* env)
 {
 	struct trust_anchor* tp;
-	uint32_t next_probe = 3600;
+	time_t next_probe = 3600;
 	int num = 0;
 	verbose(VERB_ALGO, "autotrust probe timer callback");
 	/* while there are still anchors to probe */

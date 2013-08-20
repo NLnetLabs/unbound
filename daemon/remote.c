@@ -1118,9 +1118,9 @@ struct del_info {
 	/** labels */
 	int labs;
 	/** now */
-	uint32_t now;
+	time_t now;
 	/** time to invalidate to */
-	uint32_t expired;
+	time_t expired;
 	/** number of rrsets removed */
 	size_t num_rrsets;
 	/** number of msgs removed */
@@ -1836,7 +1836,7 @@ struct infra_arg {
 	/** the SSL connection */
 	SSL* ssl;
 	/** the time now */
-	uint32_t now;
+	time_t now;
 };
 
 /** callback for every host element in the infra cache */

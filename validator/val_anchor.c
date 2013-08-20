@@ -900,7 +900,7 @@ assemble_it(struct trust_anchor* ta, size_t num, uint16_t type)
 		free(pkey);
 		return NULL;
 	}
-	pd->rr_ttl = (uint32_t*)malloc(num*sizeof(uint32_t));
+	pd->rr_ttl = (time_t*)malloc(num*sizeof(time_t));
 	if(!pd->rr_ttl) {
 		free(pd->rr_len);
 		free(pd);

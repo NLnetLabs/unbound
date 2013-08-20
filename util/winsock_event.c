@@ -71,7 +71,7 @@ settime(struct event_base* base)
                 return -1;
         }
 #ifndef S_SPLINT_S
-        *base->time_secs = (uint32_t)base->time_tv->tv_sec;
+        *base->time_secs = (time_t)base->time_tv->tv_sec;
 #endif
         return 0;
 }
@@ -108,7 +108,7 @@ zero_waitfor(WSAEVENT waitfor[], WSAEVENT x)
 	}
 }
 
-void *event_init(uint32_t* time_secs, struct timeval* time_tv)
+void *event_init(time_t* time_secs, struct timeval* time_tv)
 {
         struct event_base* base = (struct event_base*)malloc(
 		sizeof(struct event_base));

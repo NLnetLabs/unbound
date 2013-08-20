@@ -73,7 +73,7 @@ static const char* ident="unbound";
 static int logging_to_syslog = 0;
 #endif /* HAVE_SYSLOG_H */
 /** time to print in log, if NULL, use time(2) */
-static uint32_t* log_now = NULL;
+static time_t* log_now = NULL;
 /** print time in UTC or in secondsfrom1970 */
 static int log_time_asc = 0;
 
@@ -151,7 +151,7 @@ void log_ident_set(const char* id)
 	ident = id;
 }
 
-void log_set_time(uint32_t* t)
+void log_set_time(time_t* t)
 {
 	log_now = t;
 }

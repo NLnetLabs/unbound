@@ -422,7 +422,7 @@ mesh_new_callback(struct mesh_area* mesh, struct query_info* qinfo,
 }
 
 void mesh_new_prefetch(struct mesh_area* mesh, struct query_info* qinfo,
-        uint16_t qflags, uint32_t leeway)
+        uint16_t qflags, time_t leeway)
 {
 	struct mesh_state* s = mesh_area_find(mesh, qinfo, qflags&BIT_RD, 0);
 #ifdef UNBOUND_DEBUG

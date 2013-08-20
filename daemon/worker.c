@@ -449,7 +449,7 @@ answer_norec_from_cache(struct worker* worker, struct query_info* qinfo,
 	 */
 	uint16_t udpsize = edns->udp_size;
 	int secure = 0;
-	uint32_t timenow = *worker->env.now;
+	time_t timenow = *worker->env.now;
 	int must_validate = (!(flags&BIT_CD) || worker->env.cfg->ignore_cd)
 		&& worker->env.need_to_validate;
 	struct dns_msg *msg = NULL;
@@ -524,7 +524,7 @@ answer_from_cache(struct worker* worker, struct query_info* qinfo,
 	struct reply_info* rep, uint16_t id, uint16_t flags, 
 	struct comm_reply* repinfo, struct edns_data* edns)
 {
-	uint32_t timenow = *worker->env.now;
+	time_t timenow = *worker->env.now;
 	uint16_t udpsize = edns->udp_size;
 	int secure;
 	int must_validate = (!(flags&BIT_CD) || worker->env.cfg->ignore_cd)
@@ -614,7 +614,7 @@ answer_from_cache(struct worker* worker, struct query_info* qinfo,
 /** Reply to client and perform prefetch to keep cache up to date */
 static void
 reply_and_prefetch(struct worker* worker, struct query_info* qinfo, 
-	uint16_t flags, struct comm_reply* repinfo, uint32_t leeway)
+	uint16_t flags, struct comm_reply* repinfo, time_t leeway)
 {
 	/* first send answer to client to keep its latency 
 	 * as small as a cachereply */
@@ -896,7 +896,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 			/* prefetch it if the prefetch TTL expired */
 			if(worker->env.cfg->prefetch && *worker->env.now >=
 				((struct reply_info*)e->data)->prefetch_ttl) {
-				uint32_t leeway = ((struct reply_info*)e->
+				time_t leeway = ((struct reply_info*)e->
 					data)->ttl - *worker->env.now;
 				lock_rw_unlock(&e->lock);
 				reply_and_prefetch(worker, &qinfo, 

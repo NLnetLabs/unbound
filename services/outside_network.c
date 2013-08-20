@@ -1361,7 +1361,7 @@ serviced_udp_send(struct serviced_query* sq, ldns_buffer* buff)
 {
 	int rtt, vs;
 	uint8_t edns_lame_known;
-	uint32_t now = *sq->outnet->now_secs;
+	time_t now = *sq->outnet->now_secs;
 
 	if(!infra_host(sq->outnet->infra, &sq->addr, sq->addrlen, sq->zone,
 		sq->zonelen, now, &vs, &edns_lame_known, &rtt))
@@ -1576,7 +1576,7 @@ serviced_tcp_callback(struct comm_point* c, void* arg, int error,
 		if(roundtime < TCP_AUTH_QUERY_TIMEOUT*1000) {
 		    if(!infra_rtt_update(sq->outnet->infra, &sq->addr,
 			sq->addrlen, sq->zone, sq->zonelen, sq->qtype,
-			roundtime, sq->last_rtt, (uint32_t)now.tv_sec))
+			roundtime, sq->last_rtt, (time_t)now.tv_sec))
 			log_err("out of memory noting rtt.");
 		}
 	    }
@@ -1668,7 +1668,7 @@ serviced_udp_callback(struct comm_point* c, void* arg, int error,
 		sq->retry++;
 		if(!(rto=infra_rtt_update(outnet->infra, &sq->addr, sq->addrlen,
 			sq->zone, sq->zonelen, sq->qtype, -1, sq->last_rtt,
-			(uint32_t)now.tv_sec)))
+			(time_t)now.tv_sec)))
 			log_err("out of memory in UDP exponential backoff");
 		if(sq->retry < OUTBOUND_UDP_RETRY) {
 			log_name_addr(VERB_ALGO, "retry query", sq->qbuf+10,
@@ -1712,7 +1712,7 @@ serviced_udp_callback(struct comm_point* c, void* arg, int error,
 		/* only store noEDNS in cache if domain is noDNSSEC */
 		if(!sq->want_dnssec)
 		  if(!infra_edns_update(outnet->infra, &sq->addr, sq->addrlen,
-			sq->zone, sq->zonelen, -1, (uint32_t)now.tv_sec)) {
+			sq->zone, sq->zonelen, -1, (time_t)now.tv_sec)) {
 			log_err("Out of memory caching no edns for host");
 		  }
 		sq->status = serviced_query_UDP;
@@ -1722,7 +1722,7 @@ serviced_udp_callback(struct comm_point* c, void* arg, int error,
 		log_addr(VERB_ALGO, "serviced query: EDNS works for",
 			&sq->addr, sq->addrlen);
 		if(!infra_edns_update(outnet->infra, &sq->addr, sq->addrlen, 
-			sq->zone, sq->zonelen, 0, (uint32_t)now.tv_sec)) {
+			sq->zone, sq->zonelen, 0, (time_t)now.tv_sec)) {
 			log_err("Out of memory caching edns works");
 		}
 		sq->edns_lame_known = 1;
@@ -1739,7 +1739,7 @@ serviced_udp_callback(struct comm_point* c, void* arg, int error,
 		  log_addr(VERB_ALGO, "serviced query: EDNS fails for",
 			&sq->addr, sq->addrlen);
 		  if(!infra_edns_update(outnet->infra, &sq->addr, sq->addrlen,
-			sq->zone, sq->zonelen, -1, (uint32_t)now.tv_sec)) {
+			sq->zone, sq->zonelen, -1, (time_t)now.tv_sec)) {
 			log_err("Out of memory caching no edns for host");
 		  }
 		} else {
@@ -1762,7 +1762,7 @@ serviced_udp_callback(struct comm_point* c, void* arg, int error,
 		if(roundtime < 60000) {
 		    if(!infra_rtt_update(outnet->infra, &sq->addr, sq->addrlen, 
 			sq->zone, sq->zonelen, sq->qtype, roundtime,
-			sq->last_rtt, (uint32_t)now.tv_sec))
+			sq->last_rtt, (time_t)now.tv_sec))
 			log_err("out of memory noting rtt.");
 		}
 	    }
