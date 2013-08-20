@@ -1583,7 +1583,7 @@ static void config_start_include(const char* filename)
 	}
 	nm = strdup(filename);
 	if(!nm) {
-		ub_c_error_msg("include %s: malloc failure", filename);
+		ub_c_error_msg("include %s: strdup failure", filename);
 		free(s);
 		return;
 	}
