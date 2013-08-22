@@ -1567,7 +1567,7 @@ serviced_tcp_callback(struct comm_point* c, void* arg, int error,
 		(now.tv_sec == sq->last_sent_time.tv_sec &&
 		now.tv_usec > sq->last_sent_time.tv_usec)) {
 		/* convert from microseconds to milliseconds */
-		int roundtime = ((int)now.tv_sec - (int)sq->last_sent_time.tv_sec)*1000
+		int roundtime = ((int)(now.tv_sec - sq->last_sent_time.tv_sec))*1000
 		  + ((int)now.tv_usec - (int)sq->last_sent_time.tv_usec)/1000;
 		verbose(VERB_ALGO, "measured TCP-time at %d msec", roundtime);
 		log_assert(roundtime >= 0);
@@ -1753,7 +1753,7 @@ serviced_udp_callback(struct comm_point* c, void* arg, int error,
 		(now.tv_sec == sq->last_sent_time.tv_sec &&
 		now.tv_usec > sq->last_sent_time.tv_usec)) {
 		/* convert from microseconds to milliseconds */
-		int roundtime = ((int)now.tv_sec - (int)sq->last_sent_time.tv_sec)*1000
+		int roundtime = ((int)(now.tv_sec - sq->last_sent_time.tv_sec))*1000
 		  + ((int)now.tv_usec - (int)sq->last_sent_time.tv_usec)/1000;
 		verbose(VERB_ALGO, "measured roundtrip at %d msec", roundtime);
 		log_assert(roundtime >= 0);

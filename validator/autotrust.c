@@ -1804,7 +1804,7 @@ reset_worker_timer(struct module_env* env)
 #endif
 	tv.tv_usec = 0;
 	comm_timer_set(env->probe_timer, &tv);
-	verbose(VERB_ALGO, "scheduled next probe in %d sec", (int)tv.tv_sec);
+	verbose(VERB_ALGO, "scheduled next probe in %lld sec", (long long)tv.tv_sec);
 }
 
 /** set next probe for trust anchor */

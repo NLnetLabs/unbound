@@ -878,8 +878,8 @@ mesh_send_reply(struct mesh_state* m, int rcode, struct reply_info* rep,
 	m->s.env->mesh->num_reply_addrs--;
 	end_time = *m->s.env->now_tv;
 	timeval_subtract(&duration, &end_time, &r->start_time);
-	verbose(VERB_ALGO, "query took %d.%6.6d sec",
-		(int)duration.tv_sec, (int)duration.tv_usec);
+	verbose(VERB_ALGO, "query took %lld.%6.6d sec",
+		(long long)duration.tv_sec, (int)duration.tv_usec);
 	m->s.env->mesh->replies_sent++;
 	timeval_add(&m->s.env->mesh->replies_sum_wait, &duration);
 	timehist_insert(m->s.env->mesh->histogram, &duration);
@@ -1124,7 +1124,7 @@ mesh_stats(struct mesh_area* mesh, const char* str)
 		timeval_divide(&avg, &mesh->replies_sum_wait, 
 			mesh->replies_sent);
 		log_info("average recursion processing time "
-			"%d.%6.6d sec", (int)avg.tv_sec, (int)avg.tv_usec);
+			"%lld.%6.6d sec", (long long)avg.tv_sec, (int)avg.tv_usec);
 		log_info("histogram of recursion processing times");
 		timehist_log(mesh->histogram, "recursions");
 	}

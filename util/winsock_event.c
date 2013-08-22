@@ -181,8 +181,8 @@ static void handle_timeouts(struct event_base* base, struct timeval* now,
                                 wait->tv_usec = p->ev_timeout.tv_usec
                                         - now->tv_usec;
                         }
-			verbose(VERB_CLIENT, "winsock_event wait=%d.%6.6d",
-				(int)wait->tv_sec, (int)wait->tv_usec);
+			verbose(VERB_CLIENT, "winsock_event wait=%lld.%6.6d",
+				(long long)wait->tv_sec, (int)wait->tv_usec);
                         return;
                 }
 #endif
@@ -488,9 +488,9 @@ int event_base_set(struct event_base *base, struct event *ev)
 
 int event_add(struct event *ev, struct timeval *tv)
 {
-	verbose(VERB_ALGO, "event_add %p added=%d fd=%d tv=%d %s%s%s", 
+	verbose(VERB_ALGO, "event_add %p added=%d fd=%d tv=%lld %s%s%s", 
 		ev, ev->added, ev->ev_fd, 
-		(tv?(int)tv->tv_sec*1000+(int)tv->tv_usec/1000:-1),
+		(tv?(long long)tv->tv_sec*1000+(long long)tv->tv_usec/1000:-1),
 		(ev->ev_events&EV_READ)?" EV_READ":"",
 		(ev->ev_events&EV_WRITE)?" EV_WRITE":"",
 		(ev->ev_events&EV_TIMEOUT)?" EV_TIMEOUT":"");
@@ -569,10 +569,10 @@ int event_add(struct event *ev, struct timeval *tv)
 
 int event_del(struct event *ev)
 {
-	verbose(VERB_ALGO, "event_del %p added=%d fd=%d tv=%d %s%s%s", 
+	verbose(VERB_ALGO, "event_del %p added=%d fd=%d tv=%lld %s%s%s", 
 		ev, ev->added, ev->ev_fd, 
-		(ev->ev_events&EV_TIMEOUT)?(int)ev->ev_timeout.tv_sec*1000+
-		(int)ev->ev_timeout.tv_usec/1000:-1,
+		(ev->ev_events&EV_TIMEOUT)?(long long)ev->ev_timeout.tv_sec*1000+
+		(long long)ev->ev_timeout.tv_usec/1000:-1,
 		(ev->ev_events&EV_READ)?" EV_READ":"",
 		(ev->ev_events&EV_WRITE)?" EV_WRITE":"",
 		(ev->ev_events&EV_TIMEOUT)?" EV_TIMEOUT":"");

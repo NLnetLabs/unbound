@@ -228,7 +228,7 @@ log_vmsg(int pri, const char* type,
 			ident, (int)getpid(), tid?*tid:0, type, message);
 	} else
 #endif
-	fprintf(logfile, "[%u] %s[%d:%x] %s: %s\n", (unsigned)now, 
+	fprintf(logfile, "[%lld] %s[%d:%x] %s: %s\n", (long long)now, 
 		ident, (int)getpid(), tid?*tid:0, type, message);
 #ifdef UB_ON_WINDOWS
 	/* line buffering does not work on windows */
