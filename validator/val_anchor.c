@@ -242,6 +242,8 @@ anchor_new_ta(struct val_anchors* anchors, uint8_t* name, int namelabs,
 	}
 #ifdef UNBOUND_DEBUG
 	r =
+#else
+	(void)
 #endif
 	rbtree_insert(anchors->tree, &ta->node);
 	if(lockit) {

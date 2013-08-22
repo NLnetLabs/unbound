@@ -521,7 +521,7 @@ perform_setup(struct daemon* daemon, struct config_file* cfg, int debug_mode,
 		/* setusercontext does initgroups, setuid, setgid, and
 		 * also resource limits from login config, but we
 		 * still call setresuid, setresgid to be sure to set all uid*/
-		if(setusercontext(NULL, pwd, uid,
+		if(setusercontext(NULL, pwd, uid, (unsigned)
 			LOGIN_SETALL & ~LOGIN_SETUSER & ~LOGIN_SETGROUP) != 0)
 			log_warn("unable to setusercontext %s: %s",
 				cfg->username, strerror(errno));

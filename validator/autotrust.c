@@ -881,6 +881,8 @@ print_id(FILE* out, char* fname, struct module_env* env,
 	ldns_buffer_clear(env->scratch_buffer);
 #ifdef UNBOUND_DEBUG
 	s =
+#else
+	(void)
 #endif
 	ldns_rdf2buffer_str_dname(env->scratch_buffer, &rdf);
 	log_assert(s == LDNS_STATUS_OK);

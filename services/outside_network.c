@@ -1210,6 +1210,8 @@ serviced_create(struct outside_network* outnet, ldns_buffer* buff, int dnssec,
 	sq->to_be_deleted = 0;
 #ifdef UNBOUND_DEBUG
 	ins = 
+#else
+	(void)
 #endif
 	rbtree_insert(outnet->serviced, &sq->node);
 	log_assert(ins != NULL); /* must not be already present */
@@ -1449,6 +1451,8 @@ serviced_callbacks(struct serviced_query* sq, int error, struct comm_point* c,
 	size_t backlen = 0;
 #ifdef UNBOUND_DEBUG
 	rbnode_t* rem =
+#else
+	(void)
 #endif
 	/* remove from tree, and schedule for deletion, so that callbacks
 	 * can safely deregister themselves and even create new serviced
@@ -1866,6 +1870,8 @@ void outnet_serviced_query_stop(struct serviced_query* sq, void* cb_arg)
 	if(!sq->cblist && !sq->to_be_deleted) {
 #ifdef UNBOUND_DEBUG
 		rbnode_t* rem =
+#else
+		(void)
 #endif
 		rbtree_delete(sq->outnet->serviced, sq);
 		log_assert(rem); /* should be present */

@@ -321,6 +321,8 @@ void mesh_new_client(struct mesh_area* mesh, struct query_info* qinfo,
 		}
 #ifdef UNBOUND_DEBUG
 		n =
+#else
+		(void)
 #endif
 		rbtree_insert(&mesh->all, &s->node);
 		log_assert(n != NULL);
@@ -390,6 +392,8 @@ mesh_new_callback(struct mesh_area* mesh, struct query_info* qinfo,
 		}
 #ifdef UNBOUND_DEBUG
 		n =
+#else
+		(void)
 #endif
 		rbtree_insert(&mesh->all, &s->node);
 		log_assert(n != NULL);
@@ -450,6 +454,8 @@ void mesh_new_prefetch(struct mesh_area* mesh, struct query_info* qinfo,
 	}
 #ifdef UNBOUND_DEBUG
 	n =
+#else
+	(void)
 #endif
 	rbtree_insert(&mesh->all, &s->node);
 	log_assert(n != NULL);
@@ -657,6 +663,8 @@ void mesh_detach_subs(struct module_qstate* qstate)
 	RBTREE_FOR(ref, struct mesh_state_ref*, &qstate->mesh_info->sub_set) {
 #ifdef UNBOUND_DEBUG
 		n =
+#else
+		(void)
 #endif
 		rbtree_delete(&ref->s->super_set, &lookup);
 		log_assert(n != NULL); /* must have been present */
@@ -693,6 +701,8 @@ int mesh_attach_sub(struct module_qstate* qstate, struct query_info* qinfo,
 		}
 #ifdef UNBOUND_DEBUG
 		n =
+#else
+		(void)
 #endif
 		rbtree_insert(&mesh->all, &sub->node);
 		log_assert(n != NULL);
@@ -701,6 +711,8 @@ int mesh_attach_sub(struct module_qstate* qstate, struct query_info* qinfo,
 		/* set new query state to run */
 #ifdef UNBOUND_DEBUG
 		n =
+#else
+		(void)
 #endif
 		rbtree_insert(&mesh->run, &sub->run_node);
 		log_assert(n != NULL);
@@ -749,6 +761,8 @@ int mesh_state_attachment(struct mesh_state* super, struct mesh_state* sub)
 	}
 #ifdef UNBOUND_DEBUG
 	n =
+#else
+	(void)
 #endif
 	rbtree_insert(&super->sub_set, &subref->node);
 	log_assert(n != NULL); /* we checked above if statement, the reverse
