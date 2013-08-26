@@ -1,3 +1,7 @@
+26 Aug 2013: Wouter
+	- More fixes for bug#519: for the threaded case test if the bg
+	  thread has been killed, on ub_ctx_delete, to avoid hangs.
+
 22 Aug 2013: Wouter
 	- more fixes that I overlooked.
 	- review fixes from Willem.

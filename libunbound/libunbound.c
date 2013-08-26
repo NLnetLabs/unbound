@@ -60,6 +60,9 @@
 #include "services/localzone.h"
 #include "services/cache/infra.h"
 #include "services/cache/rrset.h"
+#ifdef HAVE_PTHREAD
+#include <signal.h>
+#endif
 
 #if defined(UB_ON_WINDOWS) && defined (HAVE_WINDOWS_H)
 #include <windows.h>
@@ -155,11 +158,9 @@ delq(rbnode_t* n, void* ATTR_UNUSED(arg))
 	context_query_delete(q);
 }
 
-void 
-ub_ctx_delete(struct ub_ctx* ctx)
+/** stop the bg thread */
+static void ub_stop_bg(struct ub_ctx* ctx)
 {
-	struct alloc_cache* a, *na;
-	if(!ctx) return;
 	/* stop the bg thread */
 	lock_basic_lock(&ctx->cfglock);
 	if(ctx->created_bg) {
@@ -195,7 +196,28 @@ ub_ctx_delete(struct ub_ctx* ctx)
 	else {
 		lock_basic_unlock(&ctx->cfglock);
 	}
+}
 
+void 
+ub_ctx_delete(struct ub_ctx* ctx)
+{
+	struct alloc_cache* a, *na;
+	int do_stop = 1;
+	if(!ctx) return;
+
+	/* see if bg thread is created and if threads have been killed */
+	/* no locks, because those may be held by terminated threads */
+	/* for processes the read pipe is closed and we see that on read */
+#ifdef HAVE_PTHREAD
+	if(ctx->created_bg && ctx->dothread) {
+		if(pthread_kill(ctx->bg_tid, 0) == ESRCH) {
+			/* thread has been killed */
+			do_stop = 0;
+		}
+	}
+#endif /* HAVE_PTHREAD */
+	if(do_stop)
+		ub_stop_bg(ctx);
 
 	modstack_desetup(&ctx->mods, ctx->env);
 	a = ctx->alloc_list;
