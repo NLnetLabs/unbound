@@ -1450,21 +1450,21 @@ update_events(struct module_env* env, struct val_env* ve,
  * @param holddown: the timer value
  * @return number of seconds the holddown has passed.
  */
-static int
-check_holddown(struct module_env* env, struct autr_ta* ta, 
+static time_t
+check_holddown(struct module_env* env, struct autr_ta* ta,
 	unsigned int holddown)
 {
-        unsigned int elapsed;
-	if((unsigned)*env->now < (unsigned)ta->last_change) {
+        time_t elapsed;
+	if(*env->now < ta->last_change) {
 		log_warn("time goes backwards. delaying key holddown");
 		return 0;
 	}
-	elapsed = (unsigned)*env->now - (unsigned)ta->last_change;
-        if (elapsed > holddown) {
-                return (int) (elapsed-holddown);
+	elapsed = *env->now - ta->last_change;
+        if (elapsed > (time_t)holddown) {
+                return elapsed-(time_t)holddown;
         }
-	verbose_key(ta, VERB_ALGO, "holddown time %d seconds to go",
-		(int) (holddown-elapsed));
+	verbose_key(ta, VERB_ALGO, "holddown time %lld seconds to go",
+		(long long) ((time_t)holddown-elapsed));
         return 0;
 }
 
