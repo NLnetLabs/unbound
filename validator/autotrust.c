@@ -1504,11 +1504,11 @@ do_addtime(struct module_env* env, struct autr_ta* anchor, int* c)
 	/* This not according to RFC, this is 30 days, but the RFC demands 
 	 * MAX(30days, TTL expire time of first DNSKEY set with this key),
 	 * The value may be too small if a very large TTL was used. */
-	int exceeded = check_holddown(env, anchor, env->cfg->add_holddown);
+	time_t exceeded = check_holddown(env, anchor, env->cfg->add_holddown);
 	if (exceeded && anchor->s == AUTR_STATE_ADDPEND) {
 		verbose_key(anchor, VERB_ALGO, "add-holddown time exceeded "
-			"%d seconds ago, and pending-count %d", exceeded,
-			anchor->pending_count);
+			"%lld seconds ago, and pending-count %d",
+			(long long)exceeded, anchor->pending_count);
 		if(anchor->pending_count >= MIN_PENDINGCOUNT) {
 			set_trustanchor_state(env, anchor, c, AUTR_STATE_VALID);
 			anchor->pending_count = 0;
@@ -1523,10 +1523,10 @@ do_addtime(struct module_env* env, struct autr_ta* anchor, int* c)
 static void
 do_remtime(struct module_env* env, struct autr_ta* anchor, int* c)
 {
-	int exceeded = check_holddown(env, anchor, env->cfg->del_holddown);
+	time_t exceeded = check_holddown(env, anchor, env->cfg->del_holddown);
 	if(exceeded && anchor->s == AUTR_STATE_REVOKED) {
 		verbose_key(anchor, VERB_ALGO, "del-holddown time exceeded "
-			"%d seconds ago", exceeded);
+			"%lld seconds ago", (long long)exceeded);
 		set_trustanchor_state(env, anchor, c, AUTR_STATE_REMOVED);
 	}
 }
@@ -1655,7 +1655,7 @@ remove_missing_trustanchors(struct module_env* env, struct trust_anchor* tp,
 	int* changed)
 {
 	struct autr_ta* anchor;
-	int exceeded;
+	time_t exceeded;
 	int valid = 0;
 	/* see if we have anchors that are valid */
 	for(anchor = tp->autr->keys; anchor; anchor = anchor->next) {
@@ -1703,8 +1703,8 @@ remove_missing_trustanchors(struct module_env* env, struct trust_anchor* tp,
 		 * one valid KSK: remove missing trust anchor */
                 if (exceeded && valid > 0) {
 			verbose_key(anchor, VERB_ALGO, "keep-missing time "
-				"exceeded %d seconds ago, [%d key(s) VALID]",
-				exceeded, valid);
+				"exceeded %lld seconds ago, [%d key(s) VALID]",
+				(long long)exceeded, valid);
 			set_trustanchor_state(env, anchor, changed, 
 				AUTR_STATE_REMOVED);
 		}
