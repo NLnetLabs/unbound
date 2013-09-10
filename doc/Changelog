@@ -1,5 +1,6 @@
 10 Sep 2013: Wouter
 	- MIN_TTL and MAX_TTL also in time_t.
+	- tag 1.4.21rc1 made again.
 
 26 Aug 2013: Wouter
 	- More fixes for bug#519: for the threaded case test if the bg
