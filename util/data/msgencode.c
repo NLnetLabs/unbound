@@ -441,7 +441,7 @@ rrset_belongs_in_reply(ldns_pkt_section s, uint16_t rrtype, uint16_t qtype,
 /** store rrset in buffer in wireformat, return RETVAL_* */
 static int
 packed_rrset_encode(struct ub_packed_rrset_key* key, ldns_buffer* pkt, 
-	uint16_t* num_rrs, uint32_t timenow, struct regional* region,
+	uint16_t* num_rrs, time_t timenow, struct regional* region,
 	int do_data, int do_sig, struct compress_tree_node** tree,
 	ldns_pkt_section s, uint16_t qtype, int dnssec, size_t rr_offset)
 {
@@ -528,7 +528,7 @@ packed_rrset_encode(struct ub_packed_rrset_key* key, ldns_buffer* pkt,
 /** store msg section in wireformat buffer, return RETVAL_* */
 static int
 insert_section(struct reply_info* rep, size_t num_rrsets, uint16_t* num_rrs,
-	ldns_buffer* pkt, size_t rrsets_before, uint32_t timenow, 
+	ldns_buffer* pkt, size_t rrsets_before, time_t timenow, 
 	struct regional* region, struct compress_tree_node** tree,
 	ldns_pkt_section s, uint16_t qtype, int dnssec, size_t rr_offset)
 {
@@ -624,7 +624,7 @@ positive_answer(struct reply_info* rep, uint16_t qtype) {
 
 int 
 reply_info_encode(struct query_info* qinfo, struct reply_info* rep, 
-	uint16_t id, uint16_t flags, ldns_buffer* buffer, uint32_t timenow, 
+	uint16_t id, uint16_t flags, ldns_buffer* buffer, time_t timenow, 
 	struct regional* region, uint16_t udpsize, int dnssec)
 {
 	uint16_t ancount=0, nscount=0, arcount=0;
@@ -748,7 +748,7 @@ attach_edns_record(ldns_buffer* pkt, struct edns_data* edns)
 
 int 
 reply_info_answer_encode(struct query_info* qinf, struct reply_info* rep, 
-	uint16_t id, uint16_t qflags, ldns_buffer* pkt, uint32_t timenow,
+	uint16_t id, uint16_t qflags, ldns_buffer* pkt, time_t timenow,
 	int cached, struct regional* region, uint16_t udpsize, 
 	struct edns_data* edns, int dnssec, int secure)
 {

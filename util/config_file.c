@@ -366,9 +366,9 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	else S_YNO("prefetch:", prefetch)
 	else S_YNO("prefetch-key:", prefetch_key)
 	else if(strcmp(opt, "cache-max-ttl:") == 0)
-	{ IS_NUMBER_OR_ZERO; cfg->max_ttl = atoi(val); MAX_TTL=cfg->max_ttl;}
+	{ IS_NUMBER_OR_ZERO; cfg->max_ttl = atoi(val); MAX_TTL=(time_t)cfg->max_ttl;}
 	else if(strcmp(opt, "cache-min-ttl:") == 0)
-	{ IS_NUMBER_OR_ZERO; cfg->min_ttl = atoi(val); MIN_TTL=cfg->min_ttl;}
+	{ IS_NUMBER_OR_ZERO; cfg->min_ttl = atoi(val); MIN_TTL=(time_t)cfg->min_ttl;}
 	else S_NUMBER_OR_ZERO("infra-host-ttl:", host_ttl)
 	else S_POW2("infra-cache-slabs:", infra_cache_slabs)
 	else S_SIZET_NONZERO("infra-cache-numhosts:", infra_cache_numhosts)
@@ -429,8 +429,10 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	else S_STR("python-script:", python_script)
 	/* val_sig_skew_min and max are copied into val_env during init,
 	 * so this does not update val_env with set_option */
-	else S_NUMBER_OR_ZERO("val-sig-skew-min:", val_sig_skew_min)
-	else S_NUMBER_OR_ZERO("val-sig-skew-max:", val_sig_skew_max)
+	else if(strcmp(opt, "val-sig-skew-min:") == 0)
+	{ IS_NUMBER_OR_ZERO; cfg->val_sig_skew_min = (int32_t)atoi(val); }
+	else if(strcmp(opt, "val-sig-skew-max:") == 0)
+	{ IS_NUMBER_OR_ZERO; cfg->val_sig_skew_max = (int32_t)atoi(val); }
 	else if (strcmp(opt, "outgoing-interface:") == 0) {
 		char* d = strdup(val);
 		char** oi = (char**)malloc((cfg->num_out_ifs+1)*sizeof(char*));
@@ -1062,10 +1064,10 @@ cfg_str2list_insert(struct config_str2list** head, char* item, char* i2)
 	return 1;
 }
 
-uint32_t 
+time_t 
 cfg_convert_timeval(const char* str)
 {
-	uint32_t t;
+	time_t t;
 	struct tm tm;
 	memset(&tm, 0, sizeof(tm));
 	if(strlen(str) < 14)
@@ -1169,8 +1171,8 @@ cfg_parse_memsize(const char* str, size_t* res)
 void 
 config_apply(struct config_file* config)
 {
-	MAX_TTL = (uint32_t)config->max_ttl;
-	MIN_TTL = (uint32_t)config->min_ttl;
+	MAX_TTL = (time_t)config->max_ttl;
+	MIN_TTL = (time_t)config->min_ttl;
 	EDNS_ADVERTISED_SIZE = (uint16_t)config->edns_buffer_size;
 	MINIMAL_RESPONSES = config->minimal_responses;
 	RRSET_ROUNDROBIN = config->rrset_roundrobin;

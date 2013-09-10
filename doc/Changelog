@@ -1,3 +1,30 @@
+10 Sep 2013: Wouter
+	- MIN_TTL and MAX_TTL also in time_t.
+	- tag 1.4.21rc1 made again.
+
+26 Aug 2013: Wouter
+	- More fixes for bug#519: for the threaded case test if the bg
+	  thread has been killed, on ub_ctx_delete, to avoid hangs.
+
+22 Aug 2013: Wouter
+	- more fixes that I overlooked.
+	- review fixes from Willem.
+
+21 Aug 2013: Wouter
+	- Fix#520: Errors found by static analysis from Tomas Hozza(redhat).
+
+20 Aug 2013: Wouter
+	- Fix for 2038, with time_t instead of uint32_t.
+
+19 Aug 2013: Wouter
+	- Fix#519 ub_ctx_delete may hang in some scenarios (libunbound).
+
+14 Aug 2013: Wouter
+	- Fix uninit variable in fix#516.
+
+8 Aug 2013: Wouter
+	- Fix#516 dnssec lameness detection for answers that are improper.
+
 30 Jun 2013: Wouter
 	- tag 1.4.21rc1
 

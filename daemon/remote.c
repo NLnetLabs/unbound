@@ -629,8 +629,8 @@ print_stats(SSL* ssl, const char* nm, struct stats_info* s)
 	if(!ssl_printf(ssl, "%s.requestlist.current.user"SQ"%u\n", nm,
 		(unsigned)s->mesh_num_reply_states)) return 0;
 	timeval_divide(&avg, &s->mesh_replies_sum_wait, s->mesh_replies_sent);
-	if(!ssl_printf(ssl, "%s.recursion.time.avg"SQ"%d.%6.6d\n", nm,
-		(int)avg.tv_sec, (int)avg.tv_usec)) return 0;
+	if(!ssl_printf(ssl, "%s.recursion.time.avg"SQ"%lld.%6.6d\n", nm,
+		(long long)avg.tv_sec, (int)avg.tv_usec)) return 0;
 	if(!ssl_printf(ssl, "%s.recursion.time.median"SQ"%g\n", nm, 
 		s->mesh_time_median)) return 0;
 	return 1;
@@ -713,12 +713,12 @@ print_uptime(SSL* ssl, struct worker* worker, int reset)
 	timeval_subtract(&dt, &now, &worker->daemon->time_last_stat);
 	if(reset)
 		worker->daemon->time_last_stat = now;
-	if(!ssl_printf(ssl, "time.now"SQ"%d.%6.6d\n", 
-		(unsigned)now.tv_sec, (unsigned)now.tv_usec)) return 0;
-	if(!ssl_printf(ssl, "time.up"SQ"%d.%6.6d\n", 
-		(unsigned)up.tv_sec, (unsigned)up.tv_usec)) return 0;
-	if(!ssl_printf(ssl, "time.elapsed"SQ"%d.%6.6d\n", 
-		(unsigned)dt.tv_sec, (unsigned)dt.tv_usec)) return 0;
+	if(!ssl_printf(ssl, "time.now"SQ"%lld.%6.6d\n", 
+		(long long)now.tv_sec, (unsigned)now.tv_usec)) return 0;
+	if(!ssl_printf(ssl, "time.up"SQ"%lld.%6.6d\n", 
+		(long long)up.tv_sec, (unsigned)up.tv_usec)) return 0;
+	if(!ssl_printf(ssl, "time.elapsed"SQ"%lld.%6.6d\n", 
+		(long long)dt.tv_sec, (unsigned)dt.tv_usec)) return 0;
 	return 1;
 }
 
@@ -1118,9 +1118,9 @@ struct del_info {
 	/** labels */
 	int labs;
 	/** now */
-	uint32_t now;
+	time_t now;
 	/** time to invalidate to */
-	uint32_t expired;
+	time_t expired;
 	/** number of rrsets removed */
 	size_t num_rrsets;
 	/** number of msgs removed */
@@ -1716,7 +1716,7 @@ do_status(SSL* ssl, struct worker* worker)
 	if(!ssl_printf(ssl, " ]\n"))
 		return;
 	uptime = (time_t)time(NULL) - (time_t)worker->daemon->time_boot.tv_sec;
-	if(!ssl_printf(ssl, "uptime: %u seconds\n", (unsigned)uptime))
+	if(!ssl_printf(ssl, "uptime: %lld seconds\n", (long long)uptime))
 		return;
 	if(!ssl_printf(ssl, "unbound (pid %d) is running...\n",
 		(int)getpid()))
@@ -1735,7 +1735,7 @@ get_mesh_age(struct mesh_state* m, char* buf, size_t len,
 		while(r && r->next)
 			r = r->next;
 		timeval_subtract(&d, env->now_tv, &r->start_time);
-		snprintf(buf, len, "%d.%6.6d", (int)d.tv_sec, (int)d.tv_usec);
+		snprintf(buf, len, "%lld.%6.6d", (long long)d.tv_sec, (int)d.tv_usec);
 	} else {
 		snprintf(buf, len, "-");
 	}
@@ -1836,7 +1836,7 @@ struct infra_arg {
 	/** the SSL connection */
 	SSL* ssl;
 	/** the time now */
-	uint32_t now;
+	time_t now;
 };
 
 /** callback for every host element in the infra cache */
