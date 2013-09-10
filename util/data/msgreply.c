@@ -53,9 +53,9 @@
 #include "util/data/msgencode.h"
 
 /** MAX TTL default for messages and rrsets */
-uint32_t MAX_TTL = 3600 * 24 * 10; /* ten days */
+time_t MAX_TTL = 3600 * 24 * 10; /* ten days */
 /** MIN TTL default for messages and rrsets */
-uint32_t MIN_TTL = 0;
+time_t MIN_TTL = 0;
 
 /** allocate qinfo, return 0 on error */
 static int

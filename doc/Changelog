@@ -1,3 +1,6 @@
+10 Sep 2013: Wouter
+	- MIN_TTL and MAX_TTL also in time_t.
+
 26 Aug 2013: Wouter
 	- More fixes for bug#519: for the threaded case test if the bg
 	  thread has been killed, on ub_ctx_delete, to avoid hangs.
