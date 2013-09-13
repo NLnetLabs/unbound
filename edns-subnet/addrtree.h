@@ -27,12 +27,10 @@
  * 
  * At this time the tree does not support deletion of nodes, but elem 
  * can be set to NULL to ignore the node.
- * */
+ */
 
 #ifndef ADDRTREE_H
 #define ADDRTREE_H
-
-#include <stdint.h>
 
 typedef uint8_t addrlen_t;
 typedef uint8_t addrkey_t;
@@ -43,6 +41,7 @@ struct addrtree {
 	/** Maximum prefix length we are willing to cache. */
 	addrlen_t max_depth;
 	struct module_env* env;
+	
 };
 
 struct addrnode {
@@ -68,21 +67,20 @@ struct addredge {
  * @param max_depth: Tree will cap keys to this length.
  * @param env: Module environment for alloc information
  * @return new addrtree or NULL on failure
- * */
-
+ */
 struct addrtree* addrtree_create(addrlen_t max_depth, struct module_env* env);
 
 /** 
  * Free tree and all nodes below
  * @param tree: Tree to be freed
- * */
+ */
 void addrtree_delete(struct addrtree* tree);
 
 /** 
  * Free data stored at node
  * @param tree: Tree the node lives in.
  * @param node: Node to be scrubbed
- * */
+ */
 void addrtree_clean_node(const struct addrtree* tree, struct addrnode* node);
 
 /**
@@ -94,7 +92,7 @@ void addrtree_clean_node(const struct addrtree* tree, struct addrnode* node);
  * @param sourcemask: Length of addr in bits
  * @param scope: Number of significant bits in addr
  * @param elem: data to store in the tree
- * */
+ */
 void addrtree_insert(struct addrtree* tree, const addrkey_t* addr, 
 	addrlen_t sourcemask, addrlen_t scope, struct reply_info* elem);
 
@@ -105,7 +103,7 @@ void addrtree_insert(struct addrtree* tree, const addrkey_t* addr,
  * @param addr: key for element lookup
  * @param sourcemask: Length of addr in bits
  * @return addrnode or NULL on miss
- * */
+ */
 struct addrnode* addrtree_find(const struct addrtree* tree, 
 	const addrkey_t* addr, addrlen_t sourcemask);
 

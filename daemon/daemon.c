@@ -248,6 +248,7 @@ daemon_init(void)
 	/* whitelist for edns subnet capable servers */
 	daemon->edns_subnet_upstreams = upstream_create();
 	if(!daemon->edns_subnet_upstreams) {
+		acl_list_delete(daemon->acl);
 		free(daemon->env);
 		free(daemon);
 		return NULL;

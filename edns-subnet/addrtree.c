@@ -6,7 +6,7 @@
 
 /** \file 
  * see addrtree.h 
- * */
+ */
 
 #include <stdio.h>
 #include <string.h>
@@ -22,8 +22,8 @@
  * @param addr: full key to this edge.
  * @param addrlen: length of relevant part of key for this node
  * @return new addredge or NULL on failure
- * */
-struct addredge* 
+ */
+static struct addredge* 
 edge_create(struct addrnode* node, const addrkey_t* addr, addrlen_t addrlen)
 {
 	size_t n;
@@ -32,7 +32,7 @@ edge_create(struct addrnode* node, const addrkey_t* addr, addrlen_t addrlen)
 		return NULL;
 	edge->node = node;
 	edge->len = addrlen;
-	n = (addrlen / KEYWIDTH) + ((addrlen % KEYWIDTH)!=0);
+	n = (addrlen / KEYWIDTH) + ((addrlen % KEYWIDTH)!=0)?1:0; /*ceil()*/
 	edge->str = (addrkey_t*)calloc(n, sizeof(addrkey_t));
 	if (!edge->str) {
 		free(edge);
@@ -47,8 +47,8 @@ edge_create(struct addrnode* node, const addrkey_t* addr, addrlen_t addrlen)
  * @param elem: Element to store at this node
  * @param scope: Scopemask from server reply
  * @return new addrnode or NULL on failure
- * */
-struct addrnode* 
+ */
+static struct addrnode* 
 node_create(struct reply_info* elem, addrlen_t scope)
 {
 	struct addrnode* node = (struct addrnode*)malloc( sizeof(*node) );
@@ -78,10 +78,43 @@ struct addrtree* addrtree_create(addrlen_t max_depth, struct module_env* env)
 	return tree;
 }
 
+size_t tree_size(const struct addrnode* node)
+{
+	int i;
+	size_t s = 0;
+	
+	if (!node) return s;
+	s += sizeof(struct addrnode);
+	if (node->elem) {
+		s += sizeof(struct reply_info) - sizeof(struct rrset_ref);
+		s += node->elem->rrset_count * sizeof(struct rrset_ref);
+		s += node->elem->rrset_count * sizeof(struct ub_packed_rrset_key*);
+	}
+	
+	for (i = 0; i < 2; i++) {
+		if (!node->edge[i]) continue;
+		s += sizeof(struct addredge);
+		s += (node->edge[i]->len / KEYWIDTH) + ((node->edge[i]->len % KEYWIDTH)!=0);
+		s += tree_size(node->edge[i]->node);
+	}
+	return s;
+}
+
+size_t addrtree_size(const struct addrtree* tree)
+{
+	size_t s = 0;
+	if (tree) {
+		s += sizeof(struct addrtree);
+		s += tree_size(tree->root);
+	}
+	return s;
+}
+
 void addrtree_clean_node(const struct addrtree* tree, struct addrnode* node)
 {
 	if (node->elem) {
-		reply_info_parsedelete(node->elem, tree->env->alloc);
+		//~ reply_info_parsedelete(node->elem, tree->env->alloc);
+		reply_info_delete(node->elem, NULL);
 		node->elem = NULL;
 	}
 }
@@ -90,8 +123,9 @@ void addrtree_clean_node(const struct addrtree* tree, struct addrnode* node)
  * Free node and all nodes below
  * @param tree: Tree the node lives in.
  * @param node: Node to be freed
- * */
-void freenode_recursive(struct addrtree* tree, struct addrnode* node)
+ */
+static void
+freenode_recursive(struct addrtree* tree, struct addrnode* node)
 {
 	struct addredge* edge;
 	int i;
@@ -128,8 +162,8 @@ int getbit(const addrkey_t* addr, addrlen_t addrlen, addrlen_t n)
 
 /** Test for equality on N'th bit.
  * @return 0 for equal, 1 otherwise 
- * */
-inline int 
+ */
+static inline int 
 cmpbit(const addrkey_t* key1, const addrkey_t* key2, addrlen_t n)
 {
 	addrkey_t c = key1[n/KEYWIDTH] ^ key2[n/KEYWIDTH];
@@ -144,8 +178,9 @@ cmpbit(const addrkey_t* key1, const addrkey_t* key2, addrlen_t n)
  * @param l2: Length of s2 in bits
  * @param skip: Nr of bits already checked.
  * @return Common number of bits.
- * */
-addrlen_t bits_common(const addrkey_t* s1, addrlen_t l1, 
+ */
+static addrlen_t 
+bits_common(const addrkey_t* s1, addrlen_t l1, 
 	const addrkey_t* s2, addrlen_t l2, addrlen_t skip)
 {
 	addrlen_t len, i;
@@ -165,8 +200,9 @@ addrlen_t bits_common(const addrkey_t* s1, addrlen_t l1,
  * @param l2: Length of s2 in bits
  * @param skip: Nr of bits already checked.
  * @return 1 for substring, 0 otherwise 
- * */
-int issub(const addrkey_t* s1, addrlen_t l1, 
+ */
+static int 
+issub(const addrkey_t* s1, addrlen_t l1, 
 	const addrkey_t* s2, addrlen_t l2,  addrlen_t skip)
 {
 	return bits_common(s1, l1, s2, l2, skip) == l1;
@@ -197,6 +233,7 @@ addrtree_insert(struct addrtree* tree, const addrkey_t* addr,
 			/* update this node's scope and data */
 			if (node->elem)
 				reply_info_parsedelete(node->elem, tree->env->alloc);
+				//~ reply_info_parsedelete(node->elem, NULL);
 			node->elem = elem;
 			node->scope = scope;
 			return;

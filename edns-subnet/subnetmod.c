@@ -38,6 +38,20 @@ subnet_data_delete(void* d, void* ATTR_UNUSED(arg))
 	free(r);
 }
 
+/** externally called */
+size_t 
+msg_cache_sizefunc(void* k, void* d)
+{
+	struct msgreply_entry* q = (struct msgreply_entry*)k;
+	struct subnet_msg_cache_data* r = (struct subnet_msg_cache_data*)d;
+	size_t s = sizeof(struct msgreply_entry) 
+		+ sizeof(struct subnet_msg_cache_data)
+		+ q->key.qname_len + lock_get_mem(&q->entry.lock);
+	s += addrtree_size(r->tree4);
+	s += addrtree_size(r->tree6);
+	return s;
+}
+
 /** new query for sn */
 static int
 subnet_new_qstate(struct module_qstate* qstate, int id)
@@ -63,7 +77,8 @@ int subnetmod_init(struct module_env* env, int id)
 	/* Copy msg_cache settings for now */
 	sn_env->subnet_msg_cache = slabhash_create(env->cfg->msg_cache_slabs,
 			HASH_DEFAULT_STARTARRAY, env->cfg->msg_cache_size,
-			msgreply_sizefunc, query_info_compare,
+			msg_cache_sizefunc, query_info_compare,
+			//~ msgreply_sizefunc, query_info_compare,
 			query_entry_delete, subnet_data_delete, NULL);
 	if(!sn_env->subnet_msg_cache) {
 		log_err("subnet: could not create cache");
@@ -141,7 +156,7 @@ void update_cache(struct module_qstate* qstate, int id)
 		free(qinf.qname); /* if qname 'consumed', it is set to NULL */
 		lru_entry = &mrep_entry->entry;
 		lru_entry->data = data;
-		slabhash_insert(subnet_msg_cache, h, lru_entry, data, env->alloc);
+		slabhash_insert(subnet_msg_cache, h, lru_entry, data, NULL);
 	} else {
 		data = lru_entry->data;
 		acquired_lock = 1;
@@ -163,6 +178,7 @@ void update_cache(struct module_qstate* qstate, int id)
 			lock_rw_unlock(&lru_entry->lock);
 		return;
 	}
+
 	rep = reply_info_copy(qstate->return_msg->rep, env->alloc, NULL);
 	/* fixup flags to be sensible for a reply based on the cache */
 	rep->flags |= (BIT_RA | BIT_QR);

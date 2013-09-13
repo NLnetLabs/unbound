@@ -1,8 +1,8 @@
-/* A Bison parser, made by GNU Bison 2.6.1.  */
+/* A Bison parser, made by GNU Bison 2.7.12-4996.  */
 
 /* Bison interface for Yacc-like parsers in C
    
-      Copyright (C) 1984, 1989-1990, 2000-2012 Free Software Foundation, Inc.
+      Copyright (C) 1984, 1989-1990, 2000-2013 Free Software Foundation, Inc.
    
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -30,8 +30,8 @@
    This special exception was added by the Free Software Foundation in
    version 2.2 of Bison.  */
 
-#ifndef YY_UTIL_CONFIGPARSER_H
-# define YY_UTIL_CONFIGPARSER_H
+#ifndef YY_YY_UTIL_CONFIGPARSER_H_INCLUDED
+# define YY_YY_UTIL_CONFIGPARSER_H_INCLUDED
 /* Enabling traces.  */
 #ifndef YYDEBUG
 # define YYDEBUG 0
@@ -173,7 +173,11 @@ extern int yydebug;
      VAR_STUB_FIRST = 382,
      VAR_MINIMAL_RESPONSES = 383,
      VAR_RRSET_ROUNDROBIN = 384,
-     VAR_MAX_UDP_SIZE = 385
+     VAR_SEND_CLIENT_SUBNET = 385,
+     VAR_CLIENT_SUBNET_OPCODE = 386,
+     VAR_MAX_CLIENT_SUBNET_IPV4 = 387,
+     VAR_MAX_CLIENT_SUBNET_IPV6 = 388,
+     VAR_MAX_UDP_SIZE = 389
    };
 #endif
 /* Tokens.  */
@@ -304,21 +308,25 @@ extern int yydebug;
 #define VAR_STUB_FIRST 382
 #define VAR_MINIMAL_RESPONSES 383
 #define VAR_RRSET_ROUNDROBIN 384
-#define VAR_MAX_UDP_SIZE 385
+#define VAR_SEND_CLIENT_SUBNET 385
+#define VAR_CLIENT_SUBNET_OPCODE 386
+#define VAR_MAX_CLIENT_SUBNET_IPV4 387
+#define VAR_MAX_CLIENT_SUBNET_IPV6 388
+#define VAR_MAX_UDP_SIZE 389
 
 
 
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 typedef union YYSTYPE
 {
-/* Line 2049 of yacc.c  */
+/* Line 2053 of yacc.c  */
 #line 64 "./util/configparser.y"
 
 	char*	str;
 
 
-/* Line 2049 of yacc.c  */
-#line 322 "util/configparser.h"
+/* Line 2053 of yacc.c  */
+#line 330 "util/configparser.h"
 } YYSTYPE;
 # define YYSTYPE_IS_TRIVIAL 1
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */
@@ -341,4 +349,4 @@ int yyparse ();
 #endif
 #endif /* ! YYPARSE_PARAM */
 
-#endif /* !YY_UTIL_CONFIGPARSER_H  */
+#endif /* !YY_YY_UTIL_CONFIGPARSER_H_INCLUDED  */

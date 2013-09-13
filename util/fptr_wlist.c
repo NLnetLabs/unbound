@@ -213,6 +213,9 @@ fptr_whitelist_hash_sizefunc(lruhash_sizefunc_t fptr)
 	else if(fptr == &infra_sizefunc) return 1;
 	else if(fptr == &key_entry_sizefunc) return 1;
 	else if(fptr == &test_slabhash_sizefunc) return 1;
+#ifdef CLIENT_SUBNET
+	else if(fptr == &msg_cache_sizefunc) return 1;
+#endif
 	return 0;
 }
 

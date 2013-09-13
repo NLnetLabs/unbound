@@ -911,9 +911,10 @@ IPv6 address and the host name.  For example "192.0.2.4 www.example.com".
 TTL can be inserted like this: "2001:DB8::4 7200 www.example.com"
 .TP 5
 .B send\-client\-subnet: \fI<IP address>
-Send client source address to this authority. Can be IP4 or IP6. Append 
-/num to indicate a classless delegation netblock, for example like
-10.2.3.4/24 or 2001::11/64.
+Send client source address to this authority. Append /num to indicate a 
+classless delegation netblock, for example like 10.2.3.4/24 or 
+2001::11/64. Can be given multiple times. Authorities not listed will 
+not receive edns-subnet information.
 .TP 5
 .B client\-subnet\-opcode: \fI<number>
 Specify positive integer smaller than 65536. Defaults to 8.

@@ -717,8 +717,8 @@ verbose_hex(int lvl, uint8_t *data, size_t datalen, char *header)
 static int
 match_ednsdata(ldns_pkt* q, struct reply_packet* p)
 {
-	size_t qdlen, pdlen;
-	uint8_t *qd, *pd;
+	size_t qdlen, pdlen = 0;
+	uint8_t *qd, *pd = NULL;
 	int q_set = ldns_pkt_edns(q) && ldns_pkt_edns_data(q);
 	int p_set = p->raw_ednsdata != NULL;
 	

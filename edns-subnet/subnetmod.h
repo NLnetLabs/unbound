@@ -37,6 +37,7 @@ struct subnet_qstate {
 };
 
 void subnet_data_delete(void* d, void* ATTR_UNUSED(arg));
+size_t msg_cache_sizefunc(void* k, void* d);
 
 /**
  * Get the module function block.

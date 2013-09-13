@@ -22,11 +22,11 @@ if test "$1" = "report" || test "$2" = "report"; then
 		name=`basename $result .tpkg`
 		if test -f ".done-$name"; then
 			if test "$1" != "-q"; then
-				echo "** PASSED ** : $name"
+				echo  "** PASSED ** : $name"
 			fi
 		else
 			if test -f "result.$name"; then
-				echo "\033[01;31m!! FAILED !!\033[00m : $name"
+				echo "!! FAILED !! : $name"
 			else
 				echo ">> SKIPPED<< : $name"
 			fi
@@ -99,12 +99,12 @@ if test -f $name.test; then
 	$shell $name.test $args >>$result 2>&1
 	if test $? -ne 0; then
 		echo "$name: FAILED" >> $result
-		echo "\033[01;31mFAILED\033[00m"
+		echo "FAILED"
 		success="no"
 	else
 		echo "$name: PASSED" >> $result
 		echo "$name: PASSED" > ../.done-$name
-		echo "\033[01;32mPASSED\033[00m"
+		echo "PASSED"
 		success="yes"
 	fi
 fi

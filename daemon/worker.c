@@ -893,8 +893,8 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 		return 1;
 	}
 #ifdef CLIENT_SUBNET
-	/* Do not skip cache lookup if no valid subnet data or the client
-	 * asks to remain anonymous. */
+	/* skip cache lookup if subnet is used,  Do not skip cache lookup if
+	 * no valid subnet data or the client asks to remain anonymous. */
 	if(!edns.edns_present || !edns.subnet_validdata || 
 		edns.subnet_source_mask == 0) {
 #endif

@@ -166,8 +166,8 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_ssl_service_key | server_ssl_service_pem | server_ssl_port |
 	server_minimal_responses | server_rrset_roundrobin | 
 	server_send_client_subnet | server_client_subnet_opcode |
-	server_max_client_subnet_ipv4 | server_max_client_subnet_ipv6
-	server_minimal_responses | server_rrset_roundrobin | server_max_udp_size
+	server_max_client_subnet_ipv4 | server_max_client_subnet_ipv6 |
+	server_max_udp_size
 	;
 stubstart: VAR_STUB_ZONE
 	{
