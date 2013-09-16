@@ -1,3 +1,7 @@
+16 Sep 2013: Wouter
+	- Fix#524: max-udp-size not effective to non-EDNS0 queries, from
+	  Daisuke HIGASHI.
+
 10 Sep 2013: Wouter
 	- MIN_TTL and MAX_TTL also in time_t.
 	- tag 1.4.21rc1 made again.
