@@ -977,12 +977,12 @@ parse_ednsdata(uint8_t* data, struct edns_data* edns)
 		opt_opc = ldns_read_uint16(&data[opt_start]);
 		opt_len = ldns_read_uint16(&data[2 + opt_start]);
 		/* Option does not fit in remaining data */
-		if(opt_start + 4 + opt_len > edns_datalen) break;
+		if(opt_start + 4 + (int)opt_len > edns_datalen) break;
 		
 		if(opt_opc == EDNSSUBNET_OPCODE) {
 			parse_subnet_option(data + opt_start + 4, edns, opt_len);
 		} else { /* Unknown opcode */
-			verbose(VERB_QUERY, "unknown EDNS option %x", opt_opc);
+			verbose(VERB_QUERY, "unknown EDNS option 0x%x", opt_opc);
 		}
 		
 		opt_start += opt_len + 4;
@@ -1045,8 +1045,9 @@ parse_extract_edns(struct msg_parse* msg, struct edns_data* edns)
 	edns->bits = ldns_read_uint16(&found->rr_last->ttl_data[2]);
 #ifdef CLIENT_SUBNET
 	parse_ednsdata(found->rr_last->ttl_data + 4, edns);
-#endif
+#else
 	/* ignore rdata and rrsigs */
+#endif
 	return 0;
 }
 

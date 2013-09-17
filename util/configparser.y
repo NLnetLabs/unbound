@@ -277,10 +277,10 @@ server_client_subnet_opcode: VAR_CLIENT_SUBNET_OPCODE STRING_ARG
 		else if(atoi($2) > 65535 || atoi($2) < 0)
 			yyerror("option code must be in interval [0, 65535]");
 		else cfg_parser->cfg->client_subnet_opcode = atoi($2);
-		free($2);
 	#else
 		OUTYY(("P(Compiled without edns subnet option, ignoring)\n"));
 	#endif
+		free($2);
 	}
 	;
 server_max_client_subnet_ipv4: VAR_MAX_CLIENT_SUBNET_IPV4 STRING_ARG
@@ -294,10 +294,10 @@ server_max_client_subnet_ipv4: VAR_MAX_CLIENT_SUBNET_IPV4 STRING_ARG
 		else if (atoi($2) < 0)
 			cfg_parser->cfg->max_client_subnet_ipv4 = 0;
 		else cfg_parser->cfg->max_client_subnet_ipv4 = atoi($2);
-		free($2);
 	#else
 		OUTYY(("P(Compiled without edns subnet option, ignoring)\n"));
 	#endif
+		free($2);
 	}
 	;
 server_max_client_subnet_ipv6: VAR_MAX_CLIENT_SUBNET_IPV6 STRING_ARG
@@ -311,10 +311,10 @@ server_max_client_subnet_ipv6: VAR_MAX_CLIENT_SUBNET_IPV6 STRING_ARG
 		else if (atoi($2) < 0)
 			cfg_parser->cfg->max_client_subnet_ipv6 = 0;
 		else cfg_parser->cfg->max_client_subnet_ipv6 = atoi($2);
-		free($2);
 	#else
 		OUTYY(("P(Compiled without edns subnet option, ignoring)\n"));
 	#endif
+		free($2);
 	}
 	;
 server_interface: VAR_INTERFACE STRING_ARG

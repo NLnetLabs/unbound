@@ -7,11 +7,8 @@
 /** \file 
  * see addrtree.h 
  */
-
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <assert.h>
+#include "config.h"
+#include "util/log.h"
 #include "util/data/msgreply.h"
 #include "util/module.h"
 #include "addrtree.h"
@@ -64,7 +61,7 @@ node_create(struct reply_info* elem, addrlen_t scope)
 struct addrtree* addrtree_create(addrlen_t max_depth, struct module_env* env)
 {
 	struct addrtree* tree;
-	assert(env != NULL);
+	log_assert(env != NULL);
 	tree = (struct addrtree*)malloc( sizeof(*tree) );
 	if(!tree)
 		return NULL;
@@ -113,7 +110,6 @@ size_t addrtree_size(const struct addrtree* tree)
 void addrtree_clean_node(const struct addrtree* tree, struct addrnode* node)
 {
 	if (node->elem) {
-		//~ reply_info_parsedelete(node->elem, tree->env->alloc);
 		reply_info_delete(node->elem, NULL);
 		node->elem = NULL;
 	}
@@ -133,8 +129,8 @@ freenode_recursive(struct addrtree* tree, struct addrnode* node)
 	for (i = 0; i < 2; i++) {
 		edge = node->edge[i];
 		if (edge) {
-			assert(edge->node != NULL);
-			assert(edge->str != NULL);
+			log_assert(edge->node != NULL);
+			log_assert(edge->str != NULL);
 			freenode_recursive(tree, edge->node);
 			free(edge->str);
 		}
@@ -156,7 +152,7 @@ void addrtree_delete(struct addrtree* tree)
 /** Get N'th bit from address */
 int getbit(const addrkey_t* addr, addrlen_t addrlen, addrlen_t n)
 {
-	assert(addrlen > n);
+	log_assert(addrlen > n);
 	return (int)(addr[n/KEYWIDTH]>>((KEYWIDTH-1)-(n%KEYWIDTH))) & 1;
 }
 
@@ -185,7 +181,7 @@ bits_common(const addrkey_t* s1, addrlen_t l1,
 {
 	addrlen_t len, i;
 	len = (l1 > l2) ? l2 : l1;
-	assert(skip < len);
+	log_assert(skip < len);
 	for (i = skip; i < len; i++) {
 		if (cmpbit(s1, s2, i)) return i;
 	}
@@ -214,20 +210,20 @@ addrtree_insert(struct addrtree* tree, const addrkey_t* addr,
 {
 	struct addrnode* newnode, *node;
 	struct addredge* edge, *newedge;
-	size_t index;
+	uint8_t index;
 	addrlen_t common, depth;
 
 	node = tree->root;
-	assert(node != NULL);
+	log_assert(node != NULL);
 
-	/* Protect our cache against to much fine-grained data */
+	/* Protect our cache against too much fine-grained data */
 	if (tree->max_depth < scope) scope = tree->max_depth;
 	/* Server answer was less specific than question */
 	if (scope < sourcemask) sourcemask = scope;
 
 	depth = 0;
 	while (1) {
-		assert(depth <= sourcemask);
+		log_assert(depth <= sourcemask);
 		/* Case 1: update existing node */
 		if (depth == sourcemask) {
 			/* update this node's scope and data */
@@ -238,12 +234,14 @@ addrtree_insert(struct addrtree* tree, const addrkey_t* addr,
 			node->scope = scope;
 			return;
 		}
-		index = (size_t)getbit(addr, sourcemask, depth);
+		index = (uint8_t)getbit(addr, sourcemask, depth);
 		edge = node->edge[index];
 		/* Case 2: New leafnode */
 		if (!edge) {
 			newnode = node_create(elem, scope);
 			node->edge[index] = edge_create(newnode, addr, sourcemask);
+			if (!node->edge[index])
+				free(newnode);
 			return;
 		}
 		/* Case 3: Traverse edge */
@@ -258,10 +256,14 @@ addrtree_insert(struct addrtree* tree, const addrkey_t* addr,
 			continue;
 		}
 		/* Case 4: split. */
-		newnode = node_create(NULL, 0);
-		newedge = edge_create(newnode, addr, common);
+		if (!(newnode = node_create(NULL, 0)))
+			return;
+		if (!(newedge = edge_create(newnode, addr, common))) {
+			free(newnode);
+			return;
+		}		
 		node->edge[index] = newedge;
-		index = (size_t)getbit(edge->str, edge->len, common);
+		index = (uint8_t)getbit(edge->str, edge->len, common);
 		newnode->edge[index] = edge;
 		
 		if (common == sourcemask) {
@@ -286,13 +288,13 @@ addrtree_find(const struct addrtree* tree, const addrkey_t* addr,
 	struct addredge* edge;
 	addrlen_t depth = 0;
 
-	assert(node != NULL);
+	log_assert(node != NULL);
 	while (1) {
 		/* Current node more specific then question. */
-		assert(depth <= sourcemask);
+		log_assert(depth <= sourcemask);
 		/* does this node have data? if yes, see if we have a match */
 		if (node->elem) {
-			assert(node->scope >= depth); /* saved at wrong depth */
+			log_assert(node->scope >= depth); /* saved at wrong depth */
 			if (depth == node->scope ||
 					(node->scope > sourcemask && depth == sourcemask)) {
 				/* Authority indicates it does not have a more precise
@@ -311,7 +313,7 @@ addrtree_find(const struct addrtree* tree, const addrkey_t* addr,
 			return NULL;
 		if (!issub(edge->str, edge->len, addr, sourcemask, depth))
 			return NULL;
-		assert(depth < edge->len);
+		log_assert(depth < edge->len);
 		depth = edge->len;
 		node = edge->node;
 	}

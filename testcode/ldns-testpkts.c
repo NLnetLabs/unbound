@@ -741,7 +741,7 @@ match_ednsdata(ldns_pkt* q, struct reply_packet* p)
 	else if (!p_set || !q_set)
 		return 0;
 	else 
-		return qdlen == pdlen && 0 == memcmp(qd, pd, qdlen);
+		return qdlen == pdlen && memcmp(qd, pd, qdlen) == 0;
 }
 
 /* finds entry in list, or returns NULL */

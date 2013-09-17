@@ -144,7 +144,50 @@ int subnet_compare(struct edns_data *a, struct edns_data *b)
 	}
 	return memcmp(b->subnet_addr, a->subnet_addr, INET6_SIZE);
 }
-#endif
+
+/* Populate edns structure with subnet data either from subnet option 
+ * or IP layer. 
+ * edns: allocated edns structure to populate
+ * s: mesh state of query 
+ */
+static void 
+populate_edns_subnet(struct edns_data* edns, struct mesh_state* s)
+{
+	edns->subnet_downstream = edns->subnet_validdata;
+	if(!edns->subnet_validdata) {
+		struct sockaddr_storage *ss;
+		void* sinaddr;
+		edns->subnet_validdata = 0;
+		/* Construct subnet option from original query */
+		ss = &s->reply_list->query_reply.addr;
+		if(((struct sockaddr_in*)ss)->sin_family == AF_INET) {
+			edns->subnet_source_mask = EDNSSUBNET_MAX_SUBNET_IP4;
+			edns->subnet_addr_fam = EDNSSUBNET_ADDRFAM_IP4;
+			sinaddr = &((struct sockaddr_in*)ss)->sin_addr;
+			if (!copy_clear(
+					edns->subnet_addr, INET6_SIZE, (uint8_t *)sinaddr, 
+					INET_SIZE, EDNSSUBNET_MAX_SUBNET_IP4)) {
+				edns->subnet_validdata = 1;
+			}
+		}
+#ifdef INET6
+		else {
+			edns->subnet_source_mask = EDNSSUBNET_MAX_SUBNET_IP6;
+			edns->subnet_addr_fam = EDNSSUBNET_ADDRFAM_IP6;
+			sinaddr = &((struct sockaddr_in6*)ss)->sin6_addr;
+			if (!copy_clear(
+					edns->subnet_addr, INET6_SIZE, (uint8_t *)sinaddr, 
+					INET6_SIZE, EDNSSUBNET_MAX_SUBNET_IP6)) {
+				edns->subnet_validdata = 1;
+			}
+		}
+#else
+		/* We don't know how to handle ip6, just pass */
+#endif /* INET6 */
+	}
+	memcpy(&s->s.edns_client_in, edns, sizeof(struct edns_data));
+}
+#endif /* CLIENT_SUBNET */
 
 int
 mesh_state_compare(const void* ap, const void* bp)
@@ -379,44 +422,9 @@ void mesh_new_client(struct mesh_area* mesh, struct query_info* qinfo,
 			return;
 	}
 #ifdef CLIENT_SUBNET
-	if(edns->subnet_validdata) {
-		edns->subnet_downstream = 1;
-	} else {
-		struct sockaddr_storage *ss;
-		void* sinaddr;
-		edns->subnet_validdata = 0;
-		edns->subnet_downstream = 0;
-		/* Construct subnet option from original query */
-		ss = &s->reply_list->query_reply.addr;
-		if(((struct sockaddr_in*)ss)->sin_family == AF_INET) {
-			edns->subnet_source_mask = EDNSSUBNET_MAX_SUBNET_IP4;
-			edns->subnet_addr_fam = EDNSSUBNET_ADDRFAM_IP4;
-			sinaddr = &((struct sockaddr_in*)ss)->sin_addr;
-			if (!copy_clear(
-					edns->subnet_addr, INET6_SIZE, (uint8_t *)sinaddr, 
-					INET_SIZE, EDNSSUBNET_MAX_SUBNET_IP4)) {
-				edns->subnet_validdata = 1;
-			}
-		}
-#ifdef INET6
-		else {
-			edns->subnet_source_mask = EDNSSUBNET_MAX_SUBNET_IP6;
-			edns->subnet_addr_fam = EDNSSUBNET_ADDRFAM_IP6;
-			sinaddr = &((struct sockaddr_in6*)ss)->sin6_addr;
-			if (!copy_clear(
-					edns->subnet_addr, INET6_SIZE, (uint8_t *)sinaddr, 
-					INET6_SIZE, EDNSSUBNET_MAX_SUBNET_IP6)) {
-				edns->subnet_validdata = 1;
-			}
-		}
-#else
-		else {
-			/* We don't know how to handle ip6 , just pass*/
-		}
-#endif /* INET6 */
-	}
-	memcpy(&s->s.edns_client_in, edns, sizeof(struct edns_data));
+	populate_edns_subnet(edns, s);
 #endif /* CLIENT_SUBNET */
+
 	/* update statistics */
 	if(was_detached) {
 		log_assert(mesh->num_detached_states > 0);

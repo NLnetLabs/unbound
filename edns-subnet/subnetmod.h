@@ -22,7 +22,9 @@
  * Global state for the subnet module. 
  */
 struct subnet_env {
-	/** shared message cache */
+	/** shared message cache 
+	 * key: struct query_info* 
+	 * data: struct subnet_msg_cache_data* */
 	struct slabhash* subnet_msg_cache;
 };
 

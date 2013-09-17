@@ -2223,10 +2223,10 @@ yyreduce:
 		else if(atoi((yyvsp[(2) - (2)].str)) > 65535 || atoi((yyvsp[(2) - (2)].str)) < 0)
 			yyerror("option code must be in interval [0, 65535]");
 		else cfg_parser->cfg->client_subnet_opcode = atoi((yyvsp[(2) - (2)].str));
-		free((yyvsp[(2) - (2)].str));
 	#else
 		OUTYY(("P(Compiled without edns subnet option, ignoring)\n"));
 	#endif
+		free((yyvsp[(2) - (2)].str));
 	}
     break;
 
@@ -2243,10 +2243,10 @@ yyreduce:
 		else if (atoi((yyvsp[(2) - (2)].str)) < 0)
 			cfg_parser->cfg->max_client_subnet_ipv4 = 0;
 		else cfg_parser->cfg->max_client_subnet_ipv4 = atoi((yyvsp[(2) - (2)].str));
-		free((yyvsp[(2) - (2)].str));
 	#else
 		OUTYY(("P(Compiled without edns subnet option, ignoring)\n"));
 	#endif
+		free((yyvsp[(2) - (2)].str));
 	}
     break;
 
@@ -2263,10 +2263,10 @@ yyreduce:
 		else if (atoi((yyvsp[(2) - (2)].str)) < 0)
 			cfg_parser->cfg->max_client_subnet_ipv6 = 0;
 		else cfg_parser->cfg->max_client_subnet_ipv6 = atoi((yyvsp[(2) - (2)].str));
-		free((yyvsp[(2) - (2)].str));
 	#else
 		OUTYY(("P(Compiled without edns subnet option, ignoring)\n"));
 	#endif
+		free((yyvsp[(2) - (2)].str));
 	}
     break;
 
