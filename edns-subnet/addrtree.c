@@ -318,3 +318,19 @@ addrtree_find(const struct addrtree* tree, const addrkey_t* addr,
 		node = edge->node;
 	}
 }
+
+/** Wrappers for static functions to unit test */
+int unittest_wrapper_addrtree_cmpbit(const addrkey_t* key1, 
+		const addrkey_t* key2, addrlen_t n) {
+	return cmpbit(key1, key2, n);
+}
+addrlen_t unittest_wrapper_addrtree_bits_common(const addrkey_t* s1, 
+		addrlen_t l1, const addrkey_t* s2, addrlen_t l2, addrlen_t skip) {
+	return bits_common(s1, l1, s2, l2, skip);
+}
+
+
+//~ static struct addredge* edge_create(struct addrnode* node, const addrkey_t* addr, addrlen_t addrlen)
+//~ static struct addrnode* node_create(struct reply_info* elem, addrlen_t scope)
+//~ static void freenode_recursive(struct addrtree* tree, struct addrnode* node)
+//~ static int issub(const addrkey_t* s1, addrlen_t l1, 	const addrkey_t* s2, addrlen_t l2,  addrlen_t skip)

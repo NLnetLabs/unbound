@@ -588,6 +588,7 @@ main(int argc, char* argv[])
 	slabhash_test();
 	infra_test();
 	msgparse_test();
+	vandergaast_test();
 	checklock_stop();
 	printf("%d checks ok.\n", testcount);
 #ifdef HAVE_SSL

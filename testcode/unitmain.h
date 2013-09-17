@@ -72,5 +72,8 @@ void verify_test(void);
 void neg_test(void);
 /** unit test for regional allocator functions */
 void regional_test(void);
-
+#ifdef CLIENT_SUBNET
+/** - */
+void vandergaast_test(void);
+#endif /* CLIENT_SUBNET */
 #endif /* TESTCODE_UNITMAIN_H */

@@ -107,4 +107,9 @@ void addrtree_insert(struct addrtree* tree, const addrkey_t* addr,
 struct addrnode* addrtree_find(const struct addrtree* tree, 
 	const addrkey_t* addr, addrlen_t sourcemask);
 
+/** Wrappers for static functions to unit test */
+int unittest_wrapper_addrtree_cmpbit(const addrkey_t* key1, 
+	const addrkey_t* key2, addrlen_t n);
+addrlen_t unittest_wrapper_addrtree_bits_common(const addrkey_t* s1, 
+	addrlen_t l1, const addrkey_t* s2, addrlen_t l2, addrlen_t skip);
 #endif /* ADDRTREE_H */
