@@ -44,13 +44,6 @@
 #include "testcode/unitmain.h"
 #include "edns-subnet/addrtree.h"
 
-static int 
-issub(const addrkey_t* s1, addrlen_t l1, 
-	const addrkey_t* s2, addrlen_t l2,  addrlen_t skip)
-{
-	return bits_common(s1, l1, s2, l2, skip) == l1;
-}
-
 static void issub_test(void)
 {
 	unit_show_func("edns-subnet/addrtree.h", "issub");

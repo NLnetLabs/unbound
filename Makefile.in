@@ -939,7 +939,8 @@ unitmsgparse.lo unitmsgparse.o: $(srcdir)/testcode/unitmsgparse.c config.h \
  $(srcdir)/util/data/msgencode.h $(srcdir)/util/data/dname.h $(srcdir)/util/alloc.h $(srcdir)/util/regional.h \
  $(srcdir)/util/net_help.h $(srcdir)/testcode/readhex.h
 unitvandergaast.lo unitvandergaast.o: $(srcdir)/testcode/unitvandergaast.c \
- config.h $(srcdir)/util/log.h  $(srcdir)/testcode/unitmain.h
+ config.h $(srcdir)/util/log.h  $(srcdir)/testcode/unitmain.h \
+ edns-subnet/addrtree.h
 unitneg.lo unitneg.o: $(srcdir)/testcode/unitneg.c config.h $(srcdir)/util/log.h \
  $(srcdir)/util/net_help.h \
  $(srcdir)/util/data/packed_rrset.h $(srcdir)/util/storage/lruhash.h $(srcdir)/util/locks.h \
