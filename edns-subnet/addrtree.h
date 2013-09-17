@@ -112,4 +112,8 @@ int unittest_wrapper_addrtree_cmpbit(const addrkey_t* key1,
 	const addrkey_t* key2, addrlen_t n);
 addrlen_t unittest_wrapper_addrtree_bits_common(const addrkey_t* s1, 
 	addrlen_t l1, const addrkey_t* s2, addrlen_t l2, addrlen_t skip);
+int unittest_wrapper_addrtree_getbit(const addrkey_t* addr, 
+	addrlen_t addrlen, addrlen_t n);
+int unittest_wrapper_addrtree_issub(const addrkey_t* s1, addrlen_t l1, 
+	const addrkey_t* s2, addrlen_t l2,  addrlen_t skip);
 #endif /* ADDRTREE_H */

@@ -150,7 +150,8 @@ void addrtree_delete(struct addrtree* tree)
 }
 
 /** Get N'th bit from address */
-int getbit(const addrkey_t* addr, addrlen_t addrlen, addrlen_t n)
+static int 
+getbit(const addrkey_t* addr, addrlen_t addrlen, addrlen_t n)
 {
 	log_assert(addrlen > n);
 	return (int)(addr[n/KEYWIDTH]>>((KEYWIDTH-1)-(n%KEYWIDTH))) & 1;
@@ -328,9 +329,11 @@ addrlen_t unittest_wrapper_addrtree_bits_common(const addrkey_t* s1,
 		addrlen_t l1, const addrkey_t* s2, addrlen_t l2, addrlen_t skip) {
 	return bits_common(s1, l1, s2, l2, skip);
 }
-
-
-//~ static struct addredge* edge_create(struct addrnode* node, const addrkey_t* addr, addrlen_t addrlen)
-//~ static struct addrnode* node_create(struct reply_info* elem, addrlen_t scope)
-//~ static void freenode_recursive(struct addrtree* tree, struct addrnode* node)
-//~ static int issub(const addrkey_t* s1, addrlen_t l1, 	const addrkey_t* s2, addrlen_t l2,  addrlen_t skip)
+int unittest_wrapper_addrtree_getbit(const addrkey_t* addr, 
+		addrlen_t addrlen, addrlen_t n) {
+	return getbit(addr, addrlen, n);
+}
+int unittest_wrapper_addrtree_issub(const addrkey_t* s1, addrlen_t l1, 
+		const addrkey_t* s2, addrlen_t l2,  addrlen_t skip) {
+	return issub(s1, l1, s2, l2, skip);
+}

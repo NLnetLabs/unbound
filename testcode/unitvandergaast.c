@@ -44,19 +44,60 @@
 #include "testcode/unitmain.h"
 #include "edns-subnet/addrtree.h"
 
+static int 
+issub(const addrkey_t* s1, addrlen_t l1, 
+	const addrkey_t* s2, addrlen_t l2,  addrlen_t skip)
+{
+	return bits_common(s1, l1, s2, l2, skip) == l1;
+}
+
+static void issub_test(void)
+{
+	unit_show_func("edns-subnet/addrtree.h", "issub");
+	addrkey_t k1[] = {0x55, 0x55, 0x5A};
+	addrkey_t k2[] = {0x55, 0x5D, 0x5A};
+	unit_assert( !unittest_wrapper_addrtree_issub(k1, 24, k2, 24,  0) );
+	unit_assert(  unittest_wrapper_addrtree_issub(k1,  8, k2, 16,  0) );
+	unit_assert(  unittest_wrapper_addrtree_issub(k2, 12, k1, 13,  0) );
+	unit_assert( !unittest_wrapper_addrtree_issub(k1, 16, k2, 12,  0) );
+	unit_assert(  unittest_wrapper_addrtree_issub(k1, 12, k2, 12,  0) );
+	unit_assert( !unittest_wrapper_addrtree_issub(k1, 13, k2, 13,  0) );
+	unit_assert(  unittest_wrapper_addrtree_issub(k1, 24, k2, 24, 13) );
+	unit_assert( !unittest_wrapper_addrtree_issub(k1, 24, k2, 20, 13) );
+	unit_assert(  unittest_wrapper_addrtree_issub(k1, 20, k2, 24, 13) );
+}
+
+static void getbit_test(void)
+{
+	unit_show_func("edns-subnet/addrtree.h", "getbit");
+	addrkey_t k1[] = {0x55, 0x55, 0x5A};
+	int i;
+	for(i = 0; i<20; i++) {
+		unit_assert( unittest_wrapper_addrtree_getbit(k1, 20, i) == (i&1) );
+	}
+}
+
 static void bits_common_test(void)
 {
 	unit_show_func("edns-subnet/addrtree.h", "bits_common");
 	addrkey_t k1[] = {0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC, 0xDE, 0xF0};
-	//~ addrkey_t k2[] = {0x5A, 0xF0};
+	addrkey_t k2[] = {0,0,0,0,0,0,0,0};
 	int i;
 	
 	for(i = 0; i<64; i++) {
 		unit_assert( unittest_wrapper_addrtree_bits_common(k1, 64, k1, 64, i) == 64 );
-		
-		//actually I expect the following to crash
-		//~ unit_assert( unittest_wrapper_addrtree_bits_common(k1, 64, k1, 11, i) == 11 );
 	}
+	for(i = 0; i<8; i++) {
+		k2[i] = k1[i]^(1<<i);
+	}
+	unit_assert( unittest_wrapper_addrtree_bits_common(k1, 64, k2, 64,  0) == 0*8+7 );
+	unit_assert( unittest_wrapper_addrtree_bits_common(k1, 64, k2, 64,  8) == 1*8+6 );
+	unit_assert( unittest_wrapper_addrtree_bits_common(k1, 64, k2, 64, 16) == 2*8+5 );
+	unit_assert( unittest_wrapper_addrtree_bits_common(k1, 64, k2, 64, 24) == 3*8+4 );
+	unit_assert( unittest_wrapper_addrtree_bits_common(k1, 64, k2, 64, 32) == 4*8+3 );
+	unit_assert( unittest_wrapper_addrtree_bits_common(k1, 64, k2, 64, 40) == 5*8+2 );
+	unit_assert( unittest_wrapper_addrtree_bits_common(k1, 64, k2, 64, 48) == 6*8+1 );
+	unit_assert( unittest_wrapper_addrtree_bits_common(k1, 64, k2, 64, 56) == 7*8+0 );
 }
 
 static void cmpbit_test(void)
@@ -77,4 +118,6 @@ void vandergaast_test(void)
 	unit_show_feature("vandergaast");
 	cmpbit_test();
 	bits_common_test();
+	getbit_test();
+	issub_test();
 }
