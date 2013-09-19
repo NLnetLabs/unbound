@@ -1,6 +1,7 @@
 19 Sep 2013: Wouter
 	- 1.4.21 tag created.
 	- trunk has 1.4.22 number inside it.
+	- iana portlist updated.
 
 16 Sep 2013: Wouter
 	- Fix#524: max-udp-size not effective to non-EDNS0 queries, from
