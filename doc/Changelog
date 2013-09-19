@@ -2,6 +2,7 @@
 	- 1.4.21 tag created.
 	- trunk has 1.4.22 number inside it.
 	- iana portlist updated.
+	- acx_nlnetlabs.m4 to 26; improve FLTO help text.
 
 16 Sep 2013: Wouter
 	- Fix#524: max-udp-size not effective to non-EDNS0 queries, from

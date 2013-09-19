@@ -1455,7 +1455,7 @@ Optional Features:
   --enable-FEATURE[=ARG]  include FEATURE [ARG=yes]
   --enable-checking       Enable warnings, asserts, makefile-dependencies
   --enable-debug          same as enable-checking
-  --disable-flto          Disable link-time optimization
+  --disable-flto          Disable link-time optimization (gcc specific option)
   --enable-shared[=PKGS]  build shared libraries [default=yes]
   --enable-static[=PKGS]  build static libraries [default=yes]
   --enable-fast-install[=PKGS]
