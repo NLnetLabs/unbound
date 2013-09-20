@@ -29,7 +29,7 @@ edge_create(struct addrnode* node, const addrkey_t* addr, addrlen_t addrlen)
 		return NULL;
 	edge->node = node;
 	edge->len = addrlen;
-	n = (addrlen / KEYWIDTH) + ((addrlen % KEYWIDTH)!=0)?1:0; /*ceil()*/
+	n = (size_t)((addrlen / KEYWIDTH) + ((addrlen % KEYWIDTH)!=0)?1:0); /*ceil()*/
 	edge->str = (addrkey_t*)calloc(n, sizeof(addrkey_t));
 	if (!edge->str) {
 		free(edge);

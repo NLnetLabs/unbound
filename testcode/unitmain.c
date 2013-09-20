@@ -588,7 +588,9 @@ main(int argc, char* argv[])
 	slabhash_test();
 	infra_test();
 	msgparse_test();
+#ifdef CLIENT_SUBNET
 	vandergaast_test();
+#endif /* CLIENT_SUBNET */
 	checklock_stop();
 	printf("%d checks ok.\n", testcount);
 #ifdef HAVE_SSL

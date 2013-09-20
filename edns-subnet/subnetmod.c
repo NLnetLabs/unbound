@@ -245,7 +245,7 @@ int lookup_and_reply(struct module_qstate* qstate, int id)
 static int 
 common_prefix(uint8_t *a, uint8_t *b, uint8_t net)
 {
-	int n = net / 8;
+	size_t n = (size_t)net / 8;
 	return !memcmp(a, b, n) && ((net % 8) == 0 || a[n] == b[n]);
 }
 

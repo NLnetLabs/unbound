@@ -40,6 +40,9 @@
  */
 
 #include "config.h"
+
+#ifdef CLIENT_SUBNET
+
 #include "util/log.h"
 #include "testcode/unitmain.h"
 #include "edns-subnet/addrtree.h"
@@ -114,3 +117,5 @@ void vandergaast_test(void)
 	getbit_test();
 	issub_test();
 }
+#endif /* CLIENT_SUBNET */
+
