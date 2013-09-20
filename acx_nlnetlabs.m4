@@ -2,7 +2,9 @@
 # Copyright 2009, Wouter Wijngaards, NLnet Labs.   
 # BSD licensed.
 #
-# Version 24
+# Version 26
+# 2013-09-19 FLTO help text improved.
+# 2013-07-18 Enable ACX_CHECK_COMPILER_FLAG to test for -Wstrict-prototypes
 # 2013-06-25 FLTO has --disable-flto option.
 # 2013-05-03 Update W32_SLEEP for newer mingw that links but not defines it.
 # 2013-03-22 Fix ACX_RSRC_VERSION for long version numbers.
@@ -119,7 +121,7 @@ AC_MSG_CHECKING(whether $CC supports -$1)
 cache=`echo $1 | sed 'y%.=/+-%___p_%'`
 AC_CACHE_VAL(cv_prog_cc_flag_$cache,
 [
-echo 'void f(){}' >conftest.c
+echo 'void f(void){}' >conftest.c
 if test -z "`$CC $CPPFLAGS $CFLAGS -$1 -c conftest.c 2>&1`"; then
 eval "cv_prog_cc_flag_$cache=yes"
 else
@@ -409,7 +411,7 @@ dnl Check if CC supports -flto.
 dnl in a way that supports clang and suncc (that flag does something else,
 dnl but fails to link).  It sets it in CFLAGS if it works.
 AC_DEFUN([ACX_CHECK_FLTO], [
-    AC_ARG_ENABLE([flto], AS_HELP_STRING([--disable-flto], [Disable link-time optimization]))
+    AC_ARG_ENABLE([flto], AS_HELP_STRING([--disable-flto], [Disable link-time optimization (gcc specific option)]))
     AS_IF([test "x$enable_flto" != "xno"], [
         AC_MSG_CHECKING([if $CC supports -flto])
         BAKCFLAGS="$CFLAGS"

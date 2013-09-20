@@ -486,7 +486,7 @@ val_verify_DNSKEY_with_DS(struct module_env* env, struct val_env* ve,
 		/* Once we see a single DS with a known digestID and 
 		 * algorithm, we cannot return INSECURE (with a 
 		 * "null" KeyEntry). */
-		has_useful_ds = true;
+		has_useful_ds = 1;
 
 		sec = verify_dnskeys_with_ds_rr(env, ve, dnskey_rrset, 
 			ds_rrset, i, reason);
@@ -596,7 +596,7 @@ val_verify_DNSKEY_with_TA(struct module_env* env, struct val_env* ve,
 		/* Once we see a single DS with a known digestID and 
 		 * algorithm, we cannot return INSECURE (with a 
 		 * "null" KeyEntry). */
-		has_useful_ta = true;
+		has_useful_ta = 1;
 
 		sec = verify_dnskeys_with_ds_rr(env, ve, dnskey_rrset, 
 			ta_ds, i, reason);
@@ -622,7 +622,7 @@ val_verify_DNSKEY_with_TA(struct module_env* env, struct val_env* ve,
 			continue;
 
 		/* we saw a useful TA */
-		has_useful_ta = true;
+		has_useful_ta = 1;
 
 		sec = dnskey_verify_rrset(env, ve, dnskey_rrset,
 			ta_dnskey, i, reason);

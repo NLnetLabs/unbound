@@ -78,6 +78,10 @@
  *	... same as async for non-threaded
  *	... the callbacks are called in the thread that calls process(ctx)
  *
+ * Openssl needs to have locking in place, and the application must set
+ * it up, because a mere library cannot do this, use the calls
+ * CRYPTO_set_id_callback and CRYPTO_set_locking_callback.
+ *
  * If no threading is compiled in, the above async example uses fork(2) to
  * create a process to perform the work. The forked process exits when the 
  * calling process exits, or ctx_delete() is called.
