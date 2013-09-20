@@ -78,7 +78,6 @@ int subnetmod_init(struct module_env* env, int id)
 	sn_env->subnet_msg_cache = slabhash_create(env->cfg->msg_cache_slabs,
 			HASH_DEFAULT_STARTARRAY, env->cfg->msg_cache_size,
 			msg_cache_sizefunc, query_info_compare,
-			//~ msgreply_sizefunc, query_info_compare,
 			query_entry_delete, subnet_data_delete, NULL);
 	if(!sn_env->subnet_msg_cache) {
 		log_err("subnet: could not create cache");

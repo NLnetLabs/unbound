@@ -75,7 +75,10 @@ struct addrtree* addrtree_create(addrlen_t max_depth, struct module_env* env)
 	return tree;
 }
 
-size_t tree_size(const struct addrnode* node)
+/**
+ *  Recursively calculate size of tree from this node on downwards.
+ * */
+static size_t tree_size(const struct addrnode* node)
 {
 	int i;
 	size_t s = 0;

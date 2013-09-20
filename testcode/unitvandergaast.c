@@ -1,5 +1,5 @@
 /*
- * testcode/unitvandergaast.c - unit test for msg parse routines.
+ * testcode/unitvandergaast.c - unit test for vandergaast routines.
  *
  * Copyright (c) 2013, NLnet Labs. All rights reserved.
  *

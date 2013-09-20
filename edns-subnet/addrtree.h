@@ -62,6 +62,11 @@ struct addredge {
 	struct addrnode* node;
 };
 
+/**
+ *  Size of tree in bytes
+ */
+size_t addrtree_size(const struct addrtree* tree);
+
 /** 
  * Create a new tree
  * @param max_depth: Tree will cap keys to this length.
