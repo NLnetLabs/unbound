@@ -44,8 +44,121 @@
 #ifdef CLIENT_SUBNET
 
 #include "util/log.h"
+#include "util/module.h"
 #include "testcode/unitmain.h"
 #include "edns-subnet/addrtree.h"
+
+/*
+	void printkey(addrkey_t *k, addrlen_t bits)
+	{
+		int byte;
+		int bytes = bits/8 + ((bits%8)>0);
+		for (byte = 0; byte < bytes; byte++) {
+			printf("%02x ", k[byte]);
+		}
+	}
+
+	void print_tree(struct addrnode* node, int indent)
+	{
+		struct addredge* edge;
+		int i, s, byte;
+		if (indent == 0) printf("-----Tree-----");
+		printf("[node elem:%d]\n", node->elem != NULL);
+		for (i = 0; i<2; i++) {
+			if (node->edge[i]) {
+				for (s = 0; s < indent; s++) printf(" ");
+				printkey(node->edge[i]->str, node->edge[i]->len);
+				printf("(len %d bits, %d bytes) ", node->edge[i]->len, 
+					node->edge[i]->len/8 + ((node->edge[i]->len%8)>0));
+				print_tree(node->edge[i]->node, indent+1);
+			}
+		}	
+		if (indent == 0) printf("-----Tree-----");
+	}
+*/
+
+/* what should we check?
+ * X - is it balanced? (a node with 1 child shoudl not have  
+ * a node with 1 child MUST have elem
+ * child must be sub of parent
+ * edge must be longer than parent edge
+ * */
+static int addrtree_inconsistent_subtree(struct addredge* parent_edge)
+{
+	struct addredge* edge;
+	struct addrnode* node = parent_edge->node;
+	int childcount, i, r;
+	
+	childcount = (node->edge[0] != NULL) + (node->edge[1] != NULL);
+	/* Only nodes with 2 children should possibly have no element. */
+	if (childcount < 2 && !node->elem) return 10;
+	for (i = 0; i<2; i++) {
+		edge = node->edge[i];
+		if (!edge) continue;
+		if (!edge->node) return 11;
+		if (!edge->str) return 12;
+		if (edge->len <= parent_edge->len) return 13;
+		if (!unittest_wrapper_addrtree_issub(parent_edge->str,
+				parent_edge->len, edge->str, edge->len, 0))
+			return 14;
+		if ((r = addrtree_inconsistent_subtree(edge)) != 0)
+			return 15+r;
+	}
+	return 0;
+}
+
+static int addrtree_inconsistent(struct addrtree* tree)
+{
+	struct addredge* edge;
+	int i, r;
+	
+	if (!tree) return 0;
+	if (!tree->root) return 1;
+	
+	for (i = 0; i<2; i++) {
+		edge = tree->root->edge[i];
+		if (!edge) continue;
+		if (!edge->node) return 3;
+		if (!edge->str) return 4;
+		if ((r = addrtree_inconsistent_subtree(edge)) != 0)
+			return r;
+	}
+	return 0;
+}
+
+static int randomkey(addrkey_t **k, int maxlen)
+{
+	int byte;
+	int bits = rand() % maxlen;
+	int bytes = bits/8 + (bits%8>0); /*ceil*/
+	*k = (addrkey_t *) malloc(bytes * sizeof(addrkey_t));
+	for (byte = 0; byte < bytes; byte++) {
+		(*k)[byte] = (addrkey_t)(rand() & 0xFF);
+	}
+	return bits;
+}
+
+static void consistency_test(void)
+{
+	int i, l, r;
+	addrkey_t *k;
+	struct addrtree* t;
+	struct module_env env;
+	struct reply_info *elem;
+	unit_show_func("edns-subnet/addrtree.h", "Tree consistency check");
+	srand(9195); /* just some value for reproducibility */
+
+	env.alloc = NULL;
+	t = addrtree_create(100, &env);
+
+	for (i = 0; i < 1000; i++) {
+		l = randomkey(&k, 128);
+		elem = (struct reply_info *) calloc(1, sizeof(struct reply_info));
+		addrtree_insert(t, k, l, 64, elem);
+		free(k);
+		unit_assert( !addrtree_inconsistent(t) );
+	}
+}
 
 static void issub_test(void)
 {
@@ -116,6 +229,7 @@ void vandergaast_test(void)
 	bits_common_test();
 	getbit_test();
 	issub_test();
+	consistency_test();
 }
 #endif /* CLIENT_SUBNET */
 

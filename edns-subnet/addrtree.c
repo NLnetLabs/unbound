@@ -29,7 +29,7 @@ edge_create(struct addrnode* node, const addrkey_t* addr, addrlen_t addrlen)
 		return NULL;
 	edge->node = node;
 	edge->len = addrlen;
-	n = (size_t)((addrlen / KEYWIDTH) + ((addrlen % KEYWIDTH)!=0)?1:0); /*ceil()*/
+	n = (size_t)((addrlen / KEYWIDTH) + ((addrlen % KEYWIDTH != 0)?1:0)); /*ceil()*/
 	edge->str = (addrkey_t*)calloc(n, sizeof(addrkey_t));
 	if (!edge->str) {
 		free(edge);
@@ -113,7 +113,7 @@ size_t addrtree_size(const struct addrtree* tree)
 void addrtree_clean_node(const struct addrtree* tree, struct addrnode* node)
 {
 	if (node->elem) {
-		reply_info_delete(node->elem, NULL);
+		reply_info_delete(node->elem, NULL); //YBS niet NULL: regel 244
 		node->elem = NULL;
 	}
 }
@@ -143,6 +143,10 @@ freenode_recursive(struct addrtree* tree, struct addrnode* node)
 	free(node);
 }
 
+/** 
+ * Free complete addrtree structure
+ * @param tree: Tree to free
+ */
 void addrtree_delete(struct addrtree* tree)
 {
 	if (tree) {
@@ -152,7 +156,12 @@ void addrtree_delete(struct addrtree* tree)
 	}
 }
 
-/** Get N'th bit from address */
+/** Get N'th bit from address 
+ * @param addr: address to inspect
+ * @param addrlen: length of addr in bits
+ * @param n: index of bit to test. Must be in range [0, addrlen)
+ * @return 0 or 1
+ */
 static int 
 getbit(const addrkey_t* addr, addrlen_t addrlen, addrlen_t n)
 {
@@ -212,6 +221,14 @@ void
 addrtree_insert(struct addrtree* tree, const addrkey_t* addr, 
 	addrlen_t sourcemask, addrlen_t scope, struct reply_info* elem)
 {
+	/*TODO: 
+	 * problem: code might delete elem so effectively owns elem.
+	 * but fail is silent and elem may leak.
+	 * plan return NULL or elem on insert to let caller decide.
+	 * Also try again to make tree agnostic of elem type. We need a
+	 * elem_size callback and clean_tree might have to  return a list
+	 * of elem or require delete callback */
+	
 	struct addrnode* newnode, *node;
 	struct addredge* edge, *newedge;
 	uint8_t index;
