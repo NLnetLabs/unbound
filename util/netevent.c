@@ -234,6 +234,22 @@ comm_base_create(int sigs)
 	return b;
 }
 
+struct comm_base* comm_base_create_event(struct event_base* base)
+{
+	struct comm_base* b = (struct comm_base*)calloc(1,
+		sizeof(struct comm_base));
+	if(!b)
+		return NULL;
+	b->eb = (struct internal_base*)calloc(1, sizeof(struct internal_base));
+	if(!b->eb) {
+		free(b);
+		return NULL;
+	}
+	b->eb->base = base;
+	comm_base_now(b);
+	return b;
+}
+
 void 
 comm_base_delete(struct comm_base* b)
 {
@@ -252,6 +268,21 @@ comm_base_delete(struct comm_base* b)
  	   in libevent 1.3c (event_base_once appears) this is fixed. */
 	event_base_free(b->eb->base);
 #endif /* HAVE_EVENT_BASE_FREE and HAVE_EVENT_BASE_ONCE */
+	b->eb->base = NULL;
+	free(b->eb);
+	free(b);
+}
+
+void 
+comm_base_delete_no_base(struct comm_base* b)
+{
+	if(!b)
+		return;
+	if(b->eb->slow_accept_enabled) {
+		if(event_del(&b->eb->slow_accept) != 0) {
+			log_err("could not event_del slow_accept");
+		}
+	}
 	b->eb->base = NULL;
 	free(b->eb);
 	free(b);

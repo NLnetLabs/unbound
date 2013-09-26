@@ -1354,6 +1354,13 @@ void libworker_bg_done_cb(void* ATTR_UNUSED(arg), int ATTR_UNUSED(rcode),
 	log_assert(0);
 }
 
+void libworker_event_done_cb(void* ATTR_UNUSED(arg), int ATTR_UNUSED(rcode),
+        ldns_buffer* ATTR_UNUSED(buf), enum sec_status ATTR_UNUSED(s),
+	char* ATTR_UNUSED(why_bogus))
+{
+	log_assert(0);
+}
+
 int context_query_cmp(const void* ATTR_UNUSED(a), const void* ATTR_UNUSED(b))
 {
 	log_assert(0);

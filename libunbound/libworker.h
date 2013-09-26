@@ -57,6 +57,7 @@ struct comm_point;
 struct comm_reply;
 struct regional;
 struct tube;
+struct event_base;
 
 /** 
  * The library-worker status structure
@@ -106,6 +107,31 @@ int libworker_bg(struct ub_ctx* ctx);
  */
 int libworker_fg(struct ub_ctx* ctx, struct ctx_query* q);
 
+/**
+ * create worker for event-based interface.
+ * @param ctx: context with config.
+ * @param eb: event base.
+ * @return new worker or NULL.
+ */
+struct libworker* libworker_create_event(struct ub_ctx* ctx,
+	struct event_base* eb);
+
+/**
+ * Attach context_query to mesh for callback in event-driven setup.
+ * @param ctx: context
+ * @param q: context query entry
+ * @param async_id: store query num if query takes long.
+ * @return 0 if finished OK, else error.
+ */
+int libworker_attach_mesh(struct ub_ctx* ctx, struct ctx_query* q,
+	int* async_id);
+
+/** 
+ * delete worker for event-based interface.  does not free the event_base.
+ * @param w: event-based worker to delete.
+ */
+void libworker_delete_event(struct libworker* w);
+
 /** cleanup the cache to remove all rrset IDs from it, arg is libworker */
 void libworker_alloc_cleanup(void* arg);
 
@@ -153,6 +179,10 @@ void libworker_fg_done_cb(void* arg, int rcode, ldns_buffer* buf,
 
 /** mesh callback with bg results */
 void libworker_bg_done_cb(void* arg, int rcode, ldns_buffer* buf, 
+	enum sec_status s, char* why_bogus);
+
+/** mesh callback with event results */
+void libworker_event_done_cb(void* arg, int rcode, ldns_buffer* buf, 
 	enum sec_status s, char* why_bogus);
 
 /** 

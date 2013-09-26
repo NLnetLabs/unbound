@@ -802,6 +802,8 @@ large outgoing port ranges.  ])
 	if test -n "$BAK_LDFLAGS_SET"; then
 		LDFLAGS="$BAK_LDFLAGS"
 	fi
+	AC_SUBST(UNBOUND_EVENT_INSTALL, [unbound-event-install])
+	AC_SUBST(UNBOUND_EVENT_UNINSTALL, [unbound-event-uninstall])
 else
 	AC_DEFINE(USE_MINI_EVENT, 1, [Define if you want to use internal select based events])
 fi

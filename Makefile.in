@@ -30,6 +30,8 @@ PYTHONMOD_INSTALL=@PYTHONMOD_INSTALL@
 PYTHONMOD_UNINSTALL=@PYTHONMOD_UNINSTALL@
 PYUNBOUND_INSTALL=@PYUNBOUND_INSTALL@
 PYUNBOUND_UNINSTALL=@PYUNBOUND_UNINSTALL@
+UNBOUND_EVENT_INSTALL=@UNBOUND_EVENT_INSTALL@
+UNBOUND_EVENT_UNINSTALL=@UNBOUND_EVENT_UNINSTALL@
 UNBOUND_VERSION_MAJOR=@UNBOUND_VERSION_MAJOR@
 UNBOUND_VERSION_MINOR=@UNBOUND_VERSION_MINOR@
 UNBOUND_VERSION_MICRO=@UNBOUND_VERSION_MICRO@
@@ -455,7 +457,11 @@ pyunbound-install:
 	$(LIBTOOL) --mode=install cp _unbound.la $(DESTDIR)$(PYTHON_SITE_PKG)
 	$(LIBTOOL) --mode=finish $(DESTDIR)$(PYTHON_SITE_PKG)
 
-install:	all $(PYTHONMOD_INSTALL) $(PYUNBOUND_INSTALL)
+unbound-event-install:
+	$(INSTALL) -m 755 -d $(DESTDIR)$(includedir)
+	$(LIBTOOL) --mode=install cp $(srcdir)/libunbound/unbound-event.h $(DESTDIR)$(includedir)/unbound-event.h
+
+install:	all $(PYTHONMOD_INSTALL) $(PYUNBOUND_INSTALL) $(UNBOUND_EVENT_INSTALL)
 	$(INSTALL) -m 755 -d $(DESTDIR)$(sbindir)
 	$(INSTALL) -m 755 -d $(DESTDIR)$(mandir)
 	$(INSTALL) -m 755 -d $(DESTDIR)$(mandir)/man8
@@ -500,7 +506,10 @@ pyunbound-uninstall:
 	rm -f -- $(DESTDIR)$(PYTHON_SITE_PKG)/unbound.py
 	$(LIBTOOL) --mode=uninstall rm -f $(DESTDIR)$(PYTHON_SITE_PKG)/_unbound.la
 
-uninstall:	$(PYTHONMOD_UNINSTALL) $(PYUNBOUND_UNINSTALL)
+unbound-event-uninstall:
+	rm -f -- $(DESTDIR)$(includedir)/unbound-event.h
+
+uninstall:	$(PYTHONMOD_UNINSTALL) $(PYUNBOUND_UNINSTALL) $(UNBOUND_EVENT_UNINSTALL)
 	rm -f -- $(DESTDIR)$(sbindir)/unbound$(EXEEXT) $(DESTDIR)$(sbindir)/unbound-checkconf$(EXEEXT) $(DESTDIR)$(sbindir)/unbound-host$(EXEEXT) $(DESTDIR)$(sbindir)/unbound-control$(EXEEXT) $(DESTDIR)$(sbindir)/unbound-anchor$(EXEEXT) $(DESTDIR)$(sbindir)/unbound-control-setup
 	rm -f -- $(DESTDIR)$(mandir)/man8/unbound.8 $(DESTDIR)$(mandir)/man8/unbound-checkconf.8 $(DESTDIR)$(mandir)/man5/unbound.conf.5 $(DESTDIR)$(mandir)/man8/unbound-control.8 $(DESTDIR)$(mandir)/man8/unbound-anchor.8 $(DESTDIR)$(mandir)/man8/unbound-control-setup.8
 	rm -f -- $(DESTDIR)$(mandir)/man1/unbound-host.1 $(DESTDIR)$(mandir)/man3/libunbound.3

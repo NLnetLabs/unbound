@@ -48,6 +48,7 @@
 #include "util/data/packed_rrset.h"
 struct libworker;
 struct tube;
+struct event_base;
 
 /**
  * The context structure
@@ -110,6 +111,11 @@ struct ub_ctx {
 	struct local_zones* local_zones;
 	/** random state used to seed new random state structures */
 	struct ub_randstate* seed_rnd;
+
+	/** event base for event oriented interface */
+	struct event_base* event_base;
+	/** libworker for event based interface */
+	struct libworker* event_worker;
 
 	/** next query number (to try) to use */
 	int next_querynum;

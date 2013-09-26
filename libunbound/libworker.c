@@ -50,6 +50,7 @@
 #include "libunbound/libworker.h"
 #include "libunbound/context.h"
 #include "libunbound/unbound.h"
+#include "libunbound/unbound-event.h"
 #include "services/outside_network.h"
 #include "services/mesh.h"
 #include "services/localzone.h"
@@ -73,11 +74,10 @@
 /** handle new query command for bg worker */
 static void handle_newq(struct libworker* w, uint8_t* buf, uint32_t len);
 
-/** delete libworker struct */
+/** delete libworker env */
 static void
-libworker_delete(struct libworker* w)
+libworker_delete_env(struct libworker* w)
 {
-	if(!w) return;
 	if(w->env) {
 		outside_network_quit_prepare(w->back);
 		mesh_delete(w->env->mesh);
@@ -94,13 +94,30 @@ libworker_delete(struct libworker* w)
 	SSL_CTX_free(w->sslctx);
 #endif
 	outside_network_delete(w->back);
+}
+
+/** delete libworker struct */
+static void
+libworker_delete(struct libworker* w)
+{
+	if(!w) return;
+	libworker_delete_env(w);
 	comm_base_delete(w->base);
+	free(w);
+}
+
+void
+libworker_delete_event(struct libworker* w)
+{
+	if(!w) return;
+	libworker_delete_env(w);
+	comm_base_delete_no_base(w->base);
 	free(w);
 }
 
 /** setup fresh libworker struct */
 static struct libworker*
-libworker_setup(struct ub_ctx* ctx, int is_bg)
+libworker_setup(struct ub_ctx* ctx, int is_bg, struct event_base* eb)
 {
 	unsigned int seed;
 	struct libworker* w = (struct libworker*)calloc(1, sizeof(*w));
@@ -188,7 +205,9 @@ libworker_setup(struct ub_ctx* ctx, int is_bg)
 	}
 	seed = 0;
 
-	w->base = comm_base_create(0);
+	if(eb)
+		w->base = comm_base_create_event(eb);
+	else	w->base = comm_base_create(0);
 	if(!w->base) {
 		libworker_delete(w);
 		return NULL;
@@ -231,6 +250,12 @@ libworker_setup(struct ub_ctx* ctx, int is_bg)
 	w->env->detect_cycle = &mesh_detect_cycle;
 	comm_base_timept(w->base, &w->env->now, &w->env->now_tv);
 	return w;
+}
+
+struct libworker* libworker_create_event(struct ub_ctx* ctx,
+	struct event_base* eb)
+{
+	return libworker_setup(ctx, 0, eb);
 }
 
 /** handle cancel command for bg worker */
@@ -349,7 +374,7 @@ int libworker_bg(struct ub_ctx* ctx)
 	lock_basic_lock(&ctx->cfglock);
 	if(ctx->dothread) {
 		lock_basic_unlock(&ctx->cfglock);
-		w = libworker_setup(ctx, 1);
+		w = libworker_setup(ctx, 1, NULL);
 		if(!w) return UB_NOMEM;
 		w->is_bg_thread = 1;
 #ifdef ENABLE_LOCK_CHECKS
@@ -364,7 +389,7 @@ int libworker_bg(struct ub_ctx* ctx)
 #else /* HAVE_FORK */
 		switch((ctx->bg_pid=fork())) {
 			case 0:
-				w = libworker_setup(ctx, 1);
+				w = libworker_setup(ctx, 1, NULL);
 				if(!w) fatal_exit("out of memory");
 				/* close non-used parts of the pipes */
 				tube_close_write(ctx->qq_pipe);
@@ -571,7 +596,7 @@ setup_qinfo_edns(struct libworker* w, struct ctx_query* q,
 
 int libworker_fg(struct ub_ctx* ctx, struct ctx_query* q)
 {
-	struct libworker* w = libworker_setup(ctx, 0);
+	struct libworker* w = libworker_setup(ctx, 0, NULL);
 	uint16_t qflags, qid;
 	struct query_info qinfo;
 	struct edns_data edns;
@@ -608,6 +633,70 @@ int libworker_fg(struct ub_ctx* ctx, struct ctx_query* q)
 	comm_base_dispatch(w->base);
 
 	libworker_delete(w);
+	return UB_NOERROR;
+}
+
+void
+libworker_event_done_cb(void* arg, int rcode, ldns_buffer* buf,
+	enum sec_status s, char* why_bogus)
+{
+	struct ctx_query* q = (struct ctx_query*)arg;
+	ub_event_callback_t cb = (ub_event_callback_t)q->cb;
+	void* cb_arg = q->cb_arg;
+
+	/* delete it now */
+	struct ub_ctx* ctx = q->w->ctx;
+	lock_basic_lock(&ctx->cfglock);
+	(void)rbtree_delete(&ctx->queries, q->node.key);
+	ctx->num_async--;
+	context_query_delete(q);
+	lock_basic_unlock(&ctx->cfglock);
+
+	if(!q->cancelled) {
+		/* call callback */
+		int sec = 0;
+		if(s == sec_status_bogus)
+			sec = 1;
+		else if(s == sec_status_secure)
+			sec = 2;
+		(*cb)(cb_arg, rcode, (void*)buf, sec, why_bogus);
+	}
+}
+
+int libworker_attach_mesh(struct ub_ctx* ctx, struct ctx_query* q,
+	int* async_id)
+{
+	struct libworker* w = ctx->event_worker;
+	uint16_t qflags, qid;
+	struct query_info qinfo;
+	struct edns_data edns;
+	if(!w)
+		return UB_INITFAIL;
+	if(!setup_qinfo_edns(w, q, &qinfo, &edns))
+		return UB_SYNTAX;
+	qid = 0;
+	qflags = BIT_RD;
+	q->w = w;
+	/* see if there is a fixed answer */
+	ldns_buffer_write_u16_at(w->back->udp_buff, 0, qid);
+	ldns_buffer_write_u16_at(w->back->udp_buff, 2, qflags);
+	if(local_zones_answer(ctx->local_zones, &qinfo, &edns, 
+		w->back->udp_buff, w->env->scratch)) {
+		regional_free_all(w->env->scratch);
+		free(qinfo.qname);
+		libworker_event_done_cb(q, LDNS_RCODE_NOERROR,
+			w->back->udp_buff, sec_status_insecure, NULL);
+		return UB_NOERROR;
+	}
+	/* process new query */
+	if(!mesh_new_callback(w->env->mesh, &qinfo, qflags, &edns, 
+		w->back->udp_buff, qid, libworker_event_done_cb, q)) {
+		free(qinfo.qname);
+		return UB_NOMEM;
+	}
+	free(qinfo.qname);
+	if(async_id)
+		*async_id = q->querynum;
 	return UB_NOERROR;
 }
 

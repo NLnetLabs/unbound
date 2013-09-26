@@ -295,6 +295,21 @@ struct comm_signal {
 struct comm_base* comm_base_create(int sigs);
 
 /**
+ * Create comm base that uses the given event_base (underlying event
+ * mechanism pointer).
+ * @param base: underlying lib event base.
+ * @return: the new comm base. NULL on error.
+ */
+struct comm_base* comm_base_create_event(struct event_base* base);
+
+/**
+ * Delete comm base structure but not the underlying lib event base.
+ * All comm points must have been deleted.
+ * @param b: the base to delete.
+ */
+void comm_base_delete_no_base(struct comm_base* b);
+
+/**
  * Destroy a comm base.
  * All comm points must have been deleted.
  * @param b: the base to delete.
