@@ -41,8 +41,9 @@
  * otherwise it wouldn't work, the event and event_base structures would
  * be different.  If unbound is compiled without libevent support then
  * this header file is not supposed to be installed on the system.
+ * The ldns_buffer is the same buffer format as the ldnsbuffers that
+ * are used in unbound's sourcecode.
  *
- * TODO
  * Use ub_ctx_create_event_base() to create an unbound context that uses
  * the event base that you have made.  Then, use the ub_resolve_event call
  * to add DNS resolve queries to the context.  Those then run when you
