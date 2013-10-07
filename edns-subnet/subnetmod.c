@@ -29,9 +29,9 @@
 
 /** externally called */
 void 
-subnet_data_delete(void* d, void* ATTR_UNUSED(arg))
+subnet_data_delete(void *d, void *ATTR_UNUSED(arg))
 {
-	struct subnet_msg_cache_data* r;
+	struct subnet_msg_cache_data *r;
 	r = (struct subnet_msg_cache_data*)d;
 	addrtree_delete(r->tree4);
 	addrtree_delete(r->tree6);
@@ -40,10 +40,10 @@ subnet_data_delete(void* d, void* ATTR_UNUSED(arg))
 
 /** externally called */
 size_t 
-msg_cache_sizefunc(void* k, void* d)
+msg_cache_sizefunc(void *k, void *d)
 {
-	struct msgreply_entry* q = (struct msgreply_entry*)k;
-	struct subnet_msg_cache_data* r = (struct subnet_msg_cache_data*)d;
+	struct msgreply_entry *q = (struct msgreply_entry*)k;
+	struct subnet_msg_cache_data *r = (struct subnet_msg_cache_data*)d;
 	size_t s = sizeof(struct msgreply_entry) 
 		+ sizeof(struct subnet_msg_cache_data)
 		+ q->key.qname_len + lock_get_mem(&q->entry.lock);
@@ -54,9 +54,9 @@ msg_cache_sizefunc(void* k, void* d)
 
 /** new query for sn */
 static int
-subnet_new_qstate(struct module_qstate* qstate, int id)
+subnet_new_qstate(struct module_qstate *qstate, int id)
 {
-	struct subnet_qstate* iq = (struct subnet_qstate*)regional_alloc(
+	struct subnet_qstate *iq = (struct subnet_qstate*)regional_alloc(
 		qstate->region, sizeof(struct subnet_qstate));
 	qstate->minfo[id] = iq;
 	if(!iq) 
@@ -65,9 +65,9 @@ subnet_new_qstate(struct module_qstate* qstate, int id)
 	return 1;
 }
 
-int subnetmod_init(struct module_env* env, int id)
+int subnetmod_init(struct module_env *env, int id)
 {
-	struct subnet_env* sn_env = (struct subnet_env*)calloc(1,
+	struct subnet_env *sn_env = (struct subnet_env*)calloc(1,
 		sizeof(struct subnet_env));
 	if(!sn_env) {
 		log_err("malloc failure");
@@ -86,9 +86,9 @@ int subnetmod_init(struct module_env* env, int id)
 	return 1;
 }
 
-void subnetmod_deinit(struct module_env* env, int id)
+void subnetmod_deinit(struct module_env *env, int id)
 {
-	struct subnet_env* sn_env;
+	struct subnet_env *sn_env;
 	if(!env || !env->modinfo[id])
 		return;
 	sn_env = (struct subnet_env*)env->modinfo[id];
@@ -98,52 +98,64 @@ void subnetmod_deinit(struct module_env* env, int id)
 }
 
 /** Tells client that upstream has no/improper support */
-void cp_edns_bad_response(struct edns_data* target, struct edns_data* source)
+void cp_edns_bad_response(struct edns_data *target, struct edns_data *source)
 {
 	target->subnet_scope_mask  = 0;
 	target->subnet_source_mask = source->subnet_source_mask;
 	target->subnet_addr_fam    = source->subnet_addr_fam;
-	memcpy(target->subnet_addr,  source->subnet_addr, INET6_SIZE);
+	memcpy(target->subnet_addr, source->subnet_addr, INET6_SIZE);
 	target->subnet_validdata = 1;
 }
 
+static void delfunc(void *envptr, void *elemptr) {
+	struct reply_info *elem = (struct reply_info *)elemptr;
+	struct module_env *env = (struct module_env *)envptr;
+	reply_info_parsedelete(elem, env->alloc);
+}
+
+static size_t sizefunc(void *elemptr) {
+	struct reply_info *elem  = (struct reply_info *)elemptr;
+	return sizeof (struct reply_info) - sizeof (struct rrset_ref)
+		+ elem->rrset_count * sizeof (struct rrset_ref)
+		+ elem->rrset_count * sizeof (struct ub_packed_rrset_key *);
+}
 
 /* select tree from cache entry based on edns data.
  * If for address family not present it will create a new one.
  * NULL on failure to create. */
 static struct addrtree* 
-get_tree(struct subnet_msg_cache_data* data, struct edns_data* edns, 
-	struct module_env* env)
+get_tree(struct subnet_msg_cache_data *data, struct edns_data *edns, 
+	struct module_env *env)
 {
-	struct addrtree* tree;
+	struct addrtree *tree;
 	if (edns->subnet_addr_fam == EDNSSUBNET_ADDRFAM_IP4) {
 		if (!data->tree4)
-			data->tree4 = addrtree_create(EDNSSUBNET_MAX_SUBNET_IP4, env);
+			data->tree4 = addrtree_create(EDNSSUBNET_MAX_SUBNET_IP4, &delfunc, &sizefunc, env);
 		tree = data->tree4;
 	} else {
 		if (!data->tree6)
-			data->tree6 = addrtree_create(EDNSSUBNET_MAX_SUBNET_IP6, env);
+			data->tree6 = addrtree_create(EDNSSUBNET_MAX_SUBNET_IP6, &delfunc, &sizefunc, env);
 		tree = data->tree6;
 	}
 	return tree;
 }
 
-void update_cache(struct module_qstate* qstate, int id)
+void update_cache(struct module_qstate *qstate, int id)
 {
-	struct msgreply_entry* mrep_entry;
-	struct addrtree* tree;
+	struct msgreply_entry *mrep_entry;
+	struct addrtree *tree;
 	struct reply_info *rep;
 	struct query_info qinf;
-	struct slabhash* subnet_msg_cache = 
+	struct slabhash *subnet_msg_cache = 
 		((struct subnet_env*)qstate->env->modinfo[id])->subnet_msg_cache;
-	struct edns_data* edns = &qstate->edns_client_in;
+	struct edns_data *edns = &qstate->edns_client_in;
 	
 	/** We already calculated hash upon lookup */
 	hashvalue_t h = qstate->minfo[id] ? 
 		((struct subnet_qstate*)qstate->minfo[id])->qinfo_hash : 
 		query_info_hash(&qstate->qinfo);
 	/** Step 1, general qinfo lookup */
-	struct lruhash_entry* lru_entry = slabhash_lookup(subnet_msg_cache, h, &qstate->qinfo, 1);
+	struct lruhash_entry *lru_entry = slabhash_lookup(subnet_msg_cache, h, &qstate->qinfo, 1);
 	int acquired_lock = (lru_entry != NULL);
 	if (!lru_entry) {
 		qinf = qstate->qinfo;
@@ -177,24 +189,24 @@ void update_cache(struct module_qstate* qstate, int id)
 	rep->flags &= ~(BIT_AA | BIT_CD);/* a reply based on the cache   */
 	addrtree_insert(tree, (addrkey_t*)edns->subnet_addr, 
 		edns->subnet_source_mask, 
-		qstate->edns_server_in.subnet_scope_mask, rep);
+		qstate->edns_server_in.subnet_scope_mask, rep, rep->ttl);
 	if (acquired_lock) lock_rw_unlock(&lru_entry->lock);
 }
 
 
 /* return true iff reply is sent. */
-int lookup_and_reply(struct module_qstate* qstate, int id)
+int lookup_and_reply(struct module_qstate *qstate, int id)
 {
-	struct lruhash_entry* e;
-	struct module_env* env = qstate->env;
-	struct subnet_env* sne = (struct subnet_env*)env->modinfo[id];
-	struct subnet_qstate* iq = (struct subnet_qstate*)qstate->minfo[id];
+	struct lruhash_entry *e;
+	struct module_env *env = qstate->env;
+	struct subnet_env *sne = (struct subnet_env*)env->modinfo[id];
+	struct subnet_qstate *iq = (struct subnet_qstate*)qstate->minfo[id];
 	hashvalue_t h = query_info_hash(&qstate->qinfo);
-	struct subnet_msg_cache_data* data;
-	struct edns_data* edns = &qstate->edns_client_in;
-	struct addrtree* tree;
-	struct addrnode* node;
-	struct reply_info* rep;
+	struct subnet_msg_cache_data *data;
+	struct edns_data *edns = &qstate->edns_client_in;
+	struct addrtree *tree;
+	struct addrnode *node;
+	struct reply_info *rep;
 	
 	if (iq) iq->qinfo_hash = h; /** Might be useful on cache miss */
 	e = slabhash_lookup(sne->subnet_msg_cache, h, &qstate->qinfo, 0);
@@ -207,18 +219,13 @@ int lookup_and_reply(struct module_qstate* qstate, int id)
 		return 0;
 	}
 	node = addrtree_find(tree, (addrkey_t*)edns->subnet_addr, 
-		edns->subnet_source_mask);
+		edns->subnet_source_mask, *env->now);
 	if (!node) { /** plain old cache miss */
 		lock_rw_unlock(&e->lock);
 		return 0;
 	}
 	rep = node->elem;
-	if(rep->ttl < *env->now) { /** msg expired, remove from node */
-		addrtree_clean_node(tree, node);
-		lock_rw_unlock(&e->lock);
-		return 0;
-	}
-	rep = reply_info_copy(rep, env->alloc, NULL);
+	rep = reply_info_copy(rep, env->alloc, qstate->region);
 	lock_rw_unlock(&e->lock);
 	qstate->return_msg = (struct dns_msg*)regional_alloc(
 		qstate->region, sizeof(struct dns_msg));
@@ -248,7 +255,7 @@ common_prefix(uint8_t *a, uint8_t *b, uint8_t net)
 	return !memcmp(a, b, n) && ((net % 8) == 0 || a[n] == b[n]);
 }
 
-enum module_ext_state eval_response(struct module_qstate* qstate, int id)
+enum module_ext_state eval_response(struct module_qstate *qstate, int id)
 {
 	size_t sn_octs;
 	struct edns_data *c_in  = &qstate->edns_client_in; /* rcvd from client */
@@ -307,8 +314,8 @@ enum module_ext_state eval_response(struct module_qstate* qstate, int id)
 	return module_finished;
 }
 
-void subnetmod_operate(struct module_qstate* qstate, enum module_ev event, 
-	int id, struct outbound_entry* ATTR_UNUSED(outbound))
+void subnetmod_operate(struct module_qstate *qstate, enum module_ev event, 
+	int id, struct outbound_entry *ATTR_UNUSED(outbound))
 {
 	verbose(VERB_QUERY, "subnet[module %d] operate: extstate:%s "
 		"event:%s", id, strextstate(qstate->ext_state[id]), 
@@ -361,18 +368,18 @@ void subnetmod_operate(struct module_qstate* qstate, enum module_ev event,
 	return;
 }
 
-void subnetmod_clear(struct module_qstate* qstate, int id)
+void subnetmod_clear(struct module_qstate *qstate, int id)
 {
 	/* qstate has no data outside region */
 }
 
-void subnetmod_inform_super(struct module_qstate* qstate, int id, 
-	struct module_qstate* super)
+void subnetmod_inform_super(struct module_qstate *qstate, int id, 
+	struct module_qstate *super)
 {
 	/* Not used */
 }
 
-size_t subnetmod_get_mem(struct module_env* env, int id)
+size_t subnetmod_get_mem(struct module_env *env, int id)
 {
 	verbose(VERB_ALGO, "subnetmod: get_mem, id: %d, NOTIMPL", id);
 	return 550;
@@ -386,7 +393,7 @@ static struct module_func_block subnetmod_block = {
 	&subnetmod_inform_super, &subnetmod_clear, &subnetmod_get_mem
 };
 
-struct module_func_block* subnetmod_get_funcblock(void)
+struct module_func_block *subnetmod_get_funcblock(void)
 {
 	return &subnetmod_block;
 }

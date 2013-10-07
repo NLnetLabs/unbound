@@ -24,18 +24,18 @@ static struct addredge*
 edge_create(struct addrnode* node, const addrkey_t* addr, addrlen_t addrlen)
 {
 	size_t n;
-	struct addredge* edge = (struct addredge*)malloc( sizeof(*edge) );
+	struct addredge* edge = (struct addredge*)malloc( sizeof (*edge) );
 	if (!edge)
 		return NULL;
 	edge->node = node;
 	edge->len = addrlen;
 	n = (size_t)((addrlen / KEYWIDTH) + ((addrlen % KEYWIDTH != 0)?1:0)); /*ceil()*/
-	edge->str = (addrkey_t*)calloc(n, sizeof(addrkey_t));
+	edge->str = (addrkey_t*)calloc(n, sizeof (addrkey_t));
 	if (!edge->str) {
 		free(edge);
 		return NULL;
 	}
-	memcpy(edge->str, addr, n * sizeof(addrkey_t));
+	memcpy(edge->str, addr, n * sizeof (addrkey_t));
 	return edge;
 }
 
@@ -46,77 +46,98 @@ edge_create(struct addrnode* node, const addrkey_t* addr, addrlen_t addrlen)
  * @return new addrnode or NULL on failure
  */
 static struct addrnode* 
-node_create(struct reply_info* elem, addrlen_t scope)
+node_create(void* elem, addrlen_t scope, time_t ttl)
 {
-	struct addrnode* node = (struct addrnode*)malloc( sizeof(*node) );
+	struct addrnode* node = (struct addrnode*)malloc( sizeof (*node) );
 	if (!node)
 		return NULL;
 	node->elem = elem;
 	node->scope = scope;
+	node->ttl = ttl;
 	node->edge[0] = NULL;
 	node->edge[1] = NULL;
 	return node;
 }
 
-struct addrtree* addrtree_create(addrlen_t max_depth, struct module_env* env)
+struct addrtree* addrtree_create(addrlen_t max_depth, 
+	void (*delfunc)(void *, void *), size_t (*sizefunc)(void *), void *env)
 {
 	struct addrtree* tree;
-	log_assert(env != NULL);
-	tree = (struct addrtree*)malloc( sizeof(*tree) );
+	log_assert(delfunc != NULL);
+	log_assert(sizefunc != NULL);
+	tree = (struct addrtree*)malloc( sizeof (*tree) );
 	if(!tree)
 		return NULL;
-	tree->root = node_create(NULL, 0);
+	tree->root = node_create(NULL, 0, 0);
 	if (!tree->root) {
 		free(tree);
 		return NULL;
 	}
 	tree->max_depth = max_depth;
+	tree->delfunc = delfunc;
+	tree->sizefunc = sizefunc;
 	tree->env = env;
 	return tree;
 }
 
 /**
- *  Recursively calculate size of tree from this node on downwards.
+ * Recursively calculate size of tree from this node on downwards.
  * */
-static size_t tree_size(const struct addrnode* node)
+static size_t tree_size(const struct addrtree* tree, 
+	const struct addrnode* node)
 {
-	int i;
-	size_t s = 0;
+	size_t s, i;
 	
-	if (!node) return s;
-	s += sizeof(struct addrnode);
-	if (node->elem) {
-		s += sizeof(struct reply_info) - sizeof(struct rrset_ref);
-		s += node->elem->rrset_count * sizeof(struct rrset_ref);
-		s += node->elem->rrset_count * sizeof(struct ub_packed_rrset_key*);
-	}
-	
+	if (!node) return 0;
+	s = sizeof(struct addrnode);
+	if (node->elem && tree->sizefunc)
+		s += tree->sizefunc(node->elem);
 	for (i = 0; i < 2; i++) {
 		if (!node->edge[i]) continue;
-		s += sizeof(struct addredge);
-		s += (node->edge[i]->len / KEYWIDTH) + ((node->edge[i]->len % KEYWIDTH)!=0);
-		s += tree_size(node->edge[i]->node);
+		s += sizeof (struct addredge);
+		s += (node->edge[i]->len / KEYWIDTH);
+		s += (node->edge[i]->len % KEYWIDTH) != 0;
+		s += tree_size(tree, node->edge[i]->node);
 	}
 	return s;
 }
 
 size_t addrtree_size(const struct addrtree* tree)
 {
-	size_t s = 0;
-	if (tree) {
-		s += sizeof(struct addrtree);
-		s += tree_size(tree->root);
-	}
-	return s;
+	if (!tree) return 0;
+	return sizeof (struct addrtree) + tree_size(tree, tree->root);
 }
 
-void addrtree_clean_node(const struct addrtree* tree, struct addrnode* node)
+static void
+clean_node(const struct addrtree* tree, struct addrnode* node)
 {
-	if (node->elem) {
-		reply_info_delete(node->elem, NULL); //YBS niet NULL: regel 244
-		node->elem = NULL;
-	}
+	if (!node->elem) return;
+	tree->delfunc(tree->env, node->elem);
+	node->elem = NULL;
 }
+
+static void
+purge_node(const struct addrtree* tree, struct addrnode* node, 
+	struct addrnode* parentnode, struct addredge* parentedge)
+{
+	struct addredge *child_edge;
+	
+	int childcount = (node->edge[0] != NULL) + (node->edge[1] != NULL);
+	clean_node(tree, node);
+	if (childcount == 2 || !parentnode)
+		return;
+	log_assert(parentedge); /* parent node implies parent edge */
+	if (childcount == 1) {
+		child_edge = node->edge[0]?node->edge[0]:node->edge[1];
+		if (parentedge == parentnode->edge[0])
+			parentnode->edge[0] = child_edge;
+		else
+			parentnode->edge[1] = child_edge;
+	}
+	free(parentedge->str);
+	free(parentedge);
+}
+
 
 /** 
  * Free node and all nodes below
@@ -139,7 +160,7 @@ freenode_recursive(struct addrtree* tree, struct addrnode* node)
 		}
 		free(edge);
 	}
-	addrtree_clean_node(tree, node);
+	clean_node(tree, node);
 	free(node);
 }
 
@@ -149,11 +170,10 @@ freenode_recursive(struct addrtree* tree, struct addrnode* node)
  */
 void addrtree_delete(struct addrtree* tree)
 {
-	if (tree) {
-		if (tree->root)
-			freenode_recursive(tree, tree->root);
-		free(tree);
-	}
+	if (!tree) return;
+	if (tree->root)
+		freenode_recursive(tree, tree->root);
+	free(tree);
 }
 
 /** Get N'th bit from address 
@@ -219,15 +239,14 @@ issub(const addrkey_t* s1, addrlen_t l1,
 
 void
 addrtree_insert(struct addrtree* tree, const addrkey_t* addr, 
-	addrlen_t sourcemask, addrlen_t scope, struct reply_info* elem)
+	addrlen_t sourcemask, addrlen_t scope, void* elem, time_t ttl)
 {
 	/*TODO: 
-	 * problem: code might delete elem so effectively owns elem.
-	 * but fail is silent and elem may leak.
-	 * plan return NULL or elem on insert to let caller decide.
-	 * Also try again to make tree agnostic of elem type. We need a
-	 * elem_size callback and clean_tree might have to  return a list
-	 * of elem or require delete callback */
+	 * check ttl of visited nodes.
+	 * pass current time as arg
+	 * 
+	 * purge_node(tree, node, parent_node, edge);
+	 */
 	
 	struct addrnode* newnode, *node;
 	struct addredge* edge, *newedge;
@@ -249,8 +268,7 @@ addrtree_insert(struct addrtree* tree, const addrkey_t* addr,
 		if (depth == sourcemask) {
 			/* update this node's scope and data */
 			if (node->elem)
-				reply_info_parsedelete(node->elem, tree->env->alloc);
-				//~ reply_info_parsedelete(node->elem, NULL);
+				tree->delfunc(tree->env, node->elem);
 			node->elem = elem;
 			node->scope = scope;
 			return;
@@ -259,7 +277,7 @@ addrtree_insert(struct addrtree* tree, const addrkey_t* addr,
 		edge = node->edge[index];
 		/* Case 2: New leafnode */
 		if (!edge) {
-			newnode = node_create(elem, scope);
+			newnode = node_create(elem, scope, ttl);
 			node->edge[index] = edge_create(newnode, addr, sourcemask);
 			if (!node->edge[index])
 				free(newnode);
@@ -277,7 +295,7 @@ addrtree_insert(struct addrtree* tree, const addrkey_t* addr,
 			continue;
 		}
 		/* Case 4: split. */
-		if (!(newnode = node_create(NULL, 0)))
+		if (!(newnode = node_create(NULL, 0, 0)))
 			return;
 		if (!(newedge = edge_create(newnode, addr, common))) {
 			free(newnode);
@@ -291,10 +309,11 @@ addrtree_insert(struct addrtree* tree, const addrkey_t* addr,
 			/* Data is stored in the node */
 			newnode->elem = elem;
 			newnode->scope = scope;
+			newnode->ttl = ttl;
 		} else {
 			/* Data is stored in other leafnode */
 			node = newnode;
-			newnode = node_create(elem, scope);
+			newnode = node_create(elem, scope, ttl);
 			node->edge[index^1] = edge_create(newnode, addr, sourcemask);
 		}
 		return;
@@ -303,10 +322,10 @@ addrtree_insert(struct addrtree* tree, const addrkey_t* addr,
 
 struct addrnode*
 addrtree_find(const struct addrtree* tree, const addrkey_t* addr, 
-	addrlen_t sourcemask)
+	addrlen_t sourcemask, time_t now)
 {
-	struct addrnode* node = tree->root;
-	struct addredge* edge;
+	struct addrnode *parent_node = NULL, *node = tree->root;
+	struct addredge *edge = NULL;
 	addrlen_t depth = 0;
 
 	log_assert(node != NULL);
@@ -319,7 +338,9 @@ addrtree_find(const struct addrtree* tree, const addrkey_t* addr,
 			if (depth == node->scope ||
 					(node->scope > sourcemask && depth == sourcemask)) {
 				/* Authority indicates it does not have a more precise
-				 * answer or we cannot ask a more specific question */
+				 * answer or we cannot ask a more specific question.
+				 * If expired don't clean up just now. */
+				if (node->ttl < now) return NULL;
 				return node;
 			}
 		}
@@ -335,8 +356,10 @@ addrtree_find(const struct addrtree* tree, const addrkey_t* addr,
 		if (!issub(edge->str, edge->len, addr, sourcemask, depth))
 			return NULL;
 		log_assert(depth < edge->len);
+		parent_node = node;
 		depth = edge->len;
 		node = edge->node;
+		
 	}
 }
 

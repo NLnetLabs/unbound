@@ -138,6 +138,13 @@ static int randomkey(addrkey_t **k, int maxlen)
 	return bits;
 }
 
+static void elemfree(void *envptr, void *elemptr)
+{
+	struct reply_info *elem = (struct reply_info *)elemptr;
+	struct module_env *env = (struct module_env *)envptr;
+	free(elem);
+}
+
 static void consistency_test(void)
 {
 	int i, l, r;
@@ -145,16 +152,16 @@ static void consistency_test(void)
 	struct addrtree* t;
 	struct module_env env;
 	struct reply_info *elem;
+	time_t timenow = 0;
 	unit_show_func("edns-subnet/addrtree.h", "Tree consistency check");
 	srand(9195); /* just some value for reproducibility */
 
-	env.alloc = NULL;
-	t = addrtree_create(100, &env);
+	t = addrtree_create(100, &elemfree, NULL, &env);
 
 	for (i = 0; i < 1000; i++) {
 		l = randomkey(&k, 128);
 		elem = (struct reply_info *) calloc(1, sizeof(struct reply_info));
-		addrtree_insert(t, k, l, 64, elem);
+		addrtree_insert(t, k, l, 64, elem, timenow + 10);
 		free(k);
 		unit_assert( !addrtree_inconsistent(t) );
 	}

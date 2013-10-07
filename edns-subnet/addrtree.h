@@ -40,13 +40,17 @@ struct addrtree {
 	struct addrnode* root;
 	/** Maximum prefix length we are willing to cache. */
 	addrlen_t max_depth;
-	struct module_env* env;
+	void (*delfunc)(void *, void *);
+	size_t (*sizefunc)(void *);
+	void *env;
 	
 };
 
 struct addrnode {
 	/** Payload of node, may be NULL */
 	struct reply_info* elem;
+	/** Abs time in seconds in which elem is meaningful */
+	time_t ttl;
 	/** Number of significant bits in address. */
 	addrlen_t scope;
 	/** A node can have 0-2 edges, set to NULL for unused */
@@ -73,20 +77,15 @@ size_t addrtree_size(const struct addrtree* tree);
  * @param env: Module environment for alloc information
  * @return new addrtree or NULL on failure
  */
-struct addrtree* addrtree_create(addrlen_t max_depth, struct module_env* env);
+struct addrtree* 
+addrtree_create(addrlen_t max_depth, void (*delfunc)(void *, void *), 
+	size_t (*sizefunc)(void *), void *env);
 
 /** 
  * Free tree and all nodes below
  * @param tree: Tree to be freed
  */
 void addrtree_delete(struct addrtree* tree);
-
-/** 
- * Free data stored at node
- * @param tree: Tree the node lives in.
- * @param node: Node to be scrubbed
- */
-void addrtree_clean_node(const struct addrtree* tree, struct addrnode* node);
 
 /**
  * Insert an element in the tree. Failures are silent. Sourcemask and
@@ -99,7 +98,7 @@ void addrtree_clean_node(const struct addrtree* tree, struct addrnode* node);
  * @param elem: data to store in the tree
  */
 void addrtree_insert(struct addrtree* tree, const addrkey_t* addr, 
-	addrlen_t sourcemask, addrlen_t scope, struct reply_info* elem);
+	addrlen_t sourcemask, addrlen_t scope, void* elem, time_t ttl);
 
 /**
  * Find a node containing an element in the tree.
@@ -110,7 +109,7 @@ void addrtree_insert(struct addrtree* tree, const addrkey_t* addr,
  * @return addrnode or NULL on miss
  */
 struct addrnode* addrtree_find(const struct addrtree* tree, 
-	const addrkey_t* addr, addrlen_t sourcemask);
+	const addrkey_t* addr, addrlen_t sourcemask, time_t now);
 
 /** Wrappers for static functions to unit test */
 int unittest_wrapper_addrtree_cmpbit(const addrkey_t* key1, 
