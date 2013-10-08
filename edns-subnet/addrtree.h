@@ -74,6 +74,8 @@ size_t addrtree_size(const struct addrtree* tree);
 /** 
  * Create a new tree
  * @param max_depth: Tree will cap keys to this length.
+ * @param delfunc: f(element, env) delete element
+ * @param sizefunc: f(element) returning the size of element.
  * @param env: Module environment for alloc information
  * @return new addrtree or NULL on failure
  */
@@ -89,16 +91,21 @@ void addrtree_delete(struct addrtree* tree);
 
 /**
  * Insert an element in the tree. Failures are silent. Sourcemask and
- * scope might be changed according to local policy.
+ * scope might be changed according to local policy. Caller should no 
+ * longer access elem, it could be free'd now or later during future
+ * inserts.
  * 
  * @param tree: Tree insert elem in
  * @param addr: key for element lookup
  * @param sourcemask: Length of addr in bits
  * @param scope: Number of significant bits in addr
  * @param elem: data to store in the tree
+ * @param ttl: elem is valid up to this time, seconds.
+ * @param now: Current time in seconds
  */
 void addrtree_insert(struct addrtree* tree, const addrkey_t* addr, 
-	addrlen_t sourcemask, addrlen_t scope, void* elem, time_t ttl);
+	addrlen_t sourcemask, addrlen_t scope, void* elem, time_t ttl, 
+	time_t now);
 
 /**
  * Find a node containing an element in the tree.
@@ -106,6 +113,7 @@ void addrtree_insert(struct addrtree* tree, const addrkey_t* addr,
  * @param tree: Tree to search
  * @param addr: key for element lookup
  * @param sourcemask: Length of addr in bits
+ * @param now: Current time in seconds
  * @return addrnode or NULL on miss
  */
 struct addrnode* addrtree_find(const struct addrtree* tree, 

@@ -189,7 +189,8 @@ void update_cache(struct module_qstate *qstate, int id)
 	rep->flags &= ~(BIT_AA | BIT_CD);/* a reply based on the cache   */
 	addrtree_insert(tree, (addrkey_t*)edns->subnet_addr, 
 		edns->subnet_source_mask, 
-		qstate->edns_server_in.subnet_scope_mask, rep, rep->ttl);
+		qstate->edns_server_in.subnet_scope_mask, rep, rep->ttl,
+		*qstate->env->now);
 	if (acquired_lock) lock_rw_unlock(&lru_entry->lock);
 }
 

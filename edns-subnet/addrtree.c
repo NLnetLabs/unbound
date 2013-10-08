@@ -43,6 +43,7 @@ edge_create(struct addrnode* node, const addrkey_t* addr, addrlen_t addrlen)
  * Create a new node
  * @param elem: Element to store at this node
  * @param scope: Scopemask from server reply
+ * @param ttl: Element is valid up to this time. Absolute, seconds
  * @return new addrnode or NULL on failure
  */
 static struct addrnode* 
@@ -108,6 +109,11 @@ size_t addrtree_size(const struct addrtree* tree)
 	return sizeof (struct addrtree) + tree_size(tree, tree->root);
 }
 
+/** 
+ * Scrub a node clean of elem
+ * @param tree: Tree the node lives in.
+ * @param node: Node to be cleaned
+ */
 static void
 clean_node(const struct addrtree* tree, struct addrnode* node)
 {
@@ -116,28 +122,32 @@ clean_node(const struct addrtree* tree, struct addrnode* node)
 	node->elem = NULL;
 }
 
+/** 
+ * Purge a node from the tree. Node and parentedge are cleaned and 
+ * free'd.
+ * @param tree: Tree the node lives in.
+ * @param node: Node to be freed
+ * @param parentnode: parent of node, may be NULL if node is rootnode.
+ * @param parentedge: edge between parentnode and node. May be NULL iff
+ *        parentnode is NULL
+ */
 static void
 purge_node(const struct addrtree* tree, struct addrnode* node, 
 	struct addrnode* parentnode, struct addredge* parentedge)
 {
-	struct addredge *child_edge;
-	
+	struct addredge *child_edge = NULL;
 	int childcount = (node->edge[0] != NULL) + (node->edge[1] != NULL);
 	clean_node(tree, node);
 	if (childcount == 2 || !parentnode)
 		return;
 	log_assert(parentedge); /* parent node implies parent edge */
-	if (childcount == 1) {
-		child_edge = node->edge[0]?node->edge[0]:node->edge[1];
-		if (parentedge == parentnode->edge[0])
-			parentnode->edge[0] = child_edge;
-		else
-			parentnode->edge[1] = child_edge;
+	if (childcount == 1) { /* Fix reference */
+		child_edge = node->edge[!node->edge[0]];
 	}
+	parentnode->edge[parentedge != parentnode->edge[0]] = child_edge;
 	free(parentedge->str);
 	free(parentedge);
 }
-
 
 /** 
  * Free node and all nodes below
@@ -239,15 +249,9 @@ issub(const addrkey_t* s1, addrlen_t l1,
 
 void
 addrtree_insert(struct addrtree* tree, const addrkey_t* addr, 
-	addrlen_t sourcemask, addrlen_t scope, void* elem, time_t ttl)
+	addrlen_t sourcemask, addrlen_t scope, void* elem, time_t ttl, 
+	time_t now)
 {
-	/*TODO: 
-	 * check ttl of visited nodes.
-	 * pass current time as arg
-	 * 
-	 * purge_node(tree, node, parent_node, edge);
-	 */
-	
 	struct addrnode* newnode, *node;
 	struct addredge* edge, *newedge;
 	uint8_t index;
@@ -267,14 +271,21 @@ addrtree_insert(struct addrtree* tree, const addrkey_t* addr,
 		/* Case 1: update existing node */
 		if (depth == sourcemask) {
 			/* update this node's scope and data */
-			if (node->elem)
-				tree->delfunc(tree->env, node->elem);
+			clean_node(tree, node);
 			node->elem = elem;
 			node->scope = scope;
 			return;
 		}
 		index = (uint8_t)getbit(addr, sourcemask, depth);
+		/* Get an edge to an unexpired node */
 		edge = node->edge[index];
+		while (edge) {
+			/* Purge all expired nodes on path */
+			if (!edge->node->elem || edge->node->ttl >= now)
+				break;
+			purge_node(tree, edge->node, node, edge);
+			edge = node->edge[index];
+		}
 		/* Case 2: New leafnode */
 		if (!edge) {
 			newnode = node_create(elem, scope, ttl);
@@ -320,7 +331,7 @@ addrtree_insert(struct addrtree* tree, const addrkey_t* addr,
 	}
 }
 
-struct addrnode*
+struct addrnode *
 addrtree_find(const struct addrtree* tree, const addrkey_t* addr, 
 	addrlen_t sourcemask, time_t now)
 {
@@ -333,14 +344,12 @@ addrtree_find(const struct addrtree* tree, const addrkey_t* addr,
 		/* Current node more specific then question. */
 		log_assert(depth <= sourcemask);
 		/* does this node have data? if yes, see if we have a match */
-		if (node->elem) {
+		if (node->elem && node->ttl >= now) {
 			log_assert(node->scope >= depth); /* saved at wrong depth */
 			if (depth == node->scope ||
 					(node->scope > sourcemask && depth == sourcemask)) {
 				/* Authority indicates it does not have a more precise
-				 * answer or we cannot ask a more specific question.
-				 * If expired don't clean up just now. */
-				if (node->ttl < now) return NULL;
+				 * answer or we cannot ask a more specific question. */
 				return node;
 			}
 		}

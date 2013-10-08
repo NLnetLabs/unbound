@@ -53,16 +53,23 @@
 	{
 		int byte;
 		int bytes = bits/8 + ((bits%8)>0);
+		char msk = 0xFF;
 		for (byte = 0; byte < bytes; byte++) {
-			printf("%02x ", k[byte]);
+			//~ if (byte+1 == bytes)
+				//~ msk = 0xFF<<(8-bits%8);
+			printf("%02x ", k[byte]&msk);
 		}
 	}
 
-	void print_tree(struct addrnode* node, int indent)
+	void print_tree(struct addrnode* node, int indent, int maxdepth)
 	{
 		struct addredge* edge;
 		int i, s, byte;
 		if (indent == 0) printf("-----Tree-----");
+		if (indent > maxdepth) {
+			printf("\n");
+			return;
+		}
 		printf("[node elem:%d]\n", node->elem != NULL);
 		for (i = 0; i<2; i++) {
 			if (node->edge[i]) {
@@ -70,7 +77,7 @@
 				printkey(node->edge[i]->str, node->edge[i]->len);
 				printf("(len %d bits, %d bytes) ", node->edge[i]->len, 
 					node->edge[i]->len/8 + ((node->edge[i]->len%8)>0));
-				print_tree(node->edge[i]->node, indent+1);
+				print_tree(node->edge[i]->node, indent+1, maxdepth);
 			}
 		}	
 		if (indent == 0) printf("-----Tree-----");
@@ -83,12 +90,13 @@
  * child must be sub of parent
  * edge must be longer than parent edge
  * */
-static int addrtree_inconsistent_subtree(struct addredge* parent_edge)
+static int addrtree_inconsistent_subtree(struct addrtree* tree, 
+	struct addredge* parent_edge, addrlen_t depth)
 {
 	struct addredge* edge;
 	struct addrnode* node = parent_edge->node;
 	int childcount, i, r;
-	
+	if (depth > tree->max_depth) return 15;
 	childcount = (node->edge[0] != NULL) + (node->edge[1] != NULL);
 	/* Only nodes with 2 children should possibly have no element. */
 	if (childcount < 2 && !node->elem) return 10;
@@ -101,8 +109,8 @@ static int addrtree_inconsistent_subtree(struct addredge* parent_edge)
 		if (!unittest_wrapper_addrtree_issub(parent_edge->str,
 				parent_edge->len, edge->str, edge->len, 0))
 			return 14;
-		if ((r = addrtree_inconsistent_subtree(edge)) != 0)
-			return 15+r;
+		if ((r = addrtree_inconsistent_subtree(tree, edge, depth+1)) != 0)
+			return 100+r;
 	}
 	return 0;
 }
@@ -110,7 +118,7 @@ static int addrtree_inconsistent_subtree(struct addredge* parent_edge)
 static int addrtree_inconsistent(struct addrtree* tree)
 {
 	struct addredge* edge;
-	int i, r;
+	int i, r, md;
 	
 	if (!tree) return 0;
 	if (!tree->root) return 1;
@@ -120,7 +128,7 @@ static int addrtree_inconsistent(struct addrtree* tree)
 		if (!edge) continue;
 		if (!edge->node) return 3;
 		if (!edge->str) return 4;
-		if ((r = addrtree_inconsistent_subtree(edge)) != 0)
+		if ((r = addrtree_inconsistent_subtree(tree, edge, 1)) != 0)
 			return r;
 	}
 	return 0;
@@ -157,14 +165,24 @@ static void consistency_test(void)
 	srand(9195); /* just some value for reproducibility */
 
 	t = addrtree_create(100, &elemfree, NULL, &env);
-
 	for (i = 0; i < 1000; i++) {
 		l = randomkey(&k, 128);
 		elem = (struct reply_info *) calloc(1, sizeof(struct reply_info));
-		addrtree_insert(t, k, l, 64, elem, timenow + 10);
+		addrtree_insert(t, k, l, 64, elem, timenow + 10, timenow);
 		free(k);
 		unit_assert( !addrtree_inconsistent(t) );
 	}
+	addrtree_delete(t);
+	unit_show_func("edns-subnet/addrtree.h", "Tree consistency with purge");
+	t = addrtree_create(8, &elemfree, NULL, &env);
+	for (i = 0; i < 1000; i++) {
+		l = randomkey(&k, 128);
+		elem = (struct reply_info *) calloc(1, sizeof(struct reply_info));
+		addrtree_insert(t, k, l, 64, elem, i + 10, i);
+		free(k);
+		unit_assert( !addrtree_inconsistent(t) );
+	}
+	addrtree_delete(t);
 }
 
 static void issub_test(void)
