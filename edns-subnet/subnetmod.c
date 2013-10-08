@@ -382,8 +382,10 @@ void subnetmod_inform_super(struct module_qstate *qstate, int id,
 
 size_t subnetmod_get_mem(struct module_env *env, int id)
 {
-	verbose(VERB_ALGO, "subnetmod: get_mem, id: %d, NOTIMPL", id);
-	return 550;
+	struct subnet_env *sn_env = env->modinfo[id];
+	if (!sn_env) return 0;
+	return sizeof(*sn_env) + 
+		slabhash_get_mem(sn_env->subnet_msg_cache);
 }
 
 /**

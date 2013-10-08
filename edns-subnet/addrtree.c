@@ -41,6 +41,7 @@ edge_create(struct addrnode* node, const addrkey_t* addr, addrlen_t addrlen)
 
 /** 
  * Create a new node
+ * @param tree: Tree the node lives in.
  * @param elem: Element to store at this node
  * @param scope: Scopemask from server reply
  * @param ttl: Element is valid up to this time. Absolute, seconds
