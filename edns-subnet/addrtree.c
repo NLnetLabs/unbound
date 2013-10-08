@@ -46,13 +46,15 @@ edge_create(struct addrnode* node, const addrkey_t* addr, addrlen_t addrlen)
  * @param ttl: Element is valid up to this time. Absolute, seconds
  * @return new addrnode or NULL on failure
  */
-static struct addrnode* 
-node_create(void* elem, addrlen_t scope, time_t ttl)
+static struct addrnode * 
+node_create(struct addrtree *tree, void* elem, addrlen_t scope, 
+	time_t ttl)
 {
 	struct addrnode* node = (struct addrnode*)malloc( sizeof (*node) );
 	if (!node)
 		return NULL;
 	node->elem = elem;
+	if (elem) tree->elem_count++;
 	node->scope = scope;
 	node->ttl = ttl;
 	node->edge[0] = NULL;
@@ -69,7 +71,7 @@ struct addrtree* addrtree_create(addrlen_t max_depth,
 	tree = (struct addrtree*)malloc( sizeof (*tree) );
 	if(!tree)
 		return NULL;
-	tree->root = node_create(NULL, 0, 0);
+	tree->root = node_create(tree, NULL, 0, 0);
 	if (!tree->root) {
 		free(tree);
 		return NULL;
@@ -78,6 +80,7 @@ struct addrtree* addrtree_create(addrlen_t max_depth,
 	tree->delfunc = delfunc;
 	tree->sizefunc = sizefunc;
 	tree->env = env;
+	tree->elem_count = 0;
 	return tree;
 }
 
@@ -115,11 +118,12 @@ size_t addrtree_size(const struct addrtree* tree)
  * @param node: Node to be cleaned
  */
 static void
-clean_node(const struct addrtree* tree, struct addrnode* node)
+clean_node(struct addrtree* tree, struct addrnode* node)
 {
 	if (!node->elem) return;
 	tree->delfunc(tree->env, node->elem);
 	node->elem = NULL;
+	tree->elem_count--;
 }
 
 /** 
@@ -132,7 +136,7 @@ clean_node(const struct addrtree* tree, struct addrnode* node)
  *        parentnode is NULL
  */
 static void
-purge_node(const struct addrtree* tree, struct addrnode* node, 
+purge_node(struct addrtree* tree, struct addrnode* node, 
 	struct addrnode* parentnode, struct addredge* parentedge)
 {
 	struct addredge *child_edge = NULL;
@@ -272,6 +276,7 @@ addrtree_insert(struct addrtree* tree, const addrkey_t* addr,
 		if (depth == sourcemask) {
 			/* update this node's scope and data */
 			clean_node(tree, node);
+			tree->elem_count++;
 			node->elem = elem;
 			node->scope = scope;
 			return;
@@ -288,7 +293,7 @@ addrtree_insert(struct addrtree* tree, const addrkey_t* addr,
 		}
 		/* Case 2: New leafnode */
 		if (!edge) {
-			newnode = node_create(elem, scope, ttl);
+			newnode = node_create(tree, elem, scope, ttl);
 			node->edge[index] = edge_create(newnode, addr, sourcemask);
 			if (!node->edge[index])
 				free(newnode);
@@ -306,9 +311,10 @@ addrtree_insert(struct addrtree* tree, const addrkey_t* addr,
 			continue;
 		}
 		/* Case 4: split. */
-		if (!(newnode = node_create(NULL, 0, 0)))
+		if (!(newnode = node_create(tree, NULL, 0, 0)))
 			return;
 		if (!(newedge = edge_create(newnode, addr, common))) {
+			clean_node(tree, newnode);
 			free(newnode);
 			return;
 		}		
@@ -324,7 +330,7 @@ addrtree_insert(struct addrtree* tree, const addrkey_t* addr,
 		} else {
 			/* Data is stored in other leafnode */
 			node = newnode;
-			newnode = node_create(elem, scope, ttl);
+			newnode = node_create(tree, elem, scope, ttl);
 			node->edge[index^1] = edge_create(newnode, addr, sourcemask);
 		}
 		return;

@@ -38,12 +38,14 @@ typedef uint8_t addrkey_t;
 
 struct addrtree {
 	struct addrnode* root;
+	/** Number of elements in the tree (not always equal to number of 
+	 * nodes) */
+	unsigned int elem_count;
 	/** Maximum prefix length we are willing to cache. */
 	addrlen_t max_depth;
 	void (*delfunc)(void *, void *);
 	size_t (*sizefunc)(void *);
 	void *env;
-	
 };
 
 struct addrnode {

@@ -156,6 +156,7 @@ static void elemfree(void *envptr, void *elemptr)
 static void consistency_test(void)
 {
 	int i, l, r;
+	unsigned int count;
 	addrkey_t *k;
 	struct addrtree* t;
 	struct module_env env;
@@ -165,16 +166,23 @@ static void consistency_test(void)
 	srand(9195); /* just some value for reproducibility */
 
 	t = addrtree_create(100, &elemfree, NULL, &env);
+	count = t->elem_count;
+	unit_assert(count == 0);
 	for (i = 0; i < 1000; i++) {
 		l = randomkey(&k, 128);
 		elem = (struct reply_info *) calloc(1, sizeof(struct reply_info));
 		addrtree_insert(t, k, l, 64, elem, timenow + 10, timenow);
+		/* This should always hold because no items ever expire. They
+		 * could be overwritten, though. */
+		unit_assert( count <= t->elem_count );
+		count = t->elem_count;
 		free(k);
 		unit_assert( !addrtree_inconsistent(t) );
 	}
 	addrtree_delete(t);
 	unit_show_func("edns-subnet/addrtree.h", "Tree consistency with purge");
 	t = addrtree_create(8, &elemfree, NULL, &env);
+	unit_assert(t->elem_count == 0);
 	for (i = 0; i < 1000; i++) {
 		l = randomkey(&k, 128);
 		elem = (struct reply_info *) calloc(1, sizeof(struct reply_info));
