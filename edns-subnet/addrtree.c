@@ -20,8 +20,9 @@
  * @param addrlen: length of relevant part of key for this node
  * @return new addredge or NULL on failure
  */
-static struct addredge* 
-edge_create(struct addrnode* node, const addrkey_t* addr, addrlen_t addrlen)
+static struct addredge * 
+edge_create(struct addrnode *node, const addrkey_t *addr, 
+	addrlen_t addrlen, struct addrnode *parent_node, int parent_index)
 {
 	size_t n;
 	struct addredge* edge = (struct addredge*)malloc( sizeof (*edge) );
@@ -29,6 +30,8 @@ edge_create(struct addrnode* node, const addrkey_t* addr, addrlen_t addrlen)
 		return NULL;
 	edge->node = node;
 	edge->len = addrlen;
+	edge->parent_index = parent_index;
+	edge->parent_node = parent_node;
 	n = (size_t)((addrlen / KEYWIDTH) + ((addrlen % KEYWIDTH != 0)?1:0)); /*ceil()*/
 	edge->str = (addrkey_t*)calloc(n, sizeof (addrkey_t));
 	if (!edge->str) {
@@ -36,6 +39,9 @@ edge_create(struct addrnode* node, const addrkey_t* addr, addrlen_t addrlen)
 		return NULL;
 	}
 	memcpy(edge->str, addr, n * sizeof (addrkey_t));
+	/* Only manipulate other objects after successful alloc */
+	node->parent_edge = edge;
+	parent_node->edge[parent_index] = edge;
 	return edge;
 }
 
@@ -60,6 +66,7 @@ node_create(struct addrtree *tree, void* elem, addrlen_t scope,
 	node->ttl = ttl;
 	node->edge[0] = NULL;
 	node->edge[1] = NULL;
+	node->parent_edge = NULL;
 	return node;
 }
 
@@ -132,26 +139,27 @@ clean_node(struct addrtree* tree, struct addrnode* node)
  * free'd.
  * @param tree: Tree the node lives in.
  * @param node: Node to be freed
- * @param parentnode: parent of node, may be NULL if node is rootnode.
- * @param parentedge: edge between parentnode and node. May be NULL iff
- *        parentnode is NULL
  */
 static void
-purge_node(struct addrtree* tree, struct addrnode* node, 
-	struct addrnode* parentnode, struct addredge* parentedge)
+purge_node(struct addrtree *tree, struct addrnode *node)
 {
-	struct addredge *child_edge = NULL;
-	int childcount = (node->edge[0] != NULL) + (node->edge[1] != NULL);
+	struct addredge *parent_edge, *child_edge = NULL;
+	int index;
+	int keep = node->edge[0] && node->edge[1];
+	
 	clean_node(tree, node);
-	if (childcount == 2 || !parentnode)
-		return;
-	log_assert(parentedge); /* parent node implies parent edge */
-	if (childcount == 1) { /* Fix reference */
-		child_edge = node->edge[!node->edge[0]];
+	parent_edge = node->parent_edge;
+	if (keep || !parent_edge) return;
+	index = parent_edge->parent_index;
+	child_edge = node->edge[!node->edge[0]];
+	if (child_edge) {
+		child_edge->parent_node  = parent_edge->parent_node;
+		child_edge->parent_index = index;
 	}
-	parentnode->edge[parentedge != parentnode->edge[0]] = child_edge;
-	free(parentedge->str);
-	free(parentedge);
+	parent_edge->parent_node->edge[index] = child_edge;
+	free(parent_edge->str);
+	free(parent_edge);
+	free(node);
 }
 
 /** 
@@ -289,15 +297,18 @@ addrtree_insert(struct addrtree* tree, const addrkey_t* addr,
 			/* Purge all expired nodes on path */
 			if (!edge->node->elem || edge->node->ttl >= now)
 				break;
-			purge_node(tree, edge->node, node, edge);
+			purge_node(tree, edge->node);
 			edge = node->edge[index];
 		}
 		/* Case 2: New leafnode */
 		if (!edge) {
 			newnode = node_create(tree, elem, scope, ttl);
-			node->edge[index] = edge_create(newnode, addr, sourcemask);
-			if (!node->edge[index])
+			if (!newnode) return;
+			if (!edge_create(newnode, addr, sourcemask, node, index)) {
+				clean_node(tree, newnode);
 				free(newnode);
+				return;
+			}
 			return;
 		}
 		/* Case 3: Traverse edge */
@@ -314,14 +325,16 @@ addrtree_insert(struct addrtree* tree, const addrkey_t* addr,
 		/* Case 4: split. */
 		if (!(newnode = node_create(tree, NULL, 0, 0)))
 			return;
-		if (!(newedge = edge_create(newnode, addr, common))) {
+		if (!edge_create(newnode, addr, common, node, index)) {
 			clean_node(tree, newnode);
 			free(newnode);
 			return;
-		}		
-		node->edge[index] = newedge;
+		}
+		/** connect existing child to our new node */
 		index = (uint8_t)getbit(edge->str, edge->len, common);
 		newnode->edge[index] = edge;
+		edge->parent_node = newnode;
+		edge->parent_index = index;
 		
 		if (common == sourcemask) {
 			/* Data is stored in the node */
@@ -332,7 +345,11 @@ addrtree_insert(struct addrtree* tree, const addrkey_t* addr,
 			/* Data is stored in other leafnode */
 			node = newnode;
 			newnode = node_create(tree, elem, scope, ttl);
-			node->edge[index^1] = edge_create(newnode, addr, sourcemask);
+			if (!edge_create(newnode, addr, sourcemask, node, index^1)) {
+				clean_node(tree, newnode);
+				free(newnode);
+				return;
+			}
 		}
 		return;
 	}

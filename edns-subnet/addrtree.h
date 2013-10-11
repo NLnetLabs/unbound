@@ -57,6 +57,8 @@ struct addrnode {
 	addrlen_t scope;
 	/** A node can have 0-2 edges, set to NULL for unused */
 	struct addredge* edge[2];
+	/** edge between this node and parent */
+	struct addredge* parent_edge;
 };
 
 struct addredge {
@@ -66,6 +68,9 @@ struct addredge {
 	addrlen_t len;
 	/** child node this edge is connected to */
 	struct addrnode* node;
+	/** Ptr in parent node to self */
+	struct addrnode* parent_node;
+	int parent_index;
 };
 
 /**
