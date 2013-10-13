@@ -69,6 +69,8 @@ node_create(struct addrtree *tree, void* elem, addrlen_t scope,
 	node->edge[0] = NULL;
 	node->edge[1] = NULL;
 	node->parent_edge = NULL;
+	node->next = NULL;
+	node->prev = NULL;
 	return node;
 }
 
@@ -86,6 +88,8 @@ struct addrtree* addrtree_create(addrlen_t max_depth,
 		free(tree);
 		return NULL;
 	}
+	tree->first = NULL;
+	tree->last = NULL;
 	tree->max_depth = max_depth;
 	tree->delfunc = delfunc;
 	tree->sizefunc = sizefunc;
@@ -94,12 +98,59 @@ struct addrtree* addrtree_create(addrlen_t max_depth,
 	return tree;
 }
 
+void lru_push(struct addrtree *tree, struct addrnode *node)
+{
+	if (!tree->first) {
+		tree->first = node;
+		tree->last = node;
+	} else {
+		tree->last->next = node;
+		node->prev = tree->last->next;
+		tree->last = node;
+	}
+}
+
+struct addrnode* lru_popfirst(struct addrtree *tree)
+{
+	struct addrnode* pop;
+	pop = tree->first;
+	log_assert(first != NULL);
+	if (!pop->next) {
+		tree->first = NULL;
+		tree->last = NULL;
+	} else {
+		tree->first = pop->next;
+		tree->first->prev = NULL; //remove me?
+	}
+	return pop;
+}
+
+void lru_pop(struct addrtree *tree, struct addrnode *node)
+{
+	if (node == tree->first) {
+		(void)lru_popfirst(tree);
+	} else if (node == tree->last) {
+		tree->last = node->prev;
+		tree->last->next = NULL; //remove me?
+	} else {
+		node->prev->next = node->next;
+		node->next->prev = node->prev;
+	}
+}
+
+void lru_update(struct addrtree *tree, struct addrnode *node)
+{
+	lru_pop(tree, node);
+	lru_push(tree, node);
+}
+
 /**
  * Recursively calculate size of tree from this node on downwards.
  * */
 static size_t tree_size(const struct addrtree* tree, 
 	const struct addrnode* node)
 {
+	/* TODO: with LRU we can do this iterative */
 	size_t s, i;
 	
 	if (!node) return 0;
@@ -172,6 +223,7 @@ purge_node(struct addrtree *tree, struct addrnode *node)
 static void
 freenode_recursive(struct addrtree* tree, struct addrnode* node)
 {
+	/* TODO: with LRU we can do this iterative */
 	struct addredge* edge;
 	int i;
 	
@@ -300,6 +352,7 @@ addrtree_insert(struct addrtree *tree, const addrkey_t *addr,
 			if (!edge->node->elem || edge->node->ttl >= now)
 				break;
 			purge_node(tree, edge->node);
+			lru_pop(tree, edge->node);
 			edge = node->edge[index];
 		}
 		/* Case 2: New leafnode */
@@ -311,6 +364,7 @@ addrtree_insert(struct addrtree *tree, const addrkey_t *addr,
 				free(newnode);
 				return;
 			}
+			lru_push(tree, newnode);
 			return;
 		}
 		/* Case 3: Traverse edge */
@@ -332,6 +386,7 @@ addrtree_insert(struct addrtree *tree, const addrkey_t *addr,
 			free(newnode);
 			return;
 		}
+		lru_push(tree, newnode);
 		/** connect existing child to our new node */
 		index = (uint8_t)getbit(edge->str, edge->len, common);
 		newnode->edge[index] = edge;
@@ -352,13 +407,14 @@ addrtree_insert(struct addrtree *tree, const addrkey_t *addr,
 				free(newnode);
 				return;
 			}
+			lru_push(tree, newnode);
 		}
 		return;
 	}
 }
 
 struct addrnode *
-addrtree_find(const struct addrtree* tree, const addrkey_t* addr, 
+addrtree_find(struct addrtree* tree, const addrkey_t* addr, 
 	addrlen_t sourcemask, time_t now)
 {
 	struct addrnode *parent_node = NULL, *node = tree->root;
@@ -376,6 +432,7 @@ addrtree_find(const struct addrtree* tree, const addrkey_t* addr,
 					(node->scope > sourcemask && depth == sourcemask)) {
 				/* Authority indicates it does not have a more precise
 				 * answer or we cannot ask a more specific question. */
+				lru_update(tree, node);
 				return node;
 			}
 		}

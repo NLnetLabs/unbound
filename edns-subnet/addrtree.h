@@ -51,6 +51,9 @@ struct addrtree {
 	/** External function returning size of elem. Called as
 	 * sizefunc(addrnode->elem) */
 	size_t (*sizefunc)(void *);
+	/** first node in LRU list, first candidate to go */
+	struct addrnode* first;
+	struct addrnode* last;
 };
 
 struct addrnode {
@@ -64,6 +67,10 @@ struct addrnode {
 	struct addredge* edge[2];
 	/** edge between this node and parent */
 	struct addredge* parent_edge;
+	/** previous node in LRU list */
+	struct addrnode* prev;
+	/** next node in LRU list */
+	struct addrnode* next;
 };
 
 struct addredge {
@@ -129,7 +136,7 @@ void addrtree_insert(struct addrtree* tree, const addrkey_t* addr,
  * @param now: Current time in seconds
  * @return addrnode or NULL on miss
  */
-struct addrnode* addrtree_find(const struct addrtree* tree, 
+struct addrnode* addrtree_find(struct addrtree* tree, 
 	const addrkey_t* addr, addrlen_t sourcemask, time_t now);
 
 /** Wrappers for static functions to unit test */
