@@ -18,6 +18,8 @@
  * @param node: Child node this edge will connect to.
  * @param addr: full key to this edge.
  * @param addrlen: length of relevant part of key for this node
+ * @param parent_node: Parent node for node
+ * @param parent_index: Index of child node at parent node
  * @return new addredge or NULL on failure
  */
 static struct addredge * 
@@ -254,19 +256,19 @@ bits_common(const addrkey_t* s1, addrlen_t l1,
  * @return 1 for substring, 0 otherwise 
  */
 static int 
-issub(const addrkey_t* s1, addrlen_t l1, 
-	const addrkey_t* s2, addrlen_t l2,  addrlen_t skip)
+issub(const addrkey_t *s1, addrlen_t l1, 
+	const addrkey_t *s2, addrlen_t l2,  addrlen_t skip)
 {
 	return bits_common(s1, l1, s2, l2, skip) == l1;
 }
 
 void
-addrtree_insert(struct addrtree* tree, const addrkey_t* addr, 
-	addrlen_t sourcemask, addrlen_t scope, void* elem, time_t ttl, 
+addrtree_insert(struct addrtree *tree, const addrkey_t *addr, 
+	addrlen_t sourcemask, addrlen_t scope, void *elem, time_t ttl, 
 	time_t now)
 {
-	struct addrnode* newnode, *node;
-	struct addredge* edge, *newedge;
+	struct addrnode *newnode, *node;
+	struct addredge *edge;
 	uint8_t index;
 	addrlen_t common, depth;
 
@@ -304,7 +306,7 @@ addrtree_insert(struct addrtree* tree, const addrkey_t* addr,
 		if (!edge) {
 			newnode = node_create(tree, elem, scope, ttl);
 			if (!newnode) return;
-			if (!edge_create(newnode, addr, sourcemask, node, index)) {
+			if (!edge_create(newnode, addr, sourcemask, node, (int)index)) {
 				clean_node(tree, newnode);
 				free(newnode);
 				return;
@@ -325,7 +327,7 @@ addrtree_insert(struct addrtree* tree, const addrkey_t* addr,
 		/* Case 4: split. */
 		if (!(newnode = node_create(tree, NULL, 0, 0)))
 			return;
-		if (!edge_create(newnode, addr, common, node, index)) {
+		if (!edge_create(newnode, addr, common, node, (int)index)) {
 			clean_node(tree, newnode);
 			free(newnode);
 			return;
@@ -345,7 +347,7 @@ addrtree_insert(struct addrtree* tree, const addrkey_t* addr,
 			/* Data is stored in other leafnode */
 			node = newnode;
 			newnode = node_create(tree, elem, scope, ttl);
-			if (!edge_create(newnode, addr, sourcemask, node, index^1)) {
+			if (!edge_create(newnode, addr, sourcemask, node, (int)index^1)) {
 				clean_node(tree, newnode);
 				free(newnode);
 				return;

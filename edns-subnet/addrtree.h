@@ -43,14 +43,19 @@ struct addrtree {
 	unsigned int elem_count;
 	/** Maximum prefix length we are willing to cache. */
 	addrlen_t max_depth;
+	/** External function to delete elem. Called as 
+	 * delfunc(addrnode->elem, addrtree->env) */
 	void (*delfunc)(void *, void *);
-	size_t (*sizefunc)(void *);
+	/** Environment for delfunc */
 	void *env;
+	/** External function returning size of elem. Called as
+	 * sizefunc(addrnode->elem) */
+	size_t (*sizefunc)(void *);
 };
 
 struct addrnode {
 	/** Payload of node, may be NULL */
-	struct reply_info* elem;
+	void* elem;
 	/** Abs time in seconds in which elem is meaningful */
 	time_t ttl;
 	/** Number of significant bits in address. */
@@ -68,8 +73,9 @@ struct addredge {
 	addrlen_t len;
 	/** child node this edge is connected to */
 	struct addrnode* node;
-	/** Ptr in parent node to self */
+	/** Parent node this ege is connected to */
 	struct addrnode* parent_node;
+	/** Index of this edge in parent_node */
 	int parent_index;
 };
 
