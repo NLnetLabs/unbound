@@ -174,6 +174,7 @@ size_t addrtree_size(const struct addrtree* tree)
 static void
 clean_node(struct addrtree* tree, struct addrnode* node)
 {
+	tree->node_count--;
 	if (!node->elem) return;
 	tree->delfunc(tree->env, node->elem);
 	node->elem = NULL;
