@@ -24,9 +24,6 @@
  * address is capped by min(sourcemask, scope). While traversing the 
  * tree the scope of all visited nodes is updated. This ensures we are 
  * always able to find the most specific answer available.
- * 
- * At this time the tree does not support deletion of nodes, but elem 
- * can be set to NULL to ignore the node.
  */
 
 #ifndef ADDRTREE_H
