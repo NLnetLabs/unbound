@@ -27,7 +27,7 @@ edge_create(struct addrnode *node, const addrkey_t *addr,
 	addrlen_t addrlen, struct addrnode *parent_node, int parent_index)
 {
 	size_t n;
-	struct addredge* edge = (struct addredge*)malloc( sizeof (*edge) );
+	struct addredge *edge = (struct addredge *)malloc( sizeof (*edge) );
 	if (!edge)
 		return NULL;
 	edge->node = node;
@@ -35,7 +35,7 @@ edge_create(struct addrnode *node, const addrkey_t *addr,
 	edge->parent_index = parent_index;
 	edge->parent_node = parent_node;
 	n = (size_t)((addrlen / KEYWIDTH) + ((addrlen % KEYWIDTH != 0)?1:0)); /*ceil()*/
-	edge->str = (addrkey_t*)calloc(n, sizeof (addrkey_t));
+	edge->str = (addrkey_t *)calloc(n, sizeof (addrkey_t));
 	if (!edge->str) {
 		free(edge);
 		return NULL;
@@ -56,10 +56,10 @@ edge_create(struct addrnode *node, const addrkey_t *addr,
  * @return new addrnode or NULL on failure
  */
 static struct addrnode * 
-node_create(struct addrtree *tree, void* elem, addrlen_t scope, 
+node_create(struct addrtree *tree, void *elem, addrlen_t scope, 
 	time_t ttl)
 {
-	struct addrnode* node = (struct addrnode*)malloc( sizeof (*node) );
+	struct addrnode* node = (struct addrnode *)malloc( sizeof (*node) );
 	if (!node)
 		return NULL;
 	node->elem = elem;
@@ -74,15 +74,15 @@ node_create(struct addrtree *tree, void* elem, addrlen_t scope,
 	return node;
 }
 
-struct addrtree* addrtree_create(addrlen_t max_depth, 
-	void (*delfunc)(void *, void *), size_t (*sizefunc)(void *), 
-	void *env, unsigned int max_node_count)
+struct addrtree * 
+addrtree_create(addrlen_t max_depth, void (*delfunc)(void *, void *), 
+	size_t (*sizefunc)(void *), void *env, unsigned int max_node_count)
 {
-	struct addrtree* tree;
+	struct addrtree *tree;
 	log_assert(delfunc != NULL);
 	log_assert(sizefunc != NULL);
-	tree = (struct addrtree*)malloc( sizeof (*tree) );
-	if(!tree)
+	tree = (struct addrtree *)malloc( sizeof (*tree) );
+	if (!tree)
 		return NULL;
 	tree->root = node_create(tree, NULL, 0, 0);
 	if (!tree->root) {
@@ -106,7 +106,7 @@ struct addrtree* addrtree_create(addrlen_t max_depth,
  * @param node: Node to be cleaned
  */
 static void
-clean_node(struct addrtree* tree, struct addrnode* node)
+clean_node(struct addrtree *tree, struct addrnode *node)
 {
 	if (!node->elem) return;
 	tree->delfunc(tree->env, node->elem);
@@ -114,7 +114,8 @@ clean_node(struct addrtree* tree, struct addrnode* node)
 }
 
 /** Remove specified node from LRU list */
-void lru_pop(struct addrtree *tree, struct addrnode *node)
+static void
+lru_pop(struct addrtree *tree, struct addrnode *node)
 {
 	if (node == tree->first) {
 		if (!node->next) { /* it is the last as well */
@@ -134,22 +135,23 @@ void lru_pop(struct addrtree *tree, struct addrnode *node)
 }
 
 /** Add node to LRU list as most recently used. */
-void lru_push(struct addrtree *tree, struct addrnode *node)
+static void
+lru_push(struct addrtree *tree, struct addrnode *node)
 {
 	if (!tree->first) {
 		tree->first = node;
-		tree->last = node;
 		node->prev = NULL;
 	} else {
 		tree->last->next = node;
 		node->prev = tree->last;
-		tree->last = node;
 	}
+	tree->last = node;
 	node->next = NULL;
 }
 
 /** Move node to the end of LRU list */
-void lru_update(struct addrtree *tree, struct addrnode *node)
+static void
+lru_update(struct addrtree *tree, struct addrnode *node)
 {
 	lru_pop(tree, node);
 	lru_push(tree, node);
@@ -161,7 +163,7 @@ void lru_update(struct addrtree *tree, struct addrnode *node)
  * @param tree: Tree the node lives in.
  * @param node: Node to be freed
  */
-static int
+static void
 purge_node(struct addrtree *tree, struct addrnode *node)
 {
 	struct addredge *parent_edge, *child_edge = NULL;
@@ -186,7 +188,8 @@ purge_node(struct addrtree *tree, struct addrnode *node)
 }
 
 /** If a limit is set remove old nodes while above that limit */
-void lru_cleanup(struct addrtree *tree)
+static void
+lru_cleanup(struct addrtree *tree)
 {
 	struct addrnode *n, *p;
 	int children;
@@ -213,33 +216,28 @@ void lru_cleanup(struct addrtree *tree)
 	}
 }
 
-/** Size in bytes of this data structure */
-size_t addrtree_size(const struct addrtree* tree)
+size_t addrtree_size(const struct addrtree *tree)
 {
-	struct addrnode* n;
+	struct addrnode *n;
 	size_t s;
 
 	if (!tree) return 0;
 	s = sizeof (struct addrnode); /* root always exists but not in LRU */
 	if (tree->root->elem) s += tree->sizefunc(tree->root->elem);
-	for(n = tree->first; n; n = n->next) {
+	for (n = tree->first; n; n = n->next) {
 		s += sizeof (struct addredge) + sizeof (struct addrnode);
 		s += tree->sizefunc(n->elem);
 	}
 	return s;
 }
 
-/** 
- * Free complete addrtree structure
- * @param tree: Tree to free
- */
-void addrtree_delete(struct addrtree* tree)
+void addrtree_delete(struct addrtree *tree)
 {
-	struct addrnode* n;
+	struct addrnode *n;
 	if (!tree) return;
 	clean_node(tree, tree->root);
 	free(tree->root);
-	while((n = tree->first)) {
+	while ((n = tree->first)) {
 		tree->first = n->next;
 		clean_node(tree, n);
 		free(n->parent_edge->str);
@@ -256,7 +254,7 @@ void addrtree_delete(struct addrtree* tree)
  * @return 0 or 1
  */
 static int 
-getbit(const addrkey_t* addr, addrlen_t addrlen, addrlen_t n)
+getbit(const addrkey_t *addr, addrlen_t addrlen, addrlen_t n)
 {
 	log_assert(addrlen > n);
 	return (int)(addr[n/KEYWIDTH]>>((KEYWIDTH-1)-(n%KEYWIDTH))) & 1;
@@ -266,7 +264,7 @@ getbit(const addrkey_t* addr, addrlen_t addrlen, addrlen_t n)
  * @return 0 for equal, 1 otherwise 
  */
 static inline int 
-cmpbit(const addrkey_t* key1, const addrkey_t* key2, addrlen_t n)
+cmpbit(const addrkey_t *key1, const addrkey_t *key2, addrlen_t n)
 {
 	addrkey_t c = key1[n/KEYWIDTH] ^ key2[n/KEYWIDTH];
 	return (int)(c >> ((KEYWIDTH-1)-(n%KEYWIDTH))) & 1;
@@ -282,8 +280,8 @@ cmpbit(const addrkey_t* key1, const addrkey_t* key2, addrlen_t n)
  * @return Common number of bits.
  */
 static addrlen_t 
-bits_common(const addrkey_t* s1, addrlen_t l1, 
-	const addrkey_t* s2, addrlen_t l2, addrlen_t skip)
+bits_common(const addrkey_t *s1, addrlen_t l1, 
+	const addrkey_t *s2, addrlen_t l2, addrlen_t skip)
 {
 	addrlen_t len, i;
 	len = (l1 > l2) ? l2 : l1;
@@ -413,7 +411,7 @@ addrtree_insert(struct addrtree *tree, const addrkey_t *addr,
 }
 
 struct addrnode *
-addrtree_find(struct addrtree* tree, const addrkey_t* addr, 
+addrtree_find(struct addrtree *tree, const addrkey_t *addr, 
 	addrlen_t sourcemask, time_t now)
 {
 	struct addrnode *parent_node = NULL, *node = tree->root;
@@ -455,19 +453,19 @@ addrtree_find(struct addrtree* tree, const addrkey_t* addr,
 }
 
 /** Wrappers for static functions to unit test */
-int unittest_wrapper_addrtree_cmpbit(const addrkey_t* key1, 
-		const addrkey_t* key2, addrlen_t n) {
+int unittest_wrapper_addrtree_cmpbit(const addrkey_t *key1, 
+		const addrkey_t *key2, addrlen_t n) {
 	return cmpbit(key1, key2, n);
 }
-addrlen_t unittest_wrapper_addrtree_bits_common(const addrkey_t* s1, 
-		addrlen_t l1, const addrkey_t* s2, addrlen_t l2, addrlen_t skip) {
+addrlen_t unittest_wrapper_addrtree_bits_common(const addrkey_t *s1, 
+		addrlen_t l1, const addrkey_t *s2, addrlen_t l2, addrlen_t skip) {
 	return bits_common(s1, l1, s2, l2, skip);
 }
-int unittest_wrapper_addrtree_getbit(const addrkey_t* addr, 
+int unittest_wrapper_addrtree_getbit(const addrkey_t *addr, 
 		addrlen_t addrlen, addrlen_t n) {
 	return getbit(addr, addrlen, n);
 }
-int unittest_wrapper_addrtree_issub(const addrkey_t* s1, addrlen_t l1, 
-		const addrkey_t* s2, addrlen_t l2,  addrlen_t skip) {
+int unittest_wrapper_addrtree_issub(const addrkey_t *s1, addrlen_t l1, 
+		const addrkey_t *s2, addrlen_t l2,  addrlen_t skip) {
 	return issub(s1, l1, s2, l2, skip);
 }

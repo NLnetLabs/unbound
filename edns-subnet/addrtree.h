@@ -37,7 +37,7 @@ typedef uint8_t addrkey_t;
 #define KEYWIDTH 8
 
 struct addrtree {
-	struct addrnode* root;
+	struct addrnode *root;
 	/** Number of elements in the tree (not always equal to number of 
 	 * nodes) */
 	unsigned int node_count;
@@ -57,35 +57,35 @@ struct addrtree {
 	/** first node in LRU list, first candidate to go */
 	struct addrnode* first;
 	/** last node in LRU list, last candidate to go */
-	struct addrnode* last;
+	struct addrnode *last;
 };
 
 struct addrnode {
 	/** Payload of node, may be NULL */
-	void* elem;
+	void *elem;
 	/** Abs time in seconds in which elem is meaningful */
 	time_t ttl;
 	/** Number of significant bits in address. */
 	addrlen_t scope;
 	/** A node can have 0-2 edges, set to NULL for unused */
-	struct addredge* edge[2];
+	struct addredge *edge[2];
 	/** edge between this node and parent */
-	struct addredge* parent_edge;
+	struct addredge *parent_edge;
 	/** previous node in LRU list */
-	struct addrnode* prev;
+	struct addrnode *prev;
 	/** next node in LRU list */
-	struct addrnode* next;
+	struct addrnode *next;
 };
 
 struct addredge {
 	/** address of connected node */
-	addrkey_t* str;
+	addrkey_t *str;
 	/** lenght in bits of str */
 	addrlen_t len;
 	/** child node this edge is connected to */
-	struct addrnode* node;
+	struct addrnode *node;
 	/** Parent node this ege is connected to */
-	struct addrnode* parent_node;
+	struct addrnode *parent_node;
 	/** Index of this edge in parent_node */
 	int parent_index;
 };
@@ -93,7 +93,7 @@ struct addredge {
 /**
  *  Size of tree in bytes
  */
-size_t addrtree_size(const struct addrtree* tree);
+size_t addrtree_size(const struct addrtree *tree);
 
 /** 
  * Create a new tree
@@ -101,9 +101,11 @@ size_t addrtree_size(const struct addrtree* tree);
  * @param delfunc: f(element, env) delete element
  * @param sizefunc: f(element) returning the size of element.
  * @param env: Module environment for alloc information
+ * @param max_node_count: Maximum size of this data structure in nodes. 
+ * 			0 for unlimited
  * @return new addrtree or NULL on failure
  */
-struct addrtree* 
+struct addrtree * 
 addrtree_create(addrlen_t max_depth, void (*delfunc)(void *, void *), 
 	size_t (*sizefunc)(void *), void *env, unsigned int max_node_count);
 
@@ -111,7 +113,7 @@ addrtree_create(addrlen_t max_depth, void (*delfunc)(void *, void *),
  * Free tree and all nodes below
  * @param tree: Tree to be freed
  */
-void addrtree_delete(struct addrtree* tree);
+void addrtree_delete(struct addrtree *tree);
 
 /**
  * Insert an element in the tree. Failures are silent. Sourcemask and
@@ -127,8 +129,8 @@ void addrtree_delete(struct addrtree* tree);
  * @param ttl: elem is valid up to this time, seconds.
  * @param now: Current time in seconds
  */
-void addrtree_insert(struct addrtree* tree, const addrkey_t* addr, 
-	addrlen_t sourcemask, addrlen_t scope, void* elem, time_t ttl, 
+void addrtree_insert(struct addrtree *tree, const addrkey_t *addr, 
+	addrlen_t sourcemask, addrlen_t scope, void *elem, time_t ttl, 
 	time_t now);
 
 /**
@@ -140,16 +142,16 @@ void addrtree_insert(struct addrtree* tree, const addrkey_t* addr,
  * @param now: Current time in seconds
  * @return addrnode or NULL on miss
  */
-struct addrnode* addrtree_find(struct addrtree* tree, 
-	const addrkey_t* addr, addrlen_t sourcemask, time_t now);
+struct addrnode * addrtree_find(struct addrtree *tree, 
+	const addrkey_t *addr, addrlen_t sourcemask, time_t now);
 
 /** Wrappers for static functions to unit test */
-int unittest_wrapper_addrtree_cmpbit(const addrkey_t* key1, 
-	const addrkey_t* key2, addrlen_t n);
-addrlen_t unittest_wrapper_addrtree_bits_common(const addrkey_t* s1, 
-	addrlen_t l1, const addrkey_t* s2, addrlen_t l2, addrlen_t skip);
-int unittest_wrapper_addrtree_getbit(const addrkey_t* addr, 
+int unittest_wrapper_addrtree_cmpbit(const addrkey_t *key1, 
+	const addrkey_t *key2, addrlen_t n);
+addrlen_t unittest_wrapper_addrtree_bits_common(const addrkey_t *s1, 
+	addrlen_t l1, const addrkey_t *s2, addrlen_t l2, addrlen_t skip);
+int unittest_wrapper_addrtree_getbit(const addrkey_t *addr, 
 	addrlen_t addrlen, addrlen_t n);
-int unittest_wrapper_addrtree_issub(const addrkey_t* s1, addrlen_t l1, 
-	const addrkey_t* s2, addrlen_t l2,  addrlen_t skip);
+int unittest_wrapper_addrtree_issub(const addrkey_t *s1, addrlen_t l1, 
+	const addrkey_t *s2, addrlen_t l2,  addrlen_t skip);
 #endif /* ADDRTREE_H */
