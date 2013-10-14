@@ -63,7 +63,7 @@ node_create(struct addrtree *tree, void* elem, addrlen_t scope,
 	if (!node)
 		return NULL;
 	node->elem = elem;
-	if (elem) tree->elem_count++;
+	tree->node_count++;
 	node->scope = scope;
 	node->ttl = ttl;
 	node->edge[0] = NULL;
@@ -94,7 +94,7 @@ struct addrtree* addrtree_create(addrlen_t max_depth,
 	tree->delfunc = delfunc;
 	tree->sizefunc = sizefunc;
 	tree->env = env;
-	tree->elem_count = 0;
+	tree->node_count = 0;
 	return tree;
 }
 
@@ -177,7 +177,6 @@ clean_node(struct addrtree* tree, struct addrnode* node)
 	if (!node->elem) return;
 	tree->delfunc(tree->env, node->elem);
 	node->elem = NULL;
-	tree->elem_count--;
 }
 
 /** 
@@ -314,7 +313,6 @@ addrtree_insert(struct addrtree *tree, const addrkey_t *addr,
 		if (depth == sourcemask) {
 			/* update this node's scope and data */
 			clean_node(tree, node);
-			tree->elem_count++;
 			node->elem = elem;
 			node->scope = scope;
 			return;
