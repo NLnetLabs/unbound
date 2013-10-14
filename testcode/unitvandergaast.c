@@ -65,12 +65,12 @@
 	{
 		struct addredge* edge;
 		int i, s, byte;
-		if (indent == 0) printf("-----Tree-----");
+		if (indent == 0) printf("-----Tree-----\n");
 		if (indent > maxdepth) {
 			printf("\n");
 			return;
 		}
-		printf("[node elem:%d]\n", node->elem != NULL);
+		printf("[node elem:%d] (%d)\n", node->elem != NULL, node);
 		for (i = 0; i<2; i++) {
 			if (node->edge[i]) {
 				for (s = 0; s < indent; s++) printf(" ");
@@ -165,7 +165,7 @@ static void consistency_test(void)
 	unit_show_func("edns-subnet/addrtree.h", "Tree consistency check");
 	srand(9195); /* just some value for reproducibility */
 
-	t = addrtree_create(100, &elemfree, NULL, &env);
+	t = addrtree_create(100, &elemfree, NULL, &env, 0);
 	count = t->node_count;
 	unit_assert(count == 0);
 	for (i = 0; i < 1000; i++) {
@@ -181,12 +181,24 @@ static void consistency_test(void)
 	}
 	addrtree_delete(t);
 	unit_show_func("edns-subnet/addrtree.h", "Tree consistency with purge");
-	t = addrtree_create(8, &elemfree, NULL, &env);
+	t = addrtree_create(8, &elemfree, NULL, &env, 0);
 	unit_assert(t->node_count == 0);
 	for (i = 0; i < 1000; i++) {
 		l = randomkey(&k, 128);
 		elem = (struct reply_info *) calloc(1, sizeof(struct reply_info));
 		addrtree_insert(t, k, l, 64, elem, i + 10, i);
+		free(k);
+		unit_assert( !addrtree_inconsistent(t) );
+	}
+	addrtree_delete(t);
+	unit_show_func("edns-subnet/addrtree.h", "Tree consistency with limit");
+	t = addrtree_create(8, &elemfree, NULL, &env, 27);
+	unit_assert(t->node_count == 0);
+	for (i = 0; i < 1000; i++) {
+		l = randomkey(&k, 128);
+		elem = (struct reply_info *) calloc(1, sizeof(struct reply_info));
+		addrtree_insert(t, k, l, 64, elem, i + 10, i);
+		unit_assert( t->node_count <= 27);
 		free(k);
 		unit_assert( !addrtree_inconsistent(t) );
 	}

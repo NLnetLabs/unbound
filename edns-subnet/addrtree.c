@@ -75,7 +75,8 @@ node_create(struct addrtree *tree, void* elem, addrlen_t scope,
 }
 
 struct addrtree* addrtree_create(addrlen_t max_depth, 
-	void (*delfunc)(void *, void *), size_t (*sizefunc)(void *), void *env)
+	void (*delfunc)(void *, void *), size_t (*sizefunc)(void *), 
+	void *env, unsigned int max_node_count)
 {
 	struct addrtree* tree;
 	log_assert(delfunc != NULL);
@@ -95,7 +96,41 @@ struct addrtree* addrtree_create(addrlen_t max_depth,
 	tree->sizefunc = sizefunc;
 	tree->env = env;
 	tree->node_count = 0;
+	tree->max_node_count = max_node_count;
 	return tree;
+}
+
+/** 
+ * Scrub a node clean of elem
+ * @param tree: Tree the node lives in.
+ * @param node: Node to be cleaned
+ */
+static void
+clean_node(struct addrtree* tree, struct addrnode* node)
+{
+	if (!node->elem) return;
+	tree->delfunc(tree->env, node->elem);
+	node->elem = NULL;
+}
+
+/** Remove specified node from LRU list */
+void lru_pop(struct addrtree *tree, struct addrnode *node)
+{
+	if (node == tree->first) {
+		if (!node->next) { /* it is the last as well */
+			tree->first = NULL;
+			tree->last = NULL;
+		} else {
+			tree->first = node->next;
+			tree->first->prev = NULL;
+		}
+	} else if (node == tree->last) { /* but not the first */
+		tree->last = node->prev;
+		tree->last->next = NULL;
+	} else {
+		node->prev->next = node->next;
+		node->next->prev = node->prev;
+	}
 }
 
 /** Add node to LRU list as most recently used. */
@@ -107,40 +142,10 @@ void lru_push(struct addrtree *tree, struct addrnode *node)
 		node->prev = NULL;
 	} else {
 		tree->last->next = node;
-		node->prev = tree->last->next;
+		node->prev = tree->last;
 		tree->last = node;
 	}
 	node->next = NULL;
-}
-
-/** Remove least recently used from LRU list */
-struct addrnode* lru_popfirst(struct addrtree *tree)
-{
-	struct addrnode* pop;
-	pop = tree->first;
-	log_assert(first != NULL);
-	if (!pop->next) {
-		tree->first = NULL;
-		tree->last = NULL;
-	} else {
-		tree->first = pop->next;
-		tree->first->prev = NULL;
-	}
-	return pop;
-}
-
-/** Remove specified node from LRU list */
-void lru_pop(struct addrtree *tree, struct addrnode *node)
-{
-	if (node == tree->first) {
-		(void)lru_popfirst(tree);
-	} else if (node == tree->last) {
-		tree->last = node->prev;
-		tree->last->next = NULL;
-	} else {
-		node->prev->next = node->next;
-		node->next->prev = node->prev;
-	}
 }
 
 /** Move node to the end of LRU list */
@@ -148,6 +153,64 @@ void lru_update(struct addrtree *tree, struct addrnode *node)
 {
 	lru_pop(tree, node);
 	lru_push(tree, node);
+}
+
+/** 
+ * Purge a node from the tree. Node and parentedge are cleaned and 
+ * free'd.
+ * @param tree: Tree the node lives in.
+ * @param node: Node to be freed
+ */
+static int
+purge_node(struct addrtree *tree, struct addrnode *node)
+{
+	struct addredge *parent_edge, *child_edge = NULL;
+	int index;
+	int keep = node->edge[0] && node->edge[1];
+	
+	clean_node(tree, node);
+	parent_edge = node->parent_edge;
+	if (keep || !parent_edge) return;
+	tree->node_count--;
+	index = parent_edge->parent_index;
+	child_edge = node->edge[!node->edge[0]];
+	if (child_edge) {
+		child_edge->parent_node  = parent_edge->parent_node;
+		child_edge->parent_index = index;
+	}
+	parent_edge->parent_node->edge[index] = child_edge;
+	free(parent_edge->str);
+	free(parent_edge);
+	lru_pop(tree, node);
+	free(node);
+}
+
+/** If a limit is set remove old nodes while above that limit */
+void lru_cleanup(struct addrtree *tree)
+{
+	struct addrnode *n, *p;
+	int children;
+	if (tree->max_node_count == 0) return;
+	while (tree->node_count > tree->max_node_count) {
+		n = tree->first;
+		if (!n) break;
+		children = (n->edge[0] != NULL) + (n->edge[1] != NULL);
+		/** Don't remove this node, it is either the root or we can't
+		 * do without it because it has 2 children */
+		if (children == 2 || !n->parent_edge) {
+			lru_update(tree, n);
+			continue;
+		}
+		p = n->parent_edge->parent_node;
+		purge_node(tree, n);
+		/** Since we removed n, n's parent p is eligible for deletion
+		 * if it is not the root node, caries no data and has only 1
+		 * child */
+		children = (p->edge[0] != NULL) + (p->edge[1] != NULL);
+		if (!p->elem && children == 1 && p->parent_edge) {
+			purge_node(tree, p);
+		}
+	}
 }
 
 /** Size in bytes of this data structure */
@@ -167,48 +230,6 @@ size_t addrtree_size(const struct addrtree* tree)
 }
 
 /** 
- * Scrub a node clean of elem
- * @param tree: Tree the node lives in.
- * @param node: Node to be cleaned
- */
-static void
-clean_node(struct addrtree* tree, struct addrnode* node)
-{
-	tree->node_count--;
-	if (!node->elem) return;
-	tree->delfunc(tree->env, node->elem);
-	node->elem = NULL;
-}
-
-/** 
- * Purge a node from the tree. Node and parentedge are cleaned and 
- * free'd.
- * @param tree: Tree the node lives in.
- * @param node: Node to be freed
- */
-static void
-purge_node(struct addrtree *tree, struct addrnode *node)
-{
-	struct addredge *parent_edge, *child_edge = NULL;
-	int index;
-	int keep = node->edge[0] && node->edge[1];
-	
-	clean_node(tree, node);
-	parent_edge = node->parent_edge;
-	if (keep || !parent_edge) return;
-	index = parent_edge->parent_index;
-	child_edge = node->edge[!node->edge[0]];
-	if (child_edge) {
-		child_edge->parent_node  = parent_edge->parent_node;
-		child_edge->parent_index = index;
-	}
-	parent_edge->parent_node->edge[index] = child_edge;
-	free(parent_edge->str);
-	free(parent_edge);
-	free(node);
-}
-
-/** 
  * Free complete addrtree structure
  * @param tree: Tree to free
  */
@@ -218,7 +239,7 @@ void addrtree_delete(struct addrtree* tree)
 	if (!tree) return;
 	clean_node(tree, tree->root);
 	free(tree->root);
-	while(n = tree->first) {
+	while((n = tree->first)) {
 		tree->first = n->next;
 		clean_node(tree, n);
 		free(n->parent_edge->str);
@@ -326,7 +347,6 @@ addrtree_insert(struct addrtree *tree, const addrkey_t *addr,
 			if (!edge->node->elem || edge->node->ttl >= now)
 				break;
 			purge_node(tree, edge->node);
-			lru_pop(tree, edge->node);
 			edge = node->edge[index];
 		}
 		/* Case 2: New leafnode */
@@ -335,10 +355,12 @@ addrtree_insert(struct addrtree *tree, const addrkey_t *addr,
 			if (!newnode) return;
 			if (!edge_create(newnode, addr, sourcemask, node, index)) {
 				clean_node(tree, newnode);
+				tree->node_count--;
 				free(newnode);
 				return;
 			}
 			lru_push(tree, newnode);
+			lru_cleanup(tree);
 			return;
 		}
 		/* Case 3: Traverse edge */
@@ -357,11 +379,12 @@ addrtree_insert(struct addrtree *tree, const addrkey_t *addr,
 			return;
 		if (!edge_create(newnode, addr, common, node, index)) {
 			clean_node(tree, newnode);
+			tree->node_count--;
 			free(newnode);
 			return;
 		}
 		lru_push(tree, newnode);
-		/** connect existing child to our new node */
+		/* connect existing child to our new node */
 		index = getbit(edge->str, edge->len, common);
 		newnode->edge[index] = edge;
 		edge->parent_node = newnode;
@@ -378,11 +401,13 @@ addrtree_insert(struct addrtree *tree, const addrkey_t *addr,
 			newnode = node_create(tree, elem, scope, ttl);
 			if (!edge_create(newnode, addr, sourcemask, node, index^1)) {
 				clean_node(tree, newnode);
+				tree->node_count--;
 				free(newnode);
 				return;
 			}
 			lru_push(tree, newnode);
 		}
+		lru_cleanup(tree);
 		return;
 	}
 }
