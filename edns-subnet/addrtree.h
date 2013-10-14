@@ -53,6 +53,7 @@ struct addrtree {
 	size_t (*sizefunc)(void *);
 	/** first node in LRU list, first candidate to go */
 	struct addrnode* first;
+	/** last node in LRU list, last candidate to go */
 	struct addrnode* last;
 };
 
@@ -101,7 +102,7 @@ size_t addrtree_size(const struct addrtree* tree);
  */
 struct addrtree* 
 addrtree_create(addrlen_t max_depth, void (*delfunc)(void *, void *), 
-	size_t (*sizefunc)(void *), void *env);
+	size_t (*sizefunc)(void *), void *env, int max_elem_count);
 
 /** 
  * Free tree and all nodes below
