@@ -216,6 +216,8 @@ static void adjustline(char* line, struct entry* e,
 			e->copy_id = true;
 		} else if(str_keyword(&parse, "copy_query")) {
 			e->copy_query = true;
+		} else if(str_keyword(&parse, "copy_ednsdata_assume_clientsubnet")) {
+			e->copy_ednsdata_assume_clientsubnet = true;
 		} else if(str_keyword(&parse, "sleep=")) {
 			e->sleeptime = (unsigned int) strtol(parse, (char**)&parse, 10);
 			while(isspace((int)*parse)) 
@@ -249,6 +251,7 @@ static struct entry* new_entry()
 	e->reply_list = NULL;
 	e->copy_id = false;
 	e->copy_query = false;
+	e->copy_ednsdata_assume_clientsubnet = false;
 	e->sleeptime = 0;
 	e->next = NULL;
 	return e;
@@ -824,6 +827,16 @@ adjust_packet(struct entry* match, ldns_pkt* answer_pkt, ldns_pkt* query_pkt)
 			LDNS_SECTION_QUESTION);
 		ldns_rr_list_deep_free(ldns_pkt_question(answer_pkt));
 		ldns_pkt_set_question(answer_pkt, list);
+	}
+	if(match->copy_ednsdata_assume_clientsubnet) {
+		/** copy ednsdata to reply, assume it is vandergaast and
+		 * adjust scopemask to match sourcemask */
+		ldns_rdf* edns_rdf;
+		if (ldns_rdf_size(ldns_pkt_edns_data(query_pkt)) >= 8) {
+			edns_rdf = ldns_rdf_clone(ldns_pkt_edns_data(query_pkt));
+			ldns_rdf_data(edns_rdf)[7] = ldns_rdf_data(edns_rdf)[6];
+			ldns_pkt_set_edns_data(answer_pkt, edns_rdf);
+		}
 	}
 	if(match->sleeptime > 0) {
 		verbose(3, "sleeping for %d seconds\n", match->sleeptime);

@@ -130,11 +130,13 @@ get_tree(struct subnet_msg_cache_data *data, struct edns_data *edns,
 	struct addrtree *tree;
 	if (edns->subnet_addr_fam == EDNSSUBNET_ADDRFAM_IP4) {
 		if (!data->tree4)
-			data->tree4 = addrtree_create(EDNSSUBNET_MAX_SUBNET_IP4, &delfunc, &sizefunc, env, 0);
+			data->tree4 = addrtree_create(EDNSSUBNET_MAX_SUBNET_IP4, 
+				&delfunc, &sizefunc, env, 0);
 		tree = data->tree4;
 	} else {
 		if (!data->tree6)
-			data->tree6 = addrtree_create(EDNSSUBNET_MAX_SUBNET_IP6, &delfunc, &sizefunc, env, 0);
+			data->tree6 = addrtree_create(EDNSSUBNET_MAX_SUBNET_IP6, 
+				&delfunc, &sizefunc, env, 0);
 		tree = data->tree6;
 	}
 	return tree;
@@ -189,7 +191,7 @@ void update_cache(struct module_qstate *qstate, int id)
 	rep->flags &= ~(BIT_AA | BIT_CD);/* a reply based on the cache   */
 	addrtree_insert(tree, (addrkey_t*)edns->subnet_addr, 
 		edns->subnet_source_mask, 
-		qstate->edns_server_in.subnet_scope_mask, rep, rep->ttl,
+		qstate->edns_server_in.subnet_scope_mask, rep, rep->ttl + *qstate->env->now,
 		*qstate->env->now);
 	if (acquired_lock) lock_rw_unlock(&lru_entry->lock);
 }

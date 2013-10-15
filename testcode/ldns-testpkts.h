@@ -194,6 +194,9 @@ struct entry {
 	bool copy_id; 
 	/** copy the query nametypeclass from query into the answer */
 	bool copy_query;
+	/** copy ednsdata to reply, assume it is vandergaast and
+	 * adjust scopemask to match sourcemask */
+	bool copy_ednsdata_assume_clientsubnet;
 	/** in seconds */
 	unsigned int sleeptime; 
 
