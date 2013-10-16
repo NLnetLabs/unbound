@@ -448,7 +448,6 @@ addrtree_find(struct addrtree *tree, const addrkey_t *addr,
 		parent_node = node;
 		depth = edge->len;
 		node = edge->node;
-		
 	}
 }
 

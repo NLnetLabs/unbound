@@ -178,7 +178,6 @@ void update_cache(struct module_qstate *qstate, int id)
 			log_err("malloc failed");
 			return;
 		}
-		slabhash_insert(subnet_msg_cache, h, lru_entry, lru_entry->data, NULL);
 	}
 	/** Step 2, find the correct tree */
 	if (!(tree = get_tree(lru_entry->data, edns, qstate->env))) {
@@ -193,7 +192,9 @@ void update_cache(struct module_qstate *qstate, int id)
 		edns->subnet_source_mask, 
 		qstate->edns_server_in.subnet_scope_mask, rep, rep->ttl + *qstate->env->now,
 		*qstate->env->now);
-	if (acquired_lock) lock_rw_unlock(&lru_entry->lock);
+	if (acquired_lock)
+		lock_rw_unlock(&lru_entry->lock);
+	slabhash_insert(subnet_msg_cache, h, lru_entry, lru_entry->data, NULL);
 }
 
 
