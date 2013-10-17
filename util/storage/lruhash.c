@@ -325,6 +325,7 @@ lruhash_insert(struct lruhash* table, hashvalue_t hash,
 		table->space_used += need_size;
 	} else {
 		/* if so: update data - needs a writelock */
+		/* A+=B-C; works because A will wrap around when B<C */
 		table->space_used += need_size -
 			(*table->sizefunc)(found->key, found->data);
 		if (found->key != entry->key) {

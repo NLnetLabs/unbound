@@ -47,6 +47,7 @@
 #include "util/module.h"
 #include "testcode/unitmain.h"
 #include "edns-subnet/addrtree.h"
+#include "edns-subnet/subnetmod.h"
 
 /*
 	void printkey(addrkey_t *k, addrlen_t bits)
@@ -165,7 +166,7 @@ static void consistency_test(void)
 	unit_show_func("edns-subnet/addrtree.h", "Tree consistency check");
 	srand(9195); /* just some value for reproducibility */
 
-	t = addrtree_create(100, &elemfree, NULL, &env, 0);
+	t = addrtree_create(100, &elemfree, &unittest_wrapper_subnetmod_sizefunc, &env, 0);
 	count = t->node_count;
 	unit_assert(count == 0);
 	for (i = 0; i < 1000; i++) {
@@ -179,9 +180,10 @@ static void consistency_test(void)
 		free(k);
 		unit_assert( !addrtree_inconsistent(t) );
 	}
+	addrtree_size(t);
 	addrtree_delete(t);
 	unit_show_func("edns-subnet/addrtree.h", "Tree consistency with purge");
-	t = addrtree_create(8, &elemfree, NULL, &env, 0);
+	t = addrtree_create(8, &elemfree, &unittest_wrapper_subnetmod_sizefunc, &env, 0);
 	unit_assert(t->node_count == 0);
 	for (i = 0; i < 1000; i++) {
 		l = randomkey(&k, 128);
@@ -190,9 +192,10 @@ static void consistency_test(void)
 		free(k);
 		unit_assert( !addrtree_inconsistent(t) );
 	}
+	addrtree_size(t);
 	addrtree_delete(t);
 	unit_show_func("edns-subnet/addrtree.h", "Tree consistency with limit");
-	t = addrtree_create(8, &elemfree, NULL, &env, 27);
+	t = addrtree_create(8, &elemfree, &unittest_wrapper_subnetmod_sizefunc, &env, 27);
 	unit_assert(t->node_count == 0);
 	for (i = 0; i < 1000; i++) {
 		l = randomkey(&k, 128);
@@ -202,6 +205,7 @@ static void consistency_test(void)
 		free(k);
 		unit_assert( !addrtree_inconsistent(t) );
 	}
+	addrtree_size(t);
 	addrtree_delete(t);
 }
 

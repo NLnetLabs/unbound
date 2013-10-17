@@ -404,4 +404,9 @@ struct module_func_block *subnetmod_get_funcblock(void)
 	return &subnetmod_block;
 }
 
+/** Wrappers for static functions to unit test */
+size_t unittest_wrapper_subnetmod_sizefunc(void *elemptr) {
+	return sizefunc(elemptr);
+}
+
 #endif  /* CLIENT_SUBNET */

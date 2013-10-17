@@ -64,4 +64,8 @@ void subnetmod_clear(struct module_qstate* qstate, int id);
 
 /** subnet module alloc size routine */
 size_t subnetmod_get_mem(struct module_env* env, int id);
+
+/** Wrappers for static functions to unit test */
+size_t unittest_wrapper_subnetmod_sizefunc(void *elemptr);
+
 #endif /* SUBNETMOD_H */

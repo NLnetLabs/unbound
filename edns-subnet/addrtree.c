@@ -226,7 +226,7 @@ size_t addrtree_size(const struct addrtree *tree)
 	if (tree->root->elem) s += tree->sizefunc(tree->root->elem);
 	for (n = tree->first; n; n = n->next) {
 		s += sizeof (struct addredge) + sizeof (struct addrnode);
-		s += tree->sizefunc(n->elem);
+		if (n->elem) s += tree->sizefunc(n->elem);
 	}
 	return s;
 }
