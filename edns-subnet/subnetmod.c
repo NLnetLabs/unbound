@@ -27,6 +27,8 @@
 #include "util/config_file.h"
 #include "util/data/msgreply.h"
 
+#define ECS_MAX_TREESIZE 100
+
 /** externally called */
 void 
 subnet_data_delete(void *d, void *ATTR_UNUSED(arg))
@@ -131,12 +133,12 @@ get_tree(struct subnet_msg_cache_data *data, struct edns_data *edns,
 	if (edns->subnet_addr_fam == EDNSSUBNET_ADDRFAM_IP4) {
 		if (!data->tree4)
 			data->tree4 = addrtree_create(EDNSSUBNET_MAX_SUBNET_IP4, 
-				&delfunc, &sizefunc, env, 0);
+				&delfunc, &sizefunc, env, ECS_MAX_TREESIZE);
 		tree = data->tree4;
 	} else {
 		if (!data->tree6)
 			data->tree6 = addrtree_create(EDNSSUBNET_MAX_SUBNET_IP6, 
-				&delfunc, &sizefunc, env, 0);
+				&delfunc, &sizefunc, env, ECS_MAX_TREESIZE);
 		tree = data->tree6;
 	}
 	return tree;
