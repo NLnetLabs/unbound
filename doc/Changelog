@@ -1,3 +1,9 @@
+26 Sep 2013: Wouter
+	- unbound-event.h is installed if configured --with-libevent.  It
+	  contains low-level library calls, that use libevent's event_base
+	  and an ldns_buffer for the wire return packet to perform async
+	  resolution in the client's eventloop.
+
 19 Sep 2013: Wouter
 	- 1.4.21 tag created.
 	- trunk has 1.4.22 number inside it.

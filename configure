@@ -653,6 +653,8 @@ CHECKLOCK_OBJ
 staticexe
 SUBNET_HEADER
 SUBNET_OBJ
+UNBOUND_EVENT_UNINSTALL
+UNBOUND_EVENT_INSTALL
 HAVE_SSL
 CONFIG_DATE
 NETBSD_LINTFLAGS
@@ -17273,6 +17275,10 @@ done
 	if test -n "$BAK_LDFLAGS_SET"; then
 		LDFLAGS="$BAK_LDFLAGS"
 	fi
+	UNBOUND_EVENT_INSTALL=unbound-event-install
+
+	UNBOUND_EVENT_UNINSTALL=unbound-event-uninstall
+
 else
 
 $as_echo "#define USE_MINI_EVENT 1" >>confdefs.h

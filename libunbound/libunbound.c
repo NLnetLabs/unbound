@@ -43,6 +43,7 @@
 
 /* include the public api first, it should be able to stand alone */
 #include "libunbound/unbound.h"
+#include "libunbound/unbound-event.h"
 #include "config.h"
 #include <ctype.h>
 #include "libunbound/context.h"
@@ -69,8 +70,8 @@
 #include <iphlpapi.h>
 #endif /* UB_ON_WINDOWS */
 
-struct ub_ctx* 
-ub_ctx_create(void)
+/** create context functionality, but no pipes */
+static struct ub_ctx* ub_ctx_create_nopipe(void)
 {
 	struct ub_ctx* ctx;
 	unsigned int seed;
@@ -105,28 +106,11 @@ ub_ctx_create(void)
 		return NULL;
 	}
 	seed = 0;
-	if((ctx->qq_pipe = tube_create()) == NULL) {
-		int e = errno;
-		ub_randfree(ctx->seed_rnd);
-		free(ctx);
-		errno = e;
-		return NULL;
-	}
-	if((ctx->rr_pipe = tube_create()) == NULL) {
-		int e = errno;
-		tube_delete(ctx->qq_pipe);
-		ub_randfree(ctx->seed_rnd);
-		free(ctx);
-		errno = e;
-		return NULL;
-	}
 	lock_basic_init(&ctx->qqpipe_lock);
 	lock_basic_init(&ctx->rrpipe_lock);
 	lock_basic_init(&ctx->cfglock);
 	ctx->env = (struct module_env*)calloc(1, sizeof(*ctx->env));
 	if(!ctx->env) {
-		tube_delete(ctx->qq_pipe);
-		tube_delete(ctx->rr_pipe);
 		ub_randfree(ctx->seed_rnd);
 		free(ctx);
 		errno = ENOMEM;
@@ -134,8 +118,6 @@ ub_ctx_create(void)
 	}
 	ctx->env->cfg = config_create_forlib();
 	if(!ctx->env->cfg) {
-		tube_delete(ctx->qq_pipe);
-		tube_delete(ctx->rr_pipe);
 		free(ctx->env);
 		ub_randfree(ctx->seed_rnd);
 		free(ctx);
@@ -150,6 +132,50 @@ ub_ctx_create(void)
 	return ctx;
 }
 
+struct ub_ctx* 
+ub_ctx_create(void)
+{
+	struct ub_ctx* ctx = ub_ctx_create_nopipe();
+	if(!ctx)
+		return NULL;
+	if((ctx->qq_pipe = tube_create()) == NULL) {
+		int e = errno;
+		ub_randfree(ctx->seed_rnd);
+		config_delete(ctx->env->cfg);
+		modstack_desetup(&ctx->mods, ctx->env);
+		free(ctx->env);
+		free(ctx);
+		errno = e;
+		return NULL;
+	}
+	if((ctx->rr_pipe = tube_create()) == NULL) {
+		int e = errno;
+		tube_delete(ctx->qq_pipe);
+		ub_randfree(ctx->seed_rnd);
+		config_delete(ctx->env->cfg);
+		modstack_desetup(&ctx->mods, ctx->env);
+		free(ctx->env);
+		free(ctx);
+		errno = e;
+		return NULL;
+	}
+	return ctx;
+}
+
+struct ub_ctx* 
+ub_ctx_create_event(struct event_base* eb)
+{
+	struct ub_ctx* ctx = ub_ctx_create_nopipe();
+	if(!ctx)
+		return NULL;
+	/* no pipes, but we have the locks to make sure everything works */
+	ctx->created_bg = 0;
+	ctx->dothread = 1; /* the processing is in the same process,
+		makes ub_cancel and ub_ctx_delete do the right thing */
+	ctx->event_base = eb;
+	return ctx;
+}
+	
 /** delete q */
 static void
 delq(rbnode_t* n, void* ATTR_UNUSED(arg))
@@ -218,6 +244,7 @@ ub_ctx_delete(struct ub_ctx* ctx)
 #endif /* HAVE_PTHREAD */
 	if(do_stop)
 		ub_stop_bg(ctx);
+	libworker_delete_event(ctx->event_worker);
 
 	modstack_desetup(&ctx->mods, ctx->env);
 	a = ctx->alloc_list;
@@ -611,6 +638,46 @@ ub_resolve(struct ub_ctx* ctx, const char* name, int rrtype,
 	lock_basic_unlock(&ctx->cfglock);
 	return UB_NOERROR;
 }
+
+int 
+ub_resolve_event(struct ub_ctx* ctx, const char* name, int rrtype, 
+	int rrclass, void* mydata, ub_event_callback_t callback, int* async_id)
+{
+	struct ctx_query* q;
+	int r;
+
+	if(async_id)
+		*async_id = 0;
+	lock_basic_lock(&ctx->cfglock);
+	if(!ctx->finalized) {
+		int r = context_finalize(ctx);
+		if(r) {
+			lock_basic_unlock(&ctx->cfglock);
+			return r;
+		}
+	}
+	if(!ctx->event_worker) {
+		ctx->event_worker = libworker_create_event(ctx,
+			ctx->event_base);
+		if(!ctx->event_worker) {
+			lock_basic_unlock(&ctx->cfglock);
+			return UB_INITFAIL;
+		}
+	}
+	lock_basic_unlock(&ctx->cfglock);
+
+	/* create new ctx_query and attempt to add to the list */
+	q = context_new(ctx, name, rrtype, rrclass, (ub_callback_t)callback,
+		mydata);
+	if(!q)
+		return UB_NOMEM;
+
+	/* attach to mesh */
+	if((r=libworker_attach_mesh(ctx, q, async_id)) != 0)
+		return r;
+	return UB_NOERROR;
+}
+
 
 int 
 ub_resolve_async(struct ub_ctx* ctx, const char* name, int rrtype, 
