@@ -77,13 +77,13 @@ node_create(struct addrtree *tree, void *elem, addrlen_t scope,
 
 /** Size in bytes of node and parent edge
  * @param tree: tree the node lives in
- * @param node: node which size must be calculated 
+ * @param n: node which size must be calculated 
  * @return size in bytes.
  **/
 static inline size_t 
 node_size(const struct addrtree *tree, const struct addrnode *n)
 {
-	return sizeof *n + sizeof *n->parent_edge + strlen(n->parent_edge->str) + 
+	return sizeof *n + sizeof *n->parent_edge + n->parent_edge->len + 
 		(n->elem?tree->sizefunc(n->elem):0);
 }
 
