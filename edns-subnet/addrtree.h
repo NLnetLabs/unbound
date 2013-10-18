@@ -41,6 +41,8 @@ struct addrtree {
 	/** Maximum number of allowed nodes, will be enforced by LRU list.
 	 * Excluding the root node, 0 for unlimited */
 	unsigned int max_node_count;
+	/** Size of tree in bytes */
+	size_t size_bytes;
 	/** Maximum prefix length we are willing to cache. */
 	addrlen_t max_depth;
 	/** External function to delete elem. Called as 

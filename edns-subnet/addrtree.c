@@ -43,6 +43,7 @@ edge_create(struct addrnode *node, const addrkey_t *addr,
 	memcpy(edge->str, addr, n * sizeof (addrkey_t));
 	/* Only manipulate other objects after successful alloc */
 	node->parent_edge = edge;
+	log_assert(parent_node->edge[parent_index] == NULL);
 	parent_node->edge[parent_index] = edge;
 	return edge;
 }
@@ -74,6 +75,18 @@ node_create(struct addrtree *tree, void *elem, addrlen_t scope,
 	return node;
 }
 
+/** Size in bytes of node and parent edge
+ * @param tree: tree the node lives in
+ * @param node: node which size must be calculated 
+ * @return size in bytes.
+ **/
+static inline size_t 
+node_size(const struct addrtree *tree, const struct addrnode *n)
+{
+	return sizeof *n + sizeof *n->parent_edge + strlen(n->parent_edge->str) + 
+		(n->elem?tree->sizefunc(n->elem):0);
+}
+
 struct addrtree * 
 addrtree_create(addrlen_t max_depth, void (*delfunc)(void *, void *), 
 	size_t (*sizefunc)(void *), void *env, unsigned int max_node_count)
@@ -89,6 +102,7 @@ addrtree_create(addrlen_t max_depth, void (*delfunc)(void *, void *),
 		free(tree);
 		return NULL;
 	}
+	tree->size_bytes = sizeof *tree + sizeof *tree->root;
 	tree->first = NULL;
 	tree->last = NULL;
 	tree->max_depth = max_depth;
@@ -109,6 +123,7 @@ static void
 clean_node(struct addrtree *tree, struct addrnode *node)
 {
 	if (!node->elem) return;
+	tree->size_bytes -= tree->sizefunc(node->elem);
 	tree->delfunc(tree->env, node->elem);
 	node->elem = NULL;
 }
@@ -181,6 +196,7 @@ purge_node(struct addrtree *tree, struct addrnode *node)
 		child_edge->parent_index = index;
 	}
 	parent_edge->parent_node->edge[index] = child_edge;
+	tree->size_bytes -= node_size(tree, node);
 	free(parent_edge->str);
 	free(parent_edge);
 	lru_pop(tree, node);
@@ -216,19 +232,10 @@ lru_cleanup(struct addrtree *tree)
 	}
 }
 
-size_t addrtree_size(const struct addrtree *tree)
+inline size_t
+addrtree_size(const struct addrtree *tree)
 {
-	struct addrnode *n;
-	size_t s;
-
-	if (!tree) return 0;
-	s = sizeof (struct addrnode); /* root always exists but not in LRU */
-	if (tree->root->elem) s += tree->sizefunc(tree->root->elem);
-	for (n = tree->first; n; n = n->next) {
-		s += sizeof (struct addredge) + sizeof (struct addrnode);
-		if (n->elem) s += tree->sizefunc(n->elem);
-	}
-	return s;
+	return tree?tree->size_bytes:0;
 }
 
 void addrtree_delete(struct addrtree *tree)
@@ -240,10 +247,12 @@ void addrtree_delete(struct addrtree *tree)
 	while ((n = tree->first)) {
 		tree->first = n->next;
 		clean_node(tree, n);
+		tree->size_bytes -= node_size(tree, n);
 		free(n->parent_edge->str);
 		free(n->parent_edge);
 		free(n);
 	}
+	log_assert(sizeof *tree == addrtree_size(tree));
 	free(tree);
 }
 
@@ -335,6 +344,7 @@ addrtree_insert(struct addrtree *tree, const addrkey_t *addr,
 			clean_node(tree, node);
 			node->elem = elem;
 			node->scope = scope;
+			tree->size_bytes += tree->sizefunc(elem);
 			return;
 		}
 		index = getbit(addr, sourcemask, depth);
@@ -357,6 +367,7 @@ addrtree_insert(struct addrtree *tree, const addrkey_t *addr,
 				free(newnode);
 				return;
 			}
+			tree->size_bytes += node_size(tree, newnode);
 			lru_push(tree, newnode);
 			lru_cleanup(tree);
 			return;
@@ -381,6 +392,7 @@ addrtree_insert(struct addrtree *tree, const addrkey_t *addr,
 			free(newnode);
 			return;
 		}
+		tree->size_bytes += node_size(tree, newnode);
 		lru_push(tree, newnode);
 		/* connect existing child to our new node */
 		index = getbit(edge->str, edge->len, common);
@@ -403,6 +415,7 @@ addrtree_insert(struct addrtree *tree, const addrkey_t *addr,
 				free(newnode);
 				return;
 			}
+			tree->size_bytes += node_size(tree, newnode);
 			lru_push(tree, newnode);
 		}
 		lru_cleanup(tree);
