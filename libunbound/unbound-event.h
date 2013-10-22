@@ -63,9 +63,9 @@ extern "C" {
 struct ub_ctx;
 struct ub_result;
 struct event_base;
-struct ldns_buffer;
+struct ldns_struct_buffer;
 
-typedef void (*ub_event_callback_t)(void*, int, struct ldns_buffer*, int, char*);
+typedef void (*ub_event_callback_t)(void*, int, struct ldns_struct_buffer*, int, char*);
 
 /**
  * Create a resolving and validation context.
@@ -80,6 +80,15 @@ typedef void (*ub_event_callback_t)(void*, int, struct ldns_buffer*, int, char*)
  * with the event_base.  Setup the options you like with the other functions.
  */
 struct ub_ctx* ub_ctx_create_event(struct event_base* base);
+
+/**
+ * Set a new event_base on a context created with ub_ctx_create_event.
+ * Any outbound queries will be canceled.
+ * @param ctx the ub_ctx to update.  Must have been created with ub_ctx_create_event
+ * @param base the new event_base to attach to the ctx
+ * @return 0 if OK, else error
+ */
+int ub_ctx_set_event(struct ub_ctx* ctx, struct event_base* base); 
 
 /**
  * Perform resolution and validation of the target name.

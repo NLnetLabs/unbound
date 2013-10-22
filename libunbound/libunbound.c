@@ -656,15 +656,14 @@ ub_resolve_event(struct ub_ctx* ctx, const char* name, int rrtype,
 			return r;
 		}
 	}
+	lock_basic_unlock(&ctx->cfglock);
 	if(!ctx->event_worker) {
 		ctx->event_worker = libworker_create_event(ctx,
 			ctx->event_base);
 		if(!ctx->event_worker) {
-			lock_basic_unlock(&ctx->cfglock);
 			return UB_INITFAIL;
 		}
 	}
-	lock_basic_unlock(&ctx->cfglock);
 
 	/* create new ctx_query and attempt to add to the list */
 	q = context_new(ctx, name, rrtype, rrclass, (ub_callback_t)callback,
@@ -1211,4 +1210,25 @@ int ub_ctx_data_remove(struct ub_ctx* ctx, const char *data)
 const char* ub_version(void)
 {
 	return PACKAGE_VERSION;
+}
+
+int 
+ub_ctx_set_event(struct ub_ctx* ctx, struct event_base* base) {
+	if (!ctx || !ctx->event_base || !base) {
+		return UB_INITFAIL;
+	}
+	if (ctx->event_base == base) {
+		/* already set */
+		return UB_NOERROR;
+	}
+	
+	lock_basic_lock(&ctx->cfglock);
+	/* destroy the current worker - safe to pass in NULL */
+	libworker_delete_event(ctx->event_worker);
+	ctx->event_worker = NULL;
+	ctx->event_base = base;	
+	ctx->created_bg = 0;
+	ctx->dothread = 1;
+	lock_basic_unlock(&ctx->cfglock);
+	return UB_NOERROR;
 }

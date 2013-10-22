@@ -1,3 +1,11 @@
+22 Oct 2013: Wouter
+	- Patch from Neel Goyal: Add an API call to set an event base on an
+	  existing ub_ctx.  This basically just destroys the current worker and
+	  sets the event base to the current.  And fix a deadlock in
+	  ub_resolve_event – the cfglock is held when libworker_create is
+	  called.  This ends up trying to acquire the lock again in
+	  context_obtain_alloc in the call chain.
+
 26 Sep 2013: Wouter
 	- unbound-event.h is installed if configured --with-libevent.  It
 	  contains low-level library calls, that use libevent's event_base
