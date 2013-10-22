@@ -1212,7 +1212,7 @@ processInitRequest3(struct module_qstate* qstate, struct iter_qstate* iq,
 	 * cached referral as the response. */
 	if(!(qstate->query_flags & BIT_RD)) {
 		iq->response = iq->deleg_msg;
-		if(verbosity >= VERB_ALGO)
+		if(verbosity >= VERB_ALGO && iq->response)
 			log_dns_msg("no RD requested, using delegation msg", 
 				&iq->response->qinfo, iq->response->rep);
 		if(qstate->reply_origin)
