@@ -5,6 +5,7 @@
 	  ub_resolve_event – the cfglock is held when libworker_create is
 	  called.  This ends up trying to acquire the lock again in
 	  context_obtain_alloc in the call chain.
+	- Fix #528: if very high logging (4 or more) segfault on allow_snoop.
 
 26 Sep 2013: Wouter
 	- unbound-event.h is installed if configured --with-libevent.  It
