@@ -946,6 +946,8 @@ parse_subnet_option(uint8_t* data, struct edns_data* edns, uint16_t opt_len)
 	/* remaing bytes indicate address */
 	
 	/* validate input*/
+	/* option length matches calculated length? */
+	if (opt_len != (edns->subnet_source_mask+7)/8 + 4) return;
 	if (opt_len - 4 > INET6_SIZE || opt_len == 0) return;
 	if (edns->subnet_addr_fam == EDNSSUBNET_ADDRFAM_IP4) {
 		if (edns->subnet_source_mask > 32 || edns->subnet_scope_mask > 32)
@@ -955,7 +957,6 @@ parse_subnet_option(uint8_t* data, struct edns_data* edns, uint16_t opt_len)
 			return;
 	} else return;
 	
-	
 	if (copy_clear(edns->subnet_addr, INET6_SIZE, data + 4, 
 			opt_len - 4, edns->subnet_source_mask))
 		return;
@@ -963,7 +964,7 @@ parse_subnet_option(uint8_t* data, struct edns_data* edns, uint16_t opt_len)
 	edns->subnet_validdata = 1;
 }
 
-static void
+static int
 parse_ednsdata(uint8_t* data, struct edns_data* edns)
 {
 	uint16_t edns_datalen, opt_opc, opt_len, opt_start;
@@ -971,22 +972,28 @@ parse_ednsdata(uint8_t* data, struct edns_data* edns)
 	/* Parse EDNS data field */
 	edns_datalen = ldns_read_uint16(data);
 	data += 2;
-	if(edns_datalen < 4) return;
+	if(edns_datalen == 0) return 0;
+	if(edns_datalen < 4) return 1;
 	opt_start = 0;
 	while(opt_start + 4 <= edns_datalen) { /* opcode + len must fit */
 		opt_opc = ldns_read_uint16(&data[opt_start]);
 		opt_len = ldns_read_uint16(&data[2 + opt_start]);
 		/* Option does not fit in remaining data */
-		if(opt_start + 4 + (int)opt_len > edns_datalen) break;
+		if(opt_start + 4 + (int)opt_len > edns_datalen) return 1;
 		
 		if(opt_opc == EDNSSUBNET_OPCODE) {
 			parse_subnet_option(data + opt_start + 4, edns, opt_len);
+			if (!edns->subnet_validdata) return 1;
 		} else { /* Unknown opcode */
 			verbose(VERB_QUERY, "unknown EDNS option 0x%x", opt_opc);
 		}
 		
 		opt_start += opt_len + 4;
 	}
+	/* if (opt_start != edns_datalen) {
+		Spurious data at end of opt record. Let's be lenient and ignore.
+	} */
+	return 0;
 }
 #endif
 
@@ -1044,7 +1051,8 @@ parse_extract_edns(struct msg_parse* msg, struct edns_data* edns)
 	edns->edns_version = found->rr_last->ttl_data[1];
 	edns->bits = ldns_read_uint16(&found->rr_last->ttl_data[2]);
 #ifdef CLIENT_SUBNET
-	parse_ednsdata(found->rr_last->ttl_data + 4, edns);
+	/* silently continue without ednsdata on parse error */
+	(void) parse_ednsdata(found->rr_last->ttl_data + 4, edns);
 #else
 	/* ignore rdata and rrsigs */
 #endif
@@ -1079,7 +1087,8 @@ parse_edns_from_pkt(ldns_buffer* pkt, struct edns_data* edns)
 	edns->edns_version = ldns_buffer_read_u8(pkt);
 	edns->bits = ldns_buffer_read_u16(pkt);
 #ifdef CLIENT_SUBNET
-	parse_ednsdata(ldns_buffer_current(pkt), edns);
+	if(parse_ednsdata(ldns_buffer_current(pkt), edns))
+		return LDNS_RCODE_FORMERR;
 #endif
 	/* ignore rdata and rrsigs */
 	return 0;
