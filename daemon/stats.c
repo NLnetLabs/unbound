@@ -40,6 +40,11 @@
  * numbers. These 'statistics' may be of interest to the operator.
  */
 #include "config.h"
+#ifdef HAVE_TIME_H
+#include <time.h>
+#endif
+#include <sys/time.h>
+#include <sys/types.h>
 #include "daemon/stats.h"
 #include "daemon/worker.h"
 #include "daemon/daemon.h"

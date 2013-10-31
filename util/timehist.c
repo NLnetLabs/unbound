@@ -43,6 +43,7 @@
 #include <time.h>
 #endif
 #include <sys/time.h>
+#include <sys/types.h>
 #include "util/timehist.h"
 #include "util/log.h"
 
