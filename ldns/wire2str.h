@@ -20,7 +20,6 @@
 extern "C" {
 #endif
 struct ldns_struct_lookup_table;
-enum ldns_enum_rdf_type;
 
 /* lookup tables for standard DNS stuff  */
 /** Taken from RFC 2535, section 7.  */
@@ -461,15 +460,14 @@ int ldns_wire2str_dname_buf(uint8_t* dname, size_t dname_len, char* str,
  * @param data_len: length of data buffer.
  * @param str: string buffer.
  * @param str_len: length of string buffer.
- * @param rdftype: the type of the rdata field.
+ * @param rdftype: the type of the rdata field, enum ldns_rdf_type.
  * @param pkt: packet for decompression, if NULL no decompression.
  * @param pktlen: length of packet buffer.
  * @return number of characters (except null) needed to print.
  * 	Can return -1 on failure.
  */
 int ldns_wire2str_rdf_scan(uint8_t** data, size_t* data_len, char** str,
-	size_t* str_len, enum ldns_enum_rdf_type rdftype, uint8_t* pkt,
-	size_t pktlen);
+	size_t* str_len, int rdftype, uint8_t* pkt, size_t pktlen);
 
 /**
  * Scan wireformat int8 field to string, with user buffers.

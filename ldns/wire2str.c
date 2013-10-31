@@ -883,7 +883,7 @@ int ldns_wire2str_ttl_scan(uint8_t** d, size_t* dlen, char** s, size_t* slen)
 }
 
 int ldns_wire2str_rdf_scan(uint8_t** d, size_t* dlen, char** s, size_t* slen,
-	ldns_rdf_type rdftype, uint8_t* pkt, size_t pktlen)
+	int rdftype, uint8_t* pkt, size_t pktlen)
 {
 	if(*dlen == 0) return 0;
 	switch(rdftype) {
