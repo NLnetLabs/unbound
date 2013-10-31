@@ -614,7 +614,7 @@ AC_RUN_IFELSE([AC_LANG_SOURCE([[
 #include <openssl/evp.h>
 #include <openssl/engine.h>
 #include <openssl/conf.h>
-/* routine to load gost from ldns */
+/* routine to load gost (from ldns) */
 int load_gost_id(void)
 {
 	static int gost_id = 0;
@@ -849,7 +849,7 @@ AC_CHECK_HEADERS([expat.h],,, [AC_INCLUDES_DEFAULT])
 AC_SUBST(staticexe)
 staticexe=""
 AC_ARG_ENABLE(static-exe, AC_HELP_STRING([--enable-static-exe],
-	[ enable to compile executables statically against event, ldns libs, for debug purposes ]), 
+	[ enable to compile executables statically against (event) libs, for debug purposes ]), 
 	, )
 if test x_$enable_static_exe = x_yes; then
 	staticexe="-static"
@@ -1069,6 +1069,10 @@ dnl includes
 #if STDC_HEADERS
 #include <stdlib.h>
 #include <stddef.h>
+#endif
+
+#ifdef HAVE_STDARG_H
+#include <stdarg.h>
 #endif
 
 #ifdef HAVE_STDINT_H

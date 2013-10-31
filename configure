@@ -1475,7 +1475,7 @@ Optional Features:
   --disable-gost          Disable GOST support
   --disable-ecdsa         Disable ECDSA support
   --enable-static-exe     enable to compile executables statically against
-                          event, ldns libs, for debug purposes
+                          (event) libs, for debug purposes
   --enable-lock-checks    enable to check lock and unlock calls, for debug
                           purposes
   --enable-allsymbols     export all symbols from libunbound and link binaries
@@ -16954,7 +16954,7 @@ else
 #include <openssl/evp.h>
 #include <openssl/engine.h>
 #include <openssl/conf.h>
-/* routine to load gost from ldns */
+/* routine to load gost (from ldns) */
 int load_gost_id(void)
 {
 	static int gost_id = 0;
