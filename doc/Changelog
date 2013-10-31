@@ -5,6 +5,7 @@
 	- iana portlist update.
 	- separate ldns into core ldns inside ldns/ subdirectory.  No more
 	  --with-ldns is needed and unbound does not rely on libldns.
+	- portability fixes for new USE_SLDNS ldns subdir codebase.
 
 22 Oct 2013: Wouter
 	- Patch from Neel Goyal: Add an API call to set an event base on an
