@@ -588,7 +588,7 @@ read_entry(FILE* in, const char* name, struct ldns_file_parse_state* pstate,
 			}
 			return current;
 		} else if(reading_hex) {
-			ldns_buffer_printf(hex_data_buffer, line);
+			ldns_buffer_printf(hex_data_buffer, "%s", line);
 		} else {
 			add_rr(skip_whitespace?parse:line, pktbuf,
 				sizeof(pktbuf), &pktlen, pstate, add_section,
