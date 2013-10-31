@@ -45,7 +45,6 @@
 #  include <sys/types.h>
 #endif
 #include <sys/time.h>
-#include <ldns/wire2host.h>
 #include "services/outside_network.h"
 #include "services/listen_dnsport.h"
 #include "services/cache/infra.h"
@@ -58,6 +57,7 @@
 #include "util/net_help.h"
 #include "util/random.h"
 #include "util/fptr_wlist.h"
+#include "ldns/sbuffer.h"
 #ifdef HAVE_OPENSSL_SSL_H
 #include <openssl/ssl.h>
 #endif

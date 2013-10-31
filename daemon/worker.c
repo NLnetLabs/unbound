@@ -40,7 +40,6 @@
  * pending requests.
  */
 #include "config.h"
-#include <ldns/wire2host.h>
 #include "util/log.h"
 #include "util/net_help.h"
 #include "util/random.h"
@@ -70,6 +69,7 @@
 #include "iterator/iter_hints.h"
 #include "validator/autotrust.h"
 #include "validator/val_anchor.h"
+#include "ldns/sbuffer.h"
 
 #ifdef HAVE_SYS_TYPES_H
 #  include <sys/types.h>

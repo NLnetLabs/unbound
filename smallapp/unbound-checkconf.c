@@ -53,6 +53,7 @@
 #include "iterator/iter_hints.h"
 #include "validator/validator.h"
 #include "services/localzone.h"
+#include "ldns/sbuffer.h"
 #ifdef HAVE_GETOPT_H
 #include <getopt.h>
 #endif
@@ -343,9 +344,9 @@ morechecks(struct config_file* cfg, const char* fname)
 		if(fname[0] != '/') {
 			if(getcwd(buf, sizeof(buf)) == NULL)
 				fatal_exit("getcwd: %s", strerror(errno));
-			strncat(buf, "/", sizeof(buf)-strlen(buf)-1);
+			strlcat(buf, "/", sizeof(buf));
 		}
-		strncat(buf, fname, sizeof(buf)-strlen(buf)-1);
+		strlcat(buf, fname, sizeof(buf));
 		if(strncmp(buf, cfg->chrootdir, strlen(cfg->chrootdir)) != 0)
 			fatal_exit("config file %s is not inside chroot %s",
 				buf, cfg->chrootdir);

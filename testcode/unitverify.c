@@ -46,7 +46,7 @@
 #include "validator/val_nsec.h"
 #include "validator/val_nsec3.h"
 #include "validator/validator.h"
-#include "testcode/ldns-testpkts.h"
+#include "testcode/testpkts.h"
 #include "util/data/msgreply.h"
 #include "util/data/msgparse.h"
 #include "util/data/dname.h"
@@ -56,6 +56,10 @@
 #include "util/net_help.h"
 #include "util/module.h"
 #include "util/config_file.h"
+#include "ldns/sbuffer.h"
+#include "ldns/keyraw.h"
+#include "ldns/str2wire.h"
+#include "ldns/wire2str.h"
 
 /** verbose signature test */
 static int vsig = 0;
@@ -68,20 +72,10 @@ entry_to_buf(struct entry* e, ldns_buffer* pkt)
 	if(e->reply_list->reply_from_hex) {
 		ldns_buffer_copy(pkt, e->reply_list->reply_from_hex);
 	} else {
-		ldns_status status;
-		size_t answer_size;
-		uint8_t* ans = NULL;
-		status = ldns_pkt2wire(&ans, e->reply_list->reply, 
-			&answer_size);
-		if(status != LDNS_STATUS_OK) {
-			log_err("could not create reply: %s",
-				ldns_get_errorstr_by_id(status));
-			fatal_exit("error in test");
-		}
 		ldns_buffer_clear(pkt);
-		ldns_buffer_write(pkt, ans, answer_size);
+		ldns_buffer_write(pkt, e->reply_list->reply_pkt,
+			e->reply_list->reply_len);
 		ldns_buffer_flip(pkt);
-		free(ans);
 	}
 }
 
@@ -102,8 +96,9 @@ entry_to_repinfo(struct entry* e, struct alloc_cache* alloc,
 	ret = reply_info_parse(pkt, alloc, qi, rep, region, &edns);
 	lock_quick_unlock(&alloc->lock);
 	if(ret != 0) {
-		printf("parse code %d: %s\n", ret,
-			ldns_lookup_by_id(ldns_rcodes, ret)->name);
+		char rcode[16];
+		ldns_wire2str_rcode_buf(ret, rcode, sizeof(rcode));
+		printf("parse code %d: %s\n", ret, rcode);
 		unit_assert(ret != 0);
 	}
 }
@@ -216,9 +211,10 @@ verifytest_entry(struct entry* e, struct alloc_cache* alloc,
 
 	regional_free_all(region);
 	if(vsig) {
-		printf("verifying pkt:\n");
-		ldns_pkt_print(stdout, e->reply_list->reply);
-		printf("\n");
+		char* s = ldns_wire2str_pkt(e->reply_list->reply_pkt,
+			e->reply_list->reply_len);
+		printf("verifying pkt:\n%s\n", s?s:"outofmemory");
+		free(s);
 	}
 	entry_to_repinfo(e, alloc, region, pkt, &qinfo, &rep);
 
@@ -254,9 +250,10 @@ dstest_entry(struct entry* e, struct alloc_cache* alloc,
 
 	regional_free_all(region);
 	if(vsig) {
-		printf("verifying DS-DNSKEY match:\n");
-		ldns_pkt_print(stdout, e->reply_list->reply);
-		printf("\n");
+		char* s = ldns_wire2str_pkt(e->reply_list->reply_pkt,
+			e->reply_list->reply_len);
+		printf("verifying DS-DNSKEY match:\n%s\n", s?s:"outofmemory");
+		free(s);
 	}
 	entry_to_repinfo(e, alloc, region, pkt, &qinfo, &rep);
 	ds = find_rrset_type(rep, LDNS_RR_TYPE_DS);
@@ -427,9 +424,10 @@ nsec3_hash_test_entry(struct entry* e, rbtree_t* ct,
 	uint8_t* qname;
 
 	if(vsig) {
-		printf("verifying NSEC3 hash:\n");
-		ldns_pkt_print(stdout, e->reply_list->reply);
-		printf("\n");
+		char* s = ldns_wire2str_pkt(e->reply_list->reply_pkt,
+			e->reply_list->reply_len);
+		printf("verifying NSEC3 hash:\n%s\n", s?s:"outofmemory");
+		free(s);
 	}
 	entry_to_repinfo(e, alloc, region, buf, &qinfo, &rep);
 	nsec3 = find_rrset_type(rep, LDNS_RR_TYPE_NSEC3);

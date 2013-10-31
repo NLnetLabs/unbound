@@ -45,6 +45,7 @@
 #include "util/data/msgparse.h"
 #include "util/log.h"
 #include "util/storage/lookup3.h"
+#include "ldns/sbuffer.h"
 
 /* determine length of a dname in buffer, no compression pointers allowed */
 size_t
@@ -347,7 +348,7 @@ void dname_pkt_copy(ldns_buffer* pkt, uint8_t* to, uint8_t* dname)
 	*to = 0;
 }
 
-void dname_print(FILE* out, ldns_buffer* pkt, uint8_t* dname)
+void dname_print(FILE* out, struct ldns_buffer* pkt, uint8_t* dname)
 {
 	uint8_t lablen;
 	if(!out) out = stdout;

@@ -41,7 +41,7 @@
 
 #ifndef UTIL_LOG_H
 #define UTIL_LOG_H
-#include <ldns/buffer.h>
+struct ldns_buffer;
 
 /**
  * verbosity value:
@@ -155,7 +155,7 @@ void log_hex(const char* msg, void* data, size_t length);
  * @param msg: string desc to print
  * @param buf: the buffer.
  */
-void log_buf(enum verbosity_value level, const char* msg, ldns_buffer* buf);
+void log_buf(enum verbosity_value level, const char* msg, struct ldns_buffer* buf);
 
 /**
  * Log fatal error message, and exit the current process.

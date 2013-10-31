@@ -296,6 +296,20 @@ ACX_TYPE_IN_ADDR_T
 ACX_TYPE_IN_PORT_T
 ACX_CHECK_MEMCMP_SIGNED
 
+AC_CHECK_SIZEOF(time_t,,[
+AC_INCLUDES_DEFAULT
+#ifdef TIME_WITH_SYS_TIME
+# include <sys/time.h>
+# include <time.h>
+#else
+# ifdef HAVE_SYS_TIME_H
+#  include <sys/time.h>
+# else
+#  include <time.h>
+# endif
+#endif
+])
+
 # add option to disable the evil rpath
 ACX_ARG_RPATH
 AC_SUBST(RUNTIME_PATH)
@@ -928,7 +942,7 @@ AC_INCLUDES_DEFAULT
 #endif
 ])
 AC_SEARCH_LIBS([setusercontext], [util])
-AC_CHECK_FUNCS([tzset sigprocmask fcntl getpwnam getrlimit setrlimit setsid sbrk chroot kill sleep usleep random srandom recvmsg sendmsg writev socketpair glob initgroups strftime localtime_r setusercontext _beginthreadex])
+AC_CHECK_FUNCS([tzset sigprocmask fcntl getpwnam getrlimit setrlimit setsid sbrk chroot kill sleep usleep random srandom recvmsg sendmsg writev socketpair glob initgroups strftime localtime_r setusercontext _beginthreadex endservent endprotoent])
 AC_CHECK_FUNCS([setresuid],,[AC_CHECK_FUNCS([setreuid])])
 AC_CHECK_FUNCS([setresgid],,[AC_CHECK_FUNCS([setregid])])
 
@@ -940,6 +954,7 @@ AC_REPLACE_FUNCS(inet_aton)
 AC_REPLACE_FUNCS(inet_pton)
 AC_REPLACE_FUNCS(inet_ntop)
 AC_REPLACE_FUNCS(snprintf)
+AC_REPLACE_FUNCS(strlcat)
 AC_REPLACE_FUNCS(strlcpy)
 AC_REPLACE_FUNCS(memmove)
 AC_REPLACE_FUNCS(gmtime_r)
@@ -1025,92 +1040,6 @@ AC_ARG_WITH(libunbound-only, AC_HELP_STRING([--with-libunbound-only],
 ])
 AC_SUBST(ALLTARGET)
 
-# check this after all other compilation checks, since the linking of the lib
-# may break checks after this.
-AC_ARG_WITH(ldns, AC_HELP_STRING([--with-ldns=PATH], 
-	[specify prefix of path of ldns library to use]), 
-	[
-	if test "$withval" != "yes"; then
-		if test "$withval" != "/usr" -a "$withval" != ""; then
-			CPPFLAGS="-I$withval/include $CPPFLAGS"
-			LDFLAGS="-L$withval/lib $LDFLAGS"
-			ACX_RUNTIME_PATH_ADD([$withval/lib])
-		fi
-		ldnsdir="$withval"
-		AC_SUBST(ldnsdir)
-	fi
-])
-
-# check if ldns is good enough
-AC_CHECK_LIB(ldns, ldns_rr_new,,[
-	AC_MSG_ERROR([No ldns library found, install the ldns library into system lib dir or use --with-ldns=path to other location.  The --with-ldns can point to the make-dir of ldns.  Install the package ldns or download source http://www.nlnetlabs.nl/projects/ldns])
-])
-AC_CHECK_FUNC(ldns_buffer_copy)
-if test $USE_NSS = "no"; then
-    AC_CHECK_FUNC(ldns_key_buf2rsa_raw)
-else
-    dnl ignore test
-    ac_cv_func_ldns_key_buf2rsa_raw="yes"
-fi
-AC_CHECK_FUNC(ldns_get_random)
-AC_CHECK_FUNC(ldns_b32_ntop_extended_hex)
-if test x$use_gost = xyes -a x$USE_NSS = xno; then
-    AC_CHECK_FUNC(ldns_key_EVP_load_gost_id)
-    AC_CHECK_FUNCS([ldns_key_EVP_unload_gost])
-else
-    dnl ignore test
-    ac_cv_func_ldns_key_EVP_load_gost_id="yes"
-fi
-if test x$use_ecdsa = xyes; then
-    AC_CHECK_DECL([LDNS_ECDSAP384SHA384], [], [], [
-AC_INCLUDES_DEFAULT
-#ifdef HAVE_SYS_SOCKET_H
-#  include <sys/socket.h>
-#endif
-#ifdef HAVE_WS2TCPIP_H
-#  include <ws2tcpip.h>
-#endif
-#include <ldns/ldns.h>
-    ])
-else
-    ac_cv_have_decl_LDNS_ECDSAP384SHA384="yes"
-fi
-AC_CHECK_HEADERS([ldns/ldns.h],,[
-	AC_MSG_ERROR([No ldns include file found, install the ldns library development files.  Install package ldns-dev or ldns-devel or download source http://www.nlnetlabs.nl/projects/ldns])
-	], [AC_INCLUDES_DEFAULT
-#ifdef HAVE_SYS_SOCKET_H
-#include <sys/socket.h>
-#endif
-
-#ifdef HAVE_NETINET_IN_H
-#include <netinet/in.h>
-#endif
-
-#ifdef HAVE_ARPA_INET_H
-#include <arpa/inet.h>
-#endif
-
-#ifdef HAVE_WINSOCK2_H
-#include <winsock2.h>
-#endif
-
-#ifdef HAVE_WS2TCPIP_H
-#include <ws2tcpip.h>
-#endif
-])
-if test $ac_cv_func_ldns_buffer_copy = yes \
-    -a $ac_cv_func_ldns_key_buf2rsa_raw = yes \
-    -a $ac_cv_func_ldns_get_random = yes \
-    -a $ac_cv_header_ldns_ldns_h = yes \
-    -a $ac_cv_func_ldns_b32_ntop_extended_hex = yes \
-    -a $ac_cv_func_ldns_key_EVP_load_gost_id = yes \
-    -a $ac_cv_have_decl_LDNS_ECDSAP384SHA384 = yes; then
-    dnl ldns was found
-    :
-else
-    AC_MSG_ERROR([ldns library is not recent, update the ldns library, install it into system lib dir or use --with-ldns=path to other location.  The --with-ldns can point to the make-dir of ldns.  Package libldns or download source http://www.nlnetlabs.nl/projects/ldns])
-fi
-
 ACX_STRIP_EXT_FLAGS
 LDFLAGS="$LATE_LDFLAGS $LDFLAGS"
 
@@ -1124,6 +1053,12 @@ dnl includes
 [
 #ifndef UNBOUND_DEBUG
 #  define NDEBUG
+#endif
+
+/** Use small-ldns codebase */
+#define USE_SLDNS 1
+#ifdef HAVE_SSL
+#  define LDNS_BUILD_CONFIG_HAVE_SSL 1
 #endif
 
 #include <stdio.h>
@@ -1180,6 +1115,7 @@ AHX_CONFIG_INET_PTON(unbound)
 AHX_CONFIG_INET_NTOP(unbound)
 AHX_CONFIG_INET_ATON(unbound)
 AHX_CONFIG_MEMMOVE(unbound)
+AHX_CONFIG_STRLCAT(unbound)
 AHX_CONFIG_STRLCPY(unbound)
 AHX_CONFIG_GMTIME_R(unbound)
 AHX_CONFIG_W32_SLEEP

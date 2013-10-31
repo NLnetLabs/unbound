@@ -53,6 +53,7 @@
 #include "util/data/dname.h"
 #include "util/data/msgreply.h"
 #include "util/alloc.h"
+#include "ldns/sbuffer.h"
 
 /** RRset flag used during scrubbing. The RRset is OK. */
 #define RRSET_SCRUB_OK	0x80

@@ -39,11 +39,13 @@
  */
 
 #include "config.h"
-#include "testcode/ldns-testpkts.h"
+#include "testcode/testpkts.h"
 #include "testcode/replay.h"
 #include "testcode/fake_event.h"
 #include "daemon/remote.h"
 #include "util/config_file.h"
+#include "ldns/keyraw.h"
+#include <ctype.h>
 
 /** signal that this is a testbound compile */
 #define unbound_testbound 1

@@ -57,9 +57,12 @@
 #include "services/outside_network.h"
 #include "services/cache/infra.h"
 #include "testcode/replay.h"
-#include "testcode/ldns-testpkts.h"
+#include "testcode/testpkts.h"
 #include "util/log.h"
 #include "util/fptr_wlist.h"
+#include "ldns/sbuffer.h"
+#include "ldns/wire2str.h"
+#include "ldns/str2wire.h"
 #include <signal.h>
 struct worker;
 struct daemon_remote;
@@ -108,11 +111,11 @@ fake_event_cleanup(void)
 
 /** helper function that logs a ldns_pkt packet to logfile */
 static void
-log_pkt(const char* desc, ldns_pkt* pkt)
+log_pkt(const char* desc, uint8_t* pkt, size_t len)
 {
-	char* str = ldns_pkt2str(pkt);
+	char* str = ldns_wire2str_pkt(pkt, len);
 	if(!str)
-		log_info("%s: (failed)", desc);
+		fatal_exit("%s: (failed out of memory wire2str_pkt)", desc);
 	else {
 		log_info("%s%s", desc, str);
 		free(str);
@@ -150,7 +153,7 @@ delete_fake_pending(struct fake_pending* pend)
 		return;
 	free(pend->zone);
 	ldns_buffer_free(pend->buffer);
-	ldns_pkt_free(pend->pkt);
+	free(pend->pkt);
 	free(pend);
 }
 
@@ -164,7 +167,7 @@ delete_replay_answer(struct replay_answer* a)
 		ldns_buffer_free(a->repinfo.c->buffer);
 		free(a->repinfo.c);
 	}
-	ldns_pkt_free(a->pkt);
+	free(a->pkt);
 	free(a);
 }
 
@@ -186,7 +189,8 @@ pending_matches_current(struct replay_runtime* runtime,
 			sockaddr_cmp(&p->addr, p->addrlen, &runtime->now->addr,
 			runtime->now->addrlen) != 0)
 			continue;
-		if((e=find_match(runtime->now->match, p->pkt, p->transport))) {
+		if((e=find_match(runtime->now->match, p->pkt, p->pkt_len,
+			p->transport))) {
 			*entry = e;
 			*pend = p;
 			return 1;
@@ -212,13 +216,16 @@ pending_find_match(struct replay_runtime* runtime, struct entry** entry,
 		if(p->start_step <= timenow && timenow <= p->end_step &&
 		  (p->addrlen == 0 || sockaddr_cmp(&p->addr, p->addrlen,
 		  	&pend->addr, pend->addrlen) == 0) &&
-		  (*entry = find_match(p->match, pend->pkt, pend->transport))) {
+		  (*entry = find_match(p->match, pend->pkt, pend->pkt_len,
+		 	 pend->transport))) {
 			log_info("matched query time %d in range [%d, %d] "
 				"with entry line %d", timenow, 
 				p->start_step, p->end_step, (*entry)->lineno);
 			if(p->addrlen != 0)
 				log_addr(0, "matched ip", &p->addr, p->addrlen);
-			log_pkt("matched pkt: ", (*entry)->reply_list->reply);
+			log_pkt("matched pkt: ",
+				(*entry)->reply_list->reply_pkt,
+				(*entry)->reply_list->reply_len);
 			return 1;
 		}
 		p = p->next_range;
@@ -275,31 +282,26 @@ pending_list_delete(struct replay_runtime* runtime, struct fake_pending* pend)
  * Fill buffer with reply from the entry.
  */
 static void
-fill_buffer_with_reply(ldns_buffer* buffer, struct entry* entry, ldns_pkt* q)
+fill_buffer_with_reply(ldns_buffer* buffer, struct entry* entry, uint8_t* q,
+	size_t qlen)
 {
-	ldns_status status;
-	ldns_pkt* answer_pkt = NULL;
+	uint8_t* c;
+	size_t clen;
 	log_assert(entry && entry->reply_list);
 	ldns_buffer_clear(buffer);
 	if(entry->reply_list->reply_from_hex) {
-		status = ldns_buffer2pkt_wire(&answer_pkt, 
-			entry->reply_list->reply_from_hex);
-		if(status != LDNS_STATUS_OK) {
-			log_err("testbound: hex packet unparsable, used asis.");
-			ldns_buffer_write(buffer, 
-			ldns_buffer_begin(entry->reply_list->reply_from_hex), 
-			ldns_buffer_limit(entry->reply_list->reply_from_hex));
-		}
+		c = ldns_buffer_begin(entry->reply_list->reply_from_hex);
+		clen = ldns_buffer_limit(entry->reply_list->reply_from_hex);
+		if(!c) fatal_exit("out of memory");
 	} else {
-		answer_pkt = ldns_pkt_clone(entry->reply_list->reply);
+		c = entry->reply_list->reply_pkt;
+		clen = entry->reply_list->reply_len;
 	}
-	if(answer_pkt) {
-		if(q) adjust_packet(entry, answer_pkt, q);
-		status = ldns_pkt2buffer_wire(buffer, answer_pkt);
-		if(status != LDNS_STATUS_OK)
-			fatal_exit("ldns: cannot pkt2buffer_wire parsed pkt");
+	if(c) {
+		if(q) adjust_packet(entry, &c, &clen, q, qlen);
+		ldns_buffer_write(buffer, c, clen);
+		if(q) free(c);
 	}
-	ldns_pkt_free(answer_pkt);
 	ldns_buffer_flip(buffer);
 }
 
@@ -324,7 +326,7 @@ answer_callback_from_entry(struct replay_runtime* runtime,
 	c.type = comm_udp;
 	if(pend->transport == transport_tcp)
 		c.type = comm_tcp;
-	fill_buffer_with_reply(c.buffer, entry, pend->pkt);
+	fill_buffer_with_reply(c.buffer, entry, pend->pkt, pend->pkt_len);
 	repinfo.c = &c;
 	repinfo.addrlen = pend->addrlen;
 	memcpy(&repinfo.addr, &pend->addr, pend->addrlen);
@@ -351,7 +353,8 @@ answer_check_it(struct replay_runtime* runtime)
 		if((runtime->now->addrlen == 0 || sockaddr_cmp(
 			&runtime->now->addr, runtime->now->addrlen,
 			&ans->repinfo.addr, ans->repinfo.addrlen) == 0) &&
-			find_match(runtime->now->match, ans->pkt, tr)) {
+			find_match(runtime->now->match, ans->pkt,
+				ans->pkt_len, tr)) {
 			log_info("testbound matched event entry from line %d",
 				runtime->now->match->lineno);
 			log_info("testbound: do STEP %d %s", 
@@ -394,9 +397,10 @@ fake_front_query(struct replay_runtime* runtime, struct replay_moment *todo)
 	if(todo->match->match_transport == transport_tcp)
 		repinfo.c->type = comm_tcp;
 	else	repinfo.c->type = comm_udp;
-	fill_buffer_with_reply(repinfo.c->buffer, todo->match, NULL);
+	fill_buffer_with_reply(repinfo.c->buffer, todo->match, NULL, 0);
 	log_info("testbound: incoming QUERY");
-	log_pkt("query pkt", todo->match->reply_list->reply);
+	log_pkt("query pkt", todo->match->reply_list->reply_pkt,
+		todo->match->reply_list->reply_len);
 	/* call the callback for incoming queries */
 	if((*runtime->callback_query)(repinfo.c, runtime->cb_arg, 
 		NETEVENT_NOERROR, &repinfo)) {
@@ -424,13 +428,13 @@ fake_pending_callback(struct replay_runtime* runtime,
 	if(!p) fatal_exit("No pending queries.");
 	cb_arg = p->cb_arg;
 	cb = p->callback;
-	log_assert(todo->qname == NULL); /* or find that one */
 	c.buffer = ldns_buffer_new(runtime->bufsize);
 	c.type = comm_udp;
 	if(p->transport == transport_tcp)
 		c.type = comm_tcp;
 	if(todo->evt_type == repevt_back_reply && todo->match) {
-		fill_buffer_with_reply(c.buffer, todo->match, p->pkt);
+		fill_buffer_with_reply(c.buffer, todo->match, p->pkt,
+			p->pkt_len);
 	}
 	repinfo.c = &c;
 	repinfo.addrlen = p->addrlen;
@@ -552,16 +556,17 @@ do_infra_rtt(struct replay_runtime* runtime)
 {
 	struct replay_moment* now = runtime->now;
 	int rto;
-	ldns_rdf* dp = ldns_dname_new_frm_str(now->variable);
+	size_t dplen = 0;
+	uint8_t* dp = ldns_str2wire_dname(now->variable, &dplen);
 	if(!dp) fatal_exit("cannot parse %s", now->variable);
-	rto = infra_rtt_update(runtime->infra, &now->addr,
-		now->addrlen, ldns_rdf_data(dp), ldns_rdf_size(dp),
-		LDNS_RR_TYPE_A, atoi(now->string), -1, runtime->now_secs);
+	rto = infra_rtt_update(runtime->infra, &now->addr, now->addrlen,
+		dp, dplen, LDNS_RR_TYPE_A, atoi(now->string),
+		-1, runtime->now_secs);
 	log_addr(0, "INFRA_RTT for", &now->addr, now->addrlen);
 	log_info("INFRA_RTT(%s roundtrip %d): rto of %d", now->variable,
 		atoi(now->string), rto);
 	if(rto == 0) fatal_exit("infra_rtt_update failed");
-	ldns_rdf_deep_free(dp);
+	free(dp);
 }
 
 /** perform exponential backoff on the timout */
@@ -712,7 +717,7 @@ run_scenario(struct replay_runtime* runtime)
 		struct fake_pending* p;
 		log_err("testbound: there are still messages pending.");
 		for(p = runtime->pending_list; p; p=p->next) {
-			log_pkt("pending msg", p->pkt);
+			log_pkt("pending msg", p->pkt, p->pkt_len);
 			log_addr(0, "pending to", &p->addr, p->addrlen);
 		}
 		fatal_exit("testbound: there are still messages pending.");
@@ -856,7 +861,6 @@ comm_point_send_reply(struct comm_reply* repinfo)
 {
 	struct replay_answer* ans = (struct replay_answer*)calloc(1,
 		sizeof(struct replay_answer));
-	ldns_status status;
 	struct replay_runtime* runtime = (struct replay_runtime*)repinfo->c->ev;
 	log_info("testbound: comm_point_send_reply fake");
 	/* dump it into the todo list */
@@ -869,13 +873,11 @@ comm_point_send_reply(struct comm_reply* repinfo)
 	runtime->answer_last = ans;
 
 	/* try to parse packet */
-	status = ldns_buffer2pkt_wire(&ans->pkt, ans->repinfo.c->buffer);
-	if(status != LDNS_STATUS_OK) {
-		log_err("ldns error parsing packet: %s",
-			ldns_get_errorstr_by_id(status));
-		fatal_exit("Sending unparseable DNS replies to clients!");
-	}
-	log_pkt("reply pkt: ", ans->pkt);
+	ans->pkt = memdup(ldns_buffer_begin(ans->repinfo.c->buffer),
+		ldns_buffer_limit(ans->repinfo.c->buffer));
+	ans->pkt_len = ldns_buffer_limit(ans->repinfo.c->buffer);
+	if(!ans->pkt) fatal_exit("out of memory");
+	log_pkt("reply pkt: ", ans->pkt, ans->pkt_len);
 }
 
 void 
@@ -938,7 +940,6 @@ pending_udp_query(struct outside_network* outnet, ldns_buffer* packet,
 	struct replay_runtime* runtime = (struct replay_runtime*)outnet->base;
 	struct fake_pending* pend = (struct fake_pending*)calloc(1,
 		sizeof(struct fake_pending));
-	ldns_status status;
 	log_assert(pend);
 	pend->buffer = ldns_buffer_new(ldns_buffer_capacity(packet));
 	log_assert(pend->buffer);
@@ -955,20 +956,18 @@ pending_udp_query(struct outside_network* outnet, ldns_buffer* packet,
 	pend->zone = NULL;
 	pend->serviced = 0;
 	pend->runtime = runtime;
-	status = ldns_buffer2pkt_wire(&pend->pkt, packet);
-	if(status != LDNS_STATUS_OK) {
-		log_err("ldns error parsing udp output packet: %s",
-			ldns_get_errorstr_by_id(status));
-		fatal_exit("Sending unparseable DNS packets to servers!");
-	}
-	log_pkt("pending udp pkt: ", pend->pkt);
+	pend->pkt_len = ldns_buffer_limit(packet);
+	pend->pkt = memdup(ldns_buffer_begin(packet), pend->pkt_len);
+	if(!pend->pkt) fatal_exit("out of memory");
+	log_pkt("pending udp pkt: ", pend->pkt, pend->pkt_len);
 
 	/* see if it matches the current moment */
 	if(runtime->now && runtime->now->evt_type == repevt_back_query &&
 		(runtime->now->addrlen == 0 || sockaddr_cmp(
 			&runtime->now->addr, runtime->now->addrlen,
 			&pend->addr, pend->addrlen) == 0) &&
-		find_match(runtime->now->match, pend->pkt, pend->transport)) {
+		find_match(runtime->now->match, pend->pkt, pend->pkt_len,
+			pend->transport)) {
 		log_info("testbound: matched pending to event. "
 			"advance time between events.");
 		log_info("testbound: do STEP %d %s", runtime->now->time_step,
@@ -992,7 +991,6 @@ pending_tcp_query(struct outside_network* outnet, ldns_buffer* packet,
 	struct replay_runtime* runtime = (struct replay_runtime*)outnet->base;
 	struct fake_pending* pend = (struct fake_pending*)calloc(1,
 		sizeof(struct fake_pending));
-	ldns_status status;
 	log_assert(pend);
 	pend->buffer = ldns_buffer_new(ldns_buffer_capacity(packet));
 	log_assert(pend->buffer);
@@ -1009,20 +1007,18 @@ pending_tcp_query(struct outside_network* outnet, ldns_buffer* packet,
 	pend->zone = NULL;
 	pend->runtime = runtime;
 	pend->serviced = 0;
-	status = ldns_buffer2pkt_wire(&pend->pkt, packet);
-	if(status != LDNS_STATUS_OK) {
-		log_err("ldns error parsing tcp output packet: %s",
-			ldns_get_errorstr_by_id(status));
-		fatal_exit("Sending unparseable DNS packets to servers!");
-	}
-	log_pkt("pending tcp pkt: ", pend->pkt);
+	pend->pkt_len = ldns_buffer_limit(packet);
+	pend->pkt = memdup(ldns_buffer_begin(packet), pend->pkt_len);
+	if(!pend->pkt) fatal_exit("out of memory");
+	log_pkt("pending tcp pkt: ", pend->pkt, pend->pkt_len);
 
 	/* see if it matches the current moment */
 	if(runtime->now && runtime->now->evt_type == repevt_back_query &&
 		(runtime->now->addrlen == 0 || sockaddr_cmp(
 			&runtime->now->addr, runtime->now->addrlen,
 			&pend->addr, pend->addrlen) == 0) &&
-		find_match(runtime->now->match, pend->pkt, pend->transport)) {
+		find_match(runtime->now->match, pend->pkt, pend->pkt_len,
+			pend->transport)) {
 		log_info("testbound: matched pending to event. "
 			"advance time between events.");
 		log_info("testbound: do STEP %d %s", runtime->now->time_step,
@@ -1049,7 +1045,6 @@ struct serviced_query* outnet_serviced_query(struct outside_network* outnet,
 	struct fake_pending* pend = (struct fake_pending*)calloc(1,
 		sizeof(struct fake_pending));
 	char z[256];
-	ldns_status status;
 	log_assert(pend);
 	log_nametypeclass(VERB_OPS, "pending serviced query", 
 		qname, qtype, qclass);
@@ -1096,20 +1091,18 @@ struct serviced_query* outnet_serviced_query(struct outside_network* outnet,
 	pend->pkt = NULL;
 	pend->runtime = runtime;
 	pend->serviced = 1;
-	status = ldns_buffer2pkt_wire(&pend->pkt, pend->buffer);
-	if(status != LDNS_STATUS_OK) {
-		log_err("ldns error parsing serviced output packet: %s",
-			ldns_get_errorstr_by_id(status));
-		fatal_exit("internal error");
-	}
-	/*log_pkt("pending serviced query: ", pend->pkt);*/
+	pend->pkt_len = ldns_buffer_limit(pend->buffer);
+	pend->pkt = memdup(ldns_buffer_begin(pend->buffer), pend->pkt_len);
+	if(!pend->pkt) fatal_exit("out of memory");
+	/*log_pkt("pending serviced query: ", pend->pkt, pend->pkt_len);*/
 
 	/* see if it matches the current moment */
 	if(runtime->now && runtime->now->evt_type == repevt_back_query &&
 		(runtime->now->addrlen == 0 || sockaddr_cmp(
 			&runtime->now->addr, runtime->now->addrlen,
 			&pend->addr, pend->addrlen) == 0) &&
-		find_match(runtime->now->match, pend->pkt, pend->transport)) {
+		find_match(runtime->now->match, pend->pkt, pend->pkt_len,
+			pend->transport)) {
 		log_info("testbound: matched pending to event. "
 			"advance time between events.");
 		log_info("testbound: do STEP %d %s", runtime->now->time_step,
@@ -1138,7 +1131,7 @@ void outnet_serviced_query_stop(struct serviced_query* sq, void* cb_arg)
 				prev->next = p->next;
 			else 	runtime->pending_list = p->next;
 			ldns_buffer_free(p->buffer);
-			ldns_pkt_free(p->pkt);
+			free(p->pkt);
 			free(p->zone);
 			free(p);
 			return;

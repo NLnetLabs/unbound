@@ -43,7 +43,6 @@
  * send back to clients.
  */
 #include "config.h"
-#include <ldns/wire2host.h>
 #include "services/mesh.h"
 #include "services/outbound_list.h"
 #include "services/cache/dns.h"
@@ -56,6 +55,7 @@
 #include "util/fptr_wlist.h"
 #include "util/alloc.h"
 #include "util/config_file.h"
+#include "ldns/sbuffer.h"
 
 /** subtract timers and the values do not overflow or become negative */
 static void

@@ -41,9 +41,9 @@
  */
 #include "config.h"
 #include <ldns/ldns.h>
-#include "util/log.h"
-#include "util/config_file.h"
-#include "util/net_help.h"
+#include <assert.h>
+
+#define DNSKEY_BIT_ZSK 0x0100
 
 /**
  * Key settings
@@ -74,12 +74,47 @@ usage()
 	exit(1);
 }
 
+static time_t 
+convert_timeval(const char* str)
+{
+	time_t t;
+	struct tm tm;
+	memset(&tm, 0, sizeof(tm));
+	if(strlen(str) < 14)
+		return 0;
+	if(sscanf(str, "%4d%2d%2d%2d%2d%2d", &tm.tm_year, &tm.tm_mon, 
+		&tm.tm_mday, &tm.tm_hour, &tm.tm_min, &tm.tm_sec) != 6)
+		return 0;
+	tm.tm_year -= 1900;
+	tm.tm_mon--;
+	/* Check values */
+	if (tm.tm_year < 70)	return 0;
+	if (tm.tm_mon < 0 || tm.tm_mon > 11)	return 0;
+	if (tm.tm_mday < 1 || tm.tm_mday > 31) 	return 0;
+	if (tm.tm_hour < 0 || tm.tm_hour > 23)	return 0;
+	if (tm.tm_min < 0 || tm.tm_min > 59)	return 0;
+	if (tm.tm_sec < 0 || tm.tm_sec > 59)	return 0;
+	/* call ldns conversion function */
+	t = ldns_mktime_from_utc(&tm);
+	return t;
+}
+
+static void fatal_exit(const char* format, ...)
+{
+	va_list args;
+	va_start(args, format);
+	printf("fatal exit: ");
+	vprintf(format, args);
+	va_end(args);
+	exit(1);
+}
+
 /** read expi ince keytag owner from cmdline */
 static void
 parse_cmdline(char *argv[], struct keysets* s)
 {
-	s->expi = cfg_convert_timeval(argv[1]);
-	s->incep = cfg_convert_timeval(argv[2]);
+	s->expi = convert_timeval(argv[1]);
+	s->incep = convert_timeval(argv[2]);
 	s->keytag = (uint16_t)atoi(argv[3]);
 	s->owner = argv[4];
 	s->flags = DNSKEY_BIT_ZSK; /* to enforce signing */
@@ -118,7 +153,7 @@ read_keys(int num, char* names[], struct keysets* set)
 		ldns_key_set_flags(k, set->flags);
 		ldns_key_set_keytag(k, set->keytag);
 		b = ldns_key_list_push_key(keys, k);
-		log_assert(b);
+		assert(b);
 	}
 	return keys;
 }
@@ -151,7 +186,7 @@ read_rrs(FILE* in)
 			fatal_exit("parse error in line %d: %s", line_nr,
 				ldns_get_errorstr_by_id(s));
 		b = ldns_rr_list_push_rr(list, rr);
-		log_assert(b);
+		assert(b);
 	}
 	printf("read %d lines\n", line_nr);
 
@@ -185,7 +220,7 @@ process_keys(int argc, char* argv[])
 	ldns_rr_list* rrs;
 	ldns_key_list* keys;
 	struct keysets settings;
-	log_assert(argc == 6);
+	assert(argc == 6);
 
 	parse_cmdline(argv, &settings);
 	keys = read_keys(1, argv+5, &settings);
@@ -208,7 +243,7 @@ process_nsec3(int argc, char* argv[])
 	if(status != LDNS_STATUS_OK)
 		fatal_exit("Could not parse salt %s: %s", argv[5],
 			ldns_get_errorstr_by_id(status));
-	log_assert(argc == 6);
+	assert(argc == 6);
 	while(fgets(line, (int)sizeof(line), stdin)) {
 		if(strlen(line) > 0)
 			line[strlen(line)-1] = 0; /* remove trailing newline */
@@ -237,7 +272,6 @@ process_nsec3(int argc, char* argv[])
 /** main program */
 int main(int argc, char* argv[])
 {
-	log_init(NULL, 0, NULL);
 	if(argc != 6) {
 		usage();
 	}

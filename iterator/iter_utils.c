@@ -63,6 +63,8 @@
 #include "validator/val_kcache.h"
 #include "validator/val_kentry.h"
 #include "validator/val_utils.h"
+#include "validator/val_sigcrypt.h"
+#include "ldns/sbuffer.h"
 
 /** time when nameserver glue is said to be 'recent' */
 #define SUSPICION_RECENT_EXPIRY 86400
@@ -682,7 +684,7 @@ rrset_equal(struct ub_packed_rrset_key* k1, struct ub_packed_rrset_key* k2)
 }
 
 int 
-reply_equal(struct reply_info* p, struct reply_info* q, ldns_buffer* scratch)
+reply_equal(struct reply_info* p, struct reply_info* q, struct regional* region)
 {
 	size_t i;
 	if(p->flags != q->flags ||
@@ -697,27 +699,12 @@ reply_equal(struct reply_info* p, struct reply_info* q, ldns_buffer* scratch)
 		return 0;
 	for(i=0; i<p->rrset_count; i++) {
 		if(!rrset_equal(p->rrsets[i], q->rrsets[i])) {
-			/* fallback procedure: try to sort and canonicalize */
-			ldns_rr_list* pl, *ql;
-			pl = packed_rrset_to_rr_list(p->rrsets[i], scratch);
-			ql = packed_rrset_to_rr_list(q->rrsets[i], scratch);
-			if(!pl || !ql) {
-				ldns_rr_list_deep_free(pl);
-				ldns_rr_list_deep_free(ql);
+			if(!rrset_canonical_equal(region, p->rrsets[i],
+				q->rrsets[i])) {
+				regional_free_all(region);
 				return 0;
 			}
-			ldns_rr_list2canonical(pl);
-			ldns_rr_list2canonical(ql);
-			ldns_rr_list_sort(pl);
-			ldns_rr_list_sort(ql);
-			if(ldns_rr_list_compare(pl, ql) != 0) {
-				ldns_rr_list_deep_free(pl);
-				ldns_rr_list_deep_free(ql);
-				return 0;
-			}
-			ldns_rr_list_deep_free(pl);
-			ldns_rr_list_deep_free(ql);
-			continue;
+			regional_free_all(region);
 		}
 	}
 	return 1;

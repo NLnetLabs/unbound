@@ -48,6 +48,7 @@ struct regional;
 struct config_file;
 struct edns_data;
 struct query_info;
+struct ldns_buffer;
 
 /**
  * Local zone type
@@ -224,7 +225,7 @@ void local_zones_print(struct local_zones* zones);
  * value is true, but the buffer is cleared (empty).
  */
 int local_zones_answer(struct local_zones* zones, struct query_info* qinfo,
-	struct edns_data* edns, ldns_buffer* buf, struct regional* temp);
+	struct edns_data* edns, struct ldns_buffer* buf, struct regional* temp);
 
 /**
  * Parse the string into localzone type.
@@ -286,11 +287,9 @@ void local_zones_del_zone(struct local_zones* zones, struct local_zone* zone);
  * name of the RR is created.
  * @param zones: the zones tree. Not locked by caller.
  * @param rr: string with on RR.
- * @param buf: buffer for scratch.
  * @return false on failure.
  */
-int local_zones_add_RR(struct local_zones* zones, const char* rr, 
-	ldns_buffer* buf);
+int local_zones_add_RR(struct local_zones* zones, const char* rr);
 
 /**
  * Remove data from domain name in the tree.

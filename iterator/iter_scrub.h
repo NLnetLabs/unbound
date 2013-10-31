@@ -42,7 +42,7 @@
 
 #ifndef ITERATOR_ITER_SCRUB_H
 #define ITERATOR_ITER_SCRUB_H
-#include <ldns/buffer.h>
+struct ldns_buffer;
 struct msg_parse;
 struct query_info;
 struct regional;
@@ -62,7 +62,7 @@ struct iter_env;
  * @param ie: iterator module environment data.
  * @return: false if the message is total waste. true if scrubbed with success.
  */
-int scrub_message(ldns_buffer* pkt, struct msg_parse* msg, 
+int scrub_message(struct ldns_buffer* pkt, struct msg_parse* msg, 
 	struct query_info* qinfo, uint8_t* zonename, struct regional* regional,
 	struct module_env* env, struct iter_env* ie);
 

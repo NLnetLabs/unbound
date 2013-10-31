@@ -44,6 +44,7 @@
 #include "util/storage/lruhash.h"
 #include "util/data/msgreply.h"
 #include "util/data/msgparse.h"
+struct ldns_buffer;
 struct alloc_cache;
 struct rrset_cache;
 struct key_cache;
@@ -176,7 +177,7 @@ struct module_env {
 	/** region for temporary usage. May be cleared after operate() call. */
 	struct regional* scratch;
 	/** buffer for temporary usage. May be cleared after operate() call. */
-	ldns_buffer* scratch_buffer;
+	struct ldns_buffer* scratch_buffer;
 	/** internal data for daemon - worker thread. */
 	struct worker* worker;
 	/** mesh area with query state dependencies */

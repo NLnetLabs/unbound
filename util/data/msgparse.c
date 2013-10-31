@@ -37,12 +37,15 @@
  * Routines for message parsing a packet buffer to a descriptive structure.
  */
 #include "config.h"
-#include <ldns/ldns.h>
 #include "util/data/msgparse.h"
 #include "util/data/dname.h"
 #include "util/data/packed_rrset.h"
 #include "util/storage/lookup3.h"
 #include "util/regional.h"
+#include "ldns/rrdef.h"
+#include "ldns/sbuffer.h"
+#include "ldns/parseutil.h"
+#include "ldns/wire2str.h"
 
 /** smart comparison of (compressed, valid) dnames from packet */
 static int
@@ -614,7 +617,7 @@ get_rdf_size(ldns_rdf_type rdf)
 			return 16;
 			break;
 		default:
-			log_assert(false); /* add type above */
+			log_assert(0); /* add type above */
 			/* only types that appear before a domain  *
 			 * name are needed. rest is simply copied. */
 	}

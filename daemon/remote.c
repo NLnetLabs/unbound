@@ -47,7 +47,6 @@
 #include <openssl/err.h>
 #endif
 #include <ctype.h>
-#include <ldns/ldns.h>
 #include "daemon/remote.h"
 #include "daemon/worker.h"
 #include "daemon/daemon.h"
@@ -75,6 +74,10 @@
 #include "iterator/iter_delegpt.h"
 #include "services/outbound_list.h"
 #include "services/outside_network.h"
+#include "ldns/str2wire.h"
+#include "ldns/parseutil.h"
+#include "ldns/wire2str.h"
+#include "ldns/sbuffer.h"
 
 #ifdef HAVE_SYS_TYPES_H
 #  include <sys/types.h>
@@ -912,17 +915,20 @@ do_stats(SSL* ssl, struct daemon_remote* rc, int reset)
 static int
 parse_arg_name(SSL* ssl, char* str, uint8_t** res, size_t* len, int* labs)
 {
-	ldns_rdf* rdf;
+	uint8_t nm[LDNS_MAX_DOMAINLEN+1];
+	size_t nmlen = sizeof(nm);
+	int status;
 	*res = NULL;
 	*len = 0;
 	*labs = 0;
-	rdf = ldns_dname_new_frm_str(str);
-	if(!rdf) {
-		ssl_printf(ssl, "error cannot parse name %s\n", str);
+	status = ldns_str2wire_dname_buf(str, nm, &nmlen);
+	if(status != 0) {
+		ssl_printf(ssl, "error cannot parse name %s at %d: %s\n", str,
+			LDNS_WIREPARSE_OFFSET(status),
+			ldns_get_errorstr_parse(status));
 		return 0;
 	}
-	*res = memdup(ldns_rdf_data(rdf), ldns_rdf_size(rdf));
-	ldns_rdf_deep_free(rdf);
+	*res = memdup(nm, nmlen);
 	if(!*res) {
 		ssl_printf(ssl, "error out of memory\n");
 		return 0;
@@ -1022,8 +1028,7 @@ do_zone_remove(SSL* ssl, struct worker* worker, char* arg)
 static void
 do_data_add(SSL* ssl, struct worker* worker, char* arg)
 {
-	if(!local_zones_add_RR(worker->daemon->local_zones, arg,
-		worker->env.scratch_buffer)) {
+	if(!local_zones_add_RR(worker->daemon->local_zones, arg)) {
 		ssl_printf(ssl,"error in syntax or out of memory, %s\n", arg);
 		return;
 	}
@@ -1388,9 +1393,9 @@ ssl_print_name_dp(SSL* ssl, char* str, uint8_t* nm, uint16_t dclass,
 	struct delegpt_addr* a;
 	int f = 0;
 	if(str) { /* print header for forward, stub */
-		char* c = ldns_rr_class2str(dclass);
+		char* c = ldns_wire2str_class(dclass);
 		dname_str(nm, buf);
-		if(!ssl_printf(ssl, "%s %s %s: ", buf, c, str)) {
+		if(!ssl_printf(ssl, "%s %s %s: ", buf, (c?c:"CLASS??"), str)) {
 			free(c);
 			return 0;
 		}
@@ -1780,10 +1785,11 @@ get_mesh_status(struct mesh_area* mesh, struct mesh_state* m,
 		if(m->sub_set.count == 0)
 			snprintf(buf, len, " (empty_list)");
 		RBTREE_FOR(sub, struct mesh_state_ref*, &m->sub_set) {
-			char* t = ldns_rr_type2str(sub->s->s.qinfo.qtype);
-			char* c = ldns_rr_class2str(sub->s->s.qinfo.qclass);
+			char* t = ldns_wire2str_type(sub->s->s.qinfo.qtype);
+			char* c = ldns_wire2str_class(sub->s->s.qinfo.qclass);
 			dname_str(sub->s->s.qinfo.qname, nm);
-			snprintf(buf, len, " %s %s %s", t, c, nm);
+			snprintf(buf, len, " %s %s %s", (t?t:"TYPE??"),
+				(c?c:"CLASS??"), nm);
 			l = strlen(buf);
 			buf += l; len -= l;
 			free(t);
@@ -1812,13 +1818,14 @@ do_dump_requestlist(SSL* ssl, struct worker* worker)
 	mesh = worker->env.mesh;
 	if(!mesh) return;
 	RBTREE_FOR(m, struct mesh_state*, &mesh->all) {
-		char* t = ldns_rr_type2str(m->s.qinfo.qtype);
-		char* c = ldns_rr_class2str(m->s.qinfo.qclass);
+		char* t = ldns_wire2str_type(m->s.qinfo.qtype);
+		char* c = ldns_wire2str_class(m->s.qinfo.qclass);
 		dname_str(m->s.qinfo.qname, buf);
 		get_mesh_age(m, timebuf, sizeof(timebuf), &worker->env);
 		get_mesh_status(mesh, m, statbuf, sizeof(statbuf));
 		if(!ssl_printf(ssl, "%3d %4s %2s %s %s %s\n", 
-			num, t, c, buf, timebuf, statbuf)) {
+			num, (t?t:"TYPE??"), (c?c:"CLASS??"), buf, timebuf,
+			statbuf)) {
 			free(t);
 			free(c);
 			return;
@@ -1978,17 +1985,25 @@ do_list_local_data(SSL* ssl, struct worker* worker)
 	struct local_zone* z;
 	struct local_data* d;
 	struct local_rrset* p;
+	char* s = (char*)ldns_buffer_begin(worker->env.scratch_buffer);
+	size_t slen = ldns_buffer_capacity(worker->env.scratch_buffer);
 	lock_quick_lock(&zones->lock);
 	RBTREE_FOR(z, struct local_zone*, &zones->ztree) {
 		lock_rw_rdlock(&z->lock);
 		RBTREE_FOR(d, struct local_data*, &z->data) {
 			for(p = d->rrsets; p; p = p->next) {
-				ldns_rr_list* rr = packed_rrset_to_rr_list(
-					p->rrset, worker->env.scratch_buffer);
-				char* str = ldns_rr_list2str(rr);
-				(void)ssl_printf(ssl, "%s", str);
-				free(str);
-				ldns_rr_list_free(rr);
+				struct packed_rrset_data* d =
+					(struct packed_rrset_data*)p->rrset->entry.data;
+				size_t i;
+				for(i=0; i<d->count + d->rrsig_count; i++) {
+					if(!packed_rr_to_string(p->rrset, i,
+						0, s, slen)) {
+						if(!ssl_printf(ssl, "BADRR\n"))
+							return;
+					}
+				        if(!ssl_printf(ssl, "%s\n", s))
+						return;
+				}
 			}
 		}
 		lock_rw_unlock(&z->lock);

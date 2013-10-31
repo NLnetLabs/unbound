@@ -60,6 +60,7 @@
 #include "config.h"
 #include "util/random.h"
 #include "util/log.h"
+#include <time.h>
 #ifdef HAVE_SSL
 #include <openssl/rand.h>
 #include <openssl/rc4.h>

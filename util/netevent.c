@@ -39,11 +39,12 @@
  * This file contains event notification functions.
  */
 #include "config.h"
-#include <ldns/wire2host.h>
 #include "util/netevent.h"
 #include "util/log.h"
 #include "util/net_help.h"
 #include "util/fptr_wlist.h"
+#include "ldns/pkthdr.h"
+#include "ldns/sbuffer.h"
 #ifdef HAVE_OPENSSL_SSL_H
 #include <openssl/ssl.h>
 #endif
@@ -422,7 +423,7 @@ static void p_ancil(const char* str, struct comm_reply* r)
 		char buf[1024];
 		if(inet_ntop(AF_INET6, &r->pktinfo.v6info.ipi6_addr, 
 			buf, (socklen_t)sizeof(buf)) == 0) {
-			strncpy(buf, "(inet_ntop error)", sizeof(buf));
+			strlcpy(buf, "(inet_ntop error)", sizeof(buf));
 		}
 		buf[sizeof(buf)-1]=0;
 		log_info("%s: %s %d", str, buf, r->pktinfo.v6info.ipi6_ifindex);
@@ -431,13 +432,13 @@ static void p_ancil(const char* str, struct comm_reply* r)
 		char buf1[1024], buf2[1024];
 		if(inet_ntop(AF_INET, &r->pktinfo.v4info.ipi_addr, 
 			buf1, (socklen_t)sizeof(buf1)) == 0) {
-			strncpy(buf1, "(inet_ntop error)", sizeof(buf1));
+			strlcpy(buf1, "(inet_ntop error)", sizeof(buf1));
 		}
 		buf1[sizeof(buf1)-1]=0;
 #ifdef HAVE_STRUCT_IN_PKTINFO_IPI_SPEC_DST
 		if(inet_ntop(AF_INET, &r->pktinfo.v4info.ipi_spec_dst, 
 			buf2, (socklen_t)sizeof(buf2)) == 0) {
-			strncpy(buf2, "(inet_ntop error)", sizeof(buf2));
+			strlcpy(buf2, "(inet_ntop error)", sizeof(buf2));
 		}
 		buf2[sizeof(buf2)-1]=0;
 #else
@@ -449,7 +450,7 @@ static void p_ancil(const char* str, struct comm_reply* r)
 		char buf1[1024];
 		if(inet_ntop(AF_INET, &r->pktinfo.v4addr, 
 			buf1, (socklen_t)sizeof(buf1)) == 0) {
-			strncpy(buf1, "(inet_ntop error)", sizeof(buf1));
+			strlcpy(buf1, "(inet_ntop error)", sizeof(buf1));
 		}
 		buf1[sizeof(buf1)-1]=0;
 		log_info("%s: %s", str, buf1);

@@ -43,7 +43,6 @@
 #ifdef HAVE_GETOPT_H
 #include <getopt.h>
 #endif
-#include <ldns/ldns.h>
 #include <signal.h>
 #include "util/locks.h"
 #include "util/log.h"
@@ -52,6 +51,11 @@
 #include "util/data/msgparse.h"
 #include "util/data/msgreply.h"
 #include "util/data/dname.h"
+#include "ldns/sbuffer.h"
+#include "ldns/str2wire.h"
+#include "ldns/wire2str.h"
+#include <openssl/ssl.h>
+#include <openssl/rand.h>
 #include <openssl/err.h>
 
 #ifndef PF_INET6
@@ -112,18 +116,13 @@ write_q(int fd, int udp, SSL* ssl, ldns_buffer* buf, uint16_t id,
 	const char* strname, const char* strtype, const char* strclass)
 {
 	struct query_info qinfo;
-	ldns_rdf* rdf;
 	uint16_t len;
 	/* qname */
-	rdf = ldns_dname_new_frm_str(strname);
-	if(!rdf) {
+	qinfo.qname = ldns_str2wire_dname(strname, &qinfo.qname_len);
+	if(!qinfo.qname) {
 		printf("cannot parse query name: '%s'\n", strname);
 		exit(1);
 	}
-	qinfo.qname = memdup(ldns_rdf_data(rdf), ldns_rdf_size(rdf));
-	if(!qinfo.qname) fatal_exit("out of memory");
-	(void)dname_count_size_labels(qinfo.qname, &qinfo.qname_len);
-	ldns_rdf_deep_free(rdf);
 
 	/* qtype and qclass */
 	qinfo.qtype = ldns_get_rr_type_by_name(strtype);
@@ -192,9 +191,8 @@ write_q(int fd, int udp, SSL* ssl, ldns_buffer* buf, uint16_t id,
 static void
 recv_one(int fd, int udp, SSL* ssl, ldns_buffer* buf)
 {
+	char* pktstr;
 	uint16_t len;
-	ldns_pkt* pkt;
-	ldns_status status;
 	if(!udp) {
 		if(ssl) {
 			if(SSL_read(ssl, (void*)&len, (int)sizeof(len)) <= 0) {
@@ -256,15 +254,18 @@ recv_one(int fd, int udp, SSL* ssl, ldns_buffer* buf)
 	printf("\nnext received packet\n");
 	log_buf(0, "data", buf);
 
-	status = ldns_wire2pkt(&pkt, ldns_buffer_begin(buf), len);
-	if(status != LDNS_STATUS_OK) {
-		printf("could not parse incoming packet: %s\n",
-			ldns_get_errorstr_by_id(status));
-		log_buf(0, "data was", buf);
-		exit(1);
+	pktstr = ldns_wire2str_pkt(ldns_buffer_begin(buf), len);
+	printf("%s", pktstr);
+	free(pktstr);
+}
+
+static int get_random(void)
+{
+	int r;
+	if (RAND_bytes((unsigned char*)&r, (int)sizeof(r)) == 1) {
+		return r;
 	}
-	ldns_pkt_print(stdout, pkt);
-	ldns_pkt_free(pkt);
+	return (int)random();
 }
 
 /** send the TCP queries and print answers */
@@ -305,7 +306,7 @@ send_em(const char* svr, int udp, int usessl, int noanswer, int num, char** qs)
 	}
 	for(i=0; i<num; i+=3) {
 		printf("\nNext query is %s %s %s\n", qs[i], qs[i+1], qs[i+2]);
-		write_q(fd, udp, ssl, buf, ldns_get_random(), qs[i],
+		write_q(fd, udp, ssl, buf, (uint16_t)get_random(), qs[i],
 			qs[i+1], qs[i+2]);
 		/* print at least one result */
 		if(!noanswer)

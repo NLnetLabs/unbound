@@ -42,7 +42,6 @@
 #ifndef UTIL_DATA_PACKED_RRSET_H
 #define UTIL_DATA_PACKED_RRSET_H
 #include "util/storage/lruhash.h"
-#include <ldns/rr.h>
 struct alloc_cache;
 struct regional;
 
@@ -382,6 +381,27 @@ const char* sec_status_to_string(enum sec_status s);
 void log_rrset_key(enum verbosity_value v, const char* str, 
 	struct ub_packed_rrset_key* rrset);
 
+/**
+ * Convert RR from RRset to string.
+ * @param rrset: structure with data.
+ * @param i: index of rr or RRSIG.
+ * @param now: time that is subtracted from ttl before printout. Can be 0.
+ * @param dest: destination string buffer. Must be nonNULL.
+ * @param dest_len: length of dest buffer (>0).
+ * @return false on failure.
+ */
+int packed_rr_to_string(struct ub_packed_rrset_key* rrset, size_t i,
+	time_t now, char* dest, size_t dest_len);
+
+/**
+ * Print the string with prefix, one rr per line.
+ * @param v: at what verbosity level to print this.
+ * @param str: string of message.
+ * @param rrset: with name, and rdata, and rrsigs.
+ */
+void log_packed_rrset(enum verbosity_value v, const char* str,
+	struct ub_packed_rrset_key* rrset);
+
 /** 
  * Allocate rrset in region - no more locks needed 
  * @param key: a (just from rrset cache looked up) rrset key + valid,
@@ -404,31 +424,5 @@ struct ub_packed_rrset_key* packed_rrset_copy_region(
 struct ub_packed_rrset_key* packed_rrset_copy_alloc(
 	struct ub_packed_rrset_key* key, struct alloc_cache* alloc, 
 	time_t now);
-
-/**
- * Create a ub_packed_rrset_key allocated on the heap.
- * It therefore does not have the correct ID value, and cannot be used
- * inside the cache.  It can be used in storage outside of the cache.
- * Keys for the cache have to be obtained from alloc.h .
- * @param rrset: the ldns rr set.
- * @return key allocated or NULL on failure.
- */
-struct ub_packed_rrset_key* ub_packed_rrset_heap_key(ldns_rr_list* rrset);
-
-/**
- * Create packed_rrset data on the heap.
- * @param rrset: the ldns rr set with the data to copy.
- * @return data allocated or NULL on failure.
- */
-struct packed_rrset_data* packed_rrset_heap_data(ldns_rr_list* rrset);
-
-/**
- * Convert packed rrset to ldns rr list.
- * @param rrset: packed rrset.
- * @param buf: scratch buffer.
- * @return rr list or NULL on failure.
- */
-ldns_rr_list* packed_rrset_to_rr_list(struct ub_packed_rrset_key* rrset,
-	ldns_buffer* buf);
 
 #endif /* UTIL_DATA_PACKED_RRSET_H */

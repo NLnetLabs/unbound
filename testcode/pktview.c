@@ -40,12 +40,13 @@
  */
 
 #include "config.h"
-#include <ldns/ldns.h>
 #include "util/log.h"
 #include "util/data/dname.h"
 #include "util/data/msgparse.h"
 #include "testcode/unitmain.h"
 #include "testcode/readhex.h"
+#include "ldns/sbuffer.h"
+#include "ldns/parseutil.h"
 
 /** usage information for pktview */
 static void usage(char* argv[])

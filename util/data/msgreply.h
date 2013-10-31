@@ -43,6 +43,7 @@
 #define UTIL_DATA_MSGREPLY_H
 #include "util/storage/lruhash.h"
 #include "util/data/packed_rrset.h"
+struct ldns_buffer;
 struct comm_reply;
 struct alloc_cache;
 struct iovec;
@@ -201,7 +202,7 @@ struct msgreply_entry {
  * @param query: the wireformat packet query. starts with ID.
  * @return: 0 on format error.
  */
-int query_info_parse(struct query_info* m, ldns_buffer* query);
+int query_info_parse(struct query_info* m, struct ldns_buffer* query);
 
 /**
  * Parse query reply.
@@ -218,7 +219,7 @@ int query_info_parse(struct query_info* m, ldns_buffer* query);
  *	o FORMERR for parse errors.
  *	o SERVFAIL for memory allocation errors.
  */
-int reply_info_parse(ldns_buffer* pkt, struct alloc_cache* alloc,
+int reply_info_parse(struct ldns_buffer* pkt, struct alloc_cache* alloc,
 	struct query_info* qinf, struct reply_info** rep, 
 	struct regional* region, struct edns_data* edns);
 
@@ -237,7 +238,7 @@ int reply_info_parse(ldns_buffer* pkt, struct alloc_cache* alloc,
  *	and no rrset_ref array in the reply is built up.
  * @return 0 if allocation failed.
  */
-int parse_create_msg(ldns_buffer* pkt, struct msg_parse* msg,
+int parse_create_msg(struct ldns_buffer* pkt, struct msg_parse* msg,
         struct alloc_cache* alloc, struct query_info* qinf,
 	struct reply_info** rep, struct regional* region);
 
@@ -322,7 +323,7 @@ struct reply_info* reply_info_copy(struct reply_info* rep,
  *	Note that TTL will still be relative on return.
  * @return false on alloc failure.
  */
-int parse_copy_decompress_rrset(ldns_buffer* pkt, struct msg_parse* msg,
+int parse_copy_decompress_rrset(struct ldns_buffer* pkt, struct msg_parse* msg,
 	struct rrset_parse *pset, struct regional* region, 
 	struct ub_packed_rrset_key* pk);
 

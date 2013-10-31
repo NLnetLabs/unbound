@@ -50,6 +50,7 @@
 #include <sys/time.h>
 #include "util/net_help.h"
 #include "util/config_file.h"
+#include "ldns/sbuffer.h"
 #include <signal.h>
 
 /** number of reads per select for delayer */
@@ -889,12 +890,12 @@ proxy_list_clear(struct proxy* p)
 			if(inet_ntop(AF_INET6, 
 				&((struct sockaddr_in6*)&p->addr)->sin6_addr,
 				from, (socklen_t)sizeof(from)) == 0)
-				strncpy(from, "err", sizeof(from));
+				strlcpy(from, "err", sizeof(from));
 		} else {
 			if(inet_ntop(AF_INET, 
 				&((struct sockaddr_in*)&p->addr)->sin_addr,
 				from, (socklen_t)sizeof(from)) == 0)
-				strncpy(from, "err", sizeof(from));
+				strlcpy(from, "err", sizeof(from));
 		}
 		printf("client[%d]: last %s@%d of %d : %u in, %u out, "
 			"%u returned\n", i++, from, port, (int)p->numreuse+1,

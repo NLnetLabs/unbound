@@ -43,7 +43,7 @@
 #ifndef ITERATOR_ITER_PRIV_H
 #define ITERATOR_ITER_PRIV_H
 #include "util/rbtree.h"
-#include <ldns/buffer.h>
+struct ldns_buffer;
 struct iter_env;
 struct config_file;
 struct regional;
@@ -99,7 +99,7 @@ int priv_apply_cfg(struct iter_priv* priv, struct config_file* cfg);
  * @param rrset: the rrset to examine, A or AAAA.
  * @return true if the rrset is bad and should be removed.
  */
-int priv_rrset_bad(struct iter_priv* priv, ldns_buffer* pkt, 
+int priv_rrset_bad(struct iter_priv* priv, struct ldns_buffer* pkt, 
 	struct rrset_parse* rrset);
 
 /**

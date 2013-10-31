@@ -46,6 +46,7 @@
 #define VALIDATOR_VAL_NEG_H
 #include "util/locks.h"
 #include "util/rbtree.h"
+struct ldns_buffer;
 struct val_neg_data;
 struct config_file;
 struct reply_info;
@@ -255,7 +256,7 @@ int val_neg_dlvlookup(struct val_neg_cache* neg, uint8_t* qname, size_t len,
  */
 struct dns_msg* val_neg_getmsg(struct val_neg_cache* neg, 
 	struct query_info* qinfo, struct regional* region, 
-	struct rrset_cache* rrset_cache, ldns_buffer* buf, time_t now,
+	struct rrset_cache* rrset_cache, struct ldns_buffer* buf, time_t now,
 	int addsoa, uint8_t* topname);
 
 

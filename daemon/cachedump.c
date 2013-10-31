@@ -40,7 +40,7 @@
  * to text format.
  */
 #include "config.h"
-#include <ldns/ldns.h>
+#include <openssl/ssl.h>
 #include "daemon/cachedump.h"
 #include "daemon/remote.h"
 #include "daemon/worker.h"
@@ -56,64 +56,19 @@
 #include "iterator/iter_utils.h"
 #include "iterator/iter_fwd.h"
 #include "iterator/iter_hints.h"
-
-/** convert to ldns rr */
-static ldns_rr*
-to_rr(struct ub_packed_rrset_key* k, struct packed_rrset_data* d, 
-	time_t now, size_t i, uint16_t type)
-{
-	ldns_rr* rr = ldns_rr_new();
-	ldns_rdf* rdf;
-	ldns_status status;
-	size_t pos;
-	log_assert(i < d->count + d->rrsig_count);
-	if(!rr) {
-		return NULL;
-	}
-	ldns_rr_set_type(rr, type);
-	ldns_rr_set_class(rr, ntohs(k->rk.rrset_class));
-	if(d->rr_ttl[i] < now)
-		ldns_rr_set_ttl(rr, 0);
-	else	ldns_rr_set_ttl(rr, d->rr_ttl[i] - now);
-	pos = 0;
-	status = ldns_wire2dname(&rdf, k->rk.dname, k->rk.dname_len, &pos);
-	if(status != LDNS_STATUS_OK) {
-		/* we drop detailed error in status */
-		ldns_rr_free(rr);
-		return NULL;
-	}
-	ldns_rr_set_owner(rr, rdf);
-	pos = 0;
-	status = ldns_wire2rdf(rr, d->rr_data[i], d->rr_len[i], &pos);
-	if(status != LDNS_STATUS_OK) {
-		/* we drop detailed error in status */
-		ldns_rr_free(rr);
-		return NULL;
-	}
-	return rr;
-}
+#include "ldns/sbuffer.h"
+#include "ldns/wire2str.h"
+#include "ldns/str2wire.h"
 
 /** dump one rrset zonefile line */
 static int
-dump_rrset_line(SSL* ssl, struct ub_packed_rrset_key* k,
-        struct packed_rrset_data* d, time_t now, size_t i, uint16_t type)
+dump_rrset_line(SSL* ssl, struct ub_packed_rrset_key* k, time_t now, size_t i)
 {
-	char* s;
-	ldns_rr* rr = to_rr(k, d, now, i, type);
-	if(!rr) {
+	char s[65535];
+	if(!packed_rr_to_string(k, i, now, s, sizeof(s))) {
 		return ssl_printf(ssl, "BADRR\n");
 	}
-	s = ldns_rr2str(rr);
-	ldns_rr_free(rr);
-	if(!s) {
-		return ssl_printf(ssl, "BADRR\n");
-	}
-	if(!ssl_printf(ssl, "%s", s)) {
-		free(s);
-		return 0;
-	}
-	free(s);
-	return 1;
+	return ssl_printf(ssl, "%s\n", s);
 }
 
 /** dump rrset key and data info */
@@ -134,16 +89,10 @@ dump_rrset(SSL* ssl, struct ub_packed_rrset_key* k,
 		(int)d->trust, (int)d->security
 		)) 
 		return 0;
-	for(i=0; i<d->count; i++) {
-		if(!dump_rrset_line(ssl, k, d, now, i, ntohs(k->rk.type)))
+	for(i=0; i<d->count + d->rrsig_count; i++) {
+		if(!dump_rrset_line(ssl, k, now, i))
 			return 0;
 	}
-	for(i=0; i<d->rrsig_count; i++) {
-		if(!dump_rrset_line(ssl, k, d, now, i+d->count, 
-			LDNS_RR_TYPE_RRSIG))
-			return 0;
-	}
-	
 	return 1;
 }
 
@@ -189,20 +138,10 @@ dump_rrset_cache(SSL* ssl, struct worker* worker)
 static int
 dump_msg_ref(SSL* ssl, struct ub_packed_rrset_key* k)
 {
-	ldns_rdf* rdf;
-	ldns_status status;
-	size_t pos;
 	char* nm, *tp, *cl;
-
-	pos = 0;
-	status = ldns_wire2dname(&rdf, k->rk.dname, k->rk.dname_len, &pos);
-	if(status != LDNS_STATUS_OK) {
-		return ssl_printf(ssl, "BADREF\n");
-	}
-	nm = ldns_rdf2str(rdf);
-	ldns_rdf_deep_free(rdf);
-	tp = ldns_rr_type2str(ntohs(k->rk.type));
-	cl = ldns_rr_class2str(ntohs(k->rk.rrset_class));
+	nm = ldns_wire2str_dname(k->rk.dname, k->rk.dname_len);
+	tp = ldns_wire2str_type(ntohs(k->rk.type));
+	cl = ldns_wire2str_class(ntohs(k->rk.rrset_class));
 	if(!nm || !cl || !tp) {
 		free(nm);
 		free(tp);
@@ -229,21 +168,12 @@ dump_msg(SSL* ssl, struct query_info* k, struct reply_info* d,
 {
 	size_t i;
 	char* nm, *tp, *cl;
-	ldns_rdf* rdf;
-	ldns_status status;
-	size_t pos;
 	if(!k || !d) return 1;
 	if(d->ttl < now) return 1; /* expired */
 	
-	pos = 0;
-	status = ldns_wire2dname(&rdf, k->qname, k->qname_len, &pos);
-	if(status != LDNS_STATUS_OK) {
-		return 1; /* skip this entry */
-	}
-	nm = ldns_rdf2str(rdf);
-	ldns_rdf_deep_free(rdf);
-	tp = ldns_rr_type2str(k->qtype);
-	cl = ldns_rr_class2str(k->qclass);
+	nm = ldns_wire2str_dname(k->qname, k->qname_len);
+	tp = ldns_wire2str_type(k->qtype);
+	cl = ldns_wire2str_class(k->qclass);
 	if(!nm || !tp || !cl) {
 		free(nm);
 		free(tp);
@@ -389,8 +319,9 @@ load_rr(SSL* ssl, ldns_buffer* buf, struct regional* region,
 	struct ub_packed_rrset_key* rk, struct packed_rrset_data* d,
 	unsigned int i, int is_rrsig, int* go_on, time_t now)
 {
-	ldns_rr* rr;
-	ldns_status status;
+	uint8_t rr[LDNS_RR_BUF_SIZE];
+	size_t rr_len = sizeof(rr), dname_len = 0;
+	int status;
 
 	/* read the line */
 	if(!ssl_read_buf(ssl, buf))
@@ -399,66 +330,43 @@ load_rr(SSL* ssl, ldns_buffer* buf, struct regional* region,
 		*go_on = 0;
 		return 1;
 	}
-	status = ldns_rr_new_frm_str(&rr, (char*)ldns_buffer_begin(buf),
-		LDNS_DEFAULT_TTL, NULL, NULL);
-	if(status != LDNS_STATUS_OK) {
+	status = ldns_str2wire_rr_buf((char*)ldns_buffer_begin(buf), rr,
+		&rr_len, &dname_len, 3600, NULL, 0, NULL, 0);
+	if(status != 0) {
 		log_warn("error cannot parse rr: %s: %s",
-			ldns_get_errorstr_by_id(status),
+			ldns_get_errorstr_parse(status),
 			(char*)ldns_buffer_begin(buf));
 		return 0;
 	}
-	if(is_rrsig && ldns_rr_get_type(rr) != LDNS_RR_TYPE_RRSIG) {
+	if(is_rrsig && ldns_wirerr_get_type(rr, rr_len, dname_len)
+		!= LDNS_RR_TYPE_RRSIG) {
 		log_warn("error expected rrsig but got %s",
 			(char*)ldns_buffer_begin(buf));
 		return 0;
 	}
 
 	/* convert ldns rr into packed_rr */
-	d->rr_ttl[i] = ldns_rr_ttl(rr) + now;
+	d->rr_ttl[i] = (time_t)ldns_wirerr_get_ttl(rr, rr_len, dname_len) + now;
 	ldns_buffer_clear(buf);
-	ldns_buffer_skip(buf, 2);
-	status = ldns_rr_rdata2buffer_wire(buf, rr);
-	if(status != LDNS_STATUS_OK) {
-		log_warn("error cannot rr2wire: %s",
-			ldns_get_errorstr_by_id(status));
-		ldns_rr_free(rr);
-		return 0;
-	}
-	ldns_buffer_flip(buf);
-	ldns_buffer_write_u16_at(buf, 0, ldns_buffer_limit(buf) - 2);
-
-	d->rr_len[i] = ldns_buffer_limit(buf);
+	d->rr_len[i] = ldns_wirerr_get_rdatalen(rr, rr_len, dname_len)+2;
 	d->rr_data[i] = (uint8_t*)regional_alloc_init(region, 
-		ldns_buffer_begin(buf), ldns_buffer_limit(buf));
+		ldns_wirerr_get_rdatawl(rr, rr_len, dname_len), d->rr_len[i]);
 	if(!d->rr_data[i]) {
-		ldns_rr_free(rr);
 		log_warn("error out of memory");
 		return 0;
 	}
 
 	/* if first entry, fill the key structure */
 	if(i==0) {
-		rk->rk.type = htons(ldns_rr_get_type(rr));
-		rk->rk.rrset_class = htons(ldns_rr_get_class(rr));
-		ldns_buffer_clear(buf);
-		status = ldns_dname2buffer_wire(buf, ldns_rr_owner(rr));
-		if(status != LDNS_STATUS_OK) {
-			log_warn("error cannot dname2buffer: %s",
-				ldns_get_errorstr_by_id(status));
-			ldns_rr_free(rr);
-			return 0;
-		}
-		ldns_buffer_flip(buf);
-		rk->rk.dname_len = ldns_buffer_limit(buf);
-		rk->rk.dname = regional_alloc_init(region, 
-			ldns_buffer_begin(buf), ldns_buffer_limit(buf));
+		rk->rk.type = htons(ldns_wirerr_get_type(rr, rr_len, dname_len));
+		rk->rk.rrset_class = htons(ldns_wirerr_get_class(rr, rr_len, dname_len));
+		rk->rk.dname_len = dname_len;
+		rk->rk.dname = regional_alloc_init(region, rr, dname_len);
 		if(!rk->rk.dname) {
 			log_warn("error out of memory");
-			ldns_rr_free(rr);
 			return 0;
 		}
 	}
-	ldns_rr_free(rr);
 
 	return 1;
 }
@@ -618,13 +526,13 @@ load_rrset_cache(SSL* ssl, struct worker* worker)
 
 /** read qinfo from next three words */
 static char*
-load_qinfo(char* str, struct query_info* qinfo, ldns_buffer* buf, 
-	struct regional* region)
+load_qinfo(char* str, struct query_info* qinfo, struct regional* region)
 {
 	/* s is part of the buf */
 	char* s = str;
-	ldns_rr* rr;
-	ldns_status status;
+	uint8_t rr[LDNS_RR_BUF_SIZE];
+	size_t rr_len = sizeof(rr), dname_len = 0;
+	int status;
 
 	/* skip three words */
 	s = strchr(str, ' ');
@@ -638,26 +546,17 @@ load_qinfo(char* str, struct query_info* qinfo, ldns_buffer* buf,
 	s++;
 
 	/* parse them */
-	status = ldns_rr_new_question_frm_str(&rr, str, NULL, NULL);
-	if(status != LDNS_STATUS_OK) {
+	status = ldns_str2wire_rr_question_buf(str, rr, &rr_len, &dname_len,
+		NULL, 0, NULL, 0);
+	if(status != 0) {
 		log_warn("error cannot parse: %s %s",
-			ldns_get_errorstr_by_id(status), str);
+			ldns_get_errorstr_parse(status), str);
 		return NULL;
 	}
-	qinfo->qtype = ldns_rr_get_type(rr);
-	qinfo->qclass = ldns_rr_get_class(rr);
-	ldns_buffer_clear(buf);
-	status = ldns_dname2buffer_wire(buf, ldns_rr_owner(rr));
-	ldns_rr_free(rr);
-	if(status != LDNS_STATUS_OK) {
-		log_warn("error cannot dname2wire: %s", 
-			ldns_get_errorstr_by_id(status));
-		return NULL;
-	}
-	ldns_buffer_flip(buf);
-	qinfo->qname_len = ldns_buffer_limit(buf);
-	qinfo->qname = (uint8_t*)regional_alloc_init(region, 
-		ldns_buffer_begin(buf), ldns_buffer_limit(buf));
+	qinfo->qtype = ldns_wirerr_get_type(rr, rr_len, dname_len);
+	qinfo->qclass = ldns_wirerr_get_class(rr, rr_len, dname_len);
+	qinfo->qname_len = dname_len;
+	qinfo->qname = (uint8_t*)regional_alloc_init(region, rr, dname_len);
 	if(!qinfo->qname) {
 		log_warn("error out of memory");
 		return NULL;
@@ -685,7 +584,7 @@ load_ref(SSL* ssl, ldns_buffer* buf, struct worker* worker,
 		return 1;
 	}
 
-	s = load_qinfo(s, &qinfo, buf, region);
+	s = load_qinfo(s, &qinfo, region);
 	if(!s) {
 		return 0;
 	}
@@ -731,7 +630,7 @@ load_msg(SSL* ssl, ldns_buffer* buf, struct worker* worker)
 		return 0;
 	}
 	s += 4;
-	s = load_qinfo(s, &qinf, buf, region);
+	s = load_qinfo(s, &qinf, region);
 	if(!s) {
 		return 0;
 	}

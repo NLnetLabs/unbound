@@ -41,7 +41,6 @@
  */
 
 #include "config.h"
-#include <ldns/dname.h>
 #include "iterator/iter_priv.h"
 #include "util/regional.h"
 #include "util/log.h"
@@ -50,6 +49,8 @@
 #include "util/data/msgparse.h"
 #include "util/net_help.h"
 #include "util/storage/dnstree.h"
+#include "ldns/str2wire.h"
+#include "ldns/sbuffer.h"
 
 struct iter_priv* priv_create(void)
 {
@@ -110,23 +111,21 @@ static int read_names(struct iter_priv* priv, struct config_file* cfg)
 	/* parse names, report errors, insert into tree */
 	struct config_strlist* p;
 	struct name_tree_node* n;
-	uint8_t* nm;
+	uint8_t* nm, *nmr;
 	size_t nm_len;
 	int nm_labs;
-	ldns_rdf* rdf;
 
 	for(p = cfg->private_domain; p; p = p->next) {
 		log_assert(p->str);
-		rdf = ldns_dname_new_frm_str(p->str);
-		if(!rdf) {
+		nm = ldns_str2wire_dname(p->str, &nm_len);
+		if(!nm) {
 			log_err("cannot parse private-domain: %s", p->str);
 			return 0;
 		}
-		nm = ldns_rdf_data(rdf);
 		nm_labs = dname_count_size_labels(nm, &nm_len);
-		nm = (uint8_t*)regional_alloc_init(priv->region, nm, nm_len);
-		ldns_rdf_deep_free(rdf);
-		if(!nm) {
+		nmr = (uint8_t*)regional_alloc_init(priv->region, nm, nm_len);
+		free(nm);
+		if(!nmr) {
 			log_err("out of memory");
 			return 0;
 		}
@@ -136,7 +135,7 @@ static int read_names(struct iter_priv* priv, struct config_file* cfg)
 			log_err("out of memory");
 			return 0;
 		}
-		if(!name_tree_insert(&priv->n, n, nm, nm_len, nm_labs,
+		if(!name_tree_insert(&priv->n, n, nmr, nm_len, nm_labs,
 			LDNS_RR_CLASS_IN)) {
 			verbose(VERB_QUERY, "ignoring duplicate "
 				"private-domain: %s", p->str);

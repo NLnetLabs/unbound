@@ -3,6 +3,8 @@
 	  interface port 53 can be used at the same time, and one of the
 	  daemons is unbound.
 	- iana portlist update.
+	- separate ldns into core ldns inside ldns/ subdirectory.  No more
+	  --with-ldns is needed and unbound does not rely on libldns.
 
 22 Oct 2013: Wouter
 	- Patch from Neel Goyal: Add an API call to set an event base on an

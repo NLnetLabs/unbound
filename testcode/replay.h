@@ -129,7 +129,7 @@
 #ifndef TESTCODE_REPLAY_H
 #define TESTCODE_REPLAY_H
 #include "util/netevent.h"
-#include "testcode/ldns-testpkts.h"
+#include "testcode/testpkts.h"
 #include "util/rbtree.h"
 struct replay_answer;
 struct replay_moment;
@@ -138,6 +138,7 @@ struct fake_pending;
 struct fake_timer;
 struct replay_var;
 struct infra_cache;
+struct ldns_buffer;
 
 /**
  * A replay scenario.
@@ -216,12 +217,6 @@ struct replay_moment {
 	struct sockaddr_storage addr;
 	/** length of addr, if 0, then any address will do */
 	socklen_t addrlen;
-
-	/** what pending query should timeout or is answered. or 
-	 * NULL for last sent query. 
-	 * Unused at this time.
-	 */
-	ldns_rr* qname;
 
 	/** macro name, for assign. */
 	char* variable;
@@ -318,7 +313,7 @@ struct replay_runtime {
  */
 struct fake_pending {
 	/** what is important only that we remember the query, copied here. */
-	ldns_buffer* buffer;
+	struct ldns_buffer* buffer;
 	/** and to what address this is sent to. */
 	struct sockaddr_storage addr;
 	/** len of addr */
@@ -339,7 +334,8 @@ struct fake_pending {
 	/** next in pending list */
 	struct fake_pending* next;
 	/** the buffer parsed into a ldns_pkt */
-	ldns_pkt* pkt;
+	uint8_t* pkt;
+	size_t pkt_len;
 	/** by what transport was the query sent out */
 	enum transport_type transport;
 	/** if this is a serviced query */
@@ -357,7 +353,8 @@ struct replay_answer {
 	/** reply information */
 	struct comm_reply repinfo;
 	/** the answer preparsed as ldns pkt */
-	ldns_pkt* pkt;
+	uint8_t* pkt;
+	size_t pkt_len;
 };
 
 /**

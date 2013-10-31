@@ -63,7 +63,9 @@
 #ifndef UTIL_DATA_MSGPARSE_H
 #define UTIL_DATA_MSGPARSE_H
 #include "util/storage/lruhash.h"
-#include <ldns/packet.h>
+#include "ldns/pkthdr.h"
+#include "ldns/rrdef.h"
+struct ldns_buffer;
 struct rrset_parse;
 struct rr_parse;
 struct regional;
@@ -229,7 +231,7 @@ size_t get_rdf_size(ldns_rdf_type rdf);
  * @param region: how to alloc results.
  * @return: 0 if OK, or rcode on error.
  */
-int parse_packet(ldns_buffer* pkt, struct msg_parse* msg, 
+int parse_packet(struct ldns_buffer* pkt, struct msg_parse* msg, 
 	struct regional* region);
 
 /**
@@ -259,7 +261,7 @@ int parse_extract_edns(struct msg_parse* msg, struct edns_data* edns);
  * @return: 0 on success, or an RCODE on error.
  *	RCODE formerr if OPT is badly formatted and so on.
  */
-int parse_edns_from_pkt(ldns_buffer* pkt, struct edns_data* edns);
+int parse_edns_from_pkt(struct ldns_buffer* pkt, struct edns_data* edns);
 
 /**
  * Calculate hash value for rrset in packet.
@@ -270,7 +272,7 @@ int parse_edns_from_pkt(ldns_buffer* pkt, struct edns_data* edns);
  * @param rrset_flags: rrset flags (same as packed_rrset flags).
  * @return hash value
  */
-hashvalue_t pkt_hash_rrset(ldns_buffer* pkt, uint8_t* dname, uint16_t type,
+hashvalue_t pkt_hash_rrset(struct ldns_buffer* pkt, uint8_t* dname, uint16_t type,
         uint16_t dclass, uint32_t rrset_flags);
 
 /**
@@ -286,7 +288,7 @@ hashvalue_t pkt_hash_rrset(ldns_buffer* pkt, uint8_t* dname, uint16_t type,
  * @return NULL or the rrset_parse if found.
  */
 struct rrset_parse* msgparse_hashtable_lookup(struct msg_parse* msg, 
-	ldns_buffer* pkt, hashvalue_t h, uint32_t rrset_flags, 
+	struct ldns_buffer* pkt, hashvalue_t h, uint32_t rrset_flags, 
 	uint8_t* dname, size_t dnamelen, uint16_t type, uint16_t dclass);
 
 /**

@@ -41,10 +41,12 @@
  * and do the library calls (for the crypto library in use).
  */
 #include "config.h"
-#include <ldns/ldns.h>
 #include "validator/val_secalgo.h"
 #include "util/data/packed_rrset.h"
 #include "util/log.h"
+#include "ldns/rrdef.h"
+#include "ldns/keyraw.h"
+#include "ldns/sbuffer.h"
 
 #if !defined(HAVE_SSL) && !defined(HAVE_NSS)
 #error "Need crypto library to do digital signature cryptography"

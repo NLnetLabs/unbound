@@ -42,8 +42,6 @@
  * returns from the procedure when done.
  */
 #include "config.h"
-#include <ldns/dname.h>
-#include <ldns/wire2host.h>
 #ifdef HAVE_SSL
 #include <openssl/ssl.h>
 #endif
@@ -70,6 +68,8 @@
 #include "util/tube.h"
 #include "iterator/iter_fwd.h"
 #include "iterator/iter_hints.h"
+#include "ldns/sbuffer.h"
+#include "ldns/str2wire.h"
 
 /** handle new query command for bg worker */
 static void handle_newq(struct libworker* w, uint8_t* buf, uint32_t len);
@@ -566,22 +566,12 @@ static int
 setup_qinfo_edns(struct libworker* w, struct ctx_query* q, 
 	struct query_info* qinfo, struct edns_data* edns)
 {
-	ldns_rdf* rdf;
 	qinfo->qtype = (uint16_t)q->res->qtype;
 	qinfo->qclass = (uint16_t)q->res->qclass;
-	rdf = ldns_dname_new_frm_str(q->res->qname);
-	if(!rdf) {
+	qinfo->qname = ldns_str2wire_dname(q->res->qname, &qinfo->qname_len);
+	if(!qinfo->qname) {
 		return 0;
 	}
-#ifdef UNBOUND_ALLOC_LITE
-	qinfo->qname = memdup(ldns_rdf_data(rdf), ldns_rdf_size(rdf));
-	qinfo->qname_len = ldns_rdf_size(rdf);
-	ldns_rdf_deep_free(rdf);
-	rdf = 0;
-#else
-	qinfo->qname = ldns_rdf_data(rdf);
-	qinfo->qname_len = ldns_rdf_size(rdf);
-#endif
 	edns->edns_present = 1;
 	edns->ext_rcode = 0;
 	edns->edns_version = 0;
@@ -590,7 +580,6 @@ setup_qinfo_edns(struct libworker* w, struct ctx_query* q,
 		edns->udp_size = (uint16_t)ldns_buffer_capacity(
 			w->back->udp_buff);
 	else	edns->udp_size = 65535;
-	ldns_rdf_free(rdf);
 	return 1;
 }
 

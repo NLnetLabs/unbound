@@ -42,6 +42,7 @@
 
 #ifndef UTIL_DATA_MSGENCODE_H
 #define UTIL_DATA_MSGENCODE_H
+struct ldns_buffer;
 struct query_info;
 struct reply_info;
 struct regional;
@@ -66,7 +67,7 @@ struct edns_data;
  * @return: 0 on error (server failure).
  */
 int reply_info_answer_encode(struct query_info* qinf, struct reply_info* rep, 
-	uint16_t id, uint16_t qflags, ldns_buffer* dest, time_t timenow,
+	uint16_t id, uint16_t qflags, struct ldns_buffer* dest, time_t timenow,
 	int cached, struct regional* region, uint16_t udpsize, 
 	struct edns_data* edns, int dnssec, int secure);
 
@@ -88,7 +89,7 @@ int reply_info_answer_encode(struct query_info* qinf, struct reply_info* rep,
  *	0 on error: malloc failure (no log_err has been done).
  */
 int reply_info_encode(struct query_info* qinfo, struct reply_info* rep, 
-	uint16_t id, uint16_t flags, ldns_buffer* buffer, time_t timenow, 
+	uint16_t id, uint16_t flags, struct ldns_buffer* buffer, time_t timenow, 
 	struct regional* region, uint16_t udpsize, int dnssec);
 
 /**
@@ -96,7 +97,7 @@ int reply_info_encode(struct query_info* qinfo, struct reply_info* rep,
  * @param pkt: where to store the packet.
  * @param qinfo: query info.
  */
-void qinfo_query_encode(ldns_buffer* pkt, struct query_info* qinfo);
+void qinfo_query_encode(struct ldns_buffer* pkt, struct query_info* qinfo);
 
 /**
  * Estimate size of EDNS record in packet. EDNS record will be no larger.
@@ -111,7 +112,7 @@ uint16_t calc_edns_field_size(struct edns_data* edns);
  * @param pkt: packet added to.
  * @param edns: if NULL or present=0, nothing is added to the packet.
  */
-void attach_edns_record(ldns_buffer* pkt, struct edns_data* edns);
+void attach_edns_record(struct ldns_buffer* pkt, struct edns_data* edns);
 
 /** 
  * Encode an error. With QR and RA set.
@@ -124,7 +125,7 @@ void attach_edns_record(ldns_buffer* pkt, struct edns_data* edns);
  * @param edns: if not NULL, this is the query edns info,
  * 	and an edns reply is attached. Only attached if EDNS record fits reply.
  */
-void error_encode(ldns_buffer* pkt, int r, struct query_info* qinfo,
+void error_encode(struct ldns_buffer* pkt, int r, struct query_info* qinfo,
 	uint16_t qid, uint16_t qflags, struct edns_data* edns);
 
 #endif /* UTIL_DATA_MSGENCODE_H */

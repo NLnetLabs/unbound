@@ -39,25 +39,24 @@
  */
 
 #include "config.h"
-#include <ldns/dname.h>
-#include <ldns/host2wire.h>
 #include "util/log.h"
 #include "testcode/unitmain.h"
 #include "util/data/dname.h"
+#include "ldns/sbuffer.h"
+#include "ldns/str2wire.h"
 
 /** put dname into buffer */
 static ldns_buffer*
 dname_to_buf(ldns_buffer* b, const char* str)
 {
-	ldns_rdf* rdf;
-	ldns_status status;
+	int e;
+	size_t len = ldns_buffer_capacity(b);
 	ldns_buffer_clear(b);
-	rdf = ldns_dname_new_frm_str(str);	
-	status = ldns_dname2buffer_wire(b, rdf);
-	if(status != LDNS_STATUS_OK)
+	e = ldns_str2wire_dname_buf(str, ldns_buffer_begin(b), &len);
+	if(e != 0)
 		fatal_exit("%s ldns: %s", __func__, 
-			ldns_get_errorstr_by_id(status));
-	ldns_rdf_deep_free(rdf);
+			ldns_get_errorstr_parse(e));
+	ldns_buffer_set_position(b, len);
 	ldns_buffer_flip(b);
 	return b;
 }

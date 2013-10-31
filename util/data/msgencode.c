@@ -40,7 +40,6 @@
  */
 
 #include "config.h"
-#include <ldns/wire2host.h>
 #include "util/data/msgencode.h"
 #include "util/data/msgreply.h"
 #include "util/data/msgparse.h"
@@ -48,6 +47,7 @@
 #include "util/log.h"
 #include "util/regional.h"
 #include "util/net_help.h"
+#include "ldns/sbuffer.h"
 
 /** return code that means the function ran out of memory. negative so it does
  * not conflict with DNS rcodes. */

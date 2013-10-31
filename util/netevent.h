@@ -60,7 +60,7 @@
 #ifndef NET_EVENT_H
 #define NET_EVENT_H
 
-#include <ldns/buffer.h>
+struct ldns_buffer;
 struct comm_point;
 struct comm_reply;
 struct event_base;
@@ -149,7 +149,7 @@ struct comm_point {
 	struct timeval* timeout;
 
 	/** buffer pointer. Either to perthread, or own buffer or NULL */
-	ldns_buffer* buffer;
+	struct ldns_buffer* buffer;
 
 	/* -------- TCP Handler -------- */
 	/** Read/Write state for TCP */
@@ -367,7 +367,7 @@ struct event_base* comm_base_internal(struct comm_base* b);
  * Sets timeout to NULL. Turns off TCP options.
  */
 struct comm_point* comm_point_create_udp(struct comm_base* base,
-	int fd, ldns_buffer* buffer, 
+	int fd, struct ldns_buffer* buffer, 
 	comm_point_callback_t* callback, void* callback_arg);
 
 /**
@@ -383,7 +383,7 @@ struct comm_point* comm_point_create_udp(struct comm_base* base,
  * Sets timeout to NULL. Turns off TCP options.
  */
 struct comm_point* comm_point_create_udp_ancil(struct comm_base* base,
-	int fd, ldns_buffer* buffer, 
+	int fd, struct ldns_buffer* buffer, 
 	comm_point_callback_t* callback, void* callback_arg);
 
 /**
@@ -477,7 +477,7 @@ void comm_point_drop_reply(struct comm_reply* repinfo);
  * @param addrlen: length of addr.
  * @return: false on a failure.
  */
-int comm_point_send_udp_msg(struct comm_point* c, ldns_buffer* packet,
+int comm_point_send_udp_msg(struct comm_point* c, struct ldns_buffer* packet,
 	struct sockaddr* addr, socklen_t addrlen);
 
 /**

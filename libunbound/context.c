@@ -49,6 +49,7 @@
 #include "services/cache/infra.h"
 #include "util/data/msgreply.h"
 #include "util/storage/slabhash.h"
+#include "ldns/sbuffer.h"
 
 int 
 context_finalize(struct ub_ctx* ctx)

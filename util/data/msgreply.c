@@ -40,7 +40,6 @@
  */
 
 #include "config.h"
-#include <ldns/ldns.h>
 #include "util/data/msgreply.h"
 #include "util/storage/lookup3.h"
 #include "util/log.h"
@@ -51,6 +50,8 @@
 #include "util/regional.h"
 #include "util/data/msgparse.h"
 #include "util/data/msgencode.h"
+#include "ldns/sbuffer.h"
+#include "ldns/wire2str.h"
 
 /** MAX TTL default for messages and rrsets */
 time_t MAX_TTL = 3600 * 24 * 10; /* ten days */
@@ -770,24 +771,15 @@ log_dns_msg(const char* str, struct query_info* qinfo, struct reply_info* rep)
 		region, 65535, 1)) {
 		log_info("%s: log_dns_msg: out of memory", str);
 	} else {
-		ldns_status s;
-		ldns_pkt* pkt = NULL;
-		s = ldns_buffer2pkt_wire(&pkt, buf);
-		if(s != LDNS_STATUS_OK) {
-			log_info("%s: log_dns_msg: ldns parse gave: %s",
-				str, ldns_get_errorstr_by_id(s));
+		char* str = ldns_wire2str_pkt(ldns_buffer_begin(buf),
+			ldns_buffer_limit(buf));
+		if(!str) {
+			log_info("%s: log_dns_msg: ldns tostr failed", str);
 		} else {
-			ldns_buffer_clear(buf);
-			s = ldns_pkt2buffer_str(buf, pkt);
-			if(s != LDNS_STATUS_OK) {
-				log_info("%s: log_dns_msg: ldns tostr gave: %s",
-					str, ldns_get_errorstr_by_id(s));
-			} else {
-				log_info("%s %s", 
-					str, (char*)ldns_buffer_begin(buf));
-			}
+			log_info("%s %s", 
+				str, (char*)ldns_buffer_begin(buf));
 		}
-		ldns_pkt_free(pkt);
+		free(str);
 	}
 	ldns_buffer_free(buf);
 	regional_destroy(region);

@@ -48,6 +48,7 @@ struct config_file;
 struct ub_packed_rrset_key;
 struct autr_point_data;
 struct autr_global_data;
+struct ldns_buffer;
 
 /**
  * Trust anchor store.
@@ -184,7 +185,7 @@ struct trust_anchor* anchor_find(struct val_anchors* anchors,
  * @return NULL on error.
  */
 struct trust_anchor* anchor_store_str(struct val_anchors* anchors, 
-	ldns_buffer* buffer, const char* str);
+	struct ldns_buffer* buffer, const char* str);
 
 /**
  * Get memory in use by the trust anchor storage

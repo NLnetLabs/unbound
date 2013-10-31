@@ -39,13 +39,14 @@
  * This file contains functions for dealing with validator key entries.
  */
 #include "config.h"
-#include <ldns/ldns.h>
 #include "validator/val_kentry.h"
 #include "util/data/packed_rrset.h"
 #include "util/data/dname.h"
 #include "util/storage/lookup3.h"
 #include "util/regional.h"
 #include "util/net_help.h"
+#include "ldns/rrdef.h"
+#include "ldns/keyraw.h"
 
 size_t 
 key_entry_sizefunc(void* key, void* data)

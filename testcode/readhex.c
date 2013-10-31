@@ -41,6 +41,8 @@
 #include <ctype.h>
 #include "testcode/readhex.h"
 #include "util/log.h"
+#include "ldns/sbuffer.h"
+#include "ldns/parseutil.h"
 
 /** skip whitespace */
 static void

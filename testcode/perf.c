@@ -43,7 +43,6 @@
 #ifdef HAVE_GETOPT_H
 #include <getopt.h>
 #endif
-#include <ldns/ldns.h>
 #include <signal.h>
 #include "util/log.h"
 #include "util/locks.h"
@@ -51,6 +50,10 @@
 #include "util/data/msgencode.h"
 #include "util/data/msgreply.h"
 #include "util/data/msgparse.h"
+#include "ldns/sbuffer.h"
+#include "ldns/wire2str.h"
+#include "ldns/str2wire.h"
+#include <sys/time.h>
 
 /** usage information for perf */
 static void usage(char* nm) 
@@ -434,11 +437,10 @@ perfendstats(struct perfinfo* info)
 		for(i=0; i<(int)(sizeof(info->by_rcode)/sizeof(size_t)); i++)
 		{
 			if(info->by_rcode[i] > 0) {
+				char rc[16];
+				ldns_wire2str_rcode_buf(i, rc, sizeof(rc));
 				printf("%d(%5s): 	%u replies\n",
-					i, ldns_lookup_by_id(ldns_rcodes, i)?
-					ldns_lookup_by_id(ldns_rcodes, 
-					i)->name:"??", 
-					(unsigned)info->by_rcode[i]);
+					i, rc, (unsigned)info->by_rcode[i]);
 			}
 		}
 	}
@@ -465,7 +467,6 @@ qlist_parse_line(ldns_buffer* buf, char* p)
 	int r; 
 	int rec = 1, edns = 0;
 	struct query_info qinfo;
-	ldns_rdf* rdf;
 	nm[0] = 0; cl[0] = 0; tp[0] = 0; fl[0] = 0;
 	r = sscanf(p, " %1023s %1023s %1023s %1023s", nm, cl, tp, fl);
 	if(r != 3 && r != 4)
@@ -483,11 +484,9 @@ qlist_parse_line(ldns_buffer* buf, char* p)
 	else if(fl[0] == 'E') edns = 1;
 	if((fl[0] == '+' || fl[0] == '-') && fl[1] == 'E')
 		edns = 1;
-	rdf = ldns_dname_new_frm_str(nm);
-	if(!rdf)
+	qinfo.qname = ldns_str2wire_dname(nm, &qinfo.qname_len);
+	if(!qinfo.qname)
 		return 0;
-	qinfo.qname = ldns_rdf_data(rdf);
-	qinfo.qname_len = ldns_rdf_size(rdf);
 	qinfo_query_encode(buf, &qinfo);
 	ldns_buffer_write_u16_at(buf, 0, 0); /* zero ID */
 	if(rec) LDNS_RD_SET(ldns_buffer_begin(buf));
@@ -500,7 +499,7 @@ qlist_parse_line(ldns_buffer* buf, char* p)
 		ed.bits = EDNS_DO;
 		attach_edns_record(buf, &ed);
 	}
-	ldns_rdf_deep_free(rdf);
+	free(qinfo.qname);
 	return 1;
 }
 

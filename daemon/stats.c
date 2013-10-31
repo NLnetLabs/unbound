@@ -40,7 +40,6 @@
  * numbers. These 'statistics' may be of interest to the operator.
  */
 #include "config.h"
-#include <ldns/wire2host.h>
 #include "daemon/stats.h"
 #include "daemon/worker.h"
 #include "daemon/daemon.h"
@@ -51,6 +50,7 @@
 #include "util/timehist.h"
 #include "util/net_help.h"
 #include "validator/validator.h"
+#include "ldns/sbuffer.h"
 
 /** add timers and the values do not overflow or become negative */
 static void

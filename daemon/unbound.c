@@ -162,8 +162,8 @@ static void usage()
 #endif
 	printf("Version %s\n", PACKAGE_VERSION);
 	get_event_sys(&evnm, &evsys, &evmethod);
-	printf("linked libs: %s %s (it uses %s), ldns %s, %s\n", 
-		evnm, evsys, evmethod, ldns_version(), 
+	printf("linked libs: %s %s (it uses %s), %s\n", 
+		evnm, evsys, evmethod,
 #ifdef HAVE_SSL
 		SSLeay_version(SSLEAY_VERSION)
 #elif defined(HAVE_NSS)

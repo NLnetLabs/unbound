@@ -45,6 +45,7 @@
 #include "util/data/dname.h"
 #include "testcode/unitmain.h"
 #include "validator/val_neg.h"
+#include "ldns/rrdef.h"
 
 /** verbose unit test for negative cache */
 static int negverbose = 0;

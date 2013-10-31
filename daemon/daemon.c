@@ -61,7 +61,6 @@
 #include "nss.h"
 #endif
 
-#include <ldns/ldns.h>
 #include "daemon/daemon.h"
 #include "daemon/worker.h"
 #include "daemon/remote.h"
@@ -80,6 +79,7 @@
 #include "util/random.h"
 #include "util/tube.h"
 #include "util/net_help.h"
+#include "ldns/keyraw.h"
 #include <signal.h>
 
 /** How many quit requests happened. */

@@ -61,6 +61,7 @@
 #include "services/localzone.h"
 #include "services/cache/infra.h"
 #include "services/cache/rrset.h"
+#include "ldns/sbuffer.h"
 #ifdef HAVE_PTHREAD
 #include <signal.h>
 #endif
@@ -1173,18 +1174,10 @@ int ub_ctx_zone_remove(struct ub_ctx* ctx, const char *zone_name)
 /* Add new RR data */
 int ub_ctx_data_add(struct ub_ctx* ctx, const char *data)
 {
-	ldns_buffer* buf;
 	int res = ub_ctx_finalize(ctx);
 	if (res) return res;
 
-	lock_basic_lock(&ctx->cfglock);
-	buf = ldns_buffer_new(ctx->env->cfg->msg_buffer_size);
-	lock_basic_unlock(&ctx->cfglock);
-	if(!buf) return UB_NOMEM;
-
-	res = local_zones_add_RR(ctx->local_zones, data, buf);
-
-	ldns_buffer_free(buf);
+	res = local_zones_add_RR(ctx->local_zones, data);
 	return (!res) ? UB_NOMEM : UB_NOERROR;
 }
 

@@ -40,7 +40,6 @@
  * According to RFC 4034.
  */
 #include "config.h"
-#include <ldns/ldns.h>
 #include "validator/validator.h"
 #include "validator/val_anchor.h"
 #include "validator/val_kcache.h"
@@ -59,6 +58,8 @@
 #include "util/regional.h"
 #include "util/config_file.h"
 #include "util/fptr_wlist.h"
+#include "ldns/rrdef.h"
+#include "ldns/wire2str.h"
 
 /* forward decl for cache response and normal super inform calls of a DS */
 static void process_ds_response(struct module_qstate* qstate, 
@@ -294,9 +295,12 @@ needs_validation(struct module_qstate* qstate, int ret_rc,
 	else 	rcode = (int)FLAGS_GET_RCODE(ret_msg->rep->flags);
 
 	if(rcode != LDNS_RCODE_NOERROR && rcode != LDNS_RCODE_NXDOMAIN) {
-		verbose(VERB_ALGO, "cannot validate non-answer, rcode %s",
-			ldns_lookup_by_id(ldns_rcodes, rcode)?
-			ldns_lookup_by_id(ldns_rcodes, rcode)->name:"??");
+		if(verbosity >= VERB_ALGO) {
+			char rc[16];
+			rc[0]=0;
+			(void)ldns_wire2str_rcode_buf(rcode, rc, sizeof(rc));
+			verbose(VERB_ALGO, "cannot validate non-answer, rcode %s", rc);
+		}
 		return 0;
 	}
 
@@ -2344,12 +2348,13 @@ ds_response_to_ke(struct module_qstate* qstate, struct val_qstate* vq,
 	char* reason = NULL;
 	enum val_classification subtype;
 	if(rcode != LDNS_RCODE_NOERROR) {
-		char* rc = ldns_pkt_rcode2str(rcode);
+		char rc[16];
+		rc[0]=0;
+		(void)ldns_wire2str_rcode_buf(rcode, rc, sizeof(rc));
 		/* errors here pretty much break validation */
 		verbose(VERB_DETAIL, "DS response was error, thus bogus");
 		errinf(qstate, rc);
 		errinf(qstate, "no DS");
-		free(rc);
 		goto return_bogus;
 	}
 
@@ -2521,10 +2526,11 @@ ds_response_to_ke(struct module_qstate* qstate, struct val_qstate* vq,
 			"DS response, thus bogus.");
 		errinf(qstate, "no DS and");
 		if(FLAGS_GET_RCODE(msg->rep->flags) != LDNS_RCODE_NOERROR) {
-			char* rc = ldns_pkt_rcode2str(
-				FLAGS_GET_RCODE(msg->rep->flags));
+			char rc[16];
+			rc[0]=0;
+			(void)ldns_wire2str_rcode_buf((int)FLAGS_GET_RCODE(
+				msg->rep->flags), rc, sizeof(rc));
 			errinf(qstate, rc);
-			free(rc);
 		} else	errinf(qstate, val_classification_to_string(subtype));
 		errinf(qstate, "message fails to prove that");
 		goto return_bogus;

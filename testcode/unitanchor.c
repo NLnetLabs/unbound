@@ -39,11 +39,12 @@
  */
 
 #include "config.h"
-#include <ldns/rr.h>
 #include "util/log.h"
 #include "util/data/dname.h"
 #include "testcode/unitmain.h"
 #include "validator/val_anchor.h"
+#include "ldns/sbuffer.h"
+#include "ldns/rrdef.h"
 
 /** test empty set */
 static void

@@ -43,7 +43,7 @@
 #ifndef ITERATOR_ITER_UTILS_H
 #define ITERATOR_ITER_UTILS_H
 #include "iterator/iter_resptype.h"
-#include <ldns/buffer.h>
+struct ldns_buffer;
 struct iter_env;
 struct iter_hints;
 struct iter_forwards;
@@ -102,7 +102,7 @@ struct delegpt_addr* iter_server_selection(struct iter_env* iter_env,
  * @param regional: regional to use for allocation.
  * @return newly allocated dns_msg, or NULL on memory error.
  */
-struct dns_msg* dns_alloc_msg(ldns_buffer* pkt, struct msg_parse* msg, 
+struct dns_msg* dns_alloc_msg(struct ldns_buffer* pkt, struct msg_parse* msg, 
 	struct regional* regional);
 
 /**
@@ -216,10 +216,10 @@ int iter_msg_from_zone(struct dns_msg* msg, struct delegpt* dp,
  * @param p: reply one. The reply has rrset data pointers in region.
  * 	Does not check rrset-IDs
  * @param q: reply two
- * @param buf: scratch buffer.
+ * @param region: scratch buffer.
  * @return if one and two are equal.
  */
-int reply_equal(struct reply_info* p, struct reply_info* q, ldns_buffer* buf);
+int reply_equal(struct reply_info* p, struct reply_info* q, struct regional* region);
 
 /**
  * Store parent-side rrset in seperate rrset cache entries for later 

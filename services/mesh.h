@@ -51,6 +51,7 @@
 #include "util/data/msgparse.h"
 #include "util/module.h"
 #include "services/modstack.h"
+struct ldns_buffer;
 struct mesh_state;
 struct mesh_reply;
 struct mesh_cb;
@@ -125,7 +126,7 @@ struct mesh_area {
 
 	/** backup of query if other operations recurse and need the
 	 * network buffers */
-	ldns_buffer* qbuf_bak;
+	struct ldns_buffer* qbuf_bak;
 
 	/** double linked list of the run-to-completion query states.
 	 * These are query states with a reply */
@@ -219,7 +220,7 @@ struct mesh_reply {
  * Mesh result callback func.
  * called as func(cb_arg, rcode, buffer_with_reply, security, why_bogus);
  */
-typedef void (*mesh_cb_func_t)(void*, int, ldns_buffer*, enum sec_status, 
+typedef void (*mesh_cb_func_t)(void*, int, struct ldns_buffer*, enum sec_status, 
 	char*);
 
 /**
@@ -235,7 +236,7 @@ struct mesh_cb {
 	/** flags of query, for reply flags */
 	uint16_t qflags;
 	/** buffer for reply */
-	ldns_buffer* buf;
+	struct ldns_buffer* buf;
 
 	/** callback routine for results. if rcode != 0 buf has message.
 	 * called as cb(cb_arg, rcode, buf, sec_state);
@@ -294,7 +295,7 @@ void mesh_new_client(struct mesh_area* mesh, struct query_info* qinfo,
  * @return 0 on error.
  */
 int mesh_new_callback(struct mesh_area* mesh, struct query_info* qinfo,
-	uint16_t qflags, struct edns_data* edns, ldns_buffer* buf, 
+	uint16_t qflags, struct edns_data* edns, struct ldns_buffer* buf, 
 	uint16_t qid, mesh_cb_func_t cb, void* cb_arg);
 
 /**
@@ -473,7 +474,7 @@ int mesh_state_add_reply(struct mesh_state* s, struct edns_data* edns,
  * @return: 0 on alloc error.
  */
 int mesh_state_add_cb(struct mesh_state* s, struct edns_data* edns,
-        ldns_buffer* buf, mesh_cb_func_t cb, void* cb_arg, uint16_t qid, 
+        struct ldns_buffer* buf, mesh_cb_func_t cb, void* cb_arg, uint16_t qid, 
 	uint16_t qflags);
 
 /**
@@ -548,7 +549,7 @@ int mesh_state_ref_compare(const void* ap, const void* bp);
  *    You can pass NULL if there is no buffer that must be backed up.
  * @return false if no space is available.
  */
-int mesh_make_new_space(struct mesh_area* mesh, ldns_buffer* qbuf);
+int mesh_make_new_space(struct mesh_area* mesh, struct ldns_buffer* qbuf);
 
 /**
  * Insert mesh state into a double linked list.  Inserted at end.

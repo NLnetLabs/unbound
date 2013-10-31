@@ -40,12 +40,13 @@
  * one of the response types.
  */
 #include "config.h"
-#include <ldns/packet.h>
 #include "iterator/iter_resptype.h"
 #include "iterator/iter_delegpt.h"
 #include "services/cache/dns.h"
 #include "util/net_help.h"
 #include "util/data/dname.h"
+#include "ldns/rrdef.h"
+#include "ldns/pkthdr.h"
 
 enum response_type 
 response_type_from_cache(struct dns_msg* msg, 

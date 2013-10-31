@@ -75,6 +75,7 @@ struct ub_packed_rrset_key;
 struct reply_info;
 struct query_info;
 struct key_entry_key;
+struct ldns_buffer;
 
 /**
  *     0 1 2 3 4 5 6 7
@@ -270,9 +271,9 @@ int nsec3_hash_cmp(const void* c1, const void* c2);
  * 	0 on a malloc failure.
  * 	-1 if the NSEC3 rr was badly formatted (i.e. formerr).
  */
-int nsec3_hash_name(rbtree_t* table, struct regional* region, ldns_buffer* buf,
-	struct ub_packed_rrset_key* nsec3, int rr, uint8_t* dname, 
-	size_t dname_len, struct nsec3_cached_hash** hash);
+int nsec3_hash_name(rbtree_t* table, struct regional* region,
+	struct ldns_buffer* buf, struct ub_packed_rrset_key* nsec3, int rr,
+	uint8_t* dname, size_t dname_len, struct nsec3_cached_hash** hash);
 
 /**
  * Get next owner name, converted to base32 encoding and with the
@@ -328,8 +329,9 @@ int nsec3_get_params(struct ub_packed_rrset_key* rrset, int r,
  * @param max: maximum space for result.
  * @return 0 on failure, otherwise bytelength stored.
  */
-size_t nsec3_get_hashed(ldns_buffer* buf, uint8_t* nm, size_t nmlen, int algo, 
-	size_t iter, uint8_t* salt, size_t saltlen, uint8_t* res, size_t max);
+size_t nsec3_get_hashed(struct ldns_buffer* buf, uint8_t* nm, size_t nmlen,
+	int algo, size_t iter, uint8_t* salt, size_t saltlen, uint8_t* res,
+	size_t max);
 
 /** 
  * see if NSEC3 RR contains given type
@@ -373,6 +375,6 @@ int nsec3_get_nextowner(struct ub_packed_rrset_key* rrset, int r,
  * @return true if covers, false if not.
  */
 int nsec3_covers(uint8_t* zone, struct nsec3_cached_hash* hash,
-	struct ub_packed_rrset_key* rrset, int rr, ldns_buffer* buf);
+	struct ub_packed_rrset_key* rrset, int rr, struct ldns_buffer* buf);
 
 #endif /* VALIDATOR_VAL_NSEC3_H */
