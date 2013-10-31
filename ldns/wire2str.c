@@ -314,7 +314,7 @@ static int print_remainder_hex(const char* pref, uint8_t** d, size_t* dlen,
 	char** s, size_t* slen)
 {
 	int w = 0;
-	w += ldns_str_print(s, slen, pref);
+	w += ldns_str_print(s, slen, "%s", pref);
 	w += print_hex_buf(s, slen, *d, *dlen);
 	*d += *dlen;
 	*dlen = 0;
