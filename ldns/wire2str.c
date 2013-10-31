@@ -391,9 +391,8 @@ static int ldns_rr_tcttl_scan(uint8_t** d, size_t* dl, char** s, size_t* sl)
 		w += ldns_wire2str_type_print(s, sl, t);
 		if(*dl == 0)
 			return w + ldns_str_print(s, sl, "; Error no ttl");
-		else	return w + print_remainder_hex(
-				"; Error malformed ttl 0x", d, dl, s, sl);
-		return w;
+		return w + print_remainder_hex(
+			"; Error malformed ttl 0x", d, dl, s, sl);
 	}
 	t = ldns_read_uint16(*d);
 	c = ldns_read_uint16((*d)+2);
