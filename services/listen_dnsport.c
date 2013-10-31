@@ -91,10 +91,10 @@ verbose_print_addr(struct addrinfo *addr)
 int
 create_udp_sock(int family, int socktype, struct sockaddr* addr,
         socklen_t addrlen, int v6only, int* inuse, int* noproto,
-	int rcv, int snd)
+	int rcv, int snd, int listen)
 {
 	int s;
-#if defined(IPV6_USE_MIN_MTU)
+#if defined(SO_REUSEADDR) || defined(IPV6_USE_MIN_MTU)
 	int on=1;
 #endif
 #ifdef IPV6_MTU
@@ -128,6 +128,25 @@ create_udp_sock(int family, int socktype, struct sockaddr* addr,
 #endif
 		*noproto = 0;
 		return -1;
+	}
+	if(listen) {
+#ifdef SO_REUSEADDR
+		if(setsockopt(s, SOL_SOCKET, SO_REUSEADDR, (void*)&on, 
+			(socklen_t)sizeof(on)) < 0) {
+#ifndef USE_WINSOCK
+			log_err("setsockopt(.. SO_REUSEADDR ..) failed: %s",
+				strerror(errno));
+			close(s);
+#else
+			log_err("setsockopt(.. SO_REUSEADDR ..) failed: %s",
+				wsa_strerror(WSAGetLastError()));
+			closesocket(s);
+#endif
+			*noproto = 0;
+			*inuse = 0;
+			return -1;
+		}
+#endif /* SO_REUSEADDR */
 	}
 	if(rcv) {
 #ifdef SO_RCVBUF
@@ -526,7 +545,7 @@ make_sock(int stype, const char* ifname, const char* port,
 		verbose_print_addr(res);
 		s = create_udp_sock(res->ai_family, res->ai_socktype,
 			(struct sockaddr*)res->ai_addr, res->ai_addrlen,
-			v6only, &inuse, &noproto, (int)rcv, (int)snd);
+			v6only, &inuse, &noproto, (int)rcv, (int)snd, 1);
 		if(s == -1 && inuse) {
 			log_err("bind: address already in use");
 		} else if(s == -1 && noproto && hints->ai_family == AF_INET6){

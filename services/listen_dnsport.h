@@ -178,11 +178,13 @@ void listen_start_accept(struct listen_dnsport* listen);
 	IPv6 proto (family) is not available.
  * @param rcv: set size on rcvbuf with socket option, if 0 it is not set.
  * @param snd: set size on sndbuf with socket option, if 0 it is not set.
+ * @param listen: if true, this is a listening UDP port, eg port 53, and 
+ * 	set SO_REUSEADDR on it.
  * @return: the socket. -1 on error.
  */
 int create_udp_sock(int family, int socktype, struct sockaddr* addr, 
 	socklen_t addrlen, int v6only, int* inuse, int* noproto, int rcv,
-	int snd);
+	int snd, int listen);
 
 /**
  * Create and bind TCP listening socket

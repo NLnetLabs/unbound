@@ -1,3 +1,8 @@
+31 Oct 2013: Wouter
+	- Set SO_REUSEADDR so that the wildcard interface and a more specific
+	  interface port 53 can be used at the same time, and one of the
+	  daemons is unbound.
+
 22 Oct 2013: Wouter
 	- Patch from Neel Goyal: Add an API call to set an event base on an
 	  existing ub_ctx.  This basically just destroys the current worker and
