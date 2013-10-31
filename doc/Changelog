@@ -1,7 +1,7 @@
 31 Oct 2013: Wouter
-	- Set SO_REUSEADDR so that the wildcard interface and a more specific
-	  interface port 53 can be used at the same time, and one of the
-	  daemons is unbound.
+	- Fix #531: Set SO_REUSEADDR so that the wildcard interface and a 
+	  more specific interface port 53 can be used at the same time, and
+	  one of the daemons is unbound.
 	- iana portlist update.
 	- separate ldns into core ldns inside ldns/ subdirectory.  No more
 	  --with-ldns is needed and unbound does not rely on libldns.
