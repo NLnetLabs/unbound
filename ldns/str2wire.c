@@ -637,8 +637,8 @@ ldns_str2wire_rr_buf_internal(const char* str, uint8_t* rr, size_t* len,
 	int status;
 	int not_there = 0;
 	char token[LDNS_MAX_RDFLEN+1];
-	uint32_t ttl;
-	uint16_t tp, cl;
+	uint32_t ttl = 0;
+	uint16_t tp = 0, cl = 0;
 
 	/* string in buffer */
 	ldns_buffer strbuf;
