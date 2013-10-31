@@ -22,6 +22,10 @@
 #include "ldns/parseutil.h"
 #include "ldns/sbuffer.h"
 #include "ldns/keyraw.h"
+#ifdef HAVE_TIME_H
+#include <time.h>
+#endif
+#include <sys/time.h>
 #include <stdarg.h>
 #include <ctype.h>
 #ifdef HAVE_NETDB_H
