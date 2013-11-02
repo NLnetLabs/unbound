@@ -56,6 +56,11 @@
 #include <openssl/engine.h>
 #endif
 
+#ifdef HAVE_TIME_H
+#include <time.h>
+#endif
+#include <sys/time.h>
+
 #ifdef HAVE_NSS
 /* nss3 */
 #include "nss.h"
