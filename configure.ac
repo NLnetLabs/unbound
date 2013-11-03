@@ -1031,14 +1031,17 @@ AC_SUBST(SOURCEFILE)
 
 # see if we want to build the library or everything
 ALLTARGET="alltargets"
+INSTALLTARGET="install-all"
 AC_ARG_WITH(libunbound-only, AC_HELP_STRING([--with-libunbound-only],
 	[do not build daemon and tool programs]),
 	[
 	if test "$withval" = "yes"; then
 		ALLTARGET="lib"
+		INSTALLTARGET="install-lib"
 	fi
 ])
 AC_SUBST(ALLTARGET)
+AC_SUBST(INSTALLTARGET)
 
 ACX_STRIP_EXT_FLAGS
 LDFLAGS="$LATE_LDFLAGS $LDFLAGS"

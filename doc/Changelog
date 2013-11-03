@@ -1,3 +1,6 @@
+3 Nov 2013: Wouter
+	- if configured --with-libunbound-only fix make install.
+
 31 Oct 2013: Wouter
 	- Fix #531: Set SO_REUSEADDR so that the wildcard interface and a 
 	  more specific interface port 53 can be used at the same time, and

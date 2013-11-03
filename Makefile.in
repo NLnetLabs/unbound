@@ -35,6 +35,7 @@ UNBOUND_VERSION_MAJOR=@UNBOUND_VERSION_MAJOR@
 UNBOUND_VERSION_MINOR=@UNBOUND_VERSION_MINOR@
 UNBOUND_VERSION_MICRO=@UNBOUND_VERSION_MICRO@
 ALLTARGET=@ALLTARGET@
+INSTALLTARGET=@INSTALLTARGET@
 
 # _unbound.la if pyunbound enabled.
 PYUNBOUND_TARGET=@PYUNBOUND_TARGET@
@@ -455,15 +456,34 @@ unbound-event-install:
 	$(INSTALL) -m 755 -d $(DESTDIR)$(includedir)
 	$(LIBTOOL) --mode=install cp $(srcdir)/libunbound/unbound-event.h $(DESTDIR)$(includedir)/unbound-event.h
 
-install:	all $(PYTHONMOD_INSTALL) $(PYUNBOUND_INSTALL) $(UNBOUND_EVENT_INSTALL)
+install:	$(INSTALLTARGET)
+
+install-lib:	lib $(UNBOUND_EVENT_INSTALL)
+	$(INSTALL) -m 755 -d $(DESTDIR)$(libdir)
+	$(INSTALL) -m 755 -d $(DESTDIR)$(includedir)
+	$(INSTALL) -m 755 -d $(DESTDIR)$(mandir)
+	$(INSTALL) -m 755 -d $(DESTDIR)$(mandir)/man3
+	$(INSTALL) -c -m 644 doc/libunbound.3 $(DESTDIR)$(mandir)/man3
+	for mpage in ub_ctx ub_result ub_ctx_create ub_ctx_delete \
+		ub_ctx_set_option ub_ctx_get_option ub_ctx_config ub_ctx_set_fwd \
+		ub_ctx_resolvconf ub_ctx_hosts ub_ctx_add_ta ub_ctx_add_ta_file \
+		ub_ctx_trustedkeys ub_ctx_debugout ub_ctx_debuglevel ub_ctx_async \
+		ub_poll ub_wait ub_fd ub_process ub_resolve ub_resolve_async ub_cancel \
+		ub_resolve_free ub_strerror ub_ctx_print_local_zones ub_ctx_zone_add \
+		ub_ctx_zone_remove ub_ctx_data_add ub_ctx_data_remove; \
+	do \
+		echo ".so man3/libunbound.3" > $(DESTDIR)$(mandir)/man3/$$mpage.3 ; \
+	done
+	$(LIBTOOL) --mode=install cp unbound.h $(DESTDIR)$(includedir)/unbound.h
+	$(LIBTOOL) --mode=install cp libunbound.la $(DESTDIR)$(libdir)
+	$(LIBTOOL) --mode=finish $(DESTDIR)$(libdir)
+
+install-all:	all $(PYTHONMOD_INSTALL) $(PYUNBOUND_INSTALL) $(UNBOUND_EVENT_INSTALL) install-lib
 	$(INSTALL) -m 755 -d $(DESTDIR)$(sbindir)
 	$(INSTALL) -m 755 -d $(DESTDIR)$(mandir)
 	$(INSTALL) -m 755 -d $(DESTDIR)$(mandir)/man8
 	$(INSTALL) -m 755 -d $(DESTDIR)$(mandir)/man5
-	$(INSTALL) -m 755 -d $(DESTDIR)$(mandir)/man3
 	$(INSTALL) -m 755 -d $(DESTDIR)$(mandir)/man1
-	$(INSTALL) -m 755 -d $(DESTDIR)$(libdir)
-	$(INSTALL) -m 755 -d $(DESTDIR)$(includedir)
 	$(LIBTOOL) --mode=install cp unbound$(EXEEXT) $(DESTDIR)$(sbindir)/unbound$(EXEEXT)
 	$(LIBTOOL) --mode=install cp unbound-checkconf$(EXEEXT) $(DESTDIR)$(sbindir)/unbound-checkconf$(EXEEXT)
 	$(LIBTOOL) --mode=install cp unbound-control$(EXEEXT) $(DESTDIR)$(sbindir)/unbound-control$(EXEEXT)
@@ -476,22 +496,8 @@ install:	all $(PYTHONMOD_INSTALL) $(PYUNBOUND_INSTALL) $(UNBOUND_EVENT_INSTALL)
 	$(INSTALL) -c -m 644 doc/unbound-anchor.8 $(DESTDIR)$(mandir)/man8
 	$(INSTALL) -c -m 644 doc/unbound.conf.5 $(DESTDIR)$(mandir)/man5
 	$(INSTALL) -c -m 644 $(srcdir)/doc/unbound-host.1 $(DESTDIR)$(mandir)/man1
-	$(INSTALL) -c -m 644 doc/libunbound.3 $(DESTDIR)$(mandir)/man3
-	for mpage in ub_ctx ub_result ub_ctx_create ub_ctx_delete \
-		ub_ctx_set_option ub_ctx_get_option ub_ctx_config ub_ctx_set_fwd \
-		ub_ctx_resolvconf ub_ctx_hosts ub_ctx_add_ta ub_ctx_add_ta_file \
-		ub_ctx_trustedkeys ub_ctx_debugout ub_ctx_debuglevel ub_ctx_async \
-		ub_poll ub_wait ub_fd ub_process ub_resolve ub_resolve_async ub_cancel \
-		ub_resolve_free ub_strerror ub_ctx_print_local_zones ub_ctx_zone_add \
-		ub_ctx_zone_remove ub_ctx_data_add ub_ctx_data_remove; \
-	do \
-		echo ".so man3/libunbound.3" > $(DESTDIR)$(mandir)/man3/$$mpage.3 ; \
-	done
 	$(INSTALL) -c -m 755 unbound-control-setup $(DESTDIR)$(sbindir)/unbound-control-setup
 	if test ! -e $(DESTDIR)$(configfile); then $(INSTALL) -d `dirname $(DESTDIR)$(configfile)`; $(INSTALL) -c -m 644 doc/example.conf $(DESTDIR)$(configfile); fi
-	$(LIBTOOL) --mode=install cp unbound.h $(DESTDIR)$(includedir)/unbound.h
-	$(LIBTOOL) --mode=install cp libunbound.la $(DESTDIR)$(libdir)
-	$(LIBTOOL) --mode=finish $(DESTDIR)$(libdir)
 
 pythonmod-uninstall:
 	rm -f -- $(DESTDIR)$(PYTHON_SITE_PKG)/unboundmodule.py
