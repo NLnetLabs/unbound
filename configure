@@ -632,6 +632,7 @@ ac_includes_default="\
 #endif"
 
 ac_subst_vars='LTLIBOBJS
+INSTALLTARGET
 ALLTARGET
 SOURCEFILE
 SOURCEDETERMINE
@@ -18237,15 +18238,18 @@ rm -f conftest.lo
 
 # see if we want to build the library or everything
 ALLTARGET="alltargets"
+INSTALLTARGET="install-all"
 
 # Check whether --with-libunbound-only was given.
 if test "${with_libunbound_only+set}" = set; then :
   withval=$with_libunbound_only;
 	if test "$withval" = "yes"; then
 		ALLTARGET="lib"
+		INSTALLTARGET="install-lib"
 	fi
 
 fi
+
 
 
 
