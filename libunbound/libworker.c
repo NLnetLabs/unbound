@@ -632,6 +632,7 @@ libworker_event_done_cb(void* arg, int rcode, ldns_buffer* buf,
 	struct ctx_query* q = (struct ctx_query*)arg;
 	ub_event_callback_t cb = (ub_event_callback_t)q->cb;
 	void* cb_arg = q->cb_arg;
+	int cancelled = q->cancelled;
 
 	/* delete it now */
 	struct ub_ctx* ctx = q->w->ctx;
@@ -641,7 +642,7 @@ libworker_event_done_cb(void* arg, int rcode, ldns_buffer* buf,
 	context_query_delete(q);
 	lock_basic_unlock(&ctx->cfglock);
 
-	if(!q->cancelled) {
+	if(!cancelled) {
 		/* call callback */
 		int sec = 0;
 		if(s == sec_status_bogus)

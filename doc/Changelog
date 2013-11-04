@@ -1,3 +1,6 @@
+4 Nov 2013: Wouter
+	- Patch from Neel Goyal to fix callback in libunbound.
+
 3 Nov 2013: Wouter
 	- if configured --with-libunbound-only fix make install.
 
