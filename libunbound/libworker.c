@@ -679,14 +679,14 @@ int libworker_attach_mesh(struct ub_ctx* ctx, struct ctx_query* q,
 		return UB_NOERROR;
 	}
 	/* process new query */
+	if(async_id)
+		*async_id = q->querynum;
 	if(!mesh_new_callback(w->env->mesh, &qinfo, qflags, &edns, 
 		w->back->udp_buff, qid, libworker_event_done_cb, q)) {
 		free(qinfo.qname);
 		return UB_NOMEM;
 	}
 	free(qinfo.qname);
-	if(async_id)
-		*async_id = q->querynum;
 	return UB_NOERROR;
 }
 

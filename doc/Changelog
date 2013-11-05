@@ -1,3 +1,7 @@
+5 Nov 2013: Wouter
+	- Patch from Neel Goyal to fix async id assignment if callback
+	  is called by libunbound in the mesh attach.
+
 4 Nov 2013: Wouter
 	- Patch from Neel Goyal to fix callback in libunbound.
 
