@@ -48,6 +48,7 @@
 #include "util/data/msgreply.h"
 #include "util/storage/slabhash.h"
 #include "util/regional.h"
+#include "ldns/sbuffer.h"
 
 #undef _POSIX_C_SOURCE
 #undef _XOPEN_SOURCE
