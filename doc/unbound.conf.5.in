@@ -334,7 +334,7 @@ a daemon. Default is yes.
 .B access\-control: \fI<IP netblock> <action>
 The netblock is given as an IP4 or IP6 address with /size appended for a 
 classless network block. The action can be \fIdeny\fR, \fIrefuse\fR, 
-\fIallow\fR or \fIallow_snoop\fR.
+\fIallow\fR, \fIallow_snoop\fR, \fIdeny_non_local\fR or \fIrefuse_non_local\fR.
 .IP
 The action \fIdeny\fR stops queries from hosts from that netblock.
 .IP
@@ -363,6 +363,12 @@ By default only localhost is \fIallow\fRed, the rest is \fIrefuse\fRd.
 The default is \fIrefuse\fRd, because that is protocol\-friendly. The DNS 
 protocol is not designed to handle dropped packets due to policy, and 
 dropping may result in (possibly excessive) retried queries.
+.IP
+The deny_non_local and refuse_non_local settings are for hosts that are
+only allowed to query for the authoritative local\-data, they are not
+allowed full recursion but only the static data.  With deny_non_local,
+messages that are disallowed are dropped, with refuse_non_local they
+receive error code REFUSED.
 .TP
 .B chroot: \fI<directory>
 If chroot is enabled, you should pass the configfile (from the

@@ -1,3 +1,6 @@
+12 Nov 2013: Wouter
+	- Fix bug#536: acl_deny_non_local and refuse_non_local added.
+
 5 Nov 2013: Wouter
 	- Patch from Neel Goyal to fix async id assignment if callback
 	  is called by libunbound in the mesh attach.

@@ -718,6 +718,52 @@ answer_chaos(struct worker* w, struct query_info* qinfo,
 	return 0;
 }
 
+int
+deny_refuse(struct comm_point* c, enum acl_access acl,
+	enum acl_access deny, enum acl_access refuse,
+	struct worker* worker, struct comm_reply* repinfo)
+{
+	if(acl == deny) {
+		comm_point_drop_reply(repinfo);
+		if(worker->stats.extended)
+			worker->stats.unwanted_queries++;
+		return 0;
+	} else if(acl == refuse) {
+		log_addr(VERB_ALGO, "refused query from",
+			&repinfo->addr, repinfo->addrlen);
+		log_buf(VERB_ALGO, "refuse", c->buffer);
+		if(worker->stats.extended)
+			worker->stats.unwanted_queries++;
+		if(worker_check_request(c->buffer, worker) == -1) {
+			comm_point_drop_reply(repinfo);
+			return 0; /* discard this */
+		}
+		ldns_buffer_set_limit(c->buffer, LDNS_HEADER_SIZE);
+		ldns_buffer_write_at(c->buffer, 4, 
+			(uint8_t*)"\0\0\0\0\0\0\0\0", 8);
+		LDNS_QR_SET(ldns_buffer_begin(c->buffer));
+		LDNS_RCODE_SET(ldns_buffer_begin(c->buffer), 
+			LDNS_RCODE_REFUSED);
+		return 1;
+	}
+
+	return -1;
+}
+
+int
+deny_refuse_all(struct comm_point* c, enum acl_access acl,
+	struct worker* worker, struct comm_reply* repinfo)
+{
+	return deny_refuse(c, acl, acl_deny, acl_refuse, worker, repinfo);
+}
+
+int
+deny_refuse_non_local(struct comm_point* c, enum acl_access acl,
+	struct worker* worker, struct comm_reply* repinfo)
+{
+	return deny_refuse(c, acl, acl_deny_non_local, acl_refuse_non_local, worker, repinfo);
+}
+
 int 
 worker_handle_request(struct comm_point* c, void* arg, int error,
 	struct comm_reply* repinfo)
@@ -737,28 +783,9 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 	}
 	acl = acl_list_lookup(worker->daemon->acl, &repinfo->addr, 
 		repinfo->addrlen);
-	if(acl == acl_deny) {
-		comm_point_drop_reply(repinfo);
-		if(worker->stats.extended)
-			worker->stats.unwanted_queries++;
-		return 0;
-	} else if(acl == acl_refuse) {
-		log_addr(VERB_ALGO, "refused query from",
-			&repinfo->addr, repinfo->addrlen);
-		log_buf(VERB_ALGO, "refuse", c->buffer);
-		if(worker->stats.extended)
-			worker->stats.unwanted_queries++;
-		if(worker_check_request(c->buffer, worker) == -1) {
-			comm_point_drop_reply(repinfo);
-			return 0; /* discard this */
-		}
-		ldns_buffer_set_limit(c->buffer, LDNS_HEADER_SIZE);
-		ldns_buffer_write_at(c->buffer, 4, 
-			(uint8_t*)"\0\0\0\0\0\0\0\0", 8);
-		LDNS_QR_SET(ldns_buffer_begin(c->buffer));
-		LDNS_RCODE_SET(ldns_buffer_begin(c->buffer), 
-			LDNS_RCODE_REFUSED);
-		return 1;
+	if((ret=deny_refuse_all(c, acl, worker, repinfo)) != -1)
+	{
+		return ret;
 	}
 	if((ret=worker_check_request(c->buffer, worker)) != 0) {
 		verbose(VERB_ALGO, "worker check request: bad query.");
@@ -872,6 +899,16 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 		server_stats_insrcode(&worker->stats, c->buffer);
 		return 1;
 	}
+
+	/* We've looked in our local zones. If the answer isn't there, we
+	 * might need to bail out based on ACLs now. */
+	if((ret=deny_refuse_non_local(c, acl, worker, repinfo)) != -1)
+	{
+		return ret;
+	}
+
+	/* If this request does not have the recursion bit set, verify
+	 * ACLs allow the snooping. */
 	if(!(LDNS_RD_WIRE(ldns_buffer_begin(c->buffer))) &&
 		acl != acl_allow_snoop ) {
 		ldns_buffer_set_limit(c->buffer, LDNS_HEADER_SIZE);

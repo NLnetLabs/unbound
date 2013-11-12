@@ -55,6 +55,10 @@ enum acl_access {
 	acl_deny = 0,
 	/** disallow access, send a polite 'REFUSED' reply */
 	acl_refuse,
+	/** disallow any access to zones that aren't local, drop it */
+	acl_deny_non_local,
+	/** disallow access to zones that aren't local, 'REFUSED' reply */
+	acl_refuse_non_local,
 	/** allow full access for recursion (+RD) queries */
 	acl_allow,
 	/** allow full access for all queries, recursion and cache snooping */

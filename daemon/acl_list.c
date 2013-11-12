@@ -103,6 +103,10 @@ acl_list_str_cfg(struct acl_list* acl, const char* str, const char* s2,
 		control = acl_deny;
 	else if(strcmp(s2, "refuse") == 0)
 		control = acl_refuse;
+	else if(strcmp(s2, "deny_non_local") == 0)
+		control = acl_deny_non_local;
+	else if(strcmp(s2, "refuse_non_local") == 0)
+		control = acl_refuse_non_local;
 	else if(strcmp(s2, "allow_snoop") == 0)
 		control = acl_allow_snoop;
 	else {
