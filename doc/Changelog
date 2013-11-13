@@ -1,3 +1,6 @@
+13 Nov 2013: Wouter
+	- Fix bug#537: compile python plugin without ldns library.
+
 12 Nov 2013: Wouter
 	- Fix bug#536: acl_deny_non_local and refuse_non_local added.
 
