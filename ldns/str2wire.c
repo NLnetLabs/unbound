@@ -639,10 +639,12 @@ ldns_str2wire_rr_buf_internal(const char* str, uint8_t* rr, size_t* len,
 	char token[LDNS_MAX_RDFLEN+1];
 	uint32_t ttl = 0;
 	uint16_t tp = 0, cl = 0;
+	size_t ddlen = 0;
 
 	/* string in buffer */
 	ldns_buffer strbuf;
 	ldns_buffer_init_frm_data(&strbuf, (uint8_t*)str, strlen(str));
+	if(!dname_len) dname_len = &ddlen;
 
 	/* parse the owner */
 	if((status=rrinternal_get_owner(&strbuf, rr, len, dname_len, origin,
