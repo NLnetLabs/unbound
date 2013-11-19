@@ -145,10 +145,11 @@ int subnet_compare(struct edns_data *a, struct edns_data *b)
 	return memcmp(b->subnet_addr, a->subnet_addr, INET6_SIZE);
 }
 
-/* Populate edns structure with subnet data either from subnet option 
+/**
+ * Populate edns structure with subnet data either from subnet option 
  * or IP layer. 
- * edns: allocated edns structure to populate
- * s: mesh state of query 
+ * @param edns: allocated edns structure to populate.
+ * @param s: mesh state of query.
  */
 static void 
 populate_edns_subnet(struct edns_data* edns, struct mesh_state* s)

@@ -1053,8 +1053,6 @@ parse_extract_edns(struct msg_parse* msg, struct edns_data* edns)
 #ifdef CLIENT_SUBNET
 	/* silently continue without ednsdata on parse error */
 	(void) parse_ednsdata(found->rr_last->ttl_data + 4, edns);
-#else
-	/* ignore rdata and rrsigs */
 #endif
 	return 0;
 }

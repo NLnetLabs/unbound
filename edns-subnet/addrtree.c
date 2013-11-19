@@ -1,5 +1,5 @@
 /*
- * addrtree -- radix tree for vandergaast cache.
+ * addrtree -- radix tree for edns subnet cache.
  *
  * Copyright (c) 2013, NLnet Labs.  See LICENSE for license.
  */
@@ -116,8 +116,8 @@ addrtree_create(addrlen_t max_depth, void (*delfunc)(void *, void *),
 
 /** 
  * Scrub a node clean of elem
- * @param tree: Tree the node lives in.
- * @param node: Node to be cleaned
+ * @param tree: tree the node lives in.
+ * @param node: node to be cleaned.
  */
 static void
 clean_node(struct addrtree *tree, struct addrnode *node)
@@ -203,7 +203,10 @@ purge_node(struct addrtree *tree, struct addrnode *node)
 	free(node);
 }
 
-/** If a limit is set remove old nodes while above that limit */
+/**
+ * If a limit is set remove old nodes while above that limit.
+ * @param tree: Tree to be cleaned up.
+ */
 static void
 lru_cleanup(struct addrtree *tree)
 {
@@ -256,7 +259,8 @@ void addrtree_delete(struct addrtree *tree)
 	free(tree);
 }
 
-/** Get N'th bit from address 
+/**
+ * Get N'th bit from address 
  * @param addr: address to inspect
  * @param addrlen: length of addr in bits
  * @param n: index of bit to test. Must be in range [0, addrlen)
@@ -269,7 +273,8 @@ getbit(const addrkey_t *addr, addrlen_t addrlen, addrlen_t n)
 	return (int)(addr[n/KEYWIDTH]>>((KEYWIDTH-1)-(n%KEYWIDTH))) & 1;
 }
 
-/** Test for equality on N'th bit.
+/**
+ * Test for equality on N'th bit.
  * @return 0 for equal, 1 otherwise 
  */
 static inline int 
@@ -280,13 +285,13 @@ cmpbit(const addrkey_t *key1, const addrkey_t *key2, addrlen_t n)
 }
 
 /**
- * Common number of bits in prefix
- * @param s1: 
- * @param l1: Length of s1 in bits
- * @param s2:
- * @param l2: Length of s2 in bits
- * @param skip: Nr of bits already checked.
- * @return Common number of bits.
+ * Common number of bits in prefix.
+ * @param s1: first prefix.
+ * @param l1: length of s1 in bits.
+ * @param s2: second prefix.
+ * @param l2: length of s2 in bits.
+ * @param skip: nr of bits already checked.
+ * @return common number of bits.
  */
 static addrlen_t 
 bits_common(const addrkey_t *s1, addrlen_t l1, 
@@ -303,11 +308,11 @@ bits_common(const addrkey_t *s1, addrlen_t l1,
 
 /**
  * Tests if s1 is a substring of s2
- * @param s1: 
- * @param l1: Length of s1 in bits
- * @param s2:
- * @param l2: Length of s2 in bits
- * @param skip: Nr of bits already checked.
+ * @param s1: first prefix.
+ * @param l1: length of s1 in bits.
+ * @param s2: second prefix.
+ * @param l2: length of s2 in bits.
+ * @param skip: nr of bits already checked.
  * @return 1 for substring, 0 otherwise 
  */
 static int 

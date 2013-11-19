@@ -1,28 +1,28 @@
 /*
- * addrtree -- radix tree for vandergaast cache.
+ * addrtree -- radix tree for edns subnet cache.
  *
  * Copyright (c) 2013, NLnet Labs.  See LICENSE for license.
  */
 
-/** 
+/**
  * \file
- * The addrtree is a radix tree designed for vandergaast. Most notable
- * is the addition of 'scope' to a node. Scope is only relevant for 
+ * The addrtree is a radix tree designed for edns subnet. Most notable
+ * is the addition of 'scope' to a node. Scope is only relevant for
  * nodes with elem set, it indicates the number of bits the authority
  * desires.
- * 
- * For retreiving data one needs an address and address length 
- * (sourcemask). While traversing the tree the first matching node is 
- * returned. A node matches when 
- * 		node.scope<=sourcemask && node.elem!=NULL 
+ *
+ * For retrieving data one needs an address and address length
+ * (sourcemask). While traversing the tree the first matching node is
+ * returned. A node matches when
+ * 		node.scope<=sourcemask && node.elem!=NULL
  * 		(This is the most specific answer the authority has.)
  * or
  * 		node.sourcemask==sourcemask && node.elem!=NULL
  * 		(This is the most specific question the client can ask.)
- * 
- * Insertion needs an address, sourcemask and scope. The length of the 
- * address is capped by min(sourcemask, scope). While traversing the 
- * tree the scope of all visited nodes is updated. This ensures we are 
+ *
+ * Insertion needs an address, sourcemask and scope. The length of the
+ * address is capped by min(sourcemask, scope). While traversing the
+ * tree the scope of all visited nodes is updated. This ensures we are
  * always able to find the most specific answer available.
  */
 
@@ -90,27 +90,29 @@ struct addredge {
 };
 
 /**
- *  Size of tree in bytes
+ * Size of tree in bytes.
+ * @param tree: Tree.
+ * @return size of tree in bytes.
  */
 size_t addrtree_size(const struct addrtree *tree);
 
 /** 
- * Create a new tree
+ * Create a new tree.
  * @param max_depth: Tree will cap keys to this length.
- * @param delfunc: f(element, env) delete element
+ * @param delfunc: f(element, env) delete element.
  * @param sizefunc: f(element) returning the size of element.
- * @param env: Module environment for alloc information
+ * @param env: Module environment for alloc information.
  * @param max_node_count: Maximum size of this data structure in nodes. 
- * 			0 for unlimited
- * @return new addrtree or NULL on failure
+ * 			0 for unlimited.
+ * @return new addrtree or NULL on failure.
  */
 struct addrtree * 
 addrtree_create(addrlen_t max_depth, void (*delfunc)(void *, void *), 
 	size_t (*sizefunc)(void *), void *env, unsigned int max_node_count);
 
 /** 
- * Free tree and all nodes below
- * @param tree: Tree to be freed
+ * Free tree and all nodes below.
+ * @param tree: Tree to be freed.
  */
 void addrtree_delete(struct addrtree *tree);
 
@@ -120,13 +122,13 @@ void addrtree_delete(struct addrtree *tree);
  * longer access elem, it could be free'd now or later during future
  * inserts.
  * 
- * @param tree: Tree insert elem in
- * @param addr: key for element lookup
- * @param sourcemask: Length of addr in bits
- * @param scope: Number of significant bits in addr
- * @param elem: data to store in the tree
+ * @param tree: Tree insert elem in.
+ * @param addr: key for element lookup.
+ * @param sourcemask: Length of addr in bits.
+ * @param scope: Number of significant bits in addr.
+ * @param elem: data to store in the tree.
  * @param ttl: elem is valid up to this time, seconds.
- * @param now: Current time in seconds
+ * @param now: Current time in seconds.
  */
 void addrtree_insert(struct addrtree *tree, const addrkey_t *addr, 
 	addrlen_t sourcemask, addrlen_t scope, void *elem, time_t ttl, 
@@ -135,11 +137,11 @@ void addrtree_insert(struct addrtree *tree, const addrkey_t *addr,
 /**
  * Find a node containing an element in the tree.
  * 
- * @param tree: Tree to search
- * @param addr: key for element lookup
- * @param sourcemask: Length of addr in bits
- * @param now: Current time in seconds
- * @return addrnode or NULL on miss
+ * @param tree: Tree to search.
+ * @param addr: key for element lookup.
+ * @param sourcemask: Length of addr in bits.
+ * @param now: Current time in seconds.
+ * @return addrnode or NULL on miss.
  */
 struct addrnode * addrtree_find(struct addrtree *tree, 
 	const addrkey_t *addr, addrlen_t sourcemask, time_t now);

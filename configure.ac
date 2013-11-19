@@ -597,7 +597,6 @@ case "$enable_subnet" in
 	;;
 esac
 
-
 # check wether gost also works
 AC_DEFUN([AC_CHECK_GOST_WORKS],
 [AC_REQUIRE([AC_PROG_CC])

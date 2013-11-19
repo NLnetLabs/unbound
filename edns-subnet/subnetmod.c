@@ -1,10 +1,10 @@
 /*
- * subnetmod -- Vandergaast module. Must be called before validator and 
- * iterator. 
+ * subnetmod -- edns subnet module. Must be called before validator and
+ * iterator.
  *
  * Copyright (c) 2013, NLnet Labs.  See LICENSE for license.
  */
- 
+
  /**
  * \file
  * subnet module for unbound.
@@ -67,7 +67,8 @@ subnet_new_qstate(struct module_qstate *qstate, int id)
 	return 1;
 }
 
-int subnetmod_init(struct module_env *env, int id)
+int
+subnetmod_init(struct module_env *env, int id)
 {
 	struct subnet_env *sn_env = (struct subnet_env*)calloc(1,
 		sizeof(struct subnet_env));
@@ -122,7 +123,8 @@ static size_t sizefunc(void *elemptr) {
 		+ elem->rrset_count * sizeof (struct ub_packed_rrset_key *);
 }
 
-/* select tree from cache entry based on edns data.
+/**
+ * Select tree from cache entry based on edns data.
  * If for address family not present it will create a new one.
  * NULL on failure to create. */
 static struct addrtree* 
@@ -144,7 +146,8 @@ get_tree(struct subnet_msg_cache_data *data, struct edns_data *edns,
 	return tree;
 }
 
-void update_cache(struct module_qstate *qstate, int id)
+void
+update_cache(struct module_qstate *qstate, int id)
 {
 	struct msgreply_entry *mrep_entry;
 	struct addrtree *tree;
@@ -165,7 +168,7 @@ void update_cache(struct module_qstate *qstate, int id)
 		qinf = qstate->qinfo;
 		qinf.qname = memdup(qstate->qinfo.qname, qstate->qinfo.qname_len);
 		if(!qinf.qname) {
-			log_err("malloc failed");
+			log_err("memdup failed");
 			return;
 		}
 		mrep_entry = query_info_entrysetup(&qinf, NULL, h);
@@ -249,11 +252,14 @@ int lookup_and_reply(struct module_qstate *qstate, int id)
 	return 1;
 }
 
-/* Test first bits of addresses for equality. Caller is responsible
+/**
+ * Test first bits of addresses for equality. Caller is responsible
  * for making sure that both a and b are at least net/8 octets long.
- * a,b: addresses
- * net: Number of bits to test 
- * return: 1 if equal, 0 otherwise*/
+ * @param a: first address.
+ * @param a: seconds address.
+ * @param net: Number of bits to test.
+ * @return: 1 if equal, 0 otherwise.
+ */
 static int 
 common_prefix(uint8_t *a, uint8_t *b, uint8_t net)
 {
@@ -261,7 +267,8 @@ common_prefix(uint8_t *a, uint8_t *b, uint8_t net)
 	return !memcmp(a, b, n) && ((net % 8) == 0 || a[n] == b[n]);
 }
 
-enum module_ext_state eval_response(struct module_qstate *qstate, int id)
+enum module_ext_state
+eval_response(struct module_qstate *qstate, int id)
 {
 	size_t sn_octs;
 	struct edns_data *c_in  = &qstate->edns_client_in; /* rcvd from client */
@@ -280,9 +287,9 @@ enum module_ext_state eval_response(struct module_qstate *qstate, int id)
 	
 	/** subnet sent but nothing came back */
 	if (!s_in->subnet_validdata) {
-		/** The authority indicated no support for vandergaast. As a
+		/** The authority indicated no support for edns subnet. As a
 		 * consequence the answer ended up in the regular cache. It
-		 * is still usefull to put it in the vandergaast cache for 
+		 * is still usefull to put it in the edns subnet cache for
 		 * when a client explicitly asks for subnet specific answer. */
 		verbose(VERB_QUERY, "subnet: Authority indicates no support");
 		update_cache(qstate, id);
@@ -320,7 +327,8 @@ enum module_ext_state eval_response(struct module_qstate *qstate, int id)
 	return module_finished;
 }
 
-void subnetmod_operate(struct module_qstate *qstate, enum module_ev event, 
+void
+subnetmod_operate(struct module_qstate *qstate, enum module_ev event, 
 	int id, struct outbound_entry *ATTR_UNUSED(outbound))
 {
 	verbose(VERB_QUERY, "subnet[module %d] operate: extstate:%s "
@@ -374,18 +382,21 @@ void subnetmod_operate(struct module_qstate *qstate, enum module_ev event,
 	return;
 }
 
-void subnetmod_clear(struct module_qstate *qstate, int id)
+void
+subnetmod_clear(struct module_qstate *qstate, int id)
 {
 	/* qstate has no data outside region */
 }
 
-void subnetmod_inform_super(struct module_qstate *qstate, int id, 
+void
+subnetmod_inform_super(struct module_qstate *qstate, int id, 
 	struct module_qstate *super)
 {
 	/* Not used */
 }
 
-size_t subnetmod_get_mem(struct module_env *env, int id)
+size_t
+subnetmod_get_mem(struct module_env *env, int id)
 {
 	struct subnet_env *sn_env = env->modinfo[id];
 	if (!sn_env) return 0;
@@ -401,13 +412,16 @@ static struct module_func_block subnetmod_block = {
 	&subnetmod_inform_super, &subnetmod_clear, &subnetmod_get_mem
 };
 
-struct module_func_block *subnetmod_get_funcblock(void)
+struct module_func_block*
+subnetmod_get_funcblock(void)
 {
 	return &subnetmod_block;
 }
 
 /** Wrappers for static functions to unit test */
-size_t unittest_wrapper_subnetmod_sizefunc(void *elemptr) {
+size_t
+unittest_wrapper_subnetmod_sizefunc(void *elemptr)
+{
 	return sizefunc(elemptr);
 }
 

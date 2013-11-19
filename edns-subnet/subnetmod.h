@@ -1,6 +1,6 @@
 /*
- * subnetmod -- Vandergaast module. Must be called before validator and 
- * iterator. 
+ * subnetmod -- edns subnet module. Must be called before validator and
+ * iterator.
  *
  * Copyright (c) 2013, NLnet Labs.  See LICENSE for license.
  */
@@ -19,11 +19,11 @@
 #include "edns-subnet/addrtree.h"
 
 /**
- * Global state for the subnet module. 
+ * Global state for the subnet module.
  */
 struct subnet_env {
-	/** shared message cache 
-	 * key: struct query_info* 
+	/** shared message cache
+	 * key: struct query_info*
 	 * data: struct subnet_msg_cache_data* */
 	struct slabhash* subnet_msg_cache;
 };
