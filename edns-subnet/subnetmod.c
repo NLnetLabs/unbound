@@ -89,7 +89,8 @@ subnetmod_init(struct module_env *env, int id)
 	return 1;
 }
 
-void subnetmod_deinit(struct module_env *env, int id)
+void
+subnetmod_deinit(struct module_env *env, int id)
 {
 	struct subnet_env *sn_env;
 	if(!env || !env->modinfo[id])
@@ -101,7 +102,8 @@ void subnetmod_deinit(struct module_env *env, int id)
 }
 
 /** Tells client that upstream has no/improper support */
-void cp_edns_bad_response(struct edns_data *target, struct edns_data *source)
+void
+cp_edns_bad_response(struct edns_data *target, struct edns_data *source)
 {
 	target->subnet_scope_mask  = 0;
 	target->subnet_source_mask = source->subnet_source_mask;
@@ -110,13 +112,15 @@ void cp_edns_bad_response(struct edns_data *target, struct edns_data *source)
 	target->subnet_validdata = 1;
 }
 
-static void delfunc(void *envptr, void *elemptr) {
+static void
+delfunc(void *envptr, void *elemptr) {
 	struct reply_info *elem = (struct reply_info *)elemptr;
 	struct module_env *env = (struct module_env *)envptr;
 	reply_info_parsedelete(elem, env->alloc);
 }
 
-static size_t sizefunc(void *elemptr) {
+static size_t
+sizefunc(void *elemptr) {
 	struct reply_info *elem  = (struct reply_info *)elemptr;
 	return sizeof (struct reply_info) - sizeof (struct rrset_ref)
 		+ elem->rrset_count * sizeof (struct rrset_ref)
@@ -204,7 +208,8 @@ update_cache(struct module_qstate *qstate, int id)
 
 
 /* return true iff reply is sent. */
-int lookup_and_reply(struct module_qstate *qstate, int id)
+int
+lookup_and_reply(struct module_qstate *qstate, int id)
 {
 	struct lruhash_entry *e;
 	struct module_env *env = qstate->env;
