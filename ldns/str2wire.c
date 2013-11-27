@@ -169,8 +169,7 @@ uint8_t* ldns_str2wire_dname(const char* str, size_t* len)
 	*len = sizeof(dname);
 	if(ldns_str2wire_dname_buf(str, dname, len) == 0) {
 		uint8_t* r = (uint8_t*)malloc(*len);
-		if(r) memcpy(r, dname, *len);
-		return r;
+		if(r) return memcpy(r, dname, *len);
 	}
 	*len = 0;
 	return NULL;
