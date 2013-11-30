@@ -792,7 +792,7 @@ print_ext(SSL* ssl, struct stats_info* s)
 	for(i=0; i<STATS_QCLASS_NUM; i++) {
 		if(inhibit_zero && s->svr.qclass[i] == 0)
 			continue;
-		lt = ldns_lookup_by_id(ldns_rr_classes, i);
+		lt = ldns_lookup_by_id(SLDNS(_rr_classes), i);
 		if(lt && lt->name) {
 			snprintf(nm, sizeof(nm), "%s", lt->name);
 		} else {
@@ -809,7 +809,7 @@ print_ext(SSL* ssl, struct stats_info* s)
 	for(i=0; i<STATS_OPCODE_NUM; i++) {
 		if(inhibit_zero && s->svr.qopcode[i] == 0)
 			continue;
-		lt = ldns_lookup_by_id(ldns_opcodes, i);
+		lt = ldns_lookup_by_id(SLDNS(_opcodes), i);
 		if(lt && lt->name) {
 			snprintf(nm, sizeof(nm), "%s", lt->name);
 		} else {
@@ -849,7 +849,7 @@ print_ext(SSL* ssl, struct stats_info* s)
 	for(i=0; i<STATS_RCODE_NUM; i++) {
 		if(inhibit_zero && s->svr.ans_rcode[i] == 0)
 			continue;
-		lt = ldns_lookup_by_id(ldns_rcodes, i);
+		lt = ldns_lookup_by_id(SLDNS(_rcodes), i);
 		if(lt && lt->name) {
 			snprintf(nm, sizeof(nm), "%s", lt->name);
 		} else {

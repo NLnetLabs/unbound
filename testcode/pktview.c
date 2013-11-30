@@ -134,8 +134,8 @@ static void analyze_rr(ldns_buffer* pkt, int q)
 	dclass = ldns_buffer_read_u16(pkt);
 	printf("type %s(%d)", ldns_rr_descript(type)?  
 		ldns_rr_descript(type)->_name: "??" , (int)type);
-	printf(" class %s(%d) ", ldns_lookup_by_id(ldns_rr_classes, 
-		(int)dclass)?ldns_lookup_by_id( ldns_rr_classes, 
+	printf(" class %s(%d) ", ldns_lookup_by_id(sldns_rr_classes, 
+		(int)dclass)?ldns_lookup_by_id(sldns_rr_classes, 
 		(int)dclass)->name:"??", (int)dclass);
 	if(q) {
 		printf("\n");

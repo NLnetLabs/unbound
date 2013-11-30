@@ -287,9 +287,9 @@ log_nametypeclass(enum verbosity_value v, const char* str, uint8_t* name,
 		snprintf(t, sizeof(t), "TYPE%d", (int)type);
 		ts = t;
 	}
-	if(ldns_lookup_by_id(ldns_rr_classes, (int)dclass) &&
-		ldns_lookup_by_id(ldns_rr_classes, (int)dclass)->name)
-		cs = ldns_lookup_by_id(ldns_rr_classes, (int)dclass)->name;
+	if(ldns_lookup_by_id(SLDNS(_rr_classes), (int)dclass) &&
+		ldns_lookup_by_id(SLDNS(_rr_classes), (int)dclass)->name)
+		cs = ldns_lookup_by_id(SLDNS(_rr_classes), (int)dclass)->name;
 	else {
 		snprintf(c, sizeof(c), "CLASS%d", (int)dclass);
 		cs = c;

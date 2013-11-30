@@ -1,3 +1,7 @@
+30 Nov 2013: Wouter
+	- Fix sldns to make globals use sldns_ prefix.  This fixes
+	  linking with libldns that uses global variables ldns_ .
+
 13 Nov 2013: Wouter
 	- Fix bug#537: compile python plugin without ldns library.
 

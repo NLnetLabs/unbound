@@ -17,7 +17,11 @@
 #include "ldns/parseutil.h"
 
 /* classes  */
+#ifdef USE_SLDNS
+static ldns_lookup_table sldns_rr_classes_data[] = {
+#else
 static ldns_lookup_table ldns_rr_classes_data[] = {
+#endif
         { LDNS_RR_CLASS_IN, "IN" },
         { LDNS_RR_CLASS_CH, "CH" },
         { LDNS_RR_CLASS_HS, "HS" },
@@ -25,7 +29,11 @@ static ldns_lookup_table ldns_rr_classes_data[] = {
         { LDNS_RR_CLASS_ANY, "ANY" },
         { 0, NULL }
 };
+#ifdef USE_SLDNS
+ldns_lookup_table* sldns_rr_classes = sldns_rr_classes_data;
+#else
 ldns_lookup_table* ldns_rr_classes = ldns_rr_classes_data;
+#endif
 
 /* types */
 static const ldns_rdf_type type_0_wireformat[] = { LDNS_RDF_TYPE_UNKNOWN };
@@ -768,7 +776,11 @@ ldns_get_rr_class_by_name(const char *name)
 	}
 
 	/* Normal types */
+#ifdef USE_SLDNS
+	lt = ldns_lookup_by_name(sldns_rr_classes, name);
+#else
 	lt = ldns_lookup_by_name(ldns_rr_classes, name);
+#endif
 
 	if (lt) {
 		return lt->id;

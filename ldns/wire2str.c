@@ -34,7 +34,7 @@
 
 /* lookup tables for standard DNS stuff  */
 /* Taken from RFC 2535, section 7.  */
-static ldns_lookup_table ldns_algorithms_data[] = {
+static ldns_lookup_table SLDNS(_algorithms_data)[] = {
 	{ LDNS_RSAMD5, "RSAMD5" },
 	{ LDNS_DH, "DH" },
 	{ LDNS_DSA, "DSA" },
@@ -52,20 +52,20 @@ static ldns_lookup_table ldns_algorithms_data[] = {
 	{ LDNS_PRIVATEOID, "PRIVATEOID" },
 	{ 0, NULL }
 };
-ldns_lookup_table* ldns_algorithms = ldns_algorithms_data;
+ldns_lookup_table* SLDNS(_algorithms) = SLDNS(_algorithms_data);
 
 /* hash algorithms in DS record */
-static ldns_lookup_table ldns_hashes_data[] = {
+static ldns_lookup_table SLDNS(_hashes_data)[] = {
 	{ LDNS_SHA1, "SHA1" },
 	{ LDNS_SHA256, "SHA256" },
 	{ LDNS_HASH_GOST, "HASH-GOST" },
 	{ LDNS_SHA384, "SHA384" },
 	{ 0, NULL }
 };
-ldns_lookup_table* ldns_hashes = ldns_hashes_data;
+ldns_lookup_table* SLDNS(_hashes) = SLDNS(_hashes_data);
 
 /* Taken from RFC 4398  */
-static ldns_lookup_table ldns_cert_algorithms_data[] = {
+static ldns_lookup_table SLDNS(_cert_algorithms_data)[] = {
 	{ LDNS_CERT_PKIX, "PKIX" },
 	{ LDNS_CERT_SPKI, "SPKI" },
 	{ LDNS_CERT_PGP, "PGP" },
@@ -78,10 +78,10 @@ static ldns_lookup_table ldns_cert_algorithms_data[] = {
 	{ LDNS_CERT_OID, "OID" },
 	{ 0, NULL }
 };
-ldns_lookup_table* ldns_cert_algorithms = ldns_cert_algorithms_data;
+ldns_lookup_table* SLDNS(_cert_algorithms) = SLDNS(_cert_algorithms_data);
 
 /* if these are used elsewhere */
-static ldns_lookup_table ldns_rcodes_data[] = {
+static ldns_lookup_table SLDNS(_rcodes_data)[] = {
 	{ LDNS_RCODE_NOERROR, "NOERROR" },
 	{ LDNS_RCODE_FORMERR, "FORMERR" },
 	{ LDNS_RCODE_SERVFAIL, "SERVFAIL" },
@@ -95,9 +95,9 @@ static ldns_lookup_table ldns_rcodes_data[] = {
 	{ LDNS_RCODE_NOTZONE, "NOTZONE" },
 	{ 0, NULL }
 };
-ldns_lookup_table* ldns_rcodes = ldns_rcodes_data;
+ldns_lookup_table* SLDNS(_rcodes) = SLDNS(_rcodes_data);
 
-static ldns_lookup_table ldns_opcodes_data[] = {
+static ldns_lookup_table SLDNS(_opcodes_data)[] = {
 	{ LDNS_PACKET_QUERY, "QUERY" },
 	{ LDNS_PACKET_IQUERY, "IQUERY" },
 	{ LDNS_PACKET_STATUS, "STATUS" },
@@ -105,9 +105,9 @@ static ldns_lookup_table ldns_opcodes_data[] = {
 	{ LDNS_PACKET_UPDATE, "UPDATE" },
 	{ 0, NULL }
 };
-ldns_lookup_table* ldns_opcodes = ldns_opcodes_data;
+ldns_lookup_table* SLDNS(_opcodes) = SLDNS(_opcodes_data);
 
-static ldns_lookup_table ldns_wireparse_errors_data[] = {
+static ldns_lookup_table SLDNS(_wireparse_errors_data)[] = {
 	{ LDNS_WIREPARSE_ERR_OK, "no parse error" },
 	{ LDNS_WIREPARSE_ERR_GENERAL, "parse error" },
 	{ LDNS_WIREPARSE_ERR_DOMAINNAME_OVERFLOW, "Domainname length overflow" },
@@ -148,15 +148,15 @@ static ldns_lookup_table ldns_wireparse_errors_data[] = {
 	{ LDNS_WIREPARSE_ERR_PARENTHESIS, "Parse error, parenthesis mismatch" },
 	{ 0, NULL }
 };
-ldns_lookup_table* ldns_wireparse_errors = ldns_wireparse_errors_data;
+ldns_lookup_table* SLDNS(_wireparse_errors) = SLDNS(_wireparse_errors_data);
 
-static ldns_lookup_table ldns_edns_flags_data[] = {
+static ldns_lookup_table SLDNS(_edns_flags_data)[] = {
 	{ 3600, "do"},
 	{ 0, NULL}
 };
-ldns_lookup_table* ldns_edns_flags = ldns_edns_flags_data;
+ldns_lookup_table* SLDNS(_edns_flags) = SLDNS(_edns_flags_data);
 
-static ldns_lookup_table ldns_edns_options_data[] = {
+static ldns_lookup_table SLDNS(_edns_options_data)[] = {
 	{ 1, "LLQ" },
 	{ 2, "UL" },
 	{ 3, "NSID" },
@@ -167,7 +167,7 @@ static ldns_lookup_table ldns_edns_options_data[] = {
 	{ 8, "edns-client-subnet" },
 	{ 0, NULL}
 };
-ldns_lookup_table* ldns_edns_options = ldns_edns_options_data;
+ldns_lookup_table* SLDNS(_edns_options) = SLDNS(_edns_options_data);
 
 char* ldns_wire2str_pkt(uint8_t* data, size_t len)
 {
@@ -806,7 +806,7 @@ int ldns_wire2str_dname_scan(uint8_t** d, size_t* dlen, char** s, size_t* slen,
 
 int ldns_wire2str_opcode_print(char** s, size_t* slen, int opcode)
 {
-	ldns_lookup_table *lt = ldns_lookup_by_id(ldns_opcodes, opcode);
+	ldns_lookup_table *lt = ldns_lookup_by_id(SLDNS(_opcodes), opcode);
 	if (lt && lt->name) {
 		return ldns_str_print(s, slen, "%s", lt->name);
 	}
@@ -815,7 +815,7 @@ int ldns_wire2str_opcode_print(char** s, size_t* slen, int opcode)
 
 int ldns_wire2str_rcode_print(char** s, size_t* slen, int rcode)
 {
-	ldns_lookup_table *lt = ldns_lookup_by_id(ldns_rcodes, rcode);
+	ldns_lookup_table *lt = ldns_lookup_by_id(SLDNS(_rcodes), rcode);
 	if (lt && lt->name) {
 		return ldns_str_print(s, slen, "%s", lt->name);
 	}
@@ -824,7 +824,7 @@ int ldns_wire2str_rcode_print(char** s, size_t* slen, int rcode)
 
 int ldns_wire2str_class_print(char** s, size_t* slen, uint16_t rrclass)
 {
-	ldns_lookup_table *lt = ldns_lookup_by_id(ldns_rr_classes,
+	ldns_lookup_table *lt = ldns_lookup_by_id(SLDNS(_rr_classes),
 		(int)rrclass);
 	if (lt && lt->name) {
 		return ldns_str_print(s, slen, "%s", lt->name);
@@ -844,7 +844,7 @@ int ldns_wire2str_type_print(char** s, size_t* slen, uint16_t rrtype)
 int ldns_wire2str_edns_option_code_print(char** s, size_t* slen,
 	uint16_t opcode)
 {
-	ldns_lookup_table *lt = ldns_lookup_by_id(ldns_edns_options,
+	ldns_lookup_table *lt = ldns_lookup_by_id(SLDNS(_edns_options),
 		(int)opcode);
 	if (lt && lt->name) {
 		return ldns_str_print(s, slen, "%s", lt->name);
@@ -1254,7 +1254,7 @@ int ldns_wire2str_cert_alg_scan(uint8_t** d, size_t* dl, char** s, size_t* sl)
 	int data, w;
 	if(*dl < 2) return -1;
 	data = (int)ldns_read_uint16(*d);
-	lt = ldns_lookup_by_id(ldns_cert_algorithms, data);
+	lt = ldns_lookup_by_id(SLDNS(_cert_algorithms), data);
 	if(lt && lt->name)
 		w = ldns_str_print(s, sl, "%s", lt->name);
 	else 	w = ldns_str_print(s, sl, "%d", data);
@@ -1694,7 +1694,7 @@ int ldns_wire2str_edns_dau_print(char** s, size_t* sl, uint8_t* data,
 	size_t i;
 	int w = 0;
 	for(i=0; i<len; i++) {
-		lt = ldns_lookup_by_id(ldns_algorithms, (int)data[i]);
+		lt = ldns_lookup_by_id(SLDNS(_algorithms), (int)data[i]);
 		if(lt && lt->name)
 			w += ldns_str_print(s, sl, " %s", lt->name);
 		else 	w += ldns_str_print(s, sl, " %d", (int)data[i]);
@@ -1709,7 +1709,7 @@ int ldns_wire2str_edns_dhu_print(char** s, size_t* sl, uint8_t* data,
 	size_t i;
 	int w = 0;
 	for(i=0; i<len; i++) {
-		lt = ldns_lookup_by_id(ldns_hashes, (int)data[i]);
+		lt = ldns_lookup_by_id(SLDNS(_hashes), (int)data[i]);
 		if(lt && lt->name)
 			w += ldns_str_print(s, sl, " %s", lt->name);
 		else 	w += ldns_str_print(s, sl, " %d", (int)data[i]);

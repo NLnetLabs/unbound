@@ -40,8 +40,12 @@ extern "C" {
 /* The first fields are contiguous and can be referenced instantly */
 #define LDNS_RDATA_FIELD_DESCRIPTORS_COMMON 258
 
-/** lookuptable for rr types  */
+/** lookuptable for rr classes  */
+#ifdef USE_SLDNS
+extern struct ldns_struct_lookup_table* sldns_rr_classes;
+#else
 extern struct ldns_struct_lookup_table* ldns_rr_classes;
+#endif
 
 /**
  *  The different RR classes.

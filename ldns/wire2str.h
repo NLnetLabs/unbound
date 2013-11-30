@@ -21,23 +21,31 @@ extern "C" {
 #endif
 struct ldns_struct_lookup_table;
 
+#ifndef SLDNS
+#  ifdef USE_SLDNS
+#    define SLDNS(x) sldns##x
+#  else
+#    define SLDNS(x) ldns##x
+#  endif
+#endif
+
 /* lookup tables for standard DNS stuff  */
 /** Taken from RFC 2535, section 7.  */
-extern struct ldns_struct_lookup_table* ldns_algorithms;
+extern struct ldns_struct_lookup_table* SLDNS(_algorithms);
 /** DS record hash algorithms */
-extern struct ldns_struct_lookup_table* ldns_hashes;
+extern struct ldns_struct_lookup_table* SLDNS(_hashes);
 /** Taken from RFC 2538, section 2.1.  */
-extern struct ldns_struct_lookup_table* ldns_cert_algorithms;
+extern struct ldns_struct_lookup_table* SLDNS(_cert_algorithms);
 /** Response codes */
-extern struct ldns_struct_lookup_table* ldns_rcodes;
+extern struct ldns_struct_lookup_table* SLDNS(_rcodes);
 /** Operation codes */
-extern struct ldns_struct_lookup_table* ldns_opcodes;
+extern struct ldns_struct_lookup_table* SLDNS(_opcodes);
 /** EDNS flags */
-extern struct ldns_struct_lookup_table* ldns_edns_flags;
+extern struct ldns_struct_lookup_table* SLDNS(_edns_flags);
 /** EDNS option codes */
-extern struct ldns_struct_lookup_table* ldns_edns_options;
+extern struct ldns_struct_lookup_table* SLDNS(_edns_options);
 /** error string from wireparse */
-extern struct ldns_struct_lookup_table* ldns_wireparse_errors;
+extern struct ldns_struct_lookup_table* SLDNS(_wireparse_errors);
 
 /**
  * Convert wireformat packet to a string representation

@@ -534,7 +534,7 @@ dnskeyset_verify_rrset(struct module_env* env, struct val_env* ve,
 void algo_needs_reason(struct module_env* env, int alg, char** reason, char* s)
 {
 	char buf[256];
-	ldns_lookup_table *t = ldns_lookup_by_id(ldns_algorithms, alg);
+	ldns_lookup_table *t = ldns_lookup_by_id(SLDNS(_algorithms), alg);
 	if(t&&t->name)
 		snprintf(buf, sizeof(buf), "%s with algorithm %s", s, t->name);
 	else	snprintf(buf, sizeof(buf), "%s with algorithm ALG%u", s,

@@ -335,6 +335,11 @@ ext_thread(void* arg)
 		r = ub_wait(inf->ctx);
 		checkerr("ub_ctx_wait", r);
 	}
+	if(async_ids) {
+		for(i=0; i<inf->numq; i++) {
+			lock_basic_destroy(&async_ids[i].lock);
+		}
+	}
 	free(async_ids);
 	
 	return NULL;
@@ -355,7 +360,7 @@ ext_test(struct ub_ctx* ctx, int argc, char** argv)
 		inf[i].ctx = ctx;
 		inf[i].argc = argc;
 		inf[i].argv = argv;
-		inf[i].numq = 1000;
+		inf[i].numq = 100;
 		ub_thread_create(&inf[i].tid, ext_thread, &inf[i]);
 	}
 	/* the work happens here */

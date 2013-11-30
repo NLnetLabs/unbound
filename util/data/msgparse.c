@@ -859,9 +859,9 @@ parse_section(ldns_buffer* pkt, struct msg_parse* msg,
 				ldns_rr_descript(type)->_name: "??",
 				(int)type);
 			fprintf(stderr, " %s(%d) ",
-				ldns_lookup_by_id(ldns_rr_classes, 
+				ldns_lookup_by_id(sldns_rr_classes, 
 				(int)ntohs(dclass))?ldns_lookup_by_id(
-				ldns_rr_classes, (int)ntohs(dclass))->name: 
+				sldns_rr_classes, (int)ntohs(dclass))->name: 
 				"??", (int)ntohs(dclass));
 			dname_print(stderr, pkt, dname);
 			fprintf(stderr, "\n");

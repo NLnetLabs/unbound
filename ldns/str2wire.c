@@ -739,7 +739,7 @@ uint8_t* ldns_wirerr_get_rdatawl(uint8_t* rr, size_t len, size_t dname_len)
 const char* ldns_get_errorstr_parse(int e)
 {
 	ldns_lookup_table *lt;
-	lt = ldns_lookup_by_id(ldns_wireparse_errors, LDNS_WIREPARSE_ERROR(e));
+	lt = ldns_lookup_by_id(SLDNS(_wireparse_errors), LDNS_WIREPARSE_ERROR(e));
 	return lt?lt->name:"unknown error";
 }
 
@@ -1206,7 +1206,8 @@ int ldns_str2wire_class_buf(const char* str, uint8_t* rd, size_t* len)
  * or by its symbolic name. Handle both */
 int ldns_str2wire_cert_alg_buf(const char* str, uint8_t* rd, size_t* len)
 {
-	ldns_lookup_table *lt = ldns_lookup_by_name(ldns_cert_algorithms, str);
+	ldns_lookup_table *lt = ldns_lookup_by_name(SLDNS(_cert_algorithms),
+		str);
 	if(*len < 2)
 		return LDNS_WIREPARSE_ERR_BUFFER_TOO_SMALL;
 	if(lt) {
@@ -1225,7 +1226,7 @@ int ldns_str2wire_cert_alg_buf(const char* str, uint8_t* rd, size_t* len)
  * or by its symbolic name. Handle both */
 int ldns_str2wire_alg_buf(const char* str, uint8_t* rd, size_t* len)
 {
-	ldns_lookup_table *lt = ldns_lookup_by_name(ldns_algorithms, str);
+	ldns_lookup_table *lt = ldns_lookup_by_name(SLDNS(_algorithms), str);
 	if(*len < 1)
 		return LDNS_WIREPARSE_ERR_BUFFER_TOO_SMALL;
 	if(lt) {

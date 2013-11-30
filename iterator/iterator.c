@@ -231,8 +231,8 @@ static int
 error_response(struct module_qstate* qstate, int id, int rcode)
 {
 	verbose(VERB_QUERY, "return error response %s", 
-		ldns_lookup_by_id(ldns_rcodes, rcode)?
-		ldns_lookup_by_id(ldns_rcodes, rcode)->name:"??");
+		ldns_lookup_by_id(SLDNS(_rcodes), rcode)?
+		ldns_lookup_by_id(SLDNS(_rcodes), rcode)->name:"??");
 	qstate->return_rcode = rcode;
 	qstate->return_msg = NULL;
 	qstate->ext_state[id] = module_finished;
@@ -543,8 +543,8 @@ prime_root(struct module_qstate* qstate, struct iter_qstate* iq, int id,
 	struct delegpt* dp;
 	struct module_qstate* subq;
 	verbose(VERB_DETAIL, "priming . %s NS", 
-		ldns_lookup_by_id(ldns_rr_classes, (int)qclass)?
-		ldns_lookup_by_id(ldns_rr_classes, (int)qclass)->name:"??");
+		ldns_lookup_by_id(SLDNS(_rr_classes), (int)qclass)?
+		ldns_lookup_by_id(SLDNS(_rr_classes), (int)qclass)->name:"??");
 	dp = hints_lookup_root(qstate->env->hints, qclass);
 	if(!dp) {
 		verbose(VERB_ALGO, "Cannot prime due to lack of hints");
