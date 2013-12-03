@@ -18073,6 +18073,9 @@ esac
 fi
 
 
+
+if test "$on_mingw" != "yes"; then
+# on windows we use our own snprintf because it is nicer with 64bit %lld.
 ac_fn_c_check_func "$LINENO" "snprintf" "ac_cv_func_snprintf"
 if test "x$ac_cv_func_snprintf" = xyes; then :
   $as_echo "#define HAVE_SNPRINTF 1" >>confdefs.h
@@ -18086,6 +18089,8 @@ esac
 
 fi
 
+
+fi
 
 ac_fn_c_check_func "$LINENO" "strlcat" "ac_cv_func_strlcat"
 if test "x$ac_cv_func_strlcat" = xyes; then :
