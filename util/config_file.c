@@ -42,6 +42,9 @@
 #include "config.h"
 #include <ctype.h>
 #include <stdarg.h>
+#ifdef HAVE_TIME_H
+#include <time.h>
+#endif
 #include "util/log.h"
 #include "util/configyyrename.h"
 #include "util/config_file.h"
