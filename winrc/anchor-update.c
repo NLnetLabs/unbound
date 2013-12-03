@@ -92,7 +92,8 @@ do_print(struct ub_result* result, char* file)
 		fatal("fopen failed");
 	}
 	i = 0;
-	while(result->data[i]) {
+	if(result->havedata)
+	  while(result->data[i]) {
 		sldns_wire2str_rdata_buf((uint8_t*)result->data[i],
 			(size_t)result->len[i], s, sizeof(s),
 			(uint16_t)result->qtype)

@@ -42,7 +42,7 @@ cwd=`pwd`
 # Utility functions.
 usage () {
     cat >&2 <<EOF
-Usage $0: [-h] [-s] [-d SVN_root] [-l ldns_path] [-w ...args...]
+Usage $0: [-h] [-s] [-d SVN_root] [-w ...args...]
 Generate a distribution tar file for unbound.
 
     -h           This usage information.
@@ -53,10 +53,8 @@ Generate a distribution tar file for unbound.
                  (which will then be unbound-<version>rc<number>)
     -d SVN_root  Retrieve the unbound source from the specified repository.
                  Detected from svn working copy if not specified.
-    -l ldnsdir   Directory where ldns resides. Detected from Makefile.
     -wssl openssl.xx.tar.gz Also build openssl from tarball for windows dist.
     -wxp expat.xx.tar.gz Also build expat from tarball for windows dist.
-    -wldns ldns.xx.tar.gz Also build libldns from tarball for windows dist.
     -w ...       Build windows binary dist. last args passed to configure.
 EOF
     exit 1
@@ -141,11 +139,9 @@ create_temp_dir () {
 
 SNAPSHOT="no"
 RC="no"
-LDNSDIR=""
 DOWIN="no"
 WINSSL=""
 WINEXPAT=""
-WINLDNS=""
 
 # Parse the command line arguments.
 while [ "$1" ]; do
@@ -160,10 +156,6 @@ while [ "$1" ]; do
         "-s")
             SNAPSHOT="yes"
             ;;
-        "-wldns")
-	    WINLDNS="$2"
-	    shift
-	    ;;
         "-wssl")
 	    WINSSL="$2"
 	    shift
@@ -176,10 +168,6 @@ while [ "$1" ]; do
             DOWIN="yes"
 	    shift
 	    break
-            ;;
-        "-l")
-            LDNSDIR="$2"
-            shift
             ;;
         "-rc")
             RC="$2"
@@ -224,21 +212,6 @@ if [ "$DOWIN" = "yes" ]; then
 		info "winssl: make install_sw"
 		make install_sw || error_cleanup "OpenSSL install failed"
 		cross_flag="$cross_flag --with-ssl=$sslinstall"
-		cd ..
-	fi
-
-	if test -n "$WINLDNS"; then
-		info "Cross compile $WINLDNS"
-		info "ldns tar unpack"
-		(cd ..; gzip -cd $WINLDNS) | tar xf - || error_cleanup "tar unpack of $WINLDNS failed"
-		cd ldns-* || error_cleanup "no ldns-X dir in tarball"
-		# we can use the cross_flag with openssl in it
-		info "ldns: Configure $cross_flag"
-		mingw32-configure  $cross_flag || error_cleanup "ldns configure failed"
-		info "ldns: make"
-		make || error_cleanup "ldns crosscompile failed"
-		# use from the build directory.
-		cross_flag="$cross_flag --with-ldns=`pwd`"
 		cd ..
 	fi
 
@@ -343,16 +316,6 @@ if [ "$DOWIN" = "yes" ]; then
 fi
 
 check_svn_root
-# Check if LDNSDIR is specified.
-if test -z "$LDNSDIR"; then
-    # try to autodetect from Makefile (if present)
-    if test -f Makefile; then
-	  eval `grep 'ldnsdir=' Makefile`
-	  if echo "$ldnsdir" | grep -v ldns-src/ >/dev/null 2>&1; then
-	  	LDNSDIR="$ldnsdir"
-	  fi
-    fi
-fi
 
 # Start the packaging process.
 info "SVNROOT  is $SVNROOT"
@@ -381,18 +344,6 @@ echo "#include \"util/configyyrename.h\"" >> util/configlexer.c || error_cleanup
 flex -i -t util/configlexer.lex >> util/configlexer.c  || error_cleanup "Failed to create configlexer"
 if test -x `which bison` 2>&1; then YACC=bison; else YACC=yacc; fi
 $YACC -y -d -o util/configparser.c util/configparser.y || error_cleanup "Failed to create configparser"
-
-# check shared code, ldns-testpkts from ldns examples, if possible.
-cd ../..
-if test ! -z "$LDNSDIR"; then
-	if diff -q $LDNSDIR/examples/ldns-testpkts.c testcode/ldns-testpkts.c &&
-	   diff -q $LDNSDIR/examples/ldns-testpkts.h testcode/ldns-testpkts.h; then
-	   	info "ldns-testpkts.c and ldns-testpkts.h are OK"
-	else
-		info "ldns-testpkts is different in ldns and unbound"
-	fi
-fi
-cd $temp_dir/unbound
 
 find . -name .c-mode-rc.el -exec rm {} \;
 find . -name .cvsignore -exec rm {} \;
