@@ -42,6 +42,7 @@
 #include "config.h"
 #include "libunbound/unbound.h"
 #include "ldns/rrdef.h"
+#include "ldns/pkthdr.h"
 #include "ldns/wire2str.h"
 
 /** usage */
