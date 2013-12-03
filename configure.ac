@@ -953,12 +953,7 @@ fi
 AC_REPLACE_FUNCS(inet_aton)
 AC_REPLACE_FUNCS(inet_pton)
 AC_REPLACE_FUNCS(inet_ntop)
-
-if test "$on_mingw" != "yes"; then
-# on windows we use our own snprintf because it is nicer with 64bit %lld.
 AC_REPLACE_FUNCS(snprintf)
-fi
-
 AC_REPLACE_FUNCS(strlcat)
 AC_REPLACE_FUNCS(strlcpy)
 AC_REPLACE_FUNCS(memmove)
