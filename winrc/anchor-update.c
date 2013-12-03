@@ -40,8 +40,9 @@
  * windows (no shell). 
  */
 #include "config.h"
-#include <ldns/ldns.h>
 #include "libunbound/unbound.h"
+#include "ldns/rrdef.h"
+#include "ldns/wire2str.h"
 
 /** usage */
 static void
