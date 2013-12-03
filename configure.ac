@@ -614,7 +614,7 @@ AC_RUN_IFELSE([AC_LANG_SOURCE([[
 #include <openssl/evp.h>
 #include <openssl/engine.h>
 #include <openssl/conf.h>
-/* routine to load gost (from ldns) */
+/* routine to load gost (from sldns) */
 int load_gost_id(void)
 {
 	static int gost_id = 0;
