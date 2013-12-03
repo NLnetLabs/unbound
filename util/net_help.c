@@ -281,15 +281,15 @@ log_nametypeclass(enum verbosity_value v, const char* str, uint8_t* name,
 	else if(type == LDNS_RR_TYPE_MAILB) ts = "MAILB";
 	else if(type == LDNS_RR_TYPE_MAILA) ts = "MAILA";
 	else if(type == LDNS_RR_TYPE_ANY) ts = "ANY";
-	else if(ldns_rr_descript(type) && ldns_rr_descript(type)->_name)
-		ts = ldns_rr_descript(type)->_name;
+	else if(sldns_rr_descript(type) && sldns_rr_descript(type)->_name)
+		ts = sldns_rr_descript(type)->_name;
 	else {
 		snprintf(t, sizeof(t), "TYPE%d", (int)type);
 		ts = t;
 	}
-	if(ldns_lookup_by_id(SLDNS(_rr_classes), (int)dclass) &&
-		ldns_lookup_by_id(SLDNS(_rr_classes), (int)dclass)->name)
-		cs = ldns_lookup_by_id(SLDNS(_rr_classes), (int)dclass)->name;
+	if(sldns_lookup_by_id(sldns_rr_classes, (int)dclass) &&
+		sldns_lookup_by_id(sldns_rr_classes, (int)dclass)->name)
+		cs = sldns_lookup_by_id(sldns_rr_classes, (int)dclass)->name;
 	else {
 		snprintf(c, sizeof(c), "CLASS%d", (int)dclass);
 		cs = c;

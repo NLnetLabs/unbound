@@ -139,9 +139,9 @@ static int
 dump_msg_ref(SSL* ssl, struct ub_packed_rrset_key* k)
 {
 	char* nm, *tp, *cl;
-	nm = ldns_wire2str_dname(k->rk.dname, k->rk.dname_len);
-	tp = ldns_wire2str_type(ntohs(k->rk.type));
-	cl = ldns_wire2str_class(ntohs(k->rk.rrset_class));
+	nm = sldns_wire2str_dname(k->rk.dname, k->rk.dname_len);
+	tp = sldns_wire2str_type(ntohs(k->rk.type));
+	cl = sldns_wire2str_class(ntohs(k->rk.rrset_class));
 	if(!nm || !cl || !tp) {
 		free(nm);
 		free(tp);
@@ -171,9 +171,9 @@ dump_msg(SSL* ssl, struct query_info* k, struct reply_info* d,
 	if(!k || !d) return 1;
 	if(d->ttl < now) return 1; /* expired */
 	
-	nm = ldns_wire2str_dname(k->qname, k->qname_len);
-	tp = ldns_wire2str_type(k->qtype);
-	cl = ldns_wire2str_class(k->qclass);
+	nm = sldns_wire2str_dname(k->qname, k->qname_len);
+	tp = sldns_wire2str_type(k->qtype);
+	cl = sldns_wire2str_class(k->qclass);
 	if(!nm || !tp || !cl) {
 		free(nm);
 		free(tp);
@@ -299,23 +299,23 @@ dump_cache(SSL* ssl, struct worker* worker)
 
 /** read a line from ssl into buffer */
 static int
-ssl_read_buf(SSL* ssl, ldns_buffer* buf)
+ssl_read_buf(SSL* ssl, sldns_buffer* buf)
 {
-	return ssl_read_line(ssl, (char*)ldns_buffer_begin(buf), 
-		ldns_buffer_capacity(buf));
+	return ssl_read_line(ssl, (char*)sldns_buffer_begin(buf), 
+		sldns_buffer_capacity(buf));
 }
 
 /** check fixed text on line */
 static int
-read_fixed(SSL* ssl, ldns_buffer* buf, const char* str)
+read_fixed(SSL* ssl, sldns_buffer* buf, const char* str)
 {
 	if(!ssl_read_buf(ssl, buf)) return 0;
-	return (strcmp((char*)ldns_buffer_begin(buf), str) == 0);
+	return (strcmp((char*)sldns_buffer_begin(buf), str) == 0);
 }
 
 /** load an RR into rrset */
 static int
-load_rr(SSL* ssl, ldns_buffer* buf, struct regional* region,
+load_rr(SSL* ssl, sldns_buffer* buf, struct regional* region,
 	struct ub_packed_rrset_key* rk, struct packed_rrset_data* d,
 	unsigned int i, int is_rrsig, int* go_on, time_t now)
 {
@@ -326,31 +326,31 @@ load_rr(SSL* ssl, ldns_buffer* buf, struct regional* region,
 	/* read the line */
 	if(!ssl_read_buf(ssl, buf))
 		return 0;
-	if(strncmp((char*)ldns_buffer_begin(buf), "BADRR\n", 6) == 0) {
+	if(strncmp((char*)sldns_buffer_begin(buf), "BADRR\n", 6) == 0) {
 		*go_on = 0;
 		return 1;
 	}
-	status = ldns_str2wire_rr_buf((char*)ldns_buffer_begin(buf), rr,
+	status = sldns_str2wire_rr_buf((char*)sldns_buffer_begin(buf), rr,
 		&rr_len, &dname_len, 3600, NULL, 0, NULL, 0);
 	if(status != 0) {
 		log_warn("error cannot parse rr: %s: %s",
-			ldns_get_errorstr_parse(status),
-			(char*)ldns_buffer_begin(buf));
+			sldns_get_errorstr_parse(status),
+			(char*)sldns_buffer_begin(buf));
 		return 0;
 	}
-	if(is_rrsig && ldns_wirerr_get_type(rr, rr_len, dname_len)
+	if(is_rrsig && sldns_wirerr_get_type(rr, rr_len, dname_len)
 		!= LDNS_RR_TYPE_RRSIG) {
 		log_warn("error expected rrsig but got %s",
-			(char*)ldns_buffer_begin(buf));
+			(char*)sldns_buffer_begin(buf));
 		return 0;
 	}
 
 	/* convert ldns rr into packed_rr */
-	d->rr_ttl[i] = (time_t)ldns_wirerr_get_ttl(rr, rr_len, dname_len) + now;
-	ldns_buffer_clear(buf);
-	d->rr_len[i] = ldns_wirerr_get_rdatalen(rr, rr_len, dname_len)+2;
+	d->rr_ttl[i] = (time_t)sldns_wirerr_get_ttl(rr, rr_len, dname_len) + now;
+	sldns_buffer_clear(buf);
+	d->rr_len[i] = sldns_wirerr_get_rdatalen(rr, rr_len, dname_len)+2;
 	d->rr_data[i] = (uint8_t*)regional_alloc_init(region, 
-		ldns_wirerr_get_rdatawl(rr, rr_len, dname_len), d->rr_len[i]);
+		sldns_wirerr_get_rdatawl(rr, rr_len, dname_len), d->rr_len[i]);
 	if(!d->rr_data[i]) {
 		log_warn("error out of memory");
 		return 0;
@@ -358,8 +358,8 @@ load_rr(SSL* ssl, ldns_buffer* buf, struct regional* region,
 
 	/* if first entry, fill the key structure */
 	if(i==0) {
-		rk->rk.type = htons(ldns_wirerr_get_type(rr, rr_len, dname_len));
-		rk->rk.rrset_class = htons(ldns_wirerr_get_class(rr, rr_len, dname_len));
+		rk->rk.type = htons(sldns_wirerr_get_type(rr, rr_len, dname_len));
+		rk->rk.rrset_class = htons(sldns_wirerr_get_class(rr, rr_len, dname_len));
 		rk->rk.dname_len = dname_len;
 		rk->rk.dname = regional_alloc_init(region, rr, dname_len);
 		if(!rk->rk.dname) {
@@ -432,9 +432,9 @@ move_into_cache(struct ub_packed_rrset_key* k,
 
 /** load an rrset entry */
 static int
-load_rrset(SSL* ssl, ldns_buffer* buf, struct worker* worker)
+load_rrset(SSL* ssl, sldns_buffer* buf, struct worker* worker)
 {
-	char* s = (char*)ldns_buffer_begin(buf);
+	char* s = (char*)sldns_buffer_begin(buf);
 	struct regional* region = worker->scratchpad;
 	struct ub_packed_rrset_key* rk;
 	struct packed_rrset_data* d;
@@ -514,10 +514,10 @@ load_rrset(SSL* ssl, ldns_buffer* buf, struct worker* worker)
 static int
 load_rrset_cache(SSL* ssl, struct worker* worker)
 {
-	ldns_buffer* buf = worker->env.scratch_buffer;
+	sldns_buffer* buf = worker->env.scratch_buffer;
 	if(!read_fixed(ssl, buf, "START_RRSET_CACHE")) return 0;
 	while(ssl_read_buf(ssl, buf) && 
-		strcmp((char*)ldns_buffer_begin(buf), "END_RRSET_CACHE")!=0) {
+		strcmp((char*)sldns_buffer_begin(buf), "END_RRSET_CACHE")!=0) {
 		if(!load_rrset(ssl, buf, worker))
 			return 0;
 	}
@@ -546,15 +546,15 @@ load_qinfo(char* str, struct query_info* qinfo, struct regional* region)
 	s++;
 
 	/* parse them */
-	status = ldns_str2wire_rr_question_buf(str, rr, &rr_len, &dname_len,
+	status = sldns_str2wire_rr_question_buf(str, rr, &rr_len, &dname_len,
 		NULL, 0, NULL, 0);
 	if(status != 0) {
 		log_warn("error cannot parse: %s %s",
-			ldns_get_errorstr_parse(status), str);
+			sldns_get_errorstr_parse(status), str);
 		return NULL;
 	}
-	qinfo->qtype = ldns_wirerr_get_type(rr, rr_len, dname_len);
-	qinfo->qclass = ldns_wirerr_get_class(rr, rr_len, dname_len);
+	qinfo->qtype = sldns_wirerr_get_type(rr, rr_len, dname_len);
+	qinfo->qclass = sldns_wirerr_get_class(rr, rr_len, dname_len);
 	qinfo->qname_len = dname_len;
 	qinfo->qname = (uint8_t*)regional_alloc_init(region, rr, dname_len);
 	if(!qinfo->qname) {
@@ -567,11 +567,11 @@ load_qinfo(char* str, struct query_info* qinfo, struct regional* region)
 
 /** load a msg rrset reference */
 static int
-load_ref(SSL* ssl, ldns_buffer* buf, struct worker* worker, 
+load_ref(SSL* ssl, sldns_buffer* buf, struct worker* worker, 
 	struct regional *region, struct ub_packed_rrset_key** rrset, 
 	int* go_on)
 {
-	char* s = (char*)ldns_buffer_begin(buf);
+	char* s = (char*)sldns_buffer_begin(buf);
 	struct query_info qinfo;
 	unsigned int flags;
 	struct ub_packed_rrset_key* k;
@@ -612,12 +612,12 @@ load_ref(SSL* ssl, ldns_buffer* buf, struct worker* worker,
 
 /** load a msg entry */
 static int
-load_msg(SSL* ssl, ldns_buffer* buf, struct worker* worker)
+load_msg(SSL* ssl, sldns_buffer* buf, struct worker* worker)
 {
 	struct regional* region = worker->scratchpad;
 	struct query_info qinf;
 	struct reply_info rep;
-	char* s = (char*)ldns_buffer_begin(buf);
+	char* s = (char*)sldns_buffer_begin(buf);
 	unsigned int flags, qdcount, security, an, ns, ar;
 	long long ttl;
 	size_t i;
@@ -675,10 +675,10 @@ load_msg(SSL* ssl, ldns_buffer* buf, struct worker* worker)
 static int
 load_msg_cache(SSL* ssl, struct worker* worker)
 {
-	ldns_buffer* buf = worker->env.scratch_buffer;
+	sldns_buffer* buf = worker->env.scratch_buffer;
 	if(!read_fixed(ssl, buf, "START_MSG_CACHE")) return 0;
 	while(ssl_read_buf(ssl, buf) && 
-		strcmp((char*)ldns_buffer_begin(buf), "END_MSG_CACHE")!=0) {
+		strcmp((char*)sldns_buffer_begin(buf), "END_MSG_CACHE")!=0) {
 		if(!load_msg(ssl, buf, worker))
 			return 0;
 	}

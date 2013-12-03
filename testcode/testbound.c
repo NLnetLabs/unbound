@@ -302,7 +302,7 @@ main(int argc, char* argv[])
 			break;
 		case 'g':
 #ifdef USE_GOST
-			if(ldns_key_EVP_load_gost_id()) {
+			if(sldns_key_EVP_load_gost_id()) {
 				printf("GOST supported\n");
 				exit(0);
 			} else {

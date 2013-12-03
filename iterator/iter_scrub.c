@@ -60,7 +60,7 @@
 
 /** remove rrset, update loop variables */
 static void
-remove_rrset(const char* str, ldns_buffer* pkt, struct msg_parse* msg, 
+remove_rrset(const char* str, sldns_buffer* pkt, struct msg_parse* msg, 
 	struct rrset_parse* prev, struct rrset_parse** rrset)
 {
 	if(verbosity >= VERB_QUERY && str
@@ -109,7 +109,7 @@ has_additional(uint16_t t)
 /** get additional name from rrset RR, return false if no name present */
 static int
 get_additional_name(struct rrset_parse* rrset, struct rr_parse* rr, 
-	uint8_t** nm, size_t* nmlen, ldns_buffer* pkt) 
+	uint8_t** nm, size_t* nmlen, sldns_buffer* pkt) 
 {
 	size_t offset = 0;
 	size_t len, oldpos;
@@ -133,14 +133,14 @@ get_additional_name(struct rrset_parse* rrset, struct rr_parse* rr,
 		default:
 			return 0;
 	}
-	len = ldns_read_uint16(rr->ttl_data+sizeof(uint32_t));
+	len = sldns_read_uint16(rr->ttl_data+sizeof(uint32_t));
 	if(len < offset+1)
 		return 0; /* rdata field too small */
 	*nm = rr->ttl_data+sizeof(uint32_t)+sizeof(uint16_t)+offset;
-	oldpos = ldns_buffer_position(pkt);
-	ldns_buffer_set_position(pkt, (size_t)(*nm - ldns_buffer_begin(pkt)));
+	oldpos = sldns_buffer_position(pkt);
+	sldns_buffer_set_position(pkt, (size_t)(*nm - sldns_buffer_begin(pkt)));
 	*nmlen = pkt_dname_len(pkt);
-	ldns_buffer_set_position(pkt, oldpos);
+	sldns_buffer_set_position(pkt, oldpos);
 	if(*nmlen == 0)
 		return 0;
 	return 1;
@@ -148,7 +148,7 @@ get_additional_name(struct rrset_parse* rrset, struct rr_parse* rr,
 
 /** Place mark on rrsets in additional section they are OK */
 static void
-mark_additional_rrset(ldns_buffer* pkt, struct msg_parse* msg, 
+mark_additional_rrset(sldns_buffer* pkt, struct msg_parse* msg, 
 	struct rrset_parse* rrset)
 {
 	/* Mark A and AAAA for NS as appropriate additional section info. */
@@ -210,7 +210,7 @@ parse_get_cname_target(struct rrset_parse* rrset, uint8_t** sname,
 /** Synthesize CNAME from DNAME, false if too long */
 static int 
 synth_cname(uint8_t* qname, size_t qnamelen, struct rrset_parse* dname_rrset, 
-	uint8_t* alias, size_t* aliaslen, ldns_buffer* pkt)
+	uint8_t* alias, size_t* aliaslen, sldns_buffer* pkt)
 {
 	/* we already know that sname is a strict subdomain of DNAME owner */
 	uint8_t* dtarg = NULL;
@@ -234,7 +234,7 @@ static struct rrset_parse*
 synth_cname_rrset(uint8_t** sname, size_t* snamelen, uint8_t* alias, 
 	size_t aliaslen, struct regional* region, struct msg_parse* msg, 
 	struct rrset_parse* rrset, struct rrset_parse* prev,
-	struct rrset_parse* nx, ldns_buffer* pkt)
+	struct rrset_parse* nx, sldns_buffer* pkt)
 {
 	struct rrset_parse* cn = (struct rrset_parse*)regional_alloc(region,
 		sizeof(struct rrset_parse));
@@ -265,8 +265,8 @@ synth_cname_rrset(uint8_t** sname, size_t* snamelen, uint8_t* alias,
 		sizeof(uint32_t)+sizeof(uint16_t)+aliaslen);
 	if(!cn->rr_first->ttl_data)
 		return NULL;
-	ldns_write_uint32(cn->rr_first->ttl_data, 0); /* TTL = 0 */
-	ldns_write_uint16(cn->rr_first->ttl_data+4, aliaslen);
+	sldns_write_uint32(cn->rr_first->ttl_data, 0); /* TTL = 0 */
+	sldns_write_uint16(cn->rr_first->ttl_data+4, aliaslen);
 	memmove(cn->rr_first->ttl_data+6, alias, aliaslen);
 	cn->rr_first->size = sizeof(uint16_t)+aliaslen;
 
@@ -288,7 +288,7 @@ synth_cname_rrset(uint8_t** sname, size_t* snamelen, uint8_t* alias,
 
 /** check if DNAME applies to a name */
 static int
-pkt_strict_sub(ldns_buffer* pkt, uint8_t* sname, uint8_t* dr)
+pkt_strict_sub(sldns_buffer* pkt, uint8_t* sname, uint8_t* dr)
 {
 	uint8_t buf1[LDNS_MAX_DOMAINLEN+1];
 	uint8_t buf2[LDNS_MAX_DOMAINLEN+1];
@@ -300,7 +300,7 @@ pkt_strict_sub(ldns_buffer* pkt, uint8_t* sname, uint8_t* dr)
 
 /** check subdomain with decompression */
 static int
-pkt_sub(ldns_buffer* pkt, uint8_t* comprname, uint8_t* zone)
+pkt_sub(sldns_buffer* pkt, uint8_t* comprname, uint8_t* zone)
 {
 	uint8_t buf[LDNS_MAX_DOMAINLEN+1];
 	dname_pkt_copy(pkt, buf, comprname);
@@ -309,7 +309,7 @@ pkt_sub(ldns_buffer* pkt, uint8_t* comprname, uint8_t* zone)
 
 /** check subdomain with decompression, compressed is parent */
 static int
-sub_of_pkt(ldns_buffer* pkt, uint8_t* zone, uint8_t* comprname)
+sub_of_pkt(sldns_buffer* pkt, uint8_t* zone, uint8_t* comprname)
 {
 	uint8_t buf[LDNS_MAX_DOMAINLEN+1];
 	dname_pkt_copy(pkt, buf, comprname);
@@ -328,7 +328,7 @@ sub_of_pkt(ldns_buffer* pkt, uint8_t* zone, uint8_t* comprname)
  * @return 0 on error.
  */
 static int
-scrub_normalize(ldns_buffer* pkt, struct msg_parse* msg, 
+scrub_normalize(sldns_buffer* pkt, struct msg_parse* msg, 
 	struct query_info* qinfo, struct regional* region)
 {
 	uint8_t* sname = qinfo->qname;
@@ -515,7 +515,7 @@ scrub_normalize(ldns_buffer* pkt, struct msg_parse* msg,
  * @param rrset: to store.
  */
 static void
-store_rrset(ldns_buffer* pkt, struct msg_parse* msg, struct module_env* env,
+store_rrset(sldns_buffer* pkt, struct msg_parse* msg, struct module_env* env,
 	struct rrset_parse* rrset)
 {
 	struct ub_packed_rrset_key* k;
@@ -566,7 +566,7 @@ static int sanitize_nsec_is_overreach(struct rrset_parse* rrset,
 	log_assert(rrset->type == LDNS_RR_TYPE_NSEC);
 	for(rr = rrset->rr_first; rr; rr = rr->next) {
 		rhs = rr->ttl_data+4+2;
-		len = ldns_read_uint16(rr->ttl_data+4);
+		len = sldns_read_uint16(rr->ttl_data+4);
 		if(!dname_valid(rhs, len)) {
 			/* malformed domain name in rdata */
 			return 1;
@@ -595,7 +595,7 @@ static int sanitize_nsec_is_overreach(struct rrset_parse* rrset,
  * @return 0 on error.
  */
 static int
-scrub_sanitize(ldns_buffer* pkt, struct msg_parse* msg, 
+scrub_sanitize(sldns_buffer* pkt, struct msg_parse* msg, 
 	struct query_info* qinfo, uint8_t* zonename, struct module_env* env,
 	struct iter_env* ie)
 {
@@ -714,7 +714,7 @@ scrub_sanitize(ldns_buffer* pkt, struct msg_parse* msg,
 }
 
 int 
-scrub_message(ldns_buffer* pkt, struct msg_parse* msg, 
+scrub_message(sldns_buffer* pkt, struct msg_parse* msg, 
 	struct query_info* qinfo, uint8_t* zonename, struct regional* region,
 	struct module_env* env, struct iter_env* ie)
 {

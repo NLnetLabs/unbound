@@ -43,7 +43,7 @@
 #ifndef ITERATOR_ITER_UTILS_H
 #define ITERATOR_ITER_UTILS_H
 #include "iterator/iter_resptype.h"
-struct ldns_buffer;
+struct sldns_buffer;
 struct iter_env;
 struct iter_hints;
 struct iter_forwards;
@@ -102,7 +102,7 @@ struct delegpt_addr* iter_server_selection(struct iter_env* iter_env,
  * @param regional: regional to use for allocation.
  * @return newly allocated dns_msg, or NULL on memory error.
  */
-struct dns_msg* dns_alloc_msg(struct ldns_buffer* pkt, struct msg_parse* msg, 
+struct dns_msg* dns_alloc_msg(struct sldns_buffer* pkt, struct msg_parse* msg, 
 	struct regional* regional);
 
 /**

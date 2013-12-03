@@ -18,8 +18,8 @@
 #include <time.h>
 #include <ctype.h>
 
-ldns_lookup_table *
-ldns_lookup_by_name(ldns_lookup_table *table, const char *name)
+sldns_lookup_table *
+sldns_lookup_by_name(sldns_lookup_table *table, const char *name)
 {
         while (table->name != NULL) {
                 if (strcasecmp(name, table->name) == 0)
@@ -29,8 +29,8 @@ ldns_lookup_by_name(ldns_lookup_table *table, const char *name)
         return NULL;
 }
 
-ldns_lookup_table *
-ldns_lookup_by_id(ldns_lookup_table *table, int id)
+sldns_lookup_table *
+sldns_lookup_by_id(sldns_lookup_table *table, int id)
 {
         while (table->name != NULL) {
                 if (table->id == id)
@@ -69,7 +69,7 @@ leap_days(int y1, int y2)
  * Code adapted from Python 2.4.1 sources (Lib/calendar.py).
  */
 time_t
-ldns_mktime_from_utc(const struct tm *tm)
+sldns_mktime_from_utc(const struct tm *tm)
 {
 	int year = 1900 + tm->tm_year;
 	time_t days = 365 * ((time_t) year - 1970) + leap_days(1970, year);
@@ -96,7 +96,7 @@ ldns_mktime_from_utc(const struct tm *tm)
 #if SIZEOF_TIME_T <= 4
 
 static void
-ldns_year_and_yday_from_days_since_epoch(int64_t days, struct tm *result)
+sldns_year_and_yday_from_days_since_epoch(int64_t days, struct tm *result)
 {
 	int year = 1970;
 	int new_year;
@@ -117,7 +117,7 @@ static const int leap_year_mdays[] = {
 };
 
 static void
-ldns_mon_and_mday_from_year_and_yday(struct tm *result)
+sldns_mon_and_mday_from_year_and_yday(struct tm *result)
 {
 	int idays = result->tm_yday;
 	const int *mon_lengths = is_leap_year(result->tm_year) ? 
@@ -131,7 +131,7 @@ ldns_mon_and_mday_from_year_and_yday(struct tm *result)
 }
 
 static void
-ldns_wday_from_year_and_yday(struct tm *result)
+sldns_wday_from_year_and_yday(struct tm *result)
 {
 	result->tm_wday = 4 /* 1-1-1970 was a thursday */
 			+ LDNS_MOD((result->tm_year - 1970), 7) * LDNS_MOD(365, 7)
@@ -144,7 +144,7 @@ ldns_wday_from_year_and_yday(struct tm *result)
 }
 
 static struct tm *
-ldns_gmtime64_r(int64_t clock, struct tm *result)
+sldns_gmtime64_r(int64_t clock, struct tm *result)
 {
 	result->tm_isdst = 0;
 	result->tm_sec   = (int) LDNS_MOD(clock, 60);
@@ -154,9 +154,9 @@ ldns_gmtime64_r(int64_t clock, struct tm *result)
 	result->tm_hour  = (int) LDNS_MOD(clock, 24);
 	clock            =       LDNS_DIV(clock, 24);
 
-	ldns_year_and_yday_from_days_since_epoch(clock, result);
-	ldns_mon_and_mday_from_year_and_yday(result);
-	ldns_wday_from_year_and_yday(result);
+	sldns_year_and_yday_from_days_since_epoch(clock, result);
+	sldns_mon_and_mday_from_year_and_yday(result);
+	sldns_wday_from_year_and_yday(result);
 	result->tm_year -= 1900;
 
 	return result;
@@ -165,26 +165,26 @@ ldns_gmtime64_r(int64_t clock, struct tm *result)
 #endif /* SIZEOF_TIME_T <= 4 */
 
 static int64_t
-ldns_serial_arithmitics_time(int32_t time, time_t now)
+sldns_serial_arithmitics_time(int32_t time, time_t now)
 {
 	int32_t offset = time - (int32_t) now;
 	return (int64_t) now + offset;
 }
 
 struct tm *
-ldns_serial_arithmitics_gmtime_r(int32_t time, time_t now, struct tm *result)
+sldns_serial_arithmitics_gmtime_r(int32_t time, time_t now, struct tm *result)
 {
 #if SIZEOF_TIME_T <= 4
-	int64_t secs_since_epoch = ldns_serial_arithmitics_time(time, now);
-	return  ldns_gmtime64_r(secs_since_epoch, result);
+	int64_t secs_since_epoch = sldns_serial_arithmitics_time(time, now);
+	return  sldns_gmtime64_r(secs_since_epoch, result);
 #else
-	time_t  secs_since_epoch = ldns_serial_arithmitics_time(time, now);
+	time_t  secs_since_epoch = sldns_serial_arithmitics_time(time, now);
 	return  gmtime_r(&secs_since_epoch, result);
 #endif
 }
 
 int
-ldns_hexdigit_to_int(char ch)
+sldns_hexdigit_to_int(char ch)
 {
 	switch (ch) {
 	case '0': return 0;
@@ -209,7 +209,7 @@ ldns_hexdigit_to_int(char ch)
 }
 
 uint32_t
-ldns_str2period(const char *nptr, const char **endptr)
+sldns_str2period(const char *nptr, const char **endptr)
 {
 	int sign = 0;
 	uint32_t i = 0;
@@ -284,7 +284,7 @@ ldns_str2period(const char *nptr, const char **endptr)
 }
 
 int
-ldns_parse_escape(uint8_t *ch_p, const char** str_p)
+sldns_parse_escape(uint8_t *ch_p, const char** str_p)
 {
 	uint16_t val;
 
@@ -315,32 +315,32 @@ error:
 
 /** parse one character, with escape codes */
 int
-ldns_parse_char(uint8_t *ch_p, const char** str_p)
+sldns_parse_char(uint8_t *ch_p, const char** str_p)
 {
 	switch (**str_p) {
 
 	case '\0':	return 0;
 
 	case '\\':	*str_p += 1;
-			return ldns_parse_escape(ch_p, str_p);
+			return sldns_parse_escape(ch_p, str_p);
 
 	default:	*ch_p = (uint8_t)*(*str_p)++;
 			return 1;
 	}
 }
 
-size_t ldns_b32_ntop_calculate_size(size_t src_data_length)
+size_t sldns_b32_ntop_calculate_size(size_t src_data_length)
 {
 	return src_data_length == 0 ? 0 : ((src_data_length - 1) / 5 + 1) * 8;
 }
 
-size_t ldns_b32_ntop_calculate_size_no_padding(size_t src_data_length)
+size_t sldns_b32_ntop_calculate_size_no_padding(size_t src_data_length)
 {
 	return ((src_data_length + 3) * 8 / 5) - 4;
 }
 
 static int
-ldns_b32_ntop_base(const uint8_t* src, size_t src_sz, char* dst, size_t dst_sz,
+sldns_b32_ntop_base(const uint8_t* src, size_t src_sz, char* dst, size_t dst_sz,
 	int extended_hex, int add_padding)
 {
 	size_t ret_sz;
@@ -352,8 +352,8 @@ ldns_b32_ntop_base(const uint8_t* src, size_t src_sz, char* dst, size_t dst_sz,
 		       * (i.e. src_sz % 5 != 0)
 		       */
 
-	ret_sz = add_padding ? ldns_b32_ntop_calculate_size(src_sz)
-			     : ldns_b32_ntop_calculate_size_no_padding(src_sz);
+	ret_sz = add_padding ? sldns_b32_ntop_calculate_size(src_sz)
+			     : sldns_b32_ntop_calculate_size_no_padding(src_sz);
 	
 	/* Do we have enough space? */
 	if (dst_sz < ret_sz + 1)
@@ -433,25 +433,25 @@ ldns_b32_ntop_base(const uint8_t* src, size_t src_sz, char* dst, size_t dst_sz,
 }
 
 int 
-ldns_b32_ntop(const uint8_t* src, size_t src_sz, char* dst, size_t dst_sz)
+sldns_b32_ntop(const uint8_t* src, size_t src_sz, char* dst, size_t dst_sz)
 {
-	return ldns_b32_ntop_base(src, src_sz, dst, dst_sz, 0, 1);
+	return sldns_b32_ntop_base(src, src_sz, dst, dst_sz, 0, 1);
 }
 
 int 
-ldns_b32_ntop_extended_hex(const uint8_t* src, size_t src_sz,
+sldns_b32_ntop_extended_hex(const uint8_t* src, size_t src_sz,
 		char* dst, size_t dst_sz)
 {
-	return ldns_b32_ntop_base(src, src_sz, dst, dst_sz, 1, 1);
+	return sldns_b32_ntop_base(src, src_sz, dst, dst_sz, 1, 1);
 }
 
-size_t ldns_b32_pton_calculate_size(size_t src_text_length)
+size_t sldns_b32_pton_calculate_size(size_t src_text_length)
 {
 	return src_text_length * 5 / 8;
 }
 
 static int
-ldns_b32_pton_base(const char* src, size_t src_sz, uint8_t* dst, size_t dst_sz,
+sldns_b32_pton_base(const char* src, size_t src_sz, uint8_t* dst, size_t dst_sz,
 	int extended_hex, int check_padding)
 {
 	size_t i = 0;
@@ -583,19 +583,19 @@ ldns_b32_pton_base(const char* src, size_t src_sz, uint8_t* dst, size_t dst_sz,
 }
 
 int
-ldns_b32_pton(const char* src, size_t src_sz, uint8_t* dst, size_t dst_sz)
+sldns_b32_pton(const char* src, size_t src_sz, uint8_t* dst, size_t dst_sz)
 {
-	return ldns_b32_pton_base(src, src_sz, dst, dst_sz, 0, 1);
+	return sldns_b32_pton_base(src, src_sz, dst, dst_sz, 0, 1);
 }
 
 int
-ldns_b32_pton_extended_hex(const char* src, size_t src_sz, 
+sldns_b32_pton_extended_hex(const char* src, size_t src_sz, 
 		uint8_t* dst, size_t dst_sz)
 {
-	return ldns_b32_pton_base(src, src_sz, dst, dst_sz, 1, 1);
+	return sldns_b32_pton_base(src, src_sz, dst, dst_sz, 1, 1);
 }
 
-size_t ldns_b64_ntop_calculate_size(size_t srcsize)
+size_t sldns_b64_ntop_calculate_size(size_t srcsize)
 {
 	return ((((srcsize + 2) / 3) * 4) + 1);
 }
@@ -610,14 +610,14 @@ size_t ldns_b64_ntop_calculate_size(size_t srcsize)
  *
  * This routine does not insert spaces or linebreaks after 76 characters.
  */
-int ldns_b64_ntop(uint8_t const *src, size_t srclength,
+int sldns_b64_ntop(uint8_t const *src, size_t srclength,
 	char *target, size_t targsize)
 {
 	const char* b64 =
 	"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 	const char pad64 = '=';
 	size_t i = 0, o = 0;
-	if(targsize < ldns_b64_ntop_calculate_size(srclength))
+	if(targsize < sldns_b64_ntop_calculate_size(srclength))
 		return -1;
 	/* whole chunks: xxxxxxyy yyyyzzzz zzwwwwww */
 	while(i+3 <= srclength) {
@@ -660,12 +660,12 @@ int ldns_b64_ntop(uint8_t const *src, size_t srclength,
 	return (int)o;
 }
 
-size_t ldns_b64_pton_calculate_size(size_t srcsize)
+size_t sldns_b64_pton_calculate_size(size_t srcsize)
 {
 	return (((((srcsize + 3) / 4) * 3)) + 1);
 }
 
-int ldns_b64_pton(char const *src, uint8_t *target, size_t targsize)
+int sldns_b64_pton(char const *src, uint8_t *target, size_t targsize)
 {
 	const uint8_t pad64 = 64; /* is 64th in the b64 array */
 	const char* s = src;

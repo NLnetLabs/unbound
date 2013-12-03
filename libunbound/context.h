@@ -48,7 +48,7 @@
 #include "util/data/packed_rrset.h"
 struct libworker;
 struct tube;
-struct ldns_buffer;
+struct sldns_buffer;
 struct event_base;
 
 /**
@@ -282,7 +282,7 @@ uint8_t* context_serialize_new_query(struct ctx_query* q, uint32_t* len);
  * @return: an alloc, or NULL on mem error.
  */
 uint8_t* context_serialize_answer(struct ctx_query* q, int err, 
-	struct ldns_buffer* pkt, uint32_t* len);
+	struct sldns_buffer* pkt, uint32_t* len);
 
 /**
  * Serialize a query cancellation. Serializes query async id

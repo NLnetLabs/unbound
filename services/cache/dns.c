@@ -616,7 +616,7 @@ synth_dname_msg(struct ub_packed_rrset_key* rrset, struct regional* region,
 	newd->rr_ttl[0] = newd->ttl;
 	msg->rep->ttl = newd->ttl;
 	msg->rep->prefetch_ttl = PREFETCH_TTL_CALC(newd->ttl);
-	ldns_write_uint16(newd->rr_data[0], newlen);
+	sldns_write_uint16(newd->rr_data[0], newlen);
 	memmove(newd->rr_data[0] + sizeof(uint16_t), newname, newlen);
 	msg->rep->an_numrrsets ++;
 	msg->rep->rrset_count ++;

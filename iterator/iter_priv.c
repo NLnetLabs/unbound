@@ -117,7 +117,7 @@ static int read_names(struct iter_priv* priv, struct config_file* cfg)
 
 	for(p = cfg->private_domain; p; p = p->next) {
 		log_assert(p->str);
-		nm = ldns_str2wire_dname(p->str, &nm_len);
+		nm = sldns_str2wire_dname(p->str, &nm_len);
 		if(!nm) {
 			log_err("cannot parse private-domain: %s", p->str);
 			return 0;
@@ -187,7 +187,7 @@ priv_lookup_addr(struct iter_priv* priv, struct sockaddr_storage* addr,
  * @return: true if the name is OK. false if unlisted.
  */
 static int 
-priv_lookup_name(struct iter_priv* priv, ldns_buffer* pkt,
+priv_lookup_name(struct iter_priv* priv, sldns_buffer* pkt,
 	uint8_t* name, size_t name_len, uint16_t dclass)
 {
 	size_t len;
@@ -209,7 +209,7 @@ size_t priv_get_mem(struct iter_priv* priv)
 
 /** remove RR from msgparse RRset, return true if rrset is entirely bad */
 static int
-remove_rr(const char* str, ldns_buffer* pkt, struct rrset_parse* rrset,
+remove_rr(const char* str, sldns_buffer* pkt, struct rrset_parse* rrset,
 	struct rr_parse* prev, struct rr_parse** rr, struct sockaddr_storage* addr, socklen_t addrlen)
 {
 	if(verbosity >= VERB_QUERY && rrset->dname_len <= LDNS_MAX_DOMAINLEN && str) {
@@ -229,7 +229,7 @@ remove_rr(const char* str, ldns_buffer* pkt, struct rrset_parse* rrset,
 	return rrset->rr_count == 0;
 }
 
-int priv_rrset_bad(struct iter_priv* priv, ldns_buffer* pkt,
+int priv_rrset_bad(struct iter_priv* priv, sldns_buffer* pkt,
 	struct rrset_parse* rrset)
 {
 	if(priv->a.count == 0) 
@@ -252,7 +252,7 @@ int priv_rrset_bad(struct iter_priv* priv, ldns_buffer* pkt,
 			sa.sin_family = AF_INET;
 			sa.sin_port = (in_port_t)htons(UNBOUND_DNS_PORT);
 			for(rr = rrset->rr_first; rr; rr = rr->next) {
-				if(ldns_read_uint16(rr->ttl_data+4) 
+				if(sldns_read_uint16(rr->ttl_data+4) 
 					!= INET_SIZE) {
 					prev = rr;
 					continue;
@@ -275,7 +275,7 @@ int priv_rrset_bad(struct iter_priv* priv, ldns_buffer* pkt,
 			sa.sin6_family = AF_INET6;
 			sa.sin6_port = (in_port_t)htons(UNBOUND_DNS_PORT);
 			for(rr = rrset->rr_first; rr; rr = rr->next) {
-				if(ldns_read_uint16(rr->ttl_data+4) 
+				if(sldns_read_uint16(rr->ttl_data+4) 
 					!= INET6_SIZE) {
 					prev = rr;
 					continue;

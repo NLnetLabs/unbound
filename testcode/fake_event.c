@@ -109,11 +109,11 @@ fake_event_cleanup(void)
 	saved_scenario = NULL;
 }
 
-/** helper function that logs a ldns_pkt packet to logfile */
+/** helper function that logs a sldns_pkt packet to logfile */
 static void
 log_pkt(const char* desc, uint8_t* pkt, size_t len)
 {
-	char* str = ldns_wire2str_pkt(pkt, len);
+	char* str = sldns_wire2str_pkt(pkt, len);
 	if(!str)
 		fatal_exit("%s: (failed out of memory wire2str_pkt)", desc);
 	else {
@@ -152,7 +152,7 @@ delete_fake_pending(struct fake_pending* pend)
 	if(!pend)
 		return;
 	free(pend->zone);
-	ldns_buffer_free(pend->buffer);
+	sldns_buffer_free(pend->buffer);
 	free(pend->pkt);
 	free(pend);
 }
@@ -164,7 +164,7 @@ delete_replay_answer(struct replay_answer* a)
 	if(!a)
 		return;
 	if(a->repinfo.c) {
-		ldns_buffer_free(a->repinfo.c->buffer);
+		sldns_buffer_free(a->repinfo.c->buffer);
 		free(a->repinfo.c);
 	}
 	free(a->pkt);
@@ -282,16 +282,16 @@ pending_list_delete(struct replay_runtime* runtime, struct fake_pending* pend)
  * Fill buffer with reply from the entry.
  */
 static void
-fill_buffer_with_reply(ldns_buffer* buffer, struct entry* entry, uint8_t* q,
+fill_buffer_with_reply(sldns_buffer* buffer, struct entry* entry, uint8_t* q,
 	size_t qlen)
 {
 	uint8_t* c;
 	size_t clen;
 	log_assert(entry && entry->reply_list);
-	ldns_buffer_clear(buffer);
+	sldns_buffer_clear(buffer);
 	if(entry->reply_list->reply_from_hex) {
-		c = ldns_buffer_begin(entry->reply_list->reply_from_hex);
-		clen = ldns_buffer_limit(entry->reply_list->reply_from_hex);
+		c = sldns_buffer_begin(entry->reply_list->reply_from_hex);
+		clen = sldns_buffer_limit(entry->reply_list->reply_from_hex);
 		if(!c) fatal_exit("out of memory");
 	} else {
 		c = entry->reply_list->reply_pkt;
@@ -299,10 +299,10 @@ fill_buffer_with_reply(ldns_buffer* buffer, struct entry* entry, uint8_t* q,
 	}
 	if(c) {
 		if(q) adjust_packet(entry, &c, &clen, q, qlen);
-		ldns_buffer_write(buffer, c, clen);
+		sldns_buffer_write(buffer, c, clen);
 		if(q) free(c);
 	}
-	ldns_buffer_flip(buffer);
+	sldns_buffer_flip(buffer);
 }
 
 /**
@@ -322,7 +322,7 @@ answer_callback_from_entry(struct replay_runtime* runtime,
 
 	memset(&c, 0, sizeof(c));
 	c.fd = -1;
-	c.buffer = ldns_buffer_new(runtime->bufsize);
+	c.buffer = sldns_buffer_new(runtime->bufsize);
 	c.type = comm_udp;
 	if(pend->transport == transport_tcp)
 		c.type = comm_tcp;
@@ -335,7 +335,7 @@ answer_callback_from_entry(struct replay_runtime* runtime,
 	if((*cb)(&c, cb_arg, NETEVENT_NOERROR, &repinfo)) {
 		fatal_exit("testbound: unexpected: callback returned 1");
 	}
-	ldns_buffer_free(c.buffer);
+	sldns_buffer_free(c.buffer);
 }
 
 /** Check the now moment answer check event */
@@ -393,7 +393,7 @@ fake_front_query(struct replay_runtime* runtime, struct replay_moment *todo)
 	}
 	repinfo.c->fd = -1;
 	repinfo.c->ev = (struct internal_event*)runtime;
-	repinfo.c->buffer = ldns_buffer_new(runtime->bufsize);
+	repinfo.c->buffer = sldns_buffer_new(runtime->bufsize);
 	if(todo->match->match_transport == transport_tcp)
 		repinfo.c->type = comm_tcp;
 	else	repinfo.c->type = comm_udp;
@@ -428,7 +428,7 @@ fake_pending_callback(struct replay_runtime* runtime,
 	if(!p) fatal_exit("No pending queries.");
 	cb_arg = p->cb_arg;
 	cb = p->callback;
-	c.buffer = ldns_buffer_new(runtime->bufsize);
+	c.buffer = sldns_buffer_new(runtime->bufsize);
 	c.type = comm_udp;
 	if(p->transport == transport_tcp)
 		c.type = comm_tcp;
@@ -445,7 +445,7 @@ fake_pending_callback(struct replay_runtime* runtime,
 		fatal_exit("unexpected: pending callback returned 1");
 	}
 	/* delete the pending item. */
-	ldns_buffer_free(c.buffer);
+	sldns_buffer_free(c.buffer);
 }
 
 /** pass time */
@@ -557,7 +557,7 @@ do_infra_rtt(struct replay_runtime* runtime)
 	struct replay_moment* now = runtime->now;
 	int rto;
 	size_t dplen = 0;
-	uint8_t* dp = ldns_str2wire_dname(now->variable, &dplen);
+	uint8_t* dp = sldns_str2wire_dname(now->variable, &dplen);
 	if(!dp) fatal_exit("cannot parse %s", now->variable);
 	rto = infra_rtt_update(runtime->infra, &now->addr, now->addrlen,
 		dp, dplen, LDNS_RR_TYPE_A, atoi(now->string),
@@ -741,7 +741,7 @@ listen_create(struct comm_base* base, struct listen_port* ATTR_UNUSED(ports),
 	if(!l)
 		return NULL;
 	l->base = base;
-	l->udp_buff = ldns_buffer_new(bufsize);
+	l->udp_buff = sldns_buffer_new(bufsize);
 	if(!l->udp_buff) {
 		free(l);
 		return NULL;
@@ -757,7 +757,7 @@ listen_delete(struct listen_dnsport* listen)
 {
 	if(!listen)
 		return;
-	ldns_buffer_free(listen->udp_buff);
+	sldns_buffer_free(listen->udp_buff);
 	free(listen);
 }
 
@@ -873,9 +873,9 @@ comm_point_send_reply(struct comm_reply* repinfo)
 	runtime->answer_last = ans;
 
 	/* try to parse packet */
-	ans->pkt = memdup(ldns_buffer_begin(ans->repinfo.c->buffer),
-		ldns_buffer_limit(ans->repinfo.c->buffer));
-	ans->pkt_len = ldns_buffer_limit(ans->repinfo.c->buffer);
+	ans->pkt = memdup(sldns_buffer_begin(ans->repinfo.c->buffer),
+		sldns_buffer_limit(ans->repinfo.c->buffer));
+	ans->pkt_len = sldns_buffer_limit(ans->repinfo.c->buffer);
 	if(!ans->pkt) fatal_exit("out of memory");
 	log_pkt("reply pkt: ", ans->pkt, ans->pkt_len);
 }
@@ -885,7 +885,7 @@ comm_point_drop_reply(struct comm_reply* repinfo)
 {
 	log_info("comm_point_drop_reply fake");
 	if(repinfo->c) {
-		ldns_buffer_free(repinfo->c->buffer);
+		sldns_buffer_free(repinfo->c->buffer);
 		free(repinfo->c);
 	}
 }
@@ -910,7 +910,7 @@ outside_network_create(struct comm_base* base, size_t bufsize,
 		return NULL;
 	runtime->infra = infra;
 	outnet->base = base;
-	outnet->udp_buff = ldns_buffer_new(bufsize);
+	outnet->udp_buff = sldns_buffer_new(bufsize);
 	if(!outnet->udp_buff) {
 		free(outnet);
 		return NULL;
@@ -923,7 +923,7 @@ outside_network_delete(struct outside_network* outnet)
 {
 	if(!outnet)
 		return;
-	ldns_buffer_free(outnet->udp_buff);
+	sldns_buffer_free(outnet->udp_buff);
 	free(outnet);
 }
 
@@ -933,7 +933,7 @@ outside_network_quit_prepare(struct outside_network* ATTR_UNUSED(outnet))
 }
 
 struct pending* 
-pending_udp_query(struct outside_network* outnet, ldns_buffer* packet,
+pending_udp_query(struct outside_network* outnet, sldns_buffer* packet,
 	struct sockaddr_storage* addr, socklen_t addrlen, int timeout,
 	comm_point_callback_t* callback, void* callback_arg)
 {
@@ -941,11 +941,11 @@ pending_udp_query(struct outside_network* outnet, ldns_buffer* packet,
 	struct fake_pending* pend = (struct fake_pending*)calloc(1,
 		sizeof(struct fake_pending));
 	log_assert(pend);
-	pend->buffer = ldns_buffer_new(ldns_buffer_capacity(packet));
+	pend->buffer = sldns_buffer_new(sldns_buffer_capacity(packet));
 	log_assert(pend->buffer);
-	ldns_buffer_write(pend->buffer, ldns_buffer_begin(packet),
-		ldns_buffer_limit(packet));
-	ldns_buffer_flip(pend->buffer);
+	sldns_buffer_write(pend->buffer, sldns_buffer_begin(packet),
+		sldns_buffer_limit(packet));
+	sldns_buffer_flip(pend->buffer);
 	memcpy(&pend->addr, addr, addrlen);
 	pend->addrlen = addrlen;
 	pend->callback = callback;
@@ -956,8 +956,8 @@ pending_udp_query(struct outside_network* outnet, ldns_buffer* packet,
 	pend->zone = NULL;
 	pend->serviced = 0;
 	pend->runtime = runtime;
-	pend->pkt_len = ldns_buffer_limit(packet);
-	pend->pkt = memdup(ldns_buffer_begin(packet), pend->pkt_len);
+	pend->pkt_len = sldns_buffer_limit(packet);
+	pend->pkt = memdup(sldns_buffer_begin(packet), pend->pkt_len);
 	if(!pend->pkt) fatal_exit("out of memory");
 	log_pkt("pending udp pkt: ", pend->pkt, pend->pkt_len);
 
@@ -983,7 +983,7 @@ pending_udp_query(struct outside_network* outnet, ldns_buffer* packet,
 }
 
 struct waiting_tcp* 
-pending_tcp_query(struct outside_network* outnet, ldns_buffer* packet,
+pending_tcp_query(struct outside_network* outnet, sldns_buffer* packet,
 	struct sockaddr_storage* addr, socklen_t addrlen, int timeout,
 	comm_point_callback_t* callback, void* callback_arg,
 	int ATTR_UNUSED(ssl_upstream))
@@ -992,11 +992,11 @@ pending_tcp_query(struct outside_network* outnet, ldns_buffer* packet,
 	struct fake_pending* pend = (struct fake_pending*)calloc(1,
 		sizeof(struct fake_pending));
 	log_assert(pend);
-	pend->buffer = ldns_buffer_new(ldns_buffer_capacity(packet));
+	pend->buffer = sldns_buffer_new(sldns_buffer_capacity(packet));
 	log_assert(pend->buffer);
-	ldns_buffer_write(pend->buffer, ldns_buffer_begin(packet),
-		ldns_buffer_limit(packet));
-	ldns_buffer_flip(pend->buffer);
+	sldns_buffer_write(pend->buffer, sldns_buffer_begin(packet),
+		sldns_buffer_limit(packet));
+	sldns_buffer_flip(pend->buffer);
 	memcpy(&pend->addr, addr, addrlen);
 	pend->addrlen = addrlen;
 	pend->callback = callback;
@@ -1007,8 +1007,8 @@ pending_tcp_query(struct outside_network* outnet, ldns_buffer* packet,
 	pend->zone = NULL;
 	pend->runtime = runtime;
 	pend->serviced = 0;
-	pend->pkt_len = ldns_buffer_limit(packet);
-	pend->pkt = memdup(ldns_buffer_begin(packet), pend->pkt_len);
+	pend->pkt_len = sldns_buffer_limit(packet);
+	pend->pkt = memdup(sldns_buffer_begin(packet), pend->pkt_len);
 	if(!pend->pkt) fatal_exit("out of memory");
 	log_pkt("pending tcp pkt: ", pend->pkt, pend->pkt_len);
 
@@ -1039,7 +1039,7 @@ struct serviced_query* outnet_serviced_query(struct outside_network* outnet,
 	int ATTR_UNUSED(tcp_upstream), int ATTR_UNUSED(ssl_upstream),
 	struct sockaddr_storage* addr, socklen_t addrlen, uint8_t* zone,
 	size_t zonelen, comm_point_callback_t* callback, void* callback_arg,
-	ldns_buffer* ATTR_UNUSED(buff))
+	sldns_buffer* ATTR_UNUSED(buff))
 {
 	struct replay_runtime* runtime = (struct replay_runtime*)outnet->base;
 	struct fake_pending* pend = (struct fake_pending*)calloc(1,
@@ -1054,18 +1054,18 @@ struct serviced_query* outnet_serviced_query(struct outside_network* outnet,
 		(flags&~(BIT_RD|BIT_CD))?" MORE":"", (dnssec)?" DO":"");
 
 	/* create packet with EDNS */
-	pend->buffer = ldns_buffer_new(512);
+	pend->buffer = sldns_buffer_new(512);
 	log_assert(pend->buffer);
-	ldns_buffer_write_u16(pend->buffer, 0); /* id */
-	ldns_buffer_write_u16(pend->buffer, flags);
-	ldns_buffer_write_u16(pend->buffer, 1); /* qdcount */
-	ldns_buffer_write_u16(pend->buffer, 0); /* ancount */
-	ldns_buffer_write_u16(pend->buffer, 0); /* nscount */
-	ldns_buffer_write_u16(pend->buffer, 0); /* arcount */
-	ldns_buffer_write(pend->buffer, qname, qnamelen);
-	ldns_buffer_write_u16(pend->buffer, qtype);
-	ldns_buffer_write_u16(pend->buffer, qclass);
-	ldns_buffer_flip(pend->buffer);
+	sldns_buffer_write_u16(pend->buffer, 0); /* id */
+	sldns_buffer_write_u16(pend->buffer, flags);
+	sldns_buffer_write_u16(pend->buffer, 1); /* qdcount */
+	sldns_buffer_write_u16(pend->buffer, 0); /* ancount */
+	sldns_buffer_write_u16(pend->buffer, 0); /* nscount */
+	sldns_buffer_write_u16(pend->buffer, 0); /* arcount */
+	sldns_buffer_write(pend->buffer, qname, qnamelen);
+	sldns_buffer_write_u16(pend->buffer, qtype);
+	sldns_buffer_write_u16(pend->buffer, qclass);
+	sldns_buffer_flip(pend->buffer);
 	if(1) {
 		/* add edns */
 		struct edns_data edns;
@@ -1091,8 +1091,8 @@ struct serviced_query* outnet_serviced_query(struct outside_network* outnet,
 	pend->pkt = NULL;
 	pend->runtime = runtime;
 	pend->serviced = 1;
-	pend->pkt_len = ldns_buffer_limit(pend->buffer);
-	pend->pkt = memdup(ldns_buffer_begin(pend->buffer), pend->pkt_len);
+	pend->pkt_len = sldns_buffer_limit(pend->buffer);
+	pend->pkt = memdup(sldns_buffer_begin(pend->buffer), pend->pkt_len);
 	if(!pend->pkt) fatal_exit("out of memory");
 	/*log_pkt("pending serviced query: ", pend->pkt, pend->pkt_len);*/
 
@@ -1130,7 +1130,7 @@ void outnet_serviced_query_stop(struct serviced_query* sq, void* cb_arg)
 			if(prev)
 				prev->next = p->next;
 			else 	runtime->pending_list = p->next;
-			ldns_buffer_free(p->buffer);
+			sldns_buffer_free(p->buffer);
 			free(p->pkt);
 			free(p->zone);
 			free(p);

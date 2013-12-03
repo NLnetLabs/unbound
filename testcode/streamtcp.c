@@ -112,26 +112,26 @@ open_svr(const char* svr, int udp)
 
 /** write a query over the TCP fd */
 static void
-write_q(int fd, int udp, SSL* ssl, ldns_buffer* buf, uint16_t id, 
+write_q(int fd, int udp, SSL* ssl, sldns_buffer* buf, uint16_t id, 
 	const char* strname, const char* strtype, const char* strclass)
 {
 	struct query_info qinfo;
 	uint16_t len;
 	/* qname */
-	qinfo.qname = ldns_str2wire_dname(strname, &qinfo.qname_len);
+	qinfo.qname = sldns_str2wire_dname(strname, &qinfo.qname_len);
 	if(!qinfo.qname) {
 		printf("cannot parse query name: '%s'\n", strname);
 		exit(1);
 	}
 
 	/* qtype and qclass */
-	qinfo.qtype = ldns_get_rr_type_by_name(strtype);
-	qinfo.qclass = ldns_get_rr_class_by_name(strclass);
+	qinfo.qtype = sldns_get_rr_type_by_name(strtype);
+	qinfo.qclass = sldns_get_rr_class_by_name(strclass);
 
 	/* make query */
 	qinfo_query_encode(buf, &qinfo);
-	ldns_buffer_write_u16_at(buf, 0, id);
-	ldns_buffer_write_u16_at(buf, 2, BIT_RD);
+	sldns_buffer_write_u16_at(buf, 0, id);
+	sldns_buffer_write_u16_at(buf, 2, BIT_RD);
 
 	if(1) {
 		/* add EDNS DO */
@@ -145,7 +145,7 @@ write_q(int fd, int udp, SSL* ssl, ldns_buffer* buf, uint16_t id,
 
 	/* send it */
 	if(!udp) {
-		len = (uint16_t)ldns_buffer_limit(buf);
+		len = (uint16_t)sldns_buffer_limit(buf);
 		len = htons(len);
 		if(ssl) {
 			if(SSL_write(ssl, (void*)&len, (int)sizeof(len)) <= 0) {
@@ -166,15 +166,15 @@ write_q(int fd, int udp, SSL* ssl, ldns_buffer* buf, uint16_t id,
 		}
 	}
 	if(ssl) {
-		if(SSL_write(ssl, (void*)ldns_buffer_begin(buf),
-			(int)ldns_buffer_limit(buf)) <= 0) {
+		if(SSL_write(ssl, (void*)sldns_buffer_begin(buf),
+			(int)sldns_buffer_limit(buf)) <= 0) {
 			log_crypto_err("cannot SSL_write");
 			exit(1);
 		}
 	} else {
-		if(send(fd, (void*)ldns_buffer_begin(buf),
-			ldns_buffer_limit(buf), 0) < 
-			(ssize_t)ldns_buffer_limit(buf)) {
+		if(send(fd, (void*)sldns_buffer_begin(buf),
+			sldns_buffer_limit(buf), 0) < 
+			(ssize_t)sldns_buffer_limit(buf)) {
 #ifndef USE_WINSOCK
 			perror("send() data failed");
 #else
@@ -189,7 +189,7 @@ write_q(int fd, int udp, SSL* ssl, ldns_buffer* buf, uint16_t id,
 
 /** receive DNS datagram over TCP and print it */
 static void
-recv_one(int fd, int udp, SSL* ssl, ldns_buffer* buf)
+recv_one(int fd, int udp, SSL* ssl, sldns_buffer* buf)
 {
 	char* pktstr;
 	uint16_t len;
@@ -212,10 +212,10 @@ recv_one(int fd, int udp, SSL* ssl, ldns_buffer* buf)
 			}
 		}
 		len = ntohs(len);
-		ldns_buffer_clear(buf);
-		ldns_buffer_set_limit(buf, len);
+		sldns_buffer_clear(buf);
+		sldns_buffer_set_limit(buf, len);
 		if(ssl) {
-			int r = SSL_read(ssl, (void*)ldns_buffer_begin(buf),
+			int r = SSL_read(ssl, (void*)sldns_buffer_begin(buf),
 				(int)len);
 			if(r <= 0) {
 				log_crypto_err("could not SSL_read");
@@ -224,7 +224,7 @@ recv_one(int fd, int udp, SSL* ssl, ldns_buffer* buf)
 			if(r != (int)len)
 				fatal_exit("ssl_read %d of %d", r, len);
 		} else {
-			if(recv(fd, (void*)ldns_buffer_begin(buf), len, 0) < 
+			if(recv(fd, (void*)sldns_buffer_begin(buf), len, 0) < 
 				(ssize_t)len) {
 #ifndef USE_WINSOCK
 				perror("read() data failed");
@@ -237,9 +237,9 @@ recv_one(int fd, int udp, SSL* ssl, ldns_buffer* buf)
 		}
 	} else {
 		ssize_t l;
-		ldns_buffer_clear(buf);
-		if((l=recv(fd, (void*)ldns_buffer_begin(buf), 
-			ldns_buffer_capacity(buf), 0)) < 0) {
+		sldns_buffer_clear(buf);
+		if((l=recv(fd, (void*)sldns_buffer_begin(buf), 
+			sldns_buffer_capacity(buf), 0)) < 0) {
 #ifndef USE_WINSOCK
 			perror("read() data failed");
 #else
@@ -248,13 +248,13 @@ recv_one(int fd, int udp, SSL* ssl, ldns_buffer* buf)
 #endif
 			exit(1);
 		}
-		ldns_buffer_set_limit(buf, (size_t)l);
+		sldns_buffer_set_limit(buf, (size_t)l);
 		len = (size_t)l;
 	}
 	printf("\nnext received packet\n");
 	log_buf(0, "data", buf);
 
-	pktstr = ldns_wire2str_pkt(ldns_buffer_begin(buf), len);
+	pktstr = sldns_wire2str_pkt(sldns_buffer_begin(buf), len);
 	printf("%s", pktstr);
 	free(pktstr);
 }
@@ -272,7 +272,7 @@ static int get_random(void)
 static void
 send_em(const char* svr, int udp, int usessl, int noanswer, int num, char** qs)
 {
-	ldns_buffer* buf = ldns_buffer_new(65553);
+	sldns_buffer* buf = sldns_buffer_new(65553);
 	int fd = open_svr(svr, udp);
 	int i;
 	SSL_CTX* ctx = NULL;
@@ -323,7 +323,7 @@ send_em(const char* svr, int udp, int usessl, int noanswer, int num, char** qs)
 #else
 	closesocket(fd);
 #endif
-	ldns_buffer_free(buf);
+	sldns_buffer_free(buf);
 	printf("orderly exit\n");
 }
 

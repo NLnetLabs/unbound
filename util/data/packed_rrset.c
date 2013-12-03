@@ -207,7 +207,7 @@ get_cname_target(struct ub_packed_rrset_key* rrset, uint8_t** dname,
 		return;
 	if(d->rr_len[0] < 3) /* at least rdatalen + 0byte root label */
 		return;
-	len = ldns_read_uint16(d->rr_data[0]);
+	len = sldns_read_uint16(d->rr_data[0]);
 	if(len != d->rr_len[0] - sizeof(uint16_t))
 		return;
 	if(dname_valid(d->rr_data[0]+sizeof(uint16_t), len) != len)
@@ -283,12 +283,12 @@ int packed_rr_to_string(struct ub_packed_rrset_key* rrset, size_t i,
 	memmove(rr, rrset->rk.dname, rrset->rk.dname_len);
 	if(i < d->count)
 		memmove(rr+rrset->rk.dname_len, &rrset->rk.type, 2);
-	else	ldns_write_uint16(rr+rrset->rk.dname_len, LDNS_RR_TYPE_RRSIG);
+	else	sldns_write_uint16(rr+rrset->rk.dname_len, LDNS_RR_TYPE_RRSIG);
 	memmove(rr+rrset->rk.dname_len+2, &rrset->rk.rrset_class, 2);
-	ldns_write_uint32(rr+rrset->rk.dname_len+4,
+	sldns_write_uint32(rr+rrset->rk.dname_len+4,
 		(uint32_t)(d->rr_ttl[i]-now));
 	memmove(rr+rrset->rk.dname_len+8, d->rr_data[i], d->rr_len[i]);
-	if(ldns_wire2str_rr_buf(rr, rlen, dest, dest_len) == -1) {
+	if(sldns_wire2str_rr_buf(rr, rlen, dest, dest_len) == -1) {
 		log_info("rrbuf failure %d %s", (int)d->rr_len[i], dest);
 		dest[0] = 0;
 		return 0;

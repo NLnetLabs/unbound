@@ -65,7 +65,7 @@
 #include "util/storage/lruhash.h"
 #include "ldns/pkthdr.h"
 #include "ldns/rrdef.h"
-struct ldns_buffer;
+struct sldns_buffer;
 struct rrset_parse;
 struct rr_parse;
 struct regional;
@@ -139,7 +139,7 @@ struct rrset_parse {
 	/** which section was it found in: one of
 	 * LDNS_SECTION_ANSWER, LDNS_SECTION_AUTHORITY, LDNS_SECTION_ADDITIONAL
 	 */
-	ldns_pkt_section section;
+	sldns_pkt_section section;
 	/** start of (possibly compressed) dname in packet */
 	uint8_t* dname;
 	/** length of the dname uncompressed wireformat */
@@ -221,7 +221,7 @@ struct edns_data {
  * @param rdf: the rdf type from the descriptor.
  * @return: size in octets. 0 on failure.
  */
-size_t get_rdf_size(ldns_rdf_type rdf);
+size_t get_rdf_size(sldns_rdf_type rdf);
 
 /**
  * Parse the packet.
@@ -231,7 +231,7 @@ size_t get_rdf_size(ldns_rdf_type rdf);
  * @param region: how to alloc results.
  * @return: 0 if OK, or rcode on error.
  */
-int parse_packet(struct ldns_buffer* pkt, struct msg_parse* msg, 
+int parse_packet(struct sldns_buffer* pkt, struct msg_parse* msg, 
 	struct regional* region);
 
 /**
@@ -261,7 +261,7 @@ int parse_extract_edns(struct msg_parse* msg, struct edns_data* edns);
  * @return: 0 on success, or an RCODE on error.
  *	RCODE formerr if OPT is badly formatted and so on.
  */
-int parse_edns_from_pkt(struct ldns_buffer* pkt, struct edns_data* edns);
+int parse_edns_from_pkt(struct sldns_buffer* pkt, struct edns_data* edns);
 
 /**
  * Calculate hash value for rrset in packet.
@@ -272,7 +272,7 @@ int parse_edns_from_pkt(struct ldns_buffer* pkt, struct edns_data* edns);
  * @param rrset_flags: rrset flags (same as packed_rrset flags).
  * @return hash value
  */
-hashvalue_t pkt_hash_rrset(struct ldns_buffer* pkt, uint8_t* dname, uint16_t type,
+hashvalue_t pkt_hash_rrset(struct sldns_buffer* pkt, uint8_t* dname, uint16_t type,
         uint16_t dclass, uint32_t rrset_flags);
 
 /**
@@ -288,7 +288,7 @@ hashvalue_t pkt_hash_rrset(struct ldns_buffer* pkt, uint8_t* dname, uint16_t typ
  * @return NULL or the rrset_parse if found.
  */
 struct rrset_parse* msgparse_hashtable_lookup(struct msg_parse* msg, 
-	struct ldns_buffer* pkt, hashvalue_t h, uint32_t rrset_flags, 
+	struct sldns_buffer* pkt, hashvalue_t h, uint32_t rrset_flags, 
 	uint8_t* dname, size_t dnamelen, uint16_t type, uint16_t dclass);
 
 /**

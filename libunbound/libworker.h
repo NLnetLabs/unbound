@@ -57,7 +57,7 @@ struct comm_point;
 struct comm_reply;
 struct regional;
 struct tube;
-struct ldns_buffer;
+struct sldns_buffer;
 struct event_base;
 
 /** 
@@ -175,15 +175,15 @@ void libworker_handle_result_write(struct tube* tube, uint8_t* msg, size_t len,
 	int err, void* arg);
 
 /** mesh callback with fg results */
-void libworker_fg_done_cb(void* arg, int rcode, struct ldns_buffer* buf, 
+void libworker_fg_done_cb(void* arg, int rcode, struct sldns_buffer* buf, 
 	enum sec_status s, char* why_bogus);
 
 /** mesh callback with bg results */
-void libworker_bg_done_cb(void* arg, int rcode, struct ldns_buffer* buf, 
+void libworker_bg_done_cb(void* arg, int rcode, struct sldns_buffer* buf, 
 	enum sec_status s, char* why_bogus);
 
 /** mesh callback with event results */
-void libworker_event_done_cb(void* arg, int rcode, struct ldns_buffer* buf, 
+void libworker_event_done_cb(void* arg, int rcode, struct sldns_buffer* buf, 
 	enum sec_status s, char* why_bogus);
 
 /** 
@@ -195,7 +195,7 @@ void libworker_event_done_cb(void* arg, int rcode, struct ldns_buffer* buf,
  *   On error, the res may contain a different status 
  *   (out of memory is not secure, not bogus).
  */
-void libworker_enter_result(struct ub_result* res, struct ldns_buffer* buf,
+void libworker_enter_result(struct ub_result* res, struct sldns_buffer* buf,
 	struct regional* temp, enum sec_status msg_security);
 
 #endif /* LIBUNBOUND_WORKER_H */

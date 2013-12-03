@@ -76,10 +76,10 @@
 
 /** initiate TCP transaction for serviced query */
 static void serviced_tcp_initiate(struct outside_network* outnet, 
-	struct serviced_query* sq, ldns_buffer* buff);
+	struct serviced_query* sq, sldns_buffer* buff);
 /** with a fd available, randomize and send UDP */
 static int randomize_and_send_udp(struct outside_network* outnet, 
-	struct pending* pend, ldns_buffer* packet, int timeout);
+	struct pending* pend, sldns_buffer* packet, int timeout);
 
 int 
 pending_cmp(const void* key1, const void* key2)
@@ -263,9 +263,9 @@ outnet_tcp_take_into_use(struct waiting_tcp* w, uint8_t* pkt, size_t pkt_len)
 	pend->query = w;
 	pend->c->repinfo.addrlen = w->addrlen;
 	memcpy(&pend->c->repinfo.addr, &w->addr, w->addrlen);
-	ldns_buffer_clear(pend->c->buffer);
-	ldns_buffer_write(pend->c->buffer, pkt, pkt_len);
-	ldns_buffer_flip(pend->c->buffer);
+	sldns_buffer_clear(pend->c->buffer);
+	sldns_buffer_write(pend->c->buffer, pkt, pkt_len);
+	sldns_buffer_flip(pend->c->buffer);
 	pend->c->tcp_is_reading = 0;
 	pend->c->tcp_byte_count = 0;
 	comm_point_start_listening(pend->c, s, -1);
@@ -325,8 +325,8 @@ outnet_tcp_cb(struct comm_point* c, void* arg, int error,
 		/* pass error below and exit */
 	} else {
 		/* check ID */
-		if(ldns_buffer_limit(c->buffer) < sizeof(uint16_t) ||
-			LDNS_ID_WIRE(ldns_buffer_begin(c->buffer))!=pend->id) {
+		if(sldns_buffer_limit(c->buffer) < sizeof(uint16_t) ||
+			LDNS_ID_WIRE(sldns_buffer_begin(c->buffer))!=pend->id) {
 			log_addr(VERB_QUERY, 
 				"outnettcp: bad ID in reply, from:",
 				&pend->query->addr, pend->query->addrlen);
@@ -372,9 +372,9 @@ outnet_send_wait_udp(struct outside_network* outnet)
 		pend = outnet->udp_wait_first;
 		outnet->udp_wait_first = pend->next_waiting;
 		if(!pend->next_waiting) outnet->udp_wait_last = NULL;
-		ldns_buffer_clear(outnet->udp_buff);
-		ldns_buffer_write(outnet->udp_buff, pend->pkt, pend->pkt_len);
-		ldns_buffer_flip(outnet->udp_buff);
+		sldns_buffer_clear(outnet->udp_buff);
+		sldns_buffer_write(outnet->udp_buff, pend->pkt, pend->pkt_len);
+		sldns_buffer_flip(outnet->udp_buff);
 		free(pend->pkt); /* freeing now makes get_mem correct */
 		pend->pkt = NULL; 
 		pend->pkt_len = 0;
@@ -402,14 +402,14 @@ outnet_udp_cb(struct comm_point* c, void* arg, int error,
 		verbose(VERB_QUERY, "outnetudp got udp error %d", error);
 		return 0;
 	}
-	if(ldns_buffer_limit(c->buffer) < LDNS_HEADER_SIZE) {
+	if(sldns_buffer_limit(c->buffer) < LDNS_HEADER_SIZE) {
 		verbose(VERB_QUERY, "outnetudp udp too short");
 		return 0;
 	}
 	log_assert(reply_info);
 
 	/* setup lookup key */
-	key.id = (unsigned)LDNS_ID_WIRE(ldns_buffer_begin(c->buffer));
+	key.id = (unsigned)LDNS_ID_WIRE(sldns_buffer_begin(c->buffer));
 	memcpy(&key.addr, &reply_info->addr, reply_info->addrlen);
 	key.addrlen = reply_info->addrlen;
 	verbose(VERB_ALGO, "Incoming reply id = %4.4x", key.id);
@@ -609,7 +609,7 @@ outside_network_create(struct comm_base *base, size_t bufsize,
 			return NULL;
 		}
 	}
-	if(	!(outnet->udp_buff = ldns_buffer_new(bufsize)) ||
+	if(	!(outnet->udp_buff = sldns_buffer_new(bufsize)) ||
 		!(outnet->pending = rbtree_create(pending_cmp)) ||
 		!(outnet->serviced = rbtree_create(serviced_cmp)) ||
 		!create_pending_tcp(outnet, bufsize)) {
@@ -731,7 +731,7 @@ outside_network_delete(struct outside_network* outnet)
 		free(outnet->serviced);
 	}
 	if(outnet->udp_buff)
-		ldns_buffer_free(outnet->udp_buff);
+		sldns_buffer_free(outnet->udp_buff);
 	if(outnet->unused_fds) {
 		struct port_comm* p = outnet->unused_fds, *np;
 		while(p) {
@@ -863,18 +863,18 @@ udp_sockport(struct sockaddr_storage* addr, socklen_t addrlen, int port,
 /** Select random ID */
 static int
 select_id(struct outside_network* outnet, struct pending* pend,
-	ldns_buffer* packet)
+	sldns_buffer* packet)
 {
 	int id_tries = 0;
 	pend->id = ((unsigned)ub_random(outnet->rnd)>>8) & 0xffff;
-	LDNS_ID_SET(ldns_buffer_begin(packet), pend->id);
+	LDNS_ID_SET(sldns_buffer_begin(packet), pend->id);
 
 	/* insert in tree */
 	pend->node.key = pend;
 	while(!rbtree_insert(outnet->pending, &pend->node)) {
 		/* change ID to avoid collision */
 		pend->id = ((unsigned)ub_random(outnet->rnd)>>8) & 0xffff;
-		LDNS_ID_SET(ldns_buffer_begin(packet), pend->id);
+		LDNS_ID_SET(sldns_buffer_begin(packet), pend->id);
 		id_tries++;
 		if(id_tries == MAX_ID_RETRY) {
 			pend->id=99999; /* non existant ID */
@@ -958,7 +958,7 @@ select_ifport(struct outside_network* outnet, struct pending* pend,
 
 static int
 randomize_and_send_udp(struct outside_network* outnet, struct pending* pend,
-	ldns_buffer* packet, int timeout)
+	sldns_buffer* packet, int timeout)
 {
 	struct timeval tv;
 
@@ -997,7 +997,7 @@ randomize_and_send_udp(struct outside_network* outnet, struct pending* pend,
 }
 
 struct pending* 
-pending_udp_query(struct outside_network* outnet, ldns_buffer* packet, 
+pending_udp_query(struct outside_network* outnet, sldns_buffer* packet, 
 	struct sockaddr_storage* addr, socklen_t addrlen, int timeout,
 	comm_point_callback_t* cb, void* cb_arg)
 {
@@ -1020,8 +1020,8 @@ pending_udp_query(struct outside_network* outnet, ldns_buffer* packet,
 		/* no unused fd, cannot create a new port (randomly) */
 		verbose(VERB_ALGO, "no fds available, udp query waiting");
 		pend->timeout = timeout;
-		pend->pkt_len = ldns_buffer_limit(packet);
-		pend->pkt = (uint8_t*)memdup(ldns_buffer_begin(packet),
+		pend->pkt_len = sldns_buffer_limit(packet);
+		pend->pkt = (uint8_t*)memdup(sldns_buffer_begin(packet),
 			pend->pkt_len);
 		if(!pend->pkt) {
 			comm_timer_delete(pend->timer);
@@ -1080,7 +1080,7 @@ outnet_tcptimer(void* arg)
 }
 
 struct waiting_tcp* 
-pending_tcp_query(struct outside_network* outnet, ldns_buffer* packet, 
+pending_tcp_query(struct outside_network* outnet, sldns_buffer* packet, 
 	struct sockaddr_storage* addr, socklen_t addrlen, int timeout,
 	comm_point_callback_t* callback, void* callback_arg, int ssl_upstream)
 {
@@ -1090,7 +1090,7 @@ pending_tcp_query(struct outside_network* outnet, ldns_buffer* packet,
 	uint16_t id;
 	/* if no buffer is free allocate space to store query */
 	w = (struct waiting_tcp*)malloc(sizeof(struct waiting_tcp) 
-		+ (pend?0:ldns_buffer_limit(packet)));
+		+ (pend?0:sldns_buffer_limit(packet)));
 	if(!w) {
 		return NULL;
 	}
@@ -1101,7 +1101,7 @@ pending_tcp_query(struct outside_network* outnet, ldns_buffer* packet,
 	w->pkt = NULL;
 	w->pkt_len = 0;
 	id = ((unsigned)ub_random(outnet->rnd)>>8) & 0xffff;
-	LDNS_ID_SET(ldns_buffer_begin(packet), id);
+	LDNS_ID_SET(sldns_buffer_begin(packet), id);
 	memcpy(&w->addr, addr, addrlen);
 	w->addrlen = addrlen;
 	w->outnet = outnet;
@@ -1115,16 +1115,16 @@ pending_tcp_query(struct outside_network* outnet, ldns_buffer* packet,
 	comm_timer_set(w->timer, &tv);
 	if(pend) {
 		/* we have a buffer available right now */
-		if(!outnet_tcp_take_into_use(w, ldns_buffer_begin(packet),
-			ldns_buffer_limit(packet))) {
+		if(!outnet_tcp_take_into_use(w, sldns_buffer_begin(packet),
+			sldns_buffer_limit(packet))) {
 			waiting_tcp_delete(w);
 			return NULL;
 		}
 	} else {
 		/* queue up */
 		w->pkt = (uint8_t*)w + sizeof(struct waiting_tcp);
-		w->pkt_len = ldns_buffer_limit(packet);
-		memmove(w->pkt, ldns_buffer_begin(packet), w->pkt_len);
+		w->pkt_len = sldns_buffer_limit(packet);
+		memmove(w->pkt, sldns_buffer_begin(packet), w->pkt_len);
 		w->next_waiting = NULL;
 		if(outnet->tcp_wait_last)
 			outnet->tcp_wait_last->next_waiting = w;
@@ -1136,31 +1136,31 @@ pending_tcp_query(struct outside_network* outnet, ldns_buffer* packet,
 
 /** create query for serviced queries */
 static void
-serviced_gen_query(ldns_buffer* buff, uint8_t* qname, size_t qnamelen, 
+serviced_gen_query(sldns_buffer* buff, uint8_t* qname, size_t qnamelen, 
 	uint16_t qtype, uint16_t qclass, uint16_t flags)
 {
-	ldns_buffer_clear(buff);
+	sldns_buffer_clear(buff);
 	/* skip id */
-	ldns_buffer_write_u16(buff, flags);
-	ldns_buffer_write_u16(buff, 1); /* qdcount */
-	ldns_buffer_write_u16(buff, 0); /* ancount */
-	ldns_buffer_write_u16(buff, 0); /* nscount */
-	ldns_buffer_write_u16(buff, 0); /* arcount */
-	ldns_buffer_write(buff, qname, qnamelen);
-	ldns_buffer_write_u16(buff, qtype);
-	ldns_buffer_write_u16(buff, qclass);
-	ldns_buffer_flip(buff);
+	sldns_buffer_write_u16(buff, flags);
+	sldns_buffer_write_u16(buff, 1); /* qdcount */
+	sldns_buffer_write_u16(buff, 0); /* ancount */
+	sldns_buffer_write_u16(buff, 0); /* nscount */
+	sldns_buffer_write_u16(buff, 0); /* arcount */
+	sldns_buffer_write(buff, qname, qnamelen);
+	sldns_buffer_write_u16(buff, qtype);
+	sldns_buffer_write_u16(buff, qclass);
+	sldns_buffer_flip(buff);
 }
 
 /** lookup serviced query in serviced query rbtree */
 static struct serviced_query*
-lookup_serviced(struct outside_network* outnet, ldns_buffer* buff, int dnssec,
+lookup_serviced(struct outside_network* outnet, sldns_buffer* buff, int dnssec,
 	struct sockaddr_storage* addr, socklen_t addrlen)
 {
 	struct serviced_query key;
 	key.node.key = &key;
-	key.qbuf = ldns_buffer_begin(buff);
-	key.qbuflen = ldns_buffer_limit(buff);
+	key.qbuf = sldns_buffer_begin(buff);
+	key.qbuflen = sldns_buffer_limit(buff);
 	key.dnssec = dnssec;
 	memcpy(&key.addr, addr, addrlen);
 	key.addrlen = addrlen;
@@ -1170,7 +1170,7 @@ lookup_serviced(struct outside_network* outnet, ldns_buffer* buff, int dnssec,
 
 /** Create new serviced entry */
 static struct serviced_query*
-serviced_create(struct outside_network* outnet, ldns_buffer* buff, int dnssec,
+serviced_create(struct outside_network* outnet, sldns_buffer* buff, int dnssec,
 	int want_dnssec, int tcp_upstream, int ssl_upstream,
 	struct sockaddr_storage* addr, socklen_t addrlen, uint8_t* zone,
 	size_t zonelen, int qtype)
@@ -1182,12 +1182,12 @@ serviced_create(struct outside_network* outnet, ldns_buffer* buff, int dnssec,
 	if(!sq) 
 		return NULL;
 	sq->node.key = sq;
-	sq->qbuf = memdup(ldns_buffer_begin(buff), ldns_buffer_limit(buff));
+	sq->qbuf = memdup(sldns_buffer_begin(buff), sldns_buffer_limit(buff));
 	if(!sq->qbuf) {
 		free(sq);
 		return NULL;
 	}
-	sq->qbuflen = ldns_buffer_limit(buff);
+	sq->qbuflen = sldns_buffer_limit(buff);
 	sq->zone = memdup(zone, zonelen);
 	if(!sq->zone) {
 		free(sq->qbuf);
@@ -1312,17 +1312,17 @@ serviced_perturb_qname(struct ub_randstate* rnd, uint8_t* qbuf, size_t len)
 
 /** put serviced query into a buffer */
 static void
-serviced_encode(struct serviced_query* sq, ldns_buffer* buff, int with_edns)
+serviced_encode(struct serviced_query* sq, sldns_buffer* buff, int with_edns)
 {
 	/* if we are using 0x20 bits for ID randomness, perturb them */
 	if(sq->outnet->use_caps_for_id) {
 		serviced_perturb_qname(sq->outnet->rnd, sq->qbuf, sq->qbuflen);
 	}
 	/* generate query */
-	ldns_buffer_clear(buff);
-	ldns_buffer_write_u16(buff, 0); /* id placeholder */
-	ldns_buffer_write(buff, sq->qbuf, sq->qbuflen);
-	ldns_buffer_flip(buff);
+	sldns_buffer_clear(buff);
+	sldns_buffer_write_u16(buff, 0); /* id placeholder */
+	sldns_buffer_write(buff, sq->qbuf, sq->qbuflen);
+	sldns_buffer_flip(buff);
 	if(with_edns) {
 		/* add edns section */
 		struct edns_data edns;
@@ -1346,7 +1346,7 @@ serviced_encode(struct serviced_query* sq, ldns_buffer* buff, int with_edns)
 		if(sq->dnssec & EDNS_DO)
 			edns.bits = EDNS_DO;
 		if(sq->dnssec & BIT_CD)
-			LDNS_CD_SET(ldns_buffer_begin(buff));
+			LDNS_CD_SET(sldns_buffer_begin(buff));
 		attach_edns_record(buff, &edns);
 	}
 }
@@ -1359,7 +1359,7 @@ serviced_encode(struct serviced_query* sq, ldns_buffer* buff, int with_edns)
  * @return 0 on error.
  */
 static int
-serviced_udp_send(struct serviced_query* sq, ldns_buffer* buff)
+serviced_udp_send(struct serviced_query* sq, sldns_buffer* buff)
 {
 	int rtt, vs;
 	uint8_t edns_lame_known;
@@ -1399,21 +1399,21 @@ serviced_udp_send(struct serviced_query* sq, ldns_buffer* buff)
 
 /** check that perturbed qname is identical */
 static int
-serviced_check_qname(ldns_buffer* pkt, uint8_t* qbuf, size_t qbuflen)
+serviced_check_qname(sldns_buffer* pkt, uint8_t* qbuf, size_t qbuflen)
 {
-	uint8_t* d1 = ldns_buffer_at(pkt, 12);
+	uint8_t* d1 = sldns_buffer_at(pkt, 12);
 	uint8_t* d2 = qbuf+10;
 	uint8_t len1, len2;
 	int count = 0;
 	log_assert(qbuflen >= 15 /* 10 header, root, type, class */);
 	len1 = *d1++;
 	len2 = *d2++;
-	if(ldns_buffer_limit(pkt) < 12+1+4) /* packet too small for qname */
+	if(sldns_buffer_limit(pkt) < 12+1+4) /* packet too small for qname */
 		return 0;
 	while(len1 != 0 || len2 != 0) {
 		if(LABEL_IS_PTR(len1)) {
-			d1 = ldns_buffer_at(pkt, PTR_OFFSET(len1, *d1));
-			if(d1 >= ldns_buffer_at(pkt, ldns_buffer_limit(pkt)))
+			d1 = sldns_buffer_at(pkt, PTR_OFFSET(len1, *d1));
+			if(d1 >= sldns_buffer_at(pkt, sldns_buffer_limit(pkt)))
 				return 0;
 			len1 = *d1++;
 			if(count++ > MAX_COMPRESS_PTRS)
@@ -1463,10 +1463,10 @@ serviced_callbacks(struct serviced_query* sq, int error, struct comm_point* c,
 	verbose(VERB_ALGO, "svcd callbacks start");
 	if(sq->outnet->use_caps_for_id && error == NETEVENT_NOERROR && c) {
 		/* noerror and nxdomain must have a qname in reply */
-		if(ldns_buffer_read_u16_at(c->buffer, 4) == 0 &&
-			(LDNS_RCODE_WIRE(ldns_buffer_begin(c->buffer))
+		if(sldns_buffer_read_u16_at(c->buffer, 4) == 0 &&
+			(LDNS_RCODE_WIRE(sldns_buffer_begin(c->buffer))
 				== LDNS_RCODE_NOERROR || 
-			 LDNS_RCODE_WIRE(ldns_buffer_begin(c->buffer))
+			 LDNS_RCODE_WIRE(sldns_buffer_begin(c->buffer))
 				== LDNS_RCODE_NXDOMAIN)) {
 			verbose(VERB_DETAIL, "no qname in reply to check 0x20ID");
 			log_addr(VERB_DETAIL, "from server", 
@@ -1474,7 +1474,7 @@ serviced_callbacks(struct serviced_query* sq, int error, struct comm_point* c,
 			log_buf(VERB_DETAIL, "for packet", c->buffer);
 			error = NETEVENT_CLOSED;
 			c = NULL;
-		} else if(ldns_buffer_read_u16_at(c->buffer, 4) > 0 &&
+		} else if(sldns_buffer_read_u16_at(c->buffer, 4) > 0 &&
 			!serviced_check_qname(c->buffer, sq->qbuf, 
 			sq->qbuflen)) {
 			verbose(VERB_DETAIL, "wrong 0x20-ID in reply qname");
@@ -1484,12 +1484,12 @@ serviced_callbacks(struct serviced_query* sq, int error, struct comm_point* c,
 			error = NETEVENT_CAPSFAIL;
 			/* and cleanup too */
 			pkt_dname_tolower(c->buffer, 
-				ldns_buffer_at(c->buffer, 12));
+				sldns_buffer_at(c->buffer, 12));
 		} else {
 			verbose(VERB_ALGO, "good 0x20-ID in reply qname");
 			/* cleanup caps, prettier cache contents. */
 			pkt_dname_tolower(c->buffer, 
-				ldns_buffer_at(c->buffer, 12));
+				sldns_buffer_at(c->buffer, 12));
 		}
 	}
 	if(dobackup && c) {
@@ -1497,8 +1497,8 @@ serviced_callbacks(struct serviced_query* sq, int error, struct comm_point* c,
 		 * may send outgoing queries that overwrite the buffer.
 		 * use secondary buffer to store the query.
 		 * This is a data copy, but faster than packet to server */
-		backlen = ldns_buffer_limit(c->buffer);
-		backup_p = memdup(ldns_buffer_begin(c->buffer), backlen);
+		backlen = sldns_buffer_limit(c->buffer);
+		backup_p = memdup(sldns_buffer_begin(c->buffer), backlen);
 		if(!backup_p) {
 			log_err("malloc failure in serviced query callbacks");
 			error = NETEVENT_CLOSED;
@@ -1510,9 +1510,9 @@ serviced_callbacks(struct serviced_query* sq, int error, struct comm_point* c,
 	while((p=sq->cblist) != NULL) {
 		sq->cblist = p->next; /* remove this element */
 		if(dobackup && c) {
-			ldns_buffer_clear(c->buffer);
-			ldns_buffer_write(c->buffer, backup_p, backlen);
-			ldns_buffer_flip(c->buffer);
+			sldns_buffer_clear(c->buffer);
+			sldns_buffer_write(c->buffer, backup_p, backlen);
+			sldns_buffer_flip(c->buffer);
 		}
 		fptr_ok(fptr_whitelist_serviced_query(p->cb));
 		(void)(*p->cb)(c, p->cb_arg, error, rep);
@@ -1541,8 +1541,8 @@ serviced_tcp_callback(struct comm_point* c, void* arg, int error,
 		infra_update_tcp_works(sq->outnet->infra, &sq->addr,
 			sq->addrlen, sq->zone, sq->zonelen);
 	if(error==NETEVENT_NOERROR && sq->status == serviced_query_TCP_EDNS &&
-		(LDNS_RCODE_WIRE(ldns_buffer_begin(c->buffer)) == 
-		LDNS_RCODE_FORMERR || LDNS_RCODE_WIRE(ldns_buffer_begin(
+		(LDNS_RCODE_WIRE(sldns_buffer_begin(c->buffer)) == 
+		LDNS_RCODE_FORMERR || LDNS_RCODE_WIRE(sldns_buffer_begin(
 		c->buffer)) == LDNS_RCODE_NOTIMPL) ) {
 		/* attempt to fallback to nonEDNS */
 		sq->status = serviced_query_TCP_EDNS_fallback;
@@ -1550,10 +1550,10 @@ serviced_tcp_callback(struct comm_point* c, void* arg, int error,
 		return 0;
 	} else if(error==NETEVENT_NOERROR && 
 		sq->status == serviced_query_TCP_EDNS_fallback &&
-			(LDNS_RCODE_WIRE(ldns_buffer_begin(c->buffer)) == 
+			(LDNS_RCODE_WIRE(sldns_buffer_begin(c->buffer)) == 
 			LDNS_RCODE_NOERROR || LDNS_RCODE_WIRE(
-			ldns_buffer_begin(c->buffer)) == LDNS_RCODE_NXDOMAIN 
-			|| LDNS_RCODE_WIRE(ldns_buffer_begin(c->buffer)) 
+			sldns_buffer_begin(c->buffer)) == LDNS_RCODE_NXDOMAIN 
+			|| LDNS_RCODE_WIRE(sldns_buffer_begin(c->buffer)) 
 			== LDNS_RCODE_YXDOMAIN)) {
 		/* the fallback produced a result that looks promising, note
 		 * that this server should be approached without EDNS */
@@ -1599,7 +1599,7 @@ serviced_tcp_callback(struct comm_point* c, void* arg, int error,
 
 static void
 serviced_tcp_initiate(struct outside_network* outnet, 
-	struct serviced_query* sq, ldns_buffer* buff)
+	struct serviced_query* sq, sldns_buffer* buff)
 {
 	verbose(VERB_ALGO, "initiate TCP query %s", 
 		sq->status==serviced_query_TCP_EDNS?"EDNS":"");
@@ -1618,7 +1618,7 @@ serviced_tcp_initiate(struct outside_network* outnet,
 
 /** Send serviced query over TCP return false on initial failure */
 static int
-serviced_tcp_send(struct serviced_query* sq, ldns_buffer* buff)
+serviced_tcp_send(struct serviced_query* sq, sldns_buffer* buff)
 {
 	int vs, rtt;
 	uint8_t edns_lame_known;
@@ -1697,9 +1697,9 @@ serviced_udp_callback(struct comm_point* c, void* arg, int error,
 	if(!fallback_tcp) {
 	    if( (sq->status == serviced_query_UDP_EDNS 
 	        ||sq->status == serviced_query_UDP_EDNS_FRAG)
-		&& (LDNS_RCODE_WIRE(ldns_buffer_begin(c->buffer)) 
+		&& (LDNS_RCODE_WIRE(sldns_buffer_begin(c->buffer)) 
 			== LDNS_RCODE_FORMERR || LDNS_RCODE_WIRE(
-			ldns_buffer_begin(c->buffer)) == LDNS_RCODE_NOTIMPL)) {
+			sldns_buffer_begin(c->buffer)) == LDNS_RCODE_NOTIMPL)) {
 		/* try to get an answer by falling back without EDNS */
 		verbose(VERB_ALGO, "serviced query: attempt without EDNS");
 		sq->status = serviced_query_UDP_EDNS_fallback;
@@ -1732,9 +1732,9 @@ serviced_udp_callback(struct comm_point* c, void* arg, int error,
 		sq->edns_lame_known = 1;
 	    } else if(sq->status == serviced_query_UDP_EDNS_fallback &&
 		!sq->edns_lame_known && (LDNS_RCODE_WIRE(
-		ldns_buffer_begin(c->buffer)) == LDNS_RCODE_NOERROR || 
-		LDNS_RCODE_WIRE(ldns_buffer_begin(c->buffer)) == 
-		LDNS_RCODE_NXDOMAIN || LDNS_RCODE_WIRE(ldns_buffer_begin(
+		sldns_buffer_begin(c->buffer)) == LDNS_RCODE_NOERROR || 
+		LDNS_RCODE_WIRE(sldns_buffer_begin(c->buffer)) == 
+		LDNS_RCODE_NXDOMAIN || LDNS_RCODE_WIRE(sldns_buffer_begin(
 		c->buffer)) == LDNS_RCODE_YXDOMAIN)) {
 		/* the fallback produced a result that looks promising, note
 		 * that this server should be approached without EDNS */
@@ -1773,7 +1773,7 @@ serviced_udp_callback(struct comm_point* c, void* arg, int error,
 	} /* end of if_!fallback_tcp */
 	/* perform TC flag check and TCP fallback after updating our
 	 * cache entries for EDNS status and RTT times */
-	if(LDNS_TC_WIRE(ldns_buffer_begin(c->buffer)) || fallback_tcp) {
+	if(LDNS_TC_WIRE(sldns_buffer_begin(c->buffer)) || fallback_tcp) {
 		/* fallback to TCP */
 		/* this discards partial UDP contents */
 		if(sq->status == serviced_query_UDP_EDNS ||
@@ -1796,7 +1796,7 @@ outnet_serviced_query(struct outside_network* outnet,
 	uint16_t flags, int dnssec, int want_dnssec, int tcp_upstream,
 	int ssl_upstream, struct sockaddr_storage* addr, socklen_t addrlen,
 	uint8_t* zone, size_t zonelen, comm_point_callback_t* callback,
-	void* callback_arg, ldns_buffer* buff)
+	void* callback_arg, sldns_buffer* buff)
 {
 	struct serviced_query* sq;
 	struct service_callback* cb;
@@ -1925,7 +1925,7 @@ size_t outnet_get_mem(struct outside_network* outnet)
 	struct port_comm* pc;
 	size_t s = sizeof(*outnet) + sizeof(*outnet->base) + 
 		sizeof(*outnet->udp_buff) + 
-		ldns_buffer_capacity(outnet->udp_buff);
+		sldns_buffer_capacity(outnet->udp_buff);
 	/* second buffer is not ours */
 	for(pc = outnet->unused_fds; pc; pc = pc->next) {
 		s += sizeof(*pc) + comm_point_get_mem(pc->cp);

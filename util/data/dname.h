@@ -45,7 +45,7 @@
 #ifndef UTIL_DATA_DNAME_H
 #define UTIL_DATA_DNAME_H
 #include "util/storage/lruhash.h"
-struct ldns_buffer;
+struct sldns_buffer;
 
 /** max number of compression ptrs to follow */
 #define MAX_COMPRESS_PTRS 256
@@ -56,7 +56,7 @@ struct ldns_buffer;
  *	at end, position is at end of the dname.
  * @return: 0 on parse failure, or length including ending 0 of dname. 
  */
-size_t query_dname_len(struct ldns_buffer* query);
+size_t query_dname_len(struct sldns_buffer* query);
 
 /**
  * Determine if dname in memory is correct. no compression ptrs allowed.
@@ -75,7 +75,7 @@ void query_dname_tolower(uint8_t* dname);
  *	is unchanged.
  * @param dname: start of dname in packet.
  */
-void pkt_dname_tolower(struct ldns_buffer* pkt, uint8_t* dname);
+void pkt_dname_tolower(struct sldns_buffer* pkt, uint8_t* dname);
 
 /**
  * Compare query dnames (uncompressed storage). The Dnames passed do not
@@ -107,7 +107,7 @@ int query_dname_compare(uint8_t* d1, uint8_t* d2);
  *	Compression pointers are followed and checked for loops.
  *	The uncompressed wireformat length is returned.
  */
-size_t pkt_dname_len(struct ldns_buffer* pkt);
+size_t pkt_dname_len(struct sldns_buffer* pkt);
 
 /**
  * Compare dnames in packet (compressed). Dnames must be valid.
@@ -118,7 +118,7 @@ size_t pkt_dname_len(struct ldns_buffer* pkt);
  * @return: -1, 0, or +1 depending on comparison results.
  * 	Sort order is first difference found. not the canonical ordering.
  */
-int dname_pkt_compare(struct ldns_buffer* pkt, uint8_t* d1, uint8_t* d2);
+int dname_pkt_compare(struct sldns_buffer* pkt, uint8_t* d1, uint8_t* d2);
 
 /**
  * Hash dname, label by label, lowercasing, into hashvalue.
@@ -139,7 +139,7 @@ hashvalue_t dname_query_hash(uint8_t* dname, hashvalue_t h);
  * @return: result hash value.
  * 	Result is the same as dname_query_hash, even if compression is used.
  */
-hashvalue_t dname_pkt_hash(struct ldns_buffer* pkt, uint8_t* dname, hashvalue_t h);
+hashvalue_t dname_pkt_hash(struct sldns_buffer* pkt, uint8_t* dname, hashvalue_t h);
 
 /**
  * Copy over a valid dname and decompress it.
@@ -147,7 +147,7 @@ hashvalue_t dname_pkt_hash(struct ldns_buffer* pkt, uint8_t* dname, hashvalue_t 
  * @param to: buffer of size from pkt_len function to hold result.
  * @param dname: pointer into packet where dname starts.
  */
-void dname_pkt_copy(struct ldns_buffer* pkt, uint8_t* to, uint8_t* dname);
+void dname_pkt_copy(struct sldns_buffer* pkt, uint8_t* to, uint8_t* dname);
 
 /**
  * Copy over a valid dname to a packet.
@@ -155,7 +155,7 @@ void dname_pkt_copy(struct ldns_buffer* pkt, uint8_t* to, uint8_t* dname);
  * @param dname: dname to copy.
  * @return: 0 if not enough space in buffer.
  */
-int dname_buffer_write(struct ldns_buffer* pkt, uint8_t* dname);
+int dname_buffer_write(struct sldns_buffer* pkt, uint8_t* dname);
 
 /**
  * Count the number of labels in an uncompressed dname in memory.
@@ -217,7 +217,7 @@ int dname_subdomain_c(uint8_t* d1, uint8_t* d2);
  * @param pkt: if not NULL, the packet for resolving compression ptrs.
  * @param dname: pointer to (start of) dname.
  */
-void dname_print(FILE* out, struct ldns_buffer* pkt, uint8_t* dname);
+void dname_print(FILE* out, struct sldns_buffer* pkt, uint8_t* dname);
 
 /** 
  * Debug helper. Print dname to given string buffer (string buffer must

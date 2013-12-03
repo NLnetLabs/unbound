@@ -54,7 +54,7 @@ struct waiting_udp;
 struct infra_cache;
 struct port_comm;
 struct port_if;
-struct ldns_buffer;
+struct sldns_buffer;
 
 /**
  * Send queries to outside servers and wait for answers from servers.
@@ -70,7 +70,7 @@ struct outside_network {
 
 	/** buffer shared by UDP connections, since there is only one
 	    datagram at any time. */
-	struct ldns_buffer* udp_buff;
+	struct sldns_buffer* udp_buff;
 	/** serviced_callbacks malloc overhead when processing multiple
 	 * identical serviced queries to the same server. */
 	size_t svcd_overhead;
@@ -412,7 +412,7 @@ void outside_network_quit_prepare(struct outside_network* outnet);
  * @return: NULL on error for malloc or socket. Else the pending query object.
  */
 struct pending* pending_udp_query(struct outside_network* outnet, 
-	struct ldns_buffer* packet, struct sockaddr_storage* addr, 
+	struct sldns_buffer* packet, struct sockaddr_storage* addr, 
 	socklen_t addrlen, int timeout, comm_point_callback_t* callback, 
 	void* callback_arg);
 
@@ -432,7 +432,7 @@ struct pending* pending_udp_query(struct outside_network* outnet,
  * @return: false on error for malloc or socket. Else the pending TCP object.
  */
 struct waiting_tcp* pending_tcp_query(struct outside_network* outnet, 
-	struct ldns_buffer* packet, struct sockaddr_storage* addr, 
+	struct sldns_buffer* packet, struct sockaddr_storage* addr, 
 	socklen_t addrlen, int timeout, comm_point_callback_t* callback, 
 	void* callback_arg, int ssl_upstream);
 
@@ -477,7 +477,7 @@ struct serviced_query* outnet_serviced_query(struct outside_network* outnet,
 	uint16_t flags, int dnssec, int want_dnssec, int tcp_upstream,
 	int ssl_upstream, struct sockaddr_storage* addr, socklen_t addrlen,
 	uint8_t* zone, size_t zonelen, comm_point_callback_t* callback,
-	void* callback_arg, struct ldns_buffer* buff);
+	void* callback_arg, struct sldns_buffer* buff);
 
 /**
  * Remove service query callback.

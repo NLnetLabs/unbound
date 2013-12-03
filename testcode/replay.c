@@ -149,7 +149,7 @@ strip_end_white(char* p)
  */
 static struct replay_range*
 replay_range_read(char* remain, FILE* in, const char* name,
-	struct ldns_file_parse_state* pstate, char* line)
+	struct sldns_file_parse_state* pstate, char* line)
 {
 	struct replay_range* rng = (struct replay_range*)malloc(
 		sizeof(struct replay_range));
@@ -266,7 +266,7 @@ read_assign_step(char* remain, struct replay_moment* mom)
  */
 static struct replay_moment*
 replay_moment_read(char* remain, FILE* in, const char* name,
-	struct ldns_file_parse_state* pstate)
+	struct sldns_file_parse_state* pstate)
 {
 	struct replay_moment* mom = (struct replay_moment*)malloc(
 		sizeof(struct replay_moment));
@@ -432,7 +432,7 @@ replay_scenario_read(FILE* in, const char* name, int* lineno)
 	char line[MAX_LINE_LEN];
 	char *parse;
 	struct replay_scenario* scen = NULL;
-	struct ldns_file_parse_state pstate;
+	struct sldns_file_parse_state pstate;
 	line[MAX_LINE_LEN-1]=0;
 	memset(&pstate, 0, sizeof(pstate));
 	pstate.default_ttl = 3600;

@@ -201,15 +201,15 @@ void *unbound_stat_realloc_lite(void *ptr, size_t size, const char* file,
 char* unbound_strdup_lite(const char* s, const char* file, int line, 
 	const char* func);
 char* unbound_lite_wrapstr(char* s);
-#  define ldns_rr2str(rr) unbound_lite_wrapstr(ldns_rr2str(rr))
-#  define ldns_rdf2str(rdf) unbound_lite_wrapstr(ldns_rdf2str(rdf))
-#  define ldns_rr_type2str(t) unbound_lite_wrapstr(ldns_rr_type2str(t))
-#  define ldns_rr_class2str(c) unbound_lite_wrapstr(ldns_rr_class2str(c))
-#  define ldns_rr_list2str(r) unbound_lite_wrapstr(ldns_rr_list2str(r))
-#  define ldns_pkt2str(p) unbound_lite_wrapstr(ldns_pkt2str(p))
-#  define ldns_pkt_rcode2str(r) unbound_lite_wrapstr(ldns_pkt_rcode2str(r))
-#  define ldns_pkt2wire(a, r, s) unbound_lite_pkt2wire(a, r, s)
-ldns_status unbound_lite_pkt2wire(uint8_t **dest, const ldns_pkt *p, size_t *size);
+#  define sldns_rr2str(rr) unbound_lite_wrapstr(sldns_rr2str(rr))
+#  define sldns_rdf2str(rdf) unbound_lite_wrapstr(sldns_rdf2str(rdf))
+#  define sldns_rr_type2str(t) unbound_lite_wrapstr(sldns_rr_type2str(t))
+#  define sldns_rr_class2str(c) unbound_lite_wrapstr(sldns_rr_class2str(c))
+#  define sldns_rr_list2str(r) unbound_lite_wrapstr(sldns_rr_list2str(r))
+#  define sldns_pkt2str(p) unbound_lite_wrapstr(sldns_pkt2str(p))
+#  define sldns_pkt_rcode2str(r) unbound_lite_wrapstr(sldns_pkt_rcode2str(r))
+#  define sldns_pkt2wire(a, r, s) unbound_lite_pkt2wire(a, r, s)
+sldns_status unbound_lite_pkt2wire(uint8_t **dest, const sldns_pkt *p, size_t *size);
 #  define i2d_DSA_SIG(d, s) unbound_lite_i2d_DSA_SIG(d, s)
 int unbound_lite_i2d_DSA_SIG(DSA_SIG* dsasig, unsigned char** sig);
 #endif /* UNBOUND_ALLOC_LITE */

@@ -231,8 +231,8 @@ static int
 error_response(struct module_qstate* qstate, int id, int rcode)
 {
 	verbose(VERB_QUERY, "return error response %s", 
-		ldns_lookup_by_id(SLDNS(_rcodes), rcode)?
-		ldns_lookup_by_id(SLDNS(_rcodes), rcode)->name:"??");
+		sldns_lookup_by_id(sldns_rcodes, rcode)?
+		sldns_lookup_by_id(sldns_rcodes, rcode)->name:"??");
 	qstate->return_rcode = rcode;
 	qstate->return_msg = NULL;
 	qstate->ext_state[id] = module_finished;
@@ -543,8 +543,8 @@ prime_root(struct module_qstate* qstate, struct iter_qstate* iq, int id,
 	struct delegpt* dp;
 	struct module_qstate* subq;
 	verbose(VERB_DETAIL, "priming . %s NS", 
-		ldns_lookup_by_id(SLDNS(_rr_classes), (int)qclass)?
-		ldns_lookup_by_id(SLDNS(_rr_classes), (int)qclass)->name:"??");
+		sldns_lookup_by_id(sldns_rr_classes, (int)qclass)?
+		sldns_lookup_by_id(sldns_rr_classes, (int)qclass)->name:"??");
 	dp = hints_lookup_root(qstate->env->hints, qclass);
 	if(!dp) {
 		verbose(VERB_ALGO, "Cannot prime due to lack of hints");
@@ -2751,7 +2751,7 @@ process_response(struct module_qstate* qstate, struct iter_qstate* iq,
 {
 	struct msg_parse* prs;
 	struct edns_data edns;
-	ldns_buffer* pkt;
+	sldns_buffer* pkt;
 
 	verbose(VERB_ALGO, "process_response: new external response event");
 	iq->response = NULL;
@@ -2778,7 +2778,7 @@ process_response(struct module_qstate* qstate, struct iter_qstate* iq,
 	memset(prs, 0, sizeof(*prs));
 	memset(&edns, 0, sizeof(edns));
 	pkt = qstate->reply->c->buffer;
-	ldns_buffer_set_position(pkt, 0);
+	sldns_buffer_set_position(pkt, 0);
 	if(parse_packet(pkt, prs, qstate->env->scratch) != LDNS_RCODE_NOERROR) {
 		verbose(VERB_ALGO, "parse error on reply packet");
 		goto handle_it;

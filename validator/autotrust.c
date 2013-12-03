@@ -144,10 +144,10 @@ verbose_key(struct autr_ta* ta, enum verbosity_value level,
 	va_list args;
 	va_start(args, format);
 	if(verbosity >= level) {
-		char* str = ldns_wire2str_dname(ta->rr, ta->dname_len);
-		int keytag = (int)ldns_calc_keytag_raw(ldns_wirerr_get_rdata(
+		char* str = sldns_wire2str_dname(ta->rr, ta->dname_len);
+		int keytag = (int)sldns_calc_keytag_raw(sldns_wirerr_get_rdata(
 			ta->rr, ta->rr_len, ta->dname_len),
-			ldns_wirerr_get_rdatalen(ta->rr, ta->rr_len,
+			sldns_wirerr_get_rdatalen(ta->rr, ta->rr_len,
 			ta->dname_len));
 		char msg[MAXSYSLOGMSGLEN];
 		vsnprintf(msg, sizeof(msg), format, args);
@@ -299,9 +299,9 @@ static int
 ta_is_dnskey_sep(struct autr_ta* ta)
 {
 	return (dnskey_flags(
-		ldns_wirerr_get_type(ta->rr, ta->rr_len, ta->dname_len),
-		ldns_wirerr_get_rdata(ta->rr, ta->rr_len, ta->dname_len),
-		ldns_wirerr_get_rdatalen(ta->rr, ta->rr_len, ta->dname_len)
+		sldns_wirerr_get_type(ta->rr, ta->rr_len, ta->dname_len),
+		sldns_wirerr_get_rdata(ta->rr, ta->rr_len, ta->dname_len),
+		sldns_wirerr_get_rdatalen(ta->rr, ta->rr_len, ta->dname_len)
 		) & DNSKEY_BIT_SEP);
 }
 
@@ -419,7 +419,7 @@ find_add_tp(struct val_anchors* anchors, uint8_t* rr, size_t rr_len,
 {
 	struct trust_anchor* tp;
 	tp = anchor_find(anchors, rr, dname_count_labels(rr), dname_len,
-		ldns_wirerr_get_class(rr, rr_len, dname_len));
+		sldns_wirerr_get_class(rr, rr_len, dname_len));
 	if(tp) {
 		if(!tp->autr) {
 			log_err("anchor cannot be with and without autotrust");
@@ -428,7 +428,7 @@ find_add_tp(struct val_anchors* anchors, uint8_t* rr, size_t rr_len,
 		}
 		return tp;
 	}
-	tp = autr_tp_create(anchors, rr, dname_len, ldns_wirerr_get_class(rr,
+	tp = autr_tp_create(anchors, rr, dname_len, sldns_wirerr_get_class(rr,
 		rr_len, dname_len));
 	lock_basic_lock(&tp->lock);
 	return tp;
@@ -480,12 +480,12 @@ add_trustanchor_frm_str(struct val_anchors* anchors, char* str,
 		*skip = 1;
                 return NULL; /* empty line */
 	}
-	if(0 != (lstatus = ldns_str2wire_rr_buf(str, rr, &rr_len, &dname_len,
+	if(0 != (lstatus = sldns_str2wire_rr_buf(str, rr, &rr_len, &dname_len,
 		0, origin, origin_len, *prev, *prev_len)))
         {
         	log_err("ldns error while converting string to RR at%d: %s: %s",
 			LDNS_WIREPARSE_OFFSET(lstatus),
-			ldns_get_errorstr_parse(lstatus), str);
+			sldns_get_errorstr_parse(lstatus), str);
                 return NULL;
         }
 	free(*prev);
@@ -495,8 +495,8 @@ add_trustanchor_frm_str(struct val_anchors* anchors, char* str,
 		log_err("malloc failure in add_trustanchor");
 		return NULL;
 	}
-	if(ldns_wirerr_get_type(rr, rr_len, dname_len)!=LDNS_RR_TYPE_DNSKEY &&
-		ldns_wirerr_get_type(rr, rr_len, dname_len)!=LDNS_RR_TYPE_DS) {
+	if(sldns_wirerr_get_type(rr, rr_len, dname_len)!=LDNS_RR_TYPE_DNSKEY &&
+		sldns_wirerr_get_type(rr, rr_len, dname_len)!=LDNS_RR_TYPE_DS) {
 		*skip = 1;
 		return NULL; /* only DS and DNSKEY allowed */
 	}
@@ -555,7 +555,7 @@ assemble_iterate_ds(struct autr_ta** list, uint8_t** rr, size_t* rr_len,
 	size_t* dname_len)
 {
 	while(*list) {
-		if(ldns_wirerr_get_type((*list)->rr, (*list)->rr_len,
+		if(sldns_wirerr_get_type((*list)->rr, (*list)->rr_len,
 			(*list)->dname_len) == LDNS_RR_TYPE_DS) {
 			*rr = (*list)->rr;
 			*rr_len = (*list)->rr_len;
@@ -574,7 +574,7 @@ assemble_iterate_dnskey(struct autr_ta** list, uint8_t** rr, size_t* rr_len,
 	size_t* dname_len)
 {
 	while(*list) {
-		if(ldns_wirerr_get_type((*list)->rr, (*list)->rr_len,
+		if(sldns_wirerr_get_type((*list)->rr, (*list)->rr_len,
 		   (*list)->dname_len) != LDNS_RR_TYPE_DS &&
 			((*list)->s == AUTR_STATE_VALID || 
 			 (*list)->s == AUTR_STATE_MISSING)) {
@@ -633,8 +633,8 @@ ub_packed_rrset_heap_key(int iter(struct autr_ta**, uint8_t**, size_t*,
 	k = (struct ub_packed_rrset_key*)calloc(1, sizeof(*k));
 	if(!k)
 		return NULL;
-	k->rk.type = htons(ldns_wirerr_get_type(rr, rr_len, dname_len));
-	k->rk.rrset_class = htons(ldns_wirerr_get_class(rr, rr_len, dname_len));
+	k->rk.type = htons(sldns_wirerr_get_type(rr, rr_len, dname_len));
+	k->rk.rrset_class = htons(sldns_wirerr_get_class(rr, rr_len, dname_len));
 	k->rk.dname_len = dname_len;
 	k->rk.dname = memdup(rr, dname_len);
 	if(!k->rk.dname) {
@@ -664,13 +664,13 @@ packed_rrset_heap_data(int iter(struct autr_ta**, uint8_t**, size_t*,
 
 	list_i = list;
 	while(iter(&list_i, &rr, &rr_len, &dname_len)) {
-		if(ldns_wirerr_get_type(rr, rr_len, dname_len) ==
+		if(sldns_wirerr_get_type(rr, rr_len, dname_len) ==
 			LDNS_RR_TYPE_RRSIG)
 			rrsig_count++;
 		else	count++;
 		/* sizeof the rdlength + rdatalen */
-		len += 2 + ldns_wirerr_get_rdatalen(rr, rr_len, dname_len);
-		ttl = (time_t)ldns_wirerr_get_ttl(rr, rr_len, dname_len);
+		len += 2 + sldns_wirerr_get_rdatalen(rr, rr_len, dname_len);
+		ttl = (time_t)sldns_wirerr_get_ttl(rr, rr_len, dname_len);
 	}
 	if(count == 0 && rrsig_count == 0)
 		return NULL;
@@ -697,12 +697,12 @@ packed_rrset_heap_data(int iter(struct autr_ta**, uint8_t**, size_t*,
 	list_i = list;
 	i = 0;
 	while(iter(&list_i, &rr, &rr_len, &dname_len)) {
-		data->rr_ttl[i] = (time_t)ldns_wirerr_get_ttl(rr, rr_len,
+		data->rr_ttl[i] = (time_t)sldns_wirerr_get_ttl(rr, rr_len,
 			dname_len);
 		if(data->rr_ttl[i] < data->ttl)
 			data->ttl = data->rr_ttl[i];
 		data->rr_len[i] = 2 /* the rdlength */ +
-			ldns_wirerr_get_rdatalen(rr, rr_len, dname_len);
+			sldns_wirerr_get_rdatalen(rr, rr_len, dname_len);
 		i++;
 	}
 
@@ -717,7 +717,7 @@ packed_rrset_heap_data(int iter(struct autr_ta**, uint8_t**, size_t*,
 	i = 0;
 	while(iter(&list_i, &rr, &rr_len, &dname_len)) {
 		memmove(data->rr_data[i],
-			ldns_wirerr_get_rdatawl(rr, rr_len, dname_len),
+			sldns_wirerr_get_rdatawl(rr, rr_len, dname_len),
 			data->rr_len[i]);
 		i++;
 	}
@@ -732,7 +732,7 @@ packed_rrset_heap_data(int iter(struct autr_ta**, uint8_t**, size_t*,
 /**
  * Assemble the trust anchors into DS and DNSKEY packed rrsets.
  * Uses only VALID and MISSING DNSKEYs.
- * Read the ldns_rrs and builds packed rrsets
+ * Read the sldns_rrs and builds packed rrsets
  * @param tp: the trust point. Must be locked.
  * @return false on malloc failure.
  */
@@ -817,7 +817,7 @@ parse_id(struct val_anchors* anchors, char* line)
 	if(!next)
 		return NULL;
 	next[0] = 0;
-	dname = ldns_str2wire_dname(line, &dname_len);
+	dname = sldns_str2wire_dname(line, &dname_len);
 	if(!dname)
 		return NULL;
 
@@ -910,7 +910,7 @@ handle_origin(char* line, uint8_t** origin, size_t* origin_len)
 	line += 7;
 	while(isspace((int)*line))
 		line++;
-	*origin = ldns_str2wire_dname(line, &len);
+	*origin = sldns_str2wire_dname(line, &len);
 	*origin_len = len;
 	if(!*origin)
 		log_warn("malloc failure or parse error in $ORIGIN");
@@ -1079,7 +1079,7 @@ trustanchor_state2str(autr_state_t s)
 static int
 print_id(FILE* out, char* fname, uint8_t* nm, size_t nmlen, uint16_t dclass)
 {
-	char* s = ldns_wire2str_dname(nm, nmlen);
+	char* s = sldns_wire2str_dname(nm, nmlen);
 	if(!s) {
 		log_err("malloc failure in write to %s", fname);
 		return 0;
@@ -1144,10 +1144,10 @@ autr_write_contents(FILE* out, char* fn, struct trust_anchor* tp)
 		if(ta->s == AUTR_STATE_REMOVED)
 			continue;
 		/* only store keys */
-		if(ldns_wirerr_get_type(ta->rr, ta->rr_len, ta->dname_len)
+		if(sldns_wirerr_get_type(ta->rr, ta->rr_len, ta->dname_len)
 			!= LDNS_RR_TYPE_DNSKEY)
 			continue;
-		str = ldns_wire2str_rr(ta->rr, ta->rr_len);
+		str = sldns_wire2str_rr(ta->rr, ta->rr_len);
 		if(!str || !str[0]) {
 			free(str);
 			log_err("malloc failure writing %s", fn);
@@ -1238,7 +1238,7 @@ rrsig_get_expiry(uint8_t* d, size_t len)
 	/* rrsig: 2(rdlen), 2(type) 1(alg) 1(v) 4(origttl), then 4(expi), (4)incep) */
 	if(len < 2+8+4)
 		return 0;
-	return ldns_read_uint32(d+2+8);
+	return sldns_read_uint32(d+2+8);
 }
 
 /** Find minimum expiration interval from signatures */
@@ -1296,18 +1296,18 @@ revoke_dnskey(struct autr_ta* ta, int off)
 {
 	uint16_t flags;
 	uint8_t* data;
-	if(ldns_wirerr_get_type(ta->rr, ta->rr_len, ta->dname_len) !=
+	if(sldns_wirerr_get_type(ta->rr, ta->rr_len, ta->dname_len) !=
 		LDNS_RR_TYPE_DNSKEY)
 		return;
-	if(ldns_wirerr_get_rdatalen(ta->rr, ta->rr_len, ta->dname_len) < 2)
+	if(sldns_wirerr_get_rdatalen(ta->rr, ta->rr_len, ta->dname_len) < 2)
 		return;
-	data = ldns_wirerr_get_rdata(ta->rr, ta->rr_len, ta->dname_len);
-	flags = ldns_read_uint16(data);
+	data = sldns_wirerr_get_rdata(ta->rr, ta->rr_len, ta->dname_len);
+	flags = sldns_read_uint16(data);
 	if (off && (flags&LDNS_KEY_REVOKE_KEY))
 		flags ^= LDNS_KEY_REVOKE_KEY; /* flip */
 	else
 		flags |= LDNS_KEY_REVOKE_KEY;
-	ldns_write_uint16(data, flags);
+	sldns_write_uint16(data, flags);
 }
 
 /** Compare two RRs skipping the REVOKED bit. Pass rdata(no len) */
@@ -1341,20 +1341,20 @@ ta_compare(struct autr_ta* a, uint16_t t, uint8_t* b, size_t b_len)
 {
 	if(!a) return -1;
 	else if(!b) return -1;
-	else if(ldns_wirerr_get_type(a->rr, a->rr_len, a->dname_len) != t)
-		return (int)ldns_wirerr_get_type(a->rr, a->rr_len,
+	else if(sldns_wirerr_get_type(a->rr, a->rr_len, a->dname_len) != t)
+		return (int)sldns_wirerr_get_type(a->rr, a->rr_len,
 			a->dname_len) - (int)t;
 	else if(t == LDNS_RR_TYPE_DNSKEY) {
 		return dnskey_compare_skip_revbit(
-			ldns_wirerr_get_rdata(a->rr, a->rr_len, a->dname_len),
-			ldns_wirerr_get_rdatalen(a->rr, a->rr_len,
+			sldns_wirerr_get_rdata(a->rr, a->rr_len, a->dname_len),
+			sldns_wirerr_get_rdatalen(a->rr, a->rr_len,
 			a->dname_len), b, b_len);
 	}
 	else if(t == LDNS_RR_TYPE_DS) {
-		if(ldns_wirerr_get_rdatalen(a->rr, a->rr_len, a->dname_len) !=
+		if(sldns_wirerr_get_rdatalen(a->rr, a->rr_len, a->dname_len) !=
 			b_len)
 			return -1;
-		return memcmp(ldns_wirerr_get_rdata(a->rr,
+		return memcmp(sldns_wirerr_get_rdata(a->rr,
 			a->rr_len, a->dname_len), b, b_len);
 	}
 	return -1;
@@ -1507,14 +1507,14 @@ check_contains_revoked(struct module_env* env, struct val_env* ve,
 			/* same keytag, but stored can be revoked already, so 
 			 * compare keytags, with +0 or +128(REVOKE flag) */
 			log_assert(dnskey_calc_keytag(dnskey_rrset, i)-128 ==
-				ldns_calc_keytag_raw(ldns_wirerr_get_rdata(
+				sldns_calc_keytag_raw(sldns_wirerr_get_rdata(
 				ta->rr, ta->rr_len, ta->dname_len),
-				ldns_wirerr_get_rdatalen(ta->rr, ta->rr_len,
+				sldns_wirerr_get_rdatalen(ta->rr, ta->rr_len,
 				ta->dname_len)) ||
 				dnskey_calc_keytag(dnskey_rrset, i) ==
-				ldns_calc_keytag_raw(ldns_wirerr_get_rdata(
+				sldns_calc_keytag_raw(sldns_wirerr_get_rdata(
 				ta->rr, ta->rr_len, ta->dname_len),
-				ldns_wirerr_get_rdatalen(ta->rr, ta->rr_len,
+				sldns_wirerr_get_rdatalen(ta->rr, ta->rr_len,
 				ta->dname_len))); /* checks conversion*/
 			verbose_key(ta, VERB_ALGO, "is self-signed revoked");
 			if(!ta->revoked) 
@@ -1808,7 +1808,7 @@ init_zsk_to_ksk(struct module_env* env, struct trust_anchor* tp, int* changed)
 	int validksk = 0;
 	for(anchor = tp->autr->keys; anchor; anchor = anchor->next) {
 		/* last_change test makes sure it was manually configured */
-		if(ldns_wirerr_get_type(anchor->rr, anchor->rr_len,
+		if(sldns_wirerr_get_type(anchor->rr, anchor->rr_len,
 			anchor->dname_len) == LDNS_RR_TYPE_DNSKEY &&
 			anchor->last_change == 0 && 
 			!ta_is_dnskey_sep(anchor) &&
@@ -1929,7 +1929,7 @@ autr_cleanup_keys(struct trust_anchor* tp)
 	while(p) {
 		/* do we want to remove this key? */
 		if(p->s == AUTR_STATE_START || p->s == AUTR_STATE_REMOVED ||
-			ldns_wirerr_get_type(p->rr, p->rr_len, p->dname_len)
+			sldns_wirerr_get_type(p->rr, p->rr_len, p->dname_len)
 			!= LDNS_RR_TYPE_DNSKEY) {
 			struct autr_ta* np = p->next;
 			/* remove */
@@ -2205,7 +2205,7 @@ static void
 autr_debug_print_ta(struct autr_ta* ta)
 {
 	char buf[32];
-	char* str = ldns_wire2str_rr(ta->rr, ta->rr_len);
+	char* str = sldns_wire2str_rr(ta->rr, ta->rr_len);
 	if(!str) {
 		log_info("out of memory in debug_print_ta");
 		return;
@@ -2271,7 +2271,7 @@ autr_debug_print(struct val_anchors* anchors)
 }
 
 void probe_answer_cb(void* arg, int ATTR_UNUSED(rcode), 
-	ldns_buffer* ATTR_UNUSED(buf), enum sec_status ATTR_UNUSED(sec),
+	sldns_buffer* ATTR_UNUSED(buf), enum sec_status ATTR_UNUSED(sec),
 	char* ATTR_UNUSED(why_bogus))
 {
 	/* retry was set before the query was done,
@@ -2296,7 +2296,7 @@ probe_anchor(struct module_env* env, struct trust_anchor* tp)
 	struct query_info qinfo;
 	uint16_t qflags = BIT_RD;
 	struct edns_data edns;
-	ldns_buffer* buf = env->scratch_buffer;
+	sldns_buffer* buf = env->scratch_buffer;
 	qinfo.qname = regional_alloc_init(env->scratch, tp->name, tp->namelen);
 	if(!qinfo.qname) {
 		log_err("out of memory making 5011 probe");
@@ -2312,8 +2312,8 @@ probe_anchor(struct module_env* env, struct trust_anchor* tp)
 	edns.ext_rcode = 0;
 	edns.edns_version = 0;
 	edns.bits = EDNS_DO;
-	if(ldns_buffer_capacity(buf) < 65535)
-		edns.udp_size = (uint16_t)ldns_buffer_capacity(buf);
+	if(sldns_buffer_capacity(buf) < 65535)
+		edns.udp_size = (uint16_t)sldns_buffer_capacity(buf);
 	else	edns.udp_size = 65535;
 
 	/* can't hold the lock while mesh_run is processing */

@@ -9,8 +9,8 @@
 
 #ifndef TESTPKTS_H
 #define TESTPKTS_H
-struct ldns_buffer;
-struct ldns_file_parse_state;
+struct sldns_buffer;
+struct sldns_file_parse_state;
 
 /**
  * \file
@@ -145,7 +145,7 @@ struct reply_packet {
 	/** length of reply pkt */
 	size_t reply_len;
 	/** or reply pkt in hex if not parsable */
-	struct ldns_buffer* reply_from_hex;
+	struct sldns_buffer* reply_from_hex;
 	/** seconds to sleep before giving packet */
 	unsigned int packet_sleep; 
 };
@@ -219,7 +219,7 @@ void delete_entry(struct entry* list);
  * @return: The entry read (malloced) or NULL if no entry could be read.
  */
 struct entry* read_entry(FILE* in, const char* name, 
-	struct ldns_file_parse_state* pstate, int skip_whitespace);
+	struct sldns_file_parse_state* pstate, int skip_whitespace);
 
 /**
  * finds entry in list, or returns NULL.

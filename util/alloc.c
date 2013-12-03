@@ -601,13 +601,13 @@ char* unbound_lite_wrapstr(char* s)
 	return n;
 }
 
-#undef ldns_pkt2wire
-ldns_status unbound_lite_pkt2wire(uint8_t **dest, const ldns_pkt *p, 
+#undef sldns_pkt2wire
+sldns_status unbound_lite_pkt2wire(uint8_t **dest, const sldns_pkt *p, 
 	size_t *size)
 {
 	uint8_t* md = NULL;
 	size_t ms = 0;
-	ldns_status s = ldns_pkt2wire(&md, p, &ms);
+	sldns_status s = sldns_pkt2wire(&md, p, &ms);
 	if(md) {
 		*dest = unbound_stat_malloc_lite(ms, __FILE__, __LINE__, 
 			__func__);

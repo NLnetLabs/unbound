@@ -319,10 +319,10 @@ hexstr2bin(char *hexstr, int len, uint8_t *buf, size_t offset, size_t buf_len)
 }
 
 /** convert hex buffer to binary buffer */
-static ldns_buffer *
-hex_buffer2wire(ldns_buffer *data_buffer)
+static sldns_buffer *
+hex_buffer2wire(sldns_buffer *data_buffer)
 {
-	ldns_buffer *wire_buffer = NULL;
+	sldns_buffer *wire_buffer = NULL;
 	int c;
 	
 	/* stat hack
@@ -335,13 +335,13 @@ hex_buffer2wire(ldns_buffer *data_buffer)
 	uint8_t *hexbuf;
 	int hexbufpos = 0;
 	size_t wirelen;
-	uint8_t *data_wire = (uint8_t *) ldns_buffer_begin(data_buffer);
+	uint8_t *data_wire = (uint8_t *) sldns_buffer_begin(data_buffer);
 	uint8_t *wire = (uint8_t*)malloc(MAX_PACKETLEN);
 	if(!wire) error("out of memory");
 	
 	hexbuf = (uint8_t*)malloc(MAX_PACKETLEN);
 	if(!hexbuf) error("out of memory");
-	for (data_buf_pos = 0; data_buf_pos < ldns_buffer_position(data_buffer); data_buf_pos++) {
+	for (data_buf_pos = 0; data_buf_pos < sldns_buffer_position(data_buffer); data_buf_pos++) {
 		c = (int) data_wire[data_buf_pos];
 		
 		if (state < 2 && !isascii(c)) {
@@ -402,8 +402,8 @@ hex_buffer2wire(ldns_buffer *data_buffer)
 
 	if (state < 2) {
 		wirelen = hexstr2bin((char *) hexbuf, hexbufpos, wire, 0, MAX_PACKETLEN);
-		wire_buffer = ldns_buffer_new(wirelen);
-		ldns_buffer_new_frm_data(wire_buffer, wire, wirelen);
+		wire_buffer = sldns_buffer_new(wirelen);
+		sldns_buffer_new_frm_data(wire_buffer, wire, wirelen);
 	} else {
 		error("Incomplete hex data, not at byte boundary\n");
 	}
@@ -414,7 +414,7 @@ hex_buffer2wire(ldns_buffer *data_buffer)
 
 /** parse ORIGIN */
 static void 
-get_origin(const char* name, struct ldns_file_parse_state* pstate, char* parse)
+get_origin(const char* name, struct sldns_file_parse_state* pstate, char* parse)
 {
 	/* snip off rest of the text so as to make the parse work in ldns */
 	char* end;
@@ -427,18 +427,18 @@ get_origin(const char* name, struct ldns_file_parse_state* pstate, char* parse)
 	store = *end;
 	*end = 0;
 	verbose(3, "parsing '%s'\n", parse);
-	status = ldns_str2wire_dname_buf(parse, pstate->origin,
+	status = sldns_str2wire_dname_buf(parse, pstate->origin,
 		&pstate->origin_len);
 	*end = store;
 	if(status != 0)
 		error("%s line %d:\n\t%s: %s", name, pstate->lineno,
-			ldns_get_errorstr_parse(status), parse);
+			sldns_get_errorstr_parse(status), parse);
 }
 
 /** add RR to packet */
 static void add_rr(char* rrstr, uint8_t* pktbuf, size_t pktsize,
-	size_t* pktlen, struct ldns_file_parse_state* pstate,
-	ldns_pkt_section add_section, const char* fname)
+	size_t* pktlen, struct sldns_file_parse_state* pstate,
+	sldns_pkt_section add_section, const char* fname)
 {
 	/* it must be a RR, parse and add to packet. */
 	size_t rr_len = pktsize - *pktlen;
@@ -451,27 +451,27 @@ static void add_rr(char* rrstr, uint8_t* pktbuf, size_t pktsize,
 
 	/* parse RR */
 	if(add_section == LDNS_SECTION_QUESTION)
-		status = ldns_str2wire_rr_question_buf(rrstr, pktbuf+*pktlen,
+		status = sldns_str2wire_rr_question_buf(rrstr, pktbuf+*pktlen,
 			&rr_len, &dname_len, origin, pstate->origin_len,
 			prev, pstate->prev_rr_len);
-	else status = ldns_str2wire_rr_buf(rrstr, pktbuf+*pktlen, &rr_len,
+	else status = sldns_str2wire_rr_buf(rrstr, pktbuf+*pktlen, &rr_len,
 			&dname_len, pstate->default_ttl, origin,
 			pstate->origin_len, prev, pstate->prev_rr_len);
 	if(status != 0)
 		error("%s line %d:%d %s\n\t%s", fname, pstate->lineno,
 			LDNS_WIREPARSE_OFFSET(status),
-			ldns_get_errorstr_parse(status), rrstr);
+			sldns_get_errorstr_parse(status), rrstr);
 	*pktlen += rr_len;
 
 	/* increase RR count */
 	if(add_section == LDNS_SECTION_QUESTION)
-		ldns_write_uint16(pktbuf+4, LDNS_QDCOUNT(pktbuf)+1);
+		sldns_write_uint16(pktbuf+4, LDNS_QDCOUNT(pktbuf)+1);
 	else if(add_section == LDNS_SECTION_ANSWER)
-		ldns_write_uint16(pktbuf+6, LDNS_ANCOUNT(pktbuf)+1);
+		sldns_write_uint16(pktbuf+6, LDNS_ANCOUNT(pktbuf)+1);
 	else if(add_section == LDNS_SECTION_AUTHORITY)
-		ldns_write_uint16(pktbuf+8, LDNS_NSCOUNT(pktbuf)+1);
+		sldns_write_uint16(pktbuf+8, LDNS_NSCOUNT(pktbuf)+1);
 	else if(add_section == LDNS_SECTION_ADDITIONAL)
-		ldns_write_uint16(pktbuf+10, LDNS_ARCOUNT(pktbuf)+1);
+		sldns_write_uint16(pktbuf+10, LDNS_ARCOUNT(pktbuf)+1);
 	else error("internal error bad section %d", (int)add_section);
 }
 
@@ -492,22 +492,22 @@ add_do_flag(uint8_t* pktbuf, size_t pktsize, size_t* pktlen)
 	if(*pktlen + sizeof(edns) > pktsize)
 		error("not enough space for EDNS OPT record");
 	memmove(pktbuf+*pktlen, edns, sizeof(edns));
-	ldns_write_uint16(pktbuf+10, LDNS_ARCOUNT(pktbuf)+1);
+	sldns_write_uint16(pktbuf+10, LDNS_ARCOUNT(pktbuf)+1);
 	*pktlen += sizeof(edns);
 }
 
 /* Reads one entry from file. Returns entry or NULL on error. */
 struct entry*
-read_entry(FILE* in, const char* name, struct ldns_file_parse_state* pstate,
+read_entry(FILE* in, const char* name, struct sldns_file_parse_state* pstate,
 	int skip_whitespace)
 {
 	struct entry* current = NULL;
 	char line[MAX_LINE];
 	char* parse;
-	ldns_pkt_section add_section = LDNS_SECTION_QUESTION;
+	sldns_pkt_section add_section = LDNS_SECTION_QUESTION;
 	struct reply_packet *cur_reply = NULL;
 	int reading_hex = 0;
-	ldns_buffer* hex_data_buffer = NULL;
+	sldns_buffer* hex_data_buffer = NULL;
 	uint8_t pktbuf[MAX_PACKETLEN];
 	size_t pktlen = LDNS_HEADER_SIZE;
 	int do_flag = 0; /* DO flag in EDNS */
@@ -564,7 +564,7 @@ read_entry(FILE* in, const char* name, struct ldns_file_parse_state* pstate,
 				add_section = LDNS_SECTION_ADDITIONAL;
 			else error("%s line %d: bad section %s", name, pstate->lineno, parse);
 		} else if(str_keyword(&parse, "HEX_ANSWER_BEGIN")) {
-			hex_data_buffer = ldns_buffer_new(MAX_PACKETLEN);
+			hex_data_buffer = sldns_buffer_new(MAX_PACKETLEN);
 			reading_hex = 1;
 		} else if(str_keyword(&parse, "HEX_ANSWER_END")) {
 			if(!reading_hex) {
@@ -572,11 +572,11 @@ read_entry(FILE* in, const char* name, struct ldns_file_parse_state* pstate,
 			}
 			reading_hex = 0;
 			cur_reply->reply_from_hex = hex_buffer2wire(hex_data_buffer);
-			ldns_buffer_free(hex_data_buffer);
+			sldns_buffer_free(hex_data_buffer);
 			hex_data_buffer = NULL;
 		} else if(str_keyword(&parse, "ENTRY_END")) {
 			if(hex_data_buffer)
-				ldns_buffer_free(hex_data_buffer);
+				sldns_buffer_free(hex_data_buffer);
 			if(pktlen != 0) {
 				if(do_flag)
 					add_do_flag(pktbuf, sizeof(pktbuf),
@@ -588,7 +588,7 @@ read_entry(FILE* in, const char* name, struct ldns_file_parse_state* pstate,
 			}
 			return current;
 		} else if(reading_hex) {
-			ldns_buffer_printf(hex_data_buffer, "%s", line);
+			sldns_buffer_printf(hex_data_buffer, "%s", line);
 		} else {
 			add_rr(skip_whitespace?parse:line, pktbuf,
 				sizeof(pktbuf), &pktlen, pstate, add_section,
@@ -615,7 +615,7 @@ read_datafile(const char* name, int skip_whitespace)
 	struct entry* last = NULL;
 	struct entry* current = NULL;
 	FILE *in;
-	struct ldns_file_parse_state pstate;
+	struct sldns_file_parse_state pstate;
 	int entry_num = 0;
 	memset(&pstate, 0, sizeof(pstate));
 
@@ -638,7 +638,7 @@ read_datafile(const char* name, int skip_whitespace)
 }
 
 /** get qtype from packet */
-static ldns_rr_type get_qtype(uint8_t* pkt, size_t pktlen)
+static sldns_rr_type get_qtype(uint8_t* pkt, size_t pktlen)
 {
 	uint8_t* d;
 	size_t dl, sl=0;
@@ -650,10 +650,10 @@ static ldns_rr_type get_qtype(uint8_t* pkt, size_t pktlen)
 	/* skip over dname with dname-scan routine */
 	d = pkt+LDNS_HEADER_SIZE;
 	dl = pktlen-LDNS_HEADER_SIZE;
-	(void)ldns_wire2str_dname_scan(&d, &dl, &snull, &sl, pkt, pktlen);
+	(void)sldns_wire2str_dname_scan(&d, &dl, &snull, &sl, pkt, pktlen);
 	if(dl < 2)
 		return 0;
-	return ldns_read_uint16(d);
+	return sldns_read_uint16(d);
 }
 
 /** get qtype from packet */
@@ -669,7 +669,7 @@ static size_t get_qname_len(uint8_t* pkt, size_t pktlen)
 	/* skip over dname with dname-scan routine */
 	d = pkt+LDNS_HEADER_SIZE;
 	dl = pktlen-LDNS_HEADER_SIZE;
-	(void)ldns_wire2str_dname_scan(&d, &dl, &snull, &sl, pkt, pktlen);
+	(void)sldns_wire2str_dname_scan(&d, &dl, &snull, &sl, pkt, pktlen);
 	return pktlen-dl-LDNS_HEADER_SIZE;
 }
 
@@ -706,10 +706,10 @@ static uint32_t get_serial(uint8_t* p, size_t plen)
 
 	/* skip other records with wire2str_scan */
 	for(i=0; i < LDNS_QDCOUNT(p); i++)
-		(void)ldns_wire2str_rrquestion_scan(&walk, &walk_len,
+		(void)sldns_wire2str_rrquestion_scan(&walk, &walk_len,
 			&snull, &sl, p, plen);
 	for(i=0; i < LDNS_ANCOUNT(p); i++)
-		(void)ldns_wire2str_rr_scan(&walk, &walk_len, &snull, &sl,
+		(void)sldns_wire2str_rr_scan(&walk, &walk_len, &snull, &sl,
 			p, plen);
 
 	/* walk through authority section */
@@ -717,29 +717,29 @@ static uint32_t get_serial(uint8_t* p, size_t plen)
 		/* if this is SOA then get serial, skip compressed dname */
 		uint8_t* dstart = walk;
 		size_t dlen = walk_len;
-		(void)ldns_wire2str_dname_scan(&dstart, &dlen, &snull, &sl,
+		(void)sldns_wire2str_dname_scan(&dstart, &dlen, &snull, &sl,
 			p, plen);
-		if(dlen >= 2 && ldns_read_uint16(dstart) == LDNS_RR_TYPE_SOA) {
+		if(dlen >= 2 && sldns_read_uint16(dstart) == LDNS_RR_TYPE_SOA) {
 			/* skip type, class, TTL, rdatalen */
 			if(dlen < 10)
 				return 0;
-			if(dlen < 10 + (size_t)ldns_read_uint16(dstart+8))
+			if(dlen < 10 + (size_t)sldns_read_uint16(dstart+8))
 				return 0;
 			dstart += 10;
 			dlen -= 10;
 			/* check third rdf */
-			(void)ldns_wire2str_dname_scan(&dstart, &dlen, &snull,
+			(void)sldns_wire2str_dname_scan(&dstart, &dlen, &snull,
 				&sl, p, plen);
-			(void)ldns_wire2str_dname_scan(&dstart, &dlen, &snull,
+			(void)sldns_wire2str_dname_scan(&dstart, &dlen, &snull,
 				&sl, p, plen);
 			if(dlen < 4)
 				return 0;
 			verbose(3, "found serial %u in msg. ",
-				(int)ldns_read_uint32(dstart));
-			return ldns_read_uint32(dstart);
+				(int)sldns_read_uint32(dstart));
+			return sldns_read_uint32(dstart);
 		}
 		/* move to next RR */
-		(void)ldns_wire2str_rr_scan(&walk, &walk_len, &snull, &sl,
+		(void)sldns_wire2str_rr_scan(&walk, &walk_len, &snull, &sl,
 			p, plen);
 	}
 	return 0;
@@ -762,27 +762,27 @@ pkt_find_edns_opt(uint8_t** p, size_t* plen)
 
 	/* skip other records with wire2str_scan */
 	for(i=0; i < LDNS_QDCOUNT(p); i++)
-		(void)ldns_wire2str_rrquestion_scan(&w, &wlen, &snull, &sl,
+		(void)sldns_wire2str_rrquestion_scan(&w, &wlen, &snull, &sl,
 			*p, *plen);
 	for(i=0; i < LDNS_ANCOUNT(p); i++)
-		(void)ldns_wire2str_rr_scan(&w, &wlen, &snull, &sl, *p, *plen);
+		(void)sldns_wire2str_rr_scan(&w, &wlen, &snull, &sl, *p, *plen);
 	for(i=0; i < LDNS_NSCOUNT(p); i++)
-		(void)ldns_wire2str_rr_scan(&w, &wlen, &snull, &sl, *p, *plen);
+		(void)sldns_wire2str_rr_scan(&w, &wlen, &snull, &sl, *p, *plen);
 
 	/* walk through additional section */
 	for(i=0; i < LDNS_ARCOUNT(p); i++) {
 		/* if this is OPT then done */
 		uint8_t* dstart = w;
 		size_t dlen = wlen;
-		(void)ldns_wire2str_dname_scan(&dstart, &dlen, &snull, &sl,
+		(void)sldns_wire2str_dname_scan(&dstart, &dlen, &snull, &sl,
 			*p, *plen);
-		if(dlen >= 2 && ldns_read_uint16(dstart) == LDNS_RR_TYPE_OPT) {
+		if(dlen >= 2 && sldns_read_uint16(dstart) == LDNS_RR_TYPE_OPT) {
 			*p = dstart+2;
 			*plen = dlen-2;
 			return 1;
 		}
 		/* move to next RR */
-		(void)ldns_wire2str_rr_scan(&w, &wlen, &snull, &sl, *p, *plen);
+		(void)sldns_wire2str_rr_scan(&w, &wlen, &snull, &sl, *p, *plen);
 	}
 	return 0;
 }
@@ -807,7 +807,7 @@ get_do_flag(uint8_t* pkt, size_t len)
 	}
 	if(walk_len < 6)
 		return 0; /* malformed */
-	edns_bits = ldns_read_uint16(walk+4);
+	edns_bits = sldns_read_uint16(walk+4);
 	return (int)(edns_bits&LDNS_EDNS_MASK_DO_BIT);
 }
 
@@ -825,19 +825,19 @@ zerottls(uint8_t* pkt, size_t pktlen)
 	walk += LDNS_HEADER_SIZE;
 	walk_len -= LDNS_HEADER_SIZE;
 	for(i=0; i < LDNS_QDCOUNT(pkt); i++)
-		(void)ldns_wire2str_rrquestion_scan(&walk, &walk_len,
+		(void)sldns_wire2str_rrquestion_scan(&walk, &walk_len,
 			&snull, &sl, pkt, pktlen);
 	for(i=0; i < num; i++) {
 		/* wipe TTL */
 		uint8_t* dstart = walk;
 		size_t dlen = walk_len;
-		(void)ldns_wire2str_dname_scan(&dstart, &dlen, &snull, &sl,
+		(void)sldns_wire2str_dname_scan(&dstart, &dlen, &snull, &sl,
 			pkt, pktlen);
 		if(dlen < 8)
 			return;
-		ldns_write_uint32(dstart+4, 0);
+		sldns_write_uint32(dstart+4, 0);
 		/* go to next RR */
-		(void)ldns_wire2str_rr_scan(&walk, &walk_len, &snull, &sl,
+		(void)sldns_wire2str_rr_scan(&walk, &walk_len, &snull, &sl,
 			pkt, pktlen);
 	}
 }
@@ -1000,7 +1000,7 @@ static void lowercase_dname(uint8_t** p, size_t* remain)
 static void lowercase_rdata(uint8_t** p, size_t* remain,
 	uint16_t rdatalen, uint16_t t)
 {
-	const ldns_rr_descriptor *desc = ldns_rr_descript(t);
+	const sldns_rr_descriptor *desc = sldns_rr_descript(t);
 	uint8_t dname_count = 0;
 	size_t i = 0;
 	size_t rdataremain = rdatalen;
@@ -1011,7 +1011,7 @@ static void lowercase_rdata(uint8_t** p, size_t* remain,
 		return;
 	}
 	while(dname_count < desc->_dname_count) {
-		ldns_rdf_type f = ldns_rr_descriptor_field_type(desc, i++);
+		sldns_rdf_type f = sldns_rr_descriptor_field_type(desc, i++);
 		if(f == LDNS_RDF_TYPE_DNAME) {
 			lowercase_dname(p, &rdataremain);
 			dname_count++;
@@ -1077,8 +1077,8 @@ static void lowercase_pkt(uint8_t* pkt, size_t pktlen)
 	for(i=0; i<LDNS_ANCOUNT(pkt)+LDNS_NSCOUNT(pkt)+LDNS_ARCOUNT(pkt); i++) {
 		lowercase_dname(&p, &remain);
 		if(remain < 10) return;
-		t = ldns_read_uint16(p);
-		rdatalen = ldns_read_uint16(p+8);
+		t = sldns_read_uint16(p);
+		rdatalen = sldns_read_uint16(p+8);
 		p += 10;
 		remain -= 10;
 		if(remain < rdatalen) return;
@@ -1104,8 +1104,8 @@ match_all(uint8_t* q, size_t qlen, uint8_t* p, size_t plen, int mttl,
 	}
 	lowercase_pkt(qb, qlen);
 	lowercase_pkt(pb, plen);
-	qstr = ldns_wire2str_pkt(qb, qlen);
-	pstr = ldns_wire2str_pkt(pb, plen);
+	qstr = sldns_wire2str_pkt(qb, qlen);
+	pstr = sldns_wire2str_pkt(pb, plen);
 	if(!qstr || !pstr) error("cannot pkt2string");
 	r = (strcmp(qstr, pstr) == 0);
 	if(!r) {
@@ -1145,8 +1145,8 @@ static int equal_dname(uint8_t* q, size_t qlen, uint8_t* p, size_t plen)
 	char* qss = qs, *pss = ps;
 	if(!qn || !pn)
 		return 0;
-	(void)ldns_wire2str_dname_scan(&qn, &qlen, &qss, &qslen, q, qlen);
-	(void)ldns_wire2str_dname_scan(&pn, &plen, &pss, &pslen, p, plen);
+	(void)sldns_wire2str_dname_scan(&qn, &qlen, &qss, &qslen, q, qlen);
+	(void)sldns_wire2str_dname_scan(&pn, &plen, &pss, &pslen, p, plen);
 	return (strcmp(qs, ps) == 0);
 }
 
@@ -1163,8 +1163,8 @@ static int subdomain_dname(uint8_t* q, size_t qlen, uint8_t* p, size_t plen)
 	if(!qn || !pn)
 		return 0;
 	/* decompresses domain names */
-	(void)ldns_wire2str_dname_scan(&qn, &qlen, &qss, &qslen, q, qlen);
-	(void)ldns_wire2str_dname_scan(&pn, &plen, &pss, &pslen, p, plen);
+	(void)sldns_wire2str_dname_scan(&qn, &qlen, &qss, &qslen, q, qlen);
+	(void)sldns_wire2str_dname_scan(&pn, &plen, &pss, &pslen, p, plen);
 	/* same: false, (strict subdomain check)??? */
 	if(strcmp(qs, ps) == 0)
 		return 1;
@@ -1275,7 +1275,7 @@ adjust_packet(struct entry* match, uint8_t** answer_pkt, size_t *answer_len,
 		memmove(res+LDNS_HEADER_SIZE+dlen+4, orig+LDNS_HEADER_SIZE,
 			reslen-(LDNS_HEADER_SIZE+dlen+4));
 		/* set QDCOUNT */
-		ldns_write_uint16(res+4, 1);
+		sldns_write_uint16(res+4, 1);
 	} else if(match->copy_query && origlen >= LDNS_HEADER_SIZE &&
 		query_len >= LDNS_HEADER_SIZE && LDNS_QDCOUNT(query_pkt)!=0
 		&& get_qname_len(orig, origlen) == 0) {
@@ -1347,7 +1347,7 @@ handle_query(uint8_t* inbuf, ssize_t inlen, struct entry* entries, int* count,
 		(int)(inlen>=2?LDNS_ID_WIRE(inbuf):0), 
 		(transport==transport_tcp)?"TCP":"UDP", (int)inlen);
 	if(verbose_out) {
-		char* out = ldns_wire2str_pkt(inbuf, (size_t)inlen);
+		char* out = sldns_wire2str_pkt(inbuf, (size_t)inlen);
 		printf("%s\n", out);
 		free(out);
 	}
@@ -1366,8 +1366,8 @@ handle_query(uint8_t* inbuf, ssize_t inlen, struct entry* entries, int* count,
 			 * parsed, we can use adjust rules. if not,
 			 * send packet literally */
 			/* still try to adjust ID if others fail */
-			outlen = ldns_buffer_limit(p->reply_from_hex);
-			outbuf = ldns_buffer_begin(p->reply_from_hex);
+			outlen = sldns_buffer_limit(p->reply_from_hex);
+			outbuf = sldns_buffer_begin(p->reply_from_hex);
 		} else {
 			outbuf = p->reply_pkt;
 			outlen = p->reply_len;
@@ -1380,7 +1380,7 @@ handle_query(uint8_t* inbuf, ssize_t inlen, struct entry* entries, int* count,
 		adjust_packet(entry, &outbuf, &outlen, inbuf, (size_t)inlen);
 		verbose(1, "Answer packet size: %u bytes.\n", (unsigned int)outlen);
 		if(verbose_out) {
-			char* out = ldns_wire2str_pkt(outbuf, outlen);
+			char* out = sldns_wire2str_pkt(outbuf, outlen);
 			printf("%s\n", out);
 			free(out);
 		}
@@ -1409,7 +1409,7 @@ void delete_replylist(struct reply_packet* replist)
 	while(p) {
 		np = p->next;
 		free(p->reply_pkt);
-		ldns_buffer_free(p->reply_from_hex);
+		sldns_buffer_free(p->reply_from_hex);
 		free(p);
 		p=np;
 	}

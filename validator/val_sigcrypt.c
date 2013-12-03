@@ -290,7 +290,7 @@ ds_create_dnskey_digest(struct module_env* env,
 	struct ub_packed_rrset_key* ds_rrset, size_t ds_idx,
 	uint8_t* digest)
 {
-	ldns_buffer* b = env->scratch_buffer;
+	sldns_buffer* b = env->scratch_buffer;
 	uint8_t* dnskey_rdata;
 	size_t dnskey_len;
 	rrset_get_rdata(dnskey_rrset, dnskey_idx, &dnskey_rdata, &dnskey_len);
@@ -298,15 +298,15 @@ ds_create_dnskey_digest(struct module_env* env,
 	/* create digest source material in buffer 
 	 * digest = digest_algorithm( DNSKEY owner name | DNSKEY RDATA);
 	 *	DNSKEY RDATA = Flags | Protocol | Algorithm | Public Key. */
-	ldns_buffer_clear(b);
-	ldns_buffer_write(b, dnskey_rrset->rk.dname, 
+	sldns_buffer_clear(b);
+	sldns_buffer_write(b, dnskey_rrset->rk.dname, 
 		dnskey_rrset->rk.dname_len);
-	query_dname_tolower(ldns_buffer_begin(b));
-	ldns_buffer_write(b, dnskey_rdata+2, dnskey_len-2); /* skip rdatalen*/
-	ldns_buffer_flip(b);
+	query_dname_tolower(sldns_buffer_begin(b));
+	sldns_buffer_write(b, dnskey_rdata+2, dnskey_len-2); /* skip rdatalen*/
+	sldns_buffer_flip(b);
 	
 	return secalgo_ds_digest(ds_get_digest_algo(ds_rrset, ds_idx),
-		(unsigned char*)ldns_buffer_begin(b), ldns_buffer_limit(b),
+		(unsigned char*)sldns_buffer_begin(b), sldns_buffer_limit(b),
 		(unsigned char*)digest);
 }
 
@@ -370,7 +370,7 @@ dnskey_calc_keytag(struct ub_packed_rrset_key* dnskey_rrset, size_t dnskey_idx)
 	size_t len;
 	rrset_get_rdata(dnskey_rrset, dnskey_idx, &data, &len);
 	/* do not pass rdatalen to ldns */
-	return ldns_calc_keytag_raw(data+2, len-2);
+	return sldns_calc_keytag_raw(data+2, len-2);
 }
 
 int dnskey_algo_is_supported(struct ub_packed_rrset_key* dnskey_rrset,
@@ -534,7 +534,7 @@ dnskeyset_verify_rrset(struct module_env* env, struct val_env* ve,
 void algo_needs_reason(struct module_env* env, int alg, char** reason, char* s)
 {
 	char buf[256];
-	ldns_lookup_table *t = ldns_lookup_by_id(SLDNS(_algorithms), alg);
+	sldns_lookup_table *t = sldns_lookup_by_id(sldns_algorithms, alg);
 	if(t&&t->name)
 		snprintf(buf, sizeof(buf), "%s with algorithm %s", s, t->name);
 	else	snprintf(buf, sizeof(buf), "%s with algorithm ALG%u", s,
@@ -644,7 +644,7 @@ struct canon_rr {
  */
 static int
 canonical_compare_byfield(struct packed_rrset_data* d, 
-	const ldns_rr_descriptor* desc, size_t i, size_t j)
+	const sldns_rr_descriptor* desc, size_t i, size_t j)
 {
 	/* sweep across rdata, keep track of some state:
 	 * 	which rr field, and bytes left in field.
@@ -788,7 +788,7 @@ canonical_compare(struct ub_packed_rrset_key* rrset, size_t i, size_t j)
 {
 	struct packed_rrset_data* d = (struct packed_rrset_data*)
 		rrset->entry.data;
-	const ldns_rr_descriptor* desc;
+	const sldns_rr_descriptor* desc;
 	uint16_t type = ntohs(rrset->rk.type);
 	size_t minlen;
 	int c;
@@ -840,7 +840,7 @@ canonical_compare(struct ub_packed_rrset_key* rrset, size_t i, size_t j)
 		case LDNS_RR_TYPE_PX:
 		case LDNS_RR_TYPE_NAPTR:
 		case LDNS_RR_TYPE_SRV:
-			desc = ldns_rr_descript(type);
+			desc = sldns_rr_descript(type);
 			log_assert(desc);
 			/* this holds for the types that need canonicalizing */
 			log_assert(desc->_minimum == desc->_maximum);
@@ -913,15 +913,15 @@ canonical_sort(struct ub_packed_rrset_key* rrset, struct packed_rrset_data* d,
  * @param can_owner_len: length of canonical owner name.
  */
 static void
-insert_can_owner(ldns_buffer* buf, struct ub_packed_rrset_key* k,
+insert_can_owner(sldns_buffer* buf, struct ub_packed_rrset_key* k,
 	uint8_t* sig, uint8_t** can_owner, size_t* can_owner_len)
 {
 	int rrsig_labels = (int)sig[3];
 	int fqdn_labels = dname_signame_label_count(k->rk.dname);
-	*can_owner = ldns_buffer_current(buf);
+	*can_owner = sldns_buffer_current(buf);
 	if(rrsig_labels == fqdn_labels) {
 		/* no change */
-		ldns_buffer_write(buf, k->rk.dname, k->rk.dname_len);
+		sldns_buffer_write(buf, k->rk.dname, k->rk.dname_len);
 		query_dname_tolower(*can_owner);
 		*can_owner_len = k->rk.dname_len;
 		return;
@@ -937,8 +937,8 @@ insert_can_owner(ldns_buffer* buf, struct ub_packed_rrset_key* k,
 			dname_remove_label(&nm, &len);	
 		}
 		*can_owner_len = len+2;
-		ldns_buffer_write(buf, (uint8_t*)"\001*", 2);
-		ldns_buffer_write(buf, nm, len);
+		sldns_buffer_write(buf, (uint8_t*)"\001*", 2);
+		sldns_buffer_write(buf, nm, len);
 		query_dname_tolower(*can_owner);
 	}
 }
@@ -950,10 +950,10 @@ insert_can_owner(ldns_buffer* buf, struct ub_packed_rrset_key* k,
  * @param len: length of the rdata (including rdatalen uint16).
  */
 static void
-canonicalize_rdata(ldns_buffer* buf, struct ub_packed_rrset_key* rrset,
+canonicalize_rdata(sldns_buffer* buf, struct ub_packed_rrset_key* rrset,
 	size_t len)
 {
-	uint8_t* datstart = ldns_buffer_current(buf)-len+2;
+	uint8_t* datstart = sldns_buffer_current(buf)-len+2;
 	switch(ntohs(rrset->rk.type)) {
 		case LDNS_RR_TYPE_NXT: 
 		case LDNS_RR_TYPE_NS:
@@ -1120,7 +1120,7 @@ int rrset_canonical_equal(struct regional* region,
  * @return false on alloc error.
  */
 static int
-rrset_canonical(struct regional* region, ldns_buffer* buf, 
+rrset_canonical(struct regional* region, sldns_buffer* buf, 
 	struct ub_packed_rrset_key* k, uint8_t* sig, size_t siglen,
 	struct rbtree_t** sortree)
 {
@@ -1144,13 +1144,13 @@ rrset_canonical(struct regional* region, ldns_buffer* buf,
 		canonical_sort(k, d, *sortree, rrs);
 	}
 
-	ldns_buffer_clear(buf);
-	ldns_buffer_write(buf, sig, siglen);
+	sldns_buffer_clear(buf);
+	sldns_buffer_write(buf, sig, siglen);
 	/* canonicalize signer name */
-	query_dname_tolower(ldns_buffer_begin(buf)+18); 
+	query_dname_tolower(sldns_buffer_begin(buf)+18); 
 	RBTREE_FOR(walk, struct canon_rr*, (*sortree)) {
 		/* see if there is enough space left in the buffer */
-		if(ldns_buffer_remaining(buf) < can_owner_len + 2 + 2 + 4
+		if(sldns_buffer_remaining(buf) < can_owner_len + 2 + 2 + 4
 			+ d->rr_len[walk->rr_idx]) {
 			log_err("verify: failed to canonicalize, "
 				"rrset too big");
@@ -1158,17 +1158,17 @@ rrset_canonical(struct regional* region, ldns_buffer* buf,
 		}
 		/* determine canonical owner name */
 		if(can_owner)
-			ldns_buffer_write(buf, can_owner, can_owner_len);
+			sldns_buffer_write(buf, can_owner, can_owner_len);
 		else	insert_can_owner(buf, k, sig, &can_owner, 
 				&can_owner_len);
-		ldns_buffer_write(buf, &k->rk.type, 2);
-		ldns_buffer_write(buf, &k->rk.rrset_class, 2);
-		ldns_buffer_write(buf, sig+4, 4);
-		ldns_buffer_write(buf, d->rr_data[walk->rr_idx], 
+		sldns_buffer_write(buf, &k->rk.type, 2);
+		sldns_buffer_write(buf, &k->rk.rrset_class, 2);
+		sldns_buffer_write(buf, sig+4, 4);
+		sldns_buffer_write(buf, d->rr_data[walk->rr_idx], 
 			d->rr_len[walk->rr_idx]);
 		canonicalize_rdata(buf, k, d->rr_len[walk->rr_idx]);
 	}
-	ldns_buffer_flip(buf);
+	sldns_buffer_flip(buf);
 	return 1;
 }
 
@@ -1300,7 +1300,7 @@ adjust_ttl(struct val_env* ve, uint32_t unow,
 }
 
 enum sec_status 
-dnskey_verify_rrset_sig(struct regional* region, ldns_buffer* buf, 
+dnskey_verify_rrset_sig(struct regional* region, sldns_buffer* buf, 
 	struct val_env* ve, time_t now,
         struct ub_packed_rrset_key* rrset, struct ub_packed_rrset_key* dnskey,
         size_t dnskey_idx, size_t sig_idx,

@@ -125,7 +125,7 @@ local_data_cmp(const void* d1, const void* d2)
 int
 parse_dname(const char* str, uint8_t** res, size_t* len, int* labs)
 {
-	*res = ldns_str2wire_dname(str, len);
+	*res = sldns_str2wire_dname(str, len);
 	*labs = 0;
 	if(!*res) {
 		log_err("cannot parse name %s", str);
@@ -220,12 +220,12 @@ get_rr_content(const char* str, uint8_t** nm, uint16_t* type,
 	uint8_t** rdata, size_t* rdata_len)
 {
 	size_t dname_len = 0;
-	int e = ldns_str2wire_rr_buf(str, rr, &len, &dname_len, 3600,
+	int e = sldns_str2wire_rr_buf(str, rr, &len, &dname_len, 3600,
 		NULL, 0, NULL, 0);
 	if(e) {
 		log_err("error parsing local-data at %d: '%s': %s",
 			LDNS_WIREPARSE_OFFSET(e), str,
-			ldns_get_errorstr_parse(e));
+			sldns_get_errorstr_parse(e));
 		return 0;
 	}
 	*nm = memdup(rr, dname_len);
@@ -233,11 +233,11 @@ get_rr_content(const char* str, uint8_t** nm, uint16_t* type,
 		log_err("out of memory");
 		return 0;
 	}
-	*dclass = ldns_wirerr_get_class(rr, len, dname_len);
-	*type = ldns_wirerr_get_type(rr, len, dname_len);
-	*ttl = (time_t)ldns_wirerr_get_ttl(rr, len, dname_len);
-	*rdata = ldns_wirerr_get_rdatawl(rr, len, dname_len);
-	*rdata_len = ldns_wirerr_get_rdatalen(rr, len, dname_len)+2;
+	*dclass = sldns_wirerr_get_class(rr, len, dname_len);
+	*type = sldns_wirerr_get_type(rr, len, dname_len);
+	*ttl = (time_t)sldns_wirerr_get_ttl(rr, len, dname_len);
+	*rdata = sldns_wirerr_get_rdatawl(rr, len, dname_len);
+	*rdata_len = sldns_wirerr_get_rdatalen(rr, len, dname_len)+2;
 	return 1;
 }
 
@@ -247,16 +247,16 @@ get_rr_nameclass(const char* str, uint8_t** nm, uint16_t* dclass)
 {
 	uint8_t rr[LDNS_RR_BUF_SIZE];
 	size_t len = sizeof(rr), dname_len = 0;
-	int s = ldns_str2wire_rr_buf(str, rr, &len, &dname_len, 3600,
+	int s = sldns_str2wire_rr_buf(str, rr, &len, &dname_len, 3600,
 		NULL, 0, NULL, 0);
 	if(s != 0) {
 		log_err("error parsing local-data at %d '%s': %s",
 			LDNS_WIREPARSE_OFFSET(s), str,
-			ldns_get_errorstr_parse(s));
+			sldns_get_errorstr_parse(s));
 		return 0;
 	}
 	*nm = memdup(rr, dname_len);
-	*dclass = ldns_wirerr_get_class(rr, len, dname_len);
+	*dclass = sldns_wirerr_get_class(rr, len, dname_len);
 	if(!*nm) {
 		log_err("out of memory");
 		return 0;
@@ -962,7 +962,7 @@ void local_zones_print(struct local_zones* zones)
 /** encode answer consisting of 1 rrset */
 static int
 local_encode(struct query_info* qinfo, struct edns_data* edns, 
-	ldns_buffer* buf, struct regional* temp, 
+	sldns_buffer* buf, struct regional* temp, 
 	struct ub_packed_rrset_key* rrset, int ansec, int rcode)
 {
 	struct reply_info rep;
@@ -982,20 +982,20 @@ local_encode(struct query_info* qinfo, struct edns_data* edns,
 	edns->ext_rcode = 0;
 	edns->bits &= EDNS_DO;
 	if(!reply_info_answer_encode(qinfo, &rep, 
-		*(uint16_t*)ldns_buffer_begin(buf),
-		ldns_buffer_read_u16_at(buf, 2),
+		*(uint16_t*)sldns_buffer_begin(buf),
+		sldns_buffer_read_u16_at(buf, 2),
 		buf, 0, 0, temp, udpsize, edns, 
 		(int)(edns->bits&EDNS_DO), 0))
 		error_encode(buf, (LDNS_RCODE_SERVFAIL|BIT_AA), qinfo,
-			*(uint16_t*)ldns_buffer_begin(buf),
-		       ldns_buffer_read_u16_at(buf, 2), edns);
+			*(uint16_t*)sldns_buffer_begin(buf),
+		       sldns_buffer_read_u16_at(buf, 2), edns);
 	return 1;
 }
 
 /** answer local data match */
 static int
 local_data_answer(struct local_zone* z, struct query_info* qinfo,
-	struct edns_data* edns, ldns_buffer* buf, struct regional* temp,
+	struct edns_data* edns, sldns_buffer* buf, struct regional* temp,
 	int labs, struct local_data** ldp)
 {
 	struct local_data key;
@@ -1042,18 +1042,18 @@ local_data_answer(struct local_zone* z, struct query_info* qinfo,
  */
 static int
 lz_zone_answer(struct local_zone* z, struct query_info* qinfo,
-	struct edns_data* edns, ldns_buffer* buf, struct regional* temp,
+	struct edns_data* edns, sldns_buffer* buf, struct regional* temp,
 	struct local_data* ld)
 {
 	if(z->type == local_zone_deny) {
 		/** no reply at all, signal caller by clearing buffer. */
-		ldns_buffer_clear(buf);
-		ldns_buffer_flip(buf);
+		sldns_buffer_clear(buf);
+		sldns_buffer_flip(buf);
 		return 1;
 	} else if(z->type == local_zone_refuse) {
 		error_encode(buf, (LDNS_RCODE_REFUSED|BIT_AA), qinfo,
-			*(uint16_t*)ldns_buffer_begin(buf),
-		       ldns_buffer_read_u16_at(buf, 2), edns);
+			*(uint16_t*)sldns_buffer_begin(buf),
+		       sldns_buffer_read_u16_at(buf, 2), edns);
 		return 1;
 	} else if(z->type == local_zone_static ||
 		z->type == local_zone_redirect) {
@@ -1069,8 +1069,8 @@ lz_zone_answer(struct local_zone* z, struct query_info* qinfo,
 			return local_encode(qinfo, edns, buf, temp, 
 				z->soa, 0, rcode);
 		error_encode(buf, (rcode|BIT_AA), qinfo, 
-			*(uint16_t*)ldns_buffer_begin(buf), 
-			ldns_buffer_read_u16_at(buf, 2), edns);
+			*(uint16_t*)sldns_buffer_begin(buf), 
+			sldns_buffer_read_u16_at(buf, 2), edns);
 		return 1;
 	} else if(z->type == local_zone_typetransparent) {
 		/* no NODATA or NXDOMAINS for this zone type */
@@ -1086,8 +1086,8 @@ lz_zone_answer(struct local_zone* z, struct query_info* qinfo,
 			return local_encode(qinfo, edns, buf, temp, 
 				z->soa, 0, rcode);
 		error_encode(buf, (rcode|BIT_AA), qinfo, 
-			*(uint16_t*)ldns_buffer_begin(buf), 
-			ldns_buffer_read_u16_at(buf, 2), edns);
+			*(uint16_t*)sldns_buffer_begin(buf), 
+			sldns_buffer_read_u16_at(buf, 2), edns);
 		return 1;
 	}
 
@@ -1097,7 +1097,7 @@ lz_zone_answer(struct local_zone* z, struct query_info* qinfo,
 
 int 
 local_zones_answer(struct local_zones* zones, struct query_info* qinfo,
-	struct edns_data* edns, ldns_buffer* buf, struct regional* temp)
+	struct edns_data* edns, sldns_buffer* buf, struct regional* temp)
 {
 	/* see if query is covered by a zone,
 	 * 	if so:	- try to match (exact) local data 

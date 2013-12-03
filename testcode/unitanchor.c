@@ -64,7 +64,7 @@ test_anchor_empty(struct val_anchors* a)
 
 /** test set of one anchor */
 static void
-test_anchor_one(ldns_buffer* buff, struct val_anchors* a)
+test_anchor_one(sldns_buffer* buff, struct val_anchors* a)
 {
 	struct trust_anchor* ta;
 	uint16_t c = LDNS_RR_CLASS_IN;
@@ -92,7 +92,7 @@ test_anchor_one(ldns_buffer* buff, struct val_anchors* a)
 
 /** test with several anchors */
 static void
-test_anchors(ldns_buffer* buff, struct val_anchors* a)
+test_anchors(sldns_buffer* buff, struct val_anchors* a)
 {
 	struct trust_anchor* ta;
 	uint16_t c = LDNS_RR_CLASS_IN;
@@ -124,14 +124,14 @@ test_anchors(ldns_buffer* buff, struct val_anchors* a)
 
 void anchors_test(void)
 {
-	ldns_buffer* buff = ldns_buffer_new(65800);
+	sldns_buffer* buff = sldns_buffer_new(65800);
 	struct val_anchors* a;
 	unit_show_feature("trust anchor store");
 	unit_assert(a = anchors_create());
-	ldns_buffer_flip(buff);
+	sldns_buffer_flip(buff);
 	test_anchor_empty(a);
 	test_anchor_one(buff, a);
 	test_anchors(buff, a);
 	anchors_delete(a);
-	ldns_buffer_free(buff);
+	sldns_buffer_free(buff);
 }

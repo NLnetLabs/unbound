@@ -792,7 +792,7 @@ listen_create(struct comm_base* base, struct listen_port* ports,
 	if(!front)
 		return NULL;
 	front->cps = NULL;
-	front->udp_buff = ldns_buffer_new(bufsize);
+	front->udp_buff = sldns_buffer_new(bufsize);
 	if(!front->udp_buff) {
 		free(front);
 		return NULL;
@@ -855,7 +855,7 @@ listen_delete(struct listen_dnsport* front)
 	if(!front) 
 		return;
 	listen_list_delete(front->cps);
-	ldns_buffer_free(front->udp_buff);
+	sldns_buffer_free(front->udp_buff);
 	free(front);
 }
 
@@ -961,7 +961,7 @@ size_t listen_get_mem(struct listen_dnsport* listen)
 {
 	size_t s = sizeof(*listen) + sizeof(*listen->base) + 
 		sizeof(*listen->udp_buff) + 
-		ldns_buffer_capacity(listen->udp_buff);
+		sldns_buffer_capacity(listen->udp_buff);
 	struct listen_list* p;
 	for(p = listen->cps; p; p = p->next) {
 		s += sizeof(*p);

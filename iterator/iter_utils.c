@@ -391,7 +391,7 @@ iter_server_selection(struct iter_env* iter_env,
 }
 
 struct dns_msg* 
-dns_alloc_msg(ldns_buffer* pkt, struct msg_parse* msg, 
+dns_alloc_msg(sldns_buffer* pkt, struct msg_parse* msg, 
 	struct regional* region)
 {
 	struct dns_msg* m = (struct dns_msg*)regional_alloc(region,
@@ -804,7 +804,7 @@ void iter_store_parentside_neg(struct module_env* env,
 	newd->rr_len[0] = 0 /* zero len rdata */ + sizeof(uint16_t);
 	packed_rrset_ptr_fixup(newd);
 	newd->rr_ttl[0] = newd->ttl;
-	ldns_write_uint16(newd->rr_data[0], 0 /* zero len rdata */);
+	sldns_write_uint16(newd->rr_data[0], 0 /* zero len rdata */);
 	/* store it */
 	log_rrset_key(VERB_ALGO, "store parent-side negative", neg);
 	iter_store_parentside_rrset(env, neg);

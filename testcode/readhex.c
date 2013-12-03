@@ -62,24 +62,24 @@ skip_whites(const char** p)
 }
 
 /* takes a hex string and puts into buffer */
-void hex_to_buf(ldns_buffer* pkt, const char* hex)
+void hex_to_buf(sldns_buffer* pkt, const char* hex)
 {
 	const char* p = hex;
 	int val;
-	ldns_buffer_clear(pkt);
+	sldns_buffer_clear(pkt);
 	while(*p) {
 		skip_whites(&p);
-		if(ldns_buffer_position(pkt) == ldns_buffer_limit(pkt))
+		if(sldns_buffer_position(pkt) == sldns_buffer_limit(pkt))
 			fatal_exit("hex_to_buf: buffer too small");
 		if(!isalnum((int)*p))
 			break;
-		val = ldns_hexdigit_to_int(*p++) << 4;
+		val = sldns_hexdigit_to_int(*p++) << 4;
 		skip_whites(&p);
 		log_assert(*p && isalnum((int)*p));
-		val |= ldns_hexdigit_to_int(*p++);
-		ldns_buffer_write_u8(pkt, (uint8_t)val);
+		val |= sldns_hexdigit_to_int(*p++);
+		sldns_buffer_write_u8(pkt, (uint8_t)val);
 		skip_whites(&p);
 	}
-	ldns_buffer_flip(pkt);
+	sldns_buffer_flip(pkt);
 }
 

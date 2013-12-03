@@ -298,7 +298,7 @@ needs_validation(struct module_qstate* qstate, int ret_rc,
 		if(verbosity >= VERB_ALGO) {
 			char rc[16];
 			rc[0]=0;
-			(void)ldns_wire2str_rcode_buf(rcode, rc, sizeof(rc));
+			(void)sldns_wire2str_rcode_buf(rcode, rc, sizeof(rc));
 			verbose(VERB_ALGO, "cannot validate non-answer, rcode %s", rc);
 		}
 		return 0;
@@ -2350,7 +2350,7 @@ ds_response_to_ke(struct module_qstate* qstate, struct val_qstate* vq,
 	if(rcode != LDNS_RCODE_NOERROR) {
 		char rc[16];
 		rc[0]=0;
-		(void)ldns_wire2str_rcode_buf(rcode, rc, sizeof(rc));
+		(void)sldns_wire2str_rcode_buf(rcode, rc, sizeof(rc));
 		/* errors here pretty much break validation */
 		verbose(VERB_DETAIL, "DS response was error, thus bogus");
 		errinf(qstate, rc);
@@ -2528,7 +2528,7 @@ ds_response_to_ke(struct module_qstate* qstate, struct val_qstate* vq,
 		if(FLAGS_GET_RCODE(msg->rep->flags) != LDNS_RCODE_NOERROR) {
 			char rc[16];
 			rc[0]=0;
-			(void)ldns_wire2str_rcode_buf((int)FLAGS_GET_RCODE(
+			(void)sldns_wire2str_rcode_buf((int)FLAGS_GET_RCODE(
 				msg->rep->flags), rc, sizeof(rc));
 			errinf(qstate, rc);
 		} else	errinf(qstate, val_classification_to_string(subtype));

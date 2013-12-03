@@ -106,14 +106,14 @@ check_mod(struct config_file* cfg, struct module_func_block* fb)
 	memset(&env, 0, sizeof(env));
 	env.cfg = cfg;
 	env.scratch = regional_create();
-	env.scratch_buffer = ldns_buffer_new(BUFSIZ);
+	env.scratch_buffer = sldns_buffer_new(BUFSIZ);
 	if(!env.scratch || !env.scratch_buffer)
 		fatal_exit("out of memory");
 	if(!(*fb->init)(&env, 0)) {
 		fatal_exit("bad config for %s module", fb->name);
 	}
 	(*fb->deinit)(&env, 0);
-	ldns_buffer_free(env.scratch_buffer);
+	sldns_buffer_free(env.scratch_buffer);
 	regional_destroy(env.scratch);
 }
 

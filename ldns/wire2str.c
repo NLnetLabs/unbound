@@ -34,7 +34,7 @@
 
 /* lookup tables for standard DNS stuff  */
 /* Taken from RFC 2535, section 7.  */
-static ldns_lookup_table SLDNS(_algorithms_data)[] = {
+static sldns_lookup_table sldns_algorithms_data[] = {
 	{ LDNS_RSAMD5, "RSAMD5" },
 	{ LDNS_DH, "DH" },
 	{ LDNS_DSA, "DSA" },
@@ -52,20 +52,20 @@ static ldns_lookup_table SLDNS(_algorithms_data)[] = {
 	{ LDNS_PRIVATEOID, "PRIVATEOID" },
 	{ 0, NULL }
 };
-ldns_lookup_table* SLDNS(_algorithms) = SLDNS(_algorithms_data);
+sldns_lookup_table* sldns_algorithms = sldns_algorithms_data;
 
 /* hash algorithms in DS record */
-static ldns_lookup_table SLDNS(_hashes_data)[] = {
+static sldns_lookup_table sldns_hashes_data[] = {
 	{ LDNS_SHA1, "SHA1" },
 	{ LDNS_SHA256, "SHA256" },
 	{ LDNS_HASH_GOST, "HASH-GOST" },
 	{ LDNS_SHA384, "SHA384" },
 	{ 0, NULL }
 };
-ldns_lookup_table* SLDNS(_hashes) = SLDNS(_hashes_data);
+sldns_lookup_table* sldns_hashes = sldns_hashes_data;
 
 /* Taken from RFC 4398  */
-static ldns_lookup_table SLDNS(_cert_algorithms_data)[] = {
+static sldns_lookup_table sldns_cert_algorithms_data[] = {
 	{ LDNS_CERT_PKIX, "PKIX" },
 	{ LDNS_CERT_SPKI, "SPKI" },
 	{ LDNS_CERT_PGP, "PGP" },
@@ -78,10 +78,10 @@ static ldns_lookup_table SLDNS(_cert_algorithms_data)[] = {
 	{ LDNS_CERT_OID, "OID" },
 	{ 0, NULL }
 };
-ldns_lookup_table* SLDNS(_cert_algorithms) = SLDNS(_cert_algorithms_data);
+sldns_lookup_table* sldns_cert_algorithms = sldns_cert_algorithms_data;
 
 /* if these are used elsewhere */
-static ldns_lookup_table SLDNS(_rcodes_data)[] = {
+static sldns_lookup_table sldns_rcodes_data[] = {
 	{ LDNS_RCODE_NOERROR, "NOERROR" },
 	{ LDNS_RCODE_FORMERR, "FORMERR" },
 	{ LDNS_RCODE_SERVFAIL, "SERVFAIL" },
@@ -95,9 +95,9 @@ static ldns_lookup_table SLDNS(_rcodes_data)[] = {
 	{ LDNS_RCODE_NOTZONE, "NOTZONE" },
 	{ 0, NULL }
 };
-ldns_lookup_table* SLDNS(_rcodes) = SLDNS(_rcodes_data);
+sldns_lookup_table* sldns_rcodes = sldns_rcodes_data;
 
-static ldns_lookup_table SLDNS(_opcodes_data)[] = {
+static sldns_lookup_table sldns_opcodes_data[] = {
 	{ LDNS_PACKET_QUERY, "QUERY" },
 	{ LDNS_PACKET_IQUERY, "IQUERY" },
 	{ LDNS_PACKET_STATUS, "STATUS" },
@@ -105,9 +105,9 @@ static ldns_lookup_table SLDNS(_opcodes_data)[] = {
 	{ LDNS_PACKET_UPDATE, "UPDATE" },
 	{ 0, NULL }
 };
-ldns_lookup_table* SLDNS(_opcodes) = SLDNS(_opcodes_data);
+sldns_lookup_table* sldns_opcodes = sldns_opcodes_data;
 
-static ldns_lookup_table SLDNS(_wireparse_errors_data)[] = {
+static sldns_lookup_table sldns_wireparse_errors_data[] = {
 	{ LDNS_WIREPARSE_ERR_OK, "no parse error" },
 	{ LDNS_WIREPARSE_ERR_GENERAL, "parse error" },
 	{ LDNS_WIREPARSE_ERR_DOMAINNAME_OVERFLOW, "Domainname length overflow" },
@@ -148,15 +148,15 @@ static ldns_lookup_table SLDNS(_wireparse_errors_data)[] = {
 	{ LDNS_WIREPARSE_ERR_PARENTHESIS, "Parse error, parenthesis mismatch" },
 	{ 0, NULL }
 };
-ldns_lookup_table* SLDNS(_wireparse_errors) = SLDNS(_wireparse_errors_data);
+sldns_lookup_table* sldns_wireparse_errors = sldns_wireparse_errors_data;
 
-static ldns_lookup_table SLDNS(_edns_flags_data)[] = {
+static sldns_lookup_table sldns_edns_flags_data[] = {
 	{ 3600, "do"},
 	{ 0, NULL}
 };
-ldns_lookup_table* SLDNS(_edns_flags) = SLDNS(_edns_flags_data);
+sldns_lookup_table* sldns_edns_flags = sldns_edns_flags_data;
 
-static ldns_lookup_table SLDNS(_edns_options_data)[] = {
+static sldns_lookup_table sldns_edns_options_data[] = {
 	{ 1, "LLQ" },
 	{ 2, "UL" },
 	{ 3, "NSID" },
@@ -167,115 +167,115 @@ static ldns_lookup_table SLDNS(_edns_options_data)[] = {
 	{ 8, "edns-client-subnet" },
 	{ 0, NULL}
 };
-ldns_lookup_table* SLDNS(_edns_options) = SLDNS(_edns_options_data);
+sldns_lookup_table* sldns_edns_options = sldns_edns_options_data;
 
-char* ldns_wire2str_pkt(uint8_t* data, size_t len)
+char* sldns_wire2str_pkt(uint8_t* data, size_t len)
 {
-	size_t slen = (size_t)ldns_wire2str_pkt_buf(data, len, NULL, 0);
+	size_t slen = (size_t)sldns_wire2str_pkt_buf(data, len, NULL, 0);
 	char* result = (char*)malloc(slen+1);
 	if(!result) return NULL;
-	ldns_wire2str_pkt_buf(data, len, result, slen+1);
+	sldns_wire2str_pkt_buf(data, len, result, slen+1);
 	return result;
 }
 
-char* ldns_wire2str_rr(uint8_t* rr, size_t len)
+char* sldns_wire2str_rr(uint8_t* rr, size_t len)
 {
-	size_t slen = (size_t)ldns_wire2str_rr_buf(rr, len, NULL, 0);
+	size_t slen = (size_t)sldns_wire2str_rr_buf(rr, len, NULL, 0);
 	char* result = (char*)malloc(slen+1);
 	if(!result) return NULL;
-	ldns_wire2str_rr_buf(rr, len, result, slen+1);
+	sldns_wire2str_rr_buf(rr, len, result, slen+1);
 	return result;
 }
 
-char* ldns_wire2str_type(uint16_t rrtype)
+char* sldns_wire2str_type(uint16_t rrtype)
 {
 	char buf[16];
-	ldns_wire2str_type_buf(rrtype, buf, sizeof(buf));
+	sldns_wire2str_type_buf(rrtype, buf, sizeof(buf));
 	return strdup(buf);
 }
 
-char* ldns_wire2str_class(uint16_t rrclass)
+char* sldns_wire2str_class(uint16_t rrclass)
 {
 	char buf[16];
-	ldns_wire2str_class_buf(rrclass, buf, sizeof(buf));
+	sldns_wire2str_class_buf(rrclass, buf, sizeof(buf));
 	return strdup(buf);
 }
 
-char* ldns_wire2str_dname(uint8_t* dname, size_t dname_len)
+char* sldns_wire2str_dname(uint8_t* dname, size_t dname_len)
 {
-	size_t slen=(size_t)ldns_wire2str_dname_buf(dname, dname_len, NULL, 0);
+	size_t slen=(size_t)sldns_wire2str_dname_buf(dname, dname_len, NULL, 0);
 	char* result = (char*)malloc(slen+1);
 	if(!result) return NULL;
-	ldns_wire2str_dname_buf(dname, dname_len, result, slen+1);
+	sldns_wire2str_dname_buf(dname, dname_len, result, slen+1);
 	return result;
 }
 
-char* ldns_wire2str_rcode(int rcode)
+char* sldns_wire2str_rcode(int rcode)
 {
 	char buf[16];
-	ldns_wire2str_rcode_buf(rcode, buf, sizeof(buf));
+	sldns_wire2str_rcode_buf(rcode, buf, sizeof(buf));
 	return strdup(buf);
 }
 
-int ldns_wire2str_pkt_buf(uint8_t* d, size_t dlen, char* s, size_t slen)
+int sldns_wire2str_pkt_buf(uint8_t* d, size_t dlen, char* s, size_t slen)
 {
 	/* use arguments as temporary variables */
-	return ldns_wire2str_pkt_scan(&d, &dlen, &s, &slen);
+	return sldns_wire2str_pkt_scan(&d, &dlen, &s, &slen);
 }
 
-int ldns_wire2str_rr_buf(uint8_t* d, size_t dlen, char* s, size_t slen)
+int sldns_wire2str_rr_buf(uint8_t* d, size_t dlen, char* s, size_t slen)
 {
 	/* use arguments as temporary variables */
-	return ldns_wire2str_rr_scan(&d, &dlen, &s, &slen, NULL, 0);
+	return sldns_wire2str_rr_scan(&d, &dlen, &s, &slen, NULL, 0);
 }
 
-int ldns_wire2str_rdata_buf(uint8_t* rdata, size_t rdata_len, char* str,
+int sldns_wire2str_rdata_buf(uint8_t* rdata, size_t rdata_len, char* str,
 	size_t str_len, uint16_t rrtype)
 {
 	/* use arguments as temporary variables */
-	return ldns_wire2str_rdata_scan(&rdata, &rdata_len, &str, &str_len,
+	return sldns_wire2str_rdata_scan(&rdata, &rdata_len, &str, &str_len,
 		rrtype, NULL, 0);
 }
 
-int ldns_wire2str_rr_unknown_buf(uint8_t* d, size_t dlen, char* s, size_t slen)
+int sldns_wire2str_rr_unknown_buf(uint8_t* d, size_t dlen, char* s, size_t slen)
 {
 	/* use arguments as temporary variables */
-	return ldns_wire2str_rr_unknown_scan(&d, &dlen, &s, &slen, NULL, 0);
+	return sldns_wire2str_rr_unknown_scan(&d, &dlen, &s, &slen, NULL, 0);
 }
 
-int ldns_wire2str_rr_comment_buf(uint8_t* rr, size_t rrlen, size_t dname_len,
+int sldns_wire2str_rr_comment_buf(uint8_t* rr, size_t rrlen, size_t dname_len,
 	char* s, size_t slen)
 {
-	uint16_t rrtype = ldns_wirerr_get_type(rr, rrlen, dname_len);
-	return ldns_wire2str_rr_comment_print(&s, &slen, rr, rrlen, dname_len,
+	uint16_t rrtype = sldns_wirerr_get_type(rr, rrlen, dname_len);
+	return sldns_wire2str_rr_comment_print(&s, &slen, rr, rrlen, dname_len,
 		rrtype);
 }
 
-int ldns_wire2str_type_buf(uint16_t rrtype, char* s, size_t slen)
+int sldns_wire2str_type_buf(uint16_t rrtype, char* s, size_t slen)
 {
 	/* use arguments as temporary variables */
-	return ldns_wire2str_type_print(&s, &slen, rrtype);
+	return sldns_wire2str_type_print(&s, &slen, rrtype);
 }
 
-int ldns_wire2str_class_buf(uint16_t rrclass, char* s, size_t slen)
+int sldns_wire2str_class_buf(uint16_t rrclass, char* s, size_t slen)
 {
 	/* use arguments as temporary variables */
-	return ldns_wire2str_class_print(&s, &slen, rrclass);
+	return sldns_wire2str_class_print(&s, &slen, rrclass);
 }
 
-int ldns_wire2str_rcode_buf(int rcode, char* s, size_t slen)
+int sldns_wire2str_rcode_buf(int rcode, char* s, size_t slen)
 {
 	/* use arguments as temporary variables */
-	return ldns_wire2str_rcode_print(&s, &slen, rcode);
+	return sldns_wire2str_rcode_print(&s, &slen, rcode);
 }
 
-int ldns_wire2str_dname_buf(uint8_t* d, size_t dlen, char* s, size_t slen)
+int sldns_wire2str_dname_buf(uint8_t* d, size_t dlen, char* s, size_t slen)
 {
 	/* use arguments as temporary variables */
-	return ldns_wire2str_dname_scan(&d, &dlen, &s, &slen, NULL, 0);
+	return sldns_wire2str_dname_scan(&d, &dlen, &s, &slen, NULL, 0);
 }
 
-int ldns_str_vprint(char** str, size_t* slen, const char* format, va_list args)
+int sldns_str_vprint(char** str, size_t* slen, const char* format, va_list args)
 {
 	int w = vsnprintf(*str, *slen, format, args);
 	if(w < 0) {
@@ -291,12 +291,12 @@ int ldns_str_vprint(char** str, size_t* slen, const char* format, va_list args)
 	return w;
 }
 
-int ldns_str_print(char** str, size_t* slen, const char* format, ...)
+int sldns_str_print(char** str, size_t* slen, const char* format, ...)
 {
 	int w;
 	va_list args;
 	va_start(args, format);
-	w = ldns_str_vprint(str, slen, format, args);
+	w = sldns_str_vprint(str, slen, format, args);
 	va_end(args);
 	return w;
 }
@@ -307,7 +307,7 @@ static int print_hex_buf(char** s, size_t* slen, uint8_t* buf, size_t len)
 	const char* hex = "0123456789ABCDEF";
 	size_t i;
 	for(i=0; i<len; i++) {
-		(void)ldns_str_print(s, slen, "%c%c", hex[(buf[i]&0xf0)>>4],
+		(void)sldns_str_print(s, slen, "%c%c", hex[(buf[i]&0xf0)>>4],
 			hex[buf[i]&0x0f]);
 	}
 	return (int)len*2;
@@ -318,14 +318,14 @@ static int print_remainder_hex(const char* pref, uint8_t** d, size_t* dlen,
 	char** s, size_t* slen)
 {
 	int w = 0;
-	w += ldns_str_print(s, slen, "%s", pref);
+	w += sldns_str_print(s, slen, "%s", pref);
 	w += print_hex_buf(s, slen, *d, *dlen);
 	*d += *dlen;
 	*dlen = 0;
 	return w;
 }
 
-int ldns_wire2str_pkt_scan(uint8_t** d, size_t* dlen, char** s, size_t* slen)
+int sldns_wire2str_pkt_scan(uint8_t** d, size_t* dlen, char** s, size_t* slen)
 {
 	int w = 0;
 	unsigned qdcount, ancount, nscount, arcount, i;
@@ -339,44 +339,44 @@ int ldns_wire2str_pkt_scan(uint8_t** d, size_t* dlen, char** s, size_t* slen)
 	} else {
 		qdcount = ancount = nscount = arcount = 0;
 	}
-	w += ldns_wire2str_header_scan(d, dlen, s, slen);
-	w += ldns_str_print(s, slen, "\n");
-	w += ldns_str_print(s, slen, ";; QUESTION SECTION:\n");
+	w += sldns_wire2str_header_scan(d, dlen, s, slen);
+	w += sldns_str_print(s, slen, "\n");
+	w += sldns_str_print(s, slen, ";; QUESTION SECTION:\n");
 	for(i=0; i<qdcount; i++) {
-		w += ldns_wire2str_rrquestion_scan(d, dlen, s, slen,
+		w += sldns_wire2str_rrquestion_scan(d, dlen, s, slen,
 			pkt, pktlen);
 		if(!*dlen) break;
 	}
-	w += ldns_str_print(s, slen, "\n");
-	w += ldns_str_print(s, slen, ";; ANSWER SECTION:\n");
+	w += sldns_str_print(s, slen, "\n");
+	w += sldns_str_print(s, slen, ";; ANSWER SECTION:\n");
 	for(i=0; i<ancount; i++) {
-		w += ldns_wire2str_rr_scan(d, dlen, s, slen, pkt, pktlen);
+		w += sldns_wire2str_rr_scan(d, dlen, s, slen, pkt, pktlen);
 		if(!*dlen) break;
 	}
-	w += ldns_str_print(s, slen, "\n");
-	w += ldns_str_print(s, slen, ";; AUTHORITY SECTION:\n");
+	w += sldns_str_print(s, slen, "\n");
+	w += sldns_str_print(s, slen, ";; AUTHORITY SECTION:\n");
 	for(i=0; i<nscount; i++) {
-		w += ldns_wire2str_rr_scan(d, dlen, s, slen, pkt, pktlen);
+		w += sldns_wire2str_rr_scan(d, dlen, s, slen, pkt, pktlen);
 		if(!*dlen) break;
 	}
-	w += ldns_str_print(s, slen, "\n");
-	w += ldns_str_print(s, slen, ";; ADDITIONAL SECTION:\n");
+	w += sldns_str_print(s, slen, "\n");
+	w += sldns_str_print(s, slen, ";; ADDITIONAL SECTION:\n");
 	for(i=0; i<arcount; i++) {
-		w += ldns_wire2str_rr_scan(d, dlen, s, slen, pkt, pktlen);
+		w += sldns_wire2str_rr_scan(d, dlen, s, slen, pkt, pktlen);
 		if(!*dlen) break;
 	}
 	/* other fields: WHEN(time), SERVER(IP) not available here. */
-	w += ldns_str_print(s, slen, ";; MSG SIZE  rcvd: %d\n", (int)pktlen);
+	w += sldns_str_print(s, slen, ";; MSG SIZE  rcvd: %d\n", (int)pktlen);
 	if(*dlen > 0) {
 		w += print_remainder_hex(";; trailing garbage 0x",
 			d, dlen, s, slen);
-		w += ldns_str_print(s, slen, "\n");
+		w += sldns_str_print(s, slen, "\n");
 	}
 	return w;
 }
 
 /** scan type, class and ttl and printout, for rr */
-static int ldns_rr_tcttl_scan(uint8_t** d, size_t* dl, char** s, size_t* sl)
+static int sldns_rr_tcttl_scan(uint8_t** d, size_t* dl, char** s, size_t* sl)
 {
 	int w = 0;
 	uint16_t t, c;
@@ -386,31 +386,31 @@ static int ldns_rr_tcttl_scan(uint8_t** d, size_t* dl, char** s, size_t* sl)
 			return w + print_remainder_hex("; Error malformed 0x",
 				d, dl, s, sl);
 		/* these print values or 0x.. if none left */
-		t = ldns_read_uint16(*d);
-		c = ldns_read_uint16((*d)+2);
+		t = sldns_read_uint16(*d);
+		c = sldns_read_uint16((*d)+2);
 		(*d)+=4;
 		(*dl)-=4;
-		w += ldns_wire2str_class_print(s, sl, c);
-		w += ldns_str_print(s, sl, "\t");
-		w += ldns_wire2str_type_print(s, sl, t);
+		w += sldns_wire2str_class_print(s, sl, c);
+		w += sldns_str_print(s, sl, "\t");
+		w += sldns_wire2str_type_print(s, sl, t);
 		if(*dl == 0)
-			return w + ldns_str_print(s, sl, "; Error no ttl");
+			return w + sldns_str_print(s, sl, "; Error no ttl");
 		return w + print_remainder_hex(
 			"; Error malformed ttl 0x", d, dl, s, sl);
 	}
-	t = ldns_read_uint16(*d);
-	c = ldns_read_uint16((*d)+2);
-	ttl = ldns_read_uint32((*d)+4);
+	t = sldns_read_uint16(*d);
+	c = sldns_read_uint16((*d)+2);
+	ttl = sldns_read_uint32((*d)+4);
 	(*d)+=8;
 	(*dl)-=8;
-	w += ldns_str_print(s, sl, "%lu\t", (unsigned long)ttl);
-	w += ldns_wire2str_class_print(s, sl, c);
-	w += ldns_str_print(s, sl, "\t");
-	w += ldns_wire2str_type_print(s, sl, t);
+	w += sldns_str_print(s, sl, "%lu\t", (unsigned long)ttl);
+	w += sldns_wire2str_class_print(s, sl, c);
+	w += sldns_str_print(s, sl, "\t");
+	w += sldns_wire2str_type_print(s, sl, t);
 	return w;
 }
 
-int ldns_wire2str_rr_scan(uint8_t** d, size_t* dlen, char** s, size_t* slen,
+int sldns_wire2str_rr_scan(uint8_t** d, size_t* dlen, char** s, size_t* slen,
 	uint8_t* pkt, size_t pktlen)
 {
 	int w = 0;
@@ -419,121 +419,121 @@ int ldns_wire2str_rr_scan(uint8_t** d, size_t* dlen, char** s, size_t* slen,
 	uint16_t rrtype = 0;
 	
 	if(*dlen >= 3 && (*d)[0]==0 &&
-		ldns_read_uint16((*d)+1)==LDNS_RR_TYPE_OPT) {
+		sldns_read_uint16((*d)+1)==LDNS_RR_TYPE_OPT) {
 		/* perform EDNS OPT processing */
-		return ldns_wire2str_edns_scan(d, dlen, s, slen, pkt, pktlen);
+		return sldns_wire2str_edns_scan(d, dlen, s, slen, pkt, pktlen);
 	}
 
 	/* try to scan the rdata with pretty-printing, but if that fails, then
 	 * scan the rdata as an unknown RR type */
-	w += ldns_wire2str_dname_scan(d, dlen, s, slen, pkt, pktlen);
-	w += ldns_str_print(s, slen, "\t");
+	w += sldns_wire2str_dname_scan(d, dlen, s, slen, pkt, pktlen);
+	w += sldns_str_print(s, slen, "\t");
 	dname_off = rrlen-(*dlen);
 	if(*dlen == 4) {
 		/* like a question-RR */
-		uint16_t t = ldns_read_uint16(*d);
-		uint16_t c = ldns_read_uint16((*d)+2);
+		uint16_t t = sldns_read_uint16(*d);
+		uint16_t c = sldns_read_uint16((*d)+2);
 		(*d)+=4;
 		(*dlen)-=4;
-		w += ldns_wire2str_class_print(s, slen, c);
-		w += ldns_str_print(s, slen, "\t");
-		w += ldns_wire2str_type_print(s, slen, t);
-		w += ldns_str_print(s, slen, " ; Error no ttl,rdata\n");
+		w += sldns_wire2str_class_print(s, slen, c);
+		w += sldns_str_print(s, slen, "\t");
+		w += sldns_wire2str_type_print(s, slen, t);
+		w += sldns_str_print(s, slen, " ; Error no ttl,rdata\n");
 		return w;
 	}
 	if(*dlen < 8) {
 		if(*dlen == 0)
-			return w + ldns_str_print(s, slen, ";Error missing RR\n");
+			return w + sldns_str_print(s, slen, ";Error missing RR\n");
 		w += print_remainder_hex(";Error partial RR 0x", d, dlen, s, slen);
-		return w + ldns_str_print(s, slen, "\n");
+		return w + sldns_str_print(s, slen, "\n");
 	}
-	rrtype = ldns_read_uint16(*d);
-	w += ldns_rr_tcttl_scan(d, dlen, s, slen);
-	w += ldns_str_print(s, slen, "\t");
+	rrtype = sldns_read_uint16(*d);
+	w += sldns_rr_tcttl_scan(d, dlen, s, slen);
+	w += sldns_str_print(s, slen, "\t");
 
 	/* rdata */
 	if(*dlen < 2) {
 		if(*dlen == 0)
-			return w + ldns_str_print(s, slen, ";Error missing rdatalen\n");
+			return w + sldns_str_print(s, slen, ";Error missing rdatalen\n");
 		w += print_remainder_hex(";Error missing rdatalen 0x",
 			d, dlen, s, slen);
-		return w + ldns_str_print(s, slen, "\n");
+		return w + sldns_str_print(s, slen, "\n");
 	}
-	rdlen = ldns_read_uint16(*d);
+	rdlen = sldns_read_uint16(*d);
 	ordlen = rdlen;
 	(*d)+=2;
 	(*dlen)-=2;
 	if(*dlen < rdlen) {
-		w += ldns_str_print(s, slen, "\\# %u ", (unsigned)rdlen);
+		w += sldns_str_print(s, slen, "\\# %u ", (unsigned)rdlen);
 		if(*dlen == 0)
-			return w + ldns_str_print(s, slen, ";Error missing rdata\n");
+			return w + sldns_str_print(s, slen, ";Error missing rdata\n");
 		w += print_remainder_hex(";Error partial rdata 0x", d, dlen, s, slen);
-		return w + ldns_str_print(s, slen, "\n");
+		return w + sldns_str_print(s, slen, "\n");
 	}
-	w += ldns_wire2str_rdata_scan(d, &rdlen, s, slen, rrtype, pkt, pktlen);
+	w += sldns_wire2str_rdata_scan(d, &rdlen, s, slen, rrtype, pkt, pktlen);
 	(*dlen) -= (ordlen-rdlen);
 
 	/* default comment */
-	w += ldns_wire2str_rr_comment_print(s, slen, rr, rrlen, dname_off,
+	w += sldns_wire2str_rr_comment_print(s, slen, rr, rrlen, dname_off,
 		rrtype);
-	w += ldns_str_print(s, slen, "\n");
+	w += sldns_str_print(s, slen, "\n");
 	return w;
 }
 
-int ldns_wire2str_rrquestion_scan(uint8_t** d, size_t* dlen, char** s,
+int sldns_wire2str_rrquestion_scan(uint8_t** d, size_t* dlen, char** s,
 	size_t* slen, uint8_t* pkt, size_t pktlen)
 {
 	int w = 0;
 	uint16_t t, c;
-	w += ldns_wire2str_dname_scan(d, dlen, s, slen, pkt, pktlen);
-	w += ldns_str_print(s, slen, "\t");
+	w += sldns_wire2str_dname_scan(d, dlen, s, slen, pkt, pktlen);
+	w += sldns_str_print(s, slen, "\t");
 	if(*dlen < 4) {
 		if(*dlen == 0)
-			return w + ldns_str_print(s, slen, "Error malformed\n");
+			return w + sldns_str_print(s, slen, "Error malformed\n");
 		w += print_remainder_hex("Error malformed 0x", d, dlen, s, slen);
-		return w + ldns_str_print(s, slen, "\n");
+		return w + sldns_str_print(s, slen, "\n");
 	}
-	t = ldns_read_uint16(*d);
-	c = ldns_read_uint16((*d)+2);
+	t = sldns_read_uint16(*d);
+	c = sldns_read_uint16((*d)+2);
 	(*d)+=4;
 	(*dlen)-=4;
-	w += ldns_wire2str_class_print(s, slen, c);
-	w += ldns_str_print(s, slen, "\t");
-	w += ldns_wire2str_type_print(s, slen, t);
-	w += ldns_str_print(s, slen, "\n");
+	w += sldns_wire2str_class_print(s, slen, c);
+	w += sldns_str_print(s, slen, "\t");
+	w += sldns_wire2str_type_print(s, slen, t);
+	w += sldns_str_print(s, slen, "\n");
 	return w;
 }
 
-int ldns_wire2str_rr_unknown_scan(uint8_t** d, size_t* dlen, char** s,
+int sldns_wire2str_rr_unknown_scan(uint8_t** d, size_t* dlen, char** s,
 	size_t* slen, uint8_t* pkt, size_t pktlen)
 {
 	size_t rdlen, ordlen;
 	int w = 0;
-	w += ldns_wire2str_dname_scan(d, dlen, s, slen, pkt, pktlen);
-	w += ldns_str_print(s, slen, "\t");
-	w += ldns_rr_tcttl_scan(d, dlen, s, slen);
-	w += ldns_str_print(s, slen, "\t");
+	w += sldns_wire2str_dname_scan(d, dlen, s, slen, pkt, pktlen);
+	w += sldns_str_print(s, slen, "\t");
+	w += sldns_rr_tcttl_scan(d, dlen, s, slen);
+	w += sldns_str_print(s, slen, "\t");
 	if(*dlen < 2) {
 		if(*dlen == 0)
-			return w + ldns_str_print(s, slen, ";Error missing rdatalen\n");
+			return w + sldns_str_print(s, slen, ";Error missing rdatalen\n");
 		w += print_remainder_hex(";Error missing rdatalen 0x",
 			d, dlen, s, slen);
-		return w + ldns_str_print(s, slen, "\n");
+		return w + sldns_str_print(s, slen, "\n");
 	}
-	rdlen = ldns_read_uint16(*d);
+	rdlen = sldns_read_uint16(*d);
 	ordlen = rdlen;
 	(*d) += 2;
 	(*dlen) -= 2;
 	if(*dlen < rdlen) {
-		w += ldns_str_print(s, slen, "\\# %u ", (unsigned)rdlen);
+		w += sldns_str_print(s, slen, "\\# %u ", (unsigned)rdlen);
 		if(*dlen == 0)
-			return w + ldns_str_print(s, slen, ";Error missing rdata\n");
+			return w + sldns_str_print(s, slen, ";Error missing rdata\n");
 		w += print_remainder_hex(";Error partial rdata 0x", d, dlen, s, slen);
-		return w + ldns_str_print(s, slen, "\n");
+		return w + sldns_str_print(s, slen, "\n");
 	}
-	w += ldns_wire2str_rdata_unknown_scan(d, &rdlen, s, slen);
+	w += sldns_wire2str_rdata_unknown_scan(d, &rdlen, s, slen);
 	(*dlen) -= (ordlen-rdlen);
-	w += ldns_str_print(s, slen, "\n");
+	w += sldns_str_print(s, slen, "\n");
 	return w;
 }
 
@@ -545,32 +545,32 @@ static int rr_comment_dnskey(char** s, size_t* slen, uint8_t* rr,
 	uint8_t* rdata;
 	int flags, w = 0;
 	if(rrlen < dname_off + 10) return 0;
-	rdlen = ldns_read_uint16(rr+dname_off+8);
+	rdlen = sldns_read_uint16(rr+dname_off+8);
 	if(rrlen < dname_off + 10 + rdlen) return 0;
 	rdata = rr + dname_off + 10;
-	flags = (int)ldns_read_uint16(rdata);
-	w += ldns_str_print(s, slen, " ;{");
+	flags = (int)sldns_read_uint16(rdata);
+	w += sldns_str_print(s, slen, " ;{");
 
 	/* id */
-	w += ldns_str_print(s, slen, "id = %u",
-		ldns_calc_keytag_raw(rdata, rdlen));
+	w += sldns_str_print(s, slen, "id = %u",
+		sldns_calc_keytag_raw(rdata, rdlen));
 
 	/* flags */
 	if((flags&LDNS_KEY_ZONE_KEY)) {
 		if((flags&LDNS_KEY_SEP_KEY))
-			w += ldns_str_print(s, slen, " (ksk)");
-		else 	w += ldns_str_print(s, slen, " (zsk)");
+			w += sldns_str_print(s, slen, " (ksk)");
+		else 	w += sldns_str_print(s, slen, " (zsk)");
 	}
 
 	/* keysize */
 	if(rdlen > 4) {
-		w += ldns_str_print(s, slen, ", ");
-		w += ldns_str_print(s, slen, "size = %db",
-			(int)ldns_rr_dnskey_key_size_raw(
+		w += sldns_str_print(s, slen, ", ");
+		w += sldns_str_print(s, slen, "size = %db",
+			(int)sldns_rr_dnskey_key_size_raw(
 			(unsigned char*)rdata+4, rdlen-4, (int)(rdata[3])));
 	}
 
-	w += ldns_str_print(s, slen, "}");
+	w += sldns_str_print(s, slen, "}");
 	return w;
 }
 
@@ -581,12 +581,12 @@ static int rr_comment_rrsig(char** s, size_t* slen, uint8_t* rr,
 	size_t rdlen;
 	uint8_t* rdata;
 	if(rrlen < dname_off + 10) return 0;
-	rdlen = ldns_read_uint16(rr+dname_off+8);
+	rdlen = sldns_read_uint16(rr+dname_off+8);
 	if(rrlen < dname_off + 10 + rdlen) return 0;
 	rdata = rr + dname_off + 10;
 	if(rdlen < 18) return 0;
-	return ldns_str_print(s, slen, " ;{id = %d}",
-		(int)ldns_read_uint16(rdata+16));
+	return sldns_str_print(s, slen, " ;{id = %d}",
+		(int)sldns_read_uint16(rdata+16));
 }
 
 /** print rr comment for type NSEC3 */
@@ -597,16 +597,16 @@ static int rr_comment_nsec3(char** s, size_t* slen, uint8_t* rr,
 	uint8_t* rdata;
 	int w = 0;
 	if(rrlen < dname_off + 10) return 0;
-	rdlen = ldns_read_uint16(rr+dname_off+8);
+	rdlen = sldns_read_uint16(rr+dname_off+8);
 	if(rrlen < dname_off + 10 + rdlen) return 0;
 	rdata = rr + dname_off + 10;
 	if(rdlen < 2) return 0;
 	if((rdata[1] & LDNS_NSEC3_VARS_OPTOUT_MASK))
-		w += ldns_str_print(s, slen, " ;{flags: optout}");
+		w += sldns_str_print(s, slen, " ;{flags: optout}");
 	return w;
 }
 
-int ldns_wire2str_rr_comment_print(char** s, size_t* slen, uint8_t* rr,
+int sldns_wire2str_rr_comment_print(char** s, size_t* slen, uint8_t* rr,
 	size_t rrlen, size_t dname_off, uint16_t rrtype)
 {
 	if(rrtype == LDNS_RR_TYPE_DNSKEY) {
@@ -619,47 +619,47 @@ int ldns_wire2str_rr_comment_print(char** s, size_t* slen, uint8_t* rr,
 	return 0;
 }
 
-int ldns_wire2str_header_scan(uint8_t** d, size_t* dlen, char** s,
+int sldns_wire2str_header_scan(uint8_t** d, size_t* dlen, char** s,
 	size_t* slen)
 {
 	int w = 0;
 	int opcode, rcode;
-	w += ldns_str_print(s, slen, ";; ->>HEADER<<- ");
+	w += sldns_str_print(s, slen, ";; ->>HEADER<<- ");
 	if(*dlen == 0)
-		return w+ldns_str_print(s, slen, "Error empty packet");
+		return w+sldns_str_print(s, slen, "Error empty packet");
 	if(*dlen < 4)
 		return w+print_remainder_hex("Error header too short 0x", d, dlen, s, slen);
 	opcode = (int)LDNS_OPCODE_WIRE(*d);
 	rcode = (int)LDNS_RCODE_WIRE(*d);
-	w += ldns_str_print(s, slen, "opcode: ");
-	w += ldns_wire2str_opcode_print(s, slen, opcode);
-	w += ldns_str_print(s, slen, ", ");
-	w += ldns_str_print(s, slen, "rcode: ");
-	w += ldns_wire2str_rcode_print(s, slen, rcode);
-	w += ldns_str_print(s, slen, ", ");
-	w += ldns_str_print(s, slen, "id: %d\n", (int)LDNS_ID_WIRE(*d));
-	w += ldns_str_print(s, slen, ";; flags:");
-	if(LDNS_QR_WIRE(*d)) w += ldns_str_print(s, slen, " qr");
-	if(LDNS_AA_WIRE(*d)) w += ldns_str_print(s, slen, " aa");
-	if(LDNS_TC_WIRE(*d)) w += ldns_str_print(s, slen, " tc");
-	if(LDNS_RD_WIRE(*d)) w += ldns_str_print(s, slen, " rd");
-	if(LDNS_CD_WIRE(*d)) w += ldns_str_print(s, slen, " cd");
-	if(LDNS_RA_WIRE(*d)) w += ldns_str_print(s, slen, " ra");
-	if(LDNS_AD_WIRE(*d)) w += ldns_str_print(s, slen, " ad");
-	if(LDNS_Z_WIRE(*d))  w += ldns_str_print(s, slen, " z");
-	w += ldns_str_print(s, slen, " ; ");
+	w += sldns_str_print(s, slen, "opcode: ");
+	w += sldns_wire2str_opcode_print(s, slen, opcode);
+	w += sldns_str_print(s, slen, ", ");
+	w += sldns_str_print(s, slen, "rcode: ");
+	w += sldns_wire2str_rcode_print(s, slen, rcode);
+	w += sldns_str_print(s, slen, ", ");
+	w += sldns_str_print(s, slen, "id: %d\n", (int)LDNS_ID_WIRE(*d));
+	w += sldns_str_print(s, slen, ";; flags:");
+	if(LDNS_QR_WIRE(*d)) w += sldns_str_print(s, slen, " qr");
+	if(LDNS_AA_WIRE(*d)) w += sldns_str_print(s, slen, " aa");
+	if(LDNS_TC_WIRE(*d)) w += sldns_str_print(s, slen, " tc");
+	if(LDNS_RD_WIRE(*d)) w += sldns_str_print(s, slen, " rd");
+	if(LDNS_CD_WIRE(*d)) w += sldns_str_print(s, slen, " cd");
+	if(LDNS_RA_WIRE(*d)) w += sldns_str_print(s, slen, " ra");
+	if(LDNS_AD_WIRE(*d)) w += sldns_str_print(s, slen, " ad");
+	if(LDNS_Z_WIRE(*d))  w += sldns_str_print(s, slen, " z");
+	w += sldns_str_print(s, slen, " ; ");
 	if(*dlen < LDNS_HEADER_SIZE)
 		return w+print_remainder_hex("Error header too short 0x", d, dlen, s, slen);
-	w += ldns_str_print(s, slen, "QUERY: %d, ", (int)LDNS_QDCOUNT(*d));
-	w += ldns_str_print(s, slen, "ANSWER: %d, ", (int)LDNS_ANCOUNT(*d));
-	w += ldns_str_print(s, slen, "AUTHORITY: %d, ", (int)LDNS_NSCOUNT(*d));
-	w += ldns_str_print(s, slen, "ADDITIONAL: %d ", (int)LDNS_ARCOUNT(*d));
+	w += sldns_str_print(s, slen, "QUERY: %d, ", (int)LDNS_QDCOUNT(*d));
+	w += sldns_str_print(s, slen, "ANSWER: %d, ", (int)LDNS_ANCOUNT(*d));
+	w += sldns_str_print(s, slen, "AUTHORITY: %d, ", (int)LDNS_NSCOUNT(*d));
+	w += sldns_str_print(s, slen, "ADDITIONAL: %d ", (int)LDNS_ARCOUNT(*d));
 	*d += LDNS_HEADER_SIZE;
 	*dlen -= LDNS_HEADER_SIZE;
 	return w;
 }
 
-int ldns_wire2str_rdata_scan(uint8_t** d, size_t* dlen, char** s,
+int sldns_wire2str_rdata_scan(uint8_t** d, size_t* dlen, char** s,
 	size_t* slen, uint16_t rrtype, uint8_t* pkt, size_t pktlen)
 {
 	/* try to prettyprint, but if that fails, use unknown format */
@@ -667,32 +667,32 @@ int ldns_wire2str_rdata_scan(uint8_t** d, size_t* dlen, char** s,
 	char* origs = *s;
 	size_t origdlen = *dlen, origslen = *slen;
 	uint16_t r_cnt, r_max;
-	ldns_rdf_type rdftype;
+	sldns_rdf_type rdftype;
 	int w = 0, n;
 
-	const ldns_rr_descriptor *desc = ldns_rr_descript(rrtype);
+	const sldns_rr_descriptor *desc = sldns_rr_descript(rrtype);
 	if(!desc) /* unknown format */
-		return ldns_wire2str_rdata_unknown_scan(d, dlen, s, slen);
+		return sldns_wire2str_rdata_unknown_scan(d, dlen, s, slen);
 	/* dlen equals the rdatalen for the rdata */
 
-	r_max = ldns_rr_descriptor_maximum(desc);
+	r_max = sldns_rr_descriptor_maximum(desc);
 	for(r_cnt=0; r_cnt < r_max; r_cnt++) {
 		if(*dlen == 0) {
-			if(r_cnt < ldns_rr_descriptor_minimum(desc))
+			if(r_cnt < sldns_rr_descriptor_minimum(desc))
 				goto failed;
 			break; /* nothing more to print */
 		}
-		rdftype = ldns_rr_descriptor_field_type(desc, r_cnt);
+		rdftype = sldns_rr_descriptor_field_type(desc, r_cnt);
 		if(r_cnt != 0)
-			w += ldns_str_print(s, slen, " ");
-		n = ldns_wire2str_rdf_scan(d, dlen, s, slen, rdftype,
+			w += sldns_str_print(s, slen, " ");
+		n = sldns_wire2str_rdf_scan(d, dlen, s, slen, rdftype,
 			pkt, pktlen);
 		if(n == -1) {
 		failed:
 			/* failed, use unknown format */
 			*d = origd; *s = origs;
 			*dlen = origdlen; *slen = origslen;
-			return ldns_wire2str_rdata_unknown_scan(d, dlen,
+			return sldns_wire2str_rdata_unknown_scan(d, dlen,
 				s, slen);
 		}
 		w += n;
@@ -700,17 +700,17 @@ int ldns_wire2str_rdata_scan(uint8_t** d, size_t* dlen, char** s,
 	return w;
 }
 
-int ldns_wire2str_rdata_unknown_scan(uint8_t** d, size_t* dlen, char** s,
+int sldns_wire2str_rdata_unknown_scan(uint8_t** d, size_t* dlen, char** s,
 	size_t* slen)
 {
 	int w = 0;
 
 	/* print length */
-	w += ldns_str_print(s, slen, "\\# %u", (unsigned)*dlen);
+	w += sldns_str_print(s, slen, "\\# %u", (unsigned)*dlen);
 
 	/* print rdlen in hex */
 	if(*dlen != 0)
-		w += ldns_str_print(s, slen, " ");
+		w += sldns_str_print(s, slen, " ");
 	w += print_hex_buf(s, slen, *d, *dlen);
 	(*d) += *dlen;
 	(*dlen) = 0;
@@ -721,9 +721,9 @@ int ldns_wire2str_rdata_unknown_scan(uint8_t** d, size_t* dlen, char** s,
 static int dname_char_print(char** s, size_t* slen, char c)
 {
 	if(c == '.' || c == ';' || c == '(' || c == ')' || c == '\\')
-		return ldns_str_print(s, slen, "\\%c", c);
+		return sldns_str_print(s, slen, "\\%c", c);
 	else if(!(isascii((int)c) && isgraph((int)c)))
-		return ldns_str_print(s, slen, "\\%03u", (unsigned)c);
+		return sldns_str_print(s, slen, "\\%03u", (unsigned)c);
 	/* plain printout */
 	if(*slen) {
 		**s = c;
@@ -733,7 +733,7 @@ static int dname_char_print(char** s, size_t* slen, char c)
 	return 1;
 }
 
-int ldns_wire2str_dname_scan(uint8_t** d, size_t* dlen, char** s, size_t* slen,
+int sldns_wire2str_dname_scan(uint8_t** d, size_t* dlen, char** s, size_t* slen,
 	uint8_t* pkt, size_t pktlen)
 {
 	int w = 0;
@@ -742,11 +742,11 @@ int ldns_wire2str_dname_scan(uint8_t** d, size_t* dlen, char** s, size_t* slen,
 	unsigned i, counter=0;
 	const unsigned maxcompr = 1000; /* loop detection, max compr ptrs */
 	int in_buf = 1;
-	if(*dlen == 0) return ldns_str_print(s, slen, "ErrorMissingDname");
+	if(*dlen == 0) return sldns_str_print(s, slen, "ErrorMissingDname");
 	if(*pos == 0) {
 		(*d)++;
 		(*dlen)--;
-		return ldns_str_print(s, slen, ".");
+		return sldns_str_print(s, slen, ".");
 	}
 	while(*pos) {
 		/* read label length */
@@ -758,26 +758,26 @@ int ldns_wire2str_dname_scan(uint8_t** d, size_t* dlen, char** s, size_t* slen,
 			/* compressed */
 			uint16_t target = 0;
 			if(in_buf && *dlen == 0)
-				return w + ldns_str_print(s, slen,
+				return w + sldns_str_print(s, slen,
 					"ErrorPartialDname");
 			else if(!in_buf && pos+1 > pkt+pktlen)
-				return w + ldns_str_print(s, slen,
+				return w + sldns_str_print(s, slen,
 					"ErrorPartialDname");
 			target = ((labellen&0x3f)<<8) | *pos;
 			if(in_buf) { (*d)++; (*dlen)--; }
 			/* move to target, if possible */
 			if(!pkt || target >= pktlen)
-				return w + ldns_str_print(s, slen,
+				return w + sldns_str_print(s, slen,
 					"ErrorComprPtrOutOfBounds");
 			if(counter++ > maxcompr)
-				return w + ldns_str_print(s, slen,
+				return w + sldns_str_print(s, slen,
 					"ErrorComprPtrLooped");
 			in_buf = 0;
 			pos = pkt+target;
 			continue;
 		} else if((labellen&0xc0)) {
 			/* notimpl label type */
-			w += ldns_str_print(s, slen,
+			w += sldns_str_print(s, slen,
 				"ErrorLABELTYPE%xIsUnknown",
 				(int)(labellen&0xc0));
 			return w;
@@ -795,97 +795,97 @@ int ldns_wire2str_dname_scan(uint8_t** d, size_t* dlen, char** s, size_t* slen,
 			(*dlen) -= labellen;
 			if(*dlen == 0) break;
 		}
-		w += ldns_str_print(s, slen, ".");
+		w += sldns_str_print(s, slen, ".");
 	}
 	/* skip over final root label */
 	if(in_buf && *dlen > 0) { (*d)++; (*dlen)--; }
 	/* in case we printed no labels, terminate dname */
-	if(w == 0) w += ldns_str_print(s, slen, ".");
+	if(w == 0) w += sldns_str_print(s, slen, ".");
 	return w;
 }
 
-int ldns_wire2str_opcode_print(char** s, size_t* slen, int opcode)
+int sldns_wire2str_opcode_print(char** s, size_t* slen, int opcode)
 {
-	ldns_lookup_table *lt = ldns_lookup_by_id(SLDNS(_opcodes), opcode);
+	sldns_lookup_table *lt = sldns_lookup_by_id(sldns_opcodes, opcode);
 	if (lt && lt->name) {
-		return ldns_str_print(s, slen, "%s", lt->name);
+		return sldns_str_print(s, slen, "%s", lt->name);
 	}
-	return ldns_str_print(s, slen, "OPCODE%u", (unsigned)opcode);
+	return sldns_str_print(s, slen, "OPCODE%u", (unsigned)opcode);
 }
 
-int ldns_wire2str_rcode_print(char** s, size_t* slen, int rcode)
+int sldns_wire2str_rcode_print(char** s, size_t* slen, int rcode)
 {
-	ldns_lookup_table *lt = ldns_lookup_by_id(SLDNS(_rcodes), rcode);
+	sldns_lookup_table *lt = sldns_lookup_by_id(sldns_rcodes, rcode);
 	if (lt && lt->name) {
-		return ldns_str_print(s, slen, "%s", lt->name);
+		return sldns_str_print(s, slen, "%s", lt->name);
 	}
-	return ldns_str_print(s, slen, "RCODE%u", (unsigned)rcode);
+	return sldns_str_print(s, slen, "RCODE%u", (unsigned)rcode);
 }
 
-int ldns_wire2str_class_print(char** s, size_t* slen, uint16_t rrclass)
+int sldns_wire2str_class_print(char** s, size_t* slen, uint16_t rrclass)
 {
-	ldns_lookup_table *lt = ldns_lookup_by_id(SLDNS(_rr_classes),
+	sldns_lookup_table *lt = sldns_lookup_by_id(sldns_rr_classes,
 		(int)rrclass);
 	if (lt && lt->name) {
-		return ldns_str_print(s, slen, "%s", lt->name);
+		return sldns_str_print(s, slen, "%s", lt->name);
 	}
-	return ldns_str_print(s, slen, "CLASS%u", (unsigned)rrclass);
+	return sldns_str_print(s, slen, "CLASS%u", (unsigned)rrclass);
 }
 
-int ldns_wire2str_type_print(char** s, size_t* slen, uint16_t rrtype)
+int sldns_wire2str_type_print(char** s, size_t* slen, uint16_t rrtype)
 {
-	const ldns_rr_descriptor *descriptor = ldns_rr_descript(rrtype);
+	const sldns_rr_descriptor *descriptor = sldns_rr_descript(rrtype);
 	if (descriptor && descriptor->_name) {
-		return ldns_str_print(s, slen, "%s", descriptor->_name);
+		return sldns_str_print(s, slen, "%s", descriptor->_name);
 	}
-	return ldns_str_print(s, slen, "TYPE%u", (unsigned)rrtype);
+	return sldns_str_print(s, slen, "TYPE%u", (unsigned)rrtype);
 }
 
-int ldns_wire2str_edns_option_code_print(char** s, size_t* slen,
+int sldns_wire2str_edns_option_code_print(char** s, size_t* slen,
 	uint16_t opcode)
 {
-	ldns_lookup_table *lt = ldns_lookup_by_id(SLDNS(_edns_options),
+	sldns_lookup_table *lt = sldns_lookup_by_id(sldns_edns_options,
 		(int)opcode);
 	if (lt && lt->name) {
-		return ldns_str_print(s, slen, "%s", lt->name);
+		return sldns_str_print(s, slen, "%s", lt->name);
 	}
-	return ldns_str_print(s, slen, "OPT%u", (unsigned)opcode);
+	return sldns_str_print(s, slen, "OPT%u", (unsigned)opcode);
 }
 
-int ldns_wire2str_class_scan(uint8_t** d, size_t* dlen, char** s, size_t* slen)
+int sldns_wire2str_class_scan(uint8_t** d, size_t* dlen, char** s, size_t* slen)
 {
 	uint16_t c;
 	if(*dlen == 0) return 0;
 	if(*dlen < 2) return print_remainder_hex("Error malformed 0x", d, dlen, s, slen);
-	c = ldns_read_uint16(*d);
+	c = sldns_read_uint16(*d);
 	(*d)+=2;
 	(*dlen)-=2;
-	return ldns_wire2str_class_print(s, slen, c);
+	return sldns_wire2str_class_print(s, slen, c);
 }
 
-int ldns_wire2str_type_scan(uint8_t** d, size_t* dlen, char** s, size_t* slen)
+int sldns_wire2str_type_scan(uint8_t** d, size_t* dlen, char** s, size_t* slen)
 {
 	uint16_t t;
 	if(*dlen == 0) return 0;
 	if(*dlen < 2) return print_remainder_hex("Error malformed 0x", d, dlen, s, slen);
-	t = ldns_read_uint16(*d);
+	t = sldns_read_uint16(*d);
 	(*d)+=2;
 	(*dlen)-=2;
-	return ldns_wire2str_type_print(s, slen, t);
+	return sldns_wire2str_type_print(s, slen, t);
 }
 
-int ldns_wire2str_ttl_scan(uint8_t** d, size_t* dlen, char** s, size_t* slen)
+int sldns_wire2str_ttl_scan(uint8_t** d, size_t* dlen, char** s, size_t* slen)
 {
 	uint32_t ttl;
 	if(*dlen == 0) return 0;
 	if(*dlen < 4) return print_remainder_hex("Error malformed 0x", d, dlen, s, slen);
-	ttl = ldns_read_uint32(*d);
+	ttl = sldns_read_uint32(*d);
 	(*d)+=4;
 	(*dlen)-=4;
-	return ldns_str_print(s, slen, "%u", (unsigned)ttl);
+	return sldns_str_print(s, slen, "%u", (unsigned)ttl);
 }
 
-int ldns_wire2str_rdf_scan(uint8_t** d, size_t* dlen, char** s, size_t* slen,
+int sldns_wire2str_rdf_scan(uint8_t** d, size_t* dlen, char** s, size_t* slen,
 	int rdftype, uint8_t* pkt, size_t pktlen)
 {
 	if(*dlen == 0) return 0;
@@ -893,119 +893,119 @@ int ldns_wire2str_rdf_scan(uint8_t** d, size_t* dlen, char** s, size_t* slen,
 	case LDNS_RDF_TYPE_NONE:
 		return 0;
 	case LDNS_RDF_TYPE_DNAME:
-		return ldns_wire2str_dname_scan(d, dlen, s, slen, pkt, pktlen);
+		return sldns_wire2str_dname_scan(d, dlen, s, slen, pkt, pktlen);
 	case LDNS_RDF_TYPE_INT8:
-		return ldns_wire2str_int8_scan(d, dlen, s, slen);
+		return sldns_wire2str_int8_scan(d, dlen, s, slen);
 	case LDNS_RDF_TYPE_INT16:
-		return ldns_wire2str_int16_scan(d, dlen, s, slen);
+		return sldns_wire2str_int16_scan(d, dlen, s, slen);
 	case LDNS_RDF_TYPE_INT32:
-		return ldns_wire2str_int32_scan(d, dlen, s, slen);
+		return sldns_wire2str_int32_scan(d, dlen, s, slen);
 	case LDNS_RDF_TYPE_PERIOD:
-		return ldns_wire2str_period_scan(d, dlen, s, slen);
+		return sldns_wire2str_period_scan(d, dlen, s, slen);
 	case LDNS_RDF_TYPE_TSIGTIME:
-		return ldns_wire2str_tsigtime_scan(d, dlen, s, slen);
+		return sldns_wire2str_tsigtime_scan(d, dlen, s, slen);
 	case LDNS_RDF_TYPE_A:
-		return ldns_wire2str_a_scan(d, dlen, s, slen);
+		return sldns_wire2str_a_scan(d, dlen, s, slen);
 	case LDNS_RDF_TYPE_AAAA:
-		return ldns_wire2str_aaaa_scan(d, dlen, s, slen);
+		return sldns_wire2str_aaaa_scan(d, dlen, s, slen);
 	case LDNS_RDF_TYPE_STR:
-		return ldns_wire2str_str_scan(d, dlen, s, slen);
+		return sldns_wire2str_str_scan(d, dlen, s, slen);
 	case LDNS_RDF_TYPE_APL:
-		return ldns_wire2str_apl_scan(d, dlen, s, slen);
+		return sldns_wire2str_apl_scan(d, dlen, s, slen);
 	case LDNS_RDF_TYPE_B32_EXT:
-		return ldns_wire2str_b32_ext_scan(d, dlen, s, slen);
+		return sldns_wire2str_b32_ext_scan(d, dlen, s, slen);
 	case LDNS_RDF_TYPE_B64:
-		return ldns_wire2str_b64_scan(d, dlen, s, slen);
+		return sldns_wire2str_b64_scan(d, dlen, s, slen);
 	case LDNS_RDF_TYPE_HEX:
-		return ldns_wire2str_hex_scan(d, dlen, s, slen);
+		return sldns_wire2str_hex_scan(d, dlen, s, slen);
 	case LDNS_RDF_TYPE_NSEC:
-		return ldns_wire2str_nsec_scan(d, dlen, s, slen);
+		return sldns_wire2str_nsec_scan(d, dlen, s, slen);
 	case LDNS_RDF_TYPE_NSEC3_SALT:
-		return ldns_wire2str_nsec3_salt_scan(d, dlen, s, slen);
+		return sldns_wire2str_nsec3_salt_scan(d, dlen, s, slen);
 	case LDNS_RDF_TYPE_TYPE:
-		return ldns_wire2str_type_scan(d, dlen, s, slen);
+		return sldns_wire2str_type_scan(d, dlen, s, slen);
 	case LDNS_RDF_TYPE_CLASS:
-		return ldns_wire2str_class_scan(d, dlen, s, slen);
+		return sldns_wire2str_class_scan(d, dlen, s, slen);
 	case LDNS_RDF_TYPE_CERT_ALG:
-		return ldns_wire2str_cert_alg_scan(d, dlen, s, slen);
+		return sldns_wire2str_cert_alg_scan(d, dlen, s, slen);
 	case LDNS_RDF_TYPE_ALG:
-		return ldns_wire2str_alg_scan(d, dlen, s, slen);
+		return sldns_wire2str_alg_scan(d, dlen, s, slen);
 	case LDNS_RDF_TYPE_UNKNOWN:
-		return ldns_wire2str_unknown_scan(d, dlen, s, slen);
+		return sldns_wire2str_unknown_scan(d, dlen, s, slen);
 	case LDNS_RDF_TYPE_TIME:
-		return ldns_wire2str_time_scan(d, dlen, s, slen);
+		return sldns_wire2str_time_scan(d, dlen, s, slen);
 	case LDNS_RDF_TYPE_LOC:
-		return ldns_wire2str_loc_scan(d, dlen, s, slen);
+		return sldns_wire2str_loc_scan(d, dlen, s, slen);
 	case LDNS_RDF_TYPE_WKS:
 	case LDNS_RDF_TYPE_SERVICE:
-		return ldns_wire2str_wks_scan(d, dlen, s, slen);
+		return sldns_wire2str_wks_scan(d, dlen, s, slen);
 	case LDNS_RDF_TYPE_NSAP:
-		return ldns_wire2str_nsap_scan(d, dlen, s, slen);
+		return sldns_wire2str_nsap_scan(d, dlen, s, slen);
 	case LDNS_RDF_TYPE_ATMA:
-		return ldns_wire2str_atma_scan(d, dlen, s, slen);
+		return sldns_wire2str_atma_scan(d, dlen, s, slen);
 	case LDNS_RDF_TYPE_IPSECKEY:
-		return ldns_wire2str_ipseckey_scan(d, dlen, s, slen, pkt,
+		return sldns_wire2str_ipseckey_scan(d, dlen, s, slen, pkt,
 			pktlen);
 	case LDNS_RDF_TYPE_INT16_DATA:
-		return ldns_wire2str_int16_data_scan(d, dlen, s, slen);
+		return sldns_wire2str_int16_data_scan(d, dlen, s, slen);
 	case LDNS_RDF_TYPE_NSEC3_NEXT_OWNER:
-		return ldns_wire2str_b32_ext_scan(d, dlen, s, slen);
+		return sldns_wire2str_b32_ext_scan(d, dlen, s, slen);
 	case LDNS_RDF_TYPE_ILNP64:
-		return ldns_wire2str_ilnp64_scan(d, dlen, s, slen);
+		return sldns_wire2str_ilnp64_scan(d, dlen, s, slen);
 	case LDNS_RDF_TYPE_EUI48:
-		return ldns_wire2str_eui48_scan(d, dlen, s, slen);
+		return sldns_wire2str_eui48_scan(d, dlen, s, slen);
 	case LDNS_RDF_TYPE_EUI64:
-		return ldns_wire2str_eui64_scan(d, dlen, s, slen);
+		return sldns_wire2str_eui64_scan(d, dlen, s, slen);
 	case LDNS_RDF_TYPE_TAG:
-		return ldns_wire2str_tag_scan(d, dlen, s, slen);
+		return sldns_wire2str_tag_scan(d, dlen, s, slen);
 	case LDNS_RDF_TYPE_LONG_STR:
-		return ldns_wire2str_long_str_scan(d, dlen, s, slen);
+		return sldns_wire2str_long_str_scan(d, dlen, s, slen);
 	}
 	/* unknown rdf type */
 	return -1;
 }
 
-int ldns_wire2str_int8_scan(uint8_t** d, size_t* dl, char** s, size_t* sl)
+int sldns_wire2str_int8_scan(uint8_t** d, size_t* dl, char** s, size_t* sl)
 {
 	int w;
 	if(*dl < 1) return -1;
-	w = ldns_str_print(s, sl, "%u", (unsigned)**d);
+	w = sldns_str_print(s, sl, "%u", (unsigned)**d);
 	(*d)++;
 	(*dl)--;
 	return w;
 }
 
-int ldns_wire2str_int16_scan(uint8_t** d, size_t* dl, char** s, size_t* sl)
+int sldns_wire2str_int16_scan(uint8_t** d, size_t* dl, char** s, size_t* sl)
 {
 	int w;
 	if(*dl < 2) return -1;
-	w = ldns_str_print(s, sl, "%lu", (unsigned long)ldns_read_uint16(*d));
+	w = sldns_str_print(s, sl, "%lu", (unsigned long)sldns_read_uint16(*d));
 	(*d)+=2;
 	(*dl)-=2;
 	return w;
 }
 
-int ldns_wire2str_int32_scan(uint8_t** d, size_t* dl, char** s, size_t* sl)
+int sldns_wire2str_int32_scan(uint8_t** d, size_t* dl, char** s, size_t* sl)
 {
 	int w;
 	if(*dl < 4) return -1;
-	w = ldns_str_print(s, sl, "%lu", (unsigned long)ldns_read_uint32(*d));
+	w = sldns_str_print(s, sl, "%lu", (unsigned long)sldns_read_uint32(*d));
 	(*d)+=4;
 	(*dl)-=4;
 	return w;
 }
 
-int ldns_wire2str_period_scan(uint8_t** d, size_t* dl, char** s, size_t* sl)
+int sldns_wire2str_period_scan(uint8_t** d, size_t* dl, char** s, size_t* sl)
 {
 	int w;
 	if(*dl < 4) return -1;
-	w = ldns_str_print(s, sl, "%u", (unsigned)ldns_read_uint32(*d));
+	w = sldns_str_print(s, sl, "%u", (unsigned)sldns_read_uint32(*d));
 	(*d)+=4;
 	(*dl)-=4;
 	return w;
 }
 
-int ldns_wire2str_tsigtime_scan(uint8_t** d, size_t* dl, char** s, size_t* sl)
+int sldns_wire2str_tsigtime_scan(uint8_t** d, size_t* dl, char** s, size_t* sl)
 {
 	/* tsigtime is 48 bits network order unsigned integer */
 	int w;
@@ -1019,26 +1019,26 @@ int ldns_wire2str_tsigtime_scan(uint8_t** d, size_t* dl, char** s, size_t* sl)
 	d4 = (*d)[4];
 	d5 = (*d)[5];
 	tsigtime = (d0<<40) | (d1<<32) | (d2<<24) | (d3<<16) | (d4<<8) | d5;
-	w = ldns_str_print(s, sl, "%llu", (long long)tsigtime);
+	w = sldns_str_print(s, sl, "%llu", (long long)tsigtime);
 	(*d)+=6;
 	(*dl)-=6;
 	return w;
 }
 
-int ldns_wire2str_a_scan(uint8_t** d, size_t* dl, char** s, size_t* sl)
+int sldns_wire2str_a_scan(uint8_t** d, size_t* dl, char** s, size_t* sl)
 {
 	char buf[32];
 	int w;
 	if(*dl < 4) return -1;
 	if(!inet_ntop(AF_INET, *d, buf, (socklen_t)sizeof(buf)))
 		return -1;
-	w = ldns_str_print(s, sl, "%s", buf);
+	w = sldns_str_print(s, sl, "%s", buf);
 	(*d)+=4;
 	(*dl)-=4;
 	return w;
 }
 
-int ldns_wire2str_aaaa_scan(uint8_t** d, size_t* dl, char** s, size_t* sl)
+int sldns_wire2str_aaaa_scan(uint8_t** d, size_t* dl, char** s, size_t* sl)
 {
 #ifdef AF_INET6
 	char buf[64];
@@ -1046,7 +1046,7 @@ int ldns_wire2str_aaaa_scan(uint8_t** d, size_t* dl, char** s, size_t* sl)
 	if(*dl < 16) return -1;
 	if(!inet_ntop(AF_INET6, *d, buf, (socklen_t)sizeof(buf)))
 		return -1;
-	w = ldns_str_print(s, sl, "%s", buf);
+	w = sldns_str_print(s, sl, "%s", buf);
 	(*d)+=16;
 	(*dl)-=16;
 	return w;
@@ -1060,7 +1060,7 @@ static int str_char_print(char** s, size_t* sl, char c)
 {
 	if(isprint((int)c) || c == '\t') {
 		if(c == '\"' || c == '\\')
-			return ldns_str_print(s, sl, "\\%c", c);
+			return sldns_str_print(s, sl, "\\%c", c);
 		if(*sl) {
 			**s = c;
 			(*s)++;
@@ -1068,10 +1068,10 @@ static int str_char_print(char** s, size_t* sl, char c)
 		}
 		return 1;
 	}
-	return ldns_str_print(s, sl, "\\%03u", (unsigned)c);
+	return sldns_str_print(s, sl, "\\%03u", (unsigned)c);
 }
 
-int ldns_wire2str_str_scan(uint8_t** d, size_t* dl, char** s, size_t* sl)
+int sldns_wire2str_str_scan(uint8_t** d, size_t* dl, char** s, size_t* sl)
 {
 	int w = 0;
 	size_t i, len;
@@ -1080,22 +1080,22 @@ int ldns_wire2str_str_scan(uint8_t** d, size_t* dl, char** s, size_t* sl)
 	if(*dl < 1+len) return -1;
 	(*d)++;
 	(*dl)--;
-	w += ldns_str_print(s, sl, "\"");
+	w += sldns_str_print(s, sl, "\"");
 	for(i=0; i<len; i++)
 		w += str_char_print(s, sl, (char)(*d)[i]);
-	w += ldns_str_print(s, sl, "\"");
+	w += sldns_str_print(s, sl, "\"");
 	(*d)+=len;
 	(*dl)-=len;
 	return w;
 }
 
-int ldns_wire2str_apl_scan(uint8_t** d, size_t* dl, char** s, size_t* sl)
+int sldns_wire2str_apl_scan(uint8_t** d, size_t* dl, char** s, size_t* sl)
 {
 	int i, w = 0;
 	uint16_t family;
 	uint8_t negation, prefix, adflength;
 	if(*dl < 4) return -1;
-	family = ldns_read_uint16(*d);
+	family = sldns_read_uint16(*d);
 	prefix = (*d)[2];
 	negation = ((*d)[3] & LDNS_APL_NEGATION);
 	adflength = ((*d)[3] & LDNS_APL_MASK);
@@ -1103,50 +1103,50 @@ int ldns_wire2str_apl_scan(uint8_t** d, size_t* dl, char** s, size_t* sl)
 	if(family != LDNS_APL_IP4 && family != LDNS_APL_IP6)
 		return -1; /* unknown address family */
 	if(negation)
-		w += ldns_str_print(s, sl, "!");
-	w += ldns_str_print(s, sl, "%u:", (unsigned)family);
+		w += sldns_str_print(s, sl, "!");
+	w += sldns_str_print(s, sl, "%u:", (unsigned)family);
 	if(family == LDNS_APL_IP4) {
 		/* check if prefix <32 ? */
 		/* address is variable length 0 - 4 */
 		for(i=0; i<4; i++) {
 			if(i > 0)
-				w += ldns_str_print(s, sl, ".");
+				w += sldns_str_print(s, sl, ".");
 			if(i < (int)adflength)
-				w += ldns_str_print(s, sl, "%d", (*d)[4+i]);
-			else	w += ldns_str_print(s, sl, "0");
+				w += sldns_str_print(s, sl, "%d", (*d)[4+i]);
+			else	w += sldns_str_print(s, sl, "0");
 		}
 	} else if(family == LDNS_APL_IP6) {
 		/* check if prefix <128 ? */
 		/* address is variable length 0 - 16 */
 		for(i=0; i<16; i++) {
 			if(i%2 == 0 && i>0)
-				w += ldns_str_print(s, sl, ":");
+				w += sldns_str_print(s, sl, ":");
 			if(i < (int)adflength)
-				w += ldns_str_print(s, sl, "%02x", (*d)[4+i]);
-			else	w += ldns_str_print(s, sl, "00");
+				w += sldns_str_print(s, sl, "%02x", (*d)[4+i]);
+			else	w += sldns_str_print(s, sl, "00");
 		}
 	}
-	w += ldns_str_print(s, sl, "/%u", (unsigned)prefix);
+	w += sldns_str_print(s, sl, "/%u", (unsigned)prefix);
 	(*d) += 4+adflength;
 	(*dl) -= 4+adflength;
 	return w;
 }
 
-int ldns_wire2str_b32_ext_scan(uint8_t** d, size_t* dl, char** s, size_t* sl)
+int sldns_wire2str_b32_ext_scan(uint8_t** d, size_t* dl, char** s, size_t* sl)
 {
 	size_t datalen;
 	size_t sz;
 	if(*dl < 1) return -1;
 	datalen = (*d)[0];
 	if(*dl < 1+datalen) return -1;
-	sz = ldns_b32_ntop_calculate_size(datalen);
+	sz = sldns_b32_ntop_calculate_size(datalen);
 	if(*sl < sz+1) {
 		(*d) += datalen+1;
 		(*dl) -= (datalen+1);
 		return (int)sz; /* out of space really, but would need buffer
 			in order to truncate the output */
 	}
-	ldns_b32_ntop_extended_hex((*d)+1, datalen, *s, *sl);
+	sldns_b32_ntop_extended_hex((*d)+1, datalen, *s, *sl);
 	(*d) += datalen+1;
 	(*dl) -= (datalen+1);
 	(*s) += sz;
@@ -1155,18 +1155,18 @@ int ldns_wire2str_b32_ext_scan(uint8_t** d, size_t* dl, char** s, size_t* sl)
 }
 
 /** scan number of bytes from wire into b64 presentation format */
-static int ldns_wire2str_b64_scan_num(uint8_t** d, size_t* dl, char** s,
+static int sldns_wire2str_b64_scan_num(uint8_t** d, size_t* dl, char** s,
 	size_t* sl, size_t num)
 {
 	/* b64_ntop_calculate size includes null at the end */
-	size_t sz = ldns_b64_ntop_calculate_size(num)-1;
+	size_t sz = sldns_b64_ntop_calculate_size(num)-1;
 	if(*sl < sz+1) {
 		(*d) += num;
 		(*dl) -= num;
 		return (int)sz; /* out of space really, but would need buffer
 			in order to truncate the output */
 	}
-	ldns_b64_ntop(*d, num, *s, *sl);
+	sldns_b64_ntop(*d, num, *s, *sl);
 	(*d) += num;
 	(*dl) -= num;
 	(*s) += sz;
@@ -1174,17 +1174,17 @@ static int ldns_wire2str_b64_scan_num(uint8_t** d, size_t* dl, char** s,
 	return (int)sz;
 }
 
-int ldns_wire2str_b64_scan(uint8_t** d, size_t* dl, char** s, size_t* sl)
+int sldns_wire2str_b64_scan(uint8_t** d, size_t* dl, char** s, size_t* sl)
 {
-	return ldns_wire2str_b64_scan_num(d, dl, s, sl, *dl);
+	return sldns_wire2str_b64_scan_num(d, dl, s, sl, *dl);
 }
 
-int ldns_wire2str_hex_scan(uint8_t** d, size_t* dl, char** s, size_t* sl)
+int sldns_wire2str_hex_scan(uint8_t** d, size_t* dl, char** s, size_t* sl)
 {
 	return print_remainder_hex("", d, dl, s, sl);
 }
 
-int ldns_wire2str_nsec_scan(uint8_t** d, size_t* dl, char** s, size_t* sl)
+int sldns_wire2str_nsec_scan(uint8_t** d, size_t* dl, char** s, size_t* sl)
 {
 	uint8_t* p = *d;
 	size_t pl = *dl;
@@ -1216,8 +1216,8 @@ int ldns_wire2str_nsec_scan(uint8_t** d, size_t* dl, char** s, size_t* sl)
 			t = ((window)<<8) | (i << 3);
 			for(bit=0; bit<8; bit++) {
 				if((p[i]&(0x80>>bit))) {
-					if(w) w += ldns_str_print(s, sl, " ");
-					w += ldns_wire2str_type_print(s, sl,
+					if(w) w += sldns_str_print(s, sl, " ");
+					w += sldns_wire2str_type_print(s, sl,
 						t+bit);
 				}
 			}
@@ -1230,7 +1230,7 @@ int ldns_wire2str_nsec_scan(uint8_t** d, size_t* dl, char** s, size_t* sl)
 	return w;
 }
 
-int ldns_wire2str_nsec3_salt_scan(uint8_t** d, size_t* dl, char** s, size_t* sl)
+int sldns_wire2str_nsec3_salt_scan(uint8_t** d, size_t* dl, char** s, size_t* sl)
 {
 	size_t salt_len;
 	int w;
@@ -1240,7 +1240,7 @@ int ldns_wire2str_nsec3_salt_scan(uint8_t** d, size_t* dl, char** s, size_t* sl)
 	(*d)++;
 	(*dl)--;
 	if(salt_len == 0) {
-		return ldns_str_print(s, sl, "-");
+		return sldns_str_print(s, sl, "-");
 	}
 	w = print_hex_buf(s, sl, *d, salt_len);
 	(*dl)-=salt_len;
@@ -1248,34 +1248,34 @@ int ldns_wire2str_nsec3_salt_scan(uint8_t** d, size_t* dl, char** s, size_t* sl)
 	return w;
 }
 
-int ldns_wire2str_cert_alg_scan(uint8_t** d, size_t* dl, char** s, size_t* sl)
+int sldns_wire2str_cert_alg_scan(uint8_t** d, size_t* dl, char** s, size_t* sl)
 {
-	ldns_lookup_table *lt;
+	sldns_lookup_table *lt;
 	int data, w;
 	if(*dl < 2) return -1;
-	data = (int)ldns_read_uint16(*d);
-	lt = ldns_lookup_by_id(SLDNS(_cert_algorithms), data);
+	data = (int)sldns_read_uint16(*d);
+	lt = sldns_lookup_by_id(sldns_cert_algorithms, data);
 	if(lt && lt->name)
-		w = ldns_str_print(s, sl, "%s", lt->name);
-	else 	w = ldns_str_print(s, sl, "%d", data);
+		w = sldns_str_print(s, sl, "%s", lt->name);
+	else 	w = sldns_str_print(s, sl, "%d", data);
 	(*dl)-=2;
 	(*d)+=2;
 	return w;
 }
 
-int ldns_wire2str_alg_scan(uint8_t** d, size_t* dl, char** s, size_t* sl)
+int sldns_wire2str_alg_scan(uint8_t** d, size_t* dl, char** s, size_t* sl)
 {
 	/* don't use algorithm mnemonics in the presentation format
 	 * this kind of got sneaked into the rfc's */
-	return ldns_wire2str_int8_scan(d, dl, s, sl);
+	return sldns_wire2str_int8_scan(d, dl, s, sl);
 }
 
-int ldns_wire2str_unknown_scan(uint8_t** d, size_t* dl, char** s, size_t* sl)
+int sldns_wire2str_unknown_scan(uint8_t** d, size_t* dl, char** s, size_t* sl)
 {
-	return ldns_wire2str_rdata_unknown_scan(d, dl, s, sl);
+	return sldns_wire2str_rdata_unknown_scan(d, dl, s, sl);
 }
 
-int ldns_wire2str_time_scan(uint8_t** d, size_t* dl, char** s, size_t* sl)
+int sldns_wire2str_time_scan(uint8_t** d, size_t* dl, char** s, size_t* sl)
 {
 	/* create a YYYYMMDDHHMMSS string if possible */
 	struct tm tm;
@@ -1283,13 +1283,13 @@ int ldns_wire2str_time_scan(uint8_t** d, size_t* dl, char** s, size_t* sl)
 	uint32_t t;
 	memset(&tm, 0, sizeof(tm));
 	if(*dl < 4) return -1;
-	t = ldns_read_uint32(*d);
+	t = sldns_read_uint32(*d);
 	date_buf[15]=0;
-	if(ldns_serial_arithmitics_gmtime_r(t, time(NULL), &tm) &&
+	if(sldns_serial_arithmitics_gmtime_r(t, time(NULL), &tm) &&
 		strftime(date_buf, 15, "%Y%m%d%H%M%S", &tm)) {
 		(*d) += 4;
 		(*dl) -= 4;
-		return ldns_str_print(s, sl, "%s", date_buf);
+		return sldns_str_print(s, sl, "%s", date_buf);
 	}
 	return -1;
 }
@@ -1303,16 +1303,16 @@ loc_cm_print(char** str, size_t* sl, uint8_t mantissa, uint8_t exponent)
 	if(exponent < 2) {
 		if(exponent == 1)
 			mantissa *= 10;
-		return ldns_str_print(str, sl, "0.%02ld", (long)mantissa);
+		return sldns_str_print(str, sl, "0.%02ld", (long)mantissa);
 	}
 	/* always <digit><string of zeros> */
-	w += ldns_str_print(str, sl, "%d", (int)mantissa);
+	w += sldns_str_print(str, sl, "%d", (int)mantissa);
 	for(i=0; i<exponent-2; i++)
-		w += ldns_str_print(str, sl, "0");
+		w += sldns_str_print(str, sl, "0");
 	return w;
 }
 
-int ldns_wire2str_loc_scan(uint8_t** d, size_t* dl, char** str, size_t* sl)
+int sldns_wire2str_loc_scan(uint8_t** d, size_t* dl, char** str, size_t* sl)
 {
 	/* we could do checking (ie degrees < 90 etc)? */
 	uint8_t version;
@@ -1333,14 +1333,14 @@ int ldns_wire2str_loc_scan(uint8_t** d, size_t* dl, char** str, size_t* sl)
 	if(*dl < 16) return -1;
 	version = (*d)[0];
 	if(version != 0)
-		return ldns_wire2str_hex_scan(d, dl, str, sl);
+		return sldns_wire2str_hex_scan(d, dl, str, sl);
 	size = (*d)[1];
 	horizontal_precision = (*d)[2];
 	vertical_precision = (*d)[3];
 
-	latitude = ldns_read_uint32((*d)+4);
-	longitude = ldns_read_uint32((*d)+8);
-	altitude = ldns_read_uint32((*d)+12);
+	latitude = sldns_read_uint32((*d)+4);
+	longitude = sldns_read_uint32((*d)+8);
+	altitude = sldns_read_uint32((*d)+12);
 
 	if (latitude > equator) {
 		northerness = 'N';
@@ -1354,7 +1354,7 @@ int ldns_wire2str_loc_scan(uint8_t** d, size_t* dl, char** str, size_t* sl)
 	m = latitude / (1000 * 60);
 	latitude = latitude % (1000 * 60);
 	s = (double) latitude / 1000.0;
-	w += ldns_str_print(str, sl, "%02u %02u %0.3f %c ",
+	w += sldns_str_print(str, sl, "%02u %02u %0.3f %c ",
 		h, m, s, northerness);
 
 	if (longitude > equator) {
@@ -1369,36 +1369,36 @@ int ldns_wire2str_loc_scan(uint8_t** d, size_t* dl, char** str, size_t* sl)
 	m = longitude / (1000 * 60);
 	longitude = longitude % (1000 * 60);
 	s = (double) longitude / (1000.0);
-	w += ldns_str_print(str, sl, "%02u %02u %0.3f %c ",
+	w += sldns_str_print(str, sl, "%02u %02u %0.3f %c ",
 		h, m, s, easterness);
 
 	s = ((double) altitude) / 100;
 	s -= 100000;
 
 	if(altitude%100 != 0)
-		w += ldns_str_print(str, sl, "%.2f", s);
+		w += sldns_str_print(str, sl, "%.2f", s);
 	else
-		w += ldns_str_print(str, sl, "%.0f", s);
+		w += sldns_str_print(str, sl, "%.0f", s);
 
-	w += ldns_str_print(str, sl, "m ");
+	w += sldns_str_print(str, sl, "m ");
 
 	w += loc_cm_print(str, sl, (size & 0xf0) >> 4, size & 0x0f);
-	w += ldns_str_print(str, sl, "m ");
+	w += sldns_str_print(str, sl, "m ");
 
 	w += loc_cm_print(str, sl, (horizontal_precision & 0xf0) >> 4,
 		horizontal_precision & 0x0f);
-	w += ldns_str_print(str, sl, "m ");
+	w += sldns_str_print(str, sl, "m ");
 
 	w += loc_cm_print(str, sl, (vertical_precision & 0xf0) >> 4,
 		vertical_precision & 0x0f);
-	w += ldns_str_print(str, sl, "m");
+	w += sldns_str_print(str, sl, "m");
 
 	(*d)+=16;
 	(*dl)-=16;
 	return w;
 }
 
-int ldns_wire2str_wks_scan(uint8_t** d, size_t* dl, char** s, size_t* sl)
+int sldns_wire2str_wks_scan(uint8_t** d, size_t* dl, char** s, size_t* sl)
 {
 	/* protocol, followed by bitmap of services */
 	const char* proto_name = NULL;
@@ -1415,10 +1415,10 @@ int ldns_wire2str_wks_scan(uint8_t** d, size_t* dl, char** s, size_t* sl)
 	(*dl)--;
 	protocol = getprotobynumber((int)protocol_nr);
 	if(protocol && (protocol->p_name != NULL)) {
-		w += ldns_str_print(s, sl, "%s", protocol->p_name);
+		w += sldns_str_print(s, sl, "%s", protocol->p_name);
 		proto_name = protocol->p_name;
 	} else	{
-		w += ldns_str_print(s, sl, "%u", (unsigned)protocol_nr);
+		w += sldns_str_print(s, sl, "%u", (unsigned)protocol_nr);
 	}
 
 	for(i=0; i<*dl; i++) {
@@ -1431,9 +1431,9 @@ int ldns_wire2str_wks_scan(uint8_t** d, size_t* dl, char** s, size_t* sl)
 			service = getservbyport((int)htons((uint16_t)port),
 				proto_name);
 			if(service && service->s_name)
-				w += ldns_str_print(s, sl, " %s",
+				w += sldns_str_print(s, sl, " %s",
 					service->s_name);
-			else 	w += ldns_str_print(s, sl, " %u",
+			else 	w += sldns_str_print(s, sl, " %u",
 					(unsigned)port);
 		}
 	}
@@ -1449,18 +1449,18 @@ int ldns_wire2str_wks_scan(uint8_t** d, size_t* dl, char** s, size_t* sl)
 	return w;
 }
 
-int ldns_wire2str_nsap_scan(uint8_t** d, size_t* dl, char** s, size_t* sl)
+int sldns_wire2str_nsap_scan(uint8_t** d, size_t* dl, char** s, size_t* sl)
 {
 	return print_remainder_hex("0x", d, dl, s, sl);
 }
 
-int ldns_wire2str_atma_scan(uint8_t** d, size_t* dl, char** s, size_t* sl)
+int sldns_wire2str_atma_scan(uint8_t** d, size_t* dl, char** s, size_t* sl)
 {
 	return print_remainder_hex("", d, dl, s, sl);
 }
 
 /* internal scan routine that can modify arguments on failure */
-static int ldns_wire2str_ipseckey_scan_internal(uint8_t** d, size_t* dl,
+static int sldns_wire2str_ipseckey_scan_internal(uint8_t** d, size_t* dl,
 	char** s, size_t* sl, uint8_t* pkt, size_t pktlen)
 {
 	/* http://www.ietf.org/internet-drafts/draft-ietf-ipseckey-rr-12.txt*/
@@ -1476,21 +1476,21 @@ static int ldns_wire2str_ipseckey_scan_internal(uint8_t** d, size_t* dl,
 		return -1; /* unknown */
 	(*d)+=3;
 	(*dl)-=3;
-	w += ldns_str_print(s, sl, "%d %d %d ",
+	w += sldns_str_print(s, sl, "%d %d %d ",
 		(int)precedence, (int)gateway_type, (int)algorithm);
 
 	switch(gateway_type) {
 	case 0: /* no gateway */
-		w += ldns_str_print(s, sl, ".");
+		w += sldns_str_print(s, sl, ".");
 		break;
 	case 1: /* ip4 */
-		w += ldns_wire2str_a_scan(d, dl, s, sl);
+		w += sldns_wire2str_a_scan(d, dl, s, sl);
 		break;
 	case 2: /* ip6 */
-		w += ldns_wire2str_aaaa_scan(d, dl, s, sl);
+		w += sldns_wire2str_aaaa_scan(d, dl, s, sl);
 		break;
 	case 3: /* dname */
-		w += ldns_wire2str_dname_scan(d, dl, s, sl, pkt, pktlen);
+		w += sldns_wire2str_dname_scan(d, dl, s, sl, pkt, pktlen);
 		break;
 	default: /* unknown */
 		return -1;
@@ -1503,17 +1503,17 @@ static int ldns_wire2str_ipseckey_scan_internal(uint8_t** d, size_t* dl,
 		return -1;
 	(*d)++;
 	(*dl)--;
-	w += ldns_wire2str_b64_scan_num(d, dl, s, sl, public_key_size);
+	w += sldns_wire2str_b64_scan_num(d, dl, s, sl, public_key_size);
 	return w;
 }
 
-int ldns_wire2str_ipseckey_scan(uint8_t** d, size_t* dl, char** s, size_t* sl,
+int sldns_wire2str_ipseckey_scan(uint8_t** d, size_t* dl, char** s, size_t* sl,
 	uint8_t* pkt, size_t pktlen)
 {
 	uint8_t* od = *d;
 	char* os = *s;
 	size_t odl = *dl, osl = *sl;
-	int w=ldns_wire2str_ipseckey_scan_internal(d, dl, s, sl, pkt, pktlen);
+	int w=sldns_wire2str_ipseckey_scan_internal(d, dl, s, sl, pkt, pktlen);
 	if(w == -1) {
 		*d = od;
 		*s = os;
@@ -1524,56 +1524,56 @@ int ldns_wire2str_ipseckey_scan(uint8_t** d, size_t* dl, char** s, size_t* sl,
 	return w;
 }
 
-int ldns_wire2str_int16_data_scan(uint8_t** d, size_t* dl, char** s, size_t* sl)
+int sldns_wire2str_int16_data_scan(uint8_t** d, size_t* dl, char** s, size_t* sl)
 {
 	uint16_t n;
 	if(*dl < 2)
 		return -1;
-	n = ldns_read_uint16(*d);
+	n = sldns_read_uint16(*d);
 	if(*dl < 2+(size_t)n)
 		return -1;
 	(*d)+=2;
 	(*dl)-=2;
-	return ldns_wire2str_b64_scan_num(d, dl, s, sl, n);
+	return sldns_wire2str_b64_scan_num(d, dl, s, sl, n);
 }
 
-int ldns_wire2str_nsec3_next_owner_scan(uint8_t** d, size_t* dl, char** s,
+int sldns_wire2str_nsec3_next_owner_scan(uint8_t** d, size_t* dl, char** s,
 	size_t* sl)
 {
-	return ldns_wire2str_b32_ext_scan(d, dl, s, sl);
+	return sldns_wire2str_b32_ext_scan(d, dl, s, sl);
 }
 
-int ldns_wire2str_ilnp64_scan(uint8_t** d, size_t* dl, char** s, size_t* sl)
+int sldns_wire2str_ilnp64_scan(uint8_t** d, size_t* dl, char** s, size_t* sl)
 {
 	int w;
 	if(*dl < 8)
 		return -1;
-	w = ldns_str_print(s, sl, "%.4x:%.4x:%.4x:%.4x",
-		ldns_read_uint16(*d), ldns_read_uint16((*d)+2),
-		ldns_read_uint16((*d)+4), ldns_read_uint16((*d)+6));
+	w = sldns_str_print(s, sl, "%.4x:%.4x:%.4x:%.4x",
+		sldns_read_uint16(*d), sldns_read_uint16((*d)+2),
+		sldns_read_uint16((*d)+4), sldns_read_uint16((*d)+6));
 	(*d)+=8;
 	(*dl)-=8;
 	return w;
 }
 
-int ldns_wire2str_eui48_scan(uint8_t** d, size_t* dl, char** s, size_t* sl)
+int sldns_wire2str_eui48_scan(uint8_t** d, size_t* dl, char** s, size_t* sl)
 {
 	int w;
 	if(*dl < 6)
 		return -1;
-	w = ldns_str_print(s, sl, "%.2x-%.2x-%.2x-%.2x-%.2x-%.2x",
+	w = sldns_str_print(s, sl, "%.2x-%.2x-%.2x-%.2x-%.2x-%.2x",
 		(*d)[0], (*d)[1], (*d)[2], (*d)[3], (*d)[4], (*d)[5]);
 	(*d)+=6;
 	(*dl)-=6;
 	return w;
 }
 
-int ldns_wire2str_eui64_scan(uint8_t** d, size_t* dl, char** s, size_t* sl)
+int sldns_wire2str_eui64_scan(uint8_t** d, size_t* dl, char** s, size_t* sl)
 {
 	int w;
 	if(*dl < 8)
 		return -1;
-	w = ldns_str_print(s, sl, "%.2x-%.2x-%.2x-%.2x-%.2x-%.2x-%.2x-%.2x",
+	w = sldns_str_print(s, sl, "%.2x-%.2x-%.2x-%.2x-%.2x-%.2x-%.2x-%.2x",
 		(*d)[0], (*d)[1], (*d)[2], (*d)[3], (*d)[4], (*d)[5],
 		(*d)[6], (*d)[7]);
 	(*d)+=8;
@@ -1581,7 +1581,7 @@ int ldns_wire2str_eui64_scan(uint8_t** d, size_t* dl, char** s, size_t* sl)
 	return w;
 }
 
-int ldns_wire2str_tag_scan(uint8_t** d, size_t* dl, char** s, size_t* sl)
+int sldns_wire2str_tag_scan(uint8_t** d, size_t* dl, char** s, size_t* sl)
 {
 	size_t i, n;
 	int w = 0;
@@ -1594,26 +1594,26 @@ int ldns_wire2str_tag_scan(uint8_t** d, size_t* dl, char** s, size_t* sl)
 		if(!isalnum((int)(*d)[i]))
 			return -1;
 	for(i=0; i<n; i++)
-		w += ldns_str_print(s, sl, "%c", (char)(*d)[i]);
+		w += sldns_str_print(s, sl, "%c", (char)(*d)[i]);
 	(*d)+=n+1;
 	(*dl)-=(n+1);
 	return w;
 }
 
-int ldns_wire2str_long_str_scan(uint8_t** d, size_t* dl, char** s, size_t* sl)
+int sldns_wire2str_long_str_scan(uint8_t** d, size_t* dl, char** s, size_t* sl)
 {
 	size_t i;
 	int w = 0;
-	w += ldns_str_print(s, sl, "\"");
+	w += sldns_str_print(s, sl, "\"");
 	for(i=0; i<*dl; i++)
 		w += str_char_print(s, sl, (char)(*d)[i]);
-	w += ldns_str_print(s, sl, "\"");
+	w += sldns_str_print(s, sl, "\"");
 	(*d)+=*dl;
 	(*dl)=0;
 	return w;
 }
 
-int ldns_wire2str_edns_llq_print(char** s, size_t* sl, uint8_t* data,
+int sldns_wire2str_edns_llq_print(char** s, size_t* sl, uint8_t* data,
 	size_t len)
 {
 	/* LLQ constants */
@@ -1629,45 +1629,45 @@ int ldns_wire2str_edns_llq_print(char** s, size_t* sl, uint8_t* data,
 
 	/* read the record */
 	if(len != 18) {
-		w += ldns_str_print(s, sl, "malformed LLQ ");
+		w += sldns_str_print(s, sl, "malformed LLQ ");
 		w += print_hex_buf(s, sl, data, len);
 		return w;
 	}
-	version = ldns_read_uint16(data);
-	llq_opcode = ldns_read_uint16(data+2);
-	error_code = ldns_read_uint16(data+4);
+	version = sldns_read_uint16(data);
+	llq_opcode = sldns_read_uint16(data+2);
+	error_code = sldns_read_uint16(data+4);
 	memmove(&llq_id, data+6, sizeof(llq_id));
-	lease_life = ldns_read_uint32(data+14);
+	lease_life = sldns_read_uint32(data+14);
 
 	/* print it */
-	w += ldns_str_print(s, sl, "v%d ", (int)version);
+	w += sldns_str_print(s, sl, "v%d ", (int)version);
 	if(llq_opcode < llq_opcodes_num)
-		w += ldns_str_print(s, sl, "%s", llq_opcodes[llq_opcode]);
-	else	w += ldns_str_print(s, sl, "opcode %d", (int)llq_opcode);
+		w += sldns_str_print(s, sl, "%s", llq_opcodes[llq_opcode]);
+	else	w += sldns_str_print(s, sl, "opcode %d", (int)llq_opcode);
 	if(error_code < llq_errors_num)
-		w += ldns_str_print(s, sl, " %s", llq_errors[error_code]);
-	else	w += ldns_str_print(s, sl, " error %d", (int)error_code);
-	w += ldns_str_print(s, sl, " id %llx lease-life %lu",
+		w += sldns_str_print(s, sl, " %s", llq_errors[error_code]);
+	else	w += sldns_str_print(s, sl, " error %d", (int)error_code);
+	w += sldns_str_print(s, sl, " id %llx lease-life %lu",
 		(unsigned long long)llq_id, (unsigned long)lease_life);
 	return w;
 }
 
-int ldns_wire2str_edns_ul_print(char** s, size_t* sl, uint8_t* data,
+int sldns_wire2str_edns_ul_print(char** s, size_t* sl, uint8_t* data,
 	size_t len)
 {
 	uint32_t lease;
 	int w = 0;
 	if(len != 4) {
-		w += ldns_str_print(s, sl, "malformed UL ");
+		w += sldns_str_print(s, sl, "malformed UL ");
 		w += print_hex_buf(s, sl, data, len);
 		return w;
 	}
-	lease = ldns_read_uint32(data);
-	w += ldns_str_print(s, sl, "lease %lu", (unsigned long)lease);
+	lease = sldns_read_uint32(data);
+	w += sldns_str_print(s, sl, "lease %lu", (unsigned long)lease);
 	return w;
 }
 
-int ldns_wire2str_edns_nsid_print(char** s, size_t* sl, uint8_t* data,
+int sldns_wire2str_edns_nsid_print(char** s, size_t* sl, uint8_t* data,
 	size_t len)
 {
 	int w = 0;
@@ -1676,72 +1676,72 @@ int ldns_wire2str_edns_nsid_print(char** s, size_t* sl, uint8_t* data,
 	for(i=0; i<len; i++) {
 		if(isprint((int)data[i]) || data[i] == '\t') {
 			if(!printed) {
-				w += ldns_str_print(s, sl, " (");
+				w += sldns_str_print(s, sl, " (");
 				printed = 1;
 			}
-			w += ldns_str_print(s, sl, "%c", (char)data[i]);
+			w += sldns_str_print(s, sl, "%c", (char)data[i]);
 		}
 	}
 	if(printed)
-		w += ldns_str_print(s, sl, ")");
+		w += sldns_str_print(s, sl, ")");
 	return w;
 }
 
-int ldns_wire2str_edns_dau_print(char** s, size_t* sl, uint8_t* data,
+int sldns_wire2str_edns_dau_print(char** s, size_t* sl, uint8_t* data,
 	size_t len)
 {
-	ldns_lookup_table *lt;
+	sldns_lookup_table *lt;
 	size_t i;
 	int w = 0;
 	for(i=0; i<len; i++) {
-		lt = ldns_lookup_by_id(SLDNS(_algorithms), (int)data[i]);
+		lt = sldns_lookup_by_id(sldns_algorithms, (int)data[i]);
 		if(lt && lt->name)
-			w += ldns_str_print(s, sl, " %s", lt->name);
-		else 	w += ldns_str_print(s, sl, " %d", (int)data[i]);
+			w += sldns_str_print(s, sl, " %s", lt->name);
+		else 	w += sldns_str_print(s, sl, " %d", (int)data[i]);
 	}
 	return w;
 }
 
-int ldns_wire2str_edns_dhu_print(char** s, size_t* sl, uint8_t* data,
+int sldns_wire2str_edns_dhu_print(char** s, size_t* sl, uint8_t* data,
 	size_t len)
 {
-	ldns_lookup_table *lt;
+	sldns_lookup_table *lt;
 	size_t i;
 	int w = 0;
 	for(i=0; i<len; i++) {
-		lt = ldns_lookup_by_id(SLDNS(_hashes), (int)data[i]);
+		lt = sldns_lookup_by_id(sldns_hashes, (int)data[i]);
 		if(lt && lt->name)
-			w += ldns_str_print(s, sl, " %s", lt->name);
-		else 	w += ldns_str_print(s, sl, " %d", (int)data[i]);
+			w += sldns_str_print(s, sl, " %s", lt->name);
+		else 	w += sldns_str_print(s, sl, " %d", (int)data[i]);
 	}
 	return w;
 }
 
-int ldns_wire2str_edns_n3u_print(char** s, size_t* sl, uint8_t* data,
+int sldns_wire2str_edns_n3u_print(char** s, size_t* sl, uint8_t* data,
 	size_t len)
 {
 	size_t i;
 	int w = 0;
 	for(i=0; i<len; i++) {
 		if(data[i] == 1)
-			w += ldns_str_print(s, sl, " SHA1");
-		else 	w += ldns_str_print(s, sl, " %d", (int)data[i]);
+			w += sldns_str_print(s, sl, " SHA1");
+		else 	w += sldns_str_print(s, sl, " %d", (int)data[i]);
 	}
 	return w;
 }
 
-int ldns_wire2str_edns_subnet_print(char** s, size_t* sl, uint8_t* data,
+int sldns_wire2str_edns_subnet_print(char** s, size_t* sl, uint8_t* data,
 	size_t len)
 {
 	int w = 0;
 	uint16_t family;
 	uint8_t source, scope;
 	if(len < 4) {
-		w += ldns_str_print(s, sl, "malformed subnet ");
+		w += sldns_str_print(s, sl, "malformed subnet ");
 		w += print_hex_buf(s, sl, data, len);
 		return w;
 	}
-	family = ldns_read_uint16(data);
+	family = sldns_read_uint16(data);
 	source = data[2];
 	scope = data[3];
 	if(family == 1) {
@@ -1750,17 +1750,17 @@ int ldns_wire2str_edns_subnet_print(char** s, size_t* sl, uint8_t* data,
 		uint8_t ip4[4];
 		memset(ip4, 0, sizeof(ip4));
 		if(len-4 > 4) {
-			w += ldns_str_print(s, sl, "trailingdata:");
+			w += sldns_str_print(s, sl, "trailingdata:");
 			w += print_hex_buf(s, sl, data+4+4, len-4-4);
-			w += ldns_str_print(s, sl, " ");
+			w += sldns_str_print(s, sl, " ");
 			len = 4+4;
 		}
 		memmove(ip4, data+4, len-4);
 		if(!inet_ntop(AF_INET, ip4, buf, (socklen_t)sizeof(buf))) {
-			w += ldns_str_print(s, sl, "ip4ntoperror ");
+			w += sldns_str_print(s, sl, "ip4ntoperror ");
 			w += print_hex_buf(s, sl, data+4+4, len-4-4);
 		} else {
-			w += ldns_str_print(s, sl, "%s", buf);
+			w += sldns_str_print(s, sl, "%s", buf);
 		}
 	} else if(family == 2) {
 		/* IP6 */
@@ -1768,59 +1768,59 @@ int ldns_wire2str_edns_subnet_print(char** s, size_t* sl, uint8_t* data,
 		uint8_t ip6[16];
 		memset(ip6, 0, sizeof(ip6));
 		if(len-4 > 16) {
-			w += ldns_str_print(s, sl, "trailingdata:");
+			w += sldns_str_print(s, sl, "trailingdata:");
 			w += print_hex_buf(s, sl, data+4+16, len-4-16);
-			w += ldns_str_print(s, sl, " ");
+			w += sldns_str_print(s, sl, " ");
 			len = 4+16;
 		}
 		memmove(ip6, data+4, len-4);
 #ifdef AF_INET6
 		if(!inet_ntop(AF_INET6, ip6, buf, (socklen_t)sizeof(buf))) {
-			w += ldns_str_print(s, sl, "ip6ntoperror ");
+			w += sldns_str_print(s, sl, "ip6ntoperror ");
 			w += print_hex_buf(s, sl, data+4+4, len-4-4);
 		} else {
-			w += ldns_str_print(s, sl, "%s", buf);
+			w += sldns_str_print(s, sl, "%s", buf);
 		}
 #else
 		w += print_hex_buf(s, sl, data+4+4, len-4-4);
 #endif
 	} else {
 		/* unknown */
-		w += ldns_str_print(s, sl, "family %d ",
+		w += sldns_str_print(s, sl, "family %d ",
 			(int)family);
 		w += print_hex_buf(s, sl, data, len);
 	}
-	w += ldns_str_print(s, sl, "/%d scope /%d", (int)source, (int)scope);
+	w += sldns_str_print(s, sl, "/%d scope /%d", (int)source, (int)scope);
 	return w;
 }
 
-int ldns_wire2str_edns_option_print(char** s, size_t* sl,
+int sldns_wire2str_edns_option_print(char** s, size_t* sl,
 	uint16_t option_code, uint8_t* optdata, size_t optlen)
 {
 	int w = 0;
-	w += ldns_wire2str_edns_option_code_print(s, sl, option_code);
-	w += ldns_str_print(s, sl, ": ");
+	w += sldns_wire2str_edns_option_code_print(s, sl, option_code);
+	w += sldns_str_print(s, sl, ": ");
 	switch(option_code) {
 	case LDNS_EDNS_LLQ:
-		w += ldns_wire2str_edns_llq_print(s, sl, optdata, optlen);
+		w += sldns_wire2str_edns_llq_print(s, sl, optdata, optlen);
 		break;
 	case LDNS_EDNS_UL:
-		w += ldns_wire2str_edns_ul_print(s, sl, optdata, optlen);
+		w += sldns_wire2str_edns_ul_print(s, sl, optdata, optlen);
 		break;
 	case LDNS_EDNS_NSID:
-		w += ldns_wire2str_edns_nsid_print(s, sl, optdata, optlen);
+		w += sldns_wire2str_edns_nsid_print(s, sl, optdata, optlen);
 		break;
 	case LDNS_EDNS_DAU:
-		w += ldns_wire2str_edns_dau_print(s, sl, optdata, optlen);
+		w += sldns_wire2str_edns_dau_print(s, sl, optdata, optlen);
 		break;
 	case LDNS_EDNS_DHU:
-		w += ldns_wire2str_edns_dhu_print(s, sl, optdata, optlen);
+		w += sldns_wire2str_edns_dhu_print(s, sl, optdata, optlen);
 		break;
 	case LDNS_EDNS_N3U:
-		w += ldns_wire2str_edns_n3u_print(s, sl, optdata, optlen);
+		w += sldns_wire2str_edns_n3u_print(s, sl, optdata, optlen);
 		break;
 	case LDNS_EDNS_CLIENT_SUBNET:
-		w += ldns_wire2str_edns_subnet_print(s, sl, optdata, optlen);
+		w += sldns_wire2str_edns_subnet_print(s, sl, optdata, optlen);
 		break;
 	default:
 		/* unknown option code */
@@ -1839,26 +1839,26 @@ print_edns_opts(char** s, size_t* sl, uint8_t* rdata, size_t rdatalen)
 	while(rdatalen > 0) {
 		/* option name */
 		if(rdatalen < 4) {
-			w += ldns_str_print(s, sl, " ; malformed: ");
+			w += sldns_str_print(s, sl, " ; malformed: ");
 			w += print_hex_buf(s, sl, rdata, rdatalen);
 			return w;
 		}
-		option_code = ldns_read_uint16(rdata);
-		option_len = ldns_read_uint16(rdata+2);
+		option_code = sldns_read_uint16(rdata);
+		option_len = sldns_read_uint16(rdata+2);
 		rdata += 4;
 		rdatalen -= 4;
 
 		/* option value */
 		if(rdatalen < (size_t)option_len) {
-			w += ldns_str_print(s, sl, " ; malformed ");
-			w += ldns_wire2str_edns_option_code_print(s, sl,
+			w += sldns_str_print(s, sl, " ; malformed ");
+			w += sldns_wire2str_edns_option_code_print(s, sl,
 				option_code);
-			w += ldns_str_print(s, sl, ": ");
+			w += sldns_str_print(s, sl, ": ");
 			w += print_hex_buf(s, sl, rdata, rdatalen);
 			return w;
 		}
-		w += ldns_str_print(s, sl, " ; ");
-		w += ldns_wire2str_edns_option_print(s, sl, option_code,
+		w += sldns_str_print(s, sl, " ; ");
+		w += sldns_wire2str_edns_option_print(s, sl, option_code,
 			rdata, option_len);
 		rdata += option_len;
 		rdatalen -= option_len;
@@ -1866,13 +1866,13 @@ print_edns_opts(char** s, size_t* sl, uint8_t* rdata, size_t rdatalen)
 	return w;
 }
 
-int ldns_wire2str_edns_scan(uint8_t** data, size_t* data_len, char** str,
+int sldns_wire2str_edns_scan(uint8_t** data, size_t* data_len, char** str,
         size_t* str_len, uint8_t* pkt, size_t pktlen)
 {
 	int w = 0;
 	uint8_t ext_rcode, edns_version;
 	uint16_t udpsize, edns_bits, rdatalen;
-	w += ldns_str_print(str, str_len, "; EDNS:");
+	w += sldns_str_print(str, str_len, "; EDNS:");
 
 	/* some input checks, domain name */
 	if(*data_len < 1+10)
@@ -1886,36 +1886,36 @@ int ldns_wire2str_edns_scan(uint8_t** data, size_t* data_len, char** str,
 	(*data_len)--;
 
 	/* check type and read fixed contents */
-	if(ldns_read_uint16((*data)) != LDNS_RR_TYPE_OPT) {
+	if(sldns_read_uint16((*data)) != LDNS_RR_TYPE_OPT) {
 		return w + print_remainder_hex("Error nottypeOPT 0x",
 			data, data_len, str, str_len);
 	}
-	udpsize = ldns_read_uint16((*data)+2);
+	udpsize = sldns_read_uint16((*data)+2);
 	ext_rcode = (*data)[4];
 	edns_version = (*data)[5];
-	edns_bits = ldns_read_uint16((*data)+6);
-	rdatalen = ldns_read_uint16((*data)+8);
+	edns_bits = sldns_read_uint16((*data)+6);
+	rdatalen = sldns_read_uint16((*data)+8);
 	(*data)+=10;
 	(*data_len)-=10;
 
-	w += ldns_str_print(str, str_len, " version: %u;",
+	w += sldns_str_print(str, str_len, " version: %u;",
 		(unsigned)edns_version);
-	w += ldns_str_print(str, str_len, " flags:");
+	w += sldns_str_print(str, str_len, " flags:");
 	if((edns_bits & LDNS_EDNS_MASK_DO_BIT))
-		w += ldns_str_print(str, str_len, " do");
+		w += sldns_str_print(str, str_len, " do");
 	/* the extended rcode is the value set, shifted four bits,
 	 * and or'd with the original rcode */
 	if(ext_rcode) {
 		int rc = ((int)ext_rcode)<<4;
 		if(pkt && pktlen >= LDNS_HEADER_SIZE)
 			rc |= LDNS_RCODE_WIRE(pkt);
-		w += ldns_str_print(str, str_len, " ; ext-rcode: %d", rc);
+		w += sldns_str_print(str, str_len, " ; ext-rcode: %d", rc);
 	}
-	w += ldns_str_print(str, str_len, " ; udp: %u", (unsigned)udpsize);
+	w += sldns_str_print(str, str_len, " ; udp: %u", (unsigned)udpsize);
 
 	if(rdatalen) {
 		if(*data_len < rdatalen) {
-			w += ldns_str_print(str, str_len,
+			w += sldns_str_print(str, str_len,
 				" ; Error EDNS rdata too short; ");
 			rdatalen = *data_len;
 		}
@@ -1923,6 +1923,6 @@ int ldns_wire2str_edns_scan(uint8_t** data, size_t* data_len, char** str,
 		(*data) += rdatalen;
 		(*data_len) -= rdatalen;
 	}
-	w += ldns_str_print(str, str_len, "\n");
+	w += sldns_str_print(str, str_len, "\n");
 	return w;
 }

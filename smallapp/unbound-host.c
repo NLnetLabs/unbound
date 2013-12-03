@@ -173,7 +173,7 @@ static int
 massage_type(const char* t, int reverse, int* multi)
 {
 	if(t) {
-		int r = ldns_get_rr_type_by_name(t);
+		int r = sldns_get_rr_type_by_name(t);
 		if(r == 0 && strcasecmp(t, "TYPE0") != 0 && 
 			strcmp(t, "") != 0) {
 			fprintf(stderr, "error unknown type %s\n", t);
@@ -192,7 +192,7 @@ static int
 massage_class(const char* c)
 {
 	if(c) {
-		int r = ldns_get_rr_class_by_name(c);
+		int r = sldns_get_rr_class_by_name(c);
 		if(r == 0 && strcasecmp(c, "CLASS0") != 0 && 
 			strcmp(c, "") != 0) {
 			fprintf(stderr, "error unknown class %s\n", c);
@@ -217,7 +217,7 @@ static void
 pretty_type(char* s, size_t len, int t)
 {
 	char d[16];
-	ldns_wire2str_type_buf((uint16_t)t, d, sizeof(d));
+	sldns_wire2str_type_buf((uint16_t)t, d, sizeof(d));
 	snprintf(s, len, "%s", d);
 }
 
@@ -226,7 +226,7 @@ static void
 pretty_class(char* s, size_t len, int c)
 {
 	char d[16];
-	ldns_wire2str_class_buf((uint16_t)c, d, sizeof(d));
+	sldns_wire2str_class_buf((uint16_t)c, d, sizeof(d));
 	snprintf(s, len, "%s", d);
 }
 
@@ -235,7 +235,7 @@ static void
 pretty_rcode(char* s, size_t len, int r)
 {
 	char d[16];
-	ldns_wire2str_rcode_buf(r, d, sizeof(d));
+	sldns_wire2str_rcode_buf(r, d, sizeof(d));
 	snprintf(s, len, "%s", d);
 }
 
@@ -244,7 +244,7 @@ static void
 print_rd(int t, char* data, size_t len)
 {
 	char s[65535];
-	ldns_wire2str_rdata_buf((uint8_t*)data, len, s, sizeof(s), (uint16_t)t);
+	sldns_wire2str_rdata_buf((uint8_t*)data, len, s, sizeof(s), (uint16_t)t);
 	printf(" %s", s);
 }
 
@@ -320,7 +320,7 @@ pretty_output(char* q, int t, int c, struct ub_result* result, int docname)
 			else if(t == LDNS_RR_TYPE_MX)
 				printf(" has no mail handler record");
 			else if(t == LDNS_RR_TYPE_ANY) {
-				char* s = ldns_wire2str_pkt(
+				char* s = sldns_wire2str_pkt(
 					result->answer_packet,
 					(size_t)result->answer_len);
 				if(!s) {

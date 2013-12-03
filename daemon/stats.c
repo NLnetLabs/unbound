@@ -262,14 +262,14 @@ void server_stats_insquery(struct server_stats* stats, struct comm_point* c,
 	uint16_t qtype, uint16_t qclass, struct edns_data* edns,
 	struct comm_reply* repinfo)
 {
-	uint16_t flags = ldns_buffer_read_u16_at(c->buffer, 2);
+	uint16_t flags = sldns_buffer_read_u16_at(c->buffer, 2);
 	if(qtype < STATS_QTYPE_NUM)
 		stats->qtype[qtype]++;
 	else	stats->qtype_big++;
 	if(qclass < STATS_QCLASS_NUM)
 		stats->qclass[qclass]++;
 	else	stats->qclass_big++;
-	stats->qopcode[ LDNS_OPCODE_WIRE(ldns_buffer_begin(c->buffer)) ]++;
+	stats->qopcode[ LDNS_OPCODE_WIRE(sldns_buffer_begin(c->buffer)) ]++;
 	if(c->type != comm_udp)
 		stats->qtcp++;
 	if(repinfo && addr_is_ip6(&repinfo->addr, repinfo->addrlen))
@@ -297,12 +297,12 @@ void server_stats_insquery(struct server_stats* stats, struct comm_point* c,
 	}
 }
 
-void server_stats_insrcode(struct server_stats* stats, ldns_buffer* buf)
+void server_stats_insrcode(struct server_stats* stats, sldns_buffer* buf)
 {
-	if(stats->extended && ldns_buffer_limit(buf) != 0) {
-		int r = (int)LDNS_RCODE_WIRE( ldns_buffer_begin(buf) );
+	if(stats->extended && sldns_buffer_limit(buf) != 0) {
+		int r = (int)LDNS_RCODE_WIRE( sldns_buffer_begin(buf) );
 		stats->ans_rcode[r] ++;
-		if(r == 0 && LDNS_ANCOUNT( ldns_buffer_begin(buf) ) == 0)
+		if(r == 0 && LDNS_ANCOUNT( sldns_buffer_begin(buf) ) == 0)
 			stats->ans_rcode_nodata ++;
 	}
 }

@@ -1060,6 +1060,7 @@ dnl includes
 
 /** Use small-ldns codebase */
 #define USE_SLDNS 1
+#define SLDNS sldns_
 #ifdef HAVE_SSL
 #  define LDNS_BUILD_CONFIG_HAVE_SSL 1
 #endif

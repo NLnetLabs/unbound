@@ -88,32 +88,32 @@ extern "C" {
 #define	LDNS_RA_CLR(wirebuf)	(*(wirebuf+3) &= ~LDNS_RA_MASK)
 
 /* Query ID */
-#define	LDNS_ID_WIRE(wirebuf)		(ldns_read_uint16(wirebuf))
-#define	LDNS_ID_SET(wirebuf, id)	(ldns_write_uint16(wirebuf, id))
+#define	LDNS_ID_WIRE(wirebuf)		(sldns_read_uint16(wirebuf))
+#define	LDNS_ID_SET(wirebuf, id)	(sldns_write_uint16(wirebuf, id))
 
 /* Counter of the question section */
 #define LDNS_QDCOUNT_OFF		4
 /*
 #define	QDCOUNT(wirebuf)		(ntohs(*(uint16_t *)(wirebuf+QDCOUNT_OFF)))
 */
-#define	LDNS_QDCOUNT(wirebuf)		(ldns_read_uint16(wirebuf+LDNS_QDCOUNT_OFF))
+#define	LDNS_QDCOUNT(wirebuf)		(sldns_read_uint16(wirebuf+LDNS_QDCOUNT_OFF))
 
 /* Counter of the answer section */
 #define LDNS_ANCOUNT_OFF		6
-#define	LDNS_ANCOUNT(wirebuf)		(ldns_read_uint16(wirebuf+LDNS_ANCOUNT_OFF))
+#define	LDNS_ANCOUNT(wirebuf)		(sldns_read_uint16(wirebuf+LDNS_ANCOUNT_OFF))
 
 /* Counter of the authority section */
 #define LDNS_NSCOUNT_OFF		8
-#define	LDNS_NSCOUNT(wirebuf)		(ldns_read_uint16(wirebuf+LDNS_NSCOUNT_OFF))
+#define	LDNS_NSCOUNT(wirebuf)		(sldns_read_uint16(wirebuf+LDNS_NSCOUNT_OFF))
 
 /* Counter of the additional section */
 #define LDNS_ARCOUNT_OFF		10
-#define	LDNS_ARCOUNT(wirebuf)		(ldns_read_uint16(wirebuf+LDNS_ARCOUNT_OFF))
+#define	LDNS_ARCOUNT(wirebuf)		(sldns_read_uint16(wirebuf+LDNS_ARCOUNT_OFF))
 
 /**
  * The sections of a packet
  */
-enum ldns_enum_pkt_section {
+enum sldns_enum_pkt_section {
         LDNS_SECTION_QUESTION = 0,
         LDNS_SECTION_ANSWER = 1,
         LDNS_SECTION_AUTHORITY = 2,
@@ -123,20 +123,20 @@ enum ldns_enum_pkt_section {
         /** used to get all non-question rrs from a packet */
         LDNS_SECTION_ANY_NOQUESTION = 5
 };
-typedef enum ldns_enum_pkt_section ldns_pkt_section;
+typedef enum sldns_enum_pkt_section sldns_pkt_section;
 
 /* opcodes for pkt's */
-enum ldns_enum_pkt_opcode {
+enum sldns_enum_pkt_opcode {
         LDNS_PACKET_QUERY = 0,
         LDNS_PACKET_IQUERY = 1,
         LDNS_PACKET_STATUS = 2, /* there is no 3?? DNS is weird */
         LDNS_PACKET_NOTIFY = 4,
         LDNS_PACKET_UPDATE = 5
 };
-typedef enum ldns_enum_pkt_opcode ldns_pkt_opcode;
+typedef enum sldns_enum_pkt_opcode sldns_pkt_opcode;
 
 /* rcodes for pkts */
-enum ldns_enum_pkt_rcode {
+enum sldns_enum_pkt_rcode {
         LDNS_RCODE_NOERROR = 0,
         LDNS_RCODE_FORMERR = 1,
         LDNS_RCODE_SERVFAIL = 2,
@@ -149,7 +149,7 @@ enum ldns_enum_pkt_rcode {
         LDNS_RCODE_NOTAUTH = 9,
         LDNS_RCODE_NOTZONE = 10
 };
-typedef enum ldns_enum_pkt_rcode ldns_pkt_rcode;
+typedef enum sldns_enum_pkt_rcode sldns_pkt_rcode;
 
 #ifdef __cplusplus
 }

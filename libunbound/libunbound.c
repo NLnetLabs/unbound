@@ -469,21 +469,21 @@ process_answer_detail(struct ub_ctx* ctx, uint8_t* msg, uint32_t len,
 		ub_resolve_free(q->res);
 	} else {
 		/* parse the message, extract rcode, fill result */
-		ldns_buffer* buf = ldns_buffer_new(q->msg_len);
+		sldns_buffer* buf = sldns_buffer_new(q->msg_len);
 		struct regional* region = regional_create();
 		*res = q->res;
 		(*res)->rcode = LDNS_RCODE_SERVFAIL;
 		if(region && buf) {
-			ldns_buffer_clear(buf);
-			ldns_buffer_write(buf, q->msg, q->msg_len);
-			ldns_buffer_flip(buf);
+			sldns_buffer_clear(buf);
+			sldns_buffer_write(buf, q->msg, q->msg_len);
+			sldns_buffer_flip(buf);
 			libworker_enter_result(*res, buf, region,
 				q->msg_security);
 		}
 		(*res)->answer_packet = q->msg;
 		(*res)->answer_len = (int)q->msg_len;
 		q->msg = NULL;
-		ldns_buffer_free(buf);
+		sldns_buffer_free(buf);
 		regional_destroy(region);
 	}
 	q->res = NULL;

@@ -15,7 +15,7 @@
 #include <limits.h>
 #include <strings.h>
 
-ldns_lookup_table ldns_directive_types[] = {
+sldns_lookup_table sldns_directive_types[] = {
         { LDNS_DIR_TTL, "$TTL" },
         { LDNS_DIR_ORIGIN, "$ORIGIN" },
         { LDNS_DIR_INCLUDE, "$INCLUDE" },
@@ -24,13 +24,13 @@ ldns_lookup_table ldns_directive_types[] = {
 
 /* add max_limit here? */
 ssize_t
-ldns_fget_token(FILE *f, char *token, const char *delim, size_t limit)
+sldns_fget_token(FILE *f, char *token, const char *delim, size_t limit)
 {
-	return ldns_fget_token_l(f, token, delim, limit, NULL);
+	return sldns_fget_token_l(f, token, delim, limit, NULL);
 }
 
 ssize_t
-ldns_fget_token_l(FILE *f, char *token, const char *delim, size_t limit, int *line_nr)
+sldns_fget_token_l(FILE *f, char *token, const char *delim, size_t limit, int *line_nr)
 {
 	int c, prev_c;
 	int p; /* 0 -> no parenthese seen, >0 nr of ( seen */
@@ -163,7 +163,7 @@ ldns_fget_token_l(FILE *f, char *token, const char *delim, size_t limit, int *li
 	return (ssize_t)i;
 
 tokenread:
-	ldns_fskipcs_l(f, del, line_nr);
+	sldns_fskipcs_l(f, del, line_nr);
 	*t = '\0';
 	if (p != 0) {
 		return -1;
@@ -173,15 +173,15 @@ tokenread:
 }
 
 ssize_t
-ldns_fget_keyword_data(FILE *f, const char *keyword, const char *k_del, char *data,
+sldns_fget_keyword_data(FILE *f, const char *keyword, const char *k_del, char *data,
                const char *d_del, size_t data_limit)
 {
-       return ldns_fget_keyword_data_l(f, keyword, k_del, data, d_del,
+       return sldns_fget_keyword_data_l(f, keyword, k_del, data, d_del,
 		       data_limit, NULL);
 }
 
 ssize_t
-ldns_fget_keyword_data_l(FILE *f, const char *keyword, const char *k_del, char *data,
+sldns_fget_keyword_data_l(FILE *f, const char *keyword, const char *k_del, char *data,
                const char *d_del, size_t data_limit, int *line_nr)
 {
        /* we assume: keyword|sep|data */
@@ -194,7 +194,7 @@ ldns_fget_keyword_data_l(FILE *f, const char *keyword, const char *k_del, char *
        if(!fkeyword)
                return -1;
 
-       i = ldns_fget_token(f, fkeyword, k_del, LDNS_MAX_KEYWORDLEN);
+       i = sldns_fget_token(f, fkeyword, k_del, LDNS_MAX_KEYWORDLEN);
        if(i==0 || i==-1) {
                free(fkeyword);
                return -1;
@@ -204,7 +204,7 @@ ldns_fget_keyword_data_l(FILE *f, const char *keyword, const char *k_del, char *
        if (strncmp(fkeyword, keyword, LDNS_MAX_KEYWORDLEN - 1) == 0) {
                /* whee! */
                /* printf("%s\n%s\n", "Matching keyword", fkeyword); */
-               i = ldns_fget_token_l(f, data, d_del, data_limit, line_nr);
+               i = sldns_fget_token_l(f, data, d_del, data_limit, line_nr);
                free(fkeyword);
                return i;
        } else {
@@ -215,13 +215,13 @@ ldns_fget_keyword_data_l(FILE *f, const char *keyword, const char *k_del, char *
 }
 
 ssize_t
-ldns_bget_token(ldns_buffer *b, char *token, const char *delim, size_t limit)
+sldns_bget_token(sldns_buffer *b, char *token, const char *delim, size_t limit)
 {
-	return ldns_bget_token_par(b, token, delim, limit, NULL, NULL);
+	return sldns_bget_token_par(b, token, delim, limit, NULL, NULL);
 }
 
 ssize_t
-ldns_bget_token_par(ldns_buffer *b, char *token, const char *delim,
+sldns_bget_token_par(sldns_buffer *b, char *token, const char *delim,
 	size_t limit, int* par, const char* skipw)
 {
 	int c, lc;
@@ -250,7 +250,7 @@ ldns_bget_token_par(ldns_buffer *b, char *token, const char *delim,
 		quoted = 1;
 	}
 
-	while ((c = ldns_bgetc(b)) != EOF) {
+	while ((c = sldns_bgetc(b)) != EOF) {
 		if (c == '\r') /* carriage return */
 			c = ' ';
 		if (c == '(' && lc != '\\' && !quoted) {
@@ -352,7 +352,7 @@ ldns_bget_token_par(ldns_buffer *b, char *token, const char *delim,
 	return (ssize_t)i;
 
 tokenread:
-	ldns_bskipcs(b, del);
+	sldns_bskipcs(b, del);
 	*t = '\0';
 
 	if (!par && p != 0) {
@@ -363,14 +363,14 @@ tokenread:
 
 
 void
-ldns_bskipcs(ldns_buffer *buffer, const char *s)
+sldns_bskipcs(sldns_buffer *buffer, const char *s)
 {
         int found;
         char c;
         const char *d;
 
-        while(ldns_buffer_available_at(buffer, buffer->_position, sizeof(char))) {
-                c = (char) ldns_buffer_read_u8_at(buffer, buffer->_position);
+        while(sldns_buffer_available_at(buffer, buffer->_position, sizeof(char))) {
+                c = (char) sldns_buffer_read_u8_at(buffer, buffer->_position);
                 found = 0;
                 for (d = s; *d; d++) {
                         if (*d == c) {
@@ -386,13 +386,13 @@ ldns_bskipcs(ldns_buffer *buffer, const char *s)
 }
 
 void
-ldns_fskipcs(FILE *fp, const char *s)
+sldns_fskipcs(FILE *fp, const char *s)
 {
-	ldns_fskipcs_l(fp, s, NULL);
+	sldns_fskipcs_l(fp, s, NULL);
 }
 
 void
-ldns_fskipcs_l(FILE *fp, const char *s, int *line_nr)
+sldns_fskipcs_l(FILE *fp, const char *s, int *line_nr)
 {
         int found;
         int c;
@@ -417,7 +417,7 @@ ldns_fskipcs_l(FILE *fp, const char *s, int *line_nr)
 }
 
 ssize_t
-ldns_bget_keyword_data(ldns_buffer *b, const char *keyword, const char *k_del, char
+sldns_bget_keyword_data(sldns_buffer *b, const char *keyword, const char *k_del, char
 *data, const char *d_del, size_t data_limit)
 {
        /* we assume: keyword|sep|data */
@@ -430,7 +430,7 @@ ldns_bget_keyword_data(ldns_buffer *b, const char *keyword, const char *k_del, c
        if(!fkeyword)
                return -1; /* out of memory */
 
-       i = ldns_bget_token(b, fkeyword, k_del, data_limit);
+       i = sldns_bget_token(b, fkeyword, k_del, data_limit);
        if(i==0 || i==-1) {
                free(fkeyword);
                return -1; /* nothing read */
@@ -441,7 +441,7 @@ ldns_bget_keyword_data(ldns_buffer *b, const char *keyword, const char *k_del, c
                free(fkeyword);
                /* whee, the match! */
                /* retrieve it's data */
-               i = ldns_bget_token(b, data, d_del, 0);
+               i = sldns_bget_token(b, data, d_del, 0);
                return i;
        } else {
                free(fkeyword);

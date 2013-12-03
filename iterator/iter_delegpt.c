@@ -390,7 +390,7 @@ delegpt_rrset_add_ns(struct delegpt* dp, struct regional* region,
 	for(i=0; i<nsdata->count; i++) {
 		if(nsdata->rr_len[i] < 2+1) continue; /* len + root label */
 		if(dname_valid(nsdata->rr_data[i]+2, nsdata->rr_len[i]-2) !=
-			(size_t)ldns_read_uint16(nsdata->rr_data[i]))
+			(size_t)sldns_read_uint16(nsdata->rr_data[i]))
 			continue; /* bad format */
 		/* add rdata of NS (= wirefmt dname), skip rdatalen bytes */
 		if(!delegpt_add_ns(dp, region, nsdata->rr_data[i]+2, lame))

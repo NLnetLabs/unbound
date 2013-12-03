@@ -185,7 +185,7 @@ read_fwds_name(struct config_stub* s)
 		log_err("forward zone without a name (use name \".\" to forward everything)");
 		return NULL;
 	}
-	dname = ldns_str2wire_dname(s->name, &dname_len);
+	dname = sldns_str2wire_dname(s->name, &dname_len);
 	if(!dname) {
 		log_err("cannot parse forward zone name %s", s->name);
 		return NULL;
@@ -208,7 +208,7 @@ read_fwds_host(struct config_stub* s, struct delegpt* dp)
 	size_t dname_len;
 	for(p = s->hosts; p; p = p->next) {
 		log_assert(p->str);
-		dname = ldns_str2wire_dname(p->str, &dname_len);
+		dname = sldns_str2wire_dname(p->str, &dname_len);
 		if(!dname) {
 			log_err("cannot parse forward %s server name: '%s'", 
 				s->name, p->str);
@@ -294,7 +294,7 @@ make_stub_holes(struct iter_forwards* fwd, struct config_file* cfg)
 	uint8_t* dname;
 	size_t dname_len;
 	for(s = cfg->stubs; s; s = s->next) {
-		dname = ldns_str2wire_dname(s->name, &dname_len);
+		dname = sldns_str2wire_dname(s->name, &dname_len);
 		if(!dname) {
 			log_err("cannot parse stub name '%s'", s->name);
 			return 0;

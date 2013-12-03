@@ -83,7 +83,7 @@ libworker_delete_env(struct libworker* w)
 		mesh_delete(w->env->mesh);
 		context_release_alloc(w->ctx, w->env->alloc, 
 			!w->is_bg || w->is_bg_thread);
-		ldns_buffer_free(w->env->scratch_buffer);
+		sldns_buffer_free(w->env->scratch_buffer);
 		regional_destroy(w->env->scratch);
 		forwards_delete(w->env->fwds);
 		hints_delete(w->env->hints);
@@ -144,7 +144,7 @@ libworker_setup(struct ub_ctx* ctx, int is_bg, struct event_base* eb)
 		lock_basic_lock(&ctx->cfglock);
 	}
 	w->env->scratch = regional_create_custom(cfg->msg_buffer_size);
-	w->env->scratch_buffer = ldns_buffer_new(cfg->msg_buffer_size);
+	w->env->scratch_buffer = sldns_buffer_new(cfg->msg_buffer_size);
 	w->env->fwds = forwards_create();
 	if(w->env->fwds && !forwards_apply_cfg(w->env->fwds, cfg)) { 
 		forwards_delete(w->env->fwds);
@@ -414,7 +414,7 @@ int libworker_bg(struct ub_ctx* ctx)
 
 /** get msg reply struct (in temp region) */
 static struct reply_info*
-parse_reply(ldns_buffer* pkt, struct regional* region, struct query_info* qi)
+parse_reply(sldns_buffer* pkt, struct regional* region, struct query_info* qi)
 {
 	struct reply_info* rep;
 	struct msg_parse* msg;
@@ -422,7 +422,7 @@ parse_reply(ldns_buffer* pkt, struct regional* region, struct query_info* qi)
 		return NULL;
 	}
 	memset(msg, 0, sizeof(*msg));
-	ldns_buffer_set_position(pkt, 0);
+	sldns_buffer_set_position(pkt, 0);
 	if(parse_packet(pkt, msg, region) != 0)
 		return 0;
 	if(!parse_create_msg(pkt, msg, NULL, qi, &rep, region)) {
@@ -498,7 +498,7 @@ fill_res(struct ub_result* res, struct ub_packed_rrset_key* answer,
 
 /** fill result from parsed message, on error fills servfail */
 void
-libworker_enter_result(struct ub_result* res, ldns_buffer* buf,
+libworker_enter_result(struct ub_result* res, sldns_buffer* buf,
 	struct regional* temp, enum sec_status msg_security)
 {
 	struct query_info rq;
@@ -526,7 +526,7 @@ libworker_enter_result(struct ub_result* res, ldns_buffer* buf,
 
 /** fillup fg results */
 static void
-libworker_fillup_fg(struct ctx_query* q, int rcode, ldns_buffer* buf, 
+libworker_fillup_fg(struct ctx_query* q, int rcode, sldns_buffer* buf, 
 	enum sec_status s, char* why_bogus)
 {
 	if(why_bogus)
@@ -539,8 +539,8 @@ libworker_fillup_fg(struct ctx_query* q, int rcode, ldns_buffer* buf,
 
 	q->res->rcode = LDNS_RCODE_SERVFAIL;
 	q->msg_security = 0;
-	q->msg = memdup(ldns_buffer_begin(buf), ldns_buffer_limit(buf));
-	q->msg_len = ldns_buffer_limit(buf);
+	q->msg = memdup(sldns_buffer_begin(buf), sldns_buffer_limit(buf));
+	q->msg_len = sldns_buffer_limit(buf);
 	if(!q->msg) {
 		return; /* the error is in the rcode */
 	}
@@ -551,7 +551,7 @@ libworker_fillup_fg(struct ctx_query* q, int rcode, ldns_buffer* buf,
 }
 
 void
-libworker_fg_done_cb(void* arg, int rcode, ldns_buffer* buf, enum sec_status s,
+libworker_fg_done_cb(void* arg, int rcode, sldns_buffer* buf, enum sec_status s,
 	char* why_bogus)
 {
 	struct ctx_query* q = (struct ctx_query*)arg;
@@ -568,7 +568,7 @@ setup_qinfo_edns(struct libworker* w, struct ctx_query* q,
 {
 	qinfo->qtype = (uint16_t)q->res->qtype;
 	qinfo->qclass = (uint16_t)q->res->qclass;
-	qinfo->qname = ldns_str2wire_dname(q->res->qname, &qinfo->qname_len);
+	qinfo->qname = sldns_str2wire_dname(q->res->qname, &qinfo->qname_len);
 	if(!qinfo->qname) {
 		return 0;
 	}
@@ -576,8 +576,8 @@ setup_qinfo_edns(struct libworker* w, struct ctx_query* q,
 	edns->ext_rcode = 0;
 	edns->edns_version = 0;
 	edns->bits = EDNS_DO;
-	if(ldns_buffer_capacity(w->back->udp_buff) < 65535)
-		edns->udp_size = (uint16_t)ldns_buffer_capacity(
+	if(sldns_buffer_capacity(w->back->udp_buff) < 65535)
+		edns->udp_size = (uint16_t)sldns_buffer_capacity(
 			w->back->udp_buff);
 	else	edns->udp_size = 65535;
 	return 1;
@@ -599,8 +599,8 @@ int libworker_fg(struct ub_ctx* ctx, struct ctx_query* q)
 	qflags = BIT_RD;
 	q->w = w;
 	/* see if there is a fixed answer */
-	ldns_buffer_write_u16_at(w->back->udp_buff, 0, qid);
-	ldns_buffer_write_u16_at(w->back->udp_buff, 2, qflags);
+	sldns_buffer_write_u16_at(w->back->udp_buff, 0, qid);
+	sldns_buffer_write_u16_at(w->back->udp_buff, 2, qflags);
 	if(local_zones_answer(ctx->local_zones, &qinfo, &edns, 
 		w->back->udp_buff, w->env->scratch)) {
 		regional_free_all(w->env->scratch);
@@ -626,7 +626,7 @@ int libworker_fg(struct ub_ctx* ctx, struct ctx_query* q)
 }
 
 void
-libworker_event_done_cb(void* arg, int rcode, ldns_buffer* buf,
+libworker_event_done_cb(void* arg, int rcode, sldns_buffer* buf,
 	enum sec_status s, char* why_bogus)
 {
 	struct ctx_query* q = (struct ctx_query*)arg;
@@ -668,8 +668,8 @@ int libworker_attach_mesh(struct ub_ctx* ctx, struct ctx_query* q,
 	qflags = BIT_RD;
 	q->w = w;
 	/* see if there is a fixed answer */
-	ldns_buffer_write_u16_at(w->back->udp_buff, 0, qid);
-	ldns_buffer_write_u16_at(w->back->udp_buff, 2, qflags);
+	sldns_buffer_write_u16_at(w->back->udp_buff, 0, qid);
+	sldns_buffer_write_u16_at(w->back->udp_buff, 2, qflags);
 	if(local_zones_answer(ctx->local_zones, &qinfo, &edns, 
 		w->back->udp_buff, w->env->scratch)) {
 		regional_free_all(w->env->scratch);
@@ -692,7 +692,7 @@ int libworker_attach_mesh(struct ub_ctx* ctx, struct ctx_query* q,
 
 /** add result to the bg worker result queue */
 static void
-add_bg_result(struct libworker* w, struct ctx_query* q, ldns_buffer* pkt, 
+add_bg_result(struct libworker* w, struct ctx_query* q, sldns_buffer* pkt, 
 	int err, char* reason)
 {
 	uint8_t* msg = NULL;
@@ -704,8 +704,8 @@ add_bg_result(struct libworker* w, struct ctx_query* q, ldns_buffer* pkt,
 		if(reason)
 			q->res->why_bogus = strdup(reason);
 		if(pkt) {
-			q->msg_len = ldns_buffer_remaining(pkt);
-			q->msg = memdup(ldns_buffer_begin(pkt), q->msg_len);
+			q->msg_len = sldns_buffer_remaining(pkt);
+			q->msg = memdup(sldns_buffer_begin(pkt), q->msg_len);
 			if(!q->msg)
 				msg = context_serialize_answer(q, UB_NOMEM, 
 				NULL, &len);
@@ -733,7 +733,7 @@ add_bg_result(struct libworker* w, struct ctx_query* q, ldns_buffer* pkt,
 }
 
 void
-libworker_bg_done_cb(void* arg, int rcode, ldns_buffer* buf, enum sec_status s,
+libworker_bg_done_cb(void* arg, int rcode, sldns_buffer* buf, enum sec_status s,
 	char* why_bogus)
 {
 	struct ctx_query* q = (struct ctx_query*)arg;
@@ -788,8 +788,8 @@ handle_newq(struct libworker* w, uint8_t* buf, uint32_t len)
 	qid = 0;
 	qflags = BIT_RD;
 	/* see if there is a fixed answer */
-	ldns_buffer_write_u16_at(w->back->udp_buff, 0, qid);
-	ldns_buffer_write_u16_at(w->back->udp_buff, 2, qflags);
+	sldns_buffer_write_u16_at(w->back->udp_buff, 0, qid);
+	sldns_buffer_write_u16_at(w->back->udp_buff, 2, qflags);
 	if(local_zones_answer(w->ctx->local_zones, &qinfo, &edns, 
 		w->back->udp_buff, w->env->scratch)) {
 		regional_free_all(w->env->scratch);
@@ -851,10 +851,10 @@ libworker_handle_reply(struct comm_point* c, void* arg, int error,
 		return 0;
 	}
 	/* sanity check. */
-	if(!LDNS_QR_WIRE(ldns_buffer_begin(c->buffer))
-		|| LDNS_OPCODE_WIRE(ldns_buffer_begin(c->buffer)) !=
+	if(!LDNS_QR_WIRE(sldns_buffer_begin(c->buffer))
+		|| LDNS_OPCODE_WIRE(sldns_buffer_begin(c->buffer)) !=
 			LDNS_PACKET_QUERY
-		|| LDNS_QDCOUNT(ldns_buffer_begin(c->buffer)) > 1) {
+		|| LDNS_QDCOUNT(sldns_buffer_begin(c->buffer)) > 1) {
 		/* error becomes timeout for the module as if this reply
 		 * never arrived. */
 		mesh_report_reply(lw->env->mesh, &e, reply_info, 
@@ -877,10 +877,10 @@ libworker_handle_service_reply(struct comm_point* c, void* arg, int error,
 		return 0;
 	}
 	/* sanity check. */
-	if(!LDNS_QR_WIRE(ldns_buffer_begin(c->buffer))
-		|| LDNS_OPCODE_WIRE(ldns_buffer_begin(c->buffer)) !=
+	if(!LDNS_QR_WIRE(sldns_buffer_begin(c->buffer))
+		|| LDNS_OPCODE_WIRE(sldns_buffer_begin(c->buffer)) !=
 			LDNS_PACKET_QUERY
-		|| LDNS_QDCOUNT(ldns_buffer_begin(c->buffer)) > 1) {
+		|| LDNS_QDCOUNT(sldns_buffer_begin(c->buffer)) > 1) {
 		/* error becomes timeout for the module as if this reply
 		 * never arrived. */
 		mesh_report_reply(lw->env->mesh, e, reply_info, 

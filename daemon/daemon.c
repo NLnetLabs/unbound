@@ -208,7 +208,7 @@ daemon_init(void)
 	OPENSSL_config("unbound");
 #  endif
 #  ifdef USE_GOST
-	(void)ldns_key_EVP_load_gost_id();
+	(void)sldns_key_EVP_load_gost_id();
 #  endif
 	OpenSSL_add_all_algorithms();
 #  if HAVE_DECL_SSL_COMP_GET_COMPRESSION_METHODS
@@ -563,7 +563,7 @@ daemon_delete(struct daemon* daemon)
 	/* libcrypto cleanup */
 #ifdef HAVE_SSL
 #  if defined(USE_GOST) && defined(HAVE_LDNS_KEY_EVP_UNLOAD_GOST)
-	ldns_key_EVP_unload_gost();
+	sldns_key_EVP_unload_gost();
 #  endif
 #  if HAVE_DECL_SSL_COMP_GET_COMPRESSION_METHODS && HAVE_DECL_SK_SSL_COMP_POP_FREE
 #    ifndef S_SPLINT_S

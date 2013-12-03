@@ -26,7 +26,7 @@
 #endif /* HAVE_SSL */
 
 size_t
-ldns_rr_dnskey_key_size_raw(const unsigned char* keydata,
+sldns_rr_dnskey_key_size_raw(const unsigned char* keydata,
 	const size_t len, int alg)
 {
 	/* for DSA keys */
@@ -36,7 +36,7 @@ ldns_rr_dnskey_key_size_raw(const unsigned char* keydata,
 	uint16_t exp;
 	uint16_t int16;
 	
-	switch ((ldns_algorithm)alg) {
+	switch ((sldns_algorithm)alg) {
 	case LDNS_DSA:
 	case LDNS_DSA_NSEC3:
 		if (len > 0) {
@@ -86,7 +86,7 @@ ldns_rr_dnskey_key_size_raw(const unsigned char* keydata,
 	}
 }
 
-uint16_t ldns_calc_keytag_raw(uint8_t* key, size_t keysize)
+uint16_t sldns_calc_keytag_raw(uint8_t* key, size_t keysize)
 {
 	if(keysize < 4) {
 		return 0;
@@ -113,10 +113,10 @@ uint16_t ldns_calc_keytag_raw(uint8_t* key, size_t keysize)
 #ifdef HAVE_SSL
 #ifdef USE_GOST
 /** store GOST engine reference loaded into OpenSSL library */
-ENGINE* ldns_gost_engine = NULL;
+ENGINE* sldns_gost_engine = NULL;
 
 int
-ldns_key_EVP_load_gost_id(void)
+sldns_key_EVP_load_gost_id(void)
 {
 	static int gost_id = 0;
 	const EVP_PKEY_ASN1_METHOD* meth;
@@ -158,24 +158,24 @@ ldns_key_EVP_load_gost_id(void)
 	}
         /* Note: do not ENGINE_finish and ENGINE_free the acquired engine
          * on some platforms this frees up the meth and unloads gost stuff */
-        ldns_gost_engine = e;
+        sldns_gost_engine = e;
 	
 	EVP_PKEY_asn1_get0_info(&gost_id, NULL, NULL, NULL, NULL, meth);
 	return gost_id;
 } 
 
-void ldns_key_EVP_unload_gost(void)
+void sldns_key_EVP_unload_gost(void)
 {
-        if(ldns_gost_engine) {
-                ENGINE_finish(ldns_gost_engine);
-                ENGINE_free(ldns_gost_engine);
-                ldns_gost_engine = NULL;
+        if(sldns_gost_engine) {
+                ENGINE_finish(sldns_gost_engine);
+                ENGINE_free(sldns_gost_engine);
+                sldns_gost_engine = NULL;
         }
 }
 #endif /* USE_GOST */
 
 DSA *
-ldns_key_buf2dsa_raw(unsigned char* key, size_t len)
+sldns_key_buf2dsa_raw(unsigned char* key, size_t len)
 {
 	uint8_t T;
 	uint16_t length;
@@ -227,7 +227,7 @@ ldns_key_buf2dsa_raw(unsigned char* key, size_t len)
 }
 
 RSA *
-ldns_key_buf2rsa_raw(unsigned char* key, size_t len)
+sldns_key_buf2rsa_raw(unsigned char* key, size_t len)
 {
 	uint16_t offset;
 	uint16_t exp;
@@ -284,7 +284,7 @@ ldns_key_buf2rsa_raw(unsigned char* key, size_t len)
 
 #ifdef USE_GOST
 EVP_PKEY*
-ldns_gost2pkey_raw(unsigned char* key, size_t keylen)
+sldns_gost2pkey_raw(unsigned char* key, size_t keylen)
 {
 	/* prefix header for X509 encoding */
 	uint8_t asn[37] = { 0x30, 0x63, 0x30, 0x1c, 0x06, 0x06, 0x2a, 0x85, 
@@ -309,7 +309,7 @@ ldns_gost2pkey_raw(unsigned char* key, size_t keylen)
 
 #ifdef USE_ECDSA
 EVP_PKEY*
-ldns_ecdsa2pkey_raw(unsigned char* key, size_t keylen, uint8_t algo)
+sldns_ecdsa2pkey_raw(unsigned char* key, size_t keylen, uint8_t algo)
 {
 	unsigned char buf[256+2]; /* sufficient for 2*384/8+1 */
         const unsigned char* pp = buf;
@@ -349,7 +349,7 @@ ldns_ecdsa2pkey_raw(unsigned char* key, size_t keylen, uint8_t algo)
 #endif /* USE_ECDSA */
 
 int
-ldns_digest_evp(unsigned char* data, unsigned int len, unsigned char* dest,
+sldns_digest_evp(unsigned char* data, unsigned int len, unsigned char* dest,
 	const EVP_MD* md)
 {
 	EVP_MD_CTX* ctx;

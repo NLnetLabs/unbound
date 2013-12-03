@@ -378,7 +378,7 @@ dnskey_get_keysize(struct packed_rrset_data* data, size_t idx)
 	algo = (int)data->rr_data[idx][2+3];
 	pk = (unsigned char*)data->rr_data[idx]+2+4;
 	pklen = (unsigned)data->rr_len[idx]-2-4;
-	return ldns_rr_dnskey_key_size_raw(pk, pklen, algo);
+	return sldns_rr_dnskey_key_size_raw(pk, pklen, algo);
 }
 
 /** get dnskey flags from data */

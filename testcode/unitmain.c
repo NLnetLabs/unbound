@@ -568,7 +568,7 @@ main(int argc, char* argv[])
 	OPENSSL_config("unbound");
 #  endif
 #  ifdef USE_GOST
-	(void)ldns_key_EVP_load_gost_id();
+	(void)sldns_key_EVP_load_gost_id();
 #  endif
 #elif defined(HAVE_NSS)
 	if(NSS_NoDB_Init(".") != SECSuccess)
@@ -593,7 +593,7 @@ main(int argc, char* argv[])
 	printf("%d checks ok.\n", testcount);
 #ifdef HAVE_SSL
 #  if defined(USE_GOST) && defined(HAVE_LDNS_KEY_EVP_UNLOAD_GOST)
-	ldns_key_EVP_unload_gost();
+	sldns_key_EVP_unload_gost();
 #  endif
 #  ifdef HAVE_OPENSSL_CONFIG
 	EVP_cleanup();

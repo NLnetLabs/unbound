@@ -9,16 +9,16 @@
 /**
  * \file
  *
- * This file contains the definition of ldns_buffer, and functions to manipulate those.
+ * This file contains the definition of sldns_buffer, and functions to manipulate those.
  */
 #include "config.h"
 #include "ldns/sbuffer.h"
 #include <stdarg.h>
 
-ldns_buffer *
-ldns_buffer_new(size_t capacity)
+sldns_buffer *
+sldns_buffer_new(size_t capacity)
 {
-	ldns_buffer *buffer = (ldns_buffer*)malloc(sizeof(ldns_buffer));
+	sldns_buffer *buffer = (sldns_buffer*)malloc(sizeof(sldns_buffer));
 
 	if (!buffer) {
 		return NULL;
@@ -35,13 +35,13 @@ ldns_buffer_new(size_t capacity)
 	buffer->_fixed = 0;
 	buffer->_status_err = 0;
 	
-	ldns_buffer_invariant(buffer);
+	sldns_buffer_invariant(buffer);
 	
 	return buffer;
 }
 
 void
-ldns_buffer_new_frm_data(ldns_buffer *buffer, void *data, size_t size)
+sldns_buffer_new_frm_data(sldns_buffer *buffer, void *data, size_t size)
 {
 	assert(data != NULL);
 
@@ -56,11 +56,11 @@ ldns_buffer_new_frm_data(ldns_buffer *buffer, void *data, size_t size)
 	memcpy(buffer->_data, data, size);
 	buffer->_status_err = 0;
 	
-	ldns_buffer_invariant(buffer);
+	sldns_buffer_invariant(buffer);
 }
 
 void
-ldns_buffer_init_frm_data(ldns_buffer *buffer, void *data, size_t size)
+sldns_buffer_init_frm_data(sldns_buffer *buffer, void *data, size_t size)
 {
 	memset(buffer, 0, sizeof(*buffer));
 	buffer->_data = data;
@@ -69,11 +69,11 @@ ldns_buffer_init_frm_data(ldns_buffer *buffer, void *data, size_t size)
 }
 
 int
-ldns_buffer_set_capacity(ldns_buffer *buffer, size_t capacity)
+sldns_buffer_set_capacity(sldns_buffer *buffer, size_t capacity)
 {
 	void *data;
 	
-	ldns_buffer_invariant(buffer);
+	sldns_buffer_invariant(buffer);
 	assert(buffer->_position <= capacity);
 
 	data = (uint8_t *) realloc(buffer->_data, capacity);
@@ -88,9 +88,9 @@ ldns_buffer_set_capacity(ldns_buffer *buffer, size_t capacity)
 }
 
 int
-ldns_buffer_reserve(ldns_buffer *buffer, size_t amount)
+sldns_buffer_reserve(sldns_buffer *buffer, size_t amount)
 {
-	ldns_buffer_invariant(buffer);
+	sldns_buffer_invariant(buffer);
 	assert(!buffer->_fixed);
 	if (buffer->_capacity < buffer->_position + amount) {
 		size_t new_capacity = buffer->_capacity * 3 / 2;
@@ -98,7 +98,7 @@ ldns_buffer_reserve(ldns_buffer *buffer, size_t amount)
 		if (new_capacity < buffer->_position + amount) {
 			new_capacity = buffer->_position + amount;
 		}
-		if (!ldns_buffer_set_capacity(buffer, new_capacity)) {
+		if (!sldns_buffer_set_capacity(buffer, new_capacity)) {
 			buffer->_status_err = 1;
 			return 0;
 		}
@@ -108,32 +108,32 @@ ldns_buffer_reserve(ldns_buffer *buffer, size_t amount)
 }
 
 int
-ldns_buffer_printf(ldns_buffer *buffer, const char *format, ...)
+sldns_buffer_printf(sldns_buffer *buffer, const char *format, ...)
 {
 	va_list args;
 	int written = 0;
 	size_t remaining;
 	
-	if (ldns_buffer_status_ok(buffer)) {
-		ldns_buffer_invariant(buffer);
+	if (sldns_buffer_status_ok(buffer)) {
+		sldns_buffer_invariant(buffer);
 		assert(buffer->_limit == buffer->_capacity);
 
-		remaining = ldns_buffer_remaining(buffer);
+		remaining = sldns_buffer_remaining(buffer);
 		va_start(args, format);
-		written = vsnprintf((char *) ldns_buffer_current(buffer), remaining,
+		written = vsnprintf((char *) sldns_buffer_current(buffer), remaining,
 				    format, args);
 		va_end(args);
 		if (written == -1) {
 			buffer->_status_err = 1;
 			return -1;
 		} else if ((size_t) written >= remaining) {
-			if (!ldns_buffer_reserve(buffer, (size_t) written + 1)) {
+			if (!sldns_buffer_reserve(buffer, (size_t) written + 1)) {
 				buffer->_status_err = 1;
 				return -1;
 			}
 			va_start(args, format);
-			written = vsnprintf((char *) ldns_buffer_current(buffer),
-			    ldns_buffer_remaining(buffer), format, args);
+			written = vsnprintf((char *) sldns_buffer_current(buffer),
+			    sldns_buffer_remaining(buffer), format, args);
 			va_end(args);
 			if (written == -1) {
 				buffer->_status_err = 1;
@@ -146,7 +146,7 @@ ldns_buffer_printf(ldns_buffer *buffer, const char *format, ...)
 }
 
 void
-ldns_buffer_free(ldns_buffer *buffer)
+sldns_buffer_free(sldns_buffer *buffer)
 {
 	if (!buffer) {
 		return;
@@ -159,31 +159,31 @@ ldns_buffer_free(ldns_buffer *buffer)
 }
 
 void *
-ldns_buffer_export(ldns_buffer *buffer)
+sldns_buffer_export(sldns_buffer *buffer)
 {
 	buffer->_fixed = 1;
 	return buffer->_data;
 }
 
 int
-ldns_bgetc(ldns_buffer *buffer)
+sldns_bgetc(sldns_buffer *buffer)
 {
-	if (!ldns_buffer_available_at(buffer, buffer->_position, sizeof(uint8_t))) {
-		ldns_buffer_set_position(buffer, ldns_buffer_limit(buffer));
-		/* ldns_buffer_rewind(buffer);*/
+	if (!sldns_buffer_available_at(buffer, buffer->_position, sizeof(uint8_t))) {
+		sldns_buffer_set_position(buffer, sldns_buffer_limit(buffer));
+		/* sldns_buffer_rewind(buffer);*/
 		return EOF;
 	}
-	return (int)ldns_buffer_read_u8(buffer);
+	return (int)sldns_buffer_read_u8(buffer);
 }
 
 void 
-ldns_buffer_copy(ldns_buffer* result, ldns_buffer* from)
+sldns_buffer_copy(sldns_buffer* result, sldns_buffer* from)
 {
-	size_t tocopy = ldns_buffer_limit(from);
+	size_t tocopy = sldns_buffer_limit(from);
 
-	if(tocopy > ldns_buffer_capacity(result))
-		tocopy = ldns_buffer_capacity(result);
-	ldns_buffer_clear(result);
-	ldns_buffer_write(result, ldns_buffer_begin(from), tocopy);
-	ldns_buffer_flip(result);
+	if(tocopy > sldns_buffer_capacity(result))
+		tocopy = sldns_buffer_capacity(result);
+	sldns_buffer_clear(result);
+	sldns_buffer_write(result, sldns_buffer_begin(from), tocopy);
+	sldns_buffer_flip(result);
 }

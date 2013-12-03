@@ -1176,7 +1176,7 @@ grab_nsec(struct rrset_cache* rrset_cache, uint8_t* qname, size_t qname_len,
 /** find nsec3 closest encloser in neg cache */
 static struct val_neg_data*
 neg_find_nsec3_ce(struct val_neg_zone* zone, uint8_t* qname, size_t qname_len,
-		int qlabs, ldns_buffer* buf, uint8_t* hashnc, size_t* nclen)
+		int qlabs, sldns_buffer* buf, uint8_t* hashnc, size_t* nclen)
 {
 	struct val_neg_data* data;
 	uint8_t hashce[NSEC3_SHA_LEN];
@@ -1259,7 +1259,7 @@ neg_nsec3_getnc(struct val_neg_zone* zone, uint8_t* hashnc, size_t nclen,
 /** neg cache nsec3 proof procedure*/
 static struct dns_msg*
 neg_nsec3_proof_ds(struct val_neg_zone* zone, uint8_t* qname, size_t qname_len,
-		int qlabs, ldns_buffer* buf, struct rrset_cache* rrset_cache,
+		int qlabs, sldns_buffer* buf, struct rrset_cache* rrset_cache,
 		struct regional* region, time_t now, uint8_t* topname)
 {
 	struct dns_msg* msg;
@@ -1390,7 +1390,7 @@ static int add_soa(struct rrset_cache* rrset_cache, time_t now,
 struct dns_msg* 
 val_neg_getmsg(struct val_neg_cache* neg, struct query_info* qinfo, 
 	struct regional* region, struct rrset_cache* rrset_cache, 
-	ldns_buffer* buf, time_t now, int addsoa, uint8_t* topname)
+	sldns_buffer* buf, time_t now, int addsoa, uint8_t* topname)
 {
 	struct dns_msg* msg;
 	struct ub_packed_rrset_key* rrset;

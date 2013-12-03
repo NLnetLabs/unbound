@@ -57,7 +57,7 @@ static void usage(char* argv[])
 }
 
 /** read hex input */
-static void read_input(ldns_buffer* pkt, FILE* in)
+static void read_input(sldns_buffer* pkt, FILE* in)
 {
 	char buf[102400];
 	char* np = buf;
@@ -70,22 +70,22 @@ static void read_input(ldns_buffer* pkt, FILE* in)
 }
 
 /** analyze domain name in packet, possibly compressed */
-static void analyze_dname(ldns_buffer* pkt)
+static void analyze_dname(sldns_buffer* pkt)
 {
-	size_t oldpos = ldns_buffer_position(pkt);
+	size_t oldpos = sldns_buffer_position(pkt);
 	size_t len;
 	printf("[pos %d] dname: ", (int)oldpos);
-	dname_print(stdout, pkt, ldns_buffer_current(pkt));
+	dname_print(stdout, pkt, sldns_buffer_current(pkt));
 	len = pkt_dname_len(pkt);
 	printf(" len=%d", (int)len);
-	if(ldns_buffer_position(pkt)-oldpos != len)
+	if(sldns_buffer_position(pkt)-oldpos != len)
 		printf(" comprlen=%d\n", 
-			(int)(ldns_buffer_position(pkt)-oldpos));
+			(int)(sldns_buffer_position(pkt)-oldpos));
 	else	printf("\n");
 }
 
 /** analyze rdata in packet */
-static void analyze_rdata(ldns_buffer*pkt, const ldns_rr_descriptor* desc, 
+static void analyze_rdata(sldns_buffer*pkt, const sldns_rr_descriptor* desc, 
 	uint16_t rdlen)
 {
 	int rdf = 0;
@@ -94,21 +94,21 @@ static void analyze_rdata(ldns_buffer*pkt, const ldns_rr_descriptor* desc,
 	while(rdlen > 0 && count) {
 		switch(desc->_wireformat[rdf]) {
 		case LDNS_RDF_TYPE_DNAME:
-			oldpos = ldns_buffer_position(pkt);
+			oldpos = sldns_buffer_position(pkt);
 			analyze_dname(pkt);
-			rdlen -= ldns_buffer_position(pkt)-oldpos;
+			rdlen -= sldns_buffer_position(pkt)-oldpos;
 			count --;
 			len = 0;
 			break;
 		case LDNS_RDF_TYPE_STR:
-			len = ldns_buffer_current(pkt)[0] + 1;
+			len = sldns_buffer_current(pkt)[0] + 1;
 			break;
 		default:
 			len = get_rdf_size(desc->_wireformat[rdf]);
 		}
 		if(len) {
 			printf(" wf[%d]", (int)len);
-			ldns_buffer_skip(pkt, (ssize_t)len);
+			sldns_buffer_skip(pkt, (ssize_t)len);
 			rdlen -= len;
 		}
 		rdf++;
@@ -117,62 +117,62 @@ static void analyze_rdata(ldns_buffer*pkt, const ldns_rr_descriptor* desc,
 		size_t i;
 		printf(" remain[%d]\n", (int)rdlen);
 		for(i=0; i<rdlen; i++)
-			printf(" %2.2X", (unsigned)ldns_buffer_current(pkt)[i]);
+			printf(" %2.2X", (unsigned)sldns_buffer_current(pkt)[i]);
 		printf("\n");
 	}
 	else	printf("\n");
-	ldns_buffer_skip(pkt, (ssize_t)rdlen);
+	sldns_buffer_skip(pkt, (ssize_t)rdlen);
 }
 
 /** analyze rr in packet */
-static void analyze_rr(ldns_buffer* pkt, int q)
+static void analyze_rr(sldns_buffer* pkt, int q)
 {
 	uint16_t type, dclass, len;
 	uint32_t ttl;
 	analyze_dname(pkt);
-	type = ldns_buffer_read_u16(pkt);
-	dclass = ldns_buffer_read_u16(pkt);
-	printf("type %s(%d)", ldns_rr_descript(type)?  
-		ldns_rr_descript(type)->_name: "??" , (int)type);
-	printf(" class %s(%d) ", ldns_lookup_by_id(sldns_rr_classes, 
-		(int)dclass)?ldns_lookup_by_id(sldns_rr_classes, 
+	type = sldns_buffer_read_u16(pkt);
+	dclass = sldns_buffer_read_u16(pkt);
+	printf("type %s(%d)", sldns_rr_descript(type)?  
+		sldns_rr_descript(type)->_name: "??" , (int)type);
+	printf(" class %s(%d) ", sldns_lookup_by_id(sldns_rr_classes, 
+		(int)dclass)?sldns_lookup_by_id(sldns_rr_classes, 
 		(int)dclass)->name:"??", (int)dclass);
 	if(q) {
 		printf("\n");
 	} else {
-		ttl = ldns_buffer_read_u32(pkt);
+		ttl = sldns_buffer_read_u32(pkt);
 		printf(" ttl %d (0x%x)", (int)ttl, (unsigned)ttl);
-		len = ldns_buffer_read_u16(pkt);
+		len = sldns_buffer_read_u16(pkt);
 		printf(" rdata len %d:\n", (int)len);
-		if(ldns_rr_descript(type))
-			analyze_rdata(pkt, ldns_rr_descript(type), len);
-		else ldns_buffer_skip(pkt, (ssize_t)len);
+		if(sldns_rr_descript(type))
+			analyze_rdata(pkt, sldns_rr_descript(type), len);
+		else sldns_buffer_skip(pkt, (ssize_t)len);
 	}
 }
 
 /** analyse pkt */
-static void analyze(ldns_buffer* pkt)
+static void analyze(sldns_buffer* pkt)
 {
 	uint16_t i, f, qd, an, ns, ar;
 	int rrnum = 0;
-	printf("packet length %d\n", (int)ldns_buffer_limit(pkt));
-	if(ldns_buffer_limit(pkt) < 12) return;
+	printf("packet length %d\n", (int)sldns_buffer_limit(pkt));
+	if(sldns_buffer_limit(pkt) < 12) return;
 
-	i = ldns_buffer_read_u16(pkt);
+	i = sldns_buffer_read_u16(pkt);
 	printf("id (hostorder): %d (0x%x)\n", (int)i, (unsigned)i);
-	f = ldns_buffer_read_u16(pkt);
+	f = sldns_buffer_read_u16(pkt);
 	printf("flags: 0x%x\n", (unsigned)f);
-	qd = ldns_buffer_read_u16(pkt);
+	qd = sldns_buffer_read_u16(pkt);
 	printf("qdcount: %d\n", (int)qd);
-	an = ldns_buffer_read_u16(pkt);
+	an = sldns_buffer_read_u16(pkt);
 	printf("ancount: %d\n", (int)an);
-	ns = ldns_buffer_read_u16(pkt);
+	ns = sldns_buffer_read_u16(pkt);
 	printf("nscount: %d\n", (int)ns);
-	ar = ldns_buffer_read_u16(pkt);
+	ar = sldns_buffer_read_u16(pkt);
 	printf("arcount: %d\n", (int)ar);
 	
 	printf(";-- query section\n");
-	while(ldns_buffer_remaining(pkt) > 0) {
+	while(sldns_buffer_remaining(pkt) > 0) {
 		if(rrnum == (int)qd) 
 			printf(";-- answer section\n");
 		if(rrnum == (int)qd+(int)an) 
@@ -188,7 +188,7 @@ static void analyze(ldns_buffer* pkt)
 /** main program for pktview */
 int main(int argc, char* argv[]) 
 {
-	ldns_buffer* pkt = ldns_buffer_new(65553);
+	sldns_buffer* pkt = sldns_buffer_new(65553);
 	if(argc != 1) {
 		usage(argv);
 	}
@@ -197,6 +197,6 @@ int main(int argc, char* argv[])
 	read_input(pkt, stdin);
 	analyze(pkt);
 
-	ldns_buffer_free(pkt);
+	sldns_buffer_free(pkt);
 	return 0;
 }

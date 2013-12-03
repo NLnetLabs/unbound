@@ -49,7 +49,7 @@ struct module_env;
 struct ub_packed_rrset_key;
 struct rbtree_t;
 struct regional;
-struct ldns_buffer;
+struct sldns_buffer;
 
 /** number of entries in algorithm needs array */
 #define ALGO_NEEDS_MAX 256
@@ -299,7 +299,7 @@ enum sec_status dnskeyset_verify_rrset_sig(struct module_env* env,
  *	bogus if it did not validate.
  */
 enum sec_status dnskey_verify_rrset_sig(struct regional* region, 
-	struct ldns_buffer* buf, struct val_env* ve, time_t now,
+	struct sldns_buffer* buf, struct val_env* ve, time_t now,
 	struct ub_packed_rrset_key* rrset, struct ub_packed_rrset_key* dnskey, 
 	size_t dnskey_idx, size_t sig_idx,
 	struct rbtree_t** sortree, int* buf_canon, char** reason);

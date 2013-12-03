@@ -1,3 +1,6 @@
+3 Dec 2013: Wouter
+	- Fix sldns to use sldns_ prefix for all ldns_ variables.
+
 30 Nov 2013: Wouter
 	- Fix sldns to make globals use sldns_ prefix.  This fixes
 	  linking with libldns that uses global variables ldns_ .

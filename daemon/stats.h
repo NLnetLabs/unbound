@@ -48,7 +48,7 @@ struct config_file;
 struct comm_point;
 struct comm_reply;
 struct edns_data;
-struct ldns_buffer;
+struct sldns_buffer;
 
 /** number of qtype that is stored for in array */
 #define STATS_QTYPE_NUM 256
@@ -230,6 +230,6 @@ void server_stats_insquery(struct server_stats* stats, struct comm_point* c,
  * @param stats: the stats
  * @param buf: buffer with rcode. If buffer is length0: not counted.
  */
-void server_stats_insrcode(struct server_stats* stats, struct ldns_buffer* buf);
+void server_stats_insrcode(struct server_stats* stats, struct sldns_buffer* buf);
 
 #endif /* DAEMON_STATS_H */

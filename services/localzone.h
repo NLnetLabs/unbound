@@ -48,7 +48,7 @@ struct regional;
 struct config_file;
 struct edns_data;
 struct query_info;
-struct ldns_buffer;
+struct sldns_buffer;
 
 /**
  * Local zone type
@@ -225,7 +225,7 @@ void local_zones_print(struct local_zones* zones);
  * value is true, but the buffer is cleared (empty).
  */
 int local_zones_answer(struct local_zones* zones, struct query_info* qinfo,
-	struct edns_data* edns, struct ldns_buffer* buf, struct regional* temp);
+	struct edns_data* edns, struct sldns_buffer* buf, struct regional* temp);
 
 /**
  * Parse the string into localzone type.

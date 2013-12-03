@@ -138,7 +138,7 @@ struct fake_pending;
 struct fake_timer;
 struct replay_var;
 struct infra_cache;
-struct ldns_buffer;
+struct sldns_buffer;
 
 /**
  * A replay scenario.
@@ -313,7 +313,7 @@ struct replay_runtime {
  */
 struct fake_pending {
 	/** what is important only that we remember the query, copied here. */
-	struct ldns_buffer* buffer;
+	struct sldns_buffer* buffer;
 	/** and to what address this is sent to. */
 	struct sockaddr_storage addr;
 	/** len of addr */
@@ -333,7 +333,7 @@ struct fake_pending {
 
 	/** next in pending list */
 	struct fake_pending* next;
-	/** the buffer parsed into a ldns_pkt */
+	/** the buffer parsed into a sldns_pkt */
 	uint8_t* pkt;
 	size_t pkt_len;
 	/** by what transport was the query sent out */

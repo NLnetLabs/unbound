@@ -40,13 +40,13 @@
 
 #ifndef TESTCODE_READHEX_H
 #define TESTCODE_READHEX_H
-struct ldns_buffer;
+struct sldns_buffer;
 
 /** 
  * Helper to convert hex string to packet buffer.
  * @param pkt: buffer to put result in.
  * @param hex: string of hex data. Spaces and ';...' comments are skipped.
  */
-void hex_to_buf(struct ldns_buffer* pkt, const char* hex);
+void hex_to_buf(struct sldns_buffer* pkt, const char* hex);
 
 #endif /* TESTCODE_READHEX_H */

@@ -32,7 +32,7 @@ extern "C" {
  * (big endian).
  */
 INLINE uint16_t
-ldns_read_uint16(const void *src)
+sldns_read_uint16(const void *src)
 {
 #ifdef ALLOW_UNALIGNED_ACCESSES
         return ntohs(*(uint16_t *) src);
@@ -43,7 +43,7 @@ ldns_read_uint16(const void *src)
 }
 
 INLINE uint32_t
-ldns_read_uint32(const void *src)
+sldns_read_uint32(const void *src)
 {
 #ifdef ALLOW_UNALIGNED_ACCESSES
         return ntohl(*(uint32_t *) src);
@@ -61,7 +61,7 @@ ldns_read_uint32(const void *src)
  * (big endian).
  */
 INLINE void
-ldns_write_uint16(void *dst, uint16_t data)
+sldns_write_uint16(void *dst, uint16_t data)
 {
 #ifdef ALLOW_UNALIGNED_ACCESSES
         * (uint16_t *) dst = htons(data);
@@ -73,7 +73,7 @@ ldns_write_uint16(void *dst, uint16_t data)
 }
 
 INLINE void
-ldns_write_uint32(void *dst, uint32_t data)
+sldns_write_uint32(void *dst, uint32_t data)
 {
 #ifdef ALLOW_UNALIGNED_ACCESSES
         * (uint32_t *) dst = htonl(data);
@@ -90,17 +90,17 @@ ldns_write_uint32(void *dst, uint32_t data)
 /**
  * \file sbuffer.h
  *
- * This file contains the definition of ldns_buffer, and functions to manipulate those.
+ * This file contains the definition of sldns_buffer, and functions to manipulate those.
  */
 
 /** 
  * implementation of buffers to ease operations
  *
- * ldns_buffers can contain arbitrary information, per octet. You can write
+ * sldns_buffers can contain arbitrary information, per octet. You can write
  * to the current end of a buffer, read from the current position, and
  * access any data within it.
  */
-struct ldns_buffer
+struct sldns_buffer
 {
 	/** The current position used for reading/writing */ 
 	size_t   _position;
@@ -122,16 +122,16 @@ struct ldns_buffer
 	 * multiple writes in sequence and check for success afterwards. */
 	unsigned _status_err : 1;
 };
-typedef struct ldns_buffer ldns_buffer;
+typedef struct sldns_buffer sldns_buffer;
 
 #ifdef NDEBUG
 INLINE void
-ldns_buffer_invariant(ldns_buffer *ATTR_UNUSED(buffer))
+sldns_buffer_invariant(sldns_buffer *ATTR_UNUSED(buffer))
 {
 }
 #else
 INLINE void
-ldns_buffer_invariant(ldns_buffer *buffer)
+sldns_buffer_invariant(sldns_buffer *buffer)
 {
 	assert(buffer != NULL);
 	assert(buffer->_position <= buffer->_limit);
@@ -146,7 +146,7 @@ ldns_buffer_invariant(ldns_buffer *buffer)
  * \param[in] capacity the size (in bytes) to allocate for the buffer
  * \return the created buffer
  */
-ldns_buffer *ldns_buffer_new(size_t capacity);
+sldns_buffer *sldns_buffer_new(size_t capacity);
 
 /**
  * creates a buffer with the specified data.  The data IS copied
@@ -157,7 +157,7 @@ ldns_buffer *ldns_buffer_new(size_t capacity);
  * \param[in] data the data to encapsulate in the buffer
  * \param[in] size the size of the data
  */
-void ldns_buffer_new_frm_data(ldns_buffer *buffer, void *data, size_t size);
+void sldns_buffer_new_frm_data(sldns_buffer *buffer, void *data, size_t size);
 
 /**
  * Setup a buffer with the data pointed to. No data copied, no memory allocs.
@@ -166,16 +166,16 @@ void ldns_buffer_new_frm_data(ldns_buffer *buffer, void *data, size_t size);
  * \param[in] data the data to encapsulate in the buffer
  * \param[in] size the size of the data
  */
-void ldns_buffer_init_frm_data(ldns_buffer *buffer, void *data, size_t size);
+void sldns_buffer_init_frm_data(sldns_buffer *buffer, void *data, size_t size);
 
 /**
  * clears the buffer and make it ready for writing.  The buffer's limit
  * is set to the capacity and the position is set to 0.
  * \param[in] buffer the buffer to clear
  */
-INLINE void ldns_buffer_clear(ldns_buffer *buffer)
+INLINE void sldns_buffer_clear(sldns_buffer *buffer)
 {
-	ldns_buffer_invariant(buffer);
+	sldns_buffer_invariant(buffer);
 
 	/* reset status here? */
 
@@ -191,9 +191,9 @@ INLINE void ldns_buffer_clear(ldns_buffer *buffer)
  * \param[in] buffer the buffer to flip
  * \return void
  */
-INLINE void ldns_buffer_flip(ldns_buffer *buffer)
+INLINE void sldns_buffer_flip(sldns_buffer *buffer)
 {
-	ldns_buffer_invariant(buffer);
+	sldns_buffer_invariant(buffer);
 
 	buffer->_limit = buffer->_position;
 	buffer->_position = 0;
@@ -204,9 +204,9 @@ INLINE void ldns_buffer_flip(ldns_buffer *buffer)
  * position is reset to 0.
  * \param[in] buffer the buffer to rewind
  */
-INLINE void ldns_buffer_rewind(ldns_buffer *buffer)
+INLINE void sldns_buffer_rewind(sldns_buffer *buffer)
 {
-	ldns_buffer_invariant(buffer);
+	sldns_buffer_invariant(buffer);
 
 	buffer->_position = 0;
 }
@@ -217,7 +217,7 @@ INLINE void ldns_buffer_rewind(ldns_buffer *buffer)
  * \return the current position
  */
 INLINE size_t
-ldns_buffer_position(ldns_buffer *buffer)
+sldns_buffer_position(sldns_buffer *buffer)
 {
 	return buffer->_position;
 }
@@ -229,7 +229,7 @@ ldns_buffer_position(ldns_buffer *buffer)
  * \param[in] mark the mark to use
  */
 INLINE void
-ldns_buffer_set_position(ldns_buffer *buffer, size_t mark)
+sldns_buffer_set_position(sldns_buffer *buffer, size_t mark)
 {
 	assert(mark <= buffer->_limit);
 	buffer->_position = mark;
@@ -243,7 +243,7 @@ ldns_buffer_set_position(ldns_buffer *buffer, size_t mark)
  * \param[in] count the count to use
  */
 INLINE void
-ldns_buffer_skip(ldns_buffer *buffer, ssize_t count)
+sldns_buffer_skip(sldns_buffer *buffer, ssize_t count)
 {
 	assert(buffer->_position + count <= buffer->_limit);
 	buffer->_position += count;
@@ -255,7 +255,7 @@ ldns_buffer_skip(ldns_buffer *buffer, ssize_t count)
  * \return the size
  */
 INLINE size_t
-ldns_buffer_limit(ldns_buffer *buffer)
+sldns_buffer_limit(sldns_buffer *buffer)
 {
 	return buffer->_limit;
 }
@@ -267,7 +267,7 @@ ldns_buffer_limit(ldns_buffer *buffer)
  * \param[in] limit the new limit
  */
 INLINE void
-ldns_buffer_set_limit(ldns_buffer *buffer, size_t limit)
+sldns_buffer_set_limit(sldns_buffer *buffer, size_t limit)
 {
 	assert(limit <= buffer->_capacity);
 	buffer->_limit = limit;
@@ -281,7 +281,7 @@ ldns_buffer_set_limit(ldns_buffer *buffer, size_t limit)
  * \return the number of bytes
  */
 INLINE size_t
-ldns_buffer_capacity(ldns_buffer *buffer)
+sldns_buffer_capacity(sldns_buffer *buffer)
 {
 	return buffer->_capacity;
 }
@@ -294,7 +294,7 @@ ldns_buffer_capacity(ldns_buffer *buffer)
  * \param[in] capacity the capacity to use
  * \return whether this failed or succeeded
  */
-int ldns_buffer_set_capacity(ldns_buffer *buffer, size_t capacity);
+int sldns_buffer_set_capacity(sldns_buffer *buffer, size_t capacity);
 
 /**
  * ensures BUFFER can contain at least AMOUNT more bytes.  The buffer's
@@ -306,7 +306,7 @@ int ldns_buffer_set_capacity(ldns_buffer *buffer, size_t capacity);
  * \param[in] amount amount to use
  * \return whether this failed or succeeded
  */
-int ldns_buffer_reserve(ldns_buffer *buffer, size_t amount);
+int sldns_buffer_reserve(sldns_buffer *buffer, size_t amount);
 
 /**
  * returns a pointer to the data at the indicated position.
@@ -315,7 +315,7 @@ int ldns_buffer_reserve(ldns_buffer *buffer, size_t amount);
  * \return the pointer to the data
  */
 INLINE uint8_t *
-ldns_buffer_at(const ldns_buffer *buffer, size_t at)
+sldns_buffer_at(const sldns_buffer *buffer, size_t at)
 {
 	assert(at <= buffer->_limit);
 	return buffer->_data + at;
@@ -328,9 +328,9 @@ ldns_buffer_at(const ldns_buffer *buffer, size_t at)
  * \return the pointer
  */
 INLINE uint8_t *
-ldns_buffer_begin(const ldns_buffer *buffer)
+sldns_buffer_begin(const sldns_buffer *buffer)
 {
-	return ldns_buffer_at(buffer, 0);
+	return sldns_buffer_at(buffer, 0);
 }
 
 /**
@@ -340,9 +340,9 @@ ldns_buffer_begin(const ldns_buffer *buffer)
  * \return the pointer
  */
 INLINE uint8_t *
-ldns_buffer_end(ldns_buffer *buffer)
+sldns_buffer_end(sldns_buffer *buffer)
 {
-	return ldns_buffer_at(buffer, buffer->_limit);
+	return sldns_buffer_at(buffer, buffer->_limit);
 }
 
 /**
@@ -351,9 +351,9 @@ ldns_buffer_end(ldns_buffer *buffer)
  * \return the pointer
  */
 INLINE uint8_t *
-ldns_buffer_current(ldns_buffer *buffer)
+sldns_buffer_current(sldns_buffer *buffer)
 {
-	return ldns_buffer_at(buffer, buffer->_position);
+	return sldns_buffer_at(buffer, buffer->_position);
 }
 
 /**
@@ -364,9 +364,9 @@ ldns_buffer_current(ldns_buffer *buffer)
  * \return number of bytes
  */
 INLINE size_t
-ldns_buffer_remaining_at(ldns_buffer *buffer, size_t at)
+sldns_buffer_remaining_at(sldns_buffer *buffer, size_t at)
 {
-	ldns_buffer_invariant(buffer);
+	sldns_buffer_invariant(buffer);
 	assert(at <= buffer->_limit);
 	return buffer->_limit - at;
 }
@@ -378,9 +378,9 @@ ldns_buffer_remaining_at(ldns_buffer *buffer, size_t at)
  * \return the number of bytes
  */
 INLINE size_t
-ldns_buffer_remaining(ldns_buffer *buffer)
+sldns_buffer_remaining(sldns_buffer *buffer)
 {
-	return ldns_buffer_remaining_at(buffer, buffer->_position);
+	return sldns_buffer_remaining_at(buffer, buffer->_position);
 }
 
 /**
@@ -393,9 +393,9 @@ ldns_buffer_remaining(ldns_buffer *buffer)
  * \return true or false (as int?)
  */
 INLINE int
-ldns_buffer_available_at(ldns_buffer *buffer, size_t at, size_t count)
+sldns_buffer_available_at(sldns_buffer *buffer, size_t at, size_t count)
 {
-	return count <= ldns_buffer_remaining_at(buffer, at);
+	return count <= sldns_buffer_remaining_at(buffer, at);
 }
 
 /**
@@ -405,9 +405,9 @@ ldns_buffer_available_at(ldns_buffer *buffer, size_t at, size_t count)
  * \return true or false (as int?)
  */
 INLINE int
-ldns_buffer_available(ldns_buffer *buffer, size_t count)
+sldns_buffer_available(sldns_buffer *buffer, size_t count)
 {
-	return ldns_buffer_available_at(buffer, buffer->_position, count);
+	return sldns_buffer_available_at(buffer, buffer->_position, count);
 }
 
 /**
@@ -418,9 +418,9 @@ ldns_buffer_available(ldns_buffer *buffer, size_t count)
  * \param[in] count the number of bytes of data to write
  */
 INLINE void
-ldns_buffer_write_at(ldns_buffer *buffer, size_t at, const void *data, size_t count)
+sldns_buffer_write_at(sldns_buffer *buffer, size_t at, const void *data, size_t count)
 {
-	assert(ldns_buffer_available_at(buffer, at, count));
+	assert(sldns_buffer_available_at(buffer, at, count));
 	memcpy(buffer->_data + at, data, count);
 }
 
@@ -431,9 +431,9 @@ ldns_buffer_write_at(ldns_buffer *buffer, size_t at, const void *data, size_t co
  * \param[in] count the lenght of the data to write
  */
 INLINE void
-ldns_buffer_write(ldns_buffer *buffer, const void *data, size_t count)
+sldns_buffer_write(sldns_buffer *buffer, const void *data, size_t count)
 {
-	ldns_buffer_write_at(buffer, buffer->_position, data, count);
+	sldns_buffer_write_at(buffer, buffer->_position, data, count);
 	buffer->_position += count;
 }
 
@@ -444,9 +444,9 @@ ldns_buffer_write(ldns_buffer *buffer, const void *data, size_t count)
  * \param[in] str the string to write
  */
 INLINE void
-ldns_buffer_write_string_at(ldns_buffer *buffer, size_t at, const char *str)
+sldns_buffer_write_string_at(sldns_buffer *buffer, size_t at, const char *str)
 {
-	ldns_buffer_write_at(buffer, at, str, strlen(str));
+	sldns_buffer_write_at(buffer, at, str, strlen(str));
 }
 
 /**
@@ -455,9 +455,9 @@ ldns_buffer_write_string_at(ldns_buffer *buffer, size_t at, const char *str)
  * \param[in] str the string to write
  */
 INLINE void
-ldns_buffer_write_string(ldns_buffer *buffer, const char *str)
+sldns_buffer_write_string(sldns_buffer *buffer, const char *str)
 {
-	ldns_buffer_write(buffer, str, strlen(str));
+	sldns_buffer_write(buffer, str, strlen(str));
 }
 
 /**
@@ -467,9 +467,9 @@ ldns_buffer_write_string(ldns_buffer *buffer, const char *str)
  * \param[in] data the 8 bits to write
  */
 INLINE void
-ldns_buffer_write_u8_at(ldns_buffer *buffer, size_t at, uint8_t data)
+sldns_buffer_write_u8_at(sldns_buffer *buffer, size_t at, uint8_t data)
 {
-	assert(ldns_buffer_available_at(buffer, at, sizeof(data)));
+	assert(sldns_buffer_available_at(buffer, at, sizeof(data)));
 	buffer->_data[at] = data;
 }
 
@@ -479,9 +479,9 @@ ldns_buffer_write_u8_at(ldns_buffer *buffer, size_t at, uint8_t data)
  * \param[in] data the 8 bits to write
  */
 INLINE void
-ldns_buffer_write_u8(ldns_buffer *buffer, uint8_t data)
+sldns_buffer_write_u8(sldns_buffer *buffer, uint8_t data)
 {
-	ldns_buffer_write_u8_at(buffer, buffer->_position, data);
+	sldns_buffer_write_u8_at(buffer, buffer->_position, data);
 	buffer->_position += sizeof(data);
 }
 
@@ -492,10 +492,10 @@ ldns_buffer_write_u8(ldns_buffer *buffer, uint8_t data)
  * \param[in] data the 16 bits to write
  */
 INLINE void
-ldns_buffer_write_u16_at(ldns_buffer *buffer, size_t at, uint16_t data)
+sldns_buffer_write_u16_at(sldns_buffer *buffer, size_t at, uint16_t data)
 {
-	assert(ldns_buffer_available_at(buffer, at, sizeof(data)));
-	ldns_write_uint16(buffer->_data + at, data);
+	assert(sldns_buffer_available_at(buffer, at, sizeof(data)));
+	sldns_write_uint16(buffer->_data + at, data);
 }
 
 /**
@@ -504,9 +504,9 @@ ldns_buffer_write_u16_at(ldns_buffer *buffer, size_t at, uint16_t data)
  * \param[in] data the 16 bits to write
  */
 INLINE void
-ldns_buffer_write_u16(ldns_buffer *buffer, uint16_t data)
+sldns_buffer_write_u16(sldns_buffer *buffer, uint16_t data)
 {
-	ldns_buffer_write_u16_at(buffer, buffer->_position, data);
+	sldns_buffer_write_u16_at(buffer, buffer->_position, data);
 	buffer->_position += sizeof(data);
 }
 
@@ -517,10 +517,10 @@ ldns_buffer_write_u16(ldns_buffer *buffer, uint16_t data)
  * \param[in] data the 32 bits to write
  */
 INLINE void
-ldns_buffer_write_u32_at(ldns_buffer *buffer, size_t at, uint32_t data)
+sldns_buffer_write_u32_at(sldns_buffer *buffer, size_t at, uint32_t data)
 {
-	assert(ldns_buffer_available_at(buffer, at, sizeof(data)));
-	ldns_write_uint32(buffer->_data + at, data);
+	assert(sldns_buffer_available_at(buffer, at, sizeof(data)));
+	sldns_write_uint32(buffer->_data + at, data);
 }
 
 /**
@@ -529,9 +529,9 @@ ldns_buffer_write_u32_at(ldns_buffer *buffer, size_t at, uint32_t data)
  * \param[in] data the 32 bits to write
  */
 INLINE void
-ldns_buffer_write_u32(ldns_buffer *buffer, uint32_t data)
+sldns_buffer_write_u32(sldns_buffer *buffer, uint32_t data)
 {
-	ldns_buffer_write_u32_at(buffer, buffer->_position, data);
+	sldns_buffer_write_u32_at(buffer, buffer->_position, data);
 	buffer->_position += sizeof(data);
 }
 
@@ -543,9 +543,9 @@ ldns_buffer_write_u32(ldns_buffer *buffer, uint32_t data)
  * \param[in] count the length of the data to copy
  */
 INLINE void
-ldns_buffer_read_at(ldns_buffer *buffer, size_t at, void *data, size_t count)
+sldns_buffer_read_at(sldns_buffer *buffer, size_t at, void *data, size_t count)
 {
-	assert(ldns_buffer_available_at(buffer, at, count));
+	assert(sldns_buffer_available_at(buffer, at, count));
 	memcpy(data, buffer->_data + at, count);
 }
 
@@ -556,9 +556,9 @@ ldns_buffer_read_at(ldns_buffer *buffer, size_t at, void *data, size_t count)
  * \param[in] count the length of the data to copy
  */
 INLINE void
-ldns_buffer_read(ldns_buffer *buffer, void *data, size_t count)
+sldns_buffer_read(sldns_buffer *buffer, void *data, size_t count)
 {
-	ldns_buffer_read_at(buffer, buffer->_position, data, count);
+	sldns_buffer_read_at(buffer, buffer->_position, data, count);
 	buffer->_position += count;
 }
 
@@ -569,9 +569,9 @@ ldns_buffer_read(ldns_buffer *buffer, void *data, size_t count)
  * \return 1 byte integer
  */
 INLINE uint8_t
-ldns_buffer_read_u8_at(ldns_buffer *buffer, size_t at)
+sldns_buffer_read_u8_at(sldns_buffer *buffer, size_t at)
 {
-	assert(ldns_buffer_available_at(buffer, at, sizeof(uint8_t)));
+	assert(sldns_buffer_available_at(buffer, at, sizeof(uint8_t)));
 	return buffer->_data[at];
 }
 
@@ -581,9 +581,9 @@ ldns_buffer_read_u8_at(ldns_buffer *buffer, size_t at)
  * \return 1 byte integer
  */
 INLINE uint8_t
-ldns_buffer_read_u8(ldns_buffer *buffer)
+sldns_buffer_read_u8(sldns_buffer *buffer)
 {
-	uint8_t result = ldns_buffer_read_u8_at(buffer, buffer->_position);
+	uint8_t result = sldns_buffer_read_u8_at(buffer, buffer->_position);
 	buffer->_position += sizeof(uint8_t);
 	return result;
 }
@@ -595,10 +595,10 @@ ldns_buffer_read_u8(ldns_buffer *buffer)
  * \return 2 byte integer
  */
 INLINE uint16_t
-ldns_buffer_read_u16_at(ldns_buffer *buffer, size_t at)
+sldns_buffer_read_u16_at(sldns_buffer *buffer, size_t at)
 {
-	assert(ldns_buffer_available_at(buffer, at, sizeof(uint16_t)));
-	return ldns_read_uint16(buffer->_data + at);
+	assert(sldns_buffer_available_at(buffer, at, sizeof(uint16_t)));
+	return sldns_read_uint16(buffer->_data + at);
 }
 
 /**
@@ -607,9 +607,9 @@ ldns_buffer_read_u16_at(ldns_buffer *buffer, size_t at)
  * \return 2 byte integer
  */
 INLINE uint16_t
-ldns_buffer_read_u16(ldns_buffer *buffer)
+sldns_buffer_read_u16(sldns_buffer *buffer)
 {
-	uint16_t result = ldns_buffer_read_u16_at(buffer, buffer->_position);
+	uint16_t result = sldns_buffer_read_u16_at(buffer, buffer->_position);
 	buffer->_position += sizeof(uint16_t);
 	return result;
 }
@@ -621,10 +621,10 @@ ldns_buffer_read_u16(ldns_buffer *buffer)
  * \return 4 byte integer
  */
 INLINE uint32_t
-ldns_buffer_read_u32_at(ldns_buffer *buffer, size_t at)
+sldns_buffer_read_u32_at(sldns_buffer *buffer, size_t at)
 {
-	assert(ldns_buffer_available_at(buffer, at, sizeof(uint32_t)));
-	return ldns_read_uint32(buffer->_data + at);
+	assert(sldns_buffer_available_at(buffer, at, sizeof(uint32_t)));
+	return sldns_read_uint32(buffer->_data + at);
 }
 
 /**
@@ -633,9 +633,9 @@ ldns_buffer_read_u32_at(ldns_buffer *buffer, size_t at)
  * \return 4 byte integer
  */
 INLINE uint32_t
-ldns_buffer_read_u32(ldns_buffer *buffer)
+sldns_buffer_read_u32(sldns_buffer *buffer)
 {
-	uint32_t result = ldns_buffer_read_u32_at(buffer, buffer->_position);
+	uint32_t result = sldns_buffer_read_u32_at(buffer, buffer->_position);
 	buffer->_position += sizeof(uint32_t);
 	return result;
 }
@@ -646,7 +646,7 @@ ldns_buffer_read_u32(ldns_buffer *buffer)
  * \return the status
  */
 INLINE int
-ldns_buffer_status(ldns_buffer *buffer)
+sldns_buffer_status(sldns_buffer *buffer)
 {
 	return (int)buffer->_status_err;
 }
@@ -657,10 +657,10 @@ ldns_buffer_status(ldns_buffer *buffer)
  * \return true or false
  */
 INLINE int
-ldns_buffer_status_ok(ldns_buffer *buffer)
+sldns_buffer_status_ok(sldns_buffer *buffer)
 {
 	if (buffer) {
-		return ldns_buffer_status(buffer) == 0;
+		return sldns_buffer_status(buffer) == 0;
 	} else {
 		return 0;
 	}
@@ -672,7 +672,7 @@ ldns_buffer_status_ok(ldns_buffer *buffer)
  * Returns the number of characters written (not including the
  * terminating '\\0') or -1 on failure.
  */
-int ldns_buffer_printf(ldns_buffer *buffer, const char *format, ...)
+int sldns_buffer_printf(sldns_buffer *buffer, const char *format, ...)
 	ATTR_FORMAT(printf, 2, 3);
 
 /**
@@ -680,7 +680,7 @@ int ldns_buffer_printf(ldns_buffer *buffer, const char *format, ...)
  * \param[in] *buffer the buffer to be freed
  * \return void
  */
-void ldns_buffer_free(ldns_buffer *buffer);
+void sldns_buffer_free(sldns_buffer *buffer);
 
 /**
  * Makes the buffer fixed and returns a pointer to the data.  The
@@ -688,7 +688,7 @@ void ldns_buffer_free(ldns_buffer *buffer);
  * \param[in] *buffer the buffer to be exported
  * \return void
  */
-void *ldns_buffer_export(ldns_buffer *buffer);
+void *sldns_buffer_export(sldns_buffer *buffer);
 
 /**
  * Copy contents of the from buffer to the result buffer and then flips 
@@ -697,7 +697,7 @@ void *ldns_buffer_export(ldns_buffer *buffer);
  * \param[out] *result resulting buffer which is copied to.
  * \param[in] *from what to copy to result.
  */
-void ldns_buffer_copy(ldns_buffer* result, ldns_buffer* from);
+void sldns_buffer_copy(sldns_buffer* result, sldns_buffer* from);
 
 #ifdef __cplusplus
 }

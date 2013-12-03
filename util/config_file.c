@@ -1086,7 +1086,7 @@ cfg_convert_timeval(const char* str)
 	if (tm.tm_min < 0 || tm.tm_min > 59)	return 0;
 	if (tm.tm_sec < 0 || tm.tm_sec > 59)	return 0;
 	/* call ldns conversion function */
-	t = ldns_mktime_from_utc(&tm);
+	t = sldns_mktime_from_utc(&tm);
 	return t;
 }
 
@@ -1521,8 +1521,8 @@ char* errinf_to_str(struct module_qstate* qstate)
 	struct config_strlist* s;
 	char dname[LDNS_MAX_DOMAINLEN+1];
 	char t[16], c[16];
-	ldns_wire2str_type_buf(qstate->qinfo.qtype, t, sizeof(t));
-	ldns_wire2str_class_buf(qstate->qinfo.qclass, c, sizeof(c));
+	sldns_wire2str_type_buf(qstate->qinfo.qtype, t, sizeof(t));
+	sldns_wire2str_class_buf(qstate->qinfo.qclass, c, sizeof(c));
 	dname_str(qstate->qinfo.qname, dname);
 	snprintf(p, left, "validation failure <%s %s %s>:", dname, t, c);
 	left -= strlen(p); p += strlen(p);
@@ -1545,8 +1545,8 @@ void errinf_rrset(struct module_qstate* qstate, struct ub_packed_rrset_key *rr)
 	char t[16], c[16];
 	if(qstate->env->cfg->val_log_level < 2 || !rr)
 		return;
-	ldns_wire2str_type_buf(ntohs(rr->rk.type), t, sizeof(t));
-	ldns_wire2str_class_buf(ntohs(rr->rk.rrset_class), c, sizeof(c));
+	sldns_wire2str_type_buf(ntohs(rr->rk.type), t, sizeof(t));
+	sldns_wire2str_class_buf(ntohs(rr->rk.rrset_class), c, sizeof(c));
 	dname_str(rr->rk.dname, dname);
 	snprintf(buf, sizeof(buf), "for <%s %s %s>", dname, t, c);
 	errinf(qstate, buf);

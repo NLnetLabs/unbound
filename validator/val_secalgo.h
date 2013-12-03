@@ -42,7 +42,7 @@
 
 #ifndef VALIDATOR_VAL_SECALGO_H
 #define VALIDATOR_VAL_SECALGO_H
-struct ldns_buffer;
+struct sldns_buffer;
 
 /**
  * Return size of DS digest according to its hash algorithm.
@@ -77,7 +77,7 @@ int dnskey_algo_id_is_supported(int id);
  * @return secure if verification succeeded, bogus on crypto failure,
  *	unchecked on format errors and alloc failures.
  */
-enum sec_status verify_canonrrset(struct ldns_buffer* buf, int algo,
+enum sec_status verify_canonrrset(struct sldns_buffer* buf, int algo,
 	unsigned char* sigblock, unsigned int sigblock_len,
 	unsigned char* key, unsigned int keylen, char** reason);
 

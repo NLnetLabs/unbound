@@ -94,7 +94,7 @@ ah(struct delegpt* dp, const char* sv, const char* ip)
 	struct sockaddr_storage addr;
 	socklen_t addrlen;
 	size_t dname_len;
-	uint8_t* dname = ldns_str2wire_dname(sv, &dname_len);
+	uint8_t* dname = sldns_str2wire_dname(sv, &dname_len);
 	if(!dname) {
 		log_err("could not parse %s", sv);
 		return 0;
@@ -194,7 +194,7 @@ read_stubs_name(struct config_stub* s)
 		log_err("stub zone without a name");
 		return NULL;
 	}
-	dname = ldns_str2wire_dname(s->name, &dname_len);
+	dname = sldns_str2wire_dname(s->name, &dname_len);
 	if(!dname) {
 		log_err("cannot parse stub zone name %s", s->name);
 		return NULL;
@@ -217,7 +217,7 @@ read_stubs_host(struct config_stub* s, struct delegpt* dp)
 	uint8_t* dname;
 	for(p = s->hosts; p; p = p->next) {
 		log_assert(p->str);
-		dname = ldns_str2wire_dname(p->str, &dname_len);
+		dname = sldns_str2wire_dname(p->str, &dname_len);
 		if(!dname) {
 			log_err("cannot parse stub %s nameserver name: '%s'", 
 				s->name, p->str);
@@ -283,7 +283,7 @@ read_stubs(struct iter_hints* hints, struct config_file* cfg)
 static int 
 read_root_hints(struct iter_hints* hints, char* fname)
 {
-	struct ldns_file_parse_state pstate;
+	struct sldns_file_parse_state pstate;
 	struct delegpt* dp;
 	uint8_t rr[LDNS_RR_BUF_SIZE];
 	size_t rr_len, dname_len;
@@ -308,32 +308,32 @@ read_root_hints(struct iter_hints* hints, char* fname)
 	while(!feof(f)) {
 		rr_len = sizeof(rr);
 		dname_len = 0;
-		status = ldns_fp2wire_rr_buf(f, rr, &rr_len, &dname_len,
+		status = sldns_fp2wire_rr_buf(f, rr, &rr_len, &dname_len,
 			&pstate);
 		if(status != 0) {
 			log_err("reading root hints %s %d:%d: %s", fname,
 				pstate.lineno, LDNS_WIREPARSE_OFFSET(status),
-				ldns_get_errorstr_parse(status));
+				sldns_get_errorstr_parse(status));
 			goto stop_read;
 		}
 		if(rr_len == 0)
 			continue; /* EMPTY line, TTL or ORIGIN */
-		if(ldns_wirerr_get_type(rr, rr_len, dname_len)
+		if(sldns_wirerr_get_type(rr, rr_len, dname_len)
 			== LDNS_RR_TYPE_NS) {
-			if(!delegpt_add_ns_mlc(dp, ldns_wirerr_get_rdata(rr,
+			if(!delegpt_add_ns_mlc(dp, sldns_wirerr_get_rdata(rr,
 				rr_len, dname_len), 0)) {
 				log_err("out of memory reading root hints");
 				goto stop_read;
 			}
-			c = ldns_wirerr_get_class(rr, rr_len, dname_len);
+			c = sldns_wirerr_get_class(rr, rr_len, dname_len);
 			if(!dp->name) {
 				if(!delegpt_set_name_mlc(dp, rr)) {
 					log_err("out of memory.");
 					goto stop_read;
 				}
 			}
-		} else if(ldns_wirerr_get_type(rr, rr_len, dname_len)
-			== LDNS_RR_TYPE_A && ldns_wirerr_get_rdatalen(rr,
+		} else if(sldns_wirerr_get_type(rr, rr_len, dname_len)
+			== LDNS_RR_TYPE_A && sldns_wirerr_get_rdatalen(rr,
 			rr_len, dname_len) == INET_SIZE) {
 			struct sockaddr_in sa;
 			socklen_t len = (socklen_t)sizeof(sa);
@@ -341,7 +341,7 @@ read_root_hints(struct iter_hints* hints, char* fname)
 			sa.sin_family = AF_INET;
 			sa.sin_port = (in_port_t)htons(UNBOUND_DNS_PORT);
 			memmove(&sa.sin_addr, 
-				ldns_wirerr_get_rdata(rr, rr_len, dname_len),
+				sldns_wirerr_get_rdata(rr, rr_len, dname_len),
 				INET_SIZE);
 			if(!delegpt_add_target_mlc(dp, rr, dname_len,
 					(struct sockaddr_storage*)&sa, len, 
@@ -349,8 +349,8 @@ read_root_hints(struct iter_hints* hints, char* fname)
 				log_err("out of memory reading root hints");
 				goto stop_read;
 			}
-		} else if(ldns_wirerr_get_type(rr, rr_len, dname_len)
-			== LDNS_RR_TYPE_AAAA && ldns_wirerr_get_rdatalen(rr,
+		} else if(sldns_wirerr_get_type(rr, rr_len, dname_len)
+			== LDNS_RR_TYPE_AAAA && sldns_wirerr_get_rdatalen(rr,
 			rr_len, dname_len) == INET6_SIZE) {
 			struct sockaddr_in6 sa;
 			socklen_t len = (socklen_t)sizeof(sa);
@@ -358,7 +358,7 @@ read_root_hints(struct iter_hints* hints, char* fname)
 			sa.sin6_family = AF_INET6;
 			sa.sin6_port = (in_port_t)htons(UNBOUND_DNS_PORT);
 			memmove(&sa.sin6_addr, 
-				ldns_wirerr_get_rdata(rr, rr_len, dname_len),
+				sldns_wirerr_get_rdata(rr, rr_len, dname_len),
 				INET6_SIZE);
 			if(!delegpt_add_target_mlc(dp, rr, dname_len,
 					(struct sockaddr_storage*)&sa, len,
@@ -368,7 +368,7 @@ read_root_hints(struct iter_hints* hints, char* fname)
 			}
 		} else {
 			char buf[17];
-			ldns_wire2str_type_buf(ldns_wirerr_get_type(rr,
+			sldns_wire2str_type_buf(sldns_wirerr_get_type(rr,
 				rr_len, dname_len), buf, sizeof(buf));
 			log_warn("root hints %s:%d skipping type %s",
 				fname, pstate.lineno, buf);

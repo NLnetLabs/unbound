@@ -759,13 +759,13 @@ print_ext(SSL* ssl, struct stats_info* s)
 {
 	int i;
 	char nm[16];
-	const ldns_rr_descriptor* desc;
-	const ldns_lookup_table* lt;
+	const sldns_rr_descriptor* desc;
+	const sldns_lookup_table* lt;
 	/* TYPE */
 	for(i=0; i<STATS_QTYPE_NUM; i++) {
 		if(inhibit_zero && s->svr.qtype[i] == 0)
 			continue;
-		desc = ldns_rr_descript((uint16_t)i);
+		desc = sldns_rr_descript((uint16_t)i);
 		if(desc && desc->_name) {
 			snprintf(nm, sizeof(nm), "%s", desc->_name);
 		} else if (i == LDNS_RR_TYPE_IXFR) {
@@ -792,7 +792,7 @@ print_ext(SSL* ssl, struct stats_info* s)
 	for(i=0; i<STATS_QCLASS_NUM; i++) {
 		if(inhibit_zero && s->svr.qclass[i] == 0)
 			continue;
-		lt = ldns_lookup_by_id(SLDNS(_rr_classes), i);
+		lt = sldns_lookup_by_id(sldns_rr_classes, i);
 		if(lt && lt->name) {
 			snprintf(nm, sizeof(nm), "%s", lt->name);
 		} else {
@@ -809,7 +809,7 @@ print_ext(SSL* ssl, struct stats_info* s)
 	for(i=0; i<STATS_OPCODE_NUM; i++) {
 		if(inhibit_zero && s->svr.qopcode[i] == 0)
 			continue;
-		lt = ldns_lookup_by_id(SLDNS(_opcodes), i);
+		lt = sldns_lookup_by_id(sldns_opcodes, i);
 		if(lt && lt->name) {
 			snprintf(nm, sizeof(nm), "%s", lt->name);
 		} else {
@@ -849,7 +849,7 @@ print_ext(SSL* ssl, struct stats_info* s)
 	for(i=0; i<STATS_RCODE_NUM; i++) {
 		if(inhibit_zero && s->svr.ans_rcode[i] == 0)
 			continue;
-		lt = ldns_lookup_by_id(SLDNS(_rcodes), i);
+		lt = sldns_lookup_by_id(sldns_rcodes, i);
 		if(lt && lt->name) {
 			snprintf(nm, sizeof(nm), "%s", lt->name);
 		} else {
@@ -921,11 +921,11 @@ parse_arg_name(SSL* ssl, char* str, uint8_t** res, size_t* len, int* labs)
 	*res = NULL;
 	*len = 0;
 	*labs = 0;
-	status = ldns_str2wire_dname_buf(str, nm, &nmlen);
+	status = sldns_str2wire_dname_buf(str, nm, &nmlen);
 	if(status != 0) {
 		ssl_printf(ssl, "error cannot parse name %s at %d: %s\n", str,
 			LDNS_WIREPARSE_OFFSET(status),
-			ldns_get_errorstr_parse(status));
+			sldns_get_errorstr_parse(status));
 		return 0;
 	}
 	*res = memdup(nm, nmlen);
@@ -1095,7 +1095,7 @@ do_flush_type(SSL* ssl, struct worker* worker, char* arg)
 		return;
 	if(!parse_arg_name(ssl, arg, &nm, &nmlen, &nmlabs))
 		return;
-	t = ldns_get_rr_type_by_name(arg2);
+	t = sldns_get_rr_type_by_name(arg2);
 	do_cache_remove(worker, nm, nmlen, t, LDNS_RR_CLASS_IN);
 	
 	free(nm);
@@ -1393,7 +1393,7 @@ ssl_print_name_dp(SSL* ssl, char* str, uint8_t* nm, uint16_t dclass,
 	struct delegpt_addr* a;
 	int f = 0;
 	if(str) { /* print header for forward, stub */
-		char* c = ldns_wire2str_class(dclass);
+		char* c = sldns_wire2str_class(dclass);
 		dname_str(nm, buf);
 		if(!ssl_printf(ssl, "%s %s %s: ", buf, (c?c:"CLASS??"), str)) {
 			free(c);
@@ -1785,8 +1785,8 @@ get_mesh_status(struct mesh_area* mesh, struct mesh_state* m,
 		if(m->sub_set.count == 0)
 			snprintf(buf, len, " (empty_list)");
 		RBTREE_FOR(sub, struct mesh_state_ref*, &m->sub_set) {
-			char* t = ldns_wire2str_type(sub->s->s.qinfo.qtype);
-			char* c = ldns_wire2str_class(sub->s->s.qinfo.qclass);
+			char* t = sldns_wire2str_type(sub->s->s.qinfo.qtype);
+			char* c = sldns_wire2str_class(sub->s->s.qinfo.qclass);
 			dname_str(sub->s->s.qinfo.qname, nm);
 			snprintf(buf, len, " %s %s %s", (t?t:"TYPE??"),
 				(c?c:"CLASS??"), nm);
@@ -1818,8 +1818,8 @@ do_dump_requestlist(SSL* ssl, struct worker* worker)
 	mesh = worker->env.mesh;
 	if(!mesh) return;
 	RBTREE_FOR(m, struct mesh_state*, &mesh->all) {
-		char* t = ldns_wire2str_type(m->s.qinfo.qtype);
-		char* c = ldns_wire2str_class(m->s.qinfo.qclass);
+		char* t = sldns_wire2str_type(m->s.qinfo.qtype);
+		char* c = sldns_wire2str_class(m->s.qinfo.qclass);
 		dname_str(m->s.qinfo.qname, buf);
 		get_mesh_age(m, timebuf, sizeof(timebuf), &worker->env);
 		get_mesh_status(mesh, m, statbuf, sizeof(statbuf));
@@ -1985,8 +1985,8 @@ do_list_local_data(SSL* ssl, struct worker* worker)
 	struct local_zone* z;
 	struct local_data* d;
 	struct local_rrset* p;
-	char* s = (char*)ldns_buffer_begin(worker->env.scratch_buffer);
-	size_t slen = ldns_buffer_capacity(worker->env.scratch_buffer);
+	char* s = (char*)sldns_buffer_begin(worker->env.scratch_buffer);
+	size_t slen = sldns_buffer_capacity(worker->env.scratch_buffer);
 	lock_quick_lock(&zones->lock);
 	RBTREE_FOR(z, struct local_zone*, &zones->ztree) {
 		lock_rw_rdlock(&z->lock);

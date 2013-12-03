@@ -41,16 +41,12 @@ extern "C" {
 #define LDNS_RDATA_FIELD_DESCRIPTORS_COMMON 258
 
 /** lookuptable for rr classes  */
-#ifdef USE_SLDNS
-extern struct ldns_struct_lookup_table* sldns_rr_classes;
-#else
-extern struct ldns_struct_lookup_table* ldns_rr_classes;
-#endif
+extern struct sldns_struct_lookup_table* sldns_rr_classes;
 
 /**
  *  The different RR classes.
  */
-enum ldns_enum_rr_class
+enum sldns_enum_rr_class
 {
 	/** the Internet */
 	LDNS_RR_CLASS_IN 	= 1,
@@ -67,23 +63,23 @@ enum ldns_enum_rr_class
 	LDNS_RR_CLASS_LAST      = 65535,
 	LDNS_RR_CLASS_COUNT     = LDNS_RR_CLASS_LAST - LDNS_RR_CLASS_FIRST + 1
 };
-typedef enum ldns_enum_rr_class ldns_rr_class;
+typedef enum sldns_enum_rr_class sldns_rr_class;
 
 /**
  *  Used to specify whether compression is allowed.
  */
-enum ldns_enum_rr_compress
+enum sldns_enum_rr_compress
 {
 	/** compression is allowed */
 	LDNS_RR_COMPRESS,
 	LDNS_RR_NO_COMPRESS
 };
-typedef enum ldns_enum_rr_compress ldns_rr_compress;
+typedef enum sldns_enum_rr_compress sldns_rr_compress;
 
 /**
  * The different RR types.
  */
-enum ldns_enum_rr_type
+enum sldns_enum_rr_type
 {
 	/**  a host address */
 	LDNS_RR_TYPE_A = 1,
@@ -240,7 +236,7 @@ enum ldns_enum_rr_type
 	LDNS_RR_TYPE_LAST  = 65535,
 	LDNS_RR_TYPE_COUNT = LDNS_RR_TYPE_LAST - LDNS_RR_TYPE_FIRST + 1
 };
-typedef enum ldns_enum_rr_type ldns_rr_type;
+typedef enum sldns_enum_rr_type sldns_rr_type;
 
 /* RDATA */
 #define LDNS_MAX_RDFLEN	65535
@@ -262,7 +258,7 @@ typedef enum ldns_enum_rr_type ldns_rr_type;
 /**
  * The different types of RDATA fields.
  */
-enum ldns_enum_rdf_type
+enum sldns_enum_rdf_type
 {
 	/** none */
 	LDNS_RDF_TYPE_NONE,
@@ -351,12 +347,12 @@ enum ldns_enum_rdf_type
         /* Aliases */
         LDNS_RDF_TYPE_BITMAP = LDNS_RDF_TYPE_NSEC
 };
-typedef enum ldns_enum_rdf_type ldns_rdf_type;
+typedef enum sldns_enum_rdf_type sldns_rdf_type;
 
 /**
  * Algorithms used in dns
  */
-enum ldns_enum_algorithm
+enum sldns_enum_algorithm
 {
         LDNS_RSAMD5             = 1,   /* RFC 4034,4035 */
         LDNS_DH                 = 2,
@@ -374,24 +370,24 @@ enum ldns_enum_algorithm
         LDNS_PRIVATEDNS         = 253,
         LDNS_PRIVATEOID         = 254
 };
-typedef enum ldns_enum_algorithm ldns_algorithm;
+typedef enum sldns_enum_algorithm sldns_algorithm;
 
 /**
  * Hashing algorithms used in the DS record
  */
-enum ldns_enum_hash
+enum sldns_enum_hash
 {
         LDNS_SHA1               = 1,  /* RFC 4034 */
         LDNS_SHA256             = 2,  /* RFC 4509 */
         LDNS_HASH_GOST          = 3,  /* RFC 5933 */
         LDNS_SHA384             = 4   /* RFC 6605 */
 };
-typedef enum ldns_enum_hash ldns_hash;
+typedef enum sldns_enum_hash sldns_hash;
 
 /**
  * algorithms used in CERT rrs
  */
-enum ldns_enum_cert_algorithm
+enum sldns_enum_cert_algorithm
 {
         LDNS_CERT_PKIX          = 1,
         LDNS_CERT_SPKI          = 2,
@@ -404,12 +400,12 @@ enum ldns_enum_cert_algorithm
         LDNS_CERT_URI           = 253,
         LDNS_CERT_OID           = 254
 };
-typedef enum ldns_enum_cert_algorithm ldns_cert_algorithm;
+typedef enum sldns_enum_cert_algorithm sldns_cert_algorithm;
 
 /**
  * EDNS option codes
  */
-enum ldns_enum_edns_option
+enum sldns_enum_edns_option
 {
 	LDNS_EDNS_LLQ = 1, /* http://files.dns-sd.org/draft-sekar-dns-llq.txt */
 	LDNS_EDNS_UL = 2, /* http://files.dns-sd.org/draft-sekar-dns-ul.txt */
@@ -420,7 +416,7 @@ enum ldns_enum_edns_option
 	LDNS_EDNS_N3U = 7, /* RFC6975 */
 	LDNS_EDNS_CLIENT_SUBNET = 8 /* draft-vandergaast-edns-client-subnet */
 };
-typedef enum ldns_edns_option ldns_edns_option;
+typedef enum sldns_edns_option sldns_edns_option;
 
 #define LDNS_EDNS_MASK_DO_BIT 0x8000
 
@@ -429,10 +425,10 @@ typedef enum ldns_edns_option ldns_edns_option;
  *
  * This structure contains, for all rr types, the rdata fields that are defined.
  */
-struct ldns_struct_rr_descriptor
+struct sldns_struct_rr_descriptor
 {
 	/** Type of the RR that is described here */
-	ldns_rr_type    _type;
+	sldns_rr_type    _type;
 	/** Textual name of the RR type.  */
 	const char *_name;
 	/** Minimum number of rdata fields in the RRs of this type.  */
@@ -440,23 +436,23 @@ struct ldns_struct_rr_descriptor
 	/** Maximum number of rdata fields in the RRs of this type.  */
 	uint8_t     _maximum;
 	/** Wireformat specification for the rr, i.e. the types of rdata fields in their respective order. */
-	const ldns_rdf_type *_wireformat;
+	const sldns_rdf_type *_wireformat;
 	/** Special rdf types */
-	ldns_rdf_type _variable;
+	sldns_rdf_type _variable;
 	/** Specifies whether compression can be used for dnames in this RR type. */
-	ldns_rr_compress _compress;
+	sldns_rr_compress _compress;
 	/** The number of DNAMEs in the _wireformat string, for parsing. */
 	uint8_t _dname_count;
 };
-typedef struct ldns_struct_rr_descriptor ldns_rr_descriptor;
+typedef struct sldns_struct_rr_descriptor sldns_rr_descriptor;
 
 /**
  * returns the resource record descriptor for the given rr type.
  *
  * \param[in] type the type value of the rr type
- *\return the ldns_rr_descriptor for this type
+ *\return the sldns_rr_descriptor for this type
  */
-const ldns_rr_descriptor *ldns_rr_descript(uint16_t type);
+const sldns_rr_descriptor *sldns_rr_descript(uint16_t type);
 
 /**
  * returns the minimum number of rdata fields of the rr type this descriptor describes.
@@ -464,7 +460,7 @@ const ldns_rr_descriptor *ldns_rr_descript(uint16_t type);
  * \param[in]  descriptor for an rr type
  * \return the minimum number of rdata fields
  */
-size_t ldns_rr_descriptor_minimum(const ldns_rr_descriptor *descriptor);
+size_t sldns_rr_descriptor_minimum(const sldns_rr_descriptor *descriptor);
 
 /**
  * returns the maximum number of rdata fields of the rr type this descriptor describes.
@@ -472,7 +468,7 @@ size_t ldns_rr_descriptor_minimum(const ldns_rr_descriptor *descriptor);
  * \param[in]  descriptor for an rr type
  * \return the maximum number of rdata fields
  */
-size_t ldns_rr_descriptor_maximum(const ldns_rr_descriptor *descriptor);
+size_t sldns_rr_descriptor_maximum(const sldns_rr_descriptor *descriptor);
 
 /**
  * returns the rdf type for the given rdata field number of the rr type for the given descriptor.
@@ -481,21 +477,21 @@ size_t ldns_rr_descriptor_maximum(const ldns_rr_descriptor *descriptor);
  * \param[in] field the field number
  * \return the rdf type for the field
  */
-ldns_rdf_type ldns_rr_descriptor_field_type(const ldns_rr_descriptor *descriptor, size_t field);
+sldns_rdf_type sldns_rr_descriptor_field_type(const sldns_rr_descriptor *descriptor, size_t field);
 
 /**
  * retrieves a rrtype by looking up its name.
  * \param[in] name a string with the name
  * \return the type which corresponds with the name
  */
-ldns_rr_type ldns_get_rr_type_by_name(const char *name);
+sldns_rr_type sldns_get_rr_type_by_name(const char *name);
 
 /**
  * retrieves a class by looking up its name.
  * \param[in] name string with the name
  * \return the cass which corresponds with the name
  */
-ldns_rr_class ldns_get_rr_class_by_name(const char *name);
+sldns_rr_class sldns_get_rr_class_by_name(const char *name);
 
 #ifdef __cplusplus
 }

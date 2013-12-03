@@ -66,23 +66,23 @@ static int vsig = 0;
 
 /** entry to packet buffer with wireformat */
 static void
-entry_to_buf(struct entry* e, ldns_buffer* pkt)
+entry_to_buf(struct entry* e, sldns_buffer* pkt)
 {
 	unit_assert(e->reply_list);
 	if(e->reply_list->reply_from_hex) {
-		ldns_buffer_copy(pkt, e->reply_list->reply_from_hex);
+		sldns_buffer_copy(pkt, e->reply_list->reply_from_hex);
 	} else {
-		ldns_buffer_clear(pkt);
-		ldns_buffer_write(pkt, e->reply_list->reply_pkt,
+		sldns_buffer_clear(pkt);
+		sldns_buffer_write(pkt, e->reply_list->reply_pkt,
 			e->reply_list->reply_len);
-		ldns_buffer_flip(pkt);
+		sldns_buffer_flip(pkt);
 	}
 }
 
 /** entry to reply info conversion */
 static void
 entry_to_repinfo(struct entry* e, struct alloc_cache* alloc, 
-	struct regional* region, ldns_buffer* pkt, struct query_info* qi, 
+	struct regional* region, sldns_buffer* pkt, struct query_info* qi, 
 	struct reply_info** rep)
 {
 	int ret;
@@ -97,7 +97,7 @@ entry_to_repinfo(struct entry* e, struct alloc_cache* alloc,
 	lock_quick_unlock(&alloc->lock);
 	if(ret != 0) {
 		char rcode[16];
-		ldns_wire2str_rcode_buf(ret, rcode, sizeof(rcode));
+		sldns_wire2str_rcode_buf(ret, rcode, sizeof(rcode));
 		printf("parse code %d: %s\n", ret, rcode);
 		unit_assert(ret != 0);
 	}
@@ -106,7 +106,7 @@ entry_to_repinfo(struct entry* e, struct alloc_cache* alloc,
 /** extract DNSKEY rrset from answer and convert it */
 static struct ub_packed_rrset_key* 
 extract_keys(struct entry* e, struct alloc_cache* alloc, 
-	struct regional* region, ldns_buffer* pkt)
+	struct regional* region, sldns_buffer* pkt)
 {
 	struct ub_packed_rrset_key* dnskey = NULL;
 	struct query_info qinfo;
@@ -201,7 +201,7 @@ verifytest_rrset(struct module_env* env, struct val_env* ve,
 /** verify and test an entry - every rr in the message */
 static void
 verifytest_entry(struct entry* e, struct alloc_cache* alloc, 
-	struct regional* region, ldns_buffer* pkt, 
+	struct regional* region, sldns_buffer* pkt, 
 	struct ub_packed_rrset_key* dnskey, struct module_env* env, 
 	struct val_env* ve)
 {
@@ -211,7 +211,7 @@ verifytest_entry(struct entry* e, struct alloc_cache* alloc,
 
 	regional_free_all(region);
 	if(vsig) {
-		char* s = ldns_wire2str_pkt(e->reply_list->reply_pkt,
+		char* s = sldns_wire2str_pkt(e->reply_list->reply_pkt,
 			e->reply_list->reply_len);
 		printf("verifying pkt:\n%s\n", s?s:"outofmemory");
 		free(s);
@@ -241,7 +241,7 @@ find_rrset_type(struct reply_info* rep, uint16_t type)
 /** DS sig test an entry - get DNSKEY and DS in entry and verify */
 static void
 dstest_entry(struct entry* e, struct alloc_cache* alloc, 
-	struct regional* region, ldns_buffer* pkt, struct module_env* env)
+	struct regional* region, sldns_buffer* pkt, struct module_env* env)
 {
 	struct query_info qinfo;
 	struct reply_info* rep = NULL;
@@ -250,7 +250,7 @@ dstest_entry(struct entry* e, struct alloc_cache* alloc,
 
 	regional_free_all(region);
 	if(vsig) {
-		char* s = ldns_wire2str_pkt(e->reply_list->reply_pkt,
+		char* s = sldns_wire2str_pkt(e->reply_list->reply_pkt,
 			e->reply_list->reply_len);
 		printf("verifying DS-DNSKEY match:\n%s\n", s?s:"outofmemory");
 		free(s);
@@ -293,7 +293,7 @@ verifytest_file(const char* fname, const char* at_date)
 	struct ub_packed_rrset_key* dnskey;
 	struct regional* region = regional_create();
 	struct alloc_cache alloc;
-	ldns_buffer* buf = ldns_buffer_new(65535);
+	sldns_buffer* buf = sldns_buffer_new(65535);
 	struct entry* e;
 	struct entry* list = read_datafile(fname, 1);
 	struct module_env env;
@@ -323,7 +323,7 @@ verifytest_file(const char* fname, const char* at_date)
 	delete_entry(list);
 	regional_destroy(region);
 	alloc_clear(&alloc);
-	ldns_buffer_free(buf);
+	sldns_buffer_free(buf);
 }
 
 /** verify DS matches DNSKEY from a file */
@@ -337,7 +337,7 @@ dstest_file(const char* fname)
 	 */
 	struct regional* region = regional_create();
 	struct alloc_cache alloc;
-	ldns_buffer* buf = ldns_buffer_new(65535);
+	sldns_buffer* buf = sldns_buffer_new(65535);
 	struct entry* e;
 	struct entry* list = read_datafile(fname, 1);
 	struct module_env env;
@@ -358,7 +358,7 @@ dstest_file(const char* fname)
 	delete_entry(list);
 	regional_destroy(region);
 	alloc_clear(&alloc);
-	ldns_buffer_free(buf);
+	sldns_buffer_free(buf);
 }
 
 /** helper for unittest of NSEC routines */
@@ -414,7 +414,7 @@ nsectest(void)
 static void
 nsec3_hash_test_entry(struct entry* e, rbtree_t* ct,
 	struct alloc_cache* alloc, struct regional* region, 
-	ldns_buffer* buf)
+	sldns_buffer* buf)
 {
 	struct query_info qinfo;
 	struct reply_info* rep = NULL;
@@ -424,7 +424,7 @@ nsec3_hash_test_entry(struct entry* e, rbtree_t* ct,
 	uint8_t* qname;
 
 	if(vsig) {
-		char* s = ldns_wire2str_pkt(e->reply_list->reply_pkt,
+		char* s = sldns_wire2str_pkt(e->reply_list->reply_pkt,
 			e->reply_list->reply_len);
 		printf("verifying NSEC3 hash:\n%s\n", s?s:"outofmemory");
 		free(s);
@@ -471,7 +471,7 @@ nsec3_hash_test(const char* fname)
 	rbtree_t ct;
 	struct regional* region = regional_create();
 	struct alloc_cache alloc;
-	ldns_buffer* buf = ldns_buffer_new(65535);
+	sldns_buffer* buf = sldns_buffer_new(65535);
 	struct entry* e;
 	struct entry* list = read_datafile(fname, 1);
 
@@ -489,7 +489,7 @@ nsec3_hash_test(const char* fname)
 	delete_entry(list);
 	regional_destroy(region);
 	alloc_clear(&alloc);
-	ldns_buffer_free(buf);
+	sldns_buffer_free(buf);
 }
 
 void 
@@ -515,7 +515,7 @@ verify_test(void)
 	verifytest_file("testdata/test_sigs.hinfo", "20090107100022");
 	verifytest_file("testdata/test_sigs.revoked", "20080414005004");
 #ifdef USE_GOST
-	if(ldns_key_EVP_load_gost_id())
+	if(sldns_key_EVP_load_gost_id())
 	  verifytest_file("testdata/test_sigs.gost", "20090807060504");
 	else printf("Warning: skipped GOST, openssl does not provide gost.\n");
 #endif

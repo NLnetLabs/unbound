@@ -10,7 +10,7 @@
 #ifndef LDNS_PARSE_H
 #define LDNS_PARSE_H
 
-struct ldns_buffer;
+struct sldns_buffer;
 
 #ifdef __cplusplus
 extern "C" {
@@ -35,13 +35,13 @@ extern "C" {
  * We now deal with $TTL, $ORIGIN and $INCLUDE.
  * The latter is not implemented in ldns (yet)
  */
-enum ldns_enum_directive
+enum sldns_enum_directive
 {
 	LDNS_DIR_TTL,
 	LDNS_DIR_ORIGIN,
 	LDNS_DIR_INCLUDE
 };
-typedef enum ldns_enum_directive ldns_directive;
+typedef enum sldns_enum_directive sldns_directive;
 
 /** 
  * returns a token/char from the stream F.
@@ -53,7 +53,7 @@ typedef enum ldns_enum_directive ldns_directive;
  * \param[in] *limit how much to read. If 0 the builtin maximum is used
  * \return 0 on error of EOF of the stream F.  Otherwise return the length of what is read
  */
-ssize_t ldns_fget_token(FILE *f, char *token, const char *delim, size_t limit);
+ssize_t sldns_fget_token(FILE *f, char *token, const char *delim, size_t limit);
 
 /** 
  * returns a token/char from the stream F.
@@ -66,7 +66,7 @@ ssize_t ldns_fget_token(FILE *f, char *token, const char *delim, size_t limit);
  * \param[in] line_nr pointer to an integer containing the current line number (for debugging purposes)
  * \return 0 on error of EOF of F otherwise return the length of what is read
  */
-ssize_t ldns_fget_token_l(FILE *f, char *token, const char *delim, size_t limit, int *line_nr);
+ssize_t sldns_fget_token_l(FILE *f, char *token, const char *delim, size_t limit, int *line_nr);
 
 /**
  * returns a token/char from the buffer b.
@@ -84,7 +84,7 @@ ssize_t ldns_fget_token_l(FILE *f, char *token, const char *delim, size_t limit,
  * token, like " ", or " \t", or NULL for none.  
  * \returns 0 on error of EOF of b. Otherwise return the length of what is read
  */
-ssize_t ldns_bget_token_par(struct ldns_buffer *b, char *token, const char *delim, size_t limit, int* par, const char* skipw);
+ssize_t sldns_bget_token_par(struct sldns_buffer *b, char *token, const char *delim, size_t limit, int* par, const char* skipw);
 
 /**
  * returns a token/char from the buffer b.
@@ -96,7 +96,7 @@ ssize_t ldns_bget_token_par(struct ldns_buffer *b, char *token, const char *deli
  * \param[in] *limit how much to read. If 0 the builtin maximum is used
  * \returns 0 on error of EOF of b. Otherwise return the length of what is read
  */
-ssize_t ldns_bget_token(struct ldns_buffer *b, char *token, const char *delim, size_t limit);
+ssize_t sldns_bget_token(struct sldns_buffer *b, char *token, const char *delim, size_t limit);
 
 /*
  * searches for keyword and delim in a file. Gives everything back
@@ -109,7 +109,7 @@ ssize_t ldns_bget_token(struct ldns_buffer *b, char *token, const char *delim, s
  * \param[in] data_limit maximum size the the data buffer
  * \return the number of character read
  */
-ssize_t ldns_fget_keyword_data(FILE *f, const char *keyword, const char *k_del, char *data, const char *d_del, size_t data_limit);
+ssize_t sldns_fget_keyword_data(FILE *f, const char *keyword, const char *k_del, char *data, const char *d_del, size_t data_limit);
 
 /*
  * searches for keyword and delim. Gives everything back
@@ -124,7 +124,7 @@ ssize_t ldns_fget_keyword_data(FILE *f, const char *keyword, const char *k_del, 
 debugging purposes)
  * \return the number of character read
  */
-ssize_t ldns_fget_keyword_data_l(FILE *f, const char *keyword, const char *k_del, char *data, const char *d_del, size_t data_limit, int *line_nr);
+ssize_t sldns_fget_keyword_data_l(FILE *f, const char *keyword, const char *k_del, char *data, const char *d_del, size_t data_limit, int *line_nr);
 
 /*
  * searches for keyword and delim in a buffer. Gives everything back
@@ -137,7 +137,7 @@ ssize_t ldns_fget_keyword_data_l(FILE *f, const char *keyword, const char *k_del
  * \param[in] data_limit maximum size the the data buffer
  * \return the number of character read
  */
-ssize_t ldns_bget_keyword_data(struct ldns_buffer *b, const char *keyword, const char *k_del, char *data, const char *d_del, size_t data_limit);
+ssize_t sldns_bget_keyword_data(struct sldns_buffer *b, const char *keyword, const char *k_del, char *data, const char *d_del, size_t data_limit);
 
 /**
  * returns the next character from a buffer. Advances the position pointer with 1.
@@ -146,7 +146,7 @@ ssize_t ldns_bget_keyword_data(struct ldns_buffer *b, const char *keyword, const
  * \param[in] *buffer buffer to read from
  * \return EOF on failure otherwise return the character
  */
-int ldns_bgetc(struct ldns_buffer *buffer);
+int sldns_bgetc(struct sldns_buffer *buffer);
 
 /**
  * skips all of the characters in the given string in the buffer, moving
@@ -155,7 +155,7 @@ int ldns_bgetc(struct ldns_buffer *buffer);
  * \param[in] *s characters to skip
  * \return void
  */
-void ldns_bskipcs(struct ldns_buffer *buffer, const char *s);
+void sldns_bskipcs(struct sldns_buffer *buffer, const char *s);
 
 /**
  * skips all of the characters in the given string in the fp, moving
@@ -164,7 +164,7 @@ void ldns_bskipcs(struct ldns_buffer *buffer, const char *s);
  * \param[in] *s characters to skip
  * \return void
  */
-void ldns_fskipcs(FILE *fp, const char *s);
+void sldns_fskipcs(FILE *fp, const char *s);
 
 
 /**
@@ -175,7 +175,7 @@ void ldns_fskipcs(FILE *fp, const char *s);
  * \param[in] line_nr pointer to an integer containing the current line number (for debugging purposes)
  * \return void
  */
-void ldns_fskipcs_l(FILE *fp, const char *s, int *line_nr);
+void sldns_fskipcs_l(FILE *fp, const char *s, int *line_nr);
 
 #ifdef __cplusplus
 }

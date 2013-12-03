@@ -80,17 +80,17 @@ do_lookup(struct ub_ctx* ctx, char* domain)
 }
 
 /** get answer into ldns rr list */
-static ldns_rr_list*
+static sldns_rr_list*
 result2answer(struct ub_result* result)
 {
-	ldns_pkt* p = NULL;
-	ldns_rr_list* a;
-	if(ldns_wire2pkt(&p, result->answer_packet, (size_t)result->answer_len) 
+	sldns_pkt* p = NULL;
+	sldns_rr_list* a;
+	if(sldns_wire2pkt(&p, result->answer_packet, (size_t)result->answer_len) 
 		!= LDNS_STATUS_OK) 
 		return NULL;
-	a = ldns_pkt_answer(p);
-	ldns_pkt_set_answer(p, NULL);
-	ldns_pkt_free(p);
+	a = sldns_pkt_answer(p);
+	sldns_pkt_set_answer(p, NULL);
+	sldns_pkt_free(p);
 	return a;
 }
 
@@ -99,7 +99,7 @@ static void
 do_print(struct ub_result* result, char* file)
 {
 	FILE* out;
-	ldns_rr_list* list = result2answer(result);
+	sldns_rr_list* list = result2answer(result);
 	if(!list) fatal("result2answer failed");
 	
 	out = fopen(file, "w");
@@ -107,9 +107,9 @@ do_print(struct ub_result* result, char* file)
 		perror(file);
 		fatal("fopen failed");
 	}
-	ldns_rr_list_print(out, list);
+	sldns_rr_list_print(out, list);
 	fclose(out);
-	ldns_rr_list_deep_free(list);
+	sldns_rr_list_deep_free(list);
 }
 
 /** update domain to file */

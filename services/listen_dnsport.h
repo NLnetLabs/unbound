@@ -46,7 +46,7 @@
 struct listen_list;
 struct config_file;
 struct addrinfo;
-struct ldns_buffer;
+struct sldns_buffer;
 
 /**
  * Listening for queries structure.
@@ -58,7 +58,7 @@ struct listen_dnsport {
 
 	/** buffer shared by UDP connections, since there is only one
 	    datagram at any time. */
-	struct ldns_buffer* udp_buff;
+	struct sldns_buffer* udp_buff;
 
 	/** list of comm points used to get incoming events */
 	struct listen_list* cps;
