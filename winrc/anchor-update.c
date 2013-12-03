@@ -97,7 +97,7 @@ do_print(struct ub_result* result, char* file)
 	  while(result->data[i]) {
 		sldns_wire2str_rdata_buf((uint8_t*)result->data[i],
 			(size_t)result->len[i], s, sizeof(s),
-			(uint16_t)result->qtype)
+			(uint16_t)result->qtype);
 		sldns_wire2str_type_buf((uint16_t)result->qtype, t, sizeof(t));
 		fprintf(out, "%s\t%s\t%s\n", result->qname, t, s);
 		i++;
