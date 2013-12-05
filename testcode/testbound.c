@@ -39,6 +39,9 @@
  */
 
 #include "config.h"
+#ifdef HAVE_TIME_H
+#  include <time.h>
+#endif
 #include "testcode/testpkts.h"
 #include "testcode/replay.h"
 #include "testcode/fake_event.h"
