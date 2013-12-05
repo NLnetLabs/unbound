@@ -1,5 +1,6 @@
 5 Dec 2013: Wouter
 	- Fix bug in cachedump that uses sldns.
+	- update pythonmod for ldns_ to sldns_ name change.
 
 3 Dec 2013: Wouter
 	- Fix sldns to use sldns_ prefix for all ldns_ variables.

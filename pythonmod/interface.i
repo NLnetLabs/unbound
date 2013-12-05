@@ -167,11 +167,11 @@ struct query_info {
 
 %extend query_info {
    %pythoncode %{
-        def _get_qtype_str(self): return ldns_wire2str_type(self.qtype)
+        def _get_qtype_str(self): return sldns_wire2str_type(self.qtype)
         __swig_getmethods__["qtype_str"] = _get_qtype_str
         if _newclass:qtype_str = _swig_property(_get_qtype_str)
 
-        def _get_qclass_str(self): return ldns_wire2str_class(self.qclass)
+        def _get_qclass_str(self): return sldns_wire2str_class(self.qclass)
         __swig_getmethods__["qclass_str"] = _get_qclass_str
         if _newclass:qclass_str = _swig_property(_get_qclass_str)
 
@@ -219,11 +219,11 @@ uint16_t ntohs(uint16_t netshort);
 
 %extend packed_rrset_key {
    %pythoncode %{
-        def _get_type_str(self): return ldns_wire2str_type(_unboundmodule.ntohs(self.type))
+        def _get_type_str(self): return sldns_wire2str_type(_unboundmodule.ntohs(self.type))
         __swig_getmethods__["type_str"] = _get_type_str
         if _newclass:type_str = _swig_property(_get_type_str)
 
-        def _get_class_str(self): return ldns_wire2str_class(_unboundmodule.ntohs(self.rrset_class))
+        def _get_class_str(self): return sldns_wire2str_class(_unboundmodule.ntohs(self.rrset_class))
         __swig_getmethods__["rrset_class_str"] = _get_class_str
         if _newclass:rrset_class_str = _swig_property(_get_class_str)
 
@@ -755,7 +755,7 @@ int checkList(PyObject *l)
     return 0;
 }
 
-int pushRRList(ldns_buffer* qb, PyObject *l, uint32_t default_ttl, int qsec,
+int pushRRList(sldns_buffer* qb, PyObject *l, uint32_t default_ttl, int qsec,
         size_t count_offset)
 {
     PyObject* item;
@@ -766,31 +766,31 @@ int pushRRList(ldns_buffer* qb, PyObject *l, uint32_t default_ttl, int qsec,
     {
         item = PyList_GetItem(l, i);
 
-        len = ldns_buffer_remaining(qb);
+        len = sldns_buffer_remaining(qb);
         if(qsec) {
-                if(ldns_str2wire_rr_question_buf(PyString_AsString(item),
-                        ldns_buffer_current(qb), &len, NULL, NULL, 0, NULL, 0)
+                if(sldns_str2wire_rr_question_buf(PyString_AsString(item),
+                        sldns_buffer_current(qb), &len, NULL, NULL, 0, NULL, 0)
                         != 0)
                         return 0;
         } else {
-                if(ldns_str2wire_rr_buf(PyString_AsString(item),
-                        ldns_buffer_current(qb), &len, NULL, default_ttl,
+                if(sldns_str2wire_rr_buf(PyString_AsString(item),
+                        sldns_buffer_current(qb), &len, NULL, default_ttl,
                         NULL, 0, NULL, 0) != 0)
                         return 0;
         }
-        ldns_buffer_skip(qb, len);
+        sldns_buffer_skip(qb, len);
 
-        ldns_buffer_write_u16_at(qb, count_offset,
-                ldns_buffer_read_u16_at(qb, count_offset)+1);
+        sldns_buffer_write_u16_at(qb, count_offset,
+                sldns_buffer_read_u16_at(qb, count_offset)+1);
     }
     return 1;
 }
 
 int set_return_msg(struct module_qstate* qstate, 
-                   const char* rr_name, ldns_rr_type rr_type, ldns_rr_class rr_class , uint16_t flags, uint32_t default_ttl,
+                   const char* rr_name, sldns_rr_type rr_type, sldns_rr_class rr_class , uint16_t flags, uint32_t default_ttl,
                    PyObject* question, PyObject* answer, PyObject* authority, PyObject* additional) 
 {
-     ldns_buffer *qb = 0;
+     sldns_buffer *qb = 0;
      int res = 1;
      size_t l;
      uint16_t PKT_QR = 1;
@@ -803,34 +803,34 @@ int set_return_msg(struct module_qstate* qstate,
  
      if ((!checkList(question)) || (!checkList(answer)) || (!checkList(authority)) || (!checkList(additional)))
         return 0;
-     if ((qb = ldns_buffer_new(LDNS_RR_BUF_SIZE)) == 0) return 0;
+     if ((qb = sldns_buffer_new(LDNS_RR_BUF_SIZE)) == 0) return 0;
 
      /* write header */
-     ldns_buffer_write_u16(qb, 0); /* ID */
-     ldns_buffer_write_u16(qb, 0); /* flags */
-     ldns_buffer_write_u16(qb, 1); /* qdcount */
-     ldns_buffer_write_u16(qb, 0); /* ancount */
-     ldns_buffer_write_u16(qb, 0); /* nscount */
-     ldns_buffer_write_u16(qb, 0); /* arcount */
-     if ((flags&PKT_QR)) LDNS_QR_SET(ldns_buffer_begin(qb));
-     if ((flags&PKT_AA)) LDNS_AA_SET(ldns_buffer_begin(qb));
-     if ((flags&PKT_TC)) LDNS_TC_SET(ldns_buffer_begin(qb));
-     if ((flags&PKT_RD)) LDNS_RD_SET(ldns_buffer_begin(qb));
-     if ((flags&PKT_CD)) LDNS_CD_SET(ldns_buffer_begin(qb));
-     if ((flags&PKT_RA)) LDNS_RA_SET(ldns_buffer_begin(qb));
-     if ((flags&PKT_AD)) LDNS_AD_SET(ldns_buffer_begin(qb));
+     sldns_buffer_write_u16(qb, 0); /* ID */
+     sldns_buffer_write_u16(qb, 0); /* flags */
+     sldns_buffer_write_u16(qb, 1); /* qdcount */
+     sldns_buffer_write_u16(qb, 0); /* ancount */
+     sldns_buffer_write_u16(qb, 0); /* nscount */
+     sldns_buffer_write_u16(qb, 0); /* arcount */
+     if ((flags&PKT_QR)) LDNS_QR_SET(sldns_buffer_begin(qb));
+     if ((flags&PKT_AA)) LDNS_AA_SET(sldns_buffer_begin(qb));
+     if ((flags&PKT_TC)) LDNS_TC_SET(sldns_buffer_begin(qb));
+     if ((flags&PKT_RD)) LDNS_RD_SET(sldns_buffer_begin(qb));
+     if ((flags&PKT_CD)) LDNS_CD_SET(sldns_buffer_begin(qb));
+     if ((flags&PKT_RA)) LDNS_RA_SET(sldns_buffer_begin(qb));
+     if ((flags&PKT_AD)) LDNS_AD_SET(sldns_buffer_begin(qb));
 
      /* write the query */
-     l = ldns_buffer_remaining(qb);
-     if(ldns_str2wire_dname_buf(rr_name, ldns_buffer_current(qb), &l) != 0) {
-             ldns_buffer_free(qb);
+     l = sldns_buffer_remaining(qb);
+     if(sldns_str2wire_dname_buf(rr_name, sldns_buffer_current(qb), &l) != 0) {
+             sldns_buffer_free(qb);
              return 0;
      }
-     ldns_buffer_skip(qb, l);
+     sldns_buffer_skip(qb, l);
      if (rr_type == 0) { rr_type = LDNS_RR_TYPE_A; }
      if (rr_class == 0) { rr_class = LDNS_RR_CLASS_IN; }
-     ldns_buffer_write_u16(qb, rr_type);
-     ldns_buffer_write_u16(qb, rr_class);
+     sldns_buffer_write_u16(qb, rr_type);
+     sldns_buffer_write_u16(qb, rr_class);
 
      /* write RR sections */
      if(res && !pushRRList(qb, question, default_ttl, 1, LDNS_QDCOUNT_OFF))
@@ -844,7 +844,7 @@ int set_return_msg(struct module_qstate* qstate,
 
      if (res) res = createResponse(qstate, qb);
 
-     if (qb) ldns_buffer_free(qb);
+     if (qb) sldns_buffer_free(qb);
      return res;
 }
 %}
@@ -899,12 +899,12 @@ void regional_log_stats(struct regional *r);
 }
 
 // Mark as source returning newly allocated memory
-%newobject ldns_wire2str_type;
-%newobject ldns_wire2str_class;
+%newobject sldns_wire2str_type;
+%newobject sldns_wire2str_class;
 
 // LDNS functions
-char *ldns_wire2str_type(const uint16_t atype);
-char *ldns_wire2str_class(const uint16_t aclass);
+char *sldns_wire2str_type(const uint16_t atype);
+char *sldns_wire2str_class(const uint16_t aclass);
 
 // Functions from pythonmod_utils
 int storeQueryInCache(struct module_qstate* qstate, struct query_info* qinfo, struct reply_info* msgrep, int is_referral);
