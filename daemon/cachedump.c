@@ -68,7 +68,7 @@ dump_rrset_line(SSL* ssl, struct ub_packed_rrset_key* k, time_t now, size_t i)
 	if(!packed_rr_to_string(k, i, now, s, sizeof(s))) {
 		return ssl_printf(ssl, "BADRR\n");
 	}
-	return ssl_printf(ssl, "%s\n", s);
+	return ssl_printf(ssl, "%s", s);
 }
 
 /** dump rrset key and data info */
