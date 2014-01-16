@@ -1576,7 +1576,7 @@ do_forward_add(SSL* ssl, struct worker* worker, char* args)
 	struct delegpt* dp = NULL;
 	if(!parse_fs_args(ssl, args, &nm, &dp, &insecure, NULL))
 		return;
-	if(insecure) {
+	if(insecure && worker->env.anchors) {
 		if(!anchors_add_insecure(worker->env.anchors, LDNS_RR_CLASS_IN,
 			nm)) {
 			(void)ssl_printf(ssl, "error out of memory\n");
@@ -1603,7 +1603,7 @@ do_forward_remove(SSL* ssl, struct worker* worker, char* args)
 	uint8_t* nm = NULL;
 	if(!parse_fs_args(ssl, args, &nm, NULL, &insecure, NULL))
 		return;
-	if(insecure)
+	if(insecure && worker->env.anchors)
 		anchors_delete_insecure(worker->env.anchors, LDNS_RR_CLASS_IN,
 			nm);
 	forwards_delete_zone(fwd, LDNS_RR_CLASS_IN, nm);
@@ -1621,7 +1621,7 @@ do_stub_add(SSL* ssl, struct worker* worker, char* args)
 	struct delegpt* dp = NULL;
 	if(!parse_fs_args(ssl, args, &nm, &dp, &insecure, &prime))
 		return;
-	if(insecure) {
+	if(insecure && worker->env.anchors) {
 		if(!anchors_add_insecure(worker->env.anchors, LDNS_RR_CLASS_IN,
 			nm)) {
 			(void)ssl_printf(ssl, "error out of memory\n");
@@ -1631,8 +1631,9 @@ do_stub_add(SSL* ssl, struct worker* worker, char* args)
 		}
 	}
 	if(!forwards_add_stub_hole(fwd, LDNS_RR_CLASS_IN, nm)) {
-		if(insecure) anchors_delete_insecure(worker->env.anchors,
-			LDNS_RR_CLASS_IN, nm);
+		if(insecure && worker->env.anchors)
+			anchors_delete_insecure(worker->env.anchors,
+				LDNS_RR_CLASS_IN, nm);
 		(void)ssl_printf(ssl, "error out of memory\n");
 		delegpt_free_mlc(dp);
 		free(nm);
@@ -1641,8 +1642,9 @@ do_stub_add(SSL* ssl, struct worker* worker, char* args)
 	if(!hints_add_stub(worker->env.hints, LDNS_RR_CLASS_IN, dp, !prime)) {
 		(void)ssl_printf(ssl, "error out of memory\n");
 		forwards_delete_stub_hole(fwd, LDNS_RR_CLASS_IN, nm);
-		if(insecure) anchors_delete_insecure(worker->env.anchors,
-			LDNS_RR_CLASS_IN, nm);
+		if(insecure && worker->env.anchors)
+			anchors_delete_insecure(worker->env.anchors,
+				LDNS_RR_CLASS_IN, nm);
 		free(nm);
 		return;
 	}
@@ -1659,7 +1661,7 @@ do_stub_remove(SSL* ssl, struct worker* worker, char* args)
 	uint8_t* nm = NULL;
 	if(!parse_fs_args(ssl, args, &nm, NULL, &insecure, NULL))
 		return;
-	if(insecure)
+	if(insecure && worker->env.anchors)
 		anchors_delete_insecure(worker->env.anchors, LDNS_RR_CLASS_IN,
 			nm);
 	forwards_delete_stub_hole(fwd, LDNS_RR_CLASS_IN, nm);
@@ -1677,10 +1679,13 @@ do_insecure_add(SSL* ssl, struct worker* worker, char* arg)
 	uint8_t* nm = NULL;
 	if(!parse_arg_name(ssl, arg, &nm, &nmlen, &nmlabs))
 		return;
-	if(!anchors_add_insecure(worker->env.anchors, LDNS_RR_CLASS_IN, nm)) {
-		(void)ssl_printf(ssl, "error out of memory\n");
-		free(nm);
-		return;
+	if(worker->env.anchors) {
+		if(!anchors_add_insecure(worker->env.anchors,
+			LDNS_RR_CLASS_IN, nm)) {
+			(void)ssl_printf(ssl, "error out of memory\n");
+			free(nm);
+			return;
+		}
 	}
 	free(nm);
 	send_ok(ssl);
@@ -1695,7 +1700,9 @@ do_insecure_remove(SSL* ssl, struct worker* worker, char* arg)
 	uint8_t* nm = NULL;
 	if(!parse_arg_name(ssl, arg, &nm, &nmlen, &nmlabs))
 		return;
-	anchors_delete_insecure(worker->env.anchors, LDNS_RR_CLASS_IN, nm);
+	if(worker->env.anchors)
+		anchors_delete_insecure(worker->env.anchors,
+			LDNS_RR_CLASS_IN, nm);
 	free(nm);
 	send_ok(ssl);
 }

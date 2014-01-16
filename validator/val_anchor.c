@@ -1184,6 +1184,8 @@ anchors_get_mem(struct val_anchors* anchors)
 {
 	struct trust_anchor *ta;
 	size_t s = sizeof(*anchors);
+	if(!anchors)
+		return 0;
 	RBTREE_FOR(ta, struct trust_anchor*, anchors->tree) {
 		s += sizeof(*ta) + ta->namelen;
 		/* keys and so on */
