@@ -1643,7 +1643,7 @@ check_holddown(struct module_env* env, struct autr_ta* ta,
         if (elapsed > (time_t)holddown) {
                 return elapsed-(time_t)holddown;
         }
-	verbose_key(ta, VERB_ALGO, "holddown time %lld seconds to go",
+	verbose_key(ta, VERB_ALGO, "holddown time " ARG_LL "d seconds to go",
 		(long long) ((time_t)holddown-elapsed));
         return 0;
 }
@@ -1687,7 +1687,7 @@ do_addtime(struct module_env* env, struct autr_ta* anchor, int* c)
 	time_t exceeded = check_holddown(env, anchor, env->cfg->add_holddown);
 	if (exceeded && anchor->s == AUTR_STATE_ADDPEND) {
 		verbose_key(anchor, VERB_ALGO, "add-holddown time exceeded "
-			"%lld seconds ago, and pending-count %d",
+			ARG_LL "d seconds ago, and pending-count %d",
 			(long long)exceeded, anchor->pending_count);
 		if(anchor->pending_count >= MIN_PENDINGCOUNT) {
 			set_trustanchor_state(env, anchor, c, AUTR_STATE_VALID);
@@ -1706,7 +1706,7 @@ do_remtime(struct module_env* env, struct autr_ta* anchor, int* c)
 	time_t exceeded = check_holddown(env, anchor, env->cfg->del_holddown);
 	if(exceeded && anchor->s == AUTR_STATE_REVOKED) {
 		verbose_key(anchor, VERB_ALGO, "del-holddown time exceeded "
-			"%lld seconds ago", (long long)exceeded);
+			ARG_LL "d seconds ago", (long long)exceeded);
 		set_trustanchor_state(env, anchor, c, AUTR_STATE_REMOVED);
 	}
 }
@@ -1884,7 +1884,7 @@ remove_missing_trustanchors(struct module_env* env, struct trust_anchor* tp,
 		 * one valid KSK: remove missing trust anchor */
                 if (exceeded && valid > 0) {
 			verbose_key(anchor, VERB_ALGO, "keep-missing time "
-				"exceeded %lld seconds ago, [%d key(s) VALID]",
+				"exceeded " ARG_LL "d seconds ago, [%d key(s) VALID]",
 				(long long)exceeded, valid);
 			set_trustanchor_state(env, anchor, changed, 
 				AUTR_STATE_REMOVED);
@@ -1988,7 +1988,7 @@ reset_worker_timer(struct module_env* env)
 #endif
 	tv.tv_usec = 0;
 	comm_timer_set(env->probe_timer, &tv);
-	verbose(VERB_ALGO, "scheduled next probe in %lld sec", (long long)tv.tv_sec);
+	verbose(VERB_ALGO, "scheduled next probe in " ARG_LL "d sec", (long long)tv.tv_sec);
 }
 
 /** set next probe for trust anchor */

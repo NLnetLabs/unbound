@@ -744,6 +744,12 @@
 #include <ws2tcpip.h>
 #endif
 
+#ifndef USE_WINSOCK
+#define ARG_LL "%ll"
+#else
+#define ARG_LL "%I64"
+#endif
+
 
  
 #ifdef HAVE_ATTR_FORMAT

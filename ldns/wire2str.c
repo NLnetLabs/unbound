@@ -1019,7 +1019,11 @@ int sldns_wire2str_tsigtime_scan(uint8_t** d, size_t* dl, char** s, size_t* sl)
 	d4 = (*d)[4];
 	d5 = (*d)[5];
 	tsigtime = (d0<<40) | (d1<<32) | (d2<<24) | (d3<<16) | (d4<<8) | d5;
+#ifndef USE_WINSOCK
 	w = sldns_str_print(s, sl, "%llu", (long long)tsigtime);
+#else
+	w = sldns_str_print(s, sl, "%I64u", (long long)tsigtime);
+#endif
 	(*d)+=6;
 	(*dl)-=6;
 	return w;
@@ -1647,8 +1651,13 @@ int sldns_wire2str_edns_llq_print(char** s, size_t* sl, uint8_t* data,
 	if(error_code < llq_errors_num)
 		w += sldns_str_print(s, sl, " %s", llq_errors[error_code]);
 	else	w += sldns_str_print(s, sl, " error %d", (int)error_code);
+#ifndef USE_WINSOCK
 	w += sldns_str_print(s, sl, " id %llx lease-life %lu",
 		(unsigned long long)llq_id, (unsigned long)lease_life);
+#else
+	w += sldns_str_print(s, sl, " id %I64x lease-life %lu",
+		(unsigned long long)llq_id, (unsigned long)lease_life);
+#endif
 	return w;
 }
 

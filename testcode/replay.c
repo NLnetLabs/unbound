@@ -792,7 +792,7 @@ macro_expand(rbtree_t* store, struct replay_runtime* runtime, char** text)
 
 	/* check for functions */
 	if(strcmp(buf, "time") == 0) {
-		snprintf(buf, sizeof(buf), "%lld", (long long)runtime->now_secs);
+		snprintf(buf, sizeof(buf), ARG_LL "d", (long long)runtime->now_secs);
 		*text += len;
 		return strdup(buf);
 	} else if(strcmp(buf, "timeout") == 0) {
@@ -800,7 +800,7 @@ macro_expand(rbtree_t* store, struct replay_runtime* runtime, char** text)
 		struct fake_timer* t = first_timer(runtime);
 		if(t && (time_t)t->tv.tv_sec >= runtime->now_secs) 
 			res = (time_t)t->tv.tv_sec - runtime->now_secs;
-		snprintf(buf, sizeof(buf), "%lld", (long long)res);
+		snprintf(buf, sizeof(buf), ARG_LL "d", (long long)res);
 		*text += len;
 		return strdup(buf);
 	} else if(strncmp(buf, "ctime ", 6) == 0 ||

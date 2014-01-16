@@ -82,7 +82,7 @@ dump_rrset(SSL* ssl, struct ub_packed_rrset_key* k,
 	if(d->ttl < now) return 1; /* expired */
 
 	/* meta line */
-	if(!ssl_printf(ssl, ";rrset%s %lld %u %u %d %d\n",
+	if(!ssl_printf(ssl, ";rrset%s " ARG_LL "d %u %u %d %d\n",
 		(k->rk.flags & PACKED_RRSET_NSEC_AT_APEX)?" nsec_apex":"",
 		(long long)(d->ttl - now),
 		(unsigned)d->count, (unsigned)d->rrsig_count,
@@ -189,7 +189,7 @@ dump_msg(SSL* ssl, struct query_info* k, struct reply_info* d,
 	}
 	
 	/* meta line */
-	if(!ssl_printf(ssl, "msg %s %s %s %d %d %lld %d %u %u %u\n",
+	if(!ssl_printf(ssl, "msg %s %s %s %d %d " ARG_LL "d %d %u %u %u\n",
 			nm, cl, tp,
 			(int)d->flags, (int)d->qdcount, 
 			(long long)(d->ttl-now), (int)d->security,
@@ -461,7 +461,7 @@ load_rrset(SSL* ssl, sldns_buffer* buf, struct worker* worker)
 		s += 10;
 		rk->rk.flags |= PACKED_RRSET_NSEC_AT_APEX;
 	}
-	if(sscanf(s, " %lld %u %u %u %u", &ttl, &rr_count, &rrsig_count,
+	if(sscanf(s, " " ARG_LL "d %u %u %u %u", &ttl, &rr_count, &rrsig_count,
 		&trust, &security) != 5) {
 		log_warn("error bad rrset spec %s", s);
 		return 0;
@@ -636,7 +636,7 @@ load_msg(SSL* ssl, sldns_buffer* buf, struct worker* worker)
 	}
 
 	/* read remainder of line */
-	if(sscanf(s, " %u %u %lld %u %u %u %u", &flags, &qdcount, &ttl, 
+	if(sscanf(s, " %u %u " ARG_LL "d %u %u %u %u", &flags, &qdcount, &ttl, 
 		&security, &an, &ns, &ar) != 7) {
 		log_warn("error cannot parse numbers: %s", s);
 		return 0;
@@ -742,8 +742,8 @@ print_dp_details(SSL* ssl, struct worker* worker, struct delegpt* dp)
 				return;
 			continue; /* skip stuff not in infra cache */
 		}
-		if(!ssl_printf(ssl, "%s%s%s%srto %d msec, ttl %lld, ping %d "
-			"var %d rtt %d, tA %d, tAAAA %d, tother %d",
+		if(!ssl_printf(ssl, "%s%s%s%srto %d msec, ttl " ARG_LL "d, "
+			"ping %d var %d rtt %d, tA %d, tAAAA %d, tother %d",
 			lame?"LAME ":"", dlame?"NoDNSSEC ":"",
 			a->lame?"AddrWasParentSide ":"",
 			rlame?"NoAuthButRecursive ":"", rto, entry_ttl,

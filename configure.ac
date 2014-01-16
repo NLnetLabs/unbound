@@ -1111,6 +1111,12 @@ dnl includes
 #ifdef HAVE_WS2TCPIP_H
 #include <ws2tcpip.h>
 #endif
+
+#ifndef USE_WINSOCK
+#define ARG_LL "%ll"
+#else
+#define ARG_LL "%I64"
+#endif
 ]
 
 AHX_CONFIG_FORMAT_ATTRIBUTE

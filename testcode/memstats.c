@@ -189,7 +189,7 @@ readfile(rbtree_t* tree, const char* fname)
 	char buf[102400];
 	if(!in)
 		fatal_exit("could not open %s: %s", fname, strerror(errno));
-	printf("Reading %s of size %lld\n", fname, (long long)total);
+	printf("Reading %s of size " ARG_LL "d\n", fname, (long long)total);
 	while(fgets(buf, 102400, in)) {
 		buf[102400-1] = 0;
 		done += (off_t)strlen(buf);

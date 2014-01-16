@@ -41,6 +41,9 @@
 #include "config.h"
 #ifdef USE_WINSOCK
 #include <signal.h>
+#ifdef HAVE_TIME_H
+#include <time.h>
+#endif
 #ifdef HAVE_SYS_TIME_H
 #include <sys/time.h>
 #endif
@@ -184,7 +187,7 @@ static void handle_timeouts(struct event_base* base, struct timeval* now,
                                 wait->tv_usec = p->ev_timeout.tv_usec
                                         - now->tv_usec;
                         }
-			verbose(VERB_CLIENT, "winsock_event wait=%lld.%6.6d",
+			verbose(VERB_CLIENT, "winsock_event wait=" ARG_LL "d.%6.6d",
 				(long long)wait->tv_sec, (int)wait->tv_usec);
                         return;
                 }
@@ -491,7 +494,7 @@ int event_base_set(struct event_base *base, struct event *ev)
 
 int event_add(struct event *ev, struct timeval *tv)
 {
-	verbose(VERB_ALGO, "event_add %p added=%d fd=%d tv=%lld %s%s%s", 
+	verbose(VERB_ALGO, "event_add %p added=%d fd=%d tv=" ARG_LL "d %s%s%s", 
 		ev, ev->added, ev->ev_fd, 
 		(tv?(long long)tv->tv_sec*1000+(long long)tv->tv_usec/1000:-1),
 		(ev->ev_events&EV_READ)?" EV_READ":"",
@@ -572,7 +575,7 @@ int event_add(struct event *ev, struct timeval *tv)
 
 int event_del(struct event *ev)
 {
-	verbose(VERB_ALGO, "event_del %p added=%d fd=%d tv=%lld %s%s%s", 
+	verbose(VERB_ALGO, "event_del %p added=%d fd=%d tv=" ARG_LL "d %s%s%s", 
 		ev, ev->added, ev->ev_fd, 
 		(ev->ev_events&EV_TIMEOUT)?(long long)ev->ev_timeout.tv_sec*1000+
 		(long long)ev->ev_timeout.tv_usec/1000:-1,

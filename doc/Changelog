@@ -1,6 +1,7 @@
 16 January 2014: Wouter
 	- fix #544: Fixed +i causes segfault when running with module conf
 	  "iterator".
+	- Windows port, adjust %lld to %I64d, and warning in win_event.c.
 
 14 January 2014: Wouter
 	- iana portlist updated.
