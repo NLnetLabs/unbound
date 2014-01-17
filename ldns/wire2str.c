@@ -718,7 +718,7 @@ int sldns_wire2str_rdata_unknown_scan(uint8_t** d, size_t* dlen, char** s,
 }
 
 /** print and escape one character for a domain dname */
-static int dname_char_print(char** s, size_t* slen, char c)
+static int dname_char_print(char** s, size_t* slen, uint8_t c)
 {
 	if(c == '.' || c == ';' || c == '(' || c == ')' || c == '\\')
 		return sldns_str_print(s, slen, "\\%c", c);
@@ -726,7 +726,7 @@ static int dname_char_print(char** s, size_t* slen, char c)
 		return sldns_str_print(s, slen, "\\%03u", (unsigned)c);
 	/* plain printout */
 	if(*slen) {
-		**s = c;
+		**s = (char)c;
 		(*s)++;
 		(*slen)--;
 	}
@@ -788,7 +788,7 @@ int sldns_wire2str_dname_scan(uint8_t** d, size_t* dlen, char** s, size_t* slen,
 		else if(!in_buf && pos+labellen > pkt+pktlen)
 			labellen = (uint8_t)(pkt + pktlen - pos);
 		for(i=0; i<(unsigned)labellen; i++) {
-			w += dname_char_print(s, slen, (char)(*pos++));
+			w += dname_char_print(s, slen, *pos++);
 		}
 		if(in_buf) {
 			(*d) += labellen;
@@ -1060,13 +1060,13 @@ int sldns_wire2str_aaaa_scan(uint8_t** d, size_t* dl, char** s, size_t* sl)
 }
 
 /** printout escaped TYPE_STR character */
-static int str_char_print(char** s, size_t* sl, char c)
+static int str_char_print(char** s, size_t* sl, uint8_t c)
 {
 	if(isprint((int)c) || c == '\t') {
 		if(c == '\"' || c == '\\')
 			return sldns_str_print(s, sl, "\\%c", c);
 		if(*sl) {
-			**s = c;
+			**s = (char)c;
 			(*s)++;
 			(*sl)--;
 		}
@@ -1086,7 +1086,7 @@ int sldns_wire2str_str_scan(uint8_t** d, size_t* dl, char** s, size_t* sl)
 	(*dl)--;
 	w += sldns_str_print(s, sl, "\"");
 	for(i=0; i<len; i++)
-		w += str_char_print(s, sl, (char)(*d)[i]);
+		w += str_char_print(s, sl, (*d)[i]);
 	w += sldns_str_print(s, sl, "\"");
 	(*d)+=len;
 	(*dl)-=len;
@@ -1610,7 +1610,7 @@ int sldns_wire2str_long_str_scan(uint8_t** d, size_t* dl, char** s, size_t* sl)
 	int w = 0;
 	w += sldns_str_print(s, sl, "\"");
 	for(i=0; i<*dl; i++)
-		w += str_char_print(s, sl, (char)(*d)[i]);
+		w += str_char_print(s, sl, (*d)[i]);
 	w += sldns_str_print(s, sl, "\"");
 	(*d)+=*dl;
 	(*dl)=0;
