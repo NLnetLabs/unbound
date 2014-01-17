@@ -1,5 +1,6 @@
 17 January 2014: Wouter
 	- Fix isprint() portability in sldns, uses unsigned int.
+	- iana portlist updated.
 
 16 January 2014: Wouter
 	- fix #544: Fixed +i causes segfault when running with module conf
