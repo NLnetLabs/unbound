@@ -1195,8 +1195,13 @@ void autr_write_file(struct module_env* env, struct trust_anchor* tp)
 		log_err("could not completely write: %s", fname);
 		return;
 	}
+	if(fclose(out) != 0) {
+		log_err("could not complete write: %s: %s",
+			fname, strerror(errno));
+		unlink(tempf);
+		return;
+	}
 	/* success; overwrite actual file */
-	fclose(out);
 	verbose(VERB_ALGO, "autotrust: replaced %s", fname);
 #ifdef UB_ON_WINDOWS
 	(void)unlink(fname); /* windows does not replace file with rename() */

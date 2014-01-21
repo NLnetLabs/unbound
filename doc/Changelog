@@ -1,3 +1,6 @@
+21 January 2014: Wouter
+	- Fix #547: no trustanchor written if filesystem full, fclose checked.
+
 17 January 2014: Wouter
 	- Fix isprint() portability in sldns, uses unsigned int.
 	- iana portlist updated.
