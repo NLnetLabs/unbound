@@ -164,6 +164,8 @@ create_udp_sock(int family, int socktype, struct sockaddr* addr,
 			*inuse = 0;
 			return -1;
 		}
+#else
+		(void)reuseport;
 #endif /* defined(__linux__) && defined(SO_REUSEPORT) */
 	}
 	if(rcv) {
@@ -483,6 +485,8 @@ create_tcp_accept_sock(struct addrinfo *addr, int v6only, int* noproto,
 		close(s);
 		return -1;
 	}
+#else
+	(void)reuseport;
 #endif /* defined(__linux__) && defined(SO_REUSEPORT) */
 #if defined(IPV6_V6ONLY)
 	if(addr->ai_family == AF_INET6 && v6only) {
