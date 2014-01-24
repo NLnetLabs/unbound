@@ -74,8 +74,8 @@ LINTFLAGS+="-DBN_ULONG=unsigned long" -Dkrb5_int32=int "-Dkrb5_ui_4=unsigned int
 LINTFLAGS+=@NETBSD_LINTFLAGS@
 # compat with OpenBSD
 LINTFLAGS+="-Dsigset_t=long"
-# FreeBSD8
-LINTFLAGS+="-D__uint16_t=uint16_t"
+# FreeBSD
+LINTFLAGS+="-D__uint16_t=uint16_t" "-DEVP_PKEY_ASN1_METHOD=int"
 
 INSTALL=$(srcdir)/install-sh
 
