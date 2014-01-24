@@ -255,9 +255,35 @@ daemon_open_shared_ports(struct daemon* daemon)
 {
 	log_assert(daemon);
 	if(daemon->cfg->port != daemon->listening_port) {
-		listening_ports_free(daemon->ports);
-		if(!(daemon->ports=listening_ports_open(daemon->cfg)))
+		int i;
+#if defined(__linux__) && defined(SO_REUSEPORT)
+		if(daemon->cfg->so_reuseport && daemon->cfg->num_threads > 0)
+			daemon->num_ports = daemon->cfg->num_threads;
+		else
+			daemon->num_ports = 1;
+#else
+		daemon->num_ports = 1;
+#endif
+		if(daemon->ports != NULL) {
+			for(i=0; i<daemon->num_ports; i++)
+				listening_ports_free(daemon->ports[i]);
+			free(daemon->ports);
+			daemon->ports = NULL;
+		}
+		if(!(daemon->ports = (struct listen_port**)calloc(
+			daemon->num_ports, sizeof(*daemon->ports)))) {
 			return 0;
+		}
+		for(i=0; i<daemon->num_ports; i++) {
+			if(!(daemon->ports[i]=
+				listening_ports_open(daemon->cfg))) {
+				for(i=0; i<daemon->num_ports; i++)
+					listening_ports_free(daemon->ports[i]);
+				free(daemon->ports);
+				daemon->ports = NULL;
+				return 0;
+			}
+		}
 		daemon->listening_port = daemon->cfg->port;
 	}
 	if(!daemon->cfg->remote_control_enable && daemon->rc_port) {
@@ -394,6 +420,7 @@ static void*
 thread_start(void* arg)
 {
 	struct worker* worker = (struct worker*)arg;
+	int port_num = 0;
 	log_thread_set(&worker->thread_num);
 	ub_thread_blocksigs();
 #ifdef THREADS_DISABLED
@@ -401,7 +428,14 @@ thread_start(void* arg)
 	tube_close_write(worker->cmd);
 	close_other_pipes(worker->daemon, worker->thread_num);
 #endif
-	if(!worker_init(worker, worker->daemon->cfg, worker->daemon->ports, 0))
+#if defined(__linux__) && defined(SO_REUSEPORT)
+	if(worker->daemon->cfg->so_reuseport)
+		port_num = worker->thread_num;
+	else
+		port_num = 0;
+#endif
+	if(!worker_init(worker, worker->daemon->cfg,
+			worker->daemon->ports[port_num], 0))
 		fatal_exit("Could not initialize thread");
 
 	worker_work(worker);
@@ -474,7 +508,7 @@ daemon_fork(struct daemon* daemon)
 
 #if defined(HAVE_EV_LOOP) || defined(HAVE_EV_DEFAULT_LOOP)
 	/* in libev the first inited base gets signals */
-	if(!worker_init(daemon->workers[0], daemon->cfg, daemon->ports, 1))
+	if(!worker_init(daemon->workers[0], daemon->cfg, daemon->ports[0], 1))
 		fatal_exit("Could not initialize main thread");
 #endif
 	
@@ -488,7 +522,7 @@ daemon_fork(struct daemon* daemon)
 	 */
 #if !(defined(HAVE_EV_LOOP) || defined(HAVE_EV_DEFAULT_LOOP))
 	/* libevent has the last inited base get signals (or any base) */
-	if(!worker_init(daemon->workers[0], daemon->cfg, daemon->ports, 1))
+	if(!worker_init(daemon->workers[0], daemon->cfg, daemon->ports[0], 1))
 		fatal_exit("Could not initialize main thread");
 #endif
 	signal_handling_playback(daemon->workers[0]);
@@ -534,11 +568,14 @@ daemon_cleanup(struct daemon* daemon)
 void 
 daemon_delete(struct daemon* daemon)
 {
+	int i;
 	if(!daemon)
 		return;
 	modstack_desetup(&daemon->mods, daemon->env);
 	daemon_remote_delete(daemon->rc);
-	listening_ports_free(daemon->ports);
+	for(i = 0; i < daemon->num_ports; i++)
+		listening_ports_free(daemon->ports[i]);
+	free(daemon->ports);
 	listening_ports_free(daemon->rc_ports);
 	if(daemon->env) {
 		slabhash_delete(daemon->env->msg_cache);

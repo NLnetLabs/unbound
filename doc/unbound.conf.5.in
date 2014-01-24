@@ -250,6 +250,12 @@ linux unbound needs root permission to bypass the limit, or the admin
 can use sysctl net.core.wmem_max.  On BSD, Solaris changes are similar
 to so\-rcvbuf.
 .TP
+.B so\-reuseport: \fI<yes or no>
+If yes, then open dedicated listening sockets for incoming queries for each
+thread and try to set the SO_REUSEPORT socket option on each socket.  May
+distribute incoming queries to threads more evenly.  Default is no.  Only
+supported on Linux >= 3.9.
+.TP
 .B rrset\-cache\-size: \fI<number>
 Number of bytes size of the RRset cache. Default is 4 megabytes.
 A plain number is in bytes, append 'k', 'm' or 'g' for kilobytes, megabytes

@@ -130,6 +130,8 @@ struct config_file {
 	size_t so_rcvbuf;
 	/** SO_SNDBUF size to set on port 53 UDP socket */
 	size_t so_sndbuf;
+	/** SO_REUSEPORT requested on port 53 sockets */
+	int so_reuseport;
 
 	/** number of interfaces to open. If 0 default all interfaces. */
 	int num_ifs;

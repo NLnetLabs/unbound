@@ -181,19 +181,22 @@ void listen_start_accept(struct listen_dnsport* listen);
  * @param snd: set size on sndbuf with socket option, if 0 it is not set.
  * @param listen: if true, this is a listening UDP port, eg port 53, and 
  * 	set SO_REUSEADDR on it.
+ * @param reuseport: if true, try to set SO_REUSEPORT on listening UDP port.
  * @return: the socket. -1 on error.
  */
 int create_udp_sock(int family, int socktype, struct sockaddr* addr, 
 	socklen_t addrlen, int v6only, int* inuse, int* noproto, int rcv,
-	int snd, int listen);
+	int snd, int listen, int reuseport);
 
 /**
  * Create and bind TCP listening socket
  * @param addr: address info ready to make socket.
  * @param v6only: enable ip6 only flag on ip6 sockets.
  * @param noproto: if error caused by lack of protocol support.
+ * @param reuseport: if true, try to set SO_REUSEPORT.
  * @return: the socket. -1 on error.
  */
-int create_tcp_accept_sock(struct addrinfo *addr, int v6only, int* noproto);
+int create_tcp_accept_sock(struct addrinfo *addr, int v6only, int* noproto,
+	int reuseport);
 
 #endif /* LISTEN_DNSPORT_H */

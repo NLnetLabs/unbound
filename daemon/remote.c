@@ -271,7 +271,7 @@ add_open(const char* ip, int nr, struct listen_port** list, int noproto_is_err)
 	}
 
 	/* open fd */
-	fd = create_tcp_accept_sock(res, 1, &noproto);
+	fd = create_tcp_accept_sock(res, 1, &noproto, 0);
 	freeaddrinfo(res);
 	if(fd == -1 && noproto) {
 		if(!noproto_is_err)

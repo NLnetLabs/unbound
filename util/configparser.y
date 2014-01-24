@@ -101,7 +101,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_VAL_SIG_SKEW_MAX VAR_CACHE_MIN_TTL VAR_VAL_LOG_LEVEL
 %token VAR_AUTO_TRUST_ANCHOR_FILE VAR_KEEP_MISSING VAR_ADD_HOLDDOWN 
 %token VAR_DEL_HOLDDOWN VAR_SO_RCVBUF VAR_EDNS_BUFFER_SIZE VAR_PREFETCH
-%token VAR_PREFETCH_KEY VAR_SO_SNDBUF VAR_HARDEN_BELOW_NXDOMAIN
+%token VAR_PREFETCH_KEY VAR_SO_SNDBUF VAR_SO_REUSEPORT VAR_HARDEN_BELOW_NXDOMAIN
 %token VAR_IGNORE_CD_FLAG VAR_LOG_QUERIES VAR_TCP_UPSTREAM VAR_SSL_UPSTREAM
 %token VAR_SSL_SERVICE_KEY VAR_SSL_SERVICE_PEM VAR_SSL_PORT VAR_FORWARD_FIRST
 %token VAR_STUB_FIRST VAR_MINIMAL_RESPONSES VAR_RRSET_ROUNDROBIN
@@ -162,7 +162,8 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_so_sndbuf | server_harden_below_nxdomain | server_ignore_cd_flag |
 	server_log_queries | server_tcp_upstream | server_ssl_upstream |
 	server_ssl_service_key | server_ssl_service_pem | server_ssl_port |
-	server_minimal_responses | server_rrset_roundrobin | server_max_udp_size
+	server_minimal_responses | server_rrset_roundrobin | server_max_udp_size |
+    server_so_reuseport
 	;
 stubstart: VAR_STUB_ZONE
 	{
@@ -595,6 +596,16 @@ server_so_sndbuf: VAR_SO_SNDBUF STRING_ARG
 		free($2);
 	}
 	;
+server_so_reuseport: VAR_SO_REUSEPORT STRING_ARG
+    {
+        OUTYY(("P(server_so_reuseport:%s)\n", $2));
+        if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+            yyerror("expected yes or no.");
+        else cfg_parser->cfg->so_reuseport =
+            (strcmp($2, "yes")==0);
+        free($2);
+    }
+    ;
 server_edns_buffer_size: VAR_EDNS_BUFFER_SIZE STRING_ARG
 	{
 		OUTYY(("P(server_edns_buffer_size:%s)\n", $2));

@@ -72,8 +72,11 @@ struct daemon {
 	char* pidfile;
 	/** port number that has ports opened. */
 	int listening_port;
-	/** listening ports, opened, to be shared by threads */
-	struct listen_port* ports;
+	/** array of listening ports, opened.  Listening ports per worker,
+	 * or just one element[0] shared by the worker threads. */
+	struct listen_port** ports;
+	/** size of ports array */
+	int num_ports;
 	/** port number for remote that has ports opened. */
 	int rc_port;
 	/** listening ports for remote control */
