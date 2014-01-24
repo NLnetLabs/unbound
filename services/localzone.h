@@ -78,7 +78,7 @@ enum localzone_type {
  */
 struct local_zones {
 	/** lock on the localzone tree */
-	lock_quick_t lock;
+	lock_rw_t lock;
 	/** rbtree of struct local_zone */
 	rbtree_t ztree;
 };

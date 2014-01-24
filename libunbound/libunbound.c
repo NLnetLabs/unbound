@@ -1125,23 +1125,23 @@ int ub_ctx_zone_add(struct ub_ctx* ctx, const char *zone_name,
 		return UB_SYNTAX;
 	}
 
-	lock_quick_lock(&ctx->local_zones->lock);
+	lock_rw_wrlock(&ctx->local_zones->lock);
 	if((z=local_zones_find(ctx->local_zones, nm, nmlen, nmlabs, 
 		LDNS_RR_CLASS_IN))) {
 		/* already present in tree */
 		lock_rw_wrlock(&z->lock);
 		z->type = t; /* update type anyway */
 		lock_rw_unlock(&z->lock);
-		lock_quick_unlock(&ctx->local_zones->lock);
+		lock_rw_unlock(&ctx->local_zones->lock);
 		free(nm);
 		return UB_NOERROR;
 	}
 	if(!local_zones_add_zone(ctx->local_zones, nm, nmlen, nmlabs, 
 		LDNS_RR_CLASS_IN, t)) {
-		lock_quick_unlock(&ctx->local_zones->lock);
+		lock_rw_unlock(&ctx->local_zones->lock);
 		return UB_NOMEM;
 	}
-	lock_quick_unlock(&ctx->local_zones->lock);
+	lock_rw_unlock(&ctx->local_zones->lock);
 	return UB_NOERROR;
 }
 
@@ -1160,13 +1160,13 @@ int ub_ctx_zone_remove(struct ub_ctx* ctx, const char *zone_name)
 		return UB_SYNTAX;
 	}
 
-	lock_quick_lock(&ctx->local_zones->lock);
+	lock_rw_wrlock(&ctx->local_zones->lock);
 	if((z=local_zones_find(ctx->local_zones, nm, nmlen, nmlabs, 
 		LDNS_RR_CLASS_IN))) {
 		/* present in tree */
 		local_zones_del_zone(ctx->local_zones, z);
 	}
-	lock_quick_unlock(&ctx->local_zones->lock);
+	lock_rw_unlock(&ctx->local_zones->lock);
 	free(nm);
 	return UB_NOERROR;
 }

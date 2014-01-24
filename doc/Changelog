@@ -2,6 +2,8 @@
 	- Change unbound-event.h to use void* buffer, length idiom.
 	- iana portlist updated.
 	- unbound-event.h is installed if you configure --enable-event-api.
+	- speed up unbound (reports say it could be up to 10%), by reducing
+	  lock contention on localzones.lock.  It is changed to an rwlock.
 
 21 January 2014: Wouter
 	- Fix #547: no trustanchor written if filesystem full, fclose checked.

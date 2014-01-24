@@ -981,7 +981,7 @@ do_zone_add(SSL* ssl, struct worker* worker, char* arg)
 		free(nm);
 		return;
 	}
-	lock_quick_lock(&worker->daemon->local_zones->lock);
+	lock_rw_wrlock(&worker->daemon->local_zones->lock);
 	if((z=local_zones_find(worker->daemon->local_zones, nm, nmlen, 
 		nmlabs, LDNS_RR_CLASS_IN))) {
 		/* already present in tree */
@@ -989,17 +989,17 @@ do_zone_add(SSL* ssl, struct worker* worker, char* arg)
 		z->type = t; /* update type anyway */
 		lock_rw_unlock(&z->lock);
 		free(nm);
-		lock_quick_unlock(&worker->daemon->local_zones->lock);
+		lock_rw_unlock(&worker->daemon->local_zones->lock);
 		send_ok(ssl);
 		return;
 	}
 	if(!local_zones_add_zone(worker->daemon->local_zones, nm, nmlen, 
 		nmlabs, LDNS_RR_CLASS_IN, t)) {
-		lock_quick_unlock(&worker->daemon->local_zones->lock);
+		lock_rw_unlock(&worker->daemon->local_zones->lock);
 		ssl_printf(ssl, "error out of memory\n");
 		return;
 	}
-	lock_quick_unlock(&worker->daemon->local_zones->lock);
+	lock_rw_unlock(&worker->daemon->local_zones->lock);
 	send_ok(ssl);
 }
 
@@ -1013,13 +1013,13 @@ do_zone_remove(SSL* ssl, struct worker* worker, char* arg)
 	struct local_zone* z;
 	if(!parse_arg_name(ssl, arg, &nm, &nmlen, &nmlabs))
 		return;
-	lock_quick_lock(&worker->daemon->local_zones->lock);
+	lock_rw_wrlock(&worker->daemon->local_zones->lock);
 	if((z=local_zones_find(worker->daemon->local_zones, nm, nmlen, 
 		nmlabs, LDNS_RR_CLASS_IN))) {
 		/* present in tree */
 		local_zones_del_zone(worker->daemon->local_zones, z);
 	}
-	lock_quick_unlock(&worker->daemon->local_zones->lock);
+	lock_rw_unlock(&worker->daemon->local_zones->lock);
 	free(nm);
 	send_ok(ssl);
 }
@@ -1974,7 +1974,7 @@ do_list_local_zones(SSL* ssl, struct worker* worker)
 	struct local_zones* zones = worker->daemon->local_zones;
 	struct local_zone* z;
 	char buf[257];
-	lock_quick_lock(&zones->lock);
+	lock_rw_rdlock(&zones->lock);
 	RBTREE_FOR(z, struct local_zone*, &zones->ztree) {
 		lock_rw_rdlock(&z->lock);
 		dname_str(z->name, buf);
@@ -1982,7 +1982,7 @@ do_list_local_zones(SSL* ssl, struct worker* worker)
 			local_zone_type2str(z->type));
 		lock_rw_unlock(&z->lock);
 	}
-	lock_quick_unlock(&zones->lock);
+	lock_rw_unlock(&zones->lock);
 }
 
 /** do the list_local_data command */
@@ -1995,7 +1995,7 @@ do_list_local_data(SSL* ssl, struct worker* worker)
 	struct local_rrset* p;
 	char* s = (char*)sldns_buffer_begin(worker->env.scratch_buffer);
 	size_t slen = sldns_buffer_capacity(worker->env.scratch_buffer);
-	lock_quick_lock(&zones->lock);
+	lock_rw_rdlock(&zones->lock);
 	RBTREE_FOR(z, struct local_zone*, &zones->ztree) {
 		lock_rw_rdlock(&z->lock);
 		RBTREE_FOR(d, struct local_data*, &z->data) {
@@ -2016,7 +2016,7 @@ do_list_local_data(SSL* ssl, struct worker* worker)
 		}
 		lock_rw_unlock(&z->lock);
 	}
-	lock_quick_unlock(&zones->lock);
+	lock_rw_unlock(&zones->lock);
 }
 
 /** tell other processes to execute the command */
