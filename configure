@@ -821,6 +821,7 @@ with_ssl
 enable_sha2
 enable_gost
 enable_ecdsa
+enable_event_api
 with_libevent
 with_libexpat
 enable_static_exe
@@ -1475,6 +1476,8 @@ Optional Features:
   --disable-sha2          Disable SHA256 and SHA512 RRSIG support
   --disable-gost          Disable GOST support
   --disable-ecdsa         Disable ECDSA support
+  --enable-event-api      Enable (experimental) libevent-based libunbound API
+                          installed to unbound-event.h
   --enable-static-exe     enable to compile executables statically against
                           (event) libs, for debug purposes
   --enable-lock-checks    enable to check lock and unlock calls, for debug
@@ -17145,6 +17148,20 @@ _ACEOF
       ;;
 esac
 
+# Check whether --enable-event-api was given.
+if test "${enable_event_api+set}" = set; then :
+  enableval=$enable_event_api;
+fi
+
+use_unbound_event="no"
+case "$enable_event_api" in
+    yes)
+      use_unbound_event="yes"
+      ;;
+    *)
+      ;;
+esac
+
 # check for libevent
 
 # Check whether --with-libevent was given.
@@ -17475,10 +17492,12 @@ done
 	if test -n "$BAK_LDFLAGS_SET"; then
 		LDFLAGS="$BAK_LDFLAGS"
 	fi
-	UNBOUND_EVENT_INSTALL=unbound-event-install
+        if test "$use_unbound_event" = "yes"; then
+		UNBOUND_EVENT_INSTALL=unbound-event-install
 
-	UNBOUND_EVENT_UNINSTALL=unbound-event-uninstall
+		UNBOUND_EVENT_UNINSTALL=unbound-event-uninstall
 
+	fi
 else
 
 $as_echo "#define USE_MINI_EVENT 1" >>confdefs.h

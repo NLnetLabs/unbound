@@ -742,6 +742,16 @@ case "$enable_ecdsa" in
       ;;
 esac
 
+AC_ARG_ENABLE(event-api, AC_HELP_STRING([--enable-event-api], [Enable (experimental) libevent-based libunbound API installed to unbound-event.h]))
+use_unbound_event="no"
+case "$enable_event_api" in
+    yes)
+      use_unbound_event="yes"
+      ;;
+    *)
+      ;;
+esac
+
 # check for libevent
 AC_ARG_WITH(libevent, AC_HELP_STRING([--with-libevent=pathname],
     [use libevent (will check /usr/local /opt/local /usr/lib /usr/pkg /usr/sfw /usr  or you can specify an explicit path). Slower, but allows use of large outgoing port ranges.]),
@@ -816,8 +826,10 @@ large outgoing port ranges.  ])
 	if test -n "$BAK_LDFLAGS_SET"; then
 		LDFLAGS="$BAK_LDFLAGS"
 	fi
-	AC_SUBST(UNBOUND_EVENT_INSTALL, [unbound-event-install])
-	AC_SUBST(UNBOUND_EVENT_UNINSTALL, [unbound-event-uninstall])
+        if test "$use_unbound_event" = "yes"; then
+		AC_SUBST(UNBOUND_EVENT_INSTALL, [unbound-event-install])
+		AC_SUBST(UNBOUND_EVENT_UNINSTALL, [unbound-event-uninstall])
+	fi
 else
 	AC_DEFINE(USE_MINI_EVENT, 1, [Define if you want to use internal select based events])
 fi
