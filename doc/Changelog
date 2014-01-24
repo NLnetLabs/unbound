@@ -1,5 +1,6 @@
 24 January 2014: Wouter
 	- Change unbound-event.h to use void* buffer, length idiom.
+	- iana portlist updated.
 
 21 January 2014: Wouter
 	- Fix #547: no trustanchor written if filesystem full, fclose checked.
