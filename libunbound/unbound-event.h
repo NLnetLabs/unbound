@@ -41,8 +41,6 @@
  * otherwise it wouldn't work, the event and event_base structures would
  * be different.  If unbound is compiled without libevent support then
  * this header file is not supposed to be installed on the system.
- * The ldns_buffer is the same buffer format as the ldnsbuffers that
- * are used in unbound's sourcecode.
  *
  * Use ub_ctx_create_event_base() to create an unbound context that uses
  * the event base that you have made.  Then, use the ub_resolve_event call
@@ -63,9 +61,8 @@ extern "C" {
 struct ub_ctx;
 struct ub_result;
 struct event_base;
-struct ldns_struct_buffer;
 
-typedef void (*ub_event_callback_t)(void*, int, struct ldns_struct_buffer*, int, char*);
+typedef void (*ub_event_callback_t)(void*, int, void*, int, int, char*);
 
 /**
  * Create a resolving and validation context.
@@ -104,13 +101,16 @@ int ub_ctx_set_event(struct ub_ctx* ctx, struct event_base* base);
  * 	and is passed on to the callback function.
  * @param callback: this is called on completion of the resolution.
  * 	It is called as:
- * 	void callback(void* mydata, int rcode, ldns_buffer* packet, int sec,
- *		char* why_bogus)
+ * 	void callback(void* mydata, int rcode, void* packet, int packet_len,
+ * 		int sec, char* why_bogus)
  * 	with mydata: the same as passed here, you may pass NULL,
  * 	with rcode: 0 on no error, nonzero for mostly SERVFAIL situations,
  *		this is a DNS rcode.
- *	with packet: ldns_buffer of a DNS wireformat packet with the answer.
+ *	with packet: a buffer with DNS wireformat packet with the answer.
  *		do not inspect if rcode != 0.
+ *		do not write or free the packet buffer, it is used internally
+ *		in unbound (for other callbacks that want the same data).
+ *	with packet_len: length in bytes of the packet buffer.
  *	with sec: 0 if insecure, 1 if bogus, 2 if DNSSEC secure.
  *	with why_bogus: text string explaining why it is bogus (or NULL).
  *	These point to buffers inside unbound; do not deallocate the packet or
