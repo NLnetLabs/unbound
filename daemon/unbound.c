@@ -66,9 +66,12 @@
 #include <grp.h>
 #endif
 
+#ifndef S_SPLINT_S
+/* splint chokes on this system header file */
 #ifdef HAVE_SYS_RESOURCE_H
 #include <sys/resource.h>
 #endif
+#endif /* S_SPLINT_S */
 #ifdef HAVE_LOGIN_CAP_H
 #include <login_cap.h>
 #endif
@@ -192,6 +195,7 @@ int replay_var_compare(const void* ATTR_UNUSED(a), const void* ATTR_UNUSED(b))
 static void
 checkrlimits(struct config_file* cfg)
 {
+#ifndef S_SPLINT_S
 #ifdef HAVE_GETRLIMIT
 	/* list has number of ports to listen to, ifs number addresses */
 	int list = ((cfg->do_udp?1:0) + (cfg->do_tcp?1 + 
@@ -282,6 +286,7 @@ checkrlimits(struct config_file* cfg)
 #else	
 	(void)cfg;
 #endif /* HAVE_GETRLIMIT */
+#endif /* S_SPLINT_S */
 }
 
 /** set verbosity, check rlimits, cache settings */

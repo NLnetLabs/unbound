@@ -1250,14 +1250,14 @@ fname_after_chroot(const char* fname, struct config_file* cfg, int use_chdir)
 	if(cfg->chrootdir && cfg->chrootdir[0] && 
 		strncmp(cfg->chrootdir, fname, strlen(cfg->chrootdir)) == 0) {
 		/* already full pathname, return it */
-		strlcpy(buf, fname, len);
+		(void)strlcpy(buf, fname, len);
 		buf[len-1] = 0;
 		return buf;
 	}
 	/* chroot */
 	if(cfg->chrootdir && cfg->chrootdir[0]) {
 		/* start with chrootdir */
-		strlcpy(buf, cfg->chrootdir, len);
+		(void)strlcpy(buf, cfg->chrootdir, len);
 		slashit = 1;
 	}
 #ifdef UB_ON_WINDOWS
@@ -1271,20 +1271,20 @@ fname_after_chroot(const char* fname, struct config_file* cfg, int use_chdir)
 	} else if(cfg->directory && cfg->directory[0]) {
 		/* prepend chdir */
 		if(slashit && cfg->directory[0] != '/')
-			strlcat(buf, "/", len);
+			(void)strlcat(buf, "/", len);
 		/* is the directory already in the chroot? */
 		if(cfg->chrootdir && cfg->chrootdir[0] && 
 			strncmp(cfg->chrootdir, cfg->directory, 
 			strlen(cfg->chrootdir)) == 0)
-			strlcat(buf, cfg->directory+strlen(cfg->chrootdir), 
+			(void)strlcat(buf, cfg->directory+strlen(cfg->chrootdir), 
 				   len);
-		else strlcat(buf, cfg->directory, len);
+		else (void)strlcat(buf, cfg->directory, len);
 		slashit = 1;
 	}
 	/* fname */
 	if(slashit && fname[0] != '/')
-		strlcat(buf, "/", len);
-	strlcat(buf, fname, len);
+		(void)strlcat(buf, "/", len);
+	(void)strlcat(buf, fname, len);
 	buf[len-1] = 0;
 	return buf;
 }
@@ -1336,7 +1336,7 @@ cfg_parse_local_zone(struct config_file* cfg, const char* val)
 		log_err("syntax error: bad zone name: %s", val);
 		return 0;
 	}
-	strlcpy(buf, name, sizeof(buf));
+	(void)strlcpy(buf, name, sizeof(buf));
 	buf[name_end-name] = '\0';
 
 	type = last_space_pos(name_end);

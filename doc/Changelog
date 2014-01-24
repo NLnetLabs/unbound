@@ -6,6 +6,7 @@
 	  lock contention on localzones.lock.  It is changed to an rwlock.
 	- so-reuseport: yesno option to distribute queries evenly over
 	  threads on Linux (Thanks Robert Edmonds).
+	- made lint clean.
 
 21 January 2014: Wouter
 	- Fix #547: no trustanchor written if filesystem full, fclose checked.

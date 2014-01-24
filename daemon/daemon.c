@@ -255,7 +255,7 @@ daemon_open_shared_ports(struct daemon* daemon)
 {
 	log_assert(daemon);
 	if(daemon->cfg->port != daemon->listening_port) {
-		int i;
+		size_t i;
 #if defined(__linux__) && defined(SO_REUSEPORT)
 		if(daemon->cfg->so_reuseport && daemon->cfg->num_threads > 0)
 			daemon->num_ports = daemon->cfg->num_threads;
@@ -568,7 +568,7 @@ daemon_cleanup(struct daemon* daemon)
 void 
 daemon_delete(struct daemon* daemon)
 {
-	int i;
+	size_t i;
 	if(!daemon)
 		return;
 	modstack_desetup(&daemon->mods, daemon->env);

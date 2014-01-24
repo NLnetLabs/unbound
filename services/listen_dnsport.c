@@ -76,7 +76,7 @@ verbose_print_addr(struct addrinfo *addr)
 #endif /* INET6 */
 		if(inet_ntop(addr->ai_family, sinaddr, buf,
 			(socklen_t)sizeof(buf)) == 0) {
-			strlcpy(buf, "(null)", sizeof(buf));
+			(void)strlcpy(buf, "(null)", sizeof(buf));
 		}
 		buf[sizeof(buf)-1] = 0;
 		verbose(VERB_ALGO, "creating %s%s socket %s %d", 
@@ -617,9 +617,9 @@ make_sock_port(int stype, const char* ifname, const char* port,
 			*noip6 = 0;
 			return -1;
 		}
-		strlcpy(newif, ifname, sizeof(newif));
+		(void)strlcpy(newif, ifname, sizeof(newif));
 		newif[s-ifname] = 0;
-		strlcpy(p, s+1, sizeof(p));
+		(void)strlcpy(p, s+1, sizeof(p));
 		p[strlen(s+1)]=0;
 		return make_sock(stype, newif, p, hints, v6only, noip6,
 			rcv, snd, reuseport);

@@ -344,9 +344,9 @@ morechecks(struct config_file* cfg, const char* fname)
 		if(fname[0] != '/') {
 			if(getcwd(buf, sizeof(buf)) == NULL)
 				fatal_exit("getcwd: %s", strerror(errno));
-			strlcat(buf, "/", sizeof(buf));
+			(void)strlcat(buf, "/", sizeof(buf));
 		}
-		strlcat(buf, fname, sizeof(buf));
+		(void)strlcat(buf, fname, sizeof(buf));
 		if(strncmp(buf, cfg->chrootdir, strlen(cfg->chrootdir)) != 0)
 			fatal_exit("config file %s is not inside chroot %s",
 				buf, cfg->chrootdir);

@@ -76,7 +76,7 @@ struct daemon {
 	 * or just one element[0] shared by the worker threads. */
 	struct listen_port** ports;
 	/** size of ports array */
-	int num_ports;
+	size_t num_ports;
 	/** port number for remote that has ports opened. */
 	int rc_port;
 	/** listening ports for remote control */

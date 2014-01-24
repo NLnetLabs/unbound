@@ -160,7 +160,7 @@ log_addr(enum verbosity_value v, const char* str,
 		default: break;
 	}
 	if(inet_ntop(af, sinaddr, dest, (socklen_t)sizeof(dest)) == 0) {
-		strlcpy(dest, "(inet_ntop error)", sizeof(dest));
+		(void)strlcpy(dest, "(inet_ntop error)", sizeof(dest));
 	}
 	dest[sizeof(dest)-1] = 0;
 	port = ntohs(((struct sockaddr_in*)addr)->sin_port);
@@ -181,7 +181,7 @@ extstrtoaddr(const char* str, struct sockaddr_storage* addr,
 		if(s-str >= MAX_ADDR_STRLEN) {
 			return 0;
 		}
-		strlcpy(buf, str, sizeof(buf));
+		(void)strlcpy(buf, str, sizeof(buf));
 		buf[s-str] = 0;
 		port = atoi(s+1);
 		if(port == 0 && strcmp(s+1,"0")!=0) {
@@ -211,7 +211,7 @@ ipstrtoaddr(const char* ip, int port, struct sockaddr_storage* addr,
 		if((s=strchr(ip, '%'))) { /* ip6%interface, rfc 4007 */
 			if(s-ip >= MAX_ADDR_STRLEN)
 				return 0;
-			strlcpy(buf, ip, sizeof(buf));
+			(void)strlcpy(buf, ip, sizeof(buf));
 			buf[s-ip]=0;
 			sa->sin6_scope_id = (uint32_t)atoi(s+1);
 			ip = buf;
@@ -317,7 +317,7 @@ void log_name_addr(enum verbosity_value v, const char* str, uint8_t* zone,
 		default: break;
 	}
 	if(inet_ntop(af, sinaddr, dest, (socklen_t)sizeof(dest)) == 0) {
-		strlcpy(dest, "(inet_ntop error)", sizeof(dest));
+		(void)strlcpy(dest, "(inet_ntop error)", sizeof(dest));
 	}
 	dest[sizeof(dest)-1] = 0;
 	port = ntohs(((struct sockaddr_in*)addr)->sin_port);
