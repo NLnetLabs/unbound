@@ -1,3 +1,6 @@
+27 January 2014: Wouter
+	- reuseport is attempted, then fallback to without on failure.
+
 24 January 2014: Wouter
 	- Change unbound-event.h to use void* buffer, length idiom.
 	- iana portlist updated.

@@ -1142,7 +1142,8 @@ void outnet_serviced_query_stop(struct serviced_query* sq, void* cb_arg)
 	log_info("double delete of pending serviced query");
 }
 
-struct listen_port* listening_ports_open(struct config_file* ATTR_UNUSED(cfg))
+struct listen_port* listening_ports_open(struct config_file* ATTR_UNUSED(cfg),
+	int* ATTR_UNUSED(reuseport))
 {
 	return calloc(1, 1);
 }

@@ -254,7 +254,10 @@ to so\-rcvbuf.
 If yes, then open dedicated listening sockets for incoming queries for each
 thread and try to set the SO_REUSEPORT socket option on each socket.  May
 distribute incoming queries to threads more evenly.  Default is no.  Only
-supported on Linux >= 3.9.
+supported on Linux >= 3.9.  You can enable it (on any platform and kernel),
+it then attempts to open the port and passes the option if it was available
+at compile time, if that works it is used, if it fails, it continues
+silently (unless verbosity 3) without the option.
 .TP
 .B rrset\-cache\-size: \fI<number>
 Number of bytes size of the RRset cache. Default is 4 megabytes.

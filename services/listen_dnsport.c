@@ -92,7 +92,7 @@ verbose_print_addr(struct addrinfo *addr)
 int
 create_udp_sock(int family, int socktype, struct sockaddr* addr,
         socklen_t addrlen, int v6only, int* inuse, int* noproto,
-	int rcv, int snd, int listen, int reuseport)
+	int rcv, int snd, int listen, int* reuseport)
 {
 	int s;
 #if defined(SO_REUSEADDR) || defined(SO_REUSEPORT) || defined(IPV6_USE_MIN_MTU)
@@ -154,15 +154,16 @@ create_udp_sock(int family, int socktype, struct sockaddr* addr,
 		 * Each thread must have its own socket bound to the same port,
 		 * with SO_REUSEPORT set on each socket.
 		 */
-		if (reuseport &&
+		if (reuseport && *reuseport &&
 		    setsockopt(s, SOL_SOCKET, SO_REUSEPORT, (void*)&on,
 			(socklen_t)sizeof(on)) < 0) {
-			log_err("setsockopt(.. SO_REUSEPORT ..) failed: %s",
-				strerror(errno));
-			close(s);
-			*noproto = 0;
-			*inuse = 0;
-			return -1;
+#ifdef ENOPROTOOPT
+			if(errno != ENOPROTOOPT || verbosity >= 3)
+				log_warn("setsockopt(.. SO_REUSEPORT ..) failed: %s",
+					strerror(errno));
+#endif
+			/* this option is not essential, we can continue */
+			*reuseport = 0;
 		}
 #else
 		(void)reuseport;
@@ -431,7 +432,7 @@ create_udp_sock(int family, int socktype, struct sockaddr* addr,
 
 int
 create_tcp_accept_sock(struct addrinfo *addr, int v6only, int* noproto,
-	int reuseport)
+	int* reuseport)
 {
 	int s;
 #if defined(SO_REUSEADDR) || defined(SO_REUSEPORT) || defined(IPV6_V6ONLY)
@@ -478,12 +479,16 @@ create_tcp_accept_sock(struct addrinfo *addr, int v6only, int* noproto,
 	 * Each thread must have its own socket bound to the same port,
 	 * with SO_REUSEPORT set on each socket.
 	 */
-	if (reuseport && setsockopt(s, SOL_SOCKET, SO_REUSEPORT, (void*)&on,
+	if (reuseport && *reuseport &&
+		setsockopt(s, SOL_SOCKET, SO_REUSEPORT, (void*)&on,
 		(socklen_t)sizeof(on)) < 0) {
-		log_err("setsockopt(.. SO_REUSEPORT ..) failed: %s",
-			strerror(errno));
-		close(s);
-		return -1;
+#ifdef ENOPROTOOPT
+		if(errno != ENOPROTOOPT || verbosity >= 3)
+			log_warn("setsockopt(.. SO_REUSEPORT ..) failed: %s",
+				strerror(errno));
+#endif
+		/* this option is not essential, we can continue */
+		*reuseport = 0;
 	}
 #else
 	(void)reuseport;
@@ -556,7 +561,7 @@ create_tcp_accept_sock(struct addrinfo *addr, int v6only, int* noproto,
 static int
 make_sock(int stype, const char* ifname, const char* port, 
 	struct addrinfo *hints, int v6only, int* noip6, size_t rcv, size_t snd,
-	int reuseport)
+	int* reuseport)
 {
 	struct addrinfo *res = NULL;
 	int r, s, inuse, noproto;
@@ -604,7 +609,7 @@ make_sock(int stype, const char* ifname, const char* port,
 static int
 make_sock_port(int stype, const char* ifname, const char* port, 
 	struct addrinfo *hints, int v6only, int* noip6, size_t rcv, size_t snd,
-	int reuseport)
+	int* reuseport)
 {
 	char* s = strchr(ifname, '@');
 	if(s) {
@@ -721,13 +726,14 @@ set_recvpktinfo(int s, int family)
  * @param rcv: receive buffer size for UDP
  * @param snd: send buffer size for UDP
  * @param ssl_port: ssl service port number
- * @param reuseport: try to set SO_REUSEPORT.
+ * @param reuseport: try to set SO_REUSEPORT if nonNULL and true.
+ * 	set to false on exit if reuseport failed due to no kernel support.
  * @return: returns false on error.
  */
 static int
 ports_create_if(const char* ifname, int do_auto, int do_udp, int do_tcp, 
 	struct addrinfo *hints, const char* port, struct listen_port** list,
-	size_t rcv, size_t snd, int ssl_port, int reuseport)
+	size_t rcv, size_t snd, int ssl_port, int* reuseport)
 {
 	int s, noip6=0;
 	if(!do_udp && !do_tcp)
@@ -901,7 +907,7 @@ listen_delete(struct listen_dnsport* front)
 }
 
 struct listen_port* 
-listening_ports_open(struct config_file* cfg)
+listening_ports_open(struct config_file* cfg, int* reuseport)
 {
 	struct listen_port* list = NULL;
 	struct addrinfo hints;
@@ -937,7 +943,7 @@ listening_ports_open(struct config_file* cfg)
 				do_auto, cfg->do_udp, do_tcp, 
 				&hints, portbuf, &list,
 				cfg->so_rcvbuf, cfg->so_sndbuf,
-				cfg->ssl_port, cfg->so_reuseport)) {
+				cfg->ssl_port, reuseport)) {
 				listening_ports_free(list);
 				return NULL;
 			}
@@ -948,7 +954,7 @@ listening_ports_open(struct config_file* cfg)
 				do_auto, cfg->do_udp, do_tcp, 
 				&hints, portbuf, &list,
 				cfg->so_rcvbuf, cfg->so_sndbuf,
-				cfg->ssl_port, cfg->so_reuseport)) {
+				cfg->ssl_port, reuseport)) {
 				listening_ports_free(list);
 				return NULL;
 			}
@@ -961,7 +967,7 @@ listening_ports_open(struct config_file* cfg)
 			if(!ports_create_if(cfg->ifs[i], 0, cfg->do_udp, 
 				do_tcp, &hints, portbuf, &list, 
 				cfg->so_rcvbuf, cfg->so_sndbuf,
-				cfg->ssl_port, cfg->so_reuseport)) {
+				cfg->ssl_port, reuseport)) {
 				listening_ports_free(list);
 				return NULL;
 			}
@@ -972,7 +978,7 @@ listening_ports_open(struct config_file* cfg)
 			if(!ports_create_if(cfg->ifs[i], 0, cfg->do_udp, 
 				do_tcp, &hints, portbuf, &list, 
 				cfg->so_rcvbuf, cfg->so_sndbuf,
-				cfg->ssl_port, cfg->so_reuseport)) {
+				cfg->ssl_port, reuseport)) {
 				listening_ports_free(list);
 				return NULL;
 			}

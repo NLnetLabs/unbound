@@ -256,32 +256,52 @@ daemon_open_shared_ports(struct daemon* daemon)
 	log_assert(daemon);
 	if(daemon->cfg->port != daemon->listening_port) {
 		size_t i;
-#if defined(__linux__) && defined(SO_REUSEPORT)
-		if(daemon->cfg->so_reuseport && daemon->cfg->num_threads > 0)
-			daemon->num_ports = daemon->cfg->num_threads;
-		else
-			daemon->num_ports = 1;
-#else
-		daemon->num_ports = 1;
-#endif
+		int reuseport = 0;
+		struct listen_port* p0;
+		/* free and close old ports */
 		if(daemon->ports != NULL) {
 			for(i=0; i<daemon->num_ports; i++)
 				listening_ports_free(daemon->ports[i]);
 			free(daemon->ports);
 			daemon->ports = NULL;
 		}
-		if(!(daemon->ports = (struct listen_port**)calloc(
-			daemon->num_ports, sizeof(*daemon->ports)))) {
+		/* see if we want to reuseport */
+#if defined(__linux__) && defined(SO_REUSEPORT)
+		if(daemon->cfg->so_reuseport && daemon->cfg->num_threads > 0)
+			reuseport = 1;
+#endif
+		/* try to use reuseport */
+		p0 = listening_ports_open(daemon->cfg, &reuseport);
+		if(!p0) {
+			listening_ports_free(p0);
 			return 0;
 		}
-		for(i=0; i<daemon->num_ports; i++) {
-			if(!(daemon->ports[i]=
-				listening_ports_open(daemon->cfg))) {
-				for(i=0; i<daemon->num_ports; i++)
-					listening_ports_free(daemon->ports[i]);
-				free(daemon->ports);
-				daemon->ports = NULL;
-				return 0;
+		if(reuseport) {
+			/* reuseport was successful, allocate for it */
+			daemon->num_ports = daemon->cfg->num_threads;
+		} else {
+			/* do the normal, singleportslist thing,
+			 * reuseport not enabled or did not work */
+			daemon->num_ports = 1;
+		}
+		if(!(daemon->ports = (struct listen_port**)calloc(
+			daemon->num_ports, sizeof(*daemon->ports)))) {
+			listening_ports_free(p0);
+			return 0;
+		}
+		daemon->ports[0] = p0;
+		if(reuseport) {
+			/* continue to use reuseport */
+			for(i=1; i<daemon->num_ports; i++) {
+				if(!(daemon->ports[i]=
+					listening_ports_open(daemon->cfg,
+						&reuseport)) || !reuseport ) {
+					for(i=0; i<daemon->num_ports; i++)
+						listening_ports_free(daemon->ports[i]);
+					free(daemon->ports);
+					daemon->ports = NULL;
+					return 0;
+				}
 			}
 		}
 		daemon->listening_port = daemon->cfg->port;
