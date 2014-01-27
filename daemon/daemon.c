@@ -278,7 +278,7 @@ daemon_open_shared_ports(struct daemon* daemon)
 		}
 		if(reuseport) {
 			/* reuseport was successful, allocate for it */
-			daemon->num_ports = daemon->cfg->num_threads;
+			daemon->num_ports = (size_t)daemon->cfg->num_threads;
 		} else {
 			/* do the normal, singleportslist thing,
 			 * reuseport not enabled or did not work */
