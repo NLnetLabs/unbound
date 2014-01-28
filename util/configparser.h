@@ -174,7 +174,8 @@ extern int yydebug;
      VAR_STUB_FIRST = 383,
      VAR_MINIMAL_RESPONSES = 384,
      VAR_RRSET_ROUNDROBIN = 385,
-     VAR_MAX_UDP_SIZE = 386
+     VAR_MAX_UDP_SIZE = 386,
+     VAR_DELAY_CLOSE = 387
    };
 #endif
 /* Tokens.  */
@@ -307,6 +308,7 @@ extern int yydebug;
 #define VAR_MINIMAL_RESPONSES 384
 #define VAR_RRSET_ROUNDROBIN 385
 #define VAR_MAX_UDP_SIZE 386
+#define VAR_DELAY_CLOSE 387
 
 
 
@@ -320,7 +322,7 @@ typedef union YYSTYPE
 
 
 /* Line 2049 of yacc.c  */
-#line 324 "util/configparser.h"
+#line 326 "util/configparser.h"
 } YYSTYPE;
 # define YYSTYPE_IS_TRIVIAL 1
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */

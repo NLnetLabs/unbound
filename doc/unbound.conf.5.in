@@ -228,6 +228,15 @@ The qps for short queries can be about (numqueriesperthread / 2)
 / (jostletimeout in whole seconds) qps per thread, about (1024/2)*5 = 2560
 qps by default.
 .TP
+.B delay\-close: \fI<msec>
+Extra delay for timeouted UDP ports before they are closed, in msec.
+Default is 0, and that disables it.  This prevents very delayed answer
+packets from the upstream (recursive) servers from bouncing against
+closed ports and setting off all sort of close-port counters, with
+eg. 1500 msec.  When timeouts happen you need extra sockets, it checks
+the ID and remote IP of packets, and unwanted packets are added to the
+unwanted packet counter.
+.TP
 .B so\-rcvbuf: \fI<number>
 If not 0, then set the SO_RCVBUF socket option to get more buffer
 space on UDP port 53 incoming queries.  So that short spikes on busy

@@ -119,6 +119,8 @@ struct config_file {
 	size_t infra_cache_slabs;
 	/** max number of hosts in the infra cache */
 	size_t infra_cache_numhosts;
+	/** delay close of udp-timeouted ports, if 0 no delayclose. in msec */
+	int delay_close;
 
 	/** the target fetch policy for the iterator */
 	char* target_fetch_policy;

@@ -381,9 +381,11 @@ outnet_send_wait_udp(struct outside_network* outnet)
 		if(!randomize_and_send_udp(outnet, pend, outnet->udp_buff, 
 			pend->timeout)) {
 			/* callback error on pending */
-			fptr_ok(fptr_whitelist_pending_udp(pend->cb));
-			(void)(*pend->cb)(outnet->unused_fds->cp, pend->cb_arg, 
-				NETEVENT_CLOSED, NULL);
+			if(pend->cb) {
+				fptr_ok(fptr_whitelist_pending_udp(pend->cb));
+				(void)(*pend->cb)(outnet->unused_fds->cp, pend->cb_arg, 
+					NETEVENT_CLOSED, NULL);
+			}
 			pending_delete(outnet, pend);
 		}
 	}
@@ -460,8 +462,10 @@ outnet_udp_cb(struct comm_point* c, void* arg, int error,
 	verbose(VERB_ALGO, "outnet handle udp reply");
 	/* delete from tree first in case callback creates a retry */
 	(void)rbtree_delete(outnet->pending, p->node.key);
-	fptr_ok(fptr_whitelist_pending_udp(p->cb));
-	(void)(*p->cb)(p->pc->cp, p->cb_arg, NETEVENT_NOERROR, reply_info);
+	if(p->cb) {
+		fptr_ok(fptr_whitelist_pending_udp(p->cb));
+		(void)(*p->cb)(p->pc->cp, p->cb_arg, NETEVENT_NOERROR, reply_info);
+	}
 	portcomm_loweruse(outnet, p->pc);
 	pending_delete(NULL, p);
 	outnet_send_wait_udp(outnet);
@@ -496,6 +500,17 @@ calc_num46(char** ifs, int num_ifs, int do_ip4, int do_ip6,
 
 }
 
+void
+pending_udp_timer_delay_cb(void* arg)
+{
+	struct pending* p = (struct pending*)arg;
+	struct outside_network* outnet = p->outnet;
+	verbose(VERB_ALGO, "timeout udp with delay");
+	portcomm_loweruse(outnet, p->pc);
+	pending_delete(outnet, p);
+	outnet_send_wait_udp(outnet);
+}
+
 void 
 pending_udp_timer_cb(void *arg)
 {
@@ -503,8 +518,16 @@ pending_udp_timer_cb(void *arg)
 	struct outside_network* outnet = p->outnet;
 	/* it timed out */
 	verbose(VERB_ALGO, "timeout udp");
-	fptr_ok(fptr_whitelist_pending_udp(p->cb));
-	(void)(*p->cb)(p->pc->cp, p->cb_arg, NETEVENT_TIMEOUT, NULL);
+	if(p->cb) {
+		fptr_ok(fptr_whitelist_pending_udp(p->cb));
+		(void)(*p->cb)(p->pc->cp, p->cb_arg, NETEVENT_TIMEOUT, NULL);
+	}
+	if(outnet->delayclose) {
+		p->cb = NULL;
+		p->timer->callback = &pending_udp_timer_delay_cb;
+		comm_timer_set(p->timer, &outnet->delay_tv);
+		return;
+	}
 	portcomm_loweruse(outnet, p->pc);
 	pending_delete(outnet, p);
 	outnet_send_wait_udp(outnet);
@@ -561,7 +584,7 @@ outside_network_create(struct comm_base *base, size_t bufsize,
 	struct ub_randstate* rnd, int use_caps_for_id, int* availports, 
 	int numavailports, size_t unwanted_threshold,
 	void (*unwanted_action)(void*), void* unwanted_param, int do_udp,
-	void* sslctx)
+	void* sslctx, int delayclose)
 {
 	struct outside_network* outnet = (struct outside_network*)
 		calloc(1, sizeof(struct outside_network));
@@ -583,6 +606,13 @@ outside_network_create(struct comm_base *base, size_t bufsize,
 	outnet->unwanted_param = unwanted_param;
 	outnet->use_caps_for_id = use_caps_for_id;
 	outnet->do_udp = do_udp;
+#ifndef S_SPLINT_S
+	if(delayclose) {
+		outnet->delayclose = 1;
+		outnet->delay_tv.tv_sec = delayclose/1000;
+		outnet->delay_tv.tv_usec = (delayclose%1000)*1000;
+	}
+#endif
 	if(numavailports == 0) {
 		log_err("no outgoing ports available");
 		outside_network_delete(outnet);

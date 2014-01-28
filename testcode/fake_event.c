@@ -900,7 +900,8 @@ outside_network_create(struct comm_base* base, size_t bufsize,
 	int ATTR_UNUSED(use_caps_for_id), int* ATTR_UNUSED(availports),
 	int ATTR_UNUSED(numavailports), size_t ATTR_UNUSED(unwanted_threshold),
 	void (*unwanted_action)(void*), void* ATTR_UNUSED(unwanted_param),
-	int ATTR_UNUSED(do_udp), void* ATTR_UNUSED(sslctx))
+	int ATTR_UNUSED(do_udp), void* ATTR_UNUSED(sslctx),
+	int ATTR_UNUSED(delayclose))
 {
 	struct replay_runtime* runtime = (struct replay_runtime*)base;
 	struct outside_network* outnet =  calloc(1, 
@@ -1225,6 +1226,11 @@ int outnet_tcp_cb(struct comm_point* ATTR_UNUSED(c),
 }
 
 void pending_udp_timer_cb(void *ATTR_UNUSED(arg))
+{
+	log_assert(0);
+}
+
+void pending_udp_timer_delay_cb(void *ATTR_UNUSED(arg))
 {
 	log_assert(0);
 }

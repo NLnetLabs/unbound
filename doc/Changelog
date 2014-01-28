@@ -2,6 +2,10 @@
 	- iana portlist updated.
 	- iana portlist test updated so it does not touch the source
 	  if there are no changes.
+	- delay-close: msec option that delays closing ports for which
+	  the UDP reply has timed out.  Keeps the port open, only accepts
+	  the correct reply.  This correct reply is not used, but the port
+	  is open so that no port-denied ICMPs are generated.
 
 27 January 2014: Wouter
 	- reuseport is attempted, then fallback to without on failure.

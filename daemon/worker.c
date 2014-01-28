@@ -1156,7 +1156,7 @@ worker_init(struct worker* worker, struct config_file *cfg,
 		worker->daemon->env->infra_cache, worker->rndstate,
 		cfg->use_caps_bits_for_id, worker->ports, worker->numports,
 		cfg->unwanted_threshold, &worker_alloc_cleanup, worker,
-		cfg->do_udp, worker->daemon->connect_sslctx);
+		cfg->do_udp, worker->daemon->connect_sslctx, cfg->delay_close);
 	if(!worker->back) {
 		log_err("could not create outgoing sockets");
 		worker_delete(worker);

@@ -95,6 +95,10 @@ struct outside_network {
 	struct port_comm* unused_fds;
 	/** if udp is done */
 	int do_udp;
+	/** if udp is delay-closed (delayed answers do not meet closed port)*/
+	int delayclose;
+	/** timeout for delayclose */
+	struct timeval delay_tv;
 
 	/** array of outgoing IP4 interfaces */
 	struct port_if* ip4_ifs;
@@ -377,6 +381,8 @@ struct serviced_query {
  * @param unwanted_param: user parameter to action.
  * @param do_udp: if udp is done.
  * @param sslctx: context to create outgoing connections with (if enabled).
+ * @param delayclose: if not0, udp sockets are delayed before timeout closure.
+ * 	msec to wait on timeouted udp sockets.
  * @return: the new structure (with no pending answers) or NULL on error.
  */
 struct outside_network* outside_network_create(struct comm_base* base,
@@ -385,7 +391,7 @@ struct outside_network* outside_network_create(struct comm_base* base,
 	struct ub_randstate* rnd, int use_caps_for_id, int* availports, 
 	int numavailports, size_t unwanted_threshold,
 	void (*unwanted_action)(void*), void* unwanted_param, int do_udp,
-	void* sslctx);
+	void* sslctx, int delayclose);
 
 /**
  * Delete outside_network structure.
@@ -515,6 +521,9 @@ int outnet_tcp_cb(struct comm_point* c, void* arg, int error,
 
 /** callback for udp timeout */
 void pending_udp_timer_cb(void *arg);
+
+/** callback for udp delay for timeout */
+void pending_udp_timer_delay_cb(void *arg);
 
 /** callback for outgoing TCP timer event */
 void outnet_tcptimer(void* arg);

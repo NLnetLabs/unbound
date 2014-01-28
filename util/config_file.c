@@ -138,6 +138,7 @@ config_create(void)
 	cfg->prefetch_key = 0;
 	cfg->infra_cache_slabs = 4;
 	cfg->infra_cache_numhosts = 10000;
+	cfg->delay_close = 0;
 	if(!(cfg->outgoing_avail_ports = (int*)calloc(65536, sizeof(int))))
 		goto error_exit;
 	init_outgoing_availports(cfg->outgoing_avail_ports, 65536);
@@ -378,6 +379,7 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	else S_NUMBER_OR_ZERO("infra-host-ttl:", host_ttl)
 	else S_POW2("infra-cache-slabs:", infra_cache_slabs)
 	else S_SIZET_NONZERO("infra-cache-numhosts:", infra_cache_numhosts)
+	else S_NUMBER_OR_ZERO("delay-close:", delay_close)
 	else S_STR("chroot:", chrootdir)
 	else S_STR("username:", username)
 	else S_STR("directory:", directory)
@@ -622,6 +624,7 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_DEC(opt, "infra-host-ttl", host_ttl)
 	else O_DEC(opt, "infra-cache-slabs", infra_cache_slabs)
 	else O_MEM(opt, "infra-cache-numhosts", infra_cache_numhosts)
+	else O_UNS(opt, "delay-close", delay_close)
 	else O_YNO(opt, "do-ip4", do_ip4)
 	else O_YNO(opt, "do-ip6", do_ip6)
 	else O_YNO(opt, "do-udp", do_udp)

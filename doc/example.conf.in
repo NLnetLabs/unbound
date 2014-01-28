@@ -114,6 +114,9 @@ server:
 
 	# if very busy, 50% queries run to completion, 50% get timeout in msec
 	# jostle-timeout: 200
+	
+	# msec to wait before close of port on timeout UDP. 0 disables.
+	# delay-close: 0
 
 	# the amount of memory to use for the RRset cache.
 	# plain value in bytes or you can append k, m or G. default is "4Mb". 
