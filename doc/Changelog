@@ -1,3 +1,7 @@
+30 January 2014: Wouter
+	- delay-close does not act if there are udp-wait queries, so that
+	  it does not make a socketdrain DoS easier.
+
 28 January 2014: Wouter
 	- iana portlist updated.
 	- iana portlist test updated so it does not touch the source

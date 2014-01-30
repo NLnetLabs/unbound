@@ -522,7 +522,11 @@ pending_udp_timer_cb(void *arg)
 		fptr_ok(fptr_whitelist_pending_udp(p->cb));
 		(void)(*p->cb)(p->pc->cp, p->cb_arg, NETEVENT_TIMEOUT, NULL);
 	}
-	if(outnet->delayclose) {
+	/* if delayclose, keep port open for a longer time.
+	 * But if the udpwaitlist exists, then we are struggling to
+	 * keep up with demand for sockets, so do not wait, but service
+	 * the customer (customer service more important than portICMPs) */
+	if(outnet->delayclose && !outnet->udp_wait_first) {
 		p->cb = NULL;
 		p->timer->callback = &pending_udp_timer_delay_cb;
 		comm_timer_set(p->timer, &outnet->delay_tv);
