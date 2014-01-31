@@ -129,13 +129,13 @@ static sldns_lookup_table sldns_wireparse_errors_data[] = {
 	{ LDNS_WIREPARSE_ERR_CERT_BAD_ALGORITHM, "Bad algorithm type for CERT record" },
 	{ LDNS_WIREPARSE_ERR_SYNTAX_TIME, "Conversion error, time encoding expected" },
 	{ LDNS_WIREPARSE_ERR_SYNTAX_PERIOD, "Conversion error, time period encoding expected" },
-	{ LDNS_WIREPARSE_ERR_SYNTAX_ILNP64, "Conversion error, 4 colon seperated hex numbers expected" },
+	{ LDNS_WIREPARSE_ERR_SYNTAX_ILNP64, "Conversion error, 4 colon separated hex numbers expected" },
 	{ LDNS_WIREPARSE_ERR_SYNTAX_EUI48,
 		"Conversion error, 6 two character hex numbers "
-		"seperated by dashes expected (i.e. xx-xx-xx-xx-xx-xx" },
+		"separated by dashes expected (i.e. xx-xx-xx-xx-xx-xx" },
 	{ LDNS_WIREPARSE_ERR_SYNTAX_EUI64,
 		"Conversion error, 8 two character hex numbers "
-		"seperated by dashes expected (i.e. xx-xx-xx-xx-xx-xx-xx-xx" },
+		"separated by dashes expected (i.e. xx-xx-xx-xx-xx-xx-xx-xx" },
 	{ LDNS_WIREPARSE_ERR_SYNTAX_TAG,
 		"Conversion error, a non-zero sequence of US-ASCII letters "
 		"and numbers in lower case expected" },
@@ -1477,7 +1477,6 @@ static int sldns_wire2str_ipseckey_scan_internal(uint8_t** d, size_t* dl,
 {
 	/* http://www.ietf.org/internet-drafts/draft-ietf-ipseckey-rr-12.txt*/
 	uint8_t precedence, gateway_type, algorithm;
-	size_t public_key_size;
 	int w = 0;
 
 	if(*dl < 3) return -1;
@@ -1510,12 +1509,8 @@ static int sldns_wire2str_ipseckey_scan_internal(uint8_t** d, size_t* dl,
 
 	if(*dl < 1)
 		return -1;
-	public_key_size = (*d)[0];
-	if(*dl < public_key_size+1)
-		return -1;
-	(*d)++;
-	(*dl)--;
-	w += sldns_wire2str_b64_scan_num(d, dl, s, sl, public_key_size);
+	w += sldns_str_print(s, sl, " ");
+	w += sldns_wire2str_b64_scan_num(d, dl, s, sl, *dl);
 	return w;
 }
 

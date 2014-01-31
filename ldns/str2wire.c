@@ -33,7 +33,7 @@
 
 /*
  * No special care is taken, all dots are translated into
- * label seperators.
+ * label separators.
  * @param rel: true if the domain is not absolute (not terminated in .).
  * 	The output is then still terminated with a '0' rootlabel.
  */
@@ -997,6 +997,12 @@ int sldns_str2wire_apl_buf(const char* str, uint8_t* rd, size_t* len)
 	uint8_t prefix;
 	size_t i;
 
+	if(strlen(my_str) == 0) {
+		/* empty APL element, no data, no string */
+		*len = 0;
+		return LDNS_WIREPARSE_ERR_OK;
+	}
+
 	/* [!]afi:address/prefix */
 	if (strlen(my_str) < 2
 			|| strchr(my_str, ':') == NULL
@@ -1021,6 +1027,7 @@ int sldns_str2wire_apl_buf(const char* str, uint8_t* rd, size_t* len)
 	if(ip_str_len+1 > sizeof(my_ip_str))
 		return LDNS_WIREPARSE_ERR_INVALID_STR;
 	(void)strlcpy(my_ip_str, my_str, sizeof(my_ip_str));
+	my_ip_str[ip_str_len] = 0;
 
 	if (family == 1) {
 		/* ipv4 */
@@ -1727,9 +1734,8 @@ int sldns_str2wire_ilnp64_buf(const char* str, uint8_t* rd, size_t* len)
 	if (sscanf(str, "%4x:%4x:%4x:%4x%n", &a, &b, &c, &d, &l) != 4 ||
 			l != (int)strlen(str) || /* more data to read */
 			strpbrk(str, "+-")       /* signed hexes */
-			) {
+			)
 		return LDNS_WIREPARSE_ERR_SYNTAX_ILNP64;
-	} 
 	shorts[0] = htons(a);
 	shorts[1] = htons(b);
 	shorts[2] = htons(c);
@@ -1748,11 +1754,8 @@ int sldns_str2wire_eui48_buf(const char* str, uint8_t* rd, size_t* len)
 		return LDNS_WIREPARSE_ERR_BUFFER_TOO_SMALL;
 	if (sscanf(str, "%2x-%2x-%2x-%2x-%2x-%2x%n",
 			&a, &b, &c, &d, &e, &f, &l) != 6 ||
-			l != (int)strlen(str) || /* more data to read */
-			strpbrk(str, "+-")       /* signed hexes */
-			) {
+			l != (int)strlen(str))
 		return LDNS_WIREPARSE_ERR_SYNTAX_EUI48;
-	} 
 	rd[0] = a;
 	rd[1] = b;
 	rd[2] = c;
@@ -1772,11 +1775,8 @@ int sldns_str2wire_eui64_buf(const char* str, uint8_t* rd, size_t* len)
 		return LDNS_WIREPARSE_ERR_BUFFER_TOO_SMALL;
 	if (sscanf(str, "%2x-%2x-%2x-%2x-%2x-%2x-%2x-%2x%n",
 			&a, &b, &c, &d, &e, &f, &g, &h, &l) != 8 ||
-			l != (int)strlen(str) || /* more data to read */
-			strpbrk(str, "+-")       /* signed hexes */
-			) {
+			l != (int)strlen(str))
 		return LDNS_WIREPARSE_ERR_SYNTAX_EUI64;
-	}
 	rd[0] = a;
 	rd[1] = b;
 	rd[2] = c;

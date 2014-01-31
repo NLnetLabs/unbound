@@ -6,6 +6,8 @@
 	- fixup warning in unitldns
 	- fixup WKS and rdata type service to print unsigned because strings
 	  are not portable; they cannot be read (for sure) on other computers.
+	- fixup type EUI48 and EUI64, type APL and type IPSECKEY in string
+	  parse sldns.
 
 30 January 2014: Wouter
 	- delay-close does not act if there are udp-wait queries, so that

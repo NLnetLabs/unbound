@@ -235,13 +235,13 @@ static const sldns_rdf_type type_lp_wireformat[] = {
 	LDNS_RDF_TYPE_INT16,
 	LDNS_RDF_TYPE_DNAME
 };
-#ifdef DRAFT_RRTYPES
 static const sldns_rdf_type type_eui48_wireformat[] = {
 	LDNS_RDF_TYPE_EUI48
 };
 static const sldns_rdf_type type_eui64_wireformat[] = {
 	LDNS_RDF_TYPE_EUI64
 };
+#ifdef DRAFT_RRTYPES
 static const sldns_rdf_type type_uri_wireformat[] = {
 	LDNS_RDF_TYPE_INT16,
 	LDNS_RDF_TYPE_INT16,
@@ -378,7 +378,7 @@ static sldns_rr_descriptor rdata_field_descriptors[] = {
 	 * directly follow the RDF types enumerated in the array pointed to
 	 * by _wireformat. For more info see type_hip_hostformat declaration.
 	 */
-	{LDNS_RR_TYPE_HIP, "HIP", 3, 3, type_hip_hostformat, LDNS_RDF_TYPE_DNAME, LDNS_RR_NO_COMPRESS, 0 },
+	{LDNS_RR_TYPE_HIP, "HIP", 3, 3, type_hip_hostformat, LDNS_RDF_TYPE_NONE, LDNS_RR_NO_COMPRESS, 0 },
 
 #ifdef DRAFT_RRTYPES
 	/* 56 */
@@ -460,15 +460,10 @@ static sldns_rr_descriptor rdata_field_descriptors[] = {
 	/* 107 */
 	{LDNS_RR_TYPE_LP, "LP", 2, 2, type_lp_wireformat, LDNS_RDF_TYPE_NONE, LDNS_RR_NO_COMPRESS, 1 },
 
-#ifdef DRAFT_RRTYPES
 	/* 108 */
 	{LDNS_RR_TYPE_EUI48, "EUI48", 1, 1, type_eui48_wireformat, LDNS_RDF_TYPE_NONE, LDNS_RR_NO_COMPRESS, 0 },
 	/* 109 */
 	{LDNS_RR_TYPE_EUI64, "EUI64", 1, 1, type_eui64_wireformat, LDNS_RDF_TYPE_NONE, LDNS_RR_NO_COMPRESS, 0 },
-#else
-{LDNS_RR_TYPE_NULL, "TYPE108", 1, 1, type_0_wireformat, LDNS_RDF_TYPE_NONE, LDNS_RR_NO_COMPRESS, 0 },
-{LDNS_RR_TYPE_NULL, "TYPE109", 1, 1, type_0_wireformat, LDNS_RDF_TYPE_NONE, LDNS_RR_NO_COMPRESS, 0 },
-#endif
 
 {LDNS_RR_TYPE_NULL, "TYPE110", 1, 1, type_0_wireformat, LDNS_RDF_TYPE_NONE, LDNS_RR_NO_COMPRESS, 0 },
 {LDNS_RR_TYPE_NULL, "TYPE111", 1, 1, type_0_wireformat, LDNS_RDF_TYPE_NONE, LDNS_RR_NO_COMPRESS, 0 },

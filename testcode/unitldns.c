@@ -147,7 +147,7 @@ rr_test_file(const char* input, const char* check)
 	inf = fopen(input, "r");
 	if(!inf) fatal_exit("cannot open %s: %s", input, strerror(errno));
 	chf = fopen(check, "r");
-	if(!chf) fatal_exit("cannot open %s: %s", input, strerror(errno));
+	if(!chf) fatal_exit("cannot open %s: %s", check, strerror(errno));
 
 	of = NULL;
 	if(0) {
@@ -164,9 +164,9 @@ rr_test_file(const char* input, const char* check)
 			continue;
 		/* read check lines */
 		if(!fgets(wire_chk, (int)bufs, chf))
-			printf("%s too short", check);
+			printf("%s too short\n", check);
 		if(!fgets(txt_chk, (int)bufs, chf))
-			printf("%s too short", check);
+			printf("%s too short\n", check);
 		chlineno += 2;
 		if(vbmp) printf("%s:%d %s", check, chlineno-1, wire_chk);
 		if(vbmp) printf("%s:%d %s", check, chlineno, txt_chk);
@@ -198,6 +198,8 @@ rr_tests(void)
 	rr_test_file("testdata/test_ldnsrr.1", "testdata/test_ldnsrr.c1");
 	rr_test_file("testdata/test_ldnsrr.2", "testdata/test_ldnsrr.c2");
 	rr_test_file("testdata/test_ldnsrr.3", "testdata/test_ldnsrr.c3");
+	rr_test_file("testdata/test_ldnsrr.4", "testdata/test_ldnsrr.c4");
+	rr_test_file("testdata/test_ldnsrr.5", "testdata/test_ldnsrr.c5");
 }
 
 void
