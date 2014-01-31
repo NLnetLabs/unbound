@@ -153,7 +153,7 @@ rr_test_file(const char* input, const char* check)
 	if(0) {
 		/* debug: create check file */
 		of = fopen("outputfile", "w");
-		if(!of) fatal_exit("cannot write output: %s", input, strerror(errno));
+		if(!of) fatal_exit("cannot write output: %s", strerror(errno));
 	}
 
 	while(fgets(txt_in, (int)bufs, inf)) {
