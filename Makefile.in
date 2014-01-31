@@ -134,10 +134,10 @@ str2wire.lo
 UNITTEST_SRC=testcode/unitanchor.c testcode/unitdname.c \
 testcode/unitlruhash.c testcode/unitmain.c testcode/unitmsgparse.c \
 testcode/unitneg.c testcode/unitregional.c testcode/unitslabhash.c \
-testcode/unitverify.c testcode/readhex.c testcode/testpkts.c
+testcode/unitverify.c testcode/readhex.c testcode/testpkts.c testcode/unitldns.c
 UNITTEST_OBJ=unitanchor.lo unitdname.lo unitlruhash.lo unitmain.lo \
 unitmsgparse.lo unitneg.lo unitregional.lo unitslabhash.lo unitverify.lo \
-readhex.lo testpkts.lo
+readhex.lo testpkts.lo unitldns.lo
 UNITTEST_OBJ_LINK=$(UNITTEST_OBJ) worker_cb.lo $(COMMON_OBJ) $(SLDNS_OBJ) \
 $(COMPAT_OBJ)
 DAEMON_SRC=daemon/acl_list.c daemon/cachedump.c daemon/daemon.c \
@@ -900,6 +900,8 @@ readhex.lo readhex.o: $(srcdir)/testcode/readhex.c config.h $(srcdir)/testcode/r
 testpkts.lo testpkts.o: $(srcdir)/testcode/testpkts.c config.h $(srcdir)/testcode/testpkts.h \
  $(srcdir)/util/net_help.h $(srcdir)/util/log.h $(srcdir)/ldns/sbuffer.h $(srcdir)/ldns/rrdef.h $(srcdir)/ldns/pkthdr.h \
  $(srcdir)/ldns/str2wire.h $(srcdir)/ldns/wire2str.h
+unitldns.lo unitldns.o: $(srcdir)/testcode/unitldns.c config.h $(srcdir)/util/log.h $(srcdir)/testcode/unitmain.h \
+ $(srcdir)/ldns/sbuffer.h $(srcdir)/ldns/str2wire.h $(srcdir)/ldns/rrdef.h $(srcdir)/ldns/wire2str.h
 acl_list.lo acl_list.o: $(srcdir)/daemon/acl_list.c config.h $(srcdir)/daemon/acl_list.h \
  $(srcdir)/util/storage/dnstree.h $(srcdir)/util/rbtree.h $(srcdir)/util/regional.h $(srcdir)/util/log.h \
  $(srcdir)/util/config_file.h $(srcdir)/util/net_help.h
@@ -1117,7 +1119,8 @@ pythonmod_utils.lo pythonmod_utils.o: $(srcdir)/pythonmod/pythonmod_utils.c conf
  $(srcdir)/util/storage/lruhash.h $(srcdir)/util/locks.h $(srcdir)/util/log.h $(srcdir)/util/data/msgreply.h \
  $(srcdir)/util/data/packed_rrset.h $(srcdir)/util/data/msgparse.h $(srcdir)/ldns/pkthdr.h $(srcdir)/ldns/rrdef.h \
  $(srcdir)/util/netevent.h $(srcdir)/util/net_help.h $(srcdir)/services/cache/dns.h \
- $(srcdir)/services/cache/rrset.h $(srcdir)/util/storage/slabhash.h $(srcdir)/util/regional.h
+ $(srcdir)/services/cache/rrset.h $(srcdir)/util/storage/slabhash.h $(srcdir)/util/regional.h \
+ $(srcdir)/ldns/sbuffer.h
 win_svc.lo win_svc.o: $(srcdir)/winrc/win_svc.c config.h $(srcdir)/winrc/win_svc.h $(srcdir)/winrc/w_inst.h \
  $(srcdir)/daemon/daemon.h $(srcdir)/util/locks.h $(srcdir)/util/log.h $(srcdir)/util/alloc.h $(srcdir)/services/modstack.h \
  $(srcdir)/daemon/worker.h $(srcdir)/util/netevent.h $(srcdir)/util/data/msgreply.h \
@@ -1130,7 +1133,8 @@ unbound-service-install.lo unbound-service-install.o: $(srcdir)/winrc/unbound-se
  $(srcdir)/winrc/w_inst.h
 unbound-service-remove.lo unbound-service-remove.o: $(srcdir)/winrc/unbound-service-remove.c config.h \
  $(srcdir)/winrc/w_inst.h
-anchor-update.lo anchor-update.o: $(srcdir)/winrc/anchor-update.c config.h $(srcdir)/libunbound/unbound.h
+anchor-update.lo anchor-update.o: $(srcdir)/winrc/anchor-update.c config.h $(srcdir)/libunbound/unbound.h \
+ $(srcdir)/ldns/rrdef.h $(srcdir)/ldns/pkthdr.h $(srcdir)/ldns/wire2str.h
 keyraw.lo keyraw.o: $(srcdir)/ldns/keyraw.c config.h $(srcdir)/ldns/keyraw.h \
  $(srcdir)/ldns/rrdef.h \
  

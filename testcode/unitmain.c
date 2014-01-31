@@ -588,6 +588,7 @@ main(int argc, char* argv[])
 	lruhash_test();
 	slabhash_test();
 	infra_test();
+	ldns_test();
 	msgparse_test();
 	checklock_stop();
 	printf("%d checks ok.\n", testcount);

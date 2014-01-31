@@ -403,9 +403,10 @@ rrinternal_spool_hex(char* token, uint8_t* rr, size_t rr_len,
 			rr[rr_cur_len+(*cur_hex_data_size)/2] =
 				(uint8_t)sldns_hexdigit_to_int(*p)*16;
 		} else {
-			rr[rr_cur_len+(*cur_hex_data_size)/2] =
+			rr[rr_cur_len+(*cur_hex_data_size)/2] +=
 				(uint8_t)sldns_hexdigit_to_int(*p);
 		}
+		p++;
 		(*cur_hex_data_size)++;
 	}
 	return LDNS_WIREPARSE_ERR_OK;
@@ -1576,7 +1577,7 @@ int sldns_str2wire_nsap_buf(const char* str, uint8_t* rd, size_t* len)
 			return RET_ERR(LDNS_WIREPARSE_ERR_BUFFER_TOO_SMALL,
 				s-str);
 		if((dlen&1)==0)
-			rd[dlen/2] += sldns_hexdigit_to_int(*s++) * 16;
+			rd[dlen/2] = (uint8_t)sldns_hexdigit_to_int(*s++) * 16;
 		else	rd[dlen/2] += sldns_hexdigit_to_int(*s++);
 		dlen++;
 	}
@@ -1607,7 +1608,7 @@ int sldns_str2wire_atma_buf(const char* str, uint8_t* rd, size_t* len)
 			return RET_ERR(LDNS_WIREPARSE_ERR_BUFFER_TOO_SMALL,
 				s-str);
 		if((dlen&1)==0)
-			rd[dlen/2] += sldns_hexdigit_to_int(*s++) * 16;
+			rd[dlen/2] = (uint8_t)sldns_hexdigit_to_int(*s++) * 16;
 		else	rd[dlen/2] += sldns_hexdigit_to_int(*s++);
 		dlen++;
 	}

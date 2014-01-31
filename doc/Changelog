@@ -1,3 +1,8 @@
+31 January 2014: Wouter
+	- unit test for ldns wire to str and back with zones, root, nlnetlabs
+	  and types.sidnlabs.
+	- Fix for hex to string in unknown, atma and nsap.
+
 30 January 2014: Wouter
 	- delay-close does not act if there are udp-wait queries, so that
 	  it does not make a socketdrain DoS easier.

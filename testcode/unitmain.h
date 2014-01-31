@@ -72,5 +72,7 @@ void verify_test(void);
 void neg_test(void);
 /** unit test for regional allocator functions */
 void regional_test(void);
+/** unit test for ldns functions */
+void ldns_test(void);
 
 #endif /* TESTCODE_UNITMAIN_H */
