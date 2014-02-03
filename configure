@@ -17216,8 +17216,18 @@ large outgoing port ranges.  " "$LINENO" 5
         else
             { $as_echo "$as_me:${as_lineno-$LINENO}: result: found in $thedir" >&5
 $as_echo "found in $thedir" >&6; }
-	    	    if test "$thedir" != "/usr" -a "$thedir" != ""; then
-                LDFLAGS="$LDFLAGS -L$thedir/lib"
+	    	    if test ! -f $thedir/lib/libevent.a -a ! -f $thedir/lib/libevent.so -a -d "$thedir/lib/event2"; then
+		    LDFLAGS="$LDFLAGS -L$thedir/lib/event2"
+
+	if test "x$enable_rpath" = xyes; then
+		if echo "$thedir/lib/event2" | grep "^/" >/dev/null; then
+			RUNTIME_PATH="$RUNTIME_PATH -R$thedir/lib/event2"
+		fi
+	fi
+
+	    else
+		    		    if test "$thedir" != "/usr" -a "$thedir" != ""; then
+			LDFLAGS="$LDFLAGS -L$thedir/lib"
 
 	if test "x$enable_rpath" = xyes; then
 		if echo "$thedir/lib" | grep "^/" >/dev/null; then
@@ -17225,6 +17235,7 @@ $as_echo "found in $thedir" >&6; }
 		fi
 	fi
 
+		    fi
 	    fi
         fi
 	# check for library used by libevent after 1.3c

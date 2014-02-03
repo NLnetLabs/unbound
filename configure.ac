@@ -799,10 +799,16 @@ large outgoing port ranges.  ])
 		fi
         else
             AC_MSG_RESULT(found in $thedir)
-	    dnl assume /usr is in default path, do not add "".
-	    if test "$thedir" != "/usr" -a "$thedir" != ""; then
-                LDFLAGS="$LDFLAGS -L$thedir/lib"
-		ACX_RUNTIME_PATH_ADD([$thedir/lib])
+	    dnl if event2 exists and no event lib in dir itself, use subdir
+	    if test ! -f $thedir/lib/libevent.a -a ! -f $thedir/lib/libevent.so -a -d "$thedir/lib/event2"; then
+		    LDFLAGS="$LDFLAGS -L$thedir/lib/event2"
+		    ACX_RUNTIME_PATH_ADD([$thedir/lib/event2])
+	    else
+		    dnl assume /usr is in default path, do not add "".
+		    if test "$thedir" != "/usr" -a "$thedir" != ""; then
+			LDFLAGS="$LDFLAGS -L$thedir/lib"
+			ACX_RUNTIME_PATH_ADD([$thedir/lib])
+		    fi
 	    fi
         fi
 	# check for library used by libevent after 1.3c

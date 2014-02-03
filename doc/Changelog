@@ -1,5 +1,6 @@
 3 February 2014: Wouter
 	- Detect libevent2 install automatically by configure.
+	- Fixup link with lib/event2 subdir.
 
 31 January 2014: Wouter
 	- unit test for ldns wire to str and back with zones, root, nlnetlabs
