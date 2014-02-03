@@ -534,7 +534,7 @@ rrinternal_parse_rdata(sldns_buffer* strbuf, char* token, size_t token_len,
 	const sldns_rr_descriptor *desc = sldns_rr_descript((uint16_t)rr_type);
 	uint16_t r_cnt, r_min, r_max;
 	size_t rr_cur_len = dname_len + 10, pre_data_pos, token_strlen;
-	int was_unknown_rr_format = 0, parens = 0, status, quoted;
+	int was_unknown_rr_format = 0, parens = 0, status, quoted, tokquote;
 	const char* delimiters;
 	sldns_rdf_type rdftype;
 	/* a desc is always returned */
@@ -560,14 +560,49 @@ rrinternal_parse_rdata(sldns_buffer* strbuf, char* token, size_t token_len,
 		}
 
 		pre_data_pos = sldns_buffer_position(strbuf);
-		if(sldns_bget_token_par(strbuf, token, delimiters, token_len,
-			&parens, quoted?NULL:" \t") == -1) {
+		if(sldns_bget_token_par(strbuf, token, quoted?"\"":delimiters,
+			token_len, &parens, quoted?NULL:" \t") == -1) {
 			break;
 		}
-		/* hmmz, rfc3597 specifies that any type can be represented
+		token_strlen = strlen(token);
+		/* check if not quoted yet, and we have encountered quotes */
+		if(!quoted && sldns_rdf_type_maybe_quoted(rdftype) &&
+			token_strlen >= 2 &&
+			(token[0] == '"' || token[0] == '\'') && 
+			(token[token_strlen-1] == '"' || token[token_strlen-1] == '\'')) {
+			/* move token two smaller (quotes) with endnull */
+			memmove(token, token+1, token_strlen-2);
+			token[token_strlen-2] = 0;
+			token_strlen -= 2;
+			quoted = 1;
+			tokquote = 1; /* do not read endquotechar from buffer */
+		} else if(!quoted && sldns_rdf_type_maybe_quoted(rdftype) &&
+			token_strlen >= 2 &&
+			(token[0] == '"' || token[0] == '\'')) {
+			/* got the start quote (remove it) but read remainder
+			 * of quoted string as well into remainder of token */
+			memmove(token, token+1, token_strlen-1);
+			token[token_strlen-1] = 0;
+			token_strlen -= 1;
+			quoted = 1;
+			tokquote = 0;
+			/* rewind buffer over skipped whitespace */
+			while(sldns_buffer_position(strbuf) > 0 &&
+				(sldns_buffer_current(strbuf)[-1] == ' ' ||
+				sldns_buffer_current(strbuf)[-1] == '\t')) {
+				sldns_buffer_skip(strbuf, -1);
+			}
+			if(sldns_bget_token_par(strbuf, token+token_strlen,
+				"\"", token_len-token_strlen,
+				&parens, NULL) == -1) {
+				break;
+			}
+			token_strlen = strlen(token);
+		} else tokquote = 0;
+
+		/* rfc3597 specifies that any type can be represented
 		 * with \# method, which can contain spaces...
 		 * it does specify size though... */
-		token_strlen = strlen(token);
 
 		/* unknown RR data */
 		if(token_strlen>=2 && strncmp(token, "\\#", 2) == 0 &&
@@ -577,7 +612,7 @@ rrinternal_parse_rdata(sldns_buffer* strbuf, char* token, size_t token_len,
 				token_len, rr, rr_len, &rr_cur_len, 
 				pre_data_pos)) != 0)
 				return status;
-		} else {
+		} else if(token_strlen > 0 || quoted) {
 			/* normal RR */
 			if((status=rrinternal_parse_rdf(strbuf, token,
 				token_len, rr, *rr_len, &rr_cur_len, rdftype,
@@ -586,7 +621,7 @@ rrinternal_parse_rdata(sldns_buffer* strbuf, char* token, size_t token_len,
 				return status;
 			}
 		}
-		if(quoted) {
+		if(quoted && !tokquote) {
 			if(sldns_buffer_available(strbuf, 1))
 				sldns_buffer_skip(strbuf, 1);
 			else 	break;

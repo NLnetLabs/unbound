@@ -113,3 +113,9 @@ eui64		IN EUI64 00-00-5e-ef-00-00-00-2a
 ;error.eui64	IN EUI64 00-00-5e-ef-00-00-00-2a-ef ; too long
 ;error.eui64	IN EUI64 00-00-5e-ef-r0-00-00-2a ; non-hex
 
+; Tests for Unbound
+; the text strings should be identical, with () and without (), parse test.
+txt1	TXT	"a" "bb" "ccc"
+txt2	TXT	( "a" "bb" "ccc" )
+txt3	TXT	"a b" "bb" " cc c " " "
+txt4	TXT	( "a b" "bb" " cc c " " " )
