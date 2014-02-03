@@ -1418,11 +1418,13 @@ int sldns_str2wire_loc_buf(const char* str, uint8_t* rd, size_t* len)
 	if (isdigit((int) *my_str)) {
 		s = strtod(my_str, &my_str);
 	}
-north:
+
+	/* skip blanks before norterness */
 	while (isblank((int) *my_str)) {
 		my_str++;
 	}
 
+north:
 	if (*my_str == 'N') {
 		northerness = 1;
 	} else if (*my_str == 'S') {
@@ -1475,11 +1477,12 @@ north:
 		s = strtod(my_str, &my_str);
 	}
 
-east:
+	/* skip blanks before easterness */
 	while (isblank(*my_str)) {
 		my_str++;
 	}
 
+east:
 	if (*my_str == 'E') {
 		easterness = 1;
 	} else if (*my_str == 'W') {
