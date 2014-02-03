@@ -1380,6 +1380,7 @@ int sldns_str2wire_loc_buf(const char* str, uint8_t* rd, size_t* len)
 
 	uint32_t equator = (uint32_t)1<<31; /* 2**31 */
 
+	/* only support version 0 */
 	uint32_t h = 0;
 	uint32_t m = 0;
 	uint8_t size_b = 1, size_e = 2;
@@ -1392,7 +1393,6 @@ int sldns_str2wire_loc_buf(const char* str, uint8_t* rd, size_t* len)
 
 	char *my_str = (char *) str;
 
-	/* only support version 0 */
 	if (isdigit((int) *my_str)) {
 		h = (uint32_t) strtol(my_str, &my_str, 10);
 	} else {
@@ -1528,7 +1528,6 @@ east:
 	if(*len < 16)
 		return LDNS_WIREPARSE_ERR_BUFFER_TOO_SMALL;
 	rd[0] = 0;
-	rd[1] = 0;
 	rd[1] = ((size_b << 4) & 0xf0) | (size_e & 0x0f);
 	rd[2] = ((horiz_pre_b << 4) & 0xf0) | (horiz_pre_e & 0x0f);
 	rd[3] = ((vert_pre_b << 4) & 0xf0) | (vert_pre_e & 0x0f);
