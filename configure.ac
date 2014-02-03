@@ -763,7 +763,7 @@ if test x_$withval = x_yes -o x_$withval != x_no; then
         fi
         for dir in $withval; do
             thedir="$dir"
-            if test -f "$dir/include/event.h"; then
+            if test -f "$dir/include/event.h" -o -f "$dir/include/event2/event.h"; then
                 found_libevent="yes"
 		dnl assume /usr is in default path.
 		if test "$thedir" != "/usr"; then

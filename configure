@@ -17179,7 +17179,7 @@ $as_echo_n "checking for libevent... " >&6; }
         fi
         for dir in $withval; do
             thedir="$dir"
-            if test -f "$dir/include/event.h"; then
+            if test -f "$dir/include/event.h" -o -f "$dir/include/event2/event.h"; then
                 found_libevent="yes"
 				if test "$thedir" != "/usr"; then
                     CPPFLAGS="$CPPFLAGS -I$thedir/include"
