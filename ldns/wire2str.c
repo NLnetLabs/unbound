@@ -1358,7 +1358,7 @@ int sldns_wire2str_loc_scan(uint8_t** d, size_t* dl, char** str, size_t* sl)
 	m = latitude / (1000 * 60);
 	latitude = latitude % (1000 * 60);
 	s = (double) latitude / 1000.0;
-	w += sldns_str_print(str, sl, "%02u %02u %0.3f %c ",
+	w += sldns_str_print(str, sl, "%02u %02u %06.3f %c ",
 		h, m, s, northerness);
 
 	if (longitude > equator) {
@@ -1373,7 +1373,7 @@ int sldns_wire2str_loc_scan(uint8_t** d, size_t* dl, char** str, size_t* sl)
 	m = longitude / (1000 * 60);
 	longitude = longitude % (1000 * 60);
 	s = (double) longitude / (1000.0);
-	w += sldns_str_print(str, sl, "%02u %02u %0.3f %c ",
+	w += sldns_str_print(str, sl, "%02u %02u %06.3f %c ",
 		h, m, s, easterness);
 
 	s = ((double) altitude) / 100;
