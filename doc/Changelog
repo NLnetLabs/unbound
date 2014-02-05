@@ -1,3 +1,6 @@
+5 February 2014: Wouter
+	- Fix sldns parse tests on osx.
+
 3 February 2014: Wouter
 	- Detect libevent2 install automatically by configure.
 	- Fixup link with lib/event2 subdir.
