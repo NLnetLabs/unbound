@@ -585,6 +585,29 @@ sldns_parse_rdf_token(sldns_buffer* strbuf, char* token, size_t token_len,
 	return 1;
 }
 
+/** Add space and one more rdf token onto the existing token string. */
+static int
+sldns_affix_token(sldns_buffer* strbuf, char* token, size_t* token_len,
+	int* quoted, int* parens, int* tokquote, size_t* pre_data_pos,
+	const char* delimiters, sldns_rdf_type rdftype, size_t* token_strlen)
+{
+	size_t addlen = *token_len - *token_strlen;
+	size_t addstrlen = 0;
+
+	/* add space */
+	if(addlen < 1) return 0;
+	token[*token_strlen] = ' ';
+	token[++(*token_strlen)] = 0;
+
+	/* read another token */
+	addlen = *token_len - *token_strlen;
+	if(!sldns_parse_rdf_token(strbuf, token+*token_strlen, addlen, quoted,
+		parens, tokquote, pre_data_pos, delimiters, rdftype,
+		&addstrlen))
+		return 0;
+	(*token_strlen) += addstrlen;
+	return 1;
+}
 
 /** parse rdata from string into rr buffer(-remainder after dname). */
 static int
@@ -634,34 +657,16 @@ rrinternal_parse_rdata(sldns_buffer* strbuf, char* token, size_t token_len,
 		} else if(token_strlen > 0 || quoted) {
 			if(rdftype == LDNS_RDF_TYPE_HIP) {
 				/* affix the HIT and PK fields, with a space */
-				size_t addlen = token_len - token_strlen;
-				size_t addstrlen = 0;
-				/* add space */
-				if(addlen < 1) break;
-				token[token_strlen] = ' ';
-				token[++token_strlen] = 0;
-				/* read another token */
-				addlen = token_len - token_strlen;
-				if(!sldns_parse_rdf_token(strbuf,
-					token+token_strlen, addlen, &quoted,
-					&parens, &tokquote, &pre_data_pos,
-					delimiters, rdftype, &addstrlen))
+				if(!sldns_affix_token(strbuf, token,
+					&token_len, &quoted, &parens,
+					&tokquote, &pre_data_pos, delimiters,
+					rdftype, &token_strlen))
 					break;
-				token_strlen += addstrlen;
-				/* add space */
-				addlen = token_len - token_strlen;
-				if(addlen < 1) break;
-				token[token_strlen] = ' ';
-				token[++token_strlen] = 0;
-				/* read another token */
-				addlen = token_len - token_strlen;
-				addstrlen = 0;
-				if(!sldns_parse_rdf_token(strbuf,
-					token+token_strlen, addlen, &quoted,
-					&parens, &tokquote, &pre_data_pos,
-					delimiters, rdftype, &addstrlen))
+				if(!sldns_affix_token(strbuf, token,
+					&token_len, &quoted, &parens,
+					&tokquote, &pre_data_pos, delimiters,
+					rdftype, &token_strlen))
 					break;
-				token_strlen += addstrlen;
 			}
 
 			/* normal RR */
