@@ -1413,6 +1413,10 @@ int sldns_wire2str_wks_scan(uint8_t** d, size_t* dl, char** s, size_t* sl)
 	uint8_t protocol_nr;
 	int bit, port, w = 0;
 	size_t i;
+	/* we cannot print with strings because they
+	 * are not portable, the presentation format may
+	 * not be able to be read in on another computer.  */
+	int print_symbols = 0;
 
 	/* protocol */
 	if(*dl < 1) return -1;
@@ -1435,15 +1439,11 @@ int sldns_wire2str_wks_scan(uint8_t** d, size_t* dl, char** s, size_t* sl)
 				continue;
 			port = (int)i*8 + bit;
 
-			/* we cannot print with strings because they
-			 * are not portable, the presentation format may
-			 * not be able to be read in on another computer.
-			 */
-			service = NULL;
-			/*
-			service = getservbyport((int)htons((uint16_t)port),
-				proto_name);
-			*/
+			if(!print_symbols)
+				service = NULL;
+			else
+				service = getservbyport(
+					(int)htons((uint16_t)port), proto_name);
 			if(service && service->s_name)
 				w += sldns_str_print(s, sl, " %s",
 					service->s_name);
