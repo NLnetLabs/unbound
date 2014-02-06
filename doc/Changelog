@@ -1,5 +1,6 @@
 6 February 2014: Wouter
 	- sldns has type HIP.
+	- code documentation on the module interface.
 
 5 February 2014: Wouter
 	- Fix sldns parse tests on osx.
