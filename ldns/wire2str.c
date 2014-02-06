@@ -946,6 +946,8 @@ int sldns_wire2str_rdf_scan(uint8_t** d, size_t* dlen, char** s, size_t* slen,
 	case LDNS_RDF_TYPE_IPSECKEY:
 		return sldns_wire2str_ipseckey_scan(d, dlen, s, slen, pkt,
 			pktlen);
+	case LDNS_RDF_TYPE_HIP:
+		return sldns_wire2str_hip_scan(d, dlen, s, slen);
 	case LDNS_RDF_TYPE_INT16_DATA:
 		return sldns_wire2str_int16_data_scan(d, dlen, s, slen);
 	case LDNS_RDF_TYPE_NSEC3_NEXT_OWNER:
@@ -1528,6 +1530,31 @@ int sldns_wire2str_ipseckey_scan(uint8_t** d, size_t* dl, char** s, size_t* sl,
 		*sl = osl;
 		return -1;
 	}
+	return w;
+}
+
+int sldns_wire2str_hip_scan(uint8_t** d, size_t* dl, char** s, size_t* sl)
+{
+	int w;
+	uint8_t algo, hitlen;
+	uint16_t pklen;
+
+	/* read lengths */
+	if(*dl < 4)
+		return -1;
+	hitlen = (*d)[0];
+	algo = (*d)[1];
+	pklen = sldns_read_uint16((*d)+2);
+	if(*dl < (size_t)4 + (size_t)hitlen + (size_t)pklen)
+		return -1;
+
+	/* write: algo hit pubkey */
+	w = sldns_str_print(s, sl, "%u ", (unsigned)algo);
+	w += print_hex_buf(s, sl, (*d)+4, hitlen);
+	w += sldns_str_print(s, sl, " ");
+	(*d)+=4+hitlen;
+	(*dl)-= (4+hitlen);
+	w += sldns_wire2str_b64_scan_num(d, dl, s, sl, pklen);
 	return w;
 }
 

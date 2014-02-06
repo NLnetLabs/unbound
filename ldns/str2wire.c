@@ -525,6 +525,67 @@ rrinternal_parse_rdf(sldns_buffer* strbuf, char* token, size_t token_len,
 	return LDNS_WIREPARSE_ERR_OK;
 }
 
+/**
+ * Parse one rdf token.  Takes care of quotes and parenthesis.
+ */
+static int
+sldns_parse_rdf_token(sldns_buffer* strbuf, char* token, size_t token_len,
+	int* quoted, int* parens, int* tokquote, size_t* pre_data_pos,
+	const char* delimiters, sldns_rdf_type rdftype, size_t* token_strlen)
+{
+	size_t slen;
+
+	/* skip spaces */
+	while(sldns_buffer_remaining(strbuf) > 0 && !*quoted &&
+		*(sldns_buffer_current(strbuf)) == ' ') {
+		sldns_buffer_skip(strbuf, 1);
+	}
+
+	*pre_data_pos = sldns_buffer_position(strbuf);
+	if(sldns_bget_token_par(strbuf, token, (*quoted)?"\"":delimiters,
+		token_len, parens, (*quoted)?NULL:" \t") == -1) {
+		return 0;
+	}
+	slen = strlen(token);
+	/* check if not quoted yet, and we have encountered quotes */
+	if(!*quoted && sldns_rdf_type_maybe_quoted(rdftype) &&
+		slen >= 2 &&
+		(token[0] == '"' || token[0] == '\'') && 
+		(token[slen-1] == '"' || token[slen-1] == '\'')) {
+		/* move token two smaller (quotes) with endnull */
+		memmove(token, token+1, slen-2);
+		token[slen-2] = 0;
+		slen -= 2;
+		*quoted = 1;
+		*tokquote = 1; /* do not read endquotechar from buffer */
+	} else if(!*quoted && sldns_rdf_type_maybe_quoted(rdftype) &&
+		slen >= 2 &&
+		(token[0] == '"' || token[0] == '\'')) {
+		/* got the start quote (remove it) but read remainder
+		 * of quoted string as well into remainder of token */
+		memmove(token, token+1, slen-1);
+		token[slen-1] = 0;
+		slen -= 1;
+		*quoted = 1;
+		*tokquote = 0;
+		/* rewind buffer over skipped whitespace */
+		while(sldns_buffer_position(strbuf) > 0 &&
+			(sldns_buffer_current(strbuf)[-1] == ' ' ||
+			sldns_buffer_current(strbuf)[-1] == '\t')) {
+			sldns_buffer_skip(strbuf, -1);
+		}
+		if(sldns_bget_token_par(strbuf, token+slen,
+			"\"", token_len-slen,
+			parens, NULL) == -1) {
+			return 0;
+		}
+		slen = strlen(token);
+	} else *tokquote = 0;
+	*token_strlen = slen;
+	return 1;
+}
+
+
 /** parse rdata from string into rr buffer(-remainder after dname). */
 static int
 rrinternal_parse_rdata(sldns_buffer* strbuf, char* token, size_t token_len,
@@ -553,52 +614,10 @@ rrinternal_parse_rdata(sldns_buffer* strbuf, char* token, size_t token_len,
 		delimiters = rrinternal_get_delims(rdftype, r_cnt, r_max);
 		quoted = rrinternal_get_quoted(strbuf, &delimiters, rdftype);
 
-		/* skip spaces */
-		while(sldns_buffer_remaining(strbuf) > 0 && !quoted &&
-			*(sldns_buffer_current(strbuf)) == ' ') {
-			sldns_buffer_skip(strbuf, 1);
-		}
-
-		pre_data_pos = sldns_buffer_position(strbuf);
-		if(sldns_bget_token_par(strbuf, token, quoted?"\"":delimiters,
-			token_len, &parens, quoted?NULL:" \t") == -1) {
+		if(!sldns_parse_rdf_token(strbuf, token, token_len, &quoted,
+			&parens, &tokquote, &pre_data_pos, delimiters, rdftype,
+			&token_strlen))
 			break;
-		}
-		token_strlen = strlen(token);
-		/* check if not quoted yet, and we have encountered quotes */
-		if(!quoted && sldns_rdf_type_maybe_quoted(rdftype) &&
-			token_strlen >= 2 &&
-			(token[0] == '"' || token[0] == '\'') && 
-			(token[token_strlen-1] == '"' || token[token_strlen-1] == '\'')) {
-			/* move token two smaller (quotes) with endnull */
-			memmove(token, token+1, token_strlen-2);
-			token[token_strlen-2] = 0;
-			token_strlen -= 2;
-			quoted = 1;
-			tokquote = 1; /* do not read endquotechar from buffer */
-		} else if(!quoted && sldns_rdf_type_maybe_quoted(rdftype) &&
-			token_strlen >= 2 &&
-			(token[0] == '"' || token[0] == '\'')) {
-			/* got the start quote (remove it) but read remainder
-			 * of quoted string as well into remainder of token */
-			memmove(token, token+1, token_strlen-1);
-			token[token_strlen-1] = 0;
-			token_strlen -= 1;
-			quoted = 1;
-			tokquote = 0;
-			/* rewind buffer over skipped whitespace */
-			while(sldns_buffer_position(strbuf) > 0 &&
-				(sldns_buffer_current(strbuf)[-1] == ' ' ||
-				sldns_buffer_current(strbuf)[-1] == '\t')) {
-				sldns_buffer_skip(strbuf, -1);
-			}
-			if(sldns_bget_token_par(strbuf, token+token_strlen,
-				"\"", token_len-token_strlen,
-				&parens, NULL) == -1) {
-				break;
-			}
-			token_strlen = strlen(token);
-		} else tokquote = 0;
 
 		/* rfc3597 specifies that any type can be represented
 		 * with \# method, which can contain spaces...
@@ -613,6 +632,38 @@ rrinternal_parse_rdata(sldns_buffer* strbuf, char* token, size_t token_len,
 				pre_data_pos)) != 0)
 				return status;
 		} else if(token_strlen > 0 || quoted) {
+			if(rdftype == LDNS_RDF_TYPE_HIP) {
+				/* affix the HIT and PK fields, with a space */
+				size_t addlen = token_len - token_strlen;
+				size_t addstrlen = 0;
+				/* add space */
+				if(addlen < 1) break;
+				token[token_strlen] = ' ';
+				token[++token_strlen] = 0;
+				/* read another token */
+				addlen = token_len - token_strlen;
+				if(!sldns_parse_rdf_token(strbuf,
+					token+token_strlen, addlen, &quoted,
+					&parens, &tokquote, &pre_data_pos,
+					delimiters, rdftype, &addstrlen))
+					break;
+				token_strlen += addstrlen;
+				/* add space */
+				addlen = token_len - token_strlen;
+				if(addlen < 1) break;
+				token[token_strlen] = ' ';
+				token[++token_strlen] = 0;
+				/* read another token */
+				addlen = token_len - token_strlen;
+				addstrlen = 0;
+				if(!sldns_parse_rdf_token(strbuf,
+					token+token_strlen, addlen, &quoted,
+					&parens, &tokquote, &pre_data_pos,
+					delimiters, rdftype, &addstrlen))
+					break;
+				token_strlen += addstrlen;
+			}
+
 			/* normal RR */
 			if((status=rrinternal_parse_rdf(strbuf, token,
 				token_len, rr, *rr_len, &rr_cur_len, rdftype,
@@ -907,6 +958,8 @@ int sldns_str2wire_rdf_buf(const char* str, uint8_t* rd, size_t* len,
 		return sldns_str2wire_tag_buf(str, rd, len);
 	case LDNS_RDF_TYPE_LONG_STR:
 		return sldns_str2wire_long_str_buf(str, rd, len);
+	case LDNS_RDF_TYPE_HIP:
+		return sldns_str2wire_hip_buf(str, rd, len);
 	case LDNS_RDF_TYPE_INT16_DATA:
 		return sldns_str2wire_int16_data_buf(str, rd, len);
 	case LDNS_RDF_TYPE_UNKNOWN:
@@ -1860,6 +1913,56 @@ int sldns_str2wire_long_str_buf(const char* str, uint8_t* rd, size_t* len)
 	if(!pstr)
 		return LDNS_WIREPARSE_ERR_SYNTAX_BAD_ESCAPE;
 	*len = length;
+	return LDNS_WIREPARSE_ERR_OK;
+}
+
+int sldns_str2wire_hip_buf(const char* str, uint8_t* rd, size_t* len)
+{
+	char* s, *end;
+	int e;
+	size_t hitlen, pklen = 0;
+	/* presentation format:
+	 * 	pk-algo HIThex pubkeybase64
+	 * wireformat:
+	 * 	hitlen[1byte] pkalgo[1byte] pubkeylen[2byte] [hit] [pubkey] */
+	if(*len < 4)
+		return LDNS_WIREPARSE_ERR_BUFFER_TOO_SMALL;
+
+	/* read PK algorithm */
+	rd[1] = (uint8_t)strtol((char*)str, &s, 10);
+	if(*s != ' ')
+		return RET_ERR(LDNS_WIREPARSE_ERR_SYNTAX_INT, s-(char*)str);
+	s++;
+	while(*s == ' ')
+		s++;
+
+	/* read HIT hex tag */
+	/* zero terminate the tag (replace later) */
+	end = strchr(s, ' ');
+	if(!end) return RET_ERR(LDNS_WIREPARSE_ERR_SYNTAX, s-(char*)str);
+	*end = 0;
+	hitlen = *len - 4;
+	if((e = sldns_str2wire_hex_buf(s, rd+4, &hitlen)) != 0) {
+		*end = ' ';
+		return RET_ERR_SHIFT(e, s-(char*)str);
+	}
+	if(hitlen > 255) {
+		*end = ' ';
+		return RET_ERR(LDNS_WIREPARSE_ERR_LABEL_OVERFLOW, s-(char*)str+255*2);
+	}
+	rd[0] = (uint8_t)hitlen;
+	*end = ' ';
+	s = end+1;
+
+	/* read pubkey base64 sequence */
+	pklen = *len - 4 - hitlen;
+	if((e = sldns_str2wire_b64_buf(s, rd+4+hitlen, &pklen)) != 0)
+		return RET_ERR_SHIFT(e, s-(char*)str);
+	if(pklen > 65535)
+		return RET_ERR(LDNS_WIREPARSE_ERR_LABEL_OVERFLOW, s-(char*)str+65535);
+	sldns_write_uint16(rd+2, pklen);
+
+	*len = 4 + hitlen + pklen;
 	return LDNS_WIREPARSE_ERR_OK;
 }
 

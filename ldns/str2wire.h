@@ -517,6 +517,15 @@ int sldns_str2wire_tag_buf(const char* str, uint8_t* rd, size_t* len);
 int sldns_str2wire_long_str_buf(const char* str, uint8_t* rd, size_t* len);
 
 /**
+ * Convert rdf of type LDNS_RDF_TYPE_HIP from string to wireformat.
+ * @param str: the text to convert for this rdata element.
+ * @param rd: rdata buffer for the wireformat.
+ * @param len: length of rd buffer on input, used length on output.
+ * @return 0 on success, error on failure.
+ */
+int sldns_str2wire_hip_buf(const char* str, uint8_t* rd, size_t* len);
+
+/**
  * Convert rdf of type LDNS_RDF_TYPE_INT16_DATA from string to wireformat.
  * @param str: the text to convert for this rdata element.
  * @param rd: rdata buffer for the wireformat.

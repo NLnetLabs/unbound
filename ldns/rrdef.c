@@ -188,37 +188,9 @@ static const sldns_rdf_type type_tlsa_wireformat[] = {
 	LDNS_RDF_TYPE_INT8,
 	LDNS_RDF_TYPE_HEX
 };
-
-/** 
- * With HIP, wire and presentation format are out of step.
- * In presentation format, we have:
- * - a PK algorithm presented as integer in range [0..255]
- * - a variable length HIT field presented as hexstring
- * - a variable length Public Key field presented as Base64
- *
- * Unfortunately in the wireformat the lengths of the variable
- * length HIT and Public Key fields do not directly preceed them.
- * In stead we have:
- * - 1 byte  HIT length: h
- * - 1 byte  PK algorithm
- * - 2 bytes Public Key length: p
- * - h bytes HIT
- * - p bytes Public Key
- *
- * In ldns those deviations from the conventions for rdata fields are best 
- * tackeled by letting the array refered to by the descriptor for HIP represent
- * host format only.
- *
- * BEWARE! Unlike other RR types, actual HIP wire format does not directly
- * follow the RDF types enumerated in the array pointed to by _wireformat in
- * its descriptor record.
- */
-static const sldns_rdf_type type_hip_hostformat[] = {
-	LDNS_RDF_TYPE_INT8,
-	LDNS_RDF_TYPE_HEX,
-	LDNS_RDF_TYPE_B64
+static const sldns_rdf_type type_hip_wireformat[] = {
+	LDNS_RDF_TYPE_HIP
 };
-
 static const sldns_rdf_type type_nid_wireformat[] = {
 	LDNS_RDF_TYPE_INT16,
 	LDNS_RDF_TYPE_ILNP64
@@ -368,17 +340,12 @@ static sldns_rr_descriptor rdata_field_descriptors[] = {
 
 {LDNS_RR_TYPE_NULL, "TYPE53", 1, 1, type_0_wireformat, LDNS_RDF_TYPE_NONE, LDNS_RR_NO_COMPRESS, 0 },
 {LDNS_RR_TYPE_NULL, "TYPE54", 1, 1, type_0_wireformat, LDNS_RDF_TYPE_NONE, LDNS_RR_NO_COMPRESS, 0 },
-
-	/* 55
+        /* 55
 	 * Hip ends with 0 or more Rendezvous Servers represented as dname's.
 	 * Hence the LDNS_RDF_TYPE_DNAME _variable field and the _maximum field
 	 * set to 0.
-	 *
-	 * BEWARE! Unlike other RR types, actual HIP wire format does not 
-	 * directly follow the RDF types enumerated in the array pointed to
-	 * by _wireformat. For more info see type_hip_hostformat declaration.
 	 */
-	{LDNS_RR_TYPE_HIP, "HIP", 3, 3, type_hip_hostformat, LDNS_RDF_TYPE_NONE, LDNS_RR_NO_COMPRESS, 0 },
+	{LDNS_RR_TYPE_HIP, "HIP", 1, 1, type_hip_wireformat, LDNS_RDF_TYPE_DNAME, LDNS_RR_NO_COMPRESS, 0 },
 
 #ifdef DRAFT_RRTYPES
 	/* 56 */
