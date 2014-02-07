@@ -219,8 +219,9 @@ libworker_setup(struct ub_ctx* ctx, int is_bg, struct event_base* eb)
 	if(numports == 0) {
 		int locked = !w->is_bg || w->is_bg_thread;
 		libworker_delete(w);
-		if(locked)
+		if(locked) {
 			lock_basic_unlock(&ctx->cfglock);
+		}
 		return NULL;
 	}
 	w->back = outside_network_create(w->base, cfg->msg_buffer_size,
