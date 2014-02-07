@@ -2,6 +2,8 @@
 	- iana portlist updated.
 	- add body to ifstatement if locks disabled.
 	- add TXT string"string" test case to unit test.
+	- Fix #551: License change "Regents" to "Copyright holder", matching
+	  the BSD license on opensource.org.
 
 6 February 2014: Wouter
 	- sldns has type HIP.
