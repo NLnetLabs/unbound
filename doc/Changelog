@@ -1,5 +1,7 @@
 7 February 2014: Wouter
 	- iana portlist updated.
+	- add body to ifstatement if locks disabled.
+	- add TXT string"string" test case to unit test.
 
 6 February 2014: Wouter
 	- sldns has type HIP.
