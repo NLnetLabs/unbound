@@ -1,3 +1,6 @@
+11 February 2014: Wouter
+	- Fix parse of #553(NSD) string in sldns, quotes without spaces.
+
 7 February 2014: Wouter
 	- iana portlist updated.
 	- add body to ifstatement if locks disabled.

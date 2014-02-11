@@ -530,7 +530,7 @@ rrinternal_parse_rdf(sldns_buffer* strbuf, char* token, size_t token_len,
  */
 static int
 sldns_parse_rdf_token(sldns_buffer* strbuf, char* token, size_t token_len,
-	int* quoted, int* parens, int* tokquote, size_t* pre_data_pos,
+	int* quoted, int* parens, size_t* pre_data_pos,
 	const char* delimiters, sldns_rdf_type rdftype, size_t* token_strlen)
 {
 	size_t slen;
@@ -557,7 +557,6 @@ sldns_parse_rdf_token(sldns_buffer* strbuf, char* token, size_t token_len,
 		token[slen-2] = 0;
 		slen -= 2;
 		*quoted = 1;
-		*tokquote = 1; /* do not read endquotechar from buffer */
 	} else if(!*quoted && sldns_rdf_type_maybe_quoted(rdftype) &&
 		slen >= 2 &&
 		(token[0] == '"' || token[0] == '\'')) {
@@ -567,7 +566,6 @@ sldns_parse_rdf_token(sldns_buffer* strbuf, char* token, size_t token_len,
 		token[slen-1] = 0;
 		slen -= 1;
 		*quoted = 1;
-		*tokquote = 0;
 		/* rewind buffer over skipped whitespace */
 		while(sldns_buffer_position(strbuf) > 0 &&
 			(sldns_buffer_current(strbuf)[-1] == ' ' ||
@@ -580,7 +578,7 @@ sldns_parse_rdf_token(sldns_buffer* strbuf, char* token, size_t token_len,
 			return 0;
 		}
 		slen = strlen(token);
-	} else *tokquote = 0;
+	}
 	*token_strlen = slen;
 	return 1;
 }
@@ -588,7 +586,7 @@ sldns_parse_rdf_token(sldns_buffer* strbuf, char* token, size_t token_len,
 /** Add space and one more rdf token onto the existing token string. */
 static int
 sldns_affix_token(sldns_buffer* strbuf, char* token, size_t* token_len,
-	int* quoted, int* parens, int* tokquote, size_t* pre_data_pos,
+	int* quoted, int* parens, size_t* pre_data_pos,
 	const char* delimiters, sldns_rdf_type rdftype, size_t* token_strlen)
 {
 	size_t addlen = *token_len - *token_strlen;
@@ -602,8 +600,7 @@ sldns_affix_token(sldns_buffer* strbuf, char* token, size_t* token_len,
 	/* read another token */
 	addlen = *token_len - *token_strlen;
 	if(!sldns_parse_rdf_token(strbuf, token+*token_strlen, addlen, quoted,
-		parens, tokquote, pre_data_pos, delimiters, rdftype,
-		&addstrlen))
+		parens, pre_data_pos, delimiters, rdftype, &addstrlen))
 		return 0;
 	(*token_strlen) += addstrlen;
 	return 1;
@@ -618,7 +615,7 @@ rrinternal_parse_rdata(sldns_buffer* strbuf, char* token, size_t token_len,
 	const sldns_rr_descriptor *desc = sldns_rr_descript((uint16_t)rr_type);
 	uint16_t r_cnt, r_min, r_max;
 	size_t rr_cur_len = dname_len + 10, pre_data_pos, token_strlen;
-	int was_unknown_rr_format = 0, parens = 0, status, quoted, tokquote;
+	int was_unknown_rr_format = 0, parens = 0, status, quoted;
 	const char* delimiters;
 	sldns_rdf_type rdftype;
 	/* a desc is always returned */
@@ -638,7 +635,7 @@ rrinternal_parse_rdata(sldns_buffer* strbuf, char* token, size_t token_len,
 		quoted = rrinternal_get_quoted(strbuf, &delimiters, rdftype);
 
 		if(!sldns_parse_rdf_token(strbuf, token, token_len, &quoted,
-			&parens, &tokquote, &pre_data_pos, delimiters, rdftype,
+			&parens, &pre_data_pos, delimiters, rdftype,
 			&token_strlen))
 			break;
 
@@ -659,12 +656,12 @@ rrinternal_parse_rdata(sldns_buffer* strbuf, char* token, size_t token_len,
 				/* affix the HIT and PK fields, with a space */
 				if(!sldns_affix_token(strbuf, token,
 					&token_len, &quoted, &parens,
-					&tokquote, &pre_data_pos, delimiters,
+					&pre_data_pos, delimiters,
 					rdftype, &token_strlen))
 					break;
 				if(!sldns_affix_token(strbuf, token,
 					&token_len, &quoted, &parens,
-					&tokquote, &pre_data_pos, delimiters,
+					&pre_data_pos, delimiters,
 					rdftype, &token_strlen))
 					break;
 			}
@@ -676,11 +673,6 @@ rrinternal_parse_rdata(sldns_buffer* strbuf, char* token, size_t token_len,
 				origin_len)) != 0) {
 				return status;
 			}
-		}
-		if(quoted && !tokquote) {
-			if(sldns_buffer_available(strbuf, 1))
-				sldns_buffer_skip(strbuf, 1);
-			else 	break;
 		}
 	}
 	if(!was_unknown_rr_format && r_cnt+1 < r_min) {

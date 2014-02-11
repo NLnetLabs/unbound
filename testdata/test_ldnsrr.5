@@ -119,7 +119,6 @@ txt1	TXT	"a" "bb" "ccc"
 txt2	TXT	( "a" "bb" "ccc" )
 txt3	TXT	"a b" "bb" " cc c " " "
 txt4	TXT	( "a b" "bb" " cc c " " " )
-txt5	TXT	Test-String"Test-String"
 
 ; LOC tests
 abbey.example.com.	3600	IN	LOC	40 32 24.716 N 105 4 25.770 W 1208.00m 600000m 2000m 1m
@@ -139,4 +138,8 @@ nohpvp.example.com.	3600	IN	LOC	40 32 24.716 N 105 4 25.770 W 1208.00m 600000m 1
 nominnosec.example.com.	3600	IN	LOC	40 0 0.000 N 105 0 0.000 W 1208.00m 1m 10000m 1m
 nosec.example.com.	3600	IN	LOC	40 32 0.000 N 105 4 0.000 W 1208.00m 1m 10000m 1m
 noszhpvp.example.com.	3600	IN	LOC	40 32 24.716 N 105 4 25.770 W 1208.00m 1m 10000m 1m
+
+; Tests for TXT quotes and parenthesis
+txt5	TXT	Test-String"Test-String"
+txt6       IN      TXT     ("v=DKIM1; k=rsa; g=*; s=email; h=sha1; t=s; p=MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQC33ewKxBZARSAPbT96IpW/k3DgdNuFEb896eIf80HcVxWw+w2G+1sQcUjxWUSGp6yTTMEls6n7tthixidyRiE/aWOy3ic/K+927PuCy0M1ZX2QY8gVmOHJbYT3qBQ8toQrvGIer8fQqqJIzO/ATVbHxX8B/z0PsmGI2xxqCyXkOw""IDAQAB;")
 

@@ -352,7 +352,11 @@ sldns_bget_token_par(sldns_buffer *b, char *token, const char *delim,
 	return (ssize_t)i;
 
 tokenread:
-	sldns_bskipcs(b, del);
+	if(*del == '"')
+		/* do not skip over quotes after the string, they are part
+		 * of the next string.  But skip over whitespace (if needed)*/
+		sldns_bskipcs(b, del+1);
+	else 	sldns_bskipcs(b, del);
 	*t = '\0';
 
 	if (!par && p != 0) {
