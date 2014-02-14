@@ -572,6 +572,9 @@
 /* Define to 1 if on MINIX. */
 #undef _MINIX
 
+/* Enable for compile on Minix */
+#undef _NETBSD_SOURCE
+
 /* Define to 2 if the system does not provide POSIX.1 features except with
    this defined. */
 #undef _POSIX_1_SOURCE

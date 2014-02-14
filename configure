@@ -4156,6 +4156,11 @@ $as_echo "$ac_cv_safe_to_define___extensions__" >&6; }
 
 
 
+if test "$ac_cv_header_minix_config_h" = "yes"; then
+
+$as_echo "#define _NETBSD_SOURCE 1" >>confdefs.h
+
+fi
 
 case "$prefix" in
         NONE)
