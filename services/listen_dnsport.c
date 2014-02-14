@@ -137,15 +137,20 @@ create_udp_sock(int family, int socktype, struct sockaddr* addr,
 #ifndef USE_WINSOCK
 			log_err("setsockopt(.. SO_REUSEADDR ..) failed: %s",
 				strerror(errno));
-			close(s);
+			if(errno != ENOSYS) {
+				close(s);
+				*noproto = 0;
+				*inuse = 0;
+				return -1;
+			}
 #else
 			log_err("setsockopt(.. SO_REUSEADDR ..) failed: %s",
 				wsa_strerror(WSAGetLastError()));
 			closesocket(s);
-#endif
 			*noproto = 0;
 			*inuse = 0;
 			return -1;
+#endif
 		}
 #endif /* SO_REUSEADDR */
 #if defined(__linux__) && defined(SO_REUSEPORT)
