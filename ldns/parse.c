@@ -163,7 +163,11 @@ sldns_fget_token_l(FILE *f, char *token, const char *delim, size_t limit, int *l
 	return (ssize_t)i;
 
 tokenread:
-	sldns_fskipcs_l(f, del, line_nr);
+	if(*del == '"')
+		/* do not skip over quotes after the string, they are part
+		 * of the next string.  But skip over whitespace (if needed)*/
+		sldns_fskipcs_l(f, del+1, line_nr);
+	else	sldns_fskipcs_l(f, del, line_nr);
 	*t = '\0';
 	if (p != 0) {
 		return -1;
