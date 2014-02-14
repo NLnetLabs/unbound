@@ -1,3 +1,6 @@
+14 February 2014: Wouter
+	- Works on Minix (3.2.1).
+
 11 February 2014: Wouter
 	- Fix parse of #553(NSD) string in sldns, quotes without spaces.
 
