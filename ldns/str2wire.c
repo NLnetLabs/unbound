@@ -1617,19 +1617,40 @@ int sldns_str2wire_wks_buf(const char* str, uint8_t* rd, size_t* len)
 			if(serv) serv_port=(int)ntohs((uint16_t)serv->s_port);
 			else {
 				serv_port = atoi(token);
-				if(serv_port == 0 && strcmp(token, "0") != 0)
+				if(serv_port == 0 && strcmp(token, "0") != 0) {
+#ifdef HAVE_ENDSERVENT
+					endservent();
+#endif
+#ifdef HAVE_ENDPROTOENT
+					endprotoent();
+#endif
 					return RET_ERR(LDNS_WIREPARSE_ERR_SYNTAX,
 						sldns_buffer_position(&strbuf));
-				if(serv_port < 0 || serv_port > 65535)
+				}
+				if(serv_port < 0 || serv_port > 65535) {
+#ifdef HAVE_ENDSERVENT
+					endservent();
+#endif
+#ifdef HAVE_ENDPROTOENT
+					endprotoent();
+#endif
 					return RET_ERR(LDNS_WIREPARSE_ERR_SYNTAX,
 						sldns_buffer_position(&strbuf));
+				}
 			}
 			if(rd_len < 1+serv_port/8+1) {
 				/* bitmap is larger, init new bytes at 0 */
-				if(*len < 1+(size_t)serv_port/8+1)
+				if(*len < 1+(size_t)serv_port/8+1) {
+#ifdef HAVE_ENDSERVENT
+					endservent();
+#endif
+#ifdef HAVE_ENDPROTOENT
+					endprotoent();
+#endif
 					return RET_ERR(
 					LDNS_WIREPARSE_ERR_BUFFER_TOO_SMALL,
 					sldns_buffer_position(&strbuf));
+				}
 				memset(rd+rd_len, 0, 1+(size_t)serv_port/8+1-rd_len);
 				rd_len = 1+serv_port/8+1;
 			}
