@@ -482,12 +482,12 @@ add_trustanchor_frm_str(struct val_anchors* anchors, char* str,
 	}
 	if(0 != (lstatus = sldns_str2wire_rr_buf(str, rr, &rr_len, &dname_len,
 		0, origin, origin_len, *prev, *prev_len)))
-        {
-        	log_err("ldns error while converting string to RR at%d: %s: %s",
+	{
+		log_err("ldns error while converting string to RR at%d: %s: %s",
 			LDNS_WIREPARSE_OFFSET(lstatus),
 			sldns_get_errorstr_parse(lstatus), str);
-                return NULL;
-        }
+		return NULL;
+	}
 	free(*prev);
 	*prev = memdup(rr, dname_len);
 	*prev_len = dname_len;
@@ -505,7 +505,7 @@ add_trustanchor_frm_str(struct val_anchors* anchors, char* str,
 		log_err("malloc failure in add trustanchor");
 		return NULL;
 	}
-        return add_trustanchor_frm_rr(anchors, drr, rr_len, dname_len, tp);
+	return add_trustanchor_frm_rr(anchors, drr, rr_len, dname_len, tp);
 }
 
 /** 
@@ -525,10 +525,10 @@ load_trustanchor(struct val_anchors* anchors, char* str, const char* fname,
 	uint8_t* origin, size_t origin_len, uint8_t** prev, size_t* prev_len,
 	int* skip)
 {
-        struct autr_ta* ta = NULL;
-        struct trust_anchor* tp = NULL;
+	struct autr_ta* ta = NULL;
+	struct trust_anchor* tp = NULL;
 
-        ta = add_trustanchor_frm_str(anchors, str, &tp, origin, origin_len,
+	ta = add_trustanchor_frm_str(anchors, str, &tp, origin, origin_len,
 		prev, prev_len, skip);
 	if(!ta)
 		return NULL;

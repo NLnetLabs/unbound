@@ -381,7 +381,7 @@ struct serviced_query {
  * @param unwanted_param: user parameter to action.
  * @param do_udp: if udp is done.
  * @param sslctx: context to create outgoing connections with (if enabled).
- * @param delayclose: if not0, udp sockets are delayed before timeout closure.
+ * @param delayclose: if not 0, udp sockets are delayed before timeout closure.
  * 	msec to wait on timeouted udp sockets.
  * @return: the new structure (with no pending answers) or NULL on error.
  */

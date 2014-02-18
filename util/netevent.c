@@ -235,7 +235,8 @@ comm_base_create(int sigs)
 	return b;
 }
 
-struct comm_base* comm_base_create_event(struct event_base* base)
+struct comm_base*
+comm_base_create_event(struct event_base* base)
 {
 	struct comm_base* b = (struct comm_base*)calloc(1,
 		sizeof(struct comm_base));
