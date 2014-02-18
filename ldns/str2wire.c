@@ -74,8 +74,8 @@ static int sldns_str2wire_dname_buf_rel(const char* str, uint8_t* buf,
 	len = 0;
 	if(*olen < 1)
 		return RET_ERR(LDNS_WIREPARSE_ERR_BUFFER_TOO_SMALL, 0);
-	q = buf+1; /* p */
-	pq = buf; /* h */
+	q = buf+1;
+	pq = buf;
 	label_len = 0;
 	for (s = str; *s; s++, q++) {
 		if (q >= buf + *olen)
