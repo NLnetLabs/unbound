@@ -74,8 +74,8 @@ static int sldns_str2wire_dname_buf_rel(const char* str, uint8_t* buf,
 	len = 0;
 	if(*olen < 1)
 		return RET_ERR(LDNS_WIREPARSE_ERR_BUFFER_TOO_SMALL, 0);
-	q = buf+1;
-	pq = buf;
+	q = buf+1; /* p */
+	pq = buf; /* h */
 	label_len = 0;
 	for (s = str; *s; s++, q++) {
 		if (q >= buf + *olen)
@@ -302,7 +302,7 @@ rrinternal_get_type(sldns_buffer* strbuf, char* token, size_t token_len,
 
 /** put type, class, ttl into rr buffer */
 static int
-rrinternal_writetype(sldns_buffer* strbuf, uint8_t* rr, size_t len,
+rrinternal_write_typeclassttl(sldns_buffer* strbuf, uint8_t* rr, size_t len,
 	size_t dname_len, uint16_t tp, uint16_t cl, uint32_t ttl, int question)
 {
 	if(question) {
@@ -745,7 +745,7 @@ sldns_str2wire_rr_buf_internal(const char* str, uint8_t* rr, size_t* len,
 		&not_there, &tp)) != 0)
 		return status;
 	/* put ttl, class, type into the rr result */
-	if((status=rrinternal_writetype(&strbuf, rr, *len, *dname_len, tp, cl,
+	if((status=rrinternal_write_typeclassttl(&strbuf, rr, *len, *dname_len, tp, cl,
 		ttl, question)) != 0)
 		return status;
 	/* for a question-RR we are done, no rdata */
@@ -1051,7 +1051,7 @@ int sldns_str2wire_str_buf(const char* str, uint8_t* rd, size_t* len)
 	/* skip length byte */
 	if(*len < 1)
 		return LDNS_WIREPARSE_ERR_BUFFER_TOO_SMALL;
-	
+
 	/* read characters */
 	while(sldns_parse_char(&ch, &s)) {
 		if(sl >= 255)
