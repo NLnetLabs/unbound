@@ -1,3 +1,11 @@
+20 February 2014: Matthijs
+	- Be lenient when a NSEC NameError response with RCODE=NXDOMAIN is
+	  received. This is okay according 4035, but not after revising
+	  existence in 4592.  NSEC empty non-terminals exist and thus the
+	  RCODE should have been NOERROR. If this occurs, and the RRsets
+	  are secure, we set the RCODE to NOERROR and the security status
+	  of the reponse is also considered secure.
+
 14 February 2014: Wouter
 	- Works on Minix (3.2.1).
 
