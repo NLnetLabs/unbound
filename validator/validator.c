@@ -762,11 +762,12 @@ validate_nodata_response(struct module_env* env, struct val_env* ve,
  * @param chase_reply: answer to that query to validate.
  * @param kkey: the key entry, which is trusted, and which matches
  * 	the signer of the answer. The key entry isgood().
+ * @param rcode: adjusted RCODE, in case of RCODE/proof mismatch leniency.
  */
 static void
 validate_nameerror_response(struct module_env* env, struct val_env* ve,
 	struct query_info* qchase, struct reply_info* chase_reply,
-	struct key_entry_key* kkey)
+	struct key_entry_key* kkey, int* rcode)
 {
 	int has_valid_nsec = 0;
 	int has_valid_wnsec = 0;
@@ -813,6 +814,10 @@ validate_nameerror_response(struct module_env* env, struct val_env* ve,
 		verbose(VERB_QUERY, "NameError response has failed to prove: "
 		          "qname does not exist");
 		chase_reply->security = sec_status_bogus;
+		/* Be lenient with RCODE in NSEC NameError responses */
+		validate_nodata_response(env, ve, qchase, chase_reply, kkey);
+		if (chase_reply->security == sec_status_secure)
+			*rcode = LDNS_RCODE_NOERROR;
 		return;
 	}
 
@@ -820,6 +825,10 @@ validate_nameerror_response(struct module_env* env, struct val_env* ve,
 		verbose(VERB_QUERY, "NameError response has failed to prove: "
 		          "covering wildcard does not exist");
 		chase_reply->security = sec_status_bogus;
+		/* Be lenient with RCODE in NSEC NameError responses */
+		validate_nodata_response(env, ve, qchase, chase_reply, kkey);
+		if (chase_reply->security == sec_status_secure)
+			*rcode = LDNS_RCODE_NOERROR;
 		return;
 	}
 
@@ -1568,6 +1577,7 @@ processValidate(struct module_qstate* qstate, struct val_qstate* vq,
 	struct val_env* ve, int id)
 {
 	enum val_classification subtype;
+	int rcode;
 
 	if(!vq->key_entry) {
 		verbose(VERB_ALGO, "validate: no key entry, failed");
@@ -1651,7 +1661,7 @@ processValidate(struct module_qstate* qstate, struct val_qstate* vq,
 			  	sec_status_to_string(
 				vq->chase_reply->security));
 			break;
-			
+
 		case VAL_CLASS_NODATA:
 			verbose(VERB_ALGO, "Validating a nodata response");
 			validate_nodata_response(qstate->env, ve,
@@ -1662,12 +1672,15 @@ processValidate(struct module_qstate* qstate, struct val_qstate* vq,
 			break;
 
 		case VAL_CLASS_NAMEERROR:
+			rcode = (int)FLAGS_GET_RCODE(vq->orig_msg->rep->flags);
 			verbose(VERB_ALGO, "Validating a nxdomain response");
 			validate_nameerror_response(qstate->env, ve, 
-				&vq->qchase, vq->chase_reply, vq->key_entry);
+				&vq->qchase, vq->chase_reply, vq->key_entry, &rcode);
 			verbose(VERB_DETAIL, "validate(nxdomain): %s",
 			  	sec_status_to_string(
 				vq->chase_reply->security));
+			FLAGS_SET_RCODE(vq->orig_msg->rep->flags, rcode);
+			FLAGS_SET_RCODE(vq->chase_reply->flags, rcode);
 			break;
 
 		case VAL_CLASS_CNAME:
