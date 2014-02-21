@@ -1,3 +1,6 @@
+21 February 2014: Wouter
+	- iana portlist updated.
+
 20 February 2014: Matthijs
 	- Be lenient when a NSEC NameError response with RCODE=NXDOMAIN is
 	  received. This is okay according 4035, but not after revising
