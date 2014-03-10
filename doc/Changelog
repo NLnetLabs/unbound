@@ -1,3 +1,7 @@
+10 March 2014: Wouter
+	- Fix bug#561: contrib/cacti plugin did not report SERVFAIL rcodes
+	  because of spelling.  Patch from Chris Coates.
+
 27 February 2014: Wouter
 	- tag 1.4.22rc1
 
