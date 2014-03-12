@@ -9,14 +9,14 @@ sinclude(ac_pkg_swig.m4)
 # must be numbers. ac_defun because of later processing
 m4_define([VERSION_MAJOR],[1])
 m4_define([VERSION_MINOR],[4])
-m4_define([VERSION_MICRO],[22])
+m4_define([VERSION_MICRO],[23])
 AC_INIT(unbound, m4_defn([VERSION_MAJOR]).m4_defn([VERSION_MINOR]).m4_defn([VERSION_MICRO]), unbound-bugs@nlnetlabs.nl, unbound)
 AC_SUBST(UNBOUND_VERSION_MAJOR, [VERSION_MAJOR])
 AC_SUBST(UNBOUND_VERSION_MINOR, [VERSION_MINOR])
 AC_SUBST(UNBOUND_VERSION_MICRO, [VERSION_MICRO])
 
 LIBUNBOUND_CURRENT=4
-LIBUNBOUND_REVISION=1
+LIBUNBOUND_REVISION=3
 LIBUNBOUND_AGE=2
 # 1.0.0 had 0:12:0
 # 1.0.1 had 0:13:0
@@ -54,6 +54,8 @@ LIBUNBOUND_AGE=2
 # 1.4.19 had 3:4:1
 # 1.4.20 had 4:0:2 # adds libunbound.ttl # but shipped 3:5:1
 # 1.4.21 had 4:1:2
+# 1.4.22 had 4:1:2
+# 1.4.23 had 4:3:2
 
 #   Current  -- the number of the binary API that we're implementing
 #   Revision -- which iteration of the implementation of the binary

@@ -1,5 +1,6 @@
 12 March 2014: Wouter
 	- tag 1.4.22
+	- trunk has 1.4.23 in development.
 
 10 March 2014: Wouter
 	- Fix bug#561: contrib/cacti plugin did not report SERVFAIL rcodes
