@@ -800,7 +800,7 @@ config_read(struct config_file* cfg, const char* filename, const char* chroot)
 
 	if(cfg_parser->errors != 0) {
 		fprintf(stderr, "read %s failed: %d errors in configuration file\n",
-			cfg_parser->filename, cfg_parser->errors);
+			fname, cfg_parser->errors);
 		errno=EINVAL;
 		return 0;
 	}
