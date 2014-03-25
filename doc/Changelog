@@ -1,3 +1,6 @@
+25 March 2014: Wouter
+	- Patch from Stuart Henderson to build unbound-host man from .1.in.
+
 24 March 2014: Wouter
 	- Fix print filename of encompassing config file on read failure.
 
