@@ -1,3 +1,6 @@
+28 March 2014: Wouter
+	- Fix #569: do_tcp is do-tcp in unbound.conf man page.
+
 25 March 2014: Wouter
 	- Patch from Stuart Henderson to build unbound-host man from .1.in.
 

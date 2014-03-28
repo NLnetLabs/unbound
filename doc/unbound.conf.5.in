@@ -169,11 +169,11 @@ Give a port number or a range of the form "low\-high", without spaces.
 .TP
 .B outgoing\-num\-tcp: \fI<number>
 Number of outgoing TCP buffers to allocate per thread. Default is 10. If set
-to 0, or if do_tcp is "no", no TCP queries to authoritative servers are done.
+to 0, or if do\-tcp is "no", no TCP queries to authoritative servers are done.
 .TP
 .B incoming\-num\-tcp: \fI<number>
 Number of incoming TCP buffers to allocate per thread. Default is 10. If set
-to 0, or if do_tcp is "no", no TCP queries from clients are accepted.
+to 0, or if do\-tcp is "no", no TCP queries from clients are accepted.
 .TP
 .B edns\-buffer\-size: \fI<number>
 Number of bytes size to advertise as the EDNS reassembly buffer size.
