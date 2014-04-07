@@ -1,6 +1,8 @@
 7 April 2014: Wouter
 	- C.ROOT-SERVERS.NET has an IPv6 address, and we updated the root
 	  hints (patch from Anand Buddhdev).
+	- Fix #572: Fix unit test failure for systems with different
+	  /etc/services.
 
 28 March 2014: Wouter
 	- Fix #569: do_tcp is do-tcp in unbound.conf man page.
