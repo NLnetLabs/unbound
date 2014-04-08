@@ -1,6 +1,7 @@
 8 April 2014: Wouter
 	- Fix #574: make test fails on Ubuntu 14.04.  Disabled remote-control
 	  in testbound scripts.
+	- iana portlist updated.
 
 7 April 2014: Wouter
 	- C.ROOT-SERVERS.NET has an IPv6 address, and we updated the root
