@@ -362,11 +362,26 @@ create_udp_sock(int family, int socktype, struct sockaddr* addr,
 # endif /* IPv6 MTU */
 	} else if(family == AF_INET) {
 #  if defined(IP_MTU_DISCOVER) && defined(IP_PMTUDISC_DONT)
+/* linux 3.15 has IP_PMTUDISC_OMIT, Hannes Frederic Sowa made it so that
+ * PMTU information is not accepted, but fragmentation is allowed
+ * if and only if the packet size exceeds the outgoing interface MTU
+ * (and also uses the interface mtu to determine the size of the packets).
+ * So there won't be any EMSGSIZE error.  Against DNS fragmentation attacks.
+ * FreeBSD already has same semantics without setting the option. */
+#    if defined(IP_PMTUDISC_OMIT)
+		int action = IP_PMTUDISC_OMIT;
+#    else
 		int action = IP_PMTUDISC_DONT;
+#    endif
 		if (setsockopt(s, IPPROTO_IP, IP_MTU_DISCOVER, 
 			&action, (socklen_t)sizeof(action)) < 0) {
 			log_err("setsockopt(..., IP_MTU_DISCOVER, "
-				"IP_PMTUDISC_DONT...) failed: %s",
+#    if defined(IP_PMTUDISC_OMIT)
+				"IP_PMTUDISC_OMIT"
+#    else
+				"IP_PMTUDISC_DONT"
+#    endif
+				"...) failed: %s",
 				strerror(errno));
 #    ifndef USE_WINSOCK
 			close(s);
