@@ -210,12 +210,12 @@ outnet_tcp_take_into_use(struct waiting_tcp* w, uint8_t* pkt, size_t pkt_len)
 		s = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
 	if(s == -1) {
 #ifndef USE_WINSOCK
-		log_err("outgoing tcp: socket: %s", strerror(errno));
+		log_err_addr("outgoing tcp: socket", strerror(errno),
+			&w->addr, w->addrlen);
 #else
-		log_err("outgoing tcp: socket: %s", 
-			wsa_strerror(WSAGetLastError()));
+		log_err_addr("outgoing tcp: socket", 
+			wsa_strerror(WSAGetLastError()), &w->addr, w->addrlen);
 #endif
-		log_addr(0, "failed address", &w->addr, w->addrlen);
 		return 0;
 	}
 	if(!pick_outgoing_tcp(w, s))
@@ -231,15 +231,14 @@ outnet_tcp_take_into_use(struct waiting_tcp* w, uint8_t* pkt, size_t pkt_len)
 #endif
 			if(tcp_connect_errno_needs_log(
 				(struct sockaddr*)&w->addr, w->addrlen))
-				log_err("outgoing tcp: connect: %s",
-					strerror(errno));
+				log_err_addr("outgoing tcp: connect",
+					strerror(errno), &w->addr, w->addrlen);
 			close(s);
 #else /* USE_WINSOCK */
 		if(WSAGetLastError() != WSAEINPROGRESS &&
 			WSAGetLastError() != WSAEWOULDBLOCK) {
 			closesocket(s);
 #endif
-			log_addr(0, "failed address", &w->addr, w->addrlen);
 			return 0;
 		}
 	}

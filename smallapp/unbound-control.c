@@ -200,15 +200,14 @@ contact_server(const char* svr, struct config_file* cfg, int statuscmd)
 #endif
 	}
 	if(connect(fd, (struct sockaddr*)&addr, addrlen) < 0) {
-		log_addr(0, "address", &addr, addrlen);
 #ifndef USE_WINSOCK
-		log_err("connect: %s", strerror(errno));
+		log_err_addr("connect", strerror(errno), &addr, addrlen);
 		if(errno == ECONNREFUSED && statuscmd) {
 			printf("unbound is stopped\n");
 			exit(3);
 		}
 #else
-		log_err("connect: %s", wsa_strerror(WSAGetLastError()));
+		log_err_addr("connect", wsa_strerror(WSAGetLastError()), &addr, addrlen);
 		if(WSAGetLastError() == WSAECONNREFUSED && statuscmd) {
 			printf("unbound is stopped\n");
 			exit(3);

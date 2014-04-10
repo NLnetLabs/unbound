@@ -329,6 +329,26 @@ void log_name_addr(enum verbosity_value v, const char* str, uint8_t* zone,
 			str, namebuf, family, dest, (int)port);
 }
 
+void log_err_addr(const char* str, const char* err,
+	struct sockaddr_storage* addr, socklen_t addrlen)
+{
+	uint16_t port;
+	char dest[100];
+	int af = (int)((struct sockaddr_in*)addr)->sin_family;
+	void* sinaddr = &((struct sockaddr_in*)addr)->sin_addr;
+	if(af == AF_INET6)
+		sinaddr = &((struct sockaddr_in6*)addr)->sin6_addr;
+	if(inet_ntop(af, sinaddr, dest, (socklen_t)sizeof(dest)) == 0) {
+		(void)strlcpy(dest, "(inet_ntop error)", sizeof(dest));
+	}
+	dest[sizeof(dest)-1] = 0;
+	port = ntohs(((struct sockaddr_in*)addr)->sin_port);
+	if(verbosity >= 4)
+		log_err("%s: %s for %s port %d (len %d)", str, err, dest,
+			(int)port, (int)addrlen);
+	else	log_err("%s: %s for %s", str, err, dest);
+}
+
 int
 sockaddr_cmp(struct sockaddr_storage* addr1, socklen_t len1, 
 	struct sockaddr_storage* addr2, socklen_t len2)

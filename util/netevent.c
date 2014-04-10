@@ -785,7 +785,7 @@ int comm_point_perform_accept(struct comm_point* c,
 			return -1;
 		}
 #endif
-		log_err("accept failed: %s", strerror(errno));
+		log_err_addr("accept failed", strerror(errno), addr, *addrlen);
 #else /* USE_WINSOCK */
 		if(WSAGetLastError() == WSAEINPROGRESS ||
 			WSAGetLastError() == WSAECONNRESET)
@@ -794,9 +794,9 @@ int comm_point_perform_accept(struct comm_point* c,
 			winsock_tcp_wouldblock(&c->ev->ev, EV_READ);
 			return -1;
 		}
-		log_err("accept failed: %s", wsa_strerror(WSAGetLastError()));
+		log_err_addr("accept failed", wsa_strerror(WSAGetLastError()),
+			addr, *addrlen);
 #endif
-		log_addr(0, "remote address is", addr, *addrlen);
 		return -1;
 	}
 	fd_set_nonblock(new_fd);
@@ -1218,7 +1218,8 @@ comm_point_tcp_handle_read(int fd, struct comm_point* c, int short_ok)
 			if(errno == ECONNRESET && verbosity < 2)
 				return 0; /* silence reset by peer */
 #endif
-			log_err("read (in tcp s): %s", strerror(errno));
+			log_err_addr("read (in tcp s)", strerror(errno),
+				&c->repinfo.addr, c->repinfo.addrlen);
 #else /* USE_WINSOCK */
 			if(WSAGetLastError() == WSAECONNRESET)
 				return 0;
@@ -1228,11 +1229,10 @@ comm_point_tcp_handle_read(int fd, struct comm_point* c, int short_ok)
 				winsock_tcp_wouldblock(&c->ev->ev, EV_READ);
 				return 1;
 			}
-			log_err("read (in tcp s): %s", 
-				wsa_strerror(WSAGetLastError()));
+			log_err_addr("read (in tcp s)", 
+				wsa_strerror(WSAGetLastError()),
+				&c->repinfo.addr, c->repinfo.addrlen);
 #endif
-			log_addr(0, "remote address is", &c->repinfo.addr,
-				c->repinfo.addrlen);
 			return 0;
 		} 
 		c->tcp_byte_count += r;
@@ -1263,7 +1263,8 @@ comm_point_tcp_handle_read(int fd, struct comm_point* c, int short_ok)
 #ifndef USE_WINSOCK
 		if(errno == EINTR || errno == EAGAIN)
 			return 1;
-		log_err("read (in tcp r): %s", strerror(errno));
+		log_err_addr("read (in tcp r)", strerror(errno),
+			&c->repinfo.addr, c->repinfo.addrlen);
 #else /* USE_WINSOCK */
 		if(WSAGetLastError() == WSAECONNRESET)
 			return 0;
@@ -1273,11 +1274,10 @@ comm_point_tcp_handle_read(int fd, struct comm_point* c, int short_ok)
 			winsock_tcp_wouldblock(&c->ev->ev, EV_READ);
 			return 1;
 		}
-		log_err("read (in tcp r): %s", 
-			wsa_strerror(WSAGetLastError()));
+		log_err_addr("read (in tcp r)",
+			wsa_strerror(WSAGetLastError()),
+			&c->repinfo.addr, c->repinfo.addrlen);
 #endif
-		log_addr(0, "remote address is", &c->repinfo.addr,
-			c->repinfo.addrlen);
 		return 0;
 	}
 	sldns_buffer_skip(c->buffer, r);
@@ -1323,7 +1323,8 @@ comm_point_tcp_handle_write(int fd, struct comm_point* c)
 		if(error != 0 && verbosity < 2)
 			return 0; /* silence lots of chatter in the logs */
                 else if(error != 0) {
-			log_err("tcp connect: %s", strerror(error));
+			log_err_addr("tcp connect", strerror(error),
+				&c->repinfo.addr, c->repinfo.addrlen);
 #else /* USE_WINSOCK */
 		/* examine error */
 		if(error == WSAEINPROGRESS)
@@ -1334,10 +1335,9 @@ comm_point_tcp_handle_write(int fd, struct comm_point* c)
 		} else if(error != 0 && verbosity < 2)
 			return 0;
 		else if(error != 0) {
-			log_err("tcp connect: %s", wsa_strerror(error));
+			log_err_addr("tcp connect", wsa_strerror(error),
+				&c->repinfo.addr, c->repinfo.addrlen);
 #endif /* USE_WINSOCK */
-			log_addr(0, "remote address is", &c->repinfo.addr, 
-				c->repinfo.addrlen);
 			return 0;
 		}
 	}
@@ -1361,13 +1361,19 @@ comm_point_tcp_handle_write(int fd, struct comm_point* c)
 #endif /* HAVE_WRITEV */
 		if(r == -1) {
 #ifndef USE_WINSOCK
-#ifdef EPIPE
+#  ifdef EPIPE
                 	if(errno == EPIPE && verbosity < 2)
                         	return 0; /* silence 'broken pipe' */
-#endif
+  #endif
 			if(errno == EINTR || errno == EAGAIN)
 				return 1;
-			log_err("tcp writev: %s", strerror(errno));
+#  ifdef HAVE_WRITEV
+			log_err_addr("tcp writev", strerror(errno),
+				&c->repinfo.addr, c->repinfo.addrlen);
+#  else /* HAVE_WRITEV */
+			log_err_addr("tcp send s", strerror(errno),
+				&c->repinfo.addr, c->repinfo.addrlen);
+#  endif /* HAVE_WRITEV */
 #else
 			if(WSAGetLastError() == WSAENOTCONN)
 				return 1;
@@ -1377,11 +1383,10 @@ comm_point_tcp_handle_write(int fd, struct comm_point* c)
 				winsock_tcp_wouldblock(&c->ev->ev, EV_WRITE);
 				return 1; 
 			}
-			log_err("tcp send s: %s", 
-				wsa_strerror(WSAGetLastError()));
+			log_err_addr("tcp send s",
+				wsa_strerror(WSAGetLastError()),
+				&c->repinfo.addr, c->repinfo.addrlen);
 #endif
-			log_addr(0, "remote address is", &c->repinfo.addr,
-				c->repinfo.addrlen);
 			return 0;
 		}
 		c->tcp_byte_count += r;
@@ -1401,7 +1406,8 @@ comm_point_tcp_handle_write(int fd, struct comm_point* c)
 #ifndef USE_WINSOCK
 		if(errno == EINTR || errno == EAGAIN)
 			return 1;
-		log_err("tcp send r: %s", strerror(errno));
+		log_err_addr("tcp send r", strerror(errno),
+			&c->repinfo.addr, c->repinfo.addrlen);
 #else
 		if(WSAGetLastError() == WSAEINPROGRESS)
 			return 1;
@@ -1409,11 +1415,9 @@ comm_point_tcp_handle_write(int fd, struct comm_point* c)
 			winsock_tcp_wouldblock(&c->ev->ev, EV_WRITE);
 			return 1; 
 		}
-		log_err("tcp send r: %s", 
-			wsa_strerror(WSAGetLastError()));
+		log_err_addr("tcp send r", wsa_strerror(WSAGetLastError()),
+			&c->repinfo.addr, c->repinfo.addrlen);
 #endif
-		log_addr(0, "remote address is", &c->repinfo.addr,
-			c->repinfo.addrlen);
 		return 0;
 	}
 	sldns_buffer_skip(c->buffer, r);

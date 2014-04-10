@@ -12,6 +12,8 @@
 	  64bit systems.
 	- Fix #558: failed prefetch lookup does not remove cached response
 	  but delays next prefetch (in lieu of caching a SERVFAIL).
+	- Fix #545: improved logging, the ip address of the error is printed
+	  on the same log-line as the error.
 
 8 April 2014: Wouter
 	- Fix #574: make test fails on Ubuntu 14.04.  Disabled remote-control
