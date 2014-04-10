@@ -5,6 +5,9 @@
 	- Document that dump_requestlist only prints queries from thread 0.
 	- unbound-control stats prints num.query.tcpout with number of TCP
 	  outgoing queries made in the previous statistics interval.
+	- Fix #567: unbound lists if forward zone is secure or insecure with
+	  +i annotation in output of list_forwards, also for list_stubs
+	  (for NetworkManager integration.)
 
 8 April 2014: Wouter
 	- Fix #574: make test fails on Ubuntu 14.04.  Disabled remote-control

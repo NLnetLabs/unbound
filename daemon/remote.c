@@ -1948,10 +1948,23 @@ do_list_forwards(SSL* ssl, struct worker* worker)
 	/* since its a per-worker structure no locks needed */
 	struct iter_forwards* fwds = worker->env.fwds;
 	struct iter_forward_zone* z;
+	struct trust_anchor* a;
+	int insecure;
 	RBTREE_FOR(z, struct iter_forward_zone*, fwds->tree) {
 		if(!z->dp) continue; /* skip empty marker for stub */
-		if(!ssl_print_name_dp(ssl, "forward", z->name, z->dclass,
-			z->dp))
+
+		/* see if it is insecure */
+		insecure = 0;
+		if(worker->env.anchors &&
+			(a=anchor_find(worker->env.anchors, z->name,
+			z->namelabs, z->namelen,  z->dclass))) {
+			if(!a->keylist && !a->numDS && !a->numDNSKEY)
+				insecure = 1;
+			lock_basic_unlock(&a->lock);
+		}
+
+		if(!ssl_print_name_dp(ssl, (insecure?"forward +i":"forward"),
+			z->name, z->dclass, z->dp))
 			return;
 	}
 }
@@ -1961,9 +1974,24 @@ static void
 do_list_stubs(SSL* ssl, struct worker* worker)
 {
 	struct iter_hints_stub* z;
+	struct trust_anchor* a;
+	int insecure;
+	char str[32];
 	RBTREE_FOR(z, struct iter_hints_stub*, &worker->env.hints->tree) {
-		if(!ssl_print_name_dp(ssl, 
-			z->noprime?"stub noprime":"stub prime", z->node.name,
+
+		/* see if it is insecure */
+		insecure = 0;
+		if(worker->env.anchors &&
+			(a=anchor_find(worker->env.anchors, z->node.name,
+			z->node.labs, z->node.len,  z->node.dclass))) {
+			if(!a->keylist && !a->numDS && !a->numDNSKEY)
+				insecure = 1;
+			lock_basic_unlock(&a->lock);
+		}
+
+		snprintf(str, sizeof(str), "stub %sprime%s",
+			(z->noprime?"no":""), (insecure?" +i":""));
+		if(!ssl_print_name_dp(ssl, str, z->node.name,
 			z->node.dclass, z->dp))
 			return;
 	}
