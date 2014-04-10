@@ -135,6 +135,8 @@ struct outside_network {
 	struct pending_tcp **tcp_conns;
 	/** number of tcp communication points. */
 	size_t num_tcp;
+	/** number of tcp communication points in use. */
+	size_t num_tcp_outgoing;
 	/** list of tcp comm points that are free for use */
 	struct pending_tcp* tcp_free;
 	/** list of tcp queries waiting for a buffer */

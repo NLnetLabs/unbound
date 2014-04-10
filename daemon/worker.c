@@ -1324,6 +1324,7 @@ void worker_stats_clear(struct worker* worker)
 	server_stats_init(&worker->stats, worker->env.cfg);
 	mesh_stats_clear(worker->env.mesh);
 	worker->back->unwanted_replies = 0;
+	worker->back->num_tcp_outgoing = 0;
 }
 
 void worker_start_accept(void* arg)

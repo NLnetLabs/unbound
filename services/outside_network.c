@@ -258,6 +258,7 @@ outnet_tcp_take_into_use(struct waiting_tcp* w, uint8_t* pkt, size_t pkt_len)
 	w->pkt = NULL;
 	w->next_waiting = (void*)pend;
 	pend->id = LDNS_ID_WIRE(pkt);
+	w->outnet->num_tcp_outgoing++;
 	w->outnet->tcp_free = pend->next_free;
 	pend->next_free = NULL;
 	pend->query = w;
@@ -600,6 +601,7 @@ outside_network_create(struct comm_base *base, size_t bufsize,
 	comm_base_timept(base, &outnet->now_secs, &outnet->now_tv);
 	outnet->base = base;
 	outnet->num_tcp = num_tcp;
+	outnet->num_tcp_outgoing = 0;
 	outnet->infra = infra;
 	outnet->rnd = rnd;
 	outnet->sslctx = sslctx;

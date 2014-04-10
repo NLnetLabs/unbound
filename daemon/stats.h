@@ -91,6 +91,8 @@ struct server_stats {
 	size_t qopcode[STATS_OPCODE_NUM];
 	/** number of queries over TCP */
 	size_t qtcp;
+	/** number of outgoing queries over TCP */
+	size_t qtcp_outgoing;
 	/** number of queries over IPv6 */
 	size_t qipv6;
 	/** number of queries with QR bit */

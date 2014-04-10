@@ -158,6 +158,7 @@ server_stats_compile(struct worker* worker, struct stats_info* s, int reset)
 		NUM_BUCKETS_HIST);
 	/* values from outside network */
 	s->svr.unwanted_replies = worker->back->unwanted_replies;
+	s->svr.qtcp_outgoing = worker->back->num_tcp_outgoing;
 
 	/* get and reset validator rrset bogus number */
 	s->svr.rrset_bogus = get_rrset_bogus(worker);
@@ -217,6 +218,7 @@ void server_stats_add(struct stats_info* total, struct stats_info* a)
 		total->svr.qtype_big += a->svr.qtype_big;
 		total->svr.qclass_big += a->svr.qclass_big;
 		total->svr.qtcp += a->svr.qtcp;
+		total->svr.qtcp_outgoing += a->svr.qtcp_outgoing;
 		total->svr.qipv6 += a->svr.qipv6;
 		total->svr.qbit_QR += a->svr.qbit_QR;
 		total->svr.qbit_AA += a->svr.qbit_AA;
