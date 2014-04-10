@@ -8,6 +8,8 @@
 	- Fix #567: unbound lists if forward zone is secure or insecure with
 	  +i annotation in output of list_forwards, also for list_stubs
 	  (for NetworkManager integration.)
+	- Fix #554: use unsigned long to print 64bit statistics counters on
+	  64bit systems.
 
 8 April 2014: Wouter
 	- Fix #574: make test fails on Ubuntu 14.04.  Disabled remote-control

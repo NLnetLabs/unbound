@@ -605,32 +605,32 @@ static int
 print_stats(SSL* ssl, const char* nm, struct stats_info* s)
 {
 	struct timeval avg;
-	if(!ssl_printf(ssl, "%s.num.queries"SQ"%u\n", nm, 
-		(unsigned)s->svr.num_queries)) return 0;
-	if(!ssl_printf(ssl, "%s.num.cachehits"SQ"%u\n", nm, 
-		(unsigned)(s->svr.num_queries 
+	if(!ssl_printf(ssl, "%s.num.queries"SQ"%lu\n", nm, 
+		(unsigned long)s->svr.num_queries)) return 0;
+	if(!ssl_printf(ssl, "%s.num.cachehits"SQ"%lu\n", nm, 
+		(unsigned long)(s->svr.num_queries 
 			- s->svr.num_queries_missed_cache))) return 0;
-	if(!ssl_printf(ssl, "%s.num.cachemiss"SQ"%u\n", nm, 
-		(unsigned)s->svr.num_queries_missed_cache)) return 0;
-	if(!ssl_printf(ssl, "%s.num.prefetch"SQ"%u\n", nm, 
-		(unsigned)s->svr.num_queries_prefetch)) return 0;
-	if(!ssl_printf(ssl, "%s.num.recursivereplies"SQ"%u\n", nm, 
-		(unsigned)s->mesh_replies_sent)) return 0;
+	if(!ssl_printf(ssl, "%s.num.cachemiss"SQ"%lu\n", nm, 
+		(unsigned long)s->svr.num_queries_missed_cache)) return 0;
+	if(!ssl_printf(ssl, "%s.num.prefetch"SQ"%lu\n", nm, 
+		(unsigned long)s->svr.num_queries_prefetch)) return 0;
+	if(!ssl_printf(ssl, "%s.num.recursivereplies"SQ"%lu\n", nm, 
+		(unsigned long)s->mesh_replies_sent)) return 0;
 	if(!ssl_printf(ssl, "%s.requestlist.avg"SQ"%g\n", nm,
 		(s->svr.num_queries_missed_cache+s->svr.num_queries_prefetch)?
 			(double)s->svr.sum_query_list_size/
 			(s->svr.num_queries_missed_cache+
 			s->svr.num_queries_prefetch) : 0.0)) return 0;
-	if(!ssl_printf(ssl, "%s.requestlist.max"SQ"%u\n", nm,
-		(unsigned)s->svr.max_query_list_size)) return 0;
-	if(!ssl_printf(ssl, "%s.requestlist.overwritten"SQ"%u\n", nm,
-		(unsigned)s->mesh_jostled)) return 0;
-	if(!ssl_printf(ssl, "%s.requestlist.exceeded"SQ"%u\n", nm,
-		(unsigned)s->mesh_dropped)) return 0;
-	if(!ssl_printf(ssl, "%s.requestlist.current.all"SQ"%u\n", nm,
-		(unsigned)s->mesh_num_states)) return 0;
-	if(!ssl_printf(ssl, "%s.requestlist.current.user"SQ"%u\n", nm,
-		(unsigned)s->mesh_num_reply_states)) return 0;
+	if(!ssl_printf(ssl, "%s.requestlist.max"SQ"%lu\n", nm,
+		(unsigned long)s->svr.max_query_list_size)) return 0;
+	if(!ssl_printf(ssl, "%s.requestlist.overwritten"SQ"%lu\n", nm,
+		(unsigned long)s->mesh_jostled)) return 0;
+	if(!ssl_printf(ssl, "%s.requestlist.exceeded"SQ"%lu\n", nm,
+		(unsigned long)s->mesh_dropped)) return 0;
+	if(!ssl_printf(ssl, "%s.requestlist.current.all"SQ"%lu\n", nm,
+		(unsigned long)s->mesh_num_states)) return 0;
+	if(!ssl_printf(ssl, "%s.requestlist.current.user"SQ"%lu\n", nm,
+		(unsigned long)s->mesh_num_reply_states)) return 0;
 	timeval_divide(&avg, &s->mesh_replies_sum_wait, s->mesh_replies_sent);
 	if(!ssl_printf(ssl, "%s.recursion.time.avg"SQ ARG_LL "d.%6.6d\n", nm,
 		(long long)avg.tv_sec, (int)avg.tv_usec)) return 0;
@@ -660,7 +660,7 @@ print_longnum(SSL* ssl, char* desc, size_t x)
 		return ssl_printf(ssl, "%s%u%6.6u\n", desc, 
 			(unsigned)front, (unsigned)back);
 	} else {
-		return ssl_printf(ssl, "%s%u\n", desc, (unsigned)x);
+		return ssl_printf(ssl, "%s%lu\n", desc, (unsigned long)x);
 	}
 }
 
@@ -739,12 +739,12 @@ print_hist(SSL* ssl, struct stats_info* s)
 	timehist_import(hist, s->svr.hist, NUM_BUCKETS_HIST);
 	for(i=0; i<hist->num; i++) {
 		if(!ssl_printf(ssl, 
-			"histogram.%6.6d.%6.6d.to.%6.6d.%6.6d=%u\n",
+			"histogram.%6.6d.%6.6d.to.%6.6d.%6.6d=%lu\n",
 			(int)hist->buckets[i].lower.tv_sec,
 			(int)hist->buckets[i].lower.tv_usec,
 			(int)hist->buckets[i].upper.tv_sec,
 			(int)hist->buckets[i].upper.tv_usec,
-			(unsigned)hist->buckets[i].count)) {
+			(unsigned long)hist->buckets[i].count)) {
 			timehist_delete(hist);
 			return 0;
 		}
@@ -781,12 +781,12 @@ print_ext(SSL* ssl, struct stats_info* s)
 		} else {
 			snprintf(nm, sizeof(nm), "TYPE%d", i);
 		}
-		if(!ssl_printf(ssl, "num.query.type.%s"SQ"%u\n", 
-			nm, (unsigned)s->svr.qtype[i])) return 0;
+		if(!ssl_printf(ssl, "num.query.type.%s"SQ"%lu\n", 
+			nm, (unsigned long)s->svr.qtype[i])) return 0;
 	}
 	if(!inhibit_zero || s->svr.qtype_big) {
-		if(!ssl_printf(ssl, "num.query.type.other"SQ"%u\n", 
-			(unsigned)s->svr.qtype_big)) return 0;
+		if(!ssl_printf(ssl, "num.query.type.other"SQ"%lu\n", 
+			(unsigned long)s->svr.qtype_big)) return 0;
 	}
 	/* CLASS */
 	for(i=0; i<STATS_QCLASS_NUM; i++) {
@@ -798,12 +798,12 @@ print_ext(SSL* ssl, struct stats_info* s)
 		} else {
 			snprintf(nm, sizeof(nm), "CLASS%d", i);
 		}
-		if(!ssl_printf(ssl, "num.query.class.%s"SQ"%u\n", 
-			nm, (unsigned)s->svr.qclass[i])) return 0;
+		if(!ssl_printf(ssl, "num.query.class.%s"SQ"%lu\n", 
+			nm, (unsigned long)s->svr.qclass[i])) return 0;
 	}
 	if(!inhibit_zero || s->svr.qclass_big) {
-		if(!ssl_printf(ssl, "num.query.class.other"SQ"%u\n", 
-			(unsigned)s->svr.qclass_big)) return 0;
+		if(!ssl_printf(ssl, "num.query.class.other"SQ"%lu\n", 
+			(unsigned long)s->svr.qclass_big)) return 0;
 	}
 	/* OPCODE */
 	for(i=0; i<STATS_OPCODE_NUM; i++) {
@@ -815,37 +815,37 @@ print_ext(SSL* ssl, struct stats_info* s)
 		} else {
 			snprintf(nm, sizeof(nm), "OPCODE%d", i);
 		}
-		if(!ssl_printf(ssl, "num.query.opcode.%s"SQ"%u\n", 
-			nm, (unsigned)s->svr.qopcode[i])) return 0;
+		if(!ssl_printf(ssl, "num.query.opcode.%s"SQ"%lu\n", 
+			nm, (unsigned long)s->svr.qopcode[i])) return 0;
 	}
 	/* transport */
-	if(!ssl_printf(ssl, "num.query.tcp"SQ"%u\n", 
-		(unsigned)s->svr.qtcp)) return 0;
-	if(!ssl_printf(ssl, "num.query.tcpout"SQ"%u\n", 
-		(unsigned)s->svr.qtcp_outgoing)) return 0;
-	if(!ssl_printf(ssl, "num.query.ipv6"SQ"%u\n", 
-		(unsigned)s->svr.qipv6)) return 0;
+	if(!ssl_printf(ssl, "num.query.tcp"SQ"%lu\n", 
+		(unsigned long)s->svr.qtcp)) return 0;
+	if(!ssl_printf(ssl, "num.query.tcpout"SQ"%lu\n", 
+		(unsigned long)s->svr.qtcp_outgoing)) return 0;
+	if(!ssl_printf(ssl, "num.query.ipv6"SQ"%lu\n", 
+		(unsigned long)s->svr.qipv6)) return 0;
 	/* flags */
-	if(!ssl_printf(ssl, "num.query.flags.QR"SQ"%u\n", 
-		(unsigned)s->svr.qbit_QR)) return 0;
-	if(!ssl_printf(ssl, "num.query.flags.AA"SQ"%u\n", 
-		(unsigned)s->svr.qbit_AA)) return 0;
-	if(!ssl_printf(ssl, "num.query.flags.TC"SQ"%u\n", 
-		(unsigned)s->svr.qbit_TC)) return 0;
-	if(!ssl_printf(ssl, "num.query.flags.RD"SQ"%u\n", 
-		(unsigned)s->svr.qbit_RD)) return 0;
-	if(!ssl_printf(ssl, "num.query.flags.RA"SQ"%u\n", 
-		(unsigned)s->svr.qbit_RA)) return 0;
-	if(!ssl_printf(ssl, "num.query.flags.Z"SQ"%u\n", 
-		(unsigned)s->svr.qbit_Z)) return 0;
-	if(!ssl_printf(ssl, "num.query.flags.AD"SQ"%u\n", 
-		(unsigned)s->svr.qbit_AD)) return 0;
-	if(!ssl_printf(ssl, "num.query.flags.CD"SQ"%u\n", 
-		(unsigned)s->svr.qbit_CD)) return 0;
-	if(!ssl_printf(ssl, "num.query.edns.present"SQ"%u\n", 
-		(unsigned)s->svr.qEDNS)) return 0;
-	if(!ssl_printf(ssl, "num.query.edns.DO"SQ"%u\n", 
-		(unsigned)s->svr.qEDNS_DO)) return 0;
+	if(!ssl_printf(ssl, "num.query.flags.QR"SQ"%lu\n", 
+		(unsigned long)s->svr.qbit_QR)) return 0;
+	if(!ssl_printf(ssl, "num.query.flags.AA"SQ"%lu\n", 
+		(unsigned long)s->svr.qbit_AA)) return 0;
+	if(!ssl_printf(ssl, "num.query.flags.TC"SQ"%lu\n", 
+		(unsigned long)s->svr.qbit_TC)) return 0;
+	if(!ssl_printf(ssl, "num.query.flags.RD"SQ"%lu\n", 
+		(unsigned long)s->svr.qbit_RD)) return 0;
+	if(!ssl_printf(ssl, "num.query.flags.RA"SQ"%lu\n", 
+		(unsigned long)s->svr.qbit_RA)) return 0;
+	if(!ssl_printf(ssl, "num.query.flags.Z"SQ"%lu\n", 
+		(unsigned long)s->svr.qbit_Z)) return 0;
+	if(!ssl_printf(ssl, "num.query.flags.AD"SQ"%lu\n", 
+		(unsigned long)s->svr.qbit_AD)) return 0;
+	if(!ssl_printf(ssl, "num.query.flags.CD"SQ"%lu\n", 
+		(unsigned long)s->svr.qbit_CD)) return 0;
+	if(!ssl_printf(ssl, "num.query.edns.present"SQ"%lu\n", 
+		(unsigned long)s->svr.qEDNS)) return 0;
+	if(!ssl_printf(ssl, "num.query.edns.DO"SQ"%lu\n", 
+		(unsigned long)s->svr.qEDNS_DO)) return 0;
 
 	/* RCODE */
 	for(i=0; i<STATS_RCODE_NUM; i++) {
@@ -857,25 +857,25 @@ print_ext(SSL* ssl, struct stats_info* s)
 		} else {
 			snprintf(nm, sizeof(nm), "RCODE%d", i);
 		}
-		if(!ssl_printf(ssl, "num.answer.rcode.%s"SQ"%u\n", 
-			nm, (unsigned)s->svr.ans_rcode[i])) return 0;
+		if(!ssl_printf(ssl, "num.answer.rcode.%s"SQ"%lu\n", 
+			nm, (unsigned long)s->svr.ans_rcode[i])) return 0;
 	}
 	if(!inhibit_zero || s->svr.ans_rcode_nodata) {
-		if(!ssl_printf(ssl, "num.answer.rcode.nodata"SQ"%u\n", 
-			(unsigned)s->svr.ans_rcode_nodata)) return 0;
+		if(!ssl_printf(ssl, "num.answer.rcode.nodata"SQ"%lu\n", 
+			(unsigned long)s->svr.ans_rcode_nodata)) return 0;
 	}
 	/* validation */
-	if(!ssl_printf(ssl, "num.answer.secure"SQ"%u\n", 
-		(unsigned)s->svr.ans_secure)) return 0;
-	if(!ssl_printf(ssl, "num.answer.bogus"SQ"%u\n", 
-		(unsigned)s->svr.ans_bogus)) return 0;
-	if(!ssl_printf(ssl, "num.rrset.bogus"SQ"%u\n", 
-		(unsigned)s->svr.rrset_bogus)) return 0;
+	if(!ssl_printf(ssl, "num.answer.secure"SQ"%lu\n", 
+		(unsigned long)s->svr.ans_secure)) return 0;
+	if(!ssl_printf(ssl, "num.answer.bogus"SQ"%lu\n", 
+		(unsigned long)s->svr.ans_bogus)) return 0;
+	if(!ssl_printf(ssl, "num.rrset.bogus"SQ"%lu\n", 
+		(unsigned long)s->svr.rrset_bogus)) return 0;
 	/* threat detection */
-	if(!ssl_printf(ssl, "unwanted.queries"SQ"%u\n", 
-		(unsigned)s->svr.unwanted_queries)) return 0;
-	if(!ssl_printf(ssl, "unwanted.replies"SQ"%u\n", 
-		(unsigned)s->svr.unwanted_replies)) return 0;
+	if(!ssl_printf(ssl, "unwanted.queries"SQ"%lu\n", 
+		(unsigned long)s->svr.unwanted_queries)) return 0;
+	if(!ssl_printf(ssl, "unwanted.replies"SQ"%lu\n", 
+		(unsigned long)s->svr.unwanted_replies)) return 0;
 	return 1;
 }
 
@@ -1288,9 +1288,9 @@ do_flush_zone(SSL* ssl, struct worker* worker, char* arg)
 
 	free(nm);
 
-	(void)ssl_printf(ssl, "ok removed %u rrsets, %u messages "
-		"and %u key entries\n", (unsigned)inf.num_rrsets, 
-		(unsigned)inf.num_msgs, (unsigned)inf.num_keys);
+	(void)ssl_printf(ssl, "ok removed %lu rrsets, %lu messages "
+		"and %lu key entries\n", (unsigned long)inf.num_rrsets, 
+		(unsigned long)inf.num_msgs, (unsigned long)inf.num_keys);
 }
 
 /** callback to delete bogus rrsets */
@@ -1356,9 +1356,9 @@ do_flush_bogus(SSL* ssl, struct worker* worker)
 			&bogus_del_kcache, &inf);
 	}
 
-	(void)ssl_printf(ssl, "ok removed %u rrsets, %u messages "
-		"and %u key entries\n", (unsigned)inf.num_rrsets, 
-		(unsigned)inf.num_msgs, (unsigned)inf.num_keys);
+	(void)ssl_printf(ssl, "ok removed %lu rrsets, %lu messages "
+		"and %lu key entries\n", (unsigned long)inf.num_rrsets, 
+		(unsigned long)inf.num_msgs, (unsigned long)inf.num_keys);
 }
 
 /** remove name rrset from cache */
@@ -1875,10 +1875,10 @@ dump_infra_host(struct lruhash_entry* e, void* arg)
 		}
 		return;
 	}
-	if(!ssl_printf(a->ssl, "%s %s ttl %d ping %d var %d rtt %d rto %d "
+	if(!ssl_printf(a->ssl, "%s %s ttl %lu ping %d var %d rtt %d rto %d "
 		"tA %d tAAAA %d tother %d "
 		"ednsknown %d edns %d delay %d lame dnssec %d rec %d A %d "
-		"other %d\n", ip_str, name, (int)(d->ttl - a->now),
+		"other %d\n", ip_str, name, (unsigned long)(d->ttl - a->now),
 		d->rtt.srtt, d->rtt.rttvar, rtt_notimeout(&d->rtt), d->rtt.rto,
 		d->timeout_A, d->timeout_AAAA, d->timeout_other,
 		(int)d->edns_lame_known, (int)d->edns_version,
