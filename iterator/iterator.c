@@ -253,6 +253,14 @@ error_response_cache(struct module_qstate* qstate, int id, int rcode)
 {
 	/* store in cache */
 	struct reply_info err;
+	if(qstate->prefetch_leeway > NORR_TTL) {
+		verbose(VERB_ALGO, "error response for prefetch in cache");
+		/* attempt to adjust the cache entry prefetch */
+		if(dns_cache_prefetch_adjust(qstate->env, &qstate->qinfo,
+			NORR_TTL))
+			return error_response(qstate, id, rcode);
+		/* if that fails (not in cache), fall through to store err */
+	}
 	memset(&err, 0, sizeof(err));
 	err.flags = (uint16_t)(BIT_QR | BIT_RA);
 	FLAGS_SET_RCODE(err.flags, rcode);
