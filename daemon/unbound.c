@@ -83,7 +83,13 @@
 #    include "util/mini_event.h"
 #  endif
 #else
-#  include <event.h>
+#  ifdef HAVE_EVENT_H
+#    include <event.h>
+#  else
+#    include "event2/event.h"
+#    include "event2/event_struct.h"
+#    include "event2/event_compat.h"
+#  endif
 #endif
 
 #ifdef UB_ON_WINDOWS
