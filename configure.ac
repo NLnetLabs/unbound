@@ -807,6 +807,7 @@ large outgoing port ranges.  ])
 	    dnl if event2 exists and no event lib in dir itself, use subdir
 	    if test ! -f $thedir/lib/libevent.a -a ! -f $thedir/lib/libevent.so -a -d "$thedir/lib/event2"; then
 		    LDFLAGS="$LDFLAGS -L$thedir/lib/event2"
+		    CPPFLAGS="$CPPFLAGS -L$thedir/include/event2"
 		    ACX_RUNTIME_PATH_ADD([$thedir/lib/event2])
 	    else
 		    dnl assume /usr is in default path, do not add "".

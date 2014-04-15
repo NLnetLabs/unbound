@@ -1,3 +1,6 @@
+15 April 2014: Wouter
+	- If event2 is installed, include dir/include/event2 in compilation.
+
 11 April 2014: Wouter
 	- Fix #502: explain that do-ip6 disable does not stop AAAA lookups,
 	  but it stops the use of the ipv6 transport layer for DNS traffic.
