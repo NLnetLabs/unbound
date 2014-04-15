@@ -17225,7 +17225,7 @@ large outgoing port ranges.  " "$LINENO" 5
 $as_echo "found in $thedir" >&6; }
 	    	    if test ! -f $thedir/lib/libevent.a -a ! -f $thedir/lib/libevent.so -a -d "$thedir/lib/event2"; then
 		    LDFLAGS="$LDFLAGS -L$thedir/lib/event2"
-		    CPPFLAGS="$CPPFLAGS -L$thedir/include/event2"
+		    CPPFLAGS="$CPPFLAGS -I$thedir/include/event2"
 
 	if test "x$enable_rpath" = xyes; then
 		if echo "$thedir/lib/event2" | grep "^/" >/dev/null; then
