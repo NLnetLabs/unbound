@@ -61,7 +61,10 @@
 #include "util/random.h"
 #include "util/log.h"
 #include <time.h>
-#ifdef HAVE_SSL
+
+#ifdef HAVE_ARC4RANDOM_UNIFORM
+/* no include for arc4_uniform */
+#elif HAVE_SSL
 #include <openssl/rand.h>
 #include <openssl/rc4.h>
 #include <openssl/err.h>
@@ -79,7 +82,34 @@
  */
 #define MAX_VALUE 0x7fffffff
 
-#ifdef HAVE_SSL
+#ifdef HAVE_ARC4RANDOM_UNIFORM
+
+void
+ub_systemseed(unsigned int ATTR_UNUSED(seed))
+{
+	/* arc4random_uniform does not need seeds, it gets kernel entropy */
+}
+
+struct ub_randstate* 
+ub_initstate(unsigned int ATTR_UNUSED(seed),
+	struct ub_randstate* ATTR_UNUSED(from))
+{
+	struct ub_randstate* s = (struct ub_randstate*)malloc(1);
+	if(!s) {
+		log_err("malloc failure in random init");
+		return NULL;
+	}
+	return s;
+}
+
+long int 
+ub_random(struct ub_randstate* ATTR_UNUSED(s))
+{
+	/* This relies on MAX_VALUE being 0x7fffffff. */
+	return (long)arc4random() & MAX_VALUE;
+}
+
+#elif HAVE_SSL
 /**
  * Struct with per-thread random state.
  * Keeps SSL types away from the header file.
@@ -253,11 +283,12 @@ long int ub_random(struct ub_randstate* ATTR_UNUSED(state))
 	return x & MAX_VALUE;
 }
 
-#endif /* HAVE_SSL or HAVE_NSS */
+#endif /* HAVE_ARC4RANDOM_UNIFORM or HAVE_SSL or HAVE_NSS */
 
 long int
 ub_random_max(struct ub_randstate* state, long int x)
 {
+#ifndef HAVE_ARC4RANDOM_UNIFORM
 	/* make sure we fetch in a range that is divisible by x. ignore
 	 * values from d .. MAX_VALUE, instead draw a new number */
 	long int d = MAX_VALUE - (MAX_VALUE % x); /* d is divisible by x */
@@ -265,6 +296,11 @@ ub_random_max(struct ub_randstate* state, long int x)
 	while(d <= v)
 		v = ub_random(state);
 	return (v % x);
+#else
+	(void)state;
+	/* on OpenBSD, this does not need _seed(), or _stir() calls */
+	return (long)arc4random_uniform(x);
+#endif
 }
 
 void 
