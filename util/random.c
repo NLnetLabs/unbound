@@ -64,7 +64,7 @@
 
 #ifdef HAVE_ARC4RANDOM_UNIFORM
 /* no include for arc4_uniform */
-#elif HAVE_SSL
+#elif defined(HAVE_SSL)
 #include <openssl/rand.h>
 #include <openssl/rc4.h>
 #include <openssl/err.h>
@@ -109,7 +109,7 @@ ub_random(struct ub_randstate* ATTR_UNUSED(s))
 	return (long)arc4random() & MAX_VALUE;
 }
 
-#elif HAVE_SSL
+#elif defined(HAVE_SSL)
 /**
  * Struct with per-thread random state.
  * Keeps SSL types away from the header file.
