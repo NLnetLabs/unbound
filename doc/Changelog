@@ -1,3 +1,7 @@
+23 April 2014: Wouter
+	- Patch from Jeremie Courreges-Anglas to use arc4random_uniform
+	  if available on the OS, it gets entropy from the OS.
+
 15 April 2014: Wouter
 	- Fix compile with libevent2 on FreeBSD.
 
