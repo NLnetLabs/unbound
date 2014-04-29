@@ -1,5 +1,9 @@
 29 April 2014: Wouter
 	- iana portlist updated.
+	- Add unbound-control flush_negative that flushed nxdomains, nodata,
+	  and errors from the cache.  For dnssec-trigger and NetworkManager,
+	  fixes cases where network changes have localdata that was already
+	  negatively cached from the previous network.
 
 23 April 2014: Wouter
 	- Patch from Jeremie Courreges-Anglas to use arc4random_uniform

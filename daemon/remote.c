@@ -1332,7 +1332,7 @@ bogus_del_kcache(struct lruhash_entry* e, void* arg)
 	}
 }
 
-/** remove all rrsets and keys from zone from cache */
+/** remove all bogus rrsets, msgs and keys from cache */
 static void
 do_flush_bogus(SSL* ssl, struct worker* worker)
 {
@@ -1354,6 +1354,82 @@ do_flush_bogus(SSL* ssl, struct worker* worker)
 	if(worker->env.key_cache) {
 		slabhash_traverse(worker->env.key_cache->slab, 1, 
 			&bogus_del_kcache, &inf);
+	}
+
+	(void)ssl_printf(ssl, "ok removed %lu rrsets, %lu messages "
+		"and %lu key entries\n", (unsigned long)inf.num_rrsets, 
+		(unsigned long)inf.num_msgs, (unsigned long)inf.num_keys);
+}
+
+/** callback to delete negative and servfail rrsets */
+static void
+negative_del_rrset(struct lruhash_entry* e, void* arg)
+{
+	/* entry is locked */
+	struct del_info* inf = (struct del_info*)arg;
+	struct ub_packed_rrset_key* k = (struct ub_packed_rrset_key*)e->key;
+	struct packed_rrset_data* d = (struct packed_rrset_data*)e->data;
+	/* delete the parentside negative cache rrsets,
+	 * these are namerserver rrsets that failed lookup, rdata empty */
+	if((k->rk.flags & PACKED_RRSET_PARENT_SIDE) && d->count == 1 &&
+		d->rrsig_count == 0 && d->rr_len[0] == 0) {
+		d->ttl = inf->expired;
+		inf->num_rrsets++;
+	}
+}
+
+/** callback to delete negative and servfail messages */
+static void
+negative_del_msg(struct lruhash_entry* e, void* arg)
+{
+	/* entry is locked */
+	struct del_info* inf = (struct del_info*)arg;
+	struct reply_info* d = (struct reply_info*)e->data;
+	/* rcode not NOERROR: NXDOMAIN, SERVFAIL, ..: an nxdomain or error
+	 * or NOERROR rcode with ANCOUNT==0: a NODATA answer */
+	if(FLAGS_GET_RCODE(d->flags) != 0 || d->an_numrrsets == 0) {
+		d->ttl = inf->expired;
+		inf->num_msgs++;
+	}
+}
+
+/** callback to delete negative key entries */
+static void
+negative_del_kcache(struct lruhash_entry* e, void* arg)
+{
+	/* entry is locked */
+	struct del_info* inf = (struct del_info*)arg;
+	struct key_entry_data* d = (struct key_entry_data*)e->data;
+	/* could be bad because of lookup failure on the DS, DNSKEY, which
+	 * was nxdomain or servfail, and thus a result of negative lookups */
+	if(d->isbad) {
+		d->ttl = inf->expired;
+		inf->num_keys++;
+	}
+}
+
+/** remove all negative(NODATA,NXDOMAIN), and servfail messages from cache */
+static void
+do_flush_negative(SSL* ssl, struct worker* worker)
+{
+	struct del_info inf;
+	/* what we do is to set them all expired */
+	inf.worker = worker;
+	inf.now = *worker->env.now;
+	inf.expired = *worker->env.now;
+	inf.expired -= 3; /* handle 3 seconds skew between threads */
+	inf.num_rrsets = 0;
+	inf.num_msgs = 0;
+	inf.num_keys = 0;
+	slabhash_traverse(&worker->env.rrset_cache->table, 1, 
+		&negative_del_rrset, &inf);
+
+	slabhash_traverse(worker->env.msg_cache, 1, &negative_del_msg, &inf);
+
+	/* and validator cache */
+	if(worker->env.key_cache) {
+		slabhash_traverse(worker->env.key_cache->slab, 1, 
+			&negative_del_kcache, &inf);
 	}
 
 	(void)ssl_printf(ssl, "ok removed %lu rrsets, %lu messages "
@@ -2203,6 +2279,8 @@ execute_cmd(struct daemon_remote* rc, SSL* ssl, char* cmd,
 		do_get_option(ssl, worker, skipwhite(p+10));
 	} else if(cmdcmp(p, "flush_bogus", 11)) {
 		do_flush_bogus(ssl, worker);
+	} else if(cmdcmp(p, "flush_negative", 14)) {
+		do_flush_negative(ssl, worker);
 	} else {
 		(void)ssl_printf(ssl, "error unknown command '%s'\n", p);
 	}

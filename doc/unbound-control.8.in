@@ -133,6 +133,12 @@ This needs to walk and inspect the entire cache, and is a slow operation.
 .B flush_bogus
 Remove all bogus data from the cache.
 .TP
+.B flush_negative
+Remove all negative data from the cache.  This is nxdomain answers,
+nodata answers and servfail answers.  Also removes bad key entries
+(which could be due to failed lookups) from the dnssec key cache, and
+iterator last-resort lookup failures from the rrset cache.
+.TP
 .B flush_stats
 Reset statistics to zero.
 .TP
