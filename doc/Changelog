@@ -1,3 +1,7 @@
+5 May 2014: Wouter
+	- More #567: remove : from output of stub and forward lists, this is
+	  easier to parse.
+
 29 April 2014: Wouter
 	- iana portlist updated.
 	- Add unbound-control flush_negative that flushed nxdomains, nodata,

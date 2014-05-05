@@ -1473,7 +1473,7 @@ ssl_print_name_dp(SSL* ssl, char* str, uint8_t* nm, uint16_t dclass,
 	if(str) { /* print header for forward, stub */
 		char* c = sldns_wire2str_class(dclass);
 		dname_str(nm, buf);
-		if(!ssl_printf(ssl, "%s %s %s: ", buf, (c?c:"CLASS??"), str)) {
+		if(!ssl_printf(ssl, "%s %s %s ", buf, (c?c:"CLASS??"), str)) {
 			free(c);
 			return 0;
 		}
