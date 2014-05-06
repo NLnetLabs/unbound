@@ -1,3 +1,6 @@
+6 May 2014: Wouter
+	- Change MAX_SENT_COUNT from 16 to 32 to resolve some cases easier.
+
 5 May 2014: Wouter
 	- More #567: remove : from output of stub and forward lists, this is
 	  easier to parse.

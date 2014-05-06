@@ -57,7 +57,7 @@ struct iter_priv;
 /** max number of referrals. Makes sure resolver does not run away */
 #define MAX_REFERRAL_COUNT	130
 /** max number of queries-sent-out.  Make sure large NS set does not loop */
-#define MAX_SENT_COUNT		16
+#define MAX_SENT_COUNT		32
 /** at what query-sent-count to stop target fetch policy */
 #define TARGET_FETCH_STOP	3
 /** how nice is a server without further information, in msec 
