@@ -1,3 +1,10 @@
+8 May 2014: Wouter
+	- Contrib windows scripts from Yuri Voinov added to src/contrib:
+	  create_unbound_ad_servers.cmd: enters anti-ad server lists.
+	  unbound_cache.cmd: saves and loads the cache.
+	- Added unbound-control-setup.cmd from Yuri Voinov to the windows
+	  unbound distribution set.  It requires openssl installed in %PATH%.
+
 6 May 2014: Wouter
 	- Change MAX_SENT_COUNT from 16 to 32 to resolve some cases easier.
 
