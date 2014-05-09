@@ -1,5 +1,6 @@
 9 May 2014: Wouter
 	- Implement draft-ietf-dnsop-rfc6598-rfc6303-01.
+	- iana portlist updated.
 
 8 May 2014: Wouter
 	- Contrib windows scripts from Yuri Voinov added to src/contrib:
