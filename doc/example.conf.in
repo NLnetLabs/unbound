@@ -478,6 +478,7 @@ server:
 	# local-zone: "a.e.f.ip6.arpa." nodefault
 	# local-zone: "b.e.f.ip6.arpa." nodefault
 	# local-zone: "8.b.d.0.1.0.0.2.ip6.arpa." nodefault
+	# And for 64.100.in-addr.arpa. to 127.100.in-addr.arpa.
 
 	# a number of locally served zones can be configured.
 	# 	local-zone: <zone> <type>

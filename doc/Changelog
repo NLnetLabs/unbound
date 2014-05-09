@@ -1,3 +1,6 @@
+9 May 2014: Wouter
+	- Implement draft-ietf-dnsop-rfc6598-rfc6303-01.
+
 8 May 2014: Wouter
 	- Contrib windows scripts from Yuri Voinov added to src/contrib:
 	  create_unbound_ad_servers.cmd: enters anti-ad server lists.
