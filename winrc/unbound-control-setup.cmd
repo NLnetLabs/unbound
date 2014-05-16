@@ -63,10 +63,7 @@ rem end of options
 
 rem Check OpenSSL installed
 for /f "delims=" %%a in ('where openssl') do @set SSL_PROGRAM=%%a
-if /I %SSL_PROGRAM%=="" (
-echo SSL not found. If installed, add path to PATH environment variable.
-exit 1
-)
+if /I "%SSL_PROGRAM%"=="" echo SSL not found. If installed, add path to PATH environment variable. & exit 1
 echo SSL found: %SSL_PROGRAM%
 
 set arg=%1
@@ -83,7 +80,7 @@ echo %SVR_BASE%.key exists
 goto next
 )
 echo generating %SVR_BASE%.key
-%SSL_PROGRAM% genrsa -out %SVR_BASE%.key %BITS% || echo could not genrsa && exit 1
+"%SSL_PROGRAM%" genrsa -out %SVR_BASE%.key %BITS% || echo could not genrsa && exit 1
 
 :next
 if exist %CTL_BASE%.key (
@@ -91,7 +88,7 @@ echo %CTL_BASE%.key exists
 goto next2
 )
 echo generating %CTL_BASE%.key
-%SSL_PROGRAM% genrsa -out %CTL_BASE%.key %BITS% || echo could not genrsa && exit 1
+"%SSL_PROGRAM%" genrsa -out %CTL_BASE%.key %BITS% || echo could not genrsa && exit 1
 
 :next2
 rem create self-signed cert for server
@@ -111,9 +108,9 @@ exit 1
 )
 
 echo create %SVR_BASE%.pem (self signed certificate)
-%SSL_PROGRAM% req -key %SVR_BASE%.key -config request.cfg  -new -x509 -days %DAYS% -out %SVR_BASE%.pem || echo could not create %SVR_BASE%.pem && exit 1
+"%SSL_PROGRAM%" req -key %SVR_BASE%.key -config request.cfg  -new -x509 -days %DAYS% -out %SVR_BASE%.pem || echo could not create %SVR_BASE%.pem && exit 1
 rem create trusted usage pem
-%SSL_PROGRAM% x509 -in %SVR_BASE%.pem -addtrust serverAuth -out %SVR_BASE%_trust.pem
+"%SSL_PROGRAM%" x509 -in %SVR_BASE%.pem -addtrust serverAuth -out %SVR_BASE%_trust.pem
 
 rem create client request and sign it
 if exist request.cfg (del /F /Q /S request.cfg)
@@ -132,21 +129,21 @@ exit 1
 )
 
 echo create %CTL_BASE%.pem (signed client certificate)
-%SSL_PROGRAM% req -key %CTL_BASE%.key -config request.cfg -new | %SSL_PROGRAM% x509 -req -days %DAYS% -CA %SVR_BASE%_trust.pem -CAkey %SVR_BASE%.key -CAcreateserial -%HASH% -out %CTL_BASE%.pem
+"%SSL_PROGRAM%" req -key %CTL_BASE%.key -config request.cfg -new | "%SSL_PROGRAM%" x509 -req -days %DAYS% -CA %SVR_BASE%_trust.pem -CAkey %SVR_BASE%.key -CAcreateserial -%HASH% -out %CTL_BASE%.pem
 
 if not exist %CTL_BASE%.pem (
 echo could not create %CTL_BASE%.pem
 exit 1
 )
 rem create trusted usage pem
-rem %SSL_PROGRAM% x509 -in %CTL_BASE%.pem -addtrust clientAuth -out %CTL_BASE%_trust.pem
+rem "%SSL_PROGRAM%" x509 -in %CTL_BASE%.pem -addtrust clientAuth -out %CTL_BASE%_trust.pem
 
-rem see details with %SSL_PROGRAM% x509 -noout -text < %SVR_BASE%.pem
+rem see details with "%SSL_PROGRAM%" x509 -noout -text < %SVR_BASE%.pem
 rem echo "create %CTL_BASE%_browser.pfx (web client certificate)"
 rem echo "create webbrowser PKCSrem12 .PFX certificate file. In Firefox import in:"
 rem echo "preferences - advanced - encryption - view certificates - your certs"
 rem echo "empty password is used, simply click OK on the password dialog box."
-rem %SSL_PROGRAM% pkcs12 -export -in %CTL_BASE%_trust.pem -inkey %CTL_BASE%.key -name "unbound remote control client cert" -out %CTL_BASE%_browser.pfx -password "pass:" || echo could not create browser certificate && exit 1
+rem "%SSL_PROGRAM%" pkcs12 -export -in %CTL_BASE%_trust.pem -inkey %CTL_BASE%.key -name "unbound remote control client cert" -out %CTL_BASE%_browser.pfx -password "pass:" || echo could not create browser certificate && exit 1
 
 rem remove crap
 del /F /Q /S request.cfg

@@ -1,3 +1,8 @@
+16 May 2014: Wouter
+	- Updated create_unbound_ad_servers and unbound_cache scripts from
+	  Yuri Voinov in the source/contrib directory. Added
+	  warmup.cmd (and .sh): warm up the DNS cache with your MRU domains.
+
 9 May 2014: Wouter
 	- Implement draft-ietf-dnsop-rfc6598-rfc6303-01.
 	- iana portlist updated.

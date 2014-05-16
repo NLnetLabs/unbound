@@ -12,14 +12,11 @@ set work_dir=%TEMP%
 set list_addr="http://pgl.yoyo.org/adservers/serverlist.php?hostformat=nohtml&showintro=1&startdate%5Bday%5D=&startdate%5Bmonth%5D=&startdate%5Byear%5D="
 
 rem Check Wget installed
-for /f "delims=" %%a in ('where wget') do @set wget="%%a"
-if /I %wget% == "" (
-echo Wget not found. If installed, add path to PATH environment variable.
-exit 1
-)
+for /f "delims=" %%a in ('where wget') do @set wget=%%a
+if /I "%wget%"=="" echo Wget not found. If installed, add path to PATH environment variable. & exit 1
 echo Wget found: %wget%
 
-%wget% -O %work_dir%\yoyo_ad_servers %list_addr%
+"%wget%" -O %work_dir%\yoyo_ad_servers %list_addr%
 
 del /Q /F /S %dst_dir%\unbound_ad_servers
 
