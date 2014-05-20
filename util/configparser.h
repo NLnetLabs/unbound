@@ -1,19 +1,19 @@
-/* A Bison parser, made by GNU Bison 2.7.12-4996.  */
+/* A Bison parser, made by GNU Bison 3.0.2.  */
 
 /* Bison interface for Yacc-like parsers in C
-   
-      Copyright (C) 1984, 1989-1990, 2000-2013 Free Software Foundation, Inc.
-   
+
+   Copyright (C) 1984, 1989-1990, 2000-2013 Free Software Foundation, Inc.
+
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
    the Free Software Foundation, either version 3 of the License, or
    (at your option) any later version.
-   
+
    This program is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
    GNU General Public License for more details.
-   
+
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
@@ -26,13 +26,13 @@
    special exception, which will cause the skeleton and the resulting
    Bison output files to be licensed under the GNU General Public
    License without this special exception.
-   
+
    This special exception was added by the Free Software Foundation in
    version 2.2 of Bison.  */
 
 #ifndef YY_YY_UTIL_CONFIGPARSER_H_INCLUDED
 # define YY_YY_UTIL_CONFIGPARSER_H_INCLUDED
-/* Enabling traces.  */
+/* Debug traces.  */
 #ifndef YYDEBUG
 # define YYDEBUG 0
 #endif
@@ -40,145 +40,146 @@
 extern int yydebug;
 #endif
 
-/* Tokens.  */
+/* Token type.  */
 #ifndef YYTOKENTYPE
 # define YYTOKENTYPE
-   /* Put the tokens into the symbol table, so that GDB and other debuggers
-      know about them.  */
-   enum yytokentype {
-     SPACE = 258,
-     LETTER = 259,
-     NEWLINE = 260,
-     COMMENT = 261,
-     COLON = 262,
-     ANY = 263,
-     ZONESTR = 264,
-     STRING_ARG = 265,
-     VAR_SERVER = 266,
-     VAR_VERBOSITY = 267,
-     VAR_NUM_THREADS = 268,
-     VAR_PORT = 269,
-     VAR_OUTGOING_RANGE = 270,
-     VAR_INTERFACE = 271,
-     VAR_DO_IP4 = 272,
-     VAR_DO_IP6 = 273,
-     VAR_DO_UDP = 274,
-     VAR_DO_TCP = 275,
-     VAR_CHROOT = 276,
-     VAR_USERNAME = 277,
-     VAR_DIRECTORY = 278,
-     VAR_LOGFILE = 279,
-     VAR_PIDFILE = 280,
-     VAR_MSG_CACHE_SIZE = 281,
-     VAR_MSG_CACHE_SLABS = 282,
-     VAR_NUM_QUERIES_PER_THREAD = 283,
-     VAR_RRSET_CACHE_SIZE = 284,
-     VAR_RRSET_CACHE_SLABS = 285,
-     VAR_OUTGOING_NUM_TCP = 286,
-     VAR_INFRA_HOST_TTL = 287,
-     VAR_INFRA_LAME_TTL = 288,
-     VAR_INFRA_CACHE_SLABS = 289,
-     VAR_INFRA_CACHE_NUMHOSTS = 290,
-     VAR_INFRA_CACHE_LAME_SIZE = 291,
-     VAR_NAME = 292,
-     VAR_STUB_ZONE = 293,
-     VAR_STUB_HOST = 294,
-     VAR_STUB_ADDR = 295,
-     VAR_TARGET_FETCH_POLICY = 296,
-     VAR_HARDEN_SHORT_BUFSIZE = 297,
-     VAR_HARDEN_LARGE_QUERIES = 298,
-     VAR_FORWARD_ZONE = 299,
-     VAR_FORWARD_HOST = 300,
-     VAR_FORWARD_ADDR = 301,
-     VAR_DO_NOT_QUERY_ADDRESS = 302,
-     VAR_HIDE_IDENTITY = 303,
-     VAR_HIDE_VERSION = 304,
-     VAR_IDENTITY = 305,
-     VAR_VERSION = 306,
-     VAR_HARDEN_GLUE = 307,
-     VAR_MODULE_CONF = 308,
-     VAR_TRUST_ANCHOR_FILE = 309,
-     VAR_TRUST_ANCHOR = 310,
-     VAR_VAL_OVERRIDE_DATE = 311,
-     VAR_BOGUS_TTL = 312,
-     VAR_VAL_CLEAN_ADDITIONAL = 313,
-     VAR_VAL_PERMISSIVE_MODE = 314,
-     VAR_INCOMING_NUM_TCP = 315,
-     VAR_MSG_BUFFER_SIZE = 316,
-     VAR_KEY_CACHE_SIZE = 317,
-     VAR_KEY_CACHE_SLABS = 318,
-     VAR_TRUSTED_KEYS_FILE = 319,
-     VAR_VAL_NSEC3_KEYSIZE_ITERATIONS = 320,
-     VAR_USE_SYSLOG = 321,
-     VAR_OUTGOING_INTERFACE = 322,
-     VAR_ROOT_HINTS = 323,
-     VAR_DO_NOT_QUERY_LOCALHOST = 324,
-     VAR_CACHE_MAX_TTL = 325,
-     VAR_HARDEN_DNSSEC_STRIPPED = 326,
-     VAR_ACCESS_CONTROL = 327,
-     VAR_LOCAL_ZONE = 328,
-     VAR_LOCAL_DATA = 329,
-     VAR_INTERFACE_AUTOMATIC = 330,
-     VAR_STATISTICS_INTERVAL = 331,
-     VAR_DO_DAEMONIZE = 332,
-     VAR_USE_CAPS_FOR_ID = 333,
-     VAR_STATISTICS_CUMULATIVE = 334,
-     VAR_OUTGOING_PORT_PERMIT = 335,
-     VAR_OUTGOING_PORT_AVOID = 336,
-     VAR_DLV_ANCHOR_FILE = 337,
-     VAR_DLV_ANCHOR = 338,
-     VAR_NEG_CACHE_SIZE = 339,
-     VAR_HARDEN_REFERRAL_PATH = 340,
-     VAR_PRIVATE_ADDRESS = 341,
-     VAR_PRIVATE_DOMAIN = 342,
-     VAR_REMOTE_CONTROL = 343,
-     VAR_CONTROL_ENABLE = 344,
-     VAR_CONTROL_INTERFACE = 345,
-     VAR_CONTROL_PORT = 346,
-     VAR_SERVER_KEY_FILE = 347,
-     VAR_SERVER_CERT_FILE = 348,
-     VAR_CONTROL_KEY_FILE = 349,
-     VAR_CONTROL_CERT_FILE = 350,
-     VAR_EXTENDED_STATISTICS = 351,
-     VAR_LOCAL_DATA_PTR = 352,
-     VAR_JOSTLE_TIMEOUT = 353,
-     VAR_STUB_PRIME = 354,
-     VAR_UNWANTED_REPLY_THRESHOLD = 355,
-     VAR_LOG_TIME_ASCII = 356,
-     VAR_DOMAIN_INSECURE = 357,
-     VAR_PYTHON = 358,
-     VAR_PYTHON_SCRIPT = 359,
-     VAR_VAL_SIG_SKEW_MIN = 360,
-     VAR_VAL_SIG_SKEW_MAX = 361,
-     VAR_CACHE_MIN_TTL = 362,
-     VAR_VAL_LOG_LEVEL = 363,
-     VAR_AUTO_TRUST_ANCHOR_FILE = 364,
-     VAR_KEEP_MISSING = 365,
-     VAR_ADD_HOLDDOWN = 366,
-     VAR_DEL_HOLDDOWN = 367,
-     VAR_SO_RCVBUF = 368,
-     VAR_EDNS_BUFFER_SIZE = 369,
-     VAR_PREFETCH = 370,
-     VAR_PREFETCH_KEY = 371,
-     VAR_SO_SNDBUF = 372,
-     VAR_HARDEN_BELOW_NXDOMAIN = 373,
-     VAR_IGNORE_CD_FLAG = 374,
-     VAR_LOG_QUERIES = 375,
-     VAR_TCP_UPSTREAM = 376,
-     VAR_SSL_UPSTREAM = 377,
-     VAR_SSL_SERVICE_KEY = 378,
-     VAR_SSL_SERVICE_PEM = 379,
-     VAR_SSL_PORT = 380,
-     VAR_FORWARD_FIRST = 381,
-     VAR_STUB_FIRST = 382,
-     VAR_MINIMAL_RESPONSES = 383,
-     VAR_RRSET_ROUNDROBIN = 384,
-     VAR_SEND_CLIENT_SUBNET = 385,
-     VAR_CLIENT_SUBNET_OPCODE = 386,
-     VAR_MAX_CLIENT_SUBNET_IPV4 = 387,
-     VAR_MAX_CLIENT_SUBNET_IPV6 = 388,
-     VAR_MAX_UDP_SIZE = 389
-   };
+  enum yytokentype
+  {
+    SPACE = 258,
+    LETTER = 259,
+    NEWLINE = 260,
+    COMMENT = 261,
+    COLON = 262,
+    ANY = 263,
+    ZONESTR = 264,
+    STRING_ARG = 265,
+    VAR_SERVER = 266,
+    VAR_VERBOSITY = 267,
+    VAR_NUM_THREADS = 268,
+    VAR_PORT = 269,
+    VAR_OUTGOING_RANGE = 270,
+    VAR_INTERFACE = 271,
+    VAR_DO_IP4 = 272,
+    VAR_DO_IP6 = 273,
+    VAR_DO_UDP = 274,
+    VAR_DO_TCP = 275,
+    VAR_CHROOT = 276,
+    VAR_USERNAME = 277,
+    VAR_DIRECTORY = 278,
+    VAR_LOGFILE = 279,
+    VAR_PIDFILE = 280,
+    VAR_MSG_CACHE_SIZE = 281,
+    VAR_MSG_CACHE_SLABS = 282,
+    VAR_NUM_QUERIES_PER_THREAD = 283,
+    VAR_RRSET_CACHE_SIZE = 284,
+    VAR_RRSET_CACHE_SLABS = 285,
+    VAR_OUTGOING_NUM_TCP = 286,
+    VAR_INFRA_HOST_TTL = 287,
+    VAR_INFRA_LAME_TTL = 288,
+    VAR_INFRA_CACHE_SLABS = 289,
+    VAR_INFRA_CACHE_NUMHOSTS = 290,
+    VAR_INFRA_CACHE_LAME_SIZE = 291,
+    VAR_NAME = 292,
+    VAR_STUB_ZONE = 293,
+    VAR_STUB_HOST = 294,
+    VAR_STUB_ADDR = 295,
+    VAR_TARGET_FETCH_POLICY = 296,
+    VAR_HARDEN_SHORT_BUFSIZE = 297,
+    VAR_HARDEN_LARGE_QUERIES = 298,
+    VAR_FORWARD_ZONE = 299,
+    VAR_FORWARD_HOST = 300,
+    VAR_FORWARD_ADDR = 301,
+    VAR_DO_NOT_QUERY_ADDRESS = 302,
+    VAR_HIDE_IDENTITY = 303,
+    VAR_HIDE_VERSION = 304,
+    VAR_IDENTITY = 305,
+    VAR_VERSION = 306,
+    VAR_HARDEN_GLUE = 307,
+    VAR_MODULE_CONF = 308,
+    VAR_TRUST_ANCHOR_FILE = 309,
+    VAR_TRUST_ANCHOR = 310,
+    VAR_VAL_OVERRIDE_DATE = 311,
+    VAR_BOGUS_TTL = 312,
+    VAR_VAL_CLEAN_ADDITIONAL = 313,
+    VAR_VAL_PERMISSIVE_MODE = 314,
+    VAR_INCOMING_NUM_TCP = 315,
+    VAR_MSG_BUFFER_SIZE = 316,
+    VAR_KEY_CACHE_SIZE = 317,
+    VAR_KEY_CACHE_SLABS = 318,
+    VAR_TRUSTED_KEYS_FILE = 319,
+    VAR_VAL_NSEC3_KEYSIZE_ITERATIONS = 320,
+    VAR_USE_SYSLOG = 321,
+    VAR_OUTGOING_INTERFACE = 322,
+    VAR_ROOT_HINTS = 323,
+    VAR_DO_NOT_QUERY_LOCALHOST = 324,
+    VAR_CACHE_MAX_TTL = 325,
+    VAR_HARDEN_DNSSEC_STRIPPED = 326,
+    VAR_ACCESS_CONTROL = 327,
+    VAR_LOCAL_ZONE = 328,
+    VAR_LOCAL_DATA = 329,
+    VAR_INTERFACE_AUTOMATIC = 330,
+    VAR_STATISTICS_INTERVAL = 331,
+    VAR_DO_DAEMONIZE = 332,
+    VAR_USE_CAPS_FOR_ID = 333,
+    VAR_STATISTICS_CUMULATIVE = 334,
+    VAR_OUTGOING_PORT_PERMIT = 335,
+    VAR_OUTGOING_PORT_AVOID = 336,
+    VAR_DLV_ANCHOR_FILE = 337,
+    VAR_DLV_ANCHOR = 338,
+    VAR_NEG_CACHE_SIZE = 339,
+    VAR_HARDEN_REFERRAL_PATH = 340,
+    VAR_PRIVATE_ADDRESS = 341,
+    VAR_PRIVATE_DOMAIN = 342,
+    VAR_REMOTE_CONTROL = 343,
+    VAR_CONTROL_ENABLE = 344,
+    VAR_CONTROL_INTERFACE = 345,
+    VAR_CONTROL_PORT = 346,
+    VAR_SERVER_KEY_FILE = 347,
+    VAR_SERVER_CERT_FILE = 348,
+    VAR_CONTROL_KEY_FILE = 349,
+    VAR_CONTROL_CERT_FILE = 350,
+    VAR_EXTENDED_STATISTICS = 351,
+    VAR_LOCAL_DATA_PTR = 352,
+    VAR_JOSTLE_TIMEOUT = 353,
+    VAR_STUB_PRIME = 354,
+    VAR_UNWANTED_REPLY_THRESHOLD = 355,
+    VAR_LOG_TIME_ASCII = 356,
+    VAR_DOMAIN_INSECURE = 357,
+    VAR_PYTHON = 358,
+    VAR_PYTHON_SCRIPT = 359,
+    VAR_VAL_SIG_SKEW_MIN = 360,
+    VAR_VAL_SIG_SKEW_MAX = 361,
+    VAR_CACHE_MIN_TTL = 362,
+    VAR_VAL_LOG_LEVEL = 363,
+    VAR_AUTO_TRUST_ANCHOR_FILE = 364,
+    VAR_KEEP_MISSING = 365,
+    VAR_ADD_HOLDDOWN = 366,
+    VAR_DEL_HOLDDOWN = 367,
+    VAR_SO_RCVBUF = 368,
+    VAR_EDNS_BUFFER_SIZE = 369,
+    VAR_PREFETCH = 370,
+    VAR_PREFETCH_KEY = 371,
+    VAR_SO_SNDBUF = 372,
+    VAR_SO_REUSEPORT = 373,
+    VAR_HARDEN_BELOW_NXDOMAIN = 374,
+    VAR_IGNORE_CD_FLAG = 375,
+    VAR_LOG_QUERIES = 376,
+    VAR_TCP_UPSTREAM = 377,
+    VAR_SSL_UPSTREAM = 378,
+    VAR_SSL_SERVICE_KEY = 379,
+    VAR_SSL_SERVICE_PEM = 380,
+    VAR_SSL_PORT = 381,
+    VAR_FORWARD_FIRST = 382,
+    VAR_STUB_FIRST = 383,
+    VAR_MINIMAL_RESPONSES = 384,
+    VAR_RRSET_ROUNDROBIN = 385,
+    VAR_MAX_UDP_SIZE = 386,
+    VAR_DELAY_CLOSE = 387,
+    VAR_SEND_CLIENT_SUBNET = 388,
+    VAR_CLIENT_SUBNET_OPCODE = 389,
+    VAR_MAX_CLIENT_SUBNET_IPV4 = 390,
+    VAR_MAX_CLIENT_SUBNET_IPV6 = 391
+  };
 #endif
 /* Tokens.  */
 #define SPACE 258
@@ -296,57 +297,44 @@ extern int yydebug;
 #define VAR_PREFETCH 370
 #define VAR_PREFETCH_KEY 371
 #define VAR_SO_SNDBUF 372
-#define VAR_HARDEN_BELOW_NXDOMAIN 373
-#define VAR_IGNORE_CD_FLAG 374
-#define VAR_LOG_QUERIES 375
-#define VAR_TCP_UPSTREAM 376
-#define VAR_SSL_UPSTREAM 377
-#define VAR_SSL_SERVICE_KEY 378
-#define VAR_SSL_SERVICE_PEM 379
-#define VAR_SSL_PORT 380
-#define VAR_FORWARD_FIRST 381
-#define VAR_STUB_FIRST 382
-#define VAR_MINIMAL_RESPONSES 383
-#define VAR_RRSET_ROUNDROBIN 384
-#define VAR_SEND_CLIENT_SUBNET 385
-#define VAR_CLIENT_SUBNET_OPCODE 386
-#define VAR_MAX_CLIENT_SUBNET_IPV4 387
-#define VAR_MAX_CLIENT_SUBNET_IPV6 388
-#define VAR_MAX_UDP_SIZE 389
+#define VAR_SO_REUSEPORT 373
+#define VAR_HARDEN_BELOW_NXDOMAIN 374
+#define VAR_IGNORE_CD_FLAG 375
+#define VAR_LOG_QUERIES 376
+#define VAR_TCP_UPSTREAM 377
+#define VAR_SSL_UPSTREAM 378
+#define VAR_SSL_SERVICE_KEY 379
+#define VAR_SSL_SERVICE_PEM 380
+#define VAR_SSL_PORT 381
+#define VAR_FORWARD_FIRST 382
+#define VAR_STUB_FIRST 383
+#define VAR_MINIMAL_RESPONSES 384
+#define VAR_RRSET_ROUNDROBIN 385
+#define VAR_MAX_UDP_SIZE 386
+#define VAR_DELAY_CLOSE 387
+#define VAR_SEND_CLIENT_SUBNET 388
+#define VAR_CLIENT_SUBNET_OPCODE 389
+#define VAR_MAX_CLIENT_SUBNET_IPV4 390
+#define VAR_MAX_CLIENT_SUBNET_IPV6 391
 
-
-
+/* Value type.  */
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
-typedef union YYSTYPE
+typedef union YYSTYPE YYSTYPE;
+union YYSTYPE
 {
-/* Line 2053 of yacc.c  */
-#line 64 "./util/configparser.y"
+#line 64 "./util/configparser.y" /* yacc.c:1909  */
 
 	char*	str;
 
-
-/* Line 2053 of yacc.c  */
-#line 330 "util/configparser.h"
-} YYSTYPE;
+#line 330 "util/configparser.h" /* yacc.c:1909  */
+};
 # define YYSTYPE_IS_TRIVIAL 1
-# define yystype YYSTYPE /* obsolescent; will be withdrawn */
 # define YYSTYPE_IS_DECLARED 1
 #endif
 
+
 extern YYSTYPE yylval;
 
-#ifdef YYPARSE_PARAM
-#if defined __STDC__ || defined __cplusplus
-int yyparse (void *YYPARSE_PARAM);
-#else
-int yyparse ();
-#endif
-#else /* ! YYPARSE_PARAM */
-#if defined __STDC__ || defined __cplusplus
 int yyparse (void);
-#else
-int yyparse ();
-#endif
-#endif /* ! YYPARSE_PARAM */
 
 #endif /* !YY_YY_UTIL_CONFIGPARSER_H_INCLUDED  */

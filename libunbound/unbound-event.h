@@ -21,16 +21,16 @@
  * specific prior written permission.
  * 
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
- * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED
+ * TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 /**
@@ -41,8 +41,6 @@
  * otherwise it wouldn't work, the event and event_base structures would
  * be different.  If unbound is compiled without libevent support then
  * this header file is not supposed to be installed on the system.
- * The ldns_buffer is the same buffer format as the ldnsbuffers that
- * are used in unbound's sourcecode.
  *
  * Use ub_ctx_create_event_base() to create an unbound context that uses
  * the event base that you have made.  Then, use the ub_resolve_event call
@@ -63,9 +61,8 @@ extern "C" {
 struct ub_ctx;
 struct ub_result;
 struct event_base;
-struct ldns_buffer;
 
-typedef void (*ub_event_callback_t)(void*, int, struct ldns_buffer*, int, char*);
+typedef void (*ub_event_callback_t)(void*, int, void*, int, int, char*);
 
 /**
  * Create a resolving and validation context.
@@ -82,6 +79,15 @@ typedef void (*ub_event_callback_t)(void*, int, struct ldns_buffer*, int, char*)
 struct ub_ctx* ub_ctx_create_event(struct event_base* base);
 
 /**
+ * Set a new event_base on a context created with ub_ctx_create_event.
+ * Any outbound queries will be canceled.
+ * @param ctx the ub_ctx to update.  Must have been created with ub_ctx_create_event
+ * @param base the new event_base to attach to the ctx
+ * @return 0 if OK, else error
+ */
+int ub_ctx_set_event(struct ub_ctx* ctx, struct event_base* base); 
+
+/**
  * Perform resolution and validation of the target name.
  * Asynchronous, after a while, the callback will be called with your
  * data and the result.  Uses the event_base user installed by creating the
@@ -95,13 +101,16 @@ struct ub_ctx* ub_ctx_create_event(struct event_base* base);
  * 	and is passed on to the callback function.
  * @param callback: this is called on completion of the resolution.
  * 	It is called as:
- * 	void callback(void* mydata, int rcode, ldns_buffer* packet, int sec,
- *		char* why_bogus)
+ * 	void callback(void* mydata, int rcode, void* packet, int packet_len,
+ * 		int sec, char* why_bogus)
  * 	with mydata: the same as passed here, you may pass NULL,
  * 	with rcode: 0 on no error, nonzero for mostly SERVFAIL situations,
  *		this is a DNS rcode.
- *	with packet: ldns_buffer of a DNS wireformat packet with the answer.
+ *	with packet: a buffer with DNS wireformat packet with the answer.
  *		do not inspect if rcode != 0.
+ *		do not write or free the packet buffer, it is used internally
+ *		in unbound (for other callbacks that want the same data).
+ *	with packet_len: length in bytes of the packet buffer.
  *	with sec: 0 if insecure, 1 if bogus, 2 if DNSSEC secure.
  *	with why_bogus: text string explaining why it is bogus (or NULL).
  *	These point to buffers inside unbound; do not deallocate the packet or

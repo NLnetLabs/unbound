@@ -21,16 +21,16 @@
  * specific prior written permission.
  * 
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
- * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED
+ * TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 /**
@@ -47,7 +47,6 @@
 #include <openssl/err.h>
 #endif
 #include <ctype.h>
-#include <ldns/ldns.h>
 #include "daemon/remote.h"
 #include "daemon/worker.h"
 #include "daemon/daemon.h"
@@ -75,6 +74,10 @@
 #include "iterator/iter_delegpt.h"
 #include "services/outbound_list.h"
 #include "services/outside_network.h"
+#include "ldns/str2wire.h"
+#include "ldns/parseutil.h"
+#include "ldns/wire2str.h"
+#include "ldns/sbuffer.h"
 
 #ifdef HAVE_SYS_TYPES_H
 #  include <sys/types.h>
@@ -268,7 +271,7 @@ add_open(const char* ip, int nr, struct listen_port** list, int noproto_is_err)
 	}
 
 	/* open fd */
-	fd = create_tcp_accept_sock(res, 1, &noproto);
+	fd = create_tcp_accept_sock(res, 1, &noproto, 0);
 	freeaddrinfo(res);
 	if(fd == -1 && noproto) {
 		if(!noproto_is_err)
@@ -602,34 +605,34 @@ static int
 print_stats(SSL* ssl, const char* nm, struct stats_info* s)
 {
 	struct timeval avg;
-	if(!ssl_printf(ssl, "%s.num.queries"SQ"%u\n", nm, 
-		(unsigned)s->svr.num_queries)) return 0;
-	if(!ssl_printf(ssl, "%s.num.cachehits"SQ"%u\n", nm, 
-		(unsigned)(s->svr.num_queries 
+	if(!ssl_printf(ssl, "%s.num.queries"SQ"%lu\n", nm, 
+		(unsigned long)s->svr.num_queries)) return 0;
+	if(!ssl_printf(ssl, "%s.num.cachehits"SQ"%lu\n", nm, 
+		(unsigned long)(s->svr.num_queries 
 			- s->svr.num_queries_missed_cache))) return 0;
-	if(!ssl_printf(ssl, "%s.num.cachemiss"SQ"%u\n", nm, 
-		(unsigned)s->svr.num_queries_missed_cache)) return 0;
-	if(!ssl_printf(ssl, "%s.num.prefetch"SQ"%u\n", nm, 
-		(unsigned)s->svr.num_queries_prefetch)) return 0;
-	if(!ssl_printf(ssl, "%s.num.recursivereplies"SQ"%u\n", nm, 
-		(unsigned)s->mesh_replies_sent)) return 0;
+	if(!ssl_printf(ssl, "%s.num.cachemiss"SQ"%lu\n", nm, 
+		(unsigned long)s->svr.num_queries_missed_cache)) return 0;
+	if(!ssl_printf(ssl, "%s.num.prefetch"SQ"%lu\n", nm, 
+		(unsigned long)s->svr.num_queries_prefetch)) return 0;
+	if(!ssl_printf(ssl, "%s.num.recursivereplies"SQ"%lu\n", nm, 
+		(unsigned long)s->mesh_replies_sent)) return 0;
 	if(!ssl_printf(ssl, "%s.requestlist.avg"SQ"%g\n", nm,
 		(s->svr.num_queries_missed_cache+s->svr.num_queries_prefetch)?
 			(double)s->svr.sum_query_list_size/
 			(s->svr.num_queries_missed_cache+
 			s->svr.num_queries_prefetch) : 0.0)) return 0;
-	if(!ssl_printf(ssl, "%s.requestlist.max"SQ"%u\n", nm,
-		(unsigned)s->svr.max_query_list_size)) return 0;
-	if(!ssl_printf(ssl, "%s.requestlist.overwritten"SQ"%u\n", nm,
-		(unsigned)s->mesh_jostled)) return 0;
-	if(!ssl_printf(ssl, "%s.requestlist.exceeded"SQ"%u\n", nm,
-		(unsigned)s->mesh_dropped)) return 0;
-	if(!ssl_printf(ssl, "%s.requestlist.current.all"SQ"%u\n", nm,
-		(unsigned)s->mesh_num_states)) return 0;
-	if(!ssl_printf(ssl, "%s.requestlist.current.user"SQ"%u\n", nm,
-		(unsigned)s->mesh_num_reply_states)) return 0;
+	if(!ssl_printf(ssl, "%s.requestlist.max"SQ"%lu\n", nm,
+		(unsigned long)s->svr.max_query_list_size)) return 0;
+	if(!ssl_printf(ssl, "%s.requestlist.overwritten"SQ"%lu\n", nm,
+		(unsigned long)s->mesh_jostled)) return 0;
+	if(!ssl_printf(ssl, "%s.requestlist.exceeded"SQ"%lu\n", nm,
+		(unsigned long)s->mesh_dropped)) return 0;
+	if(!ssl_printf(ssl, "%s.requestlist.current.all"SQ"%lu\n", nm,
+		(unsigned long)s->mesh_num_states)) return 0;
+	if(!ssl_printf(ssl, "%s.requestlist.current.user"SQ"%lu\n", nm,
+		(unsigned long)s->mesh_num_reply_states)) return 0;
 	timeval_divide(&avg, &s->mesh_replies_sum_wait, s->mesh_replies_sent);
-	if(!ssl_printf(ssl, "%s.recursion.time.avg"SQ"%lld.%6.6d\n", nm,
+	if(!ssl_printf(ssl, "%s.recursion.time.avg"SQ ARG_LL "d.%6.6d\n", nm,
 		(long long)avg.tv_sec, (int)avg.tv_usec)) return 0;
 	if(!ssl_printf(ssl, "%s.recursion.time.median"SQ"%g\n", nm, 
 		s->mesh_time_median)) return 0;
@@ -657,7 +660,7 @@ print_longnum(SSL* ssl, char* desc, size_t x)
 		return ssl_printf(ssl, "%s%u%6.6u\n", desc, 
 			(unsigned)front, (unsigned)back);
 	} else {
-		return ssl_printf(ssl, "%s%u\n", desc, (unsigned)x);
+		return ssl_printf(ssl, "%s%lu\n", desc, (unsigned long)x);
 	}
 }
 
@@ -713,11 +716,11 @@ print_uptime(SSL* ssl, struct worker* worker, int reset)
 	timeval_subtract(&dt, &now, &worker->daemon->time_last_stat);
 	if(reset)
 		worker->daemon->time_last_stat = now;
-	if(!ssl_printf(ssl, "time.now"SQ"%lld.%6.6d\n", 
+	if(!ssl_printf(ssl, "time.now"SQ ARG_LL "d.%6.6d\n", 
 		(long long)now.tv_sec, (unsigned)now.tv_usec)) return 0;
-	if(!ssl_printf(ssl, "time.up"SQ"%lld.%6.6d\n", 
+	if(!ssl_printf(ssl, "time.up"SQ ARG_LL "d.%6.6d\n", 
 		(long long)up.tv_sec, (unsigned)up.tv_usec)) return 0;
-	if(!ssl_printf(ssl, "time.elapsed"SQ"%lld.%6.6d\n", 
+	if(!ssl_printf(ssl, "time.elapsed"SQ ARG_LL "d.%6.6d\n", 
 		(long long)dt.tv_sec, (unsigned)dt.tv_usec)) return 0;
 	return 1;
 }
@@ -736,12 +739,12 @@ print_hist(SSL* ssl, struct stats_info* s)
 	timehist_import(hist, s->svr.hist, NUM_BUCKETS_HIST);
 	for(i=0; i<hist->num; i++) {
 		if(!ssl_printf(ssl, 
-			"histogram.%6.6d.%6.6d.to.%6.6d.%6.6d=%u\n",
+			"histogram.%6.6d.%6.6d.to.%6.6d.%6.6d=%lu\n",
 			(int)hist->buckets[i].lower.tv_sec,
 			(int)hist->buckets[i].lower.tv_usec,
 			(int)hist->buckets[i].upper.tv_sec,
 			(int)hist->buckets[i].upper.tv_usec,
-			(unsigned)hist->buckets[i].count)) {
+			(unsigned long)hist->buckets[i].count)) {
 			timehist_delete(hist);
 			return 0;
 		}
@@ -756,13 +759,13 @@ print_ext(SSL* ssl, struct stats_info* s)
 {
 	int i;
 	char nm[16];
-	const ldns_rr_descriptor* desc;
-	const ldns_lookup_table* lt;
+	const sldns_rr_descriptor* desc;
+	const sldns_lookup_table* lt;
 	/* TYPE */
 	for(i=0; i<STATS_QTYPE_NUM; i++) {
 		if(inhibit_zero && s->svr.qtype[i] == 0)
 			continue;
-		desc = ldns_rr_descript((uint16_t)i);
+		desc = sldns_rr_descript((uint16_t)i);
 		if(desc && desc->_name) {
 			snprintf(nm, sizeof(nm), "%s", desc->_name);
 		} else if (i == LDNS_RR_TYPE_IXFR) {
@@ -778,99 +781,101 @@ print_ext(SSL* ssl, struct stats_info* s)
 		} else {
 			snprintf(nm, sizeof(nm), "TYPE%d", i);
 		}
-		if(!ssl_printf(ssl, "num.query.type.%s"SQ"%u\n", 
-			nm, (unsigned)s->svr.qtype[i])) return 0;
+		if(!ssl_printf(ssl, "num.query.type.%s"SQ"%lu\n", 
+			nm, (unsigned long)s->svr.qtype[i])) return 0;
 	}
 	if(!inhibit_zero || s->svr.qtype_big) {
-		if(!ssl_printf(ssl, "num.query.type.other"SQ"%u\n", 
-			(unsigned)s->svr.qtype_big)) return 0;
+		if(!ssl_printf(ssl, "num.query.type.other"SQ"%lu\n", 
+			(unsigned long)s->svr.qtype_big)) return 0;
 	}
 	/* CLASS */
 	for(i=0; i<STATS_QCLASS_NUM; i++) {
 		if(inhibit_zero && s->svr.qclass[i] == 0)
 			continue;
-		lt = ldns_lookup_by_id(ldns_rr_classes, i);
+		lt = sldns_lookup_by_id(sldns_rr_classes, i);
 		if(lt && lt->name) {
 			snprintf(nm, sizeof(nm), "%s", lt->name);
 		} else {
 			snprintf(nm, sizeof(nm), "CLASS%d", i);
 		}
-		if(!ssl_printf(ssl, "num.query.class.%s"SQ"%u\n", 
-			nm, (unsigned)s->svr.qclass[i])) return 0;
+		if(!ssl_printf(ssl, "num.query.class.%s"SQ"%lu\n", 
+			nm, (unsigned long)s->svr.qclass[i])) return 0;
 	}
 	if(!inhibit_zero || s->svr.qclass_big) {
-		if(!ssl_printf(ssl, "num.query.class.other"SQ"%u\n", 
-			(unsigned)s->svr.qclass_big)) return 0;
+		if(!ssl_printf(ssl, "num.query.class.other"SQ"%lu\n", 
+			(unsigned long)s->svr.qclass_big)) return 0;
 	}
 	/* OPCODE */
 	for(i=0; i<STATS_OPCODE_NUM; i++) {
 		if(inhibit_zero && s->svr.qopcode[i] == 0)
 			continue;
-		lt = ldns_lookup_by_id(ldns_opcodes, i);
+		lt = sldns_lookup_by_id(sldns_opcodes, i);
 		if(lt && lt->name) {
 			snprintf(nm, sizeof(nm), "%s", lt->name);
 		} else {
 			snprintf(nm, sizeof(nm), "OPCODE%d", i);
 		}
-		if(!ssl_printf(ssl, "num.query.opcode.%s"SQ"%u\n", 
-			nm, (unsigned)s->svr.qopcode[i])) return 0;
+		if(!ssl_printf(ssl, "num.query.opcode.%s"SQ"%lu\n", 
+			nm, (unsigned long)s->svr.qopcode[i])) return 0;
 	}
 	/* transport */
-	if(!ssl_printf(ssl, "num.query.tcp"SQ"%u\n", 
-		(unsigned)s->svr.qtcp)) return 0;
-	if(!ssl_printf(ssl, "num.query.ipv6"SQ"%u\n", 
-		(unsigned)s->svr.qipv6)) return 0;
+	if(!ssl_printf(ssl, "num.query.tcp"SQ"%lu\n", 
+		(unsigned long)s->svr.qtcp)) return 0;
+	if(!ssl_printf(ssl, "num.query.tcpout"SQ"%lu\n", 
+		(unsigned long)s->svr.qtcp_outgoing)) return 0;
+	if(!ssl_printf(ssl, "num.query.ipv6"SQ"%lu\n", 
+		(unsigned long)s->svr.qipv6)) return 0;
 	/* flags */
-	if(!ssl_printf(ssl, "num.query.flags.QR"SQ"%u\n", 
-		(unsigned)s->svr.qbit_QR)) return 0;
-	if(!ssl_printf(ssl, "num.query.flags.AA"SQ"%u\n", 
-		(unsigned)s->svr.qbit_AA)) return 0;
-	if(!ssl_printf(ssl, "num.query.flags.TC"SQ"%u\n", 
-		(unsigned)s->svr.qbit_TC)) return 0;
-	if(!ssl_printf(ssl, "num.query.flags.RD"SQ"%u\n", 
-		(unsigned)s->svr.qbit_RD)) return 0;
-	if(!ssl_printf(ssl, "num.query.flags.RA"SQ"%u\n", 
-		(unsigned)s->svr.qbit_RA)) return 0;
-	if(!ssl_printf(ssl, "num.query.flags.Z"SQ"%u\n", 
-		(unsigned)s->svr.qbit_Z)) return 0;
-	if(!ssl_printf(ssl, "num.query.flags.AD"SQ"%u\n", 
-		(unsigned)s->svr.qbit_AD)) return 0;
-	if(!ssl_printf(ssl, "num.query.flags.CD"SQ"%u\n", 
-		(unsigned)s->svr.qbit_CD)) return 0;
-	if(!ssl_printf(ssl, "num.query.edns.present"SQ"%u\n", 
-		(unsigned)s->svr.qEDNS)) return 0;
-	if(!ssl_printf(ssl, "num.query.edns.DO"SQ"%u\n", 
-		(unsigned)s->svr.qEDNS_DO)) return 0;
+	if(!ssl_printf(ssl, "num.query.flags.QR"SQ"%lu\n", 
+		(unsigned long)s->svr.qbit_QR)) return 0;
+	if(!ssl_printf(ssl, "num.query.flags.AA"SQ"%lu\n", 
+		(unsigned long)s->svr.qbit_AA)) return 0;
+	if(!ssl_printf(ssl, "num.query.flags.TC"SQ"%lu\n", 
+		(unsigned long)s->svr.qbit_TC)) return 0;
+	if(!ssl_printf(ssl, "num.query.flags.RD"SQ"%lu\n", 
+		(unsigned long)s->svr.qbit_RD)) return 0;
+	if(!ssl_printf(ssl, "num.query.flags.RA"SQ"%lu\n", 
+		(unsigned long)s->svr.qbit_RA)) return 0;
+	if(!ssl_printf(ssl, "num.query.flags.Z"SQ"%lu\n", 
+		(unsigned long)s->svr.qbit_Z)) return 0;
+	if(!ssl_printf(ssl, "num.query.flags.AD"SQ"%lu\n", 
+		(unsigned long)s->svr.qbit_AD)) return 0;
+	if(!ssl_printf(ssl, "num.query.flags.CD"SQ"%lu\n", 
+		(unsigned long)s->svr.qbit_CD)) return 0;
+	if(!ssl_printf(ssl, "num.query.edns.present"SQ"%lu\n", 
+		(unsigned long)s->svr.qEDNS)) return 0;
+	if(!ssl_printf(ssl, "num.query.edns.DO"SQ"%lu\n", 
+		(unsigned long)s->svr.qEDNS_DO)) return 0;
 
 	/* RCODE */
 	for(i=0; i<STATS_RCODE_NUM; i++) {
 		if(inhibit_zero && s->svr.ans_rcode[i] == 0)
 			continue;
-		lt = ldns_lookup_by_id(ldns_rcodes, i);
+		lt = sldns_lookup_by_id(sldns_rcodes, i);
 		if(lt && lt->name) {
 			snprintf(nm, sizeof(nm), "%s", lt->name);
 		} else {
 			snprintf(nm, sizeof(nm), "RCODE%d", i);
 		}
-		if(!ssl_printf(ssl, "num.answer.rcode.%s"SQ"%u\n", 
-			nm, (unsigned)s->svr.ans_rcode[i])) return 0;
+		if(!ssl_printf(ssl, "num.answer.rcode.%s"SQ"%lu\n", 
+			nm, (unsigned long)s->svr.ans_rcode[i])) return 0;
 	}
 	if(!inhibit_zero || s->svr.ans_rcode_nodata) {
-		if(!ssl_printf(ssl, "num.answer.rcode.nodata"SQ"%u\n", 
-			(unsigned)s->svr.ans_rcode_nodata)) return 0;
+		if(!ssl_printf(ssl, "num.answer.rcode.nodata"SQ"%lu\n", 
+			(unsigned long)s->svr.ans_rcode_nodata)) return 0;
 	}
 	/* validation */
-	if(!ssl_printf(ssl, "num.answer.secure"SQ"%u\n", 
-		(unsigned)s->svr.ans_secure)) return 0;
-	if(!ssl_printf(ssl, "num.answer.bogus"SQ"%u\n", 
-		(unsigned)s->svr.ans_bogus)) return 0;
-	if(!ssl_printf(ssl, "num.rrset.bogus"SQ"%u\n", 
-		(unsigned)s->svr.rrset_bogus)) return 0;
+	if(!ssl_printf(ssl, "num.answer.secure"SQ"%lu\n", 
+		(unsigned long)s->svr.ans_secure)) return 0;
+	if(!ssl_printf(ssl, "num.answer.bogus"SQ"%lu\n", 
+		(unsigned long)s->svr.ans_bogus)) return 0;
+	if(!ssl_printf(ssl, "num.rrset.bogus"SQ"%lu\n", 
+		(unsigned long)s->svr.rrset_bogus)) return 0;
 	/* threat detection */
-	if(!ssl_printf(ssl, "unwanted.queries"SQ"%u\n", 
-		(unsigned)s->svr.unwanted_queries)) return 0;
-	if(!ssl_printf(ssl, "unwanted.replies"SQ"%u\n", 
-		(unsigned)s->svr.unwanted_replies)) return 0;
+	if(!ssl_printf(ssl, "unwanted.queries"SQ"%lu\n", 
+		(unsigned long)s->svr.unwanted_queries)) return 0;
+	if(!ssl_printf(ssl, "unwanted.replies"SQ"%lu\n", 
+		(unsigned long)s->svr.unwanted_replies)) return 0;
 	return 1;
 }
 
@@ -912,17 +917,20 @@ do_stats(SSL* ssl, struct daemon_remote* rc, int reset)
 static int
 parse_arg_name(SSL* ssl, char* str, uint8_t** res, size_t* len, int* labs)
 {
-	ldns_rdf* rdf;
+	uint8_t nm[LDNS_MAX_DOMAINLEN+1];
+	size_t nmlen = sizeof(nm);
+	int status;
 	*res = NULL;
 	*len = 0;
 	*labs = 0;
-	rdf = ldns_dname_new_frm_str(str);
-	if(!rdf) {
-		ssl_printf(ssl, "error cannot parse name %s\n", str);
+	status = sldns_str2wire_dname_buf(str, nm, &nmlen);
+	if(status != 0) {
+		ssl_printf(ssl, "error cannot parse name %s at %d: %s\n", str,
+			LDNS_WIREPARSE_OFFSET(status),
+			sldns_get_errorstr_parse(status));
 		return 0;
 	}
-	*res = memdup(ldns_rdf_data(rdf), ldns_rdf_size(rdf));
-	ldns_rdf_deep_free(rdf);
+	*res = memdup(nm, nmlen);
 	if(!*res) {
 		ssl_printf(ssl, "error out of memory\n");
 		return 0;
@@ -975,7 +983,7 @@ do_zone_add(SSL* ssl, struct worker* worker, char* arg)
 		free(nm);
 		return;
 	}
-	lock_quick_lock(&worker->daemon->local_zones->lock);
+	lock_rw_wrlock(&worker->daemon->local_zones->lock);
 	if((z=local_zones_find(worker->daemon->local_zones, nm, nmlen, 
 		nmlabs, LDNS_RR_CLASS_IN))) {
 		/* already present in tree */
@@ -983,17 +991,17 @@ do_zone_add(SSL* ssl, struct worker* worker, char* arg)
 		z->type = t; /* update type anyway */
 		lock_rw_unlock(&z->lock);
 		free(nm);
-		lock_quick_unlock(&worker->daemon->local_zones->lock);
+		lock_rw_unlock(&worker->daemon->local_zones->lock);
 		send_ok(ssl);
 		return;
 	}
 	if(!local_zones_add_zone(worker->daemon->local_zones, nm, nmlen, 
 		nmlabs, LDNS_RR_CLASS_IN, t)) {
-		lock_quick_unlock(&worker->daemon->local_zones->lock);
+		lock_rw_unlock(&worker->daemon->local_zones->lock);
 		ssl_printf(ssl, "error out of memory\n");
 		return;
 	}
-	lock_quick_unlock(&worker->daemon->local_zones->lock);
+	lock_rw_unlock(&worker->daemon->local_zones->lock);
 	send_ok(ssl);
 }
 
@@ -1007,13 +1015,13 @@ do_zone_remove(SSL* ssl, struct worker* worker, char* arg)
 	struct local_zone* z;
 	if(!parse_arg_name(ssl, arg, &nm, &nmlen, &nmlabs))
 		return;
-	lock_quick_lock(&worker->daemon->local_zones->lock);
+	lock_rw_wrlock(&worker->daemon->local_zones->lock);
 	if((z=local_zones_find(worker->daemon->local_zones, nm, nmlen, 
 		nmlabs, LDNS_RR_CLASS_IN))) {
 		/* present in tree */
 		local_zones_del_zone(worker->daemon->local_zones, z);
 	}
-	lock_quick_unlock(&worker->daemon->local_zones->lock);
+	lock_rw_unlock(&worker->daemon->local_zones->lock);
 	free(nm);
 	send_ok(ssl);
 }
@@ -1022,8 +1030,7 @@ do_zone_remove(SSL* ssl, struct worker* worker, char* arg)
 static void
 do_data_add(SSL* ssl, struct worker* worker, char* arg)
 {
-	if(!local_zones_add_RR(worker->daemon->local_zones, arg,
-		worker->env.scratch_buffer)) {
+	if(!local_zones_add_RR(worker->daemon->local_zones, arg)) {
 		ssl_printf(ssl,"error in syntax or out of memory, %s\n", arg);
 		return;
 	}
@@ -1090,7 +1097,7 @@ do_flush_type(SSL* ssl, struct worker* worker, char* arg)
 		return;
 	if(!parse_arg_name(ssl, arg, &nm, &nmlen, &nmlabs))
 		return;
-	t = ldns_get_rr_type_by_name(arg2);
+	t = sldns_get_rr_type_by_name(arg2);
 	do_cache_remove(worker, nm, nmlen, t, LDNS_RR_CLASS_IN);
 	
 	free(nm);
@@ -1281,9 +1288,9 @@ do_flush_zone(SSL* ssl, struct worker* worker, char* arg)
 
 	free(nm);
 
-	(void)ssl_printf(ssl, "ok removed %u rrsets, %u messages "
-		"and %u key entries\n", (unsigned)inf.num_rrsets, 
-		(unsigned)inf.num_msgs, (unsigned)inf.num_keys);
+	(void)ssl_printf(ssl, "ok removed %lu rrsets, %lu messages "
+		"and %lu key entries\n", (unsigned long)inf.num_rrsets, 
+		(unsigned long)inf.num_msgs, (unsigned long)inf.num_keys);
 }
 
 /** callback to delete bogus rrsets */
@@ -1325,7 +1332,7 @@ bogus_del_kcache(struct lruhash_entry* e, void* arg)
 	}
 }
 
-/** remove all rrsets and keys from zone from cache */
+/** remove all bogus rrsets, msgs and keys from cache */
 static void
 do_flush_bogus(SSL* ssl, struct worker* worker)
 {
@@ -1349,9 +1356,85 @@ do_flush_bogus(SSL* ssl, struct worker* worker)
 			&bogus_del_kcache, &inf);
 	}
 
-	(void)ssl_printf(ssl, "ok removed %u rrsets, %u messages "
-		"and %u key entries\n", (unsigned)inf.num_rrsets, 
-		(unsigned)inf.num_msgs, (unsigned)inf.num_keys);
+	(void)ssl_printf(ssl, "ok removed %lu rrsets, %lu messages "
+		"and %lu key entries\n", (unsigned long)inf.num_rrsets, 
+		(unsigned long)inf.num_msgs, (unsigned long)inf.num_keys);
+}
+
+/** callback to delete negative and servfail rrsets */
+static void
+negative_del_rrset(struct lruhash_entry* e, void* arg)
+{
+	/* entry is locked */
+	struct del_info* inf = (struct del_info*)arg;
+	struct ub_packed_rrset_key* k = (struct ub_packed_rrset_key*)e->key;
+	struct packed_rrset_data* d = (struct packed_rrset_data*)e->data;
+	/* delete the parentside negative cache rrsets,
+	 * these are namerserver rrsets that failed lookup, rdata empty */
+	if((k->rk.flags & PACKED_RRSET_PARENT_SIDE) && d->count == 1 &&
+		d->rrsig_count == 0 && d->rr_len[0] == 0) {
+		d->ttl = inf->expired;
+		inf->num_rrsets++;
+	}
+}
+
+/** callback to delete negative and servfail messages */
+static void
+negative_del_msg(struct lruhash_entry* e, void* arg)
+{
+	/* entry is locked */
+	struct del_info* inf = (struct del_info*)arg;
+	struct reply_info* d = (struct reply_info*)e->data;
+	/* rcode not NOERROR: NXDOMAIN, SERVFAIL, ..: an nxdomain or error
+	 * or NOERROR rcode with ANCOUNT==0: a NODATA answer */
+	if(FLAGS_GET_RCODE(d->flags) != 0 || d->an_numrrsets == 0) {
+		d->ttl = inf->expired;
+		inf->num_msgs++;
+	}
+}
+
+/** callback to delete negative key entries */
+static void
+negative_del_kcache(struct lruhash_entry* e, void* arg)
+{
+	/* entry is locked */
+	struct del_info* inf = (struct del_info*)arg;
+	struct key_entry_data* d = (struct key_entry_data*)e->data;
+	/* could be bad because of lookup failure on the DS, DNSKEY, which
+	 * was nxdomain or servfail, and thus a result of negative lookups */
+	if(d->isbad) {
+		d->ttl = inf->expired;
+		inf->num_keys++;
+	}
+}
+
+/** remove all negative(NODATA,NXDOMAIN), and servfail messages from cache */
+static void
+do_flush_negative(SSL* ssl, struct worker* worker)
+{
+	struct del_info inf;
+	/* what we do is to set them all expired */
+	inf.worker = worker;
+	inf.now = *worker->env.now;
+	inf.expired = *worker->env.now;
+	inf.expired -= 3; /* handle 3 seconds skew between threads */
+	inf.num_rrsets = 0;
+	inf.num_msgs = 0;
+	inf.num_keys = 0;
+	slabhash_traverse(&worker->env.rrset_cache->table, 1, 
+		&negative_del_rrset, &inf);
+
+	slabhash_traverse(worker->env.msg_cache, 1, &negative_del_msg, &inf);
+
+	/* and validator cache */
+	if(worker->env.key_cache) {
+		slabhash_traverse(worker->env.key_cache->slab, 1, 
+			&negative_del_kcache, &inf);
+	}
+
+	(void)ssl_printf(ssl, "ok removed %lu rrsets, %lu messages "
+		"and %lu key entries\n", (unsigned long)inf.num_rrsets, 
+		(unsigned long)inf.num_msgs, (unsigned long)inf.num_keys);
 }
 
 /** remove name rrset from cache */
@@ -1388,9 +1471,9 @@ ssl_print_name_dp(SSL* ssl, char* str, uint8_t* nm, uint16_t dclass,
 	struct delegpt_addr* a;
 	int f = 0;
 	if(str) { /* print header for forward, stub */
-		char* c = ldns_rr_class2str(dclass);
+		char* c = sldns_wire2str_class(dclass);
 		dname_str(nm, buf);
-		if(!ssl_printf(ssl, "%s %s %s: ", buf, c, str)) {
+		if(!ssl_printf(ssl, "%s %s %s ", buf, (c?c:"CLASS??"), str)) {
 			free(c);
 			return 0;
 		}
@@ -1571,7 +1654,7 @@ do_forward_add(SSL* ssl, struct worker* worker, char* args)
 	struct delegpt* dp = NULL;
 	if(!parse_fs_args(ssl, args, &nm, &dp, &insecure, NULL))
 		return;
-	if(insecure) {
+	if(insecure && worker->env.anchors) {
 		if(!anchors_add_insecure(worker->env.anchors, LDNS_RR_CLASS_IN,
 			nm)) {
 			(void)ssl_printf(ssl, "error out of memory\n");
@@ -1598,7 +1681,7 @@ do_forward_remove(SSL* ssl, struct worker* worker, char* args)
 	uint8_t* nm = NULL;
 	if(!parse_fs_args(ssl, args, &nm, NULL, &insecure, NULL))
 		return;
-	if(insecure)
+	if(insecure && worker->env.anchors)
 		anchors_delete_insecure(worker->env.anchors, LDNS_RR_CLASS_IN,
 			nm);
 	forwards_delete_zone(fwd, LDNS_RR_CLASS_IN, nm);
@@ -1616,7 +1699,7 @@ do_stub_add(SSL* ssl, struct worker* worker, char* args)
 	struct delegpt* dp = NULL;
 	if(!parse_fs_args(ssl, args, &nm, &dp, &insecure, &prime))
 		return;
-	if(insecure) {
+	if(insecure && worker->env.anchors) {
 		if(!anchors_add_insecure(worker->env.anchors, LDNS_RR_CLASS_IN,
 			nm)) {
 			(void)ssl_printf(ssl, "error out of memory\n");
@@ -1626,8 +1709,9 @@ do_stub_add(SSL* ssl, struct worker* worker, char* args)
 		}
 	}
 	if(!forwards_add_stub_hole(fwd, LDNS_RR_CLASS_IN, nm)) {
-		if(insecure) anchors_delete_insecure(worker->env.anchors,
-			LDNS_RR_CLASS_IN, nm);
+		if(insecure && worker->env.anchors)
+			anchors_delete_insecure(worker->env.anchors,
+				LDNS_RR_CLASS_IN, nm);
 		(void)ssl_printf(ssl, "error out of memory\n");
 		delegpt_free_mlc(dp);
 		free(nm);
@@ -1636,8 +1720,9 @@ do_stub_add(SSL* ssl, struct worker* worker, char* args)
 	if(!hints_add_stub(worker->env.hints, LDNS_RR_CLASS_IN, dp, !prime)) {
 		(void)ssl_printf(ssl, "error out of memory\n");
 		forwards_delete_stub_hole(fwd, LDNS_RR_CLASS_IN, nm);
-		if(insecure) anchors_delete_insecure(worker->env.anchors,
-			LDNS_RR_CLASS_IN, nm);
+		if(insecure && worker->env.anchors)
+			anchors_delete_insecure(worker->env.anchors,
+				LDNS_RR_CLASS_IN, nm);
 		free(nm);
 		return;
 	}
@@ -1654,7 +1739,7 @@ do_stub_remove(SSL* ssl, struct worker* worker, char* args)
 	uint8_t* nm = NULL;
 	if(!parse_fs_args(ssl, args, &nm, NULL, &insecure, NULL))
 		return;
-	if(insecure)
+	if(insecure && worker->env.anchors)
 		anchors_delete_insecure(worker->env.anchors, LDNS_RR_CLASS_IN,
 			nm);
 	forwards_delete_stub_hole(fwd, LDNS_RR_CLASS_IN, nm);
@@ -1672,10 +1757,13 @@ do_insecure_add(SSL* ssl, struct worker* worker, char* arg)
 	uint8_t* nm = NULL;
 	if(!parse_arg_name(ssl, arg, &nm, &nmlen, &nmlabs))
 		return;
-	if(!anchors_add_insecure(worker->env.anchors, LDNS_RR_CLASS_IN, nm)) {
-		(void)ssl_printf(ssl, "error out of memory\n");
-		free(nm);
-		return;
+	if(worker->env.anchors) {
+		if(!anchors_add_insecure(worker->env.anchors,
+			LDNS_RR_CLASS_IN, nm)) {
+			(void)ssl_printf(ssl, "error out of memory\n");
+			free(nm);
+			return;
+		}
 	}
 	free(nm);
 	send_ok(ssl);
@@ -1690,7 +1778,9 @@ do_insecure_remove(SSL* ssl, struct worker* worker, char* arg)
 	uint8_t* nm = NULL;
 	if(!parse_arg_name(ssl, arg, &nm, &nmlen, &nmlabs))
 		return;
-	anchors_delete_insecure(worker->env.anchors, LDNS_RR_CLASS_IN, nm);
+	if(worker->env.anchors)
+		anchors_delete_insecure(worker->env.anchors,
+			LDNS_RR_CLASS_IN, nm);
 	free(nm);
 	send_ok(ssl);
 }
@@ -1716,7 +1806,7 @@ do_status(SSL* ssl, struct worker* worker)
 	if(!ssl_printf(ssl, " ]\n"))
 		return;
 	uptime = (time_t)time(NULL) - (time_t)worker->daemon->time_boot.tv_sec;
-	if(!ssl_printf(ssl, "uptime: %lld seconds\n", (long long)uptime))
+	if(!ssl_printf(ssl, "uptime: " ARG_LL "d seconds\n", (long long)uptime))
 		return;
 	if(!ssl_printf(ssl, "unbound (pid %d) is running...\n",
 		(int)getpid()))
@@ -1735,7 +1825,8 @@ get_mesh_age(struct mesh_state* m, char* buf, size_t len,
 		while(r && r->next)
 			r = r->next;
 		timeval_subtract(&d, env->now_tv, &r->start_time);
-		snprintf(buf, len, "%lld.%6.6d", (long long)d.tv_sec, (int)d.tv_usec);
+		snprintf(buf, len, ARG_LL "d.%6.6d",
+			(long long)d.tv_sec, (int)d.tv_usec);
 	} else {
 		snprintf(buf, len, "-");
 	}
@@ -1780,10 +1871,11 @@ get_mesh_status(struct mesh_area* mesh, struct mesh_state* m,
 		if(m->sub_set.count == 0)
 			snprintf(buf, len, " (empty_list)");
 		RBTREE_FOR(sub, struct mesh_state_ref*, &m->sub_set) {
-			char* t = ldns_rr_type2str(sub->s->s.qinfo.qtype);
-			char* c = ldns_rr_class2str(sub->s->s.qinfo.qclass);
+			char* t = sldns_wire2str_type(sub->s->s.qinfo.qtype);
+			char* c = sldns_wire2str_class(sub->s->s.qinfo.qclass);
 			dname_str(sub->s->s.qinfo.qname, nm);
-			snprintf(buf, len, " %s %s %s", t, c, nm);
+			snprintf(buf, len, " %s %s %s", (t?t:"TYPE??"),
+				(c?c:"CLASS??"), nm);
 			l = strlen(buf);
 			buf += l; len -= l;
 			free(t);
@@ -1812,13 +1904,14 @@ do_dump_requestlist(SSL* ssl, struct worker* worker)
 	mesh = worker->env.mesh;
 	if(!mesh) return;
 	RBTREE_FOR(m, struct mesh_state*, &mesh->all) {
-		char* t = ldns_rr_type2str(m->s.qinfo.qtype);
-		char* c = ldns_rr_class2str(m->s.qinfo.qclass);
+		char* t = sldns_wire2str_type(m->s.qinfo.qtype);
+		char* c = sldns_wire2str_class(m->s.qinfo.qclass);
 		dname_str(m->s.qinfo.qname, buf);
 		get_mesh_age(m, timebuf, sizeof(timebuf), &worker->env);
 		get_mesh_status(mesh, m, statbuf, sizeof(statbuf));
 		if(!ssl_printf(ssl, "%3d %4s %2s %s %s %s\n", 
-			num, t, c, buf, timebuf, statbuf)) {
+			num, (t?t:"TYPE??"), (c?c:"CLASS??"), buf, timebuf,
+			statbuf)) {
 			free(t);
 			free(c);
 			return;
@@ -1858,10 +1951,10 @@ dump_infra_host(struct lruhash_entry* e, void* arg)
 		}
 		return;
 	}
-	if(!ssl_printf(a->ssl, "%s %s ttl %d ping %d var %d rtt %d rto %d "
+	if(!ssl_printf(a->ssl, "%s %s ttl %lu ping %d var %d rtt %d rto %d "
 		"tA %d tAAAA %d tother %d "
 		"ednsknown %d edns %d delay %d lame dnssec %d rec %d A %d "
-		"other %d\n", ip_str, name, (int)(d->ttl - a->now),
+		"other %d\n", ip_str, name, (unsigned long)(d->ttl - a->now),
 		d->rtt.srtt, d->rtt.rttvar, rtt_notimeout(&d->rtt), d->rtt.rto,
 		d->timeout_A, d->timeout_AAAA, d->timeout_other,
 		(int)d->edns_lame_known, (int)d->edns_version,
@@ -1931,10 +2024,23 @@ do_list_forwards(SSL* ssl, struct worker* worker)
 	/* since its a per-worker structure no locks needed */
 	struct iter_forwards* fwds = worker->env.fwds;
 	struct iter_forward_zone* z;
+	struct trust_anchor* a;
+	int insecure;
 	RBTREE_FOR(z, struct iter_forward_zone*, fwds->tree) {
 		if(!z->dp) continue; /* skip empty marker for stub */
-		if(!ssl_print_name_dp(ssl, "forward", z->name, z->dclass,
-			z->dp))
+
+		/* see if it is insecure */
+		insecure = 0;
+		if(worker->env.anchors &&
+			(a=anchor_find(worker->env.anchors, z->name,
+			z->namelabs, z->namelen,  z->dclass))) {
+			if(!a->keylist && !a->numDS && !a->numDNSKEY)
+				insecure = 1;
+			lock_basic_unlock(&a->lock);
+		}
+
+		if(!ssl_print_name_dp(ssl, (insecure?"forward +i":"forward"),
+			z->name, z->dclass, z->dp))
 			return;
 	}
 }
@@ -1944,9 +2050,24 @@ static void
 do_list_stubs(SSL* ssl, struct worker* worker)
 {
 	struct iter_hints_stub* z;
+	struct trust_anchor* a;
+	int insecure;
+	char str[32];
 	RBTREE_FOR(z, struct iter_hints_stub*, &worker->env.hints->tree) {
-		if(!ssl_print_name_dp(ssl, 
-			z->noprime?"stub noprime":"stub prime", z->node.name,
+
+		/* see if it is insecure */
+		insecure = 0;
+		if(worker->env.anchors &&
+			(a=anchor_find(worker->env.anchors, z->node.name,
+			z->node.labs, z->node.len,  z->node.dclass))) {
+			if(!a->keylist && !a->numDS && !a->numDNSKEY)
+				insecure = 1;
+			lock_basic_unlock(&a->lock);
+		}
+
+		snprintf(str, sizeof(str), "stub %sprime%s",
+			(z->noprime?"no":""), (insecure?" +i":""));
+		if(!ssl_print_name_dp(ssl, str, z->node.name,
 			z->node.dclass, z->dp))
 			return;
 	}
@@ -1959,7 +2080,7 @@ do_list_local_zones(SSL* ssl, struct worker* worker)
 	struct local_zones* zones = worker->daemon->local_zones;
 	struct local_zone* z;
 	char buf[257];
-	lock_quick_lock(&zones->lock);
+	lock_rw_rdlock(&zones->lock);
 	RBTREE_FOR(z, struct local_zone*, &zones->ztree) {
 		lock_rw_rdlock(&z->lock);
 		dname_str(z->name, buf);
@@ -1967,7 +2088,7 @@ do_list_local_zones(SSL* ssl, struct worker* worker)
 			local_zone_type2str(z->type));
 		lock_rw_unlock(&z->lock);
 	}
-	lock_quick_unlock(&zones->lock);
+	lock_rw_unlock(&zones->lock);
 }
 
 /** do the list_local_data command */
@@ -1978,22 +2099,30 @@ do_list_local_data(SSL* ssl, struct worker* worker)
 	struct local_zone* z;
 	struct local_data* d;
 	struct local_rrset* p;
-	lock_quick_lock(&zones->lock);
+	char* s = (char*)sldns_buffer_begin(worker->env.scratch_buffer);
+	size_t slen = sldns_buffer_capacity(worker->env.scratch_buffer);
+	lock_rw_rdlock(&zones->lock);
 	RBTREE_FOR(z, struct local_zone*, &zones->ztree) {
 		lock_rw_rdlock(&z->lock);
 		RBTREE_FOR(d, struct local_data*, &z->data) {
 			for(p = d->rrsets; p; p = p->next) {
-				ldns_rr_list* rr = packed_rrset_to_rr_list(
-					p->rrset, worker->env.scratch_buffer);
-				char* str = ldns_rr_list2str(rr);
-				(void)ssl_printf(ssl, "%s", str);
-				free(str);
-				ldns_rr_list_free(rr);
+				struct packed_rrset_data* d =
+					(struct packed_rrset_data*)p->rrset->entry.data;
+				size_t i;
+				for(i=0; i<d->count + d->rrsig_count; i++) {
+					if(!packed_rr_to_string(p->rrset, i,
+						0, s, slen)) {
+						if(!ssl_printf(ssl, "BADRR\n"))
+							return;
+					}
+				        if(!ssl_printf(ssl, "%s\n", s))
+						return;
+				}
 			}
 		}
 		lock_rw_unlock(&z->lock);
 	}
-	lock_quick_unlock(&zones->lock);
+	lock_rw_unlock(&zones->lock);
 }
 
 /** tell other processes to execute the command */
@@ -2150,6 +2279,8 @@ execute_cmd(struct daemon_remote* rc, SSL* ssl, char* cmd,
 		do_get_option(ssl, worker, skipwhite(p+10));
 	} else if(cmdcmp(p, "flush_bogus", 11)) {
 		do_flush_bogus(ssl, worker);
+	} else if(cmdcmp(p, "flush_negative", 14)) {
+		do_flush_negative(ssl, worker);
 	} else {
 		(void)ssl_printf(ssl, "error unknown command '%s'\n", p);
 	}

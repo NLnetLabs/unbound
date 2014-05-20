@@ -14,8 +14,6 @@
 
 #ifdef CLIENT_SUBNET /* keeps splint happy */
 
-#include <ldns/ldns.h>
-
 #include "edns-subnet/subnetmod.h"
 #include "edns-subnet/edns-subnet.h"
 #include "edns-subnet/addrtree.h"

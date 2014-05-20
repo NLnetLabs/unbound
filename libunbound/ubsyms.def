@@ -29,3 +29,4 @@ ub_ctx_zone_remove
 ub_ctx_data_add
 ub_ctx_data_remove
 ub_version
+ub_ctx_set_event

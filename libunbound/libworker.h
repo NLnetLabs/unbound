@@ -21,16 +21,16 @@
  * specific prior written permission.
  * 
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
- * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED
+ * TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 /**
@@ -57,6 +57,7 @@ struct comm_point;
 struct comm_reply;
 struct regional;
 struct tube;
+struct sldns_buffer;
 struct event_base;
 
 /** 
@@ -174,15 +175,15 @@ void libworker_handle_result_write(struct tube* tube, uint8_t* msg, size_t len,
 	int err, void* arg);
 
 /** mesh callback with fg results */
-void libworker_fg_done_cb(void* arg, int rcode, ldns_buffer* buf, 
+void libworker_fg_done_cb(void* arg, int rcode, struct sldns_buffer* buf, 
 	enum sec_status s, char* why_bogus);
 
 /** mesh callback with bg results */
-void libworker_bg_done_cb(void* arg, int rcode, ldns_buffer* buf, 
+void libworker_bg_done_cb(void* arg, int rcode, struct sldns_buffer* buf, 
 	enum sec_status s, char* why_bogus);
 
 /** mesh callback with event results */
-void libworker_event_done_cb(void* arg, int rcode, ldns_buffer* buf, 
+void libworker_event_done_cb(void* arg, int rcode, struct sldns_buffer* buf, 
 	enum sec_status s, char* why_bogus);
 
 /** 
@@ -194,7 +195,7 @@ void libworker_event_done_cb(void* arg, int rcode, ldns_buffer* buf,
  *   On error, the res may contain a different status 
  *   (out of memory is not secure, not bogus).
  */
-void libworker_enter_result(struct ub_result* res, ldns_buffer* buf,
+void libworker_enter_result(struct ub_result* res, struct sldns_buffer* buf,
 	struct regional* temp, enum sec_status msg_security);
 
 #endif /* LIBUNBOUND_WORKER_H */

@@ -21,16 +21,16 @@
  * specific prior written permission.
  * 
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
- * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED
+ * TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 /**
@@ -45,6 +45,7 @@
 
 #include "util/rbtree.h"
 #include "util/netevent.h"
+#include "ldns/sbuffer.h"
 struct pending;
 struct pending_timeout;
 struct ub_randstate;
@@ -54,6 +55,7 @@ struct waiting_udp;
 struct infra_cache;
 struct port_comm;
 struct port_if;
+struct sldns_buffer;
 
 /**
  * Send queries to outside servers and wait for answers from servers.
@@ -69,7 +71,7 @@ struct outside_network {
 
 	/** buffer shared by UDP connections, since there is only one
 	    datagram at any time. */
-	ldns_buffer* udp_buff;
+	struct sldns_buffer* udp_buff;
 	/** serviced_callbacks malloc overhead when processing multiple
 	 * identical serviced queries to the same server. */
 	size_t svcd_overhead;
@@ -94,6 +96,10 @@ struct outside_network {
 	struct port_comm* unused_fds;
 	/** if udp is done */
 	int do_udp;
+	/** if udp is delay-closed (delayed answers do not meet closed port)*/
+	int delayclose;
+	/** timeout for delayclose */
+	struct timeval delay_tv;
 
 	/** array of outgoing IP4 interfaces */
 	struct port_if* ip4_ifs;
@@ -133,6 +139,8 @@ struct outside_network {
 	struct pending_tcp **tcp_conns;
 	/** number of tcp communication points. */
 	size_t num_tcp;
+	/** number of tcp communication points in use. */
+	size_t num_tcp_outgoing;
 	/** list of tcp comm points that are free for use */
 	struct pending_tcp* tcp_free;
 	/** list of tcp queries waiting for a buffer */
@@ -384,6 +392,8 @@ struct serviced_query {
  * @param unwanted_param: user parameter to action.
  * @param do_udp: if udp is done.
  * @param sslctx: context to create outgoing connections with (if enabled).
+ * @param delayclose: if not 0, udp sockets are delayed before timeout closure.
+ * 	msec to wait on timeouted udp sockets.
  * \if CLIENT_SUBNET
  * @param edns_subnet_upstreams: Servers whitelisted for edns-subnet.
  * \endif
@@ -395,7 +405,7 @@ struct outside_network* outside_network_create(struct comm_base* base,
 	struct ub_randstate* rnd, int use_caps_for_id, int* availports, 
 	int numavailports, size_t unwanted_threshold,
 	void (*unwanted_action)(void*), void* unwanted_param, int do_udp,
-	void* sslctx
+	void* sslctx, int delayclose
 #ifdef CLIENT_SUBNET
 	, struct ednssubnet_upstream* edns_subnet_upstreams
 #endif
@@ -426,7 +436,7 @@ void outside_network_quit_prepare(struct outside_network* outnet);
  * @return: NULL on error for malloc or socket. Else the pending query object.
  */
 struct pending* pending_udp_query(struct outside_network* outnet, 
-	ldns_buffer* packet, struct sockaddr_storage* addr, 
+	struct sldns_buffer* packet, struct sockaddr_storage* addr, 
 	socklen_t addrlen, int timeout, comm_point_callback_t* callback, 
 	void* callback_arg);
 
@@ -446,7 +456,7 @@ struct pending* pending_udp_query(struct outside_network* outnet,
  * @return: false on error for malloc or socket. Else the pending TCP object.
  */
 struct waiting_tcp* pending_tcp_query(struct outside_network* outnet, 
-	ldns_buffer* packet, struct sockaddr_storage* addr, 
+	struct sldns_buffer* packet, struct sockaddr_storage* addr, 
 	socklen_t addrlen, int timeout, comm_point_callback_t* callback, 
 	void* callback_arg, int ssl_upstream);
 
@@ -491,11 +501,12 @@ struct serviced_query* outnet_serviced_query(struct outside_network* outnet,
 	uint16_t flags, int dnssec, int want_dnssec, int tcp_upstream,
 	int ssl_upstream, struct sockaddr_storage* addr, socklen_t addrlen,
 	uint8_t* zone, size_t zonelen, comm_point_callback_t* callback,
-	void* callback_arg, ldns_buffer* buff
+	void* callback_arg, sldns_buffer* buff
 #ifdef CLIENT_SUBNET
 	, struct edns_data* edns
 #endif
 );
+
 /**
  * Remove service query callback.
  * If that leads to zero callbacks, the query is completely cancelled.
@@ -532,6 +543,9 @@ int outnet_tcp_cb(struct comm_point* c, void* arg, int error,
 
 /** callback for udp timeout */
 void pending_udp_timer_cb(void *arg);
+
+/** callback for udp delay for timeout */
+void pending_udp_timer_delay_cb(void *arg);
 
 /** callback for outgoing TCP timer event */
 void outnet_tcptimer(void* arg);
