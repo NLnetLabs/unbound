@@ -1,3 +1,8 @@
+20 May 2014: Wouter
+	- Feature, unblock-lan-zones: yesno that you can use to make unbound
+	  perform 10.0.0.0/8 and other reverse lookups normally, for use if
+	  unbound is running service for localhost on localhost.
+
 16 May 2014: Wouter
 	- Updated create_unbound_ad_servers and unbound_cache scripts from
 	  Yuri Voinov in the source/contrib directory. Added
