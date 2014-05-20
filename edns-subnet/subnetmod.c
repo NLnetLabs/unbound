@@ -275,7 +275,6 @@ common_prefix(uint8_t *a, uint8_t *b, uint8_t net)
 enum module_ext_state
 eval_response(struct module_qstate *qstate, int id)
 {
-	size_t sn_octs;
 	struct edns_data *c_in  = &qstate->edns_client_in; /* rcvd from client */
 	struct edns_data *c_out = &qstate->edns_client_out;/* will send to client */
 	struct edns_data *s_in  = &qstate->edns_server_in; /* rcvd from auth */
@@ -308,7 +307,6 @@ eval_response(struct module_qstate *qstate, int id)
 	 * anywhere. */
 	
 	/** can we accept response? */
-	assert(sn_octs <= INET6_SIZE); /** Enforced by msgparse */
 	if(s_out->subnet_addr_fam != s_in->subnet_addr_fam ||
 		s_out->subnet_source_mask != s_in->subnet_source_mask ||
 		!common_prefix(s_out->subnet_addr, s_in->subnet_addr, 
@@ -388,14 +386,15 @@ subnetmod_operate(struct module_qstate *qstate, enum module_ev event,
 }
 
 void
-subnetmod_clear(struct module_qstate *qstate, int id)
+subnetmod_clear(struct module_qstate *ATTR_UNUSED(qstate),
+	int ATTR_UNUSED(id))
 {
 	/* qstate has no data outside region */
 }
 
 void
-subnetmod_inform_super(struct module_qstate *qstate, int id, 
-	struct module_qstate *super)
+subnetmod_inform_super(struct module_qstate *ATTR_UNUSED(qstate),
+	int ATTR_UNUSED(id), struct module_qstate *ATTR_UNUSED(super))
 {
 	/* Not used */
 }

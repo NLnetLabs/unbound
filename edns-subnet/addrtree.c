@@ -432,7 +432,7 @@ struct addrnode *
 addrtree_find(struct addrtree *tree, const addrkey_t *addr, 
 	addrlen_t sourcemask, time_t now)
 {
-	struct addrnode *parent_node = NULL, *node = tree->root;
+	struct addrnode *node = tree->root;
 	struct addredge *edge = NULL;
 	addrlen_t depth = 0;
 
@@ -463,7 +463,6 @@ addrtree_find(struct addrtree *tree, const addrkey_t *addr,
 		if (!issub(edge->str, edge->len, addr, sourcemask, depth))
 			return NULL;
 		log_assert(depth < edge->len);
-		parent_node = node;
 		depth = edge->len;
 		node = edge->node;
 	}
