@@ -692,7 +692,7 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_UNS(opt, "val-override-date", val_date_override)
 	else O_YNO(opt, "minimal-responses", minimal_responses)
 	else O_YNO(opt, "rrset-roundrobin", rrset_roundrobin)
-	else O_YNO(opt, "unblock_lan_zones", unblock_lan_zones)
+	else O_YNO(opt, "unblock-lan-zones", unblock_lan_zones)
 	else O_DEC(opt, "max-udp-size", max_udp_size)
 	else O_STR(opt, "python-script", python_script)
 	else O_DEC(opt, "val-sig-skew-min", val_sig_skew_min)
