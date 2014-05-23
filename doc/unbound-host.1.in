@@ -14,7 +14,7 @@
 .SH "SYNOPSIS"
 .LP
 .B unbound\-host
-.RB [ \-vdhr46 ]
+.RB [ \-vdhr46D ]
 .RB [ \-c 
 .IR class ]
 .RB [ \-t
@@ -73,6 +73,10 @@ Specify a public key to use as trust anchor. This is the base for a chain
 of trust that is built up from the trust anchor to the response, in order
 to validate the response message. Can be given as a DS or DNSKEY record.
 For example \-y "example.com DS 31560 5 1 1CFED84787E6E19CCF9372C1187325972FE546CD".
+.TP
+.B \-D
+Enables DNSSEC validation.  Reads the root anchor from the default configured
+root anchor at the default location, \fI@UNBOUND_ROOTKEY_FILE@\fR. 
 .TP
 .B \-f \fIkeyfile
 Reads keys from a file. Every line has a DS or DNSKEY record, in the format
