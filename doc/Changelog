@@ -1,3 +1,23 @@
+28 May 2014: Wouter
+	- Code cleanup patch from Dag-Erling Smorgrav, with compiler issue
+	  fixes from FreeBSD's copy of Unbound, he notes:
+	  Generate unbound-control-setup.sh at build time so it respects
+	  prefix and sysconfdir from the configure script.  Also fix the
+	  umask to match the comment, and the comment to match the umask.
+	  Add const and static where needed.  Use unions instead of
+	  playing pointer poker.  Move declarations that are needed in
+	  multiple source files into a shared header.  Move sldns_bgetc()
+	  from parse.c to buffer.c where it belongs.  Introduce a new
+	  header file, worker.h, which declares the callbacks that
+	  all workers must define.  Remove those declarations from
+	  libworker.h.	Include the correct headers in the correct places.
+	  Fix a few dummy callbacks that don't match their prototype.
+	  Fix some casts.  Hide the sbrk madness behind #ifdef HAVE_SBRK.
+	  Remove a useless printf which breaks reproducible builds.
+	  Get rid of CONFIGURE_{TARGET,DATE,BUILD_WITH} now that they're
+	  no longer used.  Add unbound-control-setup.sh to the list of
+	  generated files.
+
 23 May 2014: Wouter
 	- unbound-host -D enabled dnssec and reads root trust anchor from
 	  the default root key file that was compiled in.

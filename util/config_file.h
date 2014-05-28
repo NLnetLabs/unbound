@@ -641,6 +641,18 @@ struct config_parser_state {
 
 /** global config parser object used during config parsing */
 extern struct config_parser_state* cfg_parser;
+/** init lex state */
+void init_cfg_parse(void);
+/** lex in file */
+extern FILE* ub_c_in;
+/** lex out file */
+extern FILE* ub_c_out;
+/** the yacc lex generated parse function */
+int ub_c_parse(void);
+/** the lexer function */
+int ub_c_lex(void);
+/** wrap function */
+int ub_c_wrap(void);
 /** parsing helpers: print error with file and line numbers */
 void ub_c_error(const char* msg);
 /** parsing helpers: print error with file and line numbers */

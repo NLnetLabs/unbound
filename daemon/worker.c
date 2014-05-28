@@ -69,6 +69,8 @@
 #include "iterator/iter_hints.h"
 #include "validator/autotrust.h"
 #include "validator/val_anchor.h"
+#include "libunbound/context.h"
+#include "libunbound/libworker.h"
 #include "ldns/sbuffer.h"
 
 #ifdef HAVE_SYS_TYPES_H
@@ -718,7 +720,7 @@ answer_chaos(struct worker* w, struct query_info* qinfo,
 	return 0;
 }
 
-int
+static int
 deny_refuse(struct comm_point* c, enum acl_access acl,
 	enum acl_access deny, enum acl_access refuse,
 	struct worker* worker, struct comm_reply* repinfo)
@@ -750,14 +752,14 @@ deny_refuse(struct comm_point* c, enum acl_access acl,
 	return -1;
 }
 
-int
+static int
 deny_refuse_all(struct comm_point* c, enum acl_access acl,
 	struct worker* worker, struct comm_reply* repinfo)
 {
 	return deny_refuse(c, acl, acl_deny, acl_refuse, worker, repinfo);
 }
 
-int
+static int
 deny_refuse_non_local(struct comm_point* c, enum acl_access acl,
 	struct worker* worker, struct comm_reply* repinfo)
 {
@@ -846,7 +848,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 		verbose(VERB_ALGO, "query with bad edns version.");
 		log_addr(VERB_CLIENT,"from",&repinfo->addr, repinfo->addrlen);
 		error_encode(c->buffer, EDNS_RCODE_BADVERS&0xf, &qinfo,
-			*(uint16_t*)sldns_buffer_begin(c->buffer),
+			*(uint16_t*)(void *)sldns_buffer_begin(c->buffer),
 			sldns_buffer_read_u16_at(c->buffer, 2), NULL);
 		attach_edns_record(c->buffer, &edns);
 		return 1;
@@ -928,7 +930,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 		/* answer from cache - we have acquired a readlock on it */
 		if(answer_from_cache(worker, &qinfo, 
 			(struct reply_info*)e->data, 
-			*(uint16_t*)sldns_buffer_begin(c->buffer), 
+			*(uint16_t*)(void *)sldns_buffer_begin(c->buffer), 
 			sldns_buffer_read_u16_at(c->buffer, 2), repinfo, 
 			&edns)) {
 			/* prefetch it if the prefetch TTL expired */
@@ -950,7 +952,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 	}
 	if(!LDNS_RD_WIRE(sldns_buffer_begin(c->buffer))) {
 		if(answer_norec_from_cache(worker, &qinfo,
-			*(uint16_t*)sldns_buffer_begin(c->buffer), 
+			*(uint16_t*)(void *)sldns_buffer_begin(c->buffer), 
 			sldns_buffer_read_u16_at(c->buffer, 2), repinfo, 
 			&edns)) {
 			return 1;
@@ -972,7 +974,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 	/* grab a work request structure for this new request */
 	mesh_new_client(worker->env.mesh, &qinfo, 
 		sldns_buffer_read_u16_at(c->buffer, 2),
-		&edns, repinfo, *(uint16_t*)sldns_buffer_begin(c->buffer));
+		&edns, repinfo, *(uint16_t*)(void *)sldns_buffer_begin(c->buffer));
 	worker_mem_report(worker, NULL);
 	return 0;
 }
@@ -1349,7 +1351,8 @@ struct outbound_entry* libworker_send_query(uint8_t* ATTR_UNUSED(qname),
 	uint16_t ATTR_UNUSED(qclass), uint16_t ATTR_UNUSED(flags), 
 	int ATTR_UNUSED(dnssec), int ATTR_UNUSED(want_dnssec),
 	struct sockaddr_storage* ATTR_UNUSED(addr), 
-	socklen_t ATTR_UNUSED(addrlen), struct module_qstate* ATTR_UNUSED(q))
+	socklen_t ATTR_UNUSED(addrlen), uint8_t* ATTR_UNUSED(zone),
+	size_t ATTR_UNUSED(zonelen), struct module_qstate* ATTR_UNUSED(q))
 {
 	log_assert(0);
 	return 0;

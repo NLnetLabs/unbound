@@ -79,19 +79,6 @@ AC_SUBST(LIBUNBOUND_CURRENT)
 AC_SUBST(LIBUNBOUND_REVISION)
 AC_SUBST(LIBUNBOUND_AGE)
 
-pretty_cmdline() {
-	cmdline=""
-	while test -n "$1"; do
-		cmdline="$cmdline '"`echo $1 | sed -e 's/\\\\/\\\\\\\\/g' | sed -e 's/"/\\\\"/g' `"'"
-		shift
-	done
-}
-pretty_cmdline $@
-AC_DEFINE_UNQUOTED(CONFIGURE_BUILD_WITH, ["$cmdline"], [configure flags])
-AC_CANONICAL_TARGET
-AC_DEFINE_UNQUOTED(CONFIGURE_TARGET, ["$target"], [configure target system])
-AC_DEFINE_UNQUOTED(CONFIGURE_DATE, ["`date`"], [configure date])
-
 CFLAGS="$CFLAGS"
 AC_AIX
 if test "$ac_cv_header_minix_config_h" = "yes"; then
@@ -1224,6 +1211,6 @@ void *unbound_stat_realloc_log(void *ptr, size_t size, const char* file,
 
 ])
 
-AC_CONFIG_FILES([Makefile doc/example.conf doc/libunbound.3 doc/unbound.8 doc/unbound-anchor.8 doc/unbound-checkconf.8 doc/unbound.conf.5 doc/unbound-control.8 doc/unbound-host.1])
+AC_CONFIG_FILES([Makefile doc/example.conf doc/libunbound.3 doc/unbound.8 doc/unbound-anchor.8 doc/unbound-checkconf.8 doc/unbound.conf.5 doc/unbound-control.8 doc/unbound-host.1 smallapp/unbound-control-setup.sh])
 AC_CONFIG_HEADER([config.h])
 AC_OUTPUT

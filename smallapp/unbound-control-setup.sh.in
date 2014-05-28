@@ -36,8 +36,8 @@
 # settings:
 
 # directory for files
-prefix=/usr/local
-DESTDIR=${prefix}/etc/unbound
+prefix=@prefix@
+DESTDIR=@sysconfdir@/unbound
 
 # issuer and subject name for certificates
 SERVERNAME=unbound
