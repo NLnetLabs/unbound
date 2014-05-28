@@ -19,7 +19,6 @@ libtool=@libtool@
 staticexe=@staticexe@
 EXEEXT=@EXEEXT@
 configfile=@ub_conf_file@
-UNBOUND_RUN_DIR=@UNBOUND_RUN_DIR@
 CHECKLOCK_SRC=testcode/checklocks.c
 CHECKLOCK_OBJ=@CHECKLOCK_OBJ@
 WITH_PYTHONMODULE=@WITH_PYTHONMODULE@
@@ -348,8 +347,8 @@ signit$(EXEEXT):	testcode/signit.c
 unbound.h:	$(srcdir)/libunbound/unbound.h
 	sed -e 's/@''UNBOUND_VERSION_MAJOR@/$(UNBOUND_VERSION_MAJOR)/' -e 's/@''UNBOUND_VERSION_MINOR@/$(UNBOUND_VERSION_MINOR)/' -e 's/@''UNBOUND_VERSION_MICRO@/$(UNBOUND_VERSION_MICRO)/' < $(srcdir)/libunbound/unbound.h > $@
 
-unbound-control-setup:	$(srcdir)/smallapp/unbound-control-setup.sh
-	sed -e 's:^DESTDIR=.*$$:DESTDIR=$(UNBOUND_RUN_DIR):' < $(srcdir)/smallapp/unbound-control-setup.sh > $@
+unbound-control-setup:	smallapp/unbound-control-setup.sh
+	cp smallapp/unbound-control-setup.sh $@
 	-chmod +x $@
 
 # Python Module

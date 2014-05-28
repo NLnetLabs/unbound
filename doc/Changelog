@@ -17,6 +17,7 @@
 	  Get rid of CONFIGURE_{TARGET,DATE,BUILD_WITH} now that they're
 	  no longer used.  Add unbound-control-setup.sh to the list of
 	  generated files.
+	- Fixup out-of-directory compile with unbound-control-setup.sh.in.
 
 23 May 2014: Wouter
 	- unbound-host -D enabled dnssec and reads root trust anchor from
