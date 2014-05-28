@@ -16,7 +16,9 @@
 	  Remove a useless printf which breaks reproducible builds.
 	  Get rid of CONFIGURE_{TARGET,DATE,BUILD_WITH} now that they're
 	  no longer used.  Add unbound-control-setup.sh to the list of
-	  generated files.
+	  generated files.  The prototype for libworker_event_done_cb()
+	  needs to be moved from libunbound/libworker.h to
+	  libunbound/worker.h.
 	- Fixup out-of-directory compile with unbound-control-setup.sh.in.
 	- make depend.
 
