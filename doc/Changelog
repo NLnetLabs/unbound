@@ -1,3 +1,6 @@
+30 May 2014: Wouter
+	- Fixup sldns_enum_edns_option typedef definition.
+
 28 May 2014: Wouter
 	- Code cleanup patch from Dag-Erling Smorgrav, with compiler issue
 	  fixes from FreeBSD's copy of Unbound, he notes:

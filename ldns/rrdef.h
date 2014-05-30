@@ -419,7 +419,7 @@ enum sldns_enum_edns_option
 	LDNS_EDNS_N3U = 7, /* RFC6975 */
 	LDNS_EDNS_CLIENT_SUBNET = 8 /* draft-vandergaast-edns-client-subnet */
 };
-typedef enum sldns_edns_option sldns_edns_option;
+typedef enum sldns_enum_edns_option sldns_edns_option;
 
 #define LDNS_EDNS_MASK_DO_BIT 0x8000
 
