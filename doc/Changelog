@@ -1,3 +1,6 @@
+2 June 2014: Wouter
+	- Remove unused define from iterator.h
+
 30 May 2014: Wouter
 	- Fixup sldns_enum_edns_option typedef definition.
 
