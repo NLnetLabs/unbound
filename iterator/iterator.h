@@ -230,7 +230,8 @@ struct iter_qstate {
 	int caps_fallback;
 	/** state for capsfail: current server number to try */
 	size_t caps_server;
-	/** state for capsfail: stored query for comparisons */
+	/** state for capsfail: stored query for comparisons. Can be NULL if
+	 * no response had been seen prior to starting the fallback. */
 	struct reply_info* caps_reply;
 
 	/** Current delegation message - returned for non-RD queries */

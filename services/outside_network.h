@@ -309,6 +309,8 @@ struct serviced_query {
 	int dnssec;
 	/** We want signatures, or else the answer is likely useless */
 	int want_dnssec;
+	/** ignore capsforid */
+	int nocaps;
 	/** tcp upstream used, use tcp, or ssl_upstream for SSL */
 	int tcp_upstream, ssl_upstream;
 	/** where to send it */
@@ -466,6 +468,7 @@ void pending_delete(struct outside_network* outnet, struct pending* p);
  *	If the value includes BIT_DO, DO bit is set when in EDNS queries.
  * @param want_dnssec: signatures are needed, without EDNS the answer is
  * 	likely to be useless.
+ * @param nocaps: ignore use_caps_for_id and use unperturbed qname.
  * @param tcp_upstream: use TCP for upstream queries.
  * @param ssl_upstream: use SSL for upstream queries.
  * @param callback: callback function.
@@ -482,10 +485,11 @@ void pending_delete(struct outside_network* outnet, struct pending* p);
  */
 struct serviced_query* outnet_serviced_query(struct outside_network* outnet,
 	uint8_t* qname, size_t qnamelen, uint16_t qtype, uint16_t qclass,
-	uint16_t flags, int dnssec, int want_dnssec, int tcp_upstream,
-	int ssl_upstream, struct sockaddr_storage* addr, socklen_t addrlen,
-	uint8_t* zone, size_t zonelen, comm_point_callback_t* callback,
-	void* callback_arg, struct sldns_buffer* buff);
+	uint16_t flags, int dnssec, int want_dnssec, int nocaps,
+	int tcp_upstream, int ssl_upstream, struct sockaddr_storage* addr,
+	socklen_t addrlen, uint8_t* zone, size_t zonelen,
+	comm_point_callback_t* callback, void* callback_arg,
+	struct sldns_buffer* buff);
 
 /**
  * Remove service query callback.

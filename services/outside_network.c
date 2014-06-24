@@ -1206,7 +1206,7 @@ lookup_serviced(struct outside_network* outnet, sldns_buffer* buff, int dnssec,
 /** Create new serviced entry */
 static struct serviced_query*
 serviced_create(struct outside_network* outnet, sldns_buffer* buff, int dnssec,
-	int want_dnssec, int tcp_upstream, int ssl_upstream,
+	int want_dnssec, int nocaps, int tcp_upstream, int ssl_upstream,
 	struct sockaddr_storage* addr, socklen_t addrlen, uint8_t* zone,
 	size_t zonelen, int qtype)
 {
@@ -1233,6 +1233,7 @@ serviced_create(struct outside_network* outnet, sldns_buffer* buff, int dnssec,
 	sq->qtype = qtype;
 	sq->dnssec = dnssec;
 	sq->want_dnssec = want_dnssec;
+	sq->nocaps = nocaps;
 	sq->tcp_upstream = tcp_upstream;
 	sq->ssl_upstream = ssl_upstream;
 	memcpy(&sq->addr, addr, addrlen);
@@ -1350,7 +1351,7 @@ static void
 serviced_encode(struct serviced_query* sq, sldns_buffer* buff, int with_edns)
 {
 	/* if we are using 0x20 bits for ID randomness, perturb them */
-	if(sq->outnet->use_caps_for_id) {
+	if(sq->outnet->use_caps_for_id && !sq->nocaps) {
 		serviced_perturb_qname(sq->outnet->rnd, sq->qbuf, sq->qbuflen);
 	}
 	/* generate query */
@@ -1828,10 +1829,11 @@ serviced_udp_callback(struct comm_point* c, void* arg, int error,
 struct serviced_query* 
 outnet_serviced_query(struct outside_network* outnet,
 	uint8_t* qname, size_t qnamelen, uint16_t qtype, uint16_t qclass,
-	uint16_t flags, int dnssec, int want_dnssec, int tcp_upstream,
-	int ssl_upstream, struct sockaddr_storage* addr, socklen_t addrlen,
-	uint8_t* zone, size_t zonelen, comm_point_callback_t* callback,
-	void* callback_arg, sldns_buffer* buff)
+	uint16_t flags, int dnssec, int want_dnssec, int nocaps,
+	int tcp_upstream, int ssl_upstream, struct sockaddr_storage* addr,
+	socklen_t addrlen, uint8_t* zone, size_t zonelen,
+	comm_point_callback_t* callback, void* callback_arg,
+	sldns_buffer* buff)
 {
 	struct serviced_query* sq;
 	struct service_callback* cb;
@@ -1844,7 +1846,7 @@ outnet_serviced_query(struct outside_network* outnet,
 		return NULL;
 	if(!sq) {
 		/* make new serviced query entry */
-		sq = serviced_create(outnet, buff, dnssec, want_dnssec,
+		sq = serviced_create(outnet, buff, dnssec, want_dnssec, nocaps,
 			tcp_upstream, ssl_upstream, addr, addrlen, zone,
 			zonelen, (int)qtype);
 		if(!sq) {

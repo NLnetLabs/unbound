@@ -1293,8 +1293,8 @@ worker_delete(struct worker* worker)
 struct outbound_entry*
 worker_send_query(uint8_t* qname, size_t qnamelen, uint16_t qtype,
 	uint16_t qclass, uint16_t flags, int dnssec, int want_dnssec,
-	struct sockaddr_storage* addr, socklen_t addrlen, uint8_t* zone,
-	size_t zonelen, struct module_qstate* q)
+	int nocaps, struct sockaddr_storage* addr, socklen_t addrlen,
+	uint8_t* zone, size_t zonelen, struct module_qstate* q)
 {
 	struct worker* worker = q->env->worker;
 	struct outbound_entry* e = (struct outbound_entry*)regional_alloc(
@@ -1303,7 +1303,7 @@ worker_send_query(uint8_t* qname, size_t qnamelen, uint16_t qtype,
 		return NULL;
 	e->qstate = q;
 	e->qsent = outnet_serviced_query(worker->back, qname,
-		qnamelen, qtype, qclass, flags, dnssec, want_dnssec,
+		qnamelen, qtype, qclass, flags, dnssec, want_dnssec, nocaps,
 		q->env->cfg->tcp_upstream, q->env->cfg->ssl_upstream, addr,
 		addrlen, zone, zonelen, worker_handle_service_reply, e,
 		worker->back->udp_buff);
@@ -1350,7 +1350,7 @@ struct outbound_entry* libworker_send_query(uint8_t* ATTR_UNUSED(qname),
 	size_t ATTR_UNUSED(qnamelen), uint16_t ATTR_UNUSED(qtype), 
 	uint16_t ATTR_UNUSED(qclass), uint16_t ATTR_UNUSED(flags), 
 	int ATTR_UNUSED(dnssec), int ATTR_UNUSED(want_dnssec),
-	struct sockaddr_storage* ATTR_UNUSED(addr), 
+	int ATTR_UNUSED(nocaps), struct sockaddr_storage* ATTR_UNUSED(addr), 
 	socklen_t ATTR_UNUSED(addrlen), uint8_t* ATTR_UNUSED(zone),
 	size_t ATTR_UNUSED(zonelen), struct module_qstate* ATTR_UNUSED(q))
 {
