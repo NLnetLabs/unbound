@@ -77,6 +77,8 @@ struct daemon {
 	struct listen_port** ports;
 	/** size of ports array */
 	size_t num_ports;
+	/** reuseport is enabled if true */
+	int reuseport;
 	/** port number for remote that has ports opened. */
 	int rc_port;
 	/** listening ports for remote control */

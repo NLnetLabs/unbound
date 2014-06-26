@@ -1,3 +1,6 @@
+26 June 2014: Wouter
+	- unbound-control status reports if so-reuseport was successful.
+
 24 June 2014: Wouter
 	- Fix caps-for-id fallback, and added fallback attempt when servers
 	  drop 0x20 perturbed queries.
