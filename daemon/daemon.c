@@ -266,7 +266,7 @@ daemon_open_shared_ports(struct daemon* daemon)
 			daemon->ports = NULL;
 		}
 		/* see if we want to reuseport */
-#if defined(__linux__) && defined(SO_REUSEPORT)
+#ifdef SO_REUSEPORT
 		if(daemon->cfg->so_reuseport && daemon->cfg->num_threads > 0)
 			daemon->reuseport = 1;
 #endif
@@ -449,7 +449,7 @@ thread_start(void* arg)
 	tube_close_write(worker->cmd);
 	close_other_pipes(worker->daemon, worker->thread_num);
 #endif
-#if defined(__linux__) && defined(SO_REUSEPORT)
+#ifdef SO_REUSEPORT
 	if(worker->daemon->cfg->so_reuseport)
 		port_num = worker->thread_num;
 	else

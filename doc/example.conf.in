@@ -85,7 +85,7 @@ server:
 	# 0 is system default.  Use 4m to handle spikes on very busy servers.
 	# so-sndbuf: 0
 	
-	# on Linux(3.9+) use SO_REUSEPORT to distribute queries over threads.
+	# use SO_REUSEPORT to distribute queries over threads.
 	# so-reuseport: no
 
 	# EDNS reassembly buffer to advertise to UDP peers (the actual buffer

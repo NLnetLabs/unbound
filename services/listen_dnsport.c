@@ -153,8 +153,8 @@ create_udp_sock(int family, int socktype, struct sockaddr* addr,
 #endif
 		}
 #endif /* SO_REUSEADDR */
-#if defined(__linux__) && defined(SO_REUSEPORT)
-		/* Linux specific: try to set SO_REUSEPORT so that incoming
+#ifdef SO_REUSEPORT
+		/* try to set SO_REUSEPORT so that incoming
 		 * queries are distributed evenly among the receiving threads.
 		 * Each thread must have its own socket bound to the same port,
 		 * with SO_REUSEPORT set on each socket.
@@ -172,7 +172,7 @@ create_udp_sock(int family, int socktype, struct sockaddr* addr,
 		}
 #else
 		(void)reuseport;
-#endif /* defined(__linux__) && defined(SO_REUSEPORT) */
+#endif /* defined(SO_REUSEPORT) */
 	}
 	if(rcv) {
 #ifdef SO_RCVBUF
@@ -491,8 +491,8 @@ create_tcp_accept_sock(struct addrinfo *addr, int v6only, int* noproto,
 		return -1;
 	}
 #endif /* SO_REUSEADDR */
-#if defined(__linux__) && defined(SO_REUSEPORT)
-	/* Linux specific: try to set SO_REUSEPORT so that incoming
+#ifdef SO_REUSEPORT
+	/* try to set SO_REUSEPORT so that incoming
 	 * connections are distributed evenly among the receiving threads.
 	 * Each thread must have its own socket bound to the same port,
 	 * with SO_REUSEPORT set on each socket.
@@ -510,7 +510,7 @@ create_tcp_accept_sock(struct addrinfo *addr, int v6only, int* noproto,
 	}
 #else
 	(void)reuseport;
-#endif /* defined(__linux__) && defined(SO_REUSEPORT) */
+#endif /* defined(SO_REUSEPORT) */
 #if defined(IPV6_V6ONLY)
 	if(addr->ai_family == AF_INET6 && v6only) {
 		if(setsockopt(s, IPPROTO_IPV6, IPV6_V6ONLY, 
