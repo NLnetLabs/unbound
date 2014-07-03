@@ -1,6 +1,7 @@
 3 July 2014: Wouter
 	- DLV tests added.
 	- signit tool fixup for compile with libldns library.
+	- iana portlist updated.
 
 27 June 2014: Wouter
 	- so-reuseport is available on BSDs(such as FreeBSD 10) and OS/X.
