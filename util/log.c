@@ -68,8 +68,10 @@ static FILE* logfile = 0;
 static int key_created = 0;
 /** pthread key for thread ids in logfile */
 static ub_thread_key_t logkey;
+#ifndef THREADS_DISABLED
 /** pthread mutex to protect FILE* */
 static lock_quick_t log_lock;
+#endif
 /** the identity of this executable/process */
 static const char* ident="unbound";
 #if defined(HAVE_SYSLOG_H) || defined(UB_ON_WINDOWS)
