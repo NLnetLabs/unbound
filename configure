@@ -15053,7 +15053,7 @@ else
   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 
-#define _XOPEN_SOURCE
+#define _XOPEN_SOURCE 600
 #include <time.h>
 int main(void) { struct tm tm; char *res;
 res = strptime("2010-07-15T00:00:00+00:00", "%t%Y%t-%t%m%t-%t%d%tT%t%H%t:%t%M%t:%t%S%t", &tm);
