@@ -107,7 +107,7 @@ ub_random_max(struct ub_randstate* state, long int x)
 {
 	(void)state;
 	/* on OpenBSD, this does not need _seed(), or _stir() calls */
-	return (long)arc4random_uniform(x);
+	return (long)arc4random_uniform((uint32_t)x);
 }
 
 #else

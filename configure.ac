@@ -997,6 +997,7 @@ if test "$USE_NSS" = "no"; then
 			AC_CHECK_FUNCS([SHA512_Update],,[
 				AC_LIBOBJ(sha512)
 			])
+			AC_SEARCH_LIBS([clock_gettime], [rt])
 		;;
 		esac
 		])

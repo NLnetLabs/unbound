@@ -676,7 +676,7 @@ pick_random_ip(struct ip_list* list)
 	int sel;
 	if(num == 0) return NULL;
 	/* not perfect, but random enough */
-	sel = arc4random_uniform(num);
+	sel = (int)arc4random_uniform((uint32_t)num);
 	/* skip over unused elements that we did not select */
 	while(sel > 0 && p) {
 		if(!p->used) sel--;
