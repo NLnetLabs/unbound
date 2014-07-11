@@ -977,29 +977,33 @@ if test "$USE_NSS" = "no"; then
 		AC_LIBOBJ(explicit_bzero)
 		AC_LIBOBJ(arc4_lock)
 		AC_CHECK_FUNCS([getentropy],,[
-		case `uname` in
-		Darwin)
-			AC_LIBOBJ(getentropy_osx)
-		;;
-		SunOS)
-			AC_LIBOBJ(getentropy_solaris)
-			AC_CHECK_HEADERS([sys/sha2.h],, [
+		if test "$USE_WINSOCK" = 1; then
+			AC_LIBOBJ(getentropy_win)
+		else
+			case `uname` in
+			Darwin)
+				AC_LIBOBJ(getentropy_osx)
+			;;
+			SunOS)
+				AC_LIBOBJ(getentropy_solaris)
+				AC_CHECK_HEADERS([sys/sha2.h],, [
+					AC_CHECK_FUNCS([SHA512_Update],,[
+						AC_LIBOBJ(sha512)
+					])
+				], [AC_INCLUDES_DEFAULT])
+				if test "$ac_cv_header_sys_sha2_h" = "yes"; then
+					LIBS="$LIBS -lmd"
+				fi
+			;;
+			Linux|*)
+				AC_LIBOBJ(getentropy_linux)
 				AC_CHECK_FUNCS([SHA512_Update],,[
 					AC_LIBOBJ(sha512)
 				])
-			], [AC_INCLUDES_DEFAULT])
-			if test "$ac_cv_header_sys_sha2_h" = "yes"; then
-				LIBS="$LIBS -lmd"
-			fi
-		;;
-		Linux|*)
-			AC_LIBOBJ(getentropy_linux)
-			AC_CHECK_FUNCS([SHA512_Update],,[
-				AC_LIBOBJ(sha512)
-			])
-			AC_SEARCH_LIBS([clock_gettime], [rt])
-		;;
-		esac
+				AC_SEARCH_LIBS([clock_gettime], [rt])
+			;;
+			esac
+		fi
 		])
 	fi
 fi

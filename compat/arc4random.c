@@ -33,12 +33,14 @@
 #include <sys/types.h>
 #include <sys/param.h>
 #include <sys/time.h>
+#ifndef UB_ON_WINDOWS
 #include <sys/mman.h>
+#endif
 
 #define KEYSTREAM_ONLY
 #include "chacha_private.h"
 
-#define min(a, b) ((a) < (b) ? (a) : (b))
+#define arc4_min(a, b) ((a) < (b) ? (a) : (b))
 #ifdef __GNUC__
 #define inline __inline
 #else				/* !__GNUC__ */
@@ -71,6 +73,7 @@ _rs_init(u_char *buf, size_t n)
 		return;
 
 	if (rs == NULL) {
+#ifndef UB_ON_WINDOWS
 		if ((rs = mmap(NULL, sizeof(*rs), PROT_READ|PROT_WRITE,
 		    MAP_ANON|MAP_PRIVATE, -1, 0)) == MAP_FAILED)
 			abort();
@@ -78,11 +81,22 @@ _rs_init(u_char *buf, size_t n)
 		if (minherit(rs, sizeof(*rs), MAP_INHERIT_ZERO) == -1)
 			abort();
 #endif
+#else /* WINDOWS */
+		rs = malloc(sizeof(*rs));
+		if(!rs)
+			abort();
+#endif
 	}
 	if (rsx == NULL) {
+#ifndef UB_ON_WINDOWS
 		if ((rsx = mmap(NULL, sizeof(*rsx), PROT_READ|PROT_WRITE,
 		    MAP_ANON|MAP_PRIVATE, -1, 0)) == MAP_FAILED)
 			abort();
+#else /* WINDOWS */
+		rsx = malloc(sizeof(*rsx));
+		if(!rsx)
+			abort();
+#endif
 	}
 
 	chacha_keysetup(&rsx->rs_chacha, buf, KEYSZ * 8, 0);
@@ -94,8 +108,13 @@ _rs_stir(void)
 {
 	u_char rnd[KEYSZ + IVSZ];
 
-	if (getentropy(rnd, sizeof rnd) == -1)
+	if (getentropy(rnd, sizeof rnd) == -1) {
+#ifdef SIGKILL
 		raise(SIGKILL);
+#else
+		exit(9); /* windows */
+#endif
+	}
 
 	if (!rs)
 		_rs_init(rnd, sizeof(rnd));
@@ -145,7 +164,7 @@ _rs_rekey(u_char *dat, size_t datlen)
 	if (dat) {
 		size_t i, m;
 
-		m = min(datlen, KEYSZ + IVSZ);
+		m = arc4_min(datlen, KEYSZ + IVSZ);
 		for (i = 0; i < m; i++)
 			rsx->rs_buf[i] ^= dat[i];
 	}
@@ -165,7 +184,7 @@ _rs_random_buf(void *_buf, size_t n)
 	_rs_stir_if_needed(n);
 	while (n > 0) {
 		if (rs->rs_have > 0) {
-			m = min(n, rs->rs_have);
+			m = arc4_min(n, rs->rs_have);
 			keystream = rsx->rs_buf + sizeof(rsx->rs_buf)
 			    - rs->rs_have;
 			memcpy(buf, keystream, m);

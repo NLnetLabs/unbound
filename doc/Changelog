@@ -4,6 +4,7 @@
 	  This makes arc4random available on all platforms, except when
 	  compiled with LIBNSS (it uses libNSS crypto random).
 	- fix strptime implicit declaration error on OpenBSD.
+	- arc4random, getentropy and explicit_bzero compat for Windows.
 
 4 July 2014: Wouter
 	- Fix #593: segfault or crash upon rotating logfile.

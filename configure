@@ -18167,23 +18167,31 @@ _ACEOF
 
 else
 
-		case `uname` in
-		Darwin)
+		if test "$USE_WINSOCK" = 1; then
 			case " $LIBOBJS " in
+  *" getentropy_win.$ac_objext "* ) ;;
+  *) LIBOBJS="$LIBOBJS getentropy_win.$ac_objext"
+ ;;
+esac
+
+		else
+			case `uname` in
+			Darwin)
+				case " $LIBOBJS " in
   *" getentropy_osx.$ac_objext "* ) ;;
   *) LIBOBJS="$LIBOBJS getentropy_osx.$ac_objext"
  ;;
 esac
 
-		;;
-		SunOS)
-			case " $LIBOBJS " in
+			;;
+			SunOS)
+				case " $LIBOBJS " in
   *" getentropy_solaris.$ac_objext "* ) ;;
   *) LIBOBJS="$LIBOBJS getentropy_solaris.$ac_objext"
  ;;
 esac
 
-			for ac_header in sys/sha2.h
+				for ac_header in sys/sha2.h
 do :
   ac_fn_c_check_header_compile "$LINENO" "sys/sha2.h" "ac_cv_header_sys_sha2_h" "$ac_includes_default
 "
@@ -18193,6 +18201,42 @@ if test "x$ac_cv_header_sys_sha2_h" = xyes; then :
 _ACEOF
 
 else
+
+					for ac_func in SHA512_Update
+do :
+  ac_fn_c_check_func "$LINENO" "SHA512_Update" "ac_cv_func_SHA512_Update"
+if test "x$ac_cv_func_SHA512_Update" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_SHA512_UPDATE 1
+_ACEOF
+
+else
+
+						case " $LIBOBJS " in
+  *" sha512.$ac_objext "* ) ;;
+  *) LIBOBJS="$LIBOBJS sha512.$ac_objext"
+ ;;
+esac
+
+
+fi
+done
+
+
+fi
+
+done
+
+				if test "$ac_cv_header_sys_sha2_h" = "yes"; then
+					LIBS="$LIBS -lmd"
+				fi
+			;;
+			Linux|*)
+				case " $LIBOBJS " in
+  *" getentropy_linux.$ac_objext "* ) ;;
+  *) LIBOBJS="$LIBOBJS getentropy_linux.$ac_objext"
+ ;;
+esac
 
 				for ac_func in SHA512_Update
 do :
@@ -18214,43 +18258,7 @@ esac
 fi
 done
 
-
-fi
-
-done
-
-			if test "$ac_cv_header_sys_sha2_h" = "yes"; then
-				LIBS="$LIBS -lmd"
-			fi
-		;;
-		Linux|*)
-			case " $LIBOBJS " in
-  *" getentropy_linux.$ac_objext "* ) ;;
-  *) LIBOBJS="$LIBOBJS getentropy_linux.$ac_objext"
- ;;
-esac
-
-			for ac_func in SHA512_Update
-do :
-  ac_fn_c_check_func "$LINENO" "SHA512_Update" "ac_cv_func_SHA512_Update"
-if test "x$ac_cv_func_SHA512_Update" = xyes; then :
-  cat >>confdefs.h <<_ACEOF
-#define HAVE_SHA512_UPDATE 1
-_ACEOF
-
-else
-
-				case " $LIBOBJS " in
-  *" sha512.$ac_objext "* ) ;;
-  *) LIBOBJS="$LIBOBJS sha512.$ac_objext"
- ;;
-esac
-
-
-fi
-done
-
-			{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing clock_gettime" >&5
+				{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing clock_gettime" >&5
 $as_echo_n "checking for library containing clock_gettime... " >&6; }
 if ${ac_cv_search_clock_gettime+:} false; then :
   $as_echo_n "(cached) " >&6
@@ -18306,8 +18314,9 @@ if test "$ac_res" != no; then :
 
 fi
 
-		;;
-		esac
+			;;
+			esac
+		fi
 
 fi
 done
