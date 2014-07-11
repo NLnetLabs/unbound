@@ -21,6 +21,9 @@
    internal symbols */
 #undef EXPORT_ALL_SYMBOLS
 
+/* Define to 1 if you have the `arc4random' function. */
+#undef HAVE_ARC4RANDOM
+
 /* Define to 1 if you have the `arc4random_uniform' function. */
 #undef HAVE_ARC4RANDOM_UNIFORM
 
@@ -117,6 +120,9 @@
 
 /* Whether getaddrinfo is available */
 #undef HAVE_GETADDRINFO
+
+/* Define to 1 if you have the `getentropy' function. */
+#undef HAVE_GETENTROPY
 
 /* Define to 1 if you have the <getopt.h> header file. */
 #undef HAVE_GETOPT_H
@@ -880,6 +886,20 @@ char *ctime_r(const time_t *timep, char *buf);
 #define strptime unbound_strptime
 struct tm;
 char *strptime(const char *s, const char *format, struct tm *tm);
+#endif
+
+#if !defined(HAVE_ARC4RANDOM) || !defined(HAVE_ARC4RANDOM_UNIFORM)
+void explicit_bzero(void* buf, size_t len);
+int getentropy(void* buf, size_t len);
+#endif
+#ifndef HAVE_ARC4RANDOM
+uint32_t arc4random(void);
+void arc4random_buf(void* buf, size_t n);
+void _ARC4_LOCK(void);
+void _ARC4_UNLOCK(void);
+#endif
+#ifndef HAVE_ARC4RANDOM_UNIFORM
+uint32_t arc4random_uniform(uint32_t upper_bound);
 #endif
 
 #if defined(HAVE_EVENT_H) && !defined(HAVE_EVENT_BASE_ONCE) && !(defined(HAVE_EV_LOOP) || defined(HAVE_EV_DEFAULT_LOOP)) && (defined(HAVE_PTHREAD) || defined(HAVE_SOLARIS_THREADS))

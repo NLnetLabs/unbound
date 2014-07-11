@@ -640,6 +640,7 @@ UBSYMS
 EXTRALINK
 COMMON_OBJ_ALL_SYMBOLS
 LIBOBJ_WITHOUT_CTIME
+LIBOBJ_WITHOUT_CTIMEARC4
 WIN_CHECKCONF_OBJ_LINK
 WIN_CONTROL_OBJ_LINK
 WIN_UBANCHOR_OBJ_LINK
@@ -17935,7 +17936,7 @@ if test "$ac_res" != no; then :
 
 fi
 
-for ac_func in tzset sigprocmask fcntl getpwnam getrlimit setrlimit setsid sbrk chroot kill sleep usleep random srandom arc4random_uniform recvmsg sendmsg writev socketpair glob initgroups strftime localtime_r setusercontext _beginthreadex endservent endprotoent
+for ac_func in tzset sigprocmask fcntl getpwnam getrlimit setrlimit setsid sbrk chroot kill sleep usleep random srandom recvmsg sendmsg writev socketpair glob initgroups strftime localtime_r setusercontext _beginthreadex endservent endprotoent
 do :
   as_ac_var=`$as_echo "ac_cv_func_$ac_func" | $as_tr_sh`
 ac_fn_c_check_func "$LINENO" "$ac_func" "$as_ac_var"
@@ -18112,6 +18113,92 @@ esac
 fi
 
 
+LIBOBJ_WITHOUT_CTIMEARC4="$LIBOBJS"
+
+if test "$USE_NSS" = "no"; then
+	ac_fn_c_check_func "$LINENO" "arc4random" "ac_cv_func_arc4random"
+if test "x$ac_cv_func_arc4random" = xyes; then :
+  $as_echo "#define HAVE_ARC4RANDOM 1" >>confdefs.h
+
+else
+  case " $LIBOBJS " in
+  *" arc4random.$ac_objext "* ) ;;
+  *) LIBOBJS="$LIBOBJS arc4random.$ac_objext"
+ ;;
+esac
+
+fi
+
+
+	ac_fn_c_check_func "$LINENO" "arc4random_uniform" "ac_cv_func_arc4random_uniform"
+if test "x$ac_cv_func_arc4random_uniform" = xyes; then :
+  $as_echo "#define HAVE_ARC4RANDOM_UNIFORM 1" >>confdefs.h
+
+else
+  case " $LIBOBJS " in
+  *" arc4random_uniform.$ac_objext "* ) ;;
+  *) LIBOBJS="$LIBOBJS arc4random_uniform.$ac_objext"
+ ;;
+esac
+
+fi
+
+
+	if test "$ac_cv_func_arc4random" = "no" -o "$ac_cv_func_arc4random_uniform" = "no"; then
+		case " $LIBOBJS " in
+  *" explicit_bzero.$ac_objext "* ) ;;
+  *) LIBOBJS="$LIBOBJS explicit_bzero.$ac_objext"
+ ;;
+esac
+
+		case " $LIBOBJS " in
+  *" arc4_lock.$ac_objext "* ) ;;
+  *) LIBOBJS="$LIBOBJS arc4_lock.$ac_objext"
+ ;;
+esac
+
+	fi
+	for ac_func in getentropy
+do :
+  ac_fn_c_check_func "$LINENO" "getentropy" "ac_cv_func_getentropy"
+if test "x$ac_cv_func_getentropy" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_GETENTROPY 1
+_ACEOF
+
+else
+
+		case `uname` in
+		Darwin)
+			case " $LIBOBJS " in
+  *" getentropy_osx.$ac_objext "* ) ;;
+  *) LIBOBJS="$LIBOBJS getentropy_osx.$ac_objext"
+ ;;
+esac
+
+		;;
+		SunOS)
+			case " $LIBOBJS " in
+  *" getentropy_solaris.$ac_objext "* ) ;;
+  *) LIBOBJS="$LIBOBJS getentropy_solaris.$ac_objext"
+ ;;
+esac
+
+		;;
+		Linux|*)
+			case " $LIBOBJS " in
+  *" getentropy_linux.$ac_objext "* ) ;;
+  *) LIBOBJS="$LIBOBJS getentropy_linux.$ac_objext"
+ ;;
+esac
+
+		;;
+		esac
+
+fi
+done
+
+fi
 LIBOBJ_WITHOUT_CTIME="$LIBOBJS"
 
 ac_fn_c_check_func "$LINENO" "ctime_r" "ac_cv_func_ctime_r"

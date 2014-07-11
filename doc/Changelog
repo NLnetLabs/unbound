@@ -1,3 +1,9 @@
+11 July 2014: Wouter
+	- arc4random in compat/ and getentropy, explicit_bzero, chacha for
+	  dependencies, from OpenBSD.  arc4_lock and sha512 in compat.
+	  This makes arc4random available on all platforms, except when
+	  compiled with LIBNSS (it uses libNSS crypto random).
+
 4 July 2014: Wouter
 	- Fix #593: segfault or crash upon rotating logfile.
 

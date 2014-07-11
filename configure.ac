@@ -952,7 +952,7 @@ AC_INCLUDES_DEFAULT
 #endif
 ])
 AC_SEARCH_LIBS([setusercontext], [util])
-AC_CHECK_FUNCS([tzset sigprocmask fcntl getpwnam getrlimit setrlimit setsid sbrk chroot kill sleep usleep random srandom arc4random_uniform recvmsg sendmsg writev socketpair glob initgroups strftime localtime_r setusercontext _beginthreadex endservent endprotoent])
+AC_CHECK_FUNCS([tzset sigprocmask fcntl getpwnam getrlimit setrlimit setsid sbrk chroot kill sleep usleep random srandom recvmsg sendmsg writev socketpair glob initgroups strftime localtime_r setusercontext _beginthreadex endservent endprotoent])
 AC_CHECK_FUNCS([setresuid],,[AC_CHECK_FUNCS([setreuid])])
 AC_CHECK_FUNCS([setresgid],,[AC_CHECK_FUNCS([setregid])])
 
@@ -968,6 +968,37 @@ AC_REPLACE_FUNCS(strlcat)
 AC_REPLACE_FUNCS(strlcpy)
 AC_REPLACE_FUNCS(memmove)
 AC_REPLACE_FUNCS(gmtime_r)
+LIBOBJ_WITHOUT_CTIMEARC4="$LIBOBJS"
+AC_SUBST(LIBOBJ_WITHOUT_CTIMEARC4)
+if test "$USE_NSS" = "no"; then
+	AC_REPLACE_FUNCS(arc4random)
+	AC_REPLACE_FUNCS(arc4random_uniform)
+	if test "$ac_cv_func_arc4random" = "no" -o "$ac_cv_func_arc4random_uniform" = "no"; then
+		AC_LIBOBJ(explicit_bzero)
+		AC_LIBOBJ(arc4_lock)
+	fi
+	AC_CHECK_FUNCS([getentropy],,[
+		case `uname` in
+		Darwin)
+			AC_LIBOBJ(getentropy_osx)
+		;;
+		SunOS)
+			AC_LIBOBJ(getentropy_solaris)
+			AC_CHECK_HEADERS([sys/sha2.h],, [
+				AC_CHECK_FUNCS([SHA512_Update],,[
+					AC_LIBOBJ(sha512)
+				])
+			], [AC_INCLUDES_DEFAULT])
+		;;
+		Linux|*)
+			AC_LIBOBJ(getentropy_linux)
+			AC_CHECK_FUNCS([SHA512_Update],,[
+				AC_LIBOBJ(sha512)
+			])
+		;;
+		esac
+	])
+fi
 LIBOBJ_WITHOUT_CTIME="$LIBOBJS"
 AC_SUBST(LIBOBJ_WITHOUT_CTIME)
 AC_REPLACE_FUNCS(ctime_r)
@@ -1159,6 +1190,20 @@ char *ctime_r(const time_t *timep, char *buf);
 #define strptime unbound_strptime
 struct tm;
 char *strptime(const char *s, const char *format, struct tm *tm);
+#endif
+
+#if !defined(HAVE_ARC4RANDOM) || !defined(HAVE_ARC4RANDOM_UNIFORM)
+void explicit_bzero(void* buf, size_t len);
+int getentropy(void* buf, size_t len);
+#endif
+#ifndef HAVE_ARC4RANDOM
+uint32_t arc4random(void);
+void arc4random_buf(void* buf, size_t n);
+void _ARC4_LOCK(void);
+void _ARC4_UNLOCK(void);
+#endif
+#ifndef HAVE_ARC4RANDOM_UNIFORM
+uint32_t arc4random_uniform(uint32_t upper_bound);
 #endif
 
 #if defined(HAVE_EVENT_H) && !defined(HAVE_EVENT_BASE_ONCE) && !(defined(HAVE_EV_LOOP) || defined(HAVE_EV_DEFAULT_LOOP)) && (defined(HAVE_PTHREAD) || defined(HAVE_SOLARIS_THREADS))
