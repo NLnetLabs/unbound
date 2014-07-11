@@ -55,8 +55,8 @@
  * Also thread creation and deletion functions are defined here.
  */
 
+#ifndef LOCKRET
 #include "util/log.h"
-
 /**
  * The following macro is used to check the return value of the
  * pthread calls. They return 0 on success and an errno on error.
@@ -68,6 +68,7 @@
 		log_err("%s at %d could not " #func ": %s", \
 		__FILE__, __LINE__, strerror(lockret_err));	\
  	} while(0)
+#endif
 
 /** DEBUG: use thread debug whenever possible */
 #if defined(HAVE_PTHREAD) && defined(HAVE_PTHREAD_SPINLOCK_T) && defined(ENABLE_LOCK_CHECKS)

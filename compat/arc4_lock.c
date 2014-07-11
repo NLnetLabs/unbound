@@ -32,6 +32,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "config.h"
+#define LOCKRET(func) func
 #include "util/locks.h"
 
 void _ARC4_LOCK(void);
