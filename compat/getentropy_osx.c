@@ -71,7 +71,9 @@
 #define HD(x)	 (SHA512_Update(&ctx, (char *)&(x), sizeof (x)))
 int	getentropy(void *buf, size_t len);
 
+/* using log_info instead of main for unbound */
 /*extern int main(int, char *argv[]);*/
+extern void log_info(const char* format, ...);
 static int gotdata(char *buf, size_t len);
 static int getentropy_urandom(void *buf, size_t len);
 static int getentropy_fallback(void *buf, size_t len);
@@ -289,7 +291,9 @@ getentropy_fallback(void *buf, size_t len)
 			HX(sigprocmask(SIG_BLOCK, NULL, &sigset) == -1,
 			    sigset);
 
+			/* using log_info instead of main for unbound */
 			/*HD(main);*/		/* an addr in program */
+			HD(log_info);		/* an addr in program */
 			HD(getentropy);	/* an addr in this library */
 			HD(printf);		/* an addr in libc */
 			p = (char *)&p;
