@@ -45,6 +45,8 @@
 #include <string.h>	/* memcpy()/memset() or bcopy()/bzero() */
 #include <assert.h>	/* assert() */
 
+/* do we have sha512 header defs */
+#ifndef SHA512_DIGEST_LENGTH
 #define SHA512_BLOCK_LENGTH		128
 #define SHA512_DIGEST_LENGTH		64
 #define SHA512_DIGEST_STRING_LENGTH	(SHA512_DIGEST_LENGTH * 2 + 1)
@@ -53,11 +55,12 @@ typedef struct _SHA512_CTX {
 	uint64_t	bitcount[2];
 	uint8_t	buffer[SHA512_BLOCK_LENGTH];
 } SHA512_CTX;
+#endif /* do we have sha512 header defs */
 
-void SHA512_init(SHA512_CTX*);
-void SHA512_update(SHA512_CTX*, const uint8_t*, size_t);
-void SHA512_final(uint8_t[SHA512_DIGEST_LENGTH], SHA512_CTX*);
-unsigned char *SHA512(unsigned char *data, unsigned int data_len, unsigned char *digest);
+void SHA512_Init(SHA512_CTX*);
+void SHA512_Update(SHA512_CTX*, void*, size_t);
+void SHA512_Final(uint8_t[SHA512_DIGEST_LENGTH], SHA512_CTX*);
+unsigned char *SHA512(void *data, unsigned int data_len, unsigned char *digest);
 
 
 /*** SHA-256/384/512 Machine Architecture Definitions *****************/
@@ -250,6 +253,11 @@ static const sha2_word64 sha512_initial_hash_value[8] = {
 	0x5be0cd19137e2179ULL
 };
 
+typedef union _ldns_sha2_buffer_union {
+        uint8_t*  theChars;
+        uint64_t* theLongs;
+} ldns_sha2_buffer_union;
+
 /*** SHA-512: *********************************************************/
 void SHA512_Init(SHA512_CTX* context) {
 	if (context == (SHA512_CTX*)0) {
@@ -337,8 +345,9 @@ static void SHA512_Transform(SHA512_CTX* context,
 	a = b = c = d = e = f = g = h = T1 = T2 = 0;
 }
 
-void SHA512_Update(SHA512_CTX* context, const sha2_byte *data, size_t len) {
+void SHA512_Update(SHA512_CTX* context, void *datain, size_t len) {
 	size_t freespace, usedspace;
+	const sha2_byte* data = (const sha2_byte*)datain;
 
 	if (len == 0) {
 		/* Calling with no data is valid - we do nothing */
@@ -458,7 +467,7 @@ void SHA512_Final(sha2_byte digest[], SHA512_CTX* context) {
 }
 
 unsigned char *
-SHA512(unsigned char *data, unsigned int data_len, unsigned char *digest)
+SHA512(void *data, unsigned int data_len, unsigned char *digest)
 {
     SHA512_CTX ctx;
     SHA512_Init(&ctx);
