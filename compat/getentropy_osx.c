@@ -210,7 +210,7 @@ getentropy_fallback(void *buf, size_t len)
 	int ipmib[] = { CTL_NET, AF_INET, IPPROTO_IP, IPCTL_STATS };
 	int kmib[] = { CTL_KERN, KERN_USRSTACK };
 	int hwmib[] = { CTL_HW, HW_USERMEM };
-	int save_errno = errno, e, m, pgs = getpagesize(), faster = 0, repeat;
+	int save_errno = errno, e, pgs = getpagesize(), faster = 0, repeat;
 	uint8_t results[SHA512_DIGEST_LENGTH];
 	struct tcpstat tcpstat;
 	struct udpstat udpstat;
@@ -227,7 +227,7 @@ getentropy_fallback(void *buf, size_t len)
 	static pid_t lastpid;
 	void * addr;
 	pid_t pid;
-	size_t i;
+	size_t i, m;
 	char *p;
 
 	pid = getpid();
@@ -277,7 +277,7 @@ getentropy_fallback(void *buf, size_t len)
 			HX((pid = getsid(pid)) == -1, pid);
 			HX((pid = getppid()) == -1, pid);
 			HX((pid = getpgid(0)) == -1, pid);
-			HX((m = getpriority(0, 0)) == -1, m);
+			HX((e = getpriority(0, 0)) == -1, e);
 
 			if (!faster) {
 				ts.tv_sec = 0;
