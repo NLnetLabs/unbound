@@ -989,6 +989,9 @@ if test "$USE_NSS" = "no"; then
 					AC_LIBOBJ(sha512)
 				])
 			], [AC_INCLUDES_DEFAULT])
+			if test "$ac_cv_header_sys_sha2_h" = "yes"; then
+				LIBS="$LIBS -lmd"
+			fi
 		;;
 		Linux|*)
 			AC_LIBOBJ(getentropy_linux)

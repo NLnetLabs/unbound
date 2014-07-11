@@ -18220,6 +18220,9 @@ fi
 
 done
 
+			if test "$ac_cv_header_sys_sha2_h" = "yes"; then
+				LIBS="$LIBS -lmd"
+			fi
 		;;
 		Linux|*)
 			case " $LIBOBJS " in
