@@ -265,6 +265,9 @@
 /* Define to 1 if you have the `setusercontext' function. */
 #undef HAVE_SETUSERCONTEXT
 
+/* Define to 1 if you have the `SHA512_Update' function. */
+#undef HAVE_SHA512_UPDATE
+
 /* Define to 1 if you have the `sigprocmask' function. */
 #undef HAVE_SIGPROCMASK
 
@@ -330,6 +333,9 @@
 
 /* Define to 1 if you have the <sys/resource.h> header file. */
 #undef HAVE_SYS_RESOURCE_H
+
+/* Define to 1 if you have the <sys/sha2.h> header file. */
+#undef HAVE_SYS_SHA2_H
 
 /* Define to 1 if you have the <sys/socket.h> header file. */
 #undef HAVE_SYS_SOCKET_H
