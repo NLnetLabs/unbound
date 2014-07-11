@@ -998,7 +998,7 @@ if test "$USE_NSS" = "no"; then
 			Linux|*)
 				AC_LIBOBJ(getentropy_linux)
 				AC_CHECK_FUNCS([SHA512_Update],,[
-					AC_DEFINE([COMPAT_SHA512], [1], [Do sha512 definitions in config.h]);
+					AC_DEFINE([COMPAT_SHA512], [1], [Do sha512 definitions in config.h])
 					AC_LIBOBJ(sha512)
 				])
 				AC_SEARCH_LIBS([clock_gettime], [rt])
