@@ -998,6 +998,7 @@ if test "$USE_NSS" = "no"; then
 			Linux|*)
 				AC_LIBOBJ(getentropy_linux)
 				AC_CHECK_FUNCS([SHA512_Update],,[
+					AC_DEFINE([COMPAT_SHA512], [1], [Do sha512 definitions in config.h]);
 					AC_LIBOBJ(sha512)
 				])
 				AC_SEARCH_LIBS([clock_gettime], [rt])
@@ -1213,7 +1214,7 @@ void _ARC4_UNLOCK(void);
 #ifndef HAVE_ARC4RANDOM_UNIFORM
 uint32_t arc4random_uniform(uint32_t upper_bound);
 #endif
-#ifndef HAVE_SHA512_UPDATE
+#ifdef COMPAT_SHA512
 #ifndef SHA512_DIGEST_LENGTH
 #define SHA512_BLOCK_LENGTH		128
 #define SHA512_DIGEST_LENGTH		64
@@ -1228,7 +1229,7 @@ void SHA512_Init(SHA512_CTX*);
 void SHA512_Update(SHA512_CTX*, void*, size_t);
 void SHA512_Final(uint8_t[SHA512_DIGEST_LENGTH], SHA512_CTX*);
 unsigned char *SHA512(void* data, unsigned int data_len, unsigned char *digest);
-#endif /* HAVE_SHA512_UPDATE */
+#endif /* COMPAT_SHA512 */
 
 
 

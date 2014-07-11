@@ -18248,6 +18248,9 @@ _ACEOF
 
 else
 
+
+$as_echo "#define COMPAT_SHA512 1" >>confdefs.h
+;
 					case " $LIBOBJS " in
   *" sha512.$ac_objext "* ) ;;
   *) LIBOBJS="$LIBOBJS sha512.$ac_objext"
