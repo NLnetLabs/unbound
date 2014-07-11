@@ -1,3 +1,6 @@
+11 July 2014: Matthijs
+	- fake-rfc2553 patch (thanks Benjamin Baier).
+
 11 July 2014: Wouter
 	- arc4random in compat/ and getentropy, explicit_bzero, chacha for
 	  dependencies, from OpenBSD.  arc4_lock and sha512 in compat.
