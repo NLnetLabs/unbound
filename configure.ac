@@ -976,8 +976,7 @@ if test "$USE_NSS" = "no"; then
 	if test "$ac_cv_func_arc4random" = "no" -o "$ac_cv_func_arc4random_uniform" = "no"; then
 		AC_LIBOBJ(explicit_bzero)
 		AC_LIBOBJ(arc4_lock)
-	fi
-	AC_CHECK_FUNCS([getentropy],,[
+		AC_CHECK_FUNCS([getentropy],,[
 		case `uname` in
 		Darwin)
 			AC_LIBOBJ(getentropy_osx)
@@ -1000,7 +999,8 @@ if test "$USE_NSS" = "no"; then
 			])
 		;;
 		esac
-	])
+		])
+	fi
 fi
 LIBOBJ_WITHOUT_CTIME="$LIBOBJS"
 AC_SUBST(LIBOBJ_WITHOUT_CTIME)

@@ -18157,8 +18157,7 @@ esac
  ;;
 esac
 
-	fi
-	for ac_func in getentropy
+		for ac_func in getentropy
 do :
   ac_fn_c_check_func "$LINENO" "getentropy" "ac_cv_func_getentropy"
 if test "x$ac_cv_func_getentropy" = xyes; then :
@@ -18257,6 +18256,7 @@ done
 fi
 done
 
+	fi
 fi
 LIBOBJ_WITHOUT_CTIME="$LIBOBJS"
 
