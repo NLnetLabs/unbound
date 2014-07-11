@@ -3,11 +3,11 @@
  * Public domain.
  * Written by Matthew Dempsky.
  */
-
+#include "config.h"
 #include <string.h>
 
 __attribute__((weak)) void
-__explicit_bzero_hook(void *buf, size_t len)
+__explicit_bzero_hook(void *ATTR_UNUSED(buf), size_t ATTR_UNUSED(len))
 {
 }
 

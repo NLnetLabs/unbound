@@ -232,11 +232,11 @@ static int
 getentropy_sysctl(void *buf, size_t len)
 {
 	static int mib[] = { CTL_KERN, KERN_RANDOM, RANDOM_UUID };
-	size_t i, chunk;
+	size_t i;
 	int save_errno = errno;
 
 	for (i = 0; i < len; ) {
-		chunk = min(len - i, 16);
+		size_t chunk = min(len - i, 16);
 
 		/* SYS__sysctl because some systems already removed sysctl() */
 		struct __sysctl_args args = {
@@ -288,7 +288,7 @@ static int
 getentropy_fallback(void *buf, size_t len)
 {
 	uint8_t results[SHA512_DIGEST_LENGTH];
-	int save_errno = errno, e, m, pgs = getpagesize(), faster = 0, repeat;
+	int save_errno = errno, e, pgs = getpagesize(), faster = 0, repeat;
 	static int cnt;
 	struct timespec ts;
 	struct timeval tv;
@@ -298,7 +298,7 @@ getentropy_fallback(void *buf, size_t len)
 	SHA512_CTX ctx;
 	static pid_t lastpid;
 	pid_t pid;
-	size_t i, ii;
+	size_t i, ii, m;
 	char *p;
 
 	pid = getpid();
@@ -327,7 +327,7 @@ getentropy_fallback(void *buf, size_t len)
 			HX((pid = getsid(pid)) == -1, pid);
 			HX((pid = getppid()) == -1, pid);
 			HX((pid = getpgid(0)) == -1, pid);
-			HX((m = getpriority(0, 0)) == -1, m);
+			HX((e = getpriority(0, 0)) == -1, e);
 
 			if (!faster) {
 				ts.tv_sec = 0;

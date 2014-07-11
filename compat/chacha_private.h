@@ -52,7 +52,7 @@ static const char sigma[16] = "expand 32-byte k";
 static const char tau[16] = "expand 16-byte k";
 
 static void
-chacha_keysetup(chacha_ctx *x,const u8 *k,u32 kbits,u32 ivbits)
+chacha_keysetup(chacha_ctx *x,const u8 *k,u32 kbits,u32 ATTR_UNUSED(ivbits))
 {
   const char *constants;
 
