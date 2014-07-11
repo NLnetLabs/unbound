@@ -55,6 +55,8 @@
  * Also thread creation and deletion functions are defined here.
  */
 
+/* if you define your own LOCKRET before including locks.h, you can get most
+ * locking functions without the dependency on log_err. */
 #ifndef LOCKRET
 #include "util/log.h"
 /**
