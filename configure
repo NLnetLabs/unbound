@@ -18144,7 +18144,7 @@ esac
 fi
 
 
-	if test "$ac_cv_func_arc4random" = "no" -o "$ac_cv_func_arc4random_uniform" = "no"; then
+	if test "$ac_cv_func_arc4random" = "no"; then
 		case " $LIBOBJS " in
   *" explicit_bzero.$ac_objext "* ) ;;
   *) LIBOBJS="$LIBOBJS explicit_bzero.$ac_objext"
@@ -18167,14 +18167,14 @@ _ACEOF
 
 else
 
-		if test "$USE_WINSOCK" = 1; then
+		    if test "$USE_WINSOCK" = 1; then
 			case " $LIBOBJS " in
   *" getentropy_win.$ac_objext "* ) ;;
   *) LIBOBJS="$LIBOBJS getentropy_win.$ac_objext"
  ;;
 esac
 
-		else
+		    else
 			case `uname` in
 			Darwin)
 				case " $LIBOBJS " in
@@ -18228,6 +18228,7 @@ fi
 done
 
 				if test "$ac_cv_header_sys_sha2_h" = "yes"; then
+					# this lib needed for sha2 on solaris
 					LIBS="$LIBS -lmd"
 				fi
 			;;
@@ -18319,7 +18320,7 @@ fi
 
 			;;
 			esac
-		fi
+		    fi
 
 fi
 done

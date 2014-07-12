@@ -973,13 +973,13 @@ AC_SUBST(LIBOBJ_WITHOUT_CTIMEARC4)
 if test "$USE_NSS" = "no"; then
 	AC_REPLACE_FUNCS(arc4random)
 	AC_REPLACE_FUNCS(arc4random_uniform)
-	if test "$ac_cv_func_arc4random" = "no" -o "$ac_cv_func_arc4random_uniform" = "no"; then
+	if test "$ac_cv_func_arc4random" = "no"; then
 		AC_LIBOBJ(explicit_bzero)
 		AC_LIBOBJ(arc4_lock)
 		AC_CHECK_FUNCS([getentropy],,[
-		if test "$USE_WINSOCK" = 1; then
+		    if test "$USE_WINSOCK" = 1; then
 			AC_LIBOBJ(getentropy_win)
-		else
+		    else
 			case `uname` in
 			Darwin)
 				AC_LIBOBJ(getentropy_osx)
@@ -992,6 +992,7 @@ if test "$USE_NSS" = "no"; then
 					])
 				], [AC_INCLUDES_DEFAULT])
 				if test "$ac_cv_header_sys_sha2_h" = "yes"; then
+					# this lib needed for sha2 on solaris
 					LIBS="$LIBS -lmd"
 				fi
 			;;
@@ -1004,7 +1005,7 @@ if test "$USE_NSS" = "no"; then
 				AC_SEARCH_LIBS([clock_gettime], [rt])
 			;;
 			esac
-		fi
+		    fi
 		])
 	fi
 fi
