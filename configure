@@ -17065,15 +17065,21 @@ fi
 	      # see if OPENSSL 1.0.0 or later (has EVP MD and Verify independency)
 	      { $as_echo "$as_me:${as_lineno-$LINENO}: checking if openssl supports SHA2 and ECDSA with EVP" >&5
 $as_echo_n "checking if openssl supports SHA2 and ECDSA with EVP... " >&6; }
-	      if grep OPENSSL_VERSION_NUMBER $ssldir/include/openssl/opensslv.h | grep 0x0 >/dev/null; then
-		{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+	      if grep OPENSSL_VERSION_TEXT $ssldir/include/openssl/opensslv.h | grep "OpenSSL" >/dev/null; then
+		if grep OPENSSL_VERSION_NUMBER $ssldir/include/openssl/opensslv.h | grep 0x0 >/dev/null; then
+		  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
 $as_echo "no" >&6; }
 
 cat >>confdefs.h <<_ACEOF
 #define USE_ECDSA_EVP_WORKAROUND 1
 _ACEOF
 
+		else
+		  { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+		fi
 	      else
+		# not OpenSSL, thus likely LibreSSL, which supports it
 		{ $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 $as_echo "yes" >&6; }
 	      fi

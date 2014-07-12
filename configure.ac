@@ -721,10 +721,15 @@ case "$enable_ecdsa" in
 	      ])
 	      # see if OPENSSL 1.0.0 or later (has EVP MD and Verify independency)
 	      AC_MSG_CHECKING([if openssl supports SHA2 and ECDSA with EVP])
-	      if grep OPENSSL_VERSION_NUMBER $ssldir/include/openssl/opensslv.h | grep 0x0 >/dev/null; then
-		AC_MSG_RESULT([no])
-		AC_DEFINE_UNQUOTED([USE_ECDSA_EVP_WORKAROUND], [1], [Define this to enable an EVP workaround for older openssl])
+	      if grep OPENSSL_VERSION_TEXT $ssldir/include/openssl/opensslv.h | grep "OpenSSL" >/dev/null; then
+		if grep OPENSSL_VERSION_NUMBER $ssldir/include/openssl/opensslv.h | grep 0x0 >/dev/null; then
+		  AC_MSG_RESULT([no])
+		  AC_DEFINE_UNQUOTED([USE_ECDSA_EVP_WORKAROUND], [1], [Define this to enable an EVP workaround for older openssl])
+		else
+		  AC_MSG_RESULT([yes])
+		fi
 	      else
+		# not OpenSSL, thus likely LibreSSL, which supports it
 		AC_MSG_RESULT([yes])
 	      fi
       fi
