@@ -982,37 +982,31 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 void 
 worker_sighandler(int sig, void* arg)
 {
-	/* note that log, print, syscalls here give race conditions. */
-	/* we still print DETAIL logs, because this is extensive per message
-	 * logging anyway, and the operator may then have an interest
-	 * in the cause for unbound to exit */
+	/* note that log, print, syscalls here give race conditions. 
+	 * And cause hangups if the log-lock is held by the application. */
 	struct worker* worker = (struct worker*)arg;
 	switch(sig) {
 #ifdef SIGHUP
 		case SIGHUP:
-			verbose(VERB_QUERY, "caught signal SIGHUP");
 			comm_base_exit(worker->base);
 			break;
 #endif
 		case SIGINT:
-			verbose(VERB_QUERY, "caught signal SIGINT");
 			worker->need_to_exit = 1;
 			comm_base_exit(worker->base);
 			break;
 #ifdef SIGQUIT
 		case SIGQUIT:
-			verbose(VERB_QUERY, "caught signal SIGQUIT");
 			worker->need_to_exit = 1;
 			comm_base_exit(worker->base);
 			break;
 #endif
 		case SIGTERM:
-			verbose(VERB_QUERY, "caught signal SIGTERM");
 			worker->need_to_exit = 1;
 			comm_base_exit(worker->base);
 			break;
 		default:
-			log_err("unknown signal: %d, ignored", sig);
+			/* unknown signal, ignored */
 			break;
 	}
 }

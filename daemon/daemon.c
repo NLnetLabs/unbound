@@ -109,8 +109,9 @@ int ub_c_lex_destroy(void);
 static RETSIGTYPE record_sigh(int sig)
 {
 #ifdef LIBEVENT_SIGNAL_PROBLEM
-	verbose(VERB_OPS, "quit on signal, no cleanup and statistics, "
-		"because installed libevent version is not threadsafe");
+	/* cannot log, verbose here because locks may be held */
+	/* quit on signal, no cleanup and statistics, 
+	   because installed libevent version is not threadsafe */
 	exit(0);
 #endif 
 	switch(sig)
@@ -135,7 +136,8 @@ static RETSIGTYPE record_sigh(int sig)
 			break;
 #endif
 		default:
-			log_err("ignoring signal %d", sig);
+			/* ignoring signal */
+			break;
 	}
 }
 

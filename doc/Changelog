@@ -2,6 +2,7 @@
 	- Fix getentropy compat code, function refs were not portable.
 	- Fix to check openssl version number only for OpenSSL.
 	- LibreSSL provides compat items, check for that in configure.
+	- Fix bug in fix for log locks that caused deadlock in signal handler.
 
 11 July 2014: Matthijs
 	- fake-rfc2553 patch (thanks Benjamin Baier).
