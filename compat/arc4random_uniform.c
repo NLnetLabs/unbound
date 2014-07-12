@@ -1,9 +1,7 @@
-/*	$OpenBSD: arc4random.c,v 1.40 2014/07/09 16:52:09 bcook Exp $	*/
+/*      $OpenBSD: arc4random_uniform.c,v 1.1 2014/07/12 13:24:54 deraadt Exp $  */
 
 /*
- * Copyright (c) 1996, David Mazieres <dm@uun.org>
  * Copyright (c) 2008, Damien Miller <djm@openbsd.org>
- * Copyright (c) 2013, Markus Friedl <markus@openbsd.org>
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -17,7 +15,10 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
+
 #include "config.h"
+#include <sys/types.h>
+#include <stdlib.h>
 
 /*
  * Calculate a uniformly distributed random number less than upper_bound
