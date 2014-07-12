@@ -67,10 +67,10 @@
 
 int	getentropy(void *buf, size_t len);
 
-/* a function in the main program, but main is only in executables,
-   referencing main does not work in sun-cc, but does work with gcc */
+/* cannot refernce main, or log_info for unbound, it gives
+   portability problems.  For solaris specifically, sun-cc and gcc
+   have different link semantics (but it also fails on other platforms) */
 /* extern int main(int, char *argv[]); */
-extern void log_info(const char* format, ...);
 static int gotdata(char *buf, size_t len);
 static int getentropy_urandom(void *buf, size_t len);
 static int getentropy_fallback(void *buf, size_t len);
@@ -288,7 +288,6 @@ getentropy_fallback(void *buf, size_t len)
 
 			/* replaced main with log_info */
 			/*HF(main);*/		/* an addr in program */
-			HF(log_info);		/* an addr in program */
 			HF(getentropy);	/* an addr in this library */
 			HF(printf);		/* an addr in libc */
 			p = (char *)&p;

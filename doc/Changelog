@@ -1,3 +1,6 @@
+12 July 2014: Wouter
+	- Fix getentropy compat code, function refs were not portable.
+
 11 July 2014: Matthijs
 	- fake-rfc2553 patch (thanks Benjamin Baier).
 

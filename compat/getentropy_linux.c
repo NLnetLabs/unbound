@@ -66,10 +66,13 @@
 
 #define HR(x, l) (SHA512_Update(&ctx, (char *)(x), (l)))
 #define HD(x)	 (SHA512_Update(&ctx, (char *)&(x), sizeof (x)))
+/* (portability) some compilers cannot take sizeof a function pointer */
+#define HF(x)    (SHA512_Update(&ctx, (char *)&(x), sizeof (void*)))
 
 int	getentropy(void *buf, size_t len);
 
-extern int main(int, char *argv[]);
+/* referencing functions in other link modules is not portable */
+/* extern int main(int, char *argv[]); */
 static int gotdata(char *buf, size_t len);
 static int getentropy_urandom(void *buf, size_t len);
 #ifdef CTL_MAXNAME
@@ -342,9 +345,9 @@ getentropy_fallback(void *buf, size_t len)
 			HX(sigprocmask(SIG_BLOCK, NULL, &sigset) == -1,
 			    sigset);
 
-			HD(main);		/* an addr in program */
-			HD(getentropy);	/* an addr in this library */
-			HD(printf);		/* an addr in libc */
+			/* HF(main); */		/* an addr in program */
+			HF(getentropy);	/* an addr in this library */
+			HF(printf);		/* an addr in libc */
 			p = (char *)&p;
 			HD(p);		/* an addr on stack */
 			p = (char *)&errno;

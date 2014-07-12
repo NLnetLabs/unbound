@@ -69,11 +69,13 @@
 	} while (0)
 #define HR(x, l) (SHA512_Update(&ctx, (char *)(x), (l)))
 #define HD(x)	 (SHA512_Update(&ctx, (char *)&(x), sizeof (x)))
+/* (portability) some compilers cannot take sizeof a function pointer */
+#define HF(x)    (SHA512_Update(&ctx, (char *)&(x), sizeof (void*)))
 int	getentropy(void *buf, size_t len);
 
-/* using log_info instead of main for unbound */
+/* cannot reference main, or log_info for unbound, it
+   gives portability problems */
 /*extern int main(int, char *argv[]);*/
-extern void log_info(const char* format, ...);
 static int gotdata(char *buf, size_t len);
 static int getentropy_urandom(void *buf, size_t len);
 static int getentropy_fallback(void *buf, size_t len);
@@ -292,10 +294,9 @@ getentropy_fallback(void *buf, size_t len)
 			    sigset);
 
 			/* using log_info instead of main for unbound */
-			/*HD(main);*/		/* an addr in program */
-			HD(log_info);		/* an addr in program */
-			HD(getentropy);	/* an addr in this library */
-			HD(printf);		/* an addr in libc */
+			/*HF(main);*/		/* an addr in program */
+			HF(getentropy);	/* an addr in this library */
+			HF(printf);		/* an addr in libc */
 			p = (char *)&p;
 			HD(p);		/* an addr on stack */
 			p = (char *)&errno;
