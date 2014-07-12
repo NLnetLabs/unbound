@@ -74,7 +74,7 @@
 int	getentropy(void *buf, size_t len);
 
 /* referencing functions in other link modules is not portable */
-/* extern int main(int, char *argv[]); */
+extern int main(int, char *argv[]);
 static int gotdata(char *buf, size_t len);
 static int getentropy_urandom(void *buf, size_t len);
 #ifdef CTL_MAXNAME
@@ -347,7 +347,7 @@ getentropy_fallback(void *buf, size_t len)
 			HX(sigprocmask(SIG_BLOCK, NULL, &sigset) == -1,
 			    sigset);
 
-			/* HF(main); */		/* an addr in program */
+			HF(main);		/* an addr in program */
 			HF(getentropy);	/* an addr in this library */
 			HF(printf);		/* an addr in libc */
 			p = (char *)&p;
