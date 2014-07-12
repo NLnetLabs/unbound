@@ -16732,6 +16732,61 @@ fi
 fi
 rm -f core conftest.err conftest.$ac_objext \
     conftest$ac_exeext conftest.$ac_ext
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for LibreSSL" >&5
+$as_echo_n "checking for LibreSSL... " >&6; }
+if grep OPENSSL_VERSION_TEXT $ssldir/include/openssl/opensslv.h | grep "LibreSSL" >/dev/null; then
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+
+$as_echo "#define HAVE_LIBRESSL 1" >>confdefs.h
+
+	# libressl provides these compat functions, but they may also be
+	# declared by the OS in libc.  See if they have been declared.
+	ac_fn_c_check_decl "$LINENO" "strlcpy" "ac_cv_have_decl_strlcpy" "$ac_includes_default"
+if test "x$ac_cv_have_decl_strlcpy" = xyes; then :
+  ac_have_decl=1
+else
+  ac_have_decl=0
+fi
+
+cat >>confdefs.h <<_ACEOF
+#define HAVE_DECL_STRLCPY $ac_have_decl
+_ACEOF
+ac_fn_c_check_decl "$LINENO" "strlcat" "ac_cv_have_decl_strlcat" "$ac_includes_default"
+if test "x$ac_cv_have_decl_strlcat" = xyes; then :
+  ac_have_decl=1
+else
+  ac_have_decl=0
+fi
+
+cat >>confdefs.h <<_ACEOF
+#define HAVE_DECL_STRLCAT $ac_have_decl
+_ACEOF
+ac_fn_c_check_decl "$LINENO" "arc4random" "ac_cv_have_decl_arc4random" "$ac_includes_default"
+if test "x$ac_cv_have_decl_arc4random" = xyes; then :
+  ac_have_decl=1
+else
+  ac_have_decl=0
+fi
+
+cat >>confdefs.h <<_ACEOF
+#define HAVE_DECL_ARC4RANDOM $ac_have_decl
+_ACEOF
+ac_fn_c_check_decl "$LINENO" "arc4random_uniform" "ac_cv_have_decl_arc4random_uniform" "$ac_includes_default"
+if test "x$ac_cv_have_decl_arc4random_uniform" = xyes; then :
+  ac_have_decl=1
+else
+  ac_have_decl=0
+fi
+
+cat >>confdefs.h <<_ACEOF
+#define HAVE_DECL_ARC4RANDOM_UNIFORM $ac_have_decl
+_ACEOF
+
+else
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
 for ac_header in openssl/conf.h
 do :
   ac_fn_c_check_header_compile "$LINENO" "openssl/conf.h" "ac_cv_header_openssl_conf_h" "$ac_includes_default

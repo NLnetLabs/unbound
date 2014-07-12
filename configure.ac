@@ -556,6 +556,16 @@ AC_ARG_WITH([nss], AC_HELP_STRING([--with-nss=path],
 if test $USE_NSS = "no"; then
 ACX_WITH_SSL
 ACX_LIB_SSL
+AC_MSG_CHECKING([for LibreSSL])
+if grep OPENSSL_VERSION_TEXT $ssldir/include/openssl/opensslv.h | grep "LibreSSL" >/dev/null; then
+	AC_MSG_RESULT([yes])
+	AC_DEFINE([HAVE_LIBRESSL], [1], [Define if we have LibreSSL])
+	# libressl provides these compat functions, but they may also be
+	# declared by the OS in libc.  See if they have been declared.
+	AC_CHECK_DECLS([strlcpy,strlcat,arc4random,arc4random_uniform])
+else
+	AC_MSG_RESULT([no])
+fi
 AC_CHECK_HEADERS([openssl/conf.h],,, [AC_INCLUDES_DEFAULT])
 AC_CHECK_HEADERS([openssl/engine.h],,, [AC_INCLUDES_DEFAULT])
 AC_CHECK_FUNCS([OPENSSL_config EVP_sha1 EVP_sha256 EVP_sha512 FIPS_mode])
@@ -1207,11 +1217,23 @@ struct tm;
 char *strptime(const char *s, const char *format, struct tm *tm);
 #endif
 
-#if !defined(HAVE_ARC4RANDOM) || !defined(HAVE_ARC4RANDOM_UNIFORM)
+#ifdef HAVE_LIBRESSL
+#  if !HAVE_DECL_STRLCPY
+size_t strlcpy(char *dst, const char *src, size_t siz);
+#  endif
+#  if !HAVE_DECL_STRLCAT
+size_t strlcat(char *dst, const char *src, size_t siz);
+#  endif
+#  if !HAVE_DECL_ARC4RANDOM
+uint32_t arc4random(void);
+#  endif
+#  if !HAVE_DECL_ARC4RANDOM_UNIFORM
+uint32_t arc4random_uniform(uint32_t upper_bound);
+#  endif
+#endif /* HAVE_LIBRESSL */
+#ifndef HAVE_ARC4RANDOM
 void explicit_bzero(void* buf, size_t len);
 int getentropy(void* buf, size_t len);
-#endif
-#ifndef HAVE_ARC4RANDOM
 uint32_t arc4random(void);
 void arc4random_buf(void* buf, size_t n);
 void _ARC4_LOCK(void);
