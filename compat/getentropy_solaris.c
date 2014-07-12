@@ -1,4 +1,4 @@
-/*	$OpenBSD: getentropy_solaris.c,v 1.1 2014/07/08 10:45:35 beck Exp $	*/
+/*	$OpenBSD: getentropy_solaris.c,v 1.3 2014/07/12 14:46:31 deraadt Exp $	*/
 
 /*
  * Copyright (c) 2014 Theo de Raadt <deraadt@openbsd.org>
@@ -44,7 +44,6 @@
 #define SHA512_Update SHA512Update
 #define SHA512_Final SHA512Final
 
-
 #include <sys/vfs.h>
 #include <sys/statfs.h>
 #include <sys/loadavg.h>
@@ -72,7 +71,8 @@ int	getentropy(void *buf, size_t len);
    have different link semantics (but it also fails on other platforms) */
 /* extern int main(int, char *argv[]); */
 static int gotdata(char *buf, size_t len);
-static int getentropy_urandom(void *buf, size_t len);
+static int getentropy_urandom(void *buf, size_t len, const char *path,
+    int devfscheck);
 static int getentropy_fallback(void *buf, size_t len);
 
 int
@@ -88,18 +88,37 @@ getentropy(void *buf, size_t len)
 	/*
 	 * Try to get entropy with /dev/urandom
 	 *
+	 * Solaris provides /dev/urandom as a symbolic link to
+	 * /devices/pseudo/random@0:urandom which is provided by
+	 * a devfs filesystem.  Best practice is to use O_NOFOLLOW,
+	 * so we must try the unpublished name directly.
+	 *
+	 * This can fail if the process is inside a chroot which lacks
+	 * the devfs mount, or if file descriptors are exhausted.
+	 */
+	ret = getentropy_urandom(buf, len,
+	    "/devices/pseudo/random@0:urandom", 1);
+	if (ret != -1)
+		return (ret);
+
+	/*
+	 * Unfortunately, chroot spaces on Solaris are sometimes setup
+	 * with direct device node of the well-known /dev/urandom name
+	 * (perhaps to avoid dragging all of devfs into the space).
+	 *
 	 * This can fail if the process is inside a chroot or if file
 	 * descriptors are exhausted.
 	 */
-	ret = getentropy_urandom(buf, len);
+	ret = getentropy_urandom(buf, len, "/dev/urandom", 0);
 	if (ret != -1)
 		return (ret);
+
 	/*
-	 * Entropy collection via /dev/urandom and sysctl have failed.
+	 * Entropy collection via /dev/urandom has failed.
 	 *
 	 * No other API exists for collecting entropy, and we have
-         * no failsafe way to get it on Solaris that is not sensitive
-         * to resource exhaustion.
+	 * no failsafe way to get it on Solaris that is not sensitive
+	 * to resource exhaustion.
 	 *
 	 * We have very few options:
 	 *     - Even syslog_r is unsafe to call at this low level, so
@@ -118,8 +137,8 @@ getentropy(void *buf, size_t len)
 	 * providing a new failsafe API which works in a chroot or
 	 * when file descriptors are exhausted.
 	 */
-#undef FAIL_WHEN_SYSTEM_ENTROPY_FAILS
-#ifdef FAIL_WHEN_SYSTEM_ENTROPY_FAILS
+#undef FAIL_INSTEAD_OF_TRYING_FALLBACK
+#ifdef FAIL_INSTEAD_OF_TRYING_FALLBACK
 	raise(SIGKILL);
 #endif
 	ret = getentropy_fallback(buf, len);
@@ -147,7 +166,7 @@ gotdata(char *buf, size_t len)
 }
 
 static int
-getentropy_urandom(void *buf, size_t len)
+getentropy_urandom(void *buf, size_t len, const char *path, int devfscheck)
 {
 	struct stat st;
 	size_t i;
@@ -156,19 +175,14 @@ getentropy_urandom(void *buf, size_t len)
 
 start:
 
-        flags = O_RDONLY;
+	flags = O_RDONLY;
 #ifdef O_NOFOLLOW
-        flags |= O_NOFOLLOW;
+	flags |= O_NOFOLLOW;
 #endif
 #ifdef O_CLOEXEC
-        flags |= O_CLOEXEC;
+	flags |= O_CLOEXEC;
 #endif
-	/* 
-	 * Solaris provides /dev/urandom as a symbolic link. 
-	 * /devices/pseudo/random@0:urandom should be the
-	 * real device path, and we do want O_NOFOLLOW. 
-	 */
-	fd = open("/devices/pseudo/random@0:urandom", flags, 0);
+	fd = open(path, flags, 0);
 	if (fd == -1) {
 		if (errno == EINTR)
 			goto start;
@@ -179,7 +193,8 @@ start:
 #endif
 
 	/* Lightly verify that the device node looks sane */
-	if (fstat(fd, &st) == -1 || !S_ISCHR(st.st_mode)) {
+	if (fstat(fd, &st) == -1 || !S_ISCHR(st.st_mode) ||
+	    (devfscheck && (strcmp(st.st_fstype, "devfs") != 0))) {
 		close(fd);
 		goto nodevrandom;
 	}
@@ -205,7 +220,7 @@ nodevrandom:
 	return -1;
 }
 
-static int cl[] = {
+static const int cl[] = {
 	CLOCK_REALTIME,
 #ifdef CLOCK_MONOTONIC
 	CLOCK_MONOTONIC,
@@ -269,6 +284,7 @@ getentropy_fallback(void *buf, size_t len)
 
 			for (ii = 0; ii < sizeof(cl)/sizeof(cl[0]); ii++)
 				HX(clock_gettime(cl[ii], &ts) == -1, ts);
+
 			HX((pid = getpid()) == -1, pid);
 			HX((pid = getsid(pid)) == -1, pid);
 			HX((pid = getppid()) == -1, pid);

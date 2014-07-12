@@ -1017,6 +1017,7 @@ if test "$USE_NSS" = "no"; then
 					AC_DEFINE([COMPAT_SHA512], [1], [Do sha512 definitions in config.h])
 					AC_LIBOBJ(sha512)
 				])
+				AC_CHECK_HEADERS([sys/sysctl.h],,, [AC_INCLUDES_DEFAULT])
 				AC_SEARCH_LIBS([clock_gettime], [rt])
 			;;
 			esac

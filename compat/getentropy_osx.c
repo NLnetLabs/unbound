@@ -1,4 +1,4 @@
-/*	$OpenBSD: getentropy_osx.c,v 1.2 2014/07/09 13:23:15 bcook Exp $	*/
+/*	$OpenBSD: getentropy_osx.c,v 1.3 2014/07/12 14:48:00 deraadt Exp $	*/
 
 /*
  * Copyright (c) 2014 Theo de Raadt <deraadt@openbsd.org>
@@ -67,10 +67,12 @@
 		else \
 			HD(b); \
 	} while (0)
+
 #define HR(x, l) (SHA512_Update(&ctx, (char *)(x), (l)))
 #define HD(x)	 (SHA512_Update(&ctx, (char *)&(x), sizeof (x)))
 /* (portability) some compilers cannot take sizeof a function pointer */
 #define HF(x)    (SHA512_Update(&ctx, (char *)&(x), sizeof (void*)))
+
 int	getentropy(void *buf, size_t len);
 
 /* cannot reference main, or log_info for unbound, it
@@ -104,8 +106,8 @@ getentropy(void *buf, size_t len)
 	 * Entropy collection via /dev/urandom and sysctl have failed.
 	 *
 	 * No other API exists for collecting entropy, and we have
-         * no failsafe way to get it on OSX that is not sensitive
-         * to resource exhaustion.
+	 * no failsafe way to get it on OSX that is not sensitive
+	 * to resource exhaustion.
 	 *
 	 * We have very few options:
 	 *     - Even syslog_r is unsafe to call at this low level, so
@@ -124,8 +126,8 @@ getentropy(void *buf, size_t len)
 	 * providing a new failsafe API which works in a chroot or
 	 * when file descriptors are exhausted.
 	 */
-#undef FAIL_WHEN_SYSTEM_ENTROPY_FAILS
-#ifdef FAIL_WHEN_SYSTEM_ENTROPY_FAILS
+#undef FAIL_INSTEAD_OF_TRYING_FALLBACK
+#ifdef FAIL_INSTEAD_OF_TRYING_FALLBACK
 	raise(SIGKILL);
 #endif
 	ret = getentropy_fallback(buf, len);
@@ -162,12 +164,12 @@ getentropy_urandom(void *buf, size_t len)
 
 start:
 
-        flags = O_RDONLY;
+	flags = O_RDONLY;
 #ifdef O_NOFOLLOW
-        flags |= O_NOFOLLOW;
+	flags |= O_NOFOLLOW;
 #endif
 #ifdef O_CLOEXEC
-        flags |= O_CLOEXEC;
+	flags |= O_CLOEXEC;
 #endif
 	fd = open("/dev/urandom", flags, 0);
 	if (fd == -1) {
@@ -206,33 +208,34 @@ nodevrandom:
 	return -1;
 }
 
+static int tcpmib[] = { CTL_NET, AF_INET, IPPROTO_TCP, TCPCTL_STATS };
+static int udpmib[] = { CTL_NET, AF_INET, IPPROTO_UDP, UDPCTL_STATS };
+static int ipmib[] = { CTL_NET, AF_INET, IPPROTO_IP, IPCTL_STATS };
+static int kmib[] = { CTL_KERN, KERN_USRSTACK };
+static int hwmib[] = { CTL_HW, HW_USERMEM };
+
 static int
 getentropy_fallback(void *buf, size_t len)
 {
-	int tcpmib[] = { CTL_NET, AF_INET, IPPROTO_TCP, TCPCTL_STATS };
-	int udpmib[] = { CTL_NET, AF_INET, IPPROTO_UDP, UDPCTL_STATS };
-	int ipmib[] = { CTL_NET, AF_INET, IPPROTO_IP, IPCTL_STATS };
-	int kmib[] = { CTL_KERN, KERN_USRSTACK };
-	int hwmib[] = { CTL_HW, HW_USERMEM };
-	int save_errno = errno, e, pgs = getpagesize(), faster = 0, repeat;
 	uint8_t results[SHA512_DIGEST_LENGTH];
-	struct tcpstat tcpstat;
-	struct udpstat udpstat;
-	struct ipstat ipstat;
-        u_int64_t mach_time;
-	unsigned int idata;
+	int save_errno = errno, e, pgs = getpagesize(), faster = 0, repeat;
+	static int cnt;
 	struct timespec ts;
 	struct timeval tv;
 	struct rusage ru;
 	sigset_t sigset;
 	struct stat st;
-	static int cnt;
 	SHA512_CTX ctx;
 	static pid_t lastpid;
-	void * addr;
 	pid_t pid;
-	size_t i, m;
+	size_t i, ii, m;
 	char *p;
+	struct tcpstat tcpstat;
+	struct udpstat udpstat;
+	struct ipstat ipstat;
+	u_int64_t mach_time;
+	unsigned int idata;
+	void * addr;
 
 	pid = getpid();
 	if (lastpid == pid) {
@@ -247,35 +250,34 @@ getentropy_fallback(void *buf, size_t len)
 		int j;
 		SHA512_Init(&ctx);
 		for (j = 0; j < repeat; j++) {
-			size_t len;
 			HX((e = gettimeofday(&tv, NULL)) == -1, tv);
 			if (e != -1) {
 				cnt += (int)tv.tv_sec;
 				cnt += (int)tv.tv_usec;
 			}
 
-                        mach_time = mach_absolute_time();
-                        HD(mach_time);
+			mach_time = mach_absolute_time();
+			HD(mach_time);
 
-			len = sizeof(addr);
+			ii = sizeof(addr);
 			HX(sysctl(kmib, sizeof(kmib) / sizeof(kmib[0]),
-				&addr, &len, NULL, 0) == -1, addr);
+			    &addr, &ii, NULL, 0) == -1, addr);
 
-			len = sizeof(idata);
+			ii = sizeof(idata);
 			HX(sysctl(hwmib, sizeof(hwmib) / sizeof(hwmib[0]),
-				&idata, &len, NULL, 0) == -1, idata);
+			    &idata, &ii, NULL, 0) == -1, idata);
 
-			len = sizeof(tcpstat);
+			ii = sizeof(tcpstat);
 			HX(sysctl(tcpmib, sizeof(tcpmib) / sizeof(tcpmib[0]),
-				&tcpstat, &len, NULL, 0) == -1, tcpstat);
+			    &tcpstat, &ii, NULL, 0) == -1, tcpstat);
 
-			len = sizeof(udpstat);
+			ii = sizeof(udpstat);
 			HX(sysctl(udpmib, sizeof(udpmib) / sizeof(udpmib[0]),
-				&udpstat, &len, NULL, 0) == -1, udpstat);
+			    &udpstat, &ii, NULL, 0) == -1, udpstat);
 
-			len = sizeof(ipstat);
+			ii = sizeof(ipstat);
 			HX(sysctl(ipmib, sizeof(ipmib) / sizeof(ipmib[0]),
-				&ipstat, &len, NULL, 0) == -1, ipstat);
+			    &ipstat, &ii, NULL, 0) == -1, ipstat);
 
 			HX((pid = getpid()) == -1, pid);
 			HX((pid = getsid(pid)) == -1, pid);
@@ -345,9 +347,9 @@ getentropy_fallback(void *buf, size_t len)
 					}
 
 					/* Check cnts and times... */
-                                        mach_time = mach_absolute_time();
-                                        HD(mach_time);
-                                        cnt += (int)mach_time;
+					mach_time = mach_absolute_time();
+					HD(mach_time);
+					cnt += (int)mach_time;
 
 					HX((e = getrusage(RUSAGE_SELF,
 					    &ru)) == -1, ru);
@@ -414,7 +416,6 @@ getentropy_fallback(void *buf, size_t len)
 
 			HD(cnt);
 		}
-
 
 		SHA512_Final(results, &ctx);
 		memcpy(buf + i, results, min(sizeof(results), len - i));
