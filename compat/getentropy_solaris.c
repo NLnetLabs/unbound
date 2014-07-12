@@ -61,12 +61,11 @@
 
 #define HR(x, l) (SHA512_Update(&ctx, (char *)(x), (l)))
 #define HD(x)	 (SHA512_Update(&ctx, (char *)&(x), sizeof (x)))
-/* (portability) some compilers cannot take sizeof a function pointer */
 #define HF(x)	 (SHA512_Update(&ctx, (char *)&(x), sizeof (void*)))
 
 int	getentropy(void *buf, size_t len);
 
-/* referencing functions in other link modules is not portable */
+/* referencing functions in other link modules is not portable with sun-cc */
 /* extern int main(int, char *argv[]); */
 static int gotdata(char *buf, size_t len);
 static int getentropy_urandom(void *buf, size_t len, const char *path,
