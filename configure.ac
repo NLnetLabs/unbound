@@ -1224,10 +1224,10 @@ size_t strlcpy(char *dst, const char *src, size_t siz);
 #  if !HAVE_DECL_STRLCAT
 size_t strlcat(char *dst, const char *src, size_t siz);
 #  endif
-#  if !HAVE_DECL_ARC4RANDOM
+#  if !HAVE_DECL_ARC4RANDOM && defined(HAVE_ARC4RANDOM)
 uint32_t arc4random(void);
 #  endif
-#  if !HAVE_DECL_ARC4RANDOM_UNIFORM
+#  if !HAVE_DECL_ARC4RANDOM_UNIFORM && defined(HAVE_ARC4RANDOM_UNIFORM)
 uint32_t arc4random_uniform(uint32_t upper_bound);
 #  endif
 #endif /* HAVE_LIBRESSL */
