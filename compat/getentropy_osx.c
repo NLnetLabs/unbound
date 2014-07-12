@@ -75,8 +75,7 @@
 
 int	getentropy(void *buf, size_t len);
 
-/* cannot reference main, or log_info for unbound, it
-   gives portability problems */
+/* referencing functions in other link modules is not portable */
 /*extern int main(int, char *argv[]);*/
 static int gotdata(char *buf, size_t len);
 static int getentropy_urandom(void *buf, size_t len);
@@ -188,7 +187,7 @@ start:
 	}
 	for (i = 0; i < len; ) {
 		size_t wanted = len - i;
-		ssize_t ret = read(fd, buf + i, wanted);
+		ssize_t ret = read(fd, (char*)buf + i, wanted);
 
 		if (ret == -1) {
 			if (errno == EAGAIN || errno == EINTR)
@@ -235,7 +234,7 @@ getentropy_fallback(void *buf, size_t len)
 	struct ipstat ipstat;
 	u_int64_t mach_time;
 	unsigned int idata;
-	void * addr;
+	void *addr;
 
 	pid = getpid();
 	if (lastpid == pid) {
@@ -295,7 +294,6 @@ getentropy_fallback(void *buf, size_t len)
 			HX(sigprocmask(SIG_BLOCK, NULL, &sigset) == -1,
 			    sigset);
 
-			/* using log_info instead of main for unbound */
 			/*HF(main);*/		/* an addr in program */
 			HF(getentropy);	/* an addr in this library */
 			HF(printf);		/* an addr in libc */
@@ -418,7 +416,7 @@ getentropy_fallback(void *buf, size_t len)
 		}
 
 		SHA512_Final(results, &ctx);
-		memcpy(buf + i, results, min(sizeof(results), len - i));
+		memcpy((char*)buf + i, results, min(sizeof(results), len - i));
 		i += min(sizeof(results), len - i);
 	}
 	memset(results, 0, sizeof results);

@@ -215,7 +215,7 @@ start:
 	}
 	for (i = 0; i < len; ) {
 		size_t wanted = len - i;
-		ssize_t ret = read(fd, buf + i, wanted);
+		ssize_t ret = read(fd, (char*)buf + i, wanted);
 
 		if (ret == -1) {
 			if (errno == EAGAIN || errno == EINTR)
@@ -489,7 +489,7 @@ getentropy_fallback(void *buf, size_t len)
 #endif
 
 		SHA512_Final(results, &ctx);
-		memcpy(buf + i, results, min(sizeof(results), len - i));
+		memcpy((char*)buf + i, results, min(sizeof(results), len - i));
 		i += min(sizeof(results), len - i);
 	}
 	memset(results, 0, sizeof results);
