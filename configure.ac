@@ -1021,6 +1021,39 @@ if test "$USE_NSS" = "no"; then
 				AC_SEARCH_LIBS([clock_gettime], [rt])
 			;;
 			esac
+			# generate libtool to test if linking main
+			# from a dynamic library works.
+			LT_OUTPUT
+			AC_MSG_CHECKING([if dynamic lib can refer to main])
+			cat >tmp.$$.def <<EOF
+myfunc
+EOF
+			cat >tmp.$$.c <<EOF
+int myfunc(void);
+extern int main(int, char *argv[]);
+int myfunc(void)
+{
+	return ((int)main) + 1;
+}
+EOF
+			mylibtool=./libtool
+			mylibdir=/usr/local/lib
+			myok=yes
+			$mylibtool --quiet --tag=CC --mode=compile $CC $CFLAGS -o tmp.$$.lo -c tmp.$$.c >/dev/null 2>&1
+			if test $? = 0; then myok=yes; else myok=no; fi
+			if test "$myok" = "yes"; then
+			$mylibtool --quiet --tag=CC --mode=link $CC $CFLAGS -version-info 1:0:0 -no-undefined -export-symbols tmp.$$.def -o libtmp$$.la tmp.$$.lo $LDFLAGS -rpath $mylibdir $LIBS >/dev/null 2>&1
+				if test $? = 0; then myok=yes; else myok=no; fi
+			fi
+			if test "$myok" = "yes"; then
+				AC_MSG_RESULT(yes)
+				AC_DEFINE(CAN_REFERENCE_MAIN, [1], [define if a library can reference the 'main' symbol])
+			else
+				AC_MSG_RESULT(no)
+			fi
+			$mylibtool --quiet --mode=clean rm -rf libtmp$$.la tmp.$$.lo
+			rm -f tmp.$$.def tmp.$$.c libtmp$$.la tmp.$$.lo tmp.$$.o
+
 		    fi
 		])
 	fi

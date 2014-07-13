@@ -1,3 +1,6 @@
+13 July 2014: Wouter
+	- Configure tests if main can be linked to from getentropy compat.
+
 12 July 2014: Wouter
 	- Fix getentropy compat code, function refs were not portable.
 	- Fix to check openssl version number only for OpenSSL.

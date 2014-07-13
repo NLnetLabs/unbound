@@ -1,5 +1,8 @@
 /* config.h.in.  Generated from configure.ac by autoheader.  */
 
+/* define if a library can reference the 'main' symbol */
+#undef CAN_REFERENCE_MAIN
+
 /* Directory to chroot to */
 #undef CHROOT_DIR
 
@@ -341,7 +344,7 @@
 /* Define to 1 if you have the `strptime' function. */
 #undef HAVE_STRPTIME
 
-/* Define to 1 if `ipi_spec_dst' is a member of `struct in_pktinfo'. */
+/* Define to 1 if `ipi_spec_dst' is member of `struct in_pktinfo'. */
 #undef HAVE_STRUCT_IN_PKTINFO_IPI_SPEC_DST
 
 /* Define if you have Swig libraries and header files. */
@@ -475,9 +478,6 @@
 /* Define to the one symbol short name of this package. */
 #undef PACKAGE_TARNAME
 
-/* Define to the home page for this package. */
-#undef PACKAGE_URL
-
 /* Define to the version of this package. */
 #undef PACKAGE_VERSION
 
@@ -585,11 +585,6 @@
 /* Define to 1 if `lex' declares `yytext' as a `char *' by default, not a
    `char[]'. */
 #undef YYTEXT_POINTER
-
-/* Enable large inode numbers on Mac OS X 10.5.  */
-#ifndef _DARWIN_USE_64_BIT_INODE
-# define _DARWIN_USE_64_BIT_INODE 1
-#endif
 
 /* Number of bits in a file offset, on hosts where this is settable. */
 #undef _FILE_OFFSET_BITS

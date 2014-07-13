@@ -16,6 +16,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
+#include "config.h"
 
 #include <sys/types.h>
 #include <sys/param.h>
@@ -74,7 +75,9 @@
 
 int	getentropy(void *buf, size_t len);
 
+#ifdef CAN_REFERENCE_MAIN
 extern int main(int, char *argv[]);
+#endif
 static int gotdata(char *buf, size_t len);
 static int getentropy_urandom(void *buf, size_t len);
 static int getentropy_fallback(void *buf, size_t len);
@@ -292,7 +295,9 @@ getentropy_fallback(void *buf, size_t len)
 			HX(sigprocmask(SIG_BLOCK, NULL, &sigset) == -1,
 			    sigset);
 
+#ifdef CAN_REFERENCE_MAIN
 			HF(main);		/* an addr in program */
+#endif
 			HF(getentropy);	/* an addr in this library */
 			HF(printf);		/* an addr in libc */
 			p = (char *)&p;
