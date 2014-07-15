@@ -1,6 +1,7 @@
 15 July 2014: Wouter
 	- Fix #596: Bail out of unbound-control list_local_zones when ssl
 	  write fails.
+	- iana portlist update.
 
 13 July 2014: Wouter
 	- Configure tests if main can be linked to from getentropy compat.
