@@ -1934,6 +1934,9 @@ struct infra_arg {
 	SSL* ssl;
 	/** the time now */
 	time_t now;
+	/** ssl failure? stop writing and skip the rest.  If the tcp
+	 * connection is broken, and writes fail, we then stop writing. */
+	int ssl_failed;
 };
 
 /** callback for every host element in the infra cache */
@@ -1945,13 +1948,18 @@ dump_infra_host(struct lruhash_entry* e, void* arg)
 	struct infra_data* d = (struct infra_data*)e->data;
 	char ip_str[1024];
 	char name[257];
+	if(a->ssl_failed)
+		return;
 	addr_to_str(&k->addr, k->addrlen, ip_str, sizeof(ip_str));
 	dname_str(k->zonename, name);
 	/* skip expired stuff (only backed off) */
 	if(d->ttl < a->now) {
 		if(d->rtt.rto >= USEFUL_SERVER_TOP_TIMEOUT) {
 			if(!ssl_printf(a->ssl, "%s %s expired rto %d\n", ip_str,
-				name, d->rtt.rto)) return;
+				name, d->rtt.rto))  {
+				a->ssl_failed = 1;
+				return;
+			}
 		}
 		return;
 	}
@@ -1964,8 +1972,10 @@ dump_infra_host(struct lruhash_entry* e, void* arg)
 		(int)d->edns_lame_known, (int)d->edns_version,
 		(int)(a->now<d->probedelay?d->probedelay-a->now:0),
 		(int)d->isdnsseclame, (int)d->rec_lame, (int)d->lame_type_A,
-		(int)d->lame_other))
+		(int)d->lame_other)) {
+		a->ssl_failed = 1;
 		return;
+	}
 }
 
 /** do the dump_infra command */
@@ -1976,6 +1986,7 @@ do_dump_infra(SSL* ssl, struct worker* worker)
 	arg.infra = worker->env.infra_cache;
 	arg.ssl = ssl;
 	arg.now = *worker->env.now;
+	arg.ssl_failed = 0;
 	slabhash_traverse(arg.infra->hosts, 0, &dump_infra_host, (void*)&arg);
 }
 

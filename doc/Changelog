@@ -1,3 +1,7 @@
+16 July 2014: Wouter
+	- And Fix#596: Bail out of unbound-control dump_infra when ssl
+	  write fails.
+
 15 July 2014: Wouter
 	- Fix #596: Bail out of unbound-control list_local_zones when ssl
 	  write fails.
