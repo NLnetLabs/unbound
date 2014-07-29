@@ -1,3 +1,7 @@
+29 July 2014: Wouter
+	- Patch from Dag-Erling Smorgrav that implements feature, unbound -dd
+	  does not fork in the background and also logs to stderr.
+
 21 July 2014: Wouter
 	- Fix endian.h include for OpenBSD.
 

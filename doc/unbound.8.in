@@ -36,9 +36,11 @@ file at the default location, @ub_conf_file@. The syntax is
 described in \fIunbound.conf\fR(5).
 .TP
 .B \-d
-Debug flag, do not fork into the background, but stay attached to the
-console. This flag will also delay writing to the logfile until the
-thread\-spawn time. So that most config and setup errors appear on stderr.
+Debug flag: do not fork into the background, but stay attached to
+the console.  This flag will also delay writing to the log file until
+the thread\-spawn time, so that most config and setup errors appear on
+stderr. If given twice or more, logging does not switch to the log file
+or to syslog, but the log messages are printed to stderr all the time.
 .TP
 .B \-v
 Increase verbosity. If given multiple times, more information is logged.
