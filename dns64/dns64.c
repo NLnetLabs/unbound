@@ -64,7 +64,7 @@ static const char DEFAULT_DNS64_PREFIX[] = "64:ff9b::/96";
 /**
  * Maximum length of a domain name in a PTR query in the .in-addr.arpa tree.
  */
-static const int MAX_PTR_QNAME_IPV4 = 30;
+#define MAX_PTR_QNAME_IPV4 30
 
 /**
  * Per-query module-specific state. This is usually a dynamically-allocated
@@ -199,7 +199,7 @@ extract_ipv4(const uint8_t ipv6[16], const int offset)
  *
  * \return The number of characters written.
  */
-static int
+static size_t
 ipv4_to_ptr(uint32_t ipv4, char ptr[MAX_PTR_QNAME_IPV4])
 {
     static const char IPV4_PTR_SUFFIX[] = "\07in-addr\04arpa";
@@ -207,7 +207,7 @@ ipv4_to_ptr(uint32_t ipv4, char ptr[MAX_PTR_QNAME_IPV4])
     char* c = ptr;
 
     for (i = 0; i < 4; ++i) {
-        *c = uitoa(ipv4 % 256, c + 1);
+        *c = uitoa((unsigned int)(ipv4 % 256), c + 1);
         c += *c + 1;
         ipv4 /= 256;
     }
@@ -381,7 +381,7 @@ handle_ipv6_ptr(struct module_qstate* qstate, int id)
      */
     if (addr_in_common((struct sockaddr_storage*)&sin6, 128,
                 &dns64_env->prefix_addr, dns64_env->prefix_net,
-                sizeof(sin6)) != dns64_env->prefix_net)
+                (socklen_t)sizeof(sin6)) != dns64_env->prefix_net)
         return module_wait_module;
 
     verbose(VERB_ALGO, "dns64: rewrite PTR record");
@@ -523,7 +523,7 @@ handle_event_moddone(struct module_qstate* qstate, int id)
      *   - An AAAA query for which an error was returned.
      *   - A successful AAAA query with an answer.
      */
-	if (qstate->minfo[id] == DNS64_INTERNAL_QUERY
+	if ( (enum dns64_qstate)qstate->minfo[id] == DNS64_INTERNAL_QUERY
             || qstate->qinfo.qtype != LDNS_RR_TYPE_AAAA
 	    || qstate->return_rcode != LDNS_RCODE_NOERROR  
 	    || (qstate->return_msg &&
