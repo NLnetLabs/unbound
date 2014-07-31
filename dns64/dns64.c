@@ -550,8 +550,9 @@ handle_event_moddone(struct module_qstate* qstate, int id)
  */
 void
 dns64_operate(struct module_qstate* qstate, enum module_ev event, int id,
-		struct outbound_entry* ATTR_UNUSED(outbound))
+		struct outbound_entry* outbound)
 {
+	(void)outbound;
 	verbose(VERB_QUERY, "dns64[module %d] operate: extstate:%s event:%s",
 			id, strextstate(qstate->ext_state[id]),
 			strmodulevent(event));
