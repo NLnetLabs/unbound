@@ -1,3 +1,9 @@
+31 July 2014: Wouter
+	- DNS64 from Viagenie (BSD Licensed), written by Simon Perrault.
+	  Initial commit of the patch from the FreeBSD base (with its fixes).
+	  This adds a module (for module-config in unbound.conf) dns64 that
+	  performs DNS64 processing, see README.DNS64.
+
 29 July 2014: Wouter
 	- Patch from Dag-Erling Smorgrav that implements feature, unbound -dd
 	  does not fork in the background and also logs to stderr.

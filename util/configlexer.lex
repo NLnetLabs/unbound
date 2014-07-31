@@ -8,6 +8,8 @@
  *
  */
 
+#include "config.h"
+
 #include <ctype.h>
 #include <string.h>
 #include <strings.h>
@@ -326,6 +328,8 @@ domain-insecure{COLON}		{ YDVAR(1, VAR_DOMAIN_INSECURE) }
 minimal-responses{COLON}	{ YDVAR(1, VAR_MINIMAL_RESPONSES) }
 rrset-roundrobin{COLON}		{ YDVAR(1, VAR_RRSET_ROUNDROBIN) }
 max-udp-size{COLON}		{ YDVAR(1, VAR_MAX_UDP_SIZE) }
+dns64-prefix{COLON}		{ YDVAR(1, VAR_DNS64_PREFIX) }
+dns64-synthall{COLON}		{ YDVAR(1, VAR_DNS64_SYNTHALL) }
 <INITIAL,val>{NEWLINE}		{ LEXOUT(("NL\n")); cfg_parser->line++; }
 
 	/* Quoted strings. Strip leading and ending quotes */

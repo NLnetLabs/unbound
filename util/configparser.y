@@ -106,6 +106,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_SSL_SERVICE_KEY VAR_SSL_SERVICE_PEM VAR_SSL_PORT VAR_FORWARD_FIRST
 %token VAR_STUB_FIRST VAR_MINIMAL_RESPONSES VAR_RRSET_ROUNDROBIN
 %token VAR_MAX_UDP_SIZE VAR_DELAY_CLOSE VAR_UNBLOCK_LAN_ZONES
+%token VAR_DNS64_PREFIX VAR_DNS64_SYNTHALL
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -163,7 +164,8 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_log_queries | server_tcp_upstream | server_ssl_upstream |
 	server_ssl_service_key | server_ssl_service_pem | server_ssl_port |
 	server_minimal_responses | server_rrset_roundrobin | server_max_udp_size |
-	server_so_reuseport | server_delay_close | server_unblock_lan_zones
+	server_so_reuseport | server_delay_close | server_unblock_lan_zones |
+	server_dns64_prefix | server_dns64_synthall
 	;
 stubstart: VAR_STUB_ZONE
 	{
@@ -1155,6 +1157,22 @@ server_max_udp_size: VAR_MAX_UDP_SIZE STRING_ARG
 	{
 		OUTYY(("P(server_max_udp_size:%s)\n", $2));
 		cfg_parser->cfg->max_udp_size = atoi($2);
+		free($2);
+	}
+	;
+server_dns64_prefix: VAR_DNS64_PREFIX STRING_ARG
+	{
+		OUTYY(("P(dns64_prefix:%s)\n", $2));
+		free(cfg_parser->cfg->dns64_prefix);
+		cfg_parser->cfg->dns64_prefix = $2;
+	}
+	;
+server_dns64_synthall: VAR_DNS64_SYNTHALL STRING_ARG
+	{
+		OUTYY(("P(server_dns64_synthall:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->dns64_synthall = (strcmp($2, "yes")==0);
 		free($2);
 	}
 	;

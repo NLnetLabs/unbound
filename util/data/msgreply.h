@@ -192,6 +192,11 @@ struct msgreply_entry {
 	struct lruhash_entry entry;
 };
 
+struct reply_info*
+construct_reply_info_base(struct regional* region, uint16_t flags, size_t qd,
+		time_t ttl, time_t prettl, size_t an, size_t ns, size_t ar,
+		size_t total, enum sec_status sec);
+
 /** 
  * Parse wire query into a queryinfo structure, return 0 on parse error. 
  * initialises the (prealloced) queryinfo structure as well.

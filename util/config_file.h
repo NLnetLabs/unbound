@@ -305,6 +305,12 @@ struct config_file {
 
 	/* maximum UDP response size */
 	size_t max_udp_size;
+
+	/* DNS64 prefix */
+	char* dns64_prefix;
+
+	/* Synthetize all AAAA record despite the presence of an authoritative one */
+	int dns64_synthall;
 };
 
 /**
