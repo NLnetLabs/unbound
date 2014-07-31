@@ -3,6 +3,7 @@ Copyright 2007 NLnet Labs
 http://unbound.net
 
 This software is under BSD license, see LICENSE for details.
+The DNS64 module has BSD license in dns64/dns64.c.
 
 * Download the latest release version of this software from 
   	http://unbound.net 

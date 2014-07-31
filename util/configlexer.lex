@@ -7,9 +7,6 @@
  * See LICENSE for the license.
  *
  */
-
-#include "config.h"
-
 #include <ctype.h>
 #include <string.h>
 #include <strings.h>

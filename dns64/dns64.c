@@ -1,5 +1,5 @@
 /*
- * iterator/iterator.h - DNS64 module
+ * dns64/dns64.c - DNS64 module
  *
  * Copyright (c) 2009, Viagénie. All rights reserved.
  *
@@ -39,7 +39,7 @@
  * This file contains a module that performs DNS64 query processing.
  */
 
-#include <config.h>
+#include "config.h"
 #include "dns64/dns64.h"
 #include "services/cache/dns.h"
 #include "services/cache/rrset.h"
@@ -212,7 +212,7 @@ ipv4_to_ptr(uint32_t ipv4, char ptr[MAX_PTR_QNAME_IPV4])
         ipv4 /= 256;
     }
 
-    strcpy(c, IPV4_PTR_SUFFIX);
+    memmove(c, IPV4_PTR_SUFFIX, sizeof(IPV4_PTR_SUFFIX));
 
     return c + sizeof(IPV4_PTR_SUFFIX) - ptr;
 }
@@ -273,7 +273,7 @@ synthesize_aaaa(const uint8_t prefix_addr[16], int prefix_net,
     aaaa[prefix_net/8+2] |= a[2] >> (0+prefix_net%8);
     aaaa[prefix_net/8+3] |= a[2] << (8-prefix_net%8);
     aaaa[prefix_net/8+3] |= a[3] >> (0+prefix_net%8);
-    if (prefix_net/8/4 < 16)  /* <-- my beautiful symmetry is destroyed! */
+    if (prefix_net/8+4 < 16)  /* <-- my beautiful symmetry is destroyed! */
     aaaa[prefix_net/8+4] |= a[3] << (8-prefix_net%8);
 }
 
@@ -334,7 +334,7 @@ dns64_init(struct module_env* env, int id)
         log_err("dns64: could not apply configuration settings.");
         return 0;
     }
-	return 1;
+    return 1;
 }
 
 /**
@@ -493,13 +493,13 @@ handle_event_pass(struct module_qstate* qstate, int id)
 	    && qstate->qinfo.qtype == LDNS_RR_TYPE_AAAA)
 		return generate_type_A_query(qstate, id);
 
-    /* We are finished when our sub-query is finished. */
+	/* We are finished when our sub-query is finished. */
 	if ((uintptr_t)qstate->minfo[id] == DNS64_SUBQUERY_FINISHED)
 		return module_finished;
 
-    /* Otherwise, pass request to next module. */
-    verbose(VERB_ALGO, "dns64: pass to next module");
-    return module_wait_module;
+	/* Otherwise, pass request to next module. */
+	verbose(VERB_ALGO, "dns64: pass to next module");
+	return module_wait_module;
 }
 
 /**
@@ -532,6 +532,7 @@ handle_event_moddone(struct module_qstate* qstate, int id)
 			    qstate->return_msg->rep)))
 		return module_finished;
 
+    /* So, this is a AAAA noerror/nodata answer */
 	return generate_type_A_query(qstate, id);
 }
 
@@ -588,7 +589,7 @@ dns64_synth_aaaa_data(const struct ub_packed_rrset_key* fk,
 	 */
 	if (!(dd = *dd_out = regional_alloc(region,
 		  sizeof(struct packed_rrset_data)
-		  + fd->count * (sizeof(size_t) + sizeof(uint32_t) +
+		  + fd->count * (sizeof(size_t) + sizeof(time_t) +
 			     sizeof(uint8_t*) + 2 + 16)))) {
 		log_err("out of memory");
 		return;
@@ -607,7 +608,7 @@ dns64_synth_aaaa_data(const struct ub_packed_rrset_key* fk,
 	dd->rr_len =
 	    (size_t*)((uint8_t*)dd + sizeof(struct packed_rrset_data));
 	dd->rr_data = (uint8_t**)&dd->rr_len[dd->count];
-	dd->rr_ttl = (uint32_t*)&dd->rr_data[dd->count];
+	dd->rr_ttl = (time_t*)&dd->rr_data[dd->count];
 	for(i = 0; i < fd->count; ++i) {
 		if (fd->rr_len[i] != 6 || fd->rr_data[i][0] != 0
 		    || fd->rr_data[i][1] != 4)
@@ -654,7 +655,6 @@ dns64_synth_aaaa_data(const struct ub_packed_rrset_key* fk,
  * original empty response.
  *
  * \param id     This module's instance ID.
- * \param answer The answer RR set located in the sub-query's response.
  * \param super  Original AAAA query.
  * \param qstate A query.
  */
@@ -672,7 +672,6 @@ dns64_adjust_a(int id, struct module_qstate* super, struct module_qstate* qstate
 	log_assert(super->region);
 	log_assert(qstate->return_msg);
 	log_assert(qstate->return_msg->rep);
-	log_assert(qstate->region);
 
 	/* If dns64-synthall is enabled, return_msg is not initialized */
 	if(!super->return_msg) {
@@ -689,14 +688,14 @@ dns64_adjust_a(int id, struct module_qstate* super, struct module_qstate* qstate
 	/*
 	 * Build the actual reply.
 	 */
-	cp = construct_reply_info_base(qstate->region, rep->flags, rep->qdcount,
+	cp = construct_reply_info_base(super->region, rep->flags, rep->qdcount,
 		rep->ttl, rep->prefetch_ttl, rep->an_numrrsets, rep->ns_numrrsets,
 		rep->ar_numrrsets, rep->rrset_count, rep->security);
 	if(!cp)
 		return;
 
 	/* allocate ub_key structures special or not */
-	if(!repinfo_alloc_rrset_keys(cp, qstate->region)) {
+	if(!repinfo_alloc_rrset_keys(cp, super->region)) {
 		return;
 	}
 
@@ -705,11 +704,11 @@ dns64_adjust_a(int id, struct module_qstate* super, struct module_qstate* qstate
 		fk = rep->rrsets[i];
 		dk = cp->rrsets[i];
 		fd = (struct packed_rrset_data*)fk->entry.data;
-		dk->entry.hash = fk->entry.hash;
 		dk->rk = fk->rk;
 		dk->id = fk->id;
 
 		if(i<rep->an_numrrsets && fk->rk.type == htons(LDNS_RR_TYPE_A)) {
+			/* also sets dk->entry.hash */
 			dns64_synth_aaaa_data(fk, fd, dk, &dd, super->region, dns64_env);
 			/* Delete negative AAAA record from cache stored by
 			 * the iterator module */
@@ -717,7 +716,8 @@ dns64_adjust_a(int id, struct module_qstate* super, struct module_qstate* qstate
 					   dk->rk.dname_len, LDNS_RR_TYPE_AAAA, 
 					   LDNS_RR_CLASS_IN, 0);
 		} else {
-			dk->rk.dname = (uint8_t*)regional_alloc_init(qstate->region,
+			dk->entry.hash = fk->entry.hash;
+			dk->rk.dname = (uint8_t*)regional_alloc_init(super->region,
 				fk->rk.dname, fk->rk.dname_len);
 
 			if(!dk->rk.dname)
@@ -725,7 +725,7 @@ dns64_adjust_a(int id, struct module_qstate* super, struct module_qstate* qstate
 
 			s = packed_rrset_sizeof(fd);
 			dd = (struct packed_rrset_data*)regional_alloc_init(
-				qstate->region, fd, s);
+				super->region, fd, s);
 
 			if(!dd)
 				return;

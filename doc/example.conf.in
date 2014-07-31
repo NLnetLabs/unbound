@@ -331,8 +331,8 @@ server:
 	# minimal-responses: no
 
 	# module configuration of the server. A string with identifiers
-	# separated by spaces. Syntax: [dns64] [validator] iterator
-	# module-config: "dns64 iterator"
+	# separated by spaces. Syntax: "[dns64] [validator] iterator"
+	# module-config: "validator iterator"
 
 	# File with trusted keys, kept uptodate using RFC5011 probes,
 	# initial file like trust-anchor-file, then it stores metadata.
@@ -534,7 +534,8 @@ server:
 	# Default is no.  Can be turned on and off with unbound-control.
 	# ssl-upstream: no
 
-	# DNS64 prefix. Must be specified when DNS64 is in use.
+	# DNS64 prefix. Must be specified when DNS64 is use.
+	# Enable dns64 in module-config.  Used to synthesize IPv6 from IPv4.
 	# dns64-prefix: 64:ff9b::0/96
 
 # Python config section. To enable:

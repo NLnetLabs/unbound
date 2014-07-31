@@ -3,6 +3,11 @@
 	  Initial commit of the patch from the FreeBSD base (with its fixes).
 	  This adds a module (for module-config in unbound.conf) dns64 that
 	  performs DNS64 processing, see README.DNS64.
+	- Changes from DNS64:
+	  strcpy changed to memmove.
+	  arraybound check fixed from prefix_net/8/4 to prefix_net/8+4.
+	  allocation of result consistently in the correct region.
+	  time_t is now used for ttl in unbound (since the patch's version).
 
 29 July 2014: Wouter
 	- Patch from Dag-Erling Smorgrav that implements feature, unbound -dd
