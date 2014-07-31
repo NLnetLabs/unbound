@@ -8,6 +8,7 @@
 	  arraybound check fixed from prefix_net/8/4 to prefix_net/8+4.
 	  allocation of result consistently in the correct region.
 	  time_t is now used for ttl in unbound (since the patch's version).
+	- testdata/dns64_lookup.rpl for unit test for dns64 functionality.
 
 29 July 2014: Wouter
 	- Patch from Dag-Erling Smorgrav that implements feature, unbound -dd
