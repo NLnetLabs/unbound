@@ -1,3 +1,7 @@
+1 August 2014: Wouter
+	- Patch add msg, rrset, infra and key cache sizes to stats command
+	  from Maciej Soltysiak.
+
 31 July 2014: Wouter
 	- DNS64 from Viagenie (BSD Licensed), written by Simon Perrault.
 	  Initial commit of the patch from the FreeBSD base (with its fixes).

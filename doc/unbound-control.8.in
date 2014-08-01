@@ -463,6 +463,21 @@ Replies that were unwanted or unsolicited.  Could have been random traffic,
 delayed duplicates, very late answers, or could be spoofing attempts.
 Some low level of late answers and delayed duplicates are to be expected
 with the UDP protocol.  Very high values could indicate a threat (spoofing).
+.TP
+.I msg.cache.count
+The number of items (DNS replies) in the message cache.
+.TP
+.I rrset.cache.count
+The number of RRsets in the rrset cache.  This includes rrsets used by
+the messages in the message cache, but also delegation information.
+.TP
+.I infra.cache.count
+The number of items in the infra cache.  These are IP addresses with their
+timing and protocol support information.
+.TP
+.I key.cache.count
+The number of items in the key cache.  These are DNSSEC keys, one item
+per delegation point, and their validation status.
 .SH "FILES"
 .TP
 .I @ub_conf_file@

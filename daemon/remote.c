@@ -876,6 +876,15 @@ print_ext(SSL* ssl, struct stats_info* s)
 		(unsigned long)s->svr.unwanted_queries)) return 0;
 	if(!ssl_printf(ssl, "unwanted.replies"SQ"%lu\n", 
 		(unsigned long)s->svr.unwanted_replies)) return 0;
+	/* cache counts */
+	if(!ssl_printf(ssl, "msg.cache.count"SQ"%u\n",
+		(unsigned)s->svr.msg_cache_count)) return 0;
+	if(!ssl_printf(ssl, "rrset.cache.count"SQ"%u\n",
+		(unsigned)s->svr.rrset_cache_count)) return 0;
+	if(!ssl_printf(ssl, "infra.cache.count"SQ"%u\n",
+		(unsigned)s->svr.infra_cache_count)) return 0;
+	if(!ssl_printf(ssl, "key.cache.count"SQ"%u\n",
+		(unsigned)s->svr.key_cache_count)) return 0;
 	return 1;
 }
 
