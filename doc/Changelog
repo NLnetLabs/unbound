@@ -1,3 +1,10 @@
+5 August 2014: Wouter
+	- dnstap support, with a patch from Farsight Security, written by
+	  Robert Edmonds. The --enable-dnstap needs libfstrm and protobuf-c.
+	  It is BSD licensed (see dnstap/dnstap.c).
+	  Building with --enable-dnstap needs pkg-config with this patch.
+	- Noted dnstap in doc/README and doc/CREDITS.
+
 1 August 2014: Wouter
 	- Patch add msg, rrset, infra and key cache sizes to stats command
 	  from Maciej Soltysiak.

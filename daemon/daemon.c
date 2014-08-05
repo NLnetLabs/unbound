@@ -401,6 +401,17 @@ daemon_create_workers(struct daemon* daemon)
 	daemon->num = (daemon->cfg->num_threads?daemon->cfg->num_threads:1);
 	daemon->workers = (struct worker**)calloc((size_t)daemon->num, 
 		sizeof(struct worker*));
+	if(daemon->cfg->dnstap) {
+#ifdef USE_DNSTAP
+		daemon->dtenv = dt_create(daemon->cfg->dnstap_socket_path,
+			daemon->num);
+		if (!daemon->dtenv)
+			fatal_exit("dt_create failed");
+		dt_apply_cfg(daemon->dtenv, daemon->cfg);
+#else
+		fatal_exit("dnstap enabled in config but not built with dnstap support");
+#endif
+	}
 	for(i=0; i<daemon->num; i++) {
 		if(!(daemon->workers[i] = worker_create(daemon, i,
 			shufport+numport*i/daemon->num, 
@@ -585,6 +596,9 @@ daemon_cleanup(struct daemon* daemon)
 	free(daemon->workers);
 	daemon->workers = NULL;
 	daemon->num = 0;
+#ifdef USE_DNSTAP
+	dt_delete(daemon->dtenv);
+#endif
 	daemon->cfg = NULL;
 }
 

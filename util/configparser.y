@@ -107,12 +107,21 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_STUB_FIRST VAR_MINIMAL_RESPONSES VAR_RRSET_ROUNDROBIN
 %token VAR_MAX_UDP_SIZE VAR_DELAY_CLOSE VAR_UNBLOCK_LAN_ZONES
 %token VAR_DNS64_PREFIX VAR_DNS64_SYNTHALL
+%token VAR_DNSTAP VAR_DNSTAP_ENABLE VAR_DNSTAP_SOCKET_PATH
+%token VAR_DNSTAP_SEND_IDENTITY VAR_DNSTAP_SEND_VERSION
+%token VAR_DNSTAP_IDENTITY VAR_DNSTAP_VERSION
+%token VAR_DNSTAP_LOG_RESOLVER_QUERY_MESSAGES
+%token VAR_DNSTAP_LOG_RESOLVER_RESPONSE_MESSAGES
+%token VAR_DNSTAP_LOG_CLIENT_QUERY_MESSAGES
+%token VAR_DNSTAP_LOG_CLIENT_RESPONSE_MESSAGES
+%token VAR_DNSTAP_LOG_FORWARDER_QUERY_MESSAGES
+%token VAR_DNSTAP_LOG_FORWARDER_RESPONSE_MESSAGES
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
 toplevelvar: serverstart contents_server | stubstart contents_stub |
 	forwardstart contents_forward | pythonstart contents_py | 
-	rcstart contents_rc
+	rcstart contents_rc | dtstart contents_dt
 	;
 
 /* server: declaration */
@@ -1315,6 +1324,122 @@ rc_control_cert_file: VAR_CONTROL_CERT_FILE STRING_ARG
 		OUTYY(("P(rc_control_cert_file:%s)\n", $2));
 		free(cfg_parser->cfg->control_cert_file);
 		cfg_parser->cfg->control_cert_file = $2;
+	}
+	;
+dtstart: VAR_DNSTAP
+	{
+		OUTYY(("\nP(dnstap:)\n"));
+	}
+	;
+contents_dt: contents_dt content_dt
+	| ;
+content_dt: dt_dnstap_enable | dt_dnstap_socket_path |
+	dt_dnstap_send_identity | dt_dnstap_send_version |
+	dt_dnstap_identity | dt_dnstap_version |
+	dt_dnstap_log_resolver_query_messages |
+	dt_dnstap_log_resolver_response_messages |
+	dt_dnstap_log_client_query_messages |
+	dt_dnstap_log_client_response_messages |
+	dt_dnstap_log_forwarder_query_messages |
+	dt_dnstap_log_forwarder_response_messages
+	;
+dt_dnstap_enable: VAR_DNSTAP_ENABLE STRING_ARG
+	{
+		OUTYY(("P(dt_dnstap_enable:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->dnstap = (strcmp($2, "yes")==0);
+	}
+	;
+dt_dnstap_socket_path: VAR_DNSTAP_SOCKET_PATH STRING_ARG
+	{
+		OUTYY(("P(dt_dnstap_socket_path:%s)\n", $2));
+		free(cfg_parser->cfg->dnstap_socket_path);
+		cfg_parser->cfg->dnstap_socket_path = $2;
+	}
+	;
+dt_dnstap_send_identity: VAR_DNSTAP_SEND_IDENTITY STRING_ARG
+	{
+		OUTYY(("P(dt_dnstap_send_identity:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->dnstap_send_identity = (strcmp($2, "yes")==0);
+	}
+	;
+dt_dnstap_send_version: VAR_DNSTAP_SEND_VERSION STRING_ARG
+	{
+		OUTYY(("P(dt_dnstap_send_version:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->dnstap_send_version = (strcmp($2, "yes")==0);
+	}
+	;
+dt_dnstap_identity: VAR_DNSTAP_IDENTITY STRING_ARG
+	{
+		OUTYY(("P(dt_dnstap_identity:%s)\n", $2));
+		free(cfg_parser->cfg->dnstap_identity);
+		cfg_parser->cfg->dnstap_identity = $2;
+	}
+	;
+dt_dnstap_version: VAR_DNSTAP_VERSION STRING_ARG
+	{
+		OUTYY(("P(dt_dnstap_version:%s)\n", $2));
+		free(cfg_parser->cfg->dnstap_version);
+		cfg_parser->cfg->dnstap_version = $2;
+	}
+	;
+dt_dnstap_log_resolver_query_messages: VAR_DNSTAP_LOG_RESOLVER_QUERY_MESSAGES STRING_ARG
+	{
+		OUTYY(("P(dt_dnstap_log_resolver_query_messages:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->dnstap_log_resolver_query_messages =
+			(strcmp($2, "yes")==0);
+	}
+	;
+dt_dnstap_log_resolver_response_messages: VAR_DNSTAP_LOG_RESOLVER_RESPONSE_MESSAGES STRING_ARG
+	{
+		OUTYY(("P(dt_dnstap_log_resolver_response_messages:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->dnstap_log_resolver_response_messages =
+			(strcmp($2, "yes")==0);
+	}
+	;
+dt_dnstap_log_client_query_messages: VAR_DNSTAP_LOG_CLIENT_QUERY_MESSAGES STRING_ARG
+	{
+		OUTYY(("P(dt_dnstap_log_client_query_messages:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->dnstap_log_client_query_messages =
+			(strcmp($2, "yes")==0);
+	}
+	;
+dt_dnstap_log_client_response_messages: VAR_DNSTAP_LOG_CLIENT_RESPONSE_MESSAGES STRING_ARG
+	{
+		OUTYY(("P(dt_dnstap_log_client_response_messages:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->dnstap_log_client_response_messages =
+			(strcmp($2, "yes")==0);
+	}
+	;
+dt_dnstap_log_forwarder_query_messages: VAR_DNSTAP_LOG_FORWARDER_QUERY_MESSAGES STRING_ARG
+	{
+		OUTYY(("P(dt_dnstap_log_forwarder_query_messages:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->dnstap_log_forwarder_query_messages =
+			(strcmp($2, "yes")==0);
+	}
+	;
+dt_dnstap_log_forwarder_response_messages: VAR_DNSTAP_LOG_FORWARDER_RESPONSE_MESSAGES STRING_ARG
+	{
+		OUTYY(("P(dt_dnstap_log_forwarder_response_messages:%s)\n", $2));
+		if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+			yyerror("expected yes or no.");
+		else cfg_parser->cfg->dnstap_log_forwarder_response_messages =
+			(strcmp($2, "yes")==0);
 	}
 	;
 pythonstart: VAR_PYTHON

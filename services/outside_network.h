@@ -45,6 +45,7 @@
 
 #include "util/rbtree.h"
 #include "util/netevent.h"
+#include "dnstap/dnstap_config.h"
 struct pending;
 struct pending_timeout;
 struct ub_randstate;
@@ -55,6 +56,8 @@ struct infra_cache;
 struct port_comm;
 struct port_if;
 struct sldns_buffer;
+struct serviced_query;
+struct dt_env;
 
 /**
  * Send queries to outside servers and wait for answers from servers.
@@ -125,6 +128,10 @@ struct outside_network {
 	struct ub_randstate* rnd;
 	/** ssl context to create ssl wrapped TCP with DNS connections */
 	void* sslctx;
+#ifdef USE_DNSTAP
+	/** dnstap environment */
+	struct dt_env* dtenv;
+#endif
 
 	/**
 	 * Array of tcp pending used for outgoing TCP connections.
@@ -212,6 +219,8 @@ struct pending {
 	void* cb_arg;
 	/** the outside network it is part of */
 	struct outside_network* outnet;
+	/** the corresponding serviced_query */
+	struct serviced_query* sq;
 
 	/*---- filled if udp pending is waiting -----*/
 	/** next in waiting list. */
@@ -387,6 +396,7 @@ struct serviced_query {
  * @param sslctx: context to create outgoing connections with (if enabled).
  * @param delayclose: if not 0, udp sockets are delayed before timeout closure.
  * 	msec to wait on timeouted udp sockets.
+ * @param dtenv: environment to send dnstap events with (if enabled).
  * @return: the new structure (with no pending answers) or NULL on error.
  */
 struct outside_network* outside_network_create(struct comm_base* base,
@@ -395,7 +405,7 @@ struct outside_network* outside_network_create(struct comm_base* base,
 	struct ub_randstate* rnd, int use_caps_for_id, int* availports, 
 	int numavailports, size_t unwanted_threshold,
 	void (*unwanted_action)(void*), void* unwanted_param, int do_udp,
-	void* sslctx, int delayclose);
+	void* sslctx, int delayclose, struct dt_env *dtenv);
 
 /**
  * Delete outside_network structure.
@@ -412,39 +422,32 @@ void outside_network_quit_prepare(struct outside_network* outnet);
 /**
  * Send UDP query, create pending answer.
  * Changes the ID for the query to be random and unique for that destination.
- * @param outnet: provides the event handling
+ * @param sq: serviced query.
  * @param packet: wireformat query to send to destination.
- * @param addr: address to send to.
- * @param addrlen: length of addr.
  * @param timeout: in milliseconds from now.
  * @param callback: function to call on error, timeout or reply.
  * @param callback_arg: user argument for callback function.
  * @return: NULL on error for malloc or socket. Else the pending query object.
  */
-struct pending* pending_udp_query(struct outside_network* outnet, 
-	struct sldns_buffer* packet, struct sockaddr_storage* addr, 
-	socklen_t addrlen, int timeout, comm_point_callback_t* callback, 
+struct pending* pending_udp_query(struct serviced_query* sq,
+	struct sldns_buffer* packet, int timeout, comm_point_callback_t* callback,
 	void* callback_arg);
 
 /**
  * Send TCP query. May wait for TCP buffer. Selects ID to be random, and 
  * checks id.
- * @param outnet: provides the event handling.
+ * @param sq: serviced query.
  * @param packet: wireformat query to send to destination. copied from.
- * @param addr: address to send to.
- * @param addrlen: length of addr.
  * @param timeout: in seconds from now.
  *    Timer starts running now. Timer may expire if all buffers are used,
  *    without any query been sent to the server yet.
  * @param callback: function to call on error, timeout or reply.
  * @param callback_arg: user argument for callback function.
- * @param ssl_upstream: if the tcp connection must use SSL.
  * @return: false on error for malloc or socket. Else the pending TCP object.
  */
-struct waiting_tcp* pending_tcp_query(struct outside_network* outnet, 
-	struct sldns_buffer* packet, struct sockaddr_storage* addr, 
-	socklen_t addrlen, int timeout, comm_point_callback_t* callback, 
-	void* callback_arg, int ssl_upstream);
+struct waiting_tcp* pending_tcp_query(struct serviced_query* sq,
+	struct sldns_buffer* packet, int timeout, comm_point_callback_t* callback,
+	void* callback_arg);
 
 /**
  * Delete pending answer.

@@ -848,7 +848,7 @@ listen_cp_insert(struct comm_point* c, struct listen_dnsport* front)
 struct listen_dnsport* 
 listen_create(struct comm_base* base, struct listen_port* ports,
 	size_t bufsize, int tcp_accept_count, void* sslctx,
-	comm_point_callback_t* cb, void *cb_arg)
+	struct dt_env* dtenv, comm_point_callback_t* cb, void *cb_arg)
 {
 	struct listen_dnsport* front = (struct listen_dnsport*)
 		malloc(sizeof(struct listen_dnsport));
@@ -882,6 +882,7 @@ listen_create(struct comm_base* base, struct listen_port* ports,
 			listen_delete(front);
 			return NULL;
 		}
+		cp->dtenv = dtenv;
 		cp->do_not_close = 1;
 		if(!listen_cp_insert(cp, front)) {
 			log_err("malloc failed");

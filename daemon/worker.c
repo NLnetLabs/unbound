@@ -777,16 +777,24 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 	struct query_info qinfo;
 	struct edns_data edns;
 	enum acl_access acl;
+	int rc = 0;
 
 	if(error != NETEVENT_NOERROR) {
 		/* some bad tcp query DNS formats give these error calls */
 		verbose(VERB_ALGO, "handle request called with err=%d", error);
 		return 0;
 	}
+#ifdef USE_DNSTAP
+	if(worker->dtenv.log_client_query_messages)
+		dt_msg_send_client_query(&worker->dtenv, &repinfo->addr, c->type,
+			c->buffer);
+#endif
 	acl = acl_list_lookup(worker->daemon->acl, &repinfo->addr, 
 		repinfo->addrlen);
 	if((ret=deny_refuse_all(c, acl, worker, repinfo)) != -1)
 	{
+		if(ret == 1)
+			goto send_reply;
 		return ret;
 	}
 	if((ret=worker_check_request(c->buffer, worker)) != 0) {
@@ -810,7 +818,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 		LDNS_RCODE_SET(sldns_buffer_begin(c->buffer), 
 			LDNS_RCODE_FORMERR);
 		server_stats_insrcode(&worker->stats, c->buffer);
-		return 1;
+		goto send_reply;
 	}
 	if(worker->env.cfg->log_queries) {
 		char ip[128];
@@ -829,7 +837,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 			worker->stats.qtype[qinfo.qtype]++;
 			server_stats_insrcode(&worker->stats, c->buffer);
 		}
-		return 1;
+		goto send_reply;
 	}
 	if((ret=parse_edns_from_pkt(c->buffer, &edns)) != 0) {
 		verbose(VERB_ALGO, "worker parse edns: formerror.");
@@ -838,7 +846,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 		LDNS_QR_SET(sldns_buffer_begin(c->buffer));
 		LDNS_RCODE_SET(sldns_buffer_begin(c->buffer), ret);
 		server_stats_insrcode(&worker->stats, c->buffer);
-		return 1;
+		goto send_reply;
 	}
 	if(edns.edns_present && edns.edns_version != 0) {
 		edns.ext_rcode = (uint8_t)(EDNS_RCODE_BADVERS>>4);
@@ -851,7 +859,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 			*(uint16_t*)(void *)sldns_buffer_begin(c->buffer),
 			sldns_buffer_read_u16_at(c->buffer, 2), NULL);
 		attach_edns_record(c->buffer, &edns);
-		return 1;
+		goto send_reply;
 	}
 	if(edns.edns_present && edns.udp_size < NORMAL_UDP_SIZE &&
 		worker->daemon->cfg->harden_short_bufsize) {
@@ -879,7 +887,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 		sldns_buffer_write_at(c->buffer, 4, 
 			(uint8_t*)"\0\0\0\0\0\0\0\0", 8);
 		sldns_buffer_flip(c->buffer);
-		return 1;
+		goto send_reply;
 	}
 	if(worker->stats.extended)
 		server_stats_insquery(&worker->stats, c, qinfo.qtype,
@@ -889,7 +897,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 	if(qinfo.qclass == LDNS_RR_CLASS_CH && answer_chaos(worker, &qinfo,
 		&edns, c->buffer)) {
 		server_stats_insrcode(&worker->stats, c->buffer);
-		return 1;
+		goto send_reply;
 	}
 	if(local_zones_answer(worker->daemon->local_zones, &qinfo, &edns, 
 		c->buffer, worker->scratchpad)) {
@@ -899,13 +907,15 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 			return 0;
 		}
 		server_stats_insrcode(&worker->stats, c->buffer);
-		return 1;
+		goto send_reply;
 	}
 
 	/* We've looked in our local zones. If the answer isn't there, we
 	 * might need to bail out based on ACLs now. */
 	if((ret=deny_refuse_non_local(c, acl, worker, repinfo)) != -1)
 	{
+		if(ret == 1)
+			goto send_reply;
 		return ret;
 	}
 
@@ -923,7 +933,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 		server_stats_insrcode(&worker->stats, c->buffer);
 		log_addr(VERB_ALGO, "refused nonrec (cache snoop) query from",
 			&repinfo->addr, repinfo->addrlen);
-		return 1;
+		goto send_reply;
 	}
 	h = query_info_hash(&qinfo);
 	if((e=slabhash_lookup(worker->env.msg_cache, h, &qinfo, 0))) {
@@ -942,10 +952,11 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 				reply_and_prefetch(worker, &qinfo, 
 					sldns_buffer_read_u16_at(c->buffer, 2),
 					repinfo, leeway);
-				return 0;
+				rc = 0;
+				goto send_reply_rc;
 			}
 			lock_rw_unlock(&e->lock);
-			return 1;
+			goto send_reply;
 		}
 		verbose(VERB_ALGO, "answer from the cache failed");
 		lock_rw_unlock(&e->lock);
@@ -955,7 +966,7 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 			*(uint16_t*)(void *)sldns_buffer_begin(c->buffer), 
 			sldns_buffer_read_u16_at(c->buffer, 2), repinfo, 
 			&edns)) {
-			return 1;
+			goto send_reply;
 		}
 		verbose(VERB_ALGO, "answer norec from cache -- "
 			"need to validate or not primed");
@@ -977,6 +988,16 @@ worker_handle_request(struct comm_point* c, void* arg, int error,
 		&edns, repinfo, *(uint16_t*)(void *)sldns_buffer_begin(c->buffer));
 	worker_mem_report(worker, NULL);
 	return 0;
+
+send_reply:
+	rc = 1;
+send_reply_rc:
+#ifdef USE_DNSTAP
+	if(worker->dtenv.log_client_response_messages)
+		dt_msg_send_client_response(&worker->dtenv, &repinfo->addr,
+			c->type, c->buffer);
+#endif
+	return rc;
 }
 
 void 
@@ -1084,6 +1105,14 @@ worker_create(struct daemon* daemon, int id, int* ports, int n)
 		return NULL;
 	}
 	seed = 0;
+#ifdef USE_DNSTAP
+	if(daemon->cfg->dnstap) {
+		log_assert(daemon->dtenv != NULL);
+		memcpy(&worker->dtenv, daemon->dtenv, sizeof(struct dt_env));
+		if(!dt_init(&worker->dtenv))
+			fatal_exit("dt_init failed");
+	}
+#endif
 	return worker;
 }
 
@@ -1091,6 +1120,11 @@ int
 worker_init(struct worker* worker, struct config_file *cfg, 
 	struct listen_port* ports, int do_sigs)
 {
+#ifdef USE_DNSTAP
+	struct dt_env* dtenv = &worker->dtenv;
+#else
+	void* dtenv = NULL;
+#endif
 	worker->need_to_exit = 0;
 	worker->base = comm_base_create(do_sigs);
 	if(!worker->base) {
@@ -1139,7 +1173,8 @@ worker_init(struct worker* worker, struct config_file *cfg,
 	}
 	worker->front = listen_create(worker->base, ports,
 		cfg->msg_buffer_size, (int)cfg->incoming_num_tcp, 
-		worker->daemon->listen_sslctx, worker_handle_request, worker);
+		worker->daemon->listen_sslctx, dtenv, worker_handle_request,
+		worker);
 	if(!worker->front) {
 		log_err("could not create listening sockets");
 		worker_delete(worker);
@@ -1152,7 +1187,8 @@ worker_init(struct worker* worker, struct config_file *cfg,
 		worker->daemon->env->infra_cache, worker->rndstate,
 		cfg->use_caps_bits_for_id, worker->ports, worker->numports,
 		cfg->unwanted_threshold, &worker_alloc_cleanup, worker,
-		cfg->do_udp, worker->daemon->connect_sslctx, cfg->delay_close);
+		cfg->do_udp, worker->daemon->connect_sslctx, cfg->delay_close,
+		dtenv);
 	if(!worker->back) {
 		log_err("could not create outgoing sockets");
 		worker_delete(worker);

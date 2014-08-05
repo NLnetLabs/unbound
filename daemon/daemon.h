@@ -59,6 +59,11 @@ struct local_zones;
 struct ub_randstate;
 struct daemon_remote;
 
+#include "dnstap/dnstap_config.h"
+#ifdef USE_DNSTAP
+struct dt_env;
+#endif
+
 /**
  * Structure holding worker list.
  * Holds globally visible information.
@@ -109,6 +114,10 @@ struct daemon {
 	struct timeval time_last_stat;
 	/** time when daemon started */
 	struct timeval time_boot;
+#ifdef USE_DNSTAP
+	/** the dnstap environment master value, copied and changed by threads*/
+	struct dt_env* dtenv;
+#endif
 };
 
 /**

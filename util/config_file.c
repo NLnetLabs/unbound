@@ -211,6 +211,10 @@ config_create(void)
 	if(!(cfg->module_conf = strdup("validator iterator"))) goto error_exit;
 	if(!(cfg->val_nsec3_key_iterations = 
 		strdup("1024 150 2048 500 4096 2500"))) goto error_exit;
+#if defined(DNSTAP_SOCKET_PATH)
+	if(!(cfg->dnstap_socket_path = strdup(DNSTAP_SOCKET_PATH)))
+		goto error_exit;
+#endif
 	return cfg;
 error_exit:
 	config_delete(cfg); 
@@ -888,6 +892,9 @@ config_delete(struct config_file* cfg)
 	free(cfg->server_cert_file);
 	free(cfg->control_key_file);
 	free(cfg->control_cert_file);
+	free(cfg->dnstap_socket_path);
+	free(cfg->dnstap_identity);
+	free(cfg->dnstap_version);
 	free(cfg);
 }
 
