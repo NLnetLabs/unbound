@@ -173,7 +173,7 @@ dt_apply_identity(struct dt_env *env, struct config_file *cfg)
 	}
 	if (env->identity == NULL)
 		fatal_exit("dt_apply_identity: strdup() failed");
-	env->len_identity = strlen(env->identity);
+	env->len_identity = (unsigned int)strlen(env->identity);
 	verbose(VERB_OPS, "dnstap identity field set to \"%s\"",
 		env->identity);
 }
@@ -190,7 +190,7 @@ dt_apply_version(struct dt_env *env, struct config_file *cfg)
 		env->version = strdup(cfg->dnstap_version);
 	if (env->version == NULL)
 		fatal_exit("dt_apply_version: strdup() failed");
-	env->len_version = strlen(env->version);
+	env->len_version = (unsigned int)strlen(env->version);
 	verbose(VERB_OPS, "dnstap version field set to \"%s\"",
 		env->version);
 }
@@ -203,32 +203,32 @@ dt_apply_cfg(struct dt_env *env, struct config_file *cfg)
 
 	dt_apply_identity(env, cfg);
 	dt_apply_version(env, cfg);
-	if ((env->log_resolver_query_messages =
+	if ((env->log_resolver_query_messages = (unsigned int)
 	     cfg->dnstap_log_resolver_query_messages))
 	{
 		verbose(VERB_OPS, "dnstap Message/RESOLVER_QUERY enabled");
 	}
-	if ((env->log_resolver_response_messages =
+	if ((env->log_resolver_response_messages = (unsigned int)
 	     cfg->dnstap_log_resolver_response_messages))
 	{
 		verbose(VERB_OPS, "dnstap Message/RESOLVER_RESPONSE enabled");
 	}
-	if ((env->log_client_query_messages =
+	if ((env->log_client_query_messages = (unsigned int)
 	     cfg->dnstap_log_client_query_messages))
 	{
 		verbose(VERB_OPS, "dnstap Message/CLIENT_QUERY enabled");
 	}
-	if ((env->log_client_response_messages =
+	if ((env->log_client_response_messages = (unsigned int)
 	     cfg->dnstap_log_client_response_messages))
 	{
 		verbose(VERB_OPS, "dnstap Message/CLIENT_RESPONSE enabled");
 	}
-	if ((env->log_forwarder_query_messages =
+	if ((env->log_forwarder_query_messages = (unsigned int)
 	     cfg->dnstap_log_forwarder_query_messages))
 	{
 		verbose(VERB_OPS, "dnstap Message/FORWARDER_QUERY enabled");
 	}
-	if ((env->log_forwarder_response_messages =
+	if ((env->log_forwarder_response_messages = (unsigned int)
 	     cfg->dnstap_log_forwarder_response_messages))
 	{
 		verbose(VERB_OPS, "dnstap Message/FORWARDER_RESPONSE enabled");
@@ -261,8 +261,10 @@ dt_fill_timeval(const struct timeval *tv,
 		uint64_t *time_sec, protobuf_c_boolean *has_time_sec,
 		uint32_t *time_nsec, protobuf_c_boolean *has_time_nsec)
 {
+#ifndef S_SPLINT_S
 	*time_sec = tv->tv_sec;
 	*time_nsec = tv->tv_usec * 1000;
+#endif
 	*has_time_sec = 1;
 	*has_time_nsec = 1;
 }

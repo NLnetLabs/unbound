@@ -404,7 +404,7 @@ daemon_create_workers(struct daemon* daemon)
 	if(daemon->cfg->dnstap) {
 #ifdef USE_DNSTAP
 		daemon->dtenv = dt_create(daemon->cfg->dnstap_socket_path,
-			daemon->num);
+			(unsigned int)daemon->num);
 		if (!daemon->dtenv)
 			fatal_exit("dt_create failed");
 		dt_apply_cfg(daemon->dtenv, daemon->cfg);
