@@ -1,6 +1,7 @@
 18 August 2014: Wouter
 	- Fix #603: unbound-checkconf -o <option> should skip verification
 	  checks.
+	- iana portlist update.
 
 5 August 2014: Wouter
 	- dnstap support, with a patch from Farsight Security, written by
