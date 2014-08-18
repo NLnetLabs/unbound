@@ -2,6 +2,7 @@
 	- Fix #603: unbound-checkconf -o <option> should skip verification
 	  checks.
 	- iana portlist update.
+	- Fixup doc/unbound.doxygen to remove obsolete 1.8.7 settings.
 
 5 August 2014: Wouter
 	- dnstap support, with a patch from Farsight Security, written by
