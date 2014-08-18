@@ -459,6 +459,11 @@ checkconf(const char* cfgfile, const char* opt)
 		config_delete(cfg);
 		exit(1);
 	}
+	if(opt) {
+		print_option(cfg, opt);
+		config_delete(cfg);
+		return;
+	}
 	morechecks(cfg, cfgfile);
 	check_mod(cfg, iter_get_funcblock());
 	check_mod(cfg, val_get_funcblock());
@@ -468,8 +473,7 @@ checkconf(const char* cfgfile, const char* opt)
 #endif
 	check_fwd(cfg);
 	check_hints(cfg);
-	if(opt) print_option(cfg, opt);
-	else	printf("unbound-checkconf: no errors in %s\n", cfgfile);
+	printf("unbound-checkconf: no errors in %s\n", cfgfile);
 	config_delete(cfg);
 }
 

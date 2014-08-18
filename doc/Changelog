@@ -1,9 +1,17 @@
+18 August 2014: Wouter
+	- Fix #603: unbound-checkconf -o <option> should skip verification
+	  checks.
+
 5 August 2014: Wouter
 	- dnstap support, with a patch from Farsight Security, written by
 	  Robert Edmonds. The --enable-dnstap needs libfstrm and protobuf-c.
 	  It is BSD licensed (see dnstap/dnstap.c).
 	  Building with --enable-dnstap needs pkg-config with this patch.
 	- Noted dnstap in doc/README and doc/CREDITS.
+	- Changes to the dnstap patch.
+	  - lint fixes.
+	  - dnstap/dnstap_config.h should not have been added to the repo,
+	    because is it generated.
 
 1 August 2014: Wouter
 	- Patch add msg, rrset, infra and key cache sizes to stats command
