@@ -8,11 +8,9 @@
 .\"
 .\"
 .SH "NAME"
-.LP
 .B unbound\-host
 \- unbound DNS lookup utility
 .SH "SYNOPSIS"
-.LP
 .B unbound\-host
 .RB [ \-vdhr46D ]
 .RB [ \-c 
@@ -29,7 +27,6 @@
 .RB [ \-C
 .IR configfile ]
 .SH "DESCRIPTION"
-.LP
 .B Unbound\-host
 uses the unbound validating resolver to query for the hostname and display
 results. With the \fB\-v\fR option it displays validation 
@@ -102,7 +99,6 @@ Use solely the IPv4 network for sending packets.
 .B \-6
 Use solely the IPv6 network for sending packets.
 .SH "EXAMPLES"
-.LP
 Some examples of use. The keys shown below are fakes, thus a security failure
 is encountered.
 .P

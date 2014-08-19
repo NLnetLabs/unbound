@@ -8,14 +8,11 @@
 .\"
 .\"
 .SH "NAME"
-.LP
 .B unbound.conf
 \- Unbound configuration file.
 .SH "SYNOPSIS"
-.LP
 .B unbound.conf
 .SH "DESCRIPTION"
-.LP
 .B unbound.conf
 is used to configure
 \fIunbound\fR(8).
@@ -65,7 +62,6 @@ server:
 	access\-control: 2001:DB8::/64 allow
 .fi
 .SH "FILE FORMAT"
-.LP
 There must be whitespace between keywords. Attribute keywords end with a colon ':'. An attribute
 is followed by its containing attributes, or a value.
 .P

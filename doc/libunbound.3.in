@@ -8,7 +8,6 @@
 .\"
 .\"
 .SH "NAME"
-.LP
 .B libunbound,
 .B unbound.h,
 .B ub_ctx,
@@ -44,7 +43,6 @@
 .B ub_ctx_data_remove
 \- Unbound DNS validating resolver @version@ functions.
 .SH "SYNOPSIS"
-.LP
 .B #include <unbound.h>
 .LP
 \fIstruct ub_ctx *\fR
@@ -137,7 +135,6 @@
 \fIint\fR
 \fBub_ctx_data_remove\fR(\fIstruct ub_ctx*\fR ctx, \fIchar*\fR data);
 .SH "DESCRIPTION"
-.LP
 .B Unbound 
 is an implementation of a DNS resolver, that does caching and 
 DNSSEC validation. This is the library API, for using the \-lunbound library.
@@ -342,7 +339,6 @@ Add resource record data to local authority info, like local\-data
 .B ub_ctx_data_remove
 Delete local authority data from the name given.
 .SH "RESULT DATA STRUCTURE"
-.LP
 The result of the DNS resolution and validation is returned as 
 \fIstruct ub_result\fR. The result structure contains the following entries.
 .P

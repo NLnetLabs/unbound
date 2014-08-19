@@ -8,7 +8,6 @@
 .\"
 .\"
 .SH "NAME"
-.LP
 unbound\-checkconf
 \- Check unbound configuration file for errors.
 .SH "SYNOPSIS"

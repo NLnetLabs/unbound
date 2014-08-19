@@ -8,7 +8,6 @@
 .\"
 .\"
 .SH "NAME"
-.LP
 .B unbound\-control,
 .B unbound\-control\-setup
 \- Unbound remote server control utility.
