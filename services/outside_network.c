@@ -606,6 +606,8 @@ outside_network_create(struct comm_base *base, size_t bufsize,
 	outnet->sslctx = sslctx;
 #ifdef USE_DNSTAP
 	outnet->dtenv = dtenv;
+#else
+	(void)dtenv;
 #endif
 	outnet->svcd_overhead = 0;
 	outnet->want_to_quit = 0;
