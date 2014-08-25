@@ -1,6 +1,7 @@
 25 August 2014: Wouter
 	- Fixup checklock code for log lock and its mutual initialization
 	  dependency.
+	- iana portlist update.
 
 19 August 2014: Wouter
 	- Update unbound manpage with more explanation (from Florian Obser).
