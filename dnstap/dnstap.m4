@@ -36,6 +36,7 @@ AC_DEFUN([dt_DNSTAP],
 	  else
 	    if test -f /usr/local/include/google/protobuf-c/protobuf-c.h; then
 	      CFLAGS="$CFLAGS -I/usr/local/include/google"
+	      LDFLAGS="$LDFLAGS -L/usr/local/lib"
 	    fi
 	  fi
     ])
