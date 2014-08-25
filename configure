@@ -1537,7 +1537,7 @@ Optional Packages:
   --with-libexpat=path    specify explicit path for libexpat.
   --with-dnstap-socket-path=pathname
                           set default dnstap socket path
-  --with-protobuf-c=path  Path where protobuf is installed, for dnstap
+  --with-protobuf-c=path  Path where protobuf-c is installed, for dnstap
   --with-libfstrm=path    Path where libfstrm in installed, for dnstap
   --with-libunbound-only  do not build daemon and tool programs
 

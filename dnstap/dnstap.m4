@@ -21,7 +21,7 @@ AC_DEFUN([dt_DNSTAP],
       AC_MSG_ERROR([The protoc-c program was not found. Please install protobuf-c!])
     fi
     AC_ARG_WITH([protobuf-c], AC_HELP_STRING([--with-protobuf-c=path],
-    	[Path where protobuf is installed, for dnstap]), [
+    	[Path where protobuf-c is installed, for dnstap]), [
 	  # workaround for protobuf includes at old dir before protobuf-1.0.0
 	  if test -f $withval/include/google/protobuf-c/protobuf-c.h; then
 	    CFLAGS="$CFLAGS -I$withval/include/google"
