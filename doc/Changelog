@@ -2,6 +2,8 @@
 	- Fixup checklock code for log lock and its mutual initialization
 	  dependency.
 	- iana portlist update.
+	- Removed necessity for pkg-config from the dnstap.m4, new are
+	  the --with-libfstrm and --with-protobuf-c configure options.
 
 19 August 2014: Wouter
 	- Update unbound manpage with more explanation (from Florian Obser).

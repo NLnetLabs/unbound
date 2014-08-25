@@ -20,10 +20,32 @@ AC_DEFUN([dt_DNSTAP],
     if test -z "$PROTOC_C"; then
       AC_MSG_ERROR([The protoc-c program was not found. Please install protobuf-c!])
     fi
-    PKG_CHECK_MODULES([libfstrm], [libfstrm])
-    PKG_CHECK_MODULES([libprotobuf_c], [libprotobuf-c])
-    DNSTAP_CFLAGS="$libfstrm_CFLAGS $libprotobuf_c_CFLAGS"
-    DNSTAP_LIBS="$libfstrm_LIBS $libprotobuf_c_LIBS"
+    AC_ARG_WITH([protobuf-c], AC_HELP_STRING([--with-protobuf-c=path],
+    	[Path where protobuf is installed, for dnstap]), [
+	  # workaround for protobuf includes at old dir before protobuf-1.0.0
+	  if test -f $withval/include/google/protobuf-c/protobuf-c.h; then
+	    CFLAGS="$CFLAGS -I$withval/include/google"
+	  else
+	    CFLAGS="$CFLAGS -I$withval/include"
+	  fi
+	  LDFLAGS="$LDFLAGS -L$withval/lib"
+	], [
+	  # workaround for protobuf includes at old dir before protobuf-1.0.0
+	  if test -f /usr/include/google/protobuf-c/protobuf-c.h; then
+	    CFLAGS="$CFLAGS -I/usr/include/google"
+	  else
+	    if test -f /usr/local/include/google/protobuf-c/protobuf-c.h; then
+	      CFLAGS="$CFLAGS -I/usr/local/include/google"
+	    fi
+	  fi
+    ])
+    AC_ARG_WITH([libfstrm], AC_HELP_STRING([--with-libfstrm=path],
+    	[Path where libfstrm in installed, for dnstap]), [
+	CFLAGS="$CFLAGS -I$withval/include"
+	LDFLAGS="$LDFLAGS -L$withval/lib"
+    ])
+    AC_SEARCH_LIBS([fstrm_io_init], [fstrm])
+    AC_SEARCH_LIBS([protobuf_c_message_pack], [protobuf-c])
     $2
   else
     $3

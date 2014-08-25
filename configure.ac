@@ -5,7 +5,6 @@ sinclude(acx_nlnetlabs.m4)
 sinclude(ax_pthread.m4)
 sinclude(acx_python.m4)
 sinclude(ac_pkg_swig.m4)
-sinclude(pkg.m4)
 sinclude(dnstap/dnstap.m4)
 
 # must be numbers. ac_defun because of later processing
