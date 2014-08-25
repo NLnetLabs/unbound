@@ -1098,8 +1098,6 @@ fi
 # check for dnstap if requested
 dt_DNSTAP([$UNBOUND_RUN_DIR/dnstap.sock],
     [
-        LIBS="$LIBS $DNSTAP_LIBS"
-        CFLAGS="$CFLAGS $DNSTAP_CFLAGS"
         AC_DEFINE([USE_DNSTAP], [1], [Define to 1 to enable dnstap support])
         AC_SUBST([ENABLE_DNSTAP], [1])
 
