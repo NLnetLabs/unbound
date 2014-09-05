@@ -191,8 +191,8 @@ enum sldns_enum_rr_type
 	LDNS_RR_TYPE_RKEY = 57,
         /** draft-ietf-dnsop-trust-history */
         LDNS_RR_TYPE_TALINK = 58,
-	/** draft-barwood-dnsop-ds-publis */
-	LDNS_RR_TYPE_CDS = 59,
+	LDNS_RR_TYPE_CDS = 59, /** RFC 7344 */
+	LDNS_RR_TYPE_CDNSKEY = 60, /** RFC 7344 */
 
 	LDNS_RR_TYPE_SPF = 99, /* RFC 4408 */
 

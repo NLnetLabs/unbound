@@ -1,3 +1,6 @@
+5 September 2014: Wouter
+	- type CDS and CDNSKEY types in sldns.
+
 25 August 2014: Wouter
 	- Fixup checklock code for log lock and its mutual initialization
 	  dependency.
