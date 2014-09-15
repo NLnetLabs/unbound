@@ -1,3 +1,6 @@
+15 September 2014: Wouter
+	- Fix unit test for CDS typecode.
+
 5 September 2014: Wouter
 	- type CDS and CDNSKEY types in sldns.
 
