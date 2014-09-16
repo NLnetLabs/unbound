@@ -1,6 +1,8 @@
 16 September 2014: Wouter
 	- Fix tcp timer waiting list removal code.
 	- iana portlist update.
+	- Updated the TCP_BACLOG from 5 to 256, so that the tcp accept queue
+	  is longer and more tcp connections can be handled.
 
 15 September 2014: Wouter
 	- Fix unit test for CDS typecode.

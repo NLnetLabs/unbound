@@ -57,7 +57,7 @@
 #include <fcntl.h>
 
 /** number of queued TCP connections for listen() */
-#define TCP_BACKLOG 5 
+#define TCP_BACKLOG 256 
 
 /**
  * Debug print of the getaddrinfo returned address.
