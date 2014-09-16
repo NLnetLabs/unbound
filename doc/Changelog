@@ -1,5 +1,6 @@
 16 September 2014: Wouter
 	- Fix tcp timer waiting list removal code.
+	- iana portlist update.
 
 15 September 2014: Wouter
 	- Fix unit test for CDS typecode.
