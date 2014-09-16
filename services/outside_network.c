@@ -81,6 +81,10 @@ static void serviced_tcp_initiate(struct serviced_query* sq, sldns_buffer* buff)
 static int randomize_and_send_udp(struct pending* pend, sldns_buffer* packet,
 	int timeout);
 
+/** remove waiting tcp from the outnet waiting list */
+static void waiting_list_remove(struct outside_network* outnet,
+	struct waiting_tcp* w);
+
 int 
 pending_cmp(const void* key1, const void* key2)
 {
@@ -1100,17 +1104,7 @@ outnet_tcptimer(void* arg)
 	void* cb_arg;
 	if(w->pkt) {
 		/* it is on the waiting list */
-		struct waiting_tcp* p=outnet->tcp_wait_first, *prev=NULL;
-		while(p) {
-			if(p == w) {
-				if(prev) prev->next_waiting = w->next_waiting;
-				else	outnet->tcp_wait_first=w->next_waiting;
-				outnet->tcp_wait_last = prev;
-				break;
-			}
-			prev = p;
-			p=p->next_waiting;
-		}
+		waiting_list_remove(outnet, w);
 	} else {
 		/* it was in use */
 		struct pending_tcp* pend=(struct pending_tcp*)w->next_waiting;
