@@ -1,3 +1,6 @@
+18 September 2014: Wouter
+	- patches to also build with Python 3.x (from Pavel Simerda).
+
 16 September 2014: Wouter
 	- Fix tcp timer waiting list removal code.
 	- iana portlist update.

@@ -764,13 +764,13 @@ Result: ['74.125.43.147', '74.125.43.99', '74.125.43.103', '74.125.43.104']
      
      list = PyList_New(cnt);
      for (i=0;i<cnt;i++) 
-         PyList_SetItem(list, i, PyString_FromStringAndSize(result->data[i],result->len[i]));
+         PyList_SetItem(list, i, PyBytes_FromStringAndSize(result->data[i],result->len[i]));
      
      return list;
   }
 
   PyObject* _packet() {
-      return PyString_FromStringAndSize($self->answer_packet, $self->answer_len);
+      return PyBytes_FromStringAndSize($self->answer_packet, $self->answer_len);
   }
   
  %pythoncode %{
