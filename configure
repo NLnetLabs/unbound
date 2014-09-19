@@ -675,8 +675,6 @@ WITH_PYTHONMODULE
 swig
 SWIG_LIB
 SWIG
-PYTHON_EXTRA_LDFLAGS
-PYTHON_EXTRA_LIBS
 PYTHON_SITE_PKG
 PYTHON_LDFLAGS
 PYTHON_CPPFLAGS
@@ -15929,63 +15927,6 @@ fi
 	fi
 
         #
-        # Check for a version of Python >= 2.1.0
-        #
-        { $as_echo "$as_me:${as_lineno-$LINENO}: checking for a version of Python >= '2.1.0'" >&5
-$as_echo_n "checking for a version of Python >= '2.1.0'... " >&6; }
-        ac_supports_python_ver=`$PYTHON -c "import sys; \
-                ver = sys.version.split()[0]; \
-                print(ver >= '2.1.0')"`
-        if test "$ac_supports_python_ver" != "True"; then
-                if test -z "$PYTHON_NOVERSIONCHECK"; then
-                        { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-                        { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
-$as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
-as_fn_error $? "
-This version of the AC_PYTHON_DEVEL macro
-doesn't work properly with versions of Python before
-2.1.0. You may need to re-run configure, setting the
-variables PYTHON_CPPFLAGS, PYTHON_LDFLAGS, PYTHON_SITE_PKG,
-PYTHON_EXTRA_LIBS and PYTHON_EXTRA_LDFLAGS by hand.
-Moreover, to disable this check, set PYTHON_NOVERSIONCHECK
-to something else than an empty string.
-
-See \`config.log' for more details" "$LINENO" 5; }
-                else
-                        { $as_echo "$as_me:${as_lineno-$LINENO}: result: skip at user request" >&5
-$as_echo "skip at user request" >&6; }
-                fi
-        else
-                { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }
-        fi
-
-        #
-        # if the macro parameter ``version'' is set, honour it
-        #
-        if test -n ""; then
-                { $as_echo "$as_me:${as_lineno-$LINENO}: checking for a version of Python " >&5
-$as_echo_n "checking for a version of Python ... " >&6; }
-                ac_supports_python_ver=`$PYTHON -c "import sys; \
-                        ver = sys.version.split()[0]; \
-                        print(ver )"`
-                if test "$ac_supports_python_ver" = "True"; then
-                   { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }
-                else
-                        { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-                        as_fn_error $? "this package requires Python .
-If you have it installed, but it isn't the default Python
-interpreter in your system path, please pass the PYTHON_VERSION
-variable to configure. See \`\`configure --help'' for reference.
-" "$LINENO" 5
-                        PYTHON_VERSION=""
-                fi
-        fi
-
-        #
         # Check if you have distutils, else fail
         #
         { $as_echo "$as_me:${as_lineno-$LINENO}: checking for the distutils Python package" >&5
@@ -16026,23 +15967,8 @@ $as_echo "$PYTHON_CPPFLAGS" >&6; }
         { $as_echo "$as_me:${as_lineno-$LINENO}: checking for Python library path" >&5
 $as_echo_n "checking for Python library path... " >&6; }
         if test -z "$PYTHON_LDFLAGS"; then
-                # (makes two attempts to ensure we've got a version number
-                # from the interpreter)
-                py_version=`$PYTHON -c "from distutils.sysconfig import *; \
-                        print(''.join(get_config_vars('VERSION')))"`
-                if test "$py_version" = "None"; then
-                        if test -n "$PYTHON_VERSION"; then
-                                py_version=$PYTHON_VERSION
-                        else
-                                py_version=`$PYTHON -c "import sys; \
-                                        print(sys.version[:3])"`
-                        fi
-                fi
-
                 PYTHON_LDFLAGS=`$PYTHON -c "from distutils.sysconfig import *; \
-                        print('-L' + get_python_lib(0,1) \
-                        + ' -L' + os.path.dirname(get_python_lib(0,1)) \
-                        + ' -lpython');"`$py_version
+                        print(get_config_var('BLDLIBRARY'));"`
         fi
         { $as_echo "$as_me:${as_lineno-$LINENO}: result: $PYTHON_LDFLAGS" >&5
 $as_echo "$PYTHON_LDFLAGS" >&6; }
@@ -16059,34 +15985,6 @@ $as_echo_n "checking for Python site-packages path... " >&6; }
         fi
         { $as_echo "$as_me:${as_lineno-$LINENO}: result: $PYTHON_SITE_PKG" >&5
 $as_echo "$PYTHON_SITE_PKG" >&6; }
-
-
-        #
-        # libraries which must be linked in when embedding
-        #
-        { $as_echo "$as_me:${as_lineno-$LINENO}: checking python extra libraries" >&5
-$as_echo_n "checking python extra libraries... " >&6; }
-        if test -z "$PYTHON_EXTRA_LIBS"; then
-           PYTHON_EXTRA_LIBS=`$PYTHON -c "import distutils.sysconfig; \
-                conf = distutils.sysconfig.get_config_var; \
-                print(conf('LOCALMODLIBS'), conf('LIBS'))"`
-        fi
-        { $as_echo "$as_me:${as_lineno-$LINENO}: result: $PYTHON_EXTRA_LIBS" >&5
-$as_echo "$PYTHON_EXTRA_LIBS" >&6; }
-
-
-        #
-        # linking flags needed when embedding
-        #
-        { $as_echo "$as_me:${as_lineno-$LINENO}: checking python extra linking flags" >&5
-$as_echo_n "checking python extra linking flags... " >&6; }
-        if test -z "$PYTHON_EXTRA_LDFLAGS"; then
-                PYTHON_EXTRA_LDFLAGS=`$PYTHON -c "import distutils.sysconfig; \
-                        conf = distutils.sysconfig.get_config_var; \
-                        print(conf('LINKFORSHARED'))"`
-        fi
-        { $as_echo "$as_me:${as_lineno-$LINENO}: result: $PYTHON_EXTRA_LDFLAGS" >&5
-$as_echo "$PYTHON_EXTRA_LDFLAGS" >&6; }
 
 
         #

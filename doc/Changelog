@@ -1,3 +1,6 @@
+19 September 2014: Wouter
+	- improve python configuration detection to build on Fedora 22.
+
 18 September 2014: Wouter
 	- patches to also build with Python 3.x (from Pavel Simerda).
 
