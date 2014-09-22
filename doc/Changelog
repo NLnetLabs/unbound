@@ -1,5 +1,6 @@
 22 September 2014: Wouter
 	- Fix swig and python examples for Python 3.x.
+	- Fix for mingw compile with openssl-1.0.1i.
 
 19 September 2014: Wouter
 	- improve python configuration detection to build on Fedora 22.
