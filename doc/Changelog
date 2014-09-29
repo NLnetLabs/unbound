@@ -1,3 +1,8 @@
+29 September 2014: Wouter
+	- Fix #612: create service with service.conf in present directory and
+	  auto load it.
+	- Fix for mingw compile openssl ranlib.
+
 25 September 2014: Wouter
 	- updated configure and aclocal with newer autoconf 1.13.
 
