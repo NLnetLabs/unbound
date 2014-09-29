@@ -206,7 +206,7 @@ if [ "$DOWIN" = "yes" ]; then
 		# before 1.0.1i need --cross-compile-prefix=i686-w64-mingw32-
 		sslflags="no-asm -DOPENSSL_NO_CAPIENG mingw"
 		info "winssl: Configure $sslflags"
-		CC=i686-w64-mingw32-gcc ./Configure --prefix="$sslinstall" $sslflags || error_cleanup "OpenSSL Configure failed"
+		CC=i686-w64-mingw32-gcc RANLIB=i686-w64-mingw32-ranlib ./Configure --prefix="$sslinstall" $sslflags || error_cleanup "OpenSSL Configure failed"
 		info "winssl: make"
 		make || error_cleanup "OpenSSL crosscompile failed"
 		# only install sw not docs, which take a long time.
