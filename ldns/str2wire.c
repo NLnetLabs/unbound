@@ -337,7 +337,7 @@ rrinternal_get_delims(sldns_rdf_type rdftype, uint16_t r_cnt, uint16_t r_max)
 	case LDNS_RDF_TYPE_WKS        : /* it is the last rd field. */
 	case LDNS_RDF_TYPE_IPSECKEY   :
 	case LDNS_RDF_TYPE_NSEC       :	if (r_cnt == r_max - 1) {
-						return "\n\t";
+						return "\n";
 					}
 					break;
 	default                       :	break;

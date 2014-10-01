@@ -1,3 +1,6 @@
+1 October 2014: Wouter
+	- fix #613: Allow tab ws in var length last rdfs (in ldns str2wire).
+
 29 September 2014: Wouter
 	- Fix #612: create service with service.conf in present directory and
 	  auto load it.
