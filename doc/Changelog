@@ -1,5 +1,7 @@
 6 October 2014: Wouter
 	- Fix #614: man page variable substitution bug.
+	- Whitespaces after $ORIGIN are not part of the origin dname (ldns).
+	- $TTL's value starts at position 5 (ldns).
 
 1 October 2014: Wouter
 	- fix #613: Allow tab ws in var length last rdfs (in ldns str2wire).
