@@ -1,5 +1,6 @@
 6 October 2014: Wouter
 	- Fix #614: man page variable substitution bug.
+6 October 2014: Willem
 	- Whitespaces after $ORIGIN are not part of the origin dname (ldns).
 	- $TTL's value starts at position 5 (ldns).
 
