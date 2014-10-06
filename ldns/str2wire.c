@@ -827,6 +827,20 @@ const char* sldns_get_errorstr_parse(int e)
 	return lt?lt->name:"unknown error";
 }
 
+/* Strip whitespace from the start and the end of <line>.  */
+static char *
+sldns_strip_ws(char *line)
+{
+        char *s = line, *e;
+
+        for (s = line; *s && isspace(*s); s++)
+                ;
+        for (e = strchr(s, 0); e > s+2 && isspace(e[-1]) && e[-2] != '\\'; e--)
+                ;
+        *e = 0;
+        return s;
+}
+
 int sldns_fp2wire_rr_buf(FILE* in, uint8_t* rr, size_t* len, size_t* dname_len,
 	struct sldns_file_parse_state* parse_state)
 {
@@ -853,27 +867,22 @@ int sldns_fp2wire_rr_buf(FILE* in, uint8_t* rr, size_t* len, size_t* dname_len,
 	}
 
 	if(strncmp(line, "$ORIGIN", 7) == 0 && isspace(line[7])) {
-		size_t off = 8;
 		int s;
 		*len = 0;
 		*dname_len = 0;
 		if(!parse_state) return LDNS_WIREPARSE_ERR_OK;
-		while(isspace(line[off]))
-			off++;
 		parse_state->origin_len = sizeof(parse_state->origin);
-		s = sldns_str2wire_dname_buf(line+off, parse_state->origin,
-			&parse_state->origin_len);
+		s = sldns_str2wire_dname_buf(sldns_strip_ws(line+8),
+			parse_state->origin, &parse_state->origin_len);
 		if(s) parse_state->origin_len = 0;
 		return s;
 	} else if(strncmp(line, "$TTL", 4) == 0 && isspace(line[4])) {
 		const char* end = NULL;
-		size_t off = 8;
 		*len = 0;
 		*dname_len = 0;
 		if(!parse_state) return LDNS_WIREPARSE_ERR_OK;
-		while(isspace(line[off]))
-			off++;
-		parse_state->default_ttl = sldns_str2period(line+off, &end);
+		parse_state->default_ttl = sldns_str2period(
+			sldns_strip_ws(line+5), &end);
 	} else if (strncmp(line, "$INCLUDE", 8) == 0) {
 		*len = 0;
 		*dname_len = 0;
