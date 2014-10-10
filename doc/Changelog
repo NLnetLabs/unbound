@@ -1,5 +1,6 @@
 10 October 2014: Wouter
 	- Fix unbound-checkconf check for module config with dns64 module.
+	- Fix unbound capsforid fallback, it ignores TTLs in comparison.
 
 6 October 2014: Wouter
 	- Fix #614: man page variable substitution bug.
