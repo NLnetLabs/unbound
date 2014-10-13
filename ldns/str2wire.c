@@ -1600,6 +1600,17 @@ east:
 	return LDNS_WIREPARSE_ERR_OK;
 }
 
+static void
+ldns_tolower_str(char* s)
+{
+	if(s) {
+		while(*s) {
+			*s = (char)tolower((unsigned char)*s);
+			s++;
+		}
+	}
+}
+
 int sldns_str2wire_wks_buf(const char* str, uint8_t* rd, size_t* len)
 {
 	int rd_len = 1;
@@ -1614,6 +1625,7 @@ int sldns_str2wire_wks_buf(const char* str, uint8_t* rd, size_t* len)
 		return LDNS_WIREPARSE_ERR_BUFFER_TOO_SMALL;
 
 	while(sldns_bget_token(&strbuf, token, "\t\n ", sizeof(token)) > 0) {
+		ldns_tolower_str(token);
 		if(!have_proto) {
 			struct protoent *p = getprotobyname(token);
 			have_proto = 1;
