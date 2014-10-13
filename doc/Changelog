@@ -1,5 +1,6 @@
 13 October 2014: Wouter
 	- Fix #617: in ldns in unbound, lowercase WKS services.
+	- Fix ctype invocation casts.
 
 10 October 2014: Wouter
 	- Fix unbound-checkconf check for module config with dns64 module.
