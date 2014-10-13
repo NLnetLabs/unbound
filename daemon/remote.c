@@ -558,7 +558,7 @@ static char*
 skipwhite(char* str)
 {
 	/* EOS \0 is not a space */
-	while( isspace(*str) ) 
+	while( isspace((unsigned char)*str) ) 
 		str++;
 	return str;
 }

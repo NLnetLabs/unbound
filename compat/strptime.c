@@ -111,11 +111,11 @@ unbound_strptime(const char *s, const char *format, struct tm *tm)
 
 	while ((c = *format) != '\0') {
 		/* whitespace, literal or format */
-		if (isspace(c)) { /* whitespace */
+		if (isspace((unsigned char)c)) { /* whitespace */
 			/** whitespace matches zero or more whitespace characters in the
 			  * input string.
 			 **/
-			while (isspace(*s))
+			while (isspace((unsigned char)*s))
 				s++;
 		}
 		else if (c == '%') { /* format */
@@ -221,7 +221,7 @@ unbound_strptime(const char *s, const char *format, struct tm *tm)
 					break;
 				case 'n': /* arbitrary whitespace */
 				case 't':
-					while (isspace(*s))
+					while (isspace((unsigned char)*s))
 						s++;
 					break;
 				case 'p': /* am pm */

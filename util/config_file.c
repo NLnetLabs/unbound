@@ -1105,7 +1105,7 @@ cfg_count_numbers(const char* s)
 	/* sp ::= (space|tab)*      */
 	int num = 0;
 	while(*s) {
-		while(*s && isspace((int)*s))
+		while(*s && isspace((unsigned char)*s))
 			s++;
 		if(!*s) /* end of string */
 			break;

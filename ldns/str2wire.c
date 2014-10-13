@@ -384,7 +384,7 @@ rrinternal_spool_hex(char* token, uint8_t* rr, size_t rr_len,
 {
 	char* p = token;
 	while(*p) {
-		if(isspace(*p)) {
+		if(isspace((unsigned char)*p)) {
 			p++;
 			continue;
 		}
@@ -833,9 +833,9 @@ sldns_strip_ws(char *line)
 {
         char *s = line, *e;
 
-        for (s = line; *s && isspace(*s); s++)
+        for (s = line; *s && isspace((unsigned char)*s); s++)
                 ;
-        for (e = strchr(s, 0); e > s+2 && isspace(e[-1]) && e[-2] != '\\'; e--)
+        for (e = strchr(s, 0); e > s+2 && isspace((unsigned char)e[-1]) && e[-2] != '\\'; e--)
                 ;
         *e = 0;
         return s;
@@ -866,7 +866,7 @@ int sldns_fp2wire_rr_buf(FILE* in, uint8_t* rr, size_t* len, size_t* dname_len,
 		return LDNS_WIREPARSE_ERR_OK;
 	}
 
-	if(strncmp(line, "$ORIGIN", 7) == 0 && isspace(line[7])) {
+	if(strncmp(line, "$ORIGIN", 7) == 0 && isspace((unsigned char)line[7])) {
 		int s;
 		*len = 0;
 		*dname_len = 0;
@@ -876,7 +876,7 @@ int sldns_fp2wire_rr_buf(FILE* in, uint8_t* rr, size_t* len, size_t* dname_len,
 			parse_state->origin, &parse_state->origin_len);
 		if(s) parse_state->origin_len = 0;
 		return s;
-	} else if(strncmp(line, "$TTL", 4) == 0 && isspace(line[4])) {
+	} else if(strncmp(line, "$TTL", 4) == 0 && isspace((unsigned char)line[4])) {
 		const char* end = NULL;
 		*len = 0;
 		*dname_len = 0;
@@ -1197,7 +1197,7 @@ int sldns_str2wire_hex_buf(const char* str, uint8_t* rd, size_t* len)
 	const char* s = str;
 	size_t dlen = 0; /* number of hexdigits parsed */
 	while(*s) {
-		if(isspace(*s)) {
+		if(isspace((unsigned char)*s)) {
 			s++;
 			continue;
 		}
@@ -1703,7 +1703,7 @@ int sldns_str2wire_nsap_buf(const char* str, uint8_t* rd, size_t* len)
 	if(slen > LDNS_MAX_RDFLEN*2)
 		return LDNS_WIREPARSE_ERR_LABEL_OVERFLOW;
 	while(*s) {
-		if(isspace(*s) || *s == '.') {
+		if(isspace((unsigned char)*s) || *s == '.') {
 			s++;
 			continue;
 		}
@@ -1734,7 +1734,7 @@ int sldns_str2wire_atma_buf(const char* str, uint8_t* rd, size_t* len)
 	if(slen > LDNS_MAX_RDFLEN*2)
 		return LDNS_WIREPARSE_ERR_LABEL_OVERFLOW;
 	while(*s) {
-		if(isspace(*s) || *s == '.') {
+		if(isspace((unsigned char)*s) || *s == '.') {
 			s++;
 			continue;
 		}
