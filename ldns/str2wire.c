@@ -1929,7 +1929,7 @@ int sldns_str2wire_tag_buf(const char* str, uint8_t* rd, size_t* len)
 	if(*len < slen+1)
 		return LDNS_WIREPARSE_ERR_BUFFER_TOO_SMALL;
 	for (ptr = str; *ptr; ptr++) {
-		if(!isalnum(*ptr))
+		if(!isalnum((unsigned char)*ptr))
 			return RET_ERR(LDNS_WIREPARSE_ERR_SYNTAX_TAG, ptr-str);
 	}
 	rd[0] = slen;

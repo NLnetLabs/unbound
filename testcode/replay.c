@@ -651,7 +651,7 @@ do_macro_variable(rbtree_t* store, char* buf, size_t remain)
 	char sv;
 	if(at[0]==0)
 		return NULL; /* no variable name after $ */
-	while(*at && (isalnum((int)*at) || *at=='_')) {
+	while(*at && (isalnum((unsigned char)*at) || *at=='_')) {
 		at++;
 	}
 	/* terminator, we are working in macro_expand() buffer */
@@ -724,7 +724,7 @@ do_macro_arith(char* orig, size_t remain, char** arithstart)
 		/* remember start pos of expr, skip the first number */
 		at = orig;
 		*arithstart = at;
-		while(*at && (isdigit((int)*at) || *at == '.'))
+		while(*at && (isdigit((unsigned char)*at) || *at == '.'))
 			at++;
 		return at;
 	}
@@ -737,7 +737,7 @@ do_macro_arith(char* orig, size_t remain, char** arithstart)
 		*arithstart = NULL;
 		return do_macro_arith(orig, remain, arithstart);
 	}
-	if(isdigit((int)operator)) {
+	if(isdigit((unsigned char)operator)) {
 		*arithstart = orig;
 		return at+skip; /* do nothing, but setup for later number */
 	}
@@ -820,13 +820,13 @@ macro_expand(rbtree_t* store, struct replay_runtime* runtime, char** text)
 			at = do_macro_recursion(store, runtime, at, remain);
 		} else if(*at == '$') {
 			at = do_macro_variable(store, at, remain);
-		} else if(isdigit((int)*at)) {
+		} else if(isdigit((unsigned char)*at)) {
 			at = do_macro_arith(at, remain, &arithstart);
 		} else {
 			/* copy until whitespace or operator */
-			if(*at && (isalnum((int)*at) || *at=='_')) {
+			if(*at && (isalnum((unsigned char)*at) || *at=='_')) {
 				at++;
-				while(*at && (isalnum((int)*at) || *at=='_'))
+				while(*at && (isalnum((unsigned char)*at) || *at=='_'))
 					at++;
 			} else at++;
 		}

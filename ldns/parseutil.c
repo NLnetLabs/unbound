@@ -288,9 +288,9 @@ sldns_parse_escape(uint8_t *ch_p, const char** str_p)
 {
 	uint16_t val;
 
-	if ((*str_p)[0] && isdigit((*str_p)[0])  &&
-	    (*str_p)[1] && isdigit((*str_p)[1])  &&
-	    (*str_p)[2] && isdigit((*str_p)[2]))  {
+	if ((*str_p)[0] && isdigit((unsigned char)(*str_p)[0])  &&
+	    (*str_p)[1] && isdigit((unsigned char)(*str_p)[1])  &&
+	    (*str_p)[2] && isdigit((unsigned char)(*str_p)[2]))  {
 
 		val = (uint16_t)(((*str_p)[0] - '0') * 100 +
 				 ((*str_p)[1] - '0') *  10 +
@@ -303,7 +303,7 @@ sldns_parse_escape(uint8_t *ch_p, const char** str_p)
 		*str_p += 3;
 		return 1;
 
-	} else if ((*str_p)[0] && !isdigit((*str_p)[0])) {
+	} else if ((*str_p)[0] && !isdigit((unsigned char)(*str_p)[0])) {
 
 		*ch_p = (uint8_t)*(*str_p)++;
 		return 1;

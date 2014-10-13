@@ -959,7 +959,7 @@ ub_ctx_resolvconf(struct ub_ctx* ctx, const char* fname)
 				parse++;
 			addr = parse;
 			/* skip [0-9a-fA-F.:]*, i.e. IP4 and IP6 address */
-			while(isxdigit(*parse) || *parse=='.' || *parse==':')
+			while(isxdigit((unsigned char)*parse) || *parse=='.' || *parse==':')
 				parse++;
 			/* terminate after the address, remove newline */
 			*parse = 0;
@@ -1031,7 +1031,7 @@ ub_ctx_hosts(struct ub_ctx* ctx, const char* fname)
 		/* format: <addr> spaces <name> spaces <name> ... */
 		addr = parse;
 		/* skip addr */
-		while(isxdigit(*parse) || *parse == '.' || *parse == ':')
+		while(isxdigit((unsigned char)*parse) || *parse == '.' || *parse == ':')
 			parse++;
 		if(*parse == '\n' || *parse == 0)
 			continue;

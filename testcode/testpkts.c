@@ -344,7 +344,7 @@ hex_buffer2wire(sldns_buffer *data_buffer)
 	for (data_buf_pos = 0; data_buf_pos < sldns_buffer_position(data_buffer); data_buf_pos++) {
 		c = (int) data_wire[data_buf_pos];
 		
-		if (state < 2 && !isascii(c)) {
+		if (state < 2 && !isascii((unsigned char)c)) {
 			/*verbose("non ascii character found in file: (%d) switching to raw mode\n", c);*/
 			state = 2;
 		}

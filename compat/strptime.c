@@ -89,7 +89,7 @@ str2int(const char **buf, int max)
 {
 	int ret=0, count=0;
 
-	while (*buf[0] != '\0' && isdigit(*buf[0]) && count<max) {
+	while (*buf[0] != '\0' && isdigit((unsigned char)*buf[0]) && count<max) {
 		ret = ret*10 + (*buf[0] - '0');
 		(*buf)++;
 		count++;

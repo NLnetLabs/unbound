@@ -1113,9 +1113,9 @@ cfg_count_numbers(const char* s)
 			s++;
 		if(!*s) /* only - not allowed */
 			return 0;
-		if(!isdigit((int)*s)) /* bad character */
+		if(!isdigit((unsigned char)*s)) /* bad character */
 			return 0;
-		while(*s && isdigit((int)*s))
+		while(*s && isdigit((unsigned char)*s))
 			s++;
 		num++;
 	}
@@ -1127,7 +1127,7 @@ static int isalldigit(const char* str, size_t l)
 {
 	size_t i;
 	for(i=0; i<l; i++)
-		if(!isdigit(str[i]))
+		if(!isdigit((unsigned char)str[i]))
 			return 0;
 	return 1;
 }
@@ -1159,7 +1159,7 @@ cfg_parse_memsize(const char* str, size_t* res)
 		mult = 1024*1024;
 	else if(len > 1 && tolower(str[len-1]) == 'k')
 		mult = 1024;
-	else if(len > 0 && isdigit(str[len-1]))
+	else if(len > 0 && isdigit((unsigned char)str[len-1]))
 		mult = 1;
 	else {
 		log_err("unknown size specifier: '%s'", str);
