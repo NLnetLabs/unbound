@@ -1,3 +1,6 @@
+27 October 2014: Wouter
+	- Disabled use of SSLv3 in remote-control and ssl-upstream.
+
 16 October 2014: Wouter
 	- Documented dns64 configuration in unbound.conf man page.
 
