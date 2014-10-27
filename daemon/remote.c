@@ -38,8 +38,8 @@
  *
  * This file contains the remote control functionality for the daemon.
  * The remote control can be performed using either the commandline
- * unbound-control tool, or a SSLv3/TLS capable web browser. 
- * The channel is secured using SSLv3 or TLSv1, and certificates.
+ * unbound-control tool, or a TLS capable web browser. 
+ * The channel is secured using TLSv1, and certificates.
  * Both the server and the client(control tool) have their own keys.
  */
 #include "config.h"
