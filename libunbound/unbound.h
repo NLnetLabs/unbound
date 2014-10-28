@@ -508,7 +508,7 @@ void ub_resolve_free(struct ub_result* result);
 
 /** 
  * Convert error value to a human readable string.
- * @param err: error code from one of the ub_val* functions.
+ * @param err: error code from one of the libunbound functions.
  * @return pointer to constant text string, zero terminated.
  */
 const char* ub_strerror(int err);
