@@ -16,9 +16,9 @@ AC_SUBST(UNBOUND_VERSION_MAJOR, [VERSION_MAJOR])
 AC_SUBST(UNBOUND_VERSION_MINOR, [VERSION_MINOR])
 AC_SUBST(UNBOUND_VERSION_MICRO, [VERSION_MICRO])
 
-LIBUNBOUND_CURRENT=4
+LIBUNBOUND_CURRENT=5
 LIBUNBOUND_REVISION=3
-LIBUNBOUND_AGE=2
+LIBUNBOUND_AGE=3
 # 1.0.0 had 0:12:0
 # 1.0.1 had 0:13:0
 # 1.0.2 had 0:14:0
@@ -56,7 +56,7 @@ LIBUNBOUND_AGE=2
 # 1.4.20 had 4:0:2 # adds libunbound.ttl # but shipped 3:5:1
 # 1.4.21 had 4:1:2
 # 1.4.22 had 4:1:2
-# 1.4.23 had 4:3:2
+# 1.4.23 had 5:3:3 # adds ub_ctx_add_ta_autr
 
 #   Current  -- the number of the binary API that we're implementing
 #   Revision -- which iteration of the implementation of the binary
