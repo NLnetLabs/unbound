@@ -1,6 +1,8 @@
 4 November 2014: Wouter
 	- Add ub_ctx_add_ta_autr function to add a RFC5011 automatically
 	  tracked trust anchor to libunbound.
+	- Redefine internal minievent symbols to unique symbols that helps
+	  linking on platforms where the linker leaks names across modules.
 
 27 October 2014: Wouter
 	- Disabled use of SSLv3 in remote-control and ssl-upstream.
