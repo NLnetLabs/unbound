@@ -121,7 +121,6 @@ dt_msg_init(const struct dt_env *env,
 struct dt_env *
 dt_create(const char *socket_path, unsigned num_workers)
 {
-	char *fio_err;
 	fstrm_res res;
 	struct dt_env *env;
 	struct fstrm_iothr_options *fopt;
