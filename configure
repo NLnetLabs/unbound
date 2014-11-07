@@ -1538,7 +1538,7 @@ Optional Packages:
   --with-dnstap-socket-path=pathname
                           set default dnstap socket path
   --with-protobuf-c=path  Path where protobuf-c is installed, for dnstap
-  --with-libfstrm=path    Path where libfstrm in installed, for dnstap
+  --with-libfstrm=path    Path where libfstrm is installed, for dnstap
   --with-libunbound-only  do not build daemon and tool programs
 
 Some influential environment variables:
@@ -19846,7 +19846,7 @@ fi
 # Check whether --with-protobuf-c was given.
 if test "${with_protobuf_c+set}" = set; then :
   withval=$with_protobuf_c;
-	  # workaround for protobuf includes at old dir before protobuf-1.0.0
+	  # workaround for protobuf-c includes at old dir before protobuf-c-1.0.0
 	  if test -f $withval/include/google/protobuf-c/protobuf-c.h; then
 	    CFLAGS="$CFLAGS -I$withval/include/google"
 	  else
@@ -19856,7 +19856,7 @@ if test "${with_protobuf_c+set}" = set; then :
 
 else
 
-	  # workaround for protobuf includes at old dir before protobuf-1.0.0
+	  # workaround for protobuf-c includes at old dir before protobuf-c-1.0.0
 	  if test -f /usr/include/google/protobuf-c/protobuf-c.h; then
 	    CFLAGS="$CFLAGS -I/usr/include/google"
 	  else
@@ -19877,9 +19877,9 @@ if test "${with_libfstrm+set}" = set; then :
 
 fi
 
-    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing fstrm_io_init" >&5
-$as_echo_n "checking for library containing fstrm_io_init... " >&6; }
-if ${ac_cv_search_fstrm_io_init+:} false; then :
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing fstrm_iothr_init" >&5
+$as_echo_n "checking for library containing fstrm_iothr_init... " >&6; }
+if ${ac_cv_search_fstrm_iothr_init+:} false; then :
   $as_echo_n "(cached) " >&6
 else
   ac_func_search_save_LIBS=$LIBS
@@ -19892,11 +19892,11 @@ cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 #ifdef __cplusplus
 extern "C"
 #endif
-char fstrm_io_init ();
+char fstrm_iothr_init ();
 int
 main ()
 {
-return fstrm_io_init ();
+return fstrm_iothr_init ();
   ;
   return 0;
 }
@@ -19909,28 +19909,30 @@ for ac_lib in '' fstrm; do
     LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
   fi
   if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_search_fstrm_io_init=$ac_res
+  ac_cv_search_fstrm_iothr_init=$ac_res
 fi
 rm -f core conftest.err conftest.$ac_objext \
     conftest$ac_exeext
-  if ${ac_cv_search_fstrm_io_init+:} false; then :
+  if ${ac_cv_search_fstrm_iothr_init+:} false; then :
   break
 fi
 done
-if ${ac_cv_search_fstrm_io_init+:} false; then :
+if ${ac_cv_search_fstrm_iothr_init+:} false; then :
 
 else
-  ac_cv_search_fstrm_io_init=no
+  ac_cv_search_fstrm_iothr_init=no
 fi
 rm conftest.$ac_ext
 LIBS=$ac_func_search_save_LIBS
 fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_fstrm_io_init" >&5
-$as_echo "$ac_cv_search_fstrm_io_init" >&6; }
-ac_res=$ac_cv_search_fstrm_io_init
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_fstrm_iothr_init" >&5
+$as_echo "$ac_cv_search_fstrm_iothr_init" >&6; }
+ac_res=$ac_cv_search_fstrm_iothr_init
 if test "$ac_res" != no; then :
   test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
 
+else
+  as_fn_error $? "The fstrm library was not found. Please install fstrm!" "$LINENO" 5
 fi
 
     { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing protobuf_c_message_pack" >&5
@@ -19987,6 +19989,8 @@ ac_res=$ac_cv_search_protobuf_c_message_pack
 if test "$ac_res" != no; then :
   test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
 
+else
+  as_fn_error $? "The protobuf-c library was not found. Please install protobuf-c!" "$LINENO" 5
 fi
 
 

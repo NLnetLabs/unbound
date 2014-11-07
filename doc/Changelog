@@ -1,3 +1,12 @@
+7 November 2014: Wouter
+	- dnstap fixes by Robert Edmonds:
+		dnstap/dnstap.m4: cosmetic fixes
+		dnstap/: Remove compiled protoc-c output files
+		dnstap/dnstap.m4: Error out if required libraries are not found
+		dnstap: Fix ProtobufCBufferSimple usage that is incorrect as of
+			protobuf-c 1.0.0
+		dnstap/: Adapt to API changes in latest libfstrm (>= 0.2.0)
+
 4 November 2014: Wouter
 	- Add ub_ctx_add_ta_autr function to add a RFC5011 automatically
 	  tracked trust anchor to libunbound.
