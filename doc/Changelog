@@ -1,3 +1,6 @@
+11 November 2014: Wouter
+	- iana portlist update.
+
 7 November 2014: Wouter
 	- dnstap fixes by Robert Edmonds:
 		dnstap/dnstap.m4: cosmetic fixes
