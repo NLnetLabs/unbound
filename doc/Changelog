@@ -1,5 +1,7 @@
 11 November 2014: Wouter
 	- iana portlist update.
+	- Fix bug where forward or stub addresses with same address but
+	  different port number were not tried.
 
 7 November 2014: Wouter
 	- dnstap fixes by Robert Edmonds:
