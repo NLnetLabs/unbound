@@ -4,6 +4,7 @@
 	  different port number were not tried.
 	- version number in svn trunk is 1.5.0
 	- tag 1.5.0rc1
+	- review fix from Ralph.
 
 7 November 2014: Wouter
 	- dnstap fixes by Robert Edmonds:
