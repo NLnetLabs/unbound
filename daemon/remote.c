@@ -854,7 +854,8 @@ print_ext(SSL* ssl, struct stats_info* s)
 
 	/* RCODE */
 	for(i=0; i<STATS_RCODE_NUM; i++) {
-		if(inhibit_zero && s->svr.ans_rcode[i] == 0)
+		/* Always include RCODEs 0-5 */
+		if(inhibit_zero && i > LDNS_RCODE_REFUSED && s->svr.ans_rcode[i] == 0)
 			continue;
 		lt = sldns_lookup_by_id(sldns_rcodes, i);
 		if(lt && lt->name) {
