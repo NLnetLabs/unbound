@@ -2,6 +2,9 @@
 	- Patch from Robert Edmonds to build pyunbound python module
 	  differently.  No versioninfo, with -shared and without $(LIBS).
 	- Patch from Robert Edmonds fixes hyphens in unbound-anchor man page.
+	- Removed 'increased limit open files' log message that is written
+	  to console.  It is only written on verbosity 4 and higher.
+	  This keeps system bootup console cleaner.
 
 11 November 2014: Wouter
 	- iana portlist update.
