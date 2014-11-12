@@ -1,3 +1,7 @@
+12 November 2014: Wouter
+	- Patch from Robert Edmonds to build pyunbound python module
+	  differently.  No versioninfo, with -shared and without $(LIBS).
+
 11 November 2014: Wouter
 	- iana portlist update.
 	- Fix bug where forward or stub addresses with same address but
