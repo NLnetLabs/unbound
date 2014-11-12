@@ -1,4 +1,5 @@
 12 November 2014: Wouter
+	- trunk has 1.5.1 in development.
 	- Patch from Robert Edmonds to build pyunbound python module
 	  differently.  No versioninfo, with -shared and without $(LIBS).
 	- Patch from Robert Edmonds fixes hyphens in unbound-anchor man page.
