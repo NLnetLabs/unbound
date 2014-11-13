@@ -1,3 +1,7 @@
+13 November 2014: Wouter
+	- Patch from Stephanie Lapie that implements aaaa-filter, added
+	  to contrib/aaaa-filter-iterator.patch.
+
 12 November 2014: Wouter
 	- trunk has 1.5.1 in development.
 	- Patch from Robert Edmonds to build pyunbound python module
