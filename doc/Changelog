@@ -1,3 +1,7 @@
+17 November 2014: Wouter
+	- Fix #627: SSL_CTX_load_verify_locations return code not properly
+	  checked.
+
 14 November 2014: Wouter
 	- parser with bison 2.7
 
