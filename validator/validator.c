@@ -289,6 +289,11 @@ needs_validation(struct module_qstate* qstate, int ret_rc,
 		verbose(VERB_ALGO, "not validating response due to CD bit");
 		return 0;
 	}
+	if(qstate->is_valrec) {
+		verbose(VERB_ALGO, "not validating response, is valrec"
+			"(validation recursion lookup)");
+		return 0;
+	}
 
 	if(ret_rc != LDNS_RCODE_NOERROR || !ret_msg)
 		rcode = ret_rc;
@@ -351,14 +356,20 @@ generate_request(struct module_qstate* qstate, int id, uint8_t* name,
 	struct val_qstate* vq = (struct val_qstate*)qstate->minfo[id];
 	struct module_qstate* newq;
 	struct query_info ask;
+	int valrec;
 	ask.qname = name;
 	ask.qname_len = namelen;
 	ask.qtype = qtype;
 	ask.qclass = qclass;
 	log_query_info(VERB_ALGO, "generate request", &ask);
 	fptr_ok(fptr_whitelist_modenv_attach_sub(qstate->env->attach_sub));
+	/* enable valrec flag to avoid recursion to the same validation
+	 * routine, this lookup is simply a lookup. DLVs need validation */
+	if(qtype == LDNS_RR_TYPE_DLV)
+		valrec = 0;
+	else valrec = 1;
 	if(!(*qstate->env->attach_sub)(qstate, &ask, 
-		(uint16_t)(BIT_RD|flags), 0, &newq)){
+		(uint16_t)(BIT_RD|flags), 0, valrec, &newq)){
 		log_err("Could not generate request: out of memory");
 		return 0;
 	}
@@ -2005,14 +2016,16 @@ processFinished(struct module_qstate* qstate, struct val_qstate* vq,
 		/* if secure, this will override cache anyway, no need
 		 * to check if from parentNS */
 		if(!dns_cache_store(qstate->env, &vq->orig_msg->qinfo, 
-			vq->orig_msg->rep, 0, qstate->prefetch_leeway, 0, NULL)) {
+			vq->orig_msg->rep, 0, qstate->prefetch_leeway, 0, NULL,
+			qstate->query_flags)) {
 			log_err("out of memory caching validator results");
 		}
 	} else {
 		/* for a referral, store the verified RRsets */
 		/* and this does not get prefetched, so no leeway */
 		if(!dns_cache_store(qstate->env, &vq->orig_msg->qinfo, 
-			vq->orig_msg->rep, 1, 0, 0, NULL)) {
+			vq->orig_msg->rep, 1, 0, 0, NULL,
+			qstate->query_flags)) {
 			log_err("out of memory caching validator results");
 		}
 	}

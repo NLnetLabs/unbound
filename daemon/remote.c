@@ -1095,8 +1095,13 @@ do_cache_remove(struct worker* worker, uint8_t* nm, size_t nmlen,
 	k.qname_len = nmlen;
 	k.qtype = t;
 	k.qclass = c;
-	h = query_info_hash(&k);
+	h = query_info_hash(&k, 0);
 	slabhash_remove(worker->env.msg_cache, h, &k);
+	if(t == LDNS_RR_TYPE_AAAA) {
+		/* for AAAA also flush dns64 bit_cd packet */
+		h = query_info_hash(&k, BIT_CD);
+		slabhash_remove(worker->env.msg_cache, h, &k);
+	}
 }
 
 /** flush a type */

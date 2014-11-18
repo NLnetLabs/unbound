@@ -1,3 +1,7 @@
+18 November 2014: Wouter
+	- Fix that CD flag disables DNS64 processing, returning the DNSSEC
+	  signed AAAA denial.
+
 17 November 2014: Wouter
 	- Fix #627: SSL_CTX_load_verify_locations return code not properly
 	  checked.
