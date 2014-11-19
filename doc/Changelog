@@ -1,3 +1,6 @@
+19 November 2014: Wouter
+	- Fix cdflag dns64 processing.
+
 18 November 2014: Wouter
 	- Fix that CD flag disables DNS64 processing, returning the DNSSEC
 	  signed AAAA denial.

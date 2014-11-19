@@ -487,6 +487,7 @@ generate_sub_request(uint8_t* qname, size_t qnamelen, uint16_t qtype,
 	uint16_t qflags = 0; /* OPCODE QUERY, no flags */
 	struct query_info qinf;
 	int prime = (finalstate == PRIME_RESP_STATE)?1:0;
+	int valrec = 0;
 	qinf.qname = qname;
 	qinf.qname_len = qnamelen;
 	qinf.qtype = qtype;
@@ -500,12 +501,14 @@ generate_sub_request(uint8_t* qname, size_t qnamelen, uint16_t qtype,
 	 * the resolution chain, which might have a validator. We are 
 	 * uninterested in validating things not on the direct resolution 
 	 * path.  */
-	if(!v)
+	if(!v) {
 		qflags |= BIT_CD;
+		valrec = 1;
+	}
 	
 	/* attach subquery, lookup existing or make a new one */
 	fptr_ok(fptr_whitelist_modenv_attach_sub(qstate->env->attach_sub));
-	if(!(*qstate->env->attach_sub)(qstate, &qinf, qflags, prime, 0,
+	if(!(*qstate->env->attach_sub)(qstate, &qinf, qflags, prime, valrec,
 		&subq)) {
 		return 0;
 	}

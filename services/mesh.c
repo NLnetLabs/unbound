@@ -282,7 +282,7 @@ void mesh_new_client(struct mesh_area* mesh, struct query_info* qinfo,
         uint16_t qflags, struct edns_data* edns, struct comm_reply* rep,
         uint16_t qid)
 {
-	struct mesh_state* s = mesh_area_find(mesh, qinfo, qflags&BIT_RD, 0, 0);
+	struct mesh_state* s = mesh_area_find(mesh, qinfo, qflags&(BIT_RD|BIT_CD), 0, 0);
 	int was_detached = 0;
 	int was_noreply = 0;
 	int added = 0;
@@ -312,7 +312,7 @@ void mesh_new_client(struct mesh_area* mesh, struct query_info* qinfo,
 #ifdef UNBOUND_DEBUG
 		struct rbnode_t* n;
 #endif
-		s = mesh_state_create(mesh->env, qinfo, qflags&BIT_RD, 0, 0);
+		s = mesh_state_create(mesh->env, qinfo, qflags&(BIT_RD|BIT_CD), 0, 0);
 		if(!s) {
 			log_err("mesh_state_create: out of memory; SERVFAIL");
 			error_encode(rep->c->buffer, LDNS_RCODE_SERVFAIL,
@@ -376,7 +376,7 @@ mesh_new_callback(struct mesh_area* mesh, struct query_info* qinfo,
 	uint16_t qflags, struct edns_data* edns, sldns_buffer* buf, 
 	uint16_t qid, mesh_cb_func_t cb, void* cb_arg)
 {
-	struct mesh_state* s = mesh_area_find(mesh, qinfo, qflags&BIT_RD, 0, 0);
+	struct mesh_state* s = mesh_area_find(mesh, qinfo, qflags&(BIT_RD|BIT_CD), 0, 0);
 	int was_detached = 0;
 	int was_noreply = 0;
 	int added = 0;
@@ -387,7 +387,7 @@ mesh_new_callback(struct mesh_area* mesh, struct query_info* qinfo,
 #ifdef UNBOUND_DEBUG
 		struct rbnode_t* n;
 #endif
-		s = mesh_state_create(mesh->env, qinfo, qflags&BIT_RD, 0, 0);
+		s = mesh_state_create(mesh->env, qinfo, qflags&(BIT_RD|BIT_CD), 0, 0);
 		if(!s) {
 			return 0;
 		}
@@ -429,7 +429,7 @@ mesh_new_callback(struct mesh_area* mesh, struct query_info* qinfo,
 void mesh_new_prefetch(struct mesh_area* mesh, struct query_info* qinfo,
         uint16_t qflags, time_t leeway)
 {
-	struct mesh_state* s = mesh_area_find(mesh, qinfo, qflags&BIT_RD, 0, 0);
+	struct mesh_state* s = mesh_area_find(mesh, qinfo, qflags&(BIT_RD|BIT_CD), 0, 0);
 #ifdef UNBOUND_DEBUG
 	struct rbnode_t* n;
 #endif
@@ -448,7 +448,7 @@ void mesh_new_prefetch(struct mesh_area* mesh, struct query_info* qinfo,
 		mesh->stats_dropped ++;
 		return;
 	}
-	s = mesh_state_create(mesh->env, qinfo, qflags&BIT_RD, 0, 0);
+	s = mesh_state_create(mesh->env, qinfo, qflags&(BIT_RD|BIT_CD), 0, 0);
 	if(!s) {
 		log_err("prefetch mesh_state_create: out of memory");
 		return;
@@ -688,7 +688,6 @@ int mesh_attach_sub(struct module_qstate* qstate, struct query_info* qinfo,
 	struct mesh_state* sub = mesh_area_find(mesh, qinfo, qflags, prime,
 		valrec);
 	int was_detached;
-	log_info("mesh attach sub: myvalrec is %d", qstate->is_valrec);
 	if(mesh_detect_cycle_found(qstate, sub)) {
 		verbose(VERB_ALGO, "attach failed, cycle detected");
 		return 0;
