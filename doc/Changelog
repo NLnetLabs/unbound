@@ -1,3 +1,7 @@
+20 November 2014: Wouter
+	- fix compat/getentropy_win.c check if CryptGenRandom works and no
+	  immediate exit on windows.
+
 19 November 2014: Wouter
 	- Fix cdflag dns64 processing.
 
