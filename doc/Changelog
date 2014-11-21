@@ -1,3 +1,7 @@
+21 November 2014: Wouter
+	- Fix crash on multiple thread random usage on systems without
+	  arc4random.
+
 20 November 2014: Wouter
 	- fix compat/getentropy_win.c check if CryptGenRandom works and no
 	  immediate exit on windows.
