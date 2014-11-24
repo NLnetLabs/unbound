@@ -773,15 +773,14 @@ log_dns_msg(const char* str, struct query_info* qinfo, struct reply_info* rep)
 		region, 65535, 1)) {
 		log_info("%s: log_dns_msg: out of memory", str);
 	} else {
-		char* str = sldns_wire2str_pkt(sldns_buffer_begin(buf),
+		char* s = sldns_wire2str_pkt(sldns_buffer_begin(buf),
 			sldns_buffer_limit(buf));
-		if(!str) {
+		if(!s) {
 			log_info("%s: log_dns_msg: ldns tostr failed", str);
 		} else {
-			log_info("%s %s", 
-				str, (char*)sldns_buffer_begin(buf));
+			log_info("%s %s", str, s);
 		}
-		free(str);
+		free(s);
 	}
 	sldns_buffer_free(buf);
 	regional_destroy(region);
