@@ -1,5 +1,6 @@
 24 November 2014: Wouter
 	- Fix log at high verbosity and memory allocation failure.
+	- iana portlist update.
 
 21 November 2014: Wouter
 	- Fix crash on multiple thread random usage on systems without
