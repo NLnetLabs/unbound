@@ -1,3 +1,7 @@
+26 November 2014: Wouter
+	- Fix libunbound undefined symbol errors for main.
+	  Referencing main does not seem to be possible for libunbound.
+
 24 November 2014: Wouter
 	- Fix log at high verbosity and memory allocation failure.
 	- iana portlist update.
