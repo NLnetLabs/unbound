@@ -28,4 +28,5 @@ distribution but may be helpful.
 * aaaa-filter-iterator.patch: adds config option aaaa-filter: yes that
   works like the BIND feature (removes AAAA records unless AAAA-only domain).
   Useful for certain 'broken IPv6 default route' scenarios.
+  Patch from Stephane Lapie for ASAHI Net (no restrictions on use).
 
