@@ -1,3 +1,6 @@
+28 November 2014: Wouter
+	- Fix makefile for build from noexec source tree.
+
 26 November 2014: Wouter
 	- Fix libunbound undefined symbol errors for main.
 	  Referencing main does not seem to be possible for libunbound.
