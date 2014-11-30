@@ -1,3 +1,6 @@
+29 November 2014: Wouter
+	- Add include to getentropy_linux.c, hopefully fixing debian build.
+
 28 November 2014: Wouter
 	- Fix makefile for build from noexec source tree.
 

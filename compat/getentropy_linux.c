@@ -48,6 +48,7 @@
 #include <time.h>
 #include <openssl/sha.h>
 
+#include <linux/types.h>
 #include <linux/random.h>
 #include <linux/sysctl.h>
 #ifdef HAVE_GETAUXVAL
