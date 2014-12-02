@@ -1,3 +1,7 @@
+1 December 2014: Wouter
+	- Fix bug#632: unbound fails to build on AArch64, protects
+	  getentropy compat code from calling sysctl if it is has been removed.
+
 29 November 2014: Wouter
 	- Add include to getentropy_linux.c, hopefully fixing debian build.
 
