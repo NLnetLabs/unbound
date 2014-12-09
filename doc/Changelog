@@ -1,6 +1,8 @@
 9 December 2014: Wouter
 	- svn trunk has 1.5.2 in development.
 	- config.guess and config.sub update from libtoolize.
+	- local-zone: example.com inform makes unbound log a message with
+	  client IP for queries in that zone.  Eg. for finding infected hosts.
 
 8 December 2014: Wouter
 	- Fix CVE-2014-8602: denial of service by making resolver chase
