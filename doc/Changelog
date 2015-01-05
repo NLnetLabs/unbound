@@ -1,6 +1,8 @@
 5 January 2015: Wouter
 	- getauxval test for ppc64 linux compatibility.
 	- make strip works for unbound-host and unbound-anchor.
+	- patch from Stephane Lapie that adds to the python API, that
+	  exposes struct delegpt, and adds the find_delegation function.
 
 9 December 2014: Wouter
 	- svn trunk has 1.5.2 in development.
