@@ -368,29 +368,47 @@ create_udp_sock(int family, int socktype, struct sockaddr* addr,
  * (and also uses the interface mtu to determine the size of the packets).
  * So there won't be any EMSGSIZE error.  Against DNS fragmentation attacks.
  * FreeBSD already has same semantics without setting the option. */
-#    if defined(IP_PMTUDISC_OMIT)
-		int action = IP_PMTUDISC_OMIT;
-#    else
-		int action = IP_PMTUDISC_DONT;
-#    endif
+		int omit_set = 0;
+		int action;
+#   if defined(IP_PMTUDISC_OMIT)
+		action = IP_PMTUDISC_OMIT;
 		if (setsockopt(s, IPPROTO_IP, IP_MTU_DISCOVER, 
 			&action, (socklen_t)sizeof(action)) < 0) {
-			log_err("setsockopt(..., IP_MTU_DISCOVER, "
-#    if defined(IP_PMTUDISC_OMIT)
-				"IP_PMTUDISC_OMIT"
-#    else
-				"IP_PMTUDISC_DONT"
-#    endif
-				"...) failed: %s",
-				strerror(errno));
+
+			if (errno != EINVAL) {
+				log_err("setsockopt(..., IP_MTU_DISCOVER, IP_PMTUDISC_OMIT...) failed: %s",
+					strerror(errno));
+
 #    ifndef USE_WINSOCK
-			close(s);
+				close(s);
 #    else
-			closesocket(s);
+				closesocket(s);
 #    endif
-			*noproto = 0;
-			*inuse = 0;
-			return -1;
+				*noproto = 0;
+				*inuse = 0;
+				return -1;
+			}
+		}
+		else
+		{
+		    omit_set = 1;
+		}
+#   endif
+		if (omit_set == 0) {
+   			action = IP_PMTUDISC_DONT;
+			if (setsockopt(s, IPPROTO_IP, IP_MTU_DISCOVER,
+				&action, (socklen_t)sizeof(action)) < 0) {
+				log_err("setsockopt(..., IP_MTU_DISCOVER, IP_PMTUDISC_DONT...) failed: %s",
+					strerror(errno));
+#    ifndef USE_WINSOCK
+				close(s);
+#    else
+				closesocket(s);
+#    endif
+				*noproto = 0;
+				*inuse = 0;
+				return -1;
+			}
 		}
 #  elif defined(IP_DONTFRAG)
 		int off = 0;
