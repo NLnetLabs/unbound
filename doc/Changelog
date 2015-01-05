@@ -14,6 +14,9 @@
 	  unbound_cache.sh/cmd to support loading/save/reload cache to/from
 	  default path or (with secondary argument) arbitrary path/filename,
 	  from Yuri Voinov.
+	- Patch from Philip Paeps to contrib/unbound_munin_ that uses
+	  type ABSOLUTE.  Allows munin.conf: [idleserver.example.net]
+	  unbound_munin_hits.graph_period minute
 
 9 December 2014: Wouter
 	- svn trunk has 1.5.2 in development.

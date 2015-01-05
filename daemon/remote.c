@@ -1920,6 +1920,7 @@ do_dump_requestlist(SSL* ssl, struct worker* worker)
 	char buf[257];
 	char timebuf[32];
 	char statbuf[10240];
+	log_info("do_dump_requestlist");
 	if(!ssl_printf(ssl, "thread #%d\n", worker->thread_num))
 		return;
 	if(!ssl_printf(ssl, "#   type cl name    seconds    module status\n"))
