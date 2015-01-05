@@ -7,7 +7,7 @@
 	- patch from Brad Smith that fixes DESTDIR in unbound-control-setup
 	  for installs where config is not in the prefix location.
 	- Fix #634: fix fail to start on Linux LTS 3.14.X, ignores missing
-	  IP_MTU_DISCOVER OMIT option.
+	  IP_MTU_DISCOVER OMIT option (fix from Remi Gacogne).
 
 9 December 2014: Wouter
 	- svn trunk has 1.5.2 in development.
