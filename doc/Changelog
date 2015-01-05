@@ -8,6 +8,12 @@
 	  for installs where config is not in the prefix location.
 	- Fix #634: fix fail to start on Linux LTS 3.14.X, ignores missing
 	  IP_MTU_DISCOVER OMIT option (fix from Remi Gacogne).
+	- Updated contrib warmup.cmd/sh to support two modes - load
+	  from pre-defined list of domains or (with filename as argument)
+	  load from user-specified list of domains, and updated contrib
+	  unbound_cache.sh/cmd to support loading/save/reload cache to/from
+	  default path or (with secondary argument) arbitrary path/filename,
+	  from Yuri Voinov.
 
 9 December 2014: Wouter
 	- svn trunk has 1.5.2 in development.
