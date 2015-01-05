@@ -459,8 +459,8 @@ strip:
 	$(STRIP) unbound$(EXEEXT)
 	$(STRIP) unbound-checkconf$(EXEEXT)
 	$(STRIP) unbound-control$(EXEEXT)
-	$(STRIP) unbound-host$(EXEEXT)
-	$(STRIP) unbound-anchor$(EXEEXT)
+	$(STRIP) unbound-host$(EXEEXT) || $(STRIP) .libs/unbound-host$(EXEEXT)
+	$(STRIP) unbound-anchor$(EXEEXT) || $(STRIP) .libs/unbound-anchor$(EXEEXT)
 
 pythonmod-install:
 	$(INSTALL) -m 755 -d $(DESTDIR)$(PYTHON_SITE_PKG)
