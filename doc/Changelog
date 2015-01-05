@@ -4,6 +4,8 @@
 	- patch from Stephane Lapie that adds to the python API, that
 	  exposes struct delegpt, and adds the find_delegation function.
 	- print query name when max target count is exceeded.
+	- patch from Brad Smith that fixes DESTDIR in unbound-control-setup
+	  for installs where config is not in the prefix location.
 
 9 December 2014: Wouter
 	- svn trunk has 1.5.2 in development.

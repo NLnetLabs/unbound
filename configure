@@ -733,6 +733,7 @@ UNBOUND_PIDFILE
 UNBOUND_SHARE_DIR
 UNBOUND_CHROOT_DIR
 UNBOUND_RUN_DIR
+ub_conf_dir
 ub_conf_file
 EGREP
 GREP
@@ -4047,6 +4048,30 @@ hdr_config="`echo $ub_conf_file | sed -e 's/\\\\/\\\\\\\\/g'`"
 cat >>confdefs.h <<_ACEOF
 #define CONFIGFILE "$hdr_config"
 _ACEOF
+
+ub_conf_dir=`$as_dirname -- "$ub_conf_file" ||
+$as_expr X"$ub_conf_file" : 'X\(.*[^/]\)//*[^/][^/]*/*$' \| \
+	 X"$ub_conf_file" : 'X\(//\)[^/]' \| \
+	 X"$ub_conf_file" : 'X\(//\)$' \| \
+	 X"$ub_conf_file" : 'X\(/\)' \| . 2>/dev/null ||
+$as_echo X"$ub_conf_file" |
+    sed '/^X\(.*[^/]\)\/\/*[^/][^/]*\/*$/{
+	    s//\1/
+	    q
+	  }
+	  /^X\(\/\/\)[^/].*/{
+	    s//\1/
+	    q
+	  }
+	  /^X\(\/\/\)$/{
+	    s//\1/
+	    q
+	  }
+	  /^X\(\/\).*/{
+	    s//\1/
+	    q
+	  }
+	  s/.*/./; q'`
 
 
 # Determine run, chroot directory and pidfile locations

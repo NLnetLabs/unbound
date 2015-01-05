@@ -119,6 +119,8 @@ AC_ARG_WITH([conf_file],
 AC_SUBST(ub_conf_file)
 ACX_ESCAPE_BACKSLASH($ub_conf_file, hdr_config)
 AC_DEFINE_UNQUOTED(CONFIGFILE, ["$hdr_config"], [Pathname to the Unbound configuration file])
+ub_conf_dir=`AS_DIRNAME(["$ub_conf_file"])`
+AC_SUBST(ub_conf_dir)
 
 # Determine run, chroot directory and pidfile locations
 AC_ARG_WITH(run-dir, 
