@@ -1,3 +1,6 @@
+5 January 2015: Wouter
+	- getauxval test for ppc64 linux compatibility.
+
 9 December 2014: Wouter
 	- svn trunk has 1.5.2 in development.
 	- config.guess and config.sub update from libtoolize.

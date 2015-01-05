@@ -146,6 +146,9 @@
 /* Whether getaddrinfo is available */
 #undef HAVE_GETADDRINFO
 
+/* Define to 1 if you have the `getauxval' function. */
+#undef HAVE_GETAUXVAL
+
 /* Define to 1 if you have the `getentropy' function. */
 #undef HAVE_GETENTROPY
 

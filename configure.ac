@@ -1021,6 +1021,7 @@ if test "$USE_NSS" = "no"; then
 					AC_LIBOBJ(sha512)
 				])
 				AC_CHECK_HEADERS([sys/sysctl.h],,, [AC_INCLUDES_DEFAULT])
+				AC_CHECK_FUNCS([getauxval])
 				AC_SEARCH_LIBS([clock_gettime], [rt])
 			;;
 			esac
