@@ -3,6 +3,7 @@
 	- make strip works for unbound-host and unbound-anchor.
 	- patch from Stephane Lapie that adds to the python API, that
 	  exposes struct delegpt, and adds the find_delegation function.
+	- print query name when max target count is exceeded.
 
 9 December 2014: Wouter
 	- svn trunk has 1.5.2 in development.

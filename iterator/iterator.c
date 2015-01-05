@@ -1383,8 +1383,10 @@ query_for_targets(struct module_qstate* qstate, struct iter_qstate* iq,
 		return 0;
 	if(iq->depth > 0 && iq->target_count &&
 		iq->target_count[1] > MAX_TARGET_COUNT) {
-		verbose(VERB_QUERY, "request has exceeded the maximum "
-			"number of glue fetches %d", iq->target_count[1]);
+		char s[LDNS_MAX_DOMAINLEN+1];
+		dname_str(qstate->qinfo.qname, s);
+		verbose(VERB_QUERY, "request %s has exceeded the maximum "
+			"number of glue fetches %d", s, iq->target_count[1]);
 		return 0;
 	}
 
@@ -1581,8 +1583,10 @@ processLastResort(struct module_qstate* qstate, struct iter_qstate* iq,
 	}
 	if(iq->depth > 0 && iq->target_count &&
 		iq->target_count[1] > MAX_TARGET_COUNT) {
-		verbose(VERB_QUERY, "request has exceeded the maximum "
-			"number of glue fetches %d", iq->target_count[1]);
+		char s[LDNS_MAX_DOMAINLEN+1];
+		dname_str(qstate->qinfo.qname, s);
+		verbose(VERB_QUERY, "request %s has exceeded the maximum "
+			"number of glue fetches %d", s, iq->target_count[1]);
 		return error_response_cache(qstate, id, LDNS_RCODE_SERVFAIL);
 	}
 	/* mark cycle targets for parent-side lookups */
