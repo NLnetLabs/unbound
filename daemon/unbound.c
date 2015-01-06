@@ -651,6 +651,7 @@ run_daemon(const char* cfgfile, int cmdline_verbose, int debug_mode)
 			log_warn("Continuing with default config settings");
 		}
 		apply_settings(daemon, cfg, cmdline_verbose, debug_mode);
+		config_lookup_uid(cfg);
 	
 		/* prepare */
 		if(!daemon_open_shared_ports(daemon))
