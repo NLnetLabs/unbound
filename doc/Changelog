@@ -4,6 +4,7 @@
 	  Smorgrav, Ilya Bakulin.  Use control-interface: /path/sock and
 	  control-use-cert: no.
 	- Fixup that patch and uid lookup (only for daemon).
+	- coded the default of control-use-cert, to yes.
 
 5 January 2015: Wouter
 	- getauxval test for ppc64 linux compatibility.
