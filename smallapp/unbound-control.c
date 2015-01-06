@@ -207,7 +207,7 @@ contact_server(const char* svr, struct config_file* cfg, int statuscmd)
 		struct sockaddr_un* sun = (struct sockaddr_un *) &addr;
 		sun->sun_family = AF_LOCAL;
 #ifdef HAVE_STRUCT_SOCKADDR_UN_SUN_LEN
-		sun->sun_len = sizeof(sun);
+		sun->sun_len = (sa_family_t)sizeof(sun);
 #endif
 		(void)strlcpy(sun->sun_path, svr, sizeof(sun->sun_path));
 		addrlen = (socklen_t)sizeof(struct sockaddr_un);

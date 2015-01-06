@@ -602,7 +602,7 @@ create_local_accept_sock(const char *path, int* noproto)
 
 #ifdef HAVE_STRUCT_SOCKADDR_UN_SUN_LEN
 	/* this member exists on BSDs, not Linux */
-	sun.sun_len = sizeof(sun);
+	sun.sun_len = (sa_family_t)sizeof(sun);
 #endif
 	sun.sun_family = AF_LOCAL;
 	/* length is 92-108, 104 on FreeBSD */
