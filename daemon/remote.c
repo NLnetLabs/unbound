@@ -301,6 +301,7 @@ void daemon_remote_delete(struct daemon_remote* rc)
  * @param nr: port nr
  * @param list: list head
  * @param noproto_is_err: if lack of protocol support is an error.
+ * @param cfg: config with username for chown of unix-sockets.
  * @return false on failure.
  */
 static int
