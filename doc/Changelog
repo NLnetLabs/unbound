@@ -1,5 +1,8 @@
 6 January 2015: Wouter
 	- iana portlist update.
+	- patch for remote control over local sockets, from Dag-Erling
+	  Smorgrav, Ilya Bakulin.  Use control-interface: /path/sock and
+	  control-use-cert: no.
 
 5 January 2015: Wouter
 	- getauxval test for ppc64 linux compatibility.
