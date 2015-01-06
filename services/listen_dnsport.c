@@ -606,7 +606,7 @@ create_local_accept_sock(const char *path, int* noproto)
 #endif
 	sun.sun_family = AF_LOCAL;
 	/* length is 92-108, 104 on FreeBSD */
-	strlcpy(sun.sun_path, path, sizeof(sun.sun_path));
+	(void)strlcpy(sun.sun_path, path, sizeof(sun.sun_path));
 
 	if ((s = socket(PF_LOCAL, SOCK_STREAM, 0)) == -1) {
 		log_err("Cannot create local socket %s (%s)",
@@ -622,7 +622,7 @@ create_local_accept_sock(const char *path, int* noproto)
 	}
 
 	if (bind(s, (struct sockaddr *)&sun,
-		sizeof(struct sockaddr_un)) == -1) {
+		(socklen_t)sizeof(struct sockaddr_un)) == -1) {
 		log_err("Cannot bind local socket %s (%s)",
 			path, strerror(errno));
 		return -1;
