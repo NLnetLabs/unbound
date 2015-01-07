@@ -12,8 +12,9 @@
 	- patch from Stephane Lapie that adds to the python API, that
 	  exposes struct delegpt, and adds the find_delegation function.
 	- print query name when max target count is exceeded.
-	- patch from Brad Smith that fixes DESTDIR in unbound-control-setup
-	  for installs where config is not in the prefix location.
+	- patch from Stuart Henderson that fixes DESTDIR in
+	  unbound-control-setup for installs where config is not in
+	  the prefix location.
 	- Fix #634: fix fail to start on Linux LTS 3.14.X, ignores missing
 	  IP_MTU_DISCOVER OMIT option (fix from Remi Gacogne).
 	- Updated contrib warmup.cmd/sh to support two modes - load
