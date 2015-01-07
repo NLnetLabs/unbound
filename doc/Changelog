@@ -1,3 +1,6 @@
+7 January 2015: Wouter
+	- Fix warnings in pythonmod changes.
+
 6 January 2015: Wouter
 	- iana portlist update.
 	- patch for remote control over local sockets, from Dag-Erling

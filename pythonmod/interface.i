@@ -28,6 +28,7 @@
    #include "services/mesh.h"
    #include "iterator/iter_delegpt.h"
    #include "iterator/iter_hints.h"
+   #include "iterator/iter_utils.h"
    #include "ldns/wire2str.h"
    #include "ldns/str2wire.h"
    #include "ldns/pkthdr.h"
@@ -980,7 +981,7 @@ int set_return_msg(struct module_qstate* qstate,
 
 /* Functions which we will need to lookup delegations */
 struct delegpt* dns_cache_find_delegation(struct module_env* env,
-        char* qname, size_t qnamelen, uint16_t qtype, uint16_t qclass,
+        uint8_t* qname, size_t qnamelen, uint16_t qtype, uint16_t qclass,
         struct regional* region, struct dns_msg** msg, uint32_t timenow);
 int iter_dp_is_useless(struct query_info* qinfo, uint16_t qflags,
         struct delegpt* dp);
@@ -1004,22 +1005,22 @@ struct delegpt* find_delegation(struct module_qstate* qstate, char *nm, size_t n
     uint32_t timenow = *qstate->env->now;
 
     regional_free_all(region);
-    qinfo.qname = nm;
+    qinfo.qname = (uint8_t*)nm;
     qinfo.qname_len = nmlen;
     qinfo.qtype = LDNS_RR_TYPE_A;
     qinfo.qclass = LDNS_RR_CLASS_IN;
 
     while(1) {
-        dp = dns_cache_find_delegation(qstate->env, nm, nmlen, qinfo.qtype, qinfo.qclass, region, &msg, timenow);
+        dp = dns_cache_find_delegation(qstate->env, (uint8_t*)nm, nmlen, qinfo.qtype, qinfo.qclass, region, &msg, timenow);
         if(!dp)
             return NULL;
         if(iter_dp_is_useless(&qinfo, BIT_RD, dp)) {
-            if (dname_is_root(nm))
+            if (dname_is_root((uint8_t*)nm))
                 return NULL;
-            nm = dp->name;
+            nm = (char*)dp->name;
             nmlen = dp->namelen;
             dname_remove_label((uint8_t**)&nm, &nmlen);
-            dname_str(nm, b);
+            dname_str((uint8_t*)nm, b);
             continue;
         }
         stub = hints_lookup_stub(qstate->env->hints, qinfo.qname, qinfo.qclass, dp);
