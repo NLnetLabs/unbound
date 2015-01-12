@@ -44,6 +44,10 @@
 
 %pythoncode %{
    import encodings.idna
+   try:
+       import builtins
+   except ImportError:
+       import __builtin__ as builtins
 
    # Ensure compatibility with older python versions
    if 'bytes' not in vars():
@@ -52,7 +56,7 @@
    def ord(s):
        if isinstance(s, int):
            return s
-       return __builtins__.ord(s)
+       return builtins.ord(s)
 %}
 
 //%include "doc.i"
