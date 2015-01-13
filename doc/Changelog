@@ -1,3 +1,6 @@
+13 January 2015: Wouter
+	- iana portlist update.
+
 12 January 2015: Wouter
 	- Cast sun_len sizeof to socklen_t.
 	- Fix pyunbound ord call, portable for python 2 and 3.
