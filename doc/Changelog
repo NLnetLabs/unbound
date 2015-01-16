@@ -1,3 +1,7 @@
+16 January 2015: Wouter
+	- unit test for local unix connection.  Documentation and log_addr
+	  does not inspect port for AF_LOCAL.
+
 13 January 2015: Wouter
 	- iana portlist update.
 

@@ -553,6 +553,10 @@ remote-control:
 	# set up the keys and certificates with unbound-control-setup.
 	# control-enable: no
 
+	# Set to no and use an absolute path as control-interface to use
+	# a unix local named pipe for unbound-control.
+	# control-use-cert: yes
+
 	# what interfaces are listened to for remote control.
 	# give 0.0.0.0 and ::0 to listen to all interfaces.
 	# control-interface: 127.0.0.1
