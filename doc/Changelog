@@ -1,3 +1,6 @@
+23 January 2015: Wouter
+	- windows port fixes, no AF_LOCAL, no chown, no chmod(grp).
+
 16 January 2015: Wouter
 	- unit test for local unix connection.  Documentation and log_addr
 	  does not inspect port for AF_LOCAL.

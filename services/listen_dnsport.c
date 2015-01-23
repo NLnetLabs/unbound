@@ -641,6 +641,7 @@ create_local_accept_sock(const char *path, int* noproto)
 	(void)noproto; /*unused*/
 	return s;
 #else
+	(void)path;
 	log_err("Local sockets are not supported");
 	*noproto = 1;
 	return -1;

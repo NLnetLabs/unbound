@@ -1205,6 +1205,8 @@ void config_lookup_uid(struct config_file* cfg)
 		cfg->uid = pwd->pw_uid;
 		cfg->gid = pwd->pw_gid;
 	}
+#else
+	(void)cfg;
 #endif
 }
 
