@@ -600,6 +600,7 @@ create_local_accept_sock(const char *path, int* noproto)
 	int s;
 	struct sockaddr_un sun;
 
+	verbose(VERB_ALGO, "creating unix socket %s", path);
 #ifdef HAVE_STRUCT_SOCKADDR_UN_SUN_LEN
 	/* this member exists on BSDs, not Linux */
 	sun.sun_len = (socklen_t)sizeof(sun);
