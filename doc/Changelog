@@ -1,3 +1,6 @@
+29 January 2015: Wouter
+	- Fix pyunbound byte string representation for python3.
+
 26 January 2015: Wouter
 	- Fix unintended use of gcc extension for incomplete enum types,
 	  compile with pedantic c99 compliance (from Daniel Dickman).
