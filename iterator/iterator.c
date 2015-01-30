@@ -2882,6 +2882,9 @@ process_response(struct module_qstate* qstate, struct iter_qstate* iq,
 			iq->response->rep);
 	
 	if(event == module_event_capsfail || iq->caps_fallback) {
+		/* for fallback we care about main answer, not additionals */
+		/* removing that makes comparison more likely to succeed */
+		caps_strip_reply(iq->response->rep);
 		if(!iq->caps_fallback) {
 			/* start fallback */
 			iq->caps_fallback = 1;
