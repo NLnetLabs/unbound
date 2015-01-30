@@ -598,16 +598,16 @@ create_local_accept_sock(const char *path, int* noproto)
 {
 #ifdef HAVE_SYS_UN_H
 	int s;
-	struct sockaddr_un sun;
+	struct sockaddr_un usock;
 
 	verbose(VERB_ALGO, "creating unix socket %s", path);
 #ifdef HAVE_STRUCT_SOCKADDR_UN_SUN_LEN
 	/* this member exists on BSDs, not Linux */
-	sun.sun_len = (socklen_t)sizeof(sun);
+	usock.sun_len = (socklen_t)sizeof(usock);
 #endif
-	sun.sun_family = AF_LOCAL;
+	usock.sun_family = AF_LOCAL;
 	/* length is 92-108, 104 on FreeBSD */
-	(void)strlcpy(sun.sun_path, path, sizeof(sun.sun_path));
+	(void)strlcpy(usock.sun_path, path, sizeof(usock.sun_path));
 
 	if ((s = socket(PF_LOCAL, SOCK_STREAM, 0)) == -1) {
 		log_err("Cannot create local socket %s (%s)",
@@ -622,7 +622,7 @@ create_local_accept_sock(const char *path, int* noproto)
 		return -1;
 	}
 
-	if (bind(s, (struct sockaddr *)&sun,
+	if (bind(s, (struct sockaddr *)&usock,
 		(socklen_t)sizeof(struct sockaddr_un)) == -1) {
 		log_err("Cannot bind local socket %s (%s)",
 			path, strerror(errno));

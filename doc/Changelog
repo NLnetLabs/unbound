@@ -1,6 +1,7 @@
 30 January 2015: Wouter
 	- Fix 0x20 capsforid fallback to omit gratuitous NS and additional
 	  section changes.
+	- Portability fix for Solaris ('sun' is not usable for a variable).
 
 29 January 2015: Wouter
 	- Fix pyunbound byte string representation for python3.
