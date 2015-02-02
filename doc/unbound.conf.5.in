@@ -301,6 +301,11 @@ by threads. Must be set to a power of 2.
 .B infra\-cache\-numhosts: \fI<number>
 Number of hosts for which information is cached. Default is 10000.
 .TP
+.B infra\-cache\-min\-rtt: \fI<msec>
+Lower limit for dynamic retransmit timeout calculation in infrastructure
+cache. Default is 50 milliseconds. Increase this value if using forwarders
+needing more time to do recursive name resolution.
+.TP
 .B do\-ip4: \fI<yes or no>
 Enable or disable whether ip4 queries are answered or issued. Default is yes.
 .TP

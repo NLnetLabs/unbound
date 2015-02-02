@@ -1,3 +1,7 @@
+2 February 2015: Wouter
+	- infra-cache-min-rtt patch from Florian Riehm, for expected long
+	  uplink roundtrip times.
+
 30 January 2015: Wouter
 	- Fix 0x20 capsforid fallback to omit gratuitous NS and additional
 	  section changes.

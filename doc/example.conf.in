@@ -138,6 +138,9 @@ server:
 	# the time to live (TTL) value for cached roundtrip times, lameness and
 	# EDNS version information for hosts. In seconds.
 	# infra-host-ttl: 900
+	
+	# minimum wait time for responses, increase if uplink is long. In msec.
+	# infra-cache-min-rtt: 50
 
 	# the number of slabs to use for the Infrastructure cache.
 	# the number of slabs must be a power of 2.
