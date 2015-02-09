@@ -1,3 +1,8 @@
+9 February 2015: Wouter
+	- Fix validation failure in case upstream forwarder (ISC BIND) does
+	  not have the same trust anchors and decides to insert unsigned NS
+	  record in authority section.
+
 2 February 2015: Wouter
 	- infra-cache-min-rtt patch from Florian Riehm, for expected long
 	  uplink roundtrip times.
