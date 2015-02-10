@@ -1,3 +1,7 @@
+10 February 2015: Wouter
+	- Fix scrubber with harden-glue turned off to reject NS (and other
+	  not-address) records.
+
 9 February 2015: Wouter
 	- Fix validation failure in case upstream forwarder (ISC BIND) does
 	  not have the same trust anchors and decides to insert unsigned NS
