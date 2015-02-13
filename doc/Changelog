@@ -1,3 +1,6 @@
+13 February 2015: Wouter
+	- Fix #643: doc/example.conf.in: unnecessary whitespace.
+
 12 February 2015: Wouter
 	- tag 1.5.2rc1
 
