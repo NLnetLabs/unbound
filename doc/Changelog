@@ -1,6 +1,7 @@
 20 February 2015: Wouter
 	- Use the getrandom syscall introduced in Linux 3.17 (from Heiner
 	  Kallweit).
+	- Portability to Solaris 10, use AF_LOCAL.
 
 19 February 2015: Wouter
 	- 1.5.2 release tag.
