@@ -3,6 +3,8 @@
 	  Kallweit).
 	- Fix #645 Portability to Solaris 10, use AF_LOCAL.
 	- Fix #646 Portability to Solaris, -lrt for getentropy_solaris.
+	- Fix #647 crash in 1.5.2 because pwd.db no longer accessible after
+	  reload.
 
 19 February 2015: Wouter
 	- 1.5.2 release tag.
