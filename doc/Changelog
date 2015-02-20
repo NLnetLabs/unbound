@@ -1,3 +1,7 @@
+20 February 2015: Wouter
+	- Use the getrandom syscall introduced in Linux 3.17 (from Heiner
+	  Kallweit).
+
 19 February 2015: Wouter
 	- 1.5.2 release tag.
 	- svn trunk contains 1.5.3 under development.
