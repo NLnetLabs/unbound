@@ -1022,6 +1022,7 @@ if test "$USE_NSS" = "no"; then
 					# this lib needed for sha2 on solaris
 					LIBS="$LIBS -lmd"
 				fi
+				AC_SEARCH_LIBS([clock_gettime], [rt])
 			;;
 			Linux|*)
 				AC_LIBOBJ(getentropy_linux)
