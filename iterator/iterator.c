@@ -1793,6 +1793,7 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 			verbose(VERB_ALGO, "0x20 fallback had %d responses "
 				"match for %d wanted, done.", 
 				(int)iq->caps_server+1, (int)naddr*3);
+			iq->response = iq->caps_response;
 			iq->caps_fallback = 0;
 			iter_dec_attempts(iq->dp, 3); /* space for fallback */
 			iq->num_current_queries++; /* RespState decrements it*/
