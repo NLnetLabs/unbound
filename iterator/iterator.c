@@ -1787,7 +1787,8 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 		 * the original query is one that matched too, so we have
 		 * caps_server+1 number of matching queries now */
 		if(iq->caps_server+1 >= naddr*3 ||
-			iq->caps_server+1 >= MAX_SENT_COUNT) {
+			iq->caps_server*2+2 >= MAX_SENT_COUNT) {
+			/* *2 on sentcount check because ipv6 may fail */
 			/* we're done, process the response */
 			verbose(VERB_ALGO, "0x20 fallback had %d responses "
 				"match for %d wanted, done.", 
@@ -2884,8 +2885,18 @@ process_response(struct module_qstate* qstate, struct iter_qstate* iq,
 
 	/* normalize and sanitize: easy to delete items from linked lists */
 	if(!scrub_message(pkt, prs, &iq->qchase, iq->dp->name, 
-		qstate->env->scratch, qstate->env, ie))
+		qstate->env->scratch, qstate->env, ie)) {
+		/* if 0x20 enabled, start fallback, but we have no message */
+		if(event == module_event_capsfail && !iq->caps_fallback) {
+			iq->caps_fallback = 1;
+			iq->caps_server = 0;
+			iq->caps_reply = NULL;
+			iq->state = QUERYTARGETS_STATE;
+			iq->num_current_queries--;
+			verbose(VERB_DETAIL, "Capsforid: scrub failed, starting fallback with no response");
+		}
 		goto handle_it;
+	}
 
 	/* allocate response dns_msg in region */
 	iq->response = dns_alloc_msg(pkt, prs, qstate->region);
