@@ -1,3 +1,7 @@
+4 March 2015: Wouter
+	- Patch from Brad Smith that syncs compat/getentropy_linux with
+	  OpenBSD's version (2015-03-04).
+
 3 March 2015: Wouter
 	- tag 1.5.3rc1
 
