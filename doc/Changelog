@@ -8,6 +8,7 @@
 	  parse failures start 0x20 fallback procedure.
 	- store caps_response with best response in case downgrade response
 	  happens to be the last one.
+	- Document windows 8 tests.
 
 3 March 2015: Wouter
 	- tag 1.5.3rc1
