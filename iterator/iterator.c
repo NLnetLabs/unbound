@@ -1866,6 +1866,23 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 			/* Since a target query might have been made, we 
 			 * need to check again. */
 			if(iq->num_target_queries == 0) {
+				/* if in capsforid fallback, instead of last
+				 * resort, we agree with the current reply
+				 * we have (if any) (our count of addrs bad)*/
+				if(iq->caps_fallback && iq->caps_reply) {
+					/* we're done, process the response */
+					verbose(VERB_ALGO, "0x20 fallback had %d responses, "
+						"but no more servers except "
+						"last resort, done.", 
+						(int)iq->caps_server+1);
+					iq->caps_fallback = 0;
+					iter_dec_attempts(iq->dp, 3); /* space for fallback */
+					iq->num_current_queries++; /* RespState decrements it*/
+					iq->referral_count++; /* make sure we don't loop */
+					iq->sent_count = 0;
+					iq->state = QUERY_RESP_STATE;
+					return 1;
+				}
 				return processLastResort(qstate, iq, ie, id);
 			}
 		}
@@ -2900,6 +2917,20 @@ process_response(struct module_qstate* qstate, struct iter_qstate* iq,
 				iq->caps_reply = iq->response->rep;
 				iq->caps_server = -1; /*become zero at ++,
 				so that we start the full set of trials */
+			} else if(caps_failed_rcode(iq->caps_reply) &&
+				!caps_failed_rcode(iq->response->rep)) {
+				/* prefer to upgrade to non-SERVFAIL */
+				iq->caps_reply = iq->response->rep;
+			} else if(!caps_failed_rcode(iq->caps_reply) &&
+				caps_failed_rcode(iq->response->rep)) {
+				/* if we have non-SERVFAIL as answer then 
+				 * we can ignore SERVFAILs for the equality
+				 * comparison */
+				/* no instructions here, skip other else */
+			} else if(caps_failed_rcode(iq->caps_reply) &&
+				caps_failed_rcode(iq->response->rep)) {
+				/* failure is same as other failure in fallbk*/
+				/* no instructions here, skip other else */
 			} else if(!reply_equal(iq->response->rep, iq->caps_reply,
 				qstate->env->scratch)) {
 				verbose(VERB_DETAIL, "Capsforid fallback: "

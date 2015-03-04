@@ -750,6 +750,12 @@ caps_strip_reply(struct reply_info* rep)
 	}
 }
 
+int caps_failed_rcode(struct reply_info* rep)
+{
+	return !(FLAGS_GET_RCODE(rep->flags) == LDNS_RCODE_NOERROR ||
+		FLAGS_GET_RCODE(rep->flags) == LDNS_RCODE_NXDOMAIN);
+}
+
 void 
 iter_store_parentside_rrset(struct module_env* env, 
 	struct ub_packed_rrset_key* rrset)
