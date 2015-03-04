@@ -6,6 +6,8 @@
 	  inability to find nameservers does not fail equality comparisons,
 	  many nameservers does not try to compare more than max-sent-count,
 	  parse failures start 0x20 fallback procedure.
+	- store caps_response with best response in case downgrade response
+	  happens to be the last one.
 
 3 March 2015: Wouter
 	- tag 1.5.3rc1

@@ -235,6 +235,7 @@ struct iter_qstate {
 	/** state for capsfail: stored query for comparisons. Can be NULL if
 	 * no response had been seen prior to starting the fallback. */
 	struct reply_info* caps_reply;
+	struct dns_msg* caps_response;
 
 	/** Current delegation message - returned for non-RD queries */
 	struct dns_msg* deleg_msg;

@@ -1876,6 +1876,7 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 						"but no more servers except "
 						"last resort, done.", 
 						(int)iq->caps_server+1);
+					iq->response = iq->caps_response;
 					iq->caps_fallback = 0;
 					iter_dec_attempts(iq->dp, 3); /* space for fallback */
 					iq->num_current_queries++; /* RespState decrements it*/
@@ -2843,6 +2844,7 @@ process_response(struct module_qstate* qstate, struct iter_qstate* iq,
 			iq->caps_fallback = 1;
 			iq->caps_server = 0;
 			iq->caps_reply = NULL;
+			iq->caps_response = NULL;
 			iq->state = QUERYTARGETS_STATE;
 			iq->num_current_queries--;
 			/* need fresh attempts for the 0x20 fallback, if
@@ -2891,6 +2893,7 @@ process_response(struct module_qstate* qstate, struct iter_qstate* iq,
 			iq->caps_fallback = 1;
 			iq->caps_server = 0;
 			iq->caps_reply = NULL;
+			iq->caps_response = NULL;
 			iq->state = QUERYTARGETS_STATE;
 			iq->num_current_queries--;
 			verbose(VERB_DETAIL, "Capsforid: scrub failed, starting fallback with no response");
@@ -2918,6 +2921,7 @@ process_response(struct module_qstate* qstate, struct iter_qstate* iq,
 			iq->caps_fallback = 1;
 			iq->caps_server = 0;
 			iq->caps_reply = iq->response->rep;
+			iq->caps_response = iq->response;
 			iq->state = QUERYTARGETS_STATE;
 			iq->num_current_queries--;
 			verbose(VERB_DETAIL, "Capsforid: starting fallback");
@@ -2926,12 +2930,14 @@ process_response(struct module_qstate* qstate, struct iter_qstate* iq,
 			/* check if reply is the same, otherwise, fail */
 			if(!iq->caps_reply) {
 				iq->caps_reply = iq->response->rep;
+				iq->caps_response = iq->response;
 				iq->caps_server = -1; /*become zero at ++,
 				so that we start the full set of trials */
 			} else if(caps_failed_rcode(iq->caps_reply) &&
 				!caps_failed_rcode(iq->response->rep)) {
 				/* prefer to upgrade to non-SERVFAIL */
 				iq->caps_reply = iq->response->rep;
+				iq->caps_response = iq->response;
 			} else if(!caps_failed_rcode(iq->caps_reply) &&
 				caps_failed_rcode(iq->response->rep)) {
 				/* if we have non-SERVFAIL as answer then 
