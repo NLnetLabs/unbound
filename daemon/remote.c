@@ -724,6 +724,8 @@ print_stats(SSL* ssl, const char* nm, struct stats_info* s)
 		(long long)avg.tv_sec, (int)avg.tv_usec)) return 0;
 	if(!ssl_printf(ssl, "%s.recursion.time.median"SQ"%g\n", nm, 
 		s->mesh_time_median)) return 0;
+	if(!ssl_printf(ssl, "%s.tcpusage"SQ"%lu\n", nm,
+		(unsigned long)s->svr.tcp_accept_usage)) return 0;
 	return 1;
 }
 

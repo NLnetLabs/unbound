@@ -2,6 +2,7 @@
 	- contrib/unbound_smf22.tar.gz: Solaris SMF installation/removal
 	  scripts.  Contributed by Yuri Voinov.
 	- Document that incoming-num-tcp increase is good for large servers.
+	- stats reports tcp usage, of incoming-num-tcp buffers.
 
 4 March 2015: Wouter
 	- Patch from Brad Smith that syncs compat/getentropy_linux with
