@@ -164,12 +164,14 @@ By default only ports above 1024 that have not been assigned by IANA are used.
 Give a port number or a range of the form "low\-high", without spaces.
 .TP
 .B outgoing\-num\-tcp: \fI<number>
-Number of outgoing TCP buffers to allocate per thread. Default is 10. If set
-to 0, or if do\-tcp is "no", no TCP queries to authoritative servers are done.
+Number of outgoing TCP buffers to allocate per thread. Default is 10. If
+set to 0, or if do\-tcp is "no", no TCP queries to authoritative servers
+are done.  For larger installations increasing this value is a good idea.
 .TP
 .B incoming\-num\-tcp: \fI<number>
-Number of incoming TCP buffers to allocate per thread. Default is 10. If set
-to 0, or if do\-tcp is "no", no TCP queries from clients are accepted.
+Number of incoming TCP buffers to allocate per thread. Default is
+10. If set to 0, or if do\-tcp is "no", no TCP queries from clients are
+accepted. For larger installations increasing this value is a good idea.
 .TP
 .B edns\-buffer\-size: \fI<number>
 Number of bytes size to advertise as the EDNS reassembly buffer size.
