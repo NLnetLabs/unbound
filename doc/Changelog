@@ -1,3 +1,7 @@
+5 March 2015: Wouter
+	- contrib/unbound_smf22.tar.gz: Solaris SMF installation/removal
+	  scripts.  Contributed by Yuri Voinov.
+
 4 March 2015: Wouter
 	- Patch from Brad Smith that syncs compat/getentropy_linux with
 	  OpenBSD's version (2015-03-04).
