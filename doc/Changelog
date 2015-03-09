@@ -1,3 +1,8 @@
+9 March 2015: Wouter
+	- Fix #644: harden-algo-downgrade option, if turned off, fixes the
+	  reported excessive validation failure when multiple algorithms
+	  are present.  It allows the weakest algorithm to validate the zone.
+
 5 March 2015: Wouter
 	- contrib/unbound_smf22.tar.gz: Solaris SMF installation/removal
 	  scripts.  Contributed by Yuri Voinov.

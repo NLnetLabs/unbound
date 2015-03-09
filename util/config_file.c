@@ -169,6 +169,7 @@ config_create(void)
 	cfg->harden_dnssec_stripped = 1;
 	cfg->harden_below_nxdomain = 0;
 	cfg->harden_referral_path = 0;
+	cfg->harden_algo_downgrade = 1;
 	cfg->use_caps_bits_for_id = 0;
 	cfg->private_address = NULL;
 	cfg->private_domain = NULL;
@@ -404,6 +405,7 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	else S_YNO("harden-dnssec-stripped:", harden_dnssec_stripped)
 	else S_YNO("harden-below-nxdomain:", harden_below_nxdomain)
 	else S_YNO("harden-referral-path:", harden_referral_path)
+	else S_YNO("harden-algo-downgrade:", harden_algo_downgrade)
 	else S_YNO("use-caps-for-id", use_caps_bits_for_id)
 	else S_SIZET_OR_ZERO("unwanted-reply-threshold:", unwanted_threshold)
 	else S_STRLIST("private-address:", private_address)
@@ -662,6 +664,7 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_YNO(opt, "harden-dnssec-stripped", harden_dnssec_stripped)
 	else O_YNO(opt, "harden-below-nxdomain", harden_below_nxdomain)
 	else O_YNO(opt, "harden-referral-path", harden_referral_path)
+	else O_YNO(opt, "harden-algo-downgrade", harden_algo_downgrade)
 	else O_YNO(opt, "use-caps-for-id", use_caps_bits_for_id)
 	else O_DEC(opt, "unwanted-reply-threshold", unwanted_threshold)
 	else O_YNO(opt, "do-not-query-localhost", donotquery_localhost)

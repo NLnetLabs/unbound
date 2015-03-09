@@ -173,6 +173,8 @@ struct config_file {
 	int harden_below_nxdomain;
 	/** harden the referral path, query for NS,A,AAAA and validate */
 	int harden_referral_path;
+	/** harden against algorithm downgrade */
+	int harden_algo_downgrade;
 	/** use 0x20 bits in query as random ID bits */
 	int use_caps_bits_for_id;
 	/** strip away these private addrs from answers, no DNS Rebinding */

@@ -284,6 +284,11 @@ server:
 	# implementation of draft-wijngaards-dnsext-resolver-side-mitigation.
 	# harden-referral-path: no
 
+	# Harden against algorithm downgrade when multiple algorithms are
+	# advertised in the DS record.  If no, allows the weakest algorithm
+	# to validate the zone.
+	# harden-algo-downgrade: yes
+
 	# Use 0x20-encoded random bits in the query to foil spoof attempts.
 	# This feature is an experimental implementation of draft dns-0x20.
 	# use-caps-for-id: no
