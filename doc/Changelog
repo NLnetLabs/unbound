@@ -2,6 +2,7 @@
 	- Fix lintian warning in unbound-checkconf man page (from Andreas
 	  Schulze).
 	- print svnroot when building windows dist.
+	- iana portlist update.
 
 9 March 2015: Wouter
 	- Fix #644: harden-algo-downgrade option, if turned off, fixes the
