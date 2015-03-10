@@ -1,3 +1,7 @@
+10 March 2015: Wouter
+	- Fix lintian warning in unbound-checkconf man page (from Andreas
+	  Schulze).
+
 9 March 2015: Wouter
 	- Fix #644: harden-algo-downgrade option, if turned off, fixes the
 	  reported excessive validation failure when multiple algorithms
