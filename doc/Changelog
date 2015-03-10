@@ -1,6 +1,7 @@
 10 March 2015: Wouter
 	- Fix lintian warning in unbound-checkconf man page (from Andreas
 	  Schulze).
+	- print svnroot when building windows dist.
 
 9 March 2015: Wouter
 	- Fix #644: harden-algo-downgrade option, if turned off, fixes the
@@ -28,6 +29,7 @@
 
 3 March 2015: Wouter
 	- tag 1.5.3rc1
+	[ This became 1.5.3 on 10 March, trunk is 1.5.4 in development ]
 
 2 March 2015: Wouter
 	- iana portlist update.
