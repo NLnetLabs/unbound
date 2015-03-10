@@ -204,7 +204,7 @@ getentropy_getrandom(void *buf, size_t len)
 		ret = syscall(SYS_getrandom, buf, len, 0);
 	} while (ret == -1 && errno == EINTR);
 
-	if (ret != len)
+	if (ret != (int)len)
 		return (-1);
 	errno = pre_errno;
 	return (0);
