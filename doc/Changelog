@@ -1,3 +1,6 @@
+12 March 2015: Wouter
+	- Updated default keylength in unbound-control-setup to 3k.
+
 10 March 2015: Wouter
 	- Fix lintian warning in unbound-checkconf man page (from Andreas
 	  Schulze).
