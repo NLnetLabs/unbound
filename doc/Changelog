@@ -1,3 +1,6 @@
+16 March 2015: Wouter
+	- Fixup compile on cygwin, more portable openssl thread id.
+
 12 March 2015: Wouter
 	- Updated default keylength in unbound-control-setup to 3k.
 
