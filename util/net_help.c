@@ -770,7 +770,7 @@ static lock_basic_t *ub_openssl_locks = NULL;
 static unsigned long
 ub_crypto_id_cb(void)
 {
-	return log_thread_get();
+	return (unsigned long)log_thread_get();
 }
 
 static void
