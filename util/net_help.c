@@ -790,7 +790,7 @@ int ub_openssl_lock_init(void)
 #if defined(HAVE_SSL) && defined(OPENSSL_THREADS) && !defined(THREADS_DISABLED)
 	int i;
 	ub_openssl_locks = (lock_basic_t*)reallocarray(
-		NULL, CRYPTO_num_locks(), sizeof(lock_basic_t));
+		NULL, (size_t)CRYPTO_num_locks(), sizeof(lock_basic_t));
 	if(!ub_openssl_locks)
 		return 0;
 	for(i=0; i<CRYPTO_num_locks(); i++) {
