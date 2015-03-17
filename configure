@@ -16729,6 +16729,16 @@ fi
 cat >>confdefs.h <<_ACEOF
 #define HAVE_DECL_ARC4RANDOM_UNIFORM $ac_have_decl
 _ACEOF
+ac_fn_c_check_decl "$LINENO" "reallocarray" "ac_cv_have_decl_reallocarray" "$ac_includes_default"
+if test "x$ac_cv_have_decl_reallocarray" = xyes; then :
+  ac_have_decl=1
+else
+  ac_have_decl=0
+fi
+
+cat >>confdefs.h <<_ACEOF
+#define HAVE_DECL_REALLOCARRAY $ac_have_decl
+_ACEOF
 
 else
 	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
@@ -18131,6 +18141,20 @@ else
   case " $LIBOBJS " in
   *" gmtime_r.$ac_objext "* ) ;;
   *) LIBOBJS="$LIBOBJS gmtime_r.$ac_objext"
+ ;;
+esac
+
+fi
+
+
+ac_fn_c_check_func "$LINENO" "reallocarray" "ac_cv_func_reallocarray"
+if test "x$ac_cv_func_reallocarray" = xyes; then :
+  $as_echo "#define HAVE_REALLOCARRAY 1" >>confdefs.h
+
+else
+  case " $LIBOBJS " in
+  *" reallocarray.$ac_objext "* ) ;;
+  *) LIBOBJS="$LIBOBJS reallocarray.$ac_objext"
  ;;
 esac
 

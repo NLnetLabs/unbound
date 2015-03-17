@@ -569,7 +569,7 @@ if grep OPENSSL_VERSION_TEXT $ssldir/include/openssl/opensslv.h | grep "LibreSSL
 	AC_DEFINE([HAVE_LIBRESSL], [1], [Define if we have LibreSSL])
 	# libressl provides these compat functions, but they may also be
 	# declared by the OS in libc.  See if they have been declared.
-	AC_CHECK_DECLS([strlcpy,strlcat,arc4random,arc4random_uniform])
+	AC_CHECK_DECLS([strlcpy,strlcat,arc4random,arc4random_uniform,reallocarray])
 else
 	AC_MSG_RESULT([no])
 fi
@@ -996,6 +996,7 @@ AC_REPLACE_FUNCS(strlcat)
 AC_REPLACE_FUNCS(strlcpy)
 AC_REPLACE_FUNCS(memmove)
 AC_REPLACE_FUNCS(gmtime_r)
+AC_REPLACE_FUNCS(reallocarray)
 LIBOBJ_WITHOUT_CTIMEARC4="$LIBOBJS"
 AC_SUBST(LIBOBJ_WITHOUT_CTIMEARC4)
 if test "$USE_NSS" = "no"; then
@@ -1236,6 +1237,7 @@ AHX_CONFIG_MEMMOVE(unbound)
 AHX_CONFIG_STRLCAT(unbound)
 AHX_CONFIG_STRLCPY(unbound)
 AHX_CONFIG_GMTIME_R(unbound)
+AHX_CONFIG_REALLOCARRAY(unbound)
 AHX_CONFIG_W32_SLEEP
 AHX_CONFIG_W32_USLEEP
 AHX_CONFIG_W32_RANDOM
@@ -1268,6 +1270,9 @@ uint32_t arc4random(void);
 #  endif
 #  if !HAVE_DECL_ARC4RANDOM_UNIFORM && defined(HAVE_ARC4RANDOM_UNIFORM)
 uint32_t arc4random_uniform(uint32_t upper_bound);
+#  endif
+#  if !HAVE_DECL_REALLOCARRAY
+void *reallocarray(void *ptr, size_t nmemb, size_t size);
 #  endif
 #endif /* HAVE_LIBRESSL */
 #ifndef HAVE_ARC4RANDOM

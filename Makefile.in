@@ -131,7 +131,7 @@ compat/memcmp.c compat/memmove.c compat/snprintf.c compat/strlcat.c \
 compat/strlcpy.c compat/strptime.c compat/getentropy_linux.c \
 compat/getentropy_osx.c compat/getentropy_solaris.c compat/getentropy_win.c \
 compat/explicit_bzero.c compat/arc4random.c compat/arc4random_uniform.c \
-compat/arc4_lock.c compat/sha512.c
+compat/arc4_lock.c compat/sha512.c compat/reallocarray.c
 COMPAT_OBJ=$(LIBOBJS:.o=.lo)
 COMPAT_OBJ_WITHOUT_CTIME=$(LIBOBJ_WITHOUT_CTIME:.o=.lo)
 COMPAT_OBJ_WITHOUT_CTIMEARC4=$(LIBOBJ_WITHOUT_CTIMEARC4:.o=.lo)
@@ -1217,6 +1217,7 @@ memmove.lo memmove.o: $(srcdir)/compat/memmove.c config.h
 snprintf.lo snprintf.o: $(srcdir)/compat/snprintf.c config.h
 strlcat.lo strlcat.o: $(srcdir)/compat/strlcat.c config.h
 strlcpy.lo strlcpy.o: $(srcdir)/compat/strlcpy.c config.h
+reallocarray.lo reallocarray.o: $(srcdir)/compat/reallocarray.c config.h
 strptime.lo strptime.o: $(srcdir)/compat/strptime.c config.h
 getentropy_linux.lo getentropy_linux.o: $(srcdir)/compat/getentropy_linux.c config.h \
  

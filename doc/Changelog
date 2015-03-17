@@ -1,3 +1,7 @@
+17 March 2015: Wouter
+	- Use reallocarray for integer overflow protection, patch submitted
+	  by Loganaden Velvindron.
+
 16 March 2015: Wouter
 	- Fixup compile on cygwin, more portable openssl thread id.
 

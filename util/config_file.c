@@ -454,7 +454,8 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	{ IS_NUMBER_OR_ZERO; cfg->val_sig_skew_max = (int32_t)atoi(val); }
 	else if (strcmp(opt, "outgoing-interface:") == 0) {
 		char* d = strdup(val);
-		char** oi = (char**)malloc((cfg->num_out_ifs+1)*sizeof(char*));
+		char** oi = 
+		(char**)reallocarray(NULL, (cfg->num_out_ifs+1), sizeof(char*));
 		if(!d || !oi) { free(d); free(oi); return -1; }
 		if(cfg->out_ifs && cfg->num_out_ifs) {
 			memmove(oi, cfg->out_ifs, cfg->num_out_ifs*sizeof(char*));
@@ -1001,7 +1002,7 @@ int cfg_condense_ports(struct config_file* cfg, int** avail)
 	*avail = NULL;
 	if(num == 0)
 		return 0;
-	*avail = (int*)malloc(sizeof(int)*num);
+	*avail = (int*)reallocarray(NULL, num, sizeof(int));
 	if(!*avail)
 		return 0;
 	for(i=0; i<65536; i++) {
