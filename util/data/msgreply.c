@@ -87,6 +87,7 @@ construct_reply_info_base(struct regional* region, uint16_t flags, size_t qd,
 	/* rrset_count-1 because the first ref is part of the struct. */
 	size_t s = sizeof(struct reply_info) - sizeof(struct rrset_ref) +
 		sizeof(struct ub_packed_rrset_key*) * total;
+	if(total >= 0xffffff) return NULL; /* sanity check on numRRS*/
 	if(region)
 		rep = (struct reply_info*)regional_alloc(region, s);
 	else	rep = (struct reply_info*)malloc(s + 
