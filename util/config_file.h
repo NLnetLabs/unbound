@@ -136,6 +136,8 @@ struct config_file {
 	size_t so_sndbuf;
 	/** SO_REUSEPORT requested on port 53 sockets */
 	int so_reuseport;
+	/** IP_TRANSPRENT socket option requested on port 53 sockets */
+	int ip_transparent;
 
 	/** number of interfaces to open. If 0 default all interfaces. */
 	int num_ifs;

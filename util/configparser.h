@@ -194,7 +194,8 @@ extern int yydebug;
      VAR_DNSTAP_LOG_CLIENT_RESPONSE_MESSAGES = 403,
      VAR_DNSTAP_LOG_FORWARDER_QUERY_MESSAGES = 404,
      VAR_DNSTAP_LOG_FORWARDER_RESPONSE_MESSAGES = 405,
-     VAR_HARDEN_ALGO_DOWNGRADE = 406
+     VAR_HARDEN_ALGO_DOWNGRADE = 406,
+     VAR_IP_TRANSPARENT = 407
    };
 #endif
 /* Tokens.  */
@@ -347,6 +348,7 @@ extern int yydebug;
 #define VAR_DNSTAP_LOG_FORWARDER_QUERY_MESSAGES 404
 #define VAR_DNSTAP_LOG_FORWARDER_RESPONSE_MESSAGES 405
 #define VAR_HARDEN_ALGO_DOWNGRADE 406
+#define VAR_IP_TRANSPARENT 407
 
 
 
@@ -360,7 +362,7 @@ typedef union YYSTYPE
 
 
 /* Line 2058 of yacc.c  */
-#line 364 "util/configparser.h"
+#line 366 "util/configparser.h"
 } YYSTYPE;
 # define YYSTYPE_IS_TRIVIAL 1
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */

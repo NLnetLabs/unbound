@@ -118,7 +118,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_DNSTAP_LOG_CLIENT_RESPONSE_MESSAGES
 %token VAR_DNSTAP_LOG_FORWARDER_QUERY_MESSAGES
 %token VAR_DNSTAP_LOG_FORWARDER_RESPONSE_MESSAGES
-%token VAR_HARDEN_ALGO_DOWNGRADE
+%token VAR_HARDEN_ALGO_DOWNGRADE VAR_IP_TRANSPARENT
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -178,7 +178,8 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_minimal_responses | server_rrset_roundrobin | server_max_udp_size |
 	server_so_reuseport | server_delay_close | server_unblock_lan_zones |
 	server_dns64_prefix | server_dns64_synthall |
-	server_infra_cache_min_rtt | server_harden_algo_downgrade
+	server_infra_cache_min_rtt | server_harden_algo_downgrade |
+	server_ip_transparent
 	;
 stubstart: VAR_STUB_ZONE
 	{
@@ -617,6 +618,16 @@ server_so_reuseport: VAR_SO_REUSEPORT STRING_ARG
         if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
             yyerror("expected yes or no.");
         else cfg_parser->cfg->so_reuseport =
+            (strcmp($2, "yes")==0);
+        free($2);
+    }
+    ;
+server_ip_transparent: VAR_IP_TRANSPARENT STRING_ARG
+    {
+        OUTYY(("P(server_ip_transparent:%s)\n", $2));
+        if(strcmp($2, "yes") != 0 && strcmp($2, "no") != 0)
+            yyerror("expected yes or no.");
+        else cfg_parser->cfg->ip_transparent =
             (strcmp($2, "yes")==0);
         free($2);
     }

@@ -87,6 +87,10 @@ server:
 	
 	# use SO_REUSEPORT to distribute queries over threads.
 	# so-reuseport: no
+	
+	# use IP_TRANSPARENT so the interface: addresses can be non-local
+	# and you can config non-existing IPs that are going to work later on
+	# ip-transparent: no
 
 	# EDNS reassembly buffer to advertise to UDP peers (the actual buffer
 	# is set with msg-buffer-size). 1480 can solve fragmentation (timeouts).

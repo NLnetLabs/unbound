@@ -1,3 +1,6 @@
+19 March 2015: Wouter
+	- Add ip-transparent config option for bind to non-local addresses.
+
 17 March 2015: Wouter
 	- Use reallocarray for integer overflow protection, patch submitted
 	  by Loganaden Velvindron.
