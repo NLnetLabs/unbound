@@ -114,6 +114,9 @@ create_udp_sock(int family, int socktype, struct sockaddr* addr,
 #ifndef IPV6_V6ONLY
 	(void)v6only;
 #endif
+#ifndef IP_TRANSPARENT
+	(void)transparent;
+#endif
 	if((s = socket(family, socktype, 0)) == -1) {
 		*inuse = 0;
 #ifndef USE_WINSOCK
@@ -485,7 +488,10 @@ create_tcp_accept_sock(struct addrinfo *addr, int v6only, int* noproto,
 	int s;
 #if defined(SO_REUSEADDR) || defined(SO_REUSEPORT) || defined(IPV6_V6ONLY) || defined(IP_TRANSPARENT)
 	int on = 1;
-#endif /* SO_REUSEADDR || IPV6_V6ONLY */
+#endif
+#ifndef IP_TRANSPARENT
+	(void)transparent;
+#endif
 	verbose_print_addr(addr);
 	*noproto = 0;
 	if((s = socket(addr->ai_family, addr->ai_socktype, 0)) == -1) {
