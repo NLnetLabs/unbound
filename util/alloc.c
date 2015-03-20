@@ -369,7 +369,7 @@ void *unbound_stat_calloc(size_t nmemb, size_t size)
 {
 	size_t s;
 	void* res;
-	if(INT_MAX/nmemb < size)
+	if(nmemb != 0 && INT_MAX/nmemb < size)
 		return NULL; /* integer overflow check */
 	s = (nmemb*size==0)?(size_t)1:nmemb*size;
 	res = calloc(1, s+16);
@@ -509,7 +509,7 @@ void *unbound_stat_calloc_lite(size_t nmemb, size_t size, const char* file,
 {
 	size_t req;
 	void* res;
-	if(INT_MAX/nmemb < size)
+	if(nmemb != 0 && INT_MAX/nmemb < size)
 		return NULL; /* integer overflow check */
 	req = nmemb * size;
 	res = malloc(req+lite_pad*2+sizeof(size_t));
