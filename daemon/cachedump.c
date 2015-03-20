@@ -652,13 +652,13 @@ load_msg(SSL* ssl, sldns_buffer* buf, struct worker* worker)
 	rep.ttl = (time_t)ttl;
 	rep.prefetch_ttl = PREFETCH_TTL_CALC(rep.ttl);
 	rep.security = (enum sec_status)security;
-	rep.an_numrrsets = (size_t)an;
-	rep.ns_numrrsets = (size_t)ns;
-	rep.ar_numrrsets = (size_t)ar;
 	if(an > RR_COUNT_MAX || ns > RR_COUNT_MAX || ar > RR_COUNT_MAX) {
 		log_warn("error too many rrsets");
 		return 0; /* protect against integer overflow in alloc */
 	}
+	rep.an_numrrsets = (size_t)an;
+	rep.ns_numrrsets = (size_t)ns;
+	rep.ar_numrrsets = (size_t)ar;
 	rep.rrset_count = (size_t)an+(size_t)ns+(size_t)ar;
 	rep.rrsets = (struct ub_packed_rrset_key**)regional_alloc_zero(
 		region, sizeof(struct ub_packed_rrset_key*)*rep.rrset_count);
