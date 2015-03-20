@@ -1,3 +1,6 @@
+20 March 2015: Wouter
+	- Fixed to add integer overflow checks on allocation (defense in depth).
+
 19 March 2015: Wouter
 	- Add ip-transparent config option for bind to non-local addresses.
 

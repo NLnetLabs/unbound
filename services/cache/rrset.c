@@ -304,7 +304,7 @@ rrset_array_unlock_touch(struct rrset_cache* r, struct regional* scratch,
 {
 	hashvalue_t* h;
 	size_t i;
-	if(!(h = (hashvalue_t*)regional_alloc(scratch, 
+	if(count > RR_COUNT_MAX || !(h = (hashvalue_t*)regional_alloc(scratch, 
 		sizeof(hashvalue_t)*count)))
 		log_warn("rrset LRU: memory allocation failed");
 	else 	/* store hash values */

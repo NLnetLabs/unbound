@@ -366,6 +366,8 @@ dns_msg_create(uint8_t* qname, size_t qnamelen, uint16_t qtype,
 		sizeof(struct reply_info)-sizeof(struct rrset_ref));
 	if(!msg->rep)
 		return NULL;
+	if(capacity > RR_COUNT_MAX)
+		return NULL; /* integer overflow protection */
 	msg->rep->flags = BIT_QR; /* with QR, no AA */
 	msg->rep->qdcount = 1;
 	msg->rep->rrsets = (struct ub_packed_rrset_key**)
@@ -453,6 +455,8 @@ gen_dns_msg(struct regional* region, struct query_info* q, size_t num)
 		sizeof(struct reply_info) - sizeof(struct rrset_ref));
 	if(!msg->rep)
 		return NULL;
+	if(num > RR_COUNT_MAX)
+		return NULL; /* integer overflow protection */
 	msg->rep->rrsets = (struct ub_packed_rrset_key**)
 		regional_alloc(region,
 		num * sizeof(struct ub_packed_rrset_key*));

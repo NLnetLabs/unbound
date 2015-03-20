@@ -226,6 +226,8 @@ val_new_getmsg(struct module_qstate* qstate, struct val_qstate* vq)
 		sizeof(struct reply_info) - sizeof(struct rrset_ref));
 	if(!vq->chase_reply)
 		return NULL;
+	if(vq->orig_msg->rep->rrset_count > RR_COUNT_MAX)
+		return NULL; /* protect against integer overflow */
 	vq->chase_reply->rrsets = regional_alloc_init(qstate->region,
 		vq->orig_msg->rep->rrsets, sizeof(struct ub_packed_rrset_key*)
 			* vq->orig_msg->rep->rrset_count);

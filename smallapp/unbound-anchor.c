@@ -915,7 +915,10 @@ read_data_chunk(SSL* ssl, size_t len)
 {
 	size_t got = 0;
 	int r;
-	char* data = malloc(len+1);
+	char* data;
+	if(len >= 0xfffffff0)
+		return NULL; /* to protect against integer overflow in malloc*/
+	data = malloc(len+1);
 	if(!data) {
 		if(verb) printf("out of memory\n");
 		return NULL;

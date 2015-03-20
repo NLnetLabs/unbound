@@ -308,6 +308,8 @@ iter_prepend(struct iter_qstate* iq, struct dns_msg* msg,
 	if(num_an + num_ns == 0)
 		return 1;
 	verbose(VERB_ALGO, "prepending %d rrsets", (int)num_an + (int)num_ns);
+	if(num_an > RR_COUNT_MAX || num_ns > RR_COUNT_MAX ||
+		msg->rep->rrset_count > RR_COUNT_MAX) return 0; /* overflow */
 	sets = regional_alloc(region, (num_an+num_ns+msg->rep->rrset_count) *
 		sizeof(struct ub_packed_rrset_key*));
 	if(!sets) 
@@ -2549,6 +2551,12 @@ processClassResponse(struct module_qstate* qstate, int id,
 			/* copy appropriate rcode */
 			to->rep->flags = from->rep->flags;
 			/* copy rrsets */
+			if(from->rep->rrset_count > RR_COUNT_MAX ||
+				to->rep->rrset_count > RR_COUNT_MAX) {
+				log_err("malloc failed (too many rrsets) in collect ANY"); 
+				foriq->state = FINISHED_STATE;
+				return; /* integer overflow protection */
+			}
 			dest = regional_alloc(forq->region, sizeof(dest[0])*n);
 			if(!dest) {
 				log_err("malloc failed in collect ANY"); 
