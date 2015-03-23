@@ -1,3 +1,6 @@
+23 March 2015: Wouter
+	- Fix segfault on user not found at startup (from Maciej Soltysiak).
+
 20 March 2015: Wouter
 	- Fixed to add integer overflow checks on allocation (defense in depth).
 
