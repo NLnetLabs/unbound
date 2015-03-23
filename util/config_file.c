@@ -1218,9 +1218,7 @@ void config_lookup_uid(struct config_file* cfg)
 	/* translate username into uid and gid */
 	if(cfg->username && cfg->username[0]) {
 		struct passwd *pwd;
-		if((pwd = getpwnam(cfg->username)) == NULL)
-			log_err("user '%s' does not exist.", cfg->username);
-		else {
+		if((pwd = getpwnam(cfg->username)) != NULL) {
 			cfg_uid = pwd->pw_uid;
 			cfg_gid = pwd->pw_gid;
 		}
