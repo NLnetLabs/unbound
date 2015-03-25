@@ -1,6 +1,8 @@
 25 March 2015: Wouter
 	- Fix #657:  libunbound(3) recommends deprecated
 	  CRYPTO_set_id_callback.
+	- If unknown trust anchor algorithm, and libressl is used, error
+	  message encourages upgrade of the libressl package.
 
 23 March 2015: Wouter
 	- Fix segfault on user not found at startup (from Maciej Soltysiak).
