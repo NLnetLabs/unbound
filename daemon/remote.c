@@ -2077,7 +2077,7 @@ dump_infra_host(struct lruhash_entry* e, void* arg)
 		d->rtt.srtt, d->rtt.rttvar, rtt_notimeout(&d->rtt), d->rtt.rto,
 		d->timeout_A, d->timeout_AAAA, d->timeout_other,
 		(int)d->edns_lame_known, (int)d->edns_version,
-		(int)(a->now<d->probedelay?d->probedelay-a->now:0),
+		(int)(a->now<d->probedelay?(d->probedelay - a->now):0),
 		(int)d->isdnsseclame, (int)d->rec_lame, (int)d->lame_type_A,
 		(int)d->lame_other)) {
 		a->ssl_failed = 1;

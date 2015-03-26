@@ -1,3 +1,6 @@
+26 March 2015: Wouter
+	- remote.c probedelay line is easier to read.
+
 25 March 2015: Wouter
 	- Fix #657:  libunbound(3) recommends deprecated
 	  CRYPTO_set_id_callback.
