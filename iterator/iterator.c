@@ -61,10 +61,10 @@
 #include "util/data/msgencode.h"
 #include "util/fptr_wlist.h"
 #include "util/config_file.h"
-#include "ldns/rrdef.h"
-#include "ldns/wire2str.h"
-#include "ldns/parseutil.h"
-#include "ldns/sbuffer.h"
+#include "sldns/rrdef.h"
+#include "sldns/wire2str.h"
+#include "sldns/parseutil.h"
+#include "sldns/sbuffer.h"
 
 int 
 iter_init(struct module_env* env, int id)

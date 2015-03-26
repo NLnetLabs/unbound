@@ -51,10 +51,10 @@
 #include "util/module.h"
 #include "util/net_help.h"
 #include "util/regional.h"
-#include "ldns/keyraw.h"
-#include "ldns/sbuffer.h"
-#include "ldns/parseutil.h"
-#include "ldns/wire2str.h"
+#include "sldns/keyraw.h"
+#include "sldns/sbuffer.h"
+#include "sldns/parseutil.h"
+#include "sldns/wire2str.h"
 
 #include <ctype.h>
 #if !defined(HAVE_SSL) && !defined(HAVE_NSS)

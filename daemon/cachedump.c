@@ -56,9 +56,9 @@
 #include "iterator/iter_utils.h"
 #include "iterator/iter_fwd.h"
 #include "iterator/iter_hints.h"
-#include "ldns/sbuffer.h"
-#include "ldns/wire2str.h"
-#include "ldns/str2wire.h"
+#include "sldns/sbuffer.h"
+#include "sldns/wire2str.h"
+#include "sldns/str2wire.h"
 
 /** dump one rrset zonefile line */
 static int

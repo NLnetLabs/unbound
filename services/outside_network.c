@@ -57,7 +57,7 @@
 #include "util/net_help.h"
 #include "util/random.h"
 #include "util/fptr_wlist.h"
-#include "ldns/sbuffer.h"
+#include "sldns/sbuffer.h"
 #include "dnstap/dnstap.h"
 #ifdef HAVE_OPENSSL_SSL_H
 #include <openssl/ssl.h>

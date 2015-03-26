@@ -43,8 +43,8 @@
 #include "util/data/dname.h"
 #include "util/module.h"
 #include "util/regional.h"
-#include "ldns/parseutil.h"
-#include "ldns/wire2str.h"
+#include "sldns/parseutil.h"
+#include "sldns/wire2str.h"
 #include <fcntl.h>
 #ifdef HAVE_OPENSSL_SSL_H
 #include <openssl/ssl.h>

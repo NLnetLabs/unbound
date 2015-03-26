@@ -48,9 +48,9 @@
 #include "util/log.h"
 #include "util/net_help.h"
 #include "util/config_file.h"
-#include "ldns/sbuffer.h"
-#include "ldns/rrdef.h"
-#include "ldns/str2wire.h"
+#include "sldns/sbuffer.h"
+#include "sldns/rrdef.h"
+#include "sldns/str2wire.h"
 #ifdef HAVE_GLOB_H
 #include <glob.h>
 #endif

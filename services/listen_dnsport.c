@@ -49,7 +49,7 @@
 #include "util/log.h"
 #include "util/config_file.h"
 #include "util/net_help.h"
-#include "ldns/sbuffer.h"
+#include "sldns/sbuffer.h"
 
 #ifdef HAVE_NETDB_H
 #include <netdb.h>

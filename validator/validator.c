@@ -58,8 +58,8 @@
 #include "util/regional.h"
 #include "util/config_file.h"
 #include "util/fptr_wlist.h"
-#include "ldns/rrdef.h"
-#include "ldns/wire2str.h"
+#include "sldns/rrdef.h"
+#include "sldns/wire2str.h"
 
 /* forward decl for cache response and normal super inform calls of a DS */
 static void process_ds_response(struct module_qstate* qstate, 

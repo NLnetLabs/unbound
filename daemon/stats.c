@@ -56,7 +56,7 @@
 #include "util/timehist.h"
 #include "util/net_help.h"
 #include "validator/validator.h"
-#include "ldns/sbuffer.h"
+#include "sldns/sbuffer.h"
 #include "services/cache/rrset.h"
 #include "services/cache/infra.h"
 #include "validator/val_kcache.h"

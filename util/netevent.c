@@ -43,8 +43,8 @@
 #include "util/log.h"
 #include "util/net_help.h"
 #include "util/fptr_wlist.h"
-#include "ldns/pkthdr.h"
-#include "ldns/sbuffer.h"
+#include "sldns/pkthdr.h"
+#include "sldns/sbuffer.h"
 #include "dnstap/dnstap.h"
 #ifdef HAVE_OPENSSL_SSL_H
 #include <openssl/ssl.h>

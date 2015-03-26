@@ -78,10 +78,10 @@
 #include "iterator/iter_delegpt.h"
 #include "services/outbound_list.h"
 #include "services/outside_network.h"
-#include "ldns/str2wire.h"
-#include "ldns/parseutil.h"
-#include "ldns/wire2str.h"
-#include "ldns/sbuffer.h"
+#include "sldns/str2wire.h"
+#include "sldns/parseutil.h"
+#include "sldns/wire2str.h"
+#include "sldns/sbuffer.h"
 
 #ifdef HAVE_SYS_TYPES_H
 #  include <sys/types.h>

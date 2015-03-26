@@ -50,7 +50,7 @@
 #include "util/net_help.h"
 #include "util/regional.h"
 #include "util/config_file.h"
-#include "ldns/sbuffer.h"
+#include "sldns/sbuffer.h"
 
 /** store rrsets in the rrset cache. 
  * @param env: module environment with caches.

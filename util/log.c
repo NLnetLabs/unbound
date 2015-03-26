@@ -40,7 +40,7 @@
 #include "config.h"
 #include "util/log.h"
 #include "util/locks.h"
-#include "ldns/sbuffer.h"
+#include "sldns/sbuffer.h"
 #include <stdarg.h>
 #ifdef HAVE_TIME_H
 #include <time.h>

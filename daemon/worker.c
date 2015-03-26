@@ -71,7 +71,7 @@
 #include "validator/val_anchor.h"
 #include "libunbound/context.h"
 #include "libunbound/libworker.h"
-#include "ldns/sbuffer.h"
+#include "sldns/sbuffer.h"
 
 #ifdef HAVE_SYS_TYPES_H
 #  include <sys/types.h>

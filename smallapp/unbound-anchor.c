@@ -116,7 +116,7 @@
 
 #include "config.h"
 #include "libunbound/unbound.h"
-#include "ldns/rrdef.h"
+#include "sldns/rrdef.h"
 #include <expat.h>
 #ifndef HAVE_EXPAT_H
 #error "need libexpat to parse root-anchors.xml file."

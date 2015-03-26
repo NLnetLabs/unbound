@@ -40,7 +40,7 @@
  */
 #include "config.h"
 #include "services/cache/rrset.h"
-#include "ldns/rrdef.h"
+#include "sldns/rrdef.h"
 #include "util/storage/slabhash.h"
 #include "util/config_file.h"
 #include "util/data/packed_rrset.h"

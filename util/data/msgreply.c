@@ -50,8 +50,8 @@
 #include "util/regional.h"
 #include "util/data/msgparse.h"
 #include "util/data/msgencode.h"
-#include "ldns/sbuffer.h"
-#include "ldns/wire2str.h"
+#include "sldns/sbuffer.h"
+#include "sldns/wire2str.h"
 
 /** MAX TTL default for messages and rrsets */
 time_t MAX_TTL = 3600 * 24 * 10; /* ten days */

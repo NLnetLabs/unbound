@@ -56,8 +56,8 @@
 #include "util/fptr_wlist.h"
 #include "util/data/dname.h"
 #include "util/rtt.h"
-#include "ldns/wire2str.h"
-#include "ldns/parseutil.h"
+#include "sldns/wire2str.h"
+#include "sldns/parseutil.h"
 #ifdef HAVE_GLOB_H
 # include <glob.h>
 #endif

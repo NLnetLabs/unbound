@@ -64,7 +64,7 @@
 #include "validator/val_kentry.h"
 #include "validator/val_utils.h"
 #include "validator/val_sigcrypt.h"
-#include "ldns/sbuffer.h"
+#include "sldns/sbuffer.h"
 
 /** time when nameserver glue is said to be 'recent' */
 #define SUSPICION_RECENT_EXPIRY 86400

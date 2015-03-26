@@ -40,8 +40,8 @@
  */
 #include "config.h"
 #include "services/localzone.h"
-#include "ldns/str2wire.h"
-#include "ldns/sbuffer.h"
+#include "sldns/str2wire.h"
+#include "sldns/sbuffer.h"
 #include "util/regional.h"
 #include "util/config_file.h"
 #include "util/data/dname.h"
