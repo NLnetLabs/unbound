@@ -29,9 +29,9 @@
    #include "iterator/iter_delegpt.h"
    #include "iterator/iter_hints.h"
    #include "iterator/iter_utils.h"
-   #include "ldns/wire2str.h"
-   #include "ldns/str2wire.h"
-   #include "ldns/pkthdr.h"
+   #include "sldns/wire2str.h"
+   #include "sldns/str2wire.h"
+   #include "sldns/pkthdr.h"
 %}
 
 %include "stdint.i" // uint_16_t can be known type now
