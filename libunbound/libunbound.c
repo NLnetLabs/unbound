@@ -1053,6 +1053,8 @@ ub_ctx_hosts(struct ub_ctx* ctx, const char* fname)
 		/* skip addr */
 		while(isxdigit((unsigned char)*parse) || *parse == '.' || *parse == ':')
 			parse++;
+		if(*parse == '\r')
+			parse++;
 		if(*parse == '\n' || *parse == 0)
 			continue;
 		if(*parse == '%') 
