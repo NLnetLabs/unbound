@@ -197,6 +197,9 @@ This includes the root hints in use.
 .B list_forwards
 List the forward zones in use.  These are printed zone by zone to the output.
 .TP
+.B list_insecure
+List the zones with domain\-insecure.
+.TP
 .B list_local_zones
 List the local zones in use.  These are printed one per line with zone type.
 .TP

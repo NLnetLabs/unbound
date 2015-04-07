@@ -6,6 +6,8 @@
 	  The file has to be writable to notice the trust anchor change,
 	  without it, a trust anchor change will be unnoticed and the system
 	  will then become inoperable.
+	- unbound-control list_insecure command shows the negative trust
+	  anchors currently configured, patch from Jelte Jansen.
 
 2 April 2015: Wouter
 	- Fix #660: Fix interface-automatic broken in the presence of

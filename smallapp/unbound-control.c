@@ -109,6 +109,7 @@ usage()
 	printf("  get_option opt		get option value\n");
 	printf("  list_stubs			list stub-zones and root hints in use\n");
 	printf("  list_forwards			list forward-zones in use\n");
+	printf("  list_insecure			list domain-insecure zones\n");
 	printf("  list_local_zones		list local-zones in use\n");
 	printf("  list_local_data		list local-data RRs in use\n");
 	printf("  insecure_add zone 		add domain-insecure zone\n");

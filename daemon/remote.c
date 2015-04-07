@@ -1892,6 +1892,21 @@ do_insecure_remove(SSL* ssl, struct worker* worker, char* arg)
 	send_ok(ssl);
 }
 
+static void
+do_insecure_list(SSL* ssl, struct worker* worker)
+{
+	char buf[257];
+	struct trust_anchor* a;
+	if(worker->env.anchors) {
+		RBTREE_FOR(a, struct trust_anchor*, worker->env.anchors->tree) {
+			if(a->numDS == 0 && a->numDNSKEY == 0) {
+				dname_str(a->name, buf);
+				ssl_printf(ssl, "%s\n", buf);
+			}
+		}
+	}
+}
+
 /** do the status command */
 static void
 do_status(SSL* ssl, struct worker* worker)
@@ -2311,6 +2326,9 @@ execute_cmd(struct daemon_remote* rc, SSL* ssl, char* cmd,
 		return;
 	} else if(cmdcmp(p, "list_stubs", 10)) {
 		do_list_stubs(ssl, worker);
+		return;
+	} else if(cmdcmp(p, "list_insecure", 13)) {
+		do_insecure_list(ssl, worker);
 		return;
 	} else if(cmdcmp(p, "list_local_zones", 16)) {
 		do_list_local_zones(ssl, worker);
