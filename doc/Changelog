@@ -5,7 +5,7 @@
 	  load a readonly auto-trust-anchor-file with trust-anchor-file.
 	  The file has to be writable to notice the trust anchor change,
 	  without it, a trust anchor change will be unnoticed and the system
-	  will then become unoperable.
+	  will then become inoperable.
 
 2 April 2015: Wouter
 	- Fix #660: Fix interface-automatic broken in the presence of
