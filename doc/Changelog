@@ -1,3 +1,6 @@
+7 April 2015: Wouter
+	- Libunbound skips dos-line-endings from etc/hosts.
+
 2 April 2015: Wouter
 	- Fix #660: Fix interface-automatic broken in the presence of
 	  asymmetric routing.
