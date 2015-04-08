@@ -1,3 +1,6 @@
+8 April 2015: Wouter
+	- Fix crash in dnstap: Do not try to log TCP responses after timeout.
+
 7 April 2015: Wouter
 	- Libunbound skips dos-line-endings from etc/hosts.
 	- Unbound exits with a fatal error when the auto-trust-anchor-file
