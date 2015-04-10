@@ -1,4 +1,5 @@
 10 April 2015: Wouter
+	- unbound-control ratelimit_list lists high rate domains.
 	- ratelimit feature, ratelimit: 100, or some sensible qps, can be
 	  used to turn it on.  It ratelimits recursion effort per zone.
 	  For particular names you can configure exceptions in unbound.conf.

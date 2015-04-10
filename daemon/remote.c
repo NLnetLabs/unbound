@@ -2267,6 +2267,54 @@ do_list_local_data(SSL* ssl, struct worker* worker)
 	lock_rw_unlock(&zones->lock);
 }
 
+/** struct for user arg ratelimit list */
+struct ratelimit_list_arg {
+	/** the infra cache */
+	struct infra_cache* infra;
+	/** the SSL to print to */
+	SSL* ssl;
+	/** all or only ratelimited */
+	int all;
+	/** current time */
+	time_t now;
+};
+
+/** list items in the ratelimit table */
+static void
+rate_list(struct lruhash_entry* e, void* arg)
+{
+	struct ratelimit_list_arg* a = (struct ratelimit_list_arg*)arg;
+	struct rate_key* k = (struct rate_key*)e->key;
+	struct rate_data* d = (struct rate_data*)e->data;
+	char buf[257];
+	int lim = infra_find_ratelimit(a->infra, k->name, k->namelen);
+	int max = infra_rate_max(d, a->now);
+	if(a->all == 0) {
+		if(max < lim)
+			return;
+	}
+	dname_str(k->name, buf);
+	ssl_printf(a->ssl, "%s %d limit %d\n", buf, max, lim);
+}
+
+/** do the ratelimit_list command */
+static void
+do_ratelimit_list(SSL* ssl, struct worker* worker, char* arg)
+{
+	struct ratelimit_list_arg a;
+	a.all = 0;
+	a.infra = worker->env.infra_cache;
+	a.now = *worker->env.now;
+	a.ssl = ssl;
+	arg = skipwhite(arg);
+	if(strcmp(arg, "+a") == 0)
+		a.all = 1;
+	if(a.infra->domain_rates==NULL ||
+		(a.all == 0 && infra_dp_ratelimit == 0))
+		return;
+	slabhash_traverse(a.infra->domain_rates, 0, rate_list, &a);
+}
+
 /** tell other processes to execute the command */
 static void
 distribute_cmd(struct daemon_remote* rc, SSL* ssl, char* cmd)
@@ -2335,6 +2383,9 @@ execute_cmd(struct daemon_remote* rc, SSL* ssl, char* cmd,
 		return;
 	} else if(cmdcmp(p, "list_local_data", 15)) {
 		do_list_local_data(ssl, worker);
+		return;
+	} else if(cmdcmp(p, "ratelimit_list", 14)) {
+		do_ratelimit_list(ssl, worker, p+14);
 		return;
 	} else if(cmdcmp(p, "stub_add", 8)) {
 		/* must always distribute this cmd */

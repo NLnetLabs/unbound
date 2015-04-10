@@ -704,7 +704,7 @@ infra_get_lame_rtt(struct infra_cache* infra,
 }
 
 /** find the ratelimit in qps for a domain */
-static int infra_find_ratelimit(struct infra_cache* infra, uint8_t* name,
+int infra_find_ratelimit(struct infra_cache* infra, uint8_t* name,
 	size_t namelen)
 {
 	int labs = dname_count_labels(name);
@@ -789,7 +789,7 @@ static int* infra_rate_find_second(void* data, time_t t)
 }
 
 /** find the maximum rate stored, not too old. 0 if no information. */
-static int infra_rate_max(void* data, time_t now)
+int infra_rate_max(void* data, time_t now)
 {
 	struct rate_data* d = (struct rate_data*)data;
 	int i, max = 0;
