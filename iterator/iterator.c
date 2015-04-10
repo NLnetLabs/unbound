@@ -1954,7 +1954,8 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 	if(!outq) {
 		log_addr(VERB_DETAIL, "error sending query to auth server", 
 			&target->addr, target->addrlen);
-		infra_ratelimit_dec(qstate->env->infra_cache, iq->dp->name,
+		if(!(iq->chase_flags & BIT_RD))
+		    infra_ratelimit_dec(qstate->env->infra_cache, iq->dp->name,
 			iq->dp->namelen, *qstate->env->now);
 		return next_state(iq, QUERYTARGETS_STATE);
 	}

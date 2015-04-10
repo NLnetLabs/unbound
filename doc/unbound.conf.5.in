@@ -993,7 +993,7 @@ nameservers for those zones.
 .TP 5
 .B ratelimit\-size: \fI<memory size>
 Give the size of the data structure in which the current ongoing rates are
-kep track in.  Default 4m.  In bytes or use m(mega), k(kilo), g(giga).
+kept track in.  Default 4m.  In bytes or use m(mega), k(kilo), g(giga).
 The ratelimit structure is small, so this data structure likely does
 not need to be large.
 .TP 5

@@ -162,13 +162,17 @@ static struct domain_limit_data* domain_limit_findcreate(
 	/* can we find it? */
 	d = (struct domain_limit_data*)name_tree_find(&infra->domain_limits,
 		nm, nmlen, labs, LDNS_RR_CLASS_IN);
-	if(d)
+	if(d) {
+		free(nm);
 		return d;
+	}
 	
 	/* create it */
 	d = (struct domain_limit_data*)calloc(1, sizeof(*d));
-	if(!d)
+	if(!d) {
+		free(nm);
 		return NULL;
+	}
 	d->node.node.key = &d->node;
 	d->node.name = nm;
 	d->node.len = nmlen;
@@ -179,6 +183,8 @@ static struct domain_limit_data* domain_limit_findcreate(
 	if(!name_tree_insert(&infra->domain_limits, &d->node, nm, nmlen,
 		labs, LDNS_RR_CLASS_IN)) {
 		log_err("duplicate element in domainlimit tree");
+		free(nm);
+		free(d);
 		return NULL;
 	}
 	return d;
