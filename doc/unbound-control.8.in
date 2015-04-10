@@ -255,6 +255,13 @@ port number can be set explicitly (default port is 53 (DNS)).
 By default the forwarder information from the config file for the root "." is
 used.  The config file is not changed, so after a reload these changes are
 gone.  Other forward zones from the config file are not affected by this command.
+.TP
+.B ratelimit_list \fR[\fI+a\fR]
+List the domains that are ratelimited.  Printed one per line with current
+estimated qps and qps limit from config.  With +a it prints all domains, not
+just the ratelimited domains, with their estimated qps.  The ratelimited
+domains return an error for uncached (new) queries, but cached queries work
+as normal.
 .SH "EXIT CODE"
 The unbound\-control program exits with status code 1 on error, 0 on success.
 .SH "SET UP"
