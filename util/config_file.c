@@ -56,6 +56,7 @@
 #include "util/fptr_wlist.h"
 #include "util/data/dname.h"
 #include "util/rtt.h"
+#include "services/cache/infra.h"
 #include "sldns/wire2str.h"
 #include "sldns/parseutil.h"
 #ifdef HAVE_GLOB_H
@@ -228,6 +229,11 @@ config_create(void)
 	if(!(cfg->dnstap_socket_path = strdup(DNSTAP_SOCKET_PATH)))
 		goto error_exit;
 #endif
+	cfg->ratelimit = 0;
+	cfg->ratelimit_slabs = 4;
+	cfg->ratelimit_size = 4*1024*1024;
+	cfg->ratelimit_for_domain = NULL;
+	cfg->ratelimit_below_domain = NULL;
 	return cfg;
 error_exit:
 	config_delete(cfg); 
@@ -448,6 +454,12 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	else S_STR("control-cert-file:", control_cert_file)
 	else S_STR("module-config:", module_conf)
 	else S_STR("python-script:", python_script)
+	else if(strcmp(opt, "ratelimit:") == 0) {
+	    IS_NUMBER_OR_ZERO; cfg->ratelimit = atoi(val);
+	    infra_dp_ratelimit=cfg->ratelimit;
+	}
+	else S_MEMSIZE("ratelimit-size:", ratelimit_size)
+	else S_POW2("ratelimit-slabs:", ratelimit_slabs)
 	/* val_sig_skew_min and max are copied into val_env during init,
 	 * so this does not update val_env with set_option */
 	else if(strcmp(opt, "val-sig-skew-min:") == 0)
@@ -470,7 +482,8 @@ int config_set_option(struct config_file* cfg, const char* opt,
 		 * interface, outgoing-interface, access-control, 
 		 * stub-zone, name, stub-addr, stub-host, stub-prime
 		 * forward-first, stub-first,
-		 * forward-zone, name, forward-addr, forward-host */
+		 * forward-zone, name, forward-addr, forward-host,
+		 * ratelimit-for-domain, ratelimit-below-domain */
 		return 0;
 	}
 	return 1;
@@ -710,6 +723,11 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_YNO(opt, "unblock-lan-zones", unblock_lan_zones)
 	else O_DEC(opt, "max-udp-size", max_udp_size)
 	else O_STR(opt, "python-script", python_script)
+	else O_DEC(opt, "ratelimit", ratelimit)
+	else O_MEM(opt, "ratelimit-size", ratelimit_size)
+	else O_DEC(opt, "ratelimit-slabs", ratelimit_slabs)
+	else O_LS2(opt, "ratelimit-for-domain", ratelimit_for_domain)
+	else O_LS2(opt, "ratelimit-below-domain", ratelimit_below_domain)
 	else O_DEC(opt, "val-sig-skew-min", val_sig_skew_min)
 	else O_DEC(opt, "val-sig-skew-max", val_sig_skew_max)
 	/* not here:
@@ -919,6 +937,8 @@ config_delete(struct config_file* cfg)
 	free(cfg->dnstap_socket_path);
 	free(cfg->dnstap_identity);
 	free(cfg->dnstap_version);
+	config_deldblstrlist(cfg->ratelimit_for_domain);
+	config_deldblstrlist(cfg->ratelimit_below_domain);
 	free(cfg);
 }
 

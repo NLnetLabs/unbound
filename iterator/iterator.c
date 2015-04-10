@@ -1125,6 +1125,18 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 			 * results of priming. */
 			return 0;
 		}
+		if(infra_ratelimit_exceeded(qstate->env->infra_cache,
+			iq->dp->name, iq->dp->namelen, *qstate->env->now)) {
+			/* and increment the rate, so that the rate for time
+			 * now will also exceed the rate, keeping cache fresh */
+			(void)infra_ratelimit_inc(qstate->env->infra_cache,
+				iq->dp->name, iq->dp->namelen,
+				*qstate->env->now);
+			log_nametypeclass(VERB_ALGO, "ratelimit exceeded with "
+				"delegation point", iq->dp->name,
+				LDNS_RR_TYPE_NS, LDNS_RR_CLASS_IN);
+			return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
+		}
 
 		/* see if this dp not useless.
 		 * It is useless if:
@@ -1914,6 +1926,15 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 		return 0;
 	}
 
+	/* if not forwarding, check ratelimits per delegationpoint name */
+	if(!(iq->chase_flags & BIT_RD)) {
+		if(!infra_ratelimit_inc(qstate->env->infra_cache, iq->dp->name,
+			iq->dp->namelen, *qstate->env->now)) {
+			verbose(VERB_ALGO, "query exceeded ratelimits");
+			return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
+		}
+	}
+
 	/* We have a valid target. */
 	if(verbosity >= VERB_QUERY) {
 		log_query_info(VERB_QUERY, "sending query:", &iq->qchase);
@@ -1933,6 +1954,8 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 	if(!outq) {
 		log_addr(VERB_DETAIL, "error sending query to auth server", 
 			&target->addr, target->addrlen);
+		infra_ratelimit_dec(qstate->env->infra_cache, iq->dp->name,
+			iq->dp->namelen, *qstate->env->now);
 		return next_state(iq, QUERYTARGETS_STATE);
 	}
 	outbound_list_insert(&iq->outlist, outq);
@@ -2082,6 +2105,14 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		/* REFERRAL type responses get a reset of the 
 		 * delegation point, and back to the QUERYTARGETS_STATE. */
 		verbose(VERB_DETAIL, "query response was REFERRAL");
+
+		if(!(iq->chase_flags & BIT_RD)) {
+			/* we have a referral, no ratelimit, we can send
+			 * our queries to the given name */
+			infra_ratelimit_dec(qstate->env->infra_cache,
+				iq->dp->name, iq->dp->namelen,
+				*qstate->env->now);
+		}
 
 		/* if hardened, only store referral if we asked for it */
 		if(!qstate->env->cfg->harden_referral_path ||

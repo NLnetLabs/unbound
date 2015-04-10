@@ -345,6 +345,17 @@ struct config_file {
 	int dnstap_log_forwarder_query_messages;
 	/** true to log dnstap FORWARDER_RESPONSE message events */
 	int dnstap_log_forwarder_response_messages;
+
+	/** ratelimit 0 is off, otherwise qps (unless overridden) */
+	int ratelimit;
+	/** number of slabs for ratelimit cache */
+	size_t ratelimit_slabs;
+	/** memory size in bytes for ratelimit cache */
+	size_t ratelimit_size;
+	/* ratelimits for domain (exact match) */
+	struct config_str2list* ratelimit_for_domain;
+	/* ratelimits below domain */
+	struct config_str2list* ratelimit_below_domain;
 };
 
 /** from cfg username, after daemonise setup performed */

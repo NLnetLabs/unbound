@@ -978,6 +978,42 @@ it as detailed in the stub zone section below.
 Configure local data shorthand for a PTR record with the reversed IPv4 or
 IPv6 address and the host name.  For example "192.0.2.4 www.example.com".
 TTL can be inserted like this: "2001:DB8::4 7200 www.example.com"
+.TP 5
+.B ratelimit: \fI<number or 0>
+Enable ratelimiting of queries sent to nameserver for performing recursion.
+If 0, the default, it is disabled.  This option is experimental at this time.
+The ratelimit is in queries per second that are allowed.  More queries are
+turned away with an error (servfail).  This stops recursive floods, eg. random
+query names, but not spoofed reflection floods.  Cached responses are not
+ratelimited by this setting.  The zone of the query is determined by examining
+the nameservers for it, the zone name is used to keep track of the rate.
+For example, 100 may be a suitable value to stop the server from being
+overloaded with random names, and keeps unbound from sending traffic to the
+nameservers for those zones.
+.TP 5
+.B ratelimit\-size: \fI<memory size>
+Give the size of the data structure in which the current ongoing rates are
+kep track in.  Default 4m.  In bytes or use m(mega), k(kilo), g(giga).
+The ratelimit structure is small, so this data structure likely does
+not need to be large.
+.TP 5
+.B ratelimit\-slabs: \fI<number>
+Give power of 2 number of slabs, this is used to reduce lock contention
+in the ratelimit tracking data structure.  Close to the number of cpus is
+a fairly good setting.
+.TP 5
+.B ratelimit\-for\-domain: \fI<domain> <number qps>
+Override the global ratelimit for an exact match domain name with the listed
+number.  You can give this for any number of names.  For example, for
+a top\-level\-domain you may want to have a higher limit than other names.
+.TP 5
+.B ratelimit\-below\-domain: \fI<domain> <number qps>
+Override the global ratelimit for a domain name that ends in this name.
+You can give this multiple times, it then describes different settings
+in different parts of the namespace.  The closest matching suffix is used
+to determine the qps limit.  The rate for the exact matching domain name
+is not changed, use ratelimit\-for\-domain to set that, you might want
+to use different settings for a top\-level\-domain and subdomains.
 .SS "Remote Control Options"
 In the
 .B remote\-control:

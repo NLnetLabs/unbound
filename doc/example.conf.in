@@ -551,6 +551,23 @@ server:
 	# Enable dns64 in module-config.  Used to synthesize IPv6 from IPv4.
 	# dns64-prefix: 64:ff9b::0/96
 
+	# ratelimit for uncached, new queries, this limits recursion effort.
+	# ratelimiting is experimental, and may help against randomqueryflood.
+	# if 0(default) it is disabled, otherwise state qps allowed per zone.
+	# ratelimit: 0
+
+	# ratelimits are tracked in a cache, size in bytes of cache (or k,m).
+	# ratelimit-size: 4m
+	# ratelimit cache slabs, reduces lock contention if equal to cpucount.
+	# ratelimit-slabs: 4
+
+	# override the ratelimit for a specific domain name.
+	# give this setting multiple times to have multiple overrides.
+	# ratelimit-for-domain: example.com 100
+	# override the ratelimits for all domains below a domain name
+	# can give this multiple times, the name closest to the zone is used.
+	# ratelimit-below-domain: example 100
+
 # Python config section. To enable:
 # o use --with-pythonmodule to configure before compiling.
 # o list python in the module-config string (above) to enable.
