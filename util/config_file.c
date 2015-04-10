@@ -595,8 +595,8 @@ config_collate_cat(struct config_strlist* list)
 #define O_MEM(opt, str, var) if(strcmp(opt, str)==0) { \
 	if(cfg->var > 1024*1024*1024) {	\
 	  size_t f=cfg->var/(size_t)1000000, b=cfg->var%(size_t)1000000; \
-	  snprintf(buf, len, "%u%6.6u\n", (unsigned)f, (unsigned)b); \
-	} else snprintf(buf, len, "%u\n", (unsigned)cfg->var); \
+	  snprintf(buf, len, "%u%6.6u", (unsigned)f, (unsigned)b); \
+	} else snprintf(buf, len, "%u", (unsigned)cfg->var); \
 	func(buf, arg);}
 /** compare and print list option */
 #define O_LST(opt, name, lst) if(strcmp(opt, name)==0) { \
