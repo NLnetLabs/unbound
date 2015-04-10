@@ -374,6 +374,13 @@ void infra_ratelimit_dec(struct infra_cache* infra, uint8_t* name,
 int infra_ratelimit_exceeded(struct infra_cache* infra, uint8_t* name,
 	size_t namelen, time_t timenow);
 
+/** find the maximum rate stored, not too old. 0 if no information. */
+int infra_rate_max(void* data, time_t now);
+
+/** find the ratelimit in qps for a domain */
+int infra_find_ratelimit(struct infra_cache* infra, uint8_t* name,
+	size_t namelen);
+
 /**
  * Get memory used by the infra cache.
  * @param infra: infrastructure cache.
