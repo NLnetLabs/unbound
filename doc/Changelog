@@ -6,6 +6,7 @@
 	- Fix bug#664: libunbound python3 related fixes (from Tomas Hozza)
 	  Use print_function also for Python2.
 	  libunbound examples: produce sorted output.
+	  libunbound-Python: libldns is not used anymore.
 
 10 April 2015: Wouter
 	- unbound-control ratelimit_list lists high rate domains.
