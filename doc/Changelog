@@ -1,3 +1,6 @@
+16 April 2015: Wouter
+	- Add local-zone type inform_deny, that logs query and drops answer.
+
 10 April 2015: Wouter
 	- unbound-control ratelimit_list lists high rate domains.
 	- ratelimit feature, ratelimit: 100, or some sensible qps, can be

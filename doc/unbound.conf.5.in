@@ -815,10 +815,10 @@ data leakage about the local network to the upstream DNS servers.
 .B local\-zone: \fI<zone> <type>
 Configure a local zone. The type determines the answer to give if
 there is no match from local\-data. The types are deny, refuse, static,
-transparent, redirect, nodefault, typetransparent, inform, and are explained
-below. After that the default settings are listed. Use local\-data: to
-enter data into the local zone. Answers for local zones are authoritative
-DNS answers. By default the zones are class IN.
+transparent, redirect, nodefault, typetransparent, inform, inform_deny,
+and are explained below. After that the default settings are listed. Use
+local\-data: to enter data into the local zone. Answers for local zones
+are authoritative DNS answers. By default the zones are class IN.
 .IP
 If you need more complicated authoritative data, with referrals, wildcards,
 CNAME/DNAME support, or DNSSEC authoritative service, setup a stub\-zone for
@@ -871,6 +871,10 @@ is printed to the logfile.  The log message is: timestamp, unbound-pid,
 info: zonename inform IP@port queryname type class.  This option can be
 used for normal resolution, but machines looking up infected names are
 logged, eg. to run antivirus on them.
+.TP 10
+\h'5'\fIinform_deny\fR 
+The query is dropped, like 'deny', and logged, like 'inform'.  Ie. find
+infected machines without answering the queries.
 .TP 10
 \h'5'\fInodefault\fR 
 Used to turn off default contents for AS112 zones. The other types
