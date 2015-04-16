@@ -561,6 +561,9 @@ server:
 	# ratelimit-size: 4m
 	# ratelimit cache slabs, reduces lock contention if equal to cpucount.
 	# ratelimit-slabs: 4
+	
+	# 0 blocks when ratelimited, otherwise let 1/xth traffic through
+	# ratelimit-factor: 10
 
 	# override the ratelimit for a specific domain name.
 	# give this setting multiple times to have multiple overrides.

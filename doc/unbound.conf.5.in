@@ -1006,6 +1006,15 @@ Give power of 2 number of slabs, this is used to reduce lock contention
 in the ratelimit tracking data structure.  Close to the number of cpus is
 a fairly good setting.
 .TP 5
+.B ratelimit\-factor: \fI<number>
+Set the amount of queries to rate limit when the limit is exceeded.
+If set to 0, all queries are dropped for domains where the limit is
+exceeded.  If set to another value, 1 in that number is allowed through
+to complete.  Default is 10, allowing 1/10 traffic to flow normally.
+This can make ordinary queries complete (if repeatedly queried for),
+and enter the cache, whilst also mitigiting the traffic flow by the
+factor given.
+.TP 5
 .B ratelimit\-for\-domain: \fI<domain> <number qps>
 Override the global ratelimit for an exact match domain name with the listed
 number.  You can give this for any number of names.  For example, for

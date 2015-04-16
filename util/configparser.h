@@ -200,7 +200,8 @@ extern int yydebug;
      VAR_RATELIMIT_SLABS = 409,
      VAR_RATELIMIT_SIZE = 410,
      VAR_RATELIMIT_FOR_DOMAIN = 411,
-     VAR_RATELIMIT_BELOW_DOMAIN = 412
+     VAR_RATELIMIT_BELOW_DOMAIN = 412,
+     VAR_RATELIMIT_FACTOR = 413
    };
 #endif
 /* Tokens.  */
@@ -359,6 +360,7 @@ extern int yydebug;
 #define VAR_RATELIMIT_SIZE 410
 #define VAR_RATELIMIT_FOR_DOMAIN 411
 #define VAR_RATELIMIT_BELOW_DOMAIN 412
+#define VAR_RATELIMIT_FACTOR 413
 
 
 
@@ -372,7 +374,7 @@ typedef union YYSTYPE
 
 
 /* Line 2058 of yacc.c  */
-#line 376 "util/configparser.h"
+#line 378 "util/configparser.h"
 } YYSTYPE;
 # define YYSTYPE_IS_TRIVIAL 1
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */

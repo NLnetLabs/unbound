@@ -120,7 +120,7 @@ extern struct config_parser_state* cfg_parser;
 %token VAR_DNSTAP_LOG_FORWARDER_RESPONSE_MESSAGES
 %token VAR_HARDEN_ALGO_DOWNGRADE VAR_IP_TRANSPARENT
 %token VAR_RATELIMIT VAR_RATELIMIT_SLABS VAR_RATELIMIT_SIZE
-%token VAR_RATELIMIT_FOR_DOMAIN VAR_RATELIMIT_BELOW_DOMAIN
+%token VAR_RATELIMIT_FOR_DOMAIN VAR_RATELIMIT_BELOW_DOMAIN VAR_RATELIMIT_FACTOR
 
 %%
 toplevelvars: /* empty */ | toplevelvars toplevelvar ;
@@ -183,7 +183,7 @@ content_server: server_num_threads | server_verbosity | server_port |
 	server_infra_cache_min_rtt | server_harden_algo_downgrade |
 	server_ip_transparent | server_ratelimit | server_ratelimit_slabs |
 	server_ratelimit_size | server_ratelimit_for_domain |
-	server_ratelimit_below_domain
+	server_ratelimit_below_domain | server_ratelimit_factor
 	;
 stubstart: VAR_STUB_ZONE
 	{
@@ -1279,6 +1279,15 @@ server_ratelimit_below_domain: VAR_RATELIMIT_BELOW_DOMAIN STRING_ARG STRING_ARG
 				fatal_exit("out of memory adding "
 					"ratelimit-below-domain");
 		}
+	}
+	;
+server_ratelimit_factor: VAR_RATELIMIT_FACTOR STRING_ARG 
+	{ 
+		OUTYY(("P(server_ratelimit_factor:%s)\n", $2)); 
+		if(atoi($2) == 0 && strcmp($2, "0") != 0)
+			yyerror("number expected");
+		else cfg_parser->cfg->ratelimit_factor = atoi($2);
+		free($2);
 	}
 	;
 stub_name: VAR_NAME STRING_ARG

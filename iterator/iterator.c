@@ -61,6 +61,7 @@
 #include "util/data/msgencode.h"
 #include "util/fptr_wlist.h"
 #include "util/config_file.h"
+#include "util/random.h"
 #include "sldns/rrdef.h"
 #include "sldns/wire2str.h"
 #include "sldns/parseutil.h"
@@ -120,6 +121,7 @@ iter_new(struct module_qstate* qstate, int id)
 	iq->query_restart_count = 0;
 	iq->referral_count = 0;
 	iq->sent_count = 0;
+	iq->ratelimit_ok = 0;
 	iq->target_count = NULL;
 	iq->wait_priming_stub = 0;
 	iq->refetch_glue = 0;
@@ -1125,17 +1127,31 @@ processInitRequest(struct module_qstate* qstate, struct iter_qstate* iq,
 			 * results of priming. */
 			return 0;
 		}
-		if(infra_ratelimit_exceeded(qstate->env->infra_cache,
-			iq->dp->name, iq->dp->namelen, *qstate->env->now)) {
+		if(!iq->ratelimit_ok && qstate->prefetch_leeway)
+			iq->ratelimit_ok = 1; /* allow prefetches, this keeps
+			otherwise valid data in the cache */
+		if(!iq->ratelimit_ok && infra_ratelimit_exceeded(
+			qstate->env->infra_cache, iq->dp->name,
+			iq->dp->namelen, *qstate->env->now)) {
 			/* and increment the rate, so that the rate for time
 			 * now will also exceed the rate, keeping cache fresh */
 			(void)infra_ratelimit_inc(qstate->env->infra_cache,
 				iq->dp->name, iq->dp->namelen,
 				*qstate->env->now);
-			log_nametypeclass(VERB_ALGO, "ratelimit exceeded with "
-				"delegation point", iq->dp->name,
-				LDNS_RR_TYPE_NS, LDNS_RR_CLASS_IN);
-			return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
+			/* see if we are passed through with slip factor */
+			if(qstate->env->cfg->ratelimit_factor != 0 &&
+				ub_random_max(qstate->env->rnd,
+				    qstate->env->cfg->ratelimit_factor) == 1) {
+				iq->ratelimit_ok = 1;
+				log_nametypeclass(VERB_ALGO, "ratelimit allowed through for "
+					"delegation point", iq->dp->name,
+					LDNS_RR_TYPE_NS, LDNS_RR_CLASS_IN);
+			} else {
+				log_nametypeclass(VERB_ALGO, "ratelimit exceeded with "
+					"delegation point", iq->dp->name,
+					LDNS_RR_TYPE_NS, LDNS_RR_CLASS_IN);
+				return error_response(qstate, id, LDNS_RCODE_SERVFAIL);
+			}
 		}
 
 		/* see if this dp not useless.
@@ -1927,7 +1943,7 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 	}
 
 	/* if not forwarding, check ratelimits per delegationpoint name */
-	if(!(iq->chase_flags & BIT_RD)) {
+	if(!(iq->chase_flags & BIT_RD) && !iq->ratelimit_ok) {
 		if(!infra_ratelimit_inc(qstate->env->infra_cache, iq->dp->name,
 			iq->dp->namelen, *qstate->env->now)) {
 			verbose(VERB_ALGO, "query exceeded ratelimits");
@@ -1954,7 +1970,7 @@ processQueryTargets(struct module_qstate* qstate, struct iter_qstate* iq,
 	if(!outq) {
 		log_addr(VERB_DETAIL, "error sending query to auth server", 
 			&target->addr, target->addrlen);
-		if(!(iq->chase_flags & BIT_RD))
+		if(!(iq->chase_flags & BIT_RD) && !iq->ratelimit_ok)
 		    infra_ratelimit_dec(qstate->env->infra_cache, iq->dp->name,
 			iq->dp->namelen, *qstate->env->now);
 		return next_state(iq, QUERYTARGETS_STATE);
@@ -2107,7 +2123,7 @@ processQueryResponse(struct module_qstate* qstate, struct iter_qstate* iq,
 		 * delegation point, and back to the QUERYTARGETS_STATE. */
 		verbose(VERB_DETAIL, "query response was REFERRAL");
 
-		if(!(iq->chase_flags & BIT_RD)) {
+		if(!(iq->chase_flags & BIT_RD) && !iq->ratelimit_ok) {
 			/* we have a referral, no ratelimit, we can send
 			 * our queries to the given name */
 			infra_ratelimit_dec(qstate->env->infra_cache,

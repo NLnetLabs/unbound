@@ -355,6 +355,7 @@ ratelimit-slabs{COLON}		{ YDVAR(1, VAR_RATELIMIT_SLABS) }
 ratelimit-size{COLON}		{ YDVAR(1, VAR_RATELIMIT_SIZE) }
 ratelimit-for-domain{COLON}	{ YDVAR(2, VAR_RATELIMIT_FOR_DOMAIN) }
 ratelimit-below-domain{COLON}	{ YDVAR(2, VAR_RATELIMIT_BELOW_DOMAIN) }
+ratelimit-factor{COLON}		{ YDVAR(1, VAR_RATELIMIT_FACTOR) }
 <INITIAL,val>{NEWLINE}		{ LEXOUT(("NL\n")); cfg_parser->line++; }
 
 	/* Quoted strings. Strip leading and ending quotes */

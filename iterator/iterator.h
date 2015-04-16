@@ -259,6 +259,9 @@ struct iter_qstate {
 	 * subqueries, the malloced-array is shared, [0] refcount. */
 	int* target_count;
 
+	/** if true, already tested for ratelimiting and passed the test */
+	int ratelimit_ok;
+
 	/**
 	 * The query must store NS records from referrals as parentside RRs
 	 * Enabled once it hits resolution problems, to throttle retries.

@@ -234,6 +234,7 @@ config_create(void)
 	cfg->ratelimit_size = 4*1024*1024;
 	cfg->ratelimit_for_domain = NULL;
 	cfg->ratelimit_below_domain = NULL;
+	cfg->ratelimit_factor = 10;
 	return cfg;
 error_exit:
 	config_delete(cfg); 
@@ -460,6 +461,7 @@ int config_set_option(struct config_file* cfg, const char* opt,
 	}
 	else S_MEMSIZE("ratelimit-size:", ratelimit_size)
 	else S_POW2("ratelimit-slabs:", ratelimit_slabs)
+	else S_NUMBER_OR_ZERO("ratelimit-factor:", ratelimit_factor)
 	/* val_sig_skew_min and max are copied into val_env during init,
 	 * so this does not update val_env with set_option */
 	else if(strcmp(opt, "val-sig-skew-min:") == 0)
@@ -728,6 +730,7 @@ config_get_option(struct config_file* cfg, const char* opt,
 	else O_DEC(opt, "ratelimit-slabs", ratelimit_slabs)
 	else O_LS2(opt, "ratelimit-for-domain", ratelimit_for_domain)
 	else O_LS2(opt, "ratelimit-below-domain", ratelimit_below_domain)
+	else O_DEC(opt, "ratelimit-factor", ratelimit_factor)
 	else O_DEC(opt, "val-sig-skew-min", val_sig_skew_min)
 	else O_DEC(opt, "val-sig-skew-max", val_sig_skew_max)
 	/* not here:

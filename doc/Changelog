@@ -1,5 +1,8 @@
 16 April 2015: Wouter
 	- Add local-zone type inform_deny, that logs query and drops answer.
+	- Ratelimit does not apply to prefetched queries, and ratelimit-factor
+	  is default 10.  Repeated normal queries get resolved and with
+	  prefetch stay in the cache.
 
 10 April 2015: Wouter
 	- unbound-control ratelimit_list lists high rate domains.

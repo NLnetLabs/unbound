@@ -352,10 +352,12 @@ struct config_file {
 	size_t ratelimit_slabs;
 	/** memory size in bytes for ratelimit cache */
 	size_t ratelimit_size;
-	/* ratelimits for domain (exact match) */
+	/** ratelimits for domain (exact match) */
 	struct config_str2list* ratelimit_for_domain;
-	/* ratelimits below domain */
+	/** ratelimits below domain */
 	struct config_str2list* ratelimit_below_domain;
+	/** ratelimit factor, 0 blocks all, 10 allows 1/10 of traffic */
+	int ratelimit_factor;
 };
 
 /** from cfg username, after daemonise setup performed */
