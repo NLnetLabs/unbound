@@ -3,6 +3,8 @@
 	- Ratelimit does not apply to prefetched queries, and ratelimit-factor
 	  is default 10.  Repeated normal queries get resolved and with
 	  prefetch stay in the cache.
+	- Fix bug#664: libunbound python3 related fixes (from Tomas Hozza)
+	  Use print_function also for Python2.
 
 10 April 2015: Wouter
 	- unbound-control ratelimit_list lists high rate domains.

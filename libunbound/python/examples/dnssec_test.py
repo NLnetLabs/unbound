@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+from __future__ import print_function
 from unbound import ub_ctx, RR_TYPE_A, RR_TYPE_RRSIG, RR_TYPE_NSEC, RR_TYPE_NSEC3
 import ldns
 
