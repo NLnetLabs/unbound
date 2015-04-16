@@ -43,12 +43,12 @@ status, result = ctx.resolve("nic.cz", unbound.RR_TYPE_MX, unbound.RR_CLASS_IN)
 if status == 0 and result.havedata:
     print("Result:")
     print("      raw data:", result.data)
-    for k in result.data.mx_list:
+    for k in sorted(result.data.mx_list):
         print("      priority:%d address:%s" % k)
 
 status, result = ctx.resolve("nic.cz", unbound.RR_TYPE_A, unbound.RR_CLASS_IN)
 if status == 0 and result.havedata:
     print("Result:")
     print("      raw data:", result.data)
-    for k in result.data.address_list:
+    for k in sorted(result.data.address_list):
         print("      address:%s" % k)
