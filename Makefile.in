@@ -25,6 +25,7 @@ DNSTAP_SRC=@DNSTAP_SRC@
 DNSTAP_OBJ=@DNSTAP_OBJ@
 WITH_PYTHONMODULE=@WITH_PYTHONMODULE@
 WITH_PYUNBOUND=@WITH_PYUNBOUND@
+PY_MAJOR_VERSION=@PY_MAJOR_VERSION@
 PYTHON_SITE_PKG=@PYTHON_SITE_PKG@
 PYTHONMOD_INSTALL=@PYTHONMOD_INSTALL@
 PYTHONMOD_UNINSTALL=@PYTHONMOD_UNINSTALL@
@@ -393,7 +394,7 @@ libunbound_wrap.lo libunbound_wrap.o: libunbound/python/libunbound_wrap.c \
 	unbound.h
 libunbound/python/libunbound_wrap.c:	$(srcdir)/libunbound/python/libunbound.i unbound.h
 	@-if test ! -d libunbound/python; then $(INSTALL) -d libunbound/python; fi
-	$(SWIG) -python -o $@ $(CPPFLAGS) $(srcdir)/libunbound/python/libunbound.i
+	$(SWIG) -python -o $@ $(CPPFLAGS) -DPY_MAJOR_VERSION=$(PY_MAJOR_VERSION) $(srcdir)/libunbound/python/libunbound.i
 
 # Pyunbound python unbound wrapper
 _unbound.la:	libunbound_wrap.lo libunbound.la
