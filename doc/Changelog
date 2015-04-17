@@ -1,3 +1,8 @@
+17 April 2015: Wouter
+	- Synthesize ANY responses from cache.  Does not search exhaustively,
+	  but MX,A,AAAA,SOA,NS also CNAME.
+	- Fix leaked dns64prefix configuration string.
+
 16 April 2015: Wouter
 	- Add local-zone type inform_deny, that logs query and drops answer.
 	- Ratelimit does not apply to prefetched queries, and ratelimit-factor

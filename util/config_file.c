@@ -937,6 +937,7 @@ config_delete(struct config_file* cfg)
 	free(cfg->server_cert_file);
 	free(cfg->control_key_file);
 	free(cfg->control_cert_file);
+	free(cfg->dns64_prefix);
 	free(cfg->dnstap_socket_path);
 	free(cfg->dnstap_identity);
 	free(cfg->dnstap_version);
