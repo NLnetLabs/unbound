@@ -197,6 +197,10 @@ mesh_state_compare(const void* ap, const void* bp)
 	struct mesh_state* b = (struct mesh_state*)bp;
 #ifdef CLIENT_SUBNET
 	int r;
+
+	if (ap < bp) return -1;
+	if (ap > bp) return 1;
+	return 0;
 #endif
 
 	if(ap == bp)

@@ -368,7 +368,8 @@ subnetmod_operate(struct module_qstate *qstate, enum module_ev event,
 	/* Query handed back by next module, we have a 'final' answer */
 	if(event == module_event_moddone) {
 		verbose(VERB_QUERY, "subnet: done");
-		qstate->ext_state[id] = eval_response(qstate, id);
+		if (qstate->return_msg)
+			qstate->ext_state[id] = eval_response(qstate, id);
 		return;
 	}
 	/* We are being revisited */
