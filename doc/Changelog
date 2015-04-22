@@ -1,3 +1,7 @@
+22 April 2015: Wouter
+	- Removed contrib/unbound_unixsock.diff, because it has been
+	  integrated, use control-interface: /path in unbound.conf.
+
 17 April 2015: Wouter
 	- Synthesize ANY responses from cache.  Does not search exhaustively,
 	  but MX,A,AAAA,SOA,NS also CNAME.
