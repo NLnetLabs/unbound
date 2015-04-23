@@ -391,7 +391,9 @@ addrtree_insert(struct addrtree *tree, const addrkey_t *addr,
 		/* Case 4: split. */
 		if (!(newnode = node_create(tree, NULL, 0, 0)))
 			return;
+		node->edge[index] = NULL;
 		if (!edge_create(newnode, addr, common, node, index)) {
+			node->edge[index] = edge;
 			clean_node(tree, newnode);
 			tree->node_count--;
 			free(newnode);

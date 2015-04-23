@@ -955,7 +955,7 @@ parse_subnet_option(uint8_t* data, struct edns_data* edns, uint16_t opt_len)
 	if (edns->subnet_addr_fam == EDNSSUBNET_ADDRFAM_IP4) {
 		if (edns->subnet_source_mask > 32 || edns->subnet_scope_mask > 32)
 			return;
-	} else if (edns->subnet_addr_fam != EDNSSUBNET_ADDRFAM_IP6) {
+	} else if (edns->subnet_addr_fam == EDNSSUBNET_ADDRFAM_IP6) {
 		if (edns->subnet_source_mask > 128 || edns->subnet_scope_mask > 128)
 			return;
 	} else return;
