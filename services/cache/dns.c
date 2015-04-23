@@ -682,7 +682,7 @@ fill_any(struct module_env* env,
 		/* create msg if none */
 		if(!msg) {
 			msg = dns_msg_create(qname, qnamelen, qtype, qclass,
-				region, num-i);
+				region, (size_t)(num-i));
 			if(!msg) {
 				lock_rw_unlock(&rrset->entry.lock);
 				return NULL;
