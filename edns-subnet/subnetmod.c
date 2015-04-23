@@ -277,6 +277,8 @@ eval_response(struct module_qstate *qstate, int id)
 	struct edns_data *c_out = &qstate->edns_client_out;/* will send to client */
 	struct edns_data *s_in  = &qstate->edns_server_in; /* rcvd from auth */
 	struct edns_data *s_out = &qstate->edns_server_out;/* sent to auth */
+
+	if (!qstate->return_msg) return module_error;
 	
 	/** We have not asked for subnet data */
 	if (!s_out->subnet_sent) {
@@ -368,8 +370,7 @@ subnetmod_operate(struct module_qstate *qstate, enum module_ev event,
 	/* Query handed back by next module, we have a 'final' answer */
 	if(event == module_event_moddone) {
 		verbose(VERB_QUERY, "subnet: done");
-		if (qstate->return_msg)
-			qstate->ext_state[id] = eval_response(qstate, id);
+		qstate->ext_state[id] = eval_response(qstate, id);
 		return;
 	}
 	/* We are being revisited */
