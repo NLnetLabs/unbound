@@ -247,6 +247,7 @@ void addrtree_delete(struct addrtree *tree)
 	if (!tree) return;
 	clean_node(tree, tree->root);
 	free(tree->root);
+	tree->size_bytes -= sizeof(struct addrnode);
 	while ((n = tree->first)) {
 		tree->first = n->next;
 		clean_node(tree, n);
