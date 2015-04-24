@@ -125,6 +125,13 @@ struct delegpt* dns_cache_find_delegation(struct module_env* env,
 	uint8_t* qname, size_t qnamelen, uint16_t qtype, uint16_t qclass, 
 	struct regional* region, struct dns_msg** msg, time_t timenow);
 
+#ifdef CLIENT_SUBNET
+/** generate dns_msg from cached message */
+struct dns_msg* tomsg(struct module_env* env, struct query_info* q,
+	struct reply_info* r, struct regional* region, time_t now,
+	struct regional* scratch);
+#endif
+
 /** 
  * Find cached message 
  * @param env: module environment with the DNS cache.

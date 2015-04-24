@@ -454,7 +454,11 @@ gen_dns_msg(struct regional* region, struct query_info* q, size_t num)
 }
 
 /** generate dns_msg from cached message */
+#ifdef CLIENT_SUBNET
+struct dns_msg*
+#else
 static struct dns_msg*
+#endif
 tomsg(struct module_env* env, struct query_info* q, struct reply_info* r, 
 	struct regional* region, time_t now, struct regional* scratch)
 {

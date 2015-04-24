@@ -158,6 +158,7 @@ update_cache(struct module_qstate *qstate, int id)
 	struct slabhash *subnet_msg_cache = 
 		((struct subnet_env*)qstate->env->modinfo[id])->subnet_msg_cache;
 	struct edns_data *edns = &qstate->edns_client_in;
+	size_t i;
 	
 	/** We already calculated hash upon lookup */
 	hashvalue_t h = qstate->minfo[id] ? 
@@ -193,6 +194,13 @@ update_cache(struct module_qstate *qstate, int id)
 		return;
 	}
 	rep = reply_info_copy(qstate->return_msg->rep, qstate->env->alloc, NULL);
+	
+	/* store RRsets */
+	for(i=0; i<rep->rrset_count; i++) {
+		rep->ref[i].key = rep->rrsets[i];
+		rep->ref[i].id = rep->rrsets[i]->id;
+	}
+	reply_info_set_ttls(rep, *qstate->env->now);
 	rep->flags |= (BIT_RA | BIT_QR); /* fix flags to be sensible for */
 	rep->flags &= ~(BIT_AA | BIT_CD);/* a reply based on the cache   */
 	addrtree_insert(tree, (addrkey_t*)edns->subnet_addr, 
@@ -218,7 +226,6 @@ lookup_and_reply(struct module_qstate *qstate, int id)
 	struct edns_data *edns = &qstate->edns_client_in;
 	struct addrtree *tree;
 	struct addrnode *node;
-	struct reply_info *rep;
 	
 	if (iq) iq->qinfo_hash = h; /** Might be useful on cache miss */
 	e = slabhash_lookup(sne->subnet_msg_cache, h, &qstate->qinfo, 0);
@@ -236,17 +243,15 @@ lookup_and_reply(struct module_qstate *qstate, int id)
 		lock_rw_unlock(&e->lock);
 		return 0;
 	}
-	rep = node->elem;
-	rep = reply_info_copy(rep, env->alloc, qstate->region);
+
+	qstate->return_msg = tomsg(env, &qstate->qinfo,
+		(struct reply_info *)node->elem, qstate->region, *env->now,
+		env->scratch);
 	lock_rw_unlock(&e->lock);
-	qstate->return_msg = (struct dns_msg*)regional_alloc(
-		qstate->region, sizeof(struct dns_msg));
-	if (!qstate->return_msg) {
-		log_err("subnet: found in cache but alloc failed");
+	
+	if (!qstate->return_msg) { /** TTL expired */
 		return 0;
 	}
-	qstate->return_msg->rep = rep;
-	memcpy(&qstate->return_msg->qinfo, &qstate->qinfo, sizeof(struct query_info));
 	
 	if (edns->subnet_downstream) { /* relay to interested client */
 		memcpy(&qstate->edns_client_out, edns, sizeof(struct edns_data));
